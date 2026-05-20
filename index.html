@@ -3,18 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My System</title>
+<title>나의 시스템</title>
 <style>
-  body { background: #F5F5F7; color: #1F2937; font-family: 'Apple SD Gothic Neo', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-  .center { text-align: center; }
-  h1 { font-size: 24px; margin-bottom: 8px; }
-  p { color: #666; font-size: 14px; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#F5F5F7;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh;}
+.header{padding:28px 24px 20px;border-bottom:1px solid #E0E0E8;}
+.header-sub{font-size:11px;letter-spacing:3px;color:#888899;margin-bottom:4px;text-transform:uppercase;}
+.header-title{font-size:22px;font-weight:700;color:#1A1A2E;}
+.content{padding:24px;max-width:640px;margin:0 auto;}
+.section-label{font-size:11px;color:#888899;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;margin-top:24px;}
+.app-card{background:#FFFFFF;border:1px solid #E0E0E8;border-radius:12px;padding:18px 20px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-decoration:none;transition:all 0.15s;}
+.app-card:hover{border-color:#A78BFA;box-shadow:0 2px 12px rgba(167,139,250,0.1);}
+.app-left{display:flex;align-items:center;gap:14px;}
+.app-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.app-name{font-size:15px;font-weight:600;color:#1A1A2E;margin-bottom:3px;}
+.app-desc{font-size:12px;color:#888899;}
+.app-arrow{font-size:18px;color:#C8C8D8;}
+.empty-card{background:#FFFFFF;border:1.5px dashed #E0E0E8;border-radius:12px;padding:18px 20px;margin-bottom:10px;text-align:center;color:#BBBBCC;font-size:13px;}
 </style>
 </head>
 <body>
-<div class="center">
-  <h1>🛠 나의 시스템</h1>
-  <p>앱들이 여기에 쌓여갈 거야</p>
+
+<div class="header">
+  <div class="header-sub">My System</div>
+  <div class="header-title">🛠 나의 시스템</div>
 </div>
+
+<div class="content">
+  <div class="section-label">앱 목록</div>
+
+  <a class="app-card" href="./my-system.html">
+    <div class="app-left">
+      <div class="app-icon" style="background:rgba(167,139,250,0.12)">🧠</div>
+      <div>
+        <div class="app-name">나를 알아가는 시스템</div>
+        <div class="app-desc">무의식 신호 포착 · 패턴 발견 · AI 분석</div>
+      </div>
+    </div>
+    <div class="app-arrow">›</div>
+  </a>
+
+  <div class="empty-card">앞으로 만들 앱들이 여기에 추가될 거야</div>
+</div>
+
 </body>
 </html>
