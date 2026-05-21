@@ -197,35 +197,39 @@ body{background:#F5F5F7;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-s
   <div class="tp" id="tp-fut">
     <div class="card" style="border-left:3px solid #6366F1">
       <div class="ctit" style="margin-bottom:3px">&#128221; HTS 확인 후 입력</div>
-      <div style="font-size:11px;color:#9CA3AF;margin-bottom:12px">키움 영웅문 &rarr; 투자자별 매매동향</div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:12px;line-height:1.8;background:#F9FAFB;padding:8px 10px;border-radius:8px;">
+        &#128204; <b>[0781]</b> 투자자별매매동향 &rarr; 선물탭 &rarr; 외국인 순매수 계약수<br>
+        &#128204; <b>[0796]</b> 투자자별일별매매동향 &rarr; 외국인·기관 현물 순매수금액<br>
+        &#128204; <b>[0786]</b> 프로그램매매현황 &rarr; 합계행 순매수금액 &#247; 100 = 억원
+      </div>
       <div class="igrd">
         <div class="igrp">
-          <label>외국인 선물 순매수 (계약)</label>
+          <label>외국인 선물 순매수 (계약) <span style="color:#6366F1;font-size:10px">[0781]</span></label>
           <span class="rf">강: &#177;1,000계약 / 중: &#177;500 / 약: &#177;300이하</span>
           <input type="number" id="i-fut" placeholder="3241 또는 -1500">
         </div>
         <div class="igrp">
-          <label>전일 대비 (계약)</label>
+          <label>전일 대비 (계약) <span style="color:#6366F1;font-size:10px">[0781]</span></label>
           <span class="rf">증가=매수세 강화</span>
           <input type="number" id="i-futc" placeholder="842 또는 -300">
         </div>
         <div class="igrp">
-          <label>외국인 현물 순매수 (억원)</label>
+          <label>외국인 현물 순매수 (억원) <span style="color:#6366F1;font-size:10px">[0796]</span></label>
           <span class="rf">강: &#177;2,000억 / 중: &#177;1,000 / 약: &#177;500이하</span>
           <input type="number" id="i-csh" placeholder="3200 또는 -1800">
         </div>
         <div class="igrp">
-          <label>기관 순매수 (억원)</label>
+          <label>기관 순매수 (억원) <span style="color:#6366F1;font-size:10px">[0796]</span></label>
           <span class="rf">강: &#177;3,000억 / 약: &#177;1,000이하</span>
           <input type="number" id="i-ist" placeholder="-2100 또는 1500">
         </div>
         <div class="igrp">
-          <label>프로그램 매매 (억원)</label>
+          <label>프로그램 매매 (억원) <span style="color:#6366F1;font-size:10px">[0786]</span></label>
           <span class="rf">강: &#177;3,000억 / 차익+비차익 합계</span>
           <input type="number" id="i-prg" placeholder="6718 또는 -2500">
         </div>
         <div class="igrp">
-          <label>3일 추세</label>
+          <label>3일 추세 <span style="color:#6366F1;font-size:10px">[0781] 일별탭</span></label>
           <span class="rf">연속 방향이 핵심</span>
           <select id="i-trd">
             <option value="">선택</option>
