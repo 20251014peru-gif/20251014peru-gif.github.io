@@ -7,58 +7,89 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#F5F5F7;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh;}
-.header{padding:16px 20px 12px;background:#fff;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header{padding:14px 20px 12px;background:#fff;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
 .header-left{display:flex;align-items:center;gap:10px;}
 .back-btn{font-size:20px;color:#9CA3AF;text-decoration:none;}
 .header-title{font-size:16px;font-weight:700;}
 .header-date{font-size:12px;color:#9CA3AF;}
-.api-btn{font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;border:none;font-family:inherit;font-weight:600;}
+.api-btn{font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;border:none;font-family:inherit;font-weight:600;}
 .api-btn.on{background:#D1FAE5;color:#059669;}
 .api-btn.off{background:#FEE2E2;color:#DC2626;}
-.progress-bar{height:4px;background:#E5E7EB;position:sticky;top:57px;z-index:99;}
-.progress-fill{height:100%;background:linear-gradient(90deg,#7C3AED,#2563EB);transition:width 0.4s ease;border-radius:0 2px 2px 0;}
-.content{padding:20px;max-width:640px;margin:0 auto;}
-.section{margin-bottom:20px;}
-.section-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 14px;border-radius:10px;}
-.section-icon{font-size:18px;}
-.section-title{font-size:14px;font-weight:700;}
+.progress-bar{height:4px;background:#E5E7EB;position:sticky;top:55px;z-index:99;}
+.progress-fill{height:100%;background:linear-gradient(90deg,#7C3AED,#2563EB);transition:width 0.4s ease;}
+
+/* 탭 */
+.tabs{display:flex;background:#fff;border-bottom:1px solid #E5E7EB;position:sticky;top:59px;z-index:98;}
+.tab-btn{flex:1;padding:11px 4px;border:none;background:transparent;font-size:13px;font-weight:600;color:#9CA3AF;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;transition:all 0.15s;}
+.tab-btn.active{color:#7C3AED;border-bottom-color:#7C3AED;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+.content{padding:18px;max-width:640px;margin:0 auto;}
+.section{margin-bottom:18px;}
+.section-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:10px 14px;border-radius:10px;}
+.section-icon{font-size:17px;}
+.section-title{font-size:13px;font-weight:700;}
 .section-sub{font-size:11px;margin-left:auto;opacity:0.7;}
-.check-item{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px 16px;margin-bottom:6px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.15s;}
+.check-item{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:13px 15px;margin-bottom:6px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.15s;}
 .check-item.done{background:#F9FAFB;}
 .check-item.done .item-text{color:#9CA3AF;text-decoration:line-through;}
-.check-box{width:22px;height:22px;border-radius:6px;border:2px solid #D1D5DB;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-size:13px;}
+.check-box{width:22px;height:22px;border-radius:6px;border:2px solid #D1D5DB;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all 0.15s;}
 .check-box.checked{background:#7C3AED;border-color:#7C3AED;color:#fff;}
 .item-text{font-size:13px;color:#374151;flex:1;line-height:1.5;}
 .item-sub{font-size:11px;color:#9CA3AF;display:block;margin-top:2px;}
-.write-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px 16px;margin-bottom:6px;}
-.write-label{font-size:11px;color:#9CA3AF;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;font-weight:600;}
-textarea{width:100%;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;font-size:13px;color:#374151;resize:none;outline:none;font-family:inherit;line-height:1.7;background:#FAFAFA;}
+.write-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px 15px;margin-bottom:6px;}
+.write-label{font-size:11px;color:#9CA3AF;letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;font-weight:600;}
+textarea{width:100%;border:1px solid #E5E7EB;border-radius:8px;padding:9px 11px;font-size:13px;color:#374151;resize:none;outline:none;font-family:inherit;line-height:1.7;background:#FAFAFA;}
 textarea:focus{border-color:#7C3AED;background:#fff;}
 textarea::placeholder{color:#D1D5DB;}
-.highlight-input{border:2px solid #7C3AED !important;background:#F5F3FF !important;font-size:14px !important;font-weight:600 !important;}
-.save-btn{width:100%;padding:12px;background:#7C3AED;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:16px;transition:all 0.2s;}
-.save-btn.saved{background:#059669;}
-.stat-row{display:flex;gap:8px;margin-bottom:20px;}
-.stat-box{flex:1;background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;text-align:center;}
-.stat-num{font-size:22px;font-weight:700;color:#7C3AED;}
+.one-input{border:2px solid #7C3AED!important;background:#F5F3FF!important;font-size:14px!important;font-weight:600!important;}
+.stat-row{display:flex;gap:8px;margin-bottom:18px;}
+.stat-box{flex:1;background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:11px;text-align:center;}
+.stat-num{font-size:20px;font-weight:700;color:#7C3AED;}
 .stat-label{font-size:11px;color:#9CA3AF;margin-top:2px;}
 .energy-row{display:flex;gap:6px;}
-.energy-btn{flex:1;padding:8px 4px;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;cursor:pointer;text-align:center;font-size:20px;transition:all 0.15s;font-family:inherit;}
+.energy-btn{flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;cursor:pointer;text-align:center;font-size:18px;transition:all 0.15s;font-family:inherit;}
 .energy-btn.active{border-color:#7C3AED;background:#F5F3FF;}
-.tip{padding:12px 14px;background:#FEF3C7;border-radius:8px;border-left:3px solid #F59E0B;font-size:12px;color:#78350F;line-height:1.7;margin-bottom:14px;}
-.reset-btn{width:100%;padding:10px;background:transparent;border:1px solid #E5E7EB;border-radius:8px;color:#9CA3AF;font-size:12px;cursor:pointer;font-family:inherit;margin-top:8px;}
-.ai-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:16px;margin-bottom:10px;border-left:4px solid #7C3AED;}
-.ai-title{font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:10px;}
+.tip{padding:11px 13px;background:#FEF3C7;border-radius:8px;border-left:3px solid #F59E0B;font-size:12px;color:#78350F;line-height:1.7;margin-bottom:12px;}
+.save-btn{width:100%;padding:12px;background:#7C3AED;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:14px;transition:all 0.2s;}
+.save-btn.saved{background:#059669;}
+.reset-btn{width:100%;padding:9px;background:transparent;border:1px solid #E5E7EB;border-radius:8px;color:#9CA3AF;font-size:12px;cursor:pointer;font-family:inherit;margin-top:6px;}
+.ai-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:10px;border-left:4px solid #7C3AED;}
+.ai-title{font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:8px;}
 .ai-text{font-size:13px;color:#374151;line-height:1.9;white-space:pre-wrap;}
-.ai-run-btn{width:100%;padding:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;transition:all 0.2s;}
+.ai-run-btn{width:100%;padding:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;}
 .ai-run-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+/* 히스토리 */
+.hist-month{font-size:12px;font-weight:700;color:#9CA3AF;letter-spacing:1px;margin:16px 0 8px;text-transform:uppercase;}
+.hist-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:12px;}
+.hist-card:hover{border-color:#7C3AED;box-shadow:0 2px 8px rgba(124,58,237,0.1);}
+.hist-date{font-size:13px;font-weight:700;color:#1A1A2E;min-width:100px;}
+.hist-energy{font-size:18px;}
+.hist-progress{flex:1;}
+.hist-bar-bg{height:5px;background:#F3F4F6;border-radius:3px;margin-bottom:4px;}
+.hist-bar-fill{height:100%;background:linear-gradient(90deg,#7C3AED,#2563EB);border-radius:3px;}
+.hist-sub{font-size:11px;color:#9CA3AF;}
+.hist-one{font-size:12px;color:#374151;margin-top:4px;font-style:italic;}
+.hist-empty{text-align:center;color:#9CA3AF;padding:40px 0;font-size:13px;}
+
+/* 상세 뷰 */
+.detail-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.detail-back{font-size:13px;color:#7C3AED;cursor:pointer;font-weight:600;}
+.detail-title{font-size:16px;font-weight:700;}
+.detail-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:10px;}
+.detail-label{font-size:11px;color:#9CA3AF;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.detail-value{font-size:13px;color:#374151;line-height:1.7;}
+.detail-checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.detail-check{font-size:11px;padding:3px 10px;border-radius:20px;background:#EDE9FE;color:#5B21B6;}
+
 .hidden{display:none!important;}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
 .modal{background:#fff;border-radius:14px;padding:22px;width:100%;max-width:380px;}
 .modal-title{font-size:15px;font-weight:700;margin-bottom:6px;}
 .modal-sub{font-size:12px;color:#6B7280;margin-bottom:14px;line-height:1.6;}
 .modal input{width:100%;border:1px solid #E5E7EB;border-radius:8px;color:#1A1A2E;font-size:13px;padding:10px 12px;outline:none;font-family:inherit;margin-bottom:12px;}
-.modal input:focus{border-color:#7C3AED;}
 .modal-btns{display:flex;gap:8px;}
 .modal-btn{flex:1;padding:10px;border-radius:8px;border:none;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600;}
 .modal-btn.primary{background:#7C3AED;color:#fff;}
@@ -76,26 +107,25 @@ textarea::placeholder{color:#D1D5DB;}
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
     <div class="header-date" id="todayDate"></div>
-    <button class="api-btn off" id="apiBtn" onclick="openModal()">AI 설정</button>
+    <button class="api-btn off" id="apiBtn" onclick="openModal()">AI</button>
   </div>
 </div>
 <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
 
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('today')">오늘</button>
+  <button class="tab-btn" onclick="switchTab('history')">기록 보기</button>
+  <button class="tab-btn" onclick="switchTab('ai')">AI 분석</button>
+</div>
+
+<!-- 오늘 탭 -->
+<div class="tab-content active" id="tab-today">
 <div class="content">
 
   <div class="stat-row">
-    <div class="stat-box">
-      <div class="stat-num" id="doneCount">0</div>
-      <div class="stat-label">완료</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num" id="totalCount" style="color:#D1D5DB">0</div>
-      <div class="stat-label">전체</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num" id="streakCount" style="color:#F59E0B">0</div>
-      <div class="stat-label">연속일</div>
-    </div>
+    <div class="stat-box"><div class="stat-num" id="doneCount">0</div><div class="stat-label">완료</div></div>
+    <div class="stat-box"><div class="stat-num" id="totalCount" style="color:#D1D5DB">0</div><div class="stat-label">전체</div></div>
+    <div class="stat-box"><div class="stat-num" id="streakCount" style="color:#F59E0B">0</div><div class="stat-label">연속일</div></div>
   </div>
 
   <!-- 아침 -->
@@ -105,33 +135,30 @@ textarea::placeholder{color:#D1D5DB;}
       <span class="section-title" style="color:#5B21B6">아침 체크</span>
       <span class="section-sub" style="color:#7C3AED" id="morning-done">0/0</span>
     </div>
-
     <div class="write-card">
       <div class="write-label">⭐ 오늘 가장 중요한 것 1가지</div>
-      <textarea id="todayOne" rows="2" class="highlight-input" placeholder="딱 하나만. 오늘 이것만 해도 성공이다 싶은 것을 써봐..."></textarea>
+      <textarea id="todayOne" rows="2" class="one-input" placeholder="딱 하나만. 오늘 이것만 해도 성공이다 싶은 것..."></textarea>
     </div>
-
     <div class="write-card">
       <div class="write-label">오늘 에너지 상태</div>
-      <div class="energy-row" id="energyRow">
+      <div class="energy-row">
         <button class="energy-btn" onclick="selectEnergy(this,'😴')">😴<br><span style="font-size:10px;color:#9CA3AF">낮음</span></button>
         <button class="energy-btn" onclick="selectEnergy(this,'😐')">😐<br><span style="font-size:10px;color:#9CA3AF">보통</span></button>
         <button class="energy-btn" onclick="selectEnergy(this,'😊')">😊<br><span style="font-size:10px;color:#9CA3AF">좋음</span></button>
         <button class="energy-btn" onclick="selectEnergy(this,'🔥')">🔥<br><span style="font-size:10px;color:#9CA3AF">최상</span></button>
       </div>
     </div>
-
     <div class="check-item" onclick="toggleCheck(this)" data-section="morning">
       <div class="check-box">✓</div>
       <div class="item-text">오늘 1가지 작성 완료<span class="item-sub">적는 순간 뇌가 우선순위를 잡아</span></div>
     </div>
     <div class="check-item" onclick="toggleCheck(this)" data-section="morning">
       <div class="check-box">✓</div>
-      <div class="item-text">시장 상황 간단 체크<span class="item-sub">코스피 / 미국 선물 / 환율 흐름</span></div>
+      <div class="item-text">시장 상황 간단 체크<span class="item-sub">코스피 / 미국 선물 / 환율</span></div>
     </div>
     <div class="check-item" onclick="toggleCheck(this)" data-section="morning">
       <div class="check-box">✓</div>
-      <div class="item-text">어제 놓친 것 한 줄 떠올리기<span class="item-sub">기록 안 해도 됨, 생각만</span></div>
+      <div class="item-text">어제 놓친 것 한 줄 떠올리기</div>
     </div>
   </div>
 
@@ -142,18 +169,17 @@ textarea::placeholder{color:#D1D5DB;}
       <span class="section-title" style="color:#1D4ED8">낮 실행</span>
       <span class="section-sub" style="color:#2563EB" id="day-done">0/0</span>
     </div>
-
     <div class="check-item" onclick="toggleCheck(this)" data-section="day">
       <div class="check-box">✓</div>
-      <div class="item-text">아침에 정한 1가지 실행했나?<span class="item-sub">못 했으면 이유를 저녁에 기록</span></div>
+      <div class="item-text">아침 1가지 실행했나?<span class="item-sub">못 했으면 이유를 저녁에 기록</span></div>
     </div>
     <div class="check-item" onclick="toggleCheck(this)" data-section="day">
       <div class="check-box">✓</div>
-      <div class="item-text">예상과 다른 일이 있었나?<span class="item-sub">투자든 업무든 — 저녁 기록 준비</span></div>
+      <div class="item-text">예상과 다른 일이 있었나?</div>
     </div>
     <div class="check-item" onclick="toggleCheck(this)" data-section="day">
       <div class="check-box">✓</div>
-      <div class="item-text">감정이 강하게 올라온 순간?<span class="item-sub">기억해두기 — 저녁에 기록</span></div>
+      <div class="item-text">감정이 강하게 올라온 순간?</div>
     </div>
   </div>
 
@@ -164,29 +190,23 @@ textarea::placeholder{color:#D1D5DB;}
       <span class="section-title" style="color:#065F46">저녁 리뷰</span>
       <span class="section-sub" style="color:#059669" id="evening-done">0/0</span>
     </div>
-
-    <div class="tip">💡 <strong>오늘의 질문:</strong> "오늘 내가 틀리게 본 게 뭔가?" — 없으면 안 써도 돼.</div>
-
+    <div class="tip">💡 오늘 내가 틀리게 본 게 뭔가? — 없으면 안 써도 돼.</div>
     <div class="write-card">
-      <div class="write-label">아침에 정한 1가지 — 결과는?</div>
+      <div class="write-label">아침 1가지 — 결과는?</div>
       <textarea id="oneResult" rows="2" placeholder="실행했나? 못 했다면 이유는?"></textarea>
     </div>
-
     <div class="write-card">
-      <div class="write-label">오늘 예상과 달랐던 것</div>
+      <div class="write-label">예상과 달랐던 것</div>
       <textarea id="mismatch" rows="2" placeholder="어떤 상황에서 예상이 빗나갔나?"></textarea>
     </div>
-
     <div class="write-card">
-      <div class="write-label">오늘 못 봤거나 틀리게 본 것</div>
-      <textarea id="blindspot" rows="2" placeholder="돌아보니 놓친 것, 다르게 봤어야 했던 것..."></textarea>
+      <div class="write-label">못 봤거나 틀리게 본 것</div>
+      <textarea id="blindspot" rows="2" placeholder="놓친 것, 다르게 봤어야 했던 것..."></textarea>
     </div>
-
     <div class="write-card">
       <div class="write-label">내일 하나 바꿀 것</div>
       <textarea id="tomorrow" rows="2" placeholder="작은 것 하나면 충분해"></textarea>
     </div>
-
     <div class="check-item" onclick="toggleCheck(this)" data-section="evening">
       <div class="check-box">✓</div>
       <div class="item-text">저녁 리뷰 작성 완료</div>
@@ -195,30 +215,45 @@ textarea::placeholder{color:#D1D5DB;}
       <div class="check-box">✓</div>
       <div class="item-text">내일 1가지 미리 정하기</div>
     </div>
-
     <button class="save-btn" id="saveBtn" onclick="saveDay()">💾 오늘 저장</button>
     <button class="reset-btn" onclick="resetDay()">오늘 초기화</button>
   </div>
 
-  <!-- AI 분석 -->
-  <div class="section">
-    <div class="section-header" style="background:#F3F4F6">
-      <span class="section-icon">🤖</span>
-      <span class="section-title" style="color:#374151">AI 하루 분석</span>
-    </div>
+</div>
+</div>
 
-    <div class="tip" style="background:#EDE9FE;border-left-color:#7C3AED;color:#5B21B6">
-      💡 오늘 작성한 내용을 바탕으로 AI가 패턴과 인사이트를 분석해줘. 저장 후 실행해봐.
-    </div>
+<!-- 기록 보기 탭 -->
+<div class="tab-content" id="tab-history">
+<div class="content">
 
-    <button class="ai-run-btn" id="aiRunBtn" onclick="runAI()">🔍 오늘 하루 AI 분석하기</button>
-
-    <div class="ai-card hidden" id="aiCard">
-      <div class="ai-title">🤖 오늘의 AI 분석</div>
-      <div class="ai-text" id="aiText"></div>
+  <!-- 상세 뷰 -->
+  <div id="detailView" class="hidden">
+    <div class="detail-header">
+      <span class="detail-back" onclick="closeDetail()">← 목록으로</span>
+      <span class="detail-title" id="detailTitle"></span>
     </div>
+    <div id="detailBody"></div>
   </div>
 
+  <!-- 목록 뷰 -->
+  <div id="histList"></div>
+
+</div>
+</div>
+
+<!-- AI 분석 탭 -->
+<div class="tab-content" id="tab-ai">
+<div class="content">
+  <div class="tip" style="background:#EDE9FE;border-left-color:#7C3AED;color:#5B21B6;margin-bottom:14px;">
+    💡 오늘 작성한 내용 또는 최근 기록을 바탕으로 패턴과 인사이트를 분석해줘.
+  </div>
+  <button class="ai-run-btn" id="aiTodayBtn" onclick="runAI('today')">🔍 오늘 하루 분석</button>
+  <button class="ai-run-btn" id="aiWeekBtn" onclick="runAI('week')" style="background:linear-gradient(135deg,#059669,#047857);margin-bottom:8px;">📊 최근 7일 패턴 분석</button>
+  <div class="ai-card hidden" id="aiCard">
+    <div class="ai-title">🤖 AI 분석 결과</div>
+    <div class="ai-text" id="aiText"></div>
+  </div>
+</div>
 </div>
 
 <!-- 모달 -->
@@ -238,203 +273,242 @@ textarea::placeholder{color:#D1D5DB;}
 </div>
 
 <script>
-const STORAGE = 'daily-routine-v2';
-const STREAK = 'daily-streak-v1';
+const STORAGE_PREFIX = 'daily-v2-';
+const STREAK_KEY = 'daily-streak-v2';
 const API_KEY = 'routine-apikey';
-const days = ['일','월','화','수','목','금','토'];
+const DAYS = ['일','월','화','수','목','금','토'];
+const CHECK_LABELS = [
+  '오늘 1가지 작성','시장 상황 체크','어제 놓친 것 떠올리기',
+  '아침 1가지 실행','예상과 다른 일 확인','감정 올라온 순간 확인',
+  '저녁 리뷰 작성','내일 1가지 정하기'
+];
 
 let state = {energy:'', checks:{}, texts:{}};
 let todayKey = '';
 
 function getTodayKey(){
-  const n = new Date();
-  return `${n.getFullYear()}-${n.getMonth()+1}-${n.getDate()}`;
+  const n=new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+}
+function formatKey(key){
+  const [y,m,d]=key.split('-');
+  const date=new Date(y,m-1,d);
+  return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 (${DAYS[date.getDay()]})`;
 }
 
 function load(){
-  todayKey = getTodayKey();
-  const n = new Date();
-  document.getElementById('todayDate').textContent = `${n.getMonth()+1}월 ${n.getDate()}일(${days[n.getDay()]})`;
-
-  try{
-    const raw = localStorage.getItem(STORAGE + todayKey);
-    if(raw) state = JSON.parse(raw);
-  }catch{}
-
-  // 에너지
-  if(state.energy){
-    document.querySelectorAll('.energy-btn').forEach(b=>{
-      if(b.textContent.includes(state.energy)) b.classList.add('active');
-    });
-  }
-
-  // 체크
-  document.querySelectorAll('.check-item').forEach((item,i)=>{
-    if(state.checks[i]){
-      item.classList.add('done');
-      item.querySelector('.check-box').classList.add('checked');
-    }
-  });
-
-  // 텍스트
-  const t = state.texts;
-  if(t.todayOne) document.getElementById('todayOne').value = t.todayOne;
-  if(t.oneResult) document.getElementById('oneResult').value = t.oneResult;
-  if(t.mismatch) document.getElementById('mismatch').value = t.mismatch;
-  if(t.blindspot) document.getElementById('blindspot').value = t.blindspot;
-  if(t.tomorrow) document.getElementById('tomorrow').value = t.tomorrow;
-
+  todayKey=getTodayKey();
+  const n=new Date();
+  document.getElementById('todayDate').textContent=`${n.getMonth()+1}월 ${n.getDate()}일(${DAYS[n.getDay()]})`;
+  try{const r=localStorage.getItem(STORAGE_PREFIX+todayKey); if(r) state=JSON.parse(r);}catch{}
+  if(state.energy) document.querySelectorAll('.energy-btn').forEach(b=>{ if(b.textContent.includes(state.energy)) b.classList.add('active'); });
+  document.querySelectorAll('.check-item').forEach((item,i)=>{ if(state.checks[i]){ item.classList.add('done'); item.querySelector('.check-box').classList.add('checked'); } });
+  const t=state.texts||{};
+  ['todayOne','oneResult','mismatch','blindspot','tomorrow'].forEach(id=>{ if(t[id]) document.getElementById(id).value=t[id]; });
   updateProgress();
   updateStreak();
   updateApiBtn();
 }
 
 function saveState(){
-  state.texts = {
+  state.texts={
     todayOne: document.getElementById('todayOne').value,
     oneResult: document.getElementById('oneResult').value,
     mismatch: document.getElementById('mismatch').value,
     blindspot: document.getElementById('blindspot').value,
     tomorrow: document.getElementById('tomorrow').value,
   };
-  localStorage.setItem(STORAGE + todayKey, JSON.stringify(state));
+  state.savedAt = new Date().toISOString();
+  localStorage.setItem(STORAGE_PREFIX+todayKey, JSON.stringify(state));
 }
 
 function saveDay(){
   saveState();
-  // 스트릭
-  const sd = JSON.parse(localStorage.getItem(STREAK)||'{"lastDate":"","count":0}');
-  const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
-  const yKey = `${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
-  if(sd.lastDate === yKey){ sd.count++; sd.lastDate = todayKey; }
-  else if(sd.lastDate !== todayKey){ sd.count = 1; sd.lastDate = todayKey; }
-  localStorage.setItem(STREAK, JSON.stringify(sd));
-  document.getElementById('streakCount').textContent = sd.count;
-
-  const btn = document.getElementById('saveBtn');
-  btn.textContent = '✓ 저장됨'; btn.classList.add('saved');
-  setTimeout(()=>{ btn.textContent = '💾 오늘 저장'; btn.classList.remove('saved'); }, 2000);
+  const sd=JSON.parse(localStorage.getItem(STREAK_KEY)||'{"lastDate":"","count":0}');
+  const yest=new Date(); yest.setDate(yest.getDate()-1);
+  const yKey=`${yest.getFullYear()}-${String(yest.getMonth()+1).padStart(2,'0')}-${String(yest.getDate()).padStart(2,'0')}`;
+  if(sd.lastDate===yKey){sd.count++;sd.lastDate=todayKey;}
+  else if(sd.lastDate!==todayKey){sd.count=1;sd.lastDate=todayKey;}
+  localStorage.setItem(STREAK_KEY,JSON.stringify(sd));
+  document.getElementById('streakCount').textContent=sd.count;
+  const btn=document.getElementById('saveBtn');
+  btn.textContent='✓ 저장됨'; btn.classList.add('saved');
+  setTimeout(()=>{btn.textContent='💾 오늘 저장';btn.classList.remove('saved');},2000);
 }
 
 function resetDay(){
   if(!confirm('오늘 기록을 초기화할까요?')) return;
-  localStorage.removeItem(STORAGE + todayKey);
-  location.reload();
+  localStorage.removeItem(STORAGE_PREFIX+todayKey); location.reload();
 }
 
 function toggleCheck(item){
-  const items = Array.from(document.querySelectorAll('.check-item'));
-  const idx = items.indexOf(item);
-  const box = item.querySelector('.check-box');
-  const isDone = item.classList.toggle('done');
-  box.classList.toggle('checked', isDone);
-  state.checks[idx] = isDone;
-  saveState();
-  updateProgress();
+  const idx=Array.from(document.querySelectorAll('.check-item')).indexOf(item);
+  const box=item.querySelector('.check-box');
+  const isDone=item.classList.toggle('done');
+  box.classList.toggle('checked',isDone);
+  state.checks[idx]=isDone;
+  saveState(); updateProgress();
 }
 
-function selectEnergy(btn, emoji){
+function selectEnergy(btn,emoji){
   document.querySelectorAll('.energy-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  state.energy = emoji;
-  saveState();
+  btn.classList.add('active'); state.energy=emoji; saveState();
 }
 
 function updateProgress(){
-  const items = document.querySelectorAll('.check-item');
-  const done = document.querySelectorAll('.check-item.done').length;
-  const total = items.length;
-  document.getElementById('doneCount').textContent = done;
-  document.getElementById('totalCount').textContent = total;
-  document.getElementById('progressFill').style.width = total>0 ? (done/total*100)+'%' : '0%';
+  const items=document.querySelectorAll('.check-item');
+  const done=document.querySelectorAll('.check-item.done').length;
+  const total=items.length;
+  document.getElementById('doneCount').textContent=done;
+  document.getElementById('totalCount').textContent=total;
+  document.getElementById('progressFill').style.width=total>0?(done/total*100)+'%':'0%';
   ['morning','day','evening'].forEach(sec=>{
-    const all = document.querySelectorAll(`.check-item[data-section="${sec}"]`);
-    const d = document.querySelectorAll(`.check-item[data-section="${sec}"].done`).length;
-    const el = document.getElementById(sec+'-done');
-    if(el) el.textContent = `${d}/${all.length}`;
+    const all=document.querySelectorAll(`.check-item[data-section="${sec}"]`);
+    const d=document.querySelectorAll(`.check-item[data-section="${sec}"].done`).length;
+    const el=document.getElementById(sec+'-done');
+    if(el) el.textContent=`${d}/${all.length}`;
   });
 }
 
 function updateStreak(){
-  const sd = JSON.parse(localStorage.getItem(STREAK)||'{"count":0}');
-  document.getElementById('streakCount').textContent = sd.count||0;
+  const sd=JSON.parse(localStorage.getItem(STREAK_KEY)||'{"count":0}');
+  document.getElementById('streakCount').textContent=sd.count||0;
+}
+
+// 탭
+function switchTab(t){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['today','history','ai'][i]===t));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='history') renderHistory();
+}
+
+// 히스토리
+function getAllKeys(){
+  const keys=[];
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.startsWith(STORAGE_PREFIX)) keys.push(k.replace(STORAGE_PREFIX,''));
+  }
+  return keys.sort((a,b)=>b.localeCompare(a));
+}
+
+function renderHistory(){
+  const keys=getAllKeys();
+  const list=document.getElementById('histList');
+  if(!keys.length){
+    list.innerHTML='<div class="hist-empty">아직 기록이 없어요<br><span style="font-size:11px">오늘 루틴을 작성하고 저장해봐</span></div>';
+    return;
+  }
+  let html='';
+  let lastMonth='';
+  keys.forEach(key=>{
+    const [y,m]=key.split('-');
+    const monthLabel=`${y}년 ${parseInt(m)}월`;
+    if(monthLabel!==lastMonth){ html+=`<div class="hist-month">${monthLabel}</div>`; lastMonth=monthLabel; }
+    const data=JSON.parse(localStorage.getItem(STORAGE_PREFIX+key)||'{}');
+    const checks=data.checks||{};
+    const total=8; const done=Object.values(checks).filter(v=>v).length;
+    const pct=Math.round(done/total*100);
+    const texts=data.texts||{};
+    const [,mm,dd]=key.split('-');
+    const date=new Date(parseInt(y),parseInt(mm)-1,parseInt(dd));
+    html+=`<div class="hist-card" onclick="showDetail('${key}')">
+      <div>
+        <div class="hist-date">${parseInt(mm)}월 ${parseInt(dd)}일 (${DAYS[date.getDay()]})</div>
+        ${texts.todayOne?`<div class="hist-one">"${texts.todayOne.slice(0,20)}${texts.todayOne.length>20?'…':''}"</div>`:''}
+      </div>
+      <div style="font-size:20px">${data.energy||'—'}</div>
+      <div class="hist-progress">
+        <div class="hist-bar-bg"><div class="hist-bar-fill" style="width:${pct}%"></div></div>
+        <div class="hist-sub">${done}/${total} 완료 · ${pct}%</div>
+      </div>
+      <div style="font-size:18px;color:#D1D5DB">›</div>
+    </div>`;
+  });
+  list.innerHTML=html;
+}
+
+function showDetail(key){
+  const data=JSON.parse(localStorage.getItem(STORAGE_PREFIX+key)||'{}');
+  const texts=data.texts||{};
+  const checks=data.checks||{};
+  document.getElementById('detailTitle').textContent=formatKey(key);
+  const fields=[
+    ['⭐ 오늘 1가지',texts.todayOne],
+    ['📝 결과',texts.oneResult],
+    ['⚡ 예상과 달랐던 것',texts.mismatch],
+    ['◎ 못 봤던 것',texts.blindspot],
+    ['→ 내일 바꿀 것',texts.tomorrow],
+  ];
+  const doneChecks=Object.entries(checks).filter(([,v])=>v).map(([i])=>CHECK_LABELS[i]).filter(Boolean);
+  let html=`<div class="detail-card"><div class="detail-label">에너지</div><div class="detail-value">${data.energy||'미기록'}</div></div>`;
+  fields.forEach(([label,val])=>{ if(val) html+=`<div class="detail-card"><div class="detail-label">${label}</div><div class="detail-value">${val}</div></div>`; });
+  if(doneChecks.length) html+=`<div class="detail-card"><div class="detail-label">완료한 체크</div><div class="detail-checks">${doneChecks.map(c=>`<span class="detail-check">${c}</span>`).join('')}</div></div>`;
+  document.getElementById('detailBody').innerHTML=html;
+  document.getElementById('detailView').classList.remove('hidden');
+  document.getElementById('histList').classList.add('hidden');
+}
+
+function closeDetail(){
+  document.getElementById('detailView').classList.add('hidden');
+  document.getElementById('histList').classList.remove('hidden');
 }
 
 // API
 function openModal(){ document.getElementById('apiModal').classList.remove('hidden'); }
 function closeModal(){ document.getElementById('apiModal').classList.add('hidden'); }
-function saveKey(){
-  const k = document.getElementById('apiInput').value.trim();
-  if(k){ localStorage.setItem(API_KEY, k); updateApiBtn(); closeModal(); }
-}
-function clearKey(){ localStorage.removeItem(API_KEY); updateApiBtn(); closeModal(); }
-function updateApiBtn(){
-  const k = localStorage.getItem(API_KEY);
-  const btn = document.getElementById('apiBtn');
-  btn.textContent = k ? 'AI ON' : 'AI 설정';
-  btn.className = k ? 'api-btn on' : 'api-btn off';
-}
+function saveKey(){ const k=document.getElementById('apiInput').value.trim(); if(k){localStorage.setItem(API_KEY,k);updateApiBtn();closeModal();} }
+function clearKey(){ localStorage.removeItem(API_KEY);updateApiBtn();closeModal(); }
+function updateApiBtn(){ const k=localStorage.getItem(API_KEY); const b=document.getElementById('apiBtn'); b.textContent=k?'AI ON':'AI'; b.className=k?'api-btn on':'api-btn off'; }
 
-async function runAI(){
-  const key = localStorage.getItem(API_KEY);
-  if(!key){ openModal(); return; }
-
+async function runAI(mode){
+  const key=localStorage.getItem(API_KEY);
+  if(!key){openModal();return;}
   saveState();
-  const t = state.texts;
-  if(!t.todayOne && !t.mismatch && !t.blindspot){
-    alert('먼저 내용을 작성하고 저장해봐'); return;
+  const btn=mode==='today'?document.getElementById('aiTodayBtn'):document.getElementById('aiWeekBtn');
+  btn.disabled=true; btn.textContent='분석 중...';
+  const n=new Date(); const DAYS2=['일','월','화','수','목','금','토'];
+
+  let prompt='';
+  if(mode==='today'){
+    const t=state.texts||{};
+    prompt=`오늘(${n.getMonth()+1}월 ${n.getDate()}일) 하루 기록을 분석해줘.
+오늘 1가지: ${t.todayOne||'미작성'}
+에너지: ${state.energy||'미선택'}
+완료 체크: ${Object.values(state.checks).filter(v=>v).length}개
+1가지 결과: ${t.oneResult||'미작성'}
+예상과 달랐던 것: ${t.mismatch||'미작성'}
+맹점: ${t.blindspot||'미작성'}
+내일 바꿀 것: ${t.tomorrow||'미작성'}
+
+1. 오늘의 핵심 패턴 한 줄
+2. 발견된 맹점
+3. 내일을 위한 제안 1가지
+따뜻하고 짧게.`;
+  } else {
+    const keys=getAllKeys().slice(0,7);
+    const summary=keys.map(k=>{
+      const d=JSON.parse(localStorage.getItem(STORAGE_PREFIX+k)||'{}');
+      const t=d.texts||{};
+      const done=Object.values(d.checks||{}).filter(v=>v).length;
+      return `[${k}] 에너지:${d.energy||'?'} 완료:${done}/8 1가지:${t.todayOne?.slice(0,15)||'없음'} 맹점:${t.blindspot?.slice(0,20)||'없음'}`;
+    }).join('\n');
+    prompt=`최근 7일 하루 루틴 기록을 분석해줘.\n\n${summary}\n\n1. 반복되는 패턴 2가지\n2. 에너지와 완료율의 관계\n3. 자주 나타나는 맹점\n4. 앞으로 1주일을 위한 핵심 제안\n통찰 있게, 짧고 명확하게.`;
   }
 
-  const btn = document.getElementById('aiRunBtn');
-  btn.disabled = true; btn.textContent = '분석 중...';
-
-  const n = new Date();
-  const dateStr = `${n.getMonth()+1}월 ${n.getDate()}일 (${days[n.getDay()]})`;
-
-  const prompt = `오늘(${dateStr}) 하루 루틴 기록을 분석해줘.
-
-📌 오늘 가장 중요한 것 1가지: ${t.todayOne || '미작성'}
-⚡ 에너지 상태: ${state.energy || '미선택'}
-✅ 완료한 체크: ${Object.values(state.checks).filter(v=>v).length}개
-📝 1가지 결과: ${t.oneResult || '미작성'}
-⚡ 예상과 달랐던 것: ${t.mismatch || '미작성'}
-◎ 못 봤던 것/맹점: ${t.blindspot || '미작성'}
-→ 내일 바꿀 것: ${t.tomorrow || '미작성'}
-
-위 내용을 바탕으로 아래 4가지를 분석해줘:
-
-1. 오늘의 핵심 패턴 (한 줄)
-2. 발견된 맹점이나 반복 패턴
-3. 에너지와 실행력의 관계
-4. 내일을 위한 구체적 제안 1가지
-
-따뜻하고 통찰 있게, 3~5문장으로 짧고 명확하게.`;
-
   try{
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key': key,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:600,
-        messages:[{role:'user', content: prompt}]
-      })
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:prompt}]})
     });
-    const data = await res.json();
-    const text = data.content && data.content[0] && data.content[0].text;
-    if(text){
-      document.getElementById('aiCard').classList.remove('hidden');
-      document.getElementById('aiText').textContent = text;
-    }
+    const data=await res.json();
+    const text=data.content&&data.content[0]&&data.content[0].text;
+    if(text){ document.getElementById('aiCard').classList.remove('hidden'); document.getElementById('aiText').textContent=text; }
   }catch(e){ alert('오류: '+e.message); }
-
-  btn.disabled = false;
-  btn.textContent = '🔄 다시 분석';
+  btn.disabled=false;
+  btn.textContent=mode==='today'?'🔄 오늘 다시 분석':'🔄 주간 다시 분석';
 }
 
 load();
