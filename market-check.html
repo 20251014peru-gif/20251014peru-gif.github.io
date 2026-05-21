@@ -3,639 +3,529 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>장 전 시장 조건 체크</title>
+<title>나를 알아가는 시스템</title>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
+  authDomain: "my-system-25497.firebaseapp.com",
+  projectId: "my-system-25497",
+  storageBucket: "my-system-25497.firebasestorage.app",
+  messagingSenderId: "800117843160",
+  appId: "1:800117843160:web:610b23896bc335f285e3ad"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const SIGS = {
+  instant: {label:'즉각 반응', emoji:'⚡', color:'#A78BFA'},
+  emotion: {label:'감정 신호', emoji:'🌊', color:'#7B9FD4'},
+  avoid:   {label:'회피 패턴', emoji:'↪', color:'#E8845A'},
+  energy:  {label:'에너지',    emoji:'⚡️', color:'#FCD34D'},
+};
+
+let signals = [], principles = [];
+let form = {sig:'instant', emotions:[], intensity:5, energyDir:'up', area:'투자'};
+let sigFilter = 'all';
+
+async function loadData() {
+  try {
+    const sigSnap = await getDocs(query(collection(db,'signals'), orderBy('date','desc')));
+    signals = sigSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const prinSnap = await getDocs(query(collection(db,'principles'), orderBy('date','desc')));
+    principles = prinSnap.docs.map(d=>({id:d.id,...d.data()}));
+    updateCount();
+    document.getElementById('loadingMsg').style.display='none';
+  } catch(e) {
+    document.getElementById('loadingMsg').textContent='로드 실패: '+e.message;
+  }
+}
+
+function updateCount(){ document.getElementById('recCount').textContent=signals.length+'개'; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function formatDate(d){ return new Date(d).toLocaleDateString('ko-KR',{month:'short',day:'numeric',weekday:'short'}); }
+
+window.switchView = function(v) {
+  ['signal','records','pattern','principles','ai'].forEach((id,i)=>{
+    document.getElementById('view-'+id).classList.toggle('hidden',id!==v);
+    document.querySelectorAll('.nav-btn')[i].classList.toggle('active',id===v);
+  });
+  if(v==='records') renderRecords();
+  if(v==='pattern') renderPattern();
+  if(v==='principles') renderPrinciples();
+}
+
+window.selectSig = function(id) {
+  form.sig=id;
+  Object.keys(SIGS).forEach(k=>{
+    const btn=document.getElementById('sig-'+k);
+    const c=SIGS[k];
+    if(k===id){ btn.style.borderColor=c.color; btn.style.background=c.color+'15'; btn.querySelector('.sig-name').style.color=c.color; }
+    else{ btn.style.borderColor='var(--border)'; btn.style.background='transparent'; btn.querySelector('.sig-name').style.color='var(--text3)'; }
+  });
+  document.getElementById('emotionCard').style.display=id==='emotion'?'block':'none';
+  document.getElementById('energyCard').style.display=id==='energy'?'block':'none';
+  const sl={instant:'어떤 상황 → 첫 반응',emotion:'어떤 상황에서 감정이 올라왔나',avoid:'뭘 자꾸 회피하게 됐나',energy:'에너지 변화가 생긴 상황'};
+  const rl={instant:'즉각적으로 한 것 / 느낀 것',emotion:'감정이 왔을 때 어떻게 반응했나',avoid:'회피했을 때 속마음',energy:'에너지가 왜 변했다고 느꼈나'};
+  document.getElementById('situationLabel').textContent=sl[id];
+  document.getElementById('reactionLabel').textContent=rl[id];
+}
+
+window.toggleEmo = function(btn, emo) {
+  const idx=form.emotions.indexOf(emo);
+  if(idx>-1){ form.emotions.splice(idx,1); btn.classList.remove('active'); }
+  else{ form.emotions.push(emo); btn.classList.add('active'); }
+}
+
+window.selectInt = function(btn, val) {
+  form.intensity=val;
+  document.querySelectorAll('.int-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const lbs={1:'거의 없음',3:'약함',5:'보통',7:'강함',9:'매우 강함',10:'압도적'};
+  document.getElementById('intLabel').textContent=lbs[val]||'';
+}
+
+window.selectEnergy = function(dir) {
+  form.energyDir=dir;
+  document.getElementById('en-up').classList.toggle('active',dir==='up');
+  document.getElementById('en-down').classList.toggle('active',dir==='down');
+}
+
+window.selectArea2 = function(btn, area) {
+  form.area=area;
+  document.querySelectorAll('.area-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+window.saveSignal = async function() {
+  const reaction=document.getElementById('reactionInput').value.trim();
+  if(!reaction) return;
+  const rec={
+    date: new Date().toISOString(),
+    sig: form.sig, area: form.area,
+    emotions: [...form.emotions], intensity: form.intensity, energyDir: form.energyDir,
+    situation: document.getElementById('situationInput').value.trim(),
+    reaction, behind: document.getElementById('behindInput').value.trim(),
+  };
+  const btn=document.getElementById('sigSubmitBtn');
+  btn.textContent='저장 중...'; btn.disabled=true;
+  try {
+    const docRef = await addDoc(collection(db,'signals'), rec);
+    signals.unshift({id:docRef.id,...rec});
+    updateCount();
+    document.getElementById('situationInput').value='';
+    document.getElementById('reactionInput').value='';
+    document.getElementById('behindInput').value='';
+    form.emotions=[];
+    document.querySelectorAll('.emo-btn').forEach(b=>b.classList.remove('active'));
+    btn.textContent='✓ 저장됨'; btn.classList.add('saved');
+    setTimeout(()=>{ btn.textContent='신호 저장'; btn.classList.remove('saved'); btn.disabled=false; },2000);
+  } catch(e){ btn.textContent='오류: '+e.message; btn.disabled=false; }
+}
+
+window.filterSig = function(f, btn) {
+  sigFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRecords();
+}
+
+function renderRecords() {
+  const el=document.getElementById('recordList');
+  const list=sigFilter==='all'?signals:signals.filter(r=>r.sig===sigFilter);
+  if(!list.length){ el.innerHTML='<div class="empty">아직 기록이 없어요</div>'; return; }
+  el.innerHTML=list.map(r=>{
+    const s=SIGS[r.sig];
+    const eTag=r.emotions&&r.emotions.length?`<span class="tag" style="background:rgba(123,159,212,0.1);color:#7B9FD4">${r.emotions.join(' ')}</span>`:'';
+    const enTag=r.sig==='energy'?`<span class="tag" style="background:rgba(252,211,77,0.1);color:#FCD34D">${r.energyDir==='up'?'🔺 상승':'🔻 하락'}</span>`:'';
+    return `<div class="rec-card" style="border-left-color:${s.color}">
+      <div class="rec-top">
+        <div class="rec-tags">
+          <span class="tag" style="background:${s.color}18;color:${s.color}">${s.emoji} ${s.label}</span>
+          <span class="tag" style="background:var(--border);color:var(--text3)">${r.area}</span>
+          ${eTag}${enTag}
+        </div>
+        <div class="rec-right">
+          <span class="rec-date">${formatDate(r.date)}</span>
+          <button class="del-btn" onclick="delSignal('${r.id}')">×</button>
+        </div>
+      </div>
+      ${r.situation?`<div class="rec-sub">상황: ${esc(r.situation)}</div>`:''}
+      <div class="rec-body">${esc(r.reaction)}</div>
+      ${r.behind?`<div class="rec-insight">이면: ${esc(r.behind)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+window.delSignal = async function(id) {
+  await deleteDoc(doc(db,'signals',id));
+  signals=signals.filter(r=>r.id!==id);
+  updateCount(); renderRecords();
+}
+
+function renderPattern() {
+  const el=document.getElementById('patternContent');
+  if(!signals.length){ el.innerHTML='<div class="empty">기록이 쌓이면 패턴이 보여요</div>'; return; }
+  const total=signals.length;
+  let html=`<div class="pattern-grid">
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">총 기록</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#E8845A">${signals.filter(r=>r.sig==='avoid').length}</div><div class="stat-label">회피 패턴</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#7B9FD4">${signals.filter(r=>r.sig==='emotion').length}</div><div class="stat-label">감정 신호</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#FCD34D">${signals.filter(r=>r.sig==='energy').length}</div><div class="stat-label">에너지 변화</div></div>
+  </div>`;
+  html+=`<div class="card"><div class="card-title">신호 유형 분포</div>`;
+  Object.entries(SIGS).forEach(([id,s])=>{
+    const cnt=signals.filter(r=>r.sig===id).length;
+    const pct=total?(cnt/total*100):0;
+    html+=`<div class="bar-row"><div class="bar-head"><span style="color:var(--text2)">${s.emoji} ${s.label}</span><span style="color:${s.color};font-weight:600">${cnt}회</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${s.color}"></div></div></div>`;
+  });
+  html+='</div>';
+  const emoCount={};
+  signals.filter(r=>r.emotions&&r.emotions.length).forEach(r=>r.emotions.forEach(e=>{ emoCount[e]=(emoCount[e]||0)+1; }));
+  const topEmos=Object.entries(emoCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  if(topEmos.length){
+    html+=`<div class="card"><div class="card-title">자주 올라오는 감정</div><div class="emo-grid2">`;
+    topEmos.forEach(([e,c])=>{ html+=`<span class="emo-stat">${e} <strong>${c}회</strong></span>`; });
+    html+='</div></div>';
+  }
+  el.innerHTML=html;
+}
+
+function renderPrinciples() {
+  const el=document.getElementById('principleList');
+  if(!principles.length){ el.innerHTML='<div class="empty">발견한 원칙이 없어요<br><span style="font-size:11px">기록이 쌓이면 원칙을 써봐</span></div>'; return; }
+  el.innerHTML=principles.map((p,i)=>`
+    <div class="principle-item">
+      <div class="principle-num">원칙 ${i+1}</div>
+      <div class="principle-text">${esc(p.text)}</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px">
+        <div class="principle-date">${formatDate(p.date)}</div>
+        <button onclick="delPrinciple('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--border2);font-size:14px">×</button>
+      </div>
+    </div>`).join('');
+}
+
+window.savePrinciple = async function() {
+  const text=document.getElementById('principleInput').value.trim();
+  if(!text) return;
+  const rec={date:new Date().toISOString(), text};
+  const docRef=await addDoc(collection(db,'principles'),rec);
+  principles.unshift({id:docRef.id,...rec});
+  document.getElementById('principleInput').value='';
+  renderPrinciples();
+}
+
+window.delPrinciple = async function(id) {
+  await deleteDoc(doc(db,'principles',id));
+  principles=principles.filter(p=>p.id!==id);
+  renderPrinciples();
+}
+
+window.openApiModal = function(){ document.getElementById('apiModal').classList.remove('hidden'); }
+window.closeApiModal = function(){ document.getElementById('apiModal').classList.add('hidden'); }
+window.saveApiKey = function(){
+  const key=document.getElementById('apiKeyInput').value.trim();
+  if(key){ localStorage.setItem('gemini-apikey',key); updateApiStatus(); closeApiModal(); }
+}
+window.clearApiKey = function(){ localStorage.removeItem('gemini-apikey'); updateApiStatus(); closeApiModal(); }
+
+function updateApiStatus(){
+  const key=localStorage.getItem('gemini-apikey');
+  const btn=document.getElementById('apiStatusBtn');
+  if(key){ btn.textContent='AI ON'; btn.className='api-status on'; }
+  else{ btn.textContent='AI OFF'; btn.className='api-status off'; }
+}
+
+window.runAnalysis = async function() {
+  const key=localStorage.getItem('gemini-apikey');
+  if(!key){ openApiModal(); return; }
+  if(!signals.length){ alert('먼저 신호를 기록해봐'); return; }
+  const btn=document.getElementById('aiBtn');
+  btn.disabled=true; btn.innerHTML='분석 중...';
+  const summary=signals.slice(0,30).map(r=>`[${SIGS[r.sig].label}/${r.area}] 반응:${r.reaction} 이면:${r.behind||'없음'} 감정:${(r.emotions||[]).join(',')||'없음'}`).join('\n');
+  const prompt=`다음은 한 사람이 기록한 무의식적 신호들이야.\n\n${summary}\n\n아래 구조로 한국어로 분석해줘:\n1. 반복되는 무의식적 패턴 (3가지)\n2. 숨겨진 두려움이나 욕구\n3. 투자/삶에서 주의해야 할 심리적 맹점\n4. 시스템 업데이트 제안\n\n따뜻하고 통찰 있게, 판단 없이.`;
+  try {
+    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+    });
+    const d=await res.json();
+    const text=d.candidates&&d.candidates[0]&&d.candidates[0].content.parts.map(p=>p.text||'').join('');
+    if(text){ document.getElementById('aiResult').style.display='block'; document.getElementById('aiResultText').textContent=text; }
+  } catch(e){ alert('오류: '+e.message); }
+  btn.disabled=false; btn.innerHTML='🔍 다시 분석';
+}
+
+updateApiStatus();
+loadData();
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:#F5F5F7;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh;}
-.header{padding:14px 20px 12px;background:#fff;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
-.header-left{display:flex;align-items:center;gap:10px;}
-.back-btn{font-size:20px;color:#9CA3AF;text-decoration:none;}
-.header-title{font-size:15px;font-weight:700;}
-.header-sub{font-size:11px;color:#9CA3AF;margin-top:1px;}
-.api-btn{font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;border:none;font-family:inherit;font-weight:600;}
-.api-btn.on{background:#D1FAE5;color:#059669;}
-.api-btn.off{background:#FEE2E2;color:#DC2626;}
-.content{padding:16px;max-width:680px;margin:0 auto;}
+:root{
+  --bg:#F5F5F7;--bg2:#FFFFFF;--bg3:#F0F0F5;
+  --border:#E0E0E8;--border2:#C8C8D8;
+  --text:#1A1A2E;--text2:#444460;--text3:#888899;
+  --accent:#A78BFA;--accent2:#7C3AED;
+  --warm:#E8845A;--cool:#7B9FD4;--green:#6EE7B7;--yellow:#FCD34D;
+}
+body{background:var(--bg);color:var(--text);font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh;}
 .hidden{display:none!important;}
-
-/* 총점 */
-.score-row{display:flex;gap:10px;margin-bottom:14px;}
-.score-main{flex:1.2;background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:16px;text-align:center;}
-.score-circle{width:80px;height:80px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;flex-direction:column;border:4px solid #D1D5DB;}
-.score-num{font-size:26px;font-weight:800;color:#D1D5DB;}
-.score-label{font-size:10px;color:#9CA3AF;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
-.score-verdict{font-size:14px;font-weight:700;margin-bottom:2px;}
-.score-desc{font-size:11px;color:#6B7280;line-height:1.5;}
-.score-time{font-size:10px;color:#D1D5DB;margin-top:6px;}
-.signal-col{display:flex;flex-direction:column;gap:6px;flex:0.8;}
-.sig-box{flex:1;border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;border:2px solid transparent;}
-.sig-box.green{background:#D1FAE5;border-color:#10B981;}
-.sig-box.yellow{background:#FEF3C7;border-color:#F59E0B;}
-.sig-box.red{background:#FEE2E2;border-color:#EF4444;}
-.sig-box.active{opacity:1;}
-.sig-box:not(.active){opacity:0.35;}
-.sig-emoji{font-size:18px;}
-.sig-info .sig-name{font-size:12px;font-weight:700;}
-.sig-info .sig-cond{font-size:10px;color:#6B7280;}
-
-/* 탭 */
-.tabs{display:flex;background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:4px;margin-bottom:14px;gap:2px;}
-.tab-btn{flex:1;padding:8px 4px;border:none;background:transparent;font-size:12px;font-weight:600;color:#9CA3AF;border-radius:8px;cursor:pointer;font-family:inherit;transition:all 0.15s;}
-.tab-btn.active{background:#1A1A2E;color:#fff;}
-.tab-content{display:none;}
-.tab-content.active{display:block;}
-
-/* 지표 카드 */
-.ind-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
-.ind-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;}
-.ind-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
-.ind-name{font-size:10px;color:#9CA3AF;font-weight:700;letter-spacing:1px;}
-.dot{width:8px;height:8px;border-radius:50%;background:#D1D5DB;flex-shrink:0;}
-.dot.green{background:#10B981;}
-.dot.yellow{background:#F59E0B;}
-.dot.red{background:#EF4444;}
-.ind-val{font-size:17px;font-weight:700;color:#1A1A2E;margin-bottom:2px;}
-.ind-sub{font-size:11px;color:#9CA3AF;}
-.ind-detail{font-size:11px;color:#6B7280;margin-top:5px;line-height:1.5;padding-top:5px;border-top:1px solid #F3F4F6;}
-.full-ind{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;margin-bottom:8px;}
-.full-ind-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.full-ind-name{font-size:12px;font-weight:700;color:#374151;}
-.full-ind-body{font-size:12px;color:#374151;line-height:1.8;}
-
-/* 섹터 카드 */
-.sector-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
-.sector-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;border-left:3px solid #D1D5DB;}
-.sector-card.green{border-left-color:#10B981;}
-.sector-card.yellow{border-left-color:#F59E0B;}
-.sector-card.red{border-left-color:#EF4444;}
-.sector-name{font-size:12px;font-weight:700;color:#374151;margin-bottom:4px;}
-.sector-signal{font-size:11px;font-weight:600;margin-bottom:4px;}
-.sector-signal.green{color:#059669;}
-.sector-signal.yellow{color:#D97706;}
-.sector-signal.red{color:#DC2626;}
-.sector-reason{font-size:11px;color:#9CA3AF;line-height:1.5;}
-.sector-stocks{font-size:10px;color:#6B7280;margin-top:4px;padding-top:4px;border-top:1px solid #F3F4F6;}
-
-/* 외국인 선물 */
-.futures-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:8px;}
-.futures-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
-.futures-title{font-size:13px;font-weight:700;color:#1A1A2E;}
-.futures-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;}
-.futures-badge.buy{background:#D1FAE5;color:#059669;}
-.futures-badge.sell{background:#FEE2E2;color:#DC2626;}
-.futures-badge.neutral{background:#F3F4F6;color:#6B7280;}
-.futures-meter{height:8px;background:#F3F4F6;border-radius:4px;margin:10px 0;overflow:hidden;}
-.futures-fill{height:100%;border-radius:4px;transition:width 0.5s;}
-.futures-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;}
-.futures-stat{text-align:center;padding:8px;background:#F9FAFB;border-radius:8px;}
-.futures-stat-val{font-size:14px;font-weight:700;}
-.futures-stat-label{font-size:10px;color:#9CA3AF;margin-top:2px;}
-
-/* AI 분석 */
-.ai-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:10px;border-left:4px solid #7C3AED;}
-.ai-title{font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:8px;}
-.ai-text{font-size:13px;color:#374151;line-height:1.9;white-space:pre-wrap;}
-
-/* 심리 체크 */
-.psych-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:10px;}
-.psych-title{font-size:12px;font-weight:700;color:#374151;margin-bottom:10px;}
-.psych-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F9FAFB;}
-.psych-row:last-of-type{border-bottom:none;}
-.psych-q{font-size:12px;color:#374151;}
-.psych-btns{display:flex;gap:6px;}
-.pb{padding:4px 14px;border-radius:20px;border:1.5px solid #E5E7EB;background:transparent;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;transition:all 0.15s;}
-.pb.yes.on{background:#D1FAE5;border-color:#10B981;color:#065F46;}
-.pb.no.on{background:#FEE2E2;border-color:#EF4444;color:#991B1B;}
-.psych-result{margin-top:10px;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.6;background:#F9FAFB;color:#6B7280;}
-
-/* 이벤트 */
-.event-list{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:10px;}
-.event-item{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #F9FAFB;}
-.event-item:last-child{border-bottom:none;}
-.event-time{font-size:11px;color:#9CA3AF;width:50px;flex-shrink:0;padding-top:1px;}
-.event-text{font-size:12px;color:#374151;line-height:1.5;}
-.event-impact{font-size:10px;padding:1px 7px;border-radius:10px;flex-shrink:0;font-weight:700;}
-.event-impact.high{background:#FEE2E2;color:#DC2626;}
-.event-impact.mid{background:#FEF3C7;color:#D97706;}
-.event-impact.low{background:#F3F4F6;color:#6B7280;}
-
-/* 버튼 */
-.run-btn{width:100%;padding:14px;background:#1A1A2E;border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;margin-bottom:12px;}
-.run-btn:disabled{opacity:0.5;cursor:not-allowed;}
-.loading-dots span{animation:blink 1.4s infinite;}
-.loading-dots span:nth-child(2){animation-delay:0.2s;}
-.loading-dots span:nth-child(3){animation-delay:0.4s;}
-@keyframes blink{0%,80%,100%{opacity:0;}40%{opacity:1;}}
-
-/* 모달 */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
-.modal{background:#fff;border-radius:14px;padding:22px;width:100%;max-width:380px;}
+.header{padding:18px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg);z-index:100;}
+.logo-sub{font-size:10px;letter-spacing:3px;color:var(--text3);text-transform:uppercase;margin-bottom:3px;}
+.logo-title{font-size:16px;font-weight:700;background:linear-gradient(90deg,var(--accent),var(--cool));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.api-status{font-size:11px;padding:3px 10px;border-radius:20px;cursor:pointer;border:none;font-family:inherit;}
+.api-status.on{background:rgba(110,231,183,0.1);color:var(--green);border:1px solid rgba(110,231,183,0.2);}
+.api-status.off{background:rgba(248,113,113,0.1);color:#F87171;border:1px solid rgba(248,113,113,0.2);}
+.rec-count{font-size:12px;color:var(--text3);}
+.nav{display:flex;padding:0 20px;border-bottom:1px solid var(--border);overflow-x:auto;}
+.nav::-webkit-scrollbar{display:none;}
+.nav-btn{background:none;border:none;cursor:pointer;padding:11px 12px;font-size:13px;color:var(--text3);border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap;transition:all 0.15s;}
+.nav-btn.active{color:var(--text);border-bottom-color:var(--accent);font-weight:600;}
+.content{padding:20px;max-width:640px;margin:0 auto;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px;}
+.card-title{font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sig-btn{padding:12px 8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;cursor:pointer;text-align:left;font-family:inherit;transition:all 0.15s;}
+.sig-btn .sig-ico{font-size:18px;margin-bottom:5px;display:block;}
+.sig-btn .sig-name{font-size:11px;color:var(--text3);font-weight:600;display:block;}
+.sig-btn .sig-desc{font-size:10px;color:var(--text3);opacity:0.7;display:block;margin-top:2px;}
+.emo-grid{display:flex;flex-wrap:wrap;gap:6px;}
+.emo-btn{padding:5px 11px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.emo-btn.active{border-color:var(--accent);background:rgba(167,139,250,0.12);color:var(--accent);}
+.area-btn{padding:5px 11px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.area-btn.active{border-color:var(--warm);background:rgba(232,132,90,0.12);color:var(--warm);}
+.intensity-row{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
+.int-btn{width:30px;height:30px;border-radius:6px;border:1.5px solid var(--border);background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;transition:all 0.15s;font-weight:600;}
+.int-btn.active{border-color:var(--accent);background:rgba(167,139,250,0.15);color:var(--accent);}
+.int-label{font-size:11px;color:var(--text3);margin-left:4px;}
+textarea{width:100%;background:#F0F0F5;border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:13px;padding:10px 12px;resize:none;outline:none;line-height:1.7;font-family:inherit;}
+textarea:focus{border-color:var(--border2);}
+textarea::placeholder{color:var(--text3);}
+.submit-btn{width:100%;padding:13px;background:var(--accent2);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;font-family:inherit;transition:all 0.2s;}
+.submit-btn.saved{background:#059669;}
+.energy-row{display:flex;gap:8px;}
+.energy-btn{flex:1;padding:10px 4px;border-radius:8px;border:1.5px solid var(--border);background:transparent;cursor:pointer;text-align:center;font-size:16px;transition:all 0.15s;font-family:inherit;color:var(--text3);}
+.energy-btn.active{border-color:var(--yellow);background:rgba(252,211,77,0.1);}
+.tip{padding:12px 14px;background:#F0F0F5;border-radius:8px;border-left:3px solid var(--border2);font-size:12px;color:var(--text3);line-height:1.7;margin-top:14px;}
+.filter-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.filter-btn{padding:5px 11px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.filter-btn.active{border-color:var(--accent);background:rgba(167,139,250,0.12);color:var(--accent);font-weight:600;}
+.rec-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid var(--accent);}
+.rec-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.rec-tags{display:flex;gap:6px;flex-wrap:wrap;}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;}
+.rec-right{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.rec-date{font-size:11px;color:var(--text3);}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--border2);font-size:16px;padding:0;}
+.rec-sub{font-size:12px;color:var(--text3);margin-bottom:5px;}
+.rec-body{font-size:13px;color:var(--text2);line-height:1.7;}
+.rec-insight{font-size:12px;color:var(--green);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
+.pattern-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;}
+.stat-num{font-size:26px;font-weight:700;color:var(--accent);}
+.stat-label{font-size:11px;color:var(--text3);margin-top:2px;}
+.bar-row{margin-bottom:10px;}
+.bar-head{display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px;}
+.bar-track{height:4px;background:var(--border);border-radius:2px;}
+.bar-fill{height:100%;border-radius:2px;transition:width 0.6s ease;}
+.emo-grid2{display:flex;flex-wrap:wrap;gap:6px;}
+.emo-stat{padding:5px 12px;border-radius:20px;background:rgba(123,159,212,0.1);color:#7B9FD4;font-size:12px;}
+.principle-item{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;}
+.principle-num{font-size:11px;color:var(--accent);font-weight:700;margin-bottom:5px;letter-spacing:1px;}
+.principle-text{font-size:13px;color:var(--text2);line-height:1.7;}
+.principle-date{font-size:11px;color:var(--text3);}
+.ai-box{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px;}
+.ai-btn{width:100%;padding:13px;background:linear-gradient(135deg,#4F46E5,#7C3AED);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.ai-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.ai-result{font-size:13px;color:var(--text2);line-height:1.9;white-space:pre-wrap;}
+.empty{text-align:center;color:var(--text3);padding:50px 0;font-size:13px;}
+.loading-msg{text-align:center;color:var(--text3);padding:20px;font-size:13px;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px;width:100%;max-width:380px;}
 .modal-title{font-size:15px;font-weight:700;margin-bottom:6px;}
-.modal-sub{font-size:12px;color:#6B7280;margin-bottom:14px;line-height:1.6;}
-.modal input{width:100%;border:1px solid #E5E7EB;border-radius:8px;color:#1A1A2E;font-size:13px;padding:10px 12px;outline:none;font-family:inherit;margin-bottom:12px;}
-.modal input:focus{border-color:#7C3AED;}
+.modal-sub{font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.6;}
+.modal input{width:100%;background:#F0F0F5;border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;padding:10px 12px;outline:none;font-family:inherit;margin-bottom:12px;}
 .modal-btns{display:flex;gap:8px;}
 .modal-btn{flex:1;padding:10px;border-radius:8px;border:none;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600;}
-.modal-btn.primary{background:#1A1A2E;color:#fff;}
-.modal-btn.secondary{background:#F3F4F6;color:#6B7280;}
+.modal-btn.primary{background:var(--accent2);color:#fff;}
+.modal-btn.secondary{background:var(--border);color:var(--text3);}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="header-left">
-    <a href="./index.html" class="back-btn">‹</a>
-    <div>
-      <div class="header-title">📊 장 전 시장 조건 체크</div>
-      <div class="header-sub" id="headerDate">한국 주식 매매 가능 여부 판단</div>
-    </div>
+  <div>
+    <div class="logo-sub">My Inner System</div>
+    <div class="logo-title">나를 알아가는 시스템</div>
   </div>
-  <button class="api-btn off" id="apiBtn" onclick="openModal()">AI 설정</button>
+  <div class="header-right">
+    <span class="rec-count" id="recCount">0개</span>
+    <button class="api-status off" id="apiStatusBtn" onclick="openApiModal()">AI OFF</button>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="switchView('signal')">신호 포착</button>
+  <button class="nav-btn" onclick="switchView('records')">기록 보기</button>
+  <button class="nav-btn" onclick="switchView('pattern')">패턴 발견</button>
+  <button class="nav-btn" onclick="switchView('principles')">내 원칙</button>
+  <button class="nav-btn" onclick="switchView('ai')">AI 분석</button>
 </div>
 
 <div class="content">
+  <div id="loadingMsg" class="loading-msg">데이터 로딩 중...</div>
 
-  <!-- 총점 + 신호등 -->
-  <div class="score-row">
-    <div class="score-main">
-      <div class="score-label">종합 점수</div>
-      <div class="score-circle" id="scoreCircle">
-        <div class="score-num" id="scoreNum">--</div>
-      </div>
-      <div class="score-verdict" id="scoreVerdict">분석 전</div>
-      <div class="score-desc" id="scoreDesc">아래 버튼을 눌러 분석 시작</div>
-      <div class="score-time" id="scoreTime"></div>
-    </div>
-    <div class="signal-col">
-      <div class="sig-box green" id="sigGo">
-        <span class="sig-emoji">🟢</span>
-        <div class="sig-info">
-          <div class="sig-name">매매 가능</div>
-          <div class="sig-cond">70점 이상</div>
-        </div>
-      </div>
-      <div class="sig-box yellow" id="sigCaution">
-        <span class="sig-emoji">🟡</span>
-        <div class="sig-info">
-          <div class="sig-name">주의 매매</div>
-          <div class="sig-cond">40~69점</div>
-        </div>
-      </div>
-      <div class="sig-box red" id="sigStop">
-        <span class="sig-emoji">🔴</span>
-        <div class="sig-info">
-          <div class="sig-name">관망</div>
-          <div class="sig-cond">39점 이하</div>
-        </div>
+  <!-- SIGNAL -->
+  <div id="view-signal">
+    <div class="card">
+      <div class="card-title">어떤 신호인가</div>
+      <div class="sig-grid">
+        <button class="sig-btn" id="sig-instant" onclick="selectSig('instant')" style="border-color:var(--accent);background:rgba(167,139,250,0.08)">
+          <span class="sig-ico">⚡</span><span class="sig-name" style="color:var(--accent)">즉각 반응</span><span class="sig-desc">생각 전 첫 반응</span>
+        </button>
+        <button class="sig-btn" id="sig-emotion" onclick="selectSig('emotion')">
+          <span class="sig-ico">🌊</span><span class="sig-name">감정 신호</span><span class="sig-desc">강한 감정이 올라왔을 때</span>
+        </button>
+        <button class="sig-btn" id="sig-avoid" onclick="selectSig('avoid')">
+          <span class="sig-ico">↪</span><span class="sig-name">회피 패턴</span><span class="sig-desc">자꾸 안 하게 되는 것</span>
+        </button>
+        <button class="sig-btn" id="sig-energy" onclick="selectSig('energy')">
+          <span class="sig-ico">⚡️</span><span class="sig-name">에너지 변화</span><span class="sig-desc">올라가거나 내려간 순간</span>
+        </button>
       </div>
     </div>
+
+    <div class="card hidden" id="emotionCard">
+      <div class="card-title">어떤 감정이었나</div>
+      <div class="emo-grid">
+        <button class="emo-btn" onclick="toggleEmo(this,'불안')">불안</button>
+        <button class="emo-btn" onclick="toggleEmo(this,'두려움')">두려움</button>
+        <button class="emo-btn" onclick="toggleEmo(this,'분노')">분노</button>
+        <button class="emo-btn" onclick="toggleEmo(this,'슬픔')">슬픔</button>
+        <button class="emo-btn" onclick="toggleEmo(this,'무기력')">무기력</button>
+        <button class="emo-btn" onclick="toggleEmo(this,'부끄러움')">부끄러움</button>
+        <button class="emo-btn" onclick="toggleEmo(this,'억울함')">억울함</button>
+        <button class="emo-btn" onclick="toggleEmo(this,'기쁨')">기쁨</button>
+        <button class="emo-btn" onclick="toggleEmo(this,'설렘')">설렘</button>
+        <button class="emo-btn" onclick="toggleEmo(this,'외로움')">외로움</button>
+        <button class="emo-btn" onclick="toggleEmo(this,'혼란')">혼란</button>
+        <button class="emo-btn" onclick="toggleEmo(this,'안도')">안도</button>
+      </div>
+      <div style="margin-top:14px">
+        <div class="card-title">강도</div>
+        <div class="intensity-row">
+          <button class="int-btn" onclick="selectInt(this,1)">1</button>
+          <button class="int-btn" onclick="selectInt(this,2)">2</button>
+          <button class="int-btn" onclick="selectInt(this,3)">3</button>
+          <button class="int-btn" onclick="selectInt(this,4)">4</button>
+          <button class="int-btn active" onclick="selectInt(this,5)">5</button>
+          <button class="int-btn" onclick="selectInt(this,6)">6</button>
+          <button class="int-btn" onclick="selectInt(this,7)">7</button>
+          <button class="int-btn" onclick="selectInt(this,8)">8</button>
+          <button class="int-btn" onclick="selectInt(this,9)">9</button>
+          <button class="int-btn" onclick="selectInt(this,10)">10</button>
+          <span class="int-label" id="intLabel">보통</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card hidden" id="energyCard">
+      <div class="card-title">에너지 방향</div>
+      <div class="energy-row">
+        <button class="energy-btn" id="en-up" onclick="selectEnergy('up')">🔺<br><span style="font-size:11px">올라감</span></button>
+        <button class="energy-btn" id="en-down" onclick="selectEnergy('down')">🔻<br><span style="font-size:11px">내려감</span></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" id="situationLabel">어떤 상황이었나</div>
+      <textarea id="situationInput" rows="2" placeholder="상황을 짧게 적어봐"></textarea>
+    </div>
+    <div class="card">
+      <div class="card-title" id="reactionLabel">첫 반응 / 내용</div>
+      <textarea id="reactionInput" rows="3" placeholder="즉각적으로 느끼거나 한 것..."></textarea>
+    </div>
+    <div class="card">
+      <div class="card-title">이면에 뭐가 있을까 (선택)</div>
+      <textarea id="behindInput" rows="2" placeholder="왜 이런 반응이 나왔을까?"></textarea>
+    </div>
+    <div class="card">
+      <div class="card-title">영역</div>
+      <div class="emo-grid">
+        <button class="area-btn active" onclick="selectArea2(this,'투자')">투자</button>
+        <button class="area-btn" onclick="selectArea2(this,'업무')">업무</button>
+        <button class="area-btn" onclick="selectArea2(this,'관계')">관계</button>
+        <button class="area-btn" onclick="selectArea2(this,'내면')">내면</button>
+        <button class="area-btn" onclick="selectArea2(this,'기타')">기타</button>
+      </div>
+    </div>
+    <button class="submit-btn" id="sigSubmitBtn" onclick="saveSignal()">신호 저장</button>
+    <div class="tip">💡 무의식은 직접 볼 수 없어. 즉각 반응, 반복 감정, 회피하는 것 — 이게 무의식의 흔적이야.</div>
   </div>
 
-  <!-- 분석 버튼 -->
-  <button class="run-btn" id="runBtn" onclick="runAnalysis()">
-    🔍 지금 시장 조건 분석 (AI 웹 검색)
-  </button>
-
-  <!-- 탭 -->
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('macro')">거시 지표</button>
-    <button class="tab-btn" onclick="switchTab('futures')">외국인 선물</button>
-    <button class="tab-btn" onclick="switchTab('sector')">섹터 신호</button>
-    <button class="tab-btn" onclick="switchTab('psych')">심리 체크</button>
+  <!-- RECORDS -->
+  <div id="view-records" class="hidden">
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="filterSig('all',this)">전체</button>
+      <button class="filter-btn" onclick="filterSig('instant',this)">⚡ 즉각</button>
+      <button class="filter-btn" onclick="filterSig('emotion',this)">🌊 감정</button>
+      <button class="filter-btn" onclick="filterSig('avoid',this)">↪ 회피</button>
+      <button class="filter-btn" onclick="filterSig('energy',this)">⚡️ 에너지</button>
+    </div>
+    <div id="recordList"></div>
   </div>
 
-  <!-- 거시 지표 탭 -->
-  <div class="tab-content active" id="tab-macro">
-    <div class="ind-grid">
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">S&P500</span><div class="dot" id="d-sp"></div></div>
-        <div class="ind-val" id="v-sp">--</div>
-        <div class="ind-sub" id="s-sp">전일 종가</div>
-        <div class="ind-detail" id="dt-sp">분석 전</div>
-      </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">나스닥</span><div class="dot" id="d-nq"></div></div>
-        <div class="ind-val" id="v-nq">--</div>
-        <div class="ind-sub" id="s-nq">전일 종가</div>
-        <div class="ind-detail" id="dt-nq">분석 전</div>
-      </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">필라델피아 반도체 SOX</span><div class="dot" id="d-sox"></div></div>
-        <div class="ind-val" id="v-sox">--</div>
-        <div class="ind-sub" id="s-sox">반도체 업황</div>
-        <div class="ind-detail" id="dt-sox">분석 전</div>
-      </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">VIX 공포지수</span><div class="dot" id="d-vix"></div></div>
-        <div class="ind-val" id="v-vix">--</div>
-        <div class="ind-sub" id="s-vix">20↓안정 30↑위험</div>
-        <div class="ind-detail" id="dt-vix">분석 전</div>
-      </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">USD/KRW 환율</span><div class="dot" id="d-fx"></div></div>
-        <div class="ind-val" id="v-fx">--</div>
-        <div class="ind-sub" id="s-fx">1,300원 기준</div>
-        <div class="ind-detail" id="dt-fx">분석 전</div>
-      </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">달러인덱스 DXY</span><div class="dot" id="d-dxy"></div></div>
-        <div class="ind-val" id="v-dxy">--</div>
-        <div class="ind-sub" id="s-dxy">강달러 여부</div>
-        <div class="ind-detail" id="dt-dxy">분석 전</div>
-      </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">미국 10년물 금리</span><div class="dot" id="d-bond"></div></div>
-        <div class="ind-val" id="v-bond">--</div>
-        <div class="ind-sub" id="s-bond">성장주 부담</div>
-        <div class="ind-detail" id="dt-bond">분석 전</div>
-      </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">항셍 / 상하이</span><div class="dot" id="d-cn"></div></div>
-        <div class="ind-val" id="v-cn">--</div>
-        <div class="ind-sub" id="s-cn">중국 시장</div>
-        <div class="ind-detail" id="dt-cn">분석 전</div>
-      </div>
-    </div>
-
-    <div class="full-ind">
-      <div class="full-ind-header">
-        <span class="full-ind-name">📅 오늘 주요 이벤트</span>
-        <div class="dot" id="d-event"></div>
-      </div>
-      <div class="full-ind-body" id="dt-event">분석 전 — FOMC, CPI, 실적 발표 등</div>
-    </div>
-
-    <div class="ai-card hidden" id="aiCard">
-      <div class="ai-title">🤖 AI 종합 판단</div>
-      <div class="ai-text" id="aiText"></div>
-    </div>
+  <!-- PATTERN -->
+  <div id="view-pattern" class="hidden">
+    <div id="patternContent"></div>
   </div>
 
-  <!-- 외국인 선물 탭 -->
-  <div class="tab-content" id="tab-futures">
-    <div class="futures-card">
-      <div class="futures-header">
-        <span class="futures-title">🏦 외국인 코스피200 선물 포지션</span>
-        <span class="futures-badge neutral" id="futBadge">분석 전</span>
-      </div>
-
-      <div class="futures-meter">
-        <div class="futures-fill" id="futMeter" style="width:50%;background:#D1D5DB"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:#9CA3AF;margin-top:2px;">
-        <span>강한 매도</span><span>중립</span><span>강한 매수</span>
-      </div>
-
-      <div class="futures-info">
-        <div class="futures-stat">
-          <div class="futures-stat-val" id="futNet">--</div>
-          <div class="futures-stat-label">순포지션</div>
-        </div>
-        <div class="futures-stat">
-          <div class="futures-stat-val" id="futChange">--</div>
-          <div class="futures-stat-label">전일 대비</div>
-        </div>
-        <div class="futures-stat">
-          <div class="futures-stat-val" id="futTrend">--</div>
-          <div class="futures-stat-label">3일 추세</div>
-        </div>
+  <!-- PRINCIPLES -->
+  <div id="view-principles" class="hidden">
+    <div class="card">
+      <div class="card-title">새 원칙 추가</div>
+      <textarea id="principleInput" rows="3" placeholder="기록과 반성을 통해 발견한 나만의 원칙..."></textarea>
+      <div style="margin-top:10px">
+        <button class="submit-btn" onclick="savePrinciple()" style="padding:10px">원칙 저장</button>
       </div>
     </div>
-
-    <div class="full-ind">
-      <div class="full-ind-header">
-        <span class="full-ind-name">외국인 현물 수급</span>
-        <div class="dot" id="d-cash"></div>
-      </div>
-      <div class="full-ind-body" id="dt-cash">분석 전</div>
-    </div>
-
-    <div class="full-ind">
-      <div class="full-ind-header">
-        <span class="full-ind-name">기관 수급 & 프로그램 매매</span>
-        <div class="dot" id="d-inst"></div>
-      </div>
-      <div class="full-ind-body" id="dt-inst">분석 전</div>
-    </div>
-
-    <div class="full-ind">
-      <div class="full-ind-header">
-        <span class="full-ind-name">💡 수급 종합 해석</span>
-        <div class="dot" id="d-flow"></div>
-      </div>
-      <div class="full-ind-body" id="dt-flow">분석 전</div>
-    </div>
+    <div id="principleList"></div>
   </div>
 
-  <!-- 섹터 신호 탭 -->
-  <div class="tab-content" id="tab-sector">
-    <div style="font-size:11px;color:#9CA3AF;margin-bottom:10px;">오늘 어떤 섹터에서 기회를 찾을지 판단해줘</div>
-    <div class="sector-grid" id="sectorGrid">
-      <!-- JS로 채워짐 -->
-      <div class="sector-card"><div class="sector-name">반도체</div><div class="sector-reason">분석 전</div></div>
-      <div class="sector-card"><div class="sector-name">2차전지</div><div class="sector-reason">분석 전</div></div>
-      <div class="sector-card"><div class="sector-name">금융/은행</div><div class="sector-reason">분석 전</div></div>
-      <div class="sector-card"><div class="sector-name">바이오</div><div class="sector-reason">분석 전</div></div>
-      <div class="sector-card"><div class="sector-name">자동차</div><div class="sector-reason">분석 전</div></div>
-      <div class="sector-card"><div class="sector-name">에너지/화학</div><div class="sector-reason">분석 전</div></div>
-    </div>
-    <div class="full-ind">
-      <div class="full-ind-header">
-        <span class="full-ind-name">🎯 오늘 집중 섹터 추천</span>
+  <!-- AI -->
+  <div id="view-ai" class="hidden">
+    <div class="ai-box">
+      <div class="card-title">AI 무의식 패턴 분석</div>
+      <p style="font-size:13px;color:var(--text3);line-height:1.8;margin-bottom:16px">쌓인 신호 기록을 분석해서 반복 패턴, 무의식적 성향, 숨겨진 두려움이나 욕구를 읽어줄게.</p>
+      <div id="aiResult" style="display:none;margin-bottom:14px" class="ai-box">
+        <div class="ai-result" id="aiResultText"></div>
       </div>
-      <div class="full-ind-body" id="sectorRec">분석 후 표시</div>
+      <button class="ai-btn" id="aiBtn" onclick="runAnalysis()">🔍 무의식 패턴 분석 시작</button>
+      <div style="margin-top:8px;text-align:center;font-size:11px;color:var(--text3)">상단 AI OFF 버튼에서 API 키 입력</div>
     </div>
   </div>
-
-  <!-- 심리 체크 탭 -->
-  <div class="tab-content" id="tab-psych">
-    <div class="psych-card">
-      <div class="psych-title">🧠 매매 전 내 심리 체크</div>
-      <div class="psych-row">
-        <span class="psych-q">어제 수면이 충분했나?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',0)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',0)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-row">
-        <span class="psych-q">손실 만회 심리가 있나?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',1)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',1)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-row">
-        <span class="psych-q">FOMO (놓칠까봐 두려움)?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',2)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',2)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-row">
-        <span class="psych-q">감정적으로 안정적인가?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',3)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',3)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-row">
-        <span class="psych-q">진입 근거가 명확한가?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',4)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',4)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-row">
-        <span class="psych-q">손절 기준이 미리 정해졌나?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',5)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',5)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-result" id="psychResult">체크 후 심리 판단 결과가 여기에 표시돼</div>
-    </div>
-  </div>
-
 </div>
 
-<!-- 모달 -->
+<!-- API MODAL -->
 <div class="modal-overlay hidden" id="apiModal">
   <div class="modal">
-    <div class="modal-title">Claude API 키 설정</div>
-    <div class="modal-sub">실시간 웹 검색으로 시장 데이터를 가져오려면 Anthropic API 키가 필요해. 이 기기에만 저장됨.</div>
-    <input type="password" id="apiInput" placeholder="sk-ant-..." />
+    <div class="modal-title">Claude API 키</div>
+    <div class="modal-sub">AI 분석 기능을 사용하려면 Anthropic API 키가 필요해. 키는 이 기기에만 저장돼.</div>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-..." />
     <div class="modal-btns">
-      <button class="modal-btn secondary" onclick="closeModal()">취소</button>
-      <button class="modal-btn primary" onclick="saveKey()">저장</button>
+      <button class="modal-btn secondary" onclick="closeApiModal()">취소</button>
+      <button class="modal-btn primary" onclick="saveApiKey()">저장</button>
     </div>
     <div style="margin-top:10px;text-align:center">
-      <button onclick="clearKey()" style="background:none;border:none;cursor:pointer;font-size:11px;color:#EF4444">키 삭제</button>
+      <button onclick="clearApiKey()" style="background:none;border:none;cursor:pointer;font-size:11px;color:#F87171">키 삭제</button>
     </div>
   </div>
 </div>
 
-<script>
-const KEY = 'market-apikey-v2';
-
-// 모달
-function openModal(){ document.getElementById('apiModal').classList.remove('hidden'); }
-function closeModal(){ document.getElementById('apiModal').classList.add('hidden'); }
-function saveKey(){ const k=document.getElementById('apiInput').value.trim(); if(k){localStorage.setItem(KEY,k);updateBtn();closeModal();} }
-function clearKey(){ localStorage.removeItem(KEY);updateBtn();closeModal(); }
-function updateBtn(){ const k=localStorage.getItem(KEY); const b=document.getElementById('apiBtn'); b.textContent=k?'AI ON':'AI 설정'; b.className=k?'api-btn on':'api-btn off'; }
-
-// 탭
-function switchTab(t){
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['macro','futures','sector','psych'][i]===t));
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-  document.getElementById('tab-'+t).classList.add('active');
-}
-
-// 심리 체크
-const pState = Array(6).fill(null);
-function pCheck(btn,type,idx){
-  const row=btn.closest('.psych-row');
-  row.querySelectorAll('.pb').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-  pState[idx]=type;
-  updatePsych();
-}
-function updatePsych(){
-  const filled=pState.filter(v=>v!==null).length;
-  if(filled<3){document.getElementById('psychResult').style.cssText='';document.getElementById('psychResult').textContent='체크 후 심리 판단 결과가 여기에 표시돼';return;}
-  // Q0=수면yes=good, Q1=손실yes=bad, Q2=FOMO yes=bad, Q3=안정yes=good, Q4=근거yes=good, Q5=손절yes=good
-  let bad=0,good=0;
-  if(pState[0]==='yes')good++; if(pState[1]==='yes')bad++; if(pState[2]==='yes')bad++;
-  if(pState[3]==='yes')good++; if(pState[4]==='yes')good++; if(pState[5]==='yes')good++;
-  const el=document.getElementById('psychResult');
-  if(bad>=2){el.style.cssText='background:#FEE2E2;color:#991B1B';el.textContent='⚠️ 심리 불안정 — 시장 조건과 무관하게 오늘 매매 자제 권장';}
-  else if(good>=4){el.style.cssText='background:#D1FAE5;color:#065F46';el.textContent='✅ 심리 안정 — 시장 조건이 허락하면 매매 가능';}
-  else{el.style.cssText='background:#FEF3C7;color:#78350F';el.textContent='🟡 보통 — 작은 포지션으로 시작하거나 관망 고려';}
-}
-
-// 점수 업데이트
-function setScore(score){
-  const num=document.getElementById('scoreNum');
-  const circle=document.getElementById('scoreCircle');
-  const verdict=document.getElementById('scoreVerdict');
-  const desc=document.getElementById('scoreDesc');
-  num.textContent=score;
-  ['sigGo','sigCaution','sigStop'].forEach(id=>document.getElementById(id).classList.remove('active'));
-  if(score>=70){
-    circle.style.cssText='border-color:#10B981;'; num.style.color='#059669';
-    verdict.textContent='매매 가능 ✅'; verdict.style.color='#059669';
-    desc.textContent='조건 충분. 진입 근거 확인 후 매매 가능.';
-    document.getElementById('sigGo').classList.add('active');
-  }else if(score>=40){
-    circle.style.cssText='border-color:#F59E0B;'; num.style.color='#D97706';
-    verdict.textContent='주의 매매 🟡'; verdict.style.color='#D97706';
-    desc.textContent='조건 혼재. 소규모 or 관망 권장.';
-    document.getElementById('sigCaution').classList.add('active');
-  }else{
-    circle.style.cssText='border-color:#EF4444;'; num.style.color='#DC2626';
-    verdict.textContent='관망 권장 🔴'; verdict.style.color='#DC2626';
-    desc.textContent='불리한 조건. 오늘은 쉬는 게 전략.';
-    document.getElementById('sigStop').classList.add('active');
-  }
-  document.getElementById('scoreTime').textContent='분석: '+new Date().toLocaleTimeString('ko-KR');
-}
-
-function setDot(id,level){ document.getElementById(id).className='dot '+level; }
-
-function renderSectors(sectors){
-  const grid=document.getElementById('sectorGrid');
-  grid.innerHTML=sectors.map(s=>`
-    <div class="sector-card ${s.signal}">
-      <div class="sector-name">${s.name}</div>
-      <div class="sector-signal ${s.signal}">${s.signal==='green'?'▲ 긍정':s.signal==='yellow'?'→ 중립':'▼ 부정'}</div>
-      <div class="sector-reason">${s.reason}</div>
-      <div class="sector-stocks">관련주: ${s.stocks}</div>
-    </div>`).join('');
-}
-
-function setFutures(data){
-  const badge=document.getElementById('futBadge');
-  const meter=document.getElementById('futMeter');
-  badge.textContent=data.position;
-  if(data.direction==='buy'){
-    badge.className='futures-badge buy';
-    meter.style.cssText='width:'+(50+data.strength)+'%;background:linear-gradient(90deg,#10B981,#059669)';
-  }else if(data.direction==='sell'){
-    badge.className='futures-badge sell';
-    meter.style.cssText='width:'+(50-data.strength)+'%;background:linear-gradient(90deg,#EF4444,#DC2626)';
-  }else{
-    badge.className='futures-badge neutral';
-    meter.style.cssText='width:50%;background:#9CA3AF';
-  }
-  document.getElementById('futNet').textContent=data.net;
-  document.getElementById('futChange').textContent=data.change;
-  document.getElementById('futTrend').textContent=data.trend;
-}
-
-// 메인 분석
-async function runAnalysis(){
-  const key=localStorage.getItem(KEY);
-  if(!key){openModal();return;}
-  const btn=document.getElementById('runBtn');
-  btn.disabled=true;
-  btn.innerHTML='<span class="loading-dots"><span>●</span><span>●</span><span>●</span></span> AI 웹 검색 중... (30~60초)';
-
-  const now=new Date();
-  const dateStr=`${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일`;
-
-  const prompt=`오늘(${dateStr}) 한국 주식시장 장 전 시장 조건을 웹 검색으로 최신 데이터를 찾아 분석해줘.
-
-반드시 아래 JSON만 응답해. 다른 텍스트 없이:
-
-{
-  "score": 72,
-  "macro": {
-    "sp500": {"val":"5,234","sub":"+1.2%","signal":"green","detail":"기술주 주도 상승 마감"},
-    "nasdaq": {"val":"16,420","sub":"+1.8%","signal":"green","detail":"AI 관련주 강세"},
-    "sox": {"val":"4,812","sub":"+2.1%","signal":"green","detail":"반도체 업황 긍정"},
-    "vix": {"val":"18.2","sub":"안정권","signal":"green","detail":"20 이하 안정 구간"},
-    "fx": {"val":"1,385원","sub":"전일比 +3원","signal":"yellow","detail":"원화 약세 지속"},
-    "dxy": {"val":"104.2","sub":"강달러","signal":"yellow","detail":"달러 강세로 신흥국 부담"},
-    "bond": {"val":"4.32%","sub":"보합","signal":"yellow","detail":"금리 고점 인식 확산"},
-    "china": {"val":"항셍 +0.3%","sub":"상하이 +0.1%","signal":"yellow","detail":"경기부양 기대감"},
-    "event": {"signal":"yellow","detail":"오늘 밤 FOMC 의사록 공개 예정 — 금리 방향 힌트 주목"}
-  },
-  "futures": {
-    "position":"순매수",
-    "direction":"buy",
-    "strength":15,
-    "net":"+3,241계약",
-    "change":"전일比 +842계약",
-    "trend":"3일 연속 순매수",
-    "cash_signal":"green",
-    "cash_detail":"외국인 현물 최근 3일 3,200억 순매수. 반도체 집중",
-    "inst_signal":"yellow",
-    "inst_detail":"기관 차익매물 출회. 프로그램 매도 우세",
-    "flow_signal":"green",
-    "flow_detail":"외국인 선물+현물 동반 매수는 강한 상승 신호. 기관 매도 상쇄 가능"
-  },
-  "sectors": [
-    {"name":"반도체","signal":"green","reason":"SOX +2.1%, 엔비디아 강세. 외국인 현물 집중 매수","stocks":"삼성전자·SK하이닉스·한미반도체"},
-    {"name":"2차전지","signal":"yellow","reason":"리튬 가격 하락 지속. 수급 관망","stocks":"LG에너지솔루션·삼성SDI·POSCO홀딩스"},
-    {"name":"금융/은행","signal":"yellow","reason":"금리 보합, 배당 매력 유지. 방어적 접근","stocks":"KB금융·신한지주·하나금융"},
-    {"name":"바이오","signal":"red","reason":"외국인 수급 이탈. 임상 결과 대기","stocks":"삼성바이오·셀트리온·유한양행"},
-    {"name":"자동차","signal":"yellow","reason":"환율 수혜 but 중국 수요 부진","stocks":"현대차·기아·현대모비스"},
-    {"name":"에너지/화학","signal":"red","reason":"유가 하락 + 수요 부진. 단기 비선호","stocks":"S-Oil·LG화학·롯데케미칼"}
-  ],
-  "sector_rec": "오늘은 반도체 섹터 집중. SOX 강세 + 외국인 현물 매수가 겹치는 구간. 삼성전자·SK하이닉스 눌림목 진입 고려. 나머지 섹터는 관망.",
-  "ai_comment": "전반적으로 매매 가능 조건. 미국 상승 + 외국인 선물 순매수가 핵심 긍정 신호. 다만 환율 부담(1,380원대)과 오늘 밤 FOMC 의사록이 변수. 반도체 위주 단기 접근, 포지션 크기는 평소의 70% 권장."
-}
-
-모든 데이터는 실제 웹 검색으로 오늘 기준 최신값을 찾아서 채워줘. JSON만 응답.`;
-
-  try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:2000,
-        tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:prompt}]
-      })
-    });
-    const data=await res.json();
-    let text='';
-    if(data.content) data.content.forEach(b=>{ if(b.type==='text') text+=b.text; });
-    const match=text.match(/\{[\s\S]*\}/);
-    if(!match) throw new Error('파싱 실패');
-    const r=JSON.parse(match[0]);
-
-    // 점수
-    setScore(r.score);
-
-    // 거시
-    const m=r.macro;
-    const fields=[
-      ['sp','sp500'],['nq','nasdaq'],['sox','sox'],['vix','vix'],
-      ['fx','fx'],['dxy','dxy'],['bond','bond'],['cn','china']
-    ];
-    fields.forEach(([id,key])=>{
-      if(m[key]){
-        document.getElementById('v-'+id).textContent=m[key].val||'--';
-        document.getElementById('s-'+id).textContent=m[key].sub||'';
-        document.getElementById('dt-'+id).textContent=m[key].detail||'';
-        setDot('d-'+id, m[key].signal||'gray');
-      }
-    });
-    if(m.event){ document.getElementById('dt-event').textContent=m.event.detail; setDot('d-event',m.event.signal); }
-
-    // 외국인 선물
-    setFutures(r.futures);
-    document.getElementById('dt-cash').textContent=r.futures.cash_detail||''; setDot('d-cash',r.futures.cash_signal||'gray');
-    document.getElementById('dt-inst').textContent=r.futures.inst_detail||''; setDot('d-inst',r.futures.inst_signal||'gray');
-    document.getElementById('dt-flow').textContent=r.futures.flow_detail||''; setDot('d-flow',r.futures.flow_signal||'gray');
-
-    // 섹터
-    renderSectors(r.sectors);
-    document.getElementById('sectorRec').textContent=r.sector_rec||'';
-
-    // AI 코멘트
-    document.getElementById('aiCard').classList.remove('hidden');
-    document.getElementById('aiText').textContent=r.ai_comment||'';
-
-  }catch(e){
-    document.getElementById('scoreVerdict').textContent='오류';
-    document.getElementById('scoreDesc').textContent=e.message;
-  }
-
-  btn.disabled=false;
-  btn.textContent='🔄 다시 분석하기';
-}
-
-// 날짜
-const now=new Date();
-const days=['일','월','화','수','목','금','토'];
-document.getElementById('headerDate').textContent=
-  `${now.getMonth()+1}월 ${now.getDate()}일(${days[now.getDay()]}) · 장 전 체크`;
-
-updateBtn();
-</script>
 </body>
 </html>
