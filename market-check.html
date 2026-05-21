@@ -603,15 +603,15 @@ async function runAnalysis(){
   "ai_comment": "전반적으로 매매 가능 조건. 미국 상승 + 외국인 선물 순매수가 핵심 긍정 신호. 다만 환율 부담(1,380원대)과 오늘 밤 FOMC 의사록이 변수. 반도체 위주 단기 접근, 포지션 크기는 평소의 70% 권장."
 }
 
-모든 데이터는 실제 웹 검색으로 오늘 기준 최신값을 찾아서 채워줘. JSON만 응답.`;
+실제 최신 시장 데이터 기준으로 최대한 현실적인 값을 추정해서 채워줘. 확실하지 않은 값은 '확인필요'라고 써도 됨. JSON만 응답. 마크다운 코드블록 없이 순수 JSON만.`;
 
   try{
-    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key,{
+    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+key,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         contents:[{parts:[{text:prompt}]}],
-        tools:[{google_search:{}}]
+        generationConfig:{temperature:0.3,maxOutputTokens:2000}
       })
     });
     const data=await res.json();
