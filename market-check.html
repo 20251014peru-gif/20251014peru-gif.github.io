@@ -428,6 +428,14 @@ body{background:#F5F5F7;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-s
 </div>
 
 <script>
+
+var FB_KEY = 'AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
+var FB_BASE = 'https://firestore.googleapis.com/v1/projects/my-system-25497/databases/(default)/documents';
+function toFS(obj){var fields={};Object.keys(obj).forEach(function(k){var v=obj[k];if(v===null||v===undefined)fields[k]={nullValue:null};else if(typeof v==='string')fields[k]={stringValue:v};else if(typeof v==='number')fields[k]={integerValue:String(Math.floor(v))};else if(typeof v==='boolean')fields[k]={booleanValue:v};else fields[k]={stringValue:JSON.stringify(v)};});return{fields:fields};}
+function fromFS(doc){if(!doc||!doc.fields)return null;var obj={_id:doc.name?doc.name.split('/').pop():''};Object.keys(doc.fields).forEach(function(k){var f=doc.fields[k];if(f.stringValue!==undefined){try{obj[k]=JSON.parse(f.stringValue);}catch(e){obj[k]=f.stringValue;}}else if(f.integerValue!==undefined)obj[k]=parseInt(f.integerValue);else if(f.booleanValue!==undefined)obj[k]=f.booleanValue;else obj[k]=null;});return obj;}
+function fbSave(col,id,data){return fetch(FB_BASE+'/'+col+'/'+id+'?key='+FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(toFS(data))}).then(function(r){return r.json();});}
+function fbList(col){return fetch(FB_BASE+'/'+col+'?key='+FB_KEY+'&pageSize=100').then(function(r){return r.json();}).then(function(d){if(!d.documents)return[];return d.documents.map(fromFS).filter(Boolean);});}
+
 var AK = 'c-api-key';
 var FK = 'flow-hist-v4';
 var MK = 'macro-hist-v1';
@@ -604,6 +612,16 @@ function getMacroHist(){try{return JSON.parse(localStorage.getItem(MK)||'[]');}c
 
 // 기록 렌더링
 function renderRec() {
+  // Firebase에서 최신 데이터 로드 (비동기)
+  fbList('market-flow').then(function(docs) {
+    if (docs.length > 0) {
+      docs.sort(function(a,b){return (b.ts||0)-(a.ts||0)||(b.date||'').localeCompare(a.date||'')*-1;});
+      localStorage.setItem(FK, JSON.stringify(docs));
+    }
+    _renderRecLocal();
+  }).catch(function(){ _renderRecLocal(); });
+}
+function _renderRecLocal() {
   var flowHist=getFlowHist();
   var macroHist=getMacroHist();
   var total=flowHist.length;
