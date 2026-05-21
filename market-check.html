@@ -418,12 +418,48 @@ body{background:#F5F5F7;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun 
 <script>
 const KEY = 'gemini-apikey';
 
+// URL 파라미터에서 키 읽기
+function getKeyFromUrl(){
+  const params = new URLSearchParams(window.location.search);
+  return params.get('key') || '';
+}
+
+// 키 가져오기 (URL → localStorage 순서)
+function getApiKey(){
+  const urlKey = getKeyFromUrl();
+  if(urlKey){ localStorage.setItem(KEY, urlKey); return urlKey; }
+  return localStorage.getItem(KEY) || '';
+}
+
 // 모달
 function openModal(){ document.getElementById('apiModal').classList.remove('hidden'); }
 function closeModal(){ document.getElementById('apiModal').classList.add('hidden'); }
-function saveKey(){ const k=document.getElementById('apiInput').value.trim(); if(k){localStorage.setItem(KEY,k);updateBtn();closeModal();} }
-function clearKey(){ localStorage.removeItem(KEY);updateBtn();closeModal(); }
-function updateBtn(){ const k=localStorage.getItem(KEY); const b=document.getElementById('apiBtn'); b.textContent=k?'AI ON':'AI 설정'; b.className=k?'api-btn on':'api-btn off'; }
+function saveKey(){
+  const k=document.getElementById('apiInput').value.trim();
+  if(k){
+    localStorage.setItem(KEY,k);
+    // URL에도 포함시켜서 북마크 가능하게
+    const url = new URL(window.location.href);
+    url.searchParams.set('key', k);
+    window.history.replaceState({}, '', url.toString());
+    updateBtn();
+    closeModal();
+  }
+}
+function clearKey(){
+  localStorage.removeItem(KEY);
+  const url = new URL(window.location.href);
+  url.searchParams.delete('key');
+  window.history.replaceState({}, '', url.toString());
+  updateBtn();
+  closeModal();
+}
+function updateBtn(){
+  const k=getApiKey();
+  const b=document.getElementById('apiBtn');
+  b.textContent=k?'AI ON':'AI 설정';
+  b.className=k?'api-btn on':'api-btn off';
+}
 
 // 탭
 function switchTab(t){
@@ -515,7 +551,7 @@ function setFutures(data){
 
 // 메인 분석
 async function runAnalysis(){
-  const key=localStorage.getItem(KEY);
+  const key=getApiKey();
   if(!key){openModal();return;}
   const btn=document.getElementById('runBtn');
   btn.disabled=true;
