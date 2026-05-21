@@ -412,15 +412,16 @@ function uncheckAll() {
 function renderChecklist() {
   // Firebase에서 최신 데이터 로드
   fbGet('re-checklist', 'main').then(function(doc) {
-    if (doc && doc.data) {
-      try {
-        var fbList = JSON.parse(doc.data);
-        localStorage.setItem(CLK, JSON.stringify(fbList));
-        drawChecklist(fbList);
-        return;
-      } catch(e) {}
+    // fromFS가 이미 JSON.parse 했으므로 doc.data는 배열임
+    var list = (doc && Array.isArray(doc.data)) ? doc.data
+             : (doc && typeof doc.data === 'string') ? JSON.parse(doc.data)
+             : null;
+    if (list) {
+      localStorage.setItem(CLK, JSON.stringify(list));
+      drawChecklist(list);
+    } else {
+      drawChecklist(getChecklist());
     }
-    drawChecklist(getChecklist());
   }).catch(function() { drawChecklist(getChecklist()); });
 }
 
@@ -467,15 +468,16 @@ function deleteMemo(id) {
 function renderMemos() {
   // Firebase에서 최신 데이터 로드
   fbGet('re-memos', 'main').then(function(doc) {
-    if (doc && doc.data) {
-      try {
-        var fbMemos = JSON.parse(doc.data);
-        localStorage.setItem(MK, JSON.stringify(fbMemos));
-        drawMemos(fbMemos);
-        return;
-      } catch(e) {}
+    // fromFS가 이미 JSON.parse 했으므로 doc.data는 배열임
+    var memos = (doc && Array.isArray(doc.data)) ? doc.data
+              : (doc && typeof doc.data === 'string') ? JSON.parse(doc.data)
+              : null;
+    if (memos) {
+      localStorage.setItem(MK, JSON.stringify(memos));
+      drawMemos(memos);
+    } else {
+      drawMemos(getMemos());
     }
-    drawMemos(getMemos());
   }).catch(function() { drawMemos(getMemos()); });
 }
 
