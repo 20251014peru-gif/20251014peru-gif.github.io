@@ -200,6 +200,52 @@ body{background:#F5F5F7;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-s
 </div>
 
 <script>
+
+var FB_KEY = 'AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
+var FB_BASE = 'https://firestore.googleapis.com/v1/projects/my-system-25497/databases/(default)/documents';
+function toFS(obj) {
+  var fields = {};
+  Object.keys(obj).forEach(function(k) {
+    var v = obj[k];
+    if (v===null||v===undefined) fields[k]={nullValue:null};
+    else if (typeof v==='string') fields[k]={stringValue:v};
+    else if (typeof v==='number') fields[k]={integerValue:String(Math.floor(v))};
+    else if (typeof v==='boolean') fields[k]={booleanValue:v};
+    else fields[k]={stringValue:JSON.stringify(v)};
+  });
+  return {fields:fields};
+}
+function fromFS(doc) {
+  if (!doc||!doc.fields) return null;
+  var obj={_id:doc.name?doc.name.split('/').pop():''};
+  Object.keys(doc.fields).forEach(function(k) {
+    var f=doc.fields[k];
+    if (f.stringValue!==undefined){try{obj[k]=JSON.parse(f.stringValue);}catch(e){obj[k]=f.stringValue;}}
+    else if (f.integerValue!==undefined) obj[k]=parseInt(f.integerValue);
+    else if (f.booleanValue!==undefined) obj[k]=f.booleanValue;
+    else obj[k]=null;
+  });
+  return obj;
+}
+function fbAdd(col, data) {
+  return fetch(FB_BASE+'/'+col+'?key='+FB_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(toFS(data))}).then(function(r){return r.json();});
+}
+function fbSave(col, id, data) {
+  return fetch(FB_BASE+'/'+col+'/'+id+'?key='+FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(toFS(data))}).then(function(r){return r.json();});
+}
+function fbGet(col, id) {
+  return fetch(FB_BASE+'/'+col+'/'+id+'?key='+FB_KEY).then(function(r){return r.json();}).then(fromFS);
+}
+function fbList(col) {
+  return fetch(FB_BASE+'/'+col+'?key='+FB_KEY+'&pageSize=100').then(function(r){return r.json();}).then(function(d){
+    if (!d.documents) return [];
+    return d.documents.map(fromFS).filter(Boolean);
+  });
+}
+function fbDelete(col, id) {
+  return fetch(FB_BASE+'/'+col+'/'+id+'?key='+FB_KEY,{method:'DELETE'});
+}
+
 var CK = 're-costs-v1';
 var CLK = 're-check-v1';
 var MK = 're-memos-v1';
@@ -227,6 +273,13 @@ function showT(name) {
 }
 
 function getCosts() { try{return JSON.parse(localStorage.getItem(CK)||'[]');}catch(e){return[];} }
+function loadCostsFromFB(callback) {
+  fbList('re-costs').then(function(docs) {
+    docs.sort(function(a,b){ return (b.id||0)-(a.id||0); });
+    localStorage.setItem(CK, JSON.stringify(docs));
+    callback(docs);
+  }).catch(function() { callback(getCosts()); });
+}
 function getChecklist() { try{return JSON.parse(localStorage.getItem(CLK)||'[]');}catch(e){return[];} }
 function getMemos() { try{return JSON.parse(localStorage.getItem(MK)||'[]');}catch(e){return[];} }
 function fmt(n) { return n.toLocaleString() + '원'; }
@@ -238,12 +291,25 @@ function addCost() {
   var place = document.getElementById('cost-place').value.trim();
   var memo = document.getElementById('cost-memo').value.trim();
   if (!amt || amt <= 0) { alert('금액을 입력해줘'); return; }
-  var costs = getCosts();
-  costs.unshift({ id: Date.now(), date: date, cat: cat, amt: amt, place: place, memo: memo });
-  localStorage.setItem(CK, JSON.stringify(costs));
-  document.getElementById('cost-amt').value = '';
-  document.getElementById('cost-memo').value = '';
-  alert('추가됐어!');
+  var rec = { id: Date.now(), date: date, cat: cat, amt: amt, place: place, memo: memo };
+  // Firebase 저장
+  fbAdd('re-costs', rec).then(function(d) {
+    // localStorage 백업
+    var costs = getCosts();
+    if (d.name) rec._id = d.name.split('/').pop();
+    costs.unshift(rec);
+    localStorage.setItem(CK, JSON.stringify(costs));
+    document.getElementById('cost-amt').value = '';
+    document.getElementById('cost-memo').value = '';
+    alert('추가됐어! (PC+폰 동기화)');
+  }).catch(function() {
+    var costs = getCosts();
+    costs.unshift(rec);
+    localStorage.setItem(CK, JSON.stringify(costs));
+    document.getElementById('cost-amt').value = '';
+    document.getElementById('cost-memo').value = '';
+    alert('추가됐어! (오프라인 저장)');
+  });
 }
 
 function deleteCost(id) {
@@ -284,7 +350,11 @@ function renderSummary() {
 }
 
 function renderRecord() {
-  var costs = getCosts();
+  var costs = getCosts(); // 먼저 localStorage로 즉시 표시
+  renderRecordWith(costs);
+  loadCostsFromFB(function(fbCosts) { renderRecordWith(fbCosts); });
+}
+function renderRecordWith(costs) {
   var tbody = document.getElementById('cost-tbody');
   if (!costs.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#9CA3AF">비용 기록 없음</td></tr>'; return; }
   tbody.innerHTML = costs.map(function(c){
