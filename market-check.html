@@ -583,9 +583,13 @@ async function runAnalysis(){
     if(data.candidates&&data.candidates[0]){
       text=data.candidates[0].content.parts.map(p=>p.text||'').join('');
     }
-    const match=text.match(/\{[\s\S]*\}/);
-    if(!match) throw new Error('파싱 실패');
-    const r=JSON.parse(match[0]);
+    // 마크다운 코드블록 제거
+    const clean=text.replace(/```json/g,'').replace(/```/g,'').trim();
+    const match=clean.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error('응답: '+clean.slice(0,100));
+    let r;
+    try{ r=JSON.parse(match[0]); }
+    catch(pe){ throw new Error('JSON오류: '+match[0].slice(0,100)); }
 
     // 점수
     setScore(r.score);
@@ -621,8 +625,11 @@ async function runAnalysis(){
     document.getElementById('aiText').textContent=r.ai_comment||'';
 
   }catch(e){
-    document.getElementById('scoreVerdict').textContent='오류';
+    document.getElementById('scoreVerdict').textContent='오류 발생';
     document.getElementById('scoreDesc').textContent=e.message;
+    document.getElementById('aiCard').classList.remove('hidden');
+    document.getElementById('aiText').textContent='오류 내용: '+e.message;
+    console.error('분석 오류:', e);
   }
 
   btn.disabled=false;
