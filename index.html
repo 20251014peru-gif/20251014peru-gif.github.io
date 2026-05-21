@@ -6,197 +6,285 @@
 <title>나의 시스템</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:#F0F0F5;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh;}
+body{background:#0F0F13;color:#F0F0F5;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh;}
 
 /* 헤더 */
-.header{background:#fff;border-bottom:1px solid #E5E7EB;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;}
-.header-left .sub{font-size:10px;letter-spacing:3px;color:#9CA3AF;text-transform:uppercase;margin-bottom:3px;}
-.header-left .title{font-size:18px;font-weight:700;color:#1A1A2E;}
-.header-right{font-size:12px;color:#9CA3AF;text-align:right;}
-.header-right .date{font-size:13px;font-weight:600;color:#374151;}
+.hdr{padding:20px 20px 12px;background:linear-gradient(180deg,#0F0F13 0%,transparent 100%);}
+.hdr-title{font-size:22px;font-weight:800;letter-spacing:-0.5px;}
+.hdr-sub{font-size:12px;color:#6B7280;margin-top:3px;}
+.date-badge{display:inline-block;font-size:11px;padding:3px 10px;background:#1E1E28;border-radius:20px;color:#9CA3AF;margin-top:6px;}
 
-/* 3열 레이아웃 */
-.columns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px;min-height:calc(100vh - 70px);align-items:start;}
+.wrap{padding:0 16px 80px;}
 
-/* 각 축 컬럼 */
-.col{display:flex;flex-direction:column;gap:8px;}
-
-/* 축 헤더 */
-.col-header{border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:8px;}
-.col-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.col-title{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
-.col-count{font-size:10px;opacity:0.7;margin-left:auto;}
+/* 축 카드 */
+.axis{margin-bottom:8px;border-radius:14px;overflow:hidden;border:1px solid #1E1E28;transition:all 0.2s;}
+.axis.open{border-color:#2A2A38;}
+.axis-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;}
+.axis-header:active{opacity:0.8;}
+.axis-left{display:flex;align-items:center;gap:12px;}
+.axis-icon{font-size:22px;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.axis-info{}
+.axis-name{font-size:15px;font-weight:700;}
+.axis-desc{font-size:11px;color:#6B7280;margin-top:2px;}
+.axis-meta{display:flex;align-items:center;gap:8px;}
+.axis-count{font-size:11px;color:#6B7280;}
+.chevron{font-size:14px;color:#4B5563;transition:transform 0.25s;display:inline-block;}
+.axis.open .chevron{transform:rotate(180deg);}
+.axis-body{display:none;padding:0 12px 12px;}
+.axis.open .axis-body{display:block;}
 
 /* 앱 카드 */
-.app-card{background:#fff;border:1px solid #E5E7EB;border-radius:11px;padding:13px 14px;text-decoration:none;display:block;transition:all 0.15s;border-left:3px solid transparent;}
-.app-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.08);}
-.app-icon-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
-.app-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
-.app-name{font-size:13px;font-weight:700;color:#1A1A2E;}
-.app-desc{font-size:11px;color:#9CA3AF;line-height:1.5;}
+.app-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.app-card{display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;background:#0F0F13;border:1px solid #1E1E28;text-decoration:none;color:#F0F0F5;transition:all 0.15s;}
+.app-card:hover,.app-card:active{border-color:#374151;background:#1A1A24;}
+.app-icon-sm{font-size:20px;flex-shrink:0;}
+.app-name-sm{font-size:12px;font-weight:700;line-height:1.4;}
+.app-desc-sm{font-size:10px;color:#6B7280;margin-top:1px;}
+.app-card.full{grid-column:1/-1;}
+.app-card.new-badge::after{content:'NEW';font-size:8px;padding:1px 5px;background:#6366F1;color:#fff;border-radius:4px;font-weight:700;margin-left:auto;flex-shrink:0;}
 
-/* 준비중 카드 */
-.coming-card{background:#FAFAFA;border:1.5px dashed #E5E7EB;border-radius:11px;padding:12px 14px;display:flex;align-items:center;gap:10px;}
-.coming-icon{width:30px;height:30px;border-radius:7px;background:#F3F4F6;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
-.coming-name{font-size:12px;color:#9CA3AF;}
-.coming-badge{font-size:9px;background:#F3F4F6;color:#9CA3AF;padding:2px 7px;border-radius:8px;margin-top:2px;display:inline-block;}
+/* 준비중 */
+.coming{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:#0A0A0E;border:1px dashed #1E1E28;margin-top:4px;}
+.coming-name{font-size:12px;color:#4B5563;}
+.coming-badge{font-size:10px;padding:2px 7px;border-radius:10px;background:#1E1E28;color:#4B5563;margin-left:auto;}
 
-/* 명언 */
-.quote-card{background:#fff;border:1px solid #E5E7EB;border-radius:11px;padding:13px 14px;border-left:3px solid #6366F1;}
-.quote-text{font-size:11px;color:#374151;line-height:1.8;font-style:italic;}
-.quote-author{font-size:10px;color:#9CA3AF;margin-top:5px;}
+/* 축별 색상 */
+.axis-1{background:linear-gradient(135deg,#1A0A2E,#0F0F13);}
+.axis-1 .axis-icon{background:#2D1B5E;}
+.axis-1 .axis-name{color:#A78BFA;}
+.axis-2{background:linear-gradient(135deg,#0A1A2E,#0F0F13);}
+.axis-2 .axis-icon{background:#0F3060;}
+.axis-2 .axis-name{color:#60A5FA;}
+.axis-3{background:linear-gradient(135deg,#0A1F0A,#0F0F13);}
+.axis-3 .axis-icon{background:#0A3018;}
+.axis-3 .axis-name{color:#34D399;}
+.axis-4{background:linear-gradient(135deg,#1F0A0A,#0F0F13);}
+.axis-4 .axis-icon{background:#3D0A0A;}
+.axis-4 .axis-name{color:#F87171;}
+.axis-5{background:linear-gradient(135deg,#1A1200,#0F0F13);}
+.axis-5 .axis-icon{background:#3D2A00;}
+.axis-5 .axis-name{color:#FBBF24;}
 
-/* 모바일 */
-@media(max-width:600px){
-  .columns{grid-template-columns:1fr;padding:12px;}
-  .col-header{margin-top:8px;}
-}
+/* 구분선 */
+.section-divider{height:1px;background:#1E1E28;margin:4px 0;}
+
+/* 하단 격언 */
+.quote{margin-top:20px;padding:16px;background:#1A1A24;border-radius:12px;border-left:3px solid #6366F1;}
+.quote-text{font-size:13px;color:#9CA3AF;line-height:1.7;font-style:italic;}
+.quote-author{font-size:11px;color:#4B5563;margin-top:6px;}
 </style>
-<script>
-const days=['일','월','화','수','목','금','토'];
-window.onload=()=>{
-  const n=new Date();
-  document.getElementById('dateEl').textContent=`${n.getMonth()+1}월 ${n.getDate()}일 (${days[n.getDay()]})`;
-};
-</script>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-left">
-    <div class="sub">My System</div>
-    <div class="title">🛠 나의 시스템</div>
-  </div>
-  <div class="header-right">
-    <div class="date" id="dateEl"></div>
-    <div>달님의 3대 축</div>
-  </div>
+<div class="hdr">
+  <div class="hdr-title">&#9889; 나의 시스템</div>
+  <div class="hdr-sub">5대 축으로 삶을 설계한다</div>
+  <div class="date-badge" id="datebadge"></div>
 </div>
 
-<div class="columns">
+<div class="wrap">
 
-  <!-- 축 1: 내면 -->
-  <div class="col">
-    <div class="col-header" style="background:#EDE9FE">
-      <div class="col-dot" style="background:#7C3AED"></div>
-      <span class="col-title" style="color:#5B21B6">내면 시스템</span>
-      <span class="col-count" style="color:#7C3AED">2 / 3</span>
-    </div>
-
-    <a class="app-card" href="./daily-routine.html" style="border-left-color:#7C3AED">
-      <div class="app-icon-row">
-        <div class="app-icon" style="background:#F5F3FF">☀️</div>
-        <div class="app-name">하루 루틴</div>
+  <!-- 1축: 내면 -->
+  <div class="axis axis-1 open" id="ax1">
+    <div class="axis-header" onclick="toggle('ax1')">
+      <div class="axis-left">
+        <div class="axis-icon">&#129504;</div>
+        <div class="axis-info">
+          <div class="axis-name">내면 시스템</div>
+          <div class="axis-desc">자기인식 · 루틴 · 감정 처리</div>
+        </div>
       </div>
-      <div class="app-desc">아침 체크 · 저녁 리뷰 · 달리오 반성 루프</div>
-    </a>
-
-    <a class="app-card" href="./my-system.html" style="border-left-color:#7C3AED">
-      <div class="app-icon-row">
-        <div class="app-icon" style="background:#F5F3FF">🧠</div>
-        <div class="app-name">나를 알아가는 시스템</div>
-      </div>
-      <div class="app-desc">무의식 신호 포착 · 패턴 발견 · AI 분석</div>
-    </a>
-
-    <div class="coming-card">
-      <div class="coming-icon">📊</div>
-      <div>
-        <div class="coming-name">주간 리뷰</div>
-        <span class="coming-badge">준비중</span>
+      <div class="axis-meta">
+        <span class="axis-count">앱 2개</span>
+        <span class="chevron">&#8964;</span>
       </div>
     </div>
-
-    <div class="quote-card">
-      <div class="quote-text">"고통 + 반성 = 진보"</div>
-      <div class="quote-author">— Ray Dalio</div>
+    <div class="axis-body">
+      <div class="app-grid">
+        <a class="app-card" href="./daily-routine.html">
+          <span class="app-icon-sm">&#9728;&#65039;</span>
+          <div><div class="app-name-sm">하루 루틴</div><div class="app-desc-sm">아침·저녁 체크 + 기록</div></div>
+        </a>
+        <a class="app-card" href="./my-system.html">
+          <span class="app-icon-sm">&#129504;</span>
+          <div><div class="app-name-sm">나를 알아가는 시스템</div><div class="app-desc-sm">무의식 신호 · 패턴 발견</div></div>
+        </a>
+      </div>
     </div>
   </div>
 
-  <!-- 축 2: 투자 -->
-  <div class="col">
-    <div class="col-header" style="background:#DBEAFE">
-      <div class="col-dot" style="background:#2563EB"></div>
-      <span class="col-title" style="color:#1D4ED8">투자 시스템</span>
-      <span class="col-count" style="color:#2563EB">1 / 4</span>
-    </div>
-
-    <a class="app-card" href="./market-check.html" style="border-left-color:#2563EB">
-      <div class="app-icon-row">
-        <div class="app-icon" style="background:#EFF6FF">📊</div>
-        <div class="app-name">장 전 시장 체크</div>
+  <!-- 2축: 투자 -->
+  <div class="axis axis-2" id="ax2">
+    <div class="axis-header" onclick="toggle('ax2')">
+      <div class="axis-left">
+        <div class="axis-icon">&#128200;</div>
+        <div class="axis-info">
+          <div class="axis-name">투자 시스템</div>
+          <div class="axis-desc">시장 분석 · 수급 · 유튜브 인사이트</div>
+        </div>
       </div>
-      <div class="app-desc">거시지표 · 외국인 선물 · 섹터 신호 · 심리 체크</div>
-    </a>
-
-    <div class="coming-card">
-      <div class="coming-icon">✅</div>
-      <div>
-        <div class="coming-name">투자 판단 체크리스트</div>
+      <div class="axis-meta">
+        <span class="axis-count">앱 2개</span>
+        <span class="chevron">&#8964;</span>
+      </div>
+    </div>
+    <div class="axis-body">
+      <div class="app-grid">
+        <a class="app-card" href="./market-check.html">
+          <span class="app-icon-sm">&#128202;</span>
+          <div><div class="app-name-sm">장 전 시장 체크</div><div class="app-desc-sm">거시지표 · 수급 · AI 분석</div></div>
+        </a>
+        <a class="app-card" href="./youtube.html">
+          <span class="app-icon-sm">&#127381;</span>
+          <div><div class="app-name-sm">유튜브 채널 분석</div><div class="app-desc-sm">미주은·소수몽키·김교수</div></div>
+        </a>
+      </div>
+      <div class="section-divider" style="margin:8px 0;"></div>
+      <div class="coming">
+        <span style="font-size:14px">&#128203;</span>
+        <span class="coming-name">투자 판단 체크리스트</span>
         <span class="coming-badge">준비중</span>
       </div>
-    </div>
-
-    <div class="coming-card">
-      <div class="coming-icon">📈</div>
-      <div>
-        <div class="coming-name">모멘텀 눌림목 대시보드</div>
+      <div class="coming">
+        <span style="font-size:14px">&#127807;</span>
+        <span class="coming-name">모멘텀 눌림목 대시보드</span>
         <span class="coming-badge">준비중</span>
       </div>
-    </div>
-
-    <div class="coming-card">
-      <div class="coming-icon">🌿</div>
-      <div>
-        <div class="coming-name">계절 테마 트래커</div>
-        <span class="coming-badge">준비중</span>
-      </div>
-    </div>
-
-    <div class="quote-card" style="border-left-color:#2563EB">
-      <div class="quote-text">"아는 만큼 보인다. 못 보는 게 있다는 걸 알아야 진짜 아는 것."</div>
-      <div class="quote-author">— 오늘의 원칙</div>
     </div>
   </div>
 
-  <!-- 축 3: 업무 -->
-  <div class="col">
-    <div class="col-header" style="background:#D1FAE5">
-      <div class="col-dot" style="background:#059669"></div>
-      <span class="col-title" style="color:#065F46">업무 시스템</span>
-      <span class="col-count" style="color:#059669">0 / 3</span>
+  <!-- 3축: 부동산 -->
+  <div class="axis axis-3" id="ax3">
+    <div class="axis-header" onclick="toggle('ax3')">
+      <div class="axis-left">
+        <div class="axis-icon">&#127968;</div>
+        <div class="axis-info">
+          <div class="axis-name">부동산 시스템</div>
+          <div class="axis-desc">비용 관리 · 현장 메모 · 준비물</div>
+        </div>
+      </div>
+      <div class="axis-meta">
+        <span class="axis-count">앱 1개</span>
+        <span class="chevron">&#8964;</span>
+      </div>
     </div>
+    <div class="axis-body">
+      <div class="app-grid">
+        <a class="app-card full" href="./realestate.html">
+          <span class="app-icon-sm">&#127968;</span>
+          <div><div class="app-name-sm">부동산 투자 관리</div><div class="app-desc-sm">비용 기록 · 합산 · 체크리스트 · 메모</div></div>
+        </a>
+      </div>
+    </div>
+  </div>
 
-    <div class="coming-card">
-      <div class="coming-icon">📋</div>
-      <div>
-        <div class="coming-name">서희타워 통합 업무일지</div>
+  <!-- 4축: 업무 -->
+  <div class="axis axis-4" id="ax4">
+    <div class="axis-header" onclick="toggle('ax4')">
+      <div class="axis-left">
+        <div class="axis-icon">&#127970;</div>
+        <div class="axis-info">
+          <div class="axis-name">업무 시스템</div>
+          <div class="axis-desc">서희타워 시설 관리 · 품의서 · 민원</div>
+        </div>
+      </div>
+      <div class="axis-meta">
+        <span class="axis-count">준비중</span>
+        <span class="chevron">&#8964;</span>
+      </div>
+    </div>
+    <div class="axis-body">
+      <div class="coming">
+        <span style="font-size:14px">&#128203;</span>
+        <span class="coming-name">통합 업무일지</span>
+        <span class="coming-badge">준비중</span>
+      </div>
+      <div class="coming">
+        <span style="font-size:14px">&#128196;</span>
+        <span class="coming-name">품의서 도우미</span>
+        <span class="coming-badge">준비중</span>
+      </div>
+      <div class="coming">
+        <span style="font-size:14px">&#128101;</span>
+        <span class="coming-name">입주민 민원 기록</span>
         <span class="coming-badge">준비중</span>
       </div>
     </div>
+  </div>
 
-    <div class="coming-card">
-      <div class="coming-icon">📝</div>
-      <div>
-        <div class="coming-name">품의서 작성 도우미</div>
+  <!-- 5축: 학습 -->
+  <div class="axis axis-5" id="ax5">
+    <div class="axis-header" onclick="toggle('ax5')">
+      <div class="axis-left">
+        <div class="axis-icon">&#128218;</div>
+        <div class="axis-info">
+          <div class="axis-name">학습 시스템</div>
+          <div class="axis-desc">Python · 투자 프레임워크 · 독서</div>
+        </div>
+      </div>
+      <div class="axis-meta">
+        <span class="axis-count">준비중</span>
+        <span class="chevron">&#8964;</span>
+      </div>
+    </div>
+    <div class="axis-body">
+      <div class="coming">
+        <span style="font-size:14px">&#128013;</span>
+        <span class="coming-name">Python 학습 트래커</span>
+        <span class="coming-badge">준비중</span>
+      </div>
+      <div class="coming">
+        <span style="font-size:14px">&#128209;</span>
+        <span class="coming-name">독서 기록</span>
+        <span class="coming-badge">준비중</span>
+      </div>
+      <div class="coming">
+        <span style="font-size:14px">&#127775;</span>
+        <span class="coming-name">미주은 프레임워크</span>
         <span class="coming-badge">준비중</span>
       </div>
     </div>
+  </div>
 
-    <div class="coming-card">
-      <div class="coming-icon">👥</div>
-      <div>
-        <div class="coming-name">입주민 민원 기록</div>
-        <span class="coming-badge">준비중</span>
-      </div>
-    </div>
-
-    <div class="quote-card" style="border-left-color:#059669">
-      <div class="quote-text">"시스템임을 아는 사람만이 그 시스템을 설계할 수 있다."</div>
-      <div class="quote-author">— 오늘의 원칙</div>
-    </div>
+  <div class="quote">
+    <div class="quote-text">"시스템임을 아는 사람만이 그 시스템을 설계할 수 있다."</div>
+    <div class="quote-author">— 오늘의 원칙</div>
   </div>
 
 </div>
+
+<script>
+// 날짜
+(function(){
+  var n = new Date();
+  var days = ['일','월','화','수','목','금','토'];
+  document.getElementById('datebadge').textContent =
+    n.getFullYear() + '.' + (n.getMonth()+1) + '.' + n.getDate() + ' (' + days[n.getDay()] + ')';
+})();
+
+// 접기/펼치기
+function toggle(id) {
+  var el = document.getElementById(id);
+  el.classList.toggle('open');
+  // 상태 저장
+  var states = {};
+  ['ax1','ax2','ax3','ax4','ax5'].forEach(function(a){
+    states[a] = document.getElementById(a).classList.contains('open');
+  });
+  try { localStorage.setItem('axis-states', JSON.stringify(states)); } catch(e){}
+}
+
+// 저장된 상태 복원
+(function(){
+  try {
+    var saved = JSON.parse(localStorage.getItem('axis-states') || '{}');
+    ['ax1','ax2','ax3','ax4','ax5'].forEach(function(a){
+      var el = document.getElementById(a);
+      if (saved[a] === false) el.classList.remove('open');
+      else if (saved[a] === true) el.classList.add('open');
+    });
+  } catch(e){}
+})();
+</script>
 </body>
 </html>
