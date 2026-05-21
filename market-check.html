@@ -310,7 +310,8 @@ body{background:#F5F5F7;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-s
 <div class="ov hide" id="mov">
   <div class="modal">
     <h3>Claude API 키 설정</h3>
-    <p>console.anthropic.com에서 발급. 이 기기에만 저장됨.</p>
+    <p>console.anthropic.com에서 발급. 이 기기에만 저장됨.<br>
+    <span id="key-hint" style="color:#10B981;font-size:11px"></span></p>
     <input type="password" id="ki" placeholder="sk-ant-...">
     <div class="mbtns">
       <button class="bcl" onclick="closeM()">취소</button>
@@ -333,7 +334,14 @@ var ps = [-1,-1,-1,-1,-1,-1];
   document.getElementById('hd').textContent = (n.getMonth()+1) + '월 ' + n.getDate() + '일(' + d[n.getDay()] + ') 장전체크';
 })();
 
-function openM() { document.getElementById('mov').classList.remove('hide'); }
+function openM() {
+  document.getElementById('mov').classList.remove('hide');
+  var k = localStorage.getItem(AK);
+  var hint = document.getElementById('key-hint');
+  if (hint) hint.textContent = k ? ('저장된 키: ' + k.slice(0,12) + '...') : '아직 키 없음 — 새로 입력해줘';
+  var inp = document.getElementById('ki');
+  if (inp) inp.value = '';
+}
 function closeM() { document.getElementById('mov').classList.add('hide'); }
 function saveK() {
   var k = document.getElementById('ki').value.trim();
@@ -349,6 +357,8 @@ function updB() {
   b.className = k ? 'abtn on' : 'abtn off';
 }
 updB();
+// 항상 클릭하면 모달 열림
+document.getElementById('abtn').addEventListener('click', openM);
 
 function showT(name) {
   var tabs = ['macro','fut','sec','psy'];
