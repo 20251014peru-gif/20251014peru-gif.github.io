@@ -320,7 +320,8 @@ function showResult(idx, html) {
   el.innerHTML =
     '<div style="margin-bottom:10px">'+
       '<div class="report-actions">'+
-        '<button class="act-btn act-save" id="savebtn-'+idx+'">&#128190; 저장 (PC+폰 공유)</button>'+
+        '<button class="act-btn act-save" id="savebtn-'+idx+'">&#128190; 저장</button>'+
+        '<button class="act-btn" id="newbtn-'+idx+'" style="background:#0EA5E9;color:#fff;flex:1.2">&#128279; 전체화면으로 보기</button>'+
         '<button class="act-btn act-print" id="printbtn-'+idx+'">&#128438; 인쇄/PDF</button>'+
         '<button class="act-btn act-close" id="closebtn-'+idx+'">닫기</button>'+
       '</div>'+
@@ -332,6 +333,11 @@ function showResult(idx, html) {
   document.getElementById('savebtn-'+idx).addEventListener('click', function(){ saveResult(idx); });
   document.getElementById('printbtn-'+idx).addEventListener('click', function(){ document.getElementById('iframe-'+idx).contentWindow.print(); });
   document.getElementById('closebtn-'+idx).addEventListener('click', function(){ el.innerHTML=''; tempResults[idx]=null; });
+  document.getElementById('newbtn-'+idx).addEventListener('click', function(){
+    var blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  });
 }
 
 function saveResult(idx) {
@@ -399,8 +405,13 @@ function showSaved(r) {
   el.innerHTML =
     '<div style="margin-bottom:10px"><button id="back-hist" style="padding:6px 14px;background:#F3F4F6;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px">&larr; 목록으로</button></div>'+
     '<div style="font-size:12px;font-weight:700;color:'+(r.color||'#6B7280')+';margin-bottom:8px;">'+(r.chName||'')+' &middot; '+(r.date||'')+'</div>'+
+    '<div style="margin-bottom:8px"><button id="newtab-hist" style="padding:8px 16px;background:#0EA5E9;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;">&#128279; 전체화면으로 보기</button></div>'+
     '<div class="report-frame"><iframe style="width:100%;height:600px;border:none;" id="hist-iframe" srcdoc=""></iframe></div>';
   document.getElementById('hist-iframe').srcdoc = r.html || '';
+  document.getElementById('newtab-hist').addEventListener('click', function(){
+    var blob = new Blob([r.html||''], {type:'text/html;charset=utf-8'});
+    window.open(URL.createObjectURL(blob), '_blank');
+  });
   document.getElementById('back-hist').addEventListener('click', renderHist);
 }
 
