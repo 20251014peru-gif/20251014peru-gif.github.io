@@ -259,9 +259,9 @@ textarea::placeholder{color:#D1D5DB;}
 <!-- 모달 -->
 <div class="modal-overlay hidden" id="apiModal">
   <div class="modal">
-    <div class="modal-title">Claude API 키</div>
-    <div class="modal-sub">AI 분석 기능을 사용하려면 Anthropic API 키가 필요해. 이 기기에만 저장됨.</div>
-    <input type="password" id="apiInput" placeholder="sk-ant-..." />
+    <div class="modal-title">Gemini API 키</div>
+    <div class="modal-sub">AI 분석 기능을 사용하려면 Gemini API 키가 필요해. aistudio.google.com에서 무료 발급 가능. 이 기기에만 저장됨.</div>
+    <input type="password" id="apiInput" placeholder="AIza..." />
     <div class="modal-btns">
       <button class="modal-btn secondary" onclick="closeModal()">취소</button>
       <button class="modal-btn primary" onclick="saveKey()">저장</button>
@@ -273,9 +273,62 @@ textarea::placeholder{color:#D1D5DB;}
 </div>
 
 <script>
+
+var FB_KEY = 'AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
+var FB_BASE = 'https://firestore.googleapis.com/v1/projects/my-system-25497/databases/(default)/documents';
+
+function toFS(obj) {
+  var fields = {};
+  Object.keys(obj).forEach(function(k) {
+    var v = obj[k];
+    if (v === null || v === undefined) fields[k] = {nullValue: null};
+    else if (typeof v === 'string') fields[k] = {stringValue: v};
+    else if (typeof v === 'number') fields[k] = {integerValue: String(Math.floor(v))};
+    else if (typeof v === 'boolean') fields[k] = {booleanValue: v};
+    else fields[k] = {stringValue: JSON.stringify(v)};
+  });
+  return {fields: fields};
+}
+function fromFS(doc) {
+  if (!doc || !doc.fields) return null;
+  var obj = {};
+  Object.keys(doc.fields).forEach(function(k) {
+    var f = doc.fields[k];
+    if (f.stringValue !== undefined) {
+      try { obj[k] = JSON.parse(f.stringValue); } catch(e) { obj[k] = f.stringValue; }
+    } else if (f.integerValue !== undefined) obj[k] = parseInt(f.integerValue);
+    else if (f.booleanValue !== undefined) obj[k] = f.booleanValue;
+    else obj[k] = null;
+  });
+  return obj;
+}
+function fbSave(collection, docId, data) {
+  return fetch(FB_BASE+'/'+collection+'/'+docId+'?key='+FB_KEY, {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(toFS(data))
+  }).then(function(r){ return r.json(); });
+}
+function fbGet(collection, docId) {
+  return fetch(FB_BASE+'/'+collection+'/'+docId+'?key='+FB_KEY)
+    .then(function(r){ return r.json(); }).then(fromFS);
+}
+function fbList(collection) {
+  return fetch(FB_BASE+'/'+collection+'?key='+FB_KEY+'&pageSize=90')
+    .then(function(r){ return r.json(); }).then(function(d){
+      if (!d.documents) return [];
+      return d.documents.map(function(doc){
+        var obj = fromFS(doc);
+        if (obj && doc.name) obj._docId = doc.name.split('/').pop();
+        return obj;
+      }).filter(Boolean);
+    });
+}
+
 const STORAGE_PREFIX = 'daily-v2-';
 const STREAK_KEY = 'daily-streak-v2';
-const API_KEY = 'routine-apikey';
+const API_KEY = 'gemini-apikey';
+// 키 가져오기
+function getApiKey(){ return localStorage.getItem(API_KEY)||""; }
 const DAYS = ['일','월','화','수','목','금','토'];
 const CHECK_LABELS = [
   '오늘 1가지 작성','시장 상황 체크','어제 놓친 것 떠올리기',
@@ -460,10 +513,10 @@ function openModal(){ document.getElementById('apiModal').classList.remove('hidd
 function closeModal(){ document.getElementById('apiModal').classList.add('hidden'); }
 function saveKey(){ const k=document.getElementById('apiInput').value.trim(); if(k){localStorage.setItem(API_KEY,k);updateApiBtn();closeModal();} }
 function clearKey(){ localStorage.removeItem(API_KEY);updateApiBtn();closeModal(); }
-function updateApiBtn(){ const k=localStorage.getItem(API_KEY); const b=document.getElementById('apiBtn'); b.textContent=k?'AI ON':'AI'; b.className=k?'api-btn on':'api-btn off'; }
+function updateApiBtn(){ const k=getApiKey(); const b=document.getElementById('apiBtn'); b.textContent=k?'AI ON':'AI'; b.className=k?'api-btn on':'api-btn off'; }
 
 async function runAI(mode){
-  const key=localStorage.getItem(API_KEY);
+  const key=getApiKey();
   if(!key){openModal();return;}
   saveState();
   const btn=mode==='today'?document.getElementById('aiTodayBtn'):document.getElementById('aiWeekBtn');
