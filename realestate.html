@@ -376,38 +376,64 @@ function addCheck() {
   var list = getChecklist();
   list.push({ id: Date.now(), text: text, done: false });
   localStorage.setItem(CLK, JSON.stringify(list));
+  fbSave('re-checklist', 'main', {data: JSON.stringify(list)}).catch(function(){});
   input.value = '';
   renderChecklist();
 }
 
 function toggleCheck(id) {
   var list = getChecklist().map(function(item){ if(item.id===id) item.done=!item.done; return item; });
-  localStorage.setItem(CLK, JSON.stringify(list)); renderChecklist();
+  localStorage.setItem(CLK, JSON.stringify(list));
+  fbSave('re-checklist', 'main', {data: JSON.stringify(list)}).catch(function(){});
+  renderChecklist();
 }
 
 function deleteCheck(id) {
   var list = getChecklist().filter(function(item){ return item.id!==id; });
-  localStorage.setItem(CLK, JSON.stringify(list)); renderChecklist();
+  localStorage.setItem(CLK, JSON.stringify(list));
+  fbSave('re-checklist', 'main', {data: JSON.stringify(list)}).catch(function(){});
+  renderChecklist();
 }
 
 function checkAll() {
   var list = getChecklist().map(function(item){ item.done=true; return item; });
-  localStorage.setItem(CLK, JSON.stringify(list)); renderChecklist();
+  localStorage.setItem(CLK, JSON.stringify(list));
+  fbSave('re-checklist', 'main', {data: JSON.stringify(list)}).catch(function(){});
+  renderChecklist();
 }
+
 function uncheckAll() {
   var list = getChecklist().map(function(item){ item.done=false; return item; });
-  localStorage.setItem(CLK, JSON.stringify(list)); renderChecklist();
+  localStorage.setItem(CLK, JSON.stringify(list));
+  fbSave('re-checklist', 'main', {data: JSON.stringify(list)}).catch(function(){});
+  renderChecklist();
 }
 
 function renderChecklist() {
-  var list = getChecklist();
+  // Firebase에서 최신 데이터 로드
+  fbGet('re-checklist', 'main').then(function(doc) {
+    if (doc && doc.data) {
+      try {
+        var fbList = JSON.parse(doc.data);
+        localStorage.setItem(CLK, JSON.stringify(fbList));
+        drawChecklist(fbList);
+        return;
+      } catch(e) {}
+    }
+    drawChecklist(getChecklist());
+  }).catch(function() { drawChecklist(getChecklist()); });
+}
+
+function drawChecklist(list) {
   var el = document.getElementById('checklist-items');
-  if (!list.length) { el.innerHTML = '<div style="color:#9CA3AF;font-size:12px;padding:20px;text-align:center">준비물을 추가해봐</div>'; }
-  else {
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div style="color:#9CA3AF;font-size:12px;padding:20px;text-align:center">준비물을 추가해봐</div>';
+  } else {
     el.innerHTML = list.map(function(item){
       return '<div class="check-item">'+
         '<input type="checkbox" '+(item.done?'checked':'')+' onchange="toggleCheck('+item.id+')">'+
-        '<span class="check-txt'+(item.done?' done':'')+'" onclick="toggleCheck('+item.id+')">'+item.text+'</span>'+
+        '<span class="check-txt'+(item.done?' done':'')+'" onclick="toggleCheck('+item.id+')" style="cursor:pointer">'+item.text+'</span>'+
         '<button class="del-i" onclick="deleteCheck('+item.id+')">삭제</button>'+
       '</div>';
     }).join('');
@@ -424,19 +450,38 @@ function saveMemo() {
   memos.unshift({ id: Date.now(), date: n.getFullYear()+'-'+(n.getMonth()+1)+'-'+n.getDate(), time: n.toLocaleTimeString('ko-KR'), text: text });
   if (memos.length > 50) memos = memos.slice(0,50);
   localStorage.setItem(MK, JSON.stringify(memos));
+  // Firebase 저장
+  fbSave('re-memos', 'main', {data: JSON.stringify(memos)}).catch(function(){});
   document.getElementById('memo-text').value = '';
-  alert('저장됐어!');
+  alert('메모 저장됐어! (PC+폰 동기화)');
   renderMemos();
 }
 
 function deleteMemo(id) {
   var memos = getMemos().filter(function(m){ return m.id!==id; });
-  localStorage.setItem(MK, JSON.stringify(memos)); renderMemos();
+  localStorage.setItem(MK, JSON.stringify(memos));
+  fbSave('re-memos', 'main', {data: JSON.stringify(memos)}).catch(function(){});
+  renderMemos();
 }
 
 function renderMemos() {
-  var memos = getMemos();
+  // Firebase에서 최신 데이터 로드
+  fbGet('re-memos', 'main').then(function(doc) {
+    if (doc && doc.data) {
+      try {
+        var fbMemos = JSON.parse(doc.data);
+        localStorage.setItem(MK, JSON.stringify(fbMemos));
+        drawMemos(fbMemos);
+        return;
+      } catch(e) {}
+    }
+    drawMemos(getMemos());
+  }).catch(function() { drawMemos(getMemos()); });
+}
+
+function drawMemos(memos) {
   var el = document.getElementById('memo-list');
+  if (!el) return;
   if (!memos.length) { el.innerHTML = '<div style="color:#9CA3AF;font-size:12px;padding:10px">저장된 메모 없음</div>'; return; }
   el.innerHTML = memos.map(function(m){
     return '<div style="padding:10px 0;border-bottom:1px solid #F3F4F6;">'+
@@ -448,6 +493,7 @@ function renderMemos() {
     '</div>';
   }).join('');
 }
+
 
 renderChecklist();
 </script>
