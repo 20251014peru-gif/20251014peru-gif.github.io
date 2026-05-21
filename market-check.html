@@ -6,647 +6,573 @@
 <title>장 전 시장 조건 체크</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:#F5F5F7;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh;}
-.header{padding:14px 20px 12px;background:#fff;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
-.header-left{display:flex;align-items:center;gap:10px;}
-.back-btn{font-size:20px;color:#9CA3AF;text-decoration:none;}
-.header-title{font-size:15px;font-weight:700;}
-.header-sub{font-size:11px;color:#9CA3AF;margin-top:1px;}
-.api-btn{font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;border:none;font-family:inherit;font-weight:600;}
-.api-btn.on{background:#D1FAE5;color:#059669;}
-.api-btn.off{background:#FEE2E2;color:#DC2626;}
-.content{padding:16px;max-width:680px;margin:0 auto;}
-.hidden{display:none!important;}
-
-/* 총점 */
-.score-row{display:flex;gap:10px;margin-bottom:14px;}
-.score-main{flex:1.2;background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:16px;text-align:center;}
-.score-circle{width:80px;height:80px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;flex-direction:column;border:4px solid #D1D5DB;}
-.score-num{font-size:26px;font-weight:800;color:#D1D5DB;}
-.score-label{font-size:10px;color:#9CA3AF;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
-.score-verdict{font-size:14px;font-weight:700;margin-bottom:2px;}
-.score-desc{font-size:11px;color:#6B7280;line-height:1.5;}
-.score-time{font-size:10px;color:#D1D5DB;margin-top:6px;}
-.signal-col{display:flex;flex-direction:column;gap:6px;flex:0.8;}
-.sig-box{flex:1;border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;border:2px solid transparent;}
-.sig-box.green{background:#D1FAE5;border-color:#10B981;}
-.sig-box.yellow{background:#FEF3C7;border-color:#F59E0B;}
-.sig-box.red{background:#FEE2E2;border-color:#EF4444;}
-.sig-box.active{opacity:1;}
-.sig-box:not(.active){opacity:0.35;}
-.sig-emoji{font-size:18px;}
-.sig-info .sig-name{font-size:12px;font-weight:700;}
-.sig-info .sig-cond{font-size:10px;color:#6B7280;}
-
-/* 탭 */
-.tabs{display:flex;background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:4px;margin-bottom:14px;gap:2px;}
-.tab-btn{flex:1;padding:8px 4px;border:none;background:transparent;font-size:12px;font-weight:600;color:#9CA3AF;border-radius:8px;cursor:pointer;font-family:inherit;transition:all 0.15s;}
-.tab-btn.active{background:#1A1A2E;color:#fff;}
-.tab-content{display:none;}
-.tab-content.active{display:block;}
-
-/* 지표 카드 */
-.ind-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
-.ind-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;}
-.ind-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
-.ind-name{font-size:10px;color:#9CA3AF;font-weight:700;letter-spacing:1px;}
-.dot{width:8px;height:8px;border-radius:50%;background:#D1D5DB;flex-shrink:0;}
-.dot.green{background:#10B981;}
-.dot.yellow{background:#F59E0B;}
-.dot.red{background:#EF4444;}
-.ind-val{font-size:17px;font-weight:700;color:#1A1A2E;margin-bottom:2px;}
-.ind-sub{font-size:11px;color:#9CA3AF;}
-.ind-detail{font-size:11px;color:#6B7280;margin-top:5px;line-height:1.5;padding-top:5px;border-top:1px solid #F3F4F6;}
-.full-ind{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;margin-bottom:8px;}
-.full-ind-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.full-ind-name{font-size:12px;font-weight:700;color:#374151;}
-.full-ind-body{font-size:12px;color:#374151;line-height:1.8;}
-
-/* 섹터 카드 */
-.sector-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
-.sector-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;border-left:3px solid #D1D5DB;}
-.sector-card.green{border-left-color:#10B981;}
-.sector-card.yellow{border-left-color:#F59E0B;}
-.sector-card.red{border-left-color:#EF4444;}
-.sector-name{font-size:12px;font-weight:700;color:#374151;margin-bottom:4px;}
-.sector-signal{font-size:11px;font-weight:600;margin-bottom:4px;}
-.sector-signal.green{color:#059669;}
-.sector-signal.yellow{color:#D97706;}
-.sector-signal.red{color:#DC2626;}
-.sector-reason{font-size:11px;color:#9CA3AF;line-height:1.5;}
-.sector-stocks{font-size:10px;color:#6B7280;margin-top:4px;padding-top:4px;border-top:1px solid #F3F4F6;}
-
-/* 외국인 선물 */
-.futures-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:8px;}
-.futures-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
-.futures-title{font-size:13px;font-weight:700;color:#1A1A2E;}
-.futures-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;}
-.futures-badge.buy{background:#D1FAE5;color:#059669;}
-.futures-badge.sell{background:#FEE2E2;color:#DC2626;}
-.futures-badge.neutral{background:#F3F4F6;color:#6B7280;}
-.futures-meter{height:8px;background:#F3F4F6;border-radius:4px;margin:10px 0;overflow:hidden;}
-.futures-fill{height:100%;border-radius:4px;transition:width 0.5s;}
-.futures-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;}
-.futures-stat{text-align:center;padding:8px;background:#F9FAFB;border-radius:8px;}
-.futures-stat-val{font-size:14px;font-weight:700;}
-.futures-stat-label{font-size:10px;color:#9CA3AF;margin-top:2px;}
-
-/* AI 분석 */
-.ai-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:10px;border-left:4px solid #7C3AED;}
-.ai-title{font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:8px;}
-.ai-text{font-size:13px;color:#374151;line-height:1.9;white-space:pre-wrap;}
-
-/* 심리 체크 */
-.psych-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:10px;}
-.psych-title{font-size:12px;font-weight:700;color:#374151;margin-bottom:10px;}
-.psych-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F9FAFB;}
-.psych-row:last-of-type{border-bottom:none;}
-.psych-q{font-size:12px;color:#374151;}
-.psych-btns{display:flex;gap:6px;}
-.pb{padding:4px 14px;border-radius:20px;border:1.5px solid #E5E7EB;background:transparent;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;transition:all 0.15s;}
+body{background:#F5F5F7;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1A1A2E;}
+.hdr{background:#fff;border-bottom:1px solid #E5E7EB;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.back{font-size:20px;color:#9CA3AF;text-decoration:none;margin-right:10px;}
+.abtn{font-size:11px;padding:5px 12px;border-radius:20px;border:none;cursor:pointer;font-family:inherit;font-weight:600;}
+.abtn.on{background:#D1FAE5;color:#059669;}.abtn.off{background:#FEE2E2;color:#DC2626;}
+.wrap{padding:16px;max-width:680px;margin:0 auto;}
+.scard{display:flex;gap:10px;margin-bottom:14px;}
+.smain{flex:1.2;background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:16px;text-align:center;}
+.scirc{width:80px;height:80px;border-radius:50%;border:4px solid #D1D5DB;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;}
+.snum{font-size:26px;font-weight:800;color:#D1D5DB;}
+.stxt{font-size:14px;font-weight:700;margin-bottom:4px;}
+.ssub{font-size:11px;color:#6B7280;line-height:1.5;}
+.stime{font-size:10px;color:#D1D5DB;margin-top:6px;}
+.scol{display:flex;flex-direction:column;gap:6px;flex:0.8;}
+.sig{flex:1;border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;border:2px solid transparent;opacity:0.3;}
+.sig.active{opacity:1;}
+.sig.green{background:#D1FAE5;border-color:#10B981;}
+.sig.yellow{background:#FEF3C7;border-color:#F59E0B;}
+.sig.red{background:#FEE2E2;border-color:#EF4444;}
+.snm{font-size:12px;font-weight:700;}.sco{font-size:10px;color:#6B7280;}
+.mbtn{width:100%;padding:14px;background:#1A1A2E;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:14px;}
+.mbtn:hover{background:#374151;}.mbtn:disabled{opacity:0.5;cursor:not-allowed;}
+.aic{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:14px;border-left:4px solid #6366F1;}
+.ait{font-size:12px;font-weight:700;color:#6366F1;margin-bottom:8px;}
+.aib{font-size:13px;color:#374151;line-height:1.8;white-space:pre-wrap;}
+.tnav{display:flex;background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:4px;gap:2px;margin-bottom:14px;}
+.tbtn{flex:1;padding:8px 4px;border:none;background:transparent;font-size:12px;font-weight:600;color:#9CA3AF;border-radius:8px;cursor:pointer;font-family:inherit;}
+.tbtn.on{background:#1A1A2E;color:#fff;}
+.tp{display:none;}.tp.on{display:block;}
+.ig{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.ic{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;}
+.itop{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.ilnk{font-size:10px;color:#2563EB;font-weight:700;text-decoration:none;}
+.dot{width:8px;height:8px;border-radius:50%;background:#D1D5DB;}
+.dot.g{background:#10B981;}.dot.y{background:#F59E0B;}.dot.r{background:#EF4444;}
+.ival{font-size:18px;font-weight:700;margin-bottom:2px;}
+.ichg{font-size:12px;font-weight:600;color:#9CA3AF;}
+.ichg.up{color:#10B981;}.ichg.dn{color:#EF4444;}
+.iref{font-size:10px;color:#9CA3AF;margin-top:3px;background:#F9FAFB;padding:2px 6px;border-radius:4px;display:inline-block;}
+.idet{font-size:11px;color:#6B7280;margin-top:5px;padding-top:5px;border-top:1px solid #F3F4F6;line-height:1.5;}
+.card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;margin-bottom:8px;}
+.ctop{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.ctit{font-size:12px;font-weight:700;color:#374151;}
+.clnk{font-size:11px;color:#2563EB;text-decoration:none;font-weight:600;}
+.cbdy{font-size:12px;color:#374151;line-height:1.8;}
+.bdg{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;}
+.bdg.buy{background:#D1FAE5;color:#059669;}.bdg.sell{background:#FEE2E2;color:#DC2626;}.bdg.ntrl{background:#F3F4F6;color:#6B7280;}
+.mtr{height:8px;background:#F3F4F6;border-radius:4px;margin:10px 0;overflow:hidden;}
+.mfill{height:100%;border-radius:4px;}
+.s3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;}
+.sbox{text-align:center;padding:8px;background:#F9FAFB;border-radius:8px;}
+.sval{font-size:14px;font-weight:700;}.slbl{font-size:10px;color:#9CA3AF;margin-top:2px;}
+.igrd{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.igrp label{font-size:11px;color:#374151;font-weight:600;display:block;margin-bottom:2px;}
+.igrp .rf{font-size:10px;color:#9CA3AF;margin-bottom:4px;display:block;}
+.igrp input,.igrp select{width:100%;border:1px solid #E5E7EB;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:#fff;}
+.igrp input:focus,.igrp select:focus{border-color:#6366F1;}
+.fbtn{width:100%;padding:11px;background:#6366F1;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;}
+.sbtn{width:100%;padding:11px;background:#374151;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.tip{margin-top:10px;padding:10px;background:#FEF3C7;border-radius:8px;font-size:11px;color:#78350F;line-height:1.7;}
+.secg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.secc{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;border-left:3px solid #D1D5DB;}
+.secc.g{border-left-color:#10B981;}.secc.y{border-left-color:#F59E0B;}.secc.r{border-left-color:#EF4444;}
+.secn{font-size:12px;font-weight:700;margin-bottom:3px;}
+.secs{font-size:11px;font-weight:600;margin-bottom:3px;}
+.secs.g{color:#059669;}.secs.y{color:#D97706;}.secs.r{color:#DC2626;}
+.secr{font-size:11px;color:#9CA3AF;line-height:1.4;}
+.secst{font-size:10px;color:#6B7280;margin-top:4px;padding-top:4px;border-top:1px solid #F3F4F6;}
+.prow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #F9FAFB;}
+.prow:last-of-type{border-bottom:none;}
+.pq{font-size:13px;color:#374151;}
+.pbtns{display:flex;gap:6px;}
+.pb{padding:5px 14px;border-radius:20px;border:1.5px solid #E5E7EB;background:transparent;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700;}
 .pb.yes.on{background:#D1FAE5;border-color:#10B981;color:#065F46;}
 .pb.no.on{background:#FEE2E2;border-color:#EF4444;color:#991B1B;}
-.psych-result{margin-top:10px;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.6;background:#F9FAFB;color:#6B7280;}
-
-/* 이벤트 */
-.event-list{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:10px;}
-.event-item{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #F9FAFB;}
-.event-item:last-child{border-bottom:none;}
-.event-time{font-size:11px;color:#9CA3AF;width:50px;flex-shrink:0;padding-top:1px;}
-.event-text{font-size:12px;color:#374151;line-height:1.5;}
-.event-impact{font-size:10px;padding:1px 7px;border-radius:10px;flex-shrink:0;font-weight:700;}
-.event-impact.high{background:#FEE2E2;color:#DC2626;}
-.event-impact.mid{background:#FEF3C7;color:#D97706;}
-.event-impact.low{background:#F3F4F6;color:#6B7280;}
-
-/* 버튼 */
-.run-btn{width:100%;padding:14px;background:#1A1A2E;border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;margin-bottom:12px;}
-.run-btn:disabled{opacity:0.5;cursor:not-allowed;}
-.loading-dots span{animation:blink 1.4s infinite;}
-.loading-dots span:nth-child(2){animation-delay:0.2s;}
-.loading-dots span:nth-child(3){animation-delay:0.4s;}
-@keyframes blink{0%,80%,100%{opacity:0;}40%{opacity:1;}}
-
-/* 모달 */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
-.modal{background:#fff;border-radius:14px;padding:22px;width:100%;max-width:380px;}
-.modal-title{font-size:15px;font-weight:700;margin-bottom:6px;}
-.modal-sub{font-size:12px;color:#6B7280;margin-bottom:14px;line-height:1.6;}
-.modal input{width:100%;border:1px solid #E5E7EB;border-radius:8px;color:#1A1A2E;font-size:13px;padding:10px 12px;outline:none;font-family:inherit;margin-bottom:12px;}
-.modal input:focus{border-color:#7C3AED;}
-.modal-btns{display:flex;gap:8px;}
-.modal-btn{flex:1;padding:10px;border-radius:8px;border:none;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600;}
-.modal-btn.primary{background:#1A1A2E;color:#fff;}
-.modal-btn.secondary{background:#F3F4F6;color:#6B7280;}
+.hrow{padding:8px 0;border-bottom:1px solid #F9FAFB;font-size:11px;}
+.hrow:last-child{border-bottom:none;}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:360px;}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:6px;}
+.modal p{font-size:12px;color:#6B7280;margin-bottom:14px;line-height:1.6;}
+.modal input{width:100%;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;margin-bottom:12px;}
+.mbtns{display:flex;gap:8px;}
+.mbtns button{flex:1;padding:10px;border-radius:8px;border:none;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600;}
+.bok{background:#1A1A2E;color:#fff;}.bcl{background:#F3F4F6;color:#6B7280;}
+.hide{display:none!important;}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-left">
-    <a href="./index.html" class="back-btn">‹</a>
+<div class="hdr">
+  <div style="display:flex;align-items:center">
+    <a href="./index.html" class="back">&lsaquo;</a>
     <div>
-      <div class="header-title">📊 장 전 시장 조건 체크</div>
-      <div class="header-sub" id="headerDate">한국 주식 매매 가능 여부 판단</div>
+      <div style="font-size:15px;font-weight:700">&#128202; 장 전 시장 조건 체크</div>
+      <div style="font-size:11px;color:#9CA3AF" id="hd"></div>
     </div>
   </div>
-  <button class="api-btn off" id="apiBtn" onclick="openModal()">AI 설정</button>
+  <button id="abtn" class="abtn off" onclick="openM()">AI 설정</button>
 </div>
 
-<div class="content">
-
-  <!-- 총점 + 신호등 -->
-  <div class="score-row">
-    <div class="score-main">
-      <div class="score-label">종합 점수</div>
-      <div class="score-circle" id="scoreCircle">
-        <div class="score-num" id="scoreNum">--</div>
-      </div>
-      <div class="score-verdict" id="scoreVerdict">분석 전</div>
-      <div class="score-desc" id="scoreDesc">아래 버튼을 눌러 분석 시작</div>
-      <div class="score-time" id="scoreTime"></div>
+<div class="wrap">
+  <div class="scard">
+    <div class="smain">
+      <div style="font-size:10px;color:#9CA3AF;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">종합 점수</div>
+      <div class="scirc" id="scirc"><div class="snum" id="snum">--</div></div>
+      <div class="stxt" id="stxt">분석 전</div>
+      <div class="ssub" id="ssub">버튼을 눌러 분석 시작</div>
+      <div class="stime" id="stime"></div>
     </div>
-    <div class="signal-col">
-      <div class="sig-box green" id="sigGo">
-        <span class="sig-emoji">🟢</span>
-        <div class="sig-info">
-          <div class="sig-name">매매 가능</div>
-          <div class="sig-cond">70점 이상</div>
-        </div>
-      </div>
-      <div class="sig-box yellow" id="sigCaution">
-        <span class="sig-emoji">🟡</span>
-        <div class="sig-info">
-          <div class="sig-name">주의 매매</div>
-          <div class="sig-cond">40~69점</div>
-        </div>
-      </div>
-      <div class="sig-box red" id="sigStop">
-        <span class="sig-emoji">🔴</span>
-        <div class="sig-info">
-          <div class="sig-name">관망</div>
-          <div class="sig-cond">39점 이하</div>
-        </div>
-      </div>
+    <div class="scol">
+      <div class="sig green" id="sgo"><span style="font-size:18px">&#129001;</span><div><div class="snm">매매 가능</div><div class="sco">70점 이상</div></div></div>
+      <div class="sig yellow" id="swrn"><span style="font-size:18px">&#128993;</span><div><div class="snm">주의 매매</div><div class="sco">40~69점</div></div></div>
+      <div class="sig red" id="sstp"><span style="font-size:18px">&#128308;</span><div><div class="snm">관망</div><div class="sco">39점 이하</div></div></div>
     </div>
   </div>
 
-  <!-- 분석 버튼 -->
-  <button class="run-btn" id="runBtn" onclick="runAnalysis()">
-    🔍 지금 시장 조건 분석 (AI 웹 검색)
-  </button>
+  <button class="mbtn" id="mbtn" onclick="runMain()">&#128269; 실시간 데이터로 분석 시작</button>
 
-  <!-- 탭 -->
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('macro')">거시 지표</button>
-    <button class="tab-btn" onclick="switchTab('futures')">외국인 선물</button>
-    <button class="tab-btn" onclick="switchTab('sector')">섹터 신호</button>
-    <button class="tab-btn" onclick="switchTab('psych')">심리 체크</button>
+  <div class="aic hide" id="aic">
+    <div class="ait">&#129302; AI 종합 판단</div>
+    <div class="aib" id="aib"></div>
   </div>
 
-  <!-- 거시 지표 탭 -->
-  <div class="tab-content active" id="tab-macro">
-    <div class="ind-grid">
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">S&P500</span><div class="dot" id="d-sp"></div></div>
-        <div class="ind-val" id="v-sp">--</div>
-        <div class="ind-sub" id="s-sp">전일 종가</div>
-        <div class="ind-detail" id="dt-sp">분석 전</div>
+  <div class="tnav">
+    <button class="tbtn on" onclick="showT('macro')">거시 지표</button>
+    <button class="tbtn" onclick="showT('fut')">외국인 선물</button>
+    <button class="tbtn" onclick="showT('sec')">섹터 신호</button>
+    <button class="tbtn" onclick="showT('psy')">심리 체크</button>
+  </div>
+
+  <div class="tp on" id="tp-macro">
+    <div class="ig">
+      <div class="ic">
+        <div class="itop"><a class="ilnk" href="https://finance.yahoo.com/quote/%5EGSPC" target="_blank">S&amp;P500 &#8599;</a><div class="dot" id="d-sp"></div></div>
+        <div class="ival" id="v-sp">--</div><div class="ichg" id="c-sp">대기중</div>
+        <div class="iref">+1% 이상=강 / 보합 / -1% 이하=약</div>
+        <div class="idet" id="t-sp">분석 전</div>
       </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">나스닥</span><div class="dot" id="d-nq"></div></div>
-        <div class="ind-val" id="v-nq">--</div>
-        <div class="ind-sub" id="s-nq">전일 종가</div>
-        <div class="ind-detail" id="dt-nq">분석 전</div>
+      <div class="ic">
+        <div class="itop"><a class="ilnk" href="https://finance.yahoo.com/quote/%5EIXIC" target="_blank">나스닥 &#8599;</a><div class="dot" id="d-nq"></div></div>
+        <div class="ival" id="v-nq">--</div><div class="ichg" id="c-nq">대기중</div>
+        <div class="iref">+1.5%=강 / AI기술주 방향 주목</div>
+        <div class="idet" id="t-nq">분석 전</div>
       </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">필라델피아 반도체 SOX</span><div class="dot" id="d-sox"></div></div>
-        <div class="ind-val" id="v-sox">--</div>
-        <div class="ind-sub" id="s-sox">반도체 업황</div>
-        <div class="ind-detail" id="dt-sox">분석 전</div>
+      <div class="ic">
+        <div class="itop"><a class="ilnk" href="https://finance.yahoo.com/quote/%5ESOX" target="_blank">SOX 반도체 &#8599;</a><div class="dot" id="d-sox"></div></div>
+        <div class="ival" id="v-sox">--</div><div class="ichg" id="c-sox">대기중</div>
+        <div class="iref">+2%=강 / 삼성·SK하닉 직결</div>
+        <div class="idet" id="t-sox">분석 전</div>
       </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">VIX 공포지수</span><div class="dot" id="d-vix"></div></div>
-        <div class="ind-val" id="v-vix">--</div>
-        <div class="ind-sub" id="s-vix">20↓안정 30↑위험</div>
-        <div class="ind-detail" id="dt-vix">분석 전</div>
+      <div class="ic">
+        <div class="itop"><a class="ilnk" href="https://finance.yahoo.com/quote/%5EVIX" target="_blank">VIX 공포지수 &#8599;</a><div class="dot" id="d-vix"></div></div>
+        <div class="ival" id="v-vix">--</div><div class="ichg" id="c-vix">대기중</div>
+        <div class="iref">17이하=안정 / 20~30=주의 / 30이상=위험</div>
+        <div class="idet" id="t-vix">분석 전</div>
       </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">USD/KRW 환율</span><div class="dot" id="d-fx"></div></div>
-        <div class="ind-val" id="v-fx">--</div>
-        <div class="ind-sub" id="s-fx">1,300원 기준</div>
-        <div class="ind-detail" id="dt-fx">분석 전</div>
+      <div class="ic">
+        <div class="itop"><a class="ilnk" href="https://finance.yahoo.com/quote/KRW=X" target="_blank">USD/KRW 환율 &#8599;</a><div class="dot" id="d-fx"></div></div>
+        <div class="ival" id="v-fx">--</div><div class="ichg" id="c-fx">대기중</div>
+        <div class="iref">1430이하=우호 / 1450=현재기준 / 1480이상=부담</div>
+        <div class="idet" id="t-fx">분석 전</div>
       </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">달러인덱스 DXY</span><div class="dot" id="d-dxy"></div></div>
-        <div class="ind-val" id="v-dxy">--</div>
-        <div class="ind-sub" id="s-dxy">강달러 여부</div>
-        <div class="ind-detail" id="dt-dxy">분석 전</div>
+      <div class="ic">
+        <div class="itop"><a class="ilnk" href="https://finance.yahoo.com/quote/DX-Y.NYB" target="_blank">달러인덱스 DXY &#8599;</a><div class="dot" id="d-dxy"></div></div>
+        <div class="ival" id="v-dxy">--</div><div class="ichg" id="c-dxy">대기중</div>
+        <div class="iref">98이하=약달러우호 / 100=중립 / 104이상=부담</div>
+        <div class="idet" id="t-dxy">분석 전</div>
       </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">미국 10년물 금리</span><div class="dot" id="d-bond"></div></div>
-        <div class="ind-val" id="v-bond">--</div>
-        <div class="ind-sub" id="s-bond">성장주 부담</div>
-        <div class="ind-detail" id="dt-bond">분석 전</div>
+      <div class="ic">
+        <div class="itop"><a class="ilnk" href="https://finance.yahoo.com/quote/%5ETNX" target="_blank">미국 10년물 &#8599;</a><div class="dot" id="d-bond"></div></div>
+        <div class="ival" id="v-bond">--</div><div class="ichg" id="c-bond">대기중</div>
+        <div class="iref">4.2%이하=우호 / 4.5%이상=성장주부담</div>
+        <div class="idet" id="t-bond">분석 전</div>
       </div>
-      <div class="ind-card">
-        <div class="ind-header"><span class="ind-name">항셍 / 상하이</span><div class="dot" id="d-cn"></div></div>
-        <div class="ind-val" id="v-cn">--</div>
-        <div class="ind-sub" id="s-cn">중국 시장</div>
-        <div class="ind-detail" id="dt-cn">분석 전</div>
+      <div class="ic">
+        <div class="itop"><a class="ilnk" href="https://finance.yahoo.com/quote/%5EHSI" target="_blank">항셍지수 &#8599;</a><div class="dot" id="d-cn"></div></div>
+        <div class="ival" id="v-cn">--</div><div class="ichg" id="c-cn">대기중</div>
+        <div class="iref">+1%=강 / 중국 리스크 주목</div>
+        <div class="idet" id="t-cn">분석 전</div>
       </div>
     </div>
-
-    <div class="full-ind">
-      <div class="full-ind-header">
-        <span class="full-ind-name">📅 오늘 주요 이벤트</span>
-        <div class="dot" id="d-event"></div>
-      </div>
-      <div class="full-ind-body" id="dt-event">분석 전 — FOMC, CPI, 실적 발표 등</div>
-    </div>
-
-    <div class="ai-card hidden" id="aiCard">
-      <div class="ai-title">🤖 AI 종합 판단</div>
-      <div class="ai-text" id="aiText"></div>
+    <div class="card">
+      <div class="ctop"><span class="ctit">오늘 주요 이벤트</span><a class="clnk" href="https://kr.investing.com/economic-calendar/" target="_blank">캘린더 &#8599;</a></div>
+      <div class="cbdy" id="t-ev">분석 전</div>
     </div>
   </div>
 
-  <!-- 외국인 선물 탭 -->
-  <div class="tab-content" id="tab-futures">
-    <div class="futures-card">
-      <div class="futures-header">
-        <span class="futures-title">🏦 외국인 코스피200 선물 포지션</span>
-        <span class="futures-badge neutral" id="futBadge">분석 전</span>
-      </div>
-
-      <div class="futures-meter">
-        <div class="futures-fill" id="futMeter" style="width:50%;background:#D1D5DB"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:#9CA3AF;margin-top:2px;">
-        <span>강한 매도</span><span>중립</span><span>강한 매수</span>
-      </div>
-
-      <div class="futures-info">
-        <div class="futures-stat">
-          <div class="futures-stat-val" id="futNet">--</div>
-          <div class="futures-stat-label">순포지션</div>
+  <div class="tp" id="tp-fut">
+    <div class="card" style="border-left:3px solid #6366F1">
+      <div class="ctit" style="margin-bottom:3px">&#128221; HTS 확인 후 입력</div>
+      <div style="font-size:11px;color:#9CA3AF;margin-bottom:12px">키움 영웅문 &rarr; 투자자별 매매동향</div>
+      <div class="igrd">
+        <div class="igrp">
+          <label>외국인 선물 순매수 (계약)</label>
+          <span class="rf">강: &#177;1,000계약 / 중: &#177;500 / 약: &#177;300이하</span>
+          <input type="number" id="i-fut" placeholder="3241 또는 -1500">
         </div>
-        <div class="futures-stat">
-          <div class="futures-stat-val" id="futChange">--</div>
-          <div class="futures-stat-label">전일 대비</div>
+        <div class="igrp">
+          <label>전일 대비 (계약)</label>
+          <span class="rf">증가=매수세 강화</span>
+          <input type="number" id="i-futc" placeholder="842 또는 -300">
         </div>
-        <div class="futures-stat">
-          <div class="futures-stat-val" id="futTrend">--</div>
-          <div class="futures-stat-label">3일 추세</div>
+        <div class="igrp">
+          <label>외국인 현물 순매수 (억원)</label>
+          <span class="rf">강: &#177;2,000억 / 중: &#177;1,000 / 약: &#177;500이하</span>
+          <input type="number" id="i-csh" placeholder="3200 또는 -1800">
         </div>
+        <div class="igrp">
+          <label>기관 순매수 (억원)</label>
+          <span class="rf">강: &#177;3,000억 / 약: &#177;1,000이하</span>
+          <input type="number" id="i-ist" placeholder="-2100 또는 1500">
+        </div>
+        <div class="igrp">
+          <label>프로그램 매매 (억원)</label>
+          <span class="rf">강: &#177;3,000억 / 차익+비차익 합계</span>
+          <input type="number" id="i-prg" placeholder="6718 또는 -2500">
+        </div>
+        <div class="igrp">
+          <label>3일 추세</label>
+          <span class="rf">연속 방향이 핵심</span>
+          <select id="i-trd">
+            <option value="">선택</option>
+            <option value="3일연속순매수">3일 연속 순매수</option>
+            <option value="2일연속순매수">2일 연속 순매수</option>
+            <option value="보합">보합</option>
+            <option value="2일연속순매도">2일 연속 순매도</option>
+            <option value="3일연속순매도">3일 연속 순매도</option>
+          </select>
+        </div>
+      </div>
+      <button class="fbtn" onclick="doFlow()">&#129302; 수급 AI 분석</button>
+      <button class="sbtn" onclick="doSave()">&#128190; 오늘 데이터 저장</button>
+      <div class="tip">
+        &#128161; <strong>언제 분석해야 할까?</strong><br>
+        &middot; <strong>매일 8:30~9:00</strong> 입력 후 저장<br>
+        &middot; <strong>20일 이상 쌓이면</strong> 히스토리 &rarr; AI 패턴 분석 클릭<br>
+        &middot; 외국인 선물 3일 연속 방향 전환 즉시 분석
       </div>
     </div>
 
-    <div class="full-ind">
-      <div class="full-ind-header">
-        <span class="full-ind-name">외국인 현물 수급</span>
-        <div class="dot" id="d-cash"></div>
+    <div class="card">
+      <div class="ctop"><span class="ctit">&#127970; 외국인 선물 포지션</span><span class="bdg ntrl" id="fb">입력 전</span></div>
+      <div class="mtr"><div class="mfill" id="fm" style="width:50%;background:#D1D5DB"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:#9CA3AF"><span>강한 매도</span><span>중립</span><span>강한 매수</span></div>
+      <div class="s3">
+        <div class="sbox"><div class="sval" id="fn">--</div><div class="slbl">순포지션</div></div>
+        <div class="sbox"><div class="sval" id="fc">--</div><div class="slbl">전일 대비</div></div>
+        <div class="sbox"><div class="sval" id="ft">--</div><div class="slbl">3일 추세</div></div>
       </div>
-      <div class="full-ind-body" id="dt-cash">분석 전</div>
+    </div>
+    <div class="card"><div class="ctop"><span class="ctit">외국인 현물 수급</span><div class="dot" id="d-csh"></div></div><div class="cbdy" id="t-csh">입력 후 표시</div></div>
+    <div class="card"><div class="ctop"><span class="ctit">기관 수급 및 프로그램 매매</span><div class="dot" id="d-ist"></div></div><div class="cbdy" id="t-ist">입력 후 표시</div></div>
+    <div class="card"><div class="ctop"><span class="ctit">&#128161; AI 수급 종합 해석</span><div class="dot" id="d-flw"></div></div><div class="cbdy" id="t-flw">입력 후 분석 버튼 클릭</div></div>
+
+    <div class="card" style="border-left:3px solid #374151">
+      <div class="ctop">
+        <span class="ctit">&#128197; 수급 히스토리 <span style="font-size:10px;color:#9CA3AF">(최근 30일)</span></span>
+        <div style="display:flex;gap:6px">
+          <button onclick="doPat()" style="font-size:11px;padding:4px 10px;background:#6366F1;color:#fff;border:none;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:600">AI 패턴 분석</button>
+          <button onclick="doClear()" style="font-size:11px;padding:4px 10px;background:#F3F4F6;color:#6B7280;border:none;border-radius:20px;cursor:pointer;font-family:inherit">초기화</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#9CA3AF;margin-bottom:8px">외국인 선물 추세 (초록=순매수, 빨간=순매도)</div>
+      <div id="mchart" style="display:flex;gap:3px;align-items:flex-end;height:50px;margin-bottom:8px"></div>
+      <div id="hlist"></div>
     </div>
 
-    <div class="full-ind">
-      <div class="full-ind-header">
-        <span class="full-ind-name">기관 수급 & 프로그램 매매</span>
-        <div class="dot" id="d-inst"></div>
-      </div>
-      <div class="full-ind-body" id="dt-inst">분석 전</div>
-    </div>
-
-    <div class="full-ind">
-      <div class="full-ind-header">
-        <span class="full-ind-name">💡 수급 종합 해석</span>
-        <div class="dot" id="d-flow"></div>
-      </div>
-      <div class="full-ind-body" id="dt-flow">분석 전</div>
-    </div>
-  </div>
-
-  <!-- 섹터 신호 탭 -->
-  <div class="tab-content" id="tab-sector">
-    <div style="font-size:11px;color:#9CA3AF;margin-bottom:10px;">오늘 어떤 섹터에서 기회를 찾을지 판단해줘</div>
-    <div class="sector-grid" id="sectorGrid">
-      <!-- JS로 채워짐 -->
-      <div class="sector-card"><div class="sector-name">반도체</div><div class="sector-reason">분석 전</div></div>
-      <div class="sector-card"><div class="sector-name">2차전지</div><div class="sector-reason">분석 전</div></div>
-      <div class="sector-card"><div class="sector-name">금융/은행</div><div class="sector-reason">분석 전</div></div>
-      <div class="sector-card"><div class="sector-name">바이오</div><div class="sector-reason">분석 전</div></div>
-      <div class="sector-card"><div class="sector-name">자동차</div><div class="sector-reason">분석 전</div></div>
-      <div class="sector-card"><div class="sector-name">에너지/화학</div><div class="sector-reason">분석 전</div></div>
-    </div>
-    <div class="full-ind">
-      <div class="full-ind-header">
-        <span class="full-ind-name">🎯 오늘 집중 섹터 추천</span>
-      </div>
-      <div class="full-ind-body" id="sectorRec">분석 후 표시</div>
-    </div>
-  </div>
-
-  <!-- 심리 체크 탭 -->
-  <div class="tab-content" id="tab-psych">
-    <div class="psych-card">
-      <div class="psych-title">🧠 매매 전 내 심리 체크</div>
-      <div class="psych-row">
-        <span class="psych-q">어제 수면이 충분했나?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',0)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',0)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-row">
-        <span class="psych-q">손실 만회 심리가 있나?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',1)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',1)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-row">
-        <span class="psych-q">FOMO (놓칠까봐 두려움)?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',2)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',2)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-row">
-        <span class="psych-q">감정적으로 안정적인가?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',3)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',3)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-row">
-        <span class="psych-q">진입 근거가 명확한가?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',4)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',4)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-row">
-        <span class="psych-q">손절 기준이 미리 정해졌나?</span>
-        <div class="psych-btns">
-          <button class="pb yes" onclick="pCheck(this,'yes',5)">예</button>
-          <button class="pb no" onclick="pCheck(this,'no',5)">아니오</button>
-        </div>
-      </div>
-      <div class="psych-result" id="psychResult">체크 후 심리 판단 결과가 여기에 표시돼</div>
+    <div class="aic hide" id="patc">
+      <div class="ait">&#128202; 수급 패턴 분석 결과</div>
+      <div class="aib" id="patb"></div>
     </div>
   </div>
 
+  <div class="tp" id="tp-sec">
+    <div style="font-size:11px;color:#9CA3AF;margin-bottom:10px">오늘 어떤 섹터에서 기회를 찾을지 판단</div>
+    <div class="secg" id="secg">
+      <div class="secc"><div class="secn">반도체</div><div class="secr">분석 전</div></div>
+      <div class="secc"><div class="secn">2차전지</div><div class="secr">분석 전</div></div>
+      <div class="secc"><div class="secn">금융은행</div><div class="secr">분석 전</div></div>
+      <div class="secc"><div class="secn">바이오</div><div class="secr">분석 전</div></div>
+      <div class="secc"><div class="secn">자동차</div><div class="secr">분석 전</div></div>
+      <div class="secc"><div class="secn">에너지화학</div><div class="secr">분석 전</div></div>
+    </div>
+    <div class="card"><div class="ctit" style="margin-bottom:8px">오늘 집중 섹터 추천</div><div class="cbdy" id="srec">분석 후 표시</div></div>
+  </div>
+
+  <div class="tp" id="tp-psy">
+    <div class="card">
+      <div class="ctit" style="margin-bottom:12px">&#129504; 매매 전 심리 체크</div>
+      <div class="prow"><span class="pq">어제 수면이 충분했나?</span><div class="pbtns"><button class="pb yes" onclick="pc(this,0,1)">예</button><button class="pb no" onclick="pc(this,0,0)">아니오</button></div></div>
+      <div class="prow"><span class="pq">손실 만회 심리가 있나?</span><div class="pbtns"><button class="pb yes" onclick="pc(this,1,1)">예</button><button class="pb no" onclick="pc(this,1,0)">아니오</button></div></div>
+      <div class="prow"><span class="pq">FOMO가 있나?</span><div class="pbtns"><button class="pb yes" onclick="pc(this,2,1)">예</button><button class="pb no" onclick="pc(this,2,0)">아니오</button></div></div>
+      <div class="prow"><span class="pq">감정적으로 안정적인가?</span><div class="pbtns"><button class="pb yes" onclick="pc(this,3,1)">예</button><button class="pb no" onclick="pc(this,3,0)">아니오</button></div></div>
+      <div class="prow"><span class="pq">진입 근거가 명확한가?</span><div class="pbtns"><button class="pb yes" onclick="pc(this,4,1)">예</button><button class="pb no" onclick="pc(this,4,0)">아니오</button></div></div>
+      <div class="prow"><span class="pq">손절 기준이 정해졌나?</span><div class="pbtns"><button class="pb yes" onclick="pc(this,5,1)">예</button><button class="pb no" onclick="pc(this,5,0)">아니오</button></div></div>
+      <div id="pres" style="margin-top:12px;padding:10px;border-radius:8px;font-size:12px;background:#F9FAFB;color:#6B7280">체크 후 결과 표시</div>
+    </div>
+  </div>
 </div>
 
-<!-- 모달 -->
-<div class="modal-overlay hidden" id="apiModal">
+<div class="ov hide" id="mov">
   <div class="modal">
-    <div class="modal-title">Gemini API 키 설정</div>
-    <div class="modal-sub">실시간 웹 검색으로 시장 데이터를 가져오려면 Gemini API 키가 필요해. aistudio.google.com에서 무료 발급 가능. 이 기기에만 저장됨.</div>
-    <input type="password" id="apiInput" placeholder="AIza..." />
-    <div class="modal-btns">
-      <button class="modal-btn secondary" onclick="closeModal()">취소</button>
-      <button class="modal-btn primary" onclick="saveKey()">저장</button>
+    <h3>Claude API 키 설정</h3>
+    <p>console.anthropic.com에서 발급. 이 기기에만 저장됨.</p>
+    <input type="password" id="ki" placeholder="sk-ant-...">
+    <div class="mbtns">
+      <button class="bcl" onclick="closeM()">취소</button>
+      <button class="bok" onclick="saveK()">저장</button>
     </div>
     <div style="margin-top:10px;text-align:center">
-      <button onclick="clearKey()" style="background:none;border:none;cursor:pointer;font-size:11px;color:#EF4444">키 삭제</button>
+      <button onclick="clrK()" style="background:none;border:none;color:#EF4444;font-size:11px;cursor:pointer">키 삭제</button>
     </div>
   </div>
 </div>
 
 <script>
-const KEY = 'gemini-apikey';
+var AK = 'c-api-key';
+var FK = 'flow-hist-v3';
+var ps = [-1,-1,-1,-1,-1,-1];
 
-// 키 가져오기
-function getApiKey(){
-  return localStorage.getItem(KEY) || '';
+(function() {
+  var n = new Date();
+  var d = ['일','월','화','수','목','금','토'];
+  document.getElementById('hd').textContent = (n.getMonth()+1) + '월 ' + n.getDate() + '일(' + d[n.getDay()] + ') 장전체크';
+})();
+
+function openM() { document.getElementById('mov').classList.remove('hide'); }
+function closeM() { document.getElementById('mov').classList.add('hide'); }
+function saveK() {
+  var k = document.getElementById('ki').value.trim();
+  if (k) { localStorage.setItem(AK, k); updB();
+// 외국인선물 탭 히스토리 초기 렌더링
+setTimeout(function() { if (document.getElementById('tp-fut').classList.contains('on')) renderHist(); }, 100); closeM(); }
 }
-function updateBtn(){
-  const k=getApiKey();
-  const b=document.getElementById('apiBtn');
-  b.textContent=k?'AI ON':'AI 설정';
-  b.className=k?'api-btn on':'api-btn off';
+function clrK() { localStorage.removeItem(AK); updB(); closeM(); }
+function updB() {
+  var k = localStorage.getItem(AK);
+  var b = document.getElementById('abtn');
+  b.textContent = k ? 'AI ON' : 'AI 설정';
+  b.className = k ? 'abtn on' : 'abtn off';
+}
+updB();
+
+function showT(name) {
+  var tabs = ['macro','fut','sec','psy'];
+  document.querySelectorAll('.tbtn').forEach(function(b, i) {
+    b.classList.toggle('on', tabs[i] === name);
+  });
+  document.querySelectorAll('.tp').forEach(function(p) { p.classList.remove('on'); });
+  document.getElementById('tp-' + name).classList.add('on');
+  if (name === 'fut') setTimeout(renderHist, 50);
 }
 
-// 탭
-function switchTab(t){
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['macro','futures','sector','psych'][i]===t));
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-  document.getElementById('tab-'+t).classList.add('active');
-}
-
-// 심리 체크
-const pState = Array(6).fill(null);
-function pCheck(btn,type,idx){
-  const row=btn.closest('.psych-row');
-  row.querySelectorAll('.pb').forEach(b=>b.classList.remove('on'));
+function pc(btn, idx, val) {
+  btn.closest('.prow').querySelectorAll('.pb').forEach(function(b) { b.classList.remove('on'); });
   btn.classList.add('on');
-  pState[idx]=type;
-  updatePsych();
-}
-function updatePsych(){
-  const filled=pState.filter(v=>v!==null).length;
-  if(filled<3){document.getElementById('psychResult').style.cssText='';document.getElementById('psychResult').textContent='체크 후 심리 판단 결과가 여기에 표시돼';return;}
-  // Q0=수면yes=good, Q1=손실yes=bad, Q2=FOMO yes=bad, Q3=안정yes=good, Q4=근거yes=good, Q5=손절yes=good
-  let bad=0,good=0;
-  if(pState[0]==='yes')good++; if(pState[1]==='yes')bad++; if(pState[2]==='yes')bad++;
-  if(pState[3]==='yes')good++; if(pState[4]==='yes')good++; if(pState[5]==='yes')good++;
-  const el=document.getElementById('psychResult');
-  if(bad>=2){el.style.cssText='background:#FEE2E2;color:#991B1B';el.textContent='⚠️ 심리 불안정 — 시장 조건과 무관하게 오늘 매매 자제 권장';}
-  else if(good>=4){el.style.cssText='background:#D1FAE5;color:#065F46';el.textContent='✅ 심리 안정 — 시장 조건이 허락하면 매매 가능';}
-  else{el.style.cssText='background:#FEF3C7;color:#78350F';el.textContent='🟡 보통 — 작은 포지션으로 시작하거나 관망 고려';}
+  ps[idx] = val;
+  var f = ps.filter(function(v) { return v >= 0; }).length;
+  if (f < 3) return;
+  var bad = 0, good = 0;
+  if (ps[0]===1) good++; if (ps[1]===1) bad++; if (ps[2]===1) bad++;
+  if (ps[3]===1) good++; if (ps[4]===1) good++; if (ps[5]===1) good++;
+  var el = document.getElementById('pres');
+  if (bad >= 2) { el.style.cssText='background:#FEE2E2;color:#991B1B;padding:10px;border-radius:8px;font-size:12px;margin-top:12px'; el.textContent='심리 불안정 — 오늘 매매 자제 권장'; }
+  else if (good >= 4) { el.style.cssText='background:#D1FAE5;color:#065F46;padding:10px;border-radius:8px;font-size:12px;margin-top:12px'; el.textContent='심리 안정 — 매매 가능'; }
+  else { el.style.cssText='background:#FEF3C7;color:#78350F;padding:10px;border-radius:8px;font-size:12px;margin-top:12px'; el.textContent='보통 — 소규모 접근 권장'; }
 }
 
-// 점수 업데이트
-function setScore(score){
-  const num=document.getElementById('scoreNum');
-  const circle=document.getElementById('scoreCircle');
-  const verdict=document.getElementById('scoreVerdict');
-  const desc=document.getElementById('scoreDesc');
-  num.textContent=score;
-  ['sigGo','sigCaution','sigStop'].forEach(id=>document.getElementById(id).classList.remove('active'));
-  if(score>=70){
-    circle.style.cssText='border-color:#10B981;'; num.style.color='#059669';
-    verdict.textContent='매매 가능 ✅'; verdict.style.color='#059669';
-    desc.textContent='조건 충분. 진입 근거 확인 후 매매 가능.';
-    document.getElementById('sigGo').classList.add('active');
-  }else if(score>=40){
-    circle.style.cssText='border-color:#F59E0B;'; num.style.color='#D97706';
-    verdict.textContent='주의 매매 🟡'; verdict.style.color='#D97706';
-    desc.textContent='조건 혼재. 소규모 or 관망 권장.';
-    document.getElementById('sigCaution').classList.add('active');
-  }else{
-    circle.style.cssText='border-color:#EF4444;'; num.style.color='#DC2626';
-    verdict.textContent='관망 권장 🔴'; verdict.style.color='#DC2626';
-    desc.textContent='불리한 조건. 오늘은 쉬는 게 전략.';
-    document.getElementById('sigStop').classList.add('active');
+function setDot(id, sig) { var el = document.getElementById(id); if (el) el.className = 'dot' + (sig ? ' ' + sig : ''); }
+
+function setScore(s) {
+  document.getElementById('snum').textContent = s;
+  ['sgo','swrn','sstp'].forEach(function(id) { document.getElementById(id).classList.remove('active'); });
+  var c = document.getElementById('scirc'), n = document.getElementById('snum');
+  var t = document.getElementById('stxt'), sb = document.getElementById('ssub');
+  if (s >= 70) { c.style.borderColor='#10B981'; n.style.color='#059669'; t.textContent='매매 가능 ✅'; t.style.color='#059669'; sb.textContent='조건 충분. 진입 근거 확인 후 매매.'; document.getElementById('sgo').classList.add('active'); }
+  else if (s >= 40) { c.style.borderColor='#F59E0B'; n.style.color='#D97706'; t.textContent='주의 매매 🟡'; t.style.color='#D97706'; sb.textContent='조건 혼재. 소규모 접근 권장.'; document.getElementById('swrn').classList.add('active'); }
+  else { c.style.borderColor='#EF4444'; n.style.color='#DC2626'; t.textContent='관망 권장 🔴'; t.style.color='#DC2626'; sb.textContent='불리한 조건. 쉬는 것도 전략.'; document.getElementById('sstp').classList.add('active'); }
+  document.getElementById('stime').textContent = '분석: ' + new Date().toLocaleTimeString('ko-KR');
+}
+
+function callClaude(key, prompt, useSearch, cb) {
+  var body = { model: 'claude-sonnet-4-5', max_tokens: 800, messages: [{ role: 'user', content: prompt }] };
+  if (useSearch) { body.max_tokens = 2000; body.tools = [{ type: 'web_search_20250305', name: 'web_search' }]; }
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify(body)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.error) { cb(null, d.error.message); return; }
+    var text = '';
+    if (d.content) d.content.forEach(function(b) { if (b.type === 'text') text += b.text; });
+    cb(text, null);
+  })
+  .catch(function(e) { cb(null, e.message); });
+}
+
+function doFlow() {
+  var key = localStorage.getItem(AK);
+  if (!key) { openM(); return; }
+  var futN = parseInt(document.getElementById('i-fut').value) || 0;
+  var futcN = parseInt(document.getElementById('i-futc').value) || 0;
+  var cshN = parseInt(document.getElementById('i-csh').value) || 0;
+  var istN = parseInt(document.getElementById('i-ist').value) || 0;
+  var prgN = parseInt(document.getElementById('i-prg').value) || 0;
+  var trd = document.getElementById('i-trd').value;
+  if (!futN && !cshN) { alert('최소 외국인 선물 또는 현물 수급을 입력해줘'); return; }
+
+  document.getElementById('fn').textContent = (futN > 0 ? '+' : '') + futN + '계약';
+  document.getElementById('fc').textContent = (futcN > 0 ? '+' : '') + futcN + '계약';
+  document.getElementById('ft').textContent = trd || '--';
+
+  var badge = document.getElementById('fb'), meter = document.getElementById('fm');
+  var str = Math.min(Math.abs(futN) / 100, 40);
+  if (futN > 0) { badge.textContent = '순매수'; badge.className = 'bdg buy'; meter.style.cssText = 'width:' + (50 + str) + '%;background:linear-gradient(90deg,#10B981,#059669)'; }
+  else if (futN < 0) { badge.textContent = '순매도'; badge.className = 'bdg sell'; meter.style.cssText = 'width:' + (50 - str) + '%;background:linear-gradient(90deg,#EF4444,#DC2626)'; }
+  else { badge.textContent = '중립'; badge.className = 'bdg ntrl'; meter.style.cssText = 'width:50%;background:#9CA3AF'; }
+
+  document.getElementById('t-csh').textContent = '외국인 현물 ' + (cshN >= 0 ? '+' : '') + cshN + '억원' + (Math.abs(cshN) >= 2000 ? ' (강)' : Math.abs(cshN) >= 1000 ? ' (중)' : ' (약)');
+  setDot('d-csh', cshN > 1000 ? 'g' : cshN < -1000 ? 'r' : 'y');
+  document.getElementById('t-ist').textContent = '기관 ' + (istN >= 0 ? '+' : '') + istN + '억 / 프로그램 ' + (prgN >= 0 ? '+' : '') + prgN + '억';
+  setDot('d-ist', istN > 1000 ? 'g' : istN < -1000 ? 'r' : 'y');
+  document.getElementById('t-flw').textContent = 'AI 분석 중...';
+
+  var prompt = '한국 주식시장 수급 데이터를 분석해서 한국어로 4문장으로 종합 해석해줘.\n\n' +
+    '외국인 선물: ' + (futN > 0 ? '+' : '') + futN + '계약 (전일대비: ' + (futcN > 0 ? '+' : '') + futcN + '계약, 추세: ' + (trd || '미입력') + ')\n' +
+    '외국인 현물: ' + (cshN > 0 ? '+' : '') + cshN + '억원\n' +
+    '기관: ' + (istN > 0 ? '+' : '') + istN + '억원\n' +
+    '프로그램: ' + (prgN > 0 ? '+' : '') + prgN + '억원\n\n' +
+    '기준: 선물±1000=강, 현물±2000=강, 기관/프로그램±3000=강\n' +
+    '1)수급 강도 2)선물-현물 조합 해석 3)장 방향 4)매매 전략';
+
+  callClaude(key, prompt, false, function(text, err) {
+    document.getElementById('t-flw').textContent = err ? '오류: ' + err : (text || '분석 완료');
+    setDot('d-flw', 'g');
+  });
+}
+
+function doSave() {
+  var futN = parseInt(document.getElementById('i-fut').value) || 0;
+  var futcN = parseInt(document.getElementById('i-futc').value) || 0;
+  var cshN = parseInt(document.getElementById('i-csh').value) || 0;
+  var istN = parseInt(document.getElementById('i-ist').value) || 0;
+  var prgN = parseInt(document.getElementById('i-prg').value) || 0;
+  var trd = document.getElementById('i-trd').value;
+  if (!futN && !cshN) { alert('먼저 데이터를 입력해줘'); return; }
+  var n = new Date();
+  var dk = n.getFullYear() + '-' + (n.getMonth() + 1) + '-' + n.getDate();
+  var rec = { date: dk, fut: futN, futc: futcN, csh: cshN, ist: istN, prg: prgN, trd: trd };
+  var hist = getHist();
+  var idx = hist.findIndex(function(r) { return r.date === dk; });
+  if (idx >= 0) hist[idx] = rec; else hist.unshift(rec);
+  if (hist.length > 90) hist = hist.slice(0, 90);
+  localStorage.setItem(FK, JSON.stringify(hist));
+  renderHist();
+  alert('저장됐어 (' + dk + ') — 누적 ' + hist.length + '일치');
+}
+
+function getHist() { try { return JSON.parse(localStorage.getItem(FK) || '[]'); } catch(e) { return []; } }
+
+function renderHist() {
+  var hist = getHist();
+  var chart = document.getElementById('mchart');
+  var list = document.getElementById('hlist');
+  if (!hist.length) {
+    chart.innerHTML = '';
+    list.innerHTML = '<div style="text-align:center;color:#9CA3AF;padding:20px;font-size:12px">아직 저장된 데이터 없어<br>매일 입력 후 저장 버튼 클릭</div>';
+    return;
   }
-  document.getElementById('scoreTime').textContent='분석: '+new Date().toLocaleTimeString('ko-KR');
+  var shown = hist.slice(0, 30).slice().reverse();
+  var mx = Math.max.apply(null, shown.map(function(r) { return Math.abs(r.fut) || 1; }));
+  chart.innerHTML = shown.map(function(r) {
+    var h = Math.max(Math.round((Math.abs(r.fut) / mx) * 44), 2);
+    var col = r.fut >= 0 ? '#10B981' : '#EF4444';
+    var jc = r.fut >= 0 ? 'flex-end' : 'flex-start';
+    return '<div title="' + r.date + ': ' + (r.fut > 0 ? '+' : '') + r.fut + '계약" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:' + jc + ';height:50px"><div style="width:100%;height:' + h + 'px;background:' + col + ';border-radius:2px"></div></div>';
+  }).join('');
+  list.innerHTML = hist.slice(0, 20).map(function(r) {
+    var fc = r.fut > 1000 ? '#10B981' : r.fut < -1000 ? '#EF4444' : '#9CA3AF';
+    var cc = r.csh > 2000 ? '#10B981' : r.csh < -2000 ? '#EF4444' : '#9CA3AF';
+    return '<div class="hrow">' +
+      '<span style="color:#6B7280;margin-right:8px">' + r.date + '</span>' +
+      '<span style="color:' + fc + ';font-weight:600;margin-right:6px">선물' + (r.fut > 0 ? '+' : '') + r.fut + '</span>' +
+      '<span style="color:' + cc + ';font-weight:600;margin-right:6px">현물' + (r.csh > 0 ? '+' : '') + r.csh + '억</span>' +
+      '<span style="color:#9CA3AF;margin-right:6px">기관' + (r.ist > 0 ? '+' : '') + r.ist + '억</span>' +
+      '<span style="color:#9CA3AF">프로' + (r.prg > 0 ? '+' : '') + r.prg + '억</span>' +
+      (r.trd ? '<span style="margin-left:6px;font-size:10px;background:#F3F4F6;color:#6B7280;padding:1px 6px;border-radius:4px">' + r.trd + '</span>' : '') +
+      '</div>';
+  }).join('');
 }
 
-function setDot(id,level){ document.getElementById(id).className='dot '+level; }
-
-function renderSectors(sectors){
-  const grid=document.getElementById('sectorGrid');
-  grid.innerHTML=sectors.map(s=>`
-    <div class="sector-card ${s.signal}">
-      <div class="sector-name">${s.name}</div>
-      <div class="sector-signal ${s.signal}">${s.signal==='green'?'▲ 긍정':s.signal==='yellow'?'→ 중립':'▼ 부정'}</div>
-      <div class="sector-reason">${s.reason}</div>
-      <div class="sector-stocks">관련주: ${s.stocks}</div>
-    </div>`).join('');
+function doClear() {
+  if (confirm('전체 히스토리를 삭제할까요?')) { localStorage.removeItem(FK); renderHist(); }
 }
 
-function setFutures(data){
-  const badge=document.getElementById('futBadge');
-  const meter=document.getElementById('futMeter');
-  badge.textContent=data.position;
-  if(data.direction==='buy'){
-    badge.className='futures-badge buy';
-    meter.style.cssText='width:'+(50+data.strength)+'%;background:linear-gradient(90deg,#10B981,#059669)';
-  }else if(data.direction==='sell'){
-    badge.className='futures-badge sell';
-    meter.style.cssText='width:'+(50-data.strength)+'%;background:linear-gradient(90deg,#EF4444,#DC2626)';
-  }else{
-    badge.className='futures-badge neutral';
-    meter.style.cssText='width:50%;background:#9CA3AF';
-  }
-  document.getElementById('futNet').textContent=data.net;
-  document.getElementById('futChange').textContent=data.change;
-  document.getElementById('futTrend').textContent=data.trend;
+function doPat() {
+  var key = localStorage.getItem(AK);
+  if (!key) { openM(); return; }
+  var hist = getHist();
+  if (hist.length < 5) { alert('최소 5일치 필요. 현재 ' + hist.length + '일치'); return; }
+  document.getElementById('patc').classList.remove('hide');
+  document.getElementById('patb').textContent = '패턴 분석 중...';
+  var sum = hist.slice(0, 30).map(function(r) {
+    return r.date + ': 선물' + (r.fut > 0 ? '+' : '') + r.fut + '계약, 현물' + (r.csh > 0 ? '+' : '') + r.csh + '억, 기관' + (r.ist > 0 ? '+' : '') + r.ist + '억, 프로' + (r.prg > 0 ? '+' : '') + r.prg + '억' + (r.trd ? ', ' + r.trd : '');
+  }).join('\n');
+  var prompt = hist.length + '일치 한국 주식시장 수급 데이터를 분석해줘.\n\n' + sum + '\n\n1)외국인 선물 반복 패턴 2)선물-현물 동행/이탈 3)집중 구간 4)실전 인사이트 2가지\n구체적으로.';
+  callClaude(key, prompt, false, function(text, err) {
+    document.getElementById('patb').textContent = err ? '오류: ' + err : (text || '분석 완료');
+  });
 }
 
-// 메인 분석
-async function runAnalysis(){
-  const key=getApiKey();
-  if(!key){openModal();return;}
-  const btn=document.getElementById('runBtn');
-  btn.disabled=true;
-  btn.innerHTML='<span class="loading-dots"><span>●</span><span>●</span><span>●</span></span> AI 웹 검색 중... (30~60초)';
-
-  const now=new Date();
-  const dateStr=`${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일`;
-
-  const prompt=`오늘(${dateStr}) 한국 주식시장 장 전 시장 조건을 웹 검색으로 최신 데이터를 찾아 분석해줘.
-
-반드시 아래 JSON만 응답해. 다른 텍스트 없이:
-
-{
-  "score": 72,
-  "macro": {
-    "sp500": {"val":"5,234","sub":"+1.2%","signal":"green","detail":"기술주 주도 상승 마감"},
-    "nasdaq": {"val":"16,420","sub":"+1.8%","signal":"green","detail":"AI 관련주 강세"},
-    "sox": {"val":"4,812","sub":"+2.1%","signal":"green","detail":"반도체 업황 긍정"},
-    "vix": {"val":"18.2","sub":"안정권","signal":"green","detail":"20 이하 안정 구간"},
-    "fx": {"val":"1,385원","sub":"전일比 +3원","signal":"yellow","detail":"원화 약세 지속"},
-    "dxy": {"val":"104.2","sub":"강달러","signal":"yellow","detail":"달러 강세로 신흥국 부담"},
-    "bond": {"val":"4.32%","sub":"보합","signal":"yellow","detail":"금리 고점 인식 확산"},
-    "china": {"val":"항셍 +0.3%","sub":"상하이 +0.1%","signal":"yellow","detail":"경기부양 기대감"},
-    "event": {"signal":"yellow","detail":"오늘 밤 FOMC 의사록 공개 예정 — 금리 방향 힌트 주목"}
-  },
-  "futures": {
-    "position":"순매수",
-    "direction":"buy",
-    "strength":15,
-    "net":"+3,241계약",
-    "change":"전일比 +842계약",
-    "trend":"3일 연속 순매수",
-    "cash_signal":"green",
-    "cash_detail":"외국인 현물 최근 3일 3,200억 순매수. 반도체 집중",
-    "inst_signal":"yellow",
-    "inst_detail":"기관 차익매물 출회. 프로그램 매도 우세",
-    "flow_signal":"green",
-    "flow_detail":"외국인 선물+현물 동반 매수는 강한 상승 신호. 기관 매도 상쇄 가능"
-  },
-  "sectors": [
-    {"name":"반도체","signal":"green","reason":"SOX +2.1%, 엔비디아 강세. 외국인 현물 집중 매수","stocks":"삼성전자·SK하이닉스·한미반도체"},
-    {"name":"2차전지","signal":"yellow","reason":"리튬 가격 하락 지속. 수급 관망","stocks":"LG에너지솔루션·삼성SDI·POSCO홀딩스"},
-    {"name":"금융/은행","signal":"yellow","reason":"금리 보합, 배당 매력 유지. 방어적 접근","stocks":"KB금융·신한지주·하나금융"},
-    {"name":"바이오","signal":"red","reason":"외국인 수급 이탈. 임상 결과 대기","stocks":"삼성바이오·셀트리온·유한양행"},
-    {"name":"자동차","signal":"yellow","reason":"환율 수혜 but 중국 수요 부진","stocks":"현대차·기아·현대모비스"},
-    {"name":"에너지/화학","signal":"red","reason":"유가 하락 + 수요 부진. 단기 비선호","stocks":"S-Oil·LG화학·롯데케미칼"}
-  ],
-  "sector_rec": "오늘은 반도체 섹터 집중. SOX 강세 + 외국인 현물 매수가 겹치는 구간. 삼성전자·SK하이닉스 눌림목 진입 고려. 나머지 섹터는 관망.",
-  "ai_comment": "전반적으로 매매 가능 조건. 미국 상승 + 외국인 선물 순매수가 핵심 긍정 신호. 다만 환율 부담(1,380원대)과 오늘 밤 FOMC 의사록이 변수. 반도체 위주 단기 접근, 포지션 크기는 평소의 70% 권장."
-}
-
-실제 최신 시장 데이터 기준으로 최대한 현실적인 값을 추정해서 채워줘. 확실하지 않은 값은 '확인필요'라고 써도 됨. JSON만 응답. 마크다운 코드블록 없이 순수 JSON만.`;
-
-  try{
-    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+key,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        contents:[{parts:[{text:prompt}]}],
-        generationConfig:{temperature:0.3,maxOutputTokens:2000}
-      })
+function runMain() {
+  var key = localStorage.getItem(AK);
+  if (!key) { openM(); return; }
+  var btn = document.getElementById('mbtn');
+  btn.disabled = true; btn.textContent = '분석 중... (30~60초)';
+  var ac = document.getElementById('aic'); ac.classList.remove('hide');
+  document.getElementById('aib').textContent = 'Claude가 실시간 데이터 검색 중...';
+  var now = new Date();
+  var ds = now.getFullYear() + '년 ' + (now.getMonth() + 1) + '월 ' + now.getDate() + '일';
+  var prompt = 'Korean stock market analyst. Today: ' + ds + '. Search real-time data. Reply ONLY with raw JSON no markdown.\n' +
+    '{"score":72,"sp500_val":"7432","sp500_chg":"+1.08%","sp500_sig":"g","sp500_det":"기술주주도상승",' +
+    '"nasdaq_val":"16420","nasdaq_chg":"+1.5%","nasdaq_sig":"g","nasdaq_det":"AI관련주강세",' +
+    '"sox_val":"4812","sox_chg":"+2.1%","sox_sig":"g","sox_det":"반도체업황호조",' +
+    '"vix_val":"18.2","vix_chg":"-0.5","vix_sig":"g","vix_det":"공포지수안정",' +
+    '"fx_val":"1452원","fx_chg":"+3원","fx_sig":"y","fx_det":"원화약세지속",' +
+    '"dxy_val":"101.2","dxy_chg":"-0.3","dxy_sig":"y","dxy_det":"달러약세",' +
+    '"bond_val":"4.48%","bond_chg":"+0.02","bond_sig":"y","bond_det":"금리보합",' +
+    '"china_val":"22450","china_chg":"+0.3%","china_sig":"y","china_det":"경기부양기대",' +
+    '"ev_det":"오늘주요이벤트",' +
+    '"s1n":"반도체","s1sig":"g","s1r":"SOX강세외국인매수","s1st":"삼성전자 SK하이닉스",' +
+    '"s2n":"2차전지","s2sig":"y","s2r":"리튬약세수급관망","s2st":"LG에너지 삼성SDI",' +
+    '"s3n":"금융은행","s3sig":"y","s3r":"금리보합방어적","s3st":"KB금융 신한지주",' +
+    '"s4n":"바이오","s4sig":"r","s4r":"외국인이탈","s4st":"삼성바이오 셀트리온",' +
+    '"s5n":"자동차","s5sig":"y","s5r":"환율수혜중국부진","s5st":"현대차 기아",' +
+    '"s6n":"에너지화학","s6sig":"r","s6r":"유가하락수요부진","s6st":"S-Oil LG화학",' +
+    '"srec":"오늘집중섹터추천","ai":"종합판단및매매전략"}';
+  callClaude(key, prompt, true, function(text, err) {
+    btn.disabled = false; btn.textContent = '🔄 다시 분석';
+    if (err) { document.getElementById('aib').textContent = '오류: ' + err; return; }
+    var clean = text.replace(/```json/g,'').replace(/```/g,'').trim();
+    var m = clean.match(/\{[\s\S]*\}/);
+    if (!m) { document.getElementById('aib').textContent = '응답:\n' + clean.slice(0,300); return; }
+    var r;
+    try { r = JSON.parse(m[0]); } catch(e) { document.getElementById('aib').textContent = '파싱실패:\n' + m[0].slice(0,200); return; }
+    setScore(r.score || 50);
+    var flds = [['sp500','sp'],['nasdaq','nq'],['sox','sox'],['vix','vix'],['fx','fx'],['dxy','dxy'],['bond','bond'],['china','cn']];
+    flds.forEach(function(p) {
+      var f = p[0], id = p[1];
+      if (r[f+'_val']) document.getElementById('v-'+id).textContent = r[f+'_val'];
+      if (r[f+'_chg']) { var el = document.getElementById('c-'+id); el.textContent = r[f+'_chg']; el.className = 'ichg' + (r[f+'_chg'].charAt(0)==='+' ? ' up' : r[f+'_chg'].charAt(0)==='-' ? ' dn' : ''); }
+      if (r[f+'_sig']) setDot('d-'+id, r[f+'_sig']);
+      if (r[f+'_det']) document.getElementById('t-'+id).textContent = r[f+'_det'];
     });
-    const data=await res.json();
-    let text='';
-    if(data.candidates&&data.candidates[0]){
-      text=data.candidates[0].content.parts.map(p=>p.text||'').join('');
-    }
-    // 마크다운 코드블록 제거
-    const clean=text.replace(/```json/g,'').replace(/```/g,'').trim();
-    const match=clean.match(/\{[\s\S]*\}/);
-    if(!match) throw new Error('응답: '+clean.slice(0,100));
-    let r;
-    try{ r=JSON.parse(match[0]); }
-    catch(pe){ throw new Error('JSON오류: '+match[0].slice(0,100)); }
-
-    // 점수
-    setScore(r.score);
-
-    // 거시
-    const m=r.macro;
-    const fields=[
-      ['sp','sp500'],['nq','nasdaq'],['sox','sox'],['vix','vix'],
-      ['fx','fx'],['dxy','dxy'],['bond','bond'],['cn','china']
-    ];
-    fields.forEach(([id,key])=>{
-      if(m[key]){
-        document.getElementById('v-'+id).textContent=m[key].val||'--';
-        document.getElementById('s-'+id).textContent=m[key].sub||'';
-        document.getElementById('dt-'+id).textContent=m[key].detail||'';
-        setDot('d-'+id, m[key].signal||'gray');
-      }
-    });
-    if(m.event){ document.getElementById('dt-event').textContent=m.event.detail; setDot('d-event',m.event.signal); }
-
-    // 외국인 선물
-    setFutures(r.futures);
-    document.getElementById('dt-cash').textContent=r.futures.cash_detail||''; setDot('d-cash',r.futures.cash_signal||'gray');
-    document.getElementById('dt-inst').textContent=r.futures.inst_detail||''; setDot('d-inst',r.futures.inst_signal||'gray');
-    document.getElementById('dt-flow').textContent=r.futures.flow_detail||''; setDot('d-flow',r.futures.flow_signal||'gray');
-
-    // 섹터
-    renderSectors(r.sectors);
-    document.getElementById('sectorRec').textContent=r.sector_rec||'';
-
-    // AI 코멘트
-    document.getElementById('aiCard').classList.remove('hidden');
-    document.getElementById('aiText').textContent=r.ai_comment||'';
-
-  }catch(e){
-    document.getElementById('scoreVerdict').textContent='오류 발생';
-    document.getElementById('scoreDesc').textContent=e.message;
-    document.getElementById('aiCard').classList.remove('hidden');
-    document.getElementById('aiText').textContent='오류 내용: '+e.message;
-    console.error('분석 오류:', e);
-  }
-
-  btn.disabled=false;
-  btn.textContent='🔄 다시 분석하기';
+    if (r.ev_det) document.getElementById('t-ev').textContent = r.ev_det;
+    var secs = [];
+    for (var i = 1; i <= 6; i++) secs.push({ n: r['s'+i+'n']||'--', s: r['s'+i+'sig']||'', r: r['s'+i+'r']||'', st: r['s'+i+'st']||'' });
+    document.getElementById('secg').innerHTML = secs.map(function(s) {
+      return '<div class="secc ' + s.s + '"><div class="secn">' + s.n + '</div><div class="secs ' + s.s + '">' + (s.s==='g' ? '&#9650; 긍정' : s.s==='y' ? '&rarr; 중립' : '&#9660; 부정') + '</div><div class="secr">' + s.r + '</div><div class="secst">' + s.st + '</div></div>';
+    }).join('');
+    if (r.srec) document.getElementById('srec').textContent = r.srec;
+    document.getElementById('aib').textContent = r.ai || '분석 완료';
+  });
 }
-
-// 날짜
-const now=new Date();
-const days=['일','월','화','수','목','금','토'];
-document.getElementById('headerDate').textContent=
-  `${now.getMonth()+1}월 ${now.getDate()}일(${days[now.getDay()]}) · 장 전 체크`;
-
-updateBtn();
 </script>
 </body>
 </html>
