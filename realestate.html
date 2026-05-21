@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>부동산 투자 관리</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#F5F5F7;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1A1A2E;}
+.hdr{background:#fff;border-bottom:1px solid #E5E7EB;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.back{font-size:20px;color:#9CA3AF;text-decoration:none;margin-right:10px;}
+.wrap{padding:16px;max-width:720px;margin:0 auto;}
+.tnav{display:flex;background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:4px;gap:2px;margin-bottom:14px;overflow-x:auto;}
+.tbtn{flex:1;padding:9px 4px;border:none;background:transparent;font-size:11px;font-weight:600;color:#9CA3AF;border-radius:8px;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:52px;}
+.tbtn.on{background:#1A1A2E;color:#fff;}
+.tp{display:none;}.tp.on{display:block;}
+.card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;margin-bottom:10px;}
+.card-title{font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.fg label{font-size:11px;color:#6B7280;font-weight:600;display:block;margin-bottom:3px;}
+.fg input,.fg select,.fg textarea{width:100%;border:1px solid #E5E7EB;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:#fff;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#10B981;}
+.add-btn{width:100%;padding:11px;background:#10B981;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px;}
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.sum-box{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;text-align:center;}
+.sum-val{font-size:20px;font-weight:800;color:#10B981;}
+.sum-lbl{font-size:11px;color:#9CA3AF;margin-top:3px;}
+.cat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #F3F4F6;font-size:12px;}
+.cat-row:last-child{border-bottom:none;}
+.hint{font-size:11px;color:#9CA3AF;padding:6px 10px;background:#F9FAFB;border-radius:6px;margin-bottom:8px;}
+.tbl-wrap{overflow-x:auto;}
+.rec-tbl{width:100%;border-collapse:collapse;font-size:11px;user-select:text;cursor:text;}
+.rec-tbl th{padding:7px 8px;text-align:left;font-weight:700;border-bottom:2px solid #E5E7EB;white-space:nowrap;background:#F9FAFB;color:#6B7280;}
+.rec-tbl td{padding:7px 8px;border-bottom:1px solid #F3F4F6;white-space:nowrap;color:#374151;}
+.rec-tbl tr:nth-child(even){background:#FAFAFA;}
+.rec-tbl tr:hover{background:#F0FDF4;}
+.del-btn{font-size:10px;padding:2px 6px;background:#FEE2E2;color:#DC2626;border:none;border-radius:4px;cursor:pointer;font-family:inherit;}
+.check-item{display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #F3F4F6;}
+.check-item:last-child{border-bottom:none;}
+.check-item input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:#10B981;}
+.check-txt{font-size:13px;color:#374151;flex:1;cursor:pointer;}
+.check-txt.done{text-decoration:line-through;color:#9CA3AF;}
+.del-i{font-size:10px;padding:2px 6px;background:#F3F4F6;color:#9CA3AF;border:none;border-radius:4px;cursor:pointer;font-family:inherit;}
+.add-row{display:flex;gap:8px;margin-top:8px;}
+.add-row input{flex:1;border:1px solid #E5E7EB;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;}
+.add-row input:focus{border-color:#10B981;}
+.add-row button{padding:8px 14px;background:#10B981;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;white-space:nowrap;}
+.memo-area{width:100%;border:1px solid #E5E7EB;border-radius:8px;padding:10px;font-size:13px;font-family:inherit;outline:none;resize:vertical;line-height:1.7;min-height:120px;color:#374151;}
+.memo-area:focus{border-color:#10B981;}
+.save-btn{width:100%;padding:10px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px;}
+.ctag{display:inline-block;font-size:10px;padding:1px 7px;border-radius:10px;font-weight:600;}
+.ctag.가스충전,.ctag.톨비{background:#FEF3C7;color:#92400E;}
+.ctag.식비{background:#D1FAE5;color:#065F46;}
+.ctag.관리비{background:#DBEAFE;color:#1D4ED8;}
+.ctag.은행이자,.ctag.등기{background:#FEE2E2;color:#991B1B;}
+.ctag.목공사,.ctag.설비,.ctag.타일공사,.ctag.인테리어,.ctag.샷시{background:#EDE9FE;color:#5B21B6;}
+.ctag.전기{background:#FEF9C3;color:#713F12;}
+.ctag.페인트,.ctag.도배장판{background:#FCE7F3;color:#9D174D;}
+.ctag.욕실악세사리,.ctag.전체악세사리{background:#CFFAFE;color:#0E7490;}
+.ctag.시트지,.ctag.공구,.ctag.기타{background:#F3F4F6;color:#374151;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div style="display:flex;align-items:center">
+    <a href="./index.html" class="back">&lsaquo;</a>
+    <div>
+      <div style="font-size:15px;font-weight:700">&#127968; 부동산 투자 관리</div>
+      <div style="font-size:11px;color:#9CA3AF" id="hd"></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="tnav">
+    <button class="tbtn on" id="tab-cost" onclick="showT('cost')">비용입력</button>
+    <button class="tbtn" id="tab-summary" onclick="showT('summary')">합산보기</button>
+    <button class="tbtn" id="tab-record" onclick="showT('record')">기록보기</button>
+    <button class="tbtn" id="tab-checklist" onclick="showT('checklist')">준비물</button>
+    <button class="tbtn" id="tab-memo" onclick="showT('memo')">일반메모</button>
+  </div>
+
+  <!-- 비용 입력 -->
+  <div class="tp on" id="tp-cost">
+    <div class="card">
+      <div class="card-title">&#128178; 비용 입력</div>
+      <div class="form-row">
+        <div class="fg"><label>날짜</label><input type="date" id="cost-date"></div>
+        <div class="fg">
+          <label>카테고리</label>
+          <select id="cost-cat">
+            <optgroup label="이동/생활">
+              <option value="가스충전">가스충전</option>
+              <option value="톨비">톨비</option>
+              <option value="식비">식비</option>
+              <option value="관리비">관리비</option>
+              <option value="은행이자">은행이자</option>
+            </optgroup>
+            <optgroup label="공사/시공">
+              <option value="목공사">목공사</option>
+              <option value="설비">설비</option>
+              <option value="타일공사">타일공사</option>
+              <option value="전기">전기</option>
+              <option value="인테리어">인테리어</option>
+              <option value="샷시">샷시</option>
+              <option value="페인트">페인트</option>
+              <option value="도배장판">도배장판</option>
+            </optgroup>
+            <optgroup label="자재/용품">
+              <option value="시트지">시트지</option>
+              <option value="욕실악세사리">욕실악세사리</option>
+              <option value="전체악세사리">전체악세사리</option>
+              <option value="공구">공구</option>
+            </optgroup>
+            <optgroup label="법무/행정">
+              <option value="등기">등기</option>
+            </optgroup>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label>금액 (원)</label><input type="number" id="cost-amt" placeholder="예: 50000"></div>
+        <div class="fg"><label>물건/장소</label><input type="text" id="cost-place" placeholder="예: A동 301호"></div>
+      </div>
+      <div class="fg" style="margin-bottom:8px">
+        <label>비용 메모 (업자명, 영수증번호 등)</label>
+        <input type="text" id="cost-memo" placeholder="예: 김철수 010-1234-5678, 영수증 #001">
+      </div>
+      <button class="add-btn" onclick="addCost()">+ 비용 추가</button>
+    </div>
+  </div>
+
+  <!-- 합산 보기 -->
+  <div class="tp" id="tp-summary">
+    <div class="sum-grid">
+      <div class="sum-box"><div class="sum-val" id="total-amt">0원</div><div class="sum-lbl">총 누적 비용</div></div>
+      <div class="sum-box"><div class="sum-val" id="total-cnt" style="color:#6B7280">0건</div><div class="sum-lbl">총 건수</div></div>
+    </div>
+    <div class="card"><div class="card-title">카테고리별 합산</div><div id="cat-summary"></div></div>
+    <div class="card"><div class="card-title">물건/장소별 합산</div><div id="place-summary"></div></div>
+  </div>
+
+  <!-- 기록 보기 -->
+  <div class="tp" id="tp-record">
+    <div class="hint">&#128075; 드래그해서 복사 &rarr; 엑셀에 붙여넣기 가능</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #F3F4F6;">
+        <span style="font-size:12px;font-weight:700">비용 기록</span>
+        <button onclick="clearCosts()" style="font-size:11px;padding:4px 10px;background:#FEE2E2;color:#DC2626;border:none;border-radius:20px;cursor:pointer;font-family:inherit;">전체 삭제</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="rec-tbl">
+          <thead><tr><th>날짜</th><th>카테고리</th><th>금액</th><th>장소</th><th>메모</th><th></th></tr></thead>
+          <tbody id="cost-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 준비물 체크리스트 -->
+  <div class="tp" id="tp-checklist">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="card-title" style="margin:0">&#128204; 다음주 준비물</div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="checkAll()" style="font-size:11px;padding:4px 10px;background:#D1FAE5;color:#059669;border:none;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:600;">전체완료</button>
+          <button onclick="uncheckAll()" style="font-size:11px;padding:4px 10px;background:#F3F4F6;color:#6B7280;border:none;border-radius:20px;cursor:pointer;font-family:inherit;">전체해제</button>
+        </div>
+      </div>
+      <div id="checklist-items"></div>
+      <div class="add-row">
+        <input type="text" id="new-check" placeholder="준비물 추가... (예: 등기부등본 출력)">
+        <button onclick="addCheck()">추가</button>
+      </div>
+    </div>
+    <div class="hint">&#128075; 드래그해서 복사 &rarr; 엑셀에 붙여넣기</div>
+    <div class="card" style="padding:12px;">
+      <div style="font-size:11px;font-weight:700;color:#6B7280;margin-bottom:6px;">텍스트 복사용</div>
+      <div id="checklist-text" style="font-size:12px;color:#374151;line-height:2;user-select:text;cursor:text;white-space:pre-wrap;"></div>
+    </div>
+  </div>
+
+  <!-- 일반 메모 -->
+  <div class="tp" id="tp-memo">
+    <div class="card">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;">
+        <div class="card-title" style="margin:0">&#128221; 일반 메모</div>
+        <span style="font-size:10px;color:#9CA3AF">현장 메모, 협의 내용, 아이디어 등 자유 기록</span>
+      </div>
+      <textarea class="memo-area" id="memo-text" placeholder="현장 방문 메모, 업자 협의 내용, 다음 할 일 등...&#10;&#10;예) 목공사 업자 010-xxxx-xxxx, 견적 150만원, 다음주 월요일 착공 예정"></textarea>
+      <button class="save-btn" onclick="saveMemo()">&#128190; 메모 저장</button>
+    </div>
+    <div class="card">
+      <div class="card-title">저장된 메모 목록</div>
+      <div id="memo-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var CK = 're-costs-v1';
+var CLK = 're-check-v1';
+var MK = 're-memos-v1';
+
+// 날짜 초기화
+(function() {
+  var n = new Date();
+  var d = ['일','월','화','수','목','금','토'];
+  document.getElementById('hd').textContent = (n.getMonth()+1) + '월 ' + n.getDate() + '일(' + d[n.getDay()] + ')';
+  var di = document.getElementById('cost-date');
+  if (di) di.value = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0') + '-' + String(n.getDate()).padStart(2,'0');
+})();
+
+var TABS = ['cost','summary','record','checklist','memo'];
+
+function showT(name) {
+  TABS.forEach(function(t) {
+    document.getElementById('tab-'+t).classList.toggle('on', t===name);
+    document.getElementById('tp-'+t).classList.toggle('on', t===name);
+  });
+  if (name==='summary') renderSummary();
+  if (name==='record') renderRecord();
+  if (name==='checklist') renderChecklist();
+  if (name==='memo') renderMemos();
+}
+
+function getCosts() { try{return JSON.parse(localStorage.getItem(CK)||'[]');}catch(e){return[];} }
+function getChecklist() { try{return JSON.parse(localStorage.getItem(CLK)||'[]');}catch(e){return[];} }
+function getMemos() { try{return JSON.parse(localStorage.getItem(MK)||'[]');}catch(e){return[];} }
+function fmt(n) { return n.toLocaleString() + '원'; }
+
+function addCost() {
+  var date = document.getElementById('cost-date').value;
+  var cat = document.getElementById('cost-cat').value;
+  var amt = parseInt(document.getElementById('cost-amt').value);
+  var place = document.getElementById('cost-place').value.trim();
+  var memo = document.getElementById('cost-memo').value.trim();
+  if (!amt || amt <= 0) { alert('금액을 입력해줘'); return; }
+  var costs = getCosts();
+  costs.unshift({ id: Date.now(), date: date, cat: cat, amt: amt, place: place, memo: memo });
+  localStorage.setItem(CK, JSON.stringify(costs));
+  document.getElementById('cost-amt').value = '';
+  document.getElementById('cost-memo').value = '';
+  alert('추가됐어!');
+}
+
+function deleteCost(id) {
+  var costs = getCosts().filter(function(c){ return c.id !== id; });
+  localStorage.setItem(CK, JSON.stringify(costs));
+  renderRecord(); renderSummary();
+}
+
+function clearCosts() {
+  if (confirm('전체 비용 기록을 삭제할까요?')) { localStorage.removeItem(CK); renderRecord(); renderSummary(); }
+}
+
+function renderSummary() {
+  var costs = getCosts();
+  var total = costs.reduce(function(s,c){return s+c.amt;},0);
+  document.getElementById('total-amt').textContent = fmt(total);
+  document.getElementById('total-cnt').textContent = costs.length + '건';
+  var catMap = {};
+  costs.forEach(function(c){ catMap[c.cat] = (catMap[c.cat]||0) + c.amt; });
+  var catEl = document.getElementById('cat-summary');
+  if (!Object.keys(catMap).length) { catEl.innerHTML = '<div style="color:#9CA3AF;font-size:12px;padding:10px">비용 데이터 없음</div>'; }
+  else {
+    catEl.innerHTML = Object.entries(catMap).sort(function(a,b){return b[1]-a[1];}).map(function(e){
+      var pct = total > 0 ? Math.round(e[1]/total*100) : 0;
+      return '<div class="cat-row"><span><span class="ctag '+e[0]+'">'+e[0]+'</span></span>' +
+        '<span style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:#9CA3AF">'+pct+'%</span><span style="font-weight:700;color:#10B981">'+fmt(e[1])+'</span></span></div>';
+    }).join('');
+  }
+  var placeMap = {};
+  costs.filter(function(c){return c.place;}).forEach(function(c){ placeMap[c.place]=(placeMap[c.place]||0)+c.amt; });
+  var placeEl = document.getElementById('place-summary');
+  if (!Object.keys(placeMap).length) { placeEl.innerHTML = '<div style="color:#9CA3AF;font-size:12px;padding:10px">장소 데이터 없음</div>'; }
+  else {
+    placeEl.innerHTML = Object.entries(placeMap).sort(function(a,b){return b[1]-a[1];}).map(function(e){
+      return '<div class="cat-row"><span style="font-weight:600">'+e[0]+'</span><span style="font-weight:700;color:#10B981">'+fmt(e[1])+'</span></div>';
+    }).join('');
+  }
+}
+
+function renderRecord() {
+  var costs = getCosts();
+  var tbody = document.getElementById('cost-tbody');
+  if (!costs.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#9CA3AF">비용 기록 없음</td></tr>'; return; }
+  tbody.innerHTML = costs.map(function(c){
+    return '<tr>'+
+      '<td>'+c.date+'</td>'+
+      '<td><span class="ctag '+c.cat+'">'+c.cat+'</span></td>'+
+      '<td style="font-weight:700;color:#10B981">'+fmt(c.amt)+'</td>'+
+      '<td>'+(c.place||'-')+'</td>'+
+      '<td style="color:#9CA3AF">'+(c.memo||'-')+'</td>'+
+      '<td><button class="del-btn" onclick="deleteCost('+c.id+')">삭제</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function addCheck() {
+  var input = document.getElementById('new-check');
+  var text = input.value.trim();
+  if (!text) return;
+  var list = getChecklist();
+  list.push({ id: Date.now(), text: text, done: false });
+  localStorage.setItem(CLK, JSON.stringify(list));
+  input.value = '';
+  renderChecklist();
+}
+
+function toggleCheck(id) {
+  var list = getChecklist().map(function(item){ if(item.id===id) item.done=!item.done; return item; });
+  localStorage.setItem(CLK, JSON.stringify(list)); renderChecklist();
+}
+
+function deleteCheck(id) {
+  var list = getChecklist().filter(function(item){ return item.id!==id; });
+  localStorage.setItem(CLK, JSON.stringify(list)); renderChecklist();
+}
+
+function checkAll() {
+  var list = getChecklist().map(function(item){ item.done=true; return item; });
+  localStorage.setItem(CLK, JSON.stringify(list)); renderChecklist();
+}
+function uncheckAll() {
+  var list = getChecklist().map(function(item){ item.done=false; return item; });
+  localStorage.setItem(CLK, JSON.stringify(list)); renderChecklist();
+}
+
+function renderChecklist() {
+  var list = getChecklist();
+  var el = document.getElementById('checklist-items');
+  if (!list.length) { el.innerHTML = '<div style="color:#9CA3AF;font-size:12px;padding:20px;text-align:center">준비물을 추가해봐</div>'; }
+  else {
+    el.innerHTML = list.map(function(item){
+      return '<div class="check-item">'+
+        '<input type="checkbox" '+(item.done?'checked':'')+' onchange="toggleCheck('+item.id+')">'+
+        '<span class="check-txt'+(item.done?' done':'')+'" onclick="toggleCheck('+item.id+')">'+item.text+'</span>'+
+        '<button class="del-i" onclick="deleteCheck('+item.id+')">삭제</button>'+
+      '</div>';
+    }).join('');
+  }
+  var textEl = document.getElementById('checklist-text');
+  if (textEl) textEl.textContent = list.map(function(item){ return (item.done?'[완료] ':'[ ]   ')+item.text; }).join('\n');
+}
+
+function saveMemo() {
+  var text = document.getElementById('memo-text').value.trim();
+  if (!text) { alert('메모를 입력해줘'); return; }
+  var n = new Date();
+  var memos = getMemos();
+  memos.unshift({ id: Date.now(), date: n.getFullYear()+'-'+(n.getMonth()+1)+'-'+n.getDate(), time: n.toLocaleTimeString('ko-KR'), text: text });
+  if (memos.length > 50) memos = memos.slice(0,50);
+  localStorage.setItem(MK, JSON.stringify(memos));
+  document.getElementById('memo-text').value = '';
+  alert('저장됐어!');
+  renderMemos();
+}
+
+function deleteMemo(id) {
+  var memos = getMemos().filter(function(m){ return m.id!==id; });
+  localStorage.setItem(MK, JSON.stringify(memos)); renderMemos();
+}
+
+function renderMemos() {
+  var memos = getMemos();
+  var el = document.getElementById('memo-list');
+  if (!memos.length) { el.innerHTML = '<div style="color:#9CA3AF;font-size:12px;padding:10px">저장된 메모 없음</div>'; return; }
+  el.innerHTML = memos.map(function(m){
+    return '<div style="padding:10px 0;border-bottom:1px solid #F3F4F6;">'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:5px;">'+
+        '<span style="font-size:11px;color:#9CA3AF">'+m.date+' '+m.time+'</span>'+
+        '<button class="del-i" onclick="deleteMemo('+m.id+')">삭제</button>'+
+      '</div>'+
+      '<div style="font-size:12px;color:#374151;line-height:1.7;white-space:pre-wrap;user-select:text;cursor:text">'+m.text+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+renderChecklist();
+</script>
+</body>
+</html>
