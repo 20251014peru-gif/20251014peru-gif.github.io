@@ -9,9 +9,12 @@
 body{background:#F5F5F7;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh;}
 .header{padding:16px 20px 12px;background:#fff;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
 .header-left{display:flex;align-items:center;gap:10px;}
-.back-btn{font-size:18px;color:#9CA3AF;text-decoration:none;padding:4px;}
+.back-btn{font-size:20px;color:#9CA3AF;text-decoration:none;}
 .header-title{font-size:16px;font-weight:700;}
 .header-date{font-size:12px;color:#9CA3AF;}
+.api-btn{font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;border:none;font-family:inherit;font-weight:600;}
+.api-btn.on{background:#D1FAE5;color:#059669;}
+.api-btn.off{background:#FEE2E2;color:#DC2626;}
 .progress-bar{height:4px;background:#E5E7EB;position:sticky;top:57px;z-index:99;}
 .progress-fill{height:100%;background:linear-gradient(90deg,#7C3AED,#2563EB);transition:width 0.4s ease;border-radius:0 2px 2px 0;}
 .content{padding:20px;max-width:640px;margin:0 auto;}
@@ -21,19 +24,19 @@ body{background:#F5F5F7;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun 
 .section-title{font-size:14px;font-weight:700;}
 .section-sub{font-size:11px;margin-left:auto;opacity:0.7;}
 .check-item{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px 16px;margin-bottom:6px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.15s;}
-.check-item.done{background:#F9FAFB;border-color:#E5E7EB;}
+.check-item.done{background:#F9FAFB;}
 .check-item.done .item-text{color:#9CA3AF;text-decoration:line-through;}
 .check-box{width:22px;height:22px;border-radius:6px;border:2px solid #D1D5DB;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-size:13px;}
 .check-box.checked{background:#7C3AED;border-color:#7C3AED;color:#fff;}
 .item-text{font-size:13px;color:#374151;flex:1;line-height:1.5;}
 .item-sub{font-size:11px;color:#9CA3AF;display:block;margin-top:2px;}
-.write-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:16px;margin-bottom:6px;}
-.write-label{font-size:11px;color:#9CA3AF;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+.write-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px 16px;margin-bottom:6px;}
+.write-label{font-size:11px;color:#9CA3AF;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;font-weight:600;}
 textarea{width:100%;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;font-size:13px;color:#374151;resize:none;outline:none;font-family:inherit;line-height:1.7;background:#FAFAFA;}
 textarea:focus{border-color:#7C3AED;background:#fff;}
 textarea::placeholder{color:#D1D5DB;}
+.highlight-input{border:2px solid #7C3AED !important;background:#F5F3FF !important;font-size:14px !important;font-weight:600 !important;}
 .save-btn{width:100%;padding:12px;background:#7C3AED;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:16px;transition:all 0.2s;}
-.save-btn:hover{background:#6D28D9;}
 .save-btn.saved{background:#059669;}
 .stat-row{display:flex;gap:8px;margin-bottom:20px;}
 .stat-box{flex:1;background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;text-align:center;}
@@ -42,8 +45,24 @@ textarea::placeholder{color:#D1D5DB;}
 .energy-row{display:flex;gap:6px;}
 .energy-btn{flex:1;padding:8px 4px;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;cursor:pointer;text-align:center;font-size:20px;transition:all 0.15s;font-family:inherit;}
 .energy-btn.active{border-color:#7C3AED;background:#F5F3FF;}
-.tip{padding:12px 14px;background:#FEF3C7;border-radius:8px;border-left:3px solid #F59E0B;font-size:12px;color:#78350F;line-height:1.7;margin-bottom:16px;}
+.tip{padding:12px 14px;background:#FEF3C7;border-radius:8px;border-left:3px solid #F59E0B;font-size:12px;color:#78350F;line-height:1.7;margin-bottom:14px;}
 .reset-btn{width:100%;padding:10px;background:transparent;border:1px solid #E5E7EB;border-radius:8px;color:#9CA3AF;font-size:12px;cursor:pointer;font-family:inherit;margin-top:8px;}
+.ai-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:16px;margin-bottom:10px;border-left:4px solid #7C3AED;}
+.ai-title{font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:10px;}
+.ai-text{font-size:13px;color:#374151;line-height:1.9;white-space:pre-wrap;}
+.ai-run-btn{width:100%;padding:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;transition:all 0.2s;}
+.ai-run-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.hidden{display:none!important;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal{background:#fff;border-radius:14px;padding:22px;width:100%;max-width:380px;}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:6px;}
+.modal-sub{font-size:12px;color:#6B7280;margin-bottom:14px;line-height:1.6;}
+.modal input{width:100%;border:1px solid #E5E7EB;border-radius:8px;color:#1A1A2E;font-size:13px;padding:10px 12px;outline:none;font-family:inherit;margin-bottom:12px;}
+.modal input:focus{border-color:#7C3AED;}
+.modal-btns{display:flex;gap:8px;}
+.modal-btn{flex:1;padding:10px;border-radius:8px;border:none;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600;}
+.modal-btn.primary{background:#7C3AED;color:#fff;}
+.modal-btn.secondary{background:#F3F4F6;color:#6B7280;}
 </style>
 </head>
 <body>
@@ -55,7 +74,10 @@ textarea::placeholder{color:#D1D5DB;}
       <div class="header-title">☀️ 하루 루틴</div>
     </div>
   </div>
-  <div class="header-date" id="todayDate"></div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <div class="header-date" id="todayDate"></div>
+    <button class="api-btn off" id="apiBtn" onclick="openModal()">AI 설정</button>
+  </div>
 </div>
 <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
 
@@ -85,6 +107,11 @@ textarea::placeholder{color:#D1D5DB;}
     </div>
 
     <div class="write-card">
+      <div class="write-label">⭐ 오늘 가장 중요한 것 1가지</div>
+      <textarea id="todayOne" rows="2" class="highlight-input" placeholder="딱 하나만. 오늘 이것만 해도 성공이다 싶은 것을 써봐..."></textarea>
+    </div>
+
+    <div class="write-card">
       <div class="write-label">오늘 에너지 상태</div>
       <div class="energy-row" id="energyRow">
         <button class="energy-btn" onclick="selectEnergy(this,'😴')">😴<br><span style="font-size:10px;color:#9CA3AF">낮음</span></button>
@@ -96,7 +123,7 @@ textarea::placeholder{color:#D1D5DB;}
 
     <div class="check-item" onclick="toggleCheck(this)" data-section="morning">
       <div class="check-box">✓</div>
-      <div class="item-text">오늘 가장 중요한 것 1가지 정하기<span class="item-sub">지금 당장 해야 할 딱 하나</span></div>
+      <div class="item-text">오늘 1가지 작성 완료<span class="item-sub">적는 순간 뇌가 우선순위를 잡아</span></div>
     </div>
     <div class="check-item" onclick="toggleCheck(this)" data-section="morning">
       <div class="check-box">✓</div>
@@ -118,7 +145,7 @@ textarea::placeholder{color:#D1D5DB;}
 
     <div class="check-item" onclick="toggleCheck(this)" data-section="day">
       <div class="check-box">✓</div>
-      <div class="item-text">아침에 정한 1가지 실행했나?<span class="item-sub">했으면 체크, 못 했으면 이유 저녁에 기록</span></div>
+      <div class="item-text">아침에 정한 1가지 실행했나?<span class="item-sub">못 했으면 이유를 저녁에 기록</span></div>
     </div>
     <div class="check-item" onclick="toggleCheck(this)" data-section="day">
       <div class="check-box">✓</div>
@@ -138,7 +165,12 @@ textarea::placeholder{color:#D1D5DB;}
       <span class="section-sub" style="color:#059669" id="evening-done">0/0</span>
     </div>
 
-    <div class="tip">💡 <strong>오늘의 질문 하나:</strong> "오늘 내가 틀리게 본 게 뭔가?" — 없으면 안 써도 돼.</div>
+    <div class="tip">💡 <strong>오늘의 질문:</strong> "오늘 내가 틀리게 본 게 뭔가?" — 없으면 안 써도 돼.</div>
+
+    <div class="write-card">
+      <div class="write-label">아침에 정한 1가지 — 결과는?</div>
+      <textarea id="oneResult" rows="2" placeholder="실행했나? 못 했다면 이유는?"></textarea>
+    </div>
 
     <div class="write-card">
       <div class="write-label">오늘 예상과 달랐던 것</div>
@@ -161,21 +193,57 @@ textarea::placeholder{color:#D1D5DB;}
     </div>
     <div class="check-item" onclick="toggleCheck(this)" data-section="evening">
       <div class="check-box">✓</div>
-      <div class="item-text">내일 가장 중요한 것 1가지 미리 정하기</div>
+      <div class="item-text">내일 1가지 미리 정하기</div>
     </div>
 
-    <button class="save-btn" id="saveBtn" onclick="saveDay()">오늘 저장</button>
+    <button class="save-btn" id="saveBtn" onclick="saveDay()">💾 오늘 저장</button>
     <button class="reset-btn" onclick="resetDay()">오늘 초기화</button>
+  </div>
+
+  <!-- AI 분석 -->
+  <div class="section">
+    <div class="section-header" style="background:#F3F4F6">
+      <span class="section-icon">🤖</span>
+      <span class="section-title" style="color:#374151">AI 하루 분석</span>
+    </div>
+
+    <div class="tip" style="background:#EDE9FE;border-left-color:#7C3AED;color:#5B21B6">
+      💡 오늘 작성한 내용을 바탕으로 AI가 패턴과 인사이트를 분석해줘. 저장 후 실행해봐.
+    </div>
+
+    <button class="ai-run-btn" id="aiRunBtn" onclick="runAI()">🔍 오늘 하루 AI 분석하기</button>
+
+    <div class="ai-card hidden" id="aiCard">
+      <div class="ai-title">🤖 오늘의 AI 분석</div>
+      <div class="ai-text" id="aiText"></div>
+    </div>
   </div>
 
 </div>
 
+<!-- 모달 -->
+<div class="modal-overlay hidden" id="apiModal">
+  <div class="modal">
+    <div class="modal-title">Claude API 키</div>
+    <div class="modal-sub">AI 분석 기능을 사용하려면 Anthropic API 키가 필요해. 이 기기에만 저장됨.</div>
+    <input type="password" id="apiInput" placeholder="sk-ant-..." />
+    <div class="modal-btns">
+      <button class="modal-btn secondary" onclick="closeModal()">취소</button>
+      <button class="modal-btn primary" onclick="saveKey()">저장</button>
+    </div>
+    <div style="margin-top:10px;text-align:center">
+      <button onclick="clearKey()" style="background:none;border:none;cursor:pointer;font-size:11px;color:#EF4444">키 삭제</button>
+    </div>
+  </div>
+</div>
+
 <script>
-const STORAGE = 'daily-routine-v1';
+const STORAGE = 'daily-routine-v2';
 const STREAK = 'daily-streak-v1';
+const API_KEY = 'routine-apikey';
 const days = ['일','월','화','수','목','금','토'];
 
-let state = {energy:'', checks:{}, texts:{mismatch:'', blindspot:'', tomorrow:''}};
+let state = {energy:'', checks:{}, texts:{}};
 let todayKey = '';
 
 function getTodayKey(){
@@ -186,22 +254,21 @@ function getTodayKey(){
 function load(){
   todayKey = getTodayKey();
   const n = new Date();
-  document.getElementById('todayDate').textContent =
-    `${n.getMonth()+1}월 ${n.getDate()}일 (${days[n.getDay()]})`;
+  document.getElementById('todayDate').textContent = `${n.getMonth()+1}월 ${n.getDate()}일(${days[n.getDay()]})`;
 
   try{
-    const raw = localStorage.getItem(STORAGE+todayKey);
+    const raw = localStorage.getItem(STORAGE + todayKey);
     if(raw) state = JSON.parse(raw);
   }catch{}
 
-  // restore energy
+  // 에너지
   if(state.energy){
     document.querySelectorAll('.energy-btn').forEach(b=>{
       if(b.textContent.includes(state.energy)) b.classList.add('active');
     });
   }
 
-  // restore checks
+  // 체크
   document.querySelectorAll('.check-item').forEach((item,i)=>{
     if(state.checks[i]){
       item.classList.add('done');
@@ -209,47 +276,49 @@ function load(){
     }
   });
 
-  // restore texts
-  if(state.texts.mismatch) document.getElementById('mismatch').value = state.texts.mismatch;
-  if(state.texts.blindspot) document.getElementById('blindspot').value = state.texts.blindspot;
-  if(state.texts.tomorrow) document.getElementById('tomorrow').value = state.texts.tomorrow;
+  // 텍스트
+  const t = state.texts;
+  if(t.todayOne) document.getElementById('todayOne').value = t.todayOne;
+  if(t.oneResult) document.getElementById('oneResult').value = t.oneResult;
+  if(t.mismatch) document.getElementById('mismatch').value = t.mismatch;
+  if(t.blindspot) document.getElementById('blindspot').value = t.blindspot;
+  if(t.tomorrow) document.getElementById('tomorrow').value = t.tomorrow;
 
   updateProgress();
   updateStreak();
+  updateApiBtn();
 }
 
-function save(){
-  state.texts.mismatch = document.getElementById('mismatch').value;
-  state.texts.blindspot = document.getElementById('blindspot').value;
-  state.texts.tomorrow = document.getElementById('tomorrow').value;
-  localStorage.setItem(STORAGE+todayKey, JSON.stringify(state));
+function saveState(){
+  state.texts = {
+    todayOne: document.getElementById('todayOne').value,
+    oneResult: document.getElementById('oneResult').value,
+    mismatch: document.getElementById('mismatch').value,
+    blindspot: document.getElementById('blindspot').value,
+    tomorrow: document.getElementById('tomorrow').value,
+  };
+  localStorage.setItem(STORAGE + todayKey, JSON.stringify(state));
 }
 
 function saveDay(){
-  save();
-  const btn = document.getElementById('saveBtn');
-  btn.textContent='✓ 저장됨'; btn.classList.add('saved');
-  // update streak
-  const streakData = JSON.parse(localStorage.getItem(STREAK)||'{"lastDate":"","count":0}');
+  saveState();
+  // 스트릭
+  const sd = JSON.parse(localStorage.getItem(STREAK)||'{"lastDate":"","count":0}');
   const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
   const yKey = `${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
-  if(streakData.lastDate === yKey || streakData.lastDate === todayKey){
-    if(streakData.lastDate !== todayKey){
-      streakData.count++;
-      streakData.lastDate = todayKey;
-    }
-  } else {
-    streakData.count = 1;
-    streakData.lastDate = todayKey;
-  }
-  localStorage.setItem(STREAK, JSON.stringify(streakData));
-  document.getElementById('streakCount').textContent = streakData.count;
-  setTimeout(()=>{ btn.textContent='오늘 저장'; btn.classList.remove('saved'); },2000);
+  if(sd.lastDate === yKey){ sd.count++; sd.lastDate = todayKey; }
+  else if(sd.lastDate !== todayKey){ sd.count = 1; sd.lastDate = todayKey; }
+  localStorage.setItem(STREAK, JSON.stringify(sd));
+  document.getElementById('streakCount').textContent = sd.count;
+
+  const btn = document.getElementById('saveBtn');
+  btn.textContent = '✓ 저장됨'; btn.classList.add('saved');
+  setTimeout(()=>{ btn.textContent = '💾 오늘 저장'; btn.classList.remove('saved'); }, 2000);
 }
 
 function resetDay(){
   if(!confirm('오늘 기록을 초기화할까요?')) return;
-  localStorage.removeItem(STORAGE+todayKey);
+  localStorage.removeItem(STORAGE + todayKey);
   location.reload();
 }
 
@@ -260,7 +329,7 @@ function toggleCheck(item){
   const isDone = item.classList.toggle('done');
   box.classList.toggle('checked', isDone);
   state.checks[idx] = isDone;
-  save();
+  saveState();
   updateProgress();
 }
 
@@ -268,7 +337,7 @@ function selectEnergy(btn, emoji){
   document.querySelectorAll('.energy-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   state.energy = emoji;
-  save();
+  saveState();
 }
 
 function updateProgress(){
@@ -278,19 +347,94 @@ function updateProgress(){
   document.getElementById('doneCount').textContent = done;
   document.getElementById('totalCount').textContent = total;
   document.getElementById('progressFill').style.width = total>0 ? (done/total*100)+'%' : '0%';
-
-  // section counts
   ['morning','day','evening'].forEach(sec=>{
-    const secItems = document.querySelectorAll(`.check-item[data-section="${sec}"]`);
-    const secDone = document.querySelectorAll(`.check-item[data-section="${sec}"].done`).length;
+    const all = document.querySelectorAll(`.check-item[data-section="${sec}"]`);
+    const d = document.querySelectorAll(`.check-item[data-section="${sec}"].done`).length;
     const el = document.getElementById(sec+'-done');
-    if(el) el.textContent = `${secDone}/${secItems.length}`;
+    if(el) el.textContent = `${d}/${all.length}`;
   });
 }
 
 function updateStreak(){
-  const streakData = JSON.parse(localStorage.getItem(STREAK)||'{"lastDate":"","count":0}');
-  document.getElementById('streakCount').textContent = streakData.count||0;
+  const sd = JSON.parse(localStorage.getItem(STREAK)||'{"count":0}');
+  document.getElementById('streakCount').textContent = sd.count||0;
+}
+
+// API
+function openModal(){ document.getElementById('apiModal').classList.remove('hidden'); }
+function closeModal(){ document.getElementById('apiModal').classList.add('hidden'); }
+function saveKey(){
+  const k = document.getElementById('apiInput').value.trim();
+  if(k){ localStorage.setItem(API_KEY, k); updateApiBtn(); closeModal(); }
+}
+function clearKey(){ localStorage.removeItem(API_KEY); updateApiBtn(); closeModal(); }
+function updateApiBtn(){
+  const k = localStorage.getItem(API_KEY);
+  const btn = document.getElementById('apiBtn');
+  btn.textContent = k ? 'AI ON' : 'AI 설정';
+  btn.className = k ? 'api-btn on' : 'api-btn off';
+}
+
+async function runAI(){
+  const key = localStorage.getItem(API_KEY);
+  if(!key){ openModal(); return; }
+
+  saveState();
+  const t = state.texts;
+  if(!t.todayOne && !t.mismatch && !t.blindspot){
+    alert('먼저 내용을 작성하고 저장해봐'); return;
+  }
+
+  const btn = document.getElementById('aiRunBtn');
+  btn.disabled = true; btn.textContent = '분석 중...';
+
+  const n = new Date();
+  const dateStr = `${n.getMonth()+1}월 ${n.getDate()}일 (${days[n.getDay()]})`;
+
+  const prompt = `오늘(${dateStr}) 하루 루틴 기록을 분석해줘.
+
+📌 오늘 가장 중요한 것 1가지: ${t.todayOne || '미작성'}
+⚡ 에너지 상태: ${state.energy || '미선택'}
+✅ 완료한 체크: ${Object.values(state.checks).filter(v=>v).length}개
+📝 1가지 결과: ${t.oneResult || '미작성'}
+⚡ 예상과 달랐던 것: ${t.mismatch || '미작성'}
+◎ 못 봤던 것/맹점: ${t.blindspot || '미작성'}
+→ 내일 바꿀 것: ${t.tomorrow || '미작성'}
+
+위 내용을 바탕으로 아래 4가지를 분석해줘:
+
+1. 오늘의 핵심 패턴 (한 줄)
+2. 발견된 맹점이나 반복 패턴
+3. 에너지와 실행력의 관계
+4. 내일을 위한 구체적 제안 1가지
+
+따뜻하고 통찰 있게, 3~5문장으로 짧고 명확하게.`;
+
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:600,
+        messages:[{role:'user', content: prompt}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content && data.content[0] && data.content[0].text;
+    if(text){
+      document.getElementById('aiCard').classList.remove('hidden');
+      document.getElementById('aiText').textContent = text;
+    }
+  }catch(e){ alert('오류: '+e.message); }
+
+  btn.disabled = false;
+  btn.textContent = '🔄 다시 분석';
 }
 
 load();
