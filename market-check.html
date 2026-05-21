@@ -131,10 +131,11 @@ body{background:#F5F5F7;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-s
   </div>
 
   <div class="tnav">
-    <button class="tbtn on" onclick="showT('macro')">거시 지표</button>
-    <button class="tbtn" onclick="showT('fut')">외국인 선물</button>
-    <button class="tbtn" onclick="showT('sec')">섹터 신호</button>
-    <button class="tbtn" onclick="showT('psy')">심리 체크</button>
+    <button class="tbtn on" onclick="showT('macro')">거시지표</button>
+    <button class="tbtn" onclick="showT('fut')">수급입력</button>
+    <button class="tbtn" onclick="showT('rec')">기록보기</button>
+    <button class="tbtn" onclick="showT('sec')">섹터</button>
+    <button class="tbtn" onclick="showT('psy')">심리</button>
   </div>
 
   <div class="tp on" id="tp-macro">
@@ -284,6 +285,55 @@ body{background:#F5F5F7;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-s
     </div>
   </div>
 
+  <div class="tp" id="tp-rec">
+
+    <!-- 미니 차트 -->
+    <div class="card" style="margin-bottom:8px;">
+      <div class="ctop" style="margin-bottom:8px;">
+        <span class="ctit">&#128202; 외국인 선물 추세</span>
+        <span style="font-size:10px;color:#9CA3AF" id="rec-count">0일 누적</span>
+      </div>
+      <div style="font-size:10px;color:#9CA3AF;margin-bottom:6px;">초록=순매수 / 빨간=순매도</div>
+      <div id="rec-chart" style="display:flex;gap:3px;align-items:center;height:60px;"></div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:#D1D5DB;margin-top:3px;"><span>&#8592; 과거</span><span>오늘 &#8594;</span></div>
+    </div>
+
+    <!-- 테이블 -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #F3F4F6;">
+        <span class="ctit">날짜별 수급 기록</span>
+        <div style="display:flex;gap:6px;">
+          <button onclick="doPat()" style="font-size:11px;padding:4px 10px;background:#6366F1;color:#fff;border:none;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:600;">AI 패턴 분석</button>
+          <button onclick="doClear()" style="font-size:11px;padding:4px 10px;background:#F3F4F6;color:#6B7280;border:none;border-radius:20px;cursor:pointer;font-family:inherit;">초기화</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <thead>
+            <tr style="background:#F9FAFB;">
+              <th style="padding:8px 10px;text-align:left;color:#6B7280;font-weight:600;border-bottom:1px solid #E5E7EB;white-space:nowrap;">날짜</th>
+              <th style="padding:8px 6px;text-align:right;color:#6366F1;font-weight:600;border-bottom:1px solid #E5E7EB;white-space:nowrap;">선물<br><span style="font-size:9px;color:#9CA3AF">계약</span></th>
+              <th style="padding:8px 6px;text-align:right;color:#2563EB;font-weight:600;border-bottom:1px solid #E5E7EB;white-space:nowrap;">현물<br><span style="font-size:9px;color:#9CA3AF">억원</span></th>
+              <th style="padding:8px 6px;text-align:right;color:#374151;font-weight:600;border-bottom:1px solid #E5E7EB;white-space:nowrap;">기관<br><span style="font-size:9px;color:#9CA3AF">억원</span></th>
+              <th style="padding:8px 6px;text-align:right;color:#374151;font-weight:600;border-bottom:1px solid #E5E7EB;white-space:nowrap;">프로<br><span style="font-size:9px;color:#9CA3AF">억원</span></th>
+              <th style="padding:8px 6px;text-align:center;color:#9CA3AF;font-weight:600;border-bottom:1px solid #E5E7EB;">추세</th>
+            </tr>
+          </thead>
+          <tbody id="rec-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:30px;color:#9CA3AF;font-size:12px;">저장된 데이터 없음<br>수급입력 탭에서 매일 입력 후 저장</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 패턴 분석 결과 -->
+    <div class="aic hide" id="patc">
+      <div class="ait">&#128202; AI 수급 패턴 분석</div>
+      <div class="aib" id="patb"></div>
+    </div>
+
+  </div>
+
   <div class="tp" id="tp-sec">
     <div style="font-size:11px;color:#9CA3AF;margin-bottom:10px">오늘 어떤 섹터에서 기회를 찾을지 판단</div>
     <div class="secg" id="secg">
@@ -365,13 +415,13 @@ updB();
 document.getElementById('abtn').addEventListener('click', openM);
 
 function showT(name) {
-  var tabs = ['macro','fut','sec','psy'];
+  var tabs = ['macro','fut','rec','sec','psy'];
   document.querySelectorAll('.tbtn').forEach(function(b, i) {
     b.classList.toggle('on', tabs[i] === name);
   });
   document.querySelectorAll('.tp').forEach(function(p) { p.classList.remove('on'); });
   document.getElementById('tp-' + name).classList.add('on');
-  if (name === 'fut') setTimeout(renderHist, 50);
+  if (name === 'fut' || name === 'rec') setTimeout(renderRec, 50);
 }
 
 function pc(btn, idx, val) {
@@ -478,10 +528,56 @@ function doSave() {
   if (hist.length > 90) hist = hist.slice(0, 90);
   localStorage.setItem(FK, JSON.stringify(hist));
   renderHist();
+  renderRec();
   alert('저장됐어 (' + dk + ') — 누적 ' + hist.length + '일치');
 }
 
 function getHist() { try { return JSON.parse(localStorage.getItem(FK) || '[]'); } catch(e) { return []; } }
+
+function renderRec() {
+  var hist = getHist();
+  var count = document.getElementById('rec-count');
+  if (count) count.textContent = hist.length + '일 누적';
+
+  // 미니 차트
+  var chart = document.getElementById('rec-chart');
+  if (chart) {
+    if (!hist.length) { chart.innerHTML = '<div style="color:#9CA3AF;font-size:11px;margin:auto">데이터 없음</div>'; }
+    else {
+      var shown = hist.slice(0, 30).slice().reverse();
+      var mx = Math.max.apply(null, shown.map(function(r) { return Math.abs(r.fut) || 1; }));
+      chart.innerHTML = shown.map(function(r) {
+        var h = Math.max(Math.round((Math.abs(r.fut) / mx) * 54), 2);
+        var col = r.fut >= 0 ? '#10B981' : '#EF4444';
+        var tip = r.date + ': ' + (r.fut > 0 ? '+' : '') + r.fut;
+        return '<div title="' + tip + '" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:60px;cursor:pointer;">' +
+          '<div style="width:100%;height:' + h + 'px;background:' + col + ';border-radius:2px;opacity:0.85;"></div></div>';
+      }).join('');
+    }
+  }
+
+  // 테이블
+  var tbody = document.getElementById('rec-tbody');
+  if (!tbody) return;
+  if (!hist.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#9CA3AF;font-size:12px;">저장된 데이터 없음<br>수급입력 탭에서 매일 입력 후 저장</td></tr>';
+    return;
+  }
+  tbody.innerHTML = hist.map(function(r, i) {
+    var fc = r.fut > 1000 ? '#10B981' : r.fut < -1000 ? '#EF4444' : '#374151';
+    var cc = r.csh > 2000 ? '#10B981' : r.csh < -2000 ? '#EF4444' : '#374151';
+    var ic = r.ist > 1000 ? '#10B981' : r.ist < -1000 ? '#EF4444' : '#374151';
+    var bg = i % 2 === 0 ? '#fff' : '#FAFAFA';
+    return '<tr style="background:' + bg + ';border-bottom:1px solid #F3F4F6;">' +
+      '<td style="padding:8px 10px;color:#374151;white-space:nowrap;font-weight:600;">' + r.date + '</td>' +
+      '<td style="padding:8px 6px;text-align:right;color:' + fc + ';font-weight:700;">' + (r.fut > 0 ? '+' : '') + r.fut.toLocaleString() + '</td>' +
+      '<td style="padding:8px 6px;text-align:right;color:' + cc + ';font-weight:700;">' + (r.csh > 0 ? '+' : '') + r.csh.toLocaleString() + '</td>' +
+      '<td style="padding:8px 6px;text-align:right;color:' + ic + ';">' + (r.ist > 0 ? '+' : '') + r.ist.toLocaleString() + '</td>' +
+      '<td style="padding:8px 6px;text-align:right;color:#6B7280;">' + (r.prg > 0 ? '+' : '') + r.prg.toLocaleString() + '</td>' +
+      '<td style="padding:8px 6px;text-align:center;"><span style="font-size:10px;background:#F3F4F6;color:#6B7280;padding:1px 6px;border-radius:4px;">' + (r.trd || '-') + '</span></td>' +
+    '</tr>';
+  }).join('');
+}
 
 function renderHist() {
   var hist = getHist();
