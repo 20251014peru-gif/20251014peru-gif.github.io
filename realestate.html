@@ -110,6 +110,9 @@ table.rec td.amt{text-align:right;font-weight:700;font-variant-numeric:tabular-n
 table.rec tfoot td{background:#5a4a86;color:#fff;font-weight:700;font-variant-numeric:tabular-nums}
 .rowdel{background:none;border:none;cursor:pointer;font-size:16px;padding:4px 7px;border-radius:8px;line-height:1}
 .rowdel:hover{background:var(--pink-soft)}
+table.rec td.rtime{color:var(--ink-soft);font-size:12.5px;font-variant-numeric:tabular-nums}
+.rec-time{font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.mtime{font-size:11px;color:var(--ink-soft);margin-top:8px;text-align:right;font-variant-numeric:tabular-nums}
 
 .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px}
 .pill.sky{background:var(--sky-soft);color:#2f6fa0}
@@ -287,7 +290,7 @@ table.rec tfoot td{background:#5a4a86;color:#fff;font-weight:700;font-variant-nu
           <thead><tr>
             <th>날짜</th><th>카테고리</th><th>목록</th><th>규격</th>
             <th style="text-align:right">단가</th><th style="text-align:right">수량</th>
-            <th>부가세</th><th>지불방식</th><th>상호</th><th style="text-align:right">합계</th><th></th>
+            <th>부가세</th><th>지불방식</th><th>상호</th><th style="text-align:right">합계</th><th>입력시각</th><th></th>
           </tr></thead>
           <tbody id="recBody"></tbody>
           <tfoot id="recFoot"></tfoot>
@@ -439,10 +442,11 @@ let db=null, online=false;
 let costs=[], supplies=[], memos=[];
 
 const won = n => (Math.round(Number(n)||0)).toLocaleString("ko-KR")+"원";
-const todayStr = () => new Date().toISOString().slice(0,10);
+const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const $ = id => document.getElementById(id);
 const esc = s => (s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
-const dateFromTs = ts => { const d=new Date(ts||Date.now()); return d.toISOString().slice(0,10); };
+const dateFromTs = ts => { const d=new Date(ts||Date.now()); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const clockStr = ts => { if(!ts) return ""; const d=new Date(ts); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
 
 function calcTotal(price, qty, vat){ let b=(Number(price)||0)*(Number(qty)||0); if(vat==="미포함") b*=1.1; return Math.round(b); }
 function vatNoteText(v){ return v==="미포함" ? " (부가세 별도 +10%)" : " (부가세 포함)"; }
@@ -570,19 +574,20 @@ $("btnSave").addEventListener("click",()=>{
 
 function renderRecent(){
   const body=$("recBody"), foot=$("recFoot");
-  if(!costs.length){ $("recentCount").textContent=""; body.innerHTML=`<tr><td colspan="11" class="empty">아직 입력된 비용이 없습니다.</td></tr>`; foot.innerHTML=""; return; }
+  if(!costs.length){ $("recentCount").textContent=""; body.innerHTML=`<tr><td colspan="12" class="empty">아직 입력된 비용이 없습니다.</td></tr>`; foot.innerHTML=""; return; }
   const list=costs.filter(c=>matchQ(costQuery, c.date,c.category,c.item,c.spec,c.vendor,c.pay,c.note,c.vat,String(c.total)));
   $("recentCount").textContent = costQuery.trim() ? `(검색 ${list.length} / 전체 ${costs.length}건)` : `(총 ${costs.length}건)`;
-  if(!list.length){ body.innerHTML=`<tr><td colspan="11" class="empty">검색 결과가 없습니다.</td></tr>`; foot.innerHTML=""; return; }
+  if(!list.length){ body.innerHTML=`<tr><td colspan="12" class="empty">검색 결과가 없습니다.</td></tr>`; foot.innerHTML=""; return; }
   body.innerHTML=list.map(c=>`<tr data-id="${c.id}">
     <td>${c.date||""}</td><td>${esc(c.category||"")}</td>
     <td>${esc(c.item||"")}${(c.photos&&c.photos.length)?" 📷":""}</td><td>${esc(c.spec||"")}</td>
     <td class="num">${(Number(c.price)||0).toLocaleString()}</td><td class="num">${Number(c.qty)||0}</td>
     <td>${esc(c.vat||"포함")}</td><td>${esc(c.pay||"")}</td><td>${esc(c.vendor||"")}</td>
     <td class="amt">${(Number(c.total)||0).toLocaleString()}</td>
+    <td class="rtime">${clockStr(c.createdAt)}</td>
     <td><button class="rowdel" data-del="${c.id}" title="삭제">🗑</button></td></tr>`).join("");
   const grand=list.reduce((s,c)=>s+(Number(c.total)||0),0);
-  foot.innerHTML=`<tr><td colspan="9">합계 (${list.length}건)</td><td class="amt">${grand.toLocaleString()}</td><td></td></tr>`;
+  foot.innerHTML=`<tr><td colspan="9">합계 (${list.length}건)</td><td class="amt">${grand.toLocaleString()}</td><td></td><td></td></tr>`;
   body.querySelectorAll("tr[data-id]").forEach(tr=>tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openEdit(tr.dataset.id); }));
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation();
     if(!confirm("이 비용 항목을 삭제할까요?")) return; deleteRecord(COL_COST,b.dataset.del); renderAll(); toast("삭제되었습니다"); }));
@@ -740,7 +745,7 @@ function supItemHTML(s){
   return `<div class="sup-item ${s.done?"done":""}" data-id="${s.id}">
     <div class="cb">${s.done?"✓":""}</div>
     <span class="sdate">${supDate(s).slice(5)}</span>
-    <div class="grow"><span class="txt">${esc(s.text)}</span>${thumbsRO(s.photos)}</div>
+    <div class="grow"><span class="txt">${esc(s.text)}</span>${thumbsRO(s.photos)}${s.createdAt?`<span class="rec-time">🕐 ${clockStr(s.createdAt)}</span>`:""}</div>
     <div class="acts"><button class="btn btn-ghost btn-sm edit">수정</button><button class="btn btn-danger btn-sm del">삭제</button></div></div>`;
 }
 function renderSupplies(){
@@ -800,7 +805,7 @@ function renderMemos(){
   box.innerHTML=arr.map(m=>`<div class="memo-item" data-id="${m.id}">
     <div class="mtop"><span class="mdate">${memoDate(m)}</span>
       <div class="mbtns"><button class="btn btn-ghost btn-sm edit">수정</button><button class="btn btn-danger btn-sm del">삭제</button></div></div>
-    <div class="mbody">${esc(m.body)}</div>${thumbsRO(m.photos)}</div>`).join("");
+    <div class="mbody">${esc(m.body)}</div>${thumbsRO(m.photos)}${m.createdAt?`<div class="mtime">🕐 ${clockStr(m.createdAt)}</div>`:""}</div>`).join("");
   box.querySelectorAll(".memo-item").forEach(el=>{ const id=el.dataset.id;
     el.querySelector(".del").addEventListener("click",()=>{ if(!confirm("이 메모를 삭제할까요?")) return; deleteRecord(COL_MEMO,id); renderMemos(); renderCalendar(); });
     el.querySelector(".edit").addEventListener("click",()=>editMemo(id,el));
