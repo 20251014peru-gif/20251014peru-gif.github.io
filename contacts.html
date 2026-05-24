@@ -117,7 +117,7 @@ main{padding-top:22px}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 탭초점/막대크롭 <b style="color:#9aa7b4">v7</b></span></div>
+      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 회전보정/분야추가 <b style="color:#9aa7b4">v8</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -177,6 +177,7 @@ main{padding-top:22px}
   <h3>⚙ 명함 AI 인식 설정</h3>
   <div class="field"><label>Anthropic API 키</label><input type="password" id="setKey" placeholder="sk-ant-..." autocomplete="off"></div>
   <div class="field"><label>모델</label><input type="text" id="setModel" placeholder="claude-sonnet-4-6"></div>
+  <div class="field"><label>촬영 회전 보정 (실시간 카메라)</label><select id="setRot"><option value="0">없음 (0°)</option><option value="90">시계방향 90° (왼쪽으로 들고 찍을 때)</option><option value="270">반시계방향 90° (오른쪽으로 들고 찍을 때)</option><option value="180">180° (거꾸로)</option></select></div>
   <p style="font-size:12px;color:var(--ink-soft);line-height:1.65;margin-bottom:6px">키는 <b>이 기기 브라우저에만</b> 저장되며 깃허브 소스·클라우드에는 올라가지 않습니다. 공용 PC에서는 사용 후 <b>키 삭제</b>를 눌러주세요.</p>
   <div class="btn-row">
     <button class="btn btn-primary" id="setSave">저장</button>
@@ -226,7 +227,7 @@ const firebaseConfig = {
   storageBucket: "my-system-25497.firebasestorage.app",
 };
 const COL = "contacts";
-const CATS = ["전기","설비","기계/냉난방","통신","승강기","소방","영선","청소","공사/인테리어","자재","행정","임차인","기타"];
+const CATS = ["전기","설비","기계/냉난방","통신","승강기","소방","영선","청소","공사/인테리어","인테리어","서희타워공사","견적업체","자재","행정","임차인","직원(재직중)","직원(퇴사)","기타"];
 
 let db=null, online=false, items=[];
 const $ = id => document.getElementById(id);
@@ -373,7 +374,10 @@ $("mDelete").addEventListener("click",()=>{ if(!mId||!confirm("이 업체를 삭
 const KEY_LS="anthropic_key", MODEL_LS="anthropic_model", DEFAULT_MODEL="claude-sonnet-4-6";
 function getKey(){ try{ return localStorage.getItem(KEY_LS)||""; }catch(e){ return ""; } }
 function getModel(){ try{ return localStorage.getItem(MODEL_LS)||DEFAULT_MODEL; }catch(e){ return DEFAULT_MODEL; } }
-const CARD_PROMPT="첨부 이미지는 한국 업체의 명함입니다. 한글과 숫자를 한 글자도 틀리지 않게 매우 신중히 읽으세요. 아래 JSON 형식으로만 답하세요(설명·코드블록 금지, JSON만). 값이 없으면 빈 문자열.\n{\"name\":\"\",\"person\":\"\",\"phone\":\"\",\"email\":\"\",\"address\":\"\",\"cat\":\"\"}\n- name: 회사/상호명(한글 정확히, 대표 상호 하나)\n- person: 담당자 이름(직함 제외, 한글)\n- phone: 대표전화 또는 휴대폰 하나를 010-1234-5678 / 02-123-4567 같은 한국식 하이픈 형식으로\n- email: 이메일\n- address: 주소 한 줄\n- cat: 다음 중 가장 적합한 하나 — 전기, 설비, 기계/냉난방, 통신, 승강기, 소방, 영선, 청소, 공사/인테리어, 자재, 행정, 임차인, 기타\n명함이 기울어졌거나 배경이 있어도 명함만 읽고, 글자가 흐릿하면 한국 업체 명함 문맥에 맞게 가장 그럴듯한 한글로 정확히 보정해 읽으세요.";
+const ROT_LS="cam_rotation";
+function getCorr(){ try{ return parseInt(localStorage.getItem(ROT_LS)||"0",10)||0; }catch(e){ return 0; } }
+function rotateImage(dataUrl,deg){ const r=(((deg||0)%360)+360)%360; if(!r) return Promise.resolve(dataUrl); return new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>{ const swap=(r===90||r===270); const cn=document.createElement("canvas"); cn.width=swap?img.height:img.width; cn.height=swap?img.width:img.height; const ctx=cn.getContext("2d"); ctx.translate(cn.width/2,cn.height/2); ctx.rotate(r*Math.PI/180); ctx.drawImage(img,-img.width/2,-img.height/2); res(cn.toDataURL("image/jpeg",0.92)); }; img.onerror=rej; img.src=dataUrl; }); }
+const CARD_PROMPT="첨부 이미지는 한국 업체의 명함입니다. 한글과 숫자를 한 글자도 틀리지 않게 매우 신중히 읽으세요. 아래 JSON 형식으로만 답하세요(설명·코드블록 금지, JSON만). 값이 없으면 빈 문자열.\n{\"name\":\"\",\"person\":\"\",\"phone\":\"\",\"email\":\"\",\"address\":\"\",\"cat\":\"\"}\n- name: 회사/상호명(한글 정확히, 대표 상호 하나)\n- person: 담당자 이름(직함 제외, 한글)\n- phone: 대표전화 또는 휴대폰 하나를 010-1234-5678 / 02-123-4567 같은 한국식 하이픈 형식으로\n- email: 이메일\n- address: 주소 한 줄\n- cat: 다음 중 가장 적합한 하나 — 전기, 설비, 기계/냉난방, 통신, 승강기, 소방, 영선, 청소, 공사/인테리어, 인테리어, 서희타워공사, 견적업체, 자재, 행정, 임차인, 기타\n명함이 기울어졌거나 배경이 있어도 명함만 읽고, 글자가 흐릿하면 한국 업체 명함 문맥에 맞게 가장 그럴듯한 한글로 정확히 보정해 읽으세요.";
 function fillFields(g){
   if(g.name && !$("c-name").value.trim()) $("c-name").value=g.name;
   if(g.person && !$("c-person").value.trim()) $("c-person").value=g.person;
@@ -598,7 +602,7 @@ function tickDetect(){
     else { hitCount=Math.max(0,hitCount-1); $("camHint").textContent = found ? "조금만 더 또렷하게… (흔들림 줄이기)" : "명함을 안내선 안에 꽉 차게 비춰주세요"; }
   } finally { [src,gray,blur,edged,kernel,contours,hier].forEach(m=>{try{m&&m.delete&&m.delete();}catch(_){}}); }
 }
-async function grabFrame(){ const v=$("camVideo"); const w=v.videoWidth,h=v.videoHeight; if(!w) return null; const cn=document.createElement("canvas"); cn.width=w; cn.height=h; cn.getContext("2d").drawImage(v,0,0,w,h); return cn.toDataURL("image/jpeg",0.92); }
+async function grabFrame(){ const v=$("camVideo"); const w=v.videoWidth,h=v.videoHeight; if(!w) return null; const cn=document.createElement("canvas"); cn.width=w; cn.height=h; cn.getContext("2d").drawImage(v,0,0,w,h); let url=cn.toDataURL("image/jpeg",0.92); const d=getCorr(); if(d){ try{ url=await rotateImage(url,d); }catch(e){} } return url; }
 async function captureAuto(){ if(detTimer){ clearInterval(detTimer); detTimer=null; } const f=await grabFrame(); stopCamera(); if(f) await autoProcess(f); }
 async function captureManual(){ if(detTimer){ clearInterval(detTimer); detTimer=null; } const f=await grabFrame(); stopCamera(); if(f){ const s=await autoLandscape(f); openCropper(s); } }
 $("btnCam").addEventListener("click",startCamera);
@@ -607,10 +611,10 @@ $("camClose").addEventListener("click",stopCamera);
 $("c-pick").addEventListener("change",e=>{ const f=e.target.files[0]; e.target.value=""; handleCard(f); });
 
 /* 설정 모달 */
-$("btnSettings").addEventListener("click",()=>{ $("setKey").value=getKey(); $("setModel").value=getModel(); $("setOverlay").classList.add("show"); });
+$("btnSettings").addEventListener("click",()=>{ $("setKey").value=getKey(); $("setModel").value=getModel(); $("setRot").value=String(getCorr()); $("setOverlay").classList.add("show"); });
 $("setCancel").addEventListener("click",()=>$("setOverlay").classList.remove("show"));
 $("setOverlay").addEventListener("click",e=>{ if(e.target===$("setOverlay")) $("setOverlay").classList.remove("show"); });
-$("setSave").addEventListener("click",()=>{ try{ localStorage.setItem(KEY_LS,$("setKey").value.trim()); localStorage.setItem(MODEL_LS,$("setModel").value.trim()||DEFAULT_MODEL); }catch(e){} $("setOverlay").classList.remove("show"); toast(getKey()?"저장됨 — 이제 명함은 AI로 인식됩니다":"저장됨"); });
+$("setSave").addEventListener("click",()=>{ try{ localStorage.setItem(KEY_LS,$("setKey").value.trim()); localStorage.setItem(MODEL_LS,$("setModel").value.trim()||DEFAULT_MODEL); localStorage.setItem(ROT_LS,$("setRot").value); }catch(e){} $("setOverlay").classList.remove("show"); toast(getKey()?"저장됨 — 이제 명함은 AI로 인식됩니다":"저장됨"); });
 $("setClear").addEventListener("click",()=>{ try{ localStorage.removeItem(KEY_LS); }catch(e){} $("setKey").value=""; toast("키가 삭제되었습니다"); });
 
 /* ===== 엑셀 복사 / 백업 ===== */
