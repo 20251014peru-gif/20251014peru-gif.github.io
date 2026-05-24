@@ -91,14 +91,16 @@ main{padding-top:22px}
 .croparea{position:relative;display:inline-block;max-width:100%;line-height:0;touch-action:none;user-select:none;background:#000;border-radius:10px;overflow:hidden}
 #cropImg{display:block;max-width:100%;max-height:58vh;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
 .croparea, .cropbox, .ch, .ce{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
-.ce{position:absolute;background:var(--primary);opacity:.85;border-radius:4px}
-.ce.t{top:-4px;left:14px;right:14px;height:8px;cursor:ns-resize}
-.ce.b{bottom:-4px;left:14px;right:14px;height:8px;cursor:ns-resize}
-.ce.l{left:-4px;top:14px;bottom:14px;width:8px;cursor:ew-resize}
-.ce.r{right:-4px;top:14px;bottom:14px;width:8px;cursor:ew-resize}
-.cropbox{position:absolute;border:2px solid var(--primary);box-shadow:0 0 0 9999px rgba(0,0,0,.45);box-sizing:border-box;cursor:move}
-.ch{position:absolute;width:20px;height:20px;background:#fff;border:2px solid var(--primary);border-radius:50%}
-.ch.tl{left:-10px;top:-10px;cursor:nwse-resize} .ch.tr{right:-10px;top:-10px;cursor:nesw-resize} .ch.bl{left:-10px;bottom:-10px;cursor:nesw-resize} .ch.br{right:-10px;bottom:-10px;cursor:nwse-resize}
+.ce{position:absolute;background:transparent}
+.ce.t{top:-7px;left:14px;right:14px;height:14px;cursor:ns-resize}
+.ce.b{bottom:-7px;left:14px;right:14px;height:14px;cursor:ns-resize}
+.ce.l{left:-7px;top:14px;bottom:14px;width:14px;cursor:ew-resize}
+.ce.r{right:-7px;top:14px;bottom:14px;width:14px;cursor:ew-resize}
+.ce.t::after,.ce.b::after{content:"";position:absolute;left:0;right:0;top:50%;height:3px;transform:translateY(-50%);background:var(--primary);border-radius:2px}
+.ce.l::after,.ce.r::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:3px;transform:translateX(-50%);background:var(--primary);border-radius:2px}
+.cropbox{position:absolute;border:1px solid var(--primary);box-shadow:0 0 0 9999px rgba(0,0,0,.45);box-sizing:border-box;cursor:move}
+.ch{position:absolute;width:15px;height:15px;background:#fff;border:1.5px solid var(--primary);border-radius:50%}
+.ch.tl{left:-8px;top:-8px;cursor:nwse-resize} .ch.tr{right:-8px;top:-8px;cursor:nesw-resize} .ch.bl{left:-8px;bottom:-8px;cursor:nesw-resize} .ch.br{right:-8px;bottom:-8px;cursor:nwse-resize}
 .cammodal{background:#11161c;border-radius:18px;max-width:560px;width:100%;padding:14px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
 .camwrap{position:relative;border-radius:12px;overflow:hidden;background:#000}
 #camVideo{width:100%;max-height:66vh;display:block;object-fit:contain;background:#000}
@@ -117,7 +119,7 @@ main{padding-top:22px}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 회전보정/분야추가 <b style="color:#9aa7b4">v8</b></span></div>
+      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 초점/회전/얇은크롭 <b style="color:#9aa7b4">v9</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -177,7 +179,7 @@ main{padding-top:22px}
   <h3>⚙ 명함 AI 인식 설정</h3>
   <div class="field"><label>Anthropic API 키</label><input type="password" id="setKey" placeholder="sk-ant-..." autocomplete="off"></div>
   <div class="field"><label>모델</label><input type="text" id="setModel" placeholder="claude-sonnet-4-6"></div>
-  <div class="field"><label>촬영 회전 보정 (실시간 카메라)</label><select id="setRot"><option value="0">없음 (0°)</option><option value="90">시계방향 90° (왼쪽으로 들고 찍을 때)</option><option value="270">반시계방향 90° (오른쪽으로 들고 찍을 때)</option><option value="180">180° (거꾸로)</option></select></div>
+  <div class="field"><label>촬영 회전 보정 (사진이 틀어지면 조정)</label><select id="setRot"><option value="0">기본 (권장)</option><option value="90">시계방향으로 더 90°</option><option value="270">반시계방향으로 더 90°</option><option value="180">더 180°</option></select></div>
   <p style="font-size:12px;color:var(--ink-soft);line-height:1.65;margin-bottom:6px">키는 <b>이 기기 브라우저에만</b> 저장되며 깃허브 소스·클라우드에는 올라가지 않습니다. 공용 PC에서는 사용 후 <b>키 삭제</b>를 눌러주세요.</p>
   <div class="btn-row">
     <button class="btn btn-primary" id="setSave">저장</button>
@@ -551,16 +553,19 @@ const detCanvas=document.createElement("canvas");
 async function focusAt(e){
   const v=$("camVideo"); const rect=v.getBoundingClientRect();
   const lx=e.clientX-rect.left, ly=e.clientY-rect.top;
-  const fr=$("focusRing"); if(fr){ fr.style.left=lx+"px"; fr.style.top=ly+"px"; fr.classList.remove("show"); void fr.offsetWidth; fr.classList.add("show"); setTimeout(()=>fr.classList.remove("show"),700); }
+  const fr=$("focusRing"); if(fr){ fr.style.left=lx+"px"; fr.style.top=ly+"px"; fr.classList.remove("show"); void fr.offsetWidth; fr.classList.add("show"); setTimeout(()=>fr.classList.remove("show"),800); }
   if(!camStream) return;
+  const track=camStream.getVideoTracks()[0]; if(!track||!track.applyConstraints) return;
+  let caps={}; try{ caps=track.getCapabilities?track.getCapabilities():{}; }catch(_){}
+  const x=Math.min(1,Math.max(0,lx/rect.width)), y=Math.min(1,Math.max(0,ly/rect.height));
+  const poi=[{x,y}];
   try{
-    const track=camStream.getVideoTracks()[0]; if(!track||!track.applyConstraints) return;
-    const caps=track.getCapabilities?track.getCapabilities():{};
-    const x=Math.min(1,Math.max(0,lx/rect.width)), y=Math.min(1,Math.max(0,ly/rect.height));
+    const fm=caps.focusMode||[];
+    if(fm.indexOf&&fm.indexOf("single-shot")>=0){ const o={focusMode:"single-shot"}; if(caps.pointsOfInterest) o.pointsOfInterest=poi; await track.applyConstraints({advanced:[o]}); }
     const adv=[];
-    if(caps.pointsOfInterest) adv.push({pointsOfInterest:[{x,y}]});
-    if(caps.focusDistance && caps.focusMode && caps.focusMode.indexOf("manual")>=0){ /* skip manual */ }
-    if(caps.focusMode){ if(caps.focusMode.indexOf("single-shot")>=0) adv.push({focusMode:"single-shot"}); else if(caps.focusMode.indexOf("continuous")>=0) adv.push({focusMode:"continuous"}); }
+    if(caps.pointsOfInterest) adv.push({pointsOfInterest:poi});
+    if(caps.exposureMode && (""+caps.exposureMode).indexOf("continuous")>=0) adv.push({exposureMode:"continuous"});
+    if(fm.indexOf&&fm.indexOf("continuous")>=0) adv.push({focusMode:"continuous"});
     if(adv.length) await track.applyConstraints({advanced:adv});
   }catch(_){}
 }
@@ -602,7 +607,7 @@ function tickDetect(){
     else { hitCount=Math.max(0,hitCount-1); $("camHint").textContent = found ? "조금만 더 또렷하게… (흔들림 줄이기)" : "명함을 안내선 안에 꽉 차게 비춰주세요"; }
   } finally { [src,gray,blur,edged,kernel,contours,hier].forEach(m=>{try{m&&m.delete&&m.delete();}catch(_){}}); }
 }
-async function grabFrame(){ const v=$("camVideo"); const w=v.videoWidth,h=v.videoHeight; if(!w) return null; const cn=document.createElement("canvas"); cn.width=w; cn.height=h; cn.getContext("2d").drawImage(v,0,0,w,h); let url=cn.toDataURL("image/jpeg",0.92); const d=getCorr(); if(d){ try{ url=await rotateImage(url,d); }catch(e){} } return url; }
+async function grabFrame(){ const v=$("camVideo"); const w=v.videoWidth,h=v.videoHeight; if(!w) return null; const cn=document.createElement("canvas"); cn.width=w; cn.height=h; cn.getContext("2d").drawImage(v,0,0,w,h); let url=cn.toDataURL("image/jpeg",0.92); try{ url=await rotateImage(url, getCorr()+180); }catch(e){} return url; }
 async function captureAuto(){ if(detTimer){ clearInterval(detTimer); detTimer=null; } const f=await grabFrame(); stopCamera(); if(f) await autoProcess(f); }
 async function captureManual(){ if(detTimer){ clearInterval(detTimer); detTimer=null; } const f=await grabFrame(); stopCamera(); if(f){ const s=await autoLandscape(f); openCropper(s); } }
 $("btnCam").addEventListener("click",startCamera);
