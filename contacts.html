@@ -89,7 +89,13 @@ main{padding-top:22px}
 #cropOverlay{z-index:62}
 .cropmodal{max-width:560px;text-align:center}
 .croparea{position:relative;display:inline-block;max-width:100%;line-height:0;touch-action:none;user-select:none;background:#000;border-radius:10px;overflow:hidden}
-#cropImg{display:block;max-width:100%;max-height:58vh}
+#cropImg{display:block;max-width:100%;max-height:58vh;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.croparea, .cropbox, .ch, .ce{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+.ce{position:absolute;background:var(--primary);opacity:.85;border-radius:4px}
+.ce.t{top:-4px;left:14px;right:14px;height:8px;cursor:ns-resize}
+.ce.b{bottom:-4px;left:14px;right:14px;height:8px;cursor:ns-resize}
+.ce.l{left:-4px;top:14px;bottom:14px;width:8px;cursor:ew-resize}
+.ce.r{right:-4px;top:14px;bottom:14px;width:8px;cursor:ew-resize}
 .cropbox{position:absolute;border:2px solid var(--primary);box-shadow:0 0 0 9999px rgba(0,0,0,.45);box-sizing:border-box;cursor:move}
 .ch{position:absolute;width:20px;height:20px;background:#fff;border:2px solid var(--primary);border-radius:50%}
 .ch.tl{left:-10px;top:-10px;cursor:nwse-resize} .ch.tr{right:-10px;top:-10px;cursor:nesw-resize} .ch.bl{left:-10px;bottom:-10px;cursor:nesw-resize} .ch.br{right:-10px;bottom:-10px;cursor:nwse-resize}
@@ -97,6 +103,8 @@ main{padding-top:22px}
 .camwrap{position:relative;border-radius:12px;overflow:hidden;background:#000}
 #camVideo{width:100%;max-height:66vh;display:block;object-fit:contain;background:#000}
 .camframe{position:absolute;inset:8% 6%;border:2px dashed rgba(255,255,255,.72);border-radius:10px;pointer-events:none}
+.focusring{position:absolute;width:62px;height:62px;border:2px solid #ffd24a;border-radius:50%;transform:translate(-50%,-50%) scale(1.35);opacity:0;pointer-events:none;transition:transform .25s ease,opacity .25s ease}
+.focusring.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
 .camhint{color:#dfe7ef;font-size:13.5px;text-align:center;margin:10px 4px}
 #imgOverlay{position:fixed;inset:0;background:rgba(30,38,48,.88);display:none;align-items:center;justify-content:center;padding:20px;z-index:90;cursor:zoom-out}
 #imgOverlay.show{display:flex}
@@ -109,7 +117,7 @@ main{padding-top:22px}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 카메라/수동크롭/회전 <b style="color:#9aa7b4">v6</b></span></div>
+      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 탭초점/막대크롭 <b style="color:#9aa7b4">v7</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -181,8 +189,8 @@ main{padding-top:22px}
   <h3>✂️ 명함 영역 선택</h3>
   <p style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">모서리를 끌어 명함만 맞춘 뒤 "이 영역으로"를 누르세요. 세로면 회전하세요.</p>
   <div class="croparea" id="cropArea">
-    <img id="cropImg" alt="">
-    <div class="cropbox" id="cropBox"><span class="ch tl" data-h="tl"></span><span class="ch tr" data-h="tr"></span><span class="ch bl" data-h="bl"></span><span class="ch br" data-h="br"></span></div>
+    <img id="cropImg" alt="" draggable="false">
+    <div class="cropbox" id="cropBox"><span class="ce t" data-h="t"></span><span class="ce b" data-h="b"></span><span class="ce l" data-h="l"></span><span class="ce r" data-h="r"></span><span class="ch tl" data-h="tl"></span><span class="ch tr" data-h="tr"></span><span class="ch bl" data-h="bl"></span><span class="ch br" data-h="br"></span></div>
   </div>
   <div class="btn-row" style="justify-content:center;flex-wrap:wrap">
     <button class="btn btn-ghost" id="cropRotate">↻ 회전</button>
@@ -195,8 +203,9 @@ main{padding-top:22px}
   <div class="camwrap">
     <video id="camVideo" playsinline muted autoplay></video>
     <div class="camframe"></div>
+    <div class="focusring" id="focusRing"></div>
   </div>
-  <div class="camhint" id="camHint">카메라 준비 중…</div>
+  <div class="camhint" id="camHint">화면을 누르면 그 지점에 초점이 맞습니다 · 카메라 준비 중…</div>
   <div class="btn-row" style="justify-content:center">
     <button class="btn btn-primary" id="camShot">지금 촬영</button>
     <button class="btn btn-ghost" id="camClose">닫기</button>
@@ -217,7 +226,7 @@ const firebaseConfig = {
   storageBucket: "my-system-25497.firebasestorage.app",
 };
 const COL = "contacts";
-const CATS = ["전기","설비","기계/냉난방","통신","승강기","소방","영선","주차","청소","조경/화단","공사/인테리어","자재/용품","관공서/행정","기타"];
+const CATS = ["전기","설비","기계/냉난방","통신","승강기","소방","영선","청소","공사/인테리어","자재","행정","임차인","기타"];
 
 let db=null, online=false, items=[];
 const $ = id => document.getElementById(id);
@@ -364,7 +373,7 @@ $("mDelete").addEventListener("click",()=>{ if(!mId||!confirm("이 업체를 삭
 const KEY_LS="anthropic_key", MODEL_LS="anthropic_model", DEFAULT_MODEL="claude-sonnet-4-6";
 function getKey(){ try{ return localStorage.getItem(KEY_LS)||""; }catch(e){ return ""; } }
 function getModel(){ try{ return localStorage.getItem(MODEL_LS)||DEFAULT_MODEL; }catch(e){ return DEFAULT_MODEL; } }
-const CARD_PROMPT="첨부 이미지는 한국 업체의 명함입니다. 한글과 숫자를 한 글자도 틀리지 않게 매우 신중히 읽으세요. 아래 JSON 형식으로만 답하세요(설명·코드블록 금지, JSON만). 값이 없으면 빈 문자열.\n{\"name\":\"\",\"person\":\"\",\"phone\":\"\",\"email\":\"\",\"address\":\"\",\"cat\":\"\"}\n- name: 회사/상호명(한글 정확히, 대표 상호 하나)\n- person: 담당자 이름(직함 제외, 한글)\n- phone: 대표전화 또는 휴대폰 하나를 010-1234-5678 / 02-123-4567 같은 한국식 하이픈 형식으로\n- email: 이메일\n- address: 주소 한 줄\n- cat: 다음 중 가장 적합한 하나 — 전기, 설비, 기계/냉난방, 통신, 승강기, 소방, 영선, 주차, 청소, 조경/화단, 공사/인테리어, 자재/용품, 관공서/행정, 기타\n명함이 기울어졌거나 배경이 있어도 명함만 읽고, 글자가 흐릿하면 한국 업체 명함 문맥에 맞게 가장 그럴듯한 한글로 정확히 보정해 읽으세요.";
+const CARD_PROMPT="첨부 이미지는 한국 업체의 명함입니다. 한글과 숫자를 한 글자도 틀리지 않게 매우 신중히 읽으세요. 아래 JSON 형식으로만 답하세요(설명·코드블록 금지, JSON만). 값이 없으면 빈 문자열.\n{\"name\":\"\",\"person\":\"\",\"phone\":\"\",\"email\":\"\",\"address\":\"\",\"cat\":\"\"}\n- name: 회사/상호명(한글 정확히, 대표 상호 하나)\n- person: 담당자 이름(직함 제외, 한글)\n- phone: 대표전화 또는 휴대폰 하나를 010-1234-5678 / 02-123-4567 같은 한국식 하이픈 형식으로\n- email: 이메일\n- address: 주소 한 줄\n- cat: 다음 중 가장 적합한 하나 — 전기, 설비, 기계/냉난방, 통신, 승강기, 소방, 영선, 청소, 공사/인테리어, 자재, 행정, 임차인, 기타\n명함이 기울어졌거나 배경이 있어도 명함만 읽고, 글자가 흐릿하면 한국 업체 명함 문맥에 맞게 가장 그럴듯한 한글로 정확히 보정해 읽으세요.";
 function fillFields(g){
   if(g.name && !$("c-name").value.trim()) $("c-name").value=g.name;
   if(g.person && !$("c-person").value.trim()) $("c-person").value=g.person;
@@ -518,6 +527,8 @@ $("cropArea").addEventListener("pointermove",e=>{ if(!cDrag) return; const dx=e.
   cBox={x,y,w,h}; clayout(); });
 $("cropArea").addEventListener("pointerup",()=>{ cDrag=null; });
 $("cropArea").addEventListener("pointercancel",()=>{ cDrag=null; });
+$("cropArea").addEventListener("contextmenu",e=>e.preventDefault());
+$("cropArea").addEventListener("touchstart",e=>{ if(e.cancelable) e.preventDefault(); },{passive:false});
 $("cropRotate").addEventListener("click",async()=>{ try{ cropSrc=await rotate90(cropSrc); }catch(e){} const im=$("cropImg"); im.onload=()=>requestAnimationFrame(cReset); im.src=cropSrc; });
 $("cropCancel").addEventListener("click",()=>$("cropOverlay").classList.remove("show"));
 $("cropDone").addEventListener("click",async()=>{
@@ -533,6 +544,23 @@ $("cropDone").addEventListener("click",async()=>{
 /* ===== 실시간 카메라 + 명함 자동 촬영 ===== */
 let camStream=null, detTimer=null, hitCount=0;
 const detCanvas=document.createElement("canvas");
+async function focusAt(e){
+  const v=$("camVideo"); const rect=v.getBoundingClientRect();
+  const lx=e.clientX-rect.left, ly=e.clientY-rect.top;
+  const fr=$("focusRing"); if(fr){ fr.style.left=lx+"px"; fr.style.top=ly+"px"; fr.classList.remove("show"); void fr.offsetWidth; fr.classList.add("show"); setTimeout(()=>fr.classList.remove("show"),700); }
+  if(!camStream) return;
+  try{
+    const track=camStream.getVideoTracks()[0]; if(!track||!track.applyConstraints) return;
+    const caps=track.getCapabilities?track.getCapabilities():{};
+    const x=Math.min(1,Math.max(0,lx/rect.width)), y=Math.min(1,Math.max(0,ly/rect.height));
+    const adv=[];
+    if(caps.pointsOfInterest) adv.push({pointsOfInterest:[{x,y}]});
+    if(caps.focusDistance && caps.focusMode && caps.focusMode.indexOf("manual")>=0){ /* skip manual */ }
+    if(caps.focusMode){ if(caps.focusMode.indexOf("single-shot")>=0) adv.push({focusMode:"single-shot"}); else if(caps.focusMode.indexOf("continuous")>=0) adv.push({focusMode:"continuous"}); }
+    if(adv.length) await track.applyConstraints({advanced:adv});
+  }catch(_){}
+}
+$("camVideo").addEventListener("click",focusAt);
 async function startCamera(){
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast("이 브라우저는 카메라를 지원하지 않아요 — '사진에서 선택'을 쓰세요"); return; }
   $("camOverlay").classList.add("show"); $("camHint").textContent="카메라 준비 중…"; hitCount=0;
