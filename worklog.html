@@ -167,6 +167,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #printArea{position:absolute;left:-99999px;top:0;width:100%}
 @page{ size:A4; margin:0; }
+@page calpage{ size:A4 landscape; margin:8mm; }
 @media print{
   body{background:#fff;padding:0}
   body > *:not(#printArea){display:none !important}
@@ -184,6 +185,17 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
   #printArea .rsec.memo{color:#7c3aed;border-left-color:#7c3aed}
   #printArea .rsec.meet{color:#334155;border-left-color:#334155}
   #printArea .rsec.deliver{color:#be123c;border-left-color:#be123c}
+  #printArea.calmode{padding:0;page:calpage}
+  #printArea.calmode h1{font-size:17px;margin:0 0 6px}
+  #printArea.calmode table.pcal{width:100%;border-collapse:collapse;table-layout:fixed}
+  #printArea.calmode .pcal th{border:1px solid #333;background:#eee;font-size:11px;padding:3px;text-align:center}
+  #printArea.calmode .pcal th.sun{color:#c0392b}
+  #printArea.calmode .pcal td{border:1px solid #999;padding:3px;vertical-align:top;height:25mm;overflow:hidden}
+  #printArea.calmode .pcal td.sun .pd{color:#c0392b}
+  #printArea.calmode .pd{font-size:11px;font-weight:700;margin-bottom:2px}
+  #printArea.calmode .pw{font-size:9px;line-height:1.35;word-break:break-all}
+  #printArea.calmode .pv{font-size:9px;color:#9a6f17;font-weight:700}
+  #printArea.calmode .po{font-size:8.5px;color:#666}
 }
 @media (max-width:560px){ .grid{grid-template-columns:1fr} .brand h1{font-size:22px} .cal-cell{min-height:64px} }
 </style>
@@ -334,7 +346,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
     <div class="card">
       <div class="cal-head">
         <span class="mo" id="calMonth"></span>
-        <div class="cal-nav"><button id="calPrev">‹</button><button id="calToday" style="font-size:14px;font-weight:600;padding:0 12px">오늘</button><button id="calNext">›</button></div>
+        <div class="cal-nav"><button id="calPrev">‹</button><button id="calToday" style="font-size:14px;font-weight:600;padding:0 12px">오늘</button><button id="calNext">›</button><button id="calPrint" style="font-size:13px;font-weight:600;padding:0 12px">🖨 인쇄</button></div>
       </div>
       <div class="cal-legend">
         <span><span class="lg-dot" style="background:var(--peach)"></span>미완료</span>
@@ -884,8 +896,7 @@ function renderCalendar(){
     const total=wArr.length+vArr.length+oN;
     if(total) cls.push("has"); if(wd===0) cls.push("sun"); if(ds===todayStr()) cls.push("today"); if(ds===selDay) cls.push("sel");
     let inner="";
-    wArr.slice(0,2).forEach(en=> inner+=`<div class="wtitle"><span class="d" style="background:${statusColor(en.status)}"></span>${esc(en.title||"")}</div>`);
-    if(wArr.length>2) inner+=`<div class="wtitle" style="color:var(--ink-soft)">+${wArr.length-2} 업무</div>`;
+    wArr.forEach(en=> inner+=`<div class="wtitle"><span class="d" style="background:${statusColor(en.status)}"></span>${esc(en.title||"")}</div>`);
     if(vArr.length) inner+=`<div class="vac">🌴 ${esc(vArr.join(","))}</div>`;
     if(oN) inner+=`<div class="omark">📌 ${oN}건</div>`;
     html+=`<div class="${cls.join(" ")}" data-d="${ds}"><span class="dnum">${d}</span>${inner}</div>`;
@@ -938,7 +949,43 @@ function buildReport(day){
   if(!(w.length||v.length||p.length||m.length||c.length||mt.length||dv.length)) h+=`<div class="it">이 날의 기록이 없습니다.</div>`;
   return h;
 }
-function printReport(day){ if(!day) return; $("printArea").innerHTML=buildReport(day); window.print(); }
+function printReport(day){ if(!day) return; $("printArea").className=""; $("printArea").innerHTML=buildReport(day); window.print(); }
+
+/* ===== 달력 한 장 인쇄 ===== */
+function buildCalendarPrint(){
+  const work={}, vac={}, other={};
+  entries.forEach(e=>{
+    if(e.kind==="work"&&e.date){ (work[e.date]=work[e.date]||[]).push(e); }
+    else if(e.kind==="vacation"){ datesBetween(e.start,e.end).forEach(d=>{ (vac[d]=vac[d]||[]).push(e.name||"휴가"); }); }
+    else if(["plan","memo","call","meeting","deliver"].includes(e.kind)&&e.date){ other[e.date]=(other[e.date]||0)+1; }
+  });
+  const first=new Date(calY,calM,1).getDay(), days=new Date(calY,calM+1,0).getDate();
+  const cells=[]; for(let i=0;i<first;i++) cells.push(null);
+  for(let d=1;d<=days;d++) cells.push(`${calY}-${String(calM+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`);
+  while(cells.length%7) cells.push(null);
+  const dow=["일","월","화","수","목","금","토"];
+  let h=`<h1>${calY}년 ${calM+1}월 업무 달력</h1>`;
+  h+=`<table class="pcal"><thead><tr>`+dow.map((d,i)=>`<th class="${i===0?"sun":""}">${d}</th>`).join("")+`</tr></thead><tbody>`;
+  for(let r=0;r<cells.length/7;r++){
+    h+="<tr>";
+    for(let c=0;c<7;c++){
+      const ds=cells[r*7+c];
+      if(!ds){ h+="<td></td>"; continue; }
+      const dnum=Number(ds.split("-")[2]);
+      let inner=`<div class="pd">${dnum}</div>`;
+      (work[ds]||[]).forEach(en=> inner+=`<div class="pw"><b style="color:${statusHex(en.status)}">●</b> ${esc(en.title||"")}</div>`);
+      if(vac[ds]) inner+=`<div class="pv">🌴 ${esc(vac[ds].join(","))}</div>`;
+      if(other[ds]) inner+=`<div class="po">기타 ${other[ds]}건</div>`;
+      h+=`<td class="${c===0?"sun":""}">${inner}</td>`;
+    }
+    h+="</tr>";
+  }
+  h+="</tbody></table>";
+  return h;
+}
+function statusHex(s){ return s==="완료"?"#15803d":s==="진행중"?"#b45309":"#c0392b"; }
+function printCalendar(){ $("printArea").className="calmode"; $("printArea").innerHTML=buildCalendarPrint(); window.print(); }
+$("calPrint").addEventListener("click",printCalendar);
 
 init();
 </script>
