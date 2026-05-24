@@ -96,7 +96,7 @@ main{padding-top:22px}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 명함 AI 인식 <b style="color:#9aa7b4">v2</b></span></div>
+      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 명함 자동보정 AI 인식 <b style="color:#9aa7b4">v3</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -325,7 +325,7 @@ $("mDelete").addEventListener("click",()=>{ if(!mId||!confirm("이 업체를 삭
 const KEY_LS="anthropic_key", MODEL_LS="anthropic_model", DEFAULT_MODEL="claude-sonnet-4-6";
 function getKey(){ try{ return localStorage.getItem(KEY_LS)||""; }catch(e){ return ""; } }
 function getModel(){ try{ return localStorage.getItem(MODEL_LS)||DEFAULT_MODEL; }catch(e){ return DEFAULT_MODEL; } }
-const CARD_PROMPT="이 명함 이미지에서 정보를 정확히 읽어 아래 JSON 형식으로만 답하세요. 설명·코드블록 없이 JSON만 출력합니다. 값이 없으면 빈 문자열로 두세요.\n{\"name\":\"\",\"person\":\"\",\"phone\":\"\",\"email\":\"\",\"address\":\"\",\"cat\":\"\"}\nname=회사/업체명, person=담당자 이름, phone=대표번호 또는 휴대폰(하이픈 포함), email=이메일, address=주소.\ncat은 다음 중 가장 적합한 하나로만: 전기, 설비, 기계/냉난방, 통신, 승강기, 소방, 영선, 주차, 청소, 조경/화단, 공사/인테리어, 자재/용품, 관공서/행정, 기타.";
+const CARD_PROMPT="첨부한 사진에는 명함이 있습니다. 명함에 적힌 글자를 빠짐없이 정확히 읽어 아래 JSON 형식으로만 답하세요(설명·코드블록 금지, JSON만 출력). 값이 없으면 빈 문자열.\n{\"name\":\"\",\"person\":\"\",\"phone\":\"\",\"email\":\"\",\"address\":\"\",\"cat\":\"\"}\n- name: 회사/상호명(대표 상호 하나)\n- person: 담당자 이름(직함 제외, 한글 이름)\n- phone: 대표전화 또는 휴대폰 하나를 010-1234-5678 / 02-123-4567 같은 한국식 하이픈 형식으로\n- email: 이메일\n- address: 주소 한 줄(도로명 또는 지번 포함)\n- cat: 다음 중 가장 적합한 하나만 — 전기, 설비, 기계/냉난방, 통신, 승강기, 소방, 영선, 주차, 청소, 조경/화단, 공사/인테리어, 자재/용품, 관공서/행정, 기타\n명함이 기울어졌거나 배경이 있어도 명함 부분만 읽으세요. 한국 전화번호 자릿수에 주의하세요.";
 function fillFields(g){
   if(g.name && !$("c-name").value.trim()) $("c-name").value=g.name;
   if(g.person && !$("c-person").value.trim()) $("c-person").value=g.person;
@@ -375,15 +375,81 @@ async function ocrViaTesseract(dataUrl){
   $("ocrText").value=t.trim(); $("ocrText").style.display="block";
   $("ocrStatus").textContent="기기내 인식 완료(정확도 낮음) — 직접 확인하세요.";
 }
+/* 이미지 재인코딩(크기/품질 조정) */
+function reencode(dataUrl,maxDim,q){ return new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>{ let w=img.width,h=img.height; if(w>h){ if(w>maxDim){h=Math.round(h*maxDim/w);w=maxDim;} } else { if(h>maxDim){w=Math.round(w*maxDim/h);h=maxDim;} } const cn=document.createElement("canvas"); cn.width=w; cn.height=h; cn.getContext("2d").drawImage(img,0,0,w,h); res(cn.toDataURL("image/jpeg",q)); }; img.onerror=rej; img.src=dataUrl; }); }
+
+/* 명함 자동 보정(OpenCV로 가장자리 찾아 잘라내고 반듯하게) — 실패 시 원본 사용 */
+function loadOpenCV(){
+  return new Promise((resolve,reject)=>{
+    if(window.cv && cv.Mat) return resolve();
+    if(!window.cv){ const s=document.createElement("script"); s.async=true; s.src="https://docs.opencv.org/4.x/opencv.js"; s.onerror=()=>reject(new Error("opencv load fail")); document.head.appendChild(s); }
+    let t=0; const iv=setInterval(()=>{ if(window.cv && cv.Mat){ clearInterval(iv); resolve(); } else if((t+=300)>20000){ clearInterval(iv); reject(new Error("opencv timeout")); } },300);
+  });
+}
+function orderPts(pts){ const s=pts.slice().sort((a,b)=>a.y-b.y); const top=s.slice(0,2).sort((a,b)=>a.x-b.x); const bot=s.slice(2,4).sort((a,b)=>a.x-b.x); return [top[0],top[1],bot[1],bot[0]]; }
+function autoCropCard(dataUrl){
+  return new Promise(async (resolve)=>{
+    try{ await loadOpenCV(); }catch(e){ return resolve(dataUrl); }
+    const img=new Image();
+    img.onload=()=>{
+      let src,gray,blur,edged,kernel,contours,hierarchy,best=null,result=dataUrl;
+      try{
+        src=cv.imread(img);
+        gray=new cv.Mat(); cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);
+        blur=new cv.Mat(); cv.GaussianBlur(gray,blur,new cv.Size(5,5),0);
+        edged=new cv.Mat(); cv.Canny(blur,edged,50,150);
+        kernel=cv.Mat.ones(5,5,cv.CV_8U); cv.dilate(edged,edged,kernel);
+        contours=new cv.MatVector(); hierarchy=new cv.Mat();
+        cv.findContours(edged,contours,hierarchy,cv.RETR_LIST,cv.CHAIN_APPROX_SIMPLE);
+        const imgArea=src.rows*src.cols; let bestArea=0;
+        for(let i=0;i<contours.size();i++){
+          const c=contours.get(i); const peri=cv.arcLength(c,true);
+          const approx=new cv.Mat(); cv.approxPolyDP(c,approx,0.02*peri,true);
+          const area=Math.abs(cv.contourArea(approx));
+          if(approx.rows===4 && cv.isContourConvex(approx) && area>bestArea && area>imgArea*0.25 && area<imgArea*0.99){ bestArea=area; if(best) best.delete(); best=approx; }
+          else approx.delete();
+          c.delete();
+        }
+        if(best){
+          const p=[]; for(let i=0;i<4;i++) p.push({x:best.data32S[i*2],y:best.data32S[i*2+1]});
+          const [tl,tr,br,bl]=orderPts(p);
+          const W=Math.max(Math.hypot(br.x-bl.x,br.y-bl.y),Math.hypot(tr.x-tl.x,tr.y-tl.y));
+          const H=Math.max(Math.hypot(tr.x-br.x,tr.y-br.y),Math.hypot(tl.x-bl.x,tl.y-bl.y));
+          const aspect=W/H;
+          if(W>120 && H>70 && aspect>1.1 && aspect<2.7){
+            const srcTri=cv.matFromArray(4,1,cv.CV_32FC2,[tl.x,tl.y,tr.x,tr.y,br.x,br.y,bl.x,bl.y]);
+            const dstTri=cv.matFromArray(4,1,cv.CV_32FC2,[0,0,W,0,W,H,0,H]);
+            const M=cv.getPerspectiveTransform(srcTri,dstTri);
+            const dst=new cv.Mat(); cv.warpPerspective(src,dst,M,new cv.Size(Math.round(W),Math.round(H)));
+            const out=document.createElement("canvas"); cv.imshow(out,dst);
+            result=out.toDataURL("image/jpeg",0.92);
+            srcTri.delete(); dstTri.delete(); M.delete(); dst.delete();
+          }
+        }
+      }catch(e){ result=dataUrl; }
+      finally{ [src,gray,blur,edged,kernel,contours,hierarchy,best].forEach(m=>{ try{ m&&m.delete&&m.delete(); }catch(_){} }); }
+      resolve(result);
+    };
+    img.onerror=()=>resolve(dataUrl);
+    img.src=dataUrl;
+  });
+}
+
 async function handleCard(file){
   if(!file || !file.type.startsWith("image/")) return;
-  try{ cardImg=await compressImage(file, 1500, 0.72); }catch(e){ toast("사진 처리 실패"); return; }
-  $("scanPrev").src=cardImg; $("scanPrev").style.display="block";
+  $("scanPrev").style.display="none";
+  $("ocrStatus").textContent="명함 영역 자동 보정 중… (처음엔 보정엔진 받느라 느릴 수 있어요)";
+  let src;
+  try{ src=await compressImage(file, 1800, 0.92); }catch(e){ toast("사진 처리 실패"); return; }
+  let card=src;
+  try{ card=await autoCropCard(src); }catch(e){ card=src; }
+  try{ cardImg=await reencode(card, 1568, 0.85); }catch(e){ cardImg=card; }
+  $("scanPrev").src=cardImg; $("scanPrev").style.display="block";   /* 잘라낸 명함이 자동 첨부되어 저장됩니다 */
   const key=getKey();
   try{
     if(key) await ocrViaAPI(cardImg,key);
     else await ocrViaTesseract(cardImg);
-  }catch(err){ $("ocrStatus").textContent="인식 실패: "+(err.message||err)+" — 사진은 저장됩니다. 직접 입력하세요."; }
+  }catch(err){ $("ocrStatus").textContent="인식 실패: "+(err.message||err)+" — 명함 사진은 저장됩니다. 직접 입력하세요."; }
 }
 $("c-scan").addEventListener("change",e=>{ const f=e.target.files[0]; e.target.value=""; handleCard(f); });
 $("c-pick").addEventListener("change",e=>{ const f=e.target.files[0]; e.target.value=""; handleCard(f); });
