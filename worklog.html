@@ -591,6 +591,7 @@ function openEditor(kind,id){
   renderModalThumbs();
   $("mDelete").style.display=id?"":"none";
   $("overlay").classList.add("show");
+  const modalEl=$("overlay").querySelector(".modal"); if(modalEl) modalEl.scrollTop=0;
 }
 function renderModalThumbs(){ renderThumbs($("m-thumbs"),modalPhotos,i=>{ modalPhotos.splice(i,1); renderModalThumbs(); }); }
 $("m-cam").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
