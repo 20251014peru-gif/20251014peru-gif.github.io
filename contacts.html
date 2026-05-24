@@ -85,6 +85,12 @@ main{padding-top:22px}
 .ocr-text{width:100%;font-size:12px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px;margin-top:8px;min-height:64px;display:none;font-family:inherit}
 .scan-prev{margin-top:8px;max-width:100%;border-radius:8px;border:1px solid var(--line);display:none}
 .btn-row{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+.overlay.cam{z-index:60}
+.cammodal{background:#11161c;border-radius:18px;max-width:560px;width:100%;padding:14px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.camwrap{position:relative;border-radius:12px;overflow:hidden;background:#000}
+#camVideo{width:100%;max-height:66vh;display:block;object-fit:contain;background:#000}
+.camframe{position:absolute;inset:8% 6%;border:2px dashed rgba(255,255,255,.72);border-radius:10px;pointer-events:none}
+.camhint{color:#dfe7ef;font-size:13.5px;text-align:center;margin:10px 4px}
 #imgOverlay{position:fixed;inset:0;background:rgba(30,38,48,.88);display:none;align-items:center;justify-content:center;padding:20px;z-index:90;cursor:zoom-out}
 #imgOverlay.show{display:flex}
 #imgOverlay img{max-width:100%;max-height:100%;border-radius:12px}
@@ -96,7 +102,7 @@ main{padding-top:22px}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 명함 자동보정 AI 인식 <b style="color:#9aa7b4">v3</b></span></div>
+      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 실시간 카메라 자동촬영 <b style="color:#9aa7b4">v4</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -129,7 +135,7 @@ main{padding-top:22px}
   <div class="scan-box">
     <div style="font-size:13px;font-weight:700;color:#2c7d62;margin-bottom:8px">📇 명함 스캔 (자동입력)</div>
     <div class="scan-btns">
-      <label class="scan-btn">📷 카메라로 촬영<input type="file" id="c-scan" accept="image/*" capture="environment" style="display:none"></label>
+      <button type="button" class="scan-btn" id="btnCam">📷 실시간 카메라 (자동 촬영)</button>
       <label class="scan-btn">🖼 사진에서 선택<input type="file" id="c-pick" accept="image/*" style="display:none"></label>
     </div>
     <img id="scanPrev" class="scan-prev" alt="명함 미리보기">
@@ -161,6 +167,18 @@ main{padding-top:22px}
     <button class="btn btn-primary" id="setSave">저장</button>
     <button class="btn btn-ghost" id="setCancel">취소</button>
     <button class="btn btn-danger" id="setClear" style="margin-left:auto">키 삭제</button>
+  </div>
+</div></div>
+
+<div class="overlay cam" id="camOverlay"><div class="cammodal">
+  <div class="camwrap">
+    <video id="camVideo" playsinline muted autoplay></video>
+    <div class="camframe"></div>
+  </div>
+  <div class="camhint" id="camHint">카메라 준비 중…</div>
+  <div class="btn-row" style="justify-content:center">
+    <button class="btn btn-primary" id="camShot">지금 촬영</button>
+    <button class="btn btn-ghost" id="camClose">닫기</button>
   </div>
 </div></div>
 
@@ -435,23 +453,74 @@ function autoCropCard(dataUrl){
   });
 }
 
-async function handleCard(file){
-  if(!file || !file.type.startsWith("image/")) return;
+async function processCard(srcDataUrl){
   $("scanPrev").style.display="none";
-  $("ocrStatus").textContent="명함 영역 자동 보정 중… (처음엔 보정엔진 받느라 느릴 수 있어요)";
-  let src;
-  try{ src=await compressImage(file, 1800, 0.92); }catch(e){ toast("사진 처리 실패"); return; }
-  let card=src;
-  try{ card=await autoCropCard(src); }catch(e){ card=src; }
+  $("ocrStatus").textContent="명함 영역 자동 보정 중…";
+  let card=srcDataUrl; try{ card=await autoCropCard(srcDataUrl); }catch(e){ card=srcDataUrl; }
   try{ cardImg=await reencode(card, 1568, 0.85); }catch(e){ cardImg=card; }
-  $("scanPrev").src=cardImg; $("scanPrev").style.display="block";   /* 잘라낸 명함이 자동 첨부되어 저장됩니다 */
+  $("scanPrev").src=cardImg; $("scanPrev").style.display="block";   /* 보정된 명함 자동 첨부 */
   const key=getKey();
   try{
     if(key) await ocrViaAPI(cardImg,key);
     else await ocrViaTesseract(cardImg);
   }catch(err){ $("ocrStatus").textContent="인식 실패: "+(err.message||err)+" — 명함 사진은 저장됩니다. 직접 입력하세요."; }
 }
-$("c-scan").addEventListener("change",e=>{ const f=e.target.files[0]; e.target.value=""; handleCard(f); });
+async function handleCard(file){
+  if(!file || !file.type.startsWith("image/")) return;
+  let src; try{ src=await compressImage(file, 1800, 0.92); }catch(e){ toast("사진 처리 실패"); return; }
+  await processCard(src);
+}
+
+/* ===== 실시간 카메라 + 명함 자동 촬영 ===== */
+let camStream=null, detTimer=null, hitCount=0;
+const detCanvas=document.createElement("canvas");
+async function startCamera(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast("이 브라우저는 카메라를 지원하지 않아요 — '사진에서 선택'을 쓰세요"); return; }
+  $("camOverlay").classList.add("show"); $("camHint").textContent="카메라 준비 중…"; hitCount=0;
+  loadOpenCV().catch(()=>{});
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080} }, audio:false });
+    const v=$("camVideo"); v.srcObject=camStream; await v.play();
+    detTimer=setInterval(()=>{ try{ tickDetect(); }catch(e){} }, 280);
+  }catch(e){ $("camHint").textContent="카메라를 열 수 없어요: "+(e.message||e)+" — 권한 허용 후 다시, 또는 '사진에서 선택' 사용"; }
+}
+function stopCamera(){
+  if(detTimer){ clearInterval(detTimer); detTimer=null; }
+  try{ if(camStream) camStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+  camStream=null;
+  const v=$("camVideo"); try{ v.pause(); v.srcObject=null; }catch(e){}
+  $("camOverlay").classList.remove("show");
+}
+function tickDetect(){
+  const v=$("camVideo"); if(!v.videoWidth) return;
+  if(!(window.cv && cv.Mat)){ $("camHint").textContent="명함을 화면에 꽉 차게 비춰주세요 (자동인식 준비 중…)"; return; }
+  const dw=480, dh=Math.round(v.videoHeight*dw/v.videoWidth);
+  detCanvas.width=dw; detCanvas.height=dh; detCanvas.getContext("2d").drawImage(v,0,0,dw,dh);
+  let src,gray,blur,edged,kernel,contours,hier;
+  try{
+    src=cv.imread(detCanvas); gray=new cv.Mat(); cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);
+    let lap=new cv.Mat(), mean=new cv.Mat(), sd=new cv.Mat(); cv.Laplacian(gray,lap,cv.CV_64F); cv.meanStdDev(lap,mean,sd); const sharp=Math.pow(sd.doubleAt(0,0),2); lap.delete(); mean.delete(); sd.delete();
+    blur=new cv.Mat(); cv.GaussianBlur(gray,blur,new cv.Size(5,5),0);
+    edged=new cv.Mat(); cv.Canny(blur,edged,50,150);
+    kernel=cv.Mat.ones(5,5,cv.CV_8U); cv.dilate(edged,edged,kernel);
+    contours=new cv.MatVector(); hier=new cv.Mat(); cv.findContours(edged,contours,hier,cv.RETR_LIST,cv.CHAIN_APPROX_SIMPLE);
+    const imgArea=dw*dh; let found=false;
+    for(let i=0;i<contours.size();i++){ const ct=contours.get(i); const peri=cv.arcLength(ct,true); const ap=new cv.Mat(); cv.approxPolyDP(ct,ap,0.02*peri,true); const area=Math.abs(cv.contourArea(ap)); if(ap.rows===4 && cv.isContourConvex(ap) && area>imgArea*0.30) found=true; ap.delete(); ct.delete(); }
+    if(found && sharp>35){ hitCount++; $("camHint").textContent=`명함 인식됨 — 그대로 고정 (${Math.min(hitCount,4)}/4)`; if(hitCount>=4) captureFromVideo(); }
+    else { hitCount=Math.max(0,hitCount-1); $("camHint").textContent = found ? "흔들림 없이 들고 계세요…" : "명함을 화면에 꽉 차게, 또렷하게 비춰주세요"; }
+  } finally { [src,gray,blur,edged,kernel,contours,hier].forEach(m=>{try{m&&m.delete&&m.delete();}catch(_){}}); }
+}
+async function captureFromVideo(){
+  if(detTimer){ clearInterval(detTimer); detTimer=null; }
+  const v=$("camVideo"); const w=v.videoWidth, h=v.videoHeight; if(!w){ stopCamera(); return; }
+  const cn=document.createElement("canvas"); cn.width=w; cn.height=h; cn.getContext("2d").drawImage(v,0,0,w,h);
+  const full=cn.toDataURL("image/jpeg",0.92);
+  stopCamera();
+  await processCard(full);
+}
+$("btnCam").addEventListener("click",startCamera);
+$("camShot").addEventListener("click",captureFromVideo);
+$("camClose").addEventListener("click",stopCamera);
 $("c-pick").addEventListener("change",e=>{ const f=e.target.files[0]; e.target.value=""; handleCard(f); });
 
 /* 설정 모달 */
