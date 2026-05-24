@@ -102,7 +102,7 @@ main{padding-top:22px}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 실시간 카메라 자동촬영 <b style="color:#9aa7b4">v4</b></span></div>
+      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 실시간 카메라 자동촬영 <b style="color:#9aa7b4">v5</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -424,7 +424,7 @@ function autoCropCard(dataUrl){
           const c=contours.get(i); const peri=cv.arcLength(c,true);
           const approx=new cv.Mat(); cv.approxPolyDP(c,approx,0.02*peri,true);
           const area=Math.abs(cv.contourArea(approx));
-          if(approx.rows===4 && cv.isContourConvex(approx) && area>bestArea && area>imgArea*0.25 && area<imgArea*0.99){ bestArea=area; if(best) best.delete(); best=approx; }
+          if(approx.rows===4 && cv.isContourConvex(approx) && area>bestArea && area>imgArea*0.18 && area<imgArea*0.99){ bestArea=area; if(best) best.delete(); best=approx; }
           else approx.delete();
           c.delete();
         }
@@ -434,7 +434,7 @@ function autoCropCard(dataUrl){
           const W=Math.max(Math.hypot(br.x-bl.x,br.y-bl.y),Math.hypot(tr.x-tl.x,tr.y-tl.y));
           const H=Math.max(Math.hypot(tr.x-br.x,tr.y-br.y),Math.hypot(tl.x-bl.x,tl.y-bl.y));
           const aspect=W/H;
-          if(W>120 && H>70 && aspect>1.1 && aspect<2.7){
+          if(W>100 && H>55 && aspect>0.5 && aspect<3.0){
             const srcTri=cv.matFromArray(4,1,cv.CV_32FC2,[tl.x,tl.y,tr.x,tr.y,br.x,br.y,bl.x,bl.y]);
             const dstTri=cv.matFromArray(4,1,cv.CV_32FC2,[0,0,W,0,W,H,0,H]);
             const M=cv.getPerspectiveTransform(srcTri,dstTri);
@@ -453,12 +453,15 @@ function autoCropCard(dataUrl){
   });
 }
 
-async function processCard(srcDataUrl){
+function centerCrop(dataUrl,hPct,vPct){ return new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>{ const cw=Math.max(40,Math.round(img.width*(1-2*hPct))), ch=Math.max(40,Math.round(img.height*(1-2*vPct))); const sx=Math.round((img.width-cw)/2), sy=Math.round((img.height-ch)/2); const cn=document.createElement("canvas"); cn.width=cw; cn.height=ch; cn.getContext("2d").drawImage(img,sx,sy,cw,ch,0,0,cw,ch); res(cn.toDataURL("image/jpeg",0.9)); }; img.onerror=rej; img.src=dataUrl; }); }
+async function processCard(srcDataUrl, fromCamera){
   $("scanPrev").style.display="none";
-  $("ocrStatus").textContent="명함 영역 자동 보정 중…";
-  let card=srcDataUrl; try{ card=await autoCropCard(srcDataUrl); }catch(e){ card=srcDataUrl; }
+  $("ocrStatus").textContent="명함만 잘라내는 중…";
+  let card=srcDataUrl, cropped=false;
+  try{ const c=await autoCropCard(srcDataUrl); if(c && c!==srcDataUrl){ card=c; cropped=true; } }catch(e){}
+  if(!cropped && fromCamera){ try{ card=await centerCrop(srcDataUrl,0.06,0.12); cropped=true; }catch(e){ card=srcDataUrl; } }
   try{ cardImg=await reencode(card, 1568, 0.85); }catch(e){ cardImg=card; }
-  $("scanPrev").src=cardImg; $("scanPrev").style.display="block";   /* 보정된 명함 자동 첨부 */
+  $("scanPrev").src=cardImg; $("scanPrev").style.display="block";   /* 잘라낸 명함만 자동 첨부 */
   const key=getKey();
   try{
     if(key) await ocrViaAPI(cardImg,key);
@@ -468,7 +471,7 @@ async function processCard(srcDataUrl){
 async function handleCard(file){
   if(!file || !file.type.startsWith("image/")) return;
   let src; try{ src=await compressImage(file, 1800, 0.92); }catch(e){ toast("사진 처리 실패"); return; }
-  await processCard(src);
+  await processCard(src, false);
 }
 
 /* ===== 실시간 카메라 + 명함 자동 촬영 ===== */
@@ -481,6 +484,7 @@ async function startCamera(){
   try{
     camStream=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080} }, audio:false });
     const v=$("camVideo"); v.srcObject=camStream; await v.play();
+    try{ const tr=camStream.getVideoTracks()[0]; const caps=tr.getCapabilities?tr.getCapabilities():{}; const adv=[]; if(caps.focusMode&&caps.focusMode.includes&&caps.focusMode.includes("continuous")) adv.push({focusMode:"continuous"}); if(adv.length) await tr.applyConstraints({advanced:adv}); }catch(e){}
     detTimer=setInterval(()=>{ try{ tickDetect(); }catch(e){} }, 280);
   }catch(e){ $("camHint").textContent="카메라를 열 수 없어요: "+(e.message||e)+" — 권한 허용 후 다시, 또는 '사진에서 선택' 사용"; }
 }
@@ -505,9 +509,9 @@ function tickDetect(){
     kernel=cv.Mat.ones(5,5,cv.CV_8U); cv.dilate(edged,edged,kernel);
     contours=new cv.MatVector(); hier=new cv.Mat(); cv.findContours(edged,contours,hier,cv.RETR_LIST,cv.CHAIN_APPROX_SIMPLE);
     const imgArea=dw*dh; let found=false;
-    for(let i=0;i<contours.size();i++){ const ct=contours.get(i); const peri=cv.arcLength(ct,true); const ap=new cv.Mat(); cv.approxPolyDP(ct,ap,0.02*peri,true); const area=Math.abs(cv.contourArea(ap)); if(ap.rows===4 && cv.isContourConvex(ap) && area>imgArea*0.30) found=true; ap.delete(); ct.delete(); }
-    if(found && sharp>35){ hitCount++; $("camHint").textContent=`명함 인식됨 — 그대로 고정 (${Math.min(hitCount,4)}/4)`; if(hitCount>=4) captureFromVideo(); }
-    else { hitCount=Math.max(0,hitCount-1); $("camHint").textContent = found ? "흔들림 없이 들고 계세요…" : "명함을 화면에 꽉 차게, 또렷하게 비춰주세요"; }
+    for(let i=0;i<contours.size();i++){ const ct=contours.get(i); const peri=cv.arcLength(ct,true); const ap=new cv.Mat(); cv.approxPolyDP(ct,ap,0.02*peri,true); const area=Math.abs(cv.contourArea(ap)); if(ap.rows===4 && cv.isContourConvex(ap) && area>imgArea*0.22) found=true; ap.delete(); ct.delete(); }
+    if(found && sharp>22){ hitCount++; $("camHint").textContent=`명함 인식됨 — 그대로 고정 (${Math.min(hitCount,3)}/3)`; if(hitCount>=3) captureFromVideo(); }
+    else { hitCount=Math.max(0,hitCount-1); $("camHint").textContent = found ? "조금만 더 또렷하게… (흔들림 줄이기)" : "명함을 안내선 안에 꽉 차게 비춰주세요"; }
   } finally { [src,gray,blur,edged,kernel,contours,hier].forEach(m=>{try{m&&m.delete&&m.delete();}catch(_){}}); }
 }
 async function captureFromVideo(){
@@ -516,7 +520,7 @@ async function captureFromVideo(){
   const cn=document.createElement("canvas"); cn.width=w; cn.height=h; cn.getContext("2d").drawImage(v,0,0,w,h);
   const full=cn.toDataURL("image/jpeg",0.92);
   stopCamera();
-  await processCard(full);
+  await processCard(full, true);
 }
 $("btnCam").addEventListener("click",startCamera);
 $("camShot").addEventListener("click",captureFromVideo);
