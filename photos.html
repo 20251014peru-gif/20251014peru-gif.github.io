@@ -137,6 +137,24 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
 .mk-s.active{background:#2a4055;border-color:#5b9bd5;color:#fff}
 .mk-act{flex:1;background:#1e2935;border:1px solid #2c3a4a;color:#cdd9e5;border-radius:10px;padding:10px;font-size:13px;cursor:pointer;font-family:inherit}
 .mk-hint{color:#7d8b99;font-size:11.5px;line-height:1.5;margin-top:8px;text-align:center}
+
+/* 선택 도형 크기조절 줄 */
+.mk-resize{display:none;align-items:center;gap:8px;background:#13202c;border:1px solid #2a4055;border-radius:11px;padding:8px 10px}
+.mk-resize.show{display:flex}
+.mk-resize-lbl{color:#9fb8cf;font-size:12px;font-weight:600;margin-right:auto}
+.mk-rz{background:#23364a;border:1px solid #38516b;color:#fff;border-radius:9px;padding:8px 14px;font-size:16px;cursor:pointer;font-family:inherit;min-width:46px}
+.mk-rz:active{background:#2f4a63}
+.mk-rz-del{font-size:12px;background:#3a2330;border-color:#5c3344;color:#ff9db0;min-width:auto}
+
+/* 자체 글자 입력창 */
+.mk-textbox{position:absolute;inset:0;background:rgba(8,12,16,.78);display:none;align-items:center;justify-content:center;z-index:5;padding:20px}
+.mk-textbox.show{display:flex}
+.mk-textbox-inner{background:#1e2935;border:1px solid #2c3a4a;border-radius:16px;padding:18px 16px;width:100%;max-width:340px}
+.mk-textbox-inner label{display:block;color:#9fb0c0;font-size:12px;margin-bottom:8px;font-weight:600}
+.mk-textbox-inner input{width:100%;border:1px solid #3a4a5c;border-radius:10px;padding:13px 14px;font-size:16px;background:#10161d;color:#fff;outline:0;font-family:inherit}
+.mk-textbox-inner input:focus{border-color:#5b9bd5}
+.mk-textbox-btns{display:flex;gap:8px;margin-top:12px}
+.mk-textbox-btns .btn{flex:1;padding:12px}
 </style>
 </head>
 <body>
@@ -146,7 +164,7 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
     <div class="head-row">
       <div class="brand">
         <h1>사진 보관함</h1>
-        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v4</b></span>
+        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v7</b></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -185,7 +203,7 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
   <button class="fbtn cam" id="fabCam">📷 사진 추가</button>
 </div>
 <input type="file" id="camInput" class="hidden-input" accept="image/*" capture="environment">
-<input type="file" id="pickInput" class="hidden-input" accept="image/*" multiple>
+<input type="file" id="pickInput" class="hidden-input" accept="image/*">
 
 <!-- 저장 모달 -->
 <div class="overlay" id="addOverlay">
@@ -282,6 +300,7 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
       <button class="mk-tool" data-tool="circle">◯<span>동그라미</span></button>
       <button class="mk-tool" data-tool="rect">▢<span>네모</span></button>
       <button class="mk-tool" data-tool="text">🅣<span>글자</span></button>
+      <button class="mk-tool" data-tool="move">✋<span>이동</span></button>
     </div>
     <div class="mk-row">
       <div class="mk-colors" id="mkColors">
@@ -298,11 +317,29 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
         <button class="mk-s" data-w="14">굵게</button>
       </div>
     </div>
+    <div class="mk-row mk-resize" id="mkResize">
+      <span class="mk-resize-lbl">선택한 표시 크기</span>
+      <button class="mk-rz" id="mkSizeDown">➖</button>
+      <button class="mk-rz" id="mkSizeUp">➕</button>
+      <button class="mk-rz mk-rz-del" id="mkSizeDel">🗑 이것만 삭제</button>
+    </div>
     <div class="mk-row">
       <button class="mk-act" id="mkUndo">↶ 실행취소</button>
       <button class="mk-act" id="mkClear">전체 지우기</button>
     </div>
-    <p class="mk-hint" id="mkHint">손가락이나 마우스로 사진 위에 그리세요. ‘글자’를 고르면 원하는 곳을 눌러 텍스트를 넣어요.</p>
+    <p class="mk-hint" id="mkHint">손가락으로 사진 위에 그리세요. ‘글자’를 누르고 사진을 탭하면 글자를 넣어요. 넣은 글자·도형은 끌어서 옮길 수 있어요.</p>
+  </div>
+
+  <!-- 자체 글자 입력창 (prompt 대신) -->
+  <div class="mk-textbox" id="mkTextBox">
+    <div class="mk-textbox-inner">
+      <label>넣을 글자</label>
+      <input type="text" id="mkTextInput" placeholder="예: 여기 누수" autocomplete="off">
+      <div class="mk-textbox-btns">
+        <button class="btn btn-primary" id="mkTextOk">넣기</button>
+        <button class="btn btn-ghost" id="mkTextCancel">취소</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -342,24 +379,30 @@ function fmtDate(ts){
 function compressImage(file, maxDim=MAXDIM, quality=QUALITY){
   return new Promise((resolve,reject)=>{
     const reader=new FileReader();
+    let done=false;
+    const finish=(v)=>{ if(!done){ done=true; resolve(v); } };
     reader.onload=e=>{
+      const raw=e.target.result;
+      // 디코드/압축이 멎어도 6초 뒤 원본으로 진행
+      const timer=setTimeout(()=>finish(raw), 6000);
       const img=new Image();
       img.onload=()=>{
+        clearTimeout(timer);
         try{
           let w=img.width,h=img.height;
-          if(!w||!h){ resolve(e.target.result); return; }   // 크기를 못 읽으면 원본 사용
+          if(!w||!h){ finish(raw); return; }
           if(w>h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } }
           else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
           const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
           cv.getContext("2d").drawImage(img,0,0,w,h);
-          resolve(cv.toDataURL("image/jpeg",quality));
-        }catch(err){ resolve(e.target.result); }            // 압축 실패 시 원본 사용
+          finish(cv.toDataURL("image/jpeg",quality));
+        }catch(err){ finish(raw); }
       };
-      img.onerror=()=>resolve(e.target.result);             // 디코드 실패해도 원본 사용
-      img.src=e.target.result;
+      img.onerror=()=>{ clearTimeout(timer); finish(raw); };
+      img.src=raw;
     };
     reader.onerror=()=>reject(new Error("파일 읽기 실패"));
-    reader.readAsDataURL(file);
+    try{ reader.readAsDataURL(file); }catch(err){ reject(new Error("readAsDataURL 실패")); }
   });
 }
 
@@ -439,14 +482,19 @@ function openAddFinal(dataUrls){
 }
 async function handleFiles(files){
   if(!files || !files.length){ toast("사진이 선택되지 않았어요"); return; }
-  // type이 비어있는 기기(갤럭시 등)도 통과시키되, 명백한 비이미지만 거름
   const arr=[...files].filter(f=> !f.type || f.type.startsWith("image/"));
-  if(!arr.length){ toast("이미지 파일이 아니에요"); return; }
-  toast("사진 불러오는 중…");
+  if(!arr.length){ toast("이미지 파일이 아니에요 ("+(files[0]&&files[0].type||"형식불명")+")"); return; }
+  toast("사진 처리 중… (1/"+arr.length+")");
   try{
     const urls=[];
-    for(const f of arr){ urls.push(await compressImage(f)); }
-    openMarkupNew(urls);   // 편집화면을 바로 연다
+    for(let i=0;i<arr.length;i++){
+      toast("사진 처리 중… ("+(i+1)+"/"+arr.length+")");
+      const u=await compressImage(arr[i]);
+      if(!u){ toast("사진을 읽지 못했어요"); return; }
+      urls.push(u);
+    }
+    if(!urls.length){ toast("불러온 사진이 없어요"); return; }
+    openMarkupNew(urls);
   }catch(e){
     toast("불러오기 실패: "+(e&&e.message?e.message:"알 수 없음"));
     console.warn(e);
@@ -475,10 +523,10 @@ $("addSave").addEventListener("click",async()=>{
 });
 $("addCancel").addEventListener("click",()=>{ $("addOverlay").classList.remove("show"); pendingImgs=[]; });
 
-$("fabCam").addEventListener("click",()=>{ try{ $("camInput").click(); }catch(e){ toast("카메라 열기 실패"); } });
-$("fabPick").addEventListener("click",()=>{ try{ $("pickInput").click(); }catch(e){ toast("갤러리 열기 실패"); } });
-$("camInput").addEventListener("change",function(e){ const f=e.target.files; handleFiles(f); setTimeout(()=>{e.target.value="";},300); });
-$("pickInput").addEventListener("change",function(e){ const f=e.target.files; handleFiles(f); setTimeout(()=>{e.target.value="";},300); });
+$("fabCam").addEventListener("click",()=>{ try{ $("camInput").value=""; $("camInput").click(); }catch(e){ toast("카메라 열기 실패"); } });
+$("fabPick").addEventListener("click",()=>{ try{ $("pickInput").value=""; $("pickInput").click(); }catch(e){ toast("갤러리 열기 실패: "+(e.message||"")); } });
+$("camInput").addEventListener("change",function(e){ handleFiles(e.target.files); });
+$("pickInput").addEventListener("change",function(e){ handleFiles(e.target.files); });
 
 /* ===== 뷰어 ===== */
 let curViewId=null;
@@ -543,6 +591,7 @@ const mk = {
   tool:"pen", color:"#ff3b30", width:8,
   strokes:[],            // 저장된 도형 목록(실행취소용)
   drawing:false, start:null, cur:null, penPts:[],
+  dragging:false, selected:null, dragLast:null,
   scale:1,
   mode:"new",            // "new"=새 사진 추가, "mark"=기존 사진에 표시
   newQueue:[],           // 새 사진 추가 시 처리할 dataURL 목록
@@ -556,6 +605,8 @@ function loadCanvasImage(dataUrl, cb){
   img.onload=()=>{
     mk.baseImg=img;
     mk.strokes=[];
+    mk.selected=null;
+    updateResizeBar();
     mk.canvas.width=img.width; mk.canvas.height=img.height;
     fitCanvas();
     redrawMk();
@@ -572,7 +623,7 @@ function openMarkupNew(dataUrls){
   mk.newIndex=0;
   $("mkTitle").textContent = dataUrls.length>1 ? `새 사진 (1/${dataUrls.length})` : "새 사진";
   $("mkSave").textContent = dataUrls.length>1 ? "다음" : "저장";
-  $("mkHint").textContent="그릴 게 없으면 바로 ‘저장’을 누르세요. 펜·화살표·동그라미·글자로 표시할 수도 있어요.";
+  $("mkHint").textContent="그릴 게 없으면 바로 ‘저장’. 표시한 뒤 ✋이동으로 고르면 끌어 옮기거나 ➕➖로 크기를 바꿀 수 있어요.";
   loadCanvasImage(mk.newQueue[0]);
 }
 
@@ -623,10 +674,17 @@ function drawShape(c,s){
     const fs=s.size||Math.max(28, s.width*4);
     c.font=`bold ${fs}px Pretendard, sans-serif`;
     c.textBaseline="top";
+    // 드래그 판정을 위해 크기 기록
+    s._w=c.measureText(s.text).width; s._h=fs;
     // 가독성을 위한 외곽선
     c.lineWidth=Math.max(3,fs*0.14); c.strokeStyle="rgba(0,0,0,.55)";
     c.strokeText(s.text,s.x1,s.y1);
     c.fillStyle=s.color; c.fillText(s.text,s.x1,s.y1);
+    // 선택된 텍스트면 점선 테두리
+    if(s===mk.selected){
+      c.setLineDash([8,6]); c.lineWidth=2; c.strokeStyle="#5b9bd5";
+      c.strokeRect(s.x1-6, s.y1-4, s._w+12, s._h+8); c.setLineDash([]);
+    }
   }
 }
 function drawArrow(c,x1,y1,x2,y2,w){
@@ -641,39 +699,118 @@ function drawArrow(c,x1,y1,x2,y2,w){
 }
 function evtPos(e){
   const r=mk.canvas.getBoundingClientRect();
-  const t=e.touches?e.touches[0]:e;
+  const t=e.touches&&e.touches[0]?e.touches[0]:(e.changedTouches&&e.changedTouches[0]?e.changedTouches[0]:e);
   return { x:(t.clientX-r.left)/mk.scale, y:(t.clientY-r.top)/mk.scale };
 }
+// 어떤 도형 위를 눌렀는지 찾기(드래그용). 위에서부터(나중에 그린 것 우선)
+function hitTest(p){
+  for(let i=mk.strokes.length-1;i>=0;i--){
+    const s=mk.strokes[i];
+    if(s.type==="text"){
+      const w=s._w||80, h=s._h||30;
+      if(p.x>=s.x1-8 && p.x<=s.x1+w+8 && p.y>=s.y1-6 && p.y<=s.y1+h+6) return s;
+    }else if(s.type==="rect"||s.type==="circle"||s.type==="arrow"){
+      const minx=Math.min(s.x1,s.x2)-12, maxx=Math.max(s.x1,s.x2)+12;
+      const miny=Math.min(s.y1,s.y2)-12, maxy=Math.max(s.y1,s.y2)+12;
+      if(p.x>=minx&&p.x<=maxx&&p.y>=miny&&p.y<=maxy) return s;
+    }else if(s.type==="pen"&&s.pts){
+      for(const pt of s.pts){ if(Math.hypot(pt.x-p.x,pt.y-p.y)<16) return s; }
+    }
+  }
+  return null;
+}
+function moveShape(s,dx,dy){
+  if(s.type==="text"){ s.x1+=dx; s.y1+=dy; }
+  else if(s.type==="pen"){ s.pts.forEach(pt=>{pt.x+=dx;pt.y+=dy;}); }
+  else { s.x1+=dx; s.y1+=dy; s.x2+=dx; s.y2+=dy; }
+}
+// 선택 도형 크기 조절 (factor>1 키우기, <1 줄이기) — 중심 기준
+function resizeShape(s,factor){
+  if(!s) return;
+  if(s.type==="text"){
+    s.size=Math.max(12, Math.min(400, (s.size||34)*factor));
+  }else if(s.type==="pen"){
+    // 펜은 중심 기준으로 점들을 확대/축소 + 선 굵기도
+    let cx=0,cy=0; s.pts.forEach(p=>{cx+=p.x;cy+=p.y;}); cx/=s.pts.length; cy/=s.pts.length;
+    s.pts.forEach(p=>{ p.x=cx+(p.x-cx)*factor; p.y=cy+(p.y-cy)*factor; });
+    s.width=Math.max(2,Math.min(40,s.width*factor));
+  }else{ // rect/circle/arrow: 중심 기준 확대
+    const cx=(s.x1+s.x2)/2, cy=(s.y1+s.y2)/2;
+    s.x1=cx+(s.x1-cx)*factor; s.y1=cy+(s.y1-cy)*factor;
+    s.x2=cx+(s.x2-cx)*factor; s.y2=cy+(s.y2-cy)*factor;
+    s.width=Math.max(2,Math.min(40,s.width*factor));
+  }
+  redrawMk();
+}
+// 선택 상태에 따라 크기조절 줄 표시
+function updateResizeBar(){
+  $("mkResize").classList.toggle("show", !!(mk.tool==="move" && mk.selected));
+}
+
+let pendingTextPos=null;  // 글자 넣을 위치 임시 저장
 function mkDown(e){
   e.preventDefault();
   const p=evtPos(e);
+  if(mk.tool==="move"){
+    // 이동 모드: 도형 집어서 끌기
+    const s=hitTest(p);
+    mk.selected=s;
+    if(s){ mk.dragging=true; mk.dragLast=p; }
+    updateResizeBar();
+    redrawMk();
+    return;
+  }
   if(mk.tool==="text"){
-    const txt=prompt("넣을 글자를 입력하세요");
-    if(txt && txt.trim()){
-      mk.strokes.push({type:"text",color:mk.color,width:mk.width,size:Math.max(30,mk.width*5),x1:p.x,y1:p.y,text:txt.trim()});
-      redrawMk();
-    }
+    // 자체 입력창 열기 (prompt 안 씀)
+    pendingTextPos=p;
+    $("mkTextInput").value="";
+    $("mkTextBox").classList.add("show");
+    setTimeout(()=>$("mkTextInput").focus(),50);
     return;
   }
   mk.drawing=true; mk.start=p; mk.cur=p; mk.penPts=[p];
 }
 function mkMove(e){
+  const p=evtPos(e);
+  if(mk.dragging && mk.selected){
+    e.preventDefault();
+    moveShape(mk.selected, p.x-mk.dragLast.x, p.y-mk.dragLast.y);
+    mk.dragLast=p; redrawMk(); return;
+  }
   if(!mk.drawing) return;
   e.preventDefault();
-  mk.cur=evtPos(e);
+  mk.cur=p;
   if(mk.tool==="pen") mk.penPts.push(mk.cur);
   redrawMk();
 }
 function mkUp(e){
+  if(mk.dragging){ mk.dragging=false; redrawMk(); return; }
   if(!mk.drawing) return;
   mk.drawing=false;
   const s=liveShape();
-  // 너무 작은(점) 도형은 무시
   if(s.type==="pen"){ if(s.pts.length>=2) mk.strokes.push(s); }
   else { const d=Math.hypot(s.x2-s.x1,s.y2-s.y1); if(d>5) mk.strokes.push(s); }
   mk.start=mk.cur=null; mk.penPts=[];
   redrawMk();
 }
+// 글자 입력창 확인/취소
+$("mkTextOk").addEventListener("click",()=>{
+  const txt=$("mkTextInput").value.trim();
+  if(txt && pendingTextPos){
+    const ns={type:"text",color:mk.color,width:mk.width,size:Math.max(34,mk.width*5),x1:pendingTextPos.x,y1:pendingTextPos.y,text:txt};
+    mk.strokes.push(ns);
+    // 자동으로 이동 모드로 바꿔 바로 끌 수 있게
+    mk.tool="move"; mk.selected=ns;
+    document.querySelectorAll(".mk-tool").forEach(x=>x.classList.toggle("active", x.dataset.tool==="move"));
+    $("mkCanvas").style.cursor="move";
+    updateResizeBar();
+    redrawMk();
+    toast("글자를 넣었어요. 끌어서 위치를 옮겨보세요");
+  }
+  $("mkTextBox").classList.remove("show"); pendingTextPos=null;
+});
+$("mkTextInput").addEventListener("keydown",ev=>{ if(ev.key==="Enter") $("mkTextOk").click(); });
+$("mkTextCancel").addEventListener("click",()=>{ $("mkTextBox").classList.remove("show"); pendingTextPos=null; });
 mk.canvas.addEventListener("mousedown",mkDown);
 mk.canvas.addEventListener("mousemove",mkMove);
 window.addEventListener("mouseup",mkUp);
@@ -685,7 +822,9 @@ mk.canvas.addEventListener("touchend",mkUp);
 document.querySelectorAll(".mk-tool").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".mk-tool").forEach(x=>x.classList.remove("active"));
   b.classList.add("active"); mk.tool=b.dataset.tool;
-  $("mkCanvas").style.cursor = mk.tool==="text"?"text":"crosshair";
+  if(mk.tool!=="move"){ mk.selected=null; redrawMk(); }
+  updateResizeBar();
+  $("mkCanvas").style.cursor = mk.tool==="text"?"text":(mk.tool==="move"?"move":"crosshair");
 }));
 $("mkColors").querySelectorAll(".mk-c").forEach(s=>s.addEventListener("click",()=>{
   $("mkColors").querySelectorAll(".mk-c").forEach(x=>x.classList.remove("active"));
@@ -695,8 +834,15 @@ $("mkSizes").querySelectorAll(".mk-s").forEach(s=>s.addEventListener("click",()=
   $("mkSizes").querySelectorAll(".mk-s").forEach(x=>x.classList.remove("active"));
   s.classList.add("active"); mk.width=+s.dataset.w;
 }));
-$("mkUndo").addEventListener("click",()=>{ mk.strokes.pop(); redrawMk(); });
-$("mkClear").addEventListener("click",()=>{ if(mk.strokes.length && confirm("그린 표시를 모두 지울까요?")){ mk.strokes=[]; redrawMk(); } });
+$("mkUndo").addEventListener("click",()=>{ mk.strokes.pop(); mk.selected=null; updateResizeBar(); redrawMk(); });
+$("mkClear").addEventListener("click",()=>{ if(mk.strokes.length && confirm("그린 표시를 모두 지울까요?")){ mk.strokes=[]; mk.selected=null; updateResizeBar(); redrawMk(); } });
+$("mkSizeUp").addEventListener("click",()=>{ if(mk.selected) resizeShape(mk.selected,1.2); else toast("먼저 ‘이동’으로 표시를 골라주세요"); });
+$("mkSizeDown").addEventListener("click",()=>{ if(mk.selected) resizeShape(mk.selected,0.83); else toast("먼저 ‘이동’으로 표시를 골라주세요"); });
+$("mkSizeDel").addEventListener("click",()=>{
+  if(!mk.selected){ toast("삭제할 표시를 골라주세요"); return; }
+  mk.strokes=mk.strokes.filter(s=>s!==mk.selected);
+  mk.selected=null; updateResizeBar(); redrawMk(); toast("표시 하나를 지웠어요");
+});
 $("mkCancel").addEventListener("click",()=>{
   if(mk.strokes.length && !confirm("그린 표시가 사라져요. 닫을까요?")) return;
   if(mk.mode==="new" && mk.newQueue.length>1 && mk.newIndex < mk.newQueue.length-1){
