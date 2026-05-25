@@ -146,7 +146,7 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
     <div class="head-row">
       <div class="brand">
         <h1>사진 보관함</h1>
-        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v2</b></span>
+        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v3</b></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -184,7 +184,7 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
   <button class="fbtn pick" id="fabPick">🖼 사진에서</button>
   <button class="fbtn cam" id="fabCam">📷 사진 추가</button>
 </div>
-<input type="file" id="camInput" class="hidden-input" accept="image/*" capture="environment" multiple>
+<input type="file" id="camInput" class="hidden-input" accept="image/*" capture="environment">
 <input type="file" id="pickInput" class="hidden-input" accept="image/*" multiple>
 
 <!-- 저장 모달 -->
@@ -345,16 +345,21 @@ function compressImage(file, maxDim=MAXDIM, quality=QUALITY){
     reader.onload=e=>{
       const img=new Image();
       img.onload=()=>{
-        let w=img.width,h=img.height;
-        if(w>h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } }
-        else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
-        const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
-        cv.getContext("2d").drawImage(img,0,0,w,h);
-        resolve(cv.toDataURL("image/jpeg",quality));
+        try{
+          let w=img.width,h=img.height;
+          if(!w||!h){ resolve(e.target.result); return; }   // 크기를 못 읽으면 원본 사용
+          if(w>h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } }
+          else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
+          const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+          cv.getContext("2d").drawImage(img,0,0,w,h);
+          resolve(cv.toDataURL("image/jpeg",quality));
+        }catch(err){ resolve(e.target.result); }            // 압축 실패 시 원본 사용
       };
-      img.onerror=reject; img.src=e.target.result;
+      img.onerror=()=>resolve(e.target.result);             // 디코드 실패해도 원본 사용
+      img.src=e.target.result;
     };
-    reader.onerror=reject; reader.readAsDataURL(file);
+    reader.onerror=()=>reject(new Error("파일 읽기 실패"));
+    reader.readAsDataURL(file);
   });
 }
 
@@ -432,13 +437,19 @@ function openAdd(dataUrl, count){
   $("addOverlay").classList.add("show");
 }
 async function handleFiles(files){
-  const arr=[...files].filter(f=>f.type.startsWith("image/"));
-  if(!arr.length) return;
+  if(!files || !files.length){ toast("사진이 선택되지 않았어요"); return; }
+  // type이 비어있는 기기(갤럭시 등)도 통과시키되, 명백한 비이미지만 거름
+  const arr=[...files].filter(f=> !f.type || f.type.startsWith("image/"));
+  if(!arr.length){ toast("이미지 파일이 아니에요"); return; }
   pendingFiles=arr;
+  toast("사진 불러오는 중…");
   try{
     const first=await compressImage(arr[0]);
     openAdd(first, arr.length);
-  }catch(e){ toast("사진을 불러오지 못했어요"); }
+  }catch(e){
+    toast("불러오기 실패: "+(e&&e.message?e.message:"알 수 없음"));
+    console.warn(e);
+  }
 }
 $("addSave").addEventListener("click",async()=>{
   const name=$("addName").value.trim();
@@ -447,7 +458,7 @@ $("addSave").addEventListener("click",async()=>{
   $("addBusy").classList.add("show"); $("addSave").disabled=true;
   try{
     for(let k=0;k<pendingFiles.length;k++){
-      const dataUrl = k===0 ? pendingImg : await compressImage(pendingFiles[k]);
+      const dataUrl = (k===0 && pendingImg) ? pendingImg : await compressImage(pendingFiles[k]);
       const baseName = name || todayStr();
       const finalName = pendingFiles.length>1 ? `${baseName} (${k+1})` : baseName;
       const item={ id:genId(), name:finalName, cat, memo, img:dataUrl, ts:Date.now()+k };
@@ -463,10 +474,10 @@ $("addSave").addEventListener("click",async()=>{
 });
 $("addCancel").addEventListener("click",()=>{ $("addOverlay").classList.remove("show"); pendingFiles=[]; pendingImg=null; });
 
-$("fabCam").addEventListener("click",()=>$("camInput").click());
-$("fabPick").addEventListener("click",()=>$("pickInput").click());
-$("camInput").addEventListener("change",e=>{ const f=e.target.files; e.target.value=""; handleFiles(f); });
-$("pickInput").addEventListener("change",e=>{ const f=e.target.files; e.target.value=""; handleFiles(f); });
+$("fabCam").addEventListener("click",()=>{ try{ $("camInput").click(); }catch(e){ toast("카메라 열기 실패"); } });
+$("fabPick").addEventListener("click",()=>{ try{ $("pickInput").click(); }catch(e){ toast("갤러리 열기 실패"); } });
+$("camInput").addEventListener("change",function(e){ const f=e.target.files; handleFiles(f); setTimeout(()=>{e.target.value="";},300); });
+$("pickInput").addEventListener("change",function(e){ const f=e.target.files; handleFiles(f); setTimeout(()=>{e.target.value="";},300); });
 
 /* ===== 뷰어 ===== */
 let curViewId=null;
