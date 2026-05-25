@@ -146,7 +146,7 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
     <div class="head-row">
       <div class="brand">
         <h1>사진 보관함</h1>
-        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v3</b></span>
+        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v4</b></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -269,7 +269,7 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
 <div class="markup" id="markup">
   <div class="mk-top">
     <button class="mk-x" id="mkCancel">×</button>
-    <span class="mk-title">그림·표시</span>
+    <span class="mk-title" id="mkTitle">그림·표시</span>
     <button class="mk-save" id="mkSave">저장</button>
   </div>
   <div class="mk-stage" id="mkStage">
@@ -423,17 +423,18 @@ function render(){
 }
 
 /* ===== 추가 ===== */
-let pendingImg=null, pendingFiles=[];
-function openAdd(dataUrl, count){
-  pendingImg=dataUrl;
-  $("addPreview").src=dataUrl; $("addPreview").style.display="block";
+let pendingImgs=[];   // 편집 끝난 dataURL 배열
+function openAddFinal(dataUrls){
+  pendingImgs = dataUrls.slice();
+  const count = pendingImgs.length;
+  $("addPreview").src=pendingImgs[0]; $("addPreview").style.display="block";
   $("addName").value="";
   $("addCat").value=curCat;
   $("addMemo").value="";
   $("addTitle").textContent = count>1? `사진 저장 (${count}장)` : "사진 저장";
   $("addHint").textContent = count>1
-    ? `${count}장을 같은 이름·분류로 저장해요. 이름 뒤에 번호가 붙습니다.`
-    : `저장하면 오늘 날짜(${todayStr()})가 함께 기록돼요.`;
+    ? `${count}장을 같은 분류로 저장해요. 이름 뒤에 번호가 붙습니다. (이름은 비워도 돼요)`
+    : `이름은 비워도 돼요. 저장하면 오늘 날짜(${todayStr()})가 기록됩니다.`;
   $("addOverlay").classList.add("show");
 }
 async function handleFiles(files){
@@ -441,38 +442,38 @@ async function handleFiles(files){
   // type이 비어있는 기기(갤럭시 등)도 통과시키되, 명백한 비이미지만 거름
   const arr=[...files].filter(f=> !f.type || f.type.startsWith("image/"));
   if(!arr.length){ toast("이미지 파일이 아니에요"); return; }
-  pendingFiles=arr;
   toast("사진 불러오는 중…");
   try{
-    const first=await compressImage(arr[0]);
-    openAdd(first, arr.length);
+    const urls=[];
+    for(const f of arr){ urls.push(await compressImage(f)); }
+    openMarkupNew(urls);   // 편집화면을 바로 연다
   }catch(e){
     toast("불러오기 실패: "+(e&&e.message?e.message:"알 수 없음"));
     console.warn(e);
   }
 }
 $("addSave").addEventListener("click",async()=>{
+  if(!pendingImgs.length){ toast("저장할 사진이 없어요"); return; }
   const name=$("addName").value.trim();
   const cat=$("addCat").value;
   const memo=$("addMemo").value.trim();
   $("addBusy").classList.add("show"); $("addSave").disabled=true;
   try{
-    for(let k=0;k<pendingFiles.length;k++){
-      const dataUrl = (k===0 && pendingImg) ? pendingImg : await compressImage(pendingFiles[k]);
+    for(let k=0;k<pendingImgs.length;k++){
       const baseName = name || todayStr();
-      const finalName = pendingFiles.length>1 ? `${baseName} (${k+1})` : baseName;
-      const item={ id:genId(), name:finalName, cat, memo, img:dataUrl, ts:Date.now()+k };
+      const finalName = pendingImgs.length>1 ? `${baseName} (${k+1})` : baseName;
+      const item={ id:genId(), name:finalName, cat, memo, img:pendingImgs[k], ts:Date.now()+k };
       items.push(item);
       await cloudSet(item);
     }
     lsSave();
     $("addOverlay").classList.remove("show");
     setTab(cat);
-    toast(pendingFiles.length>1? `${pendingFiles.length}장 저장됐어요`:"저장됐어요");
+    toast(pendingImgs.length>1? `${pendingImgs.length}장 저장됐어요`:"저장됐어요");
   }catch(e){ toast("저장 중 문제가 생겼어요"); console.warn(e); }
-  finally{ $("addBusy").classList.remove("show"); $("addSave").disabled=false; pendingFiles=[]; pendingImg=null; }
+  finally{ $("addBusy").classList.remove("show"); $("addSave").disabled=false; pendingImgs=[]; }
 });
-$("addCancel").addEventListener("click",()=>{ $("addOverlay").classList.remove("show"); pendingFiles=[]; pendingImg=null; });
+$("addCancel").addEventListener("click",()=>{ $("addOverlay").classList.remove("show"); pendingImgs=[]; });
 
 $("fabCam").addEventListener("click",()=>{ try{ $("camInput").click(); }catch(e){ toast("카메라 열기 실패"); } });
 $("fabPick").addEventListener("click",()=>{ try{ $("pickInput").click(); }catch(e){ toast("갤러리 열기 실패"); } });
@@ -542,23 +543,46 @@ const mk = {
   tool:"pen", color:"#ff3b30", width:8,
   strokes:[],            // 저장된 도형 목록(실행취소용)
   drawing:false, start:null, cur:null, penPts:[],
-  scale:1
+  scale:1,
+  mode:"new",            // "new"=새 사진 추가, "mark"=기존 사진에 표시
+  newQueue:[],           // 새 사진 추가 시 처리할 dataURL 목록
+  newIndex:0
 };
 mk.ctx = mk.canvas.getContext("2d");
 
-function openMarkup(){
-  const it=items.find(i=>i.id===curViewId); if(!it) return;
+// 캔버스에 이미지 띄우고 편집화면 열기
+function loadCanvasImage(dataUrl, cb){
   const img=new Image();
   img.onload=()=>{
     mk.baseImg=img;
     mk.strokes=[];
-    // 캔버스는 원본 픽셀 크기로(화질 유지), 화면엔 CSS로 축소 표시
     mk.canvas.width=img.width; mk.canvas.height=img.height;
     fitCanvas();
     redrawMk();
     $("markup").classList.add("show");
+    if(cb) cb();
   };
-  img.src=it.img;
+  img.src=dataUrl;
+}
+
+// [새 사진] 찍거나 고른 사진들을 편집화면으로
+function openMarkupNew(dataUrls){
+  mk.mode="new";
+  mk.newQueue=dataUrls.slice();
+  mk.newIndex=0;
+  $("mkTitle").textContent = dataUrls.length>1 ? `새 사진 (1/${dataUrls.length})` : "새 사진";
+  $("mkSave").textContent = dataUrls.length>1 ? "다음" : "저장";
+  $("mkHint").textContent="그릴 게 없으면 바로 ‘저장’을 누르세요. 펜·화살표·동그라미·글자로 표시할 수도 있어요.";
+  loadCanvasImage(mk.newQueue[0]);
+}
+
+// [기존 사진] 뷰어에서 표시 추가
+function openMarkup(){
+  const it=items.find(i=>i.id===curViewId); if(!it) return;
+  mk.mode="mark";
+  $("mkTitle").textContent="그림·표시";
+  $("mkSave").textContent="저장";
+  loadCanvasImage(it.img);
 }
 function fitCanvas(){
   // 화면(stage) 안에 맞춰 표시 크기 계산
@@ -674,16 +698,41 @@ $("mkSizes").querySelectorAll(".mk-s").forEach(s=>s.addEventListener("click",()=
 $("mkUndo").addEventListener("click",()=>{ mk.strokes.pop(); redrawMk(); });
 $("mkClear").addEventListener("click",()=>{ if(mk.strokes.length && confirm("그린 표시를 모두 지울까요?")){ mk.strokes=[]; redrawMk(); } });
 $("mkCancel").addEventListener("click",()=>{
-  if(mk.strokes.length && !confirm("저장하지 않고 닫을까요?")) return;
+  if(mk.strokes.length && !confirm("그린 표시가 사라져요. 닫을까요?")) return;
+  if(mk.mode==="new" && mk.newQueue.length>1 && mk.newIndex < mk.newQueue.length-1){
+    if(!confirm("나머지 사진도 취소할까요?")) return;
+  }
+  mk.newQueue=[]; mk.newIndex=0;
   $("markup").classList.remove("show");
 });
 
-/* 편집 결과 저장: 새 사진으로 추가 + 원본 유지 */
+/* 편집화면 저장 버튼 */
 $("mkSave").addEventListener("click",async()=>{
+  // 현재 캔버스(그림 포함)를 이미지로
+  const composed = mk.strokes.length ? mk.canvas.toDataURL("image/jpeg",QUALITY) : (mk.mode==="new"? mk.newQueue[mk.newIndex] : mk.canvas.toDataURL("image/jpeg",QUALITY));
+
+  if(mk.mode==="new"){
+    // 새 사진: 이 장의 편집 결과를 보관하고, 이름·분류 입력창으로
+    mk.newQueue[mk.newIndex]=composed;       // 그림 반영된 버전으로 교체
+    mk.newIndex++;
+    if(mk.newIndex < mk.newQueue.length){
+      // 다음 장 편집으로
+      $("mkTitle").textContent=`새 사진 (${mk.newIndex+1}/${mk.newQueue.length})`;
+      $("mkSave").textContent = (mk.newIndex===mk.newQueue.length-1)?"저장":"다음";
+      loadCanvasImage(mk.newQueue[mk.newIndex]);
+      toast(`${mk.newIndex}장 편집 완료, 다음 사진`);
+    }else{
+      // 모든 장 편집 끝 → 이름·분류 입력창
+      $("markup").classList.remove("show");
+      openAddFinal(mk.newQueue);
+    }
+    return;
+  }
+
+  // 기존 사진에 표시: 새 사진으로 추가(원본 유지)
   const it=items.find(i=>i.id===curViewId); if(!it) return;
   if(!mk.strokes.length){ toast("아직 그린 표시가 없어요"); return; }
-  const dataUrl=mk.canvas.toDataURL("image/jpeg",QUALITY);
-  const newItem={ id:genId(), name:(it.name||todayStr())+" (표시)", cat:it.cat, memo:it.memo||"", img:dataUrl, ts:Date.now() };
+  const newItem={ id:genId(), name:(it.name||todayStr())+" (표시)", cat:it.cat, memo:it.memo||"", img:composed, ts:Date.now() };
   items.push(newItem);
   await cloudSet(newItem); lsSave();
   $("markup").classList.remove("show");
