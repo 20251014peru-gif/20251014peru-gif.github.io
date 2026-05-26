@@ -164,7 +164,7 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
     <div class="head-row">
       <div class="brand">
         <h1>사진 보관함</h1>
-        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v7</b></span>
+        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v8</b></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -376,29 +376,42 @@ function fmtDate(ts){
 }
 
 /* ===== 사진 압축 ===== */
+// 반환: { url:dataURL, img:HTMLImageElement(로드완료) }  → 편집화면에서 재로딩 불필요
 function compressImage(file, maxDim=MAXDIM, quality=QUALITY){
   return new Promise((resolve,reject)=>{
     const reader=new FileReader();
     let done=false;
-    const finish=(v)=>{ if(!done){ done=true; resolve(v); } };
+    const finishUrl=(url)=>{
+      if(done) return; 
+      // url만 있을 때는 편집용 이미지도 만들어서 같이 반환
+      const im=new Image();
+      im.onload=()=>{ if(!done){ done=true; resolve({url, img:im}); } };
+      im.onerror=()=>{ if(!done){ done=true; resolve({url, img:null}); } };
+      im.src=url;
+    };
+    const finishBoth=(url,img)=>{ if(!done){ done=true; resolve({url, img}); } };
     reader.onload=e=>{
       const raw=e.target.result;
-      // 디코드/압축이 멎어도 6초 뒤 원본으로 진행
-      const timer=setTimeout(()=>finish(raw), 6000);
+      const timer=setTimeout(()=>finishUrl(raw), 8000);
       const img=new Image();
       img.onload=()=>{
         clearTimeout(timer);
         try{
           let w=img.width,h=img.height;
-          if(!w||!h){ finish(raw); return; }
+          if(!w||!h){ finishUrl(raw); return; }
           if(w>h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } }
           else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
           const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
           cv.getContext("2d").drawImage(img,0,0,w,h);
-          finish(cv.toDataURL("image/jpeg",quality));
-        }catch(err){ finish(raw); }
+          const url=cv.toDataURL("image/jpeg",quality);
+          // 압축된 url로 편집용 이미지 생성
+          const out=new Image();
+          out.onload=()=>finishBoth(url,out);
+          out.onerror=()=>finishBoth(url,img); // 안 되면 원본 디코드 이미지 재사용
+          out.src=url;
+        }catch(err){ finishUrl(raw); }
       };
-      img.onerror=()=>{ clearTimeout(timer); finish(raw); };
+      img.onerror=()=>{ clearTimeout(timer); finishUrl(raw); };
       img.src=raw;
     };
     reader.onerror=()=>reject(new Error("파일 읽기 실패"));
@@ -484,17 +497,16 @@ async function handleFiles(files){
   if(!files || !files.length){ toast("사진이 선택되지 않았어요"); return; }
   const arr=[...files].filter(f=> !f.type || f.type.startsWith("image/"));
   if(!arr.length){ toast("이미지 파일이 아니에요 ("+(files[0]&&files[0].type||"형식불명")+")"); return; }
-  toast("사진 처리 중… (1/"+arr.length+")");
+  toast("사진 여는 중…");
   try{
-    const urls=[];
+    const results=[];
     for(let i=0;i<arr.length;i++){
-      toast("사진 처리 중… ("+(i+1)+"/"+arr.length+")");
-      const u=await compressImage(arr[i]);
-      if(!u){ toast("사진을 읽지 못했어요"); return; }
-      urls.push(u);
+      const r=await compressImage(arr[i]);
+      if(!r || !r.url){ toast("사진을 읽지 못했어요"); return; }
+      results.push(r);
     }
-    if(!urls.length){ toast("불러온 사진이 없어요"); return; }
-    openMarkupNew(urls);
+    if(!results.length){ toast("불러온 사진이 없어요"); return; }
+    openMarkupNew(results);
   }catch(e){
     toast("불러오기 실패: "+(e&&e.message?e.message:"알 수 없음"));
     console.warn(e);
@@ -595,36 +607,44 @@ const mk = {
   scale:1,
   mode:"new",            // "new"=새 사진 추가, "mark"=기존 사진에 표시
   newQueue:[],           // 새 사진 추가 시 처리할 dataURL 목록
+  newImgs:[],            // 편집용 미리 로드된 이미지 객체 목록
   newIndex:0
 };
 mk.ctx = mk.canvas.getContext("2d");
 
 // 캔버스에 이미지 띄우고 편집화면 열기
-function loadCanvasImage(dataUrl, cb){
-  const img=new Image();
-  img.onload=()=>{
+// preImg가 있으면(이미 로드된 이미지) 재로딩 없이 바로 사용 → 멈춤 방지
+function loadCanvasImage(dataUrl, preImg, cb){
+  const show=(img)=>{
     mk.baseImg=img;
     mk.strokes=[];
     mk.selected=null;
     updateResizeBar();
-    mk.canvas.width=img.width; mk.canvas.height=img.height;
+    mk.canvas.width=img.naturalWidth||img.width; mk.canvas.height=img.naturalHeight||img.height;
     fitCanvas();
     redrawMk();
     $("markup").classList.add("show");
     if(cb) cb();
   };
+  if(preImg && (preImg.complete || preImg.naturalWidth)){ show(preImg); return; }
+  const img=new Image();
+  let opened=false;
+  const guard=setTimeout(()=>{ if(!opened){ opened=true; toast("편집화면 여는 중 지연… 다시 시도해주세요"); } }, 8000);
+  img.onload=()=>{ if(!opened){ opened=true; clearTimeout(guard); show(img); } };
+  img.onerror=()=>{ clearTimeout(guard); toast("사진을 화면에 못 띄웠어요"); };
   img.src=dataUrl;
 }
 
-// [새 사진] 찍거나 고른 사진들을 편집화면으로
-function openMarkupNew(dataUrls){
+// [새 사진] 찍거나 고른 사진들을 편집화면으로  (results = [{url,img},...])
+function openMarkupNew(results){
   mk.mode="new";
-  mk.newQueue=dataUrls.slice();
+  mk.newQueue=results.map(r=>r.url);          // 저장용 dataURL 큐
+  mk.newImgs=results.map(r=>r.img||null);     // 편집용 이미지 객체 큐
   mk.newIndex=0;
-  $("mkTitle").textContent = dataUrls.length>1 ? `새 사진 (1/${dataUrls.length})` : "새 사진";
-  $("mkSave").textContent = dataUrls.length>1 ? "다음" : "저장";
+  $("mkTitle").textContent = results.length>1 ? `새 사진 (1/${results.length})` : "새 사진";
+  $("mkSave").textContent = results.length>1 ? "다음" : "저장";
   $("mkHint").textContent="그릴 게 없으면 바로 ‘저장’. 표시한 뒤 ✋이동으로 고르면 끌어 옮기거나 ➕➖로 크기를 바꿀 수 있어요.";
-  loadCanvasImage(mk.newQueue[0]);
+  loadCanvasImage(mk.newQueue[0], mk.newImgs[0]);
 }
 
 // [기존 사진] 뷰어에서 표시 추가
@@ -633,7 +653,7 @@ function openMarkup(){
   mk.mode="mark";
   $("mkTitle").textContent="그림·표시";
   $("mkSave").textContent="저장";
-  loadCanvasImage(it.img);
+  loadCanvasImage(it.img, null);
 }
 function fitCanvas(){
   // 화면(stage) 안에 맞춰 표시 크기 계산
@@ -750,6 +770,7 @@ function updateResizeBar(){
 let pendingTextPos=null;  // 글자 넣을 위치 임시 저장
 function mkDown(e){
   e.preventDefault();
+  if($("mkTextBox").classList.contains("show")) return; // 입력창 떠있으면 캔버스 무시
   const p=evtPos(e);
   if(mk.tool==="move"){
     // 이동 모드: 도형 집어서 끌기
@@ -763,9 +784,13 @@ function mkDown(e){
   if(mk.tool==="text"){
     // 자체 입력창 열기 (prompt 안 씀)
     pendingTextPos=p;
-    $("mkTextInput").value="";
+    const inp=$("mkTextInput");
+    inp.value="";
     $("mkTextBox").classList.add("show");
-    setTimeout(()=>$("mkTextInput").focus(),50);
+    // 포커스를 여러 번 시도해 "되다 안 되다" 방지
+    requestAnimationFrame(()=>{ try{ inp.focus(); }catch(_){} });
+    setTimeout(()=>{ try{ inp.focus(); inp.click&&inp.click(); }catch(_){} },120);
+    setTimeout(()=>{ try{ inp.focus(); }catch(_){} },300);
     return;
   }
   mk.drawing=true; mk.start=p; mk.cur=p; mk.penPts=[p];
@@ -778,6 +803,7 @@ function mkMove(e){
     mk.dragLast=p; redrawMk(); return;
   }
   if(!mk.drawing) return;
+  if($("mkTextBox").classList.contains("show")) return;
   e.preventDefault();
   mk.cur=p;
   if(mk.tool==="pen") mk.penPts.push(mk.cur);
@@ -865,7 +891,7 @@ $("mkSave").addEventListener("click",async()=>{
       // 다음 장 편집으로
       $("mkTitle").textContent=`새 사진 (${mk.newIndex+1}/${mk.newQueue.length})`;
       $("mkSave").textContent = (mk.newIndex===mk.newQueue.length-1)?"저장":"다음";
-      loadCanvasImage(mk.newQueue[mk.newIndex]);
+      loadCanvasImage(mk.newQueue[mk.newIndex], mk.newImgs[mk.newIndex]);
       toast(`${mk.newIndex}장 편집 완료, 다음 사진`);
     }else{
       // 모든 장 편집 끝 → 이름·분류 입력창
