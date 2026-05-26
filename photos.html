@@ -128,7 +128,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v13</b></span></div>
+      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v14</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="./index.html">🏠 홈</a>
@@ -236,7 +236,13 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+<script>
+// Fabric 로딩 실패 시 다른 CDN으로 자동 재시도
+if(typeof fabric==="undefined"){
+  document.write('<scr'+'ipt src="https://unpkg.com/fabric@5.3.0/dist/fabric.min.js"></scr'+'ipt>');
+}
+</script>
 <script>
 /* ===== 설정 ===== */
 const firebaseConfig = {
@@ -431,7 +437,10 @@ function openEditor(mode, dataUrls){
   }
 }
 function loadIntoFabric(dataUrl){
+  let loaded=false;
+  const guard=setTimeout(()=>{ if(!loaded){ toast("사진 로딩이 지연돼요. 다시 시도해주세요"); } }, 12000);
   fabric.Image.fromURL(dataUrl, (img)=>{
+    loaded=true; clearTimeout(guard);
     if(!img || !img.width){ toast("사진을 띄우지 못했어요"); $("editor").classList.remove("show"); return; }
     const stage=$("edStage");
     const maxW=Math.max(100,stage.clientWidth-12), maxH=Math.max(100,stage.clientHeight-12);
@@ -541,6 +550,14 @@ document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>setT
 ["addOverlay","editOverlay"].forEach(id=>$(id).addEventListener("click",e=>{ if(e.target.id===id)$(id).classList.remove("show"); }));
 
 initFirebase();
+
+// Fabric 로딩 상태 확인 (1.5초 후) — 편집 기능 가용 여부 미리 점검
+setTimeout(()=>{
+  if(typeof fabric==="undefined"){
+    console.warn("Fabric 로딩 실패");
+    // 편집 없이도 저장은 가능하도록 안내만 (사진 추가는 정상 작동)
+  }
+},1500);
 </script>
 </body>
 </html>
