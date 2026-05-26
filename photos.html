@@ -61,8 +61,8 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 .viewer .vtop{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;gap:10px}
 .viewer .vtitle{color:#fff;font-size:15px;font-weight:600;flex:1;word-break:break-all}
 .viewer .vclose{background:rgba(255,255,255,.16);color:#fff;border:0;width:38px;height:38px;border-radius:50%;font-size:20px;cursor:pointer;flex-shrink:0}
-.viewer .vimgwrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:0 12px}
-.viewer .vimg{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.viewer .vimgwrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0 12px;touch-action:none}
+.viewer .vimg{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.4);transform-origin:center center;transition:transform .04s linear;will-change:transform;user-select:none;-webkit-user-drag:none}
 .viewer .vmeta{color:#c6d2de;font-size:12px;text-align:center;padding:6px 16px 2px}
 .viewer .vbar{display:flex;gap:8px;padding:14px 16px calc(16px + env(safe-area-inset-bottom));flex-wrap:wrap;justify-content:center}
 .viewer .vbar .btn{flex:1;min-width:110px;max-width:200px}
@@ -111,9 +111,6 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 .ed-del{background:#3a2330;border:1px solid #5c3344;color:#ff9db0;border-radius:11px;padding:10px 14px;font-size:13px;cursor:pointer;font-family:inherit}
 .ed-hint{color:#7d8b99;font-size:11px;line-height:1.5;text-align:center;margin-top:6px}
 .ed-loading{color:#9fb8cf;font-size:14px;text-align:center;padding:40px}
-/* 진단창 */
-#dbg{display:none;position:fixed;left:6px;right:6px;top:44px;max-height:32vh;overflow:auto;background:rgba(8,12,18,.95);color:#7CFC9A;font:11px/1.45 monospace;padding:10px 12px;border-radius:10px;z-index:400;white-space:pre-wrap;border:1px solid #2a3a4a}
-#dbgBtn{position:fixed;right:8px;top:8px;z-index:401;background:rgba(0,0,0,.3);color:#fff;border:0;border-radius:8px;padding:4px 9px;font-size:11px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -121,7 +118,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v19</b></span></div>
+      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v21</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="./index.html">🏠 홈</a>
@@ -225,8 +222,6 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="dbg"></div>
-<button id="dbgBtn">🐞</button>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -236,12 +231,8 @@ if(typeof fabric==="undefined"){ document.write('<scr'+'ipt src="https://unpkg.c
 </script>
 <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <script>
-/* ===================== 진단 ===================== */
-let DBG=false;
-function dlog(m){ try{ const p=document.getElementById("dbg"); p.textContent+=("["+new Date().toLocaleTimeString().slice(0,8)+"] "+m+"\n"); p.scrollTop=p.scrollHeight; }catch(e){} }
-document.getElementById("dbgBtn").addEventListener("click",()=>{ DBG=!DBG; document.getElementById("dbg").style.display=DBG?"block":"none"; if(DBG)dlog("진단 ON · UA="+navigator.userAgent.slice(0,70)+" · fabric="+(typeof fabric!=="undefined")); });
-window.addEventListener("error",e=>dlog("⚠️오류: "+(e.message||"")+" @줄"+(e.lineno||"?")));
-window.addEventListener("unhandledrejection",e=>dlog("⚠️비동기오류: "+((e.reason&&e.reason.message)||e.reason||"")));
+/* dlog: 진단 제거됨 (무동작) */
+function dlog(){}
 
 /* ===================== 설정 ===================== */
 const firebaseConfig={ apiKey:"AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY", authDomain:"my-system-25497.firebaseapp.com", projectId:"my-system-25497", storageBucket:"my-system-25497.firebasestorage.app" };
@@ -390,8 +381,73 @@ function openViewer(id){
   const it=items.find(i=>i.id===id); if(!it)return;
   curViewId=id; $("vImg").src=it.img; $("vTitle").textContent=it.name||"제목 없음";
   $("vMeta").textContent=fmtDate(it.ts)+(it.memo?" · "+it.memo:""); $("viewer").classList.add("show");
+  resetZoom();
 }
-$("vClose").addEventListener("click",()=>$("viewer").classList.remove("show"));
+$("vClose").addEventListener("click",()=>{ $("viewer").classList.remove("show"); resetZoom(); });
+
+/* ===== 사진 확대·축소 (핀치 / 더블탭 / 드래그) ===== */
+const zoom={ scale:1, x:0, y:0 };
+function applyZoom(){ $("vImg").style.transform=`translate(${zoom.x}px,${zoom.y}px) scale(${zoom.scale})`; }
+function resetZoom(){ zoom.scale=1; zoom.x=0; zoom.y=0; applyZoom(); }
+function clampZoom(){
+  zoom.scale=Math.max(1, Math.min(zoom.scale, 6));
+  if(zoom.scale<=1){ zoom.x=0; zoom.y=0; return; }
+  // 너무 멀리 못 끌게 제한
+  const img=$("vImg"); const r=img.getBoundingClientRect();
+  const maxX=(r.width*zoom.scale - r.width)/2 + 40;
+  const maxY=(r.height*zoom.scale - r.height)/2 + 40;
+  zoom.x=Math.max(-maxX, Math.min(maxX, zoom.x));
+  zoom.y=Math.max(-maxY, Math.min(maxY, zoom.y));
+}
+(function setupZoom(){
+  const wrap=document.querySelector(".vimgwrap");
+  let mode=null;            // "pan" | "pinch"
+  let startX=0,startY=0, baseX=0,baseY=0;
+  let startDist=0, baseScale=1;
+  let lastTap=0;
+
+  function dist(t){ const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.hypot(dx,dy); }
+  function mid(t){ return { x:(t[0].clientX+t[1].clientX)/2, y:(t[0].clientY+t[1].clientY)/2 }; }
+
+  wrap.addEventListener("touchstart",e=>{
+    if(e.touches.length===2){
+      mode="pinch"; startDist=dist(e.touches); baseScale=zoom.scale;
+      e.preventDefault();
+    }else if(e.touches.length===1){
+      // 더블탭 감지
+      const now=Date.now();
+      if(now-lastTap<300){
+        zoom.scale = zoom.scale>1 ? 1 : 2.5;
+        zoom.x=0; zoom.y=0; clampZoom(); applyZoom();
+        lastTap=0; mode=null; return;
+      }
+      lastTap=now;
+      if(zoom.scale>1){ mode="pan"; startX=e.touches[0].clientX; startY=e.touches[0].clientY; baseX=zoom.x; baseY=zoom.y; }
+    }
+  },{passive:false});
+
+  wrap.addEventListener("touchmove",e=>{
+    if(mode==="pinch" && e.touches.length===2){
+      e.preventDefault();
+      zoom.scale=baseScale * (dist(e.touches)/startDist);
+      clampZoom(); applyZoom();
+    }else if(mode==="pan" && e.touches.length===1){
+      e.preventDefault();
+      zoom.x=baseX+(e.touches[0].clientX-startX);
+      zoom.y=baseY+(e.touches[0].clientY-startY);
+      clampZoom(); applyZoom();
+    }
+  },{passive:false});
+
+  wrap.addEventListener("touchend",e=>{
+    if(e.touches.length===0) mode=null;
+    else if(e.touches.length===1 && zoom.scale>1){ mode="pan"; startX=e.touches[0].clientX; startY=e.touches[0].clientY; baseX=zoom.x; baseY=zoom.y; }
+  });
+
+  // PC: 더블클릭 확대, 휠 줌
+  $("vImg").addEventListener("dblclick",()=>{ zoom.scale=zoom.scale>1?1:2.5; zoom.x=0; zoom.y=0; clampZoom(); applyZoom(); });
+  wrap.addEventListener("wheel",e=>{ e.preventDefault(); zoom.scale*= (e.deltaY<0?1.15:0.87); clampZoom(); applyZoom(); },{passive:false});
+})();
 function dataUrlToFile(u,fn){ const[h,b]=u.split(","); const mime=(h.match(/:(.*?);/)||[])[1]||"image/jpeg"; const bin=atob(b),a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new File([a],fn,{type:mime}); }
 function safeName(s){ return (s||"photo").replace(/[\\\/:*?"<>|]/g,"_").slice(0,40); }
 $("vShare").addEventListener("click",async()=>{
@@ -577,7 +633,6 @@ document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>setT
 ["addOverlay","editOverlay"].forEach(id=>$(id).addEventListener("click",e=>{ if(e.target.id===id)$(id).classList.remove("show"); }));
 
 initFirebase();
-setTimeout(()=>{ if(typeof fabric==="undefined") dlog("⚠️ Fabric 로딩 실패 — 편집기 작동 안 함"); else dlog("Fabric 준비됨 v"+(fabric.version||"?")); },1800);
 </script>
 </body>
 </html>
