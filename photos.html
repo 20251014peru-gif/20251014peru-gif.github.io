@@ -128,7 +128,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v14</b></span></div>
+      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v15</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="./index.html">🏠 홈</a>
@@ -438,24 +438,31 @@ function openEditor(mode, dataUrls){
 }
 function loadIntoFabric(dataUrl){
   let loaded=false;
-  const guard=setTimeout(()=>{ if(!loaded){ toast("사진 로딩이 지연돼요. 다시 시도해주세요"); } }, 12000);
-  fabric.Image.fromURL(dataUrl, (img)=>{
+  const guard=setTimeout(()=>{ if(!loaded){ toast("사진 로딩 지연. 닫고 다시 시도해주세요"); } }, 12000);
+  // 이미지를 직접 로드(콜백 안정) → Fabric에 넘김
+  const imgEl=new Image();
+  imgEl.onload=()=>{
     loaded=true; clearTimeout(guard);
-    if(!img || !img.width){ toast("사진을 띄우지 못했어요"); $("editor").classList.remove("show"); return; }
-    const stage=$("edStage");
-    const maxW=Math.max(100,stage.clientWidth-12), maxH=Math.max(100,stage.clientHeight-12);
-    const scale=Math.min(maxW/img.width, maxH/img.height, 1);
-    const cw=Math.round(img.width*scale), ch=Math.round(img.height*scale);
-    if(fc){ try{fc.dispose();}catch(e){} fc=null; }
-    fc=new fabric.Canvas("fcanvas",{ selection:true, preserveObjectStacking:true, backgroundColor:"#000" });
-    fc.setWidth(cw); fc.setHeight(ch);
-    img.scaleToWidth(cw);
-    fc.setBackgroundImage(img, fc.renderAll.bind(fc), { originX:"left", originY:"top" });
-    $("edLoading").style.display="none";
-    $("edCanvasBox").style.display="block";
-    $("edTools").style.display="block";
-    fc.renderAll();
-  });
+    try{
+      const stage=$("edStage");
+      const maxW=Math.max(100,stage.clientWidth-12), maxH=Math.max(100,stage.clientHeight-12);
+      const iw=imgEl.naturalWidth||imgEl.width, ih=imgEl.naturalHeight||imgEl.height;
+      const scale=Math.min(maxW/iw, maxH/ih, 1);
+      const cw=Math.round(iw*scale), ch=Math.round(ih*scale);
+      if(fc){ try{fc.dispose();}catch(e){} fc=null; }
+      fc=new fabric.Canvas("fcanvas",{ selection:true, preserveObjectStacking:true, backgroundColor:"#000", enableRetinaScaling:false });
+      fc.setWidth(cw); fc.setHeight(ch);
+      const fImg=new fabric.Image(imgEl,{ originX:"left", originY:"top" });
+      fImg.scaleToWidth(cw);
+      fc.setBackgroundImage(fImg, fc.renderAll.bind(fc));
+      $("edLoading").style.display="none";
+      $("edCanvasBox").style.display="block";
+      $("edTools").style.display="block";
+      fc.renderAll();
+    }catch(err){ toast("편집기 준비 실패: "+(err.message||"")); $("editor").classList.remove("show"); }
+  };
+  imgEl.onerror=()=>{ clearTimeout(guard); toast("사진을 띄우지 못했어요"); $("editor").classList.remove("show"); };
+  imgEl.src=dataUrl;
 }
 function addText(){
   const t=new fabric.IText("글자", { left:fc.getWidth()*0.28, top:fc.getHeight()*0.4, fontFamily:"Pretendard, sans-serif", fontWeight:"bold", fontSize:Math.round(fc.getHeight()*0.09)+8, fill:edColor, stroke:"rgba(0,0,0,.55)", strokeWidth:1.5, paintFirst:"stroke" });
@@ -477,7 +484,8 @@ function addArrow(){
   const line=new fabric.Line([x1,y1,x2,y2],{ stroke:edColor, strokeWidth:sw });
   const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
   const head=new fabric.Triangle({ left:x2, top:y2, width:sw*5, height:sw*5, fill:edColor, angle:ang+90, originX:"center", originY:"center" });
-  const grp=new fabric.Group([line,head]);
+  const grp=new fabric.Group([line,head],{ hasRotatingPoint:true, lockRotation:false });
+  grp.setControlsVisibility({ mtr:true });   // 회전 핸들 표시
   fc.add(grp); fc.setActiveObject(grp); fc.renderAll();
 }
 function setPen(on){
@@ -522,7 +530,15 @@ function closeEditor(){ if(fc){ try{fc.dispose();}catch(e){} fc=null; } $("edito
 $("edSave").addEventListener("click",async()=>{
   if(!fc)return;
   fc.discardActiveObject(); fc.renderAll();
-  const out=fc.toDataURL({ format:"jpeg", quality:QUALITY });
+  let out;
+  try{
+    out=fc.toDataURL({ format:"jpeg", quality:QUALITY, multiplier:1 });
+  }catch(err){
+    toast("저장 실패(이미지 변환 오류). 다시 시도해주세요");
+    console.warn("toDataURL fail",err);
+    return;
+  }
+  if(!out || out.length<100){ toast("저장 실패 — 빈 이미지"); return; }
   if(edMode==="new"){
     edQueue[edIndex]=out; edIndex++;
     if(edIndex<edQueue.length){
