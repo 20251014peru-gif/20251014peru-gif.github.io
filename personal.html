@@ -71,7 +71,7 @@ textarea{resize:vertical;min-height:74px;}
 .rec-cat{font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;}
 .rec-time{font-size:11px;color:#B0B5BD;flex-shrink:0;}
 .rec-title{font-size:14px;font-weight:600;margin:6px 0 3px;}
-.rec-detail{font-size:13px;color:#6B7280;line-height:1.5;white-space:pre-wrap;}
+.rec-detail{font-size:13px;color:#6B7280;line-height:1.5;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
 .rec-meta{font-size:12px;color:#9CA3AF;margin-top:6px;display:flex;gap:12px;flex-wrap:wrap;}
 .rec-meta b{color:#4B5563;}
 .rec-photos{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
@@ -112,6 +112,18 @@ textarea{resize:vertical;min-height:74px;}
 .modal h3{font-size:16px;margin-bottom:6px;}
 .modal p{font-size:12px;color:#6B7280;line-height:1.6;margin-bottom:14px;}
 .modal a{color:#6366F1;}
+
+.detail-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:55;align-items:flex-start;justify-content:center;padding:18px;overflow-y:auto;}
+.detail-bg.open{display:flex;}
+.detail{background:#fff;border-radius:16px;padding:22px;max-width:560px;width:100%;margin:auto;}
+.detail-cat{font-size:12px;font-weight:700;padding:3px 11px;border-radius:14px;display:inline-block;}
+.detail h2{font-size:20px;margin:12px 0 4px;line-height:1.3;}
+.detail-when{font-size:12px;color:#9CA3AF;}
+.detail-meta{font-size:14px;color:#6B7280;display:flex;gap:18px;flex-wrap:wrap;}
+.detail-meta b{color:#1A1A2E;}
+.detail-body{font-size:15px;line-height:1.7;color:#374151;white-space:pre-wrap;margin:14px 0;}
+.detail-photos img{width:100%;border-radius:12px;margin-top:10px;display:block;cursor:zoom-in;}
+.detail-photos .ph-load{height:130px;border-radius:12px;background:#F3F4F6;display:flex;align-items:center;justify-content:center;color:#B0B5BD;font-size:13px;margin-top:10px;}
 
 .viewer{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:60;align-items:center;justify-content:center;}
 .viewer.open{display:flex;}
@@ -168,7 +180,7 @@ textarea{resize:vertical;min-height:74px;}
           <input type="file" id="camInput" accept="image/*" capture="environment" style="display:none">
         </label>
         <label class="photo-btn">🖼 사진에서 선택
-          <input type="file" id="pickInput" accept="image/*" style="display:none">
+          <input type="file" id="pickInput" accept="image/*" multiple style="display:none">
         </label>
       </div>
       <div class="photo-status" id="photoStatus"></div>
@@ -237,6 +249,10 @@ textarea{resize:vertical;min-height:74px;}
     <button class="btn btn-primary" onclick="saveApi()">저장</button>
     <button class="btn btn-ghost" onclick="closeApi()">닫기</button>
   </div>
+</div>
+
+<div class="detail-bg" id="detailBg" onclick="if(event.target===this)closeDetail()">
+  <div class="detail" id="detailCard"></div>
 </div>
 
 <div class="viewer" id="viewer" onclick="this.classList.remove('open')">
@@ -365,20 +381,26 @@ function collectFields(){
 /* ===== 사진 (압축 후 base64) — 고정 입력 + 타임아웃 안전장치 ===== */
 function setPhotoStatus(msg){var el=$('photoStatus');if(el)el.textContent=msg||'';}
 function onPhotoInput(ev){
-  var file=ev.target.files&&ev.target.files[0];
+  var fl=ev.target.files; var list=fl?Array.prototype.slice.call(fl):[];
   ev.target.value='';            // 파일 참조 잡은 뒤 초기화(순서 중요)
-  if(!file){setPhotoStatus('');return;}
-  setPhotoStatus('사진 읽는 중…');
-  readAndCompress(file).then(function(data){
-    pendingPhotos.push(data);renderPending();
-    setPhotoStatus('✅ 사진 추가됨 (총 '+pendingPhotos.length+'장) — 더 넣으려면 다시 누르세요');
-  }).catch(function(e){
-    setPhotoStatus('⚠️ '+e.message);logErr('사진 첨부 실패: '+e.message);
-  });
+  if(!list.length){setPhotoStatus('');return;}
+  setPhotoStatus(list.length>1?(list.length+'장 처리 중…'):'사진 읽는 중…');
+  var i=0,ok=0;
+  (function next(){
+    if(i>=list.length){
+      setPhotoStatus(ok?('✅ 사진 '+ok+'장 추가됨 (총 '+pendingPhotos.length+'장)'):'⚠️ 추가된 사진이 없어요');
+      return;
+    }
+    var f=list[i++];
+    readAndCompress(f).then(function(data){pendingPhotos.push(data);ok++;renderPending();
+      setPhotoStatus('처리 중… ('+i+'/'+list.length+')');next();})
+    .catch(function(e){logErr('사진 첨부 실패: '+e.message);setPhotoStatus('⚠️ '+e.message);next();});
+  })();
 }
 function readAndCompress(file){
   return new Promise(function(resolve,reject){
-    if(!file.type||file.type.indexOf('image')<0){reject(new Error('이미지 파일이 아니에요'));return;}
+    // 갤럭시 갤러리는 file.type이 비어있는 경우가 많음 → 비어있으면 통과(거르지 않음)
+    if(file.type&&file.type.indexOf('image')<0){reject(new Error('이미지 파일이 아니에요'));return;}
     var done=false;
     var timer=setTimeout(function(){if(!done){done=true;reject(new Error('사진 처리 지연 — 다른 사진으로 시도해보세요'));}},8000);
     var reader=new FileReader();
@@ -492,30 +514,67 @@ function recCard(r){
   var c=catOf(r.cat);
   var photos='';
   if(r.photos&&r.photos.length){
-    photos='<div class="rec-photos">'+r.photos.map(function(p){return '<img src="'+p+'" onclick="showImg(this.src)">';}).join('')+'</div>';
+    photos='<div class="rec-photos">'+r.photos.map(function(p){return '<img src="'+p+'" onclick="event.stopPropagation();showImg(this.src)">';}).join('')+'</div>';
   } else if(r.photoIds&&r.photoIds.length){
     photos='<div class="rec-photos" data-photoids="'+r.photoIds.join(',')+'">'+r.photoIds.map(function(){return '<div class="ph-load">…</div>';}).join('')+'</div>';
   }
   var meta='';
   if(r.who)meta+='<span>👤 <b>'+esc(r.who)+'</b></span>';
   if(r.amount)meta+='<span>💰 <b>'+won(r.amount)+'원</b></span>';
-  return '<div class="rec" style="border-left-color:'+c.c+'">'+
-    '<div class="rec-top"><span class="rec-cat" style="background:'+c.bg+';color:'+c.c+'">'+c.i+' '+r.cat+'</span><span class="rec-time">'+r.time+'</span></div>'+
+  return '<div class="rec" style="border-left-color:'+c.c+';cursor:pointer" onclick="openDetail(\''+r.id+'\')">'+
+    '<div class="rec-top"><span class="rec-cat" style="background:'+c.bg+';color:'+c.c+'">'+c.i+' '+r.cat+'</span><span class="rec-time">'+r.time+' ›</span></div>'+
     (r.title?'<div class="rec-title">'+esc(r.title)+'</div>':'')+
     (r.detail?'<div class="rec-detail">'+esc(r.detail)+'</div>':'')+
     (meta?'<div class="rec-meta">'+meta+'</div>':'')+photos+
-    '<div class="rec-actions"><button class="rec-act rec-edit" onclick="startEdit(\''+r.id+'\')">✏️ 수정</button>'+
-    '<button class="rec-act rec-del" onclick="delRec(\''+r.id+'\')">🗑 삭제</button></div></div>';
+    '<div class="rec-actions"><button class="rec-act rec-edit" onclick="event.stopPropagation();startEdit(\''+r.id+'\')">✏️ 수정</button>'+
+    '<button class="rec-act rec-del" onclick="event.stopPropagation();delRec(\''+r.id+'\')">🗑 삭제</button></div></div>';
 }
+/* ===== 상세 보기 ===== */
+function openDetail(id){
+  var r=getRecords().filter(function(x){return x.id===id;})[0];if(!r)return;
+  var c=catOf(r.cat);
+  var meta='';
+  if(r.who)meta+='<span>👤 <b>'+esc(r.who)+'</b></span>';
+  if(r.amount)meta+='<span>💰 <b>'+won(r.amount)+'원</b></span>';
+  var photosHtml='';
+  if(r.photos&&r.photos.length){
+    photosHtml='<div class="detail-photos">'+r.photos.map(function(p){return '<img src="'+p+'" onclick="showImg(this.src)">';}).join('')+'</div>';
+  } else if(r.photoIds&&r.photoIds.length){
+    photosHtml='<div class="detail-photos" data-photoids="'+r.photoIds.join(',')+'">'+r.photoIds.map(function(){return '<div class="ph-load">사진 불러오는 중…</div>';}).join('')+'</div>';
+  }
+  $('detailCard').innerHTML=
+    '<span class="detail-cat" style="background:'+c.bg+';color:'+c.c+'">'+c.i+' '+r.cat+'</span>'+
+    '<h2>'+(esc(r.title)||'(제목 없음)')+'</h2>'+
+    '<div class="detail-when">'+fmtDate(r.date)+' · '+r.time+'</div>'+
+    (meta?'<div class="detail-meta" style="margin-top:12px">'+meta+'</div>':'')+
+    (r.detail?'<div class="detail-body">'+esc(r.detail)+'</div>':'')+
+    photosHtml+
+    '<div class="btn-row" style="margin-top:18px">'+
+      '<button class="btn btn-ghost" onclick="closeDetail();startEdit(\''+r.id+'\')">✏️ 수정</button>'+
+      '<button class="btn btn-ghost" style="color:#EF4444" onclick="if(confirm(\'삭제할까요?\')){realDel(\''+r.id+'\');closeDetail();}">🗑 삭제</button>'+
+    '</div>'+
+    '<button class="btn btn-primary" onclick="closeDetail()">닫기</button>';
+  $('detailBg').classList.add('open');
+  var holder=$('detailCard').querySelector('.detail-photos[data-photoids]');
+  if(holder){
+    var ids=holder.getAttribute('data-photoids').split(',');holder.removeAttribute('data-photoids');
+    ids.forEach(function(pid,idx){fetchPhoto(pid).then(function(d){
+      if(d&&holder.children[idx]){var im=document.createElement('img');im.src=d;im.onclick=function(){showImg(d);};holder.replaceChild(im,holder.children[idx]);}
+    });});
+  }
+}
+function closeDetail(){$('detailBg').classList.remove('open');}
 function delRec(id){
   if(!confirm('이 기록을 삭제할까요?'))return;
+  realDel(id);
+}
+function realDel(id){
   var records=getRecords();
   var r=records.filter(function(x){return x.id===id;})[0];
   setRecords(records.filter(function(x){return x.id!==id;}));
-  // 클라우드 삭제
   fbDelete(COL,id);
   if(r&&r.photoIds)r.photoIds.forEach(function(pid){fbDelete(COL_PHOTO,pid);});
-  renderList();doSearch&&($('searchArea').innerHTML='<div class="empty">검색어를 입력하세요</div>');
+  renderList();
   toast('삭제됨');
 }
 /* 클라우드 전용 사진 lazy 로딩 */
