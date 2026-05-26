@@ -112,7 +112,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 .ed-hint{color:#7d8b99;font-size:11px;line-height:1.5;text-align:center;margin-top:6px}
 .ed-loading{color:#9fb8cf;font-size:14px;text-align:center;padding:40px}
 /* 진단창 */
-#dbg{display:none;position:fixed;left:6px;right:6px;bottom:6px;max-height:36vh;overflow:auto;background:rgba(8,12,18,.95);color:#7CFC9A;font:11px/1.45 monospace;padding:10px 12px;border-radius:10px;z-index:400;white-space:pre-wrap;border:1px solid #2a3a4a}
+#dbg{display:none;position:fixed;left:6px;right:6px;top:44px;max-height:32vh;overflow:auto;background:rgba(8,12,18,.95);color:#7CFC9A;font:11px/1.45 monospace;padding:10px 12px;border-radius:10px;z-index:400;white-space:pre-wrap;border:1px solid #2a3a4a}
 #dbgBtn{position:fixed;right:8px;top:8px;z-index:401;background:rgba(0,0,0,.3);color:#fff;border:0;border-radius:8px;padding:4px 9px;font-size:11px;cursor:pointer}
 </style>
 </head>
@@ -121,7 +121,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v18</b></span></div>
+      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v19</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="./index.html">🏠 홈</a>
@@ -556,7 +556,7 @@ $("edSave").addEventListener("click",async()=>{
       $("edTitle").textContent=`새 사진 (${edIndex+1}/${edQueue.length})`;
       $("edSave").textContent=(edIndex===edQueue.length-1)?"저장":"다음";
       loadEditor(edQueue[edIndex]);
-    }else{ closeEditor(); openAddModal(edQueue); }
+    }else{ const finalQueue=edQueue.slice(); closeEditor(); openAddModal(finalQueue); }
   }else{
     const it=items.find(i=>i.id===curViewId);
     const nit={ id:genId(), name:((it&&it.name)||todayStr())+" (표시)", cat:(it&&it.cat)||curCat, memo:(it&&it.memo)||"", img:out, ts:Date.now() };
