@@ -138,7 +138,7 @@ textarea{resize:vertical;min-height:74px;}
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v3</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v5</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -407,47 +407,55 @@ function onPhotoInput(ev){
   ev.target.value='';            // 파일 참조 잡은 뒤 초기화(순서 중요)
   if(!list.length){setPhotoStatus('');return;}
   setPhotoStatus(list.length>1?(list.length+'장 처리 중…'):'사진 읽는 중…');
-  var i=0,ok=0;
+  var i=0,ok=0,lastErr='';
   (function next(){
     if(i>=list.length){
-      setPhotoStatus(ok?('✅ 사진 '+ok+'장 추가됨 (총 '+pendingPhotos.length+'장)'):'⚠️ 추가된 사진이 없어요');
+      if(ok)setPhotoStatus('✅ 사진 '+ok+'장 추가됨 (총 '+pendingPhotos.length+'장)');
+      else setPhotoStatus('⚠️ 추가 실패: '+(lastErr||'알 수 없는 오류')+' — 진단 탭 확인');
       return;
     }
     var f=list[i++];
     readAndCompress(f).then(function(data){pendingPhotos.push(data);ok++;renderPending();
       setPhotoStatus('처리 중… ('+i+'/'+list.length+')');next();})
-    .catch(function(e){logErr('사진 첨부 실패: '+e.message);setPhotoStatus('⚠️ '+e.message);next();});
+    .catch(function(e){lastErr=e.message;logErr('사진 첨부 실패: '+e.message+' [type='+(f.type||'없음')+', size='+(f.size||0)+']');next();});
   })();
 }
 function readAndCompress(file){
   return new Promise(function(resolve,reject){
-    if(file.type&&file.type.indexOf('image')<0){reject(new Error('이미지 파일이 아니에요'));return;}
+    var typeInfo=' ('+(file.type||'형식정보없음')+', '+Math.round((file.size||0)/1024)+'KB)';
     var done=false;
-    var timer=setTimeout(function(){if(!done){done=true;reject(new Error('사진 처리 지연 — 다른 사진으로 시도'));}},12000);
+    var timer=setTimeout(function(){if(!done){done=true;reject(new Error('처리 지연'+typeInfo));}},15000);
     function finish(data){if(done)return;done=true;clearTimeout(timer);resolve(data);}
-    function fail(msg){if(done)return;done=true;clearTimeout(timer);reject(new Error(msg));}
+    function fail(msg){if(done)return;done=true;clearTimeout(timer);reject(new Error(msg+typeInfo));}
 
-    // 1순위) createImageBitmap — 안드로이드 크롬에서 가장 안정적으로 디코드됨
-    if(window.createImageBitmap){
-      createImageBitmap(file).then(function(bmp){
-        try{finish(drawToJpeg(bmp,bmp.width,bmp.height,1600,0.6));}catch(e){fallbackReader();}
-      }).catch(function(){fallbackReader();});
-    } else { fallbackReader(); }
+    var triedBitmap=false,triedReader=false;
 
-    // 2순위) FileReader → Image — 아이폰/대부분의 브라우저
-    function fallbackReader(){
+    // 1순위) FileReader → Image (가장 호환성 높음, 대부분 기기 OK)
+    tryReader();
+    function tryReader(){
+      triedReader=true;
       var reader=new FileReader();
-      reader.onerror=function(){fail('파일 읽기 실패');};
+      reader.onerror=function(){tryBitmap();};
       reader.onload=function(e){
         var img=new Image();
         img.onload=function(){
           try{finish(drawToJpeg(img,img.naturalWidth||img.width,img.naturalHeight||img.height,1600,0.6));}
-          catch(err){fail('이미지 변환 실패');}
+          catch(err){tryBitmap();}
         };
-        img.onerror=function(){fail('이 사진 형식은 표시할 수 없어요 — 다른 사진으로 시도하세요');};
+        img.onerror=function(){tryBitmap();};   // HEIC 등 Image 디코드 실패 → 비트맵 시도
         img.src=e.target.result;
       };
-      reader.readAsDataURL(file);
+      try{reader.readAsDataURL(file);}catch(err){tryBitmap();}
+    }
+    // 2순위) createImageBitmap (안드로이드에서 Image가 실패한 HEIC도 종종 처리)
+    function tryBitmap(){
+      if(done)return;
+      if(triedBitmap||!window.createImageBitmap){ fail('이 사진 형식은 변환할 수 없어요'); return; }
+      triedBitmap=true;
+      createImageBitmap(file).then(function(bmp){
+        try{finish(drawToJpeg(bmp,bmp.width,bmp.height,1600,0.6));}
+        catch(e){fail('이미지 변환 실패');}
+      }).catch(function(){ fail('이 사진 형식은 변환할 수 없어요'); });
     }
   });
 }
@@ -514,7 +522,7 @@ function saveRecord(){
     odo:v.odo?Number(v.odo):null,liters:v.liters?Number(v.liters):null,
     date:$('f-date').value||new Date().toISOString().slice(0,10),
     time:$('f-time').value||new Date().toTimeString().slice(0,5),
-    photos:pendingPhotos.slice(),photoIds:photoIds,
+    photoIds:photoIds,   // 사진은 클라우드에만 저장 (브라우저 용량 절약)
     created:editingId?(records.filter(function(x){return x.id===id;})[0]||{}).created||new Date().toISOString():new Date().toISOString(),
     updated:new Date().toISOString()
   };
@@ -522,7 +530,8 @@ function saveRecord(){
   computeCar(rec,records);   // 차계부: 직전 주유와 비교해 주행거리·연비 자동계산
   records.unshift(rec);setRecords(records);
   fbPush(rec);
-  pendingPhotos.forEach(function(p,i){fbPushPhoto(id+'_'+i,p);});
+  // 사진은 클라우드 업로드 + 화면 캐시(photoMem)에만, localStorage엔 저장 안 함
+  pendingPhotos.forEach(function(p,i){var pid=id+'_'+i;photoMem[pid]=p;fbPushPhoto(pid,p);});
   toast(editingId?'✏️ 수정됨':'✅ 저장됨');
   cancelEdit();
 }
@@ -801,6 +810,18 @@ function clearErrors(){localStorage.removeItem(ERR_KEY);toast('에러 기록 삭
     var hash=decodeURIComponent((location.hash||'').replace('#',''));
     if(hash&&catOf(hash).k===hash)selectedCat=hash;
     renderCats();renderForm({});renderPending();setApiBtn();
+    // 용량 절약: localStorage에 남아있는 사진 원본 데이터 제거 (사진은 클라우드에 있음)
+    try{
+      var recs=getRecords(),changed=false;
+      recs.forEach(function(r){
+        if(r.photos&&r.photos.length){
+          if(!r.photoIds||!r.photoIds.length){r.photoIds=r.photos.map(function(_,i){return r.id+'_'+i;});}
+          r.photos.forEach(function(p,i){var pid=r.id+'_'+i;if(!photoMem[pid])photoMem[pid]=p;}); // 화면 표시용 캐시
+          delete r.photos;changed=true;
+        }
+      });
+      if(changed)setRecords(recs);
+    }catch(e){logErr('사진 정리 실패: '+e.message);}
     $('camInput').onchange=onPhotoInput;
     $('pickInput').onchange=onPhotoInput;
     pushMsg('ai','안녕하세요! 기록을 남기면 "지난주에 뭐 샀지?" 같은 질문에 답해드려요.');
