@@ -118,7 +118,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v21</b></span></div>
+      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v22</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="./index.html">🏠 홈</a>
@@ -143,6 +143,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 </div>
 
 <div class="fab">
+  <button class="fbtn dbgfab" id="dbgBtn" style="height:38px;font-size:12px;background:#fff;color:#8893a1;border:1px solid #e4ebf2;box-shadow:0 1px 6px rgba(0,0,0,.08)">🐞 진단</button>
   <button class="fbtn pick" id="fabPick">🖼 사진에서</button>
   <button class="fbtn cam" id="fabCam">📷 사진 추가</button>
 </div>
@@ -222,6 +223,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="dbg" style="display:none;position:fixed;left:6px;right:6px;top:44px;max-height:34vh;overflow:auto;background:rgba(8,12,18,.95);color:#7CFC9A;font:11px/1.45 monospace;padding:10px 12px;border-radius:10px;z-index:400;white-space:pre-wrap;border:1px solid #2a3a4a"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -231,8 +233,11 @@ if(typeof fabric==="undefined"){ document.write('<scr'+'ipt src="https://unpkg.c
 </script>
 <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <script>
-/* dlog: 진단 제거됨 (무동작) */
-function dlog(){}
+/* 진단 */
+let DBG=false;
+function dlog(m){ try{ const p=document.getElementById("dbg"); if(!p)return; p.textContent+=("["+new Date().toLocaleTimeString().slice(0,8)+"] "+m+"\n"); p.scrollTop=p.scrollHeight; }catch(e){} }
+window.addEventListener("error",e=>dlog("⚠️오류: "+(e.message||"")+" @줄"+(e.lineno||"?")));
+window.addEventListener("unhandledrejection",e=>dlog("⚠️비동기: "+((e.reason&&e.reason.message)||e.reason||"")));
 
 /* ===================== 설정 ===================== */
 const firebaseConfig={ apiKey:"AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY", authDomain:"my-system-25497.firebaseapp.com", projectId:"my-system-25497", storageBucket:"my-system-25497.firebasestorage.app" };
@@ -401,15 +406,17 @@ function clampZoom(){
 }
 (function setupZoom(){
   const wrap=document.querySelector(".vimgwrap");
+  if(!wrap){ dlog("⚠️줌 setup 실패: vimgwrap 없음"); return; }
+  dlog("줌 setup OK");
   let mode=null;            // "pan" | "pinch"
   let startX=0,startY=0, baseX=0,baseY=0;
   let startDist=0, baseScale=1;
   let lastTap=0;
 
   function dist(t){ const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.hypot(dx,dy); }
-  function mid(t){ return { x:(t[0].clientX+t[1].clientX)/2, y:(t[0].clientY+t[1].clientY)/2 }; }
 
   wrap.addEventListener("touchstart",e=>{
+    if(DBG) dlog("줌 touchstart 손가락="+e.touches.length+" scale="+zoom.scale.toFixed(2));
     if(e.touches.length===2){
       mode="pinch"; startDist=dist(e.touches); baseScale=zoom.scale;
       e.preventDefault();
@@ -419,6 +426,7 @@ function clampZoom(){
       if(now-lastTap<300){
         zoom.scale = zoom.scale>1 ? 1 : 2.5;
         zoom.x=0; zoom.y=0; clampZoom(); applyZoom();
+        if(DBG) dlog("더블탭 → scale="+zoom.scale);
         lastTap=0; mode=null; return;
       }
       lastTap=now;
@@ -629,6 +637,7 @@ $("btnExport").addEventListener("click",()=>{
   document.body.appendChild(a); a.click(); a.remove(); toast("백업 파일을 저장했어요");
 });
 $("searchInput").addEventListener("input",render);
+$("dbgBtn").addEventListener("click",()=>{ DBG=!DBG; const p=$("dbg"); p.style.display=DBG?"block":"none"; if(DBG)dlog("진단 ON · UA="+navigator.userAgent.slice(0,60)+" · fabric="+(typeof fabric!=="undefined")+" · zoom함수="+(typeof applyZoom==="function")); });
 document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>setTab(t.dataset.cat)));
 ["addOverlay","editOverlay"].forEach(id=>$(id).addEventListener("click",e=>{ if(e.target.id===id)$(id).classList.remove("show"); }));
 
