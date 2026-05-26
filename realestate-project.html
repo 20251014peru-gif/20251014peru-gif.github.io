@@ -30,6 +30,19 @@
   header.topbar h1{font-size:17px; margin:0; font-weight:700; letter-spacing:-.3px;}
   header.topbar .home{margin-left:auto; font-size:13px; color:#dce6dc; text-decoration:none;
     border:1px solid rgba(255,255,255,.3); padding:6px 12px; border-radius:8px;}
+  header.topbar .diag{margin-left:auto; font-size:13px; color:#fff; background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.3); padding:6px 12px; border-radius:8px; cursor:pointer;}
+  header.topbar .diag + .home{margin-left:8px;}
+
+  /* 진단 결과 모달 */
+  #diagModal .modal{width:min(620px,100%);}
+  .diag-row{display:flex; gap:10px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .diag-row:last-child{border-bottom:none;}
+  .diag-ic{flex:0 0 22px; font-size:16px; text-align:center;}
+  .diag-name{font-weight:700;}
+  .diag-detail{color:var(--ink-soft); margin-top:2px; word-break:break-all;}
+  .diag-detail code{background:#f3f0e8; padding:1px 5px; border-radius:4px; font-size:12px;}
+  .diag-ok{color:#2f6b3a;} .diag-warn{color:var(--gold);} .diag-fail{color:var(--danger);}
 
   .wrap{display:flex; min-height:calc(100vh - 52px);}
   aside{width:262px; flex:0 0 262px; background:var(--panel);
@@ -219,6 +232,7 @@
 
 <header class="topbar">
   <h1>🏗️ 부동산 프로젝트 관리</h1>
+  <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
   <a class="home" href="index.html">← 홈</a>
 </header>
 
@@ -314,6 +328,19 @@
     <div class="modal-acts">
       <button class="btn btn-primary" id="entrySaveBtn" onclick="saveEntry()">저장</button>
       <button class="btn btn-line" onclick="closeModal('entryModal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 진단 모달 -->
+<div class="modal-bg" id="diagModal">
+  <div class="modal">
+    <h3>🩺 시스템 진단</h3>
+    <div class="hint" style="margin-bottom:10px">연결·설정 상태를 점검합니다. 문제가 있으면 빨간색으로 표시됩니다.</div>
+    <div id="diagResult"><div class="ai-empty">점검 중…</div></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="runDiagnostics()">↻ 다시 점검</button>
+      <button class="btn btn-line" onclick="closeModal('diagModal')">닫기</button>
     </div>
   </div>
 </div>
@@ -902,6 +929,78 @@ function jsstr(s){return String(s).replace(/'/g,"\\'");}
 function show(id,on){document.getElementById(id).style.display=on?'block':'none';}
 function openModal(id){document.getElementById(id).classList.add("open");}
 function closeModal(id){document.getElementById(id).classList.remove("open");}
+
+/* ===== 시스템 진단 =====
+   누르면 설정·연결을 실제로 점검해서 어디가 문제인지 보여준다. */
+async function runDiagnostics(){
+  openModal("diagModal");
+  const box=document.getElementById("diagResult");
+  const rows=[];
+  function row(state, name, detail){
+    const ic={ok:'✅',warn:'⚠️',fail:'❌',info:'ℹ️'}[state]||'•';
+    const cls={ok:'diag-ok',warn:'diag-warn',fail:'diag-fail'}[state]||'';
+    rows.push(`<div class="diag-row"><div class="diag-ic">${ic}</div>
+      <div><div class="diag-name ${cls}">${name}</div>${detail?`<div class="diag-detail">${detail}</div>`:''}</div></div>`);
+    box.innerHTML=rows.join("");
+  }
+  box.innerHTML='<div class="ai-empty">점검 중…</div>'; rows.length=0;
+
+  // 1) 인터넷
+  row(navigator.onLine?'ok':'fail', "인터넷 연결", navigator.onLine?'온라인':'오프라인 상태입니다');
+
+  // 2) Firebase 초기화 + 설정값
+  row('info', "Firebase 설정",
+    `프로젝트 <code>${esc(firebaseConfig.projectId)}</code><br>Storage 버킷 <code>${esc(firebaseConfig.storageBucket)}</code>`);
+
+  // 3) Firestore 읽기
+  try{
+    await db.collection(PROJECTS).limit(1).get();
+    row('ok', "Firestore 읽기", "정상 (데이터베이스 연결 OK)");
+  }catch(err){
+    row('fail', "Firestore 읽기 실패",
+      `${esc(err.code||'')} ${esc(err.message||err)}<br>→ 콘솔에서 Firestore 사용 설정 및 보안 규칙(read 허용)을 확인하세요.`);
+  }
+
+  // 4) Firestore 쓰기 (임시 문서 생성 후 삭제)
+  try{
+    const ref=await db.collection("_diag_test").add({t:Date.now()});
+    await ref.delete();
+    row('ok', "Firestore 쓰기", "정상 (기록 저장 가능)");
+  }catch(err){
+    row('fail', "Firestore 쓰기 실패",
+      `${esc(err.code||'')} ${esc(err.message||err)}<br>→ 보안 규칙에서 write가 막혀 있을 수 있습니다.`);
+  }
+
+  // 5) Storage 업로드 (작은 텍스트 파일 업로드 후 삭제) → 사진/PDF 첨부 가능 여부
+  try{
+    const path="_diag_test/"+Date.now()+".txt";
+    const ref=storage.ref(path);
+    await ref.putString("diag");
+    await ref.getDownloadURL();
+    await ref.delete();
+    row('ok', "Storage 업로드", "정상 (사진·PDF 첨부 가능)");
+  }catch(err){
+    const code=(err&&err.code)||'';
+    let tip="→ ";
+    if(String(code).includes('unauthorized')||String(code).includes('unauthenticated'))
+      tip+="Storage 보안 규칙에서 쓰기가 막혀 있습니다. 콘솔 Storage → Rules 확인.";
+    else if(String(code).includes('object-not-found')||String(code).includes('bucket'))
+      tip+="버킷 이름이 틀렸을 수 있습니다. 콘솔 Storage의 실제 버킷명과 코드의 storageBucket을 맞추세요 (.firebasestorage.app ↔ .appspot.com).";
+    else tip+="Storage가 활성화되지 않았거나 버킷명이 틀렸을 수 있습니다.";
+    row('fail', "Storage 업로드 실패", `${esc(code)} ${esc(err.message||err)}<br>${tip}`);
+  }
+
+  // 6) AI 키 보유 여부
+  const hasKey=!!localStorage.getItem('anthropic_key');
+  row(hasKey?'ok':'warn', "AI API 키",
+    hasKey? "이 브라우저에 저장됨 (AI 분석 사용 가능)" : "아직 없음 — AI 분석을 처음 누르면 입력하게 됩니다.");
+
+  // 7) 데이터 현황
+  row('info', "현재 데이터",
+    `프로젝트 ${projects.length}개 / 현재 프로젝트 기록 ${entries.length}건 · 업체 ${vendors.length}곳`);
+
+  row('info', "점검 완료", new Date().toLocaleString('ko-KR'));
+}
 
 /* ===== 오류 표시 ===== */
 function showError(where, err){
