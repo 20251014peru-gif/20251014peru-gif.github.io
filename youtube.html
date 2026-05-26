@@ -164,7 +164,7 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
     <div class="head-row">
       <div class="brand">
         <h1>사진 보관함</h1>
-        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v11</b></span>
+        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v12</b></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -283,6 +283,10 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
 
 <div class="toast" id="toast"></div>
 
+<!-- 디버그 패널 (문제 진단용) -->
+<div id="dbgPanel" style="display:none;position:fixed;left:6px;right:6px;bottom:6px;max-height:38vh;overflow:auto;background:rgba(10,14,20,.94);color:#7CFC9A;font:11px/1.45 monospace;padding:10px 12px;border-radius:10px;z-index:200;white-space:pre-wrap;border:1px solid #2a3a4a"></div>
+<button id="dbgToggle" style="position:fixed;right:8px;top:8px;z-index:201;background:rgba(0,0,0,.35);color:#fff;border:0;border-radius:8px;padding:4px 9px;font-size:11px">🐞</button>
+
 <!-- 그림·표시 편집기 -->
 <div class="markup" id="markup">
   <div class="mk-top">
@@ -364,6 +368,23 @@ const $ = id => document.getElementById(id);
 const esc = s => (s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2600); }
 
+/* ===== 디버그 ===== */
+let _dbgOn=false;
+function dlog(msg){
+  try{
+    const p=$("dbgPanel");
+    const t=new Date().toLocaleTimeString();
+    p.textContent += `[${t}] ${msg}\n`;
+    p.scrollTop=p.scrollHeight;
+  }catch(_){}
+}
+$("dbgToggle").addEventListener("click",()=>{
+  _dbgOn=!_dbgOn; $("dbgPanel").style.display=_dbgOn?"block":"none";
+  if(_dbgOn) dlog("진단 시작. UA="+navigator.userAgent.slice(0,60));
+});
+window.addEventListener("error",e=>{ dlog("⚠️오류: "+(e.message||"")+" @"+(e.lineno||"?")); });
+window.addEventListener("unhandledrejection",e=>{ dlog("⚠️비동기오류: "+((e.reason&&e.reason.message)||e.reason||"")); });
+
 function todayStr(){
   const d=new Date();
   const p=n=>String(n).padStart(2,"0");
@@ -378,45 +399,50 @@ function fmtDate(ts){
 /* ===== 사진 압축 ===== */
 // 반환: { url:dataURL, canvas:압축된 캔버스 }  편집화면은 이 캔버스를 바로 그림
 async function compressImage(file, maxDim=MAXDIM, quality=QUALITY){
+  dlog(`압축시작 ${file.name||"무명"} ${(file.size/1048576).toFixed(1)}MB ${file.type||"형식?"}`);
   // 1순위: createImageBitmap (네이티브 디코드, 가장 안정적)
   try{
     if(window.createImageBitmap){
       const bmp=await createImageBitmap(file);
       let w=bmp.width, h=bmp.height;
+      dlog(`bitmap 디코드 OK ${w}x${h}`);
       if(w>h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } }
       else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
       const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
       cv.getContext("2d").drawImage(bmp,0,0,w,h);
       if(bmp.close) bmp.close();
-      return { url:cv.toDataURL("image/jpeg",quality), canvas:cv };
+      const url=cv.toDataURL("image/jpeg",quality);
+      dlog(`압축완료(bitmap) ${w}x${h} url=${(url.length/1024).toFixed(0)}KB`);
+      return { url, canvas:cv };
     }
-  }catch(err){ /* 다음 방법으로 */ }
+  }catch(err){ dlog("bitmap 실패→fallback: "+(err&&err.message||err)); }
 
   // 2순위: FileReader + Image (구형 브라우저)
   return new Promise((resolve,reject)=>{
     const reader=new FileReader();
     let done=false;
-    const fin=(url,cv)=>{ if(!done){ done=true; resolve({url, canvas:cv||null}); } };
+    const fin=(url,cv)=>{ if(!done){ done=true; dlog("압축완료(fallback) canvas="+(cv?"O":"X")); resolve({url, canvas:cv||null}); } };
     reader.onload=e=>{
       const raw=e.target.result;
-      const timer=setTimeout(()=>fin(raw,null), 15000);
+      const timer=setTimeout(()=>{ dlog("⏱fallback 타임아웃"); fin(raw,null); }, 15000);
       const img=new Image();
       img.onload=()=>{
         clearTimeout(timer);
         try{
           let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+          dlog(`img 디코드 OK ${w}x${h}`);
           if(!w||!h){ fin(raw,null); return; }
           if(w>h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } }
           else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
           const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
           cv.getContext("2d").drawImage(img,0,0,w,h);
           fin(cv.toDataURL("image/jpeg",quality), cv);
-        }catch(err){ fin(raw,null); }
+        }catch(err){ dlog("fallback 그리기 실패: "+(err&&err.message)); fin(raw,null); }
       };
-      img.onerror=()=>{ clearTimeout(timer); fin(raw,null); };
+      img.onerror=()=>{ clearTimeout(timer); dlog("img 디코드 실패"); fin(raw,null); };
       img.src=raw;
     };
-    reader.onerror=()=>reject(new Error("파일 읽기 실패"));
+    reader.onerror=()=>{ dlog("파일읽기 실패"); reject(new Error("파일 읽기 실패")); };
     try{ reader.readAsDataURL(file); }catch(err){ reject(new Error("readAsDataURL 실패")); }
   });
 }
@@ -617,6 +643,7 @@ mk.ctx = mk.canvas.getContext("2d");
 // 캔버스에 사진 띄우고 편집화면 열기
 function loadCanvasImage(dataUrl, src, cb){
   const show=(drawable, w, h)=>{
+    dlog(`편집화면 열기 ${w}x${h} type=${drawable&&drawable.tagName||"?"}`);
     mk.baseImg=drawable;
     mk.strokes=[];
     mk.selected=null;
@@ -628,22 +655,28 @@ function loadCanvasImage(dataUrl, src, cb){
     if(cb) cb();
   };
   // 1) 압축 캔버스가 있으면 그대로 사용 (가장 확실, 재로딩 없음)
-  if(src && src.tagName==="CANVAS" && src.width){ show(src, src.width, src.height); return; }
+  if(src && src.tagName==="CANVAS" && src.width){ dlog("경로1: 캔버스 직접"); show(src, src.width, src.height); return; }
   // 2) 이미 로드된 이미지
-  if(src && (src.complete || src.naturalWidth)){ show(src, src.naturalWidth||src.width, src.naturalHeight||src.height); return; }
+  if(src && (src.complete || src.naturalWidth)){ dlog("경로2: 로드된 이미지"); show(src, src.naturalWidth||src.width, src.naturalHeight||src.height); return; }
   // 3) dataURL을 캔버스로 변환해서 사용 (기존 사진 표시용)
-  if(!dataUrl){ toast("사진 데이터가 없어요"); return; }
+  if(!dataUrl){ dlog("경로3 실패: 데이터 없음"); toast("사진 데이터가 없어요"); return; }
+  dlog("경로3: dataURL 재로딩 시작");
   const img=new Image();
   let opened=false;
-  const guard=setTimeout(()=>{ if(!opened){ opened=true; toast("사진 여는 데 시간이 걸려요. 다시 시도해주세요"); } }, 10000);
+  const guard=setTimeout(()=>{ if(!opened){ opened=true; dlog("⏱경로3 타임아웃"); toast("사진 여는 데 시간이 걸려요. 다시 시도해주세요"); } }, 10000);
   img.onload=()=>{
     if(opened) return; opened=true; clearTimeout(guard);
+    dlog("경로3 onload OK");
     try{
+      let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+      const LIM=2048;
+      if(w>h){ if(w>LIM){ h=Math.round(h*LIM/w); w=LIM; } }
+      else { if(h>LIM){ w=Math.round(w*LIM/h); h=LIM; } }
       const cv=document.createElement("canvas");
-      cv.width=img.naturalWidth||img.width; cv.height=img.naturalHeight||img.height;
-      cv.getContext("2d").drawImage(img,0,0);
-      show(cv, cv.width, cv.height);
-    }catch(err){ show(img, img.naturalWidth||img.width, img.naturalHeight||img.height); }
+      cv.width=w; cv.height=h;
+      cv.getContext("2d").drawImage(img,0,0,w,h);
+      show(cv, w, h);
+    }catch(err){ dlog("경로3 캔버스변환 실패→이미지직접"); show(img, img.naturalWidth||img.width, img.naturalHeight||img.height); }
   };
   img.onerror=()=>{ clearTimeout(guard); toast("사진을 화면에 못 띄웠어요"); };
   img.src=dataUrl;
@@ -817,6 +850,7 @@ function mkDown(e){
   if(e.preventDefault) e.preventDefault();
   if($("mkTextBox").classList.contains("show")) return; // 입력창 떠있으면 캔버스 무시
   mk._rect=mk.canvas.getBoundingClientRect();   // 이번 드래그 동안 위치 캐시
+  if(_dbgOn) dlog(`터치down tool=${mk.tool} scale=${mk.scale.toFixed(2)}`);
   const p=evtPos(e);
   if(mk.tool==="move"){
     // 이미 선택된 도형의 핸들을 먼저 확인 (끝점/모서리 끌기)
@@ -898,21 +932,30 @@ $("mkTextOk").addEventListener("click",()=>{
 });
 $("mkTextInput").addEventListener("keydown",ev=>{ if(ev.key==="Enter") $("mkTextOk").click(); });
 $("mkTextCancel").addEventListener("click",()=>{ $("mkTextBox").classList.remove("show"); pendingTextPos=null; });
-// Pointer 이벤트로 통일 — 마우스·터치·펜 모두 한 경로로 처리(이중 발생 없음)
-if(window.PointerEvent){
-  mk.canvas.addEventListener("pointerdown",e=>{ try{mk.canvas.setPointerCapture(e.pointerId);}catch(_){} mkDown(e); });
-  mk.canvas.addEventListener("pointermove",mkMove);
-  mk.canvas.addEventListener("pointerup",mkUp);
-  mk.canvas.addEventListener("pointercancel",mkUp);
-}else{
-  // 구형 폴백
-  mk.canvas.addEventListener("mousedown",mkDown);
-  window.addEventListener("mousemove",mkMove);
-  window.addEventListener("mouseup",mkUp);
-  mk.canvas.addEventListener("touchstart",e=>{e.preventDefault();mkDown(e.touches[0]);},{passive:false});
-  mk.canvas.addEventListener("touchmove",e=>{e.preventDefault();mkMove(e.touches[0]);},{passive:false});
-  mk.canvas.addEventListener("touchend",e=>mkUp(e.changedTouches[0]));
-}
+// 터치/마우스 통합 — 한 번의 동작이 한 번만 처리되도록 잠금
+let _inputLock=false;
+function lockThen(fn){ return function(e){ fn(e); }; }
+
+// 터치 (모바일 주 경로)
+mk.canvas.addEventListener("touchstart",e=>{
+  if(e.cancelable) e.preventDefault();
+  _inputLock=true;                       // 터치 중엔 마우스 이벤트 무시
+  if(e.touches[0]) mkDown(e.touches[0]);
+},{passive:false});
+mk.canvas.addEventListener("touchmove",e=>{
+  if(e.cancelable) e.preventDefault();
+  if(e.touches[0]) mkMove(e.touches[0]);
+},{passive:false});
+mk.canvas.addEventListener("touchend",e=>{
+  if(e.changedTouches[0]) mkUp(e.changedTouches[0]);
+  setTimeout(()=>{_inputLock=false;},400);
+});
+mk.canvas.addEventListener("touchcancel",e=>{ mkUp(e.changedTouches&&e.changedTouches[0]||{}); _inputLock=false; });
+
+// 마우스 (PC) — 터치 중이면 무시
+mk.canvas.addEventListener("mousedown",e=>{ if(_inputLock)return; mkDown(e); });
+window.addEventListener("mousemove",e=>{ if(_inputLock)return; if(mk.dragging||mk.drawing) mkMove(e); });
+window.addEventListener("mouseup",e=>{ if(_inputLock)return; mkUp(e); });
 
 /* 도구·색·굵기 선택 */
 document.querySelectorAll(".mk-tool").forEach(b=>b.addEventListener("click",()=>{
