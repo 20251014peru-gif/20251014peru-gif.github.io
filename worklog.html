@@ -75,6 +75,8 @@ textarea{resize:vertical;min-height:64px}
 .chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 .filt-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .filt-row select{flex:1;min-width:140px}
+.filt-row input[type=date]{flex:1;min-width:130px;background:#fbfdff}
+.rng-sep{align-self:center;color:var(--ink-soft);font-size:13px;flex:0 0 auto}
 .photo-btns{display:flex;gap:8px;flex-wrap:wrap}
 .photo-btn{display:inline-flex;align-items:center;gap:6px;background:var(--mint-soft);color:#2c7d62;border:1px dashed var(--mint);border-radius:11px;padding:9px 13px;font-size:13.5px;font-weight:600;cursor:pointer}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -153,6 +155,9 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
 .cal-cell .wtitle .d{width:6px;height:6px;border-radius:50%;flex:0 0 auto;margin-top:3px}
 .cal-cell .wtitle .wt{flex:1;min-width:0;word-break:break-word;white-space:normal}
 .cal-cell .otitle{font-size:10px;line-height:1.35;color:var(--ink-soft);word-break:break-word;white-space:normal;width:100%}
+.cal-cell .cgrp{width:100%;margin-top:3px;padding-top:3px;border-top:1px dashed var(--line)}
+.cal-cell .cgrp:first-of-type{margin-top:1px;border-top:none;padding-top:0}
+.cal-cell .cgrp-h{font-size:9px;font-weight:800;letter-spacing:.2px;margin-bottom:1px;display:flex;align-items:center;gap:2px}
 .cal-cell .vac{font-size:10px;font-weight:700;color:#9a6f17;background:var(--gold-soft);border-radius:6px;padding:1px 5px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 .cal-cell .omark{font-size:10px;color:var(--ink-soft);margin-top:auto}
 .day-detail{margin-top:18px}
@@ -198,6 +203,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
   #printArea.calmode .pw{font-size:9px;line-height:1.35;word-break:break-all}
   #printArea.calmode .pv{font-size:9px;color:#9a6f17;font-weight:700;word-break:break-all}
   #printArea.calmode .po{font-size:8.7px;color:#444;line-height:1.3;word-break:break-all}
+  #printArea.calmode .pgh{font-size:8.5px;font-weight:800;margin-top:2px}
 }
 @media (max-width:560px){ .grid{grid-template-columns:1fr} .brand h1{font-size:22px} .cal-cell{min-height:64px} }
 </style>
@@ -206,7 +212,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4">v8</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4">v9</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -238,19 +244,23 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
         </div>
       </div>
       <div class="chips" id="statusChips"></div>
-      <div class="chips" id="wkDateChips"></div>
       <div class="filt-row">
+        <input type="date" id="wkFrom" title="시작일">
+        <span style="align-self:center;color:var(--ink-soft);font-size:13px;flex:0 0 auto">~</span>
+        <input type="date" id="wkTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="wkDateClear" style="flex:0 0 auto">기간 해제</button>
+        <select id="floorFilter"></select>
         <select id="locFilter"></select>
         <select id="fieldFilter"></select>
       </div>
-      <input type="text" id="wkSearch" class="search" placeholder="🔍 검색 — 업무내역·위치·세부내용·자재">
+      <input type="text" id="wkSearch" class="search" placeholder="🔍 검색 — 업무내역·해당층·위치·세부내용·자재">
       <div class="table-wrap">
         <table class="rec"><thead><tr>
-          <th>날짜</th><th>완료</th><th>위치</th><th>업무내역</th><th>세부내용</th><th>분야</th><th>자재</th>
+          <th>날짜</th><th>완료</th><th>해당층</th><th>위치</th><th>업무내역</th><th>세부내용</th><th>분야</th><th>자재</th>
           <th style="text-align:right">비용</th><th>개선사항</th><th></th>
         </tr></thead><tbody id="wkBody"></tbody><tfoot id="wkFoot"></tfoot></table>
       </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px"><span id="wkCount"></span> · 엑셀 복사: 위치업무내역_세부내용_자재_비용 (빈 항목 제외)</p>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px"><span id="wkCount"></span> · 엑셀 복사: 해당층 위치 업무내역_세부내용_자재_비용 (빈 항목 제외)</p>
     </div>
   </section>
 
@@ -264,7 +274,10 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
         <input type="text" id="planInput" placeholder="할 일을 입력하고 Enter">
         <button class="btn btn-primary" id="planAdd">추가</button>
       </div>
-      <div class="chips" id="planDateChips"></div>
+      <div class="filt-row">
+        <input type="date" id="planFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="planTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="planRangeClear" style="flex:0 0 auto">기간 해제</button>
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <input type="text" id="planSearch" class="search" style="flex:1;margin:0" placeholder="🔍 계획 검색">
         <button class="btn btn-ghost btn-sm" id="btnPlanExcel">📋 엑셀 복사</button>
@@ -282,7 +295,10 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
           <button class="btn btn-ghost btn-sm" id="btnMemoExcel">📋 엑셀 복사</button>
         </div>
       </div>
-      <div class="chips" id="memoDateChips"></div>
+      <div class="filt-row">
+        <input type="date" id="memoFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="memoTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="memoRangeClear" style="flex:0 0 auto">기간 해제</button>
+      </div>
       <input type="text" id="memoSearch" class="search" placeholder="🔍 메모 검색">
       <div id="memoList"></div>
     </div>
@@ -297,14 +313,18 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
           <button class="btn btn-ghost btn-sm" id="btnCallExcel">📋 엑셀 복사</button>
         </div>
       </div>
-      <div class="plan-add"><input type="date" id="callDate" class="dt"><button class="btn btn-ghost btn-sm" id="callDateClear">전체</button></div>
+      <div class="chips" id="callDirChips"></div>
+      <div class="filt-row">
+        <input type="date" id="callFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="callTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="callRangeClear" style="flex:0 0 auto">기간 해제</button>
+      </div>
       <input type="text" id="callSearch" class="search" placeholder="🔍 통화 검색 — 상대·번호·내용">
       <div class="table-wrap">
         <table class="rec"><thead><tr>
           <th>날짜</th><th>시간</th><th>구분</th><th>상대</th><th>전화번호</th><th>통화내용</th><th>조치</th><th>완료</th><th></th>
         </tr></thead><tbody id="callBody"></tbody></table>
       </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">선택한 날짜의 통화만 복사됩니다 · 순서: 날짜·구분·상대·전화번호·통화내용·조치</p>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">선택한 기간의 통화만 복사됩니다 · 순서: 날짜·구분·상대·전화번호·통화내용·조치</p>
     </div>
   </section>
 
@@ -337,9 +357,17 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
         </div>
       </div>
       <p class="desc">회의 때 전달할 내용을 따로 모아 관리합니다.</p>
-      <div class="chips" id="delDateChips"></div>
+      <div class="filt-row">
+        <input type="date" id="delFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="delTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="delRangeClear" style="flex:0 0 auto">기간 해제</button>
+      </div>
       <input type="text" id="delSearch" class="search" placeholder="🔍 전달사항 검색">
-      <div id="delList"></div>
+      <div class="table-wrap">
+        <table class="rec"><thead><tr>
+          <th>날짜</th><th>제목</th><th>전달할 내용</th><th>완료</th><th></th>
+        </tr></thead><tbody id="delBody"></tbody></table>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">선택한 기간의 전달사항만 복사됩니다 · 순서: 날짜·제목·내용</p>
     </div>
   </section>
 
@@ -399,10 +427,11 @@ const COL = "worklog_entries";
 const STATUSES = ["미완료","진행중","완료"];
 const CALLDIR  = ["수신","발신"];
 const VTYPES   = ["년차휴가","오전반차","오후반차","병가","경조","기타"];
+const FLOORS   = ["","옥탑층","20층","19층","18층","17층","16층","15층","14층","13층","12층","11층","10층","9층","8층","7층","6층","5층","4층","3층","2층","1층","지하1층","지하2층","지하3층","지하4층","지하5층","지하6층"];
 const FIELDS = {
-  "시설": [{name:"전기",subs:["엘리베이터","카리프트"]}, "통신", {name:"기계",subs:["냉난방","누수"]}, "영선", "주차", "월간점검"],
+  "시설": [{name:"전기",subs:["엘리베이터","카리프트"]}, "통신", {name:"기계",subs:["냉난방","누수"]}, {name:"소방",subs:["소화전","스프링클러","감지기","수신기","펌프"]}, "영선", "주차", "주간점검", "월간점검", "협력업체점검"],
   "환경": ["청소","화단관리","은진"],
-  "행정/문서": ["품의서","전표","안내문","관리비"],
+  "행정/문서": ["품의서","전표","안내문","관리비","임대"],
   "기타": ["기타"]
 };
 const FIELD_GROUP={};
@@ -418,7 +447,8 @@ const SCHEMA={
   work:[
     {k:"date",label:"날짜",type:"date",req:true},
     {k:"status",label:"완료 상태",type:"status"},
-    {k:"loc",label:"위치 / 해당층",type:"text"},
+    {k:"floor",label:"해당층",type:"floor"},
+    {k:"loc",label:"위치 (수동 입력)",type:"text"},
     {k:"title",label:"업무내역",type:"text",full:true,req:true},
     {k:"detail",label:"세부내용",type:"textarea",full:true},
     {k:"field",label:"분야",type:"field"},
@@ -478,6 +508,7 @@ function datesBetween(start,end){
 const RANGES=["전체","오늘","어제","2일전","3일전","이번주","이번달"];
 function dayOffset(n){ const d=new Date(); d.setDate(d.getDate()-n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 function weekRange(){ const d=new Date(); const dow=(d.getDay()+6)%7; const mon=new Date(d); mon.setDate(d.getDate()-dow); const sun=new Date(mon); sun.setDate(mon.getDate()+6); const f=x=>`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`; return [f(mon),f(sun)]; }
+function inDateRange(d,from,to){ d=d||""; return (!from||d>=from)&&(!to||d<=to); }
 function inRange(dateStr, range){
   if(!range||range==="전체") return true;
   if(!dateStr) return false;
@@ -546,7 +577,19 @@ async function loadAll(){
 /* ===== 초기화 ===== */
 async function init(){
   $("planDate").value=todayStr();
-  $("callDate").value=todayStr();
+  $("planFrom").addEventListener("change",e=>{ planFrom=e.target.value; renderPlan(); });
+  $("planTo").addEventListener("change",e=>{ planTo=e.target.value; renderPlan(); });
+  $("planRangeClear").addEventListener("click",()=>{ planFrom=""; planTo=""; $("planFrom").value=""; $("planTo").value=""; renderPlan(); });
+  $("memoFrom").addEventListener("change",e=>{ memoFrom=e.target.value; renderMemo(); });
+  $("memoTo").addEventListener("change",e=>{ memoTo=e.target.value; renderMemo(); });
+  $("memoRangeClear").addEventListener("click",()=>{ memoFrom=""; memoTo=""; $("memoFrom").value=""; $("memoTo").value=""; renderMemo(); });
+  $("delFrom").addEventListener("change",e=>{ delFrom=e.target.value; renderDeliver(); });
+  $("delTo").addEventListener("change",e=>{ delTo=e.target.value; renderDeliver(); });
+  $("delRangeClear").addEventListener("click",()=>{ delFrom=""; delTo=""; $("delFrom").value=""; $("delTo").value=""; renderDeliver(); });
+  $("floorFilter").addEventListener("change",e=>{ floorFilter=e.target.value; renderWork(); });
+  $("wkFrom").addEventListener("change",e=>{ wkFrom=e.target.value; renderWork(); });
+  $("wkTo").addEventListener("change",e=>{ wkTo=e.target.value; renderWork(); });
+  $("wkDateClear").addEventListener("click",()=>{ wkFrom=""; wkTo=""; $("wkFrom").value=""; $("wkTo").value=""; renderWork(); });
   $("locFilter").addEventListener("change",e=>{ locFilter=e.target.value; renderWork(); });
   $("fieldFilter").addEventListener("change",e=>{ fieldFilter=e.target.value; renderWork(); });
   try{
@@ -588,6 +631,7 @@ function fieldHTML(f){
   else if(f.type==="select") inner=`<select id="m-${f.k}">${f.opts.map(o=>`<option>${o}</option>`).join("")}</select>`;
   else if(f.type==="status") inner=`<select id="m-${f.k}">${STATUSES.map(o=>`<option>${o}</option>`).join("")}</select>`;
   else if(f.type==="field") inner=`<select id="m-${f.k}">${fieldOptionsHTML()}</select>`;
+  else if(f.type==="floor") inner=`<select id="m-${f.k}">${FLOORS.map(o=>`<option value="${o}">${o===""?"(층 선택 안 함)":o}</option>`).join("")}</select>`;
   else { const t=f.type==="number"?"number":f.type==="date"?"date":f.type==="time"?"time":"text"; const im=f.type==="tel"?' inputmode="tel"':''; inner=`<input type="${t}" id="m-${f.k}"${im}>`; }
   const req=f.req?' <span class="req">*</span>':'';
   return `<div class="field ${f.full?"full":""}"><label>${f.label}${req}</label>${inner}</div>`;
@@ -647,15 +691,19 @@ function wireCards(scope){
 }
 
 /* ===== 업무 ===== */
-let statusFilter="전체", wkRange="전체", locFilter="전체", fieldFilter="전체";
+let statusFilter="전체", locFilter="전체", fieldFilter="전체", floorFilter="전체", wkFrom="", wkTo="";
 function renderStatusChips(){
   const opts=["전체",...STATUSES];
   $("statusChips").innerHTML=opts.map(o=>`<button class="chip ${o===statusFilter?"active":""}" data-s="${o}">${o}</button>`).join("");
   $("statusChips").querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{ statusFilter=b.dataset.s; renderStatusChips(); renderWork(); }));
 }
 function populateWorkFilters(){
+  const usedFloors=FLOORS.filter(f=>f && entries.some(e=>e.kind==="work"&&e.floor===f));
+  $("floorFilter").innerHTML=`<option value="전체">해당층 전체</option>`+usedFloors.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("");
+  if(floorFilter!=="전체" && !usedFloors.includes(floorFilter)) floorFilter="전체";
+  $("floorFilter").value=floorFilter;
   const locs=[...new Set(entries.filter(e=>e.kind==="work"&&e.loc).map(e=>e.loc))].sort();
-  $("locFilter").innerHTML=`<option value="전체">층/위치 전체</option>`+locs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join("");
+  $("locFilter").innerHTML=`<option value="전체">위치 전체</option>`+locs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join("");
   if(!locs.includes(locFilter)) locFilter="전체";
   $("locFilter").value=locFilter;
   $("fieldFilter").innerHTML=`<option value="전체">분야 전체</option>`+fieldOptionsHTML();
@@ -664,23 +712,25 @@ function populateWorkFilters(){
 function workList(){
   return entries.filter(e=>e.kind==="work"
     && (statusFilter==="전체"||e.status===statusFilter)
-    && inRange(e.date,wkRange)
+    && (!wkFrom || (e.date||"")>=wkFrom)
+    && (!wkTo || (e.date||"")<=wkTo)
     && (locFilter==="전체"||e.loc===locFilter)
+    && (floorFilter==="전체"||e.floor===floorFilter)
     && (fieldFilter==="전체"||e.field===fieldFilter)
     && matchObj(e,Q.work)).sort(byDateDesc);
 }
 function renderWork(){
-  renderDateChips("wkDateChips", wkRange, r=>{ wkRange=r; renderWork(); });
   populateWorkFilters();
   const body=$("wkBody"), foot=$("wkFoot");
   const all=entries.filter(e=>e.kind==="work");
   const list=workList();
-  const filterOn = Q.work.trim()||statusFilter!=="전체"||wkRange!=="전체"||locFilter!=="전체"||fieldFilter!=="전체";
+  const filterOn = Q.work.trim()||statusFilter!=="전체"||wkFrom||wkTo||locFilter!=="전체"||floorFilter!=="전체"||fieldFilter!=="전체";
   $("wkCount").textContent = filterOn ? `${list.length} / 전체 ${all.length}건` : `총 ${all.length}건`;
-  if(!list.length){ body.innerHTML=`<tr><td colspan="10" class="empty">${all.length?"조건에 맞는 업무가 없습니다.":"아직 입력된 업무가 없습니다."}</td></tr>`; foot.innerHTML=""; return; }
+  if(!list.length){ body.innerHTML=`<tr><td colspan="11" class="empty">${all.length?"조건에 맞는 업무가 없습니다.":"아직 입력된 업무가 없습니다."}</td></tr>`; foot.innerHTML=""; return; }
   body.innerHTML=list.map(en=>`<tr data-id="${en.id}">
     <td>${en.date||""}</td>
     <td><span class="st ${statusClass(en.status)}">${esc(en.status||"")}</span></td>
+    <td>${esc(en.floor||"")}</td>
     <td>${esc(en.loc||"")}</td>
     <td>${esc(en.title||"")}${(en.photos&&en.photos.length)?" 📷":""}</td>
     <td class="clip" title="${esc(en.detail||"")}">${esc(en.detail||"")}</td>
@@ -690,12 +740,12 @@ function renderWork(){
     <td class="clip" title="${esc(en.improve||"")}">${esc(en.improve||"")}</td>
     <td><button class="rowdel" data-del="${en.id}" title="삭제">🗑</button></td></tr>`).join("");
   const totalCost=list.reduce((s,en)=>s+(Number(en.cost)||0),0);
-  foot.innerHTML=`<tr><td colspan="7" style="background:#33567d;color:#fff;font-weight:700">합계 (${list.length}건)</td><td class="num" style="background:#33567d;color:#fff;font-weight:700">${totalCost?won(totalCost):""}</td><td colspan="2" style="background:#33567d"></td></tr>`;
+  foot.innerHTML=`<tr><td colspan="8" style="background:#33567d;color:#fff;font-weight:700">합계 (${list.length}건)</td><td class="num" style="background:#33567d;color:#fff;font-weight:700">${totalCost?won(totalCost):""}</td><td colspan="2" style="background:#33567d"></td></tr>`;
   body.querySelectorAll("tr[data-id]").forEach(tr=>tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openEditor("work",tr.dataset.id); }));
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); if(!confirm("이 업무를 삭제할까요?")) return; deleteRecord(b.dataset.del); renderAll(); toast("삭제되었습니다"); }));
 }
 function workCopyLine(en){
-  const head=((en.loc?en.loc+" ":"")+(en.title||"")).trim();
+  const head=((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim();
   const parts=[head, en.detail, en.material, (Number(en.cost)?won(en.cost):"")].map(x=>(x||"").toString().trim()).filter(Boolean);
   return cleanCell(parts.join("_"));
 }
@@ -713,7 +763,7 @@ $("btnBackup").addEventListener("click",()=>{
 });
 
 /* ===== 오늘계획 ===== */
-let planRange="전체";
+let planFrom="", planTo="";
 $("planAdd").addEventListener("click",addPlan);
 $("planInput").addEventListener("keydown",e=>{ if(e.key==="Enter") addPlan(); });
 function addPlan(){
@@ -725,7 +775,7 @@ function togglePlanDone(id){
   const p=entries.find(x=>x.id===id); if(!p) return;
   const newDone=!p.done;
   if(newDone){
-    const w=addRecord({ kind:"work", date:p.date||todayStr(), status:"완료", loc:"", title:p.text||"", detail:"", field:"기타", material:"", cost:0, improve:"", photos:[], fromPlan:true, createdAt:Date.now() });
+    const w=addRecord({ kind:"work", date:p.date||todayStr(), status:"완료", floor:"", loc:"", title:p.text||"", detail:"", field:"기타", material:"", cost:0, improve:"", photos:[], fromPlan:true, createdAt:Date.now() });
     updateRecord(id,{done:true, loggedWorkId:w.id});
     toast("완료 — 업무일지에 기록됨");
   } else {
@@ -742,9 +792,8 @@ function planItemHTML(p){
     <button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div>`;
 }
 function renderPlan(){
-  renderDateChips("planDateChips", planRange, r=>{ planRange=r; renderPlan(); });
   const box=$("planList");
-  const all=entries.filter(e=>e.kind==="plan" && inRange(e.date,planRange) && matchObj(e,Q.plan));
+  const all=entries.filter(e=>e.kind==="plan" && inDateRange(e.date,planFrom,planTo) && matchObj(e,Q.plan));
   if(!all.length){ box.innerHTML=`<div class="empty">할 일을 추가해 보세요.</div>`; return; }
   const undone=all.filter(p=>!p.done).sort(byDateDesc);
   const done=all.filter(p=>p.done).sort(byDateDesc);
@@ -755,14 +804,14 @@ function renderPlan(){
   wireCards(box);
 }
 $("btnPlanExcel").addEventListener("click",()=>{
-  const all=entries.filter(e=>e.kind==="plan" && inRange(e.date,planRange) && matchObj(e,Q.plan)).sort(byDateDesc);
+  const all=entries.filter(e=>e.kind==="plan" && inDateRange(e.date,planFrom,planTo) && matchObj(e,Q.plan)).sort(byDateDesc);
   if(!all.length){ toast("복사할 내역이 없습니다"); return; }
   const rows=all.map(p=>[p.date||"",cleanCell(p.text),p.done?"완료":"미완료"].map(x=>(x||"").toString().trim()).filter(Boolean).join("_"));
   copyText(rows.join("\n"),"엑셀용으로 복사됨");
 });
 
 /* ===== 메모 ===== */
-let memoRange="전체";
+let memoFrom="", memoTo="";
 function cardMemo(m){
   return `<div class="row-item" data-kind="memo" data-id="${m.id}">
     <div class="grow"><div class="t">${m.title?esc(m.title):"메모"}</div>
@@ -770,9 +819,8 @@ function cardMemo(m){
     <div class="card-acts"><button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div></div>
     <span class="rtime">${m.date||""}<br>${clockStr(m.createdAt)}</span></div>`;
 }
-function memoFiltered(){ return entries.filter(e=>e.kind==="memo" && inRange(e.date,memoRange) && matchObj(e,Q.memo)).sort(byDateDesc); }
+function memoFiltered(){ return entries.filter(e=>e.kind==="memo" && inDateRange(e.date,memoFrom,memoTo) && matchObj(e,Q.memo)).sort(byDateDesc); }
 function renderMemo(){
-  renderDateChips("memoDateChips", memoRange, r=>{ memoRange=r; renderMemo(); });
   const box=$("memoList"); const list=memoFiltered();
   box.innerHTML = list.length ? list.map(cardMemo).join("") : `<div class="empty">메모가 없습니다.</div>`;
   wireCards(box);
@@ -784,14 +832,22 @@ $("btnMemoExcel").addEventListener("click",()=>{
 });
 
 /* ===== 통화 ===== */
-$("callDate").addEventListener("change",renderCall);
-$("callDateClear").addEventListener("click",()=>{ $("callDate").value=""; renderCall(); });
+$("callFrom").addEventListener("change",renderCall);
+$("callTo").addEventListener("change",renderCall);
+$("callRangeClear").addEventListener("click",()=>{ $("callFrom").value=""; $("callTo").value=""; renderCall(); });
+let callDir="전체";
+function renderCallDirChips(){
+  const opts=["전체",...CALLDIR];
+  $("callDirChips").innerHTML=opts.map(o=>`<button class="chip ${o===callDir?"active":""}" data-cd="${o}">${o}</button>`).join("");
+  $("callDirChips").querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{ callDir=b.dataset.cd; renderCall(); }));
+}
 function callFiltered(){
-  const cd=$("callDate").value;
-  return entries.filter(e=>e.kind==="call" && (!cd||e.date===cd) && matchObj(e,Q.call))
+  const f=$("callFrom").value, t=$("callTo").value;
+  return entries.filter(e=>e.kind==="call" && inDateRange(e.date,f,t) && (callDir==="전체"||e.dir===callDir) && matchObj(e,Q.call))
     .sort((a,b)=>((b.date||"")+(b.time||"")).localeCompare((a.date||"")+(a.time||"")));
 }
 function renderCall(){
+  renderCallDirChips();
   const body=$("callBody"); const list=callFiltered();
   if(!list.length){ body.innerHTML=`<tr><td colspan="9" class="empty">통화 기록이 없습니다.</td></tr>`; return; }
   body.innerHTML=list.map(c=>`<tr data-id="${c.id}">
@@ -851,13 +907,22 @@ function cardDeliver(d){
     <div class="card-acts"><button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div></div>
     <span class="rtime">${d.date||""}</span></div>`;
 }
-let deliverRange="전체";
-function deliverFiltered(){ return entries.filter(e=>e.kind==="deliver" && inRange(e.date,deliverRange) && matchObj(e,Q.deliver)).sort(byDateDesc); }
+let delFrom="", delTo="";
+function deliverFiltered(){ return entries.filter(e=>e.kind==="deliver" && inDateRange(e.date,delFrom,delTo) && matchObj(e,Q.deliver)).sort(byDateDesc); }
 function renderDeliver(){
-  renderDateChips("delDateChips", deliverRange, r=>{ deliverRange=r; renderDeliver(); });
-  const box=$("delList"); const list=deliverFiltered();
-  box.innerHTML = list.length ? list.map(cardDeliver).join("") : `<div class="empty">전달사항이 없습니다.</div>`;
-  wireCards(box);
+  const body=$("delBody"); const list=deliverFiltered();
+  if(!list.length){ body.innerHTML=`<tr><td colspan="5" class="empty">전달사항이 없습니다.</td></tr>`; return; }
+  body.innerHTML=list.map(d=>`<tr data-id="${d.id}">
+    <td>${d.date||""}</td>
+    <td>${esc(d.title||"")}</td>
+    <td class="clip" title="${esc(d.content||"")}">${esc(d.content||"")}</td>
+    <td style="text-align:center"><input type="checkbox" class="ccheck" ${d.done?"checked":""}></td>
+    <td><button class="rowdel" data-del="${d.id}" title="삭제">🗑</button></td></tr>`).join("");
+  body.querySelectorAll("tr[data-id]").forEach(tr=>{
+    tr.addEventListener("click",e=>{ if(e.target.closest("a,button,input")) return; openEditor("deliver",tr.dataset.id); });
+    const cb=tr.querySelector(".ccheck"); cb.addEventListener("change",()=>updateRecord(tr.dataset.id,{done:cb.checked}));
+    tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); if(!confirm("이 전달사항을 삭제할까요?")) return; deleteRecord(tr.dataset.id); renderAll(); toast("삭제되었습니다"); });
+  });
 }
 $("btnDelExcel").addEventListener("click",()=>{
   const list=deliverFiltered(); if(!list.length){ toast("복사할 내역이 없습니다"); return; }
@@ -869,7 +934,7 @@ $("btnDelExcel").addEventListener("click",()=>{
 function cardWork(en){
   return `<div class="row-item" data-kind="work" data-id="${en.id}">
     <div class="grow"><div class="t">${esc(en.title||"")} <span class="st ${statusClass(en.status)}">${esc(en.status||"")}</span> <span class="pill ${fieldClass(en.field)}">${esc(en.field||"")}</span></div>
-    <div class="m">${metaLine([en.loc,en.detail,en.cost?won(en.cost)+"원":""])}</div>${thumbsRO(en.photos)}</div></div>`;
+    <div class="m">${metaLine([en.floor,en.loc,en.detail,en.cost?won(en.cost)+"원":""])}</div>${thumbsRO(en.photos)}</div></div>`;
 }
 
 /* ===== 달력 ===== */
@@ -881,6 +946,9 @@ $("calToday").addEventListener("click",()=>{ const d=new Date(); calY=d.getFullY
 function dateLabel(k){ if(!k) return "(날짜없음)"; const [y,m,d]=k.split("-"); const w=["일","월","화","수","목","금","토"][new Date(k+"T00:00:00").getDay()]; return `${Number(m)}월 ${Number(d)}일 (${w})`; }
 function otherIcon(k){ return k==="plan"?"📋":k==="memo"?"📝":k==="call"?"📞":k==="meeting"?"👥":k==="deliver"?"📢":"•"; }
 function otherText(o){ if(o.kind==="plan") return o.text||"계획"; if(o.kind==="memo") return o.title||o.body||"메모"; if(o.kind==="call") return o.name||o.content||"통화"; if(o.kind==="meeting") return o.title||"회의"; if(o.kind==="deliver") return o.title||o.content||"전달"; return ""; }
+const CAL_KIND_COLOR={work:"#3f7cb8",vacation:"#9a6f17",plan:"#15803d",call:"#0e7490",memo:"#7c3aed",meeting:"#334155",deliver:"#be123c"};
+const CAL_KIND_LABEL={work:"🛠 업무",vacation:"🌴 휴가",plan:"📋 계획",call:"📞 통화",memo:"📝 메모",meeting:"👥 회의",deliver:"📢 전달"};
+const OTHER_ORDER=["plan","call","memo","meeting","deliver"];
 function renderCalendar(){
   $("calMonth").textContent=`${calY}년 ${calM+1}월`;
   const first=new Date(calY,calM,1).getDay(), days=new Date(calY,calM+1,0).getDate();
@@ -900,9 +968,18 @@ function renderCalendar(){
     const total=wArr.length+vArr.length+oArr.length;
     if(total) cls.push("has"); if(wd===0) cls.push("sun"); if(ds===todayStr()) cls.push("today"); if(ds===selDay) cls.push("sel");
     let inner="";
-    wArr.forEach(en=> inner+=`<div class="wtitle"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc(((en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
-    if(vArr.length) inner+=`<div class="vac">🌴 ${esc(vArr.join(","))}</div>`;
-    oArr.forEach(o=> inner+=`<div class="otitle">${otherIcon(o.kind)} ${esc(otherText(o))}</div>`);
+    if(wArr.length){
+      let b=""; wArr.forEach(en=> b+=`<div class="wtitle"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
+      inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.work}">${CAL_KIND_LABEL.work} ${wArr.length}</div>${b}</div>`;
+    }
+    if(vArr.length){
+      inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.vacation}">${CAL_KIND_LABEL.vacation}</div><div class="vac">${esc(vArr.join(", "))}</div></div>`;
+    }
+    OTHER_ORDER.forEach(k=>{
+      const arr=oArr.filter(o=>o.kind===k); if(!arr.length) return;
+      const b=arr.map(o=>`<div class="otitle">${esc(otherText(o))}</div>`).join("");
+      inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR[k]}">${CAL_KIND_LABEL[k]} ${arr.length}</div>${b}</div>`;
+    });
     html+=`<div class="${cls.join(" ")}" data-d="${ds}"><span class="dnum">${d}</span>${inner}</div>`;
   }
   $("calGrid").innerHTML=html;
@@ -943,7 +1020,7 @@ function buildReport(day){
   const dv=entries.filter(e=>e.kind==="deliver"&&e.date===day).sort(byDateDesc);
   let h=`<h1>업무일지 보고서</h1><div class="sub">${dateLabel(day)} · 출력일 ${todayStr()}</div>`;
   const sec=(title,items,cls)=> items.length?`<div class="rsec ${cls}"><h2>${title} (${items.length}건)</h2>`+items.join("")+`</div>`:"";
-  h+=sec("업무", w.map(en=>`<div class="it"><b>[${esc(en.status||"")}]</b> ${esc(en.loc||"")} ${esc(en.title||"")}${en.detail?" — "+esc(en.detail):""}${en.field?" ["+esc(en.field)+"]":""}${en.material?" / 자재: "+esc(en.material):""}${Number(en.cost)?" / "+won(en.cost)+"원":""}${en.improve?"<br>↳ 개선: "+esc(en.improve):""}</div>`), "work");
+  h+=sec("업무", w.map(en=>`<div class="it"><b>[${esc(en.status||"")}]</b> ${esc(en.floor||"")} ${esc(en.loc||"")} ${esc(en.title||"")}${en.detail?" — "+esc(en.detail):""}${en.field?" ["+esc(en.field)+"]":""}${en.material?" / 자재: "+esc(en.material):""}${Number(en.cost)?" / "+won(en.cost)+"원":""}${en.improve?"<br>↳ 개선: "+esc(en.improve):""}</div>`), "work");
   h+=sec("휴가", v.map(x=>`<div class="it">🌴 ${esc(x.name||"")} (${esc(x.vtype||"")}) ${x.end&&x.end!==x.start?esc(x.start)+" ~ "+esc(x.end):esc(x.start||"")}${x.note?" — "+esc(x.note):""}</div>`), "vac");
   h+=sec("오늘계획", p.map(x=>`<div class="it">${x.done?"☑":"☐"} ${esc(x.text||"")}</div>`), "plan");
   h+=sec("통화", c.map(x=>`<div class="it">[${esc(x.dir||"")}] ${esc(x.time||"")} ${esc(x.name||"")} ${esc(x.phone||"")} — ${esc(x.content||"")}${x.followup?" / 조치: "+esc(x.followup):""}${x.done?" (완료)":""}</div>`), "call");
@@ -977,9 +1054,10 @@ function buildCalendarPrint(){
       if(!ds){ h+="<td></td>"; continue; }
       const dnum=Number(ds.split("-")[2]);
       let inner=`<div class="pd">${dnum}</div>`;
-      (work[ds]||[]).forEach(en=> inner+=`<div class="pw"><b style="color:${statusHex(en.status)}">●</b> ${esc(((en.loc?en.loc+" ":"")+(en.title||"")).trim())}</div>`);
-      if(vac[ds]) inner+=`<div class="pv">🌴 ${esc(vac[ds].join(","))}</div>`;
-      (other[ds]||[]).forEach(o=> inner+=`<div class="po">${otherIcon(o.kind)} ${esc(otherText(o))}</div>`);
+      const wA=work[ds]||[], oA=other[ds]||[];
+      if(wA.length){ inner+=`<div class="pgh" style="color:${CAL_KIND_COLOR.work}">${CAL_KIND_LABEL.work}</div>`; wA.forEach(en=> inner+=`<div class="pw"><b style="color:${statusHex(en.status)}">●</b> ${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</div>`); }
+      if(vac[ds]) inner+=`<div class="pgh" style="color:${CAL_KIND_COLOR.vacation}">${CAL_KIND_LABEL.vacation}</div><div class="pv">${esc(vac[ds].join(", "))}</div>`;
+      OTHER_ORDER.forEach(k=>{ const arr=oA.filter(o=>o.kind===k); if(!arr.length) return; inner+=`<div class="pgh" style="color:${CAL_KIND_COLOR[k]}">${CAL_KIND_LABEL[k]}</div>`+arr.map(o=>`<div class="po">${esc(otherText(o))}</div>`).join(""); });
       h+=`<td class="${c===0?"sun":""}">${inner}</td>`;
     }
     h+="</tr>";
