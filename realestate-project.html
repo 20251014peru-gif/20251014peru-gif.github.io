@@ -352,13 +352,16 @@
     <div class="hint" style="margin-bottom:10px">날짜·항목·금액만 찍고 “추가”를 누르면 아래에 쌓입니다. 다 모은 뒤 “전체 저장”.</div>
     <div class="row2">
       <div class="field"><label>날짜</label><input id="qe_date" type="date"></div>
-      <div class="field"><label>항목</label><select id="qe_cat"></select></div>
+      <div class="field"><label>항목</label><select id="qe_cat" onchange="onQeCatChange()"></select></div>
+    </div>
+    <div class="field" id="qe_optwrap" style="display:none"><label id="qe_optlabel">구분</label>
+      <div id="qe_opts" style="display:flex;gap:6px;flex-wrap:wrap"></div>
     </div>
     <div class="row2">
       <div class="field"><label>금액(원)</label><input id="qe_amount" type="number" placeholder="숫자"></div>
       <div class="field"><label>결제수단</label><select id="qe_pay"><option>현금</option><option>카드</option><option>은행이체</option><option>세금계산서</option></select></div>
     </div>
-    <div class="field"><label>메모(선택)</label><input id="qe_memo" placeholder="예: 현장 점심, 경부고속도로"></div>
+    <div class="field"><label>메모(선택)</label><input id="qe_memo" placeholder="예: 현장 인부 점심, 경부고속도로"></div>
     <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="addQuickRow()">+ 목록에 추가</button></div>
     <div id="quickList" style="margin-top:12px"></div>
     <div class="modal-acts">
@@ -796,7 +799,7 @@ function renderLog(e){
     e.kind==="문제"?`<span class="l-tag 문제">문제·하자</span>`:'',
     e.kind==="사진"?`<span class="l-tag 사진">사진 ${e.photostage||''}</span>`:'',
     e.kind==="자재비"?`<span class="l-tag">자재·공사</span>`:'',
-    e.kind==="기타비용"?`<span class="l-tag">${e.cat||'기타비용'}</span>`:'',
+    e.kind==="기타비용"?`<span class="l-tag">${e.cat||'기타비용'}${e.sub?' · '+e.sub:''}</span>`:'',
     e.kind==="연락"?`<span class="l-tag">연락</span>`:'',
     e.kind==="서류"?`<span class="l-tag">서류</span>`:'',
     e.kind==="메모"?`<span class="l-tag">메모</span>`:'',
@@ -1001,19 +1004,44 @@ function closeModal(id){document.getElementById(id).classList.remove("open");}
 
 /* ===== 기타 비용: 빠른 연속 입력 ===== */
 let quickRows=[];
+let qeOpt=""; // 현재 선택된 구분(아침/점심/저녁 또는 상행/하행)
+/* 항목별 추가 선택지 */
+const QE_OPTIONS={
+  "식비":["아침","점심","저녁","간식/음료"],
+  "톨비(통행료)":["상행","하행"],
+  "교통/주유비":["상행","하행","주유"],
+  "가스충전비":["상행","하행","충전"]
+};
 function openQuickEtc(){
   if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
   quickRows=[];
   document.getElementById("qe_date").value=today();
   document.getElementById("qe_cat").innerHTML=ETC_CATS.map(c=>`<option>${c}</option>`).join("");
   document.getElementById("qe_amount").value=""; document.getElementById("qe_memo").value="";
+  onQeCatChange();
   renderQuickList();
   openModal("quickEtcModal");
+}
+function onQeCatChange(){
+  const cat=val("qe_cat");
+  const opts=QE_OPTIONS[cat];
+  const wrap=document.getElementById("qe_optwrap"), box=document.getElementById("qe_opts");
+  const label=document.getElementById("qe_optlabel");
+  qeOpt = opts? opts[0] : "";
+  if(opts){
+    label.textContent = (cat==="식비")? "끼니" : "방향/구분";
+    box.innerHTML=opts.map(o=>`<button type="button" class="mini-chip ${o===qeOpt?'on':''}" onclick="setQeOpt('${jsstr(o)}')">${o}</button>`).join("");
+    wrap.style.display="block";
+  } else { wrap.style.display="none"; }
+}
+function setQeOpt(o){
+  qeOpt=o;
+  document.querySelectorAll('#qe_opts .mini-chip').forEach(b=>b.classList.toggle('on', b.textContent===o));
 }
 function addQuickRow(){
   const amount=Number(val("qe_amount"));
   if(!amount){alert("금액을 입력하세요.");return;}
-  quickRows.push({date:val("qe_date"),cat:val("qe_cat"),amount,pay:val("qe_pay"),memo:val("qe_memo").trim()});
+  quickRows.push({date:val("qe_date"),cat:val("qe_cat"),opt:qeOpt,amount,pay:val("qe_pay"),memo:val("qe_memo").trim()});
   document.getElementById("qe_amount").value=""; document.getElementById("qe_memo").value="";
   document.getElementById("qe_amount").focus();
   renderQuickList();
@@ -1024,7 +1052,7 @@ function renderQuickList(){
   if(!quickRows.length){ box.innerHTML='<div class="ai-empty">추가된 항목이 없습니다.</div>'; return; }
   const sum=quickRows.reduce((s,r)=>s+r.amount,0);
   box.innerHTML='<table class="ctable"><tbody>'+quickRows.map((r,i)=>
-    `<tr><td>${r.date}</td><td>${r.cat}</td><td class="num">${r.amount.toLocaleString()}원</td>
+    `<tr><td>${r.date}</td><td>${r.cat}${r.opt?' · '+r.opt:''}</td><td class="num">${r.amount.toLocaleString()}원</td>
      <td>${r.pay}</td><td>${esc(r.memo||'')}</td>
      <td class="num"><button class="l-del" onclick="removeQuickRow(${i})">삭제</button></td></tr>`).join("")
     +`</tbody></table><div style="text-align:right;font-weight:700;margin-top:6px">${quickRows.length}건 · ${sum.toLocaleString()}원</div>`;
@@ -1036,8 +1064,9 @@ async function saveQuickEtc(){
     const batch=db.batch();
     quickRows.forEach(r=>{
       const ref=db.collection(ENTRIES).doc();
-      batch.set(ref,{projectId:currentProjectId,kind:"기타비용",title:r.cat+(r.memo?(' - '+r.memo):''),
-        date:r.date,stage:null,cat:r.cat,photostage:null,vendor:"",amount:r.amount,pay:r.pay,
+      const titleParts=[r.cat]; if(r.opt) titleParts.push(r.opt); if(r.memo) titleParts.push(r.memo);
+      batch.set(ref,{projectId:currentProjectId,kind:"기타비용",title:titleParts.join(' - '),
+        date:r.date,stage:null,cat:r.cat,sub:r.opt||null,photostage:null,vendor:"",amount:r.amount,pay:r.pay,
         memo:r.memo,files:[],createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     });
     await batch.commit();
