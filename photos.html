@@ -121,7 +121,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v17</b></span></div>
+      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v18</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="./index.html">🏠 홈</a>
@@ -234,6 +234,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 <script>
 if(typeof fabric==="undefined"){ document.write('<scr'+'ipt src="https://unpkg.com/fabric@5.3.0/dist/fabric.min.js"></scr'+'ipt>'); }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <script>
 /* ===================== 진단 ===================== */
 let DBG=false;
@@ -256,6 +257,16 @@ function fmtDate(ts){ if(!ts)return""; const d=new Date(ts),p=n=>String(n).padSt
 // 항상 {url, w, h} 반환. 실패 시 throw.
 async function readPhoto(file){
   dlog("readPhoto: "+(file.name||"무명")+" "+(file.size/1048576).toFixed(2)+"MB "+(file.type||"형식?"));
+  // 0단계: HEIC/HEIF면 JPEG로 변환 (안드로이드는 HEIC 못 읽음)
+  const isHeic = /heic|heif/i.test(file.type||"") || /\.hei[cf]$/i.test(file.name||"");
+  if(isHeic && typeof heic2any!=="undefined"){
+    try{
+      dlog("  HEIC 감지 → JPEG 변환 시도");
+      const blob=await heic2any({ blob:file, toType:"image/jpeg", quality:0.85 });
+      file = blob instanceof Blob ? blob : (Array.isArray(blob)?blob[0]:file);
+      dlog("  ✓ HEIC 변환 완료 "+(file.size/1048576).toFixed(2)+"MB");
+    }catch(e){ dlog("  HEIC 변환 실패: "+(e.message||e)); }
+  }
   // 방법 A: createImageBitmap → 캔버스 축소
   if(window.createImageBitmap){
     try{
@@ -268,7 +279,9 @@ async function readPhoto(file){
   }
   // 방법 B: FileReader → Image → 캔버스 축소
   const dataUrl=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error("FileReader 실패")); r.readAsDataURL(file); });
-  const img=await loadImg(dataUrl);
+  let img;
+  try{ img=await loadImg(dataUrl); }
+  catch(e){ throw new Error("이 사진 형식을 열 수 없어요"+(isHeic?" (HEIC 변환 실패)":"")); }
   try{
     const r=canvasResize(img, img.naturalWidth||img.width, img.naturalHeight||img.height);
     if(r.url.length>200){ dlog("  ✓ B(image) "+r.w+"x"+r.h); return r; }
@@ -345,8 +358,12 @@ $("pickInput").addEventListener("change",e=>handleFiles(e.target.files));
 
 /* ===================== 저장 모달 ===================== */
 function openAddModal(dataUrls){
-  pendingImgs=dataUrls.slice();
-  $("addPreview").src=pendingImgs[0]; $("addPreview").style.display="block";
+  pendingImgs=(dataUrls||[]).filter(u=>u && u.length>200);
+  if(!pendingImgs.length){ toast("저장할 사진 데이터가 비었어요"); dlog("openAddModal: 빈 데이터"); return; }
+  const p=$("addPreview");
+  p.onerror=()=>{ dlog("미리보기 표시 실패(데이터 길이 "+pendingImgs[0].length+")"); };
+  p.onload=()=>{ dlog("미리보기 표시 OK"); };
+  p.src=pendingImgs[0]; p.style.display="block";
   $("addName").value=""; $("addCat").value=curCat; $("addMemo").value="";
   $("addTitle").textContent=pendingImgs.length>1?`사진 저장 (${pendingImgs.length}장)`:"사진 저장";
   $("addOverlay").classList.add("show");
