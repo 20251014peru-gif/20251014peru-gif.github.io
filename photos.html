@@ -118,7 +118,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v22</b></span></div>
+      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v23</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="./index.html">🏠 홈</a>
@@ -218,7 +218,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
       </div>
       <button class="ed-del" id="edDel">🗑 선택삭제</button>
     </div>
-    <p class="ed-hint">도형을 끌어 옮기고, 모서리로 크기·회전. 글자는 두 번 탭하면 수정돼요.</p>
+    <p class="ed-hint">도형을 끌어 옮기고, 모서리로 크기·회전. 글자는 두 번 탭하면 수정. 두 손가락으로 사진을 확대할 수 있어요.</p>
   </div>
 </div>
 
@@ -538,12 +538,54 @@ function loadEditor(dataUrl){
       box.style.backgroundImage="url('"+dataUrl+"')";
       $("edLoading").style.display="none"; box.style.display="block"; $("edTools").style.display="block";
       fc.renderAll();
+      resetEdZoom();
       dlog("  편집기 준비 완료");
     }catch(e){ dlog("loadEditor 예외: "+(e.message||e)); toast("편집기 준비 실패: "+(e.message||"")); $("editor").classList.remove("show"); }
   };
   img.onerror=()=>{ clearTimeout(guard); dlog("loadEditor 이미지 onerror"); toast("사진을 띄우지 못했어요"); $("editor").classList.remove("show"); };
   img.src=dataUrl;
 }
+
+/* ===== 편집기 확대·축소 (두 손가락 핀치/이동) ===== */
+const edZoom={ scale:1, x:0, y:0 };
+function applyEdZoom(){ const box=$("edCanvasBox"); box.style.transform=`translate(${edZoom.x}px,${edZoom.y}px) scale(${edZoom.scale})`; box.style.transformOrigin="center center"; }
+function resetEdZoom(){ edZoom.scale=1; edZoom.x=0; edZoom.y=0; applyEdZoom(); }
+function clampEdZoom(){
+  edZoom.scale=Math.max(1, Math.min(edZoom.scale, 5));
+  if(edZoom.scale<=1){ edZoom.x=0; edZoom.y=0; return; }
+  const maxX=(edCW*edZoom.scale - edCW)/2 + 60, maxY=(edCH*edZoom.scale - edCH)/2 + 60;
+  edZoom.x=Math.max(-maxX, Math.min(maxX, edZoom.x));
+  edZoom.y=Math.max(-maxY, Math.min(maxY, edZoom.y));
+}
+(function setupEdZoom(){
+  const stage=$("edStage");
+  if(!stage){ dlog("⚠️편집줌 setup 실패"); return; }
+  dlog("편집줌 setup OK");
+  let pinch=false, startDist=0, baseScale=1, startX=0,startY=0, baseX=0,baseY=0;
+  function dist(t){ return Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY); }
+  function mid(t){ return {x:(t[0].clientX+t[1].clientX)/2, y:(t[0].clientY+t[1].clientY)/2}; }
+  // 두 손가락일 때만 작동 (한 손가락은 Fabric 도형 조작에 양보)
+  stage.addEventListener("touchstart",e=>{
+    if(e.touches.length===2){
+      pinch=true; startDist=dist(e.touches); baseScale=edZoom.scale;
+      const m=mid(e.touches); startX=m.x; startY=m.y; baseX=edZoom.x; baseY=edZoom.y;
+      if(fc){ fc.discardActiveObject(); fc.renderAll(); }
+      if(DBG) dlog("편집 핀치 시작");
+      e.preventDefault();
+    }
+  },{passive:false,capture:true});
+  stage.addEventListener("touchmove",e=>{
+    if(pinch && e.touches.length===2){
+      e.preventDefault();
+      edZoom.scale=baseScale*(dist(e.touches)/startDist);
+      const m=mid(e.touches);
+      edZoom.x=baseX+(m.x-startX); edZoom.y=baseY+(m.y-startY);
+      clampEdZoom(); applyEdZoom();
+    }
+  },{passive:false,capture:true});
+  stage.addEventListener("touchend",e=>{ if(e.touches.length<2) pinch=false; });
+  stage.addEventListener("touchcancel",()=>{ pinch=false; });
+})();
 
 function strokeW(){ return Math.max(3, edCW*0.009); }
 function addText(){
@@ -590,7 +632,7 @@ $("edColors").querySelectorAll(".ed-c").forEach(s=>s.addEventListener("click",()
 }));
 $("edDel").addEventListener("click",()=>{ if(!fc)return; const o=fc.getActiveObject(); if(o){ fc.remove(o); fc.discardActiveObject(); fc.renderAll(); } else toast("지울 항목을 먼저 선택하세요"); });
 $("edClose").addEventListener("click",()=>{ if(fc && fc.getObjects().length && !confirm("편집한 내용이 사라져요. 닫을까요?"))return; closeEditor(); });
-function closeEditor(){ if(fc){ try{fc.dispose();}catch(e){} fc=null; } $("editor").classList.remove("show"); edQueue=[]; edIndex=0; edBgImg=null; }
+function closeEditor(){ if(fc){ try{fc.dispose();}catch(e){} fc=null; } $("editor").classList.remove("show"); edQueue=[]; edIndex=0; edBgImg=null; resetEdZoom(); }
 
 // 원본 사진 + 도형 합성
 function composeOutput(){
