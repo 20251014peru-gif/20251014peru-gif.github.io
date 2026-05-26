@@ -345,6 +345,67 @@
   </div>
 </div>
 
+<!-- 기타비용 빠른 연속 입력 모달 -->
+<div class="modal-bg" id="quickEtcModal">
+  <div class="modal">
+    <h3>⚡ 기타 비용 빠른 입력</h3>
+    <div class="hint" style="margin-bottom:10px">날짜·항목·금액만 찍고 “추가”를 누르면 아래에 쌓입니다. 다 모은 뒤 “전체 저장”.</div>
+    <div class="row2">
+      <div class="field"><label>날짜</label><input id="qe_date" type="date"></div>
+      <div class="field"><label>항목</label><select id="qe_cat"></select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>금액(원)</label><input id="qe_amount" type="number" placeholder="숫자"></div>
+      <div class="field"><label>결제수단</label><select id="qe_pay"><option>현금</option><option>카드</option><option>은행이체</option><option>세금계산서</option></select></div>
+    </div>
+    <div class="field"><label>메모(선택)</label><input id="qe_memo" placeholder="예: 현장 점심, 경부고속도로"></div>
+    <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="addQuickRow()">+ 목록에 추가</button></div>
+    <div id="quickList" style="margin-top:12px"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="quickSaveBtn" onclick="saveQuickEtc()">전체 저장</button>
+      <button class="btn btn-line" onclick="closeModal('quickEtcModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 기타비용 반복 생성 모달 -->
+<div class="modal-bg" id="repeatEtcModal">
+  <div class="modal">
+    <h3>🔁 반복 비용 생성</h3>
+    <div class="hint" style="margin-bottom:10px">기간 안에서 반복되는 비용을 한 번에 만듭니다. 관리비·은행이자·도시가스는 “매월”, 주말 톨비·교통비는 “매주”.</div>
+    <div class="row2">
+      <div class="field"><label>항목</label><select id="re_cat"></select></div>
+      <div class="field"><label>금액(원)</label><input id="re_amount" type="number" placeholder="매 회 금액"></div>
+    </div>
+    <div class="field"><label>주기</label>
+      <select id="re_freq" onchange="onFreqChange()">
+        <option value="weekly">매주 (요일 선택)</option>
+        <option value="monthly">매월 (날짜 선택)</option>
+      </select>
+    </div>
+    <div class="row2">
+      <div class="field"><label>시작일</label><input id="re_start" type="date"></div>
+      <div class="field"><label>종료일</label><input id="re_end" type="date"></div>
+    </div>
+    <div class="field" id="re_weekwrap"><label>발생 요일 (여러 개 선택 가능)</label>
+      <div id="re_days" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+    <div class="field" id="re_monthwrap" style="display:none"><label>매월 며칠</label>
+      <input id="re_monthday" type="number" min="1" max="31" placeholder="예: 25 (매월 25일)">
+      <div class="hint">해당 일이 없는 달(예: 31일)은 그 달의 마지막 날로 처리됩니다.</div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>결제수단</label><select id="re_pay"><option>은행이체</option><option>카드</option><option>현금</option><option>세금계산서</option></select></div>
+      <div class="field"><label>제목</label><input id="re_title" placeholder="예: 월 관리비"></div>
+    </div>
+    <div id="re_preview" class="hint" style="margin-bottom:6px"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="repeatSaveBtn" onclick="saveRepeatEtc()">생성</button>
+      <button class="btn btn-line" onclick="closeModal('repeatEtcModal')">취소</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ===== Firebase ===== */
 const firebaseConfig = {
@@ -387,8 +448,10 @@ const STAGE_CATS = {
 
 /* ===== 기타 비용 세부 항목 ===== */
 const ETC_CATS = [
-  "교통/주유비","식비","등기비","등기 수수료(법무)","취득세","중개 수수료",
-  "대출이자","관리비","보험료","예비비","기타"
+  "식비","교통/주유비","톨비(통행료)","가스충전비",
+  "관리비","도시가스","대출이자",
+  "등기비","등기 수수료(법무)","취득세","중개 수수료",
+  "보험료","예비비","기타"
 ];
 const VENDOR_ROLES = STAGES.concat(["중개","법무","기타"]);
 
@@ -588,6 +651,12 @@ function viewCost(p){
       <div class="stat"><div class="label">기타 비용</div><div class="value">${etcSum.toLocaleString()}<small> 원</small></div></div>
       <div class="stat"><div class="label">지출 건수</div><div class="value">${withAmt.length}<small> 건</small></div></div>
     </div>
+    <div class="panel"><div class="panel-h">🧾 기타 비용 입력 <span class="cnt">식비·톨비·가스·이자·관리비 등</span></div>
+      <div class="panel-body" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="openQuickEtc()">⚡ 빠른 연속 입력</button>
+        <button class="btn btn-ghost btn-sm" onclick="openRepeatEtc()">🔁 반복 비용 생성 (주말/매주)</button>
+        <span class="hint" style="align-self:center">식비·톨비처럼 자주 나가는 건 빠른 입력, 관리비·이자처럼 주기적인 건 반복 생성</span>
+      </div></div>
     <div class="cost-cols">
       <div class="panel"><div class="panel-h">🔨 공정별 자재·공사비</div><div class="panel-body">
         <table class="ctable"><thead><tr><th>공정</th><th class="num">금액(원)</th></tr></thead>
@@ -929,6 +998,132 @@ function jsstr(s){return String(s).replace(/'/g,"\\'");}
 function show(id,on){document.getElementById(id).style.display=on?'block':'none';}
 function openModal(id){document.getElementById(id).classList.add("open");}
 function closeModal(id){document.getElementById(id).classList.remove("open");}
+
+/* ===== 기타 비용: 빠른 연속 입력 ===== */
+let quickRows=[];
+function openQuickEtc(){
+  if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
+  quickRows=[];
+  document.getElementById("qe_date").value=today();
+  document.getElementById("qe_cat").innerHTML=ETC_CATS.map(c=>`<option>${c}</option>`).join("");
+  document.getElementById("qe_amount").value=""; document.getElementById("qe_memo").value="";
+  renderQuickList();
+  openModal("quickEtcModal");
+}
+function addQuickRow(){
+  const amount=Number(val("qe_amount"));
+  if(!amount){alert("금액을 입력하세요.");return;}
+  quickRows.push({date:val("qe_date"),cat:val("qe_cat"),amount,pay:val("qe_pay"),memo:val("qe_memo").trim()});
+  document.getElementById("qe_amount").value=""; document.getElementById("qe_memo").value="";
+  document.getElementById("qe_amount").focus();
+  renderQuickList();
+}
+function removeQuickRow(i){ quickRows.splice(i,1); renderQuickList(); }
+function renderQuickList(){
+  const box=document.getElementById("quickList");
+  if(!quickRows.length){ box.innerHTML='<div class="ai-empty">추가된 항목이 없습니다.</div>'; return; }
+  const sum=quickRows.reduce((s,r)=>s+r.amount,0);
+  box.innerHTML='<table class="ctable"><tbody>'+quickRows.map((r,i)=>
+    `<tr><td>${r.date}</td><td>${r.cat}</td><td class="num">${r.amount.toLocaleString()}원</td>
+     <td>${r.pay}</td><td>${esc(r.memo||'')}</td>
+     <td class="num"><button class="l-del" onclick="removeQuickRow(${i})">삭제</button></td></tr>`).join("")
+    +`</tbody></table><div style="text-align:right;font-weight:700;margin-top:6px">${quickRows.length}건 · ${sum.toLocaleString()}원</div>`;
+}
+async function saveQuickEtc(){
+  if(!quickRows.length){alert("추가된 항목이 없습니다.");return;}
+  const btn=document.getElementById("quickSaveBtn"); btn.disabled=true; btn.textContent="저장 중...";
+  try{
+    const batch=db.batch();
+    quickRows.forEach(r=>{
+      const ref=db.collection(ENTRIES).doc();
+      batch.set(ref,{projectId:currentProjectId,kind:"기타비용",title:r.cat+(r.memo?(' - '+r.memo):''),
+        date:r.date,stage:null,cat:r.cat,photostage:null,vendor:"",amount:r.amount,pay:r.pay,
+        memo:r.memo,files:[],createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    await batch.commit();
+    btn.disabled=false; btn.textContent="전체 저장";
+    closeModal("quickEtcModal"); await selectProject(currentProjectId);
+  }catch(err){ btn.disabled=false; btn.textContent="전체 저장"; showError("빠른 비용 저장", err); }
+}
+
+/* ===== 기타 비용: 반복 생성 ===== */
+const WEEKDAYS=["일","월","화","수","목","금","토"];
+let repeatDays={};
+function openRepeatEtc(){
+  if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
+  document.getElementById("re_cat").innerHTML=ETC_CATS.map(c=>`<option ${c==='관리비'?'selected':''}>${c}</option>`).join("");
+  document.getElementById("re_amount").value="";
+  document.getElementById("re_freq").value="monthly";
+  document.getElementById("re_start").value=today();
+  document.getElementById("re_end").value="";
+  document.getElementById("re_title").value="";
+  document.getElementById("re_monthday").value="25";
+  repeatDays={6:true}; // 매주 기본 토요일
+  document.getElementById("re_days").innerHTML=WEEKDAYS.map((d,i)=>
+    `<button type="button" class="mini-chip ${repeatDays[i]?'on':''}" id="rd_${i}" onclick="toggleRepeatDay(${i})">${d}</button>`).join("");
+  ["re_start","re_end","re_amount","re_monthday"].forEach(id=>document.getElementById(id).oninput=updateRepeatPreview);
+  document.getElementById("re_cat").onchange=updateRepeatPreview;
+  onFreqChange();
+  openModal("repeatEtcModal");
+}
+function onFreqChange(){
+  const f=val("re_freq");
+  document.getElementById("re_weekwrap").style.display = f==="weekly"?"block":"none";
+  document.getElementById("re_monthwrap").style.display = f==="monthly"?"block":"none";
+  updateRepeatPreview();
+}
+function toggleRepeatDay(i){ repeatDays[i]=!repeatDays[i]; document.getElementById("rd_"+i).classList.toggle("on"); updateRepeatPreview(); }
+function repeatDates(){
+  const s=val("re_start"), e=val("re_end");
+  if(!s||!e) return [];
+  const out=[]; const end=new Date(e+"T00:00:00");
+  if(val("re_freq")==="weekly"){
+    const days=Object.keys(repeatDays).filter(k=>repeatDays[k]).map(Number);
+    if(!days.length) return [];
+    let d=new Date(s+"T00:00:00"); let guard=0;
+    while(d<=end && guard<800){ if(days.includes(d.getDay())) out.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); guard++; }
+  } else { // monthly: 매월 지정일
+    let day=Number(val("re_monthday"))||1;
+    let cur=new Date(s+"T00:00:00"); cur.setDate(1);
+    let guard=0;
+    while(cur<=end && guard<240){
+      const y=cur.getFullYear(), m=cur.getMonth();
+      const last=new Date(y,m+1,0).getDate();
+      const dd=Math.min(day,last);
+      const dt=new Date(y,m,dd);
+      if(dt>=new Date(s+"T00:00:00") && dt<=end) out.push(dt.toISOString().slice(0,10));
+      cur.setMonth(cur.getMonth()+1); guard++;
+    }
+  }
+  return out;
+}
+function updateRepeatPreview(){
+  const dates=repeatDates(); const amt=Number(val("re_amount"))||0;
+  const box=document.getElementById("re_preview");
+  if(!dates.length){ box.textContent="기간·주기·금액을 입력하면 생성될 건수가 여기 표시됩니다."; return; }
+  box.innerHTML=`→ <b>${dates.length}건</b> 생성 · 합계 <b>${(dates.length*amt).toLocaleString()}원</b> (${dates[0]} ~ ${dates[dates.length-1]})`;
+}
+async function saveRepeatEtc(){
+  const dates=repeatDates(); const amount=Number(val("re_amount"));
+  if(!dates.length){alert("기간과 주기(요일/날짜)를 확인하세요.");return;}
+  if(!amount){alert("금액을 입력하세요.");return;}
+  if(dates.length>200){alert("생성 건수가 너무 많습니다(200건 초과). 기간을 줄이세요.");return;}
+  const cat=val("re_cat"), pay=val("re_pay"), title=val("re_title").trim()||cat;
+  if(!confirm(dates.length+"건을 생성할까요? (합계 "+(dates.length*amount).toLocaleString()+"원)"))return;
+  const btn=document.getElementById("repeatSaveBtn"); btn.disabled=true; btn.textContent="생성 중...";
+  try{
+    const batch=db.batch();
+    dates.forEach(dt=>{
+      const ref=db.collection(ENTRIES).doc();
+      batch.set(ref,{projectId:currentProjectId,kind:"기타비용",title,date:dt,stage:null,cat,
+        photostage:null,vendor:"",amount,pay,memo:"반복 생성",files:[],
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    await batch.commit();
+    btn.disabled=false; btn.textContent="생성";
+    closeModal("repeatEtcModal"); await selectProject(currentProjectId);
+  }catch(err){ btn.disabled=false; btn.textContent="생성"; showError("반복 비용 생성", err); }
+}
 
 /* ===== 시스템 진단 =====
    누르면 설정·연결을 실제로 점검해서 어디가 문제인지 보여준다. */
