@@ -133,6 +133,9 @@ textarea{resize:vertical;min-height:74px;}
 .detail-meta{font-size:14px;color:#6B7280;display:flex;gap:18px;flex-wrap:wrap;}
 .detail-meta b{color:#1A1A2E;}
 .detail-body{font-size:15px;line-height:1.7;color:#374151;white-space:pre-wrap;margin:14px 0;}
+.contact-row{display:flex;align-items:center;gap:8px;background:#F8F8FC;border:1px solid #EEF0F3;border-radius:10px;padding:11px 13px;margin-top:10px;font-size:14px;color:#1A1A2E;text-decoration:none;}
+.contact-row b{font-weight:600;}
+.contact-go{margin-left:auto;font-size:12px;color:#6366F1;font-weight:700;flex-shrink:0;}
 .detail-photos img{width:100%;border-radius:12px;margin-top:10px;display:block;cursor:zoom-in;}
 .detail-photos .ph-load{height:130px;border-radius:12px;background:#F3F4F6;display:flex;align-items:center;justify-content:center;color:#B0B5BD;font-size:13px;margin-top:10px;}
 
@@ -183,7 +186,7 @@ textarea{resize:vertical;min-height:74px;}
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v10</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v11</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -363,10 +366,14 @@ var CATS=[
     {key:'title',label:'품목',ph:'예: 다이슨 청소기'},
     {key:'who',label:'구입처/브랜드',ph:'예: 쿠팡, 다이슨',opt:true},
     {key:'amount',label:'가격(원)',ph:'금액',num:true,opt:true},
+    {key:'phone',label:'전화번호',ph:'예: 010-1234-5678',opt:true},
+    {key:'addr',label:'주소',ph:'주소 입력 (눌러서 지도)',opt:true},
     {key:'detail',label:'메모',ph:'산 이유·후기·비교',area:true,opt:true}]},
   {k:'통화',  i:'📞', c:'#10B981', bg:'#D1FAE5', fields:[
     {key:'who',label:'누구와 통화',ph:'예: 엄마, 김부장'},
     {key:'title',label:'통화 주제',ph:'한 줄'},
+    {key:'phone',label:'전화번호',ph:'예: 010-1234-5678',opt:true},
+    {key:'addr',label:'주소',ph:'주소 입력 (눌러서 지도)',opt:true},
     {key:'detail',label:'통화 내용·결정사항',ph:'무슨 얘기를 했는지',area:true}]},
   {k:'가족',  i:'👨‍👩‍👧', c:'#F43F5E', bg:'#FFE4E6', fields:[
     {key:'who',label:'누구',ph:'예: 아내, 아들, 부모님'},
@@ -376,11 +383,15 @@ var CATS=[
     {key:'title',label:'장소/여행명',ph:'예: 제주도'},
     {key:'who',label:'누구와',ph:'동행',opt:true},
     {key:'amount',label:'경비(원)',ph:'쓴 돈',num:true,opt:true},
+    {key:'phone',label:'전화번호',ph:'예: 010-1234-5678',opt:true},
+    {key:'addr',label:'주소',ph:'주소 입력 (눌러서 지도)',opt:true},
     {key:'detail',label:'일정·메모',ph:'한 일·좋았던 것',area:true,opt:true}]},
   {k:'맛집',  i:'🍜', c:'#FB923C', bg:'#FFEDD5', fields:[
     {key:'title',label:'가게 이름',ph:'예: 스시오마카세'},
     {key:'who',label:'위치/지역',ph:'예: 강남, 서면',opt:true},
     {key:'amount',label:'1인 비용(원)',ph:'대략 금액',num:true,opt:true},
+    {key:'phone',label:'전화번호',ph:'예: 010-1234-5678',opt:true},
+    {key:'addr',label:'주소',ph:'주소 입력 (눌러서 지도)',opt:true},
     {key:'detail',label:'메뉴·평점·메모',ph:'먹은 메뉴, 별점(⭐), 재방문 여부',area:true,opt:true}]},
   {k:'차계부',  i:'🚗', c:'#0891B2', bg:'#CFFAFE', fields:[
     {key:'who',label:'차량',sel:['쏘나타','스타렉스']},
@@ -388,11 +399,15 @@ var CATS=[
     {key:'amount',label:'금액(원)',ph:'쓴 돈',num:true,opt:true},
     {key:'odo',label:'현재 주행거리(㎞)',ph:'예: 45200 (연비 자동계산)',num:true,opt:true},
     {key:'liters',label:'주유량(L)',ph:'주유 시에만 입력',num:true,opt:true},
+    {key:'phone',label:'전화번호',ph:'예: 010-1234-5678',opt:true},
+    {key:'addr',label:'주소',ph:'주소 입력 (눌러서 지도)',opt:true},
     {key:'detail',label:'메모',ph:'정비소·내용 등',area:true,opt:true}]},
   {k:'건강',  i:'💊', c:'#14B8A6', bg:'#CCFBF1', fields:[
     {key:'title',label:'증상/검진 항목',ph:'예: 혈압, 감기'},
     {key:'who',label:'병원/의사',ph:'기관·담당',opt:true},
     {key:'amount',label:'비용(원)',ph:'진료비·약값',num:true,opt:true},
+    {key:'phone',label:'전화번호',ph:'예: 010-1234-5678',opt:true},
+    {key:'addr',label:'주소',ph:'주소 입력 (눌러서 지도)',opt:true},
     {key:'detail',label:'내용·처방·메모',ph:'',area:true,opt:true}]},
   {k:'약속',  i:'📅', c:'#6366F1', bg:'#E0E7FF', fields:[
     {key:'title',label:'약속 내용',ph:'예: 점심 약속'},
@@ -415,6 +430,8 @@ var CATS=[
     {key:'title',label:'제목',ph:'한 줄'},
     {key:'who',label:'관련 인물/장소',ph:'',opt:true},
     {key:'amount',label:'금액(원)',ph:'',num:true,opt:true},
+    {key:'phone',label:'전화번호',ph:'예: 010-1234-5678',opt:true},
+    {key:'addr',label:'주소',ph:'주소 입력 (눌러서 지도)',opt:true},
     {key:'detail',label:'내용',ph:'',area:true,opt:true}]}
 ];
 function catOf(k){for(var i=0;i<CATS.length;i++)if(CATS[i].k===k)return CATS[i];return CATS[CATS.length-1];}
@@ -471,7 +488,7 @@ function renderForm(vals){
   $('formFields').innerHTML=h;
 }
 function collectFields(){
-  var o={};['title','detail','who','amount','odo','liters'].forEach(function(k){var el=$('f-'+k);if(el)o[k]=el.value;});
+  var o={};['title','detail','who','amount','odo','liters','phone','addr'].forEach(function(k){var el=$('f-'+k);if(el)o[k]=el.value;});
   return o;
 }
 
@@ -603,7 +620,7 @@ function startEdit(id){
   var r=getRecords().filter(function(x){return x.id===id;})[0];if(!r)return;
   editingId=id;selectedCat=r.cat;
   renderCats();
-  renderForm({title:r.title,detail:r.detail,who:r.who,amount:r.amount,odo:r.odo,liters:r.liters});
+  renderForm({title:r.title,detail:r.detail,who:r.who,amount:r.amount,odo:r.odo,liters:r.liters,phone:r.phone,addr:r.addr});
   $('f-date').value=r.date;
   pendingPhotos=(r.photos&&r.photos.slice())||[];
   // 클라우드에만 있는 사진도 불러와서 편집 가능하게
@@ -635,6 +652,7 @@ function saveRecord(){
     id:id,cat:selectedCat,title:title,detail:detail,
     who:(v.who||'').trim(),amount:v.amount?Number(v.amount):null,
     odo:v.odo?Number(v.odo):null,liters:v.liters?Number(v.liters):null,
+    phone:(v.phone||'').trim(),addr:(v.addr||'').trim(),
     date:$('f-date').value||new Date().toISOString().slice(0,10),
     time:'',
     photoIds:photoIds,   // 사진은 클라우드에만 저장 (브라우저 용량 절약)
@@ -757,6 +775,7 @@ function openDetail(id){
     '<h2>'+(esc(r.title)||'(제목 없음)')+'</h2>'+
     '<div class="detail-when">'+fmtDate(r.date)+(r.time?' · '+r.time:'')+'</div>'+
     (meta?'<div class="detail-meta" style="margin-top:12px">'+meta+'</div>':'')+
+    contactBlock(r)+
     (r.detail?'<div class="detail-body">'+esc(r.detail)+'</div>':'')+
     photosHtml+
     mapBtn(r)+
@@ -775,8 +794,16 @@ function openDetail(id){
   }
 }
 function closeDetail(){$('detailBg').classList.remove('open');}
-/* 맛집·여행 등: 가게명/장소로 네이버지도 열기 */
+/* 전화·주소 블록 (눌러서 전화걸기 / 지도) */
+function contactBlock(r){
+  var h='';
+  if(r.phone)h+='<a href="tel:'+esc(r.phone.replace(/[^0-9+]/g,''))+'" class="contact-row">📞 <b>'+esc(r.phone)+'</b><span class="contact-go">전화걸기 ›</span></a>';
+  if(r.addr)h+='<div class="contact-row" onclick="openMap(\''+encodeURIComponent(r.addr).replace(/'/g,"%27")+'\')" style="cursor:pointer">📍 <b>'+esc(r.addr)+'</b><span class="contact-go">지도 ›</span></div>';
+  return h;
+}
+/* 맛집·여행 등: 주소 우선, 없으면 가게명+위치로 네이버지도 */
 function mapBtn(r){
+  if(r.addr)return '';  // 주소가 있으면 위 contactBlock의 지도 링크로 충분
   if(r.cat!=='맛집'&&r.cat!=='여행')return '';
   var q=[r.title,r.who].filter(Boolean).join(' ').trim();
   if(!q)return '';
@@ -833,6 +860,7 @@ function fromFS(doc){if(!doc||!doc.fields)return null;var o={};Object.keys(doc.f
 function fbPush(rec){try{
   var copy={id:rec.id,cat:rec.cat,title:rec.title,detail:rec.detail,who:rec.who,amount:rec.amount,date:rec.date,time:rec.time,
     odo:rec.odo,liters:rec.liters,trip:rec.trip,kmpl:rec.kmpl,
+    phone:rec.phone,addr:rec.addr,
     photoIds:(rec.photoIds||[]).join(','),created:rec.created,updated:rec.updated};
   fetch(FB_BASE+'/'+COL+'/'+rec.id+'?key='+FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(toFS(copy))})
     .catch(function(e){logErr('Firebase 기록 동기화 실패: '+e.message);});
@@ -1021,8 +1049,8 @@ function renderApptBanner(){
 function exportCSV(){
   var recs=getRecords();
   if(!recs.length){toast('내보낼 기록이 없어요');return;}
-  var cols=['date','cat','title','detail','who','amount','odo','liters','trip','kmpl'];
-  var head=['날짜','카테고리','제목','내용','누구/장소','금액','주행거리','주유량','구간','연비'];
+  var cols=['date','cat','title','detail','who','phone','addr','amount','odo','liters','trip','kmpl'];
+  var head=['날짜','카테고리','제목','내용','누구/장소','전화번호','주소','금액','주행거리','주유량','구간','연비'];
   function cell(v){v=(v==null?'':String(v));if(/[",\n]/.test(v))v='"'+v.replace(/"/g,'""')+'"';return v;}
   var lines=[head.join(',')];
   recs.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).forEach(function(r){
