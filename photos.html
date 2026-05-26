@@ -118,7 +118,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v23</b></span></div>
+      <div class="brand"><h1>사진 보관함</h1><span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v24</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="./index.html">🏠 홈</a>
@@ -218,7 +218,7 @@ header{background:linear-gradient(135deg,#e3eefb,#e6f5ef 60%,#eaf0fb);border-bot
       </div>
       <button class="ed-del" id="edDel">🗑 선택삭제</button>
     </div>
-    <p class="ed-hint">도형을 끌어 옮기고, 모서리로 크기·회전. 글자는 두 번 탭하면 수정. 두 손가락으로 사진을 확대할 수 있어요.</p>
+    <p class="ed-hint">도형을 끌어 옮기고, 모서리로 크기·회전. 글자는 두 번 탭하면 수정. 두 손가락으로 확대하고, 확대 후엔 빈 곳을 끌어 이동해요.</p>
   </div>
 </div>
 
@@ -561,17 +561,25 @@ function clampEdZoom(){
   const stage=$("edStage");
   if(!stage){ dlog("⚠️편집줌 setup 실패"); return; }
   dlog("편집줌 setup OK");
-  let pinch=false, startDist=0, baseScale=1, startX=0,startY=0, baseX=0,baseY=0;
+  let pinch=false, panning=false, startDist=0, baseScale=1, startX=0,startY=0, baseX=0,baseY=0;
   function dist(t){ return Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY); }
   function mid(t){ return {x:(t[0].clientX+t[1].clientX)/2, y:(t[0].clientY+t[1].clientY)/2}; }
-  // 두 손가락일 때만 작동 (한 손가락은 Fabric 도형 조작에 양보)
   stage.addEventListener("touchstart",e=>{
     if(e.touches.length===2){
-      pinch=true; startDist=dist(e.touches); baseScale=edZoom.scale;
+      // 두 손가락 → 확대/이동
+      pinch=true; panning=false; startDist=dist(e.touches); baseScale=edZoom.scale;
       const m=mid(e.touches); startX=m.x; startY=m.y; baseX=edZoom.x; baseY=edZoom.y;
       if(fc){ fc.discardActiveObject(); fc.renderAll(); }
       if(DBG) dlog("편집 핀치 시작");
       e.preventDefault();
+    }else if(e.touches.length===1 && edZoom.scale>1){
+      // 확대된 상태에서 한 손가락: 도형을 안 건드렸으면 화면 이동
+      const hasTarget = fc && fc.findTarget && fc.findTarget(e, false);
+      if(!hasTarget && !(fc && fc.getActiveObject())){
+        panning=true; startX=e.touches[0].clientX; startY=e.touches[0].clientY; baseX=edZoom.x; baseY=edZoom.y;
+        if(DBG) dlog("편집 1손가락 이동 시작");
+        e.preventDefault();
+      }
     }
   },{passive:false,capture:true});
   stage.addEventListener("touchmove",e=>{
@@ -581,10 +589,15 @@ function clampEdZoom(){
       const m=mid(e.touches);
       edZoom.x=baseX+(m.x-startX); edZoom.y=baseY+(m.y-startY);
       clampEdZoom(); applyEdZoom();
+    }else if(panning && e.touches.length===1){
+      e.preventDefault();
+      edZoom.x=baseX+(e.touches[0].clientX-startX);
+      edZoom.y=baseY+(e.touches[0].clientY-startY);
+      clampEdZoom(); applyEdZoom();
     }
   },{passive:false,capture:true});
-  stage.addEventListener("touchend",e=>{ if(e.touches.length<2) pinch=false; });
-  stage.addEventListener("touchcancel",()=>{ pinch=false; });
+  stage.addEventListener("touchend",e=>{ if(e.touches.length<2) pinch=false; if(e.touches.length===0) panning=false; });
+  stage.addEventListener("touchcancel",()=>{ pinch=false; panning=false; });
 })();
 
 function strokeW(){ return Math.max(3, edCW*0.009); }
