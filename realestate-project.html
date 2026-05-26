@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>부동산 프로젝트 관리</title>
+
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+<style>
+  :root{
+    --bg:#f5f3ee; --panel:#fff; --ink:#23211c; --ink-soft:#6b6658;
+    --line:#e3ded3; --accent:#3a5a40; --accent-soft:#e7eee7;
+    --gold:#9a7b2e; --danger:#a23b2d; --radius:14px;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(40,38,30,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.5;}
+  button{font-family:inherit; cursor:pointer;}
+
+  header.topbar{background:var(--accent); color:#fff; padding:16px 22px;
+    display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:20;}
+  header.topbar h1{font-size:18px; margin:0; font-weight:700; letter-spacing:-.3px;}
+  header.topbar .home{margin-left:auto; font-size:13px; color:#dce6dc; text-decoration:none;
+    border:1px solid rgba(255,255,255,.3); padding:6px 12px; border-radius:8px;}
+
+  .wrap{display:flex; min-height:calc(100vh - 56px);}
+  aside{width:280px; flex:0 0 280px; background:var(--panel);
+    border-right:1px solid var(--line); padding:18px 14px; overflow-y:auto;}
+  aside .side-title{font-size:12px; color:var(--ink-soft); font-weight:700; letter-spacing:.4px; margin:4px 6px 10px;}
+  .proj-item{padding:11px 12px; border-radius:10px; margin-bottom:6px; cursor:pointer; border:1px solid transparent; transition:.15s;}
+  .proj-item:hover{background:var(--accent-soft);}
+  .proj-item.active{background:var(--accent-soft); border-color:#cdddcd;}
+  .proj-item .pname{font-weight:600; font-size:14px;}
+  .proj-item .paddr{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+  .pstatus{display:inline-block; font-size:11px; margin-top:6px; padding:2px 8px; border-radius:20px; background:#eee; color:#555;}
+  .pstatus.진행중{background:#e7f0e8; color:#2f6b3a;}
+  .pstatus.완료{background:#e9eef5; color:#3a567f;}
+  .pstatus.보류{background:#f5ece1; color:#9a6a2e;}
+
+  .btn{border:none; border-radius:10px; padding:10px 14px; font-size:14px; font-weight:600;}
+  .btn-primary{background:var(--accent); color:#fff;}
+  .btn-ghost{background:var(--accent-soft); color:var(--accent);}
+  .btn-line{background:#fff; border:1px solid var(--line); color:var(--ink);}
+  .btn-block{width:100%;}
+  .btn-sm{padding:6px 11px; font-size:13px;}
+
+  main{flex:1; padding:24px 28px; overflow-y:auto;}
+  .empty{color:var(--ink-soft); text-align:center; margin-top:14vh; font-size:15px;}
+
+  .proj-head{display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:18px;}
+  .proj-head h2{margin:0 0 4px; font-size:24px; letter-spacing:-.5px;}
+  .proj-head .sub{color:var(--ink-soft); font-size:14px;}
+  .proj-head .acts{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;}
+
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow);}
+  .stat .label{font-size:12px; color:var(--ink-soft);}
+  .stat .value{font-size:22px; font-weight:700; margin-top:4px; letter-spacing:-.5px;}
+  .stat .value small{font-size:13px; font-weight:600; color:var(--ink-soft);}
+
+  details.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:16px; box-shadow:var(--shadow); overflow:hidden;}
+  details.panel>summary{padding:14px 18px; font-weight:700; cursor:pointer; font-size:15px; list-style:none; display:flex; align-items:center; gap:10px;}
+  details.panel>summary::-webkit-details-marker{display:none;}
+  details.panel>summary .cnt{font-size:12px; color:var(--ink-soft); font-weight:500;}
+  details.panel>summary .add{margin-left:auto;}
+  .panel-body{padding:0 18px 16px;}
+
+  .vendor{display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--line);}
+  .vendor .vtrade{font-size:11px; font-weight:700; padding:3px 9px; border-radius:7px; background:var(--accent-soft); color:var(--accent); flex:0 0 auto;}
+  .vendor .vname{font-weight:600;}
+  .vendor .vmemo{font-size:12px; color:var(--ink-soft);}
+  .vendor a.tel{margin-left:auto; font-weight:700; color:var(--accent); text-decoration:none; font-size:15px;}
+  .vendor .vdel{color:var(--danger); background:none; border:none; font-size:12px;}
+
+  .cost-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .cost-grid h4{margin:0 0 8px; font-size:13px; color:var(--ink-soft);}
+  .cost-row{display:flex; justify-content:space-between; font-size:13px; padding:5px 0; border-bottom:1px dashed var(--line);}
+  .cost-row b{font-weight:700;}
+
+  .filters{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
+  .filters.sub{margin-bottom:16px;}
+  .chip{border:1px solid var(--line); background:#fff; border-radius:20px; padding:7px 14px; font-size:13px; color:var(--ink-soft);}
+  .chip.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .chip.sub.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+
+  .entry{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; margin-bottom:12px; box-shadow:var(--shadow);}
+  .entry .e-top{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .e-type{font-size:12px; font-weight:700; padding:3px 9px; border-radius:7px; background:var(--accent-soft); color:var(--accent);}
+  .e-type.비용{background:#f3ead8; color:var(--gold);}
+  .e-type.사진{background:#e9eef5; color:#3a567f;}
+  .e-type.연락기록{background:#f1e8ee; color:#8a4a73;}
+  .e-type.서류{background:#e6eee9; color:#2f6b3a;}
+  .e-type.기타{background:#eee; color:#666;}
+  .e-tag{font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; background:#f0ede4; color:#6b6658;}
+  .e-tag.stage{background:#3a567f; color:#fff;}
+  .entry .e-title{font-weight:600; font-size:16px;}
+  .entry .e-date{font-size:13px; color:var(--ink-soft); margin-left:auto;}
+  .entry .e-meta{font-size:13px; color:var(--ink-soft); margin-top:8px; display:flex; gap:16px; flex-wrap:wrap;}
+  .entry .e-meta b{color:var(--ink); font-weight:600;}
+  .entry .e-memo{margin-top:10px; font-size:14px; white-space:pre-wrap;}
+  .entry .e-del{color:var(--danger); background:none; border:none; font-size:13px;}
+
+  .files{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;}
+  .file{display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:13px; text-decoration:none; background:#fafaf7; max-width:240px;}
+  .file img{width:42px; height:42px; object-fit:cover; border-radius:6px;}
+  .file .fi{width:34px; height:34px; display:grid; place-items:center; background:var(--accent-soft); border-radius:6px; font-weight:700; color:var(--accent); font-size:12px;}
+  .file .fname{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+  .gallery-group{margin-bottom:22px;}
+  .gallery-group h3{font-size:15px; margin:0 0 10px;}
+  .gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px;}
+  .gallery a{display:block; border-radius:10px; overflow:hidden; border:1px solid var(--line); text-decoration:none; color:inherit;}
+  .gallery img{width:100%; height:130px; object-fit:cover; display:block;}
+  .gallery .cap{font-size:11px; padding:5px 7px; color:var(--ink-soft); background:#fff;}
+
+  .modal-bg{position:fixed; inset:0; background:rgba(30,28,22,.45); display:none; align-items:flex-start; justify-content:center; z-index:50; padding:40px 16px; overflow-y:auto;}
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--panel); border-radius:18px; width:min(560px,100%); padding:26px 26px 22px; box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .modal h3{margin:0 0 18px; font-size:19px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--ink-soft);}
+  .field input, .field select, .field textarea{width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; font-family:inherit; background:#fcfbf8;}
+  .field textarea{min-height:80px; resize:vertical;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .modal-acts{display:flex; gap:10px; margin-top:20px;}
+  #uploadProgress{display:none; font-size:13px; color:var(--accent); margin-top:8px;}
+
+  @media(max-width:780px){
+    .wrap{flex-direction:column;}
+    aside{width:auto; flex:none; border-right:none; border-bottom:1px solid var(--line);}
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .row2,.cost-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>🏗️ 부동산 프로젝트 관리</h1>
+  <a class="home" href="index.html">← 홈</a>
+</header>
+
+<div class="wrap">
+  <aside>
+    <div class="side-title">프로젝트</div>
+    <div id="projList"></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="openProjectModal()">+ 새 프로젝트</button>
+  </aside>
+  <main id="main">
+    <div class="empty">왼쪽에서 프로젝트를 선택하거나<br>새 프로젝트를 만들어 시작하세요.</div>
+  </main>
+</div>
+
+<!-- 프로젝트 모달 -->
+<div class="modal-bg" id="projectModal">
+  <div class="modal">
+    <h3>새 프로젝트</h3>
+    <div class="field"><label>프로젝트명 *</label><input id="pf_name" placeholder="예: ○○상가 2층 인테리어"></div>
+    <div class="field"><label>주소 / 위치</label><input id="pf_addr" placeholder="예: 서울시 ○○구 ○○동 123-4"></div>
+    <div class="row2">
+      <div class="field"><label>상태</label><select id="pf_status"><option>진행중</option><option>완료</option><option>보류</option></select></div>
+      <div class="field"><label>시작일</label><input id="pf_date" type="date"></div>
+    </div>
+    <div class="field"><label>메모</label><textarea id="pf_memo" placeholder="프로젝트 개요, 담당자 등"></textarea></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveProject()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('projectModal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 업체 연락처 모달 -->
+<div class="modal-bg" id="vendorModal">
+  <div class="modal">
+    <h3>업체 / 연락처 추가</h3>
+    <div class="row2">
+      <div class="field"><label>업체/이름 *</label><input id="vf_name" placeholder="예: ○○전기"></div>
+      <div class="field"><label>공종 / 역할</label>
+        <select id="vf_trade">
+          <option>전기</option><option>소방</option><option>설비</option><option>타일</option>
+          <option>필름</option><option>목공</option><option>잡자재</option><option>도배</option>
+          <option>바닥</option><option>싱크대</option><option>조명</option>
+          <option>철거</option><option>중개</option><option>법무</option><option>기타</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>전화번호 *</label><input id="vf_phone" placeholder="010-0000-0000"></div>
+    <div class="field"><label>메모</label><textarea id="vf_memo" placeholder="담당자, 단가, 특이사항 등"></textarea></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveVendor()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('vendorModal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 항목(일지) 모달 -->
+<div class="modal-bg" id="entryModal">
+  <div class="modal">
+    <h3>기록 추가</h3>
+    <div class="row2">
+      <div class="field"><label>대분류 *</label>
+        <select id="ef_type" onchange="onTypeChange()">
+          <option value="자재/공정">자재 / 공정</option>
+          <option value="비용">비용 / 지출</option>
+          <option value="사진">인테리어 사진</option>
+          <option value="연락기록">연락 기록</option>
+          <option value="서류">서류 / 공문서</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="field"><label>날짜</label><input id="ef_date" type="date"></div>
+    </div>
+
+    <div class="field" id="g_trade"><label>공종</label>
+      <select id="ef_trade">
+        <option>전기</option><option>소방</option><option>설비</option><option>타일</option>
+        <option>필름</option><option>목공</option><option>잡자재</option><option>도배</option>
+        <option>바닥</option><option>싱크대</option><option>조명</option><option>철거</option><option>기타</option>
+      </select>
+    </div>
+
+    <div class="field" id="g_cost"><label>비용 항목</label>
+      <select id="ef_cost">
+        <option>자재비</option><option>교통비</option><option>식비</option><option>등기비</option>
+        <option>등기수수료</option><option>수수료</option><option>관리비</option><option>은행이자</option>
+        <option>인건비</option><option>기타</option>
+      </select>
+    </div>
+
+    <div class="field" id="g_pay"><label>결제 수단</label>
+      <select id="ef_pay">
+        <option>세금계산서</option><option>은행이체</option><option>카드</option><option>현금</option>
+      </select>
+    </div>
+
+    <div class="field" id="g_stage"><label>구분</label>
+      <select id="ef_stage"><option>전</option><option>후</option><option>진행중</option></select>
+    </div>
+
+    <div class="field"><label>제목 *</label><input id="ef_title" placeholder="예: 화장실 타일 시공 / 1차 세금계산서"></div>
+    <div class="row2">
+      <div class="field"><label>거래처 / 상대</label><input id="ef_vendor" placeholder="예: ○○자재, 김부장"></div>
+      <div class="field"><label>금액 (원)</label><input id="ef_amount" type="number" placeholder="숫자만"></div>
+    </div>
+    <div class="field"><label>내용 / 메모</label><textarea id="ef_memo" placeholder="공정 내용, 통화 요약, 약속사항 등"></textarea></div>
+    <div class="field"><label>첨부파일 (PDF / 사진, 여러 개 가능)</label>
+      <input id="ef_files" type="file" multiple accept="image/*,application/pdf">
+      <div id="uploadProgress">업로드 중...</div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="entrySaveBtn" onclick="saveEntry()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('entryModal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== Firebase ===== */
+const firebaseConfig = {
+  apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
+  authDomain: "my-system-25497.firebaseapp.com",
+  projectId: "my-system-25497",
+  storageBucket: "my-system-25497.firebasestorage.app" // 콘솔 Storage에서 실제 버킷명 확인
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const storage = firebase.storage();
+const PROJECTS="realestate_projects", ENTRIES="realestate_entries", VENDORS="realestate_vendors";
+
+/* ===== 상태 ===== */
+let projects=[], currentProjectId=null, entries=[], vendors=[];
+let activeFilter="전체", tradeFilter="전체";
+
+/* ===== 프로젝트 ===== */
+async function loadProjects(){
+  const snap = await db.collection(PROJECTS).orderBy("createdAt","desc").get();
+  projects = snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderProjectList();
+}
+function renderProjectList(){
+  const box=document.getElementById("projList");
+  if(!projects.length){box.innerHTML='<div style="color:var(--ink-soft);font-size:13px;padding:8px 6px;">아직 프로젝트가 없습니다.</div>';return;}
+  box.innerHTML=projects.map(p=>`
+    <div class="proj-item ${p.id===currentProjectId?'active':''}" onclick="selectProject('${p.id}')">
+      <div class="pname">${esc(p.name)}</div>
+      ${p.address?`<div class="paddr">${esc(p.address)}</div>`:''}
+      <span class="pstatus ${p.status||''}">${p.status||'진행중'}</span>
+    </div>`).join("");
+}
+async function selectProject(id){
+  currentProjectId=id; renderProjectList();
+  const [eSnap,vSnap]=await Promise.all([
+    db.collection(ENTRIES).where("projectId","==",id).get(),
+    db.collection(VENDORS).where("projectId","==",id).get()
+  ]);
+  entries=eSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  vendors=vSnap.docs.map(d=>({id:d.id,...d.data()}));
+  activeFilter="전체"; tradeFilter="전체";
+  renderMain();
+}
+
+/* ===== 메인 ===== */
+function renderMain(){
+  const p=projects.find(x=>x.id===currentProjectId);
+  const main=document.getElementById("main");
+  if(!p){main.innerHTML='<div class="empty">프로젝트를 선택하세요.</div>';return;}
+
+  const withAmt=entries.filter(e=>Number(e.amount)>0);
+  const total=withAmt.reduce((s,e)=>s+Number(e.amount),0);
+  const fileCount=entries.reduce((s,e)=>s+(e.files?e.files.length:0),0);
+  const byPay=sumBy(withAmt, e=>e.pay||'기타');
+  const byCat=sumBy(withAmt, e=> e.type==='비용' ? (e.cost||'기타') : (e.trade||e.type));
+
+  const mainTypes=["전체","자재/공정","비용","사진","연락기록","서류","기타"];
+  const trades=["전체","전기","소방","설비","타일","필름","목공","잡자재","도배","바닥","싱크대","조명","철거","기타"];
+
+  let list=activeFilter==="전체"?entries:entries.filter(e=>e.type===activeFilter);
+  if(activeFilter==="자재/공정" && tradeFilter!=="전체") list=list.filter(e=>e.trade===tradeFilter);
+
+  main.innerHTML=`
+    <div class="proj-head">
+      <div>
+        <h2>${esc(p.name)}</h2>
+        <div class="sub">${esc(p.address||'')} ${p.startDate?'· 시작 '+p.startDate:''}</div>
+        ${p.memo?`<div class="sub" style="margin-top:6px">${esc(p.memo)}</div>`:''}
+      </div>
+      <div class="acts">
+        <button class="btn btn-primary btn-sm" onclick="openEntryModal()">+ 기록 추가</button>
+        <button class="btn btn-ghost btn-sm" onclick="openVendorModal()">+ 업체 추가</button>
+        <button class="btn btn-line btn-sm" onclick="deleteProject()">삭제</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="label">기록</div><div class="value">${entries.length}<small> 건</small></div></div>
+      <div class="stat"><div class="label">총 지출</div><div class="value">${total.toLocaleString()}<small> 원</small></div></div>
+      <div class="stat"><div class="label">첨부파일</div><div class="value">${fileCount}<small> 개</small></div></div>
+      <div class="stat"><div class="label">상태</div><div class="value" style="font-size:18px;color:var(--accent)">${p.status||'진행중'}</div></div>
+    </div>
+
+    <details class="panel">
+      <summary>📇 업체 연락처 <span class="cnt">${vendors.length}곳</span>
+        <button class="btn btn-ghost btn-sm add" onclick="event.preventDefault();openVendorModal()">+ 추가</button></summary>
+      <div class="panel-body">
+        ${vendors.length?vendors.map(renderVendor).join(""):'<div style="color:var(--ink-soft);font-size:13px;padding:8px 0">등록된 업체가 없습니다.</div>'}
+      </div>
+    </details>
+
+    <details class="panel" ${total?'open':''}>
+      <summary>💰 비용 요약</summary>
+      <div class="panel-body">
+        <div class="cost-grid">
+          <div><h4>결제수단별 (세금계산서·이체·카드·현금)</h4>${rows(byPay,total)}</div>
+          <div><h4>항목별 (공종 · 비용항목)</h4>${rows(byCat,total)}</div>
+        </div>
+      </div>
+    </details>
+
+    <div class="filters">
+      ${mainTypes.map(t=>`<button class="chip ${t===activeFilter?'active':''}" onclick="setFilter('${t}')">${t}</button>`).join("")}
+    </div>
+    ${activeFilter==="자재/공정"?`<div class="filters sub">
+      ${trades.map(t=>`<button class="chip sub ${t===tradeFilter?'active':''}" onclick="setTrade('${t}')">${t}</button>`).join("")}</div>`:''}
+
+    <div id="entryList">${renderList(list)}</div>
+  `;
+}
+
+function renderList(list){
+  if(!list.length) return '<div class="empty" style="margin-top:6vh">해당 항목이 없습니다.</div>';
+  if(activeFilter==="사진"){
+    const groups={"전":[],"후":[],"진행중":[]};
+    list.forEach(e=>(e.files||[]).forEach(f=>{ if((f.type||"").startsWith("image/")) (groups[e.stage||"진행중"]||groups["진행중"]).push({f,e}); }));
+    const out=["전","후","진행중"].filter(g=>groups[g].length).map(g=>`
+      <div class="gallery-group"><h3>${g==='전'?'🔻 인테리어 전':g==='후'?'🔺 인테리어 후':'🔧 진행중'} (${groups[g].length})</h3>
+        <div class="gallery">${groups[g].map(({f,e})=>`<a href="${f.url}" target="_blank" rel="noopener"><img src="${f.url}"><div class="cap">${esc(e.title)} · ${e.date||''}</div></a>`).join("")}</div>
+      </div>`).join("");
+    return out || '<div class="empty" style="margin-top:6vh">사진 첨부가 없습니다.</div>';
+  }
+  return list.map(renderEntry).join("");
+}
+
+function renderEntry(e){
+  const files=(e.files||[]).map(f=>{
+    const isImg=(f.type||"").startsWith("image/");
+    const thumb=isImg?`<img src="${f.url}" alt="">`:`<div class="fi">PDF</div>`;
+    return `<a class="file" href="${f.url}" target="_blank" rel="noopener">${thumb}<span class="fname">${esc(f.name)}</span></a>`;
+  }).join("");
+  const tags=[
+    e.trade?`<span class="e-tag">${e.trade}</span>`:'',
+    e.cost?`<span class="e-tag">${e.cost}</span>`:'',
+    e.pay?`<span class="e-tag">${e.pay}</span>`:'',
+    e.stage?`<span class="e-tag stage">${e.stage}</span>`:''
+  ].join("");
+  return `
+  <div class="entry">
+    <div class="e-top">
+      <span class="e-type ${e.type==='자재/공정'?'':e.type}">${e.type}</span>
+      ${tags}
+      <span class="e-title">${esc(e.title)}</span>
+      <span class="e-date">${e.date||''}</span>
+      <button class="e-del" onclick="deleteEntry('${e.id}')">삭제</button>
+    </div>
+    ${(e.vendor||e.amount)?`<div class="e-meta">
+        ${e.vendor?`<span>거래처: <b>${esc(e.vendor)}</b></span>`:''}
+        ${e.amount?`<span>금액: <b>${Number(e.amount).toLocaleString()}원</b></span>`:''}
+      </div>`:''}
+    ${e.memo?`<div class="e-memo">${esc(e.memo)}</div>`:''}
+    ${files?`<div class="files">${files}</div>`:''}
+  </div>`;
+}
+
+function renderVendor(v){
+  return `<div class="vendor">
+    <span class="vtrade">${v.trade||'기타'}</span>
+    <div><div class="vname">${esc(v.name)}</div>${v.memo?`<div class="vmemo">${esc(v.memo)}</div>`:''}</div>
+    <a class="tel" href="tel:${(v.phone||'').replace(/[^0-9+]/g,'')}">${esc(v.phone||'')}</a>
+    <button class="vdel" onclick="deleteVendor('${v.id}')">삭제</button>
+  </div>`;
+}
+
+function setFilter(t){activeFilter=t; tradeFilter="전체"; renderMain();}
+function setTrade(t){tradeFilter=t; renderMain();}
+function sumBy(arr,keyFn){const m={}; arr.forEach(e=>{const k=keyFn(e); m[k]=(m[k]||0)+Number(e.amount);}); return m;}
+function rows(obj,total){
+  const ks=Object.keys(obj).sort((a,b)=>obj[b]-obj[a]);
+  if(!ks.length) return '<div style="color:var(--ink-soft);font-size:13px">지출 기록 없음</div>';
+  return ks.map(k=>`<div class="cost-row"><span>${k}</span><b>${obj[k].toLocaleString()}원</b></div>`).join("")
+    + `<div class="cost-row" style="border-bottom:none;margin-top:4px"><span style="font-weight:700">합계</span><b>${total.toLocaleString()}원</b></div>`;
+}
+
+/* ===== 프로젝트 저장/삭제 ===== */
+function openProjectModal(){document.getElementById("pf_date").value=today(); openModal("projectModal");}
+async function saveProject(){
+  const name=val("pf_name").trim(); if(!name){alert("프로젝트명을 입력하세요.");return;}
+  await db.collection(PROJECTS).add({name,address:val("pf_addr").trim(),status:val("pf_status"),
+    startDate:val("pf_date"),memo:val("pf_memo").trim(),createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  ["pf_name","pf_addr","pf_memo"].forEach(id=>document.getElementById(id).value="");
+  closeModal("projectModal"); await loadProjects();
+}
+async function deleteProject(){
+  if(!currentProjectId||!confirm("이 프로젝트와 모든 기록·업체를 삭제할까요? (되돌릴 수 없음)"))return;
+  const [e,v]=await Promise.all([
+    db.collection(ENTRIES).where("projectId","==",currentProjectId).get(),
+    db.collection(VENDORS).where("projectId","==",currentProjectId).get()]);
+  const batch=db.batch();
+  e.docs.forEach(d=>batch.delete(d.ref)); v.docs.forEach(d=>batch.delete(d.ref));
+  batch.delete(db.collection(PROJECTS).doc(currentProjectId)); await batch.commit();
+  currentProjectId=null; entries=[]; vendors=[]; await loadProjects();
+  document.getElementById("main").innerHTML='<div class="empty">프로젝트를 선택하세요.</div>';
+}
+
+/* ===== 업체 ===== */
+function openVendorModal(){if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;} openModal("vendorModal");}
+async function saveVendor(){
+  const name=val("vf_name").trim(), phone=val("vf_phone").trim();
+  if(!name||!phone){alert("업체명과 전화번호를 입력하세요.");return;}
+  await db.collection(VENDORS).add({projectId:currentProjectId,name,trade:val("vf_trade"),phone,
+    memo:val("vf_memo").trim(),createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  ["vf_name","vf_phone","vf_memo"].forEach(id=>document.getElementById(id).value="");
+  closeModal("vendorModal"); await selectProject(currentProjectId);
+}
+async function deleteVendor(id){if(!confirm("이 업체를 삭제할까요?"))return; await db.collection(VENDORS).doc(id).delete(); await selectProject(currentProjectId);}
+
+/* ===== 항목 ===== */
+function onTypeChange(){
+  const t=val("ef_type");
+  show("g_trade", t==="자재/공정");
+  show("g_cost",  t==="비용");
+  show("g_pay",   t==="자재/공정"||t==="비용");
+  show("g_stage", t==="사진");
+}
+function openEntryModal(){
+  if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
+  document.getElementById("ef_date").value=today();
+  ["ef_title","ef_vendor","ef_amount","ef_memo"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("ef_files").value="";
+  document.getElementById("ef_type").value="자재/공정";
+  onTypeChange(); openModal("entryModal");
+}
+async function saveEntry(){
+  const title=val("ef_title").trim(); if(!title){alert("제목을 입력하세요.");return;}
+  const t=val("ef_type");
+  const btn=document.getElementById("entrySaveBtn"); btn.disabled=true; btn.textContent="저장 중...";
+
+  let files=[]; const fi=document.getElementById("ef_files");
+  if(fi.files.length){
+    document.getElementById("uploadProgress").style.display="block";
+    for(const f of fi.files){
+      const path=`realestate/${currentProjectId}/${Date.now()}_${f.name}`;
+      const ref=storage.ref(path); await ref.put(f);
+      files.push({name:f.name,url:await ref.getDownloadURL(),type:f.type,path});
+    }
+    document.getElementById("uploadProgress").style.display="none";
+  }
+
+  await db.collection(ENTRIES).add({
+    projectId:currentProjectId, type:t, title, date:val("ef_date"),
+    trade: t==="자재/공정"?val("ef_trade"):null,
+    cost:  t==="비용"?val("ef_cost"):null,
+    pay:   (t==="자재/공정"||t==="비용")?val("ef_pay"):null,
+    stage: t==="사진"?val("ef_stage"):null,
+    vendor:val("ef_vendor").trim(),
+    amount:val("ef_amount")?Number(val("ef_amount")):null,
+    memo:val("ef_memo").trim(), files,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  btn.disabled=false; btn.textContent="저장";
+  closeModal("entryModal"); await selectProject(currentProjectId);
+}
+async function deleteEntry(id){
+  if(!confirm("이 항목을 삭제할까요?"))return;
+  const e=entries.find(x=>x.id===id);
+  if(e&&e.files) for(const f of e.files){ if(f.path){try{await storage.ref(f.path).delete();}catch(_){}} }
+  await db.collection(ENTRIES).doc(id).delete(); await selectProject(currentProjectId);
+}
+
+/* ===== 유틸 ===== */
+function val(id){return document.getElementById(id).value;}
+function today(){return new Date().toISOString().slice(0,10);}
+function esc(s){return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function show(id,on){document.getElementById(id).style.display=on?'block':'none';}
+function openModal(id){document.getElementById(id).classList.add("open");}
+function closeModal(id){document.getElementById(id).classList.remove("open");}
+
+loadProjects();
+</script>
+</body>
+</html>
