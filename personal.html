@@ -62,6 +62,17 @@ textarea{resize:vertical;min-height:74px;}
 .btn-row{display:flex;gap:8px;}
 .btn-row .btn{flex:1;}
 
+.view-toggle{display:flex;gap:6px;margin-bottom:12px;}
+.vt-btn{flex:1;padding:9px;border:1.5px solid #E5E7EB;background:#fff;color:#6B7280;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;}
+.vt-btn.sel{background:#6366F1;color:#fff;border-color:#6366F1;}
+.row-item{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #EEF0F3;border-left:4px solid #ccc;border-radius:10px;padding:11px 13px;margin-bottom:6px;cursor:pointer;}
+.row-item:active{background:#FAFAFB;}
+.row-ico{font-size:17px;flex-shrink:0;}
+.row-mid{flex:1;min-width:0;}
+.row-title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.row-sub{font-size:11px;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+.row-right{font-size:11px;color:#B0B5BD;flex-shrink:0;text-align:right;}
+.row-cam{font-size:12px;}
 .filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
 .filter-chip{padding:6px 11px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;border:1.5px solid #E5E7EB;color:#6B7280;}
 .filter-chip.sel{background:#1A1A2E;color:#fff;border-color:#1A1A2E;}
@@ -130,6 +141,40 @@ textarea{resize:vertical;min-height:74px;}
 .viewer img{max-width:94%;max-height:90%;border-radius:8px;}
 .viewer-close{position:absolute;top:18px;right:20px;color:#fff;font-size:30px;cursor:pointer;}
 
+/* 약속 알림 배너 */
+.appt-banner{background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border-radius:12px;padding:12px 15px;margin-bottom:14px;font-size:13px;cursor:pointer;}
+.appt-banner b{font-weight:800;}
+.appt-row{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.appt-row+.appt-row{margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.25);}
+.appt-d{background:rgba(255,255,255,.25);border-radius:10px;padding:2px 9px;font-size:11px;font-weight:700;flex-shrink:0;}
+
+/* 달력 */
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:16px;font-weight:800;}
+.cal-nav{border:none;background:#F3F4F6;width:36px;height:36px;border-radius:9px;font-size:18px;cursor:pointer;color:#4B5563;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px;}
+.cal-dow{text-align:center;font-size:11px;color:#9CA3AF;font-weight:700;padding:4px 0;}
+.cal-cell{aspect-ratio:1;border-radius:9px;background:#FAFAFB;border:1px solid #F1F2F4;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;cursor:pointer;position:relative;}
+.cal-cell.empty{background:none;border:none;cursor:default;}
+.cal-cell.today{border-color:#6366F1;border-width:2px;font-weight:800;}
+.cal-cell.sel{background:#6366F1;color:#fff;}
+.cal-cell.has::after{content:'';position:absolute;bottom:5px;width:5px;height:5px;border-radius:50%;background:#F59E0B;}
+.cal-cell.sel.has::after{background:#fff;}
+.cal-cnt{font-size:9px;color:#9CA3AF;position:absolute;top:3px;right:5px;}
+.cal-cell.sel .cal-cnt{color:#E0E7FF;}
+
+/* 통계 */
+.stat-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid #EEF0F3;}
+.stat-card h3{font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;}
+.stat-big{display:flex;gap:10px;flex-wrap:wrap;}
+.stat-box{flex:1;min-width:90px;background:#F8F8FC;border-radius:10px;padding:12px;text-align:center;}
+.stat-num{font-size:20px;font-weight:800;color:#6366F1;}
+.stat-lbl{font-size:11px;color:#9CA3AF;margin-top:3px;}
+.stat-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px;}
+.stat-bar-lbl{width:70px;flex-shrink:0;color:#4B5563;}
+.stat-bar-track{flex:1;background:#F1F2F4;border-radius:6px;height:14px;overflow:hidden;}
+.stat-bar-fill{height:100%;border-radius:6px;}
+.stat-bar-val{width:56px;text-align:right;flex-shrink:0;color:#6B7280;font-weight:600;}
+
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1A1A2E;color:#fff;padding:11px 20px;border-radius:24px;font-size:13px;z-index:70;opacity:0;transition:opacity .25s;pointer-events:none;}
 .toast.show{opacity:1;}
 </style>
@@ -138,7 +183,7 @@ textarea{resize:vertical;min-height:74px;}
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v6</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v10</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -150,6 +195,8 @@ textarea{resize:vertical;min-height:74px;}
 <div class="tabs">
   <button class="tab active" onclick="tab('write',this)">✏️ 기록</button>
   <button class="tab" onclick="tab('list',this)">📋 모아보기</button>
+  <button class="tab" onclick="tab('cal',this)">📅 달력</button>
+  <button class="tab" onclick="tab('stats',this)">📊 통계</button>
   <button class="tab" onclick="tab('search',this)">🔍 검색</button>
   <button class="tab" onclick="tab('chat',this)">💬 AI 대화</button>
   <button class="tab" onclick="tab('ai',this)">🧠 분석</button>
@@ -157,6 +204,8 @@ textarea{resize:vertical;min-height:74px;}
 </div>
 
 <div class="wrap">
+
+  <div id="apptBanner"></div>
 
   <!-- 기록 -->
   <div class="panel active" id="p-write">
@@ -170,8 +219,7 @@ textarea{resize:vertical;min-height:74px;}
       <div id="formFields"></div>
 
       <div class="row2">
-        <div><label>날짜</label><input type="date" id="f-date"></div>
-        <div><label>시간</label><input type="time" id="f-time"></div>
+        <div style="flex:1"><label>날짜 <span class="opt">(방문일/있었던 날)</span></label><input type="date" id="f-date"></div>
       </div>
 
       <label>사진 <span class="opt">(자동 압축 · 모든 기기에서 보임)</span></label>
@@ -192,8 +240,28 @@ textarea{resize:vertical;min-height:74px;}
 
   <!-- 모아보기 -->
   <div class="panel" id="p-list">
+    <div class="view-toggle">
+      <button class="vt-btn" id="vtList" onclick="setView('list')">☰ 목록</button>
+      <button class="vt-btn sel" id="vtCard" onclick="setView('card')">▭ 카드</button>
+    </div>
     <div class="filter-row" id="filterRow"></div>
     <div id="listArea"></div>
+  </div>
+
+  <!-- 달력 -->
+  <div class="panel" id="p-cal">
+    <div class="cal-head">
+      <button class="cal-nav" onclick="calMove(-1)">‹</button>
+      <span id="calTitle"></span>
+      <button class="cal-nav" onclick="calMove(1)">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div id="calDayList"></div>
+  </div>
+
+  <!-- 통계 -->
+  <div class="panel" id="p-stats">
+    <div id="statsArea"></div>
   </div>
 
   <!-- 검색 -->
@@ -235,6 +303,11 @@ textarea{resize:vertical;min-height:74px;}
       <button class="btn btn-primary" onclick="runDiag()">▶ 진단 실행</button>
       <div id="diagOut" style="margin-top:14px"></div>
       <button class="btn btn-ghost" onclick="clearErrors()" style="margin-top:8px">에러 기록 지우기</button>
+    </div>
+    <div class="card">
+      <div class="card-title">💾 백업 / 내보내기</div>
+      <p style="font-size:12px;color:#6B7280;margin-bottom:10px;">모든 기록을 엑셀에서 열 수 있는 CSV 파일로 저장해요. (사진 제외)</p>
+      <button class="btn btn-primary" onclick="exportCSV()">📥 CSV로 내보내기</button>
     </div>
   </div>
 
@@ -365,6 +438,8 @@ function tab(name,el){
   var ts=document.querySelectorAll('.tab');for(var j=0;j<ts.length;j++)ts[j].classList.remove('active');
   el.classList.add('active');
   if(name==='list')renderList();
+  if(name==='cal')renderCal();
+  if(name==='stats')renderStats();
 }
 
 /* ===== 카테고리 칩 + 동적 폼 ===== */
@@ -529,7 +604,7 @@ function startEdit(id){
   editingId=id;selectedCat=r.cat;
   renderCats();
   renderForm({title:r.title,detail:r.detail,who:r.who,amount:r.amount,odo:r.odo,liters:r.liters});
-  $('f-date').value=r.date;$('f-time').value=r.time;
+  $('f-date').value=r.date;
   pendingPhotos=(r.photos&&r.photos.slice())||[];
   // 클라우드에만 있는 사진도 불러와서 편집 가능하게
   if((!r.photos||!r.photos.length)&&r.photoIds&&r.photoIds.length){
@@ -547,7 +622,7 @@ function cancelEdit(){
   $('editBanner').classList.remove('show');
   $('saveBtn').textContent='💾 저장하기';
   renderForm({});renderPending();
-  var n=new Date();$('f-date').value=n.toISOString().slice(0,10);$('f-time').value=n.toTimeString().slice(0,5);
+  var n=new Date();$('f-date').value=n.toISOString().slice(0,10);
 }
 function saveRecord(){
   var v=collectFields();
@@ -561,7 +636,7 @@ function saveRecord(){
     who:(v.who||'').trim(),amount:v.amount?Number(v.amount):null,
     odo:v.odo?Number(v.odo):null,liters:v.liters?Number(v.liters):null,
     date:$('f-date').value||new Date().toISOString().slice(0,10),
-    time:$('f-time').value||new Date().toTimeString().slice(0,5),
+    time:'',
     photoIds:photoIds,   // 사진은 클라우드에만 저장 (브라우저 용량 절약)
     created:editingId?(records.filter(function(x){return x.id===id;})[0]||{}).created||new Date().toISOString():new Date().toISOString(),
     updated:new Date().toISOString()
@@ -573,6 +648,7 @@ function saveRecord(){
   // 사진은 클라우드 업로드 + 화면 캐시(photoMem)에만, localStorage엔 저장 안 함
   pendingPhotos.forEach(function(p,i){var pid=id+'_'+i;photoMem[pid]=p;fbPushPhoto(pid,p);});
   toast(editingId?'✏️ 수정됨':'✅ 저장됨');
+  renderApptBanner();
   cancelEdit();
 }
 /* 차계부: 같은 차량의 직전 주행거리 기록과 비교해 주행거리·연비 계산 */
@@ -593,6 +669,13 @@ function computeCar(rec,records){
 
 /* ===== 모아보기 ===== */
 var listFilter='전체';
+var viewMode='card';   // 'card' 또는 'list'
+function setView(m){
+  viewMode=m;
+  $('vtList').className='vt-btn'+(m==='list'?' sel':'');
+  $('vtCard').className='vt-btn'+(m==='card'?' sel':'');
+  renderList();
+}
 function renderFilters(){
   var h='<div class="filter-chip'+(listFilter==='전체'?' sel':'')+'" onclick="setFilter(\'전체\')">전체</div>';
   CATS.forEach(function(c){h+='<div class="filter-chip'+(listFilter===c.k?' sel':'')+'" onclick="setFilter(\''+c.k+'\')">'+c.i+' '+c.k+'</div>';});
@@ -608,8 +691,23 @@ function renderList(){
 function groupByDate(arr){
   arr.sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
   var html='',curr='';
-  arr.forEach(function(r){if(r.date!==curr){curr=r.date;html+='<div class="date-group">'+fmtDate(r.date)+'</div>';}html+=recCard(r);});
+  arr.forEach(function(r){if(r.date!==curr){curr=r.date;html+='<div class="date-group">'+fmtDate(r.date)+'</div>';}html+=(viewMode==='list'?rowItem(r):recCard(r));});
   return html;
+}
+/* 한 줄 목록 항목 */
+function rowItem(r){
+  var c=catOf(r.cat);
+  var sub=[];
+  if(r.who)sub.push(esc(r.who));
+  if(r.amount){if(r.cat==='독서')sub.push('⭐'+Math.max(0,Math.min(5,Math.round(r.amount))));else sub.push(won(r.amount)+'원');}
+  if(r.cat==='차계부'&&r.kmpl)sub.push(r.kmpl+'㎞/L');
+  if(!sub.length&&r.detail)sub.push(r.detail.replace(/\n/g,' '));
+  var hasPhoto=(r.photoIds&&r.photoIds.length)||(r.photos&&r.photos.length);
+  return '<div class="row-item" style="border-left-color:'+c.c+'" onclick="openDetail(\''+r.id+'\')">'+
+    '<span class="row-ico">'+c.i+'</span>'+
+    '<div class="row-mid"><div class="row-title">'+(esc(r.title)||r.cat)+(hasPhoto?' <span class="row-cam">📷</span>':'')+'</div>'+
+    (sub.length?'<div class="row-sub">'+esc(sub.join(' · '))+'</div>':'')+'</div>'+
+    '<div class="row-right">›</div></div>';
 }
 function fmtDate(d){var dd=['일','월','화','수','목','금','토'];var t=new Date(d+'T00:00');return d+' ('+dd[t.getDay()]+')';}
 function metaHtml(r){
@@ -636,7 +734,7 @@ function recCard(r){
   }
   var meta=metaHtml(r);
   return '<div class="rec" style="border-left-color:'+c.c+';cursor:pointer" onclick="openDetail(\''+r.id+'\')">'+
-    '<div class="rec-top"><span class="rec-cat" style="background:'+c.bg+';color:'+c.c+'">'+c.i+' '+r.cat+'</span><span class="rec-time">'+r.time+' ›</span></div>'+
+    '<div class="rec-top"><span class="rec-cat" style="background:'+c.bg+';color:'+c.c+'">'+c.i+' '+r.cat+'</span><span class="rec-time">'+(r.time?r.time+' ':'')+'›</span></div>'+
     (r.title?'<div class="rec-title">'+esc(r.title)+'</div>':'')+
     (r.detail?'<div class="rec-detail">'+esc(r.detail)+'</div>':'')+
     (meta?'<div class="rec-meta">'+meta+'</div>':'')+photos+
@@ -657,10 +755,11 @@ function openDetail(id){
   $('detailCard').innerHTML=
     '<span class="detail-cat" style="background:'+c.bg+';color:'+c.c+'">'+c.i+' '+r.cat+'</span>'+
     '<h2>'+(esc(r.title)||'(제목 없음)')+'</h2>'+
-    '<div class="detail-when">'+fmtDate(r.date)+' · '+r.time+'</div>'+
+    '<div class="detail-when">'+fmtDate(r.date)+(r.time?' · '+r.time:'')+'</div>'+
     (meta?'<div class="detail-meta" style="margin-top:12px">'+meta+'</div>':'')+
     (r.detail?'<div class="detail-body">'+esc(r.detail)+'</div>':'')+
     photosHtml+
+    mapBtn(r)+
     '<div class="btn-row" style="margin-top:18px">'+
       '<button class="btn btn-ghost" onclick="closeDetail();startEdit(\''+r.id+'\')">✏️ 수정</button>'+
       '<button class="btn btn-ghost" style="color:#EF4444" onclick="if(confirm(\'삭제할까요?\')){realDel(\''+r.id+'\');closeDetail();}">🗑 삭제</button>'+
@@ -676,6 +775,17 @@ function openDetail(id){
   }
 }
 function closeDetail(){$('detailBg').classList.remove('open');}
+/* 맛집·여행 등: 가게명/장소로 네이버지도 열기 */
+function mapBtn(r){
+  if(r.cat!=='맛집'&&r.cat!=='여행')return '';
+  var q=[r.title,r.who].filter(Boolean).join(' ').trim();
+  if(!q)return '';
+  return '<button class="btn btn-ghost" style="color:#03C75A;margin-top:12px" onclick="openMap(\''+encodeURIComponent(q).replace(/'/g,"%27")+'\')">🗺️ 네이버지도에서 보기</button>';
+}
+function openMap(enc){
+  var q=decodeURIComponent(enc);
+  window.open('https://map.naver.com/p/search/'+encodeURIComponent(q),'_blank');
+}
 function delRec(id){
   if(!confirm('이 기록을 삭제할까요?'))return;
   realDel(id);
@@ -816,6 +926,118 @@ async function sendChat(){
   catch(e){thinking.textContent='⚠️ '+e.message;logErr('대화 실패: '+e.message);}
 }
 
+/* ===== 달력 ===== */
+var calYear,calMonth,calSelDate=null;
+function renderCal(){
+  if(calYear===undefined){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth();}
+  var first=new Date(calYear,calMonth,1),startDow=first.getDay();
+  var days=new Date(calYear,calMonth+1,0).getDate();
+  $('calTitle').textContent=calYear+'년 '+(calMonth+1)+'월';
+  // 날짜별 건수 집계
+  var cnt={};getRecords().forEach(function(r){if(r.date)cnt[r.date]=(cnt[r.date]||0)+1;});
+  var todayStr=new Date().toISOString().slice(0,10);
+  var dows=['일','월','화','수','목','금','토'];
+  var h='';dows.forEach(function(d){h+='<div class="cal-dow">'+d+'</div>';});
+  for(var i=0;i<startDow;i++)h+='<div class="cal-cell empty"></div>';
+  for(var d=1;d<=days;d++){
+    var ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var n=cnt[ds]||0;
+    var cls='cal-cell'+(ds===todayStr?' today':'')+(ds===calSelDate?' sel':'')+(n?' has':'');
+    h+='<div class="'+cls+'" onclick="calPick(\''+ds+'\')">'+(n?'<span class="cal-cnt">'+n+'</span>':'')+d+'</div>';
+  }
+  $('calGrid').innerHTML=h;
+  renderCalDay();
+}
+function calMove(dir){calMonth+=dir;if(calMonth<0){calMonth=11;calYear--;}if(calMonth>11){calMonth=0;calYear++;}calSelDate=null;renderCal();}
+function calPick(ds){calSelDate=(calSelDate===ds?null:ds);renderCal();}
+function renderCalDay(){
+  if(!calSelDate){$('calDayList').innerHTML='<div class="empty" style="padding:20px 0">날짜를 누르면 그날 기록이 보여요</div>';return;}
+  var arr=getRecords().filter(function(r){return r.date===calSelDate;});
+  $('calDayList').innerHTML='<div class="date-group">'+fmtDate(calSelDate)+'</div>'+(arr.length?arr.map(rowItem).join(''):'<div class="empty">기록 없음</div>');
+}
+
+/* ===== 통계 ===== */
+function renderStats(){
+  var recs=getRecords();
+  if(!recs.length){$('statsArea').innerHTML='<div class="empty">기록이 쌓이면 통계가 보여요</div>';return;}
+  var now=new Date(),ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var thisMonth=recs.filter(function(r){return (r.date||'').slice(0,7)===ym;});
+  // 이번 달 지출 합계 (지출·구매·맛집·차계부·여행·건강의 금액)
+  var spend=0;thisMonth.forEach(function(r){if(r.amount&&r.cat!=='독서')spend+=Number(r.amount);});
+  var h='';
+  h+='<div class="stat-card"><h3>📅 이번 달 ('+(now.getMonth()+1)+'월)</h3><div class="stat-big">'+
+     '<div class="stat-box"><div class="stat-num">'+thisMonth.length+'</div><div class="stat-lbl">기록</div></div>'+
+     '<div class="stat-box"><div class="stat-num">'+won(spend)+'</div><div class="stat-lbl">지출(원)</div></div>'+
+     '<div class="stat-box"><div class="stat-num">'+recs.length+'</div><div class="stat-lbl">전체 기록</div></div>'+
+     '</div></div>';
+  // 카테고리별 건수 막대
+  var byCat={};recs.forEach(function(r){byCat[r.cat]=(byCat[r.cat]||0)+1;});
+  var max=Math.max.apply(null,Object.keys(byCat).map(function(k){return byCat[k];}));
+  var order=CATS.filter(function(c){return byCat[c.k];});
+  h+='<div class="stat-card"><h3>📊 카테고리별 기록 수</h3>';
+  order.sort(function(a,b){return byCat[b.k]-byCat[a.k];}).forEach(function(c){
+    var pct=Math.round(byCat[c.k]/max*100);
+    h+='<div class="stat-bar-row"><span class="stat-bar-lbl">'+c.i+' '+c.k+'</span>'+
+       '<span class="stat-bar-track"><span class="stat-bar-fill" style="width:'+pct+'%;background:'+c.c+'"></span></span>'+
+       '<span class="stat-bar-val">'+byCat[c.k]+'건</span></div>';
+  });
+  h+='</div>';
+  // 차량별 연비 추이
+  var cars={};recs.forEach(function(r){if(r.cat==='차계부'&&r.kmpl){(cars[r.who]=cars[r.who]||[]).push(r);}});
+  Object.keys(cars).forEach(function(car){
+    var list=cars[car].sort(function(a,b){return (a.date).localeCompare(b.date);});
+    var avg=Math.round(list.reduce(function(s,r){return s+r.kmpl;},0)/list.length*10)/10;
+    h+='<div class="stat-card"><h3>🚗 '+esc(car)+' 연비 (평균 '+avg+'㎞/L)</h3>';
+    list.slice(-6).forEach(function(r){
+      var pct=Math.min(100,Math.round(r.kmpl/Math.max(avg,r.kmpl)*100));
+      h+='<div class="stat-bar-row"><span class="stat-bar-lbl">'+r.date.slice(5)+'</span>'+
+         '<span class="stat-bar-track"><span class="stat-bar-fill" style="width:'+pct+'%;background:#0891B2"></span></span>'+
+         '<span class="stat-bar-val">'+r.kmpl+'㎞/L</span></div>';
+    });
+    h+='</div>';
+  });
+  $('statsArea').innerHTML=h;
+}
+
+/* ===== 약속 알림 배너 ===== */
+function renderApptBanner(){
+  var el=$('apptBanner');if(!el)return;
+  var today=new Date();today.setHours(0,0,0,0);
+  var soon=getRecords().filter(function(r){
+    if(r.cat!=='약속')return false;
+    var d=new Date(r.date+'T00:00');var diff=Math.round((d-today)/86400000);
+    return diff>=0&&diff<=7;
+  }).sort(function(a,b){return a.date.localeCompare(b.date);});
+  if(!soon.length){el.innerHTML='';return;}
+  var rows=soon.slice(0,3).map(function(r){
+    var d=new Date(r.date+'T00:00');var diff=Math.round((d-today)/86400000);
+    var when=diff===0?'오늘':(diff===1?'내일':diff+'일 뒤');
+    return '<div class="appt-row"><span><b>'+esc(r.title||'약속')+'</b>'+(r.who?' · '+esc(r.who):'')+'</span><span class="appt-d">'+when+'</span></div>';
+  }).join('');
+  el.innerHTML='<div class="appt-banner" onclick="setFilter(\'약속\');document.querySelectorAll(\'.tab\')[1].click();">📅 다가오는 약속'+rows+'</div>';
+}
+
+/* ===== CSV 내보내기 ===== */
+function exportCSV(){
+  var recs=getRecords();
+  if(!recs.length){toast('내보낼 기록이 없어요');return;}
+  var cols=['date','cat','title','detail','who','amount','odo','liters','trip','kmpl'];
+  var head=['날짜','카테고리','제목','내용','누구/장소','금액','주행거리','주유량','구간','연비'];
+  function cell(v){v=(v==null?'':String(v));if(/[",\n]/.test(v))v='"'+v.replace(/"/g,'""')+'"';return v;}
+  var lines=[head.join(',')];
+  recs.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).forEach(function(r){
+    lines.push(cols.map(function(k){return cell(r[k]);}).join(','));
+  });
+  var csv='\uFEFF'+lines.join('\n');  // BOM for Excel 한글
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;
+  a.download='개인관리_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  toast('📥 CSV 내보냄');
+}
+
 /* ===== 진단 ===== */
 function storageSize(){var t=0;for(var k in localStorage){if(localStorage.hasOwnProperty(k))t+=(localStorage[k].length+k.length);}return t;}
 function runDiag(){
@@ -845,7 +1067,7 @@ function clearErrors(){localStorage.removeItem(ERR_KEY);toast('에러 기록 삭
   try{
     var n=new Date(),d=['일','월','화','수','목','금','토'];
     $('f-date').value=n.toISOString().slice(0,10);
-    $('f-time').value=n.toTimeString().slice(0,5);
+    // 시간은 비워둠 (선택사항 — 방문일 위주)
     // 주소 끝 #카테고리 가 있으면 그 카테고리로 시작 (예: personal.html#독서)
     var hash=decodeURIComponent((location.hash||'').replace('#',''));
     if(hash&&catOf(hash).k===hash)selectedCat=hash;
@@ -865,8 +1087,9 @@ function clearErrors(){localStorage.removeItem(ERR_KEY);toast('에러 기록 삭
     $('camInput').onchange=onPhotoInput;
     $('pickInput').onchange=onPhotoInput;
     pushMsg('ai','안녕하세요! 기록을 남기면 "지난주에 뭐 샀지?" 같은 질문에 답해드려요.');
+    renderApptBanner();
     pingFB();
-    pullRecords();
+    pullRecords().then(function(){renderApptBanner();});
   }catch(e){logErr('초기화 실패: '+e.message);}
 })();
 </script>
