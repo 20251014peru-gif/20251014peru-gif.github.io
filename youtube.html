@@ -164,7 +164,7 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
     <div class="head-row">
       <div class="brand">
         <h1>사진 보관함</h1>
-        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v9</b></span>
+        <span class="sub">부동산·업무·여행·개인 <b style="color:#9aa7b4">v11</b></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -399,7 +399,7 @@ async function compressImage(file, maxDim=MAXDIM, quality=QUALITY){
     const fin=(url,cv)=>{ if(!done){ done=true; resolve({url, canvas:cv||null}); } };
     reader.onload=e=>{
       const raw=e.target.result;
-      const timer=setTimeout(()=>fin(raw,null), 8000);
+      const timer=setTimeout(()=>fin(raw,null), 15000);
       const img=new Image();
       img.onload=()=>{
         clearTimeout(timer);
@@ -504,7 +504,7 @@ async function handleFiles(files){
     const results=[];
     for(let i=0;i<arr.length;i++){
       const r=await compressImage(arr[i]);
-      if(!r || !r.url){ toast("사진을 읽지 못했어요"); return; }
+      if(!r || (!r.canvas && !r.url)){ toast("사진을 읽지 못했어요 ("+(i+1)+")"); return; }
       results.push(r);
     }
     if(!results.length){ toast("불러온 사진이 없어요"); return; }
@@ -605,7 +605,7 @@ const mk = {
   tool:"pen", color:"#ff3b30", width:8,
   strokes:[],            // 저장된 도형 목록(실행취소용)
   drawing:false, start:null, cur:null, penPts:[],
-  dragging:false, selected:null, dragLast:null,
+  dragging:false, selected:null, dragLast:null, dragHandle:null,
   scale:1,
   mode:"new",            // "new"=새 사진 추가, "mark"=기존 사진에 표시
   newQueue:[],           // 새 사진 추가 시 처리할 dataURL 목록
@@ -615,7 +615,6 @@ const mk = {
 mk.ctx = mk.canvas.getContext("2d");
 
 // 캔버스에 사진 띄우고 편집화면 열기
-// src는 캔버스(압축결과) 또는 이미지. 캔버스면 재로딩 전혀 없음 → 멈춤 불가능
 function loadCanvasImage(dataUrl, src, cb){
   const show=(drawable, w, h)=>{
     mk.baseImg=drawable;
@@ -628,15 +627,24 @@ function loadCanvasImage(dataUrl, src, cb){
     $("markup").classList.add("show");
     if(cb) cb();
   };
-  // 1) 압축 캔버스가 있으면 그대로 사용 (가장 확실)
+  // 1) 압축 캔버스가 있으면 그대로 사용 (가장 확실, 재로딩 없음)
   if(src && src.tagName==="CANVAS" && src.width){ show(src, src.width, src.height); return; }
   // 2) 이미 로드된 이미지
   if(src && (src.complete || src.naturalWidth)){ show(src, src.naturalWidth||src.width, src.naturalHeight||src.height); return; }
-  // 3) dataURL로 새로 로드 (기존 사진 표시용)
+  // 3) dataURL을 캔버스로 변환해서 사용 (기존 사진 표시용)
+  if(!dataUrl){ toast("사진 데이터가 없어요"); return; }
   const img=new Image();
   let opened=false;
-  const guard=setTimeout(()=>{ if(!opened){ opened=true; toast("여는 중 지연… 다시 시도해주세요"); } }, 8000);
-  img.onload=()=>{ if(!opened){ opened=true; clearTimeout(guard); show(img, img.naturalWidth, img.naturalHeight); } };
+  const guard=setTimeout(()=>{ if(!opened){ opened=true; toast("사진 여는 데 시간이 걸려요. 다시 시도해주세요"); } }, 10000);
+  img.onload=()=>{
+    if(opened) return; opened=true; clearTimeout(guard);
+    try{
+      const cv=document.createElement("canvas");
+      cv.width=img.naturalWidth||img.width; cv.height=img.naturalHeight||img.height;
+      cv.getContext("2d").drawImage(img,0,0);
+      show(cv, cv.width, cv.height);
+    }catch(err){ show(img, img.naturalWidth||img.width, img.naturalHeight||img.height); }
+  };
   img.onerror=()=>{ clearTimeout(guard); toast("사진을 화면에 못 띄웠어요"); };
   img.src=dataUrl;
 }
@@ -671,12 +679,19 @@ function fitCanvas(){
   mk.canvas.style.width=(mk.canvas.width*r)+"px";
   mk.canvas.style.height=(mk.canvas.height*r)+"px";
 }
-function redrawMk(){
+// 실제 그리기 (직접 호출 금지, redrawMk 통해서만)
+function paintMk(){
+  mk._raf=0;
   const c=mk.ctx;
   c.clearRect(0,0,mk.canvas.width,mk.canvas.height);
-  if(mk.baseImg) c.drawImage(mk.baseImg,0,0,mk.canvas.width,mk.canvas.height);
+  if(mk.baseImg){ try{ c.drawImage(mk.baseImg,0,0,mk.canvas.width,mk.canvas.height); }catch(_){} }
   for(const s of mk.strokes) drawShape(c,s);
   if(mk.drawing && mk.start && mk.cur) drawShape(c, liveShape());
+}
+// 화면 주사율에 맞춰 한 번만 그림 (빠른 터치에도 끊김 없음)
+function redrawMk(){
+  if(mk._raf) return;
+  mk._raf=requestAnimationFrame(paintMk);
 }
 function liveShape(){
   if(mk.tool==="pen") return {type:"pen",color:mk.color,width:mk.width,pts:mk.penPts.slice()};
@@ -691,11 +706,18 @@ function drawShape(c,s){
     c.stroke();
   }else if(s.type==="rect"){
     c.strokeRect(Math.min(s.x1,s.x2),Math.min(s.y1,s.y2),Math.abs(s.x2-s.x1),Math.abs(s.y2-s.y1));
+    if(s===mk.selected) drawSelBox(c,s);
   }else if(s.type==="circle"){
     const cx=(s.x1+s.x2)/2, cy=(s.y1+s.y2)/2, rx=Math.abs(s.x2-s.x1)/2, ry=Math.abs(s.y2-s.y1)/2;
     c.beginPath(); c.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); c.stroke();
+    if(s===mk.selected) drawSelBox(c,s);
   }else if(s.type==="arrow"){
     drawArrow(c,s.x1,s.y1,s.x2,s.y2,s.width);
+    if(s===mk.selected){
+      // 양 끝에 핸들: 시작(파랑), 끝/화살촉(주황)
+      drawHandle(c,s.x1,s.y1,"#5b9bd5");
+      drawHandle(c,s.x2,s.y2,"#ff9500");
+    }
   }else if(s.type==="text"){
     const fs=s.size||Math.max(28, s.width*4);
     c.font=`bold ${fs}px Pretendard, sans-serif`;
@@ -723,10 +745,27 @@ function drawArrow(c,x1,y1,x2,y2,w){
   c.lineTo(x2-head*Math.cos(ang+Math.PI/7), y2-head*Math.sin(ang+Math.PI/7));
   c.closePath(); c.fill();
 }
+// 끌기 핸들(원)
+function drawHandle(c,x,y,color){
+  const rr=Math.max(10, 14/mk.scale);
+  c.beginPath(); c.arc(x,y,rr,0,Math.PI*2);
+  c.fillStyle="#fff"; c.fill();
+  c.lineWidth=Math.max(2,3/mk.scale); c.strokeStyle=color; c.stroke();
+  c.beginPath(); c.arc(x,y,rr*0.45,0,Math.PI*2); c.fillStyle=color; c.fill();
+}
+// 사각형/원 선택 점선 박스 + 모서리 핸들
+function drawSelBox(c,s){
+  const x=Math.min(s.x1,s.x2), y=Math.min(s.y1,s.y2), w=Math.abs(s.x2-s.x1), h=Math.abs(s.y2-s.y1);
+  c.save();
+  c.setLineDash([8,6]); c.lineWidth=Math.max(2,2/mk.scale); c.strokeStyle="#5b9bd5";
+  c.strokeRect(x-4,y-4,w+8,h+8); c.setLineDash([]);
+  c.restore();
+  drawHandle(c,s.x2,s.y2,"#ff9500"); // 우하단 핸들로 크기/모양 조절
+}
 function evtPos(e){
-  const r=mk.canvas.getBoundingClientRect();
-  const t=e.touches&&e.touches[0]?e.touches[0]:(e.changedTouches&&e.changedTouches[0]?e.changedTouches[0]:e);
-  return { x:(t.clientX-r.left)/mk.scale, y:(t.clientY-r.top)/mk.scale };
+  // 드래그 시작 때 캐시한 사각형 사용(매번 측정 안 함 → 부드러움)
+  const r=mk._rect || mk.canvas.getBoundingClientRect();
+  return { x:(e.clientX-r.left)/mk.scale, y:(e.clientY-r.top)/mk.scale };
 }
 // 어떤 도형 위를 눌렀는지 찾기(드래그용). 위에서부터(나중에 그린 것 우선)
 function hitTest(p){
@@ -775,13 +814,25 @@ function updateResizeBar(){
 
 let pendingTextPos=null;  // 글자 넣을 위치 임시 저장
 function mkDown(e){
-  e.preventDefault();
+  if(e.preventDefault) e.preventDefault();
   if($("mkTextBox").classList.contains("show")) return; // 입력창 떠있으면 캔버스 무시
+  mk._rect=mk.canvas.getBoundingClientRect();   // 이번 드래그 동안 위치 캐시
   const p=evtPos(e);
   if(mk.tool==="move"){
-    // 이동 모드: 도형 집어서 끌기
+    // 이미 선택된 도형의 핸들을 먼저 확인 (끝점/모서리 끌기)
+    if(mk.selected){
+      const hr=Math.max(16, 22/mk.scale);
+      const sel=mk.selected;
+      if(sel.type==="arrow"){
+        if(Math.hypot(p.x-sel.x2,p.y-sel.y2)<hr){ mk.dragging=true; mk.dragHandle="end"; mk.dragLast=p; return; }
+        if(Math.hypot(p.x-sel.x1,p.y-sel.y1)<hr){ mk.dragging=true; mk.dragHandle="start"; mk.dragLast=p; return; }
+      }else if(sel.type==="rect"||sel.type==="circle"){
+        if(Math.hypot(p.x-sel.x2,p.y-sel.y2)<hr){ mk.dragging=true; mk.dragHandle="corner"; mk.dragLast=p; return; }
+      }
+    }
+    // 아니면 새로 선택해서 통째로 끌기
     const s=hitTest(p);
-    mk.selected=s;
+    mk.selected=s; mk.dragHandle=null;
     if(s){ mk.dragging=true; mk.dragLast=p; }
     updateResizeBar();
     redrawMk();
@@ -804,19 +855,23 @@ function mkDown(e){
 function mkMove(e){
   const p=evtPos(e);
   if(mk.dragging && mk.selected){
-    e.preventDefault();
-    moveShape(mk.selected, p.x-mk.dragLast.x, p.y-mk.dragLast.y);
+    if(e.preventDefault) e.preventDefault();
+    const s=mk.selected;
+    if(mk.dragHandle==="end"){ s.x2=p.x; s.y2=p.y; }          // 화살표 끝점(방향)
+    else if(mk.dragHandle==="start"){ s.x1=p.x; s.y1=p.y; }   // 화살표 시작점
+    else if(mk.dragHandle==="corner"){ s.x2=p.x; s.y2=p.y; }  // 사각형/원 크기·모양
+    else { moveShape(s, p.x-mk.dragLast.x, p.y-mk.dragLast.y); } // 통째 이동
     mk.dragLast=p; redrawMk(); return;
   }
   if(!mk.drawing) return;
   if($("mkTextBox").classList.contains("show")) return;
-  e.preventDefault();
+  if(e.preventDefault) e.preventDefault();
   mk.cur=p;
   if(mk.tool==="pen") mk.penPts.push(mk.cur);
   redrawMk();
 }
 function mkUp(e){
-  if(mk.dragging){ mk.dragging=false; redrawMk(); return; }
+  if(mk.dragging){ mk.dragging=false; mk.dragHandle=null; redrawMk(); return; }
   if(!mk.drawing) return;
   mk.drawing=false;
   const s=liveShape();
@@ -843,12 +898,21 @@ $("mkTextOk").addEventListener("click",()=>{
 });
 $("mkTextInput").addEventListener("keydown",ev=>{ if(ev.key==="Enter") $("mkTextOk").click(); });
 $("mkTextCancel").addEventListener("click",()=>{ $("mkTextBox").classList.remove("show"); pendingTextPos=null; });
-mk.canvas.addEventListener("mousedown",mkDown);
-mk.canvas.addEventListener("mousemove",mkMove);
-window.addEventListener("mouseup",mkUp);
-mk.canvas.addEventListener("touchstart",mkDown,{passive:false});
-mk.canvas.addEventListener("touchmove",mkMove,{passive:false});
-mk.canvas.addEventListener("touchend",mkUp);
+// Pointer 이벤트로 통일 — 마우스·터치·펜 모두 한 경로로 처리(이중 발생 없음)
+if(window.PointerEvent){
+  mk.canvas.addEventListener("pointerdown",e=>{ try{mk.canvas.setPointerCapture(e.pointerId);}catch(_){} mkDown(e); });
+  mk.canvas.addEventListener("pointermove",mkMove);
+  mk.canvas.addEventListener("pointerup",mkUp);
+  mk.canvas.addEventListener("pointercancel",mkUp);
+}else{
+  // 구형 폴백
+  mk.canvas.addEventListener("mousedown",mkDown);
+  window.addEventListener("mousemove",mkMove);
+  window.addEventListener("mouseup",mkUp);
+  mk.canvas.addEventListener("touchstart",e=>{e.preventDefault();mkDown(e.touches[0]);},{passive:false});
+  mk.canvas.addEventListener("touchmove",e=>{e.preventDefault();mkMove(e.touches[0]);},{passive:false});
+  mk.canvas.addEventListener("touchend",e=>mkUp(e.changedTouches[0]));
+}
 
 /* 도구·색·굵기 선택 */
 document.querySelectorAll(".mk-tool").forEach(b=>b.addEventListener("click",()=>{
