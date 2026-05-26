@@ -214,7 +214,7 @@ textarea{resize:vertical;min-height:74px;}
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v12</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v13</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -336,9 +336,13 @@ textarea{resize:vertical;min-height:74px;}
       <button class="btn btn-ghost" onclick="clearErrors()" style="margin-top:8px">에러 기록 지우기</button>
     </div>
     <div class="card">
-      <div class="card-title">💾 백업 / 내보내기</div>
-      <p style="font-size:12px;color:#6B7280;margin-bottom:10px;">모든 기록을 엑셀에서 열 수 있는 CSV 파일로 저장해요. (사진 제외)</p>
-      <button class="btn btn-primary" onclick="exportCSV()">📥 CSV로 내보내기</button>
+      <div class="card-title">💾 백업 / 복구</div>
+      <div id="backupStatus" style="font-size:12px;margin-bottom:10px;"></div>
+      <button class="btn btn-primary" onclick="fullBackup()">📦 전체 백업 (복구 가능)</button>
+      <label class="btn btn-ghost" style="display:block;text-align:center;cursor:pointer">📂 백업 파일로 복구
+        <input type="file" id="restoreInput" accept=".json,application/json" style="display:none" onchange="restoreBackup(event)">
+      </label>
+      <button class="btn btn-ghost" onclick="exportCSV()">📥 CSV로 내보내기 (엑셀용)</button>
     </div>
     <div class="card">
       <div class="card-title">🔒 잠금 설정</div>
@@ -582,6 +586,7 @@ function tab(name,el){
   if(name==='list')renderList();
   if(name==='cal')renderCal();
   if(name==='stats')renderStats();
+  if(name==='diag')backupStatusText();
 }
 
 /* ===== 카테고리 칩 + 동적 폼 ===== */
@@ -1189,6 +1194,68 @@ function exportCSV(){
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   setTimeout(function(){URL.revokeObjectURL(url);},1000);
   toast('📥 CSV 내보냄');
+}
+
+/* ===== 전체 백업 / 복구 (사진 포함, 복구 가능) ===== */
+var LASTBK_KEY='personal-lastbackup';
+function backupStatusText(){
+  var el=document.getElementById('backupStatus');if(!el)return;
+  var last=localStorage.getItem(LASTBK_KEY);
+  if(!last){el.innerHTML='<span class="warn">아직 백업한 적이 없어요. 전체 백업을 권장해요.</span>';return;}
+  var days=Math.floor((Date.now()-Number(last))/86400000);
+  var when=new Date(Number(last)).toLocaleDateString('ko-KR');
+  if(days>=7)el.innerHTML='<span class="warn">마지막 백업: '+when+' ('+days+'일 전) — 백업할 때가 됐어요</span>';
+  else el.innerHTML='<span class="ok">마지막 백업: '+when+' ('+(days===0?'오늘':days+'일 전')+')</span>';
+}
+async function fullBackup(){
+  var recs=getRecords();
+  if(!recs.length){toast('백업할 기록이 없어요');return;}
+  toast('백업 준비 중… (사진 포함)');
+  // 사진을 클라우드에서 모아 담기
+  var photos={};
+  for(var i=0;i<recs.length;i++){
+    var r=recs[i];
+    if(r.photoIds&&r.photoIds.length){
+      for(var j=0;j<r.photoIds.length;j++){
+        var pid=r.photoIds[j];
+        try{var d=await fetchPhoto(pid);if(d)photos[pid]=d;}catch(e){}
+      }
+    }
+  }
+  var backup={app:'개인관리',version:12,exported:new Date().toISOString(),records:recs,photos:photos};
+  var blob=new Blob([JSON.stringify(backup)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;
+  a.download='개인관리_백업_'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  localStorage.setItem(LASTBK_KEY,String(Date.now()));
+  backupStatusText();
+  toast('📦 전체 백업 완료');
+}
+function restoreBackup(ev){
+  var file=ev.target.files&&ev.target.files[0];ev.target.value='';
+  if(!file)return;
+  if(!confirm('백업 파일로 복구할까요?\n현재 기록과 합쳐지며, 같은 기록은 백업 내용으로 덮어써요.'))return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var bk=JSON.parse(e.target.result);
+      if(!bk.records||!Array.isArray(bk.records))throw new Error('형식이 올바른 백업 파일이 아니에요');
+      var cur=getRecords(),map={};
+      cur.forEach(function(r){map[r.id]=r;});
+      bk.records.forEach(function(r){map[r.id]=r;});  // 백업 우선
+      var merged=Object.keys(map).map(function(k){return map[k];});
+      setRecords(merged);
+      // 기록은 클라우드로 다시 올리고, 사진도 복원 업로드
+      merged.forEach(function(r){fbPush(r);});
+      if(bk.photos){Object.keys(bk.photos).forEach(function(pid){photoMem[pid]=bk.photos[pid];fbPushPhoto(pid,bk.photos[pid]);});}
+      toast('✅ 복구 완료 ('+bk.records.length+'건)');
+      renderApptBanner();
+    }catch(err){logErr('복구 실패: '+err.message);toast('⚠️ 복구 실패: '+err.message);}
+  };
+  reader.onerror=function(){toast('⚠️ 파일을 읽지 못했어요');};
+  reader.readAsText(file);
 }
 
 /* ===== 진단 ===== */
