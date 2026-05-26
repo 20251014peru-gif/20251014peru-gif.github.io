@@ -138,7 +138,7 @@ textarea{resize:vertical;min-height:74px;}
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v5</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v6</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -424,16 +424,37 @@ function readAndCompress(file){
   return new Promise(function(resolve,reject){
     var typeInfo=' ('+(file.type||'형식정보없음')+', '+Math.round((file.size||0)/1024)+'KB)';
     var done=false;
-    var timer=setTimeout(function(){if(!done){done=true;reject(new Error('처리 지연'+typeInfo));}},15000);
+    var timer=setTimeout(function(){if(!done){done=true;reject(new Error('처리 지연'+typeInfo));}},30000);
     function finish(data){if(done)return;done=true;clearTimeout(timer);resolve(data);}
     function fail(msg){if(done)return;done=true;clearTimeout(timer);reject(new Error(msg+typeInfo));}
 
-    var triedBitmap=false,triedReader=false;
+    var triedBitmap=false,triedHeic=false;
+    var isHeic=(/heic|heif/i).test(file.type||'')||(/\.(heic|heif)$/i).test(file.name||'');
 
-    // 1순위) FileReader → Image (가장 호환성 높음, 대부분 기기 OK)
-    tryReader();
+    // HEIC/HEIF면 변환 라이브러리부터 시도
+    if(isHeic){ tryHeic(); } else { tryReader(); }
+
+    // 0순위) heic2any 로 HEIC → JPEG 변환
+    function tryHeic(){
+      triedHeic=true;
+      setPhotoStatus('HEIC 사진 변환 중… (잠시 걸려요)');
+      loadHeicLib().then(function(){
+        return window.heic2any({blob:file,toType:'image/jpeg',quality:0.6});
+      }).then(function(blob){
+        var reader=new FileReader();
+        reader.onload=function(e){
+          var img=new Image();
+          img.onload=function(){try{finish(drawToJpeg(img,img.naturalWidth||img.width,img.naturalHeight||img.height,1600,0.6));}catch(err){tryReader();}};
+          img.onerror=function(){tryReader();};
+          img.src=e.target.result;
+        };
+        reader.onerror=function(){tryReader();};
+        reader.readAsDataURL(blob);
+      }).catch(function(){ tryReader(); });  // 변환 실패하면 일반 경로로
+    }
+
+    // 1순위) FileReader → Image
     function tryReader(){
-      triedReader=true;
       var reader=new FileReader();
       reader.onerror=function(){tryBitmap();};
       reader.onload=function(e){
@@ -442,22 +463,41 @@ function readAndCompress(file){
           try{finish(drawToJpeg(img,img.naturalWidth||img.width,img.naturalHeight||img.height,1600,0.6));}
           catch(err){tryBitmap();}
         };
-        img.onerror=function(){tryBitmap();};   // HEIC 등 Image 디코드 실패 → 비트맵 시도
+        img.onerror=function(){tryBitmap();};
         img.src=e.target.result;
       };
       try{reader.readAsDataURL(file);}catch(err){tryBitmap();}
     }
-    // 2순위) createImageBitmap (안드로이드에서 Image가 실패한 HEIC도 종종 처리)
+    // 2순위) createImageBitmap
     function tryBitmap(){
       if(done)return;
-      if(triedBitmap||!window.createImageBitmap){ fail('이 사진 형식은 변환할 수 없어요'); return; }
+      if(triedBitmap||!window.createImageBitmap){ failFinal(); return; }
       triedBitmap=true;
       createImageBitmap(file).then(function(bmp){
         try{finish(drawToJpeg(bmp,bmp.width,bmp.height,1600,0.6));}
-        catch(e){fail('이미지 변환 실패');}
-      }).catch(function(){ fail('이 사진 형식은 변환할 수 없어요'); });
+        catch(e){failFinal();}
+      }).catch(function(){ failFinal(); });
+    }
+    function failFinal(){
+      // HEIC인데 아직 변환 라이브러리를 안 써봤으면 마지막으로 시도
+      if(isHeic&&!triedHeic){triedHeic=true;tryHeic();return;}
+      fail(isHeic?'HEIC 변환 실패 — 폰 카메라를 JPEG로 설정하거나 다른 사진으로':'이 사진 형식은 변환할 수 없어요');
     }
   });
+}
+/* heic2any 라이브러리를 처음 필요할 때만 불러오기 */
+var _heicLib=null;
+function loadHeicLib(){
+  if(window.heic2any)return Promise.resolve();
+  if(_heicLib)return _heicLib;
+  _heicLib=new Promise(function(resolve,reject){
+    var s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+    s.onload=function(){resolve();};
+    s.onerror=function(){_heicLib=null;reject(new Error('HEIC 라이브러리 로드 실패'));};
+    document.head.appendChild(s);
+  });
+  return _heicLib;
 }
 function drawToJpeg(src,w,h,max,q){
   if(!w||!h)throw new Error('크기 없음');
