@@ -9,7 +9,6 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
 <style>
   :root{
@@ -428,7 +427,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const storage = firebase.storage();
+/* Storage는 사용하지 않습니다 (무료 유지: 사진은 압축하여 Firestore에 저장) */
 const PROJECTS="realestate_projects", ENTRIES="realestate_entries", VENDORS="realestate_vendors";
 
 /* ===== AI 설정 (모델명은 다른 페이지와 동일하게 맞추세요) ===== */
@@ -1022,6 +1021,37 @@ function openEntryModal(presetStage,presetKind){
   document.getElementById("entryModalTitle").textContent = presetStage? presetStage+" 기록 추가" : "기록 추가";
   openModal("entryModal");
 }
+/* ===== 파일 처리: 이미지는 압축, 그 외는 1MB 제한, base64로 Firestore 저장 ===== */
+function processFile(f){
+  return new Promise((resolve,reject)=>{
+    const isImg=(f.type||"").startsWith("image/");
+    if(isImg){
+      const img=new Image(); const url=URL.createObjectURL(f);
+      img.onload=function(){
+        URL.revokeObjectURL(url);
+        const maxW=1280; let w=img.width, h=img.height;
+        if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+        const c=document.createElement("canvas"); c.width=w; c.height=h;
+        c.getContext("2d").drawImage(img,0,0,w,h);
+        let q=0.8, data=c.toDataURL("image/jpeg",q);
+        // 약 700KB 이하가 될 때까지 품질 단계적 축소
+        while(data.length>950000 && q>0.4){ q-=0.1; data=c.toDataURL("image/jpeg",q); }
+        if(data.length>1000000){ reject(new Error("사진 '"+f.name+"'이 너무 큽니다. 더 작은 사진을 사용하세요.")); return; }
+        resolve({name:f.name, url:data, type:"image/jpeg"});
+      };
+      img.onerror=function(){ URL.revokeObjectURL(url); reject(new Error("이미지를 읽을 수 없습니다: "+f.name)); };
+      img.src=url;
+    }else{
+      // PDF 등: 압축 불가 → 1MB 제한
+      if(f.size>1000000){ reject(new Error("'"+f.name+"' 파일이 1MB를 넘습니다.\n무료 저장 방식에서는 PDF/문서는 1MB 이하만 첨부할 수 있어요.\n(사진은 자동 압축되어 제한 없이 올라갑니다.)")); return; }
+      const r=new FileReader();
+      r.onload=()=>resolve({name:f.name, url:r.result, type:f.type||"application/octet-stream"});
+      r.onerror=()=>reject(new Error("파일을 읽을 수 없습니다: "+f.name));
+      r.readAsDataURL(f);
+    }
+  });
+}
+
 async function saveEntry(){
   const title=val("ef_title").trim(); if(!title){alert("제목을 입력하세요.");return;}
   const k=val("ef_kind"); const isMoney=(k==="자재비"||k==="기타비용");
@@ -1031,11 +1061,12 @@ async function saveEntry(){
   if(fi.files.length){
     document.getElementById("uploadProgress").style.display="block";
     for(const f of fi.files){
-      const path=`realestate/${currentProjectId}/${Date.now()}_${f.name}`;
-      const ref=storage.ref(path); await ref.put(f);
-      files.push({name:f.name,url:await ref.getDownloadURL(),type:f.type,path});
+      document.getElementById("uploadProgress").textContent="파일 처리 중: "+f.name;
+      const stored=await processFile(f);   // 이미지는 압축, 그 외는 1MB 제한
+      files.push(stored);
     }
     document.getElementById("uploadProgress").style.display="none";
+    document.getElementById("uploadProgress").textContent="업로드 중...";
   }
   await db.collection(ENTRIES).add({
     projectId:currentProjectId, kind:k, title, date:val("ef_date"),
@@ -1053,14 +1084,13 @@ async function saveEntry(){
  }catch(err){
   btn.disabled=false; btn.textContent="저장";
   document.getElementById("uploadProgress").style.display="none";
-  showError("기록 저장 (파일 업로드/Storage 또는 DB 권한 확인)", err);
+  showError("기록 저장 (파일 크기 또는 DB 권한 확인)", err);
  }
 }
 async function deleteEntry(id){
   const e=entries.find(x=>x.id===id);
   if(!confirm('이 기록을 삭제할까요?\n\n"'+((e&&e.title)||'')+'"\n\n되돌릴 수 없습니다.'))return;
   try{
-    if(e&&e.files) for(const f of e.files){if(f.path){try{await storage.ref(f.path).delete();}catch(_){}}}
     await db.collection(ENTRIES).doc(id).delete(); await selectProject(currentProjectId);
   }catch(err){ showError("기록 삭제", err); }
 }
@@ -1246,7 +1276,7 @@ async function runDiagnostics(){
 
   // 2) Firebase 초기화 + 설정값
   row('info', "Firebase 설정",
-    `프로젝트 <code>${esc(firebaseConfig.projectId)}</code><br>Storage 버킷 <code>${esc(firebaseConfig.storageBucket)}</code>`);
+    `프로젝트 <code>${esc(firebaseConfig.projectId)}</code>`);
 
   // 3) Firestore 읽기
   try{
@@ -1267,24 +1297,8 @@ async function runDiagnostics(){
       `${esc(err.code||'')} ${esc(err.message||err)}<br>→ 보안 규칙에서 write가 막혀 있을 수 있습니다.`);
   }
 
-  // 5) Storage 업로드 (작은 텍스트 파일 업로드 후 삭제) → 사진/PDF 첨부 가능 여부
-  try{
-    const path="_diag_test/"+Date.now()+".txt";
-    const ref=storage.ref(path);
-    await ref.putString("diag");
-    await ref.getDownloadURL();
-    await ref.delete();
-    row('ok', "Storage 업로드", "정상 (사진·PDF 첨부 가능)");
-  }catch(err){
-    const code=(err&&err.code)||'';
-    let tip="→ ";
-    if(String(code).includes('unauthorized')||String(code).includes('unauthenticated'))
-      tip+="Storage 보안 규칙에서 쓰기가 막혀 있습니다. 콘솔 Storage → Rules 확인.";
-    else if(String(code).includes('object-not-found')||String(code).includes('bucket'))
-      tip+="버킷 이름이 틀렸을 수 있습니다. 콘솔 Storage의 실제 버킷명과 코드의 storageBucket을 맞추세요 (.firebasestorage.app ↔ .appspot.com).";
-    else tip+="Storage가 활성화되지 않았거나 버킷명이 틀렸을 수 있습니다.";
-    row('fail', "Storage 업로드 실패", `${esc(code)} ${esc(err.message||err)}<br>${tip}`);
-  }
+  // 5) 사진/파일 저장 방식 (무료 방식 - Storage 미사용)
+  row('ok', "사진·파일 저장", "무료 방식 (사진은 자동 압축되어 DB에 저장 · Storage 불필요)");
 
   // 6) AI 키 보유 여부
   const hasKey=!!localStorage.getItem('anthropic_key');
