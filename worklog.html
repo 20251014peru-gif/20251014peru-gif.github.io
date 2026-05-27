@@ -77,6 +77,18 @@ textarea{resize:vertical;min-height:64px}
 .filt-row select{flex:1;min-width:140px}
 .filt-row input[type=date]{flex:1;min-width:130px;background:#fbfdff}
 .rng-sep{align-self:center;color:var(--ink-soft);font-size:13px;flex:0 0 auto}
+.view-toggle{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.view-toggle button{border:none;background:#fff;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-soft);padding:6px 13px;cursor:pointer}
+.view-toggle button.active{background:var(--primary);color:#fff}
+.list-rows .row-item{margin-bottom:6px}
+.list-rows.compact .row-item .m{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.card-grid .row-item{margin-bottom:0;flex-direction:column}
+.view-modal dl{margin:0}
+.view-modal .vrow{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.view-modal .vrow:last-child{border-bottom:none}
+.view-modal .vk{flex:0 0 96px;font-size:12.5px;font-weight:700;color:var(--ink-soft)}
+.view-modal .vv{flex:1;min-width:0;font-size:14.5px;white-space:pre-wrap;word-break:break-word}
 .photo-btns{display:flex;gap:8px;flex-wrap:wrap}
 .photo-btn{display:inline-flex;align-items:center;gap:6px;background:var(--mint-soft);color:#2c7d62;border:1px dashed var(--mint);border-radius:11px;padding:9px 13px;font-size:13.5px;font-weight:600;cursor:pointer}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -212,7 +224,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4">v9</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v11</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -227,6 +239,8 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
       <button data-tab="meeting">회의메모</button>
       <button data-tab="deliver">전달사항</button>
       <button data-tab="calendar">달력</button>
+      <button data-tab="diag">자가진단</button>
+      <button data-tab="ai">AI</button>
     </nav>
   </div>
 </header>
@@ -300,6 +314,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
         <button class="btn btn-ghost btn-sm" id="memoRangeClear" style="flex:0 0 auto">기간 해제</button>
       </div>
       <input type="text" id="memoSearch" class="search" placeholder="🔍 메모 검색">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span class="view-toggle" data-vt="memo"><button data-v="card">카드형</button><button data-v="list">목록형</button></span></div>
       <div id="memoList"></div>
     </div>
   </section>
@@ -334,6 +349,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
       <div class="list-head"><h2>휴가</h2><button class="btn btn-primary btn-sm" data-add="vacation">➕ 휴가 추가</button></div>
       <p class="desc">등록한 휴가는 달력에 바로 표시됩니다.</p>
       <input type="text" id="vacSearch" class="search" placeholder="🔍 휴가 검색 — 이름·종류">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span class="view-toggle" data-vt="vacation"><button data-v="card">카드형</button><button data-v="list">목록형</button></span></div>
       <div id="vacList"></div>
     </div>
   </section>
@@ -343,6 +359,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
     <div class="card">
       <div class="list-head"><h2>회의메모 (주간회의)</h2><button class="btn btn-primary btn-sm" data-add="meeting">➕ 회의 추가</button></div>
       <input type="text" id="meetSearch" class="search" placeholder="🔍 회의 검색 — 제목·참석자·내용">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span class="view-toggle" data-vt="meeting"><button data-v="card">카드형</button><button data-v="list">목록형</button></span></div>
       <div id="meetList"></div>
     </div>
   </section>
@@ -388,6 +405,71 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
       <div class="day-detail" id="dayDetail"></div>
     </div>
   </section>
+
+  <!-- 자가진단 -->
+  <section class="panel" id="panel-diag">
+    <div class="card">
+      <h2 style="margin-bottom:4px">자가진단 · 데이터 관리</h2>
+      <p class="desc">연결 상태와 저장 현황을 확인하고, 전체 데이터를 백업·복구하거나 CSV로 내보냅니다.</p>
+      <div id="diagStatus"></div>
+      <div class="sec-head">진단</div>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn btn-ghost btn-sm" id="diagRefresh">🔄 다시 진단</button>
+        <button class="btn btn-primary btn-sm" id="diagConnTest">🔌 연결 테스트</button>
+        <button class="btn btn-ghost btn-sm" id="diagClearErr">🧹 오류기록 지우기</button>
+      </div>
+      <div id="diagErrors" style="margin-top:12px"></div>
+      <div class="sec-head">백업 / 복구</div>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 10px">백업은 사진까지 포함한 전체 데이터를 JSON 파일로 저장합니다. 복구는 백업 파일을 불러와 기존 데이터에 합칩니다(같은 항목은 덮어씀).</p>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn btn-primary btn-sm" id="diagBackup">⬇ 전체 백업 (JSON)</button>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 백업 복구<input type="file" id="diagRestore" accept="application/json,.json" style="display:none"></label>
+      </div>
+      <div class="sec-head">CSV 내보내기 (엑셀)</div>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 10px">항목별로 엑셀에서 바로 열 수 있는 CSV 파일을 내보냅니다. 사진은 제외됩니다.</p>
+      <div class="btn-row" style="margin-top:0;gap:8px">
+        <button class="btn btn-ghost btn-sm" data-csv="work">업무</button>
+        <button class="btn btn-ghost btn-sm" data-csv="plan">오늘계획</button>
+        <button class="btn btn-ghost btn-sm" data-csv="memo">메모</button>
+        <button class="btn btn-ghost btn-sm" data-csv="call">통화</button>
+        <button class="btn btn-ghost btn-sm" data-csv="vacation">휴가</button>
+        <button class="btn btn-ghost btn-sm" data-csv="meeting">회의메모</button>
+        <button class="btn btn-ghost btn-sm" data-csv="deliver">전달사항</button>
+        <button class="btn btn-primary btn-sm" data-csv="all">전체(여러파일)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI -->
+  <section class="panel" id="panel-ai">
+    <div class="card">
+      <h2 style="margin-bottom:4px">AI 대화 · 분석</h2>
+      <p class="desc">업무일지 데이터를 바탕으로 질문하거나 분석을 받을 수 있습니다. API 키는 이 브라우저에만 저장되며 코드/서버로 전송되지 않습니다.</p>
+      <div class="sec-head">API 키 (Anthropic)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+        <input type="password" id="aiKey" class="search" style="flex:1;margin:0;min-width:200px" placeholder="sk-ant-... 키를 입력">
+        <button class="btn btn-primary btn-sm" id="aiKeySave">저장</button>
+        <button class="btn btn-ghost btn-sm" id="aiKeyClear">삭제</button>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 4px"><span id="aiKeyState"></span> · 이 키는 localStorage에만 저장됩니다.</p>
+      <div class="sec-head">빠른 분석</div>
+      <div class="btn-row" style="margin-top:0;gap:8px">
+        <button class="btn btn-ghost btn-sm" data-ai="today">오늘 요약</button>
+        <button class="btn btn-ghost btn-sm" data-ai="week">이번주 요약</button>
+        <button class="btn btn-ghost btn-sm" data-ai="pending">미완료/할일 정리</button>
+        <button class="btn btn-ghost btn-sm" data-ai="cost">비용 분석</button>
+        <button class="btn btn-ghost btn-sm" data-ai="improve">개선사항 종합</button>
+      </div>
+      <div class="sec-head">대화</div>
+      <div id="aiChat" style="border:1px solid var(--line);border-radius:14px;background:#fbfdff;padding:12px;min-height:160px;max-height:420px;overflow:auto;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <textarea id="aiInput" style="flex:1;min-width:200px;min-height:48px" placeholder="질문을 입력하세요 (예: 이번주 소방 관련 업무 정리해줘)"></textarea>
+        <button class="btn btn-primary" id="aiSend">보내기</button>
+        <button class="btn btn-ghost btn-sm" id="aiClear">대화 지우기</button>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">데이터(업무·계획·메모·통화·휴가·회의·전달)가 질문과 함께 AI에 전달됩니다. 사진은 전송되지 않습니다.</p>
+    </div>
+  </section>
 </main>
 
 <!-- 공용 추가/수정 모달 -->
@@ -410,6 +492,18 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
 </div></div>
 
 <div id="imgOverlay"><img id="imgFull" src="" alt=""></div>
+
+<!-- 보기(확대) 모달 -->
+<div class="overlay" id="viewOverlay"><div class="modal view-modal">
+  <h3 id="vTitle">상세보기</h3>
+  <div id="vBody"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="vEdit">수정</button>
+    <button class="btn btn-ghost" id="vClose">닫기</button>
+    <button class="btn btn-danger" id="vDel" style="margin-left:auto">삭제</button>
+  </div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 <div id="printArea"></div>
 
@@ -417,6 +511,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* ===== 설정 ===== */
+const APP_VERSION = "v11";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -480,6 +575,16 @@ const SCHEMA={
 };
 
 let db=null, online=false, entries=[];
+let lastError=null;                 // {code,message,where,at}
+const errorLog=[];                  // recent errors
+function logErr(where, e){
+  const code=(e&&(e.code||e.name))||"unknown";
+  const message=(e&&(e.message||String(e)))||"(메시지 없음)";
+  const rec={where, code, message, at:Date.now()};
+  lastError=rec; errorLog.unshift(rec); if(errorLog.length>30) errorLog.pop();
+  try{ renderDiag(); }catch(_){}
+  return rec;
+}
 const won = n => (Math.round(Number(n)||0)).toLocaleString("ko-KR");
 const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const nowTime = () => { const d=new Date(); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
@@ -557,10 +662,10 @@ document.addEventListener("click",e=>{ const im=e.target.closest("img.zimg"); if
 function lsLoad(){ try{ return JSON.parse(localStorage.getItem("wl_"+COL)||"[]"); }catch(e){ return []; } }
 function lsSave(){ try{ localStorage.setItem("wl_"+COL, JSON.stringify(entries)); }catch(e){} }
 function genId(){ return online ? db.collection(COL).doc().id : "L"+Date.now()+Math.floor(Math.random()*100000); }
-function syncSet(id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.collection(COL).doc(id).set(payload).catch(()=>toast("클라우드 동기화 지연 — 이 기기에는 저장됨")); }
+function syncSet(id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.collection(COL).doc(id).set(payload).catch(e=>{ logErr("저장 동기화", e); toast("클라우드 동기화 지연 — 이 기기에는 저장됨"); }); }
 function addRecord(data){ const id=genId(); const rec={...data,id}; entries.push(rec); if(online) syncSet(id,rec); lsSave(); return rec; }
 function updateRecord(id,patch){ const i=entries.findIndex(x=>x.id===id); if(i<0) return; entries[i]={...entries[i],...patch}; if(online) syncSet(id,entries[i]); lsSave(); }
-function deleteRecord(id){ entries=entries.filter(x=>x.id!==id); if(online) db.collection(COL).doc(id).delete().catch(()=>{}); lsSave(); }
+function deleteRecord(id){ entries=entries.filter(x=>x.id!==id); if(online) db.collection(COL).doc(id).delete().catch(e=>logErr("삭제 동기화", e)); lsSave(); }
 async function loadAll(){
   if(online){
     try{
@@ -577,6 +682,7 @@ async function loadAll(){
 /* ===== 초기화 ===== */
 async function init(){
   $("planDate").value=todayStr();
+  { const vb=$("verBadge"); if(vb) vb.textContent=APP_VERSION; }
   $("planFrom").addEventListener("change",e=>{ planFrom=e.target.value; renderPlan(); });
   $("planTo").addEventListener("change",e=>{ planTo=e.target.value; renderPlan(); });
   $("planRangeClear").addEventListener("click",()=>{ planFrom=""; planTo=""; $("planFrom").value=""; $("planTo").value=""; renderPlan(); });
@@ -592,19 +698,21 @@ async function init(){
   $("wkDateClear").addEventListener("click",()=>{ wkFrom=""; wkTo=""; $("wkFrom").value=""; $("wkTo").value=""; renderWork(); });
   $("locFilter").addEventListener("change",e=>{ locFilter=e.target.value; renderWork(); });
   $("fieldFilter").addEventListener("change",e=>{ fieldFilter=e.target.value; renderWork(); });
+  wireDiag();
+  aiInitKeyUI();
   try{
     if(typeof firebase==="undefined") throw new Error("sdk");
     firebase.initializeApp(firebaseConfig); db=firebase.firestore();
     try{ await db.enablePersistence({synchronizeTabs:true}); }catch(_){}
     await Promise.race([ db.collection(COL).limit(1).get(), new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),6000)) ]);
     online=true; setStatus(true);
-  }catch(e){ online=false; setStatus(false); }
+  }catch(e){ online=false; setStatus(false); logErr("초기 연결", e); }
   await loadAll();
   renderStatusChips(); renderAll();
   try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
 }
 function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
-function renderAll(){ renderWork(); renderPlan(); renderMemo(); renderCall(); renderVac(); renderMeeting(); renderDeliver(); renderCalendar(); }
+function renderAll(){ renderWork(); renderPlan(); renderMemo(); renderCall(); renderVac(); renderMeeting(); renderDeliver(); renderCalendar(); renderDiag(); }
 
 /* ===== 탭 ===== */
 function activateTab(name){
@@ -652,6 +760,38 @@ function openEditor(kind,id){
   const modalEl=$("overlay").querySelector(".modal"); if(modalEl) modalEl.scrollTop=0;
 }
 function renderModalThumbs(){ renderThumbs($("m-thumbs"),modalPhotos,i=>{ modalPhotos.splice(i,1); renderModalThumbs(); }); }
+
+/* ===== 보기(확대) 모달 ===== */
+let vId=null, vKind=null;
+function fmtVal(f,v){
+  if(v===undefined||v===null||v==="") return "";
+  if(f.type==="number") return v?won(v)+" 원":"";
+  return String(v);
+}
+function openViewer(kind,id){
+  const data=entries.find(x=>x.id===id); if(!data){ openEditor(kind,id); return; }
+  vKind=kind; vId=id;
+  $("vTitle").textContent="상세보기 · "+(KIND_LABEL[kind]||"");
+  let rows="";
+  if(kind==="plan"){
+    rows+=vrow("날짜",data.date)+vrow("할 일",data.text)+vrow("상태",data.done?"완료":"미완료");
+  } else {
+    (SCHEMA[kind]||[]).forEach(f=>{ const val=fmtVal(f,data[f.k]); if(val) rows+=vrow(f.label.replace(/\s*\*$/,""),val); });
+    if(kind==="call") rows+=vrow("완료",data.done?"완료":"미완료");
+    if(kind==="deliver") rows+=vrow("완료",data.done?"완료":"미완료");
+    if(kind==="vacation"){ /* schema covers */ }
+  }
+  let photos="";
+  if((data.photos||[]).length) photos=`<div class="vrow"><div class="vk">사진</div><div class="vv">${thumbsRO(data.photos)}</div></div>`;
+  $("vBody").innerHTML=`<dl>${rows}${photos}</dl>`;
+  $("viewOverlay").classList.add("show");
+  const m=$("viewOverlay").querySelector(".modal"); if(m) m.scrollTop=0;
+}
+function vrow(k,v){ return `<div class="vrow"><div class="vk">${esc(k)}</div><div class="vv">${esc(String(v))}</div></div>`; }
+$("vClose").addEventListener("click",()=>$("viewOverlay").classList.remove("show"));
+$("vEdit").addEventListener("click",()=>{ $("viewOverlay").classList.remove("show"); openEditor(vKind,vId); });
+$("vDel").addEventListener("click",()=>{ if(!vId||!confirm("이 항목을 삭제할까요?")) return; deleteRecord(vId); $("viewOverlay").classList.remove("show"); renderAll(); toast("삭제되었습니다"); });
+$("viewOverlay").addEventListener("click",e=>{ if(e.target===$("viewOverlay")) $("viewOverlay").classList.remove("show"); });
 $("m-cam").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("m-file").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("mCancel").addEventListener("click",()=>$("overlay").classList.remove("show"));
@@ -683,7 +823,7 @@ function listOf(kind){ return entries.filter(e=>e.kind===kind && matchObj(e,Q[ki
 /* 카드 공통 */
 function wireCards(scope){
   scope.querySelectorAll("[data-id][data-kind]").forEach(el=>{
-    el.addEventListener("click",e=>{ if(e.target.closest("a,img,button,input,.cb")) return; openEditor(el.dataset.kind, el.dataset.id); });
+    el.addEventListener("click",e=>{ if(e.target.closest("a,img,button,input,.cb")) return; openViewer(el.dataset.kind, el.dataset.id); });
     const ed=el.querySelector("[data-edit]"); if(ed) ed.addEventListener("click",e=>{ e.stopPropagation(); openEditor(el.dataset.kind, el.dataset.id); });
     const dl=el.querySelector("[data-del]"); if(dl) dl.addEventListener("click",e=>{ e.stopPropagation(); if(!confirm("삭제할까요?")) return; deleteRecord(el.dataset.id); renderAll(); toast("삭제되었습니다"); });
     const cb=el.querySelector(".cb"); if(cb) cb.addEventListener("click",e=>{ e.stopPropagation(); if(el.dataset.kind==="plan") togglePlanDone(el.dataset.id); });
@@ -741,7 +881,7 @@ function renderWork(){
     <td><button class="rowdel" data-del="${en.id}" title="삭제">🗑</button></td></tr>`).join("");
   const totalCost=list.reduce((s,en)=>s+(Number(en.cost)||0),0);
   foot.innerHTML=`<tr><td colspan="8" style="background:#33567d;color:#fff;font-weight:700">합계 (${list.length}건)</td><td class="num" style="background:#33567d;color:#fff;font-weight:700">${totalCost?won(totalCost):""}</td><td colspan="2" style="background:#33567d"></td></tr>`;
-  body.querySelectorAll("tr[data-id]").forEach(tr=>tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openEditor("work",tr.dataset.id); }));
+  body.querySelectorAll("tr[data-id]").forEach(tr=>tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openViewer("work",tr.dataset.id); }));
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); if(!confirm("이 업무를 삭제할까요?")) return; deleteRecord(b.dataset.del); renderAll(); toast("삭제되었습니다"); }));
 }
 function workCopyLine(en){
@@ -761,6 +901,129 @@ $("btnBackup").addEventListener("click",()=>{
   const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`업무일지백업_${todayStr()}.json`;
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast("백업 파일을 저장했습니다");
 });
+
+/* ===== 자가진단 · 데이터 관리 ===== */
+const DIAG_KINDS=[["work","업무"],["plan","오늘계획"],["memo","메모"],["call","통화"],["vacation","휴가"],["meeting","회의메모"],["deliver","전달사항"]];
+function bytesOf(obj){ try{ return new Blob([JSON.stringify(obj)]).size; }catch(e){ return JSON.stringify(obj).length; } }
+function fmtBytes(n){ if(n<1024) return n+" B"; if(n<1048576) return (n/1024).toFixed(1)+" KB"; return (n/1048576).toFixed(2)+" MB"; }
+function renderDiag(){
+  const box=$("diagStatus"); if(!box) return;
+  const photoCount=entries.reduce((s,e)=>s+((e.photos&&e.photos.length)||0),0);
+  const size=bytesOf(entries);
+  let lsOk=true; try{ localStorage.setItem("wl_test","1"); localStorage.removeItem("wl_test"); }catch(e){ lsOk=false; }
+  const rows=[
+    ["버전", APP_VERSION],
+    ["클라우드 연결", online?"✅ 연결됨":"⚠ 오프라인 (이 기기에 저장)"],
+    ["프로젝트", firebaseConfig.projectId],
+    ["로컬 저장소", lsOk?"✅ 정상":"⚠ 사용 불가"],
+    ["마지막 오류", lastError?`❌ [${lastError.code}] ${lastError.message}`:"없음 ✅"],
+    ["전체 기록 수", entries.length+"건"],
+    ["사진 수", photoCount+"장"],
+    ["데이터 크기", fmtBytes(size)],
+  ];
+  const cnt={}; DIAG_KINDS.forEach(([k])=>cnt[k]=0); entries.forEach(e=>{ if(cnt[e.kind]!==undefined) cnt[e.kind]++; });
+  const kindRows=DIAG_KINDS.map(([k,lbl])=>`<tr><td>${lbl}</td><td class="num">${cnt[k]}건</td></tr>`).join("");
+  box.innerHTML=`<div class="table-wrap" style="min-width:0"><table class="rec" style="min-width:0">
+    <tbody>${rows.map(r=>`<tr><td style="font-weight:700;color:#36699c;white-space:nowrap">${r[0]}</td><td style="white-space:normal;word-break:break-word">${esc(String(r[1]))}</td></tr>`).join("")}</tbody></table></div>
+    <div class="table-wrap" style="min-width:0;margin-top:10px"><table class="rec" style="min-width:0">
+    <thead><tr><th>항목</th><th style="text-align:right">기록 수</th></tr></thead><tbody>${kindRows}</tbody></table></div>`;
+  renderDiagErrors();
+}
+function fmtTime(ts){ const d=new Date(ts); return `${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`; }
+function renderDiagErrors(){
+  const box=$("diagErrors"); if(!box) return;
+  if(!errorLog.length){ box.innerHTML=`<div class="empty" style="padding:14px">기록된 오류가 없습니다 🎉</div>`; return; }
+  box.innerHTML=`<div class="sec-head">최근 오류 기록 <span class="cnt">${errorLog.length}</span></div>
+    <div class="table-wrap"><table class="rec"><thead><tr><th>시각</th><th>위치</th><th>코드</th><th>메시지</th></tr></thead>
+    <tbody>${errorLog.map(e=>`<tr><td style="white-space:nowrap">${fmtTime(e.at)}</td><td>${esc(e.where)}</td><td><span class="pill etc">${esc(e.code)}</span></td><td class="clip" title="${esc(e.message)}">${esc(e.message)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+async function connTest(){
+  if(typeof firebase==="undefined"||!db){ toast("Firebase 미초기화 — 오프라인 상태"); logErr("연결테스트", new Error("Firebase 미초기화")); return; }
+  toast("연결 테스트 중…");
+  const testId="__conntest__";
+  try{
+    await db.collection(COL).doc(testId).set({_t:Date.now(),_test:true});
+    await db.collection(COL).doc(testId).get();
+    await db.collection(COL).doc(testId).delete();
+    online=true; setStatus(true); lastError=null; renderDiag();
+    toast("✅ 연결 테스트 성공 — 읽기/쓰기 정상");
+  }catch(e){
+    online=false; setStatus(false); const r=logErr("연결테스트", e);
+    toast(`❌ 실패 [${r.code}]`);
+  }
+}
+function wireDiag(){
+  $("diagRefresh").addEventListener("click",()=>{ renderDiag(); toast("진단을 새로 했습니다"); });
+  $("diagConnTest").addEventListener("click",connTest);
+  $("diagClearErr").addEventListener("click",()=>{ errorLog.length=0; lastError=null; renderDiag(); toast("오류 기록을 지웠습니다"); });
+  $("diagBackup").addEventListener("click",doBackup);
+  $("diagRestore").addEventListener("change",handleRestore);
+  document.querySelectorAll("[data-csv]").forEach(b=>b.addEventListener("click",()=>exportCSV(b.dataset.csv)));
+}
+function doBackup(){
+  const blob=new Blob([JSON.stringify({app:"업무일지",version:APP_VERSION,exportedAt:new Date().toISOString(),count:entries.length,entries},null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`업무일지_전체백업_${todayStr()}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast("전체 백업을 저장했습니다");
+}
+function handleRestore(e){
+  const file=e.target.files&&e.target.files[0]; e.target.value="";
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    let data; try{ data=JSON.parse(ev.target.result); }catch(err){ toast("백업 파일을 읽을 수 없습니다"); return; }
+    const arr=Array.isArray(data)?data:(data.entries||[]);
+    if(!Array.isArray(arr)||!arr.length){ toast("복구할 데이터가 없습니다"); return; }
+    if(!confirm(`백업 파일에서 ${arr.length}건을 불러옵니다.\n기존 데이터에 합쳐지고, 같은 항목은 덮어쓰기 됩니다. 계속할까요?`)) return;
+    const byId={}; entries.forEach(x=>{ if(x.id) byId[x.id]=x; });
+    let added=0,updated=0;
+    arr.forEach(rec=>{
+      if(!rec||typeof rec!=="object") return;
+      if(!rec.id) rec.id=genId();
+      if(byId[rec.id]) updated++; else added++;
+      byId[rec.id]=rec;
+      if(online){ const {id,...p}=rec; db.collection(COL).doc(rec.id).set(p).catch(()=>{}); }
+    });
+    entries=Object.values(byId); lsSave(); renderAll();
+    toast(`복구 완료 — 신규 ${added}건, 갱신 ${updated}건`);
+  };
+  reader.onerror=()=>toast("파일 읽기 실패");
+  reader.readAsText(file);
+}
+/* CSV */
+const CSV_COLS={
+  work:[["date","날짜"],["status","상태"],["floor","해당층"],["loc","위치"],["title","업무내역"],["detail","세부내용"],["field","분야"],["material","자재"],["cost","비용"],["improve","개선사항"]],
+  plan:[["date","날짜"],["text","할일"],["done","완료"]],
+  memo:[["date","날짜"],["title","제목"],["body","내용"]],
+  call:[["date","날짜"],["time","시간"],["dir","구분"],["name","상대"],["phone","전화번호"],["content","통화내용"],["followup","조치"],["done","완료"]],
+  vacation:[["name","이름"],["vtype","종류"],["start","시작일"],["end","종료일"],["note","메모"]],
+  meeting:[["date","날짜"],["title","제목"],["attendees","참석자"],["body","내용"]],
+  deliver:[["date","날짜"],["title","제목"],["content","내용"],["done","완료"]],
+};
+function csvCell(v){ if(v===true) return "완료"; if(v===false) return ""; let s=(v==null?"":String(v)); if(/[",\n\r]/.test(s)) s='"'+s.replace(/"/g,'""')+'"'; return s; }
+function buildCSV(kind){
+  const cols=CSV_COLS[kind]; if(!cols) return "";
+  const rows=entries.filter(e=>e.kind===kind).sort((a,b)=>((b.date||b.start||"")+"").localeCompare((a.date||a.start||"")+""));
+  const head=cols.map(c=>csvCell(c[1])).join(",");
+  const body=rows.map(r=>cols.map(c=>csvCell(r[c[0]])).join(",")).join("\n");
+  return head+(body?"\n"+body:"");
+}
+function downloadCSV(kind,label){
+  const csv=buildCSV(kind);
+  const rowCount=entries.filter(e=>e.kind===kind).length;
+  if(!rowCount){ toast(`${label}: 내보낼 기록이 없습니다`); return false; }
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`업무일지_${label}_${todayStr()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); return true;
+}
+function exportCSV(kind){
+  if(kind==="all"){
+    let n=0; DIAG_KINDS.forEach(([k,lbl])=>{ if(downloadCSV(k,lbl)) n++; });
+    toast(n?`CSV ${n}개 파일을 내보냈습니다`:"내보낼 기록이 없습니다");
+    return;
+  }
+  const lbl=(DIAG_KINDS.find(x=>x[0]===kind)||[,"데이터"])[1];
+  if(downloadCSV(kind,lbl)) toast(`${lbl} CSV를 내보냈습니다`);
+}
 
 /* ===== 오늘계획 ===== */
 let planFrom="", planTo="";
@@ -810,6 +1073,30 @@ $("btnPlanExcel").addEventListener("click",()=>{
   copyText(rows.join("\n"),"엑셀용으로 복사됨");
 });
 
+/* ===== 카드형/목록형 보기 전환 ===== */
+const viewMode={memo:"card",vacation:"card",meeting:"card"};
+try{ const sv=JSON.parse(localStorage.getItem("wl_viewmode")||"{}"); Object.assign(viewMode,sv); }catch(e){}
+function saveViewMode(){ try{ localStorage.setItem("wl_viewmode",JSON.stringify(viewMode)); }catch(e){} }
+function wrapView(kind, list, cardFn){
+  if(!list.length) return null;
+  const mode=viewMode[kind]||"card";
+  if(mode==="list"){
+    return `<div class="list-rows compact">`+list.map(cardFn).join("")+`</div>`;
+  }
+  return `<div class="card-grid">`+list.map(cardFn).join("")+`</div>`;
+}
+function syncViewToggle(kind){
+  const tg=document.querySelector(`.view-toggle[data-vt="${kind}"]`); if(!tg) return;
+  tg.querySelectorAll("button").forEach(b=>b.classList.toggle("active", b.dataset.v===(viewMode[kind]||"card")));
+}
+document.querySelectorAll(".view-toggle[data-vt]").forEach(tg=>{
+  const kind=tg.dataset.vt;
+  tg.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    viewMode[kind]=b.dataset.v; saveViewMode(); syncViewToggle(kind);
+    if(kind==="memo") renderMemo(); else if(kind==="vacation") renderVac(); else if(kind==="meeting") renderMeeting();
+  }));
+});
+
 /* ===== 메모 ===== */
 let memoFrom="", memoTo="";
 function cardMemo(m){
@@ -822,8 +1109,8 @@ function cardMemo(m){
 function memoFiltered(){ return entries.filter(e=>e.kind==="memo" && inDateRange(e.date,memoFrom,memoTo) && matchObj(e,Q.memo)).sort(byDateDesc); }
 function renderMemo(){
   const box=$("memoList"); const list=memoFiltered();
-  box.innerHTML = list.length ? list.map(cardMemo).join("") : `<div class="empty">메모가 없습니다.</div>`;
-  wireCards(box);
+  box.innerHTML = list.length ? wrapView("memo",list,cardMemo) : `<div class="empty">메모가 없습니다.</div>`;
+  wireCards(box); syncViewToggle("memo");
 }
 $("btnMemoExcel").addEventListener("click",()=>{
   const list=memoFiltered(); if(!list.length){ toast("복사할 내역이 없습니다"); return; }
@@ -860,7 +1147,7 @@ function renderCall(){
     <td style="text-align:center"><input type="checkbox" class="ccheck" ${c.done?"checked":""}></td>
     <td><button class="rowdel" data-del="${c.id}" title="삭제">🗑</button></td></tr>`).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
-    tr.addEventListener("click",e=>{ if(e.target.closest("a,button,input")) return; openEditor("call",tr.dataset.id); });
+    tr.addEventListener("click",e=>{ if(e.target.closest("a,button,input")) return; openViewer("call",tr.dataset.id); });
     const cb=tr.querySelector(".ccheck"); cb.addEventListener("change",()=>updateRecord(tr.dataset.id,{done:cb.checked}));
     tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); if(!confirm("이 통화 기록을 삭제할까요?")) return; deleteRecord(tr.dataset.id); renderAll(); toast("삭제되었습니다"); });
   });
@@ -881,8 +1168,8 @@ function cardVac(v){
 }
 function renderVac(){
   const box=$("vacList"); const list=listOf("vacation").sort((a,b)=>(b.start||"").localeCompare(a.start||""));
-  box.innerHTML = list.length ? list.map(cardVac).join("") : `<div class="empty">휴가 기록이 없습니다.</div>`;
-  wireCards(box);
+  box.innerHTML = list.length ? wrapView("vacation",list,cardVac) : `<div class="empty">휴가 기록이 없습니다.</div>`;
+  wireCards(box); syncViewToggle("vacation");
 }
 
 /* ===== 회의메모 ===== */
@@ -895,8 +1182,8 @@ function cardMeeting(t){
 }
 function renderMeeting(){
   const box=$("meetList"); const list=listOf("meeting").sort(byDateDesc);
-  box.innerHTML = list.length ? list.map(cardMeeting).join("") : `<div class="empty">회의메모가 없습니다.</div>`;
-  wireCards(box);
+  box.innerHTML = list.length ? wrapView("meeting",list,cardMeeting) : `<div class="empty">회의메모가 없습니다.</div>`;
+  wireCards(box); syncViewToggle("meeting");
 }
 
 /* ===== 전달사항 ===== */
@@ -919,7 +1206,7 @@ function renderDeliver(){
     <td style="text-align:center"><input type="checkbox" class="ccheck" ${d.done?"checked":""}></td>
     <td><button class="rowdel" data-del="${d.id}" title="삭제">🗑</button></td></tr>`).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
-    tr.addEventListener("click",e=>{ if(e.target.closest("a,button,input")) return; openEditor("deliver",tr.dataset.id); });
+    tr.addEventListener("click",e=>{ if(e.target.closest("a,button,input")) return; openViewer("deliver",tr.dataset.id); });
     const cb=tr.querySelector(".ccheck"); cb.addEventListener("change",()=>updateRecord(tr.dataset.id,{done:cb.checked}));
     tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); if(!confirm("이 전달사항을 삭제할까요?")) return; deleteRecord(tr.dataset.id); renderAll(); toast("삭제되었습니다"); });
   });
@@ -1021,7 +1308,7 @@ function buildReport(day){
   const mt=entries.filter(e=>e.kind==="meeting"&&D(e.date)===day).sort(byDateDesc);
   const dv=entries.filter(e=>e.kind==="deliver"&&D(e.date)===day).sort(byDateDesc);
   let h=`<h1>업무일지 보고서</h1><div class="sub">${dateLabel(day)} · 출력일 ${todayStr()}</div>`;
-  const sec=(title,items,cls)=>`<div class="rsec ${cls}"><h2>${title} (${items.length}건)</h2>`+(items.length?items.join(""):`<div class="it" style="color:#999">— 없음 —</div>`)+`</div>`;
+  const sec=(title,items,cls)=> items.length?`<div class="rsec ${cls}"><h2>${title} (${items.length}건)</h2>`+items.join("")+`</div>`:"";
   h+=sec("업무", w.map(en=>`<div class="it"><b>[${esc(en.status||"")}]</b> ${esc(en.floor||"")} ${esc(en.loc||"")} ${esc(en.title||"")}${en.detail?" — "+esc(en.detail):""}${en.field?" ["+esc(en.field)+"]":""}${en.material?" / 자재: "+esc(en.material):""}${Number(en.cost)?" / "+won(en.cost)+"원":""}${en.improve?"<br>↳ 개선: "+esc(en.improve):""}</div>`), "work");
   h+=sec("휴가", v.map(x=>`<div class="it">🌴 ${esc(x.name||"")} (${esc(x.vtype||"")}) ${x.end&&x.end!==x.start?esc(x.start)+" ~ "+esc(x.end):esc(x.start||"")}${x.note?" — "+esc(x.note):""}</div>`), "vac");
   h+=sec("오늘계획", p.map(x=>`<div class="it">${x.done?"☑":"☐"} ${esc(x.text||"")}</div>`), "plan");
@@ -1029,6 +1316,7 @@ function buildReport(day){
   h+=sec("메모", m.map(x=>`<div class="it"><b>${esc(x.title||"메모")}</b> ${esc(x.body||"")}</div>`), "memo");
   h+=sec("회의메모", mt.map(x=>`<div class="it"><b>${esc(x.title||"회의")}</b>${x.attendees?" (참석: "+esc(x.attendees)+")":""}<br>${esc(x.body||"")}</div>`), "meet");
   h+=sec("전달사항", dv.map(x=>`<div class="it">📢 <b>${esc(x.title||"")}</b> ${esc(x.content||"")}</div>`), "deliver");
+  if(!(w.length||v.length||p.length||m.length||c.length||mt.length||dv.length)) h+=`<div class="it">이 날의 기록이 없습니다.</div>`;
   return h;
 }
 function printReport(day){ if(!day) return; $("printArea").className=""; $("printArea").innerHTML=buildReport(day); window.print(); }
@@ -1069,6 +1357,83 @@ function buildCalendarPrint(){
 function statusHex(s){ return s==="완료"?"#15803d":s==="진행중"?"#b45309":"#c0392b"; }
 function printCalendar(){ $("printArea").className="calmode"; $("printArea").innerHTML=buildCalendarPrint(); window.print(); }
 $("calPrint").addEventListener("click",printCalendar);
+
+/* ===== AI 대화 · 분석 ===== */
+const AI_KEY_LS="wl_anthropic_key";
+const AI_MODEL="claude-sonnet-4-20250514";
+let aiHistory=[]; // {role, content}
+function aiGetKey(){ try{ return localStorage.getItem(AI_KEY_LS)||""; }catch(e){ return ""; } }
+function aiRenderKeyState(){
+  const k=aiGetKey(); const el=$("aiKeyState"); if(!el) return;
+  el.innerHTML = k ? `🔑 키 저장됨 (••••${esc(k.slice(-4))})` : "⚠ 키가 없습니다 — 위에 입력 후 저장하세요";
+}
+function aiInitKeyUI(){
+  const k=aiGetKey(); if(k) $("aiKey").value="";
+  aiRenderKeyState();
+}
+$("aiKeySave").addEventListener("click",()=>{
+  const v=$("aiKey").value.trim(); if(!v){ toast("키를 입력하세요"); return; }
+  try{ localStorage.setItem(AI_KEY_LS,v); }catch(e){ toast("저장 실패"); return; }
+  $("aiKey").value=""; aiRenderKeyState(); toast("API 키를 저장했습니다");
+});
+$("aiKeyClear").addEventListener("click",()=>{ try{ localStorage.removeItem(AI_KEY_LS); }catch(e){} aiRenderKeyState(); toast("키를 삭제했습니다"); });
+function aiPushMsg(role,text){
+  const box=$("aiChat");
+  const mine=role==="user";
+  const div=document.createElement("div");
+  div.style.cssText=`margin-bottom:10px;display:flex;${mine?"justify-content:flex-end":""}`;
+  div.innerHTML=`<div style="max-width:84%;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.55;padding:9px 13px;border-radius:13px;${mine?"background:var(--primary);color:#fff":"background:#fff;border:1px solid var(--line)"}">${esc(text)}</div>`;
+  box.appendChild(div); box.scrollTop=box.scrollHeight;
+  return div;
+}
+function aiDataContext(){
+  // 사진 제외, 핵심 필드만 압축해서 전달
+  const slim=entries.map(e=>{ const {photos,loggedWorkId,fromPlan,...rest}=e; return rest; });
+  let json=JSON.stringify(slim);
+  if(json.length>120000) json=json.slice(0,120000)+"…(이하 생략)";
+  return json;
+}
+async function aiAsk(userText){
+  const key=aiGetKey();
+  if(!key){ toast("먼저 API 키를 저장하세요"); activateTab("ai"); return; }
+  if(!userText.trim()) return;
+  aiPushMsg("user",userText);
+  aiHistory.push({role:"user",content:userText});
+  const waiting=aiPushMsg("assistant","…생각 중");
+  const sys=`당신은 시설관리 업무일지 비서입니다. 아래는 사용자의 업무일지 데이터(JSON, 사진 제외)입니다. 한국어로 간결하고 실용적으로 답하세요. 데이터에 근거해 답하고, 없는 내용은 추측하지 마세요.\n\n오늘 날짜: ${todayStr()}\n\n[데이터]\n${aiDataContext()}`;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({ model:AI_MODEL, max_tokens:1500, system:sys, messages:aiHistory })
+    });
+    if(!res.ok){
+      let msg=`HTTP ${res.status}`;
+      try{ const j=await res.json(); if(j&&j.error&&j.error.message) msg=j.error.message; }catch(_){}
+      throw Object.assign(new Error(msg),{code:"api_"+res.status});
+    }
+    const data=await res.json();
+    const text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim()||"(응답 없음)";
+    waiting.remove();
+    aiPushMsg("assistant",text);
+    aiHistory.push({role:"assistant",content:text});
+  }catch(e){
+    waiting.remove();
+    const r=logErr("AI 요청", e);
+    aiPushMsg("assistant",`❌ 오류 [${r.code}] ${r.message}\n\n키가 올바른지, 사용량이 남아있는지 확인해 주세요.`);
+  }
+}
+$("aiSend").addEventListener("click",()=>{ const t=$("aiInput").value; $("aiInput").value=""; aiAsk(t); });
+$("aiInput").addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){ e.preventDefault(); $("aiSend").click(); } });
+$("aiClear").addEventListener("click",()=>{ aiHistory=[]; $("aiChat").innerHTML=""; toast("대화를 지웠습니다"); });
+const AI_PROMPTS={
+  today:"오늘 날짜의 업무·통화·메모·회의·전달사항·휴가를 항목별로 요약해줘.",
+  week:"이번 주(월~일)의 활동을 항목별로 요약하고, 눈에 띄는 점이나 반복되는 이슈가 있으면 짚어줘.",
+  pending:"미완료 업무와 완료되지 않은 오늘계획, 그리고 통화 중 조치가 필요한 건을 모아서 우선순위와 함께 정리해줘.",
+  cost:"업무에 기록된 비용을 분야별·기간별로 분석하고 합계와 큰 지출 항목을 알려줘.",
+  improve:"업무의 '개선사항' 내용을 모아서 공통 주제별로 묶고, 실행 가능한 제안으로 정리해줘."
+};
+document.querySelectorAll("[data-ai]").forEach(b=>b.addEventListener("click",()=>{ const p=AI_PROMPTS[b.dataset.ai]; if(p) aiAsk(p); }));
 
 init();
 </script>
