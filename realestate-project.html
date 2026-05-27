@@ -59,12 +59,16 @@
   .pstatus.진행중{background:#e7f0e8; color:#2f6b3a;}
   .pstatus.완료{background:#e9eef5; color:#3a567f;}
   .pstatus.보류{background:#f5ece1; color:#9a6a2e;}
+  .proj-item .pmeta{font-size:11px; color:var(--ink-soft); margin-top:6px;}
 
   .btn{border:none; border-radius:10px; padding:10px 14px; font-size:14px; font-weight:600;}
   .btn-primary{background:var(--accent); color:#fff;}
   .btn-ai{background:var(--blue); color:#fff;}
   .btn-ghost{background:var(--accent-soft); color:var(--accent);}
   .btn-line{background:#fff; border:1px solid var(--line); color:var(--ink);}
+  .btn-danger{background:#fff; border:1px solid var(--danger); color:var(--danger);}
+  .btn-danger:hover{background:var(--danger); color:#fff;}
+  .danger-zone{border-color:#e6c4be;}
   .btn-block{width:100%;}
   .btn-sm{padding:6px 11px; font-size:13px;}
 
@@ -109,7 +113,10 @@
 
   /* 공정 카드 */
   .stage{border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden; background:#fff;}
-  .stage-h{display:flex; align-items:center; gap:12px; padding:13px 15px; cursor:pointer;}
+  .stage-h{display:flex; align-items:center; gap:12px; padding:13px 15px; cursor:pointer; transition:background .12s;}
+  .stage-h:hover{background:#faf8f3;}
+  .stage-h::after{content:'펼치기 ▾'; font-size:11px; color:var(--ink-soft); margin-left:4px;}
+  .stage.open .stage-h::after{content:'접기 ▴';}
   .stage-no{width:26px; height:26px; flex:0 0 26px; border-radius:50%; background:#ece8de; color:var(--ink-soft); font-size:12px; font-weight:700; display:grid; place-items:center;}
   .stage.s완료 .stage-no{background:var(--accent); color:#fff;}
   .stage.s진행 .stage-no{background:var(--gold); color:#fff;}
@@ -168,6 +175,7 @@
   .vendor .vright{margin-left:auto; display:flex; align-items:center; gap:10px;}
   .vendor a.tel{font-weight:700; color:var(--accent); text-decoration:none; font-size:15px;}
   .vendor .vdel{color:var(--danger); background:none; border:none; font-size:12px;}
+  .vendor .vedit{color:var(--accent); background:none; border:none; font-size:12px;}
 
   /* 갤러리 */
   .gallery-group{margin-bottom:20px;}
@@ -257,6 +265,7 @@
       <div class="field"><label>상태</label><select id="pf_status"><option>진행중</option><option>완료</option><option>보류</option></select></div>
       <div class="field"><label>시작일</label><input id="pf_date" type="date"></div>
     </div>
+    <div class="field"><label>총 예산 (원, 선택)</label><input id="pf_budget" type="number" placeholder="예: 30000000"><div class="hint">입력하면 대시보드에서 예산 대비 지출을 비교합니다.</div></div>
     <div class="field"><label>메모</label><textarea id="pf_memo" placeholder="프로젝트 개요, 담당자, 평형, 예산 등"></textarea></div>
     <div class="modal-acts">
       <button class="btn btn-primary" onclick="saveProject()">저장</button>
@@ -268,7 +277,7 @@
 <!-- 업체 모달 -->
 <div class="modal-bg" id="vendorModal">
   <div class="modal">
-    <h3>업체 / 연락처 추가</h3>
+    <h3 id="vendorModalTitle">업체 / 연락처 추가</h3>
     <div class="row2">
       <div class="field"><label>업체/이름 *</label><input id="vf_name" placeholder="예: ○○전기"></div>
       <div class="field"><label>공종 / 역할</label><select id="vf_trade"></select></div>
@@ -469,6 +478,16 @@ async function loadProjects(){
  try{
   const snap=await db.collection(PROJECTS).orderBy("createdAt","desc").get();
   projects=snap.docs.map(d=>({id:d.id,...d.data()}));
+  // 사이드바 요약용: 모든 기록을 한 번에 읽어 프로젝트별 지출/최근날짜 집계
+  try{
+    const all=await db.collection(ENTRIES).get();
+    const sum={}, last={};
+    all.forEach(doc=>{ const e=doc.data(); const pid=e.projectId; if(!pid) return;
+      if(Number(e.amount)>0) sum[pid]=(sum[pid]||0)+Number(e.amount);
+      if(e.date && (!last[pid] || e.date>last[pid])) last[pid]=e.date;
+    });
+    projects.forEach(p=>{ p._spent=sum[p.id]||0; p._last=last[p.id]||null; });
+  }catch(_){ /* 집계 실패해도 목록은 표시 */ }
   renderProjectList();
  }catch(err){ showError("프로젝트 목록 불러오기 (Firestore 연결/권한 확인)", err); }
 }
@@ -482,6 +501,7 @@ function renderProjectList(){
       ${p.address?`<div class="paddr">${esc(p.address)}</div>`:''}
       <div class="pbar"><i style="width:${pct}%"></i></div>
       <span class="pstatus ${p.status||''}">${p.status||'진행중'} · ${pct}%</span>
+      ${(p._spent||p._last)?`<div class="pmeta">${p._spent?'💰 '+p._spent.toLocaleString()+'원':''}${p._spent&&p._last?' · ':''}${p._last?'🕓 '+p._last:''}</div>`:''}
     </div>`;}).join("");
 }
 async function selectProject(id){
@@ -514,7 +534,6 @@ function renderMain(){
         <div class="sub">${esc(p.address||'')} ${p.startDate?'· 시작 '+p.startDate:''}</div></div>
       <div class="acts">
         <button class="btn btn-primary btn-sm" onclick="openEntryModal()">+ 기록 추가</button>
-        <button class="btn btn-line btn-sm" onclick="deleteProject()">프로젝트 삭제</button>
       </div>
     </div>
     <div class="tabs">
@@ -555,9 +574,11 @@ function viewDashboard(p){
       <div class="stat"><div class="label">공정 진행률</div><div class="value">${pct}<small>%</small></div>
         <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
         <div class="label" style="margin-top:6px">${doneCnt} / ${STAGES.length} 단계 완료</div></div>
-      <div class="stat"><div class="label">총 지출</div><div class="value">${total.toLocaleString()}<small> 원</small></div></div>
+      <div class="stat"><div class="label">총 지출${p.budget?' / 예산':''}</div><div class="value">${total.toLocaleString()}<small> 원</small></div>
+        ${p.budget?`<div class="progress-wrap"><div class="progress-bar" style="width:${Math.min(100,Math.round(total/p.budget*100))}%;background:${total>p.budget?'var(--danger)':'var(--accent)'}"></div></div>
+        <div class="label" style="margin-top:6px;color:${total>p.budget?'var(--danger)':'var(--ink-soft)'}">예산 ${p.budget.toLocaleString()}원 · ${total>p.budget?'초과 '+(total-p.budget).toLocaleString()+'원':'잔여 '+(p.budget-total).toLocaleString()+'원'}</div>`:''}</div>
       <div class="stat"><div class="label">문제·하자</div><div class="value" style="color:${problems?'var(--danger)':'inherit'}">${problems}<small> 건</small></div></div>
-      <div class="stat"><div class="label">기록 · 첨부</div><div class="value">${entries.length}<small> · ${fileCount}</small></div></div>
+      <div class="stat"><div class="label">기록 / 첨부</div><div class="value">${entries.length}<small>건 / ${fileCount}개</small></div></div>
     </div>
 
     <div class="panel"><div class="panel-h">🗺️ 공정 타임라인</div>
@@ -573,7 +594,13 @@ function viewDashboard(p){
       </div></div>
 
     <div class="panel"><div class="panel-h">🕓 최근 활동 <span class="cnt">${entries.length}건 중 최신</span></div>
-      <div class="panel-body">${recent.length? recent.map(renderLog).join("") : '<div class="ai-empty">기록이 없습니다.</div>'}</div></div>
+      <div class="panel-body">${recent.length? recent.map(e=>renderLog(e,{noDelete:true})).join("") : '<div class="ai-empty">기록이 없습니다.</div>'}</div></div>
+
+    <div class="panel danger-zone"><div class="panel-h" style="color:var(--danger)">⚠️ 위험 구역</div>
+      <div class="panel-body" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span class="hint" style="margin:0">프로젝트와 그 안의 모든 기록·사진·업체가 영구 삭제됩니다. 되돌릴 수 없습니다.</span>
+        <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="deleteProject()">프로젝트 삭제</button>
+      </div></div>
   `;
 }
 
@@ -790,7 +817,8 @@ function viewSearch(p){
 }
 
 /* ===== 공통 렌더 ===== */
-function renderLog(e){
+function renderLog(e, opts){
+  opts=opts||{};
   const files=(e.files||[]).map(f=>{
     const isImg=(f.type||"").startsWith("image/");
     return `<a class="file" href="${f.url}" target="_blank" rel="noopener">${isImg?`<img src="${f.url}">`:`<div class="fi">PDF</div>`}<span class="fname">${esc(f.name)}</span></a>`;
@@ -807,9 +835,9 @@ function renderLog(e){
     (e.cat&&e.kind==="자재비")?`<span class="l-tag">${e.cat}</span>`:'',
     (e.pay&&e.amount)?`<span class="l-tag">${e.pay}</span>`:''
   ].join("");
+  const delBtn = opts.noDelete? '' : `<button class="l-del" onclick="deleteEntry('${e.id}')">삭제</button>`;
   return `<div class="log">
-    <div class="l-top">${tags}<span class="l-title">${esc(e.title)}</span><span class="l-date">${e.date||''}</span>
-      <button class="l-del" onclick="deleteEntry('${e.id}')">삭제</button></div>
+    <div class="l-top">${tags}<span class="l-title">${esc(e.title)}</span><span class="l-date">${e.date||''}</span>${delBtn}</div>
     ${(e.vendor||e.amount)?`<div class="l-meta">${e.vendor?'거래처 '+esc(e.vendor):''}${e.vendor&&e.amount?' · ':''}${e.amount?'<b>'+Number(e.amount).toLocaleString()+'원</b>':''}</div>`:''}
     ${e.memo?`<div class="l-memo">${esc(e.memo)}</div>`:''}
     ${files?`<div class="files">${files}</div>`:''}</div>`;
@@ -819,6 +847,7 @@ function renderVendor(v,spent){
     <span class="vtrade">${v.trade||'기타'}</span>
     <div><div class="vname">${esc(v.name)}</div>${v.memo?`<div class="vmemo">${esc(v.memo)}</div>`:''}${spent?`<div class="vspent">지출 ${spent.toLocaleString()}원</div>`:''}</div>
     <div class="vright"><a class="tel" href="tel:${(v.phone||'').replace(/[^0-9+]/g,'')}">${esc(v.phone||'')}</a>
+      <button class="vedit" onclick="editVendor('${v.id}')">수정</button>
       <button class="vdel" onclick="deleteVendor('${v.id}')">삭제</button></div></div>`;
 }
 
@@ -886,39 +915,80 @@ function mdLite(t){let h=esc(t).replace(/^#{2,3}\s*(.*)$/gm,'<div class="ai-h">$
   .replace(/\n/g,'<br>').replace(/(<\/div>)<br>/g,'$1'); return '<div class="ai-text">'+h+'</div>';}
 
 /* ===== 프로젝트 ===== */
-function openProjectModal(){document.getElementById("pf_date").value=today(); openModal("projectModal");}
+function openProjectModal(){
+  document.getElementById("pf_date").value=today();
+  ["pf_name","pf_addr","pf_memo","pf_budget"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("pf_status").value="진행중";
+  openModal("projectModal");
+}
 async function saveProject(){
   const name=val("pf_name").trim(); if(!name){alert("프로젝트명을 입력하세요.");return;}
-  await db.collection(PROJECTS).add({name,address:val("pf_addr").trim(),status:val("pf_status"),
-    startDate:val("pf_date"),memo:val("pf_memo").trim(),stageStatus:{},createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-  ["pf_name","pf_addr","pf_memo"].forEach(id=>document.getElementById(id).value="");
-  closeModal("projectModal"); await loadProjects();
+  try{
+    await db.collection(PROJECTS).add({name,address:val("pf_addr").trim(),status:val("pf_status"),
+      startDate:val("pf_date"),budget:val("pf_budget")?Number(val("pf_budget")):null,
+      memo:val("pf_memo").trim(),stageStatus:{},createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    ["pf_name","pf_addr","pf_memo","pf_budget"].forEach(id=>document.getElementById(id).value="");
+    closeModal("projectModal"); await loadProjects();
+  }catch(err){ showError("프로젝트 저장", err); }
 }
 async function deleteProject(){
-  if(!currentProjectId||!confirm("이 프로젝트와 모든 기록·업체를 삭제할까요? (되돌릴 수 없음)"))return;
-  const [e,v]=await Promise.all([db.collection(ENTRIES).where("projectId","==",currentProjectId).get(),
-    db.collection(VENDORS).where("projectId","==",currentProjectId).get()]);
-  const batch=db.batch(); e.docs.forEach(d=>batch.delete(d.ref)); v.docs.forEach(d=>batch.delete(d.ref));
-  batch.delete(db.collection(PROJECTS).doc(currentProjectId)); await batch.commit();
-  currentProjectId=null; entries=[]; vendors=[]; await loadProjects();
-  document.getElementById("main").innerHTML='<div class="empty">프로젝트를 선택하세요.</div>';
+  if(!currentProjectId) return;
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  const typed=prompt('정말 삭제하려면 프로젝트 이름을 정확히 입력하세요.\n\n"'+p.name+'"\n\n(취소하려면 빈 칸으로 두고 확인)');
+  if(typed===null) return;
+  if(typed.trim()!==p.name){ alert("이름이 일치하지 않아 삭제를 취소했습니다."); return; }
+  try{
+    const [e,v]=await Promise.all([db.collection(ENTRIES).where("projectId","==",currentProjectId).get(),
+      db.collection(VENDORS).where("projectId","==",currentProjectId).get()]);
+    const batch=db.batch(); e.docs.forEach(d=>batch.delete(d.ref)); v.docs.forEach(d=>batch.delete(d.ref));
+    batch.delete(db.collection(PROJECTS).doc(currentProjectId)); await batch.commit();
+    currentProjectId=null; entries=[]; vendors=[]; await loadProjects();
+    document.getElementById("main").innerHTML='<div class="empty">프로젝트를 선택하세요.</div>';
+  }catch(err){ showError("프로젝트 삭제", err); }
 }
 
 /* ===== 업체 ===== */
+let editingVendorId=null;
 function openVendorModal(){
   if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
+  editingVendorId=null;
+  document.getElementById("vendorModalTitle").textContent="업체 / 연락처 추가";
   document.getElementById("vf_trade").innerHTML=VENDOR_ROLES.map(r=>`<option>${r}</option>`).join("");
+  ["vf_name","vf_phone","vf_memo"].forEach(id=>document.getElementById(id).value="");
+  openModal("vendorModal");
+}
+function editVendor(id){
+  const v=vendors.find(x=>x.id===id); if(!v) return;
+  editingVendorId=id;
+  document.getElementById("vendorModalTitle").textContent="업체 / 연락처 수정";
+  document.getElementById("vf_trade").innerHTML=VENDOR_ROLES.map(r=>`<option ${r===v.trade?'selected':''}>${r}</option>`).join("");
+  document.getElementById("vf_name").value=v.name||"";
+  document.getElementById("vf_phone").value=v.phone||"";
+  document.getElementById("vf_memo").value=v.memo||"";
   openModal("vendorModal");
 }
 async function saveVendor(){
   const name=val("vf_name").trim(), phone=val("vf_phone").trim();
   if(!name||!phone){alert("업체명과 전화번호를 입력하세요.");return;}
-  await db.collection(VENDORS).add({projectId:currentProjectId,name,trade:val("vf_trade"),phone,
-    memo:val("vf_memo").trim(),createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-  ["vf_name","vf_phone","vf_memo"].forEach(id=>document.getElementById(id).value="");
-  closeModal("vendorModal"); await selectProject(currentProjectId);
+  try{
+    const data={projectId:currentProjectId,name,trade:val("vf_trade"),phone,memo:val("vf_memo").trim()};
+    if(editingVendorId){
+      await db.collection(VENDORS).doc(editingVendorId).update(data);
+    }else{
+      data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection(VENDORS).add(data);
+    }
+    editingVendorId=null;
+    ["vf_name","vf_phone","vf_memo"].forEach(id=>document.getElementById(id).value="");
+    closeModal("vendorModal"); await selectProject(currentProjectId);
+  }catch(err){ showError("업체 저장", err); }
 }
-async function deleteVendor(id){if(!confirm("이 업체를 삭제할까요?"))return; await db.collection(VENDORS).doc(id).delete(); await selectProject(currentProjectId);}
+async function deleteVendor(id){
+  const v=vendors.find(x=>x.id===id);
+  if(!confirm('이 업체를 삭제할까요?\n\n"'+((v&&v.name)||'')+'"'))return;
+  try{ await db.collection(VENDORS).doc(id).delete(); await selectProject(currentProjectId); }
+  catch(err){ showError("업체 삭제", err); }
+}
 
 /* ===== 기록 ===== */
 function fillStageSelect(preset){
@@ -987,10 +1057,12 @@ async function saveEntry(){
  }
 }
 async function deleteEntry(id){
-  if(!confirm("이 기록을 삭제할까요?"))return;
   const e=entries.find(x=>x.id===id);
-  if(e&&e.files) for(const f of e.files){if(f.path){try{await storage.ref(f.path).delete();}catch(_){}}}
-  await db.collection(ENTRIES).doc(id).delete(); await selectProject(currentProjectId);
+  if(!confirm('이 기록을 삭제할까요?\n\n"'+((e&&e.title)||'')+'"\n\n되돌릴 수 없습니다.'))return;
+  try{
+    if(e&&e.files) for(const f of e.files){if(f.path){try{await storage.ref(f.path).delete();}catch(_){}}}
+    await db.collection(ENTRIES).doc(id).delete(); await selectProject(currentProjectId);
+  }catch(err){ showError("기록 삭제", err); }
 }
 
 /* ===== 유틸 ===== */
@@ -1230,7 +1302,11 @@ async function runDiagnostics(){
 function showError(where, err){
   const b=document.getElementById("errBanner");
   const msg=document.getElementById("errMsg"), ex=document.getElementById("errEx");
-  const detail=(err&&(err.message||err.toString()))||"알 수 없는 오류";
+  let detail=(err&&(err.message||err.toString()))||"알 수 없는 오류";
+  // 자주 나는 권한 오류는 해결법을 덧붙임
+  if(/permission|insufficient|PERMISSION_DENIED/i.test(detail)){
+    detail += "  →  Firebase 콘솔 → Firestore/Storage 규칙을 'allow read, write: if true'로 게시하세요. (30일 테스트 만료일 제거 필요)";
+  }
   if(msg) msg.textContent = " — 위치: "+where;
   if(ex) ex.textContent = detail;
   if(b) b.classList.add("show");
