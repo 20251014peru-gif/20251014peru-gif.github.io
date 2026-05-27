@@ -134,8 +134,17 @@
   .mini-chip{font-size:12px; padding:5px 12px; border-radius:18px; border:1px solid var(--line); background:#fff; color:var(--ink-soft);}
   .mini-chip.on{background:var(--accent); color:#fff; border-color:var(--accent);}
   .checklist{margin-top:12px; padding:11px 14px; background:#f3f6f2; border:1px solid #d8e3d6; border-radius:10px;}
-  .checklist-h{font-size:12px; font-weight:700; color:var(--accent); margin-bottom:5px;}
-  .checklist-i{font-size:12.5px; color:var(--ink-soft); padding:2px 0;}
+  .checklist-h{font-size:12px; font-weight:700; color:var(--accent); margin-bottom:8px;}
+  .ck-item{padding:7px 0; border-top:1px solid #e1e9df;}
+  .ck-item:first-of-type{border-top:none;}
+  .ck-row{display:flex; align-items:flex-start; gap:8px; font-size:13px; cursor:pointer;}
+  .ck-row input{margin-top:2px; flex:0 0 auto; width:16px; height:16px;}
+  .ck-item.on .ck-row span{color:var(--ink-soft); text-decoration:line-through;}
+  .ck-tools{display:flex; gap:6px; margin:5px 0 0 24px;}
+  .ck-memo{flex:1; border:1px solid var(--line); border-radius:8px; padding:5px 9px; font-size:12px; background:#fff;}
+  .ck-add{flex:0 0 auto; border:1px solid var(--line); background:#fff; border-radius:8px; padding:5px 10px; font-size:13px; cursor:pointer;}
+  .ck-files{margin:6px 0 0 24px; display:flex; flex-wrap:wrap; gap:6px;}
+  .ck-file{font-size:11px; background:#fff; border:1px solid var(--line); border-radius:7px; padding:4px 8px; text-decoration:none; color:var(--accent);}
 
   /* 기록 줄 */
   .log{padding:10px 0; border-top:1px dashed var(--line); font-size:13px;}
@@ -292,6 +301,8 @@
 <div id="errBanner"><button class="x" onclick="document.getElementById('errBanner').classList.remove('show')">×</button>
   <b>⚠️ 오류가 발생했습니다</b><span id="errMsg"></span><span class="ex" id="errEx"></span></div>
 
+<input type="file" id="addToFolderInput" multiple accept="image/*,application/pdf" style="display:none">
+
 <!-- 이미지 뷰어 -->
 <div id="imgViewer">
   <button id="ivClose" title="닫기">×</button>
@@ -309,7 +320,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v1.3</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v1.4</span></h1>
   <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
   <a class="home" href="index.html">← 홈</a>
 </header>
@@ -532,8 +543,29 @@ const STAGE_CATS = {
 };
 /* 임장·계약 단계의 체크리스트(점검 항목) — 아파트 기준 */
 const STAGE_CHECKLIST = {
-  "임장(현장조사)": ["입지·교통·역세권","단지 규모·세대수·연식","층/향/조망·일조","누수·결로·곰팡이 흔적","주차 대수·주차 편의","학군·생활편의(마트·병원)","시세·실거래가 비교","향후 개발 호재/악재"],
-  "계약·잔금": ["등기부등본 소유자=계약자 신분 대조","근저당·가압류 등 권리관계 확인","계약금/중도금/잔금 일정","인감증명서(3개월 이내)·등기권리증","주민등록등본·초본 준비","관리비·공과금·재산세 정산 확인","전입신고·확정일자 계획","대출 실행 일정 확인"]
+  "임장(현장조사)": [
+    "입지·교통·역세권 확인","단지 규모·세대수·연식","층/향/조망·일조량",
+    "누수·결로·곰팡이 흔적","수압·배수·난방 상태","주차 대수·주차 편의",
+    "학군·생활편의(마트·병원)","채광·소음·층간소음","시세·실거래가 비교","향후 개발 호재/악재"
+  ],
+  "계약·잔금": [
+    "【계약시】 등기부등본(등기사항전부증명서) 발급·확인",
+    "【계약시】 소유자=계약 당사자 신분 대조(공동명의 시 동의서·위임장)",
+    "【계약시】 근저당·가압류·압류 등 권리관계 확인",
+    "【계약시】 부동산 표시(주소·면적·구조)가 등기부와 일치하는지",
+    "【계약시】 매매대금·계약금/중도금/잔금 지급일·금액 명시",
+    "【계약시】 계약금 입금(영수증 수령)·계약서 특약 확인",
+    "【잔금시】 잔금 직전 등기부등본 재발급(권리관계 변동 확인)",
+    "【잔금시】 등기권리증(등기필증)·매도용 인감증명서·인감도장 수령",
+    "【잔금시】 매도인 주민등록초본·신분증 확인",
+    "【잔금시】 관리비·공과금·재산세 정산 및 영수증 확인",
+    "【잔금시】 잔금 지급·영수증 수령·열쇠/도면 인수",
+    "【잔금시】 중개수수료·법무사 비용 정산",
+    "【등기】 취득세·인지세 납부",
+    "【등기】 잔금일로부터 60일 이내 소유권 이전등기 신청",
+    "【등기】 이전등기 완료 후 등기부등본 재확인",
+    "【기타】 전입신고·확정일자","【기타】 대출 실행 일정 확인"
+  ]
 };
 
 /* ===== 기타 비용 세부 항목 ===== */
@@ -583,18 +615,27 @@ function renderProjectList(){
     </div>`;}).join("");
 }
 async function selectProject(id){
+  // 다른 프로젝트로 전환할 때만 화면 상태 초기화
+  if(id!==currentProjectId){
+    activeTab="대시보드"; costFilter={stage:"전체",kind:"전체",pay:"전체",q:""}; searchQ="";
+    chatHistory=[]; window._photoOpenId=null; window._docOpenId=null; window._photoStageFilter="전체";
+  }
+  currentProjectId=id;
+  await reloadCurrent();
+}
+/* 현재 프로젝트의 데이터만 다시 읽고, 보던 탭·폴더를 유지한 채 다시 그림 */
+async function reloadCurrent(){
  try{
-  currentProjectId=id; renderProjectList();
+  renderProjectList();
+  const id=currentProjectId; if(!id) return;
   const [eSnap,vSnap]=await Promise.all([
     db.collection(ENTRIES).where("projectId","==",id).get(),
     db.collection(VENDORS).where("projectId","==",id).get()
   ]);
   entries=eSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   vendors=vSnap.docs.map(d=>({id:d.id,...d.data()}));
-  activeTab="대시보드"; costFilter={stage:"전체",kind:"전체",pay:"전체",q:""}; searchQ="";
-  chatHistory=[]; window._photoOpenId=null; window._docOpenId=null; window._photoStageFilter="전체";
   renderMain();
- }catch(err){ showError("프로젝트 열기", err); }
+ }catch(err){ showError("데이터 새로고침", err); }
 }
 
 /* ===== 진행률 ===== */
@@ -716,7 +757,7 @@ function viewStages(p){
           ${["대기","진행","완료"].map(s=>`<button class="mini-chip ${st===s?'on':''}" onclick="setStageStatus('${jsstr(stage)}','${s}')">${s}</button>`).join("")}
           <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openEntryModal('${jsstr(stage)}')">+ 이 공정에 기록</button>
         </div>
-        ${STAGE_CHECKLIST[stage]?`<div class="checklist"><div class="checklist-h">✔ 점검 체크리스트</div>${STAGE_CHECKLIST[stage].map(c=>`<div class="checklist-i">· ${c}</div>`).join("")}</div>`:''}
+        ${STAGE_CHECKLIST[stage]?renderChecklist(p,stage):''}
         <div style="margin-top:10px">${logs.length? logs.map(renderLog).join("") : '<div style="color:var(--ink-soft);font-size:13px;padding:8px 0">기록 없음</div>'}</div>
       </div>
     </div>`;}).join("");
@@ -733,6 +774,67 @@ async function setStageStatus(stage,status){
   const ss=Object.assign({},p.stageStatus||{}); ss[stage]=status;
   await db.collection(PROJECTS).doc(currentProjectId).update({stageStatus:ss});
   p.stageStatus=ss; renderProjectList(); renderTab(p);
+}
+
+/* ===== 체크리스트 (체크 + 메모 + 서류 첨부) ===== */
+// 체크 상태/메모는 프로젝트 문서의 checkState[stage][index]에 저장
+function getCheck(p,stage,idx){ return ((p.checkState||{})[stage]||{})[idx]||null; }
+function renderChecklist(p,stage){
+  const items=STAGE_CHECKLIST[stage]||[];
+  const done=items.filter((_,i)=>getCheck(p,stage,i) && getCheck(p,stage,i).done).length;
+  const rows=items.map((c,i)=>{
+    const cs=getCheck(p,stage,i)||{};
+    // 이 항목에 첨부된 서류 기록(같은 stage + checkRef=i)
+    const docs=entries.filter(e=>e.stage===stage && e.checkRef===i);
+    const files=docs.flatMap(e=>e.files||[]);
+    const fileHtml=files.map((f)=>{
+      const isImg=(f.type||"").startsWith("image/");
+      return `<a class="ck-file" href="${isImg?'javascript:void(0)':f.url}" ${isImg?`onclick="openViewer('${jsstr(f.url)}','${jsstr(f.name)}');return false;"`:'target="_blank" rel="noopener"'}>${isImg?'🖼':'📄'} ${esc(f.name)}</a>`;
+    }).join("");
+    return `<div class="ck-item ${cs.done?'on':''}">
+      <label class="ck-row"><input type="checkbox" ${cs.done?'checked':''} onchange="toggleCheck('${jsstr(stage)}',${i},this.checked)"><span>${esc(c)}</span></label>
+      <div class="ck-tools">
+        <input class="ck-memo" placeholder="메모…" value="${esc(cs.memo||'')}" onchange="saveCheckMemo('${jsstr(stage)}',${i},this.value)">
+        <button class="ck-add" onclick="addCheckDoc('${jsstr(stage)}',${i})" title="서류/사진 첨부">📎</button>
+      </div>
+      ${fileHtml?`<div class="ck-files">${fileHtml}</div>`:''}
+    </div>`;
+  }).join("");
+  return `<div class="checklist"><div class="checklist-h">✔ 점검 체크리스트 <span style="font-weight:500;color:var(--ink-soft)">(${done}/${items.length})</span></div>${rows}</div>`;
+}
+async function toggleCheck(stage,idx,done){
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  const cs=JSON.parse(JSON.stringify(p.checkState||{}));
+  cs[stage]=cs[stage]||{}; cs[stage][idx]=Object.assign({},cs[stage][idx],{done});
+  try{ await db.collection(PROJECTS).doc(currentProjectId).update({checkState:cs}); p.checkState=cs; renderTab(p); }
+  catch(err){ showError("체크 저장", err); }
+}
+async function saveCheckMemo(stage,idx,memo){
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  const cs=JSON.parse(JSON.stringify(p.checkState||{}));
+  cs[stage]=cs[stage]||{}; cs[stage][idx]=Object.assign({},cs[stage][idx],{memo});
+  try{ await db.collection(PROJECTS).doc(currentProjectId).update({checkState:cs}); p.checkState=cs; }
+  catch(err){ showError("메모 저장", err); }
+}
+/* 체크 항목에 서류/사진 첨부 → stage + checkRef=idx 기록으로 저장 */
+function addCheckDoc(stage,idx){
+  const inp=document.getElementById("addToFolderInput"); inp.value="";
+  inp.onchange=async function(){
+    if(!inp.files.length) return;
+    try{
+      const files=[];
+      for(const f of inp.files){ files.push(await processFile(f)); }
+      const label=(STAGE_CHECKLIST[stage]||[])[idx]||"체크 항목";
+      await db.collection(ENTRIES).add({
+        projectId:currentProjectId, kind:"서류", title:label.replace(/^【.*?】\s*/,''),
+        date:today(), stage:stage, checkRef:idx, cat:null, photostage:null,
+        vendor:"", amount:null, pay:null, memo:"체크리스트 첨부", files,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await reloadCurrent();
+    }catch(err){ showError("체크 서류 첨부", err); }
+  };
+  inp.click();
 }
 
 /* ===== 비용 ===== */
@@ -848,7 +950,8 @@ function viewPhotos(p){
         <button class="btn btn-line btn-sm" onclick="window._photoOpenId=null;renderTab(projects.find(x=>x.id===currentProjectId))">← 폴더 목록</button>
         <span style="margin-left:6px">${e.photostage?'['+e.photostage+'] ':''}${esc(e.title)}</span>
         <span class="cnt">${e.date||''} · 사진 ${imgs.length}장</span>
-        <button class="btn btn-ghost btn-sm add" onclick="editEntryTitle('${e.id}')">✏ 제목 수정</button></div>
+        <button class="btn btn-ghost btn-sm add" onclick="addFilesToFolder('${e.id}')">+ 사진 추가</button>
+        <button class="btn btn-line btn-sm" onclick="editEntryTitle('${e.id}')">✏ 제목 수정</button></div>
         <div class="panel-body">
           ${e.memo?`<div class="hint" style="margin-bottom:10px">${esc(e.memo)}</div>`:''}
           <div class="gallery">${imgs.map(({f,oi},idx)=>`<div class="gphoto"><a href="javascript:void(0)" onclick="openViewerList(${idx})"><img src="${f.url}"><div class="cap">${esc(f.name)}</div></a><button class="gdel" title="사진 삭제" onclick="deletePhoto('${e.id}',${oi})">×</button></div>`).join("")}</div>
@@ -914,7 +1017,8 @@ function viewDocs(p){
         <button class="btn btn-line btn-sm" onclick="window._docOpenId=null;renderTab(projects.find(x=>x.id===currentProjectId))">← 서류 목록</button>
         <span style="margin-left:6px">${esc(e.title)}</span>
         <span class="cnt">${e.date||''} · 파일 ${files.length}개</span>
-        <button class="btn btn-ghost btn-sm add" onclick="editEntryTitle('${e.id}')">✏ 제목 수정</button></div>
+        <button class="btn btn-ghost btn-sm add" onclick="addFilesToFolder('${e.id}')">+ 파일 추가</button>
+        <button class="btn btn-line btn-sm" onclick="editEntryTitle('${e.id}')">✏ 제목 수정</button></div>
         <div class="panel-body">
           ${e.vendor?`<div class="hint">거래처: ${esc(e.vendor)}</div>`:''}
           ${e.memo?`<div class="hint" style="margin-bottom:10px">${esc(e.memo)}</div>`:''}
@@ -1196,13 +1300,13 @@ async function saveVendor(){
     }
     editingVendorId=null;
     ["vf_name","vf_phone","vf_memo"].forEach(id=>document.getElementById(id).value="");
-    closeModal("vendorModal"); await selectProject(currentProjectId);
+    closeModal("vendorModal"); await reloadCurrent();
   }catch(err){ showError("업체 저장", err); }
 }
 async function deleteVendor(id){
   const v=vendors.find(x=>x.id===id);
   if(!confirm('이 업체를 삭제할까요?\n\n"'+((v&&v.name)||'')+'"'))return;
-  try{ await db.collection(VENDORS).doc(id).delete(); await selectProject(currentProjectId); }
+  try{ await db.collection(VENDORS).doc(id).delete(); await reloadCurrent(); }
   catch(err){ showError("업체 삭제", err); }
 }
 
@@ -1301,7 +1405,7 @@ async function saveEntry(){
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
   btn.disabled=false; btn.textContent="저장";
-  closeModal("entryModal"); await selectProject(currentProjectId);
+  closeModal("entryModal"); await reloadCurrent();
  }catch(err){
   btn.disabled=false; btn.textContent="저장";
   document.getElementById("uploadProgress").style.display="none";
@@ -1313,7 +1417,7 @@ async function deleteEntry(id){
   if(!confirm('이 기록을 삭제할까요?\n\n"'+((e&&e.title)||'')+'"\n\n되돌릴 수 없습니다.'))return;
   try{
     if(e&&e.files) for(const f of e.files){ if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} } }
-    await db.collection(ENTRIES).doc(id).delete(); await selectProject(currentProjectId);
+    await db.collection(ENTRIES).doc(id).delete(); await reloadCurrent();
   }catch(err){ showError("기록 삭제", err); }
 }
 /* 기록 안의 사진(파일) 한 장만 삭제 */
@@ -1325,9 +1429,30 @@ async function deletePhoto(entryId, fileIdx){
     if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} }
     const newFiles=e.files.filter((_,i)=>i!==fileIdx);
     await db.collection(ENTRIES).doc(entryId).update({files:newFiles});
-    await selectProject(currentProjectId);
+    // 폴더에 남은 (해당 종류) 파일이 없으면 목록으로 빠져나감
+    if(window._photoOpenId===entryId && !newFiles.some(x=>(x.type||"").startsWith("image/"))) window._photoOpenId=null;
+    if(window._docOpenId===entryId && newFiles.length===0) window._docOpenId=null;
+    await reloadCurrent();
   }catch(err){ showError("사진 삭제", err); }
 }
+/* 기존 폴더(기록)에 파일 추가 */
+function addFilesToFolder(entryId){
+  const inp=document.getElementById("addToFolderInput");
+  inp.value="";
+  inp.onchange=async function(){
+    if(!inp.files.length) return;
+    const e=entries.find(x=>x.id===entryId); if(!e) return;
+    try{
+      const added=[];
+      for(const f of inp.files){ added.push(await processFile(f)); }
+      const newFiles=(e.files||[]).concat(added);
+      await db.collection(ENTRIES).doc(entryId).update({files:newFiles});
+      await reloadCurrent();
+    }catch(err){ showError("파일 추가", err); }
+  };
+  inp.click();
+}
+
 /* 기록 제목 수정 (서류 폴더 등에서 사용) */
 async function editEntryTitle(entryId){
   const e=entries.find(x=>x.id===entryId); if(!e) return;
@@ -1336,7 +1461,7 @@ async function editEntryTitle(entryId){
   if(!t.trim()){ alert("제목은 비울 수 없습니다."); return; }
   try{
     await db.collection(ENTRIES).doc(entryId).update({title:t.trim()});
-    await selectProject(currentProjectId);
+    await reloadCurrent();
   }catch(err){ showError("제목 수정", err); }
 }
 
@@ -1510,7 +1635,7 @@ async function saveQuickEtc(){
     });
     await batch.commit();
     btn.disabled=false; btn.textContent="전체 저장";
-    closeModal("quickEtcModal"); await selectProject(currentProjectId);
+    closeModal("quickEtcModal"); await reloadCurrent();
   }catch(err){ btn.disabled=false; btn.textContent="전체 저장"; showError("빠른 비용 저장", err); }
 }
 
@@ -1589,7 +1714,7 @@ async function saveRepeatEtc(){
     });
     await batch.commit();
     btn.disabled=false; btn.textContent="생성";
-    closeModal("repeatEtcModal"); await selectProject(currentProjectId);
+    closeModal("repeatEtcModal"); await reloadCurrent();
   }catch(err){ btn.disabled=false; btn.textContent="생성"; showError("반복 비용 생성", err); }
 }
 
