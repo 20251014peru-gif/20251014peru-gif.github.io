@@ -32,13 +32,13 @@
   input,select,textarea{font-family:inherit;}
 
   header.topbar{background:#7d8fd0; color:#fff; padding:14px 22px;
-    display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:20;}
+    display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:20;}
   header.topbar h1{font-size:17px; margin:0; font-weight:700; letter-spacing:-.3px;}
-  header.topbar .home{margin-left:auto; font-size:13px; color:#dce6dc; text-decoration:none;
+  header.topbar .tb-right{margin-left:auto; display:flex; gap:8px; align-items:center;}
+  header.topbar .home{font-size:13px; color:#fff; text-decoration:none;
     border:1px solid rgba(255,255,255,.3); padding:6px 12px; border-radius:8px;}
-  header.topbar .diag{margin-left:auto; font-size:13px; color:#fff; background:rgba(255,255,255,.14);
+  header.topbar .diag, header.topbar .backup{font-size:13px; color:#fff; background:rgba(255,255,255,.14);
     border:1px solid rgba(255,255,255,.3); padding:6px 12px; border-radius:8px; cursor:pointer;}
-  header.topbar .diag + .home{margin-left:8px;}
 
   /* 진단 결과 모달 */
   #diagModal .modal{width:min(620px,100%);}
@@ -200,6 +200,29 @@
   .bar-cell>span{position:relative; z-index:1;}
   .cost-cols{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
 
+  /* 자재 */
+  .mf-amount{padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#f3f1fb; font-weight:700;}
+  .mat-list{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px;}
+  .mat-card{border:1px solid var(--line); border-radius:12px; background:#fff; padding:13px 15px; display:flex; flex-direction:column; gap:7px; box-shadow:var(--shadow);}
+  .mat-card .mat-top{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .mat-card .mat-amt{margin-left:auto; font-weight:700; color:var(--gold); font-size:14px;}
+  .mat-card .mat-name{font-weight:700; font-size:15px;}
+  .mat-card .mat-name small{font-weight:500; font-size:12px; color:var(--ink-soft); margin-left:5px;}
+  .mat-card .mat-spec{font-size:13px; color:var(--ink); background:#f7f6fc; border-radius:8px; padding:6px 9px;}
+  .mat-card .mat-meta{font-size:12px; color:var(--ink-soft); line-height:1.7;}
+  .mat-card .mat-meta b{color:var(--ink);}
+  .mat-card .mat-memo{font-size:12.5px; white-space:pre-wrap; color:var(--ink);}
+  .mat-thumbs{display:flex; gap:6px; flex-wrap:wrap;}
+  .mat-thumb{position:relative; width:64px; height:64px; border-radius:8px; overflow:hidden; border:1px solid var(--line); cursor:pointer; background:#f3f1fb;}
+  .mat-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .mat-thumb .mt-del{position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:rgba(162,59,45,.85); color:#fff; border:none; font-size:13px; line-height:1; cursor:pointer; display:none; padding:0;}
+  .mat-thumb:hover .mt-del{display:block;}
+  @media(hover:none){ .mat-thumb .mt-del{display:block;} }
+  .mat-addphoto{width:64px; height:64px; border-radius:8px; border:1px dashed var(--accent); background:var(--accent-soft); color:var(--accent); font-size:11px; cursor:pointer; display:grid; place-items:center; text-align:center; line-height:1.25;}
+  .mat-card .mat-acts{display:flex; gap:8px; border-top:1px solid var(--line); padding-top:9px; margin-top:2px;}
+  .mat-card .mat-acts button{flex:1; border:1px solid var(--line); background:#fff; border-radius:8px; padding:6px; font-size:12px; cursor:pointer; color:var(--ink);}
+  .mat-card .mat-acts .mdel{color:var(--danger); border-color:#e6c4be;}
+
   /* 업체 */
   .vendor{display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line);}
   .vendor:first-child{border-top:none;}
@@ -322,6 +345,11 @@
   #uploadProgress{display:none; font-size:13px; color:var(--accent); margin-top:8px;}
   .hint{font-size:11px; color:var(--ink-soft); margin-top:4px;}
 
+  /* 백업 모달 */
+  .backup-box{border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px;}
+  .backup-box h4{margin:0 0 6px; font-size:14px;}
+  .backup-box p{margin:0 0 10px; font-size:12.5px; color:var(--ink-soft); line-height:1.6;}
+
   /* 오류 배너 */
   #errBanner{position:fixed; left:50%; bottom:20px; transform:translateX(-50%);
     max-width:560px; width:calc(100% - 32px); background:#3a2320; color:#ffe9e4;
@@ -348,6 +376,7 @@
   <b>⚠️ 오류가 발생했습니다</b><span id="errMsg"></span><span class="ex" id="errEx"></span></div>
 
 <input type="file" id="addToFolderInput" multiple accept="image/*,application/pdf" style="display:none">
+<input type="file" id="restoreInput" accept="application/json,.json" style="display:none">
 
 <div id="uploadOverlay"><div class="up-box"><div class="up-spin"></div><div id="upMsg">업로드 중…</div></div></div>
 
@@ -368,9 +397,12 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v2.6</span></h1>
-  <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
-  <a class="home" href="index.html">← 홈</a>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v2.7</span></h1>
+  <div class="tb-right">
+    <button class="backup" onclick="openBackupModal()">💾 백업</button>
+    <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
+    <a class="home" href="index.html">← 홈</a>
+  </div>
 </header>
 
 <div class="wrap">
@@ -469,6 +501,71 @@
     <div class="modal-acts">
       <button class="btn btn-primary" id="entrySaveBtn" onclick="saveEntry()">저장</button>
       <button class="btn btn-line" onclick="closeModal('entryModal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 자재 모달 -->
+<div class="modal-bg" id="materialModal">
+  <div class="modal">
+    <h3 id="materialModalTitle">자재 추가</h3>
+    <div class="row2">
+      <div class="field"><label>공간 / 위치</label><select id="mf_space"></select></div>
+      <div class="field"><label>분류</label><select id="mf_cat"></select></div>
+    </div>
+    <div class="field"><label>공정 (선택)</label><select id="mf_stage"></select></div>
+    <div class="field"><label>제품명 *</label><input id="mf_name" placeholder="예: 포세린 타일 / 실크 벽지 / 강마루"></div>
+    <div class="row2">
+      <div class="field"><label>브랜드 / 제조사</label><input id="mf_brand" placeholder="예: 동서타일, LG하우시스"></div>
+      <div class="field"><label>규격 · 사양</label><input id="mf_spec" placeholder="예: 600×600, 무광, 모델 ABC-12, 화이트"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>단가 (원)</label><input id="mf_unitprice" type="number" placeholder="개당/㎡당 단가" oninput="updateMatAmount()"></div>
+      <div class="field"><label>수량</label><input id="mf_qty" type="number" placeholder="숫자" oninput="updateMatAmount()"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>단위</label><select id="mf_unit"></select></div>
+      <div class="field"><label>금액 (자동 계산)</label><div class="mf-amount" id="mf_amount">0원</div></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>공급처 / 구매처</label><input id="mf_supplier" placeholder="예: ○○자재, 을지로 상가"></div>
+      <div class="field"><label>연락처</label><input id="mf_contact" placeholder="010-0000-0000"></div>
+    </div>
+    <div class="field"><label>구매 / 시공일</label><input id="mf_date" type="date"></div>
+    <div class="field"><label>메모</label><textarea id="mf_memo" placeholder="색상 코드, 시공 위치 상세, A/S 조건, 대체품 등"></textarea></div>
+    <div class="field"><label>📷 자재 사진 (여러 장, 선택)</label>
+      <input id="mf_files" type="file" multiple accept="image/*,application/pdf">
+      <div class="hint" id="mf_filehint"></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="matSaveBtn" onclick="saveMaterial()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('materialModal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 백업/복원 모달 -->
+<div class="modal-bg" id="backupModal">
+  <div class="modal">
+    <h3>💾 백업 / 복원</h3>
+    <div class="backup-box">
+      <h4>📤 현재 프로젝트 백업 (내보내기)</h4>
+      <p>지금 선택된 프로젝트의 모든 데이터(프로젝트 정보·기록·업체·자재·체크리스트)를 JSON 파일 하나로 저장합니다. 사진/파일은 링크(URL)로 보관됩니다.</p>
+      <button class="btn btn-primary btn-sm" onclick="backupCurrentProject()">현재 프로젝트 백업하기</button>
+    </div>
+    <div class="backup-box">
+      <h4>📦 전체 백업 (모든 프로젝트)</h4>
+      <p>모든 프로젝트와 데이터를 한 파일로 저장합니다. 정기적으로 받아 두면 안전합니다.</p>
+      <button class="btn btn-line btn-sm" onclick="backupAll()">전체 백업하기</button>
+    </div>
+    <div class="backup-box">
+      <h4>📥 복원 (불러오기)</h4>
+      <p>백업한 JSON 파일을 올리면 <b>새 프로젝트로</b> 복원합니다. 기존 프로젝트를 덮어쓰지 않으니 안전합니다.</p>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('restoreInput').click()">백업 파일 선택해서 복원</button>
+      <div class="hint" id="restoreHint" style="margin-top:8px"></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-line" onclick="closeModal('backupModal')">닫기</button>
     </div>
   </div>
 </div>
@@ -604,7 +701,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const storage = firebase.storage();
-const PROJECTS="realestate_projects", ENTRIES="realestate_entries", VENDORS="realestate_vendors";
+const PROJECTS="realestate_projects", ENTRIES="realestate_entries", VENDORS="realestate_vendors", MATERIALS="realestate_materials";
 
 /* ===== AI 설정 (모델명은 다른 페이지와 동일하게 맞추세요) ===== */
 const AI_MODEL = "claude-sonnet-4-6";
@@ -706,6 +803,11 @@ const ETC_CATS = [
 ];
 const VENDOR_ROLES = STAGES.concat(["중개","법무","기타"]);
 
+/* ===== 자재(인테리어 자재 사양·단가) 옵션 ===== */
+const MAT_SPACES = ["거실","주방","안방","작은방","드레스룸","욕실(공용)","욕실(안방)","현관","발코니/베란다","복도","전체/공용","기타"];
+const MAT_CATS = ["타일","도배(벽지)","바닥재(마루/장판)","페인트/도장","필름","싱크대/주방가구","붙박이장/가구","조명/등기구","스위치/콘센트","위생기구(양변기/세면대)","수전/밸브","문/도어","창호/샷시","몰딩/걸레받이","실리콘/방수","단열/보온재","목자재(합판/석고)","철물/하드웨어","기타"];
+const MAT_UNITS = ["EA(개)","㎡","평","m(미터)","box(박스)","롤","통","set(세트)","장","자","포","말"];
+
 /* ===== 사진·서류 기본 폴더(카테고리) ===== */
 const PHOTO_FOLDERS = [
   "임장 사진","인테리어 전","인테리어 중","인테리어 후",
@@ -718,7 +820,7 @@ const DOC_FOLDERS = [
 ];
 
 /* ===== 상태 ===== */
-let projects=[], currentProjectId=null, entries=[], vendors=[];
+let projects=[], currentProjectId=null, entries=[], vendors=[], materials=[];
 let activeTab="대시보드";
 let costFilter={stage:"전체",kind:"전체",pay:"전체",q:""};
 let searchQ="";
@@ -759,6 +861,7 @@ async function selectProject(id){
   if(id!==currentProjectId){
     activeTab="대시보드"; costFilter={stage:"전체",kind:"전체",pay:"전체",q:""}; searchQ="";
     chatHistory=[]; window._photoOpenId=null; window._docOpenId=null; window._photoStageFilter="전체"; window._photoSelMode=false; window._photoSel={};
+    window._matFilter=""; window._matGroup="space";
   }
   currentProjectId=id;
   await reloadCurrent();
@@ -768,12 +871,14 @@ async function reloadCurrent(){
  try{
   renderProjectList();
   const id=currentProjectId; if(!id) return;
-  const [eSnap,vSnap]=await Promise.all([
+  const [eSnap,vSnap,mSnap]=await Promise.all([
     db.collection(ENTRIES).where("projectId","==",id).get(),
-    db.collection(VENDORS).where("projectId","==",id).get()
+    db.collection(VENDORS).where("projectId","==",id).get(),
+    db.collection(MATERIALS).where("projectId","==",id).get()
   ]);
   entries=eSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   vendors=vSnap.docs.map(d=>({id:d.id,...d.data()}));
+  materials=mSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   renderMain();
  }catch(err){ showError("데이터 새로고침", err); }
 }
@@ -814,7 +919,7 @@ function renderMain(){
   const p=projects.find(x=>x.id===currentProjectId);
   const main=document.getElementById("main");
   if(!p){main.innerHTML='<div class="empty">프로젝트를 선택하세요.</div>';return;}
-  const tabs=["대시보드","공정","비용","사진","업체·연락","서류","검색"];
+  const tabs=["대시보드","공정","자재","비용","사진","업체·연락","서류","검색"];
   main.innerHTML=`
     <div class="proj-head">
       <div><h2>${esc(p.name)}</h2>
@@ -829,13 +934,13 @@ function renderMain(){
     <div id="tabContent"></div>`;
   renderTab(p);
 }
-function tabIcon(t){return {"대시보드":"📊","공정":"🔨","비용":"💰","사진":"📷","업체·연락":"📇","서류":"📁","검색":"🔍"}[t]||"";}
+function tabIcon(t){return {"대시보드":"📊","공정":"🔨","자재":"🧱","비용":"💰","사진":"📷","업체·연락":"📇","서류":"📁","검색":"🔍"}[t]||"";}
 function setTab(t){activeTab=t; renderMain();}
 function renderTab(p){
   try{
     const c=document.getElementById("tabContent");
     c.innerHTML = ({
-      "대시보드":viewDashboard,"공정":viewStages,"비용":viewCost,"사진":viewPhotos,
+      "대시보드":viewDashboard,"공정":viewStages,"자재":viewMaterials,"비용":viewCost,"사진":viewPhotos,
       "업체·연락":viewVendors,"서류":viewDocs,"검색":viewSearch
     }[activeTab]||viewDashboard)(p);
     if(activeTab==="검색") renderSearchResult();
@@ -914,7 +1019,8 @@ function viewDashboard(p){
     <div class="panel danger-zone"><div class="panel-h" style="color:var(--danger)">⚠️ 위험 구역</div>
       <div class="panel-body" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <span class="hint" style="margin:0">프로젝트와 그 안의 모든 기록·사진·업체가 영구 삭제됩니다. 되돌릴 수 없습니다.</span>
-        <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="deleteProject()">프로젝트 삭제</button>
+        <button class="btn btn-line btn-sm" onclick="backupCurrentProject()">💾 먼저 백업</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProject()">프로젝트 삭제</button>
       </div></div>
   `;
 }
@@ -961,7 +1067,6 @@ async function setStageStatus(stage,status){
 }
 
 /* ===== 체크리스트 (체크 + 메모 + 서류 첨부) ===== */
-// 체크 상태/메모는 프로젝트 문서의 checkState[stage][index]에 저장
 function getCheck(p,stage,idx){ return ((p.checkState||{})[stage]||{})[idx]||null; }
 function ckField(stage,i,cs,type){
   const S=jsstr(stage); const sid=stageId(stage);
@@ -1064,7 +1169,6 @@ async function saveCheckField(stage,idx,field,value){
 }
 let _amtTimer=null;
 function saveCheckAmount(stage,idx,value){
-  // 입력 즉시 합계 표시 갱신, 저장은 디바운스
   const tag=document.getElementById('ckamt_'+stageId(stage)+'_'+idx);
   if(tag) tag.textContent = value? Number(value).toLocaleString()+'원' : '';
   clearTimeout(_amtTimer);
@@ -1081,7 +1185,6 @@ function addCheckDoc(stage,idx){
       for(let i=0;i<inp.files.length;i++){ showUploading("파일 올리는 중… ("+(i+1)+"/"+inp.files.length+")"); files.push(await processFile(inp.files[i])); }
       const item=(STAGE_CHECKLIST[stage]||[])[idx]||{};
       const label=(typeof item==='string'?item:(item.t||"체크 항목"));
-      // 같은 체크 항목(stage+checkRef)에 이미 기록이 있으면 거기에 파일 추가, 없으면 새로 생성
       const exist=entries.find(e=>e.stage===stage && e.checkRef===idx);
       if(exist){
         const newFiles=(exist.files||[]).concat(files);
@@ -1099,6 +1202,239 @@ function addCheckDoc(stage,idx){
     }catch(err){ hideUploading(); showError("체크 서류 첨부", err); }
   };
   inp.click();
+}
+
+/* ===== 자재 (인테리어 자재 사양·단가 + 사진) ===== */
+function matAmount(m){ return (Number(m.unitPrice)||0)*(Number(m.qty)||0); }
+function matPhotos(m){ return (m.files||[]).filter(f=>(f.type||"").startsWith("image/")); }
+function matFilter(list,q){
+  q=(q||"").trim().toLowerCase(); if(!q) return list;
+  return list.filter(m=>[m.name,m.brand,m.spec,m.cat,m.space,m.stage,m.supplier,m.memo].join(' ').toLowerCase().includes(q));
+}
+function matCardHtml(m){
+  const amt=matAmount(m);
+  const thumbs=(m.files||[]).map((f,i)=>{
+    const isImg=(f.type||"").startsWith("image/");
+    if(isImg) return `<div class="mat-thumb" onclick="openMatPhotos('${m.id}',${i})"><img src="${f.url}"><button class="mt-del" title="사진 삭제" onclick="event.stopPropagation();deleteMaterialPhoto('${m.id}',${i})">×</button></div>`;
+    return `<a class="mat-thumb" style="display:grid;place-items:center;text-decoration:none;color:var(--accent);font-size:11px;font-weight:700" href="${f.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">PDF<button class="mt-del" title="삭제" onclick="event.stopPropagation();deleteMaterialPhoto('${m.id}',${i})">×</button></a>`;
+  }).join("");
+  return `<div class="mat-card">
+    <div class="mat-top">
+      ${m.space?`<span class="l-tag 공정">${esc(m.space)}</span>`:''}
+      ${m.cat?`<span class="l-tag">${esc(m.cat)}</span>`:''}
+      ${m.stage?`<span class="l-tag 사진">${esc(m.stage)}</span>`:''}
+      ${amt?`<span class="mat-amt">${amt.toLocaleString()}원</span>`:''}
+    </div>
+    <div class="mat-name">${esc(m.name||'')}${m.brand?`<small>${esc(m.brand)}</small>`:''}</div>
+    ${m.spec?`<div class="mat-spec">📐 ${esc(m.spec)}</div>`:''}
+    <div class="mat-meta">
+      ${(m.unitPrice||m.qty)?`단가 <b>${m.unitPrice?Number(m.unitPrice).toLocaleString():'-'}</b>원 × 수량 <b>${m.qty?Number(m.qty).toLocaleString():'-'}</b>${m.unit?' '+esc(m.unit):''}<br>`:''}
+      ${m.supplier?`공급처 <b>${esc(m.supplier)}</b>`:''}${m.supplier&&m.contact?' · ':''}${m.contact?`<a href="tel:${(m.contact||'').replace(/[^0-9+]/g,'')}" style="color:var(--accent);text-decoration:none">${esc(m.contact)}</a>`:''}
+      ${m.date?`${(m.supplier||m.contact)?'<br>':''}🗓 ${esc(m.date)}`:''}
+    </div>
+    ${m.memo?`<div class="mat-memo">${esc(m.memo)}</div>`:''}
+    <div class="mat-thumbs">${thumbs}<button class="mat-addphoto" onclick="addMaterialPhotos('${m.id}')">＋<br>사진</button></div>
+    <div class="mat-acts">
+      <button onclick="editMaterial('${m.id}')">✏ 수정</button>
+      <button class="mdel" onclick="deleteMaterial('${m.id}')">🗑 삭제</button>
+    </div>
+  </div>`;
+}
+function viewMaterials(p){
+  const total=materials.reduce((s,m)=>s+matAmount(m),0);
+  const photoCnt=materials.reduce((s,m)=>s+matPhotos(m).length,0);
+  const group=window._matGroup||"space";
+  const list=matFilter(materials.slice(), window._matFilter||"");
+  const groupKey=m=>group==="cat"?(m.cat||"미분류"):group==="stage"?(m.stage||"미지정"):(m.space||"미지정");
+  const sums={}; materials.forEach(m=>{const k=groupKey(m); sums[k]=(sums[k]||0)+matAmount(m);});
+  const sumRows=Object.keys(sums).sort((a,b)=>sums[b]-sums[a]).map(k=>{
+    const w=total?Math.round(sums[k]/total*100):0;
+    return `<tr><td class="bar-cell"><i style="width:${w}%"></i><span>${esc(k)}</span></td><td class="num">${sums[k].toLocaleString()}</td></tr>`;
+  }).join("");
+  const groupLabel = group==='cat'?'분류':group==='stage'?'공정':'공간';
+  return `
+  <div class="stats">
+    <div class="stat"><div class="label">자재 종류</div><div class="value">${materials.length}<small> 종</small></div></div>
+    <div class="stat"><div class="label">총 자재비 <small>(단가×수량)</small></div><div class="value">${total.toLocaleString()}<small> 원</small></div></div>
+    <div class="stat"><div class="label">공급처</div><div class="value">${new Set(materials.map(m=>m.supplier).filter(Boolean)).size}<small> 곳</small></div></div>
+    <div class="stat"><div class="label">자재 사진</div><div class="value">${photoCnt}<small> 장</small></div></div>
+  </div>
+
+  <div class="panel"><div class="panel-h">🧱 자재 사양·단가 관리 <span class="cnt">제품·규격·단가·수량·공급처·사진을 한곳에</span>
+    <button class="btn btn-primary btn-sm add" onclick="openMaterialModal()">+ 자재 추가</button></div>
+    <div class="panel-body" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span class="hint" style="margin:0">공간·공정별로 어떤 자재를 어떤 규격·단가로 썼는지 사진과 함께 기록해 두면 견적·재시공·정산에 그대로 씁니다. (‘비용’ 탭의 실제 지출과는 별개인 자재 명세입니다)</span>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="exportMaterials()">📥 엑셀 내보내기</button>
+    </div></div>
+
+  ${total?`<div class="panel"><div class="panel-h">📊 ${groupLabel}별 자재비
+    <span style="margin-left:auto;display:inline-flex;gap:4px">
+      <button class="mini-chip ${group==='space'?'on':''}" onclick="window._matGroup='space';renderTab(projects.find(x=>x.id===currentProjectId))">공간별</button>
+      <button class="mini-chip ${group==='cat'?'on':''}" onclick="window._matGroup='cat';renderTab(projects.find(x=>x.id===currentProjectId))">분류별</button>
+      <button class="mini-chip ${group==='stage'?'on':''}" onclick="window._matGroup='stage';renderTab(projects.find(x=>x.id===currentProjectId))">공정별</button>
+    </span></div>
+    <div class="panel-body"><table class="ctable"><thead><tr><th>${groupLabel}</th><th class="num">금액(원)</th></tr></thead>
+    <tbody>${sumRows}<tr class="sum"><td>합계</td><td class="num">${total.toLocaleString()}</td></tr></tbody></table></div></div>`:''}
+
+  <div class="panel"><div class="panel-h">📋 자재 목록 <span class="cnt" id="matListCnt">${materials.length}종</span></div>
+    <div class="panel-body">
+      <div class="filterbar"><input type="text" id="matSearchInput" placeholder="제품명·브랜드·규격·공급처·메모 검색" value="${esc(window._matFilter||'')}" oninput="onMatSearch(this.value)"></div>
+      <div id="matList">${list.length? '<div class="mat-list">'+list.map(matCardHtml).join("")+'</div>' : '<div class="ai-empty">등록된 자재가 없습니다. ‘+ 자재 추가’로 입력하세요.</div>'}</div>
+    </div></div>`;
+}
+function onMatSearch(v){
+  window._matFilter=v;
+  const list=matFilter(materials.slice(), v);
+  const box=document.getElementById("matList");
+  if(box) box.innerHTML = list.length? '<div class="mat-list">'+list.map(matCardHtml).join("")+'</div>' : '<div class="ai-empty">조건에 맞는 자재가 없습니다.</div>';
+  const cnt=document.getElementById("matListCnt"); if(cnt) cnt.textContent=list.length+"종";
+}
+function updateMatAmount(){
+  const up=Number(document.getElementById("mf_unitprice").value)||0;
+  const q=Number(document.getElementById("mf_qty").value)||0;
+  const el=document.getElementById("mf_amount"); if(el) el.textContent=(up*q).toLocaleString()+"원";
+}
+let editingMaterialId=null;
+function openMaterialModal(){
+  if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
+  editingMaterialId=null;
+  document.getElementById("materialModalTitle").textContent="자재 추가";
+  document.getElementById("mf_space").innerHTML=MAT_SPACES.map(s=>`<option>${s}</option>`).join("");
+  document.getElementById("mf_stage").innerHTML='<option value="">(공정 선택 안 함)</option>'+STAGES.map(s=>`<option>${s}</option>`).join("");
+  document.getElementById("mf_cat").innerHTML=MAT_CATS.map(c=>`<option>${c}</option>`).join("");
+  document.getElementById("mf_unit").innerHTML=MAT_UNITS.map(u=>`<option>${u}</option>`).join("");
+  ["mf_name","mf_brand","mf_spec","mf_unitprice","mf_qty","mf_supplier","mf_contact","mf_memo"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("mf_files").value="";
+  document.getElementById("mf_filehint").textContent="";
+  document.getElementById("mf_date").value=today();
+  updateMatAmount();
+  openModal("materialModal");
+}
+function editMaterial(id){
+  const m=materials.find(x=>x.id===id); if(!m) return;
+  editingMaterialId=id;
+  document.getElementById("materialModalTitle").textContent="자재 수정";
+  const spaceOpts=MAT_SPACES.slice(); if(m.space&&!spaceOpts.includes(m.space)) spaceOpts.push(m.space);
+  document.getElementById("mf_space").innerHTML=spaceOpts.map(s=>`<option ${s===m.space?'selected':''}>${esc(s)}</option>`).join("");
+  document.getElementById("mf_stage").innerHTML='<option value="">(공정 선택 안 함)</option>'+STAGES.map(s=>`<option ${s===m.stage?'selected':''}>${s}</option>`).join("");
+  const catOpts=MAT_CATS.slice(); if(m.cat&&!catOpts.includes(m.cat)) catOpts.push(m.cat);
+  document.getElementById("mf_cat").innerHTML=catOpts.map(c=>`<option ${c===m.cat?'selected':''}>${esc(c)}</option>`).join("");
+  const unitOpts=MAT_UNITS.slice(); if(m.unit&&!unitOpts.includes(m.unit)) unitOpts.push(m.unit);
+  document.getElementById("mf_unit").innerHTML=unitOpts.map(u=>`<option ${u===m.unit?'selected':''}>${esc(u)}</option>`).join("");
+  document.getElementById("mf_name").value=m.name||"";
+  document.getElementById("mf_brand").value=m.brand||"";
+  document.getElementById("mf_spec").value=m.spec||"";
+  document.getElementById("mf_unitprice").value=m.unitPrice!=null?m.unitPrice:"";
+  document.getElementById("mf_qty").value=m.qty!=null?m.qty:"";
+  document.getElementById("mf_supplier").value=m.supplier||"";
+  document.getElementById("mf_contact").value=m.contact||"";
+  document.getElementById("mf_date").value=m.date||today();
+  document.getElementById("mf_memo").value=m.memo||"";
+  document.getElementById("mf_files").value="";
+  const pc=(m.files||[]).length;
+  document.getElementById("mf_filehint").textContent= pc? ("이미 사진/파일 "+pc+"개 첨부됨 — 여기서 고르면 추가됩니다. (기존 사진 삭제는 목록 카드에서)") : "";
+  updateMatAmount();
+  openModal("materialModal");
+}
+async function saveMaterial(){
+  const name=val("mf_name").trim(); if(!name){alert("제품명을 입력하세요.");return;}
+  const btn=document.getElementById("matSaveBtn"); btn.disabled=true; btn.textContent="저장 중...";
+  try{
+    let newFiles=[];
+    const fi=document.getElementById("mf_files");
+    if(fi && fi.files.length){
+      for(let i=0;i<fi.files.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); newFiles.push(await processFile(fi.files[i])); }
+      hideUploading();
+    }
+    const data={
+      projectId:currentProjectId,
+      space:val("mf_space"), stage:val("mf_stage")||null, cat:val("mf_cat"),
+      name, brand:val("mf_brand").trim(), spec:val("mf_spec").trim(),
+      unitPrice:val("mf_unitprice")?Number(val("mf_unitprice")):null,
+      qty:val("mf_qty")?Number(val("mf_qty")):null,
+      unit:val("mf_unit"),
+      supplier:val("mf_supplier").trim(), contact:val("mf_contact").trim(),
+      date:val("mf_date"), memo:val("mf_memo").trim()
+    };
+    if(editingMaterialId){
+      const m=materials.find(x=>x.id===editingMaterialId);
+      data.files=((m&&m.files)?m.files:[]).concat(newFiles);
+      await db.collection(MATERIALS).doc(editingMaterialId).update(data);
+    }else{
+      data.files=newFiles;
+      data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection(MATERIALS).add(data);
+    }
+    editingMaterialId=null;
+    btn.disabled=false; btn.textContent="저장";
+    closeModal("materialModal");
+    await reloadCurrent();
+  }catch(err){ hideUploading(); btn.disabled=false; btn.textContent="저장"; showError("자재 저장", err); }
+}
+async function deleteMaterial(id){
+  const m=materials.find(x=>x.id===id);
+  if(!confirm('이 자재를 삭제할까요?\n\n"'+((m&&m.name)||'')+'"\n\n첨부 사진도 함께 삭제됩니다.'))return;
+  try{
+    if(m&&m.files) for(const f of m.files){ if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} } }
+    await db.collection(MATERIALS).doc(id).delete(); await reloadCurrent();
+  }catch(err){ showError("자재 삭제", err); }
+}
+/* 자재 사진 추가 */
+function addMaterialPhotos(id){
+  const m=materials.find(x=>x.id===id); if(!m) return;
+  const inp=document.getElementById("addToFolderInput"); inp.value="";
+  inp.onchange=async function(){
+    if(!inp.files.length) return;
+    try{
+      showUploading("사진 올리는 중… ("+inp.files.length+"개)");
+      const added=[];
+      for(let i=0;i<inp.files.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+inp.files.length+")"); added.push(await processFile(inp.files[i])); }
+      const newFiles=(m.files||[]).concat(added);
+      await db.collection(MATERIALS).doc(id).update({files:newFiles});
+      hideUploading();
+      await reloadCurrent();
+    }catch(err){ hideUploading(); showError("자재 사진 추가", err); }
+  };
+  inp.click();
+}
+async function deleteMaterialPhoto(id, idx){
+  const m=materials.find(x=>x.id===id); if(!m||!m.files) return;
+  const f=m.files[idx]; if(!f) return;
+  if(!confirm('이 사진을 삭제할까요?\n\n'+(f.name||'')))return;
+  try{
+    if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} }
+    const newFiles=m.files.filter((_,i)=>i!==idx);
+    await db.collection(MATERIALS).doc(id).update({files:newFiles});
+    await reloadCurrent();
+  }catch(err){ showError("자재 사진 삭제", err); }
+}
+/* 자재 사진 뷰어 열기 (전체 files 인덱스 → 이미지 목록 기준으로 변환) */
+function openMatPhotos(id, idx){
+  const m=materials.find(x=>x.id===id); if(!m) return;
+  const imgs=(m.files||[]).map((f,i)=>({f,i})).filter(o=>(o.f.type||"").startsWith("image/"));
+  if(!imgs.length) return;
+  window._ivList=imgs.map(o=>({url:o.f.url, cap:(m.name||'')+(m.spec?' · '+m.spec:'')+' · '+o.f.name}));
+  let gi=imgs.findIndex(o=>o.i===idx); if(gi<0) gi=0;
+  openViewerList(gi);
+}
+function exportMaterials(){
+  if(typeof XLSX==="undefined"){ alert("엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요."); return; }
+  if(!materials.length){ alert("내보낼 자재가 없습니다."); return; }
+  const p=projects.find(x=>x.id===currentProjectId);
+  const rows=materials.map(m=>({
+    "공간":m.space||"", "공정":m.stage||"", "분류":m.cat||"",
+    "제품명":m.name||"", "브랜드":m.brand||"", "규격·사양":m.spec||"",
+    "단가":Number(m.unitPrice)||0, "수량":Number(m.qty)||0, "단위":m.unit||"",
+    "금액":matAmount(m), "공급처":m.supplier||"", "연락처":m.contact||"",
+    "구매/시공일":m.date||"", "사진수":matPhotos(m).length, "메모":m.memo||""
+  }));
+  const total=materials.reduce((s,m)=>s+matAmount(m),0);
+  rows.push({"공간":"","공정":"","분류":"","제품명":"합계","브랜드":"","규격·사양":"","단가":"","수량":"","단위":"","금액":total,"공급처":"","연락처":"","구매/시공일":"","사진수":"","메모":""});
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"자재명세");
+  const fname=((p&&p.name)||"프로젝트").replace(/[^\w가-힣]/g,"_")+"_자재명세.xlsx";
+  XLSX.writeFile(wb,fname);
 }
 
 /* ===== 비용 ===== */
@@ -1122,7 +1458,6 @@ function viewCost(p){
   const byVen={}; withAmt.forEach(e=>{if(e.vendor){byVen[e.vendor]=(byVen[e.vendor]||0)+Number(e.amount);}});
   const venRows=Object.keys(byVen).sort((a,b)=>byVen[b]-byVen[a]).slice(0,12).map(k=>`<tr><td>${esc(k)}</td><td class="num">${byVen[k].toLocaleString()}</td></tr>`).join("");
 
-  // 필터된 지출 목록
   let list=withAmt.filter(e=>
     (costFilter.stage==="전체"||e.stage===costFilter.stage) &&
     (costFilter.kind==="전체"||e.kind===costFilter.kind) &&
@@ -1217,7 +1552,6 @@ function barRow(label,amt,sum){const w=sum?Math.round(amt/sum*100):0;
 function photoFolderOf(e){ return e.photoFolder || "기타 사진"; }
 function viewPhotos(p){
   const photos=entries.filter(e=>e.kind==="사진" && (e.files||[]).some(f=>(f.type||"").startsWith("image/")));
-  // 카테고리 폴더 열기
   if(window._photoOpenId){
     const cat=window._photoOpenId;
     const inCat=photos.filter(e=>photoFolderOf(e)===cat).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
@@ -1258,7 +1592,6 @@ function viewPhotos(p){
         ${inCat.length?groups:'<div class="ai-empty">이 폴더에 사진이 없습니다. ‘+ 사진 추가’로 올리세요.</div>'}
       </div></div>`;
   }
-  // 카테고리 폴더 목록 (기본 폴더 항상 표시)
   const folders=PHOTO_FOLDERS.map(cat=>{
     const inCat=photos.filter(e=>photoFolderOf(e)===cat);
     let cnt=0, cover=null;
@@ -1276,7 +1609,6 @@ function viewPhotos(p){
       <div class="hint" style="margin-top:10px">폴더를 눌러 들어가 사진을 추가하세요. 올릴 때 제목·메모를 적어 묶음으로 관리할 수 있습니다.</div>
     </div></div>`;
 }
-/* 특정 카테고리에 사진 추가 (제목·메모·구분 입력 후 파일 선택) */
 function addPhotoToFolder(cat){
   openEntryModal(null,'사진');
   if(cat){ const sel=document.getElementById("ef_photofolder"); if(sel) sel.value=cat; }
@@ -1308,7 +1640,6 @@ function docFolderOf(e){
 }
 function viewDocs(p){
   const docs=docEntries();
-  // 카테고리 폴더 열기
   if(window._docOpenId){
     const cat=window._docOpenId;
     const inCat=docs.filter(e=>docFolderOf(e)===cat).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
@@ -1338,7 +1669,6 @@ function viewDocs(p){
         ${inCat.length?groups:'<div class="ai-empty">이 폴더에 서류가 없습니다.</div>'}
       </div></div>`;
   }
-  // 카테고리 폴더 목록 (기본 폴더 항상 표시 + 체크리스트 첨부 폴더는 있을 때만)
   const cats=DOC_FOLDERS.slice();
   if(docs.some(e=>docFolderOf(e)==="체크리스트 첨부")) cats.push("체크리스트 첨부");
   const folders=cats.map(cat=>{
@@ -1362,9 +1692,7 @@ function addDocToFolder(cat){
   if(cat){ const sel=document.getElementById("ef_docfolder"); if(sel) sel.value=cat; }
 }
 
-/* ===== 통합검색 =====
-   입력창은 다시 그리지 않고 결과 영역(#searchResult)만 갱신해야
-   한글 조합 중(자음만 입력)에도 끊기지 않는다. */
+/* ===== 통합검색 ===== */
 function searchEntries(q){
   q=(q||"").trim().toLowerCase();
   if(!q) return null;
@@ -1373,7 +1701,6 @@ function searchEntries(q){
     return hay.includes(q);
   });
 }
-/* 체크리스트에서 메모/금액이 검색어를 포함하는 항목 찾기 */
 function searchChecklist(q){
   q=(q||"").trim().toLowerCase(); if(!q) return [];
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return [];
@@ -1388,6 +1715,10 @@ function searchChecklist(q){
   });
   return out;
 }
+function searchMaterials(q){
+  q=(q||"").trim().toLowerCase(); if(!q) return [];
+  return materials.filter(m=>[m.name,m.brand,m.spec,m.cat,m.space,m.stage,m.supplier,m.contact,m.memo,m.unitPrice].join(' ').toLowerCase().includes(q));
+}
 function renderSearchResult(){
   const cnt=document.getElementById("searchCount");
   const box=document.getElementById("searchResult");
@@ -1395,23 +1726,25 @@ function renderSearchResult(){
   const res=searchEntries(searchQ);
   if(res===null){
     if(cnt) cnt.textContent="";
-    box.innerHTML='<div class="ai-empty">찾을 단어를 입력하세요. 기록·비용·사진·서류·연락·체크리스트에서 한 번에 찾습니다.</div>';
+    box.innerHTML='<div class="ai-empty">찾을 단어를 입력하세요. 기록·비용·자재·사진·서류·연락·체크리스트에서 한 번에 찾습니다.</div>';
     return;
   }
   const ckRes=searchChecklist(searchQ);
-  if(cnt) cnt.textContent=(res.length+ckRes.length)+"건";
+  const matRes=searchMaterials(searchQ);
+  if(cnt) cnt.textContent=(res.length+ckRes.length+matRes.length)+"건";
   const ckHtml=ckRes.map(r=>{
     const parts=[]; if(r.c.memo)parts.push(esc(r.c.memo)); if(r.c.amount)parts.push(Number(r.c.amount).toLocaleString()+'원'); if(r.c.date)parts.push(r.c.date);
     return `<div class="log"><div class="l-top"><span class="l-tag 공정">${esc(r.stage)}</span><span class="l-title">✔ ${esc(r.t)}</span></div>${parts.length?`<div class="l-memo">${parts.join(' · ')}</div>`:''}</div>`;
   }).join("");
+  const matHtml=matRes.map(m=>`<div class="log"><div class="l-top"><span class="l-tag">🧱 자재</span>${m.space?`<span class="l-tag 공정">${esc(m.space)}</span>`:''}<span class="l-title">${esc(m.name)}</span>${matAmount(m)?`<span class="l-date">${matAmount(m).toLocaleString()}원</span>`:''}</div><div class="l-meta">${[m.cat,m.brand,m.spec,m.supplier].filter(Boolean).map(esc).join(' · ')}</div></div>`).join("");
   const entHtml = res.length? res.map(renderLog).join("") : '';
-  box.innerHTML = (ckHtml+entHtml) || '<div class="ai-empty">검색 결과가 없습니다.</div>';
+  box.innerHTML = (ckHtml+matHtml+entHtml) || '<div class="ai-empty">검색 결과가 없습니다.</div>';
 }
 function onSearchInput(v){ searchQ=v; renderSearchResult(); }
 function viewSearch(p){
   return `<div class="panel"><div class="panel-h">🔍 통합 검색 <span class="cnt" id="searchCount"></span></div><div class="panel-body">
     <div class="filterbar"><input type="text" id="searchInput" autofocus
-      placeholder="제목·메모·거래처·공정·금액 무엇이든 검색 (예: 타일, 김부장, 세금계산서)"
+      placeholder="제목·메모·거래처·공정·자재·금액 무엇이든 검색 (예: 타일, 김부장, 세금계산서)"
       value="${esc(searchQ)}" oninput="onSearchInput(this.value)"></div>
     <div id="searchResult"></div>
   </div></div>`;
@@ -1420,7 +1753,6 @@ function viewSearch(p){
 /* ===== 공통 렌더 ===== */
 function renderLog(e, opts){
   opts=opts||{};
-  // 한 줄 목록형 (compact)
   if(opts.compact){
     const kindTag = e.kind==="자재비"?(e.stage||'자재'):(e.cat||e.kind||'');
     return `<div class="logrow">
@@ -1475,7 +1807,6 @@ function getApiKey(){
   return k;
 }
 function resetKey(){localStorage.removeItem('anthropic_key'); if(getApiKey()) alert("API 키가 변경되었습니다.");}
-/* 프로젝트 데이터 요약 (분석/챗봇 공통) */
 function projectSummary(p){
   const withAmt=entries.filter(e=>Number(e.amount)>0);
   const total=withAmt.reduce((s,e)=>s+Number(e.amount),0);
@@ -1488,7 +1819,8 @@ function projectSummary(p){
   const byStage={}; withAmt.filter(e=>e.kind==="자재비").forEach(e=>{const k=e.stage||"미지정"; byStage[k]=(byStage[k]||0)+Number(e.amount);});
   const byVen={}; withAmt.forEach(e=>{if(e.vendor)byVen[e.vendor]=(byVen[e.vendor]||0)+Number(e.amount);});
   const cb=costBreakdown(p);
-  // 체크리스트 내용 텍스트화
+  const matTotal=materials.reduce((s,m)=>s+matAmount(m),0);
+  const matText=materials.length? materials.slice(0,40).map(m=>`- ${m.space||''}/${m.cat||''} ${m.name}${m.spec?'('+m.spec+')':''} ${matAmount(m)?matAmount(m).toLocaleString()+'원':''}`).join("\n") : '없음';
   const cstate=p.checkState||{};
   let ckText="";
   ["임장(현장조사)","계약·잔금(매수)","매도(계약·잔금)"].forEach(stage=>{
@@ -1518,6 +1850,8 @@ ${stageInfo}
 [기록 지출] ${total.toLocaleString()}원 (지출기록 ${withAmt.length}건, 전체기록 ${entries.length}건)
 [공정별 자재·공사비] ${JSON.stringify(byStage)}
 [거래처별 지출] ${JSON.stringify(byVen)}
+[자재 명세] 총 ${materials.length}종 / 자재비 합계 ${matTotal.toLocaleString()}원
+${matText}
 [기타비용]
 ${etc||'없음'}
 [문제·하자 기록]
@@ -1565,7 +1899,7 @@ function mdLite(t){let h=esc(t).replace(/^#{2,3}\s*(.*)$/gm,'<div class="ai-h">$
   .replace(/\n/g,'<br>').replace(/(<\/div>)<br>/g,'$1'); return '<div class="ai-text">'+h+'</div>';}
 
 /* ===== AI 챗봇 ===== */
-let chatHistory=[];  // {role, content}
+let chatHistory=[];
 function renderChat(){
   const box=document.getElementById("chatLog"); if(!box) return;
   box.innerHTML=chatHistory.map(m=>`<div class="chat-msg ${m.role==='user'?'me':'ai'}"><div class="chat-bubble">${m.role==='assistant'?mdLite(m.content):esc(m.content)}</div></div>`).join("");
@@ -1585,7 +1919,6 @@ async function sendChat(){
 아래 실제 데이터에 근거해 한국어로 간결하고 정확하게 답하세요. 데이터에 없으면 모른다고 하고 추정 시 "추정"이라 밝히세요.
 
 ${projectSummary(p)}`;
-    // 직전 대화 몇 개만 함께 전송 (마지막 '…' placeholder 제외)
     const msgs=chatHistory.slice(0,-1).slice(-8).map(m=>({role:m.role,content:m.content}));
     const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
       headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
@@ -1625,11 +1958,17 @@ async function deleteProject(){
   if(typed===null) return;
   if(typed.trim()!==p.name){ alert("이름이 일치하지 않아 삭제를 취소했습니다."); return; }
   try{
-    const [e,v]=await Promise.all([db.collection(ENTRIES).where("projectId","==",currentProjectId).get(),
-      db.collection(VENDORS).where("projectId","==",currentProjectId).get()]);
-    const batch=db.batch(); e.docs.forEach(d=>batch.delete(d.ref)); v.docs.forEach(d=>batch.delete(d.ref));
+    const [e,v,m]=await Promise.all([
+      db.collection(ENTRIES).where("projectId","==",currentProjectId).get(),
+      db.collection(VENDORS).where("projectId","==",currentProjectId).get(),
+      db.collection(MATERIALS).where("projectId","==",currentProjectId).get()
+    ]);
+    const batch=db.batch();
+    e.docs.forEach(d=>batch.delete(d.ref));
+    v.docs.forEach(d=>batch.delete(d.ref));
+    m.docs.forEach(d=>batch.delete(d.ref));
     batch.delete(db.collection(PROJECTS).doc(currentProjectId)); await batch.commit();
-    currentProjectId=null; entries=[]; vendors=[]; await loadProjects();
+    currentProjectId=null; entries=[]; vendors=[]; materials=[]; await loadProjects();
     document.getElementById("main").innerHTML='<div class="empty">프로젝트를 선택하세요.</div>';
   }catch(err){ showError("프로젝트 삭제", err); }
 }
@@ -1681,7 +2020,6 @@ async function deleteVendor(id){
 function fillStageSelect(preset){
   document.getElementById("ef_stage").innerHTML='<option value="">(공정 선택 안 함)</option>'+STAGES.map(x=>`<option ${x===preset?'selected':''}>${x}</option>`).join("");
 }
-/* 공정 선택 시 그 공정의 자재 목록으로 세부항목 갱신 */
 function fillCatSelect(){
   const k=val("ef_kind");
   const cat=document.getElementById("ef_cat");
@@ -1712,15 +2050,11 @@ function openEntryModal(presetStage,presetKind){
   document.getElementById("entryModalTitle").textContent = presetStage? presetStage+" 기록 추가" : "기록 추가";
   openModal("entryModal");
 }
-/* ===== 파일 처리: Storage에 업로드하고 다운로드 URL 저장 =====
-   사진은 너무 큰 경우만 가볍게 리사이즈(최대 2000px, 화질 0.9), PDF 등은 원본 업로드. */
 function blobFromCanvas(c,q){ return new Promise(res=>c.toBlob(res,"image/jpeg",q)); }
 async function prepareUpload(f){
   const isImg=(f.type||"").startsWith("image/");
   if(!isImg) return {blob:f, name:f.name, type:f.type||"application/octet-stream"};
-  // 4MB 이하 사진은 원본 그대로 업로드 (화질 유지)
   if(f.size<=4*1024*1024) return {blob:f, name:f.name, type:f.type||"image/jpeg"};
-  // 큰 원본만 가볍게 리사이즈 (가로 3200px, 화질 0.95)
   return await new Promise((resolve)=>{
     const img=new Image(); const url=URL.createObjectURL(f);
     img.onload=async function(){
@@ -1773,7 +2107,6 @@ async function saveEntry(){
     memo:val("ef_memo").trim(), files,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
-  // 사진/서류면 그 카테고리 폴더를 열어둔 채 유지
   if(k==="사진" && files.some(f=>(f.type||"").startsWith("image/"))){ activeTab="사진"; window._photoOpenId=photoFolder; }
   else if(k==="서류" && files.length){ activeTab="서류"; window._docOpenId=docFolder; }
   btn.disabled=false; btn.textContent="저장";
@@ -1792,7 +2125,6 @@ async function deleteEntry(id){
     await db.collection(ENTRIES).doc(id).delete(); await reloadCurrent();
   }catch(err){ showError("기록 삭제", err); }
 }
-/* 사진 다중 선택 */
 function togglePhotoSel(entryId, fileIdx){
   if(!window._photoSel) window._photoSel={};
   const key=entryId+'_'+fileIdx;
@@ -1806,14 +2138,12 @@ async function deleteSelectedPhotos(){
   if(!confirm(keys.length+"장의 사진을 삭제할까요?\n되돌릴 수 없습니다."))return;
   try{
     showUploading("삭제 중… ("+keys.length+"장)");
-    // entryId별로 묶어서 처리
     const byEntry={};
     keys.forEach(k=>{ const idx=k.lastIndexOf('_'); const eid=k.slice(0,idx); const fi=Number(k.slice(idx+1));
       (byEntry[eid]=byEntry[eid]||[]).push(fi); });
     for(const eid of Object.keys(byEntry)){
       const e=entries.find(x=>x.id===eid); if(!e||!e.files) continue;
       const removeSet=new Set(byEntry[eid]);
-      // Storage 파일 삭제
       for(const fi of byEntry[eid]){ const f=e.files[fi]; if(f&&f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} } }
       const newFiles=e.files.filter((_,i)=>!removeSet.has(i));
       await db.collection(ENTRIES).doc(eid).update({files:newFiles});
@@ -1823,7 +2153,6 @@ async function deleteSelectedPhotos(){
     await reloadCurrent();
   }catch(err){ hideUploading(); showError("사진 일괄 삭제", err); }
 }
-/* 기록 안의 사진(파일) 한 장만 삭제 */
 async function deletePhoto(entryId, fileIdx){
   const e=entries.find(x=>x.id===entryId); if(!e||!e.files) return;
   const f=e.files[fileIdx]; if(!f) return;
@@ -1832,12 +2161,9 @@ async function deletePhoto(entryId, fileIdx){
     if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} }
     const newFiles=e.files.filter((_,i)=>i!==fileIdx);
     await db.collection(ENTRIES).doc(entryId).update({files:newFiles});
-    // 폴더에 남은 (해당 종류) 파일이 없으면 목록으로 빠져나감
-    // 카테고리 폴더는 비어도 유지되므로 닫지 않음
     await reloadCurrent();
   }catch(err){ showError("사진 삭제", err); }
 }
-/* 기존 폴더(기록)에 파일 추가 */
 function addFilesToFolder(entryId){
   const inp=document.getElementById("addToFolderInput");
   inp.value="";
@@ -1856,8 +2182,6 @@ function addFilesToFolder(entryId){
   };
   inp.click();
 }
-
-/* 기록 제목 수정 (서류 폴더 등에서 사용) */
 async function editEntryTitle(entryId){
   const e=entries.find(x=>x.id===entryId); if(!e) return;
   const t=prompt("제목을 입력하세요.", e.title||"");
@@ -1868,7 +2192,6 @@ async function editEntryTitle(entryId){
     await reloadCurrent();
   }catch(err){ showError("제목 수정", err); }
 }
-/* 제목과 메모를 함께 수정 */
 async function editEntryMeta(entryId){
   const e=entries.find(x=>x.id===entryId); if(!e) return;
   const t=prompt("제목을 입력하세요.", e.title||"");
@@ -1882,7 +2205,7 @@ async function editEntryMeta(entryId){
   }catch(err){ showError("제목·메모 수정", err); }
 }
 
-/* ===== 이미지 뷰어 (드래그 이동 + 확대/축소 + 이전/다음) ===== */
+/* ===== 이미지 뷰어 ===== */
 let ivScale=1, ivX=0, ivY=0, ivDragging=false, ivStartX=0, ivStartY=0, ivPinchDist=0;
 let ivIndex=0;
 window._ivList = window._ivList || [];
@@ -1900,7 +2223,6 @@ function ivShow(){
   document.getElementById("ivPrev").style.display=multi?"block":"none";
   document.getElementById("ivNext").style.display=multi?"block":"none";
   document.getElementById("ivCount").textContent=multi?((ivIndex+1)+" / "+list.length):"";
-  // 폴더 내부에서 연 경우(entryId 있음)만 삭제 버튼 표시
   document.getElementById("ivDel").style.display=(cur.entryId!=null)?"inline-block":"none";
 }
 async function ivDelete(){
@@ -1913,13 +2235,11 @@ function ivStep(d){
   ivIndex=(ivIndex+d+list.length)%list.length;
   ivShow();
 }
-/* 목록 기반으로 열기 (폴더 내부에서 사용) */
 function openViewerList(idx){
   ivIndex=idx||0;
   document.getElementById("imgViewer").classList.add("open");
   ivShow();
 }
-/* 단일 이미지 열기 (기록의 첨부 등) */
 function openViewer(url, cap){
   window._ivList=[{url, cap:cap||""}];
   ivIndex=0;
@@ -1931,20 +2251,13 @@ function closeViewer(){ document.getElementById("imgViewer").classList.remove("o
   const v=document.getElementById("imgViewer");
   const img=document.getElementById("ivImg");
   document.getElementById("ivClose").onclick=closeViewer;
-  // 배경 클릭 시 닫기(이미지/컨트롤 클릭은 제외)
-  v.addEventListener("mousedown",e=>{
-    if(e.target.id==="imgViewer"){ return; }
-  });
+  v.addEventListener("mousedown",e=>{ if(e.target.id==="imgViewer"){ return; } });
   v.addEventListener("click",e=>{ if(e.target.id==="imgViewer") closeViewer(); });
-  // 마우스 드래그 이동
   img.addEventListener("mousedown",e=>{ e.preventDefault(); ivDragging=true; ivStartX=e.clientX-ivX; ivStartY=e.clientY-ivY; img.classList.add("grabbing"); });
   window.addEventListener("mousemove",e=>{ if(!ivDragging) return; ivX=e.clientX-ivStartX; ivY=e.clientY-ivStartY; ivApply(); });
   window.addEventListener("mouseup",()=>{ ivDragging=false; img.classList.remove("grabbing"); });
-  // 더블클릭 확대 토글
   img.addEventListener("dblclick",()=>{ ivScale=ivScale>1?1:2.2; if(ivScale===1){ivX=0;ivY=0;} ivApply(); });
-  // 휠 줌
   v.addEventListener("wheel",e=>{ if(!v.classList.contains("open")) return; e.preventDefault(); ivZoom(e.deltaY<0?0.2:-0.2); },{passive:false});
-  // 터치: 1손가락 이동/스와이프, 2손가락 핀치줌
   let swipeStartX=0, swipeStartY=0, swipeStartT=0;
   img.addEventListener("touchstart",e=>{
     if(e.touches.length===1){ ivDragging=true; ivStartX=e.touches[0].clientX-ivX; ivStartY=e.touches[0].clientY-ivY;
@@ -1958,14 +2271,12 @@ function closeViewer(){ document.getElementById("imgViewer").classList.remove("o
       if(ivPinchDist){ ivScale=Math.min(6,Math.max(0.5,ivScale*(d/ivPinchDist))); ivApply(); } ivPinchDist=d; }
   },{passive:false});
   img.addEventListener("touchend",e=>{
-    // 확대 안 된 상태에서 가로 스와이프하면 이전/다음
     if(ivScale<=1.05 && swipeStartT){
       const dx=(e.changedTouches[0].clientX-swipeStartX), dy=(e.changedTouches[0].clientY-swipeStartY);
       if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)){ ivStep(dx<0?1:-1); }
     }
     ivDragging=false; ivPinchDist=0; swipeStartT=0;
   });
-  // 키보드: ESC 닫기, 좌우 넘기기
   window.addEventListener("keydown",e=>{
     if(!v.classList.contains("open")) return;
     if(e.key==="Escape") closeViewer();
@@ -1985,15 +2296,13 @@ function closeModal(id){document.getElementById(id).classList.remove("open");}
 
 /* ===== 기타 비용: 빠른 연속 입력 ===== */
 let quickRows=[];
-let qeOpt=""; // 현재 선택된 구분(아침/점심/저녁 또는 상행/하행)
-/* 항목별 추가 선택지 */
+let qeOpt="";
 const QE_OPTIONS={
   "식비":["아침","점심","저녁","간식/음료"],
   "톨비(통행료)":["상행","하행"],
   "교통/주유비":["상행","하행","주유"],
   "가스충전비":["상행","하행","충전"]
 };
-/* ===== 비용 수정 ===== */
 function ceFillCat(){
   const k=document.getElementById("ce_kind").value;
   const stage=document.getElementById("ce_stage").value;
@@ -2022,7 +2331,6 @@ function editCost(id){
   document.getElementById("ce_pay").value=e.pay||"카드";
   document.getElementById("ce_memo").value=e.memo||"";
   ceKindChange();
-  // cat 선택 복원
   if(e.cat){ const sel=document.getElementById("ce_cat"); if(![...sel.options].some(o=>o.value===e.cat)){ sel.innerHTML+=`<option>${e.cat}</option>`; } sel.value=e.cat; }
   openModal("costEditModal");
 }
@@ -2048,9 +2356,7 @@ async function saveCostEdit(){
 }
 
 /* ===== 엑셀 비용 가져오기 ===== */
-// 엑셀 "구분" → 앱 분류 매핑
 const XL_MAP = {
-  // 자재·공사비 (공정 연결)
   "욕실":{kind:"자재비", stage:"타일·방수"},
   "목공사":{kind:"자재비", stage:"목공"},
   "목공":{kind:"자재비", stage:"목공"},
@@ -2066,7 +2372,6 @@ const XL_MAP = {
   "싱크대":{kind:"자재비", stage:"싱크대·가구"},
   "인테리어":{kind:"자재비", stage:null},
   "공구":{kind:"자재비", stage:null},
-  // 기타비용 (cat 연결)
   "교통비":{kind:"기타비용", cat:"교통/주유비"},
   "식비":{kind:"기타비용", cat:"식비"},
   "등기":{kind:"기타비용", cat:"등기비"},
@@ -2078,11 +2383,9 @@ const XL_MAP = {
 function mapGubun(g){
   g=(g||"").trim();
   if(XL_MAP[g]) return XL_MAP[g];
-  // 부분 일치 시도
   for(const k of Object.keys(XL_MAP)){ if(g.includes(k)) return XL_MAP[k]; }
   return {kind:"기타비용", cat:"기타"};
 }
-// 교통비 세부(가스/톨비/주차)는 목록명으로 더 정확히
 function refineCat(base, name){
   name=(name||"");
   if(base.kind==="기타비용" && base.cat==="교통/주유비"){
@@ -2096,7 +2399,6 @@ function excelSerialToDate(v){
   if(v==null||v==="") return null;
   if(typeof v==="string" && /\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0,10);
   const n=Number(v); if(!n||isNaN(n)) return null;
-  // 엑셀 시리얼(1900 기준)
   const d=new Date(Math.round((n-25569)*86400*1000));
   if(isNaN(d.getTime())) return null;
   return d.toISOString().slice(0,10);
@@ -2117,7 +2419,6 @@ function onExcelPick(ev){
   reader.onload=function(e){
     try{
       const wb=XLSX.read(e.target.result,{type:"binary"});
-      // 데이터가 있는 시트 찾기 (헤더에 '목록' 또는 '비용/합계' 포함)
       let rows=null;
       for(const sn of wb.SheetNames){
         const arr=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:""});
@@ -2140,7 +2441,6 @@ function parseXlRows(arr, headRow){
     const r=arr[i]; if(!r||!r.length) continue;
     const name=String(r[ci.name]||"").trim();
     let amount=Number(r[ci.amount]|| (ci.amount2>=0?r[ci.amount2]:0))||0;
-    // 목록(품목명)이 없거나 합계/총계/소계 행은 건너뜀
     if(!name) continue;
     if(/^(합계|총계|소계|총합|계)$/.test(name)) continue;
     if(!amount) continue;
@@ -2175,7 +2475,6 @@ async function runExcelImport(){
   try{
     showUploading("비용 가져오는 중… (0/"+_xlRows.length+")");
     let n=0;
-    // 배치로 나눠서 저장 (Firestore batch는 500개 한도)
     const chunk=400;
     for(let i=0;i<_xlRows.length;i+=chunk){
       const batch=db.batch();
@@ -2277,7 +2576,7 @@ function openRepeatEtc(){
   document.getElementById("re_end").value="";
   document.getElementById("re_title").value="";
   document.getElementById("re_monthday").value="25";
-  repeatDays={6:true}; // 매주 기본 토요일
+  repeatDays={6:true};
   document.getElementById("re_days").innerHTML=WEEKDAYS.map((d,i)=>
     `<button type="button" class="mini-chip ${repeatDays[i]?'on':''}" id="rd_${i}" onclick="toggleRepeatDay(${i})">${d}</button>`).join("");
   ["re_start","re_end","re_amount","re_monthday"].forEach(id=>document.getElementById(id).oninput=updateRepeatPreview);
@@ -2301,7 +2600,7 @@ function repeatDates(){
     if(!days.length) return [];
     let d=new Date(s+"T00:00:00"); let guard=0;
     while(d<=end && guard<800){ if(days.includes(d.getDay())) out.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); guard++; }
-  } else { // monthly: 매월 지정일
+  } else {
     let day=Number(val("re_monthday"))||1;
     let cur=new Date(s+"T00:00:00"); cur.setDate(1);
     let guard=0;
@@ -2344,8 +2643,132 @@ async function saveRepeatEtc(){
   }catch(err){ btn.disabled=false; btn.textContent="생성"; showError("반복 비용 생성", err); }
 }
 
-/* ===== 시스템 진단 =====
-   누르면 설정·연결을 실제로 점검해서 어디가 문제인지 보여준다. */
+/* ===== 백업 / 복원 ===== */
+function openBackupModal(){
+  const hint=document.getElementById("restoreHint"); if(hint) hint.textContent="";
+  openModal("backupModal");
+}
+function downloadJson(obj, filename){
+  const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function stripId(o){ const c=Object.assign({},o); delete c.id; delete c._spent; delete c._last; return c; }
+async function backupCurrentProject(){
+  if(!currentProjectId){ alert("백업할 프로젝트를 먼저 선택하세요."); return; }
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  try{
+    showUploading("백업 만드는 중…");
+    const [eSnap,vSnap,mSnap]=await Promise.all([
+      db.collection(ENTRIES).where("projectId","==",currentProjectId).get(),
+      db.collection(VENDORS).where("projectId","==",currentProjectId).get(),
+      db.collection(MATERIALS).where("projectId","==",currentProjectId).get()
+    ]);
+    const data={
+      _type:"realestate-project-backup", _version:1, _exportedAt:new Date().toISOString(),
+      project:stripId(p),
+      entries:eSnap.docs.map(d=>stripId({id:d.id,...d.data()})),
+      vendors:vSnap.docs.map(d=>stripId({id:d.id,...d.data()})),
+      materials:mSnap.docs.map(d=>stripId({id:d.id,...d.data()}))
+    };
+    hideUploading();
+    const fname=(p.name||"프로젝트").replace(/[^\w가-힣]/g,"_")+"_백업_"+today()+".json";
+    downloadJson(data, fname);
+  }catch(err){ hideUploading(); showError("프로젝트 백업", err); }
+}
+async function backupAll(){
+  try{
+    showUploading("전체 백업 만드는 중…");
+    const [pSnap,eSnap,vSnap,mSnap]=await Promise.all([
+      db.collection(PROJECTS).get(),
+      db.collection(ENTRIES).get(),
+      db.collection(VENDORS).get(),
+      db.collection(MATERIALS).get()
+    ]);
+    const data={
+      _type:"realestate-full-backup", _version:1, _exportedAt:new Date().toISOString(),
+      projects:pSnap.docs.map(d=>stripId({id:d.id,...d.data()})),
+      entries:eSnap.docs.map(d=>({id:d.id,...d.data()})),
+      vendors:vSnap.docs.map(d=>({id:d.id,...d.data()})),
+      materials:mSnap.docs.map(d=>({id:d.id,...d.data()}))
+    };
+    hideUploading();
+    downloadJson(data, "부동산_전체백업_"+today()+".json");
+  }catch(err){ hideUploading(); showError("전체 백업", err); }
+}
+function cleanForWrite(o){
+  const c=Object.assign({},o);
+  delete c.id; delete c.projectId; delete c.createdAt; delete c._spent; delete c._last;
+  return c;
+}
+async function batchAdd(collName, items, projectId){
+  const chunk=400;
+  for(let i=0;i<items.length;i+=chunk){
+    const batch=db.batch();
+    items.slice(i,i+chunk).forEach(it=>{
+      const ref=db.collection(collName).doc();
+      batch.set(ref, Object.assign({}, cleanForWrite(it), {projectId, createdAt:firebase.firestore.FieldValue.serverTimestamp()}));
+    });
+    await batch.commit();
+    showUploading("복원 중… ("+Math.min(i+chunk,items.length)+"/"+items.length+" "+collName+")");
+  }
+}
+async function restoreOneProject(projData, entriesArr, vendorsArr, materialsArr){
+  const pClean=cleanForWrite(projData);
+  pClean.name=(projData.name||"복원 프로젝트")+" (복원본)";
+  if(!pClean.stageStatus) pClean.stageStatus={};
+  pClean.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+  const pRef=await db.collection(PROJECTS).add(pClean);
+  const newId=pRef.id;
+  if(entriesArr&&entriesArr.length) await batchAdd(ENTRIES, entriesArr, newId);
+  if(vendorsArr&&vendorsArr.length) await batchAdd(VENDORS, vendorsArr, newId);
+  if(materialsArr&&materialsArr.length) await batchAdd(MATERIALS, materialsArr, newId);
+  return newId;
+}
+document.getElementById("restoreInput").onchange=function(){
+  const f=this.files[0]; if(!f) return;
+  const hint=document.getElementById("restoreHint");
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    let data;
+    try{ data=JSON.parse(e.target.result); }
+    catch(_){ if(hint) hint.textContent="❌ JSON 파일을 읽지 못했습니다. 올바른 백업 파일인지 확인하세요."; return; }
+    try{
+      if(data._type==="realestate-project-backup" && data.project){
+        if(!confirm('"'+(data.project.name||'')+'" 를 새 프로젝트로 복원할까요?\n(기존 프로젝트는 그대로 두고 "(복원본)"으로 추가됩니다)')) { document.getElementById("restoreInput").value=""; return; }
+        showUploading("복원 중…");
+        await restoreOneProject(data.project, data.entries||[], data.vendors||[], data.materials||[]);
+        hideUploading();
+        document.getElementById("restoreInput").value="";
+        closeModal("backupModal");
+        await loadProjects();
+        alert("복원이 완료되었습니다. 왼쪽 목록에서 ‘(복원본)’ 프로젝트를 확인하세요.");
+      }else if(data._type==="realestate-full-backup" && Array.isArray(data.projects)){
+        if(!confirm(data.projects.length+"개 프로젝트를 모두 새로 복원할까요?\n(각각 '(복원본)'으로 추가됩니다)")) { document.getElementById("restoreInput").value=""; return; }
+        showUploading("전체 복원 중…");
+        const byProj=id=>x=>x.projectId===id;
+        for(const proj of data.projects){
+          const eArr=(data.entries||[]).filter(byProj(proj.id));
+          const vArr=(data.vendors||[]).filter(byProj(proj.id));
+          const mArr=(data.materials||[]).filter(byProj(proj.id));
+          await restoreOneProject(proj, eArr, vArr, mArr);
+        }
+        hideUploading();
+        document.getElementById("restoreInput").value="";
+        closeModal("backupModal");
+        await loadProjects();
+        alert(data.projects.length+"개 프로젝트 복원이 완료되었습니다.");
+      }else{
+        if(hint) hint.textContent="❌ 이 앱의 백업 파일 형식이 아닙니다.";
+      }
+    }catch(err){ hideUploading(); document.getElementById("restoreInput").value=""; showError("복원", err); }
+  };
+  reader.readAsText(f);
+};
+
+/* ===== 시스템 진단 ===== */
 async function runDiagnostics(){
   openModal("diagModal");
   const box=document.getElementById("diagResult");
@@ -2359,14 +2782,11 @@ async function runDiagnostics(){
   }
   box.innerHTML='<div class="ai-empty">점검 중…</div>'; rows.length=0;
 
-  // 1) 인터넷
   row(navigator.onLine?'ok':'fail', "인터넷 연결", navigator.onLine?'온라인':'오프라인 상태입니다');
 
-  // 2) Firebase 초기화 + 설정값
   row('info', "Firebase 설정",
     `프로젝트 <code>${esc(firebaseConfig.projectId)}</code><br>Storage 버킷 <code>${esc(firebaseConfig.storageBucket)}</code>`);
 
-  // 3) Firestore 읽기
   try{
     await db.collection(PROJECTS).limit(1).get();
     row('ok', "Firestore 읽기", "정상 (데이터베이스 연결 OK)");
@@ -2375,7 +2795,6 @@ async function runDiagnostics(){
       `${esc(err.code||'')} ${esc(err.message||err)}<br>→ 콘솔에서 Firestore 사용 설정 및 보안 규칙(read 허용)을 확인하세요.`);
   }
 
-  // 4) Firestore 쓰기 (임시 문서 생성 후 삭제)
   try{
     const ref=await db.collection("_diag_test").add({t:Date.now()});
     await ref.delete();
@@ -2385,7 +2804,6 @@ async function runDiagnostics(){
       `${esc(err.code||'')} ${esc(err.message||err)}<br>→ 보안 규칙에서 write가 막혀 있을 수 있습니다.`);
   }
 
-  // 5) Storage 업로드 테스트
   try{
     const path="_diag_test/"+Date.now()+".txt";
     const ref=storage.ref(path);
@@ -2404,14 +2822,12 @@ async function runDiagnostics(){
     row('fail', "Storage 업로드 실패", `${esc(code)} ${esc(err.message||err)}<br>${tip}`);
   }
 
-  // 6) AI 키 보유 여부
   const hasKey=!!localStorage.getItem('anthropic_key');
   row(hasKey?'ok':'warn', "AI API 키",
     hasKey? "이 브라우저에 저장됨 (AI 분석 사용 가능)" : "아직 없음 — AI 분석을 처음 누르면 입력하게 됩니다.");
 
-  // 7) 데이터 현황
   row('info', "현재 데이터",
-    `프로젝트 ${projects.length}개 / 현재 프로젝트 기록 ${entries.length}건 · 업체 ${vendors.length}곳`);
+    `프로젝트 ${projects.length}개 / 현재 프로젝트 기록 ${entries.length}건 · 자재 ${materials.length}종 · 업체 ${vendors.length}곳`);
 
   row('info', "점검 완료", new Date().toLocaleString('ko-KR'));
 }
@@ -2421,7 +2837,6 @@ function showError(where, err){
   const b=document.getElementById("errBanner");
   const msg=document.getElementById("errMsg"), ex=document.getElementById("errEx");
   let detail=(err&&(err.message||err.toString()))||"알 수 없는 오류";
-  // 자주 나는 권한 오류는 해결법을 덧붙임
   if(/permission|insufficient|PERMISSION_DENIED/i.test(detail)){
     detail += "  →  Firebase 콘솔 → Firestore/Storage 규칙을 'allow read, write: if true'로 게시하세요. (30일 테스트 만료일 제거 필요)";
   }
@@ -2430,7 +2845,6 @@ function showError(where, err){
   if(b) b.classList.add("show");
   console.error("["+where+"]", err);
 }
-// 처리되지 않은 모든 오류를 잡아 배너로 표시
 window.addEventListener("error", function(e){ showError("스크립트", e.error||e.message); });
 window.addEventListener("unhandledrejection", function(e){ showError("비동기 처리", e.reason); });
 
