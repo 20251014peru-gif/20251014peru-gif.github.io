@@ -1011,15 +1011,17 @@ function renderDayDetail(){
 }
 /* ===== 그날 보고서 인쇄 ===== */
 function buildReport(day){
-  const w=entries.filter(e=>e.kind==="work"&&e.date===day).sort(byDateDesc);
+  const D=(x)=>(x||"").toString().trim();
+  day=D(day);
+  const w=entries.filter(e=>e.kind==="work"&&D(e.date)===day).sort(byDateDesc);
   const v=entries.filter(e=>e.kind==="vacation"&&datesBetween(e.start,e.end).includes(day));
-  const p=entries.filter(e=>e.kind==="plan"&&e.date===day);
-  const m=entries.filter(e=>e.kind==="memo"&&e.date===day).sort(byDateDesc);
-  const c=entries.filter(e=>e.kind==="call"&&e.date===day);
-  const mt=entries.filter(e=>e.kind==="meeting"&&e.date===day).sort(byDateDesc);
-  const dv=entries.filter(e=>e.kind==="deliver"&&e.date===day).sort(byDateDesc);
+  const p=entries.filter(e=>e.kind==="plan"&&D(e.date)===day);
+  const m=entries.filter(e=>e.kind==="memo"&&D(e.date)===day).sort(byDateDesc);
+  const c=entries.filter(e=>e.kind==="call"&&D(e.date)===day);
+  const mt=entries.filter(e=>e.kind==="meeting"&&D(e.date)===day).sort(byDateDesc);
+  const dv=entries.filter(e=>e.kind==="deliver"&&D(e.date)===day).sort(byDateDesc);
   let h=`<h1>업무일지 보고서</h1><div class="sub">${dateLabel(day)} · 출력일 ${todayStr()}</div>`;
-  const sec=(title,items,cls)=> items.length?`<div class="rsec ${cls}"><h2>${title} (${items.length}건)</h2>`+items.join("")+`</div>`:"";
+  const sec=(title,items,cls)=>`<div class="rsec ${cls}"><h2>${title} (${items.length}건)</h2>`+(items.length?items.join(""):`<div class="it" style="color:#999">— 없음 —</div>`)+`</div>`;
   h+=sec("업무", w.map(en=>`<div class="it"><b>[${esc(en.status||"")}]</b> ${esc(en.floor||"")} ${esc(en.loc||"")} ${esc(en.title||"")}${en.detail?" — "+esc(en.detail):""}${en.field?" ["+esc(en.field)+"]":""}${en.material?" / 자재: "+esc(en.material):""}${Number(en.cost)?" / "+won(en.cost)+"원":""}${en.improve?"<br>↳ 개선: "+esc(en.improve):""}</div>`), "work");
   h+=sec("휴가", v.map(x=>`<div class="it">🌴 ${esc(x.name||"")} (${esc(x.vtype||"")}) ${x.end&&x.end!==x.start?esc(x.start)+" ~ "+esc(x.end):esc(x.start||"")}${x.note?" — "+esc(x.note):""}</div>`), "vac");
   h+=sec("오늘계획", p.map(x=>`<div class="it">${x.done?"☑":"☐"} ${esc(x.text||"")}</div>`), "plan");
@@ -1027,7 +1029,6 @@ function buildReport(day){
   h+=sec("메모", m.map(x=>`<div class="it"><b>${esc(x.title||"메모")}</b> ${esc(x.body||"")}</div>`), "memo");
   h+=sec("회의메모", mt.map(x=>`<div class="it"><b>${esc(x.title||"회의")}</b>${x.attendees?" (참석: "+esc(x.attendees)+")":""}<br>${esc(x.body||"")}</div>`), "meet");
   h+=sec("전달사항", dv.map(x=>`<div class="it">📢 <b>${esc(x.title||"")}</b> ${esc(x.content||"")}</div>`), "deliver");
-  if(!(w.length||v.length||p.length||m.length||c.length||mt.length||dv.length)) h+=`<div class="it">이 날의 기록이 없습니다.</div>`;
   return h;
 }
 function printReport(day){ if(!day) return; $("printArea").className=""; $("printArea").innerHTML=buildReport(day); window.print(); }
