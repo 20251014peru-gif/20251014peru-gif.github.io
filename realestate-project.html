@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
   :root{
@@ -269,6 +270,10 @@
   .ph-group:last-child{border-bottom:none;}
   .ph-gh{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;}
   .ph-gh b{font-size:14px;}
+  table.tbl{width:100%; border-collapse:collapse; font-size:12px;}
+  table.tbl th{background:#f3f1fb; padding:6px 8px; text-align:left; position:sticky; top:0; font-weight:700; color:var(--ink-soft);}
+  table.tbl td{padding:5px 8px; border-top:1px solid var(--line);}
+  table.tbl td.num{text-align:right; font-variant-numeric:tabular-nums;}
 
   /* 필터바 */
   .filterbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center;}
@@ -353,7 +358,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v2.3</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v2.5</span></h1>
   <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
   <a class="home" href="index.html">← 홈</a>
 </header>
@@ -467,6 +472,21 @@
     <div class="modal-acts">
       <button class="btn btn-primary" onclick="runDiagnostics()">↻ 다시 점검</button>
       <button class="btn btn-line" onclick="closeModal('diagModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 엑셀 가져오기 모달 -->
+<div class="modal-bg" id="excelModal">
+  <div class="modal" style="max-width:760px">
+    <h3>📥 엑셀 비용 가져오기</h3>
+    <div class="field"><label>엑셀 파일 선택 (.xlsx)</label>
+      <input type="file" id="xl_file" accept=".xlsx,.xls" onchange="onExcelPick(event)"></div>
+    <div class="hint" id="xl_hint">날짜·목록·금액(합계)·구매처·구분 열을 자동으로 인식합니다. 같은 양식이면 그대로 올리세요.</div>
+    <div id="xl_preview" style="margin-top:12px"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="xl_btn" onclick="runExcelImport()" style="display:none">가져오기</button>
+      <button class="btn btn-line" onclick="closeModal('excelModal')">닫기</button>
     </div>
   </div>
 </div>
@@ -1081,11 +1101,12 @@ function viewCost(p){
       <div class="stat"><div class="label">계약·세금·등기(체크리스트)</div><div class="value">${cb.buyCost.toLocaleString()}<small> 원</small></div></div>
       <div class="stat"><div class="label">실투자금</div><div class="value">${cb.realInvest.toLocaleString()}<small> 원</small></div><div class="label" style="margin-top:6px">대출 ${cb.loan.toLocaleString()}원 제외</div></div>
     </div>
-    <div class="panel"><div class="panel-h">🧾 기타 비용 입력 <span class="cnt">식비·톨비·가스·이자·관리비 등</span></div>
+    <div class="panel"><div class="panel-h">🧾 비용 입력 <span class="cnt">엑셀 가져오기·빠른 입력·반복 생성</span></div>
       <div class="panel-body" style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" onclick="openQuickEtc()">⚡ 빠른 연속 입력</button>
+        <button class="btn btn-primary btn-sm" onclick="openExcelImport()">📥 엑셀 가져오기</button>
+        <button class="btn btn-ghost btn-sm" onclick="openQuickEtc()">⚡ 빠른 연속 입력</button>
         <button class="btn btn-ghost btn-sm" onclick="openRepeatEtc()">🔁 반복 비용 생성 (주말/매주)</button>
-        <span class="hint" style="align-self:center">식비·톨비처럼 자주 나가는 건 빠른 입력, 관리비·이자처럼 주기적인 건 반복 생성</span>
+        <span class="hint" style="align-self:center">엑셀로 정리한 비용은 한 번에 가져오고, 자주 나가는 건 빠른 입력을 쓰세요</span>
       </div></div>
     <div class="cost-cols">
       <div class="panel"><div class="panel-h">🔨 공정별 자재·공사비</div><div class="panel-body">
@@ -1907,6 +1928,161 @@ const QE_OPTIONS={
   "교통/주유비":["상행","하행","주유"],
   "가스충전비":["상행","하행","충전"]
 };
+/* ===== 엑셀 비용 가져오기 ===== */
+// 엑셀 "구분" → 앱 분류 매핑
+const XL_MAP = {
+  // 자재·공사비 (공정 연결)
+  "욕실":{kind:"자재비", stage:"타일·방수"},
+  "목공사":{kind:"자재비", stage:"목공"},
+  "목공":{kind:"자재비", stage:"목공"},
+  "시트지":{kind:"자재비", stage:"필름"},
+  "필름":{kind:"자재비", stage:"필름"},
+  "샷시":{kind:"자재비", stage:"샷시/창호"},
+  "전등":{kind:"자재비", stage:"전기·조명"},
+  "전기":{kind:"자재비", stage:"전기·조명"},
+  "도배":{kind:"자재비", stage:"도배"},
+  "철거":{kind:"자재비", stage:"철거"},
+  "페인트":{kind:"자재비", stage:"페인트(도장)"},
+  "바닥":{kind:"자재비", stage:"바닥(마루/장판)·전기마감"},
+  "싱크대":{kind:"자재비", stage:"싱크대·가구"},
+  "인테리어":{kind:"자재비", stage:null},
+  "공구":{kind:"자재비", stage:null},
+  // 기타비용 (cat 연결)
+  "교통비":{kind:"기타비용", cat:"교통/주유비"},
+  "식비":{kind:"기타비용", cat:"식비"},
+  "등기":{kind:"기타비용", cat:"등기비"},
+  "은행이자":{kind:"기타비용", cat:"대출이자"},
+  "관리비":{kind:"기타비용", cat:"관리비"},
+  "도시가스":{kind:"기타비용", cat:"도시가스"},
+  "보험":{kind:"기타비용", cat:"보험료"}
+};
+function mapGubun(g){
+  g=(g||"").trim();
+  if(XL_MAP[g]) return XL_MAP[g];
+  // 부분 일치 시도
+  for(const k of Object.keys(XL_MAP)){ if(g.includes(k)) return XL_MAP[k]; }
+  return {kind:"기타비용", cat:"기타"};
+}
+// 교통비 세부(가스/톨비/주차)는 목록명으로 더 정확히
+function refineCat(base, name){
+  name=(name||"");
+  if(base.kind==="기타비용" && base.cat==="교통/주유비"){
+    if(/톨비|통행/.test(name)) return "톨비(통행료)";
+    if(/가스|주유|기름/.test(name)) return "교통/주유비";
+    if(/주차/.test(name)) return "교통/주유비";
+  }
+  return base.cat;
+}
+function excelSerialToDate(v){
+  if(v==null||v==="") return null;
+  if(typeof v==="string" && /\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0,10);
+  const n=Number(v); if(!n||isNaN(n)) return null;
+  // 엑셀 시리얼(1900 기준)
+  const d=new Date(Math.round((n-25569)*86400*1000));
+  if(isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0,10);
+}
+let _xlRows=null;
+function openExcelImport(){
+  if(typeof XLSX==="undefined"){ alert("엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요."); return; }
+  _xlRows=null;
+  document.getElementById("xl_file").value="";
+  document.getElementById("xl_preview").innerHTML="";
+  document.getElementById("xl_btn").style.display="none";
+  document.getElementById("xl_hint").textContent="날짜·목록·금액(합계)·구매처·구분 열을 자동 인식합니다. 같은 양식이면 그대로 올리세요.";
+  openModal("excelModal");
+}
+function onExcelPick(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:"binary"});
+      // 데이터가 있는 시트 찾기 (헤더에 '목록' 또는 '비용/합계' 포함)
+      let rows=null;
+      for(const sn of wb.SheetNames){
+        const arr=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:""});
+        const headRow=arr.findIndex(r=>r.some(c=>String(c).includes("목록")||String(c).includes("합계")||String(c).includes("구분")));
+        if(headRow>=0){ rows=parseXlRows(arr, headRow); break; }
+      }
+      if(!rows||!rows.length){ document.getElementById("xl_preview").innerHTML='<div class="ai-empty">인식할 수 있는 비용 데이터를 찾지 못했습니다. 헤더에 날짜·목록·합계·구분 열이 있는지 확인하세요.</div>'; return; }
+      _xlRows=rows;
+      renderXlPreview(rows);
+    }catch(err){ showError("엑셀 읽기", err); }
+  };
+  reader.readAsBinaryString(f);
+}
+function parseXlRows(arr, headRow){
+  const head=arr[headRow].map(c=>String(c).trim());
+  const col=(name)=>head.findIndex(h=>h.includes(name));
+  const ci={date:col("날짜"), name:col("목록"), spec:col("규격"), amount:col("합계"), amount2:col("비용"), buyer:col("구매처"), gubun:col("구분")};
+  const out=[]; let lastDate=null;
+  for(let i=headRow+1;i<arr.length;i++){
+    const r=arr[i]; if(!r||!r.length) continue;
+    const name=String(r[ci.name]||"").trim();
+    let amount=Number(r[ci.amount]|| (ci.amount2>=0?r[ci.amount2]:0))||0;
+    // 목록(품목명)이 없거나 합계/총계/소계 행은 건너뜀
+    if(!name) continue;
+    if(/^(합계|총계|소계|총합|계)$/.test(name)) continue;
+    if(!amount) continue;
+    let date=excelSerialToDate(r[ci.date]); if(date) lastDate=date; else date=lastDate;
+    const gubun=String(r[ci.gubun]||"").trim();
+    const buyer=String(r[ci.buyer]||"").trim();
+    const m=mapGubun(gubun);
+    const cat=m.kind==="기타비용"?refineCat(m,name):null;
+    out.push({date:date||today(), name, amount, gubun, buyer, kind:m.kind, stage:m.stage||null, cat});
+  }
+  return out;
+}
+function renderXlPreview(rows){
+  const total=rows.reduce((s,r)=>s+r.amount,0);
+  const matProc=rows.filter(r=>r.kind==="자재비").length;
+  const etc=rows.filter(r=>r.kind==="기타비용").length;
+  const body=rows.slice(0,40).map(r=>`<tr>
+    <td>${r.date}</td><td>${esc(r.name)}</td><td class="num">${r.amount.toLocaleString()}</td>
+    <td>${esc(r.gubun)}</td><td>${r.kind==="자재비"?('자재·'+(r.stage||'미지정')):('기타·'+r.cat)}</td></tr>`).join("");
+  document.getElementById("xl_preview").innerHTML=`
+    <div class="hint">총 <b>${rows.length}건</b> · 합계 <b>${total.toLocaleString()}원</b> (자재·공사비 ${matProc}건, 기타비용 ${etc}건)</div>
+    <div style="max-height:300px;overflow:auto;margin-top:8px;border:1px solid var(--line);border-radius:8px">
+    <table class="tbl"><thead><tr><th>날짜</th><th>목록</th><th>금액</th><th>구분(엑셀)</th><th>분류(앱)</th></tr></thead>
+    <tbody>${body}</tbody></table></div>
+    ${rows.length>40?`<div class="hint" style="margin-top:6px">… 외 ${rows.length-40}건 (전체 가져옵니다)</div>`:''}`;
+  document.getElementById("xl_btn").style.display="inline-block";
+}
+async function runExcelImport(){
+  if(!_xlRows||!_xlRows.length) return;
+  if(!confirm(_xlRows.length+"건의 비용을 가져올까요?\n(기존 기록에 추가됩니다)")) return;
+  const btn=document.getElementById("xl_btn"); btn.disabled=true; btn.textContent="가져오는 중…";
+  try{
+    showUploading("비용 가져오는 중… (0/"+_xlRows.length+")");
+    let n=0;
+    // 배치로 나눠서 저장 (Firestore batch는 500개 한도)
+    const chunk=400;
+    for(let i=0;i<_xlRows.length;i+=chunk){
+      const batch=db.batch();
+      _xlRows.slice(i,i+chunk).forEach(r=>{
+        const ref=db.collection(ENTRIES).doc();
+        batch.set(ref,{
+          projectId:currentProjectId, kind:r.kind, title:r.name||r.gubun||"비용",
+          date:r.date, stage:r.stage, cat:r.cat,
+          photoFolder:null, docFolder:null, checkRef:null,
+          vendor:r.buyer||"", amount:r.amount||null,
+          pay:r.kind==="기타비용"?"기타":null, memo:"엑셀 가져오기", files:[],
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
+        n++;
+      });
+      showUploading("비용 가져오는 중… ("+n+"/"+_xlRows.length+")");
+      await batch.commit();
+    }
+    hideUploading();
+    btn.disabled=false; btn.textContent="가져오기";
+    closeModal("excelModal");
+    alert(n+"건을 가져왔습니다.");
+    await reloadCurrent();
+  }catch(err){ hideUploading(); btn.disabled=false; btn.textContent="가져오기"; showError("엑셀 가져오기", err); }
+}
+
 function openQuickEtc(){
   if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
   quickRows=[];
