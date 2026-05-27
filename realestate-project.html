@@ -133,24 +133,27 @@
   .stage-statusrow{display:flex; gap:6px; padding-top:12px; align-items:center; flex-wrap:wrap;}
   .mini-chip{font-size:12px; padding:5px 12px; border-radius:18px; border:1px solid var(--line); background:#fff; color:var(--ink-soft);}
   .mini-chip.on{background:var(--accent); color:#fff; border-color:var(--accent);}
-  .checklist{margin-top:12px; padding:11px 14px; background:#f3f1fb; border:1px solid #e0ddf0; border-radius:10px;}
-  .checklist-h{font-size:12px; font-weight:700; color:var(--accent); margin-bottom:8px;}
-  .ck-item{padding:7px 0; border-top:1px solid #e1e9df;}
-  .ck-item:first-of-type{border-top:none;}
-  .ck-row{display:flex; align-items:flex-start; gap:8px; font-size:13px; cursor:pointer;}
-  .ck-row input{margin-top:2px; flex:0 0 auto; width:16px; height:16px;}
-  .ck-item.on .ck-row span{color:var(--ink-soft); text-decoration:line-through;}
-  .ck-tools{display:flex; gap:6px; margin:6px 0 0 24px; align-items:flex-start;}
-  .ck-memo{flex:1; border:1px solid var(--line); border-radius:8px; padding:7px 10px; font-size:13px; background:#fff; font-family:inherit; resize:none; overflow:hidden; line-height:1.5; min-height:46px;}
-  .ck-add{flex:0 0 auto; border:1px solid var(--line); background:#fff; border-radius:8px; padding:7px 11px; font-size:12px; cursor:pointer; white-space:nowrap;}
-  .ck-extra{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:6px 0 0 24px;}
-  .ck-mini{font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:5px;}
-  .ck-mini input{border:1px solid var(--line); border-radius:7px; padding:4px 8px; font-size:12px; background:#fff;}
-  .ck-mini input[type=number]{width:110px;}
-  .ck-tag{font-size:12px; font-weight:700; color:var(--gold);}
-  .ck-sum{margin-top:10px; padding-top:8px; border-top:1px solid #e0ddf0; font-size:13px; text-align:right; color:var(--ink);}
-  .ck-files{margin:6px 0 0 24px; display:flex; flex-wrap:wrap; gap:6px;}
-  .ck-file{font-size:11px; background:#fff; border:1px solid var(--line); border-radius:7px; padding:4px 8px; text-decoration:none; color:var(--accent);}
+  .checklist{margin-top:12px; padding:13px; background:#f3f1fb; border:1px solid #e0ddf0; border-radius:10px;}
+  .checklist-h{font-size:12px; font-weight:700; color:var(--accent); margin-bottom:10px;}
+  .ck-board{display:grid; grid-template-columns:repeat(4,1fr); gap:9px;}
+  @media(max-width:900px){ .ck-board{grid-template-columns:repeat(2,1fr);} }
+  @media(max-width:560px){ .ck-board{grid-template-columns:1fr;} }
+  .ck-card{background:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 10px; display:flex; flex-direction:column; gap:7px;}
+  .ck-card.on{background:#f5f3fb; border-color:var(--accent);}
+  .ck-row{display:flex; align-items:flex-start; gap:7px; font-size:12.5px; cursor:pointer; font-weight:600; line-height:1.35;}
+  .ck-row input[type=checkbox]{margin-top:1px; flex:0 0 auto; width:16px; height:16px;}
+  .ck-row span{flex:1;}
+  .ck-card.on .ck-row span{color:var(--ink-soft); text-decoration:line-through;}
+  .ck-fields{display:flex; flex-direction:column; gap:6px;}
+  .ck-grid2{display:grid; grid-template-columns:1fr 1fr; gap:5px;}
+  .ck-memo{width:100%; border:1px solid var(--line); border-radius:8px; padding:6px 9px; font-size:12.5px; background:#fcfbff; font-family:inherit; resize:none; overflow:hidden; line-height:1.45; min-height:40px;}
+  .ck-add{flex:0 0 auto; border:1px solid var(--line); background:#fff; border-radius:7px; padding:2px 7px; font-size:12px; cursor:pointer;}
+  .ck-mini{font-size:11px; color:var(--ink-soft); display:flex; align-items:center; gap:4px; flex-wrap:wrap;}
+  .ck-mini input{border:1px solid var(--line); border-radius:6px; padding:4px 6px; font-size:12px; background:#fcfbff; width:100%; min-width:0;}
+  .ck-tag{font-size:11px; font-weight:700; color:var(--gold);}
+  .ck-sum{margin-top:12px; padding-top:9px; border-top:1px solid #e0ddf0; font-size:13px; text-align:right; color:var(--ink);}
+  .ck-files{display:flex; flex-wrap:wrap; gap:5px;}
+  .ck-file{font-size:10.5px; background:#f5f3fb; border:1px solid var(--line); border-radius:6px; padding:3px 7px; text-decoration:none; color:var(--accent);}
 
   /* 기록 줄 */
   .log{padding:10px 0; border-top:1px dashed var(--line); font-size:13px;}
@@ -326,7 +329,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v1.6</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v1.8</span></h1>
   <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
   <a class="home" href="index.html">← 홈</a>
 </header>
@@ -526,7 +529,7 @@ const STAGES = [
   "임장(현장조사)","계약·잔금(매수)",
   "철거","페인트(도장)","샷시/창호","목공","설비·배관",
   "타일·방수","전기·조명","필름","도배","바닥(마루/장판)·전기마감",
-  "싱크대·가구","입주청소",
+  "싱크대·가구","기타",
   "매도(계약·잔금)"
 ];
 
@@ -547,33 +550,65 @@ const STAGE_CATS = {
   "도배": ["합지 벽지","실크 벽지","도배풀/본드","초배지","부직포","퍼티(벽면)"],
   "바닥(마루/장판)·전기마감": ["강마루/강화마루","원목마루","장판","바닥 본드/접착제","걸레받이","확장 프로파일","보양재","전기 마감(스위치/조명 설치)"],
   "싱크대·가구": ["싱크대","상부장/하부장","상판(인조대리석/세라믹)","붙박이장","신발장","손잡이/경첩","실리콘 마감"],
-  "입주청소": ["입주청소 용역","청소용품/소모품","폐기물 추가처리"]
+  "기타": ["입주청소 용역","청소용품/소모품","폐기물 추가처리","보수/하자처리","기타 비용"]
 };
-/* 임장·계약 단계의 체크리스트(점검 항목) — 아파트 기준 */
+/* 임장·계약·매도 체크리스트 (아파트 기준)
+   각 항목: {t:제목, f:[입력칸 종류], doc:첨부허용}
+   입력칸 종류: memo, date, amount, dist(거리m), parking(주차대수/세대수→%), price3(저가/중간/고가 시세) */
 const STAGE_CHECKLIST = {
   "임장(현장조사)": [
-    "입지·교통·역세권 확인","단지 규모·세대수·연식","층/향/조망·일조량",
-    "누수·결로·곰팡이 흔적","수압·배수·난방 상태","주차 대수·주차 편의",
-    "학군·생활편의(마트·병원)","채광·소음·층간소음","시세·실거래가 비교","향후 개발 호재/악재"
+    {t:"입지·교통·역세권", f:["memo"]},
+    {t:"단지 규모·세대수", f:["sedae"]},
+    {t:"연식(준공연도)", f:["year"]},
+    {t:"층/향/조망·일조량", f:["memo"]},
+    {t:"누수·결로·곰팡이", f:["memo"], doc:true},
+    {t:"수압·배수·난방", f:["memo"]},
+    {t:"주차 (대수/세대수)", f:["parking"]},
+    {t:"학군·편의시설 거리", f:["dist"]},
+    {t:"채광·소음·층간소음", f:["memo"]},
+    {t:"최근 실거래가·매물 시세", f:["price3"], doc:true},
+    {t:"향후 개발 호재/악재", f:["memo"]},
+    {t:"종합 메모", f:["memo"]}
   ],
-  "계약·잔금": [
-    "【계약시】 등기부등본(등기사항전부증명서) 발급·확인",
-    "【계약시】 소유자=계약 당사자 신분 대조(공동명의 시 동의서·위임장)",
-    "【계약시】 근저당·가압류·압류 등 권리관계 확인",
-    "【계약시】 부동산 표시(주소·면적·구조)가 등기부와 일치하는지",
-    "【계약시】 매매대금·계약금/중도금/잔금 지급일·금액 명시",
-    "【계약시】 계약금 입금(영수증 수령)·계약서 특약 확인",
-    "【잔금시】 잔금 직전 등기부등본 재발급(권리관계 변동 확인)",
-    "【잔금시】 등기권리증(등기필증)·매도용 인감증명서·인감도장 수령",
-    "【잔금시】 매도인 주민등록초본·신분증 확인",
-    "【잔금시】 관리비·공과금·재산세 정산 및 영수증 확인",
-    "【잔금시】 잔금 지급·영수증 수령·열쇠/도면 인수",
-    "【잔금시】 중개수수료·법무사 비용 정산",
-    "【등기】 취득세·인지세 납부",
-    "【등기】 잔금일로부터 60일 이내 소유권 이전등기 신청",
-    "【등기】 이전등기 완료 후 등기부등본 재확인",
-    "【기타】 전입신고·확정일자","【기타】 대출 실행 일정 확인",
-    "【기타】 화재보험 가입","【기타】 이사일정·관리사무소 통보"
+  "계약·잔금(매수)": [
+    {t:"【계약】 등기부등본 발급·확인", f:["memo"], doc:true},
+    {t:"【계약】 소유자=계약자 신분 대조", f:["memo"]},
+    {t:"【계약】 근저당·가압류 등 권리관계", f:["memo"]},
+    {t:"【계약】 부동산 표시 등기부 일치", f:["memo"]},
+    {t:"【계약】 대금·지급일정 명시", f:["memo"]},
+    {t:"【계약】 계약금 입금·영수증·특약", f:["amount","date"], doc:true},
+    {t:"【잔금】 잔금 직전 등기부 재발급", f:["date"], doc:true},
+    {t:"【잔금】 등기권리증·인감증명서 수령", f:["memo"], doc:true},
+    {t:"【잔금】 중도금", f:["amount","date"]},
+    {t:"【잔금】 잔금 지급·열쇠 인수", f:["amount","date"], doc:true},
+    {t:"【잔금】 관리비·공과금 정산", f:["memo"], doc:true},
+    {t:"【잔금】 중개수수료", f:["amount"], doc:true},
+    {t:"【등기】 취득세·인지세 납부", f:["amount","date"], doc:true},
+    {t:"【등기】 60일내 이전등기 신청", f:["date"], doc:true},
+    {t:"【등기】 법무사 비용", f:["amount"], doc:true},
+    {t:"【기타】 전입신고·확정일자", f:["date"]},
+    {t:"【기타】 대출 실행", f:["amount","date"]},
+    {t:"【기타】 화재보험·이사일정", f:["memo"]}
+  ],
+  "매도(계약·잔금)": [
+    {t:"【준비】 매도가·주변 시세 확인", f:["price3"]},
+    {t:"【준비】 등기권리증 보관 확인", f:["memo"]},
+    {t:"【준비】 대출(근저당) 잔액·상환", f:["amount"]},
+    {t:"【계약】 매수인 신분확인·계약서", f:["memo"], doc:true},
+    {t:"【계약】 계약금 수령·영수증·특약", f:["amount","date"], doc:true},
+    {t:"【계약】 30일내 실거래가 신고", f:["date"], doc:true},
+    {t:"【잔금】 잔금 직전 등기부 재발급", f:["date"], doc:true},
+    {t:"【잔금】 잔고증명·권리관계 해제", f:["memo"], doc:true},
+    {t:"【잔금】 신분증·등기권리증·인감도장", f:["memo"]},
+    {t:"【잔금】 매도용 인감증명서 발급", f:["memo"], doc:true},
+    {t:"【잔금】 주민등록초본 준비", f:["memo"]},
+    {t:"【잔금】 세금·공과금·관리비 정산", f:["memo"], doc:true},
+    {t:"【잔금】 잔금 수령·열쇠 인계", f:["amount","date"], doc:true},
+    {t:"【잔금】 중개수수료 지급", f:["amount"], doc:true},
+    {t:"【등기】 이전등기 서류 교부", f:["memo"]},
+    {t:"【세금】 양도세 예정신고(2개월내)", f:["amount","date"], doc:true},
+    {t:"【세금】 양도차익·필요경비 정리", f:["memo"], doc:true},
+    {t:"【기타】 관리사무소 명의변경 통보", f:["memo"]}
   ]
 };
 
@@ -789,46 +824,85 @@ async function setStageStatus(stage,status){
 /* ===== 체크리스트 (체크 + 메모 + 서류 첨부) ===== */
 // 체크 상태/메모는 프로젝트 문서의 checkState[stage][index]에 저장
 function getCheck(p,stage,idx){ return ((p.checkState||{})[stage]||{})[idx]||null; }
+function ckField(stage,i,cs,type){
+  const S=jsstr(stage); const sid=stageId(stage);
+  if(type==="memo")
+    return `<textarea class="ck-memo" rows="2" placeholder="메모…" oninput="autoGrow(this)" onchange="saveCheckField('${S}',${i},'memo',this.value)">${esc(cs.memo||'')}</textarea>`;
+  if(type==="date")
+    return `<label class="ck-mini">📅 <input type="date" value="${esc(cs.date||'')}" onchange="saveCheckField('${S}',${i},'date',this.value)"></label>`;
+  if(type==="amount")
+    return `<label class="ck-mini">💰 <input type="number" placeholder="금액" value="${cs.amount!=null?cs.amount:''}" oninput="saveCheckAmount('${S}',${i},this.value)"><span class="ck-tag" id="ckamt_${sid}_${i}">${cs.amount?Number(cs.amount).toLocaleString()+'원':''}</span></label>`;
+  if(type==="year")
+    return `<label class="ck-mini">🏗 준공 <input type="number" placeholder="2005" value="${esc(cs.year||'')}" onchange="saveCheckField('${S}',${i},'year',this.value)">년</label>`;
+  if(type==="sedae")
+    return `<label class="ck-mini">🏢 <input type="number" placeholder="총 세대수" value="${esc(cs.sedae||'')}" onchange="saveCheckField('${S}',${i},'sedae',this.value)">세대</label>`;
+  if(type==="dist")
+    return `<div class="ck-grid2">
+      <label class="ck-mini">🏫 학교 <input type="number" placeholder="m" value="${esc(cs.distSchool||'')}" onchange="saveCheckField('${S}',${i},'distSchool',this.value)">m</label>
+      <label class="ck-mini">🛒 마트 <input type="number" placeholder="m" value="${esc(cs.distMart||'')}" onchange="saveCheckField('${S}',${i},'distMart',this.value)">m</label>
+      <label class="ck-mini">🚇 역 <input type="number" placeholder="m" value="${esc(cs.distStation||'')}" onchange="saveCheckField('${S}',${i},'distStation',this.value)">m</label>
+      <label class="ck-mini">🏥 병원 <input type="number" placeholder="m" value="${esc(cs.distHosp||'')}" onchange="saveCheckField('${S}',${i},'distHosp',this.value)">m</label></div>`;
+  if(type==="parking"){
+    const ratio=(cs.parkTotal&&cs.sedaeP)?Math.round(cs.parkTotal/cs.sedaeP*100):null;
+    return `<div class="ck-grid2">
+      <label class="ck-mini">🅿 주차 <input type="number" placeholder="대수" value="${esc(cs.parkTotal||'')}" oninput="saveParkRatio('${S}',${i})" id="pk_${sid}_${i}_t">대</label>
+      <label class="ck-mini">🏢 세대 <input type="number" placeholder="세대수" value="${esc(cs.sedaeP||'')}" oninput="saveParkRatio('${S}',${i})" id="pk_${sid}_${i}_s">세대</label>
+      <span class="ck-tag" id="pk_${sid}_${i}_r">${ratio!=null?'세대당 '+(cs.parkTotal/cs.sedaeP).toFixed(2)+'대 ('+ratio+'%)':''}</span></div>`;
+  }
+  if(type==="price3")
+    return `<div class="ck-grid2">
+      <label class="ck-mini">📉 저가 <input type="number" placeholder="만원" value="${esc(cs.priceLow||'')}" onchange="saveCheckField('${S}',${i},'priceLow',this.value)">만</label>
+      <label class="ck-mini">📊 중간 <input type="number" placeholder="만원" value="${esc(cs.priceMid||'')}" onchange="saveCheckField('${S}',${i},'priceMid',this.value)">만</label>
+      <label class="ck-mini">📈 고가 <input type="number" placeholder="만원" value="${esc(cs.priceHigh||'')}" onchange="saveCheckField('${S}',${i},'priceHigh',this.value)">만</label>
+      <label class="ck-mini">🏷 최근실거래 <input type="number" placeholder="만원" value="${esc(cs.priceReal||'')}" onchange="saveCheckField('${S}',${i},'priceReal',this.value)">만</label></div>`;
+  return '';
+}
 function renderChecklist(p,stage){
   const items=STAGE_CHECKLIST[stage]||[];
-  const done=items.filter((_,i)=>getCheck(p,stage,i) && getCheck(p,stage,i).done).length;
+  const done=items.filter((_,i)=>{const c=getCheck(p,stage,i);return c&&c.done;}).length;
   const sid=stageId(stage);
   let amtSum=0;
-  const rows=items.map((c,i)=>{
+  const cards=items.map((item,i)=>{
     const cs=getCheck(p,stage,i)||{};
+    const fields=item.f||[];
+    if(fields.includes("amount") && cs.amount) amtSum+=Number(cs.amount)||0;
     const docs=entries.filter(e=>e.stage===stage && e.checkRef===i);
     const files=docs.flatMap(e=>e.files||[]);
     const fileHtml=files.map((f)=>{
       const isImg=(f.type||"").startsWith("image/");
       return `<a class="ck-file" href="${isImg?'javascript:void(0)':f.url}" ${isImg?`onclick="openViewer('${jsstr(f.url)}','${jsstr(f.name)}');return false;"`:'target="_blank" rel="noopener"'}>${isImg?'🖼':'📄'} ${esc(f.name)}</a>`;
     }).join("");
-    const needAmt=/계약금|중도금|잔금 지급|취득세|인지세|중개수수료|중개 수수료|법무사|등기비|채권/.test(c);
-    const needDate=/일정|신고|등기 신청|확정일자|실행/.test(c);
-    if(needAmt && cs.amount) amtSum+=Number(cs.amount)||0;
-    return `<div class="ck-item ${cs.done?'on':''}" id="ck_${sid}_${i}">
-      <label class="ck-row"><input type="checkbox" ${cs.done?'checked':''} onchange="toggleCheck('${jsstr(stage)}',${i},this.checked)"><span>${esc(c)}</span></label>
-      <div class="ck-tools">
-        <textarea class="ck-memo" rows="2" placeholder="메모… (엔터로 줄바꿈)" oninput="autoGrow(this)" onchange="saveCheckField('${jsstr(stage)}',${i},'memo',this.value)">${esc(cs.memo||'')}</textarea>
-        <button class="ck-add" onclick="addCheckDoc('${jsstr(stage)}',${i})" title="서류/사진 첨부">📎 첨부</button>
-      </div>
-      <div class="ck-extra">
-        ${needDate?`<label class="ck-mini">📅 날짜 <input type="date" value="${esc(cs.date||'')}" onchange="saveCheckField('${jsstr(stage)}',${i},'date',this.value)"></label>${cs.date?`<span class="ck-tag">${cs.date}</span>`:''}`:''}
-        ${needAmt?`<label class="ck-mini">💰 금액 <input type="number" placeholder="원" value="${cs.amount!=null?cs.amount:''}" oninput="saveCheckAmount('${jsstr(stage)}',${i},this.value)"></label><span class="ck-tag" id="ckamt_${sid}_${i}">${cs.amount?Number(cs.amount).toLocaleString()+'원':''}</span>`:''}
-      </div>
+    const inputs=fields.map(t=>ckField(stage,i,cs,t)).join("");
+    const docBtn=item.doc?`<button class="ck-add" onclick="addCheckDoc('${jsstr(stage)}',${i})" title="서류/사진 첨부">📎</button>`:'';
+    return `<div class="ck-card ${cs.done?'on':''}" id="ck_${sid}_${i}">
+      <label class="ck-row"><input type="checkbox" ${cs.done?'checked':''} onchange="toggleCheck('${jsstr(stage)}',${i},this.checked)"><span>${esc(item.t)}</span>${docBtn}</label>
+      ${inputs?`<div class="ck-fields">${inputs}</div>`:''}
       ${fileHtml?`<div class="ck-files">${fileHtml}</div>`:''}
     </div>`;
   }).join("");
   const sumHtml = amtSum>0 ? `<div class="ck-sum">이 단계 입력 금액 합계: <b>${amtSum.toLocaleString()}원</b></div>` : '';
-  return `<div class="checklist"><div class="checklist-h">✔ 점검 체크리스트 <span id="ckcount_${sid}" style="font-weight:500;color:var(--ink-soft)">(${done}/${items.length})</span></div>${rows}${sumHtml}</div>`;
+  return `<div class="checklist"><div class="checklist-h">✔ 점검 체크리스트 <span id="ckcount_${sid}" style="font-weight:500;color:var(--ink-soft)">(${done}/${items.length})</span></div>
+    <div class="ck-board">${cards}</div>${sumHtml}</div>`;
 }
 function stageId(stage){ return stage.replace(/[^a-zA-Z0-9가-힣]/g,'_'); }
 function autoGrow(t){ t.style.height='auto'; t.style.height=(t.scrollHeight)+'px'; }
+async function saveParkRatio(stage,idx){
+  const sid=stageId(stage);
+  const tot=Number(document.getElementById('pk_'+sid+'_'+idx+'_t').value)||0;
+  const sed=Number(document.getElementById('pk_'+sid+'_'+idx+'_s').value)||0;
+  const rEl=document.getElementById('pk_'+sid+'_'+idx+'_r');
+  if(rEl) rEl.textContent=(tot&&sed)?('세대당 '+(tot/sed).toFixed(2)+'대 ('+Math.round(tot/sed*100)+'%)'):'';
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  const cs=JSON.parse(JSON.stringify(p.checkState||{}));
+  cs[stage]=cs[stage]||{}; cs[stage][idx]=Object.assign({},cs[stage][idx],{parkTotal:tot||null,sedaeP:sed||null});
+  p.checkState=cs;
+  clearTimeout(_amtTimer); _amtTimer=setTimeout(()=>db.collection(PROJECTS).doc(currentProjectId).update({checkState:cs}).catch(e=>showError("저장",e)),500);
+}
 async function toggleCheck(stage,idx,done){
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
   const cs=JSON.parse(JSON.stringify(p.checkState||{}));
   cs[stage]=cs[stage]||{}; cs[stage][idx]=Object.assign({},cs[stage][idx],{done});
   p.checkState=cs;
-  // 화면 전체를 다시 그리지 않고 해당 항목만 토글 + 진행도 갱신 (펼친 공정 유지)
   const el=document.getElementById('ck_'+stageId(stage)+'_'+idx);
   if(el) el.classList.toggle('on', done);
   const items=STAGE_CHECKLIST[stage]||[];
