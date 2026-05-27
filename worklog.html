@@ -224,7 +224,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v11</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v12</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -511,7 +511,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* ===== 설정 ===== */
-const APP_VERSION = "v11";
+const APP_VERSION = "v12";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -1360,7 +1360,7 @@ $("calPrint").addEventListener("click",printCalendar);
 
 /* ===== AI 대화 · 분석 ===== */
 const AI_KEY_LS="wl_anthropic_key";
-const AI_MODEL="claude-sonnet-4-20250514";
+const AI_MODEL="claude-sonnet-4-6";
 let aiHistory=[]; // {role, content}
 function aiGetKey(){ try{ return localStorage.getItem(AI_KEY_LS)||""; }catch(e){ return ""; } }
 function aiRenderKeyState(){
