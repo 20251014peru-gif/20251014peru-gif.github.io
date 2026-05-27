@@ -154,6 +154,14 @@
   .ck-sum{margin-top:12px; padding-top:9px; border-top:1px solid #e0ddf0; font-size:13px; text-align:right; color:var(--ink);}
   .ck-files{display:flex; flex-wrap:wrap; gap:5px;}
   .ck-file{font-size:10.5px; background:#f5f3fb; border:1px solid var(--line); border-radius:6px; padding:3px 7px; text-decoration:none; color:var(--accent);}
+  .invest-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px;}
+  .iv{background:#faf9fe; border:1px solid var(--line); border-radius:10px; padding:11px 13px; display:flex; flex-direction:column; gap:3px;}
+  .iv span{font-size:12px; color:var(--ink-soft);}
+  .iv b{font-size:18px; color:var(--ink);}
+  .iv small{font-size:10.5px; color:var(--ink-soft);}
+  .iv.hi{background:#eef0fb; border-color:var(--accent);}
+  .iv.hi b{color:var(--accent);}
+  .iv.profit b{color:#5a9b7a;} .iv.loss b{color:var(--danger);}
 
   /* 기록 줄 */
   .log{padding:10px 0; border-top:1px dashed var(--line); font-size:13px;}
@@ -329,7 +337,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v1.8</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v1.9</span></h1>
   <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
   <a class="home" href="index.html">← 홈</a>
 </header>
@@ -686,6 +694,33 @@ async function reloadCurrent(){
 function stageStatus(p,stage){return ((p.stageStatus)||{})[stage]||"대기";}
 function progressPct(p){const d=STAGES.filter(s=>stageStatus(p,s)==="완료").length; return Math.round(d/STAGES.length*100);}
 
+/* ===== 비용 계산 (A방식: 기록 지출 + 체크리스트 금액 합산) ===== */
+function checkAmounts(p){
+  let loan=0, buyCost=0, sellIncome=0, sellCost=0;
+  const cstate=p.checkState||{};
+  Object.keys(cstate).forEach(stage=>{
+    const items=STAGE_CHECKLIST[stage]||[];
+    Object.keys(cstate[stage]||{}).forEach(idx=>{
+      const cell=cstate[stage][idx]; if(!cell||cell.amount==null) return;
+      const amt=Number(cell.amount)||0; if(!amt) return;
+      const item=items[idx]; const label=item?(item.t||''):'';
+      if(/대출/.test(label)) loan+=amt;
+      else if(stage==="매도(계약·잔금)"){
+        if(/받은|수령/.test(label)) sellIncome+=amt;
+        else sellCost+=amt;
+      } else buyCost+=amt;
+    });
+  });
+  return {loan, buyCost, sellIncome, sellCost};
+}
+function costBreakdown(p){
+  const entSpent=entries.filter(e=>Number(e.amount)>0).reduce((s,e)=>s+Number(e.amount),0);
+  const ck=checkAmounts(p);
+  const totalSpent = entSpent + ck.buyCost + ck.sellCost;
+  const realInvest = totalSpent - ck.loan;
+  return {entSpent, loan:ck.loan, buyCost:ck.buyCost, sellCost:ck.sellCost, sellIncome:ck.sellIncome, totalSpent, realInvest};
+}
+
 /* ===== 메인 ===== */
 function renderMain(){
   const p=projects.find(x=>x.id===currentProjectId);
@@ -724,7 +759,8 @@ function renderTab(p){
 /* ===== 대시보드 ===== */
 function viewDashboard(p){
   const withAmt=entries.filter(e=>Number(e.amount)>0);
-  const total=withAmt.reduce((s,e)=>s+Number(e.amount),0);
+  const cb=costBreakdown(p);
+  const total=cb.totalSpent;
   const fileCount=entries.reduce((s,e)=>s+(e.files?e.files.length:0),0);
   const problems=entries.filter(e=>e.kind==="문제").length;
   const pct=progressPct(p);
@@ -735,17 +771,32 @@ function viewDashboard(p){
     return `<div class="tl-step ${st==='완료'?'done':st==='진행'?'doing':''}">
       <div class="tl-dot">${st==='완료'?'✓':i+1}</div><div class="tl-label">${s}</div></div>`;}).join("");
 
+  // 투자 요약
+  const profit = cb.sellIncome>0 ? (cb.sellIncome - cb.totalSpent) : null;
+  const investPanel = `<div class="panel"><div class="panel-h">💵 투자 요약</div>
+    <div class="panel-body"><div class="invest-grid">
+      <div class="iv"><span>총 사용 비용</span><b>${cb.totalSpent.toLocaleString()}원</b><small>임장·계약·세금·등기·인테리어·기타 전부</small></div>
+      <div class="iv"><span>대출금</span><b>${cb.loan.toLocaleString()}원</b><small>자금조달 (비용 아님)</small></div>
+      <div class="iv hi"><span>실투자금</span><b>${cb.realInvest.toLocaleString()}원</b><small>총비용 − 대출금</small></div>
+      ${cb.sellIncome>0?`<div class="iv"><span>매도 수령액</span><b>${cb.sellIncome.toLocaleString()}원</b><small>받은 계약금·잔금</small></div>
+      <div class="iv ${profit>=0?'profit':'loss'}"><span>예상 손익</span><b>${profit>=0?'+':''}${profit.toLocaleString()}원</b><small>매도액 − 총비용</small></div>`:''}
+    </div>
+    <div class="hint" style="margin-top:8px">금액은 공정 탭의 계약·잔금·매도 체크리스트와 비용 탭 기록에서 자동 합산됩니다.</div>
+    </div></div>`;
+
   return `
     <div class="stats">
       <div class="stat"><div class="label">공정 진행률</div><div class="value">${pct}<small>%</small></div>
         <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
         <div class="label" style="margin-top:6px">${doneCnt} / ${STAGES.length} 단계 완료</div></div>
-      <div class="stat"><div class="label">총 지출${p.budget?' / 예산':''}</div><div class="value">${total.toLocaleString()}<small> 원</small></div>
+      <div class="stat"><div class="label">총 사용 비용${p.budget?' / 예산':''}</div><div class="value">${total.toLocaleString()}<small> 원</small></div>
         ${p.budget?`<div class="progress-wrap"><div class="progress-bar" style="width:${Math.min(100,Math.round(total/p.budget*100))}%;background:${total>p.budget?'var(--danger)':'var(--accent)'}"></div></div>
         <div class="label" style="margin-top:6px;color:${total>p.budget?'var(--danger)':'var(--ink-soft)'}">예산 ${p.budget.toLocaleString()}원 · ${total>p.budget?'초과 '+(total-p.budget).toLocaleString()+'원':'잔여 '+(p.budget-total).toLocaleString()+'원'}</div>`:''}</div>
-      <div class="stat"><div class="label">문제·하자</div><div class="value" style="color:${problems?'var(--danger)':'inherit'}">${problems}<small> 건</small></div></div>
+      <div class="stat"><div class="label">실투자금</div><div class="value">${cb.realInvest.toLocaleString()}<small> 원</small></div><div class="label" style="margin-top:6px">대출 ${cb.loan.toLocaleString()}원 제외</div></div>
       <div class="stat"><div class="label">기록 / 첨부</div><div class="value">${entries.length}<small>건 / ${fileCount}개</small></div></div>
     </div>
+
+    ${investPanel}
 
     <div class="panel"><div class="panel-h">🗺️ 공정 타임라인</div>
       <div class="panel-body"><div class="timeline">${tl}</div></div></div>
@@ -936,7 +987,8 @@ function addCheckDoc(stage,idx){
     try{
       const files=[];
       for(const f of inp.files){ files.push(await processFile(f)); }
-      const label=(STAGE_CHECKLIST[stage]||[])[idx]||"체크 항목";
+      const item=(STAGE_CHECKLIST[stage]||[])[idx]||{};
+      const label=(typeof item==='string'?item:(item.t||"체크 항목"));
       await db.collection(ENTRIES).add({
         projectId:currentProjectId, kind:"서류", title:label.replace(/^【.*?】\s*/,''),
         date:today(), stage:stage, checkRef:idx, cat:null, photostage:null,
@@ -978,13 +1030,14 @@ function viewCost(p){
     (!costFilter.q || (e.title+' '+(e.vendor||'')+' '+(e.cat||'')+' '+(e.memo||'')).toLowerCase().includes(costFilter.q.toLowerCase()))
   );
   const listSum=list.reduce((s,e)=>s+Number(e.amount),0);
+  const cb=costBreakdown(p);
 
   return `
     <div class="stats">
-      <div class="stat"><div class="label">총 지출</div><div class="value">${total.toLocaleString()}<small> 원</small></div></div>
-      <div class="stat"><div class="label">공정 자재·공사비</div><div class="value">${stageSum.toLocaleString()}<small> 원</small></div></div>
-      <div class="stat"><div class="label">기타 비용</div><div class="value">${etcSum.toLocaleString()}<small> 원</small></div></div>
-      <div class="stat"><div class="label">지출 건수</div><div class="value">${withAmt.length}<small> 건</small></div></div>
+      <div class="stat"><div class="label">총 사용 비용</div><div class="value">${cb.totalSpent.toLocaleString()}<small> 원</small></div><div class="label" style="margin-top:6px">기록+체크리스트 합산</div></div>
+      <div class="stat"><div class="label">기록 지출(인테리어·기타)</div><div class="value">${total.toLocaleString()}<small> 원</small></div></div>
+      <div class="stat"><div class="label">계약·세금·등기(체크리스트)</div><div class="value">${cb.buyCost.toLocaleString()}<small> 원</small></div></div>
+      <div class="stat"><div class="label">실투자금</div><div class="value">${cb.realInvest.toLocaleString()}<small> 원</small></div><div class="label" style="margin-top:6px">대출 ${cb.loan.toLocaleString()}원 제외</div></div>
     </div>
     <div class="panel"><div class="panel-h">🧾 기타 비용 입력 <span class="cnt">식비·톨비·가스·이자·관리비 등</span></div>
       <div class="panel-body" style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1177,6 +1230,21 @@ function searchEntries(q){
     return hay.includes(q);
   });
 }
+/* 체크리스트에서 메모/금액이 검색어를 포함하는 항목 찾기 */
+function searchChecklist(q){
+  q=(q||"").trim().toLowerCase(); if(!q) return [];
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return [];
+  const cstate=p.checkState||{}; const out=[];
+  Object.keys(cstate).forEach(stage=>{
+    const items=STAGE_CHECKLIST[stage]||[];
+    Object.keys(cstate[stage]||{}).forEach(i=>{
+      const c=cstate[stage][i]; const item=items[i]; if(!item) return;
+      const hay=[item.t,c.memo,c.amount,c.date,c.priceMid].join(' ').toLowerCase();
+      if(hay.includes(q)) out.push({stage,t:item.t,c});
+    });
+  });
+  return out;
+}
 function renderSearchResult(){
   const cnt=document.getElementById("searchCount");
   const box=document.getElementById("searchResult");
@@ -1184,11 +1252,17 @@ function renderSearchResult(){
   const res=searchEntries(searchQ);
   if(res===null){
     if(cnt) cnt.textContent="";
-    box.innerHTML='<div class="ai-empty">찾을 단어를 입력하세요. 이 프로젝트의 모든 기록(자재·비용·사진·연락·서류·문제)에서 한 번에 찾습니다.</div>';
+    box.innerHTML='<div class="ai-empty">찾을 단어를 입력하세요. 기록·비용·사진·서류·연락·체크리스트에서 한 번에 찾습니다.</div>';
     return;
   }
-  if(cnt) cnt.textContent=res.length+"건";
-  box.innerHTML = res.length? res.map(renderLog).join("") : '<div class="ai-empty">검색 결과가 없습니다.</div>';
+  const ckRes=searchChecklist(searchQ);
+  if(cnt) cnt.textContent=(res.length+ckRes.length)+"건";
+  const ckHtml=ckRes.map(r=>{
+    const parts=[]; if(r.c.memo)parts.push(esc(r.c.memo)); if(r.c.amount)parts.push(Number(r.c.amount).toLocaleString()+'원'); if(r.c.date)parts.push(r.c.date);
+    return `<div class="log"><div class="l-top"><span class="l-tag 공정">${esc(r.stage)}</span><span class="l-title">✔ ${esc(r.t)}</span></div>${parts.length?`<div class="l-memo">${parts.join(' · ')}</div>`:''}</div>`;
+  }).join("");
+  const entHtml = res.length? res.map(renderLog).join("") : '';
+  box.innerHTML = (ckHtml+entHtml) || '<div class="ai-empty">검색 결과가 없습니다.</div>';
 }
 function onSearchInput(v){ searchQ=v; renderSearchResult(); }
 function viewSearch(p){
@@ -1256,18 +1330,42 @@ function projectSummary(p){
   const etc=entries.filter(e=>e.kind==="기타비용"&&Number(e.amount)>0).map(e=>`- ${e.cat}: ${Number(e.amount).toLocaleString()}원`).join("\n");
   const byStage={}; withAmt.filter(e=>e.kind==="자재비").forEach(e=>{const k=e.stage||"미지정"; byStage[k]=(byStage[k]||0)+Number(e.amount);});
   const byVen={}; withAmt.forEach(e=>{if(e.vendor)byVen[e.vendor]=(byVen[e.vendor]||0)+Number(e.amount);});
+  const cb=costBreakdown(p);
+  // 체크리스트 내용 텍스트화
+  const cstate=p.checkState||{};
+  let ckText="";
+  ["임장(현장조사)","계약·잔금(매수)","매도(계약·잔금)"].forEach(stage=>{
+    const items=STAGE_CHECKLIST[stage]||[]; const st=cstate[stage]||{};
+    const lines=[];
+    items.forEach((item,i)=>{
+      const c=st[i]; if(!c) return;
+      const parts=[];
+      if(c.done) parts.push("✔완료");
+      if(c.memo) parts.push("메모:"+c.memo.replace(/\s+/g,' '));
+      if(c.amount) parts.push("금액:"+Number(c.amount).toLocaleString()+"원");
+      if(c.date) parts.push("날짜:"+c.date);
+      if(c.year) parts.push("준공:"+c.year);
+      if(c.sedae) parts.push("세대수:"+c.sedae);
+      if(c.parkTotal&&c.sedaeP) parts.push("주차:"+c.parkTotal+"대/"+c.sedaeP+"세대");
+      if(c.distSchool||c.distMart||c.distStation||c.distHosp) parts.push("거리(m) 학교"+(c.distSchool||'-')+"/마트"+(c.distMart||'-')+"/역"+(c.distStation||'-')+"/병원"+(c.distHosp||'-'));
+      if(c.priceLow||c.priceMid||c.priceHigh||c.priceReal) parts.push("시세(만) 저"+(c.priceLow||'-')+"/중"+(c.priceMid||'-')+"/고"+(c.priceHigh||'-')+"/실거래"+(c.priceReal||'-'));
+      if(parts.length) lines.push("  · "+item.t+" → "+parts.join(", "));
+    });
+    if(lines.length) ckText+="\n["+stage+" 체크리스트]\n"+lines.join("\n");
+  });
   return `[개요] 이름 ${p.name} / 주소 ${p.address||'-'} / 상태 ${p.status||'-'} / 시작 ${p.startDate||'-'} / 진행률 ${progressPct(p)}%${p.budget?' / 예산 '+p.budget.toLocaleString()+'원':''}
 [메모] ${p.memo||'-'}
-[공정 진행(아파트 임장·계약 → 인테리어 순서)]
+[공정 진행(아파트 임장·계약 → 인테리어 → 매도 순서)]
 ${stageInfo}
-[총 지출] ${total.toLocaleString()}원 (지출기록 ${withAmt.length}건, 전체기록 ${entries.length}건)
+[투자 요약] 총 사용비용 ${cb.totalSpent.toLocaleString()}원 / 대출 ${cb.loan.toLocaleString()}원 / 실투자금 ${cb.realInvest.toLocaleString()}원${cb.sellIncome>0?' / 매도수령 '+cb.sellIncome.toLocaleString()+'원 / 손익 '+(cb.sellIncome-cb.totalSpent).toLocaleString()+'원':''}
+[기록 지출] ${total.toLocaleString()}원 (지출기록 ${withAmt.length}건, 전체기록 ${entries.length}건)
 [공정별 자재·공사비] ${JSON.stringify(byStage)}
 [거래처별 지출] ${JSON.stringify(byVen)}
 [기타비용]
 ${etc||'없음'}
 [문제·하자 기록]
 ${problems||'없음'}
-[업체 ${vendors.length}곳] ${vendors.map(v=>v.name+'('+(v.trade||'')+')').join(', ')||'없음'}`;
+[업체 ${vendors.length}곳] ${vendors.map(v=>v.name+'('+(v.trade||'')+')').join(', ')||'없음'}${ckText}`;
 }
 
 function buildPrompt(p){
