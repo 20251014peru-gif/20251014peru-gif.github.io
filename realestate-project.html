@@ -140,9 +140,15 @@
   .ck-row{display:flex; align-items:flex-start; gap:8px; font-size:13px; cursor:pointer;}
   .ck-row input{margin-top:2px; flex:0 0 auto; width:16px; height:16px;}
   .ck-item.on .ck-row span{color:var(--ink-soft); text-decoration:line-through;}
-  .ck-tools{display:flex; gap:6px; margin:5px 0 0 24px;}
-  .ck-memo{flex:1; border:1px solid var(--line); border-radius:8px; padding:5px 9px; font-size:12px; background:#fff;}
-  .ck-add{flex:0 0 auto; border:1px solid var(--line); background:#fff; border-radius:8px; padding:5px 10px; font-size:13px; cursor:pointer;}
+  .ck-tools{display:flex; gap:6px; margin:5px 0 0 24px; align-items:flex-start;}
+  .ck-memo{flex:1; border:1px solid var(--line); border-radius:8px; padding:6px 9px; font-size:12px; background:#fff; font-family:inherit; resize:none; overflow:hidden; line-height:1.45; min-height:32px;}
+  .ck-add{flex:0 0 auto; border:1px solid var(--line); background:#fff; border-radius:8px; padding:6px 10px; font-size:13px; cursor:pointer;}
+  .ck-extra{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:6px 0 0 24px;}
+  .ck-mini{font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:5px;}
+  .ck-mini input{border:1px solid var(--line); border-radius:7px; padding:4px 8px; font-size:12px; background:#fff;}
+  .ck-mini input[type=number]{width:110px;}
+  .ck-tag{font-size:12px; font-weight:700; color:var(--gold);}
+  .ck-sum{margin-top:10px; padding-top:8px; border-top:1px solid #d8e3d6; font-size:13px; text-align:right; color:var(--ink);}
   .ck-files{margin:6px 0 0 24px; display:flex; flex-wrap:wrap; gap:6px;}
   .ck-file{font-size:11px; background:#fff; border:1px solid var(--line); border-radius:7px; padding:4px 8px; text-decoration:none; color:var(--accent);}
 
@@ -320,7 +326,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v1.4</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v1.5</span></h1>
   <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
   <a class="home" href="index.html">← 홈</a>
 </header>
@@ -564,7 +570,8 @@ const STAGE_CHECKLIST = {
     "【등기】 취득세·인지세 납부",
     "【등기】 잔금일로부터 60일 이내 소유권 이전등기 신청",
     "【등기】 이전등기 완료 후 등기부등본 재확인",
-    "【기타】 전입신고·확정일자","【기타】 대출 실행 일정 확인"
+    "【기타】 전입신고·확정일자","【기타】 대출 실행 일정 확인",
+    "【기타】 화재보험 가입","【기타】 이사일정·관리사무소 통보"
   ]
 };
 
@@ -673,6 +680,7 @@ function renderTab(p){
     }[activeTab]||viewDashboard)(p);
     if(activeTab==="검색") renderSearchResult();
     if(activeTab==="대시보드" && chatHistory.length) renderChat();
+    if(activeTab==="공정"){ document.querySelectorAll('.ck-memo').forEach(autoGrow); }
   }catch(err){ showError("화면 표시("+activeTab+" 탭)", err); }
 }
 
@@ -782,39 +790,67 @@ function getCheck(p,stage,idx){ return ((p.checkState||{})[stage]||{})[idx]||nul
 function renderChecklist(p,stage){
   const items=STAGE_CHECKLIST[stage]||[];
   const done=items.filter((_,i)=>getCheck(p,stage,i) && getCheck(p,stage,i).done).length;
+  const sid=stageId(stage);
+  let amtSum=0;
   const rows=items.map((c,i)=>{
     const cs=getCheck(p,stage,i)||{};
-    // 이 항목에 첨부된 서류 기록(같은 stage + checkRef=i)
     const docs=entries.filter(e=>e.stage===stage && e.checkRef===i);
     const files=docs.flatMap(e=>e.files||[]);
     const fileHtml=files.map((f)=>{
       const isImg=(f.type||"").startsWith("image/");
       return `<a class="ck-file" href="${isImg?'javascript:void(0)':f.url}" ${isImg?`onclick="openViewer('${jsstr(f.url)}','${jsstr(f.name)}');return false;"`:'target="_blank" rel="noopener"'}>${isImg?'🖼':'📄'} ${esc(f.name)}</a>`;
     }).join("");
-    return `<div class="ck-item ${cs.done?'on':''}">
+    const needAmt=/납부|비용|대금|수수료|세\b|취득세|인지세|정산|잔금|계약금|중도금|채권/.test(c);
+    const needDate=/일정|신고|등기 신청|확정일자|실행/.test(c);
+    if(needAmt && cs.amount) amtSum+=Number(cs.amount)||0;
+    return `<div class="ck-item ${cs.done?'on':''}" id="ck_${sid}_${i}">
       <label class="ck-row"><input type="checkbox" ${cs.done?'checked':''} onchange="toggleCheck('${jsstr(stage)}',${i},this.checked)"><span>${esc(c)}</span></label>
       <div class="ck-tools">
-        <input class="ck-memo" placeholder="메모…" value="${esc(cs.memo||'')}" onchange="saveCheckMemo('${jsstr(stage)}',${i},this.value)">
+        <textarea class="ck-memo" rows="1" placeholder="메모… (엔터로 줄바꿈)" oninput="autoGrow(this)" onchange="saveCheckField('${jsstr(stage)}',${i},'memo',this.value)">${esc(cs.memo||'')}</textarea>
         <button class="ck-add" onclick="addCheckDoc('${jsstr(stage)}',${i})" title="서류/사진 첨부">📎</button>
+      </div>
+      <div class="ck-extra">
+        ${needDate?`<label class="ck-mini">📅 날짜 <input type="date" value="${esc(cs.date||'')}" onchange="saveCheckField('${jsstr(stage)}',${i},'date',this.value)"></label>${cs.date?`<span class="ck-tag">${cs.date}</span>`:''}`:''}
+        ${needAmt?`<label class="ck-mini">💰 금액 <input type="number" placeholder="원" value="${cs.amount!=null?cs.amount:''}" oninput="saveCheckAmount('${jsstr(stage)}',${i},this.value)"></label><span class="ck-tag" id="ckamt_${sid}_${i}">${cs.amount?Number(cs.amount).toLocaleString()+'원':''}</span>`:''}
       </div>
       ${fileHtml?`<div class="ck-files">${fileHtml}</div>`:''}
     </div>`;
   }).join("");
-  return `<div class="checklist"><div class="checklist-h">✔ 점검 체크리스트 <span style="font-weight:500;color:var(--ink-soft)">(${done}/${items.length})</span></div>${rows}</div>`;
+  const sumHtml = amtSum>0 ? `<div class="ck-sum">이 단계 입력 금액 합계: <b>${amtSum.toLocaleString()}원</b></div>` : '';
+  return `<div class="checklist"><div class="checklist-h">✔ 점검 체크리스트 <span id="ckcount_${sid}" style="font-weight:500;color:var(--ink-soft)">(${done}/${items.length})</span></div>${rows}${sumHtml}</div>`;
 }
+function stageId(stage){ return stage.replace(/[^a-zA-Z0-9가-힣]/g,'_'); }
+function autoGrow(t){ t.style.height='auto'; t.style.height=(t.scrollHeight)+'px'; }
 async function toggleCheck(stage,idx,done){
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
   const cs=JSON.parse(JSON.stringify(p.checkState||{}));
   cs[stage]=cs[stage]||{}; cs[stage][idx]=Object.assign({},cs[stage][idx],{done});
-  try{ await db.collection(PROJECTS).doc(currentProjectId).update({checkState:cs}); p.checkState=cs; renderTab(p); }
+  p.checkState=cs;
+  // 화면 전체를 다시 그리지 않고 해당 항목만 토글 + 진행도 갱신 (펼친 공정 유지)
+  const el=document.getElementById('ck_'+stageId(stage)+'_'+idx);
+  if(el) el.classList.toggle('on', done);
+  const items=STAGE_CHECKLIST[stage]||[];
+  const cnt=items.filter((_,i)=>(cs[stage]||{})[i] && cs[stage][i].done).length;
+  const cEl=document.getElementById('ckcount_'+stageId(stage));
+  if(cEl) cEl.textContent='('+cnt+'/'+items.length+')';
+  try{ await db.collection(PROJECTS).doc(currentProjectId).update({checkState:cs}); }
   catch(err){ showError("체크 저장", err); }
 }
-async function saveCheckMemo(stage,idx,memo){
+async function saveCheckField(stage,idx,field,value){
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
   const cs=JSON.parse(JSON.stringify(p.checkState||{}));
-  cs[stage]=cs[stage]||{}; cs[stage][idx]=Object.assign({},cs[stage][idx],{memo});
-  try{ await db.collection(PROJECTS).doc(currentProjectId).update({checkState:cs}); p.checkState=cs; }
-  catch(err){ showError("메모 저장", err); }
+  cs[stage]=cs[stage]||{}; cs[stage][idx]=Object.assign({},cs[stage][idx],{[field]:value});
+  p.checkState=cs;
+  try{ await db.collection(PROJECTS).doc(currentProjectId).update({checkState:cs}); }
+  catch(err){ showError("저장", err); }
+}
+let _amtTimer=null;
+function saveCheckAmount(stage,idx,value){
+  // 입력 즉시 합계 표시 갱신, 저장은 디바운스
+  const tag=document.getElementById('ckamt_'+stageId(stage)+'_'+idx);
+  if(tag) tag.textContent = value? Number(value).toLocaleString()+'원' : '';
+  clearTimeout(_amtTimer);
+  _amtTimer=setTimeout(()=>{ saveCheckField(stage,idx,'amount', value?Number(value):null); },500);
 }
 /* 체크 항목에 서류/사진 첨부 → stage + checkRef=idx 기록으로 저장 */
 function addCheckDoc(stage,idx){
