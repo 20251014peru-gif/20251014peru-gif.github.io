@@ -274,6 +274,16 @@
   table.tbl th{background:#f3f1fb; padding:6px 8px; text-align:left; position:sticky; top:0; font-weight:700; color:var(--ink-soft);}
   table.tbl td{padding:5px 8px; border-top:1px solid var(--line);}
   table.tbl td.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .logrow{display:flex; align-items:center; gap:10px; padding:8px 10px; border-bottom:1px solid var(--line); font-size:13px;}
+  .logrow.head{font-weight:700; color:var(--ink-soft); font-size:11.5px; border-bottom:2px solid var(--line);}
+  .logrow .lr-tag{flex:0 0 110px; color:var(--accent); font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .logrow .lr-title{flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .logrow .lr-vendor{flex:0 0 110px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .logrow .lr-amt{flex:0 0 100px; text-align:right; font-weight:700; font-variant-numeric:tabular-nums;}
+  .logrow .lr-date{flex:0 0 86px; text-align:right; color:var(--ink-soft); font-size:11.5px;}
+  .logrow .lr-btn{flex:0 0 auto; border:1px solid var(--line); background:#fff; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; color:var(--accent);}
+  .logrow .lr-btn.del{color:var(--danger);}
+  @media(max-width:680px){ .logrow .lr-vendor{display:none;} .logrow .lr-tag{flex-basis:70px;} }
 
   /* 필터바 */
   .filterbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center;}
@@ -358,7 +368,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v2.5</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v2.6</span></h1>
   <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
   <a class="home" href="index.html">← 홈</a>
 </header>
@@ -472,6 +482,34 @@
     <div class="modal-acts">
       <button class="btn btn-primary" onclick="runDiagnostics()">↻ 다시 점검</button>
       <button class="btn btn-line" onclick="closeModal('diagModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 비용 수정 모달 -->
+<div class="modal-bg" id="costEditModal">
+  <div class="modal">
+    <h3>✏ 비용 수정</h3>
+    <input type="hidden" id="ce_id">
+    <div class="field"><label>항목명 *</label><input id="ce_title"></div>
+    <div class="row2">
+      <div class="field"><label>날짜</label><input id="ce_date" type="date"></div>
+      <div class="field"><label>금액 (원)</label><input id="ce_amount" type="number"></div>
+    </div>
+    <div class="field"><label>종류</label>
+      <select id="ce_kind" onchange="ceKindChange()">
+        <option value="자재비">자재·공사비</option><option value="기타비용">기타비용</option></select></div>
+    <div class="field" id="ce_g_stage"><label>공정</label><select id="ce_stage"></select></div>
+    <div class="field" id="ce_g_cat"><label>세부 항목</label><select id="ce_cat"></select></div>
+    <div class="row2">
+      <div class="field"><label>거래처</label><input id="ce_vendor" list="vendorList"></div>
+      <div class="field"><label>결제 수단</label>
+        <select id="ce_pay"><option>세금계산서</option><option>은행이체</option><option>카드</option><option>현금</option><option>기타</option></select></div>
+    </div>
+    <div class="field"><label>메모</label><textarea id="ce_memo"></textarea></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveCostEdit()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('costEditModal')">취소</button>
     </div>
   </div>
 </div>
@@ -1127,7 +1165,11 @@ function viewCost(p){
         <table class="ctable"><thead><tr><th>거래처</th><th class="num">금액(원)</th></tr></thead>
         <tbody>${venRows||'<tr><td colspan="2" style="color:var(--ink-soft)">거래처 입력된 지출 없음</td></tr>'}</tbody></table></div></div>
     </div>
-    <div class="panel"><div class="panel-h">📋 지출 내역</div><div class="panel-body">
+    <div class="panel"><div class="panel-h">📋 지출 내역
+      <span style="margin-left:auto;display:inline-flex;gap:4px">
+        <button class="mini-chip ${(window._costView||'card')==='card'?'on':''}" onclick="window._costView='card';renderTab(projects.find(x=>x.id===currentProjectId))">카드형</button>
+        <button class="mini-chip ${window._costView==='list'?'on':''}" onclick="window._costView='list';renderTab(projects.find(x=>x.id===currentProjectId))">목록형</button>
+      </span></div><div class="panel-body">
       <div class="filterbar">
         <select onchange="costFilter.stage=this.value;renderTab(projects.find(x=>x.id===currentProjectId))">
           <option ${costFilter.stage==='전체'?'selected':''}>전체</option>
@@ -1135,13 +1177,22 @@ function viewCost(p){
         <select onchange="costFilter.kind=this.value;renderTab(projects.find(x=>x.id===currentProjectId))">
           ${["전체","자재비","기타비용"].map(k=>`<option ${costFilter.kind===k?'selected':''}>${k}</option>`).join("")}</select>
         <select onchange="costFilter.pay=this.value;renderTab(projects.find(x=>x.id===currentProjectId))">
-          ${["전체","세금계산서","은행이체","카드","현금"].map(k=>`<option ${costFilter.pay===k?'selected':''}>${k}</option>`).join("")}</select>
+          ${["전체","세금계산서","은행이체","카드","현금","기타"].map(k=>`<option ${costFilter.pay===k?'selected':''}>${k}</option>`).join("")}</select>
         <input type="text" id="costSearchInput" placeholder="제목·거래처·메모 검색" value="${esc(costFilter.q)}"
           oninput="onCostSearch(this.value)">
         <b style="margin-left:auto" id="costListSum">${list.length}건 · ${listSum.toLocaleString()}원</b>
       </div>
-      <div id="costList">${list.length? list.map(renderLog).join("") : '<div class="ai-empty">조건에 맞는 지출이 없습니다.</div>'}</div>
+      <div id="costList">${renderCostList(list)}</div>
     </div></div>`;
+}
+function renderCostList(list){
+  if(!list.length) return '<div class="ai-empty">조건에 맞는 지출이 없습니다.</div>';
+  const compact = window._costView==='list';
+  if(compact){
+    const head=`<div class="logrow head"><span class="lr-tag">분류</span><span class="lr-title">항목</span><span class="lr-vendor">거래처</span><span class="lr-amt">금액</span><span class="lr-date">날짜</span><span style="width:84px"></span></div>`;
+    return head+list.map(e=>renderLog(e,{compact:true})).join("");
+  }
+  return list.map(e=>renderLog(e)).join("");
 }
 function costFiltered(){
   const withAmt=entries.filter(e=>Number(e.amount)>0);
@@ -1156,7 +1207,7 @@ function onCostSearch(v){
   costFilter.q=v;
   const list=costFiltered();
   const box=document.getElementById("costList"), sum=document.getElementById("costListSum");
-  if(box) box.innerHTML = list.length? list.map(renderLog).join("") : '<div class="ai-empty">조건에 맞는 지출이 없습니다.</div>';
+  if(box) box.innerHTML = renderCostList(list);
   if(sum) sum.textContent = list.length+"건 · "+list.reduce((s,e)=>s+Number(e.amount),0).toLocaleString()+"원";
 }
 function barRow(label,amt,sum){const w=sum?Math.round(amt/sum*100):0;
@@ -1369,6 +1420,19 @@ function viewSearch(p){
 /* ===== 공통 렌더 ===== */
 function renderLog(e, opts){
   opts=opts||{};
+  // 한 줄 목록형 (compact)
+  if(opts.compact){
+    const kindTag = e.kind==="자재비"?(e.stage||'자재'):(e.cat||e.kind||'');
+    return `<div class="logrow">
+      <span class="lr-tag">${esc(kindTag)}</span>
+      <span class="lr-title">${esc(e.title)}</span>
+      <span class="lr-vendor">${esc(e.vendor||'')}</span>
+      <span class="lr-amt">${e.amount?Number(e.amount).toLocaleString()+'원':''}</span>
+      <span class="lr-date">${e.date||''}</span>
+      ${opts.noEdit?'':`<button class="lr-btn" onclick="editCost('${e.id}')">수정</button>`}
+      ${opts.noDelete?'':`<button class="lr-btn del" onclick="deleteEntry('${e.id}')">삭제</button>`}
+    </div>`;
+  }
   const files=(e.files||[]).map(f=>{
     const isImg=(f.type||"").startsWith("image/");
     if(isImg) return `<a class="file" href="javascript:void(0)" onclick="openViewer('${jsstr(f.url)}','${jsstr(f.name)}')"><img src="${f.url}"><span class="fname">${esc(f.name)}</span></a>`;
@@ -1386,9 +1450,10 @@ function renderLog(e, opts){
     (e.cat&&e.kind==="자재비")?`<span class="l-tag">${e.cat}</span>`:'',
     (e.pay&&e.amount)?`<span class="l-tag">${e.pay}</span>`:''
   ].join("");
+  const editBtn = (opts.noEdit||!(e.kind==="자재비"||e.kind==="기타비용"))? '' : `<button class="l-del" style="color:var(--accent)" onclick="editCost('${e.id}')">수정</button>`;
   const delBtn = opts.noDelete? '' : `<button class="l-del" onclick="deleteEntry('${e.id}')">삭제</button>`;
   return `<div class="log">
-    <div class="l-top">${tags}<span class="l-title">${esc(e.title)}</span><span class="l-date">${e.date||''}</span>${delBtn}</div>
+    <div class="l-top">${tags}<span class="l-title">${esc(e.title)}</span><span class="l-date">${e.date||''}</span>${editBtn}${delBtn}</div>
     ${(e.vendor||e.amount)?`<div class="l-meta">${e.vendor?'거래처 '+esc(e.vendor):''}${e.vendor&&e.amount?' · ':''}${e.amount?'<b>'+Number(e.amount).toLocaleString()+'원</b>':''}</div>`:''}
     ${e.memo?`<div class="l-memo">${esc(e.memo)}</div>`:''}
     ${files?`<div class="files">${files}</div>`:''}</div>`;
@@ -1928,6 +1993,60 @@ const QE_OPTIONS={
   "교통/주유비":["상행","하행","주유"],
   "가스충전비":["상행","하행","충전"]
 };
+/* ===== 비용 수정 ===== */
+function ceFillCat(){
+  const k=document.getElementById("ce_kind").value;
+  const stage=document.getElementById("ce_stage").value;
+  const sel=document.getElementById("ce_cat");
+  let opts=[];
+  if(k==="자재비"){ opts=(STAGE_CATS[stage]||[]).concat(COMMON_CATS); }
+  else { opts=ETC_CATS; }
+  const cur=sel.value;
+  sel.innerHTML=opts.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join("");
+}
+function ceKindChange(){
+  const k=document.getElementById("ce_kind").value;
+  document.getElementById("ce_g_stage").style.display = k==="자재비"?"block":"none";
+  ceFillCat();
+}
+function editCost(id){
+  const e=entries.find(x=>x.id===id); if(!e) return;
+  document.getElementById("ce_id").value=id;
+  document.getElementById("ce_title").value=e.title||"";
+  document.getElementById("ce_date").value=e.date||"";
+  document.getElementById("ce_amount").value=e.amount!=null?e.amount:"";
+  document.getElementById("ce_kind").value=(e.kind==="기타비용")?"기타비용":"자재비";
+  document.getElementById("ce_stage").innerHTML='<option value="">(미지정)</option>'+STAGES.map(s=>`<option ${e.stage===s?'selected':''}>${s}</option>`).join("");
+  document.getElementById("ce_vendor").value=e.vendor||"";
+  document.getElementById("vendorList").innerHTML=vendors.map(v=>`<option value="${esc(v.name)}">`).join("");
+  document.getElementById("ce_pay").value=e.pay||"카드";
+  document.getElementById("ce_memo").value=e.memo||"";
+  ceKindChange();
+  // cat 선택 복원
+  if(e.cat){ const sel=document.getElementById("ce_cat"); if(![...sel.options].some(o=>o.value===e.cat)){ sel.innerHTML+=`<option>${e.cat}</option>`; } sel.value=e.cat; }
+  openModal("costEditModal");
+}
+async function saveCostEdit(){
+  const id=document.getElementById("ce_id").value;
+  const title=document.getElementById("ce_title").value.trim();
+  if(!title){ alert("항목명을 입력하세요."); return; }
+  const k=document.getElementById("ce_kind").value;
+  const upd={
+    title, date:document.getElementById("ce_date").value||today(),
+    kind:k, amount:Number(document.getElementById("ce_amount").value)||null,
+    stage:k==="자재비"?(document.getElementById("ce_stage").value||null):null,
+    cat:document.getElementById("ce_cat").value||null,
+    vendor:document.getElementById("ce_vendor").value.trim(),
+    pay:document.getElementById("ce_pay").value,
+    memo:document.getElementById("ce_memo").value.trim()
+  };
+  try{
+    await db.collection(ENTRIES).doc(id).update(upd);
+    closeModal("costEditModal");
+    await reloadCurrent();
+  }catch(err){ showError("비용 수정", err); }
+}
+
 /* ===== 엑셀 비용 가져오기 ===== */
 // 엑셀 "구분" → 앱 분류 매핑
 const XL_MAP = {
