@@ -36,6 +36,12 @@ header{background:linear-gradient(135deg,#e3eefb 0%,#e6f5ef 60%,#eaf0fb 100%);bo
 .home-link{color:var(--ink-soft);text-decoration:none;font-size:13px;border:1px solid var(--line);background:#fff;padding:6px 12px;border-radius:8px}
 .home-link:hover{color:var(--primary-deep);border-color:var(--primary)}
 nav.tabs{display:flex;gap:4px;margin-top:16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tabs-wrap{position:relative;display:flex;align-items:flex-end}
+.tabs-wrap nav.tabs{flex:1;scrollbar-width:none}
+.tabs-wrap nav.tabs::-webkit-scrollbar{display:none}
+.tab-arrow{flex:0 0 auto;align-self:stretch;margin-top:16px;border:none;background:linear-gradient(90deg,rgba(243,247,251,.95),rgba(243,247,251,.4));color:var(--primary-deep);font-size:20px;font-weight:700;cursor:pointer;padding:0 6px;display:none;border-radius:8px}
+.tab-arrow.right{background:linear-gradient(270deg,rgba(243,247,251,.95),rgba(243,247,251,.4))}
+.tab-arrow.show{display:block}
 nav.tabs button{flex:0 0 auto;border:none;background:transparent;font-family:inherit;font-size:15px;font-weight:600;color:var(--ink-soft);padding:9px 12px;border-radius:9px 9px 0 0;cursor:pointer;position:relative;white-space:nowrap}
 nav.tabs button.active{color:var(--primary-deep);background:rgba(255,255,255,.6)}
 nav.tabs button.active::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:3px;background:var(--primary);border-radius:3px}
@@ -106,6 +112,8 @@ table.rec tbody tr:nth-child(even){background:#f8fbfe}
 table.rec tbody tr:hover{background:var(--primary-soft)}
 table.rec td.num{text-align:right;font-variant-numeric:tabular-nums}
 table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
+td.clip[data-tip]:hover::after{content:attr(data-tip);position:absolute;z-index:60;left:12px;margin-top:18px;max-width:360px;white-space:pre-wrap;background:#33567d;color:#fff;font-size:12.5px;line-height:1.5;padding:9px 12px;border-radius:10px;box-shadow:0 8px 26px rgba(63,124,184,.25);pointer-events:none}
+td.clip[data-tip]:hover{position:relative}
 .rowdel{background:none;border:none;cursor:pointer;font-size:16px;padding:4px 7px;border-radius:8px;line-height:1}
 .rowdel:hover{background:var(--peach-soft)}
 .ccheck{width:20px;height:20px;cursor:pointer}
@@ -224,24 +232,28 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v12</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v13</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
       </div>
     </div>
-    <nav class="tabs" id="tabs">
-      <button data-tab="work" class="active">업무</button>
-      <button data-tab="plan">오늘계획</button>
-      <button data-tab="memo">메모</button>
-      <button data-tab="call">통화</button>
-      <button data-tab="vacation">휴가</button>
-      <button data-tab="meeting">회의메모</button>
-      <button data-tab="deliver">전달사항</button>
-      <button data-tab="calendar">달력</button>
-      <button data-tab="diag">자가진단</button>
-      <button data-tab="ai">AI</button>
-    </nav>
+    <div class="tabs-wrap">
+      <button class="tab-arrow left" id="tabArrowL" aria-label="이전 탭">‹</button>
+      <nav class="tabs" id="tabs">
+        <button data-tab="work" class="active">업무</button>
+        <button data-tab="plan">오늘계획</button>
+        <button data-tab="memo">메모</button>
+        <button data-tab="call">통화</button>
+        <button data-tab="vacation">휴가</button>
+        <button data-tab="meeting">회의메모</button>
+        <button data-tab="deliver">전달사항</button>
+        <button data-tab="calendar">달력</button>
+        <button data-tab="diag">자가진단</button>
+        <button data-tab="ai">AI</button>
+      </nav>
+      <button class="tab-arrow right" id="tabArrowR" aria-label="다음 탭">›</button>
+    </div>
   </div>
 </header>
 
@@ -336,7 +348,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
       <input type="text" id="callSearch" class="search" placeholder="🔍 통화 검색 — 상대·번호·내용">
       <div class="table-wrap">
         <table class="rec"><thead><tr>
-          <th>날짜</th><th>시간</th><th>구분</th><th>상대</th><th>전화번호</th><th>통화내용</th><th>조치</th><th>완료</th><th></th>
+          <th>날짜</th><th>시간</th><th>구분</th><th>상대</th><th>전화번호</th><th>통화내용</th><th>조치</th><th title="후속조치 완료 여부">조치완료</th><th></th>
         </tr></thead><tbody id="callBody"></tbody></table>
       </div>
       <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">선택한 기간의 통화만 복사됩니다 · 순서: 날짜·구분·상대·전화번호·통화내용·조치</p>
@@ -381,7 +393,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
       <input type="text" id="delSearch" class="search" placeholder="🔍 전달사항 검색">
       <div class="table-wrap">
         <table class="rec"><thead><tr>
-          <th>날짜</th><th>제목</th><th>전달할 내용</th><th>완료</th><th></th>
+          <th>날짜</th><th>제목</th><th>전달할 내용</th><th title="전달 완료 여부">전달완료</th><th></th>
         </tr></thead><tbody id="delBody"></tbody></table>
       </div>
       <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">선택한 기간의 전달사항만 복사됩니다 · 순서: 날짜·제목·내용</p>
@@ -511,7 +523,7 @@ table.rec td.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* ===== 설정 ===== */
-const APP_VERSION = "v12";
+const APP_VERSION = "v13";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -532,6 +544,17 @@ const FIELDS = {
 const FIELD_GROUP={};
 Object.entries(FIELDS).forEach(([g,arr])=>arr.forEach(it=>{ if(typeof it==="string") FIELD_GROUP[it]=g; else { FIELD_GROUP[it.name]=g; (it.subs||[]).forEach(s=>FIELD_GROUP[s]=g); } }));
 const GROUP_CLASS={"시설":"tech","환경":"env","행정/문서":"admin","기타":"etc"};
+const FIELD_HINT={
+  "품의서":"품의서 작성/상신 건이면 업무내역 제목에 '품의서'를 함께 적어두면 검색이 쉬워요.",
+  "전표":"전표 처리 건은 제목에 대상·금액을 함께 적어두면 좋아요.",
+  "안내문":"안내문 게시/배포 건은 제목에 대상(동·층)을 적어두면 좋아요.",
+  "관리비":"관리비 관련 건은 제목에 항목(부과/정산 등)을 적어두면 좋아요.",
+  "임대":"임대 관련 건은 제목에 호실·임차인을 적어두면 좋아요.",
+  "월간점검":"월간점검 결과는 제목에 점검 대상·일자를 적어두면 좋아요.",
+  "주간점검":"주간점검 결과는 제목에 점검 구역을 적어두면 좋아요.",
+  "협력업체점검":"협력업체점검은 제목에 업체명·점검항목을 적어두면 좋아요.",
+  "소방":"소방 점검/조치는 제목에 설비(소화전·스프링클러 등)와 위치를 적어두면 좋아요."
+};
 function fieldClass(f){ return GROUP_CLASS[FIELD_GROUP[f]]||"etc"; }
 function statusClass(s){ return s==="완료"?"done":s==="진행중"?"prog":"todo"; }
 function statusColor(s){ return s==="완료"?"var(--mint)":s==="진행중"?"var(--gold)":"var(--peach)"; }
@@ -591,7 +614,13 @@ const nowTime = () => { const d=new Date(); return `${String(d.getHours()).padSt
 const clockStr = ts => { if(!ts) return ""; const d=new Date(ts); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
 const $ = id => document.getElementById(id);
 const esc = s => (s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
-function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
+function toast(msg){ const t=$("toast"); t.innerHTML=esc(msg); t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
+function toastAction(msg, btnLabel, onClick, ms){
+  const t=$("toast"); t.innerHTML=`<span>${esc(msg)}</span> <button id="toastBtn" style="margin-left:10px;background:rgba(255,255,255,.25);color:#fff;border:none;border-radius:8px;padding:4px 12px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer">${esc(btnLabel)}</button>`;
+  t.classList.add("show"); clearTimeout(t._t);
+  const btn=$("toastBtn"); if(btn) btn.addEventListener("click",()=>{ t.classList.remove("show"); clearTimeout(t._t); onClick(); });
+  t._t=setTimeout(()=>t.classList.remove("show"), ms||6000);
+}
 function metaLine(parts){ return parts.filter(Boolean).map(esc).join(" · "); }
 function byDateDesc(a,b){ return (b.date||"").localeCompare(a.date||"")||((b.createdAt||0)-(a.createdAt||0)); }
 function cleanCell(s){ return (s||"").toString().replace(/[\t\r\n]/g," "); }
@@ -666,6 +695,25 @@ function syncSet(id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.c
 function addRecord(data){ const id=genId(); const rec={...data,id}; entries.push(rec); if(online) syncSet(id,rec); lsSave(); return rec; }
 function updateRecord(id,patch){ const i=entries.findIndex(x=>x.id===id); if(i<0) return; entries[i]={...entries[i],...patch}; if(online) syncSet(id,entries[i]); lsSave(); }
 function deleteRecord(id){ entries=entries.filter(x=>x.id!==id); if(online) db.collection(COL).doc(id).delete().catch(e=>logErr("삭제 동기화", e)); lsSave(); }
+/* 삭제 직전 임시백업 + 되돌리기 */
+const TEMP_BK="wl_tempbackup";
+function saveTempBackup(){ try{ localStorage.setItem(TEMP_BK, JSON.stringify({at:Date.now(),entries})); }catch(e){} }
+function restoreRecord(rec){
+  if(!rec) return;
+  const i=entries.findIndex(x=>x.id===rec.id);
+  if(i<0) entries.push(rec); else entries[i]=rec;
+  if(online){ const {id,...p}=rec; db.collection(COL).doc(rec.id).set(p).catch(e=>logErr("복구 동기화", e)); }
+  lsSave();
+}
+function deleteWithUndo(id, label){
+  const rec=entries.find(x=>x.id===id); if(!rec) return;
+  const backup=JSON.parse(JSON.stringify(rec));   // 깊은 복사로 보관
+  saveTempBackup();                               // 전체 임시백업
+  deleteRecord(id); renderAll();
+  toastAction(`${label||"항목"}을(를) 삭제했습니다`, "되돌리기", ()=>{
+    restoreRecord(backup); renderAll(); toast("삭제를 되돌렸습니다");
+  });
+}
 async function loadAll(){
   if(online){
     try{
@@ -720,9 +768,23 @@ function activateTab(name){
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
   document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
   btn.classList.add("active"); $("panel-"+name).classList.add("active");
+  try{ btn.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){}
   try{ localStorage.setItem("wl_tab", name); }catch(e){}
 }
 $("tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; activateTab(b.dataset.tab); });
+(function(){
+  const nav=$("tabs"), L=$("tabArrowL"), R=$("tabArrowR");
+  function upd(){
+    const max=nav.scrollWidth-nav.clientWidth-2;
+    L.classList.toggle("show", nav.scrollLeft>2);
+    R.classList.toggle("show", nav.scrollLeft<max && max>0);
+  }
+  L.addEventListener("click",()=>nav.scrollBy({left:-160,behavior:"smooth"}));
+  R.addEventListener("click",()=>nav.scrollBy({left:160,behavior:"smooth"}));
+  nav.addEventListener("scroll",upd);
+  window.addEventListener("resize",upd);
+  setTimeout(upd,200);
+})();
 
 /* ===== 공용 모달 ===== */
 let mKind=null, mId=null, modalPhotos=[];
@@ -740,7 +802,12 @@ function fieldHTML(f){
   else if(f.type==="status") inner=`<select id="m-${f.k}">${STATUSES.map(o=>`<option>${o}</option>`).join("")}</select>`;
   else if(f.type==="field") inner=`<select id="m-${f.k}">${fieldOptionsHTML()}</select>`;
   else if(f.type==="floor") inner=`<select id="m-${f.k}">${FLOORS.map(o=>`<option value="${o}">${o===""?"(층 선택 안 함)":o}</option>`).join("")}</select>`;
-  else { const t=f.type==="number"?"number":f.type==="date"?"date":f.type==="time"?"time":"text"; const im=f.type==="tel"?' inputmode="tel"':''; inner=`<input type="${t}" id="m-${f.k}"${im}>`; }
+  else { const t=f.type==="number"?"number":f.type==="date"?"date":f.type==="time"?"time":"text"; const im=f.type==="tel"?' inputmode="tel"':'';
+    if(f.k==="loc"){
+      const vals=[...new Set(entries.filter(e=>e.kind==="work"&&e.loc).map(e=>e.loc))].sort();
+      inner=`<input type="text" id="m-${f.k}" list="dl-loc" autocomplete="off"><datalist id="dl-loc">${vals.map(v=>`<option value="${esc(v)}"></option>`).join("")}</datalist>`;
+    } else inner=`<input type="${t}" id="m-${f.k}"${im}>`;
+  }
   const req=f.req?' <span class="req">*</span>':'';
   return `<div class="field ${f.full?"full":""}"><label>${f.label}${req}</label>${inner}</div>`;
 }
@@ -756,6 +823,16 @@ function openEditor(kind,id){
   modalPhotos=hasPhoto?((data.photos||[]).slice()):[];
   renderModalThumbs();
   $("mDelete").style.display=id?"":"none";
+  if(kind==="work"){
+    const fe=$("m-field"), te=$("m-title");
+    if(fe&&te){
+      const hintBox=document.createElement("div");
+      hintBox.id="fieldHint"; hintBox.style.cssText="grid-column:1/-1;font-size:12.5px;color:var(--primary-deep);background:var(--primary-soft);border-radius:9px;padding:8px 11px;display:none";
+      te.closest(".field").after(hintBox);
+      const showHint=()=>{ const h=FIELD_HINT[fe.value]; if(h){ hintBox.textContent="💡 "+h; hintBox.style.display=""; } else hintBox.style.display="none"; };
+      fe.addEventListener("change",showHint); showHint();
+    }
+  }
   $("overlay").classList.add("show");
   const modalEl=$("overlay").querySelector(".modal"); if(modalEl) modalEl.scrollTop=0;
 }
@@ -777,8 +854,8 @@ function openViewer(kind,id){
     rows+=vrow("날짜",data.date)+vrow("할 일",data.text)+vrow("상태",data.done?"완료":"미완료");
   } else {
     (SCHEMA[kind]||[]).forEach(f=>{ const val=fmtVal(f,data[f.k]); if(val) rows+=vrow(f.label.replace(/\s*\*$/,""),val); });
-    if(kind==="call") rows+=vrow("완료",data.done?"완료":"미완료");
-    if(kind==="deliver") rows+=vrow("완료",data.done?"완료":"미완료");
+    if(kind==="call") rows+=vrow("조치완료",data.done?"완료":"미완료");
+    if(kind==="deliver") rows+=vrow("전달완료",data.done?"완료":"미완료");
     if(kind==="vacation"){ /* schema covers */ }
   }
   let photos="";
@@ -790,7 +867,7 @@ function openViewer(kind,id){
 function vrow(k,v){ return `<div class="vrow"><div class="vk">${esc(k)}</div><div class="vv">${esc(String(v))}</div></div>`; }
 $("vClose").addEventListener("click",()=>$("viewOverlay").classList.remove("show"));
 $("vEdit").addEventListener("click",()=>{ $("viewOverlay").classList.remove("show"); openEditor(vKind,vId); });
-$("vDel").addEventListener("click",()=>{ if(!vId||!confirm("이 항목을 삭제할까요?")) return; deleteRecord(vId); $("viewOverlay").classList.remove("show"); renderAll(); toast("삭제되었습니다"); });
+$("vDel").addEventListener("click",()=>{ if(!vId) return; $("viewOverlay").classList.remove("show"); deleteWithUndo(vId, KIND_LABEL[vKind]||"항목"); });
 $("viewOverlay").addEventListener("click",e=>{ if(e.target===$("viewOverlay")) $("viewOverlay").classList.remove("show"); });
 $("m-cam").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("m-file").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
@@ -805,7 +882,7 @@ $("mSave").addEventListener("click",()=>{
   if(mId) updateRecord(mId,obj); else { obj.createdAt=Date.now(); if(mKind==="plan") obj.done=false; addRecord(obj); }
   renderAll(); $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
 });
-$("mDelete").addEventListener("click",()=>{ if(!mId||!confirm("이 항목을 삭제할까요?")) return; deleteRecord(mId); renderAll(); $("overlay").classList.remove("show"); toast("삭제되었습니다"); });
+$("mDelete").addEventListener("click",()=>{ if(!mId) return; $("overlay").classList.remove("show"); deleteWithUndo(mId, KIND_LABEL[mKind]||"항목"); });
 document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>openEditor(b.dataset.add,null)));
 
 /* ===== 검색 ===== */
@@ -825,7 +902,7 @@ function wireCards(scope){
   scope.querySelectorAll("[data-id][data-kind]").forEach(el=>{
     el.addEventListener("click",e=>{ if(e.target.closest("a,img,button,input,.cb")) return; openViewer(el.dataset.kind, el.dataset.id); });
     const ed=el.querySelector("[data-edit]"); if(ed) ed.addEventListener("click",e=>{ e.stopPropagation(); openEditor(el.dataset.kind, el.dataset.id); });
-    const dl=el.querySelector("[data-del]"); if(dl) dl.addEventListener("click",e=>{ e.stopPropagation(); if(!confirm("삭제할까요?")) return; deleteRecord(el.dataset.id); renderAll(); toast("삭제되었습니다"); });
+    const dl=el.querySelector("[data-del]"); if(dl) dl.addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(el.dataset.id, KIND_LABEL[el.dataset.kind]||"항목"); });
     const cb=el.querySelector(".cb"); if(cb) cb.addEventListener("click",e=>{ e.stopPropagation(); if(el.dataset.kind==="plan") togglePlanDone(el.dataset.id); });
   });
 }
@@ -873,16 +950,16 @@ function renderWork(){
     <td>${esc(en.floor||"")}</td>
     <td>${esc(en.loc||"")}</td>
     <td>${esc(en.title||"")}${(en.photos&&en.photos.length)?" 📷":""}</td>
-    <td class="clip" title="${esc(en.detail||"")}">${esc(en.detail||"")}</td>
+    <td class="clip" data-tip="${esc(en.detail||"")}" title="${esc(en.detail||"")}">${esc(en.detail||"")}</td>
     <td><span class="pill ${fieldClass(en.field)}">${esc(en.field||"")}</span></td>
     <td>${esc(en.material||"")}</td>
     <td class="num">${en.cost?won(en.cost):""}</td>
-    <td class="clip" title="${esc(en.improve||"")}">${esc(en.improve||"")}</td>
+    <td class="clip" data-tip="${esc(en.improve||"")}" title="${esc(en.improve||"")}">${esc(en.improve||"")}</td>
     <td><button class="rowdel" data-del="${en.id}" title="삭제">🗑</button></td></tr>`).join("");
   const totalCost=list.reduce((s,en)=>s+(Number(en.cost)||0),0);
   foot.innerHTML=`<tr><td colspan="8" style="background:#33567d;color:#fff;font-weight:700">합계 (${list.length}건)</td><td class="num" style="background:#33567d;color:#fff;font-weight:700">${totalCost?won(totalCost):""}</td><td colspan="2" style="background:#33567d"></td></tr>`;
   body.querySelectorAll("tr[data-id]").forEach(tr=>tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openViewer("work",tr.dataset.id); }));
-  body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); if(!confirm("이 업무를 삭제할까요?")) return; deleteRecord(b.dataset.del); renderAll(); toast("삭제되었습니다"); }));
+  body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(b.dataset.del, "업무"); }));
 }
 function workCopyLine(en){
   const head=((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim();
@@ -1142,14 +1219,14 @@ function renderCall(){
     <td><span class="dir ${c.dir==="발신"?"out":"in"}">${esc(c.dir||"")}</span></td>
     <td>${esc(c.name||"")}</td>
     <td>${c.phone?`<a href="tel:${esc(c.phone)}" class="tel">${esc(c.phone)}</a>`:""}</td>
-    <td class="clip" title="${esc(c.content||"")}">${esc(c.content||"")}</td>
-    <td class="clip" title="${esc(c.followup||"")}">${esc(c.followup||"")}</td>
-    <td style="text-align:center"><input type="checkbox" class="ccheck" ${c.done?"checked":""}></td>
+    <td class="clip" data-tip="${esc(c.content||"")}" title="${esc(c.content||"")}">${esc(c.content||"")}</td>
+    <td class="clip" data-tip="${esc(c.followup||"")}" title="${esc(c.followup||"")}">${esc(c.followup||"")}</td>
+    <td style="text-align:center"><input type="checkbox" class="ccheck" title="후속조치 완료 표시" ${c.done?"checked":""}></td>
     <td><button class="rowdel" data-del="${c.id}" title="삭제">🗑</button></td></tr>`).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
     tr.addEventListener("click",e=>{ if(e.target.closest("a,button,input")) return; openViewer("call",tr.dataset.id); });
     const cb=tr.querySelector(".ccheck"); cb.addEventListener("change",()=>updateRecord(tr.dataset.id,{done:cb.checked}));
-    tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); if(!confirm("이 통화 기록을 삭제할까요?")) return; deleteRecord(tr.dataset.id); renderAll(); toast("삭제되었습니다"); });
+    tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(tr.dataset.id, "통화"); });
   });
 }
 $("btnCallExcel").addEventListener("click",()=>{
@@ -1202,13 +1279,13 @@ function renderDeliver(){
   body.innerHTML=list.map(d=>`<tr data-id="${d.id}">
     <td>${d.date||""}</td>
     <td>${esc(d.title||"")}</td>
-    <td class="clip" title="${esc(d.content||"")}">${esc(d.content||"")}</td>
-    <td style="text-align:center"><input type="checkbox" class="ccheck" ${d.done?"checked":""}></td>
+    <td class="clip" data-tip="${esc(d.content||"")}" title="${esc(d.content||"")}">${esc(d.content||"")}</td>
+    <td style="text-align:center"><input type="checkbox" class="ccheck" title="전달 완료 표시" ${d.done?"checked":""}></td>
     <td><button class="rowdel" data-del="${d.id}" title="삭제">🗑</button></td></tr>`).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
     tr.addEventListener("click",e=>{ if(e.target.closest("a,button,input")) return; openViewer("deliver",tr.dataset.id); });
     const cb=tr.querySelector(".ccheck"); cb.addEventListener("change",()=>updateRecord(tr.dataset.id,{done:cb.checked}));
-    tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); if(!confirm("이 전달사항을 삭제할까요?")) return; deleteRecord(tr.dataset.id); renderAll(); toast("삭제되었습니다"); });
+    tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(tr.dataset.id, "전달사항"); });
   });
 }
 $("btnDelExcel").addEventListener("click",()=>{
