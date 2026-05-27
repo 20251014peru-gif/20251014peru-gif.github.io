@@ -133,6 +133,9 @@
   .stage-statusrow{display:flex; gap:6px; padding-top:12px; align-items:center; flex-wrap:wrap;}
   .mini-chip{font-size:12px; padding:5px 12px; border-radius:18px; border:1px solid var(--line); background:#fff; color:var(--ink-soft);}
   .mini-chip.on{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .checklist{margin-top:12px; padding:11px 14px; background:#f3f6f2; border:1px solid #d8e3d6; border-radius:10px;}
+  .checklist-h{font-size:12px; font-weight:700; color:var(--accent); margin-bottom:5px;}
+  .checklist-i{font-size:12.5px; color:var(--ink-soft); padding:2px 0;}
 
   /* 기록 줄 */
   .log{padding:10px 0; border-top:1px dashed var(--line); font-size:13px;}
@@ -182,8 +185,50 @@
   .gallery-group h4{font-size:14px; margin:0 0 10px;}
   .gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px;}
   .gallery a{display:block; border-radius:10px; overflow:hidden; border:1px solid var(--line); text-decoration:none; color:inherit;}
+  .gphoto{position:relative;}
+  .gphoto .gdel{position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:50%;
+    background:rgba(162,59,45,.85); color:#fff; border:none; font-size:16px; line-height:1; cursor:pointer; display:none;}
+  .gphoto:hover .gdel{display:block;}
+  @media(hover:none){ .gphoto .gdel{display:block;} }
   .gallery img{width:100%; height:120px; object-fit:cover; display:block;}
   .gallery .cap{font-size:11px; padding:5px 7px; color:var(--ink-soft); background:#fff;}
+
+  /* 이미지 뷰어 */
+  #imgViewer{position:fixed; inset:0; background:rgba(15,14,11,.92); z-index:300; display:none;
+    align-items:center; justify-content:center; overflow:hidden; touch-action:none;}
+  #imgViewer.open{display:flex;}
+  #ivImg{max-width:92vw; max-height:84vh; transform-origin:center center; cursor:grab;
+    user-select:none; -webkit-user-drag:none; transition:transform .05s linear; will-change:transform;}
+  #ivImg.grabbing{cursor:grabbing;}
+  #ivClose{position:fixed; top:14px; right:16px; width:44px; height:44px; border-radius:50%;
+    background:rgba(255,255,255,.15); color:#fff; border:none; font-size:24px; cursor:pointer; z-index:310;}
+  #ivCtrl{position:fixed; bottom:22px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:310;}
+  #ivCtrl button{width:48px; height:44px; border-radius:10px; background:rgba(255,255,255,.15);
+    color:#fff; border:none; font-size:20px; cursor:pointer;}
+  #ivCtrl button:hover,#ivClose:hover{background:rgba(255,255,255,.28);}
+  #ivCap{position:fixed; top:16px; left:16px; right:70px; color:#eee; font-size:13px; z-index:310;
+    text-shadow:0 1px 3px rgba(0,0,0,.6);}
+  #ivPrev,#ivNext{position:fixed; top:50%; transform:translateY(-50%); width:50px; height:64px;
+    background:rgba(255,255,255,.15); color:#fff; border:none; font-size:28px; cursor:pointer; z-index:310; border-radius:10px;}
+  #ivPrev{left:12px;} #ivNext{right:12px;}
+  #ivPrev:hover,#ivNext:hover{background:rgba(255,255,255,.3);}
+  #ivCount{position:fixed; bottom:74px; left:50%; transform:translateX(-50%); color:#eee; font-size:13px; z-index:310;}
+
+  /* 사진 폴더 */
+  .folders{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px;}
+  .folder{cursor:pointer; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; transition:.12s; box-shadow:var(--shadow);}
+  .folder:hover{transform:translateY(-2px); box-shadow:0 6px 18px rgba(40,38,30,.12);}
+  .folder-cover{position:relative; height:120px; background:#ece8de; display:grid; place-items:center; font-size:32px;}
+  .folder-cover img{width:100%; height:100%; object-fit:cover; display:block;}
+  .folder-badge{position:absolute; top:6px; left:6px; font-size:11px; font-weight:700; background:rgba(0,0,0,.55); color:#fff; padding:2px 8px; border-radius:20px;}
+  .folder-cnt{position:absolute; bottom:6px; right:6px; font-size:11px; font-weight:700; background:rgba(0,0,0,.55); color:#fff; padding:2px 8px; border-radius:20px;}
+  .folder-name{font-weight:600; font-size:13px; padding:8px 10px 2px; line-height:1.3;}
+  .folder-date{font-size:11px; color:var(--ink-soft); padding:0 10px 9px;}
+  .docfile{display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:8px; background:#fafaf7;}
+  .docfile a{display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; flex:1; min-width:0;}
+  .docfile img{width:44px; height:44px; object-fit:cover; border-radius:6px; flex:0 0 auto;}
+  .docfile .fi{width:40px; height:40px; display:grid; place-items:center; background:var(--accent-soft); border-radius:6px; font-weight:700; color:var(--accent); font-size:12px; flex:0 0 auto;}
+  .docfile .fname{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
   /* 필터바 */
   .filterbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center;}
@@ -198,6 +243,15 @@
   .ai-li{margin:3px 0 3px 4px;}
   .ai-foot{margin-top:14px; padding-top:10px; border-top:1px solid var(--line); font-size:12px; display:flex; gap:16px;}
   .ai-foot a{color:var(--ink-soft); text-decoration:none;}
+  .chat-log{max-height:300px; overflow-y:auto; margin-bottom:10px;}
+  .chat-log:empty::before{content:'대화를 시작해 보세요. 기록·비용·공정을 바탕으로 답합니다.'; color:var(--ink-soft); font-size:13px;}
+  .chat-msg{margin:7px 0; display:flex;}
+  .chat-msg.me{justify-content:flex-end;}
+  .chat-bubble{max-width:82%; padding:9px 13px; border-radius:14px; font-size:14px; line-height:1.55; white-space:pre-wrap;}
+  .chat-msg.me .chat-bubble{background:var(--accent); color:#fff; border-bottom-right-radius:4px;}
+  .chat-msg.ai .chat-bubble{background:#eef1f6; color:var(--ink); border-bottom-left-radius:4px;}
+  .chat-input{display:flex; gap:8px;}
+  .chat-input input{flex:1; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; background:#fcfbf8;}
 
   /* 모달 */
   .modal-bg{position:fixed; inset:0; background:rgba(30,28,22,.45); display:none; align-items:flex-start; justify-content:center; z-index:50; padding:36px 16px; overflow-y:auto;}
@@ -238,8 +292,24 @@
 <div id="errBanner"><button class="x" onclick="document.getElementById('errBanner').classList.remove('show')">×</button>
   <b>⚠️ 오류가 발생했습니다</b><span id="errMsg"></span><span class="ex" id="errEx"></span></div>
 
+<!-- 이미지 뷰어 -->
+<div id="imgViewer">
+  <button id="ivClose" title="닫기">×</button>
+  <button id="ivPrev" title="이전" onclick="ivStep(-1)">‹</button>
+  <button id="ivNext" title="다음" onclick="ivStep(1)">›</button>
+  <div id="ivCtrl">
+    <button onclick="ivZoom(-0.3)" title="축소">－</button>
+    <button onclick="ivZoom(0.3)" title="확대">＋</button>
+    <button onclick="ivReset()" title="원래대로">⟲</button>
+    <button id="ivDel" onclick="ivDelete()" title="이 사진 삭제">🗑</button>
+  </div>
+  <img id="ivImg" alt="" draggable="false">
+  <div id="ivCap"></div>
+  <div id="ivCount"></div>
+</div>
+
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리</h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v1.3</span></h1>
   <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
   <a class="home" href="index.html">← 홈</a>
 </header>
@@ -434,8 +504,9 @@ const PROJECTS="realestate_projects", ENTRIES="realestate_entries", VENDORS="rea
 /* ===== AI 설정 (모델명은 다른 페이지와 동일하게 맞추세요) ===== */
 const AI_MODEL = "claude-sonnet-4-6";
 
-/* ===== 셀프 인테리어 공정 단계 (지정 순서) ===== */
+/* ===== 공정 단계 (임장·계약 → 셀프 인테리어 순서) ===== */
 const STAGES = [
+  "임장(현장조사)","계약·잔금",
   "철거","페인트(도장)","샷시/창호","목공","설비·배관",
   "타일·방수","전기·조명","필름","도배","바닥(마루/장판)·전기마감",
   "싱크대·가구","입주청소"
@@ -444,6 +515,8 @@ const STAGES = [
 /* ===== 공정별 자재/세부항목 (검색 자료 기반) ===== */
 const COMMON_CATS = ["인건비/일당","장비/사다리차","폐기물 처리","자재 배송비","부속/잡자재","기타"];
 const STAGE_CATS = {
+  "임장(현장조사)": ["교통/주유비","톨비(통행료)","식비","감정/조사 비용","중개 상담비","기타"],
+  "계약·잔금": ["계약금","중도금","잔금","중개 수수료","법무사 비용","취득세","인지세","채권 매입","기타"],
   "철거": ["철거 인건비","폐기물 처리","종량제봉투","보양재(엘베/바닥)","사다리차"],
   "페인트(도장)": ["수성페인트","유성페인트","젯소/프라이머","퍼티","롤러/붓/트레이","마스킹테이프","사포"],
   "샷시/창호": ["샷시(하이/시스템)","유리","방충망","실리콘/우레탄폼","창호 부속"],
@@ -456,6 +529,11 @@ const STAGE_CATS = {
   "바닥(마루/장판)·전기마감": ["강마루/강화마루","원목마루","장판","바닥 본드/접착제","걸레받이","확장 프로파일","보양재","전기 마감(스위치/조명 설치)"],
   "싱크대·가구": ["싱크대","상부장/하부장","상판(인조대리석/세라믹)","붙박이장","신발장","손잡이/경첩","실리콘 마감"],
   "입주청소": ["입주청소 용역","청소용품/소모품","폐기물 추가처리"]
+};
+/* 임장·계약 단계의 체크리스트(점검 항목) — 아파트 기준 */
+const STAGE_CHECKLIST = {
+  "임장(현장조사)": ["입지·교통·역세권","단지 규모·세대수·연식","층/향/조망·일조","누수·결로·곰팡이 흔적","주차 대수·주차 편의","학군·생활편의(마트·병원)","시세·실거래가 비교","향후 개발 호재/악재"],
+  "계약·잔금": ["등기부등본 소유자=계약자 신분 대조","근저당·가압류 등 권리관계 확인","계약금/중도금/잔금 일정","인감증명서(3개월 이내)·등기권리증","주민등록등본·초본 준비","관리비·공과금·재산세 정산 확인","전입신고·확정일자 계획","대출 실행 일정 확인"]
 };
 
 /* ===== 기타 비용 세부 항목 ===== */
@@ -514,6 +592,7 @@ async function selectProject(id){
   entries=eSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   vendors=vSnap.docs.map(d=>({id:d.id,...d.data()}));
   activeTab="대시보드"; costFilter={stage:"전체",kind:"전체",pay:"전체",q:""}; searchQ="";
+  chatHistory=[]; window._photoOpenId=null; window._docOpenId=null; window._photoStageFilter="전체";
   renderMain();
  }catch(err){ showError("프로젝트 열기", err); }
 }
@@ -552,6 +631,7 @@ function renderTab(p){
       "업체·연락":viewVendors,"서류":viewDocs,"검색":viewSearch
     }[activeTab]||viewDashboard)(p);
     if(activeTab==="검색") renderSearchResult();
+    if(activeTab==="대시보드" && chatHistory.length) renderChat();
   }catch(err){ showError("화면 표시("+activeTab+" 탭)", err); }
 }
 
@@ -593,6 +673,16 @@ function viewDashboard(p){
           <a href="#" onclick="resetKey();return false;">🔑 API 키 변경</a></div>
       </div></div>
 
+    <div class="panel ai"><div class="panel-h">💬 AI 챗봇 <span class="cnt">이 프로젝트에 대해 무엇이든 물어보세요</span></div>
+      <div class="panel-body">
+        <div id="chatLog" class="chat-log"></div>
+        <div class="chat-input">
+          <input type="text" id="chatInput" placeholder="예: 지금까지 어디에 돈을 제일 많이 썼어? / 다음에 뭘 해야 해?" onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="btn btn-ai btn-sm" onclick="sendChat()">전송</button>
+        </div>
+        <div class="ai-foot"><a href="#" onclick="clearChat();return false;">🗑 대화 지우기</a></div>
+      </div></div>
+
     <div class="panel"><div class="panel-h">🕓 최근 활동 <span class="cnt">${entries.length}건 중 최신</span></div>
       <div class="panel-body">${recent.length? recent.map(e=>renderLog(e,{noDelete:true})).join("") : '<div class="ai-empty">기록이 없습니다.</div>'}</div></div>
 
@@ -626,6 +716,7 @@ function viewStages(p){
           ${["대기","진행","완료"].map(s=>`<button class="mini-chip ${st===s?'on':''}" onclick="setStageStatus('${jsstr(stage)}','${s}')">${s}</button>`).join("")}
           <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openEntryModal('${jsstr(stage)}')">+ 이 공정에 기록</button>
         </div>
+        ${STAGE_CHECKLIST[stage]?`<div class="checklist"><div class="checklist-h">✔ 점검 체크리스트</div>${STAGE_CHECKLIST[stage].map(c=>`<div class="checklist-i">· ${c}</div>`).join("")}</div>`:''}
         <div style="margin-top:10px">${logs.length? logs.map(renderLog).join("") : '<div style="color:var(--ink-soft);font-size:13px;padding:8px 0">기록 없음</div>'}</div>
       </div>
     </div>`;}).join("");
@@ -741,22 +832,54 @@ function onCostSearch(v){
 function barRow(label,amt,sum){const w=sum?Math.round(amt/sum*100):0;
   return `<tr><td class="bar-cell"><i style="width:${w}%"></i><span>${esc(label)}</span></td><td class="num">${amt.toLocaleString()}</td></tr>`;}
 
-/* ===== 사진 ===== */
+/* ===== 사진 (폴더형: 제목별로 묶고, 폴더 클릭 시 그 안의 사진만 보기) ===== */
 function viewPhotos(p){
-  const photos=entries.filter(e=>e.kind==="사진");
-  const stages=["전체"].concat([...new Set(photos.map(e=>e.stage).filter(Boolean))]);
+  const photos=entries.filter(e=>e.kind==="사진" && (e.files||[]).some(f=>(f.type||"").startsWith("image/")));
+  // 열린 폴더가 있으면 그 폴더 내부 보기
+  if(window._photoOpenId){
+    const e=photos.find(x=>x.id===window._photoOpenId);
+    if(e){
+      // 원본 files 인덱스를 보존하며 이미지만 추출
+      const imgs=[];
+      (e.files||[]).forEach((f,oi)=>{ if((f.type||"").startsWith("image/")) imgs.push({f,oi}); });
+      const cap=(e.stage?'['+e.stage+'] ':'')+e.title+' · '+(e.date||'');
+      window._ivList=imgs.map(({f,oi})=>({url:f.url, cap:cap+' · '+f.name, entryId:e.id, fileIdx:oi}));
+      return `<div class="panel"><div class="panel-h">
+        <button class="btn btn-line btn-sm" onclick="window._photoOpenId=null;renderTab(projects.find(x=>x.id===currentProjectId))">← 폴더 목록</button>
+        <span style="margin-left:6px">${e.photostage?'['+e.photostage+'] ':''}${esc(e.title)}</span>
+        <span class="cnt">${e.date||''} · 사진 ${imgs.length}장</span>
+        <button class="btn btn-ghost btn-sm add" onclick="editEntryTitle('${e.id}')">✏ 제목 수정</button></div>
+        <div class="panel-body">
+          ${e.memo?`<div class="hint" style="margin-bottom:10px">${esc(e.memo)}</div>`:''}
+          <div class="gallery">${imgs.map(({f,oi},idx)=>`<div class="gphoto"><a href="javascript:void(0)" onclick="openViewerList(${idx})"><img src="${f.url}"><div class="cap">${esc(f.name)}</div></a><button class="gdel" title="사진 삭제" onclick="deletePhoto('${e.id}',${oi})">×</button></div>`).join("")}</div>
+        </div></div>`;
+    }
+    window._photoOpenId=null;
+  }
+  // 전/중/후 필터
+  const stages=["전체","전","중(진행)","후"];
   const cur=window._photoStageFilter||"전체";
-  const filtered=cur==="전체"?photos:photos.filter(e=>e.stage===cur);
-  const groups={"전":[],"중(진행)":[],"후":[]};
-  filtered.forEach(e=>(e.files||[]).forEach(f=>{ if((f.type||"").startsWith("image/")) (groups[e.photostage]||groups["중(진행)"]).push({f,e}); }));
-  const body=["전","중(진행)","후"].filter(g=>groups[g].length).map(g=>`
-    <div class="gallery-group"><h4>${g==='전'?'🔻 시공 전':g==='후'?'🔺 시공 후':'🔧 진행 중'} (${groups[g].length})</h4>
-      <div class="gallery">${groups[g].map(({f,e})=>`<a href="${f.url}" target="_blank" rel="noopener"><img src="${f.url}"><div class="cap">${e.stage?'['+e.stage+'] ':''}${esc(e.title)} · ${e.date||''}</div></a>`).join("")}</div></div>`).join("");
-  return `<div class="panel"><div class="panel-h">📷 전 / 중 / 후 사진
+  const list=(cur==="전체"?photos:photos.filter(e=>e.photostage===cur))
+    .slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  // 폴더 카드들
+  const folders=list.map(e=>{
+    const imgs=(e.files||[]).filter(f=>(f.type||"").startsWith("image/"));
+    const cover=imgs[0];
+    const badge=e.photostage==='전'?'🔻 전':e.photostage==='후'?'🔺 후':'🔧 중';
+    return `<div class="folder" onclick="window._photoOpenId='${e.id}';renderTab(projects.find(x=>x.id===currentProjectId))">
+      <div class="folder-cover">${cover?`<img src="${cover.url}">`:'📷'}<span class="folder-badge">${badge}</span>
+        <span class="folder-cnt">${imgs.length}장</span></div>
+      <div class="folder-name">${esc(e.title)}</div>
+      <div class="folder-date">${e.date||''}${e.stage?' · '+e.stage:''}</div>
+    </div>`;
+  }).join("");
+  return `<div class="panel"><div class="panel-h">📷 사진 폴더 <span class="cnt">${list.length}개</span>
     <button class="btn btn-ghost btn-sm add" onclick="openEntryModal(null,'사진')">+ 사진 추가</button></div>
     <div class="panel-body">
-      <div class="filterbar">${stages.map(s=>`<button class="mini-chip ${cur===s?'on':''}" onclick="window._photoStageFilter='${jsstr(s)}';renderTab(projects.find(x=>x.id===currentProjectId))">${s}</button>`).join("")}</div>
-      ${body||'<div class="ai-empty">아직 사진이 없습니다. ‘+ 사진 추가’로 시공 전/중/후 사진을 올리세요.</div>'}</div></div>`;
+      <div class="filterbar">${stages.map(s=>`<button class="mini-chip ${cur===s?'on':''}" onclick="window._photoStageFilter='${jsstr(s)}';window._photoOpenId=null;renderTab(projects.find(x=>x.id===currentProjectId))">${s}</button>`).join("")}</div>
+      ${list.length?`<div class="folders">${folders}</div>`:'<div class="ai-empty">아직 사진이 없습니다. ‘+ 사진 추가’로 사진을 올리면 제목별 폴더로 정리됩니다.</div>'}
+      <div class="hint" style="margin-top:10px">제목별로 폴더가 만들어집니다. 폴더를 누르면 그 안의 사진을 볼 수 있어요.</div>
+    </div></div>`;
 }
 
 /* ===== 업체·연락 ===== */
@@ -773,13 +896,58 @@ function viewVendors(p){
 }
 
 /* ===== 서류 ===== */
-function viewDocs(p){
+function docEntries(){
+  // 서류 종류 + (이미지 아닌)파일 첨부가 있는 모든 기록
   const seen=new Set(), list=[];
   entries.forEach(e=>{if(e.kind==="서류"){list.push(e);seen.add(e.id);}});
   entries.forEach(e=>{if(!seen.has(e.id)&&e.files&&e.files.some(f=>!(f.type||'').startsWith('image/'))) list.push(e);});
-  return `<div class="panel"><div class="panel-h">📁 서류 · 세금계산서 · 공문서 <span class="cnt">${list.length}건</span>
+  return list.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+}
+function viewDocs(p){
+  const docs=docEntries();
+  // 폴더 열기
+  if(window._docOpenId){
+    const e=docs.find(x=>x.id===window._docOpenId);
+    if(e){
+      const files=e.files||[];
+      return `<div class="panel"><div class="panel-h">
+        <button class="btn btn-line btn-sm" onclick="window._docOpenId=null;renderTab(projects.find(x=>x.id===currentProjectId))">← 서류 목록</button>
+        <span style="margin-left:6px">${esc(e.title)}</span>
+        <span class="cnt">${e.date||''} · 파일 ${files.length}개</span>
+        <button class="btn btn-ghost btn-sm add" onclick="editEntryTitle('${e.id}')">✏ 제목 수정</button></div>
+        <div class="panel-body">
+          ${e.vendor?`<div class="hint">거래처: ${esc(e.vendor)}</div>`:''}
+          ${e.memo?`<div class="hint" style="margin-bottom:10px">${esc(e.memo)}</div>`:''}
+          <div class="files" style="flex-direction:column;align-items:stretch">
+            ${files.length? files.map((f,oi)=>{
+              const isImg=(f.type||"").startsWith("image/");
+              const open=isImg?`onclick="window._ivList=[{url:'${jsstr(f.url)}',cap:'${jsstr(f.name)}'}];ivIndex=0;document.getElementById('imgViewer').classList.add('open');ivShow();return false;"`:'';
+              return `<div class="docfile"><a href="${isImg?'javascript:void(0)':f.url}" ${isImg?open:'target="_blank" rel="noopener"'}>
+                ${isImg?`<img src="${f.url}">`:`<div class="fi">${(f.name||'').toLowerCase().endsWith('.pdf')?'PDF':'파일'}</div>`}
+                <span class="fname">${esc(f.name)}</span></a>
+                <button class="gdel" style="position:static;display:inline-block;flex:0 0 auto" title="파일 삭제" onclick="deletePhoto('${e.id}',${oi})">×</button></div>`;
+            }).join("") : '<div class="ai-empty">첨부된 파일이 없습니다.</div>'}
+          </div>
+        </div></div>`;
+    }
+    window._docOpenId=null;
+  }
+  // 폴더 목록
+  const folders=docs.map(e=>{
+    const files=e.files||[];
+    const pdfCnt=files.filter(f=>!(f.type||'').startsWith('image/')).length;
+    return `<div class="folder" onclick="window._docOpenId='${e.id}';renderTab(projects.find(x=>x.id===currentProjectId))">
+      <div class="folder-cover" style="font-size:38px">📄<span class="folder-cnt">${files.length}개</span></div>
+      <div class="folder-name">${esc(e.title)}</div>
+      <div class="folder-date">${e.date||''}${e.vendor?' · '+esc(e.vendor):''}</div>
+    </div>`;
+  }).join("");
+  return `<div class="panel"><div class="panel-h">📁 서류 폴더 <span class="cnt">${docs.length}개</span>
     <button class="btn btn-ghost btn-sm add" onclick="openEntryModal(null,'서류')">+ 서류 추가</button></div>
-    <div class="panel-body">${list.length? list.map(renderLog).join("") : '<div class="ai-empty">세금계산서·계약서·이체확인증·공문서 등을 첨부해 보관하세요.</div>'}</div></div>`;
+    <div class="panel-body">
+      ${docs.length?`<div class="folders">${folders}</div>`:'<div class="ai-empty">세금계산서·계약서·이체확인증·공문서 등을 첨부해 보관하세요.</div>'}
+      <div class="hint" style="margin-top:10px">제목별로 폴더가 만들어집니다. 폴더를 누르면 첨부 파일을 보거나 제목을 수정할 수 있어요.</div>
+    </div></div>`;
 }
 
 /* ===== 통합검색 =====
@@ -821,7 +989,8 @@ function renderLog(e, opts){
   opts=opts||{};
   const files=(e.files||[]).map(f=>{
     const isImg=(f.type||"").startsWith("image/");
-    return `<a class="file" href="${f.url}" target="_blank" rel="noopener">${isImg?`<img src="${f.url}">`:`<div class="fi">PDF</div>`}<span class="fname">${esc(f.name)}</span></a>`;
+    if(isImg) return `<a class="file" href="javascript:void(0)" onclick="openViewer('${jsstr(f.url)}','${jsstr(f.name)}')"><img src="${f.url}"><span class="fname">${esc(f.name)}</span></a>`;
+    return `<a class="file" href="${f.url}" target="_blank" rel="noopener"><div class="fi">PDF</div><span class="fname">${esc(f.name)}</span></a>`;
   }).join("");
   const tags=[
     e.kind==="문제"?`<span class="l-tag 문제">문제·하자</span>`:'',
@@ -859,7 +1028,8 @@ function getApiKey(){
   return k;
 }
 function resetKey(){localStorage.removeItem('anthropic_key'); if(getApiKey()) alert("API 키가 변경되었습니다.");}
-function buildPrompt(p){
+/* 프로젝트 데이터 요약 (분석/챗봇 공통) */
+function projectSummary(p){
   const withAmt=entries.filter(e=>Number(e.amount)>0);
   const total=withAmt.reduce((s,e)=>s+Number(e.amount),0);
   const stageInfo=STAGES.map(s=>{const st=stageStatus(p,s);
@@ -868,18 +1038,27 @@ function buildPrompt(p){
     return `${s}[${st}${amt?' '+amt.toLocaleString()+'원':''}${probs?' 문제'+probs:''}]`;}).join(" → ");
   const problems=entries.filter(e=>e.kind==="문제").map(e=>`- ${e.stage||''} ${e.title}: ${(e.memo||'').replace(/\s+/g,' ').slice(0,120)}`).join("\n");
   const etc=entries.filter(e=>e.kind==="기타비용"&&Number(e.amount)>0).map(e=>`- ${e.cat}: ${Number(e.amount).toLocaleString()}원`).join("\n");
-  return `당신은 셀프 인테리어/부동산 프로젝트를 점검하는 꼼꼼한 현장 관리자입니다.
-아래 "${p.name}" 프로젝트의 실제 데이터에 근거해서만 분석하고, 추정이면 "추정"이라 표시하세요.
-
-[개요] 주소 ${p.address||'-'} / 상태 ${p.status||'-'} / 시작 ${p.startDate||'-'} / 진행률 ${progressPct(p)}%
+  const byStage={}; withAmt.filter(e=>e.kind==="자재비").forEach(e=>{const k=e.stage||"미지정"; byStage[k]=(byStage[k]||0)+Number(e.amount);});
+  const byVen={}; withAmt.forEach(e=>{if(e.vendor)byVen[e.vendor]=(byVen[e.vendor]||0)+Number(e.amount);});
+  return `[개요] 이름 ${p.name} / 주소 ${p.address||'-'} / 상태 ${p.status||'-'} / 시작 ${p.startDate||'-'} / 진행률 ${progressPct(p)}%${p.budget?' / 예산 '+p.budget.toLocaleString()+'원':''}
 [메모] ${p.memo||'-'}
-[공정 진행(셀프 인테리어 표준순서)]
+[공정 진행(아파트 임장·계약 → 인테리어 순서)]
 ${stageInfo}
-[총 지출] ${total.toLocaleString()}원 (기록 ${entries.length}건)
+[총 지출] ${total.toLocaleString()}원 (지출기록 ${withAmt.length}건, 전체기록 ${entries.length}건)
+[공정별 자재·공사비] ${JSON.stringify(byStage)}
+[거래처별 지출] ${JSON.stringify(byVen)}
 [기타비용]
 ${etc||'없음'}
 [문제·하자 기록]
 ${problems||'없음'}
+[업체 ${vendors.length}곳] ${vendors.map(v=>v.name+'('+(v.trade||'')+')').join(', ')||'없음'}`;
+}
+
+function buildPrompt(p){
+  return `당신은 아파트 인테리어/매입 프로젝트를 점검하는 꼼꼼한 현장 관리자입니다.
+아래 "${p.name}" 프로젝트의 실제 데이터에 근거해서만 분석하고, 추정이면 "추정"이라 표시하세요.
+
+${projectSummary(p)}
 
 다음 형식(마크다운)으로 한국어로 간결하게:
 ## 진행 상황
@@ -913,6 +1092,43 @@ async function runAnalysis(){
 function mdLite(t){let h=esc(t).replace(/^#{2,3}\s*(.*)$/gm,'<div class="ai-h">$1</div>')
   .replace(/^\s*[-*]\s+(.*)$/gm,'<div class="ai-li">• $1</div>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
   .replace(/\n/g,'<br>').replace(/(<\/div>)<br>/g,'$1'); return '<div class="ai-text">'+h+'</div>';}
+
+/* ===== AI 챗봇 ===== */
+let chatHistory=[];  // {role, content}
+function renderChat(){
+  const box=document.getElementById("chatLog"); if(!box) return;
+  box.innerHTML=chatHistory.map(m=>`<div class="chat-msg ${m.role==='user'?'me':'ai'}"><div class="chat-bubble">${m.role==='assistant'?mdLite(m.content):esc(m.content)}</div></div>`).join("");
+  box.scrollTop=box.scrollHeight;
+}
+function clearChat(){ chatHistory=[]; renderChat(); }
+async function sendChat(){
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  const inp=document.getElementById("chatInput"); const q=inp.value.trim(); if(!q) return;
+  const key=getApiKey(); if(!key) return;
+  inp.value="";
+  chatHistory.push({role:"user",content:q});
+  chatHistory.push({role:"assistant",content:"…"});
+  renderChat();
+  try{
+    const sys=`당신은 "${p.name}" 아파트 인테리어/매입 프로젝트를 돕는 비서입니다.
+아래 실제 데이터에 근거해 한국어로 간결하고 정확하게 답하세요. 데이터에 없으면 모른다고 하고 추정 시 "추정"이라 밝히세요.
+
+${projectSummary(p)}`;
+    // 직전 대화 몇 개만 함께 전송 (마지막 '…' placeholder 제외)
+    const msgs=chatHistory.slice(0,-1).slice(-8).map(m=>({role:m.role,content:m.content}));
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:AI_MODEL,max_tokens:1000,system:sys,messages:msgs})});
+    const data=await res.json();
+    if(data.error) throw new Error(data.error.message||'API 오류');
+    const text=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join("\n").trim()||"(빈 응답)";
+    chatHistory[chatHistory.length-1]={role:"assistant",content:text};
+    renderChat();
+  }catch(err){
+    chatHistory[chatHistory.length-1]={role:"assistant",content:"오류: "+(err.message||err)+"\n(API 키·크레딧·모델명을 확인하세요)"};
+    renderChat();
+  }
+}
 
 /* ===== 프로젝트 ===== */
 function openProjectModal(){
@@ -1028,16 +1244,18 @@ function blobFromCanvas(c,q){ return new Promise(res=>c.toBlob(res,"image/jpeg",
 async function prepareUpload(f){
   const isImg=(f.type||"").startsWith("image/");
   if(!isImg) return {blob:f, name:f.name, type:f.type||"application/octet-stream"};
-  // 이미지 리사이즈 (대용량 원본만 줄임)
-  return await new Promise((resolve,reject)=>{
+  // 4MB 이하 사진은 원본 그대로 업로드 (화질 유지)
+  if(f.size<=4*1024*1024) return {blob:f, name:f.name, type:f.type||"image/jpeg"};
+  // 큰 원본만 가볍게 리사이즈 (가로 3200px, 화질 0.95)
+  return await new Promise((resolve)=>{
     const img=new Image(); const url=URL.createObjectURL(f);
     img.onload=async function(){
       URL.revokeObjectURL(url);
-      const maxW=2000; let w=img.width, h=img.height;
+      const maxW=3200; let w=img.width, h=img.height;
       if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
       const c=document.createElement("canvas"); c.width=w; c.height=h;
       c.getContext("2d").drawImage(img,0,0,w,h);
-      const blob=await blobFromCanvas(c,0.9);
+      const blob=await blobFromCanvas(c,0.95);
       const base=(f.name||"photo").replace(/\.[^.]+$/,"");
       resolve({blob:blob||f, name:base+".jpg", type:"image/jpeg"});
     };
@@ -1098,6 +1316,121 @@ async function deleteEntry(id){
     await db.collection(ENTRIES).doc(id).delete(); await selectProject(currentProjectId);
   }catch(err){ showError("기록 삭제", err); }
 }
+/* 기록 안의 사진(파일) 한 장만 삭제 */
+async function deletePhoto(entryId, fileIdx){
+  const e=entries.find(x=>x.id===entryId); if(!e||!e.files) return;
+  const f=e.files[fileIdx]; if(!f) return;
+  if(!confirm('이 사진을 삭제할까요?\n\n'+(f.name||'')+'\n\n되돌릴 수 없습니다.'))return;
+  try{
+    if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} }
+    const newFiles=e.files.filter((_,i)=>i!==fileIdx);
+    await db.collection(ENTRIES).doc(entryId).update({files:newFiles});
+    await selectProject(currentProjectId);
+  }catch(err){ showError("사진 삭제", err); }
+}
+/* 기록 제목 수정 (서류 폴더 등에서 사용) */
+async function editEntryTitle(entryId){
+  const e=entries.find(x=>x.id===entryId); if(!e) return;
+  const t=prompt("제목을 입력하세요.", e.title||"");
+  if(t===null) return;
+  if(!t.trim()){ alert("제목은 비울 수 없습니다."); return; }
+  try{
+    await db.collection(ENTRIES).doc(entryId).update({title:t.trim()});
+    await selectProject(currentProjectId);
+  }catch(err){ showError("제목 수정", err); }
+}
+
+/* ===== 이미지 뷰어 (드래그 이동 + 확대/축소 + 이전/다음) ===== */
+let ivScale=1, ivX=0, ivY=0, ivDragging=false, ivStartX=0, ivStartY=0, ivPinchDist=0;
+let ivIndex=0;
+window._ivList = window._ivList || [];
+function ivApply(){ const img=document.getElementById("ivImg");
+  img.style.transform=`translate(${ivX}px,${ivY}px) scale(${ivScale})`; }
+function ivReset(){ ivScale=1; ivX=0; ivY=0; ivApply(); }
+function ivZoom(d){ ivScale=Math.min(6,Math.max(0.5,ivScale+d)); ivApply(); }
+function ivShow(){
+  const list=window._ivList||[];
+  const cur=list[ivIndex]; if(!cur) return;
+  ivReset();
+  document.getElementById("ivImg").src=cur.url;
+  document.getElementById("ivCap").textContent=cur.cap||"";
+  const multi=list.length>1;
+  document.getElementById("ivPrev").style.display=multi?"block":"none";
+  document.getElementById("ivNext").style.display=multi?"block":"none";
+  document.getElementById("ivCount").textContent=multi?((ivIndex+1)+" / "+list.length):"";
+  // 폴더 내부에서 연 경우(entryId 있음)만 삭제 버튼 표시
+  document.getElementById("ivDel").style.display=(cur.entryId!=null)?"inline-block":"none";
+}
+async function ivDelete(){
+  const list=window._ivList||[]; const cur=list[ivIndex]; if(!cur||cur.entryId==null) return;
+  await deletePhoto(cur.entryId, cur.fileIdx);
+  closeViewer();
+}
+function ivStep(d){
+  const list=window._ivList||[]; if(list.length<2) return;
+  ivIndex=(ivIndex+d+list.length)%list.length;
+  ivShow();
+}
+/* 목록 기반으로 열기 (폴더 내부에서 사용) */
+function openViewerList(idx){
+  ivIndex=idx||0;
+  document.getElementById("imgViewer").classList.add("open");
+  ivShow();
+}
+/* 단일 이미지 열기 (기록의 첨부 등) */
+function openViewer(url, cap){
+  window._ivList=[{url, cap:cap||""}];
+  ivIndex=0;
+  document.getElementById("imgViewer").classList.add("open");
+  ivShow();
+}
+function closeViewer(){ document.getElementById("imgViewer").classList.remove("open"); document.getElementById("ivImg").src=""; }
+(function initViewer(){
+  const v=document.getElementById("imgViewer");
+  const img=document.getElementById("ivImg");
+  document.getElementById("ivClose").onclick=closeViewer;
+  // 배경 클릭 시 닫기(이미지/컨트롤 클릭은 제외)
+  v.addEventListener("mousedown",e=>{
+    if(e.target.id==="imgViewer"){ return; }
+  });
+  v.addEventListener("click",e=>{ if(e.target.id==="imgViewer") closeViewer(); });
+  // 마우스 드래그 이동
+  img.addEventListener("mousedown",e=>{ e.preventDefault(); ivDragging=true; ivStartX=e.clientX-ivX; ivStartY=e.clientY-ivY; img.classList.add("grabbing"); });
+  window.addEventListener("mousemove",e=>{ if(!ivDragging) return; ivX=e.clientX-ivStartX; ivY=e.clientY-ivStartY; ivApply(); });
+  window.addEventListener("mouseup",()=>{ ivDragging=false; img.classList.remove("grabbing"); });
+  // 더블클릭 확대 토글
+  img.addEventListener("dblclick",()=>{ ivScale=ivScale>1?1:2.2; if(ivScale===1){ivX=0;ivY=0;} ivApply(); });
+  // 휠 줌
+  v.addEventListener("wheel",e=>{ if(!v.classList.contains("open")) return; e.preventDefault(); ivZoom(e.deltaY<0?0.2:-0.2); },{passive:false});
+  // 터치: 1손가락 이동/스와이프, 2손가락 핀치줌
+  let swipeStartX=0, swipeStartY=0, swipeStartT=0;
+  img.addEventListener("touchstart",e=>{
+    if(e.touches.length===1){ ivDragging=true; ivStartX=e.touches[0].clientX-ivX; ivStartY=e.touches[0].clientY-ivY;
+      swipeStartX=e.touches[0].clientX; swipeStartY=e.touches[0].clientY; swipeStartT=Date.now(); }
+    else if(e.touches.length===2){ ivDragging=false; ivPinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); }
+  },{passive:false});
+  img.addEventListener("touchmove",e=>{
+    e.preventDefault();
+    if(e.touches.length===1 && ivDragging){ ivX=e.touches[0].clientX-ivStartX; ivY=e.touches[0].clientY-ivStartY; ivApply(); }
+    else if(e.touches.length===2){ const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      if(ivPinchDist){ ivScale=Math.min(6,Math.max(0.5,ivScale*(d/ivPinchDist))); ivApply(); } ivPinchDist=d; }
+  },{passive:false});
+  img.addEventListener("touchend",e=>{
+    // 확대 안 된 상태에서 가로 스와이프하면 이전/다음
+    if(ivScale<=1.05 && swipeStartT){
+      const dx=(e.changedTouches[0].clientX-swipeStartX), dy=(e.changedTouches[0].clientY-swipeStartY);
+      if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)){ ivStep(dx<0?1:-1); }
+    }
+    ivDragging=false; ivPinchDist=0; swipeStartT=0;
+  });
+  // 키보드: ESC 닫기, 좌우 넘기기
+  window.addEventListener("keydown",e=>{
+    if(!v.classList.contains("open")) return;
+    if(e.key==="Escape") closeViewer();
+    else if(e.key==="ArrowLeft") ivStep(-1);
+    else if(e.key==="ArrowRight") ivStep(1);
+  });
+})();
 
 /* ===== 유틸 ===== */
 function val(id){return document.getElementById(id).value;}
