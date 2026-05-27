@@ -232,7 +232,7 @@ td.clip[data-tip]:hover{position:relative}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v13</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v14</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -523,7 +523,7 @@ td.clip[data-tip]:hover{position:relative}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* ===== 설정 ===== */
-const APP_VERSION = "v13";
+const APP_VERSION = "v14";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -1017,7 +1017,7 @@ function renderDiagErrors(){
 async function connTest(){
   if(typeof firebase==="undefined"||!db){ toast("Firebase 미초기화 — 오프라인 상태"); logErr("연결테스트", new Error("Firebase 미초기화")); return; }
   toast("연결 테스트 중…");
-  const testId="__conntest__";
+  const testId="zz_conntest_"+Date.now();
   try{
     await db.collection(COL).doc(testId).set({_t:Date.now(),_test:true});
     await db.collection(COL).doc(testId).get();
