@@ -337,7 +337,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v1.9</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v2.0</span></h1>
   <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
   <a class="home" href="index.html">← 홈</a>
 </header>
@@ -989,12 +989,19 @@ function addCheckDoc(stage,idx){
       for(const f of inp.files){ files.push(await processFile(f)); }
       const item=(STAGE_CHECKLIST[stage]||[])[idx]||{};
       const label=(typeof item==='string'?item:(item.t||"체크 항목"));
-      await db.collection(ENTRIES).add({
-        projectId:currentProjectId, kind:"서류", title:label.replace(/^【.*?】\s*/,''),
-        date:today(), stage:stage, checkRef:idx, cat:null, photostage:null,
-        vendor:"", amount:null, pay:null, memo:"체크리스트 첨부", files,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
+      // 같은 체크 항목(stage+checkRef)에 이미 기록이 있으면 거기에 파일 추가, 없으면 새로 생성
+      const exist=entries.find(e=>e.stage===stage && e.checkRef===idx);
+      if(exist){
+        const newFiles=(exist.files||[]).concat(files);
+        await db.collection(ENTRIES).doc(exist.id).update({files:newFiles});
+      }else{
+        await db.collection(ENTRIES).add({
+          projectId:currentProjectId, kind:"서류", title:label.replace(/^【.*?】\s*/,''),
+          date:today(), stage:stage, checkRef:idx, cat:null, photostage:null,
+          vendor:"", amount:null, pay:null, memo:"체크리스트 첨부", files,
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
       await reloadCurrent();
     }catch(err){ showError("체크 서류 첨부", err); }
   };
@@ -1204,11 +1211,11 @@ function viewDocs(p){
   // 폴더 목록
   const folders=docs.map(e=>{
     const files=e.files||[];
-    const pdfCnt=files.filter(f=>!(f.type||'').startsWith('image/')).length;
+    const fromCheck=(e.checkRef!=null && e.stage);
     return `<div class="folder" onclick="window._docOpenId='${e.id}';renderTab(projects.find(x=>x.id===currentProjectId))">
-      <div class="folder-cover" style="font-size:38px">📄<span class="folder-cnt">${files.length}개</span></div>
+      <div class="folder-cover" style="font-size:38px">📄<span class="folder-cnt">${files.length}개</span>${fromCheck?`<span class="folder-badge">${esc(e.stage)}</span>`:''}</div>
       <div class="folder-name">${esc(e.title)}</div>
-      <div class="folder-date">${e.date||''}${e.vendor?' · '+esc(e.vendor):''}</div>
+      <div class="folder-date">${e.date||''}${e.vendor?' · '+esc(e.vendor):''}${fromCheck?' · 체크리스트':''}</div>
     </div>`;
   }).join("");
   return `<div class="panel"><div class="panel-h">📁 서류 폴더 <span class="cnt">${docs.length}개</span>
