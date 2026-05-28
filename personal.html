@@ -187,10 +187,11 @@ textarea{resize:vertical;min-height:74px;}
 .cal-legend{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;font-size:12px;color:#4B5563;}
 .lg-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:16px;border:1.5px solid #E5E7EB;background:#fff;color:#6B7280;font-weight:600;cursor:pointer;font-size:12px;}
 .lg-chip.on{background:#1A1A2E;color:#fff;border-color:#1A1A2E;}
+.lg-chip.car.on{background:#0891B2;border-color:#0891B2;}
 .cal-legend span{display:flex;align-items:center;gap:5px;}
 .lg-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0;}
 /* 월간 그리드 */
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:16px;align-items:start;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:16px;}
 .cal-dow{text-align:center;font-size:11px;color:#9CA3AF;font-weight:700;padding:4px 0;}
 .cal-cell{min-height:78px;border-radius:10px;background:#fff;border:1px solid #EEF0F3;padding:5px 5px 6px;font-size:13px;cursor:pointer;position:relative;display:flex;flex-direction:column;}
 .cal-cell.empty{background:none;border:none;cursor:default;}
@@ -267,7 +268,7 @@ textarea{resize:vertical;min-height:74px;}
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v18</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v19</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -350,6 +351,7 @@ textarea{resize:vertical;min-height:74px;}
       </span>
     </div>
     <div class="cal-legend" id="calLegend"></div>
+    <div class="cal-legend" id="calCarLegend" style="display:none"></div>
     <div class="cal-grid" id="calGrid"></div>
     <div id="calYearGrid" style="display:none"></div>
     <div id="calDayList"></div>
@@ -1218,7 +1220,9 @@ function setCalView(v){
 }
 function calGoToday(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth();calSelDate=null;renderCal();}
 var calCatFilter='전체';
-function setCalCat(k){calCatFilter=(calCatFilter===k?'전체':k);renderCal();}
+var calCarFilter='전체';
+function setCalCat(k){calCatFilter=(calCatFilter===k?'전체':k);if(k!=='차계부')calCarFilter='전체';renderCal();}
+function setCalCar(v){calCarFilter=v;renderCal();}
 function calLegendHtml(){
   // 기록이 있는 카테고리만 — 눌러서 필터
   var used={};getRecords().forEach(function(r){used[r.cat]=1;});
@@ -1231,11 +1235,22 @@ function calLegendHtml(){
   }).join('');
   return h;
 }
+function calCarLegendHtml(){
+  // 차계부 선택 시 차량 하위 필터
+  var cars=['전체'];
+  getRecords().forEach(function(r){if(r.cat==='차계부'&&r.who&&cars.indexOf(r.who)<0)cars.push(r.who);});
+  if(cars.length<=1)return '';
+  return cars.map(function(v){
+    var on=calCarFilter===v;
+    return '<span class="lg-chip car'+(on?' on':'')+'" onclick="setCalCar(\''+v+'\')">'+(v==='전체'?'🚗 전체':v)+'</span>';
+  }).join('');
+}
 function recsByDate(){
   var map={};
   getRecords().forEach(function(r){
     if(!r.date)return;
     if(calCatFilter!=='전체'&&r.cat!==calCatFilter)return;
+    if(calCatFilter==='차계부'&&calCarFilter!=='전체'&&r.who!==calCarFilter)return;
     (map[r.date]=map[r.date]||[]).push(r);
   });
   return map;
@@ -1243,6 +1258,12 @@ function recsByDate(){
 function renderCal(){
   if(calYear===undefined){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth();}
   $('calLegend').innerHTML=calLegendHtml();
+  // 차계부 선택 시 차량 하위 필터 표시
+  var carLeg=$('calCarLegend');
+  if(calCatFilter==='차계부'){
+    var ch=calCarLegendHtml();
+    if(ch){carLeg.innerHTML=ch;carLeg.style.display='flex';}else{carLeg.style.display='none';}
+  }else{carLeg.style.display='none';}
   if(calView==='year'){
     $('calTitle').textContent=calYear+'년';
     $('calGrid').style.display='none';
@@ -1314,7 +1335,7 @@ function calMove(dir){
 function calPick(ds){calSelDate=(calSelDate===ds?null:ds);renderCal();}
 function renderCalDay(){
   if(!calSelDate){$('calDayList').innerHTML='<div class="empty" style="padding:20px 0">날짜를 누르면 그날 기록이 보여요</div>';return;}
-  var arr=getRecords().filter(function(r){return r.date===calSelDate&&(calCatFilter==='전체'||r.cat===calCatFilter);});
+  var arr=getRecords().filter(function(r){return r.date===calSelDate&&(calCatFilter==='전체'||r.cat===calCatFilter)&&!(calCatFilter==='차계부'&&calCarFilter!=='전체'&&r.who!==calCarFilter);});
   $('calDayList').innerHTML='<div class="date-group">'+fmtDate(calSelDate)+'</div>'+(arr.length?calRows(arr):'<div class="empty">기록 없음</div>');
 }
 function calRows(arr){
