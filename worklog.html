@@ -218,8 +218,8 @@ textarea{resize:vertical;min-height:64px}
 .fav-section .fs-h{font-family:'Gowun Batang',serif;font-size:14.5px;font-weight:700;color:#9a6f17;margin-bottom:9px;display:flex;align-items:center;gap:6px}
 .fav-section .fs-h .fs-cnt{font-family:'Pretendard',sans-serif;background:rgba(154,111,23,.15);color:#9a6f17;font-size:11px;padding:1px 8px;border-radius:999px;font-weight:700}
 
-/* 목록형 */
-.view-list .cat-items{grid-template-columns:1fr;gap:3px}
+/* 목록형 — v18: 다열(multi-column)로 변경 */
+.view-list .cat-items{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:5px}
 .view-list .link-card{padding:7px 10px;gap:8px;border-radius:8px}
 .view-list .link-card .lc-icon{font-size:18px}
 .view-list .link-card .lc-name{font-size:13.5px;font-weight:600}
@@ -230,6 +230,21 @@ textarea{resize:vertical;min-height:64px}
 .view-list .link-card .lc-menu-btn{font-size:11px;padding:1px 7px}
 .view-list .link-card .lc-star{font-size:15px;padding:0 2px}
 .view-list .link-card[title]:hover .lc-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.view-list .link-card .lc-typebadge{display:none}
+
+/* v18 — 폴더 vs 파일 시각 구분 */
+.link-card{border-left:4px solid var(--primary)}
+.link-card.is-folder{border-left:4px solid var(--gold);background:linear-gradient(135deg,#fffdf5 0%,#fff 60%)}
+.link-card.is-folder:hover{box-shadow:0 4px 14px rgba(230,176,77,.18)}
+.link-card.is-folder.starred{background:linear-gradient(135deg,#fffbeb,#fef3c7 200%)}
+.link-card .lc-typebadge{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;margin-top:3px;line-height:1.4;letter-spacing:.3px}
+.link-card .lc-typebadge.tb-folder{background:var(--gold-soft);color:#9a6f17}
+.link-card .lc-typebadge.tb-file{background:var(--primary-soft);color:#36699c}
+
+/* 타일형에서도 폴더 색상 유지 */
+.view-tile .link-card.is-folder{border-top:3px solid var(--gold);border-left:1px solid var(--line)}
+.view-tile .link-card{border-left:1px solid var(--line);border-top:3px solid var(--primary)}
+.view-tile .link-card .lc-typebadge{display:none}
 
 /* 미니타일형 */
 .view-tile .cat-items{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
@@ -394,7 +409,7 @@ td.clip[data-tip]:hover{position:relative}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 파일 · 사이트 · 비번 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v17</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 파일 · 사이트 · 비번 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v18</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -440,6 +455,12 @@ td.clip[data-tip]:hover{position:relative}
           <button data-v="card">🎴 카드</button>
           <button data-v="list">📋 목록</button>
           <button data-v="tile">🏷 타일</button>
+        </span>
+        <span class="tb-label" style="margin-left:6px">종류</span>
+        <span class="view-mode-group" id="fileTypeFilter">
+          <button data-ft="all" class="active">전체</button>
+          <button data-ft="folder">📁 폴더</button>
+          <button data-ft="file">📄 파일</button>
         </span>
         <span class="tb-label" style="margin-left:6px">정렬</span>
         <select class="sort-select" data-sort="filelink">
@@ -838,7 +859,7 @@ td.clip[data-tip]:hover{position:relative}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* ===== 설정 ===== */
-const APP_VERSION = "v15";
+const APP_VERSION = "v18";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -1474,6 +1495,9 @@ function renderDiag(){
   const box=$("diagStatus"); if(!box) return;
   const photoCount=entries.reduce((s,e)=>s+((e.photos&&e.photos.length)||0),0);
   const attachCount=entries.reduce((s,e)=>s+((e.attachments&&e.attachments.length)||0),0);
+  const fileLinks=entries.filter(e=>e.kind==="filelink");
+  const folderCnt=fileLinks.filter(e=>isFolder(e.path)).length;
+  const fileCnt=fileLinks.length-folderCnt;
   const size=bytesOf(entries);
   let lsOk=true; try{ localStorage.setItem("wl_test","1"); localStorage.removeItem("wl_test"); }catch(e){ lsOk=false; }
   const rows=[
@@ -1484,7 +1508,8 @@ function renderDiag(){
     ["마지막 오류", lastError?`❌ [${lastError.code}] ${lastError.message}`:"없음 ✅"],
     ["전체 기록 수", entries.length+"건"],
     ["사진 수", photoCount+"장"],
-    ["파일링크 수", attachCount+"개"],
+    ["첨부파일링크 수", attachCount+"개"],
+    ["파일링크 (폴더/파일)", `${folderCnt}개 / ${fileCnt}개`],
     ["데이터 크기", fmtBytes(size)],
   ];
   const cnt={}; DIAG_KINDS.forEach(([k])=>cnt[k]=0); entries.forEach(e=>{ if(cnt[e.kind]!==undefined) cnt[e.kind]++; });
@@ -1931,7 +1956,7 @@ function onTabChange(name){
 }
 
 /* ===== 카테고리 필터 상태 ===== */
-const CAT_FILTER = { filelink:{cat:"전체",sub:"전체",q:""}, site:{cat:"전체",sub:"전체",q:""}, password:{cat:"전체",sub:"전체",q:""} };
+const CAT_FILTER = { filelink:{cat:"전체",sub:"전체",q:"",type:"all"}, site:{cat:"전체",sub:"전체",q:""}, password:{cat:"전체",sub:"전체",q:""} };
 
 /* ===== v17 보기 모드 / 정렬 / 컴팩트 / 접기 상태 ===== */
 const VIEW_PREFS_LS = "wl_view_prefs_v17";
@@ -2029,6 +2054,13 @@ function wireFileLinkTab(){
   $("fileCatFilter").addEventListener("change",e=>{ CAT_FILTER.filelink.cat=e.target.value; CAT_FILTER.filelink.sub="전체"; renderFileLink(); });
   $("fileSubFilter").addEventListener("change",e=>{ CAT_FILTER.filelink.sub=e.target.value; renderFileLink(); });
   $("btnFileCatMgr").addEventListener("click",()=>openCatMgr("filelink"));
+  // v18: 폴더/파일 종류 필터
+  document.querySelectorAll("#fileTypeFilter button").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll("#fileTypeFilter button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    CAT_FILTER.filelink.type=b.dataset.ft;
+    renderFileLink();
+  }));
 }
 function fileLinkMatches(e,q){
   if(!q.trim()) return true;
@@ -2051,6 +2083,7 @@ function fileLinkList(){
   return entries.filter(e=>e.kind==="filelink"
     && (f.cat==="전체"||e.category===f.cat)
     && (f.sub==="전체"||e.subcategory===f.sub)
+    && (f.type==="all" || (f.type==="folder" && isFolder(e.path)) || (f.type==="file" && !isFolder(e.path)))
     && fileLinkMatches(e,f.q));
 }
 function renderFileLink(){
@@ -2127,12 +2160,17 @@ function renderFileLink(){
 }
 function fileLinkCardHTML(e){
   const tt=`${e.label||""}\n${e.path||""}${e.memo?"\n"+e.memo:""}`;
-  return `<div class="link-card${e.starred?" starred":""}" data-fid="${e.id}" title="${esc(tt)}">
+  const folder=isFolder(e.path);
+  const badge=folder
+    ? `<span class="lc-typebadge tb-folder">📁 폴더</span>`
+    : `<span class="lc-typebadge tb-file">📄 파일</span>`;
+  return `<div class="link-card${folder?" is-folder":""}${e.starred?" starred":""}" data-fid="${e.id}" title="${esc(tt)}">
     <span class="lc-icon">${fileIcon(e.path)}</span>
     <div class="lc-body">
       <div class="lc-name">${esc(e.label||"")}</div>
       <div class="lc-sub">${esc(e.path||"")}</div>
-      ${e.subcategory?`<span class="lc-tag">${esc(e.subcategory)}</span>`:""}
+      ${badge}
+      ${e.subcategory?` <span class="lc-tag">${esc(e.subcategory)}</span>`:""}
       ${e.memo?`<div class="lc-memo">📝 ${esc(e.memo)}</div>`:""}
     </div>
     <div class="lc-acts">
