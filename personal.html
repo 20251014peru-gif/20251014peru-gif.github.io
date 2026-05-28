@@ -184,6 +184,19 @@ textarea{resize:vertical;min-height:74px;}
 .cal-seg{display:inline-flex;background:#F3F4F6;border-radius:10px;padding:3px;}
 .cal-seg button{border:none;background:none;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:700;color:#6B7280;cursor:pointer;}
 .cal-seg button.sel{background:#6366F1;color:#fff;}
+.cal-full-btn{margin-left:auto;border:1.5px solid #6366F1;background:#fff;color:#6366F1;padding:7px 14px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;}
+.cal-full-btn:active{background:#EEF2FF;}
+/* 연간 전체화면 팝업 */
+.year-full-bg{display:none;position:fixed;inset:0;background:#fff;z-index:120;flex-direction:column;}
+.year-full-bg.open{display:flex;}
+.year-full-head{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:17px;font-weight:800;flex-wrap:wrap;}
+.cal-full-close{margin-left:auto;border:none;background:#1A1A2E;color:#fff;padding:9px 16px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;}
+.year-full-body{flex:1;overflow:auto;padding:10px 14px;}
+.year-tbl-full{width:100%;min-width:0;table-layout:fixed;}
+.year-tbl-full .year-corner,.year-tbl-full .year-dh{width:30px;font-size:10px;}
+.year-tbl-full .year-cell{min-width:0;height:auto;padding:2px 3px;}
+.year-tbl-full .year-evt{font-size:8.5px;}
+.year-tbl-full .year-mh{min-width:0;font-size:12px;}
 .cal-legend{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;font-size:12px;color:#4B5563;}
 .lg-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:16px;border:1.5px solid #E5E7EB;background:#fff;color:#6B7280;font-weight:600;cursor:pointer;font-size:12px;}
 .lg-chip.on{background:#1A1A2E;color:#fff;border-color:#1A1A2E;}
@@ -268,7 +281,7 @@ textarea{resize:vertical;min-height:74px;}
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v20</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v21</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -349,12 +362,25 @@ textarea{resize:vertical;min-height:74px;}
         <button id="calVMonth" class="sel" onclick="setCalView('month')">월간</button>
         <button id="calVYear" onclick="setCalView('year')">연간 계획표</button>
       </span>
+      <button id="calFullBtn" class="cal-full-btn" onclick="openYearFull()" style="display:none">⛶ 전체화면</button>
     </div>
     <div class="cal-legend" id="calLegend"></div>
     <div class="cal-legend" id="calCarLegend" style="display:none"></div>
     <div class="cal-grid" id="calGrid"></div>
     <div id="calYearGrid" style="display:none"></div>
     <div id="calDayList"></div>
+  </div>
+
+  <!-- 연간 전체화면 팝업 -->
+  <div class="year-full-bg" id="yearFullBg">
+    <div class="year-full-head">
+      <button class="cal-nav" onclick="yearFullMove(-1)">‹</button>
+      <span id="yearFullTitle"></span>
+      <button class="cal-nav" onclick="yearFullMove(1)">›</button>
+      <div class="cal-legend" id="yearFullLegend" style="margin:0 0 0 12px"></div>
+      <button class="cal-full-close" onclick="closeYearFull()">✕ 닫기</button>
+    </div>
+    <div class="year-full-body" id="yearFullBody"></div>
   </div>
 
   <!-- 통계 -->
@@ -1278,9 +1304,11 @@ function renderCal(){
     $('calGrid').style.display='none';
     $('calDayList').style.display='none';
     $('calYearGrid').style.display='block';
+    $('calFullBtn').style.display='';
     renderYear();
     return;
   }
+  $('calFullBtn').style.display='none';
   $('calTitle').textContent=calYear+'년 '+(calMonth+1)+'월';
   $('calGrid').style.display='grid';
   $('calDayList').style.display='block';
@@ -1307,17 +1335,18 @@ function renderCal(){
   $('calGrid').innerHTML=h;
   renderCalDay();
 }
-function renderYear(){
+function buildYearTable(year,full){
   var byDate=recsByDate();
-  var h='<div class="year-scroll"><table class="year-tbl"><thead><tr><th class="year-corner">일\\월</th>';
+  var cls=full?'year-tbl year-tbl-full':'year-tbl';
+  var h='<table class="'+cls+'"><thead><tr><th class="year-corner">일\\월</th>';
   for(var m=1;m<=12;m++)h+='<th class="year-mh">'+m+'월</th>';
   h+='</tr></thead><tbody>';
   for(var d=1;d<=31;d++){
     h+='<tr><td class="year-dh">'+d+'</td>';
     for(var m=1;m<=12;m++){
-      var daysIn=new Date(calYear,m,0).getDate();
+      var daysIn=new Date(year,m,0).getDate();
       if(d>daysIn){h+='<td class="year-empty"></td>';continue;}
-      var ds=calYear+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var ds=year+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
       var dow=new Date(ds+'T00:00').getDay();
       var list=byDate[ds]||[];
       var cell='';
@@ -1325,17 +1354,43 @@ function renderYear(){
         var col=evtColor(r);
         cell+='<div class="year-evt" style="color:'+col+'"><span class="ev-dot" style="background:'+col+'"></span>'+esc(r.title||r.cat)+'</div>';
       });
-      var cls='year-cell'+(dow===0?' sun':'')+(dow===6?' sat':'');
-      h+='<td class="'+cls+'" onclick="calPickYear(\''+ds+'\')">'+cell+'</td>';
+      var cc='year-cell'+(dow===0?' sun':'')+(dow===6?' sat':'');
+      h+='<td class="'+cc+'" onclick="calPickYear(\''+ds+'\')">'+cell+'</td>';
     }
     h+='</tr>';
   }
-  h+='</tbody></table></div>';
-  $('calYearGrid').innerHTML=h;
+  h+='</tbody></table>';
+  return h;
+}
+function renderYear(){
+  $('calYearGrid').innerHTML='<div class="year-scroll">'+buildYearTable(calYear,false)+'</div>';
+}
+/* 연간 전체화면 팝업 */
+var yearFullY;
+function openYearFull(){
+  yearFullY=calYear;
+  $('yearFullBg').classList.add('open');
+  renderYearFull();
+  document.body.style.overflow='hidden';
+}
+function closeYearFull(){
+  $('yearFullBg').classList.remove('open');
+  document.body.style.overflow='';
+  // 팝업에서 연도를 바꿨으면 본 화면도 반영
+  if(yearFullY!==calYear){calYear=yearFullY;renderCal();}
+}
+function yearFullMove(dir){yearFullY+=dir;renderYearFull();}
+function renderYearFull(){
+  $('yearFullTitle').textContent=yearFullY+'년';
+  $('yearFullLegend').innerHTML=calLegendHtml();
+  var saved=calYear;calYear=yearFullY;
+  $('yearFullBody').innerHTML=buildYearTable(yearFullY,true);
+  calYear=saved;
 }
 function calPickYear(ds){
   // 연간에서 날짜 누르면 그 달 월간으로 이동
-  calMonth=parseInt(ds.slice(5,7),10)-1;calSelDate=ds;setCalView('month');
+  if($('yearFullBg').classList.contains('open')){$('yearFullBg').classList.remove('open');document.body.style.overflow='';}
+  calYear=parseInt(ds.slice(0,4),10);calMonth=parseInt(ds.slice(5,7),10)-1;calSelDate=ds;setCalView('month');
 }
 function calMove(dir){
   if(calView==='year'){calYear+=dir;calSelDate=null;renderCal();return;}
