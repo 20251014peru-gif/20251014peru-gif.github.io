@@ -24,7 +24,7 @@ body{background:#F0F0F5;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun 
 .tab{flex:0 0 auto;padding:13px 15px;font-size:13px;font-weight:600;color:#9CA3AF;border:none;background:none;cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;}
 .tab.active{color:#1A1A2E;border-bottom-color:#6366F1;}
 
-.wrap{padding:16px;max-width:760px;margin:0 auto;}
+.wrap{padding:16px;max-width:1100px;margin:0 auto;}
 .panel{display:none;}
 .panel.active{display:block;}
 
@@ -268,7 +268,7 @@ textarea{resize:vertical;min-height:74px;}
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v19</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v20</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -631,6 +631,12 @@ var CATS=[
     {key:'detail',label:'내용',ph:'',area:true,opt:true}]}
 ];
 function catOf(k){for(var i=0;i<CATS.length;i++)if(CATS[i].k===k)return CATS[i];return CATS[CATS.length-1];}
+/* 달력 이벤트 색: 차계부는 차량별로 구분, 그 외는 카테고리 색 */
+var CAR_COLORS={'쏘나타':'#0891B2','스타렉스':'#EA580C'};
+function evtColor(r){
+  if(r.cat==='차계부'&&r.who&&CAR_COLORS[r.who])return CAR_COLORS[r.who];
+  return catOf(r.cat).c;
+}
 
 var selectedCat='생각';
 var pendingPhotos=[];   // 새/수정 중인 사진 base64 배열
@@ -1242,7 +1248,10 @@ function calCarLegendHtml(){
   if(cars.length<=1)return '';
   return cars.map(function(v){
     var on=calCarFilter===v;
-    return '<span class="lg-chip car'+(on?' on':'')+'" onclick="setCalCar(\''+v+'\')">'+(v==='전체'?'🚗 전체':v)+'</span>';
+    var col=CAR_COLORS[v]||'#0891B2';
+    var dot=(v==='전체')?'🚗 ':'<span class="lg-dot" style="background:'+col+'"></span>';
+    var style=on?('background:'+col+';color:#fff;border-color:'+col):'';
+    return '<span class="lg-chip car'+(on?' on':'')+'" onclick="setCalCar(\''+v+'\')" style="'+style+'">'+dot+v+'</span>';
   }).join('');
 }
 function recsByDate(){
@@ -1290,8 +1299,8 @@ function renderCal(){
     var cls='cal-cell'+(ds===todayStr?' today':'')+(ds===calSelDate?' sel':'')+(dow===0?' sun':'')+(dow===6?' sat':'');
     var evts='';
     list.forEach(function(r){
-      var c=catOf(r.cat);
-      evts+='<div class="cal-evt"><span class="ev-dot" style="background:'+c.c+'"></span>'+esc(r.title||r.cat)+'</div>';
+      var col=evtColor(r);
+      evts+='<div class="cal-evt" style="color:'+col+'"><span class="ev-dot" style="background:'+col+'"></span>'+esc(r.title||r.cat)+'</div>';
     });
     h+='<div class="'+cls+'" onclick="calPick(\''+ds+'\')"><span class="cal-num">'+d+'</span>'+evts+'</div>';
   }
@@ -1313,8 +1322,8 @@ function renderYear(){
       var list=byDate[ds]||[];
       var cell='';
       list.forEach(function(r){
-        var c=catOf(r.cat);
-        cell+='<div class="year-evt"><span class="ev-dot" style="background:'+c.c+'"></span>'+esc(r.title||r.cat)+'</div>';
+        var col=evtColor(r);
+        cell+='<div class="year-evt" style="color:'+col+'"><span class="ev-dot" style="background:'+col+'"></span>'+esc(r.title||r.cat)+'</div>';
       });
       var cls='year-cell'+(dow===0?' sun':'')+(dow===6?' sat':'');
       h+='<td class="'+cls+'" onclick="calPickYear(\''+ds+'\')">'+cell+'</td>';
@@ -1340,11 +1349,11 @@ function renderCalDay(){
 }
 function calRows(arr){
   return '<div class="tbl tbl-gen">'+arr.map(function(r){
-    var c=catOf(r.cat);
+    var col=evtColor(r);
     var sub=r.who||(r.detail?r.detail.replace(/\n/g,' '):'');
     var amt=r.amount?(r.cat==='독서'?'⭐'+Math.max(0,Math.min(5,Math.round(r.amount))):won(r.amount)):'';
-    return '<div class="tbl-row" style="border-left:3px solid '+c.c+'" onclick="openDetail(\''+r.id+'\')">'+
-      '<span class="tc-c">'+c.i+'</span>'+
+    return '<div class="tbl-row" style="border-left:3px solid '+col+'" onclick="openDetail(\''+r.id+'\')">'+
+      '<span class="tc-c">'+catOf(r.cat).i+'</span>'+
       '<span class="tc-t2">'+(esc(r.title)||r.cat)+'</span>'+
       '<span class="tc-s">'+esc(sub)+'</span>'+
       '<span class="tc-a">'+amt+'</span></div>';
