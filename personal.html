@@ -184,13 +184,15 @@ textarea{resize:vertical;min-height:74px;}
 .cal-seg{display:inline-flex;background:#F3F4F6;border-radius:10px;padding:3px;}
 .cal-seg button{border:none;background:none;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:700;color:#6B7280;cursor:pointer;}
 .cal-seg button.sel{background:#6366F1;color:#fff;}
-.cal-legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px;font-size:12px;color:#4B5563;}
+.cal-legend{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;font-size:12px;color:#4B5563;}
+.lg-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:16px;border:1.5px solid #E5E7EB;background:#fff;color:#6B7280;font-weight:600;cursor:pointer;font-size:12px;}
+.lg-chip.on{background:#1A1A2E;color:#fff;border-color:#1A1A2E;}
 .cal-legend span{display:flex;align-items:center;gap:5px;}
 .lg-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0;}
 /* 월간 그리드 */
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:16px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:16px;align-items:start;}
 .cal-dow{text-align:center;font-size:11px;color:#9CA3AF;font-weight:700;padding:4px 0;}
-.cal-cell{min-height:92px;border-radius:10px;background:#fff;border:1px solid #EEF0F3;padding:5px 5px 6px;font-size:13px;cursor:pointer;position:relative;overflow:hidden;display:flex;flex-direction:column;}
+.cal-cell{min-height:78px;border-radius:10px;background:#fff;border:1px solid #EEF0F3;padding:5px 5px 6px;font-size:13px;cursor:pointer;position:relative;display:flex;flex-direction:column;}
 .cal-cell.empty{background:none;border:none;cursor:default;}
 .cal-cell.today{border-color:#6366F1;border-width:2px;background:#F5F3FF;}
 .cal-cell.today .cal-num{color:#6366F1;font-weight:800;}
@@ -198,17 +200,23 @@ textarea{resize:vertical;min-height:74px;}
 .cal-num{font-size:12px;font-weight:600;color:#374151;margin-bottom:3px;}
 .cal-cell.sun .cal-num{color:#EF4444;}
 .cal-cell.sat .cal-num{color:#3B82F6;}
-.cal-evt{font-size:9.5px;line-height:1.3;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px;margin-bottom:1px;}
-.cal-evt .ev-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.cal-evt{font-size:9.5px;line-height:1.3;color:#374151;display:flex;align-items:flex-start;gap:3px;margin-bottom:2px;word-break:break-word;}
+.cal-evt .ev-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:3px;}
 .cal-more{font-size:9px;color:#9CA3AF;margin-top:1px;}
 /* 연간 계획표 */
-.year-tbl{width:100%;border-collapse:collapse;font-size:11px;min-width:680px;}
-.year-tbl th{background:#F8F8FC;color:#6B7280;font-weight:700;padding:7px 5px;border:1px solid #EEF0F3;position:sticky;left:0;}
-.year-tbl td{border:1px solid #F1F2F4;padding:5px;vertical-align:top;min-width:52px;height:54px;}
-.year-mo{font-weight:800;color:#374151;background:#F8F8FC;text-align:center;white-space:nowrap;position:sticky;left:0;}
-.year-evt{display:flex;align-items:center;gap:3px;font-size:9.5px;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px;}
-.year-evt .ev-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
-.year-scroll{overflow-x:auto;border-radius:10px;border:1px solid #EEF0F3;}
+.year-scroll{overflow:auto;border-radius:10px;border:1px solid #E5E7EB;max-height:78vh;}
+.year-tbl{border-collapse:collapse;font-size:11px;background:#fff;width:100%;min-width:900px;}
+.year-tbl th,.year-tbl td{border:1px solid #E5E7EB;}
+.year-corner{background:#6366F1;color:#fff;font-weight:700;width:40px;height:32px;position:sticky;top:0;left:0;z-index:6;font-size:10px;}
+.year-mh{background:#6366F1;color:#fff;font-weight:700;height:32px;position:sticky;top:0;z-index:5;min-width:62px;}
+.year-dh{background:#F8F8FC;color:#374151;font-weight:700;width:40px;text-align:center;position:sticky;left:0;z-index:4;}
+.year-cell{vertical-align:top;padding:3px 4px;min-width:62px;height:34px;cursor:pointer;}
+.year-cell:hover{background:#F5F3FF;}
+.year-cell.sun{background:#FEF2F2;}
+.year-cell.sat{background:#EFF6FF;}
+.year-empty{background:#FAFAFB;}
+.year-evt{display:flex;align-items:flex-start;gap:3px;font-size:9.5px;color:#374151;line-height:1.3;margin-bottom:2px;word-break:break-word;}
+.year-evt .ev-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:3px;}
 
 /* 통계 */
 .stat-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid #EEF0F3;}
@@ -259,7 +267,7 @@ textarea{resize:vertical;min-height:74px;}
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v16</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v18</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -1209,17 +1217,27 @@ function setCalView(v){
   renderCal();
 }
 function calGoToday(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth();calSelDate=null;renderCal();}
+var calCatFilter='전체';
+function setCalCat(k){calCatFilter=(calCatFilter===k?'전체':k);renderCal();}
 function calLegendHtml(){
-  // 기록이 있는 카테고리만 범례로
+  // 기록이 있는 카테고리만 — 눌러서 필터
   var used={};getRecords().forEach(function(r){used[r.cat]=1;});
-  var h=CATS.filter(function(c){return used[c.k];}).map(function(c){
-    return '<span><span class="lg-dot" style="background:'+c.c+'"></span>'+c.k+'</span>';
+  var list=CATS.filter(function(c){return used[c.k];});
+  if(!list.length)return '<span style="color:#9CA3AF">기록이 쌓이면 색깔 필터가 보여요</span>';
+  var h='<span class="lg-chip'+(calCatFilter==='전체'?' on':'')+'" onclick="setCalCat(\'전체\')">전체</span>';
+  h+=list.map(function(c){
+    var on=calCatFilter===c.k;
+    return '<span class="lg-chip'+(on?' on':'')+'" onclick="setCalCat(\''+c.k+'\')" style="'+(on?'background:'+c.c+';color:#fff;border-color:'+c.c:'')+'"><span class="lg-dot" style="background:'+c.c+'"></span>'+c.k+'</span>';
   }).join('');
-  return h||'<span style="color:#9CA3AF">기록이 쌓이면 색깔 범례가 보여요</span>';
+  return h;
 }
 function recsByDate(){
   var map={};
-  getRecords().forEach(function(r){if(r.date){(map[r.date]=map[r.date]||[]).push(r);}});
+  getRecords().forEach(function(r){
+    if(!r.date)return;
+    if(calCatFilter!=='전체'&&r.cat!==calCatFilter)return;
+    (map[r.date]=map[r.date]||[]).push(r);
+  });
   return map;
 }
 function renderCal(){
@@ -1250,11 +1268,10 @@ function renderCal(){
     var list=byDate[ds]||[];
     var cls='cal-cell'+(ds===todayStr?' today':'')+(ds===calSelDate?' sel':'')+(dow===0?' sun':'')+(dow===6?' sat':'');
     var evts='';
-    list.slice(0,3).forEach(function(r){
+    list.forEach(function(r){
       var c=catOf(r.cat);
       evts+='<div class="cal-evt"><span class="ev-dot" style="background:'+c.c+'"></span>'+esc(r.title||r.cat)+'</div>';
     });
-    if(list.length>3)evts+='<div class="cal-more">+'+(list.length-3)+'건</div>';
     h+='<div class="'+cls+'" onclick="calPick(\''+ds+'\')"><span class="cal-num">'+d+'</span>'+evts+'</div>';
   }
   $('calGrid').innerHTML=h;
@@ -1262,30 +1279,24 @@ function renderCal(){
 }
 function renderYear(){
   var byDate=recsByDate();
-  // 월별로 묶기
-  var byMonth={};
-  Object.keys(byDate).forEach(function(ds){
-    if(ds.slice(0,4)!==String(calYear))return;
-    var m=parseInt(ds.slice(5,7),10);
-    (byMonth[m]=byMonth[m]||[]).push.apply(byMonth[m],byDate[ds]);
-  });
-  var h='<div class="year-scroll"><table class="year-tbl"><thead><tr><th>월</th>';
-  for(var d=1;d<=31;d++)h+='<th>'+d+'</th>';
+  var h='<div class="year-scroll"><table class="year-tbl"><thead><tr><th class="year-corner">일\\월</th>';
+  for(var m=1;m<=12;m++)h+='<th class="year-mh">'+m+'월</th>';
   h+='</tr></thead><tbody>';
-  for(var m=1;m<=12;m++){
-    h+='<tr><td class="year-mo">'+m+'월</td>';
-    var daysIn=new Date(calYear,m,0).getDate();
-    for(var d=1;d<=31;d++){
-      if(d>daysIn){h+='<td style="background:#FAFAFB"></td>';continue;}
+  for(var d=1;d<=31;d++){
+    h+='<tr><td class="year-dh">'+d+'</td>';
+    for(var m=1;m<=12;m++){
+      var daysIn=new Date(calYear,m,0).getDate();
+      if(d>daysIn){h+='<td class="year-empty"></td>';continue;}
       var ds=calYear+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var dow=new Date(ds+'T00:00').getDay();
       var list=byDate[ds]||[];
       var cell='';
-      list.slice(0,2).forEach(function(r){
+      list.forEach(function(r){
         var c=catOf(r.cat);
         cell+='<div class="year-evt"><span class="ev-dot" style="background:'+c.c+'"></span>'+esc(r.title||r.cat)+'</div>';
       });
-      if(list.length>2)cell+='<div class="cal-more">+'+(list.length-2)+'</div>';
-      h+='<td onclick="calPickYear(\''+ds+'\')" style="cursor:'+(list.length?'pointer':'default')+'">'+cell+'</td>';
+      var cls='year-cell'+(dow===0?' sun':'')+(dow===6?' sat':'');
+      h+='<td class="'+cls+'" onclick="calPickYear(\''+ds+'\')">'+cell+'</td>';
     }
     h+='</tr>';
   }
@@ -1303,7 +1314,7 @@ function calMove(dir){
 function calPick(ds){calSelDate=(calSelDate===ds?null:ds);renderCal();}
 function renderCalDay(){
   if(!calSelDate){$('calDayList').innerHTML='<div class="empty" style="padding:20px 0">날짜를 누르면 그날 기록이 보여요</div>';return;}
-  var arr=getRecords().filter(function(r){return r.date===calSelDate;});
+  var arr=getRecords().filter(function(r){return r.date===calSelDate&&(calCatFilter==='전체'||r.cat===calCatFilter);});
   $('calDayList').innerHTML='<div class="date-group">'+fmtDate(calSelDate)+'</div>'+(arr.length?calRows(arr):'<div class="empty">기록 없음</div>');
 }
 function calRows(arr){
