@@ -38,6 +38,9 @@ textarea{resize:vertical;min-height:74px;}
 .row2{display:flex;gap:10px;}
 .row2>div{flex:1;}
 /* 2열 폼 그리드 */
+.date-top{display:flex;align-items:center;gap:10px;margin:6px 0 4px;}
+.date-top label{margin:0;font-size:13px;font-weight:700;color:#374151;white-space:nowrap;}
+.date-input{width:auto!important;flex:0 0 auto;min-width:160px;}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;}
 .fg-item{min-width:0;}
 .fg-item.full{grid-column:1/3;}
