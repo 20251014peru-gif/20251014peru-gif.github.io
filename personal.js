@@ -233,7 +233,7 @@ function renderCustomForm(kind,v){
       fgItem('개수','<input type="number" id="f-qty" placeholder="1" value="'+(v.qty||'')+'" oninput="calcBuy()">')+
       fgItem('<span id="lblShip">택배비(원)</span>','<input type="number" id="f-ship" placeholder="3000" value="'+ev(v.ship)+'" oninput="calcBuy()">')+
       fgItem('택배비 포함 여부','<select id="f-shipinc" onchange="calcBuy()"><option value="별도"'+(v.shipinc==='별도'?' selected':'')+'>합계에 더하기(별도)</option><option value="포함"'+(v.shipinc==='포함'?' selected':'')+'>단가에 이미 포함</option></select>')+
-      '<div class="fg-item full" id="rateBox" style="display:none"><label>환율 (1달러 = ? 원)</label><input type="number" id="f-rate" placeholder="예: 1380" value="'+ev(v.rate)+'" oninput="calcBuy()"></div>'+
+      '<div class="fg-item full" id="rateBox" style="display:none"><label>환율 (1달러 = ? 원)</label><div class="rate-row"><input type="number" id="f-rate" placeholder="예: 1380" value="'+ev(v.rate)+'" oninput="calcBuy()"><button type="button" class="rate-btn" onclick="fetchRate()">📡 그날 환율</button></div><div class="rate-note" id="rateNote"></div></div>'+
       fgItem('합계(원화)','<input type="text" id="f-amtview" readonly style="font-weight:800;color:#0EA5E9;background:#F0F9FF" value="">',true)+
       fgItem('메모','<textarea id="f-detail" placeholder="산 이유·후기">'+ev(v.detail)+'</textarea>')+
       '</div>';
@@ -342,6 +342,24 @@ function starOpts(cur){return [1,2,3,4,5].map(function(n){return '<option value=
 function ev(x){return x!=null?esc(String(x)):'';}
 function fgItem(label,inner,full){return '<div class="fg-item'+(full?' full':'')+'"><label>'+label+'</label>'+inner+'</div>';}
 function fgWrap(label,inner){return '<div style="margin-top:10px"><label>'+label+'</label>'+inner+'</div>';}
+/* 그날 환율 자동 가져오기 (Frankfurter API, 키 불필요) */
+function fetchRate(){
+  var date=($('f-date')||{}).value||new Date().toISOString().slice(0,10);
+  var note=$('rateNote');if(note){note.textContent='환율 불러오는 중…';note.style.color='#9CA3AF';}
+  // 주말/공휴일이면 그 이전 영업일 환율을 줌
+  fetch('https://api.frankfurter.dev/v1/'+date+'?base=USD&symbols=KRW')
+    .then(function(r){if(!r.ok)throw new Error('응답 오류');return r.json();})
+    .then(function(d){
+      var rate=d&&d.rates&&d.rates.KRW;
+      if(!rate)throw new Error('환율 없음');
+      var rounded=Math.round(rate*100)/100;
+      var el=$('f-rate');if(el){el.value=rounded;calcBuy();}
+      if(note){note.textContent='✅ '+(d.date||date)+' 기준 1달러 = '+won(Math.round(rate))+'원 (ECB)';note.style.color='#16A34A';}
+    })
+    .catch(function(e){
+      if(note){note.textContent='⚠️ 자동 실패 — 직접 입력하세요 ('+e.message+')';note.style.color='#EF4444';}
+    });
+}
 /* 구매 합계 */
 function calcBuy(){
   var cur=($('f-cur')||{}).value||'원';
