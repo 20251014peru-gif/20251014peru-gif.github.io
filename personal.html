@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>개인 관리</title>
-<link rel="stylesheet" href="personal.css?v=27">
+<link rel="stylesheet" href="personal.css?v=28">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v27</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v28</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -57,11 +57,11 @@
     <div class="card">
       <div class="card-title">무엇을 기록할까요?</div>
       <div class="cats" id="catChips"></div>
-      <div id="formFields"></div>
-
-      <div class="row2">
-        <div style="flex:1"><label>날짜 <span class="opt">(방문일/있었던 날)</span></label><input type="date" id="f-date"></div>
+      <div class="date-top">
+        <label>📅 날짜</label>
+        <input type="date" id="f-date" class="date-input">
       </div>
+      <div id="formFields"></div>
 
       <label>사진 <span class="opt">(자동 압축 · 모든 기기에서 보임)</span></label>
       <div class="photo-btns">
@@ -233,6 +233,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="personal.js?v=27"></script>
+<script src="personal.js?v=28"></script>
 </body>
 </html>
