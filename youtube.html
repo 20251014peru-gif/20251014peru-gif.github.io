@@ -73,6 +73,9 @@ textarea:focus{border-color:#6366F1;}
 .lt-title{font-weight:700;color:#1A1A2E;line-height:1.4;}
 .lt-time{color:#9CA3AF;white-space:nowrap;font-size:11px;text-align:right;}
 .lt-sym{font-weight:900;color:#1A1A2E;white-space:nowrap;}
+.lt-links{white-space:nowrap;}
+.lt-link{display:inline-block;font-size:10px;color:#DC2626;text-decoration:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:0 6px;margin-left:3px;vertical-align:middle;}
+.sector{display:inline-block;font-size:11px;font-weight:700;background:#FEF3C7;color:#92400E;border-radius:10px;padding:2px 9px;white-space:nowrap;}
 .lt-del{font-size:10px;padding:2px 7px;background:#FEE2E2;color:#DC2626;border:none;border-radius:4px;cursor:pointer;font-family:inherit;}
 .kw-words{color:#4338CA;font-weight:600;line-height:1.5;}
 .kw-words .kw{display:inline-block;background:#EEF2FF;border:1px solid #C7D2FE;border-radius:10px;padding:1px 7px;margin:1px 2px;font-size:11px;}
@@ -398,15 +401,15 @@ function getPrompt(idx, videos){
     '3) ★무의식 신호★ — 명시적으로 말하진 않지만 반복·강조·회피·전제·말투에서 드러나는 진짜 속내, 숨은 확신/불안, 포지션 편향\n'+
     '4) '+insightTitle+'\n5) 영상에서 실제 언급된 개별 종목/티커(있으면)\n6) 핵심 키워드 태그 5~7개\n\n'+
     '출력: 첫 줄에 메타 주석, 다음 줄부터 <!DOCTYPE html>~</html>. 그 외 설명·코드펜스 금지.\n\n'+
-    '메타 주석(첫 줄):\n<!--META:{"title":"핵심 제목","tags":["태그1","태그2"],"tickers":[{"sym":"NVDA","name":"엔비디아","tone":"긍정"}]}-->\n'+
-    'tickers는 영상에서 실제 언급된 개별 종목만. tone은 화자 톤 기준 "긍정"|"중립"|"부정" 중 하나. 개별 종목 언급 없으면 빈 배열 [].\n\n'+
+    '메타 주석(첫 줄):\n<!--META:{"title":"핵심 제목","tags":["태그1","태그2"],"tickers":[{"sym":"NVDA","name":"엔비디아","sector":"반도체","tone":"긍정"}]}-->\n'+
+    'tickers는 영상에서 실제 언급된 개별 종목만. sector는 그 종목이 속한 분야/업종(예: 반도체, 광통신, 전기차, AI인프라, 2차전지, 빅테크, 바이오, 금융, 방산 등). tone은 화자 톤 기준 "긍정"|"중립"|"부정" 중 하나. 개별 종목 언급 없으면 빈 배열 [].\n\n'+
     REPORT_CSS+'\n\n'+
     '구조(순서 고정):\n'+
     '[헤더] h1=핵심 제목, sub="채널: '+ch.name+' | '+dateStr+' | 영상 '+videos.length+'개"\n'+
     '[SECTION 📋 영상별 핵심 요약] '+(multi?'각 영상마다 .vid-summary(제목+불릿 3~5개), 마지막에 .highlight-box 종합 요약':'.vid-summary 하나 + 불릿 4~6개')+'\n'+
     '[SECTION 🧠 무의식 신호 — 화자가 진짜 말하고 있는 것] .subtext-box 3~5개. 각 박스: <span class="label">관찰</span> 반복·강조·회피된 표현 → <span class="mean">숨은 의미:</span> 진짜 속내\n'+
     '[SECTION '+insightTitle+'] 표 ('+insightCols+'), 행 4개 이상, 중요한 건 <mark>표시</mark>\n'+
-    (ch.invest?'[SECTION 📈 언급 종목] 표: 티커 | 종목명 | 화자 톤(긍정/중립/부정) | 한줄 코멘트. 실제 언급된 종목만, 없으면 "직접 언급된 개별 종목 없음" 한 줄\n':'')+
+    (ch.invest?'[SECTION 📈 언급 종목] 표: 티커 | 종목명 | 섹터(분야) | 화자 톤(긍정/중립/부정) | 한줄 코멘트. 실제 언급된 종목만, 없으면 "직접 언급된 개별 종목 없음" 한 줄\n':'')+
     '[SECTION ✍️ 한눈에 — 내가 얻어갈 것] .story-box 짧은 서사 + ul.bullet 액션 3~5개 + .tag-row 해시태그 5~7개\n'+
     '[푸터] 채널: '+ch.name+' | '+dateStr;
 }
@@ -531,9 +534,10 @@ function renderHistCards(el,list){
 }
 function renderHistList(el,list){
   var rows=''; list.forEach(function(r){
+    var lk=getLinks(r).map(function(u,i){ var id=ytId(u); return u?'<a class="lt-link" href="'+esc(u)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="'+esc(u)+'">&#9654;'+(getLinks(r).length>1?(i+1):'')+'</a>':''; }).join('');
     rows+='<tr class="hist-item" data-id="'+r._id+'"><td class="lt-date">'+esc(r.date||'')+'</td>'+
       '<td class="lt-ch" style="color:'+(r.color||'#6B7280')+'">'+esc(r.chName||'')+'</td>'+
-      '<td class="lt-title">'+esc(r.title||'(제목 없음)')+'</td><td class="lt-time">'+esc(r.time||'')+'</td>'+
+      '<td class="lt-title">'+esc(r.title||'(제목 없음)')+(lk?' <span class="lt-links">'+lk+'</span>':'')+'</td><td class="lt-time">'+esc(r.time||'')+'</td>'+
       '<td style="text-align:right"><button class="del-btn lt-del" data-id="'+r._id+'">삭제</button></td></tr>';
   });
   el.innerHTML='<div style="overflow-x:auto"><table class="hist-table"><thead><tr><th>날짜</th><th>채널</th><th>제목</th><th>분석시간</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
@@ -621,14 +625,15 @@ document.querySelectorAll('#kw-view .vchip').forEach(function(chip){ chip.addEve
 function renderTickers(){
   var el=document.getElementById('tk-list');
   var base=allDocs.filter(function(r){ return tkFilter==='all'||r.chName===tkFilter; });
-  var rows=[]; base.forEach(function(r){ getTickers(r).forEach(function(tk){ if(tk&&(tk.sym||tk.name)) rows.push({sym:tk.sym||'-',name:tk.name||'',tone:tk.tone||'중립',chName:r.chName,color:r.color,date:r.date,ts:r.ts,id:r._id}); }); });
+  var rows=[]; base.forEach(function(r){ getTickers(r).forEach(function(tk){ if(tk&&(tk.sym||tk.name)) rows.push({sym:tk.sym||'-',name:tk.name||'',sector:tk.sector||'',tone:tk.tone||'중립',chName:r.chName,color:r.color,date:r.date,ts:r.ts,id:r._id}); }); });
   if(!rows.length){ el.innerHTML='<div class="empty">아직 추출된 종목이 없어<br>이 업데이트 이후 분석한 기록부터 채워져요</div>'; return; }
   rows.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
   var uniq={}; rows.forEach(function(x){ uniq[(x.sym+'|'+x.name)]=1; });
   var html='<div class="summary-line">총 '+rows.length+'회 언급 · 종목 '+Object.keys(uniq).length+'개</div>';
-  html+='<div style="overflow-x:auto"><table class="hist-table"><thead><tr><th>티커</th><th>종목명</th><th>채널</th><th>톤</th><th>날짜</th></tr></thead><tbody>'+
+  html+='<div style="overflow-x:auto"><table class="hist-table"><thead><tr><th>티커</th><th>종목명</th><th>섹터</th><th>채널</th><th>톤</th><th>날짜</th></tr></thead><tbody>'+
     rows.map(function(x){ return '<tr class="hist-item" data-id="'+x.id+'"><td class="lt-sym">'+esc(x.sym)+'</td>'+
-      '<td>'+esc(x.name)+'</td><td class="lt-ch" style="color:'+(x.color||'#6B7280')+'">'+esc(x.chName)+'</td>'+
+      '<td>'+esc(x.name)+'</td><td>'+(x.sector?'<span class="sector">'+esc(x.sector)+'</span>':'<span style="color:#C0C4CC">-</span>')+'</td>'+
+      '<td class="lt-ch" style="color:'+(x.color||'#6B7280')+'">'+esc(x.chName)+'</td>'+
       '<td><span class="tone '+toneClass(x.tone)+'">'+esc(x.tone)+'</span></td><td class="lt-date">'+esc(x.date||'')+'</td></tr>'; }).join('')+
     '</tbody></table></div>';
   el.innerHTML=html;
