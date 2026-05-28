@@ -6,9 +6,11 @@
 <title>유튜브 채널 분석</title>
 <!--
   ===== youtube.html 변경 이력 =====
+  v1.2 (2026-05-28): 종목 링크를 미국=야후 파이낸스, 한국=네이버 증권으로 분기(인베스팅닷컴 대체).
+                     티커 추출에 market(US/KR) 추가, 한국종목은 6자리 코드로 네이버 직접 연결
   v1.1 (2026-05-28): 영상 개별/합쳐서 분석 선택 추가(개별 시 시청기록에 따로 저장),
                      카드형 삭제버튼 확대, 목록형에 링크 열(제목↔분석시간 사이) 추가,
-                     핵심단어 목록에 링크 열 추가, 종목 티커 클릭 시 인베스팅닷컴 현재가 연결, 버전 표기 도입
+                     핵심단어 목록에 링크 열 추가, 종목 티커 클릭 시 가격사이트 연결, 버전 표기 도입
   v1.0 (이전):        채널분석 · 시청기록(카드/목록) · 핵심단어(목록/빈도) · 종목 워치리스트 · 채널 비교
                      · 검색/정렬/월필터 · MD/JSON 백업 · 중복 감지 · API키 소진 안내
 -->
@@ -269,7 +271,7 @@ var FB_KEY = 'AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var FB_BASE = 'https://firestore.googleapis.com/v1/projects/my-system-25497/databases/(default)/documents';
 var COLLECTION = 'youtube-analyses';
 var MODEL = 'claude-sonnet-4-6';
-var VERSION = 'v1.1';
+var VERSION = 'v1.2';
 
 var CHANNELS = [
   { name:'미주은', icon:'\uD83D\uDCDA', color:'#DC2626', invest:true,
@@ -304,6 +306,16 @@ function getLinks(r){ try{ return r.links?JSON.parse(r.links):[]; }catch(e){ ret
 function getTickers(r){ try{ return r.tickers?JSON.parse(r.tickers):[]; }catch(e){ return []; } }
 function monthKey(r){ var p=(r.date||'').split('-'); return p.length>=2 ? p[0]+'-'+('0'+p[1]).slice(-2) : ''; }
 function toneClass(t){ if(/긍정|매수|확대/.test(t))return'pos'; if(/부정|매도|경계|축소/.test(t))return'neg'; return'neu'; }
+function tickerUrl(x){
+  var sym=(x.sym||'').trim(), name=(x.name||'').trim(), mkt=(x.market||'').toUpperCase();
+  // 한국: 6자리 코드면 네이버 종목 페이지로 직접
+  if(/^\d{6}$/.test(sym)) return 'https://finance.naver.com/item/main.naver?code='+sym;
+  // 한국인데 코드 없음(또는 한글 심볼) → 네이버 통합검색 주가
+  if(mkt==='KR' || /[가-힣]/.test(sym)) return 'https://search.naver.com/search.naver?query='+encodeURIComponent((name||sym)+' 주가');
+  // 미국·해외: 야후 파이낸스 (티커 형식이면 quote, 아니면 lookup)
+  if(sym && sym!=='-' && /^[A-Za-z][A-Za-z.\-]{0,9}$/.test(sym)) return 'https://finance.yahoo.com/quote/'+encodeURIComponent(sym);
+  return 'https://finance.yahoo.com/lookup?s='+encodeURIComponent(name||sym);
+}
 function linkCellHtml(r){
   var ls=getLinks(r); if(!ls.length) return '<span style="color:#C0C4CC">-</span>';
   return ls.map(function(u,i){ return u?'<a class="lt-link" href="'+esc(u)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="'+esc(u)+'">&#9654;'+(ls.length>1?(i+1):'')+'</a>':''; }).join('');
@@ -435,8 +447,10 @@ function getPrompt(idx, videos){
     '3) ★무의식 신호★ — 명시적으로 말하진 않지만 반복·강조·회피·전제·말투에서 드러나는 진짜 속내, 숨은 확신/불안, 포지션 편향\n'+
     '4) '+insightTitle+'\n5) 영상에서 실제 언급된 개별 종목/티커(있으면)\n6) 핵심 키워드 태그 5~7개\n\n'+
     '출력: 첫 줄에 메타 주석, 다음 줄부터 <!DOCTYPE html>~</html>. 그 외 설명·코드펜스 금지.\n\n'+
-    '메타 주석(첫 줄):\n<!--META:{"title":"핵심 제목","tags":["태그1","태그2"],"tickers":[{"sym":"NVDA","name":"엔비디아","sector":"반도체","tone":"긍정"}]}-->\n'+
-    'tickers는 영상에서 실제 언급된 개별 종목만. sector는 그 종목이 속한 분야/업종(예: 반도체, 광통신, 전기차, AI인프라, 2차전지, 빅테크, 바이오, 금융, 방산 등). tone은 화자 톤 기준 "긍정"|"중립"|"부정" 중 하나. 개별 종목 언급 없으면 빈 배열 [].\n\n'+
+    '메타 주석(첫 줄):\n<!--META:{"title":"핵심 제목","tags":["태그1","태그2"],"tickers":[{"sym":"NVDA","name":"엔비디아","sector":"반도체","market":"US","tone":"긍정"}]}-->\n'+
+    'tickers는 영상에서 실제 언급된 개별 종목만. sector는 분야/업종(예: 반도체, 광통신, 전기차, AI인프라, 2차전지, 빅테크, 바이오, 금융, 방산 등). '+
+    'market은 미국·해외 상장이면 "US", 한국(코스피/코스닥) 상장이면 "KR". 한국 종목이면 sym에 6자리 종목코드를 넣어(예: 삼성전자→"005930", SK하이닉스→"000660", 네이버→"035420"). 코드를 모르면 sym은 비우고 name만 채워. 미국 종목이면 sym에 티커(예: "NVDA"). '+
+    'tone은 화자 톤 기준 "긍정"|"중립"|"부정". 개별 종목 언급 없으면 빈 배열 [].\n\n'+
     REPORT_CSS+'\n\n'+
     '구조(순서 고정):\n'+
     '[헤더] h1=핵심 제목, sub="채널: '+ch.name+' | '+dateStr+' | 영상 '+videos.length+'개"\n'+
@@ -727,14 +741,14 @@ document.querySelectorAll('#kw-view .vchip').forEach(function(chip){ chip.addEve
 function renderTickers(){
   var el=document.getElementById('tk-list');
   var base=allDocs.filter(function(r){ return tkFilter==='all'||r.chName===tkFilter; });
-  var rows=[]; base.forEach(function(r){ getTickers(r).forEach(function(tk){ if(tk&&(tk.sym||tk.name)) rows.push({sym:tk.sym||'-',name:tk.name||'',sector:tk.sector||'',tone:tk.tone||'중립',chName:r.chName,color:r.color,date:r.date,ts:r.ts,id:r._id}); }); });
+  var rows=[]; base.forEach(function(r){ getTickers(r).forEach(function(tk){ if(tk&&(tk.sym||tk.name)) rows.push({sym:tk.sym||'-',name:tk.name||'',sector:tk.sector||'',market:tk.market||'',tone:tk.tone||'중립',chName:r.chName,color:r.color,date:r.date,ts:r.ts,id:r._id}); }); });
   if(!rows.length){ el.innerHTML='<div class="empty">아직 추출된 종목이 없어<br>이 업데이트 이후 분석한 기록부터 채워져요</div>'; return; }
   rows.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
   var uniq={}; rows.forEach(function(x){ uniq[(x.sym+'|'+x.name)]=1; });
-  var html='<div class="summary-line">총 '+rows.length+'회 언급 · 종목 '+Object.keys(uniq).length+'개 · 티커를 누르면 인베스팅닷컴에서 현재가 확인</div>';
+  var html='<div class="summary-line">총 '+rows.length+'회 언급 · 종목 '+Object.keys(uniq).length+'개 · 티커를 누르면 시세 확인 (미국=야후, 한국=네이버 증권)</div>';
   html+='<div style="overflow-x:auto"><table class="hist-table"><thead><tr><th>티커</th><th>종목명</th><th>섹터</th><th>채널</th><th>톤</th><th>날짜</th></tr></thead><tbody>'+
-    rows.map(function(x){ var q=encodeURIComponent((x.sym&&x.sym!=='-')?x.sym:x.name);
-      return '<tr class="hist-item" data-id="'+x.id+'"><td class="lt-sym"><a class="sym-link" href="https://www.investing.com/search/?q='+q+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="인베스팅닷컴 현재가">'+esc(x.sym)+'</a></td>'+
+    rows.map(function(x){ var url=tickerUrl(x); var label=(x.sym&&x.sym!=='-')?x.sym:(x.name||'-');
+      return '<tr class="hist-item" data-id="'+x.id+'"><td class="lt-sym"><a class="sym-link" href="'+url+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="시세 보기">'+esc(label)+'</a></td>'+
       '<td>'+esc(x.name)+'</td><td>'+(x.sector?'<span class="sector">'+esc(x.sector)+'</span>':'<span style="color:#C0C4CC">-</span>')+'</td>'+
       '<td class="lt-ch" style="color:'+(x.color||'#6B7280')+'">'+esc(x.chName)+'</td>'+
       '<td><span class="tone '+toneClass(x.tone)+'">'+esc(x.tone)+'</span></td><td class="lt-date">'+esc(x.date||'')+'</td></tr>'; }).join('')+
