@@ -51,7 +51,10 @@ textarea{resize:vertical;min-height:74px;}
 .item-row{display:flex;gap:6px;margin-top:7px;align-items:center;}
 .item-row input,.item-row select{margin:0;}
 .item-row .item-price{width:90px;flex-shrink:0;}
-.item-row .item-type{width:78px;flex-shrink:0;}
+.item-row .item-people{width:62px;flex-shrink:0;}
+.item-row .item-type{width:74px;flex-shrink:0;}
+.item-row .item-name-sm{flex:0 1 90px;min-width:0;}
+.item-row .item-price-lg{flex:1;min-width:0;}
 .item-del{flex-shrink:0;width:32px;height:38px;border:none;background:#FEE2E2;color:#EF4444;border-radius:8px;font-size:18px;cursor:pointer;}
 .item-total{text-align:right;font-size:14px;font-weight:800;color:#0EA5E9;margin-top:8px;}
 /* 독서 핵심문장 ↔ 생각 */
@@ -77,6 +80,16 @@ textarea{resize:vertical;min-height:74px;}
 .dx-t{font-size:13px;color:#6B7280;line-height:1.6;margin-top:7px;padding-top:7px;border-top:1px dashed #E5E7EB;}
 .dx-qtag{font-size:10px;font-weight:700;color:#7C3AED;background:#EDE9FE;padding:1px 7px;border-radius:7px;margin-right:5px;}
 .dx-qtag.think{color:#B45309;background:#FEF3C7;}
+/* 별점+진행률 인라인 */
+.star-prog{display:flex;gap:8px;align-items:center;}
+.star-prog select{flex:0 0 auto;width:auto;}
+.prog-mini{flex:1;min-width:0;font-size:12px;font-weight:700;color:#7C3AED;background:#F5F3FF!important;text-align:center;}
+/* 엑셀 복사 버튼 */
+.list-tools{display:flex;justify-content:flex-end;margin-bottom:8px;}
+.copy-btn{border:1.5px solid #16A34A;background:#F0FDF4;color:#16A34A;padding:7px 14px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;}
+.copy-btn:active{background:#DCFCE7;}
+.dx-ppl{font-size:11px;color:#9CA3AF;font-weight:600;margin-left:4px;}
+.dx-iname{flex:1;}
 
 .photo-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
 .photo-thumb{position:relative;width:72px;height:72px;border-radius:10px;overflow:hidden;border:1px solid #E5E7EB;}
@@ -313,7 +326,10 @@ textarea{resize:vertical;min-height:74px;}
 .lock-msg{margin-top:16px;font-size:13px;color:#FECACA;min-height:18px;}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1A1A2E;color:#fff;padding:11px 20px;border-radius:24px;font-size:13px;z-index:70;opacity:0;transition:opacity .25s;pointer-events:none;}
 .vault-card{background:#fff;border:1px solid #EEF0F3;border-radius:12px;padding:13px 15px;margin-bottom:10px;border-left:4px solid #6366F1;}
-.vault-head{display:flex;justify-content:space-between;align-items:center;}
+.vault-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.vault-titlebar{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.vault-name{font-size:15px;font-weight:700;color:#1A1A2E;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vault-sub{font-size:11px;font-weight:600;color:#9CA3AF;}
 .vault-lock{font-size:13px;font-weight:700;color:#6366F1;}
 .vault-acts{display:flex;gap:12px;}
 .vault-acts .rec-act{font-size:12px;background:none;border:none;cursor:pointer;font-weight:600;padding:0;}
