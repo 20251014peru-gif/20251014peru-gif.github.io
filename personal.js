@@ -115,24 +115,24 @@ var COL_PHOTO='personal_photos'; // 사진(base64)
 var CATS=[
   {k:'생각',  i:'💭', c:'#8B5CF6', bg:'#EDE9FE', fields:[
     {key:'title',label:'무슨 생각이 들었나요',ph:'한 줄 요약'},
-    {key:'detail',label:'자세히',ph:'생각의 내용·맥락',area:true,full:true}]},
+    {key:'detail',label:'자세히',ph:'생각의 내용·맥락',area:true}]},
   {k:'구매',  i:'🛒', c:'#0EA5E9', bg:'#E0F2FE', custom:'buy'},
   {k:'통화',  i:'📞', c:'#10B981', bg:'#D1FAE5', fields:[
     {key:'who',label:'누구와 통화',ph:'예: 엄마, 김부장'},
     {key:'title',label:'통화 주제',ph:'한 줄'},
     {key:'phone',label:'전화번호',ph:'010-1234-5678',opt:true},
-    {key:'detail',label:'통화 내용·결정사항',ph:'무슨 얘기를 했는지',area:true,full:true}]},
+    {key:'detail',label:'통화 내용·결정사항',ph:'무슨 얘기를 했는지',area:true}]},
   {k:'가족',  i:'👨‍👩‍👧', c:'#F43F5E', bg:'#FFE4E6', fields:[
     {key:'who',label:'누구',ph:'예: 아내, 아들'},
     {key:'title',label:'무슨 일',ph:'한 줄 요약'},
-    {key:'detail',label:'내용·느낀 점',ph:'있었던 일',area:true,full:true}]},
+    {key:'detail',label:'내용·느낀 점',ph:'있었던 일',area:true}]},
   {k:'여행',  i:'✈️', c:'#F59E0B', bg:'#FEF3C7', fields:[
     {key:'title',label:'장소/여행명',ph:'예: 제주도'},
     {key:'who',label:'누구와',ph:'동행',opt:true},
     {key:'amount',label:'경비(원)',ph:'쓴 돈',num:true,opt:true},
     {key:'phone',label:'전화번호',ph:'010-1234-5678',opt:true},
     {key:'addr',label:'주소',ph:'주소 (눌러서 지도)',opt:true},
-    {key:'detail',label:'일정·메모',ph:'한 일·좋았던 것',area:true,full:true,opt:true}]},
+    {key:'detail',label:'일정·메모',ph:'한 일·좋았던 것',area:true,opt:true}]},
   {k:'맛집',  i:'🍜', c:'#FB923C', bg:'#FFEDD5', custom:'food'},
   {k:'차계부',  i:'🚗', c:'#0891B2', bg:'#CFFAFE', fields:[
     {key:'who',label:'차량',sel:['쏘나타','스타렉스']},
@@ -141,12 +141,12 @@ var CATS=[
     {key:'odo',label:'주행거리(㎞)',ph:'예: 45200',num:true,opt:true},
     {key:'liters',label:'주유량(L)',ph:'주유 시',num:true,opt:true},
     {key:'addr',label:'정비소/주유소',ph:'상호 (눌러서 지도)',opt:true},
-    {key:'detail',label:'메모',ph:'내용 등',area:true,full:true,opt:true}]},
+    {key:'detail',label:'메모',ph:'내용 등',area:true,opt:true}]},
   {k:'건강',  i:'💊', c:'#14B8A6', bg:'#CCFBF1', custom:'health'},
   {k:'약속',  i:'📅', c:'#6366F1', bg:'#E0E7FF', custom:'appt'},
   {k:'아이디어',i:'💡', c:'#EAB308', bg:'#FEF9C3', fields:[
     {key:'title',label:'아이디어 한 줄',ph:'떠오른 생각'},
-    {key:'detail',label:'구체적으로',ph:'어떻게 실행할지',area:true,full:true,opt:true}]},
+    {key:'detail',label:'구체적으로',ph:'어떻게 실행할지',area:true,opt:true}]},
   {k:'독서',  i:'📖', c:'#7C3AED', bg:'#EDE9FE', custom:'book'},
   {k:'기타',  i:'📌', c:'#64748B', bg:'#F1F5F9', fields:[
     {key:'title',label:'제목',ph:'한 줄'},
@@ -154,7 +154,7 @@ var CATS=[
     {key:'amount',label:'금액(원)',ph:'',num:true,opt:true},
     {key:'phone',label:'전화번호',ph:'010-1234-5678',opt:true},
     {key:'addr',label:'주소',ph:'주소 (눌러서 지도)',opt:true},
-    {key:'detail',label:'내용',ph:'',area:true,full:true,opt:true}]}
+    {key:'detail',label:'내용',ph:'',area:true,opt:true}]}
 ];
 function catOf(k){for(var i=0;i<CATS.length;i++)if(CATS[i].k===k)return CATS[i];return CATS[CATS.length-1];}
 /* 달력 이벤트 색: 차계부는 차량별로 구분, 그 외는 카테고리 색 */
@@ -208,7 +208,7 @@ function renderForm(vals){
   var h='<div class="form-grid">';
   c.fields.forEach(function(f){
     var v=vals[f.key]!=null?esc(String(vals[f.key])):'';
-    var full=f.area||f.full?' full':'';
+    var full=f.full?' full':'';
     h+='<div class="fg-item'+full+'">';
     h+='<label>'+f.label+(f.opt?' <span class="opt">(선택)</span>':'')+'</label>';
     if(f.sel){
@@ -238,7 +238,7 @@ function renderCustomForm(kind,v){
       fgItem('택배비(원)','<input type="number" id="f-ship" placeholder="배송비" value="'+ev(v.ship)+'" oninput="calcBuy()">')+
       fgItem('택배비 포함 여부','<select id="f-shipinc" onchange="calcBuy()"><option value="별도"'+(v.shipinc==='별도'?' selected':'')+'>합계에 더하기(별도)</option><option value="포함"'+(v.shipinc==='포함'?' selected':'')+'>단가에 이미 포함</option></select>')+
       fgItem('합계','<input type="text" id="f-amtview" readonly style="font-weight:800;color:#0EA5E9;background:#F0F9FF" value="">',true)+
-      fgItem('메모','<textarea id="f-detail" placeholder="산 이유·후기·비교">'+ev(v.detail)+'</textarea>',true)+
+      fgItem('메모','<textarea id="f-detail" placeholder="산 이유·후기·비교">'+ev(v.detail)+'</textarea>')+
       '</div>';
     $('formFields').innerHTML=h;calcBuy();return;
   }
@@ -281,7 +281,7 @@ function renderCustomForm(kind,v){
       fgItem('주소','<input type="text" id="f-addr" placeholder="주소(눌러서 지도)" value="'+ev(v.addr)+'">')+
       fgItem('준비물','<input type="text" id="f-prep" placeholder="챙길 것" value="'+ev(v.prep)+'">')+
       fgItem('비용(원)','<input type="number" id="f-amount" placeholder="들었으면 입력" value="'+ev(v.amount)+'">')+
-      fgItem('메모','<textarea id="f-detail" placeholder="기타 메모">'+ev(v.detail)+'</textarea>',true)+
+      fgItem('메모','<textarea id="f-detail" placeholder="기타 메모">'+ev(v.detail)+'</textarea>')+
       '</div>';
     $('formFields').innerHTML=h;return;
   }
