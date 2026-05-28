@@ -44,6 +44,21 @@ textarea:focus{border-color:#6366F1;}
 .filter-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
 .fchip{font-size:11px;padding:6px 14px;border-radius:20px;border:1px solid #E5E7EB;background:#fff;color:#6B7280;cursor:pointer;font-family:inherit;font-weight:600;}
 .fchip.on{background:#1A1A2E;color:#fff;border-color:#1A1A2E;}
+.view-toggle{display:flex;gap:4px;background:#fff;border:1px solid #E5E7EB;border-radius:20px;padding:3px;}
+.vchip{font-size:11px;padding:5px 12px;border-radius:16px;border:none;background:transparent;color:#9CA3AF;cursor:pointer;font-family:inherit;font-weight:700;}
+.vchip.on{background:#1A1A2E;color:#fff;}
+.hist-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:12px;}
+.hist-table thead tr{background:#F9FAFB;}
+.hist-table th{text-align:left;padding:9px 10px;font-size:11px;font-weight:700;color:#6B7280;border-bottom:1px solid #E5E7EB;white-space:nowrap;}
+.hist-table td{padding:9px 10px;border-bottom:1px solid #F3F4F6;color:#374151;vertical-align:middle;}
+.hist-table tbody tr{cursor:pointer;}
+.hist-table tbody tr:hover{background:#F5F7FF;}
+.hist-table tbody tr:last-child td{border-bottom:none;}
+.lt-date{color:#9CA3AF;white-space:nowrap;font-size:11px;}
+.lt-ch{font-weight:800;white-space:nowrap;}
+.lt-title{font-weight:700;color:#1A1A2E;line-height:1.4;}
+.lt-time{color:#9CA3AF;white-space:nowrap;font-size:11px;text-align:right;}
+.lt-del{font-size:10px;padding:2px 7px;background:#FEE2E2;color:#DC2626;border:none;border-radius:4px;cursor:pointer;font-family:inherit;}
 .hist-item{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;}
 .hist-item:hover{border-color:#6366F1;}
 .hist-title{font-size:13.5px;font-weight:800;color:#1A1A2E;margin-bottom:4px;line-height:1.4;}
@@ -108,13 +123,19 @@ textarea:focus{border-color:#6366F1;}
       <div style="font-size:13px;font-weight:700">&#128250; 내가 본 영상 목록 <span style="font-size:11px;color:#9CA3AF">(PC+폰 공유)</span></div>
       <button id="clear-hist-btn" style="font-size:11px;padding:4px 10px;background:#F3F4F6;color:#6B7280;border:none;border-radius:20px;cursor:pointer;font-family:inherit;">전체 삭제</button>
     </div>
-    <div class="filter-row" id="filter-row">
-      <button class="fchip on" data-f="all">전체</button>
-      <button class="fchip" data-f="미주은">&#128218; 미주은</button>
-      <button class="fchip" data-f="소수몽키">&#129351; 소수몽키</button>
-      <button class="fchip" data-f="김교수">&#127979; 김교수</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div class="filter-row" id="filter-row" style="margin-bottom:0;">
+        <button class="fchip on" data-f="all">전체</button>
+        <button class="fchip" data-f="미주은">&#128218; 미주은</button>
+        <button class="fchip" data-f="소수몽키">&#129351; 소수몽키</button>
+        <button class="fchip" data-f="김교수">&#127979; 김교수</button>
+      </div>
+      <div class="view-toggle" id="view-toggle">
+        <button class="vchip on" data-v="card">&#127183; 카드</button>
+        <button class="vchip" data-v="list">&#9776; 목록</button>
+      </div>
     </div>
-    <div id="hist-list"><div class="loading">&#9729; 불러오는 중...</div></div>
+    <div id="hist-list" style="margin-top:12px;"><div class="loading">&#9729; 불러오는 중...</div></div>
   </div>
 </div>
 
@@ -169,6 +190,7 @@ var CHANNELS = [
 var tempResults = [null, null, null];
 var histDocs = [];
 var histFilter = 'all';
+var histView = 'card';
 
 // 날짜 헤더
 (function() {
@@ -485,6 +507,12 @@ function renderHist() {
     el.innerHTML = '<div class="empty">'+(histFilter==='all'?'아직 본 영상이 없어<br>분석 후 저장 버튼을 눌러줘':histFilter+' 기록이 없어')+'</div>';
     return;
   }
+  if (histView === 'list') renderHistList(el, list);
+  else renderHistCards(el, list);
+  wireHistEvents(el);
+}
+
+function renderHistCards(el, list) {
   var html = '';
   list.forEach(function(r) {
     var links = [];
@@ -505,6 +533,29 @@ function renderHist() {
       '</div>';
   });
   el.innerHTML = html;
+}
+
+function renderHistList(el, list) {
+  var rows = '';
+  list.forEach(function(r) {
+    rows += '<tr class="hist-item" data-id="'+r._id+'">'+
+        '<td class="lt-date">'+esc(r.date||'')+'</td>'+
+        '<td class="lt-ch" style="color:'+(r.color||'#6B7280')+'">'+esc(r.chName||'')+'</td>'+
+        '<td class="lt-title">'+esc(r.title||'(제목 없음)')+'</td>'+
+        '<td class="lt-time">'+esc(r.time||'')+'</td>'+
+        '<td style="text-align:right"><button class="del-btn lt-del" data-id="'+r._id+'">삭제</button></td>'+
+      '</tr>';
+  });
+  el.innerHTML =
+    '<div style="overflow-x:auto">'+
+      '<table class="hist-table">'+
+        '<thead><tr><th>날짜</th><th>채널</th><th>제목</th><th>분석시간</th><th></th></tr></thead>'+
+        '<tbody>'+rows+'</tbody>'+
+      '</table>'+
+    '</div>';
+}
+
+function wireHistEvents(el) {
   el.querySelectorAll('.hist-item').forEach(function(item) {
     item.addEventListener('click', function(e) {
       if (e.target.classList.contains('del-btn') || e.target.tagName==='A') return;
@@ -528,6 +579,14 @@ document.querySelectorAll('#filter-row .fchip').forEach(function(chip){
   chip.addEventListener('click', function(){
     histFilter = this.getAttribute('data-f');
     document.querySelectorAll('#filter-row .fchip').forEach(function(c){ c.classList.toggle('on', c===chip); });
+    renderHist();
+  });
+});
+
+document.querySelectorAll('#view-toggle .vchip').forEach(function(chip){
+  chip.addEventListener('click', function(){
+    histView = this.getAttribute('data-v');
+    document.querySelectorAll('#view-toggle .vchip').forEach(function(c){ c.classList.toggle('on', c===chip); });
     renderHist();
   });
 });
