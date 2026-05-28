@@ -226,13 +226,15 @@ function renderCustomForm(kind,v){
   if(kind==='buy'){
     h='<div class="form-grid">'+
       fgItem('품목','<input type="text" id="f-title" placeholder="무선 청소기" value="'+ev(v.title)+'">',true)+
-      fgItem('쇼핑몰/구입처','<input type="text" id="f-who" placeholder="쿠팡" value="'+ev(v.who)+'">')+
+      fgItem('쇼핑몰/구입처','<input type="text" id="f-who" placeholder="쿠팡 / 아마존" value="'+ev(v.who)+'">')+
       fgItem('쇼핑몰 링크','<input type="url" id="f-link" placeholder="https://..." value="'+ev(v.link)+'">')+
-      fgItem('단가(원)','<input type="number" id="f-unit" placeholder="150000" value="'+ev(v.unit)+'" oninput="calcBuy()">')+
+      fgItem('통화','<select id="f-cur" onchange="calcBuy()"><option value="원"'+(v.cur!=='달러'?' selected':'')+'>🇰🇷 원(₩)</option><option value="달러"'+(v.cur==='달러'?' selected':'')+'>🇺🇸 달러($)</option></select>')+
+      fgItem('<span id="lblUnit">단가(원)</span>','<input type="number" id="f-unit" placeholder="150000" value="'+ev(v.unit)+'" oninput="calcBuy()">')+
       fgItem('개수','<input type="number" id="f-qty" placeholder="1" value="'+(v.qty||'')+'" oninput="calcBuy()">')+
-      fgItem('택배비(원)','<input type="number" id="f-ship" placeholder="3000" value="'+ev(v.ship)+'" oninput="calcBuy()">')+
+      fgItem('<span id="lblShip">택배비(원)</span>','<input type="number" id="f-ship" placeholder="3000" value="'+ev(v.ship)+'" oninput="calcBuy()">')+
       fgItem('택배비 포함 여부','<select id="f-shipinc" onchange="calcBuy()"><option value="별도"'+(v.shipinc==='별도'?' selected':'')+'>합계에 더하기(별도)</option><option value="포함"'+(v.shipinc==='포함'?' selected':'')+'>단가에 이미 포함</option></select>')+
-      fgItem('합계','<input type="text" id="f-amtview" readonly style="font-weight:800;color:#0EA5E9;background:#F0F9FF" value="">',true)+
+      '<div class="fg-item full" id="rateBox" style="display:none"><label>환율 (1달러 = ? 원)</label><input type="number" id="f-rate" placeholder="예: 1380" value="'+ev(v.rate)+'" oninput="calcBuy()"></div>'+
+      fgItem('합계(원화)','<input type="text" id="f-amtview" readonly style="font-weight:800;color:#0EA5E9;background:#F0F9FF" value="">',true)+
       fgItem('메모','<textarea id="f-detail" placeholder="산 이유·후기">'+ev(v.detail)+'</textarea>')+
       '</div>';
     $('formFields').innerHTML=h;calcBuy();return;
@@ -342,10 +344,25 @@ function fgItem(label,inner,full){return '<div class="fg-item'+(full?' full':'')
 function fgWrap(label,inner){return '<div style="margin-top:10px"><label>'+label+'</label>'+inner+'</div>';}
 /* 구매 합계 */
 function calcBuy(){
+  var cur=($('f-cur')||{}).value||'원';
+  var isUsd=cur==='달러';
+  // 라벨·환율칸 토글
+  var lu=$('lblUnit'),ls=$('lblShip'),rb=$('rateBox');
+  if(lu)lu.textContent=isUsd?'단가($)':'단가(원)';
+  if(ls)ls.textContent=isUsd?'배송료($)':'택배비(원)';
+  if(rb)rb.style.display=isUsd?'':'none';
   var unit=Number(($('f-unit')||{}).value||0),qty=Number(($('f-qty')||{}).value||0),ship=Number(($('f-ship')||{}).value||0);
   var inc=($('f-shipinc')||{}).value||'별도';
-  var base=unit*(qty||1),total=base+(inc==='별도'?ship:0);
-  var el=$('f-amtview');if(el)el.value=total?won(total)+'원'+(ship&&inc==='별도'?' (택배비 '+won(ship)+' 포함)':''):'';
+  var base=unit*(qty||1),sub=base+(inc==='별도'?ship:0);
+  var el=$('f-amtview');if(!el)return;
+  if(isUsd){
+    var rate=Number(($('f-rate')||{}).value||0);
+    if(sub&&rate){var krw=Math.round(sub*rate);el.value=won(krw)+'원  ($'+sub.toLocaleString()+' × '+won(rate)+')';}
+    else if(sub){el.value='$'+sub.toLocaleString()+' (환율 입력 시 원화 자동계산)';}
+    else el.value='';
+  }else{
+    el.value=sub?won(sub)+'원'+(ship&&inc==='별도'?' (택배비 '+won(ship)+' 포함)':''):'';
+  }
 }
 /* 주유: 주유량×단가=금액 자동 */
 function calcFuel(){
@@ -419,7 +436,7 @@ function sumItems(kind){
   el.textContent=sum?('합계 '+won(sum)+'원'+extra):'';
 }
 function collectFields(){
-  var o={};['title','detail','who','amount','odo','liters','phone','addr','link','unit','qty','ship','shipinc','stars','insur','time2','place','prep','booktype','totalpg','readpg','fuelunit'].forEach(function(k){var el=$('f-'+k);if(el)o[k]=el.value;});
+  var o={};['title','detail','who','amount','odo','liters','phone','addr','link','unit','qty','ship','shipinc','stars','insur','time2','place','prep','booktype','totalpg','readpg','fuelunit','cur','rate'].forEach(function(k){var el=$('f-'+k);if(el)o[k]=el.value;});
   return o;
 }
 
@@ -613,8 +630,9 @@ function saveRecord(){
   // 카테고리별 금액 계산
   if(selectedCat==='구매'){
     var unit=Number(v.unit||0),qty=Number(v.qty||0),ship=Number(v.ship||0);
-    var base=unit*(qty||1);amount=base+(v.shipinc==='별도'?ship:0);
-    if(!amount)amount=null;
+    var base=unit*(qty||1)+(v.shipinc==='별도'?ship:0);
+    if(v.cur==='달러'){var rate=Number(v.rate||0);amount=(base&&rate)?Math.round(base*rate):null;}
+    else amount=base||null;
   }else if(selectedCat==='맛집'||selectedCat==='건강'||selectedCat==='여행'||selectedCat==='약속'){
     var s=formItems.reduce(function(a,it){return a+(Number(it.price)||0);},0);amount=s||null;
   }else if(selectedCat==='차계부'){
@@ -648,6 +666,8 @@ function saveRecord(){
   if(v.totalpg)rec.totalpg=Number(v.totalpg);
   if(v.readpg)rec.readpg=Number(v.readpg);
   if(v.fuelunit)rec.fuelunit=Number(v.fuelunit);
+  if(v.cur)rec.cur=v.cur;
+  if(v.rate)rec.rate=Number(v.rate);
   if(hasItems)rec.items=formItems.filter(function(it){
     return (it.name&&it.name.trim())||(it.price)||(it.quote&&it.quote.trim())||(it.thought&&it.thought.trim());
   });
@@ -819,8 +839,13 @@ function rowSummary(r){
     if(r.addr)s.push('🔧'+esc(r.addr));
   }else if(r.cat==='구매'){
     if(r.who)s.push(esc(r.who));
-    if(r.unit&&r.qty)s.push(won(r.unit)+'원×'+r.qty);
-    if(r.ship)s.push('택배'+won(r.ship));
+    if(r.cur==='달러'){
+      if(r.unit)s.push('$'+won(r.unit)+(r.qty?'×'+r.qty:''));
+      if(r.rate)s.push('환율'+won(r.rate));
+    }else{
+      if(r.unit&&r.qty)s.push(won(r.unit)+'원×'+r.qty);
+    }
+    if(r.ship)s.push('택배'+(r.cur==='달러'?'$':'')+won(r.ship));
     if(r.link)s.push('🔗링크');
   }else if(r.cat==='맛집'){
     if(r.who)s.push(esc(r.who));
@@ -883,10 +908,12 @@ function detailExtra(r){
   var h='';
   if(r.cat==='구매'){
     var parts=[];
-    if(r.unit)parts.push('단가 '+won(r.unit)+'원');
+    var unitLbl=r.cur==='달러'?'$':'';var unitSuf=r.cur==='달러'?'':'원';
+    if(r.unit)parts.push('단가 '+unitLbl+won(r.unit)+unitSuf);
     if(r.qty)parts.push('×'+r.qty+'개');
-    if(r.ship)parts.push('택배비 '+won(r.ship)+'원'+(r.shipinc==='포함'?'(포함)':''));
-    if(parts.length)h+='<div class="dx-line">🧮 '+parts.join(' · ')+'</div>';
+    if(r.ship)parts.push('택배비 '+unitLbl+won(r.ship)+unitSuf+(r.shipinc==='포함'?'(포함)':''));
+    if(r.cur==='달러'&&r.rate)parts.push('환율 '+won(r.rate)+'원');
+    if(parts.length)h+='<div class="dx-line">🧮 '+parts.join(' · ')+(r.cur==='달러'&&r.amount?'  →  '+won(r.amount)+'원':'')+'</div>';
     if(r.link)h+='<a href="'+esc(r.link)+'" target="_blank" class="dx-link">🔗 쇼핑몰에서 보기 ›</a>';
   }
   if(r.cat==='차계부'&&r.title==='주유'){
@@ -1574,24 +1601,46 @@ function vRenderPending(){
     row.appendChild(d);
   });
 }
+var editingVaultId=null;
 function saveVault(){
   var title=($('v-title').value||'').trim();
   var memo=($('v-memo').value||'').trim();
   if(!title&&!vaultPhotos.length){toast('제목이나 사진을 넣으세요');return;}
   var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
-  var id=String(Date.now());
-  var payload=JSON.stringify({memo:memo,photos:vaultPhotos});  // 제목은 평문, 나머지만 암호화
+  var wasEdit=editingVaultId;
+  var id=editingVaultId||String(Date.now());
+  var payload=JSON.stringify({memo:memo,photos:vaultPhotos});
   vSetStatus('암호화 중…');
   vaultEncrypt(payload,pin).then(function(enc){
-    vaultCache[id]={memo:memo,photos:vaultPhotos.slice()};
     if(enc.length>900000){vSetStatus('⚠️ 사진 용량이 커요 — 사진 수를 줄여주세요');return;}
     fetch(FB_BASE+'/'+COL_VAULT+'/'+id+'?key='+FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},
       body:JSON.stringify(toFS({enc:enc,title:title,nphoto:vaultPhotos.length,created:new Date().toISOString()}))})
       .then(function(){
-        $('v-title').value='';$('v-memo').value='';vaultPhotos=[];vRenderPending();vSetStatus('');
-        toast('🔒 저장됨 (제목만 표시, 내용은 잠김)');renderVault();
+        cancelVaultEdit();
+        toast(wasEdit?'✏️ 수정됨':'🔒 저장됨 (제목만 표시, 내용은 잠김)');
+        renderVault();
       }).catch(function(e){logErr('보관함 저장 실패: '+e.message);vSetStatus('⚠️ 저장 실패');});
   }).catch(function(e){logErr('암호화 실패: '+e.message);vSetStatus('⚠️ 암호화 실패');});
+}
+function cancelVaultEdit(){
+  editingVaultId=null;vaultPhotos=[];
+  $('v-title').value='';$('v-memo').value='';vRenderPending();vSetStatus('');
+  var b=$('vSaveBtn');if(b)b.textContent='🔒 암호화하여 저장';
+  var eb=$('vEditBanner');if(eb)eb.style.display='none';
+}
+function editVault(id,enc,title){
+  var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
+  vaultDecrypt(enc,pin).then(function(plain){
+    var o=JSON.parse(plain);
+    editingVaultId=id;
+    $('v-title').value=title||'';
+    $('v-memo').value=o.memo||'';
+    vaultPhotos=(o.photos||[]).slice();vRenderPending();
+    var b=$('vSaveBtn');if(b)b.textContent='✏️ 수정 저장';
+    var eb=$('vEditBanner');if(eb)eb.style.display='flex';
+    $('p-vault').scrollIntoView({behavior:'smooth',block:'start'});
+    toast('수정 모드 — 고치고 저장하세요');
+  }).catch(function(){toast('복호화 실패 — PIN 확인');});
 }
 function renderVault(){
   var box=$('vaultList');box.innerHTML='<div class="empty">불러오는 중…</div>';
@@ -1601,9 +1650,12 @@ function renderVault(){
       .sort(function(a,b){return (b.created||'').localeCompare(a.created||'');});
     box.innerHTML=items.map(function(it){
       var nph=it.nphoto?(' · 📷'+it.nphoto+'장'):'';
+      var encEsc=esc(it.enc).replace(/'/g,"\\'");
+      var titleEsc=esc(it.title||'').replace(/'/g,"\\'");
       return '<div class="vault-card" id="vault-'+it.id+'">'+
         '<div class="vault-head"><div class="vault-titlebar"><span class="vault-name">'+(esc(it.title)||'(제목 없음)')+'</span><span class="vault-sub">🔒 내용 잠김'+nph+'</span></div>'+
-        '<div class="vault-acts"><button class="rec-act" style="color:#6366F1" onclick="unlockVault(\''+it.id+'\',\''+esc(it.enc).replace(/'/g,"\\'")+'\')">👁 열기</button>'+
+        '<div class="vault-acts"><button class="rec-act" style="color:#6366F1" onclick="unlockVault(\''+it.id+'\',\''+encEsc+'\')">👁 열기</button>'+
+        '<button class="rec-act" style="color:#F59E0B" onclick="editVault(\''+it.id+'\',\''+encEsc+'\',\''+titleEsc+'\')">✏️ 수정</button>'+
         '<button class="rec-act rec-del" onclick="delVault(\''+it.id+'\')">🗑 삭제</button></div></div>'+
         '<div class="vault-body" id="vbody-'+it.id+'"></div></div>';
     }).join('');
