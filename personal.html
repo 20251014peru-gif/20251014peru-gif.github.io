@@ -241,9 +241,9 @@ textarea{resize:vertical;min-height:74px;}
 .stat-lbl{font-size:11px;color:#9CA3AF;margin-top:3px;}
 .stat-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px;}
 .stat-bar-lbl{width:70px;flex-shrink:0;color:#4B5563;}
-.stat-bar-track{flex:1;background:#F1F2F4;border-radius:6px;height:14px;overflow:hidden;}
-.stat-bar-fill{height:100%;border-radius:6px;}
-.stat-bar-val{width:56px;text-align:right;flex-shrink:0;color:#6B7280;font-weight:600;}
+.stat-bar-track{flex:1;display:block;background:#F1F2F4;border-radius:6px;height:14px;overflow:hidden;min-width:0;}
+.stat-bar-fill{display:block;height:100%;border-radius:6px;min-width:2px;}
+.stat-bar-val{width:92px;text-align:right;flex-shrink:0;color:#6B7280;font-weight:600;}
 
 .lock-screen{position:fixed;inset:0;background:linear-gradient(160deg,#6366F1,#4338CA);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;}
 .lock-screen.hidden{display:none;}
@@ -281,7 +281,7 @@ textarea{resize:vertical;min-height:74px;}
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v21</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v22</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -1421,37 +1421,68 @@ function renderStats(){
   if(!recs.length){$('statsArea').innerHTML='<div class="empty">기록이 쌓이면 통계가 보여요</div>';return;}
   var now=new Date(),ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   var thisMonth=recs.filter(function(r){return (r.date||'').slice(0,7)===ym;});
-  // 이번 달 지출 합계 (지출·구매·맛집·차계부·여행·건강의 금액)
   var spend=0;thisMonth.forEach(function(r){if(r.amount&&r.cat!=='독서')spend+=Number(r.amount);});
+  var totalSpend=0;recs.forEach(function(r){if(r.amount&&r.cat!=='독서')totalSpend+=Number(r.amount);});
   var h='';
   h+='<div class="stat-card"><h3>📅 이번 달 ('+(now.getMonth()+1)+'월)</h3><div class="stat-big">'+
      '<div class="stat-box"><div class="stat-num">'+thisMonth.length+'</div><div class="stat-lbl">기록</div></div>'+
-     '<div class="stat-box"><div class="stat-num">'+won(spend)+'</div><div class="stat-lbl">지출(원)</div></div>'+
+     '<div class="stat-box"><div class="stat-num">'+won(spend)+'</div><div class="stat-lbl">이번 달 지출(원)</div></div>'+
      '<div class="stat-box"><div class="stat-num">'+recs.length+'</div><div class="stat-lbl">전체 기록</div></div>'+
      '</div></div>';
-  // 카테고리별 건수 막대
+
+  function barRow(label,fillPct,color,valText){
+    return '<div class="stat-bar-row"><span class="stat-bar-lbl">'+label+'</span>'+
+      '<span class="stat-bar-track"><span class="stat-bar-fill" style="width:'+fillPct+'%;background:'+color+'"></span></span>'+
+      '<span class="stat-bar-val">'+valText+'</span></div>';
+  }
+
+  // ★ 카테고리별 지출(돈) — 핵심
+  var spendCat={};
+  recs.forEach(function(r){if(r.amount&&r.cat!=='독서')spendCat[r.cat]=(spendCat[r.cat]||0)+Number(r.amount);});
+  var spendKeys=Object.keys(spendCat);
+  if(spendKeys.length){
+    var maxS=Math.max.apply(null,spendKeys.map(function(k){return spendCat[k];}));
+    h+='<div class="stat-card"><h3>💰 카테고리별 지출 (전체 '+won(totalSpend)+'원)</h3>';
+    CATS.filter(function(c){return spendCat[c.k];}).sort(function(a,b){return spendCat[b.k]-spendCat[a.k];}).forEach(function(c){
+      var pct=Math.round(spendCat[c.k]/maxS*100);
+      h+=barRow(c.i+' '+c.k, pct, c.c, won(spendCat[c.k])+'원');
+    });
+    h+='</div>';
+  }
+
+  // 차량별 지출 (차계부)
+  var carSpend={};
+  recs.forEach(function(r){if(r.cat==='차계부'&&r.amount&&r.who)carSpend[r.who]=(carSpend[r.who]||0)+Number(r.amount);});
+  var carKeys=Object.keys(carSpend);
+  if(carKeys.length){
+    var maxC=Math.max.apply(null,carKeys.map(function(k){return carSpend[k];}));
+    h+='<div class="stat-card"><h3>🚗 차량별 정비·주유 지출</h3>';
+    carKeys.sort(function(a,b){return carSpend[b]-carSpend[a];}).forEach(function(car){
+      var col=(CAR_COLORS[car]||'#0891B2');
+      h+=barRow(car, Math.round(carSpend[car]/maxC*100), col, won(carSpend[car])+'원');
+    });
+    h+='</div>';
+  }
+
+  // 카테고리별 기록 수
   var byCat={};recs.forEach(function(r){byCat[r.cat]=(byCat[r.cat]||0)+1;});
-  var max=Math.max.apply(null,Object.keys(byCat).map(function(k){return byCat[k];}));
-  var order=CATS.filter(function(c){return byCat[c.k];});
+  var maxN=Math.max.apply(null,Object.keys(byCat).map(function(k){return byCat[k];}));
   h+='<div class="stat-card"><h3>📊 카테고리별 기록 수</h3>';
-  order.sort(function(a,b){return byCat[b.k]-byCat[a.k];}).forEach(function(c){
-    var pct=Math.round(byCat[c.k]/max*100);
-    h+='<div class="stat-bar-row"><span class="stat-bar-lbl">'+c.i+' '+c.k+'</span>'+
-       '<span class="stat-bar-track"><span class="stat-bar-fill" style="width:'+pct+'%;background:'+c.c+'"></span></span>'+
-       '<span class="stat-bar-val">'+byCat[c.k]+'건</span></div>';
+  CATS.filter(function(c){return byCat[c.k];}).sort(function(a,b){return byCat[b.k]-byCat[a.k];}).forEach(function(c){
+    h+=barRow(c.i+' '+c.k, Math.round(byCat[c.k]/maxN*100), c.c, byCat[c.k]+'건');
   });
   h+='</div>';
+
   // 차량별 연비 추이
   var cars={};recs.forEach(function(r){if(r.cat==='차계부'&&r.kmpl){(cars[r.who]=cars[r.who]||[]).push(r);}});
   Object.keys(cars).forEach(function(car){
     var list=cars[car].sort(function(a,b){return (a.date).localeCompare(b.date);});
     var avg=Math.round(list.reduce(function(s,r){return s+r.kmpl;},0)/list.length*10)/10;
-    h+='<div class="stat-card"><h3>🚗 '+esc(car)+' 연비 (평균 '+avg+'㎞/L)</h3>';
+    var col=(CAR_COLORS[car]||'#0891B2');
+    h+='<div class="stat-card"><h3>⛽ '+esc(car)+' 연비 (평균 '+avg+'㎞/L)</h3>';
     list.slice(-6).forEach(function(r){
       var pct=Math.min(100,Math.round(r.kmpl/Math.max(avg,r.kmpl)*100));
-      h+='<div class="stat-bar-row"><span class="stat-bar-lbl">'+r.date.slice(5)+'</span>'+
-         '<span class="stat-bar-track"><span class="stat-bar-fill" style="width:'+pct+'%;background:#0891B2"></span></span>'+
-         '<span class="stat-bar-val">'+r.kmpl+'㎞/L</span></div>';
+      h+=barRow(r.date.slice(5), pct, col, r.kmpl+'㎞/L');
     });
     h+='</div>';
   });
