@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>개인 관리</title>
-<link rel="stylesheet" href="personal.css?v=30">
+<link rel="stylesheet" href="personal.css?v=31">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v30</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v31</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -34,13 +34,13 @@
 
 <div class="tabs">
   <button class="tab active" onclick="tab('write',this)">✏️ 기록</button>
+  <button class="tab" onclick="tab('vault',this)">🔐 보관함</button>
   <button class="tab" onclick="tab('list',this)">📋 모아보기</button>
   <button class="tab" onclick="tab('cal',this)">📅 달력</button>
   <button class="tab" onclick="tab('stats',this)">📊 통계</button>
   <button class="tab" onclick="tab('search',this)">🔍 검색</button>
   <button class="tab" onclick="tab('chat',this)">💬 AI 대화</button>
   <button class="tab" onclick="tab('ai',this)">🧠 분석</button>
-  <button class="tab" onclick="tab('vault',this)">🔐 보관함</button>
   <button class="tab" onclick="tab('diag',this)">🩺 진단/오류</button>
 </div>
 
@@ -169,6 +169,7 @@
       <div class="card-title">🔐 보관함 <span style="font-weight:500;color:#9CA3AF;font-size:11px">사진·메모를 PIN으로 암호화 저장</span></div>
       <p style="font-size:12px;color:#6B7280;line-height:1.6;margin-bottom:12px;">
         사업자등록증·카드 등 중요 문서를 안전하게 보관해요. 내용은 PIN으로 암호화되어 저장되며, <b>PIN을 잊으면 복구할 수 없어요.</b></p>
+      <div id="vEditBanner" class="edit-banner" style="display:none">✏️ 수정 중 <button onclick="cancelVaultEdit()">취소</button></div>
       <label>제목</label>
       <input type="text" id="v-title" placeholder="예: 사업자등록증, ○○카드">
       <label>메모 <span class="opt">(선택)</span></label>
@@ -234,6 +235,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="personal.js?v=30"></script>
+<script src="personal.js?v=31"></script>
 </body>
 </html>
