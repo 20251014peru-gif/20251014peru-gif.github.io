@@ -113,48 +113,33 @@ var COL_PHOTO='personal_photos'; // 사진(base64)
 
 /* 카테고리 정의 + 카테고리별 입력 필드 스키마 */
 var CATS=[
-  {k:'생각',  i:'💭', c:'#8B5CF6', bg:'#EDE9FE', fields:[
-    {key:'title',label:'무슨 생각이 들었나요',ph:'한 줄 요약'},
-    {key:'detail',label:'자세히',ph:'생각의 내용·맥락',area:true}]},
+  {k:'생각',  i:'💭', c:'#8B5CF6', bg:'#EDE9FE', custom:'think'},
   {k:'구매',  i:'🛒', c:'#0EA5E9', bg:'#E0F2FE', custom:'buy'},
   {k:'통화',  i:'📞', c:'#10B981', bg:'#D1FAE5', fields:[
-    {key:'who',label:'누구와 통화',ph:'예: 엄마, 김부장'},
-    {key:'title',label:'통화 주제',ph:'한 줄'},
+    {key:'who',label:'누구와 통화',ph:'홍길동'},
+    {key:'title',label:'통화 주제',ph:'계약 일정 조율'},
     {key:'phone',label:'전화번호',ph:'010-1234-5678',opt:true},
     {key:'detail',label:'통화 내용·결정사항',ph:'무슨 얘기를 했는지',area:true}]},
   {k:'가족',  i:'👨‍👩‍👧', c:'#F43F5E', bg:'#FFE4E6', fields:[
-    {key:'who',label:'누구',ph:'예: 아내, 아들'},
-    {key:'title',label:'무슨 일',ph:'한 줄 요약'},
+    {key:'who',label:'누구',ph:'아내'},
+    {key:'title',label:'무슨 일',ph:'가족 외식'},
     {key:'detail',label:'내용·느낀 점',ph:'있었던 일',area:true}]},
-  {k:'여행',  i:'✈️', c:'#F59E0B', bg:'#FEF3C7', fields:[
-    {key:'title',label:'장소/여행명',ph:'예: 제주도'},
-    {key:'who',label:'누구와',ph:'동행',opt:true},
-    {key:'amount',label:'경비(원)',ph:'쓴 돈',num:true,opt:true},
-    {key:'phone',label:'전화번호',ph:'010-1234-5678',opt:true},
-    {key:'addr',label:'주소',ph:'주소 (눌러서 지도)',opt:true},
-    {key:'detail',label:'일정·메모',ph:'한 일·좋았던 것',area:true,opt:true}]},
+  {k:'여행',  i:'✈️', c:'#F59E0B', bg:'#FEF3C7', custom:'trip'},
   {k:'맛집',  i:'🍜', c:'#FB923C', bg:'#FFEDD5', custom:'food'},
-  {k:'차계부',  i:'🚗', c:'#0891B2', bg:'#CFFAFE', fields:[
-    {key:'who',label:'차량',sel:['쏘나타','스타렉스']},
-    {key:'title',label:'항목',sel:['주유','엔진오일','타이어','보험','검사','세차','수리','기타']},
-    {key:'amount',label:'금액(원)',ph:'쓴 돈',num:true,opt:true},
-    {key:'odo',label:'주행거리(㎞)',ph:'예: 45200',num:true,opt:true},
-    {key:'liters',label:'주유량(L)',ph:'주유 시',num:true,opt:true},
-    {key:'addr',label:'정비소/주유소',ph:'상호 (눌러서 지도)',opt:true},
-    {key:'detail',label:'메모',ph:'내용 등',area:true,opt:true}]},
+  {k:'차계부',  i:'🚗', c:'#0891B2', bg:'#CFFAFE', custom:'car'},
   {k:'건강',  i:'💊', c:'#14B8A6', bg:'#CCFBF1', custom:'health'},
   {k:'약속',  i:'📅', c:'#6366F1', bg:'#E0E7FF', custom:'appt'},
   {k:'아이디어',i:'💡', c:'#EAB308', bg:'#FEF9C3', fields:[
-    {key:'title',label:'아이디어 한 줄',ph:'떠오른 생각'},
+    {key:'title',label:'아이디어 한 줄',ph:'유튜브 채널 시작'},
     {key:'detail',label:'구체적으로',ph:'어떻게 실행할지',area:true,opt:true}]},
   {k:'독서',  i:'📖', c:'#7C3AED', bg:'#EDE9FE', custom:'book'},
   {k:'기타',  i:'📌', c:'#64748B', bg:'#F1F5F9', fields:[
-    {key:'title',label:'제목',ph:'한 줄'},
-    {key:'who',label:'관련 인물/장소',ph:'',opt:true},
-    {key:'amount',label:'금액(원)',ph:'',num:true,opt:true},
+    {key:'title',label:'제목',ph:'세무서 서류 제출'},
+    {key:'who',label:'관련 인물/장소',ph:'김재현 세무사',opt:true},
+    {key:'amount',label:'금액(원)',ph:'50000',num:true,opt:true},
     {key:'phone',label:'전화번호',ph:'010-1234-5678',opt:true},
     {key:'addr',label:'주소',ph:'주소 (눌러서 지도)',opt:true},
-    {key:'detail',label:'내용',ph:'',area:true,opt:true}]}
+    {key:'detail',label:'내용',ph:'자세한 내용',area:true,opt:true}]}
 ];
 function catOf(k){for(var i=0;i<CATS.length;i++)if(CATS[i].k===k)return CATS[i];return CATS[CATS.length-1];}
 /* 달력 이벤트 색: 차계부는 차량별로 구분, 그 외는 카테고리 색 */
@@ -224,140 +209,217 @@ function renderForm(vals){
   $('formFields').innerHTML=h;
 }
 /* ===== 카테고리별 맞춤 폼 ===== */
-var formItems=[];   // 반복 항목(맛집 메뉴 / 건강 항목 / 독서 핵심문장)
+var formItems=[];
 function renderCustomForm(kind,v){
   v=v||{};formItems=(v.items&&v.items.slice())||[];
   var h='';
+  if(kind==='think'){
+    h='<div class="form-grid">'+
+      fgItem('제목','<input type="text" id="f-title" placeholder="요즘 드는 생각" value="'+ev(v.title)+'">',true)+
+      '</div>'+
+      '<label style="margin-top:10px">생각 ↔ 자세히 (추가 가능)</label>'+
+      '<div id="itemRows"></div>'+
+      '<button type="button" class="add-row-btn" onclick="addItem(\'think\')">＋ 생각 추가</button>'+
+      fgWrap('전체 메모','<textarea id="f-detail" placeholder="추가 메모">'+ev(v.detail)+'</textarea>');
+    $('formFields').innerHTML=h;renderItems('think');return;
+  }
   if(kind==='buy'){
     h='<div class="form-grid">'+
-      fgItem('품목','<input type="text" id="f-title" placeholder="예: 다이슨 청소기" value="'+ev(v.title)+'">',true)+
-      fgItem('쇼핑몰/구입처','<input type="text" id="f-who" placeholder="예: 쿠팡, 알리" value="'+ev(v.who)+'">')+
+      fgItem('품목','<input type="text" id="f-title" placeholder="무선 청소기" value="'+ev(v.title)+'">',true)+
+      fgItem('쇼핑몰/구입처','<input type="text" id="f-who" placeholder="쿠팡" value="'+ev(v.who)+'">')+
       fgItem('쇼핑몰 링크','<input type="url" id="f-link" placeholder="https://..." value="'+ev(v.link)+'">')+
-      fgItem('단가(원)','<input type="number" id="f-unit" placeholder="개당 가격" value="'+ev(v.unit)+'" oninput="calcBuy()">')+
-      fgItem('개수','<input type="number" id="f-qty" placeholder="수량" value="'+(v.qty||'')+'" oninput="calcBuy()">')+
-      fgItem('택배비(원)','<input type="number" id="f-ship" placeholder="배송비" value="'+ev(v.ship)+'" oninput="calcBuy()">')+
+      fgItem('단가(원)','<input type="number" id="f-unit" placeholder="150000" value="'+ev(v.unit)+'" oninput="calcBuy()">')+
+      fgItem('개수','<input type="number" id="f-qty" placeholder="1" value="'+(v.qty||'')+'" oninput="calcBuy()">')+
+      fgItem('택배비(원)','<input type="number" id="f-ship" placeholder="3000" value="'+ev(v.ship)+'" oninput="calcBuy()">')+
       fgItem('택배비 포함 여부','<select id="f-shipinc" onchange="calcBuy()"><option value="별도"'+(v.shipinc==='별도'?' selected':'')+'>합계에 더하기(별도)</option><option value="포함"'+(v.shipinc==='포함'?' selected':'')+'>단가에 이미 포함</option></select>')+
       fgItem('합계','<input type="text" id="f-amtview" readonly style="font-weight:800;color:#0EA5E9;background:#F0F9FF" value="">',true)+
-      fgItem('메모','<textarea id="f-detail" placeholder="산 이유·후기·비교">'+ev(v.detail)+'</textarea>')+
+      fgItem('메모','<textarea id="f-detail" placeholder="산 이유·후기">'+ev(v.detail)+'</textarea>')+
       '</div>';
     $('formFields').innerHTML=h;calcBuy();return;
   }
+  if(kind==='trip'){
+    h='<div class="form-grid">'+
+      fgItem('장소/여행명','<input type="text" id="f-title" placeholder="제주도 가족여행" value="'+ev(v.title)+'">',true)+
+      fgItem('누구와','<input type="text" id="f-who" placeholder="가족 4명" value="'+ev(v.who)+'">')+
+      fgItem('주소','<input type="text" id="f-addr" placeholder="주소(눌러서 지도)" value="'+ev(v.addr)+'">')+
+      fgItem('전화번호','<input type="text" id="f-phone" placeholder="064-123-4567" value="'+ev(v.phone)+'">')+
+      '</div>'+
+      '<label style="margin-top:10px">경비 (항목별 추가)</label>'+
+      '<div id="itemRows"></div>'+
+      '<button type="button" class="add-row-btn" onclick="addItem(\'trip\')">＋ 경비 추가</button>'+
+      '<div class="item-total" id="itemTotal"></div>'+
+      fgWrap('일정·메모','<textarea id="f-detail" placeholder="한 일·좋았던 것">'+ev(v.detail)+'</textarea>');
+    $('formFields').innerHTML=h;renderItems('trip');return;
+  }
   if(kind==='food'){
     h='<div class="form-grid">'+
-      fgItem('가게 이름','<input type="text" id="f-title" placeholder="예: 스시오마카세" value="'+ev(v.title)+'">',true)+
-      fgItem('위치/지역','<input type="text" id="f-who" placeholder="예: 강남" value="'+ev(v.who)+'">')+
+      fgItem('가게 이름','<input type="text" id="f-title" placeholder="할매국밥" value="'+ev(v.title)+'">',true)+
+      fgItem('위치/지역','<input type="text" id="f-who" placeholder="부산 서면" value="'+ev(v.who)+'">')+
       fgItem('주소','<input type="text" id="f-addr" placeholder="주소(눌러서 지도)" value="'+ev(v.addr)+'">')+
-      fgItem('전화번호','<input type="text" id="f-phone" placeholder="010-..." value="'+ev(v.phone)+'">')+
-      fgItem('별점','<select id="f-stars"><option value="">-</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(String(v.stars)===String(n)?' selected':'')+'>'+'⭐'.repeat(n)+'</option>';}).join('')+'</select>')+
+      fgItem('전화번호','<input type="text" id="f-phone" placeholder="051-123-4567" value="'+ev(v.phone)+'">')+
+      fgItem('별점','<select id="f-stars"><option value="">-</option>'+starOpts(v.stars)+'</select>')+
       '</div>'+
-      '<label style="margin-top:10px">먹은 메뉴 (사람별로 추가)</label>'+
+      '<label style="margin-top:10px">먹은 메뉴 (메뉴·가격·인원, 추가 가능)</label>'+
       '<div id="itemRows"></div>'+
       '<button type="button" class="add-row-btn" onclick="addItem(\'food\')">＋ 메뉴 추가</button>'+
       '<div class="item-total" id="itemTotal"></div>'+
-      fgWrap('메모','<textarea id="f-detail" placeholder="평가·재방문 여부">'+ev(v.detail)+'</textarea>');
+      fgWrap('메모','<textarea id="f-detail" placeholder="맛 평가·재방문 여부">'+ev(v.detail)+'</textarea>');
     $('formFields').innerHTML=h;renderItems('food');return;
+  }
+  if(kind==='car'){
+    h='<div class="form-grid">'+
+      fgItem('차량','<select id="f-who"><option'+(v.who==='쏘나타'?' selected':'')+'>쏘나타</option><option'+(v.who==='스타렉스'?' selected':'')+'>스타렉스</option></select>')+
+      fgItem('구분','<select id="f-title" onchange="toggleCarType()"><option'+(v.title==='주유'?' selected':'')+'>주유</option><option'+(v.title==='정비'?' selected':'')+'>정비</option><option'+(v.title==='보험'?' selected':'')+'>보험</option><option'+(v.title==='기타'?' selected':'')+'>기타</option></select>')+
+      fgItem('주행거리(㎞)','<input type="number" id="f-odo" placeholder="45200" value="'+ev(v.odo)+'">')+
+      fgItem('주유소/정비소','<input type="text" id="f-addr" placeholder="GS칼텍스 OO점" value="'+ev(v.addr)+'">')+
+      '</div>'+
+      '<div id="carFuel">'+
+        '<div class="form-grid">'+
+          fgItem('주유량(L)','<input type="number" id="f-liters" placeholder="40" value="'+ev(v.liters)+'" oninput="calcFuel()">')+
+          fgItem('단가(원/L)','<input type="number" id="f-fuelunit" placeholder="1700" value="'+ev(v.fuelunit)+'" oninput="calcFuel()">')+
+          fgItem('금액(원)','<input type="number" id="f-amount" placeholder="68000" value="'+ev(v.amount)+'" oninput="syncFuelAmt()">',true)+
+        '</div>'+
+      '</div>'+
+      '<div id="carParts">'+
+        '<label style="margin-top:10px">정비 내역 (항목·단가, 추가 가능)</label>'+
+        '<div id="itemRows"></div>'+
+        '<button type="button" class="add-row-btn" onclick="addItem(\'car\')">＋ 정비 항목 추가</button>'+
+        '<div class="item-total" id="itemTotal"></div>'+
+      '</div>'+
+      fgWrap('메모','<textarea id="f-detail" placeholder="특이사항">'+ev(v.detail)+'</textarea>');
+    $('formFields').innerHTML=h;renderItems('car');toggleCarType();calcFuel();return;
   }
   if(kind==='health'){
     h='<div class="form-grid">'+
-      fgItem('증상/검진','<input type="text" id="f-title" placeholder="예: 감기, 건강검진" value="'+ev(v.title)+'">',true)+
-      fgItem('병원/의사','<input type="text" id="f-who" placeholder="기관·담당" value="'+ev(v.who)+'">')+
-      fgItem('전화번호','<input type="text" id="f-phone" placeholder="010-..." value="'+ev(v.phone)+'">')+
+      fgItem('증상/검진','<input type="text" id="f-title" placeholder="감기 진료" value="'+ev(v.title)+'">',true)+
+      fgItem('병원/의사','<input type="text" id="f-who" placeholder="서울내과" value="'+ev(v.who)+'">')+
+      fgItem('전화번호','<input type="text" id="f-phone" placeholder="02-123-4567" value="'+ev(v.phone)+'">')+
       fgItem('주소','<input type="text" id="f-addr" placeholder="주소(눌러서 지도)" value="'+ev(v.addr)+'">')+
       fgItem('보험 청구','<select id="f-insur"><option value="해당없음"'+(v.insur==='해당없음'?' selected':'')+'>해당없음</option><option value="청구예정"'+(v.insur==='청구예정'?' selected':'')+'>청구 예정</option><option value="청구완료"'+(v.insur==='청구완료'?' selected':'')+'>청구 완료</option></select>')+
       '</div>'+
-      '<label style="margin-top:10px">진료비 / 약값 (항목별 추가)</label>'+
+      '<label style="margin-top:10px">진료비 / 약값 (추가 가능)</label>'+
       '<div id="itemRows"></div>'+
       '<button type="button" class="add-row-btn" onclick="addItem(\'health\')">＋ 비용 항목 추가</button>'+
       '<div class="item-total" id="itemTotal"></div>'+
-      fgWrap('내용·처방','<textarea id="f-detail" placeholder="처방·메모">'+ev(v.detail)+'</textarea>');
+      fgWrap('처방·메모','<textarea id="f-detail" placeholder="처방 내용·메모">'+ev(v.detail)+'</textarea>');
     $('formFields').innerHTML=h;renderItems('health');return;
   }
   if(kind==='appt'){
     h='<div class="form-grid">'+
-      fgItem('약속 내용','<input type="text" id="f-title" placeholder="예: 점심 약속" value="'+ev(v.title)+'">',true)+
-      fgItem('누구와','<input type="text" id="f-who" placeholder="상대" value="'+ev(v.who)+'">')+
+      fgItem('약속 내용','<input type="text" id="f-title" placeholder="거래처 미팅" value="'+ev(v.title)+'">',true)+
+      fgItem('누구와','<input type="text" id="f-who" placeholder="김부장" value="'+ev(v.who)+'">')+
       fgItem('시간','<input type="time" id="f-time2" value="'+ev(v.time2)+'">')+
-      fgItem('장소','<input type="text" id="f-place" placeholder="만나는 곳" value="'+ev(v.place)+'">')+
+      fgItem('장소','<input type="text" id="f-place" placeholder="강남역 2번 출구" value="'+ev(v.place)+'">')+
       fgItem('주소','<input type="text" id="f-addr" placeholder="주소(눌러서 지도)" value="'+ev(v.addr)+'">')+
-      fgItem('준비물','<input type="text" id="f-prep" placeholder="챙길 것" value="'+ev(v.prep)+'">')+
-      fgItem('비용(원)','<input type="number" id="f-amount" placeholder="들었으면 입력" value="'+ev(v.amount)+'">')+
-      fgItem('메모','<textarea id="f-detail" placeholder="기타 메모">'+ev(v.detail)+'</textarea>')+
-      '</div>';
-    $('formFields').innerHTML=h;return;
+      fgItem('준비물','<input type="text" id="f-prep" placeholder="계약서, 도장" value="'+ev(v.prep)+'">')+
+      '</div>'+
+      '<label style="margin-top:10px">비용 (어디에 얼마, 추가 가능)</label>'+
+      '<div id="itemRows"></div>'+
+      '<button type="button" class="add-row-btn" onclick="addItem(\'appt\')">＋ 비용 추가</button>'+
+      '<div class="item-total" id="itemTotal"></div>'+
+      fgWrap('메모','<textarea id="f-detail" placeholder="기타 메모">'+ev(v.detail)+'</textarea>');
+    $('formFields').innerHTML=h;renderItems('appt');return;
   }
   if(kind==='book'){
     h='<div class="form-grid">'+
-      fgItem('책 제목','<input type="text" id="f-title" placeholder="예: 사피엔스" value="'+ev(v.title)+'">',true)+
-      fgItem('저자','<input type="text" id="f-who" placeholder="지은이" value="'+ev(v.who)+'">')+
+      fgItem('책 제목','<input type="text" id="f-title" placeholder="사피엔스" value="'+ev(v.title)+'">',true)+
+      fgItem('저자','<input type="text" id="f-who" placeholder="유발 하라리" value="'+ev(v.who)+'">')+
       fgItem('종류','<select id="f-booktype"><option value="종이책"'+(v.booktype==='종이책'?' selected':'')+'>📕 종이책</option><option value="전자책"'+(v.booktype==='전자책'?' selected':'')+'>📱 전자책</option></select>')+
-      fgItem('전체 페이지','<input type="number" id="f-totalpg" placeholder="예: 480" value="'+ev(v.totalpg)+'" oninput="calcBook()">')+
-      fgItem('읽은 페이지','<input type="number" id="f-readpg" placeholder="이어볼 페이지" value="'+ev(v.readpg)+'" oninput="calcBook()">')+
-      fgItem('별점','<select id="f-stars"><option value="">-</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(String(v.stars)===String(n)?' selected':'')+'>'+'⭐'.repeat(n)+'</option>';}).join('')+'</select>')+
-      fgItem('진행률','<input type="text" id="f-progview" readonly style="background:#F5F3FF;font-weight:700;color:#7C3AED" value="">',true)+
+      fgItem('별점 · 진행률','<div class="star-prog"><select id="f-stars"><option value="">별점</option>'+starOpts(v.stars)+'</select><input type="text" id="f-progview" readonly class="prog-mini" value=""></div>',true)+
+      fgItem('전체 페이지','<input type="number" id="f-totalpg" placeholder="480" value="'+ev(v.totalpg)+'" oninput="calcBook()">')+
+      fgItem('읽은 페이지','<input type="number" id="f-readpg" placeholder="이어볼 쪽" value="'+ev(v.readpg)+'" oninput="calcBook()">')+
       '</div>'+
-      '<label style="margin-top:10px">핵심 문장 ↔ 내 생각 (나란히, 추가 가능)</label>'+
+      '<label style="margin-top:10px">핵심 문장 ↔ 내 생각 (추가 가능)</label>'+
       '<div id="itemRows"></div>'+
       '<button type="button" class="add-row-btn" onclick="addItem(\'book\')">＋ 핵심 문장 추가</button>'+
       fgWrap('전체 메모','<textarea id="f-detail" placeholder="책 전체 감상">'+ev(v.detail)+'</textarea>');
     $('formFields').innerHTML=h;renderItems('book');calcBook();return;
   }
 }
+function starOpts(cur){return [1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(String(cur)===String(n)?' selected':'')+'>'+'⭐'.repeat(n)+'</option>';}).join('');}
 function ev(x){return x!=null?esc(String(x)):'';}
 function fgItem(label,inner,full){return '<div class="fg-item'+(full?' full':'')+'"><label>'+label+'</label>'+inner+'</div>';}
 function fgWrap(label,inner){return '<div style="margin-top:10px"><label>'+label+'</label>'+inner+'</div>';}
-/* 구매 합계 자동계산 */
+/* 구매 합계 */
 function calcBuy(){
   var unit=Number(($('f-unit')||{}).value||0),qty=Number(($('f-qty')||{}).value||0),ship=Number(($('f-ship')||{}).value||0);
   var inc=($('f-shipinc')||{}).value||'별도';
-  var base=unit*(qty||1);
-  var total=base+(inc==='별도'?ship:0);
+  var base=unit*(qty||1),total=base+(inc==='별도'?ship:0);
   var el=$('f-amtview');if(el)el.value=total?won(total)+'원'+(ship&&inc==='별도'?' (택배비 '+won(ship)+' 포함)':''):'';
+}
+/* 주유: 주유량×단가=금액 자동 */
+function calcFuel(){
+  var l=Number(($('f-liters')||{}).value||0),u=Number(($('f-fuelunit')||{}).value||0);
+  if(l&&u){var amt=Math.round(l*u);var el=$('f-amount');if(el)el.value=amt;}
+}
+function syncFuelAmt(){/* 사용자가 금액 직접 수정 시 그대로 둠 */}
+/* 차계부 구분에 따라 주유/정비 영역 토글 */
+function toggleCarType(){
+  var t=($('f-title')||{}).value;
+  var fuel=$('carFuel'),parts=$('carParts');
+  if(!fuel||!parts)return;
+  if(t==='주유'){fuel.style.display='';parts.style.display='none';}
+  else if(t==='정비'){fuel.style.display='none';parts.style.display='';}
+  else{fuel.style.display='none';parts.style.display='none';}
 }
 /* 독서 진행률 */
 function calcBook(){
   var t=Number(($('f-totalpg')||{}).value||0),r=Number(($('f-readpg')||{}).value||0);
   var el=$('f-progview');if(!el)return;
-  if(t>0&&r>=0){var pct=Math.min(100,Math.round(r/t*100));el.value=r+' / '+t+'쪽 ('+pct+'%)';}
-  else el.value='';
+  if(t>0){var pct=Math.min(100,Math.round(r/t*100));el.value=r+'/'+t+'쪽 '+pct+'%';}else el.value='';
 }
-/* 반복 항목 (맛집 메뉴 / 건강 비용 / 독서 핵심문장) */
+/* ===== 반복 항목 (컬럼 정의형) ===== */
 function addItem(kind){
-  if(kind==='food')formItems.push({name:'',price:''});
-  else if(kind==='health')formItems.push({name:'',price:'',type:'진료비'});
+  if(kind==='think')formItems.push({quote:'',thought:''});
   else if(kind==='book')formItems.push({quote:'',thought:''});
+  else if(kind==='food')formItems.push({name:'',price:'',people:''});
+  else if(kind==='health')formItems.push({type:'진료비',name:'',price:''});
+  else if(kind==='trip')formItems.push({name:'',price:''});
+  else if(kind==='appt')formItems.push({name:'',price:''});
+  else if(kind==='car')formItems.push({name:'',price:''});
   renderItems(kind);
 }
 function delItem(kind,i){formItems.splice(i,1);renderItems(kind);}
+function updItem(i,key,val){if(formItems[i])formItems[i][key]=val;}
 function renderItems(kind){
   var box=$('itemRows');if(!box)return;
   var h='';
   formItems.forEach(function(it,i){
-    if(kind==='food'){
-      h+='<div class="item-row"><input type="text" placeholder="메뉴/사람" value="'+ev(it.name)+'" oninput="updItem('+i+',\'name\',this.value)">'+
-        '<input type="number" placeholder="금액" value="'+(it.price||'')+'" oninput="updItem('+i+',\'price\',this.value);sumItems(\'food\')" class="item-price">'+
+    if(kind==='think'||kind==='book'){
+      var t1=kind==='book'?'📜 핵심 문장':'💭 생각';
+      var t2=kind==='book'?'💡 내 생각':'📝 자세히';
+      h+='<div class="quote-row"><div class="quote-head"><span class="quote-no">'+(i+1)+'</span><button type="button" class="item-del" onclick="delItem(\''+kind+'\','+i+')">×</button></div>'+
+        '<div class="quote-cols"><div class="quote-col"><div class="quote-tag">'+t1+'</div><textarea placeholder="" oninput="updItem('+i+',\'quote\',this.value)">'+ev(it.quote)+'</textarea></div>'+
+        '<div class="quote-col"><div class="quote-tag think">'+t2+'</div><textarea placeholder="" oninput="updItem('+i+',\'thought\',this.value)">'+ev(it.thought)+'</textarea></div></div></div>';
+    }else if(kind==='food'){
+      h+='<div class="item-row"><input type="text" placeholder="메뉴" value="'+ev(it.name)+'" oninput="updItem('+i+',\'name\',this.value)">'+
+        '<input type="number" placeholder="가격" value="'+(it.price||'')+'" oninput="updItem('+i+',\'price\',this.value);sumItems(\'food\')" class="item-price">'+
+        '<input type="number" placeholder="인원" value="'+(it.people||'')+'" oninput="updItem('+i+',\'people\',this.value);sumItems(\'food\')" class="item-people">'+
         '<button type="button" class="item-del" onclick="delItem(\'food\','+i+')">×</button></div>';
     }else if(kind==='health'){
       h+='<div class="item-row"><select onchange="updItem('+i+',\'type\',this.value)" class="item-type"><option'+(it.type==='진료비'?' selected':'')+'>진료비</option><option'+(it.type==='약값'?' selected':'')+'>약값</option></select>'+
-        '<input type="text" placeholder="내용" value="'+ev(it.name)+'" oninput="updItem('+i+',\'name\',this.value)">'+
-        '<input type="number" placeholder="금액" value="'+(it.price||'')+'" oninput="updItem('+i+',\'price\',this.value);sumItems(\'health\')" class="item-price">'+
+        '<input type="text" placeholder="내용" value="'+ev(it.name)+'" oninput="updItem('+i+',\'name\',this.value)" class="item-name-sm">'+
+        '<input type="number" placeholder="가격" value="'+(it.price||'')+'" oninput="updItem('+i+',\'price\',this.value);sumItems(\'health\')" class="item-price-lg">'+
         '<button type="button" class="item-del" onclick="delItem(\'health\','+i+')">×</button></div>';
-    }else if(kind==='book'){
-      h+='<div class="quote-row"><div class="quote-head"><span class="quote-no">'+(i+1)+'</span><button type="button" class="item-del" onclick="delItem(\'book\','+i+')">×</button></div>'+
-        '<div class="quote-cols"><div class="quote-col"><div class="quote-tag">📜 핵심 문장</div><textarea placeholder="인상 깊은 구절" oninput="updItem('+i+',\'quote\',this.value)">'+ev(it.quote)+'</textarea></div>'+
-        '<div class="quote-col"><div class="quote-tag think">💡 내 생각</div><textarea placeholder="느낀 점·적용할 것" oninput="updItem('+i+',\'thought\',this.value)">'+ev(it.thought)+'</textarea></div></div></div>';
+    }else{ /* trip, appt, car: 항목 + 단가 */
+      var ph=kind==='car'?'정비 항목':(kind==='appt'?'어디에':'항목');
+      h+='<div class="item-row"><input type="text" placeholder="'+ph+'" value="'+ev(it.name)+'" oninput="updItem('+i+',\'name\',this.value)">'+
+        '<input type="number" placeholder="금액" value="'+(it.price||'')+'" oninput="updItem('+i+',\'price\',this.value);sumItems(\''+kind+'\')" class="item-price">'+
+        '<button type="button" class="item-del" onclick="delItem(\''+kind+'\','+i+')">×</button></div>';
     }
   });
   box.innerHTML=h;
-  if(kind==='food'||kind==='health')sumItems(kind);
+  if(kind!=='think'&&kind!=='book')sumItems(kind);
 }
-function updItem(i,key,val){if(formItems[i])formItems[i][key]=val;}
 function sumItems(kind){
   var el=$('itemTotal');if(!el)return;
   var sum=formItems.reduce(function(s,it){return s+(Number(it.price)||0);},0);
-  el.textContent=sum?('합계 '+won(sum)+'원'):'';
+  var extra='';
+  if(kind==='food'){var ppl=formItems.reduce(function(s,it){return s+(Number(it.people)||0);},0);if(ppl)extra=' · '+ppl+'명';}
+  el.textContent=sum?('합계 '+won(sum)+'원'+extra):'';
 }
 function collectFields(){
-  var o={};['title','detail','who','amount','odo','liters','phone','addr','link','unit','qty','ship','shipinc','stars','insur','time2','place','prep','booktype','totalpg','readpg'].forEach(function(k){var el=$('f-'+k);if(el)o[k]=el.value;});
+  var o={};['title','detail','who','amount','odo','liters','phone','addr','link','unit','qty','ship','shipinc','stars','insur','time2','place','prep','booktype','totalpg','readpg','fuelunit'].forEach(function(k){var el=$('f-'+k);if(el)o[k]=el.value;});
   return o;
 }
 
@@ -553,8 +615,11 @@ function saveRecord(){
     var unit=Number(v.unit||0),qty=Number(v.qty||0),ship=Number(v.ship||0);
     var base=unit*(qty||1);amount=base+(v.shipinc==='별도'?ship:0);
     if(!amount)amount=null;
-  }else if(selectedCat==='맛집'||selectedCat==='건강'){
+  }else if(selectedCat==='맛집'||selectedCat==='건강'||selectedCat==='여행'||selectedCat==='약속'){
     var s=formItems.reduce(function(a,it){return a+(Number(it.price)||0);},0);amount=s||null;
+  }else if(selectedCat==='차계부'){
+    if(v.title==='주유'){amount=v.amount?Number(v.amount):null;}
+    else{var sc=formItems.reduce(function(a,it){return a+(Number(it.price)||0);},0);amount=sc||(v.amount?Number(v.amount):null);}
   }else if(v.amount){amount=Number(v.amount);}
   // 별점은 amount와 별개로 stars에
   var rec={
@@ -582,6 +647,7 @@ function saveRecord(){
   if(v.booktype)rec.booktype=v.booktype;
   if(v.totalpg)rec.totalpg=Number(v.totalpg);
   if(v.readpg)rec.readpg=Number(v.readpg);
+  if(v.fuelunit)rec.fuelunit=Number(v.fuelunit);
   if(hasItems)rec.items=formItems.filter(function(it){
     return (it.name&&it.name.trim())||(it.price)||(it.quote&&it.quote.trim())||(it.thought&&it.thought.trim());
   });
@@ -661,6 +727,38 @@ function renderList(){
   $('listArea').innerHTML=arr.length?groupByDate(arr):'<div class="empty">아직 기록이 없어요</div>';
   hydratePhotos();
 }
+function copyListExcel(){
+  var arr=getRecords().filter(function(r){
+    if(listFilter!=='전체'&&r.cat!==listFilter)return false;
+    if(listFilter==='차계부'&&carFilter!=='전체'&&r.who!==carFilter)return false;
+    return true;
+  });
+  if(!arr.length){toast('복사할 기록이 없어요');return;}
+  arr.sort(function(a,b){return (b.date+(b.time||'')).localeCompare(a.date+(a.time||''));});
+  var rows=[['날짜','분류','제목','상세','관련','금액'].join('\t')];
+  arr.forEach(function(r){
+    var detail=(r.detail||'').replace(/\s+/g,' ').trim();
+    if(r.items&&r.items.length){
+      var its=r.items.map(function(it){
+        if(it.quote!=null)return (it.quote||'')+(it.thought?' / '+it.thought:'');
+        return (it.type?it.type+' ':'')+(it.name||'')+(it.price?' '+it.price+'원':'')+(it.people?' '+it.people+'명':'');
+      }).join(' | ');
+      detail=(detail?detail+' | ':'')+its;
+    }
+    var cell=function(x){return String(x==null?'':x).replace(/\t/g,' ').replace(/\n/g,' ');};
+    rows.push([r.date,r.cat,cell(r.title),cell(detail),cell(r.who||r.addr||''),(r.amount||'')].join('\t'));
+  });
+  var tsv=rows.join('\n');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(tsv).then(function(){toast('📋 '+arr.length+'건 복사됨 — 엑셀에 붙여넣기');}).catch(function(){fallbackCopy(tsv,arr.length);});
+  }else fallbackCopy(tsv,arr.length);
+}
+function fallbackCopy(text,n){
+  var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');toast('📋 '+n+'건 복사됨 — 엑셀에 붙여넣기');}catch(e){toast('복사 실패');}
+  document.body.removeChild(ta);
+}
 function groupByDate(arr){
   arr.sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
   if(viewMode==='list')return tableView(arr);
@@ -689,28 +787,72 @@ function catBadge(r){
 }
 /* 표 목록 (날짜 그룹 + 한 줄 행) */
 function tableView(arr){
-  if(listFilter==='차계부'){
-    return groupRows(arr,function(r){
-      var amt=r.amount?won(r.amount)+'원':'';
-      var sub=[];if(r.odo)sub.push('📍'+won(r.odo)+'㎞');if(r.kmpl)sub.push('⛽'+r.kmpl+'㎞/L');if(r.addr)sub.push('🔧'+esc(r.addr));
-      return '<div class="lrow1" onclick="openDetail(\''+r.id+'\')">'+
-        '<span class="l1-date">'+r.date.slice(5).replace('-','/')+'</span>'+
-        catBadge(r)+
-        '<span class="l1-title">'+(esc(r.title)||'-')+photoMark(r)+'</span>'+
-        '<span class="l1-sub">'+sub.join(' · ')+'</span>'+
-        '<span class="l1-amt">'+amt+'</span></div>';
-    });
-  }
   return groupRows(arr,function(r){
-    var sub=r.who||(r.detail?r.detail.replace(/\n/g,' '):'');
-    var amt='';if(r.amount){amt=(r.cat==='독서')?('⭐'+Math.max(0,Math.min(5,Math.round(r.amount)))):(won(r.amount)+'원');}
+    var amt='';
+    if(r.cat==='독서'){amt=r.stars?('⭐'+r.stars):'';}
+    else if(r.amount){amt=won(r.amount)+'원';}
     return '<div class="lrow1" onclick="openDetail(\''+r.id+'\')">'+
       '<span class="l1-date">'+r.date.slice(5).replace('-','/')+'</span>'+
       catBadge(r)+
       '<span class="l1-title">'+(esc(r.title)||r.cat)+photoMark(r)+'</span>'+
-      '<span class="l1-sub">'+esc(sub)+'</span>'+
+      '<span class="l1-sub">'+rowSummary(r)+'</span>'+
       '<span class="l1-amt'+(r.cat==='독서'?' star':'')+'">'+amt+'</span></div>';
   });
+}
+/* 한 줄 요약: 그 기록의 핵심 정보를 카테고리별로 */
+function rowSummary(r){
+  var s=[];
+  function items(){return (r.items||[]).map(function(it){
+    if(it.quote!=null)return null;
+    return (it.name||'')+(it.price?' '+won(it.price)+'원':'')+(it.people?'('+it.people+'명)':'');
+  }).filter(Boolean);}
+  if(r.cat==='차계부'){
+    if(r.who)s.push(r.who);
+    if(r.odo)s.push('📍'+won(r.odo)+'㎞');
+    if(r.title==='주유'){
+      if(r.liters)s.push('⛽'+r.liters+'L');
+      if(r.fuelunit)s.push('@'+won(r.fuelunit)+'원');
+      if(r.kmpl)s.push(r.kmpl+'㎞/L');
+    }else{
+      var its=items();if(its.length)s.push(its.join(', '));
+    }
+    if(r.addr)s.push('🔧'+esc(r.addr));
+  }else if(r.cat==='구매'){
+    if(r.who)s.push(esc(r.who));
+    if(r.unit&&r.qty)s.push(won(r.unit)+'원×'+r.qty);
+    if(r.ship)s.push('택배'+won(r.ship));
+    if(r.link)s.push('🔗링크');
+  }else if(r.cat==='맛집'){
+    if(r.who)s.push(esc(r.who));
+    var its2=items();if(its2.length)s.push(its2.join(', '));
+    if(r.stars)s.push('⭐'+r.stars);
+  }else if(r.cat==='건강'){
+    if(r.who)s.push(esc(r.who));
+    var its3=(r.items||[]).map(function(it){return (it.type||'')+(it.name?' '+it.name:'')+(it.price?' '+won(it.price)+'원':'');}).filter(Boolean);
+    if(its3.length)s.push(its3.join(', '));
+    if(r.insur&&r.insur!=='해당없음')s.push('🏥'+r.insur);
+  }else if(r.cat==='여행'){
+    if(r.who)s.push(esc(r.who));
+    var its4=items();if(its4.length)s.push(its4.join(', '));
+  }else if(r.cat==='약속'){
+    if(r.who)s.push(esc(r.who));
+    if(r.time2)s.push('🕐'+esc(r.time2));
+    if(r.place)s.push('📍'+esc(r.place));
+    if(r.prep)s.push('🎒'+esc(r.prep));
+  }else if(r.cat==='독서'){
+    if(r.who)s.push(esc(r.who));
+    if(r.booktype)s.push(r.booktype);
+    if(r.totalpg)s.push((r.readpg||0)+'/'+r.totalpg+'쪽('+Math.min(100,Math.round((r.readpg||0)/r.totalpg*100))+'%)');
+    if(r.items&&r.items.length)s.push('📜'+r.items.length+'개');
+  }else if(r.cat==='생각'){
+    if(r.items&&r.items.length)s.push('💭'+r.items.length+'개');
+    else if(r.detail)s.push(esc(r.detail.replace(/\n/g,' ')));
+  }else{
+    if(r.who)s.push(esc(r.who));
+    if(r.detail)s.push(esc(r.detail.replace(/\n/g,' ')));
+    if(r.phone)s.push('📞'+esc(r.phone));
+  }
+  return s.join(' · ');
 }
 function photoMark(r){return ((r.photoIds&&r.photoIds.length)||(r.photos&&r.photos.length))?' <span class="pmark">📷</span>':'';}
 function fmtDateK(d){var dd=['일','월','화','수','목','금','토'];var t=new Date(d+'T00:00');var mo=parseInt(d.slice(5,7),10),da=parseInt(d.slice(8,10),10);return mo+'월 '+da+'일 ('+dd[t.getDay()]+')';}
@@ -747,26 +889,33 @@ function detailExtra(r){
     if(parts.length)h+='<div class="dx-line">🧮 '+parts.join(' · ')+'</div>';
     if(r.link)h+='<a href="'+esc(r.link)+'" target="_blank" class="dx-link">🔗 쇼핑몰에서 보기 ›</a>';
   }
-  if((r.cat==='맛집'||r.cat==='건강')&&r.items&&r.items.length){
+  if(r.cat==='차계부'&&r.title==='주유'){
+    var fp=[];
+    if(r.liters)fp.push('주유량 '+r.liters+'L');
+    if(r.fuelunit)fp.push('단가 '+won(r.fuelunit)+'원/L');
+    if(r.amount)fp.push('금액 '+won(r.amount)+'원');
+    if(fp.length)h+='<div class="dx-line">⛽ '+fp.join(' · ')+'</div>';
+  }
+  // 항목 리스트가 있는 카테고리 (맛집/건강/여행/약속/정비)
+  if((r.cat==='맛집'||r.cat==='건강'||r.cat==='여행'||r.cat==='약속'||r.cat==='차계부')&&r.items&&r.items.length){
     h+='<div class="dx-items">';
     r.items.forEach(function(it){
       var left=(it.type?'<span class="dx-type">'+esc(it.type)+'</span> ':'')+esc(it.name||'');
-      h+='<div class="dx-item"><span>'+left+'</span><span class="dx-price">'+(it.price?won(it.price)+'원':'')+'</span></div>';
+      var right=(it.price?won(it.price)+'원':'');
+      if(r.cat==='맛집'&&it.people)right=(it.price?won(it.price)+'원':'')+' <span class="dx-ppl">'+it.people+'명</span>';
+      h+='<div class="dx-item"><span class="dx-iname">'+left+'</span><span class="dx-price">'+right+'</span></div>';
     });
     if(r.amount)h+='<div class="dx-item dx-sum"><span>합계</span><span class="dx-price">'+won(r.amount)+'원</span></div>';
     h+='</div>';
   }
-  if(r.cat==='약속'){
-    var ap=[];
-    if(r.prep)ap.push('🎒 준비물: '+esc(r.prep));
-    if(r.amount)ap.push('💰 비용: '+won(r.amount)+'원');
-    if(ap.length)h+='<div class="dx-line">'+ap.join('<br>')+'</div>';
-  }
-  if(r.cat==='독서'&&r.items&&r.items.length){
+  if(r.cat==='약속'&&r.prep)h+='<div class="dx-line">🎒 준비물: '+esc(r.prep)+'</div>';
+  // 생각/독서 짝 비교
+  if((r.cat==='독서'||r.cat==='생각')&&r.items&&r.items.length){
+    var tag1=r.cat==='독서'?'📜 핵심':'💭 생각',tag2=r.cat==='독서'?'💡 생각':'📝 자세히';
     h+='<div class="dx-quotes">';
     r.items.forEach(function(it,i){
-      h+='<div class="dx-quote"><div class="dx-q"><span class="dx-qtag">📜 핵심 '+(i+1)+'</span>'+esc(it.quote||'')+'</div>'+
-        (it.thought?'<div class="dx-t"><span class="dx-qtag think">💡 생각</span>'+esc(it.thought)+'</div>':'')+'</div>';
+      h+='<div class="dx-quote"><div class="dx-q"><span class="dx-qtag">'+tag1+' '+(i+1)+'</span>'+esc(it.quote||'')+'</div>'+
+        (it.thought?'<div class="dx-t"><span class="dx-qtag think">'+tag2+'</span>'+esc(it.thought)+'</div>':'')+'</div>';
     });
     h+='</div>';
   }
@@ -1149,16 +1298,17 @@ function renderCalDay(){
   $('calDayList').innerHTML='<div class="date-group">'+fmtDate(calSelDate)+'</div>'+(arr.length?calRows(arr):'<div class="empty">기록 없음</div>');
 }
 function calRows(arr){
-  return '<div class="tbl tbl-gen">'+arr.map(function(r){
+  return arr.map(function(r){
     var col=evtColor(r);
-    var sub=r.who||(r.detail?r.detail.replace(/\n/g,' '):'');
-    var amt=r.amount?(r.cat==='독서'?'⭐'+Math.max(0,Math.min(5,Math.round(r.amount))):won(r.amount)):'';
-    return '<div class="tbl-row" style="border-left:3px solid '+col+'" onclick="openDetail(\''+r.id+'\')">'+
-      '<span class="tc-c">'+catOf(r.cat).i+'</span>'+
-      '<span class="tc-t2">'+(esc(r.title)||r.cat)+'</span>'+
-      '<span class="tc-s">'+esc(sub)+'</span>'+
-      '<span class="tc-a">'+amt+'</span></div>';
-  }).join('')+'</div>';
+    var amt='';
+    if(r.cat==='독서'){amt=r.stars?('⭐'+r.stars):'';}
+    else if(r.amount){amt=won(r.amount)+'원';}
+    return '<div class="lrow1" style="border-left:3px solid '+col+'" onclick="openDetail(\''+r.id+'\')">'+
+      catBadge(r)+
+      '<span class="l1-title">'+(esc(r.title)||r.cat)+photoMark(r)+'</span>'+
+      '<span class="l1-sub">'+rowSummary(r)+'</span>'+
+      '<span class="l1-amt'+(r.cat==='독서'?' star':'')+'">'+amt+'</span></div>';
+  }).join('');
 }
 
 /* ===== 통계 ===== */
@@ -1430,17 +1580,16 @@ function saveVault(){
   if(!title&&!vaultPhotos.length){toast('제목이나 사진을 넣으세요');return;}
   var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
   var id=String(Date.now());
-  var payload=JSON.stringify({title:title,memo:memo,photos:vaultPhotos});
+  var payload=JSON.stringify({memo:memo,photos:vaultPhotos});  // 제목은 평문, 나머지만 암호화
   vSetStatus('암호화 중…');
   vaultEncrypt(payload,pin).then(function(enc){
-    vaultCache[id]={title:title,memo:memo,photos:vaultPhotos.slice()};
-    // Firestore 1MB 한도 대비: 너무 크면 경고
+    vaultCache[id]={memo:memo,photos:vaultPhotos.slice()};
     if(enc.length>900000){vSetStatus('⚠️ 사진 용량이 커요 — 사진 수를 줄여주세요');return;}
     fetch(FB_BASE+'/'+COL_VAULT+'/'+id+'?key='+FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(toFS({enc:enc,title_hint:'',created:new Date().toISOString()}))})
+      body:JSON.stringify(toFS({enc:enc,title:title,nphoto:vaultPhotos.length,created:new Date().toISOString()}))})
       .then(function(){
         $('v-title').value='';$('v-memo').value='';vaultPhotos=[];vRenderPending();vSetStatus('');
-        toast('🔒 암호화 저장됨');renderVault();
+        toast('🔒 저장됨 (제목만 표시, 내용은 잠김)');renderVault();
       }).catch(function(e){logErr('보관함 저장 실패: '+e.message);vSetStatus('⚠️ 저장 실패');});
   }).catch(function(e){logErr('암호화 실패: '+e.message);vSetStatus('⚠️ 암호화 실패');});
 }
@@ -1451,8 +1600,9 @@ function renderVault(){
     var items=d.documents.map(function(doc){var o=fromFS(doc);o.id=doc.name.split('/').pop();return o;})
       .sort(function(a,b){return (b.created||'').localeCompare(a.created||'');});
     box.innerHTML=items.map(function(it){
+      var nph=it.nphoto?(' · 📷'+it.nphoto+'장'):'';
       return '<div class="vault-card" id="vault-'+it.id+'">'+
-        '<div class="vault-head"><span class="vault-lock">🔒 잠김</span>'+
+        '<div class="vault-head"><div class="vault-titlebar"><span class="vault-name">'+(esc(it.title)||'(제목 없음)')+'</span><span class="vault-sub">🔒 내용 잠김'+nph+'</span></div>'+
         '<div class="vault-acts"><button class="rec-act" style="color:#6366F1" onclick="unlockVault(\''+it.id+'\',\''+esc(it.enc).replace(/'/g,"\\'")+'\')">👁 열기</button>'+
         '<button class="rec-act rec-del" onclick="delVault(\''+it.id+'\')">🗑 삭제</button></div></div>'+
         '<div class="vault-body" id="vbody-'+it.id+'"></div></div>';
@@ -1461,14 +1611,13 @@ function renderVault(){
 }
 function unlockVault(id,enc){
   var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
-  var body=$('vbody-'+id);if(body.innerHTML){body.innerHTML='';return;} // 토글로 닫기
+  var body=$('vbody-'+id);if(body.innerHTML){body.innerHTML='';return;}
   body.innerHTML='<div style="font-size:12px;color:#9CA3AF;padding:6px 0">복호화 중…</div>';
   vaultDecrypt(enc,pin).then(function(plain){
     var o=JSON.parse(plain);
     var ph=(o.photos||[]).map(function(p){return '<img src="'+p+'" onclick="showImg(this.src)" style="width:100%;border-radius:10px;margin-top:8px;cursor:zoom-in">';}).join('');
-    body.innerHTML='<div class="vault-title">'+(esc(o.title)||'(제목 없음)')+'</div>'+
-      (o.memo?'<div class="vault-memo">'+esc(o.memo)+'</div>':'')+ph;
-    var head=$('vault-'+id).querySelector('.vault-lock');if(head)head.textContent='🔓 열림';
+    body.innerHTML=(o.memo?'<div class="vault-memo">'+esc(o.memo)+'</div>':'')+ph||'<div style="font-size:12px;color:#9CA3AF;padding:6px 0">내용 없음</div>';
+    var head=$('vault-'+id).querySelector('.vault-sub');if(head)head.textContent='🔓 열림';
   }).catch(function(e){body.innerHTML='<div style="color:#EF4444;font-size:12px;padding:6px 0">⚠️ 복호화 실패 — PIN이 다를 수 있어요</div>';});
 }
 function delVault(id){
