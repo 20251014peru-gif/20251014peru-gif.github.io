@@ -409,7 +409,7 @@ td.clip[data-tip]:hover{position:relative}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 파일 · 사이트 · 비번 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v18</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 파일 · 사이트 · 비번 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v19</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -859,7 +859,7 @@ td.clip[data-tip]:hover{position:relative}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* ===== 설정 ===== */
-const APP_VERSION = "v18";
+const APP_VERSION = "v19";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -963,6 +963,7 @@ const SCHEMA={
   filelink:[
     {k:"label",label:"별칭",type:"text",full:true,req:true},
     {k:"path",label:"파일/폴더 경로",type:"text",full:true,req:true},
+    {k:"ptype",label:"종류",type:"select",opts:["파일","폴더"]},
     {k:"category",label:"카테고리",type:"catselect",ctx:"filelink"},
     {k:"subcategory",label:"소분류 (자유 입력)",type:"subcat",ctx:"filelink"},
     {k:"memo",label:"메모(선택)",type:"textarea",full:true},
@@ -1018,10 +1019,16 @@ function datesBetween(start,end){
   return out;
 }
 
-/* ===== 파일링크 (v15 신규) ===== */
-function isFolder(p){ return /[\\\/]\s*$/.test(p||""); }
-function fileIcon(p){
-  if(isFolder(p)) return "📁";
+/* ===== 파일링크 (v15 신규, v19에서 ptype 우선) ===== */
+function isFolder(p, ptype){
+  // v19: 사용자가 명시적으로 선택한 종류가 있으면 그것을 우선
+  if(ptype === "폴더") return true;
+  if(ptype === "파일") return false;
+  // 기존 호환: 경로 끝이 슬래시면 폴더로 추정
+  return /[\\\/]\s*$/.test(p||"");
+}
+function fileIcon(p, ptype){
+  if(isFolder(p, ptype)) return "📁";
   const ext=(p||"").split(".").pop().toLowerCase();
   if(["doc","docx"].includes(ext)) return "📄";
   if(["xls","xlsx","xlsm","csv"].includes(ext)) return "📊";
@@ -1203,7 +1210,7 @@ function defaults(kind){
   if(kind==="work") return {date:t,status:"미완료",field:"전기"};
   if(kind==="call") return {date:t,time:nowTime(),dir:"수신"};
   if(kind==="vacation") return {start:t,end:t,vtype:"년차휴가"};
-  if(kind==="filelink") return {category:(CATEGORIES.filelink[0]||"")};
+  if(kind==="filelink") return {category:(CATEGORIES.filelink[0]||""), ptype:"파일"};
   if(kind==="site") return {category:(CATEGORIES.site[0]||"")};
   return {date:t};
 }
@@ -1235,6 +1242,10 @@ function openEditor(kind,id){
   mKind=kind; mId=id||null;
   const sc=SCHEMA[kind];
   const data = id ? (entries.find(x=>x.id===id)||{}) : defaults(kind);
+  // v19: filelink 기존 항목에 ptype 없으면 경로로 추정해서 채움 (수정 시 자동 보정)
+  if(kind==="filelink" && id && !data.ptype){
+    data.ptype = /[\\\/]\s*$/.test(data.path||"") ? "폴더" : "파일";
+  }
   $("mTitle").textContent = (id?"수정":"추가")+" · "+KIND_LABEL[kind];
   $("mFields").innerHTML = sc.map(fieldHTML).join("");
   sc.forEach(f=>{ const el=$("m-"+f.k); if(!el) return; const v=data[f.k]; if(v!==undefined&&v!==null&&v!=="") el.value=v; });
@@ -1384,6 +1395,11 @@ $("mSave").addEventListener("click",async ()=>{
   const sc=SCHEMA[mKind]; const obj={kind:mKind};
   for(const f of sc){ const el=$("m-"+f.k); let v=el?el.value:""; if(f.type==="number") v=Number(v)||0; else if(typeof v==="string") v=v.trim(); obj[f.k]=v; }
   for(const f of sc){ if(f.req && !String(obj[f.k]||"").trim()){ toast(f.label+"을(를) 입력하세요"); return; } }
+  // v19: filelink가 폴더면 경로 끝에 \ 자동 추가, 파일이면 끝 슬래시 제거
+  if(mKind==="filelink" && obj.path){
+    if(obj.ptype==="폴더" && !/[\\\/]$/.test(obj.path)) obj.path = obj.path + "\\";
+    if(obj.ptype==="파일") obj.path = obj.path.replace(/[\\\/]+$/, "");
+  }
   if(PHOTO_KINDS.includes(mKind)) obj.photos=modalPhotos.slice();
   if(ATTACH_KINDS.includes(mKind)) obj.attachments=modalAttachments.slice();
   if(mKind==="vacation" && !obj.end) obj.end=obj.start;
@@ -1496,7 +1512,7 @@ function renderDiag(){
   const photoCount=entries.reduce((s,e)=>s+((e.photos&&e.photos.length)||0),0);
   const attachCount=entries.reduce((s,e)=>s+((e.attachments&&e.attachments.length)||0),0);
   const fileLinks=entries.filter(e=>e.kind==="filelink");
-  const folderCnt=fileLinks.filter(e=>isFolder(e.path)).length;
+  const folderCnt=fileLinks.filter(e=>isFolder(e.path, e.ptype)).length;
   const fileCnt=fileLinks.length-folderCnt;
   const size=bytesOf(entries);
   let lsOk=true; try{ localStorage.setItem("wl_test","1"); localStorage.removeItem("wl_test"); }catch(e){ lsOk=false; }
@@ -2083,7 +2099,7 @@ function fileLinkList(){
   return entries.filter(e=>e.kind==="filelink"
     && (f.cat==="전체"||e.category===f.cat)
     && (f.sub==="전체"||e.subcategory===f.sub)
-    && (f.type==="all" || (f.type==="folder" && isFolder(e.path)) || (f.type==="file" && !isFolder(e.path)))
+    && (f.type==="all" || (f.type==="folder" && isFolder(e.path, e.ptype)) || (f.type==="file" && !isFolder(e.path, e.ptype)))
     && fileLinkMatches(e,f.q));
 }
 function renderFileLink(){
@@ -2160,12 +2176,12 @@ function renderFileLink(){
 }
 function fileLinkCardHTML(e){
   const tt=`${e.label||""}\n${e.path||""}${e.memo?"\n"+e.memo:""}`;
-  const folder=isFolder(e.path);
+  const folder=isFolder(e.path, e.ptype);
   const badge=folder
     ? `<span class="lc-typebadge tb-folder">📁 폴더</span>`
     : `<span class="lc-typebadge tb-file">📄 파일</span>`;
   return `<div class="link-card${folder?" is-folder":""}${e.starred?" starred":""}" data-fid="${e.id}" title="${esc(tt)}">
-    <span class="lc-icon">${fileIcon(e.path)}</span>
+    <span class="lc-icon">${fileIcon(e.path, e.ptype)}</span>
     <div class="lc-body">
       <div class="lc-name">${esc(e.label||"")}</div>
       <div class="lc-sub">${esc(e.path||"")}</div>
