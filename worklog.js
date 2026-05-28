@@ -1480,13 +1480,22 @@ function buildCatJump(kind, groupsObj, jumpBoxId){
 function sortItems(kind, list){
   const s=VIEW_PREFS[kind].sort;
   const nameKey = kind==="filelink" ? "label" : "name";
-  if(s==="recent"){
-    return list.sort((a,b)=>(b.lastOpenedAt||0)-(a.lastOpenedAt||0) || (a[nameKey]||"").localeCompare(b[nameKey]||""));
+  // 기본 비교 함수 (선택된 정렬 기준에 따라)
+  const cmp=(a,b)=>{
+    if(s==="recent") return (b.lastOpenedAt||0)-(a.lastOpenedAt||0) || (a[nameKey]||"").localeCompare(b[nameKey]||"","ko");
+    if(s==="created") return (b.createdAt||0)-(a.createdAt||0) || (a[nameKey]||"").localeCompare(b[nameKey]||"","ko");
+    return (a[nameKey]||"").localeCompare(b[nameKey]||"","ko"); // 이름순 (ㄱㄴㄷ)
+  };
+  if(kind==="filelink"){
+    // 폴더 먼저, 파일 나중 — 각 그룹 안에서 위 기준으로 정렬
+    return list.sort((a,b)=>{
+      const fa=isFolder(a.path,a.ptype)?0:1;
+      const fb=isFolder(b.path,b.ptype)?0:1;
+      if(fa!==fb) return fa-fb;   // 폴더(0)가 파일(1)보다 앞
+      return cmp(a,b);
+    });
   }
-  if(s==="created"){
-    return list.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0) || (a[nameKey]||"").localeCompare(b[nameKey]||""));
-  }
-  return list.sort((a,b)=>(a[nameKey]||"").localeCompare(b[nameKey]||""));
+  return list.sort(cmp);
 }
 
 /* ===== 파일링크 탭 ===== */
@@ -1583,9 +1592,21 @@ function renderFileLink(){
     const items=groups[c];
     const collapsed=VIEW_PREFS.filelink.collapsed[c];
     const colorClass=catColorClass("filelink",c);
+    // 폴더/파일 분리 (이미 sortItems에서 폴더가 앞으로 정렬됨)
+    const folders=items.filter(e=>isFolder(e.path,e.ptype));
+    const files=items.filter(e=>!isFolder(e.path,e.ptype));
+    let inner="";
+    if(folders.length){
+      inner+=`<div class="grp-sublabel">📁 폴더 <span class="gs-cnt">${folders.length}</span></div>`;
+      inner+=`<div class="cat-items">${folders.map(e=>fileLinkCardHTML(e)).join("")}</div>`;
+    }
+    if(files.length){
+      inner+=`<div class="grp-sublabel">📄 파일 <span class="gs-cnt">${files.length}</span></div>`;
+      inner+=`<div class="cat-items">${files.map(e=>fileLinkCardHTML(e)).join("")}</div>`;
+    }
     return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}">
       <div class="cat-group-h"><span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span></div>
-      <div class="cat-items">${items.map(e=>fileLinkCardHTML(e)).join("")}</div></div>`;
+      ${inner}</div>`;
   }).join("");
   box.innerHTML=html;
   // 이벤트
