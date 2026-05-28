@@ -184,6 +184,87 @@ textarea{resize:vertical;min-height:64px}
 .pw-card .pw-mini-btn:hover{border-color:var(--primary);color:var(--primary-deep)}
 .pw-card .pw-memo{margin-top:6px;font-size:12.5px;color:var(--ink-soft);background:#fbfdff;border-radius:7px;padding:6px 10px;word-break:break-word;white-space:pre-wrap}
 
+/* ===== v17 — 보기 모드 / 카테고리 점프 / 즐겨찾기 ===== */
+.toolbar-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;background:#fbfdff;border:1px solid var(--line);border-radius:11px}
+.toolbar-row .tb-label{font-size:12px;font-weight:700;color:var(--ink-soft);margin-right:2px}
+.view-mode-group{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+.view-mode-group button{border:none;background:#fff;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink-soft);padding:6px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.view-mode-group button.active{background:var(--primary);color:#fff}
+.view-mode-group button:hover:not(.active){background:var(--primary-soft);color:var(--primary-deep)}
+.sort-select{font-size:12.5px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink-soft);font-family:inherit;cursor:pointer}
+.tb-toggle{font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:7px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;font-family:inherit}
+.tb-toggle:hover{border-color:var(--primary);color:var(--primary-deep)}
+.tb-toggle.active{background:var(--mint);color:#fff;border-color:var(--mint)}
+
+/* 카테고리 점프 칩 */
+.cat-jump{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;padding:10px 11px;background:linear-gradient(135deg,var(--primary-soft) 0%,#fbfdff 100%);border-radius:11px;border:1px solid var(--line)}
+.cat-jump .jh{font-size:11.5px;font-weight:700;color:var(--ink-soft);margin-right:4px;align-self:center}
+.cat-jump a{font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;background:#fff;color:var(--ink);text-decoration:none;border:1px solid var(--line);cursor:pointer;transition:all .12s;display:inline-flex;align-items:center;gap:4px}
+.cat-jump a:hover{border-color:var(--primary);transform:translateY(-1px);box-shadow:0 2px 6px rgba(63,124,184,.15)}
+.cat-jump a .jc{font-size:10.5px;color:var(--ink-soft);background:var(--bg2);padding:0 6px;border-radius:999px;margin-left:2px}
+.cat-jump a .jdot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* 카테고리 색상 — 자동 부여 */
+.cat-c0{--ccol:#5b9bd5} .cat-c1{--ccol:#5cc2a0} .cat-c2{--ccol:#e6b04d} .cat-c3{--ccol:#ef8d8d}
+.cat-c4{--ccol:#9a8cd6} .cat-c5{--ccol:#dd83ad} .cat-c6{--ccol:#4ab8c8} .cat-c7{--ccol:#a3c552}
+.cat-c8{--ccol:#e08754} .cat-c9{--ccol:#7894c7} .cat-c10{--ccol:#c574d4} .cat-c11{--ccol:#76a8a8}
+
+.cat-group{position:relative}
+.cat-group-h{border-bottom-color:var(--ccol,var(--primary-soft));border-bottom-width:3px}
+.cat-group-h::before{content:"";display:inline-block;width:4px;height:18px;background:var(--ccol,var(--primary));border-radius:3px;margin-right:2px}
+
+/* 즐겨찾기 섹션 */
+.fav-section{background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid var(--gold);border-radius:14px;padding:12px 14px;margin-bottom:18px}
+.fav-section .fs-h{font-family:'Gowun Batang',serif;font-size:14.5px;font-weight:700;color:#9a6f17;margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.fav-section .fs-h .fs-cnt{font-family:'Pretendard',sans-serif;background:rgba(154,111,23,.15);color:#9a6f17;font-size:11px;padding:1px 8px;border-radius:999px;font-weight:700}
+
+/* 목록형 */
+.view-list .cat-items{grid-template-columns:1fr;gap:3px}
+.view-list .link-card{padding:7px 10px;gap:8px;border-radius:8px}
+.view-list .link-card .lc-icon{font-size:18px}
+.view-list .link-card .lc-name{font-size:13.5px;font-weight:600}
+.view-list .link-card .lc-sub{font-size:11px;-webkit-line-clamp:1;margin-top:1px}
+.view-list .link-card .lc-tag{display:none}
+.view-list .link-card .lc-memo{display:none}
+.view-list .link-card .lc-acts{flex-direction:row;gap:3px}
+.view-list .link-card .lc-menu-btn{font-size:11px;padding:1px 7px}
+.view-list .link-card .lc-star{font-size:15px;padding:0 2px}
+.view-list .link-card[title]:hover .lc-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 미니타일형 */
+.view-tile .cat-items{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.view-tile .link-card{flex-direction:column;align-items:center;text-align:center;padding:10px 6px 8px;gap:5px;min-height:80px}
+.view-tile .link-card .lc-icon{font-size:30px}
+.view-tile .link-card .lc-body{width:100%;text-align:center}
+.view-tile .link-card .lc-name{font-size:12.5px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.view-tile .link-card .lc-sub{display:none}
+.view-tile .link-card .lc-tag{display:none}
+.view-tile .link-card .lc-memo{display:none}
+.view-tile .link-card .lc-acts{position:absolute;top:3px;right:3px;flex-direction:row;gap:2px;background:rgba(255,255,255,.85);border-radius:5px;padding:1px}
+.view-tile .link-card .lc-menu-btn{font-size:10px;padding:1px 5px}
+.view-tile .link-card .lc-star{font-size:14px;padding:0 2px}
+.view-tile .link-card .lc-icon img{width:30px !important;height:30px !important}
+
+/* 카드형 컴팩트 모드 (기본보다 빽빽하게) */
+.view-card.compact .cat-items{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px}
+.view-card.compact .link-card{padding:8px 10px;gap:7px}
+.view-card.compact .link-card .lc-icon{font-size:20px}
+.view-card.compact .link-card .lc-name{font-size:13.5px}
+.view-card.compact .link-card .lc-sub{font-size:11px;-webkit-line-clamp:1}
+.view-card.compact .link-card .lc-memo{display:none}
+
+/* 비번카드 목록형 */
+.pw-view-list .pw-card{padding:8px 11px}
+.pw-view-list .pw-card .pw-name{font-size:13.5px}
+.pw-view-list .pw-card .pw-field{font-size:12px;padding:3px 0}
+.pw-view-list .pw-card .pw-field-k{flex:0 0 50px;font-size:11px}
+.pw-view-list .pw-card .pw-memo{display:none}
+
+@media (max-width:560px){
+  .view-tile .cat-items{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
+  .cat-jump{padding:8px}
+}
+
 .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:#fff}
 table.rec{border-collapse:collapse;width:100%;min-width:900px;font-size:13.5px}
 table.rec th,table.rec td{padding:10px 12px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line);vertical-align:top}
@@ -313,7 +394,7 @@ td.clip[data-tip]:hover{position:relative}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 파일 · 사이트 · 비번 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v16</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 파일 · 사이트 · 비번 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 <b style="color:#9aa7b4" id="verBadge">v17</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -353,11 +434,28 @@ td.clip[data-tip]:hover{position:relative}
         </div>
       </div>
       <p class="desc">자주 쓰는 파일/폴더를 카테고리별로 정리합니다. 클릭하면 PC에서 바로 열립니다. (※ <code>localfile.reg</code> 등록 필요 — 자가진단 탭 참조)</p>
+      <div class="toolbar-row">
+        <span class="tb-label">보기</span>
+        <span class="view-mode-group" data-vm="filelink">
+          <button data-v="card">🎴 카드</button>
+          <button data-v="list">📋 목록</button>
+          <button data-v="tile">🏷 타일</button>
+        </span>
+        <span class="tb-label" style="margin-left:6px">정렬</span>
+        <select class="sort-select" data-sort="filelink">
+          <option value="name">이름순</option>
+          <option value="recent">최근 사용순</option>
+          <option value="created">등록일순</option>
+        </select>
+        <button class="tb-toggle" data-compact="filelink">컴팩트</button>
+        <button class="tb-toggle" data-collapse="filelink">전체 접기</button>
+      </div>
       <div class="filt-row">
         <select id="fileCatFilter"></select>
         <select id="fileSubFilter"></select>
       </div>
       <input type="text" id="fileSearch" class="search" placeholder="🔍 검색 — 별칭·경로·메모">
+      <div id="fileCatJump"></div>
       <div id="fileList"></div>
     </div>
   </section>
@@ -373,11 +471,28 @@ td.clip[data-tip]:hover{position:relative}
         </div>
       </div>
       <p class="desc">자주 가는 인터넷 사이트를 카테고리별로 정리합니다.</p>
+      <div class="toolbar-row">
+        <span class="tb-label">보기</span>
+        <span class="view-mode-group" data-vm="site">
+          <button data-v="card">🎴 카드</button>
+          <button data-v="list">📋 목록</button>
+          <button data-v="tile">🏷 타일</button>
+        </span>
+        <span class="tb-label" style="margin-left:6px">정렬</span>
+        <select class="sort-select" data-sort="site">
+          <option value="name">이름순</option>
+          <option value="recent">최근 사용순</option>
+          <option value="created">등록일순</option>
+        </select>
+        <button class="tb-toggle" data-compact="site">컴팩트</button>
+        <button class="tb-toggle" data-collapse="site">전체 접기</button>
+      </div>
       <div class="filt-row">
         <select id="siteCatFilter"></select>
         <select id="siteSubFilter"></select>
       </div>
       <input type="text" id="siteSearch" class="search" placeholder="🔍 검색 — 사이트명·URL·메모">
+      <div id="siteCatJump"></div>
       <div id="siteList"></div>
     </div>
   </section>
@@ -552,11 +667,25 @@ td.clip[data-tip]:hover{position:relative}
       <div id="pwLockScreen"></div>
       <div id="pwMainArea" style="display:none">
         <p class="desc">사이트별 계정·비밀번호를 안전하게 보관합니다. 모든 비밀 데이터는 마스터 비번으로 암호화되어 저장됩니다.</p>
+        <div class="toolbar-row">
+          <span class="tb-label">보기</span>
+          <span class="view-mode-group" data-vm="password">
+            <button data-v="card">🎴 카드</button>
+            <button data-v="list">📋 목록</button>
+          </span>
+          <span class="tb-label" style="margin-left:6px">정렬</span>
+          <select class="sort-select" data-sort="password">
+            <option value="name">이름순</option>
+            <option value="created">등록일순</option>
+          </select>
+          <button class="tb-toggle" data-collapse="password">전체 접기</button>
+        </div>
         <div class="filt-row">
           <select id="pwCatFilter"></select>
           <select id="pwSubFilter"></select>
         </div>
         <input type="text" id="pwSearch" class="search" placeholder="🔍 검색 — 사이트명·아이디·메모">
+        <div id="pwCatJump"></div>
         <div id="pwList"></div>
       </div>
     </div>
@@ -1002,6 +1131,7 @@ async function init(){
   aiInitKeyUI();
   wireAttachUI();
   loadCategories();
+  loadViewPrefs();
   wireFileLinkTab();
   wireSiteTab();
   wirePasswordTab();
@@ -1803,6 +1933,96 @@ function onTabChange(name){
 /* ===== 카테고리 필터 상태 ===== */
 const CAT_FILTER = { filelink:{cat:"전체",sub:"전체",q:""}, site:{cat:"전체",sub:"전체",q:""}, password:{cat:"전체",sub:"전체",q:""} };
 
+/* ===== v17 보기 모드 / 정렬 / 컴팩트 / 접기 상태 ===== */
+const VIEW_PREFS_LS = "wl_view_prefs_v17";
+const VIEW_PREFS = {
+  filelink:{ mode:"card", sort:"name", compact:false, collapsed:{} },
+  site:{ mode:"card", sort:"name", compact:false, collapsed:{} },
+  password:{ mode:"card", sort:"name", compact:false, collapsed:{} },
+};
+function loadViewPrefs(){
+  try{
+    const s=JSON.parse(localStorage.getItem(VIEW_PREFS_LS)||"null");
+    if(s){ ["filelink","site","password"].forEach(k=>{ if(s[k]) Object.assign(VIEW_PREFS[k], s[k]); if(s[k] && !s[k].collapsed) VIEW_PREFS[k].collapsed={}; }); }
+  }catch(e){}
+}
+function saveViewPrefs(){ try{ localStorage.setItem(VIEW_PREFS_LS, JSON.stringify(VIEW_PREFS)); }catch(e){} }
+function bindViewControls(kind){
+  // 보기 모드 버튼
+  document.querySelectorAll(`.view-mode-group[data-vm="${kind}"] button`).forEach(b=>{
+    b.classList.toggle("active", b.dataset.v===VIEW_PREFS[kind].mode);
+    if(!b._bound){ b._bound=true; b.addEventListener("click",()=>{
+      VIEW_PREFS[kind].mode=b.dataset.v; saveViewPrefs(); renderKind(kind);
+    }); }
+  });
+  // 정렬 셀렉트
+  const sel=document.querySelector(`.sort-select[data-sort="${kind}"]`);
+  if(sel){ sel.value=VIEW_PREFS[kind].sort; if(!sel._bound){ sel._bound=true; sel.addEventListener("change",()=>{
+    VIEW_PREFS[kind].sort=sel.value; saveViewPrefs(); renderKind(kind);
+  }); } }
+  // 컴팩트 토글
+  const cb=document.querySelector(`[data-compact="${kind}"]`);
+  if(cb){ cb.classList.toggle("active", !!VIEW_PREFS[kind].compact); if(!cb._bound){ cb._bound=true; cb.addEventListener("click",()=>{
+    VIEW_PREFS[kind].compact=!VIEW_PREFS[kind].compact; saveViewPrefs(); renderKind(kind);
+  }); } }
+  // 전체 접기/펼치기 토글
+  const col=document.querySelector(`[data-collapse="${kind}"]`);
+  if(col){
+    const anyExpanded=Object.values(VIEW_PREFS[kind].collapsed).some(v=>!v) || Object.keys(VIEW_PREFS[kind].collapsed).length===0;
+    col.textContent = anyExpanded ? "전체 접기" : "전체 펼치기";
+    if(!col._bound){ col._bound=true; col.addEventListener("click",()=>{
+      // 현재 보이는 카테고리 모두 토글
+      const isCollapsing = col.textContent==="전체 접기";
+      const all = (kind==="password") ? CATEGORIES.password.concat(["(미분류)"]) : CATEGORIES[kind].concat(["(미분류)"]);
+      VIEW_PREFS[kind].collapsed = {};
+      if(isCollapsing) all.forEach(c=>VIEW_PREFS[kind].collapsed[c]=true);
+      saveViewPrefs(); renderKind(kind);
+    }); }
+  }
+}
+function renderKind(kind){
+  if(kind==="filelink") renderFileLink();
+  else if(kind==="site") renderSite();
+  else if(kind==="password") pwRenderList();
+}
+function catColorClass(kind, cat){
+  const idx = CATEGORIES[kind].indexOf(cat);
+  if(idx<0) return "cat-c11"; // 미분류
+  return "cat-c"+(idx % 12);
+}
+function buildCatJump(kind, groupsObj, jumpBoxId){
+  const box=$(jumpBoxId); if(!box) return;
+  const keys=Object.keys(groupsObj);
+  if(keys.length<2){ box.innerHTML=""; return; }
+  // 카테고리 순서대로
+  const cats=CATEGORIES[kind].filter(c=>groupsObj[c]).concat(groupsObj["(미분류)"]?["(미분류)"]:[]);
+  box.innerHTML=`<div class="cat-jump"><span class="jh">⬇ 점프</span>`+cats.map(c=>{
+    const colorClass=catColorClass(kind,c);
+    return `<a data-jump="${esc(c)}" class="${colorClass}"><span class="jdot" style="background:var(--ccol)"></span>${esc(c)}<span class="jc">${groupsObj[c].length}</span></a>`;
+  }).join("")+`</div>`;
+  box.querySelectorAll("[data-jump]").forEach(a=>a.addEventListener("click",ev=>{
+    ev.preventDefault();
+    const cat=a.dataset.jump;
+    const grp=document.querySelector(`#${kind==="filelink"?"fileList":kind==="site"?"siteList":"pwList"} .cat-group[data-cat="${CSS.escape(cat)}"]`);
+    if(grp){
+      // 접혀있으면 펼치기
+      if(VIEW_PREFS[kind].collapsed[cat]){ VIEW_PREFS[kind].collapsed[cat]=false; saveViewPrefs(); renderKind(kind); setTimeout(()=>{ const g=document.querySelector(`#${kind==="filelink"?"fileList":kind==="site"?"siteList":"pwList"} .cat-group[data-cat="${CSS.escape(cat)}"]`); if(g) g.scrollIntoView({behavior:"smooth",block:"start"}); }, 50); return; }
+      grp.scrollIntoView({behavior:"smooth",block:"start"});
+    }
+  }));
+}
+function sortItems(kind, list){
+  const s=VIEW_PREFS[kind].sort;
+  const nameKey = kind==="filelink" ? "label" : "name";
+  if(s==="recent"){
+    return list.sort((a,b)=>(b.lastOpenedAt||0)-(a.lastOpenedAt||0) || (a[nameKey]||"").localeCompare(b[nameKey]||""));
+  }
+  if(s==="created"){
+    return list.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0) || (a[nameKey]||"").localeCompare(b[nameKey]||""));
+  }
+  return list.sort((a,b)=>(a[nameKey]||"").localeCompare(b[nameKey]||""));
+}
+
 /* ===== 파일링크 탭 ===== */
 function wireFileLinkTab(){
   $("fileSearch").addEventListener("input",e=>{ CAT_FILTER.filelink.q=e.target.value; renderFileLink(); });
@@ -1834,45 +2054,61 @@ function fileLinkList(){
     && fileLinkMatches(e,f.q));
 }
 function renderFileLink(){
+  bindViewControls("filelink");
   populateFileFilters();
   const box=$("fileList");
   const list=fileLinkList();
-  if(!list.length){ box.innerHTML=`<div class="empty">${entries.some(e=>e.kind==="filelink")?"조건에 맞는 파일이 없습니다.":"➕ 파일 추가를 눌러 자주 쓰는 파일/폴더를 등록해 보세요."}</div>`; return; }
-  // 카테고리별 묶기
-  const groups={}; const order=[];
-  list.sort((a,b)=>(b.starred?1:0)-(a.starred?1:0) || (a.label||"").localeCompare(b.label||""));
-  list.forEach(e=>{
+  if(!list.length){
+    $("fileCatJump").innerHTML="";
+    box.innerHTML=`<div class="empty">${entries.some(e=>e.kind==="filelink")?"조건에 맞는 파일이 없습니다.":"➕ 파일 추가를 눌러 자주 쓰는 파일/폴더를 등록해 보세요."}</div>`;
+    box.className=""; return;
+  }
+  // 정렬
+  sortItems("filelink", list);
+  // 즐겨찾기 분리
+  const favs = list.filter(e=>e.starred);
+  const rest = list.filter(e=>!e.starred);
+  // 카테고리별 묶기 (즐겨찾기 제외분만)
+  const groups={};
+  rest.forEach(e=>{
     const c=e.category||"(미분류)";
-    if(!groups[c]){ groups[c]=[]; order.push(c); }
+    if(!groups[c]) groups[c]=[];
     groups[c].push(e);
   });
-  // 카테고리 순서를 CATEGORIES 순서대로 정렬
-  order.sort((a,b)=>{
-    const ai=CATEGORIES.filelink.indexOf(a), bi=CATEGORIES.filelink.indexOf(b);
-    if(ai<0 && bi<0) return a.localeCompare(b);
-    if(ai<0) return 1; if(bi<0) return -1;
-    return ai-bi;
-  });
-  box.innerHTML=order.map(c=>{
-    const items=groups[c].map(e=>`<div class="link-card${e.starred?" starred":""}" data-fid="${e.id}">
-      <span class="lc-icon">${fileIcon(e.path)}</span>
-      <div class="lc-body">
-        <div class="lc-name">${esc(e.label||"")}</div>
-        <div class="lc-sub">${esc(e.path||"")}</div>
-        ${e.subcategory?`<span class="lc-tag">${esc(e.subcategory)}</span>`:""}
-        ${e.memo?`<div class="lc-memo">📝 ${esc(e.memo)}</div>`:""}
-      </div>
-      <div class="lc-acts">
-        <button class="lc-star ${e.starred?"on":""}" data-star title="즐겨찾기">⭐</button>
-        <button class="lc-menu-btn" data-edit>수정</button>
-      </div>
-    </div>`).join("");
-    return `<div class="cat-group" data-cat="${esc(c)}">
-      <div class="cat-group-h"><span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${groups[c].length}</span></div>
-      <div class="cat-items">${items}</div></div>`;
+  // 카테고리 순서 (CATEGORIES 순서 우선, 그 외는 가나다)
+  const orderedCats=CATEGORIES.filelink.filter(c=>groups[c]);
+  Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
+  // 점프 메뉴
+  const jumpGroups={};
+  if(favs.length) jumpGroups["⭐ 즐겨찾기"]=favs;
+  orderedCats.forEach(c=>{ jumpGroups[c]=groups[c]; });
+  buildCatJump("filelink", jumpGroups, "fileCatJump");
+  // 본문
+  const mode=VIEW_PREFS.filelink.mode;
+  const compact=VIEW_PREFS.filelink.compact;
+  box.className=`view-${mode}${mode==="card"&&compact?" compact":""}`;
+  let html="";
+  // 즐겨찾기 섹션
+  if(favs.length){
+    html+=`<div class="fav-section"><div class="fs-h">⭐ 즐겨찾기 <span class="fs-cnt">${favs.length}</span></div>
+      <div class="cat-items">${favs.map(e=>fileLinkCardHTML(e)).join("")}</div></div>`;
+  }
+  // 카테고리별
+  html+=orderedCats.map(c=>{
+    const items=groups[c];
+    const collapsed=VIEW_PREFS.filelink.collapsed[c];
+    const colorClass=catColorClass("filelink",c);
+    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}">
+      <div class="cat-group-h"><span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span></div>
+      <div class="cat-items">${items.map(e=>fileLinkCardHTML(e)).join("")}</div></div>`;
   }).join("");
-  // 이벤트 바인딩
-  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",()=>h.parentElement.classList.toggle("collapsed")));
+  box.innerHTML=html;
+  // 이벤트
+  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",()=>{
+    const g=h.parentElement; const cat=g.dataset.cat;
+    VIEW_PREFS.filelink.collapsed[cat]=!VIEW_PREFS.filelink.collapsed[cat];
+    saveViewPrefs(); g.classList.toggle("collapsed");
+  }));
   box.querySelectorAll("[data-fid]").forEach(el=>{
     const id=el.dataset.fid;
     el.addEventListener("click",ev=>{
@@ -1888,6 +2124,22 @@ function renderFileLink(){
     });
     el.querySelector("[data-edit]").addEventListener("click",ev=>{ ev.stopPropagation(); openEditor("filelink", id); });
   });
+}
+function fileLinkCardHTML(e){
+  const tt=`${e.label||""}\n${e.path||""}${e.memo?"\n"+e.memo:""}`;
+  return `<div class="link-card${e.starred?" starred":""}" data-fid="${e.id}" title="${esc(tt)}">
+    <span class="lc-icon">${fileIcon(e.path)}</span>
+    <div class="lc-body">
+      <div class="lc-name">${esc(e.label||"")}</div>
+      <div class="lc-sub">${esc(e.path||"")}</div>
+      ${e.subcategory?`<span class="lc-tag">${esc(e.subcategory)}</span>`:""}
+      ${e.memo?`<div class="lc-memo">📝 ${esc(e.memo)}</div>`:""}
+    </div>
+    <div class="lc-acts">
+      <button class="lc-star ${e.starred?"on":""}" data-star title="즐겨찾기">⭐</button>
+      <button class="lc-menu-btn" data-edit>수정</button>
+    </div>
+  </div>`;
 }
 
 /* ===== 사이트 탭 ===== */
@@ -1929,46 +2181,48 @@ function faviconUrl(u){
   try{ const h=new URL(normUrl(u)).hostname; return `https://www.google.com/s2/favicons?domain=${h}&sz=32`; }catch(e){ return ""; }
 }
 function renderSite(){
+  bindViewControls("site");
   populateSiteFilters();
   const box=$("siteList");
   const list=siteList();
-  if(!list.length){ box.innerHTML=`<div class="empty">${entries.some(e=>e.kind==="site")?"조건에 맞는 사이트가 없습니다.":"➕ 사이트 추가를 눌러 자주 가는 사이트를 등록해 보세요."}</div>`; return; }
-  const groups={}; const order=[];
-  list.sort((a,b)=>(b.starred?1:0)-(a.starred?1:0) || (a.name||"").localeCompare(b.name||""));
-  list.forEach(e=>{
-    const c=e.category||"(미분류)";
-    if(!groups[c]){ groups[c]=[]; order.push(c); }
-    groups[c].push(e);
-  });
-  order.sort((a,b)=>{
-    const ai=CATEGORIES.site.indexOf(a), bi=CATEGORIES.site.indexOf(b);
-    if(ai<0 && bi<0) return a.localeCompare(b);
-    if(ai<0) return 1; if(bi<0) return -1;
-    return ai-bi;
-  });
-  box.innerHTML=order.map(c=>{
-    const items=groups[c].map(e=>{
-      const fv=faviconUrl(e.url);
-      const ic=fv?`<img src="${fv}" style="width:24px;height:24px;border-radius:4px" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none;font-size:24px">🌐</span>`:`<span style="font-size:24px">🌐</span>`;
-      return `<div class="link-card${e.starred?" starred":""}" data-sid="${e.id}">
-        <span class="lc-icon">${ic}</span>
-        <div class="lc-body">
-          <div class="lc-name">${esc(e.name||"")}</div>
-          <div class="lc-sub">${esc(e.url||"")}</div>
-          ${e.subcategory?`<span class="lc-tag">${esc(e.subcategory)}</span>`:""}
-          ${e.memo?`<div class="lc-memo">📝 ${esc(e.memo)}</div>`:""}
-        </div>
-        <div class="lc-acts">
-          <button class="lc-star ${e.starred?"on":""}" data-star title="즐겨찾기">⭐</button>
-          <button class="lc-menu-btn" data-edit>수정</button>
-        </div>
-      </div>`;
-    }).join("");
-    return `<div class="cat-group" data-cat="${esc(c)}">
-      <div class="cat-group-h"><span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${groups[c].length}</span></div>
-      <div class="cat-items">${items}</div></div>`;
+  if(!list.length){
+    $("siteCatJump").innerHTML="";
+    box.innerHTML=`<div class="empty">${entries.some(e=>e.kind==="site")?"조건에 맞는 사이트가 없습니다.":"➕ 사이트 추가를 눌러 자주 가는 사이트를 등록해 보세요."}</div>`;
+    box.className=""; return;
+  }
+  sortItems("site", list);
+  const favs=list.filter(e=>e.starred);
+  const rest=list.filter(e=>!e.starred);
+  const groups={};
+  rest.forEach(e=>{ const c=e.category||"(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
+  const orderedCats=CATEGORIES.site.filter(c=>groups[c]);
+  Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
+  const jumpGroups={};
+  if(favs.length) jumpGroups["⭐ 즐겨찾기"]=favs;
+  orderedCats.forEach(c=>{ jumpGroups[c]=groups[c]; });
+  buildCatJump("site", jumpGroups, "siteCatJump");
+  const mode=VIEW_PREFS.site.mode;
+  const compact=VIEW_PREFS.site.compact;
+  box.className=`view-${mode}${mode==="card"&&compact?" compact":""}`;
+  let html="";
+  if(favs.length){
+    html+=`<div class="fav-section"><div class="fs-h">⭐ 즐겨찾기 <span class="fs-cnt">${favs.length}</span></div>
+      <div class="cat-items">${favs.map(e=>siteCardHTML(e)).join("")}</div></div>`;
+  }
+  html+=orderedCats.map(c=>{
+    const items=groups[c];
+    const collapsed=VIEW_PREFS.site.collapsed[c];
+    const colorClass=catColorClass("site",c);
+    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}">
+      <div class="cat-group-h"><span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span></div>
+      <div class="cat-items">${items.map(e=>siteCardHTML(e)).join("")}</div></div>`;
   }).join("");
-  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",()=>h.parentElement.classList.toggle("collapsed")));
+  box.innerHTML=html;
+  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",()=>{
+    const g=h.parentElement; const cat=g.dataset.cat;
+    VIEW_PREFS.site.collapsed[cat]=!VIEW_PREFS.site.collapsed[cat];
+    saveViewPrefs(); g.classList.toggle("collapsed");
+  }));
   box.querySelectorAll("[data-sid]").forEach(el=>{
     const id=el.dataset.sid;
     el.addEventListener("click",ev=>{
@@ -1984,6 +2238,24 @@ function renderSite(){
     });
     el.querySelector("[data-edit]").addEventListener("click",ev=>{ ev.stopPropagation(); openEditor("site", id); });
   });
+}
+function siteCardHTML(e){
+  const fv=faviconUrl(e.url);
+  const ic=fv?`<img src="${fv}" style="width:24px;height:24px;border-radius:4px" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none;font-size:24px">🌐</span>`:`<span style="font-size:24px">🌐</span>`;
+  const tt=`${e.name||""}\n${e.url||""}${e.memo?"\n"+e.memo:""}`;
+  return `<div class="link-card${e.starred?" starred":""}" data-sid="${e.id}" title="${esc(tt)}">
+    <span class="lc-icon">${ic}</span>
+    <div class="lc-body">
+      <div class="lc-name">${esc(e.name||"")}</div>
+      <div class="lc-sub">${esc(e.url||"")}</div>
+      ${e.subcategory?`<span class="lc-tag">${esc(e.subcategory)}</span>`:""}
+      ${e.memo?`<div class="lc-memo">📝 ${esc(e.memo)}</div>`:""}
+    </div>
+    <div class="lc-acts">
+      <button class="lc-star ${e.starred?"on":""}" data-star title="즐겨찾기">⭐</button>
+      <button class="lc-menu-btn" data-edit>수정</button>
+    </div>
+  </div>`;
 }
 
 /* ===== 카테고리 관리 모달 ===== */
@@ -2204,6 +2476,7 @@ function pwMatches(e,q){
   return s.includes(q.trim().toLowerCase());
 }
 async function pwRenderList(){
+  bindViewControls("password");
   // 필터 채우기
   $("pwCatFilter").innerHTML=catOptions("password",true);
   $("pwCatFilter").value=CAT_FILTER.password.cat;
@@ -2223,13 +2496,26 @@ async function pwRenderList(){
 
   const box=$("pwList");
   if(!list.length){
+    $("pwCatJump").innerHTML="";
     box.innerHTML=`<div class="empty">${entries.some(e=>e.kind==="password")?"조건에 맞는 비번이 없습니다.":"➕ 비번 추가를 눌러 사이트별 계정·비밀번호를 등록해 보세요."}</div>`;
-    return;
+    box.className=""; return;
   }
-  list.sort((a,b)=>(b.starred?1:0)-(a.starred?1:0) || (a.name||"").localeCompare(b.name||""));
+  sortItems("password", list);
+  const favs=list.filter(e=>e.starred);
+  const rest=list.filter(e=>!e.starred);
+  const groups={};
+  rest.forEach(e=>{ const c=e.category||"(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
+  const orderedCats=CATEGORIES.password.filter(c=>groups[c]);
+  Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
+  const jumpGroups={};
+  if(favs.length) jumpGroups["⭐ 즐겨찾기"]=favs;
+  orderedCats.forEach(c=>{ jumpGroups[c]=groups[c]; });
+  buildCatJump("password", jumpGroups, "pwCatJump");
+  const mode=VIEW_PREFS.password.mode;
+  box.className=mode==="list"?"pw-view-list":"";
 
-  // 각 항목 복호화는 비동기. 일단 placeholder 렌더 후 채워넣기.
-  box.innerHTML=list.map(e=>{
+  // 카드 placeholder 렌더
+  const pwCardPlaceholder = e =>{
     const cat=e.category?`<span class="pw-cat">${esc(e.category)}</span>`:"";
     const sub=e.subcategory?`<span class="pw-cat" style="background:var(--mint-soft);color:#2c7d62">${esc(e.subcategory)}</span>`:"";
     return `<div class="pw-card" data-pid="${e.id}">
@@ -2243,15 +2529,42 @@ async function pwRenderList(){
       </div>
       <div data-fields>로딩 중…</div>
     </div>`;
-  }).join("");
+  };
 
-  // 복호화하여 필드 채우기
+  let html="";
+  if(favs.length){
+    html+=`<div class="fav-section"><div class="fs-h">⭐ 즐겨찾기 <span class="fs-cnt">${favs.length}</span></div>
+      <div>${favs.map(pwCardPlaceholder).join("")}</div></div>`;
+  }
+  html+=orderedCats.map(c=>{
+    const items=groups[c];
+    const collapsed=VIEW_PREFS.password.collapsed[c];
+    const colorClass=catColorClass("password",c);
+    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}" style="margin-bottom:14px">
+      <div class="cat-group-h"><span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span></div>
+      <div class="cat-items" style="display:block">${items.map(pwCardPlaceholder).join("")}</div></div>`;
+  }).join("");
+  box.innerHTML=html;
+
+  // 접기 이벤트
+  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",()=>{
+    const g=h.parentElement; const cat=g.dataset.cat;
+    VIEW_PREFS.password.collapsed[cat]=!VIEW_PREFS.password.collapsed[cat];
+    saveViewPrefs(); g.classList.toggle("collapsed");
+    // 접힘 처리 (display:none 으로)
+    const items=g.querySelector(".cat-items");
+    if(items) items.style.display = g.classList.contains("collapsed") ? "none" : "block";
+  }));
+  // 초기 접힘 상태 반영
+  box.querySelectorAll(".cat-group.collapsed .cat-items").forEach(el=>el.style.display="none");
+
+  // 복호화 채우기
   for(const e of list){
     const card=box.querySelector(`[data-pid="${e.id}"]`);
     if(!card) continue;
     let data={username:"",password:"",url:"",memo:""};
     try{ if(e.encrypted) data=JSON.parse(await decryptStr(e.encrypted, masterPassword)); }
-    catch(err){ card.querySelector("[data-fields]").innerHTML=`<div style="color:var(--peach);font-size:13px;padding:6px 0">⚠ 복호화 실패 — 마스터 비번이 변경되었거나 데이터 손상</div>`; continue; }
+    catch(err){ card.querySelector("[data-fields]").innerHTML=`<div style="color:var(--peach);font-size:13px;padding:6px 0">⚠ 복호화 실패</div>`; continue; }
     const shown=pwShownIds.has(e.id);
     const pwDisp = shown ? esc(data.password||"") : "••••••••";
     const fieldsHTML=`
@@ -2261,7 +2574,6 @@ async function pwRenderList(){
       ${data.memo?`<div class="pw-memo">📝 ${esc(data.memo)}</div>`:""}
     `;
     const fb=card.querySelector("[data-fields]"); fb.innerHTML=fieldsHTML;
-    // 이벤트
     fb.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>{
       if(pwShownIds.has(e.id)) pwShownIds.delete(e.id); else pwShownIds.add(e.id);
       pwRenderList();
