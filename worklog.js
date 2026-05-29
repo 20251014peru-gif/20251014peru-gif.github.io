@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v30";
+const APP_VERSION = "v31";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -3740,9 +3740,31 @@ function copyExpenseExcel(){
     && (!EXP_FILTER.ym || (e.date||"").startsWith(EXP_FILTER.ym))
   ).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
   if(!list.length){ toast("복사할 내역이 없습니다"); return; }
-  // 형식: NO\t지출내역\t지출금액\t날짜\t비고
-  const text = list.map((e,i)=>[i+1, e.title||"", e.amount||0, e.date||"", e.memo||""].map(cleanCell).join("\t")).join("\n");
-  copyText(text, `${expType} ${list.length}건 엑셀 복사됨`);
+  // 1) 탭 구분 텍스트 (전통적)
+  const rows = list.map((e,i)=>[i+1, e.title||"", e.amount||0, e.date||"", e.memo||""]);
+  const text = rows.map(r=>r.map(v=>String(v).replace(/\t/g," ").replace(/\n/g," ")).join("\t")).join("\n");
+  // 2) HTML 테이블 (엑셀이 자동으로 셀에 매핑)
+  const html = "<table>" + rows.map(r=>"<tr>"+r.map(v=>{
+    const s=String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    return `<td>${s}</td>`;
+  }).join("")+"</tr>").join("") + "</table>";
+  // 3) 두 형식 모두 클립보드에
+  copyExcelData(text, html, `${expType} ${list.length}건 엑셀 복사됨`);
+}
+
+// 엑셀이 잘 인식하도록 plain text + HTML 두 형식을 같이 클립보드에
+function copyExcelData(text, html, successMsg){
+  if(navigator.clipboard && navigator.clipboard.write && window.ClipboardItem){
+    const item = new ClipboardItem({
+      "text/plain": new Blob([text], {type:"text/plain"}),
+      "text/html": new Blob([html], {type:"text/html"})
+    });
+    navigator.clipboard.write([item])
+      .then(()=>toast(successMsg))
+      .catch(()=>copyText(text, successMsg));
+  } else {
+    copyText(text, successMsg);
+  }
 }
 
 
