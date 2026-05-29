@@ -171,6 +171,76 @@ table.rec tbody tr.st-zero td:nth-child(7) b{color:#999}
 .exp-stat-card.exp-stat-tax .es-v{color:#36699c}
 .pill.amount{background:#fdf2ee;color:#a85e3a;font-weight:700}
 
+/* v35: 홈/뒤로 버튼 크게 */
+.nav-btn{display:inline-flex;align-items:center;gap:5px;padding:9px 16px;border-radius:11px;font-size:14.5px;font-weight:700;border:2px solid var(--primary-soft);background:#fff;color:var(--primary-deep);cursor:pointer;text-decoration:none;font-family:inherit;transition:all .15s;line-height:1}
+.nav-btn:hover:not(:disabled){background:var(--primary-soft);border-color:var(--primary);transform:translateY(-1px);box-shadow:0 3px 8px rgba(80,140,200,.18)}
+.nav-btn:disabled{opacity:.4;cursor:not-allowed}
+.nav-btn.nav-back{background:linear-gradient(135deg,#fff 0%,#f0f5fd 100%)}
+.nav-btn.nav-home{background:linear-gradient(135deg,#fff 0%,var(--primary-soft) 100%);border-color:var(--primary)}
+.nav-btn.nav-home:hover{background:var(--primary);color:#fff;border-color:var(--primary-deep)}
+
+/* v35: 검색창 큰 버전 (눈에 띄게) */
+.search.search-big{font-size:16px;padding:14px 18px;border:2.5px solid var(--primary);background:#fff;border-radius:13px;box-shadow:0 2px 10px rgba(80,140,200,.12);font-weight:500;margin:6px 0 14px;width:100%}
+.search.search-big:focus{border-color:var(--primary-deep);box-shadow:0 0 0 4px rgba(80,140,200,.18),0 4px 15px rgba(80,140,200,.2);outline:none}
+.search.search-big::placeholder{color:var(--primary-deep);font-weight:600;opacity:.7}
+
+/* v35: 지출 카드 안 항목 목록 */
+.exp-stat-card{padding:14px 16px}
+.exp-stat-card .es-items{margin-top:10px;border-top:1px dashed rgba(0,0,0,.08);padding-top:9px;max-height:280px;overflow-y:auto}
+.exp-stat-card .es-item{display:flex;justify-content:space-between;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;align-items:center;transition:background .1s}
+.exp-stat-card .es-item:hover{background:rgba(0,0,0,.04)}
+.exp-stat-card .es-item .es-i-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.exp-stat-card .es-item .es-i-amt{flex:0 0 auto;font-weight:700;font-family:'Gowun Batang',serif;color:var(--ink-soft);font-size:12px}
+.exp-stat-card.exp-stat-personal .es-i-amt{color:#a85e3a}
+.exp-stat-card.exp-stat-tax .es-i-amt{color:#36699c}
+.exp-stat-card .es-empty{margin-top:10px;padding:10px;font-size:12px;color:var(--ink-soft);text-align:center;font-style:italic;border-top:1px dashed rgba(0,0,0,.08)}
+
+/* v35: 청소 전용 달력 */
+.clean-cal-wrap{margin:14px 0 6px;padding:12px;background:#fbfdff;border:1px solid var(--line);border-radius:13px}
+.clean-cal-head{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:10px}
+.clean-cal-head .cc-title{font-size:16px;font-weight:700;color:var(--primary-deep);font-family:'Gowun Batang',serif;min-width:130px;text-align:center}
+.cc-nav{border:1px solid var(--line);background:#fff;color:var(--primary-deep);font-size:18px;font-weight:700;width:30px;height:30px;border-radius:8px;cursor:pointer;line-height:1}
+.cc-nav:hover{background:var(--primary-soft);border-color:var(--primary)}
+/* v36: 셀 행이 자동으로 늘어나도록 grid-auto-rows + align-items */
+.clean-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;grid-auto-rows:minmax(46px,auto);align-items:stretch}
+.cc-dh{text-align:center;font-size:11.5px;font-weight:700;color:var(--ink-soft);padding:5px 0;background:var(--bg2);border-radius:4px}
+.cc-cell{min-height:46px;border:1px solid #eaeef3;border-radius:6px;padding:4px;background:#fff;font-size:11px;cursor:pointer;transition:all .12s;position:relative;display:flex;flex-direction:column}
+.cc-cell.empty{background:transparent;border:none;cursor:default}
+.cc-cell:not(.empty):hover{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft);transform:translateY(-1px);z-index:2}
+.cc-cell.today{background:#fff8e8;border-color:#e6cb6b}
+.cc-cell.sun{background:#fef6f6}
+.cc-cell.sat{background:#f6f9fe}
+.cc-cell.has{background:linear-gradient(135deg,#e9f8f0 0%,#fbfdff 100%);border-color:#5cc2a0}
+.cc-cell.has.today{background:linear-gradient(135deg,#fff8e8 0%,#e9f8f0 100%);border-color:#5cc2a0}
+.cc-num{font-weight:700;font-size:12px;color:var(--ink);margin-bottom:2px;flex:0 0 auto}
+.cc-cell.sun .cc-num{color:#c33}
+.cc-cell.sat .cc-num{color:#36699c}
+.cc-mark{font-size:13px;margin-top:2px;font-weight:700;color:#2c7d62}
+/* v36: 셀 안 항목들 — 자동 줄바꿈, 행 늘어남 */
+.cc-items{display:flex;flex-direction:column;gap:2px;flex:1}
+.cc-it{font-size:10.5px;line-height:1.35;padding:2px 4px;border-radius:4px;background:rgba(255,255,255,.85);color:var(--ink);word-break:break-word;white-space:normal}
+.cc-it-director{background:rgba(139,92,246,.12);color:#5b3a9c;border-left:2px solid #8b5cf6}
+.cc-it-directive{background:rgba(80,140,200,.12);color:var(--primary-deep);border-left:2px solid var(--primary)}
+.cc-it-special{background:rgba(216,134,72,.12);color:#a05722;border-left:2px solid #d88648}
+@media (max-width:700px){
+  .cc-it{font-size:9.5px}
+  .cc-num{font-size:11px}
+}
+
+/* v35: 전체 검색 */
+.tab-search{background:linear-gradient(135deg,#fff8e8 0%,#ffeec4 100%) !important;color:#a67d1a !important;border:2px solid #e6cb6b !important;font-weight:700 !important;margin-left:8px !important}
+.tab-search:hover{background:#ffeec4 !important;border-color:#d4a850 !important;transform:translateY(-1px);box-shadow:0 2px 6px rgba(180,140,40,.2)}
+.gs-group{margin-bottom:18px}
+.gs-group-h{font-size:13px;font-weight:700;color:var(--primary-deep);padding:6px 10px;background:var(--primary-soft);border-radius:7px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.gs-cnt{font-size:11px;background:#fff;color:var(--primary-deep);padding:1px 8px;border-radius:999px}
+.gs-item{padding:9px 11px;border-radius:8px;background:#fbfdff;border:1px solid var(--line);margin-bottom:5px;cursor:pointer;transition:all .12s}
+.gs-item:hover{background:var(--primary-soft);border-color:var(--primary);transform:translateX(2px)}
+.gs-i-title{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.3}
+.gs-i-lbl{font-size:10.5px;color:#fff;background:var(--primary-deep);padding:2px 7px;border-radius:5px;margin-right:5px;font-weight:700}
+.gs-i-sub{font-size:12px;color:var(--ink-soft);margin-top:3px}
+.gs-i-date{font-size:11px;color:var(--primary);margin-top:3px;font-weight:600}
+.gs-more{font-size:12px;color:var(--ink-soft);padding:6px 10px;font-style:italic;text-align:center}
+
 /* v29: 업무 탭 내 서브탭 */
 .subtabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;padding:8px;background:linear-gradient(135deg,var(--primary-soft) 0%,#fbfdff 100%);border:1px solid var(--line);border-radius:13px}
 .subtabs button{flex:0 0 auto;border:1px solid transparent;background:#fff;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink-soft);padding:8px 14px;cursor:pointer;border-radius:9px;transition:all .15s}

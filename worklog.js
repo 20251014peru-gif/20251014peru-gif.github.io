@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v34";
+const APP_VERSION = "v36";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -352,6 +352,9 @@ async function init(){
   wireExpenseTab();
   wireExpenseModal();
   wireWorkSubtabs();
+  wireGlobalSearch();
+  const backBtn = $("btnBack");
+  if(backBtn) backBtn.addEventListener("click", goBack);
   loadCleanSettings();
   wireCatMgr();
   try{
@@ -393,6 +396,42 @@ function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.c
 function renderAll(){ renderWork(); renderPlan(); renderMemo(); renderCall(); renderVac(); renderMeeting(); renderDeliver(); renderCalendar(); renderFileLink(); renderSite(); renderPassword(); renderMaterial(); renderCleaning(); renderExpense(); renderDiag(); }
 
 /* ===== 탭 ===== */
+// v35: 뒤로 가기 히스토리 (5단계까지)
+const TAB_HISTORY = []; // [{tab, subtab}]
+const TAB_HISTORY_MAX = 5;
+let SKIP_HISTORY = false;
+
+function pushTabHistory(tab, subtab){
+  if(SKIP_HISTORY) return;
+  const last = TAB_HISTORY[TAB_HISTORY.length-1];
+  // 같은 상태 중복 방지
+  if(last && last.tab===tab && last.subtab===subtab) return;
+  TAB_HISTORY.push({tab, subtab});
+  while(TAB_HISTORY.length > TAB_HISTORY_MAX+1) TAB_HISTORY.shift();
+  updateBackButton();
+}
+
+function updateBackButton(){
+  const btn = $("btnBack"); if(!btn) return;
+  btn.disabled = TAB_HISTORY.length < 2;
+}
+
+function goBack(){
+  if(TAB_HISTORY.length < 2) return;
+  TAB_HISTORY.pop(); // 현재 제거
+  const prev = TAB_HISTORY.pop(); // 직전 가져옴 (다시 push될 거임)
+  if(!prev) return;
+  SKIP_HISTORY = true;
+  activateTab(prev.tab);
+  if(prev.subtab && prev.tab==="work"){
+    setTimeout(()=>{ activateWorkSubtab(prev.subtab); SKIP_HISTORY=false; pushTabHistory(prev.tab, prev.subtab); updateBackButton(); }, 60);
+  } else {
+    SKIP_HISTORY = false;
+    pushTabHistory(prev.tab, null);
+    updateBackButton();
+  }
+}
+
 function activateTab(name){
   // 서브탭으로 이동된 항목이면 업무 탭 + 해당 서브탭으로
   const subtabs = ["filelink","call","site","vacation","meeting","deliver","expense"];
@@ -410,6 +449,9 @@ function activateTab(name){
     let last="general";
     try{ last = localStorage.getItem("wl_work_subtab")||"general"; }catch(e){}
     activateWorkSubtab(last);
+    pushTabHistory(name, last);
+  } else {
+    pushTabHistory(name, null);
   }
   try{ btn.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){}
   try{ localStorage.setItem("wl_tab", name); }catch(e){}
@@ -444,6 +486,10 @@ function activateWorkSubtab(sub){
   // 페이지 맨 위로 스크롤
   window.scrollTo({top:0, behavior:"smooth"});
   try{ localStorage.setItem("wl_work_subtab", sub); }catch(e){}
+  // 히스토리 push (work 탭이 활성일 때만)
+  if(document.getElementById("panel-work").classList.contains("active")){
+    pushTabHistory("work", sub);
+  }
 }
 
 // 업무 탭 서브탭 클릭 wiring
@@ -3059,7 +3105,14 @@ function wireCleaningTab(){
   $("clnRangeClear").addEventListener("click",()=>{ CLEAN_FILTER.from=""; CLEAN_FILTER.to=""; $("clnFrom").value=""; $("clnTo").value=""; renderCleaning(); });
   $("btnAddCleaning").addEventListener("click",()=>openCleaningEditor(null));
   $("btnCleanStaffMgr").addEventListener("click",openCleanStaffMgr);
+  // 청소 달력
+  $("cleanCalPrev").addEventListener("click",()=>{ cleanCalM--; if(cleanCalM<0){cleanCalM=11; cleanCalY--;} renderCleaningCalendar(); });
+  $("cleanCalNext").addEventListener("click",()=>{ cleanCalM++; if(cleanCalM>11){cleanCalM=0; cleanCalY++;} renderCleaningCalendar(); });
 }
+
+// 청소 전용 달력 상태
+let cleanCalY = new Date().getFullYear();
+let cleanCalM = new Date().getMonth();
 
 function cleaningList(){
   return entries.filter(e=>e.kind==="cleaning"
@@ -3076,7 +3129,70 @@ function cleaningMatches(e, q){
   return parts.filter(Boolean).join(" ").toLowerCase().includes(q.trim().toLowerCase());
 }
 
+function renderCleaningCalendar(){
+  const titleEl = $("cleanCalTitle"); if(!titleEl) return;
+  titleEl.textContent = `${cleanCalY}년 ${cleanCalM+1}월`;
+  const first = new Date(cleanCalY, cleanCalM, 1).getDay();
+  const days = new Date(cleanCalY, cleanCalM+1, 0).getDate();
+  // 청소 일지 있는 날짜 집계
+  const byDate = {};
+  entries.filter(e=>e.kind==="cleaning"&&e.date).forEach(e=>{
+    (byDate[e.date]=byDate[e.date]||[]).push(e);
+  });
+  const today = todayStr();
+  let html = `<div class="cc-dh">일</div><div class="cc-dh">월</div><div class="cc-dh">화</div><div class="cc-dh">수</div><div class="cc-dh">목</div><div class="cc-dh">금</div><div class="cc-dh">토</div>`;
+  for(let i=0;i<first;i++) html += `<div class="cc-cell empty"></div>`;
+  for(let d=1; d<=days; d++){
+    const ds = `${cleanCalY}-${String(cleanCalM+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const arr = byDate[ds]||[];
+    const has = arr.length>0;
+    const isToday = ds === today;
+    const dow = new Date(cleanCalY,cleanCalM,d).getDay();
+    const cls = `cc-cell ${has?"has":""} ${isToday?"today":""} ${dow===0?"sun":""} ${dow===6?"sat":""}`;
+    let inner = `<div class="cc-num">${d}</div>`;
+    if(has){
+      // 모든 일지의 지시·전달·특기 항목 모으기
+      const items = [];
+      arr.forEach(c=>{
+        if(Array.isArray(c.directorOrders)) c.directorOrders.forEach(t=>{ if(t&&t.trim()) items.push({type:"director",text:t.trim()}); });
+        if(Array.isArray(c.directives)) c.directives.forEach(t=>{ if(t&&t.trim()) items.push({type:"directive",text:t.trim()}); });
+        if(Array.isArray(c.specials)) c.specials.forEach(t=>{ if(t&&t.trim()) items.push({type:"special",text:t.trim()}); });
+        // 옛 데이터 호환
+        if(!Array.isArray(c.directives) && c.notes) c.notes.split(/\n+/).forEach(t=>{ if(t&&t.trim()) items.push({type:"directive",text:t.trim()}); });
+        if(!Array.isArray(c.specials) && c.special) c.special.split(/\n+/).forEach(t=>{ if(t&&t.trim()) items.push({type:"special",text:t.trim()}); });
+      });
+      if(items.length){
+        const itemsHtml = items.map(it=>{
+          const icon = it.type==="director" ? "👔" : it.type==="special" ? "⭐" : "📌";
+          return `<div class="cc-it cc-it-${it.type}">${icon} ${esc(it.text)}</div>`;
+        }).join("");
+        inner += `<div class="cc-items">${itemsHtml}</div>`;
+      } else {
+        // 항목 없으면 표시만
+        inner += `<div class="cc-mark">🧹${arr.length>1?` ${arr.length}`:""}</div>`;
+      }
+    }
+    html += `<div class="${cls}" data-date="${ds}">${inner}</div>`;
+  }
+  $("cleanCalGrid").innerHTML = html;
+  // 클릭 → 일지 열기
+  $("cleanCalGrid").querySelectorAll(".cc-cell[data-date]").forEach(el=>{
+    el.addEventListener("click",()=>{
+      const ds = el.dataset.date;
+      const arr = byDate[ds]||[];
+      if(arr.length===1) openCleaningEditor(arr[0].id);
+      else if(arr.length>1){
+        openCleaningEditor(arr[0].id);
+      } else {
+        openCleaningEditor(null);
+        setTimeout(()=>{ const d=$("cln-date"); if(d) d.value=ds; },80);
+      }
+    });
+  });
+}
+
 function renderCleaning(){
+  renderCleaningCalendar(); // 달력도 같이 갱신
   const list=cleaningList();
   // 월별 사용량 통계
   renderCleaningStats();
@@ -3524,8 +3640,133 @@ function renderCleanStaffList(){
 
 
 /* =========================================================
-   v28: 지출 관리 (개인지출 품의서 + 세금계산서 확인)
+   v35: 전체 검색
    ========================================================= */
+function wireGlobalSearch(){
+  const btn = $("btnGlobalSearch");
+  if(btn) btn.addEventListener("click", openGlobalSearch);
+  // Ctrl+K 단축키
+  document.addEventListener("keydown", e=>{
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="k"){
+      e.preventDefault();
+      openGlobalSearch();
+    }
+    if(e.key==="Escape" && $("globalSearchOverlay").classList.contains("show")){
+      closeGlobalSearch();
+    }
+  });
+  $("gsClose").addEventListener("click", closeGlobalSearch);
+  $("globalSearchOverlay").addEventListener("click", e=>{
+    if(e.target===$("globalSearchOverlay")) closeGlobalSearch();
+  });
+  $("gsInput").addEventListener("input", e=>runGlobalSearch(e.target.value));
+}
+function openGlobalSearch(){
+  $("globalSearchOverlay").classList.add("show");
+  setTimeout(()=>$("gsInput").focus(), 50);
+  runGlobalSearch($("gsInput").value);
+}
+function closeGlobalSearch(){
+  $("globalSearchOverlay").classList.remove("show");
+}
+function runGlobalSearch(q){
+  const box = $("gsResults");
+  q = (q||"").trim().toLowerCase();
+  if(!q){
+    box.innerHTML = `<div class="empty" style="padding:30px">검색어를 입력하세요 (예: <b>점검</b>, <b>비둘기</b>, <b>2026-05</b>, <b>김태경</b>)</div>`;
+    return;
+  }
+  // 모든 entries에서 검색
+  const matches = [];
+  entries.forEach(e=>{
+    const kind = e.kind;
+    const text = collectSearchText(e).toLowerCase();
+    if(text.includes(q)){
+      matches.push({
+        e, kind,
+        preview: makeSearchPreview(e),
+      });
+    }
+  });
+  if(!matches.length){
+    box.innerHTML = `<div class="empty" style="padding:30px">"${esc(q)}" 검색 결과 없음</div>`;
+    return;
+  }
+  // 종류별로 그룹화
+  const byKind = {};
+  matches.forEach(m=>{ (byKind[m.kind]=byKind[m.kind]||[]).push(m); });
+  const kindOrder = ["work","schedule","plan","memo","call","meeting","deliver","vacation","cleaning","expense","stock","item","filelink","site","password"];
+  let html = `<div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">📌 총 <b style="color:var(--primary-deep)">${matches.length}건</b>의 결과 — 클릭하면 해당 화면으로 이동</div>`;
+  kindOrder.forEach(k=>{
+    if(!byKind[k]) return;
+    const lbl = KIND_LABEL[k]||k;
+    html += `<div class="gs-group"><div class="gs-group-h">${esc(lbl)} <span class="gs-cnt">${byKind[k].length}</span></div>`;
+    byKind[k].slice(0,30).forEach(m=>{
+      html += `<div class="gs-item" data-kind="${m.kind}" data-id="${m.e.id}">${m.preview}</div>`;
+    });
+    if(byKind[k].length>30) html += `<div class="gs-more">+ ${byKind[k].length-30}건 더 (검색어를 더 좁혀주세요)</div>`;
+    html += `</div>`;
+  });
+  box.innerHTML = html;
+  box.querySelectorAll(".gs-item").forEach(el=>{
+    el.addEventListener("click",()=>{
+      const kind = el.dataset.kind, id = el.dataset.id;
+      closeGlobalSearch();
+      // 해당 탭으로 이동
+      const tabMap = {work:"work", schedule:"work", plan:"plan", memo:"memo", call:"call", meeting:"meeting", deliver:"deliver", vacation:"vacation", cleaning:"cleaning", expense:"expense", stock:"material", item:"material", filelink:"filelink", site:"site", password:"password"};
+      const tab = tabMap[kind] || "work";
+      activateTab(tab);
+      // 모달 열기
+      setTimeout(()=>{
+        if(kind==="cleaning") openCleaningEditor(id);
+        else if(kind==="expense") openExpenseEditor(id);
+        else openEditor(kind, id);
+      }, 200);
+    });
+  });
+}
+function collectSearchText(e){
+  const parts = [];
+  Object.keys(e).forEach(k=>{
+    const v = e[k];
+    if(typeof v === "string") parts.push(v);
+    else if(typeof v === "number") parts.push(String(v));
+    else if(Array.isArray(v)){
+      v.forEach(x=>{
+        if(typeof x === "string") parts.push(x);
+        else if(x && typeof x === "object") parts.push(JSON.stringify(x));
+      });
+    }
+  });
+  return parts.join(" ");
+}
+function makeSearchPreview(e){
+  const lbl = KIND_LABEL[e.kind]||e.kind;
+  const date = e.date || e.start || "";
+  let title="", subtitle="";
+  if(e.kind==="work"){ title = e.title||"(제목없음)"; subtitle = `${e.floor||""} ${e.loc||""} · ${e.status||""}`.trim(); }
+  else if(e.kind==="schedule"){ title = e.title||"(제목없음)"; subtitle = `${e.sStatus||""} · ${e.sType||""}`; }
+  else if(e.kind==="plan"){ title = e.title||"(제목없음)"; subtitle = e.memo||""; }
+  else if(e.kind==="memo"){ title = e.title||"(제목없음)"; subtitle = (e.content||"").slice(0,60); }
+  else if(e.kind==="call"){ title = e.who||e.from||"(통화)"; subtitle = `${e.time||""} ${e.dir||""} · ${(e.content||"").slice(0,40)}`; }
+  else if(e.kind==="meeting"){ title = e.title||"(회의)"; subtitle = (e.content||"").slice(0,60); }
+  else if(e.kind==="deliver"){ title = e.title||"(전달사항)"; subtitle = (e.content||"").slice(0,60); }
+  else if(e.kind==="vacation"){ title = e.name||"휴가"; subtitle = `${e.vtype||""} ${e.start||""}~${e.end||""}`; }
+  else if(e.kind==="cleaning"){ title = `청소일지 ${e.date||""}`; subtitle = `반장 ${e.foreman||""}`; }
+  else if(e.kind==="expense"){ title = e.title||""; subtitle = `${e.expType||"개인지출"} · ${won(Number(e.amount)||0)}원`; }
+  else if(e.kind==="item"){ title = e.itemName||""; subtitle = `${e.shopId||""} ${e.spec||""}`; }
+  else if(e.kind==="stock"){
+    const it = entries.find(x=>x.id===e.itemId);
+    title = `${e.stockType||""} ${(it&&it.itemName)||"(품목)"}`;
+    subtitle = `${e.qty||0} × ${won(Number(e.unitPrice)||0)} = ${won(Number(e.amount)||0)}원`;
+  }
+  else if(e.kind==="filelink"){ title = e.label||""; subtitle = `${e.category||""} · ${e.path||""}`; }
+  else if(e.kind==="site"){ title = e.name||""; subtitle = `${e.category||""} · ${e.url||""}`; }
+  else if(e.kind==="password"){ title = e.name||""; subtitle = e.user||""; }
+  return `<div class="gs-i-title"><span class="gs-i-lbl">${esc(lbl)}</span> ${esc(title).slice(0,70)}</div>${subtitle?`<div class="gs-i-sub">${esc(subtitle).slice(0,90)}</div>`:""}${date?`<div class="gs-i-date">📅 ${esc(date)}</div>`:""}`;
+}
+
+
 const EXP_FILTER = { tab:"personal", q:"", ym:"" };
 
 function wireExpenseTab(){
@@ -3593,24 +3834,40 @@ function renderExpenseStats(){
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
   const thisMonth = all.filter(e=>(e.date||"").startsWith(ym));
-  const personal = thisMonth.filter(e=>(e.expType||"개인지출")==="개인지출");
-  const tax = thisMonth.filter(e=>e.expType==="세금계산서");
+  const personal = thisMonth.filter(e=>(e.expType||"개인지출")==="개인지출").sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  const tax = thisMonth.filter(e=>e.expType==="세금계산서").sort((a,b)=>(a.date||"").localeCompare(b.date||""));
   const personalSum = personal.reduce((s,e)=>s+(Number(e.amount)||0),0);
   const taxSum = tax.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  // 각 카드 안에 항목 한 줄씩 표시
+  const itemsHtml = (arr) => {
+    if(!arr.length) return `<div class="es-empty">이번달 내역이 없습니다</div>`;
+    return `<div class="es-items">` + arr.map(e=>
+      `<div class="es-item" data-id="${e.id}">
+        <span class="es-i-title">${esc(e.title||"")}</span>
+        <span class="es-i-amt">${won(Number(e.amount)||0)}원</span>
+      </div>`
+    ).join("") + `</div>`;
+  };
   box.innerHTML = `
     <div class="exp-stat-row">
       <div class="exp-stat-card exp-stat-personal">
         <div class="es-h">💸 ${ym} 개인 지출</div>
         <div class="es-v">${won(personalSum)}<span class="es-u">원</span></div>
         <div class="es-s">${personal.length}건</div>
+        ${itemsHtml(personal)}
       </div>
       <div class="exp-stat-card exp-stat-tax">
         <div class="es-h">📃 ${ym} 세금계산서</div>
         <div class="es-v">${won(taxSum)}<span class="es-u">원</span></div>
         <div class="es-s">${tax.length}건</div>
+        ${itemsHtml(tax)}
       </div>
     </div>
   `;
+  // 항목 클릭 시 수정 모달
+  box.querySelectorAll(".es-item").forEach(el=>{
+    el.addEventListener("click",()=>openExpenseEditor(el.dataset.id));
+  });
 }
 
 // ===== 지출 추가/수정 모달 =====

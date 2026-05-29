@@ -14,10 +14,11 @@
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 통합 · 자재 · 청소 · 달력 · 메모 <b style="color:#9aa7b4" id="verBadge">v34</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 통합 · 자재 · 청소 · 달력 · 전체검색 <b style="color:#9aa7b4" id="verBadge">v36</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
-        <a class="home-link" href="index.html">← 홈</a>
+        <button class="nav-btn nav-back" id="btnBack" title="이전 화면으로 (5단계까지)" disabled>↶ 뒤로</button>
+        <a class="nav-btn nav-home" href="index.html">⌂ 홈</a>
       </div>
     </div>
     <div class="tabs-wrap">
@@ -32,6 +33,7 @@
         <button data-tab="password">🔐 비번</button>
         <button data-tab="diag">자가진단</button>
         <button data-tab="ai">AI</button>
+        <button id="btnGlobalSearch" class="tab-search" title="전체 검색 (Ctrl+K)">🔍 전체 검색</button>
       </nav>
       <button class="tab-arrow right" id="tabArrowR" aria-label="다음 탭">›</button>
     </div>
@@ -335,11 +337,12 @@
       </div>
       <p class="desc">품목을 한 번 등록해두면, 입출고를 기록할 때마다 자동으로 재고가 계산됩니다. 안전재고 미달 품목은 빨갛게 표시돼요.</p>
 
+      <input type="text" id="matSearch" class="search search-big" placeholder="🔍 검색 — 품목명·규격·거래처·메모">
+
       <div id="matMonthlySummary"></div>
 
       <div class="mat-tabs">
-        <button data-mattab="stock" class="active">📊 재고 현황</button>
-        <button data-mattab="item">📋 품목 마스터</button>
+        <button data-mattab="stock" class="active">📋 품목·재고</button>
         <button data-mattab="tx">📥 입출고 내역</button>
       </div>
 
@@ -348,7 +351,6 @@
         <select id="matRecFilter"></select>
         <button class="btn btn-ghost btn-sm" id="matLowToggle" style="flex:0 0 auto">⚠ 부족만</button>
       </div>
-      <input type="text" id="matSearch" class="search" placeholder="🔍 검색 — 품목명·규격·거래처·메모">
 
       <div id="matStockPanel">
         <div class="table-wrap">
@@ -359,14 +361,7 @@
         </div>
       </div>
 
-      <div id="matItemPanel" style="display:none">
-        <div class="table-wrap">
-          <table class="rec"><thead><tr>
-            <th>상품ID</th><th>품목명</th><th>규격</th><th>단위</th><th>분야</th><th>제조원</th><th>거래처</th>
-            <th style="text-align:right">기본단가</th><th>주기</th><th></th>
-          </tr></thead><tbody id="matItemBody"></tbody></table>
-        </div>
-      </div>
+      <div id="matItemPanel" style="display:none"></div>
 
       <div id="matTxPanel" style="display:none">
         <div class="table-wrap">
@@ -392,12 +387,24 @@
         </div>
       </div>
       <p class="desc">청소반장이 작성한 일지를 사진으로 올리면 AI가 자동 분석합니다. 휴지·핸드타월 입출고는 자재 탭으로 자동 연동돼요.</p>
+      <input type="text" id="clnSearch" class="search search-big" placeholder="🔍 검색 — 날짜·담당자·층·특이사항">
+
       <div id="clnStats"></div>
+
+      <!-- v35: 청소 전용 달력 -->
+      <div class="clean-cal-wrap">
+        <div class="clean-cal-head">
+          <button class="cc-nav" id="cleanCalPrev">‹</button>
+          <span class="cc-title" id="cleanCalTitle"></span>
+          <button class="cc-nav" id="cleanCalNext">›</button>
+        </div>
+        <div class="clean-cal-grid" id="cleanCalGrid"></div>
+      </div>
+
       <div class="filt-row" style="margin-top:10px">
         <input type="date" id="clnFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="clnTo" title="종료일">
         <button class="btn btn-ghost btn-sm" id="clnRangeClear" style="flex:0 0 auto">기간 해제</button>
       </div>
-      <input type="text" id="clnSearch" class="search" placeholder="🔍 검색 — 날짜·담당자·층·특이사항">
       <div id="clnList"></div>
     </div>
   </section>
@@ -414,6 +421,8 @@
       </div>
       <p class="desc">개인 지출(품의서용)과 세금계산서 발급 내역(확인용)을 따로 관리합니다. 달력에서 날짜별로도 확인할 수 있어요.</p>
 
+      <input type="text" id="expSearch" class="search search-big" placeholder="🔍 검색 — 내역·비고·날짜">
+
       <div id="expStats"></div>
 
       <div class="mat-tabs" style="margin-top:14px">
@@ -424,7 +433,6 @@
       <div class="filt-row">
         <select id="expMonthFilter"></select>
       </div>
-      <input type="text" id="expSearch" class="search" placeholder="🔍 검색 — 내역·비고·날짜">
 
       <div class="table-wrap">
         <table class="rec"><thead><tr>
@@ -624,6 +632,13 @@
     <button class="btn btn-ghost" id="clnCancel">취소</button>
     <button class="btn btn-danger" id="clnDelete" style="margin-left:auto;display:none">삭제</button>
   </div>
+</div></div>
+
+<!-- v35: 전체 검색 오버레이 -->
+<div class="overlay" id="globalSearchOverlay"><div class="modal" style="max-width:720px;max-height:85vh;display:flex;flex-direction:column">
+  <h3 style="margin:0 0 12px;display:flex;justify-content:space-between;align-items:center">🔍 전체 검색 <button class="btn btn-ghost btn-sm" id="gsClose" style="font-size:14px">닫기 (Esc)</button></h3>
+  <input type="text" id="gsInput" class="search search-big" placeholder="🔍 모든 탭에서 검색 — 키워드 입력" autocomplete="off" autofocus style="margin-bottom:12px">
+  <div id="gsResults" style="flex:1;overflow-y:auto;min-height:200px"></div>
 </div></div>
 
 <!-- 💰 지출 모달 -->
