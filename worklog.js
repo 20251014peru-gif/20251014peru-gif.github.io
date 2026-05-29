@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v37";
+const APP_VERSION = "v38";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -720,7 +720,7 @@ function openEditor(kind,id){
   }
 
   // v37: field 타입 입력에 ➕ 새 분야 추가 / ⚙ 관리 버튼 처리
-  document.querySelectorAll("#fields select[id^='m-']").forEach(sel=>{
+  document.querySelectorAll("#mFields select[id^='m-']").forEach(sel=>{
     const fieldKey = sel.id.replace("m-","");
     const fieldDef = SCHEMA[kind].find(f=>f.k===fieldKey && f.type==="field");
     if(!fieldDef) return;
@@ -1448,6 +1448,31 @@ function bindCalControls(){
     openEditor("schedule",null);
     setTimeout(()=>{ const el=$("m-date"); if(el) el.value=d; },50);
   });
+  // v37: 달력 종류별 필터 단추
+  const filterWrap = $("calFilter");
+  if(filterWrap){
+    filterWrap.querySelectorAll("button[data-calf]").forEach(b=>{
+      b.addEventListener("click",()=>{
+        const k = b.dataset.calf;
+        if(k==="all"){
+          // 전체 토글: 모두 켜있으면 모두 끄기, 아니면 모두 켜기
+          const allOn = Object.values(CAL_FILTER).every(v=>v);
+          Object.keys(CAL_FILTER).forEach(key=>{ CAL_FILTER[key] = !allOn; });
+          filterWrap.querySelectorAll("button[data-calf]").forEach(btn=>{
+            btn.classList.toggle("active", !allOn);
+          });
+        } else {
+          CAL_FILTER[k] = !CAL_FILTER[k];
+          b.classList.toggle("active", CAL_FILTER[k]);
+          // "전체" 단추 상태 갱신
+          const allOn = Object.keys(CAL_FILTER).every(key=>CAL_FILTER[key]);
+          const allBtn = filterWrap.querySelector('button[data-calf="all"]');
+          if(allBtn) allBtn.classList.toggle("active", allOn);
+        }
+        renderCalendar();
+      });
+    });
+  }
 }
 function dateLabel(k){ if(!k) return "(날짜없음)"; const [y,m,d]=k.split("-"); const w=["일","월","화","수","목","금","토"][new Date(k+"T00:00:00").getDay()]; return `${Number(m)}월 ${Number(d)}일 (${w})`; }
 function otherText(o){ if(o.kind==="plan") return o.text||"계획"; if(o.kind==="memo") return o.title||o.body||"메모"; if(o.kind==="call") return o.name||o.content||"통화"; if(o.kind==="meeting") return o.title||"회의"; if(o.kind==="deliver") return o.title||o.content||"전달"; if(o.kind==="schedule") return o.title||"예정"; return ""; }
@@ -1509,36 +1534,50 @@ function renderMonthView(){
       }
     } else {
       const wArr=work[ds]||[]; const vArr=vac[ds]||[]; const oArr=other[ds]||[]; const sArr=sched[ds]||[]; const clArr=cleaning[ds]||[]; const exArr=expense[ds]||[];
-      if(wArr.length){
+      // v37: 필터 적용
+      if(wArr.length && CAL_FILTER.work){
         hasContent=true;
         let b=""; wArr.forEach(en=> b+=`<div class="wtitle"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.work}">${CAL_KIND_LABEL.work} ${wArr.length}</div>${b}</div>`;
       }
-      if(clArr.length){
+      if(clArr.length && CAL_FILTER.cleaning){
         hasContent=true;
-        inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#15803d">🧹 청소일지</div></div>`;
+        // 청소 일지의 지시·전달·특기 항목 표시
+        let cb = "";
+        clArr.forEach(c=>{
+          const items = [];
+          if(Array.isArray(c.directorOrders)) c.directorOrders.forEach(t=>{ if(t&&t.trim()) items.push("👔 "+t.trim()); });
+          if(Array.isArray(c.directives)) c.directives.forEach(t=>{ if(t&&t.trim()) items.push("📌 "+t.trim()); });
+          if(Array.isArray(c.specials)) c.specials.forEach(t=>{ if(t&&t.trim()) items.push("⭐ "+t.trim()); });
+          items.slice(0,3).forEach(it=>{
+            cb += `<div class="otitle">${esc(it).slice(0,40)}</div>`;
+          });
+        });
+        inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#15803d">🧹 청소 ${clArr.length}</div>${cb}</div>`;
       }
-      if(exArr.length){
+      if(exArr.length && CAL_FILTER.expense){
         hasContent=true;
-        const personal=exArr.filter(e=>(e.expType||"개인지출")==="개인지출");
-        const tax=exArr.filter(e=>e.expType==="세금계산서");
-        const sum=exArr.reduce((s,e)=>s+(Number(e.amount)||0),0);
-        let lbl="";
-        if(personal.length) lbl+=`💸${personal.length}`;
-        if(tax.length) lbl+=`${lbl?" ":""}📃${tax.length}`;
-        inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#a85e3a">${lbl} (${won(sum)}원)</div></div>`;
+        // 지출 각 건별 제목과 금액 표시
+        let eb = "";
+        exArr.forEach(e=>{
+          const icon = (e.expType==="세금계산서") ? "📃" : "💸";
+          const amt = won(Number(e.amount)||0);
+          eb += `<div class="otitle">${icon} ${esc((e.title||"").slice(0,18))} <b style="color:#a85e3a">${amt}원</b></div>`;
+        });
+        inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#a85e3a">💰 지출 ${exArr.length}</div>${eb}</div>`;
       }
-      if(vArr.length){
+      if(vArr.length && CAL_FILTER.vacation){
         hasContent=true;
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.vacation}">${CAL_KIND_LABEL.vacation}</div><div class="vac">${esc(vArr.join(", "))}</div></div>`;
       }
       // 업무 달력에서도 스케줄을 작게 표시
-      if(sArr.length){
+      if(sArr.length && CAL_FILTER.schedule){
         hasContent=true;
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.schedule}">${CAL_KIND_LABEL.schedule} ${sArr.length}</div>${sArr.map(s=>`<div class="otitle">${esc(s.title||"")}</div>`).join("")}</div>`;
       }
       OTHER_ORDER.forEach(k=>{
         const arr=oArr.filter(o=>o.kind===k); if(!arr.length) return;
+        if(!CAL_FILTER[k]) return; // v37: 필터
         hasContent=true;
         const b=arr.map(o=>`<div class="otitle">${esc(otherText(o))}</div>`).join("");
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR[k]}">${CAL_KIND_LABEL[k]} ${arr.length}</div>${b}</div>`;
@@ -3843,6 +3882,28 @@ function wireQuickMemo(){
   $("qmClear").addEventListener("click", clearQuickMemo);
   $("qmToMemo").addEventListener("click", quickMemoToFormal);
   $("qmFile").addEventListener("change", handleQmPhoto);
+  // v37: Ctrl+V 클립보드 붙여넣기 (사진/스크린샷)
+  $("qmText").addEventListener("paste", async e=>{
+    const items = (e.clipboardData||window.clipboardData)?.items;
+    if(!items) return;
+    let imageFound = false;
+    for(const it of items){
+      if(it.type && it.type.startsWith("image/")){
+        e.preventDefault();
+        const blob = it.getAsFile();
+        if(!blob) continue;
+        imageFound = true;
+        try{
+          const dataUrl = await compressImage(blob, 1200, 0.7);
+          quickMemoPhotos.push(dataUrl);
+          try{ localStorage.setItem(QM_LS_PHOTOS, JSON.stringify(quickMemoPhotos)); }catch(err){}
+          renderQmPhotos();
+          $("qmStatus").textContent = "📷 사진이 붙여넣어졌어요";
+        }catch(err){ console.warn("paste image 실패", err); }
+      }
+    }
+    if(imageFound) toast("📷 클립보드 사진을 첨부했어요");
+  });
   // 텍스트 자동 저장
   $("qmText").addEventListener("input", e=>{
     clearTimeout(qmSaveTimer);
@@ -3942,7 +4003,7 @@ function quickMemoToFormal(){
 
 
 function wireGlobalSearch(){
-  const btn = $("btnGlobalSearch");
+  const btn = $("btnGlobalSearchTop");
   if(btn) btn.addEventListener("click", openGlobalSearch);
   // Ctrl+K 단축키
   document.addEventListener("keydown", e=>{
