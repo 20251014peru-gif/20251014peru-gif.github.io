@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v25";
+const APP_VERSION = "v27";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -352,8 +352,32 @@ async function init(){
     online=true; setStatus(true);
   }catch(e){ online=false; setStatus(false); logErr("초기 연결", e); }
   await loadAll();
+  migrateTissueToJumbo(); // v26: 휴지 → 점보롤 자동 변환
   renderStatusChips(); renderAll();
   try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
+}
+
+// v26: 옛 "휴지" 품목 → "점보롤"로 자동 마이그레이션
+function migrateTissueToJumbo(){
+  let changed = 0;
+  entries.forEach(e=>{
+    if(e.kind==="item" && (e.itemName||"").trim()==="휴지"){
+      e.itemName = "점보롤";
+      if(!e.unit || e.unit==="EA") e.unit = "롤";
+      if(!e.memo) e.memo = "휴지에서 자동 변경됨";
+      else e.memo = e.memo + " · 휴지에서 자동 변경됨";
+      // Firestore에도 반영
+      if(online && db){
+        db.collection(COL).doc(e.id).set(e).catch(err=>console.warn("migrate save fail",err));
+      }
+      changed++;
+    }
+  });
+  if(changed>0){
+    lsSave();
+    console.log(`✅ 마이그레이션: 휴지 ${changed}건 → 점보롤로 변경됨`);
+    setTimeout(()=>toast(`✅ 휴지 ${changed}건이 자동으로 점보롤로 변경되었어요`, 3500), 800);
+  }
 }
 function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
 function renderAll(){ renderWork(); renderPlan(); renderMemo(); renderCall(); renderVac(); renderMeeting(); renderDeliver(); renderCalendar(); renderFileLink(); renderSite(); renderPassword(); renderMaterial(); renderCleaning(); renderDiag(); }
@@ -2385,7 +2409,7 @@ async function handleMatFileUpload(e){
   const key=(aiGetKey()||"").trim();
   if(!key){ toast("자가진단·AI 탭에서 API 키부터 저장해주세요"); activateTab("ai"); return; }
   if(!/^[\x20-\x7E]+$/.test(key)){ toast("⚠ API 키에 잘못된 문자가 있어요. AI 탭에서 재저장하세요"); return; }
-  // 1) 파일 로드 알림
+  // 1) 파일 첨부 알림
   toast(`📎 "${file.name}" 파일 첨부됨 — 읽는 중...`);
   try{
     // 2) 엑셀 파싱
@@ -2395,20 +2419,28 @@ async function handleMatFileUpload(e){
     const sheet = wb.Sheets[sheetName];
     if(!sheet || !sheet["!ref"]){ toast("❌ 엑셀이 비어있습니다"); return; }
     const range = XLSX.utils.decode_range(sheet["!ref"]);
-    const totalRows = range.e.r - range.s.r; // 헤더 제외 추정
+    const totalRows = range.e.r - range.s.r;
     if(totalRows<=0){ toast("❌ 데이터가 없습니다"); return; }
     // 3) 첫 5행 미리보기
     const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, raw:false, defval:""});
-    const preview = aoa.slice(0, 6).map((r,i)=>`${i===0?"📋":(i+"·")} ${r.slice(0,7).join(" | ").slice(0,90)}`).join("\n");
+    const preview = aoa.slice(0, 6).map((r,i)=>`${i===0?"📋":(i+"·")} ${r.slice(0,7).join(" | ").slice(0,80)}`).join("\n");
     toast(`✅ ${totalRows}행 로드 완료`, 2500);
-    // 4) 미리보기 + 종류 확인
-    const msg = `📎 ${file.name}\n📊 시트: ${sheetName} (약 ${totalRows}행)\n\n┌── 미리보기 (첫 5행) ──┐\n${preview}\n└────────────────┘\n\n어떤 종류의 데이터인가요?\n\n[확인] = 📋 품목 마스터\n[취소] = 📥 입출고 내역`;
-    const isItem = confirm(msg);
-    const type = isItem ? "item" : "stock";
+    // 4) 구매 날짜 입력 받기
+    const todayDefault = todayStr();
+    const dateInput = prompt(
+`📎 ${file.name}\n📊 ${totalRows}행 데이터\n\n┌── 미리보기 ──┐\n${preview}\n└──────────┘\n\n📅 이 구매내역의 날짜를 입력하세요 (YYYY-MM-DD)\n→ 모든 행이 이 날짜로 입고 처리됩니다.`,
+      todayDefault
+    );
+    if(!dateInput){ toast("취소되었습니다"); return; }
+    const purchaseDate = dateInput.trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(purchaseDate)){
+      toast("❌ 날짜 형식이 잘못되었습니다 (예: 2026-05-29)");
+      return;
+    }
     // 5) TSV 변환
     const txt = XLSX.utils.sheet_to_csv(sheet, {FS:"\t", RS:"\n", strip:true});
     if(!txt || !txt.trim()){ toast("❌ 변환된 데이터가 비어있습니다"); return; }
-    // 6) 너무 길면 자르기 (Claude max 토큰 고려)
+    // 6) 길이 자르기
     const MAX_CHARS = 80000;
     let dataText = txt;
     let trimmed = false;
@@ -2416,13 +2448,123 @@ async function handleMatFileUpload(e){
       dataText = dataText.slice(0, MAX_CHARS) + "\n...(이하 생략)";
       trimmed = true;
     }
-    toast(`🤖 AI 분석 중... ${totalRows}행${trimmed?" (일부만)":""} — 30초~1분 소요`, 4000);
-    await aiExtractFromText(dataText, type, key);
+    toast(`🤖 AI 분석 중... ${totalRows}행${trimmed?" (일부만)":""} — 30초~1분 소요`, 5000);
+    // 7) AI 분석 — 구매내역 전용
+    await aiExtractPurchase(dataText, purchaseDate, key);
   }catch(err){
     logErr("엑셀 파일 분석", err);
     console.error("엑셀 분석 상세 에러:", err);
     toast(`❌ ${err.message||"파일 처리 실패"}`, 5000);
   }
+}
+
+// 구매내역 전용 AI 추출 (엑셀 → 품목 등록 + 입고 처리)
+async function aiExtractPurchase(txt, purchaseDate, key){
+  const sys = `당신은 서브원(SERVEONE) 같은 쇼핑몰의 구매 엑셀 데이터를 분석하는 도우미입니다. 반드시 JSON 배열만 응답하세요. 다른 설명·인사말·코드블럭 표시 모두 금지. 응답은 [로 시작해서 ]로 끝나야 합니다.
+
+각 행은 한 번의 구매(입고)입니다. 추출할 필드:
+{"shopId":"상품ID","itemName":"품목명","spec":"규격(핵심만 간단히)","unit":"단위(EA/BOX/ROL/PR 등)","maker":"제조원","qty":수량,"unitPrice":단가,"amount":총액}
+
+중요 규칙:
+- shopId: "상품ID","상품코드","제품번호" 컬럼의 값 그대로. 없으면 빈 문자열.
+- itemName: "상품명","품명","제품명" 컬럼.
+- spec: "규격" 컬럼에서 핵심만 추려 짧게. 예: "SR끈;15mm*100m;재생;포장용;SR;300g;300g" → "15mm×100m 재생". 너무 긴 옵션 나열 금지.
+- unit: "1EA", "1BOX", "1ROL", "1PR" 같은 값은 숫자 떼고 단위만 ("EA","BOX","ROL","PR"). "1BOX(5000SH)" 같은 건 "BOX" 만.
+- maker: "제조원","메이커" 컬럼.
+- qty, unitPrice, amount: 숫자만. 콤마/공백 제거.
+- "총액","합계" 컬럼은 amount로.
+- 통화단위(KRW 등) 컬럼은 완전히 무시.
+- StockNo 컬럼도 무시.
+- 다른 설명 없이 JSON 배열만 답하세요.
+- 예: [{"shopId":"6573068","itemName":"소프트밴드","spec":"15mm×100m 재생","unit":"ROL","maker":"(주)동원피앤아이","qty":5,"unitPrice":2430,"amount":12150}]`;
+
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:AI_MODEL, max_tokens:8000, system:sys, messages:[{role:"user",content:txt}]})
+  });
+  if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j?.error?.message||`HTTP ${res.status}`); }
+  const data=await res.json();
+  const reply=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+  console.log("AI 응답 (처음 500자):", reply.slice(0,500));
+  console.log("AI 응답 (마지막 200자):", reply.slice(-200));
+  let arr;
+  try{
+    arr = extractJsonFromAIReply(reply, true);
+  }catch(e){
+    console.error("JSON 파싱 실패. AI 전체 응답:", reply);
+    throw new Error(`JSON 파싱 실패. F12 콘솔에서 'AI 전체 응답' 확인. 첫 부분: "${reply.slice(0,100)}"`);
+  }
+  if(!Array.isArray(arr)||!arr.length){ toast("AI가 데이터를 추출하지 못했습니다"); return; }
+
+  // 신규 품목 / 기존 품목 분리
+  let newItemsCount = 0, existingItemsCount = 0;
+  arr.forEach(row=>{
+    if(!row.itemName) return;
+    const matched = entries.find(e=>e.kind==="item" && (
+      (row.shopId && e.shopId===row.shopId) ||
+      (!row.shopId && (e.itemName||"").trim()===(row.itemName||"").trim())
+    ));
+    if(matched) existingItemsCount++;
+    else newItemsCount++;
+  });
+  const totalAmount = arr.reduce((s,r)=>s+(Number(r.amount)||Number(r.qty)*Number(r.unitPrice)||0),0);
+  const confirmMsg = `📊 분석 완료\n\n📅 구매일자: ${purchaseDate}\n📦 총 ${arr.length}건\n  · 신규 품목 자동 등록: ${newItemsCount}건\n  · 기존 품목 매칭: ${existingItemsCount}건\n💰 총 구매금액: ${won(totalAmount)}원\n\n이대로 진행할까요?`;
+  if(!confirm(confirmMsg)) return;
+
+  // 신규 등록 + 입고 처리
+  let addedItems = 0, addedStocks = 0;
+  for(const row of arr){
+    if(!row.itemName) continue;
+    // 품목 매칭 (shopId 우선 → 품목명)
+    let item = entries.find(e=>e.kind==="item" && (
+      (row.shopId && e.shopId===row.shopId) ||
+      (!row.shopId && (e.itemName||"").trim()===(row.itemName||"").trim())
+    ));
+    if(!item){
+      item = addRecord({
+        kind:"item",
+        itemCode: nextItemCode(),
+        shopId: row.shopId||"",
+        itemName: row.itemName||"",
+        spec: row.spec||"",
+        unit: row.unit||"",
+        field: "기타",
+        maker: row.maker||"",
+        vendor: "서브원",
+        unitPrice: Number(row.unitPrice)||0,
+        safetyStock: 0,
+        recurring: "비주기",
+        location: "",
+        memo: `엑셀 구매내역에서 자동 등록 (${purchaseDate})`,
+        createdAt: Date.now()
+      });
+      addedItems++;
+    }
+    // 입고 처리
+    const qty = Number(row.qty)||0;
+    const up = Number(row.unitPrice)||0;
+    const amt = Number(row.amount) || (qty*up);
+    if(qty>0){
+      addRecord({
+        kind:"stock",
+        date: purchaseDate,
+        stockType: "입고",
+        itemId: item.id,
+        qty,
+        unitPrice: up,
+        amount: amt,
+        vendor: "서브원",
+        docNo: "",
+        useTarget: "",
+        memo: `엑셀 구매내역`,
+        createdAt: Date.now()
+      });
+      addedStocks++;
+    }
+  }
+  renderMaterial();
+  toast(`✅ 완료! 신규 품목 ${addedItems}건, 입고 ${addedStocks}건 등록`, 5000);
 }
 
 // AI 추출 공통 로직 (텍스트와 파일 둘 다에서 호출)
@@ -2547,6 +2689,8 @@ function renderMaterial(){
     fieldEl.innerHTML=`<option value="전체">분야 전체</option>`+fieldOptionsHTML();
     $("matRecFilter").innerHTML=`<option value="전체">주기 전체</option>`+["비주기","월간","분기","반기","연간","수시"].map(o=>`<option value="${o}">${o}</option>`).join("");
   }
+  // 월별 통계
+  renderMatMonthlySummary();
   // 탭별 렌더
   $("matStockPanel").style.display = MAT_FILTER.tab==="stock" ? "" : "none";
   $("matItemPanel").style.display  = MAT_FILTER.tab==="item"  ? "" : "none";
@@ -2554,6 +2698,48 @@ function renderMaterial(){
   if(MAT_FILTER.tab==="stock") renderStockOverview();
   else if(MAT_FILTER.tab==="item") renderItemList();
   else if(MAT_FILTER.tab==="tx") renderTxList();
+}
+
+// v26: 자재 탭 상단 — 월별 구매·사용 요약
+function renderMatMonthlySummary(){
+  const box = $("matMonthlySummary"); if(!box) return;
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  const stocks = entries.filter(e=>e.kind==="stock");
+  const thisMonthIn = stocks.filter(e=>e.stockType==="입고" && (e.date||"").startsWith(ym));
+  const thisMonthOut = stocks.filter(e=>e.stockType==="출고" && (e.date||"").startsWith(ym));
+  const inAmount = thisMonthIn.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const outAmount = thisMonthOut.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  // 이전 달도 비교용
+  const prevDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const prevYm = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,"0")}`;
+  const prevIn = stocks.filter(e=>e.stockType==="입고" && (e.date||"").startsWith(prevYm))
+    .reduce((s,e)=>s+(Number(e.amount)||0),0);
+  // 전체 누적 재고가액 (현재재고 × 단가)
+  const items = entries.filter(e=>e.kind==="item");
+  const stockValue = items.reduce((s,it)=>{
+    const q = calcStock(it.id);
+    return s + (q>0 ? q*(Number(it.unitPrice)||0) : 0);
+  },0);
+  box.innerHTML = `
+    <div class="mat-month-row">
+      <div class="mat-month-card mat-month-in">
+        <div class="mm-h">📥 ${ym} 구매 금액</div>
+        <div class="mm-v">${won(inAmount)}<span class="mm-u">원</span></div>
+        <div class="mm-s">${thisMonthIn.length}건 · 지난달 ${won(prevIn)}원</div>
+      </div>
+      <div class="mat-month-card mat-month-out">
+        <div class="mm-h">📤 ${ym} 사용 금액</div>
+        <div class="mm-v">${won(outAmount)}<span class="mm-u">원</span></div>
+        <div class="mm-s">${thisMonthOut.length}건</div>
+      </div>
+      <div class="mat-month-card mat-month-stock">
+        <div class="mm-h">📦 누적 재고가액</div>
+        <div class="mm-v">${won(stockValue)}<span class="mm-u">원</span></div>
+        <div class="mm-s">${items.length}개 품목</div>
+      </div>
+    </div>
+  `;
 }
 
 // 재고 현황 — 품목 단위로 현재 재고 + 안전재고 경고

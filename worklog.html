@@ -14,7 +14,7 @@
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 자재 · 청소 · 점검일지 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 · 달력 <b style="color:#9aa7b4" id="verBadge">v25</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 자재 · 청소 · 사이트 · 점검일지 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 · 달력 <b style="color:#9aa7b4" id="verBadge">v27</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -26,6 +26,7 @@
         <button data-tab="work" class="active">업무</button>
         <button data-tab="material">📦 자재</button>
         <button data-tab="cleaning">🧹 청소</button>
+        <button data-tab="site">🌐 사이트</button>
         <button data-tab="filelink">📁 점검일지·관리폴더</button>
         <button data-tab="plan">오늘계획</button>
         <button data-tab="memo">메모</button>
@@ -34,7 +35,6 @@
         <button data-tab="meeting">회의메모</button>
         <button data-tab="deliver">전달사항</button>
         <button data-tab="calendar">달력</button>
-        <button data-tab="site">🌐 사이트</button>
         <button data-tab="password">🔐 비번</button>
         <button data-tab="diag">자가진단</button>
         <button data-tab="ai">AI</button>
@@ -314,8 +314,8 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" id="btnAddStock">📥 입출고 추가</button>
           <button class="btn btn-ghost btn-sm" id="btnAddItem">➕ 품목 등록</button>
-          <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="엑셀 파일(.xlsx, .csv)을 직접 업로드해서 AI가 자동 분석합니다">
-            📤 엑셀 파일 업로드
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="서브원 등 쇼핑몰 구매내역 엑셀을 올리면 자동으로 품목 등록 + 입고 처리됩니다">
+            📤 구매내역 엑셀 업로드
             <input type="file" id="matFileUpload" accept=".xlsx,.xls,.csv" style="display:none">
           </label>
           <button class="btn btn-ghost btn-sm" id="btnAIExtract" title="엑셀 내용을 텍스트로 붙여넣어 AI가 자동 추출">🤖 AI 텍스트 추출</button>
@@ -323,6 +323,8 @@
         </div>
       </div>
       <p class="desc">품목을 한 번 등록해두면, 입출고를 기록할 때마다 자동으로 재고가 계산됩니다. 안전재고 미달 품목은 빨갛게 표시돼요.</p>
+
+      <div id="matMonthlySummary"></div>
 
       <div class="mat-tabs">
         <button data-mattab="stock" class="active">📊 재고 현황</button>
