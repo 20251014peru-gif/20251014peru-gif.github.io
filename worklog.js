@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v39";
+const APP_VERSION = "v40";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -3909,7 +3909,6 @@ function renderCleanStaffList(){
 const QM_LS_TEXT = "wl_quickmemo_text_v37";
 const QM_LS_PHOTOS = "wl_quickmemo_photos_v37";
 let quickMemoPhotos = [];
-let qmSaveTimer = null;
 
 function wireQuickMemo(){
   const btn = $("btnQuickMemo");
@@ -3925,48 +3924,110 @@ function wireQuickMemo(){
   $("qmClear").addEventListener("click", clearQuickMemo);
   $("qmToMemo").addEventListener("click", quickMemoToFormal);
   $("qmFile").addEventListener("change", handleQmPhoto);
-  // v37: Ctrl+V 클립보드 붙여넣기 (사진/스크린샷)
+  // v39: contenteditable div에 클립보드 paste — 사진은 인라인으로 삽입
   $("qmText").addEventListener("paste", async e=>{
-    const items = (e.clipboardData||window.clipboardData)?.items;
+    const cd = (e.clipboardData||window.clipboardData);
+    if(!cd) return;
+    const items = cd.items;
     if(!items) return;
-    let imageFound = false;
+    // 이미지 항목이 있으면 인라인 삽입
     for(const it of items){
       if(it.type && it.type.startsWith("image/")){
         e.preventDefault();
         const blob = it.getAsFile();
         if(!blob) continue;
-        imageFound = true;
         try{
-          const dataUrl = await compressImage(blob, 1200, 0.7);
-          quickMemoPhotos.push(dataUrl);
-          try{ localStorage.setItem(QM_LS_PHOTOS, JSON.stringify(quickMemoPhotos)); }catch(err){}
-          renderQmPhotos();
-          $("qmStatus").textContent = "📷 사진이 붙여넣어졌어요";
+          const dataUrl = await compressImage(blob, 1400, 0.75);
+          insertImageAtCursor(dataUrl);
+          $("qmStatus").textContent = "📷 사진이 본문에 들어갔어요";
+          scheduleQmSave();
         }catch(err){ console.warn("paste image 실패", err); }
+        return; // 첫 이미지만 처리하고 종료
       }
     }
-    if(imageFound) toast("📷 클립보드 사진을 첨부했어요");
+    // 이미지 없으면 일반 텍스트 붙여넣기 (스타일 제거)
+    e.preventDefault();
+    const text = cd.getData("text/plain") || "";
+    document.execCommand("insertText", false, text);
   });
-  // 텍스트 자동 저장
-  $("qmText").addEventListener("input", e=>{
-    clearTimeout(qmSaveTimer);
-    qmSaveTimer = setTimeout(()=>{
-      try{ localStorage.setItem(QM_LS_TEXT, e.target.value); }catch(err){}
-      const s=$("qmStatus"); if(s){ s.textContent="💾 자동 저장됨 "+new Date().toLocaleTimeString("ko-KR").slice(0,8); }
-    }, 400);
+  // 텍스트/사진 변경 시 자동 저장
+  $("qmText").addEventListener("input", scheduleQmSave);
+  // 사진 클릭 — 삭제 버튼은 별도, 사진 자체 클릭은 확대
+  $("qmText").addEventListener("click", e=>{
+    const rm = e.target.closest(".qm-inline-img-rm");
+    if(rm){
+      e.preventDefault();
+      const wrap = rm.closest(".qm-inline-img-wrap");
+      if(wrap){ wrap.remove(); scheduleQmSave(); }
+      return;
+    }
+    const img = e.target.closest(".qm-inline-img-wrap img");
+    if(img){
+      e.preventDefault();
+      openQmZoom(img.src);
+    }
   });
+  // 확대 오버레이 닫기
+  $("qmZoomOverlay").addEventListener("click", ()=>$("qmZoomOverlay").classList.remove("show"));
   // 초기 로드
   loadQuickMemo();
+}
+
+function insertImageAtCursor(dataUrl){
+  const wrapHtml = `<div class="qm-inline-img-wrap" contenteditable="false"><img src="${dataUrl}"><button type="button" class="qm-inline-img-rm" title="이 사진 삭제">×</button></div><br>`;
+  // 커서 위치에 삽입
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount){
+    const range = sel.getRangeAt(0);
+    const editor = $("qmText");
+    if(editor.contains(range.startContainer)){
+      range.deleteContents();
+      const tmp = document.createElement("div");
+      tmp.innerHTML = wrapHtml;
+      const frag = document.createDocumentFragment();
+      while(tmp.firstChild) frag.appendChild(tmp.firstChild);
+      range.insertNode(frag);
+      // 커서를 사진 뒤로
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return;
+    }
+  }
+  // 커서 위치를 못 찾으면 끝에 추가
+  $("qmText").insertAdjacentHTML("beforeend", wrapHtml);
+}
+
+function openQmZoom(src){
+  $("qmZoomImg").src = src;
+  $("qmZoomOverlay").classList.add("show");
+}
+
+let qmSaveTimer = null;
+function scheduleQmSave(){
+  clearTimeout(qmSaveTimer);
+  qmSaveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(QM_LS_TEXT, $("qmText").innerHTML); }catch(err){}
+    const s=$("qmStatus"); if(s){ s.textContent="💾 자동 저장됨 "+new Date().toLocaleTimeString("ko-KR").slice(0,8); }
+  }, 400);
 }
 
 function loadQuickMemo(){
   try{
     const t = localStorage.getItem(QM_LS_TEXT)||"";
-    $("qmText").value = t;
+    $("qmText").innerHTML = t;
+    // 옛 quickMemoPhotos 배열 호환 (이전 버전 데이터 마이그레이션)
     const p = JSON.parse(localStorage.getItem(QM_LS_PHOTOS)||"[]");
-    if(Array.isArray(p)) quickMemoPhotos = p;
+    if(Array.isArray(p) && p.length){
+      // 옛 사진들을 본문 끝에 추가
+      p.forEach(src=>{
+        $("qmText").insertAdjacentHTML("beforeend", `<div class="qm-inline-img-wrap" contenteditable="false"><img src="${src}"><button type="button" class="qm-inline-img-rm" title="이 사진 삭제">×</button></div><br>`);
+      });
+      localStorage.removeItem(QM_LS_PHOTOS);
+      try{ localStorage.setItem(QM_LS_TEXT, $("qmText").innerHTML); }catch(e){}
+    }
+    quickMemoPhotos = []; // 이제 사용 안 함
   }catch(e){}
-  renderQmPhotos();
 }
 
 function toggleQuickMemo(){
@@ -3979,66 +4040,59 @@ function closeQuickMemo(){
 }
 function clearQuickMemo(){
   if(!confirm("급한 메모 내용을 모두 지울까요? (되돌릴 수 없음)")) return;
-  $("qmText").value = "";
+  $("qmText").innerHTML = "";
   quickMemoPhotos = [];
   try{
     localStorage.removeItem(QM_LS_TEXT);
     localStorage.removeItem(QM_LS_PHOTOS);
   }catch(e){}
-  renderQmPhotos();
   $("qmStatus").textContent = "🗑 지워졌습니다";
 }
 
+// 파일 선택 버튼으로 사진 추가 (인라인 삽입)
 async function handleQmPhoto(e){
   const files = Array.from(e.target.files||[]);
   e.target.value = "";
   for(const f of files){
     try{
-      const dataUrl = await compressImage(f, 1200, 0.7);
-      quickMemoPhotos.push(dataUrl);
+      const dataUrl = await compressImage(f, 1400, 0.75);
+      insertImageAtCursor(dataUrl);
     }catch(err){ console.warn("사진 처리 실패", err); }
   }
-  try{ localStorage.setItem(QM_LS_PHOTOS, JSON.stringify(quickMemoPhotos)); }catch(err){}
-  renderQmPhotos();
+  scheduleQmSave();
+  $("qmText").focus();
 }
 
+// renderQmPhotos는 더이상 필요 없음 (사진이 본문 안에 있음) - 빈 함수로 호환 유지
 function renderQmPhotos(){
-  const box = $("qmPhotoList");
-  if(!box) return;
-  if(!quickMemoPhotos.length){ box.innerHTML=""; return; }
-  box.innerHTML = quickMemoPhotos.map((src,i)=>
-    `<div class="qm-thumb"><img src="${src}"><button class="qm-thumb-rm" data-i="${i}">×</button></div>`
-  ).join("");
-  box.querySelectorAll(".qm-thumb-rm").forEach(b=>b.addEventListener("click",()=>{
-    quickMemoPhotos.splice(Number(b.dataset.i),1);
-    try{ localStorage.setItem(QM_LS_PHOTOS, JSON.stringify(quickMemoPhotos)); }catch(e){}
-    renderQmPhotos();
-  }));
+  // 빈 함수: 이제 사진은 qmText 안에 인라인으로 들어감
 }
 
 function quickMemoToFormal(){
-  const t = ($("qmText").value||"").trim();
-  if(!t && !quickMemoPhotos.length){ toast("저장할 내용이 없습니다"); return; }
-  // 첫 줄을 제목으로
-  const firstLine = (t.split("\n")[0]||"").slice(0,40);
+  const editor = $("qmText");
+  // 텍스트 추출
+  const textOnly = (editor.innerText||"").trim();
+  // 사진 추출
+  const photos = Array.from(editor.querySelectorAll("img")).map(img=>img.src);
+  if(!textOnly && !photos.length){ toast("저장할 내용이 없습니다"); return; }
+  const firstLine = (textOnly.split("\n")[0]||"").slice(0,40);
   const title = firstLine || "급한 메모 "+todayStr();
   const memoRec = {
     kind: "memo",
     date: todayStr(),
     title,
-    body: t,            // 메모는 'body' 필드 사용
-    photos: quickMemoPhotos.slice(),  // attachments가 아니라 photos!
+    body: textOnly,
+    photos,
     createdAt: Date.now()
   };
   addRecord(memoRec);
-  // 정식 저장 후 급한메모 지우기
-  $("qmText").value = "";
+  // 정식 저장 후 지우기
+  editor.innerHTML = "";
   quickMemoPhotos = [];
   try{
     localStorage.removeItem(QM_LS_TEXT);
     localStorage.removeItem(QM_LS_PHOTOS);
   }catch(e){}
-  renderQmPhotos();
   renderAll();
   toast(`✅ 메모 탭에 저장되었습니다: "${title.slice(0,30)}"`, 3500);
   $("qmStatus").textContent = "📋 정식 메모로 저장됨";

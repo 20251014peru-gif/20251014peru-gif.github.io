@@ -14,7 +14,7 @@
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">분야관리 · ⚡급한메모 · 자재 · 청소 · 달력 <b style="color:#9aa7b4" id="verBadge">v39</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">분야관리 · ⚡급한메모 · 자재 · 청소 · 달력 <b style="color:#9aa7b4" id="verBadge">v40</b></span></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <div class="nav-group nav-group-tools">
@@ -670,7 +670,7 @@
       <button class="qm-btn qm-close" id="qmClose" title="닫기">✕</button>
     </div>
   </div>
-  <textarea id="qmText" placeholder="여기에 막 쓰세요... 자동으로 저장돼요. 사진은 아래 버튼으로 첨부하세요."></textarea>
+  <div id="qmText" contenteditable="true" data-placeholder="여기에 막 쓰세요... 자동으로 저장돼요. Ctrl+V로 사진을 텍스트 사이에 붙여넣을 수 있어요."></div>
   <div class="qm-photo-area">
     <label class="qm-photo-btn">
       📷 사진 첨부
@@ -680,6 +680,9 @@
   </div>
   <div class="qm-status" id="qmStatus">💾 자동 저장됨</div>
 </div>
+
+<!-- v39: 사진 확대 오버레이 -->
+<div id="qmZoomOverlay"><img id="qmZoomImg" src=""></div>
 
 <!-- 분야 관리 모달 -->
 <div class="overlay" id="fieldMgrOverlay"><div class="modal">
