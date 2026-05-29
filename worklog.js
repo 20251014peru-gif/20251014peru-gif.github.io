@@ -2385,30 +2385,43 @@ async function handleMatFileUpload(e){
   const key=(aiGetKey()||"").trim();
   if(!key){ toast("자가진단·AI 탭에서 API 키부터 저장해주세요"); activateTab("ai"); return; }
   if(!/^[\x20-\x7E]+$/.test(key)){ toast("⚠ API 키에 잘못된 문자가 있어요. AI 탭에서 재저장하세요"); return; }
-  // 파일 종류 선택
-  const type = confirm(`"${file.name}" 파일이 어떤 데이터인가요?\n\n[확인] = 📥 입출고 내역 (구매·사용 기록)\n[취소] = 📋 품목 마스터 (자재 목록)`) ? "stock" : "item";
-  toast(`📊 ${file.name} 읽는 중...`);
+  // 1) 파일 로드 알림
+  toast(`📎 "${file.name}" 파일 첨부됨 — 읽는 중...`);
   try{
-    // 엑셀 파싱
+    // 2) 엑셀 파싱
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, {type:"array"});
-    // 첫 시트만 사용
     const sheetName = wb.SheetNames[0];
     const sheet = wb.Sheets[sheetName];
-    // 시트를 TSV(탭 구분) 텍스트로 변환
+    if(!sheet || !sheet["!ref"]){ toast("❌ 엑셀이 비어있습니다"); return; }
+    const range = XLSX.utils.decode_range(sheet["!ref"]);
+    const totalRows = range.e.r - range.s.r; // 헤더 제외 추정
+    if(totalRows<=0){ toast("❌ 데이터가 없습니다"); return; }
+    // 3) 첫 5행 미리보기
+    const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, raw:false, defval:""});
+    const preview = aoa.slice(0, 6).map((r,i)=>`${i===0?"📋":(i+"·")} ${r.slice(0,7).join(" | ").slice(0,90)}`).join("\n");
+    toast(`✅ ${totalRows}행 로드 완료`, 2500);
+    // 4) 미리보기 + 종류 확인
+    const msg = `📎 ${file.name}\n📊 시트: ${sheetName} (약 ${totalRows}행)\n\n┌── 미리보기 (첫 5행) ──┐\n${preview}\n└────────────────┘\n\n어떤 종류의 데이터인가요?\n\n[확인] = 📋 품목 마스터\n[취소] = 📥 입출고 내역`;
+    const isItem = confirm(msg);
+    const type = isItem ? "item" : "stock";
+    // 5) TSV 변환
     const txt = XLSX.utils.sheet_to_csv(sheet, {FS:"\t", RS:"\n", strip:true});
-    if(!txt || !txt.trim()){ toast("엑셀 파일에 데이터가 없습니다"); return; }
-    // 너무 길면 자르기
+    if(!txt || !txt.trim()){ toast("❌ 변환된 데이터가 비어있습니다"); return; }
+    // 6) 너무 길면 자르기 (Claude max 토큰 고려)
+    const MAX_CHARS = 80000;
     let dataText = txt;
-    if(dataText.length > 30000){
-      dataText = dataText.slice(0, 30000) + "\n...(이하 생략)";
-      toast("⚠ 데이터가 너무 많아 일부만 분석합니다");
+    let trimmed = false;
+    if(dataText.length > MAX_CHARS){
+      dataText = dataText.slice(0, MAX_CHARS) + "\n...(이하 생략)";
+      trimmed = true;
     }
-    toast(`🤖 AI 분석 중... (${file.name})`);
+    toast(`🤖 AI 분석 중... ${totalRows}행${trimmed?" (일부만)":""} — 30초~1분 소요`, 4000);
     await aiExtractFromText(dataText, type, key);
   }catch(err){
     logErr("엑셀 파일 분석", err);
-    toast(`❌ 파일 읽기 실패: ${err.message}`);
+    console.error("엑셀 분석 상세 에러:", err);
+    toast(`❌ ${err.message||"파일 처리 실패"}`, 5000);
   }
 }
 
@@ -2442,12 +2455,20 @@ async function aiExtractFromText(txt, type, key){
   const res=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
     headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-    body:JSON.stringify({model:AI_MODEL, max_tokens:4000, system:sys, messages:[{role:"user",content:txt}]})
+    body:JSON.stringify({model:AI_MODEL, max_tokens:8000, system:sys, messages:[{role:"user",content:txt}]})
   });
   if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j?.error?.message||`HTTP ${res.status}`); }
   const data=await res.json();
   const reply=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
-  const arr=extractJsonFromAIReply(reply, true);
+  console.log("AI 응답 (처음 500자):", reply.slice(0,500));
+  console.log("AI 응답 (마지막 200자):", reply.slice(-200));
+  let arr;
+  try{
+    arr = extractJsonFromAIReply(reply, true);
+  }catch(e){
+    console.error("JSON 파싱 실패. AI 전체 응답:", reply);
+    throw new Error(`JSON 파싱 실패. F12 콘솔에서 'AI 전체 응답' 확인. 첫 부분: "${reply.slice(0,100)}"`);
+  }
   if(!Array.isArray(arr)||!arr.length){ toast("AI가 데이터를 추출하지 못했습니다"); return; }
   if(!confirm(`AI가 ${arr.length}건을 추출했습니다.\n그대로 추가할까요?`)) return;
   // 추가
