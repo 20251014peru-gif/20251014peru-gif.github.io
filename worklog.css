@@ -124,8 +124,36 @@ textarea{resize:vertical;min-height:64px}
 .cat-group.collapsed .cat-items{display:none}
 .cat-group.collapsed .grp-sublabel{display:none}
 /* v21+: 카테고리 내 폴더/파일 구분 라벨 */
+/* v21+: 카테고리 내 폴더/파일 구분 라벨 */
 .grp-sublabel{font-size:11.5px;font-weight:700;color:var(--ink-soft);margin:8px 0 5px;display:flex;align-items:center;gap:5px}
 .grp-sublabel .gs-cnt{font-size:10px;background:var(--bg2);color:var(--primary-deep);padding:0 7px;border-radius:999px;font-weight:600}
+
+/* ===== v22: 자재 관리 ===== */
+.mat-tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid var(--line);padding-bottom:0}
+.mat-tabs button{flex:0 0 auto;border:none;background:transparent;font-family:inherit;font-size:14.5px;font-weight:600;color:var(--ink-soft);padding:9px 14px;cursor:pointer;border-radius:8px 8px 0 0;position:relative}
+.mat-tabs button.active{color:var(--primary-deep);background:var(--primary-soft)}
+.mat-tabs button.active::after{content:"";position:absolute;left:8px;right:8px;bottom:-2px;height:3px;background:var(--primary);border-radius:3px}
+.mat-tabs button:hover:not(.active){background:#fbfdff;color:var(--primary-deep)}
+/* 재고 부족 행 */
+table.rec tbody tr.st-low{background:#fff5f5 !important}
+table.rec tbody tr.st-low:hover{background:var(--peach-soft) !important}
+table.rec tbody tr.st-low td:nth-child(7){color:var(--peach);font-weight:700}
+table.rec tbody tr.st-zero{background:#fafafa !important;color:var(--ink-soft)}
+table.rec tbody tr.st-zero td:nth-child(7) b{color:#999}
+#matLowToggle.active{background:var(--peach);color:#fff;border-color:var(--peach)}
+
+/* ===== v23: 청소 일지 ===== */
+#clnStats{margin:6px 0 8px}
+.cln-stat-row{display:flex;gap:18px;flex-wrap:wrap;padding:10px 14px;background:linear-gradient(135deg,var(--mint-soft) 0%,#fbfdff 100%);border:1px solid var(--line);border-radius:11px;font-size:13px}
+.cln-stat-item b{font-size:15px;color:#2c7d62;margin-left:4px}
+.cln-row{border-left:4px solid #5cc2a0}
+.cln-row:hover{border-color:var(--primary)}
+.cln-staff-table{font-size:13px;min-width:560px}
+.cln-staff-table input[type=text]{font-size:13px;padding:5px 8px;background:#fbfdff}
+.cln-staff-table input[type=number]{font-size:13px;padding:5px 8px;text-align:right;width:65px;background:#fbfdff}
+.cln-staff-table td{padding:5px 6px !important}
+.cln-staff-table .cln-floors{width:120px}
+.cln-staff-table .cln-special{width:100%}
 .cat-group-h .ch-cnt{background:var(--bg2);color:var(--primary-deep);font-size:11px;padding:1px 8px;border-radius:999px;font-family:'Pretendard',sans-serif}
 .cat-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
 .link-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 12px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:border-color .12s,box-shadow .12s;position:relative}

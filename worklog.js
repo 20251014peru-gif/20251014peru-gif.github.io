@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v21";
+const APP_VERSION = "v23";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -35,7 +35,7 @@ function fieldClass(f){ return GROUP_CLASS[FIELD_GROUP[f]]||"etc"; }
 function statusClass(s){ return s==="완료"?"done":s==="진행중"?"prog":"todo"; }
 function statusColor(s){ return s==="완료"?"var(--mint)":s==="진행중"?"var(--gold)":"var(--peach)"; }
 
-const KIND_LABEL={work:"업무",plan:"오늘계획",memo:"메모",call:"통화",vacation:"휴가",meeting:"회의메모",deliver:"전달사항",filelink:"파일링크",site:"사이트",password:"비밀번호",schedule:"업무예정"};
+const KIND_LABEL={work:"업무",plan:"오늘계획",memo:"메모",call:"통화",vacation:"휴가",meeting:"회의메모",deliver:"전달사항",filelink:"파일링크",site:"사이트",password:"비밀번호",schedule:"업무예정",item:"품목",stock:"입출고",cleaning:"청소일지"};
 const PHOTO_KINDS=["work","memo","meeting"];
 const ATTACH_KINDS=["work","memo","meeting"];
 
@@ -123,6 +123,31 @@ const SCHEMA={
     {k:"sType",label:"종류",type:"select",opts:["정기점검","협력업체점검","회의","행사","공사","기타"]},
     {k:"title",label:"예정 내용",type:"text",full:true,req:true},
     {k:"memo",label:"메모(선택)",type:"textarea",full:true},
+  ],
+  item:[
+    {k:"itemCode",label:"품목 ID (자동 부여 가능)",type:"text"},
+    {k:"itemName",label:"품목명",type:"text",full:true,req:true},
+    {k:"spec",label:"규격/모델",type:"text",full:true},
+    {k:"unit",label:"단위",type:"text"},
+    {k:"field",label:"분야",type:"field"},
+    {k:"vendor",label:"주거래처/공급업체",type:"text"},
+    {k:"unitPrice",label:"기본 단가 (원)",type:"number"},
+    {k:"safetyStock",label:"안전재고 수량",type:"number"},
+    {k:"recurring",label:"구매 주기",type:"select",opts:["비주기","월간","분기","반기","연간","수시"]},
+    {k:"location",label:"보관 위치",type:"text",full:true},
+    {k:"memo",label:"메모",type:"textarea",full:true},
+  ],
+  stock:[
+    {k:"date",label:"거래일",type:"date",req:true},
+    {k:"stockType",label:"구분",type:"select",opts:["입고","출고"]},
+    {k:"itemId",label:"품목",type:"itemselect",req:true},
+    {k:"qty",label:"수량",type:"number",req:true},
+    {k:"unitPrice",label:"단가 (원)",type:"number"},
+    {k:"amount",label:"금액 (원)",type:"number"},
+    {k:"vendor",label:"거래처",type:"text"},
+    {k:"docNo",label:"전표/세금계산서 번호",type:"text"},
+    {k:"useTarget",label:"사용처 (출고시)",type:"text",full:true},
+    {k:"memo",label:"메모",type:"textarea",full:true},
   ],
 };
 
@@ -312,6 +337,10 @@ async function init(){
   wireFileLinkTab();
   wireSiteTab();
   wirePasswordTab();
+  wireMaterialTab();
+  wireCleaningTab();
+  wireCleaningModal();
+  loadCleanSettings();
   wireCatMgr();
   try{
     if(typeof firebase==="undefined") throw new Error("sdk");
@@ -325,7 +354,7 @@ async function init(){
   try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
 }
 function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
-function renderAll(){ renderWork(); renderPlan(); renderMemo(); renderCall(); renderVac(); renderMeeting(); renderDeliver(); renderCalendar(); renderFileLink(); renderSite(); renderPassword(); renderDiag(); }
+function renderAll(){ renderWork(); renderPlan(); renderMemo(); renderCall(); renderVac(); renderMeeting(); renderDeliver(); renderCalendar(); renderFileLink(); renderSite(); renderPassword(); renderMaterial(); renderCleaning(); renderDiag(); }
 
 /* ===== 탭 ===== */
 function activateTab(name){
@@ -363,6 +392,8 @@ function defaults(kind){
   if(kind==="site") return {category:(CATEGORIES.site[0]||"")};
   if(kind==="deliver") return {date:t, dtype:"즉시전달"};
   if(kind==="schedule") return {date:t, sStatus:"예정", sType:"정기점검"};
+  if(kind==="item") return {field:"전기", recurring:"비주기", safetyStock:0, unitPrice:0};
+  if(kind==="stock") return {date:t, stockType:"입고", qty:1, unitPrice:0, amount:0};
   return {date:t};
 }
 function fieldHTML(f){
@@ -375,6 +406,10 @@ function fieldHTML(f){
   else if(f.type==="catselect"){
     inner=`<select id="m-${f.k}" class="cat-sel" data-ctx="${f.ctx}"></select>
     <input type="text" id="m-${f.k}-new" class="cat-new" autocomplete="off" placeholder="새 카테고리 입력" style="display:none;margin-top:6px">`;
+  }
+  else if(f.type==="itemselect"){
+    inner=`<select id="m-${f.k}" class="item-sel"></select>
+    <div id="m-${f.k}-info" style="margin-top:5px;font-size:12px;color:var(--ink-soft);background:var(--primary-soft);border-radius:7px;padding:6px 9px;display:none"></div>`;
   }
   else if(f.type==="subcat"){
     inner=`<select id="m-${f.k}-sel" class="subcat-sel" data-subctx="${f.ctx}"></select>
@@ -465,6 +500,46 @@ function openEditor(kind,id){
         else { subInp.style.display="none"; }
       });
     }
+  }
+
+  // v22: stock(입출고) 모달 — 품목 셀렉트와 단가 자동 채움
+  if(kind==="stock"){
+    const itemSel=$("m-itemId");
+    const infoBox=$("m-itemId-info");
+    const items=entries.filter(e=>e.kind==="item").sort((a,b)=>(a.itemName||"").localeCompare(b.itemName||"","ko"));
+    let html=`<option value="">— 품목 선택 —</option>`;
+    items.forEach(it=>{
+      const lbl=`${it.itemName||""}${it.spec?" ("+it.spec+")":""}${it.unit?" ["+it.unit+"]":""}`;
+      html+=`<option value="${esc(it.id)}">${esc(lbl)}</option>`;
+    });
+    itemSel.innerHTML=html;
+    if(data.itemId) itemSel.value=data.itemId;
+    const refreshItemInfo=()=>{
+      const it=entries.find(e=>e.id===itemSel.value && e.kind==="item");
+      if(!it){ infoBox.style.display="none"; return; }
+      const stock=calcStock(it.id);
+      infoBox.style.display="";
+      infoBox.innerHTML=`<b>📦 ${esc(it.itemName||"")}</b>${it.spec?" · "+esc(it.spec):""}${it.unit?" · "+esc(it.unit):""} <br>
+        분야: ${esc(it.field||"-")} · 거래처: ${esc(it.vendor||"-")} · 기본단가: ${it.unitPrice?won(it.unitPrice)+"원":"-"} · 현재재고: <b>${stock}</b>${it.safetyStock?` / 안전 ${it.safetyStock}`:""}`;
+      // 단가 자동 채움 (비어있을 때만)
+      const upEl=$("m-unitPrice");
+      if(upEl && (!upEl.value || Number(upEl.value)===0) && it.unitPrice){
+        upEl.value=it.unitPrice;
+        // 수량 × 단가 = 금액 자동 계산
+        recalcAmount();
+      }
+    };
+    itemSel.addEventListener("change",refreshItemInfo);
+    if(data.itemId) refreshItemInfo();
+    // 수량/단가 입력 → 금액 자동
+    const recalcAmount=()=>{
+      const q=Number($("m-qty").value)||0;
+      const p=Number($("m-unitPrice").value)||0;
+      const a=q*p;
+      $("m-amount").value=a;
+    };
+    $("m-qty").addEventListener("input",recalcAmount);
+    $("m-unitPrice").addEventListener("input",recalcAmount);
   }
 
   if(kind==="work"){
@@ -606,6 +681,9 @@ $("mSave").addEventListener("click",async ()=>{
         // 새 카테고리를 목록에 자동 등록
         if(v && CATEGORIES[f.ctx] && !CATEGORIES[f.ctx].includes(v)){ CATEGORIES[f.ctx].push(v); saveCategories(); }
       } else if(sel){ v=sel.value; }
+    } else if(f.type==="itemselect"){
+      const sel=$("m-"+f.k);
+      v=sel?sel.value:"";
     } else {
       const el=$("m-"+f.k); v=el?el.value:"";
       if(f.type==="number") v=Number(v)||0; else if(typeof v==="string") v=v.trim();
@@ -642,8 +720,12 @@ function listOf(kind){ return entries.filter(e=>e.kind===kind && matchObj(e,Q[ki
 /* 카드 공통 */
 function wireCards(scope){
   scope.querySelectorAll("[data-id][data-kind]").forEach(el=>{
-    el.addEventListener("click",e=>{ if(e.target.closest("a,img,button,input,.cb")) return; openViewer(el.dataset.kind, el.dataset.id); });
-    const ed=el.querySelector("[data-edit]"); if(ed) ed.addEventListener("click",e=>{ e.stopPropagation(); openEditor(el.dataset.kind, el.dataset.id); });
+    el.addEventListener("click",e=>{
+      if(e.target.closest("a,img,button,input,.cb")) return;
+      if(el.dataset.kind==="cleaning"){ openCleaningEditor(el.dataset.id); return; }
+      openViewer(el.dataset.kind, el.dataset.id);
+    });
+    const ed=el.querySelector("[data-edit]"); if(ed) ed.addEventListener("click",e=>{ e.stopPropagation(); if(el.dataset.kind==="cleaning") openCleaningEditor(el.dataset.id); else openEditor(el.dataset.kind, el.dataset.id); });
     const dl=el.querySelector("[data-del]"); if(dl) dl.addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(el.dataset.id, KIND_LABEL[el.dataset.kind]||"항목"); });
     const cb=el.querySelector(".cb"); if(cb) cb.addEventListener("click",e=>{ e.stopPropagation(); if(el.dataset.kind==="plan") togglePlanDone(el.dataset.id); });
   });
@@ -722,7 +804,7 @@ $("btnBackup").addEventListener("click",()=>{
 });
 
 /* ===== 자가진단 ===== */
-const DIAG_KINDS=[["work","업무"],["plan","오늘계획"],["memo","메모"],["call","통화"],["vacation","휴가"],["meeting","회의메모"],["deliver","전달사항"],["schedule","업무예정"],["filelink","파일링크"],["site","사이트"],["password","비밀번호"]];
+const DIAG_KINDS=[["work","업무"],["plan","오늘계획"],["memo","메모"],["call","통화"],["vacation","휴가"],["meeting","회의메모"],["deliver","전달사항"],["schedule","업무예정"],["item","품목"],["stock","입출고"],["cleaning","청소일지"],["filelink","파일링크"],["site","사이트"],["password","비밀번호"]];
 function bytesOf(obj){ try{ return new Blob([JSON.stringify(obj)]).size; }catch(e){ return JSON.stringify(obj).length; } }
 function fmtBytes(n){ if(n<1024) return n+" B"; if(n<1048576) return (n/1024).toFixed(1)+" KB"; return (n/1048576).toFixed(2)+" MB"; }
 function renderDiag(){
@@ -823,6 +905,8 @@ const CSV_COLS={
   meeting:[["date","날짜"],["title","제목"],["attendees","참석자"],["body","내용"]],
   deliver:[["date","날짜"],["dtype","전달종류"],["title","제목"],["content","내용"],["done","완료"]],
   schedule:[["date","예정일"],["sStatus","상태"],["sType","종류"],["title","예정내용"],["memo","메모"]],
+  item:[["itemCode","품목ID"],["itemName","품목명"],["spec","규격"],["unit","단위"],["field","분야"],["vendor","거래처"],["unitPrice","단가"],["safetyStock","안전재고"],["recurring","구매주기"],["location","보관위치"],["memo","메모"]],
+  stock:[["date","거래일"],["stockType","구분"],["itemName","품목명"],["spec","규격"],["qty","수량"],["unitPrice","단가"],["amount","금액"],["vendor","거래처"],["docNo","전표번호"],["useTarget","사용처"],["memo","메모"]],
 };
 function csvCell(v){ if(v===true) return "완료"; if(v===false) return ""; let s=(v==null?"":String(v)); if(/[",\n\r]/.test(s)) s='"'+s.replace(/"/g,'""')+'"'; return s; }
 function buildCSV(kind){
@@ -1150,11 +1234,12 @@ function renderMonthView(){
   $("calYearGrid").style.display="none";
   const first=new Date(calY,calM,1).getDay(), days=new Date(calY,calM+1,0).getDate();
   // 업무 모드 데이터
-  const work={}, vac={}, other={}, sched={};
+  const work={}, vac={}, other={}, sched={}, cleaning={};
   entries.forEach(e=>{
     if(e.kind==="work"&&e.date){ (work[e.date]=work[e.date]||[]).push(e); }
     else if(e.kind==="vacation"){ datesBetween(e.start,e.end).forEach(d=>{ (vac[d]=vac[d]||[]).push(e.name||"휴가"); }); }
     else if(e.kind==="schedule"&&e.date){ (sched[e.date]=sched[e.date]||[]).push(e); }
+    else if(e.kind==="cleaning"&&e.date){ (cleaning[e.date]=cleaning[e.date]||[]).push(e); }
     else if(["plan","memo","call","meeting","deliver"].includes(e.kind)&&e.date){ (other[e.date]=other[e.date]||[]).push(e); }
   });
   const dow=["일","월","화","수","목","금","토"];
@@ -1177,11 +1262,15 @@ function renderMonthView(){
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.vacation}">${CAL_KIND_LABEL.vacation}</div><div class="vac">${esc(vArr.join(", "))}</div></div>`;
       }
     } else {
-      const wArr=work[ds]||[]; const vArr=vac[ds]||[]; const oArr=other[ds]||[]; const sArr=sched[ds]||[];
+      const wArr=work[ds]||[]; const vArr=vac[ds]||[]; const oArr=other[ds]||[]; const sArr=sched[ds]||[]; const clArr=cleaning[ds]||[];
       if(wArr.length){
         hasContent=true;
         let b=""; wArr.forEach(en=> b+=`<div class="wtitle"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.work}">${CAL_KIND_LABEL.work} ${wArr.length}</div>${b}</div>`;
+      }
+      if(clArr.length){
+        hasContent=true;
+        inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#15803d">🧹 청소일지</div></div>`;
       }
       if(vArr.length){
         hasContent=true;
@@ -1290,6 +1379,7 @@ function renderDayDetail(){
   const mt=entries.filter(e=>e.kind==="meeting"&&e.date===selDay).sort(byDateDesc);
   const dv=entries.filter(e=>e.kind==="deliver"&&e.date===selDay).sort(byDateDesc);
   const sc=entries.filter(e=>e.kind==="schedule"&&e.date===selDay).sort(byDateDesc);
+  const cl=entries.filter(e=>e.kind==="cleaning"&&e.date===selDay).sort(byDateDesc);
   let h=`<div class="list-head"><h2 style="font-size:16px">${dateLabel(selDay)}</h2>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       ${calMode==="schedule"?`<button class="btn btn-primary btn-sm" id="addSchedBtn">➕ 예정 추가</button>`:""}
@@ -1302,9 +1392,10 @@ function renderDayDetail(){
       setTimeout(()=>{ const e=$("m-date"); if(e) e.value=selDay; },50);
     });
   };
-  if(!(w.length||v.length||p.length||m.length||c.length||mt.length||dv.length||sc.length)){
+  if(!(w.length||v.length||p.length||m.length||c.length||mt.length||dv.length||sc.length||cl.length)){
     box.innerHTML=h+`<div class="empty">이 날의 기록이 없습니다.</div>`; wireRep(); return;
   }
+  if(cl.length) h+=`<div class="detail-block"><div class="bh">🧹 청소일지</div>${cl.map(c=>`<div class="row-item" data-kind="cleaning" data-id="${c.id}"><div class="grow"><div class="t">🧹 청소일지 <span class="pill admin">반장 ${esc(c.foreman||"")}</span></div><div class="m">${c.special?"⭐ "+esc(c.special).slice(0,80):""}</div></div></div>`).join("")}</div>`;
   if(sc.length) h+=`<div class="detail-block"><div class="bh">📅 업무예정</div>${sc.map(cardSchedule).join("")}</div>`;
   if(v.length) h+=`<div class="detail-block"><div class="bh">🌴 휴가</div>${v.map(cardVac).join("")}</div>`;
   if(w.length) h+=`<div class="detail-block"><div class="bh">🛠 업무</div>${w.map(cardWork).join("")}</div>`;
@@ -2206,6 +2297,770 @@ async function pwOpenEditor(id){
 
 /* ===== 카테고리 모달 진입 정의 (password용 라벨) ===== */
 // (openCatMgr 함수에서 처리됨)
+
+
+/* =========================================================
+   v22: 자재 관리 (품목 마스터 + 입출고 + 재고 자동계산)
+   ========================================================= */
+const MAT_FILTER = { tab:"stock", field:"전체", q:"", recurring:"전체", lowOnly:false };
+
+// 품목별 현재 재고 계산
+function calcStock(itemId){
+  if(!itemId) return 0;
+  let s=0;
+  entries.forEach(e=>{
+    if(e.kind==="stock" && e.itemId===itemId){
+      const q=Number(e.qty)||0;
+      if(e.stockType==="입고") s+=q;
+      else if(e.stockType==="출고") s-=q;
+    }
+  });
+  return s;
+}
+
+// 품목 ID 자동 생성 (M0001 형식)
+function nextItemCode(){
+  const used=entries.filter(e=>e.kind==="item"&&/^M\d+$/.test(e.itemCode||"")).map(e=>parseInt(e.itemCode.slice(1)));
+  const n=used.length?Math.max(...used)+1:1;
+  return "M"+String(n).padStart(4,"0");
+}
+
+function wireMaterialTab(){
+  // 탭 토글 (재고/품목/입출고)
+  document.querySelectorAll("[data-mattab]").forEach(b=>b.addEventListener("click",()=>{
+    MAT_FILTER.tab=b.dataset.mattab;
+    document.querySelectorAll("[data-mattab]").forEach(x=>x.classList.toggle("active",x===b));
+    renderMaterial();
+  }));
+  $("matSearch").addEventListener("input",e=>{ MAT_FILTER.q=e.target.value; renderMaterial(); });
+  $("matFieldFilter").addEventListener("change",e=>{ MAT_FILTER.field=e.target.value; renderMaterial(); });
+  $("matRecFilter").addEventListener("change",e=>{ MAT_FILTER.recurring=e.target.value; renderMaterial(); });
+  $("matLowToggle").addEventListener("click",()=>{
+    MAT_FILTER.lowOnly=!MAT_FILTER.lowOnly;
+    $("matLowToggle").classList.toggle("active",MAT_FILTER.lowOnly);
+    renderMaterial();
+  });
+  $("btnAddItem").addEventListener("click",()=>openEditor("item",null));
+  $("btnAddStock").addEventListener("click",()=>openEditor("stock",null));
+  $("btnMatExcel").addEventListener("click",matExcelCopy);
+  $("btnAIExtract").addEventListener("click",aiExtractDialog);
+}
+
+function renderMaterial(){
+  // 필터/필드 옵션 초기화
+  const fieldEl=$("matFieldFilter");
+  if(fieldEl && !fieldEl.options.length){
+    fieldEl.innerHTML=`<option value="전체">분야 전체</option>`+fieldOptionsHTML();
+    $("matRecFilter").innerHTML=`<option value="전체">주기 전체</option>`+["비주기","월간","분기","반기","연간","수시"].map(o=>`<option value="${o}">${o}</option>`).join("");
+  }
+  // 탭별 렌더
+  $("matStockPanel").style.display = MAT_FILTER.tab==="stock" ? "" : "none";
+  $("matItemPanel").style.display  = MAT_FILTER.tab==="item"  ? "" : "none";
+  $("matTxPanel").style.display    = MAT_FILTER.tab==="tx"    ? "" : "none";
+  if(MAT_FILTER.tab==="stock") renderStockOverview();
+  else if(MAT_FILTER.tab==="item") renderItemList();
+  else if(MAT_FILTER.tab==="tx") renderTxList();
+}
+
+// 재고 현황 — 품목 단위로 현재 재고 + 안전재고 경고
+function renderStockOverview(){
+  const items=entries.filter(e=>e.kind==="item")
+    .filter(it=>MAT_FILTER.field==="전체"||it.field===MAT_FILTER.field)
+    .filter(it=>MAT_FILTER.recurring==="전체"||it.recurring===MAT_FILTER.recurring)
+    .filter(it=>{
+      if(!MAT_FILTER.q.trim()) return true;
+      const s=[it.itemCode,it.itemName,it.spec,it.vendor,it.memo].filter(Boolean).join(" ").toLowerCase();
+      return s.includes(MAT_FILTER.q.trim().toLowerCase());
+    });
+  // 재고 계산 + 안전재고 필터
+  const rows=items.map(it=>({
+    item:it,
+    stock:calcStock(it.id),
+  })).filter(r=>{
+    if(!MAT_FILTER.lowOnly) return true;
+    return Number(it.safetyStock||0)>0 ? r.stock < Number(r.item.safetyStock) : r.stock<=0;
+  }).sort((a,b)=>(a.item.itemName||"").localeCompare(b.item.itemName||"","ko"));
+  const body=$("matStockBody");
+  if(!rows.length){ body.innerHTML=`<tr><td colspan="9" class="empty">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</td></tr>`; return; }
+  body.innerHTML=rows.map(r=>{
+    const it=r.item, st=r.stock;
+    const safe=Number(it.safetyStock||0);
+    const lowCls = safe>0 && st<safe ? "st-low" : (st<=0 ? "st-zero" : "");
+    const recCls = it.recurring && it.recurring!=="비주기" ? "rec-on" : "";
+    return `<tr data-id="${it.id}" class="${lowCls}">
+      <td>${esc(it.itemCode||"")}</td>
+      <td><b>${esc(it.itemName||"")}</b>${it.spec?`<br><span style="font-size:11px;color:var(--ink-soft)">${esc(it.spec)}</span>`:""}</td>
+      <td>${esc(it.unit||"")}</td>
+      <td><span class="pill ${fieldClass(it.field)}">${esc(it.field||"")}</span></td>
+      <td>${esc(it.vendor||"")}</td>
+      <td class="num">${it.unitPrice?won(it.unitPrice):""}</td>
+      <td class="num"><b style="font-size:15px">${st}</b>${safe?`<br><span style="font-size:10.5px;color:var(--ink-soft)">안전 ${safe}</span>`:""}</td>
+      <td>${it.recurring&&it.recurring!=="비주기"?`<span class="pill leave">🔁 ${esc(it.recurring)}</span>`:""}</td>
+      <td>
+        <button class="mini-btn" data-act="in">📥 입고</button>
+        <button class="mini-btn" data-act="out">📤 출고</button>
+        <button class="mini-btn" data-act="edit">수정</button>
+      </td></tr>`;
+  }).join("");
+  body.querySelectorAll("tr[data-id]").forEach(tr=>{
+    const id=tr.dataset.id;
+    tr.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",e=>{
+      e.stopPropagation();
+      if(b.dataset.act==="edit") openEditor("item",id);
+      else { // 입고 or 출고 — stock 모달 열고 품목 미리 선택
+        openEditor("stock",null);
+        setTimeout(()=>{
+          const sel=$("m-itemId"); if(sel){ sel.value=id; sel.dispatchEvent(new Event("change")); }
+          const tp=$("m-stockType"); if(tp){ tp.value=b.dataset.act==="in"?"입고":"출고"; }
+        },80);
+      }
+    }));
+  });
+}
+
+// 품목 목록
+function renderItemList(){
+  const items=entries.filter(e=>e.kind==="item")
+    .filter(it=>MAT_FILTER.field==="전체"||it.field===MAT_FILTER.field)
+    .filter(it=>MAT_FILTER.recurring==="전체"||it.recurring===MAT_FILTER.recurring)
+    .filter(it=>{
+      if(!MAT_FILTER.q.trim()) return true;
+      const s=[it.itemCode,it.itemName,it.spec,it.vendor,it.memo,it.location].filter(Boolean).join(" ").toLowerCase();
+      return s.includes(MAT_FILTER.q.trim().toLowerCase());
+    })
+    .sort((a,b)=>(a.itemName||"").localeCompare(b.itemName||"","ko"));
+  const body=$("matItemBody");
+  if(!items.length){ body.innerHTML=`<tr><td colspan="9" class="empty">등록된 품목이 없습니다.</td></tr>`; return; }
+  body.innerHTML=items.map(it=>`<tr data-id="${it.id}">
+    <td>${esc(it.itemCode||"")}</td>
+    <td><b>${esc(it.itemName||"")}</b></td>
+    <td>${esc(it.spec||"")}</td>
+    <td>${esc(it.unit||"")}</td>
+    <td><span class="pill ${fieldClass(it.field)}">${esc(it.field||"")}</span></td>
+    <td>${esc(it.vendor||"")}</td>
+    <td class="num">${it.unitPrice?won(it.unitPrice):""}</td>
+    <td>${it.recurring&&it.recurring!=="비주기"?`<span class="pill leave">🔁 ${esc(it.recurring)}</span>`:esc(it.recurring||"")}</td>
+    <td><button class="rowdel" data-del="${it.id}" title="삭제">🗑</button></td>
+  </tr>`).join("");
+  body.querySelectorAll("tr[data-id]").forEach(tr=>{
+    tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openEditor("item",tr.dataset.id); });
+    tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(tr.dataset.id,"품목"); });
+  });
+}
+
+// 입출고 거래 내역
+function renderTxList(){
+  const items=entries.filter(e=>e.kind==="item");
+  const itemById={}; items.forEach(it=>itemById[it.id]=it);
+  const txs=entries.filter(e=>e.kind==="stock")
+    .filter(t=>{
+      const it=itemById[t.itemId];
+      if(MAT_FILTER.field!=="전체" && (!it || it.field!==MAT_FILTER.field)) return false;
+      if(!MAT_FILTER.q.trim()) return true;
+      const s=[t.date,t.vendor,t.docNo,t.useTarget,t.memo,(it&&it.itemName)||"",(it&&it.spec)||""].filter(Boolean).join(" ").toLowerCase();
+      return s.includes(MAT_FILTER.q.trim().toLowerCase());
+    })
+    .sort(byDateDesc);
+  const body=$("matTxBody");
+  if(!txs.length){ body.innerHTML=`<tr><td colspan="10" class="empty">입출고 내역이 없습니다.</td></tr>`; return; }
+  body.innerHTML=txs.map(t=>{
+    const it=itemById[t.itemId];
+    const tCls = t.stockType==="입고" ? "in" : "out";
+    return `<tr data-id="${t.id}">
+      <td>${t.date||""}</td>
+      <td><span class="dir ${tCls}">${esc(t.stockType||"")}</span></td>
+      <td>${it?`<b>${esc(it.itemName||"")}</b>${it.spec?"<br><span style='font-size:11px;color:var(--ink-soft)'>"+esc(it.spec)+"</span>":""}`:"<span style='color:var(--peach)'>(품목 삭제됨)</span>"}</td>
+      <td>${it?esc(it.unit||""):""}</td>
+      <td class="num">${t.qty||0}</td>
+      <td class="num">${t.unitPrice?won(t.unitPrice):""}</td>
+      <td class="num">${t.amount?won(t.amount):""}</td>
+      <td>${esc(t.vendor||"")}</td>
+      <td class="clip" data-tip="${esc(t.useTarget||t.memo||"")}" title="${esc(t.useTarget||t.memo||"")}">${esc(t.useTarget||t.memo||"")}</td>
+      <td><button class="rowdel" data-del="${t.id}" title="삭제">🗑</button></td>
+    </tr>`;
+  }).join("");
+  body.querySelectorAll("tr[data-id]").forEach(tr=>{
+    tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openEditor("stock",tr.dataset.id); });
+    tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(tr.dataset.id,"입출고 내역"); });
+  });
+  // 합계
+  const totalIn=txs.filter(t=>t.stockType==="입고").reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const totalOut=txs.filter(t=>t.stockType==="출고").reduce((s,t)=>s+(Number(t.amount)||0),0);
+  $("matTxSummary").innerHTML=`입고 합계 <b style="color:#2c7d62">${won(totalIn)}원</b> · 출고 합계 <b style="color:#36699c">${won(totalOut)}원</b> · 총 ${txs.length}건`;
+}
+
+function matExcelCopy(){
+  const items=entries.filter(e=>e.kind==="item");
+  const itemById={}; items.forEach(it=>itemById[it.id]=it);
+  let text=""; let lbl="";
+  if(MAT_FILTER.tab==="stock"){
+    lbl="재고현황";
+    const rows=items.sort((a,b)=>(a.itemName||"").localeCompare(b.itemName||"","ko"));
+    text=rows.map(it=>[it.itemCode,it.itemName,it.spec,it.unit,it.field,it.vendor,it.unitPrice||"",calcStock(it.id),it.safetyStock||"",it.recurring||""].map(x=>cleanCell(x)).join("\t")).join("\n");
+  } else if(MAT_FILTER.tab==="item"){
+    lbl="품목목록";
+    const rows=items.sort((a,b)=>(a.itemName||"").localeCompare(b.itemName||"","ko"));
+    text=rows.map(it=>[it.itemCode,it.itemName,it.spec,it.unit,it.field,it.vendor,it.unitPrice||"",it.safetyStock||"",it.recurring||"",it.location,it.memo].map(x=>cleanCell(x)).join("\t")).join("\n");
+  } else {
+    lbl="입출고내역";
+    const txs=entries.filter(e=>e.kind==="stock").sort(byDateDesc);
+    text=txs.map(t=>{
+      const it=itemById[t.itemId]||{};
+      return [t.date,t.stockType,it.itemName||"",it.spec||"",t.qty||0,t.unitPrice||"",t.amount||"",t.vendor,t.docNo,t.useTarget,t.memo].map(x=>cleanCell(x)).join("\t");
+    }).join("\n");
+  }
+  if(!text){ toast("복사할 내역이 없습니다"); return; }
+  copyText(text, `${lbl} 엑셀 복사됨`);
+}
+
+/* AI 엑셀 추출 — 사용자가 엑셀 내용 붙여넣으면 Claude가 분석 */
+async function aiExtractDialog(){
+  const key=aiGetKey();
+  if(!key){ toast("자가진단·AI 탭에서 API 키부터 저장해주세요"); activateTab("ai"); return; }
+  // 간단한 prompt 모달 띄우기
+  const txt = prompt("엑셀에서 복사한 내용을 붙여넣어 주세요\n(첫 행은 헤더로, Tab 또는 쉼표로 구분된 데이터)\n\nAI가 분석해서 품목 또는 입출고 내역으로 자동 추출합니다.","");
+  if(!txt||!txt.trim()) return;
+  const type = confirm("이 데이터는 [확인=입출고 내역] / [취소=품목 마스터] 중 어느 쪽인가요?") ? "stock" : "item";
+  toast("AI 분석 중...잠시 기다려주세요");
+  try{
+    const sys = type==="stock"
+      ? `당신은 엑셀 데이터를 분석해 자재 입출고 내역을 추출하는 도우미입니다. 사용자가 붙여넣은 데이터를 분석해서 JSON 배열로만 답하세요. 각 항목은 다음 필드를 가집니다:
+{"date":"YYYY-MM-DD","stockType":"입고|출고","itemName":"품목명","spec":"규격","unit":"단위","qty":숫자,"unitPrice":숫자,"amount":숫자,"vendor":"거래처","docNo":"전표번호","useTarget":"사용처","memo":"메모"}
+- stockType: "구매","매입","입고" 같은 단어 → "입고", "사용","출고","불출" → "출고". 명시 없으면 입고로 추정.
+- 날짜: 다양한 형식을 YYYY-MM-DD로. 연도 없으면 ${calY}.
+- 숫자: 콤마/공백 제거. 빈값은 0.
+- 다른 설명 없이 JSON 배열만 답하세요. 예: [{"date":"2026-05-01",...}]`
+      : `당신은 엑셀 데이터를 분석해 자재 품목 마스터를 추출하는 도우미입니다. 사용자가 붙여넣은 데이터를 분석해서 JSON 배열로만 답하세요. 각 항목은:
+{"itemName":"품목명","spec":"규격","unit":"단위","field":"전기|소방|기계|통신|영선|주차|청소|기타","vendor":"거래처","unitPrice":숫자,"safetyStock":숫자,"recurring":"비주기|월간|분기|반기|연간|수시","location":"보관위치","memo":"메모"}
+- field: 품목 성격으로 추정. 모르면 "기타".
+- recurring: 명시 없으면 "비주기".
+- 다른 설명 없이 JSON 배열만 답하세요.`;
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:AI_MODEL, max_tokens:4000, system:sys, messages:[{role:"user",content:txt}]})
+    });
+    if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j?.error?.message||`HTTP ${res.status}`); }
+    const data=await res.json();
+    const reply=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+    // JSON 추출
+    let jsonStr=reply;
+    const m=reply.match(/\[[\s\S]*\]/);
+    if(m) jsonStr=m[0];
+    const arr=JSON.parse(jsonStr);
+    if(!Array.isArray(arr)||!arr.length){ toast("AI가 데이터를 추출하지 못했습니다"); return; }
+    if(!confirm(`AI가 ${arr.length}건을 추출했습니다.\n그대로 추가할까요?`)) return;
+    // 추가
+    let added=0;
+    if(type==="item"){
+      for(const it of arr){
+        if(!it.itemName) continue;
+        addRecord({
+          kind:"item",
+          itemCode:nextItemCode(),
+          itemName:it.itemName||"",
+          spec:it.spec||"",
+          unit:it.unit||"",
+          field:it.field||"기타",
+          vendor:it.vendor||"",
+          unitPrice:Number(it.unitPrice)||0,
+          safetyStock:Number(it.safetyStock)||0,
+          recurring:it.recurring||"비주기",
+          location:it.location||"",
+          memo:it.memo||"",
+          createdAt:Date.now()
+        });
+        added++;
+      }
+    } else {
+      // stock: 품목명으로 itemId 매칭, 없으면 자동 생성
+      for(const t of arr){
+        if(!t.itemName) continue;
+        let item=entries.find(e=>e.kind==="item" && (e.itemName||"").trim()===String(t.itemName).trim());
+        if(!item){
+          item=addRecord({
+            kind:"item",
+            itemCode:nextItemCode(),
+            itemName:t.itemName,
+            spec:t.spec||"",
+            unit:t.unit||"",
+            field:"기타",
+            vendor:t.vendor||"",
+            unitPrice:Number(t.unitPrice)||0,
+            safetyStock:0,
+            recurring:"비주기",
+            createdAt:Date.now()
+          });
+        }
+        const qty=Number(t.qty)||0;
+        const up=Number(t.unitPrice)||0;
+        const amt=Number(t.amount) || (qty*up);
+        addRecord({
+          kind:"stock",
+          date:t.date||todayStr(),
+          stockType:(t.stockType==="출고"?"출고":"입고"),
+          itemId:item.id,
+          qty,
+          unitPrice:up,
+          amount:amt,
+          vendor:t.vendor||"",
+          docNo:t.docNo||"",
+          useTarget:t.useTarget||"",
+          memo:t.memo||"",
+          createdAt:Date.now()
+        });
+        added++;
+      }
+    }
+    renderMaterial();
+    toast(`✅ ${added}건 추가 완료`);
+  }catch(e){ logErr("AI 자재추출",e); toast(`❌ ${e.message}`); }
+}
+
+
+function wireCleaningModal(){
+  $("clnCancel").addEventListener("click",()=>$("cleaningOverlay").classList.remove("show"));
+  $("clnSave").addEventListener("click",saveCleaning);
+  $("clnDelete").addEventListener("click",()=>{
+    if(!cleaningData||!cleaningData.id) return;
+    const id=cleaningData.id;
+    $("cleaningOverlay").classList.remove("show");
+    const linkedStocks=entries.filter(s=>s.kind==="stock"&&s.cleaningId===id).map(s=>s.id);
+    linkedStocks.forEach(sid=>deleteRecord(sid));
+    deleteWithUndo(id, "청소일지");
+  });
+  $("cleaningOverlay").addEventListener("click",e=>{ if(e.target===$("cleaningOverlay")) $("cleaningOverlay").classList.remove("show"); });
+  // 명단 관리 모달
+  $("cleanStaffClose").addEventListener("click",()=>$("cleanStaffOverlay").classList.remove("show"));
+  $("cleanStaffOverlay").addEventListener("click",e=>{ if(e.target===$("cleanStaffOverlay")) $("cleanStaffOverlay").classList.remove("show"); });
+  $("cleanStaffAdd").addEventListener("click",()=>{
+    CLEAN_STAFF.push({name:"", floors:"", tissue:0, towel:0, special:""});
+    saveCleanStaff(); renderCleanStaffList();
+  });
+  $("cleanForemanInput").addEventListener("input",e=>{ CLEAN_FOREMAN=e.target.value||"배옥식"; saveCleanForeman(); });
+}
+
+
+const CLEAN_STAFF_LS = "wl_clean_staff_v23";
+const CLEAN_FOREMAN_LS = "wl_clean_foreman_v23";
+const DEFAULT_CLEAN_STAFF = [
+  {name:"김태경", floors:"20·19·15층"},
+  {name:"한광희", floors:"16·17·18층"},
+  {name:"박일월", floors:"11·12·13·14층"},
+  {name:"정은지", floors:"8·9·10층"},
+  {name:"오희성", floors:"4·5·6·7층"},
+  {name:"차민자", floors:"B1·1·2·3층"},
+];
+let CLEAN_STAFF = DEFAULT_CLEAN_STAFF.slice();
+let CLEAN_FOREMAN = "배옥식";
+
+function loadCleanSettings(){
+  try{
+    const s=JSON.parse(localStorage.getItem(CLEAN_STAFF_LS)||"null");
+    if(Array.isArray(s)&&s.length) CLEAN_STAFF=s;
+    const f=localStorage.getItem(CLEAN_FOREMAN_LS);
+    if(f) CLEAN_FOREMAN=f;
+  }catch(e){}
+}
+function saveCleanStaff(){ try{ localStorage.setItem(CLEAN_STAFF_LS, JSON.stringify(CLEAN_STAFF)); }catch(e){} }
+function saveCleanForeman(){ try{ localStorage.setItem(CLEAN_FOREMAN_LS, CLEAN_FOREMAN); }catch(e){} }
+
+// 청소 일지 필터 상태
+const CLEAN_FILTER = { q:"", from:"", to:"" };
+
+function wireCleaningTab(){
+  $("clnSearch").addEventListener("input",e=>{ CLEAN_FILTER.q=e.target.value; renderCleaning(); });
+  $("clnFrom").addEventListener("change",e=>{ CLEAN_FILTER.from=e.target.value; renderCleaning(); });
+  $("clnTo").addEventListener("change",e=>{ CLEAN_FILTER.to=e.target.value; renderCleaning(); });
+  $("clnRangeClear").addEventListener("click",()=>{ CLEAN_FILTER.from=""; CLEAN_FILTER.to=""; $("clnFrom").value=""; $("clnTo").value=""; renderCleaning(); });
+  $("btnAddCleaning").addEventListener("click",()=>openCleaningEditor(null));
+  $("btnCleanStaffMgr").addEventListener("click",openCleanStaffMgr);
+}
+
+function cleaningList(){
+  return entries.filter(e=>e.kind==="cleaning"
+    && inDateRange(e.date, CLEAN_FILTER.from, CLEAN_FILTER.to)
+    && (!CLEAN_FILTER.q.trim() || cleaningMatches(e, CLEAN_FILTER.q))
+  ).sort(byDateDesc);
+}
+function cleaningMatches(e, q){
+  const parts=[e.date, e.foreman, e.instructions, e.special];
+  (e.staffWork||[]).forEach(s=>{ parts.push(s.name, s.floors, s.special); });
+  return parts.filter(Boolean).join(" ").toLowerCase().includes(q.trim().toLowerCase());
+}
+
+function renderCleaning(){
+  const list=cleaningList();
+  // 월별 사용량 통계
+  renderCleaningStats();
+  const box=$("clnList");
+  if(!list.length){ box.innerHTML=`<div class="empty">청소 일지가 없습니다. <b>➕ 일지 추가</b>로 사진 한 장 올려보세요.</div>`; return; }
+  box.innerHTML=list.map(c=>{
+    const totalTissue=(c.staffWork||[]).reduce((s,x)=>s+(Number(x.tissue)||0),0);
+    const totalTowel=(c.staffWork||[]).reduce((s,x)=>s+(Number(x.towel)||0),0);
+    const issues=(c.staffWork||[]).filter(x=>x.special&&x.special.trim());
+    return `<div class="row-item cln-row" data-id="${c.id}">
+      <div class="grow">
+        <div class="t">🧹 ${esc(c.date||"")} <span class="pill admin">반장 ${esc(c.foreman||CLEAN_FOREMAN)}</span>
+          ${totalTissue?`<span class="pill tech">휴지 ${totalTissue}</span>`:""}
+          ${totalTowel?`<span class="pill env">핸드타월 ${totalTowel}</span>`:""}
+          ${(c.photo)?`<span style="font-size:13px">📷</span>`:""}
+        </div>
+        <div class="m">
+          ${c.instructions?`<div><b>📌 지시:</b> ${esc(c.instructions).slice(0,80)}${c.instructions.length>80?"…":""}</div>`:""}
+          ${c.special?`<div><b>⭐ 특기:</b> ${esc(c.special).slice(0,80)}${c.special.length>80?"…":""}</div>`:""}
+          ${issues.length?`<div style="margin-top:3px"><b>⚠ 특이사항:</b> ${issues.map(s=>esc(s.name)+"-"+esc(s.special)).join(" / ")}</div>`:""}
+        </div>
+        <div class="card-acts">
+          <button class="mini-btn" data-edit>수정</button>
+          <button class="mini-btn del" data-del>삭제</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+  box.querySelectorAll(".cln-row").forEach(el=>{
+    const id=el.dataset.id;
+    el.addEventListener("click",e=>{ if(e.target.closest("button")) return; openCleaningEditor(id); });
+    el.querySelector("[data-edit]").addEventListener("click",e=>{ e.stopPropagation(); openCleaningEditor(id); });
+    el.querySelector("[data-del]").addEventListener("click",e=>{
+      e.stopPropagation();
+      // 연동된 자재 입출고 같이 삭제
+      const linkedStocks=entries.filter(s=>s.kind==="stock"&&s.cleaningId===id).map(s=>s.id);
+      linkedStocks.forEach(sid=>deleteRecord(sid));
+      deleteWithUndo(id, "청소일지");
+    });
+  });
+}
+
+function renderCleaningStats(){
+  const box=$("clnStats"); if(!box) return;
+  const all=entries.filter(e=>e.kind==="cleaning");
+  if(!all.length){ box.innerHTML=""; return; }
+  // 이번 달
+  const now=new Date();
+  const ym=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  const thisMonth=all.filter(e=>(e.date||"").startsWith(ym));
+  const t=thisMonth.reduce((s,e)=>s+(e.staffWork||[]).reduce((q,x)=>q+(Number(x.tissue)||0),0),0);
+  const w=thisMonth.reduce((s,e)=>s+(e.staffWork||[]).reduce((q,x)=>q+(Number(x.towel)||0),0),0);
+  box.innerHTML=`<div class="cln-stat-row">
+    <span class="cln-stat-item">📅 이번달 일지 <b>${thisMonth.length}건</b></span>
+    <span class="cln-stat-item">🧻 휴지 사용 <b>${t}</b></span>
+    <span class="cln-stat-item">🧺 핸드타월 사용 <b>${w}</b></span>
+    <span class="cln-stat-item" style="color:var(--ink-soft)">전체 일지 ${all.length}건</span>
+  </div>`;
+}
+
+// ===== 청소 일지 추가/수정 모달 =====
+let cleaningPhoto=null;
+let cleaningData=null;
+function openCleaningEditor(id){
+  cleaningData = id ? Object.assign({},entries.find(e=>e.id===id)||{}) : {
+    date: todayStr(),
+    foreman: CLEAN_FOREMAN,
+    staffWork: CLEAN_STAFF.map(s=>({name:s.name, floors:s.floors, tissue:0, towel:0, special:""})),
+    instructions: "",
+    special: "",
+    tissueIn: 0, tissueOut: 0, towelIn: 0, towelOut: 0,
+    photo: null,
+  };
+  cleaningPhoto = cleaningData.photo || null;
+  renderCleaningModal(id);
+  $("cleaningOverlay").classList.add("show");
+  const m=$("cleaningOverlay").querySelector(".modal"); if(m) m.scrollTop=0;
+}
+
+function renderCleaningModal(id){
+  $("clnTitle").textContent = (id?"수정":"추가")+" · 🧹 청소 일지";
+  const d=cleaningData;
+  // 누락된 staffWork 보정
+  if(!Array.isArray(d.staffWork)) d.staffWork=[];
+  // 현재 등록 명단과 일지 명단 동기화 (퇴사·신규 반영, 기존 데이터는 유지)
+  const byName={};
+  d.staffWork.forEach(s=>{ byName[s.name]=s; });
+  const aligned=CLEAN_STAFF.map(cs=>{
+    const found=byName[cs.name];
+    return found || {name:cs.name, floors:cs.floors, tissue:0, towel:0, special:""};
+  });
+  // 명단에 없는 옛 데이터도 끝에 보존
+  d.staffWork.forEach(s=>{
+    if(!CLEAN_STAFF.find(cs=>cs.name===s.name)) aligned.push(s);
+  });
+  d.staffWork=aligned;
+
+  let rows = d.staffWork.map((s,i)=>`
+    <tr data-idx="${i}">
+      <td><b>${esc(s.name||"")}</b></td>
+      <td><input type="text" class="cln-floors" value="${esc(s.floors||"")}"></td>
+      <td><input type="number" class="cln-tissue" value="${Number(s.tissue)||0}" min="0"></td>
+      <td><input type="number" class="cln-towel" value="${Number(s.towel)||0}" min="0"></td>
+      <td><input type="text" class="cln-special" value="${esc(s.special||"")}" placeholder="특이사항"></td>
+    </tr>`).join("");
+
+  $("clnFields").innerHTML=`
+    <div class="grid" style="margin-bottom:14px">
+      <div class="field"><label>날짜 <span class="req">*</span></label><input type="date" id="cln-date" value="${esc(d.date||todayStr())}"></div>
+      <div class="field"><label>반장</label><input type="text" id="cln-foreman" value="${esc(d.foreman||CLEAN_FOREMAN)}"></div>
+    </div>
+
+    <div class="field full" style="margin-bottom:14px">
+      <label>📷 일지 원본 사진 (AI 분석에 사용)</label>
+      <div class="photo-btns">
+        <label class="photo-btn">📷 촬영<input type="file" id="cln-cam" accept="image/*" capture="environment" style="display:none"></label>
+        <label class="photo-btn">🖼 사진 선택<input type="file" id="cln-file" accept="image/*" style="display:none"></label>
+        <button class="btn btn-primary btn-sm" id="cln-aiBtn" type="button" ${cleaningPhoto?"":"disabled"}>🤖 AI 분석</button>
+      </div>
+      <div id="cln-photoArea"></div>
+    </div>
+
+    <h3 style="font-family:'Gowun Batang',serif;font-size:16px;color:#33567d;margin:6px 0">👥 담당자별 작업 내역</h3>
+    <div class="table-wrap" style="margin-bottom:14px">
+      <table class="rec cln-staff-table"><thead><tr>
+        <th>담당자</th><th>담당 층</th><th>휴지</th><th>핸드타월</th><th>특이사항</th>
+      </tr></thead><tbody id="cln-staffBody">${rows}</tbody></table>
+    </div>
+
+    <div class="field full" style="margin-bottom:10px">
+      <label>📌 지시 및 전달사항</label>
+      <textarea id="cln-instructions" rows="3">${esc(d.instructions||"")}</textarea>
+    </div>
+
+    <div class="field full" style="margin-bottom:14px">
+      <label>⭐ 특기사항</label>
+      <textarea id="cln-special" rows="3">${esc(d.special||"")}</textarea>
+    </div>
+
+    <h3 style="font-family:'Gowun Batang',serif;font-size:16px;color:#33567d;margin:6px 0">📦 소모품 입출고 (자재 탭 자동 연동)</h3>
+    <div class="grid">
+      <div class="field"><label>🧻 휴지 입고</label><input type="number" id="cln-tissueIn" value="${Number(d.tissueIn)||0}" min="0"></div>
+      <div class="field"><label>🧻 휴지 출고</label><input type="number" id="cln-tissueOut" value="${Number(d.tissueOut)||0}" min="0"></div>
+      <div class="field"><label>🧺 핸드타월 입고</label><input type="number" id="cln-towelIn" value="${Number(d.towelIn)||0}" min="0"></div>
+      <div class="field"><label>🧺 핸드타월 출고</label><input type="number" id="cln-towelOut" value="${Number(d.towelOut)||0}" min="0"></div>
+    </div>
+    <p style="font-size:12px;color:var(--ink-soft);margin-top:6px">💡 저장 시 휴지·핸드타월 품목이 자재 탭에 자동 등록되고, 입출고 내역도 자동으로 기록됩니다.</p>
+  `;
+  // 사진 영역
+  renderCleaningPhoto();
+  $("cln-aiBtn").disabled = !cleaningPhoto;
+  // 이벤트
+  $("cln-cam").addEventListener("change",e=>handleCleaningPhoto(e));
+  $("cln-file").addEventListener("change",e=>handleCleaningPhoto(e));
+  $("cln-aiBtn").addEventListener("click",cleaningAIAnalyze);
+  $("clnSave").style.display="";
+  $("clnDelete").style.display = id?"":"none";
+}
+
+function renderCleaningPhoto(){
+  const area=$("cln-photoArea");
+  if(!cleaningPhoto){ area.innerHTML=`<div style="font-size:12px;color:var(--ink-soft);margin-top:8px">사진을 올리면 AI 분석 버튼이 활성화됩니다.</div>`; return; }
+  area.innerHTML=`<div class="thumbs" style="margin-top:8px"><div class="thumb" style="width:120px;height:120px"><img class="zimg" src="${cleaningPhoto}"><button class="rm" id="cln-rmPhoto">×</button></div></div>`;
+  $("cln-rmPhoto").addEventListener("click",()=>{ cleaningPhoto=null; renderCleaningPhoto(); $("cln-aiBtn").disabled=true; });
+}
+
+async function handleCleaningPhoto(e){
+  const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
+  try{
+    cleaningPhoto=await compressImage(f, 1400, 0.7);
+    renderCleaningPhoto();
+    $("cln-aiBtn").disabled=false;
+  }catch(err){ toast("사진 처리 실패"); }
+}
+
+async function cleaningAIAnalyze(){
+  const key=aiGetKey();
+  if(!key){ toast("AI 탭에서 API 키부터 저장해주세요"); return; }
+  if(!cleaningPhoto){ toast("사진이 없습니다"); return; }
+  const btn=$("cln-aiBtn");
+  btn.disabled=true; btn.textContent="🤖 분석 중...";
+  toast("AI가 일지를 읽고 있어요... 10~20초 걸려요");
+  try{
+    const staffNames=CLEAN_STAFF.map(s=>s.name).join(", ");
+    const sys=`당신은 미화반 청소 일지 사진을 분석하는 도우미입니다. 한국어 손글씨로 작성된 일지 양식을 보고 데이터를 추출해 JSON으로만 응답하세요.
+
+추출할 필드:
+{
+  "date": "YYYY-MM-DD" (일지의 날짜, 양식 상단의 "2026년 5월 27일" 같은 표기를 변환),
+  "foreman": "반장 이름" (결재란의 반장 칸에 적힌 이름, 못 읽으면 "${CLEAN_FOREMAN}"),
+  "staffWork": [
+    {"name": "담당자명", "floors": "담당 층", "tissue": 휴지 출고 수량, "towel": 핸드타월 출고 수량, "special": "문제점 및 특이사항"},
+    ...
+  ],
+  "instructions": "지시 및 전달사항 전문",
+  "special": "특기사항 전문",
+  "tissueIn": 휴지 입고 수량,
+  "tissueOut": 휴지 출고 수량,
+  "towelIn": 핸드타월 입고 수량,
+  "towelOut": 핸드타월 출고 수량
+}
+
+알려진 담당자 명단(참고): ${staffNames}
+- 손글씨가 흐릿하면 합리적으로 추정.
+- 수량은 빈칸이면 0.
+- 휴지/핸드타월 출고는 담당자별 출고내역 칸에서 읽으세요.
+- 소모품 입출고 표는 일지 하단의 표.
+- 다른 설명 없이 JSON만 답하세요.`;
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({
+        model:AI_MODEL, max_tokens:3000, system:sys,
+        messages:[{role:"user", content:[
+          {type:"image", source:{type:"base64", media_type:"image/jpeg", data:cleaningPhoto.split(",")[1]}},
+          {type:"text", text:"이 청소 일지를 분석해서 JSON으로 추출해주세요."}
+        ]}]
+      })
+    });
+    if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j?.error?.message||`HTTP ${res.status}`); }
+    const data=await res.json();
+    const reply=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+    let jsonStr=reply;
+    const m=reply.match(/\{[\s\S]*\}/);
+    if(m) jsonStr=m[0];
+    const parsed=JSON.parse(jsonStr);
+    // cleaningData에 적용 (사진은 유지)
+    cleaningData={...cleaningData, ...parsed, photo: cleaningPhoto};
+    if(!Array.isArray(cleaningData.staffWork)) cleaningData.staffWork=[];
+    renderCleaningModal(cleaningData.id);
+    toast("✅ AI 분석 완료 — 내용 확인 후 수정/저장하세요");
+  }catch(e){
+    logErr("AI 청소분석", e);
+    toast(`❌ ${e.message}`);
+  }finally{
+    btn.disabled=false; btn.textContent="🤖 AI 분석";
+  }
+}
+
+// ===== 청소일지 저장 (자재 자동 연동) =====
+async function saveCleaning(){
+  const id = cleaningData && cleaningData.id;
+  // 폼에서 값 수집
+  const obj = {
+    kind:"cleaning",
+    date: $("cln-date").value || todayStr(),
+    foreman: ($("cln-foreman").value||"").trim() || CLEAN_FOREMAN,
+    instructions: $("cln-instructions").value||"",
+    special: $("cln-special").value||"",
+    tissueIn: Number($("cln-tissueIn").value)||0,
+    tissueOut: Number($("cln-tissueOut").value)||0,
+    towelIn: Number($("cln-towelIn").value)||0,
+    towelOut: Number($("cln-towelOut").value)||0,
+    photo: cleaningPhoto,
+    staffWork: []
+  };
+  // 담당자별 데이터 수집
+  document.querySelectorAll("#cln-staffBody tr[data-idx]").forEach(tr=>{
+    const idx=Number(tr.dataset.idx);
+    const src=cleaningData.staffWork[idx]||{};
+    obj.staffWork.push({
+      name: src.name||"",
+      floors: tr.querySelector(".cln-floors").value||"",
+      tissue: Number(tr.querySelector(".cln-tissue").value)||0,
+      towel: Number(tr.querySelector(".cln-towel").value)||0,
+      special: tr.querySelector(".cln-special").value||"",
+    });
+  });
+  // 저장 또는 수정
+  let savedRec;
+  if(id){
+    updateRecord(id, obj);
+    savedRec={...obj, id};
+    // 기존 연동 자재 내역 모두 삭제 후 재생성
+    const linked=entries.filter(s=>s.kind==="stock"&&s.cleaningId===id).map(s=>s.id);
+    linked.forEach(sid=>deleteRecord(sid));
+  } else {
+    obj.createdAt=Date.now();
+    savedRec=addRecord(obj);
+  }
+  // 자재 연동
+  await syncCleaningToStock(savedRec);
+  $("cleaningOverlay").classList.remove("show");
+  renderAll();
+  toast(id?"수정되었습니다":"저장되었습니다");
+}
+
+// 휴지/핸드타월 품목 자동 생성 보장
+function ensureCleaningItem(name){
+  let item=entries.find(e=>e.kind==="item" && (e.itemName||"").trim()===name);
+  if(item) return item;
+  return addRecord({
+    kind:"item",
+    itemCode: nextItemCode(),
+    itemName: name,
+    spec: "",
+    unit: name==="휴지"?"롤":"팩",
+    field: "환경",
+    vendor: "",
+    unitPrice: 0,
+    safetyStock: 0,
+    recurring: "월간",
+    location: "",
+    memo: "청소 일지에서 자동 생성됨",
+    createdAt: Date.now()
+  });
+}
+
+async function syncCleaningToStock(cln){
+  const tissueItem = ensureCleaningItem("휴지");
+  const towelItem  = ensureCleaningItem("핸드타월");
+  const dateStr = cln.date || todayStr();
+  // 1) 소모품 입고
+  if(Number(cln.tissueIn)>0){
+    addRecord({kind:"stock", date:dateStr, stockType:"입고", itemId:tissueItem.id, qty:Number(cln.tissueIn), unitPrice:0, amount:0, memo:`청소일지 ${dateStr} 입고`, cleaningId:cln.id, createdAt:Date.now()});
+  }
+  if(Number(cln.towelIn)>0){
+    addRecord({kind:"stock", date:dateStr, stockType:"입고", itemId:towelItem.id, qty:Number(cln.towelIn), unitPrice:0, amount:0, memo:`청소일지 ${dateStr} 입고`, cleaningId:cln.id, createdAt:Date.now()});
+  }
+  // 2) 소모품 출고 (전체 출고)
+  if(Number(cln.tissueOut)>0){
+    addRecord({kind:"stock", date:dateStr, stockType:"출고", itemId:tissueItem.id, qty:Number(cln.tissueOut), unitPrice:0, amount:0, useTarget:"청소 전체", memo:`청소일지 ${dateStr} 출고(전체)`, cleaningId:cln.id, createdAt:Date.now()});
+  }
+  if(Number(cln.towelOut)>0){
+    addRecord({kind:"stock", date:dateStr, stockType:"출고", itemId:towelItem.id, qty:Number(cln.towelOut), unitPrice:0, amount:0, useTarget:"청소 전체", memo:`청소일지 ${dateStr} 출고(전체)`, cleaningId:cln.id, createdAt:Date.now()});
+  }
+  // 3) 담당자별 층별 출고
+  (cln.staffWork||[]).forEach(s=>{
+    if(Number(s.tissue)>0){
+      addRecord({kind:"stock", date:dateStr, stockType:"출고", itemId:tissueItem.id, qty:Number(s.tissue), unitPrice:0, amount:0, useTarget:`${s.floors||""} (${s.name})`, memo:`청소일지 ${dateStr} 층별 출고`, cleaningId:cln.id, createdAt:Date.now()});
+    }
+    if(Number(s.towel)>0){
+      addRecord({kind:"stock", date:dateStr, stockType:"출고", itemId:towelItem.id, qty:Number(s.towel), unitPrice:0, amount:0, useTarget:`${s.floors||""} (${s.name})`, memo:`청소일지 ${dateStr} 층별 출고`, cleaningId:cln.id, createdAt:Date.now()});
+    }
+  });
+}
+
+// ===== 명단 관리 모달 =====
+function openCleanStaffMgr(){
+  renderCleanStaffList();
+  $("cleanStaffOverlay").classList.add("show");
+}
+function renderCleanStaffList(){
+  $("cleanForemanInput").value = CLEAN_FOREMAN;
+  $("cleanStaffList").innerHTML = CLEAN_STAFF.map((s,i)=>`
+    <div class="cat-row" data-i="${i}">
+      <input type="text" class="cr-name-edit" value="${esc(s.name)}" data-k="name" style="flex:1">
+      <input type="text" class="cr-name-edit" value="${esc(s.floors)}" data-k="floors" placeholder="담당 층" style="flex:1.4">
+      <button data-act="up" title="위로">▲</button>
+      <button data-act="down" title="아래로">▼</button>
+      <button class="danger" data-act="del" title="삭제">🗑</button>
+    </div>
+  `).join("") || `<div class="empty" style="padding:14px">등록된 담당자가 없습니다.</div>`;
+  $("cleanStaffList").querySelectorAll(".cat-row").forEach(row=>{
+    const i=Number(row.dataset.i);
+    row.querySelectorAll("input").forEach(inp=>inp.addEventListener("input",()=>{
+      CLEAN_STAFF[i][inp.dataset.k] = inp.value;
+    }));
+    row.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>{
+      const a=b.dataset.act;
+      if(a==="up"&&i>0) [CLEAN_STAFF[i-1],CLEAN_STAFF[i]]=[CLEAN_STAFF[i],CLEAN_STAFF[i-1]];
+      else if(a==="down"&&i<CLEAN_STAFF.length-1) [CLEAN_STAFF[i+1],CLEAN_STAFF[i]]=[CLEAN_STAFF[i],CLEAN_STAFF[i+1]];
+      else if(a==="del"){
+        if(!confirm(`${CLEAN_STAFF[i].name} 담당자를 명단에서 삭제하시겠습니까?\n(기존 일지의 데이터는 유지됩니다)`)) return;
+        CLEAN_STAFF.splice(i,1);
+      }
+      saveCleanStaff();
+      renderCleanStaffList();
+    }));
+  });
+}
 
 
 const AI_KEY_LS="wl_anthropic_key";

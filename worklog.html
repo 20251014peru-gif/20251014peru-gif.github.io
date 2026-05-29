@@ -14,7 +14,7 @@
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 파일 · 사이트 · 비번 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 · 예정 <b style="color:#9aa7b4" id="verBadge">v21</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 파일 · 사이트 · 비번 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 · 예정 · 자재 · 청소 <b style="color:#9aa7b4" id="verBadge">v23</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -33,6 +33,8 @@
         <button data-tab="meeting">회의메모</button>
         <button data-tab="deliver">전달사항</button>
         <button data-tab="calendar">달력</button>
+        <button data-tab="material">📦 자재</button>
+        <button data-tab="cleaning">🧹 청소</button>
         <button data-tab="password">🔐 비번</button>
         <button data-tab="diag">자가진단</button>
         <button data-tab="ai">AI</button>
@@ -304,6 +306,85 @@
     </div>
   </section>
 
+  <!-- 📦 자재 -->
+  <section class="panel" id="panel-material">
+    <div class="card">
+      <div class="list-head">
+        <h2>📦 자재 관리</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="btnAddStock">📥 입출고 추가</button>
+          <button class="btn btn-ghost btn-sm" id="btnAddItem">➕ 품목 등록</button>
+          <button class="btn btn-ghost btn-sm" id="btnAIExtract" title="엑셀 내용 붙여넣으면 AI가 자동 추출">🤖 AI 엑셀 추출</button>
+          <button class="btn btn-ghost btn-sm" id="btnMatExcel">📋 엑셀 복사</button>
+        </div>
+      </div>
+      <p class="desc">품목을 한 번 등록해두면, 입출고를 기록할 때마다 자동으로 재고가 계산됩니다. 안전재고 미달 품목은 빨갛게 표시돼요.</p>
+
+      <div class="mat-tabs">
+        <button data-mattab="stock" class="active">📊 재고 현황</button>
+        <button data-mattab="item">📋 품목 마스터</button>
+        <button data-mattab="tx">📥 입출고 내역</button>
+      </div>
+
+      <div class="filt-row">
+        <select id="matFieldFilter"></select>
+        <select id="matRecFilter"></select>
+        <button class="btn btn-ghost btn-sm" id="matLowToggle" style="flex:0 0 auto">⚠ 부족만</button>
+      </div>
+      <input type="text" id="matSearch" class="search" placeholder="🔍 검색 — 품목명·규격·거래처·메모">
+
+      <div id="matStockPanel">
+        <div class="table-wrap">
+          <table class="rec"><thead><tr>
+            <th>품목ID</th><th>품목명/규격</th><th>단위</th><th>분야</th><th>거래처</th>
+            <th style="text-align:right">단가</th><th style="text-align:right">재고</th><th>주기</th><th></th>
+          </tr></thead><tbody id="matStockBody"></tbody></table>
+        </div>
+      </div>
+
+      <div id="matItemPanel" style="display:none">
+        <div class="table-wrap">
+          <table class="rec"><thead><tr>
+            <th>품목ID</th><th>품목명</th><th>규격</th><th>단위</th><th>분야</th><th>거래처</th>
+            <th style="text-align:right">기본단가</th><th>주기</th><th></th>
+          </tr></thead><tbody id="matItemBody"></tbody></table>
+        </div>
+      </div>
+
+      <div id="matTxPanel" style="display:none">
+        <div class="table-wrap">
+          <table class="rec"><thead><tr>
+            <th>거래일</th><th>구분</th><th>품목/규격</th><th>단위</th>
+            <th style="text-align:right">수량</th><th style="text-align:right">단가</th><th style="text-align:right">금액</th>
+            <th>거래처</th><th>사용처/메모</th><th></th>
+          </tr></thead><tbody id="matTxBody"></tbody></table>
+        </div>
+        <p id="matTxSummary" style="font-size:13px;color:var(--ink-soft);margin-top:8px;text-align:right"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🧹 청소 -->
+  <section class="panel" id="panel-cleaning">
+    <div class="card">
+      <div class="list-head">
+        <h2>🧹 청소일지 (미화반)</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="btnAddCleaning">➕ 일지 추가</button>
+          <button class="btn btn-ghost btn-sm" id="btnCleanStaffMgr">⚙ 명단·반장 관리</button>
+        </div>
+      </div>
+      <p class="desc">청소반장이 작성한 일지를 사진으로 올리면 AI가 자동 분석합니다. 휴지·핸드타월 입출고는 자재 탭으로 자동 연동돼요.</p>
+      <div id="clnStats"></div>
+      <div class="filt-row" style="margin-top:10px">
+        <input type="date" id="clnFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="clnTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="clnRangeClear" style="flex:0 0 auto">기간 해제</button>
+      </div>
+      <input type="text" id="clnSearch" class="search" placeholder="🔍 검색 — 날짜·담당자·층·특이사항">
+      <div id="clnList"></div>
+    </div>
+  </section>
+
   <!-- 🔐 비밀번호 -->
   <section class="panel" id="panel-password">
     <div class="card">
@@ -476,6 +557,33 @@
   <div id="catList" style="max-height:340px;overflow:auto"></div>
   <div class="btn-row">
     <button class="btn btn-ghost" id="catMgrClose" style="margin-left:auto">닫기</button>
+  </div>
+</div></div>
+
+<!-- 🧹 청소일지 모달 -->
+<div class="overlay" id="cleaningOverlay"><div class="modal" style="max-width:780px">
+  <h3 id="clnTitle">청소 일지</h3>
+  <div id="clnFields"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="clnSave">저장</button>
+    <button class="btn btn-ghost" id="clnCancel">취소</button>
+    <button class="btn btn-danger" id="clnDelete" style="margin-left:auto;display:none">삭제</button>
+  </div>
+</div></div>
+
+<!-- 미화반 명단 관리 모달 -->
+<div class="overlay" id="cleanStaffOverlay"><div class="modal">
+  <h3>⚙ 미화반 명단·반장 관리</h3>
+  <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">반장 이름과 담당자 명단·담당 층을 관리합니다. 변경하면 일지 추가 시 자동 반영됩니다.</p>
+  <div class="field" style="margin-bottom:14px">
+    <label>반장 이름</label>
+    <input type="text" id="cleanForemanInput" placeholder="배옥식">
+  </div>
+  <div style="font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:6px">담당자 명단</div>
+  <div id="cleanStaffList" style="max-height:340px;overflow:auto;margin-bottom:10px"></div>
+  <button class="btn btn-primary btn-sm" id="cleanStaffAdd" style="margin-bottom:10px">➕ 담당자 추가</button>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="cleanStaffClose" style="margin-left:auto">닫기</button>
   </div>
 </div></div>
 
