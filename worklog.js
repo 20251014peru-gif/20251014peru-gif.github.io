@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v23";
+const APP_VERSION = "v24";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -2344,6 +2344,136 @@ function wireMaterialTab(){
   $("btnAddStock").addEventListener("click",()=>openEditor("stock",null));
   $("btnMatExcel").addEventListener("click",matExcelCopy);
   $("btnAIExtract").addEventListener("click",aiExtractDialog);
+  $("matFileUpload").addEventListener("change",handleMatFileUpload);
+}
+
+// 엑셀/CSV 파일 업로드 → AI 분석
+async function handleMatFileUpload(e){
+  const file = e.target.files&&e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+  if(typeof XLSX === "undefined"){ toast("엑셀 라이브러리 로드 실패 — 새로고침해주세요"); return; }
+  const key=(aiGetKey()||"").trim();
+  if(!key){ toast("자가진단·AI 탭에서 API 키부터 저장해주세요"); activateTab("ai"); return; }
+  if(!/^[\x20-\x7E]+$/.test(key)){ toast("⚠ API 키에 잘못된 문자가 있어요. AI 탭에서 재저장하세요"); return; }
+  // 파일 종류 선택
+  const type = confirm(`"${file.name}" 파일이 어떤 데이터인가요?\n\n[확인] = 📥 입출고 내역 (구매·사용 기록)\n[취소] = 📋 품목 마스터 (자재 목록)`) ? "stock" : "item";
+  toast(`📊 ${file.name} 읽는 중...`);
+  try{
+    // 엑셀 파싱
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:"array"});
+    // 첫 시트만 사용
+    const sheetName = wb.SheetNames[0];
+    const sheet = wb.Sheets[sheetName];
+    // 시트를 TSV(탭 구분) 텍스트로 변환
+    const txt = XLSX.utils.sheet_to_csv(sheet, {FS:"\t", RS:"\n", strip:true});
+    if(!txt || !txt.trim()){ toast("엑셀 파일에 데이터가 없습니다"); return; }
+    // 너무 길면 자르기
+    let dataText = txt;
+    if(dataText.length > 30000){
+      dataText = dataText.slice(0, 30000) + "\n...(이하 생략)";
+      toast("⚠ 데이터가 너무 많아 일부만 분석합니다");
+    }
+    toast(`🤖 AI 분석 중... (${file.name})`);
+    await aiExtractFromText(dataText, type, key);
+  }catch(err){
+    logErr("엑셀 파일 분석", err);
+    toast(`❌ 파일 읽기 실패: ${err.message}`);
+  }
+}
+
+// AI 추출 공통 로직 (텍스트와 파일 둘 다에서 호출)
+async function aiExtractFromText(txt, type, key){
+  const sys = type==="stock"
+    ? `당신은 엑셀 데이터를 분석해 자재 입출고 내역을 추출하는 도우미입니다. 사용자가 붙여넣은 데이터를 분석해서 JSON 배열로만 답하세요. 각 항목은 다음 필드를 가집니다:
+{"date":"YYYY-MM-DD","stockType":"입고|출고","itemName":"품목명","spec":"규격","unit":"단위","qty":숫자,"unitPrice":숫자,"amount":숫자,"vendor":"거래처","docNo":"전표번호","useTarget":"사용처","memo":"메모"}
+- stockType: "구매","매입","입고" 같은 단어 → "입고", "사용","출고","불출" → "출고". 명시 없으면 입고로 추정.
+- 날짜: 다양한 형식을 YYYY-MM-DD로. 연도 없으면 ${calY}.
+- 숫자: 콤마/공백 제거. 빈값은 0.
+- 다른 설명 없이 JSON 배열만 답하세요. 예: [{"date":"2026-05-01",...}]`
+    : `당신은 엑셀 데이터를 분석해 자재 품목 마스터를 추출하는 도우미입니다. 사용자가 붙여넣은 데이터를 분석해서 JSON 배열로만 답하세요. 각 항목은:
+{"itemName":"품목명","spec":"규격","unit":"단위","field":"전기|소방|기계|통신|영선|주차|청소|기타","vendor":"거래처","unitPrice":숫자,"safetyStock":숫자,"recurring":"비주기|월간|분기|반기|연간|수시","location":"보관위치","memo":"메모"}
+- field: 품목 성격으로 추정. 모르면 "기타".
+- recurring: 명시 없으면 "비주기".
+- 다른 설명 없이 JSON 배열만 답하세요.`;
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:AI_MODEL, max_tokens:4000, system:sys, messages:[{role:"user",content:txt}]})
+  });
+  if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j?.error?.message||`HTTP ${res.status}`); }
+  const data=await res.json();
+  const reply=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+  let jsonStr=reply;
+  const m=reply.match(/\[[\s\S]*\]/);
+  if(m) jsonStr=m[0];
+  const arr=JSON.parse(jsonStr);
+  if(!Array.isArray(arr)||!arr.length){ toast("AI가 데이터를 추출하지 못했습니다"); return; }
+  if(!confirm(`AI가 ${arr.length}건을 추출했습니다.\n그대로 추가할까요?`)) return;
+  // 추가
+  let added=0;
+  if(type==="item"){
+    for(const it of arr){
+      if(!it.itemName) continue;
+      addRecord({
+        kind:"item",
+        itemCode:nextItemCode(),
+        itemName:it.itemName||"",
+        spec:it.spec||"",
+        unit:it.unit||"",
+        field:it.field||"기타",
+        vendor:it.vendor||"",
+        unitPrice:Number(it.unitPrice)||0,
+        safetyStock:Number(it.safetyStock)||0,
+        recurring:it.recurring||"비주기",
+        location:it.location||"",
+        memo:it.memo||"",
+        createdAt:Date.now()
+      });
+      added++;
+    }
+  } else {
+    for(const t of arr){
+      if(!t.itemName) continue;
+      let item=entries.find(e=>e.kind==="item" && (e.itemName||"").trim()===String(t.itemName).trim());
+      if(!item){
+        item=addRecord({
+          kind:"item",
+          itemCode:nextItemCode(),
+          itemName:t.itemName,
+          spec:t.spec||"",
+          unit:t.unit||"",
+          field:"기타",
+          vendor:t.vendor||"",
+          unitPrice:Number(t.unitPrice)||0,
+          safetyStock:0,
+          recurring:"비주기",
+          createdAt:Date.now()
+        });
+      }
+      const qty=Number(t.qty)||0;
+      const up=Number(t.unitPrice)||0;
+      const amt=Number(t.amount) || (qty*up);
+      addRecord({
+        kind:"stock",
+        date:t.date||todayStr(),
+        stockType:(t.stockType==="출고"?"출고":"입고"),
+        itemId:item.id,
+        qty,
+        unitPrice:up,
+        amount:amt,
+        vendor:t.vendor||"",
+        docNo:t.docNo||"",
+        useTarget:t.useTarget||"",
+        memo:t.memo||"",
+        createdAt:Date.now()
+      });
+      added++;
+    }
+  }
+  renderMaterial();
+  toast(`✅ ${added}건 추가 완료`);
 }
 
 function renderMaterial(){
@@ -2513,107 +2643,17 @@ function matExcelCopy(){
   copyText(text, `${lbl} 엑셀 복사됨`);
 }
 
-/* AI 엑셀 추출 — 사용자가 엑셀 내용 붙여넣으면 Claude가 분석 */
+/* AI 텍스트 추출 — 사용자가 엑셀 텍스트 붙여넣으면 Claude가 분석 */
 async function aiExtractDialog(){
-  const key=aiGetKey();
+  const key=(aiGetKey()||"").trim();
   if(!key){ toast("자가진단·AI 탭에서 API 키부터 저장해주세요"); activateTab("ai"); return; }
-  // 간단한 prompt 모달 띄우기
+  if(!/^[\x20-\x7E]+$/.test(key)){ toast("⚠ API 키에 잘못된 문자가 있어요. AI 탭에서 재저장하세요"); return; }
   const txt = prompt("엑셀에서 복사한 내용을 붙여넣어 주세요\n(첫 행은 헤더로, Tab 또는 쉼표로 구분된 데이터)\n\nAI가 분석해서 품목 또는 입출고 내역으로 자동 추출합니다.","");
   if(!txt||!txt.trim()) return;
   const type = confirm("이 데이터는 [확인=입출고 내역] / [취소=품목 마스터] 중 어느 쪽인가요?") ? "stock" : "item";
   toast("AI 분석 중...잠시 기다려주세요");
   try{
-    const sys = type==="stock"
-      ? `당신은 엑셀 데이터를 분석해 자재 입출고 내역을 추출하는 도우미입니다. 사용자가 붙여넣은 데이터를 분석해서 JSON 배열로만 답하세요. 각 항목은 다음 필드를 가집니다:
-{"date":"YYYY-MM-DD","stockType":"입고|출고","itemName":"품목명","spec":"규격","unit":"단위","qty":숫자,"unitPrice":숫자,"amount":숫자,"vendor":"거래처","docNo":"전표번호","useTarget":"사용처","memo":"메모"}
-- stockType: "구매","매입","입고" 같은 단어 → "입고", "사용","출고","불출" → "출고". 명시 없으면 입고로 추정.
-- 날짜: 다양한 형식을 YYYY-MM-DD로. 연도 없으면 ${calY}.
-- 숫자: 콤마/공백 제거. 빈값은 0.
-- 다른 설명 없이 JSON 배열만 답하세요. 예: [{"date":"2026-05-01",...}]`
-      : `당신은 엑셀 데이터를 분석해 자재 품목 마스터를 추출하는 도우미입니다. 사용자가 붙여넣은 데이터를 분석해서 JSON 배열로만 답하세요. 각 항목은:
-{"itemName":"품목명","spec":"규격","unit":"단위","field":"전기|소방|기계|통신|영선|주차|청소|기타","vendor":"거래처","unitPrice":숫자,"safetyStock":숫자,"recurring":"비주기|월간|분기|반기|연간|수시","location":"보관위치","memo":"메모"}
-- field: 품목 성격으로 추정. 모르면 "기타".
-- recurring: 명시 없으면 "비주기".
-- 다른 설명 없이 JSON 배열만 답하세요.`;
-    const res=await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",
-      headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:AI_MODEL, max_tokens:4000, system:sys, messages:[{role:"user",content:txt}]})
-    });
-    if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j?.error?.message||`HTTP ${res.status}`); }
-    const data=await res.json();
-    const reply=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
-    // JSON 추출
-    let jsonStr=reply;
-    const m=reply.match(/\[[\s\S]*\]/);
-    if(m) jsonStr=m[0];
-    const arr=JSON.parse(jsonStr);
-    if(!Array.isArray(arr)||!arr.length){ toast("AI가 데이터를 추출하지 못했습니다"); return; }
-    if(!confirm(`AI가 ${arr.length}건을 추출했습니다.\n그대로 추가할까요?`)) return;
-    // 추가
-    let added=0;
-    if(type==="item"){
-      for(const it of arr){
-        if(!it.itemName) continue;
-        addRecord({
-          kind:"item",
-          itemCode:nextItemCode(),
-          itemName:it.itemName||"",
-          spec:it.spec||"",
-          unit:it.unit||"",
-          field:it.field||"기타",
-          vendor:it.vendor||"",
-          unitPrice:Number(it.unitPrice)||0,
-          safetyStock:Number(it.safetyStock)||0,
-          recurring:it.recurring||"비주기",
-          location:it.location||"",
-          memo:it.memo||"",
-          createdAt:Date.now()
-        });
-        added++;
-      }
-    } else {
-      // stock: 품목명으로 itemId 매칭, 없으면 자동 생성
-      for(const t of arr){
-        if(!t.itemName) continue;
-        let item=entries.find(e=>e.kind==="item" && (e.itemName||"").trim()===String(t.itemName).trim());
-        if(!item){
-          item=addRecord({
-            kind:"item",
-            itemCode:nextItemCode(),
-            itemName:t.itemName,
-            spec:t.spec||"",
-            unit:t.unit||"",
-            field:"기타",
-            vendor:t.vendor||"",
-            unitPrice:Number(t.unitPrice)||0,
-            safetyStock:0,
-            recurring:"비주기",
-            createdAt:Date.now()
-          });
-        }
-        const qty=Number(t.qty)||0;
-        const up=Number(t.unitPrice)||0;
-        const amt=Number(t.amount) || (qty*up);
-        addRecord({
-          kind:"stock",
-          date:t.date||todayStr(),
-          stockType:(t.stockType==="출고"?"출고":"입고"),
-          itemId:item.id,
-          qty,
-          unitPrice:up,
-          amount:amt,
-          vendor:t.vendor||"",
-          docNo:t.docNo||"",
-          useTarget:t.useTarget||"",
-          memo:t.memo||"",
-          createdAt:Date.now()
-        });
-        added++;
-      }
-    }
-    renderMaterial();
-    toast(`✅ ${added}건 추가 완료`);
+    await aiExtractFromText(txt, type, key);
   }catch(e){ logErr("AI 자재추출",e); toast(`❌ ${e.message}`); }
 }
 
@@ -2684,7 +2724,10 @@ function cleaningList(){
   ).sort(byDateDesc);
 }
 function cleaningMatches(e, q){
-  const parts=[e.date, e.foreman, e.instructions, e.special];
+  const parts=[e.date, e.foreman, e.notes, e.instructions, e.special];
+  if(Array.isArray(e.directorOrders)) parts.push(...e.directorOrders);
+  if(Array.isArray(e.directives)) parts.push(...e.directives);
+  if(Array.isArray(e.specials)) parts.push(...e.specials);
   (e.staffWork||[]).forEach(s=>{ parts.push(s.name, s.floors, s.special); });
   return parts.filter(Boolean).join(" ").toLowerCase().includes(q.trim().toLowerCase());
 }
@@ -2699,17 +2742,23 @@ function renderCleaning(){
     const totalTissue=(c.staffWork||[]).reduce((s,x)=>s+(Number(x.tissue)||0),0);
     const totalTowel=(c.staffWork||[]).reduce((s,x)=>s+(Number(x.towel)||0),0);
     const issues=(c.staffWork||[]).filter(x=>x.special&&x.special.trim());
+    // 옛 데이터 호환
+    const directors = Array.isArray(c.directorOrders) ? c.directorOrders : [];
+    const directives = Array.isArray(c.directives) ? c.directives : (c.notes||c.instructions?(c.notes||c.instructions).split(/\n+/).filter(s=>s.trim()):[]);
+    const specials = Array.isArray(c.specials) ? c.specials : (c.special?c.special.split(/\n+/).filter(s=>s.trim()):[]);
+    const itemList = (arr, max=3) => arr.slice(0,max).map(t=>`<li>${esc(t).slice(0,90)}${t.length>90?"…":""}</li>`).join("") + (arr.length>max?`<li style="color:var(--ink-soft);font-style:italic">+${arr.length-max}건 더</li>`:"");
     return `<div class="row-item cln-row" data-id="${c.id}">
       <div class="grow">
         <div class="t">🧹 ${esc(c.date||"")} <span class="pill admin">반장 ${esc(c.foreman||CLEAN_FOREMAN)}</span>
-          ${totalTissue?`<span class="pill tech">휴지 ${totalTissue}</span>`:""}
+          ${totalTissue?`<span class="pill tech">점보롤 ${totalTissue}</span>`:""}
           ${totalTowel?`<span class="pill env">핸드타월 ${totalTowel}</span>`:""}
           ${(c.photo)?`<span style="font-size:13px">📷</span>`:""}
         </div>
         <div class="m">
-          ${c.instructions?`<div><b>📌 지시:</b> ${esc(c.instructions).slice(0,80)}${c.instructions.length>80?"…":""}</div>`:""}
-          ${c.special?`<div><b>⭐ 특기:</b> ${esc(c.special).slice(0,80)}${c.special.length>80?"…":""}</div>`:""}
-          ${issues.length?`<div style="margin-top:3px"><b>⚠ 특이사항:</b> ${issues.map(s=>esc(s.name)+"-"+esc(s.special)).join(" / ")}</div>`:""}
+          ${directors.length?`<div class="cln-card-section"><b>👔 소장 지시:</b><ul>${itemList(directors)}</ul></div>`:""}
+          ${directives.length?`<div class="cln-card-section"><b>📌 지시·전달:</b><ul>${itemList(directives)}</ul></div>`:""}
+          ${specials.length?`<div class="cln-card-section"><b>⭐ 특기:</b><ul>${itemList(specials)}</ul></div>`:""}
+          ${issues.length?`<div style="margin-top:5px"><b>⚠ 담당자 특이사항:</b> ${issues.map(s=>esc(s.name)+"-"+esc(s.special)).join(" / ")}</div>`:""}
         </div>
         <div class="card-acts">
           <button class="mini-btn" data-edit>수정</button>
@@ -2744,7 +2793,7 @@ function renderCleaningStats(){
   const w=thisMonth.reduce((s,e)=>s+(e.staffWork||[]).reduce((q,x)=>q+(Number(x.towel)||0),0),0);
   box.innerHTML=`<div class="cln-stat-row">
     <span class="cln-stat-item">📅 이번달 일지 <b>${thisMonth.length}건</b></span>
-    <span class="cln-stat-item">🧻 휴지 사용 <b>${t}</b></span>
+    <span class="cln-stat-item">🧻 점보롤 사용 <b>${t}</b></span>
     <span class="cln-stat-item">🧺 핸드타월 사용 <b>${w}</b></span>
     <span class="cln-stat-item" style="color:var(--ink-soft)">전체 일지 ${all.length}건</span>
   </div>`;
@@ -2758,11 +2807,25 @@ function openCleaningEditor(id){
     date: todayStr(),
     foreman: CLEAN_FOREMAN,
     staffWork: CLEAN_STAFF.map(s=>({name:s.name, floors:s.floors, tissue:0, towel:0, special:""})),
-    instructions: "",
-    special: "",
+    directorOrders: [],
+    directives: [],
+    specials: [],
     tissueIn: 0, tissueOut: 0, towelIn: 0, towelOut: 0,
     photo: null,
   };
+  // 옛 데이터 호환
+  if(cleaningData.id){
+    // notes 단일 텍스트 → directives 배열로 변환
+    if(!Array.isArray(cleaningData.directives)){
+      const src = cleaningData.notes || cleaningData.instructions || "";
+      cleaningData.directives = src ? src.split(/\n+/).filter(s=>s.trim()) : [];
+    }
+    if(!Array.isArray(cleaningData.specials)){
+      const src = cleaningData.special || "";
+      cleaningData.specials = src ? src.split(/\n+/).filter(s=>s.trim()) : [];
+    }
+    if(!Array.isArray(cleaningData.directorOrders)) cleaningData.directorOrders = [];
+  }
   cleaningPhoto = cleaningData.photo || null;
   renderCleaningModal(id);
   $("cleaningOverlay").classList.add("show");
@@ -2815,29 +2878,54 @@ function renderCleaningModal(id){
     <h3 style="font-family:'Gowun Batang',serif;font-size:16px;color:#33567d;margin:6px 0">👥 담당자별 작업 내역</h3>
     <div class="table-wrap" style="margin-bottom:14px">
       <table class="rec cln-staff-table"><thead><tr>
-        <th>담당자</th><th>담당 층</th><th>휴지</th><th>핸드타월</th><th>특이사항</th>
+        <th>담당자</th><th>담당 층</th><th>점보롤</th><th>핸드타월</th><th>특이사항</th>
       </tr></thead><tbody id="cln-staffBody">${rows}</tbody></table>
     </div>
 
-    <div class="field full" style="margin-bottom:10px">
-      <label>📌 지시 및 전달사항</label>
-      <textarea id="cln-instructions" rows="3">${esc(d.instructions||"")}</textarea>
+    <div class="field full" style="margin-bottom:14px">
+      <label>👔 소장 지시사항 <span style="color:var(--ink-soft);font-weight:400;font-size:11px">— 항목당 한 셀로 추가됩니다</span></label>
+      <div id="cln-directorList" class="cln-item-list"></div>
+      <button type="button" class="btn btn-ghost btn-sm" data-addcln="director">➕ 항목 추가</button>
     </div>
 
     <div class="field full" style="margin-bottom:14px">
-      <label>⭐ 특기사항</label>
-      <textarea id="cln-special" rows="3">${esc(d.special||"")}</textarea>
+      <label>📌 지시 및 전달사항 <span style="color:var(--ink-soft);font-weight:400;font-size:11px">— 항목당 한 셀로 추가됩니다</span></label>
+      <div id="cln-directiveList" class="cln-item-list"></div>
+      <button type="button" class="btn btn-ghost btn-sm" data-addcln="directive">➕ 항목 추가</button>
+    </div>
+
+    <div class="field full" style="margin-bottom:14px">
+      <label>⭐ 특기사항 <span style="color:var(--ink-soft);font-weight:400;font-size:11px">— 항목당 한 셀로 추가됩니다</span></label>
+      <div id="cln-specialList" class="cln-item-list"></div>
+      <button type="button" class="btn btn-ghost btn-sm" data-addcln="special">➕ 항목 추가</button>
     </div>
 
     <h3 style="font-family:'Gowun Batang',serif;font-size:16px;color:#33567d;margin:6px 0">📦 소모품 입출고 (자재 탭 자동 연동)</h3>
     <div class="grid">
-      <div class="field"><label>🧻 휴지 입고</label><input type="number" id="cln-tissueIn" value="${Number(d.tissueIn)||0}" min="0"></div>
-      <div class="field"><label>🧻 휴지 출고</label><input type="number" id="cln-tissueOut" value="${Number(d.tissueOut)||0}" min="0"></div>
+      <div class="field"><label>🧻 점보롤 입고</label><input type="number" id="cln-tissueIn" value="${Number(d.tissueIn)||0}" min="0"></div>
+      <div class="field"><label>🧻 점보롤 출고</label><input type="number" id="cln-tissueOut" value="${Number(d.tissueOut)||0}" min="0"></div>
       <div class="field"><label>🧺 핸드타월 입고</label><input type="number" id="cln-towelIn" value="${Number(d.towelIn)||0}" min="0"></div>
       <div class="field"><label>🧺 핸드타월 출고</label><input type="number" id="cln-towelOut" value="${Number(d.towelOut)||0}" min="0"></div>
     </div>
-    <p style="font-size:12px;color:var(--ink-soft);margin-top:6px">💡 저장 시 휴지·핸드타월 품목이 자재 탭에 자동 등록되고, 입출고 내역도 자동으로 기록됩니다.</p>
+    <p style="font-size:12px;color:var(--ink-soft);margin-top:6px">💡 저장 시 점보롤·핸드타월 품목이 자재 탭에 자동 등록되고, 입출고 내역도 자동으로 기록됩니다.</p>
   `;
+  // 3개 항목 리스트 렌더링
+  renderCleaningItemList("director", "cln-directorList", cleaningData.directorOrders);
+  renderCleaningItemList("directive", "cln-directiveList", cleaningData.directives);
+  renderCleaningItemList("special", "cln-specialList", cleaningData.specials);
+  // ➕ 항목 추가 버튼
+  $("clnFields").querySelectorAll("[data-addcln]").forEach(b=>b.addEventListener("click",()=>{
+    const type=b.dataset.addcln;
+    const arr = type==="director"?cleaningData.directorOrders : type==="directive"?cleaningData.directives : cleaningData.specials;
+    arr.push("");
+    const listId = type==="director"?"cln-directorList" : type==="directive"?"cln-directiveList" : "cln-specialList";
+    renderCleaningItemList(type, listId, arr);
+    // 새로 추가된 항목에 자동 포커스
+    setTimeout(()=>{
+      const inputs=$(listId).querySelectorAll("input.cln-item-input");
+      if(inputs.length) inputs[inputs.length-1].focus();
+    },50);
+  }));
   // 사진 영역
   renderCleaningPhoto();
   $("cln-aiBtn").disabled = !cleaningPhoto;
@@ -2849,12 +2937,32 @@ function renderCleaningModal(id){
   $("clnDelete").style.display = id?"":"none";
 }
 
+function renderCleaningItemList(type, containerId, arr){
+  const box = $(containerId); if(!box) return;
+  if(!arr.length){ box.innerHTML = `<div style="font-size:12px;color:var(--ink-soft);padding:6px 2px;font-style:italic">아직 항목이 없습니다 — ➕ 버튼으로 추가하세요</div>`; return; }
+  box.innerHTML = arr.map((v,i)=>`
+    <div class="cln-item-row">
+      <span class="cln-item-no">${i+1}.</span>
+      <input type="text" class="cln-item-input" value="${esc(v)}" data-idx="${i}" placeholder="내용 입력">
+      <button type="button" class="cln-item-del" data-idx="${i}" title="삭제">🗑</button>
+    </div>
+  `).join("");
+  box.querySelectorAll(".cln-item-input").forEach(inp=>inp.addEventListener("input",()=>{
+    arr[Number(inp.dataset.idx)] = inp.value;
+  }));
+  box.querySelectorAll(".cln-item-del").forEach(b=>b.addEventListener("click",()=>{
+    arr.splice(Number(b.dataset.idx),1);
+    renderCleaningItemList(type, containerId, arr);
+  }));
+}
+
 function renderCleaningPhoto(){
   const area=$("cln-photoArea");
   if(!cleaningPhoto){ area.innerHTML=`<div style="font-size:12px;color:var(--ink-soft);margin-top:8px">사진을 올리면 AI 분석 버튼이 활성화됩니다.</div>`; return; }
   area.innerHTML=`<div class="thumbs" style="margin-top:8px"><div class="thumb" style="width:120px;height:120px"><img class="zimg" src="${cleaningPhoto}"><button class="rm" id="cln-rmPhoto">×</button></div></div>`;
   $("cln-rmPhoto").addEventListener("click",()=>{ cleaningPhoto=null; renderCleaningPhoto(); $("cln-aiBtn").disabled=true; });
 }
+
 
 async function handleCleaningPhoto(e){
   const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
@@ -2866,8 +2974,12 @@ async function handleCleaningPhoto(e){
 }
 
 async function cleaningAIAnalyze(){
-  const key=aiGetKey();
+  const key=(aiGetKey()||"").trim();
   if(!key){ toast("AI 탭에서 API 키부터 저장해주세요"); return; }
+  if(!/^[\x20-\x7E]+$/.test(key)){
+    toast("⚠ API 키에 잘못된 문자가 들어있어요. AI 탭에서 다시 저장하세요");
+    return;
+  }
   if(!cleaningPhoto){ toast("사진이 없습니다"); return; }
   const btn=$("cln-aiBtn");
   btn.disabled=true; btn.textContent="🤖 분석 중...";
@@ -2878,16 +2990,17 @@ async function cleaningAIAnalyze(){
 
 추출할 필드:
 {
-  "date": "YYYY-MM-DD" (일지의 날짜, 양식 상단의 "2026년 5월 27일" 같은 표기를 변환),
-  "foreman": "반장 이름" (결재란의 반장 칸에 적힌 이름, 못 읽으면 "${CLEAN_FOREMAN}"),
+  "date": "YYYY-MM-DD" (일지의 날짜),
+  "foreman": "반장 이름" (못 읽으면 "${CLEAN_FOREMAN}"),
   "staffWork": [
-    {"name": "담당자명", "floors": "담당 층", "tissue": 휴지 출고 수량, "towel": 핸드타월 출고 수량, "special": "문제점 및 특이사항"},
+    {"name": "담당자명", "floors": "담당 층", "tissue": 점보롤 출고 수량, "towel": 핸드타월 출고 수량, "special": "문제점 및 특이사항"},
     ...
   ],
-  "instructions": "지시 및 전달사항 전문",
-  "special": "특기사항 전문",
-  "tissueIn": 휴지 입고 수량,
-  "tissueOut": 휴지 출고 수량,
+  "directorOrders": ["소장 지시사항 항목 1", "소장 지시사항 항목 2", ...],
+  "directives": ["지시 및 전달사항 항목 1", "항목 2", ...],
+  "specials": ["특기사항 항목 1", "특기사항 항목 2", ...],
+  "tissueIn": 점보롤 입고 수량,
+  "tissueOut": 점보롤 출고 수량,
   "towelIn": 핸드타월 입고 수량,
   "towelOut": 핸드타월 출고 수량
 }
@@ -2895,8 +3008,9 @@ async function cleaningAIAnalyze(){
 알려진 담당자 명단(참고): ${staffNames}
 - 손글씨가 흐릿하면 합리적으로 추정.
 - 수량은 빈칸이면 0.
-- 휴지/핸드타월 출고는 담당자별 출고내역 칸에서 읽으세요.
-- 소모품 입출고 표는 일지 하단의 표.
+- 점보롤/핸드타월 출고는 담당자별 "소모품 출고내역" 칸에서 읽으세요. "휴지" 칸은 점보롤을 의미합니다.
+- 지시 및 전달사항·특기사항·소장 지시사항은 줄 단위로 분리하여 각각 배열에 넣으세요. (글머리표 ·, -, ※ 등은 제거)
+- "소장 지시사항"이 별도로 보이지 않으면 빈 배열 [].
 - 다른 설명 없이 JSON만 답하세요.`;
     const res=await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
@@ -2932,13 +3046,15 @@ async function cleaningAIAnalyze(){
 // ===== 청소일지 저장 (자재 자동 연동) =====
 async function saveCleaning(){
   const id = cleaningData && cleaningData.id;
-  // 폼에서 값 수집
+  // 폼에서 값 수집 — 입력 변경분은 이미 cleaningData 배열에 반영됨
+  const cleanArr = arr => (arr||[]).map(s=>(s||"").trim()).filter(Boolean);
   const obj = {
     kind:"cleaning",
     date: $("cln-date").value || todayStr(),
     foreman: ($("cln-foreman").value||"").trim() || CLEAN_FOREMAN,
-    instructions: $("cln-instructions").value||"",
-    special: $("cln-special").value||"",
+    directorOrders: cleanArr(cleaningData.directorOrders),
+    directives: cleanArr(cleaningData.directives),
+    specials: cleanArr(cleaningData.specials),
     tissueIn: Number($("cln-tissueIn").value)||0,
     tissueOut: Number($("cln-tissueOut").value)||0,
     towelIn: Number($("cln-towelIn").value)||0,
@@ -2977,7 +3093,7 @@ async function saveCleaning(){
   toast(id?"수정되었습니다":"저장되었습니다");
 }
 
-// 휴지/핸드타월 품목 자동 생성 보장
+// 점보롤/핸드타월 품목 자동 생성 보장
 function ensureCleaningItem(name){
   let item=entries.find(e=>e.kind==="item" && (e.itemName||"").trim()===name);
   if(item) return item;
@@ -2986,7 +3102,7 @@ function ensureCleaningItem(name){
     itemCode: nextItemCode(),
     itemName: name,
     spec: "",
-    unit: name==="휴지"?"롤":"팩",
+    unit: name==="점보롤"?"롤":"팩",
     field: "환경",
     vendor: "",
     unitPrice: 0,
@@ -2999,7 +3115,7 @@ function ensureCleaningItem(name){
 }
 
 async function syncCleaningToStock(cln){
-  const tissueItem = ensureCleaningItem("휴지");
+  const tissueItem = ensureCleaningItem("점보롤");
   const towelItem  = ensureCleaningItem("핸드타월");
   const dateStr = cln.date || todayStr();
   // 1) 소모품 입고
@@ -3076,7 +3192,12 @@ function aiInitKeyUI(){
   aiRenderKeyState();
 }
 $("aiKeySave").addEventListener("click",()=>{
-  const v=$("aiKey").value.trim(); if(!v){ toast("키를 입력하세요"); return; }
+  const v=$("aiKey").value.trim();
+  if(!v){ toast("키를 입력하세요"); return; }
+  if(!/^[\x20-\x7E]+$/.test(v)){
+    toast("⚠ 키에 잘못된 문자(한글·공백 등)가 들어있어요. sk-ant-로 시작하는 영문/숫자만 입력하세요");
+    return;
+  }
   try{ localStorage.setItem(AI_KEY_LS,v); }catch(e){ toast("저장 실패"); return; }
   $("aiKey").value=""; aiRenderKeyState(); toast("API 키를 저장했습니다");
 });
