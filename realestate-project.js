@@ -1,24 +1,20 @@
 /* ============================================================
-   부동산 프로젝트 관리 v3.1
+   부동산 프로젝트 관리 v3.2
    ------------------------------------------------------------
-   [v3.1 변경 내역]
-   1) 철거 등 공정 기록의 '결제수단' 미표시 버그 수정
-      (ef_pay 셀렉트에 옵션을 채우지 않던 문제 → buildOptSelect 추가)
-   2) 비용·주말비용 내역 기본 보기를 '한 줄 목록형(엑셀형)'으로 변경 (카드형은 토글)
-   3) 주말 세트 입력을 '줄 추가식'으로 전면 개편
-      - 종류(식비/톨비/주유·가스/…, 직접 추가 가능)
-      - 식비 끼니: 아침/점심/저녁/집간식/현장간식
-      - 톨비: 상행/하행 / 주유·가스: 휘발유·가스 × 상행/하행/충전
-      - 줄 복제·삭제, 여러 번 추가 자유
-   4) 부동산: 네고 희망가·특이사항 추가, '방문 횟수' 중심 정렬/표시,
-      방문 이력 펼침·개별 삭제(deleteVisit)
-   5) 전화번호 전부 탭하면 바로 전화(telLink) — 부동산·견적·업체·자재
-   6) 자재 카드에 '구매량 + 재고 = 총 보유 수량' 합계 표시
+   [v3.2 변경 내역]
+   1) 모든 "+ 직접 추가" 드롭다운에서 '삭제'도 가능
+      (직접 추가한 항목만 삭제, 기본 제공 항목은 보호) — addOptModal 개편
+   2) 기록 종류별 '표시할 칸' 설정 기능 (⚙ 칸 설정)
+      - 예: 교통비 종류에 금액·결제수단 칸이 안 뜨던 문제 해결
+      - 종류마다 금액/결제/거래처/공정/세부/폴더 칸을 켜고 끌 수 있음
+      - 내가 추가한 종류도 금액·결제수단이 기본으로 보이게(돈 항목으로 간주)
+      - 설정은 realestate_options(kindcfg_<종류>)에 저장
+   3) 비용 집계: 자재비·공사비 외 '모든 금액 종류'(교통비 등 사용자 추가 포함)를
+      기타 비용 표/필터/수정에 정상 반영
    ------------------------------------------------------------
-   [기존 v3.0]
-   - 파일 분리(HTML/CSS/JS) / USD↔KRW 환율 자동 환산
-   - 모든 셀렉트 "+ 직접 추가" 옵션 시스템 (realestate_options)
-   - 자재 재고 + 사용 이력 / 견적 비교 / 백업·복원
+   [v3.1] 결제수단 버그 수정 / 목록형 기본 / 주말 줄 추가식 /
+          부동산 방문횟수·네고가 / 전화 바로걸기 / 자재 총보유수량
+   [v3.0] 파일 분리 / USD 환율 / 옵션 직접추가 / 자재 재고 / 견적 / 백업
    ============================================================ */
 
 /* ===== Firebase ===== */
@@ -211,54 +207,81 @@ function buildOptSelect(selectId, optKey, selectedVal, extraHead){
     row.appendChild(btn);
   }
 }
-/* 옵션 추가 모달 */
+/* 옵션 추가/삭제 모달 */
 let _addOptKey=null, _addOptTarget=null;
+function optLabelOf(optKey){
+  if(optKey.startsWith('stage_cat_')) return '"'+optKey.replace('stage_cat_','')+'" 공정의 세부 항목';
+  return OPT_LABELS[optKey] || "이 목록";
+}
 function openAddOpt(optKey, selectId){
   _addOptKey=optKey; _addOptTarget=selectId;
-  document.getElementById("addOptTitle").textContent="새 옵션 추가";
-  document.getElementById("addOptHint").textContent= optKey.startsWith('stage_cat_')
-    ? ('"'+optKey.replace('stage_cat_','')+'" 공정의 세부 항목을 추가합니다.')
-    : OPT_LABELS[optKey] ? (OPT_LABELS[optKey]+"에 항목을 추가합니다.") : "이 목록에 항목을 추가합니다.";
+  document.getElementById("addOptTitle").textContent=optLabelOf(optKey)+" 관리";
+  document.getElementById("addOptHint").textContent="새 항목을 추가하거나, 직접 추가한 항목을 삭제할 수 있습니다.";
   document.getElementById("addOptInput").value="";
+  renderAddOptList();
   openModal("addOptModal");
   setTimeout(()=>document.getElementById("addOptInput").focus(),120);
+}
+/* 내가 추가한 항목 목록 (각각 삭제 버튼) */
+function renderAddOptList(){
+  const box=document.getElementById("addOptList"); if(!box) return;
+  const mine=(userOpts[_addOptKey]||[]);
+  if(!mine.length){ box.innerHTML='<div class="hint" style="margin:2px 0">아직 직접 추가한 항목이 없습니다.</div>'; return; }
+  box.innerHTML=mine.map(v=>`<div class="opt-manage-row">
+    <span>${esc(v)}</span>
+    <button class="opt-del-btn" title="삭제" onclick="deleteUserOpt('${jsstr(v)}')">삭제</button>
+  </div>`).join("");
+}
+async function deleteUserOpt(v){
+  if(!_addOptKey) return;
+  if(!confirm('"'+v+'" 항목을 삭제할까요?\n\n이미 이 값으로 저장된 기록은 그대로 남습니다.')) return;
+  userOpts[_addOptKey]=(userOpts[_addOptKey]||[]).filter(x=>x!==v);
+  await saveUserOpts(_addOptKey);
+  renderAddOptList();
+  refreshOptConsumers(); // 화면의 셀렉트/탭 갱신
 }
 async function confirmAddOpt(){
   const v=document.getElementById("addOptInput").value.trim();
   if(!v){ alert("이름을 입력하세요."); return; }
   if(!userOpts[_addOptKey]) userOpts[_addOptKey]=[];
-  if(!userOpts[_addOptKey].includes(v) && !opts(_addOptKey).includes(v)){
+  if(userOpts[_addOptKey].includes(v) || opts(_addOptKey).includes(v)){
+    alert("이미 있는 항목입니다.");
+  } else {
     userOpts[_addOptKey].push(v);
     await saveUserOpts(_addOptKey);
   }
+  document.getElementById("addOptInput").value="";
+  document.getElementById("addOptInput").focus();
+  renderAddOptList();
   // 호출한 셀렉트를 새 옵션이 선택된 상태로 다시 채움
   if(_addOptTarget){
     const sel=document.getElementById(_addOptTarget);
     if(sel){
       const headOpt = sel.options[0] && sel.options[0].value==="" ? sel.options[0].text : null;
       buildOptSelect(_addOptTarget, _addOptKey, v, headOpt);
-      // 셀렉트가 onchange를 트리거해서 의존 셀렉트를 갱신할 수 있게 이벤트 발생
       sel.dispatchEvent(new Event('change'));
     }
   }
-  // 주말 모달이 열려있고 종류(wk_kinds)를 추가했으면 줄 그리드 재렌더
+  refreshOptConsumers();
+}
+/* 옵션 변경 후 화면 갱신 (주말 모달/현재 탭) */
+function refreshOptConsumers(){
   if(_addOptKey==="wk_kinds" && document.getElementById("weekendModal").classList.contains("open")){
     readWkRows(); renderWeekend();
   }
-  // OPT_LABELS 미등록 옵션이지만 OPT 셀렉트가 화면에 떠 있을 수 있으니 현재 탭 재렌더 (옵션 추가 직후 즉시 반영)
   if(OPT_REFRESH_TAB[_addOptKey] && currentProjectId){
     const p=projects.find(x=>x.id===currentProjectId); if(p) renderTab(p);
   }
-  closeModal("addOptModal");
 }
-/* 옵션 추가 직후, 현재 탭에 바로 반영이 필요한 키들 */
+/* 옵션 추가/삭제 직후, 현재 탭에 바로 반영이 필요한 키들 */
 const OPT_REFRESH_TAB={ stages:true, photo_folders:true, doc_folders:true };
 /* 카테고리별 한글 라벨 (옵션 모달 안내 문구용) */
 const OPT_LABELS={
   stages:"공정 단계", kinds:"기록 종류", pays:"결제 수단",
   etc_cats:"기타 비용 항목", vendor_roles:"업체 공종/역할",
   photo_folders:"사진 폴더", doc_folders:"서류 폴더",
-  mat_spaces:"자재 공간", mat_cats:"자재 분류", mat_units:"자재 단위"
+  mat_spaces:"자재 공간", mat_cats:"자재 분류", mat_units:"자재 단위",
+  wk_kinds:"주말 비용 종류"
 };
 
 /* ===== 환율 (USD → KRW) ===== */
@@ -766,6 +789,7 @@ function renderLog(e, opts){
     if(isImg) return `<a class="file" href="javascript:void(0)" onclick="openViewer('${jsstr(f.url)}','${jsstr(f.name)}')"><img src="${f.url}"><span class="fname">${esc(f.name)}</span></a>`;
     return `<a class="file" href="${f.url}" target="_blank" rel="noopener"><div class="fi">PDF</div><span class="fname">${esc(f.name)}</span></a>`;
   }).join("");
+  const KNOWN_KINDS=["문제","사진","자재비","공사비","기타비용","연락","서류","메모"];
   const tags=[
     e.kind==="문제"?`<span class="l-tag 문제">문제·하자</span>`:'',
     e.kind==="사진"?`<span class="l-tag 사진">사진</span>`:'',
@@ -775,12 +799,14 @@ function renderLog(e, opts){
     e.kind==="연락"?`<span class="l-tag">연락</span>`:'',
     e.kind==="서류"?`<span class="l-tag">서류</span>`:'',
     e.kind==="메모"?`<span class="l-tag">메모</span>`:'',
+    (!KNOWN_KINDS.includes(e.kind)&&e.kind)?`<span class="l-tag">${esc(e.kind)}${e.cat?' · '+esc(e.cat):''}</span>`:'',
     e.stage?`<span class="l-tag 공정">${esc(e.stage)}</span>`:'',
     ((e.kind==="자재비"||e.kind==="공사비")&&e.cat)?`<span class="l-tag">${esc(e.cat)}</span>`:'',
     (e.pay&&e.amount)?`<span class="l-tag">${esc(e.pay)}</span>`:'',
     (e.currency==="USD")?`<span class="l-tag" style="background:#e7eafb;color:var(--blue)">USD $${Number(e.amountOrig||0).toLocaleString()}</span>`:''
   ].join("");
-  const editBtn = (opts.noEdit||!(e.kind==="자재비"||e.kind==="공사비"||e.kind==="기타비용"))? '' : `<button class="l-del" style="color:var(--accent)" onclick="editCost('${e.id}')">수정</button>`;
+  // 금액이 있는 기록(모든 종류)은 수정 가능
+  const editBtn = (opts.noEdit||!(Number(e.amount)>0||e.kind==="자재비"||e.kind==="공사비"||e.kind==="기타비용"))? '' : `<button class="l-del" style="color:var(--accent)" onclick="editCost('${e.id}')">수정</button>`;
   const delBtn = opts.noDelete? '' : `<button class="l-del" onclick="deleteEntry('${e.id}')">삭제</button>`;
   return `<div class="log">
     <div class="l-top">${tags}<span class="l-title">${esc(e.title)}</span><span class="l-date">${e.date||''}</span>${editBtn}${delBtn}</div>
@@ -1132,7 +1158,7 @@ function viewCost(p){
   const stageSum=Object.values(byStage).reduce((a,b)=>a+b,0);
   const stageRows=stages.filter(s=>byStage[s]).map(s=>barRow(s,byStage[s],stageSum)).join("")
     +(byStage["미지정"]?barRow("미지정",byStage["미지정"],stageSum):"");
-  const byEtc={}; withAmt.filter(e=>e.kind==="기타비용").forEach(e=>{const k=e.cat||"기타"; byEtc[k]=(byEtc[k]||0)+Number(e.amount);});
+  const byEtc={}; withAmt.filter(e=>e.kind!=="자재비"&&e.kind!=="공사비").forEach(e=>{const k=e.cat||e.kind||"기타"; byEtc[k]=(byEtc[k]||0)+Number(e.amount);});
   const etcSum=Object.values(byEtc).reduce((a,b)=>a+b,0);
   const etcRows=Object.keys(byEtc).sort((a,b)=>byEtc[b]-byEtc[a]).map(k=>barRow(k,byEtc[k],etcSum)).join("");
   const byPay={}; withAmt.forEach(e=>{const k=e.pay||"미지정"; byPay[k]=(byPay[k]||0)+Number(e.amount);});
@@ -1184,7 +1210,7 @@ function viewCost(p){
       <div class="filterbar">
         <select onchange="costFilter.stage=this.value;renderTab(projects.find(x=>x.id===currentProjectId))">${stageOptsHtml}</select>
         <select onchange="costFilter.kind=this.value;renderTab(projects.find(x=>x.id===currentProjectId))">
-          ${["전체","자재비","공사비","기타비용"].map(k=>`<option ${costFilter.kind===k?'selected':''}>${k}</option>`).join("")}</select>
+          ${(()=>{ const used=[...new Set(withAmt.map(e=>e.kind).filter(Boolean))]; const base=["자재비","공사비","기타비용"]; const all=["전체"].concat(base.filter(b=>used.includes(b))).concat(used.filter(u=>!base.includes(u))); return all.map(k=>`<option ${costFilter.kind===k?'selected':''}>${esc(k)}</option>`).join(""); })()}</select>
         <select onchange="costFilter.pay=this.value;renderTab(projects.find(x=>x.id===currentProjectId))">
           ${["전체"].concat(opts("pays")).map(k=>`<option ${costFilter.pay===k?'selected':''}>${esc(k)}</option>`).join("")}</select>
         <input type="text" id="costSearchInput" placeholder="제목·거래처·메모 검색" value="${esc(costFilter.q)}" oninput="onCostSearch(this.value)">
@@ -1875,13 +1901,38 @@ function viewSearch(p){
    ============================================================ */
 
 /* ===== 기록(Entry) ===== */
+/* ===== 종류별 표시 칸 설정 =====
+   기본: 사진/서류는 폴더칸, 그 외(자재비·공사비·기타비용 + 사용자 추가 종류)는 금액·결제·거래처·공정·세부 표시.
+   사용자가 종류별로 칸을 켜고 끌 수 있고, realestate_options 의 kindcfg_<종류> 키에 저장됨. */
+const ALL_FIELDS=["amount","pay","vendor","stage","cat","photofolder","docfolder"];
+const FIELD_LABELS={amount:"금액",pay:"결제수단",vendor:"거래처",stage:"공정 단계",cat:"세부 항목",photofolder:"사진 폴더",docfolder:"서류 폴더"};
+function defaultKindFields(k){
+  if(k==="사진") return ["stage","photofolder","vendor"];
+  if(k==="서류") return ["stage","docfolder","vendor"];
+  if(k==="연락") return ["stage","vendor"];
+  if(k==="메모") return ["stage"];
+  if(k==="문제") return ["stage","vendor"];
+  // 자재비/공사비/기타비용 및 사용자 추가 종류 → 돈 항목으로 간주
+  return ["amount","pay","vendor","stage","cat"];
+}
+function kindFields(k){
+  const saved=userOpts["kindcfg_"+k];
+  if(Array.isArray(saved) && saved.length) return saved;
+  return defaultKindFields(k);
+}
+function kindIsMoney(k){ return kindFields(k).includes("amount"); }
 function onKindChange(){
-  const k=val("ef_kind"); const isMoney=(k==="자재비"||k==="공사비"||k==="기타비용");
-  show("g_amount",isMoney); show("g_pay",isMoney);
-  show("g_photofolder",k==="사진"); show("g_docfolder",k==="서류");
-  show("g_stage", k!=="기타비용");
-  document.getElementById("g_cat").style.display=isMoney?"block":"none";
-  fillCatSelect();
+  const k=val("ef_kind");
+  const f=kindFields(k);
+  show("g_amount", f.includes("amount"));
+  show("g_pay", f.includes("pay"));
+  show("g_photofolder", f.includes("photofolder"));
+  show("g_docfolder", f.includes("docfolder"));
+  show("g_stage", f.includes("stage"));
+  document.getElementById("g_cat").style.display = f.includes("cat")?"block":"none";
+  // 거래처 칸 표시
+  const gv=document.getElementById("ef_vendor"); if(gv){ const fld=gv.closest('.field'); if(fld) fld.style.display=f.includes("vendor")?"block":"none"; }
+  if(f.includes("cat")) fillCatSelect();
 }
 function fillStageSelect(preset){
   buildOptSelect("ef_stage","stages",preset||"","(공정 선택 안 함)");
@@ -1894,9 +1945,34 @@ function fillCatSelect(){
     buildOptSelect("ef_cat","etc_cats","");
     return;
   }
-  // 자재비/공사비: 공정별 세부항목 (stage_cat_<stage>). 공정 미선택 시 공통 키 사용
+  // 공정별 세부항목 (stage_cat_<stage>). 공정 미선택 시 공통 키
   const key = stage? ("stage_cat_"+stage) : "stage_cat_공통";
   buildOptSelect("ef_cat", key, "");
+}
+/* 종류별 칸 설정 모달 */
+let _kindCfgKind=null;
+function openKindConfig(){
+  const k=val("ef_kind"); if(!k){ alert("먼저 종류를 선택하세요."); return; }
+  _kindCfgKind=k;
+  const cur=kindFields(k);
+  document.getElementById("kindCfgTitle").textContent='"'+k+'" 종류에 표시할 칸';
+  document.getElementById("kindCfgList").innerHTML = ALL_FIELDS.map(f=>
+    `<label class="kindcfg-row"><input type="checkbox" value="${f}" ${cur.includes(f)?'checked':''}> ${esc(FIELD_LABELS[f])}</label>`
+  ).join("");
+  openModal("kindConfigModal");
+}
+async function saveKindConfig(){
+  if(!_kindCfgKind) return;
+  const checked=[...document.querySelectorAll('#kindCfgList input:checked')].map(c=>c.value);
+  userOpts["kindcfg_"+_kindCfgKind]=checked;
+  await saveUserOpts("kindcfg_"+_kindCfgKind);
+  closeModal("kindConfigModal");
+  onKindChange(); // 즉시 반영
+}
+function resetKindConfig(){
+  if(!_kindCfgKind) return;
+  const def=defaultKindFields(_kindCfgKind);
+  document.querySelectorAll('#kindCfgList input').forEach(c=>{ c.checked=def.includes(c.value); });
 }
 function openEntryModal(presetStage,presetKind){
   if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
@@ -1949,7 +2025,9 @@ async function processFile(f){
 }
 async function saveEntry(){
   const title=val("ef_title").trim(); if(!title){alert("제목을 입력하세요.");return;}
-  const k=val("ef_kind"); const isMoney=(k==="자재비"||k==="공사비"||k==="기타비용");
+  const k=val("ef_kind");
+  const f=kindFields(k);
+  const isMoney=f.includes("amount");
   const cur=val("ef_currency")||"KRW";
   const amtOrig= isMoney&&val("ef_amount")?Number(val("ef_amount")):null;
   let amtKRW=amtOrig;
@@ -1964,24 +2042,24 @@ async function saveEntry(){
     for(let i=0;i<fi.files.length;i++){ showUploading("파일 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); files.push(await processFile(fi.files[i])); }
     hideUploading();
   }
-  const photoFolder = k==="사진" ? val("ef_photofolder") : null;
-  const docFolder = k==="서류" ? val("ef_docfolder") : null;
+  const photoFolder = f.includes("photofolder") ? val("ef_photofolder") : null;
+  const docFolder = f.includes("docfolder") ? val("ef_docfolder") : null;
   await db.collection(ENTRIES).add({
     projectId:currentProjectId, kind:k, title, date:val("ef_date"),
-    stage:(k!=="기타비용"&&val("ef_stage"))?val("ef_stage"):null,
-    cat:isMoney?val("ef_cat"):null,
+    stage:(f.includes("stage")&&val("ef_stage"))?val("ef_stage"):null,
+    cat: f.includes("cat")?val("ef_cat"):null,
     photoFolder, docFolder,
-    vendor:val("ef_vendor").trim(),
+    vendor: f.includes("vendor")?val("ef_vendor").trim():"",
     amount: isMoney? (amtKRW||null) : null,
     amountOrig: (isMoney&&cur==="USD")?amtOrig:null,
     currency: isMoney?cur:null,
     fxRate: (isMoney&&cur==="USD")?_fxRate:null,
-    pay:isMoney?val("ef_pay"):null,
+    pay: f.includes("pay")?val("ef_pay"):null,
     memo:val("ef_memo").trim(), files,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
-  if(k==="사진" && files.some(f=>(f.type||"").startsWith("image/"))){ activeTab="사진"; window._photoOpenId=photoFolder; }
-  else if(k==="서류" && files.length){ activeTab="서류"; window._docOpenId=docFolder; }
+  if(f.includes("photofolder") && files.some(f2=>(f2.type||"").startsWith("image/"))){ activeTab="사진"; window._photoOpenId=photoFolder; }
+  else if(f.includes("docfolder") && files.length){ activeTab="서류"; window._docOpenId=docFolder; }
   btn.disabled=false; btn.textContent="저장";
   closeModal("entryModal"); await reloadCurrent();
  }catch(err){ btn.disabled=false; btn.textContent="저장"; hideUploading(); showError("기록 저장", err); }
@@ -2073,7 +2151,10 @@ function editCost(id){
   document.getElementById("ce_title").value=e.title||"";
   document.getElementById("ce_date").value=e.date||"";
   document.getElementById("ce_amount").value=e.amount!=null?e.amount:"";
-  document.getElementById("ce_kind").value=(e.kind==="기타비용")?"기타비용":(e.kind==="공사비"?"공사비":"자재비");
+  // 종류 셀렉트: 기본 3종 + 현재 기록의 종류(사용자 추가 종류 포함) 보존
+  const base=["자재비","공사비","기타비용"];
+  const kinds = base.includes(e.kind)? base : base.concat([e.kind||"기타비용"]);
+  document.getElementById("ce_kind").innerHTML = kinds.map(k=>`<option ${k===e.kind?'selected':''}>${esc(k)}</option>`).join("");
   document.getElementById("ce_stage").innerHTML='<option value="">(미지정)</option>'+opts("stages").map(s=>`<option ${e.stage===s?'selected':''}>${esc(s)}</option>`).join("");
   document.getElementById("ce_vendor").value=e.vendor||"";
   document.getElementById("vendorList").innerHTML=vendors.map(v=>`<option value="${esc(v.name)}">`).join("");

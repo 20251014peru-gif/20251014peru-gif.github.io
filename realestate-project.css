@@ -270,6 +270,19 @@ main{flex:1; padding:20px 24px; overflow-y:auto;}
 .opt-row select{flex:1;}
 .opt-row .opt-add{flex:0 0 auto; padding:8px 10px; font-size:12px; background:var(--accent-soft); color:var(--accent); border:1px solid var(--line); border-radius:8px; cursor:pointer;}
 .field select{width:100%;}
+/* 옵션 관리(추가/삭제) 목록 */
+.opt-manage-list{max-height:200px; overflow-y:auto; border:1px solid var(--line); border-radius:10px; padding:6px;}
+.opt-manage-row{display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px;}
+.opt-manage-row:hover{background:var(--accent-soft);}
+.opt-manage-row span{flex:1; font-size:13.5px;}
+.opt-del-btn{flex:0 0 auto; border:1px solid #e6c4be; background:#fff; color:var(--danger); border-radius:7px; padding:4px 10px; font-size:12px; cursor:pointer;}
+.opt-del-btn:hover{background:var(--danger); color:#fff;}
+/* 종류별 칸 설정 */
+.field-cfg{font-size:11px; font-weight:500; color:var(--accent); text-decoration:none; margin-left:6px; background:var(--accent-soft); padding:2px 8px; border-radius:6px;}
+.field-cfg:hover{background:var(--accent); color:#fff;}
+.kindcfg-list{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+.kindcfg-row{display:flex; align-items:center; gap:8px; font-size:14px; padding:9px 11px; border:1px solid var(--line); border-radius:10px; background:#fcfbf8; cursor:pointer;}
+.kindcfg-row input{width:17px; height:17px;}
 
 /* 업체 */
 .vendor{display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line);}

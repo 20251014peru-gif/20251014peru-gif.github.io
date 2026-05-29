@@ -38,7 +38,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.1</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.2</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
@@ -100,7 +100,7 @@
   <div class="modal">
     <h3 id="entryModalTitle">기록 추가</h3>
     <div class="row2">
-      <div class="field"><label>종류 *</label><select id="ef_kind" onchange="onKindChange()"></select></div>
+      <div class="field"><label>종류 * <a href="#" class="field-cfg" onclick="openKindConfig();return false;">⚙ 칸 설정</a></label><select id="ef_kind" onchange="onKindChange()"></select></div>
       <div class="field"><label>날짜</label><input id="ef_date" type="date"></div>
     </div>
     <div class="row2">
@@ -202,13 +202,35 @@
 
 <!-- 옵션 추가 미니 모달 (모든 셀렉트의 "+ 직접 추가"가 공용) -->
 <div class="modal-bg" id="addOptModal">
-  <div class="modal" style="width:min(420px,100%)">
+  <div class="modal" style="width:min(440px,100%)">
     <h3 id="addOptTitle">새 옵션 추가</h3>
     <div class="hint" id="addOptHint" style="margin-bottom:10px"></div>
-    <div class="field"><label>새 항목</label><input id="addOptInput" placeholder="추가할 이름을 입력하세요"></div>
+    <div class="field"><label>새 항목 추가</label>
+      <div style="display:flex;gap:6px">
+        <input id="addOptInput" placeholder="추가할 이름을 입력하세요" style="flex:1" onkeydown="if(event.key==='Enter')confirmAddOpt()">
+        <button class="btn btn-primary btn-sm" onclick="confirmAddOpt()" style="flex:0 0 auto">추가</button>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:6px"><label>내가 추가한 항목 (삭제 가능)</label>
+      <div id="addOptList" class="opt-manage-list"></div>
+    </div>
+    <div class="hint">※ 기본 제공 항목은 삭제할 수 없고, 직접 추가한 항목만 지울 수 있습니다.</div>
     <div class="modal-acts">
-      <button class="btn btn-primary" onclick="confirmAddOpt()">추가</button>
-      <button class="btn btn-line" onclick="closeModal('addOptModal')">취소</button>
+      <button class="btn btn-line" onclick="closeModal('addOptModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 종류별 표시 칸 설정 모달 -->
+<div class="modal-bg" id="kindConfigModal">
+  <div class="modal" style="width:min(420px,100%)">
+    <h3 id="kindCfgTitle">표시할 칸 설정</h3>
+    <div class="hint" style="margin-bottom:10px">이 종류를 선택했을 때 기록 모달에 보일 칸을 고르세요. 예) 교통비 → 금액·결제수단 켜기.</div>
+    <div id="kindCfgList" class="kindcfg-list"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveKindConfig()">저장</button>
+      <button class="btn btn-ghost" onclick="resetKindConfig()">기본값</button>
+      <button class="btn btn-line" onclick="closeModal('kindConfigModal')">취소</button>
     </div>
   </div>
 </div>
