@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v38";
+const APP_VERSION = "v39";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -268,7 +268,7 @@ function attachLinksRO(arr){
 }
 function attachMiniRO(arr){
   if(!arr||!arr.length) return "";
-  return `<div class="row-attach-mini">`+arr.map(a=>`<a href="${toLocalUrl(a.path)}" title="${esc(a.path)}" onclick="event.stopPropagation()">${fileIcon(a.path)} ${esc(a.label||a.path.split(/[\\\/]/).pop()||a.path)}</a>`).join("")+`</div>`;
+  return `<div class="row-attach-mini">`+arr.filter(a=>a && a.path).map(a=>`<a href="${toLocalUrl(a.path)}" title="${esc(a.path)}" onclick="event.stopPropagation()">${fileIcon(a.path)} ${esc(a.label||a.path.split(/[\\\/]/).pop()||a.path)}</a>`).join("")+`</div>`;
 }
 
 /* 날짜 범위 필터 */
@@ -394,6 +394,7 @@ async function init(){
   }catch(e){ online=false; setStatus(false); logErr("초기 연결", e); }
   await loadAll();
   migrateTissueToJumbo(); // v26: 휴지 → 점보롤 자동 변환
+  migrateBadMemoAttachments(); // v38: 깨진 첨부 정리
   renderStatusChips(); renderAll();
   try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
 }
@@ -420,8 +421,50 @@ function migrateTissueToJumbo(){
     setTimeout(()=>toast(`✅ 휴지 ${changed}건이 자동으로 점보롤로 변경되었어요`, 3500), 800);
   }
 }
+// v38: 메모의 잘못된 attachments({type:"image",data:...}) 정리 → photos로 이동
+function migrateBadMemoAttachments(){
+  let changed = 0;
+  entries.forEach(e=>{
+    if(e.kind==="memo" && Array.isArray(e.attachments) && e.attachments.length){
+      const badItems = e.attachments.filter(a => a && a.data && !a.path);
+      if(badItems.length){
+        // 이미지 데이터를 photos로 옮기기
+        if(!Array.isArray(e.photos)) e.photos = [];
+        badItems.forEach(a => {
+          if(typeof a.data === "string") e.photos.push(a.data);
+        });
+        // attachments에서 제거
+        e.attachments = e.attachments.filter(a => a && a.path);
+        // body 필드 호환 (content → body)
+        if(e.content && !e.body) e.body = e.content;
+        if(online && db){
+          db.collection(COL).doc(e.id).set(e).catch(()=>{});
+        }
+        changed++;
+      }
+    }
+  });
+  if(changed>0){
+    lsSave();
+    console.log(`✅ v38 마이그레이션: 메모 ${changed}건의 깨진 첨부 정리됨`);
+  }
+}
+
 function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
-function renderAll(){ renderWork(); renderPlan(); renderMemo(); renderCall(); renderVac(); renderMeeting(); renderDeliver(); renderCalendar(); renderFileLink(); renderSite(); renderPassword(); renderMaterial(); renderCleaning(); renderExpense(); renderDiag(); }
+function renderAll(){
+  // v38: 한 함수 에러가 나머지를 막지 않도록 각각 try-catch
+  const fns = [
+    ["work", renderWork], ["plan", renderPlan], ["memo", renderMemo],
+    ["call", renderCall], ["vac", renderVac], ["meeting", renderMeeting],
+    ["deliver", renderDeliver], ["calendar", renderCalendar],
+    ["filelink", renderFileLink], ["site", renderSite], ["password", renderPassword],
+    ["material", renderMaterial], ["cleaning", renderCleaning],
+    ["expense", renderExpense], ["diag", renderDiag]
+  ];
+  fns.forEach(([name, fn])=>{
+    try{ fn(); }catch(err){ console.error(`render${name} 에러:`, err); }
+  });
+}
 
 /* ===== 탭 ===== */
 // v35: 뒤로 가기 히스토리 (5단계까지)
@@ -3983,8 +4026,8 @@ function quickMemoToFormal(){
     kind: "memo",
     date: todayStr(),
     title,
-    content: t,
-    attachments: quickMemoPhotos.map(src=>({type:"image", data:src})),
+    body: t,            // 메모는 'body' 필드 사용
+    photos: quickMemoPhotos.slice(),  // attachments가 아니라 photos!
     createdAt: Date.now()
   };
   addRecord(memoRec);
