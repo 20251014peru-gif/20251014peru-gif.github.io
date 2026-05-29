@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v24";
+const APP_VERSION = "v25";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -125,11 +125,13 @@ const SCHEMA={
     {k:"memo",label:"메모(선택)",type:"textarea",full:true},
   ],
   item:[
-    {k:"itemCode",label:"품목 ID (자동 부여 가능)",type:"text"},
+    {k:"itemCode",label:"품목 ID (내부 관리용)",type:"text"},
+    {k:"shopId",label:"서브원 상품ID (검색용)",type:"text"},
     {k:"itemName",label:"품목명",type:"text",full:true,req:true},
-    {k:"spec",label:"규격/모델",type:"text",full:true},
+    {k:"spec",label:"규격 (간단히)",type:"text",full:true},
     {k:"unit",label:"단위",type:"text"},
     {k:"field",label:"분야",type:"field"},
+    {k:"maker",label:"제조원",type:"text"},
     {k:"vendor",label:"주거래처/공급업체",type:"text"},
     {k:"unitPrice",label:"기본 단가 (원)",type:"number"},
     {k:"safetyStock",label:"안전재고 수량",type:"number"},
@@ -905,7 +907,7 @@ const CSV_COLS={
   meeting:[["date","날짜"],["title","제목"],["attendees","참석자"],["body","내용"]],
   deliver:[["date","날짜"],["dtype","전달종류"],["title","제목"],["content","내용"],["done","완료"]],
   schedule:[["date","예정일"],["sStatus","상태"],["sType","종류"],["title","예정내용"],["memo","메모"]],
-  item:[["itemCode","품목ID"],["itemName","품목명"],["spec","규격"],["unit","단위"],["field","분야"],["vendor","거래처"],["unitPrice","단가"],["safetyStock","안전재고"],["recurring","구매주기"],["location","보관위치"],["memo","메모"]],
+  item:[["itemCode","품목ID"],["shopId","상품ID"],["itemName","품목명"],["spec","규격"],["unit","단위"],["field","분야"],["maker","제조원"],["vendor","거래처"],["unitPrice","단가"],["safetyStock","안전재고"],["recurring","구매주기"],["location","보관위치"],["memo","메모"]],
   stock:[["date","거래일"],["stockType","구분"],["itemName","품목명"],["spec","규격"],["qty","수량"],["unitPrice","단가"],["amount","금액"],["vendor","거래처"],["docNo","전표번호"],["useTarget","사용처"],["memo","메모"]],
 };
 function csvCell(v){ if(v===true) return "완료"; if(v===false) return ""; let s=(v==null?"":String(v)); if(/[",\n\r]/.test(s)) s='"'+s.replace(/"/g,'""')+'"'; return s; }
@@ -2347,7 +2349,34 @@ function wireMaterialTab(){
   $("matFileUpload").addEventListener("change",handleMatFileUpload);
 }
 
-// 엑셀/CSV 파일 업로드 → AI 분석
+function extractJsonFromAIReply(reply, expectArray){
+  if(!reply) throw new Error("AI 응답이 비어있습니다");
+  let s = reply.trim();
+  // 1) ```json ... ``` 코드블럭 안에 들어있으면 추출
+  const codeBlock = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if(codeBlock) s = codeBlock[1].trim();
+  // 2) 배열을 기대하면 [ ... ], 객체면 { ... } 첫 매칭
+  if(expectArray){
+    const m = s.match(/\[[\s\S]*\]/);
+    if(m) s = m[0];
+  } else {
+    const m = s.match(/\{[\s\S]*\}/);
+    if(m) s = m[0];
+  }
+  try{
+    return JSON.parse(s);
+  }catch(e){
+    // 단일 따옴표 → 쌍따옴표 변환 시도
+    try{
+      const fixed = s.replace(/(\w+)'(\w+)/g,"$1__APOS__$2").replace(/'/g,'"').replace(/__APOS__/g,"'");
+      return JSON.parse(fixed);
+    }catch(e2){
+      throw new Error(`AI 응답에서 JSON을 찾을 수 없어요. 응답 앞부분: "${reply.slice(0,80)}..."`);
+    }
+  }
+}
+
+
 async function handleMatFileUpload(e){
   const file = e.target.files&&e.target.files[0];
   e.target.value = "";
@@ -2386,17 +2415,30 @@ async function handleMatFileUpload(e){
 // AI 추출 공통 로직 (텍스트와 파일 둘 다에서 호출)
 async function aiExtractFromText(txt, type, key){
   const sys = type==="stock"
-    ? `당신은 엑셀 데이터를 분석해 자재 입출고 내역을 추출하는 도우미입니다. 사용자가 붙여넣은 데이터를 분석해서 JSON 배열로만 답하세요. 각 항목은 다음 필드를 가집니다:
-{"date":"YYYY-MM-DD","stockType":"입고|출고","itemName":"품목명","spec":"규격","unit":"단위","qty":숫자,"unitPrice":숫자,"amount":숫자,"vendor":"거래처","docNo":"전표번호","useTarget":"사용처","memo":"메모"}
-- stockType: "구매","매입","입고" 같은 단어 → "입고", "사용","출고","불출" → "출고". 명시 없으면 입고로 추정.
+    ? `당신은 엑셀 데이터를 분석해 자재 입출고 내역을 추출하는 도우미입니다. 반드시 JSON 배열만 응답하세요. 다른 설명, 인사말, 코드블럭 표시(\`\`\`) 모두 금지. 응답은 [로 시작해서 ]로 끝나야 합니다.
+
+각 항목의 필드:
+{"date":"YYYY-MM-DD","stockType":"입고|출고","itemName":"품목명","spec":"규격(간단히)","unit":"단위","qty":숫자,"unitPrice":숫자,"amount":숫자,"vendor":"거래처","maker":"제조원","docNo":"전표번호","useTarget":"사용처","memo":"메모"}
+- stockType: "구매","매입","입고" 같은 단어 → "입고", "사용","출고","불출" → "출고". 명시 없으면 "입고".
 - 날짜: 다양한 형식을 YYYY-MM-DD로. 연도 없으면 ${calY}.
 - 숫자: 콤마/공백 제거. 빈값은 0.
-- 다른 설명 없이 JSON 배열만 답하세요. 예: [{"date":"2026-05-01",...}]`
-    : `당신은 엑셀 데이터를 분석해 자재 품목 마스터를 추출하는 도우미입니다. 사용자가 붙여넣은 데이터를 분석해서 JSON 배열로만 답하세요. 각 항목은:
-{"itemName":"품목명","spec":"규격","unit":"단위","field":"전기|소방|기계|통신|영선|주차|청소|기타","vendor":"거래처","unitPrice":숫자,"safetyStock":숫자,"recurring":"비주기|월간|분기|반기|연간|수시","location":"보관위치","memo":"메모"}
-- field: 품목 성격으로 추정. 모르면 "기타".
+- 규격은 핵심만 간략히 (전체 옵션 나열하지 말고 핵심 1~2개만).
+- 예: [{"date":"2026-05-01","stockType":"입고","itemName":"점보롤","qty":10}]`
+    : `당신은 엑셀 데이터를 분석해 자재 품목 마스터를 추출하는 도우미입니다. 반드시 JSON 배열만 응답하세요. 다른 설명, 인사말, 코드블럭 표시(\`\`\`) 모두 금지. 응답은 [로 시작해서 ]로 끝나야 합니다.
+
+각 항목의 필드:
+{"shopId":"상품ID(엑셀의 상품ID 또는 상품코드 컬럼 값을 그대로)","itemName":"품목명","spec":"규격을 간단히 핵심만","unit":"단위","field":"전기|소방|기계|통신|영선|주차|청소|기타","maker":"제조원","vendor":"거래처/공급업체","unitPrice":숫자,"safetyStock":숫자,"recurring":"비주기|월간|분기|반기|연간|수시","location":"보관위치","memo":"메모"}
+
+중요한 규칙:
+- shopId: 엑셀의 "상품ID", "상품코드", "제품번호" 같은 컬럼 값을 그대로. 없으면 빈 문자열.
+- spec(규격): 핵심 정보만 추려서 짧게 (예: "300mm×100m·재생" / 전체 옵션 나열 금지)
+- unit: "1EA", "1BOX", "1ROL", "1PR" 같은 형식은 단위 부분만 추출 ("EA", "BOX", "ROL", "PR")
+- field: 품목 성격으로 추정. 청소용품 → "청소", 전기재 → "전기", 모르면 "기타".
+- maker: "제조원" 또는 "메이커" 컬럼.
+- vendor: "거래처", "구매처", "공급업체" 컬럼. 없으면 빈 문자열.
 - recurring: 명시 없으면 "비주기".
-- 다른 설명 없이 JSON 배열만 답하세요.`;
+- 통화단위(KRW 등)는 무시. 총액 컬럼도 무시(단가만 사용).
+- 예: [{"shopId":"6573068","itemName":"소프트밴드","spec":"SR끈;15mm*100m","unit":"ROL","maker":"(주)동원피앤아이","unitPrice":2430,"field":"기타"}]`;
   const res=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
     headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
@@ -2405,10 +2447,7 @@ async function aiExtractFromText(txt, type, key){
   if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j?.error?.message||`HTTP ${res.status}`); }
   const data=await res.json();
   const reply=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
-  let jsonStr=reply;
-  const m=reply.match(/\[[\s\S]*\]/);
-  if(m) jsonStr=m[0];
-  const arr=JSON.parse(jsonStr);
+  const arr=extractJsonFromAIReply(reply, true);
   if(!Array.isArray(arr)||!arr.length){ toast("AI가 데이터를 추출하지 못했습니다"); return; }
   if(!confirm(`AI가 ${arr.length}건을 추출했습니다.\n그대로 추가할까요?`)) return;
   // 추가
@@ -2418,11 +2457,13 @@ async function aiExtractFromText(txt, type, key){
       if(!it.itemName) continue;
       addRecord({
         kind:"item",
-        itemCode:nextItemCode(),
+        itemCode:it.itemCode||nextItemCode(),
+        shopId:it.shopId||"",
         itemName:it.itemName||"",
         spec:it.spec||"",
         unit:it.unit||"",
         field:it.field||"기타",
+        maker:it.maker||"",
         vendor:it.vendor||"",
         unitPrice:Number(it.unitPrice)||0,
         safetyStock:Number(it.safetyStock)||0,
@@ -2441,10 +2482,12 @@ async function aiExtractFromText(txt, type, key){
         item=addRecord({
           kind:"item",
           itemCode:nextItemCode(),
+          shopId:t.shopId||"",
           itemName:t.itemName,
           spec:t.spec||"",
           unit:t.unit||"",
-          field:"기타",
+          field:t.field||"기타",
+          maker:t.maker||"",
           vendor:t.vendor||"",
           unitPrice:Number(t.unitPrice)||0,
           safetyStock:0,
@@ -2499,7 +2542,7 @@ function renderStockOverview(){
     .filter(it=>MAT_FILTER.recurring==="전체"||it.recurring===MAT_FILTER.recurring)
     .filter(it=>{
       if(!MAT_FILTER.q.trim()) return true;
-      const s=[it.itemCode,it.itemName,it.spec,it.vendor,it.memo].filter(Boolean).join(" ").toLowerCase();
+      const s=[it.itemCode,it.shopId,it.itemName,it.spec,it.maker,it.vendor,it.memo].filter(Boolean).join(" ").toLowerCase();
       return s.includes(MAT_FILTER.q.trim().toLowerCase());
     });
   // 재고 계산 + 안전재고 필터
@@ -2511,17 +2554,17 @@ function renderStockOverview(){
     return Number(it.safetyStock||0)>0 ? r.stock < Number(r.item.safetyStock) : r.stock<=0;
   }).sort((a,b)=>(a.item.itemName||"").localeCompare(b.item.itemName||"","ko"));
   const body=$("matStockBody");
-  if(!rows.length){ body.innerHTML=`<tr><td colspan="9" class="empty">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</td></tr>`; return; }
+  if(!rows.length){ body.innerHTML=`<tr><td colspan="10" class="empty">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</td></tr>`; return; }
   body.innerHTML=rows.map(r=>{
     const it=r.item, st=r.stock;
     const safe=Number(it.safetyStock||0);
     const lowCls = safe>0 && st<safe ? "st-low" : (st<=0 ? "st-zero" : "");
-    const recCls = it.recurring && it.recurring!=="비주기" ? "rec-on" : "";
     return `<tr data-id="${it.id}" class="${lowCls}">
-      <td>${esc(it.itemCode||"")}</td>
+      <td>${esc(it.shopId||it.itemCode||"")}</td>
       <td><b>${esc(it.itemName||"")}</b>${it.spec?`<br><span style="font-size:11px;color:var(--ink-soft)">${esc(it.spec)}</span>`:""}</td>
       <td>${esc(it.unit||"")}</td>
       <td><span class="pill ${fieldClass(it.field)}">${esc(it.field||"")}</span></td>
+      <td>${esc(it.maker||"")}</td>
       <td>${esc(it.vendor||"")}</td>
       <td class="num">${it.unitPrice?won(it.unitPrice):""}</td>
       <td class="num"><b style="font-size:15px">${st}</b>${safe?`<br><span style="font-size:10.5px;color:var(--ink-soft)">안전 ${safe}</span>`:""}</td>
@@ -2555,18 +2598,19 @@ function renderItemList(){
     .filter(it=>MAT_FILTER.recurring==="전체"||it.recurring===MAT_FILTER.recurring)
     .filter(it=>{
       if(!MAT_FILTER.q.trim()) return true;
-      const s=[it.itemCode,it.itemName,it.spec,it.vendor,it.memo,it.location].filter(Boolean).join(" ").toLowerCase();
+      const s=[it.itemCode,it.shopId,it.itemName,it.spec,it.maker,it.vendor,it.memo,it.location].filter(Boolean).join(" ").toLowerCase();
       return s.includes(MAT_FILTER.q.trim().toLowerCase());
     })
     .sort((a,b)=>(a.itemName||"").localeCompare(b.itemName||"","ko"));
   const body=$("matItemBody");
-  if(!items.length){ body.innerHTML=`<tr><td colspan="9" class="empty">등록된 품목이 없습니다.</td></tr>`; return; }
+  if(!items.length){ body.innerHTML=`<tr><td colspan="10" class="empty">등록된 품목이 없습니다.</td></tr>`; return; }
   body.innerHTML=items.map(it=>`<tr data-id="${it.id}">
-    <td>${esc(it.itemCode||"")}</td>
+    <td>${esc(it.shopId||it.itemCode||"")}</td>
     <td><b>${esc(it.itemName||"")}</b></td>
     <td>${esc(it.spec||"")}</td>
     <td>${esc(it.unit||"")}</td>
     <td><span class="pill ${fieldClass(it.field)}">${esc(it.field||"")}</span></td>
+    <td>${esc(it.maker||"")}</td>
     <td>${esc(it.vendor||"")}</td>
     <td class="num">${it.unitPrice?won(it.unitPrice):""}</td>
     <td>${it.recurring&&it.recurring!=="비주기"?`<span class="pill leave">🔁 ${esc(it.recurring)}</span>`:esc(it.recurring||"")}</td>
@@ -3026,13 +3070,13 @@ async function cleaningAIAnalyze(){
     if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j?.error?.message||`HTTP ${res.status}`); }
     const data=await res.json();
     const reply=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
-    let jsonStr=reply;
-    const m=reply.match(/\{[\s\S]*\}/);
-    if(m) jsonStr=m[0];
-    const parsed=JSON.parse(jsonStr);
+    const parsed=extractJsonFromAIReply(reply, false);
     // cleaningData에 적용 (사진은 유지)
     cleaningData={...cleaningData, ...parsed, photo: cleaningPhoto};
     if(!Array.isArray(cleaningData.staffWork)) cleaningData.staffWork=[];
+    if(!Array.isArray(cleaningData.directorOrders)) cleaningData.directorOrders=[];
+    if(!Array.isArray(cleaningData.directives)) cleaningData.directives=[];
+    if(!Array.isArray(cleaningData.specials)) cleaningData.specials=[];
     renderCleaningModal(cleaningData.id);
     toast("✅ AI 분석 완료 — 내용 확인 후 수정/저장하세요");
   }catch(e){
