@@ -1,12 +1,24 @@
 /* ============================================================
-   부동산 프로젝트 관리 v3.0
-   - 파일 분리(HTML/CSS/JS)
-   - USD↔KRW 환율 자동 환산
-   - 모든 셀렉트 "+ 직접 추가" 옵션 시스템 (Firestore: realestate_options)
-   - 자재 재고 + 사용 이력
-   - 견적 비교, 부동산 방문 관리
-   - 주말 빠른 입력 (가스/톨비/식비 세트)
-   - 백업/복원
+   부동산 프로젝트 관리 v3.1
+   ------------------------------------------------------------
+   [v3.1 변경 내역]
+   1) 철거 등 공정 기록의 '결제수단' 미표시 버그 수정
+      (ef_pay 셀렉트에 옵션을 채우지 않던 문제 → buildOptSelect 추가)
+   2) 비용·주말비용 내역 기본 보기를 '한 줄 목록형(엑셀형)'으로 변경 (카드형은 토글)
+   3) 주말 세트 입력을 '줄 추가식'으로 전면 개편
+      - 종류(식비/톨비/주유·가스/…, 직접 추가 가능)
+      - 식비 끼니: 아침/점심/저녁/집간식/현장간식
+      - 톨비: 상행/하행 / 주유·가스: 휘발유·가스 × 상행/하행/충전
+      - 줄 복제·삭제, 여러 번 추가 자유
+   4) 부동산: 네고 희망가·특이사항 추가, '방문 횟수' 중심 정렬/표시,
+      방문 이력 펼침·개별 삭제(deleteVisit)
+   5) 전화번호 전부 탭하면 바로 전화(telLink) — 부동산·견적·업체·자재
+   6) 자재 카드에 '구매량 + 재고 = 총 보유 수량' 합계 표시
+   ------------------------------------------------------------
+   [기존 v3.0]
+   - 파일 분리(HTML/CSS/JS) / USD↔KRW 환율 자동 환산
+   - 모든 셀렉트 "+ 직접 추가" 옵션 시스템 (realestate_options)
+   - 자재 재고 + 사용 이력 / 견적 비교 / 백업·복원
    ============================================================ */
 
 /* ===== Firebase ===== */
@@ -58,7 +70,8 @@ const DEFAULT_OPTS = {
   ],
   mat_spaces:["거실","주방","안방","작은방","드레스룸","욕실(공용)","욕실(안방)","현관","발코니/베란다","복도","전체/공용","기타"],
   mat_cats:["타일","도배(벽지)","바닥재(마루/장판)","페인트/도장","필름","싱크대/주방가구","붙박이장/가구","조명/등기구","스위치/콘센트","위생기구(양변기/세면대)","수전/밸브","문/도어","창호/샷시","몰딩/걸레받이","실리콘/방수","단열/보온재","목자재(합판/석고)","철물/하드웨어","기타"],
-  mat_units:["EA(개)","㎡","평","m(미터)","box(박스)","롤","통","set(세트)","장","자","포","말"]
+  mat_units:["EA(개)","㎡","평","m(미터)","box(박스)","롤","통","set(세트)","장","자","포","말"],
+  wk_kinds:["식비","톨비(통행료)","주유·가스","주차비","숙박비","기타"]
 };
 
 /* 공정별 자재(세부 항목) — 기본값. 사용자 추가분은 stage_cats[stage] 키로 합쳐짐 */
@@ -228,8 +241,18 @@ async function confirmAddOpt(){
       sel.dispatchEvent(new Event('change'));
     }
   }
+  // 주말 모달이 열려있고 종류(wk_kinds)를 추가했으면 줄 그리드 재렌더
+  if(_addOptKey==="wk_kinds" && document.getElementById("weekendModal").classList.contains("open")){
+    readWkRows(); renderWeekend();
+  }
+  // OPT_LABELS 미등록 옵션이지만 OPT 셀렉트가 화면에 떠 있을 수 있으니 현재 탭 재렌더 (옵션 추가 직후 즉시 반영)
+  if(OPT_REFRESH_TAB[_addOptKey] && currentProjectId){
+    const p=projects.find(x=>x.id===currentProjectId); if(p) renderTab(p);
+  }
   closeModal("addOptModal");
 }
+/* 옵션 추가 직후, 현재 탭에 바로 반영이 필요한 키들 */
+const OPT_REFRESH_TAB={ stages:true, photo_folders:true, doc_folders:true };
 /* 카테고리별 한글 라벨 (옵션 모달 안내 문구용) */
 const OPT_LABELS={
   stages:"공정 단계", kinds:"기록 종류", pays:"결제 수단",
@@ -399,7 +422,7 @@ async function selectProject(id){
     chatHistory=[]; window._photoOpenId=null; window._docOpenId=null;
     window._photoSelMode=false; window._photoSel={};
     window._matFilter=""; window._matGroup="space";
-    window._quoteSort={key:"krw",dir:1}; window._agentSort={key:"visits",dir:-1};
+    window._quoteSort={key:"krw",dir:1}; window._agentSort={key:"count",dir:-1};
   }
   currentProjectId=id;
   await reloadCurrent();
@@ -727,10 +750,11 @@ function renderLog(e, opts){
   opts=opts||{};
   if(opts.compact){
     const kindTag = (e.kind==="자재비"||e.kind==="공사비") ? (e.stage||e.kind) : (e.cat||e.kind||'');
+    const midCol = opts.payAsVendor ? (e.pay||'') : (e.vendor||'');
     return `<div class="logrow">
       <span class="lr-tag">${esc(kindTag)}</span>
       <span class="lr-title">${esc(e.title)}</span>
-      <span class="lr-vendor">${esc(e.vendor||'')}</span>
+      <span class="lr-vendor">${esc(midCol)}</span>
       <span class="lr-amt">${e.amount?Number(e.amount).toLocaleString()+'원':''}</span>
       <span class="lr-date">${e.date||''}</span>
       ${opts.noEdit?'':`<button class="lr-btn" onclick="editCost('${e.id}')">수정</button>`}
@@ -768,7 +792,7 @@ function renderVendor(v,spent){
   return `<div class="vendor">
     <span class="vtrade">${esc(v.trade||'기타')}</span>
     <div><div class="vname">${esc(v.name)}</div>${v.memo?`<div class="vmemo">${esc(v.memo)}</div>`:''}${spent?`<div class="vspent">지출 ${spent.toLocaleString()}원</div>`:''}</div>
-    <div class="vright"><a class="tel" href="tel:${(v.phone||'').replace(/[^0-9+]/g,'')}">${esc(v.phone||'')}</a>
+    <div class="vright"><a class="tel" href="tel:${(v.phone||'').replace(/[^0-9+]/g,'')}">📞 ${esc(v.phone||'')}</a>
       <button class="vedit" onclick="editVendor('${v.id}')">수정</button>
       <button class="vdel" onclick="deleteVendor('${v.id}')">삭제</button></div></div>`;
 }
@@ -827,6 +851,10 @@ function matCardHtml(m){
   }).join("");
   const useLog=(m.useLog||[]).slice().reverse().map(u=>`<div class="mat-useline">▸ ${esc(u.date||'')} −${u.qty}${m.unit?esc(m.unit):''} ${u.memo?'· '+esc(u.memo):''}</div>`).join("");
   const stockShow = (m.stock!=null && m.stock!=="");
+  const qtyN = Number(m.qty)||0;
+  const stockN = stockShow ? (Number(m.stock)||0) : 0;
+  const totalHold = qtyN + stockN; // 구매량 + 재고 = 총 보유
+  const unitTxt = m.unit?esc(m.unit):'';
   return `<div class="mat-card">
     <div class="mat-top">
       ${m.space?`<span class="l-tag 공정">${esc(m.space)}</span>`:''}
@@ -837,9 +865,10 @@ function matCardHtml(m){
     <div class="mat-name">${esc(m.name||'')}${m.brand?`<small>${esc(m.brand)}</small>`:''}</div>
     ${m.spec?`<div class="mat-spec">📐 ${esc(m.spec)}</div>`:''}
     <div class="mat-meta">
-      ${(unitKRW||m.qty)?`단가 <b>${unitKRW?unitKRW.toLocaleString():'-'}</b>원${m.currency==="USD"&&m.unitPrice?` <small>($${Number(m.unitPrice).toLocaleString()})</small>`:''} × 수량 <b>${m.qty?Number(m.qty).toLocaleString():'-'}</b>${m.unit?' '+esc(m.unit):''}<br>`:''}
-      ${stockShow?`📦 재고 <span class="mat-stock ${stockClass(m)}">${Number(m.stock).toLocaleString()}${m.unit?esc(m.unit):''}</span>${m.stockLoc?' · '+esc(m.stockLoc):''}<br>`:''}
-      ${m.supplier?`공급처 <b>${esc(m.supplier)}</b>`:''}${m.supplier&&m.contact?' · ':''}${m.contact?`<a href="tel:${(m.contact||'').replace(/[^0-9+]/g,'')}" style="color:var(--accent);text-decoration:none">${esc(m.contact)}</a>`:''}
+      ${(unitKRW||m.qty)?`단가 <b>${unitKRW?unitKRW.toLocaleString():'-'}</b>원${m.currency==="USD"&&m.unitPrice?` <small>($${Number(m.unitPrice).toLocaleString()})</small>`:''} × 구매수량 <b>${m.qty?Number(m.qty).toLocaleString():'-'}</b>${unitTxt}<br>`:''}
+      ${stockShow?`📦 재고 <span class="mat-stock ${stockClass(m)}">${stockN.toLocaleString()}${unitTxt}</span>${m.stockLoc?' · '+esc(m.stockLoc):''}<br>`:''}
+      ${(qtyN>0 && stockShow)?`🧮 총 보유 <b>${totalHold.toLocaleString()}${unitTxt}</b> <small>(구매 ${qtyN.toLocaleString()} + 재고 ${stockN.toLocaleString()})</small><br>`:''}
+      ${m.supplier?`공급처 <b>${esc(m.supplier)}</b>`:''}${m.supplier&&m.contact?' · ':''}${m.contact?telLink(m.contact):''}
       ${m.date?`${(m.supplier||m.contact)?'<br>':''}🗓 ${esc(m.date)}`:''}
     </div>
     ${m.memo?`<div class="mat-memo">${esc(m.memo)}</div>`:''}
@@ -1149,8 +1178,8 @@ function viewCost(p){
     </div>
     <div class="panel"><div class="panel-h">📋 지출 내역
       <span style="margin-left:auto;display:inline-flex;gap:4px">
-        <button class="mini-chip ${(window._costView||'card')==='card'?'on':''}" onclick="window._costView='card';renderTab(projects.find(x=>x.id===currentProjectId))">카드형</button>
-        <button class="mini-chip ${window._costView==='list'?'on':''}" onclick="window._costView='list';renderTab(projects.find(x=>x.id===currentProjectId))">목록형</button>
+        <button class="mini-chip ${(window._costView||'list')==='list'?'on':''}" onclick="window._costView='list';renderTab(projects.find(x=>x.id===currentProjectId))">목록형</button>
+        <button class="mini-chip ${window._costView==='card'?'on':''}" onclick="window._costView='card';renderTab(projects.find(x=>x.id===currentProjectId))">카드형</button>
       </span></div><div class="panel-body">
       <div class="filterbar">
         <select onchange="costFilter.stage=this.value;renderTab(projects.find(x=>x.id===currentProjectId))">${stageOptsHtml}</select>
@@ -1166,11 +1195,11 @@ function viewCost(p){
 }
 function renderCostList(list){
   if(!list.length) return '<div class="ai-empty">조건에 맞는 지출이 없습니다.</div>';
-  if(window._costView==='list'){
-    const head=`<div class="logrow head"><span class="lr-tag">분류</span><span class="lr-title">항목</span><span class="lr-vendor">거래처</span><span class="lr-amt">금액</span><span class="lr-date">날짜</span><span style="width:84px"></span></div>`;
-    return head+list.map(e=>renderLog(e,{compact:true})).join("");
+  if(window._costView==='card'){
+    return list.map(e=>renderLog(e)).join("");
   }
-  return list.map(e=>renderLog(e)).join("");
+  const head=`<div class="logrow head"><span class="lr-tag">분류</span><span class="lr-title">항목</span><span class="lr-vendor">거래처</span><span class="lr-amt">금액</span><span class="lr-date">날짜</span><span style="width:84px"></span></div>`;
+  return head+list.map(e=>renderLog(e,{compact:true})).join("");
 }
 function costFiltered(){
   const withAmt=entries.filter(e=>Number(e.amount)>0);
@@ -1202,7 +1231,7 @@ function viewQuotesAgents(p){
   <div class="panel"><div class="panel-h">🏢 부동산 관리 <span class="cnt">${agents.length}곳</span>
     <button class="btn btn-primary btn-sm add" onclick="openAgentModal()">+ 부동산 추가</button></div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:10px">‘방문 +1’로 데려온 손님을 기록합니다. 많이 데려온 순으로 자동 정렬돼, 실적 좋은 부동산 위주로 관리할 수 있습니다.</div>
+      <div class="hint" style="margin-bottom:10px">‘방문 +1’을 누를 때마다 방문 1회로 쌓입니다. <b>방문 횟수가 많은 부동산</b>이 위로 정렬돼, 자주 오는 곳 위주로 관리할 수 있습니다. 전화번호를 누르면 바로 전화가 걸립니다.</div>
       ${renderAgentTable()}
     </div></div>`;
 }
@@ -1239,7 +1268,7 @@ function renderQuoteTable(){
     return `<tr class="${cls}">
       <td>${esc(q.stage||'')}</td>
       <td>${esc(q.title||'')}${q.memo?`<br><span class="hint">${esc(q.memo)}</span>`:''}</td>
-      <td>${esc(q.vendor||'')}${q.phone?`<br><a href="tel:${(q.phone||'').replace(/[^0-9+]/g,'')}" style="color:var(--accent);text-decoration:none;font-size:12px">${esc(q.phone)}</a>`:''}</td>
+      <td>${esc(q.vendor||'')}${q.phone?`<br>${telLink(q.phone)}`:''}</td>
       <td class="num"><b>${amt.toLocaleString()}</b>${q.currency==="USD"?`<br><span class="hint">$${Number(q.amount).toLocaleString()}</span>`:''}</td>
       <td class="num">${q.days?Number(q.days)+'일':''}</td>
       <td>${q.date||''}${q.valid?`<br><span class="hint">~${q.valid}</span>`:''}</td>
@@ -1336,9 +1365,10 @@ async function deleteQuote(id){
 }
 
 /* 부동산 */
-function agentVisits(a){ return (a.visits||[]).reduce((s,v)=>s+(Number(v.count)||0),0); }
+function agentVisits(a){ return (a.visits||[]).reduce((s,v)=>s+(Number(v.count)||0),0); } // 데려온 인원 합
+function agentVisitCount(a){ return (a.visits||[]).length; } // 방문 횟수
 function sortAgents(key){
-  const s=window._agentSort||{key:"visits",dir:-1};
+  const s=window._agentSort||{key:"count",dir:-1};
   if(s.key===key) s.dir=-s.dir; else { s.key=key; s.dir=-1; }
   window._agentSort=s; renderTab(projects.find(x=>x.id===currentProjectId));
 }
@@ -1346,32 +1376,47 @@ function aSortHeader(label,key,cur){
   const on=cur.key===key; const ic=on?(cur.dir>0?'▲':'▼'):'⇅';
   return `<th class="sortable" onclick="sortAgents('${key}')">${esc(label)}<span class="sort-ic">${ic}</span></th>`;
 }
+function telLink(phone, cls){
+  if(!phone) return '';
+  const num=(phone||'').replace(/[^0-9+]/g,'');
+  return `<a class="tel-link ${cls||''}" href="tel:${num}">📞 ${esc(phone)}</a>`;
+}
 function renderAgentTable(){
   if(!agents.length) return '<div class="ai-empty">등록된 부동산이 없습니다. ‘+ 부동산 추가’로 입력하세요.</div>';
-  const s=window._agentSort||{key:"visits",dir:-1};
+  const s=window._agentSort||{key:"count",dir:-1};
+  const lastDate=a=>{ const vs=(a.visits||[]).map(v=>v.date).filter(Boolean).sort(); return vs.length?vs[vs.length-1]:""; };
   const getv={
-    name:a=>a.name||"", visits:a=>agentVisits(a),
-    last:a=>{ const vs=(a.visits||[]).map(v=>v.date).sort(); return vs.length?vs[vs.length-1]:""; },
-    price:a=>Number(a.price)||0
-  }[s.key]||(a=>agentVisits(a));
+    name:a=>a.name||"",
+    count:a=>agentVisitCount(a),
+    people:a=>agentVisits(a),
+    last:a=>lastDate(a),
+    price:a=>Number(a.price)||0,
+    nego:a=>Number(a.nego)||0
+  }[s.key]||(a=>agentVisitCount(a));
   let rows=agents.slice();
   rows.sort((a,b)=>{ const va=getv(a), vb=getv(b);
     if(typeof va==='number') return (va-vb)*s.dir;
     return String(va).localeCompare(String(vb))*s.dir; });
   const body=rows.map((a,i)=>{
-    const tv=agentVisits(a);
-    const vs=(a.visits||[]).map(v=>v.date).sort();
-    const last=vs.length?vs[vs.length-1]:"";
-    const rankCls = (s.key==='visits'&&s.dir<0&&i<3&&tv>0)?'top':'';
+    const vc=agentVisitCount(a);
+    const ppl=agentVisits(a);
+    const last=lastDate(a);
+    const rankCls = (s.key==='count'&&s.dir<0&&i<3&&vc>0)?'top':'';
+    // 방문 이력 (날짜 + 인원 + 메모) — 펼침
+    const hist=(a.visits||[]).slice().sort((x,y)=>(y.date||"").localeCompare(x.date||"")).map((v,vi)=>
+      `<div class="visit-hist-line">▸ ${esc(v.date||'')}${v.count?(' · '+v.count+'명'):''}${v.memo?(' · '+esc(v.memo)):''}
+        <button class="visit-del" title="이 방문 삭제" onclick="deleteVisit('${a.id}',${(a.visits||[]).indexOf(v)})">×</button></div>`).join("");
     return `<tr>
       <td><span class="agent-rank ${rankCls}">${i+1}</span></td>
-      <td><b>${esc(a.name||'')}</b>${a.agent?`<br><span class="hint">${esc(a.agent)}</span>`:''}</td>
-      <td>${a.phone?`<a href="tel:${(a.phone||'').replace(/[^0-9+]/g,'')}" style="color:var(--accent);text-decoration:none">${esc(a.phone)}</a>`:''}</td>
-      <td class="num">${a.price?Number(a.price).toLocaleString()+'만':''}</td>
-      <td><span class="visit-pill ${tv?'':'zero'}">${tv}명</span>${a.visits&&a.visits.length?`<br><span class="hint">${a.visits.length}회</span>`:''}</td>
+      <td><b>${esc(a.name||'')}</b>${a.agent?`<br><span class="hint">${esc(a.agent)}</span>`:''}
+        ${a.memo?`<br><span class="hint">📝 ${esc(a.memo)}</span>`:''}</td>
+      <td>${telLink(a.phone)}</td>
+      <td class="num">${a.price?Number(a.price).toLocaleString()+'만':''}${a.nego?`<br><span class="hint">네고 ${Number(a.nego).toLocaleString()}만</span>`:''}</td>
+      <td><span class="visit-pill ${vc?'':'zero'}">${vc}회</span>${ppl?`<br><span class="hint">손님 ${ppl}명</span>`:''}
+        ${hist?`<div class="visit-hist">${hist}</div>`:''}</td>
       <td>${last||'<span class="hint">방문 없음</span>'}</td>
       <td>
-        <button class="lr-btn" onclick="openVisit('${a.id}')">방문 +</button>
+        <button class="lr-btn" onclick="openVisit('${a.id}')">방문 +1</button>
         <button class="lr-btn" onclick="editAgent('${a.id}')">수정</button>
         <button class="lr-btn del" onclick="deleteAgent('${a.id}')">삭제</button>
       </td>
@@ -1382,17 +1427,18 @@ function renderAgentTable(){
       <th>#</th>
       ${aSortHeader('부동산','name',s)}
       <th>전화</th>
-      ${aSortHeader('내놓은가','price',s)}
-      ${aSortHeader('데려온 인원','visits',s)}
+      ${aSortHeader('내놓은가/네고','price',s)}
+      ${aSortHeader('방문 횟수','count',s)}
       ${aSortHeader('최근 방문','last',s)}
       <th></th>
-    </tr></thead><tbody>${body}</tbody></table></div>`;
+    </tr></thead><tbody>${body}</tbody></table></div>
+    <div class="hint" style="margin-top:8px">‘방문 횟수’ 헤더로 정렬하면 자주 오는(=적극적인) 부동산이 위로 올라옵니다. 한 번이라도 방문한 곳을 우선 관리하세요.</div>`;
 }
 function openAgentModal(){
   if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
   document.getElementById("agentModalTitle").textContent="부동산 추가";
   document.getElementById("af_id").value="";
-  ["af_name","af_agent","af_phone","af_price","af_memo"].forEach(id=>document.getElementById(id).value="");
+  ["af_name","af_agent","af_phone","af_price","af_nego","af_memo"].forEach(id=>document.getElementById(id).value="");
   openModal("agentModal");
 }
 function editAgent(id){
@@ -1403,6 +1449,7 @@ function editAgent(id){
   document.getElementById("af_agent").value=a.agent||"";
   document.getElementById("af_phone").value=a.phone||"";
   document.getElementById("af_price").value=a.price!=null?a.price:"";
+  document.getElementById("af_nego").value=a.nego!=null?a.nego:"";
   document.getElementById("af_memo").value=a.memo||"";
   openModal("agentModal");
 }
@@ -1411,7 +1458,9 @@ async function saveAgent(){
   if(!name){alert("부동산 이름을 입력하세요.");return;}
   if(!phone){alert("전화번호를 입력하세요.");return;}
   const data={projectId:currentProjectId,name,agent:val("af_agent").trim(),phone,
-    price:val("af_price")?Number(val("af_price")):null,memo:val("af_memo").trim()};
+    price:val("af_price")?Number(val("af_price")):null,
+    nego:val("af_nego")?Number(val("af_nego")):null,
+    memo:val("af_memo").trim()};
   try{
     const id=document.getElementById("af_id").value;
     if(id){ await db.collection(AGENTS).doc(id).update(data); }
@@ -1428,16 +1477,16 @@ async function deleteAgent(id){
 function openVisit(id){
   const a=agents.find(x=>x.id===id); if(!a) return;
   document.getElementById("vs_id").value=id;
-  document.getElementById("vs_hint").textContent=(a.name||"")+" — 지금까지 "+agentVisits(a)+"명 데려옴 ("+((a.visits||[]).length)+"회)";
+  document.getElementById("vs_hint").textContent=(a.name||"")+" — 지금까지 "+agentVisitCount(a)+"회 방문"+(agentVisits(a)?(" · 손님 "+agentVisits(a)+"명"):"");
   document.getElementById("vs_date").value=today();
-  document.getElementById("vs_count").value="1";
+  document.getElementById("vs_count").value="0";
   document.getElementById("vs_memo").value="";
   openModal("visitModal");
 }
 async function saveVisit(){
   const id=document.getElementById("vs_id").value;
   const a=agents.find(x=>x.id===id); if(!a) return;
-  const count=Number(val("vs_count"))||1;
+  const count=Number(val("vs_count"))||0;
   const visit={date:val("vs_date")||today(), count, memo:val("vs_memo").trim()};
   const visits=(a.visits||[]).concat([visit]);
   try{
@@ -1445,89 +1494,142 @@ async function saveVisit(){
     closeModal("visitModal"); await reloadCurrent();
   }catch(err){ showError("방문 기록", err); }
 }
+async function deleteVisit(id, idx){
+  const a=agents.find(x=>x.id===id); if(!a||!a.visits) return;
+  const v=a.visits[idx]; if(!v) return;
+  if(!confirm('이 방문 기록을 삭제할까요?\n\n'+(v.date||'')+(v.memo?(' · '+v.memo):'')))return;
+  try{
+    const visits=a.visits.filter((_,i)=>i!==idx);
+    await db.collection(AGENTS).doc(id).update({visits});
+    await reloadCurrent();
+  }catch(err){ showError("방문 삭제", err); }
+}
 
-/* ===== 주말 빠른 입력 (가스/톨비/식비 세트) ===== */
-let _wkDates=[]; // [{date, rows:{...}}]
-const WK_MEAL=["아침","점심","저녁","간식"];
+/* ===== 주말 빠른 입력 (행 추가식, 전체 수정 가능) ===== */
+let _wkRows=[];   // [{id, date, kind, fuel, dir, meal, memo, pay, amount}]
+let _wkSeq=1;
+const WK_MEALS=["아침","점심","저녁","집간식","현장간식"];
+const WK_DIRS=["상행","하행"];
+const WK_FUELS=["휘발유","가스"];
+function nextSat(){ const d=new Date(); const day=d.getDay(); const s=new Date(d); s.setDate(d.getDate()+((6-day+7)%7)); return s.toISOString().slice(0,10); }
 function openWeekend(){
   if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
-  _wkDates=[];
-  // 가장 가까운 토요일을 기본으로
-  const d=new Date(); const day=d.getDay();
-  const sat=new Date(d); sat.setDate(d.getDate()+((6-day+7)%7));
-  document.getElementById("wk_date").value=today();
-  addWkDate(sat.toISOString().slice(0,10));
+  _wkRows=[]; _wkSeq=1;
+  const sat=nextSat();
+  // 기본 행 몇 개 미리 깔아주기 (자주 쓰는 것)
+  addWkRow({date:sat, kind:"주유·가스", fuel:"휘발유", dir:"상행"});
+  addWkRow({date:sat, kind:"톨비(통행료)", dir:"상행"});
+  addWkRow({date:sat, kind:"식비", meal:"점심"});
+  renderWeekend();
   openModal("weekendModal");
 }
-function syncWeekendDates(){ /* placeholder: 단일 날짜 입력칸은 '추가' 버튼 대용 */ }
-function addWkDate(dateStr){
-  const ds=dateStr||val("wk_date")||today();
-  if(_wkDates.some(x=>x.date===ds)) return;
-  _wkDates.push({date:ds});
+function addWkRow(preset){
+  preset=preset||{};
+  _wkRows.push({
+    id:_wkSeq++,
+    date:preset.date||(_wkRows.length?_wkRows[_wkRows.length-1].date:nextSat()),
+    kind:preset.kind||"식비",
+    fuel:preset.fuel||"휘발유",
+    dir:preset.dir||"상행",
+    meal:preset.meal||"점심",
+    memo:preset.memo||"",
+    pay:preset.pay||"카드",
+    amount:preset.amount||""
+  });
+}
+function wkAddRow(){ readWkRows(); addWkRow({}); renderWeekend(); }
+function wkDuplicate(id){
+  readWkRows();
+  const r=_wkRows.find(x=>x.id===id); if(!r) return;
+  const copy=Object.assign({}, r, {id:_wkSeq++, amount:""});
+  const idx=_wkRows.findIndex(x=>x.id===id);
+  _wkRows.splice(idx+1,0,copy);
   renderWeekend();
 }
-function removeWkDate(ds){ _wkDates=_wkDates.filter(x=>x.date!==ds); renderWeekend(); }
-function weekendDayHtml(item){
-  const ds=item.date;
-  const dow=["일","월","화","수","목","금","토"][new Date(ds+"T00:00:00").getDay()];
-  const mealRows=WK_MEAL.map(meal=>{
-    const homemade = meal==="간식";
-    return `<div class="wk-row" data-d="${ds}" data-g="식비" data-k="${meal}">
-      <span class="wk-lab">${meal}</span>
-      <input type="text" class="wk-memo" placeholder="${meal==='간식'?'예: 집에서 김밥 준비':'장소/메뉴'}">
-      <select class="wk-pay">${opts("pays").map(p=>`<option ${p==='현금'?'selected':''}>${esc(p)}</option>`).join("")}</select>
-      <input type="number" class="wk-amt" placeholder="${homemade?'0 가능':'금액'}">
-    </div>`;
-  }).join("");
-  const tollRows=["상행","하행"].map(dir=>`
-    <div class="wk-row" data-d="${ds}" data-g="톨비(통행료)" data-k="${dir}">
-      <span class="wk-lab">톨비 ${dir}</span>
-      <input type="text" class="wk-memo" placeholder="노선(선택)">
-      <select class="wk-pay">${opts("pays").map(p=>`<option ${p==='카드'?'selected':''}>${esc(p)}</option>`).join("")}</select>
-      <input type="number" class="wk-amt" placeholder="금액">
-    </div>`).join("");
-  const gasRows=["상행","하행","충전"].map(dir=>`
-    <div class="wk-row" data-d="${ds}" data-g="교통/주유비" data-k="${dir}">
-      <span class="wk-lab">주유/가스 ${dir}</span>
-      <input type="text" class="wk-memo" placeholder="주유소(선택)">
-      <select class="wk-pay">${opts("pays").map(p=>`<option ${p==='카드'?'selected':''}>${esc(p)}</option>`).join("")}</select>
-      <input type="number" class="wk-amt" placeholder="금액">
-    </div>`).join("");
-  return `<div class="wk-day">
-    <h4>📅 ${ds} (${dow}) <button class="wk-remove" onclick="removeWkDate('${ds}')">날짜 제거</button></h4>
-    <div class="wk-section"><div class="wk-section-title">🍚 식비 (아침·점심·저녁·간식 / 간식은 집에서 준비 시 0원·메모만)</div>${mealRows}</div>
-    <div class="wk-section"><div class="wk-section-title">🛣 톨비 (상행/하행)</div>${tollRows}</div>
-    <div class="wk-section"><div class="wk-section-title">⛽ 주유·가스 (상행/하행/충전)</div>${gasRows}</div>
+function wkRemoveRow(id){ readWkRows(); _wkRows=_wkRows.filter(x=>x.id!==id); renderWeekend(); }
+function wkKindChange(id){ readWkRows(); renderWeekend(); }
+/* 화면의 입력값을 _wkRows에 반영 (재렌더 전에 호출) */
+function readWkRows(){
+  document.querySelectorAll('#wk_grid .wk-line').forEach(line=>{
+    const id=Number(line.getAttribute('data-id'));
+    const r=_wkRows.find(x=>x.id===id); if(!r) return;
+    const g=(sel)=>{ const el=line.querySelector(sel); return el?el.value:undefined; };
+    r.date=g('.wk-date')??r.date;
+    r.kind=g('.wk-kind')??r.kind;
+    r.fuel=g('.wk-fuel')??r.fuel;
+    r.dir=g('.wk-dir')??r.dir;
+    r.meal=g('.wk-meal')??r.meal;
+    r.memo=g('.wk-memo')??r.memo;
+    r.pay=g('.wk-pay')??r.pay;
+    const amt=g('.wk-amt'); r.amount=(amt===undefined?r.amount:amt);
+  });
+}
+function wkLineHtml(r){
+  const kinds=opts("wk_kinds");
+  const kindSel=`<select class="wk-kind" onchange="wkKindChange(${r.id})">${kinds.map(k=>`<option ${k===r.kind?'selected':''}>${esc(k)}</option>`).join("")}</select>`;
+  // 종류별 세부 입력
+  let detail="";
+  if(r.kind==="식비"){
+    detail=`<select class="wk-meal">${WK_MEALS.map(m=>`<option ${m===r.meal?'selected':''}>${esc(m)}</option>`).join("")}</select>`;
+  } else if(r.kind==="톨비(통행료)"){
+    detail=`<select class="wk-dir">${WK_DIRS.map(d=>`<option ${d===r.dir?'selected':''}>${esc(d)}</option>`).join("")}</select>`;
+  } else if(r.kind==="주유·가스"){
+    detail=`<select class="wk-fuel">${WK_FUELS.map(f=>`<option ${f===r.fuel?'selected':''}>${esc(f)}</option>`).join("")}</select>
+      <select class="wk-dir">${WK_DIRS.concat(["충전"]).map(d=>`<option ${d===r.dir?'selected':''}>${esc(d)}</option>`).join("")}</select>`;
+  } else {
+    detail=`<span class="wk-lab" style="color:var(--ink-soft);font-size:12px">메모에 내용 입력</span>`;
+  }
+  const meal=r.kind==="식비"?r.meal:"";
+  const homemadeHint = (meal==="집간식")?'집에서 준비(0원 가능)':'';
+  return `<div class="wk-line" data-id="${r.id}">
+    <div class="wk-line-grid">
+      <input type="date" class="wk-date" value="${esc(r.date)}">
+      ${kindSel}
+      <div class="wk-detail">${detail}</div>
+      <input type="text" class="wk-memo" placeholder="${homemadeHint||'메모(장소/노선/메뉴)'}" value="${esc(r.memo)}">
+      <select class="wk-pay">${opts("pays").map(p=>`<option ${p===r.pay?'selected':''}>${esc(p)}</option>`).join("")}</select>
+      <input type="number" class="wk-amt" placeholder="금액" value="${esc(r.amount)}">
+      <div class="wk-line-acts">
+        <button type="button" class="wk-mini" title="이 줄 복제" onclick="wkDuplicate(${r.id})">＋복제</button>
+        <button type="button" class="wk-mini del" title="이 줄 삭제" onclick="wkRemoveRow(${r.id})">🗑</button>
+      </div>
+    </div>
   </div>`;
 }
 function renderWeekend(){
-  const dateChips=_wkDates.map(it=>`<span class="mini-chip on">${it.date} ✕ <a href="#" onclick="removeWkDate('${it.date}');return false;" style="color:inherit;text-decoration:none">제거</a></span>`).join("")
-    + `<button class="btn btn-ghost btn-sm" onclick="addWkDate()">+ 위 날짜 추가</button>`;
-  document.getElementById("wk_dates").innerHTML=dateChips;
-  document.getElementById("wk_grid").innerHTML=_wkDates.length? _wkDates.map(weekendDayHtml).join("") : '<div class="ai-empty">날짜를 추가하세요. (날짜 입력 후 ‘위 날짜 추가’)</div>';
+  const grid=document.getElementById("wk_grid");
+  if(!grid) return;
+  const head=`<div class="wk-line head"><div class="wk-line-grid">
+    <span>날짜</span><span>종류</span><span>세부</span><span>메모</span><span>결제</span><span>금액</span><span></span>
+  </div></div>`;
+  grid.innerHTML = head + (_wkRows.length? _wkRows.map(wkLineHtml).join("") : '<div class="ai-empty">아래 ‘+ 줄 추가’로 항목을 넣으세요.</div>');
 }
 async function saveWeekendSet(){
-  // 그리드에서 금액>0 또는 (간식+메모있음) 인 행만 수집
-  const rows=[...document.querySelectorAll('#wk_grid .wk-row')];
+  readWkRows();
   const toSave=[];
-  rows.forEach(r=>{
-    const d=r.getAttribute('data-d'), g=r.getAttribute('data-g'), k=r.getAttribute('data-k');
-    const memo=(r.querySelector('.wk-memo')||{}).value||"";
-    const pay=(r.querySelector('.wk-pay')||{}).value||"현금";
-    const amt=Number((r.querySelector('.wk-amt')||{}).value||0);
-    const homemade = (g==="식비" && k==="간식" && amt===0 && memo.trim());
-    if(amt>0 || homemade){
-      const titleParts=[g==="식비"?k:(g.replace(/\(.*?\)/,'')+" "+k)];
-      if(memo.trim()) titleParts.push(memo.trim());
+  _wkRows.forEach(r=>{
+    const amt=Number(r.amount)||0;
+    const isHomemade = (r.kind==="식비" && r.meal==="집간식");
+    // 집간식은 0원이라도 메모 있으면 저장. 그 외엔 금액>0만.
+    if(amt>0 || (isHomemade && (amt>0 || r.memo.trim()))){
+      let sub="", catForStat="";
+      if(r.kind==="식비"){ sub=r.meal; catForStat="식비"; }
+      else if(r.kind==="톨비(통행료)"){ sub=r.dir; catForStat="톨비(통행료)"; }
+      else if(r.kind==="주유·가스"){ sub=r.fuel+" "+r.dir; catForStat="교통/주유비"; }
+      else { sub=""; catForStat=r.kind; }
+      const titleParts=[r.kind==="식비"?r.meal:(r.kind==="주유·가스"?(r.fuel+" "+r.dir):(r.kind+(sub?" "+sub:"")))];
+      if(r.memo.trim()) titleParts.push(r.memo.trim());
       toSave.push({
         projectId:currentProjectId, kind:"기타비용",
-        title:titleParts.join(' - '), date:d, stage:null, cat:g, sub:k,
-        vendor:"", amount:amt||0, pay, memo: homemade?("집에서 준비 / "+memo.trim()):memo.trim(),
+        title:titleParts.join(' - '), date:r.date, stage:null,
+        cat:catForStat, sub:sub||null,
+        vendor:"", amount:amt||0, pay:r.pay||"카드",
+        memo: isHomemade?("집간식 / "+r.memo.trim()):r.memo.trim(),
         files:[]
       });
     }
   });
-  if(!toSave.length){ alert("저장할 항목이 없습니다. 금액을 입력하거나, 간식에 '집에서 준비' 메모를 남기세요."); return; }
+  if(!toSave.length){ alert("저장할 항목이 없습니다. 금액을 입력하거나, 집간식에 메모를 남기세요."); return; }
   const btn=document.getElementById("wk_save"); btn.disabled=true; btn.textContent="저장 중...";
   try{
     const batch=db.batch();
@@ -1539,21 +1641,28 @@ async function saveWeekendSet(){
     await reloadCurrent();
   }catch(err){ btn.disabled=false; btn.textContent="한 번에 저장"; showError("주말 세트 저장", err); }
 }
-/* 주말 비용 탭 (요약 + 빠른 진입) */
+/* 주말 비용 탭 (요약 + 한 줄 목록형 기본) */
 function viewWeekend(p){
-  const wk=entries.filter(e=>e.kind==="기타비용" && ["식비","톨비(통행료)","교통/주유비","가스충전비"].includes(e.cat));
+  const wk=entries.filter(e=>e.kind==="기타비용" && ["식비","톨비(통행료)","교통/주유비","가스충전비","주차비","숙박비"].includes(e.cat));
   const total=wk.reduce((s,e)=>s+(Number(e.amount)||0),0);
   const byCat={}; wk.forEach(e=>{const k=e.cat||"기타"; byCat[k]=(byCat[k]||0)+(Number(e.amount)||0);});
   const catRows=Object.keys(byCat).sort((a,b)=>byCat[b]-byCat[a]).map(k=>barRow(k,byCat[k],total)).join("");
-  // 날짜별 묶음
   const byDate={}; wk.forEach(e=>{ (byDate[e.date]=byDate[e.date]||[]).push(e); });
   const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
-  const dateBlocks=dates.slice(0,12).map(d=>{
-    const list=byDate[d]; const sum=list.reduce((s,e)=>s+(Number(e.amount)||0),0);
-    const dow=["일","월","화","수","목","금","토"][new Date(d+"T00:00:00").getDay()];
-    return `<div class="ph-group"><div class="ph-gh"><b>${d} (${dow})</b> <span class="cnt">${list.length}건 · ${sum.toLocaleString()}원</span></div>
-      ${list.map(e=>renderLog(e,{compact:true})).join("")}</div>`;
-  }).join("");
+  const sorted=wk.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const view=window._wkView||'list';
+  let listHtml;
+  if(view==='card'){
+    listHtml=dates.slice(0,20).map(d=>{
+      const list=byDate[d]; const sum=list.reduce((s,e)=>s+(Number(e.amount)||0),0);
+      const dow=["일","월","화","수","목","금","토"][new Date(d+"T00:00:00").getDay()];
+      return `<div class="ph-group"><div class="ph-gh"><b>${d} (${dow})</b> <span class="cnt">${list.length}건 · ${sum.toLocaleString()}원</span></div>
+        ${list.map(e=>renderLog(e,{compact:true})).join("")}</div>`;
+    }).join("");
+  } else {
+    const head=`<div class="logrow head"><span class="lr-tag">분류</span><span class="lr-title">항목</span><span class="lr-vendor">결제</span><span class="lr-amt">금액</span><span class="lr-date">날짜</span><span style="width:84px"></span></div>`;
+    listHtml = head + sorted.map(e=>renderLog(e,{compact:true, payAsVendor:true})).join("");
+  }
   return `
     <div class="stats">
       <div class="stat"><div class="label">주말 비용 합계</div><div class="value">${total.toLocaleString()}<small> 원</small></div></div>
@@ -1564,11 +1673,15 @@ function viewWeekend(p){
     <div class="panel"><div class="panel-h">🚗 주말 출퇴근 비용 <span class="cnt">가스·톨비·식비</span>
       <button class="btn btn-primary btn-sm add" onclick="openWeekend()">+ 주말 세트 입력</button></div>
       <div class="panel-body">
-        <div class="hint">주말마다 반복되는 상행/하행 톨비·주유, 끼니별 식비(집에서 준비 간식 포함)를 한 번에 입력하세요.</div>
+        <div class="hint">상행/하행 톨비·주유(휘발유/가스), 끼니별 식비(집간식·현장간식)를 줄 단위로 자유롭게 추가·수정해 한 번에 저장하세요.</div>
         ${total?`<table class="ctable" style="margin-top:10px"><thead><tr><th>항목</th><th class="num">합계(원)</th></tr></thead><tbody>${catRows}<tr class="sum"><td>합계</td><td class="num">${total.toLocaleString()}</td></tr></tbody></table>`:''}
       </div></div>
-    <div class="panel"><div class="panel-h">📅 날짜별 주말 비용 <span class="cnt">최근 12일</span></div>
-      <div class="panel-body">${dateBlocks||'<div class="ai-empty">아직 주말 비용 기록이 없습니다.</div>'}</div></div>`;
+    <div class="panel"><div class="panel-h">📋 주말 비용 내역 <span class="cnt">${wk.length}건</span>
+      <span style="margin-left:auto;display:inline-flex;gap:4px">
+        <button class="mini-chip ${view==='list'?'on':''}" onclick="window._wkView='list';renderTab(projects.find(x=>x.id===currentProjectId))">목록형</button>
+        <button class="mini-chip ${view==='card'?'on':''}" onclick="window._wkView='card';renderTab(projects.find(x=>x.id===currentProjectId))">날짜별</button>
+      </span></div>
+      <div class="panel-body">${wk.length?listHtml:'<div class="ai-empty">아직 주말 비용 기록이 없습니다.</div>'}</div></div>`;
 }
 
 /* ===== 사진 ===== */
@@ -1796,6 +1909,7 @@ function openEntryModal(presetStage,presetKind){
   document.getElementById("ef_kind").onchange=onKindChange;
   buildOptSelect("ef_photofolder","photo_folders","");
   buildOptSelect("ef_docfolder","doc_folders","");
+  buildOptSelect("ef_pay","pays","");
   document.getElementById("vendorList").innerHTML=vendors.map(v=>`<option value="${esc(v.name)}">`).join("");
   fillStageSelect(presetStage||"");
   document.getElementById("ef_stage").onchange=fillCatSelect;

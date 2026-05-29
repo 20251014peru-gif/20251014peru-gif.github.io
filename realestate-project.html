@@ -38,7 +38,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.0</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.1</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
@@ -155,14 +155,14 @@
         </div>
         <div class="hint" id="mf_fxhint"></div>
       </div>
-      <div class="field"><label>수량</label><input id="mf_qty" type="number" oninput="updateMatAmount()"></div>
+      <div class="field"><label>구매 수량</label><input id="mf_qty" type="number" oninput="updateMatAmount()"></div>
     </div>
     <div class="row2">
       <div class="field"><label>단위</label><select id="mf_unit"></select></div>
       <div class="field"><label>금액 (원 환산)</label><div class="mf-amount" id="mf_amount">0원</div></div>
     </div>
     <div class="row2">
-      <div class="field"><label>📦 재고 수량</label><input id="mf_stock" type="number" placeholder="현재 보유 수량"></div>
+      <div class="field"><label>📦 재고 수량</label><input id="mf_stock" type="number" placeholder="남은/보관 중 수량"><div class="hint">구매 수량과 별개로 현재 남은 양. 둘 다 넣으면 카드에 합계(총 보유)가 표시됩니다.</div></div>
       <div class="field"><label>재고 위치 (선택)</label><input id="mf_stockloc" placeholder="예: 창고 / 현장"></div>
     </div>
     <div class="row2">
@@ -298,20 +298,17 @@
 
 <!-- 주말 빠른 입력 (가스/톨비/식비 세트) -->
 <div class="modal-bg" id="weekendModal">
-  <div class="modal" style="max-width:680px">
-    <h3>🚗 주말 출퇴근 비용 빠른 입력</h3>
-    <div class="hint" style="margin-bottom:10px">상행/하행 톨비·주유, 끼니별 식비를 한 번에 찍어 저장합니다. 0원은 자동 제외, "집에서 준비"는 0원이라도 메모로 남깁니다.</div>
-    <div class="row2">
-      <div class="field"><label>날짜</label><input id="wk_date" type="date" onchange="syncWeekendDates()"></div>
-      <div class="field"><label>요일 추가</label>
-        <select id="wk_addDay"><option value="0">일요일 추가</option><option value="1">토요일 추가</option><option value="-1">선택 안함</option></select>
-        <div class="hint">'요일 추가'를 선택하면 토·일 두 줄을 동시에 입력합니다.</div>
-      </div>
+  <div class="modal" style="max-width:820px">
+    <h3>🚗 주말 출퇴근 비용 입력</h3>
+    <div class="hint" style="margin-bottom:10px">줄 단위로 자유롭게 추가·수정하세요. 종류(식비/톨비/주유·가스 등) → 세부(끼니·상행/하행·휘발유/가스)를 고르고 금액을 넣습니다. 집간식은 0원이라도 메모만 있으면 저장됩니다.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-ghost btn-sm" onclick="wkAddRow()">+ 줄 추가</button>
+      <button class="btn btn-line btn-sm" onclick="openAddOpt('wk_kinds',null)">+ 종류 항목 추가</button>
     </div>
-    <div id="wk_dates" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
-    <div id="wk_grid"></div>
+    <div id="wk_grid" style="max-height:52vh;overflow-y:auto"></div>
     <div class="modal-acts">
-      <button class="btn btn-primary" id="wk_save" onclick="saveWeekendSet()">한 번에 저장</button>
+      <button class="btn btn-ghost btn-sm" onclick="wkAddRow()">+ 줄 추가</button>
+      <button class="btn btn-primary" id="wk_save" onclick="saveWeekendSet()" style="margin-left:auto">한 번에 저장</button>
       <button class="btn btn-line" onclick="closeModal('weekendModal')">닫기</button>
     </div>
   </div>
@@ -425,11 +422,12 @@
       <div class="field"><label>부동산 이름 *</label><input id="af_name" placeholder="예: ○○공인중개사"></div>
       <div class="field"><label>담당자</label><input id="af_agent" placeholder="실장님 성함"></div>
     </div>
+    <div class="field"><label>전화번호 *</label><input id="af_phone" type="tel" placeholder="02-000-0000"></div>
     <div class="row2">
-      <div class="field"><label>전화번호 *</label><input id="af_phone" placeholder="02-..."></div>
-      <div class="field"><label>내놓은 가격(만원)</label><input id="af_price" type="number"></div>
+      <div class="field"><label>내놓은 가격(만원)</label><input id="af_price" type="number" placeholder="예: 35000"></div>
+      <div class="field"><label>원하는(네고) 가격(만원)</label><input id="af_nego" type="number" placeholder="예: 33000"></div>
     </div>
-    <div class="field"><label>메모</label><textarea id="af_memo" placeholder="요율, 특이사항"></textarea></div>
+    <div class="field"><label>특이사항</label><textarea id="af_memo" placeholder="요율, 협의 내용, 손님 반응, 광고 현황 등"></textarea></div>
     <div class="modal-acts">
       <button class="btn btn-primary" onclick="saveAgent()">저장</button>
       <button class="btn btn-line" onclick="closeModal('agentModal')">취소</button>
@@ -440,16 +438,16 @@
 <!-- 부동산 방문 모달 -->
 <div class="modal-bg" id="visitModal">
   <div class="modal" style="width:min(440px,100%)">
-    <h3>👀 방문(데려옴) 기록</h3>
+    <h3>👀 방문 기록 추가 (+1회)</h3>
     <input type="hidden" id="vs_id">
     <div class="hint" id="vs_hint" style="margin-bottom:10px"></div>
     <div class="row2">
-      <div class="field"><label>방문일</label><input id="vs_date" type="date"></div>
-      <div class="field"><label>인원수</label><input id="vs_count" type="number" min="1" value="1"></div>
+      <div class="field"><label>방문일 *</label><input id="vs_date" type="date"></div>
+      <div class="field"><label>데려온 인원(선택)</label><input id="vs_count" type="number" min="0" value="0" placeholder="손님 수"></div>
     </div>
-    <div class="field"><label>방문자 / 메모</label><input id="vs_memo" placeholder="예: 김OO 부부 / 진지하게 봄"></div>
+    <div class="field"><label>특이사항 / 방문자</label><input id="vs_memo" placeholder="예: 김OO 부부 / 가격 협의 / 재방문 예정"></div>
     <div class="modal-acts">
-      <button class="btn btn-primary" onclick="saveVisit()">기록</button>
+      <button class="btn btn-primary" onclick="saveVisit()">방문 1회 기록</button>
       <button class="btn btn-line" onclick="closeModal('visitModal')">취소</button>
     </div>
   </div>
