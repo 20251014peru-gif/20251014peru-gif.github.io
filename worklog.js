@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v29";
+const APP_VERSION = "v30";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -425,20 +425,24 @@ function activateWorkSubtab(sub){
   // 호스트 영역
   const host = $("workSubpanelHost");
   if(!host) return;
-  // 모든 통합 패널 숨김
+  // 모든 통합 패널 강제 숨김 + 호스트 안으로 이동
   ["filelink","call","site","vacation","meeting","deliver","expense"].forEach(name=>{
     const p = document.getElementById("panel-"+name);
-    if(p) p.style.display = "none";
+    if(p){
+      if(p.parentElement !== host) host.appendChild(p);
+      p.style.display = "none";
+      p.classList.remove("active");
+    }
   });
   if(sub !== "general"){
     const panel = document.getElementById("panel-"+sub);
     if(panel){
-      // 호스트 안으로 옮기기 (이미 안에 있을 수 있음)
-      if(panel.parentElement !== host) host.appendChild(panel);
-      panel.style.display = "";
+      panel.style.display = "block";
       panel.classList.add("active");
     }
   }
+  // 페이지 맨 위로 스크롤
+  window.scrollTo({top:0, behavior:"smooth"});
   try{ localStorage.setItem("wl_work_subtab", sub); }catch(e){}
 }
 
@@ -447,6 +451,18 @@ function wireWorkSubtabs(){
   document.querySelectorAll("#workSubtabs button").forEach(b=>b.addEventListener("click",()=>{
     activateWorkSubtab(b.dataset.subtab);
   }));
+  // 페이지 로드 직후 통합 대상 패널들을 모두 host 안으로 즉시 이동 + 숨김
+  const host = $("workSubpanelHost");
+  if(host){
+    ["filelink","call","site","vacation","meeting","deliver","expense"].forEach(name=>{
+      const p = document.getElementById("panel-"+name);
+      if(p && p.parentElement !== host){
+        host.appendChild(p);
+        p.style.display = "none";
+        p.classList.remove("active");
+      }
+    });
+  }
 }
 $("tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; activateTab(b.dataset.tab); });
 (function(){

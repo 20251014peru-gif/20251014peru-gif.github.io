@@ -177,9 +177,10 @@ table.rec tbody tr.st-zero td:nth-child(7) b{color:#999}
 .subtabs button:hover{color:var(--primary-deep);background:#fff;border-color:var(--primary-soft);transform:translateY(-1px);box-shadow:0 2px 6px rgba(80,120,180,.08)}
 .subtabs button.active{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 2px 8px rgba(80,140,200,.25)}
 .subtabs button.active:hover{background:var(--primary-deep)}
-#workSubpanelHost > .panel{display:none;padding:0}
-#workSubpanelHost > .panel.active{display:block !important}
-#workSubpanelHost > .panel .card{margin:0}
+/* 호스트 안에 들어간 패널들은 호스트 표시 제어를 따름 */
+#workSubpanelHost > .panel{display:none}
+#workSubpanelHost > .panel[style*="block"]{display:block !important}
+#workSubpanelHost > .panel .card{margin-top:0}
 @media (max-width:600px){
   .subtabs{padding:6px;gap:4px}
   .subtabs button{font-size:12.5px;padding:7px 11px}
