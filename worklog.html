@@ -14,9 +14,10 @@
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 통합 · 자재 · 청소 · 달력 · 전체검색 <b style="color:#9aa7b4" id="verBadge">v36</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">분야관리 · ⚡급한메모 · 자재 · 청소 · 달력 <b style="color:#9aa7b4" id="verBadge">v37</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
+        <button class="nav-btn nav-quick" id="btnQuickMemo" title="급한 메모 (Ctrl+Shift+M)">⚡ 메모</button>
         <button class="nav-btn nav-back" id="btnBack" title="이전 화면으로 (5단계까지)" disabled>↶ 뒤로</button>
         <a class="nav-btn nav-home" href="index.html">⌂ 홈</a>
       </div>
@@ -312,6 +313,20 @@
         <span><span class="lg-dot" style="background:var(--mint)"></span>완료</span>
         <span><span class="lg-dot" style="background:#0891b2"></span>예정</span>
         <span>🌴 휴가</span>
+      </div>
+      <!-- v37: 달력 종류별 필터 -->
+      <div class="cal-filter" id="calFilter">
+        <span class="cf-label">표시:</span>
+        <button class="cf-btn active" data-calf="all">🔵 전체</button>
+        <button class="cf-btn active" data-calf="work">🛠 업무</button>
+        <button class="cf-btn active" data-calf="cleaning">🧹 청소</button>
+        <button class="cf-btn active" data-calf="memo">📝 메모</button>
+        <button class="cf-btn active" data-calf="call">📞 통화</button>
+        <button class="cf-btn active" data-calf="meeting">💼 회의</button>
+        <button class="cf-btn active" data-calf="deliver">📢 전달</button>
+        <button class="cf-btn active" data-calf="vacation">🌴 휴가</button>
+        <button class="cf-btn active" data-calf="expense">💰 지출</button>
+        <button class="cf-btn active" data-calf="plan">📋 계획</button>
       </div>
       <div class="cal-grid" id="calGrid"></div>
       <div id="calYearGrid" style="display:none;overflow-x:auto"></div>
@@ -639,6 +654,41 @@
   <h3 style="margin:0 0 12px;display:flex;justify-content:space-between;align-items:center">🔍 전체 검색 <button class="btn btn-ghost btn-sm" id="gsClose" style="font-size:14px">닫기 (Esc)</button></h3>
   <input type="text" id="gsInput" class="search search-big" placeholder="🔍 모든 탭에서 검색 — 키워드 입력" autocomplete="off" autofocus style="margin-bottom:12px">
   <div id="gsResults" style="flex:1;overflow-y:auto;min-height:200px"></div>
+</div></div>
+
+<!-- v37: ⚡ 급한 메모 사이드 패널 -->
+<div id="quickMemoSide" class="quick-memo-side">
+  <div class="qm-head">
+    <span class="qm-title">⚡ 급한 메모</span>
+    <div class="qm-actions">
+      <button class="qm-btn" id="qmToMemo" title="정식 메모로 저장">📋 메모로</button>
+      <button class="qm-btn qm-clear" id="qmClear" title="모두 지우기">🗑 지우기</button>
+      <button class="qm-btn qm-close" id="qmClose" title="닫기">✕</button>
+    </div>
+  </div>
+  <textarea id="qmText" placeholder="여기에 막 쓰세요... 자동으로 저장돼요. 사진은 아래 버튼으로 첨부하세요."></textarea>
+  <div class="qm-photo-area">
+    <label class="qm-photo-btn">
+      📷 사진 첨부
+      <input type="file" id="qmFile" accept="image/*" multiple style="display:none">
+    </label>
+    <div id="qmPhotoList"></div>
+  </div>
+  <div class="qm-status" id="qmStatus">💾 자동 저장됨</div>
+</div>
+
+<!-- 분야 관리 모달 -->
+<div class="overlay" id="fieldMgrOverlay"><div class="modal">
+  <h3>⚙ 분야 관리</h3>
+  <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">업무·자재 등에서 사용하는 분야를 관리합니다. 삭제 시 해당 분야의 데이터는 "기타"로 자동 변경됩니다.</p>
+  <div id="fieldMgrList" style="max-height:340px;overflow:auto;margin-bottom:10px"></div>
+  <div style="display:flex;gap:6px;margin-bottom:10px">
+    <input type="text" id="fieldMgrNew" placeholder="새 분야 이름" style="flex:1">
+    <button class="btn btn-primary btn-sm" id="fieldMgrAddBtn">➕ 추가</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="fieldMgrClose" style="margin-left:auto">닫기</button>
+  </div>
 </div></div>
 
 <!-- 💰 지출 모달 -->

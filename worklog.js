@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v36";
+const APP_VERSION = "v37";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -11,15 +11,43 @@ const STATUSES = ["미완료","진행중","완료"];
 const CALLDIR  = ["수신","발신"];
 const VTYPES   = ["년차휴가","오전반차","오후반차","병가","경조","기타"];
 const FLOORS   = ["","옥탑층","20층","19층","18층","17층","16층","15층","14층","13층","12층","11층","10층","9층","8층","7층","6층","5층","4층","3층","2층","1층","지하1층","지하2층","지하3층","지하4층","지하5층","지하6층"];
-const FIELDS = {
-  "시설": [{name:"전기",subs:["엘리베이터","카리프트"]}, "통신", {name:"기계",subs:["냉난방","누수"]}, {name:"소방",subs:["소화전","스프링클러","감지기","수신기","펌프"]}, "영선", "주차", "주간점검", "월간점검", "협력업체점검"],
-  "환경": ["청소","화단관리","은진"],
-  "행정/문서": ["품의서","전표","안내문","관리비","임대"],
-  "기타": ["기타"]
-};
-const FIELD_GROUP={};
-Object.entries(FIELDS).forEach(([g,arr])=>arr.forEach(it=>{ if(typeof it==="string") FIELD_GROUP[it]=g; else { FIELD_GROUP[it.name]=g; (it.subs||[]).forEach(s=>FIELD_GROUP[s]=g); } }));
-const GROUP_CLASS={"시설":"tech","환경":"env","행정/문서":"admin","기타":"etc"};
+// v37: 분야를 평면 배열로 (트리 구조 제거, 들여쓰기 없음)
+const DEFAULT_FIELDS = [
+  "전기","엘리베이터","카리프트","통신","기계","냉난방","누수",
+  "소방","소화전","스프링클러","감지기","수신기","펌프",
+  "영선","주차","주간점검","월간점검","협력업체점검",
+  "청소","화단관리","은진",
+  "품의서","전표","안내문","관리비","임대",
+  "기타"
+];
+let FIELDS = DEFAULT_FIELDS.slice();
+const FIELDS_LS_KEY = "wl_fields_v37";
+
+// 분야별 색상 자동 배정 (10가지 색 풀)
+const FIELD_COLOR_POOL = ["tech","env","admin","etc","peach","mint","gold","blue","purple","rose"];
+function fieldClass(f){
+  if(!f) return "etc";
+  // 사용자 정의 분야는 이름 해시로 색 배정
+  const i = FIELDS.indexOf(f);
+  if(i<0) return "etc";
+  return FIELD_COLOR_POOL[i % FIELD_COLOR_POOL.length];
+}
+
+function loadFields(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(FIELDS_LS_KEY)||"null");
+    if(Array.isArray(saved) && saved.length) FIELDS = saved;
+  }catch(e){}
+}
+function saveFields(){
+  try{ localStorage.setItem(FIELDS_LS_KEY, JSON.stringify(FIELDS)); }catch(e){}
+  // Firestore 동기화
+  if(online && db){
+    db.collection("worklog_meta").doc("fields").set({fields:FIELDS, updatedAt:Date.now()}).catch(()=>{});
+  }
+}
+
+// 옛 FIELD_HINT 호환 (사용처에서 참조)
 const FIELD_HINT={
   "품의서":"품의서 작성/상신 건이면 업무내역 제목에 '품의서'를 함께 적어두면 검색이 쉬워요.",
   "전표":"전표 처리 건은 제목에 대상·금액을 함께 적어두면 좋아요.",
@@ -31,7 +59,6 @@ const FIELD_HINT={
   "협력업체점검":"협력업체점검은 제목에 업체명·점검항목을 적어두면 좋아요.",
   "소방":"소방 점검/조치는 제목에 설비(소화전·스프링클러 등)와 위치를 적어두면 좋아요."
 };
-function fieldClass(f){ return GROUP_CLASS[FIELD_GROUP[f]]||"etc"; }
 function statusClass(s){ return s==="완료"?"done":s==="진행중"?"prog":"todo"; }
 function statusColor(s){ return s==="완료"?"var(--mint)":s==="진행중"?"var(--gold)":"var(--peach)"; }
 
@@ -188,11 +215,9 @@ function metaLine(parts){ return parts.filter(Boolean).map(esc).join(" · "); }
 function byDateDesc(a,b){ return (b.date||"").localeCompare(a.date||"")||((b.createdAt||0)-(a.createdAt||0)); }
 function cleanCell(s){ return (s||"").toString().replace(/[\t\r\n]/g," "); }
 function fieldOptionsHTML(){
-  return Object.entries(FIELDS).map(([g,arr])=>{
-    const opts=arr.map(it=> typeof it==="string" ? `<option value="${it}">${it}</option>`
-      : `<option value="${it.name}">${it.name}</option>`+(it.subs||[]).map(s=>`<option value="${s}">└ ${s}</option>`).join("")).join("");
-    return `<optgroup label="${g}">${opts}</optgroup>`;
-  }).join("");
+  // 평면화: 들여쓰기 없이 일자로
+  const opts = FIELDS.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("");
+  return opts + `<option value="__new__">➕ 새 분야 추가</option>`;
 }
 function datesBetween(start,end){
   const out=[]; if(!start) return out;
@@ -342,6 +367,7 @@ async function init(){
   aiInitKeyUI();
   wireAttachUI();
   loadCategories();
+  loadFields();
   loadViewPrefs();
   wireFileLinkTab();
   wireSiteTab();
@@ -353,10 +379,12 @@ async function init(){
   wireExpenseModal();
   wireWorkSubtabs();
   wireGlobalSearch();
+  wireQuickMemo();
   const backBtn = $("btnBack");
   if(backBtn) backBtn.addEventListener("click", goBack);
   loadCleanSettings();
   wireCatMgr();
+  wireFieldMgr();
   try{
     if(typeof firebase==="undefined") throw new Error("sdk");
     firebase.initializeApp(firebaseConfig); db=firebase.firestore();
@@ -546,7 +574,11 @@ function fieldHTML(f){
   if(f.type==="textarea") inner=`<textarea id="m-${f.k}"></textarea>`;
   else if(f.type==="select") inner=`<select id="m-${f.k}">${f.opts.map(o=>`<option>${o}</option>`).join("")}</select>`;
   else if(f.type==="status") inner=`<select id="m-${f.k}">${STATUSES.map(o=>`<option>${o}</option>`).join("")}</select>`;
-  else if(f.type==="field") inner=`<select id="m-${f.k}">${fieldOptionsHTML()}</select>`;
+  else if(f.type==="field") inner=`<div style="display:flex;gap:6px;align-items:stretch">
+      <select id="m-${f.k}" style="flex:1">${fieldOptionsHTML()}</select>
+      <button type="button" class="btn btn-ghost btn-sm" data-fieldmgr style="flex:0 0 auto;padding:0 10px" title="분야 관리">⚙</button>
+    </div>
+    <input type="text" id="m-${f.k}-new" class="cat-new" autocomplete="off" placeholder="새 분야 이름 입력 후 Enter" style="display:none;margin-top:6px">`;
   else if(f.type==="floor") inner=`<select id="m-${f.k}">${FLOORS.map(o=>`<option value="${o}">${o===""?"(층 선택 안 함)":o}</option>`).join("")}</select>`;
   else if(f.type==="catselect"){
     inner=`<select id="m-${f.k}" class="cat-sel" data-ctx="${f.ctx}"></select>
@@ -687,6 +719,55 @@ function openEditor(kind,id){
     $("m-unitPrice").addEventListener("input",recalcAmount);
   }
 
+  // v37: field 타입 입력에 ➕ 새 분야 추가 / ⚙ 관리 버튼 처리
+  document.querySelectorAll("#fields select[id^='m-']").forEach(sel=>{
+    const fieldKey = sel.id.replace("m-","");
+    const fieldDef = SCHEMA[kind].find(f=>f.k===fieldKey && f.type==="field");
+    if(!fieldDef) return;
+    const newInp = $(`m-${fieldKey}-new`);
+    const mgrBtn = sel.parentElement.querySelector("[data-fieldmgr]");
+    // 기존 값 복원
+    if(data[fieldKey]){
+      if(FIELDS.includes(data[fieldKey])) sel.value = data[fieldKey];
+      else { sel.value = "__new__"; if(newInp){ newInp.style.display=""; newInp.value=data[fieldKey]; } }
+    }
+    sel.addEventListener("change", ()=>{
+      if(sel.value==="__new__"){
+        if(newInp){ newInp.style.display=""; newInp.value=""; newInp.focus(); }
+      } else {
+        if(newInp){ newInp.style.display="none"; newInp.value=""; }
+      }
+    });
+    if(newInp){
+      newInp.addEventListener("keydown", e=>{
+        if(e.key==="Enter"){
+          e.preventDefault();
+          const v = newInp.value.trim();
+          if(v && !FIELDS.includes(v)){
+            FIELDS.push(v); saveFields();
+            // 옵션 재구성
+            sel.innerHTML = fieldOptionsHTML();
+            sel.value = v;
+            newInp.style.display = "none";
+            newInp.value = "";
+            toast(`✅ "${v}" 분야가 추가되었습니다`);
+          }
+        }
+      });
+    }
+    if(mgrBtn){
+      mgrBtn.addEventListener("click", e=>{
+        e.preventDefault();
+        openFieldManager(()=>{
+          // 닫힌 후 옵션 재구성
+          const curVal = sel.value;
+          sel.innerHTML = fieldOptionsHTML();
+          if(FIELDS.includes(curVal)) sel.value = curVal;
+        });
+      });
+    }
+  });
+
   if(kind==="work"){
     const fe=$("m-field"), te=$("m-title");
     if(fe&&te){
@@ -819,6 +900,13 @@ $("mSave").addEventListener("click",async ()=>{
       const sel=$("m-"+f.k+"-sel");
       if(sel && sel.value==="__new__"){ const inp=$("m-"+f.k); v=inp?inp.value.trim():""; }
       else if(sel){ v=sel.value; }
+    } else if(f.type==="field"){
+      // v37: 분야 — __new__ 면 입력칸에서 값 가져오기 + 자동 등록
+      const sel=$("m-"+f.k);
+      if(sel && sel.value==="__new__"){
+        const inp=$("m-"+f.k+"-new"); v=inp?inp.value.trim():"";
+        if(v && !FIELDS.includes(v)){ FIELDS.push(v); saveFields(); }
+      } else if(sel){ v=sel.value; }
     } else if(f.type==="catselect"){
       const sel=$("m-"+f.k);
       if(sel && sel.value==="__new__"){
@@ -1320,6 +1408,11 @@ function cardWork(en){
 let calY,calM,selDay=null;
 let calMode="work";   // "work" or "schedule"
 let calView="month";  // "month" or "year"
+// v37: 달력 종류별 필터 (true=표시)
+const CAL_FILTER = {
+  work:true, cleaning:true, memo:true, call:true, meeting:true,
+  deliver:true, vacation:true, expense:true, plan:true, schedule:true
+};
 (function(){ const d=new Date(); calY=d.getFullYear(); calM=d.getMonth(); })();
 function bindCalControls(){
   // 한 번만 바인딩
@@ -2043,6 +2136,95 @@ function wireCatMgr(){
   $("catAddBtn").addEventListener("click",catAddNew);
   $("catNewName").addEventListener("keydown",e=>{ if(e.key==="Enter") catAddNew(); });
 }
+
+// v37: 분야 관리 모달
+let fieldMgrOnClose = null;
+function openFieldManager(onClose){
+  fieldMgrOnClose = onClose || null;
+  renderFieldMgrList();
+  $("fieldMgrOverlay").classList.add("show");
+  $("fieldMgrNew").value = "";
+  setTimeout(()=>$("fieldMgrNew").focus(), 100);
+}
+function closeFieldManager(){
+  $("fieldMgrOverlay").classList.remove("show");
+  if(fieldMgrOnClose) fieldMgrOnClose();
+  fieldMgrOnClose = null;
+}
+function renderFieldMgrList(){
+  const box = $("fieldMgrList");
+  if(!FIELDS.length){
+    box.innerHTML = `<div class="empty" style="padding:14px">등록된 분야가 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = FIELDS.map((f,i)=>{
+    // 해당 분야 사용 건수
+    const cnt = entries.filter(e=>(e.kind==="work"||e.kind==="item") && e.field===f).length;
+    return `<div class="cat-row" data-i="${i}">
+      <span class="pill ${fieldClass(f)}" style="min-width:50px;text-align:center">${esc(f)}</span>
+      <span style="flex:1;font-size:12px;color:var(--ink-soft)">${cnt}건 사용 중</span>
+      <button data-act="up" title="위로">▲</button>
+      <button data-act="down" title="아래로">▼</button>
+      <button class="danger" data-act="del" title="삭제">🗑</button>
+    </div>`;
+  }).join("");
+  box.querySelectorAll(".cat-row").forEach(row=>{
+    const i = Number(row.dataset.i);
+    row.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>{
+      const a = b.dataset.act;
+      if(a==="up" && i>0){
+        [FIELDS[i-1], FIELDS[i]] = [FIELDS[i], FIELDS[i-1]];
+        saveFields(); renderFieldMgrList();
+      } else if(a==="down" && i<FIELDS.length-1){
+        [FIELDS[i+1], FIELDS[i]] = [FIELDS[i], FIELDS[i+1]];
+        saveFields(); renderFieldMgrList();
+      } else if(a==="del"){
+        const f = FIELDS[i];
+        const cnt = entries.filter(e=>(e.kind==="work"||e.kind==="item") && e.field===f).length;
+        let msg = `"${f}" 분야를 삭제하시겠어요?`;
+        if(cnt>0) msg += `\n\n⚠ 이 분야를 사용 중인 ${cnt}건이 "기타"로 자동 변경됩니다.`;
+        if(!confirm(msg)) return;
+        FIELDS.splice(i,1);
+        // 기존 데이터 "기타"로 변경
+        if(cnt>0){
+          if(!FIELDS.includes("기타")) FIELDS.push("기타");
+          entries.forEach(e=>{
+            if((e.kind==="work"||e.kind==="item") && e.field===f){
+              e.field = "기타";
+              // Firestore 동기화
+              if(online && db) db.collection(COL).doc(e.id).set(e).catch(()=>{});
+            }
+          });
+          lsSave();
+        }
+        saveFields();
+        renderFieldMgrList();
+        renderAll();
+        toast(`"${f}" 분야 삭제됨${cnt>0?` (${cnt}건이 "기타"로 변경)`:""}`);
+      }
+    }));
+  });
+}
+function fieldMgrAddNew(){
+  const v = ($("fieldMgrNew").value||"").trim();
+  if(!v){ toast("분야 이름을 입력하세요"); return; }
+  if(FIELDS.includes(v)){ toast("이미 있는 분야예요"); return; }
+  FIELDS.push(v);
+  saveFields();
+  renderFieldMgrList();
+  $("fieldMgrNew").value = "";
+  $("fieldMgrNew").focus();
+  toast(`✅ "${v}" 분야 추가됨`);
+}
+function wireFieldMgr(){
+  $("fieldMgrClose").addEventListener("click", closeFieldManager);
+  $("fieldMgrOverlay").addEventListener("click", e=>{
+    if(e.target===$("fieldMgrOverlay")) closeFieldManager();
+  });
+  $("fieldMgrAddBtn").addEventListener("click", fieldMgrAddNew);
+  $("fieldMgrNew").addEventListener("keydown", e=>{ if(e.key==="Enter") fieldMgrAddNew(); });
+}
+
 function openCatMgr(kind){
   catMgrKind=kind;
   const label=kind==="filelink"?"파일링크":kind==="site"?"사이트":"비밀번호";
@@ -3640,8 +3822,125 @@ function renderCleanStaffList(){
 
 
 /* =========================================================
-   v35: 전체 검색
+   v37: ⚡ 급한 메모 (Quick Memo)
    ========================================================= */
+const QM_LS_TEXT = "wl_quickmemo_text_v37";
+const QM_LS_PHOTOS = "wl_quickmemo_photos_v37";
+let quickMemoPhotos = [];
+let qmSaveTimer = null;
+
+function wireQuickMemo(){
+  const btn = $("btnQuickMemo");
+  if(btn) btn.addEventListener("click", toggleQuickMemo);
+  // 단축키 Ctrl+Shift+M
+  document.addEventListener("keydown", e=>{
+    if((e.ctrlKey||e.metaKey) && e.shiftKey && e.key.toLowerCase()==="m"){
+      e.preventDefault();
+      toggleQuickMemo();
+    }
+  });
+  $("qmClose").addEventListener("click", closeQuickMemo);
+  $("qmClear").addEventListener("click", clearQuickMemo);
+  $("qmToMemo").addEventListener("click", quickMemoToFormal);
+  $("qmFile").addEventListener("change", handleQmPhoto);
+  // 텍스트 자동 저장
+  $("qmText").addEventListener("input", e=>{
+    clearTimeout(qmSaveTimer);
+    qmSaveTimer = setTimeout(()=>{
+      try{ localStorage.setItem(QM_LS_TEXT, e.target.value); }catch(err){}
+      const s=$("qmStatus"); if(s){ s.textContent="💾 자동 저장됨 "+new Date().toLocaleTimeString("ko-KR").slice(0,8); }
+    }, 400);
+  });
+  // 초기 로드
+  loadQuickMemo();
+}
+
+function loadQuickMemo(){
+  try{
+    const t = localStorage.getItem(QM_LS_TEXT)||"";
+    $("qmText").value = t;
+    const p = JSON.parse(localStorage.getItem(QM_LS_PHOTOS)||"[]");
+    if(Array.isArray(p)) quickMemoPhotos = p;
+  }catch(e){}
+  renderQmPhotos();
+}
+
+function toggleQuickMemo(){
+  const side = $("quickMemoSide");
+  if(side.classList.contains("show")){ closeQuickMemo(); }
+  else { side.classList.add("show"); setTimeout(()=>$("qmText").focus(), 200); }
+}
+function closeQuickMemo(){
+  $("quickMemoSide").classList.remove("show");
+}
+function clearQuickMemo(){
+  if(!confirm("급한 메모 내용을 모두 지울까요? (되돌릴 수 없음)")) return;
+  $("qmText").value = "";
+  quickMemoPhotos = [];
+  try{
+    localStorage.removeItem(QM_LS_TEXT);
+    localStorage.removeItem(QM_LS_PHOTOS);
+  }catch(e){}
+  renderQmPhotos();
+  $("qmStatus").textContent = "🗑 지워졌습니다";
+}
+
+async function handleQmPhoto(e){
+  const files = Array.from(e.target.files||[]);
+  e.target.value = "";
+  for(const f of files){
+    try{
+      const dataUrl = await compressImage(f, 1200, 0.7);
+      quickMemoPhotos.push(dataUrl);
+    }catch(err){ console.warn("사진 처리 실패", err); }
+  }
+  try{ localStorage.setItem(QM_LS_PHOTOS, JSON.stringify(quickMemoPhotos)); }catch(err){}
+  renderQmPhotos();
+}
+
+function renderQmPhotos(){
+  const box = $("qmPhotoList");
+  if(!box) return;
+  if(!quickMemoPhotos.length){ box.innerHTML=""; return; }
+  box.innerHTML = quickMemoPhotos.map((src,i)=>
+    `<div class="qm-thumb"><img src="${src}"><button class="qm-thumb-rm" data-i="${i}">×</button></div>`
+  ).join("");
+  box.querySelectorAll(".qm-thumb-rm").forEach(b=>b.addEventListener("click",()=>{
+    quickMemoPhotos.splice(Number(b.dataset.i),1);
+    try{ localStorage.setItem(QM_LS_PHOTOS, JSON.stringify(quickMemoPhotos)); }catch(e){}
+    renderQmPhotos();
+  }));
+}
+
+function quickMemoToFormal(){
+  const t = ($("qmText").value||"").trim();
+  if(!t && !quickMemoPhotos.length){ toast("저장할 내용이 없습니다"); return; }
+  // 첫 줄을 제목으로
+  const firstLine = (t.split("\n")[0]||"").slice(0,40);
+  const title = firstLine || "급한 메모 "+todayStr();
+  const memoRec = {
+    kind: "memo",
+    date: todayStr(),
+    title,
+    content: t,
+    attachments: quickMemoPhotos.map(src=>({type:"image", data:src})),
+    createdAt: Date.now()
+  };
+  addRecord(memoRec);
+  // 정식 저장 후 급한메모 지우기
+  $("qmText").value = "";
+  quickMemoPhotos = [];
+  try{
+    localStorage.removeItem(QM_LS_TEXT);
+    localStorage.removeItem(QM_LS_PHOTOS);
+  }catch(e){}
+  renderQmPhotos();
+  renderAll();
+  toast(`✅ 메모 탭에 저장되었습니다: "${title.slice(0,30)}"`, 3500);
+  $("qmStatus").textContent = "📋 정식 메모로 저장됨";
+}
+
+
 function wireGlobalSearch(){
   const btn = $("btnGlobalSearch");
   if(btn) btn.addEventListener("click", openGlobalSearch);
@@ -3833,38 +4132,46 @@ function renderExpenseStats(){
   if(!all.length){ box.innerHTML=""; return; }
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
-  const thisMonth = all.filter(e=>(e.date||"").startsWith(ym));
-  const personal = thisMonth.filter(e=>(e.expType||"개인지출")==="개인지출").sort((a,b)=>(a.date||"").localeCompare(b.date||""));
-  const tax = thisMonth.filter(e=>e.expType==="세금계산서").sort((a,b)=>(a.date||"").localeCompare(b.date||""));
-  const personalSum = personal.reduce((s,e)=>s+(Number(e.amount)||0),0);
-  const taxSum = tax.reduce((s,e)=>s+(Number(e.amount)||0),0);
-  // 각 카드 안에 항목 한 줄씩 표시
-  const itemsHtml = (arr) => {
-    if(!arr.length) return `<div class="es-empty">이번달 내역이 없습니다</div>`;
-    return `<div class="es-items">` + arr.map(e=>
-      `<div class="es-item" data-id="${e.id}">
-        <span class="es-i-title">${esc(e.title||"")}</span>
-        <span class="es-i-amt">${won(Number(e.amount)||0)}원</span>
+  // 이번달 + 전체 모두 보여줌
+  const filterByType = (type) => all.filter(e=>(e.expType||"개인지출")===type)
+    .sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const personalAll = filterByType("개인지출");
+  const taxAll = filterByType("세금계산서");
+  const personalThis = personalAll.filter(e=>(e.date||"").startsWith(ym));
+  const taxThis = taxAll.filter(e=>(e.date||"").startsWith(ym));
+  const personalSum = personalThis.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const taxSum = taxThis.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const personalSumAll = personalAll.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const taxSumAll = taxAll.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  // 표시할 항목들 (이번달 우선, 없으면 최근 10건)
+  const showItems = (thisMonth, allArr) => {
+    const showList = thisMonth.length ? thisMonth : allArr.slice(0,10);
+    if(!showList.length) return `<div class="es-empty">아직 내역이 없습니다</div>`;
+    const lblPrefix = thisMonth.length ? "" : `<div class="es-recent-lbl">📋 최근 10건</div>`;
+    return lblPrefix + `<div class="es-items">` + showList.map(e=>
+      `<div class="es-item" data-id="${e.id}" title="${esc(e.date||"")} · ${esc(e.memo||"")}">
+        <span class="es-i-date">${esc((e.date||"").slice(5))}</span>
+        <span class="es-i-title">${esc(e.title||"(제목없음)")}</span>
+        <span class="es-i-amt">${won(Number(e.amount)||0)}</span>
       </div>`
     ).join("") + `</div>`;
   };
   box.innerHTML = `
     <div class="exp-stat-row">
       <div class="exp-stat-card exp-stat-personal">
-        <div class="es-h">💸 ${ym} 개인 지출</div>
+        <div class="es-h">💸 ${ym} 개인 지출 <span class="es-h-sub">전체 ${won(personalSumAll)}원</span></div>
         <div class="es-v">${won(personalSum)}<span class="es-u">원</span></div>
-        <div class="es-s">${personal.length}건</div>
-        ${itemsHtml(personal)}
+        <div class="es-s">이번달 ${personalThis.length}건 · 전체 ${personalAll.length}건</div>
+        ${showItems(personalThis, personalAll)}
       </div>
       <div class="exp-stat-card exp-stat-tax">
-        <div class="es-h">📃 ${ym} 세금계산서</div>
+        <div class="es-h">📃 ${ym} 세금계산서 <span class="es-h-sub">전체 ${won(taxSumAll)}원</span></div>
         <div class="es-v">${won(taxSum)}<span class="es-u">원</span></div>
-        <div class="es-s">${tax.length}건</div>
-        ${itemsHtml(tax)}
+        <div class="es-s">이번달 ${taxThis.length}건 · 전체 ${taxAll.length}건</div>
+        ${showItems(taxThis, taxAll)}
       </div>
     </div>
   `;
-  // 항목 클릭 시 수정 모달
   box.querySelectorAll(".es-item").forEach(el=>{
     el.addEventListener("click",()=>openExpenseEditor(el.dataset.id));
   });
