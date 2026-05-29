@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v27";
+const APP_VERSION = "v29";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -35,7 +35,7 @@ function fieldClass(f){ return GROUP_CLASS[FIELD_GROUP[f]]||"etc"; }
 function statusClass(s){ return s==="완료"?"done":s==="진행중"?"prog":"todo"; }
 function statusColor(s){ return s==="완료"?"var(--mint)":s==="진행중"?"var(--gold)":"var(--peach)"; }
 
-const KIND_LABEL={work:"업무",plan:"오늘계획",memo:"메모",call:"통화",vacation:"휴가",meeting:"회의메모",deliver:"전달사항",filelink:"파일링크",site:"사이트",password:"비밀번호",schedule:"업무예정",item:"품목",stock:"입출고",cleaning:"청소일지"};
+const KIND_LABEL={work:"업무",plan:"오늘계획",memo:"메모",call:"통화",vacation:"휴가",meeting:"회의메모",deliver:"전달사항",filelink:"파일링크",site:"사이트",password:"비밀번호",schedule:"업무예정",item:"품목",stock:"입출고",cleaning:"청소일지",expense:"지출"};
 const PHOTO_KINDS=["work","memo","meeting"];
 const ATTACH_KINDS=["work","memo","meeting"];
 
@@ -150,6 +150,13 @@ const SCHEMA={
     {k:"docNo",label:"전표/세금계산서 번호",type:"text"},
     {k:"useTarget",label:"사용처 (출고시)",type:"text",full:true},
     {k:"memo",label:"메모",type:"textarea",full:true},
+  ],
+  expense:[
+    {k:"date",label:"날짜",type:"date",req:true},
+    {k:"expType",label:"종류",type:"select",opts:["개인지출","세금계산서"],req:true},
+    {k:"title",label:"내역",type:"text",full:true,req:true},
+    {k:"amount",label:"금액 (원)",type:"number",req:true},
+    {k:"memo",label:"비고",type:"text",full:true},
   ],
 };
 
@@ -342,6 +349,9 @@ async function init(){
   wireMaterialTab();
   wireCleaningTab();
   wireCleaningModal();
+  wireExpenseTab();
+  wireExpenseModal();
+  wireWorkSubtabs();
   loadCleanSettings();
   wireCatMgr();
   try{
@@ -380,17 +390,63 @@ function migrateTissueToJumbo(){
   }
 }
 function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
-function renderAll(){ renderWork(); renderPlan(); renderMemo(); renderCall(); renderVac(); renderMeeting(); renderDeliver(); renderCalendar(); renderFileLink(); renderSite(); renderPassword(); renderMaterial(); renderCleaning(); renderDiag(); }
+function renderAll(){ renderWork(); renderPlan(); renderMemo(); renderCall(); renderVac(); renderMeeting(); renderDeliver(); renderCalendar(); renderFileLink(); renderSite(); renderPassword(); renderMaterial(); renderCleaning(); renderExpense(); renderDiag(); }
 
 /* ===== 탭 ===== */
 function activateTab(name){
+  // 서브탭으로 이동된 항목이면 업무 탭 + 해당 서브탭으로
+  const subtabs = ["filelink","call","site","vacation","meeting","deliver","expense"];
+  if(subtabs.includes(name)){
+    activateTab("work");
+    setTimeout(()=>activateWorkSubtab(name), 50);
+    return;
+  }
   const btn=document.querySelector(`.tabs button[data-tab="${name}"]`); if(!btn) return;
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
   document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
   btn.classList.add("active"); $("panel-"+name).classList.add("active");
+  // 업무 탭이면 마지막 서브탭 복원
+  if(name==="work"){
+    let last="general";
+    try{ last = localStorage.getItem("wl_work_subtab")||"general"; }catch(e){}
+    activateWorkSubtab(last);
+  }
   try{ btn.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){}
   try{ localStorage.setItem("wl_tab", name); }catch(e){}
   try{ onTabChange(name); }catch(e){}
+}
+
+// v29: 업무 탭 내 서브탭 활성화
+function activateWorkSubtab(sub){
+  document.querySelectorAll("#workSubtabs button").forEach(b=>b.classList.toggle("active", b.dataset.subtab===sub));
+  // 일반업무 영역 (work-subpanel)
+  const generalPanel = document.querySelector('.work-subpanel[data-subpanel="general"]');
+  if(generalPanel) generalPanel.style.display = sub==="general" ? "" : "none";
+  // 호스트 영역
+  const host = $("workSubpanelHost");
+  if(!host) return;
+  // 모든 통합 패널 숨김
+  ["filelink","call","site","vacation","meeting","deliver","expense"].forEach(name=>{
+    const p = document.getElementById("panel-"+name);
+    if(p) p.style.display = "none";
+  });
+  if(sub !== "general"){
+    const panel = document.getElementById("panel-"+sub);
+    if(panel){
+      // 호스트 안으로 옮기기 (이미 안에 있을 수 있음)
+      if(panel.parentElement !== host) host.appendChild(panel);
+      panel.style.display = "";
+      panel.classList.add("active");
+    }
+  }
+  try{ localStorage.setItem("wl_work_subtab", sub); }catch(e){}
+}
+
+// 업무 탭 서브탭 클릭 wiring
+function wireWorkSubtabs(){
+  document.querySelectorAll("#workSubtabs button").forEach(b=>b.addEventListener("click",()=>{
+    activateWorkSubtab(b.dataset.subtab);
+  }));
 }
 $("tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; activateTab(b.dataset.tab); });
 (function(){
@@ -420,6 +476,7 @@ function defaults(kind){
   if(kind==="schedule") return {date:t, sStatus:"예정", sType:"정기점검"};
   if(kind==="item") return {field:"전기", recurring:"비주기", safetyStock:0, unitPrice:0};
   if(kind==="stock") return {date:t, stockType:"입고", qty:1, unitPrice:0, amount:0};
+  if(kind==="expense") return {date:t, expType:"개인지출", amount:0};
   return {date:t};
 }
 function fieldHTML(f){
@@ -749,9 +806,15 @@ function wireCards(scope){
     el.addEventListener("click",e=>{
       if(e.target.closest("a,img,button,input,.cb")) return;
       if(el.dataset.kind==="cleaning"){ openCleaningEditor(el.dataset.id); return; }
+      if(el.dataset.kind==="expense"){ openExpenseEditor(el.dataset.id); return; }
       openViewer(el.dataset.kind, el.dataset.id);
     });
-    const ed=el.querySelector("[data-edit]"); if(ed) ed.addEventListener("click",e=>{ e.stopPropagation(); if(el.dataset.kind==="cleaning") openCleaningEditor(el.dataset.id); else openEditor(el.dataset.kind, el.dataset.id); });
+    const ed=el.querySelector("[data-edit]"); if(ed) ed.addEventListener("click",e=>{
+      e.stopPropagation();
+      if(el.dataset.kind==="cleaning") openCleaningEditor(el.dataset.id);
+      else if(el.dataset.kind==="expense") openExpenseEditor(el.dataset.id);
+      else openEditor(el.dataset.kind, el.dataset.id);
+    });
     const dl=el.querySelector("[data-del]"); if(dl) dl.addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(el.dataset.id, KIND_LABEL[el.dataset.kind]||"항목"); });
     const cb=el.querySelector(".cb"); if(cb) cb.addEventListener("click",e=>{ e.stopPropagation(); if(el.dataset.kind==="plan") togglePlanDone(el.dataset.id); });
   });
@@ -830,7 +893,7 @@ $("btnBackup").addEventListener("click",()=>{
 });
 
 /* ===== 자가진단 ===== */
-const DIAG_KINDS=[["work","업무"],["plan","오늘계획"],["memo","메모"],["call","통화"],["vacation","휴가"],["meeting","회의메모"],["deliver","전달사항"],["schedule","업무예정"],["item","품목"],["stock","입출고"],["cleaning","청소일지"],["filelink","파일링크"],["site","사이트"],["password","비밀번호"]];
+const DIAG_KINDS=[["work","업무"],["plan","오늘계획"],["memo","메모"],["call","통화"],["vacation","휴가"],["meeting","회의메모"],["deliver","전달사항"],["schedule","업무예정"],["item","품목"],["stock","입출고"],["cleaning","청소일지"],["expense","지출"],["filelink","파일링크"],["site","사이트"],["password","비밀번호"]];
 function bytesOf(obj){ try{ return new Blob([JSON.stringify(obj)]).size; }catch(e){ return JSON.stringify(obj).length; } }
 function fmtBytes(n){ if(n<1024) return n+" B"; if(n<1048576) return (n/1024).toFixed(1)+" KB"; return (n/1048576).toFixed(2)+" MB"; }
 function renderDiag(){
@@ -933,6 +996,7 @@ const CSV_COLS={
   schedule:[["date","예정일"],["sStatus","상태"],["sType","종류"],["title","예정내용"],["memo","메모"]],
   item:[["itemCode","품목ID"],["shopId","상품ID"],["itemName","품목명"],["spec","규격"],["unit","단위"],["field","분야"],["maker","제조원"],["vendor","거래처"],["unitPrice","단가"],["safetyStock","안전재고"],["recurring","구매주기"],["location","보관위치"],["memo","메모"]],
   stock:[["date","거래일"],["stockType","구분"],["itemName","품목명"],["spec","규격"],["qty","수량"],["unitPrice","단가"],["amount","금액"],["vendor","거래처"],["docNo","전표번호"],["useTarget","사용처"],["memo","메모"]],
+  expense:[["no","NO"],["title","지출내역"],["amount","지출금액"],["date","날짜"],["memo","비고"]],
 };
 function csvCell(v){ if(v===true) return "완료"; if(v===false) return ""; let s=(v==null?"":String(v)); if(/[",\n\r]/.test(s)) s='"'+s.replace(/"/g,'""')+'"'; return s; }
 function buildCSV(kind){
@@ -1260,12 +1324,13 @@ function renderMonthView(){
   $("calYearGrid").style.display="none";
   const first=new Date(calY,calM,1).getDay(), days=new Date(calY,calM+1,0).getDate();
   // 업무 모드 데이터
-  const work={}, vac={}, other={}, sched={}, cleaning={};
+  const work={}, vac={}, other={}, sched={}, cleaning={}, expense={};
   entries.forEach(e=>{
     if(e.kind==="work"&&e.date){ (work[e.date]=work[e.date]||[]).push(e); }
     else if(e.kind==="vacation"){ datesBetween(e.start,e.end).forEach(d=>{ (vac[d]=vac[d]||[]).push(e.name||"휴가"); }); }
     else if(e.kind==="schedule"&&e.date){ (sched[e.date]=sched[e.date]||[]).push(e); }
     else if(e.kind==="cleaning"&&e.date){ (cleaning[e.date]=cleaning[e.date]||[]).push(e); }
+    else if(e.kind==="expense"&&e.date){ (expense[e.date]=expense[e.date]||[]).push(e); }
     else if(["plan","memo","call","meeting","deliver"].includes(e.kind)&&e.date){ (other[e.date]=other[e.date]||[]).push(e); }
   });
   const dow=["일","월","화","수","목","금","토"];
@@ -1288,7 +1353,7 @@ function renderMonthView(){
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.vacation}">${CAL_KIND_LABEL.vacation}</div><div class="vac">${esc(vArr.join(", "))}</div></div>`;
       }
     } else {
-      const wArr=work[ds]||[]; const vArr=vac[ds]||[]; const oArr=other[ds]||[]; const sArr=sched[ds]||[]; const clArr=cleaning[ds]||[];
+      const wArr=work[ds]||[]; const vArr=vac[ds]||[]; const oArr=other[ds]||[]; const sArr=sched[ds]||[]; const clArr=cleaning[ds]||[]; const exArr=expense[ds]||[];
       if(wArr.length){
         hasContent=true;
         let b=""; wArr.forEach(en=> b+=`<div class="wtitle"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
@@ -1297,6 +1362,16 @@ function renderMonthView(){
       if(clArr.length){
         hasContent=true;
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#15803d">🧹 청소일지</div></div>`;
+      }
+      if(exArr.length){
+        hasContent=true;
+        const personal=exArr.filter(e=>(e.expType||"개인지출")==="개인지출");
+        const tax=exArr.filter(e=>e.expType==="세금계산서");
+        const sum=exArr.reduce((s,e)=>s+(Number(e.amount)||0),0);
+        let lbl="";
+        if(personal.length) lbl+=`💸${personal.length}`;
+        if(tax.length) lbl+=`${lbl?" ":""}📃${tax.length}`;
+        inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#a85e3a">${lbl} (${won(sum)}원)</div></div>`;
       }
       if(vArr.length){
         hasContent=true;
@@ -1406,6 +1481,7 @@ function renderDayDetail(){
   const dv=entries.filter(e=>e.kind==="deliver"&&e.date===selDay).sort(byDateDesc);
   const sc=entries.filter(e=>e.kind==="schedule"&&e.date===selDay).sort(byDateDesc);
   const cl=entries.filter(e=>e.kind==="cleaning"&&e.date===selDay).sort(byDateDesc);
+  const ex=entries.filter(e=>e.kind==="expense"&&e.date===selDay).sort(byDateDesc);
   let h=`<div class="list-head"><h2 style="font-size:16px">${dateLabel(selDay)}</h2>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       ${calMode==="schedule"?`<button class="btn btn-primary btn-sm" id="addSchedBtn">➕ 예정 추가</button>`:""}
@@ -1418,10 +1494,11 @@ function renderDayDetail(){
       setTimeout(()=>{ const e=$("m-date"); if(e) e.value=selDay; },50);
     });
   };
-  if(!(w.length||v.length||p.length||m.length||c.length||mt.length||dv.length||sc.length||cl.length)){
+  if(!(w.length||v.length||p.length||m.length||c.length||mt.length||dv.length||sc.length||cl.length||ex.length)){
     box.innerHTML=h+`<div class="empty">이 날의 기록이 없습니다.</div>`; wireRep(); return;
   }
   if(cl.length) h+=`<div class="detail-block"><div class="bh">🧹 청소일지</div>${cl.map(c=>`<div class="row-item" data-kind="cleaning" data-id="${c.id}"><div class="grow"><div class="t">🧹 청소일지 <span class="pill admin">반장 ${esc(c.foreman||"")}</span></div><div class="m">${c.special?"⭐ "+esc(c.special).slice(0,80):""}</div></div></div>`).join("")}</div>`;
+  if(ex.length) h+=`<div class="detail-block"><div class="bh">💰 지출/세금계산서</div>${ex.map(e=>`<div class="row-item" data-kind="expense" data-id="${e.id}"><div class="grow"><div class="t">${(e.expType==="세금계산서")?"📃":"💸"} ${esc(e.title||"")} <span class="pill amount">${won(e.amount||0)}원</span></div><div class="m">${e.memo?esc(e.memo):""}</div></div></div>`).join("")}</div>`;
   if(sc.length) h+=`<div class="detail-block"><div class="bh">📅 업무예정</div>${sc.map(cardSchedule).join("")}</div>`;
   if(v.length) h+=`<div class="detail-block"><div class="bh">🌴 휴가</div>${v.map(cardVac).join("")}</div>`;
   if(w.length) h+=`<div class="detail-block"><div class="bh">🛠 업무</div>${w.map(cardWork).join("")}</div>`;
@@ -3430,8 +3507,231 @@ function renderCleanStaffList(){
 }
 
 
-const AI_KEY_LS="wl_anthropic_key";
+/* =========================================================
+   v28: 지출 관리 (개인지출 품의서 + 세금계산서 확인)
+   ========================================================= */
+const EXP_FILTER = { tab:"personal", q:"", ym:"" };
+
+function wireExpenseTab(){
+  // 서브탭 전환
+  document.querySelectorAll("[data-exptab]").forEach(b=>b.addEventListener("click",()=>{
+    EXP_FILTER.tab = b.dataset.exptab;
+    document.querySelectorAll("[data-exptab]").forEach(x=>x.classList.toggle("active",x===b));
+    renderExpense();
+  }));
+  $("expSearch").addEventListener("input",e=>{ EXP_FILTER.q=e.target.value; renderExpense(); });
+  $("expMonthFilter").addEventListener("change",e=>{ EXP_FILTER.ym=e.target.value; renderExpense(); });
+  $("btnAddExpense").addEventListener("click",()=>openExpenseEditor(null));
+  $("btnExpExcel").addEventListener("click",copyExpenseExcel);
+}
+
+function renderExpense(){
+  // 월 필터 옵션 초기화 (있는 월만)
+  const monthSel = $("expMonthFilter");
+  if(monthSel){
+    const allExp = entries.filter(e=>e.kind==="expense");
+    const months = [...new Set(allExp.map(e=>(e.date||"").slice(0,7)).filter(Boolean))].sort().reverse();
+    const cur = monthSel.value;
+    monthSel.innerHTML = `<option value="">전체 월</option>` + months.map(m=>`<option value="${m}">${m}</option>`).join("");
+    monthSel.value = EXP_FILTER.ym && months.includes(EXP_FILTER.ym) ? EXP_FILTER.ym : "";
+  }
+  // 월별 통계
+  renderExpenseStats();
+  // 필터된 목록
+  const expType = EXP_FILTER.tab==="personal" ? "개인지출" : "세금계산서";
+  const list = entries.filter(e=>e.kind==="expense"
+    && (e.expType||"개인지출")===expType
+    && (!EXP_FILTER.ym || (e.date||"").startsWith(EXP_FILTER.ym))
+    && (!EXP_FILTER.q.trim() || [e.title,e.memo,e.date].filter(Boolean).join(" ").toLowerCase().includes(EXP_FILTER.q.trim().toLowerCase()))
+  ).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  const body = $("expBody");
+  if(!list.length){
+    body.innerHTML = `<tr><td colspan="6" class="empty">${EXP_FILTER.tab==="personal"?"개인 지출":"세금계산서"} 내역이 없습니다.</td></tr>`;
+    $("expTotal").innerHTML = "";
+    return;
+  }
+  let total=0;
+  body.innerHTML = list.map((e,i)=>{
+    const amt = Number(e.amount)||0; total+=amt;
+    return `<tr data-id="${e.id}">
+      <td class="num">${i+1}</td>
+      <td><b>${esc(e.title||"")}</b>${e.photo?'<span style="margin-left:5px;font-size:13px">📷</span>':""}</td>
+      <td class="num">${won(amt)}</td>
+      <td>${esc(e.date||"")}</td>
+      <td>${esc(e.memo||"")}</td>
+      <td><button class="rowdel" data-del title="삭제">🗑</button></td>
+    </tr>`;
+  }).join("");
+  $("expTotal").innerHTML = `합계: <b>${won(total)}원</b> (${list.length}건)`;
+  body.querySelectorAll("tr[data-id]").forEach(tr=>{
+    const id=tr.dataset.id;
+    tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openExpenseEditor(id); });
+    tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(id, "지출 내역"); });
+  });
+}
+
+function renderExpenseStats(){
+  const box = $("expStats"); if(!box) return;
+  const all = entries.filter(e=>e.kind==="expense");
+  if(!all.length){ box.innerHTML=""; return; }
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  const thisMonth = all.filter(e=>(e.date||"").startsWith(ym));
+  const personal = thisMonth.filter(e=>(e.expType||"개인지출")==="개인지출");
+  const tax = thisMonth.filter(e=>e.expType==="세금계산서");
+  const personalSum = personal.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const taxSum = tax.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  box.innerHTML = `
+    <div class="exp-stat-row">
+      <div class="exp-stat-card exp-stat-personal">
+        <div class="es-h">💸 ${ym} 개인 지출</div>
+        <div class="es-v">${won(personalSum)}<span class="es-u">원</span></div>
+        <div class="es-s">${personal.length}건</div>
+      </div>
+      <div class="exp-stat-card exp-stat-tax">
+        <div class="es-h">📃 ${ym} 세금계산서</div>
+        <div class="es-v">${won(taxSum)}<span class="es-u">원</span></div>
+        <div class="es-s">${tax.length}건</div>
+      </div>
+    </div>
+  `;
+}
+
+// ===== 지출 추가/수정 모달 =====
+let expenseData = null;
+let expensePhoto = null;
+function openExpenseEditor(id){
+  expenseData = id ? Object.assign({}, entries.find(e=>e.id===id)||{}) : {
+    date: todayStr(),
+    expType: EXP_FILTER.tab==="personal" ? "개인지출" : "세금계산서",
+    title: "",
+    amount: 0,
+    memo: "",
+    photo: null
+  };
+  expensePhoto = expenseData.photo || null;
+  renderExpenseModal(id);
+  $("expenseOverlay").classList.add("show");
+  const m=$("expenseOverlay").querySelector(".modal"); if(m) m.scrollTop=0;
+}
+
+function renderExpenseModal(id){
+  $("expTitle").textContent = (id?"수정":"추가")+" · 💰 지출 내역";
+  const d = expenseData;
+  // 자주 쓰는 내역 자동완성 (지난 90일 내역에서)
+  const recent = entries.filter(e=>e.kind==="expense" && e.title && e.expType===d.expType)
+    .map(e=>e.title)
+    .filter((v,i,a)=>a.indexOf(v)===i)
+    .slice(0,30);
+  const datalistOpts = recent.map(t=>`<option value="${esc(t)}">`).join("");
+  $("expFields").innerHTML = `
+    <div class="grid">
+      <div class="field"><label>날짜 <span class="req">*</span></label><input type="date" id="exp-date" value="${esc(d.date||todayStr())}"></div>
+      <div class="field">
+        <label>종류 <span class="req">*</span></label>
+        <select id="exp-type">
+          <option value="개인지출" ${(d.expType==="개인지출")?"selected":""}>💸 개인지출 (품의서용)</option>
+          <option value="세금계산서" ${(d.expType==="세금계산서")?"selected":""}>📃 세금계산서 (발급 확인)</option>
+        </select>
+      </div>
+    </div>
+    <div class="field full" style="margin-top:14px">
+      <label>내역 <span class="req">*</span></label>
+      <input type="text" id="exp-title" value="${esc(d.title||"")}" list="expTitleList" placeholder="예: 종량제 봉투, 정화조 수리, 점심식사">
+      <datalist id="expTitleList">${datalistOpts}</datalist>
+    </div>
+    <div class="grid" style="margin-top:14px">
+      <div class="field"><label>금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0"></div>
+    </div>
+    <div class="field full" style="margin-top:14px">
+      <label>비고</label>
+      <input type="text" id="exp-memo" value="${esc(d.memo||"")}" placeholder="예: 100장, 5층·6층 30개">
+    </div>
+    <div class="field full" style="margin-top:14px">
+      <label>📷 영수증 사진 (선택)</label>
+      <div class="photo-btns">
+        <label class="photo-btn">📷 촬영<input type="file" id="exp-cam" accept="image/*" capture="environment" style="display:none"></label>
+        <label class="photo-btn">🖼 사진 선택<input type="file" id="exp-file" accept="image/*" style="display:none"></label>
+      </div>
+      <div id="exp-photoArea"></div>
+    </div>
+  `;
+  renderExpensePhoto();
+  $("exp-cam").addEventListener("change",e=>handleExpensePhoto(e));
+  $("exp-file").addEventListener("change",e=>handleExpensePhoto(e));
+  $("expDelete").style.display = id?"":"none";
+}
+
+function renderExpensePhoto(){
+  const area = $("exp-photoArea");
+  if(!expensePhoto){ area.innerHTML = `<div style="font-size:12px;color:var(--ink-soft);margin-top:6px">영수증을 촬영하거나 사진으로 첨부하세요. (선택)</div>`; return; }
+  area.innerHTML = `<div class="thumbs" style="margin-top:8px"><div class="thumb" style="width:120px;height:120px"><img class="zimg" src="${expensePhoto}"><button class="rm" id="exp-rmPhoto">×</button></div></div>`;
+  $("exp-rmPhoto").addEventListener("click",()=>{ expensePhoto=null; renderExpensePhoto(); });
+}
+async function handleExpensePhoto(e){
+  const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
+  try{ expensePhoto = await compressImage(f, 1400, 0.7); renderExpensePhoto(); }
+  catch(err){ toast("사진 처리 실패"); }
+}
+
+function saveExpense(){
+  const id = expenseData && expenseData.id;
+  const title = ($("exp-title").value||"").trim();
+  const amount = Number($("exp-amount").value)||0;
+  if(!title){ toast("내역을 입력하세요"); return; }
+  if(amount<=0){ toast("금액을 입력하세요"); return; }
+  const obj = {
+    kind: "expense",
+    date: $("exp-date").value || todayStr(),
+    expType: $("exp-type").value || "개인지출",
+    title,
+    amount,
+    memo: $("exp-memo").value || "",
+    photo: expensePhoto
+  };
+  if(id){ updateRecord(id, obj); }
+  else { obj.createdAt = Date.now(); addRecord(obj); }
+  // 현재 보고 있던 종류와 다르면 그 탭으로 자동 전환
+  if(obj.expType==="개인지출" && EXP_FILTER.tab!=="personal"){
+    EXP_FILTER.tab = "personal";
+    document.querySelectorAll("[data-exptab]").forEach(x=>x.classList.toggle("active", x.dataset.exptab==="personal"));
+  } else if(obj.expType==="세금계산서" && EXP_FILTER.tab!=="tax"){
+    EXP_FILTER.tab = "tax";
+    document.querySelectorAll("[data-exptab]").forEach(x=>x.classList.toggle("active", x.dataset.exptab==="tax"));
+  }
+  $("expenseOverlay").classList.remove("show");
+  renderAll();
+  toast(id?"수정되었습니다":"저장되었습니다");
+}
+
+function wireExpenseModal(){
+  $("expCancel").addEventListener("click",()=>$("expenseOverlay").classList.remove("show"));
+  $("expSave").addEventListener("click",saveExpense);
+  $("expDelete").addEventListener("click",()=>{
+    if(!expenseData||!expenseData.id) return;
+    const id=expenseData.id;
+    $("expenseOverlay").classList.remove("show");
+    deleteWithUndo(id, "지출 내역");
+  });
+  $("expenseOverlay").addEventListener("click",e=>{ if(e.target===$("expenseOverlay")) $("expenseOverlay").classList.remove("show"); });
+}
+
+// 엑셀 복사 — 품의서 양식에 붙여넣을 수 있도록
+function copyExpenseExcel(){
+  const expType = EXP_FILTER.tab==="personal" ? "개인지출" : "세금계산서";
+  const list = entries.filter(e=>e.kind==="expense"
+    && (e.expType||"개인지출")===expType
+    && (!EXP_FILTER.ym || (e.date||"").startsWith(EXP_FILTER.ym))
+  ).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  if(!list.length){ toast("복사할 내역이 없습니다"); return; }
+  // 형식: NO\t지출내역\t지출금액\t날짜\t비고
+  const text = list.map((e,i)=>[i+1, e.title||"", e.amount||0, e.date||"", e.memo||""].map(cleanCell).join("\t")).join("\n");
+  copyText(text, `${expType} ${list.length}건 엑셀 복사됨`);
+}
+
+
 const AI_MODEL="claude-sonnet-4-6";
+const AI_KEY_LS="wl_anthropic_key";
 let aiHistory=[];
 function aiGetKey(){ try{ return localStorage.getItem(AI_KEY_LS)||""; }catch(e){ return ""; } }
 function aiRenderKeyState(){

@@ -14,7 +14,7 @@
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">업무 · 자재 · 청소 · 사이트 · 점검일지 · 계획 · 메모 · 통화 · 휴가 · 회의 · 전달 · 달력 <b style="color:#9aa7b4" id="verBadge">v27</b></span></div>
+      <div class="brand"><h1>업무일지</h1><span class="sub">업무 통합 · 자재 · 청소 · 달력 · 메모 <b style="color:#9aa7b4" id="verBadge">v29</b></span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="index.html">← 홈</a>
@@ -26,15 +26,9 @@
         <button data-tab="work" class="active">업무</button>
         <button data-tab="material">📦 자재</button>
         <button data-tab="cleaning">🧹 청소</button>
-        <button data-tab="site">🌐 사이트</button>
-        <button data-tab="filelink">📁 점검일지·관리폴더</button>
-        <button data-tab="plan">오늘계획</button>
-        <button data-tab="memo">메모</button>
-        <button data-tab="call">통화</button>
-        <button data-tab="vacation">휴가</button>
-        <button data-tab="meeting">회의메모</button>
-        <button data-tab="deliver">전달사항</button>
         <button data-tab="calendar">달력</button>
+        <button data-tab="memo">메모</button>
+        <button data-tab="plan">오늘계획</button>
         <button data-tab="password">🔐 비번</button>
         <button data-tab="diag">자가진단</button>
         <button data-tab="ai">AI</button>
@@ -127,6 +121,20 @@
 
   <!-- 업무 -->
   <section class="panel active" id="panel-work">
+    <!-- v29: 업무 탭 서브탭 네비 -->
+    <nav class="subtabs" id="workSubtabs">
+      <button data-subtab="general" class="active">🏢 일반업무</button>
+      <button data-subtab="filelink">📁 점검일지</button>
+      <button data-subtab="call">📞 통화</button>
+      <button data-subtab="site">🌐 사이트</button>
+      <button data-subtab="vacation">🌴 휴가</button>
+      <button data-subtab="meeting">💼 회의</button>
+      <button data-subtab="deliver">📢 전달</button>
+      <button data-subtab="expense">💰 지출</button>
+    </nav>
+
+    <!-- 일반 업무 (기본) -->
+    <div class="work-subpanel" data-subpanel="general">
     <div class="card">
       <div class="list-head">
         <h2>업무</h2>
@@ -155,6 +163,9 @@
       </div>
       <p style="font-size:12px;color:var(--ink-soft);margin-top:8px"><span id="wkCount"></span> · 엑셀 복사: 해당층 위치 업무내역_세부내용_자재_비용 (빈 항목 제외)</p>
     </div>
+    </div>
+    <!-- 다른 서브패널들은 JS로 동적 이동/표시 -->
+    <div id="workSubpanelHost"></div>
   </section>
 
   <!-- 오늘계획 -->
@@ -391,6 +402,44 @@
     </div>
   </section>
 
+  <!-- 💰 지출 -->
+  <section class="panel" id="panel-expense">
+    <div class="card">
+      <div class="list-head">
+        <h2>💰 지출 / 세금계산서</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="btnAddExpense">➕ 지출 추가</button>
+          <button class="btn btn-ghost btn-sm" id="btnExpExcel">📋 엑셀 복사</button>
+        </div>
+      </div>
+      <p class="desc">개인 지출(품의서용)과 세금계산서 발급 내역(확인용)을 따로 관리합니다. 달력에서 날짜별로도 확인할 수 있어요.</p>
+
+      <div id="expStats"></div>
+
+      <div class="mat-tabs" style="margin-top:14px">
+        <button data-exptab="personal" class="active">💸 개인 지출</button>
+        <button data-exptab="tax">📃 세금계산서</button>
+      </div>
+
+      <div class="filt-row">
+        <select id="expMonthFilter"></select>
+      </div>
+      <input type="text" id="expSearch" class="search" placeholder="🔍 검색 — 내역·비고·날짜">
+
+      <div class="table-wrap">
+        <table class="rec"><thead><tr>
+          <th style="text-align:right;width:55px">NO</th>
+          <th>지출내역</th>
+          <th style="text-align:right">지출금액</th>
+          <th style="width:110px">날짜</th>
+          <th>비고</th>
+          <th style="width:40px"></th>
+        </tr></thead><tbody id="expBody"></tbody></table>
+      </div>
+      <p id="expTotal" style="font-size:14px;color:var(--ink);margin-top:8px;text-align:right"></p>
+    </div>
+  </section>
+
   <!-- 🔐 비밀번호 -->
   <section class="panel" id="panel-password">
     <div class="card">
@@ -574,6 +623,17 @@
     <button class="btn btn-primary" id="clnSave">저장</button>
     <button class="btn btn-ghost" id="clnCancel">취소</button>
     <button class="btn btn-danger" id="clnDelete" style="margin-left:auto;display:none">삭제</button>
+  </div>
+</div></div>
+
+<!-- 💰 지출 모달 -->
+<div class="overlay" id="expenseOverlay"><div class="modal" style="max-width:560px">
+  <h3 id="expTitle">지출 내역</h3>
+  <div id="expFields"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="expSave">저장</button>
+    <button class="btn btn-ghost" id="expCancel">취소</button>
+    <button class="btn btn-danger" id="expDelete" style="margin-left:auto;display:none">삭제</button>
   </div>
 </div></div>
 
