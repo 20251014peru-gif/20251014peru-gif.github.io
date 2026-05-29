@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v31";
+const APP_VERSION = "v32";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -3744,27 +3744,57 @@ function copyExpenseExcel(){
   const rows = list.map((e,i)=>[i+1, e.title||"", e.amount||0, e.date||"", e.memo||""]);
   const text = rows.map(r=>r.map(v=>String(v).replace(/\t/g," ").replace(/\n/g," ")).join("\t")).join("\n");
   // 2) HTML 테이블 (엑셀이 자동으로 셀에 매핑)
-  const html = "<table>" + rows.map(r=>"<tr>"+r.map(v=>{
-    const s=String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    return `<td>${s}</td>`;
-  }).join("")+"</tr>").join("") + "</table>";
+  // mso 스타일을 넣으면 엑셀이 확실히 셀로 인식
+  let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1" cellspacing="0">`;
+  rows.forEach(r=>{
+    html += "<tr>";
+    r.forEach(v=>{
+      const s=String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      // 숫자는 number 타입 명시 (엑셀이 숫자 셀로 인식)
+      const isNum = typeof v === "number" || (/^[0-9]+$/.test(String(v)) && String(v).length<10);
+      html += isNum ? `<td x:num>${s}</td>` : `<td>${s}</td>`;
+    });
+    html += "</tr>";
+  });
+  html += "</table></body></html>";
   // 3) 두 형식 모두 클립보드에
   copyExcelData(text, html, `${expType} ${list.length}건 엑셀 복사됨`);
 }
 
 // 엑셀이 잘 인식하도록 plain text + HTML 두 형식을 같이 클립보드에
-function copyExcelData(text, html, successMsg){
+async function copyExcelData(text, html, successMsg){
+  // 방법 1: 최신 Clipboard API + ClipboardItem (두 형식 동시 제공)
   if(navigator.clipboard && navigator.clipboard.write && window.ClipboardItem){
-    const item = new ClipboardItem({
-      "text/plain": new Blob([text], {type:"text/plain"}),
-      "text/html": new Blob([html], {type:"text/html"})
-    });
-    navigator.clipboard.write([item])
-      .then(()=>toast(successMsg))
-      .catch(()=>copyText(text, successMsg));
-  } else {
-    copyText(text, successMsg);
+    try{
+      const item = new ClipboardItem({
+        "text/plain": new Blob([text], {type:"text/plain"}),
+        "text/html": new Blob([html], {type:"text/html"})
+      });
+      await navigator.clipboard.write([item]);
+      toast(successMsg);
+      return;
+    }catch(e){ console.warn("ClipboardItem 실패, 폴백 시도:", e); }
   }
+  // 방법 2: 옛 방식 — 임시 textarea에 HTML 넣고 selection으로 복사
+  // 이 방식은 엑셀이 HTML 테이블을 더 잘 인식함
+  try{
+    const div = document.createElement("div");
+    div.contentEditable = "true";
+    div.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0";
+    div.innerHTML = html;
+    document.body.appendChild(div);
+    const range = document.createRange();
+    range.selectNodeContents(div);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    const ok = document.execCommand("copy");
+    sel.removeAllRanges();
+    document.body.removeChild(div);
+    if(ok){ toast(successMsg); return; }
+  }catch(e){ console.warn("execCommand HTML 복사 실패:", e); }
+  // 방법 3: 최후의 보루 — plain text만
+  copyText(text, successMsg);
 }
 
 
