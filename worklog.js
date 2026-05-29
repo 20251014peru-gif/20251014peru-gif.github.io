@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v33";
+const APP_VERSION = "v34";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -3734,42 +3734,63 @@ function wireExpenseModal(){
 
 // 엑셀 복사 — 품의서 양식에 붙여넣을 수 있도록
 function copyExpenseExcel(){
-  if(typeof XLSX === "undefined"){ toast("엑셀 라이브러리 로드 실패 — 새로고침해주세요"); return; }
   const expType = EXP_FILTER.tab==="personal" ? "개인지출" : "세금계산서";
   const list = entries.filter(e=>e.kind==="expense"
     && (e.expType||"개인지출")===expType
     && (!EXP_FILTER.ym || (e.date||"").startsWith(EXP_FILTER.ym))
   ).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
-  if(!list.length){ toast("다운로드할 내역이 없습니다"); return; }
-  // 헤더 + 데이터 (AOA 형식)
-  const aoa = [["NO","지출내역","지출금액","날짜","비고"]];
-  let total=0;
-  list.forEach((e,i)=>{
-    const amt = Number(e.amount)||0;
-    total += amt;
-    aoa.push([i+1, e.title||"", amt, e.date||"", e.memo||""]);
+  if(!list.length){ toast("복사할 내역이 없습니다"); return; }
+  // 1) 탭 구분 텍스트
+  const rows = list.map((e,i)=>[i+1, e.title||"", e.amount||0, e.date||"", e.memo||""]);
+  const text = rows.map(r=>r.map(v=>String(v).replace(/\t/g," ").replace(/\n/g," ")).join("\t")).join("\n");
+  // 2) HTML 테이블 (엑셀이 자동으로 셀에 매핑)
+  let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1" cellspacing="0">`;
+  rows.forEach(r=>{
+    html += "<tr>";
+    r.forEach(v=>{
+      const s=String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      const isNum = typeof v === "number" || (/^[0-9]+$/.test(String(v)) && String(v).length<10);
+      html += isNum ? `<td x:num>${s}</td>` : `<td>${s}</td>`;
+    });
+    html += "</tr>";
   });
-  // 합계 행 추가
-  aoa.push(["","합계",total,"",""]);
-  // 워크북 생성
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  // 컬럼 너비 자동 설정
-  ws["!cols"] = [{wch:6},{wch:30},{wch:14},{wch:14},{wch:30}];
-  // 숫자 포맷 (지출금액 컬럼 = C열)
-  for(let r=1; r<aoa.length; r++){
-    const cellAddr = XLSX.utils.encode_cell({r:r, c:2});
-    if(ws[cellAddr] && typeof ws[cellAddr].v === "number"){
-      ws[cellAddr].z = "#,##0";  // 천단위 콤마
-    }
+  html += "</table></body></html>";
+  copyExcelData(text, html, `${expType} ${list.length}건 엑셀 복사됨`);
+}
+
+// 엑셀이 잘 인식하도록 plain text + HTML 두 형식을 같이 클립보드에
+async function copyExcelData(text, html, successMsg){
+  // 방법 1: 최신 Clipboard API + ClipboardItem (두 형식 동시 제공)
+  if(navigator.clipboard && navigator.clipboard.write && window.ClipboardItem){
+    try{
+      const item = new ClipboardItem({
+        "text/plain": new Blob([text], {type:"text/plain"}),
+        "text/html": new Blob([html], {type:"text/html"})
+      });
+      await navigator.clipboard.write([item]);
+      toast(successMsg);
+      return;
+    }catch(e){ console.warn("ClipboardItem 실패, 폴백 시도:", e); }
   }
-  XLSX.utils.book_append_sheet(wb, ws, expType);
-  // 파일명 — 기간 포함
-  const ymPart = EXP_FILTER.ym ? `_${EXP_FILTER.ym}` : "";
-  const today = todayStr().replace(/-/g,"");
-  const filename = `${expType}${ymPart}_${today}.xlsx`;
-  XLSX.writeFile(wb, filename);
-  toast(`✅ ${expType} ${list.length}건 다운로드 (${filename})`, 4000);
+  // 방법 2: 옛 방식 — 임시 div에 HTML 넣고 selection으로 복사
+  try{
+    const div = document.createElement("div");
+    div.contentEditable = "true";
+    div.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0";
+    div.innerHTML = html;
+    document.body.appendChild(div);
+    const range = document.createRange();
+    range.selectNodeContents(div);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    const ok = document.execCommand("copy");
+    sel.removeAllRanges();
+    document.body.removeChild(div);
+    if(ok){ toast(successMsg); return; }
+  }catch(e){ console.warn("execCommand HTML 복사 실패:", e); }
+  // 방법 3: 최후의 보루 — plain text만
+  copyText(text, successMsg);
 }
 
 
