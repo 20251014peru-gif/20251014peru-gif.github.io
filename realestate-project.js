@@ -1,20 +1,21 @@
 /* ============================================================
-   부동산 프로젝트 관리 v3.8
+   부동산 프로젝트 관리 v3.9
    ------------------------------------------------------------
-   [v3.8 변경 내역]
-   1) 입력 경로를 '기록 추가' 하나로 통일
-      (주말 세트 입력·빠른 연속 입력 버튼 제거 → 기록 추가로)
-   2) 기록 추가 모달 상단에 자주 쓰는 종류 '빠른 선택 칩'
-      (🍚식비 ⛽주유·가스 🛣톨비 🅿주차비 🧱자재비 🔨공사비 📷사진)
-      → 탭 한 번에 종류 선택 + 세부항목 자동 표시
-   3) 주말 비용 탭도 종류별 기록추가 버튼으로 연결
+   [v3.9 변경 내역]
+   1) 주말 비용 탭 제거 → 비용 탭으로 흡수(식비·주유·톨비 빠른 입력 버튼)
+   2) 기록 추가 빠른칩에 부동산 매수비용·매도비용 추가
+      - 매수: 매매대금/취득세/지방교육세/농특세/국민주택채권/법무사/중개/인지세/이사비
+      - 매도: 받은 대금/양도세/지방소득세/중개/법무/퇴거합의금
+   3) 자재비·공사비에 규격·단가×수량·부가세(별도/포함/없음) 칸
+      → 단가×수량×부가세로 금액 자동 계산, 목록에 규격·부가세 표시
+   4) 종류별 세부항목을 인테리어 실무 공정 순서에 맞게 정비
+      (철거→설비→전기→창호→목공→타일·방수→도배·바닥→가구·조명)
    ------------------------------------------------------------
+   [v3.8] 입력 기록추가로 통일 / 빠른 종류 칩
    [v3.7] 비용 분류 통일 / 전화·주소(네이버지도)
-   [v3.6] 주말 영수증 사진(양도세 증빙)
-   [v3.5] 주말 한줄 즉시저장 / 식비 메뉴 합계 / 메모 팝업
-   [v3.4] 커스텀 입력칸 / 앞으로가기
-   [v3.3] 작업일지 / 준비·할일 / 뒤로가기
-   [v3.0~3.2] 파일분리·환율·옵션·자재·견적·백업·종류별 칸 설정
+   [v3.6] 주말 영수증 사진(증빙)  [v3.5] 식비 메뉴합계·메모팝업
+   [v3.4] 커스텀칸·앞으로가기  [v3.3] 작업일지·할일·뒤로가기
+   [v3.0~3.2] 파일분리·환율·옵션·자재·견적·백업·칸설정
    ============================================================ */
 
 /* ===== Firebase ===== */
@@ -75,13 +76,15 @@ const DEFAULT_OPTS = {
    세 곳(기록추가 / 주말세트 / 비용수정)이 모두 이 체계를 사용.
    - 종류(kind): 자재비/공사비 + 아래 기타 종류들
    - 종류별 세부항목(sub): SUB_CATS 매핑. (자재비/공사비는 공정별 stage_cat) */
-const COST_KINDS = ["자재비","공사비","식비","톨비(통행료)","주유·가스","주차비","관리비","도시가스","대출이자","등기비","취득세","중개 수수료","보험료","숙박비","예비비","기타비용"];
+const COST_KINDS = ["자재비","공사비","부동산 매수비용","부동산 매도비용","식비","톨비(통행료)","주유·가스","주차비","관리비","도시가스","대출이자","등기비","취득세","중개 수수료","보험료","숙박비","예비비","기타비용"];
 const SUB_CATS = {
+  "부동산 매수비용":["매매대금(계약금)","매매대금(중도금)","매매대금(잔금)","취득세","지방교육세","농어촌특별세","국민주택채권","법무사 수수료","중개 수수료","인지세","이사비","기타"],
+  "부동산 매도비용":["받은 계약금","받은 중도금","받은 잔금","양도소득세","지방소득세","중개 수수료","법무사/대행 비용","퇴거합의금","기타"],
   "식비":["아침","점심","저녁","집간식","현장간식","기타"],
   "톨비(통행료)":["상행","하행"],
   "주유·가스":["휘발유 상행","휘발유 하행","휘발유 충전","가스 상행","가스 하행","가스 충전"],
   "주차비":["현장","기타"],
-  "관리비":[], "도시가스":[], "대출이자":[], "등기비":[], "취득세":[],
+  "관리비":[], "도시가스":[], "대출이자":[], "등기비":["취득세","국민주택채권","법무사 수수료","인지세"], "취득세":[],
   "중개 수수료":["매수","매도"], "보험료":[], "숙박비":[], "예비비":[], "기타비용":[]
 };
 /* 종류에 맞는 세부항목 목록 반환 (자재비/공사비는 공정 기반) */
@@ -547,7 +550,7 @@ function renderMain(){
   const p=projects.find(x=>x.id===currentProjectId);
   const main=document.getElementById("main");
   if(!p){main.innerHTML='<div class="empty">프로젝트를 선택하세요.</div>';return;}
-  const tabs=["대시보드","공정","자재","비용","견적·부동산","주말 비용","작업일지","준비·할일","사진","업체·연락","서류","검색"];
+  const tabs=["대시보드","공정","자재","비용","견적·부동산","작업일지","준비·할일","사진","업체·연락","서류","검색"];
   main.innerHTML=`
     <div class="proj-head">
       <div><h2>${esc(p.name)}</h2>
@@ -611,7 +614,7 @@ function renderTab(p){
     const c=document.getElementById("tabContent");
     const map={
       "대시보드":viewDashboard,"공정":viewStages,"자재":viewMaterials,"비용":viewCost,
-      "견적·부동산":viewQuotesAgents,"주말 비용":viewWeekend,"작업일지":viewWorklog,
+      "견적·부동산":viewQuotesAgents,"작업일지":viewWorklog,
       "준비·할일":viewTodos,"사진":viewPhotos,
       "업체·연락":viewVendors,"서류":viewDocs,"검색":viewSearch
     };
@@ -890,11 +893,14 @@ function renderLog(e, opts){
   const delBtn = opts.noDelete? '' : `<button class="l-del" onclick="deleteEntry('${e.id}')">삭제</button>`;
   const customHtml = (e.custom && Object.keys(e.custom).length)
     ? `<div class="l-meta">${Object.keys(e.custom).map(nm=>`${esc(nm)} <b>${esc(e.custom[nm])}</b>`).join(' · ')}</div>` : '';
+  const matHtml = (e.spec||e.unitPrice||e.qty||(e.vat&&e.vat!=='없음'))
+    ? `<div class="l-meta">${e.spec?'규격 '+esc(e.spec):''}${e.spec&&(e.unitPrice||e.qty)?' · ':''}${(e.unitPrice||e.qty)?((e.unitPrice?Number(e.unitPrice).toLocaleString():'?')+'원 × '+(e.qty||'?')):''}${e.vat?` · 부가세 ${esc(e.vat)}`:''}</div>` : '';
   const contactHtml = (e.phone||e.addr)
     ? `<div class="l-meta" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${e.phone?telLink(e.phone):''}${e.addr?mapLink(e.addr):''}</div>` : '';
   return `<div class="log">
     <div class="l-top">${tags}<span class="l-title">${esc(e.title)}</span><span class="l-date">${e.date||''}</span>${editBtn}${delBtn}</div>
     ${(e.vendor||e.amount)?`<div class="l-meta">${e.vendor?'거래처 '+esc(e.vendor):''}${e.vendor&&e.amount?' · ':''}${e.amount?'<b>'+Number(e.amount).toLocaleString()+'원</b>':''}</div>`:''}
+    ${matHtml}
     ${customHtml}
     ${contactHtml}
     ${e.memo?`<div class="l-memo">${esc(e.memo)}</div>`:''}
@@ -1263,10 +1269,21 @@ function viewCost(p){
       <div class="stat"><div class="label">실투자금</div><div class="value">${cb.realInvest.toLocaleString()}<small> 원</small></div></div>
     </div>
     <div class="panel"><div class="panel-h">🧾 비용 입력 <span class="cnt">기록 추가로 통일</span></div>
-      <div class="panel-body" style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" onclick="openEntryModal()">+ 기록 추가</button>
-        <button class="btn btn-ghost btn-sm" onclick="openExcelImport()">📥 엑셀 가져오기</button>
-        <button class="btn btn-ghost btn-sm" onclick="openRepeatEtc()">🔁 반복 비용 생성</button>
+      <div class="panel-body">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="openEntryModal()">+ 기록 추가</button>
+          <button class="btn btn-ghost btn-sm" onclick="openExcelImport()">📥 엑셀 가져오기</button>
+          <button class="btn btn-ghost btn-sm" onclick="openRepeatEtc()">🔁 반복 비용 생성</button>
+        </div>
+        <div class="hint" style="margin-top:8px">자주 쓰는 항목 바로 입력:</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'식비')">🍚 식비</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'주유·가스')">⛽ 주유·가스</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'톨비(통행료)')">🛣 톨비</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'주차비')">🅿 주차비</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'부동산 매수비용')">🏠 매수비용</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'부동산 매도비용')">💵 매도비용</button>
+        </div>
       </div></div>
     <div class="cost-cols">
       <div class="panel"><div class="panel-h">🔨 공정별 자재·공사비</div><div class="panel-body">
@@ -2329,15 +2346,34 @@ function onKindChange(){
   // 거래처 칸 표시
   const gv=document.getElementById("ef_vendor"); if(gv){ const fld=gv.closest('.field'); if(fld) fld.style.display=f.includes("vendor")?"block":"none"; }
   if(f.includes("cat")) fillCatSelect();
+  // 자재비/공사비면 규격·단가·부가세 그룹 표시
+  const isMat=(k==="자재비"||k==="공사비");
+  show("g_matspec", isMat);
   renderCustomFields(); // 종류별 커스텀 입력칸
   renderQuickKinds(); // 빠른 선택 칩 강조 갱신
 }
+/* 자재 단가×수량×부가세 → 금액 자동 계산 */
+function calcMatAmount(){
+  const up=Number(val("ef_unitprice"))||0;
+  const qty=Number(val("ef_qty"))||0;
+  if(!up || !qty){ const h=document.getElementById("ef_vatHint"); if(h) h.textContent=""; return; }
+  const vatEl=document.querySelector('input[name="ef_vat"]:checked');
+  const vat=vatEl?vatEl.value:"포함";
+  let total=up*qty;
+  let note="";
+  if(vat==="별도"){ const supply=total; total=Math.round(total*1.1); note="공급가 "+supply.toLocaleString()+"원 + 부가세 "+(total-supply).toLocaleString()+"원"; }
+  else if(vat==="포함"){ const supply=Math.round(total/1.1); note="공급가 "+supply.toLocaleString()+"원 (부가세 "+(total-supply).toLocaleString()+"원 포함)"; }
+  else { note="부가세 없음"; }
+  const amtEl=document.getElementById("ef_amount"); if(amtEl){ amtEl.value=total; updateEntryFx&&updateEntryFx(); }
+  const h=document.getElementById("ef_vatHint"); if(h) h.textContent=note+" · 금액 "+total.toLocaleString()+"원";
+}
 /* 빠른 종류 선택 칩 (자주 쓰는 것) */
-const QUICK_KINDS=[["식비","🍚"],["주유·가스","⛽"],["톨비(통행료)","🛣"],["주차비","🅿"],["자재비","🧱"],["공사비","🔨"],["사진","📷"]];
+const QUICK_KINDS=[["식비","🍚"],["주유·가스","⛽"],["톨비(통행료)","🛣"],["주차비","🅿"],["자재비","🧱"],["공사비","🔨"],["부동산 매수비용","🏠"],["부동산 매도비용","💵"],["사진","📷"]];
 function renderQuickKinds(){
   const box=document.getElementById("ef_quickKinds"); if(!box) return;
   const cur=val("ef_kind");
-  box.innerHTML=QUICK_KINDS.map(([k,ic])=>`<button type="button" class="qk-chip ${k===cur?'on':''}" onclick="pickKind('${jsstr(k)}')">${ic} ${esc(k==="톨비(통행료)"?"톨비":k)}</button>`).join("");
+  const shortLabel=(k)=>{ if(k==="톨비(통행료)")return"톨비"; if(k==="부동산 매수비용")return"매수비용"; if(k==="부동산 매도비용")return"매도비용"; return k; };
+  box.innerHTML=QUICK_KINDS.map(([k,ic])=>`<button type="button" class="qk-chip ${k===cur?'on':''}" onclick="pickKind('${jsstr(k)}')">${ic} ${esc(shortLabel(k))}</button>`).join("");
 }
 function pickKind(k){
   const sel=document.getElementById("ef_kind");
@@ -2463,6 +2499,9 @@ function openEntryModal(presetStage,presetKind){
   document.getElementById("ef_stage").onchange=fillCatSelect;
   const ph=document.getElementById("ef_phone"); if(ph) ph.value="";
   const ad=document.getElementById("ef_addr"); if(ad) ad.value="";
+  ["ef_spec","ef_unitprice","ef_qty"].forEach(id=>{const el=document.getElementById(id); if(el) el.value="";});
+  const vatDef=document.querySelector('input[name="ef_vat"][value="포함"]'); if(vatDef) vatDef.checked=true;
+  const vh=document.getElementById("ef_vatHint"); if(vh) vh.textContent="";
   efMapHint();
   _efCustomValues={};
   onKindChange();
@@ -2518,13 +2557,15 @@ async function saveEntry(){
     for(let i=0;i<fi.files.length;i++){ showUploading("파일 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); files.push(await processFile(fi.files[i])); }
     hideUploading();
   }
+  // 통일 분류 표준화: 자재비/공사비/사진/연락/서류/문제/메모를 제외한 비용 종류는
+  // kind=기타비용 + cat=종류(통계호환) + sub=세부 로 저장
   const photoFolder = f.includes("photofolder") ? val("ef_photofolder") : null;
   const docFolder = f.includes("docfolder") ? val("ef_docfolder") : null;
   const customData=readCustomFields();
-  // 통일 분류 표준화: 식비/톨비/주유·가스/주차비 등은 kind=기타비용 + cat=종류 + sub=세부로 저장
   const selCat = f.includes("cat") ? val("ef_cat") : null;
   let kindToSave=k, catToSave=selCat, subToSave=null, stageToSave=(f.includes("stage")&&val("ef_stage"))?val("ef_stage"):null;
-  const ETC_AS_KIND = ["식비","톨비(통행료)","주유·가스","주차비","관리비","도시가스","대출이자","등기비","취득세","중개 수수료","보험료","숙박비","예비비"];
+  const NON_ETC = ["자재비","공사비","사진","연락","서류","문제","메모","기타비용"];
+  const ETC_AS_KIND = COST_KINDS.filter(x=>!NON_ETC.includes(x));
   if(ETC_AS_KIND.includes(k)){
     kindToSave="기타비용"; catToSave=statCatOf(k); subToSave=selCat; stageToSave=null;
   }
@@ -2540,6 +2581,10 @@ async function saveEntry(){
     currency: isMoney?cur:null,
     fxRate: (isMoney&&cur==="USD")?_fxRate:null,
     pay: f.includes("pay")?val("ef_pay"):null,
+    spec: (k==="자재비"||k==="공사비")?(val("ef_spec")||"").trim()||null:null,
+    unitPrice: (k==="자재비"||k==="공사비")&&val("ef_unitprice")?Number(val("ef_unitprice")):null,
+    qty: (k==="자재비"||k==="공사비")&&val("ef_qty")?Number(val("ef_qty")):null,
+    vat: (k==="자재비"||k==="공사비")?((document.querySelector('input[name="ef_vat"]:checked')||{}).value||null):null,
     phone: val("ef_phone")?val("ef_phone").trim():null,
     addr: val("ef_addr")?val("ef_addr").trim():null,
     custom: Object.keys(customData).length?customData:null,

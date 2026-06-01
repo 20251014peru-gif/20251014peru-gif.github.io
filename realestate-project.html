@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>부동산 프로젝트 관리</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="realestate-project.css?v=3.8">
+<link rel="stylesheet" href="realestate-project.css?v=3.9">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
@@ -38,7 +38,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.8</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.9</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
@@ -107,6 +107,26 @@
     <div class="row2">
       <div class="field" id="g_stage"><label>공정 단계</label><select id="ef_stage" onchange="fillCatSelect()"></select></div>
       <div class="field" id="g_cat"><label>세부 항목</label><select id="ef_cat"></select></div>
+    </div>
+    <div id="g_matspec" style="display:none">
+      <div class="row2">
+        <div class="field"><label>규격 / 사양</label><input id="ef_spec" placeholder="예: 600x600 / 9.5T / 18mm"></div>
+        <div class="field"><label>단가 × 수량</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="ef_unitprice" type="number" placeholder="단가" style="flex:1" oninput="calcMatAmount()">
+            <span style="color:var(--ink-soft)">×</span>
+            <input id="ef_qty" type="number" placeholder="수량" style="width:74px" oninput="calcMatAmount()">
+          </div>
+        </div>
+      </div>
+      <div class="field"><label>부가세</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label class="vat-opt"><input type="radio" name="ef_vat" value="별도" onchange="calcMatAmount()"> 부가세 별도(+10%)</label>
+          <label class="vat-opt"><input type="radio" name="ef_vat" value="포함" checked onchange="calcMatAmount()"> 부가세 포함</label>
+          <label class="vat-opt"><input type="radio" name="ef_vat" value="없음" onchange="calcMatAmount()"> 부가세 없음</label>
+        </div>
+        <div class="hint" id="ef_vatHint"></div>
+      </div>
     </div>
     <div class="field" id="g_photofolder"><label>📷 사진 폴더</label><select id="ef_photofolder"></select></div>
     <div class="field" id="g_docfolder"><label>📁 서류 폴더</label><select id="ef_docfolder"></select></div>
@@ -600,6 +620,6 @@
   </div>
 </div>
 
-<script src="realestate-project.js?v=3.8"></script>
+<script src="realestate-project.js?v=3.9"></script>
 </body>
 </html>
