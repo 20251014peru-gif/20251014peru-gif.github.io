@@ -1,5 +1,5 @@
 /* ============================================================
-   부동산 프로젝트 관리 v5.9 — 달력 칩 겹침 해결(외부확장 CSS 충돌)
+   부동산 프로젝트 관리 v6.0 — 달력 필터 정리(컨트롤/메모/그룹/전체아이콘)
    ------------------------------------------------------------
    [v5.5] 7일마다 백업 파일 자동 제안(개인관리 장점 이식) — 7일 지나면 앱 열 때 백업 만들지 물어봄
    [v5.4] 사라졌던 급한메모 슬라이드 패널 HTML 복구(메모 오류 해결)
@@ -771,7 +771,7 @@ function calMove(delta){
   renderTab(projects.find(x=>x.id===currentProjectId));
 }
 function calToday(){ const n=new Date(); window._calYM={y:n.getFullYear(),m:n.getMonth()}; renderTab(projects.find(x=>x.id===currentProjectId)); }
-function calIcon(k){ return {"식비":"🍚","주유·가스":"⛽","톨비(통행료)":"🛣","주차비":"🅿","택배비":"📦","자재비":"🧱","공사비":"🔨","부동산 매수비용":"🏠","부동산 매도비용":"💵","사진":"📷","연락":"📞","서류":"📁","문제":"⚠","메모":"📝"}[k]||"•"; }
+function calIcon(k){ return {"식비":"🍚","주유·가스":"⛽","톨비(통행료)":"🛣","주차비":"🅿","택배비":"📦","자재비":"🧱","공사비":"🔨","부동산 매수비용":"🏠","부동산 매도비용":"💵","사진":"📷","연락":"📞","서류":"📁","문제":"⚠","메모":"📝","기타비용":"💰","대출이자":"🏦","관리비":"🏢","등기비":"📋","취득세":"🧾","중개수수료":"🤝","수리비":"🛠","공과금":"🧾","보험료":"🛡"}[k]||"💠"; }
 function calItemLabel(e){
   const k=displayKindOf(e);
   const icon=calIcon(k);
@@ -795,7 +795,15 @@ function calPresentKinds(){
   const set=new Set();
   entries.forEach(e=>{ if(e.date) set.add(displayKindOf(e)); });
   // 보기 좋은 순서로 정렬
-  const order=["식비","주유·가스","톨비(통행료)","주차비","택배비","자재비","공사비","부동산 매수비용","부동산 매도비용","사진","연락","서류","문제","메모","기타비용"];
+  const order=[
+    // 비용 그룹 (돈 나가는 것)
+    "식비","주유·가스","톨비(통행료)","주차비","택배비","자재비","공사비",
+    "수리비","관리비","공과금","보험료","대출이자","등기비","취득세","중개수수료","기타비용",
+    // 부동산 그룹
+    "부동산 매수비용","부동산 매도비용",
+    // 기록 그룹
+    "사진","서류","연락","문제","메모"
+  ];
   return [...set].sort((a,b)=>{ const ia=order.indexOf(a), ib=order.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
 }
 function viewCalendar(p){
@@ -831,18 +839,20 @@ function viewCalendar(p){
     </div>`;
   }
   const headDows=dow.map((w,i)=>`<div class="cal-h ${i===0?'sun':''} ${i===6?'sat':''}">${w}</div>`).join("");
-  // 종류 필터 칩 — 7개씩 줄로 나눔
+  // 종류 필터 칩 — 7개씩 줄로 나눔, 맨 앞에 메모 표시 토글
   const kinds=calPresentKinds();
+  const memoOn=window._calShowMemo!==false;
   function chipHtml(k){ return `<button class="cal-chip ${calKindOn(k)?'on':''}" onclick="calToggleKind('${jsstr(k)}')">${calIcon(k)} ${esc(k==="톨비(통행료)"?"톨비":k==="부동산 매수비용"?"매수":k==="부동산 매도비용"?"매도":k)}</button>`; }
+  const memoChip=`<button class="cal-chip ${memoOn?'on':''}" onclick="calToggleMemo()">📝 메모</button>`;
   let kindRows="";
   if(kinds.length){
-    for(let i=0;i<kinds.length;i+=7){
-      kindRows+=`<div class="cal-filter-row">${kinds.slice(i,i+7).map(chipHtml).join("")}</div>`;
+    const cells=[memoChip].concat(kinds.map(chipHtml));  // 메모를 맨 앞에
+    for(let i=0;i<cells.length;i+=7){
+      kindRows+=`<div class="cal-filter-row">${cells.slice(i,i+7).join("")}</div>`;
     }
   } else {
-    kindRows=`<div class="cal-filter-row"><span class="hint">기록이 없습니다.</span></div>`;
+    kindRows=`<div class="cal-filter-row">${memoChip}<span class="hint" style="margin-left:6px">표시할 기록이 없습니다.</span></div>`;
   }
-  const memoOn=window._calShowMemo!==false;
   return `<div class="panel">
     <div class="cal-top">
       <div class="cal-nav">
@@ -855,8 +865,7 @@ function viewCalendar(p){
     </div>
     <div class="cal-filter">
       <div class="cal-filter-row cal-filter-ctrl">
-        <span class="cal-filter-lab">표시 설정</span>
-        <button class="cal-chip ${memoOn?'on':''}" onclick="calToggleMemo()">📝 메모</button>
+        <span class="cal-filter-lab">표시 설정 :</span>
         <button class="cal-chip cal-ctrl" onclick="calAllKinds(true)">전체 켜기</button>
         <button class="cal-chip cal-ctrl" onclick="calAllKinds(false)">전체 끄기</button>
       </div>
