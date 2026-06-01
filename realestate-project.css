@@ -232,6 +232,11 @@ main{flex:1; padding:20px 24px; overflow-y:auto;}
 .tel-link:hover{background:var(--accent); color:#fff;}
 .map-link{display:inline-block; color:#15803d; text-decoration:none; font-size:13px; font-weight:600; background:#e6f4ea; padding:4px 10px; border-radius:8px;}
 .map-link:hover{background:#15803d; color:#fff;}
+/* 기록추가 빠른 종류 칩 */
+.quick-kinds{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;}
+.qk-chip{border:1px solid var(--line); background:#fff; border-radius:20px; padding:8px 14px; font-size:13.5px; font-weight:600; cursor:pointer; color:var(--ink); white-space:nowrap;}
+.qk-chip:hover{background:var(--accent-soft);}
+.qk-chip.on{background:var(--accent); color:#fff; border-color:var(--accent);}
 
 /* 주말 빠른 입력 */
 .wk-day{border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; background:#fafaff;}

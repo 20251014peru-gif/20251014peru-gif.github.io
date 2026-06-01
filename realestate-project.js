@@ -1,21 +1,20 @@
 /* ============================================================
-   부동산 프로젝트 관리 v3.7
+   부동산 프로젝트 관리 v3.8
    ------------------------------------------------------------
-   [v3.7 변경 내역]
-   1) 비용 분류 체계 통일 (기록추가 / 주말세트 / 비용수정 동일)
-      - 종류: 자재비·공사비·식비·톨비·주유·가스·주차비·관리비… (COST_KINDS)
-      - 종류 선택 시 세부항목 자동 변경 (식비→아침/점심/저녁, 톨비→상행/하행 등)
-      - 주말 저장분(기타비용+식비 등)도 수정창에서 종류=식비, 세부=아침 으로 정확히 표시
-   2) 전화번호 칸 추가 → 누르면 바로 전화 (기록/비용수정)
-   3) 주소 칸 추가 → 누르면 네이버지도로 연결(길찾기) (기록/비용수정)
+   [v3.8 변경 내역]
+   1) 입력 경로를 '기록 추가' 하나로 통일
+      (주말 세트 입력·빠른 연속 입력 버튼 제거 → 기록 추가로)
+   2) 기록 추가 모달 상단에 자주 쓰는 종류 '빠른 선택 칩'
+      (🍚식비 ⛽주유·가스 🛣톨비 🅿주차비 🧱자재비 🔨공사비 📷사진)
+      → 탭 한 번에 종류 선택 + 세부항목 자동 표시
+   3) 주말 비용 탭도 종류별 기록추가 버튼으로 연결
    ------------------------------------------------------------
-   [v3.6] 주말 영수증 사진 첨부(양도세 증빙·영수증 폴더)
-   [v3.5] 주말 한 줄 즉시저장 / 식비 메뉴 여러개 합계 / 메모 팝업
-   [v3.4] 커스텀 입력칸 / 앞으로가기 / 주말 주행거리·메뉴
-   [v3.3] 작업일지 탭 / 준비·할일 탭 / 뒤로가기
-   [v3.2] 옵션 추가·삭제 / 종류별 칸 설정(⚙)
-   [v3.1] 결제수단 버그 / 목록형 기본 / 부동산 방문횟수 / 전화 / 자재 총보유
-   [v3.0] 파일 분리 / USD 환율 / 옵션 직접추가 / 자재 재고 / 견적 / 백업
+   [v3.7] 비용 분류 통일 / 전화·주소(네이버지도)
+   [v3.6] 주말 영수증 사진(양도세 증빙)
+   [v3.5] 주말 한줄 즉시저장 / 식비 메뉴 합계 / 메모 팝업
+   [v3.4] 커스텀 입력칸 / 앞으로가기
+   [v3.3] 작업일지 / 준비·할일 / 뒤로가기
+   [v3.0~3.2] 파일분리·환율·옵션·자재·견적·백업·종류별 칸 설정
    ============================================================ */
 
 /* ===== Firebase ===== */
@@ -1263,11 +1262,10 @@ function viewCost(p){
       <div class="stat"><div class="label">계약·세금·등기</div><div class="value">${cb.buyCost.toLocaleString()}<small> 원</small></div></div>
       <div class="stat"><div class="label">실투자금</div><div class="value">${cb.realInvest.toLocaleString()}<small> 원</small></div></div>
     </div>
-    <div class="panel"><div class="panel-h">🧾 비용 입력 <span class="cnt">엑셀·빠른입력·반복·주말세트</span></div>
+    <div class="panel"><div class="panel-h">🧾 비용 입력 <span class="cnt">기록 추가로 통일</span></div>
       <div class="panel-body" style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" onclick="openExcelImport()">📥 엑셀 가져오기</button>
-        <button class="btn btn-ghost btn-sm" onclick="openWeekend()">🚗 주말 세트 입력</button>
-        <button class="btn btn-ghost btn-sm" onclick="openQuickEtc()">⚡ 빠른 연속 입력</button>
+        <button class="btn btn-primary btn-sm" onclick="openEntryModal()">+ 기록 추가</button>
+        <button class="btn btn-ghost btn-sm" onclick="openExcelImport()">📥 엑셀 가져오기</button>
         <button class="btn btn-ghost btn-sm" onclick="openRepeatEtc()">🔁 반복 비용 생성</button>
       </div></div>
     <div class="cost-cols">
@@ -1848,9 +1846,15 @@ function viewWeekend(p){
       <div class="stat"><div class="label">하루 평균</div><div class="value">${dates.length?Math.round(total/dates.length).toLocaleString():0}<small> 원</small></div></div>
     </div>
     <div class="panel"><div class="panel-h">🚗 주말 출퇴근 비용 <span class="cnt">가스·톨비·식비</span>
-      <button class="btn btn-primary btn-sm add" onclick="openWeekend()">+ 주말 세트 입력</button></div>
+      <button class="btn btn-primary btn-sm add" onclick="openEntryModal(null,'식비')">+ 기록 추가</button></div>
       <div class="panel-body">
-        <div class="hint">상행/하행 톨비·주유(휘발유/가스), 끼니별 식비(집간식·현장간식)를 줄 단위로 자유롭게 추가·수정해 한 번에 저장하세요.</div>
+        <div class="hint">‘기록 추가’ 하나로 식비·주유·가스·톨비를 모두 입력합니다. 종류를 고르면 끼니(아침/점심/저녁)·상행/하행 등 세부가 자동으로 떠요.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'식비')">🍚 식비</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'주유·가스')">⛽ 주유·가스</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'톨비(통행료)')">🛣 톨비</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'주차비')">🅿 주차비</button>
+        </div>
         ${total?`<table class="ctable" style="margin-top:10px"><thead><tr><th>항목</th><th class="num">합계(원)</th></tr></thead><tbody>${catRows}<tr class="sum"><td>합계</td><td class="num">${total.toLocaleString()}</td></tr></tbody></table>`:''}
       </div></div>
     <div class="panel"><div class="panel-h">📋 주말 비용 내역 <span class="cnt">${wk.length}건</span>
@@ -2326,6 +2330,22 @@ function onKindChange(){
   const gv=document.getElementById("ef_vendor"); if(gv){ const fld=gv.closest('.field'); if(fld) fld.style.display=f.includes("vendor")?"block":"none"; }
   if(f.includes("cat")) fillCatSelect();
   renderCustomFields(); // 종류별 커스텀 입력칸
+  renderQuickKinds(); // 빠른 선택 칩 강조 갱신
+}
+/* 빠른 종류 선택 칩 (자주 쓰는 것) */
+const QUICK_KINDS=[["식비","🍚"],["주유·가스","⛽"],["톨비(통행료)","🛣"],["주차비","🅿"],["자재비","🧱"],["공사비","🔨"],["사진","📷"]];
+function renderQuickKinds(){
+  const box=document.getElementById("ef_quickKinds"); if(!box) return;
+  const cur=val("ef_kind");
+  box.innerHTML=QUICK_KINDS.map(([k,ic])=>`<button type="button" class="qk-chip ${k===cur?'on':''}" onclick="pickKind('${jsstr(k)}')">${ic} ${esc(k==="톨비(통행료)"?"톨비":k)}</button>`).join("");
+}
+function pickKind(k){
+  const sel=document.getElementById("ef_kind");
+  if(!sel) return;
+  // 종류 목록에 없으면(혹시) 추가
+  if(![...sel.options].some(o=>o.value===k)){ sel.innerHTML+=`<option>${esc(k)}</option>`; }
+  sel.value=k;
+  onKindChange();
 }
 /* ===== 커스텀 입력칸 (종류별, realestate_options: customfields_<종류>) ===== */
 function customFieldKey(){ return "customfields_"+(val("ef_kind")||""); }
