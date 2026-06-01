@@ -247,8 +247,9 @@ main{flex:1; padding:20px 24px; overflow-y:auto;}
 /* 주말 줄 추가식 입력 */
 .wk-line{margin-bottom:6px;}
 .wk-line-grid{display:grid; grid-template-columns:130px 120px minmax(120px,1.1fr) 1.4fr 92px 100px 78px; gap:6px; align-items:center;}
-.wk-line .wk-detail{display:flex; gap:4px;}
+.wk-line .wk-detail{display:flex; gap:4px; flex-wrap:wrap;}
 .wk-line .wk-detail select{flex:1; min-width:0;}
+.wk-line .wk-detail input{flex:0 1 auto; min-width:0;}
 .wk-line input, .wk-line select{border:1px solid var(--line); border-radius:8px; padding:7px 8px; font-size:13px; background:#fff; width:100%; min-width:0;}
 .wk-line .wk-amt{text-align:right; font-variant-numeric:tabular-nums;}
 .wk-line-acts{display:flex; gap:3px; justify-content:flex-end;}

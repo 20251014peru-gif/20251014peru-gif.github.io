@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>부동산 프로젝트 관리</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="realestate-project.css?v=3.3">
+<link rel="stylesheet" href="realestate-project.css?v=3.4">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
@@ -38,7 +38,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.3</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.4</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
@@ -121,6 +121,9 @@
       </div>
     </div>
     <div class="field" id="g_pay"><label>결제 수단</label><select id="ef_pay"></select></div>
+    <div id="ef_customWrap"></div>
+    <div style="margin-bottom:13px"><button type="button" class="btn btn-ghost btn-sm" onclick="addCustomField()">+ 입력칸 추가</button>
+      <span class="hint" style="margin-left:6px">이 종류에 나만의 칸(예: 현장 담당자, 차량번호)을 만들어요.</span></div>
     <div class="field"><label>내용 / 메모</label><textarea id="ef_memo" placeholder="시공 내용, 통화 요약, 문제 상황과 처리 방법 등"></textarea></div>
     <div class="field"><label>첨부파일 (PDF / 사진, 여러 개)</label>
       <input id="ef_files" type="file" multiple accept="image/*,application/pdf">
@@ -519,6 +522,6 @@
   </div>
 </div>
 
-<script src="realestate-project.js?v=3.3"></script>
+<script src="realestate-project.js?v=3.4"></script>
 </body>
 </html>

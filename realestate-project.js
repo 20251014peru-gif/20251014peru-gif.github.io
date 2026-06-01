@@ -1,16 +1,15 @@
 /* ============================================================
-   부동산 프로젝트 관리 v3.3
+   부동산 프로젝트 관리 v3.4
    ------------------------------------------------------------
-   [v3.3 변경 내역]
-   1) 작업일지 탭(📒): 날짜별 기록 + 주중(업체작업)/주말(내작업) 구분,
-      업체·시간·사진/파일 첨부, 필터(전체/내작업/업체작업)
-   2) 준비·할일 탭(✅): 체크박스 겸용 메모(다음 주 준비사항 통합),
-      기한·분류·상세메모·사진첨부, 완료 처리/비우기
-   3) 뒤로가기 5단계: 탭 이동·폴더 진입을 되돌리는 '← 뒤로' 버튼
-   4) 주말 비용 단순화: 식비에 인원수 입력(식당/메뉴는 메모),
-      가스·식비는 공정 단계 없이 간단하게
-   5) 백업/복원·삭제·진단에 작업일지·할일 컬렉션 반영
+   [v3.4 변경 내역]
+   1) 커스텀 입력칸: 기록 모달에서 "+ 입력칸 추가"로 나만의 칸 생성/삭제
+      - 종류별로 저장(customfields_<종류>), 그 종류 고르면 자동으로 뜸
+      - 입력값은 기록의 custom 객체에 저장, 목록에도 표시
+   2) 앞으로 가기: 뒤로/앞으로 버튼 (각 10단계)
+   3) 주말 비용 보강: 주유·가스에 주행거리(km) 칸, 식비에 메뉴 칸
+      (식당 이름은 메모) — 제목/메모/데이터에 반영
    ------------------------------------------------------------
+   [v3.3] 작업일지 탭 / 준비·할일 탭 / 뒤로가기 / 주말 단순화
    [v3.2] 옵션 추가·삭제 / 종류별 칸 설정(⚙) / 사용자종류 비용집계
    [v3.1] 결제수단 버그 / 목록형 기본 / 주말 줄추가식 / 부동산 방문횟수 / 전화 / 자재 총보유
    [v3.0] 파일 분리 / USD 환율 / 옵션 직접추가 / 자재 재고 / 견적 / 백업
@@ -446,7 +445,7 @@ async function selectProject(id){
     window._photoSelMode=false; window._photoSel={};
     window._matFilter=""; window._matGroup="space";
     window._quoteSort={key:"krw",dir:1}; window._agentSort={key:"count",dir:-1};
-    window._wlFilter="전체"; navStack=[];
+    window._wlFilter="전체"; navStack=[]; navFwd=[];
   }
   currentProjectId=id;
   await reloadCurrent();
@@ -521,6 +520,7 @@ function renderMain(){
         <div class="sub">${esc(p.address||'')} ${p.startDate?'· 시작 '+p.startDate:''}</div></div>
       <div class="acts">
         ${navStack.length?`<button class="btn btn-line btn-sm" onclick="navBack()" title="이전 화면으로">← 뒤로</button>`:''}
+        ${navFwd.length?`<button class="btn btn-line btn-sm" onclick="navForward()" title="다음 화면으로">앞으로 →</button>`:''}
         <button class="btn btn-line btn-sm" onclick="openProjectModal('${p.id}')">✏ 정보 수정</button>
         <button class="btn btn-primary btn-sm" onclick="openEntryModal()">+ 기록 추가</button>
       </div>
@@ -532,25 +532,38 @@ function renderMain(){
   renderTab(p);
 }
 function tabIcon(t){return {"대시보드":"📊","공정":"🔨","자재":"🧱","비용":"💰","견적·부동산":"📞","주말 비용":"🚗","작업일지":"📒","준비·할일":"✅","사진":"📷","업체·연락":"📇","서류":"📁","검색":"🔍"}[t]||"";}
-/* ===== 뒤로가기(네비게이션) 스택 — 최근 5단계 ===== */
-let navStack=[]; // [{tab, photoOpenId, docOpenId, costView, wkView}]
+/* ===== 네비게이션 스택 — 뒤로/앞으로 (각 최대 10단계) ===== */
+let navStack=[];   // 뒤로 갈 화면들
+let navFwd=[];     // 앞으로 갈 화면들
 function navSnapshot(){
   return { tab:activeTab,
     photoOpenId:window._photoOpenId||null, docOpenId:window._docOpenId||null,
     costView:window._costView||null, wkView:window._wkView||null };
 }
-function navPush(){
-  navStack.push(navSnapshot());
-  if(navStack.length>5) navStack.shift(); // 최근 5단계만
-}
-function navBack(){
-  if(!navStack.length) return;
-  const s=navStack.pop();
+function navApply(s){
   activeTab=s.tab;
   window._photoOpenId=s.photoOpenId; window._docOpenId=s.docOpenId;
   if(s.costView!=null) window._costView=s.costView;
   if(s.wkView!=null) window._wkView=s.wkView;
   window._photoSelMode=false; window._photoSel={};
+}
+function navPush(){
+  navStack.push(navSnapshot());
+  if(navStack.length>10) navStack.shift();
+  navFwd=[]; // 새 이동을 하면 앞으로 기록은 사라짐(브라우저와 동일)
+}
+function navBack(){
+  if(!navStack.length) return;
+  navFwd.push(navSnapshot());
+  if(navFwd.length>10) navFwd.shift();
+  navApply(navStack.pop());
+  renderMain();
+}
+function navForward(){
+  if(!navFwd.length) return;
+  navStack.push(navSnapshot());
+  if(navStack.length>10) navStack.shift();
+  navApply(navFwd.pop());
   renderMain();
 }
 function setTab(t){ if(t===activeTab) return; navPush(); activeTab=t; window._photoOpenId=null; window._docOpenId=null; renderMain(); }
@@ -841,9 +854,12 @@ function renderLog(e, opts){
   // 금액이 있는 기록(모든 종류)은 수정 가능
   const editBtn = (opts.noEdit||!(Number(e.amount)>0||e.kind==="자재비"||e.kind==="공사비"||e.kind==="기타비용"))? '' : `<button class="l-del" style="color:var(--accent)" onclick="editCost('${e.id}')">수정</button>`;
   const delBtn = opts.noDelete? '' : `<button class="l-del" onclick="deleteEntry('${e.id}')">삭제</button>`;
+  const customHtml = (e.custom && Object.keys(e.custom).length)
+    ? `<div class="l-meta">${Object.keys(e.custom).map(nm=>`${esc(nm)} <b>${esc(e.custom[nm])}</b>`).join(' · ')}</div>` : '';
   return `<div class="log">
     <div class="l-top">${tags}<span class="l-title">${esc(e.title)}</span><span class="l-date">${e.date||''}</span>${editBtn}${delBtn}</div>
     ${(e.vendor||e.amount)?`<div class="l-meta">${e.vendor?'거래처 '+esc(e.vendor):''}${e.vendor&&e.amount?' · ':''}${e.amount?'<b>'+Number(e.amount).toLocaleString()+'원</b>':''}</div>`:''}
+    ${customHtml}
     ${e.memo?`<div class="l-memo">${esc(e.memo)}</div>`:''}
     ${files?`<div class="files">${files}</div>`:''}</div>`;
 }
@@ -1592,6 +1608,8 @@ function addWkRow(preset){
     dir:preset.dir||"상행",
     meal:preset.meal||"점심",
     people:preset.people||"",
+    menu:preset.menu||"",
+    dist:preset.dist||"",
     memo:preset.memo||"",
     pay:preset.pay||"카드",
     amount:preset.amount||""
@@ -1620,6 +1638,8 @@ function readWkRows(){
     r.dir=g('.wk-dir')??r.dir;
     r.meal=g('.wk-meal')??r.meal;
     r.people=g('.wk-people')??r.people;
+    r.menu=g('.wk-menu')??r.menu;
+    r.dist=g('.wk-dist')??r.dist;
     r.memo=g('.wk-memo')??r.memo;
     r.pay=g('.wk-pay')??r.pay;
     const amt=g('.wk-amt'); r.amount=(amt===undefined?r.amount:amt);
@@ -1632,18 +1652,20 @@ function wkLineHtml(r){
   let detail="";
   if(r.kind==="식비"){
     detail=`<select class="wk-meal">${WK_MEALS.map(m=>`<option ${m===r.meal?'selected':''}>${esc(m)}</option>`).join("")}</select>
-      <input type="number" class="wk-people" placeholder="인원" value="${esc(r.people)}" title="인원수" style="max-width:64px">`;
+      <input type="text" class="wk-menu" placeholder="메뉴" value="${esc(r.menu)}" title="메뉴">
+      <input type="number" class="wk-people" placeholder="인원" value="${esc(r.people)}" title="인원수" style="max-width:60px">`;
   } else if(r.kind==="톨비(통행료)"){
     detail=`<select class="wk-dir">${WK_DIRS.map(d=>`<option ${d===r.dir?'selected':''}>${esc(d)}</option>`).join("")}</select>`;
   } else if(r.kind==="주유·가스"){
     detail=`<select class="wk-fuel">${WK_FUELS.map(f=>`<option ${f===r.fuel?'selected':''}>${esc(f)}</option>`).join("")}</select>
-      <select class="wk-dir">${WK_DIRS.concat(["충전"]).map(d=>`<option ${d===r.dir?'selected':''}>${esc(d)}</option>`).join("")}</select>`;
+      <select class="wk-dir">${WK_DIRS.concat(["충전"]).map(d=>`<option ${d===r.dir?'selected':''}>${esc(d)}</option>`).join("")}</select>
+      <input type="number" class="wk-dist" placeholder="거리km" value="${esc(r.dist)}" title="주행거리(km)" style="max-width:72px">`;
   } else {
     detail=`<span class="wk-lab" style="color:var(--ink-soft);font-size:12px">메모에 내용 입력</span>`;
   }
   const meal=r.kind==="식비"?r.meal:"";
   const homemadeHint = (meal==="집간식")?'집에서 준비(0원 가능)':'';
-  const memoPlaceholder = r.kind==="식비" ? '식당/메뉴' : (r.kind==="주유·가스"?'주유소/거리':'메모(장소/노선)');
+  const memoPlaceholder = r.kind==="식비" ? '식당 이름' : (r.kind==="주유·가스"?'주유소':'메모(장소/노선)');
   return `<div class="wk-line" data-id="${r.id}">
     <div class="wk-line-grid">
       <input type="date" class="wk-date" value="${esc(r.date)}">
@@ -1681,15 +1703,25 @@ async function saveWeekendSet(){
       else if(r.kind==="주유·가스"){ sub=r.fuel+" "+r.dir; catForStat="교통/주유비"; }
       else { sub=""; catForStat=r.kind; }
       const titleParts=[r.kind==="식비"?r.meal:(r.kind==="주유·가스"?(r.fuel+" "+r.dir):(r.kind+(sub?" "+sub:"")))];
+      if(r.kind==="식비" && r.menu && r.menu.trim()) titleParts[0]+=" "+r.menu.trim();
       if(r.kind==="식비" && r.people) titleParts[0]+=" ("+r.people+"명)";
+      if(r.kind==="주유·가스" && r.dist) titleParts[0]+=" "+r.dist+"km";
       if(r.memo.trim()) titleParts.push(r.memo.trim());
-      let memoOut = isHomemade?("집간식 / "+r.memo.trim()):r.memo.trim();
-      if(r.kind==="식비" && r.people) memoOut = (memoOut?memoOut+" / ":"")+"인원 "+r.people+"명";
+      let memoBits=[];
+      if(isHomemade) memoBits.push("집간식");
+      if(r.kind==="식비" && r.menu && r.menu.trim()) memoBits.push("메뉴: "+r.menu.trim());
+      if(r.kind==="식비" && r.people) memoBits.push("인원 "+r.people+"명");
+      if(r.kind==="주유·가스" && r.dist) memoBits.push("주행 "+r.dist+"km");
+      if(r.memo.trim()) memoBits.push(r.memo.trim());
+      const memoOut=memoBits.join(" / ");
       toSave.push({
         projectId:currentProjectId, kind:"기타비용",
         title:titleParts.join(' - '), date:r.date, stage:null,
         cat:catForStat, sub:sub||null,
         vendor:"", amount:amt||0, pay:r.pay||"카드",
+        menu: r.kind==="식비"?(r.menu||"").trim():null,
+        people: r.kind==="식비"&&r.people?Number(r.people):null,
+        dist: r.kind==="주유·가스"&&r.dist?Number(r.dist):null,
         memo: memoOut,
         files:[]
       });
@@ -2214,6 +2246,52 @@ function onKindChange(){
   // 거래처 칸 표시
   const gv=document.getElementById("ef_vendor"); if(gv){ const fld=gv.closest('.field'); if(fld) fld.style.display=f.includes("vendor")?"block":"none"; }
   if(f.includes("cat")) fillCatSelect();
+  renderCustomFields(); // 종류별 커스텀 입력칸
+}
+/* ===== 커스텀 입력칸 (종류별, realestate_options: customfields_<종류>) ===== */
+function customFieldKey(){ return "customfields_"+(val("ef_kind")||""); }
+function customFieldNames(){ return userOpts[customFieldKey()]||[]; }
+let _efCustomValues={}; // 현재 모달의 커스텀 값 임시 보관(수정 시 채움)
+function renderCustomFields(){
+  const wrap=document.getElementById("ef_customWrap"); if(!wrap) return;
+  const names=customFieldNames();
+  wrap.innerHTML=names.map((nm,i)=>`
+    <div class="field">
+      <label>${esc(nm)} <a href="#" class="field-cfg" style="background:#f6e2de;color:var(--danger)" onclick="removeCustomField('${jsstr(nm)}');return false;">✕ 칸 삭제</a></label>
+      <input type="text" class="ef-custom" data-name="${esc(nm)}" value="${esc(_efCustomValues[nm]||'')}" placeholder="${esc(nm)} 입력">
+    </div>`).join("");
+}
+function readCustomFields(){
+  const out={};
+  document.querySelectorAll('#ef_customWrap .ef-custom').forEach(inp=>{
+    const nm=inp.getAttribute('data-name'); const v=inp.value.trim();
+    if(v) out[nm]=v;
+  });
+  return out;
+}
+async function addCustomField(){
+  const k=val("ef_kind"); if(!k){ alert("먼저 종류를 선택하세요."); return; }
+  const nm=prompt('"'+k+'" 종류에 추가할 입력칸 이름을 적으세요.\n예: 현장 담당자, 차량번호, 보증기간');
+  if(nm===null) return;
+  const name=nm.trim(); if(!name){ alert("이름을 입력하세요."); return; }
+  const key=customFieldKey();
+  if(!userOpts[key]) userOpts[key]=[];
+  if(userOpts[key].includes(name)){ alert("이미 있는 칸입니다."); return; }
+  // 현재 입력값 보존
+  _efCustomValues=Object.assign({}, _efCustomValues, readCustomFields());
+  userOpts[key].push(name);
+  await saveUserOpts(key);
+  renderCustomFields();
+}
+async function removeCustomField(name){
+  const k=val("ef_kind");
+  if(!confirm('"'+name+'" 입력칸을 삭제할까요?\n("'+k+'" 종류에서 사라집니다. 이미 저장된 기록의 값은 유지됩니다.)')) return;
+  const key=customFieldKey();
+  _efCustomValues=Object.assign({}, _efCustomValues, readCustomFields());
+  delete _efCustomValues[name];
+  userOpts[key]=(userOpts[key]||[]).filter(x=>x!==name);
+  await saveUserOpts(key);
+  renderCustomFields();
 }
 function fillStageSelect(preset){
   buildOptSelect("ef_stage","stages",preset||"","(공정 선택 안 함)");
@@ -2270,6 +2348,7 @@ function openEntryModal(presetStage,presetKind){
   document.getElementById("vendorList").innerHTML=vendors.map(v=>`<option value="${esc(v.name)}">`).join("");
   fillStageSelect(presetStage||"");
   document.getElementById("ef_stage").onchange=fillCatSelect;
+  _efCustomValues={};
   onKindChange();
   document.getElementById("entryModalTitle").textContent = presetStage? presetStage+" 기록 추가" : "기록 추가";
   openModal("entryModal");
@@ -2325,6 +2404,7 @@ async function saveEntry(){
   }
   const photoFolder = f.includes("photofolder") ? val("ef_photofolder") : null;
   const docFolder = f.includes("docfolder") ? val("ef_docfolder") : null;
+  const customData=readCustomFields();
   await db.collection(ENTRIES).add({
     projectId:currentProjectId, kind:k, title, date:val("ef_date"),
     stage:(f.includes("stage")&&val("ef_stage"))?val("ef_stage"):null,
@@ -2336,6 +2416,7 @@ async function saveEntry(){
     currency: isMoney?cur:null,
     fxRate: (isMoney&&cur==="USD")?_fxRate:null,
     pay: f.includes("pay")?val("ef_pay"):null,
+    custom: Object.keys(customData).length?customData:null,
     memo:val("ef_memo").trim(), files,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
