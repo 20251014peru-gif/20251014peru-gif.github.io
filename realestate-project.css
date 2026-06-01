@@ -81,6 +81,20 @@ main{flex:1; padding:20px 24px; overflow-y:auto;}
   .tab{padding:11px 13px; font-size:14px;}
   .proj-head .acts .btn-sm{padding:8px 12px; font-size:13.5px;}
 }
+/* 상단 검색바 + 메모 버튼 */
+.topbar{display:flex; gap:10px; align-items:stretch; margin-bottom:16px;}
+.topsearch{flex:1; display:flex; align-items:center; gap:8px; background:var(--panel); border:2px solid var(--line); border-radius:12px; padding:0 14px; box-shadow:var(--shadow);}
+.topsearch:focus-within{border-color:var(--accent);}
+.topsearch .ts-icon{font-size:18px; opacity:.7;}
+.topsearch input{flex:1; border:none; outline:none; background:none; font-size:16px; padding:14px 0; color:var(--ink);}
+.topsearch .ts-clear{border:none; background:none; cursor:pointer; font-size:16px; color:var(--ink-soft); padding:4px 8px;}
+.memo-btn{white-space:nowrap; font-size:15px; padding:0 18px;}
+.topsearch-result{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; margin-bottom:16px; box-shadow:var(--shadow); max-height:400px; overflow-y:auto;}
+.tsr-head{font-weight:700; font-size:13.5px; margin-bottom:8px; color:var(--accent);}
+@media(max-width:780px){
+  .topsearch input{font-size:15px; padding:11px 0;}
+  .memo-btn{padding:0 12px; font-size:14px;}
+}
 
 .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;}
 .stat{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:13px 15px; box-shadow:var(--shadow);}

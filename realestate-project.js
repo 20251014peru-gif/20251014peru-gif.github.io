@@ -1,20 +1,15 @@
 /* ============================================================
-   부동산 프로젝트 관리 v4.0
+   부동산 프로젝트 관리 v4.2
    ------------------------------------------------------------
-   [v4.0 변경 내역]
-   1) 식비: 기록추가에서 메뉴 여러 개 추가 → 자동 합계가 금액에 반영
-   2) 주유·가스: 기록추가에 주행거리(km) 칸
-   3) 자재비/공사비 세부 분리
-      - 자재비 = 공정별 자재 목록(공정 선택 시), 규격·단가·부가세
-      - 공사비 = 인건비·시공비·장비·폐기물 등(공정 무관)
-   4) 택배비 종류 추가 (자재배송/택배/퀵·화물)
-   5) 빠른칩과 비용입력 버튼 목록 일치(식비·주유·톨비·주차·택배·매수·매도 등)
-   6) 상단 탭·헤더 버튼(뒤로/정보수정/기록추가) 크기 확대
+   [v4.2 변경 내역]
+   1) 모든 '기록 추가'(홈·비용·공정 탭)는 동일한 입력 화면을 사용 — 호환 통일
+   2) 자재비/공사비 입력 순서 명확화: ① 공정 단계 먼저 → ② 공정 세부
+      (자재비는 라벨에 '먼저 선택' 강조, 공정 고르면 그 공정 자재가 세부에 표시)
    ------------------------------------------------------------
-   [v3.9] 주말탭 제거→비용 흡수 / 매수·매도비용 / 자재 규격·부가세
-   [v3.8] 입력 기록추가 통일 / 빠른칩  [v3.7] 분류통일·전화·주소(지도)
-   [v3.5~3.6] 식비메뉴합계·메모팝업·영수증사진
-   [v3.3~3.4] 작업일지·할일·뒤로/앞으로·커스텀칸
+   [v4.1] 자재비 공정안내·공사비 인건비 개별합계·프로젝트 메모·상단 검색바
+   [v4.0] 식비메뉴합계·주유거리·자재공정분리·택배비·탭버튼확대
+   [v3.7~3.9] 분류통일·전화·주소(지도)·기록추가통일·매수매도·자재규격부가세
+   [v3.3~3.6] 작업일지·할일·뒤로앞으로·커스텀칸·영수증사진·메모팝업
    [v3.0~3.2] 파일분리·환율·옵션·자재·견적·백업·칸설정
    ============================================================ */
 
@@ -576,8 +571,54 @@ function renderMain(){
     <div class="tabs">
       ${tabs.map(t=>`<button class="tab ${t===activeTab?'active':''}" onclick="setTab('${t}')">${tabIcon(t)} ${t}</button>`).join("")}
     </div>
+    <div class="topbar">
+      <div class="topsearch">
+        <span class="ts-icon">🔍</span>
+        <input id="topSearchInput" placeholder="전체 검색 — 제목·거래처·메모·금액…" value="${esc(window._topSearchQ||'')}"
+          oninput="onTopSearch(this.value)" onkeydown="if(event.key==='Enter')gotoSearch(this.value)">
+        ${window._topSearchQ?`<button class="ts-clear" onclick="clearTopSearch()">✕</button>`:''}
+      </div>
+      <button class="btn btn-line memo-btn" onclick="openProjectMemo()" title="이 프로젝트 메모">📝 메모${(p.quickMemo&&p.quickMemo.trim())?' •':''}</button>
+    </div>
+    <div id="topSearchResult"></div>
     <div id="tabContent"></div>`;
   renderTab(p);
+}
+/* ===== 상단 전체 검색 ===== */
+function onTopSearch(q){
+  window._topSearchQ=q;
+  const box=document.getElementById("topSearchResult");
+  const clearBtn=document.querySelector(".ts-clear");
+  if(!box) return;
+  const query=(q||"").trim().toLowerCase();
+  if(!query){ box.innerHTML=""; if(clearBtn) clearBtn.style.display="none"; return; }
+  const hits=entries.filter(e=>{
+    const hay=[e.title,e.vendor,e.memo,e.cat,e.sub,e.stage,e.kind,(e.amount!=null?String(e.amount):"")].filter(Boolean).join(" ").toLowerCase();
+    return hay.includes(query);
+  }).slice(0,40);
+  if(!hits.length){ box.innerHTML='<div class="topsearch-result"><div class="ai-empty">검색 결과가 없습니다.</div></div>'; return; }
+  box.innerHTML='<div class="topsearch-result"><div class="tsr-head">🔍 검색 결과 '+hits.length+'건</div>'+hits.map(e=>renderLog(e,{compact:true})).join("")+'</div>';
+}
+function clearTopSearch(){ window._topSearchQ=""; const i=document.getElementById("topSearchInput"); if(i) i.value=""; const box=document.getElementById("topSearchResult"); if(box) box.innerHTML=""; }
+function gotoSearch(q){ window._topSearchQ=q; onTopSearch(q); }
+/* ===== 프로젝트별 빠른 메모 ===== */
+function openProjectMemo(){
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  document.getElementById("pmText").value=p.quickMemo||"";
+  openModal("projMemoModal");
+  setTimeout(()=>{const t=document.getElementById("pmText"); if(t) t.focus();},120);
+}
+async function saveProjectMemo(){
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  const txt=document.getElementById("pmText").value;
+  const btn=document.getElementById("pmSaveBtn"); if(btn){ btn.disabled=true; btn.textContent="저장 중..."; }
+  try{
+    await db.collection(PROJECTS).doc(p.id).update({quickMemo:txt});
+    p.quickMemo=txt;
+    closeModal("projMemoModal");
+    renderMain();
+  }catch(err){ showError("메모 저장", err); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent="저장"; } }
 }
 function tabIcon(t){return {"대시보드":"📊","공정":"🔨","자재":"🧱","비용":"💰","견적·부동산":"📞","주말 비용":"🚗","작업일지":"📒","준비·할일":"✅","사진":"📷","업체·연락":"📇","서류":"📁","검색":"🔍"}[t]||"";}
 /* ===== 네비게이션 스택 — 뒤로/앞으로 (각 최대 10단계) ===== */
@@ -908,6 +949,8 @@ function renderLog(e, opts){
     ? `<div class="l-meta">${e.spec?'규격 '+esc(e.spec):''}${e.spec&&(e.unitPrice||e.qty)?' · ':''}${(e.unitPrice||e.qty)?((e.unitPrice?Number(e.unitPrice).toLocaleString():'?')+'원 × '+(e.qty||'?')):''}${e.vat?` · 부가세 ${esc(e.vat)}`:''}</div>` : '';
   const menuHtml = (e.menus && e.menus.length)
     ? `<div class="l-meta">🍚 ${e.menus.map(m=>esc(m.name)+(m.price?' '+Number(m.price).toLocaleString()+'원':'')).join(' · ')}</div>` : '';
+  const workerHtml = (e.workers && e.workers.length)
+    ? `<div class="l-meta">👷 ${e.workers.map(w=>esc(w.name)+(w.pay?' '+Number(w.pay).toLocaleString()+'원':'')).join(' · ')} (${e.workers.length}명)</div>` : '';
   const distHtml = (e.dist)
     ? `<div class="l-meta">🚗 주행 ${Number(e.dist).toLocaleString()}km</div>` : '';
   const contactHtml = (e.phone||e.addr)
@@ -917,6 +960,7 @@ function renderLog(e, opts){
     ${(e.vendor||e.amount)?`<div class="l-meta">${e.vendor?'거래처 '+esc(e.vendor):''}${e.vendor&&e.amount?' · ':''}${e.amount?'<b>'+Number(e.amount).toLocaleString()+'원</b>':''}</div>`:''}
     ${matHtml}
     ${menuHtml}
+    ${workerHtml}
     ${distHtml}
     ${customHtml}
     ${contactHtml}
@@ -2364,14 +2408,60 @@ function onKindChange(){
   // 거래처 칸 표시
   const gv=document.getElementById("ef_vendor"); if(gv){ const fld=gv.closest('.field'); if(fld) fld.style.display=f.includes("vendor")?"block":"none"; }
   if(f.includes("cat")) fillCatSelect();
+  // 라벨 동적 안내: 자재비/공사비는 "공정 먼저 → 세부"
+  const labStage=document.getElementById("lab_stage");
+  const labCat=document.getElementById("lab_cat");
+  if(labStage&&labCat){
+    if(k==="자재비"){ labStage.innerHTML='① 공정 단계 <b style="color:var(--accent)">먼저 선택</b>'; labCat.textContent='② 공정 세부 (자재)'; }
+    else if(k==="공사비"){ labStage.textContent='① 공정 단계'; labCat.textContent='② 세부 (인건비·시공비 등)'; }
+    else { labStage.textContent='공정 단계'; labCat.textContent='세부 항목'; }
+  }
   // 자재비만 규격·단가·부가세 (공사비는 인건비라 제외)
   show("g_matspec", k==="자재비");
   // 식비 메뉴, 주유 거리 그룹
   show("g_meals", k==="식비");
   show("g_dist", k==="주유·가스");
   if(k==="식비") renderEfMeals();
+  // 공사비 인건비: 인부 개별 입력 그룹
+  efWorkerToggle();
   renderCustomFields(); // 종류별 커스텀 입력칸
   renderQuickKinds(); // 빠른 선택 칩 강조 갱신
+}
+/* ===== 공사비 인건비: 인부 개별(이름+일당) + 합계 ===== */
+let _efWorkers=[]; let _efWorkerSeq=1;
+function efWorkerToggle(){
+  const k=val("ef_kind");
+  const cat=val("ef_cat");
+  const on = (k==="공사비" && /인건비|일당/.test(cat||""));
+  show("g_workers", on);
+  if(on) renderEfWorkers();
+}
+function efAddWorker(){
+  const nm=(val("ef_workerName")||"").trim();
+  const pay=Number(val("ef_workerPay"))||0;
+  if(!nm && !pay){ alert("인부 이름이나 일당을 입력하세요."); return; }
+  _efWorkers.push({id:_efWorkerSeq++, name:nm||"(인부)", pay});
+  document.getElementById("ef_workerName").value="";
+  document.getElementById("ef_workerPay").value="";
+  document.getElementById("ef_workerName").focus();
+  renderEfWorkers();
+}
+function efRemoveWorker(id){ _efWorkers=_efWorkers.filter(w=>w.id!==id); renderEfWorkers(); }
+function efWorkerSum(){ return _efWorkers.reduce((s,w)=>s+(Number(w.pay)||0),0); }
+function renderEfWorkers(){
+  const box=document.getElementById("ef_workerList"); if(!box) return;
+  if(!_efWorkers.length){ box.innerHTML='<div class="hint" style="margin:4px 0">인부를 한 명씩 추가하면(이름+일당) 자동 합산되어 금액에 들어갑니다.</div>'; }
+  else {
+    box.innerHTML=_efWorkers.map(w=>`<div class="wk-menu-row">
+      <span class="wk-menu-name">👷 ${esc(w.name)}</span>
+      <span class="wk-menu-price">${w.pay.toLocaleString()}원</span>
+      <button type="button" class="opt-del-btn" onclick="efRemoveWorker(${w.id})">삭제</button>
+    </div>`).join("");
+  }
+  const sum=efWorkerSum();
+  const sumEl=document.getElementById("ef_workerSum");
+  if(sumEl) sumEl.textContent= sum? (_efWorkers.length+"명 · 합계 "+sum.toLocaleString()+"원"):"";
+  if(sum){ const amtEl=document.getElementById("ef_amount"); if(amtEl){ amtEl.value=sum; updateEntryFx&&updateEntryFx(); } }
 }
 /* ===== 식비 메뉴 여러 개 + 합계 (기록추가) ===== */
 let _efMeals=[]; let _efMealSeq=1;
@@ -2490,6 +2580,13 @@ function fillCatSelect(){
   const stage=val("ef_stage");
   const sel=document.getElementById("ef_cat");
   if(!sel) return;
+  const g_cat=document.getElementById("g_cat");
+  // 자재비: 공정을 먼저 골라야 그 공정의 자재가 뜸
+  if(k==="자재비" && !stage){
+    if(g_cat) g_cat.style.display="block";
+    sel.innerHTML='<option value="">↑ 공정 단계를 먼저 선택하세요</option>';
+    return;
+  }
   // 통일 체계: 종류별 세부항목 (subCatsFor로 일원화)
   let list;
   if(k==="기타비용"){
@@ -2497,7 +2594,6 @@ function fillCatSelect(){
   } else {
     list=subCatsFor(k, stage);
   }
-  const g_cat=document.getElementById("g_cat");
   if(g_cat){ const f=kindFields(k); g_cat.style.display = (f.includes("cat")&&list.length)?"block":"none"; }
   const cur=sel.value;
   sel.innerHTML=list.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join("");
@@ -2546,9 +2642,12 @@ function openEntryModal(presetStage,presetKind){
   const ad=document.getElementById("ef_addr"); if(ad) ad.value="";
   ["ef_spec","ef_unitprice","ef_qty"].forEach(id=>{const el=document.getElementById(id); if(el) el.value="";});
   _efMeals=[]; _efMealSeq=1;
-  ["ef_mealName","ef_mealPrice","ef_dist"].forEach(id=>{const el=document.getElementById(id); if(el) el.value="";});
+  _efWorkers=[]; _efWorkerSeq=1;
+  ["ef_mealName","ef_mealPrice","ef_dist","ef_workerName","ef_workerPay"].forEach(id=>{const el=document.getElementById(id); if(el) el.value="";});
   const mealList=document.getElementById("ef_mealList"); if(mealList) mealList.innerHTML="";
   const mealSum=document.getElementById("ef_mealSum"); if(mealSum) mealSum.textContent="";
+  const wkList=document.getElementById("ef_workerList"); if(wkList) wkList.innerHTML="";
+  const wkSum=document.getElementById("ef_workerSum"); if(wkSum) wkSum.textContent="";
   const vatDef=document.querySelector('input[name="ef_vat"][value="포함"]'); if(vatDef) vatDef.checked=true;
   const vh=document.getElementById("ef_vatHint"); if(vh) vh.textContent="";
   efMapHint();
@@ -2636,6 +2735,7 @@ async function saveEntry(){
     vat: (k==="자재비"||k==="공사비")?((document.querySelector('input[name="ef_vat"]:checked')||{}).value||null):null,
     menus: (k==="식비"&&_efMeals.length)?_efMeals.map(m=>({name:m.name,price:m.price})):null,
     menu: (k==="식비"&&_efMeals.length)?_efMeals.map(m=>m.name).join(", "):null,
+    workers: (k==="공사비"&&_efWorkers.length)?_efWorkers.map(w=>({name:w.name,pay:w.pay})):null,
     dist: (k==="주유·가스"&&val("ef_dist"))?Number(val("ef_dist")):null,
     phone: val("ef_phone")?val("ef_phone").trim():null,
     addr: val("ef_addr")?val("ef_addr").trim():null,

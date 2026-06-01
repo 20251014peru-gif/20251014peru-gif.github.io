@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>부동산 프로젝트 관리</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="realestate-project.css?v=4.0">
+<link rel="stylesheet" href="realestate-project.css?v=4.2">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
@@ -38,7 +38,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v4.0</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v4.2</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
@@ -105,8 +105,8 @@
       <div class="field"><label>날짜</label><input id="ef_date" type="date"></div>
     </div>
     <div class="row2">
-      <div class="field" id="g_stage"><label>공정 단계</label><select id="ef_stage" onchange="fillCatSelect()"></select></div>
-      <div class="field" id="g_cat"><label>세부 항목</label><select id="ef_cat"></select></div>
+      <div class="field" id="g_stage"><label id="lab_stage">공정 단계</label><select id="ef_stage" onchange="fillCatSelect()"></select></div>
+      <div class="field" id="g_cat"><label id="lab_cat">세부 항목</label><select id="ef_cat" onchange="efWorkerToggle()"></select></div>
     </div>
     <div id="g_meals" style="display:none">
       <div class="field"><label>🍚 메뉴 (여러 개 → 자동 합계)</label>
@@ -120,6 +120,17 @@
       </div>
     </div>
     <div id="g_dist" class="field" style="display:none"><label>🚗 주행거리(km)</label><input id="ef_dist" type="number" placeholder="예: 120"></div>
+    <div id="g_workers" style="display:none">
+      <div class="field"><label>👷 인부별 일당 (한 명씩 추가 → 자동 합계)</label>
+        <div style="display:flex;gap:6px">
+          <input id="ef_workerName" placeholder="이름/역할 (예: 김반장)" style="flex:2" onkeydown="if(event.key==='Enter'){efAddWorker();event.preventDefault();}">
+          <input id="ef_workerPay" type="number" placeholder="일당" style="flex:1" onkeydown="if(event.key==='Enter'){efAddWorker();event.preventDefault();}">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="efAddWorker()">+ 추가</button>
+        </div>
+        <div id="ef_workerList" style="margin-top:8px"></div>
+        <div id="ef_workerSum" class="hint" style="text-align:right;font-weight:700;color:var(--accent)"></div>
+      </div>
+    </div>
     <div id="g_matspec" style="display:none">
       <div class="row2">
         <div class="field"><label>규격 / 사양</label><input id="ef_spec" placeholder="예: 600x600 / 9.5T / 18mm"></div>
@@ -493,6 +504,18 @@
   </div>
 </div>
 
+<!-- 프로젝트 빠른 메모 -->
+<div class="modal-bg" id="projMemoModal">
+  <div class="modal" style="width:min(560px,100%)">
+    <h3>📝 프로젝트 메모 <span style="font-size:12px;font-weight:500;opacity:.7">막 적는 메모장 (이 프로젝트 공용)</span></h3>
+    <div class="field"><textarea id="pmText" style="min-height:220px" placeholder="급하게 적어둘 것, 잊지 말 것, 통화 메모, 다음에 할 일 등 자유롭게 적으세요. 어느 탭에서든 같은 메모가 보입니다."></textarea></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="pmSaveBtn" onclick="saveProjectMemo()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('projMemoModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 기타비용 빠른 연속 입력 모달 (기존) -->
 <div class="modal-bg" id="quickEtcModal">
   <div class="modal">
@@ -632,6 +655,6 @@
   </div>
 </div>
 
-<script src="realestate-project.js?v=4.0"></script>
+<script src="realestate-project.js?v=4.2"></script>
 </body>
 </html>
