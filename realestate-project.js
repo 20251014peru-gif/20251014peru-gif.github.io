@@ -1,12 +1,13 @@
 /* ============================================================
-   부동산 프로젝트 관리 v3.5
+   부동산 프로젝트 관리 v3.6
    ------------------------------------------------------------
-   [v3.5 변경 내역]
-   1) 주말 비용 입력을 '한 줄씩 즉시 저장' 방식으로 변경
-      (모아서 한꺼번에 저장 → 저장하고 계속 / 모달 하단에 그날 저장 목록·삭제)
-   2) 식비: 메뉴를 여러 개 추가(메뉴명+가격) → 자동 합계가 금액에 반영
-   3) 메모: 칸이 작아 입력 불편 → '📝 메모 작성' 누르면 팝업(큰 textarea)
+   [v3.6 변경 내역]
+   1) 주말 비용 입력에 영수증 사진 첨부(양도세 증빙용)
+      - 모바일 카메라 바로 촬영(capture) 또는 갤러리 선택, 여러 장
+      - 저장 시 '사진' 탭의 '영수증·증빙' 폴더에 자동 분류되어 모아 보기
+      - 모달의 그날 저장 목록에 🧾 사진 장수 표시
    ------------------------------------------------------------
+   [v3.5] 주말 한 줄 즉시저장 / 식비 메뉴 여러개 합계 / 메모 팝업
    [v3.4] 커스텀 입력칸 / 앞으로가기 / 주말 주행거리·메뉴
    [v3.3] 작업일지 탭 / 준비·할일 탭 / 뒤로가기 / 주말 단순화
    [v3.2] 옵션 추가·삭제 / 종류별 칸 설정(⚙) / 사용자종류 비용집계
@@ -55,7 +56,7 @@ const DEFAULT_OPTS = {
   ],
   photo_folders:[
     "임장 사진","인테리어 전","인테리어 중","인테리어 후",
-    "자재 관련","하자·문제","계약·잔금 현장","참고 사진","기타 사진"
+    "자재 관련","하자·문제","계약·잔금 현장","영수증·증빙","참고 사진","기타 사진"
   ],
   doc_folders:[
     "매매계약서","등기 관련 서류","세금계산서","영수증·이체확인증",
@@ -1598,9 +1599,16 @@ function openWeekend(){
   document.getElementById("wk_dist_input").value="";
   document.getElementById("wk_people_input").value="";
   document.getElementById("wk_rest_input").value="";
+  const fi=document.getElementById("wk_files"); if(fi) fi.value="";
+  const mb=document.getElementById("wk_memo_btn"); if(mb) mb.textContent="📝 메모 작성";
   wkKindChange();
   renderWkTodayList();
   openModal("weekendModal");
+}
+function wkFileHint(){
+  const fi=document.getElementById("wk_files"); const h=document.getElementById("wk_filehint");
+  if(!fi||!h) return;
+  h.textContent = fi.files && fi.files.length ? ("📎 "+fi.files.length+"장 첨부됨 — 저장하면 영수증·증빙 폴더에 들어갑니다.") : "카메라로 영수증을 바로 찍거나 갤러리에서 고르세요.";
 }
 function wkKindChange(){
   const k=document.getElementById("wk_kind_sel").value;
@@ -1709,20 +1717,28 @@ async function saveWkOne(){
   if(k==="주유·가스" && extra.dist) memoBits.push("주행 "+extra.dist+"km");
   if(memo) memoBits.push(memo);
   const titleParts=[titleHead]; if(memo) titleParts.push(memo);
-  const data={
-    projectId:currentProjectId, kind:"기타비용",
-    title:titleParts.join(' - '), date, stage:null,
-    cat:catForStat, sub:sub||null, vendor:"", amount:amt||0, pay,
-    menu: k==="식비"? (extra.menus&&extra.menus.length?extra.menus.map(m=>m.name).join(", "):null):null,
-    menus: k==="식비"&&extra.menus&&extra.menus.length?extra.menus:null,
-    rest: k==="식비"?(extra.rest||null):null,
-    people: k==="식비"?(extra.people||null):null,
-    dist: k==="주유·가스"?(extra.dist||null):null,
-    memo: memoBits.join(" / "),
-    files:[], createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  };
   const btn=document.getElementById("wk_saveOne"); btn.disabled=true; btn.textContent="저장 중...";
   try{
+    // 영수증 사진 업로드
+    let files=[]; const fi=document.getElementById("wk_files");
+    if(fi && fi.files && fi.files.length){
+      for(let i=0;i<fi.files.length;i++){ showUploading("영수증 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); files.push(await processFile(fi.files[i])); }
+      hideUploading();
+    }
+    const hasPhoto = files.some(f=>(f.type||"").startsWith("image/"));
+    const data={
+      projectId:currentProjectId, kind:"기타비용",
+      title:titleParts.join(' - '), date, stage:null,
+      cat:catForStat, sub:sub||null, vendor:"", amount:amt||0, pay,
+      menu: k==="식비"? (extra.menus&&extra.menus.length?extra.menus.map(m=>m.name).join(", "):null):null,
+      menus: k==="식비"&&extra.menus&&extra.menus.length?extra.menus:null,
+      rest: k==="식비"?(extra.rest||null):null,
+      people: k==="식비"?(extra.people||null):null,
+      dist: k==="주유·가스"?(extra.dist||null):null,
+      memo: memoBits.join(" / "),
+      photoFolder: hasPhoto?"영수증·증빙":null,
+      files, createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
     await db.collection(ENTRIES).add(data);
     btn.disabled=false; btn.textContent="✓ 저장하고 계속";
     setTimeout(()=>{ if(btn) btn.textContent="저장하고 계속"; }, 900);
@@ -1733,10 +1749,12 @@ async function saveWkOne(){
     document.getElementById("wk_people_input").value="";
     document.getElementById("wk_rest_input").value="";
     document.getElementById("wk_memo_val").value="";
+    if(fi) fi.value="";
+    const fh=document.getElementById("wk_filehint"); if(fh) fh.textContent="카메라로 영수증을 바로 찍거나 갤러리에서 고르세요. 저장 후 ‘사진’ 탭의 ‘영수증·증빙’ 폴더에서 모아 볼 수 있어요.";
     const mb=document.getElementById("wk_memo_btn"); if(mb) mb.textContent="📝 메모 작성";
     await reloadCurrent();
     renderWkTodayList();
-  }catch(err){ btn.disabled=false; btn.textContent="저장하고 계속"; showError("주말 비용 저장", err); }
+  }catch(err){ hideUploading(); btn.disabled=false; btn.textContent="저장하고 계속"; showError("주말 비용 저장", err); }
 }
 /* 모달 안에서 '이 날짜에 저장된 것' 미리보기 + 삭제 */
 function renderWkTodayList(){
@@ -1748,12 +1766,14 @@ function renderWkTodayList(){
   const sum=list.reduce((s,e)=>s+(Number(e.amount)||0),0);
   if(!list.length){ box.innerHTML='<div class="hint" style="margin-top:6px">이 날짜에 저장된 항목이 없습니다.</div>'; return; }
   box.innerHTML=`<div class="wk-today-head">📅 ${date} 저장됨 — ${list.length}건 · 합계 ${sum.toLocaleString()}원</div>`+
-    list.map(e=>`<div class="wk-today-row">
+    list.map(e=>{
+      const nPhoto=(e.files||[]).filter(f=>(f.type||"").startsWith("image/")).length;
+      return `<div class="wk-today-row">
       <span class="wk-today-cat">${esc(e.cat||'')}${e.sub?' · '+esc(e.sub):''}</span>
-      <span class="wk-today-title">${esc(e.title||'')}</span>
+      <span class="wk-today-title">${esc(e.title||'')}${nPhoto?` <span title="영수증 ${nPhoto}장">🧾${nPhoto}</span>`:''}</span>
       <span class="wk-today-amt">${Number(e.amount||0).toLocaleString()}원</span>
       <button type="button" class="opt-del-btn" onclick="deleteEntry('${e.id}').then(()=>renderWkTodayList())">삭제</button>
-    </div>`).join("");
+    </div>`;}).join("");
 }
 /* 주말 비용 탭 (요약 + 한 줄 목록형 기본) */
 function viewWeekend(p){
@@ -1801,7 +1821,7 @@ function viewWeekend(p){
 /* ===== 사진 ===== */
 function photoFolderOf(e){ return e.photoFolder || "기타 사진"; }
 function viewPhotos(p){
-  const photos=entries.filter(e=>e.kind==="사진" && (e.files||[]).some(f=>(f.type||"").startsWith("image/")));
+  const photos=entries.filter(e=>(e.kind==="사진"||e.photoFolder) && (e.files||[]).some(f=>(f.type||"").startsWith("image/")));
   if(window._photoOpenId){
     const cat=window._photoOpenId;
     const inCat=photos.filter(e=>photoFolderOf(e)===cat).sort((a,b)=>(b.date||"").localeCompare(a.date||""));

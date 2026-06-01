@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>부동산 프로젝트 관리</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="realestate-project.css?v=3.5">
+<link rel="stylesheet" href="realestate-project.css?v=3.6">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
@@ -38,7 +38,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.5</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.6</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
@@ -427,6 +427,11 @@
       <input type="hidden" id="wk_memo_val">
     </div>
 
+    <div class="field"><label>🧾 영수증 사진 (양도세 증빙용, 여러 장)</label>
+      <input id="wk_files" type="file" multiple accept="image/*,application/pdf" capture="environment" onchange="wkFileHint()">
+      <div class="hint" id="wk_filehint">카메라로 영수증을 바로 찍거나 갤러리에서 고르세요. 저장 후 ‘사진’ 탭의 ‘영수증·증빙’ 폴더에서 모아 볼 수 있어요.</div>
+    </div>
+
     <div class="modal-acts">
       <button class="btn btn-primary" id="wk_saveOne" onclick="saveWkOne()" style="flex:1">저장하고 계속</button>
       <button class="btn btn-line" onclick="closeModal('weekendModal')">닫기</button>
@@ -587,6 +592,6 @@
   </div>
 </div>
 
-<script src="realestate-project.js?v=3.5"></script>
+<script src="realestate-project.js?v=3.6"></script>
 </body>
 </html>
