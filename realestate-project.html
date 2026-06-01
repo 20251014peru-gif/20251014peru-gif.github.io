@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>부동산 프로젝트 관리</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="realestate-project.css?v=3.6">
+<link rel="stylesheet" href="realestate-project.css?v=3.7">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
@@ -38,7 +38,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.6</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.7</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
@@ -121,6 +121,11 @@
       </div>
     </div>
     <div class="field" id="g_pay"><label>결제 수단</label><select id="ef_pay"></select></div>
+    <div class="row2">
+      <div class="field"><label>전화번호 (선택)</label><input id="ef_phone" type="tel" placeholder="누르면 바로 전화"></div>
+      <div class="field"><label>주소 (선택) <a id="ef_mapBtn" class="field-cfg" style="display:none" href="#" target="_blank" rel="noopener">📍 네이버지도</a></label>
+        <input id="ef_addr" placeholder="주소 입력 → 지도 연결" oninput="efMapHint()"></div>
+    </div>
     <div id="ef_customWrap"></div>
     <div style="margin-bottom:13px"><button type="button" class="btn btn-ghost btn-sm" onclick="addCustomField()">+ 입력칸 추가</button>
       <span class="hint" style="margin-left:6px">이 종류에 나만의 칸(예: 현장 담당자, 차량번호)을 만들어요.</span></div>
@@ -332,15 +337,17 @@
       <div class="field"><label>금액 (원)</label><input id="ce_amount" type="number"></div>
     </div>
     <div class="field"><label>종류</label>
-      <select id="ce_kind" onchange="ceKindChange()">
-        <option value="자재비">자재비</option>
-        <option value="공사비">공사비</option>
-        <option value="기타비용">기타비용</option></select></div>
-    <div class="field" id="ce_g_stage"><label>공정</label><select id="ce_stage"></select></div>
+      <select id="ce_kind" onchange="ceKindChange()"></select></div>
+    <div class="field" id="ce_g_stage"><label>공정</label><select id="ce_stage" onchange="ceFillCat()"></select></div>
     <div class="field" id="ce_g_cat"><label>세부 항목</label><select id="ce_cat"></select></div>
     <div class="row2">
       <div class="field"><label>거래처</label><input id="ce_vendor" list="vendorList"></div>
       <div class="field"><label>결제 수단</label><select id="ce_pay"></select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>전화번호</label><input id="ce_phone" type="tel" placeholder="누르면 바로 전화"></div>
+      <div class="field"><label>주소 <a id="ce_mapBtn" class="field-cfg" style="display:none" href="#" target="_blank" rel="noopener">📍 네이버지도</a></label>
+        <input id="ce_addr" placeholder="주소 입력 → 지도 연결" oninput="ceMapHint()"></div>
     </div>
     <div class="field"><label>메모</label><textarea id="ce_memo"></textarea></div>
     <div class="modal-acts">
@@ -592,6 +599,6 @@
   </div>
 </div>
 
-<script src="realestate-project.js?v=3.6"></script>
+<script src="realestate-project.js?v=3.7"></script>
 </body>
 </html>

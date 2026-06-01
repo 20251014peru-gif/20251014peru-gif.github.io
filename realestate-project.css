@@ -230,6 +230,8 @@ main{flex:1; padding:20px 24px; overflow-y:auto;}
 .visit-hist-line .visit-del{margin-left:auto; border:none; background:none; color:var(--danger); font-size:13px; cursor:pointer; line-height:1; padding:0 2px;}
 .tel-link{display:inline-block; color:var(--accent); text-decoration:none; font-size:13px; font-weight:600; background:var(--accent-soft); padding:4px 10px; border-radius:8px; white-space:nowrap;}
 .tel-link:hover{background:var(--accent); color:#fff;}
+.map-link{display:inline-block; color:#15803d; text-decoration:none; font-size:13px; font-weight:600; background:#e6f4ea; padding:4px 10px; border-radius:8px;}
+.map-link:hover{background:#15803d; color:#fff;}
 
 /* 주말 빠른 입력 */
 .wk-day{border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; background:#fafaff;}

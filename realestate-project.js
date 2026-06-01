@@ -1,17 +1,20 @@
 /* ============================================================
-   부동산 프로젝트 관리 v3.6
+   부동산 프로젝트 관리 v3.7
    ------------------------------------------------------------
-   [v3.6 변경 내역]
-   1) 주말 비용 입력에 영수증 사진 첨부(양도세 증빙용)
-      - 모바일 카메라 바로 촬영(capture) 또는 갤러리 선택, 여러 장
-      - 저장 시 '사진' 탭의 '영수증·증빙' 폴더에 자동 분류되어 모아 보기
-      - 모달의 그날 저장 목록에 🧾 사진 장수 표시
+   [v3.7 변경 내역]
+   1) 비용 분류 체계 통일 (기록추가 / 주말세트 / 비용수정 동일)
+      - 종류: 자재비·공사비·식비·톨비·주유·가스·주차비·관리비… (COST_KINDS)
+      - 종류 선택 시 세부항목 자동 변경 (식비→아침/점심/저녁, 톨비→상행/하행 등)
+      - 주말 저장분(기타비용+식비 등)도 수정창에서 종류=식비, 세부=아침 으로 정확히 표시
+   2) 전화번호 칸 추가 → 누르면 바로 전화 (기록/비용수정)
+   3) 주소 칸 추가 → 누르면 네이버지도로 연결(길찾기) (기록/비용수정)
    ------------------------------------------------------------
+   [v3.6] 주말 영수증 사진 첨부(양도세 증빙·영수증 폴더)
    [v3.5] 주말 한 줄 즉시저장 / 식비 메뉴 여러개 합계 / 메모 팝업
    [v3.4] 커스텀 입력칸 / 앞으로가기 / 주말 주행거리·메뉴
-   [v3.3] 작업일지 탭 / 준비·할일 탭 / 뒤로가기 / 주말 단순화
-   [v3.2] 옵션 추가·삭제 / 종류별 칸 설정(⚙) / 사용자종류 비용집계
-   [v3.1] 결제수단 버그 / 목록형 기본 / 주말 줄추가식 / 부동산 방문횟수 / 전화 / 자재 총보유
+   [v3.3] 작업일지 탭 / 준비·할일 탭 / 뒤로가기
+   [v3.2] 옵션 추가·삭제 / 종류별 칸 설정(⚙)
+   [v3.1] 결제수단 버그 / 목록형 기본 / 부동산 방문횟수 / 전화 / 자재 총보유
    [v3.0] 파일 분리 / USD 환율 / 옵션 직접추가 / 자재 재고 / 견적 / 백업
    ============================================================ */
 
@@ -41,7 +44,7 @@ const DEFAULT_OPTS = {
     "싱크대·가구","기타",
     "매도(계약·잔금)"
   ],
-  kinds:["자재비","공사비","사진","연락","서류","문제","메모","기타비용"],
+  kinds:["자재비","공사비","식비","톨비(통행료)","주유·가스","주차비","사진","연락","서류","문제","메모","기타비용"],
   pays:["세금계산서","은행이체","카드","현금","기타"],
   etc_cats:[
     "식비","교통/주유비","톨비(통행료)","가스충전비",
@@ -68,6 +71,38 @@ const DEFAULT_OPTS = {
   mat_units:["EA(개)","㎡","평","m(미터)","box(박스)","롤","통","set(세트)","장","자","포","말"],
   wk_kinds:["식비","톨비(통행료)","주유·가스","주차비","숙박비","기타"]
 };
+
+/* ===== 비용 종류 통일 체계 =====
+   세 곳(기록추가 / 주말세트 / 비용수정)이 모두 이 체계를 사용.
+   - 종류(kind): 자재비/공사비 + 아래 기타 종류들
+   - 종류별 세부항목(sub): SUB_CATS 매핑. (자재비/공사비는 공정별 stage_cat) */
+const COST_KINDS = ["자재비","공사비","식비","톨비(통행료)","주유·가스","주차비","관리비","도시가스","대출이자","등기비","취득세","중개 수수료","보험료","숙박비","예비비","기타비용"];
+const SUB_CATS = {
+  "식비":["아침","점심","저녁","집간식","현장간식","기타"],
+  "톨비(통행료)":["상행","하행"],
+  "주유·가스":["휘발유 상행","휘발유 하행","휘발유 충전","가스 상행","가스 하행","가스 충전"],
+  "주차비":["현장","기타"],
+  "관리비":[], "도시가스":[], "대출이자":[], "등기비":[], "취득세":[],
+  "중개 수수료":["매수","매도"], "보험료":[], "숙박비":[], "예비비":[], "기타비용":[]
+};
+/* 종류에 맞는 세부항목 목록 반환 (자재비/공사비는 공정 기반) */
+function subCatsFor(kind, stage){
+  if(kind==="자재비"||kind==="공사비"){
+    const key = stage? ("stage_cat_"+stage) : "stage_cat_공통";
+    return opts(key);
+  }
+  // 사용자가 옵션에서 추가한 세부(sub_<종류>)도 합침
+  const base = SUB_CATS[kind] || [];
+  const extra = userOpts["sub_"+kind] || [];
+  const out=[]; const seen=new Set();
+  base.concat(extra).forEach(v=>{ if(v && !seen.has(v)){ seen.add(v); out.push(v); }});
+  return out;
+}
+/* 주말 비용으로 저장할 때 통계 분류(cat)를 표준화 */
+function statCatOf(kind){
+  if(kind==="주유·가스") return "교통/주유비";
+  return kind;
+}
 
 /* 공정별 자재(세부 항목) — 기본값. 사용자 추가분은 stage_cats[stage] 키로 합쳐짐 */
 const COMMON_CATS = ["인건비/일당","장비/사다리차","폐기물 처리","자재 배송비","부속/잡자재","기타"];
@@ -856,10 +891,13 @@ function renderLog(e, opts){
   const delBtn = opts.noDelete? '' : `<button class="l-del" onclick="deleteEntry('${e.id}')">삭제</button>`;
   const customHtml = (e.custom && Object.keys(e.custom).length)
     ? `<div class="l-meta">${Object.keys(e.custom).map(nm=>`${esc(nm)} <b>${esc(e.custom[nm])}</b>`).join(' · ')}</div>` : '';
+  const contactHtml = (e.phone||e.addr)
+    ? `<div class="l-meta" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${e.phone?telLink(e.phone):''}${e.addr?mapLink(e.addr):''}</div>` : '';
   return `<div class="log">
     <div class="l-top">${tags}<span class="l-title">${esc(e.title)}</span><span class="l-date">${e.date||''}</span>${editBtn}${delBtn}</div>
     ${(e.vendor||e.amount)?`<div class="l-meta">${e.vendor?'거래처 '+esc(e.vendor):''}${e.vendor&&e.amount?' · ':''}${e.amount?'<b>'+Number(e.amount).toLocaleString()+'원</b>':''}</div>`:''}
     ${customHtml}
+    ${contactHtml}
     ${e.memo?`<div class="l-memo">${esc(e.memo)}</div>`:''}
     ${files?`<div class="files">${files}</div>`:''}</div>`;
 }
@@ -1455,6 +1493,11 @@ function telLink(phone, cls){
   if(!phone) return '';
   const num=(phone||'').replace(/[^0-9+]/g,'');
   return `<a class="tel-link ${cls||''}" href="tel:${num}">📞 ${esc(phone)}</a>`;
+}
+function naverMapUrl(addr){ return "https://map.naver.com/p/search/"+encodeURIComponent(addr); }
+function mapLink(addr, cls){
+  if(!addr) return '';
+  return `<a class="map-link ${cls||''}" href="${naverMapUrl(addr)}" target="_blank" rel="noopener">📍 ${esc(addr)}</a>`;
 }
 function renderAgentTable(){
   if(!agents.length) return '<div class="ai-empty">등록된 부동산이 없습니다. ‘+ 부동산 추가’로 입력하세요.</div>';
@@ -2332,17 +2375,31 @@ async function removeCustomField(name){
 function fillStageSelect(preset){
   buildOptSelect("ef_stage","stages",preset||"","(공정 선택 안 함)");
 }
+function efMapHint(){
+  const addr=(val("ef_addr")||"").trim();
+  const a=document.getElementById("ef_mapBtn");
+  if(a){ if(addr){ a.style.display="inline-block"; a.href=naverMapUrl(addr); } else { a.style.display="none"; } }
+}
 function fillCatSelect(){
   const k=val("ef_kind");
   const stage=val("ef_stage");
   const sel=document.getElementById("ef_cat");
-  if(k==="기타비용"){
-    buildOptSelect("ef_cat","etc_cats","");
-    return;
+  if(!sel) return;
+  // 통일 체계: 종류별 세부항목
+  let list;
+  if(k==="자재비"||k==="공사비"){
+    const key = stage? ("stage_cat_"+stage) : "stage_cat_공통";
+    list=opts(key);
+  } else if(k==="기타비용"){
+    // 기타비용은 큰 분류(식비/톨비/주유·가스/관리비...)를 세부로 사용
+    list=opts("etc_cats");
+  } else {
+    list=subCatsFor(k, stage);
   }
-  // 공정별 세부항목 (stage_cat_<stage>). 공정 미선택 시 공통 키
-  const key = stage? ("stage_cat_"+stage) : "stage_cat_공통";
-  buildOptSelect("ef_cat", key, "");
+  const g_cat=document.getElementById("g_cat");
+  if(g_cat){ const f=kindFields(k); g_cat.style.display = (f.includes("cat")&&list.length)?"block":"none"; }
+  const cur=sel.value;
+  sel.innerHTML=list.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join("");
 }
 /* 종류별 칸 설정 모달 */
 let _kindCfgKind=null;
@@ -2384,6 +2441,9 @@ function openEntryModal(presetStage,presetKind){
   document.getElementById("vendorList").innerHTML=vendors.map(v=>`<option value="${esc(v.name)}">`).join("");
   fillStageSelect(presetStage||"");
   document.getElementById("ef_stage").onchange=fillCatSelect;
+  const ph=document.getElementById("ef_phone"); if(ph) ph.value="";
+  const ad=document.getElementById("ef_addr"); if(ad) ad.value="";
+  efMapHint();
   _efCustomValues={};
   onKindChange();
   document.getElementById("entryModalTitle").textContent = presetStage? presetStage+" 기록 추가" : "기록 추가";
@@ -2441,10 +2501,18 @@ async function saveEntry(){
   const photoFolder = f.includes("photofolder") ? val("ef_photofolder") : null;
   const docFolder = f.includes("docfolder") ? val("ef_docfolder") : null;
   const customData=readCustomFields();
+  // 통일 분류 표준화: 식비/톨비/주유·가스/주차비 등은 kind=기타비용 + cat=종류 + sub=세부로 저장
+  const selCat = f.includes("cat") ? val("ef_cat") : null;
+  let kindToSave=k, catToSave=selCat, subToSave=null, stageToSave=(f.includes("stage")&&val("ef_stage"))?val("ef_stage"):null;
+  const ETC_AS_KIND = ["식비","톨비(통행료)","주유·가스","주차비","관리비","도시가스","대출이자","등기비","취득세","중개 수수료","보험료","숙박비","예비비"];
+  if(ETC_AS_KIND.includes(k)){
+    kindToSave="기타비용"; catToSave=statCatOf(k); subToSave=selCat; stageToSave=null;
+  }
   await db.collection(ENTRIES).add({
-    projectId:currentProjectId, kind:k, title, date:val("ef_date"),
-    stage:(f.includes("stage")&&val("ef_stage"))?val("ef_stage"):null,
-    cat: f.includes("cat")?val("ef_cat"):null,
+    projectId:currentProjectId, kind:kindToSave, title, date:val("ef_date"),
+    stage:stageToSave,
+    cat: catToSave,
+    sub: subToSave,
     photoFolder, docFolder,
     vendor: f.includes("vendor")?val("ef_vendor").trim():"",
     amount: isMoney? (amtKRW||null) : null,
@@ -2452,6 +2520,8 @@ async function saveEntry(){
     currency: isMoney?cur:null,
     fxRate: (isMoney&&cur==="USD")?_fxRate:null,
     pay: f.includes("pay")?val("ef_pay"):null,
+    phone: val("ef_phone")?val("ef_phone").trim():null,
+    addr: val("ef_addr")?val("ef_addr").trim():null,
     custom: Object.keys(customData).length?customData:null,
     memo:val("ef_memo").trim(), files,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
@@ -2528,14 +2598,33 @@ async function editEntryMeta(entryId){
 }
 
 /* ===== 비용 수정 ===== */
+/* 저장된 기록의 '표시용 종류'를 구함.
+   - 자재비/공사비: 그대로
+   - 기타비용으로 저장됐지만 cat이 식비/톨비 등 표준 종류면: 그 cat을 종류로 승격
+   - 주말 저장분의 cat="교통/주유비"는 "주유·가스"로 역매핑 */
+function displayKindOf(e){
+  if(e.kind==="자재비"||e.kind==="공사비") return e.kind;
+  if(e.kind==="기타비용"){
+    if(e.cat==="교통/주유비") return "주유·가스";
+    if(e.cat && COST_KINDS.includes(e.cat)) return e.cat;
+    return "기타비용";
+  }
+  return e.kind || "기타비용";
+}
+/* 표시 종류 기준의 현재 세부값 */
+function displaySubOf(e, dispKind){
+  if(dispKind==="자재비"||dispKind==="공사비") return e.cat||"";
+  // 식비/톨비/주유 등: sub에 저장돼 있음
+  return e.sub||"";
+}
 function ceFillCat(){
   const k=document.getElementById("ce_kind").value;
   const stage=document.getElementById("ce_stage").value;
   const sel=document.getElementById("ce_cat");
-  let list=[];
-  if(k==="자재비"||k==="공사비"){ list= stage? opts("stage_cat_"+stage):COMMON_CATS; }
-  else { list=opts("etc_cats"); }
+  const list=subCatsFor(k, stage);
   const cur=sel.value;
+  const g_cat=document.getElementById("ce_g_cat");
+  if(g_cat) g_cat.style.display = list.length? "block":"none";
   sel.innerHTML=list.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join("");
 }
 function ceKindChange(){
@@ -2545,35 +2634,58 @@ function ceKindChange(){
 }
 function editCost(id){
   const e=entries.find(x=>x.id===id); if(!e) return;
+  const dispKind=displayKindOf(e);
+  const dispSub=displaySubOf(e, dispKind);
   document.getElementById("ce_id").value=id;
   document.getElementById("ce_title").value=e.title||"";
   document.getElementById("ce_date").value=e.date||"";
   document.getElementById("ce_amount").value=e.amount!=null?e.amount:"";
-  // 종류 셀렉트: 기본 3종 + 현재 기록의 종류(사용자 추가 종류 포함) 보존
-  const base=["자재비","공사비","기타비용"];
-  const kinds = base.includes(e.kind)? base : base.concat([e.kind||"기타비용"]);
-  document.getElementById("ce_kind").innerHTML = kinds.map(k=>`<option ${k===e.kind?'selected':''}>${esc(k)}</option>`).join("");
+  // 종류 셀렉트: 통일 목록(COST_KINDS) + 현재 표시종류가 목록에 없으면 추가
+  const kinds = COST_KINDS.includes(dispKind)? COST_KINDS.slice() : COST_KINDS.concat([dispKind]);
+  document.getElementById("ce_kind").innerHTML = kinds.map(k=>`<option ${k===dispKind?'selected':''}>${esc(k)}</option>`).join("");
   document.getElementById("ce_stage").innerHTML='<option value="">(미지정)</option>'+opts("stages").map(s=>`<option ${e.stage===s?'selected':''}>${esc(s)}</option>`).join("");
   document.getElementById("ce_vendor").value=e.vendor||"";
   document.getElementById("vendorList").innerHTML=vendors.map(v=>`<option value="${esc(v.name)}">`).join("");
   document.getElementById("ce_pay").innerHTML=opts("pays").map(p=>`<option ${e.pay===p?'selected':''}>${esc(p)}</option>`).join("");
+  document.getElementById("ce_phone").value=e.phone||"";
+  document.getElementById("ce_addr").value=e.addr||"";
   document.getElementById("ce_memo").value=e.memo||"";
   ceKindChange();
-  if(e.cat){ const sel=document.getElementById("ce_cat"); if(![...sel.options].some(o=>o.value===e.cat)){ sel.innerHTML+=`<option>${esc(e.cat)}</option>`; } sel.value=e.cat; }
+  // 세부값 선택 (목록에 없으면 추가)
+  if(dispSub){ const sel=document.getElementById("ce_cat"); if(![...sel.options].some(o=>o.value===dispSub)){ sel.innerHTML+=`<option>${esc(dispSub)}</option>`; } sel.value=dispSub; }
+  ceMapHint();
   openModal("costEditModal");
+}
+function ceMapHint(){
+  const addr=document.getElementById("ce_addr").value.trim();
+  const a=document.getElementById("ce_mapBtn");
+  if(a){ if(addr){ a.style.display="inline-block"; a.href=naverMapUrl(addr); } else { a.style.display="none"; } }
 }
 async function saveCostEdit(){
   const id=document.getElementById("ce_id").value;
   const title=document.getElementById("ce_title").value.trim();
   if(!title){ alert("항목명을 입력하세요."); return; }
-  const k=document.getElementById("ce_kind").value;
+  const dispKind=document.getElementById("ce_kind").value;
+  const sub=document.getElementById("ce_cat").value||null;
+  const isStageKind=(dispKind==="자재비"||dispKind==="공사비");
+  // 저장 형태 표준화: 자재비/공사비는 그대로, 그 외는 kind=기타비용 + cat=종류(통계호환) + sub=세부
+  let kindToSave, catToSave, subToSave, stageToSave;
+  if(isStageKind){
+    kindToSave=dispKind; catToSave=sub; subToSave=null;
+    stageToSave=document.getElementById("ce_stage").value||null;
+  } else {
+    kindToSave="기타비용";
+    catToSave=statCatOf(dispKind); // 식비→식비, 주유·가스→교통/주유비
+    subToSave=sub; stageToSave=null;
+  }
   const upd={
     title, date:document.getElementById("ce_date").value||today(),
-    kind:k, amount:Number(document.getElementById("ce_amount").value)||null,
-    stage:(k==="자재비"||k==="공사비")?(document.getElementById("ce_stage").value||null):null,
-    cat:document.getElementById("ce_cat").value||null,
+    kind:kindToSave, amount:Number(document.getElementById("ce_amount").value)||null,
+    stage:stageToSave, cat:catToSave, sub:subToSave,
     vendor:document.getElementById("ce_vendor").value.trim(),
     pay:document.getElementById("ce_pay").value,
+    phone:document.getElementById("ce_phone").value.trim()||null,
+    addr:document.getElementById("ce_addr").value.trim()||null,
     memo:document.getElementById("ce_memo").value.trim()
   };
   try{ await db.collection(ENTRIES).doc(id).update(upd); closeModal("costEditModal"); await reloadCurrent(); }
