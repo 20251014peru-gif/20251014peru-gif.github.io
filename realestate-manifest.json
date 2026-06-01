@@ -1,0 +1,15 @@
+{
+  "name": "부동산 프로젝트 관리",
+  "short_name": "부동산관리",
+  "description": "부동산 프로젝트별 비용·공정·자재·견적·작업일지 관리",
+  "start_url": "./realestate-project.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f5ef",
+  "theme_color": "#c9a227",
+  "icons": [
+    { "src": "realestate-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "realestate-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

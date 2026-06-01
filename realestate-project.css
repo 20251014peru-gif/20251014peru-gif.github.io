@@ -478,3 +478,59 @@ table.tbl td.num{text-align:right; font-variant-numeric:tabular-nums;}
   .stats{grid-template-columns:repeat(2,1fr);}
   .row2,.cost-cols{grid-template-columns:1fr;}
 }
+
+/* ===== 잠금화면 (PIN/지문) ===== */
+.lock-screen{position:fixed; inset:0; z-index:2000; background:linear-gradient(160deg,#f7f5ef,#efe9da); display:flex; align-items:center; justify-content:center;}
+.lock-screen.hidden{display:none;}
+.lock-box{width:min(340px,90vw); text-align:center;}
+.lock-title{font-size:20px; font-weight:800; color:var(--ink); margin-bottom:6px;}
+.lock-desc{font-size:13px; color:var(--ink-soft); margin-bottom:18px;}
+.lock-dots{display:flex; gap:14px; justify-content:center; margin-bottom:10px;}
+.lock-dot{width:14px; height:14px; border-radius:50%; border:2px solid var(--accent); background:transparent;}
+.lock-dot.on{background:var(--accent);}
+.lock-msg{min-height:18px; font-size:12.5px; color:var(--danger); margin-bottom:14px;}
+.lock-pad{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; max-width:260px; margin:0 auto;}
+.lock-key{height:64px; border:1px solid var(--line); background:#fff; border-radius:16px; font-size:22px; font-weight:600; color:var(--ink); cursor:pointer; box-shadow:var(--shadow);}
+.lock-key:active{background:var(--accent-soft);}
+.lock-bio{margin-top:18px; border:1px solid var(--line); background:#fff; border-radius:12px; padding:12px 18px; font-size:14px; cursor:pointer; color:var(--accent);}
+
+/* ===== 달력 (칸 안 내용+금액) ===== */
+.cal-top{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:14px 16px; border-bottom:1px solid var(--line);}
+.cal-nav{display:flex; gap:6px;}
+.cal-title{font-size:18px; font-weight:800; color:var(--ink);}
+.cal-sum{font-size:13px; color:var(--ink-soft);}
+.cal-sum b{color:var(--accent); font-size:15px;}
+.cal-grid-h{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; padding:10px 12px 0;}
+.cal-h{text-align:center; font-size:12.5px; font-weight:700; color:var(--ink-soft); padding:4px 0;}
+.cal-h.sun{color:#d9534f;} .cal-h.sat{color:#3f7cb8;}
+.cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; padding:4px 12px 14px;}
+.cal-cell{min-height:96px; border:1px solid var(--line); border-radius:8px; padding:5px; background:#fff; cursor:pointer; overflow:hidden; display:flex; flex-direction:column;}
+.cal-cell.empty{background:transparent; border:none; cursor:default;}
+.cal-cell.today{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft) inset;}
+.cal-cell.has:hover{background:var(--accent-soft);}
+.cal-d{display:flex; align-items:center; justify-content:space-between; font-size:12.5px; font-weight:700; margin-bottom:3px;}
+.cal-cell.sun .cal-d{color:#d9534f;} .cal-cell.sat .cal-d{color:#3f7cb8;}
+.cal-dsum{font-size:10.5px; font-weight:700; color:var(--accent); font-variant-numeric:tabular-nums;}
+.cal-items{display:flex; flex-direction:column; gap:2px; overflow:hidden;}
+.cal-item{display:flex; align-items:center; gap:3px; font-size:10.5px; background:#f6f3ea; border-radius:5px; padding:2px 4px; white-space:nowrap; overflow:hidden;}
+.cal-item:hover{background:var(--accent-soft);}
+.cal-i-ic{flex:0 0 auto;}
+.cal-i-t{flex:1; overflow:hidden; text-overflow:ellipsis;}
+.cal-i-amt{flex:0 0 auto; font-weight:700; color:var(--accent); font-variant-numeric:tabular-nums;}
+.cal-more{font-size:10px; color:var(--ink-soft); padding:1px 4px;}
+.cal-day-sum{text-align:right; font-weight:700; color:var(--accent); padding:8px 4px 0; border-top:1px solid var(--line); margin-top:6px;}
+@media(max-width:780px){
+  .cal-cell{min-height:74px;}
+  .cal-i-t{display:none;}
+  .cal-item{justify-content:space-between;}
+  .cal-title{font-size:16px;}
+}
+
+/* 달력 종류 필터 */
+.cal-filter{display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:10px 14px; border-bottom:1px solid var(--line);}
+.cal-filter-lab{font-size:12.5px; font-weight:700; color:var(--ink-soft);}
+.cal-filter-div{width:1px; height:18px; background:var(--line); margin:0 2px;}
+.cal-chip{border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 11px; font-size:12.5px; cursor:pointer; color:var(--ink-soft); white-space:nowrap;}
+.cal-chip.on{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.cal-chip.ghost{color:var(--ink-soft); font-size:11.5px; padding:5px 9px;}
+.cal-i-memo{display:block; font-size:9.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis;}

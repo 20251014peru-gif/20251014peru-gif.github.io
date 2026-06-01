@@ -1,13 +1,17 @@
 /* ============================================================
-   부동산 프로젝트 관리 v4.8
+   부동산 프로젝트 관리 v5.1 — 달력 표시 필터
    ------------------------------------------------------------
-   [v4.8 변경 내역] — 코드 정리(기능 변화 없음)
-   1) 죽은 코드 제거: 주말세트 입력(openWeekend 등) / 빠른연속입력
-      (openQuickEtc 등) 관련 함수·모달·CSS 일괄 삭제
-      → 입력은 '기록 추가' 하나로 통합 완료된 상태라 불필요했음
-   2) 안 쓰는 메모 컬렉션 상수(MEMOS) 제거 — 메모는 프로젝트 문서에 저장
-   3) 데이터 구조 문서 추가(아래 DATA MODEL 주석)
-
+   [v5.1 변경 내역]
+   1) 달력에 종류별 표시 켜기/끄기 필터(칩) — 보고 싶은 종류만 표시
+      (업무 달력처럼: 식비만, 또는 공사비만 등 골라보기)
+   2) 메모 표시 토글 — 켜면 달력 항목에 메모 한 줄도 같이 표시
+   3) 전체 켜기/끄기 버튼, 한 칸 최대 5건 표시
+   ------------------------------------------------------------
+   [v5.0] 달력 통합(칸 안 내용+금액) — 표준 틀 7기둥 완성
+   [v4.9] PWA·PIN/지문 잠금
+   [v4.8] 코드정리·DATA MODEL 문서화
+   [v4.0~4.7] 입력통일·식비메뉴·자재공정·인건비·메모인라인·검색통합
+   [v3.x] 분류통일·전화주소·작업일지·할일·커스텀칸·영수증·파일분리·환율·백업
    ------------------------------------------------------------
    ===== DATA MODEL (Firestore 저장 구조) =====
    [projects] 프로젝트
@@ -587,7 +591,7 @@ function renderMain(){
   const p=projects.find(x=>x.id===currentProjectId);
   const main=document.getElementById("main");
   if(!p){main.innerHTML='<div class="empty">프로젝트를 선택하세요.</div>';return;}
-  const tabs=["대시보드","공정","자재","비용","견적·부동산","작업일지","준비·할일","사진","업체·연락","서류"];
+  const tabs=["대시보드","달력","공정","자재","비용","견적·부동산","작업일지","준비·할일","사진","업체·연락","서류"];
   main.innerHTML=`
     <div class="proj-head">
       <div><h2>${esc(p.name)}</h2>
@@ -756,7 +760,126 @@ async function clearMemo(){
     const st=document.getElementById("memoStatus"); if(st) st.textContent="🗑 지웠습니다";
   }catch(err){ showError("메모 지우기", err); }
 }
-function tabIcon(t){return {"대시보드":"📊","공정":"🔨","자재":"🧱","비용":"💰","견적·부동산":"📞","주말 비용":"🚗","작업일지":"📒","준비·할일":"✅","사진":"📷","업체·연락":"📇","서류":"📁","검색":"🔍"}[t]||"";}
+function tabIcon(t){return {"대시보드":"📊","달력":"📅","공정":"🔨","자재":"🧱","비용":"💰","견적·부동산":"📞","주말 비용":"🚗","작업일지":"📒","준비·할일":"✅","사진":"📷","업체·연락":"📇","서류":"📁","검색":"🔍"}[t]||"";}
+/* ===== 달력 (칸 안에 내용+금액 직접 표시) ===== */
+function calCursor(){
+  if(!window._calYM){ const n=new Date(); window._calYM={y:n.getFullYear(), m:n.getMonth()}; }
+  return window._calYM;
+}
+function calMove(delta){
+  const c=calCursor(); let m=c.m+delta, y=c.y;
+  if(m<0){ m=11; y--; } if(m>11){ m=0; y++; }
+  window._calYM={y,m};
+  renderTab(projects.find(x=>x.id===currentProjectId));
+}
+function calToday(){ const n=new Date(); window._calYM={y:n.getFullYear(),m:n.getMonth()}; renderTab(projects.find(x=>x.id===currentProjectId)); }
+function calIcon(k){ return {"식비":"🍚","주유·가스":"⛽","톨비(통행료)":"🛣","주차비":"🅿","택배비":"📦","자재비":"🧱","공사비":"🔨","부동산 매수비용":"🏠","부동산 매도비용":"💵","사진":"📷","연락":"📞","서류":"📁","문제":"⚠","메모":"📝"}[k]||"•"; }
+function calItemLabel(e){
+  const k=displayKindOf(e);
+  const icon=calIcon(k);
+  const amt=e.amount?Number(e.amount).toLocaleString()+"원":"";
+  // 제목 + (켜져 있으면) 메모 한 줄
+  const showMemo=window._calShowMemo!==false;
+  let sub="";
+  if(showMemo && e.memo){ const m=e.memo.replace(/\s+/g,' ').trim(); if(m) sub=`<span class="cal-i-memo">${esc(m.length>18?m.slice(0,18)+'…':m)}</span>`; }
+  const title=esc(e.title||k||"");
+  return `<div class="cal-item" onclick="event.stopPropagation(); editCost('${e.id}')" title="${title} ${amt} ${esc(e.memo||'')}">
+    <span class="cal-i-ic">${icon}</span><span class="cal-i-t">${title}${sub}</span>${amt?`<span class="cal-i-amt">${amt}</span>`:''}</div>`;
+}
+/* 달력에 표시할 종류 필터 */
+function calFilterSet(){ if(!window._calFilter) window._calFilter={}; return window._calFilter; }
+function calKindOn(k){ const f=calFilterSet(); return f[k]!==false; } // 기본 켜짐
+function calToggleKind(k){ const f=calFilterSet(); f[k]=(f[k]===false); renderTab(projects.find(x=>x.id===currentProjectId)); }
+function calToggleMemo(){ window._calShowMemo=(window._calShowMemo===false); renderTab(projects.find(x=>x.id===currentProjectId)); }
+function calAllKinds(on){ const f=calFilterSet(); calPresentKinds().forEach(k=>{ f[k]=!on?true:false; }); renderTab(projects.find(x=>x.id===currentProjectId)); }
+/* 현재 프로젝트 기록에 등장하는 종류 목록 */
+function calPresentKinds(){
+  const set=new Set();
+  entries.forEach(e=>{ if(e.date) set.add(displayKindOf(e)); });
+  // 보기 좋은 순서로 정렬
+  const order=["식비","주유·가스","톨비(통행료)","주차비","택배비","자재비","공사비","부동산 매수비용","부동산 매도비용","사진","연락","서류","문제","메모","기타비용"];
+  return [...set].sort((a,b)=>{ const ia=order.indexOf(a), ib=order.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
+}
+function viewCalendar(p){
+  const c=calCursor();
+  const first=new Date(c.y,c.m,1);
+  const startDow=first.getDay();
+  const daysInMonth=new Date(c.y,c.m+1,0).getDate();
+  const f=calFilterSet();
+  // 날짜별 기록 묶기 (필터 적용)
+  const byDate={};
+  entries.forEach(e=>{ if(!e.date) return; if(!calKindOn(displayKindOf(e))) return; (byDate[e.date]=byDate[e.date]||[]).push(e); });
+  const ym=c.y+"-"+String(c.m+1).padStart(2,"0");
+  let monthSum=0, monthCnt=0;
+  Object.keys(byDate).forEach(d=>{ if(d.startsWith(ym)) byDate[d].forEach(e=>{ if(e.amount){monthSum+=Number(e.amount);} monthCnt++; }); });
+  const todayStr=today();
+  const dow=["일","월","화","수","목","금","토"];
+  let cells="";
+  for(let i=0;i<startDow;i++) cells+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=ym+"-"+String(d).padStart(2,"0");
+    const list=(byDate[ds]||[]).slice().sort((a,b)=>(b.amount||0)-(a.amount||0));
+    const daySum=list.reduce((s,e)=>s+(Number(e.amount)||0),0);
+    const wd=(startDow+d-1)%7;
+    const cls=["cal-cell"];
+    if(ds===todayStr) cls.push("today");
+    if(wd===0) cls.push("sun"); if(wd===6) cls.push("sat");
+    const items=list.slice(0,5).map(calItemLabel).join("");
+    const more=list.length>5?`<div class="cal-more">+${list.length-5}건 더</div>`:"";
+    cls.push(list.length?"has":"");
+    cells+=`<div class="${cls.join(' ')}" onclick="calDayOpen('${ds}')">
+      <div class="cal-d"><span>${d}</span>${daySum?`<span class="cal-dsum">${daySum.toLocaleString()}</span>`:''}</div>
+      <div class="cal-items">${items}${more}</div>
+    </div>`;
+  }
+  const headDows=dow.map((w,i)=>`<div class="cal-h ${i===0?'sun':''} ${i===6?'sat':''}">${w}</div>`).join("");
+  // 종류 필터 칩
+  const kinds=calPresentKinds();
+  const chips=kinds.map(k=>`<button class="cal-chip ${calKindOn(k)?'on':''}" onclick="calToggleKind('${jsstr(k)}')">${calIcon(k)} ${esc(k==="톨비(통행료)"?"톨비":k==="부동산 매수비용"?"매수":k==="부동산 매도비용"?"매도":k)}</button>`).join("");
+  const memoOn=window._calShowMemo!==false;
+  return `<div class="panel">
+    <div class="cal-top">
+      <div class="cal-nav">
+        <button class="btn btn-line btn-sm" onclick="calMove(-1)">‹ 이전</button>
+        <button class="btn btn-line btn-sm" onclick="calToday()">오늘</button>
+        <button class="btn btn-line btn-sm" onclick="calMove(1)">다음 ›</button>
+      </div>
+      <div class="cal-title">${c.y}년 ${c.m+1}월</div>
+      <div class="cal-sum">${monthCnt}건 · 합계 <b>${monthSum.toLocaleString()}원</b></div>
+    </div>
+    <div class="cal-filter">
+      <span class="cal-filter-lab">표시:</span>
+      ${chips || '<span class="hint">기록이 없습니다.</span>'}
+      <span class="cal-filter-div"></span>
+      <button class="cal-chip ${memoOn?'on':''}" onclick="calToggleMemo()">📝 메모 표시</button>
+      <button class="cal-chip ghost" onclick="calAllKinds(true)">전체 켜기</button>
+      <button class="cal-chip ghost" onclick="calAllKinds(false)">전체 끄기</button>
+    </div>
+    <div class="cal-grid-h">${headDows}</div>
+    <div class="cal-grid">${cells}</div>
+  </div>`;
+}
+/* 날짜 칸 클릭 → 그날 기록 목록 + 그날 기록추가 */
+function calDayOpen(ds){
+  const list=entries.filter(e=>e.date===ds).sort((a,b)=>(b.amount||0)-(a.amount||0));
+  const sum=list.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const box=document.getElementById("calDayBody");
+  const t=document.getElementById("calDayTitle");
+  if(t) t.textContent=ds+" ("+["일","월","화","수","목","금","토"][new Date(ds+"T00:00:00").getDay()]+")";
+  if(box){
+    box.innerHTML=(list.length?list.map(e=>renderLog(e,{compact:true})).join(""):'<div class="ai-empty">이 날짜에 기록이 없습니다.</div>')
+      + (sum?`<div class="cal-day-sum">합계 ${sum.toLocaleString()}원</div>`:'');
+  }
+  window._calDayDate=ds;
+  openModal("calDayModal");
+}
+function calDayAdd(){
+  const ds=window._calDayDate;
+  closeModal("calDayModal");
+  openEntryModal();
+  // 날짜를 그날로 세팅
+  setTimeout(()=>{ const el=document.getElementById("ef_date"); if(el&&ds) el.value=ds; },150);
+}
 /* ===== 네비게이션 스택 — 뒤로/앞으로 (각 최대 10단계) ===== */
 let navStack=[];   // 뒤로 갈 화면들
 let navFwd=[];     // 앞으로 갈 화면들
@@ -801,7 +924,7 @@ function renderTab(p){
   try{
     const c=document.getElementById("tabContent");
     const map={
-      "대시보드":viewDashboard,"공정":viewStages,"자재":viewMaterials,"비용":viewCost,
+      "대시보드":viewDashboard,"달력":viewCalendar,"공정":viewStages,"자재":viewMaterials,"비용":viewCost,
       "견적·부동산":viewQuotesAgents,"작업일지":viewWorklog,
       "준비·할일":viewTodos,"사진":viewPhotos,
       "업체·연락":viewVendors,"서류":viewDocs,"검색":viewSearch
@@ -1134,10 +1257,98 @@ window.addEventListener("unhandledrejection", function(e){ showError("비동기 
 
 /* === 시작 === */
 (async function init(){
+  startLock();              // 잠금 먼저
+  registerSW();             // PWA 서비스워커 등록
   await loadUserOpts();
-  loadFxRate();           // 비동기, 결과는 배지에 반영
+  loadFxRate();
   await loadProjects();
 })();
+
+/* ===== PWA 서비스워커 등록 ===== */
+function registerSW(){
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('realestate-sw.js').catch(function(){});
+  }
+}
+
+/* ===== 잠금 (PIN/지문) — 개인관리 패턴 이식 ===== */
+const PIN_KEY='re-pin', BIO_KEY='re-bio';
+let pinBuffer='', pinMode='enter', pinFirst='';
+function hashPin(s){ let h=0; for(let i=0;i<s.length;i++){ h=((h<<5)-h+s.charCodeAt(i))|0; } return 'h'+h; }
+function hasPin(){ return !!localStorage.getItem(PIN_KEY); }
+function lockText(t,d){ const a=document.getElementById('lockTitle'),b=document.getElementById('lockDesc'); if(a)a.textContent=t; if(b)b.textContent=d; }
+function lockMsg(m){ const e=document.getElementById('lockMsg'); if(e)e.textContent=m||''; }
+function renderDots(){ const e=document.getElementById('lockDots'); if(!e)return; e.innerHTML=''; for(let i=0;i<4;i++){ const d=document.createElement('span'); d.className='lock-dot'+(i<pinBuffer.length?' on':''); e.appendChild(d);} }
+function buildPad(){
+  const pad=document.getElementById('lockPad'); if(!pad||pad.childElementCount)return;
+  const keys=['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  keys.forEach(k=>{
+    const b=document.createElement('button'); b.className='lock-key'; b.textContent=k;
+    if(k==='') b.style.visibility='hidden';
+    else b.onclick=()=>pinPress(k);
+    pad.appendChild(b);
+  });
+}
+function pinPress(k){
+  if(k==='⌫'){ pinBuffer=pinBuffer.slice(0,-1); renderDots(); return; }
+  if(pinBuffer.length>=4) return;
+  pinBuffer+=k; renderDots();
+  if(pinBuffer.length===4) setTimeout(pinComplete,120);
+}
+function pinComplete(){
+  if(pinMode==='set'){
+    pinFirst=pinBuffer; pinBuffer=''; renderDots();
+    pinMode='confirm'; lockText('PIN 확인','한 번 더 입력하세요'); lockMsg('');
+    return;
+  }
+  if(pinMode==='confirm'){
+    if(pinBuffer===pinFirst){ localStorage.setItem(PIN_KEY,hashPin(pinBuffer)); unlock(); tryEnableBio(); }
+    else { pinBuffer=''; pinFirst=''; renderDots(); pinMode='set'; lockText('PIN 설정','다시 설정해 주세요'); lockMsg('두 번 입력이 달라요'); }
+    return;
+  }
+  // enter
+  if(hashPin(pinBuffer)===localStorage.getItem(PIN_KEY)){ unlock(); }
+  else { pinBuffer=''; renderDots(); lockMsg('PIN이 틀렸어요'); }
+}
+function unlock(){ pinBuffer=''; lockMsg(''); const s=document.getElementById('lockScreen'); if(s)s.classList.add('hidden'); }
+function startLock(){
+  // 잠금을 설정하지 않았으면 잠금화면을 건너뜀(기존 사용자 방해 안 함)
+  if(!hasPin()){ const s=document.getElementById('lockScreen'); if(s)s.classList.add('hidden'); return; }
+  const s=document.getElementById('lockScreen'); if(s)s.classList.remove('hidden');
+  buildPad(); renderDots();
+  pinMode='enter'; lockText('🔒 부동산 관리 잠금','PIN 4자리를 입력하세요');
+  if(localStorage.getItem(BIO_KEY)==='1' && window.PublicKeyCredential){
+    const b=document.getElementById('lockBio'); if(b)b.style.display='inline-block';
+    setTimeout(bioUnlock,300);
+  }
+}
+/* 설정에서 호출: PIN 새로 만들기/변경 */
+function setupPin(){
+  const s=document.getElementById('lockScreen'); if(s)s.classList.remove('hidden');
+  buildPad(); pinBuffer=''; pinFirst=''; renderDots();
+  pinMode='set'; lockText('PIN 설정','앱을 열 때 쓸 PIN 4자리를 정하세요'); lockMsg('');
+}
+function removePin(){
+  if(!hasPin()){ alert('설정된 PIN이 없습니다.'); return; }
+  if(confirm('잠금(PIN)을 해제할까요?')){ localStorage.removeItem(PIN_KEY); localStorage.removeItem(BIO_KEY); alert('잠금이 해제되었습니다.'); }
+}
+function tryEnableBio(){
+  if(!window.PublicKeyCredential) return;
+  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function(ok){
+    if(ok && confirm('지문/얼굴로도 열 수 있게 등록할까요?')){
+      const cred={publicKey:{challenge:new Uint8Array(16),rp:{name:'부동산관리'},
+        user:{id:new Uint8Array(16),name:'me',displayName:'me'},
+        pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+        authenticatorSelection:{userVerification:'required',authenticatorAttachment:'platform'},timeout:30000}};
+      navigator.credentials.create(cred).then(function(){ localStorage.setItem(BIO_KEY,'1'); }).catch(function(){});
+    }
+  }).catch(function(){});
+}
+function bioUnlock(){
+  if(!window.PublicKeyCredential){ lockMsg('이 기기는 지문을 지원하지 않아요'); return; }
+  const opt={publicKey:{challenge:new Uint8Array(16),userVerification:'required',timeout:30000}};
+  navigator.credentials.get(opt).then(function(){ unlock(); }).catch(function(){ lockMsg('지문 인식 실패 — PIN을 입력하세요'); });
+}
 /* ============================================================
    JS 2/3 — 자재·재고·비용·견적/부동산·주말입력·사진·서류
    ============================================================ */

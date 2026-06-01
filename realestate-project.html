@@ -4,14 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>부동산 프로젝트 관리</title>
+<link rel="manifest" href="realestate-manifest.json">
+<meta name="theme-color" content="#c9a227">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="부동산관리">
+<link rel="apple-touch-icon" href="realestate-icon-192.png">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="realestate-project.css?v=4.8">
+<link rel="stylesheet" href="realestate-project.css?v=5.1">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+
+<!-- 잠금화면 (PIN/지문) -->
+<div id="lockScreen" class="lock-screen hidden">
+  <div class="lock-box">
+    <div class="lock-title" id="lockTitle">🔒 부동산 관리 잠금</div>
+    <div class="lock-desc" id="lockDesc">PIN 4자리를 입력하세요</div>
+    <div class="lock-dots" id="lockDots"></div>
+    <div class="lock-msg" id="lockMsg"></div>
+    <div class="lock-pad" id="lockPad"></div>
+    <button class="lock-bio" id="lockBio" style="display:none" onclick="bioUnlock()">👆 지문/얼굴로 열기</button>
+  </div>
+</div>
 
 <div id="errBanner"><button class="x" onclick="document.getElementById('errBanner').classList.remove('show')">×</button>
   <b>⚠️ 오류가 발생했습니다</b><span id="errMsg"></span><span class="ex" id="errEx"></span></div>
@@ -38,7 +56,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v4.8</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v5.1</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
@@ -331,6 +349,18 @@
   </div>
 </div>
 
+<!-- 달력: 그날 상세 -->
+<div class="modal-bg" id="calDayModal">
+  <div class="modal" style="width:min(560px,100%)">
+    <h3>📅 <span id="calDayTitle"></span></h3>
+    <div id="calDayBody" style="max-height:54vh;overflow-y:auto;margin-bottom:12px"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="calDayAdd()">+ 이 날짜에 기록 추가</button>
+      <button class="btn btn-line" onclick="closeModal('calDayModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 백업/복원 모달 -->
 <div class="modal-bg" id="backupModal">
   <div class="modal">
@@ -350,6 +380,12 @@
       <p>백업한 JSON 파일을 올리면 <b>새 프로젝트로</b> 복원합니다. 기존 프로젝트를 덮어쓰지 않으니 안전합니다.</p>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('restoreInput').click()">백업 파일 선택해서 복원</button>
       <div class="hint" id="restoreHint" style="margin-top:8px"></div>
+    </div>
+    <div class="backup-box">
+      <h4>🔒 앱 잠금 (PIN/지문)</h4>
+      <p>앱을 열 때 PIN 4자리로 잠급니다. 지원하는 기기는 지문/얼굴로도 열 수 있습니다. (돈·계약 정보 보호용)</p>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('backupModal');setupPin()">PIN 설정 / 변경</button>
+      <button class="btn btn-ghost btn-sm" onclick="removePin()">잠금 해제</button>
     </div>
     <div class="modal-acts">
       <button class="btn btn-line" onclick="closeModal('backupModal')">닫기</button>
@@ -529,6 +565,6 @@
   </div>
 </div>
 
-<script src="realestate-project.js?v=4.8"></script>
+<script src="realestate-project.js?v=5.1"></script>
 </body>
 </html>
