@@ -250,6 +250,16 @@ main{flex:1; padding:20px 24px; overflow-y:auto;}
 .wk-line .wk-detail{display:flex; gap:4px; flex-wrap:wrap;}
 .wk-line .wk-detail select{flex:1; min-width:0;}
 .wk-line .wk-detail input{flex:0 1 auto; min-width:0;}
+/* 주말 메뉴 목록 */
+.wk-menu-row{display:flex; align-items:center; gap:8px; padding:6px 8px; border:1px solid var(--line); border-radius:8px; margin-bottom:5px; background:#fcfbf8;}
+.wk-menu-name{flex:1; font-size:13.5px;}
+.wk-menu-price{font-variant-numeric:tabular-nums; font-weight:600; color:var(--gold);}
+/* 주말 모달 안 저장된 목록 */
+.wk-today-head{font-size:13px; font-weight:700; margin-bottom:8px; color:var(--ink);}
+.wk-today-row{display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px dashed var(--line); font-size:12.5px;}
+.wk-today-cat{flex:0 0 110px; color:var(--accent); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.wk-today-title{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.wk-today-amt{font-variant-numeric:tabular-nums; font-weight:600;}
 .wk-line input, .wk-line select{border:1px solid var(--line); border-radius:8px; padding:7px 8px; font-size:13px; background:#fff; width:100%; min-width:0;}
 .wk-line .wk-amt{text-align:right; font-variant-numeric:tabular-nums;}
 .wk-line-acts{display:flex; gap:3px; justify-content:flex-end;}
