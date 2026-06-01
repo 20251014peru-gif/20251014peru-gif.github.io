@@ -1,19 +1,18 @@
 /* ============================================================
-   부동산 프로젝트 관리 v3.2
+   부동산 프로젝트 관리 v3.3
    ------------------------------------------------------------
-   [v3.2 변경 내역]
-   1) 모든 "+ 직접 추가" 드롭다운에서 '삭제'도 가능
-      (직접 추가한 항목만 삭제, 기본 제공 항목은 보호) — addOptModal 개편
-   2) 기록 종류별 '표시할 칸' 설정 기능 (⚙ 칸 설정)
-      - 예: 교통비 종류에 금액·결제수단 칸이 안 뜨던 문제 해결
-      - 종류마다 금액/결제/거래처/공정/세부/폴더 칸을 켜고 끌 수 있음
-      - 내가 추가한 종류도 금액·결제수단이 기본으로 보이게(돈 항목으로 간주)
-      - 설정은 realestate_options(kindcfg_<종류>)에 저장
-   3) 비용 집계: 자재비·공사비 외 '모든 금액 종류'(교통비 등 사용자 추가 포함)를
-      기타 비용 표/필터/수정에 정상 반영
+   [v3.3 변경 내역]
+   1) 작업일지 탭(📒): 날짜별 기록 + 주중(업체작업)/주말(내작업) 구분,
+      업체·시간·사진/파일 첨부, 필터(전체/내작업/업체작업)
+   2) 준비·할일 탭(✅): 체크박스 겸용 메모(다음 주 준비사항 통합),
+      기한·분류·상세메모·사진첨부, 완료 처리/비우기
+   3) 뒤로가기 5단계: 탭 이동·폴더 진입을 되돌리는 '← 뒤로' 버튼
+   4) 주말 비용 단순화: 식비에 인원수 입력(식당/메뉴는 메모),
+      가스·식비는 공정 단계 없이 간단하게
+   5) 백업/복원·삭제·진단에 작업일지·할일 컬렉션 반영
    ------------------------------------------------------------
-   [v3.1] 결제수단 버그 수정 / 목록형 기본 / 주말 줄 추가식 /
-          부동산 방문횟수·네고가 / 전화 바로걸기 / 자재 총보유수량
+   [v3.2] 옵션 추가·삭제 / 종류별 칸 설정(⚙) / 사용자종류 비용집계
+   [v3.1] 결제수단 버그 / 목록형 기본 / 주말 줄추가식 / 부동산 방문횟수 / 전화 / 자재 총보유
    [v3.0] 파일 분리 / USD 환율 / 옵션 직접추가 / 자재 재고 / 견적 / 백업
    ============================================================ */
 
@@ -30,7 +29,8 @@ const storage = firebase.storage();
 const PROJECTS="realestate_projects", ENTRIES="realestate_entries",
       VENDORS="realestate_vendors", MATERIALS="realestate_materials",
       QUOTES="realestate_quotes", AGENTS="realestate_agents",
-      OPTIONS="realestate_options";
+      OPTIONS="realestate_options",
+      WORKLOG="realestate_worklog", TODOS="realestate_todos";
 const AI_MODEL = "claude-sonnet-4-6";
 
 /* ===== 기본 옵션값 (Firestore의 사용자 추가분이 합쳐짐) ===== */
@@ -391,7 +391,7 @@ function updateQuoteFx(){
 
 /* ===== 상태 ===== */
 let projects=[], currentProjectId=null;
-let entries=[], vendors=[], materials=[], quotes=[], agents=[];
+let entries=[], vendors=[], materials=[], quotes=[], agents=[], worklogs=[], todos=[];
 let activeTab="대시보드";
 let costFilter={stage:"전체",kind:"전체",pay:"전체",q:""};
 let searchQ="";
@@ -446,6 +446,7 @@ async function selectProject(id){
     window._photoSelMode=false; window._photoSel={};
     window._matFilter=""; window._matGroup="space";
     window._quoteSort={key:"krw",dir:1}; window._agentSort={key:"count",dir:-1};
+    window._wlFilter="전체"; navStack=[];
   }
   currentProjectId=id;
   await reloadCurrent();
@@ -454,18 +455,22 @@ async function reloadCurrent(){
  try{
   renderProjectList();
   const id=currentProjectId; if(!id) return;
-  const [eSnap,vSnap,mSnap,qSnap,aSnap]=await Promise.all([
+  const [eSnap,vSnap,mSnap,qSnap,aSnap,wSnap,tSnap]=await Promise.all([
     db.collection(ENTRIES).where("projectId","==",id).get(),
     db.collection(VENDORS).where("projectId","==",id).get(),
     db.collection(MATERIALS).where("projectId","==",id).get(),
     db.collection(QUOTES).where("projectId","==",id).get(),
-    db.collection(AGENTS).where("projectId","==",id).get()
+    db.collection(AGENTS).where("projectId","==",id).get(),
+    db.collection(WORKLOG).where("projectId","==",id).get(),
+    db.collection(TODOS).where("projectId","==",id).get()
   ]);
   entries=eSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   vendors=vSnap.docs.map(d=>({id:d.id,...d.data()}));
   materials=mSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   quotes=qSnap.docs.map(d=>({id:d.id,...d.data()}));
   agents=aSnap.docs.map(d=>({id:d.id,...d.data()}));
+  worklogs=wSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  todos=tSnap.docs.map(d=>({id:d.id,...d.data()}));
   renderMain();
  }catch(err){ showError("데이터 새로고침", err); }
 }
@@ -509,12 +514,13 @@ function renderMain(){
   const p=projects.find(x=>x.id===currentProjectId);
   const main=document.getElementById("main");
   if(!p){main.innerHTML='<div class="empty">프로젝트를 선택하세요.</div>';return;}
-  const tabs=["대시보드","공정","자재","비용","견적·부동산","주말 비용","사진","업체·연락","서류","검색"];
+  const tabs=["대시보드","공정","자재","비용","견적·부동산","주말 비용","작업일지","준비·할일","사진","업체·연락","서류","검색"];
   main.innerHTML=`
     <div class="proj-head">
       <div><h2>${esc(p.name)}</h2>
         <div class="sub">${esc(p.address||'')} ${p.startDate?'· 시작 '+p.startDate:''}</div></div>
       <div class="acts">
+        ${navStack.length?`<button class="btn btn-line btn-sm" onclick="navBack()" title="이전 화면으로">← 뒤로</button>`:''}
         <button class="btn btn-line btn-sm" onclick="openProjectModal('${p.id}')">✏ 정보 수정</button>
         <button class="btn btn-primary btn-sm" onclick="openEntryModal()">+ 기록 추가</button>
       </div>
@@ -525,14 +531,41 @@ function renderMain(){
     <div id="tabContent"></div>`;
   renderTab(p);
 }
-function tabIcon(t){return {"대시보드":"📊","공정":"🔨","자재":"🧱","비용":"💰","견적·부동산":"📞","주말 비용":"🚗","사진":"📷","업체·연락":"📇","서류":"📁","검색":"🔍"}[t]||"";}
-function setTab(t){activeTab=t; renderMain();}
+function tabIcon(t){return {"대시보드":"📊","공정":"🔨","자재":"🧱","비용":"💰","견적·부동산":"📞","주말 비용":"🚗","작업일지":"📒","준비·할일":"✅","사진":"📷","업체·연락":"📇","서류":"📁","검색":"🔍"}[t]||"";}
+/* ===== 뒤로가기(네비게이션) 스택 — 최근 5단계 ===== */
+let navStack=[]; // [{tab, photoOpenId, docOpenId, costView, wkView}]
+function navSnapshot(){
+  return { tab:activeTab,
+    photoOpenId:window._photoOpenId||null, docOpenId:window._docOpenId||null,
+    costView:window._costView||null, wkView:window._wkView||null };
+}
+function navPush(){
+  navStack.push(navSnapshot());
+  if(navStack.length>5) navStack.shift(); // 최근 5단계만
+}
+function navBack(){
+  if(!navStack.length) return;
+  const s=navStack.pop();
+  activeTab=s.tab;
+  window._photoOpenId=s.photoOpenId; window._docOpenId=s.docOpenId;
+  if(s.costView!=null) window._costView=s.costView;
+  if(s.wkView!=null) window._wkView=s.wkView;
+  window._photoSelMode=false; window._photoSel={};
+  renderMain();
+}
+function setTab(t){ if(t===activeTab) return; navPush(); activeTab=t; window._photoOpenId=null; window._docOpenId=null; renderMain(); }
+/* 폴더 등 하위 화면 진입용 (뒤로가기 기록) */
+function navOpenPhoto(cat){ navPush(); window._photoOpenId=cat; renderTab(projects.find(x=>x.id===currentProjectId)); }
+function navOpenDoc(cat){ navPush(); window._docOpenId=cat; renderTab(projects.find(x=>x.id===currentProjectId)); }
+function navClosePhoto(){ navPush(); window._photoOpenId=null; window._photoSelMode=false; renderTab(projects.find(x=>x.id===currentProjectId)); }
+function navCloseDoc(){ navPush(); window._docOpenId=null; renderTab(projects.find(x=>x.id===currentProjectId)); }
 function renderTab(p){
   try{
     const c=document.getElementById("tabContent");
     const map={
       "대시보드":viewDashboard,"공정":viewStages,"자재":viewMaterials,"비용":viewCost,
-      "견적·부동산":viewQuotesAgents,"주말 비용":viewWeekend,"사진":viewPhotos,
+      "견적·부동산":viewQuotesAgents,"주말 비용":viewWeekend,"작업일지":viewWorklog,
+      "준비·할일":viewTodos,"사진":viewPhotos,
       "업체·연락":viewVendors,"서류":viewDocs,"검색":viewSearch
     };
     c.innerHTML = (map[activeTab]||viewDashboard)(p);
@@ -1558,6 +1591,7 @@ function addWkRow(preset){
     fuel:preset.fuel||"휘발유",
     dir:preset.dir||"상행",
     meal:preset.meal||"점심",
+    people:preset.people||"",
     memo:preset.memo||"",
     pay:preset.pay||"카드",
     amount:preset.amount||""
@@ -1585,6 +1619,7 @@ function readWkRows(){
     r.fuel=g('.wk-fuel')??r.fuel;
     r.dir=g('.wk-dir')??r.dir;
     r.meal=g('.wk-meal')??r.meal;
+    r.people=g('.wk-people')??r.people;
     r.memo=g('.wk-memo')??r.memo;
     r.pay=g('.wk-pay')??r.pay;
     const amt=g('.wk-amt'); r.amount=(amt===undefined?r.amount:amt);
@@ -1596,7 +1631,8 @@ function wkLineHtml(r){
   // 종류별 세부 입력
   let detail="";
   if(r.kind==="식비"){
-    detail=`<select class="wk-meal">${WK_MEALS.map(m=>`<option ${m===r.meal?'selected':''}>${esc(m)}</option>`).join("")}</select>`;
+    detail=`<select class="wk-meal">${WK_MEALS.map(m=>`<option ${m===r.meal?'selected':''}>${esc(m)}</option>`).join("")}</select>
+      <input type="number" class="wk-people" placeholder="인원" value="${esc(r.people)}" title="인원수" style="max-width:64px">`;
   } else if(r.kind==="톨비(통행료)"){
     detail=`<select class="wk-dir">${WK_DIRS.map(d=>`<option ${d===r.dir?'selected':''}>${esc(d)}</option>`).join("")}</select>`;
   } else if(r.kind==="주유·가스"){
@@ -1607,12 +1643,13 @@ function wkLineHtml(r){
   }
   const meal=r.kind==="식비"?r.meal:"";
   const homemadeHint = (meal==="집간식")?'집에서 준비(0원 가능)':'';
+  const memoPlaceholder = r.kind==="식비" ? '식당/메뉴' : (r.kind==="주유·가스"?'주유소/거리':'메모(장소/노선)');
   return `<div class="wk-line" data-id="${r.id}">
     <div class="wk-line-grid">
       <input type="date" class="wk-date" value="${esc(r.date)}">
       ${kindSel}
       <div class="wk-detail">${detail}</div>
-      <input type="text" class="wk-memo" placeholder="${homemadeHint||'메모(장소/노선/메뉴)'}" value="${esc(r.memo)}">
+      <input type="text" class="wk-memo" placeholder="${homemadeHint||memoPlaceholder}" value="${esc(r.memo)}">
       <select class="wk-pay">${opts("pays").map(p=>`<option ${p===r.pay?'selected':''}>${esc(p)}</option>`).join("")}</select>
       <input type="number" class="wk-amt" placeholder="금액" value="${esc(r.amount)}">
       <div class="wk-line-acts">
@@ -1644,13 +1681,16 @@ async function saveWeekendSet(){
       else if(r.kind==="주유·가스"){ sub=r.fuel+" "+r.dir; catForStat="교통/주유비"; }
       else { sub=""; catForStat=r.kind; }
       const titleParts=[r.kind==="식비"?r.meal:(r.kind==="주유·가스"?(r.fuel+" "+r.dir):(r.kind+(sub?" "+sub:"")))];
+      if(r.kind==="식비" && r.people) titleParts[0]+=" ("+r.people+"명)";
       if(r.memo.trim()) titleParts.push(r.memo.trim());
+      let memoOut = isHomemade?("집간식 / "+r.memo.trim()):r.memo.trim();
+      if(r.kind==="식비" && r.people) memoOut = (memoOut?memoOut+" / ":"")+"인원 "+r.people+"명";
       toSave.push({
         projectId:currentProjectId, kind:"기타비용",
         title:titleParts.join(' - '), date:r.date, stage:null,
         cat:catForStat, sub:sub||null,
         vendor:"", amount:amt||0, pay:r.pay||"카드",
-        memo: isHomemade?("집간식 / "+r.memo.trim()):r.memo.trim(),
+        memo: memoOut,
         files:[]
       });
     }
@@ -1746,7 +1786,7 @@ function viewPhotos(p){
       : `<button class="btn btn-ghost btn-sm add" onclick="addPhotoToFolder('${jsstr(cat)}')">+ 사진 추가</button>
          ${all.length?`<button class="btn btn-line btn-sm" onclick="window._photoSelMode=true;window._photoSel={};renderTab(projects.find(x=>x.id===currentProjectId))">☑ 여러장 선택</button>`:''}`;
     return `<div class="panel"><div class="panel-h">
-      <button class="btn btn-line btn-sm" onclick="window._photoOpenId=null;window._photoSelMode=false;renderTab(projects.find(x=>x.id===currentProjectId))">← 폴더 목록</button>
+      <button class="btn btn-line btn-sm" onclick="navClosePhoto()">← 폴더 목록</button>
       <span style="margin-left:6px">📷 ${esc(cat)}</span><span class="cnt">${all.length}장</span>${toolbar}</div>
       <div class="panel-body">${inCat.length?groups:'<div class="ai-empty">이 폴더에 사진이 없습니다.</div>'}</div></div>`;
   }
@@ -1754,7 +1794,7 @@ function viewPhotos(p){
     const inCat=photos.filter(e=>photoFolderOf(e)===cat);
     let cnt=0, cover=null;
     inCat.forEach(e=>(e.files||[]).forEach(f=>{ if((f.type||"").startsWith("image/")){ cnt++; if(!cover)cover=f; }}));
-    return `<div class="folder" onclick="window._photoOpenId='${jsstr(cat)}';renderTab(projects.find(x=>x.id===currentProjectId))">
+    return `<div class="folder" onclick="navOpenPhoto('${jsstr(cat)}')">
       <div class="folder-cover">${cover?`<img src="${cover.url}">`:'📷'}<span class="folder-cnt">${cnt}장</span></div>
       <div class="folder-name">${esc(cat)}</div><div class="folder-date">${cnt?cnt+'장':'비어있음'}</div></div>`;
   }).join("");
@@ -1803,7 +1843,7 @@ function viewDocs(p){
         </div></div>`;
     }).join("");
     return `<div class="panel"><div class="panel-h">
-      <button class="btn btn-line btn-sm" onclick="window._docOpenId=null;renderTab(projects.find(x=>x.id===currentProjectId))">← 폴더 목록</button>
+      <button class="btn btn-line btn-sm" onclick="navCloseDoc()">← 폴더 목록</button>
       <span style="margin-left:6px">📁 ${esc(cat)}</span><span class="cnt">${inCat.length}건</span>
       ${cat!=="체크리스트 첨부"?`<button class="btn btn-ghost btn-sm add" onclick="addDocToFolder('${jsstr(cat)}')">+ 서류 추가</button>`:''}</div>
       <div class="panel-body">${inCat.length?groups:'<div class="ai-empty">이 폴더에 서류가 없습니다.</div>'}</div></div>`;
@@ -1813,7 +1853,7 @@ function viewDocs(p){
   const folders=cats.map(cat=>{
     const inCat=docs.filter(e=>docFolderOf(e)===cat);
     const cnt=inCat.reduce((s,e)=>s+((e.files||[]).length),0);
-    return `<div class="folder" onclick="window._docOpenId='${jsstr(cat)}';renderTab(projects.find(x=>x.id===currentProjectId))">
+    return `<div class="folder" onclick="navOpenDoc('${jsstr(cat)}')">
       <div class="folder-cover" style="font-size:38px">${cat==="체크리스트 첨부"?'✔':'📄'}<span class="folder-cnt">${cnt}개</span></div>
       <div class="folder-name">${esc(cat)}</div><div class="folder-date">${cnt?cnt+'개 파일':'비어있음'}</div></div>`;
   }).join("");
@@ -1895,6 +1935,247 @@ function viewSearch(p){
       placeholder="제목·메모·거래처·공정·자재·견적 검색 (예: 타일, 김부장)"
       value="${esc(searchQ)}" oninput="onSearchInput(this.value)"></div>
     <div id="searchResult"></div></div></div>`;
+}
+
+/* ============================================================
+   작업일지 (주중=업체 작업 / 주말=내 작업)
+   ============================================================ */
+function isWeekendDate(ds){ const d=new Date(ds+"T00:00:00").getDay(); return d===0||d===6; }
+function wlSide(w){ return w.side || (isWeekendDate(w.date)?"내작업":"업체작업"); }
+function viewWorklog(p){
+  const filt=window._wlFilter||"전체";
+  let list=worklogs.slice();
+  if(filt!=="전체") list=list.filter(w=>wlSide(w)===filt);
+  const mine=worklogs.filter(w=>wlSide(w)==="내작업").length;
+  const vend=worklogs.filter(w=>wlSide(w)==="업체작업").length;
+  const dates=[...new Set(worklogs.map(w=>w.date))];
+  // 날짜별 그룹
+  const byDate={}; list.forEach(w=>{ (byDate[w.date]=byDate[w.date]||[]).push(w); });
+  const sortedDates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  const blocks=sortedDates.map(d=>{
+    const dow=["일","월","화","수","목","금","토"][new Date(d+"T00:00:00").getDay()];
+    const items=byDate[d];
+    return `<div class="wl-day">
+      <div class="wl-date">📅 ${d} (${dow}) <span class="cnt">${items.length}건</span></div>
+      ${items.map(w=>{
+        const side=wlSide(w);
+        const photos=(w.files||[]).filter(f=>(f.type||"").startsWith("image/"));
+        return `<div class="wl-item ${side==='내작업'?'mine':'vendor'}">
+          <div class="wl-top">
+            <span class="wl-side ${side==='내작업'?'mine':'vendor'}">${side==='내작업'?'🙋 내 작업':'🏢 업체'}</span>
+            ${w.vendor?`<span class="wl-vendor">${esc(w.vendor)}</span>`:''}
+            ${w.hours?`<span class="wl-hours">⏱ ${esc(w.hours)}</span>`:''}
+            <span class="wl-acts">
+              <button class="lr-btn" onclick="editWorklog('${w.id}')">수정</button>
+              <button class="lr-btn del" onclick="deleteWorklog('${w.id}')">삭제</button>
+            </span>
+          </div>
+          <div class="wl-title">${esc(w.title||'')}</div>
+          ${w.memo?`<div class="wl-memo">${esc(w.memo)}</div>`:''}
+          ${photos.length?`<div class="wl-photos">${photos.map((f,i)=>{const gi=(w.files||[]).indexOf(f);return `<div class="wl-thumb" onclick="openWorklogPhotos('${w.id}',${gi})"><img src="${f.url}"></div>`;}).join("")}</div>`:''}
+          <div class="wl-files">${(w.files||[]).map((f,oi)=>{
+            const isImg=(f.type||"").startsWith("image/"); if(isImg) return '';
+            return `<a class="ck-file" href="${f.url}" target="_blank" rel="noopener">📄 ${esc(f.name)}</a>`;
+          }).join("")}</div>
+        </div>`;
+      }).join("")}
+    </div>`;
+  }).join("");
+  return `
+    <div class="stats">
+      <div class="stat"><div class="label">작업일지</div><div class="value">${worklogs.length}<small> 건</small></div></div>
+      <div class="stat"><div class="label">🙋 내 작업(주말)</div><div class="value">${mine}<small> 건</small></div></div>
+      <div class="stat"><div class="label">🏢 업체 작업(주중)</div><div class="value">${vend}<small> 건</small></div></div>
+      <div class="stat"><div class="label">작업한 날</div><div class="value">${dates.length}<small> 일</small></div></div>
+    </div>
+    <div class="panel"><div class="panel-h">📒 작업일지 <span class="cnt">주중=업체 / 주말=내 작업</span>
+      <button class="btn btn-primary btn-sm add" onclick="openWorklog()">+ 작업 기록</button></div>
+      <div class="panel-body">
+        <div class="filterbar">
+          ${["전체","내작업","업체작업"].map(f=>`<button class="mini-chip ${filt===f?'on':''}" onclick="window._wlFilter='${f}';renderTab(projects.find(x=>x.id===currentProjectId))">${f==='내작업'?'🙋 내 작업':f==='업체작업'?'🏢 업체 작업':'전체'}</button>`).join("")}
+        </div>
+        ${blocks||'<div class="ai-empty">작업 기록이 없습니다. ‘+ 작업 기록’으로 오늘 한 일을 남기세요.</div>'}
+      </div></div>`;
+}
+function openWorklog(){
+  if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
+  document.getElementById("wl_id").value="";
+  document.getElementById("worklogModalTitle").textContent="작업 기록 추가";
+  document.getElementById("wl_date").value=today();
+  document.getElementById("wl_side").value = isWeekendDate(today())?"내작업":"업체작업";
+  buildOptSelect("wl_vendor_sel","vendor_roles","","(역할 선택 안 함)");
+  ["wl_title","wl_vendor","wl_hours","wl_memo"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("wl_files").value="";
+  document.getElementById("vendorList").innerHTML=vendors.map(v=>`<option value="${esc(v.name)}">`).join("");
+  openModal("worklogModal");
+}
+function editWorklog(id){
+  const w=worklogs.find(x=>x.id===id); if(!w) return;
+  document.getElementById("wl_id").value=id;
+  document.getElementById("worklogModalTitle").textContent="작업 기록 수정";
+  document.getElementById("wl_date").value=w.date||today();
+  document.getElementById("wl_side").value=wlSide(w);
+  document.getElementById("wl_title").value=w.title||"";
+  document.getElementById("wl_vendor").value=w.vendor||"";
+  document.getElementById("wl_hours").value=w.hours||"";
+  document.getElementById("wl_memo").value=w.memo||"";
+  document.getElementById("wl_files").value="";
+  document.getElementById("vendorList").innerHTML=vendors.map(v=>`<option value="${esc(v.name)}">`).join("");
+  openModal("worklogModal");
+}
+async function saveWorklog(){
+  const title=val("wl_title").trim(); if(!title){ alert("한 일(제목)을 입력하세요."); return; }
+  const btn=document.getElementById("wl_saveBtn"); btn.disabled=true; btn.textContent="저장 중...";
+  try{
+    let newFiles=[]; const fi=document.getElementById("wl_files");
+    if(fi.files.length){ for(let i=0;i<fi.files.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); newFiles.push(await processFile(fi.files[i])); } hideUploading(); }
+    const data={ projectId:currentProjectId, date:val("wl_date"), side:val("wl_side"),
+      title, vendor:val("wl_vendor").trim(), hours:val("wl_hours").trim(), memo:val("wl_memo").trim() };
+    const id=document.getElementById("wl_id").value;
+    if(id){
+      const w=worklogs.find(x=>x.id===id);
+      data.files=((w&&w.files)||[]).concat(newFiles);
+      await db.collection(WORKLOG).doc(id).update(data);
+    } else {
+      data.files=newFiles; data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection(WORKLOG).add(data);
+    }
+    btn.disabled=false; btn.textContent="저장"; closeModal("worklogModal"); await reloadCurrent();
+  }catch(err){ hideUploading(); btn.disabled=false; btn.textContent="저장"; showError("작업일지 저장", err); }
+}
+async function deleteWorklog(id){
+  const w=worklogs.find(x=>x.id===id);
+  if(!confirm('이 작업 기록을 삭제할까요?\n\n"'+((w&&w.title)||'')+'"'))return;
+  try{
+    if(w&&w.files) for(const f of w.files){ if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} } }
+    await db.collection(WORKLOG).doc(id).delete(); await reloadCurrent();
+  }catch(err){ showError("작업일지 삭제", err); }
+}
+function openWorklogPhotos(id, idx){
+  const w=worklogs.find(x=>x.id===id); if(!w) return;
+  const imgs=(w.files||[]).map((f,i)=>({f,i})).filter(o=>(o.f.type||"").startsWith("image/"));
+  if(!imgs.length) return;
+  window._ivList=imgs.map(o=>({url:o.f.url, cap:(w.title||'')+' · '+o.f.name, entryId:null}));
+  let gi=imgs.findIndex(o=>o.i===idx); if(gi<0) gi=0;
+  openViewerList(gi);
+}
+
+/* ============================================================
+   준비·할일 (체크박스 겸용 메모, 다음 주 준비 통합)
+   ============================================================ */
+function viewTodos(p){
+  const open=todos.filter(t=>!t.done);
+  const done=todos.filter(t=>t.done);
+  const sortFn=(a,b)=>{ const da=a.due||"9999", db_=b.due||"9999"; if(da!==db_) return da.localeCompare(db_); return (a.createdOrder||0)-(b.createdOrder||0); };
+  open.sort(sortFn);
+  const card=t=>{
+    const photos=(t.files||[]).filter(f=>(f.type||"").startsWith("image/"));
+    const overdue = t.due && !t.done && t.due < today();
+    return `<div class="todo-item ${t.done?'done':''}">
+      <label class="todo-check"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo('${t.id}',this.checked)"></label>
+      <div class="todo-body">
+        <div class="todo-title">${esc(t.title||'')}</div>
+        ${t.memo?`<div class="todo-memo">${esc(t.memo)}</div>`:''}
+        <div class="todo-meta">
+          ${t.due?`<span class="todo-due ${overdue?'over':''}">📅 ${t.due}${overdue?' (지남)':''}</span>`:''}
+          ${t.tag?`<span class="l-tag">${esc(t.tag)}</span>`:''}
+        </div>
+        ${photos.length?`<div class="wl-photos">${photos.map((f)=>{const gi=(t.files||[]).indexOf(f);return `<div class="wl-thumb" onclick="openTodoPhotos('${t.id}',${gi})"><img src="${f.url}"></div>`;}).join("")}</div>`:''}
+        ${(t.files||[]).some(f=>!(f.type||'').startsWith('image/'))?`<div class="wl-files">${(t.files||[]).map((f,oi)=>{const isImg=(f.type||"").startsWith("image/");if(isImg)return'';return `<a class="ck-file" href="${f.url}" target="_blank" rel="noopener">📄 ${esc(f.name)}</a>`;}).join("")}</div>`:''}
+      </div>
+      <div class="todo-acts">
+        <button class="lr-btn" onclick="editTodo('${t.id}')">수정</button>
+        <button class="lr-btn del" onclick="deleteTodo('${t.id}')">삭제</button>
+      </div>
+    </div>`;
+  };
+  return `
+    <div class="stats">
+      <div class="stat"><div class="label">할 일</div><div class="value">${open.length}<small> 건 남음</small></div></div>
+      <div class="stat"><div class="label">완료</div><div class="value">${done.length}<small> 건</small></div></div>
+      <div class="stat"><div class="label">기한 지남</div><div class="value" style="${open.some(t=>t.due&&t.due<today())?'color:var(--danger)':''}">${open.filter(t=>t.due&&t.due<today()).length}<small> 건</small></div></div>
+      <div class="stat"><div class="label">이번 주</div><div class="value">${open.filter(t=>t.due&&t.due>=today()&&t.due<=weekLater()).length}<small> 건</small></div></div>
+    </div>
+    <div class="panel"><div class="panel-h">✅ 준비·할일 <span class="cnt">다음 주 준비사항·메모</span>
+      <button class="btn btn-primary btn-sm add" onclick="openTodo()">+ 할일 / 메모 추가</button></div>
+      <div class="panel-body">
+        ${open.length? open.map(card).join("") : '<div class="ai-empty">할 일이 없습니다. 다음 주 준비사항이나 메모를 추가하세요.</div>'}
+      </div></div>
+    ${done.length?`<div class="panel"><div class="panel-h">✔ 완료됨 <span class="cnt">${done.length}건</span>
+      <button class="btn btn-line btn-sm add" onclick="clearDoneTodos()">완료 항목 비우기</button></div>
+      <div class="panel-body">${done.map(card).join("")}</div></div>`:''}`;
+}
+function weekLater(){ const d=new Date(); d.setDate(d.getDate()+7); return d.toISOString().slice(0,10); }
+function openTodo(){
+  if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
+  document.getElementById("td_id").value="";
+  document.getElementById("todoModalTitle").textContent="할일 / 메모 추가";
+  ["td_title","td_memo","td_due","td_tag"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("td_files").value="";
+  openModal("todoModal");
+}
+function editTodo(id){
+  const t=todos.find(x=>x.id===id); if(!t) return;
+  document.getElementById("td_id").value=id;
+  document.getElementById("todoModalTitle").textContent="할일 / 메모 수정";
+  document.getElementById("td_title").value=t.title||"";
+  document.getElementById("td_memo").value=t.memo||"";
+  document.getElementById("td_due").value=t.due||"";
+  document.getElementById("td_tag").value=t.tag||"";
+  document.getElementById("td_files").value="";
+  openModal("todoModal");
+}
+async function saveTodo(){
+  const title=val("td_title").trim(); if(!title){ alert("할 일/메모 내용을 입력하세요."); return; }
+  const btn=document.getElementById("td_saveBtn"); btn.disabled=true; btn.textContent="저장 중...";
+  try{
+    let newFiles=[]; const fi=document.getElementById("td_files");
+    if(fi.files.length){ for(let i=0;i<fi.files.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); newFiles.push(await processFile(fi.files[i])); } hideUploading(); }
+    const data={ projectId:currentProjectId, title, memo:val("td_memo").trim(),
+      due:val("td_due")||null, tag:val("td_tag").trim() };
+    const id=document.getElementById("td_id").value;
+    if(id){
+      const t=todos.find(x=>x.id===id);
+      data.files=((t&&t.files)||[]).concat(newFiles);
+      await db.collection(TODOS).doc(id).update(data);
+    } else {
+      data.files=newFiles; data.done=false;
+      data.createdOrder=Date.now();
+      data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection(TODOS).add(data);
+    }
+    btn.disabled=false; btn.textContent="저장"; closeModal("todoModal"); await reloadCurrent();
+  }catch(err){ hideUploading(); btn.disabled=false; btn.textContent="저장"; showError("할일 저장", err); }
+}
+async function toggleTodo(id, done){
+  try{ await db.collection(TODOS).doc(id).update({done}); const t=todos.find(x=>x.id===id); if(t)t.done=done; renderTab(projects.find(x=>x.id===currentProjectId)); }
+  catch(err){ showError("할일 체크", err); }
+}
+async function deleteTodo(id){
+  const t=todos.find(x=>x.id===id);
+  if(!confirm('이 항목을 삭제할까요?\n\n"'+((t&&t.title)||'')+'"'))return;
+  try{
+    if(t&&t.files) for(const f of t.files){ if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} } }
+    await db.collection(TODOS).doc(id).delete(); await reloadCurrent();
+  }catch(err){ showError("할일 삭제", err); }
+}
+async function clearDoneTodos(){
+  const done=todos.filter(t=>t.done); if(!done.length) return;
+  if(!confirm("완료된 "+done.length+"건을 모두 삭제할까요?"))return;
+  try{
+    showUploading("삭제 중…");
+    for(const t of done){ if(t.files) for(const f of t.files){ if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} } } }
+    const batch=db.batch(); done.forEach(t=>batch.delete(db.collection(TODOS).doc(t.id))); await batch.commit();
+    hideUploading(); await reloadCurrent();
+  }catch(err){ hideUploading(); showError("완료 항목 비우기", err); }
+}
+function openTodoPhotos(id, idx){
+  const t=todos.find(x=>x.id===id); if(!t) return;
+  const imgs=(t.files||[]).map((f,i)=>({f,i})).filter(o=>(o.f.type||"").startsWith("image/"));
+  if(!imgs.length) return;
+  window._ivList=imgs.map(o=>({url:o.f.url, cap:(t.title||'')+' · '+o.f.name, entryId:null}));
+  let gi=imgs.findIndex(o=>o.i===idx); if(gi<0) gi=0;
+  openViewerList(gi);
 }
 /* ============================================================
    JS 3/3 — 기록 CRUD · 이미지뷰어 · AI · 빠른입력/엑셀/반복 · 백업 · 프로젝트 · 진단
@@ -2586,14 +2867,16 @@ async function deleteProject(){
   if(typed===null) return;
   if(typed.trim()!==p.name){ alert("이름이 일치하지 않아 취소했습니다."); return; }
   try{
-    const [e,v,m,q,a]=await Promise.all([
+    const [e,v,m,q,a,w,t]=await Promise.all([
       db.collection(ENTRIES).where("projectId","==",currentProjectId).get(),
       db.collection(VENDORS).where("projectId","==",currentProjectId).get(),
       db.collection(MATERIALS).where("projectId","==",currentProjectId).get(),
       db.collection(QUOTES).where("projectId","==",currentProjectId).get(),
-      db.collection(AGENTS).where("projectId","==",currentProjectId).get()
+      db.collection(AGENTS).where("projectId","==",currentProjectId).get(),
+      db.collection(WORKLOG).where("projectId","==",currentProjectId).get(),
+      db.collection(TODOS).where("projectId","==",currentProjectId).get()
     ]);
-    const all=[...e.docs,...v.docs,...m.docs,...q.docs,...a.docs];
+    const all=[...e.docs,...v.docs,...m.docs,...q.docs,...a.docs,...w.docs,...t.docs];
     for(let i=0;i<all.length;i+=400){
       const batch=db.batch();
       all.slice(i,i+400).forEach(d=>batch.delete(d.ref));
@@ -2601,7 +2884,7 @@ async function deleteProject(){
       await batch.commit();
     }
     if(!all.length){ await db.collection(PROJECTS).doc(currentProjectId).delete(); }
-    currentProjectId=null; entries=[]; vendors=[]; materials=[]; quotes=[]; agents=[];
+    currentProjectId=null; entries=[]; vendors=[]; materials=[]; quotes=[]; agents=[]; worklogs=[]; todos=[];
     await loadProjects();
     document.getElementById("main").innerHTML='<div class="empty">프로젝트를 선택하세요.</div>';
   }catch(err){ showError("프로젝트 삭제", err); }
@@ -2620,21 +2903,25 @@ async function backupCurrentProject(){
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
   try{
     showUploading("백업 만드는 중…");
-    const [e,v,m,q,a]=await Promise.all([
+    const [e,v,m,q,a,w,t]=await Promise.all([
       db.collection(ENTRIES).where("projectId","==",currentProjectId).get(),
       db.collection(VENDORS).where("projectId","==",currentProjectId).get(),
       db.collection(MATERIALS).where("projectId","==",currentProjectId).get(),
       db.collection(QUOTES).where("projectId","==",currentProjectId).get(),
-      db.collection(AGENTS).where("projectId","==",currentProjectId).get()
+      db.collection(AGENTS).where("projectId","==",currentProjectId).get(),
+      db.collection(WORKLOG).where("projectId","==",currentProjectId).get(),
+      db.collection(TODOS).where("projectId","==",currentProjectId).get()
     ]);
-    const data={ _type:"realestate-project-backup", _version:3, _exportedAt:new Date().toISOString(),
+    const data={ _type:"realestate-project-backup", _version:4, _exportedAt:new Date().toISOString(),
       options:userOpts,
       project:stripId(p),
       entries:e.docs.map(d=>stripId({id:d.id,...d.data()})),
       vendors:v.docs.map(d=>stripId({id:d.id,...d.data()})),
       materials:m.docs.map(d=>stripId({id:d.id,...d.data()})),
       quotes:q.docs.map(d=>stripId({id:d.id,...d.data()})),
-      agents:a.docs.map(d=>stripId({id:d.id,...d.data()}))
+      agents:a.docs.map(d=>stripId({id:d.id,...d.data()})),
+      worklogs:w.docs.map(d=>stripId({id:d.id,...d.data()})),
+      todos:t.docs.map(d=>stripId({id:d.id,...d.data()}))
     };
     hideUploading();
     downloadJson(data, (p.name||"프로젝트").replace(/[^\w가-힣]/g,"_")+"_백업_"+today()+".json");
@@ -2643,18 +2930,21 @@ async function backupCurrentProject(){
 async function backupAll(){
   try{
     showUploading("전체 백업 만드는 중…");
-    const [pS,eS,vS,mS,qS,aS]=await Promise.all([
+    const [pS,eS,vS,mS,qS,aS,wS,tS]=await Promise.all([
       db.collection(PROJECTS).get(), db.collection(ENTRIES).get(), db.collection(VENDORS).get(),
-      db.collection(MATERIALS).get(), db.collection(QUOTES).get(), db.collection(AGENTS).get()
+      db.collection(MATERIALS).get(), db.collection(QUOTES).get(), db.collection(AGENTS).get(),
+      db.collection(WORKLOG).get(), db.collection(TODOS).get()
     ]);
-    const data={ _type:"realestate-full-backup", _version:3, _exportedAt:new Date().toISOString(),
+    const data={ _type:"realestate-full-backup", _version:4, _exportedAt:new Date().toISOString(),
       options:userOpts,
       projects:pS.docs.map(d=>stripId({id:d.id,...d.data()})),
       entries:eS.docs.map(d=>({id:d.id,...d.data()})),
       vendors:vS.docs.map(d=>({id:d.id,...d.data()})),
       materials:mS.docs.map(d=>({id:d.id,...d.data()})),
       quotes:qS.docs.map(d=>({id:d.id,...d.data()})),
-      agents:aS.docs.map(d=>({id:d.id,...d.data()}))
+      agents:aS.docs.map(d=>({id:d.id,...d.data()})),
+      worklogs:wS.docs.map(d=>({id:d.id,...d.data()})),
+      todos:tS.docs.map(d=>({id:d.id,...d.data()}))
     };
     hideUploading();
     downloadJson(data, "부동산_전체백업_"+today()+".json");
@@ -2671,7 +2961,7 @@ async function batchAdd(collName, items, projectId){
     showUploading("복원 중… ("+Math.min(i+chunk,items.length)+"/"+items.length+" "+collName+")");
   }
 }
-async function restoreOneProject(projData, e, v, m, q, a){
+async function restoreOneProject(projData, e, v, m, q, a, w, t){
   const pClean=cleanForWrite(projData);
   pClean.name=(projData.name||"복원 프로젝트")+" (복원본)";
   if(!pClean.stageStatus) pClean.stageStatus={};
@@ -2682,6 +2972,8 @@ async function restoreOneProject(projData, e, v, m, q, a){
   if(m&&m.length) await batchAdd(MATERIALS, m, newId);
   if(q&&q.length) await batchAdd(QUOTES, q, newId);
   if(a&&a.length) await batchAdd(AGENTS, a, newId);
+  if(w&&w.length) await batchAdd(WORKLOG, w, newId);
+  if(t&&t.length) await batchAdd(TODOS, t, newId);
   return newId;
 }
 async function mergeOptions(opt){
@@ -2708,7 +3000,7 @@ document.getElementById("restoreInput").onchange=function(){
         if(!confirm('"'+(data.project.name||'')+'" 를 새 프로젝트로 복원할까요?')) { document.getElementById("restoreInput").value=""; return; }
         showUploading("복원 중…");
         await mergeOptions(data.options);
-        await restoreOneProject(data.project, data.entries||[], data.vendors||[], data.materials||[], data.quotes||[], data.agents||[]);
+        await restoreOneProject(data.project, data.entries||[], data.vendors||[], data.materials||[], data.quotes||[], data.agents||[], data.worklogs||[], data.todos||[]);
         hideUploading(); document.getElementById("restoreInput").value=""; closeModal("backupModal"); await loadProjects();
         alert("복원이 완료되었습니다.");
       }else if(data._type==="realestate-full-backup" && Array.isArray(data.projects)){
@@ -2722,7 +3014,9 @@ document.getElementById("restoreInput").onchange=function(){
             (data.vendors||[]).filter(by(proj.id)),
             (data.materials||[]).filter(by(proj.id)),
             (data.quotes||[]).filter(by(proj.id)),
-            (data.agents||[]).filter(by(proj.id)));
+            (data.agents||[]).filter(by(proj.id)),
+            (data.worklogs||[]).filter(by(proj.id)),
+            (data.todos||[]).filter(by(proj.id)));
         }
         hideUploading(); document.getElementById("restoreInput").value=""; closeModal("backupModal"); await loadProjects();
         alert(data.projects.length+"개 프로젝트 복원 완료.");
@@ -2754,6 +3048,6 @@ async function runDiagnostics(){
   catch(err){ row('fail', "Storage 업로드 실패", esc((err&&err.code)||'')+" "+esc(err.message||err)); }
   const hasKey=!!localStorage.getItem('anthropic_key');
   row(hasKey?'ok':'warn', "AI API 키", hasKey? "저장됨" : "없음 — AI 처음 사용 시 입력");
-  row('info', "현재 데이터", `프로젝트 ${projects.length}개 / 기록 ${entries.length} · 자재 ${materials.length} · 견적 ${quotes.length} · 부동산 ${agents.length} · 업체 ${vendors.length}`);
+  row('info', "현재 데이터", `프로젝트 ${projects.length}개 / 기록 ${entries.length} · 자재 ${materials.length} · 견적 ${quotes.length} · 부동산 ${agents.length} · 업체 ${vendors.length} · 작업일지 ${worklogs.length} · 할일 ${todos.length}`);
   row('info', "점검 완료", new Date().toLocaleString('ko-KR'));
 }

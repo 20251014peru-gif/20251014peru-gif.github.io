@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>부동산 프로젝트 관리</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="realestate-project.css?v=3.2">
+<link rel="stylesheet" href="realestate-project.css?v=3.3">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
@@ -38,7 +38,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.2</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v3.3</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
@@ -217,6 +217,50 @@
     <div class="hint">※ 기본 제공 항목은 삭제할 수 없고, 직접 추가한 항목만 지울 수 있습니다.</div>
     <div class="modal-acts">
       <button class="btn btn-line" onclick="closeModal('addOptModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 작업일지 모달 -->
+<div class="modal-bg" id="worklogModal">
+  <div class="modal">
+    <h3 id="worklogModalTitle">작업 기록 추가</h3>
+    <input type="hidden" id="wl_id">
+    <div class="row2">
+      <div class="field"><label>날짜</label><input id="wl_date" type="date"></div>
+      <div class="field"><label>구분</label>
+        <select id="wl_side"><option value="업체작업">🏢 업체 작업 (주중)</option><option value="내작업">🙋 내 작업 (주말)</option></select></div>
+    </div>
+    <div class="field"><label>한 일 *</label><input id="wl_title" placeholder="예: 거실 도배 시공 / 욕실 방수 / 자재 운반"></div>
+    <div class="row2">
+      <div class="field"><label>업체 / 작업자</label><input id="wl_vendor" list="vendorList" placeholder="업체명 또는 본인"></div>
+      <div class="field"><label>작업 시간 (선택)</label><input id="wl_hours" placeholder="예: 09:00~17:00 / 반나절"></div>
+    </div>
+    <div class="field" style="display:none"><select id="wl_vendor_sel"></select></div>
+    <div class="field"><label>내용 / 메모</label><textarea id="wl_memo" placeholder="진행 상황, 다음 작업, 특이사항 등"></textarea></div>
+    <div class="field"><label>📷 사진 / 파일 (여러 개)</label><input id="wl_files" type="file" multiple accept="image/*,application/pdf"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="wl_saveBtn" onclick="saveWorklog()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('worklogModal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 할일 / 메모 모달 -->
+<div class="modal-bg" id="todoModal">
+  <div class="modal">
+    <h3 id="todoModalTitle">할일 / 메모 추가</h3>
+    <input type="hidden" id="td_id">
+    <div class="field"><label>할 일 / 메모 *</label><input id="td_title" placeholder="예: 도배 업체 견적 받기 / 다음주 타일 주문"></div>
+    <div class="row2">
+      <div class="field"><label>기한 (선택)</label><input id="td_due" type="date"></div>
+      <div class="field"><label>분류 (선택)</label><input id="td_tag" placeholder="예: 준비물 / 연락 / 주문"></div>
+    </div>
+    <div class="field"><label>상세 메모</label><textarea id="td_memo" placeholder="자세한 내용, 필요한 것 등"></textarea></div>
+    <div class="field"><label>📷 사진 / 파일 (선택)</label><input id="td_files" type="file" multiple accept="image/*,application/pdf"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="td_saveBtn" onclick="saveTodo()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('todoModal')">취소</button>
     </div>
   </div>
 </div>
@@ -475,6 +519,6 @@
   </div>
 </div>
 
-<script src="realestate-project.js?v=3.2"></script>
+<script src="realestate-project.js?v=3.3"></script>
 </body>
 </html>
