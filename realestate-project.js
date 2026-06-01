@@ -1,6 +1,8 @@
 /* ============================================================
-   부동산 프로젝트 관리 v5.3 — 달력 필터 버그픽스
+   부동산 프로젝트 관리 v5.5 — 7일 자동백업 제안
    ------------------------------------------------------------
+   [v5.5] 7일마다 백업 파일 자동 제안(개인관리 장점 이식) — 7일 지나면 앱 열 때 백업 만들지 물어봄
+   [v5.4] 사라졌던 급한메모 슬라이드 패널 HTML 복구(메모 오류 해결)
    [v5.3] 1) 달력 '전체 켜기/끄기' 동작 거꾸로였던 것 수정
           2) 필터 칩 겹침 정리(전체켜기·끄기·메모를 라벨 옆으로)
           3) 메모 상태 표시 null 가드 (textContent 오류 방지)
@@ -641,14 +643,13 @@ function openMemoBoard(){
   const ed=document.getElementById("memoEditor");
   if(ed) ed.innerHTML = p.quickMemoHtml || (p.quickMemo? esc(p.quickMemo).replace(/\n/g,'<br>') : "");
   const _st0=document.getElementById("memoStatus"); if(_st0) _st0.textContent="";
-  const panel=document.getElementById("memoPanel");
-  panel.classList.add("open");
-  document.getElementById("memoBackdrop").classList.add("open");
+  const panel=document.getElementById("memoPanel"); if(panel) panel.classList.add("open");
+  const bd=document.getElementById("memoBackdrop"); if(bd) bd.classList.add("open");
   setTimeout(()=>{const t=document.getElementById("memoEditor"); if(t) t.focus();},150);
 }
 function closeMemoPanel(){
-  document.getElementById("memoPanel").classList.remove("open");
-  document.getElementById("memoBackdrop").classList.remove("open");
+  const p=document.getElementById("memoPanel"); if(p) p.classList.remove("open");
+  const bd=document.getElementById("memoBackdrop"); if(bd) bd.classList.remove("open");
 }
 /* 편집 중 자동 저장 (디바운스) */
 function memoOnInput(){
@@ -1302,7 +1303,7 @@ function pinComplete(){
   if(hashPin(pinBuffer)===localStorage.getItem(PIN_KEY)){ unlock(); }
   else { pinBuffer=''; renderDots(); lockMsg('PIN이 틀렸어요'); }
 }
-function unlock(){ pinBuffer=''; lockMsg(''); const s=document.getElementById('lockScreen'); if(s)s.classList.add('hidden'); }
+function unlock(){ pinBuffer=''; lockMsg(''); const s=document.getElementById('lockScreen'); if(s)s.classList.add('hidden'); setTimeout(()=>{ if(typeof checkBackupReminder==='function') checkBackupReminder(); }, 1200); }
 function startLock(){
   // 잠금을 설정하지 않았으면 잠금화면을 건너뜀(기존 사용자 방해 안 함)
   if(!hasPin()){ const s=document.getElementById('lockScreen'); if(s)s.classList.add('hidden'); return; }
@@ -3439,7 +3440,24 @@ async function backupAll(){
     };
     hideUploading();
     downloadJson(data, "부동산_전체백업_"+today()+".json");
+    localStorage.setItem("re-lastBackup", String(Date.now()));  // 7일 알림용
   }catch(err){ hideUploading(); showError("전체 백업", err); }
+}
+/* ===== 7일마다 자동 백업 제안 ===== */
+function checkBackupReminder(){
+  try{
+    const last=Number(localStorage.getItem("re-lastBackup")||0);
+    const week=7*24*60*60*1000;
+    const now=Date.now();
+    if(now-last < week) return;                 // 7일 안 지났으면 조용히
+    if(!projects.length) return;                // 데이터 없으면 굳이 안 함
+    const days = last? Math.floor((now-last)/(24*60*60*1000)) : null;
+    const msg = days!=null
+      ? ("마지막 백업이 "+days+"일 전입니다.\n지금 전체 백업 파일을 만들까요?")
+      : ("아직 백업한 적이 없습니다.\n만일을 대비해 전체 백업 파일을 만들까요?\n(데이터는 클라우드에 저장돼 있지만, 한 벌 더 빼두면 안전합니다)");
+    if(confirm(msg)){ backupAll(); }
+    else { localStorage.setItem("re-lastBackup", String(now)); } // 미루면 다음 주에 다시
+  }catch(_){}
 }
 function cleanForWrite(o){ const c=Object.assign({},o); delete c.id; delete c.projectId; delete c.createdAt; delete c._spent; delete c._last; return c; }
 async function batchAdd(collName, items, projectId){
@@ -3550,4 +3568,6 @@ async function runDiagnostics(){
   await loadUserOpts();
   loadFxRate();
   await loadProjects();
+  // PIN이 없으면(잠금화면 안 뜸) 바로 백업 체크. PIN 있으면 unlock 후 체크됨.
+  if(!hasPin()) setTimeout(checkBackupReminder, 1500);
 })();
