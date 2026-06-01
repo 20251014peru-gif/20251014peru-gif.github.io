@@ -1,5 +1,5 @@
 /* ============================================================
-   부동산 프로젝트 관리 v6.0 — 달력 필터 정리(컨트롤/메모/그룹/전체아이콘)
+   부동산 프로젝트 관리 v6.3 — 직접추가 항목 삭제 갱신 수정
    ------------------------------------------------------------
    [v5.5] 7일마다 백업 파일 자동 제안(개인관리 장점 이식) — 7일 지나면 앱 열 때 백업 만들지 물어봄
    [v5.4] 사라졌던 급한메모 슬라이드 패널 HTML 복구(메모 오류 해결)
@@ -317,6 +317,15 @@ async function deleteUserOpt(v){
   userOpts[_addOptKey]=(userOpts[_addOptKey]||[]).filter(x=>x!==v);
   await saveUserOpts(_addOptKey);
   renderAddOptList();
+  // 이 옵션을 쓰는 select(모달 안 단위 등)를 다시 그림
+  if(_addOptTarget){
+    const sel=document.getElementById(_addOptTarget);
+    if(sel){
+      const headOpt = sel.options[0] && sel.options[0].value==="" ? sel.options[0].text : null;
+      const curVal = (sel.value===v) ? "" : sel.value;  // 지운 값이 선택돼 있었으면 비움
+      buildOptSelect(_addOptTarget, _addOptKey, curVal, headOpt);
+    }
+  }
   refreshOptConsumers(); // 화면의 셀렉트/탭 갱신
 }
 async function confirmAddOpt(){
@@ -2534,6 +2543,7 @@ function onKindChange(){
   }
   // 자재비만 규격·단가·부가세 (공사비는 인건비라 제외)
   show("g_matspec", k==="자재비");
+  if(k==="자재비") fillMatPick();
   // 식비 메뉴, 주유 거리 그룹
   show("g_meals", k==="식비");
   show("g_dist", k==="주유·가스");
@@ -2611,7 +2621,13 @@ function renderEfMeals(){
 function calcMatAmount(){
   const up=Number(val("ef_unitprice"))||0;
   const qty=Number(val("ef_qty"))||0;
-  if(!up || !qty){ const h=document.getElementById("ef_vatHint"); if(h) h.textContent=""; return; }
+  const ship=Number(val("ef_shipping"))||0;
+  if(!up || !qty){
+    // 단가·수량이 없어도 택배비만 있으면 그것만 반영
+    if(ship){ const amtEl=document.getElementById("ef_amount"); if(amtEl){ amtEl.value=ship; updateEntryFx&&updateEntryFx(); } const h0=document.getElementById("ef_vatHint"); if(h0) h0.textContent="택배비 "+ship.toLocaleString()+"원"; }
+    else { const h=document.getElementById("ef_vatHint"); if(h) h.textContent=""; }
+    return;
+  }
   const vatEl=document.querySelector('input[name="ef_vat"]:checked');
   const vat=vatEl?vatEl.value:"포함";
   let total=up*qty;
@@ -2619,10 +2635,39 @@ function calcMatAmount(){
   if(vat==="별도"){ const supply=total; total=Math.round(total*1.1); note="공급가 "+supply.toLocaleString()+"원 + 부가세 "+(total-supply).toLocaleString()+"원"; }
   else if(vat==="포함"){ const supply=Math.round(total/1.1); note="공급가 "+supply.toLocaleString()+"원 (부가세 "+(total-supply).toLocaleString()+"원 포함)"; }
   else { note="부가세 없음"; }
+  if(ship){ total+=ship; note+=" + 택배비 "+ship.toLocaleString()+"원"; }
   const amtEl=document.getElementById("ef_amount"); if(amtEl){ amtEl.value=total; updateEntryFx&&updateEntryFx(); }
-  const h=document.getElementById("ef_vatHint"); if(h) h.textContent=note+" · 금액 "+total.toLocaleString()+"원";
+  const h=document.getElementById("ef_vatHint"); if(h) h.textContent=note+" · 합계 "+total.toLocaleString()+"원";
 }
-/* 빠른 종류 선택 칩 (자주 쓰는 것) */
+/* 자재비 입력 — 재고에서 불러오기 */
+function fillMatPick(){
+  const sel=document.getElementById("ef_matpick"); if(!sel) return;
+  const list=materials.slice().sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+  sel.innerHTML='<option value="">— 등록된 자재 선택 (규격·단가 자동 입력) —</option>'
+    + list.map(m=>{
+        const price=(m.unitPriceKRW!=null?m.unitPriceKRW:m.unitPrice);
+        const stk=(m.stock!=null?` · 재고 ${m.stock}${m.unit||''}`:'');
+        return `<option value="${m.id}">${esc(m.name)}${m.spec?' ('+esc(m.spec)+')':''}${price?' · '+Number(price).toLocaleString()+'원':''}${stk}</option>`;
+      }).join("");
+  window._efMatId=null;
+  const h=document.getElementById("ef_matpickHint"); if(h) h.textContent= list.length? "" : "아직 등록된 자재가 없습니다. 자재 탭에서 먼저 등록하면 여기서 불러올 수 있어요.";
+}
+function pickMaterial(){
+  const id=val("ef_matpick");
+  window._efMatId = id || null;
+  const h=document.getElementById("ef_matpickHint");
+  if(!id){ if(h) h.textContent=""; return; }
+  const m=materials.find(x=>x.id===id); if(!m){ if(h) h.textContent=""; return; }
+  // 규격·단가 자동 채움 (단가는 '최근 단가' 참고값 — 바뀌었으면 그대로 고치면 됨)
+  if(m.spec){ const s=document.getElementById("ef_spec"); if(s) s.value=m.spec; }
+  const price=(m.unitPriceKRW!=null?m.unitPriceKRW:m.unitPrice);
+  if(price!=null){ const u=document.getElementById("ef_unitprice"); if(u) u.value=price; }
+  // 제목이 비어있으면 자재명으로 채움
+  const t=document.getElementById("ef_title"); if(t && !t.value.trim()) t.value=m.name||"";
+  calcMatAmount();
+  if(h) h.innerHTML=`✅ <b>${esc(m.name)}</b> 불러옴 · 단가는 <b>최근 산 가격</b>이에요. 이번에 값이 다르면 단가만 고치세요 (재고에 자동 반영).` + (m.stock!=null?` · 현재 재고 ${m.stock}${m.unit||''}`:'');
+}
+
 const QUICK_KINDS=[["식비","🍚"],["주유·가스","⛽"],["톨비(통행료)","🛣"],["주차비","🅿"],["택배비","📦"],["자재비","🧱"],["공사비","🔨"],["부동산 매수비용","🏠"],["부동산 매도비용","💵"],["사진","📷"]];
 function renderQuickKinds(){
   const box=document.getElementById("ef_quickKinds"); if(!box) return;
@@ -2756,7 +2801,10 @@ function openEntryModal(presetStage,presetKind){
   document.getElementById("ef_stage").onchange=fillCatSelect;
   const ph=document.getElementById("ef_phone"); if(ph) ph.value="";
   const ad=document.getElementById("ef_addr"); if(ad) ad.value="";
-  ["ef_spec","ef_unitprice","ef_qty"].forEach(id=>{const el=document.getElementById(id); if(el) el.value="";});
+  ["ef_spec","ef_unitprice","ef_qty","ef_shipping"].forEach(id=>{const el=document.getElementById(id); if(el) el.value="";});
+  window._efMatId=null;
+  const _mp=document.getElementById("ef_matpick"); if(_mp) _mp.value="";
+  const _mph=document.getElementById("ef_matpickHint"); if(_mph) _mph.textContent="";
   _efMeals=[]; _efMealSeq=1;
   _efWorkers=[]; _efWorkerSeq=1;
   ["ef_mealName","ef_mealPrice","ef_dist","ef_workerName","ef_workerPay"].forEach(id=>{const el=document.getElementById(id); if(el) el.value="";});
@@ -2848,6 +2896,7 @@ async function saveEntry(){
     spec: (k==="자재비"||k==="공사비")?(val("ef_spec")||"").trim()||null:null,
     unitPrice: (k==="자재비"||k==="공사비")&&val("ef_unitprice")?Number(val("ef_unitprice")):null,
     qty: (k==="자재비"||k==="공사비")&&val("ef_qty")?Number(val("ef_qty")):null,
+    shipping: (k==="자재비"&&val("ef_shipping"))?Number(val("ef_shipping")):null,
     vat: (k==="자재비"||k==="공사비")?((document.querySelector('input[name="ef_vat"]:checked')||{}).value||null):null,
     menus: (k==="식비"&&_efMeals.length)?_efMeals.map(m=>({name:m.name,price:m.price})):null,
     menu: (k==="식비"&&_efMeals.length)?_efMeals.map(m=>m.name).join(", "):null,
@@ -2861,6 +2910,25 @@ async function saveEntry(){
   });
   if(f.includes("photofolder") && files.some(f2=>(f2.type||"").startsWith("image/"))){ activeTab="사진"; window._photoOpenId=photoFolder; }
   else if(f.includes("docfolder") && files.length){ activeTab="서류"; window._docOpenId=docFolder; }
+  // 자재비 + 재고에서 불러온 경우: 재고 수량 +, 최근 단가 갱신
+  if(k==="자재비" && window._efMatId){
+    try{
+      const m=materials.find(x=>x.id===window._efMatId);
+      const buyQty=Number(val("ef_qty"))||0;
+      const buyUnit=Number(val("ef_unitprice"))||null;
+      if(m){
+        const upd={};
+        if(buyQty){ upd.stock=(Number(m.stock)||0)+buyQty; }        // 사면 재고 증가
+        if(buyUnit){ upd.unitPrice=buyUnit; upd.unitPriceKRW=buyUnit; upd.currency="KRW"; } // 최근 단가 갱신
+        // 입고 기록 남기기
+        const log=(m.useLog||[]).slice();
+        log.push({type:"in", qty:buyQty||null, unitPrice:buyUnit||null, date:val("ef_date")||today(), memo:"자재비 기록에서 입고"});
+        upd.useLog=log;
+        if(Object.keys(upd).length) await db.collection(MATERIALS).doc(m.id).update(upd);
+      }
+    }catch(_){}
+    window._efMatId=null;
+  }
   btn.disabled=false; btn.textContent="저장";
   closeModal("entryModal"); await reloadCurrent();
  }catch(err){ btn.disabled=false; btn.textContent="저장"; hideUploading(); showError("기록 저장", err); }

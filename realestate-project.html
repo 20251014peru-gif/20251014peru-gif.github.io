@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="부동산관리">
 <link rel="apple-touch-icon" href="realestate-icon-192.png">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="realestate-project.css?v=6.0">
+<link rel="stylesheet" href="realestate-project.css?v=6.3">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
@@ -56,7 +56,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v6.0</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v6.3</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
@@ -150,6 +150,13 @@
       </div>
     </div>
     <div id="g_matspec" style="display:none">
+      <div class="field" id="g_matpick">
+        <label>📦 재고에서 불러오기 (선택)</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="ef_matpick" onchange="pickMaterial()" style="flex:1"><option value="">— 등록된 자재 선택 (규격·단가 자동 입력) —</option></select>
+        </div>
+        <div class="hint" id="ef_matpickHint"></div>
+      </div>
       <div class="row2">
         <div class="field"><label>규격 / 사양</label><input id="ef_spec" placeholder="예: 600x600 / 9.5T / 18mm"></div>
         <div class="field"><label>단가 × 수량</label>
@@ -167,6 +174,9 @@
           <label class="vat-opt"><input type="radio" name="ef_vat" value="없음" onchange="calcMatAmount()"> 부가세 없음</label>
         </div>
         <div class="hint" id="ef_vatHint"></div>
+      </div>
+      <div class="field"><label>📦 택배비 / 배송비 (선택)</label>
+        <input id="ef_shipping" type="number" placeholder="자재 배송비가 있으면 입력 (자동으로 금액에 합산)" oninput="calcMatAmount()">
       </div>
     </div>
     <div class="field" id="g_photofolder"><label>📷 사진 폴더</label><select id="ef_photofolder"></select></div>
@@ -585,6 +595,6 @@
   </div>
 </div>
 
-<script src="realestate-project.js?v=6.0"></script>
+<script src="realestate-project.js?v=6.3"></script>
 </body>
 </html>
