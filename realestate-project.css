@@ -108,7 +108,8 @@ main{flex:1; padding:20px 24px; overflow-y:auto;}
 .memo-area{flex:1; min-height:300px; width:100%; border:1px solid var(--line); border-radius:12px; padding:14px; font-size:15px; line-height:1.6; background:#fff; outline:none; overflow-y:auto;}
 .memo-area:focus{border-color:#f59e0b;}
 .memo-area:empty:before{content:attr(data-ph); color:var(--ink-soft); pointer-events:none;}
-.memo-area .memo-inline-img{max-width:100%; border-radius:10px; margin:6px 0; display:block;}
+.memo-area .memo-inline-img{max-width:100%; border-radius:10px; margin:6px 0; display:block; cursor:pointer; border:2px solid transparent;}
+.memo-area .memo-inline-img:hover{border-color:var(--danger); opacity:.85;}
 .memo-panel-foot{display:flex; align-items:center; gap:12px; padding:14px 18px; border-top:1px solid var(--line); background:#fffdf5;}
 .memo-status{margin-left:auto; font-size:13px; color:var(--ink-soft);}
 @media(max-width:780px){

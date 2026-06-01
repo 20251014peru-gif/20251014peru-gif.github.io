@@ -1,12 +1,12 @@
 /* ============================================================
-   부동산 프로젝트 관리 v4.6
+   부동산 프로젝트 관리 v4.7
    ------------------------------------------------------------
-   [v4.6 변경 내역]
-   1) 급한 메모를 인라인 편집기로 변경 (글 + 이미지 섞어서 작성)
-      - Ctrl+V 또는 '📷 사진 넣기' → 커서 위치(글 사이)에 이미지가 바로 박힘
-      - 첨부 썸네일 방식이 아니라 워드/메신저처럼 글-사진 혼합
-      - 자동 저장(quickMemoHtml + quickMemo 텍스트)
+   [v4.7 변경 내역]
+   1) 급한 메모의 인라인 이미지 삭제 기능
+      - 메모 안 사진을 누르면 삭제(확인 후) + Storage에서도 제거
+      - 사진에 마우스 올리면 빨간 테두리로 삭제 가능 표시
    ------------------------------------------------------------
+   [v4.6] 급한 메모 인라인 편집(글+사진 섞기)
    [v4.4~4.5] 급한 메모 슬라이드 패널·붙여넣기
    [v4.3] 검색바 상단 1개로·검색탭 제거
    [v4.0~4.2] 식비메뉴·주유거리·자재공정·택배비·인건비개별·기록추가통일
@@ -657,6 +657,31 @@ function memoInsertImage(url){
     ed.appendChild(img); ed.appendChild(document.createElement("br"));
   }
   memoOnInput();
+}
+/* 에디터 안 이미지 클릭 → 삭제 */
+function memoEditorClick(e){
+  const t=e.target;
+  if(t && t.tagName==="IMG" && t.classList.contains("memo-inline-img")){
+    if(confirm("이 사진을 메모에서 지울까요?")){
+      const src=t.getAttribute("src");
+      // 바로 뒤 <br>도 같이 정리
+      const next=t.nextSibling;
+      t.remove();
+      if(next && next.nodeName==="BR") next.remove();
+      memoOnInput();
+      saveMemoText();
+      // Storage에서도 삭제 시도 (url로 path 추정 불가하면 그대로 둠)
+      if(src) memoDeleteStorageByUrl(src);
+    }
+  }
+}
+/* url에 해당하는 Storage 파일 삭제 (가능할 때만) */
+async function memoDeleteStorageByUrl(url){
+  try{
+    // Firebase Storage download URL에서 path 추출: /o/{encodedPath}?
+    const m=/\/o\/([^?]+)/.exec(url);
+    if(m && m[1]){ const path=decodeURIComponent(m[1]); await storage.ref(path).delete(); }
+  }catch(_){ /* 무시 (이미 삭제되었거나 외부 url) */ }
 }
 /* 사진 첨부 버튼 */
 async function addMemoPhoto(){
