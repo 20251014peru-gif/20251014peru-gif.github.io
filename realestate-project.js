@@ -1,15 +1,18 @@
 /* ============================================================
-   부동산 프로젝트 관리 v4.2
+   부동산 프로젝트 관리 v4.4
    ------------------------------------------------------------
-   [v4.2 변경 내역]
-   1) 모든 '기록 추가'(홈·비용·공정 탭)는 동일한 입력 화면을 사용 — 호환 통일
-   2) 자재비/공사비 입력 순서 명확화: ① 공정 단계 먼저 → ② 공정 세부
-      (자재비는 라벨에 '먼저 선택' 강조, 공정 고르면 그 공정 자재가 세부에 표시)
+   [v4.4 변경 내역]
+   1) '급한 메모'를 업무일지 방식의 오른쪽 슬라이드 패널로 구현
+      - 상단 '⚡ 급한메모' 버튼 → 오른쪽에서 패널 슬라이드
+      - 큰 메모장에 막 적으면 자동 저장(타이핑 멈추면 0.8초 후 저장)
+      - 📷 사진 첨부(여러 장, 카메라/갤러리), 썸네일·확대·개별삭제
+      - 🗑 지우기(내용+사진), 프로젝트 문서에 저장(quickMemo/quickMemoFiles)
+   ※ 새 컬렉션 불필요 — 프로젝트 문서에 저장하므로 규칙 변경 없음
    ------------------------------------------------------------
-   [v4.1] 자재비 공정안내·공사비 인건비 개별합계·프로젝트 메모·상단 검색바
-   [v4.0] 식비메뉴합계·주유거리·자재공정분리·택배비·탭버튼확대
-   [v3.7~3.9] 분류통일·전화·주소(지도)·기록추가통일·매수매도·자재규격부가세
-   [v3.3~3.6] 작업일지·할일·뒤로앞으로·커스텀칸·영수증사진·메모팝업
+   [v4.3] 검색바 상단 1개로·검색탭 제거
+   [v4.0~4.2] 식비메뉴·주유거리·자재공정·택배비·인건비개별·기록추가통일
+   [v3.7~3.9] 분류통일·전화·주소(지도)·매수매도·자재규격부가세
+   [v3.3~3.6] 작업일지·할일·뒤로앞으로·커스텀칸·영수증사진
    [v3.0~3.2] 파일분리·환율·옵션·자재·견적·백업·칸설정
    ============================================================ */
 
@@ -27,7 +30,8 @@ const PROJECTS="realestate_projects", ENTRIES="realestate_entries",
       VENDORS="realestate_vendors", MATERIALS="realestate_materials",
       QUOTES="realestate_quotes", AGENTS="realestate_agents",
       OPTIONS="realestate_options",
-      WORKLOG="realestate_worklog", TODOS="realestate_todos";
+      WORKLOG="realestate_worklog", TODOS="realestate_todos",
+      MEMOS="realestate_memos";
 const AI_MODEL = "claude-sonnet-4-6";
 
 /* ===== 기본 옵션값 (Firestore의 사용자 추가분이 합쳐짐) ===== */
@@ -433,7 +437,7 @@ function updateQuoteFx(){
 
 /* ===== 상태 ===== */
 let projects=[], currentProjectId=null;
-let entries=[], vendors=[], materials=[], quotes=[], agents=[], worklogs=[], todos=[];
+let entries=[], vendors=[], materials=[], quotes=[], agents=[], worklogs=[], todos=[], memos=[];
 let activeTab="대시보드";
 let costFilter={stage:"전체",kind:"전체",pay:"전체",q:""};
 let searchQ="";
@@ -556,7 +560,7 @@ function renderMain(){
   const p=projects.find(x=>x.id===currentProjectId);
   const main=document.getElementById("main");
   if(!p){main.innerHTML='<div class="empty">프로젝트를 선택하세요.</div>';return;}
-  const tabs=["대시보드","공정","자재","비용","견적·부동산","작업일지","준비·할일","사진","업체·연락","서류","검색"];
+  const tabs=["대시보드","공정","자재","비용","견적·부동산","작업일지","준비·할일","사진","업체·연락","서류"];
   main.innerHTML=`
     <div class="proj-head">
       <div><h2>${esc(p.name)}</h2>
@@ -568,19 +572,19 @@ function renderMain(){
         <button class="btn btn-primary btn-sm" onclick="openEntryModal()">+ 기록 추가</button>
       </div>
     </div>
-    <div class="tabs">
-      ${tabs.map(t=>`<button class="tab ${t===activeTab?'active':''}" onclick="setTab('${t}')">${tabIcon(t)} ${t}</button>`).join("")}
-    </div>
     <div class="topbar">
       <div class="topsearch">
         <span class="ts-icon">🔍</span>
-        <input id="topSearchInput" placeholder="전체 검색 — 제목·거래처·메모·금액…" value="${esc(window._topSearchQ||'')}"
+        <input id="topSearchInput" placeholder="전체 검색 — 제목·거래처·메모·금액·공정·자재…" value="${esc(window._topSearchQ||'')}"
           oninput="onTopSearch(this.value)" onkeydown="if(event.key==='Enter')gotoSearch(this.value)">
         ${window._topSearchQ?`<button class="ts-clear" onclick="clearTopSearch()">✕</button>`:''}
       </div>
-      <button class="btn btn-line memo-btn" onclick="openProjectMemo()" title="이 프로젝트 메모">📝 메모${(p.quickMemo&&p.quickMemo.trim())?' •':''}</button>
+      <button class="btn btn-line memo-btn" onclick="openMemoBoard()" title="급한 메모">⚡ 급한메모${((p.quickMemo&&p.quickMemo.trim())||(p.quickMemoFiles&&p.quickMemoFiles.length))?' <span class="memo-cnt">•</span>':''}</button>
     </div>
     <div id="topSearchResult"></div>
+    <div class="tabs">
+      ${tabs.map(t=>`<button class="tab ${t===activeTab?'active':''}" onclick="setTab('${t}')">${tabIcon(t)} ${t}</button>`).join("")}
+    </div>
     <div id="tabContent"></div>`;
   renderTab(p);
 }
@@ -601,24 +605,97 @@ function onTopSearch(q){
 }
 function clearTopSearch(){ window._topSearchQ=""; const i=document.getElementById("topSearchInput"); if(i) i.value=""; const box=document.getElementById("topSearchResult"); if(box) box.innerHTML=""; }
 function gotoSearch(q){ window._topSearchQ=q; onTopSearch(q); }
-/* ===== 프로젝트별 빠른 메모 ===== */
-function openProjectMemo(){
+/* ===== 급한 메모 (오른쪽 슬라이드 패널, 자동 저장 + 사진) ===== */
+let _memoSaveTimer=null;
+function openMemoBoard(){
+  if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
-  document.getElementById("pmText").value=p.quickMemo||"";
-  openModal("projMemoModal");
-  setTimeout(()=>{const t=document.getElementById("pmText"); if(t) t.focus();},120);
+  document.getElementById("memoText").value = p.quickMemo||"";
+  renderMemoPhotos();
+  document.getElementById("memoStatus").textContent="";
+  const panel=document.getElementById("memoPanel");
+  panel.classList.add("open");
+  document.getElementById("memoBackdrop").classList.add("open");
+  setTimeout(()=>{const t=document.getElementById("memoText"); if(t) t.focus();},150);
 }
-async function saveProjectMemo(){
+function closeMemoPanel(){
+  document.getElementById("memoPanel").classList.remove("open");
+  document.getElementById("memoBackdrop").classList.remove("open");
+}
+function renderMemoPhotos(){
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
-  const txt=document.getElementById("pmText").value;
-  const btn=document.getElementById("pmSaveBtn"); if(btn){ btn.disabled=true; btn.textContent="저장 중..."; }
+  const box=document.getElementById("memoPhotos"); if(!box) return;
+  const files=p.quickMemoFiles||[];
+  if(!files.length){ box.innerHTML=""; return; }
+  box.innerHTML=files.map((f,i)=>{
+    if((f.type||"").startsWith("image/")) return `<div class="memo-thumb"><img src="${f.url}" onclick="openMemoPhotos(${i})"><button class="memo-thumb-del" onclick="deleteMemoPhoto(${i})">✕</button></div>`;
+    return `<div class="memo-thumb file"><a href="${f.url}" target="_blank" rel="noopener">📄 ${esc(f.name||'파일')}</a><button class="memo-thumb-del" onclick="deleteMemoPhoto(${i})">✕</button></div>`;
+  }).join("");
+}
+/* 타이핑 시 자동 저장 (디바운스) */
+function memoOnInput(){
+  const st=document.getElementById("memoStatus"); if(st) st.textContent="작성 중…";
+  if(_memoSaveTimer) clearTimeout(_memoSaveTimer);
+  _memoSaveTimer=setTimeout(saveMemoText, 800);
+}
+async function saveMemoText(){
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  const txt=document.getElementById("memoText").value;
   try{
     await db.collection(PROJECTS).doc(p.id).update({quickMemo:txt});
     p.quickMemo=txt;
-    closeModal("projMemoModal");
-    renderMain();
-  }catch(err){ showError("메모 저장", err); }
-  finally{ if(btn){ btn.disabled=false; btn.textContent="저장"; } }
+    const st=document.getElementById("memoStatus"); if(st) st.textContent="💾 자동 저장됨";
+    const btn=document.querySelector(".memo-btn"); // 헤더 버튼 배지 갱신은 다음 렌더 때
+  }catch(err){ const st=document.getElementById("memoStatus"); if(st) st.textContent="⚠ 저장 실패"; }
+}
+async function addMemoPhoto(){
+  const fi=document.getElementById("memoFileInput");
+  if(!fi||!fi.files||!fi.files.length) return;
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  try{
+    let added=[];
+    for(let i=0;i<fi.files.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); added.push(await processFile(fi.files[i])); }
+    hideUploading();
+    const files=(p.quickMemoFiles||[]).concat(added);
+    await db.collection(PROJECTS).doc(p.id).update({quickMemoFiles:files});
+    p.quickMemoFiles=files;
+    fi.value="";
+    renderMemoPhotos();
+    const st=document.getElementById("memoStatus"); if(st) st.textContent="💾 사진 저장됨";
+  }catch(err){ hideUploading(); showError("메모 사진 추가", err); }
+}
+async function deleteMemoPhoto(idx){
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  const files=(p.quickMemoFiles||[]).slice();
+  const f=files[idx]; if(!f) return;
+  if(!confirm("이 첨부를 삭제할까요?")) return;
+  try{
+    if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} }
+    files.splice(idx,1);
+    await db.collection(PROJECTS).doc(p.id).update({quickMemoFiles:files});
+    p.quickMemoFiles=files;
+    renderMemoPhotos();
+  }catch(err){ showError("첨부 삭제", err); }
+}
+function openMemoPhotos(idx){
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  const imgs=(p.quickMemoFiles||[]).map((f,i)=>({f,i})).filter(o=>(o.f.type||"").startsWith("image/"));
+  if(!imgs.length) return;
+  window._ivList=imgs.map(o=>({url:o.f.url, cap:'급한 메모', entryId:null}));
+  let gi=imgs.findIndex(o=>o.i===idx); if(gi<0) gi=0;
+  openViewerList(gi);
+}
+async function clearMemo(){
+  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
+  if(!confirm("메모 내용을 모두 지울까요? (사진도 함께 삭제)")) return;
+  try{
+    if(p.quickMemoFiles) for(const f of p.quickMemoFiles){ if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} } }
+    await db.collection(PROJECTS).doc(p.id).update({quickMemo:"", quickMemoFiles:[]});
+    p.quickMemo=""; p.quickMemoFiles=[];
+    document.getElementById("memoText").value="";
+    renderMemoPhotos();
+    const st=document.getElementById("memoStatus"); if(st) st.textContent="🗑 지웠습니다";
+  }catch(err){ showError("메모 지우기", err); }
 }
 function tabIcon(t){return {"대시보드":"📊","공정":"🔨","자재":"🧱","비용":"💰","견적·부동산":"📞","주말 비용":"🚗","작업일지":"📒","준비·할일":"✅","사진":"📷","업체·연락":"📇","서류":"📁","검색":"🔍"}[t]||"";}
 /* ===== 네비게이션 스택 — 뒤로/앞으로 (각 최대 10단계) ===== */
