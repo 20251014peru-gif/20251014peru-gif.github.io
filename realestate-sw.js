@@ -1,10 +1,10 @@
 // 부동산 프로젝트 관리 서비스워커 — 오프라인에서도 앱이 열리게 함
 // 새 버전 배포 시 아래 CACHE 숫자를 올리면 캐시가 갱신됨
-var CACHE = 'realestate-app-v5-1';
+var CACHE = 'realestate-app-v5-2';
 var ASSETS = [
   './realestate-project.html',
-  './realestate-project.css?v=5.1',
-  './realestate-project.js?v=5.1',
+  './realestate-project.css?v=5.2',
+  './realestate-project.js?v=5.2',
   './realestate-manifest.json'
 ];
 

@@ -1,13 +1,14 @@
 /* ============================================================
-   부동산 프로젝트 관리 v5.1 — 달력 표시 필터
+   부동산 프로젝트 관리 v5.2 — 긴급 버그픽스
    ------------------------------------------------------------
-   [v5.1 변경 내역]
-   1) 달력에 종류별 표시 켜기/끄기 필터(칩) — 보고 싶은 종류만 표시
-      (업무 달력처럼: 식비만, 또는 공사비만 등 골라보기)
-   2) 메모 표시 토글 — 켜면 달력 항목에 메모 한 줄도 같이 표시
-   3) 전체 켜기/끄기 버튼, 한 칸 최대 5건 표시
+   [v5.2] 앱이 안 열리고 데이터가 안 보이던 오류 수정
+     - 원인: init()이 PIN_KEY 상수 선언보다 먼저 실행돼
+       'Cannot access PIN_KEY before initialization' 오류 → init 중단
+       → 데이터 로딩(loadProjects)까지 도달 못 함
+     - 해결: init() 호출을 파일 맨 끝(모든 선언 이후)으로 이동
+     ※ 데이터는 안전했음(Firebase에 그대로). 로딩만 막혔던 것.
    ------------------------------------------------------------
-   [v5.0] 달력 통합(칸 안 내용+금액) — 표준 틀 7기둥 완성
+   [v5.1] 달력 표시 필터  [v5.0] 달력 통합(7기둥 완성)
    [v4.9] PWA·PIN/지문 잠금
    [v4.8] 코드정리·DATA MODEL 문서화
    [v4.0~4.7] 입력통일·식비메뉴·자재공정·인건비·메모인라인·검색통합
@@ -1256,13 +1257,8 @@ window.addEventListener("error", function(e){ showError("스크립트", e.error|
 window.addEventListener("unhandledrejection", function(e){ showError("비동기 처리", e.reason); });
 
 /* === 시작 === */
-(async function init(){
-  startLock();              // 잠금 먼저
-  registerSW();             // PWA 서비스워커 등록
-  await loadUserOpts();
-  loadFxRate();
-  await loadProjects();
-})();
+/* init()은 파일 맨 끝에서 실행 — 모든 const/function 선언 후에 호출해야
+   'Cannot access PIN_KEY before initialization' 오류가 안 남 */
 
 /* ===== PWA 서비스워커 등록 ===== */
 function registerSW(){
@@ -3550,3 +3546,12 @@ async function runDiagnostics(){
   row('info', "현재 데이터", `프로젝트 ${projects.length}개 / 기록 ${entries.length} · 자재 ${materials.length} · 견적 ${quotes.length} · 부동산 ${agents.length} · 업체 ${vendors.length} · 작업일지 ${worklogs.length} · 할일 ${todos.length}`);
   row('info', "점검 완료", new Date().toLocaleString('ko-KR'));
 }
+
+/* ===== 앱 시작 (모든 선언 이후 맨 끝에서 실행) ===== */
+(async function init(){
+  startLock();              // 잠금 (PIN 미설정 시 자동 통과)
+  registerSW();             // PWA 서비스워커 등록
+  await loadUserOpts();
+  loadFxRate();
+  await loadProjects();
+})();
