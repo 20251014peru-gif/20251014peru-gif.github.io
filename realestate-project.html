@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>부동산 프로젝트 관리</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="realestate-project.css?v=4.7">
+<link rel="stylesheet" href="realestate-project.css?v=4.8">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
@@ -38,7 +38,7 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v4.7</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v4.8</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
@@ -416,140 +416,6 @@
   </div>
 </div>
 
-<!-- 주말 빠른 입력 (가스/톨비/식비 세트) -->
-<div class="modal-bg" id="weekendModal">
-  <div class="modal" style="max-width:560px">
-    <h3>🚗 주말 비용 입력 <span style="font-size:12px;font-weight:500;opacity:.7">한 줄씩 바로 저장</span></h3>
-    <div class="row2">
-      <div class="field"><label>날짜</label><input id="wk_date" type="date" onchange="renderWkTodayList()"></div>
-      <div class="field"><label>종류</label>
-        <div style="display:flex;gap:6px">
-          <select id="wk_kind_sel" style="flex:1"></select>
-          <button type="button" class="opt-add" onclick="openAddOpt('wk_kinds','wk_kind_sel')">+</button>
-        </div></div>
-    </div>
-
-    <!-- 식비 세부 -->
-    <div id="wk_g_meal" class="row2">
-      <div class="field"><label>끼니</label>
-        <select id="wk_meal_sel">
-          <option>아침</option><option selected>점심</option><option>저녁</option><option>집간식</option><option>현장간식</option>
-        </select></div>
-      <div class="field"><label>식당 이름</label><input id="wk_rest_input" placeholder="예: ○○한식당"></div>
-    </div>
-    <!-- 식비 메뉴 여러 개 -->
-    <div id="wk_g_menu" class="field">
-      <label>메뉴 (여러 개 추가 → 자동 합계)</label>
-      <div style="display:flex;gap:6px">
-        <input id="wk_menu_name" placeholder="메뉴 이름" style="flex:2" onkeydown="if(event.key==='Enter'){wkAddMenu();event.preventDefault();}">
-        <input id="wk_menu_price" type="number" placeholder="가격" style="flex:1" onkeydown="if(event.key==='Enter'){wkAddMenu();event.preventDefault();}">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="wkAddMenu()">+ 추가</button>
-      </div>
-      <div id="wk_menu_list" style="margin-top:8px"></div>
-      <div id="wk_menu_sum" class="hint" style="text-align:right;font-weight:700;color:var(--accent)"></div>
-      <div style="margin-top:6px"><input id="wk_people_input" type="number" placeholder="인원수(선택)" style="max-width:140px"></div>
-    </div>
-
-    <!-- 톨비 세부 -->
-    <div id="wk_g_toll" class="field"><label>방향</label>
-      <select id="wk_toll_dir"><option>상행</option><option>하행</option></select></div>
-
-    <!-- 주유·가스 세부 -->
-    <div id="wk_g_gas" class="row2">
-      <div class="field"><label>연료 / 방향</label>
-        <div style="display:flex;gap:6px">
-          <select id="wk_gas_fuel"><option>휘발유</option><option>가스</option></select>
-          <select id="wk_gas_dir"><option>상행</option><option>하행</option><option>충전</option></select>
-        </div></div>
-      <div class="field"><label>주행거리(km)</label><input id="wk_dist_input" type="number" placeholder="예: 120"></div>
-    </div>
-
-    <div class="row2">
-      <div class="field" id="wk_g_amt"><label>금액</label><input id="wk_amt_input" type="number" placeholder="숫자만"></div>
-      <div class="field"><label>결제수단</label>
-        <div style="display:flex;gap:6px">
-          <select id="wk_pay_sel" style="flex:1"></select>
-          <button type="button" class="opt-add" onclick="openAddOpt('pays','wk_pay_sel')">+</button>
-        </div></div>
-    </div>
-
-    <div class="field"><label>메모</label>
-      <button type="button" id="wk_memo_btn" class="btn btn-line" style="width:100%;text-align:left" onclick="openWkMemo()">📝 메모 작성</button>
-      <input type="hidden" id="wk_memo_val">
-    </div>
-
-    <div class="field"><label>🧾 영수증 사진 (양도세 증빙용, 여러 장)</label>
-      <input id="wk_files" type="file" multiple accept="image/*,application/pdf" capture="environment" onchange="wkFileHint()">
-      <div class="hint" id="wk_filehint">카메라로 영수증을 바로 찍거나 갤러리에서 고르세요. 저장 후 ‘사진’ 탭의 ‘영수증·증빙’ 폴더에서 모아 볼 수 있어요.</div>
-    </div>
-
-    <div class="modal-acts">
-      <button class="btn btn-primary" id="wk_saveOne" onclick="saveWkOne()" style="flex:1">저장하고 계속</button>
-      <button class="btn btn-line" onclick="closeModal('weekendModal')">닫기</button>
-    </div>
-
-    <div id="wk_today" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px"></div>
-  </div>
-</div>
-
-<!-- 주말 메모 팝업 -->
-<div class="modal-bg" id="wkMemoModal">
-  <div class="modal" style="width:min(480px,100%)">
-    <h3>📝 메모 작성</h3>
-    <div class="field"><textarea id="wkMemoText" style="min-height:160px" placeholder="자유롭게 작성하세요"></textarea></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" onclick="saveWkMemo()">확인</button>
-      <button class="btn btn-line" onclick="closeModal('wkMemoModal')">취소</button>
-    </div>
-  </div>
-</div>
-
-<!-- 급한 메모 (오른쪽 슬라이드 패널) -->
-<div class="memo-backdrop" id="memoBackdrop" onclick="closeMemoPanel()"></div>
-<div class="memo-panel" id="memoPanel">
-  <div class="memo-panel-head">
-    <span class="memo-panel-title">⚡ 급한 메모</span>
-    <div class="memo-panel-acts">
-      <button class="btn btn-line btn-sm" onclick="clearMemo()">🗑 지우기</button>
-      <button class="memo-x" onclick="closeMemoPanel()">✕</button>
-    </div>
-  </div>
-  <div class="memo-panel-body">
-    <div id="memoEditor" class="memo-area" contenteditable="true" data-ph="여기에 자유롭게 적으세요. 자동 저장됩니다. (캡처 이미지는 Ctrl+V로 글 사이에 바로 붙여넣기 · 사진을 누르면 삭제)" oninput="memoOnInput()" onpaste="memoPasteHandler(event)" onclick="memoEditorClick(event)"></div>
-  </div>
-  <div class="memo-panel-foot">
-    <input type="file" id="memoFileInput" multiple accept="image/*,application/pdf" capture="environment" style="display:none" onchange="addMemoPhoto()">
-    <button class="btn btn-line" onclick="document.getElementById('memoFileInput').click()">📷 사진 넣기</button>
-    <span id="memoStatus" class="memo-status"></span>
-  </div>
-</div>
-
-<!-- 기타비용 빠른 연속 입력 모달 (기존) -->
-<div class="modal-bg" id="quickEtcModal">
-  <div class="modal">
-    <h3>⚡ 기타 비용 빠른 입력</h3>
-    <div class="hint" style="margin-bottom:10px">날짜·항목·금액만 찍고 “추가”를 누르면 아래에 쌓입니다. 다 모은 뒤 “전체 저장”.</div>
-    <div class="row2">
-      <div class="field"><label>날짜</label><input id="qe_date" type="date"></div>
-      <div class="field"><label>항목</label><select id="qe_cat" onchange="onQeCatChange()"></select></div>
-    </div>
-    <div class="field" id="qe_optwrap" style="display:none"><label id="qe_optlabel">구분</label>
-      <div id="qe_opts" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>금액(원)</label><input id="qe_amount" type="number" placeholder="숫자"></div>
-      <div class="field"><label>결제수단</label><select id="qe_pay"></select></div>
-    </div>
-    <div class="field"><label>메모(선택)</label><input id="qe_memo" placeholder="예: 현장 인부 점심, 경부고속도로"></div>
-    <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="addQuickRow()">+ 목록에 추가</button></div>
-    <div id="quickList" style="margin-top:12px"></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" id="quickSaveBtn" onclick="saveQuickEtc()">전체 저장</button>
-      <button class="btn btn-line" onclick="closeModal('quickEtcModal')">닫기</button>
-    </div>
-  </div>
-</div>
-
 <!-- 기타비용 반복 생성 모달 -->
 <div class="modal-bg" id="repeatEtcModal">
   <div class="modal">
@@ -663,6 +529,6 @@
   </div>
 </div>
 
-<script src="realestate-project.js?v=4.7"></script>
+<script src="realestate-project.js?v=4.8"></script>
 </body>
 </html>

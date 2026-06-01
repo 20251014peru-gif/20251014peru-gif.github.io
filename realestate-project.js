@@ -1,18 +1,50 @@
 /* ============================================================
-   부동산 프로젝트 관리 v4.7
+   부동산 프로젝트 관리 v4.8
    ------------------------------------------------------------
-   [v4.7 변경 내역]
-   1) 급한 메모의 인라인 이미지 삭제 기능
-      - 메모 안 사진을 누르면 삭제(확인 후) + Storage에서도 제거
-      - 사진에 마우스 올리면 빨간 테두리로 삭제 가능 표시
+   [v4.8 변경 내역] — 코드 정리(기능 변화 없음)
+   1) 죽은 코드 제거: 주말세트 입력(openWeekend 등) / 빠른연속입력
+      (openQuickEtc 등) 관련 함수·모달·CSS 일괄 삭제
+      → 입력은 '기록 추가' 하나로 통합 완료된 상태라 불필요했음
+   2) 안 쓰는 메모 컬렉션 상수(MEMOS) 제거 — 메모는 프로젝트 문서에 저장
+   3) 데이터 구조 문서 추가(아래 DATA MODEL 주석)
+
    ------------------------------------------------------------
-   [v4.6] 급한 메모 인라인 편집(글+사진 섞기)
-   [v4.4~4.5] 급한 메모 슬라이드 패널·붙여넣기
-   [v4.3] 검색바 상단 1개로·검색탭 제거
-   [v4.0~4.2] 식비메뉴·주유거리·자재공정·택배비·인건비개별·기록추가통일
-   [v3.7~3.9] 분류통일·전화·주소(지도)·매수매도·자재규격부가세
-   [v3.3~3.6] 작업일지·할일·뒤로앞으로·커스텀칸·영수증사진
-   [v3.0~3.2] 파일분리·환율·옵션·자재·견적·백업·칸설정
+   ===== DATA MODEL (Firestore 저장 구조) =====
+   [projects] 프로젝트
+     {name, address, startDate, status, stageStatus{공정:상태},
+      quickMemo(텍스트), quickMemoHtml(글+인라인이미지 HTML)}
+   [entries] 모든 비용·기록 (이 앱의 핵심)
+     공통: {projectId, kind, title, date, amount, vendor, pay,
+            cat, sub, stage, memo, files[], phone, addr, custom{}}
+     - kind 저장 규칙:
+        자재비/공사비 → kind 그대로, stage=공정, cat=세부
+        그 외 비용(식비/주유·가스/톨비/주차/택배/매수/매도/관리비…)
+          → kind="기타비용", cat=종류(통계호환), sub=세부
+            (예: 식비 점심 → kind=기타비용,cat=식비,sub=점심)
+            (주유·가스 → cat="교통/주유비")
+        사진/연락/서류/문제/메모 → kind 그대로
+     - 종류별 특수필드:
+        자재비: spec(규격), unitPrice(단가), qty(수량), vat(별도/포함/없음)
+        식비:   menus[{name,price}], menu(이름들), rest(식당), people(인원)
+        공사비: workers[{name,pay}]  (인건비 인부 개별)
+        주유·가스: dist(주행 km)
+     - 표시 종류 복원: displayKindOf(e) — 저장된 cat을 보고 식비/주유 등
+       원래 종류로 되돌려 비용수정창에 표시
+   [vendors] 업체  {projectId,name,trade,phone,memo}
+   [materials] 자재 재고  {projectId,name,space,cat,brand,spec,supplier,...}
+   [quotes] 견적  [agents] 부동산 중개
+   [worklog] 작업일지  {projectId,date,side,vendor,hours,memo,files[]}
+   [todos] 준비·할일  {projectId,title,memo,done,due,tag,files[]}
+   [options] 사용자 추가 옵션  doc id=옵션키, {items:[...]}
+     (stages, kinds, pays, etc_cats, stage_cat_<공정>, sub_<종류> 등)
+   ------------------------------------------------------------
+   [핵심 함수 지도]
+     입력:  openEntryModal → onKindChange(종류별 칸 표시)
+            → fillCatSelect(세부) → saveEntry(표준화 저장)
+     수정:  editCost → displayKindOf/displaySubOf → saveCostEdit
+     분류:  COST_KINDS, SUB_CATS, CONSTRUCTION_CATS, subCatsFor()
+     집계:  viewCost (자재/공사=공정별, 그 외=cat별)
+     메모:  openMemoBoard(오른쪽 패널) — 인라인 편집·자동저장
    ============================================================ */
 
 /* ===== Firebase ===== */
@@ -29,8 +61,7 @@ const PROJECTS="realestate_projects", ENTRIES="realestate_entries",
       VENDORS="realestate_vendors", MATERIALS="realestate_materials",
       QUOTES="realestate_quotes", AGENTS="realestate_agents",
       OPTIONS="realestate_options",
-      WORKLOG="realestate_worklog", TODOS="realestate_todos",
-      MEMOS="realestate_memos";
+      WORKLOG="realestate_worklog", TODOS="realestate_todos";
 const AI_MODEL = "claude-sonnet-4-6";
 
 /* ===== 기본 옵션값 (Firestore의 사용자 추가분이 합쳐짐) ===== */
@@ -309,11 +340,8 @@ async function confirmAddOpt(){
   }
   refreshOptConsumers();
 }
-/* 옵션 변경 후 화면 갱신 (주말 모달/현재 탭) */
+/* 옵션 변경 후 화면 갱신 (현재 탭) */
 function refreshOptConsumers(){
-  if(_addOptKey==="wk_kinds" && document.getElementById("weekendModal").classList.contains("open")){
-    if(typeof wkKindChange==="function") wkKindChange();
-  }
   if(OPT_REFRESH_TAB[_addOptKey] && currentProjectId){
     const p=projects.find(x=>x.id===currentProjectId); if(p) renderTab(p);
   }
@@ -436,7 +464,7 @@ function updateQuoteFx(){
 
 /* ===== 상태 ===== */
 let projects=[], currentProjectId=null;
-let entries=[], vendors=[], materials=[], quotes=[], agents=[], worklogs=[], todos=[], memos=[];
+let entries=[], vendors=[], materials=[], quotes=[], agents=[], worklogs=[], todos=[];
 let activeTab="대시보드";
 let costFilter={stage:"전체",kind:"전체",pay:"전체",q:""};
 let searchQ="";
@@ -1808,249 +1836,7 @@ async function deleteVisit(id, idx){
   }catch(err){ showError("방문 삭제", err); }
 }
 
-/* ===== 주말 빠른 입력 (한 줄씩 즉시 저장) ===== */
-const WK_MEALS=["아침","점심","저녁","집간식","현장간식"];
-const WK_DIRS=["상행","하행"];
-const WK_FUELS=["휘발유","가스"];
-let _wkMenus=[]; // 식비 메뉴 여러 개 [{name, price}]
-let _wkMenuSeq=1;
-function nextSat(){ const d=new Date(); const day=d.getDay(); const s=new Date(d); s.setDate(d.getDate()+((6-day+7)%7)); return s.toISOString().slice(0,10); }
-function openWeekend(){
-  if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
-  _wkMenus=[]; _wkMenuSeq=1;
-  document.getElementById("wk_date").value=nextSat();
-  buildOptSelect("wk_kind_sel","wk_kinds","식비");
-  document.getElementById("wk_kind_sel").onchange=wkKindChange;
-  buildOptSelect("wk_pay_sel","pays","카드");
-  document.getElementById("wk_memo_val").value="";
-  document.getElementById("wk_amt_input").value="";
-  document.getElementById("wk_dist_input").value="";
-  document.getElementById("wk_people_input").value="";
-  document.getElementById("wk_rest_input").value="";
-  const fi=document.getElementById("wk_files"); if(fi) fi.value="";
-  const mb=document.getElementById("wk_memo_btn"); if(mb) mb.textContent="📝 메모 작성";
-  wkKindChange();
-  renderWkTodayList();
-  openModal("weekendModal");
-}
-function wkFileHint(){
-  const fi=document.getElementById("wk_files"); const h=document.getElementById("wk_filehint");
-  if(!fi||!h) return;
-  h.textContent = fi.files && fi.files.length ? ("📎 "+fi.files.length+"장 첨부됨 — 저장하면 영수증·증빙 폴더에 들어갑니다.") : "카메라로 영수증을 바로 찍거나 갤러리에서 고르세요.";
-}
-function wkKindChange(){
-  const k=document.getElementById("wk_kind_sel").value;
-  // 세부 영역 표시 전환 (grid/ block 보존: 빈 문자열로 원래 CSS 복귀)
-  const setShow=(id,on,disp)=>{ const el=document.getElementById(id); if(el) el.style.display=on?(disp||"block"):"none"; };
-  setShow("wk_g_meal", k==="식비", "grid");
-  setShow("wk_g_menu", k==="식비", "block");
-  setShow("wk_g_toll", k==="톨비(통행료)", "block");
-  setShow("wk_g_gas", k==="주유·가스", "grid");
-  const amtWrap=document.getElementById("wk_g_amt");
-  if(amtWrap){ const lb=amtWrap.querySelector("label"); if(lb) lb.textContent = k==="식비" ? "금액 (메뉴 합계 자동)" : "금액"; }
-  updateWkMealSum();
-}
-/* 식비 메뉴 추가/삭제/합계 */
-function wkAddMenu(){
-  const nm=document.getElementById("wk_menu_name").value.trim();
-  const pr=Number(document.getElementById("wk_menu_price").value)||0;
-  if(!nm && !pr){ alert("메뉴 이름이나 가격을 입력하세요."); return; }
-  _wkMenus.push({id:_wkMenuSeq++, name:nm||"(메뉴)", price:pr});
-  document.getElementById("wk_menu_name").value="";
-  document.getElementById("wk_menu_price").value="";
-  document.getElementById("wk_menu_name").focus();
-  renderWkMenus();
-}
-function wkRemoveMenu(id){ _wkMenus=_wkMenus.filter(m=>m.id!==id); renderWkMenus(); }
-function renderWkMenus(){
-  const box=document.getElementById("wk_menu_list");
-  if(!box) return;
-  if(!_wkMenus.length){ box.innerHTML='<div class="hint" style="margin:4px 0">아직 추가한 메뉴가 없습니다. 메뉴를 여러 개 넣으면 자동 합산됩니다.</div>'; updateWkMealSum(); return; }
-  box.innerHTML=_wkMenus.map(m=>`<div class="wk-menu-row">
-    <span class="wk-menu-name">${esc(m.name)}</span>
-    <span class="wk-menu-price">${m.price.toLocaleString()}원</span>
-    <button type="button" class="opt-del-btn" onclick="wkRemoveMenu(${m.id})">삭제</button>
-  </div>`).join("");
-  updateWkMealSum();
-}
-function wkMenuSum(){ return _wkMenus.reduce((s,m)=>s+(Number(m.price)||0),0); }
-function updateWkMealSum(){
-  const k=document.getElementById("wk_kind_sel").value;
-  if(k==="식비" && _wkMenus.length){
-    const sum=wkMenuSum();
-    document.getElementById("wk_amt_input").value=sum;
-    const el=document.getElementById("wk_menu_sum"); if(el) el.textContent="메뉴 합계: "+sum.toLocaleString()+"원";
-  } else {
-    const el=document.getElementById("wk_menu_sum"); if(el) el.textContent="";
-  }
-}
-/* 메모 팝업 */
-function openWkMemo(){
-  document.getElementById("wkMemoText").value=document.getElementById("wk_memo_val").value;
-  openModal("wkMemoModal");
-  setTimeout(()=>document.getElementById("wkMemoText").focus(),120);
-}
-function saveWkMemo(){
-  document.getElementById("wk_memo_val").value=document.getElementById("wkMemoText").value;
-  const btn=document.getElementById("wk_memo_btn");
-  const v=document.getElementById("wk_memo_val").value.trim();
-  if(btn) btn.textContent = v? ("📝 "+(v.length>10?v.slice(0,10)+"…":v)) : "📝 메모 작성";
-  closeModal("wkMemoModal");
-}
-/* 한 줄 즉시 저장 */
-async function saveWkOne(){
-  const k=document.getElementById("wk_kind_sel").value;
-  const date=document.getElementById("wk_date").value||today();
-  const pay=document.getElementById("wk_pay_sel").value||"카드";
-  const memo=document.getElementById("wk_memo_val").value.trim();
-  let amt=Number(document.getElementById("wk_amt_input").value)||0;
-  let sub="", catForStat="", titleHead="", extra={};
-  if(k==="식비"){
-    const meal=document.getElementById("wk_meal_sel").value;
-    const rest=document.getElementById("wk_rest_input").value.trim();
-    const people=Number(document.getElementById("wk_people_input").value)||0;
-    if(_wkMenus.length) amt=wkMenuSum();
-    sub=meal; catForStat="식비"; titleHead=meal;
-    if(rest) titleHead+=" "+rest;
-    if(_wkMenus.length) titleHead+=" ("+_wkMenus.map(m=>m.name).join(", ")+")";
-    else if(people) titleHead+=" ("+people+"명)";
-    extra={ meal, rest, people:people||null,
-      menus:_wkMenus.map(m=>({name:m.name,price:m.price})) };
-    const isHomemade=(meal==="집간식");
-    if(amt<=0 && !(isHomemade && (memo||rest))){ alert("금액(또는 메뉴)을 입력하세요. 집간식은 메모/식당이 있으면 0원도 저장됩니다."); return; }
-  } else if(k==="톨비(통행료)"){
-    const dir=document.getElementById("wk_toll_dir").value;
-    sub=dir; catForStat="톨비(통행료)"; titleHead="톨비 "+dir;
-    if(amt<=0){ alert("금액을 입력하세요."); return; }
-  } else if(k==="주유·가스"){
-    const fuel=document.getElementById("wk_gas_fuel").value;
-    const dir=document.getElementById("wk_gas_dir").value;
-    const dist=Number(document.getElementById("wk_dist_input").value)||0;
-    sub=fuel+" "+dir; catForStat="교통/주유비"; titleHead=fuel+" "+dir;
-    if(dist) titleHead+=" "+dist+"km";
-    extra={ fuel, dir, dist:dist||null };
-    if(amt<=0){ alert("금액을 입력하세요."); return; }
-  } else {
-    sub=""; catForStat=k; titleHead=k;
-    if(amt<=0){ alert("금액을 입력하세요."); return; }
-  }
-  // 메모 종합
-  let memoBits=[];
-  if(k==="식비"){
-    if(extra.meal==="집간식") memoBits.push("집간식");
-    if(extra.rest) memoBits.push("식당: "+extra.rest);
-    if(_wkMenus.length) memoBits.push("메뉴: "+_wkMenus.map(m=>m.name+" "+m.price.toLocaleString()+"원").join(", "));
-    if(extra.people) memoBits.push("인원 "+extra.people+"명");
-  }
-  if(k==="주유·가스" && extra.dist) memoBits.push("주행 "+extra.dist+"km");
-  if(memo) memoBits.push(memo);
-  const titleParts=[titleHead]; if(memo) titleParts.push(memo);
-  const btn=document.getElementById("wk_saveOne"); btn.disabled=true; btn.textContent="저장 중...";
-  try{
-    // 영수증 사진 업로드
-    let files=[]; const fi=document.getElementById("wk_files");
-    if(fi && fi.files && fi.files.length){
-      for(let i=0;i<fi.files.length;i++){ showUploading("영수증 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); files.push(await processFile(fi.files[i])); }
-      hideUploading();
-    }
-    const hasPhoto = files.some(f=>(f.type||"").startsWith("image/"));
-    const data={
-      projectId:currentProjectId, kind:"기타비용",
-      title:titleParts.join(' - '), date, stage:null,
-      cat:catForStat, sub:sub||null, vendor:"", amount:amt||0, pay,
-      menu: k==="식비"? (extra.menus&&extra.menus.length?extra.menus.map(m=>m.name).join(", "):null):null,
-      menus: k==="식비"&&extra.menus&&extra.menus.length?extra.menus:null,
-      rest: k==="식비"?(extra.rest||null):null,
-      people: k==="식비"?(extra.people||null):null,
-      dist: k==="주유·가스"?(extra.dist||null):null,
-      memo: memoBits.join(" / "),
-      photoFolder: hasPhoto?"영수증·증빙":null,
-      files, createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    };
-    await db.collection(ENTRIES).add(data);
-    btn.disabled=false; btn.textContent="✓ 저장하고 계속";
-    setTimeout(()=>{ if(btn) btn.textContent="저장하고 계속"; }, 900);
-    // 폼 일부 초기화 (날짜·종류·결제는 유지해서 연속 입력 편하게)
-    _wkMenus=[]; renderWkMenus();
-    document.getElementById("wk_amt_input").value="";
-    document.getElementById("wk_dist_input").value="";
-    document.getElementById("wk_people_input").value="";
-    document.getElementById("wk_rest_input").value="";
-    document.getElementById("wk_memo_val").value="";
-    if(fi) fi.value="";
-    const fh=document.getElementById("wk_filehint"); if(fh) fh.textContent="카메라로 영수증을 바로 찍거나 갤러리에서 고르세요. 저장 후 ‘사진’ 탭의 ‘영수증·증빙’ 폴더에서 모아 볼 수 있어요.";
-    const mb=document.getElementById("wk_memo_btn"); if(mb) mb.textContent="📝 메모 작성";
-    await reloadCurrent();
-    renderWkTodayList();
-  }catch(err){ hideUploading(); btn.disabled=false; btn.textContent="저장하고 계속"; showError("주말 비용 저장", err); }
-}
-/* 모달 안에서 '이 날짜에 저장된 것' 미리보기 + 삭제 */
-function renderWkTodayList(){
-  const box=document.getElementById("wk_today"); if(!box) return;
-  const date=document.getElementById("wk_date").value;
-  const list=entries.filter(e=>e.kind==="기타비용" && e.date===date &&
-    ["식비","톨비(통행료)","교통/주유비","가스충전비","주차비","숙박비"].includes(e.cat))
-    .sort((a,b)=>(b.createdAt&&a.createdAt)?0:0);
-  const sum=list.reduce((s,e)=>s+(Number(e.amount)||0),0);
-  if(!list.length){ box.innerHTML='<div class="hint" style="margin-top:6px">이 날짜에 저장된 항목이 없습니다.</div>'; return; }
-  box.innerHTML=`<div class="wk-today-head">📅 ${date} 저장됨 — ${list.length}건 · 합계 ${sum.toLocaleString()}원</div>`+
-    list.map(e=>{
-      const nPhoto=(e.files||[]).filter(f=>(f.type||"").startsWith("image/")).length;
-      return `<div class="wk-today-row">
-      <span class="wk-today-cat">${esc(e.cat||'')}${e.sub?' · '+esc(e.sub):''}</span>
-      <span class="wk-today-title">${esc(e.title||'')}${nPhoto?` <span title="영수증 ${nPhoto}장">🧾${nPhoto}</span>`:''}</span>
-      <span class="wk-today-amt">${Number(e.amount||0).toLocaleString()}원</span>
-      <button type="button" class="opt-del-btn" onclick="deleteEntry('${e.id}').then(()=>renderWkTodayList())">삭제</button>
-    </div>`;}).join("");
-}
-/* 주말 비용 탭 (요약 + 한 줄 목록형 기본) */
-function viewWeekend(p){
-  const wk=entries.filter(e=>e.kind==="기타비용" && ["식비","톨비(통행료)","교통/주유비","가스충전비","주차비","숙박비"].includes(e.cat));
-  const total=wk.reduce((s,e)=>s+(Number(e.amount)||0),0);
-  const byCat={}; wk.forEach(e=>{const k=e.cat||"기타"; byCat[k]=(byCat[k]||0)+(Number(e.amount)||0);});
-  const catRows=Object.keys(byCat).sort((a,b)=>byCat[b]-byCat[a]).map(k=>barRow(k,byCat[k],total)).join("");
-  const byDate={}; wk.forEach(e=>{ (byDate[e.date]=byDate[e.date]||[]).push(e); });
-  const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
-  const sorted=wk.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-  const view=window._wkView||'list';
-  let listHtml;
-  if(view==='card'){
-    listHtml=dates.slice(0,20).map(d=>{
-      const list=byDate[d]; const sum=list.reduce((s,e)=>s+(Number(e.amount)||0),0);
-      const dow=["일","월","화","수","목","금","토"][new Date(d+"T00:00:00").getDay()];
-      return `<div class="ph-group"><div class="ph-gh"><b>${d} (${dow})</b> <span class="cnt">${list.length}건 · ${sum.toLocaleString()}원</span></div>
-        ${list.map(e=>renderLog(e,{compact:true})).join("")}</div>`;
-    }).join("");
-  } else {
-    const head=`<div class="logrow head"><span class="lr-tag">분류</span><span class="lr-title">항목</span><span class="lr-vendor">결제</span><span class="lr-amt">금액</span><span class="lr-date">날짜</span><span style="width:84px"></span></div>`;
-    listHtml = head + sorted.map(e=>renderLog(e,{compact:true, payAsVendor:true})).join("");
-  }
-  return `
-    <div class="stats">
-      <div class="stat"><div class="label">주말 비용 합계</div><div class="value">${total.toLocaleString()}<small> 원</small></div></div>
-      <div class="stat"><div class="label">기록 건수</div><div class="value">${wk.length}<small> 건</small></div></div>
-      <div class="stat"><div class="label">이동 일수</div><div class="value">${dates.length}<small> 일</small></div></div>
-      <div class="stat"><div class="label">하루 평균</div><div class="value">${dates.length?Math.round(total/dates.length).toLocaleString():0}<small> 원</small></div></div>
-    </div>
-    <div class="panel"><div class="panel-h">🚗 주말 출퇴근 비용 <span class="cnt">가스·톨비·식비</span>
-      <button class="btn btn-primary btn-sm add" onclick="openEntryModal(null,'식비')">+ 기록 추가</button></div>
-      <div class="panel-body">
-        <div class="hint">‘기록 추가’ 하나로 식비·주유·가스·톨비를 모두 입력합니다. 종류를 고르면 끼니(아침/점심/저녁)·상행/하행 등 세부가 자동으로 떠요.</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'식비')">🍚 식비</button>
-          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'주유·가스')">⛽ 주유·가스</button>
-          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'톨비(통행료)')">🛣 톨비</button>
-          <button class="btn btn-ghost btn-sm" onclick="openEntryModal(null,'주차비')">🅿 주차비</button>
-        </div>
-        ${total?`<table class="ctable" style="margin-top:10px"><thead><tr><th>항목</th><th class="num">합계(원)</th></tr></thead><tbody>${catRows}<tr class="sum"><td>합계</td><td class="num">${total.toLocaleString()}</td></tr></tbody></table>`:''}
-      </div></div>
-    <div class="panel"><div class="panel-h">📋 주말 비용 내역 <span class="cnt">${wk.length}건</span>
-      <span style="margin-left:auto;display:inline-flex;gap:4px">
-        <button class="mini-chip ${view==='list'?'on':''}" onclick="window._wkView='list';renderTab(projects.find(x=>x.id===currentProjectId))">목록형</button>
-        <button class="mini-chip ${view==='card'?'on':''}" onclick="window._wkView='card';renderTab(projects.find(x=>x.id===currentProjectId))">날짜별</button>
-      </span></div>
-      <div class="panel-body">${wk.length?listHtml:'<div class="ai-empty">아직 주말 비용 기록이 없습니다.</div>'}</div></div>`;
-}
+/* (주말 빠른 입력·주말 비용 탭은 v3.8~v3.9에서 기록 추가로 통합되어 제거됨) */
 
 /* ===== 사진 ===== */
 function photoFolderOf(e){ return e.photoFolder || "기타 사진"; }
@@ -3155,59 +2941,7 @@ async function sendChat(){
   }catch(err){ chatHistory[chatHistory.length-1]={role:"assistant",content:"오류: "+(err.message||err)}; renderChat(); }
 }
 
-/* ===== 빠른 연속 입력 ===== */
-let quickRows=[]; let qeOpt="";
-const QE_OPTIONS={
-  "식비":["아침","점심","저녁","간식"],
-  "톨비(통행료)":["상행","하행"],
-  "교통/주유비":["상행","하행","주유"],
-  "가스충전비":["상행","하행","충전"]
-};
-function openQuickEtc(){
-  if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
-  quickRows=[];
-  document.getElementById("qe_date").value=today();
-  buildOptSelect("qe_cat","etc_cats","");
-  document.getElementById("qe_cat").onchange=onQeCatChange;
-  buildOptSelect("qe_pay","pays","현금");
-  document.getElementById("qe_amount").value=""; document.getElementById("qe_memo").value="";
-  onQeCatChange(); renderQuickList(); openModal("quickEtcModal");
-}
-function onQeCatChange(){
-  const cat=val("qe_cat"); const o=QE_OPTIONS[cat];
-  const wrap=document.getElementById("qe_optwrap"), box=document.getElementById("qe_opts"), label=document.getElementById("qe_optlabel");
-  qeOpt = o? o[0] : "";
-  if(o){ label.textContent=(cat==="식비")?"끼니":"방향/구분";
-    box.innerHTML=o.map(x=>`<button type="button" class="mini-chip ${x===qeOpt?'on':''}" onclick="setQeOpt('${jsstr(x)}')">${x}</button>`).join(""); wrap.style.display="block";
-  } else wrap.style.display="none";
-}
-function setQeOpt(o){ qeOpt=o; document.querySelectorAll('#qe_opts .mini-chip').forEach(b=>b.classList.toggle('on', b.textContent===o)); }
-function addQuickRow(){
-  const amount=Number(val("qe_amount")); if(!amount){alert("금액을 입력하세요.");return;}
-  quickRows.push({date:val("qe_date"),cat:val("qe_cat"),opt:qeOpt,amount,pay:val("qe_pay"),memo:val("qe_memo").trim()});
-  document.getElementById("qe_amount").value=""; document.getElementById("qe_memo").value=""; document.getElementById("qe_amount").focus(); renderQuickList();
-}
-function removeQuickRow(i){ quickRows.splice(i,1); renderQuickList(); }
-function renderQuickList(){
-  const box=document.getElementById("quickList");
-  if(!quickRows.length){ box.innerHTML='<div class="ai-empty">추가된 항목이 없습니다.</div>'; return; }
-  const sum=quickRows.reduce((s,r)=>s+r.amount,0);
-  box.innerHTML='<table class="ctable"><tbody>'+quickRows.map((r,i)=>
-    `<tr><td>${r.date}</td><td>${esc(r.cat)}${r.opt?' · '+esc(r.opt):''}</td><td class="num">${r.amount.toLocaleString()}원</td><td>${esc(r.pay)}</td><td>${esc(r.memo||'')}</td><td class="num"><button class="l-del" onclick="removeQuickRow(${i})">삭제</button></td></tr>`).join("")
-    +`</tbody></table><div style="text-align:right;font-weight:700;margin-top:6px">${quickRows.length}건 · ${sum.toLocaleString()}원</div>`;
-}
-async function saveQuickEtc(){
-  if(!quickRows.length){alert("추가된 항목이 없습니다.");return;}
-  const btn=document.getElementById("quickSaveBtn"); btn.disabled=true; btn.textContent="저장 중...";
-  try{
-    const batch=db.batch();
-    quickRows.forEach(r=>{ const ref=db.collection(ENTRIES).doc();
-      const t=[r.cat]; if(r.opt) t.push(r.opt); if(r.memo) t.push(r.memo);
-      batch.set(ref,{projectId:currentProjectId,kind:"기타비용",title:t.join(' - '),date:r.date,stage:null,cat:r.cat,sub:r.opt||null,vendor:"",amount:r.amount,pay:r.pay,memo:r.memo,files:[],createdAt:firebase.firestore.FieldValue.serverTimestamp()}); });
-    await batch.commit();
-    btn.disabled=false; btn.textContent="전체 저장"; closeModal("quickEtcModal"); await reloadCurrent();
-  }catch(err){ btn.disabled=false; btn.textContent="전체 저장"; showError("빠른 비용 저장", err); }
-}
+/* (빠른 연속 입력은 v3.8에서 기록 추가로 통합되어 제거됨) */
 
 /* ===== 반복 비용 ===== */
 const WEEKDAYS=["일","월","화","수","목","금","토"];
