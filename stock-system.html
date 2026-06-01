@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>주식 시스템 관리</title>
+<link rel="manifest" href="stock-manifest.json">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="주식시스템">
+<link rel="apple-touch-icon" href="stock-icon-192.png">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="stock-system.css?v=1.0">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<!-- 잠금화면 -->
+<div id="lockScreen" class="lock-screen hidden">
+  <div class="lock-box">
+    <div class="lock-title" id="lockTitle">🔒 주식 시스템 잠금</div>
+    <div class="lock-desc" id="lockDesc">PIN 4자리를 입력하세요</div>
+    <div class="lock-dots" id="lockDots"></div>
+    <div class="lock-msg" id="lockMsg"></div>
+    <div class="lock-pad" id="lockPad"></div>
+    <button class="lock-bio" id="lockBio" style="display:none" onclick="bioUnlock()">👆 지문/얼굴로 열기</button>
+  </div>
+</div>
+
+<div id="errBanner"><button class="x" onclick="document.getElementById('errBanner').classList.remove('show')">×</button>
+  <b>⚠️ 오류</b><span id="errMsg"></span></div>
+
+<header>
+  <div class="wrap head-row">
+    <div class="brand">
+      <h1>주식 시스템 관리 <span class="ver" id="appVer">v1.0</span></h1>
+      <div class="sub">미국장 → 한국장 톱니바퀴 · 정보수집 → 판단 → 매매 → 복기</div>
+    </div>
+    <div class="acts">
+      <span class="status" id="cloudStatus"><span class="dot"></span> 연결 중…</span>
+      <button class="btn-top" onclick="openKeyModal()">🔑 API 키</button>
+      <button class="btn-top" onclick="openSettings()">⚙ 설정</button>
+      <a class="btn-top" href="index.html">← 홈</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tabs" id="tabs"></div>
+  <div id="tabContent"></div>
+</div>
+
+<!-- API 키 모달 -->
+<div class="modal-bg" id="keyModal">
+  <div class="modal">
+    <h3>🔑 Anthropic API 키</h3>
+    <p class="hint">AI 종합판단·요약에 사용됩니다. 키는 이 기기(브라우저)에만 저장되고 서버로 보내지 않습니다.</p>
+    <input id="keyInput" type="password" placeholder="sk-ant-..." autocomplete="off">
+    <label class="chk"><input type="checkbox" id="keyAutoSearch"> AI 자동 웹검색 시도 (안 되면 붙여넣기 사용)</label>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveKey()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('keyModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 설정 모달 -->
+<div class="modal-bg" id="settingsModal">
+  <div class="modal">
+    <h3>⚙ 설정</h3>
+    <div class="set-box">
+      <h4>🔒 앱 잠금 (PIN/지문)</h4>
+      <p class="hint">자산 정보 보호용. PIN 미설정 시 잠금화면은 뜨지 않습니다.</p>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('settingsModal');setupPin()">PIN 설정 / 변경</button>
+      <button class="btn btn-ghost btn-sm" onclick="removePin()">잠금 해제</button>
+    </div>
+    <div class="set-box">
+      <h4>💾 백업</h4>
+      <p class="hint">모든 브리핑·기록을 JSON 파일로 저장합니다.</p>
+      <button class="btn btn-line btn-sm" onclick="backupAll()">전체 백업</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('restoreInput').click()">복원</button>
+      <input type="file" id="restoreInput" accept="application/json,.json" style="display:none" onchange="restoreAll(event)">
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-line" onclick="closeModal('settingsModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div id="uploadingBar"><span class="spinner"></span> <span id="uploadingText">처리 중…</span></div>
+
+<script src="stock-system.js?v=1.0"></script>
+</body>
+</html>
