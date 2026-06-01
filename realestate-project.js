@@ -1,15 +1,11 @@
 /* ============================================================
-   부동산 프로젝트 관리 v5.2 — 긴급 버그픽스
+   부동산 프로젝트 관리 v5.3 — 달력 필터 버그픽스
    ------------------------------------------------------------
-   [v5.2] 앱이 안 열리고 데이터가 안 보이던 오류 수정
-     - 원인: init()이 PIN_KEY 상수 선언보다 먼저 실행돼
-       'Cannot access PIN_KEY before initialization' 오류 → init 중단
-       → 데이터 로딩(loadProjects)까지 도달 못 함
-     - 해결: init() 호출을 파일 맨 끝(모든 선언 이후)으로 이동
-     ※ 데이터는 안전했음(Firebase에 그대로). 로딩만 막혔던 것.
-   ------------------------------------------------------------
+   [v5.3] 1) 달력 '전체 켜기/끄기' 동작 거꾸로였던 것 수정
+          2) 필터 칩 겹침 정리(전체켜기·끄기·메모를 라벨 옆으로)
+          3) 메모 상태 표시 null 가드 (textContent 오류 방지)
+   [v5.2] init 실행순서 버그픽스(PIN_KEY)
    [v5.1] 달력 표시 필터  [v5.0] 달력 통합(7기둥 완성)
-   [v4.9] PWA·PIN/지문 잠금
    [v4.8] 코드정리·DATA MODEL 문서화
    [v4.0~4.7] 입력통일·식비메뉴·자재공정·인건비·메모인라인·검색통합
    [v3.x] 분류통일·전화주소·작업일지·할일·커스텀칸·영수증·파일분리·환율·백업
@@ -644,7 +640,7 @@ function openMemoBoard(){
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
   const ed=document.getElementById("memoEditor");
   if(ed) ed.innerHTML = p.quickMemoHtml || (p.quickMemo? esc(p.quickMemo).replace(/\n/g,'<br>') : "");
-  document.getElementById("memoStatus").textContent="";
+  const _st0=document.getElementById("memoStatus"); if(_st0) _st0.textContent="";
   const panel=document.getElementById("memoPanel");
   panel.classList.add("open");
   document.getElementById("memoBackdrop").classList.add("open");
@@ -792,7 +788,7 @@ function calFilterSet(){ if(!window._calFilter) window._calFilter={}; return win
 function calKindOn(k){ const f=calFilterSet(); return f[k]!==false; } // 기본 켜짐
 function calToggleKind(k){ const f=calFilterSet(); f[k]=(f[k]===false); renderTab(projects.find(x=>x.id===currentProjectId)); }
 function calToggleMemo(){ window._calShowMemo=(window._calShowMemo===false); renderTab(projects.find(x=>x.id===currentProjectId)); }
-function calAllKinds(on){ const f=calFilterSet(); calPresentKinds().forEach(k=>{ f[k]=!on?true:false; }); renderTab(projects.find(x=>x.id===currentProjectId)); }
+function calAllKinds(on){ const f=calFilterSet(); calPresentKinds().forEach(k=>{ f[k]=on?true:false; }); renderTab(projects.find(x=>x.id===currentProjectId)); }
 /* 현재 프로젝트 기록에 등장하는 종류 목록 */
 function calPresentKinds(){
   const set=new Set();
@@ -849,12 +845,12 @@ function viewCalendar(p){
       <div class="cal-sum">${monthCnt}건 · 합계 <b>${monthSum.toLocaleString()}원</b></div>
     </div>
     <div class="cal-filter">
-      <span class="cal-filter-lab">표시:</span>
-      ${chips || '<span class="hint">기록이 없습니다.</span>'}
-      <span class="cal-filter-div"></span>
-      <button class="cal-chip ${memoOn?'on':''}" onclick="calToggleMemo()">📝 메모 표시</button>
+      <span class="cal-filter-lab">표시</span>
       <button class="cal-chip ghost" onclick="calAllKinds(true)">전체 켜기</button>
       <button class="cal-chip ghost" onclick="calAllKinds(false)">전체 끄기</button>
+      <button class="cal-chip ${memoOn?'on':''}" onclick="calToggleMemo()">📝 메모</button>
+      <span class="cal-filter-div"></span>
+      ${chips || '<span class="hint">기록이 없습니다.</span>'}
     </div>
     <div class="cal-grid-h">${headDows}</div>
     <div class="cal-grid">${cells}</div>

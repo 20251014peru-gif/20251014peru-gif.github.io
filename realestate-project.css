@@ -527,7 +527,8 @@ table.tbl td.num{text-align:right; font-variant-numeric:tabular-nums;}
 }
 
 /* 달력 종류 필터 */
-.cal-filter{display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:10px 14px; border-bottom:1px solid var(--line);}
+.cal-filter{display:flex; align-items:center; gap:7px; flex-wrap:wrap; padding:12px 14px; border-bottom:1px solid var(--line); line-height:1.4;}
+.cal-chip{flex:0 0 auto; line-height:1.4; height:auto;}
 .cal-filter-lab{font-size:12.5px; font-weight:700; color:var(--ink-soft);}
 .cal-filter-div{width:1px; height:18px; background:var(--line); margin:0 2px;}
 .cal-chip{border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 11px; font-size:12.5px; cursor:pointer; color:var(--ink-soft); white-space:nowrap;}
