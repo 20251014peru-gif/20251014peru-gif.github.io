@@ -105,8 +105,10 @@ main{flex:1; padding:20px 24px; overflow-y:auto;}
 .memo-thumb img{width:100%; height:100%; object-fit:cover; cursor:pointer;}
 .memo-thumb.file{display:flex; align-items:center; justify-content:center; padding:6px; font-size:12px; text-align:center;}
 .memo-thumb-del{position:absolute; top:3px; right:3px; border:none; background:rgba(0,0,0,.55); color:#fff; border-radius:50%; width:22px; height:22px; cursor:pointer; font-size:12px;}
-.memo-area{flex:1; min-height:300px; width:100%; border:1px solid var(--line); border-radius:12px; padding:14px; font-size:15px; line-height:1.6; resize:none; background:#fff; outline:none;}
+.memo-area{flex:1; min-height:300px; width:100%; border:1px solid var(--line); border-radius:12px; padding:14px; font-size:15px; line-height:1.6; background:#fff; outline:none; overflow-y:auto;}
 .memo-area:focus{border-color:#f59e0b;}
+.memo-area:empty:before{content:attr(data-ph); color:var(--ink-soft); pointer-events:none;}
+.memo-area .memo-inline-img{max-width:100%; border-radius:10px; margin:6px 0; display:block;}
 .memo-panel-foot{display:flex; align-items:center; gap:12px; padding:14px 18px; border-top:1px solid var(--line); background:#fffdf5;}
 .memo-status{margin-left:auto; font-size:13px; color:var(--ink-soft);}
 @media(max-width:780px){

@@ -1,12 +1,13 @@
 /* ============================================================
-   부동산 프로젝트 관리 v4.5
+   부동산 프로젝트 관리 v4.6
    ------------------------------------------------------------
-   [v4.5 변경 내역]
-   1) 급한 메모에 캡처 이미지 붙여넣기(Ctrl+V) 지원
-      - 메모장에서 클립보드 이미지를 붙여넣으면 바로 첨부·자동 저장
-      - 기존 📷 사진 첨부 버튼도 그대로
+   [v4.6 변경 내역]
+   1) 급한 메모를 인라인 편집기로 변경 (글 + 이미지 섞어서 작성)
+      - Ctrl+V 또는 '📷 사진 넣기' → 커서 위치(글 사이)에 이미지가 바로 박힘
+      - 첨부 썸네일 방식이 아니라 워드/메신저처럼 글-사진 혼합
+      - 자동 저장(quickMemoHtml + quickMemo 텍스트)
    ------------------------------------------------------------
-   [v4.4] 급한 메모 슬라이드 패널(자동저장·사진첨부)
+   [v4.4~4.5] 급한 메모 슬라이드 패널·붙여넣기
    [v4.3] 검색바 상단 1개로·검색탭 제거
    [v4.0~4.2] 식비메뉴·주유거리·자재공정·택배비·인건비개별·기록추가통일
    [v3.7~3.9] 분류통일·전화·주소(지도)·매수매도·자재규격부가세
@@ -608,29 +609,19 @@ let _memoSaveTimer=null;
 function openMemoBoard(){
   if(!currentProjectId){alert("프로젝트를 먼저 선택하세요.");return;}
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
-  document.getElementById("memoText").value = p.quickMemo||"";
-  renderMemoPhotos();
+  const ed=document.getElementById("memoEditor");
+  if(ed) ed.innerHTML = p.quickMemoHtml || (p.quickMemo? esc(p.quickMemo).replace(/\n/g,'<br>') : "");
   document.getElementById("memoStatus").textContent="";
   const panel=document.getElementById("memoPanel");
   panel.classList.add("open");
   document.getElementById("memoBackdrop").classList.add("open");
-  setTimeout(()=>{const t=document.getElementById("memoText"); if(t) t.focus();},150);
+  setTimeout(()=>{const t=document.getElementById("memoEditor"); if(t) t.focus();},150);
 }
 function closeMemoPanel(){
   document.getElementById("memoPanel").classList.remove("open");
   document.getElementById("memoBackdrop").classList.remove("open");
 }
-function renderMemoPhotos(){
-  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
-  const box=document.getElementById("memoPhotos"); if(!box) return;
-  const files=p.quickMemoFiles||[];
-  if(!files.length){ box.innerHTML=""; return; }
-  box.innerHTML=files.map((f,i)=>{
-    if((f.type||"").startsWith("image/")) return `<div class="memo-thumb"><img src="${f.url}" onclick="openMemoPhotos(${i})"><button class="memo-thumb-del" onclick="deleteMemoPhoto(${i})">✕</button></div>`;
-    return `<div class="memo-thumb file"><a href="${f.url}" target="_blank" rel="noopener">📄 ${esc(f.name||'파일')}</a><button class="memo-thumb-del" onclick="deleteMemoPhoto(${i})">✕</button></div>`;
-  }).join("");
-}
-/* 타이핑 시 자동 저장 (디바운스) */
+/* 편집 중 자동 저장 (디바운스) */
 function memoOnInput(){
   const st=document.getElementById("memoStatus"); if(st) st.textContent="작성 중…";
   if(_memoSaveTimer) clearTimeout(_memoSaveTimer);
@@ -638,76 +629,77 @@ function memoOnInput(){
 }
 async function saveMemoText(){
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
-  const txt=document.getElementById("memoText").value;
+  const ed=document.getElementById("memoEditor"); if(!ed) return;
+  const html=ed.innerHTML;
+  const plain=ed.innerText||"";
   try{
-    await db.collection(PROJECTS).doc(p.id).update({quickMemo:txt});
-    p.quickMemo=txt;
+    await db.collection(PROJECTS).doc(p.id).update({quickMemoHtml:html, quickMemo:plain});
+    p.quickMemoHtml=html; p.quickMemo=plain;
     const st=document.getElementById("memoStatus"); if(st) st.textContent="💾 자동 저장됨";
-    const btn=document.querySelector(".memo-btn"); // 헤더 버튼 배지 갱신은 다음 렌더 때
   }catch(err){ const st=document.getElementById("memoStatus"); if(st) st.textContent="⚠ 저장 실패"; }
 }
+/* 커서 위치에 이미지 삽입 */
+function memoInsertImage(url){
+  const ed=document.getElementById("memoEditor"); if(!ed) return;
+  ed.focus();
+  const img=document.createElement("img");
+  img.src=url; img.className="memo-inline-img";
+  const sel=window.getSelection();
+  if(sel && sel.rangeCount && ed.contains(sel.anchorNode)){
+    const range=sel.getRangeAt(0); range.deleteContents();
+    range.insertNode(img);
+    // 이미지 뒤로 커서 이동 + 줄바꿈
+    const br=document.createElement("br");
+    img.after(br);
+    range.setStartAfter(br); range.collapse(true);
+    sel.removeAllRanges(); sel.addRange(range);
+  } else {
+    ed.appendChild(img); ed.appendChild(document.createElement("br"));
+  }
+  memoOnInput();
+}
+/* 사진 첨부 버튼 */
 async function addMemoPhoto(){
   const fi=document.getElementById("memoFileInput");
   if(!fi||!fi.files||!fi.files.length) return;
-  await uploadMemoFiles(Array.from(fi.files));
+  await uploadMemoInline(Array.from(fi.files));
   fi.value="";
 }
-/* 클립보드 붙여넣기(Ctrl+V) → 이미지 첨부 */
+/* 붙여넣기(Ctrl+V) → 커서 위치에 이미지 인라인 삽입 */
 async function memoPasteHandler(e){
   const items=(e.clipboardData||window.clipboardData)?.items;
   if(!items) return;
   const imgs=[];
   for(const it of items){ if(it.kind==="file" && (it.type||"").startsWith("image/")){ const f=it.getAsFile(); if(f) imgs.push(f); } }
-  if(!imgs.length) return; // 텍스트 붙여넣기는 그대로 두기
+  if(!imgs.length) return; // 텍스트는 기본 동작
   e.preventDefault();
-  // 파일명이 없을 수 있으니 보정
   const named=imgs.map((f,i)=>{ try{ return new File([f], f.name||("붙여넣기_"+Date.now()+"_"+i+".png"), {type:f.type||"image/png"}); }catch(_){ return f; } });
-  await uploadMemoFiles(named);
+  await uploadMemoInline(named);
 }
-async function uploadMemoFiles(fileList){
+async function uploadMemoInline(fileList){
   if(!fileList||!fileList.length) return;
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
   try{
-    let added=[];
-    for(let i=0;i<fileList.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+fileList.length+")"); added.push(await processFile(fileList[i])); }
+    for(let i=0;i<fileList.length;i++){
+      showUploading("사진 올리는 중… ("+(i+1)+"/"+fileList.length+")");
+      const meta=await processFile(fileList[i]);
+      if((meta.type||"").startsWith("image/")) memoInsertImage(meta.url);
+      else { // 이미지가 아니면 링크로 삽입
+        const ed=document.getElementById("memoEditor");
+        if(ed){ const a=document.createElement("a"); a.href=meta.url; a.target="_blank"; a.textContent="📄 "+(meta.name||"파일"); ed.appendChild(a); ed.appendChild(document.createElement("br")); }
+      }
+    }
     hideUploading();
-    const files=(p.quickMemoFiles||[]).concat(added);
-    await db.collection(PROJECTS).doc(p.id).update({quickMemoFiles:files});
-    p.quickMemoFiles=files;
-    renderMemoPhotos();
-    const st=document.getElementById("memoStatus"); if(st) st.textContent="💾 사진 저장됨";
+    await saveMemoText();
   }catch(err){ hideUploading(); showError("메모 사진 추가", err); }
-}
-async function deleteMemoPhoto(idx){
-  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
-  const files=(p.quickMemoFiles||[]).slice();
-  const f=files[idx]; if(!f) return;
-  if(!confirm("이 첨부를 삭제할까요?")) return;
-  try{
-    if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} }
-    files.splice(idx,1);
-    await db.collection(PROJECTS).doc(p.id).update({quickMemoFiles:files});
-    p.quickMemoFiles=files;
-    renderMemoPhotos();
-  }catch(err){ showError("첨부 삭제", err); }
-}
-function openMemoPhotos(idx){
-  const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
-  const imgs=(p.quickMemoFiles||[]).map((f,i)=>({f,i})).filter(o=>(o.f.type||"").startsWith("image/"));
-  if(!imgs.length) return;
-  window._ivList=imgs.map(o=>({url:o.f.url, cap:'급한 메모', entryId:null}));
-  let gi=imgs.findIndex(o=>o.i===idx); if(gi<0) gi=0;
-  openViewerList(gi);
 }
 async function clearMemo(){
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
-  if(!confirm("메모 내용을 모두 지울까요? (사진도 함께 삭제)")) return;
+  if(!confirm("메모 내용을 모두 지울까요?")) return;
   try{
-    if(p.quickMemoFiles) for(const f of p.quickMemoFiles){ if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} } }
-    await db.collection(PROJECTS).doc(p.id).update({quickMemo:"", quickMemoFiles:[]});
-    p.quickMemo=""; p.quickMemoFiles=[];
-    document.getElementById("memoText").value="";
-    renderMemoPhotos();
+    await db.collection(PROJECTS).doc(p.id).update({quickMemo:"", quickMemoHtml:""});
+    p.quickMemo=""; p.quickMemoHtml="";
+    const ed=document.getElementById("memoEditor"); if(ed) ed.innerHTML="";
     const st=document.getElementById("memoStatus"); if(st) st.textContent="🗑 지웠습니다";
   }catch(err){ showError("메모 지우기", err); }
 }
