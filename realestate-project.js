@@ -1,14 +1,12 @@
 /* ============================================================
-   부동산 프로젝트 관리 v4.4
+   부동산 프로젝트 관리 v4.5
    ------------------------------------------------------------
-   [v4.4 변경 내역]
-   1) '급한 메모'를 업무일지 방식의 오른쪽 슬라이드 패널로 구현
-      - 상단 '⚡ 급한메모' 버튼 → 오른쪽에서 패널 슬라이드
-      - 큰 메모장에 막 적으면 자동 저장(타이핑 멈추면 0.8초 후 저장)
-      - 📷 사진 첨부(여러 장, 카메라/갤러리), 썸네일·확대·개별삭제
-      - 🗑 지우기(내용+사진), 프로젝트 문서에 저장(quickMemo/quickMemoFiles)
-   ※ 새 컬렉션 불필요 — 프로젝트 문서에 저장하므로 규칙 변경 없음
+   [v4.5 변경 내역]
+   1) 급한 메모에 캡처 이미지 붙여넣기(Ctrl+V) 지원
+      - 메모장에서 클립보드 이미지를 붙여넣으면 바로 첨부·자동 저장
+      - 기존 📷 사진 첨부 버튼도 그대로
    ------------------------------------------------------------
+   [v4.4] 급한 메모 슬라이드 패널(자동저장·사진첨부)
    [v4.3] 검색바 상단 1개로·검색탭 제거
    [v4.0~4.2] 식비메뉴·주유거리·자재공정·택배비·인건비개별·기록추가통일
    [v3.7~3.9] 분류통일·전화·주소(지도)·매수매도·자재규격부가세
@@ -651,15 +649,31 @@ async function saveMemoText(){
 async function addMemoPhoto(){
   const fi=document.getElementById("memoFileInput");
   if(!fi||!fi.files||!fi.files.length) return;
+  await uploadMemoFiles(Array.from(fi.files));
+  fi.value="";
+}
+/* 클립보드 붙여넣기(Ctrl+V) → 이미지 첨부 */
+async function memoPasteHandler(e){
+  const items=(e.clipboardData||window.clipboardData)?.items;
+  if(!items) return;
+  const imgs=[];
+  for(const it of items){ if(it.kind==="file" && (it.type||"").startsWith("image/")){ const f=it.getAsFile(); if(f) imgs.push(f); } }
+  if(!imgs.length) return; // 텍스트 붙여넣기는 그대로 두기
+  e.preventDefault();
+  // 파일명이 없을 수 있으니 보정
+  const named=imgs.map((f,i)=>{ try{ return new File([f], f.name||("붙여넣기_"+Date.now()+"_"+i+".png"), {type:f.type||"image/png"}); }catch(_){ return f; } });
+  await uploadMemoFiles(named);
+}
+async function uploadMemoFiles(fileList){
+  if(!fileList||!fileList.length) return;
   const p=projects.find(x=>x.id===currentProjectId); if(!p) return;
   try{
     let added=[];
-    for(let i=0;i<fi.files.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); added.push(await processFile(fi.files[i])); }
+    for(let i=0;i<fileList.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+fileList.length+")"); added.push(await processFile(fileList[i])); }
     hideUploading();
     const files=(p.quickMemoFiles||[]).concat(added);
     await db.collection(PROJECTS).doc(p.id).update({quickMemoFiles:files});
     p.quickMemoFiles=files;
-    fi.value="";
     renderMemoPhotos();
     const st=document.getElementById("memoStatus"); if(st) st.textContent="💾 사진 저장됨";
   }catch(err){ hideUploading(); showError("메모 사진 추가", err); }
