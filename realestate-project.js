@@ -1,5 +1,5 @@
 /* ============================================================
-   부동산 프로젝트 관리 v5.7 — 달력 필터 칩 줄분리 확정(7개씩)
+   부동산 프로젝트 관리 v5.9 — 달력 칩 겹침 해결(외부확장 CSS 충돌)
    ------------------------------------------------------------
    [v5.5] 7일마다 백업 파일 자동 제안(개인관리 장점 이식) — 7일 지나면 앱 열 때 백업 만들지 물어봄
    [v5.4] 사라졌던 급한메모 슬라이드 패널 HTML 복구(메모 오류 해결)
@@ -857,8 +857,8 @@ function viewCalendar(p){
       <div class="cal-filter-row cal-filter-ctrl">
         <span class="cal-filter-lab">표시 설정</span>
         <button class="cal-chip ${memoOn?'on':''}" onclick="calToggleMemo()">📝 메모</button>
-        <button class="cal-chip ghost" onclick="calAllKinds(true)">전체 켜기</button>
-        <button class="cal-chip ghost" onclick="calAllKinds(false)">전체 끄기</button>
+        <button class="cal-chip cal-ctrl" onclick="calAllKinds(true)">전체 켜기</button>
+        <button class="cal-chip cal-ctrl" onclick="calAllKinds(false)">전체 끄기</button>
       </div>
       ${kindRows}
     </div>
