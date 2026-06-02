@@ -118,7 +118,7 @@ textarea{resize:vertical;min-height:64px}
 
 /* ===== v16 신규 — 파일링크/사이트/비번 ===== */
 .cat-group{margin-bottom:18px}
-.cat-group-h{display:flex!important;align-items:center!important;gap:8px!important;font-family:'Gowun Batang',serif!important;font-size:20px!important;font-weight:900!important;color:#fff!important;margin-bottom:8px!important;padding:14px 18px!important;border-radius:14px!important;background:var(--ccol,var(--primary))!important;cursor:pointer!important;user-select:none!important;border-bottom:none!important;min-height:54px!important;box-sizing:border-box!important}
+.cat-group-h{display:flex!important;align-items:center!important;gap:8px!important;font-family:'Gowun Batang',serif!important;font-size:18px!important;font-weight:900!important;color:#fff!important;margin-bottom:8px!important;padding:0 18px!important;border-radius:14px!important;background:var(--ccol,var(--primary))!important;cursor:pointer!important;user-select:none!important;border-bottom:none!important;height:64px!important;min-height:64px!important;max-height:64px!important;box-sizing:border-box!important;overflow:hidden!important;white-space:nowrap!important}
 .cat-group-h .ch-arrow{font-size:11px;color:rgba(255,255,255,.8);transition:transform .15s}
 .cat-group.collapsed .ch-arrow{transform:rotate(-90deg)}
 .cat-group.collapsed .cat-items{display:none}
@@ -773,3 +773,9 @@ td.clip[data-tip]:hover{position:relative}
 .link-card:hover .lc-star{opacity:.5}
 .link-card:hover .lc-star.on{opacity:1!important}
 .link-card .lc-star.on{opacity:1!important}
+
+/* 카테고리 헤더 글자 말줄임 */
+.ch-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cat-group-h .ch-cnt{flex-shrink:0}
+.cat-group-h .ch-arrow{flex-shrink:0}
+.cat-group-h .ch-rename{flex-shrink:0}
