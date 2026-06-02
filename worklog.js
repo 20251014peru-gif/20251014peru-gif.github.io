@@ -841,41 +841,7 @@ function openEditor(kind,id){
   }
   $("overlay").classList.add("show");
   const modalEl=$("overlay").querySelector(".modal"); if(modalEl) modalEl.scrollTop=0;
-  // ⑨ 버튼(저장/취소/삭제)을 사진 촬영/선택 줄 오른쪽으로 재배치
-  (function(){
-    const btnRow = $("overlay").querySelector(".btn-row");
-    const photoArea = $("mPhotoArea");
-    if(!btnRow || !photoArea || photoArea.style.display==="none") return;
-    const photoBtns = photoArea.querySelector(".photo-btns");
-    if(!photoBtns) return;
-    // 이미 재배치됐으면 스킵
-    if(photoBtns.querySelector(".inline-save-btn")) return;
-    const saveBtn = btnRow.querySelector("#mSave");
-    const cancelBtn = btnRow.querySelector("#mCancel");
-    const delBtn = btnRow.querySelector("#mDelete");
-    if(!saveBtn) return;
-    // 사진버튼 줄에 저장/취소/삭제 인라인 추가
-    const inlineRow = document.createElement("div");
-    inlineRow.className = "inline-save-btn";
-    inlineRow.style.cssText = "display:flex;gap:6px;align-items:center;margin-left:auto";
-    const s = saveBtn.cloneNode(true);
-    const c = cancelBtn.cloneNode(true);
-    s.addEventListener("click", ()=>$("mSave").click());
-    c.addEventListener("click", ()=>$("mCancel").click());
-    inlineRow.appendChild(s);
-    inlineRow.appendChild(c);
-    if(delBtn && delBtn.style.display!=="none"){
-      const d = delBtn.cloneNode(true);
-      d.addEventListener("click", ()=>$("mDelete").click());
-      inlineRow.appendChild(d);
-    }
-    photoBtns.style.display = "flex";
-    photoBtns.style.alignItems = "center";
-    photoBtns.style.flexWrap = "wrap";
-    photoBtns.appendChild(inlineRow);
-    // 원래 btn-row 숨기기
-    btnRow.style.display = "none";
-  })();
+
 }
 function renderModalThumbs(){ renderThumbs($("m-thumbs"),modalPhotos,i=>{ modalPhotos.splice(i,1); renderModalThumbs(); }); }
 
