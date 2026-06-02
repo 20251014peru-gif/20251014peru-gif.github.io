@@ -454,8 +454,8 @@ async function init(){
   loadContactsCache().catch(()=>{});
   // 드래그 앤 드롭 순서 로드
   loadFlOrder().catch(()=>{});
-  // 서희타워 카테고리 분리 마이그레이션
-  migrateTowerCats();
+  // 서희타워 카테고리 분리 마이그레이션 (renderAll 후 실행)
+  setTimeout(()=>migrateTowerCats(), 500);
 }
 
 // v26: 옛 "휴지" 품목 → "점보롤"로 자동 마이그레이션
@@ -1092,7 +1092,11 @@ $("mSave").addEventListener("click",async ()=>{
   if(ATTACH_KINDS.includes(mKind)) obj.attachments=modalAttachments.slice();
   if(mKind==="vacation" && !obj.end) obj.end=obj.start;
   if(mId) updateRecord(mId,obj); else { obj.createdAt=Date.now(); if(mKind==="plan") obj.done=false; if(mKind==="filelink"||mKind==="site") obj.starred=false; addRecord(obj); }
-  renderAll(); $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
+  // filelink 수정 시 위치 유지 (renderAll 대신 renderFileLink만)
+  if(mKind==="filelink"){ setTimeout(()=>renderFileLink(),50); }
+  else if(mKind==="site"){ renderSite(); }
+  else renderAll();
+  $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
 });
 $("mDelete").addEventListener("click",()=>{ if(!mId) return; $("overlay").classList.remove("show"); deleteWithUndo(mId, KIND_LABEL[mKind]||"항목"); });
 document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>openEditor(b.dataset.add,null)));
@@ -2026,12 +2030,12 @@ function buildCatJump(kind, groupsObj, jumpBoxId){
   }));
 }
 
-/* 서희타워 운영 → 서희타워 운영 1/2/3 자동 마이그레이션 (최초 1회) */
+/* 서희타워 운영 → 서희타워 운영 1/2/3 자동 마이그레이션 */
 function migrateTowerCats(){
-  const LS_KEY = "tower_migrated_v1";
+  const LS_KEY = "tower_migrated_v3"; // v3: 강제 재실행
   if(localStorage.getItem(LS_KEY)) return;
   const TOWER_GROUPS = [
-    { label:"서희타워 운영 1", keys:["업무일지","경비업무일지","주간회의록","회의록","사무관련","사무"] },
+    { label:"서희타워 운영 1", keys:["업무일지","경비업무일지","주간회의록","회의록","사무관련","사무","경비"] },
     { label:"서희타워 운영 2", keys:["견적","계약","관리"] },
     { label:"서희타워 운영 3", keys:["도면","보험증권","발주서"] },
   ];
@@ -2040,21 +2044,26 @@ function migrateTowerCats(){
     for(const g of TOWER_GROUPS){
       if(g.keys.some(k=>t.includes(k.toLowerCase()))) return g.label;
     }
-    return "서희타워 운영 1";
+    return "서희타워 운영 1"; // 기본값
   }
-  const toMigrate = entries.filter(e=>e.kind==="filelink"&&e.category==="서희타워 운영");
+  const toMigrate = entries.filter(e=>e.kind==="filelink"&&
+    (e.category==="서희타워 운영"||e.category==="서희타워 운영 1"||
+     e.category==="서희타워 운영 2"||e.category==="서희타워 운영 3"));
   if(!toMigrate.length){ localStorage.setItem(LS_KEY,"1"); return; }
+  let changed=0;
   toMigrate.forEach(e=>{
     const newCat = towerGroupLabel(e);
-    updateRecord(e.id, {category: newCat});
+    if(e.category!==newCat){ updateRecord(e.id,{category:newCat}); changed++; }
   });
-  // CATEGORIES에도 추가
   ["서희타워 운영 1","서희타워 운영 2","서희타워 운영 3"].forEach(c=>{
     if(!CATEGORIES.filelink.includes(c)) CATEGORIES.filelink.push(c);
   });
+  // "서희타워 운영" 원본 카테고리 제거
+  CATEGORIES.filelink = CATEGORIES.filelink.filter(c=>c!=="서희타워 운영");
   saveCategories();
   localStorage.setItem(LS_KEY,"1");
-  console.log("서희타워 카테고리 마이그레이션 완료:", toMigrate.length+"개");
+  if(changed>0){ renderFileLink(); toast("서희타워 운영 카테고리 분리 완료"); }
+  console.log("서희타워 마이그레이션:", changed+"개 변경");
 }
 function sortItems(kind, list){
   const s=VIEW_PREFS[kind].sort;
