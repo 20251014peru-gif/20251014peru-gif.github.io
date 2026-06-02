@@ -336,7 +336,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
       <span class="pin-dot" id="pd2"></span><span class="pin-dot" id="pd3"></span>
     </div>
     <div class="pin-err" id="pinErr"></div>
-    <div id="pinPad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box">
+    <div id="pinPad" style="display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box">
       <button class="pin-btn" data-n="1">1</button>
       <button class="pin-btn" data-n="2">2</button>
       <button class="pin-btn" data-n="3">3</button>
@@ -1227,12 +1227,29 @@ $('restoreFile').addEventListener('change',function(e){
 /* ⑥ PWA Service Worker 등록 */
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('./staff-sw.js').catch(function(){});
+    navigator.serviceWorker.register('./staff-sw.js').then(function(reg){
+      // 새 Service Worker가 있으면 즉시 활성화
+      reg.addEventListener('updatefound', function(){
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', function(){
+          if(newWorker.state==='installed' && navigator.serviceWorker.controller){
+            // 새 버전 있음 → 자동 새로고침
+            newWorker.postMessage({type:'SKIP_WAITING'});
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(function(){});
+  });
+  // 새 SW 활성화 후 페이지 새로고침
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    window.location.reload();
   });
 }
 
-/* 앱 시작 시 잠금 초기화 */
-initLock();
+/* 앱 시작 시 잠금 초기화 - DOM 완전 로드 후 */
+if(document.readyState === 'complete') initLock();
+else window.addEventListener('load', initLock);
 
 </script>
 </body>

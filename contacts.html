@@ -891,7 +891,9 @@ $("btnBackup").addEventListener("click",()=>{
   a.href=url; a.download=`업체연락처백업_${ds}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast("백업 파일을 저장했습니다");
 });
 
-init();
+// DOM + 외부 스크립트 완전 로드 후 실행
+if(document.readyState === "complete") init();
+else window.addEventListener("load", init);
 </script>
 </body>
 </html>
