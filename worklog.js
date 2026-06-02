@@ -2409,7 +2409,8 @@ function renderFileLink(){
     groups[c].push(e);
   });
   // 카테고리 순서 (저장된 순서 우선 → CATEGORIES 순서 → 가나다)
-  let orderedCats=CATEGORIES.filelink.filter(c=>groups[c]);
+  // 빈 카테고리도 포함해서 표시
+  let orderedCats=[...CATEGORIES.filelink];
   Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
   orderedCats = applyFlOrder(orderedCats);
   // 점프 메뉴
@@ -2442,16 +2443,21 @@ function renderFileLink(){
   html+=expandedCats.map(({cat,origCat,items})=>{
     const collapsed=VIEW_PREFS.filelink.collapsed[origCat];
     const colorClass=catColorClass("filelink",origCat);
-    const folders=items.filter(e=>isFolder(e.path,e.ptype));
-    const files=items.filter(e=>!isFolder(e.path,e.ptype));
+    const items2 = items||[];
+    const folders=items2.filter(e=>isFolder(e.path,e.ptype));
+    const files=items2.filter(e=>!isFolder(e.path,e.ptype));
     let inner="";
-    if(folders.length){
-      inner+=`<div class="grp-sublabel">📁 폴더 <span class="gs-cnt">${folders.length}</span></div>`;
-      inner+=`<div class="cat-items">${folders.map(e=>fileLinkCardHTML(e)).join("")}</div>`;
-    }
-    if(files.length){
-      inner+=`<div class="grp-sublabel">📄 파일 <span class="gs-cnt">${files.length}</span></div>`;
-      inner+=`<div class="cat-items">${files.map(e=>fileLinkCardHTML(e)).join("")}</div>`;
+    if(!items2.length){
+      inner=`<div class="cat-items"><div style="padding:12px;color:var(--ink-soft);font-size:13px;text-align:center">➕ 파일 추가를 눌러 이 카테고리에 항목을 추가하세요</div></div>`;
+    } else {
+      if(folders.length){
+        inner+=`<div class="grp-sublabel">📁 폴더 <span class="gs-cnt">${folders.length}</span></div>`;
+        inner+=`<div class="cat-items">${folders.map(e=>fileLinkCardHTML(e)).join("")}</div>`;
+      }
+      if(files.length){
+        inner+=`<div class="grp-sublabel">📄 파일 <span class="gs-cnt">${files.length}</span></div>`;
+        inner+=`<div class="cat-items">${files.map(e=>fileLinkCardHTML(e)).join("")}</div>`;
+      }
     }
     const catIco = CAT_ICONS_MAP[origCat]||"📁";
     return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(cat)}" data-origcat="${esc(origCat)}" data-label="${esc(cat)}">
