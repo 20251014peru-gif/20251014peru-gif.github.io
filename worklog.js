@@ -2399,12 +2399,11 @@ function renderFileLink(){
   }
   // 정렬
   sortItems("filelink", list);
-  // 즐겨찾기 분리
+  // 즐겨찾기: 위에 별도 섹션으로 표시 (카테고리 목록에도 동시 표시)
   const favs = list.filter(e=>e.starred);
-  const rest = list.filter(e=>!e.starred);
-  // 카테고리별 묶기 (즐겨찾기 제외분만)
+  // 카테고리별 묶기 (즐겨찾기 포함 전체)
   const groups={};
-  rest.forEach(e=>{
+  list.forEach(e=>{
     const c=e.category||"(미분류)";
     if(!groups[c]) groups[c]=[];
     groups[c].push(e);
