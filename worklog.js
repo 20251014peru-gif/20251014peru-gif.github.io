@@ -4730,8 +4730,8 @@ function renderContactCatMgrList(){
 }
 
 // catAddBtn 클릭 — catMgrKind가 __contactCats__ 일 때 분기
-const _origCatAddNew = catAddNew;
-function catAddNew(){
+const _v41_origCatAddNew = catAddNew;
+catAddNew = function(){
   if(catMgrKind === "__contactCats__"){
     const v = $("catNewName").value.trim();
     if(!v) return;
@@ -4743,8 +4743,8 @@ function catAddNew(){
     toast(`✅ "${v}" 분야 추가됨`);
     return;
   }
-  _origCatAddNew();
-}
+  _v41_origCatAddNew();
+};
 
 // catMgrClose 닫힐 때 콜백 호출
 const _origCatMgrClose = $("catMgrClose");
@@ -4904,13 +4904,13 @@ $("mSave").addEventListener("click", ()=>{
 }, true); // capture:true → 기존 저장 핸들러보다 먼저 실행
 
 /* ── openEditor 패치 — call 열릴 때 추가 기능 연결 ─────── */
-const _origOpenEditorV41 = openEditor;
-function openEditor(kind, id){
-  _origOpenEditorV41(kind, id);
+// v41: openEditor 확장 (call 종류일 때 자동완성+분야 복원)
+const _v41_origOpenEditor = openEditor;
+openEditor = function(kind, id){
+  _v41_origOpenEditor(kind, id);
   if(kind==="call"){
     setTimeout(()=>{
       wireCallNameAutocomplete();
-      // 기존 값으로 분야 복원
       if(id){
         const rec = entries.find(e=>e.id===id);
         const sel = $("m-callField");
@@ -4920,13 +4920,13 @@ function openEditor(kind, id){
       }
     }, 90);
   }
-}
+};
 
 /* ── renderCall 테이블에 분야 열 추가 ──────────────────────── */
 // (기존 renderCall 함수에 callField 컬럼을 추가로 표시)
-const _origRenderCall = renderCall;
-function renderCall(){
-  _origRenderCall();
+const _v41_origRenderCall = renderCall;
+renderCall = function(){
+  _v41_origRenderCall();
   // thead에 분야 열 추가 (아직 없을 때만)
   const thead = document.querySelector("#panel-call table.rec thead tr");
   if(thead && !thead.querySelector("[data-callfield-th]")){
@@ -4952,8 +4952,8 @@ function renderCall(){
 }
 
 /* ── fieldHTML 패치 — callfield 타입 처리 ───────────────── */
-const _origFieldHTMLV41 = fieldHTML;
-function fieldHTML(f){
+const _v41_origFieldHTML = fieldHTML;
+fieldHTML = function(f){
   if(f.type==="callfield"){
     const opts = CONTACT_CATS.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
     return `<div class="field ${f.full?"full":""}"><label>${esc(f.label||"분야")}</label>
@@ -4962,8 +4962,8 @@ function fieldHTML(f){
         <button type="button" class="btn btn-ghost btn-sm" onclick="openContactCatMgrFromModal()" style="flex:0 0 auto;padding:0 10px" title="분야 추가/삭제">⚙</button>
       </div></div>`;
   }
-  return _origFieldHTMLV41(f);
-}
+  return _v41_origFieldHTML(f);
+};
 
 // v41 init은 원본 init()에 직접 통합됨
 
