@@ -154,7 +154,7 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
       </div>
     </div>
     <div class="chips" id="catChips"></div>
-    <input type="text" id="search" class="search" placeholder="🔍 검색 — 업체명·담당자·전화·분야·메모">
+    <input type="text" id="search" class="search" placeholder="🔍 검색 — 업체명·담당자·직책·전화·분야·메모">
     <div id="list"></div>
   </div>
 </main>
@@ -179,8 +179,9 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
   </div>
 
   <div class="field"><label>업체명 <span class="req">*</span></label><input type="text" id="c-name"></div>
-  <div class="field"><label>분야</label><select id="c-cat"></select></div>
+  <div class="field"><label>분야</label><div style="display:flex;gap:6px;align-items:center"><select id="c-cat" style="flex:1"></select><button type="button" id="btnCatMgr" style="flex-shrink:0;padding:7px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink-soft);font-size:13px;cursor:pointer;font-family:inherit" title="분야 추가/삭제">⚙ 관리</button></div></div>
   <div class="field"><label>담당자</label><input type="text" id="c-person"></div>
+  <div class="field"><label>직책</label><input type="text" id="c-title" placeholder="예: 부장, 과장, 대리"></div>
   <div class="field"><label>전화번호</label><input type="text" id="c-phone" inputmode="tel"></div>
   <div class="field"><label>이메일</label><input type="text" id="c-email" inputmode="email"></div>
   <div class="field"><label>주소</label><input type="text" id="c-address"></div>
@@ -190,6 +191,19 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
     <button class="btn btn-primary" id="mSave">저장</button>
     <button class="btn btn-ghost" id="mCancel">취소</button>
     <button class="btn btn-danger" id="mDelete" style="margin-left:auto">삭제</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="catMgrOverlay"><div class="modal" style="max-width:400px">
+  <h3>⚙ 분야 관리</h3>
+  <p style="font-size:12px;color:var(--ink-soft);margin-bottom:12px">분야를 추가하거나 삭제할 수 있습니다. 삭제해도 기존 업체의 분야는 유지됩니다.</p>
+  <div style="display:flex;gap:6px;margin-bottom:12px">
+    <input type="text" id="catMgrInput" placeholder="새 분야 이름" style="flex:1;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;outline:none">
+    <button id="catMgrAdd" class="btn btn-primary btn-sm" style="flex-shrink:0">➕ 추가</button>
+  </div>
+  <div id="catMgrList" style="max-height:340px;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="catMgrClose" style="margin-left:auto">닫기</button>
   </div>
 </div></div>
 
@@ -247,7 +261,16 @@ const firebaseConfig = {
   storageBucket: "my-system-25497.firebasestorage.app",
 };
 const COL = "contacts";
-const CATS = ["전기","설비","기계/냉난방","통신","승강기","소방","영선","청소","공사/인테리어","인테리어","서희타워공사","견적업체","자재","행정","임차인","직원(재직중)","직원(퇴사)","기타"];
+const DEFAULT_CATS = ["전기","설비","기계/냉난방","통신","승강기","소방","영선","청소","공사/인테리어","인테리어","서희타워공사","견적업체","자재","행정","임차인","직원(재직중)","직원(퇴사)","기타"];
+let CATS = (()=>{ try{ const s=localStorage.getItem("ct_cats"); if(s){ const p=JSON.parse(s); if(Array.isArray(p)&&p.length) return p; } }catch(e){} return DEFAULT_CATS.slice(); })();
+function saveCats(){ try{ localStorage.setItem("ct_cats", JSON.stringify(CATS)); }catch(e){} }
+function refreshCatUI(){
+  const sel=$("c-cat"); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML=CATS.map(c=>`<option>${c}</option>`).join("");
+  if(CATS.includes(cur)) sel.value=cur;
+  renderChips(); render();
+}
 
 let db=null, online=false, items=[];
 const $ = id => document.getElementById(id);
@@ -290,6 +313,52 @@ async function loadAll(){
 }
 
 /* ===== 초기화 ===== */
+
+/* ===== 분야 관리 ===== */
+function renderCatMgrList(){
+  const box=$("catMgrList"); if(!box) return;
+  if(!CATS.length){ box.innerHTML='<div style="color:var(--ink-soft);font-size:13px;padding:8px">분야가 없습니다.</div>'; return; }
+  box.innerHTML=CATS.map((c,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border:1px solid var(--line);border-radius:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${c}</span>
+      <button data-up="${i}" style="background:none;border:1px solid var(--line);border-radius:7px;padding:3px 8px;cursor:pointer;font-size:13px" title="위로">▲</button>
+      <button data-dn="${i}" style="background:none;border:1px solid var(--line);border-radius:7px;padding:3px 8px;cursor:pointer;font-size:13px" title="아래로">▼</button>
+      <button data-del="${i}" style="background:none;border:1px solid #fde8e8;color:#c0594f;border-radius:7px;padding:3px 10px;cursor:pointer;font-size:13px" title="삭제">🗑</button>
+    </div>`).join("");
+  box.querySelectorAll("[data-up]").forEach(b=>b.addEventListener("click",()=>{
+    const i=Number(b.dataset.up); if(i<=0) return;
+    [CATS[i-1],CATS[i]]=[CATS[i],CATS[i-1]]; saveCats(); renderCatMgrList(); refreshCatUI();
+  }));
+  box.querySelectorAll("[data-dn]").forEach(b=>b.addEventListener("click",()=>{
+    const i=Number(b.dataset.dn); if(i>=CATS.length-1) return;
+    [CATS[i+1],CATS[i]]=[CATS[i],CATS[i+1]]; saveCats(); renderCatMgrList(); refreshCatUI();
+  }));
+  box.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{
+    const i=Number(b.dataset.del);
+    if(!confirm(`"${CATS[i]}" 분야를 삭제할까요?`)) return;
+    CATS.splice(i,1); saveCats(); renderCatMgrList(); refreshCatUI();
+  }));
+}
+function openCatMgr(){
+  renderCatMgrList();
+  $("catMgrOverlay").classList.add("show");
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const addBtn=$("catMgrAdd");
+  const inp=$("catMgrInput");
+  const closeBtn=$("catMgrClose");
+  const mgr=$("btnCatMgr");
+  if(addBtn) addBtn.addEventListener("click",()=>{
+    const v=(inp.value||"").trim(); if(!v) return;
+    if(CATS.includes(v)){ alert("이미 있는 분야입니다"); return; }
+    CATS.push(v); saveCats(); inp.value=""; renderCatMgrList(); refreshCatUI();
+  });
+  if(inp) inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); addBtn&&addBtn.click(); } });
+  if(closeBtn) closeBtn.addEventListener("click",()=>$("catMgrOverlay").classList.remove("show"));
+  if(mgr) mgr.addEventListener("click",openCatMgr);
+  $("catMgrOverlay").addEventListener("click",e=>{ if(e.target===$("catMgrOverlay")) $("catMgrOverlay").classList.remove("show"); });
+});
+
 async function init(){
   $("c-cat").innerHTML=CATS.map(c=>`<option>${c}</option>`).join("");
   try{
@@ -327,7 +396,7 @@ $("search").addEventListener("input",e=>{ q=e.target.value; render(); });
 function match(it){
   if(cat!=="전체" && it.cat!==cat) return false;
   if(!q.trim()) return true;
-  const s=[it.name,it.cat,it.person,it.phone,it.email,it.address,it.memo].join(" ").toLowerCase();
+  const s=[it.name,it.cat,it.person,it.title,it.phone,it.email,it.address,it.memo].join(" ").toLowerCase();
   return s.includes(q.trim().toLowerCase());
 }
 function sortItems(arr){ return arr.sort((a,b)=> (b.fav?1:0)-(a.fav?1:0) || (a.name||"").localeCompare(b.name||"","ko")); }
@@ -335,7 +404,7 @@ function sortItems(arr){ return arr.sort((a,b)=> (b.fav?1:0)-(a.fav?1:0) || (a.n
 function cardHTML(it){
   const tel = it.phone ? `<a href="tel:${esc(it.phone)}">📞 ${esc(it.phone)}</a>` : "";
   const mail = it.email ? `<a href="mailto:${esc(it.email)}">✉ ${esc(it.email)}</a>` : "";
-  const line2 = [it.person?("👤 "+esc(it.person)):"", tel, mail].filter(Boolean).join(" &nbsp;·&nbsp; ");
+  const personStr = [it.person?esc(it.person):"", it.title?esc(it.title):""].filter(Boolean).join(" "); const line2 = [personStr?("👤 "+personStr):"", tel, mail].filter(Boolean).join(" &nbsp;·&nbsp; ");
   const addr = it.address ? `<div class="m">📍 ${esc(it.address)}</div>` : "";
   const memo = it.memo ? `<div class="m">📝 ${esc(it.memo)}</div>` : "";
   const img = it.card ? `<img class="cardimg zimg" src="${it.card}" alt="명함">` : "";
@@ -385,7 +454,7 @@ function renderTable(list){
     return `<tr data-id="${it.id}">
       <td class="c-name">${it.fav?"★ ":""}${esc(it.name||"(이름없음)")}</td>
       <td class="c-cat">${esc(it.cat||"기타")}</td>
-      <td>${esc(it.person||"")}</td>
+      <td>${esc(it.person||"")}${it.title?" "+esc(it.title):""}</td>
       <td>${tel}</td>
       <td class="c-memo">${esc(it.memo||"")}</td>
     </tr>`;
@@ -417,6 +486,7 @@ function openEditor(id){
   $("c-name").value=it.name||"";
   $("c-cat").value=it.cat||(cat!=="전체"?cat:CATS[0]);
   $("c-person").value=it.person||"";
+  $("c-title").value=it.title||"";
   $("c-phone").value=it.phone||"";
   $("c-email").value=it.email||"";
   $("c-address").value=it.address||"";
@@ -432,7 +502,7 @@ $("btnAdd").addEventListener("click",()=>openEditor(null));
 $("mCancel").addEventListener("click",()=>$("overlay").classList.remove("show"));
 $("mSave").addEventListener("click",()=>{
   const name=$("c-name").value.trim(); if(!name){ toast("업체명을 입력하세요"); return; }
-  const obj={ name, cat:$("c-cat").value, person:$("c-person").value.trim(), phone:$("c-phone").value.trim(),
+  const obj={ name, cat:$("c-cat").value, person:$("c-person").value.trim(), title:$("c-title").value.trim(), phone:$("c-phone").value.trim(),
     email:$("c-email").value.trim(), address:$("c-address").value.trim(), memo:$("c-memo").value.trim(), card:cardImg };
   if(mId) updateRecord(mId,obj); else { obj.fav=false; obj.createdAt=Date.now(); addRecord(obj); }
   render(); $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
@@ -744,7 +814,7 @@ $("setClear").addEventListener("click",()=>{ try{ localStorage.removeItem(KEY_LS
 /* ===== 엑셀 복사 / 백업 ===== */
 $("btnExcel").addEventListener("click",()=>{
   const list=sortItems(items.filter(match)); if(!list.length){ toast("복사할 내역이 없습니다"); return; }
-  const rows=list.map(it=>[it.name,it.cat,it.person,it.phone,it.email,it.address].map(x=>cleanCell(x).trim()).filter(Boolean).join("_"));
+  const rows=list.map(it=>[it.name,it.cat,it.person,it.title,it.phone,it.email,it.address].map(x=>cleanCell(x||"").trim()).filter(Boolean).join("_"));
   const text=rows.join("\n");
   const ok=()=>toast("엑셀용으로 복사됨");
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok).catch(()=>fallbackCopy(text,ok)); } else fallbackCopy(text,ok);
