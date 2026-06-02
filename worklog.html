@@ -61,31 +61,32 @@
         <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none">🔍</span>
         <input type="text" id="fileSearch" class="search" placeholder="검색 — 별칭·경로·메모" style="padding-left:44px;font-size:16px;font-weight:600;border:2.5px solid var(--primary);border-radius:14px;background:#f0f6ff;height:48px;box-shadow:0 2px 12px rgba(63,124,184,.15)">
       </div>
-      <!-- 툴바 -->
-      <div class="toolbar-row" style="margin-bottom:10px">
-        <span class="tb-label">보기</span>
-        <select id="fileLinkViewSelect" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;cursor:pointer">
+      <!-- 툴바: 검색 아래 한 줄 -->
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <select id="fileLinkViewSelect" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;cursor:pointer">
           <option value="card">🎴 카드형</option>
           <option value="list">📋 목록형</option>
           <option value="tile">🏷 타일형</option>
         </select>
-        <span class="tb-label" style="margin-left:6px">종류</span>
-        <span class="view-mode-group" id="fileTypeFilter">
-          <button data-ft="all" class="active">전체</button>
-          <button data-ft="folder">📁 폴더</button>
-          <button data-ft="file">📄 파일</button>
-        </span>
-        <span class="tb-label" style="margin-left:6px">정렬</span>
-        <select class="sort-select" data-sort="filelink">
-          <option value="name">이름순</option>
-          <option value="recent">최근 사용순</option>
-          <option value="created">등록일순</option>
+        <select id="fileTypeSelect" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;cursor:pointer">
+          <option value="all">📂 전체</option>
+          <option value="folder">📁 폴더만</option>
+          <option value="file">📄 파일만</option>
+        </select>
+        <select class="sort-select" data-sort="filelink" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;cursor:pointer">
+          <option value="name">🔤 이름순</option>
+          <option value="recent">🕐 최근 사용순</option>
+          <option value="created">📅 등록일순</option>
         </select>
       </div>
-      <div class="filt-row" style="margin-bottom:8px">
-        <select id="fileCatFilter"></select>
-        <select id="fileSubFilter" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff"></select>
-      </div>
+      <!-- 숨겨진 요소 (JS 호환용) -->
+      <span class="view-mode-group" id="fileTypeFilter" style="display:none">
+        <button data-ft="all" class="active">전체</button>
+        <button data-ft="folder">폴더</button>
+        <button data-ft="file">파일</button>
+      </span>
+      <select id="fileCatFilter" style="display:none"></select>
+      <select id="fileSubFilter" style="display:none"></select>
       <div id="fileCatJump" style="display:none"></div>
       <div id="fileList"></div>
     </div>

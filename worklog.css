@@ -759,3 +759,11 @@ td.clip[data-tip]:hover{position:relative}
 .cat-group-h[draggable="true"]{cursor:grab}
 /* 드래그 힌트 */
 .link-card::before{content:"⠿";position:absolute;left:4px;top:50%;transform:translateY(-50%);font-size:14px;color:rgba(0,0,0,.15);pointer-events:none}
+
+/* 카테고리 이름변경 버튼 */
+.ch-rename{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:7px;font-size:12px;padding:2px 7px;cursor:pointer;color:#fff;margin-left:auto;opacity:0;transition:opacity .15s;flex-shrink:0}
+.cat-group-h:hover .ch-rename{opacity:1}
+.ch-label{flex:1}
+
+/* 드래그 삽입 위치 표시선 */
+.dnd-line{height:3px;background:var(--primary);border-radius:3px;margin:2px 0;pointer-events:none;grid-column:1/-1;width:100%}

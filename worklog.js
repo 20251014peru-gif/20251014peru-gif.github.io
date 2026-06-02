@@ -2104,12 +2104,22 @@ let dragItem=null, dragType=null; // dragType: "card"|"cat"
 let dragOverEl=null;
 
 function bindDnD(box){
+  // 드래그 중인 카드를 어느 위치에 삽입할지 판단 (마우스 Y 기준)
+  function getDropTarget(container, clientY){
+    const cards = [...container.querySelectorAll(".link-card[data-fid]")];
+    for(const card of cards){
+      const rect = card.getBoundingClientRect();
+      const mid  = rect.top + rect.height / 2;
+      if(clientY < mid) return {before: card};
+    }
+    return {before: null}; // 맨 끝에 삽입
+  }
+
   // ── 카테고리 헤더 드래그 ──
   box.querySelectorAll(".cat-group").forEach(grp=>{
     const hdr = grp.querySelector(".cat-group-h");
     hdr.setAttribute("draggable","true");
     hdr.style.cursor="grab";
-
     hdr.addEventListener("dragstart", e=>{
       dragType="cat"; dragItem=grp;
       grp.classList.add("dnd-dragging");
@@ -2117,9 +2127,7 @@ function bindDnD(box){
     });
     hdr.addEventListener("dragend", ()=>{
       dragType=null; dragItem=null;
-      box.querySelectorAll(".dnd-dragging,.dnd-over-cat").forEach(el=>{
-        el.classList.remove("dnd-dragging","dnd-over-cat");
-      });
+      box.querySelectorAll(".dnd-dragging,.dnd-over-cat").forEach(el=>el.classList.remove("dnd-dragging","dnd-over-cat"));
     });
     grp.addEventListener("dragover", e=>{
       if(dragType!=="cat"||dragItem===grp) return;
@@ -2130,16 +2138,12 @@ function bindDnD(box){
     grp.addEventListener("drop", e=>{
       if(dragType!=="cat"||dragItem===grp) return;
       e.preventDefault();
-      // DOM 순서 변경
       const allGrps = [...box.querySelectorAll(".cat-group")];
-      const fromIdx = allGrps.indexOf(dragItem);
       const toIdx   = allGrps.indexOf(grp);
+      const fromIdx = allGrps.indexOf(dragItem);
       if(fromIdx<0||toIdx<0) return;
-      if(fromIdx<toIdx) grp.after(dragItem);
-      else grp.before(dragItem);
-      // 순서 저장
-      const newOrder = [...box.querySelectorAll(".cat-group")].map(g=>g.dataset.cat);
-      flOrder.catOrder = newOrder;
+      if(fromIdx<toIdx) grp.after(dragItem); else grp.before(dragItem);
+      flOrder.catOrder = [...box.querySelectorAll(".cat-group")].map(g=>g.dataset.cat);
       saveFlOrder();
       grp.classList.remove("dnd-over-cat");
     });
@@ -2147,9 +2151,7 @@ function bindDnD(box){
 
   // ── 카드 드래그 ──
   box.querySelectorAll(".link-card[data-fid]").forEach(card=>{
-    // 드래그 핸들 (아이콘 영역)
     card.setAttribute("draggable","true");
-
     card.addEventListener("dragstart", e=>{
       if(e.target.closest("[data-star],[data-edit]")){ e.preventDefault(); return; }
       dragType="card"; dragItem=card;
@@ -2159,101 +2161,71 @@ function bindDnD(box){
     });
     card.addEventListener("dragend", ()=>{
       dragType=null; dragItem=null;
-      box.querySelectorAll(".dnd-dragging,.dnd-over-card,.dnd-over-catitems").forEach(el=>{
-        el.classList.remove("dnd-dragging","dnd-over-card","dnd-over-catitems");
+      box.querySelectorAll(".dnd-dragging,.dnd-over-card,.dnd-over-catitems,.dnd-insert-before,.dnd-insert-after").forEach(el=>{
+        el.classList.remove("dnd-dragging","dnd-over-card","dnd-over-catitems","dnd-insert-before","dnd-insert-after");
       });
-    });
-    card.addEventListener("dragover", e=>{
-      if(dragType!=="card"||dragItem===card) return;
-      e.preventDefault();
-      box.querySelectorAll(".dnd-over-card").forEach(el=>el.classList.remove("dnd-over-card"));
-      card.classList.add("dnd-over-card");
-    });
-    card.addEventListener("drop", e=>{
-      if(dragType!=="card"||dragItem===card) return;
-      e.preventDefault();
-      const fromId = dragItem.dataset.fid;
-      const toId   = card.dataset.fid;
-      const fromCatGrp = dragItem.closest(".cat-group,.fav-section");
-      const toCatGrp   = card.closest(".cat-group,.fav-section");
-      const toCat = toCatGrp ? toCatGrp.dataset.cat : null;
-
-      // DOM 이동
-      const toItems = card.closest(".cat-items");
-      if(toItems){
-        const cards = [...toItems.querySelectorAll(".link-card")];
-        const toIdx = cards.indexOf(card);
-        if(toIdx>=0) card.before(dragItem);
-      }
-
-      // 카테고리 변경 + 순서 저장
-      const fromIsFav = fromCatGrp&&fromCatGrp.classList.contains("fav-section");
-      const toIsFav   = toCatGrp&&toCatGrp.classList.contains("fav-section");
-      const fromCat   = fromCatGrp&&fromCatGrp.dataset.cat;
-      if(toIsFav && !fromIsFav){
-        // → 즐겨찾기로: starred 설정
-        updateRecord(fromId, {starred:true});
-        toast(`⭐ "${entries.find(x=>x.id===fromId)?.label||""}" 즐겨찾기 추가`);
-      } else if(fromIsFav && !toIsFav && toCat){
-        // 즐겨찾기 → 카테고리로: starred 해제 + 카테고리 변경
-        const entry = entries.find(x=>x.id===fromId);
-        updateRecord(fromId, {starred:false, category:toCat});
-        toast(`"${entry?.label||""}" → ${toCat} 이동`);
-      } else if(!toIsFav && toCat && toCat !== fromCat){
-        // 다른 카테고리로 이동
-        updateRecord(fromId, {category: toCat});
-        toast(`"${entries.find(x=>x.id===fromId)?.label||""}" → ${toCat} 이동`);
-      }
-
-      // 순서 저장
-      if(toItems){
-        [...toItems.querySelectorAll(".link-card")].forEach((c,i)=>{
-          setCardMeta(c.dataset.fid, toCat||"", i);
-        });
-      }
-      saveFlOrder();
-      card.classList.remove("dnd-over-card");
+      box.querySelectorAll(".dnd-line").forEach(el=>el.remove());
     });
   });
 
-  // 카테고리 cat-items 영역에 드롭 (빈 공간으로 드롭)
+  // ── cat-items 영역 드롭 처리 (정확한 삽입 위치) ──
   box.querySelectorAll(".cat-items").forEach(ci=>{
     ci.addEventListener("dragover", e=>{
       if(dragType!=="card") return;
       e.preventDefault();
+      // 삽입 위치 표시선 업데이트
+      box.querySelectorAll(".dnd-line").forEach(el=>el.remove());
+      const {before} = getDropTarget(ci, e.clientY);
+      const line = document.createElement("div");
+      line.className="dnd-line";
+      line.style.cssText="height:3px;background:var(--primary);border-radius:3px;margin:2px 0;pointer-events:none;grid-column:1/-1";
+      if(before) ci.insertBefore(line, before);
+      else ci.appendChild(line);
       ci.classList.add("dnd-over-catitems");
     });
-    ci.addEventListener("dragleave", ()=> ci.classList.remove("dnd-over-catitems"));
+    ci.addEventListener("dragleave", e=>{
+      if(!ci.contains(e.relatedTarget)){
+        ci.classList.remove("dnd-over-catitems");
+        box.querySelectorAll(".dnd-line").forEach(el=>el.remove());
+      }
+    });
     ci.addEventListener("drop", e=>{
-      if(dragType!=="card") return;
+      if(dragType!=="card"||!dragItem) return;
       e.preventDefault();
       ci.classList.remove("dnd-over-catitems");
-      // 이미 card drop이 처리했으면 무시
-      if(!dragItem) return;
-      const toCatGrp = ci.closest(".cat-group");
-      const toCat = toCatGrp ? toCatGrp.dataset.cat : null;
-      const fromId = dragItem.dataset.fid;
-      const fromCatGrp = dragItem.closest(".cat-group");
+      box.querySelectorAll(".dnd-line").forEach(el=>el.remove());
 
-      // 맨 뒤로 이동
-      ci.appendChild(dragItem);
+      const fromId     = dragItem.dataset.fid;
+      const fromCatGrp = dragItem.closest(".cat-group,.fav-section");
+      const toCatGrp   = ci.closest(".cat-group,.fav-section");
+      const toCat      = toCatGrp ? toCatGrp.dataset.cat : null;
+      const fromCat    = fromCatGrp ? fromCatGrp.dataset.cat : null;
 
-      const fromIsFav2 = fromCatGrp&&fromCatGrp.classList.contains("fav-section");
-      const toIsFav2   = ci.closest(".fav-section") !== null;
-      if(toIsFav2 && !fromIsFav2){
+      // 정확한 위치에 삽입
+      const {before} = getDropTarget(ci, e.clientY);
+      if(before && before !== dragItem) ci.insertBefore(dragItem, before);
+      else if(!before) ci.appendChild(dragItem);
+
+      // 카테고리/즐겨찾기 변경 처리
+      const fromIsFav = fromCatGrp&&fromCatGrp.classList.contains("fav-section");
+      const toIsFav   = toCatGrp&&toCatGrp.classList.contains("fav-section");
+      if(toIsFav && !fromIsFav){
         updateRecord(fromId, {starred:true});
         toast(`⭐ "${entries.find(x=>x.id===fromId)?.label||""}" 즐겨찾기 추가`);
-      } else if(fromIsFav2 && !toIsFav2 && toCat){
+      } else if(fromIsFav && !toIsFav && toCat){
         updateRecord(fromId, {starred:false, category:toCat});
         toast(`"${entries.find(x=>x.id===fromId)?.label||""}" → ${toCat} 이동`);
-      } else if(!toIsFav2 && toCat && toCat !== (fromCatGrp&&fromCatGrp.dataset.cat)){
-        updateRecord(fromId, {category: toCat});
+      } else if(!toIsFav && toCat && toCat !== fromCat){
+        updateRecord(fromId, {category:toCat});
         toast(`"${entries.find(x=>x.id===fromId)?.label||""}" → ${toCat} 이동`);
       }
-      [...ci.querySelectorAll(".link-card")].forEach((c,i)=>{
+
+      // 순서 저장
+      [...ci.querySelectorAll(".link-card[data-fid]")].forEach((c,i)=>{
         setCardMeta(c.dataset.fid, toCat||"", i);
       });
       saveFlOrder();
+      dragItem=null;
     });
   });
 }
@@ -2276,11 +2248,25 @@ function wireFileLinkTab(){
       CAT_FILTER.filelink.sub=subSel.value; renderFileLink();
     });
   }
-  // 폴더/파일 종류 필터
+  // 종류 드롭다운
+  const typeSel=$("fileTypeSelect");
+  if(typeSel){
+    typeSel.value=CAT_FILTER.filelink.type||"all";
+    typeSel.addEventListener("change",()=>{
+      CAT_FILTER.filelink.type=typeSel.value;
+      // 숨겨진 버튼 동기화
+      document.querySelectorAll("#fileTypeFilter button").forEach(b=>{
+        b.classList.toggle("active", b.dataset.ft===typeSel.value);
+      });
+      renderFileLink();
+    });
+  }
+  // 폴더/파일 종류 필터 (숨겨진 버튼 - 하위 호환)
   document.querySelectorAll("#fileTypeFilter button").forEach(b=>b.addEventListener("click",()=>{
     document.querySelectorAll("#fileTypeFilter button").forEach(x=>x.classList.remove("active"));
     b.classList.add("active");
     CAT_FILTER.filelink.type=b.dataset.ft;
+    if(typeSel) typeSel.value=b.dataset.ft;
     renderFileLink();
   }));
 }
@@ -2409,17 +2395,39 @@ function renderFileLink(){
       inner+=`<div class="cat-items">${files.map(e=>fileLinkCardHTML(e)).join("")}</div>`;
     }
     const catIco = CAT_ICONS_MAP[origCat]||"📁";
-    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(origCat)}">
-      <div class="cat-group-h"><span class="ch-arrow">▼</span><span>${catIco}</span> ${esc(cat)}<span class="ch-cnt">${items.length}</span></div>
+    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(origCat)}" data-label="${esc(cat)}">
+      <div class="cat-group-h"><span class="ch-arrow">▼</span><span>${catIco}</span> <span class="ch-label">${esc(cat)}</span><span class="ch-cnt">${items.length}</span><button class="ch-rename" data-cat="${esc(origCat)}" title="이름 변경">✏️</button></div>
       ${inner}</div>`;
   }).join("");
   box.innerHTML=html;
   // 이벤트
-  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",()=>{
-    const g=h.parentElement; const cat=g.dataset.cat;
-    VIEW_PREFS.filelink.collapsed[cat]=!VIEW_PREFS.filelink.collapsed[cat];
-    saveViewPrefs(); g.classList.toggle("collapsed");
-  }));
+  box.querySelectorAll(".cat-group-h").forEach(h=>{
+    h.addEventListener("click", e=>{
+      if(e.target.closest(".ch-rename")) return;
+      const g=h.parentElement; const cat=g.dataset.cat;
+      VIEW_PREFS.filelink.collapsed[cat]=!VIEW_PREFS.filelink.collapsed[cat];
+      saveViewPrefs(); g.classList.toggle("collapsed");
+    });
+  });
+  // 카테고리 이름 변경
+  box.querySelectorAll(".ch-rename").forEach(btn=>{
+    btn.addEventListener("click", e=>{
+      e.stopPropagation();
+      const origCat = btn.dataset.cat;
+      const grp = btn.closest(".cat-group");
+      const curLabel = grp.dataset.label||origCat;
+      const newName = prompt(`"${curLabel}" 카테고리 이름 변경:`, curLabel);
+      if(!newName||newName===curLabel) return;
+      // CATEGORIES에서 이름 변경
+      const idx = CATEGORIES.filelink.indexOf(origCat);
+      if(idx>=0){ CATEGORIES.filelink[idx]=newName; saveCategories(); }
+      // 해당 카테고리 항목들 일괄 변경
+      const toChange = entries.filter(e=>e.kind==="filelink"&&e.category===origCat);
+      toChange.forEach(e=>updateRecord(e.id,{category:newName}));
+      toast(`"${origCat}" → "${newName}" 변경됨 (${toChange.length}개 항목)`);
+      renderFileLink();
+    });
+  });
   box.querySelectorAll("[data-fid]").forEach(el=>{
     const id=el.dataset.fid;
     el.addEventListener("click",ev=>{
