@@ -923,17 +923,44 @@ $("viewOverlay").addEventListener("click",e=>{ if(e.target===$("viewOverlay")) $
 $("m-cam").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("m-file").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("mCancel").addEventListener("click",()=>$("overlay").classList.remove("show"));
-// ⑧ 엔터 저장: 셀에 커서 없을 때(textarea/select 제외) 엔터 → 저장
+// 엔터 저장 + 탭키 자동완성 선택
 $("overlay").addEventListener("keydown", e=>{
+  const tag = (document.activeElement||{}).tagName||"";
+  // 탭키: input에서 datalist 자동완성 첫 번째 항목 선택
+  if(e.key==="Tab" && tag==="INPUT"){
+    const el = document.activeElement;
+    const listId = el.getAttribute("list");
+    if(listId){
+      const dl = document.getElementById(listId);
+      if(dl && dl.options.length > 0){
+        const typed = el.value.toLowerCase();
+        const match = Array.from(dl.options).find(o=>o.value.toLowerCase().startsWith(typed));
+        if(match && match.value !== el.value){
+          e.preventDefault();
+          el.value = match.value;
+          el.dispatchEvent(new Event("input"));
+          return;
+        }
+      }
+    }
+  }
   if(e.key!=="Enter") return;
-  const tag=(document.activeElement||{}).tagName||"";
-  if(tag==="TEXTAREA"||tag==="SELECT") return; // textarea/select는 기본 동작 유지
-  if(tag==="INPUT"){ // input 안에서는 저장 실행
+  if(tag==="TEXTAREA"||tag==="SELECT") return; // textarea/select 기본 동작 유지
+  if(tag==="INPUT"){
+    // datalist가 열려있으면 선택만 하고 저장 안 함
+    const el = document.activeElement;
+    const listId = el.getAttribute("list");
+    if(listId){
+      e.preventDefault();
+      el.blur(); // 포커스 제거 후 저장 대기
+      setTimeout(()=>$("mSave").click(), 80);
+      return;
+    }
     e.preventDefault();
     $("mSave").click();
     return;
   }
-  // 아무 셀에도 포커스 없으면 저장
+  // 셀 밖(BODY, DIV 등)에서 엔터 → 저장
   if(!["INPUT","SELECT","TEXTAREA","BUTTON"].includes(tag)){
     e.preventDefault();
     $("mSave").click();
