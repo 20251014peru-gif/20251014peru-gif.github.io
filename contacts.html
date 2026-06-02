@@ -262,8 +262,38 @@ const firebaseConfig = {
 };
 const COL = "contacts";
 const DEFAULT_CATS = ["전기","설비","기계/냉난방","통신","승강기","소방","영선","청소","공사/인테리어","인테리어","서희타워공사","견적업체","자재","행정","임차인","직원(재직중)","직원(퇴사)","기타"];
-let CATS = (()=>{ try{ const s=localStorage.getItem("ct_cats"); if(s){ const p=JSON.parse(s); if(Array.isArray(p)&&p.length) return p; } }catch(e){} return DEFAULT_CATS.slice(); })();
-function saveCats(){ try{ localStorage.setItem("ct_cats", JSON.stringify(CATS)); }catch(e){} }
+const SHARED_CATS_COL = "contact_cats"; // worklog와 공통 컬렉션
+const SHARED_CATS_LS  = "wl_shared_cats_v1"; // worklog와 동일 키
+let CATS = (()=>{
+  try{
+    const s=localStorage.getItem(SHARED_CATS_LS)||localStorage.getItem("ct_cats");
+    if(s){ const p=JSON.parse(s); if(Array.isArray(p)&&p.length) return p; }
+  }catch(e){}
+  return DEFAULT_CATS.slice();
+})();
+
+function saveCats(){
+  try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(CATS)); }catch(e){}
+  // Firebase contact_cats 동기화 (worklog와 공통)
+  if(online && db){
+    db.collection(SHARED_CATS_COL).doc("list").set({cats:CATS, updatedAt:Date.now()}).catch(()=>{});
+  }
+}
+
+async function loadCatsFromFirebase(){
+  if(!online||!db) return;
+  try{
+    const snap = await db.collection(SHARED_CATS_COL).doc("list").get();
+    if(snap.exists){
+      const d=snap.data();
+      if(Array.isArray(d.cats)&&d.cats.length){
+        CATS = d.cats;
+        try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(CATS)); }catch(e){}
+        refreshCatUI();
+      }
+    }
+  }catch(e){ console.warn("분야 로드 실패:", e); }
+}
 function refreshCatUI(){
   const sel=$("c-cat"); if(!sel) return;
   const cur=sel.value;
@@ -369,6 +399,7 @@ async function init(){
     online=true; setStatus(true);
   }catch(e){ online=false; setStatus(false); }
   await loadAll();
+  loadCatsFromFirebase().catch(()=>{});
   // 통화기록 씨드 데이터 - 이미 있는 전화번호는 건너뜀
   const SEED_CONTACTS = [{"id":"T7W3ME2HLHJvaKUxD5co","name":"소공화원","cat":"영선","person":"","phone":"010-4525-4211","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366757896},{"id":"K6LXhsMdP1f1OzX3beha","name":"광주은행 총무팀","cat":"임차인","person":"","phone":"010-9622-0383","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366758896},{"id":"skjFGUrLMa2JkFJ5b8g7","name":"김소희이사","cat":"임차인","person":"김소희","phone":"010-6516-3337","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366759896},{"id":"Nzk7k8Ruwo4iN2UYN3BX","name":"세원빌딩","cat":"기타","person":"소장","phone":"010-2498-1974","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366760896},{"id":"7DM9sDeTTaTR0fAOKXWK","name":"송림구조","cat":"공사/인테리어","person":"김손월","phone":"010-2262-1828","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366761896},{"id":"nn3c9vC6RdieelOC7dM2","name":"안전보건실","cat":"행정","person":"김만일","phone":"010-3058-5009","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366762896},{"id":"6FGQvODGmTjmAXu9YpAs","name":"조경담당","cat":"영선","person":"정례원","phone":"3416-6616","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366763896},{"id":"Wy3GOdv9Up9K4XlgvPX4","name":"서초구청 정보통신팀","cat":"행정","person":"","phone":"2155-6425","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366764896},{"id":"gzr6Z8N0gr1DSrPnGsLx","name":"아이코몰","cat":"자재","person":"","phone":"1577-1727","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366765896},{"id":"rWOTAJVEsMCH4GCEQKzG","name":"서희건설","cat":"서희타워공사","person":"이준학","phone":"010-6249-9066","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366766896},{"id":"JpgyfQuurMid9Ihbl1SL","name":"광주은행 총무팀2","cat":"임차인","person":"","phone":"010-3800-4442","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366767896},{"id":"73bLz9KqBvAdv1H5KsZe","name":"8층","cat":"임차인","person":"","phone":"3471-9634","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366768896},{"id":"USy0d4ok52nnx6p9vMYw","name":"박재홍/삼성","cat":"기계/냉난방","person":"박재홍","phone":"010-2758-7868","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366769896},{"id":"Q4vhEwScuDghg8lXS50n","name":"이혁대리","cat":"기타","person":"이혁","phone":"010-9508-8517","email":"","address":"","memo":"통화기록에서 추가","card":"","fav":false,"createdAt":1780366770896}];
   let seedAdded = 0;

@@ -33,16 +33,65 @@ function fieldClass(f){
   return FIELD_COLOR_POOL[i % FIELD_COLOR_POOL.length];
 }
 
+// ── 분야(FIELDS) = contact_cats와 통합 ──────────────────────
+// contact_cats 컬렉션 하나를 worklog업무·통화·contacts 공통으로 사용
+const SHARED_CATS_COL = "contact_cats";
+const SHARED_CATS_LS  = "wl_shared_cats_v1";
+const DEFAULT_SHARED_CATS = [
+  "전기","엘리베이터","카리프트","통신","기계","냉난방","누수",
+  "소방","소화전","스프링클러","감지기","수신기","펌프",
+  "영선","주차","주간점검","월간점검","협력업체점검",
+  "청소","화단관리","은진",
+  "품의서","전표","안내문","관리비","임대",
+  "설비","기계/냉난방","승강기","소방","영선","청소","공사/인테리어",
+  "인테리어","서희타워공사","견적업체","자재","행정","임차인",
+  "직원(재직중)","직원(퇴사)","기타"
+].filter((v,i,a)=>a.indexOf(v)===i); // 중복 제거
+
+async function loadSharedCats(){
+  // localStorage 먼저
+  try{
+    const ls = JSON.parse(localStorage.getItem(SHARED_CATS_LS)||"null");
+    if(Array.isArray(ls)&&ls.length){ FIELDS=ls; if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS=ls.slice(); return; }
+  }catch(e){}
+  // Firebase
+  if(!online||!db) return;
+  try{
+    const snap = await db.collection(SHARED_CATS_COL).doc("list").get();
+    if(snap.exists){
+      const d=snap.data();
+      if(Array.isArray(d.cats)&&d.cats.length){
+        FIELDS = d.cats.slice();
+        if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = d.cats.slice();
+        try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(FIELDS)); }catch(e){}
+      }
+    } else {
+      // 최초: 기본값으로 생성
+      await db.collection(SHARED_CATS_COL).doc("list").set({cats:DEFAULT_SHARED_CATS, updatedAt:Date.now()});
+      FIELDS = DEFAULT_SHARED_CATS.slice();
+      if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = DEFAULT_SHARED_CATS.slice();
+      try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(FIELDS)); }catch(e){}
+    }
+  }catch(e){ console.warn("분야 로드 실패:", e); }
+}
+
 function loadFields(){
   try{
-    const saved = JSON.parse(localStorage.getItem(FIELDS_LS_KEY)||"null");
-    if(Array.isArray(saved) && saved.length) FIELDS = saved;
+    const ls = JSON.parse(localStorage.getItem(SHARED_CATS_LS)||"null");
+    if(Array.isArray(ls)&&ls.length) FIELDS = ls;
+    else {
+      const old = JSON.parse(localStorage.getItem(FIELDS_LS_KEY)||"null");
+      if(Array.isArray(old)&&old.length) FIELDS = old;
+    }
   }catch(e){}
 }
 function saveFields(){
-  try{ localStorage.setItem(FIELDS_LS_KEY, JSON.stringify(FIELDS)); }catch(e){}
-  // Firestore 동기화
+  try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(FIELDS)); }catch(e){}
+  // CONTACT_CATS도 동기화
+  if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = FIELDS.slice();
+  // Firestore 동기화 (contact_cats + worklog_meta 모두)
   if(online && db){
+    db.collection(SHARED_CATS_COL).doc("list").set({cats:FIELDS, updatedAt:Date.now()}).catch(()=>{});
     db.collection("worklog_meta").doc("fields").set({fields:FIELDS, updatedAt:Date.now()}).catch(()=>{});
   }
 }
@@ -454,6 +503,8 @@ async function init(){
   loadContactsCache().catch(()=>{});
   // 드래그 앤 드롭 순서 로드
   loadFlOrder().catch(()=>{});
+  // 공통 분야 로드 (업무·통화·contacts 통합)
+  loadSharedCats().then(()=>{ renderWork(); }).catch(()=>{});
   // 서희타워 카테고리 분리 마이그레이션
   migrateTowerCats();
 }
@@ -5087,31 +5138,15 @@ const DEFAULT_CONTACT_CATS = ["전기","설비","기계/냉난방","통신","승
 let CONTACT_CATS = DEFAULT_CONTACT_CATS.slice();
 
 async function loadContactCats(){
-  try{
-    const lsVal = JSON.parse(localStorage.getItem(CONTACT_CATS_LS)||"null");
-    if(Array.isArray(lsVal) && lsVal.length) CONTACT_CATS = lsVal;
-  }catch(e){}
-  if(!online||!db) return;
-  try{
-    const snap = await db.collection(CONTACT_CATS_COL).doc("list").get();
-    if(snap.exists){
-      const d = snap.data();
-      if(Array.isArray(d.cats) && d.cats.length){
-        CONTACT_CATS = d.cats;
-        try{ localStorage.setItem(CONTACT_CATS_LS, JSON.stringify(CONTACT_CATS)); }catch(e){}
-      }
-    } else {
-      await db.collection(CONTACT_CATS_COL).doc("list").set({cats:DEFAULT_CONTACT_CATS, updatedAt:Date.now()});
-    }
-  }catch(e){ console.warn("contact_cats 로드 실패:", e); }
+  // contact_cats = FIELDS와 동일 컬렉션 사용
+  await loadSharedCats();
+  CONTACT_CATS = FIELDS.slice();
 }
 
 async function saveContactCats(){
-  try{ localStorage.setItem(CONTACT_CATS_LS, JSON.stringify(CONTACT_CATS)); }catch(e){}
-  if(!online||!db) return;
-  try{
-    await db.collection(CONTACT_CATS_COL).doc("list").set({cats:CONTACT_CATS, updatedAt:Date.now()});
-  }catch(e){ toast("분야 저장 실패: "+(e.message||e)); }
+  // FIELDS와 동기화 후 공통 저장
+  FIELDS = CONTACT_CATS.slice();
+  saveFields();
 }
 
 /* ── 분야 관리 모달 ──────────────────────────────────────── */
@@ -5197,7 +5232,8 @@ $("catMgrClose").addEventListener("click", ()=>{
 /* ── contacts 컬렉션 캐시 (자동완성용) ───────────────────── */
 let contactsCache = [];
 // 직원 명단 (이름+전화번호) - 자동완성 및 contacts 연동용
-const STAFF_LIST = [
+// STAFF_LIST: 기본값 (contacts 컬렉션 로드 전 fallback)
+let STAFF_LIST = [
   {name:"조태경", phone:"010-8724-5543", role:"실장"},
   {name:"김대환", phone:"010-3358-4852", role:"경비"},
   {name:"정지환", phone:"010-5520-3157", role:"경비"},
@@ -5217,6 +5253,15 @@ async function loadContactsCache(){
   try{
     const snap = await db.collection("contacts").get();
     contactsCache = snap.docs.map(d=>({id:d.id,...d.data()}));
+    // contacts에서 직원(재직중) 카테고리를 STAFF_LIST로 동기화
+    const staffFromDB = contactsCache.filter(c=>c.cat==="직원(재직중)"&&c.name);
+    if(staffFromDB.length){
+      STAFF_LIST = staffFromDB.map(c=>({
+        name: c.name||"",
+        phone: c.phone||"",
+        role: c.memo ? c.memo.split(" · ")[0] : ""
+      }));
+    }
   }catch(e){ console.warn("contacts 캐시 로드 실패:", e); }
 }
 
