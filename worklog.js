@@ -1802,7 +1802,7 @@ function renderMonthView(){
       const sArr=sched[ds]||[]; const vArr=vac[ds]||[];
       if(sArr.length){
         hasContent=true;
-        let b=""; sArr.forEach(s=> b+=`<div class="wtitle"><span class="d" style="background:${scheduleStatusColor(s.sStatus)}"></span><span class="wt">${esc(s.title||"")}${s.sType?" ["+esc(s.sType)+"]":""}</span></div>`);
+        let b=""; sArr.forEach(s=> b+=`<div class="wtitle" data-kind="schedule" data-id="${s.id}"><span class="d" style="background:${scheduleStatusColor(s.sStatus)}"></span><span class="wt">${esc(s.title||"")}${s.sType?" ["+esc(s.sType)+"]":""}</span></div>`);
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.schedule}">${CAL_KIND_LABEL.schedule} ${sArr.length}</div>${b}</div>`;
       }
       if(vArr.length){
@@ -1814,7 +1814,7 @@ function renderMonthView(){
       // v37: 필터 적용
       if(wArr.length && CAL_FILTER.work){
         hasContent=true;
-        let b=""; wArr.forEach(en=> b+=`<div class="wtitle"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
+        let b=""; wArr.forEach(en=> b+=`<div class="wtitle" data-kind="work" data-id="${en.id}"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.work}">${CAL_KIND_LABEL.work} ${wArr.length}</div>${b}</div>`;
       }
       if(clArr.length && CAL_FILTER.cleaning){
@@ -1856,7 +1856,7 @@ function renderMonthView(){
         const arr=oArr.filter(o=>o.kind===k); if(!arr.length) return;
         if(!CAL_FILTER[k]) return; // v37: 필터
         hasContent=true;
-        const b=arr.map(o=>`<div class="otitle">${esc(otherText(o))}</div>`).join("");
+        const b=arr.map(o=>`<div class="otitle" data-kind="${o.kind}" data-id="${o.id}">${esc(otherText(o))}</div>`).join("");
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR[k]}">${CAL_KIND_LABEL[k]} ${arr.length}</div>${b}</div>`;
       });
     }
