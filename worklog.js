@@ -666,12 +666,7 @@ function fieldHTML(f){
       const mats=[...new Set(entries.filter(e=>e.kind==="work"&&e.material).map(e=>e.material))].sort();
       inner=`<input type="text" id="m-${f.k}" list="dl-material" autocomplete="off"><datalist id="dl-material">${mats.map(v=>`<option value="${esc(v)}"></option>`).join("")}</datalist>`;
     } else if(f.k==="name" && mKind==="call"){
-      const callNames=[...new Set([
-        ...entries.filter(e=>e.kind==="call"&&e.name).map(e=>e.name),
-        ...(typeof contactsCache!=="undefined"?contactsCache.map(c=>c.name).filter(Boolean):[]),
-        ...(typeof STAFF_LIST!=="undefined"?STAFF_LIST.map(s=>s.name):[])
-      ])].sort();
-      inner=`<input type="text" id="m-${f.k}" list="dl-callname" autocomplete="off"><datalist id="dl-callname">${callNames.map(v=>`<option value="${esc(v)}"></option>`).join("")}</datalist>`;
+      inner=`<input type="text" id="m-${f.k}" autocomplete="off" placeholder="이름 입력 시 연락처 자동완성">`;
     } else inner=`<input type="${t}" id="m-${f.k}"${im}>`;
   }
   const req=f.req?' <span class="req">*</span>':'';
@@ -4844,6 +4839,9 @@ function wireCallNameAutocomplete(){
   const nameEl = $("m-name");
   const phoneEl = $("m-phone");
   if(!nameEl||!phoneEl) return;
+  // 이미 연결됐으면 스킵 (중복 방지)
+  if(nameEl._callACwired) return;
+  nameEl._callACwired = true;
 
   // 기존 드롭다운이 있으면 제거
   const existAC = document.getElementById("callNameAC");
@@ -4886,6 +4884,19 @@ function wireCallNameAutocomplete(){
   nameEl.addEventListener("input", showAC);
   nameEl.addEventListener("focus", showAC);
   nameEl.addEventListener("blur", ()=>setTimeout(()=>{ acBox.style.display="none"; }, 180));
+  // 탭키: 드롭다운 첫 번째 항목 선택 + 전화번호 자동채움
+  nameEl.addEventListener("keydown", e=>{
+    if(e.key!=="Tab") return;
+    const q = nameEl.value.trim();
+    if(!q) return;
+    const hits = searchContacts(q);
+    if(!hits.length) return;
+    e.preventDefault();
+    e.stopPropagation();
+    nameEl.value = hits[0].name;
+    if(hits[0].phone && !phoneEl.value.trim()) phoneEl.value = hits[0].phone;
+    acBox.style.display = "none";
+  });
 }
 
 /* ── 통화 저장 후 contacts 연동 제안 ─────────────────────── */
@@ -4950,8 +4961,12 @@ const _v41_origOpenEditor = openEditor;
 openEditor = function(kind, id){
   _v41_origOpenEditor(kind, id);
   if(kind==="call"){
-    setTimeout(()=>{
+    // contacts 캐시 최신화 후 자동완성 연결
+    loadContactsCache().catch(()=>{}).finally(()=>{
       wireCallNameAutocomplete();
+    });
+    setTimeout(()=>{
+      // 분야 복원
       if(id){
         const rec = entries.find(e=>e.id===id);
         const sel = $("m-callField");
