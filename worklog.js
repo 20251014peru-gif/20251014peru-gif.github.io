@@ -400,6 +400,9 @@ async function init(){
   migrateBadMemoAttachments(); // v38: 깨진 첨부 정리
   renderStatusChips(); renderAll();
   try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
+  // v41: contacts 연동 초기화 (무한재귀 방지를 위해 직접 호출)
+  loadContactCats().catch(()=>{});
+  loadContactsCache().catch(()=>{});
 }
 
 // v26: 옛 "휴지" 품목 → "점보롤"로 자동 마이그레이션
@@ -4962,12 +4965,6 @@ function fieldHTML(f){
   return _origFieldHTMLV41(f);
 }
 
-/* ── init 패치 ──────────────────────────────────────────── */
-const _origInitV41 = init;
-async function init(){
-  await _origInitV41();
-  await Promise.all([loadContactCats(), loadContactsCache()]);
-  console.log("✅ v41: contact_cats 로드 완료, contacts 캐시:", contactsCache.length+"건");
-}
+// v41 init은 원본 init()에 직접 통합됨
 
 init();
