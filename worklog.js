@@ -2158,6 +2158,7 @@ function applyFlOrder(orderedCats){
 
 // 카드 순서 적용 (카테고리 내)
 function applyCardOrder(cat, items){
+  if(!items||!items.length) return items||[];
   const withOrder = items.map(e=>{
     const m = getCardMeta(e.id);
     return { e, order: (m&&m.cat===cat) ? m.order : 9999 };
@@ -2437,7 +2438,7 @@ function renderFileLink(){
   const expandedCats=[];
   orderedCats.forEach(c=>{
     const items=groups[c];
-    expandedCats.push({cat:c, origCat:c, items:applyCardOrder(c, items)});
+    expandedCats.push({cat:c, origCat:c, items:applyCardOrder(c, items||[])});
   });
 
   html+=expandedCats.map(({cat,origCat,items})=>{
