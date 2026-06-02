@@ -572,6 +572,11 @@ function activateWorkSubtab(sub){
 // 업무 탭 서브탭 클릭 wiring
 function wireWorkSubtabs(){
   document.querySelectorAll("#workSubtabs button").forEach(b=>b.addEventListener("click",()=>{
+    // 외부 링크 탭(직원관리, 업체연락처)은 새 탭으로 열기
+    if(b.dataset.extlink){
+      window.open(b.dataset.extlink, "_blank");
+      return;
+    }
     activateWorkSubtab(b.dataset.subtab);
   }));
   // 페이지 로드 직후 통합 대상 패널들을 모두 host 안으로 즉시 이동 + 숨김
@@ -664,7 +669,7 @@ function fieldHTML(f){
       const callNames=[...new Set([
         ...entries.filter(e=>e.kind==="call"&&e.name).map(e=>e.name),
         ...(typeof contactsCache!=="undefined"?contactsCache.map(c=>c.name).filter(Boolean):[]),
-        ...["조태경","김대환","정지환","마재곤","구자경","배옥식","김태경","한광희","정은지","오희성","차민자","박일월"]
+        ...(typeof STAFF_LIST!=="undefined"?STAFF_LIST.map(s=>s.name):[])
       ])].sort();
       inner=`<input type="text" id="m-${f.k}" list="dl-callname" autocomplete="off"><datalist id="dl-callname">${callNames.map(v=>`<option value="${esc(v)}"></option>`).join("")}</datalist>`;
     } else inner=`<input type="${t}" id="m-${f.k}"${im}>`;
@@ -4784,9 +4789,20 @@ $("catMgrClose").addEventListener("click", ()=>{
 
 /* ── contacts 컬렉션 캐시 (자동완성용) ───────────────────── */
 let contactsCache = [];
+// 직원 명단 (이름+전화번호) - 자동완성 및 contacts 연동용
 const STAFF_LIST = [
-  "조태경","김대환","정지환","마재곤","구자경",
-  "배옥식","김태경","한광희","정은지","오희성","차민자","박일월"
+  {name:"조태경", phone:"010-8724-5543", role:"실장"},
+  {name:"김대환", phone:"010-3358-4852", role:"경비"},
+  {name:"정지환", phone:"010-5520-3157", role:"경비"},
+  {name:"마재곤", phone:"010-7752-2569", role:"경비"},
+  {name:"구자경", phone:"010-3842-2566", role:"경비"},
+  {name:"배옥식", phone:"010-8949-7400", role:"청소반장"},
+  {name:"김태경", phone:"010-7388-4170", role:"미화"},
+  {name:"한광희", phone:"010-8215-0047", role:"미화"},
+  {name:"정은지", phone:"010-8937-6265", role:"미화"},
+  {name:"오희성", phone:"010-4223-2842", role:"미화"},
+  {name:"차민자", phone:"010-7330-5996", role:"미화"},
+  {name:"박일월", phone:"010-8976-5746", role:"미화"},
 ];
 
 async function loadContactsCache(){
@@ -4814,10 +4830,10 @@ function searchContacts(q){
       });
     }
   });
-  // 직원 명단 (이름 매칭)
+  // 직원 명단 (이름 매칭 + 실제 전화번호)
   STAFF_LIST.forEach(s=>{
-    if(s.includes(q) && !results.find(r=>r.name===s)){
-      results.push({label: s+" [직원]", phone:"", name:s});
+    if(s.name.includes(q) && !results.find(r=>r.name===s.name)){
+      results.push({label: s.name+" ["+s.role+"]", phone:s.phone, name:s.name});
     }
   });
   return results.slice(0,8);
