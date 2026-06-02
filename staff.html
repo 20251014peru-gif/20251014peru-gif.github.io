@@ -291,9 +291,9 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .divider::after{content:'';flex:1;height:1.5px;background:var(--border);}
 
 /* ===== PIN 잠금 ===== */
-.lock-screen{position:fixed;inset:0;background:linear-gradient(145deg,#F2F5FF 0%,#E8EEFF 100%);z-index:9000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;}
+.lock-screen{position:fixed;inset:0;background:linear-gradient(145deg,#F2F5FF 0%,#E8EEFF 100%);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;}
 .lock-screen.hide{display:none;}
-.lock-card{background:#fff;border:2px solid var(--border);border-radius:24px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(76,110,245,.15);text-align:center;}
+.lock-card{background:#fff;border:2px solid var(--border);border-radius:24px;padding:28px 24px;width:100%;max-width:320px;box-shadow:0 8px 40px rgba(76,110,245,.15);text-align:center;}
 .lock-ico{font-size:48px;margin-bottom:10px;}
 .lock-title{font-size:19px;font-weight:900;color:var(--ink);margin-bottom:4px;}
 .lock-sub{font-size:12px;color:var(--ink3);margin-bottom:22px;}
@@ -303,7 +303,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .pin-dot.err{background:var(--red);border-color:var(--red);animation:shake .3s;}
 @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}};
 .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;width:100%;}
-.pin-btn{background:var(--bg);border:2px solid var(--border);border-radius:16px;padding:0;height:64px;font-size:22px;font-weight:800;color:var(--ink);cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;justify-content:center;width:100%;}
+.pin-btn{background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:0;height:62px;font-size:22px;font-weight:800;color:var(--ink);cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;}
 .pin-btn:hover{background:var(--accent-s);border-color:var(--accent2);}
 .pin-btn:active{transform:scale(.92);background:var(--accent-s);}
 .pin-btn.del{font-size:18px;color:var(--ink3);}
@@ -336,7 +336,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
       <span class="pin-dot" id="pd2"></span><span class="pin-dot" id="pd3"></span>
     </div>
     <div class="pin-err" id="pinErr"></div>
-    <div class="pin-pad" id="pinPad">
+    <div id="pinPad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;width:100%">
       <button class="pin-btn" data-n="1">1</button>
       <button class="pin-btn" data-n="2">2</button>
       <button class="pin-btn" data-n="3">3</button>
@@ -346,9 +346,9 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
       <button class="pin-btn" data-n="7">7</button>
       <button class="pin-btn" data-n="8">8</button>
       <button class="pin-btn" data-n="9">9</button>
-      <button class="pin-btn empty"></button>
+      <button class="pin-btn empty" style="background:transparent;border-color:transparent"></button>
       <button class="pin-btn" data-n="0">0</button>
-      <button class="pin-btn del" id="pinDel">⌫</button>
+      <button class="pin-btn del" id="pinDel" style="color:var(--ink3);font-size:18px">⌫</button>
     </div>
     <div class="pin-setup-btns" id="pinSetupBtns" style="display:none">
       <button class="pin-setup-btn primary" id="pinSetupOk">🔐 PIN 설정하기</button>
