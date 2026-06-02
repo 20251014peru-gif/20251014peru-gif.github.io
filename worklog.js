@@ -2099,8 +2099,10 @@ function renderFileLink(){
       inner+=`<div class="grp-sublabel">📄 파일 <span class="gs-cnt">${files.length}</span></div>`;
       inner+=`<div class="cat-items">${files.map(e=>fileLinkCardHTML(e)).join("")}</div>`;
     }
+    const CAT_ICONS={"전기":"⚡","소방":"🔥","기계":"❄️","서희타워 운영":"🏢","사무관련":"📋","비용관련":"💰","공적업무":"📌","용역":"🔧","개인용도":"👤"};
+    const catIco = CAT_ICONS[c]||"📁";
     return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}">
-      <div class="cat-group-h"><span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span></div>
+      <div class="cat-group-h"><span class="ch-arrow">▼</span><span>${catIco}</span> ${esc(c)}<span class="ch-cnt">${items.length}</span></div>
       ${inner}</div>`;
   }).join("");
   box.innerHTML=html;
