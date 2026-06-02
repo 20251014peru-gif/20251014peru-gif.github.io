@@ -660,6 +660,13 @@ function fieldHTML(f){
     } else if(f.k==="material"){
       const mats=[...new Set(entries.filter(e=>e.kind==="work"&&e.material).map(e=>e.material))].sort();
       inner=`<input type="text" id="m-${f.k}" list="dl-material" autocomplete="off"><datalist id="dl-material">${mats.map(v=>`<option value="${esc(v)}"></option>`).join("")}</datalist>`;
+    } else if(f.k==="name" && mKind==="call"){
+      const callNames=[...new Set([
+        ...entries.filter(e=>e.kind==="call"&&e.name).map(e=>e.name),
+        ...(typeof contactsCache!=="undefined"?contactsCache.map(c=>c.name).filter(Boolean):[]),
+        ...["조태경","김대환","정지환","마재곤","구자경","배옥식","김태경","한광희","정은지","오희성","차민자","박일월"]
+      ])].sort();
+      inner=`<input type="text" id="m-${f.k}" list="dl-callname" autocomplete="off"><datalist id="dl-callname">${callNames.map(v=>`<option value="${esc(v)}"></option>`).join("")}</datalist>`;
     } else inner=`<input type="${t}" id="m-${f.k}"${im}>`;
   }
   const req=f.req?' <span class="req">*</span>':'';
@@ -679,38 +686,10 @@ function openEditor(kind,id){
   $("mFields").innerHTML = sc.map(fieldHTML).join("");
   sc.forEach(f=>{ const el=$("m-"+f.k); if(!el) return; const v=data[f.k]; if(v!==undefined&&v!==null&&v!=="") el.value=v; });
   const hasPhoto=PHOTO_KINDS.includes(kind);
-  $("mPhotoArea").style.display=hasPhoto?"":"none";
+  $("mPhotoArea").style.display=hasPhoto?"flex":"none";
   modalPhotos=hasPhoto?((data.photos||[]).slice()):[];
   renderModalThumbs();
-  // 버튼(저장/취소/삭제)을 사진 있는 종류면 photo-btns 줄 오른쪽, 없으면 btn-row 원위치
-  (function(){
-    const btnRow = $("overlay").querySelector(".btn-row");
-    const photoBtns = $("mPhotoArea").querySelector(".photo-btns");
-    if(!btnRow || !photoBtns) return;
-    if(hasPhoto){
-      photoBtns.style.cssText="display:flex;align-items:center;gap:8px;flex-wrap:wrap";
-      if(!photoBtns.contains($("mSave"))){
-        const span = document.createElement("span");
-        span.id = "modalBtnHolder";
-        span.style.cssText = "margin-left:auto;display:flex;gap:6px;align-items:center";
-        span.appendChild($("mSave"));
-        span.appendChild($("mCancel"));
-        span.appendChild($("mDelete"));
-        photoBtns.appendChild(span);
-      }
-      btnRow.style.display="none";
-    } else {
-      photoBtns.style.cssText="";
-      if(!btnRow.contains($("mSave"))){
-        btnRow.insertBefore($("mSave"), btnRow.firstChild);
-        btnRow.insertBefore($("mCancel"), btnRow.children[1]);
-        btnRow.appendChild($("mDelete"));
-        const old = document.getElementById("modalBtnHolder");
-        if(old) old.remove();
-      }
-      btnRow.style.display="";
-    }
-  })();
+
 
   // v15: 첨부파일 영역
   const hasAttach=ATTACH_KINDS.includes(kind);
@@ -952,16 +931,20 @@ $("viewOverlay").addEventListener("click",e=>{ if(e.target===$("viewOverlay")) $
 $("m-cam").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("m-file").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("mCancel").addEventListener("click",()=>$("overlay").classList.remove("show"));
-// 탭키 자동완성: capture phase에서 먼저 잡아야 포커스이동보다 우선
-$("overlay").addEventListener("keydown", e=>{
+
+// ── 탭키: datalist 자동완성 첫 항목 선택 (capture:true로 브라우저 포커스이동 차단) ──
+document.addEventListener("keydown", e=>{
   if(e.key!=="Tab") return;
+  const overlay = $("overlay");
+  if(!overlay || !overlay.classList.contains("show")) return;
   const el = document.activeElement;
   if(!el || el.tagName!=="INPUT") return;
   const listId = el.getAttribute("list");
   if(!listId) return;
   const dl = document.getElementById(listId);
   if(!dl || !dl.options.length) return;
-  const typed = el.value.toLowerCase();
+  const typed = (el.value||"").toLowerCase();
+  if(!typed) return;
   const match = Array.from(dl.options).find(o=>o.value.toLowerCase().startsWith(typed));
   if(match && match.value !== el.value){
     e.preventDefault();
@@ -969,22 +952,17 @@ $("overlay").addEventListener("keydown", e=>{
     el.value = match.value;
     el.dispatchEvent(new Event("input"));
   }
-}, true); // capture:true → 브라우저 기본 탭이동보다 먼저 실행
+}, true);
 
-// 엔터 저장
-$("overlay").addEventListener("keydown", e=>{
+// ── 엔터: 셀(input) 안에서도, 셀 밖에서도 저장. textarea·select는 기본동작 유지 ──
+document.addEventListener("keydown", e=>{
   if(e.key!=="Enter") return;
+  const overlay = $("overlay");
+  if(!overlay || !overlay.classList.contains("show")) return;
   const tag = (document.activeElement||{}).tagName||"";
   if(tag==="TEXTAREA"||tag==="SELECT") return;
-  if(tag==="INPUT"){
-    e.preventDefault();
-    $("mSave").click();
-    return;
-  }
-  if(!["INPUT","SELECT","TEXTAREA","BUTTON"].includes(tag)){
-    e.preventDefault();
-    $("mSave").click();
-  }
+  e.preventDefault();
+  $("mSave").click();
 });
 $("mSave").addEventListener("click",async ()=>{
   // v16: 비밀번호 종류는 별도 처리 (암호화)
