@@ -56,14 +56,19 @@
           <button class="btn btn-ghost btn-sm" id="btnFileCatMgr">⚙ 카테고리 관리</button>
         </div>
       </div>
-      <p class="desc">점검일지, 관리 폴더 등 자주 쓰는 파일/폴더를 카테고리별로 정리합니다. 클릭하면 PC에서 바로 열립니다. (※ <code>localfile.reg</code> 등록 필요 — 자가진단 탭 참조)</p>
-      <div class="toolbar-row">
+      <!-- 검색창 맨 위 -->
+      <div style="position:relative;margin-bottom:14px">
+        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none">🔍</span>
+        <input type="text" id="fileSearch" class="search" placeholder="검색 — 별칭·경로·메모" style="padding-left:44px;font-size:16px;font-weight:600;border:2.5px solid var(--primary);border-radius:14px;background:#f0f6ff;height:48px;box-shadow:0 2px 12px rgba(63,124,184,.15)">
+      </div>
+      <!-- 툴바 -->
+      <div class="toolbar-row" style="margin-bottom:10px">
         <span class="tb-label">보기</span>
-        <span class="view-mode-group" data-vm="filelink">
-          <button data-v="card">🎴 카드</button>
-          <button data-v="list">📋 목록</button>
-          <button data-v="tile">🏷 타일</button>
-        </span>
+        <select id="fileLinkViewSelect" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;cursor:pointer">
+          <option value="card">🎴 카드형</option>
+          <option value="list">📋 목록형</option>
+          <option value="tile">🏷 타일형</option>
+        </select>
         <span class="tb-label" style="margin-left:6px">종류</span>
         <span class="view-mode-group" id="fileTypeFilter">
           <button data-ft="all" class="active">전체</button>
@@ -76,15 +81,12 @@
           <option value="recent">최근 사용순</option>
           <option value="created">등록일순</option>
         </select>
-        <button class="tb-toggle" data-compact="filelink">컴팩트</button>
-        <button class="tb-toggle" data-collapse="filelink">전체 접기</button>
       </div>
-      <div class="filt-row">
+      <div class="filt-row" style="margin-bottom:8px">
         <select id="fileCatFilter"></select>
+        <select id="fileSubFilter" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff"></select>
       </div>
-      <div class="sub-chips" id="fileSubFilter"></div>
-      <input type="text" id="fileSearch" class="search" placeholder="🔍 검색 — 별칭·경로·메모">
-      <div id="fileCatJump"></div>
+      <div id="fileCatJump" style="display:none"></div>
       <div id="fileList"></div>
     </div>
   </section>

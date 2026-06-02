@@ -238,8 +238,57 @@ function isFolder(p, ptype){
   // 기존 호환: 경로 끝이 슬래시면 폴더로 추정
   return /[\\\/]\s*$/.test(p||"");
 }
-function fileIcon(p, ptype){
-  if(isFolder(p, ptype)) return "📁";
+function fileIcon(p, ptype, label){
+  if(isFolder(p, ptype)){
+    // 폴더명 키워드로 아이콘
+    const fn=((p||"")+(label||"")).toLowerCase();
+    if(/전기|electric/.test(fn)) return "⚡";
+    if(/소방|fire/.test(fn)) return "🔥";
+    if(/기계|냉난방|hvac|boiler/.test(fn)) return "❄️";
+    if(/승강기|엘리베이터|elevator/.test(fn)) return "🛗";
+    if(/청소|미화/.test(fn)) return "🧹";
+    if(/경비|보안|security/.test(fn)) return "🛡️";
+    if(/계약|contract/.test(fn)) return "📜";
+    if(/도면|설계|drawing/.test(fn)) return "🗺️";
+    if(/보험/.test(fn)) return "🛡️";
+    if(/발주|구매|order/.test(fn)) return "🚚";
+    if(/견적|estimate/.test(fn)) return "💰";
+    if(/공문|문서|내부/.test(fn)) return "📨";
+    if(/업무일지|일지/.test(fn)) return "📓";
+    if(/사진|photo|image/.test(fn)) return "📷";
+    if(/회의|meeting/.test(fn)) return "💼";
+    if(/민원|complaint/.test(fn)) return "📢";
+    if(/점검|inspect|check/.test(fn)) return "🔍";
+    if(/관리|manage/.test(fn)) return "🗂️";
+    if(/품의서|품의/.test(fn)) return "📝";
+    return "📁";
+  }
+  // 파일명 키워드로 아이콘
+  const fn=((p||"")+(label||"")).toLowerCase();
+  if(/전화|통화|연락처|phone|call/.test(fn)) return "📞";
+  if(/안내|인포|info|notice/.test(fn)) return "ℹ️";
+  if(/교육|training|edu/.test(fn)) return "🎓";
+  if(/점검|inspect|check/.test(fn)) return "🔍";
+  if(/발전기|generator/.test(fn)) return "🔋";
+  if(/소방|fire/.test(fn)) return "🚒";
+  if(/전기|electric/.test(fn)) return "⚡";
+  if(/승강기|엘리베이터/.test(fn)) return "🛗";
+  if(/냉난방|냉각|hvac/.test(fn)) return "❄️";
+  if(/보험/.test(fn)) return "🛡️";
+  if(/계약/.test(fn)) return "📜";
+  if(/견적/.test(fn)) return "💰";
+  if(/주차|parking/.test(fn)) return "🚗";
+  if(/도면/.test(fn)) return "🗺️";
+  if(/품의/.test(fn)) return "📝";
+  if(/공문|내부문서/.test(fn)) return "📨";
+  if(/일지|일일/.test(fn)) return "📓";
+  if(/회의|meeting/.test(fn)) return "💼";
+  if(/민원/.test(fn)) return "📢";
+  if(/관리비/.test(fn)) return "💸";
+  if(/사진|photo/.test(fn)) return "📷";
+  if(/주간|weekly/.test(fn)) return "📅";
+  if(/월간|monthly/.test(fn)) return "🗓️";
+  // 확장자별
   const ext=(p||"").split(".").pop().toLowerCase();
   if(["doc","docx"].includes(ext)) return "📄";
   if(["xls","xlsx","xlsm","csv"].includes(ext)) return "📊";
@@ -1998,7 +2047,22 @@ function wireFileLinkTab(){
   $("fileSearch").addEventListener("input",e=>{ CAT_FILTER.filelink.q=e.target.value; renderFileLink(); });
   $("fileCatFilter").addEventListener("change",e=>{ CAT_FILTER.filelink.cat=e.target.value; CAT_FILTER.filelink.sub="전체"; renderFileLink(); });
   $("btnFileCatMgr").addEventListener("click",()=>openCatMgr("filelink"));
-  // v18: 폴더/파일 종류 필터
+  // 보기 드롭다운
+  const vsel=$("fileLinkViewSelect");
+  if(vsel){
+    vsel.value = VIEW_PREFS.filelink.mode||"card";
+    vsel.addEventListener("change",()=>{
+      VIEW_PREFS.filelink.mode=vsel.value; saveViewPrefs(); renderFileLink();
+    });
+  }
+  // 소분류 드롭다운
+  const subSel=$("fileSubFilter");
+  if(subSel){
+    subSel.addEventListener("change",()=>{
+      CAT_FILTER.filelink.sub=subSel.value; renderFileLink();
+    });
+  }
+  // 폴더/파일 종류 필터
   document.querySelectorAll("#fileTypeFilter button").forEach(b=>b.addEventListener("click",()=>{
     document.querySelectorAll("#fileTypeFilter button").forEach(x=>x.classList.remove("active"));
     b.classList.add("active");
@@ -2023,16 +2087,13 @@ function populateFileFilters(){
   const subs=Object.keys(cnt).sort();
   if(!subs.includes(CAT_FILTER.filelink.sub) && CAT_FILTER.filelink.sub!=="전체") CAT_FILTER.filelink.sub="전체";
   const box=$("fileSubFilter");
-  if(!subs.length){ box.innerHTML=`<span class="sub-h">소분류</span><span class="sub-empty">— 없음 —</span>`; return; }
-  const allCnt=baseList.length;
-  let html=`<span class="sub-h">소분류</span>`;
-  html+=`<button class="chip ${CAT_FILTER.filelink.sub==="전체"?"active":""}" data-sub="전체">전체<span class="sub-cnt">${allCnt}</span></button>`;
-  html+=subs.map(s=>`<button class="chip ${CAT_FILTER.filelink.sub===s?"active":""}" data-sub="${esc(s)}">${esc(s)}<span class="sub-cnt">${cnt[s]}</span></button>`).join("");
+  if(!box) return;
+  if(!subs.length){ box.innerHTML=`<option value="전체">소분류 전체</option>`; box.style.display="none"; return; }
+  box.style.display="";
+  let html=`<option value="전체">소분류 전체 (${baseList.length})</option>`;
+  html+=subs.map(s=>`<option value="${esc(s)}">${esc(s)} (${cnt[s]})</option>`).join("");
   box.innerHTML=html;
-  box.querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{
-    CAT_FILTER.filelink.sub=b.dataset.sub;
-    renderFileLink();
-  }));
+  box.value=CAT_FILTER.filelink.sub;
 }
 function fileLinkList(){
   const f=CAT_FILTER.filelink;
@@ -2044,6 +2105,9 @@ function fileLinkList(){
 }
 function renderFileLink(){
   bindViewControls("filelink");
+  // 보기 드롭다운 동기화
+  const vsel=$("fileLinkViewSelect");
+  if(vsel && vsel.value!==VIEW_PREFS.filelink.mode) vsel.value=VIEW_PREFS.filelink.mode||"card";
   populateFileFilters();
   const box=$("fileList");
   const list=fileLinkList();
@@ -2071,7 +2135,8 @@ function renderFileLink(){
   const jumpGroups={};
   if(favs.length) jumpGroups["⭐ 즐겨찾기"]=favs;
   orderedCats.forEach(c=>{ jumpGroups[c]=groups[c]; });
-  buildCatJump("filelink", jumpGroups, "fileCatJump");
+  // 점프 메뉴 미사용
+  if($("fileCatJump")) $("fileCatJump").innerHTML="";
   // 본문
   const mode=VIEW_PREFS.filelink.mode;
   const compact=VIEW_PREFS.filelink.compact;
@@ -2082,12 +2147,28 @@ function renderFileLink(){
     html+=`<div class="fav-section"><div class="fs-h">⭐ 즐겨찾기 <span class="fs-cnt">${favs.length}</span></div>
       <div class="cat-items">${favs.map(e=>fileLinkCardHTML(e)).join("")}</div></div>`;
   }
-  // 카테고리별
-  html+=orderedCats.map(c=>{
+  // 카테고리별 - 서희타워 운영 5개 초과시 자동 분할, 소형 카테고리 묶기
+  const CAT_ICONS_MAP={"전기":"⚡","소방":"🔥","기계":"❄️","기계/냉난방":"❄️","서희타워 운영":"🏢","사무관련":"📋","비용관련":"💰","공적업무":"📌","용역":"🔧","개인용도":"👤","승강기":"🛗","청소":"🧹","경비":"🛡️","행정":"📋"};
+  
+  // 서희타워 운영 5개 초과 자동 분할
+  const expandedCats=[];
+  orderedCats.forEach(c=>{
     const items=groups[c];
-    const collapsed=VIEW_PREFS.filelink.collapsed[c];
-    const colorClass=catColorClass("filelink",c);
-    // 폴더/파일 분리 (이미 sortItems에서 폴더가 앞으로 정렬됨)
+    if(items.length>5 && c==="서희타워 운영"){
+      // 5개씩 분할
+      for(let i=0;i<items.length;i+=5){
+        const chunk=items.slice(i,i+5);
+        const subKey=c+(i===0?"":` ${Math.floor(i/5)+1}`);
+        expandedCats.push({cat:subKey,origCat:c,items:chunk});
+      }
+    } else {
+      expandedCats.push({cat:c,origCat:c,items});
+    }
+  });
+
+  html+=expandedCats.map(({cat,origCat,items})=>{
+    const collapsed=VIEW_PREFS.filelink.collapsed[origCat];
+    const colorClass=catColorClass("filelink",origCat);
     const folders=items.filter(e=>isFolder(e.path,e.ptype));
     const files=items.filter(e=>!isFolder(e.path,e.ptype));
     let inner="";
@@ -2099,10 +2180,9 @@ function renderFileLink(){
       inner+=`<div class="grp-sublabel">📄 파일 <span class="gs-cnt">${files.length}</span></div>`;
       inner+=`<div class="cat-items">${files.map(e=>fileLinkCardHTML(e)).join("")}</div>`;
     }
-    const CAT_ICONS={"전기":"⚡","소방":"🔥","기계":"❄️","서희타워 운영":"🏢","사무관련":"📋","비용관련":"💰","공적업무":"📌","용역":"🔧","개인용도":"👤"};
-    const catIco = CAT_ICONS[c]||"📁";
-    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}">
-      <div class="cat-group-h"><span class="ch-arrow">▼</span><span>${catIco}</span> ${esc(c)}<span class="ch-cnt">${items.length}</span></div>
+    const catIco = CAT_ICONS_MAP[origCat]||"📁";
+    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(origCat)}">
+      <div class="cat-group-h"><span class="ch-arrow">▼</span><span>${catIco}</span> ${esc(cat)}<span class="ch-cnt">${items.length}</span></div>
       ${inner}</div>`;
   }).join("");
   box.innerHTML=html;
@@ -2135,7 +2215,7 @@ function fileLinkCardHTML(e){
     ? `<span class="lc-typebadge tb-folder">📁 폴더</span>`
     : `<span class="lc-typebadge tb-file">📄 파일</span>`;
   return `<div class="link-card${folder?" is-folder":""}${e.starred?" starred":""}" data-fid="${e.id}" title="${esc(tt)}">
-    <span class="lc-icon">${fileIcon(e.path, e.ptype)}</span>
+    <span class="lc-icon">${fileIcon(e.path, e.ptype, e.label)}</span>
     <div class="lc-body">
       <div class="lc-name">${esc(e.label||"")}</div>
       <div class="lc-sub">${esc(e.path||"")}</div>
