@@ -682,6 +682,35 @@ function openEditor(kind,id){
   $("mPhotoArea").style.display=hasPhoto?"":"none";
   modalPhotos=hasPhoto?((data.photos||[]).slice()):[];
   renderModalThumbs();
+  // 버튼(저장/취소/삭제)을 사진 있는 종류면 photo-btns 줄 오른쪽, 없으면 btn-row 원위치
+  (function(){
+    const btnRow = $("overlay").querySelector(".btn-row");
+    const photoBtns = $("mPhotoArea").querySelector(".photo-btns");
+    if(!btnRow || !photoBtns) return;
+    if(hasPhoto){
+      photoBtns.style.cssText="display:flex;align-items:center;gap:8px;flex-wrap:wrap";
+      if(!photoBtns.contains($("mSave"))){
+        const span = document.createElement("span");
+        span.id = "modalBtnHolder";
+        span.style.cssText = "margin-left:auto;display:flex;gap:6px;align-items:center";
+        span.appendChild($("mSave"));
+        span.appendChild($("mCancel"));
+        span.appendChild($("mDelete"));
+        photoBtns.appendChild(span);
+      }
+      btnRow.style.display="none";
+    } else {
+      photoBtns.style.cssText="";
+      if(!btnRow.contains($("mSave"))){
+        btnRow.insertBefore($("mSave"), btnRow.firstChild);
+        btnRow.insertBefore($("mCancel"), btnRow.children[1]);
+        btnRow.appendChild($("mDelete"));
+        const old = document.getElementById("modalBtnHolder");
+        if(old) old.remove();
+      }
+      btnRow.style.display="";
+    }
+  })();
 
   // v15: 첨부파일 영역
   const hasAttach=ATTACH_KINDS.includes(kind);
@@ -923,44 +952,35 @@ $("viewOverlay").addEventListener("click",e=>{ if(e.target===$("viewOverlay")) $
 $("m-cam").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("m-file").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("mCancel").addEventListener("click",()=>$("overlay").classList.remove("show"));
-// 엔터 저장 + 탭키 자동완성 선택
+// 탭키 자동완성: capture phase에서 먼저 잡아야 포커스이동보다 우선
 $("overlay").addEventListener("keydown", e=>{
-  const tag = (document.activeElement||{}).tagName||"";
-  // 탭키: input에서 datalist 자동완성 첫 번째 항목 선택
-  if(e.key==="Tab" && tag==="INPUT"){
-    const el = document.activeElement;
-    const listId = el.getAttribute("list");
-    if(listId){
-      const dl = document.getElementById(listId);
-      if(dl && dl.options.length > 0){
-        const typed = el.value.toLowerCase();
-        const match = Array.from(dl.options).find(o=>o.value.toLowerCase().startsWith(typed));
-        if(match && match.value !== el.value){
-          e.preventDefault();
-          el.value = match.value;
-          el.dispatchEvent(new Event("input"));
-          return;
-        }
-      }
-    }
+  if(e.key!=="Tab") return;
+  const el = document.activeElement;
+  if(!el || el.tagName!=="INPUT") return;
+  const listId = el.getAttribute("list");
+  if(!listId) return;
+  const dl = document.getElementById(listId);
+  if(!dl || !dl.options.length) return;
+  const typed = el.value.toLowerCase();
+  const match = Array.from(dl.options).find(o=>o.value.toLowerCase().startsWith(typed));
+  if(match && match.value !== el.value){
+    e.preventDefault();
+    e.stopPropagation();
+    el.value = match.value;
+    el.dispatchEvent(new Event("input"));
   }
+}, true); // capture:true → 브라우저 기본 탭이동보다 먼저 실행
+
+// 엔터 저장
+$("overlay").addEventListener("keydown", e=>{
   if(e.key!=="Enter") return;
-  if(tag==="TEXTAREA"||tag==="SELECT") return; // textarea/select 기본 동작 유지
+  const tag = (document.activeElement||{}).tagName||"";
+  if(tag==="TEXTAREA"||tag==="SELECT") return;
   if(tag==="INPUT"){
-    // datalist가 열려있으면 선택만 하고 저장 안 함
-    const el = document.activeElement;
-    const listId = el.getAttribute("list");
-    if(listId){
-      e.preventDefault();
-      el.blur(); // 포커스 제거 후 저장 대기
-      setTimeout(()=>$("mSave").click(), 80);
-      return;
-    }
     e.preventDefault();
     $("mSave").click();
     return;
   }
-  // 셀 밖(BODY, DIV 등)에서 엔터 → 저장
   if(!["INPUT","SELECT","TEXTAREA","BUTTON"].includes(tag)){
     e.preventDefault();
     $("mSave").click();

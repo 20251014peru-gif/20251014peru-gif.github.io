@@ -600,16 +600,16 @@
 
   <div class="field full" id="mPhotoArea" style="margin-top:12px">
     <label>📷 사진</label>
-    <div class="photo-btns" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
+    <div class="photo-btns">
       <label class="photo-btn">📷 촬영<input type="file" id="m-cam" accept="image/*" capture="environment" style="display:none"></label>
       <label class="photo-btn">🖼 사진 선택<input type="file" id="m-file" accept="image/*" multiple style="display:none"></label>
-      <span style="margin-left:auto;display:flex;gap:6px">
-        <button class="btn btn-primary" id="mSave">저장</button>
-        <button class="btn btn-ghost" id="mCancel">취소</button>
-        <button class="btn btn-danger" id="mDelete" style="margin-left:4px">삭제</button>
-      </span>
     </div>
     <div class="thumbs" id="m-thumbs"></div>
+  </div>
+  <div class="btn-row" style="flex-wrap:nowrap">
+    <button class="btn btn-primary" id="mSave">저장</button>
+    <button class="btn btn-ghost" id="mCancel">취소</button>
+    <button class="btn btn-danger" id="mDelete" style="margin-left:auto">삭제</button>
   </div>
 </div></div>
 
