@@ -118,7 +118,7 @@ textarea{resize:vertical;min-height:64px}
 
 /* ===== v16 신규 — 파일링크/사이트/비번 ===== */
 .cat-group{margin-bottom:18px}
-.cat-group-h{display:flex;align-items:center;gap:8px;font-family:'Gowun Batang',serif;font-size:22px;font-weight:900;color:#fff;margin-bottom:8px;padding:16px 18px;border-radius:14px;background:var(--ccol,var(--primary));cursor:pointer;user-select:none;border-bottom:none}
+.cat-group-h{display:flex!important;align-items:center!important;gap:8px!important;font-family:'Gowun Batang',serif!important;font-size:20px!important;font-weight:900!important;color:#fff!important;margin-bottom:8px!important;padding:14px 18px!important;border-radius:14px!important;background:var(--ccol,var(--primary))!important;cursor:pointer!important;user-select:none!important;border-bottom:none!important;min-height:54px!important;box-sizing:border-box!important}
 .cat-group-h .ch-arrow{font-size:11px;color:rgba(255,255,255,.8);transition:transform .15s}
 .cat-group.collapsed .ch-arrow{transform:rotate(-90deg)}
 .cat-group.collapsed .cat-items{display:none}
@@ -442,7 +442,7 @@ table.rec tbody tr.st-zero td:nth-child(7) b{color:#999}
 .cat-c8{--ccol:#e08754} .cat-c9{--ccol:#7894c7} .cat-c10{--ccol:#c574d4} .cat-c11{--ccol:#76a8a8}
 
 .cat-group{position:relative}
-.cat-group-h{border-bottom-color:var(--ccol,var(--primary-soft));border-bottom-width:3px}
+/* cat-group-h border 제거됨 */
 .cat-group-h::before{display:none}
 
 /* 즐겨찾기 섹션 */

@@ -454,6 +454,8 @@ async function init(){
   loadContactsCache().catch(()=>{});
   // 드래그 앤 드롭 순서 로드
   loadFlOrder().catch(()=>{});
+  // 서희타워 카테고리 분리 마이그레이션
+  migrateTowerCats();
 }
 
 // v26: 옛 "휴지" 품목 → "점보롤"로 자동 마이그레이션
@@ -2023,21 +2025,64 @@ function buildCatJump(kind, groupsObj, jumpBoxId){
     }
   }));
 }
+
+/* 서희타워 운영 → 서희타워 운영 1/2/3 자동 마이그레이션 (최초 1회) */
+function migrateTowerCats(){
+  const LS_KEY = "tower_migrated_v1";
+  if(localStorage.getItem(LS_KEY)) return;
+  const TOWER_GROUPS = [
+    { label:"서희타워 운영 1", keys:["업무일지","경비업무일지","주간회의록","회의록","사무관련","사무"] },
+    { label:"서희타워 운영 2", keys:["견적","계약","관리"] },
+    { label:"서희타워 운영 3", keys:["도면","보험증권","발주서"] },
+  ];
+  function towerGroupLabel(item){
+    const t=(item.label||item.path||"").toLowerCase();
+    for(const g of TOWER_GROUPS){
+      if(g.keys.some(k=>t.includes(k.toLowerCase()))) return g.label;
+    }
+    return "서희타워 운영 1";
+  }
+  const toMigrate = entries.filter(e=>e.kind==="filelink"&&e.category==="서희타워 운영");
+  if(!toMigrate.length){ localStorage.setItem(LS_KEY,"1"); return; }
+  toMigrate.forEach(e=>{
+    const newCat = towerGroupLabel(e);
+    updateRecord(e.id, {category: newCat});
+  });
+  // CATEGORIES에도 추가
+  ["서희타워 운영 1","서희타워 운영 2","서희타워 운영 3"].forEach(c=>{
+    if(!CATEGORIES.filelink.includes(c)) CATEGORIES.filelink.push(c);
+  });
+  saveCategories();
+  localStorage.setItem(LS_KEY,"1");
+  console.log("서희타워 카테고리 마이그레이션 완료:", toMigrate.length+"개");
+}
 function sortItems(kind, list){
   const s=VIEW_PREFS[kind].sort;
   const nameKey = kind==="filelink" ? "label" : "name";
-  // 기본 비교 함수 (선택된 정렬 기준에 따라)
   const cmp=(a,b)=>{
     if(s==="recent") return (b.lastOpenedAt||0)-(a.lastOpenedAt||0) || (a[nameKey]||"").localeCompare(b[nameKey]||"","ko");
     if(s==="created") return (b.createdAt||0)-(a.createdAt||0) || (a[nameKey]||"").localeCompare(b[nameKey]||"","ko");
-    return (a[nameKey]||"").localeCompare(b[nameKey]||"","ko"); // 이름순 (ㄱㄴㄷ)
+    return (a[nameKey]||"").localeCompare(b[nameKey]||"","ko");
   };
   if(kind==="filelink"){
-    // 폴더 먼저, 파일 나중 — 각 그룹 안에서 위 기준으로 정렬
+    // flOrder에 저장된 순서가 있으면 → 저장 순서 우선 (수정 후 위치 유지)
+    const hasOrder = list.some(e=>flOrder.cards[e.id]);
+    if(hasOrder){
+      return list.sort((a,b)=>{
+        const oa = flOrder.cards[a.id] ? flOrder.cards[a.id].order : 9999;
+        const ob = flOrder.cards[b.id] ? flOrder.cards[b.id].order : 9999;
+        if(oa!==ob) return oa-ob;
+        // 같은 order면 폴더 먼저
+        const fa=isFolder(a.path,a.ptype)?0:1;
+        const fb=isFolder(b.path,b.ptype)?0:1;
+        if(fa!==fb) return fa-fb;
+        return cmp(a,b);
+      });
+    }
     return list.sort((a,b)=>{
       const fa=isFolder(a.path,a.ptype)?0:1;
       const fb=isFolder(b.path,b.ptype)?0:1;
-      if(fa!==fb) return fa-fb;   // 폴더(0)가 파일(1)보다 앞
+      if(fa!==fb) return fa-fb;
       return cmp(a,b);
     });
   }
@@ -2104,15 +2149,27 @@ let dragItem=null, dragType=null; // dragType: "card"|"cat"
 let dragOverEl=null;
 
 function bindDnD(box){
-  // 드래그 중인 카드를 어느 위치에 삽입할지 판단 (마우스 Y 기준)
-  function getDropTarget(container, clientY){
-    const cards = [...container.querySelectorAll(".link-card[data-fid]")];
+  // 드래그 중인 카드를 어느 위치에 삽입할지 판단 (X/Y 모두 계산 - 그리드 대응)
+  function getDropTarget(container, clientX, clientY){
+    const cards = [...container.querySelectorAll(".link-card[data-fid]")].filter(c=>c!==dragItem);
+    if(!cards.length) return {before: null};
+    // 각 카드의 중심점과 거리 계산
+    let closest = null, closestDist = Infinity, insertBefore = true;
     for(const card of cards){
       const rect = card.getBoundingClientRect();
-      const mid  = rect.top + rect.height / 2;
-      if(clientY < mid) return {before: card};
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dist = Math.hypot(clientX - cx, clientY - cy);
+      if(dist < closestDist){
+        closestDist = dist;
+        closest = card;
+        // 같은 행이면 X로 판단, 다른 행이면 Y로 판단
+        const sameRow = Math.abs(clientY - cy) < rect.height * 0.6;
+        insertBefore = sameRow ? clientX < cx : clientY < cy;
+      }
     }
-    return {before: null}; // 맨 끝에 삽입
+    if(!closest) return {before: null};
+    return {before: insertBefore ? closest : null, after: !insertBefore ? closest : null};
   }
 
   // ── 카테고리 헤더 드래그 ──
@@ -2175,11 +2232,12 @@ function bindDnD(box){
       e.preventDefault();
       // 삽입 위치 표시선 업데이트
       box.querySelectorAll(".dnd-line").forEach(el=>el.remove());
-      const {before} = getDropTarget(ci, e.clientY);
+      const {before, after} = getDropTarget(ci, e.clientX, e.clientY);
       const line = document.createElement("div");
       line.className="dnd-line";
       line.style.cssText="height:3px;background:var(--primary);border-radius:3px;margin:2px 0;pointer-events:none;grid-column:1/-1";
-      if(before) ci.insertBefore(line, before);
+      const refNode = before || (after ? after.nextSibling : null);
+      if(refNode) ci.insertBefore(line, refNode);
       else ci.appendChild(line);
       ci.classList.add("dnd-over-catitems");
     });
@@ -2202,9 +2260,10 @@ function bindDnD(box){
       const fromCat    = fromCatGrp ? fromCatGrp.dataset.cat : null;
 
       // 정확한 위치에 삽입
-      const {before} = getDropTarget(ci, e.clientY);
+      const {before, after} = getDropTarget(ci, e.clientX, e.clientY);
       if(before && before !== dragItem) ci.insertBefore(dragItem, before);
-      else if(!before) ci.appendChild(dragItem);
+      else if(after && after !== dragItem) after.after(dragItem);
+      else ci.appendChild(dragItem);
 
       // 카테고리/즐겨찾기 변경 처리
       const fromIsFav = fromCatGrp&&fromCatGrp.classList.contains("fav-section");
@@ -2352,32 +2411,11 @@ function renderFileLink(){
   // 카테고리별 - 서희타워 운영 5개 초과시 자동 분할, 소형 카테고리 묶기
   const CAT_ICONS_MAP={"전기":"⚡","소방":"🔥","기계":"❄️","기계/냉난방":"❄️","서희타워 운영":"🏢","사무관련":"📋","비용관련":"💰","공적업무":"📌","용역":"🔧","개인용도":"👤","승강기":"🛗","청소":"🧹","경비":"🛡️","행정":"📋"};
   
-  // 서희타워 운영 키워드 기반 3그룹 분할
-  const TOWER_GROUPS = [
-    { label:"서희타워 운영 1", keys:["업무일지","경비업무일지","주간 회의록","주간회의록","회의록","사무관련","사무"] },
-    { label:"서희타워 운영 2", keys:["견적","계약","관리"] },
-    { label:"서희타워 운영 3", keys:["도면","보험증권","발주서"] },
-  ];
-  function towerGroup(item){
-    const t=(item.label||item.path||"").toLowerCase();
-    for(let i=0;i<TOWER_GROUPS.length;i++){
-      if(TOWER_GROUPS[i].keys.some(k=>t.includes(k.toLowerCase()))) return i;
-    }
-    return 0; // 기본 1그룹
-  }
-
+  // 카테고리별 독립 처리 (서희타워 운영 1/2/3은 마이그레이션으로 이미 분리됨)
   const expandedCats=[];
   orderedCats.forEach(c=>{
     const items=groups[c];
-    if(c==="서희타워 운영"){
-      const buckets=[[],[],[]];
-      items.forEach(e=>buckets[towerGroup(e)].push(e));
-      TOWER_GROUPS.forEach((g,i)=>{
-        if(buckets[i].length) expandedCats.push({cat:g.label, origCat:c, items:applyCardOrder(g.label, buckets[i])});
-      });
-    } else {
-      expandedCats.push({cat:c, origCat:c, items:applyCardOrder(c, items)});
-    }
+    expandedCats.push({cat:c, origCat:c, items:applyCardOrder(c, items)});
   });
 
   html+=expandedCats.map(({cat,origCat,items})=>{
@@ -2395,8 +2433,8 @@ function renderFileLink(){
       inner+=`<div class="cat-items">${files.map(e=>fileLinkCardHTML(e)).join("")}</div>`;
     }
     const catIco = CAT_ICONS_MAP[origCat]||"📁";
-    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(origCat)}" data-label="${esc(cat)}">
-      <div class="cat-group-h"><span class="ch-arrow">▼</span><span>${catIco}</span> <span class="ch-label">${esc(cat)}</span><span class="ch-cnt">${items.length}</span><button class="ch-rename" data-cat="${esc(origCat)}" title="이름 변경">✏️</button></div>
+    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(cat)}" data-origcat="${esc(origCat)}" data-label="${esc(cat)}">
+      <div class="cat-group-h"><span class="ch-arrow">▼</span><span>${catIco}</span> <span class="ch-label">${esc(cat)}</span><span class="ch-cnt">${items.length}</span><button class="ch-rename" data-cat="${esc(origCat)}" data-dispcat="${esc(cat)}" title="이름 변경">✏️</button></div>
       ${inner}</div>`;
   }).join("");
   box.innerHTML=html;
@@ -2452,7 +2490,7 @@ function fileLinkCardHTML(e){
   const badge=folder
     ? `<span class="lc-typebadge tb-folder">📁 폴더</span>`
     : `<span class="lc-typebadge tb-file">📄 파일</span>`;
-  return `<div class="link-card${folder?" is-folder":""}${e.starred?" starred":""}" data-fid="${e.id}" title="${esc(tt)}">
+  return `<div class="link-card${folder?" is-folder":""}${e.starred?" starred":""}" data-fid="${e.id}" data-cat="${esc(e.category||"")}" title="${esc(tt)}">
     <span class="lc-icon">${fileIcon(e.path, e.ptype, e.label)}</span>
     <div class="lc-body">
       <div class="lc-name">${esc(e.label||"")}</div>
