@@ -37,18 +37,16 @@ function fieldClass(f){
 // contact_cats 컬렉션 하나를 worklog업무·통화·contacts 공통으로 사용
 const SHARED_CATS_COL = "contact_cats";
 const SHARED_CATS_LS  = "wl_shared_cats_v1";
-const DEFAULT_SHARED_CATS = [
-  "전기", "엘리베이터", "카리프트", "통신", "기계", "냉난방", "누수", "소방", "소화전", "스프링클러", "감지기", "수신기", "펌프", "영선", "주차", "주간점검", "월간점검", "협력업체점검", "청소", "화단관리", "은진", "품의서", "전표", "안내문", "관리비", "임대", "기타", "설비", "기계/냉난방", "승강기", "공사/인테리어", "인테리어", "서희타워공사", "견적업체", "자재", "행정", "임차인", "직원(재직중)", "직원(퇴사)"
-].filter((v,i,a)=>a.indexOf(v)===i); // 중복 제거
+const DEFAULT_SHARED_CATS = ["감지기","견적업체","공사/인테리어","관리비","기계","기계/냉난방","기타","냉난방","누수","서희타워공사","설비","소방","소화전","수신기","스프링클러","승강기","안내문","엘리베이터","영선","월간점검","은진","인테리어","임대","임차인","자재","전기","전표","주간점검","주차","직원(재직중)","직원(퇴사)","청소","카리프트","통신","펌프","품의서","행정","협력업체점검","화단관리"];
 
 async function loadSharedCats(){
   // localStorage 먼저
   try{
     const ls = JSON.parse(localStorage.getItem(SHARED_CATS_LS)||"null");
     if(Array.isArray(ls)&&ls.length){
-      // 기본값 누락 항목 보완
       const merged = [...ls];
       DEFAULT_SHARED_CATS.forEach(c=>{ if(!merged.includes(c)) merged.push(c); });
+      merged.sort((a,b)=>a.localeCompare(b,"ko"));
       FIELDS = merged;
       if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = merged.slice();
       return;
@@ -61,15 +59,14 @@ async function loadSharedCats(){
     if(snap.exists){
       const d=snap.data();
       if(Array.isArray(d.cats)&&d.cats.length){
-        // Firebase 목록 + 기본값 병합 (누락 항목 보완)
         const merged = [...d.cats];
         DEFAULT_SHARED_CATS.forEach(c=>{ if(!merged.includes(c)) merged.push(c); });
+        merged.sort((a,b)=>a.localeCompare(b,"ko"));
         FIELDS = merged;
         if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = merged.slice();
         try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(FIELDS)); }catch(e){}
       }
     } else {
-      // 최초: 기본값으로 생성
       await db.collection(SHARED_CATS_COL).doc("list").set({cats:DEFAULT_SHARED_CATS, updatedAt:Date.now()});
       FIELDS = DEFAULT_SHARED_CATS.slice();
       if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = DEFAULT_SHARED_CATS.slice();
@@ -89,6 +86,8 @@ function loadFields(){
   }catch(e){}
 }
 function saveFields(){
+  FIELDS.sort((a,b)=>a.localeCompare(b,"ko"));
+  if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = FIELDS.slice();
   try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(FIELDS)); }catch(e){}
   // CONTACT_CATS도 동기화
   if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = FIELDS.slice();

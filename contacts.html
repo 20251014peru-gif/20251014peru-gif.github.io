@@ -273,6 +273,7 @@ let CATS = (()=>{
 })();
 
 function saveCats(){
+  CATS.sort((a,b)=>a.localeCompare(b,"ko"));
   try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(CATS)); }catch(e){}
   // Firebase contact_cats 동기화 (worklog와 공통)
   if(online && db){
