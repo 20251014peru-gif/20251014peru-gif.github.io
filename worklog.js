@@ -1218,13 +1218,15 @@ $("delSearch").addEventListener("input",e=>{ Q.deliver=e.target.value; renderDel
 function listOf(kind){ return entries.filter(e=>e.kind===kind && matchObj(e,Q[kind])); }
 
 /* 카드 공통 */
-function wireCards(scope){
+function wireCards(scope, directEdit=false){
   scope.querySelectorAll("[data-id][data-kind]").forEach(el=>{
     el.addEventListener("click",e=>{
       if(e.target.closest("a,img,button,input,.cb")) return;
       if(el.dataset.kind==="cleaning"){ openCleaningEditor(el.dataset.id); return; }
       if(el.dataset.kind==="expense"){ openExpenseEditor(el.dataset.id); return; }
-      openViewer(el.dataset.kind, el.dataset.id);
+      // directEdit=true면 바로 수정창 (달력에서 사용)
+      if(directEdit) openEditor(el.dataset.kind, el.dataset.id);
+      else openViewer(el.dataset.kind, el.dataset.id);
     });
     const ed=el.querySelector("[data-edit]"); if(ed) ed.addEventListener("click",e=>{
       e.stopPropagation();
@@ -1470,7 +1472,7 @@ function planItemHTML(p){
   return `<div class="sup-item ${p.done?"done":""}" data-kind="plan" data-id="${p.id}">
     <div class="cb">${p.done?"✓":""}</div>
     <div class="grow"><span class="txt">${esc(p.text||"")}</span> <span class="pdate">${p.date||""}</span></div>
-    <button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div>`;
+    <button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div>`;
 }
 function renderPlan(){
   const box=$("planList");
@@ -1521,7 +1523,7 @@ function cardMemo(m){
   return `<div class="row-item" data-kind="memo" data-id="${m.id}">
     <div class="grow"><div class="t">${m.title?esc(m.title):"메모"}${(m.attachments&&m.attachments.length)?' 📎':''}</div>
     <div class="m" style="white-space:pre-wrap">${esc(m.body||"")}</div>${thumbsRO(m.photos)}${attachMiniRO(m.attachments)}
-    <div class="card-acts"><button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div></div>
+    <div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div></div>
     <span class="rtime">${m.date||""}<br>${clockStr(m.createdAt)}</span></div>`;
 }
 function memoFiltered(){ return entries.filter(e=>e.kind==="memo" && inDateRange(e.date,memoFrom,memoTo) && matchObj(e,Q.memo)).sort(byDateDesc); }
@@ -1593,7 +1595,7 @@ function cardVac(v){
   return `<div class="row-item" data-kind="vacation" data-id="${v.id}">
     <div class="grow"><div class="t">${esc(v.name||"")} <span class="pill leave">${esc(v.vtype||"")}</span></div>
     <div class="m">🌴 ${esc(range)}${v.note?" · "+esc(v.note):""}</div>
-    <div class="card-acts"><button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div></div></div>`;
+    <div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div></div></div>`;
 }
 function renderVac(){
   const box=$("vacList"); const list=listOf("vacation").sort((a,b)=>(b.start||"").localeCompare(a.start||""));
@@ -1606,7 +1608,7 @@ function cardMeeting(t){
   return `<div class="row-item" data-kind="meeting" data-id="${t.id}">
     <div class="grow"><div class="t">${esc(t.title||"회의")}${(t.attachments&&t.attachments.length)?' 📎':''}</div>
     <div class="m">${t.attendees?"👥 "+esc(t.attendees):""}${t.body?`<br>📄 <span style="white-space:pre-wrap">${esc(t.body)}</span>`:""}</div>${thumbsRO(t.photos)}${attachMiniRO(t.attachments)}
-    <div class="card-acts"><button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div></div>
+    <div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div></div>
     <span class="rtime">${t.date||""}</span></div>`;
 }
 function renderMeeting(){
@@ -1622,7 +1624,7 @@ function cardDeliver(d){
   return `<div class="row-item" data-kind="deliver" data-id="${d.id}">
     <div class="grow"><div class="t">📢 ${d.title?esc(d.title):"전달사항"} <span class="pill ${dtCls}">${esc(dt)}</span></div>
     <div class="m" style="white-space:pre-wrap">${esc(d.content||"")}</div>
-    <div class="card-acts"><button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div></div>
+    <div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div></div>
     <span class="rtime">${d.date||""}</span></div>`;
 }
 let delFrom="", delTo="", delDtype="전체";
@@ -1668,9 +1670,15 @@ $("btnDelExcel").addEventListener("click",()=>{
 
 /* 업무 카드(달력 상세) */
 function cardWork(en){
+  const expBadge = en.expType&&en.expType!=="없음"
+    ? `<span class="pill ${en.expType==="세금계산서"?"amount":"tech"}" style="font-size:10px">${en.expType==="세금계산서"?"📃세금":"💸품의"}</span>` : "";
   return `<div class="row-item" data-kind="work" data-id="${en.id}">
-    <div class="grow"><div class="t">${esc(en.title||"")} <span class="st ${statusClass(en.status)}">${esc(en.status||"")}</span> <span class="pill ${fieldClass(en.field)}">${esc(en.field||"")}</span>${(en.attachments&&en.attachments.length)?' 📎':''}</div>
-    <div class="m">${metaLine([en.floor,en.loc,en.detail,en.cost?won(en.cost)+"원":""])}</div>${thumbsRO(en.photos)}${attachMiniRO(en.attachments)}</div></div>`;
+    <div class="grow">
+      <div class="t">${esc(en.title||"")} <span class="st ${statusClass(en.status)}">${esc(en.status||"")}</span> <span class="pill ${fieldClass(en.field)}">${esc(en.field||"")}</span>${expBadge}${(en.attachments&&en.attachments.length)?' 📎':''}</div>
+      <div class="m">${metaLine([en.floor,en.loc,en.detail,en.cost?won(en.cost)+"원":""])}</div>
+      ${thumbsRO(en.photos)}${attachMiniRO(en.attachments)}
+      <div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div>
+    </div></div>`;
 }
 
 /* ===== 달력 (v21: 업무/스케줄 모드 + 월간/연간 뷰) ===== */
@@ -1968,7 +1976,9 @@ function renderDayDetail(){
       dirs.slice(0,3).forEach(function(t){if(t.trim()) parts.push("📌 "+esc(t));});
       specs.slice(0,3).forEach(function(t){if(t.trim()) parts.push("⭐ "+esc(t));});
       var detail=parts.join(" · ");
-      return '<div class="row-item" data-kind="cleaning" data-id="'+c.id+'"><div class="grow"><div class="t">🧹 청소일지 <span class="pill admin">반장 '+esc(c.foreman||"")+'</span></div>'+(detail?'<div class="m" style="font-size:12.5px;line-height:1.6;margin-top:3px">'+detail+'</div>':"")+"</div></div>";
+      return '<div class="row-item" data-kind="cleaning" data-id="'+c.id+'"><div class="grow"><div class="t">🧹 청소일지 <span class="pill admin">반장 '+esc(c.foreman||"")+'</span></div>'+(detail?'<div class="m" style="font-size:12.5px;line-height:1.6;margin-top:3px">'+detail+'</div>':"")
+        +'<div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button></div>'
+        +"</div></div>";
     });
     h+='<div class="detail-block"><div class="bh">🧹 청소일지</div>'+clHtml.join("")+'</div>';
   }
@@ -1977,12 +1987,12 @@ function renderDayDetail(){
   if(v.length) h+=`<div class="detail-block"><div class="bh">🌴 휴가</div>${v.map(cardVac).join("")}</div>`;
   if(w.length) h+=`<div class="detail-block"><div class="bh">🛠 업무</div>${w.map(cardWork).join("")}</div>`;
   if(p.length) h+=`<div class="detail-block"><div class="bh">📋 오늘계획</div>${p.map(planItemHTML).join("")}</div>`;
-  if(c.length) h+=`<div class="detail-block"><div class="bh">📞 통화</div>${c.map(cc=>`<div class="row-item" data-kind="call" data-id="${cc.id}"><div class="grow"><div class="t">${esc(cc.name||"(상대)")} <span class="dir ${cc.dir==="발신"?"out":"in"}">${esc(cc.dir||"")}</span></div><div class="m">${cc.phone?"☎ "+esc(cc.phone)+" · ":""}${esc(cc.content||"")}</div></div></div>`).join("")}</div>`;
+  if(c.length) h+=`<div class="detail-block"><div class="bh">📞 통화</div>${c.map(cc=>`<div class="row-item" data-kind="call" data-id="${cc.id}"><div class="grow"><div class="t">${esc(cc.name||"(상대)")} <span class="dir ${cc.dir==="발신"?"out":"in"}">${esc(cc.dir||"")}</span></div><div class="m">${cc.phone?"☎ "+esc(cc.phone)+" · ":""}${esc(cc.content||"")}</div><div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div></div></div>`).join("")}</div>`;
   if(m.length) h+=`<div class="detail-block"><div class="bh">📝 메모</div>${m.map(cardMemo).join("")}</div>`;
   if(mt.length) h+=`<div class="detail-block"><div class="bh">👥 회의</div>${mt.map(cardMeeting).join("")}</div>`;
   if(dv.length) h+=`<div class="detail-block"><div class="bh">📢 전달사항</div>${dv.map(cardDeliver).join("")}</div>`;
   box.innerHTML=h;
-  wireCards(box);
+  wireCards(box, true); // 달력: 클릭 시 바로 수정창
   wireRep();
 }
 function cardSchedule(s){
@@ -1991,7 +2001,7 @@ function cardSchedule(s){
   return `<div class="row-item" data-kind="schedule" data-id="${s.id}">
     <div class="grow"><div class="t">📅 ${esc(s.title||"")} <span class="st ${stCls}">${esc(st)}</span> <span class="pill etc">${esc(s.sType||"")}</span></div>
     <div class="m">${s.memo?esc(s.memo):""}</div>
-    <div class="card-acts"><button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div></div>
+    <div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div></div>
     <span class="rtime">${s.date||""}</span></div>`;
 }
 function buildReport(day){
@@ -4066,8 +4076,8 @@ function renderCleaning(){
           ${issues.length?`<div style="margin-top:5px"><b>⚠ 담당자 특이사항:</b> ${issues.map(s=>esc(s.name)+"-"+esc(s.special)).join(" / ")}</div>`:""}
         </div>
         <div class="card-acts">
-          <button class="mini-btn" data-edit>수정</button>
-          <button class="mini-btn del" data-del>삭제</button>
+          <button class="mini-btn" data-edit>✏️ 수정</button>
+          <button class="mini-btn del" data-del>🗑 삭제</button>
         </div>
       </div>
     </div>`;
