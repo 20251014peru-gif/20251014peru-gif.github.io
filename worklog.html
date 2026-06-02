@@ -598,18 +598,20 @@
     <div class="attach-list" id="mAttachList"></div>
   </div>
 
-  <div class="field full" id="mPhotoArea" style="margin-top:12px">
-    <label>📷 사진</label>
-    <div class="photo-btns">
+  <!-- 사진 미리보기 -->
+  <div class="thumbs" id="m-thumbs" style="margin-top:8px"></div>
+  <!-- 버튼 행: 사진 있는 종류 = [촬영][선택] ─────── [저장][취소][삭제]
+               사진 없는 종류 = ─────────────────── [저장][취소][삭제] -->
+  <div id="mBtnRow" style="margin-top:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div id="mPhotoArea" style="display:none;align-items:center;gap:6px">
       <label class="photo-btn">📷 촬영<input type="file" id="m-cam" accept="image/*" capture="environment" style="display:none"></label>
       <label class="photo-btn">🖼 사진 선택<input type="file" id="m-file" accept="image/*" multiple style="display:none"></label>
     </div>
-    <div class="thumbs" id="m-thumbs"></div>
-  </div>
-  <div class="btn-row" style="flex-wrap:nowrap">
-    <button class="btn btn-primary" id="mSave">저장</button>
-    <button class="btn btn-ghost" id="mCancel">취소</button>
-    <button class="btn btn-danger" id="mDelete" style="margin-left:auto">삭제</button>
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <button class="btn btn-primary" id="mSave">저장</button>
+      <button class="btn btn-ghost" id="mCancel">취소</button>
+      <button class="btn btn-danger" id="mDelete">삭제</button>
+    </div>
   </div>
 </div></div>
 
