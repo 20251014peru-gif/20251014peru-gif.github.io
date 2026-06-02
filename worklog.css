@@ -747,3 +747,15 @@ td.clip[data-tip]:hover{position:relative}
 
 /* lc-sub 경로 줄이기 */
 .link-card .lc-sub{-webkit-line-clamp:1!important}
+
+/* ── 드래그 앤 드롭 시각 효과 ── */
+.link-card[draggable="true"]{cursor:grab}
+.link-card[draggable="true"]:active{cursor:grabbing}
+.link-card.dnd-dragging{opacity:.4;transform:scale(.97);box-shadow:0 8px 24px rgba(0,0,0,.18)!important}
+.link-card.dnd-over-card{border-top:3px solid var(--primary)!important;margin-top:-3px}
+.cat-items.dnd-over-catitems{background:rgba(63,124,184,.06);border-radius:10px;outline:2px dashed var(--primary);outline-offset:2px}
+.cat-group.dnd-dragging{opacity:.4}
+.cat-group.dnd-over-cat>.cat-group-h{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 5px var(--ccol,var(--primary))}
+.cat-group-h[draggable="true"]{cursor:grab}
+/* 드래그 힌트 */
+.link-card::before{content:"⠿";position:absolute;left:4px;top:50%;transform:translateY(-50%);font-size:14px;color:rgba(0,0,0,.15);pointer-events:none}

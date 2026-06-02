@@ -449,9 +449,11 @@ async function init(){
   migrateBadMemoAttachments(); // v38: 깨진 첨부 정리
   renderStatusChips(); renderAll();
   try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
-  // v41: contacts 연동 초기화 (무한재귀 방지를 위해 직접 호출)
+  // v41: contacts 연동 초기화
   loadContactCats().catch(()=>{});
   loadContactsCache().catch(()=>{});
+  // 드래그 앤 드롭 순서 로드
+  loadFlOrder().catch(()=>{});
 }
 
 // v26: 옛 "휴지" 품목 → "점보롤"로 자동 마이그레이션
@@ -2043,6 +2045,218 @@ function sortItems(kind, list){
 }
 
 /* ===== 파일링크 탭 ===== */
+
+/* =========================================================
+   드래그 앤 드롭 — 점검일지 카드/카테고리 순서
+   Firebase: filelink_order / doc: "order"
+   ========================================================= */
+const FL_ORDER_COL = "filelink_order";
+const FL_ORDER_LS  = "fl_order_v1";
+let flOrder = { catOrder:[], cards:{} }; // {catOrder:[catName,...], cards:{id:{cat,order}}}
+
+async function loadFlOrder(){
+  try{
+    const ls = JSON.parse(localStorage.getItem(FL_ORDER_LS)||"null");
+    if(ls) flOrder = ls;
+  }catch(e){}
+  if(!online||!db) return;
+  try{
+    const snap = await db.collection(FL_ORDER_COL).doc("order").get();
+    if(snap.exists){
+      flOrder = snap.data();
+      try{ localStorage.setItem(FL_ORDER_LS, JSON.stringify(flOrder)); }catch(e){}
+    }
+  }catch(e){ console.warn("flOrder 로드 실패:", e); }
+}
+
+async function saveFlOrder(){
+  try{ localStorage.setItem(FL_ORDER_LS, JSON.stringify(flOrder)); }catch(e){}
+  if(!online||!db) return;
+  try{
+    await db.collection(FL_ORDER_COL).doc("order").set(flOrder);
+  }catch(e){ console.warn("flOrder 저장 실패:", e); }
+}
+
+// 카드에 저장된 순서/카테고리 정보 가져오기
+function getCardMeta(id){ return flOrder.cards[id]||null; }
+function setCardMeta(id, cat, order){ flOrder.cards[id]={cat,order}; }
+
+// 카테고리 순서 적용
+function applyFlOrder(orderedCats){
+  if(!flOrder.catOrder||!flOrder.catOrder.length) return orderedCats;
+  const saved = flOrder.catOrder.filter(c=>orderedCats.includes(c));
+  const extra = orderedCats.filter(c=>!saved.includes(c));
+  return [...saved, ...extra];
+}
+
+// 카드 순서 적용 (카테고리 내)
+function applyCardOrder(cat, items){
+  const withOrder = items.map(e=>{
+    const m = getCardMeta(e.id);
+    return { e, order: (m&&m.cat===cat) ? m.order : 9999 };
+  });
+  withOrder.sort((a,b)=>a.order-b.order);
+  return withOrder.map(x=>x.e);
+}
+
+/* ── 드래그 앤 드롭 바인딩 ── */
+let dragItem=null, dragType=null; // dragType: "card"|"cat"
+let dragOverEl=null;
+
+function bindDnD(box){
+  // ── 카테고리 헤더 드래그 ──
+  box.querySelectorAll(".cat-group").forEach(grp=>{
+    const hdr = grp.querySelector(".cat-group-h");
+    hdr.setAttribute("draggable","true");
+    hdr.style.cursor="grab";
+
+    hdr.addEventListener("dragstart", e=>{
+      dragType="cat"; dragItem=grp;
+      grp.classList.add("dnd-dragging");
+      e.dataTransfer.effectAllowed="move";
+    });
+    hdr.addEventListener("dragend", ()=>{
+      dragType=null; dragItem=null;
+      box.querySelectorAll(".dnd-dragging,.dnd-over-cat").forEach(el=>{
+        el.classList.remove("dnd-dragging","dnd-over-cat");
+      });
+    });
+    grp.addEventListener("dragover", e=>{
+      if(dragType!=="cat"||dragItem===grp) return;
+      e.preventDefault();
+      box.querySelectorAll(".dnd-over-cat").forEach(el=>el.classList.remove("dnd-over-cat"));
+      grp.classList.add("dnd-over-cat");
+    });
+    grp.addEventListener("drop", e=>{
+      if(dragType!=="cat"||dragItem===grp) return;
+      e.preventDefault();
+      // DOM 순서 변경
+      const allGrps = [...box.querySelectorAll(".cat-group")];
+      const fromIdx = allGrps.indexOf(dragItem);
+      const toIdx   = allGrps.indexOf(grp);
+      if(fromIdx<0||toIdx<0) return;
+      if(fromIdx<toIdx) grp.after(dragItem);
+      else grp.before(dragItem);
+      // 순서 저장
+      const newOrder = [...box.querySelectorAll(".cat-group")].map(g=>g.dataset.cat);
+      flOrder.catOrder = newOrder;
+      saveFlOrder();
+      grp.classList.remove("dnd-over-cat");
+    });
+  });
+
+  // ── 카드 드래그 ──
+  box.querySelectorAll(".link-card[data-fid]").forEach(card=>{
+    // 드래그 핸들 (아이콘 영역)
+    card.setAttribute("draggable","true");
+
+    card.addEventListener("dragstart", e=>{
+      if(e.target.closest("[data-star],[data-edit]")){ e.preventDefault(); return; }
+      dragType="card"; dragItem=card;
+      card.classList.add("dnd-dragging");
+      e.dataTransfer.effectAllowed="move";
+      e.dataTransfer.setData("text/plain", card.dataset.fid);
+    });
+    card.addEventListener("dragend", ()=>{
+      dragType=null; dragItem=null;
+      box.querySelectorAll(".dnd-dragging,.dnd-over-card,.dnd-over-catitems").forEach(el=>{
+        el.classList.remove("dnd-dragging","dnd-over-card","dnd-over-catitems");
+      });
+    });
+    card.addEventListener("dragover", e=>{
+      if(dragType!=="card"||dragItem===card) return;
+      e.preventDefault();
+      box.querySelectorAll(".dnd-over-card").forEach(el=>el.classList.remove("dnd-over-card"));
+      card.classList.add("dnd-over-card");
+    });
+    card.addEventListener("drop", e=>{
+      if(dragType!=="card"||dragItem===card) return;
+      e.preventDefault();
+      const fromId = dragItem.dataset.fid;
+      const toId   = card.dataset.fid;
+      const fromCatGrp = dragItem.closest(".cat-group,.fav-section");
+      const toCatGrp   = card.closest(".cat-group,.fav-section");
+      const toCat = toCatGrp ? toCatGrp.dataset.cat : null;
+
+      // DOM 이동
+      const toItems = card.closest(".cat-items");
+      if(toItems){
+        const cards = [...toItems.querySelectorAll(".link-card")];
+        const toIdx = cards.indexOf(card);
+        if(toIdx>=0) card.before(dragItem);
+      }
+
+      // 카테고리 변경 + 순서 저장
+      const fromIsFav = fromCatGrp&&fromCatGrp.classList.contains("fav-section");
+      const toIsFav   = toCatGrp&&toCatGrp.classList.contains("fav-section");
+      const fromCat   = fromCatGrp&&fromCatGrp.dataset.cat;
+      if(toIsFav && !fromIsFav){
+        // → 즐겨찾기로: starred 설정
+        updateRecord(fromId, {starred:true});
+        toast(`⭐ "${entries.find(x=>x.id===fromId)?.label||""}" 즐겨찾기 추가`);
+      } else if(fromIsFav && !toIsFav && toCat){
+        // 즐겨찾기 → 카테고리로: starred 해제 + 카테고리 변경
+        const entry = entries.find(x=>x.id===fromId);
+        updateRecord(fromId, {starred:false, category:toCat});
+        toast(`"${entry?.label||""}" → ${toCat} 이동`);
+      } else if(!toIsFav && toCat && toCat !== fromCat){
+        // 다른 카테고리로 이동
+        updateRecord(fromId, {category: toCat});
+        toast(`"${entries.find(x=>x.id===fromId)?.label||""}" → ${toCat} 이동`);
+      }
+
+      // 순서 저장
+      if(toItems){
+        [...toItems.querySelectorAll(".link-card")].forEach((c,i)=>{
+          setCardMeta(c.dataset.fid, toCat||"", i);
+        });
+      }
+      saveFlOrder();
+      card.classList.remove("dnd-over-card");
+    });
+  });
+
+  // 카테고리 cat-items 영역에 드롭 (빈 공간으로 드롭)
+  box.querySelectorAll(".cat-items").forEach(ci=>{
+    ci.addEventListener("dragover", e=>{
+      if(dragType!=="card") return;
+      e.preventDefault();
+      ci.classList.add("dnd-over-catitems");
+    });
+    ci.addEventListener("dragleave", ()=> ci.classList.remove("dnd-over-catitems"));
+    ci.addEventListener("drop", e=>{
+      if(dragType!=="card") return;
+      e.preventDefault();
+      ci.classList.remove("dnd-over-catitems");
+      // 이미 card drop이 처리했으면 무시
+      if(!dragItem) return;
+      const toCatGrp = ci.closest(".cat-group");
+      const toCat = toCatGrp ? toCatGrp.dataset.cat : null;
+      const fromId = dragItem.dataset.fid;
+      const fromCatGrp = dragItem.closest(".cat-group");
+
+      // 맨 뒤로 이동
+      ci.appendChild(dragItem);
+
+      const fromIsFav2 = fromCatGrp&&fromCatGrp.classList.contains("fav-section");
+      const toIsFav2   = ci.closest(".fav-section") !== null;
+      if(toIsFav2 && !fromIsFav2){
+        updateRecord(fromId, {starred:true});
+        toast(`⭐ "${entries.find(x=>x.id===fromId)?.label||""}" 즐겨찾기 추가`);
+      } else if(fromIsFav2 && !toIsFav2 && toCat){
+        updateRecord(fromId, {starred:false, category:toCat});
+        toast(`"${entries.find(x=>x.id===fromId)?.label||""}" → ${toCat} 이동`);
+      } else if(!toIsFav2 && toCat && toCat !== (fromCatGrp&&fromCatGrp.dataset.cat)){
+        updateRecord(fromId, {category: toCat});
+        toast(`"${entries.find(x=>x.id===fromId)?.label||""}" → ${toCat} 이동`);
+      }
+      [...ci.querySelectorAll(".link-card")].forEach((c,i)=>{
+        setCardMeta(c.dataset.fid, toCat||"", i);
+      });
+      saveFlOrder();
+    });
+  });
+}
 function wireFileLinkTab(){
   $("fileSearch").addEventListener("input",e=>{ CAT_FILTER.filelink.q=e.target.value; renderFileLink(); });
   $("fileCatFilter").addEventListener("change",e=>{ CAT_FILTER.filelink.cat=e.target.value; CAT_FILTER.filelink.sub="전체"; renderFileLink(); });
@@ -2128,9 +2342,10 @@ function renderFileLink(){
     if(!groups[c]) groups[c]=[];
     groups[c].push(e);
   });
-  // 카테고리 순서 (CATEGORIES 순서 우선, 그 외는 가나다)
-  const orderedCats=CATEGORIES.filelink.filter(c=>groups[c]);
+  // 카테고리 순서 (저장된 순서 우선 → CATEGORIES 순서 → 가나다)
+  let orderedCats=CATEGORIES.filelink.filter(c=>groups[c]);
   Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
+  orderedCats = applyFlOrder(orderedCats);
   // 점프 메뉴
   const jumpGroups={};
   if(favs.length) jumpGroups["⭐ 즐겨찾기"]=favs;
@@ -2144,8 +2359,9 @@ function renderFileLink(){
   let html="";
   // 즐겨찾기 섹션
   if(favs.length){
-    html+=`<div class="fav-section"><div class="fs-h">⭐ 즐겨찾기 <span class="fs-cnt">${favs.length}</span></div>
-      <div class="cat-items">${favs.map(e=>fileLinkCardHTML(e)).join("")}</div></div>`;
+    const orderedFavs = applyCardOrder("__fav__", favs);
+    html+=`<div class="fav-section" data-cat="__fav__"><div class="fs-h">⭐ 즐겨찾기 <span class="fs-cnt">${favs.length}</span></div>
+      <div class="cat-items">${orderedFavs.map(e=>fileLinkCardHTML(e)).join("")}</div></div>`;
   }
   // 카테고리별 - 서희타워 운영 5개 초과시 자동 분할, 소형 카테고리 묶기
   const CAT_ICONS_MAP={"전기":"⚡","소방":"🔥","기계":"❄️","기계/냉난방":"❄️","서희타워 운영":"🏢","사무관련":"📋","비용관련":"💰","공적업무":"📌","용역":"🔧","개인용도":"👤","승강기":"🛗","청소":"🧹","경비":"🛡️","행정":"📋"};
@@ -2171,10 +2387,10 @@ function renderFileLink(){
       const buckets=[[],[],[]];
       items.forEach(e=>buckets[towerGroup(e)].push(e));
       TOWER_GROUPS.forEach((g,i)=>{
-        if(buckets[i].length) expandedCats.push({cat:g.label, origCat:c, items:buckets[i]});
+        if(buckets[i].length) expandedCats.push({cat:g.label, origCat:c, items:applyCardOrder(g.label, buckets[i])});
       });
     } else {
-      expandedCats.push({cat:c, origCat:c, items});
+      expandedCats.push({cat:c, origCat:c, items:applyCardOrder(c, items)});
     }
   });
 
@@ -2219,6 +2435,8 @@ function renderFileLink(){
     });
     el.querySelector("[data-edit]").addEventListener("click",ev=>{ ev.stopPropagation(); openEditor("filelink", id); });
   });
+  // 드래그 앤 드롭 바인딩
+  bindDnD(box);
 }
 function fileLinkCardHTML(e){
   const tt=`${e.label||""}\n${e.path||""}${e.memo?"\n"+e.memo:""}`;
