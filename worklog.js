@@ -38,21 +38,21 @@ function fieldClass(f){
 const SHARED_CATS_COL = "contact_cats";
 const SHARED_CATS_LS  = "wl_shared_cats_v1";
 const DEFAULT_SHARED_CATS = [
-  "전기","엘리베이터","카리프트","통신","기계","냉난방","누수",
-  "소방","소화전","스프링클러","감지기","수신기","펌프",
-  "영선","주차","주간점검","월간점검","협력업체점검",
-  "청소","화단관리","은진",
-  "품의서","전표","안내문","관리비","임대",
-  "설비","기계/냉난방","승강기","소방","영선","청소","공사/인테리어",
-  "인테리어","서희타워공사","견적업체","자재","행정","임차인",
-  "직원(재직중)","직원(퇴사)","기타"
+  "전기", "엘리베이터", "카리프트", "통신", "기계", "냉난방", "누수", "소방", "소화전", "스프링클러", "감지기", "수신기", "펌프", "영선", "주차", "주간점검", "월간점검", "협력업체점검", "청소", "화단관리", "은진", "품의서", "전표", "안내문", "관리비", "임대", "기타", "설비", "기계/냉난방", "승강기", "공사/인테리어", "인테리어", "서희타워공사", "견적업체", "자재", "행정", "임차인", "직원(재직중)", "직원(퇴사)"
 ].filter((v,i,a)=>a.indexOf(v)===i); // 중복 제거
 
 async function loadSharedCats(){
   // localStorage 먼저
   try{
     const ls = JSON.parse(localStorage.getItem(SHARED_CATS_LS)||"null");
-    if(Array.isArray(ls)&&ls.length){ FIELDS=ls; if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS=ls.slice(); return; }
+    if(Array.isArray(ls)&&ls.length){
+      // 기본값 누락 항목 보완
+      const merged = [...ls];
+      DEFAULT_SHARED_CATS.forEach(c=>{ if(!merged.includes(c)) merged.push(c); });
+      FIELDS = merged;
+      if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = merged.slice();
+      return;
+    }
   }catch(e){}
   // Firebase
   if(!online||!db) return;
@@ -61,8 +61,11 @@ async function loadSharedCats(){
     if(snap.exists){
       const d=snap.data();
       if(Array.isArray(d.cats)&&d.cats.length){
-        FIELDS = d.cats.slice();
-        if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = d.cats.slice();
+        // Firebase 목록 + 기본값 병합 (누락 항목 보완)
+        const merged = [...d.cats];
+        DEFAULT_SHARED_CATS.forEach(c=>{ if(!merged.includes(c)) merged.push(c); });
+        FIELDS = merged;
+        if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = merged.slice();
         try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(FIELDS)); }catch(e){}
       }
     } else {
