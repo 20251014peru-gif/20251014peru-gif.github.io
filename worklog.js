@@ -1899,6 +1899,7 @@ function buildReport(day){
   const c=entries.filter(e=>e.kind==="call"&&D(e.date)===day);
   const mt=entries.filter(e=>e.kind==="meeting"&&D(e.date)===day).sort(byDateDesc);
   const dv=entries.filter(e=>e.kind==="deliver"&&D(e.date)===day).sort(byDateDesc);
+  const cl=entries.filter(e=>e.kind==="cleaning"&&D(e.date)===day).sort(byDateDesc);
   let h=`<h1>업무일지 보고서</h1><div class="sub">${dateLabel(day)} · 출력일 ${todayStr()}</div>`;
   const sec=(title,items,cls)=> items.length?`<div class="rsec ${cls}"><h2>${title} (${items.length}건)</h2>`+items.join("")+`</div>`:"";
   h+=sec("업무", w.map(en=>`<div class="it"><b>[${esc(en.status||"")}]</b> ${esc(en.floor||"")} ${esc(en.loc||"")} ${esc(en.title||"")}${en.detail?" — "+esc(en.detail):""}${en.field?" ["+esc(en.field)+"]":""}${en.material?" / 자재: "+esc(en.material):""}${Number(en.cost)?" / "+won(en.cost)+"원":""}${en.improve?"<br>↳ 개선: "+esc(en.improve):""}</div>`), "work");
@@ -1908,7 +1909,21 @@ function buildReport(day){
   h+=sec("메모", m.map(x=>`<div class="it"><b>${esc(x.title||"메모")}</b> ${esc(x.body||"")}</div>`), "memo");
   h+=sec("회의메모", mt.map(x=>`<div class="it"><b>${esc(x.title||"회의")}</b>${x.attendees?" (참석: "+esc(x.attendees)+")":""}<br>${esc(x.body||"")}</div>`), "meet");
   h+=sec("전달사항", dv.map(x=>`<div class="it">📢 <b>${esc(x.title||"")}</b> ${esc(x.content||"")}</div>`), "deliver");
-  if(!(w.length||v.length||p.length||m.length||c.length||mt.length||dv.length)) h+=`<div class="it">이 날의 기록이 없습니다.</div>`;
+  if(cl.length){
+    const clItems=cl.map(x=>{
+      const dirs=Array.isArray(x.directives)?x.directives:(x.notes||x.instructions?(x.notes||x.instructions).split("\n").filter(s=>s.trim()):[]);
+      const specs=Array.isArray(x.specials)?x.specials:(x.special?x.special.split("\n").filter(s=>s.trim()):[]);
+      let s=`<div class="it"><b>반장: ${esc(x.foreman||"")}</b>`;
+      if(dirs.length) s+=`<br>📌 지시사항: ${dirs.map(d=>esc(d)).join(" / ")}`;
+      if(specs.length) s+=`<br>⭐ 특기사항: ${specs.map(d=>esc(d)).join(" / ")}`;
+      if(x.instructions&&!dirs.length) s+=`<br>📢 전달사항: ${esc(x.instructions)}`;
+      const issues=(x.staffWork||[]).filter(sw=>sw.special&&sw.special.trim());
+      if(issues.length) s+=`<br>⚠ 담당자: ${issues.map(sw=>esc(sw.name)+"-"+esc(sw.special)).join(" / ")}`;
+      return s+"</div>";
+    });
+    h+=sec("청소일지", clItems, "cleaning");
+  }
+  if(!(w.length||v.length||p.length||m.length||c.length||mt.length||dv.length||cl.length)) h+=`<div class="it">이 날의 기록이 없습니다.</div>`;
   return h;
 }
 function printReport(day){ if(!day) return; $("printArea").className=""; $("printArea").innerHTML=buildReport(day); window.print(); }
