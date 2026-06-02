@@ -676,16 +676,16 @@ td.clip[data-tip]:hover{position:relative}
 
 /* ── 점검일지 3열 카테고리 배치 ── */
 #fileList{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:14px;
-  align-items:start;
+  display:grid!important;
+  grid-template-columns:repeat(3,1fr)!important;
+  gap:14px!important;
+  align-items:start!important;
 }
 #fileList .fav-section{grid-column:1/-1}
 #fileList .cat-jump-wrap{grid-column:1/-1}
 #fileCatJump{grid-column:1/-1}
-@media(max-width:900px){#fileList{grid-template-columns:repeat(2,1fr);}}
-@media(max-width:580px){#fileList{grid-template-columns:1fr;}}
+@media(max-width:900px){#fileList{grid-template-columns:repeat(2,1fr)!important;}}
+@media(max-width:580px){#fileList{grid-template-columns:1fr!important;}}
 
 /* 카테고리별 색상 아이콘 */
 .cat-group[data-cat="전기"] .cat-group-h::after{content:" ⚡"}
