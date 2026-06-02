@@ -156,6 +156,8 @@ const SCHEMA={
     {k:"material",label:"자재",type:"text"},
     {k:"qty",label:"수량",type:"text"},
     {k:"cost",label:"비용 (원)",type:"number"},
+    {k:"expType",label:"지출종류",type:"select",opts:["없음","개인지출(품의서)","세금계산서"]},
+    {k:"vendor",label:"업체명 (지출시)",type:"text"},
     {k:"improve",label:"앞으로 개선사항",type:"textarea",full:true},
   ],
   plan:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"text",label:"할 일",type:"text",full:true,req:true} ],
@@ -563,6 +565,43 @@ function migrateBadMemoAttachments(){
 }
 
 function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
+/* ── 업무 → 지출 자동 연동 ─────────────────────────────── */
+function syncWorkExpense(workObj, workId, savedId){
+  const id = workId || savedId;
+  if(!id) return;
+  const expType = workObj.expType||"없음";
+  // 기존 연동 expense 찾기
+  const linked = entries.filter(e=>e.kind==="expense"&&e.workId===id);
+
+  if(expType==="없음"||!Number(workObj.cost)){
+    // 지출 없음 → 기존 연동 expense 삭제
+    linked.forEach(e=>deleteRecord(e.id));
+    return;
+  }
+
+  const expData = {
+    kind:"expense",
+    date: workObj.date||todayStr(),
+    expType: expType==="개인지출(품의서)" ? "개인지출" : "세금계산서",
+    title: workObj.title||(workObj.field||""),
+    amount: Number(workObj.cost)||0,
+    vendor: workObj.vendor||"",
+    memo: (workObj.floor||"")+(workObj.loc?" "+workObj.loc:"")+(workObj.field?" ["+workObj.field+"]":""),
+    workId: id, // 업무와 연결 키
+    createdAt: Date.now()
+  };
+
+  if(linked.length){
+    // 기존 expense 업데이트
+    updateRecord(linked[0].id, expData);
+    linked.slice(1).forEach(e=>deleteRecord(e.id)); // 중복 제거
+  } else {
+    // 새 expense 생성
+    addRecord(expData);
+  }
+  renderAll();
+}
+
 function renderAll(){
   // v38: 한 함수 에러가 나머지를 막지 않도록 각각 try-catch
   const fns = [
@@ -1144,14 +1183,26 @@ $("mSave").addEventListener("click",async ()=>{
   if(PHOTO_KINDS.includes(mKind)) obj.photos=modalPhotos.slice();
   if(ATTACH_KINDS.includes(mKind)) obj.attachments=modalAttachments.slice();
   if(mKind==="vacation" && !obj.end) obj.end=obj.start;
-  if(mId) updateRecord(mId,obj); else { obj.createdAt=Date.now(); if(mKind==="plan") obj.done=false; if(mKind==="filelink"||mKind==="site") obj.starred=false; addRecord(obj); }
+  let savedId=mId;
+  if(mId) updateRecord(mId,obj); else { obj.createdAt=Date.now(); if(mKind==="plan") obj.done=false; if(mKind==="filelink"||mKind==="site") obj.starred=false; const nr=addRecord(obj); savedId=nr?nr.id:obj.id; }
   // filelink 수정 시 위치 유지 (renderAll 대신 renderFileLink만)
   if(mKind==="filelink"){ setTimeout(()=>renderFileLink(),50); }
   else if(mKind==="site"){ renderSite(); }
   else renderAll();
+  // 업무 저장 시 지출 자동 연동
+  if(mKind==="work") syncWorkExpense(obj, mId, savedId);
   $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
 });
-$("mDelete").addEventListener("click",()=>{ if(!mId) return; $("overlay").classList.remove("show"); deleteWithUndo(mId, KIND_LABEL[mKind]||"항목"); });
+$("mDelete").addEventListener("click",()=>{
+  if(!mId) return;
+  // 업무 삭제 시 연동 expense도 함께 삭제
+  if(mKind==="work"){
+    const linked=entries.filter(e=>e.kind==="expense"&&e.workId===mId);
+    linked.forEach(e=>deleteRecord(e.id));
+  }
+  $("overlay").classList.remove("show");
+  deleteWithUndo(mId, KIND_LABEL[mKind]||"항목");
+});
 document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>openEditor(b.dataset.add,null)));
 
 /* ===== 검색 ===== */
@@ -1233,6 +1284,7 @@ function renderWork(){
     <td><span class="pill ${fieldClass(en.field)}">${esc(en.field||"")}</span></td>
     <td>${esc(en.material||"")}</td>
     <td class="num">${en.cost?won(en.cost):""}</td>
+    <td>${en.expType&&en.expType!=="없음"?'<span class="pill '+(en.expType==="세금계산서"?"amount":"tech")+'" style="font-size:10px">'+(en.expType==="세금계산서"?"📃세금":"💸품의")+"</span>":""}</td>
     <td class="clip" data-tip="${esc(en.improve||"")}" title="${esc(en.improve||"")}">${esc(en.improve||"")}</td>
     <td><button class="rowdel" data-del="${en.id}" title="삭제">🗑</button></td></tr>`).join("");
   const totalCost=list.reduce((s,en)=>s+(Number(en.cost)||0),0);
