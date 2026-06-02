@@ -1855,7 +1855,18 @@ function renderDayDetail(){
   if(!(w.length||v.length||p.length||m.length||c.length||mt.length||dv.length||sc.length||cl.length||ex.length)){
     box.innerHTML=h+`<div class="empty">이 날의 기록이 없습니다.</div>`; wireRep(); return;
   }
-  if(cl.length) h+=`<div class="detail-block"><div class="bh">🧹 청소일지</div>${cl.map(c=>`<div class="row-item" data-kind="cleaning" data-id="${c.id}"><div class="grow"><div class="t">🧹 청소일지 <span class="pill admin">반장 ${esc(c.foreman||"")}</span></div><div class="m">${c.special?"⭐ "+esc(c.special).slice(0,80):""}</div></div></div>`).join("")}</div>`;
+  if(cl.length){
+    const clHtml = cl.map(c=>{
+      const getDirs = function(c){ if(Array.isArray(c.directives)) return c.directives; var s=c.notes||c.instructions||""; return s?s.split("\n").filter(function(x){return x.trim();}):[];};
+      const getSpecs = function(c){ if(Array.isArray(c.specials)) return c.specials; var s=c.special||""; return s?s.split("\n").filter(function(x){return x.trim();}):[];};
+      var dirs=getDirs(c), specs=getSpecs(c), parts=[];
+      dirs.slice(0,3).forEach(function(t){if(t.trim()) parts.push("📌 "+esc(t));});
+      specs.slice(0,3).forEach(function(t){if(t.trim()) parts.push("⭐ "+esc(t));});
+      var detail=parts.join(" · ");
+      return '<div class="row-item" data-kind="cleaning" data-id="'+c.id+'"><div class="grow"><div class="t">🧹 청소일지 <span class="pill admin">반장 '+esc(c.foreman||"")+'</span></div>'+(detail?'<div class="m" style="font-size:12.5px;line-height:1.6;margin-top:3px">'+detail+'</div>':"")+"</div></div>";
+    });
+    h+='<div class="detail-block"><div class="bh">🧹 청소일지</div>'+clHtml.join("")+'</div>';
+  }
   if(ex.length) h+=`<div class="detail-block"><div class="bh">💰 지출/세금계산서</div>${ex.map(e=>`<div class="row-item" data-kind="expense" data-id="${e.id}"><div class="grow"><div class="t">${(e.expType==="세금계산서")?"📃":"💸"} ${esc(e.title||"")} <span class="pill amount">${won(e.amount||0)}원</span></div><div class="m">${e.memo?esc(e.memo):""}</div></div></div>`).join("")}</div>`;
   if(sc.length) h+=`<div class="detail-block"><div class="bh">📅 업무예정</div>${sc.map(cardSchedule).join("")}</div>`;
   if(v.length) h+=`<div class="detail-block"><div class="bh">🌴 휴가</div>${v.map(cardVac).join("")}</div>`;
@@ -3918,8 +3929,8 @@ function renderCleaning(){
     const issues=(c.staffWork||[]).filter(x=>x.special&&x.special.trim());
     // 옛 데이터 호환
     const directors = Array.isArray(c.directorOrders) ? c.directorOrders : [];
-    const directives = Array.isArray(c.directives) ? c.directives : (c.notes||c.instructions?(c.notes||c.instructions).split(/\n+/).filter(s=>s.trim()):[]);
-    const specials = Array.isArray(c.specials) ? c.specials : (c.special?c.special.split(/\n+/).filter(s=>s.trim()):[]);
+    const directives = Array.isArray(c.directives) ? c.directives : (c.notes||c.instructions?(c.notes||c.instructions).split("\n").filter(s=>s.trim()):[]);
+    const specials = Array.isArray(c.specials) ? c.specials : (c.special?c.special.split("\n").filter(s=>s.trim()):[]);
     const itemList = (arr, max=3) => arr.slice(0,max).map(t=>`<li>${esc(t).slice(0,90)}${t.length>90?"…":""}</li>`).join("") + (arr.length>max?`<li style="color:var(--ink-soft);font-style:italic">+${arr.length-max}건 더</li>`:"");
     return `<div class="row-item cln-row" data-id="${c.id}">
       <div class="grow">
