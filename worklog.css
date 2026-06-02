@@ -118,7 +118,7 @@ textarea{resize:vertical;min-height:64px}
 
 /* ===== v16 신규 — 파일링크/사이트/비번 ===== */
 .cat-group{margin-bottom:18px}
-.cat-group-h{display:flex;align-items:center;gap:8px;font-family:'Gowun Batang',serif;font-size:16px;font-weight:800;color:#fff;margin-bottom:8px;padding:10px 14px;border-radius:12px;background:var(--ccol,var(--primary));cursor:pointer;user-select:none;border-bottom:none}
+.cat-group-h{display:flex;align-items:center;gap:8px;font-family:'Gowun Batang',serif;font-size:18px;font-weight:900;color:#fff;margin-bottom:8px;padding:12px 16px;border-radius:12px;background:var(--ccol,var(--primary));cursor:pointer;user-select:none;border-bottom:none}
 .cat-group-h .ch-arrow{font-size:11px;color:rgba(255,255,255,.8);transition:transform .15s}
 .cat-group.collapsed .ch-arrow{transform:rotate(-90deg)}
 .cat-group.collapsed .cat-items{display:none}
@@ -367,7 +367,7 @@ table.rec tbody tr.st-zero td:nth-child(7) b{color:#999}
 .cln-card-section ul li::before{content:"•";position:absolute;left:3px;color:var(--primary-deep);font-weight:700}
 .cat-group-h .ch-cnt{background:rgba(255,255,255,.25);color:#fff;font-size:11px;padding:1px 8px;border-radius:999px;font-family:'Pretendard',sans-serif}
 .cat-items{display:flex;flex-direction:column;gap:6px}
-.link-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .12s,box-shadow .12s,transform .12s;position:relative}
+.link-card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:border-color .12s,box-shadow .12s,transform .12s;position:relative}
 .link-card:hover{border-color:var(--primary);box-shadow:0 4px 14px rgba(63,124,184,.15);transform:translateX(3px)}
 .link-card.starred{background:linear-gradient(135deg,#fff,var(--gold-soft) 200%)}
 .link-card .lc-icon{font-size:28px;flex:0 0 auto;line-height:1}
@@ -718,3 +718,32 @@ td.clip[data-tip]:hover{position:relative}
 /* 카드 글씨 크기 추가 강조 */
 .link-card .lc-typebadge.tb-folder{background:color-mix(in srgb,var(--ccol,#e6b04d) 15%,#fff);color:var(--ccol,#9a6f17);border:1px solid var(--ccol,#e6b04d)}
 .link-card .lc-typebadge.tb-file{background:color-mix(in srgb,var(--ccol,#5b9bd5) 12%,#fff);color:var(--ccol,#36699c);border:1px solid var(--ccol,#5b9bd5)}
+
+/* ── 즐겨찾기 3열 ── */
+.fav-section{grid-column:1/-1;margin-bottom:6px}
+.fav-section .fs-h{font-size:18px;font-weight:900;color:#b8860b;padding:12px 16px;background:linear-gradient(135deg,#fff8dc,#fff3a0);border-radius:12px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.fav-section .cat-items{display:grid!important;grid-template-columns:repeat(3,1fr)!important;flex-direction:unset!important;gap:10px!important}
+@media(max-width:900px){.fav-section .cat-items{grid-template-columns:repeat(2,1fr)!important;}}
+@media(max-width:580px){.fav-section .cat-items{grid-template-columns:1fr!important;}}
+
+/* 카드 디자인 개선 - 카테고리 색상 반영 */
+.cat-group .link-card{
+  border-left:4px solid var(--ccol,var(--primary));
+  background:color-mix(in srgb,var(--ccol,#5b9bd5) 5%,#fff);
+}
+.cat-group .link-card.is-folder{
+  background:color-mix(in srgb,var(--ccol,#e6b04d) 10%,#fff);
+  border-left:4px solid var(--ccol,var(--gold));
+}
+.cat-group .link-card:hover{
+  background:color-mix(in srgb,var(--ccol,#5b9bd5) 12%,#fff);
+}
+
+/* 카드 아이콘 크기 */
+.link-card .lc-icon{font-size:30px!important}
+
+/* 카드 이름 폰트 */
+.link-card .lc-name{font-size:18px!important;font-weight:800!important}
+
+/* lc-sub 경로 줄이기 */
+.link-card .lc-sub{-webkit-line-clamp:1!important}

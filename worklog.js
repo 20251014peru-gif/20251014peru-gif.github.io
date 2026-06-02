@@ -2150,19 +2150,31 @@ function renderFileLink(){
   // 카테고리별 - 서희타워 운영 5개 초과시 자동 분할, 소형 카테고리 묶기
   const CAT_ICONS_MAP={"전기":"⚡","소방":"🔥","기계":"❄️","기계/냉난방":"❄️","서희타워 운영":"🏢","사무관련":"📋","비용관련":"💰","공적업무":"📌","용역":"🔧","개인용도":"👤","승강기":"🛗","청소":"🧹","경비":"🛡️","행정":"📋"};
   
-  // 서희타워 운영 5개 초과 자동 분할
+  // 서희타워 운영 키워드 기반 3그룹 분할
+  const TOWER_GROUPS = [
+    { label:"서희타워 운영 1", keys:["업무일지","경비업무일지","주간 회의록","주간회의록","회의록","사무관련","사무"] },
+    { label:"서희타워 운영 2", keys:["견적","계약","관리"] },
+    { label:"서희타워 운영 3", keys:["도면","보험증권","발주서"] },
+  ];
+  function towerGroup(item){
+    const t=(item.label||item.path||"").toLowerCase();
+    for(let i=0;i<TOWER_GROUPS.length;i++){
+      if(TOWER_GROUPS[i].keys.some(k=>t.includes(k.toLowerCase()))) return i;
+    }
+    return 0; // 기본 1그룹
+  }
+
   const expandedCats=[];
   orderedCats.forEach(c=>{
     const items=groups[c];
-    if(items.length>5 && c==="서희타워 운영"){
-      // 5개씩 분할
-      for(let i=0;i<items.length;i+=5){
-        const chunk=items.slice(i,i+5);
-        const subKey=c+(i===0?"":` ${Math.floor(i/5)+1}`);
-        expandedCats.push({cat:subKey,origCat:c,items:chunk});
-      }
+    if(c==="서희타워 운영"){
+      const buckets=[[],[],[]];
+      items.forEach(e=>buckets[towerGroup(e)].push(e));
+      TOWER_GROUPS.forEach((g,i)=>{
+        if(buckets[i].length) expandedCats.push({cat:g.label, origCat:c, items:buckets[i]});
+      });
     } else {
-      expandedCats.push({cat:c,origCat:c,items});
+      expandedCats.push({cat:c, origCat:c, items});
     }
   });
 
