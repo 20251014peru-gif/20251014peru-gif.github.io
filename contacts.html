@@ -153,8 +153,21 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
         <button class="btn btn-ghost btn-sm" id="btnSettings">⚙ OCR 설정</button>
       </div>
     </div>
-    <div class="chips" id="catChips"></div>
-    <input type="text" id="search" class="search" placeholder="🔍 검색 — 업체명·담당자·직책·전화·분야·메모">
+    <!-- 검색 맨 위 + 분야 드롭다운 한 줄 -->
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <div style="position:relative;flex:1;min-width:200px">
+        <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:17px;pointer-events:none">🔍</span>
+        <input type="text" id="search" class="search" placeholder="업체명·담당자·직책·전화·분야·메모 검색" style="padding-left:42px;margin:0;height:44px;font-size:15px;font-weight:600;border:2.5px solid var(--primary);border-radius:12px;background:#f0f6ff;box-shadow:0 2px 10px rgba(63,124,184,.12);width:100%;box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+        <select id="catDropdown" style="height:44px;padding:0 36px 0 14px;border:1.5px solid var(--line);border-radius:12px;font-size:14px;font-weight:700;background:#fff;cursor:pointer;min-width:140px;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22 viewBox=%220 0 12 8%22><path fill=%22%23666%22 d=%22M0 0l6 8 6-8z%22/></svg>');background-repeat:no-repeat;background-position:right 12px center">
+          <option value="전체">📂 전체</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" id="btnCatMgrTop" title="분야 관리" style="height:44px;padding:0 14px;font-size:13px;white-space:nowrap">⚙ 분야관리</button>
+      </div>
+    </div>
+    <!-- 숨겨진 칩 (JS 호환) -->
+    <div class="chips" id="catChips" style="display:none"></div>
     <div id="list"></div>
   </div>
 </main>
@@ -375,6 +388,12 @@ function openCatMgr(){
   $("catMgrOverlay").classList.add("show");
 }
 document.addEventListener("DOMContentLoaded",()=>{
+  // 드롭다운 분야 필터
+  const dd=$("catDropdown");
+  if(dd) dd.addEventListener("change",()=>{ cat=dd.value; renderChips(); render(); });
+  // 상단 분야관리 버튼
+  const mgrTop=$("btnCatMgrTop");
+  if(mgrTop) mgrTop.addEventListener("click",openCatMgr);
   const addBtn=$("catMgrAdd");
   const inp=$("catMgrInput");
   const closeBtn=$("catMgrClose");
@@ -421,8 +440,21 @@ function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.c
 let cat="전체", q="", viewMode="card";
 function renderChips(){
   const opts=["전체",...CATS];
+  // 숨겨진 칩 (JS 호환)
   $("catChips").innerHTML=opts.map(c=>`<button class="chip ${c===cat?"active":""}" data-c="${c}">${c}</button>`).join("");
   $("catChips").querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{ cat=b.dataset.c; renderChips(); render(); }));
+  // 드롭다운 업데이트
+  const dd=$("catDropdown");
+  if(dd){
+    const cur=cat;
+    dd.innerHTML=`<option value="전체">📂 전체 (${items.length})</option>`
+      + CATS.map(c=>{
+          const cnt=items.filter(x=>x.cat===c).length;
+          return cnt>0?`<option value="${c}">${c} (${cnt})</option>`:"";
+        }).join("");
+    if([...dd.options].some(o=>o.value===cur)) dd.value=cur;
+    else dd.value="전체";
+  }
 }
 $("search").addEventListener("input",e=>{ q=e.target.value; render(); });
 function match(it){
