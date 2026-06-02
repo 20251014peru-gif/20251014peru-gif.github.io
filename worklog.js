@@ -454,8 +454,8 @@ async function init(){
   loadContactsCache().catch(()=>{});
   // 드래그 앤 드롭 순서 로드
   loadFlOrder().catch(()=>{});
-  // 서희타워 카테고리 분리 마이그레이션 (renderAll 후 실행)
-  setTimeout(()=>migrateTowerCats(), 500);
+  // 서희타워 카테고리 분리 마이그레이션
+  migrateTowerCats();
 }
 
 // v26: 옛 "휴지" 품목 → "점보롤"로 자동 마이그레이션
@@ -2030,40 +2030,53 @@ function buildCatJump(kind, groupsObj, jumpBoxId){
   }));
 }
 
-/* 서희타워 운영 → 서희타워 운영 1/2/3 자동 마이그레이션 */
-function migrateTowerCats(){
-  const LS_KEY = "tower_migrated_v3"; // v3: 강제 재실행
-  if(localStorage.getItem(LS_KEY)) return;
-  const TOWER_GROUPS = [
-    { label:"서희타워 운영 1", keys:["업무일지","경비업무일지","주간회의록","회의록","사무관련","사무","경비"] },
-    { label:"서희타워 운영 2", keys:["견적","계약","관리"] },
-    { label:"서희타워 운영 3", keys:["도면","보험증권","발주서"] },
-  ];
-  function towerGroupLabel(item){
-    const t=(item.label||item.path||"").toLowerCase();
-    for(const g of TOWER_GROUPS){
-      if(g.keys.some(k=>t.includes(k.toLowerCase()))) return g.label;
-    }
-    return "서희타워 운영 1"; // 기본값
+/* 서희타워 운영 → 서희타워 운영 1/2/3 마이그레이션 */
+const TOWER_GROUPS_DEF = [
+  { label:"서희타워 운영 1", keys:["업무일지","경비업무일지","주간회의록","회의록","사무관련","사무","경비"] },
+  { label:"서희타워 운영 2", keys:["견적","계약","관리"] },
+  { label:"서희타워 운영 3", keys:["도면","보험증권","발주서"] },
+];
+function getTowerGroupLabel(item){
+  const t=(item.label||item.path||"").toLowerCase();
+  for(const g of TOWER_GROUPS_DEF){
+    if(g.keys.some(k=>t.includes(k.toLowerCase()))) return g.label;
   }
+  return "서희타워 운영 1";
+}
+function migrateTowerCats(){
+  const LS_KEY = "tower_migrated_v4";
+  if(localStorage.getItem(LS_KEY)) return;
+
   const toMigrate = entries.filter(e=>e.kind==="filelink"&&
     (e.category==="서희타워 운영"||e.category==="서희타워 운영 1"||
      e.category==="서희타워 운영 2"||e.category==="서희타워 운영 3"));
+
   if(!toMigrate.length){ localStorage.setItem(LS_KEY,"1"); return; }
+
+  // entries를 직접 동기 수정 (렌더링 즉시 반영)
   let changed=0;
   toMigrate.forEach(e=>{
-    const newCat = towerGroupLabel(e);
-    if(e.category!==newCat){ updateRecord(e.id,{category:newCat}); changed++; }
+    const newCat = getTowerGroupLabel(e);
+    if(e.category!==newCat){
+      e.category = newCat; // entries 직접 수정
+      if(online&&db) db.collection(COL).doc(e.id).update({category:newCat}).catch(()=>{});
+      changed++;
+    }
   });
+
   ["서희타워 운영 1","서희타워 운영 2","서희타워 운영 3"].forEach(c=>{
     if(!CATEGORIES.filelink.includes(c)) CATEGORIES.filelink.push(c);
   });
-  // "서희타워 운영" 원본 카테고리 제거
   CATEGORIES.filelink = CATEGORIES.filelink.filter(c=>c!=="서희타워 운영");
   saveCategories();
+  lsSave(); // localStorage도 즉시 반영
   localStorage.setItem(LS_KEY,"1");
-  if(changed>0){ renderFileLink(); toast("서희타워 운영 카테고리 분리 완료"); }
-  console.log("서희타워 마이그레이션:", changed+"개 변경");
+
+  if(changed>0){
+    renderFileLink();
+    toast(`✅ 서희타워 운영 카테고리 1/2/3 분리 완료 (${changed}개)`);
+  }
+  console.log("서희타워 마이그레이션 완료:", changed+"개");
 }
 function sortItems(kind, list){
   const s=VIEW_PREFS[kind].sort;
