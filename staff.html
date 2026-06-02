@@ -394,7 +394,9 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
       <p id="hd"></p>
     </div>
   </div>
-  <div style="display:flex;gap:7px;align-items:center">
+  <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+    <a href="./worklog.html" style="background:var(--bg);border:2px solid var(--border2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;text-decoration:none;" title="통합업무일지">📋 업무일지</a>
+    <a href="./contacts.html" style="background:var(--bg);border:2px solid var(--border2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;text-decoration:none;" title="업체연락처">📞 업체연락처</a>
     <button onclick="$('backupModal').classList.add('show')" style="background:var(--bg);border:2px solid var(--border2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;" title="백업·복구">💾 백업</button>
     <button onclick="lockApp()" style="background:var(--bg);border:2px solid var(--border2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;" title="화면 잠금">🔐 잠금</button>
     <span class="badge">☁ 동기화</span>
