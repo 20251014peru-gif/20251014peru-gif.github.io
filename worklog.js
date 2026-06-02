@@ -1827,7 +1827,7 @@ function renderMonthView(){
           if(Array.isArray(c.directives)) c.directives.forEach(t=>{ if(t&&t.trim()) items.push("📌 "+t.trim()); });
           if(Array.isArray(c.specials)) c.specials.forEach(t=>{ if(t&&t.trim()) items.push("⭐ "+t.trim()); });
           items.slice(0,3).forEach(it=>{
-            cb += `<div class="otitle">${esc(it).slice(0,40)}</div>`;
+            cb += `<div class="otitle" data-kind="cleaning" data-id="${c.id}">${esc(it).slice(0,40)}</div>`;
           });
         });
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#15803d">🧹 청소 ${clArr.length}</div>${cb}</div>`;
@@ -1839,7 +1839,7 @@ function renderMonthView(){
         exArr.forEach(e=>{
           const icon = (e.expType==="세금계산서") ? "📃" : "💸";
           const amt = won(Number(e.amount)||0);
-          eb += `<div class="otitle">${icon} ${esc((e.title||"").slice(0,18))} <b style="color:#a85e3a">${amt}원</b></div>`;
+          eb += `<div class="otitle" data-kind="expense" data-id="${e.id}">${icon} ${esc((e.title||"").slice(0,18))} <b style="color:#a85e3a">${amt}원</b></div>`;
         });
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#a85e3a">💰 지출 ${exArr.length}</div>${eb}</div>`;
       }
@@ -1850,7 +1850,7 @@ function renderMonthView(){
       // 업무 달력에서도 스케줄을 작게 표시
       if(sArr.length && CAL_FILTER.schedule){
         hasContent=true;
-        inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.schedule}">${CAL_KIND_LABEL.schedule} ${sArr.length}</div>${sArr.map(s=>`<div class="otitle">${esc(s.title||"")}</div>`).join("")}</div>`;
+        inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.schedule}">${CAL_KIND_LABEL.schedule} ${sArr.length}</div>${sArr.map(s=>`<div class="otitle" data-kind="schedule" data-id="${s.id}">${esc(s.title||"")}</div>`).join("")}</div>`;
       }
       OTHER_ORDER.forEach(k=>{
         const arr=oArr.filter(o=>o.kind===k); if(!arr.length) return;
@@ -1865,7 +1865,20 @@ function renderMonthView(){
   }
   $("calGrid").innerHTML=html;
   $("calGrid").querySelectorAll("[data-d]").forEach(el=>{
-    el.addEventListener("click",()=>{ selDay=el.dataset.d; renderCalendar(); });
+    el.addEventListener("click",(e)=>{
+      // 개별 항목(wtitle, otitle) 클릭 → 수정창 바로 열기
+      const item = e.target.closest("[data-id][data-kind]");
+      if(item){
+        e.stopPropagation();
+        const kind=item.dataset.kind, id=item.dataset.id;
+        if(kind==="cleaning") openCleaningEditor(id);
+        else if(kind==="expense") openExpenseEditor(id);
+        else openEditor(kind, id);
+        return;
+      }
+      // 빈 셀 또는 날짜 클릭 → 상세보기
+      selDay=el.dataset.d; renderCalendar();
+    });
     // 스케줄 모드에서 빈 셀 더블클릭 → 빠른 추가
     el.addEventListener("dblclick",()=>{
       if(calMode==="schedule"){
