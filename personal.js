@@ -21,8 +21,8 @@ function buildPad(){
   var keys=['1','2','3','4','5','6','7','8','9','bio','0','del'];
   pad.innerHTML=keys.map(function(k){
     if(k==='bio')return '<button class="pin-key blank" id="padBio"></button>';
-    if(k==='del')return '<button class="pin-key" onclick="pinPress(\'del\')">⌫</button>';
-    return '<button class="pin-key" onclick="pinPress(\''+k+'\')">'+k+'</button>';
+    if(k==='del')return '<button class="pin-key" ontouchstart="pinPress(event,\'del\')" onclick="pinPress(event,\'del\')">⌫</button>';
+    return '<button class="pin-key" ontouchstart="pinPress(event,\''+k+'\')" onclick="pinPress(event,\''+k+'\')">'+k+'</button>';
   }).join('');
 }
 function renderDots(){
@@ -32,11 +32,14 @@ function renderDots(){
 }
 function lockMsg(t){var el=document.getElementById('lockMsg');if(el)el.textContent=t||'';}
 function setLockText(title,sub){document.getElementById('lockTitle').textContent=title;document.getElementById('lockSub').textContent=sub;}
-function pinPress(k){
+function pinPress(ev,k){
+  // 모바일: touchstart로 즉시 반응 + click 중복 방지
+  if(ev){if(ev.type==='touchstart'){ev.preventDefault();window._lastPinTouch=Date.now();}
+    else if(ev.type==='click'&&window._lastPinTouch&&Date.now()-window._lastPinTouch<500)return;}
   if(k==='del'){pinBuffer=pinBuffer.slice(0,-1);renderDots();return;}
   if(pinBuffer.length>=4)return;
   pinBuffer+=k;renderDots();
-  if(pinBuffer.length===4)setTimeout(pinComplete,150);
+  if(pinBuffer.length===4)setTimeout(pinComplete,40);
 }
 function pinComplete(){
   if(pinMode==='set'){
@@ -70,7 +73,7 @@ function startLock(){
     pinMode='enter';setLockText('개인 관리 잠금','PIN 4자리를 입력하세요');
     if(localStorage.getItem(BIO_KEY)==='1'&&window.PublicKeyCredential){
       document.getElementById('lockBio').style.display='inline-block';
-      setTimeout(bioUnlock,300); // 자동으로 지문 시도
+      // 자동 지문 시도 제거: 사용자가 직접 지문 버튼을 눌러야 시도 (구글 PIN 창 충돌 방지)
     }
   }
 }
@@ -93,6 +96,11 @@ function bioUnlock(){
   var opt={publicKey:{challenge:new Uint8Array(16),userVerification:'required',timeout:30000}};
   navigator.credentials.get(opt).then(function(){unlock();})
     .catch(function(){lockMsg('지문 인식 실패 — PIN을 입력하세요');});
+}
+function disableBio(){
+  if(!confirm('지문 잠금을 끕니다. (앱 PIN은 그대로 작동) 진행할까요?'))return;
+  localStorage.removeItem(BIO_KEY);
+  toast('🚫 지문 잠금 해제됨 — PIN으로만 열려요');
 }
 function changePin(){
   if(!confirm('PIN을 새로 설정할까요? 잠금 화면으로 이동합니다.'))return;
@@ -1221,11 +1229,10 @@ function calCarLegendHtml(){
   }).join('');
 }
 function recsByDate(){
+  // 달력 그리드는 항상 모든 기록 표시 (필터는 하단 목록에만 적용)
   var map={};
   getRecords().forEach(function(r){
     if(!r.date)return;
-    if(calCatFilter!=='전체'&&r.cat!==calCatFilter)return;
-    if(calCatFilter==='차계부'&&calCarFilter!=='전체'&&r.who!==calCarFilter)return;
     (map[r.date]=map[r.date]||[]).push(r);
   });
   return map;

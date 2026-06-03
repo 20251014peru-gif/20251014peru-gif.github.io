@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>개인 관리</title>
-<link rel="stylesheet" href="personal.css?v=32">
+<link rel="stylesheet" href="personal.css?v=35">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v32</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v35</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -209,6 +209,8 @@
       <div class="card-title">🔒 잠금 설정</div>
       <p style="font-size:12px;color:#6B7280;margin-bottom:10px;">앱을 열 때 PIN/지문으로 잠가요.</p>
       <button class="btn btn-ghost" onclick="changePin()">PIN 변경</button>
+      <button class="btn btn-ghost" onclick="disableBio()" style="margin-top:8px">🚫 지문 끄기</button>
+      <p style="font-size:11px;color:#9CA3AF;margin-top:8px;">지문이 구글 PIN 창과 충돌하면 끄세요. PIN으로는 정상 잠금됩니다.</p>
     </div>
   </div>
 
@@ -235,6 +237,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="personal.js?v=32"></script>
+<script src="personal.js?v=35"></script>
 </body>
 </html>

@@ -321,11 +321,11 @@ textarea{resize:vertical;min-height:74px;}
 .lock-title{font-size:20px;font-weight:800;color:#fff;}
 .lock-sub{font-size:13px;color:#C7D2FE;margin-top:6px;margin-bottom:24px;}
 .pin-dots{display:flex;gap:14px;justify-content:center;margin-bottom:28px;}
-.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid #C7D2FE;}
-.pin-dot.on{background:#fff;border-color:#fff;}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid #C7D2FE;transition:background .08s,border-color .08s,transform .08s;}
+.pin-dot.on{background:#fff;border-color:#fff;transform:scale(1.15);}
 .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-.pin-key{aspect-ratio:1.4;border:none;border-radius:14px;background:rgba(255,255,255,.15);color:#fff;font-size:24px;font-weight:700;cursor:pointer;}
-.pin-key:active{background:rgba(255,255,255,.35);}
+.pin-key{aspect-ratio:1.4;border:none;border-radius:14px;background:rgba(255,255,255,.15);color:#fff;font-size:24px;font-weight:700;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;transition:background .05s,transform .05s;}
+.pin-key:active{background:rgba(255,255,255,.5);transform:scale(.94);}
 .pin-key.blank{background:none;cursor:default;}
 .lock-bio{margin-top:20px;background:rgba(255,255,255,.2);border:none;color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;}
 .lock-msg{margin-top:16px;font-size:13px;color:#FECACA;min-height:18px;}
