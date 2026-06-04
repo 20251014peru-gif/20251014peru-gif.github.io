@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v50</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v51</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -84,35 +84,57 @@
 
   <div id="apptBanner"></div>
 
-  <!-- 기록 -->
+  <!-- 기록 탭 (업무일지 방식) -->
   <div class="panel active" id="p-write">
-    <div class="edit-banner" id="editBanner">
-      <span id="editBannerText">수정 중</span>
-      <button onclick="cancelEdit()">새 기록으로 ✕</button>
+    <!-- 카테고리 필터 + 추가버튼 -->
+    <div class="wr-toolbar">
+      <div class="wr-cats" id="catChips"></div>
+      <button class="wr-add-btn" onclick="openAddModal()">＋ 기록 추가</button>
     </div>
-    <div class="card">
-      <div class="card-title">무엇을 기록할까요?</div>
-      <div class="cats" id="catChips"></div>
-      <div class="date-top">
-        <label>📅 날짜</label>
-        <input type="date" id="f-date" class="date-input">
-      </div>
-      <div id="formFields"></div>
+    <!-- 날짜 필터 -->
+    <div class="wr-filters">
+      <input type="date" id="wrDateFrom" class="wr-date" onchange="renderWriteList()">
+      <span class="wr-dash">~</span>
+      <input type="date" id="wrDateTo" class="wr-date" onchange="renderWriteList()">
+      <button class="wr-filter-clear" onclick="clearWrDate()">기간 해제</button>
+      <span class="wr-count" id="wrCount"></span>
+    </div>
+    <!-- 목록 -->
+    <div id="writeList"></div>
+  </div>
 
-      <label>사진 <span class="opt">(자동 압축 · 모든 기기에서 보임)</span></label>
-      <div class="photo-btns">
-        <label class="photo-btn">📷 카메라
-          <input type="file" id="camInput" accept="image/*" capture="environment" style="display:none">
-        </label>
-        <label class="photo-btn">🖼 사진에서 선택
-          <input type="file" id="pickInput" accept="image/*" multiple style="display:none">
-        </label>
+  <!-- 기록 입력/수정 모달 -->
+  <div class="add-modal-bg" id="addModalBg" onclick="if(event.target===this)closeAddModal()">
+    <div class="add-modal" id="addModal">
+      <div class="add-modal-head">
+        <span id="addModalTitle">✏️ 기록 추가</span>
+        <button class="add-modal-close" onclick="closeAddModal()">✕</button>
       </div>
-      <div class="photo-status" id="photoStatus"></div>
-      <div id="pasteBox" class="paste-box" contenteditable="true" data-ph="📋 여기를 누르고 Ctrl+V로 사진 붙여넣기 (PC)"></div>
-      <div class="photo-row" id="photoRow"></div>
-
-      <button class="btn btn-primary" id="saveBtn" onclick="saveRecord()">💾 저장하기</button>
+      <div class="add-modal-body">
+        <div class="edit-banner" id="editBanner" style="margin:0 0 10px">
+          <span id="editBannerText">수정 중</span>
+          <button onclick="cancelEdit()">새 기록으로 ✕</button>
+        </div>
+        <div class="cats" id="catChipsModal"></div>
+        <div class="date-top">
+          <label>📅 날짜</label>
+          <input type="date" id="f-date" class="date-input">
+        </div>
+        <div id="formFields"></div>
+        <label>사진 <span class="opt">(자동 압축)</span></label>
+        <div class="photo-btns">
+          <label class="photo-btn">📷 카메라
+            <input type="file" id="camInput" accept="image/*" capture="environment" style="display:none">
+          </label>
+          <label class="photo-btn">🖼 사진에서 선택
+            <input type="file" id="pickInput" accept="image/*" multiple style="display:none">
+          </label>
+        </div>
+        <div class="photo-status" id="photoStatus"></div>
+        <div id="pasteBox" class="paste-box" contenteditable="true" data-ph="📋 Ctrl+V로 사진 붙여넣기"></div>
+        <div class="photo-row" id="photoRow"></div>
+        <button class="btn btn-primary" id="saveBtn" onclick="saveRecord()">💾 저장하기</button>
+      </div>
     </div>
   </div>
 
@@ -310,6 +332,6 @@
   <div class="cp-list" id="catPaneList"></div>
 </div>
 
-<script src="personal.js?v=50"></script>
+<script src="personal.js?v=51"></script>
 </body>
 </html>

@@ -119,6 +119,25 @@ var FB_BASE='https://firestore.googleapis.com/v1/projects/my-system-25497/databa
 var COL='personal';        // 기록(텍스트)
 var COL_PHOTO='personal_photos'; // 사진(base64)
 
+
+/* ===== 카테고리 순서 관리 (드래그) ===== */
+var LS_CAT_ORDER='personal_cat_order_v1';
+function getCatOrder(){
+  try{
+    var s=localStorage.getItem(LS_CAT_ORDER);
+    if(s){var a=JSON.parse(s);if(Array.isArray(a)&&a.length)return a;}
+  }catch(e){}
+  return CATS.map(function(c){return c.k;});
+}
+function saveCatOrder(arr){try{localStorage.setItem(LS_CAT_ORDER,JSON.stringify(arr));}catch(e){}}
+function getOrderedCats(){
+  var order=getCatOrder();
+  var map={};CATS.forEach(function(c){map[c.k]=c;});
+  var result=[];
+  order.forEach(function(k){if(map[k])result.push(map[k]);});
+  CATS.forEach(function(c){if(!map[c.k+'_done']&&result.indexOf(c)<0)result.push(c);});
+  return result;
+}
 /* 카테고리 정의 + 카테고리별 입력 필드 스키마 */
 var CATS=[
   /* 가나다순 · 통화+가족+약속 → 사람 통합 · 아이디어→생각 통합 */
@@ -289,6 +308,7 @@ function tab(name,el){
   $('p-'+name).classList.add('active');
   var ts=document.querySelectorAll('.tab');for(var j=0;j<ts.length;j++)ts[j].classList.remove('active');
   el.classList.add('active');
+  if(name==='write'){renderWriteList();renderCats();}
   if(name==='list')renderList();
   if(name==='cal')renderCal();
   if(name==='stats')renderStats();
@@ -301,19 +321,120 @@ function tab(name,el){
 function renderCats(){
   var recs=getRecords();
   var cnt={};recs.forEach(function(r){cnt[r.cat]=(cnt[r.cat]||0)+1;});
-  var h='';CATS.forEach(function(c){
+  var ordered=getOrderedCats();
+  /* toolbar용 칩 (드래그 가능) */
+  var allSel=(wrFilter==='전체');
+  var h='<div class="cat-chip-wrap">'+
+    '<div class="cat-chip'+(allSel?' sel':'')+'" style="'+(allSel?'background:#6B7280;color:#fff;':'')+'" onclick="setWrFilter(\'전체\')">전체</div>'+
+  '</div>';
+  ordered.forEach(function(c){
     var sel=c.k===selectedCat;
     var n=cnt[c.k]||0;
-    h+='<div class="cat-chip-wrap">'+
-      '<div class="cat-chip'+(sel?' sel':'')+'" style="'+(sel?'background:'+c.c+';':'')+'" onclick="pickCat(\''+c.k+'\')">'+c.i+' '+c.k+'</div>'+
-      (n?'<span class="cat-peek-btn" onclick="openCatPane(\''+c.k+'\')" title="'+c.k+' 내역 보기">'+n+'</span>':'')+
+    h+='<div class="cat-chip-wrap" draggable="true" data-cat="'+c.k+'"'+
+      ' ondragstart="catDragStart(event)"'+
+      ' ondragover="catDragOver(event)"'+
+      ' ondrop="catDrop(event)"'+
+      ' ondragend="catDragEnd(event)"'+
+      ' ontouchstart="catTouchStart(event)"'+
+      ' ontouchmove="catTouchMove(event)"'+
+      ' ontouchend="catTouchEnd(event)">'+
+      '<div class="cat-chip'+(sel?' sel':'')+((wrFilter===c.k&&!sel)?' wr-active':'')+'" style="'+(sel?'background:'+c.c+';':(wrFilter===c.k?'border-color:'+c.c+';color:'+c.c+';':'')+'')+'" onclick="setWrFilter(\''+c.k+'\')">'+
+        '<span class="cat-drag-handle" title="드래그로 순서 변경">⠿</span>'+
+        c.i+' '+c.k+
+      '</div>'+
+      (n?'<span class="cat-peek-btn" onclick="openCatPane(\''+c.k+'\')" title="'+c.k+' 내역">'+n+'</span>':'')+
     '</div>';
   });
-  $('catChips').innerHTML=h;
+  var cc=$('catChips');if(cc)cc.innerHTML=h;
+  /* 모달용 칩 (드래그 없음, 심플) */
+  var hm='';ordered.forEach(function(c){
+    var sel=c.k===selectedCat;
+    hm+='<div class="cat-chip'+(sel?' sel':'')+'" style="'+(sel?'background:'+c.c+';':'')+'" onclick="pickCat(\''+c.k+'\')">'+c.i+' '+c.k+'</div>';
+  });
+  var cm=$('catChipsModal');if(cm)cm.innerHTML=hm;
+}
+
+/* ===== 카테고리 드래그 앤 드롭 (PC) ===== */
+var _dragSrc=null;
+function catDragStart(e){
+  _dragSrc=e.currentTarget;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',e.currentTarget.dataset.cat);
+}
+function catDragOver(e){
+  e.preventDefault();e.dataTransfer.dropEffect='move';
+  var wrap=e.currentTarget;
+  if(wrap===_dragSrc)return;
+  wrap.classList.add('drag-over');
+}
+function catDrop(e){
+  e.preventDefault();
+  var from=e.dataTransfer.getData('text/plain');
+  var to=e.currentTarget.dataset.cat;
+  if(!from||from===to)return;
+  _applyCatReorder(from,to);
+}
+function catDragEnd(e){
+  document.querySelectorAll('.cat-chip-wrap').forEach(function(el){
+    el.classList.remove('dragging','drag-over');
+  });
+}
+/* ===== 카테고리 터치 드래그 (모바일) ===== */
+var _touchSrc=null,_touchClone=null,_touchCat='';
+function catTouchStart(e){
+  if(e.touches.length!==1)return;
+  var wrap=e.currentTarget;
+  _touchSrc=wrap;_touchCat=wrap.dataset.cat;
+  wrap.classList.add('dragging');
+  /* 클론 만들어 손가락 따라다니게 */
+  _touchClone=wrap.cloneNode(true);
+  _touchClone.style.cssText='position:fixed;opacity:.8;pointer-events:none;z-index:9999;transform:scale(1.05);';
+  var r=wrap.getBoundingClientRect();
+  _touchClone.style.left=r.left+'px';_touchClone.style.top=r.top+'px';
+  _touchClone.style.width=r.width+'px';
+  document.body.appendChild(_touchClone);
+}
+function catTouchMove(e){
+  if(!_touchClone)return;
+  e.preventDefault();
+  var t=e.touches[0];
+  _touchClone.style.left=(t.clientX-_touchClone.offsetWidth/2)+'px';
+  _touchClone.style.top=(t.clientY-20)+'px';
+  /* 아래 요소 찾기 */
+  _touchClone.style.display='none';
+  var el=document.elementFromPoint(t.clientX,t.clientY);
+  _touchClone.style.display='';
+  document.querySelectorAll('.cat-chip-wrap').forEach(function(w){w.classList.remove('drag-over');});
+  if(el){var wrap=el.closest('.cat-chip-wrap');if(wrap&&wrap!==_touchSrc)wrap.classList.add('drag-over');}
+}
+function catTouchEnd(e){
+  if(!_touchClone){return;}
+  var t=e.changedTouches[0];
+  _touchClone.style.display='none';
+  var el=document.elementFromPoint(t.clientX,t.clientY);
+  _touchClone.style.display='';
+  if(el){
+    var wrap=el.closest('.cat-chip-wrap');
+    if(wrap&&wrap!==_touchSrc&&wrap.dataset.cat)_applyCatReorder(_touchCat,wrap.dataset.cat);
+  }
+  document.querySelectorAll('.cat-chip-wrap').forEach(function(w){w.classList.remove('dragging','drag-over');});
+  if(_touchClone.parentNode)_touchClone.parentNode.removeChild(_touchClone);
+  _touchClone=null;_touchSrc=null;_touchCat='';
+}
+function _applyCatReorder(fromK,toK){
+  var order=getCatOrder();
+  var fi=order.indexOf(fromK),ti=order.indexOf(toK);
+  if(fi<0||ti<0)return;
+  order.splice(fi,1);order.splice(ti,0,fromK);
+  saveCatOrder(order);
+  renderCats();renderWriteList();
 }
 function pickCat(k){
-  var cur=collectFields();      // 현재 입력값 보존
+  var cur=collectFields();
   selectedCat=k; renderCats(); renderForm(cur);
+  // 모달 타이틀 갱신
+  var mt=$('addModalTitle');if(mt&&!editingId)mt.textContent='✏️ '+k+' 기록 추가';
 }
 function renderForm(vals){
   vals=vals||{};
@@ -844,6 +965,90 @@ function renderPending(){
 function showImg(src){$('viewerImg').src=src;$('viewer').classList.add('open');}
 
 /* ===== 저장 / 수정 ===== */
+
+/* ===== 기록 추가 모달 ===== */
+var wrFilter='전체';
+var wrDateFrom='',wrDateTo='';
+function openAddModal(cat){
+  if(cat)pickCat(cat);
+  $('addModalBg').classList.add('open');
+  $('addModalTitle').textContent=editingId?'✏️ 수정':'✏️ 기록 추가';
+  setTimeout(function(){
+    var fi=$('formFields');if(fi){var inp=fi.querySelector('input[type=text]');if(inp)inp.focus();}
+  },200);
+}
+function closeAddModal(){
+  $('addModalBg').classList.remove('open');
+  if(!editingId)cancelEdit();
+}
+/* pickCat 에서 모달이 열려있으면 catChipsModal도 갱신 */
+function renderCatsModal(){renderCats();}
+
+/* ===== 기록 탭 목록 렌더 ===== */
+function renderWriteList(){
+  var recs=getRecords();
+  /* 날짜 필터 */
+  var df=($('wrDateFrom')||{}).value||'';
+  var dt=($('wrDateTo')||{}).value||'';
+  recs=recs.filter(function(r){
+    if(wrFilter!=='전체'&&r.cat!==wrFilter)return false;
+    if(df&&r.date<df)return false;
+    if(dt&&r.date>dt)return false;
+    return true;
+  });
+  recs.sort(function(a,b){return (b.date+(b.time||'')).localeCompare(a.date+(a.time||''));});
+  var cnt=$('wrCount');if(cnt)cnt.textContent=recs.length+'건';
+  var el=$('writeList');if(!el)return;
+  if(!recs.length){el.innerHTML='<div class="empty" style="padding:30px 0">기록이 없어요 — 위 버튼으로 추가하세요</div>';return;}
+  /* 날짜 그룹 */
+  var html='',cur='';
+  recs.forEach(function(r){
+    if(r.date!==cur){
+      cur=r.date;
+      html+='<div class="wr-day-band">📅 '+fmtDateK(r.date)+'</div>';
+    }
+    var c=catOf(r.cat);
+    var col=evtColor(r);
+    var amt='';
+    if(r.amount)amt='<span class="wr-amt">'+won(r.amount)+'원</span>';
+    if(r.cat==='독서'&&r.stars)amt='<span class="wr-amt star">'+'⭐'.repeat(Math.min(5,Math.round(r.stars)))+'</span>';
+    var sub=rowSummary(r);
+    var badge=(r.cat==='사람'&&r.subtype?r.subtype:r.cat);
+    html+='<div class="wr-row">'+
+      '<span class="wr-badge" style="background:'+col+'22;color:'+col+'">'+c.i+' '+esc(badge)+'</span>'+
+      '<span class="wr-title" onclick="openDetail(\''+r.id+'\')">'+
+        (esc(r.title)||esc(r.cat))+photoMark(r)+
+      '</span>'+
+      (sub?'<span class="wr-sub">'+sub+'</span>':'')+
+      amt+
+      '<span class="wr-acts">'+
+        '<button class="wr-edit" onclick="wrEdit(\''+r.id+'\')">✏️</button>'+
+        '<button class="wr-del" onclick="wrDel(\''+r.id+'\')">🗑</button>'+
+      '</span>'+
+    '</div>';
+  });
+  el.innerHTML=html;
+  hydratePhotos();
+}
+function wrEdit(id){
+  startEdit(id);
+  openAddModal();
+}
+function wrDel(id){
+  if(!confirm('삭제할까요?'))return;
+  realDel(id);
+  renderWriteList();renderCats();
+}
+function clearWrDate(){
+  var f=$('wrDateFrom'),t=$('wrDateTo');
+  if(f)f.value='';if(t)t.value='';
+  renderWriteList();
+}
+function setWrFilter(k){
+  wrFilter=k;
+  renderWriteList();
+  renderCats();  // 선택 카테고리 하이라이트
+}
 function startEdit(id){
   var r=getRecords().filter(function(x){return x.id===id;})[0];if(!r)return;
   editingId=id;selectedCat=r.cat;
@@ -859,8 +1064,9 @@ function startEdit(id){
   $('editBanner').classList.add('show');
   $('editBannerText').textContent='✏️ 수정 중 — '+(r.title||r.cat);
   $('saveBtn').textContent='✅ 수정 완료';
-  document.querySelector('.tab').click(); // 기록 탭으로
-  window.scrollTo(0,0);
+  // 기록 탭이 아니면 이동
+  var writeTab=document.querySelector('.tab');
+  if(writeTab&&!document.getElementById('p-write').classList.contains('active'))writeTab.click();
 }
 function cancelEdit(){
   editingId=null;pendingPhotos=[];formItems=[];
@@ -931,6 +1137,9 @@ function saveRecord(){
   toast(editingId?'✏️ 수정됨':'✅ 저장됨');
   renderApptBanner();
   cancelEdit();
+  closeAddModal();
+  renderWriteList();
+  renderCats();
 }
 /* 차계부: 같은 차량의 직전 주행거리 기록과 비교해 주행거리·연비 계산 */
 function computeCar(rec,records){
@@ -2371,7 +2580,7 @@ function delContact(id){
     // 주소 끝 #카테고리 가 있으면 그 카테고리로 시작 (예: personal.html#독서)
     var hash=decodeURIComponent((location.hash||'').replace('#',''));
     if(hash&&catOf(hash).k===hash)selectedCat=hash;
-    migratePersonCat();initViewMode();renderCats();renderForm({});renderPending();setApiBtn();
+    migratePersonCat();initViewMode();renderCats();renderForm({});renderPending();setApiBtn();renderWriteList();
     // 용량 절약: localStorage에 남아있는 사진 원본 데이터 제거 (사진은 클라우드에 있음)
     try{
       var recs=getRecords(),changed=false;
