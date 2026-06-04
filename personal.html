@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v47</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v48</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -54,6 +54,20 @@
 <!-- 사진 확대 오버레이 -->
 <div id="qmZoomOverlay"><img id="qmZoomImg" src=""></div>
 
+<!-- 글로벌 상단 검색바 -->
+<div class="g-search-bar">
+  <div class="g-search-wrap">
+    <span class="g-search-icon">🔍</span>
+    <input type="text" id="gSearchInput"
+      placeholder="어디서나 검색 — 제목·사람·카테고리·날짜…"
+      oninput="globalSearch()"
+      onkeydown="if(event.key==='Escape'){clearGSearch();this.blur();}">
+    <button class="g-search-clear" id="gSearchClear"
+      style="display:none" onclick="clearGSearch()">✕</button>
+  </div>
+  <div class="g-search-drop" id="gSearchDrop"></div>
+</div>
+
 <div class="tabs">
   <button class="tab active" onclick="tab('write',this)">✏️ 기록</button>
   <button class="tab" onclick="tab('contacts',this)">📞 연락처</button>
@@ -61,7 +75,6 @@
   <button class="tab" onclick="tab('list',this)">📋 모아보기</button>
   <button class="tab" onclick="tab('cal',this)">📅 달력</button>
   <button class="tab" onclick="tab('stats',this)">📊 통계</button>
-  <button class="tab" onclick="tab('search',this)">🔍 검색</button>
   <button class="tab" onclick="tab('chat',this)">💬 AI 대화</button>
   <button class="tab" onclick="tab('ai',this)">🧠 분석</button>
   <button class="tab" onclick="tab('diag',this)">🩺 진단/오류</button>
@@ -154,13 +167,6 @@
   <div class="panel" id="p-stats">
     <div id="statsArea"></div>
   </div>
-
-  <!-- 검색 -->
-  <div class="panel" id="p-search">
-    <div class="search-box">
-      <input type="text" id="searchInput" placeholder="단어로 검색 (제목·내용·사람·카테고리)" onkeyup="if(event.key==='Enter')doSearch()">
-      <button class="btn btn-primary btn-sm" onclick="doSearch()">검색</button>
-    </div>
     <div class="chat-hint">날짜(2026-05) · 사람(엄마) · 단어(청소기) 무엇이든</div>
     <div id="searchArea"><div class="empty">검색어를 입력하세요</div></div>
   </div>
@@ -306,6 +312,6 @@
   <div class="cp-list" id="catPaneList"></div>
 </div>
 
-<script src="personal.js?v=47"></script>
+<script src="personal.js?v=48"></script>
 </body>
 </html>

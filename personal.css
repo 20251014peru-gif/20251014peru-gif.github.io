@@ -531,3 +531,52 @@ textarea{resize:vertical;min-height:74px;}
   padding:5px 14px;font-size:13px;font-weight:600;cursor:pointer;color:#6B7280;transition:all .15s;}
 .vt-btn.sel{background:#7d8fd0;color:#fff;border-color:#7d8fd0;}
 .vt-btn:hover:not(.sel){background:#E0E7FF;border-color:#A5B4FC;color:#4F46E5;}
+
+/* ===== 글로벌 상단 검색바 ===== */
+.g-search-bar{
+  position:sticky;top:0;z-index:3000;
+  background:linear-gradient(135deg,#6366F1 0%,#7d8fd0 100%);
+  padding:10px 14px 0;
+  box-shadow:0 2px 12px rgba(99,102,241,.25);
+}
+.g-search-wrap{
+  display:flex;align-items:center;gap:8px;
+  background:#fff;border-radius:28px;
+  padding:0 14px;
+  box-shadow:0 2px 8px rgba(0,0,0,.12),0 0 0 2px rgba(255,255,255,.4);
+}
+.g-search-icon{font-size:17px;line-height:1;flex-shrink:0;color:#6366F1;}
+#gSearchInput{
+  flex:1;border:none;outline:none;background:transparent;
+  font-size:15px;font-weight:500;color:#1A1A2E;
+  padding:11px 0;
+  font-family:inherit;
+}
+#gSearchInput::placeholder{color:#9CA3AF;font-weight:400;}
+.g-search-clear{
+  display:none;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;
+  background:#E5E7EB;border:none;cursor:pointer;
+  font-size:12px;font-weight:700;color:#6B7280;
+  flex-shrink:0;
+}
+.g-search-clear:hover{background:#D1D5DB;color:#111;}
+/* 결과 드롭다운 */
+.g-search-drop{
+  display:none;max-height:65vh;overflow-y:auto;
+  background:#fff;border-radius:0 0 14px 14px;
+  box-shadow:0 8px 24px rgba(0,0,0,.15);
+  margin:6px -14px 0;
+}
+.g-search-drop.open{display:block;}
+.gs-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;font-size:13px;color:#6B7280;
+  border-bottom:1px solid #F3F4F6;background:#F8F9FF;
+  position:sticky;top:0;z-index:1;
+}
+.gs-close{
+  background:none;border:none;cursor:pointer;
+  font-size:16px;color:#9CA3AF;padding:0 4px;line-height:1;
+}
+.gs-close:hover{color:#EF4444;}

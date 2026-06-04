@@ -303,7 +303,7 @@ function tab(name,el){
   if(name==='stats')renderStats();
   if(name==='diag')backupStatusText();
   if(name==='vault')renderVault();
-  if(name==='contacts'){refreshCtCatSelect();loadContacts();}
+  if(name==='contacts'){refreshCtCatSelect();loadContacts();setTimeout(attachCtNameAc,400);}
 }
 
 /* ===== 카테고리 칩 + 동적 폼 ===== */
@@ -1263,12 +1263,26 @@ function hydratePhotos(){
 }
 
 /* ===== 검색 ===== */
-function doSearch(){
-  var q=$('searchInput').value.trim().toLowerCase();
-  if(!q){$('searchArea').innerHTML='<div class="empty">검색어를 입력하세요</div>';return;}
-  var hit=getRecords().filter(function(r){return (r.title+' '+r.detail+' '+r.who+' '+r.cat+' '+r.date).toLowerCase().indexOf(q)>-1;});
-  $('searchArea').innerHTML=hit.length?('<div class="date-group">검색 결과 '+hit.length+'건</div>'+groupByDate(hit)):'<div class="empty">"'+esc(q)+'" 결과 없음</div>';
+function doSearch(){globalSearch();}
+function globalSearch(){
+  var inp=$('gSearchInput'); if(!inp)return;
+  var q=inp.value.trim().toLowerCase();
+  var area=$('gSearchDrop'); if(!area)return;
+  var clr=$('gSearchClear'); if(clr)clr.style.display=q?'flex':'none';
+  if(!q){area.classList.remove('open');return;}
+  var hit=getRecords().filter(function(r){
+    return ([r.title,r.detail,r.who,r.cat,r.date,r.addr,r.phone,r.place].join(' ')).toLowerCase().indexOf(q)>-1;
+  });
+  area.innerHTML=hit.length
+    ?('<div class="gs-hdr">🔍 <b>'+hit.length+'건</b> 찾음<button class="gs-close" onclick="clearGSearch()">✕</button></div>'+groupByDate(hit))
+    :'<div class="gs-hdr">🔍 <b>"'+esc(q)+'"</b> — 결과 없음<button class="gs-close" onclick="clearGSearch()">✕</button></div>';
+  area.classList.add('open');
   hydratePhotos();
+}
+function clearGSearch(){
+  var inp=$('gSearchInput');if(inp)inp.value='';
+  var area=$('gSearchDrop');if(area)area.classList.remove('open');
+  var clr=$('gSearchClear');if(clr)clr.style.display='none';
 }
 
 /* ===== Firebase REST ===== */
@@ -1938,7 +1952,7 @@ function wireQuickMemo(){
   // 사진 삭제·확대 클릭
   $('qmText').addEventListener('click',function(e){
     var rm=e.target.closest('.qm-inline-img-rm');
-    if(rm){e.preventDefault();var wrap=rm.closest('.qm-inline-img-wrap');if(wrap){wrap.remove();scheduleQmSave();}return;}
+    if(rm){e.preventDefault();e.stopPropagation();var wrap=rm.closest('.qm-inline-img-wrap');if(wrap){wrap.remove();scheduleQmSave();}setTimeout(function(){var t=$('qmText');if(t)t.focus();},10);return;}
     var img=e.target.closest('.qm-inline-img-wrap img');
     if(img){e.preventDefault();openQmZoom(img.src);}
   });
@@ -2108,6 +2122,20 @@ function ctCatColor(k){
 }
 function setCtFilter(k){ctFilter=k;renderContacts();}
 
+
+/* 연락처 이름 입력 → 기존 번호 자동채움 */
+function attachCtNameAc(){
+  var el=$('ct-name'), ph=$('ct-phone');
+  if(!el||!ph||el._acDone)return;
+  el._acDone=true;
+  el.addEventListener('input',function(){
+    if(editingContactId)return;          // 수정 중엔 기존 값 유지
+    var name=el.value.trim();
+    if(!name)return;
+    var ct=contactsCache.find(function(c){return c.name===name;});
+    if(ct&&ct.phone&&!ph.value){ph.value=ct.phone;}
+  });
+}
 function saveContact(){
   var name=($('ct-name').value||'').trim();
   var phone=($('ct-phone').value||'').trim();
