@@ -1238,10 +1238,12 @@ function calCarLegendHtml(){
   }).join('');
 }
 function recsByDate(){
-  // 달력 그리드는 항상 모든 기록 표시 (필터는 하단 목록에만 적용)
+  // 카테고리/차량 필터 적용 (달력 그리드 + 하단 목록 모두)
   var map={};
   getRecords().forEach(function(r){
     if(!r.date)return;
+    if(calCatFilter!=='전체'&&r.cat!==calCatFilter)return;
+    if(calCatFilter==='차계부'&&calCarFilter!=='전체'&&r.who!==calCarFilter)return;
     (map[r.date]=map[r.date]||[]).push(r);
   });
   return map;
