@@ -22,14 +22,16 @@
 </div>
 
 <div class="hdr">
-  <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v65</span></span>
-    <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
-  </div>
-  <div class="hdr-r">
-    <button class="nav-btn nav-quick" id="btnQuickMemo" title="급한 메모 (Ctrl+Shift+M)">⚡ 급한메모</button>
-    <a href="index.html" class="home-link">← 홈</a>
-    <button class="api-btn off" id="apiBtn" onclick="openApi()">AI</button>
+  <div class="hdr-inner">
+    <div class="hdr-l">
+      <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#9CA3AF;font-weight:600">v66</span></span>
+      <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
+    </div>
+    <div class="hdr-r">
+      <button class="nav-btn nav-quick" id="btnQuickMemo" title="급한 메모 (Ctrl+Shift+M)">⚡ 급한메모</button>
+      <a href="index.html" class="home-link">← 홈</a>
+      <button class="api-btn off" id="apiBtn" onclick="openApi()">AI</button>
+    </div>
   </div>
 </div>
 
@@ -56,30 +58,30 @@
 
 <!-- 글로벌 상단 검색바 -->
 <div class="g-search-bar">
-  <div class="g-search-wrap">
-    <span class="g-search-icon">🔍</span>
-    <input type="text" id="gSearchInput"
-      placeholder="어디서나 검색 — 제목·사람·카테고리·날짜…"
-      oninput="globalSearch()"
-      onkeydown="if(event.key==='Escape'){clearGSearch();this.blur();}">
-    <button class="g-search-clear" id="gSearchClear"
-      style="display:none" onclick="clearGSearch()">✕</button>
+  <div class="g-search-inner">
+    <div class="g-search-wrap">
+      <span class="g-search-icon">🔍</span>
+      <input type="text" id="gSearchInput"
+        placeholder="어디서나 검색 — 제목·사람·카테고리·날짜…"
+        oninput="globalSearch()"
+        onkeydown="if(event.key==='Escape'){clearGSearch();this.blur();}">
+      <button class="g-search-clear" id="gSearchClear"
+        style="display:none" onclick="clearGSearch()">✕</button>
+    </div>
+    <div class="g-search-drop" id="gSearchDrop"></div>
   </div>
-  <div class="g-search-drop" id="gSearchDrop"></div>
 </div>
 
 <div class="tabs">
-  <div class="tabs-inner">
-    <button class="tab active" onclick="tab('write',this)">✏️ 기록</button>
-    <button class="tab" onclick="tab('contacts',this)">📞 연락처</button>
-    <button class="tab" onclick="tab('vault',this)">🔐 보관함</button>
-    <button class="tab" onclick="tab('list',this)">📋 모아보기</button>
-    <button class="tab" onclick="tab('cal',this)">📅 달력</button>
-    <button class="tab" onclick="tab('stats',this)">📊 통계</button>
-    <button class="tab" onclick="tab('chat',this)">💬 AI 대화</button>
-    <button class="tab" onclick="tab('ai',this)">🧠 분석</button>
-    <button class="tab" onclick="tab('diag',this)">🩺 진단/오류</button>
-  </div>
+  <button class="tab active" onclick="tab('write',this)">✏️ 기록</button>
+  <button class="tab" onclick="tab('contacts',this)">📞 연락처</button>
+  <button class="tab" onclick="tab('vault',this)">🔐 보관함</button>
+  <button class="tab" onclick="tab('list',this)">📋 모아보기</button>
+  <button class="tab" onclick="tab('cal',this)">📅 달력</button>
+  <button class="tab" onclick="tab('stats',this)">📊 통계</button>
+  <button class="tab" onclick="tab('chat',this)">💬 AI 대화</button>
+  <button class="tab" onclick="tab('ai',this)">🧠 분석</button>
+  <button class="tab" onclick="tab('diag',this)">🩺 진단/오류</button>
 </div>
 
 <div class="wrap">
@@ -400,6 +402,6 @@ var vaultFirebaseApp = firebase.initializeApp({
 var vaultDb = vaultFirebaseApp.firestore();
 var vaultStorage = vaultFirebaseApp.storage();
 </script>
-<script src="personal.js?v=65"></script>
+<script src="personal.js?v=66"></script>
 </body>
 </html>
