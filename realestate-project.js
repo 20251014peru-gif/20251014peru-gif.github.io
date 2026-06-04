@@ -60,6 +60,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const storage = firebase.storage();
+const CM_VENDOR="re_cm_vendor", CM_PRICE="re_cm_price",
+      CM_CHK="re_cm_chk", CM_DOC="re_cm_doc", CM_REF="re_cm_ref";
 const PROJECTS="realestate_projects", ENTRIES="realestate_entries",
       VENDORS="realestate_vendors", MATERIALS="realestate_materials",
       QUOTES="realestate_quotes", AGENTS="realestate_agents",
@@ -485,6 +487,417 @@ let chatHistory=[];
 /* ===== 유틸 ===== */
 function val(id){return document.getElementById(id).value;}
 function today(){return new Date().toISOString().slice(0,10);}
+
+/* ================================================================
+   📂 공통자료 — 5개 섹션 (프로젝트 무관, 공통 Firebase 컬렉션)
+   ================================================================ */
+let _cmTab = "vendor";
+let _cmEditId = null, _cmEditCol = null;
+let _cmVendors=[], _cmPrices=[], _cmChks=[], _cmDocs=[], _cmRefs=[];
+let _cmLoaded = false;
+let _cmChkStage="임장", _cmDocStage="매수";
+let _cmVendorFilter="전체";
+
+/* 기본 데이터 */
+const CM_CHK_DEFAULTS=[
+  {stage:"임장",text:"등기부등본 확인 (근저당·가압류)",done:false},
+  {stage:"임장",text:"건축물대장 확인 (위반건축물 여부)",done:false},
+  {stage:"임장",text:"실측 면적 확인",done:false},
+  {stage:"임장",text:"주변 시세 비교 (3개 이상)",done:false},
+  {stage:"임장",text:"누수·결로·곰팡이 점검",done:false},
+  {stage:"계약",text:"계약서 특약사항 확인",done:false},
+  {stage:"계약",text:"계약금 10% 이체",done:false},
+  {stage:"계약",text:"잔금일 협의",done:false},
+  {stage:"공사",text:"인테리어 업체 견적 3곳 이상",done:false},
+  {stage:"공사",text:"공사 일정표 작성",done:false},
+  {stage:"공사",text:"중간 점검 (타일·목공 완료 후)",done:false},
+  {stage:"공사",text:"준공 점검 (입주 청소 전)",done:false},
+  {stage:"매도",text:"매도 호가 설정",done:false},
+  {stage:"매도",text:"공인중개사 3곳 이상 내놓기",done:false},
+  {stage:"매도",text:"양도세 신고 준비",done:false},
+];
+const CM_DOC_DEFAULTS=[
+  {stage:"매수",text:"등기부등본",done:false},
+  {stage:"매수",text:"건축물대장",done:false},
+  {stage:"매수",text:"매매계약서 원본",done:false},
+  {stage:"매수",text:"인감증명서 (매도인)",done:false},
+  {stage:"매도",text:"등기권리증",done:false},
+  {stage:"매도",text:"인감도장·인감증명",done:false},
+  {stage:"매도",text:"주민등록등본",done:false},
+  {stage:"대출",text:"소득증빙서류",done:false},
+  {stage:"대출",text:"재직증명서",done:false},
+  {stage:"공통",text:"신분증 사본",done:false},
+  {stage:"공통",text:"통장 사본",done:false},
+];
+const VENDOR_CATS=["전체","목공","타일","도배","설비","전기","페인트","샷시","청소","철거","기타"];
+
+/* ---- 모달 열기/닫기 ---- */
+async function openCommonData(){
+  document.getElementById("commonDataModal").classList.add("open");
+  if(!_cmLoaded){ await loadCmData(); _cmLoaded=true; }
+  renderCmContent();
+}
+function closeCommonData(){ document.getElementById("commonDataModal").classList.remove("open"); }
+function closeCmSubModal(){ document.getElementById("cmSubModal").classList.remove("open"); _cmEditId=null; _cmEditCol=null; }
+
+/* ---- 데이터 로드 ---- */
+async function loadCmData(){
+  try{
+    const [v,p,c,d,r]=await Promise.all([
+      db.collection(CM_VENDOR).get(),
+      db.collection(CM_PRICE).get(),
+      db.collection(CM_CHK).get(),
+      db.collection(CM_DOC).get(),
+      db.collection(CM_REF).get(),
+    ]);
+    _cmVendors=v.docs.map(d=>({id:d.id,...d.data()}));
+    _cmPrices=p.docs.map(d=>({id:d.id,...d.data()}));
+    _cmChks=c.docs.map(d=>({id:d.id,...d.data()}));
+    _cmDocs=d.docs.map(d=>({id:d.id,...d.data()}));
+    _cmRefs=r.docs.map(d=>({id:d.id,...d.data()}));
+    // 기본 데이터 삽입 (최초 1회)
+    if(!_cmChks.length){ for(const x of CM_CHK_DEFAULTS){ const ref=db.collection(CM_CHK).doc(); await ref.set({...x,createdAt:Date.now()}); _cmChks.push({id:ref.id,...x,createdAt:Date.now()}); } }
+    if(!_cmDocs.length){ for(const x of CM_DOC_DEFAULTS){ const ref=db.collection(CM_DOC).doc(); await ref.set({...x,createdAt:Date.now()}); _cmDocs.push({id:ref.id,...x,createdAt:Date.now()}); } }
+  }catch(e){ showError("공통자료 로드",e); }
+}
+
+/* ---- 탭 전환 ---- */
+function setCmTab(tab, btn){
+  _cmTab=tab;
+  document.querySelectorAll("#cmTabRow .cm-tab").forEach(b=>b.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+  renderCmContent();
+}
+function renderCmContent(){
+  const el=document.getElementById("cmContent"); if(!el)return;
+  if(_cmTab==="vendor") el.innerHTML=renderCmVendorHtml();
+  else if(_cmTab==="price") el.innerHTML=renderCmPriceHtml();
+  else if(_cmTab==="checklist") el.innerHTML=renderCmChkHtml();
+  else if(_cmTab==="doc") el.innerHTML=renderCmDocHtml();
+  else if(_cmTab==="ref") el.innerHTML=renderCmRefHtml();
+}
+
+/* ================================================================
+   ① 업체 연락처
+   ================================================================ */
+function renderCmVendorHtml(){
+  const q=(document.getElementById("cmVSearch")?.value||"").toLowerCase();
+  let arr=_cmVendors.filter(v=>{
+    if(_cmVendorFilter!=="전체"&&v.field!==_cmVendorFilter)return false;
+    if(q&&!((v.name+v.phone+v.field+v.note||"").toLowerCase().includes(q)))return false;
+    return true;
+  }).sort((a,b)=>(a.field||"").localeCompare(b.field||""));
+
+  const chips=VENDOR_CATS.map(c=>`<button class="cm-chip${_cmVendorFilter===c?" on":""}" onclick="_cmVendorFilter='${c}';renderCmContent()">${c}</button>`).join("");
+  const rows=arr.length?arr.map(v=>`
+    <tr onclick="cmVendorEdit('${v.id}')" style="cursor:pointer">
+      <td><span class="cm-field-badge">${esc(v.field||"기타")}</span></td>
+      <td style="font-weight:600">${esc(v.name||"")}</td>
+      <td><a href="tel:${esc(v.phone||"")}" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:none">${esc(v.phone||"")}</a></td>
+      <td>${v.stars?"⭐".repeat(Math.min(5,v.stars)):""}</td>
+      <td style="color:#888;font-size:12px">${esc(v.note||"")}</td>
+    </tr>`).join("")
+    :`<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">업체가 없어요</td></tr>`;
+
+  return `<div style="margin-bottom:10px;display:flex;gap:6px;justify-content:space-between;align-items:center">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div>
+    <button class="btn btn-primary btn-sm" onclick="cmVendorAdd()">＋ 업체 추가</button>
+  </div>
+  <input id="cmVSearch" placeholder="🔍 업체명·전화·분야 검색" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:10px" oninput="renderCmContent()">
+  <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px">
+    <thead><tr style="background:var(--row-even)">
+      <th style="padding:8px 10px;text-align:left;font-size:12px;border-bottom:1px solid var(--line)">분야</th>
+      <th style="padding:8px 10px;text-align:left">상호명</th>
+      <th style="padding:8px 10px;text-align:left">전화</th>
+      <th style="padding:8px 10px;text-align:left">평점</th>
+      <th style="padding:8px 10px;text-align:left">메모</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+function cmVendorAdd(){
+  _cmEditId=null; _cmEditCol=CM_VENDOR;
+  document.getElementById("cmSubTitle").textContent="📞 업체 추가";
+  document.getElementById("cmSubDelBtn").style.display="none";
+  document.getElementById("cmSubBody").innerHTML=cmVendorForm({});
+  document.getElementById("cmSubModal").classList.add("open");
+}
+function cmVendorEdit(id){
+  const v=_cmVendors.find(x=>x.id===id); if(!v)return;
+  _cmEditId=id; _cmEditCol=CM_VENDOR;
+  document.getElementById("cmSubTitle").textContent="📞 업체 수정";
+  document.getElementById("cmSubDelBtn").style.display="";
+  document.getElementById("cmSubBody").innerHTML=cmVendorForm(v);
+  document.getElementById("cmSubModal").classList.add("open");
+}
+function cmVendorForm(v){
+  const starsOpts=[1,2,3,4,5].map(n=>`<option value="${n}"${v.stars==n?" selected":""}>${"⭐".repeat(n)}</option>`).join("");
+  const fieldOpts=VENDOR_CATS.filter(c=>c!=="전체").map(c=>`<option${v.field===c?" selected":""}>${c}</option>`).join("");
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div><label style="font-size:12px;color:#888">분야</label><select id="cmv-field" style="width:100%;padding:7px;border:1px solid var(--line);border-radius:8px"><option value="">선택</option>${fieldOpts}</select></div>
+    <div><label style="font-size:12px;color:#888">상호명 *</label><input id="cmv-name" value="${esc(v.name||"")}" placeholder="홍길동 목공" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+    <div><label style="font-size:12px;color:#888">전화번호</label><input id="cmv-phone" type="tel" value="${esc(v.phone||"")}" placeholder="010-1234-5678" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+    <div><label style="font-size:12px;color:#888">평점</label><select id="cmv-stars" style="width:100%;padding:7px;border:1px solid var(--line);border-radius:8px"><option value="">-</option>${starsOpts}</select></div>
+    <div style="grid-column:1/-1"><label style="font-size:12px;color:#888">메모</label><input id="cmv-note" value="${esc(v.note||"")}" placeholder="특기사항, 단가 정보 등" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+  </div>`;
+}
+
+/* ================================================================
+   ② 단가 기준표
+   ================================================================ */
+const PRICE_GROUPS=["이동/생활","공사/시공","자재/용품","법무/행정","기타"];
+let _cmPriceFilter="전체";
+function renderCmPriceHtml(){
+  let arr=_cmPrices.filter(p=>_cmPriceFilter==="전체"||p.cat===_cmPriceFilter).sort((a,b)=>(a.cat||"").localeCompare(b.cat||""));
+  const chips=["전체",...PRICE_GROUPS].map(c=>`<button class="cm-chip${_cmPriceFilter===c?" on":""}" onclick="_cmPriceFilter='${c}';renderCmContent()">${c}</button>`).join("");
+  const rows=arr.length?arr.map(p=>`
+    <tr onclick="cmPriceEdit('${p.id}')" style="cursor:pointer">
+      <td><span class="cm-field-badge">${esc(p.cat||"기타")}</span></td>
+      <td style="font-weight:600">${esc(p.item)}</td>
+      <td style="color:#888">${esc(p.unit||"")}</td>
+      <td style="text-align:right;font-weight:700;color:var(--accent)">${p.minPrice?(Number(p.minPrice)||0).toLocaleString()+"원":"-"}</td>
+      <td style="text-align:right;font-weight:700;color:var(--accent)">${p.maxPrice?(Number(p.maxPrice)||0).toLocaleString()+"원":"-"}</td>
+      <td style="color:#888;font-size:12px">${esc(p.note||"")}</td>
+    </tr>`).join("")
+    :`<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px">단가 기준이 없어요</td></tr>`;
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div>
+    <button class="btn btn-primary btn-sm" onclick="cmPriceAdd()">＋ 항목 추가</button>
+  </div>
+  <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px">
+    <thead><tr style="background:var(--row-even)">
+      <th style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--line)">카테고리</th>
+      <th style="padding:8px 10px">항목</th><th style="padding:8px 10px">단위</th>
+      <th style="padding:8px 10px;text-align:right">최저</th>
+      <th style="padding:8px 10px;text-align:right">최고</th>
+      <th style="padding:8px 10px">메모</th>
+    </tr></thead><tbody>${rows}</tbody>
+  </table></div>`;
+}
+function cmPriceAdd(){
+  _cmEditId=null; _cmEditCol=CM_PRICE;
+  document.getElementById("cmSubTitle").textContent="💰 단가 추가";
+  document.getElementById("cmSubDelBtn").style.display="none";
+  document.getElementById("cmSubBody").innerHTML=cmPriceForm({});
+  document.getElementById("cmSubModal").classList.add("open");
+}
+function cmPriceEdit(id){
+  const p=_cmPrices.find(x=>x.id===id); if(!p)return;
+  _cmEditId=id; _cmEditCol=CM_PRICE;
+  document.getElementById("cmSubTitle").textContent="💰 단가 수정";
+  document.getElementById("cmSubDelBtn").style.display="";
+  document.getElementById("cmSubBody").innerHTML=cmPriceForm(p);
+  document.getElementById("cmSubModal").classList.add("open");
+}
+function cmPriceForm(p){
+  const catOpts=PRICE_GROUPS.map(c=>`<option${p.cat===c?" selected":""}>${c}</option>`).join("");
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div><label style="font-size:12px;color:#888">카테고리</label><select id="cmp-cat" style="width:100%;padding:7px;border:1px solid var(--line);border-radius:8px">${catOpts}</select></div>
+    <div><label style="font-size:12px;color:#888">항목명 *</label><input id="cmp-item" value="${esc(p.item||"")}" placeholder="도배(합지)" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+    <div><label style="font-size:12px;color:#888">단위</label><input id="cmp-unit" value="${esc(p.unit||"")}" placeholder="평당, m²" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+    <div><label style="font-size:12px;color:#888">최저 단가(원)</label><input id="cmp-min" type="number" value="${p.minPrice||""}" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+    <div><label style="font-size:12px;color:#888">최고 단가(원)</label><input id="cmp-max" type="number" value="${p.maxPrice||""}" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+    <div><label style="font-size:12px;color:#888">메모</label><input id="cmp-note" value="${esc(p.note||"")}" placeholder="지역·시기 기준 등" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+  </div>`;
+}
+
+/* ================================================================
+   ③ 체크리스트 템플릿
+   ================================================================ */
+function renderCmChkHtml(){
+  const stages=["임장","계약","공사","매도","기타"];
+  const tabs=stages.map(s=>`<button class="cm-chip${_cmChkStage===s?" on":""}" onclick="_cmChkStage='${s}';renderCmContent()">${s}</button>`).join("");
+  const arr=_cmChks.filter(c=>c.stage===_cmChkStage).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const rows=arr.length?arr.map(c=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line)">
+      <input type="checkbox" ${c.done?"checked":""} onchange="toggleCmChk('${c.id}')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)">
+      <span style="flex:1;font-size:14px;${c.done?"text-decoration:line-through;color:#aaa":""}">${esc(c.text||"")}</span>
+      <button onclick="cmChkEdit('${c.id}')" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:13px;padding:2px 6px">✏️</button>
+    </div>`).join("")
+    :`<div style="text-align:center;color:#aaa;padding:20px">항목이 없어요</div>`;
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${tabs}</div>
+    <button class="btn btn-primary btn-sm" onclick="cmChkAdd()">＋ 항목 추가</button>
+  </div>${rows}`;
+}
+function toggleCmChk(id){
+  const c=_cmChks.find(x=>x.id===id); if(!c)return;
+  c.done=!c.done;
+  db.collection(CM_CHK).doc(id).update({done:c.done}).catch(e=>showError("체크",e));
+  renderCmContent();
+}
+function cmChkAdd(){
+  _cmEditId=null; _cmEditCol=CM_CHK;
+  document.getElementById("cmSubTitle").textContent="✅ 체크 항목 추가";
+  document.getElementById("cmSubDelBtn").style.display="none";
+  document.getElementById("cmSubBody").innerHTML=cmChkForm({stage:_cmChkStage});
+  document.getElementById("cmSubModal").classList.add("open");
+}
+function cmChkEdit(id){
+  const c=_cmChks.find(x=>x.id===id); if(!c)return;
+  _cmEditId=id; _cmEditCol=CM_CHK;
+  document.getElementById("cmSubTitle").textContent="✅ 항목 수정";
+  document.getElementById("cmSubDelBtn").style.display="";
+  document.getElementById("cmSubBody").innerHTML=cmChkForm(c);
+  document.getElementById("cmSubModal").classList.add("open");
+}
+function cmChkForm(c){
+  const stages=["임장","계약","공사","매도","기타"];
+  const opts=stages.map(s=>`<option${c.stage===s?" selected":""}>${s}</option>`).join("");
+  return `<div style="display:grid;gap:10px">
+    <div><label style="font-size:12px;color:#888">단계</label><select id="cmchk-stage" style="width:100%;padding:7px;border:1px solid var(--line);border-radius:8px">${opts}</select></div>
+    <div><label style="font-size:12px;color:#888">내용 *</label><input id="cmchk-text" value="${esc(c.text||"")}" placeholder="확인할 내용" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+  </div>`;
+}
+
+/* ================================================================
+   ④ 서류 목록
+   ================================================================ */
+function renderCmDocHtml(){
+  const stages=["매수","매도","대출","공통"];
+  const tabs=stages.map(s=>`<button class="cm-chip${_cmDocStage===s?" on":""}" onclick="_cmDocStage='${s}';renderCmContent()">${s}</button>`).join("");
+  const arr=_cmDocs.filter(d=>d.stage===_cmDocStage).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const rows=arr.length?arr.map(d=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line)">
+      <input type="checkbox" ${d.done?"checked":""} onchange="toggleCmDoc('${d.id}')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)">
+      <span style="flex:1;font-size:14px;${d.done?"text-decoration:line-through;color:#aaa":""}">${esc(d.text||"")}</span>
+      <button onclick="cmDocEdit('${d.id}')" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:13px">✏️</button>
+    </div>`).join("")
+    :`<div style="text-align:center;color:#aaa;padding:20px">서류 항목이 없어요</div>`;
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${tabs}</div>
+    <button class="btn btn-primary btn-sm" onclick="cmDocAdd()">＋ 서류 추가</button>
+  </div>${rows}`;
+}
+function toggleCmDoc(id){
+  const d=_cmDocs.find(x=>x.id===id); if(!d)return;
+  d.done=!d.done;
+  db.collection(CM_DOC).doc(id).update({done:d.done}).catch(e=>showError("서류체크",e));
+  renderCmContent();
+}
+function cmDocAdd(){
+  _cmEditId=null; _cmEditCol=CM_DOC;
+  document.getElementById("cmSubTitle").textContent="📋 서류 추가";
+  document.getElementById("cmSubDelBtn").style.display="none";
+  document.getElementById("cmSubBody").innerHTML=cmDocForm({stage:_cmDocStage});
+  document.getElementById("cmSubModal").classList.add("open");
+}
+function cmDocEdit(id){
+  const d=_cmDocs.find(x=>x.id===id); if(!d)return;
+  _cmEditId=id; _cmEditCol=CM_DOC;
+  document.getElementById("cmSubTitle").textContent="📋 서류 수정";
+  document.getElementById("cmSubDelBtn").style.display="";
+  document.getElementById("cmSubBody").innerHTML=cmDocForm(d);
+  document.getElementById("cmSubModal").classList.add("open");
+}
+function cmDocForm(d){
+  const stages=["매수","매도","대출","공통"];
+  const opts=stages.map(s=>`<option${d.stage===s?" selected":""}>${s}</option>`).join("");
+  return `<div style="display:grid;gap:10px">
+    <div><label style="font-size:12px;color:#888">단계</label><select id="cmdoc-stage" style="width:100%;padding:7px;border:1px solid var(--line);border-radius:8px">${opts}</select></div>
+    <div><label style="font-size:12px;color:#888">서류명 *</label><input id="cmdoc-text" value="${esc(d.text||"")}" placeholder="등기부등본" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+  </div>`;
+}
+
+/* ================================================================
+   ⑤ 참고자료
+   ================================================================ */
+function renderCmRefHtml(){
+  const q=(document.getElementById("cmRefQ")?.value||"").toLowerCase();
+  const arr=_cmRefs.filter(r=>!q||(r.title+r.body).toLowerCase().includes(q)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  const cards=arr.length?arr.map(r=>`
+    <div onclick="cmRefEdit('${r.id}')" style="background:var(--row-even);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">${esc(r.title||"")}</div>
+      ${r.body?`<div style="font-size:13px;color:#888;white-space:pre-wrap;line-height:1.5">${esc(r.body)}</div>`:""}
+    </div>`).join("")
+    :`<div style="text-align:center;color:#aaa;padding:20px">참고자료가 없어요</div>`;
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <input id="cmRefQ" placeholder="🔍 제목·내용 검색" style="flex:1;margin-right:10px;padding:7px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px" oninput="renderCmContent()">
+    <button class="btn btn-primary btn-sm" onclick="cmRefAdd()">＋ 추가</button>
+  </div>${cards}`;
+}
+function cmRefAdd(){
+  _cmEditId=null; _cmEditCol=CM_REF;
+  document.getElementById("cmSubTitle").textContent="📁 참고자료 추가";
+  document.getElementById("cmSubDelBtn").style.display="none";
+  document.getElementById("cmSubBody").innerHTML=cmRefForm({});
+  document.getElementById("cmSubModal").classList.add("open");
+}
+function cmRefEdit(id){
+  const r=_cmRefs.find(x=>x.id===id); if(!r)return;
+  _cmEditId=id; _cmEditCol=CM_REF;
+  document.getElementById("cmSubTitle").textContent="📁 참고자료 수정";
+  document.getElementById("cmSubDelBtn").style.display="";
+  document.getElementById("cmSubBody").innerHTML=cmRefForm(r);
+  document.getElementById("cmSubModal").classList.add("open");
+}
+function cmRefForm(r){
+  return `<div style="display:grid;gap:10px">
+    <div><label style="font-size:12px;color:#888">제목 *</label><input id="cmref-title" value="${esc(r.title||"")}" placeholder="예: 도배 시공 참고" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+    <div><label style="font-size:12px;color:#888">내용·메모·URL</label><textarea id="cmref-body" rows="5" placeholder="참고 링크, 업체 정보, 메모 등" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px;font-family:inherit;resize:vertical">${esc(r.body||"")}</textarea></div>
+  </div>`;
+}
+
+/* ================================================================
+   공통 저장/삭제
+   ================================================================ */
+async function cmSubSave(){
+  try{
+    if(_cmEditCol===CM_VENDOR){
+      const name=(document.getElementById("cmv-name")?.value||"").trim();
+      if(!name){alert("상호명을 입력하세요");return;}
+      const data={field:document.getElementById("cmv-field")?.value||"기타",name,
+        phone:(document.getElementById("cmv-phone")?.value||"").trim(),
+        stars:Number(document.getElementById("cmv-stars")?.value)||0,
+        note:(document.getElementById("cmv-note")?.value||"").trim(),updatedAt:Date.now()};
+      if(_cmEditId){ await db.collection(CM_VENDOR).doc(_cmEditId).update(data); const i=_cmVendors.findIndex(x=>x.id===_cmEditId); if(i>=0)_cmVendors[i]={..._cmVendors[i],...data}; }
+      else{ const ref=await db.collection(CM_VENDOR).add({...data,createdAt:Date.now()}); _cmVendors.push({id:ref.id,...data,createdAt:Date.now()}); }
+    }else if(_cmEditCol===CM_PRICE){
+      const item=(document.getElementById("cmp-item")?.value||"").trim();
+      if(!item){alert("항목명을 입력하세요");return;}
+      const data={cat:document.getElementById("cmp-cat")?.value||"기타",item,
+        unit:(document.getElementById("cmp-unit")?.value||"").trim(),
+        minPrice:Number(document.getElementById("cmp-min")?.value)||0,
+        maxPrice:Number(document.getElementById("cmp-max")?.value)||0,
+        note:(document.getElementById("cmp-note")?.value||"").trim(),updatedAt:Date.now()};
+      if(_cmEditId){ await db.collection(CM_PRICE).doc(_cmEditId).update(data); const i=_cmPrices.findIndex(x=>x.id===_cmEditId); if(i>=0)_cmPrices[i]={..._cmPrices[i],...data}; }
+      else{ const ref=await db.collection(CM_PRICE).add({...data,createdAt:Date.now()}); _cmPrices.push({id:ref.id,...data,createdAt:Date.now()}); }
+    }else if(_cmEditCol===CM_CHK){
+      const text=(document.getElementById("cmchk-text")?.value||"").trim();
+      if(!text){alert("내용을 입력하세요");return;}
+      const data={stage:document.getElementById("cmchk-stage")?.value||_cmChkStage,text,done:false,updatedAt:Date.now()};
+      if(_cmEditId){ await db.collection(CM_CHK).doc(_cmEditId).update(data); const i=_cmChks.findIndex(x=>x.id===_cmEditId); if(i>=0)_cmChks[i]={..._cmChks[i],...data}; }
+      else{ const ref=await db.collection(CM_CHK).add({...data,createdAt:Date.now()}); _cmChks.push({id:ref.id,...data,createdAt:Date.now()}); }
+    }else if(_cmEditCol===CM_DOC){
+      const text=(document.getElementById("cmdoc-text")?.value||"").trim();
+      if(!text){alert("서류명을 입력하세요");return;}
+      const data={stage:document.getElementById("cmdoc-stage")?.value||_cmDocStage,text,done:false,updatedAt:Date.now()};
+      if(_cmEditId){ await db.collection(CM_DOC).doc(_cmEditId).update(data); const i=_cmDocs.findIndex(x=>x.id===_cmEditId); if(i>=0)_cmDocs[i]={..._cmDocs[i],...data}; }
+      else{ const ref=await db.collection(CM_DOC).add({...data,createdAt:Date.now()}); _cmDocs.push({id:ref.id,...data,createdAt:Date.now()}); }
+    }else if(_cmEditCol===CM_REF){
+      const title=(document.getElementById("cmref-title")?.value||"").trim();
+      if(!title){alert("제목을 입력하세요");return;}
+      const data={title,body:(document.getElementById("cmref-body")?.value||"").trim(),updatedAt:Date.now()};
+      if(_cmEditId){ await db.collection(CM_REF).doc(_cmEditId).update(data); const i=_cmRefs.findIndex(x=>x.id===_cmEditId); if(i>=0)_cmRefs[i]={..._cmRefs[i],...data}; }
+      else{ const ref=await db.collection(CM_REF).add({...data,createdAt:Date.now()}); _cmRefs.push({id:ref.id,...data,createdAt:Date.now()}); }
+    }
+    closeCmSubModal(); renderCmContent();
+  }catch(e){ showError("공통자료 저장",e); }
+}
+async function cmSubDel(){
+  if(!_cmEditId||!_cmEditCol)return;
+  if(!confirm("삭제할까요?"))return;
+  try{
+    await db.collection(_cmEditCol).doc(_cmEditId).delete();
+    if(_cmEditCol===CM_VENDOR)_cmVendors=_cmVendors.filter(x=>x.id!==_cmEditId);
+    else if(_cmEditCol===CM_PRICE)_cmPrices=_cmPrices.filter(x=>x.id!==_cmEditId);
+    else if(_cmEditCol===CM_CHK)_cmChks=_cmChks.filter(x=>x.id!==_cmEditId);
+    else if(_cmEditCol===CM_DOC)_cmDocs=_cmDocs.filter(x=>x.id!==_cmEditId);
+    else if(_cmEditCol===CM_REF)_cmRefs=_cmRefs.filter(x=>x.id!==_cmEditId);
+    closeCmSubModal(); renderCmContent();
+  }catch(e){ showError("공통자료 삭제",e); }
+}
+/* ================================================================ */
 function esc(s){return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function jsstr(s){return String(s).replace(/'/g,"\\'");}
 function show(id,on){const el=document.getElementById(id); if(el) el.style.display=on?'block':'none';}
