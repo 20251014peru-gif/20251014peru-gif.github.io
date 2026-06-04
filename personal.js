@@ -1205,8 +1205,13 @@ function setCalView(v){
 function calGoToday(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth();calSelDate=null;renderCal();}
 var calCatFilter='전체';
 var calCarFilter='전체';
-function setCalCat(k){calCatFilter=(calCatFilter===k?'전체':k);if(k!=='차계부')calCarFilter='전체';renderCal();}
-function setCalCar(v){calCarFilter=v;renderCal();}
+function setCalCat(k){
+  calCatFilter=(calCatFilter===k?'전체':k);
+  calCarFilter='전체';
+  renderCal();
+  renderCalDay();   // 안전장치: 확실히 다시 그리기
+}
+function setCalCar(v){calCarFilter=v;renderCal();renderCalDay();}
 function calLegendHtml(){
   // 기록이 있는 카테고리만 — 눌러서 필터
   var used={};getRecords().forEach(function(r){used[r.cat]=1;});
