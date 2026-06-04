@@ -580,3 +580,11 @@ textarea{resize:vertical;min-height:74px;}
   font-size:16px;color:#9CA3AF;padding:0 4px;line-height:1;
 }
 .gs-close:hover{color:#EF4444;}
+
+/* ===== 사람 카테고리 (통화/만남/약속/가족 통합) ===== */
+.person-sub{margin-top:8px;}
+#f-subtype{
+  font-weight:700;font-size:14px;
+  background:#D1FAE5;border:1.5px solid #6EE7B7;color:#065F46;
+  border-radius:8px;padding:6px 10px;
+}
