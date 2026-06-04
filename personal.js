@@ -241,6 +241,7 @@ function renderCustomForm(kind,v){
       fgItem('개수','<input type="number" id="f-qty" placeholder="1" value="'+(v.qty||'')+'" oninput="calcBuy()">')+
       fgItem('<span id="lblShip">택배비(원)</span>','<input type="number" id="f-ship" placeholder="3000" value="'+ev(v.ship)+'" oninput="calcBuy()">')+
       fgItem('택배비 포함 여부','<select id="f-shipinc" onchange="calcBuy()"><option value="별도"'+(v.shipinc==='별도'?' selected':'')+'>합계에 더하기(별도)</option><option value="포함"'+(v.shipinc==='포함'?' selected':'')+'>단가에 이미 포함</option></select>')+
+      fgItem('결제수단','<select id="f-pay"><option value=""'+(!v.pay?' selected':'')+'>-</option><option'+(v.pay==='카드'?' selected':'')+'>💳 카드</option><option'+(v.pay==='현금'?' selected':'')+'>💵 현금</option><option'+(v.pay==='계좌이체'?' selected':'')+'>🏦 계좌이체</option></select>')+
       '<div class="fg-item full" id="rateBox" style="display:none"><label>환율 (1달러 = ? 원)</label><div class="rate-row"><input type="number" id="f-rate" placeholder="예: 1380" value="'+ev(v.rate)+'" oninput="calcBuy()"><button type="button" class="rate-btn" onclick="fetchRate()">📡 그날 환율</button></div><div class="rate-note" id="rateNote"></div></div>'+
       fgItem('합계(원화)','<input type="text" id="f-amtview" readonly style="font-weight:800;color:#0EA5E9;background:#F0F9FF" value="">',true)+
       fgItem('메모','<textarea id="f-detail" placeholder="산 이유·후기">'+ev(v.detail)+'</textarea>')+
@@ -462,7 +463,7 @@ function sumItems(kind){
   el.textContent=sum?('합계 '+won(sum)+'원'+extra):'';
 }
 function collectFields(){
-  var o={};['title','detail','who','amount','odo','liters','phone','addr','link','unit','qty','ship','shipinc','stars','insur','time2','place','prep','booktype','totalpg','readpg','fuelunit','cur','rate'].forEach(function(k){var el=$('f-'+k);if(el)o[k]=el.value;});
+  var o={};['title','detail','who','amount','odo','liters','phone','addr','link','unit','qty','ship','shipinc','stars','insur','time2','place','prep','booktype','totalpg','readpg','fuelunit','cur','rate','pay'].forEach(function(k){var el=$('f-'+k);if(el)o[k]=el.value;});
   return o;
 }
 
@@ -694,6 +695,7 @@ function saveRecord(){
   if(v.fuelunit)rec.fuelunit=Number(v.fuelunit);
   if(v.cur)rec.cur=v.cur;
   if(v.rate)rec.rate=Number(v.rate);
+  if(v.pay)rec.pay=v.pay;
   if(hasItems)rec.items=formItems.filter(function(it){
     return (it.name&&it.name.trim())||(it.price)||(it.quote&&it.quote.trim())||(it.thought&&it.thought.trim());
   });
@@ -872,6 +874,7 @@ function rowSummary(r){
       if(r.unit&&r.qty)s.push(won(r.unit)+'원×'+r.qty);
     }
     if(r.ship)s.push('택배'+(r.cur==='달러'?'$':'')+won(r.ship));
+    if(r.pay)s.push(r.pay==='카드'?'💳':(r.pay==='현금'?'💵':'🏦'));
     if(r.link)s.push('🔗링크');
   }else if(r.cat==='맛집'){
     if(r.who)s.push(esc(r.who));
@@ -940,6 +943,7 @@ function detailExtra(r){
     if(r.ship)parts.push('택배비 '+unitLbl+won(r.ship)+unitSuf+(r.shipinc==='포함'?'(포함)':''));
     if(r.cur==='달러'&&r.rate)parts.push('환율 '+won(r.rate)+'원');
     if(parts.length)h+='<div class="dx-line">🧮 '+parts.join(' · ')+(r.cur==='달러'&&r.amount?'  →  '+won(r.amount)+'원':'')+'</div>';
+    if(r.pay)h+='<div class="dx-line">'+(r.pay==='카드'?'💳':(r.pay==='현금'?'💵':'🏦'))+' 결제수단: '+esc(r.pay)+'</div>';
     if(r.link)h+='<a href="'+esc(r.link)+'" target="_blank" class="dx-link">🔗 쇼핑몰에서 보기 ›</a>';
   }
   if(r.cat==='차계부'&&r.title==='주유'){
