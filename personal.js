@@ -1794,6 +1794,18 @@ function wireQuickMemo(){
     if(img){e.preventDefault();openQmZoom(img.src);}
   });
   $('qmZoomOverlay').addEventListener('click',function(){$('qmZoomOverlay').classList.remove('show');});
+  // 패널 밖 클릭으로 닫기
+  document.addEventListener('click',function(e){
+    var side=$('quickMemoSide');
+    if(!side||!side.classList.contains('show'))return;
+    // 클릭이 패널 내부면 무시
+    if(side.contains(e.target))return;
+    // 메모 열기 버튼 자체 클릭이면 무시 (toggleQuickMemo가 처리)
+    if(e.target.closest('#btnQuickMemo'))return;
+    // 사진 확대 오버레이 클릭이면 무시
+    if(e.target.closest('#qmZoomOverlay'))return;
+    closeQuickMemo();
+  });
   loadQuickMemo();
 }
 function insertImageAtCursor(dataUrl){
