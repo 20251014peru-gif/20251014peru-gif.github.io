@@ -1837,9 +1837,11 @@ function renderMonthView(){
         // 지출 각 건별 제목과 금액 표시
         let eb = "";
         exArr.forEach(e=>{
-          const icon = (e.expType==="세금계산서") ? "📃" : "💸";
+          const isTax = (e.expType==="세금계산서");
+          const icon = isTax ? "📃" : "💸";
           const amt = won(Number(e.amount)||0);
-          eb += `<div class="otitle" data-kind="expense" data-id="${e.id}">${icon} ${esc((e.title||"").slice(0,18))} <b style="color:#a85e3a">${amt}원</b></div>`;
+          const amtColor = isTax ? "#c2410c" : "#0369a1";
+          eb += `<div class="otitle" data-kind="expense" data-id="${e.id}">${icon} ${esc((e.title||"").slice(0,18))} <b style="color:${amtColor}">${amt}원</b></div>`;
         });
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#a85e3a">💰 지출 ${exArr.length}</div>${eb}</div>`;
       }
@@ -4994,10 +4996,16 @@ function renderExpenseModal(id){
     </div>
     <div class="grid" style="margin-top:14px">
       <div class="field"><label>금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0"></div>
+      <div class="field"><label>업체명</label><input type="text" id="exp-vendor" value="${esc(d.vendor||"")}" placeholder="예: 삼성에어컨, 한국전기"></div>
     </div>
-    <div class="field full" style="margin-top:14px">
-      <label>비고</label>
-      <input type="text" id="exp-memo" value="${esc(d.memo||"")}" placeholder="예: 100장, 5층·6층 30개">
+    <div class="grid" style="margin-top:10px">
+      <div class="field">
+        <label>분야</label>
+        <div style="display:flex;gap:6px">
+          <select id="exp-field" style="flex:1">${(typeof FIELDS!=="undefined"?FIELDS:["전기","기계/냉난방","소방","영선","청소","기타"]).map(f=>`<option value="${esc(f)}" ${d.field===f?"selected":""}>${esc(f)}</option>`).join("")}</select>
+        </div>
+      </div>
+      <div class="field"><label>비고</label><input type="text" id="exp-memo" value="${esc(d.memo||"")}" placeholder="예: 100장, 5층·6층 30개"></div>
     </div>
     <div class="field full" style="margin-top:14px">
       <label>📷 영수증 사진 (선택)</label>
@@ -5038,7 +5046,9 @@ function saveExpense(){
     expType: $("exp-type").value || "개인지출",
     title,
     amount,
-    memo: $("exp-memo").value || "",
+    memo: ($("exp-memo")||{value:""}).value || "",
+    vendor: ($("exp-vendor")||{value:""}).value.trim(),
+    field: ($("exp-field")||{value:""}).value,
     photo: expensePhoto
   };
   if(id){ updateRecord(id, obj); }
