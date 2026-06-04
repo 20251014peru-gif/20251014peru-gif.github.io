@@ -4,6 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<script>
+// 캐시 강제 무효화 - CSS/JS 항상 최신버전
+(function(){
+  var v="20260604080434";
+  var css=document.getElementById("main-css");
+  if(css) css.href="worklog.css?v="+v;
+})();
+</script>
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>업무일지</title>
@@ -11,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-<link rel="stylesheet" href="worklog.css?v=202606040758">
+<link rel="stylesheet" id="main-css" href="worklog.css?v=20260604080434">
 </head>
 <body>
 <header>
@@ -741,6 +749,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=202606040758"></script>
+<script src="worklog.js?v=20260604080434"></script>
 </body>
 </html>

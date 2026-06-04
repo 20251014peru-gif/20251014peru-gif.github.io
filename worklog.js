@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v41";
+const APP_VERSION = "v41-20260604";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
