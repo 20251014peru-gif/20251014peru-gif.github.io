@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v59</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v60</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -366,18 +366,20 @@
   <div class="cp-list" id="catPaneList"></div>
 </div>
 
-<!-- Firebase SDK (Storage 업로드용) -->
+<!-- Firebase SDK (보관함용: Firestore + Storage) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
-firebase.initializeApp({
+var vaultFirebaseApp = firebase.initializeApp({
   apiKey:"AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain:"my-system-25497.firebaseapp.com",
   projectId:"my-system-25497",
   storageBucket:"my-system-25497.firebasestorage.app"
-});
-var fbStorage = firebase.storage();
+},"vaultApp");
+var vaultDb = vaultFirebaseApp.firestore();
+var vaultStorage = vaultFirebaseApp.storage();
 </script>
-<script src="personal.js?v=59"></script>
+<script src="personal.js?v=60"></script>
 </body>
 </html>
