@@ -494,6 +494,8 @@ function today(){return new Date().toISOString().slice(0,10);}
 let _cmTab = "vendor";
 let _cmEditId = null, _cmEditCol = null;
 let _cmVendors=[], _cmPrices=[], _cmChks=[], _cmDocs=[], _cmRefs=[];
+let _cmRefFiles=[];   // 현재 서브모달에서 임시 보관 중인 첨부파일 [{name,url,type,path}]
+let _cmRefDelFiles=[]; // 수정 시 삭제할 파일 경로 목록
 let _cmLoaded = false;
 let _cmChkStage="임장", _cmDocStage="매수";
 let _cmVendorFilter="전체";
@@ -538,7 +540,13 @@ async function openCommonData(){
   renderCmContent();
 }
 function closeCommonData(){ document.getElementById("commonDataModal").classList.remove("open"); }
-function closeCmSubModal(){ document.getElementById("cmSubModal").classList.remove("open"); _cmEditId=null; _cmEditCol=null; }
+function closeCmSubModal(){
+  document.getElementById("cmSubModal").classList.remove("open");
+  // 임시 object URL 해제
+  _cmRefFiles.forEach(f=>{if(f._pending&&f.url)try{URL.revokeObjectURL(f.url);}catch(_){}});
+  _cmRefFiles=[]; _cmRefDelFiles=[];
+  _cmEditId=null; _cmEditCol=null;
+}
 
 /* ---- 데이터 로드 ---- */
 async function loadCmData(){
@@ -804,17 +812,46 @@ function cmDocForm(d){
    ================================================================ */
 function renderCmRefHtml(){
   const q=(document.getElementById("cmRefQ")?.value||"").toLowerCase();
-  const arr=_cmRefs.filter(r=>!q||(r.title+r.body).toLowerCase().includes(q)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-  const cards=arr.length?arr.map(r=>`
-    <div onclick="cmRefEdit('${r.id}')" style="background:var(--row-even);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer">
-      <div style="font-weight:700;font-size:15px;margin-bottom:4px">${esc(r.title||"")}</div>
-      ${r.body?`<div style="font-size:13px;color:#888;white-space:pre-wrap;line-height:1.5">${esc(r.body)}</div>`:""}
-    </div>`).join("")
-    :`<div style="text-align:center;color:#aaa;padding:20px">참고자료가 없어요</div>`;
+  const arr=_cmRefs.filter(r=>!q||(r.title+(r.body||"")).toLowerCase().includes(q)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  const cards=arr.length?arr.map(r=>{
+    // 첨부파일 썸네일
+    const files=r.files||[];
+    const fileThumbs=files.map(f=>{
+      const isImg=(f.type||"").startsWith("image/");
+      if(isImg) return `<div class="cmref-thumb" onclick="event.stopPropagation();cmRefViewImg('${f.url}')"><img src="${esc(f.url)}" style="width:100%;height:100%;object-fit:cover;border-radius:6px"></div>`;
+      const ext=(f.name||"").split(".").pop().toUpperCase()||"FILE";
+      return `<div class="cmref-thumb cmref-file" onclick="event.stopPropagation();window.open('${esc(f.url)}','_blank')"><div class="cmref-ext">${esc(ext)}</div><div class="cmref-fname">${esc(f.name||"")}</div></div>`;
+    }).join("");
+    return `<div class="cmref-card" onclick="cmRefEdit('${r.id}')">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px">${esc(r.title||"")}</div>
+          ${r.body?`<div style="font-size:13px;color:#888;white-space:pre-wrap;line-height:1.5">${esc(r.body)}</div>`:""}
+        </div>
+        ${files.length?`<span style="font-size:11px;color:#aaa;white-space:nowrap;flex-shrink:0">📎 ${files.length}개</span>`:""}
+      </div>
+      ${fileThumbs?`<div class="cmref-thumbs" onclick="event.stopPropagation()">${fileThumbs}</div>`:""}
+    </div>`;
+  }).join("")
+    :`<div style="text-align:center;color:#aaa;padding:20px">참고자료가 없어요 — 위 버튼으로 추가하세요</div>`;
   return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
     <input id="cmRefQ" placeholder="🔍 제목·내용 검색" style="flex:1;margin-right:10px;padding:7px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px" oninput="renderCmContent()">
     <button class="btn btn-primary btn-sm" onclick="cmRefAdd()">＋ 추가</button>
   </div>${cards}`;
+}
+function cmRefViewImg(url){
+  const ov=document.getElementById("cmRefImgOverlay")||createCmImgOverlay();
+  ov.querySelector("img").src=url;
+  ov.style.display="flex";
+}
+function createCmImgOverlay(){
+  const ov=document.createElement("div");
+  ov.id="cmRefImgOverlay";
+  ov.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99999;display:none;align-items:center;justify-content:center;cursor:zoom-out";
+  ov.innerHTML=`<img style="max-width:94vw;max-height:92vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.5)">`;
+  ov.addEventListener("click",()=>ov.style.display="none");
+  document.body.appendChild(ov);
+  return ov;
 }
 function cmRefAdd(){
   _cmEditId=null; _cmEditCol=CM_REF;
@@ -832,10 +869,74 @@ function cmRefEdit(id){
   document.getElementById("cmSubModal").classList.add("open");
 }
 function cmRefForm(r){
+  // 기존 첨부파일 초기화
+  _cmRefFiles=(r.files||[]).slice();
+  _cmRefDelFiles=[];
+  setTimeout(()=>{ cmRefRenderPreviews(); cmRefBindDrop(); },50);
   return `<div style="display:grid;gap:10px">
-    <div><label style="font-size:12px;color:#888">제목 *</label><input id="cmref-title" value="${esc(r.title||"")}" placeholder="예: 도배 시공 참고" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
-    <div><label style="font-size:12px;color:#888">내용·메모·URL</label><textarea id="cmref-body" rows="5" placeholder="참고 링크, 업체 정보, 메모 등" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px;font-family:inherit;resize:vertical">${esc(r.body||"")}</textarea></div>
+    <div><label style="font-size:12px;color:#888">제목 *</label>
+      <input id="cmref-title" value="${esc(r.title||"")}" placeholder="예: 도배 시공 참고 / 계약서 사본" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px">
+    </div>
+    <div><label style="font-size:12px;color:#888">메모·URL (선택)</label>
+      <textarea id="cmref-body" rows="3" placeholder="참고 링크, 메모, 업체 정보 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;resize:vertical;font-size:14px">${esc(r.body||"")}</textarea>
+    </div>
+    <div>
+      <label style="font-size:12px;color:#888">첨부파일 (사진·PDF·문서)</label>
+      <div id="cmRefDropZone" class="cmref-dropzone">
+        <div class="cmref-dz-inner">
+          <div style="font-size:28px;margin-bottom:6px">📎</div>
+          <div style="font-size:14px;font-weight:600;color:#666">여기에 파일을 드래그하거나</div>
+          <label class="btn btn-line btn-sm" style="cursor:pointer;margin-top:8px">
+            클릭해서 파일 선택
+            <input type="file" id="cmRefFileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.txt" style="display:none" onchange="cmRefHandleFiles(this.files)">
+          </label>
+          <div style="font-size:11px;color:#aaa;margin-top:6px">사진·PDF·문서 등 모든 파일 가능</div>
+        </div>
+      </div>
+      <div id="cmRefPreviews" class="cmref-previews"></div>
+    </div>
   </div>`;
+}
+function cmRefBindDrop(){
+  const dz=document.getElementById("cmRefDropZone"); if(!dz)return;
+  dz.addEventListener("dragover",e=>{e.preventDefault();dz.classList.add("drag-over");});
+  dz.addEventListener("dragleave",e=>{if(!dz.contains(e.relatedTarget))dz.classList.remove("drag-over");});
+  dz.addEventListener("drop",e=>{
+    e.preventDefault();dz.classList.remove("drag-over");
+    const files=e.dataTransfer.files; if(files&&files.length)cmRefHandleFiles(files);
+  });
+}
+function cmRefHandleFiles(files){
+  const arr=Array.from(files);
+  // 미리보기 즉시 표시 (아직 업로드 전, File 객체 보관)
+  arr.forEach(f=>{
+    _cmRefFiles.push({_file:f, name:f.name, type:f.type, url:URL.createObjectURL(f), _pending:true});
+  });
+  cmRefRenderPreviews();
+}
+function cmRefRenderPreviews(){
+  const box=document.getElementById("cmRefPreviews"); if(!box)return;
+  if(!_cmRefFiles.length){box.innerHTML="";return;}
+  box.innerHTML=_cmRefFiles.map((f,i)=>{
+    const isImg=(f.type||"").startsWith("image/");
+    const ext=(f.name||"").split(".").pop().toUpperCase()||"FILE";
+    const pending=f._pending?"<div class='cmref-pending'>업로드 대기</div>":"";
+    const thumb=isImg
+      ?`<img src="${esc(f.url)}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`
+      :`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:4px"><div style="font-size:22px">📄</div><div style="font-size:10px;font-weight:700;color:var(--accent)">${esc(ext)}</div></div>`;
+    return `<div class="cmref-prev-item" title="${esc(f.name||"")}">
+      <div class="cmref-prev-img" onclick="${isImg?"cmRefViewImg('"+esc(f.url)+"')":"window.open('"+esc(f.url)+"','_blank')"}">${thumb}</div>
+      <div style="font-size:10px;color:#888;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((f.name||"").length>14?(f.name||"").slice(0,12)+"..":f.name||"")}</div>
+      ${pending}
+      <button onclick="cmRefRemoveFile(${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+    </div>`;
+  }).join("");
+}
+function cmRefRemoveFile(i){
+  const f=_cmRefFiles[i];
+  if(f&&!f._pending&&f.path)_cmRefDelFiles.push(f.path); // 실제 삭제 예약
+  _cmRefFiles.splice(i,1);
+  cmRefRenderPreviews();
 }
 
 /* ================================================================
@@ -877,9 +978,37 @@ async function cmSubSave(){
     }else if(_cmEditCol===CM_REF){
       const title=(document.getElementById("cmref-title")?.value||"").trim();
       if(!title){alert("제목을 입력하세요");return;}
-      const data={title,body:(document.getElementById("cmref-body")?.value||"").trim(),updatedAt:Date.now()};
-      if(_cmEditId){ await db.collection(CM_REF).doc(_cmEditId).update(data); const i=_cmRefs.findIndex(x=>x.id===_cmEditId); if(i>=0)_cmRefs[i]={..._cmRefs[i],...data}; }
-      else{ const ref=await db.collection(CM_REF).add({...data,createdAt:Date.now()}); _cmRefs.push({id:ref.id,...data,createdAt:Date.now()}); }
+      const saveBtn=document.getElementById("cmModalSave")||document.querySelector("#cmSubModal .btn-primary");
+      if(saveBtn){saveBtn.disabled=true;saveBtn.textContent="업로드 중…";}
+      try{
+        // 대기 중인 파일 업로드
+        const uploaded=[];
+        for(const f of _cmRefFiles){
+          if(f._pending&&f._file){
+            const safe=(f.name||"file").replace(/[^\w.\-가-힣]/g,"_");
+            const path=`realestate/common_ref/${Date.now()}_${Math.random().toString(36).slice(2,6)}_${safe}`;
+            const ref=storage.ref(path);
+            await ref.put(f._file,{contentType:f.type||"application/octet-stream"});
+            const url=await ref.getDownloadURL();
+            uploaded.push({name:f.name,url,type:f.type||"",path});
+          }else if(!f._pending){
+            uploaded.push({name:f.name,url:f.url,type:f.type||"",path:f.path||""});
+          }
+        }
+        // 삭제 예약된 파일 실제 삭제
+        for(const p of _cmRefDelFiles){ try{ await storage.ref(p).delete(); }catch(_){} }
+        _cmRefDelFiles=[];
+        const data={title,body:(document.getElementById("cmref-body")?.value||"").trim(),files:uploaded,updatedAt:Date.now()};
+        if(_cmEditId){
+          await db.collection(CM_REF).doc(_cmEditId).update(data);
+          const i=_cmRefs.findIndex(x=>x.id===_cmEditId); if(i>=0)_cmRefs[i]={..._cmRefs[i],...data};
+        }else{
+          const ref=await db.collection(CM_REF).add({...data,createdAt:Date.now()});
+          _cmRefs.push({id:ref.id,...data,createdAt:Date.now()});
+        }
+      }finally{
+        if(saveBtn){saveBtn.disabled=false;saveBtn.textContent="저장";}
+      }
     }
     closeCmSubModal(); renderCmContent();
   }catch(e){ showError("공통자료 저장",e); }
@@ -893,7 +1022,11 @@ async function cmSubDel(){
     else if(_cmEditCol===CM_PRICE)_cmPrices=_cmPrices.filter(x=>x.id!==_cmEditId);
     else if(_cmEditCol===CM_CHK)_cmChks=_cmChks.filter(x=>x.id!==_cmEditId);
     else if(_cmEditCol===CM_DOC)_cmDocs=_cmDocs.filter(x=>x.id!==_cmEditId);
-    else if(_cmEditCol===CM_REF)_cmRefs=_cmRefs.filter(x=>x.id!==_cmEditId);
+    else if(_cmEditCol===CM_REF){
+      const r=_cmRefs.find(x=>x.id===_cmEditId);
+      if(r&&r.files){ for(const f of r.files){ if(f.path){ try{ await storage.ref(f.path).delete(); }catch(_){} } } }
+      _cmRefs=_cmRefs.filter(x=>x.id!==_cmEditId);
+    }
     closeCmSubModal(); renderCmContent();
   }catch(e){ showError("공통자료 삭제",e); }
 }

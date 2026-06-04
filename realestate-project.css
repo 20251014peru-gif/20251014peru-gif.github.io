@@ -565,3 +565,56 @@ table.tbl td.num{text-align:right; font-variant-numeric:tabular-nums;}
 /* 분야 배지 */
 .cm-field-badge{display:inline-block;background:#ede9f8;color:var(--accent,#9b85d4);
   font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+
+/* ================================================================
+   참고자료 드래그앤드롭 & 첨부파일
+   ================================================================ */
+/* 카드 */
+.cmref-card{
+  background:var(--row-even);border:1px solid var(--line);
+  border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;
+  transition:border-color .15s;
+}
+.cmref-card:hover{border-color:var(--accent);}
+
+/* 썸네일 행 */
+.cmref-thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.cmref-thumb{
+  width:72px;height:72px;border-radius:8px;overflow:hidden;
+  border:1px solid var(--line);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  background:#f8f8fc;flex-shrink:0;
+}
+.cmref-thumb:hover{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent,#9b85d4)22;}
+.cmref-file{flex-direction:column;gap:3px;padding:6px;}
+.cmref-ext{font-size:11px;font-weight:800;color:var(--accent);background:#ede9f8;padding:2px 6px;border-radius:4px;}
+.cmref-fname{font-size:9px;color:#aaa;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:60px;}
+
+/* 드롭존 */
+.cmref-dropzone{
+  border:2px dashed var(--line);border-radius:12px;
+  background:#fafafa;cursor:pointer;
+  transition:border-color .2s,background .2s;
+  min-height:110px;display:flex;align-items:center;justify-content:center;
+}
+.cmref-dropzone:hover,.cmref-dropzone.drag-over{
+  border-color:var(--accent);background:#f0eefa;
+}
+.cmref-dz-inner{text-align:center;padding:18px 12px;}
+
+/* 미리보기 그리드 */
+.cmref-previews{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+.cmref-prev-item{
+  position:relative;width:80px;
+  display:flex;flex-direction:column;align-items:center;
+}
+.cmref-prev-img{
+  width:80px;height:80px;border-radius:8px;overflow:hidden;
+  border:1px solid var(--line);cursor:pointer;
+  background:#f0eefa;display:flex;align-items:center;justify-content:center;
+}
+.cmref-prev-img:hover{border-color:var(--accent);}
+.cmref-pending{
+  font-size:9px;color:#e07a00;background:#fff7e6;
+  padding:1px 5px;border-radius:4px;margin-top:2px;white-space:nowrap;
+}
