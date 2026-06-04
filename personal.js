@@ -2228,25 +2228,43 @@ function vSetStatus(m){var el=$('vPhotoStatus');if(el)el.textContent=m||'';}
 function vHandleFiles(files){
   var list=Array.prototype.slice.call(files);
   if(!list.length)return;
-  var imgs=[],docs=[];
+  var total=list.length,done=0;
+  vSetStatus('읽는 중…(0/'+total+')');
   list.forEach(function(f){
-    if(f.type.startsWith('image/'))imgs.push(f); else docs.push(f);
+    var isImg=f.type.startsWith('image/');
+    if(isImg){
+      // 이미지: 압축 후 base64
+      readAndCompress(f).then(function(b64){
+        vaultFiles.push({kind:'image',name:f.name,data:b64,mime:f.type});
+        done++;vSetStatus('읽는 중…('+done+'/'+total+')');
+        if(done===total){vSetStatus('✅ '+total+'개 추가됨');vRenderPreviews();}
+      }).catch(function(e){
+        done++;vSetStatus('⚠️ '+e.message);
+        if(done===total)vRenderPreviews();
+      });
+    }else{
+      // 문서·PDF: FileReader로 base64 직접 읽기
+      var mb=(f.size/1024/1024).toFixed(1);
+      if(f.size>4*1024*1024){
+        // 4MB 초과 파일은 경고
+        vSetStatus('⚠️ '+f.name+' ('+mb+'MB) — 4MB 이하 파일만 보관 가능');
+        done++;if(done===total)vRenderPreviews();
+        return;
+      }
+      var reader=new FileReader();
+      reader.onload=function(e){
+        var b64=e.target.result; // data:mime;base64,.... 형식
+        vaultFiles.push({kind:'file',name:f.name,data:b64,mime:f.type||'application/octet-stream'});
+        done++;vSetStatus('읽는 중…('+done+'/'+total+')');
+        if(done===total){vSetStatus('✅ '+total+'개 추가됨');vRenderPreviews();}
+      };
+      reader.onerror=function(){
+        done++;vSetStatus('⚠️ '+f.name+' 읽기 실패');
+        if(done===total)vRenderPreviews();
+      };
+      reader.readAsDataURL(f);
+    }
   });
-  var total=imgs.length+docs.length,done=0;
-  vSetStatus('처리 중…');
-  // 이미지: base64 압축
-  imgs.forEach(function(f){
-    readAndCompress(f).then(function(b64){
-      vaultFiles.push({kind:'image',name:f.name,data:b64,mime:f.type,_previewUrl:b64});
-      done++;if(done===total){vSetStatus('✅ '+total+'개 추가됨');vRenderPreviews();}
-    }).catch(function(e){done++;vSetStatus('⚠️ '+e.message);if(done===total)vRenderPreviews();});
-  });
-  // 문서: 객체 URL로 미리보기, 저장 시 업로드
-  docs.forEach(function(f){
-    vaultFiles.push({kind:'file',name:f.name,mime:f.type||'',_file:f,_previewUrl:null});
-    done++;if(done===total){vSetStatus('✅ '+total+'개 추가됨');vRenderPreviews();}
-  });
-  if(!total){vSetStatus('');vRenderPreviews();}
 }
 
 function vOnPhoto(ev){vHandleFiles(ev.target.files);ev.target.value='';}
@@ -2286,7 +2304,7 @@ function vRenderPreviews(){
     var thumb=isImg
       ?('<img src="'+f.data+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px;cursor:zoom-in" onclick="showImg(this.src)">')
       :('<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:4px">'+
-        '<div style="font-size:22px">📄</div>'+
+        '<div style="font-size:24px">'+(ext==='PDF'?'📕':(ext==='DOCX'||ext==='DOC'?'📘':(ext==='XLSX'||ext==='XLS'?'📗':'📄')))+'</div>'+
         '<div style="font-size:10px;font-weight:800;color:#6366F1;background:#EEF2FF;padding:1px 5px;border-radius:3px">'+esc(ext)+'</div>'+
         '</div>');
     var name=(f.name||'').length>13?(f.name||'').slice(0,11)+'..':f.name||'';
@@ -2312,27 +2330,15 @@ function saveVault(){
   if(!title&&!memo&&!vaultFiles.length){toast('제목이나 내용을 넣으세요');return;}
   var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
   var btn=$('vSaveBtn');btn.disabled=true;btn.textContent='저장 중…';
-  vSetStatus('파일 업로드 중…');
+  function step(msg){vSetStatus('🔄 '+msg);}
 
-  // 문서 파일들 업로드 (이미지는 base64로 이미 있음)
-  var uploadPromises=vaultFiles.map(function(f){
-    if(f.kind==='file'&&f._file){
-      return vaultUploadFile(f._file).then(function(res){
-        f.url=res.url;f.path=res.path;delete f._file;
-      });
-    }
-    return Promise.resolve();
-  });
-
-  Promise.all(uploadPromises).then(function(){
-    // payload: 이미지 base64 + 문서 URL 목록
+  // 모든 파일이 이미 base64(data)로 있음
+  Promise.resolve().then(function(){
+    step('데이터 준비 중…');
     var payload=JSON.stringify({
       memo:memo,
       files:vaultFiles.map(function(f){
-        return {kind:f.kind,name:f.name,mime:f.mime||'',
-          data:f.kind==='image'?f.data:'',   // 이미지만 base64
-          url:f.kind==='file'?f.url:'',       // 문서는 URL
-          path:f.path||''};
+        return {kind:f.kind,name:f.name,mime:f.mime||'',data:f.data||''};
       })
     });
     vSetStatus('암호화 중…');
@@ -2446,17 +2452,24 @@ function unlockVault(id){
     files.forEach(function(f){
       if(f.kind==='image'&&f.data){
         html+='<img src="'+f.data+'" onclick="showImg(this.src)" style="max-width:100%;border-radius:10px;margin-top:8px;cursor:zoom-in;display:block">';
-      }else if(f.kind==='file'&&f.url){
+      }else if(f.kind==='file'&&f.data){
         var ext=(f.name||'').split('.').pop().toUpperCase()||'FILE';
         var isImg=/^(JPG|JPEG|PNG|GIF|WEBP)$/.test(ext);
         if(isImg){
-          html+='<img src="'+esc(f.url)+'" onclick="showImg(this.src)" style="max-width:100%;border-radius:10px;margin-top:8px;cursor:zoom-in;display:block">';
+          html+='<img src="'+f.data+'" onclick="showImg(this.src)" style="max-width:100%;border-radius:10px;margin-top:8px;cursor:zoom-in;display:block">';
         }else{
-          html+='<a href="'+esc(f.url)+'" target="_blank" class="vault-file-link">'+
+          // data:URL 그대로 링크로 다운로드 가능하게
+          html+='<a href="'+f.data+'" download="'+esc(f.name||'file')+'" class="vault-file-link">'+
             '<span class="vault-file-ext">'+esc(ext)+'</span>'+
             '<span class="vault-file-name">'+esc(f.name||'파일')+'</span>'+
-            '<span style="font-size:11px;color:#9CA3AF">↗ 열기</span></a>';
+            '<span style="font-size:11px;color:#9CA3AF">⬇ 다운로드</span></a>';
         }
+      }else if(f.kind==='file'&&f.url){
+        var ext2=(f.name||'').split('.').pop().toUpperCase()||'FILE';
+        html+='<a href="'+esc(f.url)+'" target="_blank" class="vault-file-link">'+
+          '<span class="vault-file-ext">'+esc(ext2)+'</span>'+
+          '<span class="vault-file-name">'+esc(f.name||'파일')+'</span>'+
+          '<span style="font-size:11px;color:#9CA3AF">↗ 열기</span></a>';
       }
     });
     body.innerHTML=html||'<div style="font-size:12px;color:#9CA3AF;padding:6px 0">내용 없음</div>';
