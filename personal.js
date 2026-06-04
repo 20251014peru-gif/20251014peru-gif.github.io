@@ -2340,11 +2340,13 @@ function openVaultModal(){
   const btn=$('vSaveBtn'); if(btn){btn.disabled=false;btn.textContent='🔒 암호화하여 저장';}
   vRenderPreviews(); vSetStatus('');
   const modal=$('vaultModal'); if(modal) modal.classList.add('open');
+  document.body.classList.add('modal-open');
   setTimeout(()=>{ const t=$('v-title'); if(t) t.focus(); }, 100);
   vaultBindDrop();
 }
 function closeVaultModal(){
   const modal=$('vaultModal'); if(modal) modal.classList.remove('open');
+  document.body.classList.remove('modal-open');
   editingVaultId=null; vaultFiles=[];
   vSetStatus('');
 }
@@ -2494,6 +2496,7 @@ function editVault(id){
     const btn=$('vSaveBtn'); if(btn){btn.disabled=false;btn.textContent='✏️ 수정 저장';}
     const eb=$('vEditBanner'); if(eb) eb.style.display='flex';
     const modal=$('vaultModal'); if(modal) modal.classList.add('open');
+    document.body.classList.add('modal-open');
     vaultBindDrop();
     toast('수정 모드');
   }).catch(()=>toast('복호화 실패 — PIN 확인'));

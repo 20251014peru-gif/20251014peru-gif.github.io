@@ -209,7 +209,7 @@ textarea{resize:vertical;min-height:74px;}
 .ok{color:#15803D;}.bad{color:#DC2626;}.warn{color:#D97706;}
 .err-log{background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:12px;font-size:12px;color:#991B1B;margin-top:10px;font-family:monospace;white-space:pre-wrap;word-break:break-all;line-height:1.5;}
 
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;align-items:center;justify-content:center;padding:20px;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:4000;align-items:center;justify-content:center;padding:20px;}
 .modal-bg.open{display:flex;}
 .modal{background:#fff;border-radius:16px;padding:22px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;}
 .modal h3{font-size:16px;margin-bottom:6px;}
@@ -817,3 +817,9 @@ textarea{resize:vertical;min-height:74px;}
   background:#EEF2FF;padding:2px 7px;border-radius:5px;flex-shrink:0;
 }
 .vault-file-name{flex:1;font-size:14px;font-weight:600;color:#374151;}
+
+/* 모달 열렸을 때 검색바 숨기기 */
+body.modal-open .g-search-bar{ display:none; }
+/* 보관함 버튼 항상 가로 */
+#vaultModal .btn-row-vault{display:flex;gap:8px;margin-top:16px;}
+#vaultModal .btn-row-vault .btn-primary{flex:1;}
