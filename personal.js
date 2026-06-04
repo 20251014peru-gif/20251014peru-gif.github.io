@@ -313,7 +313,7 @@ function tab(name,el){
   if(name==='cal')renderCal();
   if(name==='stats')renderStats();
   if(name==='diag')backupStatusText();
-  if(name==='vault')renderVault();
+  if(name==='vault'){renderVault();}
   if(name==='contacts'){refreshCtCatSelect();loadContacts();setTimeout(attachCtNameAc,400);}
 }
 
@@ -2414,7 +2414,7 @@ async function saveVault(){
     }
     vSetStatus('✅ 저장 완료');
     toast(wasEdit?'✏️ 수정됨':'🔒 저장됨');
-    cancelVaultEdit();
+    closeVaultModal();
     renderVault();
   }catch(err){
     var msg=err&&err.message?err.message:String(err);
@@ -2426,6 +2426,22 @@ async function saveVault(){
   }
 }
 
+function openVaultModal(){
+  editingVaultId=null;vaultFiles=[];
+  var ti=$('v-title');if(ti)ti.value='';
+  var me=$('v-memo');if(me)me.value='';
+  vRenderPreviews();vSetStatus('');
+  var b=$('vSaveBtn');if(b){b.disabled=false;b.textContent='🔒 암호화하여 저장';}
+  var mt=$('vModalTitle');if(mt)mt.textContent='보관 추가';
+  var eb=$('vEditBanner');if(eb)eb.style.display='none';
+  var modal=$('vaultModal');if(modal)modal.classList.add('open');
+  setTimeout(function(){var ti=$('v-title');if(ti)ti.focus();},100);
+  vaultBindDrop();
+}
+function closeVaultModal(){
+  var modal=$('vaultModal');if(modal)modal.classList.remove('open');
+  cancelVaultEdit();
+}
 function cancelVaultEdit(){
   editingVaultId=null;vaultFiles=[];
   var ti=$('v-title');if(ti)ti.value='';
@@ -2455,9 +2471,11 @@ function editVault(id){
       vaultFiles=o.photos.map(function(p){return {kind:'image',name:'photo.jpg',data:p,mime:'image/jpeg'};});
     }
     vRenderPreviews();
-    var b=$('vSaveBtn');if(b)b.textContent='✏️ 수정 저장';
+    var b=$('vSaveBtn');if(b){b.disabled=false;b.textContent='✏️ 수정 저장';}
     var eb=$('vEditBanner');if(eb)eb.style.display='flex';
-    $('p-vault').scrollIntoView({behavior:'smooth',block:'start'});
+    var mt=$('vModalTitle');if(mt)mt.textContent='보관 수정';
+    var modal=$('vaultModal');if(modal)modal.classList.add('open');
+    vaultBindDrop();
     toast('수정 모드 — 고치고 저장하세요');
   }).catch(function(){toast('복호화 실패 — PIN 확인');});
 }
