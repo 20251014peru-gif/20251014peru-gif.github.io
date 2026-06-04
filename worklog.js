@@ -4722,23 +4722,39 @@ function quickMemoToFormal(){
 
 
 function wireGlobalSearch(){
+  // 상단 고정 검색창
+  const bar = $("globalSearchBar");
+  if(bar){
+    bar.addEventListener("focus", ()=>{
+      openGlobalSearch();
+      // 검색창 값을 팝업 input에 동기화
+      setTimeout(()=>{ const gi=$("gsInput"); if(gi){ gi.value=bar.value; gi.focus(); if(bar.value) runGlobalSearch(bar.value); } }, 60);
+    });
+    bar.addEventListener("input", e=>{
+      const gi=$("gsInput"); if(gi){ gi.value=e.target.value; runGlobalSearch(e.target.value); }
+      if(!$("globalSearchOverlay").classList.contains("show")) openGlobalSearch();
+    });
+  }
   const btn = $("btnGlobalSearchTop");
   if(btn) btn.addEventListener("click", openGlobalSearch);
   // Ctrl+K 단축키
   document.addEventListener("keydown", e=>{
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="k"){
       e.preventDefault();
-      openGlobalSearch();
+      if(bar){ bar.focus(); } else openGlobalSearch();
     }
-    if(e.key==="Escape" && $("globalSearchOverlay").classList.contains("show")){
-      closeGlobalSearch();
+    if(e.key==="Escape"){
+      if($("globalSearchOverlay").classList.contains("show")){ closeGlobalSearch(); if(bar) bar.blur(); }
     }
   });
-  $("gsClose").addEventListener("click", closeGlobalSearch);
+  $("gsClose").addEventListener("click", ()=>{ closeGlobalSearch(); if(bar){ bar.value=""; } });
   $("globalSearchOverlay").addEventListener("click", e=>{
-    if(e.target===$("globalSearchOverlay")) closeGlobalSearch();
+    if(e.target===$("globalSearchOverlay")){ closeGlobalSearch(); if(bar) bar.blur(); }
   });
-  $("gsInput").addEventListener("input", e=>runGlobalSearch(e.target.value));
+  $("gsInput").addEventListener("input", e=>{
+    runGlobalSearch(e.target.value);
+    if(bar) bar.value=e.target.value; // 팝업→상단 검색창 동기화
+  });
 }
 function openGlobalSearch(){
   $("globalSearchOverlay").classList.add("show");
