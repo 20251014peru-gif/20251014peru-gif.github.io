@@ -375,3 +375,20 @@ textarea{resize:vertical;min-height:74px;}
 @media (max-width:600px){
   .quick-memo-side{width:100%;right:-100%;}
 }
+
+/* ===== 연락처 ===== */
+.ct-toolbar{margin-bottom:12px;}
+.ct-toolbar #ctSearch{margin-bottom:10px;}
+.ct-card{background:#fff;border:1px solid #EEF0F3;border-radius:12px;padding:13px 15px;margin-bottom:10px;}
+.ct-row1{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
+.ct-name{font-size:16px;font-weight:700;color:#1A1A2E;}
+.ct-person{font-size:12px;color:#9CA3AF;font-weight:500;margin-left:4px;}
+.ct-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:13px;white-space:nowrap;}
+.ct-line{margin-top:5px;font-size:14px;}
+.ct-phone{color:#10B981;text-decoration:none;font-weight:600;}
+.ct-phone:active{color:#059669;}
+.ct-addr{color:#0EA5E9;text-decoration:none;font-weight:600;}
+.ct-memo{margin-top:7px;font-size:13px;color:#6B7280;line-height:1.5;white-space:pre-wrap;}
+.ct-acts{display:flex;gap:12px;margin-top:10px;padding-top:8px;border-top:1px solid #F1F2F4;}
+.ct-acts .rec-act{font-size:12px;background:none;border:none;cursor:pointer;font-weight:600;padding:0;color:#6366F1;}
+.ct-acts .rec-del{color:#EF4444;}

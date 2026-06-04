@@ -217,6 +217,7 @@ function tab(name,el){
   if(name==='stats')renderStats();
   if(name==='diag')backupStatusText();
   if(name==='vault')renderVault();
+  if(name==='contacts'){loadContacts();}
 }
 
 /* ===== 카테고리 칩 + 동적 폼 ===== */
@@ -1869,6 +1870,122 @@ function qmemoUpdateFab(){
   // HTML 태그 제외하고 실제 내용이 있는지
   var has=t.replace(/<[^>]+>/g,'').trim().length>0||t.indexOf('<img')>=0;
   var fab=$('btnQuickMemo');if(fab)fab.classList.toggle('has-content',has);
+}
+
+/* ===== 연락처 (personal_contacts) ===== */
+var COL_CONTACTS='personal_contacts';
+var contactsCache=[];
+var editingContactId=null;
+var ctFilter='전체';
+var CT_CATS=['가족','친구','거래처','병원','식당','관공서','업무','기타'];
+
+function loadContacts(){
+  fetch(FB_BASE+'/'+COL_CONTACTS+'?key='+FB_KEY+'&pageSize=500').then(function(r){return r.json();})
+    .then(function(d){
+      contactsCache=(d.documents||[]).map(function(doc){var o=fromFS(doc);o.id=doc.name.split('/').pop();return o;});
+      renderContacts();
+    }).catch(function(e){logErr('연락처 조회 실패: '+e.message);$('contactList').innerHTML='<div class="empty">불러오기 실패</div>';});
+}
+
+function renderContacts(){
+  // 필터 칩
+  var fcnt={};contactsCache.forEach(function(c){fcnt[c.cat]=(fcnt[c.cat]||0)+1;});
+  var hf='<div class="filter-chip'+(ctFilter==='전체'?' sel':'')+'" onclick="setCtFilter(\'전체\')">전체 <b>'+contactsCache.length+'</b></div>';
+  CT_CATS.forEach(function(k){
+    var n=fcnt[k]||0;
+    hf+='<div class="filter-chip'+(ctFilter===k?' sel':'')+(n===0?' empty':'')+'" onclick="setCtFilter(\''+k+'\')">'+k+(n?' <b>'+n+'</b>':'')+'</div>';
+  });
+  $('ctFilterRow').innerHTML=hf;
+  // 목록
+  var q=($('ctSearch').value||'').trim().toLowerCase();
+  var arr=contactsCache.filter(function(c){
+    if(ctFilter!=='전체'&&c.cat!==ctFilter)return false;
+    if(!q)return true;
+    return ((c.name||'').toLowerCase().indexOf(q)>=0)
+      ||((c.phone||'').replace(/\s/g,'').indexOf(q.replace(/\s/g,''))>=0)
+      ||((c.addr||'').toLowerCase().indexOf(q)>=0)
+      ||((c.person||'').toLowerCase().indexOf(q)>=0)
+      ||((c.memo||'').toLowerCase().indexOf(q)>=0);
+  }).sort(function(a,b){return (a.name||'').localeCompare(b.name||'','ko');});
+  if(!arr.length){$('contactList').innerHTML='<div class="empty">'+(contactsCache.length?'검색 결과 없음':'아직 연락처가 없어요')+'</div>';return;}
+  $('contactList').innerHTML=arr.map(function(c){
+    var phoneClean=(c.phone||'').replace(/[^0-9+]/g,'');
+    var mapUrl=c.addr?('https://map.naver.com/p/search/'+encodeURIComponent(c.addr)):'';
+    return '<div class="ct-card">'+
+      '<div class="ct-row1">'+
+        '<span class="ct-name">'+esc(c.name||'(이름없음)')+(c.person?' <span class="ct-person">'+esc(c.person)+'</span>':'')+'</span>'+
+        '<span class="ct-badge" style="background:'+ctCatColor(c.cat)+'1A;color:'+ctCatColor(c.cat)+'">'+esc(c.cat||'기타')+'</span>'+
+      '</div>'+
+      (c.phone?'<div class="ct-line"><a class="ct-phone" href="tel:'+esc(phoneClean)+'">📞 '+esc(c.phone)+'</a></div>':'')+
+      (c.addr?'<div class="ct-line"><a class="ct-addr" href="'+mapUrl+'" target="_blank">📍 '+esc(c.addr)+'</a></div>':'')+
+      (c.memo?'<div class="ct-memo">'+esc(c.memo)+'</div>':'')+
+      '<div class="ct-acts">'+
+        '<button class="rec-act rec-edit" onclick="editContact(\''+c.id+'\')">✏️ 수정</button>'+
+        '<button class="rec-act rec-del" onclick="delContact(\''+c.id+'\')">🗑 삭제</button>'+
+      '</div></div>';
+  }).join('');
+}
+
+function ctCatColor(k){
+  var m={'가족':'#F43F5E','친구':'#8B5CF6','거래처':'#0EA5E9','병원':'#14B8A6','식당':'#FB923C','관공서':'#64748B','업무':'#6366F1','기타':'#9CA3AF'};
+  return m[k]||'#9CA3AF';
+}
+function setCtFilter(k){ctFilter=k;renderContacts();}
+
+function saveContact(){
+  toast('저장 시도…');   // 1) 함수 진입 확인
+  var name=($('ct-name').value||'').trim();
+  var phone=($('ct-phone').value||'').trim();
+  if(!name&&!phone){toast('⚠️ 이름이나 전화번호를 입력하세요');return;}
+  var id=editingContactId||String(Date.now());
+  var rec={
+    name:name,phone:phone,
+    addr:($('ct-addr').value||'').trim(),
+    cat:$('ct-cat').value||'기타',
+    person:($('ct-person').value||'').trim(),
+    memo:($('ct-memo').value||'').trim(),
+    updated:new Date().toISOString()
+  };
+  if(!editingContactId)rec.created=new Date().toISOString();
+  var url=FB_BASE+'/'+COL_CONTACTS+'/'+id+'?key='+FB_KEY;
+  fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(toFS(rec))})
+    .then(function(r){
+      if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status+': '+t.slice(0,200));});
+      return r.json();
+    })
+    .then(function(){toast(editingContactId?'✏️ 수정됨':'✅ 저장됨');cancelContactEdit();loadContacts();})
+    .catch(function(e){logErr('연락처 저장 실패: '+e.message);toast('⚠️ '+e.message);});
+}
+
+function editContact(id){
+  var c=contactsCache.filter(function(x){return x.id===id;})[0];if(!c)return;
+  editingContactId=id;
+  $('ct-name').value=c.name||'';
+  $('ct-phone').value=c.phone||'';
+  $('ct-addr').value=c.addr||'';
+  $('ct-cat').value=c.cat||'기타';
+  $('ct-person').value=c.person||'';
+  $('ct-memo').value=c.memo||'';
+  $('ctEditBadge').textContent='— 수정 중';
+  $('ctSaveBtn').textContent='💾 수정 저장';
+  $('ctCancelBtn').style.display='';
+  $('ct-name').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function cancelContactEdit(){
+  editingContactId=null;
+  ['ct-name','ct-phone','ct-addr','ct-person','ct-memo'].forEach(function(k){$(k).value='';});
+  $('ct-cat').value='가족';
+  $('ctEditBadge').textContent='';
+  $('ctSaveBtn').textContent='💾 저장';
+  $('ctCancelBtn').style.display='none';
+}
+
+function delContact(id){
+  if(!confirm('이 연락처를 삭제할까요?'))return;
+  fetch(FB_BASE+'/'+COL_CONTACTS+'/'+id+'?key='+FB_KEY,{method:'DELETE'})
+    .then(function(){toast('삭제됨');loadContacts();})
+    .catch(function(){toast('삭제 실패');});
 }
 
 (function init(){
