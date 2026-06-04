@@ -156,6 +156,43 @@ function evtColor(r){
   if(r.cat==='차계부'&&r.who&&CAR_COLORS[r.who])return CAR_COLORS[r.who];
   return catOf(r.cat).c;
 }
+/* 달력 칸에 표시할 짧고 정보 풍부한 라벨 (compact=true는 연간용 더 짧게) */
+function calEventLabel(r,compact){
+  var t=r.title||r.cat;
+  // 차계부 — 주유: "주유 40L 68,000원" / 정비: "정비 - 엔진오일 ..."
+  if(r.cat==='차계부'){
+    if(t==='주유'){
+      var p=['⛽'];
+      if(r.liters)p.push(r.liters+'L');
+      if(!compact&&r.amount)p.push(won(r.amount)+'원');
+      return esc(p.join(' '));
+    }
+    if(t==='정비'){
+      var firstItem=(r.items&&r.items[0]&&r.items[0].name)||'';
+      return esc('🔧 정비'+(firstItem?' - '+firstItem:'')+(r.items&&r.items.length>1?' 외 '+(r.items.length-1):''));
+    }
+    return esc(t);
+  }
+  // 맛집 — "원조명동 (서면)"
+  if(r.cat==='맛집'){
+    var loc=r.who?'('+r.who+')':'';
+    return esc(t)+(loc?' <span style="color:#9CA3AF;font-size:.92em">'+esc(loc)+'</span>':'');
+  }
+  // 구매 — "믹서기 170,000원"
+  if(r.cat==='구매'){
+    if(compact)return esc(t);
+    return esc(t)+(r.amount?' <span style="color:#9CA3AF;font-size:.92em">'+won(r.amount)+'원</span>':'');
+  }
+  // 약속 — "거래처 미팅 14:00"
+  if(r.cat==='약속'){
+    return esc(t)+(r.time2&&!compact?' <span style="color:#9CA3AF;font-size:.92em">'+esc(r.time2)+'</span>':'');
+  }
+  // 통화 — "통화: 홍길동"
+  if(r.cat==='통화'&&r.who){return esc(t)+' <span style="color:#9CA3AF;font-size:.92em">- '+esc(r.who)+'</span>';}
+  // 건강 — "감기 진료 (서울내과)"
+  if(r.cat==='건강'&&r.who&&!compact){return esc(t)+' <span style="color:#9CA3AF;font-size:.92em">('+esc(r.who)+')</span>';}
+  return esc(t);
+}
 
 var selectedCat='생각';
 var pendingPhotos=[];   // 새/수정 중인 사진 base64 배열
@@ -1286,7 +1323,7 @@ function renderCal(){
     var evts='';
     list.forEach(function(r){
       var col=evtColor(r);
-      evts+='<div class="cal-evt" style="color:'+col+'"><span class="ev-dot" style="background:'+col+'"></span>'+esc(r.title||r.cat)+'</div>';
+      evts+='<div class="cal-evt" style="color:'+col+'"><span class="ev-dot" style="background:'+col+'"></span>'+calEventLabel(r)+'</div>';
     });
     h+='<div class="'+cls+'" onclick="calPick(\''+ds+'\')"><span class="cal-num">'+d+'</span>'+evts+'</div>';
   }
@@ -1310,7 +1347,7 @@ function buildYearTable(year,full){
       var cell='';
       list.forEach(function(r){
         var col=evtColor(r);
-        cell+='<div class="year-evt" style="color:'+col+'"><span class="ev-dot" style="background:'+col+'"></span>'+esc(r.title||r.cat)+'</div>';
+        cell+='<div class="year-evt" style="color:'+col+'"><span class="ev-dot" style="background:'+col+'"></span>'+calEventLabel(r,true)+'</div>';
       });
       var cc='year-cell'+(dow===0?' sun':'')+(dow===6?' sat':'');
       h+='<td class="'+cc+'" onclick="calPickYear(\''+ds+'\')">'+cell+'</td>';
