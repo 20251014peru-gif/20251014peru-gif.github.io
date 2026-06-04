@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>개인 관리</title>
-<link rel="stylesheet" href="personal.css?v=43">
+<link rel="stylesheet" href="personal.css?v=44">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v43</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v44</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -56,6 +56,7 @@
 
 <div class="tabs">
   <button class="tab active" onclick="tab('write',this)">✏️ 기록</button>
+  <button class="tab" onclick="tab('contacts',this)">📞 연락처</button>
   <button class="tab" onclick="tab('vault',this)">🔐 보관함</button>
   <button class="tab" onclick="tab('list',this)">📋 모아보기</button>
   <button class="tab" onclick="tab('cal',this)">📅 달력</button>
@@ -185,6 +186,35 @@
     </div>
   </div>
 
+  <!-- 연락처 -->
+  <div class="panel" id="p-contacts">
+    <div class="card">
+      <div class="card-title">📞 연락처 <span id="ctEditBadge" class="opt"></span></div>
+      <div class="form-grid">
+        <div class="fg-item"><label>이름/상호</label><input type="text" id="ct-name" placeholder="홍길동 / 서울세무사"></div>
+        <div class="fg-item"><label>전화번호</label><input type="tel" id="ct-phone" placeholder="010-1234-5678"></div>
+        <div class="fg-item full"><label>주소 <span class="opt">(눌러서 지도)</span></label><input type="text" id="ct-addr" placeholder="서울시 강남구 ..."></div>
+        <div class="fg-item"><label>카테고리</label>
+          <select id="ct-cat">
+            <option>가족</option><option>친구</option><option>거래처</option><option>병원</option>
+            <option>식당</option><option>관공서</option><option>업무</option><option>기타</option>
+          </select>
+        </div>
+        <div class="fg-item"><label>담당자</label><input type="text" id="ct-person" placeholder="대표·담당자 이름"></div>
+        <div class="fg-item full"><label>메모</label><textarea id="ct-memo" placeholder="기타 메모"></textarea></div>
+      </div>
+      <button class="btn btn-primary" id="ctSaveBtn" onclick="saveContact()">💾 저장</button>
+      <button class="btn btn-ghost" id="ctCancelBtn" onclick="cancelContactEdit()" style="display:none">취소</button>
+    </div>
+    <div class="card">
+      <div class="ct-toolbar">
+        <input type="text" id="ctSearch" placeholder="🔍 이름·전화·주소 검색" oninput="renderContacts()">
+        <div class="filter-row" id="ctFilterRow"></div>
+      </div>
+      <div id="contactList"></div>
+    </div>
+  </div>
+
   <!-- 보관함 -->
   <div class="panel" id="p-vault">
     <div class="card">
@@ -259,6 +289,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="personal.js?v=43"></script>
+<script src="personal.js?v=44"></script>
 </body>
 </html>
