@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>개인 관리</title>
-<link rel="stylesheet" href="personal.css?v=41">
+<link rel="stylesheet" href="personal.css?v=42">
 </head>
 <body>
 
@@ -23,28 +23,36 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v41</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v42</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
-    <button class="memo-fab" id="memoFab" onclick="openQuickMemo()" title="급한 메모">⚡</button>
+    <button class="nav-btn nav-quick" id="btnQuickMemo" title="급한 메모 (Ctrl+Shift+M)">⚡ 급한메모</button>
     <a href="index.html" class="home-link">← 홈</a>
     <button class="api-btn off" id="apiBtn" onclick="openApi()">AI</button>
   </div>
 </div>
 
-<!-- 급한 메모 슬라이드 패널 -->
-<div class="memo-backdrop" id="memoBackdrop" onclick="closeQuickMemo()"></div>
-<div class="memo-panel" id="memoPanel">
-  <div class="memo-panel-head">
-    <span class="memo-panel-title">⚡ 급한 메모 <span class="memo-saved" id="memoSaved"></span></span>
-    <div class="memo-panel-acts">
-      <button class="btn-mini" onclick="clearQuickMemo()">🗑 지우기</button>
-      <button class="memo-x" onclick="closeQuickMemo()">✕</button>
+<!-- 급한 메모 슬라이드 패널 (worklog 표준) -->
+<div id="quickMemoSide" class="quick-memo-side">
+  <div class="qm-head">
+    <span class="qm-title">⚡ 급한 메모</span>
+    <div class="qm-actions">
+      <button class="qm-btn qm-clear" id="qmClear" title="모두 지우기">🗑 지우기</button>
+      <button class="qm-btn qm-close" id="qmClose" title="닫기">✕</button>
     </div>
   </div>
-  <textarea id="quickMemoText" class="memo-area" placeholder="떠오른 생각·할 일·잊지 말 것을 빠르게 적어두세요. 자동 저장돼요."></textarea>
+  <div id="qmText" contenteditable="true" data-placeholder="여기에 막 쓰세요... 자동으로 저장돼요. Ctrl+V로 사진을 텍스트 사이에 붙여넣을 수 있어요."></div>
+  <div class="qm-photo-area">
+    <label class="qm-photo-btn">
+      📷 사진 첨부
+      <input type="file" id="qmFile" accept="image/*" multiple style="display:none">
+    </label>
+  </div>
+  <div class="qm-status" id="qmStatus">💾 자동 저장됨</div>
 </div>
+<!-- 사진 확대 오버레이 -->
+<div id="qmZoomOverlay"><img id="qmZoomImg" src=""></div>
 
 <div class="tabs">
   <button class="tab active" onclick="tab('write',this)">✏️ 기록</button>
@@ -251,6 +259,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="personal.js?v=41"></script>
+<script src="personal.js?v=42"></script>
 </body>
 </html>

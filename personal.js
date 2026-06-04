@@ -1750,42 +1750,113 @@ function delVault(id){
   fetch(FB_BASE+'/'+COL_VAULT+'/'+id+'?key='+FB_KEY,{method:'DELETE'}).then(function(){toast('삭제됨');renderVault();}).catch(function(){toast('삭제 실패');});
 }
 
-/* ===== 급한 메모 (어디서나 빠른 메모) ===== */
-var QMEMO_KEY='personal-quickmemo';
-var qmemoTimer=null;
-function openQuickMemo(){
-  $('memoBackdrop').classList.add('open');
-  $('memoPanel').classList.add('open');
-  var ta=$('quickMemoText');
-  ta.value=localStorage.getItem(QMEMO_KEY)||'';
-  setTimeout(function(){ta.focus();},100);
+/* ===== 급한 메모 (worklog 표준) ===== */
+var QM_LS_TEXT='personal_quickmemo_text_v1';
+var qmSaveTimer=null;
+function wireQuickMemo(){
+  var btn=$('btnQuickMemo');if(btn)btn.addEventListener('click',toggleQuickMemo);
+  // 단축키 Ctrl+Shift+M
+  document.addEventListener('keydown',function(e){
+    if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key&&e.key.toLowerCase()==='m'){e.preventDefault();toggleQuickMemo();}
+    if(e.key==='Escape'&&$('quickMemoSide').classList.contains('show'))closeQuickMemo();
+  });
+  $('qmClose').addEventListener('click',closeQuickMemo);
+  $('qmClear').addEventListener('click',clearQuickMemo);
+  $('qmFile').addEventListener('change',handleQmPhoto);
+  // 클립보드 paste — 사진은 인라인 삽입
+  $('qmText').addEventListener('paste',function(e){
+    var cd=e.clipboardData||window.clipboardData;if(!cd)return;
+    var items=cd.items;if(!items)return;
+    for(var i=0;i<items.length;i++){
+      var it=items[i];
+      if(it.type&&it.type.indexOf('image/')===0){
+        e.preventDefault();
+        var blob=it.getAsFile();if(!blob)continue;
+        readAndCompress(blob).then(function(dataUrl){
+          insertImageAtCursor(dataUrl);
+          $('qmStatus').textContent='📷 사진이 본문에 들어갔어요';
+          scheduleQmSave();
+        }).catch(function(){});
+        return;
+      }
+    }
+    // 이미지 없으면 일반 텍스트 (스타일 제거)
+    e.preventDefault();
+    var text=cd.getData('text/plain')||'';
+    document.execCommand('insertText',false,text);
+  });
+  $('qmText').addEventListener('input',scheduleQmSave);
+  // 사진 삭제·확대 클릭
+  $('qmText').addEventListener('click',function(e){
+    var rm=e.target.closest('.qm-inline-img-rm');
+    if(rm){e.preventDefault();var wrap=rm.closest('.qm-inline-img-wrap');if(wrap){wrap.remove();scheduleQmSave();}return;}
+    var img=e.target.closest('.qm-inline-img-wrap img');
+    if(img){e.preventDefault();openQmZoom(img.src);}
+  });
+  $('qmZoomOverlay').addEventListener('click',function(){$('qmZoomOverlay').classList.remove('show');});
+  loadQuickMemo();
+}
+function insertImageAtCursor(dataUrl){
+  var wrapHtml='<div class="qm-inline-img-wrap" contenteditable="false"><img src="'+dataUrl+'"><button type="button" class="qm-inline-img-rm" title="이 사진 삭제">×</button></div><br>';
+  var sel=window.getSelection();
+  if(sel&&sel.rangeCount){
+    var range=sel.getRangeAt(0),editor=$('qmText');
+    if(editor.contains(range.startContainer)){
+      range.deleteContents();
+      var tmp=document.createElement('div');tmp.innerHTML=wrapHtml;
+      var frag=document.createDocumentFragment();
+      while(tmp.firstChild)frag.appendChild(tmp.firstChild);
+      range.insertNode(frag);
+      range.collapse(false);sel.removeAllRanges();sel.addRange(range);
+      return;
+    }
+  }
+  $('qmText').insertAdjacentHTML('beforeend',wrapHtml);
+}
+function openQmZoom(src){$('qmZoomImg').src=src;$('qmZoomOverlay').classList.add('show');}
+function scheduleQmSave(){
+  clearTimeout(qmSaveTimer);
+  qmSaveTimer=setTimeout(function(){
+    try{localStorage.setItem(QM_LS_TEXT,$('qmText').innerHTML);}catch(err){toast('⚠️ 메모 저장 실패 — 사진을 줄여주세요');}
+    var s=$('qmStatus');if(s)s.textContent='💾 자동 저장됨 '+new Date().toLocaleTimeString('ko-KR').slice(0,8);
+    qmemoUpdateFab();
+  },400);
+}
+function loadQuickMemo(){
+  try{var t=localStorage.getItem(QM_LS_TEXT)||'';$('qmText').innerHTML=t;}catch(e){}
+  qmemoUpdateFab();
+}
+function toggleQuickMemo(){
+  var side=$('quickMemoSide');
+  if(side.classList.contains('show'))closeQuickMemo();
+  else{side.classList.add('show');setTimeout(function(){$('qmText').focus();},200);}
 }
 function closeQuickMemo(){
-  // 닫기 전 즉시 저장 (자동저장 타이머가 안 끝났을 수 있어서)
-  if(qmemoTimer){clearTimeout(qmemoTimer);qmemoTimer=null;}
-  var ta=$('quickMemoText');
-  if(ta)localStorage.setItem(QMEMO_KEY,ta.value);
-  $('memoBackdrop').classList.remove('open');
-  $('memoPanel').classList.remove('open');
+  // 닫기 전 즉시 저장
+  if(qmSaveTimer){clearTimeout(qmSaveTimer);qmSaveTimer=null;}
+  try{localStorage.setItem(QM_LS_TEXT,$('qmText').innerHTML);}catch(e){}
+  $('quickMemoSide').classList.remove('show');
   qmemoUpdateFab();
 }
 function clearQuickMemo(){
-  if(!confirm('급한 메모를 다 지울까요?'))return;
-  localStorage.removeItem(QMEMO_KEY);
-  $('quickMemoText').value='';
-  $('memoSaved').textContent='지워짐';
+  if(!confirm('급한 메모 내용을 모두 지울까요? (되돌릴 수 없음)'))return;
+  $('qmText').innerHTML='';
+  try{localStorage.removeItem(QM_LS_TEXT);}catch(e){}
+  $('qmStatus').textContent='🗑 지워졌습니다';
   qmemoUpdateFab();
 }
-function qmemoSave(){
-  var v=$('quickMemoText').value;
-  localStorage.setItem(QMEMO_KEY,v);
-  $('memoSaved').textContent='저장됨';
-  setTimeout(function(){var el=$('memoSaved');if(el&&el.textContent==='저장됨')el.textContent='';},1500);
-  qmemoUpdateFab();
+function handleQmPhoto(e){
+  var files=Array.prototype.slice.call(e.target.files||[]);e.target.value='';
+  var i=0;(function next(){
+    if(i>=files.length){scheduleQmSave();$('qmText').focus();return;}
+    readAndCompress(files[i++]).then(function(dataUrl){insertImageAtCursor(dataUrl);next();}).catch(function(){next();});
+  })();
 }
 function qmemoUpdateFab(){
-  var has=(localStorage.getItem(QMEMO_KEY)||'').trim().length>0;
-  var fab=$('memoFab');if(fab)fab.classList.toggle('has-content',has);
+  var t=localStorage.getItem(QM_LS_TEXT)||'';
+  // HTML 태그 제외하고 실제 내용이 있는지
+  var has=t.replace(/<[^>]+>/g,'').trim().length>0||t.indexOf('<img')>=0;
+  var fab=$('btnQuickMemo');if(fab)fab.classList.toggle('has-content',has);
 }
 
 (function init(){
@@ -1816,18 +1887,8 @@ function qmemoUpdateFab(){
     var vp=$('vPickInput');if(vp)vp.onchange=vOnPhoto;
     var vpb=$('vPasteBox');if(vpb)vpb.addEventListener('paste',vHandlePaste);
     var pb=$('pasteBox');if(pb)pb.addEventListener('paste',handlePaste);
-    // 급한 메모 자동저장
-    var qm=$('quickMemoText');
-    if(qm)qm.addEventListener('input',function(){
-      if(qmemoTimer)clearTimeout(qmemoTimer);
-      $('memoSaved').textContent='저장 중…';
-      qmemoTimer=setTimeout(qmemoSave,500);
-    });
-    qmemoUpdateFab();
-    // ESC 키로 메모 패널 닫기
-    document.addEventListener('keydown',function(e){
-      if(e.key==='Escape'&&$('memoPanel').classList.contains('open'))closeQuickMemo();
-    });
+    // 급한 메모 (worklog 표준)
+    wireQuickMemo();
     // 기록 탭이 활성일 때 화면 어디서 붙여넣어도 받기 (PC 편의)
     document.addEventListener('paste',function(e){
       if(document.getElementById('p-write').classList.contains('active')){
