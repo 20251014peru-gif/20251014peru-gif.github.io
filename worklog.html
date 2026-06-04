@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-<link rel="stylesheet" id="main-css" href="worklog.css?v=20260604092919">
+<link rel="stylesheet" id="main-css" href="worklog.css?v=20260604093531">
 </head>
 <body>
 <header>
@@ -79,7 +79,7 @@
       <!-- 검색창 맨 위 -->
       <div style="position:relative;margin-bottom:14px">
         <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none">🔍</span>
-        <input type="text" id="fileSearch" class="search" placeholder="검색 — 별칭·경로·메모" style="padding-left:44px;font-size:16px;font-weight:600;border:2.5px solid var(--primary);border-radius:14px;background:#f0f6ff;height:48px;box-shadow:0 2px 12px rgba(63,124,184,.15)">
+
       </div>
       <!-- 툴바: 검색 아래 한 줄 -->
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
@@ -270,7 +270,7 @@
     <div class="card">
       <div class="list-head"><h2>휴가</h2><button class="btn btn-primary btn-sm" data-add="vacation">➕ 휴가 추가</button></div>
       <p class="desc">등록한 휴가는 달력에 바로 표시됩니다.</p>
-      <input type="text" id="vacSearch" class="search" placeholder="🔍 휴가 검색 — 이름·종류">
+
       <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span class="view-toggle" data-vt="vacation"><button data-v="card">카드형</button><button data-v="list">목록형</button></span></div>
       <div id="vacList"></div>
     </div>
@@ -280,7 +280,7 @@
   <section class="panel" id="panel-meeting">
     <div class="card">
       <div class="list-head"><h2>회의메모 (주간회의)</h2><button class="btn btn-primary btn-sm" data-add="meeting">➕ 회의 추가</button></div>
-      <input type="text" id="meetSearch" class="search" placeholder="🔍 회의 검색 — 제목·참석자·내용">
+
       <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span class="view-toggle" data-vt="meeting"><button data-v="card">카드형</button><button data-v="list">목록형</button></span></div>
       <div id="meetList"></div>
     </div>
@@ -301,7 +301,7 @@
         <input type="date" id="delFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="delTo" title="종료일">
         <button class="btn btn-ghost btn-sm" id="delRangeClear" style="flex:0 0 auto">기간 해제</button>
       </div>
-      <input type="text" id="delSearch" class="search" placeholder="🔍 전달사항 검색">
+
       <div class="table-wrap">
         <table class="rec"><thead><tr>
           <th>날짜</th><th>전달종류</th><th>제목</th><th>전달할 내용</th><th title="전달 완료 여부">전달완료</th><th></th>
@@ -382,7 +382,7 @@
       </div>
       <p class="desc">품목을 한 번 등록해두면, 입출고를 기록할 때마다 자동으로 재고가 계산됩니다. 안전재고 미달 품목은 빨갛게 표시돼요.</p>
 
-      <input type="text" id="matSearch" class="search search-big" placeholder="🔍 검색 — 품목명·규격·거래처·메모">
+
 
       <div id="matMonthlySummary"></div>
 
@@ -432,7 +432,7 @@
         </div>
       </div>
       <p class="desc">청소반장이 작성한 일지를 사진으로 올리면 AI가 자동 분석합니다. 휴지·핸드타월 입출고는 자재 탭으로 자동 연동돼요.</p>
-      <input type="text" id="clnSearch" class="search search-big" placeholder="🔍 검색 — 날짜·담당자·층·특이사항">
+
 
       <div id="clnStats"></div>
 
@@ -466,11 +466,7 @@
       </div>
       <p class="desc">개인 지출(품의서용)과 세금계산서 발급 내역(확인용)을 따로 관리합니다. 달력에서 날짜별로도 확인할 수 있어요.</p>
 
-      <!-- 검색창 표준 스타일 -->
-      <div style="position:relative;margin-bottom:10px">
-        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none">🔍</span>
-        <input type="text" id="expSearch" placeholder="검색 — 내역·비고·날짜" style="padding-left:44px;height:48px;font-size:15px;font-weight:600;border:2.5px solid var(--primary);border-radius:14px;background:#f0f6ff;box-shadow:0 2px 12px rgba(63,124,184,.15);width:100%;box-sizing:border-box;outline:none">
-      </div>
+
 
       <!-- 탭 + 월필터 한 줄 -->
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
@@ -761,6 +757,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=20260604092937"></script>
+<script src="worklog.js?v=20260604093540"></script>
 </body>
 </html>

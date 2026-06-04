@@ -1212,9 +1212,9 @@ const _ws=$("wkSearch"); if(_ws) _ws.addEventListener("input",e=>{ Q.work=e.targ
 const _ps=$("planSearch"); if(_ps) _ps.addEventListener("input",e=>{ Q.plan=e.target.value; renderPlan(); });
 const _ms=$("memoSearch"); if(_ms) _ms.addEventListener("input",e=>{ Q.memo=e.target.value; renderMemo(); });
 const _cs=$("callSearch"); if(_cs) _cs.addEventListener("input",e=>{ Q.call=e.target.value; renderCall(); });
-$("vacSearch").addEventListener("input",e=>{ Q.vacation=e.target.value; renderVac(); });
-$("meetSearch").addEventListener("input",e=>{ Q.meeting=e.target.value; renderMeeting(); });
-$("delSearch").addEventListener("input",e=>{ Q.deliver=e.target.value; renderDeliver(); });
+const _vacSearch=$("vacSearch"); if(_vacSearch) _vacSearch.addEventListener("input",e=>{ Q.vacation=e.target.value; renderVac(); });
+const _meetSearch=$("meetSearch"); if(_meetSearch) _meetSearch.addEventListener("input",e=>{ Q.meeting=e.target.value; renderMeeting(); });
+const _delSearch=$("delSearch"); if(_delSearch) _delSearch.addEventListener("input",e=>{ Q.deliver=e.target.value; renderDeliver(); });
 function listOf(kind){ return entries.filter(e=>e.kind===kind && matchObj(e,Q[kind])); }
 
 /* 카드 공통 */
@@ -2484,7 +2484,7 @@ function bindDnD(box){
   });
 }
 function wireFileLinkTab(){
-  $("fileSearch").addEventListener("input",e=>{ CAT_FILTER.filelink.q=e.target.value; renderFileLink(); });
+  const _fileSearch=$("fileSearch"); if(_fileSearch) _fileSearch.addEventListener("input",e=>{ CAT_FILTER.filelink.q=e.target.value; renderFileLink(); });
   $("fileCatFilter").addEventListener("change",e=>{ CAT_FILTER.filelink.cat=e.target.value; CAT_FILTER.filelink.sub="전체"; renderFileLink(); });
   $("btnFileCatMgr").addEventListener("click",()=>openCatMgr("filelink"));
   // 보기 드롭다운
@@ -3383,7 +3383,7 @@ function wireMaterialTab(){
     document.querySelectorAll("[data-mattab]").forEach(x=>x.classList.toggle("active",x===b));
     renderMaterial();
   }));
-  $("matSearch").addEventListener("input",e=>{ MAT_FILTER.q=e.target.value; renderMaterial(); });
+  const _mats=$("matSearch"); if(_mats) _mats.addEventListener("input",e=>{ MAT_FILTER.q=e.target.value; renderMaterial(); });
   $("matFieldFilter").addEventListener("change",e=>{ MAT_FILTER.field=e.target.value; renderMaterial(); });
   $("matRecFilter").addEventListener("change",e=>{ MAT_FILTER.recurring=e.target.value; renderMaterial(); });
   $("matLowToggle").addEventListener("click",()=>{
@@ -3985,7 +3985,7 @@ function saveCleanForeman(){ try{ localStorage.setItem(CLEAN_FOREMAN_LS, CLEAN_F
 const CLEAN_FILTER = { q:"", from:"", to:"" };
 
 function wireCleaningTab(){
-  $("clnSearch").addEventListener("input",e=>{ CLEAN_FILTER.q=e.target.value; renderCleaning(); });
+  const _clnSearch=$("clnSearch"); if(_clnSearch) _clnSearch.addEventListener("input",e=>{ CLEAN_FILTER.q=e.target.value; renderCleaning(); });
   $("clnFrom").addEventListener("change",e=>{ CLEAN_FILTER.from=e.target.value; renderCleaning(); });
   $("clnTo").addEventListener("change",e=>{ CLEAN_FILTER.to=e.target.value; renderCleaning(); });
   $("clnRangeClear").addEventListener("click",()=>{ CLEAN_FILTER.from=""; CLEAN_FILTER.to=""; $("clnFrom").value=""; $("clnTo").value=""; renderCleaning(); });
@@ -4882,7 +4882,7 @@ function wireExpenseTab(){
     EXP_FILTER.ym=""; // 탭 전환 시 월 초기화
     renderExpense();
   }));
-  $("expSearch").addEventListener("input",e=>{ EXP_FILTER.q=e.target.value; renderExpense(); });
+  const _expSearch=$("expSearch"); if(_expSearch) _expSearch.addEventListener("input",e=>{ EXP_FILTER.q=e.target.value; renderExpense(); });
   $("expMonthFilter").addEventListener("change",e=>{ EXP_FILTER.ym=e.target.value; renderExpense(); });
   $("btnAddExpense").addEventListener("click",()=>openExpenseEditor(null));
   $("btnExpExcel").addEventListener("click",copyExpenseExcel);
