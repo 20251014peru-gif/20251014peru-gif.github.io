@@ -779,3 +779,11 @@ td.clip[data-tip]:hover{position:relative}
 .cat-group-h .ch-cnt{flex-shrink:0}
 .cat-group-h .ch-arrow{flex-shrink:0}
 .cat-group-h .ch-rename{flex-shrink:0}
+
+/* ── 지출 탭 색상 구분 ── */
+[data-exptab="personal"].active{background:#0369a1!important;color:#fff!important}
+[data-exptab="tax"].active{background:#c2410c!important;color:#fff!important}
+[data-exptab="personal"]:not(.active){border-color:#0369a1;color:#0369a1}
+[data-exptab="tax"]:not(.active){border-color:#c2410c;color:#c2410c}
+/* 업무연동 표시 */
+#expTable tbody tr:hover{filter:brightness(.97)}

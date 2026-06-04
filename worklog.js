@@ -4864,23 +4864,33 @@ function renderExpense(){
   ).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
   const body = $("expBody");
   if(!list.length){
-    body.innerHTML = `<tr><td colspan="6" class="empty">${EXP_FILTER.tab==="personal"?"개인 지출":"세금계산서"} 내역이 없습니다.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" class="empty">${EXP_FILTER.tab==="personal"?"개인 지출":"세금계산서"} 내역이 없습니다.</td></tr>`;
     $("expTotal").innerHTML = "";
     return;
   }
   let total=0;
+  const isPersonal = EXP_FILTER.tab==="personal";
   body.innerHTML = list.map((e,i)=>{
     const amt = Number(e.amount)||0; total+=amt;
-    return `<tr data-id="${e.id}">
-      <td class="num">${i+1}</td>
-      <td><b>${esc(e.title||"")}</b>${e.photo?'<span style="margin-left:5px;font-size:13px">📷</span>':""}</td>
-      <td class="num">${won(amt)}</td>
+    const rowStyle = isPersonal
+      ? "background:linear-gradient(90deg,#f0f9ff 0%,#fff 100%)" // 개인지출: 하늘
+      : "background:linear-gradient(90deg,#fff8f0 0%,#fff 100%)"; // 세금계산서: 주황
+    const amtColor = isPersonal ? "#0369a1" : "#c2410c";
+    const badge = isPersonal
+      ? `<span class="pill tech" style="font-size:10px">💸품의</span>`
+      : `<span class="pill amount" style="font-size:10px">📃세금</span>`;
+    return `<tr data-id="${e.id}" style="${rowStyle}">
+      <td class="num" style="color:#888">${i+1}</td>
+      <td>${badge} <b>${esc(e.title||"")}</b>${e.workId?` <span style="font-size:11px;color:#aaa">🔗업무연동</span>`:""}${e.photo?'<span style="margin-left:5px;font-size:13px">📷</span>':""}</td>
+      <td class="num" style="font-weight:800;color:${amtColor}">${won(amt)}</td>
+      <td>${esc(e.vendor||"")}</td>
       <td>${esc(e.date||"")}</td>
-      <td>${esc(e.memo||"")}</td>
+      <td>${esc(e.memo||"").slice(0,30)}</td>
       <td><button class="rowdel" data-del title="삭제">🗑</button></td>
     </tr>`;
   }).join("");
-  $("expTotal").innerHTML = `합계: <b>${won(total)}원</b> (${list.length}건)`;
+  const totalColor = isPersonal ? "#0369a1" : "#c2410c";
+  $("expTotal").innerHTML = `합계: <b style="color:${totalColor};font-size:16px">${won(total)}원</b> <span style="color:#888">(${list.length}건)</span>`;
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
     const id=tr.dataset.id;
     tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openExpenseEditor(id); });
