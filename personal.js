@@ -2309,7 +2309,7 @@ function vRemoveFile(i){
 function saveVault(){
   var title=($('v-title').value||'').trim();
   var memo=($('v-memo').value||'').trim();
-  if(!title&&!vaultFiles.length){toast('제목이나 파일을 넣으세요');return;}
+  if(!title&&!memo&&!vaultFiles.length){toast('제목이나 내용을 넣으세요');return;}
   var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
   var btn=$('vSaveBtn');btn.disabled=true;btn.textContent='저장 중…';
   vSetStatus('파일 업로드 중…');
@@ -2336,6 +2336,11 @@ function saveVault(){
       })
     });
     vSetStatus('암호화 중…');
+    if(payload.length>700000){
+      vSetStatus('⚠️ 데이터가 너무 커요 ('+Math.round(payload.length/1024)+'KB). 사진을 줄여주세요.');
+      btn.disabled=false;btn.textContent='🔒 암호화하여 저장';
+      return Promise.reject(new Error('payload too large'));
+    }
     return vaultEncrypt(payload,pin);
   }).then(function(enc){
     var wasEdit=editingVaultId;
@@ -2345,7 +2350,8 @@ function saveVault(){
     return fetch(FB_BASE+'/'+COL_VAULT+'/'+id+'?key='+FB_KEY,{
       method:'PATCH',headers:{'Content-Type':'application/json'},
       body:JSON.stringify(toFS({enc:enc,title:title,nfile:vaultFiles.length,nimg:nImg,ndoc:nDoc,created:new Date().toISOString()}))
-    }).then(function(){
+    }).then(function(res){
+      if(!res.ok){return res.text().then(function(t){throw new Error('HTTP '+res.status+': '+t.slice(0,120));});}
       cancelVaultEdit();
       toast(wasEdit?'✏️ 수정됨':'🔒 저장됨');
       renderVault();
@@ -2366,8 +2372,10 @@ function cancelVaultEdit(){
   var eb=$('vEditBanner');if(eb)eb.style.display='none';
 }
 
-function editVault(id,enc,title){
+function editVault(id){
   var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
+  var vs=vaultStore[id]||{};var enc=vs.enc||'';var title=vs.title||'';
+  if(!enc){toast('데이터 없음');return;}
   vaultDecrypt(enc,pin).then(function(plain){
     var o=JSON.parse(plain);
     editingVaultId=id;
@@ -2391,24 +2399,29 @@ function editVault(id,enc,title){
   }).catch(function(){toast('복호화 실패 — PIN 확인');});
 }
 
+/* vaultStore: id → {enc, title} 맵 (onclick에 enc 직접 안 씀) */
+var vaultStore={};
 function renderVault(){
   var box=$('vaultList');box.innerHTML='<div class="empty">불러오는 중…</div>';
   fetch(FB_BASE+'/'+COL_VAULT+'?key='+FB_KEY+'&pageSize=200').then(function(r){return r.json();}).then(function(d){
     if(!d.documents||!d.documents.length){box.innerHTML='<div class="empty">아직 보관한 문서가 없어요</div>';return;}
     var items=d.documents.map(function(doc){var o=fromFS(doc);o.id=doc.name.split('/').pop();return o;})
       .sort(function(a,b){return (b.created||'').localeCompare(a.created||'');});
+    vaultStore={};
+    items.forEach(function(it){vaultStore[it.id]={enc:it.enc,title:it.title||''};});
     box.innerHTML=items.map(function(it){
       var sub='🔒 내용 잠김';
       if(it.nfile>0){var parts=[];if(it.nimg)parts.push('📷'+it.nimg+'장');if(it.ndoc)parts.push('📄'+it.ndoc+'개');sub+=' · '+parts.join(' ');}
       else if(it.nphoto){sub+=' · 📷'+it.nphoto+'장';}
-      var encEsc=esc(it.enc).replace(/'/g,"\'");
-      var titleEsc=esc(it.title||'').replace(/'/g,"\'");
       return '<div class="vault-card" id="vault-'+it.id+'">'+
         '<div class="vault-head">'+
-          '<div class="vault-titlebar"><span class="vault-name">'+(esc(it.title)||'(제목 없음)')+'</span><span class="vault-sub">'+sub+'</span></div>'+
+          '<div class="vault-titlebar">'+
+            '<span class="vault-name">'+(esc(it.title)||'(제목 없음)')+'</span>'+
+            '<span class="vault-sub">'+sub+'</span>'+
+          '</div>'+
           '<div class="vault-acts">'+
-            '<button class="rec-act" style="color:#6366F1" onclick="unlockVault(\''+it.id+'\',\''+encEsc+'\')">👁️ 열기</button>'+
-            '<button class="rec-act" style="color:#F59E0B" onclick="editVault(\''+it.id+'\',\''+encEsc+'\',\''+titleEsc+'\')">✏️ 수정</button>'+
+            '<button class="rec-act" style="color:#6366F1" onclick="unlockVault(\''+it.id+'\')">👁 열기</button>'+
+            '<button class="rec-act" style="color:#F59E0B" onclick="editVault(\''+it.id+'\')">✏️ 수정</button>'+
             '<button class="rec-act rec-del" onclick="delVault(\''+it.id+'\')">🗑 삭제</button>'+
           '</div>'+
         '</div>'+
@@ -2418,8 +2431,9 @@ function renderVault(){
   }).catch(function(e){logErr('보관함 조회 실패: '+e.message);box.innerHTML='<div class="empty">불러오기 실패</div>';});
 }
 
-function unlockVault(id,enc){
+function unlockVault(id){
   var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
+  var enc=(vaultStore[id]||{}).enc||'';if(!enc){toast('데이터 없음');return;}
   var body=$('vbody-'+id);if(body.innerHTML){body.innerHTML='';return;}
   body.innerHTML='<div style="font-size:12px;color:#9CA3AF;padding:6px 0">복호화 중…</div>';
   vaultDecrypt(enc,pin).then(function(plain){
