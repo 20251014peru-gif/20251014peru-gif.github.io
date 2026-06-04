@@ -1688,7 +1688,7 @@ let calView="month";  // "month" or "year"
 // v37: 달력 종류별 필터 (true=표시)
 const CAL_FILTER = {
   work:true, cleaning:true, memo:true, call:true, meeting:true,
-  deliver:true, vacation:true, expense:true, plan:true, schedule:true
+  deliver:true, vacation:true, expense:true, expense_tax:true, expense_personal:true, plan:true, schedule:true
 };
 (function(){ const d=new Date(); calY=d.getFullYear(); calM=d.getMonth(); })();
 function bindCalControls(){
@@ -1832,19 +1832,25 @@ function renderMonthView(){
         });
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#15803d">🧹 청소 ${clArr.length}</div>${cb}</div>`;
       }
-      if(exArr.length && CAL_FILTER.expense){
+      // 지출: 세금계산서 / 개인지출 분리 필터
+      const taxArr = exArr.filter(e=>e.expType==="세금계산서");
+      const personalArr = exArr.filter(e=>e.expType!=="세금계산서");
+      const renderExpGroup = (arr, isTax) => {
+        if(!arr.length) return;
+        if(isTax && !CAL_FILTER.expense_tax) return;
+        if(!isTax && !CAL_FILTER.expense_personal) return;
         hasContent=true;
-        // 지출 각 건별 제목과 금액 표시
-        let eb = "";
-        exArr.forEach(e=>{
-          const isTax = (e.expType==="세금계산서");
-          const icon = isTax ? "📃" : "💸";
-          const amt = won(Number(e.amount)||0);
-          const amtColor = isTax ? "#c2410c" : "#0369a1";
-          eb += `<div class="otitle" data-kind="expense" data-id="${e.id}">${icon} ${esc((e.title||"").slice(0,18))} <b style="color:${amtColor}">${amt}원</b></div>`;
+        const icon = isTax ? "📃" : "💸";
+        const color = isTax ? "#c2410c" : "#0369a1";
+        const label = isTax ? "📃 세금계산서" : "💸 개인지출";
+        let eb="";
+        arr.forEach(e=>{
+          eb += `<div class="otitle" data-kind="expense" data-id="${e.id}">${icon} ${esc((e.title||"").slice(0,18))} <b style="color:${color}">${won(Number(e.amount)||0)}원</b></div>`;
         });
-        inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#a85e3a">💰 지출 ${exArr.length}</div>${eb}</div>`;
-      }
+        inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${color}">${label} ${arr.length}</div>${eb}</div>`;
+      };
+      renderExpGroup(taxArr, true);
+      renderExpGroup(personalArr, false);
       if(vArr.length && CAL_FILTER.vacation){
         hasContent=true;
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.vacation}">${CAL_KIND_LABEL.vacation}</div><div class="vac">${esc(vArr.join(", "))}</div></div>`;
@@ -1997,7 +2003,17 @@ function renderDayDetail(){
     });
     h+='<div class="detail-block"><div class="bh">🧹 청소일지</div>'+clHtml.join("")+'</div>';
   }
-  if(ex.length) h+=`<div class="detail-block"><div class="bh">💰 지출/세금계산서</div>${ex.map(e=>`<div class="row-item" data-kind="expense" data-id="${e.id}"><div class="grow"><div class="t">${(e.expType==="세금계산서")?"📃":"💸"} ${esc(e.title||"")} <span class="pill amount">${won(e.amount||0)}원</span></div><div class="m">${e.memo?esc(e.memo):""}</div></div></div>`).join("")}</div>`;
+  if(ex.length){
+    const taxEx=ex.filter(e=>e.expType==="세금계산서");
+    const perEx=ex.filter(e=>e.expType!=="세금계산서");
+    const makeExBlock=(arr,label,color)=>{
+      if(!arr.length) return "";
+      const rows=arr.map(e=>`<div class="row-item" data-kind="expense" data-id="${e.id}"><div class="grow"><div class="t">${e.expType==="세금계산서"?"📃":"💸"} ${esc(e.title||"")} <span class="pill amount" style="background:${color}20;color:${color}">${won(e.amount||0)}원</span>${e.vendor?` <span style="font-size:12px;color:#888">${esc(e.vendor)}</span>`:""}</div><div class="m">${e.memo?esc(e.memo):""}</div><div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div></div></div>`).join("");
+      return `<div class="detail-block" style="border-left:3px solid ${color}"><div class="bh" style="color:${color}">${label} (${arr.length}건)</div>${rows}</div>`;
+    };
+    h+=makeExBlock(taxEx,"📃 세금계산서","#c2410c");
+    h+=makeExBlock(perEx,"💸 개인지출","#0369a1");
+  }
   if(sc.length) h+=`<div class="detail-block"><div class="bh">📅 업무예정</div>${sc.map(cardSchedule).join("")}</div>`;
   if(v.length) h+=`<div class="detail-block"><div class="bh">🌴 휴가</div>${v.map(cardVac).join("")}</div>`;
   if(w.length) h+=`<div class="detail-block"><div class="bh">🛠 업무</div>${w.map(cardWork).join("")}</div>`;
