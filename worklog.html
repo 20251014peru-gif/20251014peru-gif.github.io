@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-<link rel="stylesheet" id="main-css" href="worklog.css?v=20260604081839">
+<link rel="stylesheet" id="main-css" href="worklog.css?v=20260604091402">
 </head>
 <body>
 <header>
@@ -457,18 +457,22 @@
       </div>
       <p class="desc">개인 지출(품의서용)과 세금계산서 발급 내역(확인용)을 따로 관리합니다. 달력에서 날짜별로도 확인할 수 있어요.</p>
 
-      <input type="text" id="expSearch" class="search search-big" placeholder="🔍 검색 — 내역·비고·날짜">
+      <!-- 검색창 표준 스타일 -->
+      <div style="position:relative;margin-bottom:10px">
+        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none">🔍</span>
+        <input type="text" id="expSearch" placeholder="검색 — 내역·비고·날짜" style="padding-left:44px;height:48px;font-size:15px;font-weight:600;border:2.5px solid var(--primary);border-radius:14px;background:#f0f6ff;box-shadow:0 2px 12px rgba(63,124,184,.15);width:100%;box-sizing:border-box;outline:none">
+      </div>
+
+      <!-- 월필터 + 탭 한 줄 -->
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <div class="mat-tabs" style="margin:0;flex:1">
+          <button data-exptab="personal" class="active">💸 개인 지출</button>
+          <button data-exptab="tax">📃 세금계산서</button>
+        </div>
+        <select id="expMonthFilter" style="height:38px;padding:0 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;font-weight:600;background:#fff;cursor:pointer;min-width:120px"></select>
+      </div>
 
       <div id="expStats"></div>
-
-      <div class="mat-tabs" style="margin-top:14px">
-        <button data-exptab="personal" class="active">💸 개인 지출</button>
-        <button data-exptab="tax">📃 세금계산서</button>
-      </div>
-
-      <div class="filt-row">
-        <select id="expMonthFilter"></select>
-      </div>
 
       <div class="table-wrap">
         <table class="rec" id="expTable"><thead id="expThead"><tr>
@@ -750,6 +754,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=20260604081900"></script>
+<script src="worklog.js?v=20260604091402"></script>
 </body>
 </html>

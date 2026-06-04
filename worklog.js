@@ -4866,8 +4866,13 @@ function renderExpense(){
   const monthSel = $("expMonthFilter");
   if(monthSel){
     const allExp = entries.filter(e=>e.kind==="expense");
-    const months = [...new Set(allExp.map(e=>(e.date||"").slice(0,7)).filter(Boolean))].sort().reverse();
-    const cur = monthSel.value;
+    const months = [...new Set(allExp.map(e=>{
+      const d = e.date||e.createdAt&&new Date(e.createdAt).toISOString().slice(0,10)||"";
+      return d.slice(0,7);
+    }).filter(Boolean))].sort().reverse();
+    const curYM = todayStr().slice(0,7); // 현재 월
+    // EXP_FILTER.ym 없으면 현재 월 기본 선택
+    if(!EXP_FILTER.ym) EXP_FILTER.ym = months.includes(curYM) ? curYM : "";
     monthSel.innerHTML = `<option value="">전체 월</option>` + months.map(m=>`<option value="${m}">${m}</option>`).join("");
     monthSel.value = EXP_FILTER.ym && months.includes(EXP_FILTER.ym) ? EXP_FILTER.ym : "";
   }
