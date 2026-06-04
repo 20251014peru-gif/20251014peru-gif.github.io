@@ -1592,6 +1592,7 @@ function openDetail(id){
     '</div>'+
     '<button class="btn btn-primary" onclick="closeDetail()">닫기</button>';
   $('detailBg').classList.add('open');
+  document.body.classList.add('detail-open');
   var holder=$('detailCard').querySelector('.detail-photos[data-photoids]');
   if(holder){
     var ids=holder.getAttribute('data-photoids').split(',');holder.removeAttribute('data-photoids');
@@ -1600,7 +1601,7 @@ function openDetail(id){
     });});
   }
 }
-function closeDetail(){$('detailBg').classList.remove('open');}
+function closeDetail(){$('detailBg').classList.remove('open');document.body.classList.remove('detail-open');}
 /* 전화·주소 블록 (눌러서 전화걸기 / 지도) */
 function contactBlock(r){
   var h='';
