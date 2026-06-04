@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v55</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v56</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -289,7 +289,9 @@
       <div class="card-title">🩺 자가 진단</div>
       <p style="font-size:12px;color:#6B7280;margin-bottom:10px;">문제가 생기면 여기서 원인을 바로 확인하세요.</p>
       <button class="btn btn-primary" onclick="runDiag()">▶ 진단 실행</button>
+      <button class="btn btn-ghost" onclick="testVaultSave()" style="margin-left:8px">🔐 보관함 저장 테스트</button>
       <div id="diagOut" style="margin-top:14px"></div>
+      <div id="vaultDiagOut" style="margin-top:8px;font-size:12px;font-family:monospace;white-space:pre-wrap;background:#f8f8fc;padding:10px;border-radius:8px;display:none"></div>
       <button class="btn btn-ghost" onclick="clearErrors()" style="margin-top:8px">에러 기록 지우기</button>
     </div>
     <div class="card">
@@ -353,6 +355,6 @@
   <div class="cp-list" id="catPaneList"></div>
 </div>
 
-<script src="personal.js?v=55"></script>
+<script src="personal.js?v=56"></script>
 </body>
 </html>

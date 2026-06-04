@@ -2135,6 +2135,68 @@ function restoreBackup(ev){
 
 /* ===== 진단 ===== */
 function storageSize(){var t=0;for(var k in localStorage){if(localStorage.hasOwnProperty(k))t+=(localStorage[k].length+k.length);}return t;}
+
+/* ===== 보관함 저장 테스트 (진단용) ===== */
+async function testVaultSave(){
+  var out=document.getElementById('vaultDiagOut');
+  if(!out)return;
+  out.style.display='block';
+  function log(msg){out.textContent+=msg+'\n';console.log('[VaultTest]',msg);}
+  out.textContent='=== 보관함 저장 테스트 시작 ===\n';
+
+  // 1. crypto.subtle 사용 가능?
+  try{
+    if(!window.crypto||!window.crypto.subtle){throw new Error('crypto.subtle 없음');}
+    log('✅ 1. crypto.subtle 사용 가능');
+  }catch(e){log('❌ 1. '+e.message);return;}
+
+  // 2. PIN 확인
+  var pin=sessionPin;
+  if(!pin){log('⚠️ 2. sessionPin 없음 — PIN 재입력 시도');
+    pin=vaultKeyPin();
+  }
+  if(!pin){log('❌ 2. PIN 없음 — 먼저 앱에 PIN으로 로그인하세요');return;}
+  log('✅ 2. PIN 있음 (길이:'+pin.length+')');
+
+  // 3. 암호화 테스트
+  try{
+    var enc=await vaultEncrypt('{"memo":"테스트","files":[]}',pin);
+    log('✅ 3. 암호화 성공 (enc 길이:'+enc.length+')');
+    // 복호화 검증
+    var dec=await vaultDecrypt(enc,pin);
+    log('✅ 3b. 복호화 검증 성공: '+dec.slice(0,30));
+  }catch(e){log('❌ 3. 암호화 실패: '+e.message);return;}
+
+  // 4. Firestore PATCH 테스트
+  try{
+    var testId='__vault_test_'+Date.now();
+    var testEnc=await vaultEncrypt('{"memo":"진단테스트","files":[]}',pin);
+    var url=FB_BASE+'/'+COL_VAULT+'/'+testId+'?key='+FB_KEY;
+    log('🔄 4. Firestore PATCH 요청: '+url.slice(0,80)+'…');
+    var res=await fetch(url,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(toFS({enc:testEnc,title:'[진단테스트]',nfile:0,nimg:0,ndoc:0,created:new Date().toISOString()}))
+    });
+    var txt=await res.text();
+    log('HTTP 응답: '+res.status+' '+res.statusText);
+    if(res.ok){
+      log('✅ 4. Firestore 저장 성공!');
+      log('응답 앞 200자: '+txt.slice(0,200));
+      // 테스트 문서 삭제
+      await fetch(FB_BASE+'/'+COL_VAULT+'/'+testId+'?key='+FB_KEY,{method:'DELETE'});
+      log('✅ 4b. 테스트 문서 삭제 완료');
+      log('\n=== 결과: 보관함 저장 정상 작동 ===');
+      log('→ 실제 저장이 안 된다면 아래를 확인하세요:');
+      log('  - 제목이 비어있지 않은지');
+      log('  - vaultFiles에 data가 있는지 (파일 선택 후 미리보기 확인)');
+    }else{
+      log('❌ 4. Firestore 실패: '+txt.slice(0,300));
+    }
+  }catch(e){log('❌ 4. fetch 오류: '+e.message);}
+
+  log('\n=== 테스트 완료 ===');
+}
 function runDiag(){
   var rows=[];
   var lsOk=true;try{localStorage.setItem('__t','1');localStorage.removeItem('__t');}catch(e){lsOk=false;}
@@ -2324,49 +2386,71 @@ function vRemoveFile(i){
 }
 
 /* ---- 저장 ---- */
-function saveVault(){
+async function saveVault(){
   var title=($('v-title').value||'').trim();
   var memo=($('v-memo').value||'').trim();
   if(!title&&!memo&&!vaultFiles.length){toast('제목이나 내용을 넣으세요');return;}
-  var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
-  var btn=$('vSaveBtn');btn.disabled=true;btn.textContent='저장 중…';
-  function step(msg){vSetStatus('🔄 '+msg);}
 
-  // 모든 파일이 이미 base64(data)로 있음
-  Promise.resolve().then(function(){
-    step('데이터 준비 중…');
-    var payload=JSON.stringify({
-      memo:memo,
-      files:vaultFiles.map(function(f){
-        return {kind:f.kind,name:f.name,mime:f.mime||'',data:f.data||''};
-      })
+  /* 1단계: PIN 확인 */
+  vSetStatus('🔄 PIN 확인 중…');
+  var pin=vaultKeyPin();
+  if(!pin){vSetStatus('');toast('PIN이 필요해요');return;}
+  vSetStatus('✅ PIN 확인됨');
+
+  var btn=$('vSaveBtn');
+  btn.disabled=true;btn.textContent='저장 중…';
+
+  try{
+    /* 2단계: payload 구성 */
+    vSetStatus('🔄 데이터 구성 중…');
+    var fileList=vaultFiles.map(function(f){
+      return {kind:f.kind||'image',name:f.name||'',mime:f.mime||'',data:f.data||''};
     });
-    vSetStatus('암호화 중…');
-    if(payload.length>700000){
-      vSetStatus('⚠️ 데이터가 너무 커요 ('+Math.round(payload.length/1024)+'KB). 사진을 줄여주세요.');
-      btn.disabled=false;btn.textContent='🔒 암호화하여 저장';
-      return Promise.reject(new Error('payload too large'));
-    }
-    return vaultEncrypt(payload,pin);
-  }).then(function(enc){
+    var payload=JSON.stringify({memo:memo,files:fileList});
+    var kb=Math.round(payload.length/1024);
+    vSetStatus('🔄 payload '+kb+'KB — 암호화 시작…');
+
+    /* 3단계: 암호화 */
+    var enc=await vaultEncrypt(payload,pin);
+    vSetStatus('✅ 암호화 완료 ('+Math.round(enc.length/1024)+'KB) — Firestore 저장 중…');
+
+    /* 4단계: Firestore 저장 */
     var wasEdit=editingVaultId;
     var id=editingVaultId||String(Date.now());
-    var nImg=vaultFiles.filter(function(f){return f.kind==='image';}).length;
-    var nDoc=vaultFiles.filter(function(f){return f.kind==='file';}).length;
-    return fetch(FB_BASE+'/'+COL_VAULT+'/'+id+'?key='+FB_KEY,{
-      method:'PATCH',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(toFS({enc:enc,title:title,nfile:vaultFiles.length,nimg:nImg,ndoc:nDoc,created:new Date().toISOString()}))
-    }).then(function(res){
-      if(!res.ok){return res.text().then(function(t){throw new Error('HTTP '+res.status+': '+t.slice(0,120));});}
-      cancelVaultEdit();
-      toast(wasEdit?'✏️ 수정됨':'🔒 저장됨');
-      renderVault();
+    var nImg=fileList.filter(function(f){return f.kind==='image';}).length;
+    var nDoc=fileList.filter(function(f){return f.kind==='file';}).length;
+    var fsBody=toFS({
+      enc:enc,
+      title:title,
+      nfile:fileList.length,
+      nimg:nImg,
+      ndoc:nDoc,
+      created:new Date().toISOString()
     });
-  }).catch(function(e){
-    logErr('보관함 저장 실패: '+e.message);
-    vSetStatus('⚠️ 저장 실패: '+e.message);
-    btn.disabled=false;btn.textContent='🔒 암호화하여 저장';
-  });
+    var url=FB_BASE+'/'+COL_VAULT+'/'+id+'?key='+FB_KEY;
+    vSetStatus('🔄 Firestore PATCH 요청 중… ('+url.slice(0,60)+'…)');
+    var res=await fetch(url,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(fsBody)
+    });
+    var resText=await res.text();
+    if(!res.ok){
+      throw new Error('HTTP '+res.status+' — '+resText.slice(0,200));
+    }
+    vSetStatus('✅ 저장 완료!');
+    logErr('[보관함 성공] 저장됨 id='+id);
+    setTimeout(function(){cancelVaultEdit();},300);
+    toast(wasEdit?'✏️ 수정됨':'🔒 저장됨');
+    setTimeout(function(){renderVault();},400);
+  }catch(err){
+    var msg=err&&err.message?err.message:String(err);
+    vSetStatus('❌ 저장 실패: '+msg);
+    logErr('[보관함 실패] '+msg);
+    toast('⚠️ 저장 실패 — 진단/오류 탭 확인');
+    btn.disabled=false;
+    btn.textContent='🔒 암호화하여 저장';
+  }
 }
 
 function cancelVaultEdit(){
