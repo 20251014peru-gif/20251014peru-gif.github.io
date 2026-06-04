@@ -588,3 +588,73 @@ textarea{resize:vertical;min-height:74px;}
   background:#D1FAE5;border:1.5px solid #6EE7B7;color:#065F46;
   border-radius:8px;padding:6px 10px;
 }
+
+/* ===== catPane v50: 빠른입력 + 인라인수정 ===== */
+.cat-pane{--cp-accent:#7d8fd0;}
+.cp-quick-form{
+  padding:14px 16px 10px;border-bottom:2px solid #F3F4F6;
+  background:#FAFBFF;
+}
+.cp-qf-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px;}
+.cp-qinput{
+  border:1px solid #D1D5DB;border-radius:8px;padding:7px 10px;
+  font-size:13px;font-family:inherit;outline:none;
+  background:#fff;
+}
+.cp-qinput:focus{border-color:var(--cp-accent);}
+.cp-date-in{width:130px;flex-shrink:0;}
+.cp-who-in{width:80px;}
+.cp-amt-in{width:90px;}
+.cp-qtextarea{
+  width:100%;border:1px solid #D1D5DB;border-radius:8px;
+  padding:7px 10px;font-size:13px;font-family:inherit;
+  resize:vertical;box-sizing:border-box;margin-bottom:6px;
+}
+.cp-qtextarea:focus{border-color:var(--cp-accent);outline:none;}
+.cp-qsave{
+  width:100%;background:var(--cp-accent);color:#fff;
+  border:none;border-radius:10px;padding:9px;
+  font-size:14px;font-weight:700;cursor:pointer;
+}
+.cp-qsave:hover{opacity:.9;}
+.cp-list-inner{padding:0;}
+/* 목록 행 */
+.cp-row2{border-bottom:1px solid #F3F4F6;}
+.cp-row2-main{
+  display:grid;grid-template-columns:44px 1fr auto;grid-template-rows:auto auto;
+  gap:2px 6px;padding:10px 8px 10px 14px;cursor:pointer;
+}
+.cp-row2-main:hover{background:#F8F9FF;}
+.cp-date2{font-size:11px;color:#9CA3AF;white-space:nowrap;}
+.cp-title2{font-size:14px;font-weight:600;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cp-sub2{font-size:12px;color:#6B7280;grid-column:2;grid-row:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cp-amt-tag{font-size:13px;font-weight:700;color:#EF4444;white-space:nowrap;}
+.cp-row2-acts{
+  display:flex;gap:2px;padding:0 8px;align-items:center;
+  background:#FAFBFF;border-top:1px solid #F3F4F6;
+}
+.cp-edit-btn,.cp-del-btn{
+  background:none;border:none;cursor:pointer;
+  font-size:14px;padding:4px 8px;border-radius:6px;
+}
+.cp-edit-btn:hover{background:#EEF2FF;}
+.cp-del-btn:hover{background:#FEE2E2;}
+/* 인라인 수정 */
+.cp-inline-edit{
+  padding:10px 14px;background:#F8F9FF;
+  border-top:1px dashed #E0E7FF;
+}
+.cp-edit-btns{display:flex;gap:6px;margin-top:6px;}
+.cp-qcancel{
+  flex:1;background:#F3F4F6;color:#6B7280;
+  border:none;border-radius:10px;padding:9px;
+  font-size:14px;font-weight:600;cursor:pointer;
+}
+
+/* ===== 생각/아이디어 구분 select ===== */
+#f-subtype.think-sub{
+  background:#EDE9FE;border-color:#A78BFA;color:#5B21B6;font-weight:700;
+}
+
+/* ===== 일상 카테고리 ===== */
+.daily-mood-row{display:flex;gap:8px;margin-top:8px;}

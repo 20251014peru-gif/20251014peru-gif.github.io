@@ -362,12 +362,18 @@ function renderCustomForm(kind,v){
   v=v||{};formItems=(v.items&&v.items.slice())||[];
   var h='';
   if(kind==='think'){
+    var thinkSub=v.subtype||'생각';
+    var thinkOpts=['생각','아이디어'].map(function(s){return '<option'+(s===thinkSub?' selected':'')+'>'+s+'</option>';}).join('');
+    var ph=thinkSub==='아이디어'?'실행 가능한 아이디어':'요즘 드는 생각';
+    var lbl=thinkSub==='아이디어'?'아이디어 ↔ 실행방법':'생각 ↔ 자세히';
+    var addLbl=thinkSub==='아이디어'?'＋ 아이디어 추가':'＋ 생각 추가';
     h='<div class="form-grid">'+
-      fgItem('제목','<input type="text" id="f-title" placeholder="요즘 드는 생각" value="'+ev(v.title)+'">',true)+
+      fgItem('종류','<select id="f-subtype" onchange="reloadThinkForm()">'+thinkOpts+'</select>')+
+      fgItem('제목','<input type="text" id="f-title" placeholder="'+ph+'" value="'+ev(v.title)+'">',true)+
       '</div>'+
-      '<label style="margin-top:10px">생각 ↔ 자세히 (추가 가능)</label>'+
+      '<label style="margin-top:10px">'+lbl+' (추가 가능)</label>'+
       '<div id="itemRows"></div>'+
-      '<button type="button" class="add-row-btn" onclick="addItem(\'think\')">＋ 생각 추가</button>'+
+      '<button type="button" class="add-row-btn" onclick="addItem(\'think\')">'+addLbl+'</button>'+
       fgWrap('전체 메모','<textarea id="f-detail" placeholder="추가 메모">'+ev(v.detail)+'</textarea>');
     $('formFields').innerHTML=h;renderItems('think');return;
   }
@@ -456,8 +462,11 @@ function renderCustomForm(kind,v){
     $('formFields').innerHTML=h;renderItems('health');return;
   }
   if(kind==='person'){
-    var subtypes=['통화','만남','약속','가족'];
+    /* 만남+약속 통합 → 만남(시간·장소·준비물 포함) */
+    var subtypes=['통화','만남','가족'];
     var sub=v.subtype||'통화';
+    /* 기존 약속 → 만남으로 이관 */
+    if(sub==='약속')sub='만남';
     var subOpts=subtypes.map(function(s){return '<option'+(s===sub?' selected':'')+'>'+s+'</option>';}).join('');
     h='<div class="form-grid">'+
       fgItem('구분','<select id="f-subtype" onchange="togglePersonType()">'+subOpts+'</select>')+
@@ -465,39 +474,32 @@ function renderCustomForm(kind,v){
       fgItem('전화번호','<input type="tel" id="f-phone" placeholder="010-1234-5678" value="'+ev(v.phone)+'">')+
       '</div>'+
       '<div id="personSub">'+
-      /* 통화 필드 */
+      /* 통화 */
       '<div id="pSub_통화" class="person-sub">'+
         '<div class="form-grid">'+
           fgItem('통화 주제','<input type="text" id="f-title" placeholder="계약 일정 조율" value="'+ev(v.title)+'">',true)+
         '</div>'+
         fgWrap('통화 내용·결정사항','<textarea id="f-detail" placeholder="무슨 얘기를 했는지">'+ev(v.detail)+'</textarea>')+
       '</div>'+
-      /* 만남 필드 */
+      /* 만남 (약속+만남 통합: 시간·장소·준비물·비용) */
       '<div id="pSub_만남" class="person-sub" style="display:none">'+
         '<div class="form-grid">'+
-          fgItem('무슨 일','<input type="text" id="f-title" placeholder="점심 식사·카페" value="'+ev(v.title)+'">',true)+
-          fgItem('장소','<input type="text" id="f-place" placeholder="강남 스타벅스" value="'+ev(v.place)+'">')+
-        '</div>'+
-        fgWrap('내용·느낀 점','<textarea id="f-detail" placeholder="있었던 일">'+ev(v.detail)+'</textarea>')+
-      '</div>'+
-      /* 약속 필드 */
-      '<div id="pSub_약속" class="person-sub" style="display:none">'+
-        '<div class="form-grid">'+
-          fgItem('약속 내용','<input type="text" id="f-title" placeholder="거래처 미팅" value="'+ev(v.title)+'">',true)+
+          fgItem('내용','<input type="text" id="f-title" placeholder="거래처 미팅 / 점심 식사" value="'+ev(v.title)+'">',true)+
           fgItem('시간','<input type="time" id="f-time2" value="'+ev(v.time2)+'">')+
           fgItem('장소','<input type="text" id="f-place" placeholder="강남역 2번 출구" value="'+ev(v.place)+'">')+
-          fgItem('준비물','<input type="text" id="f-prep" placeholder="계약서, 도장" value="'+ev(v.prep)+'">')+
+          fgItem('준비물 <span class="opt">(선택)</span>','<input type="text" id="f-prep" placeholder="계약서, 도장" value="'+ev(v.prep)+'">')+
         '</div>'+
-        '<label style="margin-top:10px">비용 (추가 가능)</label>'+
+        '<label style="margin-top:10px">비용 <span class="opt">(선택)</span></label>'+
         '<div id="itemRows"></div>'+
         '<button type="button" class="add-row-btn" onclick="addItem(\'person\')">＋ 비용 추가</button>'+
         '<div class="item-total" id="itemTotal"></div>'+
-        fgWrap('메모','<textarea id="f-detail" placeholder="기타 메모">'+ev(v.detail)+'</textarea>')+
+        fgWrap('메모','<textarea id="f-detail" placeholder="있었던 일·기타 메모">'+ev(v.detail)+'</textarea>')+
       '</div>'+
-      /* 가족 필드 */
+      /* 가족 */
       '<div id="pSub_가족" class="person-sub" style="display:none">'+
         '<div class="form-grid">'+
           fgItem('무슨 일','<input type="text" id="f-title" placeholder="가족 외식·여행" value="'+ev(v.title)+'">',true)+
+          fgItem('장소 <span class="opt">(선택)</span>','<input type="text" id="f-place" placeholder="어디서" value="'+ev(v.place)+'">')+
         '</div>'+
         fgWrap('내용·느낀 점','<textarea id="f-detail" placeholder="있었던 일">'+ev(v.detail)+'</textarea>')+
       '</div>'+
@@ -505,10 +507,27 @@ function renderCustomForm(kind,v){
     $('formFields').innerHTML=h;
     togglePersonType();
     if($('f-who')&&$('f-phone'))attachWhoAutocomplete('f-who','f-phone');
-    if(sub==='약속')renderItems('person');
+    if(sub==='만남')renderItems('person');
     return;
   }
 
+  if(kind==='daily'){
+    var moods=['😊 좋음','😐 보통','😔 나쁨','😤 화남','😌 평온','🥳 신남','😴 피곤'];
+    var weathers=['☀️ 맑음','⛅ 흐림','🌧️ 비','❄️ 눈','💨 바람','🌤️ 구름 조금'];
+    var mOpts=moods.map(function(m){return '<option'+(m===v.mood?' selected':'')+'>'+m+'</option>';}).join('');
+    var wOpts=weathers.map(function(w){return '<option'+(w===v.weather?' selected':'')+'>'+w+'</option>';}).join('');
+    h='<div class="form-grid">'+
+      fgItem('오늘 한 마디','<input type="text" id="f-title" placeholder="오늘을 한 단어로 표현한다면?" value="'+ev(v.title)+'" style="font-size:16px;font-weight:600">',true)+
+      fgItem('날씨','<select id="f-weather">'+wOpts+'</select>')+
+      fgItem('기분','<select id="f-mood">'+mOpts+'</select>')+
+      '</div>'+
+      fgWrap('오늘 있었던 일','<textarea id="f-detail" placeholder="오늘 무슨 일이 있었나요? 자유롭게 적어요." style="min-height:90px">'+ev(v.detail)+'</textarea>')+
+      '<div style="margin-top:12px"><label>감사한 것 <span class=\"opt\">(추가 가능)</span></label>'+
+      '<div id="itemRows"></div>'+
+      '<button type="button" class="add-row-btn" onclick="addItem(\'daily\')">＋ 감사한 것 추가</button></div>'+
+      fgWrap('내일 할 일','<textarea id="f-tomorrow" placeholder="내일 꼭 해야 할 것." style="min-height:60px">'+ev(v.tomorrow)+'</textarea>');
+    $('formFields').innerHTML=h;renderItems('daily');return;
+  }
   if(kind==='book'){
     h='<div class="form-grid">'+
       fgItem('책 제목','<input type="text" id="f-title" placeholder="사피엔스" value="'+ev(v.title)+'">',true)+
@@ -524,6 +543,11 @@ function renderCustomForm(kind,v){
       fgWrap('전체 메모','<textarea id="f-detail" placeholder="책 전체 감상">'+ev(v.detail)+'</textarea>');
     $('formFields').innerHTML=h;renderItems('book');calcBook();return;
   }
+}
+
+function reloadThinkForm(){
+  var cur=collectFields();
+  renderCustomForm('think',cur);
 }
 function starOpts(cur){return [1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(String(cur)===String(n)?' selected':'')+'>'+'⭐'.repeat(n)+'</option>';}).join('');}
 function ev(x){return x!=null?esc(String(x)):'';}
@@ -599,6 +623,7 @@ function addItem(kind){
   else if(kind==='trip')formItems.push({name:'',price:''});
   else if(kind==='person')formItems.push({name:'',price:''});
   else if(kind==='car')formItems.push({name:'',price:''});
+  else if(kind==='daily')formItems.push({quote:''});
   renderItems(kind);
 }
 function delItem(kind,i){formItems.splice(i,1);renderItems(kind);}
@@ -607,7 +632,7 @@ function renderItems(kind){
   var box=$('itemRows');if(!box)return;
   var h='';
   formItems.forEach(function(it,i){
-    if(kind==='think'||kind==='book'){
+    if(kind==='think'||kind==='book'||kind==='daily'){
       var t1=kind==='book'?'📜 핵심 문장':'💭 생각';
       var t2=kind==='book'?'💡 내 생각':'📝 자세히';
       h+='<div class="quote-row"><div class="quote-head"><span class="quote-no">'+(i+1)+'</span><button type="button" class="item-del" onclick="delItem(\''+kind+'\','+i+')">×</button></div>'+
@@ -644,13 +669,11 @@ function sumItems(kind){
 /* ===== 사람 카테고리: 구분별 필드 토글 ===== */
 function togglePersonType(){
   var sub=($('f-subtype')||{}).value||'통화';
-  ['통화','만남','약속','가족'].forEach(function(s){
+  ['통화','만남','가족'].forEach(function(s){
     var el=document.getElementById('pSub_'+s);
     if(el)el.style.display=(s===sub?'':'none');
   });
-  // 약속일 때만 items(비용) 렌더
-  if(sub==='약속')renderItems('person');
-  // 전화번호 칸: 만남/가족은 선택사항으로 흐리게
+  if(sub==='만남')renderItems('person');
   var ph=$('f-phone');
   if(ph){
     ph.style.opacity=(sub==='만남'||sub==='가족')?'0.5':'1';
@@ -927,28 +950,16 @@ function computeCar(rec,records){
 
 
 /* ===== 카테고리 내역 슬라이드 패널 ===== */
+var cpCurCat='';
 function openCatPane(k){
+  cpCurCat=k;
   var c=catOf(k);
-  var arr=getRecords().filter(function(r){return r.cat===k;});
-  arr.sort(function(a,b){return (b.date+(b.time||'')).localeCompare(a.date+(a.time||''));});
-  $('catPaneTitle').innerHTML=c.i+' '+esc(k)+' <span class="cp-cnt">'+arr.length+'건</span>';
-  $('catPaneList').innerHTML=arr.length?arr.map(function(r){
-    var amt='';
-    if(r.cat==='독서'&&r.stars){amt='<span class="cp-stars">'+'⭐'.repeat(Math.min(5,Math.round(r.stars)))+'</span>';}
-    else if(r.amount){amt='<span class="cp-amt">'+won(r.amount)+'원</span>';}
-    return '<div class="cp-row" onclick="openDetail(\''+r.id+'\')">' +
-      '<span class="cp-date">'+r.date.slice(5).replace('-','/')+'</span>'+
-      '<span class="cp-title">'+(esc(r.title)||esc(k))+(photoMark(r)||'')+'</span>'+
-      '<span class="cp-sub">'+rowSummary(r)+'</span>'+
-      amt+'</div>';
-  }).join(''):'<div class="cp-empty">기록이 없어요</div>';
   var pane=$('catPane');if(!pane)return;
   pane.classList.add('open');
-  pane.style.borderTopColor=c.c;
-  // ESC로 닫기
+  pane.style.setProperty('--cp-accent',c.c);
+  renderCatPane();
   function onKey(e){if(e.key==='Escape'){closeCatPane();document.removeEventListener('keydown',onKey);}}
   document.addEventListener('keydown',onKey);
-  // 외부 클릭 닫기
   setTimeout(function(){
     document.addEventListener('click',function oCPO(e){
       var pn=$('catPane');if(!pn)return;
@@ -957,7 +968,98 @@ function openCatPane(k){
     },true);
   },50);
 }
-function closeCatPane(){var p=$('catPane');if(p)p.classList.remove('open');}
+function renderCatPane(){
+  var k=cpCurCat;
+  var c=catOf(k);
+  var arr=getRecords().filter(function(r){return r.cat===k;});
+  arr.sort(function(a,b){return (b.date+(b.time||'')).localeCompare(a.date+(a.time||''));});
+  /* 헤더 */
+  $('catPaneTitle').innerHTML=c.i+' '+esc(k)+' <span class="cp-cnt">'+arr.length+'건</span>';
+  /* 빠른 입력 폼 */
+  var today=new Date().toISOString().slice(0,10);
+  var qf='<div class="cp-quick-form" id="cpQuickForm">'+
+    '<div class="cp-qf-row">'+
+      '<input type="date" id="cpDate" value="'+today+'" class="cp-qinput cp-date-in">'+
+      '<input type="text" id="cpTitle" placeholder="제목 (필수)" class="cp-qinput" style="flex:1">'+
+      '<input type="text" id="cpWho" placeholder="관련" class="cp-qinput cp-who-in">'+
+      '<input type="number" id="cpAmt" placeholder="금액" class="cp-qinput cp-amt-in">'+
+    '</div>'+
+    '<textarea id="cpDetail" placeholder="내용 (선택)" class="cp-qtextarea" rows="2"></textarea>'+
+    '<button class="cp-qsave" onclick="saveCatQuick()">＋ '+esc(k)+' 저장</button>'+
+  '</div>';
+  /* 목록 */
+  var list=arr.length?arr.map(function(r){
+    var amt='';
+    if(r.cat==='독서'&&r.stars){amt='<span class="cp-amt-tag">'+'⭐'.repeat(Math.min(5,Math.round(r.stars)))+'</span>';}
+    else if(r.amount){amt='<span class="cp-amt-tag">'+won(r.amount)+'원</span>';}
+    return '<div class="cp-row2" id="cpr_'+r.id+'">'+
+      '<div class="cp-row2-main" onclick="openDetail(\''+r.id+'\')">'+
+        '<span class="cp-date2">'+r.date.slice(5).replace('-','/')+'</span>'+
+        '<span class="cp-title2">'+(esc(r.title)||esc(k))+(photoMark(r)||'')+'</span>'+
+        '<span class="cp-sub2">'+rowSummary(r)+'</span>'+
+        amt+
+      '</div>'+
+      '<div class="cp-row2-acts">'+
+        '<button class="cp-edit-btn" onclick="cpEditRow(\''+r.id+'\')">✏️</button>'+
+        '<button class="cp-del-btn" onclick="cpDelRow(\''+r.id+'\')">🗑</button>'+
+      '</div>'+
+      '<div class="cp-inline-edit" id="cpe_'+r.id+'" style="display:none">'+
+        '<div class="cp-qf-row">'+
+          '<input type="date" id="cped_date_'+r.id+'" value="'+r.date+'" class="cp-qinput cp-date-in">'+
+          '<input type="text" id="cped_title_'+r.id+'" value="'+esc(r.title||'')+'" placeholder="제목" class="cp-qinput" style="flex:1">'+
+          '<input type="text" id="cped_who_'+r.id+'" value="'+esc(r.who||'')+'" placeholder="관련" class="cp-qinput cp-who-in">'+
+          '<input type="number" id="cped_amt_'+r.id+'" value="'+(r.amount||'')+'" placeholder="금액" class="cp-qinput cp-amt-in">'+
+        '</div>'+
+        '<textarea id="cped_detail_'+r.id+'" class="cp-qtextarea" rows="2">'+esc(r.detail||'')+'</textarea>'+
+        '<div class="cp-edit-btns">'+
+          '<button class="cp-qsave" onclick="cpSaveRow(\''+r.id+'\')">✅ 저장</button>'+
+          '<button class="cp-qcancel" onclick="cpCancelRow(\''+r.id+'\')">취소</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join(''):'<div class="cp-empty">기록이 없어요 — 위에서 바로 추가하세요</div>';
+  $('catPaneList').innerHTML=qf+'<div class="cp-list-inner">'+list+'</div>';
+}
+function saveCatQuick(){
+  var title=($('cpTitle')||{}).value||'';title=title.trim();
+  if(!title){$('cpTitle').focus();$('cpTitle').style.borderColor='#EF4444';return;}
+  $('cpTitle').style.borderColor='';
+  var id=String(Date.now());
+  var rec={id:id,cat:cpCurCat,date:($('cpDate')||{}).value||new Date().toISOString().slice(0,10),
+    title:title,who:($('cpWho')||{}).value||'',
+    amount:Number(($('cpAmt')||{}).value||0)||undefined,
+    detail:($('cpDetail')||{}).value||'',
+    created:new Date().toISOString()};
+  if(!rec.amount)delete rec.amount;
+  var recs=getRecords();recs.unshift(rec);setRecords(recs);
+  fbPush(rec);
+  toast('✅ '+esc(cpCurCat)+' 저장됨');
+  renderCatPane();renderCats();
+}
+function cpEditRow(id){
+  // 다른 열린 수정 닫기
+  document.querySelectorAll('.cp-inline-edit').forEach(function(el){el.style.display='none';});
+  var el=document.getElementById('cpe_'+id);if(el)el.style.display='block';
+}
+function cpCancelRow(id){var el=document.getElementById('cpe_'+id);if(el)el.style.display='none';}
+function cpSaveRow(id){
+  var recs=getRecords();var r=recs.find(function(x){return x.id===id;});if(!r)return;
+  r.date=($('cped_date_'+id)||{}).value||r.date;
+  r.title=($('cped_title_'+id)||{}).value||r.title;
+  r.who=($('cped_who_'+id)||{}).value||'';
+  r.amount=Number(($('cped_amt_'+id)||{}).value||0)||undefined;
+  if(!r.amount)delete r.amount;
+  r.detail=($('cped_detail_'+id)||{}).value||'';
+  setRecords(recs);fbPush(r);
+  toast('✏️ 수정됨');renderCatPane();renderCats();
+}
+function cpDelRow(id){
+  if(!confirm('이 기록을 삭제할까요?'))return;
+  var recs=getRecords().filter(function(x){return x.id!==id;});setRecords(recs);
+  fbDelete(COL,id);
+  toast('🗑 삭제됨');renderCatPane();renderCats();
+}
+function closeCatPane(){var p=$('catPane');if(p)p.classList.remove('open');cpCurCat='';}
 /* ===== 모아보기 ===== */
 var listFilter='전체';
 var carFilter='전체';
@@ -1147,10 +1249,9 @@ function rowSummary(r){
     if(r.who)s.push(esc(r.who));
     var its4=items();if(its4.length)s.push(its4.join(', '));
   }else if(r.cat==='사람'){
-    var sub=r.subtype||'';
+    var sub=(r.subtype==='약속'?'만남':r.subtype)||'';
     if(r.who)s.push(esc(r.who));
-    if(sub==='약속'){if(r.time2)s.push('🕐'+esc(r.time2));if(r.place)s.push('📍'+esc(r.place));if(r.prep)s.push('🎒'+esc(r.prep));}
-    else if(sub==='만남'||sub==='가족'){if(r.place)s.push('📍'+esc(r.place));}
+    if(sub==='만남'||sub==='가족'){if(r.time2)s.push('🕐'+esc(r.time2));if(r.place)s.push('📍'+esc(r.place));if(r.prep)s.push('🎒'+esc(r.prep));}
     else{if(r.phone)s.push('📞'+esc(r.phone));}
     if(sub)s.push('['+sub+']');
   }else if(r.cat==='독서'){
@@ -1214,7 +1315,7 @@ function detailExtra(r){
     if(fp.length)h+='<div class="dx-line">⛽ '+fp.join(' · ')+'</div>';
   }
   // 항목 리스트가 있는 카테고리 (맛집/건강/여행/약속/정비)
-  if((r.cat==='맛집'||r.cat==='건강'||r.cat==='여행'||(r.cat==='사람'&&r.subtype==='약속')||r.cat==='차계부')&&r.items&&r.items.length){
+  if((r.cat==='맛집'||r.cat==='건강'||r.cat==='여행'||(r.cat==='사람'&&(r.subtype==='만남'||r.subtype==='약속'))||r.cat==='차계부')&&r.items&&r.items.length){
     h+='<div class="dx-items">';
     r.items.forEach(function(it){
       var left=(it.type?'<span class="dx-type">'+esc(it.type)+'</span> ':'')+esc(it.name||'');
@@ -1225,7 +1326,7 @@ function detailExtra(r){
     if(r.amount)h+='<div class="dx-item dx-sum"><span>합계</span><span class="dx-price">'+won(r.amount)+'원</span></div>';
     h+='</div>';
   }
-  if(r.cat==='사람'&&r.subtype==='약속'&&r.prep)h+='<div class="dx-line">🎒 준비물: '+esc(r.prep)+'</div>';
+  if(r.cat==='사람'&&(r.subtype==='만남'||r.subtype==='약속')&&r.prep)h+='<div class="dx-line">🎒 준비물: '+esc(r.prep)+'</div>';
   // 생각/독서 짝 비교
   if((r.cat==='독서'||r.cat==='생각')&&r.items&&r.items.length){
     var tag1=r.cat==='독서'?'📜 핵심':'💭 생각',tag2=r.cat==='독서'?'💡 생각':'📝 자세히';
@@ -1727,7 +1828,7 @@ function renderApptBanner(){
   var el=$('apptBanner');if(!el)return;
   var today=new Date();today.setHours(0,0,0,0);
   var soon=getRecords().filter(function(r){
-    if(!(r.cat==='사람'&&r.subtype==='약속'))return false;
+    if(!(r.cat==='사람'&&(r.subtype==='만남'||r.subtype==='약속')))return false;
     var d=new Date(r.date+'T00:00');var diff=Math.round((d-today)/86400000);
     return diff>=0&&diff<=7;
   }).sort(function(a,b){return a.date.localeCompare(b.date);});
