@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v64</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v65</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -69,15 +69,17 @@
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="tab('write',this)">✏️ 기록</button>
-  <button class="tab" onclick="tab('contacts',this)">📞 연락처</button>
-  <button class="tab" onclick="tab('vault',this)">🔐 보관함</button>
-  <button class="tab" onclick="tab('list',this)">📋 모아보기</button>
-  <button class="tab" onclick="tab('cal',this)">📅 달력</button>
-  <button class="tab" onclick="tab('stats',this)">📊 통계</button>
-  <button class="tab" onclick="tab('chat',this)">💬 AI 대화</button>
-  <button class="tab" onclick="tab('ai',this)">🧠 분석</button>
-  <button class="tab" onclick="tab('diag',this)">🩺 진단/오류</button>
+  <div class="tabs-inner">
+    <button class="tab active" onclick="tab('write',this)">✏️ 기록</button>
+    <button class="tab" onclick="tab('contacts',this)">📞 연락처</button>
+    <button class="tab" onclick="tab('vault',this)">🔐 보관함</button>
+    <button class="tab" onclick="tab('list',this)">📋 모아보기</button>
+    <button class="tab" onclick="tab('cal',this)">📅 달력</button>
+    <button class="tab" onclick="tab('stats',this)">📊 통계</button>
+    <button class="tab" onclick="tab('chat',this)">💬 AI 대화</button>
+    <button class="tab" onclick="tab('ai',this)">🧠 분석</button>
+    <button class="tab" onclick="tab('diag',this)">🩺 진단/오류</button>
+  </div>
 </div>
 
 <div class="wrap">
@@ -398,6 +400,6 @@ var vaultFirebaseApp = firebase.initializeApp({
 var vaultDb = vaultFirebaseApp.firestore();
 var vaultStorage = vaultFirebaseApp.storage();
 </script>
-<script src="personal.js?v=64"></script>
+<script src="personal.js?v=65"></script>
 </body>
 </html>

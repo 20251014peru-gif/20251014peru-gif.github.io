@@ -13,7 +13,8 @@ body{background:#F0F0F5;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun 
 .api-btn.on{background:#DCFCE7;color:#15803D;}
 .api-btn.off{background:#FEE2E2;color:#B91C1C;}
 
-.tabs{display:flex;background:#fff;border-bottom:1px solid #E5E7EB;overflow-x:auto;position:sticky;top:52px;z-index:19;}
+.tabs{background:#fff;border-bottom:1px solid #E5E7EB;position:sticky;top:52px;z-index:19;}
+.tabs-inner{display:flex;overflow-x:auto;max-width:1100px;margin:0 auto;padding:0 16px;}
 .tab{flex:0 0 auto;padding:13px 15px;font-size:13px;font-weight:600;color:#9CA3AF;border:none;background:none;cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;}
 .tab.active{color:#1A1A2E;border-bottom-color:#6366F1;}
 
