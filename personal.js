@@ -2363,8 +2363,14 @@ async function saveVault(){
   var title=($('v-title').value||'').trim();
   var memo=($('v-memo').value||'').trim();
   if(!title&&!memo&&!vaultFiles.length){toast('제목이나 내용을 넣으세요');return;}
-  var pin=vaultKeyPin();
-  if(!pin){toast('PIN이 필요해요');return;}
+  /* PIN: sessionPin 우선, 없으면 직접 입력 */
+  var pin=sessionPin;
+  if(!pin){
+    var p=prompt('PIN 4자리를 입력하세요');
+    if(!p){toast('PIN이 필요해요');return;}
+    if(hashPin(p)!==localStorage.getItem(PIN_KEY)){toast('PIN이 맞지 않아요');return;}
+    sessionPin=p; pin=p;
+  }
 
   var btn=$('vSaveBtn');
   btn.disabled=true;btn.textContent='저장 중…';
