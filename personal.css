@@ -341,3 +341,19 @@ textarea{resize:vertical;min-height:74px;}
 .vault-title{font-size:16px;font-weight:700;margin-top:10px;}
 .vault-memo{font-size:14px;color:#4B5563;white-space:pre-wrap;margin-top:6px;line-height:1.6;}
 .toast.show{opacity:1;}
+/* ===== 급한 메모 ===== */
+.memo-fab{background:#FEF3C7;border:1.5px solid #F59E0B;color:#B45309;width:38px;height:38px;border-radius:50%;font-size:18px;cursor:pointer;font-weight:700;padding:0;position:relative;}
+.memo-fab.has-content::after{content:'';position:absolute;top:3px;right:3px;width:9px;height:9px;border-radius:50%;background:#EF4444;border:2px solid #fff;}
+.memo-fab:active{background:#FDE68A;}
+.memo-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:140;}
+.memo-backdrop.open{display:block;}
+.memo-panel{position:fixed;top:0;right:0;width:min(420px,92vw);height:100%;background:#FFFBEB;z-index:141;transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column;box-shadow:-4px 0 24px rgba(0,0,0,.15);}
+.memo-panel.open{transform:translateX(0);}
+.memo-panel-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #FDE68A;background:#FEF3C7;}
+.memo-panel-title{font-size:15px;font-weight:800;color:#92400E;}
+.memo-saved{font-size:11px;color:#9CA3AF;font-weight:500;margin-left:6px;}
+.memo-panel-acts{display:flex;gap:8px;align-items:center;}
+.memo-panel-acts .btn-mini{border:1px solid #FCA5A5;background:#fff;color:#DC2626;padding:5px 10px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;}
+.memo-x{border:none;background:none;font-size:22px;color:#92400E;cursor:pointer;padding:0 4px;}
+.memo-area{flex:1;border:none;background:#FFFBEB;padding:18px 18px;font-size:15px;line-height:1.65;color:#1A1A2E;font-family:inherit;outline:none;border-radius:0;}
+.memo-area:focus{background:#FFFBEB;}

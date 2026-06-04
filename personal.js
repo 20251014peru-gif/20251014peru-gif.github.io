@@ -1750,6 +1750,44 @@ function delVault(id){
   fetch(FB_BASE+'/'+COL_VAULT+'/'+id+'?key='+FB_KEY,{method:'DELETE'}).then(function(){toast('삭제됨');renderVault();}).catch(function(){toast('삭제 실패');});
 }
 
+/* ===== 급한 메모 (어디서나 빠른 메모) ===== */
+var QMEMO_KEY='personal-quickmemo';
+var qmemoTimer=null;
+function openQuickMemo(){
+  $('memoBackdrop').classList.add('open');
+  $('memoPanel').classList.add('open');
+  var ta=$('quickMemoText');
+  ta.value=localStorage.getItem(QMEMO_KEY)||'';
+  setTimeout(function(){ta.focus();},100);
+}
+function closeQuickMemo(){
+  // 닫기 전 즉시 저장 (자동저장 타이머가 안 끝났을 수 있어서)
+  if(qmemoTimer){clearTimeout(qmemoTimer);qmemoTimer=null;}
+  var ta=$('quickMemoText');
+  if(ta)localStorage.setItem(QMEMO_KEY,ta.value);
+  $('memoBackdrop').classList.remove('open');
+  $('memoPanel').classList.remove('open');
+  qmemoUpdateFab();
+}
+function clearQuickMemo(){
+  if(!confirm('급한 메모를 다 지울까요?'))return;
+  localStorage.removeItem(QMEMO_KEY);
+  $('quickMemoText').value='';
+  $('memoSaved').textContent='지워짐';
+  qmemoUpdateFab();
+}
+function qmemoSave(){
+  var v=$('quickMemoText').value;
+  localStorage.setItem(QMEMO_KEY,v);
+  $('memoSaved').textContent='저장됨';
+  setTimeout(function(){var el=$('memoSaved');if(el&&el.textContent==='저장됨')el.textContent='';},1500);
+  qmemoUpdateFab();
+}
+function qmemoUpdateFab(){
+  var has=(localStorage.getItem(QMEMO_KEY)||'').trim().length>0;
+  var fab=$('memoFab');if(fab)fab.classList.toggle('has-content',has);
+}
+
 (function init(){
   try{
     startLock();
@@ -1778,6 +1816,18 @@ function delVault(id){
     var vp=$('vPickInput');if(vp)vp.onchange=vOnPhoto;
     var vpb=$('vPasteBox');if(vpb)vpb.addEventListener('paste',vHandlePaste);
     var pb=$('pasteBox');if(pb)pb.addEventListener('paste',handlePaste);
+    // 급한 메모 자동저장
+    var qm=$('quickMemoText');
+    if(qm)qm.addEventListener('input',function(){
+      if(qmemoTimer)clearTimeout(qmemoTimer);
+      $('memoSaved').textContent='저장 중…';
+      qmemoTimer=setTimeout(qmemoSave,500);
+    });
+    qmemoUpdateFab();
+    // ESC 키로 메모 패널 닫기
+    document.addEventListener('keydown',function(e){
+      if(e.key==='Escape'&&$('memoPanel').classList.contains('open'))closeQuickMemo();
+    });
     // 기록 탭이 활성일 때 화면 어디서 붙여넣어도 받기 (PC 편의)
     document.addEventListener('paste',function(e){
       if(document.getElementById('p-write').classList.contains('active')){

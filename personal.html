@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>개인 관리</title>
-<link rel="stylesheet" href="personal.css?v=39">
+<link rel="stylesheet" href="personal.css?v=41">
 </head>
 <body>
 
@@ -23,13 +23,27 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v39</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v41</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
+    <button class="memo-fab" id="memoFab" onclick="openQuickMemo()" title="급한 메모">⚡</button>
     <a href="index.html" class="home-link">← 홈</a>
     <button class="api-btn off" id="apiBtn" onclick="openApi()">AI</button>
   </div>
+</div>
+
+<!-- 급한 메모 슬라이드 패널 -->
+<div class="memo-backdrop" id="memoBackdrop" onclick="closeQuickMemo()"></div>
+<div class="memo-panel" id="memoPanel">
+  <div class="memo-panel-head">
+    <span class="memo-panel-title">⚡ 급한 메모 <span class="memo-saved" id="memoSaved"></span></span>
+    <div class="memo-panel-acts">
+      <button class="btn-mini" onclick="clearQuickMemo()">🗑 지우기</button>
+      <button class="memo-x" onclick="closeQuickMemo()">✕</button>
+    </div>
+  </div>
+  <textarea id="quickMemoText" class="memo-area" placeholder="떠오른 생각·할 일·잊지 말 것을 빠르게 적어두세요. 자동 저장돼요."></textarea>
 </div>
 
 <div class="tabs">
@@ -237,6 +251,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="personal.js?v=39"></script>
+<script src="personal.js?v=41"></script>
 </body>
 </html>
