@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v62</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v63</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -214,27 +214,45 @@
 
   <!-- 연락처 -->
   <div class="panel" id="p-contacts">
-    <div class="card">
-      <div class="card-title">📞 연락처 <span id="ctEditBadge" class="opt"></span></div>
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px">
+      <div>
+        <div class="card-title" style="margin:0">📞 연락처</div>
+        <div style="font-size:12px;color:#9CA3AF;margin-top:2px">이름·전화·주소·메모 저장</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openContactModal()">＋ 연락처 추가</button>
+    </div>
+    <div class="card" style="padding:12px 16px">
+      <input type="text" id="ctSearch" placeholder="🔍 이름·전화·주소 검색" oninput="renderContacts()" style="width:100%;box-sizing:border-box;margin-bottom:8px">
+      <div class="filter-row" id="ctFilterRow"></div>
+    </div>
+    <div id="contactList" style="padding:0 4px"></div>
+  </div>
+
+  <!-- 연락처 입력 모달 -->
+  <div class="modal-bg" id="contactModal" onclick="if(event.target===this)closeContactModal()">
+    <div class="modal">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <h3 style="margin:0;font-size:16px">📞 <span id="ctModalTitle">연락처 추가</span></h3>
+        <button onclick="closeContactModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#9CA3AF;line-height:1">✕</button>
+      </div>
       <div class="form-grid">
-        <div class="fg-item"><label>이름/상호</label><input type="text" id="ct-name" placeholder="홍길동 / 서울세무사"></div>
+        <div class="fg-item"><label>이름/상호 *</label><input type="text" id="ct-name" placeholder="홍길동 / 서울세무사"></div>
         <div class="fg-item"><label>전화번호</label><input type="tel" id="ct-phone" placeholder="010-1234-5678"></div>
         <div class="fg-item full"><label>주소 <span class="opt">(눌러서 지도)</span></label><input type="text" id="ct-addr" placeholder="서울시 강남구 ..."></div>
-        <div class="fg-item"><label>카테고리 <button type="button" class="cat-mini" onclick="ctCatAdd()">＋</button><button type="button" class="cat-mini" onclick="ctCatDel()">－</button></label>
+        <div class="fg-item">
+          <label>카테고리
+            <button type="button" class="cat-mini" onclick="ctCatAdd()">＋</button>
+            <button type="button" class="cat-mini" onclick="ctCatDel()">－</button>
+          </label>
           <select id="ct-cat"></select>
         </div>
         <div class="fg-item"><label>담당자</label><input type="text" id="ct-person" placeholder="대표·담당자 이름"></div>
-        <div class="fg-item full"><label>메모</label><textarea id="ct-memo" placeholder="기타 메모"></textarea></div>
+        <div class="fg-item full"><label>메모</label><textarea id="ct-memo" placeholder="기타 메모" rows="3"></textarea></div>
       </div>
-      <button class="btn btn-primary" id="ctSaveBtn" onclick="saveContact()">💾 저장</button>
-      <button class="btn btn-ghost" id="ctCancelBtn" onclick="cancelContactEdit()" style="display:none">취소</button>
-    </div>
-    <div class="card">
-      <div class="ct-toolbar">
-        <input type="text" id="ctSearch" placeholder="🔍 이름·전화·주소 검색" oninput="renderContacts()">
-        <div class="filter-row" id="ctFilterRow"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-primary" id="ctSaveBtn" onclick="saveContact()" style="flex:1">💾 저장</button>
+        <button class="btn btn-ghost" onclick="closeContactModal()" style="white-space:nowrap">취소</button>
       </div>
-      <div id="contactList"></div>
     </div>
   </div>
 
@@ -380,6 +398,6 @@ var vaultFirebaseApp = firebase.initializeApp({
 var vaultDb = vaultFirebaseApp.firestore();
 var vaultStorage = vaultFirebaseApp.storage();
 </script>
-<script src="personal.js?v=62"></script>
+<script src="personal.js?v=63"></script>
 </body>
 </html>

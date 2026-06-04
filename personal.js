@@ -2734,6 +2734,21 @@ function attachCtNameAc(){
     if(ct&&ct.phone&&!ph.value){ph.value=ct.phone;}
   });
 }
+function openContactModal(){
+  editingContactId=null;
+  ['ct-name','ct-phone','ct-addr','ct-person','ct-memo'].forEach(function(k){var e=$(k);if(e)e.value='';});
+  var cs=$('ct-cat');if(cs){refreshCtCatSelect();cs.value='기타';}
+  var mt=$('ctModalTitle');if(mt)mt.textContent='연락처 추가';
+  var btn=$('ctSaveBtn');if(btn){btn.textContent='💾 저장';}
+  var modal=$('contactModal');if(modal)modal.classList.add('open');
+  document.body.classList.add('modal-open');
+  setTimeout(function(){var n=$('ct-name');if(n)n.focus();},100);
+}
+function closeContactModal(){
+  var modal=$('contactModal');if(modal)modal.classList.remove('open');
+  document.body.classList.remove('modal-open');
+  editingContactId=null;
+}
 function saveContact(){
   var name=($('ct-name').value||'').trim();
   var phone=($('ct-phone').value||'').trim();
@@ -2750,33 +2765,27 @@ function saveContact(){
   if(!editingContactId)rec.created=new Date().toISOString();
   fetch(FB_BASE+'/'+COL_CONTACTS+'/'+id+'?key='+FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(toFS(rec))})
     .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status);});return r.json();})
-    .then(function(){toast(editingContactId?'✏️ 수정됨':'✅ 저장됨');cancelContactEdit();loadContacts();})
+    .then(function(){toast(editingContactId?'✏️ 수정됨':'✅ 저장됨');closeContactModal();loadContacts();})
     .catch(function(e){logErr('연락처 저장 실패: '+e.message);toast('⚠️ '+e.message);});
 }
 
 function editContact(id){
   var c=contactsCache.filter(function(x){return x.id===id;})[0];if(!c)return;
   editingContactId=id;
-  $('ct-name').value=c.name||'';
-  $('ct-phone').value=c.phone||'';
-  $('ct-addr').value=c.addr||'';
-  $('ct-cat').value=c.cat||'기타';
-  $('ct-person').value=c.person||'';
-  $('ct-memo').value=c.memo||'';
-  $('ctEditBadge').textContent='— 수정 중';
-  $('ctSaveBtn').textContent='💾 수정 저장';
-  $('ctCancelBtn').style.display='';
-  $('ct-name').scrollIntoView({behavior:'smooth',block:'center'});
+  var n=$('ct-name');if(n)n.value=c.name||'';
+  var p=$('ct-phone');if(p)p.value=c.phone||'';
+  var a=$('ct-addr');if(a)a.value=c.addr||'';
+  refreshCtCatSelect();
+  var cs=$('ct-cat');if(cs)cs.value=c.cat||'기타';
+  var pe=$('ct-person');if(pe)pe.value=c.person||'';
+  var m=$('ct-memo');if(m)m.value=c.memo||'';
+  var mt=$('ctModalTitle');if(mt)mt.textContent='연락처 수정';
+  var btn=$('ctSaveBtn');if(btn)btn.textContent='💾 수정 저장';
+  var modal=$('contactModal');if(modal)modal.classList.add('open');
+  document.body.classList.add('modal-open');
 }
 
-function cancelContactEdit(){
-  editingContactId=null;
-  ['ct-name','ct-phone','ct-addr','ct-person','ct-memo'].forEach(function(k){$(k).value='';});
-  $('ct-cat').value='가족';
-  $('ctEditBadge').textContent='';
-  $('ctSaveBtn').textContent='💾 저장';
-  $('ctCancelBtn').style.display='none';
-}
+function cancelContactEdit(){ closeContactModal(); }
 
 function delContact(id){
   if(!confirm('이 연락처를 삭제할까요?'))return;
