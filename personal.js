@@ -217,7 +217,7 @@ function tab(name,el){
   if(name==='stats')renderStats();
   if(name==='diag')backupStatusText();
   if(name==='vault')renderVault();
-  if(name==='contacts'){loadContacts();}
+  if(name==='contacts'){refreshCtCatSelect();loadContacts();}
 }
 
 /* ===== 카테고리 칩 + 동적 폼 ===== */
@@ -1877,7 +1877,34 @@ var COL_CONTACTS='personal_contacts';
 var contactsCache=[];
 var editingContactId=null;
 var ctFilter='전체';
-var CT_CATS=['가족','친구','거래처','병원','식당','관공서','업무','기타'];
+var CT_CATS_KEY='personal_ct_cats';
+var CT_CATS_DEFAULT=['가족','친구','거래처','병원','식당','관공서','업무','기타'];
+function ctCatsLoad(){
+  try{var s=localStorage.getItem(CT_CATS_KEY);if(s){var a=JSON.parse(s);if(Array.isArray(a)&&a.length)return a;}}catch(e){}
+  return CT_CATS_DEFAULT.slice();
+}
+function ctCatsSave(arr){localStorage.setItem(CT_CATS_KEY,JSON.stringify(arr));}
+function ctCatAdd(){
+  var n=prompt('새 카테고리 이름:');if(!n)return;n=n.trim();if(!n)return;
+  var arr=ctCatsLoad();if(arr.indexOf(n)>=0){toast('이미 있어요');return;}
+  arr.push(n);ctCatsSave(arr);
+  refreshCtCatSelect();renderContacts();toast('✅ "'+n+'" 추가됨');
+}
+function ctCatDel(){
+  var arr=ctCatsLoad();
+  var name=prompt('지울 카테고리 이름 (현재: '+arr.join(', ')+')');
+  if(!name)return;name=name.trim();
+  var i=arr.indexOf(name);if(i<0){toast('없는 이름이에요');return;}
+  if(!confirm('"'+name+'" 카테고리를 지울까요?\n(이 카테고리의 연락처들은 그대로 남고, 카테고리 이름만 사라져요)'))return;
+  arr.splice(i,1);ctCatsSave(arr);
+  refreshCtCatSelect();renderContacts();toast('🗑 삭제됨');
+}
+function refreshCtCatSelect(){
+  var sel=$('ct-cat');if(!sel)return;
+  var cur=sel.value;
+  var arr=ctCatsLoad();
+  sel.innerHTML=arr.map(function(k){return '<option'+(k===cur?' selected':'')+'>'+esc(k)+'</option>';}).join('');
+}
 
 function loadContacts(){
   fetch(FB_BASE+'/'+COL_CONTACTS+'?key='+FB_KEY+'&pageSize=500').then(function(r){return r.json();})
@@ -1891,6 +1918,7 @@ function renderContacts(){
   // 필터 칩
   var fcnt={};contactsCache.forEach(function(c){fcnt[c.cat]=(fcnt[c.cat]||0)+1;});
   var hf='<div class="filter-chip'+(ctFilter==='전체'?' sel':'')+'" onclick="setCtFilter(\'전체\')">전체 <b>'+contactsCache.length+'</b></div>';
+  var CT_CATS=ctCatsLoad();
   CT_CATS.forEach(function(k){
     var n=fcnt[k]||0;
     hf+='<div class="filter-chip'+(ctFilter===k?' sel':'')+(n===0?' empty':'')+'" onclick="setCtFilter(\''+k+'\')">'+k+(n?' <b>'+n+'</b>':'')+'</div>';
@@ -1933,7 +1961,6 @@ function ctCatColor(k){
 function setCtFilter(k){ctFilter=k;renderContacts();}
 
 function saveContact(){
-  toast('저장 시도…');   // 1) 함수 진입 확인
   var name=($('ct-name').value||'').trim();
   var phone=($('ct-phone').value||'').trim();
   if(!name&&!phone){toast('⚠️ 이름이나 전화번호를 입력하세요');return;}
@@ -1947,12 +1974,8 @@ function saveContact(){
     updated:new Date().toISOString()
   };
   if(!editingContactId)rec.created=new Date().toISOString();
-  var url=FB_BASE+'/'+COL_CONTACTS+'/'+id+'?key='+FB_KEY;
-  fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(toFS(rec))})
-    .then(function(r){
-      if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status+': '+t.slice(0,200));});
-      return r.json();
-    })
+  fetch(FB_BASE+'/'+COL_CONTACTS+'/'+id+'?key='+FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(toFS(rec))})
+    .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status);});return r.json();})
     .then(function(){toast(editingContactId?'✏️ 수정됨':'✅ 저장됨');cancelContactEdit();loadContacts();})
     .catch(function(e){logErr('연락처 저장 실패: '+e.message);toast('⚠️ '+e.message);});
 }

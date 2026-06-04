@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>개인 관리</title>
-<link rel="stylesheet" href="personal.css?v=45">
+<link rel="stylesheet" href="personal.css?v=46">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v45</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v46</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -194,11 +194,8 @@
         <div class="fg-item"><label>이름/상호</label><input type="text" id="ct-name" placeholder="홍길동 / 서울세무사"></div>
         <div class="fg-item"><label>전화번호</label><input type="tel" id="ct-phone" placeholder="010-1234-5678"></div>
         <div class="fg-item full"><label>주소 <span class="opt">(눌러서 지도)</span></label><input type="text" id="ct-addr" placeholder="서울시 강남구 ..."></div>
-        <div class="fg-item"><label>카테고리</label>
-          <select id="ct-cat">
-            <option>가족</option><option>친구</option><option>거래처</option><option>병원</option>
-            <option>식당</option><option>관공서</option><option>업무</option><option>기타</option>
-          </select>
+        <div class="fg-item"><label>카테고리 <button type="button" class="cat-mini" onclick="ctCatAdd()">＋</button><button type="button" class="cat-mini" onclick="ctCatDel()">－</button></label>
+          <select id="ct-cat"></select>
         </div>
         <div class="fg-item"><label>담당자</label><input type="text" id="ct-person" placeholder="대표·담당자 이름"></div>
         <div class="fg-item full"><label>메모</label><textarea id="ct-memo" placeholder="기타 메모"></textarea></div>
@@ -289,6 +286,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="personal.js?v=45"></script>
+<script src="personal.js?v=46"></script>
 </body>
 </html>

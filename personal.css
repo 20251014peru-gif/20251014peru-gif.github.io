@@ -392,3 +392,5 @@ textarea{resize:vertical;min-height:74px;}
 .ct-acts{display:flex;gap:12px;margin-top:10px;padding-top:8px;border-top:1px solid #F1F2F4;}
 .ct-acts .rec-act{font-size:12px;background:none;border:none;cursor:pointer;font-weight:600;padding:0;color:#6366F1;}
 .ct-acts .rec-del{color:#EF4444;}
+.cat-mini{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;border:1px solid #C7D2FE;background:#EEF2FF;color:#4F46E5;font-size:13px;font-weight:800;cursor:pointer;margin-left:6px;padding:0;line-height:1;}
+.cat-mini:hover{background:#6366F1;color:#fff;}
