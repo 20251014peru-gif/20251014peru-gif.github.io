@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v46</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v47</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -286,6 +286,26 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="personal.js?v=46"></script>
+<!-- 차량/결제수단 관리 모달 -->
+<div class="mgr-overlay" id="mgrModal" onclick="if(event.target===this)closeMgr()">
+  <div class="mgr-box">
+    <div class="mgr-head">
+      <span id="mgrTitle">관리</span>
+      <button class="mgr-close" onclick="closeMgr()">✕</button>
+    </div>
+    <div class="mgr-body" id="mgrBody"></div>
+  </div>
+</div>
+
+<!-- 카테고리 내역 슬라이드 패널 -->
+<div class="cat-pane" id="catPane">
+  <div class="cp-head">
+    <span id="catPaneTitle"></span>
+    <button class="cp-close" onclick="closeCatPane()">✕</button>
+  </div>
+  <div class="cp-list" id="catPaneList"></div>
+</div>
+
+<script src="personal.js?v=47"></script>
 </body>
 </html>

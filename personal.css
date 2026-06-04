@@ -394,3 +394,140 @@ textarea{resize:vertical;min-height:74px;}
 .ct-acts .rec-del{color:#EF4444;}
 .cat-mini{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;border:1px solid #C7D2FE;background:#EEF2FF;color:#4F46E5;font-size:13px;font-weight:800;cursor:pointer;margin-left:6px;padding:0;line-height:1;}
 .cat-mini:hover{background:#6366F1;color:#fff;}
+
+/* ===== 카테고리 칩 개수 배지 ===== */
+.cat-chip-wrap{display:inline-flex;align-items:center;gap:0;margin:3px 2px;}
+.cat-peek-btn{display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;padding:0 5px;
+  background:#7d8fd0;color:#fff;font-size:11px;font-weight:700;
+  border-radius:0 9px 9px 0;cursor:pointer;line-height:1;
+  border:none;transition:background .15s;}
+.cat-peek-btn:hover{background:#5a70b8;}
+/* 칩이 선택됐을 때 배지색도 진하게 */
+.cat-chip.sel + .cat-peek-btn{background:rgba(0,0,0,.25);}
+.cat-chip.sel + .cat-peek-btn:hover{background:rgba(0,0,0,.38);}
+
+/* ===== 카테고리 내역 슬라이드 패널 ===== */
+.cat-pane{
+  position:fixed;right:-360px;top:0;width:360px;height:100vh;
+  background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.13);
+  z-index:4000;transition:right .28s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;border-left:3px solid #7d8fd0;
+  border-top:4px solid #7d8fd0;}
+.cat-pane.open{right:0;}
+.cp-head{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid #EEF0F3;
+  font-size:16px;font-weight:700;color:#1A1A2E;background:#f8f8fc;}
+.cp-cnt{font-size:12px;font-weight:600;color:#7d8fd0;margin-left:6px;background:#EEF2FF;padding:2px 7px;border-radius:10px;}
+.cp-close{background:none;border:none;font-size:20px;cursor:pointer;color:#9CA3AF;padding:0 4px;line-height:1;}
+.cp-close:hover{color:#EF4444;}
+.cp-list{flex:1;overflow-y:auto;padding:8px 0;}
+.cp-row{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:6px;
+  padding:10px 14px;border-bottom:1px solid #F3F4F6;cursor:pointer;transition:background .1s;}
+.cp-row:hover{background:#F8F9FF;}
+.cp-date{font-size:11px;color:#9CA3AF;white-space:nowrap;}
+.cp-title{font-size:14px;font-weight:600;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cp-sub{font-size:12px;color:#6B7280;grid-column:2;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cp-amt{font-size:13px;font-weight:700;color:#EF4444;white-space:nowrap;text-align:right;}
+.cp-stars{font-size:12px;}
+.cp-empty{text-align:center;color:#9CA3AF;padding:30px;font-size:14px;}
+@media(max-width:600px){
+  .cat-pane{width:100%;right:-100%;}
+}
+
+/* ===== 관리 모달 (차량·결제수단) ===== */
+.mgr-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:5000;
+  display:none;align-items:center;justify-content:center;}
+.mgr-overlay.open{display:flex;}
+.mgr-box{background:#fff;border-radius:16px;padding:20px;width:320px;max-width:92vw;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.mgr-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.mgr-head>span{font-size:16px;font-weight:700;color:#1A1A2E;}
+.mgr-close{background:none;border:none;font-size:20px;cursor:pointer;color:#9CA3AF;padding:0;}
+.mgr-row{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid #F1F2F4;}
+.mgr-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.mgr-name{flex:1;font-size:14px;color:#374151;font-weight:500;}
+.mgr-del{background:none;border:none;color:#EF4444;cursor:pointer;font-size:14px;font-weight:700;padding:2px 6px;}
+.mgr-del:hover{background:#FEE2E2;border-radius:6px;}
+.mgr-add-row{display:flex;gap:8px;margin-top:12px;}
+.mgr-input{flex:1;border:1px solid #D1D5DB;border-radius:8px;padding:8px 10px;font-size:14px;}
+.mgr-add-btn{background:#7d8fd0;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.mgr-add-btn:hover{background:#5a70b8;}
+/* 폼 안의 인라인 관리 버튼 */
+.mgr-inline-btn{font-size:11px;background:#EEF2FF;border:1px solid #C7D2FE;color:#4F46E5;
+  border-radius:6px;padding:3px 7px;cursor:pointer;margin-left:4px;vertical-align:middle;}
+.mgr-inline-btn:hover{background:#6366F1;color:#fff;border-color:#6366F1;}
+
+/* ===== 카드/목록 토글 개선 ===== */
+.view-toggle{display:flex;gap:4px;padding:10px 14px 4px;}
+.vt-btn{background:#F3F4F6;border:1px solid #E5E7EB;border-radius:20px;
+  padding:5px 14px;font-size:13px;font-weight:600;cursor:pointer;color:#6B7280;transition:all .15s;}
+.vt-btn.sel{background:#7d8fd0;color:#fff;border-color:#7d8fd0;}
+.vt-btn:hover:not(.sel){background:#E0E7FF;border-color:#A5B4FC;color:#4F46E5;}
+
+/* ===== 카테고리 칩 개수 배지 ===== */
+.cat-chip-wrap{display:inline-flex;align-items:center;gap:0;margin:3px 2px;}
+.cat-peek-btn{display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;padding:0 5px;
+  background:#7d8fd0;color:#fff;font-size:11px;font-weight:700;
+  border-radius:0 9px 9px 0;cursor:pointer;line-height:1;
+  border:none;transition:background .15s;}
+.cat-peek-btn:hover{background:#5a70b8;}
+.cat-chip.sel + .cat-peek-btn{background:rgba(0,0,0,.25);}
+.cat-chip.sel + .cat-peek-btn:hover{background:rgba(0,0,0,.38);}
+
+/* ===== 카테고리 내역 슬라이드 패널 ===== */
+.cat-pane{
+  position:fixed;right:-360px;top:0;width:360px;height:100vh;
+  background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.13);
+  z-index:4000;transition:right .28s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;}
+.cat-pane.open{right:0;}
+.cp-head{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid #EEF0F3;
+  font-size:16px;font-weight:700;color:#1A1A2E;background:#f8f8fc;
+  border-top:4px solid #7d8fd0;}
+.cp-cnt{font-size:12px;font-weight:600;color:#7d8fd0;margin-left:6px;background:#EEF2FF;padding:2px 7px;border-radius:10px;}
+.cp-close{background:none;border:none;font-size:20px;cursor:pointer;color:#9CA3AF;padding:0 4px;line-height:1;}
+.cp-close:hover{color:#EF4444;}
+.cp-list{flex:1;overflow-y:auto;padding:8px 0;}
+.cp-row{display:grid;grid-template-columns:44px 1fr auto;grid-template-rows:auto auto;
+  align-items:center;gap:2px 6px;
+  padding:10px 14px;border-bottom:1px solid #F3F4F6;cursor:pointer;transition:background .1s;}
+.cp-row:hover{background:#F8F9FF;}
+.cp-date{font-size:11px;color:#9CA3AF;white-space:nowrap;grid-row:1;}
+.cp-title{font-size:14px;font-weight:600;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;grid-row:1;}
+.cp-sub{font-size:12px;color:#6B7280;grid-column:2;grid-row:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cp-amt{font-size:13px;font-weight:700;color:#EF4444;white-space:nowrap;text-align:right;grid-row:1;}
+.cp-stars{font-size:12px;grid-row:1;}
+.cp-empty{text-align:center;color:#9CA3AF;padding:30px;font-size:14px;}
+@media(max-width:600px){.cat-pane{width:100%;right:-100%;}}
+
+/* ===== 관리 모달 (차량·결제수단) ===== */
+.mgr-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:5000;
+  display:none;align-items:center;justify-content:center;}
+.mgr-overlay.open{display:flex;}
+.mgr-box{background:#fff;border-radius:16px;padding:20px;width:320px;max-width:92vw;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.mgr-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.mgr-head>span{font-size:16px;font-weight:700;color:#1A1A2E;}
+.mgr-close{background:none;border:none;font-size:20px;cursor:pointer;color:#9CA3AF;padding:0;}
+.mgr-row{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid #F1F2F4;}
+.mgr-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.mgr-name{flex:1;font-size:14px;color:#374151;font-weight:500;}
+.mgr-del{background:none;border:none;color:#EF4444;cursor:pointer;font-size:14px;font-weight:700;padding:2px 6px;}
+.mgr-del:hover{background:#FEE2E2;border-radius:6px;}
+.mgr-add-row{display:flex;gap:8px;margin-top:12px;}
+.mgr-input{flex:1;border:1px solid #D1D5DB;border-radius:8px;padding:8px 10px;font-size:14px;}
+.mgr-add-btn{background:#7d8fd0;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.mgr-add-btn:hover{background:#5a70b8;}
+.mgr-inline-btn{font-size:11px;background:#EEF2FF;border:1px solid #C7D2FE;color:#4F46E5;
+  border-radius:6px;padding:3px 7px;cursor:pointer;margin-left:4px;vertical-align:middle;}
+.mgr-inline-btn:hover{background:#6366F1;color:#fff;border-color:#6366F1;}
+
+/* ===== 카드/목록 토글 개선 ===== */
+.view-toggle{display:flex;gap:4px;padding:10px 14px 4px;}
+.vt-btn{background:#F3F4F6;border:1px solid #E5E7EB;border-radius:20px;
+  padding:5px 14px;font-size:13px;font-weight:600;cursor:pointer;color:#6B7280;transition:all .15s;}
+.vt-btn.sel{background:#7d8fd0;color:#fff;border-color:#7d8fd0;}
+.vt-btn:hover:not(.sel){background:#E0E7FF;border-color:#A5B4FC;color:#4F46E5;}

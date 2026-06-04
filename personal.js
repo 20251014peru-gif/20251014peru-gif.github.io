@@ -152,6 +152,92 @@ var CATS=[
 function catOf(k){for(var i=0;i<CATS.length;i++)if(CATS[i].k===k)return CATS[i];return CATS[CATS.length-1];}
 /* 달력 이벤트 색: 차계부는 차량별로 구분, 그 외는 카테고리 색 */
 var CAR_COLORS={'쏘나타':'#0891B2','스타렉스':'#EA580C'};
+/* ===== 차량 목록 (사용자 관리) ===== */
+var LS_CARS='personal_cars_v1';
+var LS_PAY='personal_pay_v1';
+var CAR_COLOR_POOL=['#0891B2','#EA580C','#16A34A','#9333EA','#D97706','#DB2777','#0284C7','#65A30D'];
+function getCars(){
+  try{var s=localStorage.getItem(LS_CARS);if(s){var a=JSON.parse(s);if(Array.isArray(a)&&a.length)return a;}}catch(e){}
+  return [{name:'쏘나타',color:'#0891B2'},{name:'스타렉스',color:'#EA580C'}];
+}
+function saveCars(arr){
+  localStorage.setItem(LS_CARS,JSON.stringify(arr));
+  arr.forEach(function(c){CAR_COLORS[c.name]=c.color;});
+}
+function getPayMethods(){
+  try{var s=localStorage.getItem(LS_PAY);if(s){var a=JSON.parse(s);if(Array.isArray(a)&&a.length)return a;}}catch(e){}
+  return ['카드','현금','계좌이체'];
+}
+function savePayMethods(arr){localStorage.setItem(LS_PAY,JSON.stringify(arr));}
+function carSelectHtml(selVal){
+  return getCars().map(function(c){return '<option'+(c.name===selVal?' selected':'')+'>'+c.name+'</option>';}).join('');
+}
+function paySelectHtml(selVal){
+  var opts='<option value=""'+(selVal?'':' selected')+'>-</option>';
+  getPayMethods().forEach(function(p){opts+='<option'+(p===selVal?' selected':'')+'>'+p+'</option>';});
+  return opts;
+}
+function payIcon(p){return p==='카드'?'💳':(p==='현금'?'💵':(p==='계좌이체'?'🏦':'💰'));}
+/* 관리 모달 공통 */
+function closeMgr(){$('mgrModal').classList.remove('open');}
+/* 차량 관리 */
+function openCarMgr(){
+  var cars=getCars();
+  var rows=cars.map(function(c,i){
+    return '<div class="mgr-row">'+
+      '<span class="mgr-dot" style="background:'+c.color+'"></span>'+
+      '<span class="mgr-name">'+esc(c.name)+'</span>'+
+      '<button class="mgr-del" onclick="delCar('+i+')">✕</button></div>';
+  }).join('');
+  $('mgrTitle').textContent='🚗 차량 목록 관리';
+  $('mgrBody').innerHTML=rows+
+    '<div class="mgr-add-row"><input id="mgrCarName" placeholder="차량 이름 (예: 레이)" class="mgr-input">'+
+    '<button class="mgr-add-btn" onclick="addCar()">＋ 추가</button></div>';
+  $('mgrModal').classList.add('open');
+}
+function addCar(){
+  var name=($('mgrCarName')||{}).value||'';name=name.trim();if(!name)return;
+  var cars=getCars();
+  if(cars.some(function(c){return c.name===name;})){toast('이미 있어요');return;}
+  var col=CAR_COLOR_POOL[cars.length%CAR_COLOR_POOL.length];
+  cars.push({name:name,color:col});saveCars(cars);openCarMgr();
+  // 차계부 폼 새로고침
+  if(selectedCat==='차계부'){var cur=collectFields();renderCustomForm('car',cur);}
+  toast('✅ '+name+' 추가됨');
+}
+function delCar(i){
+  var cars=getCars();
+  if(!confirm('"'+cars[i].name+'" 삭제할까요?'))return;
+  cars.splice(i,1);saveCars(cars);openCarMgr();
+  if(selectedCat==='차계부'){var cur=collectFields();renderCustomForm('car',cur);}
+  toast('삭제됨');
+}
+/* 결제수단 관리 */
+function openPayMgr(){
+  var arr=getPayMethods();
+  var rows=arr.map(function(p,i){
+    return '<div class="mgr-row">'+
+      '<span class="mgr-name">'+payIcon(p)+' '+esc(p)+'</span>'+
+      '<button class="mgr-del" onclick="delPay('+i+')">✕</button></div>';
+  }).join('');
+  $('mgrTitle').textContent='💳 결제수단 관리';
+  $('mgrBody').innerHTML=rows+
+    '<div class="mgr-add-row"><input id="mgrPayName" placeholder="예: 네이버페이" class="mgr-input">'+
+    '<button class="mgr-add-btn" onclick="addPay()">＋ 추가</button></div>';
+  $('mgrModal').classList.add('open');
+}
+function addPay(){
+  var name=($('mgrPayName')||{}).value||'';name=name.trim();if(!name)return;
+  var arr=getPayMethods();
+  if(arr.indexOf(name)>=0){toast('이미 있어요');return;}
+  arr.push(name);savePayMethods(arr);openPayMgr();toast('✅ '+name+' 추가됨');
+}
+function delPay(i){
+  var arr=getPayMethods();arr.splice(i,1);savePayMethods(arr);openPayMgr();toast('삭제됨');
+}
+/* CAR_COLORS 초기화 */
+(function(){var cars=getCars();cars.forEach(function(c){CAR_COLORS[c.name]=c.color;});})();
+
 function evtColor(r){
   if(r.cat==='차계부'&&r.who&&CAR_COLORS[r.who])return CAR_COLORS[r.who];
   return catOf(r.cat).c;
@@ -222,9 +308,15 @@ function tab(name,el){
 
 /* ===== 카테고리 칩 + 동적 폼 ===== */
 function renderCats(){
+  var recs=getRecords();
+  var cnt={};recs.forEach(function(r){cnt[r.cat]=(cnt[r.cat]||0)+1;});
   var h='';CATS.forEach(function(c){
     var sel=c.k===selectedCat;
-    h+='<div class="cat-chip'+(sel?' sel':'')+'" style="'+(sel?'background:'+c.c+';':'')+'" onclick="pickCat(\''+c.k+'\')">'+c.i+' '+c.k+'</div>';
+    var n=cnt[c.k]||0;
+    h+='<div class="cat-chip-wrap">'+
+      '<div class="cat-chip'+(sel?' sel':'')+'" style="'+(sel?'background:'+c.c+';':'')+'" onclick="pickCat(\''+c.k+'\')">'+c.i+' '+c.k+'</div>'+
+      (n?'<span class="cat-peek-btn" onclick="openCatPane(\''+c.k+'\')" title="'+c.k+' 내역 보기">'+n+'</span>':'')+
+    '</div>';
   });
   $('catChips').innerHTML=h;
 }
@@ -252,7 +344,26 @@ function renderForm(vals){
     h+='</div>';
   });
   h+='</div>';
+
+/* ===== 이름→연락처 전화번호 자동완성 ===== */
+function attachWhoAutocomplete(inputId, phoneId){
+  var el=$(inputId);if(!el)return;
+  var dlId='dl_ac_'+inputId;
+  var dl=document.getElementById(dlId);
+  if(!dl){dl=document.createElement('datalist');dl.id=dlId;document.body.appendChild(dl);}
+  el.setAttribute('list',dlId);
+  dl.innerHTML=contactsCache.map(function(c){
+    return '<option value="'+esc(c.name)+'">'+(c.phone?' ('+esc(c.phone)+')':'')+'</option>';
+  }).join('');
+  el.oninput=function(){
+    var name=el.value.trim();
+    var ct=contactsCache.find(function(c){return c.name===name;});
+    var ph=$(phoneId);
+    if(ct&&ct.phone&&ph&&!ph.value){ph.value=ct.phone;}
+  };
+}
   $('formFields').innerHTML=h;
+  if($('f-who')&&$('f-phone'))attachWhoAutocomplete('f-who','f-phone');
 }
 /* ===== 카테고리별 맞춤 폼 ===== */
 var formItems=[];
@@ -279,7 +390,7 @@ function renderCustomForm(kind,v){
       fgItem('개수','<input type="number" id="f-qty" placeholder="1" value="'+(v.qty||'')+'" oninput="calcBuy()">')+
       fgItem('<span id="lblShip">택배비(원)</span>','<input type="number" id="f-ship" placeholder="3000" value="'+ev(v.ship)+'" oninput="calcBuy()">')+
       fgItem('택배비 포함 여부','<select id="f-shipinc" onchange="calcBuy()"><option value="별도"'+(v.shipinc==='별도'?' selected':'')+'>합계에 더하기(별도)</option><option value="포함"'+(v.shipinc==='포함'?' selected':'')+'>단가에 이미 포함</option></select>')+
-      fgItem('결제수단','<select id="f-pay"><option value=""'+(!v.pay?' selected':'')+'>-</option><option'+(v.pay==='카드'?' selected':'')+'>💳 카드</option><option'+(v.pay==='현금'?' selected':'')+'>💵 현금</option><option'+(v.pay==='계좌이체'?' selected':'')+'>🏦 계좌이체</option></select>')+
+      fgItem('결제수단','<select id="f-pay">'+paySelectHtml(v.pay)+'</select><button type="button" class="mgr-inline-btn" onclick="openPayMgr()">⚙️</button>')+
       '<div class="fg-item full" id="rateBox" style="display:none"><label>환율 (1달러 = ? 원)</label><div class="rate-row"><input type="number" id="f-rate" placeholder="예: 1380" value="'+ev(v.rate)+'" oninput="calcBuy()"><button type="button" class="rate-btn" onclick="fetchRate()">📡 그날 환율</button></div><div class="rate-note" id="rateNote"></div></div>'+
       fgItem('합계(원화)','<input type="text" id="f-amtview" readonly style="font-weight:800;color:#0EA5E9;background:#F0F9FF" value="">',true)+
       fgItem('메모','<textarea id="f-detail" placeholder="산 이유·후기">'+ev(v.detail)+'</textarea>')+
@@ -317,7 +428,7 @@ function renderCustomForm(kind,v){
   }
   if(kind==='car'){
     h='<div class="form-grid">'+
-      fgItem('차량','<select id="f-who"><option'+(v.who==='쏘나타'?' selected':'')+'>쏘나타</option><option'+(v.who==='스타렉스'?' selected':'')+'>스타렉스</option></select>')+
+      fgItem('차량','<select id="f-who">'+carSelectHtml(v.who)+'</select><button type="button" class="mgr-inline-btn" onclick="openCarMgr()">⚙️</button>')+
       fgItem('구분','<select id="f-title" onchange="toggleCarType()"><option'+(v.title==='주유'?' selected':'')+'>주유</option><option'+(v.title==='정비'?' selected':'')+'>정비</option><option'+(v.title==='보험'?' selected':'')+'>보험</option><option'+(v.title==='기타'?' selected':'')+'>기타</option></select>')+
       fgItem('주행거리(㎞)','<input type="number" id="f-odo" placeholder="45200" value="'+ev(v.odo)+'">')+
       fgItem('주유소/정비소','<input type="text" id="f-addr" placeholder="GS칼텍스 OO점" value="'+ev(v.addr)+'">')+
@@ -762,15 +873,52 @@ function computeCar(rec,records){
   }
 }
 
+
+/* ===== 카테고리 내역 슬라이드 패널 ===== */
+function openCatPane(k){
+  var c=catOf(k);
+  var arr=getRecords().filter(function(r){return r.cat===k;});
+  arr.sort(function(a,b){return (b.date+(b.time||'')).localeCompare(a.date+(a.time||''));});
+  $('catPaneTitle').innerHTML=c.i+' '+esc(k)+' <span class="cp-cnt">'+arr.length+'건</span>';
+  $('catPaneList').innerHTML=arr.length?arr.map(function(r){
+    var amt='';
+    if(r.cat==='독서'&&r.stars){amt='<span class="cp-stars">'+'⭐'.repeat(Math.min(5,Math.round(r.stars)))+'</span>';}
+    else if(r.amount){amt='<span class="cp-amt">'+won(r.amount)+'원</span>';}
+    return '<div class="cp-row" onclick="openDetail(\''+r.id+'\')">' +
+      '<span class="cp-date">'+r.date.slice(5).replace('-','/')+'</span>'+
+      '<span class="cp-title">'+(esc(r.title)||esc(k))+(photoMark(r)||'')+'</span>'+
+      '<span class="cp-sub">'+rowSummary(r)+'</span>'+
+      amt+'</div>';
+  }).join(''):'<div class="cp-empty">기록이 없어요</div>';
+  var pane=$('catPane');if(!pane)return;
+  pane.classList.add('open');
+  pane.style.borderTopColor=c.c;
+  // ESC로 닫기
+  function onKey(e){if(e.key==='Escape'){closeCatPane();document.removeEventListener('keydown',onKey);}}
+  document.addEventListener('keydown',onKey);
+  // 외부 클릭 닫기
+  setTimeout(function(){
+    document.addEventListener('click',function oCPO(e){
+      var pn=$('catPane');if(!pn)return;
+      if(pn.contains(e.target)||e.target.classList.contains('cat-peek-btn'))return;
+      closeCatPane();document.removeEventListener('click',oCPO,true);
+    },true);
+  },50);
+}
+function closeCatPane(){var p=$('catPane');if(p)p.classList.remove('open');}
 /* ===== 모아보기 ===== */
 var listFilter='전체';
 var carFilter='전체';
 var viewMode='list';   // 기본을 목록으로
 function setView(m){
   viewMode=m;
+  try{localStorage.setItem('personal_viewMode',m);}catch(e){}
   $('vtList').className='vt-btn'+(m==='list'?' sel':'');
   $('vtCard').className='vt-btn'+(m==='card'?' sel':'');
   renderList();
+}
+function initViewMode(){
+  try{var s=localStorage.getItem('personal_viewMode');if(s==='card'||s==='list')viewMode=s;}catch(e){}
 }
 function renderFilters(){
   var recs=getRecords();
@@ -912,7 +1060,7 @@ function rowSummary(r){
       if(r.unit&&r.qty)s.push(won(r.unit)+'원×'+r.qty);
     }
     if(r.ship)s.push('택배'+(r.cur==='달러'?'$':'')+won(r.ship));
-    if(r.pay)s.push(r.pay==='카드'?'💳':(r.pay==='현금'?'💵':'🏦'));
+    if(r.pay)s.push(payIcon(r.pay));
     if(r.link)s.push('🔗링크');
   }else if(r.cat==='맛집'){
     if(r.who)s.push(esc(r.who));
@@ -981,7 +1129,7 @@ function detailExtra(r){
     if(r.ship)parts.push('택배비 '+unitLbl+won(r.ship)+unitSuf+(r.shipinc==='포함'?'(포함)':''));
     if(r.cur==='달러'&&r.rate)parts.push('환율 '+won(r.rate)+'원');
     if(parts.length)h+='<div class="dx-line">🧮 '+parts.join(' · ')+(r.cur==='달러'&&r.amount?'  →  '+won(r.amount)+'원':'')+'</div>';
-    if(r.pay)h+='<div class="dx-line">'+(r.pay==='카드'?'💳':(r.pay==='현금'?'💵':'🏦'))+' 결제수단: '+esc(r.pay)+'</div>';
+    if(r.pay)h+='<div class="dx-line">'+payIcon(r.pay)+' 결제수단: '+esc(r.pay)+'</div>';
     if(r.link)h+='<a href="'+esc(r.link)+'" target="_blank" class="dx-link">🔗 쇼핑몰에서 보기 ›</a>';
   }
   if(r.cat==='차계부'&&r.title==='주유'){
@@ -2020,7 +2168,7 @@ function delContact(id){
     // 주소 끝 #카테고리 가 있으면 그 카테고리로 시작 (예: personal.html#독서)
     var hash=decodeURIComponent((location.hash||'').replace('#',''));
     if(hash&&catOf(hash).k===hash)selectedCat=hash;
-    renderCats();renderForm({});renderPending();setApiBtn();
+    initViewMode();renderCats();renderForm({});renderPending();setApiBtn();
     // 용량 절약: localStorage에 남아있는 사진 원본 데이터 제거 (사진은 클라우드에 있음)
     try{
       var recs=getRecords(),changed=false;
