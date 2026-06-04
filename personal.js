@@ -121,33 +121,23 @@ var COL_PHOTO='personal_photos'; // 사진(base64)
 
 /* 카테고리 정의 + 카테고리별 입력 필드 스키마 */
 var CATS=[
-  {k:'생각',  i:'💭', c:'#8B5CF6', bg:'#EDE9FE', custom:'think'},
-  {k:'구매',  i:'🛒', c:'#0EA5E9', bg:'#E0F2FE', custom:'buy'},
-  {k:'통화',  i:'📞', c:'#10B981', bg:'#D1FAE5', fields:[
-    {key:'who',label:'누구와 통화',ph:'홍길동'},
-    {key:'title',label:'통화 주제',ph:'계약 일정 조율'},
-    {key:'phone',label:'전화번호',ph:'010-1234-5678',opt:true},
-    {key:'detail',label:'통화 내용·결정사항',ph:'무슨 얘기를 했는지',area:true}]},
-  {k:'가족',  i:'👨‍👩‍👧', c:'#F43F5E', bg:'#FFE4E6', fields:[
-    {key:'who',label:'누구',ph:'아내'},
-    {key:'title',label:'무슨 일',ph:'가족 외식'},
-    {key:'detail',label:'내용·느낀 점',ph:'있었던 일',area:true}]},
-  {k:'여행',  i:'✈️', c:'#F59E0B', bg:'#FEF3C7', custom:'trip'},
-  {k:'맛집',  i:'🍜', c:'#FB923C', bg:'#FFEDD5', custom:'food'},
-  {k:'차계부',  i:'🚗', c:'#0891B2', bg:'#CFFAFE', custom:'car'},
+  /* 가나다순 · 통화+가족+약속 → 사람 통합 · 아이디어→생각 통합 */
   {k:'건강',  i:'💊', c:'#14B8A6', bg:'#CCFBF1', custom:'health'},
-  {k:'약속',  i:'📅', c:'#6366F1', bg:'#E0E7FF', custom:'appt'},
-  {k:'아이디어',i:'💡', c:'#EAB308', bg:'#FEF9C3', fields:[
-    {key:'title',label:'아이디어 한 줄',ph:'유튜브 채널 시작'},
-    {key:'detail',label:'구체적으로',ph:'어떻게 실행할지',area:true,opt:true}]},
-  {k:'독서',  i:'📖', c:'#7C3AED', bg:'#EDE9FE', custom:'book'},
+  {k:'구매',  i:'🛒', c:'#0EA5E9', bg:'#E0F2FE', custom:'buy'},
   {k:'기타',  i:'📌', c:'#64748B', bg:'#F1F5F9', fields:[
     {key:'title',label:'제목',ph:'세무서 서류 제출'},
     {key:'who',label:'관련 인물/장소',ph:'김재현 세무사',opt:true},
     {key:'amount',label:'금액(원)',ph:'50000',num:true,opt:true},
     {key:'phone',label:'전화번호',ph:'010-1234-5678',opt:true},
     {key:'addr',label:'주소',ph:'주소 (눌러서 지도)',opt:true},
-    {key:'detail',label:'내용',ph:'자세한 내용',area:true,opt:true}]}
+    {key:'detail',label:'내용',ph:'자세한 내용',area:true,opt:true}]},
+  {k:'독서',  i:'📖', c:'#7C3AED', bg:'#EDE9FE', custom:'book'},
+  {k:'맛집',  i:'🍜', c:'#FB923C', bg:'#FFEDD5', custom:'food'},
+  {k:'사람',  i:'👤', c:'#10B981', bg:'#D1FAE5', custom:'person'},
+  {k:'생각',  i:'💭', c:'#8B5CF6', bg:'#EDE9FE', custom:'think'},
+  {k:'여행',  i:'✈️', c:'#F59E0B', bg:'#FEF3C7', custom:'trip'},
+  {k:'일상',  i:'📔', c:'#EC4899', bg:'#FCE7F3', custom:'daily'},
+  {k:'차계부',  i:'🚗', c:'#0891B2', bg:'#CFFAFE', custom:'car'}
 ];
 function catOf(k){for(var i=0;i<CATS.length;i++)if(CATS[i].k===k)return CATS[i];return CATS[CATS.length-1];}
 /* 달력 이벤트 색: 차계부는 차량별로 구분, 그 외는 카테고리 색 */
@@ -269,18 +259,19 @@ function calEventLabel(r,compact){
     if(compact)return esc(t);
     return esc(t)+(r.amount?' <span style="color:#9CA3AF;font-size:.92em">'+won(r.amount)+'원</span>':'');
   }
-  // 약속 — "거래처 미팅 14:00"
-  if(r.cat==='약속'){
-    return esc(t)+(r.time2&&!compact?' <span style="color:#9CA3AF;font-size:.92em">'+esc(r.time2)+'</span>':'');
+  // 사람 — 구분별 표시
+  if(r.cat==='사람'){
+    var sub=r.subtype||'';
+    if(sub==='약속')return esc(t)+(r.time2&&!compact?' <span style="color:#9CA3AF;font-size:.92em">'+esc(r.time2)+'</span>':'');
+    if(r.who)return esc(t)+' <span style="color:#9CA3AF;font-size:.92em">- '+esc(r.who)+'</span>';
+    return esc(t);
   }
-  // 통화 — "통화: 홍길동"
-  if(r.cat==='통화'&&r.who){return esc(t)+' <span style="color:#9CA3AF;font-size:.92em">- '+esc(r.who)+'</span>';}
   // 건강 — "감기 진료 (서울내과)"
   if(r.cat==='건강'&&r.who&&!compact){return esc(t)+' <span style="color:#9CA3AF;font-size:.92em">('+esc(r.who)+')</span>';}
   return esc(t);
 }
 
-var selectedCat='생각';
+var selectedCat='일상';
 var pendingPhotos=[];   // 새/수정 중인 사진 base64 배열
 var editingId=null;     // 수정 중인 기록 id (null이면 새 기록)
 var photoMem={};        // 클라우드에서 받아온 사진 캐시 (메모리)
@@ -464,22 +455,60 @@ function renderCustomForm(kind,v){
       fgWrap('처방·메모','<textarea id="f-detail" placeholder="처방 내용·메모">'+ev(v.detail)+'</textarea>');
     $('formFields').innerHTML=h;renderItems('health');return;
   }
-  if(kind==='appt'){
+  if(kind==='person'){
+    var subtypes=['통화','만남','약속','가족'];
+    var sub=v.subtype||'통화';
+    var subOpts=subtypes.map(function(s){return '<option'+(s===sub?' selected':'')+'>'+s+'</option>';}).join('');
     h='<div class="form-grid">'+
-      fgItem('약속 내용','<input type="text" id="f-title" placeholder="거래처 미팅" value="'+ev(v.title)+'">',true)+
-      fgItem('누구와','<input type="text" id="f-who" placeholder="김부장" value="'+ev(v.who)+'">')+
-      fgItem('시간','<input type="time" id="f-time2" value="'+ev(v.time2)+'">')+
-      fgItem('장소','<input type="text" id="f-place" placeholder="강남역 2번 출구" value="'+ev(v.place)+'">')+
-      fgItem('주소','<input type="text" id="f-addr" placeholder="주소(눌러서 지도)" value="'+ev(v.addr)+'">')+
-      fgItem('준비물','<input type="text" id="f-prep" placeholder="계약서, 도장" value="'+ev(v.prep)+'">')+
+      fgItem('구분','<select id="f-subtype" onchange="togglePersonType()">'+subOpts+'</select>')+
+      fgItem('상대','<input type="text" id="f-who" placeholder="홍길동 / 아내 / 가족" value="'+ev(v.who)+'" oninput="acPersonWho()">')+
+      fgItem('전화번호','<input type="tel" id="f-phone" placeholder="010-1234-5678" value="'+ev(v.phone)+'">')+
       '</div>'+
-      '<label style="margin-top:10px">비용 (어디에 얼마, 추가 가능)</label>'+
-      '<div id="itemRows"></div>'+
-      '<button type="button" class="add-row-btn" onclick="addItem(\'appt\')">＋ 비용 추가</button>'+
-      '<div class="item-total" id="itemTotal"></div>'+
-      fgWrap('메모','<textarea id="f-detail" placeholder="기타 메모">'+ev(v.detail)+'</textarea>');
-    $('formFields').innerHTML=h;renderItems('appt');return;
+      '<div id="personSub">'+
+      /* 통화 필드 */
+      '<div id="pSub_통화" class="person-sub">'+
+        '<div class="form-grid">'+
+          fgItem('통화 주제','<input type="text" id="f-title" placeholder="계약 일정 조율" value="'+ev(v.title)+'">',true)+
+        '</div>'+
+        fgWrap('통화 내용·결정사항','<textarea id="f-detail" placeholder="무슨 얘기를 했는지">'+ev(v.detail)+'</textarea>')+
+      '</div>'+
+      /* 만남 필드 */
+      '<div id="pSub_만남" class="person-sub" style="display:none">'+
+        '<div class="form-grid">'+
+          fgItem('무슨 일','<input type="text" id="f-title" placeholder="점심 식사·카페" value="'+ev(v.title)+'">',true)+
+          fgItem('장소','<input type="text" id="f-place" placeholder="강남 스타벅스" value="'+ev(v.place)+'">')+
+        '</div>'+
+        fgWrap('내용·느낀 점','<textarea id="f-detail" placeholder="있었던 일">'+ev(v.detail)+'</textarea>')+
+      '</div>'+
+      /* 약속 필드 */
+      '<div id="pSub_약속" class="person-sub" style="display:none">'+
+        '<div class="form-grid">'+
+          fgItem('약속 내용','<input type="text" id="f-title" placeholder="거래처 미팅" value="'+ev(v.title)+'">',true)+
+          fgItem('시간','<input type="time" id="f-time2" value="'+ev(v.time2)+'">')+
+          fgItem('장소','<input type="text" id="f-place" placeholder="강남역 2번 출구" value="'+ev(v.place)+'">')+
+          fgItem('준비물','<input type="text" id="f-prep" placeholder="계약서, 도장" value="'+ev(v.prep)+'">')+
+        '</div>'+
+        '<label style="margin-top:10px">비용 (추가 가능)</label>'+
+        '<div id="itemRows"></div>'+
+        '<button type="button" class="add-row-btn" onclick="addItem(\'person\')">＋ 비용 추가</button>'+
+        '<div class="item-total" id="itemTotal"></div>'+
+        fgWrap('메모','<textarea id="f-detail" placeholder="기타 메모">'+ev(v.detail)+'</textarea>')+
+      '</div>'+
+      /* 가족 필드 */
+      '<div id="pSub_가족" class="person-sub" style="display:none">'+
+        '<div class="form-grid">'+
+          fgItem('무슨 일','<input type="text" id="f-title" placeholder="가족 외식·여행" value="'+ev(v.title)+'">',true)+
+        '</div>'+
+        fgWrap('내용·느낀 점','<textarea id="f-detail" placeholder="있었던 일">'+ev(v.detail)+'</textarea>')+
+      '</div>'+
+      '</div>';
+    $('formFields').innerHTML=h;
+    togglePersonType();
+    if($('f-who')&&$('f-phone'))attachWhoAutocomplete('f-who','f-phone');
+    if(sub==='약속')renderItems('person');
+    return;
   }
+
   if(kind==='book'){
     h='<div class="form-grid">'+
       fgItem('책 제목','<input type="text" id="f-title" placeholder="사피엔스" value="'+ev(v.title)+'">',true)+
@@ -568,7 +597,7 @@ function addItem(kind){
   else if(kind==='food')formItems.push({name:'',price:'',people:''});
   else if(kind==='health')formItems.push({type:'진료비',name:'',price:''});
   else if(kind==='trip')formItems.push({name:'',price:''});
-  else if(kind==='appt')formItems.push({name:'',price:''});
+  else if(kind==='person')formItems.push({name:'',price:''});
   else if(kind==='car')formItems.push({name:'',price:''});
   renderItems(kind);
 }
@@ -595,7 +624,7 @@ function renderItems(kind){
         '<input type="number" placeholder="가격" value="'+(it.price||'')+'" oninput="updItem('+i+',\'price\',this.value);sumItems(\'health\')" class="item-price-lg">'+
         '<button type="button" class="item-del" onclick="delItem(\'health\','+i+')">×</button></div>';
     }else{ /* trip, appt, car: 항목 + 단가 */
-      var ph=kind==='car'?'정비 항목':(kind==='appt'?'어디에':'항목');
+      var ph=kind==='car'?'정비 항목':(kind==='person'?'어디에':'항목');
       h+='<div class="item-row"><input type="text" placeholder="'+ph+'" value="'+ev(it.name)+'" oninput="updItem('+i+',\'name\',this.value)">'+
         '<input type="number" placeholder="금액" value="'+(it.price||'')+'" oninput="updItem('+i+',\'price\',this.value);sumItems(\''+kind+'\')" class="item-price">'+
         '<button type="button" class="item-del" onclick="delItem(\''+kind+'\','+i+')">×</button></div>';
@@ -611,8 +640,31 @@ function sumItems(kind){
   if(kind==='food'){var ppl=formItems.reduce(function(s,it){return s+(Number(it.people)||0);},0);if(ppl)extra=' · '+ppl+'명';}
   el.textContent=sum?('합계 '+won(sum)+'원'+extra):'';
 }
+
+/* ===== 사람 카테고리: 구분별 필드 토글 ===== */
+function togglePersonType(){
+  var sub=($('f-subtype')||{}).value||'통화';
+  ['통화','만남','약속','가족'].forEach(function(s){
+    var el=document.getElementById('pSub_'+s);
+    if(el)el.style.display=(s===sub?'':'none');
+  });
+  // 약속일 때만 items(비용) 렌더
+  if(sub==='약속')renderItems('person');
+  // 전화번호 칸: 만남/가족은 선택사항으로 흐리게
+  var ph=$('f-phone');
+  if(ph){
+    ph.style.opacity=(sub==='만남'||sub==='가족')?'0.5':'1';
+    ph.placeholder=sub==='통화'?'010-1234-5678':'010-1234-5678 (선택)';
+  }
+}
+function acPersonWho(){
+  var el=$('f-who'),ph=$('f-phone');if(!el||!ph)return;
+  var name=el.value.trim();
+  var ct=contactsCache.find(function(c){return c.name===name;});
+  if(ct&&ct.phone&&!ph.value)ph.value=ct.phone;
+}
 function collectFields(){
-  var o={};['title','detail','who','amount','odo','liters','phone','addr','link','unit','qty','ship','shipinc','stars','insur','time2','place','prep','booktype','totalpg','readpg','fuelunit','cur','rate','pay'].forEach(function(k){var el=$('f-'+k);if(el)o[k]=el.value;});
+  var o={};['title','detail','who','amount','odo','liters','phone','addr','link','unit','qty','ship','shipinc','stars','insur','time2','place','prep','booktype','totalpg','readpg','fuelunit','cur','rate','pay','subtype','mood','weather','tomorrow'].forEach(function(k){var el=$('f-'+k);if(el)o[k]=el.value;});
   return o;
 }
 
@@ -917,6 +969,26 @@ function setView(m){
   $('vtCard').className='vt-btn'+(m==='card'?' sel':'');
   renderList();
 }
+
+/* ===== 구 카테고리 → 사람 마이그레이션 (1회) ===== */
+function migratePersonCat(){
+  var MIG_KEY='personal_person_migrated_v1';
+  if(localStorage.getItem(MIG_KEY))return;
+  var recs=getRecords();var changed=false;
+  var MAP={'통화':'통화','가족':'가족','약속':'약속'};
+  recs.forEach(function(r){
+    if(MAP[r.cat]){
+      r.subtype=MAP[r.cat]; // 구분 보존
+      // 가족 제목이 없으면 who를 title로
+      if(r.cat==='가족'&&!r.title&&r.who){r.title=r.who;}
+      r.cat='사람'; changed=true;
+    }
+    // 아이디어 → 생각
+    if(r.cat==='아이디어'){r.cat='생각';changed=true;}
+  });
+  if(changed)setRecords(recs);
+  localStorage.setItem(MIG_KEY,'1');
+}
 function initViewMode(){
   try{var s=localStorage.getItem('personal_viewMode');if(s==='card'||s==='list')viewMode=s;}catch(e){}
 }
@@ -1016,7 +1088,7 @@ function groupRows(arr,rowFn){
 }
 function catBadge(r){
   var col=evtColor(r),c=catOf(r.cat);
-  var label=(r.cat==='차계부'&&r.who)?r.who:c.k;
+  var label=(r.cat==='차계부'&&r.who)?r.who:(r.cat==='사람'&&r.subtype?r.subtype:c.k);
   return '<span class="cat-badge" style="background:'+col+'1A;color:'+col+'">'+c.i+' '+esc(label)+'</span>';
 }
 /* 표 목록 (날짜 그룹 + 한 줄 행) */
@@ -1074,11 +1146,13 @@ function rowSummary(r){
   }else if(r.cat==='여행'){
     if(r.who)s.push(esc(r.who));
     var its4=items();if(its4.length)s.push(its4.join(', '));
-  }else if(r.cat==='약속'){
+  }else if(r.cat==='사람'){
+    var sub=r.subtype||'';
     if(r.who)s.push(esc(r.who));
-    if(r.time2)s.push('🕐'+esc(r.time2));
-    if(r.place)s.push('📍'+esc(r.place));
-    if(r.prep)s.push('🎒'+esc(r.prep));
+    if(sub==='약속'){if(r.time2)s.push('🕐'+esc(r.time2));if(r.place)s.push('📍'+esc(r.place));if(r.prep)s.push('🎒'+esc(r.prep));}
+    else if(sub==='만남'||sub==='가족'){if(r.place)s.push('📍'+esc(r.place));}
+    else{if(r.phone)s.push('📞'+esc(r.phone));}
+    if(sub)s.push('['+sub+']');
   }else if(r.cat==='독서'){
     if(r.who)s.push(esc(r.who));
     if(r.booktype)s.push(r.booktype);
@@ -1106,7 +1180,7 @@ function metaHtml(r){
     if(r.booktype)m+='<span>'+(r.booktype==='전자책'?'📱':'📕')+' '+r.booktype+'</span>';
     if(r.totalpg)m+='<span>📖 <b>'+(r.readpg||0)+'/'+r.totalpg+'쪽</b> ('+Math.min(100,Math.round((r.readpg||0)/r.totalpg*100))+'%)</span>';
   }
-  if(r.cat==='약속'){
+  if(r.cat==='사람'&&r.subtype==='약속'){
     if(r.time2)m+='<span>🕐 <b>'+esc(r.time2)+'</b></span>';
     if(r.place)m+='<span>📍 <b>'+esc(r.place)+'</b></span>';
   }
@@ -1140,7 +1214,7 @@ function detailExtra(r){
     if(fp.length)h+='<div class="dx-line">⛽ '+fp.join(' · ')+'</div>';
   }
   // 항목 리스트가 있는 카테고리 (맛집/건강/여행/약속/정비)
-  if((r.cat==='맛집'||r.cat==='건강'||r.cat==='여행'||r.cat==='약속'||r.cat==='차계부')&&r.items&&r.items.length){
+  if((r.cat==='맛집'||r.cat==='건강'||r.cat==='여행'||(r.cat==='사람'&&r.subtype==='약속')||r.cat==='차계부')&&r.items&&r.items.length){
     h+='<div class="dx-items">';
     r.items.forEach(function(it){
       var left=(it.type?'<span class="dx-type">'+esc(it.type)+'</span> ':'')+esc(it.name||'');
@@ -1151,7 +1225,7 @@ function detailExtra(r){
     if(r.amount)h+='<div class="dx-item dx-sum"><span>합계</span><span class="dx-price">'+won(r.amount)+'원</span></div>';
     h+='</div>';
   }
-  if(r.cat==='약속'&&r.prep)h+='<div class="dx-line">🎒 준비물: '+esc(r.prep)+'</div>';
+  if(r.cat==='사람'&&r.subtype==='약속'&&r.prep)h+='<div class="dx-line">🎒 준비물: '+esc(r.prep)+'</div>';
   // 생각/독서 짝 비교
   if((r.cat==='독서'||r.cat==='생각')&&r.items&&r.items.length){
     var tag1=r.cat==='독서'?'📜 핵심':'💭 생각',tag2=r.cat==='독서'?'💡 생각':'📝 자세히';
@@ -1653,7 +1727,7 @@ function renderApptBanner(){
   var el=$('apptBanner');if(!el)return;
   var today=new Date();today.setHours(0,0,0,0);
   var soon=getRecords().filter(function(r){
-    if(r.cat!=='약속')return false;
+    if(!(r.cat==='사람'&&r.subtype==='약속'))return false;
     var d=new Date(r.date+'T00:00');var diff=Math.round((d-today)/86400000);
     return diff>=0&&diff<=7;
   }).sort(function(a,b){return a.date.localeCompare(b.date);});
@@ -1663,7 +1737,7 @@ function renderApptBanner(){
     var when=diff===0?'오늘':(diff===1?'내일':diff+'일 뒤');
     return '<div class="appt-row"><span><b>'+esc(r.title||'약속')+'</b>'+(r.who?' · '+esc(r.who):'')+'</span><span class="appt-d">'+when+'</span></div>';
   }).join('');
-  el.innerHTML='<div class="appt-banner" onclick="setFilter(\'약속\');document.querySelectorAll(\'.tab\')[1].click();">📅 다가오는 약속'+rows+'</div>';
+  el.innerHTML='<div class="appt-banner" onclick="setFilter(\'사람\');document.querySelectorAll(\'.tab\')[1].click();">📅 다가오는 약속'+rows+'</div>';
 }
 
 /* ===== CSV 내보내기 ===== */
@@ -2196,7 +2270,7 @@ function delContact(id){
     // 주소 끝 #카테고리 가 있으면 그 카테고리로 시작 (예: personal.html#독서)
     var hash=decodeURIComponent((location.hash||'').replace('#',''));
     if(hash&&catOf(hash).k===hash)selectedCat=hash;
-    initViewMode();renderCats();renderForm({});renderPending();setApiBtn();
+    migratePersonCat();initViewMode();renderCats();renderForm({});renderPending();setApiBtn();
     // 용량 절약: localStorage에 남아있는 사진 원본 데이터 제거 (사진은 클라우드에 있음)
     try{
       var recs=getRecords(),changed=false;
