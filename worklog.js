@@ -1208,10 +1208,10 @@ document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()
 /* ===== 검색 ===== */
 const Q={work:"",plan:"",memo:"",call:"",vacation:"",meeting:"",deliver:""};
 function matchObj(e,q){ if(!q.trim()) return true; const s=Object.entries(e).filter(([k])=>k!=="photos"&&k!=="id"&&k!=="kind").map(([,v])=>String(v)).join(" ").toLowerCase(); return s.includes(q.trim().toLowerCase()); }
-$("wkSearch").addEventListener("input",e=>{ Q.work=e.target.value; renderWork(); });
-$("planSearch").addEventListener("input",e=>{ Q.plan=e.target.value; renderPlan(); });
-$("memoSearch").addEventListener("input",e=>{ Q.memo=e.target.value; renderMemo(); });
-$("callSearch").addEventListener("input",e=>{ Q.call=e.target.value; renderCall(); });
+const _ws=$("wkSearch"); if(_ws) _ws.addEventListener("input",e=>{ Q.work=e.target.value; renderWork(); });
+const _ps=$("planSearch"); if(_ps) _ps.addEventListener("input",e=>{ Q.plan=e.target.value; renderPlan(); });
+const _ms=$("memoSearch"); if(_ms) _ms.addEventListener("input",e=>{ Q.memo=e.target.value; renderMemo(); });
+const _cs=$("callSearch"); if(_cs) _cs.addEventListener("input",e=>{ Q.call=e.target.value; renderCall(); });
 $("vacSearch").addEventListener("input",e=>{ Q.vacation=e.target.value; renderVac(); });
 $("meetSearch").addEventListener("input",e=>{ Q.meeting=e.target.value; renderMeeting(); });
 $("delSearch").addEventListener("input",e=>{ Q.deliver=e.target.value; renderDeliver(); });
@@ -2708,7 +2708,7 @@ function fileLinkCardHTML(e){
 
 /* ===== 사이트 탭 ===== */
 function wireSiteTab(){
-  $("siteSearch").addEventListener("input",e=>{ CAT_FILTER.site.q=e.target.value; renderSite(); });
+  const _ss=$("siteSearch"); if(_ss) _ss.addEventListener("input",e=>{ CAT_FILTER.site.q=e.target.value; renderSite(); });
   $("siteCatFilter").addEventListener("change",e=>{ CAT_FILTER.site.cat=e.target.value; CAT_FILTER.site.sub="전체"; renderSite(); });
   $("btnSiteCatMgr").addEventListener("click",()=>openCatMgr("site"));
 }
