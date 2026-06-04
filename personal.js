@@ -2158,12 +2158,16 @@ function runDiag(){
 function clearErrors(){localStorage.removeItem(ERR_KEY);toast('에러 기록 삭제됨');runDiag();}
 
 /* ===== 초기화 ===== */
-/* ===== 보관함 (PIN 암호화 금고) ===== */
+/* ===== 보관함 (PIN 암호화 금고) v52 ===== */
 var COL_VAULT='personal_vault';
-var vaultPhotos=[];      // 입력 중인 사진(평문 base64)
-var vaultCache={};       // 복호화 캐시 (id -> {title,memo,photos})
+var VAULT_BUCKET='my-system-25497.firebasestorage.app';
+// 현재 입력 중인 첨부파일 목록
+// type: 'image'(base64) | 'file'(Storage URL)
+var vaultFiles=[];   // [{kind:'image'|'file', name, data(base64 or url), mime, path(Storage경로)}]
+var vaultCache={};
+var editingVaultId=null;
+
 function vaultKeyPin(){
-  // 지문으로 들어왔거나 PIN을 모르면 한 번 물어봄
   if(sessionPin)return sessionPin;
   var p=prompt('보관함을 열려면 PIN 4자리를 입력하세요');
   if(p&&hashPin(p)===localStorage.getItem(PIN_KEY)){sessionPin=p;return p;}
@@ -2192,76 +2196,201 @@ function vaultDecrypt(b64,pin){
     return crypto.subtle.decrypt({name:'AES-GCM',iv:iv},key,ct);
   }).then(function(pt){return new TextDecoder().decode(pt);});
 }
-function vSetStatus(m){var el=$('vPhotoStatus');if(el)el.textContent=m||'';}
-function vOnPhoto(ev){
-  var fl=ev.target.files,list=fl?Array.prototype.slice.call(fl):[];ev.target.value='';
-  if(!list.length)return;
-  vSetStatus('사진 읽는 중…');var i=0,ok=0;
-  (function next(){
-    if(i>=list.length){vSetStatus(ok?('✅ '+ok+'장 추가됨'):'⚠️ 추가 실패');return;}
-    readAndCompress(list[i++]).then(function(d){vaultPhotos.push(d);ok++;vRenderPending();next();}).catch(function(e){vSetStatus('⚠️ '+e.message);next();});
-  })();
-}
-function vHandlePaste(e){
-  var items=(e.clipboardData||window.clipboardData);if(!items)return;
-  var files=[];if(items.items){for(var i=0;i<items.items.length;i++){var it=items.items[i];if(it.kind==='file'&&it.type.indexOf('image')>-1){var f=it.getAsFile();if(f)files.push(f);}}}
-  if(!files.length)return;e.preventDefault();
-  var bx=$('vPasteBox');if(bx)bx.innerHTML='';
-  var i=0,ok=0;vSetStatus('붙여넣는 중…');
-  (function next(){if(i>=files.length){vSetStatus(ok?('✅ '+ok+'장 추가됨'):'⚠️ 실패');return;}
-    readAndCompress(files[i++]).then(function(d){vaultPhotos.push(d);ok++;vRenderPending();next();}).catch(function(){next();});})();
-}
-function vRenderPending(){
-  var row=$('vPhotoRow');row.innerHTML='';
-  vaultPhotos.forEach(function(p,i){
-    var d=document.createElement('div');d.className='photo-thumb';
-    d.innerHTML='<img src="'+p+'"><button class="photo-del">×</button>';
-    d.querySelector('img').onclick=function(){showImg(p);};
-    d.querySelector('.photo-del').onclick=function(){vaultPhotos.splice(i,1);vRenderPending();};
-    row.appendChild(d);
+
+/* ---- Firebase Storage 업로드 (REST) ---- */
+function vaultUploadFile(file){
+  return new Promise(function(resolve,reject){
+    var path='personal_vault/'+Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+file.name.replace(/[^\w.가-힣-]/g,'_');
+    var url='https://firebasestorage.googleapis.com/v0/b/'+VAULT_BUCKET+'/o?uploadType=media&name='+encodeURIComponent(path)+'&key='+FB_KEY;
+    var xhr=new XMLHttpRequest();
+    xhr.open('POST',url,true);
+    xhr.setRequestHeader('Content-Type',file.type||'application/octet-stream');
+    xhr.upload.onprogress=function(e){if(e.lengthComputable)vSetStatus('업로드 중… '+Math.round(e.loaded/e.total*100)+'%');};
+    xhr.onload=function(){
+      if(xhr.status>=200&&xhr.status<300){
+        var res=JSON.parse(xhr.responseText);
+        var dlUrl='https://firebasestorage.googleapis.com/v0/b/'+VAULT_BUCKET+'/o/'+encodeURIComponent(path)+'?alt=media&token='+res.downloadTokens;
+        resolve({name:file.name,url:dlUrl,mime:file.type||'',path:path});
+      }else reject(new Error('업로드 실패('+xhr.status+')'));
+    };
+    xhr.onerror=function(){reject(new Error('네트워크 오류'));};
+    xhr.send(file);
   });
 }
-var editingVaultId=null;
+function vaultDeleteFile(path){
+  var url='https://firebasestorage.googleapis.com/v0/b/'+VAULT_BUCKET+'/o/'+encodeURIComponent(path)+'?key='+FB_KEY;
+  return fetch(url,{method:'DELETE'}).catch(function(){});
+}
+
+/* ---- 파일 추가 핸들러 ---- */
+function vSetStatus(m){var el=$('vPhotoStatus');if(el)el.textContent=m||'';}
+
+function vHandleFiles(files){
+  var list=Array.prototype.slice.call(files);
+  if(!list.length)return;
+  var imgs=[],docs=[];
+  list.forEach(function(f){
+    if(f.type.startsWith('image/'))imgs.push(f); else docs.push(f);
+  });
+  var total=imgs.length+docs.length,done=0;
+  vSetStatus('처리 중…');
+  // 이미지: base64 압축
+  imgs.forEach(function(f){
+    readAndCompress(f).then(function(b64){
+      vaultFiles.push({kind:'image',name:f.name,data:b64,mime:f.type,_previewUrl:b64});
+      done++;if(done===total){vSetStatus('✅ '+total+'개 추가됨');vRenderPreviews();}
+    }).catch(function(e){done++;vSetStatus('⚠️ '+e.message);if(done===total)vRenderPreviews();});
+  });
+  // 문서: 객체 URL로 미리보기, 저장 시 업로드
+  docs.forEach(function(f){
+    vaultFiles.push({kind:'file',name:f.name,mime:f.type||'',_file:f,_previewUrl:null});
+    done++;if(done===total){vSetStatus('✅ '+total+'개 추가됨');vRenderPreviews();}
+  });
+  if(!total){vSetStatus('');vRenderPreviews();}
+}
+
+function vOnPhoto(ev){vHandleFiles(ev.target.files);ev.target.value='';}
+function vOnDoc(ev){vHandleFiles(ev.target.files);ev.target.value='';}
+
+function vHandlePaste(e){
+  var items=(e.clipboardData||window.clipboardData);if(!items||!items.items)return;
+  var files=[];
+  for(var i=0;i<items.items.length;i++){
+    var it=items.items[i];
+    if(it.kind==='file'&&it.type.indexOf('image/')>-1){var f=it.getAsFile();if(f)files.push(f);}
+  }
+  if(!files.length)return;
+  e.preventDefault();
+  var bx=$('vPasteBox');if(bx)bx.innerHTML='';
+  vHandleFiles(files);
+}
+
+/* ---- 드래그앤드롭 ---- */
+function vaultBindDrop(){
+  var dz=$('vaultDropZone');if(!dz)return;
+  dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('dz-over');});
+  dz.addEventListener('dragleave',function(e){if(!dz.contains(e.relatedTarget))dz.classList.remove('dz-over');});
+  dz.addEventListener('drop',function(e){
+    e.preventDefault();dz.classList.remove('dz-over');
+    if(e.dataTransfer.files&&e.dataTransfer.files.length)vHandleFiles(e.dataTransfer.files);
+  });
+}
+
+/* ---- 미리보기 렌더 ---- */
+function vRenderPreviews(){
+  var box=$('vaultPreviews');if(!box)return;
+  if(!vaultFiles.length){box.innerHTML='';return;}
+  box.innerHTML=vaultFiles.map(function(f,i){
+    var isImg=f.kind==='image';
+    var ext=(f.name||'').split('.').pop().toUpperCase()||'FILE';
+    var thumb=isImg
+      ?('<img src="'+f.data+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px;cursor:zoom-in" onclick="showImg(this.src)">')
+      :('<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:4px">'+
+        '<div style="font-size:22px">📄</div>'+
+        '<div style="font-size:10px;font-weight:800;color:#6366F1;background:#EEF2FF;padding:1px 5px;border-radius:3px">'+esc(ext)+'</div>'+
+        '</div>');
+    var name=(f.name||'').length>13?(f.name||'').slice(0,11)+'..':f.name||'';
+    return '<div class="vault-prev-item" title="'+esc(f.name||'')+'">'+
+      '<div class="vault-prev-img">'+thumb+'</div>'+
+      '<div style="font-size:10px;color:#6B7280;margin-top:3px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:72px">'+esc(name)+'</div>'+
+      '<button onclick="vRemoveFile('+i+')" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1">✕</button>'+
+    '</div>';
+  }).join('');
+}
+function vRemoveFile(i){
+  var f=vaultFiles[i];
+  // 기존 저장된 파일이면 삭제 예약
+  if(f.path&&!f._file)f._toDelete=true;
+  vaultFiles.splice(i,1);
+  vRenderPreviews();
+}
+
+/* ---- 저장 ---- */
 function saveVault(){
   var title=($('v-title').value||'').trim();
   var memo=($('v-memo').value||'').trim();
-  if(!title&&!vaultPhotos.length){toast('제목이나 사진을 넣으세요');return;}
+  if(!title&&!vaultFiles.length){toast('제목이나 파일을 넣으세요');return;}
   var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
-  var wasEdit=editingVaultId;
-  var id=editingVaultId||String(Date.now());
-  var payload=JSON.stringify({memo:memo,photos:vaultPhotos});
-  vSetStatus('암호화 중…');
-  vaultEncrypt(payload,pin).then(function(enc){
-    if(enc.length>900000){vSetStatus('⚠️ 사진 용량이 커요 — 사진 수를 줄여주세요');return;}
-    fetch(FB_BASE+'/'+COL_VAULT+'/'+id+'?key='+FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(toFS({enc:enc,title:title,nphoto:vaultPhotos.length,created:new Date().toISOString()}))})
-      .then(function(){
-        cancelVaultEdit();
-        toast(wasEdit?'✏️ 수정됨':'🔒 저장됨 (제목만 표시, 내용은 잠김)');
-        renderVault();
-      }).catch(function(e){logErr('보관함 저장 실패: '+e.message);vSetStatus('⚠️ 저장 실패');});
-  }).catch(function(e){logErr('암호화 실패: '+e.message);vSetStatus('⚠️ 암호화 실패');});
+  var btn=$('vSaveBtn');btn.disabled=true;btn.textContent='저장 중…';
+  vSetStatus('파일 업로드 중…');
+
+  // 문서 파일들 업로드 (이미지는 base64로 이미 있음)
+  var uploadPromises=vaultFiles.map(function(f){
+    if(f.kind==='file'&&f._file){
+      return vaultUploadFile(f._file).then(function(res){
+        f.url=res.url;f.path=res.path;delete f._file;
+      });
+    }
+    return Promise.resolve();
+  });
+
+  Promise.all(uploadPromises).then(function(){
+    // payload: 이미지 base64 + 문서 URL 목록
+    var payload=JSON.stringify({
+      memo:memo,
+      files:vaultFiles.map(function(f){
+        return {kind:f.kind,name:f.name,mime:f.mime||'',
+          data:f.kind==='image'?f.data:'',   // 이미지만 base64
+          url:f.kind==='file'?f.url:'',       // 문서는 URL
+          path:f.path||''};
+      })
+    });
+    vSetStatus('암호화 중…');
+    return vaultEncrypt(payload,pin);
+  }).then(function(enc){
+    var wasEdit=editingVaultId;
+    var id=editingVaultId||String(Date.now());
+    var nImg=vaultFiles.filter(function(f){return f.kind==='image';}).length;
+    var nDoc=vaultFiles.filter(function(f){return f.kind==='file';}).length;
+    return fetch(FB_BASE+'/'+COL_VAULT+'/'+id+'?key='+FB_KEY,{
+      method:'PATCH',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(toFS({enc:enc,title:title,nfile:vaultFiles.length,nimg:nImg,ndoc:nDoc,created:new Date().toISOString()}))
+    }).then(function(){
+      cancelVaultEdit();
+      toast(wasEdit?'✏️ 수정됨':'🔒 저장됨');
+      renderVault();
+    });
+  }).catch(function(e){
+    logErr('보관함 저장 실패: '+e.message);
+    vSetStatus('⚠️ 저장 실패: '+e.message);
+    btn.disabled=false;btn.textContent='🔒 암호화하여 저장';
+  });
 }
+
 function cancelVaultEdit(){
-  editingVaultId=null;vaultPhotos=[];
-  $('v-title').value='';$('v-memo').value='';vRenderPending();vSetStatus('');
-  var b=$('vSaveBtn');if(b)b.textContent='🔒 암호화하여 저장';
+  editingVaultId=null;vaultFiles=[];
+  var ti=$('v-title');if(ti)ti.value='';
+  var me=$('v-memo');if(me)me.value='';
+  vRenderPreviews();vSetStatus('');
+  var b=$('vSaveBtn');if(b){b.disabled=false;b.textContent='🔒 암호화하여 저장';}
   var eb=$('vEditBanner');if(eb)eb.style.display='none';
 }
+
 function editVault(id,enc,title){
   var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
   vaultDecrypt(enc,pin).then(function(plain){
     var o=JSON.parse(plain);
     editingVaultId=id;
-    $('v-title').value=title||'';
-    $('v-memo').value=o.memo||'';
-    vaultPhotos=(o.photos||[]).slice();vRenderPending();
+    var ti=$('v-title');if(ti)ti.value=title||'';
+    var me=$('v-memo');if(me)me.value=o.memo||'';
+    // 파일 복원
+    vaultFiles=(o.files||[]).map(function(f){
+      // 구형: photos 배열 호환
+      if(!o.files&&o.photos)return {kind:'image',name:'photo',data:f,mime:'image/jpeg'};
+      return f;
+    });
+    // 구형 photos 배열 호환
+    if(!o.files&&o.photos){
+      vaultFiles=o.photos.map(function(p){return {kind:'image',name:'photo.jpg',data:p,mime:'image/jpeg'};});
+    }
+    vRenderPreviews();
     var b=$('vSaveBtn');if(b)b.textContent='✏️ 수정 저장';
     var eb=$('vEditBanner');if(eb)eb.style.display='flex';
     $('p-vault').scrollIntoView({behavior:'smooth',block:'start'});
     toast('수정 모드 — 고치고 저장하세요');
   }).catch(function(){toast('복호화 실패 — PIN 확인');});
 }
+
 function renderVault(){
   var box=$('vaultList');box.innerHTML='<div class="empty">불러오는 중…</div>';
   fetch(FB_BASE+'/'+COL_VAULT+'?key='+FB_KEY+'&pageSize=200').then(function(r){return r.json();}).then(function(d){
@@ -2269,32 +2398,63 @@ function renderVault(){
     var items=d.documents.map(function(doc){var o=fromFS(doc);o.id=doc.name.split('/').pop();return o;})
       .sort(function(a,b){return (b.created||'').localeCompare(a.created||'');});
     box.innerHTML=items.map(function(it){
-      var nph=it.nphoto?(' · 📷'+it.nphoto+'장'):'';
-      var encEsc=esc(it.enc).replace(/'/g,"\\'");
-      var titleEsc=esc(it.title||'').replace(/'/g,"\\'");
+      var sub='🔒 내용 잠김';
+      if(it.nfile>0){var parts=[];if(it.nimg)parts.push('📷'+it.nimg+'장');if(it.ndoc)parts.push('📄'+it.ndoc+'개');sub+=' · '+parts.join(' ');}
+      else if(it.nphoto){sub+=' · 📷'+it.nphoto+'장';}
+      var encEsc=esc(it.enc).replace(/'/g,"\'");
+      var titleEsc=esc(it.title||'').replace(/'/g,"\'");
       return '<div class="vault-card" id="vault-'+it.id+'">'+
-        '<div class="vault-head"><div class="vault-titlebar"><span class="vault-name">'+(esc(it.title)||'(제목 없음)')+'</span><span class="vault-sub">🔒 내용 잠김'+nph+'</span></div>'+
-        '<div class="vault-acts"><button class="rec-act" style="color:#6366F1" onclick="unlockVault(\''+it.id+'\',\''+encEsc+'\')">👁 열기</button>'+
-        '<button class="rec-act" style="color:#F59E0B" onclick="editVault(\''+it.id+'\',\''+encEsc+'\',\''+titleEsc+'\')">✏️ 수정</button>'+
-        '<button class="rec-act rec-del" onclick="delVault(\''+it.id+'\')">🗑 삭제</button></div></div>'+
-        '<div class="vault-body" id="vbody-'+it.id+'"></div></div>';
+        '<div class="vault-head">'+
+          '<div class="vault-titlebar"><span class="vault-name">'+(esc(it.title)||'(제목 없음)')+'</span><span class="vault-sub">'+sub+'</span></div>'+
+          '<div class="vault-acts">'+
+            '<button class="rec-act" style="color:#6366F1" onclick="unlockVault(\''+it.id+'\',\''+encEsc+'\')">👁️ 열기</button>'+
+            '<button class="rec-act" style="color:#F59E0B" onclick="editVault(\''+it.id+'\',\''+encEsc+'\',\''+titleEsc+'\')">✏️ 수정</button>'+
+            '<button class="rec-act rec-del" onclick="delVault(\''+it.id+'\')">🗑 삭제</button>'+
+          '</div>'+
+        '</div>'+
+        '<div class="vault-body" id="vbody-'+it.id+'"></div>'+
+      '</div>';
     }).join('');
   }).catch(function(e){logErr('보관함 조회 실패: '+e.message);box.innerHTML='<div class="empty">불러오기 실패</div>';});
 }
+
 function unlockVault(id,enc){
   var pin=vaultKeyPin();if(!pin){toast('PIN이 필요해요');return;}
   var body=$('vbody-'+id);if(body.innerHTML){body.innerHTML='';return;}
   body.innerHTML='<div style="font-size:12px;color:#9CA3AF;padding:6px 0">복호화 중…</div>';
   vaultDecrypt(enc,pin).then(function(plain){
     var o=JSON.parse(plain);
-    var ph=(o.photos||[]).map(function(p){return '<img src="'+p+'" onclick="showImg(this.src)" style="width:100%;border-radius:10px;margin-top:8px;cursor:zoom-in">';}).join('');
-    body.innerHTML=(o.memo?'<div class="vault-memo">'+esc(o.memo)+'</div>':'')+ph||'<div style="font-size:12px;color:#9CA3AF;padding:6px 0">내용 없음</div>';
+    var html='';
+    if(o.memo)html+='<div class="vault-memo">'+esc(o.memo)+'</div>';
+    // 신형: files 배열
+    var files=o.files||[];
+    if(!files.length&&o.photos)files=o.photos.map(function(p){return {kind:'image',data:p,name:'photo.jpg'};});
+    files.forEach(function(f){
+      if(f.kind==='image'&&f.data){
+        html+='<img src="'+f.data+'" onclick="showImg(this.src)" style="max-width:100%;border-radius:10px;margin-top:8px;cursor:zoom-in;display:block">';
+      }else if(f.kind==='file'&&f.url){
+        var ext=(f.name||'').split('.').pop().toUpperCase()||'FILE';
+        var isImg=/^(JPG|JPEG|PNG|GIF|WEBP)$/.test(ext);
+        if(isImg){
+          html+='<img src="'+esc(f.url)+'" onclick="showImg(this.src)" style="max-width:100%;border-radius:10px;margin-top:8px;cursor:zoom-in;display:block">';
+        }else{
+          html+='<a href="'+esc(f.url)+'" target="_blank" class="vault-file-link">'+
+            '<span class="vault-file-ext">'+esc(ext)+'</span>'+
+            '<span class="vault-file-name">'+esc(f.name||'파일')+'</span>'+
+            '<span style="font-size:11px;color:#9CA3AF">↗ 열기</span></a>';
+        }
+      }
+    });
+    body.innerHTML=html||'<div style="font-size:12px;color:#9CA3AF;padding:6px 0">내용 없음</div>';
     var head=$('vault-'+id).querySelector('.vault-sub');if(head)head.textContent='🔓 열림';
-  }).catch(function(e){body.innerHTML='<div style="color:#EF4444;font-size:12px;padding:6px 0">⚠️ 복호화 실패 — PIN이 다를 수 있어요</div>';});
+  }).catch(function(){body.innerHTML='<div style="color:#EF4444;font-size:12px;padding:6px 0">⚠️ 복호화 실패 — PIN이 다를 수 있어요</div>';});
 }
+
 function delVault(id){
   if(!confirm('이 보관 문서를 삭제할까요?'))return;
-  fetch(FB_BASE+'/'+COL_VAULT+'/'+id+'?key='+FB_KEY,{method:'DELETE'}).then(function(){toast('삭제됨');renderVault();}).catch(function(){toast('삭제 실패');});
+  fetch(FB_BASE+'/'+COL_VAULT+'/'+id+'?key='+FB_KEY,{method:'DELETE'})
+    .then(function(){toast('삭제됨');renderVault();})
+    .catch(function(){toast('삭제 실패');});
 }
 
 /* ===== 급한 메모 (worklog 표준) ===== */
@@ -2597,7 +2757,9 @@ function delContact(id){
     $('pickInput').onchange=onPhotoInput;
     var vc=$('vCamInput');if(vc)vc.onchange=vOnPhoto;
     var vp=$('vPickInput');if(vp)vp.onchange=vOnPhoto;
+    var vd=$('vDocInput');if(vd)vd.onchange=vOnDoc;
     var vpb=$('vPasteBox');if(vpb)vpb.addEventListener('paste',vHandlePaste);
+    vaultBindDrop();
     var pb=$('pasteBox');if(pb)pb.addEventListener('paste',handlePaste);
     // 급한 메모 (worklog 표준)
     wireQuickMemo();

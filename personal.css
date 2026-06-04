@@ -779,3 +779,41 @@ textarea{resize:vertical;min-height:74px;}
   .add-modal{border-radius:14px 14px 0 0;margin:auto 0 0;}
   .add-modal-bg{align-items:flex-end;padding:0;}
 }
+
+/* ===== 보관함 드래그앤드롭 v52 ===== */
+.vault-dropzone{
+  border:2px dashed #C7D2FE;border-radius:14px;
+  background:#FAFBFF;min-height:120px;
+  display:flex;align-items:center;justify-content:center;
+  transition:border-color .2s,background .2s;
+  margin-bottom:8px;
+}
+.vault-dropzone.dz-over{border-color:#6366F1;background:#EEF2FF;}
+.vault-dz-inner{text-align:center;padding:16px 12px;}
+
+/* 첨부 미리보기 그리드 */
+.vault-previews{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;min-height:0;}
+.vault-prev-item{
+  position:relative;width:72px;
+  display:flex;flex-direction:column;align-items:center;
+}
+.vault-prev-img{
+  width:72px;height:72px;border-radius:8px;overflow:hidden;
+  border:1px solid #E5E7EB;background:#F5F3FF;
+  display:flex;align-items:center;justify-content:center;
+}
+.vault-prev-img:hover{border-color:#6366F1;}
+
+/* 열기 시 파일 링크 */
+.vault-file-link{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;border-radius:10px;
+  background:#F5F3FF;border:1px solid #DDD6FE;
+  margin-top:8px;text-decoration:none;color:#1A1A2E;
+}
+.vault-file-link:hover{background:#EDE9FE;}
+.vault-file-ext{
+  font-size:11px;font-weight:800;color:#6366F1;
+  background:#EEF2FF;padding:2px 7px;border-radius:5px;flex-shrink:0;
+}
+.vault-file-name{flex:1;font-size:14px;font-weight:600;color:#374151;}

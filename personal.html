@@ -23,7 +23,7 @@
 
 <div class="hdr">
   <div class="hdr-l">
-    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v51</span></span>
+    <span class="hdr-title">🗂️ 개인 관리 <span style="font-size:11px;color:#A5B4FC;font-weight:600">v52</span></span>
     <span class="hdr-sub"><span class="dot" id="fbDot"></span><span id="fbText">연결 확인 중...</span></span>
   </div>
   <div class="hdr-r">
@@ -241,23 +241,44 @@
   <!-- 보관함 -->
   <div class="panel" id="p-vault">
     <div class="card">
-      <div class="card-title">🔐 보관함 <span style="font-weight:500;color:#9CA3AF;font-size:11px">사진·메모를 PIN으로 암호화 저장</span></div>
+      <div class="card-title">🔐 보관함 <span style="font-weight:500;color:#9CA3AF;font-size:11px">PIN 암호화 저장</span></div>
       <p style="font-size:12px;color:#6B7280;line-height:1.6;margin-bottom:12px;">
-        사업자등록증·카드 등 중요 문서를 안전하게 보관해요. 내용은 PIN으로 암호화되어 저장되며, <b>PIN을 잊으면 복구할 수 없어요.</b></p>
+        사업자등록증·카드·계약서 등 중요 문서를 안전하게 보관해요. 내용은 PIN으로 암호화되며, <b>PIN을 잊으면 복구할 수 없어요.</b></p>
       <div id="vEditBanner" class="edit-banner" style="display:none">✏️ 수정 중 <button onclick="cancelVaultEdit()">취소</button></div>
-      <label>제목</label>
-      <input type="text" id="v-title" placeholder="예: 사업자등록증, ○○카드">
+
+      <label>제목 <span class="req">*</span></label>
+      <input type="text" id="v-title" placeholder="예: 사업자등록증, ○○카드, 임대차계약서">
+
       <label>메모 <span class="opt">(선택)</span></label>
-      <textarea id="v-memo" placeholder="카드번호 일부, 메모 등"></textarea>
-      <label>사진 <span class="opt">(붙여넣기 Ctrl+V 가능)</span></label>
-      <div class="photo-btns">
-        <label class="photo-btn">📷 카메라<input type="file" id="vCamInput" accept="image/*" capture="environment" style="display:none"></label>
-        <label class="photo-btn">🖼 사진 선택<input type="file" id="vPickInput" accept="image/*" multiple style="display:none"></label>
+      <textarea id="v-memo" placeholder="카드번호 일부, 메모, URL 등"></textarea>
+
+      <label>파일 첨부 <span class="opt">(사진·PDF·문서 모두 가능)</span></label>
+      <!-- 드래그앤드롭 영역 -->
+      <div class="vault-dropzone" id="vaultDropZone">
+        <div class="vault-dz-inner">
+          <div style="font-size:32px;margin-bottom:6px">📎</div>
+          <div style="font-size:14px;font-weight:600;color:#6B7280">여기에 파일을 드래그하거나</div>
+          <div style="display:flex;gap:8px;margin-top:10px;justify-content:center;flex-wrap:wrap">
+            <label class="photo-btn" style="cursor:pointer">📷 카메라
+              <input type="file" id="vCamInput" accept="image/*" capture="environment" style="display:none">
+            </label>
+            <label class="photo-btn" style="cursor:pointer">🖼 사진 선택
+              <input type="file" id="vPickInput" accept="image/*" multiple style="display:none">
+            </label>
+            <label class="photo-btn" style="cursor:pointer;background:#EEF2FF;color:#4F46E5;border-color:#A5B4FC">📄 문서 선택
+              <input type="file" id="vDocInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.txt,.zip" multiple style="display:none">
+            </label>
+          </div>
+          <div style="font-size:11px;color:#9CA3AF;margin-top:8px">PDF · Word · Excel · HWP · 사진 등</div>
+        </div>
       </div>
+      <!-- Ctrl+V 붙여넣기 (사진) -->
+      <div id="vPasteBox" class="paste-box" contenteditable="true" data-ph="📋 Ctrl+V로 사진 붙여넣기 (PC)"></div>
       <div class="photo-status" id="vPhotoStatus"></div>
-      <div id="vPasteBox" class="paste-box" contenteditable="true" data-ph="📋 여기를 누르고 Ctrl+V로 사진 붙여넣기 (PC)"></div>
-      <div class="photo-row" id="vPhotoRow"></div>
-      <button class="btn btn-primary" id="vSaveBtn" onclick="saveVault()">🔒 암호화하여 저장</button>
+      <!-- 첨부 미리보기 -->
+      <div class="vault-previews" id="vaultPreviews"></div>
+
+      <button class="btn btn-primary" id="vSaveBtn" onclick="saveVault()" style="margin-top:14px">🔒 암호화하여 저장</button>
     </div>
     <div id="vaultList"></div>
   </div>
@@ -332,6 +353,6 @@
   <div class="cp-list" id="catPaneList"></div>
 </div>
 
-<script src="personal.js?v=51"></script>
+<script src="personal.js?v=52"></script>
 </body>
 </html>
