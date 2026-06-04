@@ -4852,7 +4852,18 @@ function wireExpenseTab(){
   // 서브탭 전환
   document.querySelectorAll("[data-exptab]").forEach(b=>b.addEventListener("click",()=>{
     EXP_FILTER.tab = b.dataset.exptab;
-    document.querySelectorAll("[data-exptab]").forEach(x=>x.classList.toggle("active",x===b));
+    document.querySelectorAll("[data-exptab]").forEach(x=>{
+      x.classList.toggle("active",x===b);
+      // 인라인 스타일 버튼도 업데이트
+      if(x.classList.contains("mat-tab")){
+        if(x===b){
+          x.style.background="var(--primary)"; x.style.color="#fff"; x.style.borderColor="var(--primary)";
+        } else {
+          x.style.background="#fff"; x.style.color="var(--ink)"; x.style.borderColor="var(--line)";
+        }
+      }
+    });
+    EXP_FILTER.ym=""; // 탭 전환 시 월 초기화
     renderExpense();
   }));
   $("expSearch").addEventListener("input",e=>{ EXP_FILTER.q=e.target.value; renderExpense(); });
