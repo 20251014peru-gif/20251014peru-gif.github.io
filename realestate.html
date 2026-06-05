@@ -3,666 +3,581 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>부동산 프로젝트 관리</title>
-<link rel="manifest" href="realestate-manifest.json">
-<meta name="theme-color" content="#c9a227">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="부동산관리">
-<link rel="apple-touch-icon" href="realestate-icon-192.png">
-<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="realestate-project.css?v=20260605">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<title>부동산 투자 관리</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#F0F0F5;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh;font-size:14px;}
+.hdr{background:#fff;border-bottom:1px solid #E5E7EB;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;}
+.hdr-title{font-size:17px;font-weight:800;letter-spacing:-0.5px;}
+.hdr-sub{font-size:10px;color:#9CA3AF;margin-top:1px;}
+.hdr-right{display:flex;gap:8px;align-items:center;}
+.home-btn{font-size:12px;padding:5px 12px;background:#F3F4F6;border:none;border-radius:8px;cursor:pointer;color:#374151;text-decoration:none;}
+.ver{font-size:10px;color:#9CA3AF;}
+
+.tabs{display:flex;gap:0;background:#fff;border-bottom:2px solid #E5E7EB;padding:0 16px;overflow-x:auto;}
+.tabs button{flex-shrink:0;padding:10px 14px;border:none;background:none;font-size:13px;font-weight:600;color:#9CA3AF;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;}
+.tabs button.active{color:#059669;border-bottom-color:#059669;}
+
+.panel{display:none;padding:14px 16px;max-width:700px;margin:0 auto;}
+.panel.active{display:block;}
+
+/* 입력폼 */
+.form-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid #E5E7EB;}
+.form-card h3{font-size:14px;font-weight:700;margin-bottom:12px;color:#059669;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+.field label{font-size:11px;color:#6B7280;font-weight:600;}
+.field input,.field select,.field textarea{border:1px solid #E5E7EB;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:#FAFAFA;}
+.field textarea{resize:vertical;min-height:60px;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#059669;background:#fff;}
+.btn-add{width:100%;padding:11px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;}
+.btn-add:active{background:#047857;}
+
+/* 합산 카드 */
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.sum-card{background:#fff;border-radius:12px;padding:14px;border:1px solid #E5E7EB;text-align:center;}
+.sum-card .label{font-size:11px;color:#9CA3AF;margin-bottom:4px;}
+.sum-card .value{font-size:18px;font-weight:800;color:#059669;}
+.sum-card .sub{font-size:11px;color:#6B7280;margin-top:2px;}
+
+/* 카테고리별 */
+.cat-list{background:#fff;border-radius:12px;padding:12px;margin-bottom:14px;border:1px solid #E5E7EB;}
+.cat-list h4{font-size:12px;font-weight:700;color:#374151;margin-bottom:10px;}
+.cat-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #F9FAFB;}
+.cat-row:last-child{border-bottom:none;}
+.cat-name{font-size:12px;color:#374151;flex:1;}
+.cat-bar-wrap{flex:2;height:6px;background:#F3F4F6;border-radius:3px;overflow:hidden;}
+.cat-bar{height:100%;background:#059669;border-radius:3px;}
+.cat-amt{font-size:12px;font-weight:700;color:#059669;min-width:70px;text-align:right;}
+.cat-pct{font-size:10px;color:#9CA3AF;min-width:30px;text-align:right;}
+
+/* 물건별 */
+.place-list{background:#fff;border-radius:12px;padding:12px;margin-bottom:14px;border:1px solid #E5E7EB;}
+.place-list h4{font-size:12px;font-weight:700;color:#374151;margin-bottom:10px;}
+.place-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F9FAFB;}
+.place-row:last-child{border-bottom:none;}
+.place-name{font-size:13px;color:#374151;font-weight:600;}
+.place-amt{font-size:13px;font-weight:700;color:#059669;}
+
+/* 기록 테이블 */
+.tbl-wrap{overflow-x:auto;background:#fff;border-radius:12px;border:1px solid #E5E7EB;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{background:#F9FAFB;padding:8px 10px;text-align:left;font-weight:700;color:#6B7280;border-bottom:1px solid #E5E7EB;white-space:nowrap;}
+td{padding:8px 10px;border-bottom:1px solid #F9FAFB;color:#374151;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+.del-i{background:#FEE2E2;color:#DC2626;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;}
+.memo-i{font-size:11px;color:#9CA3AF;margin-top:2px;}
+
+/* 체크리스트 */
+.chk-input-row{display:flex;gap:8px;margin-bottom:12px;}
+.chk-input-row input{flex:1;border:1px solid #E5E7EB;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;}
+.chk-input-row button{padding:9px 16px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.chk-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:6px;border:1px solid #E5E7EB;}
+.chk-item.done .chk-text{text-decoration:line-through;color:#9CA3AF;}
+.chk-cb{width:20px;height:20px;cursor:pointer;accent-color:#059669;}
+.chk-text{flex:1;font-size:13px;}
+.chk-date{font-size:10px;color:#9CA3AF;}
+.chk-del{background:none;border:none;color:#D1D5DB;font-size:16px;cursor:pointer;padding:0 4px;}
+.chk-del:hover{color:#DC2626;}
+.copy-btn{padding:7px 14px;background:#F3F4F6;border:1px solid #E5E7EB;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:#374151;}
+.copy-btn:active{background:#E5E7EB;}
+
+/* 메모 */
+.memo-tabs{display:flex;gap:8px;margin-bottom:12px;}
+.memo-tab{padding:7px 16px;border:1.5px solid #E5E7EB;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#6B7280;}
+.memo-tab.on{background:#059669;color:#fff;border-color:#059669;}
+.memo-area{width:100%;min-height:100px;border:1px solid #E5E7EB;border-radius:10px;padding:10px;font-size:13px;font-family:inherit;resize:vertical;background:#FAFAFA;}
+.memo-area:focus{outline:none;border-color:#059669;background:#fff;}
+.memo-save-btn{margin-top:8px;padding:9px 20px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;}
+.memo-list-item{background:#fff;border-radius:10px;padding:11px 13px;margin-bottom:8px;border:1px solid #E5E7EB;}
+.memo-list-item .meta{display:flex;justify-content:space-between;margin-bottom:5px;}
+.memo-list-item .dt{font-size:11px;color:#9CA3AF;}
+.memo-list-item .txt{font-size:13px;color:#374151;line-height:1.6;white-space:pre-wrap;user-select:text;}
+
+/* 달력 */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.cal-nav button{padding:6px 14px;border:1px solid #E5E7EB;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;}
+.cal-nav .ym{font-size:16px;font-weight:800;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;background:#fff;border-radius:12px;border:1px solid #E5E7EB;overflow:hidden;margin-bottom:14px;}
+.cal-head{text-align:center;font-size:11px;font-weight:700;color:#6B7280;padding:8px 0;background:#F9FAFB;}
+.cal-head:first-child{color:#EF4444;}
+.cal-head:last-child{color:#3B82F6;}
+.cal-day{min-height:52px;padding:4px;background:#fff;border:0.5px solid #F3F4F6;cursor:pointer;}
+.cal-day:hover{background:#F0FDF4;}
+.cal-day.today .cal-num{background:#059669;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
+.cal-day.other .cal-num{color:#D1D5DB;}
+.cal-num{font-size:12px;font-weight:600;margin-bottom:2px;}
+.cal-dot{font-size:9px;color:#059669;font-weight:700;}
+.cal-day-detail{background:#fff;border-radius:12px;border:1px solid #E5E7EB;padding:14px;margin-bottom:14px;}
+.cal-day-detail h4{font-size:13px;font-weight:700;margin-bottom:10px;color:#059669;}
+
+/* 동기화 상태 */
+.sync-bar{text-align:right;font-size:10px;color:#9CA3AF;padding:4px 0 8px;}
+</style>
 </head>
 <body>
 
-<!-- 잠금화면 (PIN/지문) -->
-<div id="lockScreen" class="lock-screen hidden">
-  <div class="lock-box">
-    <div class="lock-title" id="lockTitle">🔒 부동산 관리 잠금</div>
-    <div class="lock-desc" id="lockDesc">PIN 4자리를 입력하세요</div>
-    <div class="lock-dots" id="lockDots"></div>
-    <div class="lock-msg" id="lockMsg"></div>
-    <div class="lock-pad" id="lockPad"></div>
-    <button class="lock-bio" id="lockBio" style="display:none" onclick="bioUnlock()">👆 지문/얼굴로 열기</button>
+<div class="hdr">
+  <div>
+    <div class="hdr-title">🏠 부동산 투자 관리</div>
+    <div class="hdr-sub">비용기록 · 합산 · 체크리스트 · 메모</div>
+  </div>
+  <div class="hdr-right">
+    <span class="ver">v3.0</span>
+    <a class="home-btn" href="./index.html">← 홈</a>
   </div>
 </div>
 
-<div id="errBanner"><button class="x" onclick="document.getElementById('errBanner').classList.remove('show')">×</button>
-  <b>⚠️ 오류가 발생했습니다</b><span id="errMsg"></span><span class="ex" id="errEx"></span></div>
-
-<input type="file" id="addToFolderInput" multiple accept="image/*,application/pdf" style="display:none">
-<input type="file" id="restoreInput" accept="application/json,.json" style="display:none">
-
-<div id="uploadOverlay"><div class="up-box"><div class="up-spin"></div><div id="upMsg">업로드 중…</div></div></div>
-
-<!-- 이미지 뷰어 -->
-<div id="imgViewer">
-  <button id="ivClose" title="닫기">×</button>
-  <button id="ivPrev" title="이전" onclick="ivStep(-1)">‹</button>
-  <button id="ivNext" title="다음" onclick="ivStep(1)">›</button>
-  <div id="ivCtrl">
-    <button onclick="ivZoom(-0.3)" title="축소">－</button>
-    <button onclick="ivZoom(0.3)" title="확대">＋</button>
-    <button onclick="ivReset()" title="원래대로">⟲</button>
-    <button id="ivDel" onclick="ivDelete()" title="이 사진 삭제">🗑</button>
-  </div>
-  <img id="ivImg" alt="" draggable="false">
-  <div id="ivCap"></div>
-  <div id="ivCount"></div>
+<div class="tabs" id="tabs">
+  <button data-tab="cost" class="active">💰 비용입력</button>
+  <button data-tab="sum">📊 합산보기</button>
+  <button data-tab="log">📋 기록</button>
+  <button data-tab="checklist">✅ 준비물</button>
+  <button data-tab="memo">📝 메모</button>
+  <button data-tab="cal">📅 달력</button>
 </div>
 
-<header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v6.6</span></h1>
-  <div class="tb-right">
-    <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
-    <button class="btn-qm-hdr" onclick="openGlobalMemo()" title="급한 메모 (Ctrl+Shift+M)">⚡</button>
-    <button class="backup" onclick="openBackupModal()">💾 백업</button>
-    <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
-    <a class="home" href="index.html">← 홈</a>
-  </div>
-</header>
-
-<div class="wrap">
-  <aside>
-    <button class="common-data-btn" onclick="openCommonData()">📂 공통자료</button>
-    <div class="side-title" style="margin-top:14px">프로젝트</div>
-    <div id="projList"></div>
-    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="openProjectModal()">+ 새 프로젝트</button>
-  </aside>
-  <main id="main">
-    <div class="empty">왼쪽에서 프로젝트를 선택하거나<br>새 프로젝트를 만들어 시작하세요.</div>
-  </main>
-</div>
-
-<!-- 프로젝트 모달 -->
-<div class="modal-bg" id="projectModal">
-  <div class="modal">
-    <h3 id="projectModalTitle">새 프로젝트</h3>
-    <input type="hidden" id="pf_id">
-    <div class="field"><label>프로젝트명 *</label><input id="pf_name" placeholder="예: ○○상가 2층 인테리어"></div>
-    <div class="field"><label>주소 / 위치</label><input id="pf_addr" placeholder="예: 서울시 ○○구 ○○동 123-4"></div>
+<!-- 비용입력 -->
+<div class="panel active" id="panel-cost">
+  <div class="form-card">
+    <h3>💰 비용 입력</h3>
     <div class="row2">
-      <div class="field"><label>상태</label><select id="pf_status"><option>진행중</option><option>완료</option><option>보류</option></select></div>
-      <div class="field"><label>시작일</label><input id="pf_date" type="date"></div>
-    </div>
-    <div class="field"><label>총 예산 (원, 선택)</label><input id="pf_budget" type="number" placeholder="예: 30000000"></div>
-    <div class="field"><label>메모</label><textarea id="pf_memo" placeholder="프로젝트 개요, 담당자, 평형, 예산 등"></textarea></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" onclick="saveProject()">저장</button>
-      <button class="btn btn-line" onclick="closeModal('projectModal')">취소</button>
-    </div>
-  </div>
-</div>
-
-<!-- 업체 모달 -->
-<div class="modal-bg" id="vendorModal">
-  <div class="modal">
-    <h3 id="vendorModalTitle">업체 / 연락처 추가</h3>
-    <div class="row2">
-      <div class="field"><label>업체/이름 *</label><input id="vf_name" placeholder="예: ○○전기"></div>
-      <div class="field"><label>공종 / 역할</label><select id="vf_trade"></select></div>
-    </div>
-    <div class="field"><label>전화번호 *</label><input id="vf_phone" placeholder="010-0000-0000"></div>
-    <div class="field"><label>메모</label><textarea id="vf_memo" placeholder="담당자, 단가, 특이사항 등"></textarea></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" onclick="saveVendor()">저장</button>
-      <button class="btn btn-line" onclick="closeModal('vendorModal')">취소</button>
-    </div>
-  </div>
-</div>
-
-<!-- 기록 모달 -->
-<div class="modal-bg" id="entryModal">
-  <div class="modal">
-    <h3 id="entryModalTitle">기록 추가</h3>
-    <div class="quick-kinds" id="ef_quickKinds"></div>
-    <div class="row2">
-      <div class="field"><label>종류 * <a href="#" class="field-cfg" onclick="openKindConfig();return false;">⚙ 칸 설정</a></label><select id="ef_kind" onchange="onKindChange()"></select></div>
-      <div class="field"><label>날짜</label><input id="ef_date" type="date"></div>
+      <div class="field"><label>날짜</label><input type="date" id="c-date"></div>
+      <div class="field"><label>물건/장소</label><input type="text" id="c-place" placeholder="예: 군산 나운현대2차"></div>
     </div>
     <div class="row2">
-      <div class="field" id="g_stage"><label id="lab_stage">공정 단계</label><select id="ef_stage" onchange="fillCatSelect()"></select></div>
-      <div class="field" id="g_cat"><label id="lab_cat">세부 항목</label><select id="ef_cat" onchange="efWorkerToggle()"></select></div>
-    </div>
-    <div id="g_meals" style="display:none">
-      <div class="field"><label>🍚 메뉴 (여러 개 → 자동 합계)</label>
-        <div style="display:flex;gap:6px">
-          <input id="ef_mealName" placeholder="메뉴 이름" style="flex:2" onkeydown="if(event.key==='Enter'){efAddMeal();event.preventDefault();}">
-          <input id="ef_mealPrice" type="number" placeholder="가격" style="flex:1" onkeydown="if(event.key==='Enter'){efAddMeal();event.preventDefault();}">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="efAddMeal()">+ 추가</button>
-        </div>
-        <div id="ef_mealList" style="margin-top:8px"></div>
-        <div id="ef_mealSum" class="hint" style="text-align:right;font-weight:700;color:var(--accent)"></div>
+      <div class="field"><label>카테고리</label>
+        <select id="c-cat">
+          <optgroup label="이동/생활">
+            <option>가스충전</option><option>톨비</option><option>식비</option>
+            <option>관리비</option><option>은행이자</option>
+          </optgroup>
+          <optgroup label="공사/시공">
+            <option>목공사</option><option>설비</option><option>타일공사</option>
+            <option>욕실악세사리</option><option>전기</option><option>인테리어</option>
+            <option>샷시</option><option>페인트</option><option>도배장판</option>
+            <option>시트지</option><option>전체악세사리</option>
+          </optgroup>
+          <optgroup label="법무/행정">
+            <option>등기</option><option>공구</option>
+          </optgroup>
+          <optgroup label="기타">
+            <option>기타</option>
+          </optgroup>
+        </select>
       </div>
+      <div class="field"><label>금액 (원)</label><input type="number" id="c-amount" placeholder="숫자만"></div>
     </div>
-    <div id="g_dist" class="field" style="display:none"><label>🚗 주행거리(km)</label><input id="ef_dist" type="number" placeholder="예: 120"></div>
-    <div id="g_workers" style="display:none">
-      <div class="field"><label>👷 인부별 일당 (한 명씩 추가 → 자동 합계)</label>
-        <div style="display:flex;gap:6px">
-          <input id="ef_workerName" placeholder="이름/역할 (예: 김반장)" style="flex:2" onkeydown="if(event.key==='Enter'){efAddWorker();event.preventDefault();}">
-          <input id="ef_workerPay" type="number" placeholder="일당" style="flex:1" onkeydown="if(event.key==='Enter'){efAddWorker();event.preventDefault();}">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="efAddWorker()">+ 추가</button>
-        </div>
-        <div id="ef_workerList" style="margin-top:8px"></div>
-        <div id="ef_workerSum" class="hint" style="text-align:right;font-weight:700;color:var(--accent)"></div>
-      </div>
-    </div>
-    <div id="g_matspec" style="display:none">
-      <div class="field" id="g_matpick">
-        <label>📦 재고에서 불러오기 (선택)</label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <select id="ef_matpick" onchange="pickMaterial()" style="flex:1"><option value="">— 등록된 자재 선택 (규격·단가 자동 입력) —</option></select>
-        </div>
-        <div class="hint" id="ef_matpickHint"></div>
-      </div>
-      <div class="row2">
-        <div class="field"><label>규격 / 사양</label><input id="ef_spec" placeholder="예: 600x600 / 9.5T / 18mm"></div>
-        <div class="field"><label>단가 × 수량</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input id="ef_unitprice" type="number" placeholder="단가" style="flex:1" oninput="calcMatAmount()">
-            <span style="color:var(--ink-soft)">×</span>
-            <input id="ef_qty" type="number" placeholder="수량" style="width:74px" oninput="calcMatAmount()">
-          </div>
-        </div>
-      </div>
-      <div class="field"><label>부가세</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <label class="vat-opt"><input type="radio" name="ef_vat" value="별도" onchange="calcMatAmount()"> 부가세 별도(+10%)</label>
-          <label class="vat-opt"><input type="radio" name="ef_vat" value="포함" checked onchange="calcMatAmount()"> 부가세 포함</label>
-          <label class="vat-opt"><input type="radio" name="ef_vat" value="없음" onchange="calcMatAmount()"> 부가세 없음</label>
-        </div>
-        <div class="hint" id="ef_vatHint"></div>
-      </div>
-      <div class="field"><label>📦 택배비 / 배송비 (선택)</label>
-        <input id="ef_shipping" type="number" placeholder="자재 배송비가 있으면 입력 (자동으로 금액에 합산)" oninput="calcMatAmount()">
-      </div>
-    </div>
-    <div class="field" id="g_photofolder"><label>📷 사진 폴더</label><select id="ef_photofolder"></select></div>
-    <div class="field" id="g_docfolder"><label>📁 서류 폴더</label><select id="ef_docfolder"></select></div>
-    <div class="field"><label>제목 *</label><input id="ef_title" placeholder="예: 거실 도배 시공 / 욕실 타일 압착시멘트"></div>
-    <div class="row2">
-      <div class="field"><label>거래처 / 상대</label><input id="ef_vendor" list="vendorList" placeholder="예: ○○자재"><datalist id="vendorList"></datalist></div>
-      <div class="field" id="g_amount"><label>금액</label>
-        <div style="display:flex;gap:6px">
-          <input id="ef_amount" type="number" placeholder="숫자만" style="flex:1" oninput="updateEntryFx()">
-          <select id="ef_currency" style="width:84px" onchange="updateEntryFx()"><option value="KRW">KRW</option><option value="USD">USD</option></select>
-        </div>
-        <div class="hint" id="ef_fxhint"></div>
-      </div>
-    </div>
-    <div class="field" id="g_pay"><label>결제 수단</label><select id="ef_pay"></select></div>
-    <div class="row2">
-      <div class="field"><label>전화번호 (선택)</label><input id="ef_phone" type="tel" placeholder="누르면 바로 전화"></div>
-      <div class="field"><label>주소 (선택) <a id="ef_mapBtn" class="field-cfg" style="display:none" href="#" target="_blank" rel="noopener">📍 네이버지도</a></label>
-        <input id="ef_addr" placeholder="주소 입력 → 지도 연결" oninput="efMapHint()"></div>
-    </div>
-    <div id="ef_customWrap"></div>
-    <div style="margin-bottom:13px"><button type="button" class="btn btn-ghost btn-sm" onclick="addCustomField()">+ 입력칸 추가</button>
-      <span class="hint" style="margin-left:6px">이 종류에 나만의 칸(예: 현장 담당자, 차량번호)을 만들어요.</span></div>
-    <div class="field"><label>내용 / 메모</label><textarea id="ef_memo" placeholder="시공 내용, 통화 요약, 문제 상황과 처리 방법 등"></textarea></div>
-    <div class="field"><label>첨부파일 (PDF / 사진, 여러 개)</label>
-      <div class="file-drop-zone" id="ef_dropZone">
-        <input id="ef_files" type="file" multiple accept="image/*,application/pdf">
-        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
-        <div id="ef_dropPreview" class="drop-preview"></div>
-      </div>
-      <div id="uploadProgress">업로드 중...</div>
-    </div>
-    <div class="field"><label>🔗 참고 링크 (선택)</label>
-      <div class="link-input-wrap">
-        <input id="ef_link" type="url" placeholder="https://... 쇼핑몰·제품페이지·카탈로그 링크" oninput="efLinkHint()">
-        <a id="ef_linkBtn" class="link-open-btn" href="#" target="_blank" rel="noopener" style="display:none">열기</a>
-      </div>
-    </div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" id="entrySaveBtn" onclick="saveEntry()">저장</button>
-      <button class="btn btn-line" onclick="closeModal('entryModal')">취소</button>
-    </div>
+    <div class="field"><label>시각</label><input type="time" id="c-time"></div>
+    <div class="field"><label>메모 (선택)</label><textarea id="c-memo" placeholder="업체명, 내용, 특이사항 등"></textarea></div>
+    <button class="btn-add" onclick="addCost()">+ 비용 추가</button>
+  </div>
+  <div class="sync-bar" id="cost-sync"></div>
+</div>
+
+<!-- 합산보기 -->
+<div class="panel" id="panel-sum">
+  <div id="sum-content"></div>
+</div>
+
+<!-- 기록 -->
+<div class="panel" id="panel-log">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <span style="font-size:13px;font-weight:700;color:#374151" id="log-count"></span>
+    <button class="copy-btn" onclick="copyTable()">📋 복사(엑셀용)</button>
+  </div>
+  <div class="tbl-wrap">
+    <table id="log-table">
+      <thead><tr><th>날짜</th><th>시각</th><th>물건/장소</th><th>카테고리</th><th>금액</th><th>메모</th><th></th></tr></thead>
+      <tbody id="log-body"></tbody>
+    </table>
   </div>
 </div>
 
-<!-- 자재 모달 -->
-<div class="modal-bg" id="materialModal">
-  <div class="modal">
-    <h3 id="materialModalTitle">자재 추가</h3>
-    <div class="row2">
-      <div class="field"><label>공간 / 위치</label><select id="mf_space"></select></div>
-      <div class="field"><label>분류</label><select id="mf_cat"></select></div>
-    </div>
-    <div class="field"><label>공정 (선택)</label><select id="mf_stage"></select></div>
-    <div class="field"><label>제품명 *</label><input id="mf_name" placeholder="예: 포세린 타일 / 실크 벽지 / 강마루"></div>
-    <div class="row2">
-      <div class="field"><label>브랜드 / 제조사</label><input id="mf_brand"></div>
-      <div class="field"><label>규격 · 사양</label><input id="mf_spec"></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>단가</label>
-        <div style="display:flex;gap:6px">
-          <input id="mf_unitprice" type="number" placeholder="개당/㎡당" style="flex:1" oninput="updateMatAmount()">
-          <select id="mf_currency" style="width:84px" onchange="updateMatAmount()"><option value="KRW">KRW</option><option value="USD">USD</option></select>
-        </div>
-        <div class="hint" id="mf_fxhint"></div>
-      </div>
-      <div class="field"><label>구매 수량</label><input id="mf_qty" type="number" oninput="updateMatAmount()"></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>단위</label><select id="mf_unit"></select></div>
-      <div class="field"><label>금액 (원 환산)</label><div class="mf-amount" id="mf_amount">0원</div></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>📦 재고 수량</label><input id="mf_stock" type="number" placeholder="남은/보관 중 수량"><div class="hint">구매 수량과 별개로 현재 남은 양. 둘 다 넣으면 카드에 합계(총 보유)가 표시됩니다.</div></div>
-      <div class="field"><label>재고 위치 (선택)</label><input id="mf_stockloc" placeholder="예: 창고 / 현장"></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>공급처 / 구매처</label><input id="mf_supplier"></div>
-      <div class="field"><label>연락처</label><input id="mf_contact" placeholder="010-0000-0000"></div>
-    </div>
-    <div class="field"><label>구매 / 시공일</label><input id="mf_date" type="date"></div>
-    <div class="field"><label>메모</label><textarea id="mf_memo"></textarea></div>
-    <div class="field"><label>📷 자재 사진 (여러 장, 선택)</label>
-      <div class="file-drop-zone" id="mf_dropZone">
-        <input id="mf_files" type="file" multiple accept="image/*,application/pdf">
-        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
-        <div id="mf_dropPreview" class="drop-preview"></div>
-      </div>
-      <div class="hint" id="mf_filehint"></div>
-    </div>
-    <div class="field"><label>🔗 제품 링크 (선택)</label>
-      <div class="link-input-wrap">
-        <input id="mf_link" type="url" placeholder="https://... 쇼핑몰·제조사·스펙시트 링크" oninput="mfLinkHint()">
-        <a id="mf_linkBtn" class="link-open-btn" href="#" target="_blank" rel="noopener" style="display:none">열기</a>
-      </div>
-    </div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" id="matSaveBtn" onclick="saveMaterial()">저장</button>
-      <button class="btn btn-line" onclick="closeModal('materialModal')">취소</button>
-    </div>
+<!-- 준비물 체크리스트 -->
+<div class="panel" id="panel-checklist">
+  <div class="chk-input-row">
+    <input type="text" id="chk-input" placeholder="준비물 항목 입력" onkeydown="if(event.key==='Enter')addChk()">
+    <button onclick="addChk()">+ 추가</button>
   </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <span style="font-size:12px;color:#6B7280" id="chk-count"></span>
+    <button class="copy-btn" onclick="copyChk()">📋 텍스트 복사</button>
+  </div>
+  <div id="chk-list"></div>
+  <div class="sync-bar" id="chk-sync"></div>
 </div>
 
-<!-- 재고 사용 모달 -->
-<div class="modal-bg" id="stockUseModal">
-  <div class="modal" style="width:min(440px,100%)">
-    <h3 id="stockUseTitle">재고 사용</h3>
-    <input type="hidden" id="su_id">
-    <div class="hint" id="su_hint" style="margin-bottom:10px"></div>
-    <div class="row2">
-      <div class="field"><label>사용 수량</label><input id="su_qty" type="number" min="0" step="1"></div>
-      <div class="field"><label>사용일</label><input id="su_date" type="date"></div>
-    </div>
-    <div class="field"><label>사용 메모 (선택)</label><input id="su_memo" placeholder="예: 거실 동쪽 벽 시공"></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" onclick="saveStockUse()">차감 저장</button>
-      <button class="btn btn-line" onclick="closeModal('stockUseModal')">취소</button>
-    </div>
+<!-- 메모 -->
+<div class="panel" id="panel-memo">
+  <div class="memo-tabs">
+    <button class="memo-tab on" onclick="setMemoTab('general',this)">📝 일반메모</button>
+    <button class="memo-tab" onclick="setMemoTab('cost',this)">💰 비용메모</button>
   </div>
+  <div id="memo-input-area">
+    <textarea class="memo-area" id="memo-text" placeholder="자유롭게 메모하세요"></textarea>
+    <button class="memo-save-btn" onclick="saveMemo()">저장</button>
+  </div>
+  <div style="margin-top:14px" id="memo-list"></div>
+  <div class="sync-bar" id="memo-sync"></div>
 </div>
 
-<!-- 옵션 추가 미니 모달 (모든 셀렉트의 "+ 직접 추가"가 공용) -->
-<div class="modal-bg" id="addOptModal">
-  <div class="modal" style="width:min(440px,100%)">
-    <h3 id="addOptTitle">새 옵션 추가</h3>
-    <div class="hint" id="addOptHint" style="margin-bottom:10px"></div>
-    <div class="field"><label>새 항목 추가</label>
-      <div style="display:flex;gap:6px">
-        <input id="addOptInput" placeholder="추가할 이름을 입력하세요" style="flex:1" onkeydown="if(event.key==='Enter')confirmAddOpt()">
-        <button class="btn btn-primary btn-sm" onclick="confirmAddOpt()" style="flex:0 0 auto">추가</button>
-      </div>
-    </div>
-    <div class="field" style="margin-bottom:6px"><label>내가 추가한 항목 (삭제 가능)</label>
-      <div id="addOptList" class="opt-manage-list"></div>
-    </div>
-    <div class="hint">※ 기본 제공 항목은 삭제할 수 없고, 직접 추가한 항목만 지울 수 있습니다.</div>
-    <div class="modal-acts">
-      <button class="btn btn-line" onclick="closeModal('addOptModal')">닫기</button>
-    </div>
+<!-- 달력 -->
+<div class="panel" id="panel-cal">
+  <div class="cal-nav">
+    <button onclick="calMove(-1)">‹</button>
+    <span class="ym" id="cal-ym"></span>
+    <button onclick="calMove(1)">›</button>
   </div>
+  <div class="cal-grid" id="cal-grid"></div>
+  <div id="cal-detail"></div>
 </div>
 
-<!-- 작업일지 모달 -->
-<div class="modal-bg" id="worklogModal">
-  <div class="modal">
-    <h3 id="worklogModalTitle">작업 기록 추가</h3>
-    <input type="hidden" id="wl_id">
-    <div class="row2">
-      <div class="field"><label>날짜</label><input id="wl_date" type="date"></div>
-      <div class="field"><label>구분</label>
-        <select id="wl_side"><option value="업체작업">🏢 업체 작업 (주중)</option><option value="내작업">🙋 내 작업 (주말)</option></select></div>
-    </div>
-    <div class="field"><label>한 일 *</label><input id="wl_title" placeholder="예: 거실 도배 시공 / 욕실 방수 / 자재 운반"></div>
-    <div class="row2">
-      <div class="field"><label>업체 / 작업자</label><input id="wl_vendor" list="vendorList" placeholder="업체명 또는 본인"></div>
-      <div class="field"><label>작업 시간 (선택)</label><input id="wl_hours" placeholder="예: 09:00~17:00 / 반나절"></div>
-    </div>
-    <div class="field" style="display:none"><select id="wl_vendor_sel"></select></div>
-    <div class="field"><label>내용 / 메모</label><textarea id="wl_memo" placeholder="진행 상황, 다음 작업, 특이사항 등"></textarea></div>
-    <div class="field"><label>📷 사진 / 파일 (여러 개)</label>
-      <div class="file-drop-zone" id="wl_dropZone">
-        <input id="wl_files" type="file" multiple accept="image/*,application/pdf">
-        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
-        <div id="wl_dropPreview" class="drop-preview"></div>
-      </div>
-    </div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" id="wl_saveBtn" onclick="saveWorklog()">저장</button>
-      <button class="btn btn-line" onclick="closeModal('worklogModal')">취소</button>
-    </div>
-  </div>
-</div>
+<script>
+/* ===== Firebase REST API ===== */
+var FB_KEY = 'AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
+var FB_PROJECT = 'my-system-25497';
+var FB_BASE = 'https://firestore.googleapis.com/v1/projects/'+FB_PROJECT+'/databases/(default)/documents/';
 
-<!-- 할일 / 메모 모달 -->
-<div class="modal-bg" id="todoModal">
-  <div class="modal">
-    <h3 id="todoModalTitle">할일 / 메모 추가</h3>
-    <input type="hidden" id="td_id">
-    <div class="field"><label>할 일 / 메모 *</label><input id="td_title" placeholder="예: 도배 업체 견적 받기 / 다음주 타일 주문"></div>
-    <div class="row2">
-      <div class="field"><label>기한 (선택)</label><input id="td_due" type="date"></div>
-      <div class="field"><label>분류 (선택)</label><input id="td_tag" placeholder="예: 준비물 / 연락 / 주문"></div>
-    </div>
-    <div class="field"><label>상세 메모</label><textarea id="td_memo" placeholder="자세한 내용, 필요한 것 등"></textarea></div>
-    <div class="field"><label>📷 사진 / 파일 (선택)</label>
-      <div class="file-drop-zone" id="td_dropZone">
-        <input id="td_files" type="file" multiple accept="image/*,application/pdf">
-        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
-        <div id="td_dropPreview" class="drop-preview"></div>
-      </div>
-    </div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" id="td_saveBtn" onclick="saveTodo()">저장</button>
-      <button class="btn btn-line" onclick="closeModal('todoModal')">취소</button>
-    </div>
-  </div>
-</div>
+function toFS(val){
+  if(Array.isArray(val)) return {arrayValue:{values:val.map(function(v){return toFS(v);})}};
+  if(typeof val==='object'&&val!==null) return {mapValue:{fields:Object.fromEntries(Object.entries(val).map(function(e){return [e[0],toFS(e[1])]}))}};
+  if(typeof val==='number') return {doubleValue:val};
+  if(typeof val==='boolean') return {booleanValue:val};
+  if(val===null||val===undefined) return {nullValue:null};
+  return {stringValue:String(val)};
+}
+function fromFS(v){
+  if(!v) return null;
+  if('stringValue' in v){ try{return JSON.parse(v.stringValue);}catch(e){return v.stringValue;} }
+  if('doubleValue' in v) return v.doubleValue;
+  if('integerValue' in v) return Number(v.integerValue);
+  if('booleanValue' in v) return v.booleanValue;
+  if('nullValue' in v) return null;
+  if('arrayValue' in v) return (v.arrayValue.values||[]).map(fromFS);
+  if('mapValue' in v){ var o={}; Object.entries(v.mapValue.fields||{}).forEach(function(e){o[e[0]]=fromFS(e[1]);}); return o; }
+  return null;
+}
+function fbSave(col, doc, data){
+  var fields={};
+  Object.entries(data).forEach(function(e){ fields[e[0]]=toFS(e[1]); });
+  return fetch(FB_BASE+col+'/'+doc+'?key='+FB_KEY,{
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({fields:fields})
+  }).then(function(r){return r.json();});
+}
+function fbGet(col, doc){
+  return fetch(FB_BASE+col+'/'+doc+'?key='+FB_KEY)
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){ if(!d||!d.fields) return null; var o={}; Object.entries(d.fields).forEach(function(e){o[e[0]]=fromFS(e[1]);}); return o; });
+}
 
-<!-- 종류별 표시 칸 설정 모달 -->
-<div class="modal-bg" id="kindConfigModal">
-  <div class="modal" style="width:min(420px,100%)">
-    <h3 id="kindCfgTitle">표시할 칸 설정</h3>
-    <div class="hint" style="margin-bottom:10px">이 종류를 선택했을 때 기록 모달에 보일 칸을 고르세요. 예) 교통비 → 금액·결제수단 켜기.</div>
-    <div id="kindCfgList" class="kindcfg-list"></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" onclick="saveKindConfig()">저장</button>
-      <button class="btn btn-ghost" onclick="resetKindConfig()">기본값</button>
-      <button class="btn btn-line" onclick="closeModal('kindConfigModal')">취소</button>
-    </div>
-  </div>
-</div>
+/* ===== 로컬 키 ===== */
+var CK='re_costs', CHK='re_chk', MK='re_memos', CMK='re_costmemos';
+var _memoTab='general';
 
-<!-- 달력: 그날 상세 -->
-<div class="modal-bg" id="calDayModal">
-  <div class="modal" style="width:min(560px,100%)">
-    <h3>📅 <span id="calDayTitle"></span></h3>
-    <div id="calDayBody" style="max-height:54vh;overflow-y:auto;margin-bottom:12px"></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" onclick="calDayAdd()">+ 이 날짜에 기록 추가</button>
-      <button class="btn btn-line" onclick="closeModal('calDayModal')">닫기</button>
-    </div>
-  </div>
-</div>
+/* ===== 날짜/시각 헬퍼 ===== */
+function todayKR(){
+  var n=new Date(); var off=n.getTimezoneOffset();
+  var kr=new Date(n.getTime()+(9*60+off)*60000);
+  return kr.getFullYear()+'-'+String(kr.getMonth()+1).padStart(2,'0')+'-'+String(kr.getDate()).padStart(2,'0');
+}
+function nowTimeKR(){
+  var n=new Date(); var off=n.getTimezoneOffset();
+  var kr=new Date(n.getTime()+(9*60+off)*60000);
+  return String(kr.getHours()).padStart(2,'0')+':'+String(kr.getMinutes()).padStart(2,'0');
+}
+function fmtAmt(n){ return Number(n).toLocaleString()+'원'; }
 
-<!-- 급한 메모 (오른쪽 슬라이드 패널) -->
-<div class="memo-backdrop" id="memoBackdrop" onclick="closeMemoPanel()"></div>
-<div class="memo-panel" id="memoPanel">
-  <div class="memo-panel-head">
-    <span class="memo-panel-title">⚡ 급한 메모</span>
-    <div class="memo-panel-acts">
-      <button class="btn btn-line btn-sm" onclick="clearMemo()">🗑 지우기</button>
-      <button class="memo-x" onclick="closeMemoPanel()">✕</button>
-    </div>
-  </div>
-  <div class="memo-panel-body">
-    <div id="memoEditor" class="memo-area" contenteditable="true" data-ph="여기에 자유롭게 적으세요. 자동 저장됩니다. (캡처 이미지는 Ctrl+V로 글 사이에 바로 붙여넣기 · 사진을 누르면 삭제)" oninput="memoOnInput()" onpaste="memoPasteHandler(event)" onclick="memoEditorClick(event)"></div>
-  </div>
-  <div class="memo-panel-foot">
-    <input type="file" id="memoFileInput" multiple accept="image/*,application/pdf" capture="environment" style="display:none" onchange="addMemoPhoto()">
-    <button class="btn btn-line" onclick="document.getElementById('memoFileInput').click()">📷 사진 넣기</button>
-    <span id="memoStatus" class="memo-status"></span>
-  </div>
-</div>
+/* ===== 비용 ===== */
+function getCosts(){ try{return JSON.parse(localStorage.getItem(CK)||'[]');}catch(e){return [];} }
+function saveCostsLocal(arr){ localStorage.setItem(CK,JSON.stringify(arr)); }
+function syncCosts(arr){
+  fbSave('re-costs','main',{data:JSON.stringify(arr)})
+    .then(function(){setSync('cost-sync','✅ 동기화됨');})
+    .catch(function(){setSync('cost-sync','⚠ 오프라인 저장');});
+}
+function setSync(id,msg){ var el=document.getElementById(id); if(el) el.textContent=msg; }
 
-<!-- 백업/복원 모달 -->
-<div class="modal-bg" id="backupModal">
-  <div class="modal">
-    <h3>💾 백업 / 복원</h3>
-    <div class="backup-box">
-      <h4>📤 현재 프로젝트 백업 (내보내기)</h4>
-      <p>지금 선택된 프로젝트의 모든 데이터(프로젝트 정보·기록·업체·자재·견적·부동산·체크리스트)를 JSON 파일 하나로 저장합니다. 사진/파일은 링크(URL)로 보관됩니다.</p>
-      <button class="btn btn-primary btn-sm" onclick="backupCurrentProject()">현재 프로젝트 백업하기</button>
-    </div>
-    <div class="backup-box">
-      <h4>📦 전체 백업 (모든 프로젝트)</h4>
-      <p>모든 프로젝트와 데이터를 한 파일로 저장합니다. 정기적으로 받아 두면 안전합니다.</p>
-      <button class="btn btn-line btn-sm" onclick="backupAll()">전체 백업하기</button>
-    </div>
-    <div class="backup-box">
-      <h4>📥 복원 (불러오기)</h4>
-      <p>백업한 JSON 파일을 올리면 <b>새 프로젝트로</b> 복원합니다. 기존 프로젝트를 덮어쓰지 않으니 안전합니다.</p>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('restoreInput').click()">백업 파일 선택해서 복원</button>
-      <div class="hint" id="restoreHint" style="margin-top:8px"></div>
-    </div>
-    <div class="backup-box">
-      <h4>🔒 앱 잠금 (PIN/지문)</h4>
-      <p>앱을 열 때 PIN 4자리로 잠급니다. 지원하는 기기는 지문/얼굴로도 열 수 있습니다. (돈·계약 정보 보호용)</p>
-      <button class="btn btn-primary btn-sm" onclick="closeModal('backupModal');setupPin()">PIN 설정 / 변경</button>
-      <button class="btn btn-ghost btn-sm" onclick="removePin()">잠금 해제</button>
-    </div>
-    <div class="modal-acts">
-      <button class="btn btn-line" onclick="closeModal('backupModal')">닫기</button>
-    </div>
-  </div>
-</div>
+function addCost(){
+  var date=document.getElementById('c-date').value;
+  var place=document.getElementById('c-place').value.trim();
+  var cat=document.getElementById('c-cat').value;
+  var amount=Number(document.getElementById('c-amount').value);
+  var time=document.getElementById('c-time').value;
+  var memo=document.getElementById('c-memo').value.trim();
+  if(!date||!amount){alert('날짜와 금액을 입력하세요.');return;}
+  var costs=getCosts();
+  costs.push({id:Date.now(),date:date,time:time,place:place,cat:cat,amount:amount,memo:memo});
+  costs.sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
+  saveCostsLocal(costs);
+  syncCosts(costs);
+  document.getElementById('c-amount').value='';
+  document.getElementById('c-memo').value='';
+  renderAll();
+  alert('저장됐습니다!');
+}
 
-<!-- 진단 모달 -->
-<div class="modal-bg" id="diagModal">
-  <div class="modal">
-    <h3>🩺 시스템 진단</h3>
-    <div class="hint" style="margin-bottom:10px">연결·설정 상태를 점검합니다. 문제가 있으면 빨간색으로 표시됩니다.</div>
-    <div id="diagResult"><div class="ai-empty">점검 중…</div></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" onclick="runDiagnostics()">↻ 다시 점검</button>
-      <button class="btn btn-line" onclick="closeModal('diagModal')">닫기</button>
-    </div>
-  </div>
-</div>
+function deleteCost(id){
+  if(!confirm('삭제할까요?')) return;
+  var costs=getCosts().filter(function(c){return c.id!==id;});
+  saveCostsLocal(costs); syncCosts(costs); renderAll();
+}
 
-<!-- 비용 수정 모달 -->
-<div class="modal-bg" id="costEditModal">
-  <div class="modal">
-    <h3>✏ 비용 수정</h3>
-    <input type="hidden" id="ce_id">
-    <div class="field"><label>항목명 *</label><input id="ce_title"></div>
-    <div class="row2">
-      <div class="field"><label>날짜</label><input id="ce_date" type="date"></div>
-      <div class="field"><label>금액 (원)</label><input id="ce_amount" type="number"></div>
-    </div>
-    <div class="field"><label>종류</label>
-      <select id="ce_kind" onchange="ceKindChange()"></select></div>
-    <div class="field" id="ce_g_stage"><label>공정</label><select id="ce_stage" onchange="ceFillCat()"></select></div>
-    <div class="field" id="ce_g_cat"><label>세부 항목</label><select id="ce_cat"></select></div>
-    <div class="row2">
-      <div class="field"><label>거래처</label><input id="ce_vendor" list="vendorList"></div>
-      <div class="field"><label>결제 수단</label><select id="ce_pay"></select></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>전화번호</label><input id="ce_phone" type="tel" placeholder="누르면 바로 전화"></div>
-      <div class="field"><label>주소 <a id="ce_mapBtn" class="field-cfg" style="display:none" href="#" target="_blank" rel="noopener">📍 네이버지도</a></label>
-        <input id="ce_addr" placeholder="주소 입력 → 지도 연결" oninput="ceMapHint()"></div>
-    </div>
-    <div class="field"><label>메모</label><textarea id="ce_memo"></textarea></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" onclick="saveCostEdit()">저장</button>
-      <button class="btn btn-line" onclick="closeModal('costEditModal')">취소</button>
-    </div>
-  </div>
-</div>
+/* ===== 합산/기록 렌더 ===== */
+function renderSum(){
+  var costs=getCosts();
+  var total=costs.reduce(function(s,c){return s+Number(c.amount);},0);
+  // 카테고리별
+  var byC={}; costs.forEach(function(c){byC[c.cat]=(byC[c.cat]||0)+Number(c.amount);});
+  var catRows=Object.entries(byC).sort(function(a,b){return b[1]-a[1];}).map(function(e){
+    var pct=total?Math.round(e[1]/total*100):0;
+    return '<div class="cat-row"><span class="cat-name">'+e[0]+'</span>'+
+      '<div class="cat-bar-wrap"><div class="cat-bar" style="width:'+pct+'%"></div></div>'+
+      '<span class="cat-amt">'+fmtAmt(e[1])+'</span><span class="cat-pct">'+pct+'%</span></div>';
+  }).join('');
+  // 물건별
+  var byP={}; costs.forEach(function(c){if(c.place) byP[c.place]=(byP[c.place]||0)+Number(c.amount);});
+  var placeRows=Object.entries(byP).sort(function(a,b){return b[1]-a[1];}).map(function(e){
+    return '<div class="place-row"><span class="place-name">'+e[0]+'</span><span class="place-amt">'+fmtAmt(e[1])+'</span></div>';
+  }).join('') || '<div style="color:#9CA3AF;font-size:12px;padding:8px">물건/장소 미입력</div>';
 
-<!-- 엑셀 가져오기 모달 -->
-<div class="modal-bg" id="excelModal">
-  <div class="modal" style="max-width:760px">
-    <h3>📥 엑셀 비용 가져오기</h3>
-    <div class="field"><label>엑셀 파일 선택 (.xlsx)</label>
-      <input type="file" id="xl_file" accept=".xlsx,.xls" onchange="onExcelPick(event)"></div>
-    <div class="hint" id="xl_hint">날짜·목록·금액(합계)·구매처·구분 열을 자동으로 인식합니다.</div>
-    <div id="xl_preview" style="margin-top:12px"></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" id="xl_btn" onclick="runExcelImport()" style="display:none">가져오기</button>
-      <button class="btn btn-line" onclick="closeModal('excelModal')">닫기</button>
-    </div>
-  </div>
-</div>
+  document.getElementById('sum-content').innerHTML=
+    '<div class="sum-grid">'+
+      '<div class="sum-card"><div class="label">총 누적 비용</div><div class="value">'+fmtAmt(total)+'</div><div class="sub">'+costs.length+'건</div></div>'+
+      '<div class="sum-card"><div class="label">항목 수</div><div class="value">'+costs.length+'</div><div class="sub">'+Object.keys(byC).length+'개 카테고리</div></div>'+
+    '</div>'+
+    '<div class="cat-list"><h4>카테고리별 합산</h4>'+catRows+'</div>'+
+    '<div class="place-list"><h4>물건/장소별 합산</h4>'+placeRows+'</div>';
+}
 
-<!-- 기타비용 반복 생성 모달 -->
-<div class="modal-bg" id="repeatEtcModal">
-  <div class="modal">
-    <h3>🔁 반복 비용 생성</h3>
-    <div class="hint" style="margin-bottom:10px">기간 안에서 반복되는 비용을 한 번에 만듭니다.</div>
-    <div class="row2">
-      <div class="field"><label>항목</label><select id="re_cat"></select></div>
-      <div class="field"><label>금액(원)</label><input id="re_amount" type="number"></div>
-    </div>
-    <div class="field"><label>주기</label>
-      <select id="re_freq" onchange="onFreqChange()">
-        <option value="weekly">매주 (요일 선택)</option>
-        <option value="monthly">매월 (날짜 선택)</option>
-      </select>
-    </div>
-    <div class="row2">
-      <div class="field"><label>시작일</label><input id="re_start" type="date"></div>
-      <div class="field"><label>종료일</label><input id="re_end" type="date"></div>
-    </div>
-    <div class="field" id="re_weekwrap"><label>발생 요일 (여러 개 선택 가능)</label>
-      <div id="re_days" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-    </div>
-    <div class="field" id="re_monthwrap" style="display:none"><label>매월 며칠</label>
-      <input id="re_monthday" type="number" min="1" max="31" placeholder="예: 25">
-    </div>
-    <div class="row2">
-      <div class="field"><label>결제수단</label><select id="re_pay"></select></div>
-      <div class="field"><label>제목</label><input id="re_title"></div>
-    </div>
-    <div id="re_preview" class="hint" style="margin-bottom:6px"></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" id="repeatSaveBtn" onclick="saveRepeatEtc()">생성</button>
-      <button class="btn btn-line" onclick="closeModal('repeatEtcModal')">취소</button>
-    </div>
-  </div>
-</div>
+function renderLog(){
+  var costs=getCosts();
+  document.getElementById('log-count').textContent='총 '+costs.length+'건 / '+fmtAmt(costs.reduce(function(s,c){return s+Number(c.amount);},0));
+  var rows=costs.map(function(c){
+    return '<tr>'+
+      '<td>'+c.date+'</td>'+
+      '<td>'+(c.time||'')+'</td>'+
+      '<td>'+(c.place||'')+'</td>'+
+      '<td>'+c.cat+'</td>'+
+      '<td style="font-weight:700;color:#059669">'+fmtAmt(c.amount)+'</td>'+
+      '<td><div>'+(c.memo?'<span class="memo-i">'+esc(c.memo)+'</span>':'')+'</div></td>'+
+      '<td><button class="del-i" onclick="deleteCost('+c.id+')">삭제</button></td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('log-body').innerHTML=rows||'<tr><td colspan="7" style="text-align:center;color:#9CA3AF;padding:20px">기록 없음</td></tr>';
+}
 
-<!-- 견적 모달 -->
-<div class="modal-bg" id="quoteModal">
-  <div class="modal">
-    <h3 id="quoteModalTitle">견적 추가</h3>
-    <input type="hidden" id="qf_id">
-    <div class="row2">
-      <div class="field"><label>공정 / 분류</label><select id="qf_stage"></select></div>
-      <div class="field"><label>세부 항목 (선택)</label><select id="qf_cat"></select></div>
-    </div>
-    <div class="field"><label>견적 내용 / 작업명 *</label><input id="qf_title" placeholder="예: 거실 전체 도배 (실크) / 욕실 전체 리모델링"></div>
-    <div class="row2">
-      <div class="field"><label>업체명 *</label><input id="qf_vendor" list="vendorList" placeholder="○○인테리어"></div>
-      <div class="field"><label>업체 전화</label><input id="qf_phone" placeholder="010-..."></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>견적 금액</label>
-        <div style="display:flex;gap:6px">
-          <input id="qf_amount" type="number" style="flex:1" oninput="updateQuoteFx()">
-          <select id="qf_currency" style="width:84px" onchange="updateQuoteFx()"><option value="KRW">KRW</option><option value="USD">USD</option></select>
-        </div>
-        <div class="hint" id="qf_fxhint"></div>
-      </div>
-      <div class="field"><label>받은 날짜</label><input id="qf_date" type="date"></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>공사 기간(일)</label><input id="qf_days" type="number" placeholder="예: 5"></div>
-      <div class="field"><label>유효기간</label><input id="qf_valid" type="date"></div>
-    </div>
-    <div class="field"><label>포함/제외 사항·메모</label><textarea id="qf_memo" placeholder="자재 포함 여부, 폐기물·운반비, A/S 기간, 결제 조건 등"></textarea></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" onclick="saveQuote()">저장</button>
-      <button class="btn btn-line" onclick="closeModal('quoteModal')">취소</button>
-    </div>
-  </div>
-</div>
+function copyTable(){
+  var costs=getCosts();
+  var txt='날짜\t시각\t물건/장소\t카테고리\t금액\t메모\n'+
+    costs.map(function(c){return [c.date,c.time||'',c.place||'',c.cat,c.amount,c.memo||''].join('\t');}).join('\n');
+  navigator.clipboard.writeText(txt).then(function(){alert('복사됐습니다. 엑셀에 붙여넣기 하세요.');}).catch(function(){alert('복사 실패');});
+}
 
-<!-- 부동산 모달 -->
-<div class="modal-bg" id="agentModal">
-  <div class="modal">
-    <h3 id="agentModalTitle">부동산 추가</h3>
-    <input type="hidden" id="af_id">
-    <div class="row2">
-      <div class="field"><label>부동산 이름 *</label><input id="af_name" placeholder="예: ○○공인중개사"></div>
-      <div class="field"><label>담당자</label><input id="af_agent" placeholder="실장님 성함"></div>
-    </div>
-    <div class="field"><label>전화번호 *</label><input id="af_phone" type="tel" placeholder="02-000-0000"></div>
-    <div class="row2">
-      <div class="field"><label>내놓은 가격(만원)</label><input id="af_price" type="number" placeholder="예: 35000"></div>
-      <div class="field"><label>원하는(네고) 가격(만원)</label><input id="af_nego" type="number" placeholder="예: 33000"></div>
-    </div>
-    <div class="field"><label>특이사항</label><textarea id="af_memo" placeholder="요율, 협의 내용, 손님 반응, 광고 현황 등"></textarea></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" onclick="saveAgent()">저장</button>
-      <button class="btn btn-line" onclick="closeModal('agentModal')">취소</button>
-    </div>
-  </div>
-</div>
+/* ===== 체크리스트 ===== */
+function getChk(){ try{var d=localStorage.getItem(CHK); return Array.isArray(d)?d:(d?JSON.parse(d):[]);}catch(e){return [];} }
+function saveChkLocal(arr){ localStorage.setItem(CHK,JSON.stringify(arr)); }
+function syncChk(arr){
+  fbSave('re-checklist','main',{data:JSON.stringify(arr)})
+    .then(function(){setSync('chk-sync','✅ 동기화됨');})
+    .catch(function(){setSync('chk-sync','⚠ 오프라인 저장');});
+}
 
-<!-- 부동산 방문 모달 -->
-<div class="modal-bg" id="visitModal">
-  <div class="modal" style="width:min(440px,100%)">
-    <h3>👀 방문 기록 추가 (+1회)</h3>
-    <input type="hidden" id="vs_id">
-    <div class="hint" id="vs_hint" style="margin-bottom:10px"></div>
-    <div class="row2">
-      <div class="field"><label>방문일 *</label><input id="vs_date" type="date"></div>
-      <div class="field"><label>데려온 인원(선택)</label><input id="vs_count" type="number" min="0" value="0" placeholder="손님 수"></div>
-    </div>
-    <div class="field"><label>특이사항 / 방문자</label><input id="vs_memo" placeholder="예: 김OO 부부 / 가격 협의 / 재방문 예정"></div>
-    <div class="modal-acts">
-      <button class="btn btn-primary" onclick="saveVisit()">방문 1회 기록</button>
-      <button class="btn btn-line" onclick="closeModal('visitModal')">취소</button>
-    </div>
-  </div>
-</div>
+function addChk(){
+  var txt=document.getElementById('chk-input').value.trim(); if(!txt) return;
+  var arr=getChk();
+  arr.push({id:Date.now(),text:txt,done:false,date:todayKR()});
+  saveChkLocal(arr); syncChk(arr);
+  document.getElementById('chk-input').value='';
+  renderChk();
+}
+function toggleChk(id){
+  var arr=getChk().map(function(c){return c.id===id?Object.assign({},c,{done:!c.done}):c;});
+  saveChkLocal(arr); syncChk(arr); renderChk();
+}
+function deleteChk(id){
+  var arr=getChk().filter(function(c){return c.id!==id;});
+  saveChkLocal(arr); syncChk(arr); renderChk();
+}
+function renderChk(){
+  var arr=getChk();
+  var done=arr.filter(function(c){return c.done;}).length;
+  document.getElementById('chk-count').textContent=arr.length+'개 중 '+done+'개 완료';
+  document.getElementById('chk-list').innerHTML=arr.map(function(c){
+    return '<div class="chk-item'+(c.done?' done':'')+'">'+
+      '<input type="checkbox" class="chk-cb"'+(c.done?' checked':'')+' onchange="toggleChk('+c.id+')">'+
+      '<span class="chk-text">'+esc(c.text)+'</span>'+
+      '<span class="chk-date">'+c.date+'</span>'+
+      '<button class="chk-del" onclick="deleteChk('+c.id+')" title="삭제">×</button>'+
+    '</div>';
+  }).join('')||'<div style="color:#9CA3AF;font-size:12px;padding:10px">항목 없음</div>';
+}
+function copyChk(){
+  var arr=getChk();
+  var txt=arr.map(function(c){return (c.done?'[✓] ':'[ ] ')+c.text;}).join('\n');
+  navigator.clipboard.writeText(txt).then(function(){alert('복사됐습니다.');}).catch(function(){alert('복사 실패');});
+}
 
-<script src="realestate-project.js?v=20260605"></script>
+/* ===== 메모 ===== */
+function getMemos(type){ try{var k=type==='cost'?CMK:MK; var d=localStorage.getItem(k); return Array.isArray(d)?d:(d?JSON.parse(d):[]);}catch(e){return [];} }
+function saveMemoLocal(type,arr){ localStorage.setItem(type==='cost'?CMK:MK,JSON.stringify(arr)); }
+function syncMemo(type,arr){
+  var col=type==='cost'?'re-costmemos':'re-memos';
+  fbSave(col,'main',{data:JSON.stringify(arr)})
+    .then(function(){setSync('memo-sync','✅ 동기화됨');})
+    .catch(function(){setSync('memo-sync','⚠ 오프라인 저장');});
+}
+function setMemoTab(type,btn){
+  _memoTab=type;
+  document.querySelectorAll('.memo-tab').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  renderMemoList();
+}
+function saveMemo(){
+  var txt=document.getElementById('memo-text').value.trim(); if(!txt) return;
+  var arr=getMemos(_memoTab);
+  var n=new Date(); var off=n.getTimezoneOffset();
+  var kr=new Date(n.getTime()+(9*60+off)*60000);
+  var date=kr.getFullYear()+'-'+String(kr.getMonth()+1).padStart(2,'0')+'-'+String(kr.getDate()).padStart(2,'0');
+  var time=String(kr.getHours()).padStart(2,'0')+':'+String(kr.getMinutes()).padStart(2,'0');
+  arr.unshift({id:Date.now(),text:txt,date:date,time:time});
+  saveMemoLocal(_memoTab,arr); syncMemo(_memoTab,arr);
+  document.getElementById('memo-text').value='';
+  renderMemoList();
+}
+function deleteMemo(type,id){
+  var arr=getMemos(type).filter(function(m){return m.id!==id;});
+  saveMemoLocal(type,arr); syncMemo(type,arr); renderMemoList();
+}
+function renderMemoList(){
+  var arr=getMemos(_memoTab);
+  document.getElementById('memo-list').innerHTML=arr.map(function(m){
+    return '<div class="memo-list-item">'+
+      '<div class="meta"><span class="dt">'+m.date+' '+m.time+'</span>'+
+      '<button class="del-i" onclick="deleteMemo(\''+_memoTab+'\','+m.id+')">삭제</button></div>'+
+      '<div class="txt">'+esc(m.text)+'</div>'+
+    '</div>';
+  }).join('')||'<div style="color:#9CA3AF;font-size:12px;padding:10px">저장된 메모 없음</div>';
+}
 
-<!-- ===== 공통자료 모달 ===== -->
-<div class="modal-bg" id="commonDataModal" onclick="if(event.target===this)closeCommonData()">
-  <div class="modal" style="max-width:860px;max-height:90vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-shrink:0">
-      <h3 style="margin:0">📂 공통자료</h3>
-      <button class="btn btn-ghost btn-sm" onclick="closeCommonData()">✕ 닫기</button>
-    </div>
-    <!-- 섹션 탭 -->
-    <div class="cm-tab-row" id="cmTabRow">
-      <button class="cm-tab active" onclick="setCmTab('vendor',this)">📞 업체연락처</button>
-      <button class="cm-tab" onclick="setCmTab('price',this)">💰 단가기준표</button>
-      <button class="cm-tab" onclick="setCmTab('checklist',this)">✅ 체크리스트</button>
-      <button class="cm-tab" onclick="setCmTab('doc',this)">📋 서류목록</button>
-      <button class="cm-tab" onclick="setCmTab('ref',this)">📁 참고자료</button>
-    </div>
-    <!-- 섹션 콘텐츠 -->
-    <div id="cmContent" style="flex:1;overflow-y:auto;padding-top:14px"></div>
-  </div>
-</div>
+/* ===== 달력 ===== */
+var _calYM;
+function calInit(){ var n=new Date(); _calYM={y:n.getFullYear(),m:n.getMonth()}; }
+function calMove(d){ _calYM.m+=d; if(_calYM.m<0){_calYM.m=11;_calYM.y--;} if(_calYM.m>11){_calYM.m=0;_calYM.y++;} renderCal(); }
+function renderCal(){
+  if(!_calYM) calInit();
+  var y=_calYM.y, m=_calYM.m;
+  document.getElementById('cal-ym').textContent=y+'년 '+(m+1)+'월';
+  var costs=getCosts();
+  var byDate={};
+  costs.forEach(function(c){ if(!byDate[c.date]) byDate[c.date]=[]; byDate[c.date].push(c); });
+  var first=new Date(y,m,1).getDay();
+  var last=new Date(y,m+1,0).getDate();
+  var today=todayKR();
+  var cells='';
+  var days=['일','월','화','수','목','금','토'];
+  days.forEach(function(d){ cells+='<div class="cal-head">'+d+'</div>'; });
+  for(var i=0;i<first;i++) cells+='<div class="cal-day other"></div>';
+  for(var d=1;d<=last;d++){
+    var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var isToday=ds===today;
+    var hasCost=byDate[ds]&&byDate[ds].length;
+    cells+='<div class="cal-day'+(isToday?' today':'')+'\" onclick="showCalDay(\''+ds+'\')">'
+      +'<div class="cal-num">'+d+'</div>'
+      +(hasCost?'<div class="cal-dot">●'+byDate[ds].length+'</div>':'')
+      +'</div>';
+  }
+  document.getElementById('cal-grid').innerHTML=cells;
+}
+function showCalDay(ds){
+  var costs=getCosts().filter(function(c){return c.date===ds;});
+  var html='<div class="cal-day-detail"><h4>📅 '+ds+' 지출 내역</h4>';
+  if(costs.length){
+    var total=costs.reduce(function(s,c){return s+Number(c.amount);},0);
+    html+=costs.map(function(c){
+      return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #F3F4F6">'+
+        '<span style="font-size:13px">'+c.cat+(c.place?' · '+c.place:'')+'</span>'+
+        '<span style="font-size:13px;font-weight:700;color:#059669">'+fmtAmt(c.amount)+'</span></div>';
+    }).join('');
+    html+='<div style="text-align:right;margin-top:8px;font-weight:800;color:#059669">합계: '+fmtAmt(total)+'</div>';
+  } else { html+='<div style="color:#9CA3AF;font-size:12px">지출 없음</div>'; }
+  html+='</div>';
+  document.getElementById('cal-detail').innerHTML=html;
+}
 
-<!-- 공통자료 입력 서브모달 -->
-<div class="modal-bg" id="cmSubModal" onclick="if(event.target===this)closeCmSubModal()">
-  <div class="modal" style="max-width:520px">
-    <h3 id="cmSubTitle" style="margin:0 0 14px">추가</h3>
-    <div id="cmSubBody"></div>
-    <div class="field-row" style="margin-top:16px;justify-content:flex-end;gap:8px">
-      <button class="btn btn-ghost btn-sm" onclick="closeCmSubModal()">취소</button>
-      <button class="btn btn-danger btn-sm" id="cmSubDelBtn" style="display:none" onclick="cmSubDel()">삭제</button>
-      <button class="btn btn-primary btn-sm" onclick="cmSubSave()">저장</button>
-    </div>
-  </div>
-</div>
+/* ===== 탭 ===== */
+function activateTab(name){
+  var btn=document.querySelector('.tabs button[data-tab="'+name+'"]'); if(!btn) return;
+  document.querySelectorAll('.tabs button').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+  btn.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  try{localStorage.setItem('re_invest_tab',name);}catch(e){}
+  if(name==='sum') renderSum();
+  if(name==='log') renderLog();
+  if(name==='checklist') renderChk();
+  if(name==='memo') renderMemoList();
+  if(name==='cal') renderCal();
+}
+document.getElementById('tabs').addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b) return;
+  activateTab(b.dataset.tab);
+});
 
+/* ===== Firebase에서 불러오기 ===== */
+function loadFromFirebase(){
+  // 비용
+  fbGet('re-costs','main').then(function(doc){
+    if(doc&&doc.data){
+      var arr=Array.isArray(doc.data)?doc.data:JSON.parse(doc.data);
+      localStorage.setItem(CK,JSON.stringify(arr));
+      renderAll();
+    }
+  }).catch(function(){});
+  // 체크리스트
+  fbGet('re-checklist','main').then(function(doc){
+    if(doc&&doc.data){
+      var arr=Array.isArray(doc.data)?doc.data:JSON.parse(doc.data);
+      localStorage.setItem(CHK,JSON.stringify(arr));
+      renderChk();
+    }
+  }).catch(function(){});
+  // 일반메모
+  fbGet('re-memos','main').then(function(doc){
+    if(doc&&doc.data){
+      var arr=Array.isArray(doc.data)?doc.data:JSON.parse(doc.data);
+      localStorage.setItem(MK,JSON.stringify(arr));
+      if(_memoTab==='general') renderMemoList();
+    }
+  }).catch(function(){});
+  // 비용메모
+  fbGet('re-costmemos','main').then(function(doc){
+    if(doc&&doc.data){
+      var arr=Array.isArray(doc.data)?doc.data:JSON.parse(doc.data);
+      localStorage.setItem(CMK,JSON.stringify(arr));
+      if(_memoTab==='cost') renderMemoList();
+    }
+  }).catch(function(){});
+}
+
+/* ===== esc ===== */
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ===== renderAll ===== */
+function renderAll(){ renderSum(); renderLog(); renderChk(); renderMemoList(); }
+
+/* ===== 초기화 ===== */
+(function init(){
+  document.getElementById('c-date').value=todayKR();
+  document.getElementById('c-time').value=nowTimeKR();
+  renderAll(); renderCal();
+  loadFromFirebase();
+  try{
+    var t=localStorage.getItem('re_invest_tab');
+    if(t) activateTab(t);
+  }catch(e){}
+})();
+</script>
 </body>
 </html>
