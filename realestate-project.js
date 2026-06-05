@@ -1,5 +1,5 @@
 /* ============================================================
-   부동산 프로젝트 관리 v6.3 — 직접추가 항목 삭제 갱신 수정
+   부동산 프로젝트 관리 v6.6 — 파일드롭/Ctrl+V 첨부, 링크필드, 전화자동입력, 자동완성Tab
    ------------------------------------------------------------
    [v5.5] 7일마다 백업 파일 자동 제안(개인관리 장점 이식) — 7일 지나면 앱 열 때 백업 만들지 물어봄
    [v5.4] 사라졌던 급한메모 슬라이드 패널 HTML 복구(메모 오류 해결)
@@ -1783,8 +1783,8 @@ function renderLog(e, opts){
     ? `<div class="l-meta">👷 ${e.workers.map(w=>esc(w.name)+(w.pay?' '+Number(w.pay).toLocaleString()+'원':'')).join(' · ')} (${e.workers.length}명)</div>` : '';
   const distHtml = (e.dist)
     ? `<div class="l-meta">🚗 주행 ${Number(e.dist).toLocaleString()}km</div>` : '';
-  const contactHtml = (e.phone||e.addr)
-    ? `<div class="l-meta" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${e.phone?telLink(e.phone):''}${e.addr?mapLink(e.addr):''}</div>` : '';
+  const contactHtml = (e.phone||e.addr||e.link)
+    ? `<div class="l-meta" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${e.phone?telLink(e.phone):''}${e.addr?mapLink(e.addr):''}${e.link?`<a class="field-cfg" href="${esc(e.link)}" target="_blank" rel="noopener" style="color:var(--accent)">🔗 링크</a>`:''}</div>` : '';
   return `<div class="log">
     <div class="l-top">${tags}<span class="l-title">${esc(e.title)}</span><span class="l-date">${e.date||''}</span>${editBtn}${delBtn}</div>
     ${(e.vendor||e.amount)?`<div class="l-meta">${e.vendor?'거래처 '+esc(e.vendor):''}${e.vendor&&e.amount?' · ':''}${e.amount?'<b>'+Number(e.amount).toLocaleString()+'원</b>':''}</div>`:''}
@@ -1960,7 +1960,7 @@ function matCardHtml(m){
       ${(unitKRW||m.qty)?`단가 <b>${unitKRW?unitKRW.toLocaleString():'-'}</b>원${m.currency==="USD"&&m.unitPrice?` <small>($${Number(m.unitPrice).toLocaleString()})</small>`:''} × 구매수량 <b>${m.qty?Number(m.qty).toLocaleString():'-'}</b>${unitTxt}<br>`:''}
       ${stockShow?`📦 재고 <span class="mat-stock ${stockClass(m)}">${stockN.toLocaleString()}${unitTxt}</span>${m.stockLoc?' · '+esc(m.stockLoc):''}<br>`:''}
       ${(qtyN>0 && stockShow)?`🧮 총 보유 <b>${totalHold.toLocaleString()}${unitTxt}</b> <small>(구매 ${qtyN.toLocaleString()} + 재고 ${stockN.toLocaleString()})</small><br>`:''}
-      ${m.supplier?`공급처 <b>${esc(m.supplier)}</b>`:''}${m.supplier&&m.contact?' · ':''}${m.contact?telLink(m.contact):''}
+      ${m.supplier?`공급처 <b>${esc(m.supplier)}</b>`:''}${m.supplier&&m.contact?' · ':''}${m.contact?telLink(m.contact):''}${m.link?` <a href="${esc(m.link)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px">🔗 링크</a>`:''}
       ${m.date?`${(m.supplier||m.contact)?'<br>':''}🗓 ${esc(m.date)}`:''}
     </div>
     ${m.memo?`<div class="mat-memo">${esc(m.memo)}</div>`:''}
@@ -2035,6 +2035,11 @@ function openMaterialModal(){
   document.getElementById("mf_files").value="";
   document.getElementById("mf_filehint").textContent="";
   document.getElementById("mf_date").value=today();
+  // 링크·드롭 초기화
+  const mflk=document.getElementById("mf_link"); if(mflk) mflk.value="";
+  const mflkb=document.getElementById("mf_linkBtn"); if(mflkb) mflkb.style.display="none";
+  const mfdp=document.getElementById("mf_dropPreview"); if(mfdp) mfdp.innerHTML="";
+  window._mfDropFiles=[];
   updateMatAmount();
   openModal("materialModal");
 }
@@ -2061,6 +2066,10 @@ function editMaterial(id){
   document.getElementById("mf_files").value="";
   const pc=(m.files||[]).length;
   document.getElementById("mf_filehint").textContent= pc? ("이미 사진/파일 "+pc+"개 첨부됨 — 여기서 고르면 추가됩니다.") : "";
+  // 링크 불러오기 + 드롭 초기화
+  const emflk=document.getElementById("mf_link"); if(emflk){ emflk.value=m.link||""; mfLinkHint(); }
+  const emfdp=document.getElementById("mf_dropPreview"); if(emfdp) emfdp.innerHTML="";
+  window._mfDropFiles=[];
   updateMatAmount();
   openModal("materialModal");
 }
@@ -2077,8 +2086,9 @@ async function saveMaterial(){
   try{
     let newFiles=[];
     const fi=document.getElementById("mf_files");
-    if(fi && fi.files.length){
-      for(let i=0;i<fi.files.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); newFiles.push(await processFile(fi.files[i])); }
+    const allMfFiles=[...Array.from(fi?.files||[]),...(window._mfDropFiles||[])];
+    if(allMfFiles.length){
+      for(let i=0;i<allMfFiles.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+allMfFiles.length+")"); newFiles.push(await processFile(allMfFiles[i])); }
       hideUploading();
     }
     const data={
@@ -2092,6 +2102,7 @@ async function saveMaterial(){
       stock: val("mf_stock")!==""?Number(val("mf_stock")):null,
       stockLoc:val("mf_stockloc").trim(),
       supplier:val("mf_supplier").trim(), contact:val("mf_contact").trim(),
+      link:val("mf_link")?.trim()||null,
       date:val("mf_date"), memo:val("mf_memo").trim()
     };
     if(editingMaterialId){
@@ -2794,6 +2805,7 @@ function renderSearchResult(){
   box.innerHTML = (ckHtml+matHtml+qHtml+entHtml) || '<div class="ai-empty">검색 결과가 없습니다.</div>';
 }
 function onSearchInput(v){ searchQ=v; renderSearchResult(); }
+function onSearchTabActivated(){ requestAnimationFrame(()=>{ applyStdSearchStyle('searchInput'); }); }
 function viewSearch(p){
   return `<div class="panel"><div class="panel-h">🔍 통합 검색 <span class="cnt" id="searchCount"></span></div><div class="panel-body">
     <div class="filterbar"><input type="text" id="searchInput" autofocus
@@ -2871,6 +2883,7 @@ function openWorklog(){
   buildOptSelect("wl_vendor_sel","vendor_roles","","(역할 선택 안 함)");
   ["wl_title","wl_vendor","wl_hours","wl_memo"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("wl_files").value="";
+  const wldp=document.getElementById("wl_dropPreview"); if(wldp) wldp.innerHTML=""; window._wlDropFiles=[];
   document.getElementById("vendorList").innerHTML=vendors.map(v=>`<option value="${esc(v.name)}">`).join("");
   openModal("worklogModal");
 }
@@ -2885,6 +2898,7 @@ function editWorklog(id){
   document.getElementById("wl_hours").value=w.hours||"";
   document.getElementById("wl_memo").value=w.memo||"";
   document.getElementById("wl_files").value="";
+  const ewldp=document.getElementById("wl_dropPreview"); if(ewldp) ewldp.innerHTML=""; window._wlDropFiles=[];
   document.getElementById("vendorList").innerHTML=vendors.map(v=>`<option value="${esc(v.name)}">`).join("");
   openModal("worklogModal");
 }
@@ -2893,7 +2907,8 @@ async function saveWorklog(){
   const btn=document.getElementById("wl_saveBtn"); btn.disabled=true; btn.textContent="저장 중...";
   try{
     let newFiles=[]; const fi=document.getElementById("wl_files");
-    if(fi.files.length){ for(let i=0;i<fi.files.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); newFiles.push(await processFile(fi.files[i])); } hideUploading(); }
+    const allWlFiles=[...Array.from(fi?.files||[]),...(window._wlDropFiles||[])];
+    if(allWlFiles.length){ for(let i=0;i<allWlFiles.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+allWlFiles.length+")"); newFiles.push(await processFile(allWlFiles[i])); } hideUploading(); }
     const data={ projectId:currentProjectId, date:val("wl_date"), side:val("wl_side"),
       title, vendor:val("wl_vendor").trim(), hours:val("wl_hours").trim(), memo:val("wl_memo").trim() };
     const id=document.getElementById("wl_id").value;
@@ -2977,6 +2992,7 @@ function openTodo(){
   document.getElementById("todoModalTitle").textContent="할일 / 메모 추가";
   ["td_title","td_memo","td_due","td_tag"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("td_files").value="";
+  const tddp=document.getElementById("td_dropPreview"); if(tddp) tddp.innerHTML=""; window._tdDropFiles=[];
   openModal("todoModal");
 }
 function editTodo(id){
@@ -2995,7 +3011,8 @@ async function saveTodo(){
   const btn=document.getElementById("td_saveBtn"); btn.disabled=true; btn.textContent="저장 중...";
   try{
     let newFiles=[]; const fi=document.getElementById("td_files");
-    if(fi.files.length){ for(let i=0;i<fi.files.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); newFiles.push(await processFile(fi.files[i])); } hideUploading(); }
+    const allTdFiles=[...Array.from(fi?.files||[]),...(window._tdDropFiles||[])];
+    if(allTdFiles.length){ for(let i=0;i<allTdFiles.length;i++){ showUploading("사진 올리는 중… ("+(i+1)+"/"+allTdFiles.length+")"); newFiles.push(await processFile(allTdFiles[i])); } hideUploading(); }
     const data={ projectId:currentProjectId, title, memo:val("td_memo").trim(),
       due:val("td_due")||null, tag:val("td_tag").trim() };
     const id=document.getElementById("td_id").value;
@@ -3348,6 +3365,12 @@ function openEntryModal(presetStage,presetKind){
   const ph=document.getElementById("ef_phone"); if(ph) ph.value="";
   const ad=document.getElementById("ef_addr"); if(ad) ad.value="";
   ["ef_spec","ef_unitprice","ef_qty","ef_shipping"].forEach(id=>{const el=document.getElementById(id); if(el) el.value="";});
+  // 링크·드롭 초기화
+  const lk=document.getElementById("ef_link"); if(lk) lk.value="";
+  const lkb=document.getElementById("ef_linkBtn"); if(lkb) lkb.style.display="none";
+  const dp=document.getElementById("ef_dropPreview"); if(dp) dp.innerHTML="";
+  window._efDropFiles=[];
+  window._efManualPhone=false;
   window._efMatId=null;
   const _mp=document.getElementById("ef_matpick"); if(_mp) _mp.value="";
   const _mph=document.getElementById("ef_matpickHint"); if(_mph) _mph.textContent="";
@@ -3410,9 +3433,12 @@ async function saveEntry(){
   }
   const btn=document.getElementById("entrySaveBtn"); btn.disabled=true; btn.textContent="저장 중...";
  try{
-  let files=[]; const fi=document.getElementById("ef_files");
-  if(fi.files.length){
-    for(let i=0;i<fi.files.length;i++){ showUploading("파일 올리는 중… ("+(i+1)+"/"+fi.files.length+")"); files.push(await processFile(fi.files[i])); }
+  let files=[];
+  // 기본 파일선택 + 드롭/붙여넣기 파일 합산
+  const fi=document.getElementById("ef_files");
+  const allEfFiles=[...Array.from(fi.files||[]),...(window._efDropFiles||[])];
+  if(allEfFiles.length){
+    for(let i=0;i<allEfFiles.length;i++){ showUploading("파일 올리는 중… ("+(i+1)+"/"+allEfFiles.length+")"); files.push(await processFile(allEfFiles[i])); }
     hideUploading();
   }
   // 통일 분류 표준화: 자재비/공사비/사진/연락/서류/문제/메모를 제외한 비용 종류는
@@ -3450,6 +3476,7 @@ async function saveEntry(){
     dist: (k==="주유·가스"&&val("ef_dist"))?Number(val("ef_dist")):null,
     phone: val("ef_phone")?val("ef_phone").trim():null,
     addr: val("ef_addr")?val("ef_addr").trim():null,
+    link: val("ef_link")?val("ef_link").trim():null,
     custom: Object.keys(customData).length?customData:null,
     memo:val("ef_memo").trim(), files,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
@@ -4193,6 +4220,34 @@ async function runDiagnostics(){
   row('info', "점검 완료", new Date().toLocaleString('ko-KR'));
 }
 
+/* ── 헤더 ⚡ 전역 급한메모 (프로젝트 미선택시에도 열림) ── */
+const _GLOBAL_MEMO_KEY = 're_global_quickmemo';
+function openGlobalMemo(){
+  // 프로젝트 선택됐으면 기존 프로젝트 메모로
+  if(currentProjectId){ openMemoBoard(); return; }
+  // 없으면 localStorage 기반 전역 메모
+  const panel=document.getElementById('memoPanel'); if(!panel) return;
+  const ed=document.getElementById('memoEditor');
+  if(ed) ed.innerHTML = localStorage.getItem(_GLOBAL_MEMO_KEY)||'';
+  const st=document.getElementById('memoStatus'); if(st) st.textContent='';
+  document.getElementById('memoPanel').classList.add('open');
+  document.getElementById('memoBackdrop').classList.add('open');
+  setTimeout(()=>{ if(ed) ed.focus(); },150);
+}
+// Ctrl+Shift+M 단축키
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey) && e.shiftKey && e.key.toLowerCase()==='m'){
+    e.preventDefault();
+    const panel=document.getElementById('memoPanel');
+    if(panel && panel.classList.contains('open')) closeMemoPanel();
+    else openGlobalMemo();
+  }
+  if(e.key==='Escape'){
+    const panel=document.getElementById('memoPanel');
+    if(panel && panel.classList.contains('open')){ closeMemoPanel(); }
+  }
+});
+
 /* ===== 앱 시작 (모든 선언 이후 맨 끝에서 실행) ===== */
 (async function init(){
   startLock();              // 잠금 (PIN 미설정 시 자동 통과)
@@ -4203,3 +4258,241 @@ async function runDiagnostics(){
   // PIN이 없으면(잠금화면 안 뜸) 바로 백업 체크. PIN 있으면 unlock 후 체크됨.
   if(!hasPin()) setTimeout(checkBackupReminder, 1500);
 })();
+
+
+/* ============================================================
+   v6.6 NEW: 드래그앤드롭·Ctrl+V 첨부 / 링크 필드 / 전화자동입력 / 자동완성Tab
+   ============================================================ */
+
+/* ── 드롭존 초기화 (모달 열릴 때 한 번씩 호출) ── */
+function initDropZone(zoneId, previewId, storeKey){
+  const zone = document.getElementById(zoneId);
+  if(!zone || zone._dzInited) return;
+  zone._dzInited = true;
+  const input = zone.querySelector('input[type="file"]');
+
+  // 드래그 시각 표시
+  zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('dz-hover'); });
+  zone.addEventListener('dragleave', ()=>zone.classList.remove('dz-hover'));
+  zone.addEventListener('drop', e=>{
+    e.preventDefault(); zone.classList.remove('dz-hover');
+    addDropFiles(Array.from(e.dataTransfer.files), previewId, storeKey);
+  });
+
+  // Ctrl+V (모달이 열려있을 때 전역 paste)
+  zone._pasteHandler = (e)=>{
+    // 해당 모달이 열려있을 때만
+    const modal = zone.closest('.modal-bg');
+    if(!modal || !modal.classList.contains('open')) return;
+    // 메모 에디터 안에 포커스 있으면 무시
+    if(document.activeElement && document.activeElement.contentEditable==='true') return;
+    const items = (e.clipboardData||window.clipboardData)?.items;
+    if(!items) return;
+    const files=[];
+    for(const it of items){ if(it.kind==='file') { const f=it.getAsFile(); if(f) files.push(f); } }
+    if(!files.length) return;
+    e.preventDefault();
+    addDropFiles(files, previewId, storeKey);
+  };
+  document.addEventListener('paste', zone._pasteHandler);
+}
+
+function addDropFiles(files, previewId, storeKey){
+  if(!files||!files.length) return;
+  if(!window[storeKey]) window[storeKey]=[];
+  window[storeKey].push(...files);
+  renderDropPreview(previewId, storeKey);
+}
+
+function renderDropPreview(previewId, storeKey){
+  const box = document.getElementById(previewId); if(!box) return;
+  const files = window[storeKey]||[];
+  box.innerHTML = files.map((f,i)=>{
+    const isImg = (f.type||'').startsWith('image/');
+    const icon = isImg ? '🖼' : '📄';
+    return `<div class="dp-item" data-i="${i}" data-key="${storeKey}">
+      ${icon} <span class="dp-name">${esc(f.name||'파일')}</span>
+      <button type="button" class="dp-del" onclick="removeDropFile('${storeKey}',${i},'${previewId}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function removeDropFile(storeKey, idx, previewId){
+  if(!window[storeKey]) return;
+  window[storeKey].splice(idx,1);
+  renderDropPreview(previewId, storeKey);
+}
+
+/* ── 링크 힌트 함수 ── */
+function efLinkHint(){
+  const v=(document.getElementById('ef_link')||{}).value||'';
+  const btn=document.getElementById('ef_linkBtn');
+  if(btn){ if(v.startsWith('http')){ btn.style.display='inline-block'; btn.href=v; } else { btn.style.display='none'; } }
+}
+function mfLinkHint(){
+  const v=(document.getElementById('mf_link')||{}).value||'';
+  const btn=document.getElementById('mf_linkBtn');
+  if(btn){ if(v.startsWith('http')){ btn.style.display='inline-block'; btn.href=v; } else { btn.style.display='none'; } }
+}
+
+/* ── 거래처 입력 시 업체연락처에서 전화번호 자동 입력 ── */
+function setupVendorAutoPhone(){
+  const efVendor = document.getElementById('ef_vendor');
+  if(efVendor && !efVendor._autoPhoneInited){
+    efVendor._autoPhoneInited = true;
+
+    // 자동완성 Tab 선택 지원
+    efVendor.addEventListener('keydown', e=>{
+      if(e.key==='Tab'){
+        const dl = document.getElementById('vendorList');
+        if(!dl) return;
+        const v = efVendor.value.trim().toLowerCase();
+        if(!v) return;
+        const match = Array.from(dl.options).find(o=>o.value.toLowerCase().startsWith(v));
+        if(match && match.value !== efVendor.value){
+          e.preventDefault();
+          efVendor.value = match.value;
+          efVendor.dispatchEvent(new Event('input'));
+          efVendor.dispatchEvent(new Event('change'));
+        }
+      }
+    });
+
+    // 값 변경 시 전화번호 자동 채우기
+    efVendor.addEventListener('input', ()=>{
+      if(window._efManualPhone) return;
+      fillPhoneFromVendor('ef_vendor','ef_phone');
+    });
+    efVendor.addEventListener('change', ()=>{
+      if(window._efManualPhone) return;
+      fillPhoneFromVendor('ef_vendor','ef_phone');
+    });
+
+    // 사람이 직접 전화번호 입력하면 자동입력 중단
+    const efPhone = document.getElementById('ef_phone');
+    if(efPhone) efPhone.addEventListener('input', ()=>{ window._efManualPhone=true; });
+  }
+
+  // 공정/세부항목 입력 시 단가기준표 자동완성 — 업체 선택도 자동화
+  const efStage = document.getElementById('ef_stage');
+  const efCat = document.getElementById('ef_cat');
+  if(efStage && !efStage._autoVendorInited){
+    efStage._autoVendorInited=true;
+    const suggest = ()=>{
+      const stage=(efStage.value||'').trim();
+      const cat=(efCat?efCat.value:'').trim();
+      const term=(cat||stage).toLowerCase();
+      if(!term) return;
+      // 업체연락처에서 해당 공종 매칭
+      const match = _cmVendors.find(v=>((v.field||'')+(v.note||'')).toLowerCase().includes(term));
+      if(match){
+        const ev=document.getElementById('ef_vendor');
+        if(ev && !ev.value.trim()){ ev.value=match.name||''; }
+        const ph=document.getElementById('ef_phone');
+        if(ph && !ph.value.trim() && !window._efManualPhone){ ph.value=match.phone||''; }
+      }
+    };
+    efStage.addEventListener('change', suggest);
+    if(efCat) efCat.addEventListener('change', suggest);
+  }
+}
+
+function fillPhoneFromVendor(vendorInputId, phoneInputId){
+  const nameEl=document.getElementById(vendorInputId);
+  const phoneEl=document.getElementById(phoneInputId);
+  if(!nameEl||!phoneEl) return;
+  const name=(nameEl.value||'').trim().toLowerCase();
+  if(!name) return;
+  // 프로젝트 업체 목록 먼저
+  const pv=vendors.find(v=>(v.name||'').toLowerCase()===name);
+  if(pv && pv.phone){ phoneEl.value=pv.phone; return; }
+  // 공통자료 업체연락처
+  const cv=_cmVendors.find(v=>(v.name||'').toLowerCase()===name);
+  if(cv && cv.phone){ phoneEl.value=cv.phone; return; }
+}
+
+/* 자재 공급처 → 연락처 자동 입력 */
+function setupMfSupplierAutoPhone(){
+  const mfSupplier=document.getElementById('mf_supplier');
+  if(mfSupplier && !mfSupplier._autoPhoneInited){
+    mfSupplier._autoPhoneInited=true;
+    mfSupplier.addEventListener('input', ()=>{
+      const name=(mfSupplier.value||'').trim().toLowerCase();
+      if(!name) return;
+      const pv=vendors.find(v=>(v.name||'').toLowerCase()===name);
+      const cv=_cmVendors.find(v=>(v.name||'').toLowerCase()===name);
+      const found=pv||cv;
+      const contactEl=document.getElementById('mf_contact');
+      if(found&&found.phone&&contactEl&&!contactEl.value.trim()) contactEl.value=found.phone;
+    });
+
+    // Tab 자동완성
+    mfSupplier.addEventListener('keydown', e=>{
+      if(e.key!=='Tab') return;
+      const allNames=[...vendors,..._cmVendors].map(v=>v.name||'').filter(Boolean);
+      const v=mfSupplier.value.trim().toLowerCase();
+      if(!v) return;
+      const match=allNames.find(n=>n.toLowerCase().startsWith(v));
+      if(match && match!==mfSupplier.value){ e.preventDefault(); mfSupplier.value=match; mfSupplier.dispatchEvent(new Event('input')); }
+    });
+  }
+}
+
+/* ── 검색창 표준 스타일 (동적 렌더 후 적용) ── */
+function applyStdSearchStyle(inputId){
+  const el=document.getElementById(inputId); if(!el) return;
+  if(el._stdStyled) return; el._stdStyled=true;
+  const wrap=el.parentElement;
+  if(!wrap.style.position) wrap.style.position='relative';
+  // 🔍 아이콘 삽입
+  if(!wrap.querySelector('.std-search-icon')){
+    const ic=document.createElement('span');
+    ic.className='std-search-icon';
+    ic.textContent='🔍';
+    wrap.insertBefore(ic, el);
+  }
+  el.style.cssText+='padding-left:44px;height:48px;font-size:15px;font-weight:600;'+
+    'border:2.5px solid var(--primary,#7d8fd0);border-radius:14px;'+
+    'background:#f0f6ff;box-shadow:0 2px 12px rgba(63,124,184,.15);width:100%;box-sizing:border-box;';
+}
+
+/* ── 모달 열릴 때 드롭존+자동입력 활성화 ── */
+const _origOpenModal = window.openModal;
+window.openModal = function(id){
+  _origOpenModal(id);
+  requestAnimationFrame(()=>{
+    if(id==='entryModal'){
+      initDropZone('ef_dropZone','ef_dropPreview','_efDropFiles');
+      setupVendorAutoPhone();
+    }
+    if(id==='materialModal'){
+      initDropZone('mf_dropZone','mf_dropPreview','_mfDropFiles');
+      setupMfSupplierAutoPhone();
+    }
+    if(id==='worklogModal'){
+      initDropZone('wl_dropZone','wl_dropPreview','_wlDropFiles');
+    }
+    if(id==='todoModal'){
+      initDropZone('td_dropZone','td_dropPreview','_tdDropFiles');
+    }
+  });
+};
+
+/* ── ef_vendor에 Tab 자동완성 (비용수정 모달) ── */
+document.addEventListener('DOMContentLoaded', ()=>{
+  ['ce_vendor','qf_vendor','wl_vendor'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('keydown', e=>{
+      if(e.key!=='Tab') return;
+      const dl=document.getElementById('vendorList'); if(!dl) return;
+      const v=el.value.trim().toLowerCase(); if(!v) return;
+      const match=Array.from(dl.options).find(o=>o.value.toLowerCase().startsWith(v));
+      if(match&&match.value!==el.value){ e.preventDefault(); el.value=match.value; el.dispatchEvent(new Event('input')); }
+    });
+    // 거래처 → 전화번호 자동
+    if(id==='ce_vendor'){
+      el.addEventListener('input', ()=>fillPhoneFromVendor('ce_vendor','ce_phone'));
+    }
+  });
+});

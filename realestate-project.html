@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="부동산관리">
 <link rel="apple-touch-icon" href="realestate-icon-192.png">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="realestate-project.css?v=6.3">
+<link rel="stylesheet" href="realestate-project.css?v=20260605">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
@@ -56,9 +56,10 @@
 </div>
 
 <header class="topbar">
-  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v6.5</span></h1>
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v6.6</span></h1>
   <div class="tb-right">
     <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
+    <button class="btn-qm-hdr" onclick="openGlobalMemo()" title="급한 메모 (Ctrl+Shift+M)">⚡</button>
     <button class="backup" onclick="openBackupModal()">💾 백업</button>
     <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
     <a class="home" href="index.html">← 홈</a>
@@ -204,8 +205,18 @@
       <span class="hint" style="margin-left:6px">이 종류에 나만의 칸(예: 현장 담당자, 차량번호)을 만들어요.</span></div>
     <div class="field"><label>내용 / 메모</label><textarea id="ef_memo" placeholder="시공 내용, 통화 요약, 문제 상황과 처리 방법 등"></textarea></div>
     <div class="field"><label>첨부파일 (PDF / 사진, 여러 개)</label>
-      <input id="ef_files" type="file" multiple accept="image/*,application/pdf">
+      <div class="file-drop-zone" id="ef_dropZone">
+        <input id="ef_files" type="file" multiple accept="image/*,application/pdf">
+        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
+        <div id="ef_dropPreview" class="drop-preview"></div>
+      </div>
       <div id="uploadProgress">업로드 중...</div>
+    </div>
+    <div class="field"><label>🔗 참고 링크 (선택)</label>
+      <div class="link-input-wrap">
+        <input id="ef_link" type="url" placeholder="https://... 쇼핑몰·제품페이지·카탈로그 링크" oninput="efLinkHint()">
+        <a id="ef_linkBtn" class="link-open-btn" href="#" target="_blank" rel="noopener" style="display:none">열기</a>
+      </div>
     </div>
     <div class="modal-acts">
       <button class="btn btn-primary" id="entrySaveBtn" onclick="saveEntry()">저장</button>
@@ -253,8 +264,18 @@
     <div class="field"><label>구매 / 시공일</label><input id="mf_date" type="date"></div>
     <div class="field"><label>메모</label><textarea id="mf_memo"></textarea></div>
     <div class="field"><label>📷 자재 사진 (여러 장, 선택)</label>
-      <input id="mf_files" type="file" multiple accept="image/*,application/pdf">
+      <div class="file-drop-zone" id="mf_dropZone">
+        <input id="mf_files" type="file" multiple accept="image/*,application/pdf">
+        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
+        <div id="mf_dropPreview" class="drop-preview"></div>
+      </div>
       <div class="hint" id="mf_filehint"></div>
+    </div>
+    <div class="field"><label>🔗 제품 링크 (선택)</label>
+      <div class="link-input-wrap">
+        <input id="mf_link" type="url" placeholder="https://... 쇼핑몰·제조사·스펙시트 링크" oninput="mfLinkHint()">
+        <a id="mf_linkBtn" class="link-open-btn" href="#" target="_blank" rel="noopener" style="display:none">열기</a>
+      </div>
     </div>
     <div class="modal-acts">
       <button class="btn btn-primary" id="matSaveBtn" onclick="saveMaterial()">저장</button>
@@ -319,7 +340,13 @@
     </div>
     <div class="field" style="display:none"><select id="wl_vendor_sel"></select></div>
     <div class="field"><label>내용 / 메모</label><textarea id="wl_memo" placeholder="진행 상황, 다음 작업, 특이사항 등"></textarea></div>
-    <div class="field"><label>📷 사진 / 파일 (여러 개)</label><input id="wl_files" type="file" multiple accept="image/*,application/pdf"></div>
+    <div class="field"><label>📷 사진 / 파일 (여러 개)</label>
+      <div class="file-drop-zone" id="wl_dropZone">
+        <input id="wl_files" type="file" multiple accept="image/*,application/pdf">
+        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
+        <div id="wl_dropPreview" class="drop-preview"></div>
+      </div>
+    </div>
     <div class="modal-acts">
       <button class="btn btn-primary" id="wl_saveBtn" onclick="saveWorklog()">저장</button>
       <button class="btn btn-line" onclick="closeModal('worklogModal')">취소</button>
@@ -338,7 +365,13 @@
       <div class="field"><label>분류 (선택)</label><input id="td_tag" placeholder="예: 준비물 / 연락 / 주문"></div>
     </div>
     <div class="field"><label>상세 메모</label><textarea id="td_memo" placeholder="자세한 내용, 필요한 것 등"></textarea></div>
-    <div class="field"><label>📷 사진 / 파일 (선택)</label><input id="td_files" type="file" multiple accept="image/*,application/pdf"></div>
+    <div class="field"><label>📷 사진 / 파일 (선택)</label>
+      <div class="file-drop-zone" id="td_dropZone">
+        <input id="td_files" type="file" multiple accept="image/*,application/pdf">
+        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
+        <div id="td_dropPreview" class="drop-preview"></div>
+      </div>
+    </div>
     <div class="modal-acts">
       <button class="btn btn-primary" id="td_saveBtn" onclick="saveTodo()">저장</button>
       <button class="btn btn-line" onclick="closeModal('todoModal')">취소</button>
@@ -596,7 +629,7 @@
   </div>
 </div>
 
-<script src="realestate-project.js?v=6.3"></script>
+<script src="realestate-project.js?v=20260605"></script>
 
 <!-- ===== 공통자료 모달 ===== -->
 <div class="modal-bg" id="commonDataModal" onclick="if(event.target===this)closeCommonData()">

@@ -618,3 +618,73 @@ table.tbl td.num{text-align:right; font-variant-numeric:tabular-nums;}
   font-size:9px;color:#e07a00;background:#fff7e6;
   padding:1px 5px;border-radius:4px;margin-top:2px;white-space:nowrap;
 }
+
+/* ============================================================
+   v6.6 NEW STYLES
+   ============================================================ */
+
+/* ── 헤더 ⚡ 급한메모 버튼 (표준) ── */
+.btn-qm-hdr{
+  background:linear-gradient(135deg,#ffe066,#ffb800);
+  color:#7a5800;font-weight:800;font-size:18px;
+  border:none;border-radius:10px;
+  width:38px;height:38px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(255,184,0,.35);
+  transition:transform .15s,box-shadow .15s;
+  flex-shrink:0;
+}
+.btn-qm-hdr:hover{transform:scale(1.1);box-shadow:0 4px 14px rgba(255,184,0,.5);}
+
+/* ── 파일 드롭존 ── */
+.file-drop-zone{
+  position:relative;
+  border:2.5px dashed var(--line,#d0cce8);
+  border-radius:12px;
+  background:#fafafa;
+  min-height:58px;
+  padding:10px 12px 8px;
+  cursor:pointer;
+  transition:border-color .2s,background .2s;
+  display:flex;flex-direction:column;gap:6px;
+}
+.file-drop-zone:hover,.file-drop-zone.dz-hover{
+  border-color:var(--accent,#7d8fd0);background:#f0eefa;
+}
+.file-drop-zone input[type=file]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2;
+}
+.drop-hint{
+  font-size:12px;color:#999;text-align:center;
+  pointer-events:none;padding:4px 0;
+}
+.drop-preview{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;position:relative;z-index:3;}
+.dp-item{
+  display:inline-flex;align-items:center;gap:4px;
+  background:#ede9fa;border-radius:8px;padding:3px 7px;
+  font-size:12px;color:#5a4e8a;max-width:220px;
+}
+.dp-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;}
+.dp-del{
+  background:none;border:none;cursor:pointer;color:#c0392b;
+  font-size:13px;font-weight:700;padding:0 2px;line-height:1;
+}
+
+/* ── 링크 입력 필드 ── */
+.link-input-wrap{display:flex;gap:8px;align-items:center;}
+.link-input-wrap input[type=url]{flex:1;}
+.link-open-btn{
+  flex-shrink:0;
+  display:inline-flex;align-items:center;gap:4px;
+  background:var(--accent,#7d8fd0);color:#fff;
+  border-radius:9px;padding:7px 14px;font-size:13px;font-weight:700;
+  text-decoration:none;white-space:nowrap;
+  transition:background .15s,transform .1s;
+}
+.link-open-btn:hover{background:#5a6fb8;transform:scale(1.04);}
+
+/* ── 표준 검색창 아이콘 ── */
+.std-search-icon{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  font-size:18px;pointer-events:none;z-index:2;
+}
