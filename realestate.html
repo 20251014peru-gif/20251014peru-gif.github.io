@@ -1,840 +1,668 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>부동산 비용 관리</title>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-
-<style>
-:root{
-  --bg:#f7f4fc; --bg2:#efe9f8; --card:#ffffff;
-  --ink:#4a4258; --ink-soft:#948da6; --line:#ece6f4;
-  --primary:#9b85d4; --primary-deep:#7d63c2; --primary-soft:#ece4fa;
-  --mint:#74c6a8; --mint-soft:#dff3ec;
-  --peach:#ef9f82; --peach-soft:#fde9df;
-  --pink:#e58cb4; --pink-soft:#fbe2ee;
-  --sky:#7fb9e6; --sky-soft:#e2f0fb;
-  --yellow-soft:#fdf3d4;
-  --shadow:0 1px 2px rgba(123,99,194,.06), 0 8px 26px rgba(123,99,194,.09);
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{background:linear-gradient(180deg,#f9f5fd 0%,#f3eefb 100%);background-attachment:fixed;color:var(--ink);font-family:'Pretendard',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-body{padding:0 0 80px;min-height:100vh}
-.wrap{max-width:1000px;margin:0 auto;padding:0 16px}
-
-header{background:linear-gradient(135deg,#efe6fb 0%,#fbeef4 60%,#e6f1fb 100%);border-bottom:1px solid var(--line);padding:22px 0 16px}
-.head-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.brand{display:flex;align-items:baseline;gap:10px}
-.brand h1{font-family:'Gowun Batang',serif;font-size:26px;font-weight:700;letter-spacing:-.5px;color:#5a4a86}
-.brand .sub{color:var(--ink-soft);font-size:13px}
-.status{font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink-soft)}
-.status .dot{width:8px;height:8px;border-radius:50%;background:#cdc6dc}
-.status.on .dot{background:#5fc99d}
-.status.off .dot{background:var(--peach)}
-.home-link{color:var(--ink-soft);text-decoration:none;font-size:13px;border:1px solid var(--line);background:#fff;padding:6px 12px;border-radius:8px}
-.home-link:hover{color:var(--primary-deep);border-color:var(--primary)}
-
-nav.tabs{display:flex;gap:4px;margin-top:16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-nav.tabs button{flex:0 0 auto;border:none;background:transparent;font-family:inherit;font-size:15px;font-weight:600;color:var(--ink-soft);padding:9px 14px;border-radius:9px 9px 0 0;cursor:pointer;position:relative;white-space:nowrap}
-nav.tabs button.active{color:var(--primary-deep);background:rgba(255,255,255,.6)}
-nav.tabs button.active::after{content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:3px;background:var(--primary);border-radius:3px}
-
-main{padding-top:26px}
-.panel{display:none;animation:fade .25s ease}
-.panel.active{display:block}
-@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:20px}
-.card + .card{margin-top:18px}
-.card h2{font-family:'Gowun Batang',serif;font-size:19px;margin-bottom:4px;color:#5a4a86}
-.card .desc{color:var(--ink-soft);font-size:13px;margin-bottom:16px}
-
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 14px}
-.field{display:flex;flex-direction:column;gap:5px}
-.field.full{grid-column:1 / -1}
-.field label{font-size:12.5px;font-weight:600;color:var(--ink-soft)}
-.field label .req{color:var(--pink)}
-input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink);background:#fdfbff;border:1px solid var(--line);border-radius:11px;padding:11px 12px;width:100%;outline:none;transition:border-color .15s,box-shadow .15s}
-input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);background:#fff}
-input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
-textarea{resize:vertical;min-height:64px}
-
-.total-preview{grid-column:1 / -1;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(120deg,var(--primary-soft),var(--sky-soft));border:1px solid #e0d5f5;border-radius:14px;padding:14px 16px;margin-top:2px}
-.total-preview .lbl{font-size:13px;color:var(--primary-deep);font-weight:600}
-.total-preview .amt{font-family:'Gowun Batang',serif;font-size:24px;font-weight:700;color:var(--primary-deep);font-variant-numeric:tabular-nums}
-.total-preview .vatnote{font-size:11px;color:var(--ink-soft);margin-left:8px;font-weight:500}
-
-.btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
-.btn{font-family:inherit;font-size:15px;font-weight:600;border-radius:12px;padding:12px 20px;cursor:pointer;border:1px solid transparent;transition:transform .08s,filter .15s}
-.btn:active{transform:translateY(1px)}
-.btn-primary{background:var(--primary);color:#fff}
-.btn-primary:hover{background:var(--primary-deep)}
-.btn-ghost{background:#fff;color:var(--ink);border-color:var(--line)}
-.btn-ghost:hover{border-color:var(--primary)}
-.btn-danger{background:#fff;color:var(--pink);border-color:var(--pink-soft)}
-.btn-danger:hover{background:var(--pink-soft)}
-.btn-sm{font-size:13px;padding:7px 13px;border-radius:9px}
-
-.list-head{display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px;flex-wrap:wrap;gap:8px}
-.list-head h3{font-size:15px;color:var(--ink-soft);font-weight:700}
-.empty{text-align:center;color:var(--ink-soft);padding:34px 10px;font-size:14px}
-.search{margin:4px 0 12px;background:#fdfbff}
-.sec-head{font-size:12.5px;font-weight:700;color:var(--ink-soft);margin:16px 0 8px;display:flex;align-items:center;gap:8px}
-.sec-head .cnt{background:var(--bg2);padding:1px 9px;border-radius:999px;font-size:11px;color:var(--primary-deep)}
-
-.photo-area{grid-column:1/-1}
-.photo-btns{display:flex;gap:8px;flex-wrap:wrap}
-.photo-btn{display:inline-flex;align-items:center;gap:6px;background:var(--mint-soft);color:#2f7a5d;border:1px dashed var(--mint);border-radius:11px;padding:9px 13px;font-size:13.5px;font-weight:600;cursor:pointer}
-.photo-btn:hover{background:#d3eee3}
-.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.thumb{position:relative;width:74px;height:74px;border-radius:10px;overflow:hidden;border:1px solid var(--line);cursor:pointer;background:#f3eefb}
-.thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.thumb .rm{position:absolute;top:2px;right:2px;background:rgba(74,66,88,.78);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;line-height:1}
-.detail-thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.detail-thumbs .thumb{width:58px;height:58px}
-
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:#fff}
-table.rec{border-collapse:collapse;width:100%;min-width:840px;font-size:13.5px}
-table.rec th,table.rec td{padding:10px 12px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
-table.rec thead th{background:var(--primary-soft);color:#6b5aa0;font-weight:700;font-size:12.5px;position:sticky;top:0}
-table.rec tbody tr{cursor:pointer}
-table.rec tbody tr:nth-child(even){background:#faf8fe}
-table.rec tbody tr:hover{background:var(--primary-soft)}
-table.rec td.num{text-align:right;font-variant-numeric:tabular-nums}
-table.rec td.amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;color:var(--primary-deep)}
-table.rec tfoot td{background:#5a4a86;color:#fff;font-weight:700;font-variant-numeric:tabular-nums}
-.rowdel{background:none;border:none;cursor:pointer;font-size:16px;padding:4px 7px;border-radius:8px;line-height:1}
-.rowdel:hover{background:var(--pink-soft)}
-table.rec td.rtime{color:var(--ink-soft);font-size:12.5px;font-variant-numeric:tabular-nums}
-.rec-time{font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
-.mtime{font-size:11px;color:var(--ink-soft);margin-top:8px;text-align:right;font-variant-numeric:tabular-nums}
-
-.pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px}
-.pill.sky{background:var(--sky-soft);color:#2f6fa0}
-.pill.lav{background:var(--primary-soft);color:#6b54ad}
-.pill.mint{background:var(--mint-soft);color:#2f7a5d}
-.pill.peach{background:var(--peach-soft);color:#c4683f}
-.pill.gray{background:#f0eef5;color:#857d97}
-
-.seg{display:inline-flex;background:var(--bg2);border-radius:12px;padding:4px;gap:2px;flex-wrap:wrap}
-.seg button{border:none;background:transparent;font-family:inherit;font-size:14px;font-weight:600;color:var(--ink-soft);padding:8px 15px;border-radius:9px;cursor:pointer}
-.seg button.active{background:#fff;color:var(--primary-deep);box-shadow:0 1px 4px rgba(123,99,194,.15)}
-.sum-total{display:flex;align-items:baseline;justify-content:space-between;background:linear-gradient(120deg,#6f5bb0,#9b85d4);color:#fff;border-radius:16px;padding:16px 20px;margin:16px 0}
-.sum-total .l{font-size:14px;opacity:.85}
-.sum-total .v{font-family:'Gowun Batang',serif;font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
-.group{margin-bottom:10px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
-.group-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:#f6f2fc;cursor:pointer}
-.group-head .gname{font-weight:700;font-size:15px;display:flex;align-items:center;gap:9px}
-.group-head .gcount{font-size:12px;color:var(--ink-soft);font-weight:500}
-.group-head .gsum{font-family:'Gowun Batang',serif;font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;color:var(--primary-deep)}
-.group-body{display:none;padding:8px 12px 12px}
-.group.open .group-body{display:block}
-.group-head .arr{transition:transform .15s;color:var(--ink-soft)}
-.group.open .arr{transform:rotate(90deg)}
-.mini{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px 6px;border-bottom:1px dashed var(--line);font-size:14px;align-items:center;cursor:pointer;border-radius:8px}
-.mini:last-child{border-bottom:none}
-.mini:hover{background:#f8f5fd}
-.mini .mt{font-weight:600}
-.mini .mm{font-size:12px;color:var(--ink-soft)}
-.mini .ma{font-variant-numeric:tabular-nums;font-weight:600;text-align:right;color:var(--primary-deep)}
-
-.cal-head{display:flex;align-items:center;justify-content:space-between;margin:14px 0}
-.cal-head .mo{font-family:'Gowun Batang',serif;font-size:20px;font-weight:700;color:#5a4a86}
-.cal-nav{display:flex;gap:6px}
-.cal-nav button{height:38px;min-width:38px;border-radius:11px;border:1px solid var(--line);background:#fff;font-size:18px;cursor:pointer;color:var(--ink)}
-.cal-nav button:hover{border-color:var(--primary);color:var(--primary-deep)}
-.cal-legend{display:flex;gap:14px;font-size:12px;color:var(--ink-soft);margin-bottom:10px;flex-wrap:wrap}
-.cal-legend span{display:inline-flex;align-items:center;gap:5px}
-.lg-dot{width:9px;height:9px;border-radius:50%}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.cal-dow{text-align:center;font-size:12px;font-weight:700;color:var(--ink-soft);padding:4px 0}
-.cal-dow.sun{color:var(--pink)}
-.cal-cell{min-height:70px;border:1px solid var(--line);border-radius:12px;padding:6px 6px 4px;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:2px;transition:border-color .12s}
-.cal-cell.empty-cell{background:transparent;border:none;cursor:default}
-.cal-cell:hover{border-color:var(--primary)}
-.cal-cell.has{background:#faf6ff}
-.cal-cell.sel{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
-.cal-cell.today .dnum{background:var(--primary);color:#fff;border-radius:7px;padding:0 5px}
-.cal-cell .dnum{font-size:13px;font-weight:700;align-self:flex-start}
-.cal-cell.sun .dnum{color:var(--pink)}
-.cal-cell .csum{margin-top:auto;font-size:11px;font-weight:700;color:var(--primary-deep);font-variant-numeric:tabular-nums;line-height:1.2}
-.cal-marks{display:flex;gap:4px;flex-wrap:wrap}
-.cmark{font-size:10px;font-weight:700;padding:1px 6px;border-radius:7px;line-height:1.55}
-.cmark.sup{background:var(--mint-soft);color:#2f7a5d}
-.cmark.memo{background:var(--peach-soft);color:#c4683f}
-.day-detail{margin-top:18px}
-.detail-block{margin-bottom:16px}
-.detail-block .bh{font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:7px}
-
-.row-item{display:flex;align-items:flex-start;gap:11px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px 13px;margin-bottom:8px}
-.row-item .grow{flex:1;min-width:0}
-.row-item .grow .t{font-size:15px;font-weight:600}
-.row-item .grow .m{font-size:12px;color:var(--ink-soft);margin-top:2px}
-.row-item .amt{font-family:'Gowun Batang',serif;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--primary-deep)}
-.row-item.clickable{cursor:pointer;transition:border-color .12s}
-.row-item.clickable:hover{border-color:var(--primary)}
-
-.add-inline{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-.add-inline .dt{max-width:150px}
-.add-inline input[type=text]{flex:1;min-width:160px}
-.sup-item{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px 13px;margin-bottom:8px}
-.sup-item.done{opacity:.62}
-.sup-item .cb{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px}
-.sup-item.done .cb{background:var(--mint);border-color:var(--mint)}
-.sup-item .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
-.sup-item .txt{font-size:15px}
-.sup-item.done .txt{text-decoration:line-through;color:var(--ink-soft)}
-.sup-item .sdate{font-size:11px;color:#fff;background:var(--sky);padding:2px 8px;border-radius:999px;white-space:nowrap;font-weight:600;flex:0 0 auto}
-.sup-item .acts{display:flex;gap:6px;flex:0 0 auto}
-.edit-box{background:#fbf9ff;border:1px solid var(--primary-soft);border-radius:13px;padding:12px;margin-bottom:8px}
-
-.memo-item{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
-.memo-item .mtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px}
-.memo-item .mdate{font-size:12px;color:#fff;background:var(--peach);padding:2px 9px;border-radius:999px;font-weight:600}
-.memo-item .mbody{font-size:15px;white-space:pre-wrap;line-height:1.55}
-.memo-item .mbtns{display:flex;gap:6px}
-
-.overlay{position:fixed;inset:0;background:rgba(74,66,88,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
-.overlay.show{display:flex}
-.modal{background:var(--card);border-radius:20px;max-width:520px;width:100%;max-height:90vh;overflow:auto;padding:22px;box-shadow:0 20px 60px rgba(74,66,88,.3)}
-.modal h3{font-family:'Gowun Batang',serif;font-size:20px;margin-bottom:16px;color:#5a4a86}
-
-#imgOverlay{position:fixed;inset:0;background:rgba(40,34,52,.88);display:none;align-items:center;justify-content:center;padding:20px;z-index:90;cursor:zoom-out}
-#imgOverlay.show{display:flex}
-#imgOverlay img{max-width:100%;max-height:100%;border-radius:12px}
-
-.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:#5a4a86;color:#fff;padding:12px 22px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:all .3s;z-index:100;pointer-events:none;max-width:90%;text-align:center}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-@media (max-width:560px){
-  .grid{grid-template-columns:1fr}
-  .brand h1{font-size:22px}
-  .cal-cell{min-height:58px}
-}
-</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>부동산 프로젝트 관리</title>
+<link rel="manifest" href="realestate-manifest.json">
+<meta name="theme-color" content="#c9a227">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="부동산관리">
+<link rel="apple-touch-icon" href="realestate-icon-192.png">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="realestate-project.css?v=6.6">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
-<header>
-  <div class="wrap">
-    <div class="head-row">
-      <div class="brand">
-        <h1>부동산 비용 관리</h1>
-        <span class="sub">비용 · 합산 · 달력 · 준비물 · 메모</span>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
-        <a class="home-link" href="index.html">← 홈</a>
-      </div>
-    </div>
-    <nav class="tabs" id="tabs">
-      <button data-tab="entry" class="active">비용 입력</button>
-      <button data-tab="summary">합산 보기</button>
-      <button data-tab="calendar">달력</button>
-      <button data-tab="supplies">준비물</button>
-      <button data-tab="memo">메모</button>
-    </nav>
+<!-- 잠금화면 (PIN/지문) -->
+<div id="lockScreen" class="lock-screen hidden">
+  <div class="lock-box">
+    <div class="lock-title" id="lockTitle">🔒 부동산 관리 잠금</div>
+    <div class="lock-desc" id="lockDesc">PIN 4자리를 입력하세요</div>
+    <div class="lock-dots" id="lockDots"></div>
+    <div class="lock-msg" id="lockMsg"></div>
+    <div class="lock-pad" id="lockPad"></div>
+    <button class="lock-bio" id="lockBio" style="display:none" onclick="bioUnlock()">👆 지문/얼굴로 열기</button>
+  </div>
+</div>
+
+<div id="errBanner"><button class="x" onclick="document.getElementById('errBanner').classList.remove('show')">×</button>
+  <b>⚠️ 오류가 발생했습니다</b><span id="errMsg"></span><span class="ex" id="errEx"></span></div>
+
+<input type="file" id="addToFolderInput" multiple accept="image/*,application/pdf" style="display:none">
+<input type="file" id="restoreInput" accept="application/json,.json" style="display:none">
+
+<div id="uploadOverlay"><div class="up-box"><div class="up-spin"></div><div id="upMsg">업로드 중…</div></div></div>
+
+<!-- 이미지 뷰어 -->
+<div id="imgViewer">
+  <button id="ivClose" title="닫기">×</button>
+  <button id="ivPrev" title="이전" onclick="ivStep(-1)">‹</button>
+  <button id="ivNext" title="다음" onclick="ivStep(1)">›</button>
+  <div id="ivCtrl">
+    <button onclick="ivZoom(-0.3)" title="축소">－</button>
+    <button onclick="ivZoom(0.3)" title="확대">＋</button>
+    <button onclick="ivReset()" title="원래대로">⟲</button>
+    <button id="ivDel" onclick="ivDelete()" title="이 사진 삭제">🗑</button>
+  </div>
+  <img id="ivImg" alt="" draggable="false">
+  <div id="ivCap"></div>
+  <div id="ivCount"></div>
+</div>
+
+<header class="topbar">
+  <h1>🏗️ 부동산 프로젝트 관리 <span style="font-size:11px;font-weight:500;opacity:.7">v6.6</span></h1>
+  <div class="tb-right">
+    <span id="fxBadge" class="fx-badge" title="환율 (USD→KRW)">$1 = -</span>
+    <button class="btn-qm-hdr" onclick="openGlobalMemo()" title="급한 메모 (Ctrl+Shift+M)">⚡</button>
+    <button class="backup" onclick="openBackupModal()">💾 백업</button>
+    <button class="diag" onclick="runDiagnostics()">🩺 진단</button>
+    <a class="home" href="index.html">← 홈</a>
   </div>
 </header>
 
-<main class="wrap">
+<div class="wrap">
+  <aside>
+    <button class="common-data-btn" onclick="openCommonData()">📂 공통자료</button>
+    <div class="side-title" style="margin-top:14px">프로젝트</div>
+    <div id="projList"></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="openProjectModal()">+ 새 프로젝트</button>
+  </aside>
+  <main id="main">
+    <div class="empty">왼쪽에서 프로젝트를 선택하거나<br>새 프로젝트를 만들어 시작하세요.</div>
+  </main>
+</div>
 
-  <!-- ===== 비용 입력 ===== -->
-  <section class="panel active" id="panel-entry">
-    <div class="card">
-      <h2>비용 입력</h2>
-      <p class="desc">단가 × 수량이 자동 합계됩니다. 부가세 미포함이면 합계에 10%가 더해집니다.</p>
-      <div class="grid">
-        <div class="field"><label>날짜 <span class="req">*</span></label><input type="date" id="f-date"></div>
-        <div class="field"><label>카테고리</label><select id="f-category"></select></div>
-        <div class="field full"><label>목록 (항목명) <span class="req">*</span></label><input type="text" id="f-item" placeholder="예: 화장실 누수 수리"></div>
-        <div class="field full"><label>규격</label><input type="text" id="f-spec" placeholder="예: 25평형 / 벽걸이 1대"></div>
-        <div class="field"><label>단가 (원)</label><input type="number" id="f-price" placeholder="0" min="0" step="1"></div>
-        <div class="field"><label>수량</label><input type="number" id="f-qty" placeholder="1" min="0" step="1" value="1"></div>
-        <div class="field"><label>부가세</label><select id="f-vat"><option value="포함">포함</option><option value="미포함">미포함 (+10%)</option></select></div>
-        <div class="field"><label>지불방식</label><select id="f-pay"><option>계좌이체</option><option>직불카드</option><option>신용카드</option></select></div>
-        <div class="field"><label>상호</label><input type="text" id="f-vendor" list="vendorList" placeholder="예: ○○설비"></div>
-        <div class="field"><label>메모 (선택)</label><input type="text" id="f-note" placeholder="영수증번호·특이사항 등"></div>
-        <div class="field photo-area">
-          <label>사진 (영수증·현장)</label>
-          <div class="photo-btns">
-            <label class="photo-btn">📷 촬영<input type="file" id="f-cam" accept="image/*" capture="environment" style="display:none"></label>
-            <label class="photo-btn">🖼 사진 선택<input type="file" id="f-file" accept="image/*" multiple style="display:none"></label>
-          </div>
-          <div class="thumbs" id="f-thumbs"></div>
-        </div>
-        <div class="total-preview"><span class="lbl">합계<span class="vatnote" id="vatNote"></span></span><span class="amt" id="totalPreview">0원</span></div>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="btnSave">저장하기</button>
-        <button class="btn btn-ghost" id="btnReset">초기화</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="list-head">
-        <h3>입력 내역 <span id="recentCount" style="font-weight:500"></span></h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" id="btnCopyExcel">📋 엑셀용 복사</button>
-          <button class="btn btn-ghost btn-sm" id="btnBackup">⬇ 백업</button>
-        </div>
-      </div>
-      <input type="text" id="costSearch" class="search" placeholder="🔍 검색 — 목록·규격·상호·카테고리·날짜·메모">
-      <div class="table-wrap">
-        <table class="rec">
-          <thead><tr>
-            <th>날짜</th><th>카테고리</th><th>목록</th><th>규격</th>
-            <th style="text-align:right">단가</th><th style="text-align:right">수량</th>
-            <th>부가세</th><th>지불방식</th><th>상호</th><th style="text-align:right">합계</th><th>입력시각</th><th></th>
-          </tr></thead>
-          <tbody id="recBody"></tbody>
-          <tfoot id="recFoot"></tfoot>
-        </table>
-      </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">행을 누르면 수정·삭제·사진 확인을 할 수 있어요. ‘엑셀용 복사’로 엑셀에 바로 붙여넣을 수 있습니다.</p>
-    </div>
-  </section>
-
-  <!-- ===== 합산 보기 ===== -->
-  <section class="panel" id="panel-summary">
-    <div class="card">
-      <h2>합산 보기</h2>
-      <p class="desc">달별 · 날짜별 · 카테고리별 · 상호별로 합계를 봅니다. 항목을 누르면 수정됩니다.</p>
-      <div class="seg" id="sumSeg">
-        <button data-mode="month" class="active">달별</button>
-        <button data-mode="date">날짜별</button>
-        <button data-mode="category">카테고리별</button>
-        <button data-mode="vendor">상호별</button>
-      </div>
-      <div class="sum-total"><span class="l">전체 합계</span><span class="v" id="grandTotal">0원</span></div>
-      <div id="summaryBody"></div>
-    </div>
-  </section>
-
-  <!-- ===== 달력 ===== -->
-  <section class="panel" id="panel-calendar">
-    <div class="card">
-      <div class="seg" id="calSeg">
-        <button data-cal="cost" class="active">💰 비용 달력</button>
-        <button data-cal="plan">✓ 준비물·메모 달력</button>
-      </div>
-      <div class="cal-head">
-        <span class="mo" id="calMonth"></span>
-        <div class="cal-nav">
-          <button id="calPrev">‹</button>
-          <button id="calToday" style="font-size:14px;font-weight:600;padding:0 12px">오늘</button>
-          <button id="calNext">›</button>
-        </div>
-      </div>
-      <div class="cal-legend" id="calLegend"></div>
-      <div class="cal-grid" id="calGrid"></div>
-      <div class="day-detail" id="dayDetail"></div>
-    </div>
-  </section>
-
-  <!-- ===== 준비물 ===== -->
-  <section class="panel" id="panel-supplies">
-    <div class="card">
-      <h2>준비물 체크리스트</h2>
-      <p class="desc">날짜를 정해 추가하면 ‘준비물·메모 달력’에도 표시됩니다. 사진도 첨부할 수 있어요.</p>
-      <div class="add-inline">
-        <input type="date" id="supDate" class="dt">
-        <input type="text" id="supInput" placeholder="예: 계약서 사본, 인감도장, 등기부등본">
-      </div>
-      <div class="photo-btns">
-        <label class="photo-btn">📷 촬영<input type="file" id="sup-cam" accept="image/*" capture="environment" style="display:none"></label>
-        <label class="photo-btn">🖼 사진<input type="file" id="sup-file" accept="image/*" multiple style="display:none"></label>
-      </div>
-      <div class="thumbs" id="sup-add-thumbs"></div>
-      <div class="btn-row"><button class="btn btn-primary" id="supAdd">추가</button></div>
-      <input type="text" id="supSearch" class="search" placeholder="🔍 준비물 검색" style="margin-top:14px">
-      <div id="supList" style="margin-top:4px"></div>
-    </div>
-  </section>
-
-  <!-- ===== 메모 ===== -->
-  <section class="panel" id="panel-memo">
-    <div class="card">
-      <h2>일반 메모</h2>
-      <p class="desc">날짜별로 기록되어 ‘준비물·메모 달력’에서도 볼 수 있습니다. 사진도 첨부할 수 있어요.</p>
-      <div class="add-inline"><input type="date" id="memoDate" class="dt"></div>
-      <div class="field full"><textarea id="memoInput" placeholder="현장 방문 메모, 업자 협의 내용 등…"></textarea></div>
-      <div class="photo-btns" style="margin-top:10px">
-        <label class="photo-btn">📷 촬영<input type="file" id="memo-cam" accept="image/*" capture="environment" style="display:none"></label>
-        <label class="photo-btn">🖼 사진<input type="file" id="memo-file" accept="image/*" multiple style="display:none"></label>
-      </div>
-      <div class="thumbs" id="memo-add-thumbs"></div>
-      <div class="btn-row"><button class="btn btn-primary" id="memoAdd">메모 추가</button></div>
-      <input type="text" id="memoSearch" class="search" placeholder="🔍 메모 검색" style="margin-top:16px">
-      <div id="memoList" style="margin-top:4px"></div>
-    </div>
-  </section>
-
-</main>
-
-<datalist id="vendorList"></datalist>
-
-<!-- 비용 수정 모달 -->
-<div class="overlay" id="overlay">
+<!-- 프로젝트 모달 -->
+<div class="modal-bg" id="projectModal">
   <div class="modal">
-    <h3>비용 수정</h3>
-    <div class="grid">
-      <div class="field"><label>날짜</label><input type="date" id="e-date"></div>
-      <div class="field"><label>카테고리</label><select id="e-category"></select></div>
-      <div class="field full"><label>목록 (항목명)</label><input type="text" id="e-item"></div>
-      <div class="field full"><label>규격</label><input type="text" id="e-spec"></div>
-      <div class="field"><label>단가 (원)</label><input type="number" id="e-price" min="0"></div>
-      <div class="field"><label>수량</label><input type="number" id="e-qty" min="0"></div>
-      <div class="field"><label>부가세</label><select id="e-vat"><option value="포함">포함</option><option value="미포함">미포함 (+10%)</option></select></div>
-      <div class="field"><label>지불방식</label><select id="e-pay"><option>계좌이체</option><option>직불카드</option><option>신용카드</option></select></div>
-      <div class="field"><label>상호</label><input type="text" id="e-vendor" list="vendorList"></div>
-      <div class="field"><label>메모</label><input type="text" id="e-note"></div>
-      <div class="field photo-area">
-        <label>사진</label>
-        <div class="photo-btns">
-          <label class="photo-btn">📷 촬영<input type="file" id="e-cam" accept="image/*" capture="environment" style="display:none"></label>
-          <label class="photo-btn">🖼 사진 선택<input type="file" id="e-file" accept="image/*" multiple style="display:none"></label>
-        </div>
-        <div class="thumbs" id="e-thumbs"></div>
-      </div>
-      <div class="total-preview"><span class="lbl">합계<span class="vatnote" id="eVatNote"></span></span><span class="amt" id="eTotalPreview">0원</span></div>
+    <h3 id="projectModalTitle">새 프로젝트</h3>
+    <input type="hidden" id="pf_id">
+    <div class="field"><label>프로젝트명 *</label><input id="pf_name" placeholder="예: ○○상가 2층 인테리어"></div>
+    <div class="field"><label>주소 / 위치</label><input id="pf_addr" placeholder="예: 서울시 ○○구 ○○동 123-4"></div>
+    <div class="row2">
+      <div class="field"><label>상태</label><select id="pf_status"><option>진행중</option><option>완료</option><option>보류</option></select></div>
+      <div class="field"><label>시작일</label><input id="pf_date" type="date"></div>
     </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" id="eSave">수정 저장</button>
-      <button class="btn btn-ghost" id="eCancel">취소</button>
-      <button class="btn btn-danger" id="eDelete" style="margin-left:auto">삭제</button>
+    <div class="field"><label>총 예산 (원, 선택)</label><input id="pf_budget" type="number" placeholder="예: 30000000"></div>
+    <div class="field"><label>메모</label><textarea id="pf_memo" placeholder="프로젝트 개요, 담당자, 평형, 예산 등"></textarea></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveProject()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('projectModal')">취소</button>
     </div>
   </div>
 </div>
 
-<div id="imgOverlay"><img id="imgFull" src="" alt=""></div>
-<div class="toast" id="toast"></div>
+<!-- 업체 모달 -->
+<div class="modal-bg" id="vendorModal">
+  <div class="modal">
+    <h3 id="vendorModalTitle">업체 / 연락처 추가</h3>
+    <div class="row2">
+      <div class="field"><label>업체/이름 *</label><input id="vf_name" placeholder="예: ○○전기"></div>
+      <div class="field"><label>공종 / 역할</label><select id="vf_trade"></select></div>
+    </div>
+    <div class="field"><label>전화번호 *</label><input id="vf_phone" placeholder="010-0000-0000"></div>
+    <div class="field"><label>메모</label><textarea id="vf_memo" placeholder="담당자, 단가, 특이사항 등"></textarea></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveVendor()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('vendorModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script>
-/* ===== 설정 ===== */
-const firebaseConfig = {
-  apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
-  authDomain: "my-system-25497.firebaseapp.com",
-  projectId: "my-system-25497",
-  storageBucket: "my-system-25497.firebasestorage.app",
-};
-const COL_COST="realestate_costs", COL_SUP="realestate_supplies", COL_MEMO="realestate_memos";
+<!-- 기록 모달 -->
+<div class="modal-bg" id="entryModal">
+  <div class="modal">
+    <h3 id="entryModalTitle">기록 추가</h3>
+    <div class="quick-kinds" id="ef_quickKinds"></div>
+    <div class="row2">
+      <div class="field"><label>종류 * <a href="#" class="field-cfg" onclick="openKindConfig();return false;">⚙ 칸 설정</a></label><select id="ef_kind" onchange="onKindChange()"></select></div>
+      <div class="field"><label>날짜</label><input id="ef_date" type="date"></div>
+    </div>
+    <div class="row2">
+      <div class="field" id="g_stage"><label id="lab_stage">공정 단계</label><select id="ef_stage" onchange="fillCatSelect()"></select></div>
+      <div class="field" id="g_cat"><label id="lab_cat">세부 항목</label><select id="ef_cat" onchange="efWorkerToggle()"></select></div>
+    </div>
+    <div id="g_meals" style="display:none">
+      <div class="field"><label>🍚 메뉴 (여러 개 → 자동 합계)</label>
+        <div style="display:flex;gap:6px">
+          <input id="ef_mealName" placeholder="메뉴 이름" style="flex:2" onkeydown="if(event.key==='Enter'){efAddMeal();event.preventDefault();}">
+          <input id="ef_mealPrice" type="number" placeholder="가격" style="flex:1" onkeydown="if(event.key==='Enter'){efAddMeal();event.preventDefault();}">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="efAddMeal()">+ 추가</button>
+        </div>
+        <div id="ef_mealList" style="margin-top:8px"></div>
+        <div id="ef_mealSum" class="hint" style="text-align:right;font-weight:700;color:var(--accent)"></div>
+      </div>
+    </div>
+    <div id="g_dist" class="field" style="display:none"><label>🚗 주행거리(km)</label><input id="ef_dist" type="number" placeholder="예: 120"></div>
+    <div id="g_workers" style="display:none">
+      <div class="field"><label>👷 인부별 일당 (한 명씩 추가 → 자동 합계)</label>
+        <div style="display:flex;gap:6px">
+          <input id="ef_workerName" placeholder="이름/역할 (예: 김반장)" style="flex:2" onkeydown="if(event.key==='Enter'){efAddWorker();event.preventDefault();}">
+          <input id="ef_workerPay" type="number" placeholder="일당" style="flex:1" onkeydown="if(event.key==='Enter'){efAddWorker();event.preventDefault();}">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="efAddWorker()">+ 추가</button>
+        </div>
+        <div id="ef_workerList" style="margin-top:8px"></div>
+        <div id="ef_workerSum" class="hint" style="text-align:right;font-weight:700;color:var(--accent)"></div>
+      </div>
+    </div>
+    <div id="g_matspec" style="display:none">
+      <div class="field" id="g_matpick">
+        <label>📦 재고에서 불러오기 (선택)</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="ef_matpick" onchange="pickMaterial()" style="flex:1"><option value="">— 등록된 자재 선택 (규격·단가 자동 입력) —</option></select>
+        </div>
+        <div class="hint" id="ef_matpickHint"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>규격 / 사양</label><input id="ef_spec" placeholder="예: 600x600 / 9.5T / 18mm"></div>
+        <div class="field"><label>단가 × 수량</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="ef_unitprice" type="number" placeholder="단가" style="flex:1" oninput="calcMatAmount()">
+            <span style="color:var(--ink-soft)">×</span>
+            <input id="ef_qty" type="number" placeholder="수량" style="width:74px" oninput="calcMatAmount()">
+          </div>
+        </div>
+      </div>
+      <div class="field"><label>부가세</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label class="vat-opt"><input type="radio" name="ef_vat" value="별도" onchange="calcMatAmount()"> 부가세 별도(+10%)</label>
+          <label class="vat-opt"><input type="radio" name="ef_vat" value="포함" checked onchange="calcMatAmount()"> 부가세 포함</label>
+          <label class="vat-opt"><input type="radio" name="ef_vat" value="없음" onchange="calcMatAmount()"> 부가세 없음</label>
+        </div>
+        <div class="hint" id="ef_vatHint"></div>
+      </div>
+      <div class="field"><label>📦 택배비 / 배송비 (선택)</label>
+        <input id="ef_shipping" type="number" placeholder="자재 배송비가 있으면 입력 (자동으로 금액에 합산)" oninput="calcMatAmount()">
+      </div>
+    </div>
+    <div class="field" id="g_photofolder"><label>📷 사진 폴더</label><select id="ef_photofolder"></select></div>
+    <div class="field" id="g_docfolder"><label>📁 서류 폴더</label><select id="ef_docfolder"></select></div>
+    <div class="field"><label>제목 *</label><input id="ef_title" placeholder="예: 거실 도배 시공 / 욕실 타일 압착시멘트"></div>
+    <div class="row2">
+      <div class="field"><label>거래처 / 상대</label><input id="ef_vendor" list="vendorList" placeholder="예: ○○자재"><datalist id="vendorList"></datalist></div>
+      <div class="field" id="g_amount"><label>금액</label>
+        <div style="display:flex;gap:6px">
+          <input id="ef_amount" type="number" placeholder="숫자만" style="flex:1" oninput="updateEntryFx()">
+          <select id="ef_currency" style="width:84px" onchange="updateEntryFx()"><option value="KRW">KRW</option><option value="USD">USD</option></select>
+        </div>
+        <div class="hint" id="ef_fxhint"></div>
+      </div>
+    </div>
+    <div class="field" id="g_pay"><label>결제 수단</label><select id="ef_pay"></select></div>
+    <div class="row2">
+      <div class="field"><label>전화번호 (선택)</label><input id="ef_phone" type="tel" placeholder="누르면 바로 전화"></div>
+      <div class="field"><label>주소 (선택) <a id="ef_mapBtn" class="field-cfg" style="display:none" href="#" target="_blank" rel="noopener">📍 네이버지도</a></label>
+        <input id="ef_addr" placeholder="주소 입력 → 지도 연결" oninput="efMapHint()"></div>
+    </div>
+    <div id="ef_customWrap"></div>
+    <div style="margin-bottom:13px"><button type="button" class="btn btn-ghost btn-sm" onclick="addCustomField()">+ 입력칸 추가</button>
+      <span class="hint" style="margin-left:6px">이 종류에 나만의 칸(예: 현장 담당자, 차량번호)을 만들어요.</span></div>
+    <div class="field"><label>내용 / 메모</label><textarea id="ef_memo" placeholder="시공 내용, 통화 요약, 문제 상황과 처리 방법 등"></textarea></div>
+    <div class="field"><label>첨부파일 (PDF / 사진, 여러 개)</label>
+      <div class="file-drop-zone" id="ef_dropZone">
+        <input id="ef_files" type="file" multiple accept="image/*,application/pdf">
+        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
+        <div id="ef_dropPreview" class="drop-preview"></div>
+      </div>
+      <div id="uploadProgress">업로드 중...</div>
+    </div>
+    <div class="field"><label>🔗 참고 링크 (선택)</label>
+      <div class="link-input-wrap">
+        <input id="ef_link" type="url" placeholder="https://... 쇼핑몰·제품페이지·카탈로그 링크" oninput="efLinkHint()">
+        <a id="ef_linkBtn" class="link-open-btn" href="#" target="_blank" rel="noopener" style="display:none">열기</a>
+      </div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="entrySaveBtn" onclick="saveEntry()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('entryModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-const CATS = {
-  "이동/생활": ["가스충전","톨비","식비","관리비","은행이자"],
-  "공사/시공": ["목공사","설비","타일공사","전기","인테리어","샷시","페인트","도배장판"],
-  "자재/용품": ["시트지","욕실악세사리","전체악세사리","공구"],
-  "법무/행정": ["등기"],
-  "기타": ["기타"]
-};
-const CAT_GROUP={}; Object.entries(CATS).forEach(([g,arr])=>arr.forEach(c=>CAT_GROUP[c]=g));
-const GROUP_CLASS={"이동/생활":"sky","공사/시공":"lav","자재/용품":"mint","법무/행정":"peach","기타":"gray"};
-function catClass(cat){ return GROUP_CLASS[CAT_GROUP[cat]]||"gray"; }
+<!-- 자재 모달 -->
+<div class="modal-bg" id="materialModal">
+  <div class="modal">
+    <h3 id="materialModalTitle">자재 추가</h3>
+    <div class="row2">
+      <div class="field"><label>공간 / 위치</label><select id="mf_space"></select></div>
+      <div class="field"><label>분류</label><select id="mf_cat"></select></div>
+    </div>
+    <div class="field"><label>공정 (선택)</label><select id="mf_stage"></select></div>
+    <div class="field"><label>제품명 *</label><input id="mf_name" placeholder="예: 포세린 타일 / 실크 벽지 / 강마루"></div>
+    <div class="row2">
+      <div class="field"><label>브랜드 / 제조사</label><input id="mf_brand"></div>
+      <div class="field"><label>규격 · 사양</label><input id="mf_spec"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>단가</label>
+        <div style="display:flex;gap:6px">
+          <input id="mf_unitprice" type="number" placeholder="개당/㎡당" style="flex:1" oninput="updateMatAmount()">
+          <select id="mf_currency" style="width:84px" onchange="updateMatAmount()"><option value="KRW">KRW</option><option value="USD">USD</option></select>
+        </div>
+        <div class="hint" id="mf_fxhint"></div>
+      </div>
+      <div class="field"><label>구매 수량</label><input id="mf_qty" type="number" oninput="updateMatAmount()"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>단위</label><select id="mf_unit"></select></div>
+      <div class="field"><label>금액 (원 환산)</label><div class="mf-amount" id="mf_amount">0원</div></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>📦 재고 수량</label><input id="mf_stock" type="number" placeholder="남은/보관 중 수량"><div class="hint">구매 수량과 별개로 현재 남은 양. 둘 다 넣으면 카드에 합계(총 보유)가 표시됩니다.</div></div>
+      <div class="field"><label>재고 위치 (선택)</label><input id="mf_stockloc" placeholder="예: 창고 / 현장"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>공급처 / 구매처</label><input id="mf_supplier"></div>
+      <div class="field"><label>연락처</label><input id="mf_contact" placeholder="010-0000-0000"></div>
+    </div>
+    <div class="field"><label>구매 / 시공일</label><input id="mf_date" type="date"></div>
+    <div class="field"><label>메모</label><textarea id="mf_memo"></textarea></div>
+    <div class="field"><label>📷 자재 사진 (여러 장, 선택)</label>
+      <div class="file-drop-zone" id="mf_dropZone">
+        <input id="mf_files" type="file" multiple accept="image/*,application/pdf">
+        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
+        <div id="mf_dropPreview" class="drop-preview"></div>
+      </div>
+      <div class="hint" id="mf_filehint"></div>
+    </div>
+    <div class="field"><label>🔗 제품 링크 (선택)</label>
+      <div class="link-input-wrap">
+        <input id="mf_link" type="url" placeholder="https://... 쇼핑몰·제조사·스펙시트 링크" oninput="mfLinkHint()">
+        <a id="mf_linkBtn" class="link-open-btn" href="#" target="_blank" rel="noopener" style="display:none">열기</a>
+      </div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="matSaveBtn" onclick="saveMaterial()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('materialModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-let db=null, online=false;
-let costs=[], supplies=[], memos=[];
+<!-- 재고 사용 모달 -->
+<div class="modal-bg" id="stockUseModal">
+  <div class="modal" style="width:min(440px,100%)">
+    <h3 id="stockUseTitle">재고 사용</h3>
+    <input type="hidden" id="su_id">
+    <div class="hint" id="su_hint" style="margin-bottom:10px"></div>
+    <div class="row2">
+      <div class="field"><label>사용 수량</label><input id="su_qty" type="number" min="0" step="1"></div>
+      <div class="field"><label>사용일</label><input id="su_date" type="date"></div>
+    </div>
+    <div class="field"><label>사용 메모 (선택)</label><input id="su_memo" placeholder="예: 거실 동쪽 벽 시공"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveStockUse()">차감 저장</button>
+      <button class="btn btn-line" onclick="closeModal('stockUseModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-const won = n => (Math.round(Number(n)||0)).toLocaleString("ko-KR")+"원";
-const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
-const $ = id => document.getElementById(id);
-const esc = s => (s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
-const dateFromTs = ts => { const d=new Date(ts||Date.now()); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
-const clockStr = ts => { if(!ts) return ""; const d=new Date(ts); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+<!-- 옵션 추가 미니 모달 (모든 셀렉트의 "+ 직접 추가"가 공용) -->
+<div class="modal-bg" id="addOptModal">
+  <div class="modal" style="width:min(440px,100%)">
+    <h3 id="addOptTitle">새 옵션 추가</h3>
+    <div class="hint" id="addOptHint" style="margin-bottom:10px"></div>
+    <div class="field"><label>새 항목 추가</label>
+      <div style="display:flex;gap:6px">
+        <input id="addOptInput" placeholder="추가할 이름을 입력하세요" style="flex:1" onkeydown="if(event.key==='Enter')confirmAddOpt()">
+        <button class="btn btn-primary btn-sm" onclick="confirmAddOpt()" style="flex:0 0 auto">추가</button>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:6px"><label>내가 추가한 항목 (삭제 가능)</label>
+      <div id="addOptList" class="opt-manage-list"></div>
+    </div>
+    <div class="hint">※ 기본 제공 항목은 삭제할 수 없고, 직접 추가한 항목만 지울 수 있습니다.</div>
+    <div class="modal-acts">
+      <button class="btn btn-line" onclick="closeModal('addOptModal')">닫기</button>
+    </div>
+  </div>
+</div>
 
-function calcTotal(price, qty, vat){ let b=(Number(price)||0)*(Number(qty)||0); if(vat==="미포함") b*=1.1; return Math.round(b); }
-function vatNoteText(v){ return v==="미포함" ? " (부가세 별도 +10%)" : " (부가세 포함)"; }
-function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
-function buildCatSelect(sel){ sel.innerHTML = Object.entries(CATS).map(([g,arr])=>`<optgroup label="${g}">${arr.map(c=>`<option value="${c}">${c}</option>`).join("")}</optgroup>`).join(""); }
+<!-- 작업일지 모달 -->
+<div class="modal-bg" id="worklogModal">
+  <div class="modal">
+    <h3 id="worklogModalTitle">작업 기록 추가</h3>
+    <input type="hidden" id="wl_id">
+    <div class="row2">
+      <div class="field"><label>날짜</label><input id="wl_date" type="date"></div>
+      <div class="field"><label>구분</label>
+        <select id="wl_side"><option value="업체작업">🏢 업체 작업 (주중)</option><option value="내작업">🙋 내 작업 (주말)</option></select></div>
+    </div>
+    <div class="field"><label>한 일 *</label><input id="wl_title" placeholder="예: 거실 도배 시공 / 욕실 방수 / 자재 운반"></div>
+    <div class="row2">
+      <div class="field"><label>업체 / 작업자</label><input id="wl_vendor" list="vendorList" placeholder="업체명 또는 본인"></div>
+      <div class="field"><label>작업 시간 (선택)</label><input id="wl_hours" placeholder="예: 09:00~17:00 / 반나절"></div>
+    </div>
+    <div class="field" style="display:none"><select id="wl_vendor_sel"></select></div>
+    <div class="field"><label>내용 / 메모</label><textarea id="wl_memo" placeholder="진행 상황, 다음 작업, 특이사항 등"></textarea></div>
+    <div class="field"><label>📷 사진 / 파일 (여러 개)</label>
+      <div class="file-drop-zone" id="wl_dropZone">
+        <input id="wl_files" type="file" multiple accept="image/*,application/pdf">
+        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
+        <div id="wl_dropPreview" class="drop-preview"></div>
+      </div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="wl_saveBtn" onclick="saveWorklog()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('worklogModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-/* ===== 사진 ===== */
-const MAX_TOTAL=900000;
-function compressImage(file, maxDim=1100, quality=0.62){
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onload=e=>{ const img=new Image(); img.onload=()=>{
-      let w=img.width,h=img.height;
-      if(w>h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } } else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
-      const cv=document.createElement("canvas"); cv.width=w; cv.height=h; cv.getContext("2d").drawImage(img,0,0,w,h);
-      resolve(cv.toDataURL("image/jpeg",quality));
-    }; img.onerror=reject; img.src=e.target.result; };
-    reader.onerror=reject; reader.readAsDataURL(file);
-  });
-}
-async function addPhotos(files, arr, rerender){
-  for(const f of files){
-    if(!f.type.startsWith("image/")) continue;
-    try{ const data=await compressImage(f); const cur=arr.reduce((s,p)=>s+p.length,0);
-      if(cur+data.length>MAX_TOTAL){ toast("사진 용량이 커서 더 추가할 수 없어요"); break; } arr.push(data);
-    }catch(e){ toast("사진 처리 실패"); }
-  }
-  rerender();
-}
-function handleFiles(e,arr,cb){ const files=[...e.target.files]; e.target.value=""; if(files.length) addPhotos(files,arr,cb); }
-function renderThumbs(container, arr, onRemove){
-  container.innerHTML = arr.map((src,i)=>`<div class="thumb"><img class="zimg" src="${src}"><button class="rm" data-rm="${i}">×</button></div>`).join("");
-  container.querySelectorAll("[data-rm]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); onRemove(Number(b.dataset.rm)); }));
-}
-function thumbsRO(arr){ return (arr&&arr.length)?`<div class="detail-thumbs">${arr.map(p=>`<div class="thumb"><img class="zimg" src="${p}"></div>`).join("")}</div>`:""; }
-function showImg(src){ $("imgFull").src=src; $("imgOverlay").classList.add("show"); }
-$("imgOverlay").addEventListener("click",()=>$("imgOverlay").classList.remove("show"));
-document.addEventListener("click",e=>{ const im=e.target.closest("img.zimg"); if(im){ e.stopPropagation(); showImg(im.src); } });
+<!-- 할일 / 메모 모달 -->
+<div class="modal-bg" id="todoModal">
+  <div class="modal">
+    <h3 id="todoModalTitle">할일 / 메모 추가</h3>
+    <input type="hidden" id="td_id">
+    <div class="field"><label>할 일 / 메모 *</label><input id="td_title" placeholder="예: 도배 업체 견적 받기 / 다음주 타일 주문"></div>
+    <div class="row2">
+      <div class="field"><label>기한 (선택)</label><input id="td_due" type="date"></div>
+      <div class="field"><label>분류 (선택)</label><input id="td_tag" placeholder="예: 준비물 / 연락 / 주문"></div>
+    </div>
+    <div class="field"><label>상세 메모</label><textarea id="td_memo" placeholder="자세한 내용, 필요한 것 등"></textarea></div>
+    <div class="field"><label>📷 사진 / 파일 (선택)</label>
+      <div class="file-drop-zone" id="td_dropZone">
+        <input id="td_files" type="file" multiple accept="image/*,application/pdf">
+        <div class="drop-hint">📎 파일 선택 · 드래그 · Ctrl+V 붙여넣기</div>
+        <div id="td_dropPreview" class="drop-preview"></div>
+      </div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="td_saveBtn" onclick="saveTodo()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('todoModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-/* ===== 저장소 (즉시 반영 + 백그라운드 동기화) ===== */
-function lsKey(c){ return "re_"+c; }
-function lsLoad(c){ try{ return JSON.parse(localStorage.getItem(lsKey(c))||"[]"); }catch(e){ return []; } }
-function lsSave(c,a){ try{ localStorage.setItem(lsKey(c), JSON.stringify(a)); }catch(e){ toast("기기 저장공간이 가득 찼어요"); } }
-function arrayOf(c){ return c===COL_COST?costs : c===COL_SUP?supplies : memos; }
-function setArray(c,a){ if(c===COL_COST)costs=a; else if(c===COL_SUP)supplies=a; else memos=a; }
-function genId(col){ return online ? db.collection(col).doc().id : "L"+Date.now()+Math.floor(Math.random()*100000); }
-function syncSet(col,id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.collection(col).doc(id).set(payload).catch(()=>toast("저장 동기화 지연 — 인터넷 확인 후 자동 재시도됩니다")); }
-function addRecord(col,data){ const id=genId(col); const rec={...data,id}; arrayOf(col).push(rec); if(online) syncSet(col,id,rec); else lsSave(col,arrayOf(col)); return rec; }
-function updateRecord(col,id,patch){ const a=arrayOf(col); const i=a.findIndex(x=>x.id===id); if(i<0) return null; a[i]={...a[i],...patch}; if(online) syncSet(col,id,a[i]); else lsSave(col,a); return a[i]; }
-function deleteRecord(col,id){ setArray(col,arrayOf(col).filter(x=>x.id!==id)); if(online) db.collection(col).doc(id).delete().catch(()=>toast("삭제 동기화 지연")); else lsSave(col,arrayOf(col)); }
+<!-- 종류별 표시 칸 설정 모달 -->
+<div class="modal-bg" id="kindConfigModal">
+  <div class="modal" style="width:min(420px,100%)">
+    <h3 id="kindCfgTitle">표시할 칸 설정</h3>
+    <div class="hint" style="margin-bottom:10px">이 종류를 선택했을 때 기록 모달에 보일 칸을 고르세요. 예) 교통비 → 금액·결제수단 켜기.</div>
+    <div id="kindCfgList" class="kindcfg-list"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveKindConfig()">저장</button>
+      <button class="btn btn-ghost" onclick="resetKindConfig()">기본값</button>
+      <button class="btn btn-line" onclick="closeModal('kindConfigModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-async function loadAll(){
-  if(online){
-    try{
-      const [c,s,m]=await Promise.all([db.collection(COL_COST).get(),db.collection(COL_SUP).get(),db.collection(COL_MEMO).get()]);
-      costs=c.docs.map(d=>({id:d.id,...d.data()}));
-      supplies=s.docs.map(d=>({id:d.id,...d.data()}));
-      memos=m.docs.map(d=>({id:d.id,...d.data()}));
-    }catch(e){ costs=[];supplies=[];memos=[]; }
-  } else { costs=lsLoad(COL_COST); supplies=lsLoad(COL_SUP); memos=lsLoad(COL_MEMO); }
-  sortCosts();
-}
-function sortCosts(){ costs.sort((a,b)=> (b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0)); }
+<!-- 달력: 그날 상세 -->
+<div class="modal-bg" id="calDayModal">
+  <div class="modal" style="width:min(560px,100%)">
+    <h3>📅 <span id="calDayTitle"></span></h3>
+    <div id="calDayBody" style="max-height:54vh;overflow-y:auto;margin-bottom:12px"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="calDayAdd()">+ 이 날짜에 기록 추가</button>
+      <button class="btn btn-line" onclick="closeModal('calDayModal')">닫기</button>
+    </div>
+  </div>
+</div>
 
-/* ===== 초기화 ===== */
-async function init(){
-  buildCatSelect($("f-category")); buildCatSelect($("e-category"));
-  try{
-    if(typeof firebase==="undefined") throw new Error("sdk");
-    firebase.initializeApp(firebaseConfig);
-    db=firebase.firestore();
-    try{ await db.enablePersistence({synchronizeTabs:true}); }catch(_){}
-    await Promise.race([ db.collection(COL_COST).limit(1).get(), new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),6000)) ]);
-    online=true; setStatus(true);
-  }catch(e){ online=false; setStatus(false); }
-  await loadAll();
-  $("f-date").value=todayStr(); $("supDate").value=todayStr(); $("memoDate").value=todayStr();
-  renderAll(); updatePreview();
-  try{ const t=localStorage.getItem("re_tab"); if(t) activateTab(t); }catch(e){}
-}
-function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
-function renderAll(){ refreshVendorList(); renderRecent(); renderSummary(); renderCalendar(); renderSupplies(); renderMemos(); }
-function refreshVendorList(){ const vs=[...new Set(costs.map(c=>c.vendor).filter(Boolean))]; $("vendorList").innerHTML=vs.map(v=>`<option value="${esc(v)}">`).join(""); }
+<!-- 급한 메모 (오른쪽 슬라이드 패널) -->
+<div class="memo-backdrop" id="memoBackdrop" onclick="closeMemoPanel()"></div>
+<div class="memo-panel" id="memoPanel">
+  <div class="memo-panel-head">
+    <span class="memo-panel-title">⚡ 급한 메모</span>
+    <div class="memo-panel-acts">
+      <button class="btn btn-line btn-sm" onclick="clearMemo()">🗑 지우기</button>
+      <button class="memo-x" onclick="closeMemoPanel()">✕</button>
+    </div>
+  </div>
+  <div class="memo-panel-body">
+    <div id="memoEditor" class="memo-area" contenteditable="true" data-ph="여기에 자유롭게 적으세요. 자동 저장됩니다. (캡처 이미지는 Ctrl+V로 글 사이에 바로 붙여넣기 · 사진을 누르면 삭제)" oninput="memoOnInput()" onpaste="memoPasteHandler(event)" onclick="memoEditorClick(event)"></div>
+  </div>
+  <div class="memo-panel-foot">
+    <input type="file" id="memoFileInput" multiple accept="image/*,application/pdf" capture="environment" style="display:none" onchange="addMemoPhoto()">
+    <button class="btn btn-line" onclick="document.getElementById('memoFileInput').click()">📷 사진 넣기</button>
+    <span id="memoStatus" class="memo-status"></span>
+  </div>
+</div>
 
-/* ===== 검색 & 백업 ===== */
-let costQuery="", supQuery="", memoQuery="";
-function matchQ(q, ...fields){ q=(q||"").trim().toLowerCase(); if(!q) return true; return fields.filter(Boolean).join(" ").toLowerCase().includes(q); }
-$("costSearch").addEventListener("input",e=>{ costQuery=e.target.value; renderRecent(); });
-$("supSearch").addEventListener("input",e=>{ supQuery=e.target.value; renderSupplies(); });
-$("memoSearch").addEventListener("input",e=>{ memoQuery=e.target.value; renderMemos(); });
-$("btnBackup").addEventListener("click",()=>{
-  const data={ exportedAt:new Date().toISOString(), costs, supplies, memos };
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob); const a=document.createElement("a");
-  a.href=url; a.download=`부동산백업_${todayStr()}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  toast("백업 파일을 저장했습니다");
-});
+<!-- 백업/복원 모달 -->
+<div class="modal-bg" id="backupModal">
+  <div class="modal">
+    <h3>💾 백업 / 복원</h3>
+    <div class="backup-box">
+      <h4>📤 현재 프로젝트 백업 (내보내기)</h4>
+      <p>지금 선택된 프로젝트의 모든 데이터(프로젝트 정보·기록·업체·자재·견적·부동산·체크리스트)를 JSON 파일 하나로 저장합니다. 사진/파일은 링크(URL)로 보관됩니다.</p>
+      <button class="btn btn-primary btn-sm" onclick="backupCurrentProject()">현재 프로젝트 백업하기</button>
+    </div>
+    <div class="backup-box">
+      <h4>📦 전체 백업 (모든 프로젝트)</h4>
+      <p>모든 프로젝트와 데이터를 한 파일로 저장합니다. 정기적으로 받아 두면 안전합니다.</p>
+      <button class="btn btn-line btn-sm" onclick="backupAll()">전체 백업하기</button>
+    </div>
+    <div class="backup-box">
+      <h4>📥 복원 (불러오기)</h4>
+      <p>백업한 JSON 파일을 올리면 <b>새 프로젝트로</b> 복원합니다. 기존 프로젝트를 덮어쓰지 않으니 안전합니다.</p>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('restoreInput').click()">백업 파일 선택해서 복원</button>
+      <div class="hint" id="restoreHint" style="margin-top:8px"></div>
+    </div>
+    <div class="backup-box">
+      <h4>🔒 앱 잠금 (PIN/지문)</h4>
+      <p>앱을 열 때 PIN 4자리로 잠급니다. 지원하는 기기는 지문/얼굴로도 열 수 있습니다. (돈·계약 정보 보호용)</p>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('backupModal');setupPin()">PIN 설정 / 변경</button>
+      <button class="btn btn-ghost btn-sm" onclick="removePin()">잠금 해제</button>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-line" onclick="closeModal('backupModal')">닫기</button>
+    </div>
+  </div>
+</div>
 
-/* ===== 탭 ===== */
-function activateTab(name){
-  const btn=document.querySelector(`.tabs button[data-tab="${name}"]`); if(!btn) return;
-  document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
-  btn.classList.add("active"); $("panel-"+name).classList.add("active");
-  try{ localStorage.setItem("re_tab", name); }catch(e){}
-}
-$("tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; activateTab(b.dataset.tab); });
+<!-- 진단 모달 -->
+<div class="modal-bg" id="diagModal">
+  <div class="modal">
+    <h3>🩺 시스템 진단</h3>
+    <div class="hint" style="margin-bottom:10px">연결·설정 상태를 점검합니다. 문제가 있으면 빨간색으로 표시됩니다.</div>
+    <div id="diagResult"><div class="ai-empty">점검 중…</div></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="runDiagnostics()">↻ 다시 점검</button>
+      <button class="btn btn-line" onclick="closeModal('diagModal')">닫기</button>
+    </div>
+  </div>
+</div>
 
-/* ===== 비용 입력 ===== */
-let formPhotos=[];
-["f-price","f-qty","f-vat"].forEach(id=>$(id).addEventListener("input",updatePreview));
-$("f-vat").addEventListener("change",updatePreview);
-function updatePreview(){ const v=$("f-vat").value; $("totalPreview").textContent=won(calcTotal($("f-price").value,$("f-qty").value,v)); $("vatNote").textContent=vatNoteText(v); }
-$("f-cam").addEventListener("change",e=>handleFiles(e,formPhotos,renderFormThumbs));
-$("f-file").addEventListener("change",e=>handleFiles(e,formPhotos,renderFormThumbs));
-function renderFormThumbs(){ renderThumbs($("f-thumbs"),formPhotos,i=>{ formPhotos.splice(i,1); renderFormThumbs(); }); }
-$("btnReset").addEventListener("click",resetForm);
-function resetForm(){ $("f-vendor").value=""; $("f-item").value=""; $("f-spec").value=""; $("f-price").value=""; $("f-qty").value="1"; $("f-note").value=""; $("f-vat").value="포함"; $("f-date").value=todayStr(); formPhotos=[]; renderFormThumbs(); updatePreview(); }
-$("btnSave").addEventListener("click",()=>{
-  const date=$("f-date").value, item=$("f-item").value.trim();
-  if(!date){ toast("날짜를 입력하세요"); return; }
-  if(!item){ toast("목록(항목명)을 입력하세요"); return; }
-  const price=Number($("f-price").value)||0, qty=Number($("f-qty").value)||0, vat=$("f-vat").value;
-  addRecord(COL_COST,{ date, category:$("f-category").value, item, spec:$("f-spec").value.trim(), price, qty, vat,
-    pay:$("f-pay").value, vendor:$("f-vendor").value.trim(), note:$("f-note").value.trim(),
-    photos:formPhotos.slice(), total:calcTotal(price,qty,vat), createdAt:Date.now() });
-  sortCosts(); renderAll(); resetForm(); toast("저장되었습니다");
-});
+<!-- 비용 수정 모달 -->
+<div class="modal-bg" id="costEditModal">
+  <div class="modal">
+    <h3>✏ 비용 수정</h3>
+    <input type="hidden" id="ce_id">
+    <div class="field"><label>항목명 *</label><input id="ce_title"></div>
+    <div class="row2">
+      <div class="field"><label>날짜</label><input id="ce_date" type="date"></div>
+      <div class="field"><label>금액 (원)</label><input id="ce_amount" type="number"></div>
+    </div>
+    <div class="field"><label>종류</label>
+      <select id="ce_kind" onchange="ceKindChange()"></select></div>
+    <div class="field" id="ce_g_stage"><label>공정</label><select id="ce_stage" onchange="ceFillCat()"></select></div>
+    <div class="field" id="ce_g_cat"><label>세부 항목</label><select id="ce_cat"></select></div>
+    <div class="row2">
+      <div class="field"><label>거래처</label><input id="ce_vendor" list="vendorList"></div>
+      <div class="field"><label>결제 수단</label><select id="ce_pay"></select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>전화번호</label><input id="ce_phone" type="tel" placeholder="누르면 바로 전화"></div>
+      <div class="field"><label>주소 <a id="ce_mapBtn" class="field-cfg" style="display:none" href="#" target="_blank" rel="noopener">📍 네이버지도</a></label>
+        <input id="ce_addr" placeholder="주소 입력 → 지도 연결" oninput="ceMapHint()"></div>
+    </div>
+    <div class="field"><label>메모</label><textarea id="ce_memo"></textarea></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveCostEdit()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('costEditModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-function renderRecent(){
-  const body=$("recBody"), foot=$("recFoot");
-  if(!costs.length){ $("recentCount").textContent=""; body.innerHTML=`<tr><td colspan="12" class="empty">아직 입력된 비용이 없습니다.</td></tr>`; foot.innerHTML=""; return; }
-  const list=costs.filter(c=>matchQ(costQuery, c.date,c.category,c.item,c.spec,c.vendor,c.pay,c.note,c.vat,String(c.total)));
-  $("recentCount").textContent = costQuery.trim() ? `(검색 ${list.length} / 전체 ${costs.length}건)` : `(총 ${costs.length}건)`;
-  if(!list.length){ body.innerHTML=`<tr><td colspan="12" class="empty">검색 결과가 없습니다.</td></tr>`; foot.innerHTML=""; return; }
-  body.innerHTML=list.map(c=>`<tr data-id="${c.id}">
-    <td>${c.date||""}</td><td>${esc(c.category||"")}</td>
-    <td>${esc(c.item||"")}${(c.photos&&c.photos.length)?" 📷":""}</td><td>${esc(c.spec||"")}</td>
-    <td class="num">${(Number(c.price)||0).toLocaleString()}</td><td class="num">${Number(c.qty)||0}</td>
-    <td>${esc(c.vat||"포함")}</td><td>${esc(c.pay||"")}</td><td>${esc(c.vendor||"")}</td>
-    <td class="amt">${(Number(c.total)||0).toLocaleString()}</td>
-    <td class="rtime">${clockStr(c.createdAt)}</td>
-    <td><button class="rowdel" data-del="${c.id}" title="삭제">🗑</button></td></tr>`).join("");
-  const grand=list.reduce((s,c)=>s+(Number(c.total)||0),0);
-  foot.innerHTML=`<tr><td colspan="9">합계 (${list.length}건)</td><td class="amt">${grand.toLocaleString()}</td><td></td><td></td></tr>`;
-  body.querySelectorAll("tr[data-id]").forEach(tr=>tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openEdit(tr.dataset.id); }));
-  body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation();
-    if(!confirm("이 비용 항목을 삭제할까요?")) return; deleteRecord(COL_COST,b.dataset.del); renderAll(); toast("삭제되었습니다"); }));
-}
-$("btnCopyExcel").addEventListener("click",()=>{
-  if(!costs.length){ toast("복사할 내역이 없습니다"); return; }
-  const head=["날짜","카테고리","목록","규격","단가","수량","부가세","지불방식","상호","합계"];
-  const rows=costs.map(c=>[c.date||"",c.category||"",c.item||"",c.spec||"",Number(c.price)||0,Number(c.qty)||0,c.vat||"포함",c.pay||"",c.vendor||"",Number(c.total)||0].join("\t"));
-  const tsv=[head.join("\t"),...rows].join("\n");
-  const ok=()=>toast("엑셀용으로 복사됨 — 붙여넣기 하세요");
-  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(tsv).then(ok).catch(()=>fallbackCopy(tsv,ok)); } else fallbackCopy(tsv,ok);
-});
-function fallbackCopy(text,cb){ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");cb();}catch(e){toast("복사 실패");} ta.remove(); }
+<!-- 엑셀 가져오기 모달 -->
+<div class="modal-bg" id="excelModal">
+  <div class="modal" style="max-width:760px">
+    <h3>📥 엑셀 비용 가져오기</h3>
+    <div class="field"><label>엑셀 파일 선택 (.xlsx)</label>
+      <input type="file" id="xl_file" accept=".xlsx,.xls" onchange="onExcelPick(event)"></div>
+    <div class="hint" id="xl_hint">날짜·목록·금액(합계)·구매처·구분 열을 자동으로 인식합니다.</div>
+    <div id="xl_preview" style="margin-top:12px"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="xl_btn" onclick="runExcelImport()" style="display:none">가져오기</button>
+      <button class="btn btn-line" onclick="closeModal('excelModal')">닫기</button>
+    </div>
+  </div>
+</div>
 
-/* ===== 합산 보기 ===== */
-let sumMode="month";
-$("sumSeg").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; sumMode=b.dataset.mode;
-  document.querySelectorAll("#sumSeg button").forEach(x=>x.classList.remove("active")); b.classList.add("active"); renderSummary(); });
-function sum(arr){ return arr.reduce((s,c)=>s+(Number(c.total)||0),0); }
-function monthLabel(k){ if(!k) return "(날짜없음)"; const [y,m]=k.split("-"); return `${y}년 ${Number(m)}월`; }
-function dateLabel(k){ if(!k) return "(날짜없음)"; const [y,m,d]=k.split("-"); const w=["일","월","화","수","목","금","토"][new Date(k).getDay()]; return `${Number(m)}월 ${Number(d)}일 (${w})`; }
-function renderSummary(){
-  $("grandTotal").textContent=won(sum(costs));
-  const body=$("summaryBody");
-  if(!costs.length){ body.innerHTML=`<div class="empty">데이터가 없습니다.</div>`; return; }
-  const groups={};
-  costs.forEach(c=>{ let key;
-    if(sumMode==="month") key=(c.date||"").slice(0,7);
-    else if(sumMode==="date") key=c.date||"";
-    else if(sumMode==="category") key=c.category||"기타";
-    else key=c.vendor||"(상호없음)";
-    (groups[key]=groups[key]||[]).push(c); });
-  let keys=Object.keys(groups);
-  if(sumMode==="category"||sumMode==="vendor") keys.sort((a,b)=>sum(groups[b])-sum(groups[a])); else keys.sort((a,b)=>b.localeCompare(a));
-  body.innerHTML=keys.map((k,idx)=>{
-    const arr=groups[k].slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-    const label=sumMode==="month"?monthLabel(k):sumMode==="date"?dateLabel(k):k;
-    return `<div class="group ${idx===0?"open":""}">
-      <div class="group-head"><span class="gname"><span class="arr">›</span>${esc(label)} <span class="gcount">${arr.length}건</span></span><span class="gsum">${won(sum(arr))}</span></div>
-      <div class="group-body">${arr.map(c=>`<div class="mini" data-id="${c.id}">
-        <div><span class="mt">${esc(c.item)}</span> <span class="pill ${catClass(c.category)}">${esc(c.category||"기타")}</span>
-        <div class="mm">${c.date}${c.vendor?" · "+esc(c.vendor):""} · ${esc(c.pay||"")}</div></div>
-        <div class="ma">${won(c.total)}</div></div>`).join("")}</div></div>`;
-  }).join("");
-  body.querySelectorAll(".group-head").forEach(h=>h.addEventListener("click",()=>h.parentElement.classList.toggle("open")));
-  body.querySelectorAll(".mini").forEach(el=>el.addEventListener("click",()=>openEdit(el.dataset.id)));
-}
+<!-- 기타비용 반복 생성 모달 -->
+<div class="modal-bg" id="repeatEtcModal">
+  <div class="modal">
+    <h3>🔁 반복 비용 생성</h3>
+    <div class="hint" style="margin-bottom:10px">기간 안에서 반복되는 비용을 한 번에 만듭니다.</div>
+    <div class="row2">
+      <div class="field"><label>항목</label><select id="re_cat"></select></div>
+      <div class="field"><label>금액(원)</label><input id="re_amount" type="number"></div>
+    </div>
+    <div class="field"><label>주기</label>
+      <select id="re_freq" onchange="onFreqChange()">
+        <option value="weekly">매주 (요일 선택)</option>
+        <option value="monthly">매월 (날짜 선택)</option>
+      </select>
+    </div>
+    <div class="row2">
+      <div class="field"><label>시작일</label><input id="re_start" type="date"></div>
+      <div class="field"><label>종료일</label><input id="re_end" type="date"></div>
+    </div>
+    <div class="field" id="re_weekwrap"><label>발생 요일 (여러 개 선택 가능)</label>
+      <div id="re_days" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+    <div class="field" id="re_monthwrap" style="display:none"><label>매월 며칠</label>
+      <input id="re_monthday" type="number" min="1" max="31" placeholder="예: 25">
+    </div>
+    <div class="row2">
+      <div class="field"><label>결제수단</label><select id="re_pay"></select></div>
+      <div class="field"><label>제목</label><input id="re_title"></div>
+    </div>
+    <div id="re_preview" class="hint" style="margin-bottom:6px"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" id="repeatSaveBtn" onclick="saveRepeatEtc()">생성</button>
+      <button class="btn btn-line" onclick="closeModal('repeatEtcModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-/* ===== 달력 ===== */
-let calY,calM,selDay=null,calView="cost";
-(function(){ const d=new Date(); calY=d.getFullYear(); calM=d.getMonth(); })();
-$("calSeg").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; calView=b.dataset.cal; selDay=null;
-  document.querySelectorAll("#calSeg button").forEach(x=>x.classList.remove("active")); b.classList.add("active"); renderCalendar(); });
-$("calPrev").addEventListener("click",()=>{ calM--; if(calM<0){calM=11;calY--;} selDay=null; renderCalendar(); });
-$("calNext").addEventListener("click",()=>{ calM++; if(calM>11){calM=0;calY++;} selDay=null; renderCalendar(); });
-$("calToday").addEventListener("click",()=>{ const d=new Date(); calY=d.getFullYear(); calM=d.getMonth(); selDay=todayStr(); renderCalendar(); });
-function shortWon(n){ n=Number(n)||0; if(n>=100000000) return (n/100000000).toFixed(1).replace(/\.0$/,"")+"억"; if(n>=10000) return Math.round(n/10000).toLocaleString()+"만"; return n.toLocaleString(); }
-function supDate(s){ return s.date || dateFromTs(s.createdAt); }
-function memoDate(m){ return m.date || dateFromTs(m.createdAt); }
-function renderCalendar(){
-  $("calMonth").textContent=`${calY}년 ${calM+1}월`;
-  $("calLegend").innerHTML = calView==="cost"
-    ? `<span><span class="lg-dot" style="background:var(--primary)"></span>그날 비용 합계</span>`
-    : `<span><span class="lg-dot" style="background:var(--mint)"></span>준비물(✓)</span><span><span class="lg-dot" style="background:var(--peach)"></span>메모(📝)</span>`;
-  const first=new Date(calY,calM,1).getDay(), days=new Date(calY,calM+1,0).getDate();
-  const cost={}, sup={}, mem={};
-  costs.forEach(c=>{ if(!c.date)return; (cost[c.date]=cost[c.date]||{sum:0,n:0}); cost[c.date].sum+=Number(c.total)||0; cost[c.date].n++; });
-  supplies.forEach(s=>{ const d=supDate(s); sup[d]=(sup[d]||0)+1; });
-  memos.forEach(m=>{ const d=memoDate(m); mem[d]=(mem[d]||0)+1; });
-  const dow=["일","월","화","수","목","금","토"];
-  let html=dow.map((d,i)=>`<div class="cal-dow ${i===0?"sun":""}">${d}</div>`).join("");
-  for(let i=0;i<first;i++) html+=`<div class="cal-cell empty-cell"></div>`;
-  for(let d=1;d<=days;d++){
-    const ds=`${calY}-${String(calM+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-    const ci=cost[ds], si=sup[ds], mi=mem[ds];
-    const wd=new Date(calY,calM,d).getDay(); const cls=["cal-cell"];
-    if(calView==="cost"?!!ci:!!(si||mi)) cls.push("has");
-    if(wd===0) cls.push("sun"); if(ds===todayStr()) cls.push("today"); if(ds===selDay) cls.push("sel");
-    let inner="";
-    if(calView==="cost"){ if(ci) inner=`<span class="csum">${shortWon(ci.sum)}</span>`; }
-    else { let m=""; if(si) m+=`<span class="cmark sup">✓${si}</span>`; if(mi) m+=`<span class="cmark memo">📝${mi}</span>`; if(m) inner=`<div class="cal-marks">${m}</div>`; }
-    html+=`<div class="${cls.join(" ")}" data-d="${ds}"><span class="dnum">${d}</span>${inner}</div>`;
-  }
-  $("calGrid").innerHTML=html;
-  $("calGrid").querySelectorAll("[data-d]").forEach(el=>el.addEventListener("click",()=>{ selDay=el.dataset.d; renderCalendar(); }));
-  renderDayDetail();
-}
-function renderDayDetail(){
-  const box=$("dayDetail"); if(!selDay){ box.innerHTML=""; return; }
-  if(calView==="cost"){
-    const cArr=costs.filter(c=>c.date===selDay).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-    let h=`<div class="list-head"><h3>${dateLabel(selDay)}</h3>${cArr.length?`<span style="font-size:13px;color:var(--ink-soft)">비용 합계 ${won(sum(cArr))}</span>`:""}</div>`;
-    if(!cArr.length){ box.innerHTML=h+`<div class="empty">이 날의 비용 기록이 없습니다.</div>`; return; }
-    h+=cArr.map(c=>`<div class="row-item clickable" data-id="${c.id}">
-      <div class="grow"><div class="t">${esc(c.item)} <span class="pill ${catClass(c.category)}">${esc(c.category||"기타")}</span></div>
-        <div class="m">${c.vendor?esc(c.vendor)+" · ":""}${esc(c.pay||"")} · ${esc(c.vat||"포함")}</div>${thumbsRO(c.photos)}</div>
-      <div class="amt">${won(c.total)}</div></div>`).join("");
-    box.innerHTML=h;
-    box.querySelectorAll(".row-item.clickable").forEach(el=>el.addEventListener("click",e=>{ if(e.target.closest("img")) return; openEdit(el.dataset.id); }));
-  } else {
-    const sArr=supplies.filter(s=>supDate(s)===selDay);
-    const mArr=memos.filter(m=>memoDate(m)===selDay).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-    let h=`<div class="list-head"><h3>${dateLabel(selDay)}</h3></div>`;
-    if(!sArr.length&&!mArr.length){ box.innerHTML=h+`<div class="empty">이 날의 준비물·메모가 없습니다.</div>`; return; }
-    if(sArr.length){ h+=`<div class="detail-block"><div class="bh">✓ 준비물</div>`+sArr.map(s=>`<div class="sup-item ${s.done?"done":""}" data-sid="${s.id}"><div class="cb">${s.done?"✓":""}</div><div class="grow"><span class="txt">${esc(s.text)}</span>${thumbsRO(s.photos)}</div></div>`).join("")+`</div>`; }
-    if(mArr.length){ h+=`<div class="detail-block"><div class="bh">📝 메모</div>`+mArr.map(m=>`<div class="memo-item"><div class="mbody">${esc(m.body)}</div>${thumbsRO(m.photos)}</div>`).join("")+`</div>`; }
-    box.innerHTML=h;
-    box.querySelectorAll("[data-sid]").forEach(el=>el.querySelector(".cb").addEventListener("click",()=>toggleSup(el.dataset.sid)));
-  }
-}
+<!-- 견적 모달 -->
+<div class="modal-bg" id="quoteModal">
+  <div class="modal">
+    <h3 id="quoteModalTitle">견적 추가</h3>
+    <input type="hidden" id="qf_id">
+    <div class="row2">
+      <div class="field"><label>공정 / 분류</label><select id="qf_stage"></select></div>
+      <div class="field"><label>세부 항목 (선택)</label><select id="qf_cat"></select></div>
+    </div>
+    <div class="field"><label>견적 내용 / 작업명 *</label><input id="qf_title" placeholder="예: 거실 전체 도배 (실크) / 욕실 전체 리모델링"></div>
+    <div class="row2">
+      <div class="field"><label>업체명 *</label><input id="qf_vendor" list="vendorList" placeholder="○○인테리어"></div>
+      <div class="field"><label>업체 전화</label><input id="qf_phone" placeholder="010-..."></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>견적 금액</label>
+        <div style="display:flex;gap:6px">
+          <input id="qf_amount" type="number" style="flex:1" oninput="updateQuoteFx()">
+          <select id="qf_currency" style="width:84px" onchange="updateQuoteFx()"><option value="KRW">KRW</option><option value="USD">USD</option></select>
+        </div>
+        <div class="hint" id="qf_fxhint"></div>
+      </div>
+      <div class="field"><label>받은 날짜</label><input id="qf_date" type="date"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>공사 기간(일)</label><input id="qf_days" type="number" placeholder="예: 5"></div>
+      <div class="field"><label>유효기간</label><input id="qf_valid" type="date"></div>
+    </div>
+    <div class="field"><label>포함/제외 사항·메모</label><textarea id="qf_memo" placeholder="자재 포함 여부, 폐기물·운반비, A/S 기간, 결제 조건 등"></textarea></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveQuote()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('quoteModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-/* ===== 비용 수정 모달 ===== */
-let editId=null, editPhotos=[];
-["e-price","e-qty","e-vat"].forEach(id=>$(id).addEventListener("input",ePreview));
-$("e-vat").addEventListener("change",ePreview);
-$("e-cam").addEventListener("change",e=>handleFiles(e,editPhotos,renderEditThumbs));
-$("e-file").addEventListener("change",e=>handleFiles(e,editPhotos,renderEditThumbs));
-function renderEditThumbs(){ renderThumbs($("e-thumbs"),editPhotos,i=>{ editPhotos.splice(i,1); renderEditThumbs(); }); }
-function ePreview(){ const v=$("e-vat").value; $("eTotalPreview").textContent=won(calcTotal($("e-price").value,$("e-qty").value,v)); $("eVatNote").textContent=vatNoteText(v); }
-function openEdit(id){
-  const c=costs.find(x=>x.id===id); if(!c) return; editId=id;
-  $("e-date").value=c.date||""; $("e-category").value=c.category||"기타"; $("e-vendor").value=c.vendor||"";
-  $("e-pay").value=c.pay||"계좌이체"; $("e-item").value=c.item||""; $("e-spec").value=c.spec||"";
-  $("e-price").value=c.price||0; $("e-qty").value=c.qty||0; $("e-vat").value=c.vat||"포함"; $("e-note").value=c.note||"";
-  editPhotos=(c.photos||[]).slice(); renderEditThumbs(); ePreview(); $("overlay").classList.add("show");
-}
-$("eCancel").addEventListener("click",()=>$("overlay").classList.remove("show"));
-$("overlay").addEventListener("click",e=>{ if(e.target===$("overlay")) $("overlay").classList.remove("show"); });
-$("eSave").addEventListener("click",()=>{
-  if(!editId) return; const date=$("e-date").value, item=$("e-item").value.trim();
-  if(!date||!item){ toast("날짜와 목록은 필수입니다"); return; }
-  const price=Number($("e-price").value)||0, qty=Number($("e-qty").value)||0, vat=$("e-vat").value;
-  updateRecord(COL_COST,editId,{ date, category:$("e-category").value, item, spec:$("e-spec").value.trim(), price, qty, vat,
-    pay:$("e-pay").value, vendor:$("e-vendor").value.trim(), note:$("e-note").value.trim(), photos:editPhotos.slice(), total:calcTotal(price,qty,vat) });
-  sortCosts(); renderAll(); $("overlay").classList.remove("show"); toast("수정되었습니다");
-});
-$("eDelete").addEventListener("click",()=>{
-  if(!editId||!confirm("이 비용 항목을 삭제할까요?")) return;
-  deleteRecord(COL_COST,editId); renderAll(); $("overlay").classList.remove("show"); toast("삭제되었습니다");
-});
+<!-- 부동산 모달 -->
+<div class="modal-bg" id="agentModal">
+  <div class="modal">
+    <h3 id="agentModalTitle">부동산 추가</h3>
+    <input type="hidden" id="af_id">
+    <div class="row2">
+      <div class="field"><label>부동산 이름 *</label><input id="af_name" placeholder="예: ○○공인중개사"></div>
+      <div class="field"><label>담당자</label><input id="af_agent" placeholder="실장님 성함"></div>
+    </div>
+    <div class="field"><label>전화번호 *</label><input id="af_phone" type="tel" placeholder="02-000-0000"></div>
+    <div class="row2">
+      <div class="field"><label>내놓은 가격(만원)</label><input id="af_price" type="number" placeholder="예: 35000"></div>
+      <div class="field"><label>원하는(네고) 가격(만원)</label><input id="af_nego" type="number" placeholder="예: 33000"></div>
+    </div>
+    <div class="field"><label>특이사항</label><textarea id="af_memo" placeholder="요율, 협의 내용, 손님 반응, 광고 현황 등"></textarea></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveAgent()">저장</button>
+      <button class="btn btn-line" onclick="closeModal('agentModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-/* ===== 준비물 ===== */
-let supAddPhotos=[], supEditPhotos=[];
-$("sup-cam").addEventListener("change",e=>handleFiles(e,supAddPhotos,renderSupAddThumbs));
-$("sup-file").addEventListener("change",e=>handleFiles(e,supAddPhotos,renderSupAddThumbs));
-function renderSupAddThumbs(){ renderThumbs($("sup-add-thumbs"),supAddPhotos,i=>{ supAddPhotos.splice(i,1); renderSupAddThumbs(); }); }
-$("supAdd").addEventListener("click",addSup);
-$("supInput").addEventListener("keydown",e=>{ if(e.key==="Enter") addSup(); });
-function addSup(){
-  const text=$("supInput").value.trim(); if(!text){ toast("준비물 내용을 입력하세요"); return; }
-  addRecord(COL_SUP,{ text, done:false, date:$("supDate").value||todayStr(), photos:supAddPhotos.slice(), createdAt:Date.now() });
-  $("supInput").value=""; supAddPhotos=[]; renderSupAddThumbs(); renderSupplies(); renderCalendar(); toast("준비물 추가됨");
-}
-function supItemHTML(s){
-  return `<div class="sup-item ${s.done?"done":""}" data-id="${s.id}">
-    <div class="cb">${s.done?"✓":""}</div>
-    <span class="sdate">${supDate(s).slice(5)}</span>
-    <div class="grow"><span class="txt">${esc(s.text)}</span>${thumbsRO(s.photos)}${s.createdAt?`<span class="rec-time">🕐 ${clockStr(s.createdAt)}</span>`:""}</div>
-    <div class="acts"><button class="btn btn-ghost btn-sm edit">수정</button><button class="btn btn-danger btn-sm del">삭제</button></div></div>`;
-}
-function renderSupplies(){
-  const box=$("supList");
-  if(!supplies.length){ box.innerHTML=`<div class="empty">준비물을 추가해 보세요.</div>`; return; }
-  const base=supplies.filter(s=>matchQ(supQuery, s.text, supDate(s)));
-  if(!base.length){ box.innerHTML=`<div class="empty">검색 결과가 없습니다.</div>`; return; }
-  const undone=base.filter(s=>!s.done).sort((a,b)=>supDate(b).localeCompare(supDate(a)));
-  const done=base.filter(s=>s.done).sort((a,b)=>supDate(b).localeCompare(supDate(a)));
-  let h=`<div class="sec-head">진행 중 <span class="cnt">${undone.length}</span></div>`;
-  h+= undone.length ? undone.map(supItemHTML).join("") : `<div class="empty" style="padding:14px">남은 준비물이 없어요 🎉</div>`;
-  if(done.length) h+=`<div class="sec-head">완료 <span class="cnt">${done.length}</span></div>`+done.map(supItemHTML).join("");
-  box.innerHTML=h;
-  box.querySelectorAll(".sup-item").forEach(el=>{ const id=el.dataset.id;
-    el.querySelector(".cb").addEventListener("click",()=>toggleSup(id));
-    el.querySelector(".edit").addEventListener("click",()=>editSup(id,el));
-    el.querySelector(".del").addEventListener("click",()=>delSup(id));
-  });
-}
-function toggleSup(id){ const s=supplies.find(x=>x.id===id); if(!s) return; updateRecord(COL_SUP,id,{done:!s.done}); renderSupplies(); renderCalendar(); }
-function editSup(id,el){
-  const s=supplies.find(x=>x.id===id); if(!s) return;
-  supEditPhotos=(s.photos||[]).slice();
-  el.className="edit-box"; el.removeAttribute("data-id");
-  el.innerHTML=`<div class="add-inline"><input type="date" class="dt sd" value="${supDate(s)}"><input type="text" class="st" value="${esc(s.text)}"></div>
-    <div class="photo-btns"><label class="photo-btn">📷 촬영<input type="file" class="ecam" accept="image/*" capture="environment" style="display:none"></label>
-    <label class="photo-btn">🖼 사진<input type="file" class="efile" accept="image/*" multiple style="display:none"></label></div>
-    <div class="thumbs et"></div>
-    <div class="btn-row"><button class="btn btn-primary btn-sm save">저장</button><button class="btn btn-ghost btn-sm cancel">취소</button></div>`;
-  const renderET=()=>renderThumbs(el.querySelector(".et"),supEditPhotos,i=>{ supEditPhotos.splice(i,1); renderET(); });
-  renderET();
-  el.querySelector(".ecam").addEventListener("change",e=>handleFiles(e,supEditPhotos,renderET));
-  el.querySelector(".efile").addEventListener("change",e=>handleFiles(e,supEditPhotos,renderET));
-  const st=el.querySelector(".st"); st.focus();
-  el.querySelector(".save").addEventListener("click",()=>{ const v=st.value.trim(), d=el.querySelector(".sd").value||supDate(s); if(!v){ toast("내용을 입력하세요"); return; }
-    updateRecord(COL_SUP,id,{text:v,date:d,photos:supEditPhotos.slice()}); renderSupplies(); renderCalendar(); toast("수정되었습니다"); });
-  el.querySelector(".cancel").addEventListener("click",renderSupplies);
-  st.addEventListener("keydown",e=>{ if(e.key==="Enter")el.querySelector(".save").click(); if(e.key==="Escape")renderSupplies(); });
-}
-function delSup(id){ if(!confirm("이 준비물을 삭제할까요?")) return; deleteRecord(COL_SUP,id); renderSupplies(); renderCalendar(); }
+<!-- 부동산 방문 모달 -->
+<div class="modal-bg" id="visitModal">
+  <div class="modal" style="width:min(440px,100%)">
+    <h3>👀 방문 기록 추가 (+1회)</h3>
+    <input type="hidden" id="vs_id">
+    <div class="hint" id="vs_hint" style="margin-bottom:10px"></div>
+    <div class="row2">
+      <div class="field"><label>방문일 *</label><input id="vs_date" type="date"></div>
+      <div class="field"><label>데려온 인원(선택)</label><input id="vs_count" type="number" min="0" value="0" placeholder="손님 수"></div>
+    </div>
+    <div class="field"><label>특이사항 / 방문자</label><input id="vs_memo" placeholder="예: 김OO 부부 / 가격 협의 / 재방문 예정"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="saveVisit()">방문 1회 기록</button>
+      <button class="btn btn-line" onclick="closeModal('visitModal')">취소</button>
+    </div>
+  </div>
+</div>
 
-/* ===== 메모 ===== */
-let memoAddPhotos=[], memoEditPhotos=[];
-$("memo-cam").addEventListener("change",e=>handleFiles(e,memoAddPhotos,renderMemoAddThumbs));
-$("memo-file").addEventListener("change",e=>handleFiles(e,memoAddPhotos,renderMemoAddThumbs));
-function renderMemoAddThumbs(){ renderThumbs($("memo-add-thumbs"),memoAddPhotos,i=>{ memoAddPhotos.splice(i,1); renderMemoAddThumbs(); }); }
-$("memoAdd").addEventListener("click",()=>{
-  const body=$("memoInput").value.trim(); if(!body){ toast("메모 내용을 입력하세요"); return; }
-  addRecord(COL_MEMO,{ body, date:$("memoDate").value||todayStr(), photos:memoAddPhotos.slice(), createdAt:Date.now() });
-  $("memoInput").value=""; memoAddPhotos=[]; renderMemoAddThumbs(); renderMemos(); renderCalendar(); toast("메모 추가됨");
-});
-function renderMemos(){
-  const box=$("memoList");
-  let arr=memos.slice().sort((a,b)=>memoDate(b).localeCompare(memoDate(a))||((b.createdAt||0)-(a.createdAt||0)));
-  arr=arr.filter(m=>matchQ(memoQuery, m.body, memoDate(m)));
-  if(!arr.length){ box.innerHTML=`<div class="empty">${memos.length?"검색 결과가 없습니다.":"메모가 없습니다."}</div>`; return; }
-  box.innerHTML=arr.map(m=>`<div class="memo-item" data-id="${m.id}">
-    <div class="mtop"><span class="mdate">${memoDate(m)}</span>
-      <div class="mbtns"><button class="btn btn-ghost btn-sm edit">수정</button><button class="btn btn-danger btn-sm del">삭제</button></div></div>
-    <div class="mbody">${esc(m.body)}</div>${thumbsRO(m.photos)}${m.createdAt?`<div class="mtime">🕐 ${clockStr(m.createdAt)}</div>`:""}</div>`).join("");
-  box.querySelectorAll(".memo-item").forEach(el=>{ const id=el.dataset.id;
-    el.querySelector(".del").addEventListener("click",()=>{ if(!confirm("이 메모를 삭제할까요?")) return; deleteRecord(COL_MEMO,id); renderMemos(); renderCalendar(); });
-    el.querySelector(".edit").addEventListener("click",()=>editMemo(id,el));
-  });
-}
-function editMemo(id,card){
-  const m=memos.find(x=>x.id===id); if(!m) return;
-  memoEditPhotos=(m.photos||[]).slice();
-  card.innerHTML=`<div class="add-inline"><input type="date" class="dt md" value="${memoDate(m)}"></div>
-    <div class="field full"><textarea class="memo-edit">${esc(m.body)}</textarea></div>
-    <div class="photo-btns" style="margin-top:10px"><label class="photo-btn">📷 촬영<input type="file" class="ecam" accept="image/*" capture="environment" style="display:none"></label>
-    <label class="photo-btn">🖼 사진<input type="file" class="efile" accept="image/*" multiple style="display:none"></label></div>
-    <div class="thumbs et"></div>
-    <div class="btn-row"><button class="btn btn-primary btn-sm save">저장</button><button class="btn btn-ghost btn-sm cancel">취소</button></div>`;
-  const renderET=()=>renderThumbs(card.querySelector(".et"),memoEditPhotos,i=>{ memoEditPhotos.splice(i,1); renderET(); });
-  renderET();
-  card.querySelector(".ecam").addEventListener("change",e=>handleFiles(e,memoEditPhotos,renderET));
-  card.querySelector(".efile").addEventListener("change",e=>handleFiles(e,memoEditPhotos,renderET));
-  const ta=card.querySelector(".memo-edit"); ta.focus();
-  card.querySelector(".save").addEventListener("click",()=>{ const v=ta.value.trim(), d=card.querySelector(".md").value||memoDate(m); if(!v){ toast("내용을 입력하세요"); return; }
-    updateRecord(COL_MEMO,id,{body:v,date:d,photos:memoEditPhotos.slice()}); renderMemos(); renderCalendar(); toast("수정되었습니다"); });
-  card.querySelector(".cancel").addEventListener("click",renderMemos);
-}
+<script src="realestate-project.js?v=6.6"></script>
 
-init();
-</script>
+<!-- ===== 공통자료 모달 ===== -->
+<div class="modal-bg" id="commonDataModal" onclick="if(event.target===this)closeCommonData()">
+  <div class="modal" style="max-width:860px;max-height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-shrink:0">
+      <h3 style="margin:0">📂 공통자료</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeCommonData()">✕ 닫기</button>
+    </div>
+    <!-- 섹션 탭 -->
+    <div class="cm-tab-row" id="cmTabRow">
+      <button class="cm-tab active" onclick="setCmTab('vendor',this)">📞 업체연락처</button>
+      <button class="cm-tab" onclick="setCmTab('price',this)">💰 단가기준표</button>
+      <button class="cm-tab" onclick="setCmTab('checklist',this)">✅ 체크리스트</button>
+      <button class="cm-tab" onclick="setCmTab('doc',this)">📋 서류목록</button>
+      <button class="cm-tab" onclick="setCmTab('ref',this)">📁 참고자료</button>
+    </div>
+    <!-- 섹션 콘텐츠 -->
+    <div id="cmContent" style="flex:1;overflow-y:auto;padding-top:14px"></div>
+  </div>
+</div>
+
+<!-- 공통자료 입력 서브모달 -->
+<div class="modal-bg" id="cmSubModal" onclick="if(event.target===this)closeCmSubModal()">
+  <div class="modal" style="max-width:520px">
+    <h3 id="cmSubTitle" style="margin:0 0 14px">추가</h3>
+    <div id="cmSubBody"></div>
+    <div class="field-row" style="margin-top:16px;justify-content:flex-end;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="closeCmSubModal()">취소</button>
+      <button class="btn btn-danger btn-sm" id="cmSubDelBtn" style="display:none" onclick="cmSubDel()">삭제</button>
+      <button class="btn btn-primary btn-sm" onclick="cmSubSave()">저장</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
