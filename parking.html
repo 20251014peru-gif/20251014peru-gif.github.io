@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>방문객 주차 관리 시스템 - 서희타워</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-light: #dbeafe;
+    --secondary: #64748b;
+    --success: #16a34a;
+    --success-light: #dcfce7;
+    --warning: #d97706;
+    --warning-light: #fef3c7;
+    --danger: #dc2626;
+    --danger-light: #fee2e2;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Malgun Gothic', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-lg); }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header-sub { font-size: 13px; opacity: 0.8; margin-top: 2px; }
+  .api-key-area { display: flex; align-items: center; gap: 8px; }
+  .api-input { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 12px; border-radius: 8px; font-size: 13px; width: 220px; }
+  .api-input::placeholder { color: rgba(255,255,255,0.6); }
+  .btn-sm { padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+  .btn-white { background: white; color: var(--primary); }
+  .btn-white:hover { background: #f0f6ff; }
+
+  /* TABS */
+  .tabs { background: white; border-bottom: 2px solid var(--border); display: flex; gap: 4px; padding: 0 24px; overflow-x: auto; }
+  .tab { padding: 12px 20px; font-size: 14px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.2s; }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .tab:hover:not(.active) { color: var(--text); background: #f8fafc; }
+
+  /* MAIN CONTENT */
+  .content { padding: 20px 24px; max-width: 1600px; margin: 0 auto; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+  /* UPLOAD ZONE */
+  .upload-zone { border: 2.5px dashed var(--primary); border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; background: #f0f6ff; }
+  .upload-zone:hover, .upload-zone.drag-over { background: var(--primary-light); border-color: var(--primary-dark); }
+  .upload-zone .icon { font-size: 40px; margin-bottom: 12px; }
+  .upload-zone h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .upload-zone p { font-size: 13px; color: var(--text-muted); }
+  #fileInput { display: none; }
+  .preview-images { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+  .preview-img { position: relative; border-radius: 8px; overflow: hidden; border: 2px solid var(--border); }
+  .preview-img img { width: 200px; height: 140px; object-fit: cover; display: block; }
+  .preview-img .remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+
+  /* EXTRACT RESULT */
+  .extract-area { min-height: 120px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border); padding: 16px; font-size: 13px; }
+  .loading-spinner { display: flex; align-items: center; gap: 10px; color: var(--primary); }
+  .spinner { width: 20px; height: 20px; border: 2.5px solid var(--primary-light); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* EDITABLE TABLE */
+  .table-container { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #1e3a5f; color: white; padding: 8px 10px; font-weight: 600; text-align: center; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
+  td { padding: 6px 8px; border: 1px solid var(--border); text-align: center; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  tr:hover td { background: #eff6ff; }
+  td input, td select { width: 100%; border: none; background: transparent; font-size: 13px; text-align: center; padding: 2px; font-family: inherit; }
+  td input:focus, td select:focus { outline: 2px solid var(--primary); border-radius: 4px; }
+  .row-no { background: #f1f5f9 !important; color: var(--text-muted); font-weight: 600; }
+  .col-time { min-width: 70px; }
+  .col-plate { min-width: 80px; }
+  .col-floor { min-width: 50px; }
+  .col-purpose { min-width: 80px; }
+  .col-park { min-width: 60px; }
+  .col-note { min-width: 80px; }
+
+  /* FLOOR BADGE */
+  .floor-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .fb-hospital { background: #fef3c7; color: #92400e; }
+  .fb-bank { background: #dbeafe; color: #1e40af; }
+  .fb-wang { background: #fce7f3; color: #9d174d; }
+  .fb-other { background: #f0fdf4; color: #166534; }
+
+  /* FLOOR TABLE */
+  .floor-table th { background: #334155; }
+  .floor-table .total-row td { background: #1e3a5f !important; color: white; font-weight: 700; }
+  .floor-table .date-col { font-weight: 600; background: #f8fafc !important; }
+  td.has-val { background: #dbeafe !important; font-weight: 600; }
+  td.zero-val { color: var(--text-muted); }
+
+  /* CROSSCHECK */
+  .check-ok { color: var(--success); font-weight: 700; }
+  .check-err { color: var(--danger); font-weight: 700; }
+  .check-row-ok td { background: #f0fdf4 !important; }
+  .check-row-err td { background: #fff1f2 !important; }
+
+  /* BUTTONS */
+  .btn { padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #15803d; }
+  .btn-warning { background: var(--warning); color: white; }
+  .btn-warning:hover { background: #b45309; }
+  .btn-secondary { background: var(--secondary); color: white; }
+  .btn-secondary:hover { background: #475569; }
+  .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+  .btn-outline:hover { background: var(--primary-light); }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-danger:hover { background: #b91c1c; }
+
+  /* TOOLBAR */
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .toolbar-right { margin-left: auto; display: flex; gap: 8px; }
+
+  /* DATE SELECT */
+  .date-select { display: flex; align-items: center; gap: 8px; }
+  .date-select label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+  .date-select input, .date-select select { padding: 8px 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 13px; }
+  .date-select input:focus, .date-select select:focus { border-color: var(--primary); outline: none; }
+
+  /* STATS */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat-card { background: white; border-radius: 10px; padding: 14px 16px; border: 1px solid var(--border); text-align: center; }
+  .stat-val { font-size: 28px; font-weight: 800; color: var(--primary); }
+  .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* STATUS BAR */
+  .status-bar { background: #1e293b; color: #94a3b8; padding: 8px 16px; font-size: 12px; display: flex; gap: 16px; border-top: 1px solid #334155; }
+  .status-ok { color: #4ade80; }
+  .status-err { color: #f87171; }
+  .status-warn { color: #fbbf24; }
+
+  /* PROGRESS */
+  .progress-bar { height: 6px; background: var(--primary-light); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .progress-fill { height: 100%; background: var(--primary); transition: width 0.3s; border-radius: 3px; }
+
+  /* MODAL */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: white; border-radius: 16px; padding: 24px; width: 90%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .form-group input, .form-group select { padding: 9px 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px; }
+  .form-group input:focus, .form-group select:focus { border-color: var(--primary); outline: none; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+  /* TAG */
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; margin: 1px; }
+
+  /* NOTICE */
+  .notice { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 10px; }
+  .notice-info { background: var(--primary-light); color: var(--primary-dark); }
+  .notice-warn { background: var(--warning-light); color: #92400e; }
+  .notice-success { background: var(--success-light); color: #166534; }
+
+  /* ADD ROW */
+  .add-row td { background: #f0fdf4 !important; }
+  .btn-icon { background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 6px; font-size: 15px; }
+  .btn-icon:hover { background: var(--primary-light); }
+
+  @media (max-width: 768px) {
+    .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .api-key-area { width: 100%; }
+    .api-input { flex: 1; }
+    .content { padding: 12px 14px; }
+    .form-row { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🏢 서희타워 방문객 주차대장 관리시스템</h1>
+    <div class="header-sub">Seohee Tower Visitor Parking Management System</div>
+  </div>
+  <div class="api-key-area">
+    <input type="password" class="api-input" id="apiKeyInput" placeholder="Anthropic API Key 입력..." autocomplete="off">
+    <button class="btn-sm btn-white" onclick="saveApiKey()">저장</button>
+    <span id="apiStatus" style="font-size:12px;opacity:0.8"></span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('ocr')">📸 사진 OCR 입력</div>
+  <div class="tab" onclick="switchTab('list')">📋 방문차량 목록</div>
+  <div class="tab" onclick="switchTab('floor')">🏗️ 일별·층별 집계</div>
+  <div class="tab" onclick="switchTab('check')">✅ 크로스체크</div>
+  <div class="tab" onclick="switchTab('analysis')">🔍 차량 분석</div>
+  <div class="tab" onclick="switchTab('export')">📥 내보내기</div>
+</div>
+
+<div class="content">
+
+  <!-- =============== OCR TAB =============== -->
+  <div class="tab-panel active" id="tab-ocr">
+    <div class="notice notice-info">
+      💡 <div><strong>사용법:</strong> 임시주차대장 사진을 업로드하면 AI가 자동으로 텍스트를 추출합니다. 추출된 데이터는 검토 후 방문차량 목록에 추가됩니다.<br>
+      <strong>자동:</strong> 차량번호·시간·층·방문목적 추출, 층별 카테고리 자동 분류 &nbsp;|&nbsp; <strong>수동 확인:</strong> OCR 오류, B1(왕삼돈/편의점) 구분, 5층 세분류</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📅 날짜 설정</div>
+      <div class="date-select">
+        <label>입력 날짜:</label>
+        <input type="date" id="inputDate" value="">
+        <label>월 탭:</label>
+        <select id="monthTab">
+          <option value="2~3월">2~3월</option>
+          <option value="4월">4월</option>
+          <option value="5월">5월</option>
+          <option value="6월">6월</option>
+          <option value="7월">7월</option>
+          <option value="8월">8월</option>
+          <option value="9월">9월</option>
+          <option value="10월">10월</option>
+          <option value="11월">11월</option>
+          <option value="12월">12월</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📷 사진 업로드</div>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragleave="this.classList.remove('drag-over')">
+        <div class="icon">📋</div>
+        <h3>임시주차대장 사진을 업로드하세요</h3>
+        <p>클릭하거나 드래그해서 이미지 파일을 올려주세요 (JPG, PNG)</p>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(this.files)">
+      <div class="preview-images" id="previewImages"></div>
+    </div>
+
+    <div class="card" id="extractCard" style="display:none">
+      <div class="card-title">🤖 AI 텍스트 추출 결과</div>
+      <div class="toolbar">
+        <button class="btn btn-primary" onclick="runOCR()" id="ocrBtn">🔍 AI로 텍스트 추출 시작</button>
+        <button class="btn btn-outline" onclick="clearExtracted()">초기화</button>
+        <div id="ocrProgress" style="display:none; flex:1">
+          <div style="font-size:13px; color:var(--primary); margin-bottom:4px;" id="ocrProgressText">처리중...</div>
+          <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="extract-area" id="extractArea">
+        <div style="color:var(--text-muted); font-size:13px;">AI 추출 결과가 여기에 표시됩니다.</div>
+      </div>
+    </div>
+
+    <div class="card" id="parsedCard" style="display:none">
+      <div class="card-title">📊 파싱된 데이터 미리보기 <span id="parsedCount" style="background:var(--primary);color:white;padding:2px 10px;border-radius:12px;font-size:13px;margin-left:8px;">0건</span></div>
+      <div class="notice notice-warn" id="manualCheckNotice" style="display:none">
+        ⚠️ <div id="manualCheckMsg"></div>
+      </div>
+      <div class="table-container" id="parsedTableContainer"></div>
+      <div class="toolbar" style="margin-top:12px;">
+        <button class="btn btn-success" onclick="confirmAddToList()" id="addToListBtn">✅ 방문차량 목록에 추가</button>
+        <button class="btn btn-outline" onclick="clearParsed()">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== LIST TAB =============== -->
+  <div class="tab-panel" id="tab-list">
+    <div class="toolbar">
+      <div class="date-select">
+        <label>월:</label>
+        <select id="listMonthFilter" onchange="renderList()">
+          <option value="all">전체</option>
+          <option value="2">2월</option>
+          <option value="3">3월</option>
+          <option value="4">4월</option>
+          <option value="5">5월</option>
+          <option value="6">6월</option>
+        </select>
+        <label>날짜:</label>
+        <input type="date" id="listDateFilter" onchange="renderList()">
+      </div>
+      <button class="btn btn-outline" onclick="clearDateFilter()">전체보기</button>
+      <div class="toolbar-right">
+        <button class="btn btn-primary" onclick="openAddModal()">+ 수동 추가</button>
+        <button class="btn btn-success" onclick="recalcFloor()">🔄 층별집계 재계산</button>
+      </div>
+    </div>
+
+    <div class="stats-grid" id="listStats"></div>
+
+    <div class="card" style="padding:0">
+      <div class="table-container" style="max-height:600px; overflow-y:auto;">
+        <table id="listTable">
+          <thead>
+            <tr>
+              <th style="width:40px">No</th>
+              <th class="col-time">입차</th>
+              <th class="col-time">출차</th>
+              <th class="col-plate">차량번호</th>
+              <th class="col-floor">층</th>
+              <th class="col-purpose">방문목적</th>
+              <th class="col-park">배정층</th>
+              <th class="col-note">비고</th>
+              <th style="width:60px">날짜</th>
+              <th style="width:80px">층분류</th>
+              <th style="width:60px">관리</th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== FLOOR TAB =============== -->
+  <div class="tab-panel" id="tab-floor">
+    <div class="toolbar">
+      <button class="btn btn-success" onclick="recalcFloor()">🔄 층별집계 재계산</button>
+      <span style="font-size:13px; color:var(--text-muted);" id="floorCalcTime"></span>
+    </div>
+    <div class="card" style="padding:0;">
+      <div class="table-container" style="max-height:65vh; overflow:auto;">
+        <table class="floor-table" id="floorTable">
+          <thead id="floorThead"></thead>
+          <tbody id="floorTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== CHECK TAB =============== -->
+  <div class="tab-panel" id="tab-check">
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="runCrossCheck()">🔍 크로스체크 실행</button>
+    </div>
+    <div id="checkResult">
+      <div class="notice notice-info">💡 크로스체크를 실행하면 방문차량 목록의 합계와 층별집계의 합계를 비교합니다.</div>
+    </div>
+  </div>
+
+  <!-- =============== ANALYSIS TAB =============== -->
+  <div class="tab-panel" id="tab-analysis">
+
+    <div class="card">
+      <div class="card-title">🔍 차량 분석 조건 설정</div>
+      <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-end;">
+        <div class="form-group">
+          <label>방문 횟수 기준 (N회 이상)</label>
+          <input type="number" id="freqThreshold" value="3" min="1" style="padding:8px 12px;border:2px solid var(--border);border-radius:8px;font-size:14px;width:120px;">
+        </div>
+        <div class="form-group">
+          <label>장기주차 기준 (N시간 이상)</label>
+          <input type="number" id="longStayThreshold" value="7" min="1" style="padding:8px 12px;border:2px solid var(--border);border-radius:8px;font-size:14px;width:120px;">
+        </div>
+        <div class="form-group">
+          <label>기간 필터</label>
+          <select id="analysisMonth" style="padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:14px;">
+            <option value="all">전체 기간</option>
+            <option value="2">2월</option><option value="3">3월</option>
+            <option value="4">4월</option><option value="5">5월</option>
+            <option value="6">6월</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="runAnalysis()" style="height:42px;">🔍 분석 실행</button>
+      </div>
+    </div>
+
+    <!-- 요약 통계 -->
+    <div class="stats-grid" id="analysisStats" style="display:none"></div>
+
+    <!-- 다빈도 차량 -->
+    <div class="card" id="freqCard" style="display:none">
+      <div class="card-title">
+        🔴 다빈도 방문 차량
+        <span id="freqBadge" style="background:#dc2626;color:white;padding:2px 10px;border-radius:12px;font-size:13px;margin-left:8px;"></span>
+        <span style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:8px;">같은 차량번호가 여러 번 등장한 차량 (관심 대상 또는 정기방문자)</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:40px">순위</th>
+              <th>차량번호</th>
+              <th>방문횟수</th>
+              <th>주요 방문층</th>
+              <th>주요 방문목적</th>
+              <th>방문 날짜 목록</th>
+              <th>평균 체류시간</th>
+            </tr>
+          </thead>
+          <tbody id="freqBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 장기주차 차량 -->
+    <div class="card" id="longCard" style="display:none">
+      <div class="card-title">
+        🟠 장기주차 차량
+        <span id="longBadge" style="background:#d97706;color:white;padding:2px 10px;border-radius:12px;font-size:13px;margin-left:8px;"></span>
+        <span style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:8px;">입출차 기준 설정 시간 이상 주차한 차량</span>
+      </div>
+      <div class="table-container" style="max-height:500px;overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>날짜</th>
+              <th>No</th>
+              <th>차량번호</th>
+              <th>입차</th>
+              <th>출차</th>
+              <th>체류시간</th>
+              <th>방문층</th>
+              <th>방문목적</th>
+              <th>배정층</th>
+              <th>비고</th>
+            </tr>
+          </thead>
+          <tbody id="longBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 둘 다 해당 -->
+    <div class="card" id="bothCard" style="display:none">
+      <div class="card-title">
+        🚨 다빈도 + 장기주차 동시 해당
+        <span id="bothBadge" style="background:#7c3aed;color:white;padding:2px 10px;border-radius:12px;font-size:13px;margin-left:8px;"></span>
+        <span style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:8px;">특별 관리 대상</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>차량번호</th>
+              <th>방문횟수</th>
+              <th>장기주차 횟수</th>
+              <th>주요 방문층</th>
+              <th>주요 방문목적</th>
+            </tr>
+          </thead>
+          <tbody id="bothBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- =============== EXPORT TAB =============== -->
+  <div class="tab-panel" id="tab-export">
+    <div class="card">
+      <div class="card-title">📥 Excel 파일 내보내기</div>
+      <div class="notice notice-info">💡 현재까지 입력된 모든 데이터를 기존 주차대장 형식의 Excel 파일로 내보냅니다.</div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <div style="font-size:13px; font-weight:600; margin-bottom:8px;">내보내기 형식</div>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="radio" name="exportType" value="all" checked>
+            <span>전체 데이터 (월별 시트 + 일별층별 시트)</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:8px;">
+            <input type="radio" name="exportType" value="month">
+            <span>선택 월만</span>
+            <select id="exportMonth" style="padding:4px 8px; border:1px solid var(--border); border-radius:6px;">
+              <option value="6월">6월</option>
+              <option value="5월">5월</option>
+              <option value="4월">4월</option>
+              <option value="2~3월">2~3월</option>
+            </select>
+          </label>
+        </div>
+        <div>
+          <button class="btn btn-success" onclick="exportExcel()">📥 Excel로 내보내기</button>
+          <button class="btn btn-outline" onclick="exportJSON()" style="margin-left:10px;">📄 JSON 백업</button>
+          <button class="btn btn-warning" onclick="importJSON()" style="margin-left:10px;">📤 JSON 복원</button>
+          <input type="file" id="jsonImport" accept=".json" style="display:none" onchange="doImportJSON(this)">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 데이터 현황</div>
+      <div id="dataStats" style="font-size:14px; line-height:2;"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-bg" id="addModal">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">방문차량 추가</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>날짜</label>
+        <input type="date" id="mDate">
+      </div>
+      <div class="form-group">
+        <label>No</label>
+        <input type="number" id="mNo" placeholder="자동">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>입차 시간</label>
+        <input type="time" id="mIn">
+      </div>
+      <div class="form-group">
+        <label>출차 시간</label>
+        <input type="time" id="mOut">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>차량번호 (끝 4자리)</label>
+        <input type="text" id="mPlate" placeholder="예: 1234" maxlength="10">
+      </div>
+      <div class="form-group">
+        <label>방문층</label>
+        <input type="text" id="mFloor" placeholder="예: 1, B1, 서희" oninput="autoFloorCat()">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>방문목적</label>
+        <input type="text" id="mPurpose" placeholder="예: 미팅, 병원, 왕3" oninput="autoFloorCat()">
+      </div>
+      <div class="form-group">
+        <label>배정층</label>
+        <input type="text" id="mPark" placeholder="예: B4, B6">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>비고</label>
+        <input type="text" id="mNote" placeholder="선택사항">
+      </div>
+      <div class="form-group">
+        <label>층 분류 (자동)</label>
+        <select id="mFloorCat">
+          <option value="20층">20층</option><option value="19층">19층</option>
+          <option value="18층">18층</option><option value="17층">17층</option>
+          <option value="16층">16층</option><option value="15층">15층</option>
+          <option value="14층">14층</option><option value="13층">13층</option>
+          <option value="12층">12층</option><option value="11층">11층</option>
+          <option value="10층">10층</option><option value="9층">9층</option>
+          <option value="8층">8층</option><option value="7층">7층</option>
+          <option value="6층">6층</option>
+          <option value="5층광주은행">5층(광주은행)</option>
+          <option value="5층변호사">5층(변호사)</option>
+          <option value="4층">4층</option><option value="3층">3층</option>
+          <option value="2층">2층</option><option value="1층">1층(병원)</option>
+          <option value="왕삼돈">왕삼돈(B1)</option>
+          <option value="편의점">편의점(B1)</option>
+          <option value="관리소">관리소(B2)</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveModal()" id="saveModalBtn">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span>서희타워 방문객 주차대장 관리시스템 v1.0</span>
+  <span id="totalRecords" class="status-ok">총 0건</span>
+  <span id="lastUpdate" style="margin-left:auto;"></span>
+</div>
+
+<script>
+// ============================================================
+// DATA STORE
+// ============================================================
+let parkingData = []; // [{no, date, in, out, plate, floor, purpose, park, note, floorCat, month}]
+let floorData = {};   // {date: {cat: count}}
+let editingIdx = -1;
+let uploadedImages = []; // [{file, base64}]
+
+const FLOOR_COLS = [
+  '20층','19층','18층','17층','16층','15층','14층','13층','12층','11층',
+  '10층','9층','8층','7층','6층','5층광주은행','5층변호사','4층','3층','2층',
+  '1층','왕삼돈','편의점','관리소','기타'
+];
+
+// ============================================================
+// INIT
+// ============================================================
+window.onload = () => {
+  // Set today's date
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('inputDate').value = today;
+
+  // Auto-select month tab
+  const m = new Date().getMonth() + 1;
+  const ms = document.getElementById('monthTab');
+  for (let i = 0; i < ms.options.length; i++) {
+    if (ms.options[i].value === m + '월') { ms.selectedIndex = i; break; }
+  }
+
+  // Load API key
+  const savedKey = localStorage.getItem('sh_anthropic_key');
+  if (savedKey) {
+    document.getElementById('apiKeyInput').value = savedKey;
+    document.getElementById('apiStatus').textContent = '✓ 저장됨';
+  }
+
+  // Load parking data
+  loadFromStorage();
+  renderList();
+  renderFloorTable();
+  renderDataStats();
+};
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (key) {
+    localStorage.setItem('sh_anthropic_key', key);
+    document.getElementById('apiStatus').textContent = '✓ 저장됨';
+  }
+}
+
+function getApiKey() {
+  return localStorage.getItem('sh_anthropic_key') || document.getElementById('apiKeyInput').value.trim();
+}
+
+function loadFromStorage() {
+  const saved = localStorage.getItem('sh_parking_data');
+  if (saved) {
+    try {
+      parkingData = JSON.parse(saved);
+      recalcFloor(true);
+    } catch(e) { parkingData = []; }
+  }
+}
+
+function saveToStorage() {
+  localStorage.setItem('sh_parking_data', JSON.stringify(parkingData));
+  document.getElementById('lastUpdate').textContent = '저장: ' + new Date().toLocaleTimeString('ko-KR');
+  document.getElementById('totalRecords').textContent = '총 ' + parkingData.length + '건';
+}
+
+// ============================================================
+// TAB SWITCH
+// ============================================================
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const ids = ['ocr','list','floor','check','analysis','export'];
+    t.classList.toggle('active', ids[i] === id);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (id === 'list') renderList();
+  if (id === 'floor') renderFloorTable();
+  if (id === 'export') renderDataStats();
+}
+
+// ============================================================
+// IMAGE UPLOAD
+// ============================================================
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.add('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+}
+
+function handleFiles(files) {
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target.result;
+      uploadedImages.push({ file, base64 });
+      renderPreviews();
+      document.getElementById('extractCard').style.display = '';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function renderPreviews() {
+  const container = document.getElementById('previewImages');
+  container.innerHTML = '';
+  uploadedImages.forEach((img, i) => {
+    const div = document.createElement('div');
+    div.className = 'preview-img';
+    div.innerHTML = `<img src="${img.base64}"><button class="remove" onclick="removeImage(${i})">✕</button>`;
+    container.appendChild(div);
+  });
+}
+
+function removeImage(i) {
+  uploadedImages.splice(i, 1);
+  renderPreviews();
+  if (uploadedImages.length === 0) document.getElementById('extractCard').style.display = 'none';
+}
+
+// ============================================================
+// OCR WITH CLAUDE API
+// ============================================================
+async function runOCR() {
+  const key = getApiKey();
+  if (!key) { alert('Anthropic API Key를 먼저 입력해주세요.'); return; }
+  if (uploadedImages.length === 0) { alert('이미지를 먼저 업로드해주세요.'); return; }
+
+  const date = document.getElementById('inputDate').value;
+  const btn = document.getElementById('ocrBtn');
+  btn.disabled = true;
+  btn.textContent = '처리중...';
+
+  const progressDiv = document.getElementById('ocrProgress');
+  const progressText = document.getElementById('ocrProgressText');
+  const progressFill = document.getElementById('progressFill');
+  progressDiv.style.display = '';
+  document.getElementById('extractArea').innerHTML = '<div class="loading-spinner"><div class="spinner"></div> AI가 이미지를 분석중입니다...</div>';
+
+  try {
+    const allResults = [];
+    for (let i = 0; i < uploadedImages.length; i++) {
+      progressText.textContent = `이미지 ${i+1}/${uploadedImages.length} 분석중...`;
+      progressFill.style.width = ((i / uploadedImages.length) * 80) + '%';
+
+      const img = uploadedImages[i];
+      const base64data = img.base64.split(',')[1];
+      const mediaType = img.base64.split(';')[0].split(':')[1];
+
+      const prompt = `다음은 서희타워 임시 방문객 주차대장 사진입니다.
+날짜: ${date}
+
+이 이미지에서 방문차량 기록 테이블을 추출해주세요.
+테이블 열: No, 입차시간, 출차시간, 차량번호(끝4자리), 방문층, 방문목적, 배정층, 비고
+
+추출 규칙:
+- 빈 행은 제외
+- 시간은 HH:MM 형식으로
+- 차량번호는 숫자만 (끝 4자리)
+- 층은 숫자(예:1,5,13,20) 또는 B1, B2, 서희 등 그대로
+- 방문목적: 미팅, 병원/치료/진료, 공사, 은행, 왕3/왕삼돈/식사, 편의점, 근무/직원, 상담 등
+- 배정층: B4, B6 등
+
+반드시 JSON 배열로만 응답하세요. 마크다운 코드블록 없이 순수 JSON만:
+[{"no":1,"in":"09:20","out":"11:40","plate":"7753","floor":"9","purpose":"미팅","park":"B4","note":""}]
+
+이미지에서 층별 빈차 점검표가 있다면 무시하고 방문차량 기록표만 추출하세요.`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4096,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64data }},
+              { type: 'text', text: prompt }
+            ]
+          }]
+        })
+      });
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+      const text = data.content[0].text.trim();
+      allResults.push({ imageNum: i + 1, raw: text });
+    }
+
+    progressFill.style.width = '90%';
+    progressText.textContent = '데이터 파싱중...';
+
+    // Parse and merge results
+    let allRows = [];
+    let rawDisplay = '';
+    for (const result of allResults) {
+      rawDisplay += `=== 이미지 ${result.imageNum} ===\n${result.raw}\n\n`;
+      try {
+        let json = result.raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+        const rows = JSON.parse(json);
+        rows.forEach(r => { r._imageNum = result.imageNum; r._date = date; });
+        allRows = allRows.concat(rows);
+      } catch(e) {
+        rawDisplay += `[파싱 오류: ${e.message}]\n`;
+      }
+    }
+
+    document.getElementById('extractArea').innerHTML = `<pre style="font-size:12px; white-space:pre-wrap; color:#374151;">${rawDisplay}</pre>`;
+
+    progressFill.style.width = '100%';
+    progressText.textContent = '완료!';
+
+    if (allRows.length > 0) {
+      renderParsedTable(allRows, date);
+    } else {
+      alert('데이터를 추출하지 못했습니다. 이미지 품질을 확인해주세요.');
+    }
+
+  } catch(e) {
+    document.getElementById('extractArea').innerHTML = `<div style="color:var(--danger)">오류: ${e.message}</div>`;
+    alert('API 오류: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 AI로 텍스트 추출 시작';
+    setTimeout(() => progressDiv.style.display = 'none', 2000);
+  }
+}
+
+// ============================================================
+// FLOOR CATEGORY MAPPING
+// ============================================================
+function getFloorCat(floor, purpose) {
+  const f = String(floor || '').trim().toLowerCase();
+  const p = String(purpose || '').trim();
+
+  if (f === '1' || f === '1층') return '1층';
+  if (f === 'b1') {
+    // B1: 왕삼돈 or 편의점
+    const pLow = p.toLowerCase();
+    if (pLow.includes('편의점') || pLow.includes('gs') || pLow.includes('gs25')) return '편의점';
+    return '왕삼돈'; // default B1 = 왕삼돈
+  }
+  if (f === 'b2' || f === 'b2층') return '관리소';
+  if (f === '5' || f === '5층') {
+    const pLow = p.toLowerCase();
+    if (pLow.includes('변호사') || pLow.includes('501') || pLow.includes('법무')) return '5층변호사';
+    return '5층광주은행'; // default 5층 = 광주은행
+  }
+
+  // Numeric floors
+  const num = parseInt(f.replace('층',''));
+  if (!isNaN(num) && num >= 2 && num <= 20) return num + '층';
+
+  // Special cases
+  if (f === '서희' || f === '서회' || f === '서희건설') return '기타';
+  if (f === '-' || f === '' || f === 'nan') return '기타';
+  if (f.includes('전층') || f.includes('b지상') || f.includes('지상')) return '기타';
+  if (f.includes('세스코')) return '기타';
+
+  return '기타';
+}
+
+function autoFloorCat() {
+  const floor = document.getElementById('mFloor').value;
+  const purpose = document.getElementById('mPurpose').value;
+  const cat = getFloorCat(floor, purpose);
+  const sel = document.getElementById('mFloorCat');
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === cat) { sel.selectedIndex = i; break; }
+  }
+}
+
+// ============================================================
+// PARSED TABLE
+// ============================================================
+function renderParsedTable(rows, date) {
+  const card = document.getElementById('parsedCard');
+  card.style.display = '';
+  document.getElementById('parsedCount').textContent = rows.length + '건';
+
+  // Check for manual review items
+  const b1Wang = rows.filter(r => String(r.floor||'').toLowerCase() === 'b1' &&
+    !String(r.purpose||'').toLowerCase().includes('편의점') &&
+    !String(r.purpose||'').toLowerCase().includes('gs'));
+  const floor5 = rows.filter(r => String(r.floor||'').trim() === '5');
+  let warnings = [];
+  if (b1Wang.length > 0) warnings.push(`B1층 ${b1Wang.length}건: 왕삼돈/편의점 자동 분류(목적 미기재시 왕삼돈으로 처리)`);
+  if (floor5.length > 0) warnings.push(`5층 ${floor5.length}건: 광주은행/변호사 자동 분류(목적 미기재시 광주은행으로 처리)`);
+
+  const noticeDiv = document.getElementById('manualCheckNotice');
+  if (warnings.length > 0) {
+    noticeDiv.style.display = '';
+    document.getElementById('manualCheckMsg').innerHTML = '<strong>수동 확인 권장:</strong><br>' + warnings.join('<br>');
+  } else {
+    noticeDiv.style.display = 'none';
+  }
+
+  const container = document.getElementById('parsedTableContainer');
+  let html = `<table><thead><tr>
+    <th>No</th><th>입차</th><th>출차</th><th>차량번호</th>
+    <th>방문층</th><th>방문목적</th><th>배정층</th><th>비고</th><th>층분류</th>
+  </tr></thead><tbody>`;
+
+  rows.forEach((r, i) => {
+    const cat = getFloorCat(r.floor, r.purpose);
+    const catColor = getCatColor(cat);
+    html += `<tr>
+      <td>${r.no || i+1}</td>
+      <td><input type="time" value="${r.in||''}" onchange="parsedRows[${i}].in=this.value"></td>
+      <td><input type="time" value="${r.out||''}" onchange="parsedRows[${i}].out=this.value"></td>
+      <td><input type="text" value="${r.plate||''}" onchange="parsedRows[${i}].plate=this.value" style="width:80px"></td>
+      <td><input type="text" value="${r.floor||''}" onchange="parsedRows[${i}].floor=this.value;updateRowCat(${i})" style="width:50px"></td>
+      <td><input type="text" value="${r.purpose||''}" onchange="parsedRows[${i}].purpose=this.value;updateRowCat(${i})" style="width:80px"></td>
+      <td><input type="text" value="${r.park||''}" onchange="parsedRows[${i}].park=this.value" style="width:50px"></td>
+      <td><input type="text" value="${r.note||''}" onchange="parsedRows[${i}].note=this.value" style="width:70px"></td>
+      <td id="cat-${i}"><span class="tag" style="${catColor}">${cat}</span></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+  window.parsedRows = rows.map(r => ({...r, _date: date}));
+}
+
+function getCatColor(cat) {
+  if (cat === '1층') return 'background:#fef3c7;color:#92400e;';
+  if (cat.includes('광주은행')) return 'background:#dbeafe;color:#1e40af;';
+  if (cat.includes('변호사')) return 'background:#ede9fe;color:#5b21b6;';
+  if (cat === '왕삼돈') return 'background:#fce7f3;color:#9d174d;';
+  if (cat === '편의점') return 'background:#fef9c3;color:#854d0e;';
+  if (cat === '관리소') return 'background:#e0f2fe;color:#075985;';
+  if (cat === '기타') return 'background:#f1f5f9;color:#475569;';
+  return 'background:#f0fdf4;color:#166534;';
+}
+
+function updateRowCat(i) {
+  const r = window.parsedRows[i];
+  const cat = getFloorCat(r.floor, r.purpose);
+  r._floorCat = cat;
+  document.getElementById('cat-' + i).innerHTML = `<span class="tag" style="${getCatColor(cat)}">${cat}</span>`;
+}
+
+function confirmAddToList() {
+  if (!window.parsedRows || window.parsedRows.length === 0) return;
+  const date = document.getElementById('inputDate').value;
+  const monthTab = document.getElementById('monthTab').value;
+
+  let nextNo = 1;
+  const dateParkings = parkingData.filter(r => r.date === date);
+  if (dateParkings.length > 0) {
+    nextNo = Math.max(...dateParkings.map(r => parseInt(r.no) || 0)) + 1;
+  }
+
+  window.parsedRows.forEach((r, i) => {
+    const cat = getFloorCat(r.floor, r.purpose);
+    parkingData.push({
+      no: r.no || (nextNo + i),
+      date: date,
+      month: monthTab,
+      in: r.in || '',
+      out: r.out || '',
+      plate: String(r.plate || ''),
+      floor: String(r.floor || ''),
+      purpose: r.purpose || '',
+      park: r.park || '',
+      note: r.note || '',
+      floorCat: cat
+    });
+  });
+
+  saveToStorage();
+  recalcFloor(true);
+  alert(`✅ ${window.parsedRows.length}건이 방문차량 목록에 추가되었습니다!`);
+  clearParsed();
+  uploadedImages = [];
+  renderPreviews();
+  document.getElementById('extractCard').style.display = 'none';
+  switchTab('list');
+}
+
+function clearParsed() {
+  window.parsedRows = [];
+  document.getElementById('parsedCard').style.display = 'none';
+}
+
+function clearExtracted() {
+  uploadedImages = [];
+  renderPreviews();
+  document.getElementById('extractCard').style.display = 'none';
+  document.getElementById('extractArea').innerHTML = '';
+  clearParsed();
+}
+
+// ============================================================
+// LIST RENDER
+// ============================================================
+function renderList() {
+  const monthFilter = document.getElementById('listMonthFilter').value;
+  const dateFilter = document.getElementById('listDateFilter').value;
+
+  let filtered = parkingData;
+  if (dateFilter) filtered = filtered.filter(r => r.date === dateFilter);
+  else if (monthFilter !== 'all') filtered = filtered.filter(r => {
+    const m = new Date(r.date).getMonth() + 1;
+    return String(m) === monthFilter;
+  });
+
+  filtered.sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.no - b.no));
+
+  // Stats
+  const statsDiv = document.getElementById('listStats');
+  statsDiv.innerHTML = `
+    <div class="stat-card"><div class="stat-val">${filtered.length}</div><div class="stat-label">총 방문차량</div></div>
+    <div class="stat-card"><div class="stat-val">${[...new Set(filtered.map(r=>r.date))].length}</div><div class="stat-label">집계 일수</div></div>
+    <div class="stat-card"><div class="stat-val">${filtered.filter(r=>r.floorCat==='1층').length}</div><div class="stat-label">병원(1층)</div></div>
+    <div class="stat-card"><div class="stat-val">${filtered.filter(r=>r.floorCat==='왕삼돈').length}</div><div class="stat-label">왕삼돈(B1)</div></div>
+    <div class="stat-card"><div class="stat-val">${filtered.filter(r=>r.floorCat.includes('광주은행')||r.floorCat.includes('변호사')).length}</div><div class="stat-label">5층</div></div>
+  `;
+
+  // Table
+  const tbody = document.getElementById('listBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--text-muted);">데이터가 없습니다</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((r, i) => {
+    const actualIdx = parkingData.indexOf(r);
+    const cat = r.floorCat || getFloorCat(r.floor, r.purpose);
+    return `<tr>
+      <td class="row-no">${r.no}</td>
+      <td>${r.in}</td>
+      <td>${r.out}</td>
+      <td style="font-weight:600">${r.plate}</td>
+      <td>${r.floor}</td>
+      <td>${r.purpose}</td>
+      <td>${r.park}</td>
+      <td style="color:var(--text-muted);font-size:12px">${r.note||''}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${r.date?.slice(5)}</td>
+      <td><span class="tag" style="${getCatColor(cat)}">${cat}</span></td>
+      <td>
+        <button class="btn-icon" onclick="editRecord(${actualIdx})" title="편집">✏️</button>
+        <button class="btn-icon" onclick="deleteRecord(${actualIdx})" title="삭제" style="color:var(--danger)">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('totalRecords').textContent = '총 ' + parkingData.length + '건';
+}
+
+function clearDateFilter() {
+  document.getElementById('listDateFilter').value = '';
+  document.getElementById('listMonthFilter').value = 'all';
+  renderList();
+}
+
+// ============================================================
+// ADD / EDIT MODAL
+// ============================================================
+function openAddModal() {
+  editingIdx = -1;
+  document.getElementById('modalTitle').textContent = '방문차량 추가';
+  document.getElementById('saveModalBtn').textContent = '추가';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('mDate').value = today;
+  document.getElementById('mNo').value = '';
+  document.getElementById('mIn').value = '';
+  document.getElementById('mOut').value = '';
+  document.getElementById('mPlate').value = '';
+  document.getElementById('mFloor').value = '';
+  document.getElementById('mPurpose').value = '';
+  document.getElementById('mPark').value = '';
+  document.getElementById('mNote').value = '';
+  document.getElementById('mFloorCat').value = '기타';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function editRecord(idx) {
+  editingIdx = idx;
+  const r = parkingData[idx];
+  document.getElementById('modalTitle').textContent = '방문차량 수정';
+  document.getElementById('saveModalBtn').textContent = '수정';
+  document.getElementById('mDate').value = r.date;
+  document.getElementById('mNo').value = r.no;
+  document.getElementById('mIn').value = r.in;
+  document.getElementById('mOut').value = r.out;
+  document.getElementById('mPlate').value = r.plate;
+  document.getElementById('mFloor').value = r.floor;
+  document.getElementById('mPurpose').value = r.purpose;
+  document.getElementById('mPark').value = r.park;
+  document.getElementById('mNote').value = r.note || '';
+  const cat = r.floorCat || getFloorCat(r.floor, r.purpose);
+  const sel = document.getElementById('mFloorCat');
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === cat) { sel.selectedIndex = i; break; }
+  }
+  document.getElementById('addModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('addModal').classList.remove('open');
+}
+
+function saveModal() {
+  const date = document.getElementById('mDate').value;
+  const month = date ? (new Date(date).getMonth() + 1) + '월' : '';
+  const rec = {
+    no: parseInt(document.getElementById('mNo').value) || (parkingData.length + 1),
+    date, month,
+    in: document.getElementById('mIn').value,
+    out: document.getElementById('mOut').value,
+    plate: document.getElementById('mPlate').value,
+    floor: document.getElementById('mFloor').value,
+    purpose: document.getElementById('mPurpose').value,
+    park: document.getElementById('mPark').value,
+    note: document.getElementById('mNote').value,
+    floorCat: document.getElementById('mFloorCat').value
+  };
+
+  if (editingIdx >= 0) {
+    parkingData[editingIdx] = rec;
+  } else {
+    parkingData.push(rec);
+  }
+
+  saveToStorage();
+  recalcFloor(true);
+  renderList();
+  closeModal();
+}
+
+function deleteRecord(idx) {
+  if (!confirm('이 기록을 삭제하시겠습니까?')) return;
+  parkingData.splice(idx, 1);
+  saveToStorage();
+  recalcFloor(true);
+  renderList();
+}
+
+// ============================================================
+// FLOOR CALC
+// ============================================================
+function recalcFloor(silent) {
+  floorData = {};
+  parkingData.forEach(r => {
+    const date = r.date;
+    if (!date) return;
+    if (!floorData[date]) floorData[date] = {};
+    const cat = r.floorCat || getFloorCat(r.floor, r.purpose);
+    floorData[date][cat] = (floorData[date][cat] || 0) + 1;
+  });
+
+  if (!silent) {
+    renderFloorTable();
+    document.getElementById('floorCalcTime').textContent = '마지막 계산: ' + new Date().toLocaleTimeString('ko-KR');
+    alert('✅ 층별집계가 재계산되었습니다.');
+  } else {
+    renderFloorTable();
+  }
+}
+
+function renderFloorTable() {
+  const thead = document.getElementById('floorThead');
+  const tbody = document.getElementById('floorTbody');
+
+  if (Object.keys(floorData).length === 0) {
+    thead.innerHTML = '';
+    tbody.innerHTML = '<tr><td style="padding:24px;text-align:center;color:var(--text-muted)">방문차량 데이터를 먼저 입력하세요</td></tr>';
+    return;
+  }
+
+  // Header
+  let thHtml = '<tr><th style="min-width:90px">날짜</th>';
+  FLOOR_COLS.forEach(c => { thHtml += `<th style="min-width:60px;writing-mode:vertical-lr;transform:rotate(180deg);padding:8px 4px;">${c}</th>`; });
+  thHtml += '<th style="min-width:60px;background:#dc2626">합계</th></tr>';
+  thead.innerHTML = thHtml;
+
+  const dates = Object.keys(floorData).sort();
+  let totals = {};
+  FLOOR_COLS.forEach(c => totals[c] = 0);
+  let grandTotal = 0;
+
+  let tbHtml = '';
+  dates.forEach(date => {
+    const day = floorData[date];
+    let rowTotal = 0;
+    FLOOR_COLS.forEach(c => {
+      const v = day[c] || 0;
+      rowTotal += v;
+      totals[c] += v;
+    });
+    grandTotal += rowTotal;
+
+    tbHtml += `<tr><td class="date-col">${date.slice(5)}</td>`;
+    FLOOR_COLS.forEach(c => {
+      const v = day[c] || 0;
+      tbHtml += v > 0
+        ? `<td class="has-val">${v}</td>`
+        : `<td class="zero-val">-</td>`;
+    });
+    tbHtml += `<td style="font-weight:700;background:#1e3a5f;color:white">${rowTotal}</td></tr>`;
+  });
+
+  // Total row
+  tbHtml += '<tr class="total-row"><td>합 계</td>';
+  FLOOR_COLS.forEach(c => {
+    tbHtml += `<td>${totals[c] || '-'}</td>`;
+  });
+  tbHtml += `<td>${grandTotal}</td></tr>`;
+
+  tbody.innerHTML = tbHtml;
+}
+
+// ============================================================
+// CROSS CHECK
+// ============================================================
+function runCrossCheck() {
+  recalcFloor(true);
+
+  const dates = Object.keys(floorData).sort();
+  let html = '<div class="card">';
+  html += '<div class="card-title">✅ 크로스체크 결과</div>';
+  html += '<table><thead><tr><th>날짜</th><th>방문차량 목록 합계</th><th>층별집계 합계</th><th>결과</th></tr></thead><tbody>';
+
+  let allOk = true;
+  dates.forEach(date => {
+    const listCount = parkingData.filter(r => r.date === date).length;
+    const floorCount = Object.values(floorData[date] || {}).reduce((a,b) => a+b, 0);
+    const ok = listCount === floorCount;
+    if (!ok) allOk = false;
+    html += `<tr class="${ok ? 'check-row-ok' : 'check-row-err'}">
+      <td>${date}</td>
+      <td>${listCount}</td>
+      <td>${floorCount}</td>
+      <td class="${ok ? 'check-ok' : 'check-err'}">${ok ? '✅ 일치' : '❌ 불일치 (차이: ' + Math.abs(listCount - floorCount) + ')'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+
+  if (allOk && dates.length > 0) {
+    html = '<div class="notice notice-success">🎉 모든 날짜에서 합계가 일치합니다!</div>' + html;
+  } else if (!allOk) {
+    html = '<div class="notice notice-warn">⚠️ 일치하지 않는 날짜가 있습니다. 층 분류를 확인해주세요.</div>' + html;
+  }
+
+  html += '</div>';
+  document.getElementById('checkResult').innerHTML = html;
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+
+  // Group by month
+  const months = {};
+  parkingData.forEach(r => {
+    const m = r.month || ((new Date(r.date).getMonth()+1) + '월');
+    if (!months[m]) months[m] = [];
+    months[m].push(r);
+  });
+
+  // Monthly sheets
+  Object.entries(months).forEach(([month, rows]) => {
+    rows.sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.no - b.no);
+    const wsData = [['No','입차','출차','차량번호','층','방문목적','배정층','비고','날짜']];
+    rows.forEach(r => wsData.push([r.no, r.in, r.out, r.plate, r.floor, r.purpose, r.park, r.note||'', r.date]));
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, month);
+  });
+
+  // Floor sheet
+  recalcFloor(true);
+  const dates = Object.keys(floorData).sort();
+  const floorHeader = ['날짜', ...FLOOR_COLS, '합계'];
+  const floorRows = [floorHeader];
+  let totals = {};
+  FLOOR_COLS.forEach(c => totals[c] = 0);
+  let grand = 0;
+
+  dates.forEach(date => {
+    const day = floorData[date] || {};
+    let total = 0;
+    const row = [date];
+    FLOOR_COLS.forEach(c => { const v = day[c]||0; row.push(v||null); total += v; totals[c] += v; });
+    row.push(total); grand += total;
+    floorRows.push(row);
+  });
+  const totalRow = ['합계'];
+  FLOOR_COLS.forEach(c => totalRow.push(totals[c]||null));
+  totalRow.push(grand);
+  floorRows.push(totalRow);
+
+  const wsFloor = XLSX.utils.aoa_to_sheet(floorRows);
+  XLSX.utils.book_append_sheet(wb, wsFloor, '일별층별');
+
+  const now = new Date();
+  const fname = `서희타워_방문객주차대장_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
+  XLSX.writeFile(wb, fname);
+}
+
+function exportJSON() {
+  const json = JSON.stringify({ version: 1, exported: new Date().toISOString(), data: parkingData }, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'parking_backup.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON() {
+  document.getElementById('jsonImport').click();
+}
+
+function doImportJSON(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const obj = JSON.parse(e.target.result);
+      const imported = obj.data || obj;
+      if (!Array.isArray(imported)) throw new Error('잘못된 형식');
+      if (!confirm(`${imported.length}건을 불러옵니다. 기존 데이터에 추가할까요? (취소: 덮어쓰기)`)) {
+        parkingData = imported;
+      } else {
+        parkingData = [...parkingData, ...imported];
+      }
+      saveToStorage();
+      recalcFloor(true);
+      renderList();
+      alert('✅ 불러오기 완료!');
+    } catch(e) { alert('오류: ' + e.message); }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function renderDataStats() {
+  recalcFloor(true);
+  const months = {};
+  parkingData.forEach(r => {
+    const m = r.month || ((new Date(r.date).getMonth()+1) + '월');
+    months[m] = (months[m]||0) + 1;
+  });
+  const dates = Object.keys(floorData).length;
+  let html = `<div>📊 총 방문차량: <strong>${parkingData.length}건</strong></div>`;
+  html += `<div>📅 집계 일수: <strong>${dates}일</strong></div>`;
+  Object.entries(months).forEach(([m, cnt]) => {
+    html += `<div>• ${m}: ${cnt}건</div>`;
+  });
+  document.getElementById('dataStats').innerHTML = html;
+}
+
+// ============================================================
+// VEHICLE ANALYSIS
+// ============================================================
+
+// HH:MM → minutes
+function timeToMin(t) {
+  if (!t || typeof t !== 'string') return null;
+  const parts = t.trim().split(':');
+  if (parts.length < 2) return null;
+  const h = parseInt(parts[0]);
+  const m = parseInt(parts[1]);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+// Returns stay duration in minutes, null if invalid
+function calcStayMin(inTime, outTime) {
+  const inM = timeToMin(inTime);
+  const outM = timeToMin(outTime);
+  if (inM === null || outM === null) return null;
+  let diff = outM - inM;
+  if (diff < 0) diff += 24 * 60; // overnight
+  return diff;
+}
+
+function formatDuration(mins) {
+  if (mins === null) return '-';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h}시간 ${m}분`;
+}
+
+// Mode of array of strings
+function mode(arr) {
+  if (!arr.length) return '-';
+  const cnt = {};
+  arr.forEach(v => { cnt[v] = (cnt[v]||0) + 1; });
+  return Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0][0];
+}
+
+function runAnalysis() {
+  const freqN = parseInt(document.getElementById('freqThreshold').value) || 3;
+  const longH = parseInt(document.getElementById('longStayThreshold').value) || 7;
+  const longMin = longH * 60;
+  const monthF = document.getElementById('analysisMonth').value;
+
+  // Filter data
+  let data = parkingData;
+  if (monthF !== 'all') {
+    data = data.filter(r => {
+      const m = r.date ? new Date(r.date).getMonth() + 1 : null;
+      return String(m) === monthF;
+    });
+  }
+
+  // ── 1. 다빈도 차량 ──────────────────────────────────────
+  const plateMap = {};
+  data.forEach(r => {
+    const plate = String(r.plate || '').trim();
+    if (!plate || plate === '' || plate === 'nan') return;
+    if (!plateMap[plate]) plateMap[plate] = [];
+    plateMap[plate].push(r);
+  });
+
+  const freqPlates = Object.entries(plateMap)
+    .filter(([, rows]) => rows.length >= freqN)
+    .sort((a, b) => b[1].length - a[1].length);
+
+  // ── 2. 장기주차 차량 ────────────────────────────────────
+  const longStay = data
+    .map(r => ({ ...r, stayMin: calcStayMin(r.in, r.out) }))
+    .filter(r => r.stayMin !== null && r.stayMin >= longMin)
+    .sort((a, b) => b.stayMin - a.stayMin);
+
+  const longPlates = new Set(longStay.map(r => String(r.plate || '').trim()));
+
+  // ── 3. 동시 해당 ────────────────────────────────────────
+  const bothPlates = freqPlates.filter(([plate]) => longPlates.has(plate));
+
+  // ── 요약 통계 ───────────────────────────────────────────
+  document.getElementById('analysisStats').style.display = '';
+  document.getElementById('analysisStats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-val" style="color:#2563eb">${data.length}</div>
+      <div class="stat-label">분석 대상 전체</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:#dc2626">${freqPlates.length}</div>
+      <div class="stat-label">다빈도 차량 (${freqN}회↑)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:#d97706">${longStay.length}</div>
+      <div class="stat-label">장기주차 건수 (${longH}시간↑)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:#7c3aed">${bothPlates.length}</div>
+      <div class="stat-label">다빈도+장기 동시</div>
+    </div>
+  `;
+
+  // ── 다빈도 테이블 ────────────────────────────────────────
+  document.getElementById('freqCard').style.display = '';
+  document.getElementById('freqBadge').textContent = freqPlates.length + '대';
+
+  const freqBody = document.getElementById('freqBody');
+  if (freqPlates.length === 0) {
+    freqBody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">${freqN}회 이상 방문 차량 없음</td></tr>`;
+  } else {
+    freqBody.innerHTML = freqPlates.map(([plate, rows], i) => {
+      const stays = rows.map(r => calcStayMin(r.in, r.out)).filter(v => v !== null);
+      const avgStay = stays.length ? Math.round(stays.reduce((a,b)=>a+b,0)/stays.length) : null;
+      const floors = rows.map(r => String(r.floor||''));
+      const purposes = rows.map(r => r.purpose||'');
+      const dates = [...new Set(rows.map(r => r.date))].sort();
+      const isLong = longPlates.has(plate);
+      const rankStyle = i === 0 ? 'background:#fef3c7;' : i === 1 ? 'background:#f1f5f9;' : '';
+      return `<tr style="${rankStyle}">
+        <td style="font-weight:700;font-size:16px">${i+1}</td>
+        <td style="font-weight:800;font-size:15px;letter-spacing:1px">
+          ${plate}
+          ${isLong ? '<span class="tag" style="background:#fef3c7;color:#92400e;margin-left:4px">장기</span>' : ''}
+        </td>
+        <td><span style="font-size:18px;font-weight:800;color:#dc2626">${rows.length}</span>회</td>
+        <td>${mode(floors)}</td>
+        <td>${mode(purposes)}</td>
+        <td style="font-size:11px;color:var(--text-muted);max-width:200px">${dates.map(d=>d.slice(5)).join(', ')}</td>
+        <td>${avgStay !== null ? formatDuration(avgStay) : '-'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── 장기주차 테이블 ──────────────────────────────────────
+  document.getElementById('longCard').style.display = '';
+  document.getElementById('longBadge').textContent = longStay.length + '건';
+
+  const longBody = document.getElementById('longBody');
+  if (longStay.length === 0) {
+    longBody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--text-muted)">${longH}시간 이상 주차 차량 없음</td></tr>`;
+  } else {
+    longBody.innerHTML = longStay.map(r => {
+      const h = r.stayMin / 60;
+      const color = h >= 12 ? '#dc2626' : h >= 9 ? '#d97706' : '#2563eb';
+      const bgColor = h >= 12 ? '#fff1f2' : h >= 9 ? '#fef3c7' : '#eff6ff';
+      const isFreq = freqPlates.some(([p]) => p === String(r.plate||'').trim());
+      return `<tr style="background:${bgColor}">
+        <td style="font-size:11px">${r.date}</td>
+        <td>${r.no}</td>
+        <td style="font-weight:800;letter-spacing:1px">
+          ${r.plate}
+          ${isFreq ? '<span class="tag" style="background:#fce7f3;color:#9d174d;margin-left:4px">다빈도</span>' : ''}
+        </td>
+        <td>${r.in}</td>
+        <td>${r.out}</td>
+        <td style="font-weight:800;color:${color}">${formatDuration(r.stayMin)}</td>
+        <td>${r.floor}</td>
+        <td>${r.purpose}</td>
+        <td>${r.park}</td>
+        <td style="font-size:11px;color:var(--text-muted)">${r.note||''}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── 동시 해당 테이블 ──────────────────────────────────────
+  document.getElementById('bothCard').style.display = '';
+  document.getElementById('bothBadge').textContent = bothPlates.length + '대';
+
+  const bothBody = document.getElementById('bothBody');
+  if (bothPlates.length === 0) {
+    bothBody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted)">해당 차량 없음</td></tr>`;
+  } else {
+    bothBody.innerHTML = bothPlates.map(([plate, rows]) => {
+      const longCnt = longStay.filter(r => String(r.plate||'').trim() === plate).length;
+      const floors = rows.map(r => String(r.floor||''));
+      const purposes = rows.map(r => r.purpose||'');
+      return `<tr style="background:#faf5ff;border-left:4px solid #7c3aed">
+        <td style="font-weight:800;font-size:15px;letter-spacing:1px;color:#7c3aed">${plate}</td>
+        <td style="font-weight:700;color:#dc2626">${rows.length}회</td>
+        <td style="font-weight:700;color:#d97706">${longCnt}건</td>
+        <td>${mode(floors)}</td>
+        <td>${mode(purposes)}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+// Close modal on bg click
+document.getElementById('addModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
