@@ -1,23 +1,18 @@
 <!DOCTYPE html>
 <!-- parking.html
-  APP_VERSION: v2.2-20260608
-  v2.2 변경내역:
-    - 전역 차량번호 검색바 추가 (모든 탭에서 항상 표시)
-    - 설정 탭: 층별 임차인 Firebase 관리 (추가/수정/삭제)
-    - 설정 탭: 방문목적 카테고리 Firebase 관리 (추가/삭제)
-    - 방문목적 입력 자동완성 datalist 연동
-  v2.1 변경내역:
-    - Firebase Firestore 실시간 동기화 완성
-    - ⚡ 급한메모 슬라이드 패널 추가
-    - 날짜별 No 자동 채번
-    - 전일/미출차 체류시간 처리
-    - 5층 분류 수정 (변호사 키워드만 변호사)
+  APP_VERSION: v2.4-20260608
+  v2.4 변경내역:
+    - 층 헤더 숫자 가로 표시 고정 (writing-mode 완전 제거)
+    - No 전체 누적 채번 (날짜 무관 최대값+1)
+    - 두 장 사진 No 기준 정렬 (업로드 순서 무관 1→48)
+    - 모바일 CSS 전면 개편 (터치 영역 확대, 중요 컬럼 우선)
+    - 실시간 동기화: Firebase onSnapshot (폰↔PC 즉시 반영)
 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>방문객 주차대장 v2.1 - 서희타워</title>
+<title>방문객 주차대장 v2.4 - 서희타워</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
@@ -238,14 +233,114 @@
   .search-wrap input { padding-left: 44px; height: 48px; font-size: 15px; font-weight: 600; border: 2.5px solid var(--primary); border-radius: 14px; background: #f0f6ff; box-shadow: 0 2px 12px rgba(63,124,184,.15); width: 100%; outline: none; }
   .search-wrap input:focus { border-color: var(--primary-dark); }
 
+  /* FLOOR TABLE - 가로 텍스트 고정 */
+  .floor-table th { background: #334155; white-space: nowrap; font-size: 11px; padding: 6px 4px; }
+  .floor-table .total-row td { background: #1e3a5f !important; color: white; font-weight: 700; }
+  .floor-table .date-col { font-weight: 600; background: #f8fafc !important; }
+  td.has-val { background: #dbeafe !important; font-weight: 600; }
+  td.zero-val { color: #cbd5e1; }
+
+  /* ──────────────────────────────────────────────────────────
+     📱 모바일 전면 최적화
+  ────────────────────────────────────────────────────────── */
   @media (max-width: 768px) {
-    .header { flex-direction: column; align-items: flex-start; gap: 10px; }
-    .api-key-area { width: 100%; }
-    .api-input { flex: 1; }
-    .content { padding: 12px 14px; }
-    .form-row { grid-template-columns: 1fr; }
-    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    /* 헤더 */
+    .header { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 16px; }
+    .header h1 { font-size: 16px; }
+    .header-sub { font-size: 11px; }
+    .api-key-area { width: 100%; flex-wrap: wrap; gap: 6px; }
+    .api-input { flex: 1; min-width: 0; font-size: 13px; }
+    .qm-btn { font-size: 12px; padding: 6px 10px; }
+
+    /* 탭 */
+    .tabs { padding: 0 8px; gap: 2px; }
+    .tab { padding: 10px 8px; font-size: 12px; }
+
+    /* 전역 검색바 */
+    #globalSearchBar { padding: 8px 14px; }
+    .search-wrap { width: 100%; }
+    .search-wrap input { height: 42px; font-size: 14px; }
+
+    /* 컨텐츠 */
+    .content { padding: 10px 12px; }
+    .card { padding: 14px 12px; margin-bottom: 12px; border-radius: 10px; }
+    .card-title { font-size: 14px; margin-bottom: 12px; }
+
+    /* 폼 */
+    .form-row { grid-template-columns: 1fr; gap: 8px; }
+    .form-group label { font-size: 12px; }
+    .form-group input, .form-group select { font-size: 15px; padding: 10px 12px; }
+
+    /* 버튼 - 터치 영역 크게 */
+    .btn { padding: 12px 18px; font-size: 14px; border-radius: 10px; }
+    .btn-sm { padding: 8px 14px; font-size: 13px; }
+    .btn-icon { padding: 8px; font-size: 18px; }
+
+    /* 통계 카드 */
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat-card { padding: 12px; }
+    .stat-val { font-size: 24px; }
+
+    /* 툴바 */
+    .toolbar { gap: 8px; flex-wrap: wrap; }
+    .toolbar-right { margin-left: 0; width: 100%; display: flex; gap: 8px; }
+    .toolbar-right .btn { flex: 1; text-align: center; }
+
+    /* 날짜 선택 */
+    .date-select { flex-wrap: wrap; gap: 6px; }
+    .date-select input, .date-select select { font-size: 15px; padding: 8px 10px; min-width: 0; }
+
+    /* 테이블 - 모바일 스크롤 */
+    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { font-size: 12px; }
+    th { padding: 7px 5px; font-size: 11px; }
+    td { padding: 7px 5px; }
+
+    /* 목록 탭 테이블 - 중요 컬럼만 */
+    #listTable th:nth-child(7),
+    #listTable td:nth-child(7),
+    #listTable th:nth-child(8),
+    #listTable td:nth-child(8) { display: none; } /* 배정층·비고 숨김 */
+
+    /* 급한메모 */
     .quick-memo-side { width: 100%; right: -100%; }
+
+    /* 모달 */
+    .modal { width: 95%; max-height: 85vh; padding: 18px 14px; }
+
+    /* 업로드존 */
+    .upload-zone { padding: 20px; }
+    .upload-zone .icon { font-size: 32px; }
+    .upload-zone h3 { font-size: 14px; }
+
+    /* 미리보기 이미지 */
+    .preview-img img { width: 140px; height: 100px; }
+
+    /* 층별 탭 뱃지 */
+    .day-badge { min-width: 56px; padding: 8px 10px; }
+    .day-badge .dv-cnt { font-size: 18px; }
+
+    /* 당일 차량 목록 */
+    .dvl-row { flex-wrap: wrap; gap: 4px; padding: 8px; }
+    .dvl-time { width: auto; font-size: 11px; }
+
+    /* 분석탭 */
+    #analysisStats { grid-template-columns: repeat(2, 1fr); }
+
+    /* 상태바 */
+    .status-bar { font-size: 11px; gap: 8px; padding: 6px 12px; flex-wrap: wrap; }
+    #lastUpdate { margin-left: 0; }
+
+    /* 설정탭 폼 */
+    #tab-settings .form-group { min-width: unset !important; }
+  }
+
+  @media (max-width: 480px) {
+    .tabs { padding: 0 4px; }
+    .tab { padding: 9px 6px; font-size: 11px; }
+    .header h1 { font-size: 15px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat-val { font-size: 20px; }
   }
 </style>
 </head>
@@ -253,7 +348,7 @@
 
 <div class="header">
   <div>
-    <h1>🏢 서희타워 방문객 주차대장 <span style="font-size:13px;opacity:.7;font-weight:400">v2.3</span></h1>
+    <h1>🏢 서희타워 방문객 주차대장 <span style="font-size:13px;opacity:.7;font-weight:400">v2.4</span></h1>
     <div class="header-sub">Seohee Tower Visitor Parking Management System</div>
   </div>
   <div class="api-key-area">
@@ -932,12 +1027,11 @@ async function deleteFirebaseRecord(rec) {
 }
 
 // ============================================================
-// 날짜별 No 자동 채번
+// No 누적 채번 (전체 데이터 기준 최대값+1)
 // ============================================================
 function getNextNo(date) {
-  const same = parkingData.filter(r => r.date === date);
-  if (same.length === 0) return 1;
-  return Math.max(...same.map(r => parseInt(r.no) || 0)) + 1;
+  if (parkingData.length === 0) return 1;
+  return Math.max(...parkingData.map(r => parseInt(r.no) || 0)) + 1;
 }
 
 // ============================================================
@@ -1198,7 +1292,7 @@ async function runOCR() {
     progressFill.style.width = '90%';
     progressText.textContent = '데이터 파싱중...';
 
-    // Parse and merge results
+    // Parse and merge results - No 기준 정렬 (앞면1~20, 뒷면21~48 순서 무관)
     let allRows = [];
     let rawDisplay = '';
     for (const result of allResults) {
@@ -1212,6 +1306,8 @@ async function runOCR() {
         rawDisplay += `[파싱 오류: ${e.message}]\n`;
       }
     }
+    // No 기준 오름차순 정렬 (1→48)
+    allRows.sort((a, b) => (parseInt(a.no)||999) - (parseInt(b.no)||999));
 
     document.getElementById('extractArea').innerHTML = `<pre style="font-size:12px; white-space:pre-wrap; color:#374151;">${rawDisplay}</pre>`;
 
@@ -1743,11 +1839,19 @@ function renderFloorTable() {
   document.getElementById('floorSummaryBars').innerHTML = barsHtml;
 
   // ── 헤더 ──
-  let thHtml = '<tr><th style="min-width:80px;position:sticky;left:0;z-index:20">날짜</th>';
+  // 컬럼명 짧게
+  const shortName = {
+    '20층':'20층','19층':'19층','18층':'18층','17층':'17층','16층':'16층',
+    '15층':'15층','14층':'14층','13층':'13층','12층':'12층','11층':'11층',
+    '10층':'10층','9층':'9층','8층':'8층','7층':'7층','6층':'6층',
+    '5층광주은행':'은행','5층변호사':'변호사','4층':'4층','3층':'3층','2층':'2층',
+    '1층':'1층','왕삼돈':'왕삼돈','편의점':'편의점','관리소':'관리소','기타':'기타'
+  };
+  let thHtml = '<tr><th style="min-width:60px;position:sticky;left:0;z-index:20;background:#334155">날짜</th>';
   usedCols.forEach(c => {
-    thHtml += `<th style="min-width:48px;writing-mode:vertical-rl;transform:rotate(0deg);padding:8px 4px;font-size:11px">${c}</th>`;
+    thHtml += `<th style="min-width:40px;font-size:11px;padding:6px 4px;text-align:center;background:#334155;color:white;white-space:nowrap">${shortName[c]||c}</th>`;
   });
-  thHtml += '<th style="min-width:48px;background:#dc2626">합계</th></tr>';
+  thHtml += '<th style="min-width:40px;background:#dc2626;color:white;white-space:nowrap">합계</th></tr>';
   thead.innerHTML = thHtml;
 
   // ── 행 ──
