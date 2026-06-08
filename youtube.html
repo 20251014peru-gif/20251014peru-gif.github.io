@@ -6,6 +6,10 @@
 <title>유튜브 채널 분석</title>
 <!--
   ===== youtube.html 변경 이력 =====
+  v1.5 (2026-06-08): 분할 분석 기능 추가 — 자막 12,000자 초과 시 자동으로 10,000자씩 구간 분할,
+                     구간별 1차 추출 후 종합 리포트 생성. 진행 바 UI 표시.
+  v1.4 (2026-06-08): 프롬프트에 "1회 언급 중요 신호" 규칙 추가 — 반복 없이 단 한 번만 나와도
+                     핵심으로 처리하는 패턴 명시(명시적 강조/강한 확신/수치·티커/부정형/행동 촉구)
   v1.3 (2026-06-08): 자막 잘림 한도 확대(단일 4200→10000, 복수 3000→6000), max_tokens 5000→8000,
                      프롬프트 강화 — 수치/근거/예시 빠짐없이 + 화자가 화면 설명 시 🖥️ 화면 설명 섹션 별도 추출
   v1.2 (2026-05-28): 종목 링크를 미국=야후 파이낸스, 한국=네이버 증권으로 분기(인베스팅닷컴 대체).
@@ -449,7 +453,14 @@ function getPrompt(idx, videos){
     '【절대 원칙 — 반드시 준수】\n'+
     '① 원문에 등장하는 모든 수치(%, 배수, 금액, 날짜)·근거·예시·종목명·논리 흐름을 빠짐없이 담아라. 임의로 생략하거나 뭉뚱그리지 마라.\n'+
     '② 화자가 "지금 보시면", "이 차트를", "여기 보시면", "화면에서", "이 숫자가", "표를 보면" 등 화면/차트/표/그래프를 직접 가리키며 설명하는 구간은 🖥️ [화면 설명] 태그를 붙여 별도 강조 처리하고, 해당 수치·내용·결론을 구체적으로 서술하라. 이 구간이 가장 중요한 핵심 정보일 가능성이 높다.\n'+
-    '③ "그냥", "뭐", "약간" 같은 완충어로 실제 강한 주장을 희석시킨 경우도 원래 주장의 강도를 그대로 기록하라.\n\n'+
+    '③ "그냥", "뭐", "약간" 같은 완충어로 실제 강한 주장을 희석시킨 경우도 원래 주장의 강도를 그대로 기록하라.\n'+
+    '④ 【중요 신호 — 반복 없이 1회만 나와도 반드시 포함】 아래 패턴은 화자가 단 한 번 언급해도 핵심으로 처리하라. 반복 빈도로만 중요도를 판단하지 마라:\n'+
+    '   - "이게 핵심이다", "중요한 건", "꼭 알아야 할", "핵심은" (명시적 강조)\n'+
+    '   - "저는 ~라고 봅니다", "확신합니다", "분명히" (화자의 강한 확신)\n'+
+    '   - 구체적 수치·날짜·가격·티커 언급 (팩트 기반 주장)\n'+
+    '   - "~이 아니라", "~가 아닌", "틀렸다" (부정형 = 강한 주장의 신호)\n'+
+    '   - "지금 당장", "조심해야", "위험하다", "기회다" (행동 촉구)\n'+
+    '   - 화면/차트를 직접 가리키며 설명하는 모든 구간\n\n'+
     '다음을 모두 포함해 분석해:\n1) 전체를 관통하는 핵심 제목(한 줄)\n2) 영상별 핵심 요약 — 원문의 논거·수치·예시를 최대한 구체적으로 (여러 개면 각각 + 종합)\n'+
     '3) ★무의식 신호★ — 명시적으로 말하진 않지만 반복·강조·회피·전제·말투에서 드러나는 진짜 속내, 숨은 확신/불안, 포지션 편향\n'+
     '4) '+insightTitle+'\n5) 영상에서 실제 언급된 개별 종목/티커(있으면)\n6) 핵심 키워드 태그 5~7개\n\n'+
@@ -510,8 +521,131 @@ function analyze(idx){
     var dup=allDocs.find(function(r){ return getLinks(r).some(function(u){ var id=ytId(u); return id && newIds.indexOf(id)>=0; }); });
     if(dup && !confirm('이 영상은 이미 분석한 적 있어 ('+dup.date+' · '+dup.chName+').\n그래도 계속할까?')) return;
   }
+  // 자막이 12,000자 이상이면 분할 분석으로 자동 전환
+  var totalLen=videos.reduce(function(s,v){ return s+v.script.length; },0);
   if(analyzeMode[idx]==='individual' && videos.length>1) analyzeIndividual(idx,videos);
+  else if(totalLen>12000) analyzeSplit(idx,videos);
   else analyzeCombined(idx,videos);
+}
+
+/* ---------- 분할 분석 (자막 12,000자 초과 시 자동 실행) ---------- */
+function getSplitPrompt(idx, part, totalParts, scriptChunk){
+  var ch=CHANNELS[idx];
+  return '너는 기록학·주식투자·거시경제 전문가야.\n\n'+
+    '지금 분석하는 것은 【'+ch.name+'】 채널 영상 자막의 '+part+'/'+totalParts+' 구간이야.\n'+
+    '전체 자막을 '+totalParts+'개 구간으로 나눠서 순서대로 분석 중이야.\n\n'+
+    '【절대 원칙】\n'+
+    '① 이 구간에 등장하는 모든 수치·근거·예시·종목명·논리를 빠짐없이 추출하라.\n'+
+    '② 화자가 "지금 보시면", "이 차트", "여기 보시면", "화면에서" 등 화면을 직접 가리키는 구간은 🖥️[화면설명]으로 표시하고 수치·패턴·결론을 구체적으로 적어라.\n'+
+    '③ "이게 핵심이다", "중요한 건", "확신합니다", 구체적 수치·티커, 부정형("~이 아니라"), "조심해야", "기회다" 등은 1회 언급이라도 반드시 포함하라.\n'+
+    '④ 반복 빈도로 중요도를 판단하지 마라.\n\n'+
+    '【'+part+'/'+totalParts+' 구간 자막】\n'+scriptChunk+'\n\n'+
+    '출력 형식(JSON 금지, 순수 텍스트):\n'+
+    '=== 구간 '+part+' 핵심 추출 ===\n'+
+    '[주요 주장·논거] 이 구간의 핵심 주장을 모두 나열 (수치·근거 포함)\n'+
+    '[🖥️ 화면 설명] 화면 지시 구간이 있으면 각각: 화면명 / 수치·패턴 / 화자 결론. 없으면 "없음"\n'+
+    '[강조 신호] "핵심이다", 수치, 부정형, 행동촉구 등 1회 언급 중요 표현 목록\n'+
+    '[종목·티커] 언급된 종목명/티커 (없으면 "없음")\n'+
+    '=== 구간 '+part+' 끝 ===';
+}
+
+function getMergePrompt(idx, videos, partResults){
+  var ch=CHANNELS[idx], n=new Date(), dateStr=n.getFullYear()+'년 '+(n.getMonth()+1)+'월 '+n.getDate()+'일';
+  var insightTitle=ch.invest?'💰 투자 인사이트':'🏛️ 거시 인사이트';
+  var insightCols=ch.invest?'열 = 항목(종목/섹터/진입·청산/리스크) | 핵심 내용 | 내가 활용할 포인트':'열 = 항목(금리·매크로/자산배분/헤지/주의신호) | 핵심 내용 | 내가 활용할 포인트';
+  var links=videos.map(function(v){ return v.link||''; }).filter(Boolean);
+  var partsBlock=partResults.map(function(r,i){ return '【구간 '+(i+1)+' 추출 결과】\n'+r; }).join('\n\n──────────\n\n');
+  return '너는 기록학·주식투자·거시경제·인문학·콘텐츠 구조화 전문가야.\n\n'+
+    '채널: '+ch.name+'\n분석 관점: '+ch.focus+' 중심으로 분석해.\n'+
+    '아래는 영상 자막을 '+partResults.length+'개 구간으로 나눠 1차 추출한 결과야. 이걸 바탕으로 최종 종합 리포트를 만들어.\n\n'+
+    '【1차 구간별 추출 결과 (전체)】\n'+partsBlock+'\n\n'+
+    '【절대 원칙】\n'+
+    '① 각 구간 추출 결과에 있는 내용을 빠짐없이 종합 리포트에 반영하라. 임의로 생략 금지.\n'+
+    '② 🖥️ 화면 설명 구간은 별도 섹션으로 강조하라.\n'+
+    '③ 반복이 없어도 1회 언급된 핵심 신호(수치·부정형·강조·행동촉구)는 모두 포함하라.\n'+
+    '④ "그냥", "약간" 같은 완충어로 희석된 주장도 원래 강도로 기록하라.\n\n'+
+    '출력: 첫 줄에 메타 주석, 다음 줄부터 <!DOCTYPE html>~</html>. 그 외 설명·코드펜스 금지.\n\n'+
+    '메타 주석(첫 줄):\n<!--META:{"title":"핵심 제목","tags":["태그1","태그2"],"tickers":[{"sym":"NVDA","name":"엔비디아","sector":"반도체","market":"US","tone":"긍정"}]}-->\n'+
+    'tickers는 실제 언급된 개별 종목만. market: 미국·해외="US", 한국="KR". 한국 종목 sym은 6자리 코드. 미국은 티커. tone: "긍정"|"중립"|"부정". 없으면 [].\n\n'+
+    REPORT_CSS+'\n\n'+
+    '구조(순서 고정):\n'+
+    '[헤더] h1=핵심 제목, sub="채널: '+ch.name+' | '+dateStr+' | 분할분석('+partResults.length+'구간 종합)"\n'+
+    '[SECTION 📋 전체 핵심 요약] .vid-summary + 불릿 6~10개 (수치·근거 포함) + .highlight-box 종합\n'+
+    '[SECTION 🖥️ 화면 설명 핵심 포인트] 각 구간에서 추출된 화면 설명 구간 전체. .screen-box 형식: <span class="slabel">🖥️ 화면</span> 화면명 <span class="sval">수치/패턴:</span> 내용 <span class="sconc">결론:</span> 해석. 없으면 "감지된 화면 설명 없음" 한 줄.\n'+
+    '[SECTION 🧠 무의식 신호 — 화자가 진짜 말하고 있는 것] .subtext-box 3~5개. <span class="label">관찰</span> 반복·강조·회피 표현 → <span class="mean">숨은 의미:</span> 진짜 속내\n'+
+    '[SECTION '+insightTitle+'] 표 ('+insightCols+'), 행 4개 이상, 중요한 건 <mark>표시</mark>\n'+
+    (ch.invest?'[SECTION 📈 언급 종목] 표: 티커 | 종목명 | 섹터 | 화자 톤 | 한줄 코멘트. 없으면 "직접 언급된 개별 종목 없음"\n':'')+
+    '[SECTION ✍️ 한눈에 — 내가 얻어갈 것] .story-box 짧은 서사 + ul.bullet 액션 3~5개 + .tag-row 해시태그 5~7개\n'+
+    '[푸터] 채널: '+ch.name+' | '+dateStr+' | 분할분석 '+partResults.length+'구간 종합';
+}
+
+function analyzeSplit(idx, videos){
+  var key=localStorage.getItem(AK);
+  var btn=document.getElementById('btn-'+idx);
+  var el=document.getElementById('result-'+idx);
+  // 자막 전체를 이어붙인 뒤 청크 분할 (청크당 최대 10,000자)
+  var CHUNK=10000;
+  var fullScript=videos.map(function(v,i){ return (videos.length>1?'[영상 '+(i+1)+']\n':'')+v.script; }).join('\n\n');
+  var chunks=[];
+  for(var pos=0; pos<fullScript.length; pos+=CHUNK){
+    // 단어 경계에서 자르기 (공백 기준)
+    var end=Math.min(pos+CHUNK, fullScript.length);
+    if(end<fullScript.length){
+      var sp=fullScript.lastIndexOf(' ', end); if(sp>pos) end=sp;
+    }
+    chunks.push(fullScript.slice(pos, end));
+    pos=end-pos+pos; // 재조정
+  }
+  // 실제로는 간단하게 고정 슬라이스
+  chunks=[];
+  for(var s=0; s<fullScript.length; s+=CHUNK){
+    chunks.push(fullScript.slice(s, s+CHUNK));
+  }
+  var total=chunks.length;
+  btn.disabled=true;
+  el.innerHTML='<div id="split-progress-'+idx+'" style="background:#EEF2FF;border:1px solid #A5B4FC;border-radius:10px;padding:14px 16px;margin-bottom:10px;">'+
+    '<div style="font-size:13px;font-weight:800;color:#4338CA;margin-bottom:8px;">🔄 분할 분석 중 — 자막이 길어서 '+total+'구간으로 나눠 분석해요</div>'+
+    '<div id="split-bar-'+idx+'" style="height:8px;background:#E0E7FF;border-radius:4px;overflow:hidden;margin-bottom:8px;"><div id="split-fill-'+idx+'" style="height:100%;background:#6366F1;width:0%;transition:width 0.4s;border-radius:4px;"></div></div>'+
+    '<div id="split-status-'+idx+'" style="font-size:12px;color:#6B7280;">구간 1/'+total+' 분석 중...</div>'+
+    '</div>';
+  var partResults=[];
+  function updateProgress(step, statusText){
+    var pct=Math.round(step/(total+1)*100);
+    var fill=document.getElementById('split-fill-'+idx); if(fill) fill.style.width=pct+'%';
+    var st=document.getElementById('split-status-'+idx); if(st) st.textContent=statusText;
+  }
+  function stepSplit(i){
+    if(i>=total){
+      // 모든 구간 완료 → 종합 리포트 생성
+      updateProgress(total, '최종 종합 리포트 생성 중...');
+      btn.textContent='종합 리포트 생성 중...';
+      fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:MODEL,max_tokens:8000,messages:[{role:'user',content:getMergePrompt(idx,videos,partResults)}]})})
+      .then(function(r){return r.json();}).then(function(d){
+        btn.disabled=false; updateAnalyzeBtn(idx);
+        var prog=document.getElementById('split-progress-'+idx); if(prog) prog.remove();
+        if(d.error){ alert(apiErr(d)); return; }
+        var text=''; if(d.content)d.content.forEach(function(b){ if(b.type==='text')text+=b.text; });
+        var pr=parseMeta(text);
+        tempResults[idx]={html:pr.html,title:pr.meta.title,tags:pr.meta.tags,tickers:pr.meta.tickers,
+          links:videos.map(function(v){return v.link;}).filter(Boolean),videoCount:videos.length,idx:idx};
+        showResult(idx,tempResults[idx]);
+      }).catch(function(e){ btn.disabled=false; updateAnalyzeBtn(idx); alert('종합 오류: '+e.message); });
+      return;
+    }
+    updateProgress(i, '구간 '+(i+1)+'/'+total+' 분석 중...');
+    btn.textContent='분할 분석 중 ('+(i+1)+'/'+total+')...';
+    fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:MODEL,max_tokens:3000,messages:[{role:'user',content:getSplitPrompt(idx,i+1,total,chunks[i])}]})})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.error){ partResults.push('[구간 '+(i+1)+' 오류: '+apiErr(d)+']'); }
+      else { var t=''; if(d.content)d.content.forEach(function(b){ if(b.type==='text')t+=b.text; }); partResults.push(t); }
+      stepSplit(i+1);
+    }).catch(function(e){ partResults.push('[구간 '+(i+1)+' 네트워크 오류: '+e.message+']'); stepSplit(i+1); });
+  }
+  stepSplit(0);
 }
 
 function analyzeCombined(idx,videos){
