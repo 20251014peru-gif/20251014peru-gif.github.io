@@ -1,18 +1,22 @@
 <!DOCTYPE html>
 <!-- parking.html
-  APP_VERSION: v2.4-20260608
+  APP_VERSION: v2.5-20260608
+  v2.5 변경내역:
+    - 여러 날짜 사진 한 번에 업로드 가능 (AI가 사진에서 날짜 자동 추출)
+    - 날짜 추출 실패 시 입력칸 날짜를 fallback으로 사용
+    - 파싱 미리보기 테이블에 날짜 컬럼 추가 (초록=정상, 빨강=날짜없음)
   v2.4 변경내역:
-    - 층 헤더 숫자 가로 표시 고정 (writing-mode 완전 제거)
-    - No 전체 누적 채번 (날짜 무관 최대값+1)
-    - 두 장 사진 No 기준 정렬 (업로드 순서 무관 1→48)
-    - 모바일 CSS 전면 개편 (터치 영역 확대, 중요 컬럼 우선)
-    - 실시간 동기화: Firebase onSnapshot (폰↔PC 즉시 반영)
+    - 층 헤더 숫자 가로 표시 고정
+    - No 전체 누적 채번
+    - 두 장 사진 No 기준 정렬
+    - 모바일 CSS 전면 개편
+    - Firebase 실시간 동기화
 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>방문객 주차대장 v2.4 - 서희타워</title>
+<title>방문객 주차대장 v2.5 - 서희타워</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
@@ -348,7 +352,7 @@
 
 <div class="header">
   <div>
-    <h1>🏢 서희타워 방문객 주차대장 <span style="font-size:13px;opacity:.7;font-weight:400">v2.4</span></h1>
+    <h1>🏢 서희타워 방문객 주차대장 <span style="font-size:13px;opacity:.7;font-weight:400">v2.5</span></h1>
     <div class="header-sub">Seohee Tower Visitor Parking Management System</div>
   </div>
   <div class="api-key-area">
@@ -1241,7 +1245,11 @@ async function runOCR() {
       const mediaType = img.base64.split(';')[0].split(':')[1];
 
       const prompt = `다음은 서희타워 임시 방문객 주차대장 사진입니다.
-날짜: ${date}
+기준 날짜(입력된 날짜): ${date}
+
+[중요] 사진 상단에 날짜가 적혀 있으면 그 날짜를 사용하세요.
+예: "2026년 6월 2일", "2026.06.02", "26.6.2" 등 → "2026-06-02" 형식으로 변환
+날짜를 읽을 수 없으면 기준 날짜(${date})를 사용하세요.
 
 [방문차량 기록] 테이블에서 데이터를 추출하세요. (층별 빈차 점검표는 완전히 무시)
 
@@ -1259,8 +1267,8 @@ async function runOCR() {
 9. 필기체 판독: 비슷한 숫자(0↔6, 1↔7, 5↔6) 주의해서 읽기
 10. 줄이 30번 이상이면 전부 추출
 
-순수 JSON 배열로만 응답 (마크다운 없이):
-[{"no":1,"in":"09:20","out":"11:40","plate":"7753","floor":"9","purpose":"미팅","park":"B4","note":""}]`;
+순수 JSON 배열로만 응답 (마크다운 없이). date 필드 반드시 포함:
+[{"no":1,"date":"2026-06-02","in":"09:20","out":"11:40","plate":"7753","floor":"9","purpose":"미팅","park":"B4","note":""}]`;
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -1410,22 +1418,24 @@ function renderParsedTable(rows, date) {
 
   const container = document.getElementById('parsedTableContainer');
   let html = `<table><thead><tr>
-    <th>No</th><th>입차</th><th>출차</th><th>차량번호</th>
+    <th>No</th><th>날짜(자동)</th><th>입차</th><th>출차</th><th>차량번호</th>
     <th>방문층</th><th>방문목적</th><th>배정층</th><th>비고</th><th>층분류</th>
   </tr></thead><tbody>`;
 
   rows.forEach((r, i) => {
     const cat = getFloorCat(r.floor, r.purpose);
     const catColor = getCatColor(cat);
+    const rowDate = (r.date && r.date.match(/^\d{4}-\d{2}-\d{2}$/)) ? r.date : (document.getElementById('inputDate').value || '');
     html += `<tr>
       <td>${r.no || i+1}</td>
+      <td style="font-size:11px;color:${rowDate?'#166534':'#dc2626'}">${rowDate||'날짜없음'}</td>
       <td><input type="time" value="${r.in||''}" onchange="parsedRows[${i}].in=this.value"></td>
       <td><input type="time" value="${r.out||''}" onchange="parsedRows[${i}].out=this.value"></td>
-      <td><input type="text" value="${r.plate||''}" onchange="parsedRows[${i}].plate=this.value" style="width:80px"></td>
-      <td><input type="text" value="${r.floor||''}" onchange="parsedRows[${i}].floor=this.value;updateRowCat(${i})" style="width:50px"></td>
-      <td><input type="text" value="${r.purpose||''}" onchange="parsedRows[${i}].purpose=this.value;updateRowCat(${i})" style="width:80px"></td>
-      <td><input type="text" value="${r.park||''}" onchange="parsedRows[${i}].park=this.value" style="width:50px"></td>
-      <td><input type="text" value="${r.note||''}" onchange="parsedRows[${i}].note=this.value" style="width:70px"></td>
+      <td><input type="text" value="${r.plate||''}" onchange="parsedRows[${i}].plate=this.value" style="width:70px"></td>
+      <td><input type="text" value="${r.floor||''}" onchange="parsedRows[${i}].floor=this.value;updateRowCat(${i})" style="width:45px"></td>
+      <td><input type="text" value="${r.purpose||''}" onchange="parsedRows[${i}].purpose=this.value;updateRowCat(${i})" style="width:75px"></td>
+      <td><input type="text" value="${r.park||''}" onchange="parsedRows[${i}].park=this.value" style="width:45px"></td>
+      <td><input type="text" value="${r.note||''}" onchange="parsedRows[${i}].note=this.value" style="width:65px"></td>
       <td id="cat-${i}"><span class="tag" style="${catColor}">${cat}</span></td>
     </tr>`;
   });
@@ -1454,8 +1464,7 @@ function updateRowCat(i) {
 
 async function confirmAddToList() {
   if (!window.parsedRows || window.parsedRows.length === 0) return;
-  const date = document.getElementById('inputDate').value;
-  const month = date ? (new Date(date).getMonth() + 1) + '월' : '기타';
+  const fallbackDate = document.getElementById('inputDate').value;
 
   const btn = document.getElementById('addToListBtn');
   btn.disabled = true;
@@ -1463,13 +1472,16 @@ async function confirmAddToList() {
   setSyncStatus('warn', '저장중...');
 
   try {
-    let nextNo = getNextNo(date);
+    let nextNo = getNextNo(fallbackDate);
     for (let i = 0; i < window.parsedRows.length; i++) {
       const r = window.parsedRows[i];
+      // 각 행의 날짜 우선 사용 (AI가 이미지에서 추출), 없으면 입력칸 날짜
+      const rowDate = (r.date && r.date.match(/^\d{4}-\d{2}-\d{2}$/)) ? r.date : fallbackDate;
+      const month = rowDate ? (new Date(rowDate).getMonth() + 1) + '월' : '기타';
       const cat = getFloorCat(r.floor, r.purpose);
       await saveRecord({
         no: r.no || (nextNo + i),
-        date, month,
+        date: rowDate, month,
         in: r.in || '',
         out: r.out || '',
         plate: String(r.plate || '').trim(),
