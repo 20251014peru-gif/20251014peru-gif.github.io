@@ -1,10 +1,26 @@
 <!DOCTYPE html>
+<!-- parking.html
+  APP_VERSION: v2.2-20260608
+  v2.2 변경내역:
+    - 전역 차량번호 검색바 추가 (모든 탭에서 항상 표시)
+    - 설정 탭: 층별 임차인 Firebase 관리 (추가/수정/삭제)
+    - 설정 탭: 방문목적 카테고리 Firebase 관리 (추가/삭제)
+    - 방문목적 입력 자동완성 datalist 연동
+  v2.1 변경내역:
+    - Firebase Firestore 실시간 동기화 완성
+    - ⚡ 급한메모 슬라이드 패널 추가
+    - 날짜별 No 자동 채번
+    - 전일/미출차 체류시간 처리
+    - 5층 분류 수정 (변호사 키워드만 변호사)
+-->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>방문객 주차 관리 시스템 - 서희타워</title>
+<title>방문객 주차대장 v2.1 - 서희타워</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <style>
   :root {
     --primary: #2563eb;
@@ -96,12 +112,35 @@
   .fb-wang { background: #fce7f3; color: #9d174d; }
   .fb-other { background: #f0fdf4; color: #166534; }
 
-  /* FLOOR TABLE */
+  /* FLOOR TABLE extras */
   .floor-table th { background: #334155; }
   .floor-table .total-row td { background: #1e3a5f !important; color: white; font-weight: 700; }
   .floor-table .date-col { font-weight: 600; background: #f8fafc !important; }
   td.has-val { background: #dbeafe !important; font-weight: 600; }
-  td.zero-val { color: var(--text-muted); }
+  td.zero-val { color: #cbd5e1; }
+
+  /* DAY VIEW BADGES */
+  .day-badge { display:flex;flex-direction:column;align-items:center;padding:10px 14px;border-radius:10px;min-width:68px;border:1.5px solid var(--border);background:#f8fafc;cursor:default; }
+  .day-badge .dv-cnt { font-size:22px;font-weight:800;line-height:1; }
+  .day-badge .dv-lbl { font-size:10px;color:var(--text-muted);margin-top:3px;text-align:center; }
+  .day-badge.highlight { background:#dbeafe;border-color:#93c5fd; }
+  .day-badge.highlight .dv-cnt { color:#1d4ed8; }
+
+  /* FLOOR BAR */
+  .floor-bar-wrap { display:flex;flex-direction:column;min-width:70px;max-width:90px; }
+  .floor-bar-label { font-size:10px;text-align:center;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .floor-bar-track { height:8px;background:#e2e8f0;border-radius:4px;margin:3px 0; }
+  .floor-bar-fill { height:8px;border-radius:4px;background:#3b82f6;transition:width 0.4s; }
+  .floor-bar-val { font-size:11px;font-weight:700;text-align:center;color:#1e293b; }
+
+  /* DAY VEHICLE LIST */
+  .dvl-row { display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:8px;margin-bottom:4px;background:#f8fafc;border:1px solid var(--border);font-size:13px; }
+  .dvl-no { width:28px;text-align:center;font-weight:700;color:var(--text-muted);font-size:12px; }
+  .dvl-time { width:110px;color:var(--text-muted);font-size:12px; }
+  .dvl-plate { font-weight:800;width:60px;letter-spacing:1px; }
+  .dvl-floor { width:40px;text-align:center; }
+  .dvl-purpose { flex:1;color:var(--text-muted); }
+  .dvl-cat { }
 
   /* CROSSCHECK */
   .check-ok { color: var(--success); font-weight: 700; }
@@ -176,6 +215,29 @@
   .btn-icon { background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 6px; font-size: 15px; }
   .btn-icon:hover { background: var(--primary-light); }
 
+  /* ⚡ 급한 메모 */
+  .qm-btn { background: linear-gradient(135deg,#f59e0b,#fbbf24); border: none; border-radius: 10px; padding: 7px 14px; font-size: 13px; font-weight: 700; color: #7c2d12; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: opacity .15s; }
+  .qm-btn:hover { opacity: .85; }
+  .quick-memo-side { position: fixed; top: 0; right: -360px; width: 340px; height: 100vh; background: #fff; border-left: 2px solid #fbbf24; box-shadow: -4px 0 24px rgba(0,0,0,.13); z-index: 2000; display: flex; flex-direction: column; transition: right .25s cubic-bezier(.4,0,.2,1); }
+  .quick-memo-side.open { right: 0; }
+  .qm-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: linear-gradient(135deg,#fef3c7,#fde68a); border-bottom: 1px solid #fbbf24; }
+  .qm-head-title { font-size: 14px; font-weight: 700; color: #7c2d12; }
+  .qm-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #92400e; padding: 2px 6px; border-radius: 6px; }
+  .qm-close:hover { background: #fde68a; }
+  #qmText { flex: 1; padding: 14px; font-size: 14px; line-height: 1.7; color: #1e293b; outline: none; overflow-y: auto; }
+  .qm-inline-img-wrap { display: inline-block; position: relative; margin: 4px; }
+  .qm-inline-img-wrap img { max-width: 100%; border-radius: 6px; display: block; }
+  .qm-inline-img-wrap .qm-del-img { display: none; position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,.6); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; align-items: center; justify-content: center; }
+  .qm-inline-img-wrap:hover .qm-del-img { display: flex; }
+  .qm-overlay { display: none; position: fixed; inset: 0; z-index: 1999; }
+  .qm-overlay.open { display: block; }
+
+  /* 🔍 표준 검색창 */
+  .search-wrap { position: relative; }
+  .search-wrap .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 18px; pointer-events: none; color: var(--primary); }
+  .search-wrap input { padding-left: 44px; height: 48px; font-size: 15px; font-weight: 600; border: 2.5px solid var(--primary); border-radius: 14px; background: #f0f6ff; box-shadow: 0 2px 12px rgba(63,124,184,.15); width: 100%; outline: none; }
+  .search-wrap input:focus { border-color: var(--primary-dark); }
+
   @media (max-width: 768px) {
     .header { flex-direction: column; align-items: flex-start; gap: 10px; }
     .api-key-area { width: 100%; }
@@ -183,6 +245,7 @@
     .content { padding: 12px 14px; }
     .form-row { grid-template-columns: 1fr; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .quick-memo-side { width: 100%; right: -100%; }
   }
 </style>
 </head>
@@ -190,14 +253,27 @@
 
 <div class="header">
   <div>
-    <h1>🏢 서희타워 방문객 주차대장 관리시스템</h1>
+    <h1>🏢 서희타워 방문객 주차대장 <span style="font-size:13px;opacity:.7;font-weight:400">v2.2</span></h1>
     <div class="header-sub">Seohee Tower Visitor Parking Management System</div>
   </div>
   <div class="api-key-area">
+    <button class="qm-btn" onclick="openQM()">⚡ 급한메모</button>
     <input type="password" class="api-input" id="apiKeyInput" placeholder="Anthropic API Key 입력..." autocomplete="off">
     <button class="btn-sm btn-white" onclick="saveApiKey()">저장</button>
     <span id="apiStatus" style="font-size:12px;opacity:0.8"></span>
   </div>
+</div>
+
+<!-- ⚡ 급한 메모 패널 -->
+<div class="qm-overlay" id="qmOverlay" onclick="closeQM()"></div>
+<div class="quick-memo-side" id="qmPanel">
+  <div class="qm-head">
+    <span class="qm-head-title">⚡ 급한 메모</span>
+    <button class="qm-close" onclick="closeQM()">✕</button>
+  </div>
+  <div id="qmText" contenteditable="true" spellcheck="false"
+       placeholder="메모를 입력하세요... (Ctrl+V로 사진 첨부 가능)"
+       oninput="qmDebounce()" onpaste="qmPaste(event)"></div>
 </div>
 
 <div class="tabs">
@@ -207,6 +283,38 @@
   <div class="tab" onclick="switchTab('check')">✅ 크로스체크</div>
   <div class="tab" onclick="switchTab('analysis')">🔍 차량 분석</div>
   <div class="tab" onclick="switchTab('export')">📥 내보내기</div>
+  <div class="tab" onclick="switchTab('settings')">⚙️ 설정</div>
+</div>
+
+<!-- 전역 차량번호 검색바 (모든 탭에서 항상 표시) -->
+<div id="globalSearchBar" style="background:#fff;border-bottom:2px solid #dbeafe;padding:10px 24px;display:flex;align-items:center;gap:12px;">
+  <div class="search-wrap" style="width:320px;">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="globalPlateSearch"
+      placeholder="차량번호 검색 — 어느 탭에서나 이력 조회"
+      oninput="globalSearch(this.value)"
+      autocomplete="off">
+  </div>
+  <span id="globalSearchInfo" style="font-size:13px;color:var(--text-muted);"></span>
+  <button id="globalSearchClear" onclick="clearGlobalSearch()" style="display:none;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:13px;cursor:pointer;color:var(--text-muted);">✕ 초기화</button>
+</div>
+
+<!-- 전역 검색 결과 패널 (검색 시만 표시) -->
+<div id="globalSearchResult" style="display:none;background:#f0f6ff;border-bottom:2px solid #93c5fd;padding:0 24px 16px;max-height:420px;overflow-y:auto;">
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 0 10px;">
+    <span style="font-size:14px;font-weight:700;color:#1d4ed8;" id="globalSearchTitle"></span>
+  </div>
+  <div class="table-container">
+    <table id="globalSearchTable">
+      <thead>
+        <tr>
+          <th>날짜</th><th>No</th><th>입차</th><th>출차</th>
+          <th>차량번호</th><th>방문층</th><th>방문목적</th><th>배정층</th><th>층분류</th><th>비고</th>
+        </tr>
+      </thead>
+      <tbody id="globalSearchBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <div class="content">
@@ -281,7 +389,11 @@
 
   <!-- =============== LIST TAB =============== -->
   <div class="tab-panel" id="tab-list">
-    <div class="toolbar">
+    <div class="toolbar" style="gap:10px;flex-wrap:wrap;">
+      <div class="search-wrap" style="min-width:200px;flex:1;max-width:280px;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="plateSearch" placeholder="차량번호 검색..." oninput="renderList()">
+      </div>
       <div class="date-select">
         <label>월:</label>
         <select id="listMonthFilter" onchange="renderList()">
@@ -330,12 +442,56 @@
 
   <!-- =============== FLOOR TAB =============== -->
   <div class="tab-panel" id="tab-floor">
-    <div class="toolbar">
-      <button class="btn btn-success" onclick="recalcFloor()">🔄 층별집계 재계산</button>
-      <span style="font-size:13px; color:var(--text-muted);" id="floorCalcTime"></span>
+
+    <!-- 오늘 날짜 선택 & 즉시 현황 -->
+    <div class="card">
+      <div class="card-title">📅 날짜별 층별 현황 (당일 즉시 확인)</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <div class="date-select">
+          <label>날짜 선택:</label>
+          <input type="date" id="dayViewDate" oninput="renderDayView()">
+        </div>
+        <button class="btn btn-outline" onclick="setDayViewToday()">오늘</button>
+      </div>
+      <!-- 당일 요약 배지 -->
+      <div id="dayViewBadges" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;"></div>
+      <!-- 당일 한 줄 테이블 -->
+      <div class="table-container" style="margin-top:14px;">
+        <table id="dayViewTable">
+          <thead id="dayViewThead"></thead>
+          <tbody id="dayViewTbody"></tbody>
+        </table>
+      </div>
+      <!-- 당일 차량 목록 -->
+      <div id="dayVehicleList" style="margin-top:12px;"></div>
     </div>
-    <div class="card" style="padding:0;">
-      <div class="table-container" style="max-height:65vh; overflow:auto;">
+
+    <!-- 기간별 집계 -->
+    <div class="card">
+      <div class="card-title">📊 기간별 층별 집계표 (엑셀 형식)</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <div class="date-select">
+          <label>시작:</label>
+          <input type="date" id="rangeStart">
+          <label>종료:</label>
+          <input type="date" id="rangeEnd">
+        </div>
+        <select id="rangeMonthQuick" onchange="setRangeByMonth(this.value)" style="padding:8px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;">
+          <option value="">월 빠른선택</option>
+          <option value="2">2월</option><option value="3">3월</option>
+          <option value="4">4월</option><option value="5">5월</option>
+          <option value="6">6월</option><option value="all">전체</option>
+        </select>
+        <button class="btn btn-primary" onclick="renderFloorTable()">🔄 집계</button>
+        <button class="btn btn-success" onclick="exportFloorExcel()">📥 Excel</button>
+        <span style="font-size:13px;color:var(--text-muted);" id="floorCalcTime"></span>
+      </div>
+
+      <!-- 층별 합계 바 -->
+      <div id="floorSummaryBars" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;"></div>
+
+      <!-- 메인 집계 테이블 -->
+      <div class="table-container" style="max-height:55vh;overflow:auto;">
         <table class="floor-table" id="floorTable">
           <thead id="floorThead"></thead>
           <tbody id="floorTbody"></tbody>
@@ -462,8 +618,86 @@
 
   </div>
 
-  <!-- =============== EXPORT TAB =============== -->
-  <div class="tab-panel" id="tab-export">
+  <!-- =============== SETTINGS TAB =============== -->
+  <div class="tab-panel" id="tab-settings">
+
+    <!-- 층별 임차인 설정 -->
+    <div class="card">
+      <div class="card-title">🏢 층별 임차인 설정
+        <span style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:8px;">층 분류에 자동 반영됩니다</span>
+      </div>
+      <div class="notice notice-info" style="margin-bottom:14px;">
+        💡 <div>5층: 방문목적에 <strong>변호사</strong> 키워드 있으면 변호사, 나머지는 광주은행으로 자동 분류됩니다.<br>
+        다른 층도 임차인명을 등록하면 비고란에 표시됩니다. (분류는 층번호 기준으로 작동)</div>
+      </div>
+
+      <!-- 추가 폼 -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end;">
+        <div class="form-group" style="min-width:100px;">
+          <label>층 번호</label>
+          <input type="text" id="tFloor" placeholder="예: 5, B1, 1" style="padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:14px;width:110px;">
+        </div>
+        <div class="form-group" style="flex:1;min-width:160px;">
+          <label>임차인/용도명</label>
+          <input type="text" id="tName" placeholder="예: 광주은행, 정형외과, 왕삼돈" style="padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:14px;width:100%;">
+        </div>
+        <div class="form-group" style="min-width:120px;">
+          <label>분류 카테고리</label>
+          <select id="tCat" style="padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:14px;width:100%;">
+            <option value="">자동(층번호)</option>
+            <option value="1층">1층(병원)</option>
+            <option value="왕삼돈">왕삼돈(B1)</option>
+            <option value="편의점">편의점(B1)</option>
+            <option value="관리소">관리소(B2)</option>
+            <option value="5층광주은행">5층(광주은행)</option>
+            <option value="5층변호사">5층(변호사)</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="addTenant()" style="height:42px;align-self:flex-end;">+ 추가</button>
+      </div>
+
+      <!-- 임차인 목록 테이블 -->
+      <div class="table-container">
+        <table id="tenantTable">
+          <thead>
+            <tr>
+              <th style="width:80px">층</th>
+              <th>임차인/용도</th>
+              <th style="width:140px">분류 카테고리</th>
+              <th style="width:80px">관리</th>
+            </tr>
+          </thead>
+          <tbody id="tenantBody">
+            <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted)">로딩중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 방문목적 카테고리 관리 -->
+    <div class="card">
+      <div class="card-title">🗂️ 방문목적 카테고리 관리
+        <span style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:8px;">입력 모달의 드롭다운에 반영됩니다</span>
+      </div>
+
+      <!-- 추가 폼 -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;align-items:flex-end;">
+        <div class="form-group" style="flex:1;">
+          <label>새 방문목적 추가</label>
+          <input type="text" id="newPurpose" placeholder="예: 회의, 업무, 배달, 공사" style="padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:14px;width:100%;" onkeydown="if(event.key==='Enter')addPurpose()">
+        </div>
+        <button class="btn btn-primary" onclick="addPurpose()" style="height:42px;align-self:flex-end;">+ 추가</button>
+      </div>
+
+      <!-- 현재 목록 -->
+      <div id="purposeList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      <div style="margin-top:10px;font-size:12px;color:var(--text-muted)">태그를 클릭하면 삭제됩니다</div>
+    </div>
+
+  </div>
+
+</div><!-- /content -->
     <div class="card">
       <div class="card-title">📥 Excel 파일 내보내기</div>
       <div class="notice notice-info">💡 현재까지 입력된 모든 데이터를 기존 주차대장 형식의 Excel 파일로 내보냅니다.</div>
@@ -539,7 +773,8 @@
     <div class="form-row">
       <div class="form-group">
         <label>방문목적</label>
-        <input type="text" id="mPurpose" placeholder="예: 미팅, 병원, 왕3" oninput="autoFloorCat()">
+        <input type="text" id="mPurpose" placeholder="예: 미팅, 병원, 왕3" oninput="autoFloorCat()" list="purposeDatalist" autocomplete="off">
+        <datalist id="purposeDatalist"></datalist>
       </div>
       <div class="form-group">
         <label>배정층</label>
@@ -581,8 +816,9 @@
 </div>
 
 <div class="status-bar">
-  <span>서희타워 방문객 주차대장 관리시스템 v1.0</span>
+  <span>서희타워 방문객 주차대장 관리시스템 v2.0</span>
   <span id="totalRecords" class="status-ok">총 0건</span>
+  <span id="syncStatus" class="status-warn">⏳ 연결중...</span>
   <span id="lastUpdate" style="margin-left:auto;"></span>
 </div>
 
@@ -602,38 +838,49 @@ const FLOOR_COLS = [
 ];
 
 // ============================================================
+// FIREBASE INIT
+// ============================================================
+const FB_CONFIG = {
+  apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
+  authDomain: "my-system-25497.firebaseapp.com",
+  projectId: "my-system-25497"
+};
+firebase.initializeApp(FB_CONFIG);
+const db = firebase.firestore();
+const COLLECTION = 'parking_records';
+
+let unsubscribe = null; // realtime listener
+
+// ============================================================
 // INIT
 // ============================================================
 window.onload = () => {
-  // Set today's date
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('inputDate').value = today;
 
-  // Auto-select month tab
   const m = new Date().getMonth() + 1;
   const ms = document.getElementById('monthTab');
   for (let i = 0; i < ms.options.length; i++) {
     if (ms.options[i].value === m + '월') { ms.selectedIndex = i; break; }
   }
 
-  // Load API key
   const savedKey = localStorage.getItem('sh_anthropic_key');
   if (savedKey) {
-    document.getElementById('apiKeyInput').value = savedKey;
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiKeyInput').placeholder = '저장된 키 사용중';
     document.getElementById('apiStatus').textContent = '✓ 저장됨';
   }
 
-  // Load parking data
-  loadFromStorage();
-  renderList();
-  renderFloorTable();
-  renderDataStats();
+  // Firebase 실시간 리스너 시작
+  startRealtimeSync();
 };
 
 function saveApiKey() {
   const key = document.getElementById('apiKeyInput').value.trim();
   if (key) {
     localStorage.setItem('sh_anthropic_key', key);
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiKeyInput').placeholder = '저장된 키 사용중';
     document.getElementById('apiStatus').textContent = '✓ 저장됨';
   }
 }
@@ -642,20 +889,77 @@ function getApiKey() {
   return localStorage.getItem('sh_anthropic_key') || document.getElementById('apiKeyInput').value.trim();
 }
 
-function loadFromStorage() {
-  const saved = localStorage.getItem('sh_parking_data');
-  if (saved) {
-    try {
-      parkingData = JSON.parse(saved);
-      recalcFloor(true);
-    } catch(e) { parkingData = []; }
-  }
+// ============================================================
+// FIREBASE 실시간 동기화 (완성)
+// ============================================================
+function setSyncStatus(state, msg) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  const styles = {
+    ok:   { cls: 'status-ok',   text: '🟢 ' + msg },
+    warn: { cls: 'status-warn', text: '⏳ ' + msg },
+    err:  { cls: 'status-err',  text: '🔴 ' + msg },
+  };
+  const s = styles[state] || styles.warn;
+  el.className = s.cls;
+  el.textContent = s.text;
 }
 
+function startRealtimeSync() {
+  setSyncStatus('warn', '연결중...');
+  if (unsubscribe) unsubscribe();
+
+  // 임차인·방문목적 로드 (백그라운드)
+  loadTenants();
+  loadPurposes();
+
+  unsubscribe = db.collection(COLLECTION)
+    .orderBy('date', 'asc')
+    .onSnapshot(snapshot => {
+      parkingData = [];
+      snapshot.forEach(doc => {
+        parkingData.push({ _id: doc.id, ...doc.data() });
+      });
+      recalcFloor(true);
+      renderList();
+      renderDataStats();
+      setSyncStatus('ok', '동기화됨 · ' + new Date().toLocaleTimeString('ko-KR'));
+      document.getElementById('totalRecords').textContent = '총 ' + parkingData.length + '건';
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('ko-KR');
+    }, err => {
+      setSyncStatus('err', '연결 오류: ' + err.message);
+    });
+}
+
+async function saveRecord(rec) {
+  // Firestore doc ID: date_no 형식
+  const docId = (rec.date || 'nodate') + '_' + String(rec.no).padStart(4, '0');
+  const data = { ...rec };
+  delete data._id;
+  await db.collection(COLLECTION).doc(docId).set(data);
+}
+
+async function deleteFirebaseRecord(rec) {
+  if (!rec._id) return;
+  await db.collection(COLLECTION).doc(rec._id).delete();
+}
+
+// ============================================================
+// 날짜별 No 자동 채번
+// ============================================================
+function getNextNo(date) {
+  const same = parkingData.filter(r => r.date === date);
+  if (same.length === 0) return 1;
+  return Math.max(...same.map(r => parseInt(r.no) || 0)) + 1;
+}
+
+// ============================================================
+// localStorage 저장 (API 키만, 주차 데이터는 Firebase)
+// ============================================================
 function saveToStorage() {
-  localStorage.setItem('sh_parking_data', JSON.stringify(parkingData));
-  document.getElementById('lastUpdate').textContent = '저장: ' + new Date().toLocaleTimeString('ko-KR');
+  // 주차 데이터는 Firebase에서 관리 — 여기서는 UI 업데이트만
   document.getElementById('totalRecords').textContent = '총 ' + parkingData.length + '건';
+  document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('ko-KR');
 }
 
 // ============================================================
@@ -663,14 +967,28 @@ function saveToStorage() {
 // ============================================================
 function switchTab(id) {
   document.querySelectorAll('.tab').forEach((t,i) => {
-    const ids = ['ocr','list','floor','check','analysis','export'];
+    const ids = ['ocr','list','floor','check','analysis','export','settings'];
     t.classList.toggle('active', ids[i] === id);
   });
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + id).classList.add('active');
   if (id === 'list') renderList();
-  if (id === 'floor') renderFloorTable();
+  if (id === 'floor') { initFloorTab(); }
   if (id === 'export') renderDataStats();
+  if (id === 'settings') { renderTenants(); renderPurposes(); }
+}
+
+function initFloorTab() {
+  const today = new Date().toISOString().split('T')[0];
+  if (!document.getElementById('dayViewDate').value)
+    document.getElementById('dayViewDate').value = today;
+  if (!document.getElementById('rangeStart').value) {
+    const m = new Date(); m.setDate(1);
+    document.getElementById('rangeStart').value = m.toISOString().split('T')[0];
+    document.getElementById('rangeEnd').value = today;
+  }
+  renderDayView();
+  renderFloorTable();
 }
 
 // ============================================================
@@ -837,33 +1155,42 @@ async function runOCR() {
 // ============================================================
 function getFloorCat(floor, purpose) {
   const f = String(floor || '').trim().toLowerCase();
-  const p = String(purpose || '').trim();
+  const p = String(purpose || '').trim().toLowerCase();
 
   if (f === '1' || f === '1층') return '1층';
   if (f === 'b1') {
-    // B1: 왕삼돈 or 편의점
-    const pLow = p.toLowerCase();
-    if (pLow.includes('편의점') || pLow.includes('gs') || pLow.includes('gs25')) return '편의점';
-    return '왕삼돈'; // default B1 = 왕삼돈
+    if (p.includes('편의점') || p.includes('gs') || p.includes('gs25')) return '편의점';
+    return '왕삼돈';
   }
   if (f === 'b2' || f === 'b2층') return '관리소';
   if (f === '5' || f === '5층') {
-    const pLow = p.toLowerCase();
-    if (pLow.includes('변호사') || pLow.includes('501') || pLow.includes('법무')) return '5층변호사';
-    return '5층광주은행'; // default 5층 = 광주은행
+    // 변호사 키워드 있으면 변호사, 나머지는 무조건 광주은행
+    if (p.includes('변호사') || p.includes('법무')) return '5층변호사';
+    return '5층광주은행';
   }
 
-  // Numeric floors
   const num = parseInt(f.replace('층',''));
   if (!isNaN(num) && num >= 2 && num <= 20) return num + '층';
 
-  // Special cases
   if (f === '서희' || f === '서회' || f === '서희건설') return '기타';
   if (f === '-' || f === '' || f === 'nan') return '기타';
-  if (f.includes('전층') || f.includes('b지상') || f.includes('지상')) return '기타';
-  if (f.includes('세스코')) return '기타';
+  if (f.includes('전층') || f.includes('b지상') || f.includes('지상') || f.includes('옥상')) return '기타';
 
   return '기타';
+}
+
+// HH:MM → minutes. 전일/미출차/X 등 특수값 처리
+function timeToMin(t) {
+  if (!t || typeof t !== 'string') return null;
+  const s = t.trim();
+  // 특수값
+  if (['전일','미출차','x','-','nan',''].includes(s.toLowerCase())) return null;
+  const parts = s.split(':');
+  if (parts.length < 2) return null;
+  const h = parseInt(parts[0]);
+  const m = parseInt(parts[1]);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
 }
 
 function autoFloorCat() {
@@ -945,42 +1272,48 @@ function updateRowCat(i) {
   document.getElementById('cat-' + i).innerHTML = `<span class="tag" style="${getCatColor(cat)}">${cat}</span>`;
 }
 
-function confirmAddToList() {
+async function confirmAddToList() {
   if (!window.parsedRows || window.parsedRows.length === 0) return;
   const date = document.getElementById('inputDate').value;
   const monthTab = document.getElementById('monthTab').value;
 
-  let nextNo = 1;
-  const dateParkings = parkingData.filter(r => r.date === date);
-  if (dateParkings.length > 0) {
-    nextNo = Math.max(...dateParkings.map(r => parseInt(r.no) || 0)) + 1;
+  const btn = document.getElementById('addToListBtn');
+  btn.disabled = true;
+  btn.textContent = '저장중...';
+  setSyncStatus('warn', '저장중...');
+
+  try {
+    let nextNo = getNextNo(date);
+    for (let i = 0; i < window.parsedRows.length; i++) {
+      const r = window.parsedRows[i];
+      const cat = getFloorCat(r.floor, r.purpose);
+      await saveRecord({
+        no: r.no || (nextNo + i),
+        date, month: monthTab,
+        in: r.in || '',
+        out: r.out || '',
+        plate: String(r.plate || '').trim(),
+        floor: String(r.floor || '').trim(),
+        purpose: r.purpose || '',
+        park: r.park || '',
+        note: r.note || '',
+        floorCat: cat
+      });
+    }
+    setSyncStatus('ok', window.parsedRows.length + '건 저장됨');
+    alert(`✅ ${window.parsedRows.length}건이 저장되었습니다!`);
+    clearParsed();
+    uploadedImages = [];
+    renderPreviews();
+    document.getElementById('extractCard').style.display = 'none';
+    switchTab('list');
+  } catch(e) {
+    setSyncStatus('err', '저장 실패');
+    alert('저장 오류: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✅ 방문차량 목록에 추가';
   }
-
-  window.parsedRows.forEach((r, i) => {
-    const cat = getFloorCat(r.floor, r.purpose);
-    parkingData.push({
-      no: r.no || (nextNo + i),
-      date: date,
-      month: monthTab,
-      in: r.in || '',
-      out: r.out || '',
-      plate: String(r.plate || ''),
-      floor: String(r.floor || ''),
-      purpose: r.purpose || '',
-      park: r.park || '',
-      note: r.note || '',
-      floorCat: cat
-    });
-  });
-
-  saveToStorage();
-  recalcFloor(true);
-  alert(`✅ ${window.parsedRows.length}건이 방문차량 목록에 추가되었습니다!`);
-  clearParsed();
-  uploadedImages = [];
-  renderPreviews();
-  document.getElementById('extractCard').style.display = 'none';
-  switchTab('list');
 }
 
 function clearParsed() {
@@ -1001,26 +1334,47 @@ function clearExtracted() {
 // ============================================================
 function renderList() {
   const monthFilter = document.getElementById('listMonthFilter').value;
-  const dateFilter = document.getElementById('listDateFilter').value;
+  const dateFilter  = document.getElementById('listDateFilter').value;
+  const plateFilter = (document.getElementById('plateSearch')?.value || '').trim().toLowerCase();
 
   let filtered = parkingData;
-  if (dateFilter) filtered = filtered.filter(r => r.date === dateFilter);
-  else if (monthFilter !== 'all') filtered = filtered.filter(r => {
-    const m = new Date(r.date).getMonth() + 1;
-    return String(m) === monthFilter;
-  });
+  if (plateFilter) {
+    filtered = filtered.filter(r => String(r.plate || '').toLowerCase().includes(plateFilter));
+  } else if (dateFilter) {
+    filtered = filtered.filter(r => r.date === dateFilter);
+  } else if (monthFilter !== 'all') {
+    filtered = filtered.filter(r => {
+      const m = r.date ? new Date(r.date).getMonth() + 1 : null;
+      return String(m) === monthFilter;
+    });
+  }
 
-  filtered.sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.no - b.no));
+  filtered = [...filtered].sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.no - b.no));
 
   // Stats
   const statsDiv = document.getElementById('listStats');
-  statsDiv.innerHTML = `
-    <div class="stat-card"><div class="stat-val">${filtered.length}</div><div class="stat-label">총 방문차량</div></div>
-    <div class="stat-card"><div class="stat-val">${[...new Set(filtered.map(r=>r.date))].length}</div><div class="stat-label">집계 일수</div></div>
-    <div class="stat-card"><div class="stat-val">${filtered.filter(r=>r.floorCat==='1층').length}</div><div class="stat-label">병원(1층)</div></div>
-    <div class="stat-card"><div class="stat-val">${filtered.filter(r=>r.floorCat==='왕삼돈').length}</div><div class="stat-label">왕삼돈(B1)</div></div>
-    <div class="stat-card"><div class="stat-val">${filtered.filter(r=>r.floorCat.includes('광주은행')||r.floorCat.includes('변호사')).length}</div><div class="stat-label">5층</div></div>
-  `;
+  // 검색 중이면 해당 차량 이력 요약 표시
+  if (plateFilter) {
+    const totalVisits = filtered.length;
+    const dates = [...new Set(filtered.map(r => r.date))].sort();
+    statsDiv.innerHTML = `
+      <div class="stat-card" style="border:2px solid var(--primary)">
+        <div class="stat-val" style="color:#dc2626">${totalVisits}</div>
+        <div class="stat-label">"${plateFilter}" 검색결과</div>
+      </div>
+      <div class="stat-card"><div class="stat-val">${dates.length}</div><div class="stat-label">방문 날짜 수</div></div>
+      <div class="stat-card"><div class="stat-val" style="font-size:12px">${dates.slice(-1)[0]?.slice(5)||'-'}</div><div class="stat-label">마지막 방문</div></div>
+    `;
+  } else {
+    const safeFloorCat = r => r.floorCat || '';
+    statsDiv.innerHTML = `
+      <div class="stat-card"><div class="stat-val">${filtered.length}</div><div class="stat-label">총 방문차량</div></div>
+      <div class="stat-card"><div class="stat-val">${[...new Set(filtered.map(r=>r.date))].length}</div><div class="stat-label">집계 일수</div></div>
+      <div class="stat-card"><div class="stat-val">${filtered.filter(r=>safeFloorCat(r)==='1층').length}</div><div class="stat-label">병원(1층)</div></div>
+      <div class="stat-card"><div class="stat-val">${filtered.filter(r=>safeFloorCat(r)==='왕삼돈').length}</div><div class="stat-label">왕삼돈(B1)</div></div>
+      <div class="stat-card"><div class="stat-val">${filtered.filter(r=>safeFloorCat(r).includes('광주은행')||safeFloorCat(r).includes('변호사')).length}</div><div class="stat-label">5층</div></div>
+    `;
+  }
 
   // Table
   const tbody = document.getElementById('listBody');
@@ -1109,37 +1463,39 @@ function closeModal() {
 function saveModal() {
   const date = document.getElementById('mDate').value;
   const month = date ? (new Date(date).getMonth() + 1) + '월' : '';
+  const noVal = parseInt(document.getElementById('mNo').value) ||
+                (editingIdx >= 0 ? parkingData[editingIdx].no : getNextNo(date));
   const rec = {
-    no: parseInt(document.getElementById('mNo').value) || (parkingData.length + 1),
-    date, month,
+    no: noVal, date, month,
     in: document.getElementById('mIn').value,
     out: document.getElementById('mOut').value,
-    plate: document.getElementById('mPlate').value,
-    floor: document.getElementById('mFloor').value,
-    purpose: document.getElementById('mPurpose').value,
-    park: document.getElementById('mPark').value,
-    note: document.getElementById('mNote').value,
+    plate: document.getElementById('mPlate').value.trim(),
+    floor: document.getElementById('mFloor').value.trim(),
+    purpose: document.getElementById('mPurpose').value.trim(),
+    park: document.getElementById('mPark').value.trim(),
+    note: document.getElementById('mNote').value.trim(),
     floorCat: document.getElementById('mFloorCat').value
   };
 
-  if (editingIdx >= 0) {
-    parkingData[editingIdx] = rec;
-  } else {
-    parkingData.push(rec);
-  }
+  saveRecord(rec).then(() => {
+    setSyncStatus('ok', '저장됨');
+  }).catch(e => {
+    setSyncStatus('err', '저장 실패: ' + e.message);
+    alert('저장 오류: ' + e.message);
+  });
 
-  saveToStorage();
-  recalcFloor(true);
-  renderList();
   closeModal();
 }
 
 function deleteRecord(idx) {
   if (!confirm('이 기록을 삭제하시겠습니까?')) return;
-  parkingData.splice(idx, 1);
-  saveToStorage();
-  recalcFloor(true);
-  renderList();
+  const rec = parkingData[idx];
+  deleteFirebaseRecord(rec).then(() => {
+    setSyncStatus('ok', '삭제됨');
+  }).catch(e => {
+    setSyncStatus('err', '삭제 실패: ' + e.message);
+    alert('삭제 오류: ' + e.message);
+  });
 }
 
 // ============================================================
@@ -1154,67 +1510,272 @@ function recalcFloor(silent) {
     const cat = r.floorCat || getFloorCat(r.floor, r.purpose);
     floorData[date][cat] = (floorData[date][cat] || 0) + 1;
   });
-
   if (!silent) {
-    renderFloorTable();
-    document.getElementById('floorCalcTime').textContent = '마지막 계산: ' + new Date().toLocaleTimeString('ko-KR');
-    alert('✅ 층별집계가 재계산되었습니다.');
-  } else {
-    renderFloorTable();
+    initFloorTab();
   }
 }
 
-function renderFloorTable() {
-  const thead = document.getElementById('floorThead');
-  const tbody = document.getElementById('floorTbody');
+// ─── 당일 층별 현황 ────────────────────────────────────────
+function setDayViewToday() {
+  document.getElementById('dayViewDate').value = new Date().toISOString().split('T')[0];
+  renderDayView();
+}
 
-  if (Object.keys(floorData).length === 0) {
-    thead.innerHTML = '';
-    tbody.innerHTML = '<tr><td style="padding:24px;text-align:center;color:var(--text-muted)">방문차량 데이터를 먼저 입력하세요</td></tr>';
+function renderDayView() {
+  const date = document.getElementById('dayViewDate').value;
+  const rows = parkingData.filter(r => r.date === date)
+    .sort((a,b) => (a.in||'').localeCompare(b.in||''));
+
+  // ── 층별 카운트 ──
+  const dayCats = {};
+  rows.forEach(r => {
+    const cat = r.floorCat || getFloorCat(r.floor, r.purpose);
+    dayCats[cat] = (dayCats[cat] || 0) + 1;
+  });
+
+  // ── 배지 ──
+  const badgeDiv = document.getElementById('dayViewBadges');
+  if (rows.length === 0) {
+    badgeDiv.innerHTML = `<div style="color:var(--text-muted);font-size:13px;padding:12px 0">${date ? date + ' 데이터 없음' : '날짜를 선택하세요'}</div>`;
+    document.getElementById('dayViewThead').innerHTML = '';
+    document.getElementById('dayViewTbody').innerHTML = '';
+    document.getElementById('dayVehicleList').innerHTML = '';
     return;
   }
 
-  // Header
-  let thHtml = '<tr><th style="min-width:90px">날짜</th>';
-  FLOOR_COLS.forEach(c => { thHtml += `<th style="min-width:60px;writing-mode:vertical-lr;transform:rotate(180deg);padding:8px 4px;">${c}</th>`; });
-  thHtml += '<th style="min-width:60px;background:#dc2626">합계</th></tr>';
+  // 전체 합계 배지 먼저
+  let badges = `<div class="day-badge highlight"><div class="dv-cnt">${rows.length}</div><div class="dv-lbl">전체</div></div>`;
+  // 층별 배지 (값 있는 것만)
+  FLOOR_COLS.forEach(c => {
+    if (dayCats[c]) {
+      badges += `<div class="day-badge"><div class="dv-cnt" style="color:${getCatTextColor(c)}">${dayCats[c]}</div><div class="dv-lbl">${c}</div></div>`;
+    }
+  });
+  badgeDiv.innerHTML = badges;
+
+  // ── 한 줄 테이블 (엑셀 형식) ──
+  const thead = document.getElementById('dayViewThead');
+  const tbody = document.getElementById('dayViewTbody');
+  let thHtml = '<tr><th style="background:#1e3a5f">날짜</th>';
+  FLOOR_COLS.forEach(c => {
+    if (dayCats[c]) thHtml += `<th style="background:#334155;min-width:52px">${c}</th>`;
+  });
+  thHtml += '<th style="background:#dc2626;min-width:52px">합계</th></tr>';
   thead.innerHTML = thHtml;
 
-  const dates = Object.keys(floorData).sort();
-  let totals = {};
+  let tdHtml = `<tr><td class="date-col" style="font-weight:700">${date.slice(5)}</td>`;
+  FLOOR_COLS.forEach(c => {
+    if (dayCats[c]) tdHtml += `<td class="has-val">${dayCats[c]}</td>`;
+  });
+  tdHtml += `<td style="font-weight:800;background:#1e3a5f;color:white">${rows.length}</td></tr>`;
+  tbody.innerHTML = tdHtml;
+
+  // ── 당일 차량 목록 ──
+  const listDiv = document.getElementById('dayVehicleList');
+  let listHtml = `<div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">📋 ${date} 방문차량 목록 (${rows.length}대)</div>`;
+  rows.forEach((r, i) => {
+    const cat = r.floorCat || getFloorCat(r.floor, r.purpose);
+    listHtml += `<div class="dvl-row">
+      <div class="dvl-no">${i+1}</div>
+      <div class="dvl-time">${r.in||'-'} → ${r.out||'-'}</div>
+      <div class="dvl-plate">${r.plate}</div>
+      <div class="dvl-floor">${r.floor}층</div>
+      <div class="dvl-purpose">${r.purpose||''}</div>
+      <div class="dvl-cat"><span class="tag" style="${getCatColor(cat)}">${cat}</span></div>
+    </div>`;
+  });
+  listDiv.innerHTML = listHtml;
+}
+
+function getCatTextColor(cat) {
+  if (cat === '1층') return '#92400e';
+  if (cat.includes('광주은행')) return '#1e40af';
+  if (cat.includes('변호사')) return '#5b21b6';
+  if (cat === '왕삼돈') return '#9d174d';
+  if (cat === '편의점') return '#854d0e';
+  if (cat === '관리소') return '#075985';
+  return '#166534';
+}
+
+// ─── 기간별 층별 집계 ─────────────────────────────────────
+function setRangeByMonth(val) {
+  if (!val) return;
+  const y = new Date().getFullYear();
+  if (val === 'all') {
+    document.getElementById('rangeStart').value = '2026-01-01';
+    document.getElementById('rangeEnd').value = new Date().toISOString().split('T')[0];
+  } else {
+    const m = parseInt(val);
+    document.getElementById('rangeStart').value = `${y}-${String(m).padStart(2,'0')}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    document.getElementById('rangeEnd').value = `${y}-${String(m).padStart(2,'0')}-${lastDay}`;
+  }
+  renderFloorTable();
+}
+
+function renderFloorTable() {
+  recalcFloor(true); // 내부 floorData 갱신
+  const start = document.getElementById('rangeStart')?.value || '';
+  const end   = document.getElementById('rangeEnd')?.value   || '';
+
+  const thead = document.getElementById('floorThead');
+  const tbody = document.getElementById('floorTbody');
+  if (!thead || !tbody) return;
+
+  // 날짜 필터
+  let dates = Object.keys(floorData).sort();
+  if (start) dates = dates.filter(d => d >= start);
+  if (end)   dates = dates.filter(d => d <= end);
+
+  if (dates.length === 0) {
+    thead.innerHTML = '';
+    tbody.innerHTML = '<tr><td style="padding:24px;text-align:center;color:var(--text-muted)">해당 기간 데이터가 없습니다</td></tr>';
+    document.getElementById('floorSummaryBars').innerHTML = '';
+    return;
+  }
+
+  // 사용된 층 컬럼만 추려서 표시 (0인 컬럼 숨김)
+  const totals = {};
   FLOOR_COLS.forEach(c => totals[c] = 0);
   let grandTotal = 0;
+  dates.forEach(date => {
+    const day = floorData[date] || {};
+    FLOOR_COLS.forEach(c => { totals[c] += (day[c] || 0); });
+  });
+  const usedCols = FLOOR_COLS.filter(c => totals[c] > 0);
+  FLOOR_COLS.forEach(c => { grandTotal += totals[c]; });
 
+  // ── 층별 합계 바 차트 ──
+  const maxVal = Math.max(...usedCols.map(c => totals[c]), 1);
+  let barsHtml = '';
+  usedCols.forEach(c => {
+    const pct = Math.round((totals[c] / maxVal) * 100);
+    barsHtml += `<div class="floor-bar-wrap">
+      <div class="floor-bar-label" title="${c}">${c}</div>
+      <div class="floor-bar-track"><div class="floor-bar-fill" style="width:${pct}%;background:${getCatBarColor(c)}"></div></div>
+      <div class="floor-bar-val">${totals[c]}</div>
+    </div>`;
+  });
+  document.getElementById('floorSummaryBars').innerHTML = barsHtml;
+
+  // ── 헤더 ──
+  let thHtml = '<tr><th style="min-width:80px;position:sticky;left:0;z-index:20">날짜</th>';
+  usedCols.forEach(c => {
+    thHtml += `<th style="min-width:48px;writing-mode:vertical-lr;transform:rotate(180deg);padding:8px 4px;font-size:11px">${c}</th>`;
+  });
+  thHtml += '<th style="min-width:48px;background:#dc2626">합계</th></tr>';
+  thead.innerHTML = thHtml;
+
+  // ── 행 ──
   let tbHtml = '';
   dates.forEach(date => {
-    const day = floorData[date];
+    const day = floorData[date] || {};
     let rowTotal = 0;
-    FLOOR_COLS.forEach(c => {
-      const v = day[c] || 0;
-      rowTotal += v;
-      totals[c] += v;
-    });
-    grandTotal += rowTotal;
+    usedCols.forEach(c => { rowTotal += (day[c] || 0); });
 
-    tbHtml += `<tr><td class="date-col">${date.slice(5)}</td>`;
-    FLOOR_COLS.forEach(c => {
+    // 날짜 클릭하면 당일 뷰로 이동
+    tbHtml += `<tr style="cursor:pointer" onclick="jumpToDayView('${date}')">
+      <td class="date-col" style="position:sticky;left:0;background:#f8fafc;z-index:5" title="클릭하면 당일 상세보기">${date.slice(5)}</td>`;
+    usedCols.forEach(c => {
       const v = day[c] || 0;
-      tbHtml += v > 0
-        ? `<td class="has-val">${v}</td>`
-        : `<td class="zero-val">-</td>`;
+      tbHtml += v > 0 ? `<td class="has-val">${v}</td>` : `<td class="zero-val">-</td>`;
     });
-    tbHtml += `<td style="font-weight:700;background:#1e3a5f;color:white">${rowTotal}</td></tr>`;
+    tbHtml += `<td style="font-weight:800;background:#1e3a5f;color:white">${rowTotal}</td></tr>`;
   });
 
-  // Total row
-  tbHtml += '<tr class="total-row"><td>합 계</td>';
-  FLOOR_COLS.forEach(c => {
-    tbHtml += `<td>${totals[c] || '-'}</td>`;
-  });
+  // ── 합계 행 ──
+  tbHtml += '<tr class="total-row"><td style="position:sticky;left:0;background:#1e3a5f;z-index:5">합 계</td>';
+  usedCols.forEach(c => { tbHtml += `<td>${totals[c] || '-'}</td>`; });
   tbHtml += `<td>${grandTotal}</td></tr>`;
-
   tbody.innerHTML = tbHtml;
+
+  document.getElementById('floorCalcTime').textContent =
+    `${dates.length}일 · 총 ${grandTotal}대 | 마지막 계산: ${new Date().toLocaleTimeString('ko-KR')}`;
 }
+
+// 집계표 날짜 클릭 → 당일 뷰로 이동
+function jumpToDayView(date) {
+  document.getElementById('dayViewDate').value = date;
+  renderDayView();
+  document.getElementById('dayViewDate').closest('.card').scrollIntoView({ behavior:'smooth' });
+}
+
+function getCatBarColor(cat) {
+  if (cat === '1층') return '#f59e0b';
+  if (cat.includes('광주은행')) return '#3b82f6';
+  if (cat.includes('변호사')) return '#8b5cf6';
+  if (cat === '왕삼돈') return '#ec4899';
+  if (cat === '편의점') return '#f97316';
+  if (cat === '관리소') return '#06b6d4';
+  if (cat === '기타') return '#94a3b8';
+  return '#10b981';
+}
+
+// ─── 층별 Excel 내보내기 ─────────────────────────────────
+function exportFloorExcel() {
+  recalcFloor(true);
+  const start = document.getElementById('rangeStart')?.value || '';
+  const end   = document.getElementById('rangeEnd')?.value   || '';
+
+  let dates = Object.keys(floorData).sort();
+  if (start) dates = dates.filter(d => d >= start);
+  if (end)   dates = dates.filter(d => d <= end);
+
+  const totals = {};
+  FLOOR_COLS.forEach(c => totals[c] = 0);
+  dates.forEach(date => {
+    FLOOR_COLS.forEach(c => { totals[c] += (floorData[date]?.[c] || 0); });
+  });
+  const usedCols = FLOOR_COLS.filter(c => totals[c] > 0);
+
+  const wb = XLSX.utils.book_new();
+
+  // 일별 집계 시트
+  const header = ['날짜', ...usedCols, '합계'];
+  const wsData = [header];
+  let grand = 0;
+  dates.forEach(date => {
+    const day = floorData[date] || {};
+    let total = 0;
+    const row = [date];
+    usedCols.forEach(c => { const v = day[c]||0; row.push(v||null); total += v; });
+    row.push(total); grand += total;
+    wsData.push(row);
+  });
+  const totalRow = ['합계'];
+  usedCols.forEach(c => totalRow.push(totals[c]||null));
+  totalRow.push(grand);
+  wsData.push(totalRow);
+
+  const ws1 = XLSX.utils.aoa_to_sheet(wsData);
+  // 컬럼 너비
+  ws1['!cols'] = [{ wch: 12 }, ...usedCols.map(() => ({ wch: 8 })), { wch: 8 }];
+  XLSX.utils.book_append_sheet(wb, ws1, '일별층별');
+
+  // 층별 합계만 시트
+  const ws2Data = [['층', '방문대수', '비율(%)']];
+  usedCols.forEach(c => {
+    ws2Data.push([c, totals[c], grand > 0 ? Math.round(totals[c]/grand*1000)/10 : 0]);
+  });
+  ws2Data.push(['합계', grand, 100]);
+  const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
+  ws2['!cols'] = [{ wch: 14 }, { wch: 10 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, ws2, '층별합계');
+
+  // 방문차량 상세
+  const wRows = parkingData
+    .filter(r => (!start || r.date >= start) && (!end || r.date <= end))
+    .sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.no - b.no);
+  const ws3Data = [['No','날짜','입차','출차','차량번호','방문층','방문목적','배정층','층분류','비고']];
+  wRows.forEach(r => ws3Data.push([r.no, r.date, r.in, r.out, r.plate, r.floor, r.purpose, r.park, r.floorCat||getFloorCat(r.floor,r.purpose), r.note||'']));
+  const ws3 = XLSX.utils.aoa_to_sheet(ws3Data);
+  ws3['!cols'] = [{wch:5},{wch:12},{wch:8},{wch:8},{wch:10},{wch:6},{wch:10},{wch:6},{wch:14},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws3, '방문차량상세');
+
+  const label = start && end ? `${start}_${end}` : new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb, `서희타워_층별집계_${label}.xlsx`);
+}
+
 
 // ============================================================
 // CROSS CHECK
@@ -1318,23 +1879,21 @@ function importJSON() {
   document.getElementById('jsonImport').click();
 }
 
-function doImportJSON(input) {
+async function doImportJSON(input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const obj = JSON.parse(e.target.result);
       const imported = obj.data || obj;
       if (!Array.isArray(imported)) throw new Error('잘못된 형식');
-      if (!confirm(`${imported.length}건을 불러옵니다. 기존 데이터에 추가할까요? (취소: 덮어쓰기)`)) {
-        parkingData = imported;
-      } else {
-        parkingData = [...parkingData, ...imported];
+      if (!confirm(`${imported.length}건을 Firebase에 업로드합니다. 계속할까요?`)) return;
+      setSyncStatus('warn', '업로드중...');
+      for (const r of imported) {
+        await saveRecord(r);
       }
-      saveToStorage();
-      recalcFloor(true);
-      renderList();
+      setSyncStatus('ok', imported.length + '건 업로드 완료');
       alert('✅ 불러오기 완료!');
     } catch(e) { alert('오류: ' + e.message); }
   };
@@ -1362,16 +1921,7 @@ function renderDataStats() {
 // VEHICLE ANALYSIS
 // ============================================================
 
-// HH:MM → minutes
-function timeToMin(t) {
-  if (!t || typeof t !== 'string') return null;
-  const parts = t.trim().split(':');
-  if (parts.length < 2) return null;
-  const h = parseInt(parts[0]);
-  const m = parseInt(parts[1]);
-  if (isNaN(h) || isNaN(m)) return null;
-  return h * 60 + m;
-}
+// HH:MM → minutes (공통 함수 위에서 정의됨)
 
 // Returns stay duration in minutes, null if invalid
 function calcStayMin(inTime, outTime) {
@@ -1542,6 +2092,266 @@ function runAnalysis() {
     }).join('');
   }
 }
+
+// ============================================================
+// 전역 차량번호 검색 (모든 탭에서 항상 표시)
+// ============================================================
+function globalSearch(val) {
+  const q = val.trim();
+  const clearBtn = document.getElementById('globalSearchClear');
+  const resultDiv = document.getElementById('globalSearchResult');
+  const infoSpan = document.getElementById('globalSearchInfo');
+
+  if (!q) {
+    resultDiv.style.display = 'none';
+    clearBtn.style.display = 'none';
+    infoSpan.textContent = '';
+    return;
+  }
+
+  clearBtn.style.display = '';
+  const hits = parkingData.filter(r =>
+    String(r.plate || '').toLowerCase().includes(q.toLowerCase())
+  ).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.no - b.no);
+
+  document.getElementById('globalSearchTitle').textContent =
+    `"${q}" 검색결과 — ${hits.length}건 / 방문일 ${[...new Set(hits.map(r => r.date))].length}일`;
+  infoSpan.textContent = hits.length + '건';
+
+  const tbody = document.getElementById('globalSearchBody');
+  if (hits.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:var(--text-muted)">결과 없음</td></tr>';
+  } else {
+    tbody.innerHTML = hits.map(r => {
+      const cat = r.floorCat || getFloorCat(r.floor, r.purpose);
+      return `<tr>
+        <td style="font-size:11px">${r.date}</td>
+        <td>${r.no}</td>
+        <td>${r.in || '-'}</td>
+        <td>${r.out || '-'}</td>
+        <td style="font-weight:800;letter-spacing:1px">${r.plate}</td>
+        <td>${r.floor}</td>
+        <td>${r.purpose || ''}</td>
+        <td>${r.park || ''}</td>
+        <td><span class="tag" style="${getCatColor(cat)}">${cat}</span></td>
+        <td style="font-size:11px;color:var(--text-muted)">${r.note || ''}</td>
+      </tr>`;
+    }).join('');
+  }
+  resultDiv.style.display = '';
+}
+
+function clearGlobalSearch() {
+  document.getElementById('globalPlateSearch').value = '';
+  document.getElementById('globalSearchResult').style.display = 'none';
+  document.getElementById('globalSearchClear').style.display = 'none';
+  document.getElementById('globalSearchInfo').textContent = '';
+}
+
+// ============================================================
+// 설정: 층별 임차인 관리 (Firebase)
+// ============================================================
+const COL_TENANT  = 'parking_tenants';
+const COL_PURPOSE = 'parking_purposes';
+
+// 기본 임차인 (처음 로드 시 없으면 사용)
+const DEFAULT_TENANTS = [
+  { floor: '1',  name: '병원(정형외과)',    cat: '1층' },
+  { floor: '5',  name: '광주은행(502호)',   cat: '5층광주은행' },
+  { floor: '5',  name: '변호사(501호)',     cat: '5층변호사' },
+  { floor: 'B1', name: '왕삼돈',           cat: '왕삼돈' },
+  { floor: 'B1', name: '편의점(GS25)',     cat: '편의점' },
+  { floor: 'B2', name: '관리소',           cat: '관리소' },
+];
+
+const DEFAULT_PURPOSES = ['미팅','병원','치료','공사','은행','업무','상담','회의','근무','직원','식사','왕3','편의점','청소','점검','배달'];
+
+let tenantsCache  = [];
+let purposesCache = [];
+
+async function loadTenants() {
+  const snap = await db.collection(COL_TENANT).orderBy('floor').get();
+  if (snap.empty) {
+    // 최초 - 기본값 저장
+    for (const t of DEFAULT_TENANTS) {
+      await db.collection(COL_TENANT).add(t);
+    }
+    tenantsCache = DEFAULT_TENANTS.map((t, i) => ({ _id: 'init' + i, ...t }));
+  } else {
+    tenantsCache = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  }
+}
+
+async function loadPurposes() {
+  const snap = await db.collection(COL_PURPOSE).orderBy('name').get();
+  if (snap.empty) {
+    for (const name of DEFAULT_PURPOSES) {
+      await db.collection(COL_PURPOSE).add({ name });
+    }
+    purposesCache = DEFAULT_PURPOSES.map((name, i) => ({ _id: 'init' + i, name }));
+  } else {
+    purposesCache = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  }
+  updatePurposeDatalist();
+}
+
+function updatePurposeDatalist() {
+  const dl = document.getElementById('purposeDatalist');
+  if (!dl) return;
+  dl.innerHTML = purposesCache.map(p => `<option value="${p.name}">`).join('');
+}
+
+async function renderTenants() {
+  if (tenantsCache.length === 0) await loadTenants();
+  const tbody = document.getElementById('tenantBody');
+  if (!tbody) return;
+
+  if (tenantsCache.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted)">등록된 임차인 없음</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = tenantsCache.map(t => `
+    <tr>
+      <td style="font-weight:700">${t.floor}층</td>
+      <td>
+        <input type="text" value="${t.name}" onchange="updateTenant('${t._id}','name',this.value)"
+          style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:100%;font-size:13px;">
+      </td>
+      <td>
+        <select onchange="updateTenant('${t._id}','cat',this.value)"
+          style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;width:100%;">
+          ${['1층','왕삼돈','편의점','관리소','5층광주은행','5층변호사','기타',
+             '2층','3층','4층','6층','7층','8층','9층','10층','11층','12층','13층','14층','15층','16층','17층','18층','19층','20층']
+            .map(v => `<option value="${v}" ${t.cat === v ? 'selected' : ''}>${v}</option>`).join('')}
+        </select>
+      </td>
+      <td><button class="btn-icon" onclick="deleteTenant('${t._id}')" style="color:var(--danger)">🗑️</button></td>
+    </tr>`).join('');
+}
+
+async function addTenant() {
+  const floor   = document.getElementById('tFloor').value.trim();
+  const name    = document.getElementById('tName').value.trim();
+  const cat     = document.getElementById('tCat').value;
+  if (!floor || !name) { alert('층 번호와 임차인명을 입력하세요.'); return; }
+  const ref = await db.collection(COL_TENANT).add({ floor, name, cat: cat || (floor + '층') });
+  tenantsCache.push({ _id: ref.id, floor, name, cat: cat || (floor + '층') });
+  document.getElementById('tFloor').value = '';
+  document.getElementById('tName').value  = '';
+  document.getElementById('tCat').value   = '';
+  renderTenants();
+}
+
+async function updateTenant(id, field, val) {
+  await db.collection(COL_TENANT).doc(id).update({ [field]: val });
+  const t = tenantsCache.find(t => t._id === id);
+  if (t) t[field] = val;
+}
+
+async function deleteTenant(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  await db.collection(COL_TENANT).doc(id).delete();
+  tenantsCache = tenantsCache.filter(t => t._id !== id);
+  renderTenants();
+}
+
+// ============================================================
+// 설정: 방문목적 카테고리 관리 (Firebase)
+// ============================================================
+async function renderPurposes() {
+  if (purposesCache.length === 0) await loadPurposes();
+  const div = document.getElementById('purposeList');
+  if (!div) return;
+
+  if (purposesCache.length === 0) {
+    div.innerHTML = '<span style="color:var(--text-muted);font-size:13px">등록된 목적 없음</span>';
+    return;
+  }
+
+  div.innerHTML = purposesCache.map(p => `
+    <span class="tag" style="background:#dbeafe;color:#1e40af;cursor:pointer;padding:6px 12px;font-size:13px;"
+      onclick="deletePurpose('${p._id}','${p.name}')"
+      title="클릭하면 삭제">
+      ${p.name} ✕
+    </span>`).join('');
+}
+
+async function addPurpose() {
+  const name = document.getElementById('newPurpose').value.trim();
+  if (!name) return;
+  if (purposesCache.find(p => p.name === name)) { alert('이미 있는 목적입니다.'); return; }
+  const ref = await db.collection(COL_PURPOSE).add({ name });
+  purposesCache.push({ _id: ref.id, name });
+  purposesCache.sort((a, b) => a.name.localeCompare(b.name));
+  document.getElementById('newPurpose').value = '';
+  renderPurposes();
+  updatePurposeDatalist();
+}
+
+async function deletePurpose(id, name) {
+  if (!confirm(`"${name}"을 삭제하시겠습니까?`)) return;
+  await db.collection(COL_PURPOSE).doc(id).delete();
+  purposesCache = purposesCache.filter(p => p._id !== id);
+  renderPurposes();
+  updatePurposeDatalist();
+}
+
+// ============================================================
+// ⚡ 급한 메모 (표준 컴포넌트)
+// ============================================================
+const QM_LS_TEXT = 'sh_parking_qm_v1';
+let _qmTimer = null;
+
+function openQM() {
+  document.getElementById('qmPanel').classList.add('open');
+  document.getElementById('qmOverlay').classList.add('open');
+  const saved = localStorage.getItem(QM_LS_TEXT);
+  if (saved !== null) document.getElementById('qmText').innerHTML = saved;
+  document.getElementById('qmText').focus();
+}
+function closeQM() {
+  document.getElementById('qmPanel').classList.remove('open');
+  document.getElementById('qmOverlay').classList.remove('open');
+}
+function qmDebounce() {
+  clearTimeout(_qmTimer);
+  _qmTimer = setTimeout(() => {
+    localStorage.setItem(QM_LS_TEXT, document.getElementById('qmText').innerHTML);
+  }, 400);
+}
+function qmPaste(e) {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      const file = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const wrap = document.createElement('span');
+        wrap.className = 'qm-inline-img-wrap';
+        wrap.innerHTML = `<img src="${ev.target.result}"><button class="qm-del-img" onclick="this.parentNode.remove();qmDebounce()">✕</button>`;
+        const sel = window.getSelection();
+        if (sel.rangeCount) {
+          const range = sel.getRangeAt(0);
+          range.insertNode(wrap);
+          range.collapse(false);
+        } else {
+          document.getElementById('qmText').appendChild(wrap);
+        }
+        qmDebounce();
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeQM();
+  if (e.ctrlKey && e.shiftKey && e.key === 'M') { e.preventDefault(); openQM(); }
+});
 
 // Close modal on bg click
 document.getElementById('addModal').addEventListener('click', function(e) {
