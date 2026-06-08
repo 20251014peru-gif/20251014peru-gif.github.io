@@ -602,6 +602,8 @@ function migrateBadMemoAttachments(){
   }
 }
 
+function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
+
 // v42: 업무 저장 시 합계 자동계산 (qty × unitPrice + delivery)
 function calcWorkTotal(obj){
   const qty  = Number(obj.qty)||0;
