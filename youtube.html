@@ -6,7 +6,8 @@
 <title>유튜브 채널 분석</title>
 <!--
   ===== youtube.html 변경 이력 =====
-  v1.5 (2026-06-08): 분할 분석 기능 추가 — 자막 12,000자 초과 시 자동으로 10,000자씩 구간 분할,
+  v1.6 (2026-06-09): 채널 관리 기능 추가 — 채널 설정 탭에서 추가/수정/삭제 가능, localStorage 저장,
+                     탭/필터 동적 렌더링으로 채널 수 변경에 자동 대응
                      구간별 1차 추출 후 종합 리포트 생성. 진행 바 UI 표시.
   v1.4 (2026-06-08): 프롬프트에 "1회 언급 중요 신호" 규칙 추가 — 반복 없이 단 한 번만 나와도
                      핵심으로 처리하는 패턴 명시(명시적 강조/강한 확신/수치·티커/부정형/행동 촉구)
@@ -154,23 +155,15 @@ textarea:focus{border-color:#6366F1;}
 </div>
 
 <div class="wrap">
-  <div class="tnav">
-    <button class="tbtn on" id="tb-0">&#128218; 미주은</button>
-    <button class="tbtn" id="tb-1">&#129351; 소수몽키</button>
-    <button class="tbtn" id="tb-2">&#127979; 김교수</button>
-    <button class="tbtn" id="tb-3">&#128193; 시청기록</button>
-    <button class="tbtn" id="tb-4">&#128273; 핵심단어</button>
-    <button class="tbtn" id="tb-5">&#128200; 종목</button>
-    <button class="tbtn" id="tb-6">&#9878;&#65039; 비교</button>
+  <div class="tnav" id="tnav">
+    <!-- JS로 동적 렌더링 -->
   </div>
 
   <!-- 채널 입력 탭 (JS로 채움) -->
-  <div class="tp on" id="tp-0"></div>
-  <div class="tp" id="tp-1"></div>
-  <div class="tp" id="tp-2"></div>
+  <div id="ch-tabs-wrap"></div>
 
   <!-- 시청기록 -->
-  <div class="tp" id="tp-3">
+  <div class="tp" id="tp-hist">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
       <div style="font-size:13px;font-weight:700">&#128250; 내가 본 영상</div>
       <div style="display:flex;gap:6px;align-items:center;">
@@ -181,12 +174,7 @@ textarea:focus{border-color:#6366F1;}
         <button id="clear-hist-btn" style="font-size:11px;padding:4px 10px;background:#F3F4F6;color:#6B7280;border:none;border-radius:20px;cursor:pointer;font-family:inherit;">전체 삭제</button>
       </div>
     </div>
-    <div class="filter-row" id="filter-row">
-      <button class="fchip on" data-f="all">전체</button>
-      <button class="fchip" data-f="미주은">&#128218; 미주은</button>
-      <button class="fchip" data-f="소수몽키">&#129351; 소수몽키</button>
-      <button class="fchip" data-f="김교수">&#127979; 김교수</button>
-    </div>
+    <div class="filter-row" id="filter-row"></div>
     <div class="ctrl-row">
       <input type="text" class="search" id="hist-search" placeholder="\uD83D\uDD0D 제목·핵심단어 검색">
       <select id="hist-sort"><option value="new">최신순</option><option value="old">오래된순</option><option value="ch">채널순</option></select>
@@ -200,7 +188,7 @@ textarea:focus{border-color:#6366F1;}
   </div>
 
   <!-- 핵심단어 -->
-  <div class="tp" id="tp-4">
+  <div class="tp" id="tp-kw">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
       <div style="font-size:13px;font-weight:700">&#128273; 핵심단어</div>
       <div class="view-toggle" id="kw-view">
@@ -208,29 +196,19 @@ textarea:focus{border-color:#6366F1;}
         <button class="vchip" data-v="freq">&#9729; 빈도</button>
       </div>
     </div>
-    <div class="filter-row" id="kw-filter">
-      <button class="fchip on" data-f="all">전체</button>
-      <button class="fchip" data-f="미주은">&#128218; 미주은</button>
-      <button class="fchip" data-f="소수몽키">&#129351; 소수몽키</button>
-      <button class="fchip" data-f="김교수">&#127979; 김교수</button>
-    </div>
+    <div class="filter-row" id="kw-filter"></div>
     <div id="kw-list" style="margin-top:12px;"><div class="loading">&#9729; 불러오는 중...</div></div>
   </div>
 
   <!-- 종목 워치리스트 -->
-  <div class="tp" id="tp-5">
+  <div class="tp" id="tp-tk">
     <div style="font-size:13px;font-weight:700;margin-bottom:10px;">&#128200; 종목 워치리스트 <span style="font-size:11px;color:#9CA3AF">(영상에서 언급된 종목)</span></div>
-    <div class="filter-row" id="tk-filter">
-      <button class="fchip on" data-f="all">전체</button>
-      <button class="fchip" data-f="미주은">&#128218; 미주은</button>
-      <button class="fchip" data-f="소수몽키">&#129351; 소수몽키</button>
-      <button class="fchip" data-f="김교수">&#127979; 김교수</button>
-    </div>
+    <div class="filter-row" id="tk-filter"></div>
     <div id="tk-list" style="margin-top:12px;"><div class="loading">&#9729; 불러오는 중...</div></div>
   </div>
 
   <!-- 채널 비교 -->
-  <div class="tp" id="tp-6">
+  <div class="tp" id="tp-cmp">
     <div style="font-size:13px;font-weight:700;margin-bottom:10px;">&#9878;&#65039; 채널 교차 비교 <span style="font-size:11px;color:#9CA3AF">(분석 2개 이상 선택)</span></div>
     <div class="card">
       <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px;">비교 관점 (선택)</div>
@@ -239,6 +217,13 @@ textarea:focus{border-color:#6366F1;}
       <button class="run-btn" id="cmp-btn">&#9878;&#65039; 선택한 분석 비교하기</button>
     </div>
     <div id="cmp-result"></div>
+  </div>
+
+  <!-- 채널 설정 -->
+  <div class="tp" id="tp-cfg">
+    <div style="font-size:13px;font-weight:700;margin-bottom:12px;">⚙️ 채널 관리</div>
+    <div id="ch-list-cfg"></div>
+    <button class="add-btn" id="ch-add-btn" style="margin-top:6px;">➕ 새 채널 추가</button>
   </div>
 </div>
 
@@ -277,7 +262,7 @@ var FB_KEY = 'AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var FB_BASE = 'https://firestore.googleapis.com/v1/projects/my-system-25497/databases/(default)/documents';
 var COLLECTION = 'youtube-analyses';
 var MODEL = 'claude-sonnet-4-6';
-var VERSION = 'v1.5';
+var VERSION = 'v1.6';
 
 var CHANNELS = [
   { name:'미주은', icon:'\uD83D\uDCDA', color:'#DC2626', invest:true,
@@ -291,13 +276,31 @@ var CHANNELS = [
     focus:'거시경제 사이클과 금리 방향성, 채권-주식-달러 상관관계, 중앙은행 정책 시그널, 자산배분과 리스크 헤지' }
 ];
 
-var tempResults = [null, null, null];
-var analyzeMode = ['combined','combined','combined'];
+/* ---------- 채널 관리 ---------- */
+var DEFAULT_CHANNELS = [
+  { name:'미주은', icon:'📚', color:'#DC2626', invest:true,
+    desc:'EPS 컨센서스 · 밸류에이션 · 모멘텀 투자',
+    focus:'EPS 컨센서스 추이와 어닝 서프라이즈, 포워드 PER/PEG 밸류에이션, 모멘텀 진입·청산 조건, 목표 주가와 리스크 요인' },
+  { name:'소수몽키', icon:'🥇', color:'#2563EB', invest:true,
+    desc:'성장주 · 기술주 · 나스닥 중심 분석',
+    focus:'나스닥 기술·성장주 모멘텀, 실적 서프라이즈와 가이던스, 시장 심리와 수급 흐름, 단기 트레이딩 관점' },
+  { name:'김교수', icon:'🏫', color:'#059669', invest:false,
+    desc:'거시경제 · 금리 · 채권 · 자산배분',
+    focus:'거시경제 사이클과 금리 방향성, 채권-주식-달러 상관관계, 중앙은행 정책 시그널, 자산배분과 리스크 헤지' }
+];
+var CH_KEY = 'yt-channels-v1';
+function loadChannels(){ try{ var s=localStorage.getItem(CH_KEY); return s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT_CHANNELS)); }catch(e){ return JSON.parse(JSON.stringify(DEFAULT_CHANNELS)); } }
+function saveChannels(){ localStorage.setItem(CH_KEY, JSON.stringify(CHANNELS)); }
+var CHANNELS = loadChannels();
+
+var tempResults = [];
+var analyzeMode = [];
 var tempCompare = null;
 var allDocs = [];
 var histFilter='all', histView='card', histSort='new', histMonth='all', histSearch='';
 var kwFilter='all', kwView='list', kwQuery='';
 var tkFilter='all';
+var currentTab = 'ch-0';
 
 (function() {
   var n = new Date(); var days=['일','월','화','수','목','금','토'];
@@ -330,7 +333,7 @@ function linkCellHtml(r){
 /* ---------- 채널 입력 탭 ---------- */
 function buildChannelTab(idx){
   var ch=CHANNELS[idx];
-  document.getElementById('tp-'+idx).innerHTML =
+  document.getElementById('tp-ch-'+idx).innerHTML =
     '<div class="ch-hdr"><div class="ch-icon">'+ch.icon+'</div>'+
       '<div><div class="ch-name">'+ch.name+'</div><div class="ch-desc">'+ch.desc+'</div></div></div>'+
     '<div class="card">'+
@@ -381,9 +384,171 @@ function gatherVideos(idx){
     if(script) out.push({link:link,script:script});
   }); return out;
 }
-for (var bi=0; bi<3; bi++) buildChannelTab(bi);
+for (var bi=0; bi<CHANNELS.length; bi++) { tempResults.push(null); analyzeMode.push('combined'); }
 
-/* ---------- 모달 ---------- */
+/* ---------- 동적 탭/필터 렌더링 ---------- */
+function renderNav(){
+  var nav=document.getElementById('tnav');
+  var fixedTabs=[
+    {id:'hist',label:'📂 시청기록'},
+    {id:'kw',label:'🔑 핵심단어'},
+    {id:'tk',label:'📈 종목'},
+    {id:'cmp',label:'⚖️ 비교'},
+    {id:'cfg',label:'⚙️ 채널설정'}
+  ];
+  var html='';
+  CHANNELS.forEach(function(ch,i){ html+='<button class="tbtn'+(currentTab==='ch-'+i?' on':'')+'" data-tab="ch-'+i+'">'+ch.icon+' '+ch.name+'</button>'; });
+  fixedTabs.forEach(function(t){ html+='<button class="tbtn'+(currentTab===t.id?' on':'')+'" data-tab="'+t.id+'">'+t.label+'</button>'; });
+  nav.innerHTML=html;
+  nav.querySelectorAll('.tbtn').forEach(function(btn){ btn.addEventListener('click',function(){ showTab(this.getAttribute('data-tab')); }); });
+}
+
+function renderChTabs(){
+  var wrap=document.getElementById('ch-tabs-wrap');
+  var html='';
+  CHANNELS.forEach(function(ch,i){ html+='<div class="tp'+(currentTab==='ch-'+i?' on':'')+'" id="tp-ch-'+i+'"></div>'; });
+  wrap.innerHTML=html;
+  CHANNELS.forEach(function(ch,i){ buildChannelTab(i); });
+}
+
+function renderFilters(){
+  var allBtn='<button class="fchip on" data-f="all">전체</button>';
+  var chips=CHANNELS.map(function(ch){ return '<button class="fchip" data-f="'+ch.name+'">'+ch.icon+' '+ch.name+'</button>'; }).join('');
+  ['filter-row','kw-filter','tk-filter'].forEach(function(id){ var el=document.getElementById(id); if(el){ el.innerHTML=allBtn+chips; wireFilterChips(el); } });
+}
+
+function wireFilterChips(container){
+  container.querySelectorAll('.fchip').forEach(function(chip){ chip.addEventListener('click',function(){
+    var f=this.getAttribute('data-f');
+    container.querySelectorAll('.fchip').forEach(function(c){ c.classList.toggle('on',c===chip); });
+    var cid=container.id;
+    if(cid==='filter-row'){ histFilter=f; renderHist(); }
+    else if(cid==='kw-filter'){ kwFilter=f; kwQuery=''; renderKeywords(); }
+    else if(cid==='tk-filter'){ tkFilter=f; renderTickers(); }
+  }); });
+}
+
+function showTab(tabId){
+  currentTab=tabId;
+  // 채널 탭
+  document.querySelectorAll('#ch-tabs-wrap .tp').forEach(function(el){ el.classList.remove('on'); });
+  // 고정 탭
+  ['tp-hist','tp-kw','tp-tk','tp-cmp','tp-cfg'].forEach(function(id){ var el=document.getElementById(id); if(el)el.classList.remove('on'); });
+  // 탭 버튼
+  document.querySelectorAll('#tnav .tbtn').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-tab')===tabId); });
+
+  if(tabId.indexOf('ch-')===0){
+    var el=document.getElementById('tp-'+tabId); if(el)el.classList.add('on');
+  } else {
+    var el=document.getElementById('tp-'+tabId); if(el)el.classList.add('on');
+    if(tabId==='hist') loadView('hist');
+    else if(tabId==='kw') loadView('kw');
+    else if(tabId==='tk') loadView('tk');
+    else if(tabId==='cmp') loadView('cmp');
+    else if(tabId==='cfg') renderChConfig();
+  }
+}
+
+function initApp(){
+  CHANNELS.forEach(function(){ if(tempResults.length<CHANNELS.length){ tempResults.push(null); analyzeMode.push('combined'); } });
+  renderNav();
+  renderChTabs();
+  renderFilters();
+}
+
+/* ---------- 채널 설정 ---------- */
+var ICON_LIST = ['📚','🥇','🏫','📊','💰','🎯','🔍','📰','🌐','🎬','📡','💡','🏦','🇺🇸','🇰🇷'];
+var COLOR_LIST = ['#DC2626','#2563EB','#059669','#7C3AED','#D97706','#0891B2','#DB2777','#65A30D','#EA580C','#475569'];
+
+function renderChConfig(){
+  var el=document.getElementById('ch-list-cfg');
+  if(!el)return;
+  var html='';
+  CHANNELS.forEach(function(ch,i){
+    html+='<div class="card" style="margin-bottom:10px;padding:14px;" id="cfg-card-'+i+'">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'+
+        '<div style="font-size:15px;font-weight:800;color:'+ch.color+'">'+ch.icon+' '+ch.name+'</div>'+
+        '<div style="display:flex;gap:6px;">'+
+          '<button class="cfg-edit-btn" data-i="'+i+'" style="font-size:11px;padding:5px 12px;background:#EEF2FF;color:#4338CA;border:none;border-radius:8px;cursor:pointer;font-weight:700;">✏️ 수정</button>'+
+          '<button class="cfg-del-btn" data-i="'+i+'" style="font-size:11px;padding:5px 12px;background:#FEE2E2;color:#DC2626;border:none;border-radius:8px;cursor:pointer;font-weight:700;">🗑 삭제</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="font-size:12px;color:#6B7280;">'+ch.desc+'</div>'+
+    '</div>';
+  });
+  el.innerHTML=html;
+  el.querySelectorAll('.cfg-edit-btn').forEach(function(btn){ btn.addEventListener('click',function(){ openChModal(parseInt(this.getAttribute('data-i'))); }); });
+  el.querySelectorAll('.cfg-del-btn').forEach(function(btn){ btn.addEventListener('click',function(){
+    var i=parseInt(this.getAttribute('data-i'));
+    if(!confirm('"'+CHANNELS[i].name+'" 채널을 삭제할까요?\n(저장된 분석 기록은 유지됩니다)')) return;
+    CHANNELS.splice(i,1); tempResults.splice(i,1); analyzeMode.splice(i,1);
+    saveChannels(); rebuildApp();
+  }); });
+}
+
+function openChModal(idx){
+  var isNew=(idx==null);
+  var ch=isNew?{name:'',icon:'📺',color:'#6366F1',invest:true,desc:'',focus:''}:CHANNELS[idx];
+  var iconBtns=ICON_LIST.map(function(ic){ return '<button type="button" class="icon-pick'+(ic===ch.icon?' sel':'')+'" data-ic="'+ic+'" style="font-size:20px;padding:4px 6px;background:'+(ic===ch.icon?'#EEF2FF':'transparent')+';border:'+(ic===ch.icon?'2px solid #6366F1':'2px solid transparent')+';border-radius:8px;cursor:pointer;">'+ic+'</button>'; }).join('');
+  var colorBtns=COLOR_LIST.map(function(cl){ return '<button type="button" class="color-pick'+(cl===ch.color?' sel':'')+'" data-cl="'+cl+'" style="width:26px;height:26px;background:'+cl+';border:'+(cl===ch.color?'3px solid #1A1A2E':'3px solid transparent')+';border-radius:50%;cursor:pointer;"></button>'; }).join('');
+  document.body.insertAdjacentHTML('beforeend',
+    '<div class="ov" id="ch-modal-ov">'+
+    '<div class="modal" style="max-width:400px;max-height:90vh;overflow-y:auto;">'+
+      '<h3>'+(isNew?'새 채널 추가':'채널 수정')+'</h3>'+
+      '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:#6B7280;margin-bottom:4px;">채널 이름</div>'+
+        '<input type="text" id="cfg-name" value="'+esc(ch.name)+'" placeholder="채널 이름" style="margin:0"></div>'+
+      '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:#6B7280;margin-bottom:4px;">아이콘</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:4px;">'+iconBtns+'</div></div>'+
+      '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:#6B7280;margin-bottom:6px;">색상</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;">'+colorBtns+'</div></div>'+
+      '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:#6B7280;margin-bottom:4px;">설명 (짧게)</div>'+
+        '<input type="text" id="cfg-desc" value="'+esc(ch.desc)+'" placeholder="예) 거시경제 · 금리 분석" style="margin:0"></div>'+
+      '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:#6B7280;margin-bottom:4px;">분석 관점 (AI 프롬프트용)</div>'+
+        '<textarea id="cfg-focus" style="min-height:80px;margin:0">'+esc(ch.focus)+'</textarea></div>'+
+      '<div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;">'+
+        '<input type="checkbox" id="cfg-invest"'+(ch.invest?' checked':'')+' style="width:16px;height:16px;">'+
+        '<label for="cfg-invest" style="font-size:12px;font-weight:700;color:#374151;">투자 채널 (종목·투자 인사이트 섹션 포함)</label></div>'+
+      '<div class="mbtns">'+
+        '<button class="bcl" id="cfg-cancel">취소</button>'+
+        '<button class="bok" id="cfg-save">'+(isNew?'추가':'저장')+'</button>'+
+      '</div>'+
+    '</div></div>');
+  var ov=document.getElementById('ch-modal-ov');
+  var selIcon=ch.icon, selColor=ch.color;
+  ov.querySelectorAll('.icon-pick').forEach(function(b){ b.addEventListener('click',function(){
+    selIcon=this.getAttribute('data-ic');
+    ov.querySelectorAll('.icon-pick').forEach(function(x){ x.style.background=x===b?'#EEF2FF':'transparent'; x.style.border=x===b?'2px solid #6366F1':'2px solid transparent'; });
+  }); });
+  ov.querySelectorAll('.color-pick').forEach(function(b){ b.addEventListener('click',function(){
+    selColor=this.getAttribute('data-cl');
+    ov.querySelectorAll('.color-pick').forEach(function(x){ x.style.border=x===b?'3px solid #1A1A2E':'3px solid transparent'; });
+  }); });
+  document.getElementById('cfg-cancel').addEventListener('click',function(){ ov.remove(); });
+  document.getElementById('cfg-save').addEventListener('click',function(){
+    var name=document.getElementById('cfg-name').value.trim();
+    if(!name){ alert('채널 이름을 입력해줘'); return; }
+    var newCh={ name:name, icon:selIcon, color:selColor, invest:document.getElementById('cfg-invest').checked,
+      desc:document.getElementById('cfg-desc').value.trim(), focus:document.getElementById('cfg-focus').value.trim() };
+    if(isNew){ CHANNELS.push(newCh); tempResults.push(null); analyzeMode.push('combined'); }
+    else { CHANNELS[idx]=newCh; }
+    saveChannels(); ov.remove(); rebuildApp();
+    if(isNew) showTab('ch-'+(CHANNELS.length-1));
+  });
+}
+
+function rebuildApp(){
+  currentTab = currentTab||'ch-0';
+  // 채널 탭 범위 초과 시 첫 탭으로
+  if(currentTab.indexOf('ch-')===0){
+    var ci=parseInt(currentTab.replace('ch-',''));
+    if(ci>=CHANNELS.length) currentTab='ch-0';
+  }
+  renderNav(); renderChTabs(); renderFilters();
+  showTab(currentTab);
+}
+
+document.getElementById('ch-add-btn').addEventListener('click',function(){ openChModal(null); });
+
 function openM(){ document.getElementById('mov').classList.remove('hide'); var k=localStorage.getItem(AK);
   document.getElementById('key-hint').textContent=k?'저장된 키: '+k.slice(0,14)+'...':'아직 키 없음'; document.getElementById('ki').value=''; }
 function closeM(){ document.getElementById('mov').classList.add('hide'); }
@@ -396,12 +561,8 @@ document.getElementById('save-key-btn').addEventListener('click',saveKey);
 document.getElementById('clr-key-btn').addEventListener('click',clearKey);
 updBtn();
 
-/* ---------- 탭 ---------- */
-function showTab(idx){
-  for(var i=0;i<7;i++){ document.getElementById('tb-'+i).classList.toggle('on',i===idx); document.getElementById('tp-'+i).classList.toggle('on',i===idx); }
-  if(idx===3) loadView('hist'); else if(idx===4) loadView('kw'); else if(idx===5) loadView('tk'); else if(idx===6) loadView('cmp');
-}
-for(var ti=0;ti<7;ti++){ (function(i){ document.getElementById('tb-'+i).addEventListener('click',function(){ showTab(i); }); })(ti); }
+/* initApp 실행 */
+initApp();
 
 /* ---------- Firestore ---------- */
 function toFS(obj){ var f={}; Object.keys(obj).forEach(function(k){ var v=obj[k];
@@ -808,8 +969,6 @@ function wireHistEvents(el){
     var id=this.getAttribute('data-id'); if(confirm('이 기록을 삭제할까요?')) fbDelete(id).then(function(){ allDocs=allDocs.filter(function(d){return d._id!==id;}); renderHist(); });
   }); });
 }
-document.querySelectorAll('#filter-row .fchip').forEach(function(chip){ chip.addEventListener('click',function(){
-  histFilter=this.getAttribute('data-f'); document.querySelectorAll('#filter-row .fchip').forEach(function(c){c.classList.toggle('on',c===chip);}); renderHist(); }); });
 document.querySelectorAll('#view-toggle .vchip').forEach(function(chip){ chip.addEventListener('click',function(){
   histView=this.getAttribute('data-v'); document.querySelectorAll('#view-toggle .vchip').forEach(function(c){c.classList.toggle('on',c===chip);}); renderHist(); }); });
 document.getElementById('hist-search').addEventListener('input',function(){ histSearch=this.value; renderHist(); });
@@ -874,8 +1033,6 @@ function renderKeywords(){
     var found=allDocs.find(function(d){return d._id===this.getAttribute('data-id');}.bind(this)); if(found)openFS(found.html||'',found.title||'분석 리포트'); }); });
 }
 function wireKwClear(){ var c=document.getElementById('kw-clear'); if(c)c.addEventListener('click',function(){ kwQuery=''; renderKeywords(); }); }
-document.querySelectorAll('#kw-filter .fchip').forEach(function(chip){ chip.addEventListener('click',function(){
-  kwFilter=this.getAttribute('data-f'); kwQuery=''; document.querySelectorAll('#kw-filter .fchip').forEach(function(c){c.classList.toggle('on',c===chip);}); renderKeywords(); }); });
 document.querySelectorAll('#kw-view .vchip').forEach(function(chip){ chip.addEventListener('click',function(){
   kwView=this.getAttribute('data-v'); document.querySelectorAll('#kw-view .vchip').forEach(function(c){c.classList.toggle('on',c===chip);}); renderKeywords(); }); });
 
@@ -899,9 +1056,6 @@ function renderTickers(){
   el.querySelectorAll('.hist-item').forEach(function(item){ item.addEventListener('click',function(){
     var found=allDocs.find(function(d){return d._id===this.getAttribute('data-id');}.bind(this)); if(found)openFS(found.html||'',found.title||'분석 리포트'); }); });
 }
-document.querySelectorAll('#tk-filter .fchip').forEach(function(chip){ chip.addEventListener('click',function(){
-  tkFilter=this.getAttribute('data-f'); document.querySelectorAll('#tk-filter .fchip').forEach(function(c){c.classList.toggle('on',c===chip);}); renderTickers(); }); });
-
 /* ---------- 채널 비교 ---------- */
 function renderComparePick(){
   var el=document.getElementById('cmp-pick');
