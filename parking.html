@@ -1114,6 +1114,9 @@ async function renumberAll() {
     alert('오류: ' + e.message);
   }
 }
+
+// No 전체 누적 채번 — OCR의 원본 No 완전 무시, 전체 최대값+1
+function getNextNo() {
   if (parkingData.length === 0) return 1;
   return Math.max(...parkingData.map(r => parseInt(r.no) || 0)) + 1;
 }
