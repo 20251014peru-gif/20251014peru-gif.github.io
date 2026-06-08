@@ -6,6 +6,8 @@
 <title>유튜브 채널 분석</title>
 <!--
   ===== youtube.html 변경 이력 =====
+  v1.3 (2026-06-08): 자막 잘림 한도 확대(단일 4200→10000, 복수 3000→6000), max_tokens 5000→8000,
+                     프롬프트 강화 — 수치/근거/예시 빠짐없이 + 화자가 화면 설명 시 🖥️ 화면 설명 섹션 별도 추출
   v1.2 (2026-05-28): 종목 링크를 미국=야후 파이낸스, 한국=네이버 증권으로 분기(인베스팅닷컴 대체).
                      티커 추출에 market(US/KR) 추가, 한국종목은 6자리 코드로 네이버 직접 연결
   v1.1 (2026-05-28): 영상 개별/합쳐서 분석 선택 추가(개별 시 시청기록에 따로 저장),
@@ -432,18 +434,23 @@ var REPORT_CSS='<style>@import url(\'https://fonts.googleapis.com/css2?family=No
 '.subtext-box{background:var(--purple-light);border-left:4px solid var(--purple);border-radius:0 6px 6px 0;padding:12px 16px;margin:10px 0;font-size:14px;color:#3a2d6b}.subtext-box .label{display:inline-block;font-size:11px;font-weight:800;background:var(--purple);color:#fff;border-radius:4px;padding:2px 8px;margin-bottom:6px}.subtext-box .mean{color:#5f3dc4;font-weight:700}'+
 '.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13.5px}thead tr{background:var(--accent);color:#fff}thead th{padding:10px 14px;font-weight:700;text-align:left}tbody tr:nth-child(odd){background:var(--accent-light)}tbody tr:nth-child(even){background:#fff}tbody td{padding:10px 14px;vertical-align:top;color:#2d2d4e;border-bottom:1px solid #eef0f8}tbody td strong{color:var(--text-main)}'+
 '.story-box{background:var(--bg-story);border-radius:8px;padding:18px 20px;font-size:14px;color:var(--text-sub);line-height:1.9}.tag-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.tag{background:var(--accent-light);color:var(--accent);font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #c5d0ff}'+
+'.screen-box{background:#e8f4ff;border-left:4px solid #1971c2;border-radius:0 6px 6px 0;padding:12px 16px;margin:10px 0;font-size:14px;color:#1a3a5c}.screen-box .slabel{display:inline-block;font-size:11px;font-weight:800;background:#1971c2;color:#fff;border-radius:4px;padding:2px 8px;margin-bottom:6px;letter-spacing:.3px}.screen-box .sval{color:#003f8a;font-weight:700}.screen-box .sconc{color:#1864ab;font-style:italic}'+
 'mark{background:#fff3bf;padding:1px 4px;border-radius:3px;font-weight:700;color:#5c3d00}'+
 '.report-footer{background:var(--bg-story);padding:12px 32px;text-align:center;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border)}</style>';
 
 function getPrompt(idx, videos){
   var ch=CHANNELS[idx], n=new Date(), dateStr=n.getFullYear()+'년 '+(n.getMonth()+1)+'월 '+n.getDate()+'일', multi=videos.length>1;
-  var vidBlock=videos.map(function(v,i){ return '[영상 '+(i+1)+'] 링크: '+(v.link||'(없음)')+'\n내용:\n'+v.script.slice(0,multi?3000:4200); }).join('\n\n──────────\n\n');
+  var vidBlock=videos.map(function(v,i){ return '[영상 '+(i+1)+'] 링크: '+(v.link||'(없음)')+'\n내용:\n'+v.script.slice(0,multi?6000:10000); }).join('\n\n──────────\n\n');
   var insightTitle=ch.invest?'💰 투자 인사이트':'🏛️ 거시 인사이트';
   var insightCols=ch.invest?'열 = 항목(종목/섹터/진입·청산/리스크) | 핵심 내용 | 내가 활용할 포인트':'열 = 항목(금리·매크로/자산배분/헤지/주의신호) | 핵심 내용 | 내가 활용할 포인트';
   return '너는 기록학·주식투자·거시경제·인문학·콘텐츠 구조화 전문가야.\n\n'+
     '채널: '+ch.name+'\n분석 관점: '+ch.focus+' 중심으로 분석해.\n영상 개수: '+videos.length+'개'+(multi?' (여러 영상을 하나로 합쳐 종합 분석)':'')+'\n\n'+
     '【영상 원문】\n'+vidBlock+'\n\n'+
-    '다음을 모두 포함해 분석해:\n1) 전체를 관통하는 핵심 제목(한 줄)\n2) 영상별 핵심 요약(여러 개면 각각 + 종합)\n'+
+    '【절대 원칙 — 반드시 준수】\n'+
+    '① 원문에 등장하는 모든 수치(%, 배수, 금액, 날짜)·근거·예시·종목명·논리 흐름을 빠짐없이 담아라. 임의로 생략하거나 뭉뚱그리지 마라.\n'+
+    '② 화자가 "지금 보시면", "이 차트를", "여기 보시면", "화면에서", "이 숫자가", "표를 보면" 등 화면/차트/표/그래프를 직접 가리키며 설명하는 구간은 🖥️ [화면 설명] 태그를 붙여 별도 강조 처리하고, 해당 수치·내용·결론을 구체적으로 서술하라. 이 구간이 가장 중요한 핵심 정보일 가능성이 높다.\n'+
+    '③ "그냥", "뭐", "약간" 같은 완충어로 실제 강한 주장을 희석시킨 경우도 원래 주장의 강도를 그대로 기록하라.\n\n'+
+    '다음을 모두 포함해 분석해:\n1) 전체를 관통하는 핵심 제목(한 줄)\n2) 영상별 핵심 요약 — 원문의 논거·수치·예시를 최대한 구체적으로 (여러 개면 각각 + 종합)\n'+
     '3) ★무의식 신호★ — 명시적으로 말하진 않지만 반복·강조·회피·전제·말투에서 드러나는 진짜 속내, 숨은 확신/불안, 포지션 편향\n'+
     '4) '+insightTitle+'\n5) 영상에서 실제 언급된 개별 종목/티커(있으면)\n6) 핵심 키워드 태그 5~7개\n\n'+
     '출력: 첫 줄에 메타 주석, 다음 줄부터 <!DOCTYPE html>~</html>. 그 외 설명·코드펜스 금지.\n\n'+
@@ -454,7 +461,8 @@ function getPrompt(idx, videos){
     REPORT_CSS+'\n\n'+
     '구조(순서 고정):\n'+
     '[헤더] h1=핵심 제목, sub="채널: '+ch.name+' | '+dateStr+' | 영상 '+videos.length+'개"\n'+
-    '[SECTION 📋 영상별 핵심 요약] '+(multi?'각 영상마다 .vid-summary(제목+불릿 3~5개), 마지막에 .highlight-box 종합 요약':'.vid-summary 하나 + 불릿 4~6개')+'\n'+
+    '[SECTION 📋 영상별 핵심 요약] '+(multi?'각 영상마다 .vid-summary(제목+불릿 4~7개 — 수치·근거 포함), 마지막에 .highlight-box 종합 요약':'.vid-summary 하나 + 불릿 5~8개 — 수치·근거 포함')+'\n'+
+    '[SECTION 🖥️ 화면 설명 핵심 포인트] 화자가 차트·표·그래프·화면을 직접 가리키며 설명한 구간만 추출. .screen-box 형식으로 각 항목마다: <span class="slabel">🖥️ 화면</span> 어떤 화면인지(차트명/지표명) <span class="sval">수치/패턴:</span> 화자가 짚은 수치나 패턴 <span class="sconc">결론:</span> 화자의 해석·전망. 해당 구간이 없으면 "이 영상에는 화면 직접 설명 구간이 감지되지 않았습니다." 한 줄.\n'+
     '[SECTION 🧠 무의식 신호 — 화자가 진짜 말하고 있는 것] .subtext-box 3~5개. 각 박스: <span class="label">관찰</span> 반복·강조·회피된 표현 → <span class="mean">숨은 의미:</span> 진짜 속내\n'+
     '[SECTION '+insightTitle+'] 표 ('+insightCols+'), 행 4개 이상, 중요한 건 <mark>표시</mark>\n'+
     (ch.invest?'[SECTION 📈 언급 종목] 표: 티커 | 종목명 | 섹터(분야) | 화자 톤(긍정/중립/부정) | 한줄 코멘트. 실제 언급된 종목만, 없으면 "직접 언급된 개별 종목 없음" 한 줄\n':'')+
@@ -511,7 +519,7 @@ function analyzeCombined(idx,videos){
   var btn=document.getElementById('btn-'+idx); btn.disabled=true; btn.textContent='분석 중... (30~60초)';
   fetch('https://api.anthropic.com/v1/messages',{method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:MODEL,max_tokens:5000,messages:[{role:'user',content:getPrompt(idx,videos)}]})})
+    body:JSON.stringify({model:MODEL,max_tokens:8000,messages:[{role:'user',content:getPrompt(idx,videos)}]})})
   .then(function(r){return r.json();}).then(function(d){
     btn.disabled=false; updateAnalyzeBtn(idx);
     if(d.error){ alert(apiErr(d)); return; }
@@ -540,7 +548,7 @@ function analyzeIndividual(idx,videos){
     btn.textContent='개별 분석 중 ('+(i+1)+'/'+videos.length+')...';
     fetch('https://api.anthropic.com/v1/messages',{method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:MODEL,max_tokens:5000,messages:[{role:'user',content:getPrompt(idx,[videos[i]])}]})})
+      body:JSON.stringify({model:MODEL,max_tokens:8000,messages:[{role:'user',content:getPrompt(idx,[videos[i]])}]})})
     .then(function(r){return r.json();}).then(function(d){
       if(d.error){ appendResultError('indiv-'+idx,'영상 '+(i+1)+': '+apiErr(d)); }
       else { var text=''; if(d.content)d.content.forEach(function(b){ if(b.type==='text')text+=b.text; });
