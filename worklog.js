@@ -1315,7 +1315,10 @@ function populateWorkFilters(){
   $("locFilter").innerHTML=`<option value="전체">위치 전체</option>`+locs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join("");
   if(!locs.includes(locFilter)) locFilter="전체";
   $("locFilter").value=locFilter;
-  $("fieldFilter").innerHTML=`<option value="전체">분야 전체</option>`+fieldOptionsHTML();
+  // v42: __new__ 옵션 제외 (필터에는 실제 분야만)
+  const fieldOpts = FIELDS.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("");
+  $("fieldFilter").innerHTML=`<option value="전체">분야 전체</option>`+fieldOpts;
+  if(fieldFilter!=="전체" && !FIELDS.includes(fieldFilter)) fieldFilter="전체";
   $("fieldFilter").value=fieldFilter;
 }
 function workList(){
