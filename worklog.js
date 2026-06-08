@@ -1,5 +1,13 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v41-20260604";
+const APP_VERSION = "v42-20260608";
+// v42-20260608 변경사항:
+// - 업무 목록: 체크박스 다중선택 삭제 추가, 삭제버튼 항상 표시
+// - 업무 추가창: 분야/지출종류 → 해당층/위치 아래로 이동, 자재사양/단가/수량/합계/택배비 필드 추가
+// - 급한메모: 패널 밖 클릭 시 닫기
+// - 청소 지시사항/전달사항: Enter 키로 항목 추가
+// - 청소 소모품: 점보롤/핸드타월 고정 → 입고된 자재/출고된 자재 자유 항목으로 변경
+// - 점검일지 폴더 수정 버튼 크기 크게
+// - 통화 추가: 이름/직책/업체 3개 필드 분리
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
   authDomain: "my-system-25497.firebaseapp.com",
@@ -150,13 +158,16 @@ const SCHEMA={
     {k:"status",label:"완료 상태",type:"status"},
     {k:"floor",label:"해당층",type:"floor"},
     {k:"loc",label:"위치 (수동 입력)",type:"text"},
+    {k:"field",label:"분야",type:"field"},
+    {k:"expType",label:"지출종류",type:"select",opts:["없음","개인지출(품의서)","세금계산서"]},
     {k:"title",label:"업무내역",type:"text",full:true,req:true},
     {k:"detail",label:"세부내용",type:"textarea",full:true},
-    {k:"field",label:"분야",type:"field"},
-    {k:"material",label:"자재",type:"text"},
-    {k:"qty",label:"수량",type:"text"},
-    {k:"cost",label:"비용 (원)",type:"number"},
-    {k:"expType",label:"지출종류",type:"select",opts:["없음","개인지출(품의서)","세금계산서"]},
+    {k:"material",label:"자재명",type:"text"},
+    {k:"matSpec",label:"자재 사양",type:"text"},
+    {k:"qty",label:"수량",type:"number"},
+    {k:"unitPrice",label:"단가 (원)",type:"number"},
+    {k:"cost",label:"합계 (원)",type:"number"},
+    {k:"delivery",label:"택배비 (원)",type:"number"},
     {k:"vendor",label:"업체명 (지출시)",type:"text"},
     {k:"improve",label:"앞으로 개선사항",type:"textarea",full:true},
   ],
@@ -164,7 +175,10 @@ const SCHEMA={
   memo:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"title",label:"제목(선택)",type:"text",full:true}, {k:"body",label:"내용",type:"textarea",full:true,req:true} ],
   call:[
     {k:"date",label:"날짜",type:"date",req:true}, {k:"time",label:"시간",type:"time"},
-    {k:"dir",label:"구분",type:"select",opts:CALLDIR}, {k:"name",label:"상대 (이름/업체)",type:"text"},
+    {k:"dir",label:"구분",type:"select",opts:CALLDIR},
+    {k:"name",label:"이름",type:"text"},
+    {k:"role",label:"직책",type:"text"},
+    {k:"company",label:"업체",type:"text"},
     {k:"phone",label:"전화번호",type:"tel"},
     {k:"callField",label:"분야",type:"callfield"},
     {k:"content",label:"통화 내용",type:"textarea",full:true,req:true},
@@ -468,6 +482,30 @@ async function init(){
   $("wkDateClear").addEventListener("click",()=>{ wkFrom=""; wkTo=""; $("wkFrom").value=""; $("wkTo").value=""; renderWork(); });
   $("locFilter").addEventListener("change",e=>{ locFilter=e.target.value; renderWork(); });
   $("fieldFilter").addEventListener("change",e=>{ fieldFilter=e.target.value; renderWork(); });
+  // v42: 전체선택 + 선택삭제
+  document.addEventListener("change", e=>{
+    if(!e.target.classList.contains("wk-allchk")) return;
+    const checked = e.target.checked;
+    const list = workList();
+    if(checked) list.forEach(en=>wkChecked.add(en.id));
+    else wkChecked.clear();
+    renderWork();
+  });
+  const _btnWkDel = $("btnWkDelSelected");
+  if(_btnWkDel) _btnWkDel.addEventListener("click",()=>{
+    const cnt = wkChecked.size;
+    if(!cnt) return;
+    if(!confirm(`선택한 업무 ${cnt}건을 삭제하시겠습니까?`)) return;
+    const ids = [...wkChecked];
+    wkChecked.clear();
+    ids.forEach(id=>{
+      const linked=entries.filter(e=>e.kind==="expense"&&e.workId===id);
+      linked.forEach(e=>deleteRecord(e.id));
+      deleteRecord(id);
+    });
+    renderAll();
+    toast(`${cnt}건 삭제됨`);
+  });
   wireDiag();
   aiInitKeyUI();
   wireAttachUI();
@@ -564,7 +602,16 @@ function migrateBadMemoAttachments(){
   }
 }
 
-function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
+// v42: 업무 저장 시 합계 자동계산 (qty × unitPrice + delivery)
+function calcWorkTotal(obj){
+  const qty  = Number(obj.qty)||0;
+  const up   = Number(obj.unitPrice)||0;
+  const del  = Number(obj.delivery)||0;
+  if(qty>0 && up>0) obj.cost = qty*up + del;
+  else if(del>0 && !obj.cost) obj.cost = del;
+}
+
+
 /* ── 업무 → 지출 자동 연동 ─────────────────────────────── */
 function syncWorkExpense(workObj, workId, savedId){
   const id = workId || savedId;
@@ -994,6 +1041,19 @@ function openEditor(kind,id){
       const showHint=()=>{ const h=FIELD_HINT[fe.value]; if(h){ hintBox.textContent="💡 "+h; hintBox.style.display=""; } else hintBox.style.display="none"; };
       fe.addEventListener("change",showHint); showHint();
     }
+    // 자재 단가×수량 → 합계 자동 계산 + 택배비 포함
+    const calcWorkCost = ()=>{
+      const qty = Number(($("m-qty")||{}).value)||0;
+      const up  = Number(($("m-unitPrice")||{}).value)||0;
+      const del = Number(($("m-delivery")||{}).value)||0;
+      const costEl = $("m-cost");
+      if(costEl && (qty>0||up>0)){
+        costEl.value = qty*up + del;
+      }
+    };
+    ["m-qty","m-unitPrice","m-delivery"].forEach(id=>{
+      const el=$(id); if(el) el.addEventListener("input", calcWorkCost);
+    });
   }
   $("overlay").classList.add("show");
   const modalEl=$("overlay").querySelector(".modal"); if(modalEl) modalEl.scrollTop=0;
@@ -1189,8 +1249,8 @@ $("mSave").addEventListener("click",async ()=>{
   if(mKind==="filelink"){ setTimeout(()=>renderFileLink(),50); }
   else if(mKind==="site"){ renderSite(); }
   else renderAll();
-  // 업무 저장 시 지출 자동 연동
-  if(mKind==="work") syncWorkExpense(obj, mId, savedId);
+  // 업무 저장 시 지출 자동 연동 + 합계 자동계산
+  if(mKind==="work"){ calcWorkTotal(obj); syncWorkExpense(obj, mId, savedId); }
   $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
 });
 $("mDelete").addEventListener("click",()=>{
@@ -1268,6 +1328,8 @@ function workList(){
     && (fieldFilter==="전체"||e.field===fieldFilter)
     && matchObj(e,Q.work)).sort(byDateDesc);
 }
+let wkChecked = new Set(); // 선택된 업무 id
+
 function renderWork(){
   populateWorkFilters();
   const body=$("wkBody"), foot=$("wkFoot");
@@ -1275,23 +1337,39 @@ function renderWork(){
   const list=workList();
   const filterOn = Q.work.trim()||statusFilter!=="전체"||wkFrom||wkTo||locFilter!=="전체"||floorFilter!=="전체"||fieldFilter!=="전체";
   $("wkCount").textContent = filterOn ? `${list.length} / 전체 ${all.length}건` : `총 ${all.length}건`;
-  if(!list.length){ body.innerHTML=`<tr><td colspan="11" class="empty">${all.length?"조건에 맞는 업무가 없습니다.":"아직 입력된 업무가 없습니다."}</td></tr>`; foot.innerHTML=""; return; }
-  body.innerHTML=list.map(en=>`<tr data-id="${en.id}">
+  // 선택 삭제 버튼 상태 갱신
+  const delSelBtn = $("btnWkDelSelected");
+  if(delSelBtn) delSelBtn.style.display = wkChecked.size>0 ? "" : "none";
+  if(!list.length){ body.innerHTML=`<tr><td colspan="10" class="empty">${all.length?"조건에 맞는 업무가 없습니다.":"아직 입력된 업무가 없습니다."}</td></tr>`; foot.innerHTML=""; return; }
+  const allChecked = list.length>0 && list.every(en=>wkChecked.has(en.id));
+  body.innerHTML=list.map(en=>`<tr data-id="${en.id}" class="${wkChecked.has(en.id)?"wk-checked":""}">
+    <td style="text-align:center;padding:6px 8px"><input type="checkbox" class="wk-chk" data-wid="${en.id}" ${wkChecked.has(en.id)?"checked":""} onclick="event.stopPropagation()"></td>
     <td>${en.date||""}</td>
     <td><span class="st ${statusClass(en.status)}">${esc(en.status||"")}</span></td>
     <td>${esc(en.floor||"")}</td>
     <td>${esc(en.loc||"")}</td>
     <td>${esc(en.title||"")}${(en.photos&&en.photos.length)?" 📷":""}${(en.attachments&&en.attachments.length)?" 📎":""}</td>
-    <td class="clip" data-tip="${esc(en.detail||"")}" title="${esc(en.detail||"")}">${esc(en.detail||"")}</td>
     <td><span class="pill ${fieldClass(en.field)}">${esc(en.field||"")}</span></td>
-    <td>${esc(en.material||"")}</td>
     <td class="num">${en.cost?won(en.cost):""}</td>
     <td>${en.expType&&en.expType!=="없음"?'<span class="pill '+(en.expType==="세금계산서"?"amount":"tech")+'" style="font-size:10px">'+(en.expType==="세금계산서"?"📃세금":"💸품의")+"</span>":""}</td>
-    <td class="clip" data-tip="${esc(en.improve||"")}" title="${esc(en.improve||"")}">${esc(en.improve||"")}</td>
-    <td><button class="rowdel" data-del="${en.id}" title="삭제">🗑</button></td></tr>`).join("");
+    <td style="text-align:center"><button class="rowdel wk-rowdel-vis" data-del="${en.id}" title="삭제">🗑</button></td></tr>`).join("");
+  // 전체선택 체크박스 헤더 동기화
+  const thChk = document.querySelector("#panel-work thead .wk-allchk");
+  if(thChk) thChk.checked = allChecked;
   const totalCost=list.reduce((s,en)=>s+(Number(en.cost)||0),0);
-  foot.innerHTML=`<tr><td colspan="8" style="background:#33567d;color:#fff;font-weight:700">합계 (${list.length}건)</td><td class="num" style="background:#33567d;color:#fff;font-weight:700">${totalCost?won(totalCost):""}</td><td colspan="2" style="background:#33567d"></td></tr>`;
-  body.querySelectorAll("tr[data-id]").forEach(tr=>tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openViewer("work",tr.dataset.id); }));
+  foot.innerHTML=`<tr><td></td><td colspan="6" style="background:#33567d;color:#fff;font-weight:700">합계 (${list.length}건)</td><td class="num" style="background:#33567d;color:#fff;font-weight:700">${totalCost?won(totalCost):""}</td><td colspan="2" style="background:#33567d"></td></tr>`;
+  body.querySelectorAll("tr[data-id]").forEach(tr=>tr.addEventListener("click",e=>{ if(e.target.closest("[data-del],.wk-chk")) return; openViewer("work",tr.dataset.id); }));
+  body.querySelectorAll(".wk-chk").forEach(chk=>chk.addEventListener("change",e=>{
+    e.stopPropagation();
+    const id = chk.dataset.wid;
+    if(chk.checked) wkChecked.add(id); else wkChecked.delete(id);
+    chk.closest("tr").classList.toggle("wk-checked", chk.checked);
+    const delSelBtn2=$("btnWkDelSelected");
+    if(delSelBtn2) delSelBtn2.style.display = wkChecked.size>0 ? "" : "none";
+    // 전체선택 체크박스 갱신
+    const thChk2=document.querySelector("#panel-work thead .wk-allchk");
+    if(thChk2) thChk2.checked = list.every(en=>wkChecked.has(en.id));
+  }));
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(b.dataset.del, "업무"); }));
 }
 function workCopyLine(en){
@@ -1556,21 +1634,23 @@ function callFiltered(){
 function renderCall(){
   renderCallDirChips();
   const body=$("callBody"); const list=callFiltered();
-  if(!list.length){ body.innerHTML=`<tr><td colspan="9" class="empty">통화 기록이 없습니다.</td></tr>`; return; }
-  body.innerHTML=list.map(c=>`<tr data-id="${c.id}">
+  if(!list.length){ body.innerHTML=`<tr><td colspan="10" class="empty">통화 기록이 없습니다.</td></tr>`; return; }
+  body.innerHTML=list.map(c=>{
+    const nameStr = [c.name, c.role, c.company].filter(Boolean).join(" / ");
+    return `<tr data-id="${c.id}">
     <td>${c.date||""}</td><td>${esc(c.time||"")}</td>
     <td><span class="dir ${c.dir==="발신"?"out":"in"}">${esc(c.dir||"")}</span></td>
-    <td>${esc(c.name||"")}</td>
+    <td>${esc(nameStr||c.name||"")}</td>
     <td>${c.phone?`<a href="tel:${esc(c.phone)}" class="tel" data-tel="${esc(c.phone)}" title="클릭: 휴대폰은 바로 통화 / PC는 번호 복사">📞 ${esc(c.phone)}</a>`:""}</td>
     <td class="clip" data-tip="${esc(c.content||"")}" title="${esc(c.content||"")}">${esc(c.content||"")}</td>
     <td class="clip" data-tip="${esc(c.followup||"")}" title="${esc(c.followup||"")}">${esc(c.followup||"")}</td>
     <td style="text-align:center"><input type="checkbox" class="ccheck" title="후속조치 완료 표시" ${c.done?"checked":""}></td>
-    <td><button class="rowdel" data-del="${c.id}" title="삭제">🗑</button></td></tr>`).join("");
+    <td><button class="rowdel" data-del="${c.id}" title="삭제">🗑</button></td></tr>`;
+  }).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
     tr.addEventListener("click",e=>{ if(e.target.closest("a,button,input")) return; openViewer("call",tr.dataset.id); });
     const cb=tr.querySelector(".ccheck"); cb.addEventListener("change",()=>updateRecord(tr.dataset.id,{done:cb.checked}));
     tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(tr.dataset.id, "통화"); });
-    // v21: 전화번호 클릭 → 모바일이면 자동통화, PC면 번호 복사
     const telLink=tr.querySelector("[data-tel]");
     if(telLink) telLink.addEventListener("click",e=>{
       const num=telLink.dataset.tel;
@@ -1579,7 +1659,6 @@ function renderCall(){
         e.preventDefault();
         copyText(num, `📞 ${num} 복사됨 — 휴대폰에서 통화하세요`);
       }
-      // 모바일이면 그대로 tel: 링크 작동
     });
   });
 }
@@ -4156,12 +4235,14 @@ function openCleaningEditor(id){
     directorOrders: [],
     directives: [],
     specials: [],
+    // v42: 자유 입출고 항목 배열 [{name, qty}]
+    inItems: [], outItems: [],
+    // 구버전 호환 필드
     tissueIn: 0, tissueOut: 0, towelIn: 0, towelOut: 0,
     photo: null,
   };
   // 옛 데이터 호환
   if(cleaningData.id){
-    // notes 단일 텍스트 → directives 배열로 변환
     if(!Array.isArray(cleaningData.directives)){
       const src = cleaningData.notes || cleaningData.instructions || "";
       cleaningData.directives = src ? src.split(/\n+/).filter(s=>s.trim()) : [];
@@ -4171,6 +4252,19 @@ function openCleaningEditor(id){
       cleaningData.specials = src ? src.split(/\n+/).filter(s=>s.trim()) : [];
     }
     if(!Array.isArray(cleaningData.directorOrders)) cleaningData.directorOrders = [];
+    // v42: 구버전 점보롤/핸드타월 → inItems/outItems 마이그레이션
+    if(!Array.isArray(cleaningData.inItems)){
+      const legacy = [];
+      if(Number(cleaningData.tissueIn)>0) legacy.push({name:"점보롤", qty:Number(cleaningData.tissueIn)});
+      if(Number(cleaningData.towelIn)>0) legacy.push({name:"핸드타월", qty:Number(cleaningData.towelIn)});
+      cleaningData.inItems = legacy;
+    }
+    if(!Array.isArray(cleaningData.outItems)){
+      const legacy = [];
+      if(Number(cleaningData.tissueOut)>0) legacy.push({name:"점보롤", qty:Number(cleaningData.tissueOut)});
+      if(Number(cleaningData.towelOut)>0) legacy.push({name:"핸드타월", qty:Number(cleaningData.towelOut)});
+      cleaningData.outItems = legacy;
+    }
   }
   cleaningPhoto = cleaningData.photo || null;
   renderCleaningModal(id);
@@ -4247,31 +4341,51 @@ function renderCleaningModal(id){
     </div>
 
     <h3 style="font-family:'Gowun Batang',serif;font-size:16px;color:#33567d;margin:6px 0">📦 소모품 입출고 (자재 탭 자동 연동)</h3>
-    <div class="grid">
-      <div class="field"><label>🧻 점보롤 입고</label><input type="number" id="cln-tissueIn" value="${Number(d.tissueIn)||0}" min="0"></div>
-      <div class="field"><label>🧻 점보롤 출고</label><input type="number" id="cln-tissueOut" value="${Number(d.tissueOut)||0}" min="0"></div>
-      <div class="field"><label>🧺 핸드타월 입고</label><input type="number" id="cln-towelIn" value="${Number(d.towelIn)||0}" min="0"></div>
-      <div class="field"><label>🧺 핸드타월 출고</label><input type="number" id="cln-towelOut" value="${Number(d.towelOut)||0}" min="0"></div>
+    <div style="margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:700;color:var(--ink-soft)">📥 입고된 자재</span>
+        <button type="button" class="btn btn-ghost btn-sm" id="cln-addInItem">➕ 항목 추가</button>
+      </div>
+      <div id="cln-inItems"></div>
     </div>
-    <p style="font-size:12px;color:var(--ink-soft);margin-top:6px">💡 저장 시 점보롤·핸드타월 품목이 자재 탭에 자동 등록되고, 입출고 내역도 자동으로 기록됩니다.</p>
+    <div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:700;color:var(--ink-soft)">📤 출고된 자재</span>
+        <button type="button" class="btn btn-ghost btn-sm" id="cln-addOutItem">➕ 항목 추가</button>
+      </div>
+      <div id="cln-outItems"></div>
+    </div>
+    <p style="font-size:12px;color:var(--ink-soft);margin-top:6px">💡 저장 시 해당 자재 품목이 자재 탭에 자동 등록되고, 입출고 내역도 자동으로 기록됩니다.</p>
   `;
   // 3개 항목 리스트 렌더링
   renderCleaningItemList("director", "cln-directorList", cleaningData.directorOrders);
   renderCleaningItemList("directive", "cln-directiveList", cleaningData.directives);
   renderCleaningItemList("special", "cln-specialList", cleaningData.specials);
-  // ➕ 항목 추가 버튼
+  // ➕ 항목 추가 버튼 (지시사항 등)
   $("clnFields").querySelectorAll("[data-addcln]").forEach(b=>b.addEventListener("click",()=>{
     const type=b.dataset.addcln;
     const arr = type==="director"?cleaningData.directorOrders : type==="directive"?cleaningData.directives : cleaningData.specials;
     arr.push("");
     const listId = type==="director"?"cln-directorList" : type==="directive"?"cln-directiveList" : "cln-specialList";
     renderCleaningItemList(type, listId, arr);
-    // 새로 추가된 항목에 자동 포커스
     setTimeout(()=>{
       const inputs=$(listId).querySelectorAll("input.cln-item-input");
       if(inputs.length) inputs[inputs.length-1].focus();
     },50);
   }));
+  // v42: 자유 입출고 항목 렌더링
+  renderClnStockItems("cln-inItems", cleaningData.inItems);
+  renderClnStockItems("cln-outItems", cleaningData.outItems);
+  $("cln-addInItem").addEventListener("click",()=>{
+    cleaningData.inItems.push({name:"", qty:0});
+    renderClnStockItems("cln-inItems", cleaningData.inItems);
+    setTimeout(()=>{ const els=$("cln-inItems").querySelectorAll(".cln-stock-name"); if(els.length) els[els.length-1].focus(); },30);
+  });
+  $("cln-addOutItem").addEventListener("click",()=>{
+    cleaningData.outItems.push({name:"", qty:0});
+    renderClnStockItems("cln-outItems", cleaningData.outItems);
+    setTimeout(()=>{ const els=$("cln-outItems").querySelectorAll(".cln-stock-name"); if(els.length) els[els.length-1].focus(); },30);
+  });
   // 사진 영역
   renderCleaningPhoto();
   $("cln-aiBtn").disabled = !cleaningPhoto;
@@ -4281,6 +4395,31 @@ function renderCleaningModal(id){
   $("cln-aiBtn").addEventListener("click",cleaningAIAnalyze);
   $("clnSave").style.display="";
   $("clnDelete").style.display = id?"":"none";
+}
+
+// v42: 자유 입출고 항목 렌더링
+function renderClnStockItems(containerId, arr){
+  const box=$(containerId); if(!box) return;
+  if(!arr.length){ box.innerHTML=`<div style="font-size:12px;color:var(--ink-soft);padding:6px 2px;font-style:italic">아직 항목이 없습니다 — ➕ 항목 추가를 눌러 자재를 입력하세요</div>`; return; }
+  box.innerHTML = arr.map((it,i)=>`
+    <div class="cln-item-row" data-si="${i}">
+      <span class="cln-item-no">${i+1}.</span>
+      <input type="text" class="cln-item-input cln-stock-name" value="${esc(it.name||"")}" data-idx="${i}" placeholder="자재명 (예: 점보롤)">
+      <input type="number" class="cln-stock-qty" value="${Number(it.qty)||0}" data-idx="${i}" min="0" placeholder="수량" style="width:70px;text-align:right;padding:5px 6px;font-size:13px;border:1px solid var(--line);border-radius:7px;background:#fbfdff">
+      <span style="font-size:12px;color:var(--ink-soft);flex:0 0 auto">개</span>
+      <button type="button" class="cln-item-del" data-idx="${i}" title="삭제">🗑</button>
+    </div>`).join("");
+  box.querySelectorAll(".cln-stock-name").forEach(inp=>{
+    inp.addEventListener("input",()=>{ arr[Number(inp.dataset.idx)].name = inp.value; });
+    inp.addEventListener("keydown",e=>{ if(e.key==="Tab"){ e.preventDefault(); const q=inp.closest(".cln-item-row").querySelector(".cln-stock-qty"); if(q) q.focus(); } });
+  });
+  box.querySelectorAll(".cln-stock-qty").forEach(inp=>{
+    inp.addEventListener("input",()=>{ arr[Number(inp.dataset.idx)].qty = Number(inp.value)||0; });
+  });
+  box.querySelectorAll(".cln-item-del").forEach(b=>b.addEventListener("click",()=>{
+    arr.splice(Number(b.dataset.idx),1);
+    renderClnStockItems(containerId, arr);
+  }));
 }
 
 function renderCleaningItemList(type, containerId, arr){
@@ -4293,9 +4432,21 @@ function renderCleaningItemList(type, containerId, arr){
       <button type="button" class="cln-item-del" data-idx="${i}" title="삭제">🗑</button>
     </div>
   `).join("");
-  box.querySelectorAll(".cln-item-input").forEach(inp=>inp.addEventListener("input",()=>{
-    arr[Number(inp.dataset.idx)] = inp.value;
-  }));
+  box.querySelectorAll(".cln-item-input").forEach(inp=>{
+    inp.addEventListener("input",()=>{ arr[Number(inp.dataset.idx)] = inp.value; });
+    // v42: Enter → 새 항목 추가
+    inp.addEventListener("keydown", e=>{
+      if(e.key !== "Enter") return;
+      e.preventDefault();
+      arr[Number(inp.dataset.idx)] = inp.value; // 현재 값 저장
+      arr.push("");
+      renderCleaningItemList(type, containerId, arr);
+      setTimeout(()=>{
+        const inputs = box.querySelectorAll("input.cln-item-input");
+        if(inputs.length) inputs[inputs.length-1].focus();
+      }, 30);
+    });
+  });
   box.querySelectorAll(".cln-item-del").forEach(b=>b.addEventListener("click",()=>{
     arr.splice(Number(b.dataset.idx),1);
     renderCleaningItemList(type, containerId, arr);
@@ -4392,7 +4543,6 @@ async function cleaningAIAnalyze(){
 // ===== 청소일지 저장 (자재 자동 연동) =====
 async function saveCleaning(){
   const id = cleaningData && cleaningData.id;
-  // 폼에서 값 수집 — 입력 변경분은 이미 cleaningData 배열에 반영됨
   const cleanArr = arr => (arr||[]).map(s=>(s||"").trim()).filter(Boolean);
   const obj = {
     kind:"cleaning",
@@ -4401,10 +4551,9 @@ async function saveCleaning(){
     directorOrders: cleanArr(cleaningData.directorOrders),
     directives: cleanArr(cleaningData.directives),
     specials: cleanArr(cleaningData.specials),
-    tissueIn: Number($("cln-tissueIn").value)||0,
-    tissueOut: Number($("cln-tissueOut").value)||0,
-    towelIn: Number($("cln-towelIn").value)||0,
-    towelOut: Number($("cln-towelOut").value)||0,
+    // v42: 자유 입출고 항목
+    inItems: (cleaningData.inItems||[]).filter(it=>it.name&&it.name.trim()),
+    outItems: (cleaningData.outItems||[]).filter(it=>it.name&&it.name.trim()),
     photo: cleaningPhoto,
     staffWork: []
   };
@@ -4425,7 +4574,6 @@ async function saveCleaning(){
   if(id){
     updateRecord(id, obj);
     savedRec={...obj, id};
-    // 기존 연동 자재 내역 모두 삭제 후 재생성
     const linked=entries.filter(s=>s.kind==="stock"&&s.cleaningId===id).map(s=>s.id);
     linked.forEach(sid=>deleteRecord(sid));
   } else {
@@ -4461,30 +4609,30 @@ function ensureCleaningItem(name){
 }
 
 async function syncCleaningToStock(cln){
-  const tissueItem = ensureCleaningItem("점보롤");
-  const towelItem  = ensureCleaningItem("핸드타월");
   const dateStr = cln.date || todayStr();
-  // 1) 소모품 입고
-  if(Number(cln.tissueIn)>0){
-    addRecord({kind:"stock", date:dateStr, stockType:"입고", itemId:tissueItem.id, qty:Number(cln.tissueIn), unitPrice:0, amount:0, memo:`청소일지 ${dateStr} 입고`, cleaningId:cln.id, createdAt:Date.now()});
+  // v42: 자유 입출고 항목 처리
+  const inItems = Array.isArray(cln.inItems) ? cln.inItems : [];
+  const outItems = Array.isArray(cln.outItems) ? cln.outItems : [];
+
+  for(const it of inItems){
+    if(!it.name||!it.name.trim()||!(Number(it.qty)>0)) continue;
+    const item = ensureCleaningItem(it.name.trim());
+    addRecord({kind:"stock", date:dateStr, stockType:"입고", itemId:item.id, qty:Number(it.qty), unitPrice:0, amount:0, memo:`청소일지 ${dateStr} 입고`, cleaningId:cln.id, createdAt:Date.now()});
   }
-  if(Number(cln.towelIn)>0){
-    addRecord({kind:"stock", date:dateStr, stockType:"입고", itemId:towelItem.id, qty:Number(cln.towelIn), unitPrice:0, amount:0, memo:`청소일지 ${dateStr} 입고`, cleaningId:cln.id, createdAt:Date.now()});
+  for(const it of outItems){
+    if(!it.name||!it.name.trim()||!(Number(it.qty)>0)) continue;
+    const item = ensureCleaningItem(it.name.trim());
+    addRecord({kind:"stock", date:dateStr, stockType:"출고", itemId:item.id, qty:Number(it.qty), unitPrice:0, amount:0, useTarget:"청소 전체", memo:`청소일지 ${dateStr} 출고`, cleaningId:cln.id, createdAt:Date.now()});
   }
-  // 2) 소모품 출고 (전체 출고)
-  if(Number(cln.tissueOut)>0){
-    addRecord({kind:"stock", date:dateStr, stockType:"출고", itemId:tissueItem.id, qty:Number(cln.tissueOut), unitPrice:0, amount:0, useTarget:"청소 전체", memo:`청소일지 ${dateStr} 출고(전체)`, cleaningId:cln.id, createdAt:Date.now()});
-  }
-  if(Number(cln.towelOut)>0){
-    addRecord({kind:"stock", date:dateStr, stockType:"출고", itemId:towelItem.id, qty:Number(cln.towelOut), unitPrice:0, amount:0, useTarget:"청소 전체", memo:`청소일지 ${dateStr} 출고(전체)`, cleaningId:cln.id, createdAt:Date.now()});
-  }
-  // 3) 담당자별 층별 출고
+  // 담당자별 층별 출고 (tissue/towel 필드가 있으면 구버전 호환)
   (cln.staffWork||[]).forEach(s=>{
     if(Number(s.tissue)>0){
-      addRecord({kind:"stock", date:dateStr, stockType:"출고", itemId:tissueItem.id, qty:Number(s.tissue), unitPrice:0, amount:0, useTarget:`${s.floors||""} (${s.name})`, memo:`청소일지 ${dateStr} 층별 출고`, cleaningId:cln.id, createdAt:Date.now()});
+      const item=ensureCleaningItem("점보롤");
+      addRecord({kind:"stock", date:dateStr, stockType:"출고", itemId:item.id, qty:Number(s.tissue), unitPrice:0, amount:0, useTarget:`${s.floors||""} (${s.name})`, memo:`청소일지 ${dateStr} 층별 출고`, cleaningId:cln.id, createdAt:Date.now()});
     }
     if(Number(s.towel)>0){
-      addRecord({kind:"stock", date:dateStr, stockType:"출고", itemId:towelItem.id, qty:Number(s.towel), unitPrice:0, amount:0, useTarget:`${s.floors||""} (${s.name})`, memo:`청소일지 ${dateStr} 층별 출고`, cleaningId:cln.id, createdAt:Date.now()});
+      const item=ensureCleaningItem("핸드타월");
+      addRecord({kind:"stock", date:dateStr, stockType:"출고", itemId:item.id, qty:Number(s.towel), unitPrice:0, amount:0, useTarget:`${s.floors||""} (${s.name})`, memo:`청소일지 ${dateStr} 층별 출고`, cleaningId:cln.id, createdAt:Date.now()});
     }
   });
 }
@@ -4546,6 +4694,15 @@ function wireQuickMemo(){
   $("qmClear").addEventListener("click", clearQuickMemo);
   $("qmToMemo").addEventListener("click", quickMemoToFormal);
   $("qmFile").addEventListener("change", handleQmPhoto);
+  // v42: 패널 밖 클릭 시 닫기
+  document.addEventListener("click", e=>{
+    const side = $("quickMemoSide");
+    if(!side.classList.contains("show")) return;
+    const qmBtn = $("btnQuickMemo");
+    if(side.contains(e.target)) return;
+    if(qmBtn && qmBtn.contains(e.target)) return;
+    closeQuickMemo();
+  });
   // v39: contenteditable div에 클립보드 paste — 사진은 인라인으로 삽입
   $("qmText").addEventListener("paste", async e=>{
     const cd = (e.clipboardData||window.clipboardData);
@@ -5440,12 +5597,12 @@ function searchContacts(q){
 function wireCallNameAutocomplete(){
   const nameEl = $("m-name");
   const phoneEl = $("m-phone");
+  const roleEl = $("m-role");
+  const companyEl = $("m-company");
   if(!nameEl||!phoneEl) return;
-  // 이미 연결됐으면 스킵 (중복 방지)
   if(nameEl._callACwired) return;
   nameEl._callACwired = true;
 
-  // 기존 드롭다운이 있으면 제거
   const existAC = document.getElementById("callNameAC");
   if(existAC) existAC.remove();
 
@@ -5459,6 +5616,17 @@ function wireCallNameAutocomplete(){
 
   const wrap = nameEl.closest(".field");
   if(wrap){ wrap.style.position="relative"; wrap.appendChild(acBox); }
+
+  const fillFromHit = h => {
+    nameEl.value = h.name;
+    if(h.phone && !phoneEl.value.trim()) phoneEl.value = h.phone;
+    // 직책/업체 자동 채움 (contacts 캐시에서 가져올 수 있으면)
+    const contact = contactsCache.find(c=>c.name===h.name||(c.person&&c.person===h.name));
+    if(contact){
+      if(roleEl && !roleEl.value.trim()) roleEl.value = contact.role||contact.position||"";
+      if(companyEl && !companyEl.value.trim()) companyEl.value = contact.company||contact.name||"";
+    }
+  };
 
   const showAC = ()=>{
     const q = nameEl.value.trim();
@@ -5476,9 +5644,7 @@ function wireCallNameAutocomplete(){
       el.addEventListener("mouseleave",()=>{el.style.background="";});
       el.addEventListener("mousedown", e=>{
         e.preventDefault();
-        const h = hits[Number(el.dataset.aci)];
-        nameEl.value = h.name;
-        if(h.phone && !phoneEl.value.trim()) phoneEl.value = h.phone;
+        fillFromHit(hits[Number(el.dataset.aci)]);
         acBox.style.display = "none";
       });
     });
@@ -5486,7 +5652,6 @@ function wireCallNameAutocomplete(){
   nameEl.addEventListener("input", showAC);
   nameEl.addEventListener("focus", showAC);
   nameEl.addEventListener("blur", ()=>setTimeout(()=>{ acBox.style.display="none"; }, 180));
-  // 탭키: 드롭다운 첫 번째 항목 선택 + 전화번호 자동채움
   nameEl.addEventListener("keydown", e=>{
     if(e.key!=="Tab") return;
     const q = nameEl.value.trim();
@@ -5495,8 +5660,7 @@ function wireCallNameAutocomplete(){
     if(!hits.length) return;
     e.preventDefault();
     e.stopPropagation();
-    nameEl.value = hits[0].name;
-    if(hits[0].phone && !phoneEl.value.trim()) phoneEl.value = hits[0].phone;
+    fillFromHit(hits[0]);
     acBox.style.display = "none";
   });
 }
@@ -5555,7 +5719,7 @@ $("mSave").addEventListener("click", ()=>{
     const cat   = ($("m-callField")||{value:"기타"}).value||"기타";
     if(phone) _pendingCallContact = {name, phone, cat};
   }
-}, true); // capture:true → 기존 저장 핸들러보다 먼저 실행
+}, true);
 
 /* ── openEditor 패치 — call 열릴 때 추가 기능 연결 ─────── */
 // v41: openEditor 확장 (call 종류일 때 자동완성+분야 복원)
