@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <!-- parking.html
-  APP_VERSION: v2.6-20260608
-  v2.6 변경내역:
-    - No 중복 저장 버그 수정 (docId에 타임스탬프 추가)
-    - 날짜별 전체 삭제 기능 추가 (방문차량 목록 툴바)
-    - OCR 날짜 인식 강화 (주차대장 상단 날짜 텍스트 우선 추출)
-  v2.5 이전 생략
+  APP_VERSION: v2.7-20260608
+  v2.7 변경내역:
+    - No 누적 완전 수정: OCR 원본 No 완전 무시, 전체 최대값+1만 사용
+    - 목록 정렬: No 오름차순 (날짜 무관)
+    - getNextNo 파라미터 제거 (date 불필요)
 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>방문객 주차대장 v2.6 - 서희타워</title>
+<title>방문객 주차대장 v2.7 - 서희타워</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
@@ -347,7 +346,7 @@
 
 <div class="header">
   <div>
-    <h1>🏢 서희타워 방문객 주차대장 <span style="font-size:13px;opacity:.7;font-weight:400">v2.6</span></h1>
+    <h1>🏢 서희타워 방문객 주차대장 <span style="font-size:13px;opacity:.7;font-weight:400">v2.7</span></h1>
     <div class="header-sub">Seohee Tower Visitor Parking Management System</div>
   </div>
   <div class="api-key-area">
@@ -1086,7 +1085,8 @@ async function deleteByDate(date, cnt) {
     alert('오류: ' + e.message);
   }
 }
-function getNextNo(date) {
+// No 전체 누적 채번 — OCR의 원본 No 완전 무시, 전체 최대값+1
+function getNextNo() {
   if (parkingData.length === 0) return 1;
   return Math.max(...parkingData.map(r => parseInt(r.no) || 0)) + 1;
 }
@@ -1528,15 +1528,15 @@ async function confirmAddToList() {
   setSyncStatus('warn', '저장중...');
 
   try {
-    let nextNo = getNextNo(fallbackDate);
+    // OCR의 원본 No 완전 무시 — 전체 누적 최대값+1부터 시작
+    let nextNo = getNextNo();
     for (let i = 0; i < window.parsedRows.length; i++) {
       const r = window.parsedRows[i];
-      // 각 행의 날짜 우선 사용 (AI가 이미지에서 추출), 없으면 입력칸 날짜
       const rowDate = (r.date && r.date.match(/^\d{4}-\d{2}-\d{2}$/)) ? r.date : fallbackDate;
       const month = rowDate ? (new Date(rowDate).getMonth() + 1) + '월' : '기타';
       const cat = getFloorCat(r.floor, r.purpose);
       await saveRecord({
-        no: r.no || (nextNo + i),
+        no: nextNo + i,        // OCR No 무시, 누적 번호만 사용
         date: rowDate, month,
         in: r.in || '',
         out: r.out || '',
@@ -1597,7 +1597,8 @@ function renderList() {
     });
   }
 
-  filtered = [...filtered].sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.no - b.no));
+  // No 기준 오름차순 정렬 (전체 누적번호)
+  filtered = [...filtered].sort((a, b) => (parseInt(a.no)||0) - (parseInt(b.no)||0));
 
   // Stats
   const statsDiv = document.getElementById('listStats');
@@ -1712,7 +1713,7 @@ function saveModal() {
   const date = document.getElementById('mDate').value;
   const month = date ? (new Date(date).getMonth() + 1) + '월' : '';
   const noVal = parseInt(document.getElementById('mNo').value) ||
-                (editingIdx >= 0 ? parkingData[editingIdx].no : getNextNo(date));
+                (editingIdx >= 0 ? parkingData[editingIdx].no : getNextNo());
   const rec = {
     no: noVal, date, month,
     in: document.getElementById('mIn').value,
