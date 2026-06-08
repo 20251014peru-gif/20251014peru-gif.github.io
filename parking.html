@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- parking.html
-  APP_VERSION: v2.7-20260608
+  APP_VERSION: v2.8-20260608
   v2.7 변경내역:
     - No 누적 완전 수정: OCR 원본 No 완전 무시, 전체 최대값+1만 사용
     - 목록 정렬: No 오름차순 (날짜 무관)
@@ -10,7 +10,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>방문객 주차대장 v2.7 - 서희타워</title>
+<title>방문객 주차대장 v2.8 - 서희타워</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
@@ -346,7 +346,7 @@
 
 <div class="header">
   <div>
-    <h1>🏢 서희타워 방문객 주차대장 <span style="font-size:13px;opacity:.7;font-weight:400">v2.7</span></h1>
+    <h1>🏢 서희타워 방문객 주차대장 <span style="font-size:13px;opacity:.7;font-weight:400">v2.8</span></h1>
     <div class="header-sub">Seohee Tower Visitor Parking Management System</div>
   </div>
   <div class="api-key-area">
@@ -486,7 +486,8 @@
       <button class="btn btn-outline" onclick="clearDateFilter()">전체보기</button>
       <div class="toolbar-right">
         <button class="btn btn-primary" onclick="openAddModal()">+ 수동 추가</button>
-        <button class="btn btn-danger" onclick="openDeleteByDateModal()" title="선택한 날짜 전체 삭제">🗑️ 날짜별 삭제</button>
+        <button class="btn btn-danger" onclick="openDeleteByDateModal()">🗑️ 날짜별 삭제</button>
+        <button class="btn btn-warning" onclick="renumberAll()" title="전체 No를 날짜순으로 1부터 재번호">🔢 No 재번호</button>
         <button class="btn btn-success" onclick="recalcFloor()">🔄 층별집계 재계산</button>
       </div>
     </div>
@@ -1085,8 +1086,34 @@ async function deleteByDate(date, cnt) {
     alert('오류: ' + e.message);
   }
 }
-// No 전체 누적 채번 — OCR의 원본 No 완전 무시, 전체 최대값+1
-function getNextNo() {
+// ============================================================
+// 전체 No 재번호 (날짜+입차시간 순으로 1부터 재번호)
+// ============================================================
+async function renumberAll() {
+  if (parkingData.length === 0) { alert('데이터가 없습니다.'); return; }
+  if (!confirm(`전체 ${parkingData.length}건의 No를 날짜·입차시간 순으로 1부터 재번호합니다.\n계속하시겠습니까?`)) return;
+
+  setSyncStatus('warn', '재번호 중...');
+
+  // 날짜 → 입차시간 순 정렬
+  const sorted = [...parkingData].sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return (a.in || '').localeCompare(b.in || '');
+  });
+
+  try {
+    for (let i = 0; i < sorted.length; i++) {
+      const r = sorted[i];
+      if (!r._id) continue;
+      await db.collection(COLLECTION).doc(r._id).update({ no: i + 1 });
+    }
+    setSyncStatus('ok', `${sorted.length}건 재번호 완료`);
+    alert(`✅ ${sorted.length}건 재번호 완료!\n날짜·입차시간 순으로 1~${sorted.length} 번호가 매겨졌습니다.`);
+  } catch(e) {
+    setSyncStatus('err', '재번호 오류: ' + e.message);
+    alert('오류: ' + e.message);
+  }
+}
   if (parkingData.length === 0) return 1;
   return Math.max(...parkingData.map(r => parseInt(r.no) || 0)) + 1;
 }
