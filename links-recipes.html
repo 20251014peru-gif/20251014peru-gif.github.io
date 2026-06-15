@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>My Collection ✿</title>
+<link rel="stylesheet" href="links-recipes.css?v=20260615">
+</head>
+<body>
+
+<!-- 앱 헤더 -->
+<div class="app-header">
+  <div class="app-title">My<span>Collection</span> ✿</div>
+  <div class="header-right">
+    <span class="backup-status" id="backupStatus">💾 백업완료</span>
+    <button class="hdr-btn" id="darkToggle" title="다크모드">🌙</button>
+  </div>
+</div>
+
+<!-- 탭 컨텐츠 -->
+<div class="tab-contents">
+
+  <!-- ===== 링크 탭 ===== -->
+  <div class="tab-content active" id="tab-link">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="linkSearch" class="search-input" placeholder="링크 검색...">
+      </div>
+      <div class="toolbar-row">
+        <div class="chips-wrap" id="linkCatChips"></div>
+        <div class="sort-wrap">
+          <select id="linkSort" class="sort-sel">
+            <option value="newest">최신순</option>
+            <option value="oldest">오래된순</option>
+            <option value="name">가나다순</option>
+            <option value="fav">즐겨찾기</option>
+          </select>
+        </div>
+      </div>
+      <div class="list-count" id="linkCount">0개</div>
+    </div>
+    <div class="list-area" id="linkList"></div>
+    <button class="fab" id="addLinkBtn">＋</button>
+  </div>
+
+  <!-- ===== 레시피 탭 ===== -->
+  <div class="tab-content" id="tab-recipe">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="recipeSearch" class="search-input" placeholder="레시피 검색...">
+      </div>
+      <div class="toolbar-row">
+        <div class="chips-wrap" id="recipeCatChips"></div>
+        <div class="sort-wrap">
+          <select id="recipeSort" class="sort-sel">
+            <option value="newest">최신순</option>
+            <option value="oldest">오래된순</option>
+            <option value="name">가나다순</option>
+            <option value="fav">즐겨찾기</option>
+          </select>
+        </div>
+      </div>
+      <div class="list-count" id="recipeCount">0개</div>
+    </div>
+    <div class="list-area" id="recipeList"></div>
+    <button class="fab fab-mint" id="addRecipeBtn">＋</button>
+  </div>
+
+  <!-- ===== 달력 탭 ===== -->
+  <div class="tab-content" id="tab-cal">
+    <div class="cal-toolbar">
+      <button class="cal-nav" id="calPrev">‹</button>
+      <span class="cal-month" id="calMonthLabel"></span>
+      <button class="cal-nav" id="calNext">›</button>
+      <div class="cal-zoom-btns">
+        <button class="zoom-btn" id="zoomSm" title="작게">S</button>
+        <button class="zoom-btn active" id="zoomMd" title="보통">M</button>
+        <button class="zoom-btn" id="zoomLg" title="크게">L</button>
+      </div>
+    </div>
+    <div class="cal-legend">
+      <span class="legend-item link-legend">🔗 링크</span>
+      <span class="legend-item recipe-legend">🍳 레시피</span>
+    </div>
+    <div class="cal-grid-wrap">
+      <div class="cal-dow-row" id="calDow"></div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+    <div class="cal-detail" id="calDetail" style="display:none">
+      <div class="cal-detail-header">
+        <span id="calDetailDate"></span>
+        <button class="cal-detail-close" id="calDetailClose">✕</button>
+      </div>
+      <div id="calDetailList"></div>
+    </div>
+    <div class="cal-stats" id="calStats"></div>
+  </div>
+
+  <!-- ===== AI 탭 ===== -->
+  <div class="tab-content" id="tab-ai">
+    <div class="ai-header">
+      <div class="ai-title">🤖 AI 검색</div>
+      <div class="ai-sub">저장된 링크와 레시피에서 찾아드려요</div>
+    </div>
+    <div class="ai-chat-area" id="aiChat">
+      <div class="ai-bubble ai-bubble-bot">
+        안녕하세요! 저장된 링크와 레시피를 검색해드려요 😊<br>
+        예) "타일 관련 링크 보여줘" / "계란 들어간 레시피"
+      </div>
+    </div>
+    <div class="ai-input-wrap">
+      <input type="text" id="aiInput" class="ai-input" placeholder="무엇이든 물어보세요...">
+      <button class="ai-send" id="aiSend">➤</button>
+    </div>
+  </div>
+
+  <!-- ===== 설정 탭 ===== -->
+  <div class="tab-content" id="tab-settings">
+    <div class="settings-area">
+
+      <div class="settings-section">
+        <div class="settings-title">🔑 API 설정</div>
+        <input type="password" id="apiKeyInput" class="settings-input" placeholder="Anthropic API Key">
+        <button class="settings-btn" id="saveApiKey">저장</button>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title">💾 백업 관리</div>
+        <div class="backup-info" id="backupInfo">마지막 백업: 없음</div>
+        <div class="settings-row">
+          <button class="settings-btn" id="manualBackup">지금 백업</button>
+          <button class="settings-btn btn-outline" id="exportJson">JSON 내보내기</button>
+        </div>
+        <div class="settings-sub">자동 백업: 매일 자정 (최근 5개 유지)</div>
+        <div class="settings-title" style="margin-top:14px;">🔄 백업에서 복원</div>
+        <div id="backupList"></div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title">🏷️ 링크 카테고리 관리</div>
+        <div id="linkCatManage"></div>
+        <div class="add-cat-row">
+          <input type="text" id="newLinkCat" class="settings-input" placeholder="새 카테고리">
+          <button class="settings-btn" id="addLinkCat">추가</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title">🏷️ 레시피 카테고리 관리</div>
+        <div id="recipeCatManage"></div>
+        <div class="add-cat-row">
+          <input type="text" id="newRecipeCat" class="settings-input" placeholder="새 카테고리">
+          <button class="settings-btn" id="addRecipeCat">추가</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title">📊 통계</div>
+        <div id="statsArea"></div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title">🔗 링크 유효성 검사</div>
+        <button class="settings-btn" id="checkLinks">전체 링크 확인</button>
+        <div id="linkCheckResult"></div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title">🌙 테마</div>
+        <div class="settings-row">
+          <span class="settings-label">다크모드</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="darkModeToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title danger-text">🗑️ 데이터 초기화</div>
+        <button class="settings-btn btn-danger" id="clearAll">전체 삭제</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- 하단 탭바 -->
+<div class="bottom-bar">
+  <button class="btab active" data-tab="link">
+    <span class="btab-icon">🔗</span>
+    <span class="btab-label">링크</span>
+  </button>
+  <button class="btab" data-tab="recipe">
+    <span class="btab-icon">🍳</span>
+    <span class="btab-label">레시피</span>
+  </button>
+  <button class="btab" data-tab="cal">
+    <span class="btab-icon">📅</span>
+    <span class="btab-label">달력</span>
+  </button>
+  <button class="btab" data-tab="ai">
+    <span class="btab-icon">🤖</span>
+    <span class="btab-label">AI</span>
+  </button>
+  <button class="btab" data-tab="settings">
+    <span class="btab-icon">⚙️</span>
+    <span class="btab-label">설정</span>
+  </button>
+</div>
+
+<!-- ===== 링크 추가/수정 모달 ===== -->
+<div class="modal-overlay" id="linkModal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span class="modal-title" id="linkModalTitle">🔗 링크 추가</span>
+      <button class="modal-close" id="linkModalClose">✕</button>
+    </div>
+    <div class="modal-body" id="linkModalBody">
+      <label class="form-label">URL *</label>
+      <input type="url" id="lmUrl" class="form-input" placeholder="https://...">
+      <label class="form-label">제목</label>
+      <input type="text" id="lmTitle" class="form-input" placeholder="제목 입력">
+      <label class="form-label">카테고리</label>
+      <select id="lmCat" class="form-select"></select>
+      <label class="form-label">메모</label>
+      <textarea id="lmMemo" class="form-textarea" placeholder="메모 (선택)"></textarea>
+      <label class="form-label">나중에 보기 날짜</label>
+      <input type="date" id="lmRemind" class="form-input">
+      <label class="form-label">이미지 첨부</label>
+      <div class="img-upload-area" id="lmImgArea">
+        <input type="file" id="lmImgFile" accept="image/*" capture="environment" style="display:none">
+        <button class="img-btn" id="lmImgCam">📷 카메라/갤러리</button>
+        <button class="img-btn" id="lmImgPaste">📋 클립보드 붙여넣기</button>
+        <div class="img-preview-wrap" id="lmImgPreview"></div>
+      </div>
+      <div class="custom-fields-section">
+        <div class="custom-fields-title">➕ 커스텀 필드
+          <button class="add-custom-btn" id="lmAddCustom">+ 필드 추가</button>
+        </div>
+        <div id="lmCustomFields"></div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">즐겨찾기</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="lmFav">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-save" id="lmSave">저장하기 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 레시피 추가/수정 모달 ===== -->
+<div class="modal-overlay" id="recipeModal">
+  <div class="modal-sheet modal-sheet-tall">
+    <div class="modal-header">
+      <span class="modal-title" id="recipeModalTitle">🍳 레시피 추가</span>
+      <button class="modal-close" id="recipeModalClose">✕</button>
+    </div>
+    <div class="modal-body" id="recipeModalBody">
+      <label class="form-label">제목 *</label>
+      <input type="text" id="rmTitle" class="form-input" placeholder="레시피 제목">
+      <label class="form-label">참고 링크</label>
+      <input type="url" id="rmLink" class="form-input" placeholder="https://...">
+      <label class="form-label">카테고리</label>
+      <select id="rmCat" class="form-select"></select>
+      <div class="form-3col">
+        <div>
+          <label class="form-label">인분</label>
+          <input type="text" id="rmServing" class="form-input" placeholder="2인분">
+        </div>
+        <div>
+          <label class="form-label">시간</label>
+          <input type="text" id="rmTime" class="form-input" placeholder="30분">
+        </div>
+        <div>
+          <label class="form-label">칼로리</label>
+          <input type="text" id="rmCalorie" class="form-input" placeholder="300kcal">
+        </div>
+      </div>
+      <label class="form-label">난이도</label>
+      <select id="rmDifficulty" class="form-select">
+        <option value="">선택</option>
+        <option>⭐ 쉬움</option>
+        <option>⭐⭐ 보통</option>
+        <option>⭐⭐⭐ 어려움</option>
+      </select>
+      <label class="form-label">태그</label>
+      <input type="text" id="rmTags" class="form-input" placeholder="간단, 손님초대, 다이어트 (쉼표 구분)">
+      <label class="form-label">이미지 첨부</label>
+      <div class="img-upload-area">
+        <input type="file" id="rmImgFile" accept="image/*" capture="environment" style="display:none">
+        <button class="img-btn" id="rmImgCam">📷 카메라/갤러리</button>
+        <button class="img-btn" id="rmImgPaste">📋 클립보드 붙여넣기</button>
+        <div class="img-preview-wrap" id="rmImgPreview"></div>
+      </div>
+      <label class="form-label">재료 <span class="form-hint">(구매링크도 추가 가능)</span></label>
+      <div id="rmIngredients"></div>
+      <button class="add-row-btn" id="rmAddIngr">+ 재료 추가</button>
+      <label class="form-label" style="margin-top:12px;">조리 순서</label>
+      <div id="rmSteps"></div>
+      <button class="add-row-btn" id="rmAddStep">+ 단계 추가</button>
+      <label class="form-label" style="margin-top:12px;">만드는 방법 (자유메모)</label>
+      <textarea id="rmMemo" class="form-textarea" placeholder="추가 설명, 팁 등..."></textarea>
+      <div class="custom-fields-section">
+        <div class="custom-fields-title">➕ 커스텀 필드
+          <button class="add-custom-btn" id="rmAddCustom">+ 필드 추가</button>
+        </div>
+        <div id="rmCustomFields"></div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">즐겨찾기</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="rmFav">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-save modal-save-mint" id="rmSave">저장하기 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 상세보기 모달 ===== -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-sheet modal-sheet-tall">
+    <div class="modal-header">
+      <span class="modal-title" id="detailTitle"></span>
+      <button class="modal-close" id="detailClose">✕</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer detail-footer">
+      <button class="modal-save btn-edit" id="detailEdit">✏️ 수정</button>
+      <button class="modal-save btn-share" id="detailShare">📤 공유</button>
+      <button class="modal-save btn-delete" id="detailDelete">🗑️ 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 장보기 모드 모달 ===== -->
+<div class="modal-overlay" id="shopModal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span class="modal-title" id="shopTitle">🛒 장보기 목록</span>
+      <button class="modal-close" id="shopClose">✕</button>
+    </div>
+    <div class="modal-body" id="shopBody"></div>
+  </div>
+</div>
+
+<!-- ===== 커스텀 필드 추가 모달 ===== -->
+<div class="modal-overlay" id="customFieldModal">
+  <div class="modal-sheet modal-sheet-sm">
+    <div class="modal-header">
+      <span class="modal-title">필드 추가</span>
+      <button class="modal-close" id="cfClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label">필드 이름</label>
+      <input type="text" id="cfName" class="form-input" placeholder="예: 구매여부, 가격">
+      <label class="form-label">필드 타입</label>
+      <select id="cfType" class="form-select">
+        <option value="text">텍스트</option>
+        <option value="number">숫자</option>
+        <option value="date">날짜</option>
+        <option value="checkbox">체크박스</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-save" id="cfSave">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
+<script src="links-recipes.js?v=20260615"></script>
+</body>
+</html>
