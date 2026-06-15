@@ -926,9 +926,8 @@ function setTool(tool){
     canvas.freeDrawingBrush.width=parseInt(document.getElementById('toolSize').value);
     canvas.freeDrawingBrush.color=document.getElementById('toolColor').value;
   } else if(tool==='crop'){
-    // 크롭은 Fabric 없이 별도 오버레이 UI 사용
     canvas.selection=false;
-    document.getElementById('cropControls').classList.remove('hidden');
+    // 크롭 풀스크린 UI 열기 (별도 오버레이)
     openCropUI();
   } else if(tool==='text'){
     document.getElementById('textInputRow').classList.remove('hidden');
@@ -940,188 +939,140 @@ function setTool(tool){
   }
 }
 
-/* ═══════════════════════════════════
-   크롭 UI — 명함앱 검증 패턴 그대로
-   ═══════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   크롭 UI — contacts.html 검증 패턴 (정적 HTML)
+   cropArea pointerdown → data-h 없으면 move
+   naturalWidth 기준 픽셀 크롭
+   ═══════════════════════════════════════════════ */
+
+/* 크롭 열기 */
 function openCropUI(){
-  const wrap = document.getElementById('canvasWrapper');
-  // 크롭 오버레이 DOM 삽입 (없으면)
-  let ov = document.getElementById('cropUIOverlay');
-  if(!ov){
-    ov = document.createElement('div');
-    ov.id = 'cropUIOverlay';
-    ov.style.cssText = 'position:absolute;inset:0;z-index:50;touch-action:none;';
+  cropImgSrc = modalImages[modalSlide]?.dataUrl || cropImgSrc;
+  if(!cropImgSrc){ showToast('사진이 없습니다'); return; }
 
-    // 크롭 박스
-    const box = document.createElement('div');
-    box.id = 'cropUIBox';
-    box.style.cssText = 'position:absolute;border:2px solid #FFD700;box-sizing:border-box;';
+  const im = document.getElementById('cropImg');
+  im.onload = ()=>{ cResetTries=0; cResetWhenReady(); };
+  im.src = cropImgSrc;
+  if(im.complete && im.naturalWidth) { cResetTries=0; cResetWhenReady(); }
 
-    // 모서리 4개 — 큰 원형 핸들
-    const corners = [
-      {dh:'lt', s:'top:-14px;left:-14px;cursor:nwse-resize;'},
-      {dh:'rt', s:'top:-14px;right:-14px;cursor:nesw-resize;'},
-      {dh:'rb', s:'bottom:-14px;right:-14px;cursor:nwse-resize;'},
-      {dh:'lb', s:'bottom:-14px;left:-14px;cursor:nesw-resize;'},
-    ];
-    corners.forEach(c=>{
-      const el=document.createElement('div');
-      el.setAttribute('data-h', c.dh);
-      el.style.cssText=`position:absolute;width:28px;height:28px;background:#FFD700;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:2;${c.s}`;
-      box.appendChild(el);
-    });
-    // 엣지 4개 — 넓은 막대기 형태 (터치 잡기 쉽게)
-    const edges = [
-      {dh:'t', s:'top:-10px;left:20%;right:20%;height:20px;cursor:ns-resize;border-radius:10px;'},
-      {dh:'b', s:'bottom:-10px;left:20%;right:20%;height:20px;cursor:ns-resize;border-radius:10px;'},
-      {dh:'l', s:'left:-10px;top:20%;bottom:20%;width:20px;cursor:ew-resize;border-radius:10px;'},
-      {dh:'r', s:'right:-10px;top:20%;bottom:20%;width:20px;cursor:ew-resize;border-radius:10px;'},
-    ];
-    edges.forEach(e=>{
-      const el=document.createElement('div');
-      el.setAttribute('data-h', e.dh);
-      el.style.cssText=`position:absolute;background:#FFD700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);z-index:2;${e.s}`;
-      box.appendChild(el);
-    });
-    ov.appendChild(box);
-    wrap.style.position='relative';
-    wrap.appendChild(ov);
-
-    /* 이벤트: pointerdown/move/up
-       핸들 data-h 속성으로 식별, 박스 내부면 이동, 바깥이면 무시
-       단, 핸들은 박스 경계를 벗어나 있으므로 data-h 우선 확인 */
-    ov.addEventListener('pointerdown', e=>{
-      // 1) 핸들 클릭 여부 — target 또는 부모에서 data-h 찾기
-      let h = null;
-      let el = e.target;
-      while(el && el !== ov){
-        const dh = el.getAttribute && el.getAttribute('data-h');
-        if(dh){ h=dh; break; }
-        el=el.parentElement;
-      }
-      if(h){
-        // 핸들 드래그
-        cDrag=h;
-      } else {
-        // 박스 내부면 이동
-        const boxEl=document.getElementById('cropUIBox');
-        const boxR=boxEl.getBoundingClientRect();
-        const inBox=e.clientX>=boxR.left&&e.clientX<=boxR.right
-                  &&e.clientY>=boxR.top &&e.clientY<=boxR.bottom;
-        if(!inBox) return;
-        cDrag='move';
-      }
-      cSX=e.clientX; cSY=e.clientY; cSB={...cBox};
-      try{ ov.setPointerCapture(e.pointerId); }catch(_){}
-      e.preventDefault();
-    });
-    ov.addEventListener('pointermove', e=>{
-      if(!cDrag) return;
-      const dx=e.clientX-cSX, dy=e.clientY-cSY;
-      let {x,y,w,h}=cSB;
-      const W=cIR.w, H=cIR.h;
-      if(cDrag==='move'){
-        x=Math.min(Math.max(0,cSB.x+dx),W-cSB.w);
-        y=Math.min(Math.max(0,cSB.y+dy),H-cSB.h);
-      } else {
-        if(cDrag.includes('l')){ x=cSB.x+dx; w=cSB.w-dx; }
-        if(cDrag.includes('r')){ w=cSB.w+dx; }
-        if(cDrag.includes('t')){ y=cSB.y+dy; h=cSB.h-dy; }
-        if(cDrag.includes('b')){ h=cSB.h+dy; }
-        if(w<40){ if(cDrag.includes('l')){ x=cSB.x+cSB.w-40; } w=40; }
-        if(h<30){ if(cDrag.includes('t')){ y=cSB.y+cSB.h-30; } h=30; }
-        if(x<0){ w+=x; x=0; } if(y<0){ h+=y; y=0; }
-        if(x+w>W) w=W-x; if(y+h>H) h=H-y;
-      }
-      cBox={x,y,w,h}; cropUILayout();
-      e.preventDefault();
-    });
-    ov.addEventListener('pointerup',     ()=>{ cDrag=null; });
-    ov.addEventListener('pointercancel', ()=>{ cDrag=null; });
-  } else {
-    ov.style.display='';
-  }
-
-  cropUIReset();
-}
-
-/* 이미지 크기 측정 후 박스 초기화 — iOS rAF 루프 패턴 */
-let _cResetTries=0;
-function cropUIReset(){
-  const cvEl = document.getElementById('editCanvas');
-  const w = cvEl ? cvEl.clientWidth  : 0;
-  const h = cvEl ? cvEl.clientHeight : 0;
-  if(w>0 && h>0){
-    _cResetTries=0;
-    cIR = {w,h};
-    cBox = {x:Math.round(w*0.07), y:Math.round(h*0.07), w:Math.round(w*0.86), h:Math.round(h*0.86)};
-    cropUILayout();
-  } else if(_cResetTries++ < 60){
-    requestAnimationFrame(cropUIReset);
-  } else {
-    _cResetTries=0;
-    const wrapper=document.getElementById('canvasWrapper');
-    cIR={w:wrapper.clientWidth||300, h:wrapper.clientHeight||300};
-    cBox={x:20,y:20,w:cIR.w-40,h:cIR.h-40};
-    cropUILayout();
-  }
-}
-
-function cropUILayout(){
-  const box = document.getElementById('cropUIBox'); if(!box) return;
-  // 어두운 배경 (box 바깥) — clip-path 이용
-  const ov = document.getElementById('cropUIOverlay'); if(!ov) return;
-  ov.style.background = `rgba(0,0,0,0)`;
-  box.style.left   = cBox.x + 'px';
-  box.style.top    = cBox.y + 'px';
-  box.style.width  = cBox.w + 'px';
-  box.style.height = cBox.h + 'px';
-  // 박스 바깥 어둡게 (box-shadow inset trick)
-  const iw=cIR.w, ih=cIR.h;
-  box.style.boxShadow = `0 0 0 9999px rgba(0,0,0,0.5)`;
+  document.getElementById('cropOverlay').classList.add('show');
 }
 
 function closeCropUI(){
-  const ov=document.getElementById('cropUIOverlay');
-  if(ov) ov.style.display='none';
+  document.getElementById('cropOverlay').classList.remove('show');
 }
 
-/* ── 크롭 적용 (명함앱 cropDone 패턴) ── */
-function applyCrop(){
-  // cIR, cBox 기반으로 원본 이미지에서 픽셀 크롭
-  const im = new Image();
-  im.onload = ()=>{
-    // 화면 좌표 → 원본 픽셀 좌표
-    const sX = im.naturalWidth  / (cIR.w || 1);
-    const sY = im.naturalHeight / (cIR.h || 1);
-    const sx = Math.max(0, Math.round(cBox.x * sX));
-    const sy = Math.max(0, Math.round(cBox.y * sY));
-    const sw = Math.min(im.naturalWidth  - sx, Math.max(20, Math.round(cBox.w * sX)));
-    const sh = Math.min(im.naturalHeight - sy, Math.max(20, Math.round(cBox.h * sY)));
+/* iOS/Android 모두 안전한 레이아웃 대기 루프 */
+let cResetTries = 0;
+function cResetWhenReady(){
+  const im = document.getElementById('cropImg');
+  if(im.clientWidth > 0 && im.clientHeight > 0){
+    cResetTries = 0; cReset(); return;
+  }
+  if(cResetTries++ < 60){ requestAnimationFrame(cResetWhenReady); return; }
+  cResetTries = 0;
+  // 끝내 0이면 naturalWidth 기준
+  const area = document.getElementById('cropArea');
+  const mw   = area.clientWidth  || window.innerWidth;
+  const mh   = area.clientHeight || window.innerHeight - 120;
+  cIR = { w: Math.min(mw, im.naturalWidth||mw), h: Math.min(mh, im.naturalHeight||mh) };
+  cBox = { x:cIR.w*0.06, y:cIR.h*0.06, w:cIR.w*0.88, h:cIR.h*0.88 };
+  cropUILayout();
+}
 
-    const out = document.createElement('canvas');
-    out.width=sw; out.height=sh;
-    out.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, sw, sh);
-    const cropped = out.toDataURL('image/jpeg', 0.96);
+function cReset(){
+  const im = document.getElementById('cropImg');
+  cIR = { w: im.clientWidth, h: im.clientHeight };
+  // cropBox를 img 위에 절대좌표로 맞춤
+  const area   = document.getElementById('cropArea');
+  const aRect  = area.getBoundingClientRect();
+  const iRect  = im.getBoundingClientRect();
+  cOffset = { x: iRect.left - aRect.left, y: iRect.top - aRect.top };
+  cBox = { x: cIR.w*0.06, y: cIR.h*0.06, w: cIR.w*0.88, h: cIR.h*0.88 };
+  cropUILayout();
+}
 
-    // modalImages 반영
-    let idx = modalImages.findIndex(m=>m.id===editImgId);
-    if(idx<0) idx=modalSlide;
-    if(idx>=0 && idx<modalImages.length){
-      modalImages[idx].dataUrl = cropped;
-      editImgId = modalImages[idx].id;
-      cropImgSrc = cropped;
+let cOffset = {x:0, y:0};
+
+function cropUILayout(){
+  const box = document.getElementById('cropBox');
+  if(!box) return;
+  box.style.left   = (cOffset.x + cBox.x) + 'px';
+  box.style.top    = (cOffset.y + cBox.y) + 'px';
+  box.style.width  = cBox.w + 'px';
+  box.style.height = cBox.h + 'px';
+}
+
+/* ── pointerdown/move/up — contacts.html 완전 동일 ── */
+(function setupCropEvents(){
+  const area = document.getElementById('cropArea');
+  if(!area) return;
+
+  area.addEventListener('pointerdown', e=>{
+    const h = e.target.getAttribute && e.target.getAttribute('data-h');
+    // data-h 있으면 해당 핸들, 없으면 이동 (contacts.html 패턴)
+    cDrag = h || 'move';
+    cSX = e.clientX; cSY = e.clientY; cSB = {...cBox};
+    try{ area.setPointerCapture(e.pointerId); }catch(_){}
+    e.preventDefault();
+  });
+
+  area.addEventListener('pointermove', e=>{
+    if(!cDrag) return;
+    const dx = e.clientX - cSX, dy = e.clientY - cSY;
+    let {x,y,w,h} = cSB;
+    const W = cIR.w, H = cIR.h;
+
+    if(cDrag === 'move'){
+      x = Math.min(Math.max(0, cSB.x+dx), W-cSB.w);
+      y = Math.min(Math.max(0, cSB.y+dy), H-cSB.h);
+    } else {
+      if(cDrag.indexOf('l')>=0){ x=cSB.x+dx; w=cSB.w-dx; }
+      if(cDrag.indexOf('r')>=0){ w=cSB.w+dx; }
+      if(cDrag.indexOf('t')>=0){ y=cSB.y+dy; h=cSB.h-dy; }
+      if(cDrag.indexOf('b')>=0){ h=cSB.h+dy; }
+      if(w<40){ if(cDrag.indexOf('l')>=0) x=cSB.x+cSB.w-40; w=40; }
+      if(h<30){ if(cDrag.indexOf('t')>=0) y=cSB.y+cSB.h-30; h=30; }
+      if(x<0){ w+=x; x=0; } if(y<0){ h+=y; y=0; }
+      if(x+w>W) w=W-x; if(y+h>H) h=H-y;
     }
+    cBox={x,y,w,h}; cropUILayout();
+    e.preventDefault();
+  });
 
-    closeCropUI();
-    document.getElementById('cropControls').classList.add('hidden');
-    // 편집기도 크롭된 이미지로 갱신
-    initCanvas(cropped);
-    setTool('select');
-    showToast('✂️ 크롭 완료 — ✓완료 버튼으로 저장');
-  };
-  im.src = cropImgSrc; // 원본 dataUrl 기준 크롭
+  area.addEventListener('pointerup',     ()=>{ cDrag=null; });
+  area.addEventListener('pointercancel', ()=>{ cDrag=null; });
+})();
+
+/* ── 크롭 적용 — contacts.html cropDone 패턴 ── */
+function applyCrop(){
+  const im = document.getElementById('cropImg');
+  const sX = im.naturalWidth  / (cIR.w || 1);
+  const sY = im.naturalHeight / (cIR.h || 1);
+  const sx = Math.max(0, Math.round(cBox.x * sX));
+  const sy = Math.max(0, Math.round(cBox.y * sY));
+  const sw = Math.max(20, Math.round(cBox.w * sX));
+  const sh = Math.max(20, Math.round(cBox.h * sY));
+
+  const out = document.createElement('canvas');
+  out.width=sw; out.height=sh;
+  out.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, sw, sh);
+  const cropped = out.toDataURL('image/jpeg', 0.96);
+
+  let idx = modalImages.findIndex(m=>m.id===editImgId);
+  if(idx<0) idx=modalSlide;
+  if(idx>=0 && idx<modalImages.length){
+    modalImages[idx].dataUrl = cropped;
+    editImgId = modalImages[idx].id;
+    cropImgSrc = cropped;
+  }
+  closeCropUI();
+  document.getElementById('cropControls').classList.add('hidden');
+  initCanvas(cropped);
+  setTool('select');
+  showToast('✂️ 크롭 완료 — ✓완료로 저장');
 }
+
 
 /* ── 회전 ── */
 function rotateImage(deg){
@@ -1399,12 +1350,28 @@ async function init(){
   document.getElementById('btnDelObj').onclick   = ()=>{ if(canvas){const o=canvas.getActiveObject();if(o){canvas.remove(o);canvas.renderAll();}} };
   document.getElementById('btnRotateL').onclick  = ()=>rotateImage(-90);
   document.getElementById('btnRotateR').onclick  = ()=>rotateImage(90);
-  document.getElementById('btnApplyCrop').onclick  = applyCrop;
-  document.getElementById('btnCancelCrop').onclick = ()=>{
-    closeCropUI();
-    document.getElementById('cropControls').classList.add('hidden');
-    setTool('select');
+  // 크롭 풀스크린 버튼들
+  document.getElementById('cropDoneBtn').onclick   = applyCrop;
+  document.getElementById('cropCancelBtn').onclick = ()=>{ closeCropUI(); setTool('select'); };
+  document.getElementById('cropRotateBtn').onclick = ()=>{
+    const im = document.getElementById('cropImg');
+    const src = im.src || cropImgSrc;
+    const tmpI = new Image();
+    tmpI.onload = ()=>{
+      const c=document.createElement('canvas'); c.width=tmpI.height; c.height=tmpI.width;
+      const ctx=c.getContext('2d');
+      ctx.translate(c.width/2,c.height/2); ctx.rotate(Math.PI/2);
+      ctx.drawImage(tmpI,-tmpI.width/2,-tmpI.height/2);
+      cropImgSrc = c.toDataURL('image/jpeg',0.95);
+      const im2=document.getElementById('cropImg');
+      im2.onload=()=>{ cResetTries=0; cResetWhenReady(); };
+      im2.src=cropImgSrc;
+    };
+    tmpI.src=src;
   };
+  // 편집모달 내 크롭/취소 버튼 (하단 바 — crop tool 선택 시 표시)
+  document.getElementById('btnApplyCrop').onclick  = applyCrop;
+  document.getElementById('btnCancelCrop').onclick = ()=>{ closeCropUI(); setTool('select'); };
   document.getElementById('btnAddText').onclick    = addText;
   document.getElementById('textInput').onkeydown   = e=>{ if(e.key==='Enter') addText(); };
 
