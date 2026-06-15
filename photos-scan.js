@@ -1,5 +1,5 @@
-/* photos-scan.js  v5.3-20260616
-   수정: 카메라→자동감지모달, 크롭엣지핸들수정, 버전표시, 상세보기전체화면
+/* photos-scan.js  v5.4-20260616
+   수정: 크롭 contacts.html 완전동일패턴, initCropEvents DOM후 호출
    URL ?mode=personal (기본) / ?mode=work 로 개인/업무 완전 분리
    - IndexedDB: PhotoScanDB_personal / PhotoScanDB_work
    - localStorage 키: photoscan_photos_personal / photoscan_photos_work 등
@@ -855,14 +855,7 @@ async function firebaseBackupMeta(){
 
 /* ── 편집기 (명함앱 검증 방식 — img+overlay, Fabric 크롭 대신 native canvas) ── */
 let canvas=null, editImgId=null, editTool='select', mosaicActive=false;
-
-/* ── 크롭 전용 변수 (명함앱과 동일 패턴) ── */
-let cIR={w:0,h:0};          // 화면상 이미지 크기
-let cBox={x:0,y:0,w:0,h:0}; // 크롭 박스 (화면 좌표)
-let cDrag=null, cSX=0, cSY=0, cSB=null;
-let cropImgSrc='';           // 현재 크롭 중인 원본 dataUrl
-let cropRect=null;           // Fabric 크롭rect (선택모드용 빈값 유지)
-let cropOverlays=[];
+let cropImgSrc='';  // 현재 크롭/편집 중인 원본 dataUrl
 
 function openEditor(){
   if(!modalImages.length){ showToast('사진을 먼저 추가하세요'); return; }
@@ -940,21 +933,65 @@ function setTool(tool){
 }
 
 /* ═══════════════════════════════════════════════
-   크롭 UI — contacts.html 검증 패턴 (정적 HTML)
-   cropArea pointerdown → data-h 없으면 move
-   naturalWidth 기준 픽셀 크롭
+   크롭 UI v5.4 — contacts.html 완전 동일 패턴
+   - 정적 HTML (cropArea/cropImg/cropBox/핸들)
+   - pointerdown: data-h 없으면 move
+   - setPointerCapture 로 손가락 추적
+   - naturalWidth 비율로 정확한 픽셀 크롭
    ═══════════════════════════════════════════════ */
+
+let cIR={w:0,h:0}, cBox={x:0,y:0,w:0,h:0};
+let cDrag=null, cSX=0, cSY=0, cSB=null;
+let cOffset={x:0,y:0};
+let cResetTries=0;
+
+/* 크롭 레이아웃 업데이트 */
+function cropUILayout(){
+  const box=document.getElementById('cropBox');
+  if(!box) return;
+  box.style.left   = (cOffset.x + cBox.x)+'px';
+  box.style.top    = (cOffset.y + cBox.y)+'px';
+  box.style.width  = cBox.w+'px';
+  box.style.height = cBox.h+'px';
+}
+
+/* iOS/Android 레이아웃 완료 대기 루프 */
+function cResetWhenReady(){
+  const im=document.getElementById('cropImg');
+  if(im.clientWidth>0 && im.clientHeight>0){
+    cResetTries=0; cReset(); return;
+  }
+  if(cResetTries++<60){ requestAnimationFrame(cResetWhenReady); return; }
+  cResetTries=0;
+  // fallback: naturalWidth 기준
+  const area=document.getElementById('cropArea');
+  const mw=area.clientWidth||window.innerWidth;
+  const mh=area.clientHeight||(window.innerHeight-120);
+  cIR={w:Math.min(mw,im.naturalWidth||mw), h:Math.min(mh,im.naturalHeight||mh)};
+  cOffset={x:0,y:0};
+  cBox={x:cIR.w*0.06,y:cIR.h*0.06,w:cIR.w*0.88,h:cIR.h*0.88};
+  cropUILayout();
+}
+
+function cReset(){
+  const im=document.getElementById('cropImg');
+  const area=document.getElementById('cropArea');
+  const aRect=area.getBoundingClientRect();
+  const iRect=im.getBoundingClientRect();
+  cIR={w:im.clientWidth, h:im.clientHeight};
+  cOffset={x:iRect.left-aRect.left, y:iRect.top-aRect.top};
+  cBox={x:cIR.w*0.06,y:cIR.h*0.06,w:cIR.w*0.88,h:cIR.h*0.88};
+  cropUILayout();
+}
 
 /* 크롭 열기 */
 function openCropUI(){
-  cropImgSrc = modalImages[modalSlide]?.dataUrl || cropImgSrc;
+  cropImgSrc = (modalImages[modalSlide]||{}).dataUrl || cropImgSrc;
   if(!cropImgSrc){ showToast('사진이 없습니다'); return; }
-
-  const im = document.getElementById('cropImg');
-  im.onload = ()=>{ cResetTries=0; cResetWhenReady(); };
-  im.src = cropImgSrc;
-  if(im.complete && im.naturalWidth) { cResetTries=0; cResetWhenReady(); }
-
+  const im=document.getElementById('cropImg');
+  im.onload=()=>{ cResetTries=0; requestAnimationFrame(cResetWhenReady); };
+  im.src=cropImgSrc;
+  if(im.complete && im.naturalWidth){ cResetTries=0; requestAnimationFrame(cResetWhenReady); }
   document.getElementById('cropOverlay').classList.add('show');
 }
 
@@ -962,70 +999,29 @@ function closeCropUI(){
   document.getElementById('cropOverlay').classList.remove('show');
 }
 
-/* iOS/Android 모두 안전한 레이아웃 대기 루프 */
-let cResetTries = 0;
-function cResetWhenReady(){
-  const im = document.getElementById('cropImg');
-  if(im.clientWidth > 0 && im.clientHeight > 0){
-    cResetTries = 0; cReset(); return;
-  }
-  if(cResetTries++ < 60){ requestAnimationFrame(cResetWhenReady); return; }
-  cResetTries = 0;
-  // 끝내 0이면 naturalWidth 기준
-  const area = document.getElementById('cropArea');
-  const mw   = area.clientWidth  || window.innerWidth;
-  const mh   = area.clientHeight || window.innerHeight - 120;
-  cIR = { w: Math.min(mw, im.naturalWidth||mw), h: Math.min(mh, im.naturalHeight||mh) };
-  cBox = { x:cIR.w*0.06, y:cIR.h*0.06, w:cIR.w*0.88, h:cIR.h*0.88 };
-  cropUILayout();
-}
+/* ── 크롭 이벤트 — init() 에서 호출 ── */
+function initCropEvents(){
+  const area=document.getElementById('cropArea');
+  if(!area || area._cropInited) return;
+  area._cropInited=true;
 
-function cReset(){
-  const im = document.getElementById('cropImg');
-  cIR = { w: im.clientWidth, h: im.clientHeight };
-  // cropBox를 img 위에 절대좌표로 맞춤
-  const area   = document.getElementById('cropArea');
-  const aRect  = area.getBoundingClientRect();
-  const iRect  = im.getBoundingClientRect();
-  cOffset = { x: iRect.left - aRect.left, y: iRect.top - aRect.top };
-  cBox = { x: cIR.w*0.06, y: cIR.h*0.06, w: cIR.w*0.88, h: cIR.h*0.88 };
-  cropUILayout();
-}
-
-let cOffset = {x:0, y:0};
-
-function cropUILayout(){
-  const box = document.getElementById('cropBox');
-  if(!box) return;
-  box.style.left   = (cOffset.x + cBox.x) + 'px';
-  box.style.top    = (cOffset.y + cBox.y) + 'px';
-  box.style.width  = cBox.w + 'px';
-  box.style.height = cBox.h + 'px';
-}
-
-/* ── pointerdown/move/up — contacts.html 완전 동일 ── */
-(function setupCropEvents(){
-  const area = document.getElementById('cropArea');
-  if(!area) return;
-
-  area.addEventListener('pointerdown', e=>{
-    const h = e.target.getAttribute && e.target.getAttribute('data-h');
-    // data-h 있으면 해당 핸들, 없으면 이동 (contacts.html 패턴)
-    cDrag = h || 'move';
-    cSX = e.clientX; cSY = e.clientY; cSB = {...cBox};
+  area.addEventListener('pointerdown',e=>{
+    // data-h 있으면 해당 핸들 방향, 없으면 전체 이동
+    const h=e.target.getAttribute&&e.target.getAttribute('data-h');
+    cDrag=h||'move';
+    cSX=e.clientX; cSY=e.clientY; cSB={...cBox};
     try{ area.setPointerCapture(e.pointerId); }catch(_){}
     e.preventDefault();
   });
 
-  area.addEventListener('pointermove', e=>{
+  area.addEventListener('pointermove',e=>{
     if(!cDrag) return;
-    const dx = e.clientX - cSX, dy = e.clientY - cSY;
-    let {x,y,w,h} = cSB;
-    const W = cIR.w, H = cIR.h;
-
-    if(cDrag === 'move'){
-      x = Math.min(Math.max(0, cSB.x+dx), W-cSB.w);
-      y = Math.min(Math.max(0, cSB.y+dy), H-cSB.h);
+    const dx=e.clientX-cSX, dy=e.clientY-cSY;
+    let {x,y,w,h}=cSB;
+    const W=cIR.w, H=cIR.h;
+    if(cDrag==='move'){
+      x=Math.min(Math.max(0,cSB.x+dx),W-cSB.w);
+      y=Math.min(Math.max(0,cSB.y+dy),H-cSB.h);
     } else {
       if(cDrag.indexOf('l')>=0){ x=cSB.x+dx; w=cSB.w-dx; }
       if(cDrag.indexOf('r')>=0){ w=cSB.w+dx; }
@@ -1033,41 +1029,39 @@ function cropUILayout(){
       if(cDrag.indexOf('b')>=0){ h=cSB.h+dy; }
       if(w<40){ if(cDrag.indexOf('l')>=0) x=cSB.x+cSB.w-40; w=40; }
       if(h<30){ if(cDrag.indexOf('t')>=0) y=cSB.y+cSB.h-30; h=30; }
-      if(x<0){ w+=x; x=0; } if(y<0){ h+=y; y=0; }
+      if(x<0){w+=x;x=0;} if(y<0){h+=y;y=0;}
       if(x+w>W) w=W-x; if(y+h>H) h=H-y;
     }
     cBox={x,y,w,h}; cropUILayout();
     e.preventDefault();
   });
 
-  area.addEventListener('pointerup',     ()=>{ cDrag=null; });
-  area.addEventListener('pointercancel', ()=>{ cDrag=null; });
-})();
+  area.addEventListener('pointerup',    ()=>{ cDrag=null; });
+  area.addEventListener('pointercancel',()=>{ cDrag=null; });
+}
 
-/* ── 크롭 적용 — contacts.html cropDone 패턴 ── */
+/* ── 크롭 적용 — contacts.html cropDone 완전 동일 ── */
 function applyCrop(){
-  const im = document.getElementById('cropImg');
-  const sX = im.naturalWidth  / (cIR.w || 1);
-  const sY = im.naturalHeight / (cIR.h || 1);
-  const sx = Math.max(0, Math.round(cBox.x * sX));
-  const sy = Math.max(0, Math.round(cBox.y * sY));
-  const sw = Math.max(20, Math.round(cBox.w * sX));
-  const sh = Math.max(20, Math.round(cBox.h * sY));
-
-  const out = document.createElement('canvas');
+  const im=document.getElementById('cropImg');
+  const sX=im.naturalWidth/(cIR.w||1);
+  const sY=im.naturalHeight/(cIR.h||1);
+  const sx=Math.max(0,Math.round(cBox.x*sX));
+  const sy=Math.max(0,Math.round(cBox.y*sY));
+  const sw=Math.max(20,Math.round(cBox.w*sX));
+  const sh=Math.max(20,Math.round(cBox.h*sY));
+  const out=document.createElement('canvas');
   out.width=sw; out.height=sh;
-  out.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, sw, sh);
-  const cropped = out.toDataURL('image/jpeg', 0.96);
+  out.getContext('2d').drawImage(im,sx,sy,sw,sh,0,0,sw,sh);
+  const cropped=out.toDataURL('image/jpeg',0.96);
 
-  let idx = modalImages.findIndex(m=>m.id===editImgId);
+  let idx=modalImages.findIndex(m=>m.id===editImgId);
   if(idx<0) idx=modalSlide;
-  if(idx>=0 && idx<modalImages.length){
-    modalImages[idx].dataUrl = cropped;
-    editImgId = modalImages[idx].id;
-    cropImgSrc = cropped;
+  if(idx>=0&&idx<modalImages.length){
+    modalImages[idx].dataUrl=cropped;
+    editImgId=modalImages[idx].id;
+    cropImgSrc=cropped;
   }
   closeCropUI();
-  document.getElementById('cropControls').classList.add('hidden');
   initCanvas(cropped);
   setTool('select');
   showToast('✂️ 크롭 완료 — ✓완료로 저장');
@@ -1225,7 +1219,7 @@ async function init(){
 
   /* 모드별 UI 적용 */
   document.getElementById('appTitle').textContent   = MODE_LABEL;
-  document.getElementById('appVersion').textContent = 'v5.3';
+  document.getElementById('appVersion').textContent = 'v5.4';
   document.getElementById('sideTitle').textContent  = MODE_LABEL;
   document.title = MODE_LABEL;
   document.querySelector('.app-title').style.color = MODE_COLOR;
@@ -1233,6 +1227,9 @@ async function init(){
   const modeBar = document.createElement('div');
   modeBar.style.cssText = `position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
   document.body.appendChild(modeBar);
+
+  /* 크롭 이벤트 초기화 (DOM 완성 후) */
+  initCropEvents();
 
   /* OpenCV 로딩 배지 */
   if(!cvReady && !cvError){
