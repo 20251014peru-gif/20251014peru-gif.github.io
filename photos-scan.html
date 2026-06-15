@@ -14,35 +14,22 @@
 
 <header class="app-header">
   <div class="header-left">
-    <button class="btn-icon" id="btnMenu">☰</button>
     <div class="header-title-wrap">
       <h1 class="app-title" id="appTitle">📷 사진 스캔</h1>
-      <span class="app-version" id="appVersion">v5.3</span>
+      <span class="app-version" id="appVersion">v6.7</span>
     </div>
   </div>
   <div class="header-right">
-    <button class="btn-icon" id="btnSearch" title="AI검색">🔍</button>
-    <button class="btn-icon" id="btnBackup" title="클라우드백업">☁️</button>
-    <button class="btn-icon" id="btnSettings" title="설정">⚙️</button>
+    <button class="btn-icon" id="btnHome"       title="홈으로">🏠</button>
+    <button class="btn-icon" id="btnBackup"     title="OneDrive 백업">☁️</button>
+    <button class="btn-icon" id="btnApiKey"     title="AI API 키 설정">🔑</button>
+    <button class="btn-icon" id="btnCatManage2" title="카테고리 관리">📂</button>
+    <button class="btn-icon" id="btnLocalExp"   title="로컬 백업 내보내기">⬇️</button>
+    <button class="btn-icon" id="btnLocalImp"   title="로컬 백업 불러오기">⬆️</button>
   </div>
 </header>
 
-<div class="side-overlay" id="sideOverlay"></div>
-<nav class="side-menu" id="sideMenu">
-  <div class="side-header">
-    <span id="sideTitle">메뉴</span>
-    <button class="btn-icon" id="btnMenuClose">✕</button>
-  </div>
-  <div class="side-body">
-    <button class="menu-item active" data-view="gallery">🖼️ 갤러리</button>
-    <hr>
-    <button class="menu-item" id="mnuApiKey">🔑 AI API 키 설정</button>
-    <button class="menu-item" id="mnuBackupExport">⬇️ 백업 내보내기</button>
-    <button class="menu-item" id="mnuBackupImport">⬆️ 백업 불러오기</button>
-    <hr>
-    <a class="menu-item" href="index.html">🏠 홈으로</a>
-  </div>
-</nav>
+
 
 <main class="main-content">
   <section class="view active" id="viewGallery">
@@ -54,7 +41,8 @@
     <div class="action-bar">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input type="text" id="gallerySearch" placeholder="제목·메모 검색...">
+        <input type="text" id="gallerySearch" placeholder="제목·메모 검색... (AI: @ 입력)">
+        <button class="search-ai-btn" id="btnAiSearchInline" title="AI 검색">🤖</button>
       </div>
     </div>
 
@@ -149,6 +137,15 @@
       <div class="ai-crop-row">
         <button class="btn-ai" id="btnAiCrop">📄 문서 자동감지 (OpenCV)</button>
         <span class="ai-status" id="aiCropStatus"></span>
+      </div>
+      <div class="form-row">
+        <label>문서 유형</label>
+        <select id="photoType">
+          <option value="">── 일반 사진 ──</option>
+          <option value="영수증">🧾 영수증</option>
+          <option value="계약서">📄 계약서</option>
+          <option value="행정문서">📋 행정문서</option>
+        </select>
       </div>
       <div class="form-row">
         <label>제목</label>
@@ -318,6 +315,7 @@
     <button class="vf-nav" id="btnViewNext">›</button>
   </div>
   <div class="vf-meta">
+    <span class="badge" id="viewType" style="display:none;background:#fef3c7;color:#d97706;"></span>
     <span class="badge" id="viewCat"></span>
     <span class="view-date" id="viewDate"></span>
     <p id="viewMemo"></p>
@@ -354,6 +352,33 @@
       <button class="btn-primary" id="btnSaveApiKey">저장</button>
     </div>
   </div>
+</div>
+
+<!-- OneDrive 백업 모달 -->
+<div class="modal-bg" id="modalOneDrive">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span>☁️ OneDrive 백업</span>
+      <button class="btn-icon" id="btnOneDriveClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint-text">Microsoft 계정으로 OneDrive에 백업합니다.<br>최초 1회 로그인이 필요해요.</p>
+      <div id="oneDriveStatus" class="od-status"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btnOdLocalExport">⬇️ 로컬 저장</button>
+      <button class="btn-primary"   id="btnOdUpload">☁️ OneDrive 업로드</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI 검색 결과 드롭다운 -->
+<div class="ai-search-dropdown" id="aiSearchDropdown" style="display:none">
+  <div class="ai-search-drop-header">
+    <span>🤖 AI 검색 결과</span>
+    <button onclick="closeAiDrop()">✕</button>
+  </div>
+  <div id="aiSearchDropResult"></div>
 </div>
 
 <div class="toast" id="toast"></div>

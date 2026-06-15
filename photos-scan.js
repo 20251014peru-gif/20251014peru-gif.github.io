@@ -65,9 +65,7 @@ function showToast(msg, dur=2500){
 const openModal  = id => document.getElementById(id).classList.add('open');
 const closeModal = id => document.getElementById(id).classList.remove('open');
 
-/* ── 사이드 메뉴 ── */
-const openSideMenu  = () => { document.getElementById('sideMenu').classList.add('open');    document.getElementById('sideOverlay').classList.add('open'); };
-const closeSideMenu = () => { document.getElementById('sideMenu').classList.remove('open'); document.getElementById('sideOverlay').classList.remove('open'); };
+/* 사이드 메뉴 제거 */
 
 /* ── 이미지 리사이즈 (AI 전송용) ── */
 function resizeForAI(dataUrl, maxPx=1024){
@@ -277,7 +275,7 @@ async function savePhoto(){
   } else {
     const pid=uid(); const imgIds=[];
     for(const m of modalImages){ const iid=uid(); await idbPut(iid,m.dataUrl); imgIds.push(iid); }
-    photos.unshift({id:pid,title,cat,memo,date,imgIds});
+    photos.unshift({id:pid,title,cat,memo,date,type,imgIds});
   }
   savePhotos(); closeModal('modalAdd'); renderGallery(); showToast('저장되었습니다');
 }
@@ -1322,6 +1320,129 @@ async function startScanFromCamera(files){
 }
 
 
+/* ════════════════════════════════════
+   OneDrive 백업 (Microsoft Graph API)
+   ════════════════════════════════════ */
+const OD_CLIENT_ID = ''; // Azure App Registration Client ID (설정 필요)
+const OD_SCOPE     = 'Files.ReadWrite offline_access';
+let   odToken      = null;
+
+async function odLogin(){
+  const statusEl = document.getElementById('oneDriveStatus');
+  if(!OD_CLIENT_ID){
+    statusEl.innerHTML = '⚠️ OneDrive Client ID가 설정되지 않았습니다.<br>설정 > OneDrive 연동에서 입력하세요.';
+    return null;
+  }
+  // PKCE 방식 로그인
+  const redirectUri = location.origin + location.pathname;
+  const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`
+    + `?client_id=${OD_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`
+    + `&scope=${encodeURIComponent(OD_SCOPE)}&response_mode=fragment`;
+  const popup = window.open(authUrl, 'odAuth', 'width=500,height=600');
+  return new Promise(res=>{
+    const timer = setInterval(()=>{
+      try{
+        const hash = popup.location.hash;
+        if(hash && hash.includes('access_token')){
+          clearInterval(timer); popup.close();
+          const params = new URLSearchParams(hash.slice(1));
+          odToken = params.get('access_token');
+          res(odToken);
+        }
+      }catch(e){}
+      if(popup.closed){ clearInterval(timer); res(null); }
+    }, 500);
+  });
+}
+
+async function uploadToOneDrive(){
+  const statusEl = document.getElementById('oneDriveStatus');
+  statusEl.textContent = '☁️ OneDrive 연결 중...';
+
+  // 토큰 없으면 로그인
+  if(!odToken){
+    odToken = await odLogin();
+    if(!odToken){ statusEl.textContent = '❌ 로그인 실패'; return; }
+  }
+
+  try{
+    statusEl.textContent = '📦 백업 파일 생성 중...';
+    const allImages = await idbGetAll();
+    const blob = new Blob(
+      [JSON.stringify({photos, categories, images:allImages}, null, 2)],
+      {type:'application/json'}
+    );
+    const fileName = `photoscan-backup-${today()}.json`;
+
+    statusEl.textContent = '⬆️ OneDrive에 업로드 중...';
+    const resp = await fetch(
+      `https://graph.microsoft.com/v1.0/me/drive/root:/PhotoScan/${fileName}:/content`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${odToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: blob
+      }
+    );
+    if(!resp.ok) throw new Error(`업로드 실패 ${resp.status}`);
+    const result = await resp.json();
+    statusEl.innerHTML = `✅ OneDrive 업로드 완료!<br>📁 경로: PhotoScan/${fileName}<br>📅 ${new Date().toLocaleString('ko-KR')}`;
+    showToast('☁️ OneDrive 백업 완료!');
+  } catch(e){
+    if(e.message.includes('401')){ odToken=null; statusEl.textContent='⚠️ 인증 만료 — 다시 시도하세요'; }
+    else statusEl.textContent = '❌ 오류: ' + e.message;
+  }
+}
+
+/* ════════════════════════════════════
+   AI 검색 — 검색창 통합
+   @ 입력하거나 🤖 버튼 클릭 시 실행
+   ════════════════════════════════════ */
+function closeAiDrop(){
+  document.getElementById('aiSearchDropdown').style.display='none';
+}
+
+async function runAiSearch(query){
+  query = query.replace(/^@/,'').trim();
+  if(!query) return;
+  const key = localStorage.getItem(LS_API_KEY)||'';
+  if(!key){ showToast('AI 키를 먼저 설정하세요 🔑'); return; }
+
+  const drop = document.getElementById('aiSearchDropdown');
+  const res  = document.getElementById('aiSearchDropResult');
+  drop.style.display = '';
+  res.innerHTML = '<div style="padding:16px;color:#94a3b8">🤖 검색 중...</div>';
+
+  const index = photos.map(p=>({id:p.id,title:p.title,cat:p.cat,type:p.type,memo:p.memo,date:p.date}));
+  try{
+    const text = await callAI([{
+      role:'user',
+      content:`사진 목록:
+${JSON.stringify(index)}
+
+검색: "${query}"
+
+관련 사진을 JSON으로 반환: [{"id":"xxx","reason":"이유"},...]. JSON만 반환.`
+    }], 1024);
+    const found = JSON.parse(text.replace(/\`\`\`json|\`\`\`/g,'').trim());
+    if(!found.length){ res.innerHTML='<p style="padding:16px;color:#aaa">관련 사진을 찾지 못했습니다.</p>'; return; }
+    res.innerHTML='';
+    found.forEach(r=>{
+      const p=photos.find(x=>x.id===r.id); if(!p) return;
+      const card=document.createElement('div');
+      card.className='result-card';
+      card.innerHTML=`<div class="result-title">${p.title||'(제목 없음)'}</div><div class="result-meta">${p.type||''} · ${p.cat||''} · ${p.date||''}</div><div class="result-reason">${r.reason}</div>`;
+      card.onclick=()=>{ closeAiDrop(); openViewModal(p.id); };
+      res.appendChild(card);
+    });
+  } catch(e){
+    res.innerHTML=`<p style="padding:16px;color:red">오류: ${e.message}</p>`;
+  }
+}
+
+
 /* ── Init ── */
 async function init(){
   await openIDB();
@@ -1329,7 +1450,7 @@ async function init(){
 
   /* 모드별 UI 적용 */
   document.getElementById('appTitle').textContent   = MODE_LABEL;
-  document.getElementById('appVersion').textContent = 'v6.5';
+  document.getElementById('appVersion').textContent = 'v6.7';
   document.getElementById('sideTitle').textContent  = MODE_LABEL;
   document.title = MODE_LABEL;
   document.querySelector('.app-title').style.color = MODE_COLOR;
@@ -1384,16 +1505,31 @@ async function init(){
   document.getElementById('btnBackup').onclick   = firebaseBackupMeta;
   document.getElementById('btnSettings').onclick = ()=>openModal('modalApiKey');
 
-  /* 사이드 메뉴 */
-  document.getElementById('mnuApiKey').onclick       = ()=>{ closeSideMenu(); openModal('modalApiKey'); };
-  document.getElementById('mnuBackupExport').onclick = ()=>{ closeSideMenu(); exportBackup(); };
-  document.getElementById('mnuBackupImport').onclick = ()=>{ closeSideMenu(); document.getElementById('backupInput').click(); };
+  /* 사이드 메뉴 제거됨 */
 
-  /* 카메라(자동스캔) / 갤러리 */
-  document.getElementById('btnCamera').onclick  = ()=>document.getElementById('fileInputCamera').click();
-  document.getElementById('btnGallery').onclick = ()=>document.getElementById('fileInputGallery').click();
-  document.getElementById('fileInputCamera').onchange  = e=>{ if(e.target.files.length) handleFiles(e.target.files,false,true); e.target.value=''; };
-  document.getElementById('fileInputGallery').onchange = e=>{ if(e.target.files.length) handleFiles(e.target.files); e.target.value=''; };
+  /* 모드 버튼 이벤트 */
+  const _safe = id => document.getElementById(id);
+  // 일반사진 모드
+  if(_safe('btnPhotoCamera'))  _safe('btnPhotoCamera').onclick  = startBurstCamera;
+  if(_safe('btnPhotoGallery')) _safe('btnPhotoGallery').onclick = ()=>_safe('fileInputGallery').click();
+  // 문서스캔 모드
+  if(_safe('btnScanCamera'))   _safe('btnScanCamera').onclick   = ()=>_safe('fileScanCamera').click();
+  if(_safe('btnScanGallery'))  _safe('btnScanGallery').onclick  = ()=>_safe('fileScanGallery').click();
+
+  // 파일 입력 핸들러
+  if(_safe('fileScanCamera'))  _safe('fileScanCamera').onchange  = e=>{ if(e.target.files.length) startScanFromCamera(e.target.files); e.target.value=''; };
+  if(_safe('fileScanGallery')) _safe('fileScanGallery').onchange = e=>{ if(e.target.files.length) startScanFromCamera(e.target.files); e.target.value=''; };
+
+  // 연속촬영 오버레이 버튼
+  if(_safe('burstAddMore')) _safe('burstAddMore').onclick = ()=>_safe('fileInputCamera').click();
+  if(_safe('burstDone'))    _safe('burstDone').onclick    = burstDone;
+  if(_safe('burstCancel'))  _safe('burstCancel').onclick  = burstCancel;
+
+  /* 기존 카메라/갤러리 (하위 호환) */
+  if(_safe('btnCamera'))  _safe('btnCamera').onclick  = ()=>_safe('fileInputCamera').click();
+  if(_safe('btnGallery')) _safe('btnGallery').onclick = ()=>_safe('fileInputGallery').click();
+  _safe('fileInputCamera').onchange  = e=>{ if(e.target.files.length) addBurstFiles(e.target.files); e.target.value=''; };
+  _safe('fileInputGallery').onchange = e=>{ if(e.target.files.length) handleFiles(e.target.files); e.target.value=''; };
 
   /* 검색 */
   document.getElementById('gallerySearch').oninput = e=>{ currentSearch=e.target.value; renderGallery(); };
