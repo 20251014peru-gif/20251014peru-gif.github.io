@@ -162,7 +162,11 @@ body{background:#FEF8E8}
       <label class="form-label">참고 링크</label>
       <input type="url" id="fLink" class="form-input" placeholder="https://...">
       <label class="form-label">카테고리</label>
-      <select id="fCat" class="form-select"></select>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="fCat" class="form-select" style="flex:1"></select>
+        <button type="button" id="inlineAddCat" style="width:42px;height:44px;border-radius:13px;background:#D97706;color:#fff;border:none;font-size:22px;cursor:pointer;flex-shrink:0">＋</button>
+        <button type="button" id="inlineDelCat" style="width:42px;height:44px;border-radius:13px;background:#fff0f0;color:#e24b4a;border:1.5px solid #f5c1c1;font-size:18px;cursor:pointer;flex-shrink:0">✕</button>
+      </div>
       <label class="form-label">태그 <span class="form-hint">입력 후 Enter</span></label>
       <div class="tag-input-wrap" id="tagWrap"></div>
       <label class="form-label">재료 <span class="form-hint">구매링크 선택입력</span></label>
@@ -244,6 +248,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('shopClose').onclick=()=>document.getElementById('shopModal').classList.remove('open');
   document.getElementById('shopModal').onclick=e=>{if(e.target===document.getElementById('shopModal'))document.getElementById('shopModal').classList.remove('open')};
   document.addEventListener('paste',e=>{if(!document.getElementById('editModal').classList.contains('open'))return;const it=e.clipboardData?.items;if(!it)return;for(const i of it){if(i.type.startsWith('image/')){addImageFromFile(i.getAsFile(),editImages,renderImgPreview);break}}});
+  setupInlineCat();
   scheduleAutoBackup();
 });
 
@@ -512,6 +517,24 @@ window.restoreBackup=async id=>{
   if(!confirm('복원할까요?'))return;const all=await fsGet('rc_backups');const b=all.find(x=>x.id===id);if(!b)return;
   try{const s=JSON.parse(b.snap);items=s.data.items||[];cats=s.data.cats||[];saveCats();renderList();renderSettings();toast('복원 완료 ✓')}catch{toast('복원 실패')}
 };
+function setupInlineCat(){
+  document.getElementById('inlineAddCat').onclick = ()=>{
+    const n = prompt('새 카테고리 이름을 입력하세요');
+    if(!n||!n.trim()) return;
+    const v = n.trim();
+    if(cats.includes(v)){ toast('이미 있는 카테고리예요'); return; }
+    cats.push(v); saveCats(); renderCatSelect(); renderCatChips();
+    document.getElementById('fCat').value = v;
+    toast(v+' 추가 완료 ✓');
+  };
+  document.getElementById('inlineDelCat').onclick = ()=>{
+    const v = document.getElementById('fCat').value;
+    if(!v){ toast('삭제할 카테고리를 먼저 선택해주세요'); return; }
+    if(!confirm('"'+v+'" 카테고리를 삭제할까요?')) return;
+    cats = cats.filter(c=>c!==v); saveCats(); renderCatSelect(); renderCatChips();
+    toast(v+' 삭제 완료');
+  };
+}
 function scheduleAutoBackup(){const lb=parseInt(localStorage.getItem('rc_lastBackup')||'0');if(Date.now()-lb>7*24*60*60*1000)setTimeout(()=>doBackup('rc',()=>({items,cats})),5000)}
 </script>
 </body>

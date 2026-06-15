@@ -150,7 +150,11 @@ body{background:#EEF5FD}
       <label class="form-label">제목</label>
       <input type="text" id="fTitle" class="form-input" placeholder="제목">
       <label class="form-label">카테고리</label>
-      <select id="fCat" class="form-select"></select>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="fCat" class="form-select" style="flex:1"></select>
+        <button type="button" id="inlineAddCat" style="width:42px;height:44px;border-radius:13px;background:#185FA5;color:#fff;border:none;font-size:22px;cursor:pointer;flex-shrink:0">＋</button>
+        <button type="button" id="inlineDelCat" style="width:42px;height:44px;border-radius:13px;background:#fff0f0;color:#e24b4a;border:1.5px solid #f5c1c1;font-size:18px;cursor:pointer;flex-shrink:0">✕</button>
+      </div>
       <label class="form-label">태그 <span class="form-hint">입력 후 Enter</span></label>
       <div class="tag-input-wrap" id="tagWrap"></div>
       <label class="form-label">메모</label>
@@ -231,6 +235,24 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.getElementById('manualBackup').onclick = ()=>doBackup('lk',()=>({items,cats}));
   document.getElementById('exportJsonBtn').onclick = ()=>exportJson({items,cats},'links_backup.json');
   document.getElementById('darkModeToggle').onchange = toggleDark;
+
+  // 인라인 카테고리 추가/삭제
+  document.getElementById('inlineAddCat').onclick = ()=>{
+    const n = prompt('새 카테고리 이름을 입력하세요');
+    if(!n||!n.trim()) return;
+    const v = n.trim();
+    if(cats.includes(v)){ toast('이미 있는 카테고리예요'); return; }
+    cats.push(v); saveCats(); renderCatSelect(); renderCatChips();
+    document.getElementById('fCat').value = v;
+    toast(v+' 추가 완료 ✓');
+  };
+  document.getElementById('inlineDelCat').onclick = ()=>{
+    const v = document.getElementById('fCat').value;
+    if(!v){ toast('삭제할 카테고리를 먼저 선택해주세요'); return; }
+    if(!confirm('"'+v+'" 카테고리를 삭제할까요?')) return;
+    cats = cats.filter(c=>c!==v); saveCats(); renderCatSelect(); renderCatChips();
+    toast(v+' 삭제 완료');
+  };
 
   scheduleAutoBackup();
 });
