@@ -839,388 +839,385 @@ async function firebaseBackupMeta(){
   } catch(e){ showToast('클라우드 백업 실패'); }
 }
 
-/* ── Fabric.js 편집기 ── */
-let canvas=null, editImgId=null, editTool='select', cropRect=null;
-let mosaicActive=false; // 드래그 모자이크 상태
+/* ── 편집기 (명함앱 검증 방식 — img+overlay, Fabric 크롭 대신 native canvas) ── */
+let canvas=null, editImgId=null, editTool='select', mosaicActive=false;
+
+/* ── 크롭 전용 변수 (명함앱과 동일 패턴) ── */
+let cIR={w:0,h:0};          // 화면상 이미지 크기
+let cBox={x:0,y:0,w:0,h:0}; // 크롭 박스 (화면 좌표)
+let cDrag=null, cSX=0, cSY=0, cSB=null;
+let cropImgSrc='';           // 현재 크롭 중인 원본 dataUrl
+let cropRect=null;           // Fabric 크롭rect (선택모드용 빈값 유지)
+let cropOverlays=[];
 
 function openEditor(){
   if(!modalImages.length){ showToast('사진을 먼저 추가하세요'); return; }
   editImgId = modalImages[modalSlide].id;
+  cropImgSrc = modalImages[modalSlide].dataUrl;
   closeModal('modalAdd');
   openModal('modalEdit');
-  setTimeout(()=>initCanvas(modalImages[modalSlide].dataUrl), 120);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>initCanvas(cropImgSrc)));
 }
 
+/* ── Canvas 초기화 (Fabric용, 크롭 제외) ── */
 function initCanvas(dataUrl){
+  cropImgSrc = dataUrl;
   const wrapper = document.getElementById('canvasWrapper');
-  const maxW = Math.min(wrapper.clientWidth - 20, 700);
-  const maxH = Math.min(wrapper.clientHeight - 20, 540);
-  if(canvas){ canvas.dispose(); canvas=null; }
+  const maxW = (wrapper.clientWidth  > 50 ? wrapper.clientWidth  : window.innerWidth)  - 8;
+  const maxH = (wrapper.clientHeight > 50 ? wrapper.clientHeight : window.innerHeight) - 180;
 
+  if(canvas){ canvas.dispose(); canvas=null; }
   canvas = new fabric.Canvas('editCanvas', {
-    selection: true,
-    preserveObjectStacking: true,
-    stopContextMenu: true,
-    fireRightClick: false
+    selection:true, preserveObjectStacking:true,
+    stopContextMenu:true, fireRightClick:false
   });
 
-  fabric.Image.fromURL(dataUrl, img=>{
-    const scale = Math.min(maxW/img.width, maxH/img.height, 1);
-    const cw = Math.round(img.width * scale);
-    const ch = Math.round(img.height * scale);
-    canvas.setWidth(cw);
-    canvas.setHeight(ch);
-    img.set({ scaleX:scale, scaleY:scale, selectable:false, evented:false });
-    canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+  const _img = new Image();
+  _img.onload = ()=>{
+    const scale = Math.min(maxW/_img.width, maxH/_img.height, 1);
+    const cw = Math.round(_img.width  * scale);
+    const ch = Math.round(_img.height * scale);
+    canvas.setWidth(cw); canvas.setHeight(ch);
+    const fImg = new fabric.Image(_img, {scaleX:scale,scaleY:scale,selectable:false,evented:false});
+    canvas.setBackgroundImage(fImg, canvas.renderAll.bind(canvas));
 
-    /* 모자이크 드래그 이벤트 */
-    canvas.on('mouse:down', opt=>{
-      if(editTool==='mosaic'){ mosaicActive=true; applyMosaicAt(opt.e); }
-    });
-    canvas.on('mouse:move', opt=>{
-      if(editTool==='mosaic' && mosaicActive) applyMosaicAt(opt.e);
-    });
-    canvas.on('mouse:up', ()=>{ mosaicActive=false; });
-
-    // 터치 이벤트도 모자이크 지원
-    canvas.upperCanvasEl.addEventListener('touchstart', e=>{
-      if(editTool==='mosaic'){ mosaicActive=true; applyMosaicAt(e.touches[0]); e.preventDefault(); }
-    }, {passive:false});
-    canvas.upperCanvasEl.addEventListener('touchmove', e=>{
-      if(editTool==='mosaic' && mosaicActive){ applyMosaicAt(e.touches[0]); e.preventDefault(); }
-    }, {passive:false});
-    canvas.upperCanvasEl.addEventListener('touchend', ()=>{ mosaicActive=false; });
-
-  }, {crossOrigin:'anonymous'});
+    /* 모자이크 드래그 */
+    canvas.on('mouse:down', opt=>{ if(editTool==='mosaic'){ mosaicActive=true; applyMosaicAt(opt.e); }});
+    canvas.on('mouse:move', opt=>{ if(editTool==='mosaic'&&mosaicActive) applyMosaicAt(opt.e); });
+    canvas.on('mouse:up',   ()=>{ mosaicActive=false; });
+    canvas.upperCanvasEl.addEventListener('touchstart',e=>{
+      if(editTool==='mosaic'){mosaicActive=true;applyMosaicAt(e.touches[0]);e.preventDefault();}
+    },{passive:false});
+    canvas.upperCanvasEl.addEventListener('touchmove',e=>{
+      if(editTool==='mosaic'&&mosaicActive){applyMosaicAt(e.touches[0]);e.preventDefault();}
+    },{passive:false});
+    canvas.upperCanvasEl.addEventListener('touchend',()=>{ mosaicActive=false; });
+  };
+  _img.src = dataUrl;
   setTool('select');
 }
 
 function setTool(tool){
   editTool = tool;
-  document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.toggle('active', b.dataset.tool===tool));
+  document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
   document.getElementById('cropControls').classList.add('hidden');
   document.getElementById('textInputRow').classList.add('hidden');
   document.getElementById('lblMosaic').style.display  = 'none';
   document.getElementById('mosaicSize').style.display = 'none';
   if(!canvas) return;
-
-  canvas.isDrawingMode = false;
-  canvas.selection     = true;
-  canvas.defaultCursor = 'default';
+  canvas.isDrawingMode=false; canvas.selection=true; canvas.defaultCursor='default';
 
   if(tool==='draw'){
-    canvas.isDrawingMode = true;
-    canvas.freeDrawingBrush.width = parseInt(document.getElementById('toolSize').value);
-    canvas.freeDrawingBrush.color = document.getElementById('toolColor').value;
+    canvas.isDrawingMode=true;
+    canvas.freeDrawingBrush.width=parseInt(document.getElementById('toolSize').value);
+    canvas.freeDrawingBrush.color=document.getElementById('toolColor').value;
   } else if(tool==='crop'){
-    canvas.selection = false;
+    // 크롭은 Fabric 없이 별도 오버레이 UI 사용
+    canvas.selection=false;
     document.getElementById('cropControls').classList.remove('hidden');
-    startCropMode();
+    openCropUI();
   } else if(tool==='text'){
     document.getElementById('textInputRow').classList.remove('hidden');
-    canvas.defaultCursor = 'text';
+    canvas.defaultCursor='text';
   } else if(tool==='mosaic'){
-    document.getElementById('lblMosaic').style.display  = '';
-    document.getElementById('mosaicSize').style.display = '';
-    canvas.selection     = false;
-    canvas.defaultCursor = 'crosshair';
+    document.getElementById('lblMosaic').style.display='';
+    document.getElementById('mosaicSize').style.display='';
+    canvas.selection=false; canvas.defaultCursor='crosshair';
   }
 }
 
-/* 크롭 박스 — 핸들 크게, 터치 정교하게 */
-function startCropMode(){
-  if(cropRect) canvas.remove(cropRect);
-  const pad = 30;
-  cropRect = new fabric.Rect({
-    left:   pad,
-    top:    pad,
-    width:  canvas.width  - pad*2,
-    height: canvas.height - pad*2,
-    fill:             'rgba(0,0,0,0.0)',
-    stroke:           '#3F7CB8',
-    strokeWidth:      2.5,
-    strokeDashArray:  [8,4],
-    cornerColor:      '#fff',
-    cornerStrokeColor:'#3F7CB8',
-    cornerSize:       20,          // 터치하기 쉽게 크게
-    cornerStyle:      'circle',
-    transparentCorners: false,
-    borderColor:      '#3F7CB8',
-    borderDashArray:  [6,3],
-    hasRotatingPoint: false,       // 회전 핸들 숨김
-    lockRotation:     true,
-    minScaleLimit:    0.1,
-    padding:          6
-  });
+/* ═══════════════════════════════════
+   크롭 UI — 명함앱 검증 패턴 그대로
+   ═══════════════════════════════════ */
+function openCropUI(){
+  const wrap = document.getElementById('canvasWrapper');
+  // 크롭 오버레이 DOM 삽입 (없으면)
+  let ov = document.getElementById('cropUIOverlay');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'cropUIOverlay';
+    ov.style.cssText = 'position:absolute;inset:0;z-index:50;touch-action:none;';
 
-  // 반투명 어두운 오버레이 (크롭 외부)
-  canvas.clipPath = null;
-  canvas.add(cropRect);
-  canvas.setActiveObject(cropRect);
+    // 크롭 박스
+    const box = document.createElement('div');
+    box.id = 'cropUIBox';
+    box.style.cssText = 'position:absolute;border:2px solid #FFD700;box-sizing:border-box;';
 
-  // 크롭 박스 외부 어둡게
-  cropRect.on('moving',   updateCropOverlay);
-  cropRect.on('scaling',  updateCropOverlay);
-  cropRect.on('modified', updateCropOverlay);
-
-  canvas.renderAll();
-}
-
-let cropOverlays = [];
-function updateCropOverlay(){
-  cropOverlays.forEach(o=>canvas.remove(o));
-  cropOverlays=[];
-  if(!cropRect) return;
-
-  const r   = cropRect.getBoundingRect(true);
-  const cw  = canvas.width;
-  const ch  = canvas.height;
-
-  const rects=[
-    {left:0,        top:0,     width:r.left,             height:ch},
-    {left:r.left+r.width, top:0, width:cw-(r.left+r.width), height:ch},
-    {left:r.left,   top:0,     width:r.width,             height:r.top},
-    {left:r.left,   top:r.top+r.height, width:r.width, height:ch-(r.top+r.height)}
-  ];
-  rects.forEach(opts=>{
-    if(opts.width<=0||opts.height<=0) return;
-    const o = new fabric.Rect({...opts, fill:'rgba(0,0,0,0.45)', selectable:false, evented:false});
-    cropOverlays.push(o);
-    canvas.add(o);
-    canvas.sendToBack(o);
-  });
-  canvas.bringToFront(cropRect);
-  canvas.renderAll();
-}
-
-function applyCrop(){
-  if(!cropRect) return;
-
-  // 크롭 박스 실제 좌표 (캔버스 화면 기준)
-  const br = cropRect.getBoundingRect(true);
-
-  // 오버레이/크롭박스 제거
-  cropOverlays.forEach(o=>canvas.remove(o));
-  cropOverlays=[];
-  canvas.remove(cropRect);
-  cropRect=null;
-  canvas.renderAll();
-
-  // 원본 배경 이미지에서 직접 픽셀 크롭 (캔버스 렌더링 결과 아닌 원본 사용)
-  const bgImg   = canvas.backgroundImage;
-  const scaleX  = bgImg ? (bgImg.scaleX||1) : 1;
-  const scaleY  = bgImg ? (bgImg.scaleY||1) : 1;
-  const origEl  = bgImg ? bgImg.getElement() : null;
-
-  // 캔버스 좌표 → 원본 이미지 픽셀 좌표 변환
-  const px = Math.round(br.left  / scaleX);
-  const py = Math.round(br.top   / scaleY);
-  const pw = Math.round(br.width / scaleX);
-  const ph = Math.round(br.height/ scaleY);
-
-  if(!origEl || pw < 10 || ph < 10){ showToast('크롭 영역이 너무 작습니다'); return; }
-
-  // 원본 이미지에서 어노테이션 포함해서 크롭
-  // 1) 어노테이션만 임시 캔버스에 합성
-  const merged = document.createElement('canvas');
-  merged.width  = origEl.naturalWidth  || origEl.width;
-  merged.height = origEl.naturalHeight || origEl.height;
-  const mctx = merged.getContext('2d');
-  mctx.drawImage(origEl, 0, 0);
-
-  // 2) canvas 위 객체(텍스트, 도형 등)를 원본 스케일에 맞게 그리기
-  const objs = canvas.getObjects();
-  if(objs.length){
-    const tmpC = document.createElement('canvas');
-    tmpC.width  = canvas.width;
-    tmpC.height = canvas.height;
-    const tmpCtx = tmpC.getContext('2d');
-    // fabric canvas의 어노테이션 레이어만 export
-    canvas.getObjects().forEach(obj=>{
-      // fabric 객체를 canvas에 그리기
+    // 8개 핸들 (모서리 4 + 엣지 4)
+    const handles = [
+      {id:'lt',style:'top:-8px;left:-8px;cursor:nwse-resize;','data-h':'lt'},
+      {id:'rt',style:'top:-8px;right:-8px;cursor:nesw-resize;','data-h':'rt'},
+      {id:'rb',style:'bottom:-8px;right:-8px;cursor:nwse-resize;','data-h':'rb'},
+      {id:'lb',style:'bottom:-8px;left:-8px;cursor:nesw-resize;','data-h':'lb'},
+      {id:'t', style:'top:-7px;left:50%;transform:translateX(-50%);cursor:ns-resize;','data-h':'t'},
+      {id:'r', style:'right:-7px;top:50%;transform:translateY(-50%);cursor:ew-resize;','data-h':'r'},
+      {id:'b', style:'bottom:-7px;left:50%;transform:translateX(-50%);cursor:ns-resize;','data-h':'b'},
+      {id:'l', style:'left:-7px;top:50%;transform:translateY(-50%);cursor:ew-resize;','data-h':'l'},
+    ];
+    handles.forEach(h=>{
+      const el=document.createElement('div');
+      el.setAttribute('data-h', h['data-h']);
+      el.style.cssText = `position:absolute;width:16px;height:16px;background:#FFD700;border:2px solid #fff;border-radius:50%;${h.style}`;
+      box.appendChild(el);
     });
-    // 간단하게: canvas.toDataURL로 전체 내보낸 후 크롭
+    ov.appendChild(box);
+    wrap.style.position='relative';
+    wrap.appendChild(ov);
+
+    /* 이벤트: pointerdown/move/up — 명함앱 완전 동일 패턴 */
+    ov.addEventListener('pointerdown', e=>{
+      const h = e.target.getAttribute && e.target.getAttribute('data-h');
+      // 핸들 클릭이면 해당 handle, 박스 내부면 move, 바깥이면 무시
+      const boxEl = document.getElementById('cropUIBox');
+      const boxR  = boxEl.getBoundingClientRect();
+      const inBox = e.clientX>=boxR.left&&e.clientX<=boxR.right&&e.clientY>=boxR.top&&e.clientY<=boxR.bottom;
+      if(!h && !inBox) return;
+      cDrag = h || 'move';
+      cSX=e.clientX; cSY=e.clientY; cSB={...cBox};
+      try{ ov.setPointerCapture(e.pointerId); }catch(_){}
+      e.preventDefault();
+    });
+    ov.addEventListener('pointermove', e=>{
+      if(!cDrag) return;
+      const dx=e.clientX-cSX, dy=e.clientY-cSY;
+      let {x,y,w,h}=cSB;
+      const W=cIR.w, H=cIR.h;
+      if(cDrag==='move'){
+        x=Math.min(Math.max(0,cSB.x+dx),W-cSB.w);
+        y=Math.min(Math.max(0,cSB.y+dy),H-cSB.h);
+      } else {
+        if(cDrag.includes('l')){ x=cSB.x+dx; w=cSB.w-dx; }
+        if(cDrag.includes('r')){ w=cSB.w+dx; }
+        if(cDrag.includes('t')){ y=cSB.y+dy; h=cSB.h-dy; }
+        if(cDrag.includes('b')){ h=cSB.h+dy; }
+        if(w<40){ if(cDrag.includes('l')){ x=cSB.x+cSB.w-40; } w=40; }
+        if(h<30){ if(cDrag.includes('t')){ y=cSB.y+cSB.h-30; } h=30; }
+        if(x<0){ w+=x; x=0; } if(y<0){ h+=y; y=0; }
+        if(x+w>W) w=W-x; if(y+h>H) h=H-y;
+      }
+      cBox={x,y,w,h}; cropUILayout();
+      e.preventDefault();
+    });
+    ov.addEventListener('pointerup',     ()=>{ cDrag=null; });
+    ov.addEventListener('pointercancel', ()=>{ cDrag=null; });
+  } else {
+    ov.style.display='';
   }
 
-  // 가장 확실한 방법: canvas 전체 export 후 원본 스케일로 크롭
-  const fullUrl = canvas.toDataURL({format:'jpeg', quality:0.97, multiplier:1});
-
-  cropImageByPixel(
-    fullUrl,
-    Math.round(br.left),
-    Math.round(br.top),
-    Math.round(br.width),
-    Math.round(br.height)
-  ).then(cropped=>{
-    if(!cropped){ showToast('크롭 실패'); return; }
-    // ★ 핵심: editImgId로 찾고, 못 찾으면 modalSlide로 저장
-    const idx = modalImages.findIndex(m=>m.id===editImgId);
-    if(idx>=0){
-      modalImages[idx].dataUrl = cropped;
-    } else if(modalImages[modalSlide]){
-      modalImages[modalSlide].dataUrl = cropped;
-    }
-    // 편집 캔버스도 크롭된 이미지로 갱신
-    initCanvas(cropped);
-    document.getElementById('cropControls').classList.add('hidden');
-    showToast('✂️ 크롭 완료 — 완료 버튼을 눌러 저장하세요');
-  });
+  cropUIReset();
 }
 
-/* 회전 */
+/* 이미지 크기 측정 후 박스 초기화 — iOS rAF 루프 패턴 */
+let _cResetTries=0;
+function cropUIReset(){
+  const cvEl = document.getElementById('editCanvas');
+  const w = cvEl ? cvEl.clientWidth  : 0;
+  const h = cvEl ? cvEl.clientHeight : 0;
+  if(w>0 && h>0){
+    _cResetTries=0;
+    cIR = {w,h};
+    cBox = {x:Math.round(w*0.07), y:Math.round(h*0.07), w:Math.round(w*0.86), h:Math.round(h*0.86)};
+    cropUILayout();
+  } else if(_cResetTries++ < 60){
+    requestAnimationFrame(cropUIReset);
+  } else {
+    _cResetTries=0;
+    const wrapper=document.getElementById('canvasWrapper');
+    cIR={w:wrapper.clientWidth||300, h:wrapper.clientHeight||300};
+    cBox={x:20,y:20,w:cIR.w-40,h:cIR.h-40};
+    cropUILayout();
+  }
+}
+
+function cropUILayout(){
+  const box = document.getElementById('cropUIBox'); if(!box) return;
+  // 어두운 배경 (box 바깥) — clip-path 이용
+  const ov = document.getElementById('cropUIOverlay'); if(!ov) return;
+  ov.style.background = `rgba(0,0,0,0)`;
+  box.style.left   = cBox.x + 'px';
+  box.style.top    = cBox.y + 'px';
+  box.style.width  = cBox.w + 'px';
+  box.style.height = cBox.h + 'px';
+  // 박스 바깥 어둡게 (box-shadow inset trick)
+  const iw=cIR.w, ih=cIR.h;
+  box.style.boxShadow = `0 0 0 9999px rgba(0,0,0,0.5)`;
+}
+
+function closeCropUI(){
+  const ov=document.getElementById('cropUIOverlay');
+  if(ov) ov.style.display='none';
+}
+
+/* ── 크롭 적용 (명함앱 cropDone 패턴) ── */
+function applyCrop(){
+  // cIR, cBox 기반으로 원본 이미지에서 픽셀 크롭
+  const im = new Image();
+  im.onload = ()=>{
+    // 화면 좌표 → 원본 픽셀 좌표
+    const sX = im.naturalWidth  / (cIR.w || 1);
+    const sY = im.naturalHeight / (cIR.h || 1);
+    const sx = Math.max(0, Math.round(cBox.x * sX));
+    const sy = Math.max(0, Math.round(cBox.y * sY));
+    const sw = Math.min(im.naturalWidth  - sx, Math.max(20, Math.round(cBox.w * sX)));
+    const sh = Math.min(im.naturalHeight - sy, Math.max(20, Math.round(cBox.h * sY)));
+
+    const out = document.createElement('canvas');
+    out.width=sw; out.height=sh;
+    out.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, sw, sh);
+    const cropped = out.toDataURL('image/jpeg', 0.96);
+
+    // modalImages 반영
+    let idx = modalImages.findIndex(m=>m.id===editImgId);
+    if(idx<0) idx=modalSlide;
+    if(idx>=0 && idx<modalImages.length){
+      modalImages[idx].dataUrl = cropped;
+      editImgId = modalImages[idx].id;
+      cropImgSrc = cropped;
+    }
+
+    closeCropUI();
+    document.getElementById('cropControls').classList.add('hidden');
+    // 편집기도 크롭된 이미지로 갱신
+    initCanvas(cropped);
+    setTool('select');
+    showToast('✂️ 크롭 완료 — ✓완료 버튼으로 저장');
+  };
+  im.src = cropImgSrc; // 원본 dataUrl 기준 크롭
+}
+
+/* ── 회전 ── */
 function rotateImage(deg){
-  if(!canvas) return;
-  const dataUrl = canvas.toDataURL({format:'jpeg', quality:0.95});
-  const img = new Image();
-  img.onload = ()=>{
+  const im = new Image();
+  im.onload = ()=>{
     const c = document.createElement('canvas');
-    if(deg===90||deg===-90){ c.width=img.height; c.height=img.width; }
-    else { c.width=img.width; c.height=img.height; }
-    const ctx = c.getContext('2d');
+    if(deg===90||deg===-90){ c.width=im.height; c.height=im.width; }
+    else { c.width=im.width; c.height=im.height; }
+    const ctx=c.getContext('2d');
     ctx.translate(c.width/2, c.height/2);
-    ctx.rotate(deg * Math.PI/180);
-    ctx.drawImage(img, -img.width/2, -img.height/2);
+    ctx.rotate(deg*Math.PI/180);
+    ctx.drawImage(im, -im.width/2, -im.height/2);
     const rotated = c.toDataURL('image/jpeg', 0.95);
-    const idx = modalImages.findIndex(m=>m.id===editImgId);
+    let idx=modalImages.findIndex(m=>m.id===editImgId);
+    if(idx<0) idx=modalSlide;
     if(idx>=0) modalImages[idx].dataUrl = rotated;
+    cropImgSrc = rotated;
     initCanvas(rotated);
   };
-  img.src = dataUrl;
+  im.src = canvas ? canvas.toDataURL({format:'jpeg',quality:0.95}) : cropImgSrc;
 }
 
-/* 텍스트 */
+/* ── 텍스트 ── */
 function addText(){
-  const txt = document.getElementById('textInput').value; if(!txt) return;
-  const t = new fabric.Text(txt, {
-    left:40, top:40,
-    fill:     document.getElementById('toolColor').value,
-    fontSize: parseInt(document.getElementById('toolSize').value)*5+16,
-    fontFamily:'Arial', fontWeight:'bold',
-    shadow:   'rgba(0,0,0,0.4) 1px 1px 3px'
-  });
-  canvas.add(t); canvas.setActiveObject(t); canvas.renderAll();
+  const txt=document.getElementById('textInput').value; if(!txt) return;
+  canvas.add(new fabric.Text(txt,{
+    left:40,top:40,fill:document.getElementById('toolColor').value,
+    fontSize:parseInt(document.getElementById('toolSize').value)*5+16,
+    fontFamily:'Arial',fontWeight:'bold',shadow:'rgba(0,0,0,0.4) 1px 1px 3px'
+  }));
+  canvas.renderAll();
   document.getElementById('textInput').value='';
   setTool('select');
 }
 
-/* 도형 */
+/* ── 도형 ── */
 function addShape(type){
-  const color = document.getElementById('toolColor').value;
-  const sw    = parseInt(document.getElementById('toolSize').value);
-  const shape = type==='rect'
-    ? new fabric.Rect({left:60,top:60,width:150,height:100,fill:'transparent',stroke:color,strokeWidth:sw,cornerSize:14})
-    : new fabric.Ellipse({left:60,top:60,rx:75,ry:50,fill:'transparent',stroke:color,strokeWidth:sw,cornerSize:14});
+  const color=document.getElementById('toolColor').value;
+  const sw=parseInt(document.getElementById('toolSize').value);
+  const shape=type==='rect'
+    ?new fabric.Rect({left:60,top:60,width:150,height:100,fill:'transparent',stroke:color,strokeWidth:sw,cornerSize:14})
+    :new fabric.Ellipse({left:60,top:60,rx:75,ry:50,fill:'transparent',stroke:color,strokeWidth:sw,cornerSize:14});
   canvas.add(shape); canvas.setActiveObject(shape); canvas.renderAll();
   setTool('select');
 }
 
-/* 화살표 */
+/* ── 화살표 ── */
 function addArrow(){
-  const color = document.getElementById('toolColor').value;
-  const sw    = parseInt(document.getElementById('toolSize').value);
-  const len   = 120;
-
-  // 화살표 몸통 + 머리 (triangle)
-  const line = new fabric.Line([50, 100, 50+len, 100], {
-    stroke:color, strokeWidth:sw, selectable:false
-  });
-  const head = new fabric.Triangle({
-    width: sw*5+8, height: sw*5+12,
-    fill:  color,
-    left:  50+len, top:100,
-    angle: 90,
-    originX:'center', originY:'center',
-    selectable:false
-  });
-  const group = new fabric.Group([line, head], {
-    left:80, top:80, cornerSize:14,
-    hasRotatingPoint:true
-  });
-  canvas.add(group); canvas.setActiveObject(group); canvas.renderAll();
+  const color=document.getElementById('toolColor').value;
+  const sw=parseInt(document.getElementById('toolSize').value);
+  const len=120;
+  const line=new fabric.Line([50,100,50+len,100],{stroke:color,strokeWidth:sw,selectable:false});
+  const head=new fabric.Triangle({width:sw*5+8,height:sw*5+12,fill:color,left:50+len,top:100,angle:90,originX:'center',originY:'center',selectable:false});
+  const grp=new fabric.Group([line,head],{left:80,top:80,cornerSize:14,hasRotatingPoint:true});
+  canvas.add(grp); canvas.setActiveObject(grp); canvas.renderAll();
   setTool('select');
 }
 
-/* 모자이크 — 터치/마우스 드래그 */
+/* ── 모자이크 드래그 ── */
 function applyMosaicAt(e){
   if(!canvas) return;
-  // 캔버스 기준 좌표 계산
-  const rect = canvas.upperCanvasEl.getBoundingClientRect();
-  const pt   = {
-    x: (e.clientX - rect.left),
-    y: (e.clientY - rect.top)
-  };
-  const sz  = parseInt(document.getElementById('mosaicSize').value)||40;
-  const bg  = canvas.backgroundImage; if(!bg) return;
-  const bgEl= bg.getElement();
-  // 원본 이미지 픽셀 좌표
-  const sx = Math.round((pt.x - sz/2) / (bg.scaleX||1));
-  const sy = Math.round((pt.y - sz/2) / (bg.scaleY||1));
-  const sw = Math.round(sz / (bg.scaleX||1));
-  const sh = Math.round(sz / (bg.scaleY||1));
-
-  const tc = document.createElement('canvas');
-  tc.width=Math.max(1,sw); tc.height=Math.max(1,sh);
-  tc.getContext('2d').drawImage(bgEl, sx, sy, sw, sh, 0, 0, sw, sh);
-
-  // 픽셀화
-  const pb = Math.max(3, Math.round(sz/10));
-  const pc = document.createElement('canvas');
-  pc.width=pb; pc.height=pb;
-  const pctx = pc.getContext('2d');
-  pctx.imageSmoothingEnabled=false;
-  pctx.drawImage(tc, 0, 0, pb, pb);
-
-  // 확대해서 모자이크 타일 완성
-  const mc = document.createElement('canvas');
-  mc.width=sz; mc.height=sz;
-  const mctx = mc.getContext('2d');
-  mctx.imageSmoothingEnabled=false;
-  mctx.drawImage(pc, 0, 0, sz, sz);
-
-  fabric.Image.fromURL(mc.toDataURL(), mImg=>{
-    mImg.set({
-      left:pt.x-sz/2, top:pt.y-sz/2,
-      width:sz, height:sz,
-      scaleX:1, scaleY:1,
-      selectable:false, evented:false,
-      opacity:1
-    });
-    canvas.add(mImg);
-    canvas.renderAll();
+  const rect=canvas.upperCanvasEl.getBoundingClientRect();
+  const pt={x:e.clientX-rect.left, y:e.clientY-rect.top};
+  const sz=parseInt(document.getElementById('mosaicSize').value)||40;
+  const bg=canvas.backgroundImage; if(!bg) return;
+  const bgEl=bg.getElement();
+  const sx=Math.round((pt.x-sz/2)/(bg.scaleX||1));
+  const sy=Math.round((pt.y-sz/2)/(bg.scaleY||1));
+  const sw=Math.round(sz/(bg.scaleX||1));
+  const sh=Math.round(sz/(bg.scaleY||1));
+  const tc=document.createElement('canvas'); tc.width=Math.max(1,sw); tc.height=Math.max(1,sh);
+  tc.getContext('2d').drawImage(bgEl,sx,sy,sw,sh,0,0,sw,sh);
+  const pb=Math.max(3,Math.round(sz/10));
+  const pc=document.createElement('canvas'); pc.width=pb; pc.height=pb;
+  const pctx=pc.getContext('2d'); pctx.imageSmoothingEnabled=false;
+  pctx.drawImage(tc,0,0,pb,pb);
+  const mc=document.createElement('canvas'); mc.width=sz; mc.height=sz;
+  const mctx=mc.getContext('2d'); mctx.imageSmoothingEnabled=false;
+  mctx.drawImage(pc,0,0,sz,sz);
+  fabric.Image.fromURL(mc.toDataURL(),mImg=>{
+    mImg.set({left:pt.x-sz/2,top:pt.y-sz/2,width:sz,height:sz,scaleX:1,scaleY:1,selectable:false,evented:false});
+    canvas.add(mImg); canvas.renderAll();
   });
 }
 
-/* 편집 완료 → modalImages 반영 후 추가모달로 */
+/* ── 편집 완료 → modalImages 저장 ── */
 function finishEdit(){
   if(!canvas) return;
+  closeCropUI();
 
-  // 크롭 오버레이 정리
-  cropOverlays.forEach(o=>canvas.remove(o)); cropOverlays=[];
-  if(cropRect){ canvas.remove(cropRect); cropRect=null; }
-  canvas.renderAll();
+  // Fabric canvas export (어노테이션 포함)
+  const annotated = canvas.toDataURL({format:'jpeg', quality:0.95});
 
-  // 현재 캔버스 내용을 고품질로 export
-  const dataUrl = canvas.toDataURL({format:'jpeg', quality:0.95});
-
-  // 1순위: editImgId로 찾기
-  let idx = modalImages.findIndex(m=>m.id===editImgId);
-  // 2순위: 못 찾으면 현재 슬라이드
-  if(idx < 0) idx = modalSlide;
-  // 3순위: 그래도 없으면 새로 추가
-  if(idx < 0 || idx >= modalImages.length){
-    modalImages.push({ id: editImgId||uid(), dataUrl });
-    idx = modalImages.length - 1;
+  // 원본 이미지와 어노테이션 합성
+  const bgImg = canvas.backgroundImage;
+  if(bgImg){
+    const origEl = bgImg.getElement();
+    const ow = origEl.naturalWidth  || origEl.width;
+    const oh = origEl.naturalHeight || origEl.height;
+    // 원본 해상도 캔버스에 배경 + 어노테이션 합성
+    const out = document.createElement('canvas');
+    out.width=ow; out.height=oh;
+    const ctx=out.getContext('2d');
+    ctx.drawImage(origEl,0,0,ow,oh);
+    // 어노테이션: canvas export를 원본 크기에 맞게 스케일
+    const ann=new Image();
+    ann.onload=()=>{
+      ctx.drawImage(ann,0,0,ow,oh);
+      const final=out.toDataURL('image/jpeg',0.95);
+      saveEditResult(final);
+    };
+    ann.src=annotated;
   } else {
-    modalImages[idx].dataUrl = dataUrl;
-    modalImages[idx].id = editImgId || modalImages[idx].id;
+    saveEditResult(annotated);
   }
-  modalSlide = idx;
+}
 
+function saveEditResult(dataUrl){
+  let idx=modalImages.findIndex(m=>m.id===editImgId);
+  if(idx<0) idx=modalSlide;
+  if(idx<0||idx>=modalImages.length){
+    modalImages.push({id:editImgId||uid(), dataUrl});
+    idx=modalImages.length-1;
+  } else {
+    modalImages[idx].dataUrl=dataUrl;
+    modalImages[idx].id=editImgId||modalImages[idx].id;
+  }
+  modalSlide=idx;
   closeModal('modalEdit');
   openModal('modalAdd');
   renderModalSlides();
   showToast('✅ 편집 저장 완료');
 }
+
 
 /* ── 카테고리 추가 공통 함수 ── */
 function addCategory(name){
@@ -1356,8 +1353,7 @@ async function init(){
   document.getElementById('btnRotateR').onclick  = ()=>rotateImage(90);
   document.getElementById('btnApplyCrop').onclick  = applyCrop;
   document.getElementById('btnCancelCrop').onclick = ()=>{
-    cropOverlays.forEach(o=>canvas.remove(o)); cropOverlays=[];
-    if(cropRect){canvas.remove(cropRect);cropRect=null;}
+    closeCropUI();
     document.getElementById('cropControls').classList.add('hidden');
     setTool('select');
   };

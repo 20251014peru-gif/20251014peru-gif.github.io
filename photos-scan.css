@@ -223,3 +223,7 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
   z-index:9999;pointer-events:none;
   transition:opacity .3s;
 }
+
+/* ── 크롭 UI 오버레이 (명함앱 패턴) ── */
+#cropUIOverlay{user-select:none;-webkit-user-select:none;}
+#cropUIBox{box-sizing:border-box;box-shadow:0 0 0 9999px rgba(0,0,0,0.5);}
