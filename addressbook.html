@@ -5,16 +5,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>주소록 📒</title>
-<link rel="stylesheet" href="shared.css?v=20260615">
+<link rel="stylesheet" href="shared.css?v=20260617">
 <style>
-.app-title{color:var(--bl3)}.app-title span{color:var(--lv3)}
-.btab.active{color:var(--bl3)}
-.chip-all{background:var(--bl3);border-color:var(--bl3)}
-.chip-item.active{background:var(--bl);color:var(--bl3);border-color:var(--bl2)}
-.fab{background:linear-gradient(135deg,var(--bl3),var(--lv3));box-shadow:0 4px 20px rgba(24,95,165,.4)}
-.item-card{border-color:var(--bl2)}
-.search-input:focus{border-color:var(--bl3)}
-.ab-avatar{width:44px;height:44px;border-radius:50%;background:var(--bl);color:var(--bl3);font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+/* 주소록 = 초록 테마 */
+:root{
+  --ac:#059669;--ac2:#9FE1CB;--ac3:#E8F8F0;--ac4:#064e3b;
+}
+body{background:#E8F8F0}
+.app-header{border-bottom-color:#9FE1CB}
+.app-title{color:#059669;font-size:19px;letter-spacing:-.5px;font-weight:900}
+.app-title span{color:#7F77DD}
+.app-title::before{content:'📒 '}
+.modal-title{color:#059669}
+.card-title{word-break:keep-all;white-space:normal;color:#064e3b;font-size:15px;font-weight:800}
+.item-card{border-color:#9FE1CB;background:#fff}
+.item-card:hover{border-color:#059669}
+.fab,.fab-bl{background:linear-gradient(135deg,#059669,#7F77DD);box-shadow:0 4px 20px rgba(5,150,105,.4)}
+.btab.active{color:#059669}
+.bottom-bar{border-top-color:#9FE1CB}
+.search-input{border-color:#9FE1CB}
+.search-input:focus{border-color:#059669}
+.chip-all{background:#059669;border-color:#059669}
+.chip-item.active{background:#E8F8F0;color:#059669;border-color:#9FE1CB}
+.sort-sel{border-color:#9FE1CB}
+.modal-save,.modal-save-bl{background:linear-gradient(135deg,#059669,#7F77DD)}
+.modal-sheet{border-top-color:#9FE1CB}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#059669}
+.tag-chip{background:#E8F8F0;color:#059669}
+.tag-chip-del{color:#059669}
+.hdr-btn{background:#E8F8F0}
+.back-btn{background:#E8F8F0;color:#059669}
+.cal-nav{background:#E8F8F0;color:#059669}
+.zoom-btn.active{background:#059669;border-color:#059669}
+.settings-title{color:#059669}
+.settings-btn{background:#059669}
+.card-edit-btn{background:#E8F8F0;color:#059669;border-color:#9FE1CB}
+.list-count{color:#059669;font-size:12px}
+.card-date{color:#059669}
+.card-sub{color:#059669;font-size:12px;font-weight:600}
+.ab-avatar{width:44px;height:44px;border-radius:50%;background:#E8F8F0;color:#059669;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.contact-tel{background:#E8F8F0;color:#059669;border-color:#9FE1CB}
+.contact-addr{background:#EEF5FD;color:#185FA5;border-color:#B5D4F4}
 </style>
 </head>
 <body>

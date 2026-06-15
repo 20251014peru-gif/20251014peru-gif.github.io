@@ -31,8 +31,9 @@ body.dark{
 .back-btn{background:var(--lv);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;color:var(--lv3);font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center}
 
 .tab-contents{position:fixed;top:60px;bottom:64px;left:0;right:0;overflow:hidden}
-.tab-content{display:none;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px}
+.tab-content{display:none;height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:40px}
 .tab-content.active{display:block}
+.settings-area{padding:14px;min-height:100%}
 
 /* BOTTOM TAB */
 .bottom-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--bg2);border-top:1.5px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom)}

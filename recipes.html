@@ -5,16 +5,55 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>레시피 🍳</title>
-<link rel="stylesheet" href="shared.css?v=20260615">
+<link rel="stylesheet" href="shared.css?v=20260617">
 <style>
-.app-title{color:var(--mn3)}.app-title span{color:var(--lv3)}
-.btab.active{color:var(--mn3)}
-.chip-all{background:var(--mn3);border-color:var(--mn3)}
-.chip-item.active{background:var(--mn);color:var(--mn3);border-color:var(--mn2)}
-.fab{background:linear-gradient(135deg,var(--mn3),var(--lv3));box-shadow:0 4px 20px rgba(29,158,117,.4)}
-.item-card{border-color:var(--mn2)}
-.search-input:focus{border-color:var(--mn3)}
-.calorie-result{background:var(--mn);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--mn3);font-weight:700;margin-top:8px;display:none}
+/* 레시피 앱 = 따뜻한 노랑/주황 테마 (음식/요리 느낌) */
+:root{
+  --ac:#D97706;--ac2:#FAC775;--ac3:#FEF8E8;--ac4:#92400e;
+}
+body{background:#FEF8E8}
+.app-header{border-bottom-color:#FAC775}
+.app-title{color:#D97706;font-size:19px;letter-spacing:-.5px;font-weight:900}
+.app-title span{color:#C4621A}
+.app-title::before{content:'🍳 '}
+.modal-title{color:#D97706}
+.card-title{word-break:keep-all;white-space:normal;color:#92400e;font-size:15px;font-weight:800}
+.item-card{border-color:#FAC775;background:#fff}
+.item-card:hover{border-color:#D97706}
+.fab,.fab-mn{background:linear-gradient(135deg,#D97706,#C4621A);box-shadow:0 4px 20px rgba(217,119,6,.4)}
+.btab.active{color:#D97706}
+.bottom-bar{border-top-color:#FAC775}
+.search-input{border-color:#FAC775}
+.search-input:focus{border-color:#D97706}
+.chip-all{background:#D97706;border-color:#D97706}
+.chip-item.active{background:#FEF8E8;color:#D97706;border-color:#FAC775}
+.sort-sel{border-color:#FAC775}
+.modal-save,.modal-save-mn{background:linear-gradient(135deg,#D97706,#C4621A)}
+.modal-sheet{border-top-color:#FAC775}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#D97706}
+.tag-chip{background:#FEF8E8;color:#D97706}
+.tag-chip-del{color:#D97706}
+.hdr-btn{background:#FEF8E8}
+.back-btn{background:#FEF8E8;color:#D97706}
+.cal-nav{background:#FEF8E8;color:#D97706}
+.zoom-btn.active{background:#D97706;border-color:#D97706}
+.cal-cell.today{background:#FEF8E8;border-color:#FAC775}
+.settings-title{color:#D97706}
+.settings-btn{background:#D97706}
+.card-view-btn{background:#FEF8E8;color:#D97706;border-color:#FAC775}
+.card-edit-btn{background:#EEE8FD;color:#7F77DD;border-color:#CECBF6}
+.list-count{color:#D97706;font-size:12px}
+.card-date{color:#D97706}
+.card-sub{color:#C4621A;font-size:12px;font-weight:600}
+.ai-title{color:#D97706}
+.ai-bubble-bot{background:#FEF8E8;color:#D97706;border-color:#FAC775}
+.ai-send{background:#D97706}
+.ai-input:focus{border-color:#D97706}
+.badge-recipe{background:#FEF8E8;font-size:22px}
+.calorie-result{background:#FEF8E8;border-radius:12px;padding:10px 14px;font-size:13px;color:#D97706;font-weight:700;margin-top:8px;display:none;border:1.5px solid #FAC775}
+.ingr-chip{background:#FEF8E8;color:#92400e;font-weight:700}
+.step-dot{background:#FEF8E8;color:#D97706}
+.add-row-btn-mn{background:#FEF8E8;color:#D97706;border-color:#FAC775}
 </style>
 </head>
 <body>
@@ -75,7 +114,7 @@
       <div class="settings-section">
         <div class="settings-title" style="color:var(--mn3)">🏷️ 카테고리 관리</div>
         <div id="catManage"></div>
-        <div class="add-cat-row"><input type="text" id="newCat" class="settings-input" placeholder="새 카테고리"><button class="settings-btn" id="addCat" style="background:var(--mn3)">추가</button></div>
+        <div class="add-cat-row"><input type="text" id="newCat" class="settings-input" placeholder="새 카테고리 입력"><button class="settings-btn" id="addCatBtn" style="background:var(--mn3)">추가</button></div>
       </div>
       <div class="settings-section">
         <div class="settings-title" style="color:var(--mn3)">💾 백업</div>
@@ -128,9 +167,10 @@
       <div class="form-row"><label class="form-label">즐겨찾기</label><label class="toggle-switch"><input type="checkbox" id="fFav"><span class="toggle-slider"></span></label></div>
       <label class="form-label">이미지 첨부</label>
       <div class="img-upload-area">
-        <input type="file" id="fImgFile" accept="image/*" capture="environment" style="display:none">
-        <button class="img-btn" style="background:var(--mn);color:var(--mn3);border-color:var(--mn2)" onclick="document.getElementById('fImgFile').click()">📷 카메라/갤러리</button>
-        <button class="img-btn" style="background:var(--mn);color:var(--mn3);border-color:var(--mn2)" id="pasteBtn">📋 붙여넣기</button>
+        <input type="file" id="fImgFile" accept="image/*" style="display:none">
+        <button class="img-btn" id="imgCamBtn" style="background:var(--mn);color:var(--mn3);border-color:var(--mn2)">📷 카메라</button>
+        <button class="img-btn" id="imgGalBtn" style="background:var(--mn);color:var(--mn3);border-color:var(--mn2)">🖼️ 갤러리</button>
+        <button class="img-btn" id="imgPasteBtn" style="background:var(--mn);color:var(--mn3);border-color:var(--mn2)">📋 붙여넣기</button>
         <div class="img-preview-wrap" id="imgPreview"></div>
       </div>
     </div>
@@ -179,8 +219,10 @@ document.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('editModal').onclick=e=>{if(e.target===document.getElementById('editModal'))closeEdit()};
   document.getElementById('saveBtn').onclick=saveItem;
   document.getElementById('addIngrRow').onclick=()=>{editIngrs.push({name:'',amount:'',buyLink:''});renderIngrRows()};
+  document.getElementById('imgCamBtn').onclick=()=>{ document.getElementById('fImgFile').setAttribute('capture','environment'); document.getElementById('fImgFile').click(); };
+  document.getElementById('imgGalBtn').onclick=()=>{ document.getElementById('fImgFile').removeAttribute('capture'); document.getElementById('fImgFile').click(); };
   document.getElementById('fImgFile').onchange=e=>{if(e.target.files[0])addImageFromFile(e.target.files[0],editImages,renderImgPreview)};
-  document.getElementById('pasteBtn').onclick=()=>pasteImageClipboard(editImages,renderImgPreview);
+  document.getElementById('imgPasteBtn').onclick=()=>pasteImageClipboard(editImages,renderImgPreview);
   document.getElementById('calcCalorie').onclick=calcCalorieAI;
   document.getElementById('detailClose').onclick=()=>document.getElementById('detailModal').classList.remove('open');
   document.getElementById('detailModal').onclick=e=>{if(e.target===document.getElementById('detailModal'))document.getElementById('detailModal').classList.remove('open')};
@@ -426,12 +468,15 @@ function appendBubble(text,type){
 // SETTINGS
 function setupSettings(){
   document.getElementById('saveApiKey').onclick=()=>{const k=document.getElementById('apiKeyInput').value.trim();if(!k)return;localStorage.setItem('lr_apiKey',k);document.getElementById('apiKeyInput').value='';toast('API 키 저장 ✓')};
-  document.getElementById('addCat').onclick=()=>{const v=document.getElementById('newCat').value.trim();if(!v||cats.includes(v))return;cats.push(v);saveCats();document.getElementById('newCat').value='';renderSettings()};
+  document.getElementById('addCatBtn').onclick=()=>{const v=document.getElementById('newCat').value.trim();if(!v||cats.includes(v)){toast('중복이거나 비어있어요');return;}cats.push(v);saveCats();document.getElementById('newCat').value='';renderSettings();renderCatChips();};
+  document.getElementById('newCat').onkeydown=e=>{if(e.key==='Enter')document.getElementById('addCatBtn').click()};
   document.getElementById('manualBackup').onclick=()=>doBackup('rc',()=>({items,cats}));
   document.getElementById('exportJsonBtn').onclick=()=>exportJson({items,cats},'recipes_backup.json');
 }
 function renderSettings(){
-  document.getElementById('catManage').innerHTML=cats.map((c,i)=>`<div class="cat-manage-item"><span class="cat-manage-name">${esc(c)}</span><button class="cat-del-btn" onclick="cats.splice(${i},1);saveCats();renderSettings();renderCatChips()">✕</button></div>`).join('');
+  document.getElementById('catManage').innerHTML=cats.length
+    ? cats.map((c,i)=>`<div class="cat-manage-item"><span class="cat-manage-name">${esc(c)}</span><button class="cat-del-btn" onclick="cats.splice(${i},1);saveCats();renderSettings();renderCatChips()">✕</button></div>`).join('')
+    : '<div style="font-size:12px;color:var(--txt2);padding:6px 0">카테고리가 없어요. 아래에서 추가해주세요</div>';
   document.getElementById('statsArea').innerHTML=`<div class="stat-item"><span>전체 레시피</span><span class="stat-val" style="color:var(--mn3)">${items.length}개</span></div><div class="stat-item"><span>즐겨찾기</span><span class="stat-val" style="color:var(--mn3)">${items.filter(i=>i.fav).length}개</span></div>`;
   renderBackupList();
 }
