@@ -784,7 +784,7 @@ async function aiSearch(){
       const p=photos.find(x=>x.id===r.id); if(!p) continue;
       const card=document.createElement('div'); card.className='result-card';
       card.innerHTML=`<div class="result-title">${p.title||'(제목 없음)'}</div><div class="result-meta">${p.cat||''} · ${p.date||''}</div><div class="result-reason">${r.reason}</div>`;
-      card.onclick=()=>{ document.getElementById('panelSearch').classList.remove('open'); openViewModal(p.id); };
+      card.onclick=()=>{ closeAiDrop(); openViewModal(p.id); };
       resultEl.appendChild(card);
     }
   } catch(e){ resultEl.innerHTML=`<p style="color:red;font-size:13px">오류: ${e.message}</p>`; }
@@ -1449,12 +1449,13 @@ async function init(){
   loadData();
 
   /* 모드별 UI 적용 */
-  document.getElementById('appTitle').textContent   = MODE_LABEL;
-  document.getElementById('appVersion').textContent = 'v6.7b';
-  document.getElementById('sideTitle').textContent  = MODE_LABEL;
+  const _el = id => document.getElementById(id);
+  if(_el('appTitle'))   _el('appTitle').textContent   = MODE_LABEL;
+  if(_el('appVersion')) _el('appVersion').textContent = 'v6.8';
   document.title = MODE_LABEL;
-  document.querySelector('.app-title').style.color = MODE_COLOR;
-  // 헤더 배경 모드 표시줄
+  if(document.querySelector('.app-title'))
+    document.querySelector('.app-title').style.color = MODE_COLOR;
+  // 상단 모드 컬러 바
   const modeBar = document.createElement('div');
   modeBar.style.cssText = `position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
   document.body.appendChild(modeBar);
@@ -1650,7 +1651,7 @@ async function init(){
   document.getElementById('btnViewDelete').onclick = ()=>deletePhoto(viewPhotoId);
 
   /* AI 검색 */
-  document.getElementById('btnSearchClose').onclick = ()=>document.getElementById('panelSearch').classList.remove('open');
+  /* btnSearchClose 제거됨 */
   document.getElementById('btnAiSearch').onclick    = aiSearch;
 
   /* API 키 */
@@ -1659,7 +1660,7 @@ async function init(){
   document.getElementById('btnSaveApiKey').onclick  = ()=>{ localStorage.setItem(LS_API_KEY,document.getElementById('apiKeyInput').value.trim()); closeModal('modalApiKey'); showToast('API 키 저장됨'); };
 
   /* ESC */
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){['modalAdd','modalEdit','modalApiKey'].forEach(closeModal); document.getElementById('modalView').style.display='none'; document.getElementById('panelSearch').classList.remove('open'); } });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){['modalAdd','modalEdit','modalApiKey'].forEach(closeModal); document.getElementById('modalView').style.display='none'; closeAiDrop(); } });
 
   /* 드래그앤드롭 */
   document.addEventListener('dragover',e=>e.preventDefault());
