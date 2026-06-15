@@ -1450,7 +1450,7 @@ async function init(){
 
   /* 모드별 UI 적용 */
   document.getElementById('appTitle').textContent   = MODE_LABEL;
-  document.getElementById('appVersion').textContent = 'v6.7';
+  document.getElementById('appVersion').textContent = 'v6.7b';
   document.getElementById('sideTitle').textContent  = MODE_LABEL;
   document.title = MODE_LABEL;
   document.querySelector('.app-title').style.color = MODE_COLOR;
@@ -1497,15 +1497,38 @@ async function init(){
   };
   document.getElementById('btnDocScanApply').onclick = applyDocScanCrop;
 
-  /* 헤더 */
-  document.getElementById('btnMenu').onclick     = openSideMenu;
-  document.getElementById('sideOverlay').onclick = closeSideMenu;
-  document.getElementById('btnMenuClose').onclick= closeSideMenu;
-  document.getElementById('btnSearch').onclick   = ()=>document.getElementById('panelSearch').classList.add('open');
-  document.getElementById('btnBackup').onclick   = firebaseBackupMeta;
-  document.getElementById('btnSettings').onclick = ()=>openModal('modalApiKey');
+  /* ── 헤더 아이콘 이벤트 ── */
+  const $= id=>document.getElementById(id);
+  // 존재하는 요소에만 이벤트 (null 오류 방지)
+  const $on = (id, fn)=>{ const el=$(id); if(el) el.onclick=fn; };
 
-  /* 사이드 메뉴 제거됨 */
+  $on('btnHome',       ()=>{ location.href='index.html'; });
+  $on('btnBackup',     ()=>{ $('oneDriveStatus') && ($('oneDriveStatus').textContent='☁️ 준비됨'); openModal('modalOneDrive'); });
+  $on('btnApiKey',     ()=>{ $('apiKeyInput').value=localStorage.getItem(LS_API_KEY)||''; openModal('modalApiKey'); });
+  $on('btnCatManage2', openCatModal);
+  $on('btnLocalExp',   exportBackup);
+  $on('btnLocalImp',   ()=>$('backupInput').click());
+  $on('btnSettings',   ()=>{ $('apiKeyInput').value=localStorage.getItem(LS_API_KEY)||''; openModal('modalApiKey'); });
+
+  /* OneDrive 모달 */
+  $on('btnOneDriveClose', ()=>closeModal('modalOneDrive'));
+  $on('btnOdUpload',      uploadToOneDrive);
+  $on('btnOdLocalExport', ()=>{ closeModal('modalOneDrive'); exportBackup(); });
+
+  /* AI 검색 — 검색창 통합 (@검색어 + Enter 또는 🤖 버튼) */
+  const srchEl = $('gallerySearch');
+  if(srchEl){
+    srchEl.addEventListener('keydown', e=>{
+      if(e.key==='Enter' && srchEl.value.startsWith('@')){
+        e.preventDefault(); runAiSearch(srchEl.value);
+      }
+    });
+  }
+  $on('btnAiSearchInline', ()=>{
+    const v = srchEl?.value||'';
+    const q = v.startsWith('@') ? v : ('@'+(v||prompt('AI 검색어를 입력하세요 (@제외)')||''));
+    runAiSearch(q);
+  });
 
   /* 모드 버튼 이벤트 */
   const _safe = id => document.getElementById(id);
