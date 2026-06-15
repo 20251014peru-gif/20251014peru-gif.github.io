@@ -223,3 +223,106 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
   z-index:9999;pointer-events:none;
   transition:opacity .3s;
 }
+
+/* ── 크롭 UI 오버레이 (명함앱 패턴) ── */
+#cropUIOverlay{user-select:none;-webkit-user-select:none;}
+#cropUIBox{box-sizing:border-box;box-shadow:0 0 0 9999px rgba(0,0,0,0.5);}
+
+/* ── 버전 배지 ── */
+.app-version{font-size:10px;color:var(--muted);font-weight:600;margin-left:2px;display:block;line-height:1;}
+
+/* ── 상세보기 전체화면 ── */
+.view-fullscreen{
+  display:none;
+  position:fixed;inset:0;z-index:600;
+  background:#000;
+  flex-direction:column;
+}
+.view-fullscreen.open{display:flex;}
+.vf-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;
+  background:rgba(0,0,0,.75);
+  flex-shrink:0;
+}
+.vf-title{color:#fff;font-size:15px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vf-btns{display:flex;gap:2px;flex-shrink:0;}
+.vf-btn{width:40px;height:40px;border:none;background:transparent;color:#fff;font-size:20px;cursor:pointer;border-radius:8px;}
+.vf-btn:hover{background:rgba(255,255,255,.15);}
+.vf-img-wrap{
+  flex:1;position:relative;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;min-height:0;
+}
+.vf-img-wrap img{
+  max-width:100%;max-height:100%;
+  object-fit:contain;display:block;
+  user-select:none;-webkit-user-select:none;
+}
+.vf-nav{
+  position:absolute;top:50%;transform:translateY(-50%);
+  background:rgba(255,255,255,.18);border:none;color:#fff;
+  font-size:36px;width:48px;height:64px;cursor:pointer;
+  border-radius:8px;backdrop-filter:blur(4px);
+}
+#btnViewPrev{left:6px;}#btnViewNext{right:6px;}
+.vf-meta{
+  padding:12px 16px;
+  background:rgba(0,0,0,.75);
+  flex-shrink:0;
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+}
+.vf-meta .badge{flex-shrink:0;}
+.vf-meta .view-date{color:#aaa;font-size:13px;}
+.vf-meta #viewMemo{width:100%;color:#ddd;font-size:13px;line-height:1.5;white-space:pre-wrap;}
+
+/* ── 헤더 타이틀+버전 래퍼 ── */
+.header-title-wrap{display:flex;flex-direction:column;justify-content:center;line-height:1.2;}
+.header-title-wrap .app-title{font-size:16px;font-weight:700;color:var(--primary);}
+.header-title-wrap .app-version{font-size:10px;color:var(--muted);font-weight:600;}
+
+/* ===== 크롭 풀스크린 오버레이 ===== */
+.crop-overlay-fs{
+  display:none;position:fixed;inset:0;z-index:700;
+  background:#000;flex-direction:column;
+}
+.crop-overlay-fs.show{display:flex;}
+.crop-overlay-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:rgba(0,0,0,.8);flex-shrink:0;
+  color:#fff;font-size:15px;font-weight:700;
+}
+.crop-area-fs{
+  flex:1;position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  touch-action:none;user-select:none;-webkit-user-select:none;
+}
+#cropImg{
+  max-width:100%;max-height:100%;
+  object-fit:contain;display:block;pointer-events:none;
+}
+#cropBox{
+  position:absolute;box-sizing:border-box;
+  border:2px solid #FFD700;
+  box-shadow:0 0 0 9999px rgba(0,0,0,0.55);
+}
+/* 모서리 핸들 */
+.ch{
+  position:absolute;width:26px;height:26px;
+  background:#FFD700;border:3px solid #fff;border-radius:50%;
+  box-shadow:0 2px 8px rgba(0,0,0,.5);z-index:2;
+}
+.ch[data-h="lt"]{top:-13px;left:-13px;cursor:nwse-resize;}
+.ch[data-h="rt"]{top:-13px;right:-13px;cursor:nesw-resize;}
+.ch[data-h="rb"]{bottom:-13px;right:-13px;cursor:nwse-resize;}
+.ch[data-h="lb"]{bottom:-13px;left:-13px;cursor:nesw-resize;}
+/* 엣지 핸들 — 막대기 형태, 넓은 터치 영역 */
+.ce{position:absolute;background:#FFD700;border:2px solid #fff;
+    box-shadow:0 1px 4px rgba(0,0,0,.4);z-index:2;border-radius:4px;}
+.ce-t{top:-8px;left:15%;right:15%;height:16px;cursor:ns-resize;}
+.ce-b{bottom:-8px;left:15%;right:15%;height:16px;cursor:ns-resize;}
+.ce-l{left:-8px;top:15%;bottom:15%;width:16px;cursor:ew-resize;}
+.ce-r{right:-8px;top:15%;bottom:15%;width:16px;cursor:ew-resize;}
+.crop-hint-fs{
+  color:#aaa;font-size:13px;text-align:center;
+  padding:8px;background:rgba(0,0,0,.7);flex-shrink:0;
+}

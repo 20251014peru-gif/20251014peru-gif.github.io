@@ -8,14 +8,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
 <!-- OpenCV.js: 문서 자동감지용 -->
-<script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady()" onerror="onOpenCvError()"></script>
+<script async src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js" onload="onOpenCvReady()" onerror="onOpenCvError()"></script>
 </head>
 <body>
 
 <header class="app-header">
   <div class="header-left">
     <button class="btn-icon" id="btnMenu">☰</button>
-    <h1 class="app-title" id="appTitle">📷 사진 스캔</h1>
+    <div class="header-title-wrap">
+      <h1 class="app-title" id="appTitle">📷 사진 스캔</h1>
+      <span class="app-version" id="appVersion">v5.3</span>
+    </div>
   </div>
   <div class="header-right">
     <button class="btn-icon" id="btnSearch" title="AI검색">🔍</button>
@@ -206,9 +209,9 @@
         <canvas id="editCanvas"></canvas>
       </div>
       <div class="crop-controls hidden" id="cropControls">
-        <button class="btn-sm btn-primary"   id="btnApplyCrop">크롭 적용</button>
+        <button class="btn-sm btn-primary"   id="btnApplyCrop">✂️ 크롭 적용</button>
         <button class="btn-sm btn-secondary" id="btnCancelCrop">취소</button>
-        <span class="crop-hint">드래그로 영역 선택</span>
+        <span class="crop-hint">박스를 드래그해 영역 조정</span>
       </div>
       <div class="text-input-row hidden" id="textInputRow">
         <input type="text" id="textInput" placeholder="텍스트 입력">
@@ -218,30 +221,55 @@
   </div>
 </div>
 
+<!-- ===== 크롭 전용 풀스크린 (명함앱 검증 패턴) ===== -->
+<div id="cropOverlay" class="crop-overlay-fs">
+  <div class="crop-overlay-header">
+    <span>✂️ 크롭</span>
+    <div style="display:flex;gap:6px">
+      <button class="vf-btn" id="cropRotateBtn">↻ 회전</button>
+      <button class="vf-btn" id="cropDoneBtn">✓ 적용</button>
+      <button class="vf-btn" id="cropCancelBtn">✕</button>
+    </div>
+  </div>
+  <div id="cropArea" class="crop-area-fs">
+    <img id="cropImg" alt="">
+    <div id="cropBox">
+      <!-- 모서리 핸들 -->
+      <div class="ch" data-h="lt"></div>
+      <div class="ch" data-h="rt"></div>
+      <div class="ch" data-h="rb"></div>
+      <div class="ch" data-h="lb"></div>
+      <!-- 엣지 핸들 -->
+      <div class="ce ce-t" data-h="t"></div>
+      <div class="ce ce-b" data-h="b"></div>
+      <div class="ce ce-l" data-h="l"></div>
+      <div class="ce ce-r" data-h="r"></div>
+    </div>
+  </div>
+  <p class="crop-hint-fs">모서리·막대기 드래그로 범위 조정 후 ✓ 적용</p>
+</div>
+
 <!-- 상세 보기 모달 -->
-<div class="modal-bg" id="modalView">
-  <div class="modal modal-view">
-    <div class="modal-header">
-      <span id="viewTitle"></span>
-      <div class="view-header-btns">
-        <button class="btn-icon" id="btnViewShare"  title="공유">📤</button>
-        <button class="btn-icon" id="btnViewEdit"   title="수정">✏️</button>
-        <button class="btn-icon" id="btnViewDelete" title="삭제">🗑️</button>
-        <button class="btn-icon" id="btnViewClose">✕</button>
-      </div>
+<!-- 상세보기: 전체화면 -->
+<div class="view-fullscreen" id="modalView" style="display:none">
+  <div class="vf-header">
+    <span class="vf-title" id="viewTitle"></span>
+    <div class="vf-btns">
+      <button class="vf-btn" id="btnViewShare">📤</button>
+      <button class="vf-btn" id="btnViewEdit">✏️</button>
+      <button class="vf-btn" id="btnViewDelete">🗑️</button>
+      <button class="vf-btn" id="btnViewClose">✕</button>
     </div>
-    <div class="view-img-area">
-      <button class="view-nav" id="btnViewPrev">‹</button>
-      <img id="viewImg" src="" alt="">
-      <button class="view-nav" id="btnViewNext">›</button>
-    </div>
-    <div class="view-meta">
-      <div class="view-badges">
-        <span class="badge" id="viewCat"></span>
-        <span class="view-date" id="viewDate"></span>
-      </div>
-      <p id="viewMemo"></p>
-    </div>
+  </div>
+  <div class="vf-img-wrap">
+    <button class="vf-nav" id="btnViewPrev">‹</button>
+    <img id="viewImg" src="" alt="">
+    <button class="vf-nav" id="btnViewNext">›</button>
+  </div>
+  <div class="vf-meta">
+    <span class="badge" id="viewCat"></span>
+    <span class="view-date" id="viewDate"></span>
+    <p id="viewMemo"></p>
   </div>
 </div>
 
