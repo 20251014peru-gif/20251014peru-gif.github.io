@@ -263,6 +263,8 @@ async function savePhoto(){
   const cat   = document.getElementById('photoCat').value;
   const memo  = document.getElementById('photoMemo').value.trim();
   const date  = document.getElementById('photoDate').value||today();
+  const typeEl= document.getElementById('photoType');
+  const type  = typeEl ? typeEl.value : '';
   if(!modalImages.length){ showToast('사진을 1장 이상 추가하세요'); return; }
   if(!title){ showToast('제목을 입력하세요'); return; }
 
@@ -271,7 +273,7 @@ async function savePhoto(){
     await Promise.all((p.imgIds||[]).map(id=>idbDelete(id)));
     const newIds=[];
     for(const m of modalImages){ const nid=m.id||uid(); await idbPut(nid,m.dataUrl); newIds.push(nid); }
-    p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.imgIds=newIds;
+    p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.type=type; p.imgIds=newIds;
   } else {
     const pid=uid(); const imgIds=[];
     for(const m of modalImages){ const iid=uid(); await idbPut(iid,m.dataUrl); imgIds.push(iid); }
@@ -310,6 +312,16 @@ async function handleFiles(files, append=false, autoScan=false){
   }
 }
 const blobToDataUrl = blob => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(blob); });
+
+/* 이미지 로드 헬퍼 — AI 크롭에서 사용 */
+function loadImage(src){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>res(img);
+    img.onerror=()=>rej(new Error('이미지 로드 실패: '+src.slice(0,40)));
+    img.src=src;
+  });
+}
 
 /* ═══════════════════════════════════════════════════════
    문서 자동감지 시스템 v6.3
@@ -1025,7 +1037,7 @@ function initCropEvents(){
   area._inited = true;
 
   area.addEventListener('pointerdown', function(e){
-    // data-h 있으면 리사이즈, 없으면 전체 이동
+    // e.target에서 data-h 찾기 (핸들은 pointer-events:all 이므로 직접 잡힘)
     let h = null;
     let el = e.target;
     while(el && el !== area){
@@ -1033,10 +1045,21 @@ function initCropEvents(){
       if(dh){ h = dh; break; }
       el = el.parentElement;
     }
-    _cDrag = h || 'move';
+    // #cropBox 내부 클릭 (핸들 아닌 곳) = move
+    // #cropArea 빈 곳 클릭 = 무시
+    if(!h){
+      const box = document.getElementById('cropBox');
+      if(!box) return;
+      const bR = box.getBoundingClientRect();
+      const inBox = e.clientX>=bR.left && e.clientX<=bR.right &&
+                    e.clientY>=bR.top  && e.clientY<=bR.bottom;
+      if(!inBox) return;
+      h = 'move';
+    }
+    _cDrag = h;
     _cSX = e.clientX; _cSY = e.clientY;
     _cSB = {..._cBox};
-    area.setPointerCapture(e.pointerId);
+    try{ area.setPointerCapture(e.pointerId); }catch(_){}
     e.preventDefault();
   }, {passive:false});
 
@@ -1055,7 +1078,7 @@ function initCropEvents(){
       if(_cDrag.includes('r')){ w = _cSB.w+dx; }
       if(_cDrag.includes('t')){ y = _cSB.y+dy; h = _cSB.h-dy; }
       if(_cDrag.includes('b')){ h = _cSB.h+dy; }
-      if(w < 40){ if(_cDrag.includes('l')){ x = _cSB.x+_cSB.w-40; } w=40; }
+      if(w < 30){ if(_cDrag.includes('l')){ x = _cSB.x+_cSB.w-30; } w=30; }
       if(h < 30){ if(_cDrag.includes('t')){ y = _cSB.y+_cSB.h-30; } h=30; }
       if(x<0){w+=x;x=0;} if(y<0){h+=y;y=0;}
       if(x+w>W) w=W-x; if(y+h>H) h=H-y;
