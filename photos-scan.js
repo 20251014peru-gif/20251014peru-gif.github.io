@@ -1273,8 +1273,9 @@ async function init(){
   loadData();
 
   /* 모드별 UI 적용 */
-  document.getElementById('appTitle').textContent  = MODE_LABEL;
-  document.getElementById('sideTitle').textContent = MODE_LABEL;
+  document.getElementById('appTitle').textContent   = MODE_LABEL;
+  document.getElementById('appVersion').textContent = 'v5.3';
+  document.getElementById('sideTitle').textContent  = MODE_LABEL;
   document.title = MODE_LABEL;
   document.querySelector('.app-title').style.color = MODE_COLOR;
   // 헤더 배경 모드 표시줄
@@ -1289,10 +1290,19 @@ async function init(){
     badge.className = 'cv-status';
     badge.textContent = '⏳ OpenCV 로딩 중...';
     document.body.appendChild(badge);
-    // 로드 완료 감지
+    let tries = 0;
     const waitCv = setInterval(()=>{
-      if(cvReady){ badge.textContent='✅ OpenCV 준비됨'; setTimeout(()=>badge.remove(),2000); clearInterval(waitCv); }
-      else if(cvError){ badge.textContent='⚠️ OpenCV 실패 (AI 모드)'; setTimeout(()=>badge.remove(),3000); clearInterval(waitCv); }
+      tries++;
+      if(cvReady){
+        badge.textContent='✅ OpenCV 준비됨';
+        setTimeout(()=>badge.remove(),2000);
+        clearInterval(waitCv);
+      } else if(cvError || tries > 30){ // 15초(30×500ms) 후 포기
+        cvError=true;
+        badge.textContent='⚠️ OpenCV 실패 — AI 모드로 동작';
+        setTimeout(()=>badge.remove(),3000);
+        clearInterval(waitCv);
+      }
     }, 500);
   }
 

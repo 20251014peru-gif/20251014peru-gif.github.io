@@ -274,3 +274,8 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
 .vf-meta .badge{flex-shrink:0;}
 .vf-meta .view-date{color:#aaa;font-size:13px;}
 .vf-meta #viewMemo{width:100%;color:#ddd;font-size:13px;line-height:1.5;white-space:pre-wrap;}
+
+/* ── 헤더 타이틀+버전 래퍼 ── */
+.header-title-wrap{display:flex;flex-direction:column;justify-content:center;line-height:1.2;}
+.header-title-wrap .app-title{font-size:16px;font-weight:700;color:var(--primary);}
+.header-title-wrap .app-version{font-size:10px;color:var(--muted);font-weight:600;}
