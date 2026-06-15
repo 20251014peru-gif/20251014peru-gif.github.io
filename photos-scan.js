@@ -1240,7 +1240,29 @@ function addCategory(name){
   if(categories.includes(n)){ showToast('이미 있는 카테고리'); return; }
   categories.push(n); saveCategories();
   renderFilterChips(); populateCatSelect(n);
+  if(document.getElementById('catList')) renderCatList();
   showToast(`"${n}" 추가됨`);
+}
+
+function openCatModal(){
+  renderCatList();
+  openModal('modalCat');
+}
+
+function renderCatList(){
+  const ul=document.getElementById('catList'); if(!ul) return;
+  ul.innerHTML='';
+  categories.forEach((c,i)=>{
+    const li=document.createElement('li');
+    li.className='cat-item';
+    li.innerHTML=`<span class="cat-name">${c}</span><button title="삭제">🗑</button>`;
+    li.querySelector('button').onclick=()=>{
+      if(!confirm(`"${c}" 삭제?`)) return;
+      categories.splice(i,1); saveCategories();
+      renderCatList(); renderFilterChips(); populateCatSelect();
+    };
+    ul.appendChild(li);
+  });
 }
 
 /* ══════════════════════════════════════════
@@ -1448,223 +1470,219 @@ async function init(){
   await openIDB();
   loadData();
 
-  /* 모드별 UI 적용 */
+  /* ── 버전/모드 표시 ── */
   const _el = id => document.getElementById(id);
   if(_el('appTitle'))   _el('appTitle').textContent   = MODE_LABEL;
-  if(_el('appVersion')) _el('appVersion').textContent = 'v6.8';
+  if(_el('appVersion')) _el('appVersion').textContent = 'v6.9';
   document.title = MODE_LABEL;
-  if(document.querySelector('.app-title'))
-    document.querySelector('.app-title').style.color = MODE_COLOR;
   // 상단 모드 컬러 바
   const modeBar = document.createElement('div');
   modeBar.style.cssText = `position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
   document.body.appendChild(modeBar);
 
-  /* 크롭 이벤트 초기화 (DOM 완성 후) */
+  /* ── 크롭 이벤트 초기화 ── */
   initCropEvents();
 
-  /* OpenCV 로딩 배지 */
+  /* ── OpenCV 로딩 배지 ── */
   if(!cvReady && !cvError){
     const badge = document.createElement('div');
-    badge.id = 'cvStatusBadge';
-    badge.className = 'cv-status';
-    badge.textContent = '⏳ OpenCV 로딩 중...';
+    badge.id='cvStatusBadge'; badge.className='cv-status';
+    badge.textContent='⏳ OpenCV 로딩 중...';
     document.body.appendChild(badge);
-    let tries = 0;
+    let tries=0;
     const waitCv = setInterval(()=>{
       tries++;
-      if(cvReady){
-        badge.textContent='✅ OpenCV 준비됨';
-        setTimeout(()=>badge.remove(),2000);
-        clearInterval(waitCv);
-      } else if(cvError || tries > 30){ // 15초(30×500ms) 후 포기
-        cvError=true;
-        badge.textContent='⚠️ OpenCV 실패 — AI 모드로 동작';
-        setTimeout(()=>badge.remove(),3000);
-        clearInterval(waitCv);
-      }
-    }, 500);
+      if(cvReady){ badge.textContent='✅ OpenCV 준비됨'; setTimeout(()=>badge.remove(),2000); clearInterval(waitCv); }
+      else if(cvError||tries>30){ cvError=true; badge.textContent='⚠️ OpenCV 실패(AI모드)'; setTimeout(()=>badge.remove(),3000); clearInterval(waitCv); }
+    },500);
   }
 
   renderFilterChips();
   renderGallery();
   populateCatSelect();
 
-  /* 문서감지 모달 이벤트 */
-  document.getElementById('btnDocScanClose').onclick = ()=>closeModal('modalDocScan');
-  document.getElementById('btnDocScanRetry').onclick = ()=>{
-    closeModal('modalDocScan');
-    aiDocCrop(false);
-  };
-  document.getElementById('btnDocScanApply').onclick = applyDocScanCrop;
+  /* ══════════════════════════════════════
+     헤더 아이콘 — 모두 안전하게 연결
+     ══════════════════════════════════════ */
+  const $on = (id,fn)=>{ const el=_el(id); if(el) el.onclick=fn; };
 
-  /* ── 헤더 아이콘 이벤트 ── */
-  const $= id=>document.getElementById(id);
-  // 존재하는 요소에만 이벤트 (null 오류 방지)
-  const $on = (id, fn)=>{ const el=$(id); if(el) el.onclick=fn; };
-
-  $on('btnHome',       ()=>{ location.href='index.html'; });
-  $on('btnBackup',     ()=>{ $('oneDriveStatus') && ($('oneDriveStatus').textContent='☁️ 준비됨'); openModal('modalOneDrive'); });
-  $on('btnApiKey',     ()=>{ $('apiKeyInput').value=localStorage.getItem(LS_API_KEY)||''; openModal('modalApiKey'); });
+  $on('btnHome',       ()=>location.href='index.html');
+  $on('btnBackup',     ()=>{ if(_el('oneDriveStatus')) _el('oneDriveStatus').textContent='☁️ 준비됨'; openModal('modalOneDrive'); });
+  $on('btnApiKey',     ()=>{ if(_el('apiKeyInput')) _el('apiKeyInput').value=localStorage.getItem(LS_API_KEY)||''; openModal('modalApiKey'); });
   $on('btnCatManage2', openCatModal);
   $on('btnLocalExp',   exportBackup);
-  $on('btnLocalImp',   ()=>$('backupInput').click());
-  $on('btnSettings',   ()=>{ $('apiKeyInput').value=localStorage.getItem(LS_API_KEY)||''; openModal('modalApiKey'); });
+  $on('btnLocalImp',   ()=>_el('backupInput')?.click());
+  $on('btnAddCat',     ()=>{ const n=prompt('새 카테고리 이름'); if(n?.trim()) addCategory(n.trim()); });
 
-  /* OneDrive 모달 */
-  $on('btnOneDriveClose', ()=>closeModal('modalOneDrive'));
-  $on('btnOdUpload',      uploadToOneDrive);
-  $on('btnOdLocalExport', ()=>{ closeModal('modalOneDrive'); exportBackup(); });
+  /* ══════════════════════════════════════
+     모드 버튼 (일반사진 / 문서스캔)
+     ══════════════════════════════════════ */
+  $on('btnPhotoCamera',  startBurstCamera);
+  $on('btnPhotoGallery', ()=>_el('fileInputGallery')?.click());
+  $on('btnScanCamera',   ()=>_el('fileScanCamera')?.click());
+  $on('btnScanGallery',  ()=>_el('fileScanGallery')?.click());
 
-  /* AI 검색 — 검색창 통합 (@검색어 + Enter 또는 🤖 버튼) */
-  const srchEl = $('gallerySearch');
+  /* 파일 입력 */
+  $on('fileInputCamera',  null); // onclick 아님 — onchange 아래에서
+  _el('fileInputCamera')  && (_el('fileInputCamera').onchange  = e=>{ if(e.target.files.length) addBurstFiles(e.target.files); e.target.value=''; });
+  _el('fileInputGallery') && (_el('fileInputGallery').onchange = e=>{ if(e.target.files.length) handleFiles(e.target.files); e.target.value=''; });
+  _el('fileScanCamera')   && (_el('fileScanCamera').onchange   = e=>{ if(e.target.files.length) startScanFromCamera(e.target.files); e.target.value=''; });
+  _el('fileScanGallery')  && (_el('fileScanGallery').onchange  = e=>{ if(e.target.files.length) startScanFromCamera(e.target.files); e.target.value=''; });
+  _el('addMoreCam')       && (_el('addMoreCam').onchange       = e=>{ if(e.target.files.length) handleFiles(e.target.files,true); e.target.value=''; });
+  _el('addMoreGal')       && (_el('addMoreGal').onchange       = e=>{ if(e.target.files.length) handleFiles(e.target.files,true); e.target.value=''; });
+  _el('backupInput')      && (_el('backupInput').onchange      = e=>{ if(e.target.files[0]) importBackup(e.target.files[0]); e.target.value=''; });
+
+  /* 연속촬영 오버레이 */
+  $on('burstAddMore', ()=>_el('fileInputCamera')?.click());
+  $on('burstDone',    burstDone);
+  $on('burstCancel',  burstCancel);
+
+  /* ══════════════════════════════════════
+     검색
+     ══════════════════════════════════════ */
+  const srchEl = _el('gallerySearch');
   if(srchEl){
+    srchEl.oninput = e=>{ currentSearch=e.target.value.startsWith('@')?'':e.target.value; renderGallery(); };
     srchEl.addEventListener('keydown', e=>{
-      if(e.key==='Enter' && srchEl.value.startsWith('@')){
-        e.preventDefault(); runAiSearch(srchEl.value);
-      }
+      if(e.key==='Enter' && srchEl.value.startsWith('@')){ e.preventDefault(); runAiSearch(srchEl.value); }
     });
   }
   $on('btnAiSearchInline', ()=>{
-    const v = srchEl?.value||'';
-    const q = v.startsWith('@') ? v : ('@'+(v||prompt('AI 검색어를 입력하세요 (@제외)')||''));
-    runAiSearch(q);
+    const v=srchEl?.value||'';
+    runAiSearch(v.startsWith('@')?v:'@'+(v||prompt('AI 검색어')||''));
   });
 
-  /* 모드 버튼 이벤트 */
-  const _safe = id => document.getElementById(id);
-  // 일반사진 모드
-  if(_safe('btnPhotoCamera'))  _safe('btnPhotoCamera').onclick  = startBurstCamera;
-  if(_safe('btnPhotoGallery')) _safe('btnPhotoGallery').onclick = ()=>_safe('fileInputGallery').click();
-  // 문서스캔 모드
-  if(_safe('btnScanCamera'))   _safe('btnScanCamera').onclick   = ()=>_safe('fileScanCamera').click();
-  if(_safe('btnScanGallery'))  _safe('btnScanGallery').onclick  = ()=>_safe('fileScanGallery').click();
-
-  // 파일 입력 핸들러
-  if(_safe('fileScanCamera'))  _safe('fileScanCamera').onchange  = e=>{ if(e.target.files.length) startScanFromCamera(e.target.files); e.target.value=''; };
-  if(_safe('fileScanGallery')) _safe('fileScanGallery').onchange = e=>{ if(e.target.files.length) startScanFromCamera(e.target.files); e.target.value=''; };
-
-  // 연속촬영 오버레이 버튼
-  if(_safe('burstAddMore')) _safe('burstAddMore').onclick = ()=>_safe('fileInputCamera').click();
-  if(_safe('burstDone'))    _safe('burstDone').onclick    = burstDone;
-  if(_safe('burstCancel'))  _safe('burstCancel').onclick  = burstCancel;
-
-  /* 기존 카메라/갤러리 (하위 호환) */
-  if(_safe('btnCamera'))  _safe('btnCamera').onclick  = ()=>_safe('fileInputCamera').click();
-  if(_safe('btnGallery')) _safe('btnGallery').onclick = ()=>_safe('fileInputGallery').click();
-  _safe('fileInputCamera').onchange  = e=>{ if(e.target.files.length) addBurstFiles(e.target.files); e.target.value=''; };
-  _safe('fileInputGallery').onchange = e=>{ if(e.target.files.length) handleFiles(e.target.files); e.target.value=''; };
-
-  /* 검색 */
-  document.getElementById('gallerySearch').oninput = e=>{ currentSearch=e.target.value; renderGallery(); };
-
-  /* 필터칩 카테고리 추가 */
-  document.getElementById('btnAddCat').onclick = ()=>{
-    const n=prompt('새 카테고리 이름');
-    addCategory(n);
-  };
-
-  /* 추가 모달 */
-  document.getElementById('btnModalAddClose').onclick = ()=>closeModal('modalAdd');
-  document.getElementById('btnSlidePrev').onclick     = ()=>goSlide(-1);
-  document.getElementById('btnSlideNext').onclick     = ()=>goSlide(1);
-  document.getElementById('btnAddMoreCam').onclick    = ()=>document.getElementById('addMoreCam').click();
-  document.getElementById('btnAddMoreGal').onclick    = ()=>document.getElementById('addMoreGal').click();
-  document.getElementById('addMoreCam').onchange      = e=>{ if(e.target.files.length) handleFiles(e.target.files,true); e.target.value=''; };
-  document.getElementById('addMoreGal').onchange      = e=>{ if(e.target.files.length) handleFiles(e.target.files,true); e.target.value=''; };
-  document.getElementById('btnDelImg').onclick        = ()=>{
+  /* ══════════════════════════════════════
+     사진 추가/수정 모달
+     ══════════════════════════════════════ */
+  $on('btnModalAddClose', ()=>closeModal('modalAdd'));
+  $on('btnSlidePrev',     ()=>goSlide(-1));
+  $on('btnSlideNext',     ()=>goSlide(1));
+  $on('btnAddMoreCam',    ()=>_el('addMoreCam')?.click());
+  $on('btnAddMoreGal',    ()=>_el('addMoreGal')?.click());
+  $on('btnDelImg', ()=>{
     if(!modalImages.length) return;
     modalImages.splice(modalSlide,1);
     modalSlide=Math.min(modalSlide,modalImages.length-1);
     renderModalSlides();
-  };
-  document.getElementById('btnAiCrop').onclick    = ()=>aiDocCrop(false);
-  document.getElementById('btnSavePhoto').onclick = savePhoto;
-  document.getElementById('btnEditPhoto').onclick = openEditor;
+  });
+  $on('btnAiCrop',   ()=>aiDocCrop(false));
+  $on('btnSavePhoto', savePhoto);
+  $on('btnEditPhoto', openEditor);
 
-  /* select 옆 카테고리 인라인 추가/삭제 */
-  document.getElementById('btnInlineCatAdd').onclick = ()=>{
-    const n=prompt('새 카테고리 이름'); addCategory(n);
-  };
-  document.getElementById('btnInlineCatDel').onclick = ()=>{
-    const cur=document.getElementById('photoCat').value;
-    if(!cur){ showToast('삭제할 카테고리가 없습니다'); return; }
-    if(DEFAULT_CATS.includes(cur)){ showToast(`"${cur}"은 기본 카테고리라 삭제할 수 없습니다`); return; }
-    if(!confirm(`"${cur}" 카테고리를 삭제할까요?`)) return;
-    categories=categories.filter(c=>c!==cur); saveCategories();
-    populateCatSelect(); renderFilterChips();
-    showToast(`"${cur}" 삭제됨`);
-  };
+  /* 카테고리 인라인 추가/삭제 */
+  $on('btnInlineCatAdd', ()=>{
+    const n=prompt('새 카테고리 이름'); if(n?.trim()) addCategory(n.trim());
+  });
+  $on('btnInlineCatDel', ()=>{
+    const sel=_el('photoCat'); if(!sel?.value) return;
+    if(!confirm(`"${sel.value}" 카테고리를 삭제할까요?`)) return;
+    categories=categories.filter(c=>c!==sel.value); saveCategories();
+    populateCatSelect(); renderFilterChips(); showToast('삭제됨');
+  });
 
-  /* 백업 import */
-  document.getElementById('backupInput').onchange = e=>{ if(e.target.files[0]) importBackup(e.target.files[0]); e.target.value=''; };
-
-  /* 편집 모달 */
-  document.getElementById('btnEditClose').onclick  = ()=>{ closeModal('modalEdit'); openModal('modalAdd'); };
-  document.getElementById('btnEditDone').onclick   = finishEdit;
-  document.getElementById('btnEditUndo').onclick   = ()=>{ if(canvas&&canvas.undo) canvas.undo(); };
+  /* ══════════════════════════════════════
+     편집 모달
+     ══════════════════════════════════════ */
+  $on('btnEditClose', ()=>{ closeModal('modalEdit'); openModal('modalAdd'); });
+  $on('btnEditDone',  finishEdit);
+  $on('btnEditUndo',  ()=>{ if(canvas&&canvas.undo) canvas.undo(); });
   document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>{
     b.onclick=()=>{
       const t=b.dataset.tool;
-      if(t==='rect')   addShape('rect');
+      if(t==='rect') addShape('rect');
       else if(t==='circle') addShape('circle');
       else if(t==='arrow')  addArrow();
       else setTool(t);
     };
   });
-  document.getElementById('toolColor').onchange = ()=>{ if(canvas&&canvas.isDrawingMode) canvas.freeDrawingBrush.color=document.getElementById('toolColor').value; };
-  document.getElementById('toolSize').onchange  = ()=>{ if(canvas&&canvas.isDrawingMode) canvas.freeDrawingBrush.width=parseInt(document.getElementById('toolSize').value); };
-  document.getElementById('btnDelObj').onclick   = ()=>{ if(canvas){const o=canvas.getActiveObject();if(o){canvas.remove(o);canvas.renderAll();}} };
-  document.getElementById('btnRotateL').onclick  = ()=>rotateImage(-90);
-  document.getElementById('btnRotateR').onclick  = ()=>rotateImage(90);
-  // 크롭 풀스크린 버튼들
-  document.getElementById('cropDoneBtn').onclick   = applyCrop;
-  document.getElementById('cropCancelBtn').onclick = ()=>{ closeCropUI(); setTool('select'); };
-  document.getElementById('cropRotateBtn').onclick = ()=>{
-    const im = document.getElementById('cropImg');
-    const src = im.src || cropImgSrc;
-    const tmpI = new Image();
-    tmpI.onload = ()=>{
-      const c=document.createElement('canvas'); c.width=tmpI.height; c.height=tmpI.width;
-      const ctx=c.getContext('2d');
-      ctx.translate(c.width/2,c.height/2); ctx.rotate(Math.PI/2);
-      ctx.drawImage(tmpI,-tmpI.width/2,-tmpI.height/2);
-      cropImgSrc = c.toDataURL('image/jpeg',0.95);
-      const im2=document.getElementById('cropImg');
-      im2.onload=()=>{ cResetTries=0; cResetWhenReady(); };
-      im2.src=cropImgSrc;
-    };
-    tmpI.src=src;
-  };
-  // 편집모달 내 크롭/취소 버튼 (하단 바 — crop tool 선택 시 표시)
-  document.getElementById('btnApplyCrop').onclick  = applyCrop;
-  document.getElementById('btnCancelCrop').onclick = ()=>{ closeCropUI(); setTool('select'); };
-  document.getElementById('btnAddText').onclick    = addText;
-  document.getElementById('textInput').onkeydown   = e=>{ if(e.key==='Enter') addText(); };
+  $on('toolColor', null);
+  _el('toolColor') && (_el('toolColor').onchange=()=>{ if(canvas&&canvas.isDrawingMode) canvas.freeDrawingBrush.color=_el('toolColor').value; });
+  _el('toolSize')  && (_el('toolSize').onchange =()=>{ if(canvas&&canvas.isDrawingMode) canvas.freeDrawingBrush.width=parseInt(_el('toolSize').value); });
+  $on('btnDelObj',    ()=>{ if(canvas){const o=canvas.getActiveObject();if(o){canvas.remove(o);canvas.renderAll();}} });
+  $on('btnRotateL',   ()=>rotateImage(-90));
+  $on('btnRotateR',   ()=>rotateImage(90));
+  $on('btnApplyCrop', applyCrop);
+  $on('btnCancelCrop',()=>{ closeCropUI(); setTool('select'); });
+  $on('btnAddText',   addText);
+  _el('textInput') && (_el('textInput').onkeydown=e=>{ if(e.key==='Enter') addText(); });
 
-  /* 상세 보기 */
-  document.getElementById('btnViewClose').onclick  = ()=>{ document.getElementById('modalView').style.display='none'; };
-  document.getElementById('btnViewPrev').onclick   = ()=>viewNavSlide(-1);
-  document.getElementById('btnViewNext').onclick   = ()=>viewNavSlide(1);
-  document.getElementById('btnViewShare').onclick  = sharePhoto;
-  document.getElementById('btnViewEdit').onclick   = ()=>{ document.getElementById('modalView').style.display='none'; openEditMetaModal(viewPhotoId); };
-  document.getElementById('btnViewDelete').onclick = ()=>deletePhoto(viewPhotoId);
+  /* 크롭 풀스크린 버튼 */
+  $on('cropDoneBtn',   applyCrop);
+  $on('cropCancelBtn', ()=>{ closeCropUI(); setTool('select'); });
+  $on('cropRotateBtn', ()=>{
+    const im=_el('cropImg'); if(!im) return;
+    const tmp=new Image(); tmp.onload=()=>{
+      const cv=document.createElement('canvas'); cv.width=tmp.height; cv.height=tmp.width;
+      const ctx=cv.getContext('2d'); ctx.translate(cv.width/2,cv.height/2); ctx.rotate(Math.PI/2);
+      ctx.drawImage(tmp,-tmp.width/2,-tmp.height/2);
+      cropImgSrc=cv.toDataURL('image/jpeg',0.95);
+      im.onload=()=>{ _cTries=0; requestAnimationFrame(_cReady); };
+      im.src=cropImgSrc;
+    }; tmp.src=im.src||cropImgSrc;
+  });
 
-  /* AI 검색 */
-  /* btnSearchClose 제거됨 */
-  document.getElementById('btnAiSearch').onclick    = aiSearch;
+  /* ══════════════════════════════════════
+     상세보기 모달
+     ══════════════════════════════════════ */
+  $on('btnViewClose',  ()=>{ if(_el('modalView')) _el('modalView').style.display='none'; });
+  $on('btnViewPrev',   ()=>viewNavSlide(-1));
+  $on('btnViewNext',   ()=>viewNavSlide(1));
+  $on('btnViewShare',  sharePhoto);
+  $on('btnViewEdit',   ()=>{ if(_el('modalView')) _el('modalView').style.display='none'; openEditMetaModal(viewPhotoId); });
+  $on('btnViewDelete', ()=>deletePhoto(viewPhotoId));
 
-  /* API 키 */
-  document.getElementById('btnApiKeyClose').onclick = ()=>closeModal('modalApiKey');
-  document.getElementById('apiKeyInput').value      = localStorage.getItem(LS_API_KEY)||'';
-  document.getElementById('btnSaveApiKey').onclick  = ()=>{ localStorage.setItem(LS_API_KEY,document.getElementById('apiKeyInput').value.trim()); closeModal('modalApiKey'); showToast('API 키 저장됨'); };
+  /* ══════════════════════════════════════
+     OpenCV 문서감지 모달
+     ══════════════════════════════════════ */
+  $on('btnDocScanClose', ()=>closeModal('modalDocScan'));
+  $on('btnDocScanRetry', ()=>{ closeModal('modalDocScan'); aiDocCrop(false); });
+  $on('btnDocScanApply', applyDocScanCrop);
 
-  /* ESC */
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){['modalAdd','modalEdit','modalApiKey'].forEach(closeModal); document.getElementById('modalView').style.display='none'; closeAiDrop(); } });
+  /* ══════════════════════════════════════
+     카테고리 관리 모달
+     ══════════════════════════════════════ */
+  $on('btnCatClose', ()=>closeModal('modalCat'));
+  $on('btnCatAdd',   ()=>{
+    const n=_el('catNewName')?.value.trim(); if(!n) return;
+    addCategory(n); if(_el('catNewName')) _el('catNewName').value='';
+  });
+  _el('catNewName') && (_el('catNewName').onkeydown=e=>{ if(e.key==='Enter') _el('btnCatAdd')?.click(); });
 
-  /* 드래그앤드롭 */
-  document.addEventListener('dragover',e=>e.preventDefault());
-  document.addEventListener('drop',e=>{ e.preventDefault(); const files=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')||f.name.endsWith('.heic')); if(files.length) handleFiles(files); });
+  /* ══════════════════════════════════════
+     API 키 모달
+     ══════════════════════════════════════ */
+  $on('btnApiKeyClose', ()=>closeModal('modalApiKey'));
+  $on('btnSaveApiKey',  ()=>{
+    const k=_el('apiKeyInput')?.value.trim()||'';
+    localStorage.setItem(LS_API_KEY,k); closeModal('modalApiKey'); showToast('API 키 저장됨');
+  });
+
+  /* ══════════════════════════════════════
+     OneDrive 모달
+     ══════════════════════════════════════ */
+  $on('btnOneDriveClose', ()=>closeModal('modalOneDrive'));
+  $on('btnOdUpload',      uploadToOneDrive);
+  $on('btnOdLocalExport', ()=>{ closeModal('modalOneDrive'); exportBackup(); });
+
+  /* ══════════════════════════════════════
+     ESC 키
+     ══════════════════════════════════════ */
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape'){
+      ['modalAdd','modalEdit','modalApiKey','modalOneDrive','modalCat','modalDocScan'].forEach(closeModal);
+      if(_el('modalView')) _el('modalView').style.display='none';
+      closeAiDrop(); closeCropUI();
+    }
+  });
+
+  /* 드래그&드롭 */
+  document.addEventListener('dragover', e=>e.preventDefault());
+  document.addEventListener('drop', e=>{
+    e.preventDefault();
+    const files=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')||f.name?.endsWith('.heic'));
+    if(files.length) handleFiles(files);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);

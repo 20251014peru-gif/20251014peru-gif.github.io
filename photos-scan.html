@@ -381,7 +381,24 @@
   <div id="aiSearchDropResult"></div>
 </div>
 
+<!-- 카테고리 관리 모달 -->
+<div class="modal-bg" id="modalCat">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span>📂 카테고리 관리</span>
+      <button class="btn-icon" id="btnCatClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="cat-add-row">
+        <input type="text" id="catNewName" placeholder="새 카테고리 이름">
+        <button class="btn-primary" id="btnCatAdd">추가</button>
+      </div>
+      <ul class="cat-list" id="catList"></ul>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
-<script src="photos-scan.js?v=20260616d"></script>
+<script src="photos-scan.js?v=20260616e"></script>
 </body>
 </html>

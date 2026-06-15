@@ -520,3 +520,13 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
   padding:12px;background:#f0f6ff;border-radius:10px;
   font-size:13px;line-height:1.7;min-height:60px;
 }
+
+/* ── 카테고리 관리 모달 ── */
+.cat-add-row{display:flex;gap:8px;margin-bottom:14px;}
+.cat-add-row input{flex:1;height:42px;border:2px solid var(--border);border-radius:10px;padding:0 14px;font-size:14px;outline:none;}
+.cat-add-row input:focus{border-color:var(--primary);}
+.cat-list{list-style:none;display:flex;flex-direction:column;gap:8px;}
+.cat-item{display:flex;align-items:center;gap:10px;background:#f8fafc;padding:11px 14px;border-radius:10px;border:1px solid var(--border);}
+.cat-item .cat-name{flex:1;font-size:14px;font-weight:600;}
+.cat-item button{border:none;background:none;cursor:pointer;font-size:18px;color:var(--muted);padding:3px 6px;border-radius:6px;}
+.cat-item button:hover{background:#fee2e2;color:var(--danger);}
