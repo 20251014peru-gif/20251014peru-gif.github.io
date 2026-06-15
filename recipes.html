@@ -15,7 +15,6 @@ body{background:#FEF8E8}
 .app-header{border-bottom-color:#FAC775}
 .app-title{color:#D97706;font-size:19px;letter-spacing:-.5px;font-weight:900}
 .app-title span{color:#C4621A}
-.app-title::before{content:'🍳 '}
 .modal-title{color:#D97706}
 .card-title{word-break:keep-all;white-space:normal;color:#92400e;font-size:15px;font-weight:800}
 .item-card{border-color:#FAC775;background:#fff}
@@ -54,6 +53,16 @@ body{background:#FEF8E8}
 .ingr-chip{background:#FEF8E8;color:#92400e;font-weight:700}
 .step-dot{background:#FEF8E8;color:#D97706}
 .add-row-btn-mn{background:#FEF8E8;color:#D97706;border-color:#FAC775}
+
+.cat-section{background:#fff;border-radius:14px;border:1.5px solid #FAC775;padding:14px;margin-bottom:12px}
+.cat-section-title{font-size:14px;font-weight:800;color:#D97706;margin-bottom:10px}
+.cat-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:10px;background:#FFFBF0;margin-bottom:6px;font-size:13px;font-weight:600;color:#92400e}
+.cat-item-del{width:26px;height:26px;border-radius:50%;background:#fff;color:#e24b4a;border:1.5px solid #f5c1c1;font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.cat-add-row{display:flex;gap:8px;margin-top:8px}
+.cat-add-input{flex:1;height:42px;border-radius:12px;border:1.5px solid #FAC775;background:#FFFBF0;padding:0 12px;font-size:13px;color:#92400e;outline:none}
+.cat-add-input:focus{border-color:#D97706}
+.cat-add-btn{padding:0 16px;height:42px;border-radius:12px;background:#D97706;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.cat-empty{font-size:12px;color:#888;padding:6px 0}
 </style>
 </head>
 <body>
@@ -111,10 +120,13 @@ body{background:#FEF8E8}
         <input type="password" id="apiKeyInput" class="settings-input" placeholder="Anthropic API Key">
         <button class="settings-btn" id="saveApiKey" style="background:var(--mn3)">저장</button>
       </div>
-      <div class="settings-section">
-        <div class="settings-title" style="color:var(--mn3)">🏷️ 카테고리 관리</div>
+      <div class="cat-section">
+        <div class="cat-section-title">🏷️ 카테고리 관리</div>
         <div id="catManage"></div>
-        <div class="add-cat-row"><input type="text" id="newCat" class="settings-input" placeholder="새 카테고리 입력"><button class="settings-btn" id="addCatBtn" style="background:var(--mn3)">추가</button></div>
+        <div class="cat-add-row">
+          <input type="text" id="newCatInput" class="cat-add-input" placeholder="새 카테고리 입력">
+          <button class="cat-add-btn" id="addCatBtn">＋ 추가</button>
+        </div>
       </div>
       <div class="settings-section">
         <div class="settings-title" style="color:var(--mn3)">💾 백업</div>
@@ -473,10 +485,22 @@ function setupSettings(){
   document.getElementById('manualBackup').onclick=()=>doBackup('rc',()=>({items,cats}));
   document.getElementById('exportJsonBtn').onclick=()=>exportJson({items,cats},'recipes_backup.json');
 }
+function addCat(){
+  const inp=document.getElementById('newCatInput');
+  const v=inp.value.trim();
+  if(!v){toast('카테고리 이름을 입력해주세요');return;}
+  if(cats.includes(v)){toast('이미 있는 카테고리예요');return;}
+  cats.push(v);saveCats();inp.value='';
+  renderSettings();renderCatChips();renderCatSelect();toast('추가 완료 ✓');
+}
+function delCat(i){
+  if(!confirm(`"${cats[i]}" 삭제할까요?`))return;
+  cats.splice(i,1);saveCats();renderSettings();renderCatChips();renderCatSelect();toast('삭제 완료');
+}
+window.delCat=delCat;
 function renderSettings(){
-  document.getElementById('catManage').innerHTML=cats.length
-    ? cats.map((c,i)=>`<div class="cat-manage-item"><span class="cat-manage-name">${esc(c)}</span><button class="cat-del-btn" onclick="cats.splice(${i},1);saveCats();renderSettings();renderCatChips()">✕</button></div>`).join('')
-    : '<div style="font-size:12px;color:var(--txt2);padding:6px 0">카테고리가 없어요. 아래에서 추가해주세요</div>';
+  const wrap=document.getElementById('catManage');
+  wrap.innerHTML=cats.length?cats.map((c,i)=>`<div class="cat-item"><span>${esc(c)}</span><button class="cat-item-del" onclick="delCat(${i})">✕</button></div>`).join(''):'<div class="cat-empty">카테고리가 없어요. 아래에서 추가해주세요.</div>';
   document.getElementById('statsArea').innerHTML=`<div class="stat-item"><span>전체 레시피</span><span class="stat-val" style="color:var(--mn3)">${items.length}개</span></div><div class="stat-item"><span>즐겨찾기</span><span class="stat-val" style="color:var(--mn3)">${items.filter(i=>i.fav).length}개</span></div>`;
   renderBackupList();
 }

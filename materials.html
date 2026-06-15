@@ -15,7 +15,6 @@ body{background:#FDF0E6}
 .app-header{border-bottom-color:#D4956A}
 .app-title{color:#8B4513;font-size:19px;letter-spacing:-.5px;font-weight:900}
 .app-title span{color:#C4621A}
-.app-title::before{content:'🔧 '}
 .modal-title{color:#8B4513}
 .card-title{word-break:keep-all;white-space:normal;color:#5c2d0a;font-size:15px;font-weight:800}
 .item-card{border-color:#D4956A;background:#fff}
@@ -50,6 +49,16 @@ body{background:#FDF0E6}
 .ai-input:focus{border-color:#8B4513}
 .badge-mat{background:#FDF0E6;font-size:22px}
 .autocomplete-item:hover{background:#FDF0E6}
+
+.cat-section{background:#fff;border-radius:14px;border:1.5px solid #D4956A;padding:14px;margin-bottom:12px}
+.cat-section-title{font-size:14px;font-weight:800;color:#8B4513;margin-bottom:10px}
+.cat-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:10px;background:#FDF5EE;margin-bottom:6px;font-size:13px;font-weight:600;color:#5c2d0a}
+.cat-item-del{width:26px;height:26px;border-radius:50%;background:#fff;color:#e24b4a;border:1.5px solid #f5c1c1;font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.cat-add-row{display:flex;gap:8px;margin-top:8px}
+.cat-add-input{flex:1;height:42px;border-radius:12px;border:1.5px solid #D4956A;background:#FDF5EE;padding:0 12px;font-size:13px;color:#5c2d0a;outline:none}
+.cat-add-input:focus{border-color:#8B4513}
+.cat-add-btn{padding:0 16px;height:42px;border-radius:12px;background:#8B4513;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.cat-empty{font-size:12px;color:#888;padding:6px 0}
 </style>
 </head>
 <body>
@@ -121,12 +130,12 @@ body{background:#FDF0E6}
         <input type="password" id="apiKeyInput" class="settings-input" placeholder="Anthropic API Key">
         <button class="settings-btn" id="saveApiKey" style="background:var(--or3)">저장</button>
       </div>
-      <div class="settings-section">
-        <div class="settings-title" style="color:var(--or3)">🏷️ 카테고리 관리</div>
+      <div class="cat-section">
+        <div class="cat-section-title">🏷️ 카테고리 관리</div>
         <div id="catManage"></div>
-        <div class="add-cat-row">
-          <input type="text" id="newCat" class="settings-input" placeholder="새 카테고리 입력">
-          <button class="settings-btn" id="addCatBtn" style="background:var(--or3)">추가</button>
+        <div class="cat-add-row">
+          <input type="text" id="newCatInput" class="cat-add-input" placeholder="새 카테고리 입력">
+          <button class="cat-add-btn" id="addCatBtn">＋ 추가</button>
         </div>
       </div>
       <div class="settings-section">
@@ -414,8 +423,24 @@ async function sendAI(){ const q=document.getElementById('aiInput').value.trim()
 function appendBubble(text,type){ const chat=document.getElementById('aiChat'); const div=document.createElement('div'); div.className='ai-bubble ai-bubble-'+(type==='user'?'user':'bot'); if(type==='user') div.style.marginLeft='auto'; div.textContent=text; chat.appendChild(div); chat.scrollTop=chat.scrollHeight; return div; }
 
 // SETTINGS
-function setupSettings(){ document.getElementById('saveApiKey').onclick=()=>{const k=document.getElementById('apiKeyInput').value.trim();if(!k)return;localStorage.setItem('lr_apiKey',k);document.getElementById('apiKeyInput').value='';toast('API 키 저장 ✓');}; document.getElementById('addCatBtn').onclick=()=>{const v=document.getElementById('newCat').value.trim();if(!v||cats.includes(v)){toast('중복이거나 비어있어요');return;}cats.push(v);saveCats();document.getElementById('newCat').value='';renderSettings();renderCatChips();}; document.getElementById('manualBackup').onclick=()=>doBackup('mt',()=>({items,cats})); document.getElementById('exportJsonBtn').onclick=()=>exportJson({items,cats},'materials_backup.json'); }
-function renderSettings(){ document.getElementById('catManage').innerHTML=cats.length?cats.map((c,i)=>`<div class="cat-manage-item"><span class="cat-manage-name">${esc(c)}</span><button class="cat-del-btn" onclick="cats.splice(${i},1);saveCats();renderSettings();renderCatChips()">✕</button></div>`).join(''):'<div style="font-size:12px;color:var(--txt2);padding:6px 0">카테고리가 없어요</div>'; document.getElementById('statsArea').innerHTML=`<div class="stat-item"><span>전체 자재</span><span class="stat-val" style="color:var(--or3)">${items.filter(i=>!i.isCar).length}개</span></div><div class="stat-item"><span>차량 항목</span><span class="stat-val" style="color:var(--or3)">${items.filter(i=>i.isCar).length}개</span></div><div class="stat-item"><span>즐겨찾기</span><span class="stat-val" style="color:var(--or3)">${items.filter(i=>i.fav).length}개</span></div>`; renderBackupList(); }
+function setupSettings(){ document.getElementById('saveApiKey').onclick=()=>{const k=document.getElementById('apiKeyInput').value.trim();if(!k)return;localStorage.setItem('lr_apiKey',k);document.getElementById('apiKeyInput').value='';toast('API 키 저장 ✓');}; document.getElementById('addCatBtn').onclick=addCat;
+  document.getElementById('newCatInput').onkeydown=e=>{if(e.key==='Enter')addCat();}; document.getElementById('manualBackup').onclick=()=>doBackup('mt',()=>({items,cats})); document.getElementById('exportJsonBtn').onclick=()=>exportJson({items,cats},'materials_backup.json'); }
+function addCat(){
+  const inp=document.getElementById('newCatInput');
+  const v=inp.value.trim();
+  if(!v){toast('카테고리 이름을 입력해주세요');return;}
+  if(cats.includes(v)){toast('이미 있는 카테고리예요');return;}
+  cats.push(v);saveCats();inp.value='';
+  renderSettings();renderCatChips();renderCatSelect();toast('추가 완료 ✓');
+}
+function delCat(i){
+  if(!confirm(`"${cats[i]}" 삭제할까요?`))return;
+  cats.splice(i,1);saveCats();renderSettings();renderCatChips();renderCatSelect();toast('삭제 완료');
+}
+window.delCat=delCat;
+function renderSettings(){ 
+  const wrap=document.getElementById('catManage');
+  wrap.innerHTML=cats.length?cats.map((c,i)=>`<div class="cat-item"><span>${esc(c)}</span><button class="cat-item-del" onclick="delCat(${i})">✕</button></div>`).join(''):'<div class="cat-empty">카테고리가 없어요. 아래에서 추가해주세요.</div>'; document.getElementById('statsArea').innerHTML=`<div class="stat-item"><span>전체 자재</span><span class="stat-val" style="color:var(--or3)">${items.filter(i=>!i.isCar).length}개</span></div><div class="stat-item"><span>차량 항목</span><span class="stat-val" style="color:var(--or3)">${items.filter(i=>i.isCar).length}개</span></div><div class="stat-item"><span>즐겨찾기</span><span class="stat-val" style="color:var(--or3)">${items.filter(i=>i.fav).length}개</span></div>`; renderBackupList(); }
 async function renderBackupList(){ const all=await fsGet('mt_backups'); all.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)); document.getElementById('backupList').innerHTML=all.slice(0,5).map(b=>`<div class="backup-item"><span>${formatDateFull(b.timestamp)}</span><button class="backup-restore-btn" onclick="restoreBackup('${b.id}')">복원</button></div>`).join('')||'<div style="font-size:12px;color:var(--txt2)">백업 없음</div>'; }
 window.restoreBackup=async id=>{if(!confirm('복원할까요?'))return;const all=await fsGet('mt_backups');const b=all.find(x=>x.id===id);if(!b)return;try{const s=JSON.parse(b.snap);items=s.data.items||[];cats=s.data.cats||[];saveCats();renderList();renderSettings();toast('복원 완료 ✓')}catch{toast('복원 실패')}};
 function scheduleAutoBackup(){const lb=parseInt(localStorage.getItem('mt_lastBackup')||'0');if(Date.now()-lb>7*24*60*60*1000)setTimeout(()=>doBackup('mt',()=>({items,cats})),5000);}

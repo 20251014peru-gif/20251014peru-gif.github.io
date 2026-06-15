@@ -7,19 +7,13 @@
 <title>링크 컬렉션 🔗</title>
 <link rel="stylesheet" href="shared.css?v=20260617">
 <style>
-/* 링크 앱 = 파란색 테마 */
-:root{
-  --ac:#185FA5;--ac2:#B5D4F4;--ac3:#E8F3FD;--ac4:#0c3d6e;
-}
 body{background:#EEF5FD}
 .app-header{border-bottom-color:#B5D4F4}
-.app-title{color:#185FA5;font-size:19px;letter-spacing:-.5px}
+.app-title{color:#185FA5;font-size:19px;font-weight:900}
 .app-title span{color:#7F77DD}
-.app-title::before{content:'🔗 '}
 .modal-title{color:#185FA5}
 .card-title{word-break:keep-all;white-space:normal;color:#0c3d6e;font-size:15px}
 .item-card{border-color:#B5D4F4;background:#fff}
-.item-card:hover{border-color:#185FA5}
 .fab{background:linear-gradient(135deg,#185FA5,#7F77DD)}
 .btab.active{color:#185FA5}
 .bottom-bar{border-top-color:#B5D4F4}
@@ -27,28 +21,31 @@ body{background:#EEF5FD}
 .search-input:focus{border-color:#185FA5}
 .chip-all{background:#185FA5;border-color:#185FA5}
 .chip-item.active{background:#E8F3FD;color:#185FA5;border-color:#B5D4F4}
-.sort-sel{border-color:#B5D4F4}
 .modal-save{background:linear-gradient(135deg,#185FA5,#7F77DD)}
 .modal-sheet{border-top-color:#B5D4F4}
 .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#185FA5}
 .tag-chip{background:#E8F3FD;color:#185FA5}
 .tag-chip-del{color:#185FA5}
-.hdr-btn{background:#E8F3FD}
-.back-btn{background:#E8F3FD;color:#185FA5}
+.hdr-btn,.back-btn{background:#E8F3FD;color:#185FA5}
 .cal-nav{background:#E8F3FD;color:#185FA5}
 .zoom-btn.active{background:#185FA5;border-color:#185FA5}
-.cal-cell.today{background:#E8F3FD;border-color:#B5D4F4}
 .settings-title{color:#185FA5}
 .settings-btn{background:#185FA5}
 .card-view-btn{background:#E8F3FD;color:#185FA5;border-color:#B5D4F4}
 .card-edit-btn{background:#EEE8FD;color:#7F77DD;border-color:#CECBF6}
-.list-count{color:#185FA5;font-size:12px}
-.card-date{color:#185FA5}
-.card-sub{color:#4a7ab5;font-size:12px}
 .ai-title{color:#185FA5}
 .ai-bubble-bot{background:#E8F3FD;color:#185FA5;border-color:#B5D4F4}
 .ai-send{background:#185FA5}
-.ai-input:focus{border-color:#185FA5}
+/* 카테고리 관리 */
+.cat-section{background:#fff;border-radius:14px;border:1.5px solid #B5D4F4;padding:14px;margin-bottom:12px}
+.cat-section-title{font-size:14px;font-weight:800;color:#185FA5;margin-bottom:10px}
+.cat-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:10px;background:#EEF5FD;margin-bottom:6px;font-size:13px;font-weight:600;color:#0c3d6e}
+.cat-item-del{width:26px;height:26px;border-radius:50%;background:#fff;color:#e24b4a;border:1.5px solid #f5c1c1;font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.cat-add-row{display:flex;gap:8px;margin-top:8px}
+.cat-add-input{flex:1;height:42px;border-radius:12px;border:1.5px solid #B5D4F4;background:#EEF5FD;padding:0 12px;font-size:13px;color:#0c3d6e;outline:none}
+.cat-add-input:focus{border-color:#185FA5}
+.cat-add-btn{padding:0 16px;height:42px;border-radius:12px;background:#185FA5;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.cat-empty{font-size:12px;color:#888;padding:6px 0}
 </style>
 </head>
 <body>
@@ -96,40 +93,40 @@ body{background:#EEF5FD}
   <div class="tab-content" id="tab-ai">
     <div class="ai-header"><div class="ai-title">🤖 AI 검색</div><div class="ai-sub">저장된 링크에서 찾아드려요</div></div>
     <div class="ai-chat-area" id="aiChat">
-      <div class="ai-bubble ai-bubble-bot">안녕하세요! 저장된 링크를 검색해드려요 😊<br>예) "인스타 저장된 것" / "커튼 관련 링크"</div>
+      <div class="ai-bubble ai-bubble-bot">저장된 링크를 검색해드려요 😊<br>예) "인스타 저장된 것" / "커튼 관련"</div>
     </div>
     <div class="ai-input-wrap"><input type="text" id="aiInput" class="ai-input" placeholder="무엇이든 물어보세요..."><button class="ai-send" id="aiSend">➤</button></div>
   </div>
 
   <div class="tab-content" id="tab-settings">
     <div class="settings-area">
-      <div class="settings-section">
-        <div class="settings-title">🔑 API 설정</div>
+      <div class="cat-section">
+        <div class="cat-section-title">🏷️ 카테고리 관리</div>
+        <div id="catManage"></div>
+        <div class="cat-add-row">
+          <input type="text" id="newCatInput" class="cat-add-input" placeholder="새 카테고리 입력">
+          <button class="cat-add-btn" id="addCatBtn">＋ 추가</button>
+        </div>
+      </div>
+      <div class="cat-section">
+        <div class="cat-section-title">🔑 API 설정</div>
         <input type="password" id="apiKeyInput" class="settings-input" placeholder="Anthropic API Key">
         <button class="settings-btn" id="saveApiKey">저장</button>
       </div>
-      <div class="settings-section">
-        <div class="settings-title">🏷️ 카테고리 관리</div>
-        <div id="catManage"></div>
-        <div class="add-cat-row">
-          <input type="text" id="newCat" class="settings-input" placeholder="새 카테고리 입력">
-          <button class="settings-btn" id="addCatBtn">추가</button>
-        </div>
-      </div>
-      <div class="settings-section">
-        <div class="settings-title">💾 백업</div>
-        <div class="settings-row">
+      <div class="cat-section">
+        <div class="cat-section-title">💾 백업</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="settings-btn" id="manualBackup">지금 백업</button>
-          <button class="settings-btn btn-outline" id="exportJsonBtn">JSON 내보내기</button>
+          <button class="settings-btn" id="exportJsonBtn" style="background:#7F77DD">JSON 내보내기</button>
         </div>
-        <div id="backupList"></div>
+        <div id="backupList" style="margin-top:10px"></div>
       </div>
-      <div class="settings-section">
-        <div class="settings-title">📊 통계</div>
+      <div class="cat-section">
+        <div class="cat-section-title">📊 통계</div>
         <div id="statsArea"></div>
       </div>
-      <div class="settings-section">
-        <div class="settings-title">🌙 테마</div>
+      <div class="cat-section">
+        <div class="cat-section-title">🌙 테마</div>
         <div class="settings-row"><span class="settings-label">다크모드</span><label class="toggle-switch"><input type="checkbox" id="darkModeToggle"><span class="toggle-slider"></span></label></div>
       </div>
     </div>
@@ -151,7 +148,7 @@ body{background:#EEF5FD}
       <label class="form-label">URL *</label>
       <input type="url" id="fUrl" class="form-input" placeholder="https://">
       <label class="form-label">제목</label>
-      <input type="text" id="fTitle" class="form-input" placeholder="제목 (예: 커튼형/모기장/치기)">
+      <input type="text" id="fTitle" class="form-input" placeholder="제목">
       <label class="form-label">카테고리</label>
       <select id="fCat" class="form-select"></select>
       <label class="form-label">태그 <span class="form-hint">입력 후 Enter</span></label>
@@ -160,7 +157,7 @@ body{background:#EEF5FD}
       <textarea id="fMemo" class="form-textarea" placeholder="메모..."></textarea>
       <label class="form-label">이미지 첨부</label>
       <div class="img-upload-area">
-        <input type="file" id="fImgFile" accept="image/*" capture="environment" style="display:none">
+        <input type="file" id="fImgFile" accept="image/*" style="display:none">
         <button class="img-btn" id="imgCamBtn">📷 카메라</button>
         <button class="img-btn" id="imgGalBtn">🖼️ 갤러리</button>
         <button class="img-btn" id="imgPasteBtn">📋 붙여넣기</button>
@@ -172,7 +169,7 @@ body{background:#EEF5FD}
   </div>
 </div>
 
-<!-- 상세보기 팝업 -->
+<!-- 상세보기 -->
 <div class="modal-overlay" id="detailModal">
   <div class="modal-sheet modal-sheet-center">
     <div class="modal-header"><span class="modal-title" id="detailTitle"></span><button class="modal-close" id="detailClose">✕</button></div>
@@ -185,7 +182,7 @@ body{background:#EEF5FD}
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="shared.js?v=20260616"></script>
+<script src="shared.js?v=20260617"></script>
 <script>
 let items=[], cats=[], currentTags=[], editImages=[], editingId=null;
 let calYear, calMonth, calZoom='md', currentDetailId=null;
@@ -197,33 +194,63 @@ document.addEventListener('DOMContentLoaded', async()=>{
     if(tab==='cal') renderCal();
     if(tab==='settings') renderSettings();
   });
-  setupCalNav(); setupAI(); setupSettings();
+  setupCalNav(); setupAI();
   const now=new Date(); calYear=now.getFullYear(); calMonth=now.getMonth();
   await loadData();
-  renderList(); renderCatChips();
+  renderList(); renderCatChips(); renderSettings();
+
   document.getElementById('linkSearch').oninput = renderList;
   document.getElementById('sortSel').onchange = renderList;
   document.getElementById('addBtn').onclick = ()=>openEdit();
   document.getElementById('editClose').onclick = closeEdit;
   document.getElementById('editModal').onclick = e=>{if(e.target===document.getElementById('editModal'))closeEdit()};
   document.getElementById('saveBtn').onclick = saveItem;
+
   // 이미지
-  document.getElementById('imgCamBtn').onclick = ()=>{ document.getElementById('fImgFile').removeAttribute('accept'); document.getElementById('fImgFile').setAttribute('capture','environment'); document.getElementById('fImgFile').click(); };
-  document.getElementById('imgGalBtn').onclick = ()=>{ document.getElementById('fImgFile').removeAttribute('capture'); document.getElementById('fImgFile').setAttribute('accept','image/*'); document.getElementById('fImgFile').click(); };
+  document.getElementById('imgCamBtn').onclick = ()=>{ document.getElementById('fImgFile').setAttribute('capture','environment'); document.getElementById('fImgFile').click(); };
+  document.getElementById('imgGalBtn').onclick = ()=>{ document.getElementById('fImgFile').removeAttribute('capture'); document.getElementById('fImgFile').click(); };
   document.getElementById('fImgFile').onchange = e=>{ if(e.target.files[0]) addImageFromFile(e.target.files[0], editImages, renderImgPreview); };
   document.getElementById('imgPasteBtn').onclick = ()=>pasteImageClipboard(editImages, renderImgPreview);
   document.addEventListener('paste', e=>{
     if(!document.getElementById('editModal').classList.contains('open')) return;
-    const items2=e.clipboardData?.items; if(!items2) return;
-    for(const i of items2){ if(i.type.startsWith('image/')){ addImageFromFile(i.getAsFile(), editImages, renderImgPreview); break; } }
+    for(const i of (e.clipboardData?.items||[])){ if(i.type.startsWith('image/')){addImageFromFile(i.getAsFile(),editImages,renderImgPreview);break;} }
   });
+
   // 상세
   document.getElementById('detailClose').onclick = ()=>document.getElementById('detailModal').classList.remove('open');
   document.getElementById('detailModal').onclick = e=>{if(e.target===document.getElementById('detailModal'))document.getElementById('detailModal').classList.remove('open')};
   document.getElementById('detailEdit').onclick = ()=>{ document.getElementById('detailModal').classList.remove('open'); openEdit(currentDetailId); };
   document.getElementById('detailDelete').onclick = deleteItem;
+
+  // 카테고리 추가
+  document.getElementById('addCatBtn').onclick = addCat;
+  document.getElementById('newCatInput').onkeydown = e=>{ if(e.key==='Enter') addCat(); };
+
+  // 설정
+  document.getElementById('saveApiKey').onclick = ()=>{ const k=document.getElementById('apiKeyInput').value.trim(); if(!k) return; localStorage.setItem('lr_apiKey',k); document.getElementById('apiKeyInput').value=''; toast('API 키 저장 ✓'); };
+  document.getElementById('manualBackup').onclick = ()=>doBackup('lk',()=>({items,cats}));
+  document.getElementById('exportJsonBtn').onclick = ()=>exportJson({items,cats},'links_backup.json');
+  document.getElementById('darkModeToggle').onchange = toggleDark;
+
   scheduleAutoBackup();
 });
+
+function addCat(){
+  const inp = document.getElementById('newCatInput');
+  const v = inp.value.trim();
+  if(!v){ toast('카테고리 이름을 입력해주세요'); return; }
+  if(cats.includes(v)){ toast('이미 있는 카테고리예요'); return; }
+  cats.push(v); saveCats(); inp.value='';
+  renderSettings(); renderCatChips(); renderCatSelect();
+  toast('카테고리 추가 완료 ✓');
+}
+function delCat(i){
+  if(!confirm(`"${cats[i]}" 카테고리를 삭제할까요?`)) return;
+  cats.splice(i,1); saveCats();
+  renderSettings(); renderCatChips(); renderCatSelect();
+  toast('삭제 완료');
+}
+window.delCat = delCat;
 
 async function loadData(){ items = await fsGet('lk_items'); }
 
@@ -236,7 +263,6 @@ function getPlatform(url){
 function platEmoji(p){ return p==='insta'?'🟣':p==='yt'?'🔴':'🔗'; }
 function platClass(p){ return p==='insta'?'badge-insta':p==='yt'?'badge-yt':'badge-etc'; }
 
-// LIST
 function renderList(){
   renderCatChips();
   const q=(document.getElementById('linkSearch').value||'').toLowerCase();
@@ -257,18 +283,18 @@ function renderList(){
     const tags=Array.isArray(it.tags)?it.tags:[];
     const imgs=Array.isArray(it.images)?it.images:[];
     const tagsHtml=tags.map((t,i)=>`<span class="tag ${tagColor(i)}">${esc(t)}</span>`).join('');
-    const catHtml=it.cat?`<span class="tag tag-pk">${esc(it.cat)}</span>`:'';
+    const catHtml=it.cat?`<span class="tag tag-bl">${esc(it.cat)}</span>`:'';
     const imgHtml=imgs.length?`<img class="card-img" src="${imgs[0]}" alt="">`:'';
     return `<div class="item-card" onclick="openDetail('${it.id}')">
       <div class="card-top">
         <div class="platform-badge ${platClass(p)}">${platEmoji(p)}</div>
         <div class="card-info">
           <div class="card-title">${esc(it.title||'제목 없음')}</div>
-          <div class="card-sub">${esc((it.url||'').slice(0,45))}</div>
+          <div class="card-sub" style="color:#4a7ab5">${esc((it.url||'').slice(0,45))}</div>
         </div>
         <span class="card-fav" onclick="event.stopPropagation();toggleFav('${it.id}')">${it.fav?'⭐':'☆'}</span>
       </div>
-      <div class="card-meta">${catHtml}${tagsHtml}<span class="card-date">${formatDate(it.createdAt)}</span></div>
+      <div class="card-meta">${catHtml}${tagsHtml}<span class="card-date" style="color:#185FA5">${formatDate(it.createdAt)}</span></div>
       ${it.memo?`<div class="card-memo">${esc(it.memo)}</div>`:''}
       ${imgHtml}
       <div class="card-actions">
@@ -280,7 +306,6 @@ function renderList(){
   }).join('');
 }
 
-// CAT CHIPS
 function renderCatChips(){
   const wrap=document.getElementById('catChips');
   const active=wrap.dataset.active||'all';
@@ -296,28 +321,18 @@ function renderCatChips(){
     ch.onclick=()=>{ wrap.dataset.active=c; renderList(); };
     wrap.appendChild(ch);
   });
-  const add=document.createElement('div'); add.className='chip chip-add'; add.textContent='＋';
-  add.onclick=()=>{
-    const n=prompt('새 카테고리 이름');
-    if(n&&!cats.includes(n)){ cats.push(n); saveCats(); renderCatChips(); renderCatSelect(); }
-  };
-  wrap.appendChild(add);
 }
 function saveCats(){ localStorage.setItem('lk_cats', JSON.stringify(cats)); }
 function renderCatSelect(){
   document.getElementById('fCat').innerHTML='<option value="">카테고리 선택</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
 }
 
-// IMG PREVIEW
 function renderImgPreview(){
   document.getElementById('imgPreview').innerHTML=editImages.map((img,i)=>`
-    <div class="img-preview-item">
-      <img src="${img}" alt="">
-      <button class="img-del-btn" onclick="editImages.splice(${i},1);renderImgPreview()">✕</button>
-    </div>`).join('');
+    <div class="img-preview-item"><img src="${img}" alt="">
+    <button class="img-del-btn" onclick="editImages.splice(${i},1);renderImgPreview()">✕</button></div>`).join('');
 }
 
-// EDIT MODAL
 function openEdit(id=null){
   editingId=id; currentTags=[]; editImages=[];
   document.getElementById('editModalTitle').textContent=id?'🔗 링크 수정':'🔗 링크 추가';
@@ -352,7 +367,7 @@ function renderTagInput(){
   });
   const inp=document.createElement('input'); inp.className='tag-input-field'; inp.placeholder='태그 입력 후 Enter';
   inp.onkeydown=e=>{
-    if((e.key==='Enter'||e.key===',')&&inp.value.trim()){ e.preventDefault(); const v=inp.value.trim(); if(!currentTags.includes(v)){currentTags.push(v);renderTagInput()}else inp.value=''; }
+    if((e.key==='Enter'||e.key===',')&&inp.value.trim()){ e.preventDefault(); const v=inp.value.trim(); if(!currentTags.includes(v)){currentTags.push(v);renderTagInput();}else inp.value=''; }
     if(e.key==='Backspace'&&!inp.value&&currentTags.length){ currentTags.pop(); renderTagInput(); }
   };
   wrap.appendChild(inp);
@@ -364,20 +379,17 @@ async function saveItem(){
   const id=editingId||genId();
   const existing=editingId?items.find(x=>x.id===editingId):null;
   const data={url, title:document.getElementById('fTitle').value.trim()||url, cat:document.getElementById('fCat').value, memo:document.getElementById('fMemo').value.trim(), fav:document.getElementById('fFav').checked, tags:currentTags, images:editImages, createdAt:existing?.createdAt||Date.now(), updatedAt:Date.now()};
-  const ok=await fsSet('lk_items',id,data);
-  if(!ok){ toast('저장 실패'); return; }
-  if(editingId){ const idx=items.findIndex(x=>x.id===editingId); if(idx>=0) items[idx]={id,...data}; }
+  if(!await fsSet('lk_items',id,data)){ toast('저장 실패'); return; }
+  if(editingId){ const idx=items.findIndex(x=>x.id===editingId); if(idx>=0)items[idx]={id,...data}; }
   else items.unshift({id,...data});
   closeEdit(); renderList(); renderCal(); toast('저장 완료 ✓');
 }
 
-async function toggleFav(id){ const it=items.find(x=>x.id===id); if(!it) return; it.fav=!it.fav; await fsSet('lk_items',id,it); renderList(); }
-async function quickDelete(id){ if(!confirm('삭제할까요?')) return; await fsDelete('lk_items',id); items=items.filter(x=>x.id!==id); renderList(); renderCal(); toast('삭제 완료'); }
+async function toggleFav(id){ const it=items.find(x=>x.id===id); if(!it)return; it.fav=!it.fav; await fsSet('lk_items',id,it); renderList(); }
+async function quickDelete(id){ if(!confirm('삭제할까요?'))return; await fsDelete('lk_items',id); items=items.filter(x=>x.id!==id); renderList(); renderCal(); toast('삭제 완료'); }
 
-// DETAIL
 function openDetail(id){
-  const it=items.find(x=>x.id===id); if(!it) return;
-  currentDetailId=id;
+  const it=items.find(x=>x.id===id); if(!it)return; currentDetailId=id;
   const p=getPlatform(it.url);
   const tags=Array.isArray(it.tags)?it.tags:[];
   const imgs=Array.isArray(it.images)?it.images:[];
@@ -387,92 +399,81 @@ function openDetail(id){
     <div class="detail-section">
       <div class="detail-section-title">URL</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <span style="font-size:13px;color:var(--bl3);word-break:break-all;flex:1">${esc(it.url)}</span>
-        <button onclick="openLink('${esc(it.url)}')" style="padding:6px 14px;border-radius:10px;background:var(--pk3);color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">${p==='insta'?'인스타 열기':p==='yt'?'유튜브 열기':'링크 열기'}</button>
+        <span style="font-size:13px;color:#185FA5;word-break:break-all;flex:1">${esc(it.url)}</span>
+        <button onclick="openLink('${esc(it.url)}')" style="padding:6px 14px;border-radius:10px;background:#185FA5;color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer">${p==='insta'?'인스타 열기':p==='yt'?'유튜브 열기':'링크 열기'}</button>
       </div>
     </div>
-    ${it.cat||tags.length?`<div class="detail-section">${it.cat?`<span class="tag tag-pk">${esc(it.cat)}</span> `:''} ${tags.map((t,i)=>`<span class="tag ${tagColor(i)}">${esc(t)}</span>`).join(' ')}</div>`:''}
+    ${it.cat||tags.length?`<div class="detail-section">${it.cat?`<span class="tag tag-bl">${esc(it.cat)}</span> `:''} ${tags.map((t,i)=>`<span class="tag ${tagColor(i)}">${esc(t)}</span>`).join(' ')}</div>`:''}
     ${it.memo?`<div class="detail-section"><div class="detail-section-title">메모</div><div style="font-size:13px;line-height:1.6;white-space:pre-wrap">${esc(it.memo)}</div></div>`:''}
     <div style="font-size:11px;color:var(--txt2)">저장일: ${formatDateFull(it.createdAt)}</div>`;
   document.getElementById('detailModal').classList.add('open');
 }
-async function deleteItem(){ if(!confirm('삭제할까요?')) return; await fsDelete('lk_items',currentDetailId); items=items.filter(x=>x.id!==currentDetailId); document.getElementById('detailModal').classList.remove('open'); renderList(); renderCal(); toast('삭제 완료'); }
+async function deleteItem(){ if(!confirm('삭제할까요?'))return; await fsDelete('lk_items',currentDetailId); items=items.filter(x=>x.id!==currentDetailId); document.getElementById('detailModal').classList.remove('open'); renderList(); renderCal(); toast('삭제 완료'); }
 
-// CAL
 function setupCalNav(){
   const now=new Date(); calYear=now.getFullYear(); calMonth=now.getMonth();
-  document.getElementById('calPrev').onclick=()=>{ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCal(); };
-  document.getElementById('calNext').onclick=()=>{ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCal(); };
-  ['Sm','Md','Lg'].forEach(z=>document.getElementById('zoom'+z).onclick=()=>{ calZoom=z.toLowerCase(); document.querySelectorAll('.zoom-btn').forEach(b=>b.classList.remove('active')); document.getElementById('zoom'+z).classList.add('active'); renderCal(); });
-  document.getElementById('calDetailClose').onclick=()=>{ document.getElementById('calDetail').style.display='none'; };
+  document.getElementById('calPrev').onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCal();};
+  document.getElementById('calNext').onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCal();};
+  ['Sm','Md','Lg'].forEach(z=>document.getElementById('zoom'+z).onclick=()=>{calZoom=z.toLowerCase();document.querySelectorAll('.zoom-btn').forEach(b=>b.classList.remove('active'));document.getElementById('zoom'+z).classList.add('active');renderCal();});
+  document.getElementById('calDetailClose').onclick=()=>{document.getElementById('calDetail').style.display='none';};
 }
 function renderCal(){
   document.getElementById('calMonthLabel').textContent=`${calYear}년 ${calMonth+1}월`;
   renderCalendarBase({year:calYear,month:calMonth,items,getDateStr:it=>tsToDate(it.createdAt),getEntries:it=>it.title||'링크',getEntryClass:()=>'link-entry',onDayClick:'openCalDay',zoomClass:calZoom});
   const mc=items.filter(i=>i.createdAt&&new Date(i.createdAt).getFullYear()===calYear&&new Date(i.createdAt).getMonth()===calMonth).length;
-  document.getElementById('calStats').innerHTML=`<div class="cal-stats-row"><div class="cal-stat-box pk"><span class="cal-stat-num">${mc}</span><div class="cal-stat-label">이번달 링크</div></div><div class="cal-stat-box lv"><span class="cal-stat-num">${items.length}</span><div class="cal-stat-label">전체 링크</div></div></div>`;
+  document.getElementById('calStats').innerHTML=`<div class="cal-stats-row"><div class="cal-stat-box pk"><span class="cal-stat-num">${mc}</span><div class="cal-stat-label">이번달</div></div><div class="cal-stat-box lv"><span class="cal-stat-num">${items.length}</span><div class="cal-stat-label">전체</div></div></div>`;
 }
 window.openCalDay=dateStr=>{
-  const day=items.filter(i=>tsToDate(i.createdAt)===dateStr); if(!day.length) return;
+  const day=items.filter(i=>tsToDate(i.createdAt)===dateStr); if(!day.length)return;
   document.getElementById('calDetailDate').textContent='📅 '+dateStr;
-  document.getElementById('calDetailList').innerHTML=day.map(i=>`<div class="cal-detail-item" onclick="openDetail('${i.id}')"><span style="font-size:18px">${platEmoji(getPlatform(i.url))}</span><span class="cal-detail-name" style="color:var(--pk3)">${esc(i.title||'링크')}</span></div>`).join('');
+  document.getElementById('calDetailList').innerHTML=day.map(i=>`<div class="cal-detail-item" onclick="openDetail('${i.id}')"><span>${platEmoji(getPlatform(i.url))}</span><span class="cal-detail-name" style="color:#185FA5">${esc(i.title||'링크')}</span></div>`).join('');
   document.getElementById('calDetail').style.display='block';
 };
 
-// AI
 function setupAI(){
   document.getElementById('aiSend').onclick=sendAI;
-  document.getElementById('aiInput').onkeydown=e=>{if(e.key==='Enter')sendAI()};
+  document.getElementById('aiInput').onkeydown=e=>{if(e.key==='Enter')sendAI();};
 }
 async function sendAI(){
-  const q=document.getElementById('aiInput').value.trim(); if(!q) return;
+  const q=document.getElementById('aiInput').value.trim(); if(!q)return;
   const key=localStorage.getItem('lr_apiKey');
-  if(!key){ appendBubble('설정 탭에서 API 키를 입력해주세요 🔑','bot'); return; }
+  if(!key){appendBubble('설정 탭에서 API 키를 입력해주세요 🔑','bot');return;}
   appendBubble(q,'user'); document.getElementById('aiInput').value='';
-  const loading=appendBubble('생각 중...🤔','bot');
-  const ctx=JSON.stringify(items.map(i=>({title:i.title,url:i.url,cat:i.cat,tags:i.tags,memo:i.memo})));
+  const loading=appendBubble('생각 중...','bot');
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:800,system:`링크 컬렉션 검색 도우미. 데이터: ${ctx}`,messages:[{role:'user',content:q}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:800,system:`링크 컬렉션 검색 도우미. 데이터: ${JSON.stringify(items.map(i=>({title:i.title,url:i.url,cat:i.cat,tags:i.tags,memo:i.memo})))}`,messages:[{role:'user',content:q}]})});
     loading.remove(); if(!res.ok){appendBubble('오류. API 키 확인해주세요.','bot');return;}
     const d=await res.json(); appendBubble(d.content?.[0]?.text||'답변 없음','bot');
-  }catch{ loading.remove(); appendBubble('네트워크 오류','bot'); }
+  }catch{loading.remove();appendBubble('네트워크 오류','bot');}
 }
 function appendBubble(text,type){
   const chat=document.getElementById('aiChat'); const div=document.createElement('div');
   div.className='ai-bubble ai-bubble-'+(type==='user'?'user':'bot');
-  if(type==='user') div.style.marginLeft='auto';
+  if(type==='user')div.style.marginLeft='auto';
   div.textContent=text; chat.appendChild(div); chat.scrollTop=chat.scrollHeight; return div;
 }
 
-// SETTINGS
-function setupSettings(){
-  document.getElementById('saveApiKey').onclick=()=>{ const k=document.getElementById('apiKeyInput').value.trim(); if(!k) return; localStorage.setItem('lr_apiKey',k); document.getElementById('apiKeyInput').value=''; toast('API 키 저장 ✓'); };
-  document.getElementById('addCatBtn').onclick=()=>{
-    const v=document.getElementById('newCat').value.trim();
-    if(!v||cats.includes(v)){ toast('중복이거나 비어있어요'); return; }
-    cats.push(v); saveCats(); document.getElementById('newCat').value=''; renderSettings(); renderCatChips();
-  };
-  document.getElementById('newCat').onkeydown=e=>{if(e.key==='Enter')document.getElementById('addCatBtn').click()};
-  document.getElementById('manualBackup').onclick=()=>doBackup('lk',()=>({items,cats}));
-  document.getElementById('exportJsonBtn').onclick=()=>exportJson({items,cats},'links_backup.json');
-}
 function renderSettings(){
-  document.getElementById('catManage').innerHTML=cats.length
-    ? cats.map((c,i)=>`<div class="cat-manage-item"><span class="cat-manage-name">${esc(c)}</span><button class="cat-del-btn" onclick="cats.splice(${i},1);saveCats();renderSettings();renderCatChips()">✕</button></div>`).join('')
-    : '<div style="font-size:12px;color:var(--txt2);padding:6px 0">카테고리가 없어요</div>';
+  const wrap=document.getElementById('catManage');
+  if(!cats.length){ wrap.innerHTML='<div class="cat-empty">카테고리가 없어요. 아래에서 추가해주세요.</div>'; return; }
+  wrap.innerHTML=cats.map((c,i)=>`
+    <div class="cat-item">
+      <span>${esc(c)}</span>
+      <button class="cat-item-del" onclick="delCat(${i})">✕</button>
+    </div>`).join('');
   document.getElementById('statsArea').innerHTML=`
-    <div class="stat-item"><span>전체 링크</span><span class="stat-val">${items.length}개</span></div>
-    <div class="stat-item"><span>즐겨찾기</span><span class="stat-val">${items.filter(i=>i.fav).length}개</span></div>
-    <div class="stat-item"><span>인스타</span><span class="stat-val">${items.filter(i=>getPlatform(i.url)==='insta').length}개</span></div>
-    <div class="stat-item"><span>유튜브</span><span class="stat-val">${items.filter(i=>getPlatform(i.url)==='yt').length}개</span></div>`;
+    <div class="stat-item"><span>전체 링크</span><span class="stat-val" style="color:#185FA5">${items.length}개</span></div>
+    <div class="stat-item"><span>즐겨찾기</span><span class="stat-val" style="color:#185FA5">${items.filter(i=>i.fav).length}개</span></div>
+    <div class="stat-item"><span>인스타</span><span class="stat-val" style="color:#185FA5">${items.filter(i=>getPlatform(i.url)==='insta').length}개</span></div>
+    <div class="stat-item"><span>유튜브</span><span class="stat-val" style="color:#185FA5">${items.filter(i=>getPlatform(i.url)==='yt').length}개</span></div>`;
   renderBackupList();
 }
 async function renderBackupList(){
   const all=await fsGet('lk_backups'); all.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
   document.getElementById('backupList').innerHTML=all.slice(0,5).map(b=>`<div class="backup-item"><span>${formatDateFull(b.timestamp)}</span><button class="backup-restore-btn" onclick="restoreBackup('${b.id}')">복원</button></div>`).join('')||'<div style="font-size:12px;color:var(--txt2)">백업 없음</div>';
 }
-window.restoreBackup=async id=>{ if(!confirm('복원할까요?')) return; const all=await fsGet('lk_backups'); const b=all.find(x=>x.id===id); if(!b) return; try{const s=JSON.parse(b.snap);items=s.data.items||[];cats=s.data.cats||[];saveCats();renderList();renderSettings();toast('복원 완료 ✓')}catch{toast('복원 실패')} };
-function scheduleAutoBackup(){ const lb=parseInt(localStorage.getItem('lk_lastBackup')||'0'); if(Date.now()-lb>7*24*60*60*1000) setTimeout(()=>doBackup('lk',()=>({items,cats})),5000); }
+window.restoreBackup=async id=>{ if(!confirm('복원할까요?'))return; const all=await fsGet('lk_backups'); const b=all.find(x=>x.id===id); if(!b)return; try{const s=JSON.parse(b.snap);items=s.data.items||[];cats=s.data.cats||[];saveCats();renderList();renderSettings();toast('복원 완료 ✓');}catch{toast('복원 실패');} };
+function scheduleAutoBackup(){ const lb=parseInt(localStorage.getItem('lk_lastBackup')||'0'); if(Date.now()-lb>7*24*60*60*1000)setTimeout(()=>doBackup('lk',()=>({items,cats})),5000); }
 </script>
 </body>
 </html>
