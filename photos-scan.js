@@ -538,47 +538,49 @@ function drawDocOutline(ctx, corners, dw, dh){
   ctx.restore();
 }
 
-/* 핸들 드래그 */
+/* 핸들 드래그 — pointerdown+setPointerCapture (모바일/PC 모두 작동) */
 function makeDraggable(handle, idx, dispScale, origImg, offX, offY, dw, dh){
-  const canvas = document.getElementById('docScanCanvas');
-  let dragging = false;
+  const cvs = document.getElementById('docScanCanvas');
 
-  function onStart(e){
-    dragging=true; e.preventDefault();
-  }
-  function onMove(e){
-    if(!dragging) return;
+  handle.addEventListener('pointerdown', e=>{
     e.preventDefault();
-    const wrap   = document.getElementById('docScanWrap');
-    const wRect  = wrap.getBoundingClientRect();
-    const client = e.touches ? e.touches[0] : e;
-    const cx = client.clientX - wRect.left - offX;
-    const cy = client.clientY - wRect.top  - offY;
-    const clampX = Math.max(0, Math.min(dw, cx));
-    const clampY = Math.max(0, Math.min(dh, cy));
+    e.stopPropagation();
+    try{ handle.setPointerCapture(e.pointerId); }catch(_){}
 
-    // 핸들 이동
-    handle.style.left = (offX + clampX) + 'px';
-    handle.style.top  = (offY + clampY) + 'px';
+    function onMove(ev){
+      ev.preventDefault();
+      const wrap  = document.getElementById('docScanWrap');
+      const wRect = wrap.getBoundingClientRect();
+      const cx = ev.clientX - wRect.left - offX;
+      const cy = ev.clientY - wRect.top  - offY;
+      const clampX = Math.max(0, Math.min(dw, cx));
+      const clampY = Math.max(0, Math.min(dh, cy));
 
-    // 원본 좌표 업데이트
-    docCorners[idx] = { x: clampX/dispScale, y: clampY/dispScale };
+      // 핸들 위치 업데이트
+      handle.style.left = (offX + clampX) + 'px';
+      handle.style.top  = (offY + clampY) + 'px';
 
-    // 캔버스 다시 그리기
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0,0,dw,dh);
-    ctx.drawImage(origImg,0,0,dw,dh);
-    const dispC = docCorners.map(p=>({x:p.x*dispScale, y:p.y*dispScale}));
-    drawDocOutline(ctx, dispC, dw, dh);
-  }
-  function onEnd(){ dragging=false; }
+      // 원본 좌표 업데이트
+      docCorners[idx] = { x: clampX/dispScale, y: clampY/dispScale };
 
-  handle.addEventListener('mousedown',  onStart);
-  handle.addEventListener('touchstart', onStart, {passive:false});
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('touchmove', onMove, {passive:false});
-  document.addEventListener('mouseup',   onEnd);
-  document.addEventListener('touchend',  onEnd);
+      // 캔버스 다시 그리기
+      const ctx = cvs.getContext('2d');
+      ctx.clearRect(0,0,dw,dh);
+      ctx.drawImage(origImg,0,0,dw,dh);
+      const dispC = docCorners.map(p=>({x:p.x*dispScale, y:p.y*dispScale}));
+      drawDocOutline(ctx, dispC, dw, dh);
+    }
+
+    function onEnd(){
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup',   onEnd);
+      handle.removeEventListener('pointercancel',onEnd);
+    }
+
+    handle.addEventListener('pointermove',  onMove, {passive:false});
+    handle.addEventListener('pointerup',    onEnd);
+    handle.addEventListener('pointercancel',onEnd);
+  }, {passive:false});
 }
 
 /* ── 원근 변환(Perspective Warp) 적용 크롭 ── */
