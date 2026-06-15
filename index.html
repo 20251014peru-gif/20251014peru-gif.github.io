@@ -48,6 +48,11 @@ body{background:#F0F0F5;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun 
 .app-nm{font-size:11px;font-weight:700;line-height:1.3;}
 .app-ds{font-size:10px;color:#9CA3AF;}
 
+/* 새 항목 강조 뱃지 */
+.app-item.new-item{border-color:#F4C0D1;background:#FDF6FF;}
+.app-item.new-item .app-nm{color:#D4537E;}
+.new-tag{font-size:9px;padding:2px 7px;border-radius:8px;background:#FDE8F5;color:#D4537E;font-weight:700;margin-left:auto;flex-shrink:0;white-space:nowrap;}
+
 /* 준비중 */
 .app-coming{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;margin-top:6px;background:#F9FAFB;border:1px dashed #E5E7EB;}
 .app-coming .app-nm{color:#9CA3AF;}
@@ -98,6 +103,15 @@ body{background:#F0F0F5;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun 
           <span class="app-em">&#129504;</span>
           <div><div class="app-nm">나를 알아가는 시스템</div><div class="app-ds">무의식 신호 · 패턴 발견</div></div>
         </a>
+        <!-- ✨ 새로 추가 -->
+        <a class="app-item new-item" href="./links-recipes.html">
+          <span class="app-em">🔗</span>
+          <div>
+            <div class="app-nm">링크 &amp; 레시피 컬렉션</div>
+            <div class="app-ds">인스타·유튜브 링크 저장 · 레시피 · AI 검색</div>
+          </div>
+          <span class="new-tag">NEW</span>
+        </a>
       </div>
     </div>
 
@@ -140,7 +154,6 @@ body{background:#F0F0F5;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun 
           <span class="app-em">&#128296;</span>
           <div><div class="app-nm">부동산 프로젝트 관리</div><div class="app-ds">공종·비용·전후사진·업체·서류 통합</div></div>
         </a>
-
         <a class="app-item" href="./realestate.html">
           <span class="app-em">&#127968;</span>
           <div><div class="app-nm">부동산 투자 관리</div><div class="app-ds">비용기록 · 합산 · 준비물 · 메모 · 달력</div></div>
