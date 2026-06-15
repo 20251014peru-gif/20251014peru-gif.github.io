@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🚀 GitHub 자동 업로드</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Apple SD Gothic Neo',sans-serif;background:#F8FAFC;color:#1E293B;padding:20px;}
+h1{font-size:20px;font-weight:800;color:#3F7CB8;margin-bottom:20px;}
+.card{background:#fff;border-radius:14px;border:1.5px solid #E2E8F0;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.card h2{font-size:14px;font-weight:700;color:#64748B;margin-bottom:12px;}
+label{font-size:13px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;}
+input,select,textarea{width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:9px 12px;font-size:14px;outline:none;font-family:inherit;margin-bottom:12px;}
+input:focus,select:focus,textarea:focus{border-color:#3F7CB8;}
+textarea{resize:vertical;min-height:60px;}
+.btn{background:#3F7CB8;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;}
+.btn:hover{background:#2c5f8a;}
+.btn-sec{background:#fff;color:#3F7CB8;border:2px solid #3F7CB8;}
+.btn-green{background:#10B981;}
+.file-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.file-item{display:flex;align-items:center;gap:8px;background:#f0f6ff;padding:8px 12px;border-radius:8px;font-size:13px;}
+.file-item span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.file-item button{border:none;background:none;cursor:pointer;color:#EF4444;font-size:16px;}
+.status{padding:12px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:8px;}
+.status.ok{background:#D1FAE5;color:#065F46;}
+.status.err{background:#FEE2E2;color:#991B1B;}
+.status.info{background:#EBF3FC;color:#1e40af;}
+.log{background:#1E293B;color:#94A3B8;padding:14px;border-radius:10px;font-size:12px;font-family:monospace;max-height:200px;overflow-y:auto;white-space:pre-wrap;}
+.hint{font-size:12px;color:#94A3B8;margin-top:-8px;margin-bottom:12px;}
+progress{width:100%;height:8px;border-radius:4px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+<h1>🚀 GitHub 자동 업로드</h1>
+
+<!-- 설정 -->
+<div class="card">
+  <h2>⚙️ GitHub 설정 (최초 1회)</h2>
+  <label>Personal Access Token</label>
+  <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+  <p class="hint">GitHub → Settings → Developer settings → Personal access tokens → repo 권한</p>
+  <label>저장소 (repo)</label>
+  <input type="text" id="ghRepo" placeholder="20251014peru-gif/20251014peru-gif.github.io">
+  <label>브랜치</label>
+  <input type="text" id="ghBranch" value="main">
+  <button class="btn btn-sec" onclick="saveSettings()">💾 설정 저장</button>
+</div>
+
+<!-- 파일 선택 -->
+<div class="card">
+  <h2>📁 업로드할 파일 선택</h2>
+  <input type="file" id="fileInput" multiple onchange="addFiles(this.files)" style="margin-bottom:8px;">
+  <div class="hint">여러 파일 한 번에 선택 가능 (html, css, js, py 등)</div>
+  <div class="file-list" id="fileList"></div>
+  <label>커밋 메시지</label>
+  <input type="text" id="commitMsg" value="Update files" placeholder="Update photos-scan v6.0">
+  <label>GitHub 경로 (비우면 루트)</label>
+  <input type="text" id="ghPath" placeholder="예: 비우면 / | subfolder/ 입력 시 하위폴더">
+  <div id="progressWrap" style="display:none">
+    <progress id="progressBar" max="100" value="0"></progress>
+    <p id="progressTxt" style="font-size:13px;color:#64748B;margin-bottom:8px;"></p>
+  </div>
+  <button class="btn btn-green" onclick="uploadAll()">🚀 GitHub에 자동 업로드</button>
+</div>
+
+<!-- 로그 -->
+<div class="card">
+  <h2>📋 업로드 로그</h2>
+  <div id="statusArea"></div>
+  <div class="log" id="logArea">업로드 로그가 여기 표시됩니다.\n</div>
+</div>
+
+<script>
+const LS_TOKEN  = 'gh_token';
+const LS_REPO   = 'gh_repo';
+const LS_BRANCH = 'gh_branch';
+
+// 설정 불러오기
+window.onload = ()=>{
+  document.getElementById('ghToken').value  = localStorage.getItem(LS_TOKEN)  || '';
+  document.getElementById('ghRepo').value   = localStorage.getItem(LS_REPO)   || '20251014peru-gif/20251014peru-gif.github.io';
+  document.getElementById('ghBranch').value = localStorage.getItem(LS_BRANCH) || 'main';
+};
+
+function saveSettings(){
+  localStorage.setItem(LS_TOKEN,  document.getElementById('ghToken').value.trim());
+  localStorage.setItem(LS_REPO,   document.getElementById('ghRepo').value.trim());
+  localStorage.setItem(LS_BRANCH, document.getElementById('ghBranch').value.trim());
+  showStatus('✅ 설정이 저장되었습니다','ok');
+}
+
+// 파일 목록 관리
+let fileMap = {}; // name → File
+function addFiles(files){
+  Array.from(files).forEach(f=>{ fileMap[f.name]=f; });
+  renderFileList();
+}
+function removeFile(name){ delete fileMap[name]; renderFileList(); }
+function renderFileList(){
+  const ul = document.getElementById('fileList');
+  ul.innerHTML = '';
+  Object.keys(fileMap).forEach(name=>{
+    const div=document.createElement('div');
+    div.className='file-item';
+    div.innerHTML=`<span>📄 ${name}</span><button onclick="removeFile('${name}')">✕</button>`;
+    ul.appendChild(div);
+  });
+}
+
+// 로그
+function log(msg){ 
+  const el=document.getElementById('logArea');
+  el.textContent += msg+'\n';
+  el.scrollTop=el.scrollHeight;
+}
+function showStatus(msg,type){
+  const el=document.getElementById('statusArea');
+  el.innerHTML=`<div class="status ${type}">${msg}</div>`;
+}
+
+// 파일 → base64
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onload=()=>{
+      // data:xxx;base64,YYY → YYY 부분만 추출
+      const b64=fr.result.split(',')[1];
+      res(b64);
+    };
+    fr.onerror=rej;
+    fr.readAsDataURL(file);
+  });
+}
+
+// GitHub API: 파일 1개 업로드
+async function uploadFile(token, repo, branch, path, b64content, commitMsg){
+  const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+  
+  // 기존 파일 SHA 가져오기 (업데이트할 때 필요)
+  let sha = null;
+  try{
+    const getResp = await fetch(url, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if(getResp.ok){
+      const existing = await getResp.json();
+      sha = existing.sha;
+    }
+  }catch(e){}
+
+  // PUT으로 업로드
+  const body = {
+    message: commitMsg,
+    content: b64content,
+    branch:  branch,
+  };
+  if(sha) body.sha = sha; // 기존 파일 덮어쓰기
+
+  const resp = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `token ${token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if(!resp.ok){
+    const err = await resp.json();
+    throw new Error(err.message || `HTTP ${resp.status}`);
+  }
+  return await resp.json();
+}
+
+// 전체 업로드
+async function uploadAll(){
+  const token  = document.getElementById('ghToken').value.trim();
+  const repo   = document.getElementById('ghRepo').value.trim();
+  const branch = document.getElementById('ghBranch').value.trim();
+  const msg    = document.getElementById('commitMsg').value.trim() || 'Update files';
+  const ghPath = document.getElementById('ghPath').value.trim().replace(/^\/|\/$/g,'');
+
+  if(!token){ showStatus('❌ GitHub Token을 입력하세요','err'); return; }
+  if(!repo) { showStatus('❌ 저장소를 입력하세요','err'); return; }
+
+  const files = Object.values(fileMap);
+  if(!files.length){ showStatus('❌ 파일을 선택하세요','err'); return; }
+
+  document.getElementById('progressWrap').style.display='';
+  const bar = document.getElementById('progressBar');
+  const txt = document.getElementById('progressTxt');
+  document.getElementById('logArea').textContent='';
+  
+  let ok=0, fail=0;
+  for(let i=0; i<files.length; i++){
+    const f = files[i];
+    const filePath = ghPath ? `${ghPath}/${f.name}` : f.name;
+    bar.value = Math.round((i/files.length)*100);
+    txt.textContent = `(${i+1}/${files.length}) ${f.name} 업로드 중...`;
+    log(`⬆️  ${filePath}`);
+    try{
+      const b64 = await fileToBase64(f);
+      await uploadFile(token, repo, branch, filePath, b64, msg);
+      log(`✅ 완료: ${filePath}`);
+      ok++;
+    }catch(e){
+      log(`❌ 실패: ${filePath} — ${e.message}`);
+      fail++;
+    }
+    // 연속 요청 간 딜레이 (rate limit 방지)
+    if(i < files.length-1) await new Promise(r=>setTimeout(r,400));
+  }
+
+  bar.value=100;
+  txt.textContent='완료!';
+  const siteUrl = `https://${repo.split('/')[0]}.github.io`;
+  if(fail===0){
+    showStatus(`🎉 ${ok}개 파일 업로드 완료! 1~2분 후 반영돼요.`,'ok');
+    log(`\n🌐 사이트: ${siteUrl}`);
+  } else {
+    showStatus(`⚠️ ${ok}개 성공, ${fail}개 실패`,'err');
+  }
+}
+</script>
+</body>
+</html>

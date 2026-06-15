@@ -327,7 +327,7 @@ function onOpenCvReady(){ cvReady=true; const b=document.getElementById('cvStatu
 function onOpenCvError(){ cvError=true;  const b=document.getElementById('cvStatusBadge'); if(b) b.remove(); }
 
 /* ── 서버 주소 (app.py 포트에 맞게) ── */
-const SCAN_SERVER = 'http://localhost:5001';
+const SCAN_SERVER = 'http://localhost:8080'; // app.py 포트
 
 /* ── 서버 생존 확인 (1.5초 타임아웃) ── */
 async function serverAlive(){
@@ -1329,7 +1329,7 @@ async function init(){
 
   /* 모드별 UI 적용 */
   document.getElementById('appTitle').textContent   = MODE_LABEL;
-  document.getElementById('appVersion').textContent = 'v6.4';
+  document.getElementById('appVersion').textContent = 'v6.5';
   document.getElementById('sideTitle').textContent  = MODE_LABEL;
   document.title = MODE_LABEL;
   document.querySelector('.app-title').style.color = MODE_COLOR;
