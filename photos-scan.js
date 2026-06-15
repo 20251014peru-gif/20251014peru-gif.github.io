@@ -299,97 +299,395 @@ async function handleFiles(files, append=false, autoScan=false){
 }
 const blobToDataUrl = blob => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(blob); });
 
-/* ── AI 문서 자동감지 크롭 (2단계 정교 분석) ── */
+/* ═══════════════════════════════════════
+   OpenCV.js 문서 자동감지 시스템
+   ═══════════════════════════════════════ */
+let cvReady = false;
+let cvError  = false;
+
+function onOpenCvReady(){
+  cvReady = true;
+  console.log('OpenCV.js 로드 완료');
+  // 로딩 배지 제거
+  const b = document.getElementById('cvStatusBadge');
+  if(b) b.remove();
+}
+function onOpenCvError(){
+  cvError = true;
+  console.warn('OpenCV.js 로드 실패 — AI 크롭으로 대체');
+  const b = document.getElementById('cvStatusBadge');
+  if(b){ b.textContent='⚠️ OpenCV 로드 실패'; setTimeout(()=>b.remove(), 3000); }
+}
+
+/* 문서 감지 진입점 */
 async function aiDocCrop(silent=false){
   if(!modalImages.length){ if(!silent) showToast('먼저 사진을 추가하세요'); return; }
-  const key = localStorage.getItem(LS_API_KEY)||'';
-  if(!key){
-    document.getElementById('aiCropStatus').textContent='⚠️ AI 키 없음 — ⚙️에서 설정하세요';
-    return;
-  }
+
   const statusEl = document.getElementById('aiCropStatus');
   const btn      = document.getElementById('btnAiCrop');
-  const overlay  = document.getElementById('scanOverlay');
-  btn.disabled=true;
-  if(silent) overlay.style.display='flex';
-  else statusEl.textContent='🤖 1단계: 문서 감지 중...';
+  btn.disabled   = true;
+
+  if(cvReady){
+    // ── OpenCV 경로 ──
+    statusEl.textContent = '📄 OpenCV로 문서 감지 중...';
+    try{
+      await openCvDocScan(modalImages[modalSlide].dataUrl, silent);
+    } catch(e){
+      console.error('OpenCV scan error:', e);
+      statusEl.textContent = '⚠️ 감지 실패: ' + e.message;
+    } finally{
+      btn.disabled = false;
+    }
+  } else if(!cvError){
+    // 아직 로딩 중
+    statusEl.textContent = '⏳ OpenCV 로딩 중... (잠시 후 다시 시도)';
+    btn.disabled = false;
+  } else {
+    // OpenCV 실패 → Anthropic AI fallback
+    await aiDocCropFallback(silent, statusEl, btn);
+  }
+}
+
+/* ── OpenCV 문서감지 핵심 로직 ── */
+let docCorners = []; // [{x,y}] 4개 꼭짓점 (캔버스 좌표)
+let docScanImgData = null; // 원본 dataUrl 보관
+let docScanScale   = 1;
+
+async function openCvDocScan(dataUrl, silent=false){
+  const statusEl = document.getElementById('aiCropStatus');
+  docScanImgData = dataUrl;
+
+  // 1. 이미지 → HTMLImageElement
+  const img = await loadImage(dataUrl);
+
+  // 2. OpenCV Mat 생성 (처리용 축소 버전)
+  const MAX = 800;
+  const scale = Math.min(MAX/img.width, MAX/img.height, 1);
+  const w = Math.round(img.width * scale);
+  const h = Math.round(img.height * scale);
+  docScanScale = scale;
+
+  const tmpC = document.createElement('canvas');
+  tmpC.width=w; tmpC.height=h;
+  tmpC.getContext('2d').drawImage(img, 0, 0, w, h);
+
+  const src = cv.imread(tmpC);
+  const dst = new cv.Mat();
+
+  // 3. 그레이스케일 → 가우시안 블러 → Canny 엣지
+  const gray   = new cv.Mat();
+  const blurred= new cv.Mat();
+  const edges  = new cv.Mat();
+  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+  cv.GaussianBlur(gray, blurred, new cv.Size(5,5), 0);
+  cv.Canny(blurred, edges, 75, 200);
+
+  // 4. dilate로 엣지 두껍게 (끊긴 선 연결)
+  const kernel  = cv.Mat.ones(3, 3, cv.CV_8U);
+  const dilated = new cv.Mat();
+  cv.dilate(edges, dilated, kernel);
+
+  // 5. 윤곽선 찾기
+  const contours = new cv.MatVector();
+  const hierarchy= new cv.Mat();
+  cv.findContours(dilated, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+  // 6. 가장 큰 사각형 윤곽 찾기
+  let bestQuad = null;
+  let bestArea = 0;
+  const imgArea = w * h;
+
+  for(let i=0; i<contours.size(); i++){
+    const cnt  = contours.get(i);
+    const peri = cv.arcLength(cnt, true);
+    const approx = new cv.Mat();
+    cv.approxPolyDP(cnt, approx, 0.02*peri, true);
+
+    if(approx.rows === 4){
+      const area = Math.abs(cv.contourArea(approx));
+      // 이미지의 10%~95% 크기인 것만 유효
+      if(area > imgArea*0.10 && area < imgArea*0.95 && area > bestArea){
+        bestArea = area;
+        bestQuad = [];
+        for(let j=0; j<4; j++){
+          bestQuad.push({
+            x: approx.intAt(j,0) / scale, // 원본 픽셀 좌표
+            y: approx.intAt(j,1) / scale
+          });
+        }
+      }
+      approx.delete();
+    }
+    cnt.delete();
+  }
+
+  // 메모리 해제
+  [src,dst,gray,blurred,edges,kernel,dilated,contours,hierarchy].forEach(m=>{ try{m.delete();}catch(e){} });
+
+  if(!bestQuad){
+    // 사각형 못 찾으면 이미지 전체를 기본값으로
+    statusEl.textContent = '⚠️ 문서 경계를 찾지 못했습니다. 꼭짓점을 수동으로 조정하세요.';
+    bestQuad = [
+      {x:img.width*0.05,  y:img.height*0.05},
+      {x:img.width*0.95,  y:img.height*0.05},
+      {x:img.width*0.95,  y:img.height*0.95},
+      {x:img.width*0.05,  y:img.height*0.95}
+    ];
+  } else {
+    // 꼭짓점 정렬: 좌상→우상→우하→좌하
+    bestQuad = sortCorners(bestQuad);
+    statusEl.textContent = '✅ 문서 감지 완료! 꼭짓점을 조정 후 크롭하세요.';
+  }
+
+  docCorners = bestQuad;
+  openDocScanModal(img);
+}
+
+/* 꼭짓점 정렬: 좌상→우상→우하→좌하 */
+function sortCorners(pts){
+  const cx = pts.reduce((s,p)=>s+p.x,0)/4;
+  const cy = pts.reduce((s,p)=>s+p.y,0)/4;
+  return [
+    pts.find(p=>p.x<cx&&p.y<cy) || pts[0], // 좌상
+    pts.find(p=>p.x>cx&&p.y<cy) || pts[1], // 우상
+    pts.find(p=>p.x>cx&&p.y>cy) || pts[2], // 우하
+    pts.find(p=>p.x<cx&&p.y>cy) || pts[3], // 좌하
+  ];
+}
+
+/* 이미지 로드 헬퍼 */
+function loadImage(src){
+  return new Promise((res,rej)=>{
+    const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src;
+  });
+}
+
+/* ── 문서감지 모달 열기 + 꼭짓점 UI ── */
+function openDocScanModal(origImg){
+  openModal('modalDocScan');
+
+  const wrap   = document.getElementById('docScanWrap');
+  const canvas = document.getElementById('docScanCanvas');
+
+  // 캔버스 크기: wrap 기준으로 맞춤
+  const maxW = Math.min(wrap.clientWidth  || 500, 560);
+  const maxH = Math.min(wrap.clientHeight || 400, 440);
+  const scale = Math.min(maxW/origImg.width, maxH/origImg.height, 1);
+  const dw = Math.round(origImg.width  * scale);
+  const dh = Math.round(origImg.height * scale);
+
+  canvas.width  = dw;
+  canvas.height = dh;
+
+  // 이미지 그리기
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(origImg, 0, 0, dw, dh);
+
+  // 꼭짓점을 캔버스 좌표로 변환
+  const dispCorners = docCorners.map(p=>({ x:p.x*scale, y:p.y*scale }));
+  drawDocOutline(ctx, dispCorners, dw, dh);
+
+  // 핸들 위치 설정
+  const wrapRect = wrap.getBoundingClientRect();
+  const canvRect = canvas.getBoundingClientRect();
+  const offsetX  = canvRect.left - wrapRect.left;
+  const offsetY  = canvRect.top  - wrapRect.top;
+
+  dispCorners.forEach((p,i)=>{
+    const h = document.getElementById(`ch${i}`);
+    h.style.left = (offsetX + p.x) + 'px';
+    h.style.top  = (offsetY + p.y) + 'px';
+    makeDraggable(h, i, scale, origImg, offsetX, offsetY, dw, dh);
+  });
+}
+
+/* 윤곽선 + 꼭짓점 그리기 */
+function drawDocOutline(ctx, corners, dw, dh){
+  ctx.save();
+  // 외부 어둡게
+  ctx.fillStyle='rgba(0,0,0,0.45)';
+  ctx.beginPath();
+  ctx.rect(0,0,dw,dh);
+  ctx.moveTo(corners[0].x,corners[0].y);
+  corners.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.closePath();
+  ctx.fill('evenodd');
+  // 선
+  ctx.strokeStyle='#FFD700';
+  ctx.lineWidth=2.5;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(corners[0].x,corners[0].y);
+  corners.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* 핸들 드래그 */
+function makeDraggable(handle, idx, dispScale, origImg, offX, offY, dw, dh){
+  const canvas = document.getElementById('docScanCanvas');
+  let dragging = false;
+
+  function onStart(e){
+    dragging=true; e.preventDefault();
+  }
+  function onMove(e){
+    if(!dragging) return;
+    e.preventDefault();
+    const wrap   = document.getElementById('docScanWrap');
+    const wRect  = wrap.getBoundingClientRect();
+    const client = e.touches ? e.touches[0] : e;
+    const cx = client.clientX - wRect.left - offX;
+    const cy = client.clientY - wRect.top  - offY;
+    const clampX = Math.max(0, Math.min(dw, cx));
+    const clampY = Math.max(0, Math.min(dh, cy));
+
+    // 핸들 이동
+    handle.style.left = (offX + clampX) + 'px';
+    handle.style.top  = (offY + clampY) + 'px';
+
+    // 원본 좌표 업데이트
+    docCorners[idx] = { x: clampX/dispScale, y: clampY/dispScale };
+
+    // 캔버스 다시 그리기
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,dw,dh);
+    ctx.drawImage(origImg,0,0,dw,dh);
+    const dispC = docCorners.map(p=>({x:p.x*dispScale, y:p.y*dispScale}));
+    drawDocOutline(ctx, dispC, dw, dh);
+  }
+  function onEnd(){ dragging=false; }
+
+  handle.addEventListener('mousedown',  onStart);
+  handle.addEventListener('touchstart', onStart, {passive:false});
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('mouseup',   onEnd);
+  document.addEventListener('touchend',  onEnd);
+}
+
+/* ── 원근 변환(Perspective Warp) 적용 크롭 ── */
+async function applyDocScanCrop(){
+  if(!docCorners.length || !docScanImgData){ showToast('감지된 문서가 없습니다'); return; }
+
+  const statusEl = document.getElementById('aiCropStatus');
+  statusEl.textContent = '⏳ 원근 보정 중...';
 
   try{
-    const m = modalImages[modalSlide];
+    const img = await loadImage(docScanImgData);
 
-    /* ── 1단계: 문서 존재 여부 + 대략 위치 ── */
-    const small = await resizeForAI(m.dataUrl, 1600); // 고해상도로 전송
-    const [mtype, base64] = getB64Parts(small);
+    // 꼭짓점 정렬: 좌상→우상→우하→좌하
+    const sorted = sortCorners(docCorners);
+    const [tl,tr,br2,bl] = sorted;
 
-    const prompt1 = `이 이미지를 분석해서 문서(영수증, 계약서, 명함, 인쇄된 종이 등)가 있는지 찾아주세요.
+    // 출력 크기: 상단/하단 너비, 좌/우 높이 중 최대값
+    const wTop  = Math.hypot(tr.x-tl.x, tr.y-tl.y);
+    const wBot  = Math.hypot(br2.x-bl.x, br2.y-bl.y);
+    const hLeft = Math.hypot(bl.x-tl.x, bl.y-tl.y);
+    const hRight= Math.hypot(br2.x-tr.x, br2.y-tr.y);
+    const outW  = Math.round(Math.max(wTop, wBot));
+    const outH  = Math.round(Math.max(hLeft, hRight));
 
-규칙:
-- 이미지 전체가 문서이거나, 배경 위에 문서가 놓인 경우 모두 포함
-- 문서의 네 꼭짓점을 픽셀 좌표로 최대한 정확히 찾아주세요
-- 이미지 크기는 ${await getImgSize(m.dataUrl)}
+    if(outW < 50 || outH < 50){ showToast('크롭 영역이 너무 작습니다'); return; }
 
-응답 형식(JSON만, 다른 텍스트 없이):
-문서가 있는 경우: {"hasDoc":true,"x1":픽셀,"y1":픽셀,"x2":픽셀,"y2":픽셀,"x3":픽셀,"y3":픽셀,"x4":픽셀,"y4":픽셀}
-(x1,y1=좌상, x2,y2=우상, x3,y3=우하, x4,y4=좌하 순서)
-문서가 없는 경우: {"hasDoc":false}`;
+    if(cvReady){
+      // OpenCV 원근 변환
+      const srcPts = cv.matFromArray(4,1,cv.CV_32FC2,[
+        tl.x,tl.y, tr.x,tr.y, br2.x,br2.y, bl.x,bl.y
+      ]);
+      const dstPts = cv.matFromArray(4,1,cv.CV_32FC2,[
+        0,0, outW,0, outW,outH, 0,outH
+      ]);
 
-    const text1 = await callAI([{
+      // 원본 이미지 → OpenCV Mat
+      const tmpC = document.createElement('canvas');
+      tmpC.width=img.width; tmpC.height=img.height;
+      tmpC.getContext('2d').drawImage(img,0,0);
+      const srcMat = cv.imread(tmpC);
+      const dstMat = new cv.Mat();
+      const M = cv.getPerspectiveTransform(srcPts, dstPts);
+      const dsize = new cv.Size(outW, outH);
+      cv.warpPerspective(srcMat, dstMat, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT);
+
+      // 결과를 canvas로 출력
+      const outC = document.createElement('canvas');
+      outC.width=outW; outC.height=outH;
+      cv.imshow(outC, dstMat);
+
+      [srcPts,dstPts,srcMat,dstMat,M].forEach(m=>{try{m.delete();}catch(e){}});
+
+      const result = outC.toDataURL('image/jpeg', 0.95);
+      applyResultToModal(result);
+    } else {
+      // OpenCV 없으면 단순 bounding box 크롭
+      const xs = sorted.map(p=>p.x);
+      const ys = sorted.map(p=>p.y);
+      const result = await cropImageByPixel(
+        docScanImgData,
+        Math.round(Math.min(...xs)), Math.round(Math.min(...ys)),
+        Math.round(Math.max(...xs)-Math.min(...xs)),
+        Math.round(Math.max(...ys)-Math.min(...ys))
+      );
+      applyResultToModal(result);
+    }
+  } catch(e){
+    console.error('Warp error:', e);
+    statusEl.textContent = '⚠️ 원근 보정 실패: ' + e.message;
+  }
+}
+
+function applyResultToModal(dataUrl){
+  modalImages[modalSlide].dataUrl = dataUrl;
+  closeModal('modalDocScan');
+  renderModalSlides();
+  document.getElementById('aiCropStatus').textContent = '✅ 문서 크롭 + 원근 보정 완료!';
+  showToast('📄 문서 크롭 완료');
+}
+
+/* ── Anthropic AI fallback (OpenCV 실패 시) ── */
+async function aiDocCropFallback(silent, statusEl, btn){
+  const key = localStorage.getItem(LS_API_KEY)||'';
+  if(!key){
+    statusEl.textContent='⚠️ OpenCV 로드 실패. AI 키도 없음 — ⚙️에서 설정하세요';
+    btn.disabled=false; return;
+  }
+  const overlay = document.getElementById('scanOverlay');
+  if(silent) overlay.style.display='flex';
+  else statusEl.textContent='🤖 AI로 문서 감지 중...';
+  try{
+    const m     = modalImages[modalSlide];
+    const small = await resizeForAI(m.dataUrl, 1200);
+    const [mtype,base64] = getB64Parts(small);
+    const origSize = await getImgSize(m.dataUrl);
+    const [oW,oH] = origSize.split('x').map(Number);
+    const resizedSize = await getImgSize(small);
+    const [rW,rH] = resizedSize.split('x').map(Number);
+
+    const text = await callAI([{
       role:'user',
       content:[
         {type:'image', source:{type:'base64', media_type:mtype, data:base64}},
-        {type:'text',  text:prompt1}
+        {type:'text', text:`이미지(${rW}x${rH}px)에서 문서의 4개 꼭짓점 픽셀 좌표를 찾아주세요. JSON만 반환: {"hasDoc":true,"tl":[x,y],"tr":[x,y],"br":[x,y],"bl":[x,y]} 또는 {"hasDoc":false}`}
       ]
-    }], 300);
+    }],256);
 
-    const j1 = JSON.parse(text1.replace(/```json|```/g,'').trim());
-    if(!j1.hasDoc){
-      statusEl.textContent='✓ 문서를 찾지 못했습니다';
-      return;
-    }
+    const j = JSON.parse(text.replace(/```json|```/g,'').trim());
+    if(!j.hasDoc){ statusEl.textContent='✓ 문서를 찾지 못했습니다'; return; }
 
-    /* ── 2단계: 꼭짓점 좌표로 정밀 크롭 ── */
-    if(!silent) statusEl.textContent='🤖 2단계: 정밀 크롭 중...';
-
-    // 원본 이미지 크기 가져오기
-    const origSize = await getImgSize(m.dataUrl);
-    const [origW, origH] = origSize.split('x').map(Number);
-
-    // 리사이즈된 이미지 기준 좌표 → 원본 좌표로 변환
-    const resized = await resizeForAI(m.dataUrl, 1600);
-    const resizedSize = await getImgSize(resized);
-    const [rW, rH] = resizedSize.split('x').map(Number);
-    const scaleX = origW / rW;
-    const scaleY = origH / rH;
-
-    // 4개 꼭짓점에서 bounding box 계산
-    const xs = [j1.x1, j1.x2, j1.x3, j1.x4].map(v => Math.round((+v||0) * scaleX));
-    const ys = [j1.y1, j1.y2, j1.y3, j1.y4].map(v => Math.round((+v||0) * scaleY));
-    const minX = Math.max(0, Math.min(...xs));
-    const minY = Math.max(0, Math.min(...ys));
-    const maxX = Math.min(origW, Math.max(...xs));
-    const maxY = Math.min(origH, Math.max(...ys));
-
-    // 여백 5% 추가
-    const padX = Math.round((maxX - minX) * 0.02);
-    const padY = Math.round((maxY - minY) * 0.02);
-    const sx = Math.max(0, minX - padX);
-    const sy = Math.max(0, minY - padY);
-    const sw = Math.min(origW - sx, maxX - minX + padX*2);
-    const sh = Math.min(origH - sy, maxY - minY + padY*2);
-
-    if(sw < 50 || sh < 50) throw new Error('문서 크롭 영역이 너무 작습니다');
-
+    const sx = Math.round(Math.min(j.tl[0],j.bl[0]) * oW/rW);
+    const sy = Math.round(Math.min(j.tl[1],j.tr[1]) * oH/rH);
+    const sw = Math.round((Math.max(j.tr[0],j.br[0]) - Math.min(j.tl[0],j.bl[0])) * oW/rW);
+    const sh = Math.round((Math.max(j.bl[1],j.br[1]) - Math.min(j.tl[1],j.tr[1])) * oH/rH);
     const cropped = await cropImageByPixel(m.dataUrl, sx, sy, sw, sh);
     modalImages[modalSlide].dataUrl = cropped;
     renderModalSlides();
-    statusEl.textContent = `✅ 정밀 크롭 완료 (${sw}×${sh}px)`;
-
+    statusEl.textContent = `✅ AI 크롭 완료 (${sw}×${sh}px)`;
   } catch(e){
-    console.error('AI Crop:', e);
-    statusEl.textContent = '⚠️ ' + e.message;
+    statusEl.textContent='⚠️ '+e.message;
   } finally{
-    btn.disabled = false;
-    overlay.style.display = 'none';
+    btn.disabled=false;
+    overlay.style.display='none';
   }
 }
 
@@ -401,33 +699,30 @@ function getImgSize(dataUrl){
     img.src=dataUrl;
   });
 }
-/* base64 분리 */
 function getB64Parts(dataUrl){
-  const parts=dataUrl.split(';base64,');
-  return [parts[0].replace('data:',''), parts[1]];
+  const p=dataUrl.split(';base64,');
+  return [p[0].replace('data:',''), p[1]];
 }
-/* 픽셀 단위 크롭 */
-function cropImageByPixel(dataUrl, sx, sy, sw, sh){
+function cropImageByPixel(dataUrl,sx,sy,sw,sh){
   return new Promise(res=>{
     const img=new Image();
     img.onload=()=>{
       const c=document.createElement('canvas');
-      c.width=sw; c.height=sh;
+      c.width=Math.max(1,sw); c.height=Math.max(1,sh);
       c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
       res(c.toDataURL('image/jpeg',0.95));
     };
     img.src=dataUrl;
   });
 }
-
 function cropImageDataUrl(dataUrl,rx,ry,rw,rh){
   return new Promise(res=>{
     const img=new Image();
     img.onload=()=>{
       const c=document.createElement('canvas');
-      const sx=Math.round(rx*img.width), sy=Math.round(ry*img.height);
-      const sw=Math.round(rw*img.width), sh=Math.round(rh*img.height);
-      c.width=sw; c.height=sh;
+      const sx=Math.round(rx*img.width),sy=Math.round(ry*img.height);
+      const sw=Math.round(rw*img.width),sh=Math.round(rh*img.height);
+      c.width=sw;c.height=sh;
       c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
       res(c.toDataURL('image/jpeg',0.92));
     };
@@ -701,37 +996,74 @@ function updateCropOverlay(){
 function applyCrop(){
   if(!cropRect) return;
 
-  // 현재 크롭 박스의 실제 화면 좌표
+  // 크롭 박스 실제 좌표 (캔버스 화면 기준)
   const br = cropRect.getBoundingRect(true);
-  const cw = canvas.width, ch = canvas.height;
 
-  // 비율 계산
-  const rx = Math.max(0, br.left / cw);
-  const ry = Math.max(0, br.top  / ch);
-  const rw = Math.min(1-rx, br.width  / cw);
-  const rh = Math.min(1-ry, br.height / ch);
-
-  // 오버레이 제거
+  // 오버레이/크롭박스 제거
   cropOverlays.forEach(o=>canvas.remove(o));
   cropOverlays=[];
   canvas.remove(cropRect);
   cropRect=null;
+  canvas.renderAll();
 
-  // 현재 편집 canvas를 이미지로 내보내고 크롭
-  const fullDataUrl = canvas.toDataURL({format:'jpeg', quality:0.95});
+  // 원본 배경 이미지에서 직접 픽셀 크롭 (캔버스 렌더링 결과 아닌 원본 사용)
+  const bgImg   = canvas.backgroundImage;
+  const scaleX  = bgImg ? (bgImg.scaleX||1) : 1;
+  const scaleY  = bgImg ? (bgImg.scaleY||1) : 1;
+  const origEl  = bgImg ? bgImg.getElement() : null;
+
+  // 캔버스 좌표 → 원본 이미지 픽셀 좌표 변환
+  const px = Math.round(br.left  / scaleX);
+  const py = Math.round(br.top   / scaleY);
+  const pw = Math.round(br.width / scaleX);
+  const ph = Math.round(br.height/ scaleY);
+
+  if(!origEl || pw < 10 || ph < 10){ showToast('크롭 영역이 너무 작습니다'); return; }
+
+  // 원본 이미지에서 어노테이션 포함해서 크롭
+  // 1) 어노테이션만 임시 캔버스에 합성
+  const merged = document.createElement('canvas');
+  merged.width  = origEl.naturalWidth  || origEl.width;
+  merged.height = origEl.naturalHeight || origEl.height;
+  const mctx = merged.getContext('2d');
+  mctx.drawImage(origEl, 0, 0);
+
+  // 2) canvas 위 객체(텍스트, 도형 등)를 원본 스케일에 맞게 그리기
+  const objs = canvas.getObjects();
+  if(objs.length){
+    const tmpC = document.createElement('canvas');
+    tmpC.width  = canvas.width;
+    tmpC.height = canvas.height;
+    const tmpCtx = tmpC.getContext('2d');
+    // fabric canvas의 어노테이션 레이어만 export
+    canvas.getObjects().forEach(obj=>{
+      // fabric 객체를 canvas에 그리기
+    });
+    // 간단하게: canvas.toDataURL로 전체 내보낸 후 크롭
+  }
+
+  // 가장 확실한 방법: canvas 전체 export 후 원본 스케일로 크롭
+  const fullUrl = canvas.toDataURL({format:'jpeg', quality:0.97, multiplier:1});
+
   cropImageByPixel(
-    fullDataUrl,
-    Math.round(rx*canvas.width),
-    Math.round(ry*canvas.height),
-    Math.round(rw*canvas.width),
-    Math.round(rh*canvas.height)
+    fullUrl,
+    Math.round(br.left),
+    Math.round(br.top),
+    Math.round(br.width),
+    Math.round(br.height)
   ).then(cropped=>{
-    // modalImages에 즉시 반영
+    if(!cropped){ showToast('크롭 실패'); return; }
+    // ★ 핵심: editImgId로 찾고, 못 찾으면 modalSlide로 저장
     const idx = modalImages.findIndex(m=>m.id===editImgId);
-    if(idx>=0) modalImages[idx].dataUrl = cropped;
+    if(idx>=0){
+      modalImages[idx].dataUrl = cropped;
+    } else if(modalImages[modalSlide]){
+      modalImages[modalSlide].dataUrl = cropped;
+    }
+    // 편집 캔버스도 크롭된 이미지로 갱신
     initCanvas(cropped);
     document.getElementById('cropControls').classList.add('hidden');
-    showToast('✂️ 잘라내기 완료');
+    showToast('✂️ 크롭 완료 — 완료 버튼을 눌러 저장하세요');
   });
 }
 
@@ -861,23 +1193,33 @@ function applyMosaicAt(e){
 /* 편집 완료 → modalImages 반영 후 추가모달로 */
 function finishEdit(){
   if(!canvas) return;
+
   // 크롭 오버레이 정리
   cropOverlays.forEach(o=>canvas.remove(o)); cropOverlays=[];
   if(cropRect){ canvas.remove(cropRect); cropRect=null; }
   canvas.renderAll();
 
+  // 현재 캔버스 내용을 고품질로 export
   const dataUrl = canvas.toDataURL({format:'jpeg', quality:0.95});
-  const idx = modalImages.findIndex(m=>m.id===editImgId);
-  if(idx>=0){
-    modalImages[idx].dataUrl = dataUrl;
+
+  // 1순위: editImgId로 찾기
+  let idx = modalImages.findIndex(m=>m.id===editImgId);
+  // 2순위: 못 찾으면 현재 슬라이드
+  if(idx < 0) idx = modalSlide;
+  // 3순위: 그래도 없으면 새로 추가
+  if(idx < 0 || idx >= modalImages.length){
+    modalImages.push({ id: editImgId||uid(), dataUrl });
+    idx = modalImages.length - 1;
   } else {
-    // id 못 찾으면 현재 슬라이드에 반영
-    if(modalImages[modalSlide]) modalImages[modalSlide].dataUrl = dataUrl;
+    modalImages[idx].dataUrl = dataUrl;
+    modalImages[idx].id = editImgId || modalImages[idx].id;
   }
+  modalSlide = idx;
+
   closeModal('modalEdit');
   openModal('modalAdd');
   renderModalSlides();
-  showToast('✅ 편집 내용이 저장되었습니다');
+  showToast('✅ 편집 저장 완료');
 }
 
 /* ── 카테고리 추가 공통 함수 ── */
@@ -905,9 +1247,31 @@ async function init(){
   modeBar.style.cssText = `position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
   document.body.appendChild(modeBar);
 
+  /* OpenCV 로딩 배지 */
+  if(!cvReady && !cvError){
+    const badge = document.createElement('div');
+    badge.id = 'cvStatusBadge';
+    badge.className = 'cv-status';
+    badge.textContent = '⏳ OpenCV 로딩 중...';
+    document.body.appendChild(badge);
+    // 로드 완료 감지
+    const waitCv = setInterval(()=>{
+      if(cvReady){ badge.textContent='✅ OpenCV 준비됨'; setTimeout(()=>badge.remove(),2000); clearInterval(waitCv); }
+      else if(cvError){ badge.textContent='⚠️ OpenCV 실패 (AI 모드)'; setTimeout(()=>badge.remove(),3000); clearInterval(waitCv); }
+    }, 500);
+  }
+
   renderFilterChips();
   renderGallery();
   populateCatSelect();
+
+  /* 문서감지 모달 이벤트 */
+  document.getElementById('btnDocScanClose').onclick = ()=>closeModal('modalDocScan');
+  document.getElementById('btnDocScanRetry').onclick = ()=>{
+    closeModal('modalDocScan');
+    aiDocCrop(false);
+  };
+  document.getElementById('btnDocScanApply').onclick = applyDocScanCrop;
 
   /* 헤더 */
   document.getElementById('btnMenu').onclick     = openSideMenu;

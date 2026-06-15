@@ -4,9 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>📷 사진 스캔</title>
-<link rel="stylesheet" href="photos-scan.css?v=20260616d">
+<link rel="stylesheet" href="photos-scan.css?v=20260616e">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
+<!-- OpenCV.js: 문서 자동감지용 -->
+<script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady()" onerror="onOpenCvError()"></script>
 </head>
 <body>
 
@@ -91,7 +93,7 @@
         </div>
       </div>
       <div class="ai-crop-row">
-        <button class="btn-ai" id="btnAiCrop">🤖 AI 문서 자동감지 크롭</button>
+        <button class="btn-ai" id="btnAiCrop">📄 문서 자동감지 (OpenCV)</button>
         <span class="ai-status" id="aiCropStatus"></span>
       </div>
       <div class="form-row">
@@ -125,8 +127,34 @@
 <!-- AI 스캔 오버레이 -->
 <div class="scan-overlay-modal" id="scanOverlay" style="display:none">
   <div class="scan-overlay-box">
-    <div class="scan-spinner">🤖</div>
-    <p>문서 자동 감지 중...</p>
+    <div class="scan-spinner">📄</div>
+    <p id="scanOverlayMsg">문서 자동 감지 중...</p>
+  </div>
+</div>
+
+<!-- ===== OpenCV 문서감지 모달 ===== -->
+<div class="modal-bg" id="modalDocScan">
+  <div class="modal modal-docscan">
+    <div class="modal-header">
+      <span>📄 문서 자동감지</span>
+      <button class="btn-icon" id="btnDocScanClose">✕</button>
+    </div>
+    <div class="docscan-body">
+      <!-- 캔버스: 꼭짓점 표시 + 조정 -->
+      <div class="docscan-canvas-wrap" id="docScanWrap">
+        <canvas id="docScanCanvas"></canvas>
+        <!-- 4개 드래그 핸들 -->
+        <div class="corner-handle" id="ch0"></div>
+        <div class="corner-handle" id="ch1"></div>
+        <div class="corner-handle" id="ch2"></div>
+        <div class="corner-handle" id="ch3"></div>
+      </div>
+      <p class="docscan-hint">꼭짓점을 드래그해서 정밀하게 조정하세요</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btnDocScanRetry">🔄 다시 감지</button>
+      <button class="btn-primary"   id="btnDocScanApply">✅ 이 영역으로 크롭</button>
+    </div>
   </div>
 </div>
 
