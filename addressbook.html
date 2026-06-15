@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>주소록 📒</title>
+<link rel="stylesheet" href="shared.css?v=20260615">
+<style>
+.app-title{color:var(--bl3)}.app-title span{color:var(--lv3)}
+.btab.active{color:var(--bl3)}
+.chip-all{background:var(--bl3);border-color:var(--bl3)}
+.chip-item.active{background:var(--bl);color:var(--bl3);border-color:var(--bl2)}
+.fab{background:linear-gradient(135deg,var(--bl3),var(--lv3));box-shadow:0 4px 20px rgba(24,95,165,.4)}
+.item-card{border-color:var(--bl2)}
+.search-input:focus{border-color:var(--bl3)}
+.ab-avatar{width:44px;height:44px;border-radius:50%;background:var(--bl);color:var(--bl3);font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="app-header">
+  <div class="app-title">주소록<span>📒</span></div>
+  <div class="header-right">
+    <a href="./index.html" class="back-btn">🏠</a>
+    <a href="./materials.html" class="back-btn" style="background:var(--or);color:var(--or3)">🔧</a>
+    <button class="hdr-btn" id="darkToggle" style="background:var(--bl)">🌙</button>
+  </div>
+</div>
+
+<div class="tab-contents">
+  <div class="tab-content active" id="tab-list">
+    <div class="toolbar">
+      <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="abSearch" class="search-input" placeholder="이름, 전화번호, 주소 검색..."></div>
+      <div class="toolbar-row">
+        <div class="chips-wrap" id="catChips"></div>
+        <select id="sortSel" class="sort-sel"><option value="name">가나다순</option><option value="newest">최신순</option></select>
+      </div>
+      <div class="list-count" id="listCount">0개</div>
+    </div>
+    <div class="list-area" id="abList"></div>
+    <button class="fab fab-bl" id="addBtn">＋</button>
+  </div>
+
+  <div class="tab-content" id="tab-settings">
+    <div class="settings-area">
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--bl3)">🏷️ 카테고리 관리</div>
+        <div id="catManage"></div>
+        <div class="add-cat-row"><input type="text" id="newCat" class="settings-input" placeholder="새 카테고리"><button class="settings-btn" id="addCat" style="background:var(--bl3)">추가</button></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--bl3)">💾 백업</div>
+        <div class="settings-row"><button class="settings-btn" id="manualBackup" style="background:var(--bl3)">지금 백업</button><button class="settings-btn btn-outline" id="exportJsonBtn" style="color:var(--bl3);border-color:var(--bl3)">JSON 내보내기</button></div>
+        <div id="backupList"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--bl3)">📊 통계</div>
+        <div id="statsArea"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title">🌙 테마</div>
+        <div class="settings-row"><span class="settings-label">다크모드</span><label class="toggle-switch"><input type="checkbox" id="darkModeToggle"><span class="toggle-slider"></span></label></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <button class="btab active" data-tab="list"><span class="btab-icon">📒</span><span class="btab-label">주소록</span></button>
+  <button class="btab" data-tab="settings"><span class="btab-icon">⚙️</span><span class="btab-label">설정</span></button>
+</div>
+
+<!-- 추가/수정 모달 -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-sheet modal-sheet-tall">
+    <div class="modal-header"><span class="modal-title" id="editModalTitle" style="color:var(--bl3)">📒 연락처 추가</span><button class="modal-close" id="editClose">✕</button></div>
+    <div class="modal-body">
+      <label class="form-label">이름 *</label>
+      <input type="text" id="fName" class="form-input" placeholder="업체명 또는 이름">
+      <label class="form-label">카테고리</label>
+      <select id="fCat" class="form-select"></select>
+      <label class="form-label">전화번호</label>
+      <input type="tel" id="fPhone" class="form-input" placeholder="010-0000-0000">
+      <label class="form-label">주소</label>
+      <input type="text" id="fAddress" class="form-input" placeholder="주소 입력">
+      <label class="form-label">메모</label>
+      <textarea id="fMemo" class="form-textarea" placeholder="메모..."></textarea>
+      <div class="form-row"><label class="form-label">즐겨찾기</label><label class="toggle-switch"><input type="checkbox" id="fFav"><span class="toggle-slider"></span></label></div>
+    </div>
+    <div class="modal-footer"><button class="modal-save modal-save-bl" id="saveBtn">저장하기 💾</button></div>
+  </div>
+</div>
+
+<!-- 상세보기 팝업 -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-sheet modal-sheet-center">
+    <div class="modal-header"><span class="modal-title" id="detailTitle" style="color:var(--bl3)"></span><button class="modal-close" id="detailClose">✕</button></div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer">
+      <button class="modal-save btn-edit" id="detailEdit">✏️ 수정</button>
+      <button class="modal-save btn-delete" id="detailDelete">🗑️ 삭제</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="shared.js?v=20260615"></script>
+<script>
+let items=[], cats=[], editingId=null, currentDetailId=null;
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  cats=JSON.parse(localStorage.getItem('ab_cats')||'["자재업체","시공업체","임차인","개인","기타"]');
+  setupTheme();
+  setupTabs([],tab=>{if(tab==='settings')renderSettings()});
+  await loadData();renderList();renderCatChips();
+  document.getElementById('abSearch').oninput=renderList;
+  document.getElementById('sortSel').onchange=renderList;
+  document.getElementById('addBtn').onclick=()=>openEdit();
+  document.getElementById('editClose').onclick=closeEdit;
+  document.getElementById('editModal').onclick=e=>{if(e.target===document.getElementById('editModal'))closeEdit()};
+  document.getElementById('saveBtn').onclick=saveItem;
+  document.getElementById('detailClose').onclick=()=>document.getElementById('detailModal').classList.remove('open');
+  document.getElementById('detailModal').onclick=e=>{if(e.target===document.getElementById('detailModal'))document.getElementById('detailModal').classList.remove('open')};
+  document.getElementById('detailEdit').onclick=()=>{document.getElementById('detailModal').classList.remove('open');openEdit(currentDetailId)};
+  document.getElementById('detailDelete').onclick=deleteItem;
+});
+
+async function loadData(){items=await fsGet('ab_contacts')}
+
+function initials(name){return(name||'?').charAt(0).toUpperCase()}
+
+// LIST
+function renderList(){
+  renderCatChips();
+  const q=(document.getElementById('abSearch').value||'').toLowerCase();
+  const cat=document.getElementById('catChips').dataset.active||'all';
+  const sort=document.getElementById('sortSel').value;
+  let arr=[...items];
+  if(q)arr=arr.filter(i=>(i.name||'').toLowerCase().includes(q)||(i.phone||'').includes(q)||(i.address||'').toLowerCase().includes(q)||(i.memo||'').toLowerCase().includes(q));
+  if(cat!=='all')arr=arr.filter(i=>i.cat===cat);
+  if(sort==='name')arr.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else arr.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  document.getElementById('listCount').textContent=arr.length+'개';
+  const list=document.getElementById('abList');
+  if(!arr.length){list.innerHTML='<div class="empty-state"><div class="empty-emoji">📒</div><div class="empty-text">저장된 연락처가 없어요<br>자재앱에서 업체 저장 시 자동 추가돼요</div></div>';return}
+  list.innerHTML=arr.map(it=>`<div class="item-card" onclick="openDetail('${it.id}')">
+    <div class="card-top">
+      <div class="ab-avatar">${esc(initials(it.name))}</div>
+      <div class="card-info">
+        <div class="card-title">${esc(it.name||'이름 없음')}</div>
+        ${it.cat?`<div class="card-sub">${esc(it.cat)}</div>`:''}
+      </div>
+      <span class="card-fav" onclick="event.stopPropagation();toggleFav('${it.id}')">${it.fav?'⭐':'☆'}</span>
+    </div>
+    ${it.phone?`<a class="contact-action contact-tel" href="tel:${esc(it.phone.replace(/[^0-9+]/g,''))}" onclick="event.stopPropagation()" style="margin-top:8px">📞 ${esc(it.phone)}</a>`:''}
+    ${it.address?`<div class="contact-action contact-addr" onclick="event.stopPropagation();openNaver('${esc(it.address)}')" style="margin-top:6px">📍 ${esc(it.address)}</div>`:''}
+    ${it.memo?`<div class="card-memo" style="margin-top:6px">${esc(it.memo)}</div>`:''}
+    <div class="card-actions">
+      <button class="card-edit-btn" onclick="event.stopPropagation();openEdit('${it.id}')">✏️ 수정</button>
+      <button class="card-del-btn" onclick="event.stopPropagation();quickDelete('${it.id}')">🗑️ 삭제</button>
+    </div>
+  </div>`).join('');
+}
+
+// CAT
+function renderCatChips(){
+  const wrap=document.getElementById('catChips');const active=wrap.dataset.active||'all';
+  wrap.innerHTML='';
+  const all=document.createElement('div');all.className='chip chip-all';all.style.background='var(--bl3)';all.style.borderColor='var(--bl3)';all.textContent='전체';
+  all.onclick=()=>{wrap.dataset.active='all';renderList()};wrap.appendChild(all);
+  cats.forEach(c=>{
+    const ch=document.createElement('div');ch.className='chip chip-item'+(active===c?' active':'');
+    if(active===c){ch.style.background='var(--bl)';ch.style.color='var(--bl3)';ch.style.borderColor='var(--bl2)'}
+    ch.textContent=c;ch.onclick=()=>{wrap.dataset.active=c;renderList()};wrap.appendChild(ch);
+  });
+  const add=document.createElement('div');add.className='chip chip-add';add.textContent='＋';
+  add.onclick=()=>{const n=prompt('새 카테고리');if(n&&!cats.includes(n)){cats.push(n);saveCats();renderCatChips();renderCatSelect()}};
+  wrap.appendChild(add);
+}
+function saveCats(){localStorage.setItem('ab_cats',JSON.stringify(cats))}
+function renderCatSelect(){document.getElementById('fCat').innerHTML='<option value="">카테고리 선택</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+
+// EDIT
+function openEdit(id=null){
+  editingId=id;
+  document.getElementById('editModalTitle').textContent=id?'📒 연락처 수정':'📒 연락처 추가';
+  renderCatSelect();
+  if(id){
+    const it=items.find(x=>x.id===id);
+    if(it){
+      document.getElementById('fName').value=it.name||'';
+      document.getElementById('fCat').value=it.cat||'';
+      document.getElementById('fPhone').value=it.phone||'';
+      document.getElementById('fAddress').value=it.address||'';
+      document.getElementById('fMemo').value=it.memo||'';
+      document.getElementById('fFav').checked=it.fav||false;
+    }
+  }else{
+    ['fName','fPhone','fAddress','fMemo'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('fCat').value='';document.getElementById('fFav').checked=false;
+  }
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEdit(){document.getElementById('editModal').classList.remove('open')}
+
+async function saveItem(){
+  const name=document.getElementById('fName').value.trim();
+  if(!name){toast('이름을 입력해주세요');return}
+  const id=editingId||genId();
+  const existing=editingId?items.find(x=>x.id===editingId):null;
+  const data={name,cat:document.getElementById('fCat').value,phone:document.getElementById('fPhone').value.trim(),address:document.getElementById('fAddress').value.trim(),memo:document.getElementById('fMemo').value.trim(),fav:document.getElementById('fFav').checked,createdAt:existing?.createdAt||Date.now(),updatedAt:Date.now()};
+  const ok=await fsSet('ab_contacts',id,data);
+  if(!ok){toast('저장 실패');return}
+  if(editingId){const idx=items.findIndex(x=>x.id===editingId);if(idx>=0)items[idx]={id,...data}}else items.unshift({id,...data});
+  closeEdit();renderList();toast('저장 완료 ✓');
+}
+
+async function toggleFav(id){const it=items.find(x=>x.id===id);if(!it)return;it.fav=!it.fav;await fsSet('ab_contacts',id,it);renderList()}
+async function quickDelete(id){if(!confirm('삭제할까요?'))return;await fsDelete('ab_contacts',id);items=items.filter(x=>x.id!==id);renderList();toast('삭제 완료')}
+
+// DETAIL
+function openDetail(id){
+  const it=items.find(x=>x.id===id);if(!it)return;
+  currentDetailId=id;
+  document.getElementById('detailTitle').textContent='📒 '+(it.name||'연락처');
+  document.getElementById('detailBody').innerHTML=`
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+      <div class="ab-avatar" style="width:56px;height:56px;font-size:22px">${esc(initials(it.name))}</div>
+      <div><div style="font-size:18px;font-weight:800">${esc(it.name)}</div>${it.cat?`<div style="font-size:12px;color:var(--txt2)">${esc(it.cat)}</div>`:''}</div>
+    </div>
+    ${it.phone?`<div class="detail-section"><div class="detail-section-title">전화번호</div><a class="contact-action contact-tel" href="tel:${esc(it.phone.replace(/[^0-9+]/g,''))}">📞 ${esc(it.phone)} — 탭하여 전화걸기</a></div>`:''}
+    ${it.address?`<div class="detail-section"><div class="detail-section-title">주소</div><div class="contact-action contact-addr" onclick="openNaver('${esc(it.address)}')">📍 ${esc(it.address)} — 네이버 지도 열기</div></div>`:''}
+    ${it.memo?`<div class="detail-section"><div class="detail-section-title">메모</div><div style="font-size:13px;line-height:1.6;white-space:pre-wrap">${esc(it.memo)}</div></div>`:''}
+    <div style="font-size:11px;color:var(--txt2)">저장일: ${formatDateFull(it.createdAt)}</div>`;
+  document.getElementById('detailModal').classList.add('open');
+}
+async function deleteItem(){if(!confirm('삭제할까요?'))return;await fsDelete('ab_contacts',currentDetailId);items=items.filter(x=>x.id!==currentDetailId);document.getElementById('detailModal').classList.remove('open');renderList();toast('삭제 완료')}
+
+// SETTINGS
+function renderSettings(){
+  document.getElementById('catManage').innerHTML=cats.map((c,i)=>`<div class="cat-manage-item"><span class="cat-manage-name">${esc(c)}</span><button class="cat-del-btn" onclick="cats.splice(${i},1);saveCats();renderSettings();renderCatChips()">✕</button></div>`).join('');
+  document.getElementById('statsArea').innerHTML=`<div class="stat-item"><span>전체 연락처</span><span class="stat-val" style="color:var(--bl3)">${items.length}개</span></div><div class="stat-item"><span>즐겨찾기</span><span class="stat-val" style="color:var(--bl3)">${items.filter(i=>i.fav).length}개</span></div>`;
+  renderBackupList();
+}
+document.getElementById('addCat').onclick=()=>{const v=document.getElementById('newCat').value.trim();if(!v||cats.includes(v))return;cats.push(v);saveCats();document.getElementById('newCat').value='';renderSettings()};
+document.getElementById('manualBackup').onclick=()=>doBackup('ab',()=>({items,cats}));
+document.getElementById('exportJsonBtn').onclick=()=>exportJson({items,cats},'addressbook_backup.json');
+async function renderBackupList(){
+  const all=await fsGet('ab_backups');all.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+  document.getElementById('backupList').innerHTML=all.slice(0,5).map(b=>`<div class="backup-item"><span>${formatDateFull(b.timestamp)}</span><button class="backup-restore-btn" onclick="restoreBackup('${b.id}')">복원</button></div>`).join('')||'<div style="font-size:12px;color:var(--txt2)">백업 없음</div>';
+}
+window.restoreBackup=async id=>{
+  if(!confirm('복원할까요?'))return;const all=await fsGet('ab_backups');const b=all.find(x=>x.id===id);if(!b)return;
+  try{const s=JSON.parse(b.snap);items=s.data.items||[];cats=s.data.cats||[];saveCats();renderList();renderSettings();toast('복원 완료 ✓')}catch{toast('복원 실패')}
+};
+</script>
+</body>
+</html>

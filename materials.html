@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>자재 관리 🔧</title>
+<link rel="stylesheet" href="shared.css?v=20260615">
+<style>
+.app-title{color:var(--or3)}.app-title span{color:var(--yw3)}
+.modal-title{color:var(--or3)}
+.btab.active{color:var(--or3)}
+.chip-all{background:var(--or3);border-color:var(--or3)}
+.chip-item.active{background:var(--or);color:var(--or3);border-color:var(--or2)}
+.fab{background:linear-gradient(135deg,var(--or3),var(--yw3));box-shadow:0 4px 20px rgba(196,98,26,.4)}
+.item-card{border-color:var(--or2)}
+.search-input:focus{border-color:var(--or3)}
+</style>
+</head>
+<body>
+<div class="app-header">
+  <div class="app-title">자재<span>관리</span> 🔧</div>
+  <div class="header-right">
+    <a href="./index.html" class="back-btn">🏠</a>
+    <button class="hdr-btn" id="darkToggle" style="background:var(--or)">🌙</button>
+  </div>
+</div>
+
+<div class="tab-contents">
+  <div class="tab-content active" id="tab-list">
+    <div class="toolbar">
+      <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="matSearch" class="search-input" placeholder="자재 검색..."></div>
+      <div class="toolbar-row">
+        <div class="chips-wrap" id="catChips"></div>
+        <select id="sortSel" class="sort-sel"><option value="newest">최신순</option><option value="oldest">오래된순</option><option value="name">가나다순</option><option value="fav">즐겨찾기</option></select>
+      </div>
+      <div class="list-count" id="listCount">0개</div>
+    </div>
+    <div class="list-area" id="matList"></div>
+    <button class="fab fab-or" id="addBtn">＋</button>
+  </div>
+
+  <div class="tab-content" id="tab-cal">
+    <div class="cal-toolbar">
+      <button class="cal-nav" id="calPrev" style="background:var(--or);color:var(--or3)">‹</button>
+      <span class="cal-month" id="calMonthLabel"></span>
+      <button class="cal-nav" id="calNext" style="background:var(--or);color:var(--or3)">›</button>
+      <div class="cal-zoom-btns">
+        <button class="zoom-btn" id="zoomSm">S</button>
+        <button class="zoom-btn active" id="zoomMd">M</button>
+        <button class="zoom-btn" id="zoomLg">L</button>
+      </div>
+    </div>
+    <div class="cal-grid-wrap"><div class="cal-dow-row" id="calDow"></div><div class="cal-grid" id="calGrid"></div></div>
+    <div class="cal-detail" id="calDetail" style="display:none">
+      <div class="cal-detail-header"><span id="calDetailDate"></span><button class="cal-detail-close" id="calDetailClose">✕</button></div>
+      <div id="calDetailList"></div>
+    </div>
+    <div class="cal-stats" id="calStats"></div>
+  </div>
+
+  <div class="tab-content" id="tab-ai">
+    <div class="ai-header"><div class="ai-title" style="color:var(--or3)">🤖 AI 검색</div><div class="ai-sub">저장된 자재에서 찾아드려요</div></div>
+    <div class="ai-chat-area" id="aiChat"><div class="ai-bubble ai-bubble-bot">자재 검색 도우미예요 😊<br>예) "타일 자재 업체" / "조명 가격 비교"</div></div>
+    <div class="ai-input-wrap"><input type="text" id="aiInput" class="ai-input" placeholder="무엇이든 물어보세요..."><button class="ai-send" id="aiSend" style="background:var(--or3)">➤</button></div>
+  </div>
+
+  <div class="tab-content" id="tab-settings">
+    <div class="settings-area">
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--or3)">🔑 API 설정</div>
+        <input type="password" id="apiKeyInput" class="settings-input" placeholder="Anthropic API Key">
+        <button class="settings-btn" id="saveApiKey" style="background:var(--or3)">저장</button>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--or3)">🏷️ 카테고리 관리</div>
+        <div id="catManage"></div>
+        <div class="add-cat-row"><input type="text" id="newCat" class="settings-input" placeholder="새 카테고리"><button class="settings-btn" id="addCat" style="background:var(--or3)">추가</button></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--or3)">💾 백업</div>
+        <div class="settings-row"><button class="settings-btn" id="manualBackup" style="background:var(--or3)">지금 백업</button><button class="settings-btn btn-outline" id="exportJsonBtn" style="color:var(--or3);border-color:var(--or3)">JSON 내보내기</button></div>
+        <div id="backupList"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--or3)">📒 주소록 바로가기</div>
+        <a href="./addressbook.html" style="display:block;padding:10px 14px;background:var(--bl);color:var(--bl3);border-radius:12px;text-decoration:none;font-size:13px;font-weight:700">📒 주소록 열기 →</a>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--or3)">📊 통계</div>
+        <div id="statsArea"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title">🌙 테마</div>
+        <div class="settings-row"><span class="settings-label">다크모드</span><label class="toggle-switch"><input type="checkbox" id="darkModeToggle"><span class="toggle-slider"></span></label></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <button class="btab active" data-tab="list"><span class="btab-icon">🔧</span><span class="btab-label">자재</span></button>
+  <button class="btab" data-tab="cal"><span class="btab-icon">📅</span><span class="btab-label">달력</span></button>
+  <button class="btab" data-tab="ai"><span class="btab-icon">🤖</span><span class="btab-label">AI</span></button>
+  <button class="btab" data-tab="settings"><span class="btab-icon">⚙️</span><span class="btab-label">설정</span></button>
+</div>
+
+<!-- 추가/수정 모달 -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-sheet modal-sheet-tall">
+    <div class="modal-header"><span class="modal-title" id="editModalTitle">🔧 자재 추가</span><button class="modal-close" id="editClose">✕</button></div>
+    <div class="modal-body">
+      <label class="form-label">자재명 *</label>
+      <input type="text" id="fName" class="form-input" placeholder="자재명">
+      <label class="form-label">카테고리</label>
+      <select id="fCat" class="form-select"></select>
+      <label class="form-label">태그 <span class="form-hint">입력 후 Enter</span></label>
+      <div class="tag-input-wrap" id="tagWrap"></div>
+      <label class="form-label">참고 URL</label>
+      <input type="url" id="fUrl" class="form-input" placeholder="https://...">
+      <label class="form-label">업체명</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="fCompany" class="form-input" placeholder="업체명 입력" autocomplete="off">
+        <div class="autocomplete-list" id="acList" style="display:none"></div>
+      </div>
+      <label class="form-label">전화번호</label>
+      <input type="tel" id="fPhone" class="form-input" placeholder="010-0000-0000">
+      <label class="form-label">주소</label>
+      <input type="text" id="fAddress" class="form-input" placeholder="주소 입력">
+      <label class="form-label">가격 목록 <span class="form-hint">업체별 가격 비교</span></label>
+      <div id="priceRows"></div>
+      <button class="add-row-btn" id="addPriceRow" style="background:var(--or);color:var(--or3);border-color:var(--or2)">+ 가격 추가</button>
+      <label class="form-label">메모</label>
+      <textarea id="fMemo" class="form-textarea" placeholder="메모..."></textarea>
+      <label class="form-label">이미지 첨부</label>
+      <div class="img-upload-area">
+        <input type="file" id="fImgFile" accept="image/*" capture="environment" style="display:none">
+        <button class="img-btn" style="background:var(--or);color:var(--or3);border-color:var(--or2)" onclick="document.getElementById('fImgFile').click()">📷 카메라/갤러리</button>
+        <button class="img-btn" style="background:var(--or);color:var(--or3);border-color:var(--or2)" id="pasteBtn">📋 붙여넣기</button>
+        <div class="img-preview-wrap" id="imgPreview"></div>
+      </div>
+      <div class="form-row"><label class="form-label">즐겨찾기</label><label class="toggle-switch"><input type="checkbox" id="fFav"><span class="toggle-slider"></span></label></div>
+    </div>
+    <div class="modal-footer"><button class="modal-save modal-save-or" id="saveBtn">저장하기 💾</button></div>
+  </div>
+</div>
+
+<!-- 상세보기 팝업 -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-sheet modal-sheet-center">
+    <div class="modal-header"><span class="modal-title" id="detailTitle" style="color:var(--or3)"></span><button class="modal-close" id="detailClose">✕</button></div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer">
+      <button class="modal-save btn-edit" id="detailEdit">✏️ 수정</button>
+      <button class="modal-save btn-delete" id="detailDelete">🗑️ 삭제</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="shared.js?v=20260615"></script>
+<script>
+let items=[], cats=[], currentTags=[], editImages=[], editPrices=[], editingId=null;
+let calYear, calMonth, calZoom='md', currentDetailId=null;
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  cats=JSON.parse(localStorage.getItem('mt_cats')||'["자재","타일","전기","기계","조명"]');
+  setupTheme();
+  setupTabs([],tab=>{if(tab==='cal')renderCal();if(tab==='settings')renderSettings()});
+  setupCalNav();setupAI();setupSettings();setupAutocomplete();
+  const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
+  await loadData();renderList();renderCatChips();
+  document.getElementById('matSearch').oninput=renderList;
+  document.getElementById('sortSel').onchange=renderList;
+  document.getElementById('addBtn').onclick=()=>openEdit();
+  document.getElementById('editClose').onclick=closeEdit;
+  document.getElementById('editModal').onclick=e=>{if(e.target===document.getElementById('editModal'))closeEdit()};
+  document.getElementById('saveBtn').onclick=saveItem;
+  document.getElementById('addPriceRow').onclick=addPriceRow;
+  document.getElementById('fImgFile').onchange=e=>{if(e.target.files[0])addImageFromFile(e.target.files[0],editImages,renderImgPreview)};
+  document.getElementById('pasteBtn').onclick=()=>pasteImageClipboard(editImages,renderImgPreview);
+  document.getElementById('detailClose').onclick=()=>document.getElementById('detailModal').classList.remove('open');
+  document.getElementById('detailModal').onclick=e=>{if(e.target===document.getElementById('detailModal'))document.getElementById('detailModal').classList.remove('open')};
+  document.getElementById('detailEdit').onclick=()=>{document.getElementById('detailModal').classList.remove('open');openEdit(currentDetailId)};
+  document.getElementById('detailDelete').onclick=deleteItem;
+  document.addEventListener('paste',e=>{if(!document.getElementById('editModal').classList.contains('open'))return;const it=e.clipboardData?.items;if(!it)return;for(const i of it){if(i.type.startsWith('image/')){addImageFromFile(i.getAsFile(),editImages,renderImgPreview);break}}});
+  scheduleAutoBackup();
+});
+
+async function loadData(){items=await fsGet('mt_items')}
+
+// LIST
+function renderList(){
+  renderCatChips();
+  const q=(document.getElementById('matSearch').value||'').toLowerCase();
+  const cat=document.getElementById('catChips').dataset.active||'all';
+  const sort=document.getElementById('sortSel').value;
+  let arr=[...items];
+  if(q)arr=arr.filter(i=>(i.name||'').toLowerCase().includes(q)||(i.company||'').toLowerCase().includes(q)||(i.memo||'').toLowerCase().includes(q));
+  if(cat!=='all')arr=arr.filter(i=>i.cat===cat);
+  if(sort==='newest')arr.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  else if(sort==='oldest')arr.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  else if(sort==='name')arr.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else if(sort==='fav')arr.sort((a,b)=>(b.fav?1:0)-(a.fav?1:0));
+  document.getElementById('listCount').textContent=arr.length+'개';
+  const list=document.getElementById('matList');
+  if(!arr.length){list.innerHTML='<div class="empty-state"><div class="empty-emoji">🔧</div><div class="empty-text">저장된 자재가 없어요</div></div>';return}
+  list.innerHTML=arr.map(it=>{
+    const tags=Array.isArray(it.tags)?it.tags:[];
+    const prices=Array.isArray(it.prices)?it.prices:[];
+    const imgs=Array.isArray(it.images)?it.images:[];
+    const tagsHtml=tags.map((t,i)=>`<span class="tag ${tagColor(i)}">${esc(t)}</span>`).join('');
+    const catHtml=it.cat?`<span class="tag tag-or">${esc(it.cat)}</span>`:'';
+    const priceHtml=prices.length?`<div style="margin-top:6px;font-size:12px;color:var(--or3);font-weight:700">${prices.map(p=>`💰 ${esc(p.label?p.label+': ':'')}${esc(p.amount)}`).join(' · ')}</div>`:'';
+    const telHtml=it.phone?`<a href="tel:${esc(it.phone.replace(/[^0-9+]/g,''))}" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mn3);font-weight:700;text-decoration:none;padding:3px 8px;background:var(--mn);border-radius:8px;margin-right:4px">📞 ${esc(it.phone)}</a>`:'';
+    const addrHtml=it.address?`<button onclick="event.stopPropagation();openNaver('${esc(it.address)}')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--bl3);font-weight:700;border:none;background:var(--bl);border-radius:8px;padding:3px 8px;cursor:pointer">📍 ${esc(it.address.slice(0,15))}${it.address.length>15?'...':''}</button>`:'';
+    const imgHtml=imgs.length?`<img class="card-img" src="${imgs[0]}" alt="">`:'';
+    return`<div class="item-card" onclick="openDetail('${it.id}')">
+      <div class="card-top">
+        <div class="platform-badge badge-mat">🔧</div>
+        <div class="card-info">
+          <div class="card-title">${esc(it.name||'이름 없음')}</div>
+          ${it.company?`<div class="card-sub">🏢 ${esc(it.company)}</div>`:''}
+        </div>
+        <span class="card-fav" onclick="event.stopPropagation();toggleFav('${it.id}')">${it.fav?'⭐':'☆'}</span>
+      </div>
+      <div class="card-meta">${catHtml}${tagsHtml}<span class="card-date">${formatDate(it.createdAt)}</span></div>
+      ${priceHtml}
+      ${telHtml||addrHtml?`<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${telHtml}${addrHtml}</div>`:''}
+      ${it.memo?`<div class="card-memo">${esc(it.memo)}</div>`:''}
+      ${imgHtml}
+      <div class="card-actions">
+        <button class="card-edit-btn" onclick="event.stopPropagation();openEdit('${it.id}')">✏️ 수정</button>
+        <button class="card-del-btn" onclick="event.stopPropagation();quickDelete('${it.id}')">🗑️ 삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// CAT
+function renderCatChips(){
+  const wrap=document.getElementById('catChips');
+  const active=wrap.dataset.active||'all';
+  wrap.innerHTML='';
+  const all=document.createElement('div');all.className='chip chip-all';all.style.background='var(--or3)';all.style.borderColor='var(--or3)';all.textContent='전체';
+  all.onclick=()=>{wrap.dataset.active='all';renderList()};wrap.appendChild(all);
+  cats.forEach(c=>{
+    const ch=document.createElement('div');
+    ch.className='chip chip-item'+(active===c?' active':'');
+    if(active===c){ch.style.background='var(--or)';ch.style.color='var(--or3)';ch.style.borderColor='var(--or2)'}
+    ch.textContent=c;ch.onclick=()=>{wrap.dataset.active=c;renderList()};wrap.appendChild(ch);
+  });
+  const add=document.createElement('div');add.className='chip chip-add';add.textContent='＋';
+  add.onclick=()=>{const n=prompt('새 카테고리');if(n&&!cats.includes(n)){cats.push(n);saveCats();renderCatChips();renderCatSelect()}};
+  wrap.appendChild(add);
+}
+function saveCats(){localStorage.setItem('mt_cats',JSON.stringify(cats))}
+function renderCatSelect(){
+  document.getElementById('fCat').innerHTML='<option value="">카테고리 선택</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+}
+
+// AUTOCOMPLETE
+function setupAutocomplete(){
+  const inp=document.getElementById('fCompany');
+  const list=document.getElementById('acList');
+  let debounce;
+  inp.oninput=async()=>{
+    clearTimeout(debounce);
+    const q=inp.value.trim();
+    if(!q){list.style.display='none';return}
+    debounce=setTimeout(async()=>{
+      const sugg=await getAddressbookSuggestions(q);
+      if(!sugg.length){list.style.display='none';return}
+      list.innerHTML=sugg.map(s=>`<div class="autocomplete-item" onclick="fillFromAddressbook('${esc(s.id)}')">
+        <span class="autocomplete-name">${esc(s.name)}</span>
+        <span class="autocomplete-sub">${s.phone?'📞 '+esc(s.phone)+' ':''} ${s.address?'📍 '+esc(s.address):''}</span>
+      </div>`).join('');
+      list.style.display='block';
+    },300);
+  };
+  document.addEventListener('click',e=>{if(!inp.contains(e.target)&&!list.contains(e.target))list.style.display='none'});
+}
+window.fillFromAddressbook=async id=>{
+  const all=await fsGet('ab_contacts');
+  const c=all.find(x=>x.id===id);if(!c)return;
+  document.getElementById('fCompany').value=c.name||'';
+  document.getElementById('fPhone').value=c.phone||'';
+  document.getElementById('fAddress').value=c.address||'';
+  document.getElementById('acList').style.display='none';
+  toast('주소록에서 자동 입력됐어요 ✓');
+};
+
+// PRICE ROWS
+function addPriceRow(data=null){
+  editPrices.push(data||{label:'',amount:''});renderPriceRows();
+}
+function renderPriceRows(){
+  const wrap=document.getElementById('priceRows');
+  wrap.innerHTML=editPrices.map((p,i)=>`<div class="price-row">
+    <input type="text" placeholder="업체/구분" value="${esc(p.label||'')}" oninput="editPrices[${i}].label=this.value" style="flex:1">
+    <input type="text" placeholder="가격" value="${esc(p.amount||'')}" oninput="editPrices[${i}].amount=this.value" style="flex:1">
+    <button class="price-del" onclick="editPrices.splice(${i},1);renderPriceRows()">✕</button>
+  </div>`).join('');
+}
+
+// IMG
+function renderImgPreview(){
+  document.getElementById('imgPreview').innerHTML=editImages.map((img,i)=>`<div class="img-preview-item"><img src="${img}" alt=""><button class="img-del-btn" onclick="editImages.splice(${i},1);renderImgPreview()">✕</button></div>`).join('');
+}
+
+// EDIT MODAL
+function openEdit(id=null){
+  editingId=id;currentTags=[];editImages=[];editPrices=[];
+  document.getElementById('editModalTitle').textContent=id?'🔧 자재 수정':'🔧 자재 추가';
+  renderCatSelect();
+  if(id){
+    const it=items.find(x=>x.id===id);
+    if(it){
+      document.getElementById('fName').value=it.name||'';
+      document.getElementById('fCat').value=it.cat||'';
+      document.getElementById('fUrl').value=it.url||'';
+      document.getElementById('fCompany').value=it.company||'';
+      document.getElementById('fPhone').value=it.phone||'';
+      document.getElementById('fAddress').value=it.address||'';
+      document.getElementById('fMemo').value=it.memo||'';
+      document.getElementById('fFav').checked=it.fav||false;
+      currentTags=Array.isArray(it.tags)?[...it.tags]:[];
+      editImages=Array.isArray(it.images)?[...it.images]:[];
+      editPrices=Array.isArray(it.prices)?JSON.parse(JSON.stringify(it.prices)):[];
+    }
+  }else{
+    ['fName','fUrl','fCompany','fPhone','fAddress','fMemo'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('fCat').value='';document.getElementById('fFav').checked=false;
+  }
+  renderTagInput();renderImgPreview();renderPriceRows();
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEdit(){document.getElementById('editModal').classList.remove('open')}
+function renderTagInput(){
+  const wrap=document.getElementById('tagWrap');wrap.innerHTML='';
+  currentTags.forEach((t,i)=>{
+    const chip=document.createElement('span');chip.className='tag-chip';chip.style.background='var(--or)';chip.style.color='var(--or3)';
+    chip.innerHTML=`${esc(t)}<button class="tag-chip-del" onclick="currentTags.splice(${i},1);renderTagInput()">✕</button>`;
+    wrap.appendChild(chip);
+  });
+  const inp=document.createElement('input');inp.className='tag-input-field';inp.placeholder='태그 입력 후 Enter';
+  inp.onkeydown=e=>{
+    if((e.key==='Enter'||e.key===',')&&inp.value.trim()){e.preventDefault();const v=inp.value.trim();if(!currentTags.includes(v)){currentTags.push(v);renderTagInput()}else inp.value=''}
+    if(e.key==='Backspace'&&!inp.value&&currentTags.length){currentTags.pop();renderTagInput()}
+  };
+  wrap.appendChild(inp);
+}
+
+async function saveItem(){
+  const name=document.getElementById('fName').value.trim();
+  if(!name){toast('자재명을 입력해주세요');return}
+  const phone=document.getElementById('fPhone').value.trim();
+  const address=document.getElementById('fAddress').value.trim();
+  const company=document.getElementById('fCompany').value.trim();
+  const id=editingId||genId();
+  const existing=editingId?items.find(x=>x.id===editingId):null;
+  const data={name,cat:document.getElementById('fCat').value,url:document.getElementById('fUrl').value.trim(),company,phone,address,prices:editPrices.filter(p=>p.amount),tags:currentTags,memo:document.getElementById('fMemo').value.trim(),fav:document.getElementById('fFav').checked,images:editImages,createdAt:existing?.createdAt||Date.now(),updatedAt:Date.now()};
+  const ok=await fsSet('mt_items',id,data);
+  if(!ok){toast('저장 실패');return}
+  if(editingId){const idx=items.findIndex(x=>x.id===editingId);if(idx>=0)items[idx]={id,...data}}else items.unshift({id,...data});
+  // 주소록 자동 동기화
+  if(company&&(phone||address))await syncToAddressbook(company,phone,address,'자재업체');
+  closeEdit();renderList();renderCal();toast('저장 완료 ✓');
+}
+
+async function toggleFav(id){const it=items.find(x=>x.id===id);if(!it)return;it.fav=!it.fav;await fsSet('mt_items',id,it);renderList()}
+async function quickDelete(id){if(!confirm('삭제할까요?'))return;await fsDelete('mt_items',id);items=items.filter(x=>x.id!==id);renderList();renderCal();toast('삭제 완료')}
+
+// DETAIL
+function openDetail(id){
+  const it=items.find(x=>x.id===id);if(!it)return;
+  currentDetailId=id;
+  document.getElementById('detailTitle').textContent='🔧 '+(it.name||'자재');
+  const tags=Array.isArray(it.tags)?it.tags:[];
+  const prices=Array.isArray(it.prices)?it.prices:[];
+  const imgs=Array.isArray(it.images)?it.images:[];
+  document.getElementById('detailBody').innerHTML=`
+    ${imgs.map(img=>`<img class="detail-img" src="${img}" alt="">`).join('')}
+    ${it.cat||tags.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${it.cat?`<span class="tag tag-or">${esc(it.cat)}</span>`:''} ${tags.map((t,i)=>`<span class="tag ${tagColor(i)}">${esc(t)}</span>`).join('')}</div>`:''}
+    ${it.company?`<div class="detail-section"><div class="detail-section-title">업체</div><div style="font-size:14px;font-weight:700">${esc(it.company)}</div></div>`:''}
+    ${it.phone?`<div class="detail-section"><div class="detail-section-title">전화번호</div><a class="contact-action contact-tel" href="tel:${esc(it.phone.replace(/[^0-9+]/g,''))}">📞 ${esc(it.phone)} — 탭하여 전화걸기</a></div>`:''}
+    ${it.address?`<div class="detail-section"><div class="detail-section-title">주소</div><div class="contact-action contact-addr" onclick="openNaver('${esc(it.address)}')">📍 ${esc(it.address)} — 네이버 지도 열기</div></div>`:''}
+    ${prices.length?`<div class="detail-section"><div class="detail-section-title">가격 목록</div>${prices.map(p=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border2);font-size:13px"><span>${esc(p.label||'-')}</span><span style="font-weight:700;color:var(--or3)">${esc(p.amount)}</span></div>`).join('')}</div>`:''}
+    ${it.url?`<div class="detail-section"><div class="detail-section-title">참고 링크</div><a href="${esc(it.url)}" target="_blank" style="color:var(--bl3);font-size:13px">${esc(it.url)}</a></div>`:''}
+    ${it.memo?`<div class="detail-section"><div class="detail-section-title">메모</div><div style="font-size:13px;line-height:1.6;white-space:pre-wrap">${esc(it.memo)}</div></div>`:''}
+    <div style="font-size:11px;color:var(--txt2)">저장일: ${formatDateFull(it.createdAt)}</div>`;
+  document.getElementById('detailModal').classList.add('open');
+}
+async function deleteItem(){if(!confirm('삭제할까요?'))return;await fsDelete('mt_items',currentDetailId);items=items.filter(x=>x.id!==currentDetailId);document.getElementById('detailModal').classList.remove('open');renderList();renderCal();toast('삭제 완료')}
+
+// CAL
+function setupCalNav(){
+  const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
+  document.getElementById('calPrev').onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCal()};
+  document.getElementById('calNext').onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCal()};
+  ['Sm','Md','Lg'].forEach(z=>document.getElementById('zoom'+z).onclick=()=>{calZoom=z.toLowerCase();document.querySelectorAll('.zoom-btn').forEach(b=>b.classList.remove('active'));document.getElementById('zoom'+z).classList.add('active');renderCal()});
+  document.getElementById('calDetailClose').onclick=()=>{document.getElementById('calDetail').style.display='none'};
+}
+function renderCal(){
+  document.getElementById('calMonthLabel').textContent=`${calYear}년 ${calMonth+1}월`;
+  renderCalendarBase({year:calYear,month:calMonth,items,getDateStr:it=>tsToDate(it.createdAt),getEntries:it=>it.name||'자재',getEntryClass:()=>'mat-entry',onDayClick:'openCalDay',zoomClass:calZoom});
+  const mc=items.filter(i=>i.createdAt&&new Date(i.createdAt).getFullYear()===calYear&&new Date(i.createdAt).getMonth()===calMonth).length;
+  document.getElementById('calStats').innerHTML=`<div class="cal-stats-row"><div class="cal-stat-box" style="background:var(--or)"><span class="cal-stat-num" style="color:var(--or3)">${mc}</span><div class="cal-stat-label">이번달 자재</div></div><div class="cal-stat-box lv"><span class="cal-stat-num">${items.length}</span><div class="cal-stat-label">전체 자재</div></div></div>`;
+}
+window.openCalDay=dateStr=>{
+  const day=items.filter(i=>tsToDate(i.createdAt)===dateStr);if(!day.length)return;
+  document.getElementById('calDetailDate').textContent='📅 '+dateStr;
+  document.getElementById('calDetailList').innerHTML=day.map(i=>`<div class="cal-detail-item" onclick="openDetail('${i.id}')"><span style="font-size:18px">🔧</span><span class="cal-detail-name" style="color:var(--or3)">${esc(i.name||'자재')}</span></div>`).join('');
+  document.getElementById('calDetail').style.display='block';
+};
+
+// AI
+function setupAI(){
+  document.getElementById('aiSend').onclick=sendAI;
+  document.getElementById('aiInput').onkeydown=e=>{if(e.key==='Enter')sendAI()};
+}
+async function sendAI(){
+  const q=document.getElementById('aiInput').value.trim();if(!q)return;
+  const key=localStorage.getItem('lr_apiKey');
+  if(!key){appendBubble('설정 탭에서 API 키를 입력해주세요 🔑','bot');return}
+  appendBubble(q,'user');document.getElementById('aiInput').value='';
+  const loading=appendBubble('생각 중...🤔','bot');
+  const ctx=JSON.stringify(items.map(i=>({name:i.name,cat:i.cat,company:i.company,prices:i.prices,tags:i.tags,memo:i.memo})));
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:800,system:`자재 관리 검색 도우미. 데이터: ${ctx}`,messages:[{role:'user',content:q}]})});
+    loading.remove();
+    if(!res.ok){appendBubble('오류. API 키 확인해주세요.','bot');return}
+    const d=await res.json();appendBubble(d.content?.[0]?.text||'답변 없음','bot');
+  }catch{loading.remove();appendBubble('네트워크 오류','bot')}
+}
+function appendBubble(text,type){
+  const chat=document.getElementById('aiChat');
+  const div=document.createElement('div');div.className='ai-bubble ai-bubble-'+(type==='user'?'user':'bot');
+  if(type==='user')div.style.marginLeft='auto';
+  div.textContent=text;chat.appendChild(div);chat.scrollTop=chat.scrollHeight;return div;
+}
+
+// SETTINGS
+function setupSettings(){
+  document.getElementById('saveApiKey').onclick=()=>{const k=document.getElementById('apiKeyInput').value.trim();if(!k)return;localStorage.setItem('lr_apiKey',k);document.getElementById('apiKeyInput').value='';toast('API 키 저장 ✓')};
+  document.getElementById('addCat').onclick=()=>{const v=document.getElementById('newCat').value.trim();if(!v||cats.includes(v))return;cats.push(v);saveCats();document.getElementById('newCat').value='';renderSettings()};
+  document.getElementById('manualBackup').onclick=()=>doBackup('mt',()=>({items,cats}));
+  document.getElementById('exportJsonBtn').onclick=()=>exportJson({items,cats},'materials_backup.json');
+}
+function renderSettings(){
+  document.getElementById('catManage').innerHTML=cats.map((c,i)=>`<div class="cat-manage-item"><span class="cat-manage-name">${esc(c)}</span><button class="cat-del-btn" onclick="cats.splice(${i},1);saveCats();renderSettings();renderCatChips()">✕</button></div>`).join('');
+  document.getElementById('statsArea').innerHTML=`<div class="stat-item"><span>전체 자재</span><span class="stat-val" style="color:var(--or3)">${items.length}개</span></div><div class="stat-item"><span>즐겨찾기</span><span class="stat-val" style="color:var(--or3)">${items.filter(i=>i.fav).length}개</span></div>`;
+  renderBackupList();
+}
+async function renderBackupList(){
+  const all=await fsGet('mt_backups');all.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+  document.getElementById('backupList').innerHTML=all.slice(0,5).map(b=>`<div class="backup-item"><span>${formatDateFull(b.timestamp)}</span><button class="backup-restore-btn" onclick="restoreBackup('${b.id}')">복원</button></div>`).join('')||'<div style="font-size:12px;color:var(--txt2)">백업 없음</div>';
+}
+window.restoreBackup=async id=>{
+  if(!confirm('복원할까요?'))return;
+  const all=await fsGet('mt_backups');const b=all.find(x=>x.id===id);if(!b)return;
+  try{const s=JSON.parse(b.snap);items=s.data.items||[];cats=s.data.cats||[];saveCats();renderList();renderSettings();toast('복원 완료 ✓')}catch{toast('복원 실패')}
+};
+function scheduleAutoBackup(){const lb=parseInt(localStorage.getItem('mt_lastBackup')||'0');if(Date.now()-lb>7*24*60*60*1000)setTimeout(()=>doBackup('mt',()=>({items,cats})),5000)}
+</script>
+</body>
+</html>

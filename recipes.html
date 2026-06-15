@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>레시피 🍳</title>
+<link rel="stylesheet" href="shared.css?v=20260615">
+<style>
+.app-title{color:var(--mn3)}.app-title span{color:var(--lv3)}
+.btab.active{color:var(--mn3)}
+.chip-all{background:var(--mn3);border-color:var(--mn3)}
+.chip-item.active{background:var(--mn);color:var(--mn3);border-color:var(--mn2)}
+.fab{background:linear-gradient(135deg,var(--mn3),var(--lv3));box-shadow:0 4px 20px rgba(29,158,117,.4)}
+.item-card{border-color:var(--mn2)}
+.search-input:focus{border-color:var(--mn3)}
+.calorie-result{background:var(--mn);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--mn3);font-weight:700;margin-top:8px;display:none}
+</style>
+</head>
+<body>
+<div class="app-header">
+  <div class="app-title">레시피<span>컬렉션</span> 🍳</div>
+  <div class="header-right">
+    <a href="./index.html" class="back-btn">🏠</a>
+    <button class="hdr-btn" id="darkToggle" style="background:var(--mn)">🌙</button>
+  </div>
+</div>
+
+<div class="tab-contents">
+  <div class="tab-content active" id="tab-list">
+    <div class="toolbar">
+      <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="recipeSearch" class="search-input" placeholder="레시피 검색..."></div>
+      <div class="toolbar-row">
+        <div class="chips-wrap" id="catChips"></div>
+        <select id="sortSel" class="sort-sel"><option value="newest">최신순</option><option value="oldest">오래된순</option><option value="name">가나다순</option><option value="fav">즐겨찾기</option></select>
+      </div>
+      <div class="list-count" id="listCount">0개</div>
+    </div>
+    <div class="list-area" id="recipeList"></div>
+    <button class="fab fab-mn" id="addBtn">＋</button>
+  </div>
+
+  <div class="tab-content" id="tab-cal">
+    <div class="cal-toolbar">
+      <button class="cal-nav" id="calPrev" style="background:var(--mn);color:var(--mn3)">‹</button>
+      <span class="cal-month" id="calMonthLabel"></span>
+      <button class="cal-nav" id="calNext" style="background:var(--mn);color:var(--mn3)">›</button>
+      <div class="cal-zoom-btns">
+        <button class="zoom-btn" id="zoomSm">S</button>
+        <button class="zoom-btn active" id="zoomMd">M</button>
+        <button class="zoom-btn" id="zoomLg">L</button>
+      </div>
+    </div>
+    <div class="cal-grid-wrap"><div class="cal-dow-row" id="calDow"></div><div class="cal-grid" id="calGrid"></div></div>
+    <div class="cal-detail" id="calDetail" style="display:none">
+      <div class="cal-detail-header"><span id="calDetailDate"></span><button class="cal-detail-close" id="calDetailClose">✕</button></div>
+      <div id="calDetailList"></div>
+    </div>
+    <div class="cal-stats" id="calStats"></div>
+  </div>
+
+  <div class="tab-content" id="tab-ai">
+    <div class="ai-header"><div class="ai-title" style="color:var(--mn3)">🤖 AI 검색</div><div class="ai-sub">저장된 레시피에서 찾아드려요</div></div>
+    <div class="ai-chat-area" id="aiChat"><div class="ai-bubble ai-bubble-bot">레시피 검색 도우미예요 😊<br>예) "계란 들어간 레시피" / "다이어트 음식"</div></div>
+    <div class="ai-input-wrap"><input type="text" id="aiInput" class="ai-input" placeholder="무엇이든 물어보세요..."><button class="ai-send" id="aiSend" style="background:var(--mn3)">➤</button></div>
+  </div>
+
+  <div class="tab-content" id="tab-settings">
+    <div class="settings-area">
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--mn3)">🔑 API 설정</div>
+        <input type="password" id="apiKeyInput" class="settings-input" placeholder="Anthropic API Key">
+        <button class="settings-btn" id="saveApiKey" style="background:var(--mn3)">저장</button>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--mn3)">🏷️ 카테고리 관리</div>
+        <div id="catManage"></div>
+        <div class="add-cat-row"><input type="text" id="newCat" class="settings-input" placeholder="새 카테고리"><button class="settings-btn" id="addCat" style="background:var(--mn3)">추가</button></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--mn3)">💾 백업</div>
+        <div class="settings-row"><button class="settings-btn" id="manualBackup" style="background:var(--mn3)">지금 백업</button><button class="settings-btn btn-outline" id="exportJsonBtn" style="color:var(--mn3);border-color:var(--mn3)">JSON 내보내기</button></div>
+        <div id="backupList"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title" style="color:var(--mn3)">📊 통계</div>
+        <div id="statsArea"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title">🌙 테마</div>
+        <div class="settings-row"><span class="settings-label">다크모드</span><label class="toggle-switch"><input type="checkbox" id="darkModeToggle"><span class="toggle-slider"></span></label></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <button class="btab active" data-tab="list"><span class="btab-icon">🍳</span><span class="btab-label">레시피</span></button>
+  <button class="btab" data-tab="cal"><span class="btab-icon">📅</span><span class="btab-label">달력</span></button>
+  <button class="btab" data-tab="ai"><span class="btab-icon">🤖</span><span class="btab-label">AI</span></button>
+  <button class="btab" data-tab="settings"><span class="btab-icon">⚙️</span><span class="btab-label">설정</span></button>
+</div>
+
+<!-- 추가/수정 모달 -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-sheet modal-sheet-tall">
+    <div class="modal-header"><span class="modal-title" id="editModalTitle" style="color:var(--mn3)">🍳 레시피 추가</span><button class="modal-close" id="editClose">✕</button></div>
+    <div class="modal-body">
+      <label class="form-label">제목 *</label>
+      <input type="text" id="fTitle" class="form-input" placeholder="레시피 제목">
+      <label class="form-label">참고 링크</label>
+      <input type="url" id="fLink" class="form-input" placeholder="https://...">
+      <label class="form-label">카테고리</label>
+      <select id="fCat" class="form-select"></select>
+      <label class="form-label">태그 <span class="form-hint">입력 후 Enter</span></label>
+      <div class="tag-input-wrap" id="tagWrap"></div>
+      <label class="form-label">재료 <span class="form-hint">구매링크 선택입력</span></label>
+      <div id="ingrRows"></div>
+      <button class="add-row-btn add-row-btn-mn" id="addIngrRow">+ 재료 추가</button>
+      <label class="form-label" style="margin-top:12px">자유 메모</label>
+      <textarea id="fMemo" class="form-textarea" placeholder="만드는 방법, 팁, 참고사항..."></textarea>
+      <label class="form-label">칼로리 <span class="form-hint">AI 자동계산 가능</span></label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="fCalorie" class="form-input" placeholder="예: 350kcal" style="flex:1">
+        <button id="calcCalorie" style="white-space:nowrap;padding:0 14px;height:44px;border-radius:13px;background:var(--lv3);color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer">🤖 AI 계산</button>
+      </div>
+      <div class="calorie-result" id="calorieResult"></div>
+      <div class="form-row"><label class="form-label">즐겨찾기</label><label class="toggle-switch"><input type="checkbox" id="fFav"><span class="toggle-slider"></span></label></div>
+      <label class="form-label">이미지 첨부</label>
+      <div class="img-upload-area">
+        <input type="file" id="fImgFile" accept="image/*" capture="environment" style="display:none">
+        <button class="img-btn" style="background:var(--mn);color:var(--mn3);border-color:var(--mn2)" onclick="document.getElementById('fImgFile').click()">📷 카메라/갤러리</button>
+        <button class="img-btn" style="background:var(--mn);color:var(--mn3);border-color:var(--mn2)" id="pasteBtn">📋 붙여넣기</button>
+        <div class="img-preview-wrap" id="imgPreview"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="modal-save modal-save-mn" id="saveBtn">저장하기 💾</button></div>
+  </div>
+</div>
+
+<!-- 상세보기 팝업 -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-sheet modal-sheet-center">
+    <div class="modal-header"><span class="modal-title" id="detailTitle" style="color:var(--mn3)"></span><button class="modal-close" id="detailClose">✕</button></div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer">
+      <button class="modal-save btn-edit" id="detailEdit">✏️ 수정</button>
+      <button class="modal-save" id="shopModeBtn" style="background:var(--mn3)">🛒 장보기</button>
+      <button class="modal-save btn-delete" id="detailDelete">🗑️ 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- 장보기 모달 -->
+<div class="modal-overlay" id="shopModal">
+  <div class="modal-sheet">
+    <div class="modal-header"><span class="modal-title" id="shopTitle" style="color:var(--mn3)">🛒 장보기</span><button class="modal-close" id="shopClose">✕</button></div>
+    <div class="modal-body" id="shopBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="shared.js?v=20260615"></script>
+<script>
+let items=[], cats=[], currentTags=[], editImages=[], editIngrs=[], editingId=null;
+let calYear, calMonth, calZoom='md', currentDetailId=null;
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  cats=JSON.parse(localStorage.getItem('rc_cats')||'[]');
+  setupTheme();
+  setupTabs([],tab=>{if(tab==='cal')renderCal();if(tab==='settings')renderSettings()});
+  setupCalNav();setupAI();setupSettings();
+  const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
+  await loadData();renderList();renderCatChips();
+  document.getElementById('recipeSearch').oninput=renderList;
+  document.getElementById('sortSel').onchange=renderList;
+  document.getElementById('addBtn').onclick=()=>openEdit();
+  document.getElementById('editClose').onclick=closeEdit;
+  document.getElementById('editModal').onclick=e=>{if(e.target===document.getElementById('editModal'))closeEdit()};
+  document.getElementById('saveBtn').onclick=saveItem;
+  document.getElementById('addIngrRow').onclick=()=>{editIngrs.push({name:'',amount:'',buyLink:''});renderIngrRows()};
+  document.getElementById('fImgFile').onchange=e=>{if(e.target.files[0])addImageFromFile(e.target.files[0],editImages,renderImgPreview)};
+  document.getElementById('pasteBtn').onclick=()=>pasteImageClipboard(editImages,renderImgPreview);
+  document.getElementById('calcCalorie').onclick=calcCalorieAI;
+  document.getElementById('detailClose').onclick=()=>document.getElementById('detailModal').classList.remove('open');
+  document.getElementById('detailModal').onclick=e=>{if(e.target===document.getElementById('detailModal'))document.getElementById('detailModal').classList.remove('open')};
+  document.getElementById('detailEdit').onclick=()=>{document.getElementById('detailModal').classList.remove('open');openEdit(currentDetailId)};
+  document.getElementById('detailDelete').onclick=deleteItem;
+  document.getElementById('shopModeBtn').onclick=()=>openShop(currentDetailId);
+  document.getElementById('shopClose').onclick=()=>document.getElementById('shopModal').classList.remove('open');
+  document.getElementById('shopModal').onclick=e=>{if(e.target===document.getElementById('shopModal'))document.getElementById('shopModal').classList.remove('open')};
+  document.addEventListener('paste',e=>{if(!document.getElementById('editModal').classList.contains('open'))return;const it=e.clipboardData?.items;if(!it)return;for(const i of it){if(i.type.startsWith('image/')){addImageFromFile(i.getAsFile(),editImages,renderImgPreview);break}}});
+  scheduleAutoBackup();
+});
+
+async function loadData(){items=await fsGet('rc_items')}
+
+// LIST
+function renderList(){
+  renderCatChips();
+  const q=(document.getElementById('recipeSearch').value||'').toLowerCase();
+  const cat=document.getElementById('catChips').dataset.active||'all';
+  const sort=document.getElementById('sortSel').value;
+  let arr=[...items];
+  if(q)arr=arr.filter(i=>(i.title||'').toLowerCase().includes(q)||(i.cat||'').toLowerCase().includes(q)||(i.memo||'').toLowerCase().includes(q));
+  if(cat!=='all')arr=arr.filter(i=>i.cat===cat);
+  if(sort==='newest')arr.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  else if(sort==='oldest')arr.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  else if(sort==='name')arr.sort((a,b)=>(a.title||'').localeCompare(b.title||''));
+  else if(sort==='fav')arr.sort((a,b)=>(b.fav?1:0)-(a.fav?1:0));
+  document.getElementById('listCount').textContent=arr.length+'개';
+  const list=document.getElementById('recipeList');
+  if(!arr.length){list.innerHTML='<div class="empty-state"><div class="empty-emoji">🍳</div><div class="empty-text">저장된 레시피가 없어요</div></div>';return}
+  list.innerHTML=arr.map(it=>{
+    const tags=Array.isArray(it.tags)?it.tags:[];
+    const ingrs=Array.isArray(it.ingredients)?it.ingredients:[];
+    const imgs=Array.isArray(it.images)?it.images:[];
+    const tagsHtml=tags.map((t,i)=>`<span class="tag ${tagColor(i)}">${esc(t)}</span>`).join('');
+    const catHtml=it.cat?`<span class="tag tag-mn">${esc(it.cat)}</span>`:'';
+    const ingrHtml=ingrs.length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${ingrs.slice(0,4).map(ig=>`<span style="font-size:11px;padding:3px 9px;border-radius:9px;background:var(--yw);color:var(--yw3);font-weight:700">${esc(ig.name)}${ig.amount?' '+esc(ig.amount):''}</span>`).join('')}${ingrs.length>4?`<span style="font-size:11px;padding:3px 9px;border-radius:9px;background:var(--yw);color:var(--yw3);font-weight:700">+${ingrs.length-4}</span>`:''}</div>`:'';
+    const imgHtml=imgs.length?`<img class="card-img" src="${imgs[0]}" alt="">`:'';
+    return`<div class="item-card" onclick="openDetail('${it.id}')">
+      <div class="card-top">
+        <div class="platform-badge badge-recipe">🍳</div>
+        <div class="card-info">
+          <div class="card-title">${esc(it.title||'제목 없음')}</div>
+          ${it.calorie?`<div class="card-sub">🔥 ${esc(it.calorie)}</div>`:''}
+        </div>
+        <span class="card-fav" onclick="event.stopPropagation();toggleFav('${it.id}')">${it.fav?'⭐':'☆'}</span>
+      </div>
+      <div class="card-meta">${catHtml}${tagsHtml}<span class="card-date">${formatDate(it.createdAt)}</span></div>
+      ${ingrHtml}
+      ${it.memo?`<div class="card-memo">${esc(it.memo)}</div>`:''}
+      ${imgHtml}
+      <div class="card-actions">
+        <button class="card-view-btn" style="background:var(--mn);color:var(--mn3);border-color:var(--mn2)" onclick="event.stopPropagation();openDetail('${it.id}')">👁️ 보기</button>
+        <button class="card-edit-btn" onclick="event.stopPropagation();openEdit('${it.id}')">✏️ 수정</button>
+        <button class="card-del-btn" onclick="event.stopPropagation();quickDelete('${it.id}')">🗑️ 삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// CAT
+function renderCatChips(){
+  const wrap=document.getElementById('catChips');
+  const active=wrap.dataset.active||'all';
+  wrap.innerHTML='';
+  const all=document.createElement('div');all.className='chip chip-all';all.style.background='var(--mn3)';all.style.borderColor='var(--mn3)';all.textContent='전체';
+  all.onclick=()=>{wrap.dataset.active='all';renderList()};wrap.appendChild(all);
+  cats.forEach(c=>{
+    const ch=document.createElement('div');ch.className='chip chip-item'+(active===c?' active':'');
+    if(active===c){ch.style.background='var(--mn)';ch.style.color='var(--mn3)';ch.style.borderColor='var(--mn2)'}
+    ch.textContent=c;ch.onclick=()=>{wrap.dataset.active=c;renderList()};wrap.appendChild(ch);
+  });
+  const add=document.createElement('div');add.className='chip chip-add';add.textContent='＋';
+  add.onclick=()=>{const n=prompt('새 카테고리');if(n&&!cats.includes(n)){cats.push(n);saveCats();renderCatChips();renderCatSelect()}};
+  wrap.appendChild(add);
+}
+function saveCats(){localStorage.setItem('rc_cats',JSON.stringify(cats))}
+function renderCatSelect(){document.getElementById('fCat').innerHTML='<option value="">카테고리 선택</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+
+// INGR ROWS
+function renderIngrRows(){
+  const wrap=document.getElementById('ingrRows');
+  wrap.innerHTML=editIngrs.map((ig,i)=>`<div class="ingr-row">
+    <input class="ingr-name" type="text" placeholder="재료명" value="${esc(ig.name||'')}" oninput="editIngrs[${i}].name=this.value">
+    <input class="ingr-amount" type="text" placeholder="양" value="${esc(ig.amount||'')}" oninput="editIngrs[${i}].amount=this.value">
+    <input class="ingr-link" type="url" placeholder="구매링크(선택)" value="${esc(ig.buyLink||'')}" oninput="editIngrs[${i}].buyLink=this.value">
+    <button class="ingr-del" onclick="editIngrs.splice(${i},1);renderIngrRows()">✕</button>
+  </div>`).join('');
+}
+
+// IMG
+function renderImgPreview(){
+  document.getElementById('imgPreview').innerHTML=editImages.map((img,i)=>`<div class="img-preview-item"><img src="${img}" alt=""><button class="img-del-btn" onclick="editImages.splice(${i},1);renderImgPreview()">✕</button></div>`).join('');
+}
+
+// EDIT
+function openEdit(id=null){
+  editingId=id;currentTags=[];editImages=[];editIngrs=[];
+  document.getElementById('editModalTitle').textContent=id?'🍳 레시피 수정':'🍳 레시피 추가';
+  renderCatSelect();
+  if(id){
+    const it=items.find(x=>x.id===id);
+    if(it){
+      document.getElementById('fTitle').value=it.title||'';
+      document.getElementById('fLink').value=it.refLink||'';
+      document.getElementById('fCat').value=it.cat||'';
+      document.getElementById('fMemo').value=it.memo||'';
+      document.getElementById('fCalorie').value=it.calorie||'';
+      document.getElementById('fFav').checked=it.fav||false;
+      currentTags=Array.isArray(it.tags)?[...it.tags]:[];
+      editImages=Array.isArray(it.images)?[...it.images]:[];
+      editIngrs=Array.isArray(it.ingredients)?JSON.parse(JSON.stringify(it.ingredients)):[];
+    }
+  }else{
+    ['fTitle','fLink','fMemo','fCalorie'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('fCat').value='';document.getElementById('fFav').checked=false;
+  }
+  document.getElementById('calorieResult').style.display='none';
+  renderTagInput();renderIngrRows();renderImgPreview();
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEdit(){document.getElementById('editModal').classList.remove('open')}
+function renderTagInput(){
+  const wrap=document.getElementById('tagWrap');wrap.innerHTML='';
+  currentTags.forEach((t,i)=>{
+    const chip=document.createElement('span');chip.className='tag-chip';chip.style.background='var(--mn)';chip.style.color='var(--mn3)';
+    chip.innerHTML=`${esc(t)}<button class="tag-chip-del" onclick="currentTags.splice(${i},1);renderTagInput()">✕</button>`;
+    wrap.appendChild(chip);
+  });
+  const inp=document.createElement('input');inp.className='tag-input-field';inp.placeholder='태그 입력 후 Enter';
+  inp.onkeydown=e=>{
+    if((e.key==='Enter'||e.key===',')&&inp.value.trim()){e.preventDefault();const v=inp.value.trim();if(!currentTags.includes(v)){currentTags.push(v);renderTagInput()}else inp.value=''}
+    if(e.key==='Backspace'&&!inp.value&&currentTags.length){currentTags.pop();renderTagInput()}
+  };
+  wrap.appendChild(inp);
+}
+
+// CALORIE AI
+async function calcCalorieAI(){
+  const key=localStorage.getItem('lr_apiKey');
+  if(!key){toast('설정 탭에서 API 키를 입력해주세요');return}
+  const ingrs=editIngrs.filter(i=>i.name).map(i=>`${i.name} ${i.amount||''}`).join(', ');
+  if(!ingrs){toast('재료를 먼저 입력해주세요');return}
+  const btn=document.getElementById('calcCalorie');btn.textContent='계산중...';btn.disabled=true;
+  const result=document.getElementById('calorieResult');
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,system:'영양 계산 도우미. 재료 목록을 받으면 총 칼로리를 한국어로 간단히 답해주세요. 형식: "약 XXXkcal (재료별 간략 설명)"',messages:[{role:'user',content:`재료: ${ingrs}`}]})});
+    const d=await res.json();
+    const txt=d.content?.[0]?.text||'';
+    result.textContent='🔥 '+txt;result.style.display='block';
+    const match=txt.match(/(\d+)kcal/i);
+    if(match)document.getElementById('fCalorie').value=match[1]+'kcal';
+  }catch{toast('AI 계산 실패')}
+  btn.textContent='🤖 AI 계산';btn.disabled=false;
+}
+
+async function saveItem(){
+  const title=document.getElementById('fTitle').value.trim();
+  if(!title){toast('제목을 입력해주세요');return}
+  const id=editingId||genId();
+  const existing=editingId?items.find(x=>x.id===editingId):null;
+  const data={title,refLink:document.getElementById('fLink').value.trim(),cat:document.getElementById('fCat').value,tags:currentTags,ingredients:editIngrs.filter(i=>i.name),memo:document.getElementById('fMemo').value.trim(),calorie:document.getElementById('fCalorie').value.trim(),fav:document.getElementById('fFav').checked,images:editImages,createdAt:existing?.createdAt||Date.now(),updatedAt:Date.now()};
+  const ok=await fsSet('rc_items',id,data);
+  if(!ok){toast('저장 실패');return}
+  if(editingId){const idx=items.findIndex(x=>x.id===editingId);if(idx>=0)items[idx]={id,...data}}else items.unshift({id,...data});
+  closeEdit();renderList();renderCal();toast('저장 완료 ✓');
+}
+
+async function toggleFav(id){const it=items.find(x=>x.id===id);if(!it)return;it.fav=!it.fav;await fsSet('rc_items',id,it);renderList()}
+async function quickDelete(id){if(!confirm('삭제할까요?'))return;await fsDelete('rc_items',id);items=items.filter(x=>x.id!==id);renderList();renderCal();toast('삭제 완료')}
+
+// DETAIL POPUP
+function openDetail(id){
+  const it=items.find(x=>x.id===id);if(!it)return;
+  currentDetailId=id;
+  const tags=Array.isArray(it.tags)?it.tags:[];
+  const ingrs=Array.isArray(it.ingredients)?it.ingredients:[];
+  const imgs=Array.isArray(it.images)?it.images:[];
+  document.getElementById('detailTitle').textContent='🍳 '+(it.title||'레시피');
+  document.getElementById('detailBody').innerHTML=`
+    ${it.cat||tags.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${it.cat?`<span class="tag tag-mn">${esc(it.cat)}</span>`:''} ${tags.map((t,i)=>`<span class="tag ${tagColor(i)}">${esc(t)}</span>`).join('')} ${it.calorie?`<span class="tag tag-yw">🔥 ${esc(it.calorie)}</span>`:''}</div>`:''}
+    ${it.refLink?`<div class="detail-section"><div class="detail-section-title">참고 링크</div><a href="${esc(it.refLink)}" target="_blank" style="color:var(--bl3);font-size:13px">${esc(it.refLink)}</a></div>`:''}
+    ${ingrs.length?`<div class="detail-section"><div class="detail-section-title">재료</div>${ingrs.map(ig=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--border2);font-size:13px"><span style="flex:1;font-weight:600">${esc(ig.name)}</span><span style="color:var(--txt2)">${esc(ig.amount||'')}</span>${ig.buyLink?`<a href="${esc(ig.buyLink)}" target="_blank" style="font-size:11px;color:var(--bl3);text-decoration:underline">🛒 구매</a>`:''}</div>`).join('')}</div>`:''}
+    ${it.memo?`<div class="detail-section"><div class="detail-section-title">메모</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--txt)">${esc(it.memo)}</div></div>`:''}
+    ${imgs.length?`<div class="detail-section">${imgs.map(img=>`<img class="detail-img" src="${img}" alt="">`).join('')}</div>`:''}
+    <div style="font-size:11px;color:var(--txt2)">저장일: ${formatDateFull(it.createdAt)}</div>`;
+  document.getElementById('detailModal').classList.add('open');
+}
+async function deleteItem(){if(!confirm('삭제할까요?'))return;await fsDelete('rc_items',currentDetailId);items=items.filter(x=>x.id!==currentDetailId);document.getElementById('detailModal').classList.remove('open');renderList();renderCal();toast('삭제 완료')}
+
+// SHOP MODE
+function openShop(id){
+  const it=items.find(x=>x.id===id);if(!it)return;
+  const ingrs=Array.isArray(it.ingredients)?it.ingredients:[];
+  document.getElementById('shopTitle').textContent=`🛒 ${it.title} 장보기`;
+  document.getElementById('shopBody').innerHTML=ingrs.map((ig,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)"><input type="checkbox" id="si${i}" onchange="this.parentElement.style.opacity=this.checked?'.4':'1'" style="width:22px;height:22px;accent-color:var(--mn3)"><label for="si${i}" style="flex:1;font-size:14px;font-weight:600">${esc(ig.name)}</label><span style="font-size:13px;color:var(--txt2)">${esc(ig.amount||'')}</span>${ig.buyLink?`<a href="${esc(ig.buyLink)}" target="_blank" style="font-size:11px;color:var(--bl3);text-decoration:underline;flex-shrink:0">🛒</a>`:''}</div>`).join('');
+  document.getElementById('shopModal').classList.add('open');
+}
+
+// CAL
+function setupCalNav(){
+  const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
+  document.getElementById('calPrev').onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCal()};
+  document.getElementById('calNext').onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCal()};
+  ['Sm','Md','Lg'].forEach(z=>document.getElementById('zoom'+z).onclick=()=>{calZoom=z.toLowerCase();document.querySelectorAll('.zoom-btn').forEach(b=>b.classList.remove('active'));document.getElementById('zoom'+z).classList.add('active');renderCal()});
+  document.getElementById('calDetailClose').onclick=()=>{document.getElementById('calDetail').style.display='none'};
+}
+function renderCal(){
+  document.getElementById('calMonthLabel').textContent=`${calYear}년 ${calMonth+1}월`;
+  renderCalendarBase({year:calYear,month:calMonth,items,getDateStr:it=>tsToDate(it.createdAt),getEntries:it=>it.title||'레시피',getEntryClass:()=>'recipe-entry',onDayClick:'openCalDay',zoomClass:calZoom});
+  const mc=items.filter(i=>i.createdAt&&new Date(i.createdAt).getFullYear()===calYear&&new Date(i.createdAt).getMonth()===calMonth).length;
+  document.getElementById('calStats').innerHTML=`<div class="cal-stats-row"><div class="cal-stat-box mn"><span class="cal-stat-num">${mc}</span><div class="cal-stat-label">이번달 레시피</div></div><div class="cal-stat-box lv"><span class="cal-stat-num">${items.length}</span><div class="cal-stat-label">전체 레시피</div></div></div>`;
+}
+window.openCalDay=dateStr=>{
+  const day=items.filter(i=>tsToDate(i.createdAt)===dateStr);if(!day.length)return;
+  document.getElementById('calDetailDate').textContent='📅 '+dateStr;
+  document.getElementById('calDetailList').innerHTML=day.map(i=>`<div class="cal-detail-item" onclick="openDetail('${i.id}')"><span style="font-size:18px">🍳</span><span class="cal-detail-name" style="color:var(--mn3)">${esc(i.title||'레시피')}</span></div>`).join('');
+  document.getElementById('calDetail').style.display='block';
+};
+
+// AI
+function setupAI(){document.getElementById('aiSend').onclick=sendAI;document.getElementById('aiInput').onkeydown=e=>{if(e.key==='Enter')sendAI()}}
+async function sendAI(){
+  const q=document.getElementById('aiInput').value.trim();if(!q)return;
+  const key=localStorage.getItem('lr_apiKey');
+  if(!key){appendBubble('설정 탭에서 API 키를 입력해주세요 🔑','bot');return}
+  appendBubble(q,'user');document.getElementById('aiInput').value='';
+  const loading=appendBubble('생각 중...🤔','bot');
+  const ctx=JSON.stringify(items.map(i=>({title:i.title,cat:i.cat,tags:i.tags,ingredients:(Array.isArray(i.ingredients)?i.ingredients:[]).map(ig=>ig.name).join(','),memo:i.memo})));
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:800,system:`레시피 검색 도우미. 데이터: ${ctx}`,messages:[{role:'user',content:q}]})});
+    loading.remove();if(!res.ok){appendBubble('오류','bot');return}
+    const d=await res.json();appendBubble(d.content?.[0]?.text||'답변 없음','bot');
+  }catch{loading.remove();appendBubble('네트워크 오류','bot')}
+}
+function appendBubble(text,type){
+  const chat=document.getElementById('aiChat');const div=document.createElement('div');
+  div.className='ai-bubble ai-bubble-'+(type==='user'?'user':'bot');
+  if(type==='user')div.style.marginLeft='auto';
+  div.textContent=text;chat.appendChild(div);chat.scrollTop=chat.scrollHeight;return div;
+}
+
+// SETTINGS
+function setupSettings(){
+  document.getElementById('saveApiKey').onclick=()=>{const k=document.getElementById('apiKeyInput').value.trim();if(!k)return;localStorage.setItem('lr_apiKey',k);document.getElementById('apiKeyInput').value='';toast('API 키 저장 ✓')};
+  document.getElementById('addCat').onclick=()=>{const v=document.getElementById('newCat').value.trim();if(!v||cats.includes(v))return;cats.push(v);saveCats();document.getElementById('newCat').value='';renderSettings()};
+  document.getElementById('manualBackup').onclick=()=>doBackup('rc',()=>({items,cats}));
+  document.getElementById('exportJsonBtn').onclick=()=>exportJson({items,cats},'recipes_backup.json');
+}
+function renderSettings(){
+  document.getElementById('catManage').innerHTML=cats.map((c,i)=>`<div class="cat-manage-item"><span class="cat-manage-name">${esc(c)}</span><button class="cat-del-btn" onclick="cats.splice(${i},1);saveCats();renderSettings();renderCatChips()">✕</button></div>`).join('');
+  document.getElementById('statsArea').innerHTML=`<div class="stat-item"><span>전체 레시피</span><span class="stat-val" style="color:var(--mn3)">${items.length}개</span></div><div class="stat-item"><span>즐겨찾기</span><span class="stat-val" style="color:var(--mn3)">${items.filter(i=>i.fav).length}개</span></div>`;
+  renderBackupList();
+}
+async function renderBackupList(){
+  const all=await fsGet('rc_backups');all.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+  document.getElementById('backupList').innerHTML=all.slice(0,5).map(b=>`<div class="backup-item"><span>${formatDateFull(b.timestamp)}</span><button class="backup-restore-btn" onclick="restoreBackup('${b.id}')">복원</button></div>`).join('')||'<div style="font-size:12px;color:var(--txt2)">백업 없음</div>';
+}
+window.restoreBackup=async id=>{
+  if(!confirm('복원할까요?'))return;const all=await fsGet('rc_backups');const b=all.find(x=>x.id===id);if(!b)return;
+  try{const s=JSON.parse(b.snap);items=s.data.items||[];cats=s.data.cats||[];saveCats();renderList();renderSettings();toast('복원 완료 ✓')}catch{toast('복원 실패')}
+};
+function scheduleAutoBackup(){const lb=parseInt(localStorage.getItem('rc_lastBackup')||'0');if(Date.now()-lb>7*24*60*60*1000)setTimeout(()=>doBackup('rc',()=>({items,cats})),5000)}
+</script>
+</body>
+</html>
