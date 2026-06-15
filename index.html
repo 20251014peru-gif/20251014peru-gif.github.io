@@ -7,12 +7,19 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#F0F0F5;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh;}
+
 .hdr{background:#fff;border-bottom:1px solid #E5E7EB;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;}
+.hdr-left{display:flex;flex-direction:column;}
 .hdr-title{font-size:20px;font-weight:800;letter-spacing:-0.5px;}
 .hdr-sub{font-size:11px;color:#9CA3AF;margin-top:2px;}
-.date-badge{font-size:11px;padding:4px 12px;background:#F3F4F6;border-radius:20px;color:#6B7280;}
+.date-badge{font-size:11px;padding:4px 12px;background:#F3F4F6;border-radius:20px;color:#6B7280;white-space:nowrap;}
+
 .wrap{padding:16px;max-width:900px;margin:0 auto;}
+
+/* 3열 2행 그리드 */
 .axis-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+/* 축 카드 */
 .axis{border-radius:14px;overflow:hidden;border:1.5px solid #E5E7EB;background:#fff;transition:box-shadow 0.2s;}
 .axis.open{box-shadow:0 4px 16px rgba(0,0,0,0.08);}
 .axis-hdr{display:flex;flex-direction:column;align-items:center;padding:16px 10px 12px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;text-align:center;}
@@ -22,39 +29,57 @@ body{background:#F0F0F5;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun 
 .axis-desc{font-size:10px;color:#9CA3AF;line-height:1.4;}
 .axis-chevron{font-size:11px;color:#D1D5DB;margin-top:6px;transition:transform 0.2s;display:block;}
 .axis.open .axis-chevron{transform:rotate(180deg);}
-.ax1 .axis-icon{background:#EDE9FE;} .ax1 .axis-name{color:#6D28D9;}
-.ax2 .axis-icon{background:#DBEAFE;} .ax2 .axis-name{color:#1D4ED8;}
+
+/* 축별 색상 */
+.ax1 .axis-icon{background:#EDE9FE;} .ax1 .axis-name{color:#7C3AED;}
+.ax2 .axis-icon{background:#FEF3C7;} .ax2 .axis-name{color:#D97706;}
 .ax3 .axis-icon{background:#D1FAE5;} .ax3 .axis-name{color:#059669;}
-.ax4 .axis-icon{background:#FEE2E2;} .ax4 .axis-name{color:#DC2626;}
-.ax5 .axis-icon{background:#FEF3C7;} .ax5 .axis-name{color:#D97706;}
-.ax6 .axis-icon{background:#FCE7F3;} .ax6 .axis-name{color:#9D174D;}
-.axis-body{display:none;padding:0 8px 10px;border-top:1px solid #F3F4F6;}
+.ax4 .axis-icon{background:#DBEAFE;} .ax4 .axis-name{color:#2563EB;}
+.ax5 .axis-icon{background:#FCE7F3;} .ax5 .axis-name{color:#DB2777;}
+.ax6 .axis-icon{background:#FEE2E2;} .ax6 .axis-name{color:#DC2626;}
+
+/* 앱 목록 (접힘) */
+.axis-body{display:none;border-top:1px solid #F3F4F6;padding:8px;}
 .axis.open .axis-body{display:block;}
-.app-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;text-decoration:none;color:#1A1A2E;margin-top:6px;border:1px solid #F3F4F6;background:#FAFAFA;transition:all 0.15s;}
-.app-item:hover{background:#F0F0F5;border-color:#E5E7EB;}
-.app-em{font-size:16px;flex-shrink:0;}
-.app-nm{font-size:11px;font-weight:700;line-height:1.3;}
-.app-ds{font-size:10px;color:#9CA3AF;}
-.app-item.new-item{border-color:#F4C0D1;background:#FDF6FF;}
-.app-item.new-item .app-nm{color:#D4537E;}
-.new-tag{font-size:9px;padding:2px 7px;border-radius:8px;background:#FDE8F5;color:#D4537E;font-weight:700;margin-left:auto;flex-shrink:0;white-space:nowrap;}
-.app-coming{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;margin-top:6px;background:#F9FAFB;border:1px dashed #E5E7EB;}
+
+/* 앱 항목 */
+.app-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;text-decoration:none;color:#1A1A2E;transition:background 0.15s;position:relative;}
+.app-item:hover{background:#F9FAFB;}
+.app-item:active{background:#F3F4F6;}
+.app-em{font-size:20px;width:32px;text-align:center;flex-shrink:0;}
+.app-nm{font-size:13px;font-weight:600;line-height:1.3;}
+.app-ds{font-size:10px;color:#9CA3AF;margin-top:1px;line-height:1.3;}
 .app-coming .app-nm{color:#9CA3AF;}
-.coming-tag{font-size:9px;padding:1px 6px;border-radius:8px;background:#F3F4F6;color:#9CA3AF;margin-left:auto;flex-shrink:0;}
-.sub-list{padding:6px 8px;background:#F9FAFB;border-radius:8px;margin-top:4px;}
-.sub-item{font-size:10px;color:#6B7280;padding:3px 0;border-bottom:1px solid #F3F4F6;display:flex;align-items:center;gap:6px;}
-.sub-item:last-child{border-bottom:none;}
-.quote{margin-top:14px;padding:14px 16px;background:#fff;border-radius:12px;border-left:3px solid #6366F1;}
-.quote-text{font-size:12px;color:#6B7280;line-height:1.7;font-style:italic;}
-.quote-author{font-size:10px;color:#9CA3AF;margin-top:4px;}
+.app-coming{cursor:default;pointer-events:none;}
+
+/* 구분선 그룹 */
+.app-group{margin-top:6px;margin-bottom:2px;padding:4px 10px;}
+.app-group-label{font-size:10px;font-weight:700;color:#9CA3AF;letter-spacing:0.5px;text-transform:uppercase;}
+
+/* NEW 뱃지 */
+.new-tag{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;background:#EF4444;color:#fff;padding:2px 6px;border-radius:20px;}
+
+/* 명언 */
+.quote-box{background:#fff;border-radius:14px;border:1.5px solid #E5E7EB;padding:16px 20px;margin-top:10px;text-align:center;}
+.quote-text{font-size:13px;color:#374151;line-height:1.7;font-style:italic;}
+.quote-author{font-size:11px;color:#9CA3AF;margin-top:6px;}
+
+/* 반응형 */
+@media(max-width:600px){
+  .axis-grid{grid-template-columns:1fr 1fr;}
+  .hdr-title{font-size:17px;}
+}
+@media(max-width:380px){
+  .axis-grid{grid-template-columns:1fr 1fr;}
+}
 </style>
 </head>
 <body>
 
 <div class="hdr">
-  <div>
-    <div class="hdr-title">&#9889; 나의 시스템</div>
-    <div class="hdr-sub">6대 축으로 삶을 설계한다</div>
+  <div class="hdr-left">
+    <div class="hdr-title">🏠 나의 시스템</div>
+    <div class="hdr-sub">서희타워 통합 관리</div>
   </div>
   <div class="date-badge" id="datebadge"></div>
 </div>
@@ -65,186 +90,161 @@ body{background:#F0F0F5;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun 
     <!-- 1축: 개인 관리 -->
     <div class="axis ax1" id="ax1">
       <div class="axis-hdr" onclick="toggle('ax1')">
-        <div class="axis-icon">&#128450;&#65039;</div>
+        <div class="axis-icon">🧘</div>
         <div class="axis-name">개인 관리</div>
-        <div class="axis-desc">생각·구매·통화·가족·여행 기록</div>
-        <span class="axis-chevron">&#9660;</span>
+        <div class="axis-desc">일상·루틴·자기계발</div>
+        <span class="axis-chevron">▼</span>
       </div>
       <div class="axis-body">
         <a class="app-item" href="./personal.html">
-          <span class="app-em">&#128450;&#65039;</span>
-          <div><div class="app-nm">개인 관리 대시보드</div><div class="app-ds">기록·사진·검색·AI 대화·진단</div></div>
+          <span class="app-em">📁</span>
+          <div><div class="app-nm">개인 관리 대시보드</div><div class="app-ds">보관함·연락처·차계부·맛집·독서</div></div>
         </a>
         <a class="app-item" href="./daily-routine.html">
-          <span class="app-em">&#9728;&#65039;</span>
-          <div><div class="app-nm">하루 루틴</div><div class="app-ds">아침·저녁 체크 + 기록</div></div>
+          <span class="app-em">☀️</span>
+          <div><div class="app-nm">하루 루틴</div><div class="app-ds">아침·저녁 루틴 체크</div></div>
         </a>
         <a class="app-item" href="./my-system.html">
-          <span class="app-em">&#129504;</span>
-          <div><div class="app-nm">나를 알아가는 시스템</div><div class="app-ds">무의식 신호 · 패턴 발견</div></div>
+          <span class="app-em">🧠</span>
+          <div><div class="app-nm">나를 알아가는 시스템</div><div class="app-ds">자기분석·성격·가치관</div></div>
         </a>
-        <a class="app-item" href="./links.html" style="border-color:#B5D4F4;background:#EEF5FD;">
+        <div class="app-group"><span class="app-group-label">✨ 컬렉션</span></div>
+        <a class="app-item" href="./links.html">
           <span class="app-em">🔗</span>
-          <div class="app-nm" style="color:#185FA5;">링크 컬렉션</div>
-          <span style="font-size:9px;padding:2px 7px;border-radius:8px;background:#E8F3FD;color:#185FA5;font-weight:700;margin-left:auto;flex-shrink:0;">NEW</span>
+          <div><div class="app-nm">링크 컬렉션</div><div class="app-ds">링크 저장 · 달력 · AI검색</div></div>
         </a>
-        <a class="app-item" href="./materials.html" style="border-color:#D4956A;background:#FDF5EE;">
+        <a class="app-item" href="./materials.html">
           <span class="app-em">🔧</span>
-          <div class="app-nm" style="color:#8B4513;">자재 관리</div>
-          <span style="font-size:9px;padding:2px 7px;border-radius:8px;background:#FDF0E6;color:#8B4513;font-weight:700;margin-left:auto;flex-shrink:0;">NEW</span>
+          <div><div class="app-nm">자재 관리</div><div class="app-ds">자재 저장 · 달력 · AI검색</div></div>
         </a>
-        <a class="app-item" href="./recipes.html" style="border-color:#FAC775;background:#FFFBF0;">
+        <a class="app-item" href="./recipes.html">
           <span class="app-em">🍳</span>
-          <div class="app-nm" style="color:#D97706;">레시피 컬렉션</div>
-          <span style="font-size:9px;padding:2px 7px;border-radius:8px;background:#FEF8E8;color:#D97706;font-weight:700;margin-left:auto;flex-shrink:0;">NEW</span>
+          <div><div class="app-nm">레시피 컬렉션</div><div class="app-ds">레시피 저장 · 달력 · AI검색</div></div>
         </a>
-        <a class="app-item" href="./addressbook.html" style="border-color:#9FE1CB;background:#F0FBF6;">
-          <span class="app-em">📒</span>
-          <div class="app-nm" style="color:#059669;">주소록</div>
-          <span style="font-size:9px;padding:2px 7px;border-radius:8px;background:#E8F8F0;color:#059669;font-weight:700;margin-left:auto;flex-shrink:0;">NEW</span>
+        <a class="app-item" href="./photos-scan.html">
+          <span class="app-em">📷</span>
+          <div><div class="app-nm">사진 스캔</div><div class="app-ds">문서·영수증 AI크롭 · 편집 · AI검색</div></div>
+          <span class="new-tag">NEW</span>
         </a>
       </div>
     </div>
 
-    <!-- 2축: 투자 -->
+    <!-- 2축: 투자 시스템 -->
     <div class="axis ax2" id="ax2">
       <div class="axis-hdr" onclick="toggle('ax2')">
-        <div class="axis-icon">&#128200;</div>
+        <div class="axis-icon">📈</div>
         <div class="axis-name">투자 시스템</div>
-        <div class="axis-desc">시장 분석 · 수급 · 섹터</div>
-        <span class="axis-chevron">&#9660;</span>
+        <div class="axis-desc">한국·미국 주식</div>
+        <span class="axis-chevron">▼</span>
       </div>
       <div class="axis-body">
         <a class="app-item" href="./market-check.html">
-          <span class="app-em">&#128202;</span>
-          <div><div class="app-nm">장 전 시장 체크</div><div class="app-ds">거시지표 · 수급 · AI 분석</div></div>
+          <span class="app-em">📊</span>
+          <div><div class="app-nm">장 전 시장 체크</div><div class="app-ds">장전·장후 조건 저장</div></div>
         </a>
-        <div class="app-coming">
-          <span class="app-em">&#128203;</span>
-          <div><div class="app-nm">투자 판단 체크리스트</div></div>
-          <span class="coming-tag">준비중</span>
-        </div>
-        <div class="app-coming">
-          <span class="app-em">&#127807;</span>
-          <div><div class="app-nm">모멘텀 눌림목 대시보드</div></div>
-          <span class="coming-tag">준비중</span>
-        </div>
+        <a class="app-item" href="./youtube.html">
+          <span class="app-em">▶️</span>
+          <div><div class="app-nm">유튜브 분석</div><div class="app-ds">미주은·소수몽키·김교수</div></div>
+        </a>
+        <a class="app-item app-coming">
+          <span class="app-em">🤖</span>
+          <div><div class="app-nm">AI 스캐너</div><div class="app-ds">준비중</div></div>
+        </a>
       </div>
     </div>
 
-    <!-- 3축: 부동산 -->
+    <!-- 3축: 부동산 시스템 -->
     <div class="axis ax3" id="ax3">
       <div class="axis-hdr" onclick="toggle('ax3')">
-        <div class="axis-icon">&#127968;</div>
+        <div class="axis-icon">🏠</div>
         <div class="axis-name">부동산 시스템</div>
-        <div class="axis-desc">프로젝트 · 비용 · 인테리어</div>
-        <span class="axis-chevron">&#9660;</span>
+        <div class="axis-desc">매입·인테리어·매도</div>
+        <span class="axis-chevron">▼</span>
       </div>
       <div class="axis-body">
-        <a class="app-item" href="./realestate-project.html">
-          <span class="app-em">&#128296;</span>
-          <div><div class="app-nm">부동산 프로젝트 관리</div><div class="app-ds">공종·비용·전후사진·업체·서류 통합</div></div>
-        </a>
         <a class="app-item" href="./realestate.html">
-          <span class="app-em">&#127968;</span>
-          <div><div class="app-nm">부동산 투자 관리</div><div class="app-ds">비용기록 · 합산 · 준비물 · 메모 · 달력</div></div>
+          <span class="app-em">💰</span>
+          <div><div class="app-nm">부동산 투자 관리</div><div class="app-ds">비용·체크리스트·메모</div></div>
         </a>
-        <a class="app-item" href="./photos.html">
-          <span class="app-em">&#128247;</span>
-          <div><div class="app-nm">사진 보관함</div><div class="app-ds">부동산·업무·여행·개인 · 그림표시 · 카톡공유</div></div>
+        <a class="app-item" href="./realestate-project.html">
+          <span class="app-em">🏗️</span>
+          <div><div class="app-nm">프로젝트 관리</div><div class="app-ds">공정·자재·업체·비용 통합</div></div>
         </a>
       </div>
     </div>
 
-    <!-- 4축: 업무 -->
+    <!-- 4축: 업무 시스템 -->
     <div class="axis ax4" id="ax4">
       <div class="axis-hdr" onclick="toggle('ax4')">
-        <div class="axis-icon">&#127970;</div>
+        <div class="axis-icon">💼</div>
         <div class="axis-name">업무 시스템</div>
-        <div class="axis-desc">서희타워 · 품의서 · 민원</div>
-        <span class="axis-chevron">&#9660;</span>
+        <div class="axis-desc">서희타워 시설관리</div>
+        <span class="axis-chevron">▼</span>
       </div>
       <div class="axis-body">
         <a class="app-item" href="./worklog.html">
-          <span class="app-em">&#128203;</span>
-          <div><div class="app-nm">통합 업무일지</div><div class="app-ds">업무·계획·통화·휴가·회의·전달·달력</div></div>
+          <span class="app-em">📝</span>
+          <div><div class="app-nm">통합 업무일지</div><div class="app-ds">업무·청소·통화·메모·회의·지출</div></div>
         </a>
         <a class="app-item" href="./staff.html">
-          <span class="app-em">&#128101;</span>
-          <div><div class="app-nm">직원 관리 기록</div><div class="app-ds">전달·중요행동·처리현황</div></div>
+          <span class="app-em">👥</span>
+          <div><div class="app-nm">직원 관리</div><div class="app-ds">12명 근태·업무지시·주의경고</div></div>
         </a>
         <a class="app-item" href="./contacts.html">
-          <span class="app-em">&#128222;</span>
+          <span class="app-em">📞</span>
           <div><div class="app-nm">업체 연락처</div><div class="app-ds">분야별 · 명함 스캔 자동입력</div></div>
         </a>
         <a class="app-item" href="./parking.html">
-          <span class="app-em">&#128663;</span>
-          <div><div class="app-nm">방문객 주차대장</div><div class="app-ds">OCR 입력 · 층별집계 · 다빈도·장기주차 분석</div></div>
+          <span class="app-em">🚗</span>
+          <div><div class="app-nm">방문객 주차대장</div><div class="app-ds">OCR 입력 · 층별집계 · 차량분석</div></div>
         </a>
-        <div class="app-coming">
-          <span class="app-em">&#128196;</span>
-          <div><div class="app-nm">품의서 도우미</div></div>
-          <span class="coming-tag">준비중</span>
-        </div>
-        <div class="app-coming">
-          <span class="app-em">&#128101;</span>
-          <div><div class="app-nm">입주민 민원 기록</div></div>
-          <span class="coming-tag">준비중</span>
-        </div>
       </div>
     </div>
 
     <!-- 5축: 학습 -->
     <div class="axis ax5" id="ax5">
       <div class="axis-hdr" onclick="toggle('ax5')">
-        <div class="axis-icon">&#128218;</div>
-        <div class="axis-name">학습 시스템</div>
-        <div class="axis-desc">유튜브 · Python · 프레임워크</div>
-        <span class="axis-chevron">&#9660;</span>
+        <div class="axis-icon">📚</div>
+        <div class="axis-name">학습</div>
+        <div class="axis-desc">Python · 투자 공부</div>
+        <span class="axis-chevron">▼</span>
       </div>
       <div class="axis-body">
-        <a class="app-item" href="./youtube.html">
-          <span class="app-em">&#127381;</span>
-          <div><div class="app-nm">유튜브 채널 분석</div><div class="app-ds">요약 · AI 분석 · 기록</div></div>
+        <a class="app-item app-coming">
+          <span class="app-em">🐍</span>
+          <div><div class="app-nm">Python 학습 기록</div><div class="app-ds">준비중</div></div>
         </a>
-        <div class="sub-list">
-          <div class="sub-item">&#128218; <span>미주은 — EPS · 밸류에이션 · 모멘텀</span></div>
-          <div class="sub-item">&#129351; <span>소수몽키 — 성장주 · 나스닥 · 기술주</span></div>
-          <div class="sub-item">&#127979; <span>김교수 — 거시경제 · 금리 · 자산배분</span></div>
-        </div>
-        <div class="app-coming">
-          <span class="app-em">&#128013;</span>
-          <div><div class="app-nm">Python 학습 트래커</div></div>
-          <span class="coming-tag">준비중</span>
-        </div>
-        <div class="app-coming">
-          <span class="app-em">&#127775;</span>
-          <div><div class="app-nm">미주은 프레임워크 정리</div></div>
-          <span class="coming-tag">준비중</span>
-        </div>
+        <a class="app-item app-coming">
+          <span class="app-em">📖</span>
+          <div><div class="app-nm">투자 공부 노트</div><div class="app-ds">준비중</div></div>
+        </a>
       </div>
     </div>
 
     <!-- 6축: 독서 -->
     <div class="axis ax6" id="ax6">
       <div class="axis-hdr" onclick="toggle('ax6')">
-        <div class="axis-icon">&#128215;</div>
-        <div class="axis-name">독서 기록</div>
-        <div class="axis-desc">읽은 책 · 인사이트 · 메모</div>
-        <span class="axis-chevron">&#9660;</span>
+        <div class="axis-icon">📕</div>
+        <div class="axis-name">독서</div>
+        <div class="axis-desc">책·메모·인사이트</div>
+        <span class="axis-chevron">▼</span>
       </div>
       <div class="axis-body">
-        <a class="app-item" href="./personal.html#독서">
-          <span class="app-em">&#128214;</span>
-          <div><div class="app-nm">독서 기록 앱</div><div class="app-ds">책 기록 · 핵심 문장 · 별점 · 사진</div></div>
+        <a class="app-item" href="./personal.html#reading">
+          <span class="app-em">📕</span>
+          <div><div class="app-nm">독서 기록</div><div class="app-ds">개인관리 앱 내 독서 탭</div></div>
+        </a>
+        <a class="app-item app-coming">
+          <span class="app-em">💡</span>
+          <div><div class="app-nm">인사이트 노트</div><div class="app-ds">준비중</div></div>
         </a>
       </div>
     </div>
 
-  </div>
+  </div><!-- /axis-grid -->
 
-  <div class="quote">
-    <div class="quote-text">"시스템임을 아는 사람만이 그 시스템을 설계할 수 있다."</div>
+  <div class="quote-box">
+    <div class="quote-text">"작은 습관이 쌓여 큰 변화를 만든다."</div>
     <div class="quote-author">— 오늘의 원칙</div>
   </div>
 </div>
