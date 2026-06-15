@@ -1,5 +1,5 @@
-/* photos-scan.js  v6.0-20260616
-   수정: 크롭 v6.0 완전재작성(막대기+모서리 모두 작동)
+/* photos-scan.js  v6.1-20260616
+   수정: Flask서버 OpenCV 연동(서버→브라우저CV→AI fallback)
    URL ?mode=personal (기본) / ?mode=work 로 개인/업무 완전 분리
    - IndexedDB: PhotoScanDB_personal / PhotoScanDB_work
    - localStorage 키: photoscan_photos_personal / photoscan_photos_work 등
@@ -313,168 +313,264 @@ async function handleFiles(files, append=false, autoScan=false){
 }
 const blobToDataUrl = blob => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(blob); });
 
-/* ═══════════════════════════════════════
-   OpenCV.js 문서 자동감지 시스템
-   ═══════════════════════════════════════ */
-let cvReady = false;
+/* ═══════════════════════════════════════════════════════
+   문서 자동감지 시스템 v6.3
+   우선순위:
+     1) 🖥️ Flask 서버 Python OpenCV (컴 켜져 있을 때 — 최고 정확도)
+     2) 🤖 Claude AI 2단계 분석    (컴 꺼져 있을 때 — 자동 fallback)
+   ═══════════════════════════════════════════════════════ */
+
+let cvReady = false;  // 브라우저 OpenCV (예비)
 let cvError  = false;
 
-function onOpenCvReady(){
-  cvReady = true;
-  console.log('OpenCV.js 로드 완료');
-  // 로딩 배지 제거
-  const b = document.getElementById('cvStatusBadge');
-  if(b) b.remove();
-}
-function onOpenCvError(){
-  cvError = true;
-  console.warn('OpenCV.js 로드 실패 — AI 크롭으로 대체');
-  const b = document.getElementById('cvStatusBadge');
-  if(b){ b.textContent='⚠️ OpenCV 로드 실패'; setTimeout(()=>b.remove(), 3000); }
+function onOpenCvReady(){ cvReady=true; const b=document.getElementById('cvStatusBadge'); if(b) b.remove(); }
+function onOpenCvError(){ cvError=true;  const b=document.getElementById('cvStatusBadge'); if(b) b.remove(); }
+
+/* ── 서버 주소 (app.py 포트에 맞게) ── */
+const SCAN_SERVER = 'http://localhost:5001';
+
+/* ── 서버 생존 확인 (1.5초 타임아웃) ── */
+async function serverAlive(){
+  try{
+    const r = await fetch(SCAN_SERVER + '/api/scan/detect', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      // 1픽셀 GIF — 실제 처리 없이 응답만 확인
+      body: JSON.stringify({image:'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='}),
+      signal: AbortSignal.timeout(1500)
+    });
+    return r.status < 500; // 200 또는 400이면 서버 살아있음
+  } catch{ return false; }
 }
 
-/* 문서 감지 진입점 */
+/* ═══════════════════════════════════════
+   메인 진입점 — 자동 경로 선택
+   ═══════════════════════════════════════ */
 async function aiDocCrop(silent=false){
   if(!modalImages.length){ if(!silent) showToast('먼저 사진을 추가하세요'); return; }
 
   const statusEl = document.getElementById('aiCropStatus');
   const btn      = document.getElementById('btnAiCrop');
-  btn.disabled   = true;
+  if(btn) btn.disabled = true;
 
-  if(cvReady){
-    // ── OpenCV 경로 ──
-    statusEl.textContent = '📄 OpenCV로 문서 감지 중...';
-    try{
-      await openCvDocScan(modalImages[modalSlide].dataUrl, silent);
-    } catch(e){
-      console.error('OpenCV scan error:', e);
-      statusEl.textContent = '⚠️ 감지 실패: ' + e.message;
-    } finally{
-      btn.disabled = false;
+  try{
+    const alive = await serverAlive();
+
+    if(alive){
+      /* ─── 경로 1: 서버 Python OpenCV ─── */
+      statusEl.textContent = '🖥️ 서버(Python OpenCV)로 감지 중...';
+      await runServerScan(silent, statusEl);
+    } else {
+      /* ─── 경로 2: Claude AI ─── */
+      statusEl.textContent = '🤖 AI로 문서 감지 중... (1~3단계)';
+      await aiDocCropFallback(silent, statusEl, btn);
     }
-  } else if(!cvError){
-    // 아직 로딩 중
-    statusEl.textContent = '⏳ OpenCV 로딩 중... (잠시 후 다시 시도)';
-    btn.disabled = false;
-  } else {
-    // OpenCV 실패 → Anthropic AI fallback
-    await aiDocCropFallback(silent, statusEl, btn);
+  } catch(e){
+    console.error('aiDocCrop error:', e);
+    statusEl.textContent = '⚠️ 오류: ' + e.message;
+  } finally{
+    if(btn) btn.disabled = false;
   }
 }
 
-/* ── OpenCV 문서감지 핵심 로직 ── */
-let docCorners = []; // [{x,y}] 4개 꼭짓점 (캔버스 좌표)
-let docScanImgData = null; // 원본 dataUrl 보관
-let docScanScale   = 1;
+/* ═══════════════════════════════════════
+   경로 1: Flask 서버 Python OpenCV
+   ═══════════════════════════════════════ */
+async function runServerScan(silent, statusEl){
+  const overlay = document.getElementById('scanOverlay');
+  if(silent) overlay.style.display = 'flex';
 
-async function openCvDocScan(dataUrl, silent=false){
-  const statusEl = document.getElementById('aiCropStatus');
-  docScanImgData = dataUrl;
+  try{
+    const m = modalImages[modalSlide];
+    // 1600px 리사이즈 후 서버 전송
+    const small = await resizeForAI(m.dataUrl, 1600);
 
-  // 1. 이미지 → HTMLImageElement
-  const img = await loadImage(dataUrl);
+    const resp = await fetch(SCAN_SERVER + '/api/scan/detect', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({image: small}),
+      signal: AbortSignal.timeout(15000)
+    });
+    if(!resp.ok) throw new Error(`서버 오류 ${resp.status}`);
+    const result = await resp.json();
+    if(result.error) throw new Error(result.error);
 
-  // 2. OpenCV Mat 생성 (처리용 축소 버전)
-  const MAX = 800;
-  const scale = Math.min(MAX/img.width, MAX/img.height, 1);
-  const w = Math.round(img.width * scale);
-  const h = Math.round(img.height * scale);
-  docScanScale = scale;
+    // 좌표를 원본 이미지 기준으로 역변환
+    const origImg  = await loadImage(m.dataUrl);
+    const smallImg = await loadImage(small);
+    const sX = origImg.width  / smallImg.width;
+    const sY = origImg.height / smallImg.height;
 
-  const tmpC = document.createElement('canvas');
-  tmpC.width=w; tmpC.height=h;
-  tmpC.getContext('2d').drawImage(img, 0, 0, w, h);
+    docCorners = sortCorners(
+      result.corners.map(([x,y]) => ({
+        x: Math.round(Math.max(0, Math.min(origImg.width,  x*sX))),
+        y: Math.round(Math.max(0, Math.min(origImg.height, y*sY)))
+      }))
+    );
+    docScanImgData = m.dataUrl;
 
-  const src = cv.imread(tmpC);
-  const dst = new cv.Mat();
+    statusEl.textContent = result.found
+      ? '✅ 서버 감지 완료 — 꼭짓점 조정 후 크롭'
+      : '⚠️ 문서 경계 불명확 — 꼭짓점을 조정하세요';
 
-  // 3. 그레이스케일 → 가우시안 블러 → Canny 엣지
-  const gray   = new cv.Mat();
-  const blurred= new cv.Mat();
-  const edges  = new cv.Mat();
-  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-  cv.GaussianBlur(gray, blurred, new cv.Size(5,5), 0);
-  cv.Canny(blurred, edges, 75, 200);
+    openDocScanModal(origImg);
 
-  // 4. dilate로 엣지 두껍게 (끊긴 선 연결)
-  const kernel  = cv.Mat.ones(3, 3, cv.CV_8U);
-  const dilated = new cv.Mat();
-  cv.dilate(edges, dilated, kernel);
+  } catch(e){
+    console.error('Server scan failed:', e);
+    statusEl.textContent = '⚠️ 서버 오류 → AI로 재시도 중...';
+    // 서버 실패 시 AI로 자동 전환
+    await aiDocCropFallback(false, statusEl, null);
+  } finally{
+    overlay.style.display = 'none';
+  }
+}
 
-  // 5. 윤곽선 찾기
-  const contours = new cv.MatVector();
-  const hierarchy= new cv.Mat();
-  cv.findContours(dilated, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+/* ═══════════════════════════════════════
+   경로 2: Claude AI 2단계 정밀 감지
+   ═══════════════════════════════════════ */
+async function aiDocCropFallback(silent, statusEl, btn){
+  const key = localStorage.getItem(LS_API_KEY)||'';
+  if(!key){
+    statusEl.textContent = '⚠️ AI 키 없음 — ⚙️에서 설정하세요';
+    return;
+  }
+  const overlay = document.getElementById('scanOverlay');
+  if(silent) overlay.style.display = 'flex';
 
-  // 6. 가장 큰 사각형 윤곽 찾기
-  let bestQuad = null;
-  let bestArea = 0;
-  const imgArea = w * h;
+  try{
+    const m = modalImages[modalSlide];
+    if(!m){ statusEl.textContent='⚠️ 사진이 없습니다'; return; }
 
-  for(let i=0; i<contours.size(); i++){
-    const cnt  = contours.get(i);
-    const peri = cv.arcLength(cnt, true);
-    const approx = new cv.Mat();
-    cv.approxPolyDP(cnt, approx, 0.02*peri, true);
+    /* ── 전처리: 대비/선명도 향상 ── */
+    const enhanced = await enhanceImage(m.dataUrl);
 
-    if(approx.rows === 4){
-      const area = Math.abs(cv.contourArea(approx));
-      // 이미지의 10%~95% 크기인 것만 유효
-      if(area > imgArea*0.10 && area < imgArea*0.95 && area > bestArea){
-        bestArea = area;
-        bestQuad = [];
-        for(let j=0; j<4; j++){
-          bestQuad.push({
-            x: approx.intAt(j,0) / scale, // 원본 픽셀 좌표
-            y: approx.intAt(j,1) / scale
-          });
+    /* ── 1단계: 문서 위치 + 신뢰도 ── */
+    statusEl.textContent = '🤖 1단계: 문서 위치 파악 중...';
+    const small1 = await resizeForAI(enhanced, 1600);
+    const [mt1, b641] = getB64Parts(small1);
+    const [rW1, rH1]  = (await getImgSize(small1)).split('x').map(Number);
+
+    const r1 = await callAI([{
+      role:'user',
+      content:[
+        {type:'image', source:{type:'base64', media_type:mt1, data:b641}},
+        {type:'text', text:
+`당신은 문서 스캔 전문가입니다. 이미지(${rW1}×${rH1}px)에서 문서를 찾아주세요.
+
+대상: 영수증, 계약서, 청구서, 종이문서, 명함, A4용지 등
+조건: 그림자/접힘/구겨짐/비스듬한 각도 모두 인식
+
+JSON만 반환 (다른 텍스트 절대 금지):
+문서 있음: {"found":true,"tl":[x,y],"tr":[x,y],"br":[x,y],"bl":[x,y],"conf":0~100}
+문서 없음: {"found":false}
+(tl=좌상, tr=우상, br=우하, bl=좌하, 픽셀좌표)`
         }
-      }
-      approx.delete();
+      ]
+    }], 200);
+
+    let j1;
+    try{ j1 = JSON.parse(r1.replace(/```json|```/g,'').trim()); }
+    catch(pe){ throw new Error('AI 응답 파싱 실패: ' + r1.slice(0,100)); }
+
+    if(!j1.found){
+      /* 못 찾으면 기본 꼭짓점으로 모달 열기 */
+      statusEl.textContent = '⚠️ 문서를 찾지 못했습니다. 꼭짓점을 직접 조정하세요.';
+      const origImg = await loadImage(m.dataUrl);
+      const px = Math.round(origImg.width*0.08), py = Math.round(origImg.height*0.08);
+      docCorners     = sortCorners([
+        {x:px,                y:py},
+        {x:origImg.width-px,  y:py},
+        {x:origImg.width-px,  y:origImg.height-py},
+        {x:px,                y:origImg.height-py}
+      ]);
+      docScanImgData = m.dataUrl;
+      openDocScanModal(origImg);
+      return;
     }
-    cnt.delete();
+
+    let corners = {tl:j1.tl, tr:j1.tr, br:j1.br, bl:j1.bl};
+
+    /* ── 2단계: 신뢰도 낮으면 확대 재분석 ── */
+    if((j1.conf||100) < 80){
+      statusEl.textContent = '🤖 2단계: 정밀 좌표 재확인 중...';
+      try{
+        const xs  = [j1.tl[0],j1.tr[0],j1.br[0],j1.bl[0]];
+        const ys  = [j1.tl[1],j1.tr[1],j1.br[1],j1.bl[1]];
+        const pad = 0.08;
+        const pw  = Math.round((Math.max(...xs)-Math.min(...xs))*pad);
+        const ph  = Math.round((Math.max(...ys)-Math.min(...ys))*pad);
+        const sx2 = Math.max(0, Math.min(...xs)-pw);
+        const sy2 = Math.max(0, Math.min(...ys)-ph);
+        const sw2 = Math.min(rW1-sx2, Math.max(...xs)-sx2+pw*2);
+        const sh2 = Math.min(rH1-sy2, Math.max(...ys)-sy2+ph*2);
+
+        const crop2      = await cropImageByPixel(small1, sx2, sy2, sw2, sh2);
+        const [mt2,b642] = getB64Parts(crop2);
+        const [rW2,rH2]  = (await getImgSize(crop2)).split('x').map(Number);
+
+        const r2 = await callAI([{
+          role:'user',
+          content:[
+            {type:'image', source:{type:'base64', media_type:mt2, data:b642}},
+            {type:'text', text:
+`이 이미지(${rW2}×${rH2}px)는 문서를 확대한 것입니다.
+문서의 정확한 4개 꼭짓점 픽셀 좌표를 찾아주세요.
+JSON만 반환: {"tl":[x,y],"tr":[x,y],"br":[x,y],"bl":[x,y]}`
+            }
+          ]
+        }], 150);
+
+        const j2 = JSON.parse(r2.replace(/```json|```/g,'').trim());
+        const sc = rW1/rW2;
+        corners  = {
+          tl: [Math.round((j2.tl[0]+sx2)*sc), Math.round((j2.tl[1]+sy2)*sc)],
+          tr: [Math.round((j2.tr[0]+sx2)*sc), Math.round((j2.tr[1]+sy2)*sc)],
+          br: [Math.round((j2.br[0]+sx2)*sc), Math.round((j2.br[1]+sy2)*sc)],
+          bl: [Math.round((j2.bl[0]+sx2)*sc), Math.round((j2.bl[1]+sy2)*sc)],
+        };
+      } catch(e2){ /* 2단계 실패 → 1단계 결과 유지 */ }
+    }
+
+    /* ── 원본 이미지 크기로 역변환 ── */
+    const origImg = await loadImage(m.dataUrl);
+    const sX = origImg.width  / rW1;
+    const sY = origImg.height / rH1;
+    const toOrig = ([x,y]) => ({
+      x: Math.round(Math.max(0, Math.min(origImg.width,  x*sX))),
+      y: Math.round(Math.max(0, Math.min(origImg.height, y*sY)))
+    });
+
+    docCorners     = sortCorners([toOrig(corners.tl), toOrig(corners.tr), toOrig(corners.br), toOrig(corners.bl)]);
+    docScanImgData = m.dataUrl;
+
+    statusEl.textContent = '✅ AI 감지 완료 — 꼭짓점 조정 후 크롭';
+    openDocScanModal(origImg);
+
+  } catch(e){
+    console.error('AI fallback error:', e);
+    statusEl.textContent = '⚠️ AI 오류: ' + e.message;
+  } finally{
+    if(btn) btn.disabled = false;
+    overlay.style.display = 'none';
   }
-
-  // 메모리 해제
-  [src,dst,gray,blurred,edges,kernel,dilated,contours,hierarchy].forEach(m=>{ try{m.delete();}catch(e){} });
-
-  if(!bestQuad){
-    // 사각형 못 찾으면 이미지 전체를 기본값으로
-    statusEl.textContent = '⚠️ 문서 경계를 찾지 못했습니다. 꼭짓점을 수동으로 조정하세요.';
-    bestQuad = [
-      {x:img.width*0.05,  y:img.height*0.05},
-      {x:img.width*0.95,  y:img.height*0.05},
-      {x:img.width*0.95,  y:img.height*0.95},
-      {x:img.width*0.05,  y:img.height*0.95}
-    ];
-  } else {
-    // 꼭짓점 정렬: 좌상→우상→우하→좌하
-    bestQuad = sortCorners(bestQuad);
-    statusEl.textContent = '✅ 문서 감지 완료! 꼭짓점을 조정 후 크롭하세요.';
-  }
-
-  docCorners = bestQuad;
-  openDocScanModal(img);
 }
 
-/* 꼭짓점 정렬: 좌상→우상→우하→좌하 */
-function sortCorners(pts){
-  const cx = pts.reduce((s,p)=>s+p.x,0)/4;
-  const cy = pts.reduce((s,p)=>s+p.y,0)/4;
-  return [
-    pts.find(p=>p.x<cx&&p.y<cy) || pts[0], // 좌상
-    pts.find(p=>p.x>cx&&p.y<cy) || pts[1], // 우상
-    pts.find(p=>p.x>cx&&p.y>cy) || pts[2], // 우하
-    pts.find(p=>p.x<cx&&p.y>cy) || pts[3], // 좌하
-  ];
-}
-
-/* 이미지 로드 헬퍼 */
-function loadImage(src){
-  return new Promise((res,rej)=>{
-    const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src;
+/* ── 이미지 전처리: 대비/선명도 향상 (AI 정확도 개선) ── */
+function enhanceImage(dataUrl){
+  return new Promise(res=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const c   = document.createElement('canvas');
+      c.width   = img.width; c.height = img.height;
+      const ctx = c.getContext('2d');
+      ctx.filter = 'contrast(1.15) brightness(1.05) saturate(0.85)';
+      ctx.drawImage(img, 0, 0);
+      res(c.toDataURL('image/jpeg', 0.95));
+    };
+    img.src = dataUrl;
   });
 }
+
 
 /* ── 문서감지 모달 열기 + 꼭짓점 UI ── */
 function openDocScanModal(origImg){
@@ -579,131 +675,60 @@ function makeDraggable(handle, idx, dispScale, origImg, offX, offY, dw, dh){
 }
 
 
-/* ── 원근 변환(Perspective Warp) 적용 크롭 ── */
+/* ── 원근 보정 크롭 (서버 API 또는 canvas fallback) ── */
 async function applyDocScanCrop(){
   if(!docCorners.length || !docScanImgData){ showToast('감지된 문서가 없습니다'); return; }
 
   const statusEl = document.getElementById('aiCropStatus');
+  const btn      = document.getElementById('btnDocScanApply');
+  btn.disabled   = true;
   statusEl.textContent = '⏳ 원근 보정 중...';
 
   try{
-    const img = await loadImage(docScanImgData);
-
-    // 꼭짓점 정렬: 좌상→우상→우하→좌하
-    const sorted = sortCorners(docCorners);
-    const [tl,tr,br2,bl] = sorted;
-
-    // 출력 크기: 상단/하단 너비, 좌/우 높이 중 최대값
-    const wTop  = Math.hypot(tr.x-tl.x, tr.y-tl.y);
-    const wBot  = Math.hypot(br2.x-bl.x, br2.y-bl.y);
-    const hLeft = Math.hypot(bl.x-tl.x, bl.y-tl.y);
-    const hRight= Math.hypot(br2.x-tr.x, br2.y-tr.y);
-    const outW  = Math.round(Math.max(wTop, wBot));
-    const outH  = Math.round(Math.max(hLeft, hRight));
-
-    if(outW < 50 || outH < 50){ showToast('크롭 영역이 너무 작습니다'); return; }
-
-    if(cvReady){
-      // OpenCV 원근 변환
-      const srcPts = cv.matFromArray(4,1,cv.CV_32FC2,[
-        tl.x,tl.y, tr.x,tr.y, br2.x,br2.y, bl.x,bl.y
-      ]);
-      const dstPts = cv.matFromArray(4,1,cv.CV_32FC2,[
-        0,0, outW,0, outW,outH, 0,outH
-      ]);
-
-      // 원본 이미지 → OpenCV Mat
-      const tmpC = document.createElement('canvas');
-      tmpC.width=img.width; tmpC.height=img.height;
-      tmpC.getContext('2d').drawImage(img,0,0);
-      const srcMat = cv.imread(tmpC);
-      const dstMat = new cv.Mat();
-      const M = cv.getPerspectiveTransform(srcPts, dstPts);
-      const dsize = new cv.Size(outW, outH);
-      cv.warpPerspective(srcMat, dstMat, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT);
-
-      // 결과를 canvas로 출력
-      const outC = document.createElement('canvas');
-      outC.width=outW; outC.height=outH;
-      cv.imshow(outC, dstMat);
-
-      [srcPts,dstPts,srcMat,dstMat,M].forEach(m=>{try{m.delete();}catch(e){}});
-
-      const result = outC.toDataURL('image/jpeg', 0.95);
-      applyResultToModal(result);
-    } else {
-      // OpenCV 없으면 단순 bounding box 크롭
-      const xs = sorted.map(p=>p.x);
-      const ys = sorted.map(p=>p.y);
-      const result = await cropImageByPixel(
-        docScanImgData,
-        Math.round(Math.min(...xs)), Math.round(Math.min(...ys)),
-        Math.round(Math.max(...xs)-Math.min(...xs)),
-        Math.round(Math.max(...ys)-Math.min(...ys))
-      );
-      applyResultToModal(result);
+    let result;
+    try{
+      // 1순위: 서버 Python OpenCV warp (가장 정확)
+      result = await serverWarp(docScanImgData, docCorners);
+      statusEl.textContent = '✅ 서버 원근 보정 완료 (고품질)';
+    } catch(serverErr){
+      // 2순위: canvas 기반 warp (서버 없을 때)
+      console.warn('Server warp failed, using canvas:', serverErr);
+      result = await canvasWarp(docScanImgData, docCorners);
+      statusEl.textContent = '✅ 크롭 완료';
     }
+    applyResultToModal(result);
   } catch(e){
-    console.error('Warp error:', e);
-    statusEl.textContent = '⚠️ 원근 보정 실패: ' + e.message;
+    statusEl.textContent = '⚠️ ' + e.message;
+  } finally{
+    btn.disabled = false;
   }
 }
 
-function applyResultToModal(dataUrl){
-  modalImages[modalSlide].dataUrl = dataUrl;
-  closeModal('modalDocScan');
-  renderModalSlides();
-  document.getElementById('aiCropStatus').textContent = '✅ 문서 크롭 + 원근 보정 완료!';
-  showToast('📄 문서 크롭 완료');
+/* canvas 기반 원근 변환 (서버 없을 때 fallback) */
+async function canvasWarp(dataUrl, corners){
+  const img = await loadImage(dataUrl);
+  const sorted = sortCorners(corners);
+  const [tl,tr,br2,bl] = sorted;
+  const wTop  = Math.hypot(tr.x-tl.x, tr.y-tl.y);
+  const wBot  = Math.hypot(br2.x-bl.x, br2.y-bl.y);
+  const hLeft = Math.hypot(bl.x-tl.x, bl.y-tl.y);
+  const hRight= Math.hypot(br2.x-tr.x, br2.y-tr.y);
+  const outW  = Math.round(Math.max(wTop,wBot));
+  const outH  = Math.round(Math.max(hLeft,hRight));
+  if(outW<50||outH<50) throw new Error('크롭 영역이 너무 작습니다');
+
+  // bounding box 크롭 (원근변환 없이)
+  const xs = sorted.map(p=>p.x), ys = sorted.map(p=>p.y);
+  const sx = Math.max(0,Math.min(...xs));
+  const sy = Math.max(0,Math.min(...ys));
+  const sw = Math.min(img.width-sx, Math.max(...xs)-sx);
+  const sh = Math.min(img.height-sy, Math.max(...ys)-sy);
+  return await cropImageByPixel(dataUrl, sx, sy, sw, sh);
 }
+
 
 /* ── Anthropic AI fallback (OpenCV 실패 시) ── */
-async function aiDocCropFallback(silent, statusEl, btn){
-  const key = localStorage.getItem(LS_API_KEY)||'';
-  if(!key){
-    statusEl.textContent='⚠️ OpenCV 로드 실패. AI 키도 없음 — ⚙️에서 설정하세요';
-    btn.disabled=false; return;
-  }
-  const overlay = document.getElementById('scanOverlay');
-  if(silent) overlay.style.display='flex';
-  else statusEl.textContent='🤖 AI로 문서 감지 중...';
-  try{
-    const m     = modalImages[modalSlide];
-    const small = await resizeForAI(m.dataUrl, 1200);
-    const [mtype,base64] = getB64Parts(small);
-    const origSize = await getImgSize(m.dataUrl);
-    const [oW,oH] = origSize.split('x').map(Number);
-    const resizedSize = await getImgSize(small);
-    const [rW,rH] = resizedSize.split('x').map(Number);
 
-    const text = await callAI([{
-      role:'user',
-      content:[
-        {type:'image', source:{type:'base64', media_type:mtype, data:base64}},
-        {type:'text', text:`이미지(${rW}x${rH}px)에서 문서의 4개 꼭짓점 픽셀 좌표를 찾아주세요. JSON만 반환: {"hasDoc":true,"tl":[x,y],"tr":[x,y],"br":[x,y],"bl":[x,y]} 또는 {"hasDoc":false}`}
-      ]
-    }],256);
-
-    const j = JSON.parse(text.replace(/```json|```/g,'').trim());
-    if(!j.hasDoc){ statusEl.textContent='✓ 문서를 찾지 못했습니다'; return; }
-
-    const sx = Math.round(Math.min(j.tl[0],j.bl[0]) * oW/rW);
-    const sy = Math.round(Math.min(j.tl[1],j.tr[1]) * oH/rH);
-    const sw = Math.round((Math.max(j.tr[0],j.br[0]) - Math.min(j.tl[0],j.bl[0])) * oW/rW);
-    const sh = Math.round((Math.max(j.bl[1],j.br[1]) - Math.min(j.tl[1],j.tr[1])) * oH/rH);
-    const cropped = await cropImageByPixel(m.dataUrl, sx, sy, sw, sh);
-    modalImages[modalSlide].dataUrl = cropped;
-    renderModalSlides();
-    statusEl.textContent = `✅ AI 크롭 완료 (${sw}×${sh}px)`;
-  } catch(e){
-    statusEl.textContent='⚠️ '+e.message;
-  } finally{
-    btn.disabled=false;
-    overlay.style.display='none';
-  }
-}
-
-/* 이미지 크기 반환 "WxH" */
 function getImgSize(dataUrl){
   return new Promise(res=>{
     const img=new Image();
@@ -1220,6 +1245,83 @@ function addCategory(name){
   showToast(`"${n}" 추가됨`);
 }
 
+/* ══════════════════════════════════════════
+   모드 관리 (일반사진 / 문서스캔)
+   연속촬영 (burst)
+   ══════════════════════════════════════════ */
+let currentMode = 'photo'; // 'photo' | 'scan'
+let burstImages = [];      // 연속촬영 임시 저장
+
+/* 모드 전환 */
+function setMode(mode){
+  currentMode = mode;
+  document.getElementById('tabPhoto').classList.toggle('active', mode==='photo');
+  document.getElementById('tabScan').classList.toggle('active', mode==='scan');
+  document.getElementById('modePhoto').style.display = mode==='photo' ? '' : 'none';
+  document.getElementById('modeScan').style.display  = mode==='scan'  ? '' : 'none';
+}
+
+/* ── 일반사진: 카메라 연속촬영 ── */
+function startBurstCamera(){
+  burstImages = [];
+  renderBurstOverlay();
+  document.getElementById('fileInputCamera').click();
+}
+
+function renderBurstOverlay(){
+  const overlay = document.getElementById('burstOverlay');
+  const count   = document.getElementById('burstCount');
+  const thumbs  = document.getElementById('burstThumbs');
+  count.textContent = burstImages.length + '장';
+  thumbs.innerHTML  = '';
+  burstImages.forEach(m=>{
+    const img = document.createElement('img');
+    img.className = 'burst-thumb'; img.src = m.dataUrl;
+    thumbs.appendChild(img);
+  });
+  overlay.classList.toggle('show', burstImages.length > 0);
+}
+
+async function addBurstFiles(files){
+  for(const f of Array.from(files)){
+    let blob = f;
+    if(f.name?.toLowerCase().endsWith('.heic')||f.type==='image/heic'){
+      try{ blob = await heic2any({blob:f,toType:'image/jpeg',quality:0.92}); }catch(e){}
+    }
+    burstImages.push({id:uid(), dataUrl: await blobToDataUrl(blob)});
+  }
+  renderBurstOverlay();
+}
+
+function burstDone(){
+  if(!burstImages.length){ burstCancel(); return; }
+  document.getElementById('burstOverlay').classList.remove('show');
+  openAddModal([...burstImages]);
+  burstImages = [];
+}
+
+function burstCancel(){
+  burstImages = [];
+  document.getElementById('burstOverlay').classList.remove('show');
+}
+
+/* ── 문서스캔: 카메라/갤러리 → 자동감지 ── */
+async function startScanFromCamera(files){
+  if(!files.length) return;
+  const results = [];
+  for(const f of Array.from(files)){
+    let blob=f;
+    if(f.name?.toLowerCase().endsWith('.heic')||f.type==='image/heic'){
+      try{ blob=await heic2any({blob:f,toType:'image/jpeg',quality:0.92}); }catch(e){}
+    }
+    results.push({id:uid(), dataUrl:await blobToDataUrl(blob)});
+  }
+  openAddModal(results);
+  // 자동 문서감지 실행
+  setTimeout(()=> aiDocCrop(true), 400);
+}
+
+
 /* ── Init ── */
 async function init(){
   await openIDB();
@@ -1227,7 +1329,7 @@ async function init(){
 
   /* 모드별 UI 적용 */
   document.getElementById('appTitle').textContent   = MODE_LABEL;
-  document.getElementById('appVersion').textContent = 'v6.0';
+  document.getElementById('appVersion').textContent = 'v6.4';
   document.getElementById('sideTitle').textContent  = MODE_LABEL;
   document.title = MODE_LABEL;
   document.querySelector('.app-title').style.color = MODE_COLOR;

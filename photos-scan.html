@@ -50,26 +50,77 @@
       <div class="filter-chips" id="filterChips"></div>
       <button class="btn-chip-add" id="btnAddCat" title="카테고리 추가">＋</button>
     </div>
+    <!-- 검색바 -->
     <div class="action-bar">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input type="text" id="gallerySearch" placeholder="제목·메모 검색...">
       </div>
-      <button class="btn-add-cam" id="btnCamera" title="카메라 촬영 (자동스캔)">📷</button>
-      <button class="btn-add-gal" id="btnGallery" title="갤러리 선택">🖼️</button>
     </div>
+
+    <!-- 모드 선택 탭 -->
+    <div class="mode-tab-bar">
+      <button class="mode-tab active" id="tabPhoto" onclick="setMode('photo')">
+        📷 일반사진
+      </button>
+      <button class="mode-tab" id="tabScan" onclick="setMode('scan')">
+        📄 문서스캔
+      </button>
+    </div>
+
+    <!-- 일반사진 모드 버튼 -->
+    <div class="mode-actions" id="modePhoto">
+      <button class="mode-act-btn btn-cam" id="btnPhotoCamera">
+        📷 카메라 촬영
+        <span class="mode-act-hint">여러 장 연속 촬영</span>
+      </button>
+      <button class="mode-act-btn btn-gal" id="btnPhotoGallery">
+        🖼️ 갤러리 선택
+        <span class="mode-act-hint">여러 장 한번에</span>
+      </button>
+    </div>
+
+    <!-- 문서스캔 모드 버튼 -->
+    <div class="mode-actions" id="modeScan" style="display:none">
+      <button class="mode-act-btn btn-scan" id="btnScanCamera">
+        📷 카메라로 스캔
+        <span class="mode-act-hint">자동 문서감지</span>
+      </button>
+      <button class="mode-act-btn btn-gal" id="btnScanGallery">
+        🖼️ 갤러리에서 스캔
+        <span class="mode-act-hint">사진 선택 후 감지</span>
+      </button>
+    </div>
+
+    <!-- 갤러리 그리드 -->
     <div class="photo-grid" id="photoGrid">
       <div class="empty-state" id="emptyState">
         <div class="empty-icon">📷</div>
-        <p>📷 카메라로 찍으면 자동 스캔됩니다<br>🖼️ 갤러리에서 불러올 수도 있어요</p>
+        <p>위 버튼으로 사진을 추가하세요</p>
       </div>
     </div>
   </section>
 </main>
 
+<!-- 연속촬영 오버레이 -->
+<div class="burst-overlay" id="burstOverlay">
+  <div class="burst-count" id="burstCount">0장</div>
+  <div class="burst-thumbs" id="burstThumbs"></div>
+  <div class="burst-btns">
+    <button class="burst-btn add" id="burstAddMore">📷 추가 촬영</button>
+    <button class="burst-btn done" id="burstDone">✓ 완료 · 저장</button>
+    <button class="burst-btn cancel" id="burstCancel">✕ 취소</button>
+  </div>
+</div>
+
 <!-- 파일 입력 -->
+<!-- 일반사진: 다중 선택 -->
 <input type="file" id="fileInputGallery" accept="image/*,.heic" multiple style="display:none">
-<input type="file" id="fileInputCamera"  accept="image/*" capture="environment" style="display:none">
+<input type="file" id="fileInputCamera"  accept="image/*" capture="environment" multiple style="display:none">
+<!-- 문서스캔: 단일 선택 -->
+<input type="file" id="fileScanCamera"   accept="image/*" capture="environment" style="display:none">
+<input type="file" id="fileScanGallery"  accept="image/*,.heic" style="display:none">
+<!-- 추가 촬영 -->
 <input type="file" id="addMoreGal"       accept="image/*,.heic" multiple style="display:none">
 <input type="file" id="addMoreCam"       accept="image/*" capture="environment" style="display:none">
 <input type="file" id="backupInput"      accept=".json" style="display:none">
