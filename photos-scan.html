@@ -148,8 +148,9 @@
         <button class="tool-btn" data-tool="text"   title="텍스트">🔤</button>
         <button class="tool-btn" data-tool="rect"   title="사각형">⬜</button>
         <button class="tool-btn" data-tool="circle" title="원">⭕</button>
+        <button class="tool-btn" data-tool="arrow"  title="화살표">➡️</button>
         <button class="tool-btn" data-tool="draw"   title="그리기">✏️</button>
-        <button class="tool-btn" data-tool="mosaic" title="모자이크">🟫</button>
+        <button class="tool-btn" data-tool="mosaic" title="모자이크(드래그)">🟫</button>
         <div class="tool-sep"></div>
         <label class="tool-label">색상</label>
         <input type="color" id="toolColor" value="#FF0000">
@@ -160,13 +161,16 @@
           <option value="10">굵게</option>
           <option value="20">매우굵게</option>
         </select>
-        <label class="tool-label" id="lblMosaic" style="display:none">모자이크</label>
+        <label class="tool-label" id="lblMosaic" style="display:none">모자이크크기</label>
         <select id="mosaicSize" style="display:none">
           <option value="20">작게</option>
           <option value="40" selected>보통</option>
           <option value="70">크게</option>
           <option value="100">매우크게</option>
         </select>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" id="btnRotateL" title="왼쪽 90° 회전">↺</button>
+        <button class="tool-btn" id="btnRotateR" title="오른쪽 90° 회전">↻</button>
         <div class="tool-sep"></div>
         <button class="tool-btn danger" id="btnDelObj" title="삭제">🗑️</button>
       </div>

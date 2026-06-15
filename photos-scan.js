@@ -299,7 +299,7 @@ async function handleFiles(files, append=false, autoScan=false){
 }
 const blobToDataUrl = blob => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(blob); });
 
-/* ── AI 문서 자동감지 크롭 ── */
+/* ── AI 문서 자동감지 크롭 (2단계 정교 분석) ── */
 async function aiDocCrop(silent=false){
   if(!modalImages.length){ if(!silent) showToast('먼저 사진을 추가하세요'); return; }
   const key = localStorage.getItem(LS_API_KEY)||'';
@@ -312,44 +312,112 @@ async function aiDocCrop(silent=false){
   const overlay  = document.getElementById('scanOverlay');
   btn.disabled=true;
   if(silent) overlay.style.display='flex';
-  else statusEl.textContent='🤖 AI 분석 중...';
+  else statusEl.textContent='🤖 1단계: 문서 감지 중...';
 
   try{
-    const m     = modalImages[modalSlide];
-    const small = await resizeForAI(m.dataUrl, 1024);
-    const parts = small.split(';base64,');
-    if(parts.length!==2) throw new Error('이미지 변환 오류');
-    const mtype  = parts[0].replace('data:','');
-    const base64 = parts[1];
+    const m = modalImages[modalSlide];
 
-    const text = await callAI([{
+    /* ── 1단계: 문서 존재 여부 + 대략 위치 ── */
+    const small = await resizeForAI(m.dataUrl, 1600); // 고해상도로 전송
+    const [mtype, base64] = getB64Parts(small);
+
+    const prompt1 = `이 이미지를 분석해서 문서(영수증, 계약서, 명함, 인쇄된 종이 등)가 있는지 찾아주세요.
+
+규칙:
+- 이미지 전체가 문서이거나, 배경 위에 문서가 놓인 경우 모두 포함
+- 문서의 네 꼭짓점을 픽셀 좌표로 최대한 정확히 찾아주세요
+- 이미지 크기는 ${await getImgSize(m.dataUrl)}
+
+응답 형식(JSON만, 다른 텍스트 없이):
+문서가 있는 경우: {"hasDoc":true,"x1":픽셀,"y1":픽셀,"x2":픽셀,"y2":픽셀,"x3":픽셀,"y3":픽셀,"x4":픽셀,"y4":픽셀}
+(x1,y1=좌상, x2,y2=우상, x3,y3=우하, x4,y4=좌하 순서)
+문서가 없는 경우: {"hasDoc":false}`;
+
+    const text1 = await callAI([{
       role:'user',
       content:[
         {type:'image', source:{type:'base64', media_type:mtype, data:base64}},
-        {type:'text',  text:'이 이미지에서 문서(영수증·계약서·종이문서 등)를 찾아주세요. 문서가 있으면 {"hasDoc":true,"x":0.05,"y":0.05,"w":0.9,"h":0.9} 형식으로 0~1 비율 좌표를 반환하고, 없으면 {"hasDoc":false}를 반환하세요. JSON만 반환하세요.'}
+        {type:'text',  text:prompt1}
       ]
-    }], 200);
+    }], 300);
 
-    const json = JSON.parse(text.replace(/```json|```/g,'').trim());
-    if(!json.hasDoc){
-      statusEl.textContent='✓ 문서를 찾지 못했습니다 (일반 사진으로 저장)';
+    const j1 = JSON.parse(text1.replace(/```json|```/g,'').trim());
+    if(!j1.hasDoc){
+      statusEl.textContent='✓ 문서를 찾지 못했습니다';
       return;
     }
-    const x=Math.max(0,Math.min(+json.x||0,0.99));
-    const y=Math.max(0,Math.min(+json.y||0,0.99));
-    const w=Math.max(0.05,Math.min(+json.w||0.9,1-x));
-    const h=Math.max(0.05,Math.min(+json.h||0.9,1-y));
-    const cropped = await cropImageDataUrl(m.dataUrl,x,y,w,h);
+
+    /* ── 2단계: 꼭짓점 좌표로 정밀 크롭 ── */
+    if(!silent) statusEl.textContent='🤖 2단계: 정밀 크롭 중...';
+
+    // 원본 이미지 크기 가져오기
+    const origSize = await getImgSize(m.dataUrl);
+    const [origW, origH] = origSize.split('x').map(Number);
+
+    // 리사이즈된 이미지 기준 좌표 → 원본 좌표로 변환
+    const resized = await resizeForAI(m.dataUrl, 1600);
+    const resizedSize = await getImgSize(resized);
+    const [rW, rH] = resizedSize.split('x').map(Number);
+    const scaleX = origW / rW;
+    const scaleY = origH / rH;
+
+    // 4개 꼭짓점에서 bounding box 계산
+    const xs = [j1.x1, j1.x2, j1.x3, j1.x4].map(v => Math.round((+v||0) * scaleX));
+    const ys = [j1.y1, j1.y2, j1.y3, j1.y4].map(v => Math.round((+v||0) * scaleY));
+    const minX = Math.max(0, Math.min(...xs));
+    const minY = Math.max(0, Math.min(...ys));
+    const maxX = Math.min(origW, Math.max(...xs));
+    const maxY = Math.min(origH, Math.max(...ys));
+
+    // 여백 5% 추가
+    const padX = Math.round((maxX - minX) * 0.02);
+    const padY = Math.round((maxY - minY) * 0.02);
+    const sx = Math.max(0, minX - padX);
+    const sy = Math.max(0, minY - padY);
+    const sw = Math.min(origW - sx, maxX - minX + padX*2);
+    const sh = Math.min(origH - sy, maxY - minY + padY*2);
+
+    if(sw < 50 || sh < 50) throw new Error('문서 크롭 영역이 너무 작습니다');
+
+    const cropped = await cropImageByPixel(m.dataUrl, sx, sy, sw, sh);
     modalImages[modalSlide].dataUrl = cropped;
     renderModalSlides();
-    statusEl.textContent='✅ 문서 영역이 자동으로 잘렸습니다';
+    statusEl.textContent = `✅ 정밀 크롭 완료 (${sw}×${sh}px)`;
+
   } catch(e){
-    console.error('AI Crop:',e);
-    statusEl.textContent='⚠️ '+e.message;
+    console.error('AI Crop:', e);
+    statusEl.textContent = '⚠️ ' + e.message;
   } finally{
-    btn.disabled=false;
-    overlay.style.display='none';
+    btn.disabled = false;
+    overlay.style.display = 'none';
   }
+}
+
+/* 이미지 크기 반환 "WxH" */
+function getImgSize(dataUrl){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>res(`${img.width}x${img.height}`);
+    img.src=dataUrl;
+  });
+}
+/* base64 분리 */
+function getB64Parts(dataUrl){
+  const parts=dataUrl.split(';base64,');
+  return [parts[0].replace('data:',''), parts[1]];
+}
+/* 픽셀 단위 크롭 */
+function cropImageByPixel(dataUrl, sx, sy, sw, sh){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas');
+      c.width=sw; c.height=sh;
+      c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
+      res(c.toDataURL('image/jpeg',0.95));
+    };
+    img.src=dataUrl;
+  });
 }
 
 function cropImageDataUrl(dataUrl,rx,ry,rw,rh){
@@ -478,105 +546,338 @@ async function firebaseBackupMeta(){
 
 /* ── Fabric.js 편집기 ── */
 let canvas=null, editImgId=null, editTool='select', cropRect=null;
+let mosaicActive=false; // 드래그 모자이크 상태
 
 function openEditor(){
   if(!modalImages.length){ showToast('사진을 먼저 추가하세요'); return; }
-  editImgId=modalImages[modalSlide].id;
-  closeModal('modalAdd'); openModal('modalEdit');
-  setTimeout(()=>initCanvas(modalImages[modalSlide].dataUrl),100);
+  editImgId = modalImages[modalSlide].id;
+  closeModal('modalAdd');
+  openModal('modalEdit');
+  setTimeout(()=>initCanvas(modalImages[modalSlide].dataUrl), 120);
 }
+
 function initCanvas(dataUrl){
-  const wrapper=document.getElementById('canvasWrapper');
-  const maxW=Math.min(wrapper.clientWidth-24,680);
-  const maxH=Math.min(wrapper.clientHeight-24,520);
+  const wrapper = document.getElementById('canvasWrapper');
+  const maxW = Math.min(wrapper.clientWidth - 20, 700);
+  const maxH = Math.min(wrapper.clientHeight - 20, 540);
   if(canvas){ canvas.dispose(); canvas=null; }
-  canvas=new fabric.Canvas('editCanvas',{selection:true});
-  fabric.Image.fromURL(dataUrl,img=>{
-    const scale=Math.min(maxW/img.width,maxH/img.height,1);
-    canvas.setWidth(Math.round(img.width*scale));
-    canvas.setHeight(Math.round(img.height*scale));
-    img.set({scaleX:scale,scaleY:scale,selectable:false,evented:false});
-    canvas.setBackgroundImage(img,canvas.renderAll.bind(canvas));
-    canvas.on('mouse:down',opt=>{ if(editTool==='mosaic') applyMosaic(opt); });
-  },{crossOrigin:'anonymous'});
+
+  canvas = new fabric.Canvas('editCanvas', {
+    selection: true,
+    preserveObjectStacking: true,
+    stopContextMenu: true,
+    fireRightClick: false
+  });
+
+  fabric.Image.fromURL(dataUrl, img=>{
+    const scale = Math.min(maxW/img.width, maxH/img.height, 1);
+    const cw = Math.round(img.width * scale);
+    const ch = Math.round(img.height * scale);
+    canvas.setWidth(cw);
+    canvas.setHeight(ch);
+    img.set({ scaleX:scale, scaleY:scale, selectable:false, evented:false });
+    canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+
+    /* 모자이크 드래그 이벤트 */
+    canvas.on('mouse:down', opt=>{
+      if(editTool==='mosaic'){ mosaicActive=true; applyMosaicAt(opt.e); }
+    });
+    canvas.on('mouse:move', opt=>{
+      if(editTool==='mosaic' && mosaicActive) applyMosaicAt(opt.e);
+    });
+    canvas.on('mouse:up', ()=>{ mosaicActive=false; });
+
+    // 터치 이벤트도 모자이크 지원
+    canvas.upperCanvasEl.addEventListener('touchstart', e=>{
+      if(editTool==='mosaic'){ mosaicActive=true; applyMosaicAt(e.touches[0]); e.preventDefault(); }
+    }, {passive:false});
+    canvas.upperCanvasEl.addEventListener('touchmove', e=>{
+      if(editTool==='mosaic' && mosaicActive){ applyMosaicAt(e.touches[0]); e.preventDefault(); }
+    }, {passive:false});
+    canvas.upperCanvasEl.addEventListener('touchend', ()=>{ mosaicActive=false; });
+
+  }, {crossOrigin:'anonymous'});
   setTool('select');
 }
+
 function setTool(tool){
-  editTool=tool;
-  document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
+  editTool = tool;
+  document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.toggle('active', b.dataset.tool===tool));
   document.getElementById('cropControls').classList.add('hidden');
   document.getElementById('textInputRow').classList.add('hidden');
-  document.getElementById('lblMosaic').style.display='none';
-  document.getElementById('mosaicSize').style.display='none';
+  document.getElementById('lblMosaic').style.display  = 'none';
+  document.getElementById('mosaicSize').style.display = 'none';
   if(!canvas) return;
-  canvas.isDrawingMode=false;
+
+  canvas.isDrawingMode = false;
+  canvas.selection     = true;
+  canvas.defaultCursor = 'default';
+
   if(tool==='draw'){
-    canvas.isDrawingMode=true;
-    canvas.freeDrawingBrush.width=parseInt(document.getElementById('toolSize').value);
-    canvas.freeDrawingBrush.color=document.getElementById('toolColor').value;
+    canvas.isDrawingMode = true;
+    canvas.freeDrawingBrush.width = parseInt(document.getElementById('toolSize').value);
+    canvas.freeDrawingBrush.color = document.getElementById('toolColor').value;
   } else if(tool==='crop'){
-    document.getElementById('cropControls').classList.remove('hidden'); startCropMode();
+    canvas.selection = false;
+    document.getElementById('cropControls').classList.remove('hidden');
+    startCropMode();
   } else if(tool==='text'){
     document.getElementById('textInputRow').classList.remove('hidden');
+    canvas.defaultCursor = 'text';
   } else if(tool==='mosaic'){
-    document.getElementById('lblMosaic').style.display='';
-    document.getElementById('mosaicSize').style.display='';
-    canvas.defaultCursor='crosshair';
+    document.getElementById('lblMosaic').style.display  = '';
+    document.getElementById('mosaicSize').style.display = '';
+    canvas.selection     = false;
+    canvas.defaultCursor = 'crosshair';
   }
 }
+
+/* 크롭 박스 — 핸들 크게, 터치 정교하게 */
 function startCropMode(){
   if(cropRect) canvas.remove(cropRect);
-  cropRect=new fabric.Rect({left:30,top:30,width:canvas.width-60,height:canvas.height-60,fill:'rgba(0,0,0,0)',stroke:'#3F7CB8',strokeWidth:2,strokeDashArray:[6,4],cornerColor:'#3F7CB8',cornerSize:12,transparentCorners:false});
-  canvas.add(cropRect); canvas.setActiveObject(cropRect); canvas.renderAll();
+  const pad = 30;
+  cropRect = new fabric.Rect({
+    left:   pad,
+    top:    pad,
+    width:  canvas.width  - pad*2,
+    height: canvas.height - pad*2,
+    fill:             'rgba(0,0,0,0.0)',
+    stroke:           '#3F7CB8',
+    strokeWidth:      2.5,
+    strokeDashArray:  [8,4],
+    cornerColor:      '#fff',
+    cornerStrokeColor:'#3F7CB8',
+    cornerSize:       20,          // 터치하기 쉽게 크게
+    cornerStyle:      'circle',
+    transparentCorners: false,
+    borderColor:      '#3F7CB8',
+    borderDashArray:  [6,3],
+    hasRotatingPoint: false,       // 회전 핸들 숨김
+    lockRotation:     true,
+    minScaleLimit:    0.1,
+    padding:          6
+  });
+
+  // 반투명 어두운 오버레이 (크롭 외부)
+  canvas.clipPath = null;
+  canvas.add(cropRect);
+  canvas.setActiveObject(cropRect);
+
+  // 크롭 박스 외부 어둡게
+  cropRect.on('moving',   updateCropOverlay);
+  cropRect.on('scaling',  updateCropOverlay);
+  cropRect.on('modified', updateCropOverlay);
+
+  canvas.renderAll();
 }
+
+let cropOverlays = [];
+function updateCropOverlay(){
+  cropOverlays.forEach(o=>canvas.remove(o));
+  cropOverlays=[];
+  if(!cropRect) return;
+
+  const r   = cropRect.getBoundingRect(true);
+  const cw  = canvas.width;
+  const ch  = canvas.height;
+
+  const rects=[
+    {left:0,        top:0,     width:r.left,             height:ch},
+    {left:r.left+r.width, top:0, width:cw-(r.left+r.width), height:ch},
+    {left:r.left,   top:0,     width:r.width,             height:r.top},
+    {left:r.left,   top:r.top+r.height, width:r.width, height:ch-(r.top+r.height)}
+  ];
+  rects.forEach(opts=>{
+    if(opts.width<=0||opts.height<=0) return;
+    const o = new fabric.Rect({...opts, fill:'rgba(0,0,0,0.45)', selectable:false, evented:false});
+    cropOverlays.push(o);
+    canvas.add(o);
+    canvas.sendToBack(o);
+  });
+  canvas.bringToFront(cropRect);
+  canvas.renderAll();
+}
+
 function applyCrop(){
   if(!cropRect) return;
-  const rx=cropRect.left/canvas.width, ry=cropRect.top/canvas.height;
-  const rw=(cropRect.width*cropRect.scaleX)/canvas.width, rh=(cropRect.height*cropRect.scaleY)/canvas.height;
-  const dataUrl=canvas.toDataURL({format:'jpeg',quality:0.92});
-  cropImageDataUrl(dataUrl,rx,ry,rw,rh).then(cropped=>{
+
+  // 현재 크롭 박스의 실제 화면 좌표
+  const br = cropRect.getBoundingRect(true);
+  const cw = canvas.width, ch = canvas.height;
+
+  // 비율 계산
+  const rx = Math.max(0, br.left / cw);
+  const ry = Math.max(0, br.top  / ch);
+  const rw = Math.min(1-rx, br.width  / cw);
+  const rh = Math.min(1-ry, br.height / ch);
+
+  // 오버레이 제거
+  cropOverlays.forEach(o=>canvas.remove(o));
+  cropOverlays=[];
+  canvas.remove(cropRect);
+  cropRect=null;
+
+  // 현재 편집 canvas를 이미지로 내보내고 크롭
+  const fullDataUrl = canvas.toDataURL({format:'jpeg', quality:0.95});
+  cropImageByPixel(
+    fullDataUrl,
+    Math.round(rx*canvas.width),
+    Math.round(ry*canvas.height),
+    Math.round(rw*canvas.width),
+    Math.round(rh*canvas.height)
+  ).then(cropped=>{
+    // modalImages에 즉시 반영
+    const idx = modalImages.findIndex(m=>m.id===editImgId);
+    if(idx>=0) modalImages[idx].dataUrl = cropped;
     initCanvas(cropped);
-    const idx=modalImages.findIndex(m=>m.id===editImgId);
-    if(idx>=0) modalImages[idx].dataUrl=cropped;
-    cropRect=null;
+    document.getElementById('cropControls').classList.add('hidden');
+    showToast('✂️ 잘라내기 완료');
   });
 }
+
+/* 회전 */
+function rotateImage(deg){
+  if(!canvas) return;
+  const dataUrl = canvas.toDataURL({format:'jpeg', quality:0.95});
+  const img = new Image();
+  img.onload = ()=>{
+    const c = document.createElement('canvas');
+    if(deg===90||deg===-90){ c.width=img.height; c.height=img.width; }
+    else { c.width=img.width; c.height=img.height; }
+    const ctx = c.getContext('2d');
+    ctx.translate(c.width/2, c.height/2);
+    ctx.rotate(deg * Math.PI/180);
+    ctx.drawImage(img, -img.width/2, -img.height/2);
+    const rotated = c.toDataURL('image/jpeg', 0.95);
+    const idx = modalImages.findIndex(m=>m.id===editImgId);
+    if(idx>=0) modalImages[idx].dataUrl = rotated;
+    initCanvas(rotated);
+  };
+  img.src = dataUrl;
+}
+
+/* 텍스트 */
 function addText(){
-  const txt=document.getElementById('textInput').value; if(!txt) return;
-  canvas.add(new fabric.Text(txt,{left:40,top:40,fill:document.getElementById('toolColor').value,fontSize:parseInt(document.getElementById('toolSize').value)*5+14,fontFamily:'Arial',fontWeight:'bold'}));
-  canvas.renderAll(); document.getElementById('textInput').value='';
+  const txt = document.getElementById('textInput').value; if(!txt) return;
+  const t = new fabric.Text(txt, {
+    left:40, top:40,
+    fill:     document.getElementById('toolColor').value,
+    fontSize: parseInt(document.getElementById('toolSize').value)*5+16,
+    fontFamily:'Arial', fontWeight:'bold',
+    shadow:   'rgba(0,0,0,0.4) 1px 1px 3px'
+  });
+  canvas.add(t); canvas.setActiveObject(t); canvas.renderAll();
+  document.getElementById('textInput').value='';
+  setTool('select');
 }
+
+/* 도형 */
 function addShape(type){
-  const color=document.getElementById('toolColor').value;
-  const sw=parseInt(document.getElementById('toolSize').value);
-  const shape=type==='rect'
-    ?new fabric.Rect({left:60,top:60,width:140,height:90,fill:'transparent',stroke:color,strokeWidth:sw})
-    :new fabric.Ellipse({left:60,top:60,rx:70,ry:45,fill:'transparent',stroke:color,strokeWidth:sw});
+  const color = document.getElementById('toolColor').value;
+  const sw    = parseInt(document.getElementById('toolSize').value);
+  const shape = type==='rect'
+    ? new fabric.Rect({left:60,top:60,width:150,height:100,fill:'transparent',stroke:color,strokeWidth:sw,cornerSize:14})
+    : new fabric.Ellipse({left:60,top:60,rx:75,ry:50,fill:'transparent',stroke:color,strokeWidth:sw,cornerSize:14});
   canvas.add(shape); canvas.setActiveObject(shape); canvas.renderAll();
+  setTool('select');
 }
-function applyMosaic(opt){
-  const pt=canvas.getPointer(opt.e);
-  const sz=parseInt(document.getElementById('mosaicSize').value)||40;
-  const bg=canvas.backgroundImage; if(!bg) return;
-  const bgEl=bg.getElement();
-  const sx=Math.round((pt.x-sz/2)/(bg.scaleX||1)), sy=Math.round((pt.y-sz/2)/(bg.scaleY||1));
-  const sw=Math.round(sz/(bg.scaleX||1)), sh=Math.round(sz/(bg.scaleY||1));
-  const tc=document.createElement('canvas'); tc.width=sw; tc.height=sh;
-  tc.getContext('2d').drawImage(bgEl,sx,sy,sw,sh,0,0,sw,sh);
-  const pb=Math.max(4,Math.round(sz/8));
-  const pc=document.createElement('canvas'); pc.width=pb; pc.height=pb;
-  pc.getContext('2d').drawImage(tc,0,0,pb,pb);
-  fabric.Image.fromURL(pc.toDataURL(),mImg=>{
-    mImg.set({left:pt.x-sz/2,top:pt.y-sz/2,width:sz,height:sz,scaleX:1,scaleY:1,selectable:false,evented:false});
-    canvas.add(mImg); canvas.renderAll();
+
+/* 화살표 */
+function addArrow(){
+  const color = document.getElementById('toolColor').value;
+  const sw    = parseInt(document.getElementById('toolSize').value);
+  const len   = 120;
+
+  // 화살표 몸통 + 머리 (triangle)
+  const line = new fabric.Line([50, 100, 50+len, 100], {
+    stroke:color, strokeWidth:sw, selectable:false
+  });
+  const head = new fabric.Triangle({
+    width: sw*5+8, height: sw*5+12,
+    fill:  color,
+    left:  50+len, top:100,
+    angle: 90,
+    originX:'center', originY:'center',
+    selectable:false
+  });
+  const group = new fabric.Group([line, head], {
+    left:80, top:80, cornerSize:14,
+    hasRotatingPoint:true
+  });
+  canvas.add(group); canvas.setActiveObject(group); canvas.renderAll();
+  setTool('select');
+}
+
+/* 모자이크 — 터치/마우스 드래그 */
+function applyMosaicAt(e){
+  if(!canvas) return;
+  // 캔버스 기준 좌표 계산
+  const rect = canvas.upperCanvasEl.getBoundingClientRect();
+  const pt   = {
+    x: (e.clientX - rect.left),
+    y: (e.clientY - rect.top)
+  };
+  const sz  = parseInt(document.getElementById('mosaicSize').value)||40;
+  const bg  = canvas.backgroundImage; if(!bg) return;
+  const bgEl= bg.getElement();
+  // 원본 이미지 픽셀 좌표
+  const sx = Math.round((pt.x - sz/2) / (bg.scaleX||1));
+  const sy = Math.round((pt.y - sz/2) / (bg.scaleY||1));
+  const sw = Math.round(sz / (bg.scaleX||1));
+  const sh = Math.round(sz / (bg.scaleY||1));
+
+  const tc = document.createElement('canvas');
+  tc.width=Math.max(1,sw); tc.height=Math.max(1,sh);
+  tc.getContext('2d').drawImage(bgEl, sx, sy, sw, sh, 0, 0, sw, sh);
+
+  // 픽셀화
+  const pb = Math.max(3, Math.round(sz/10));
+  const pc = document.createElement('canvas');
+  pc.width=pb; pc.height=pb;
+  const pctx = pc.getContext('2d');
+  pctx.imageSmoothingEnabled=false;
+  pctx.drawImage(tc, 0, 0, pb, pb);
+
+  // 확대해서 모자이크 타일 완성
+  const mc = document.createElement('canvas');
+  mc.width=sz; mc.height=sz;
+  const mctx = mc.getContext('2d');
+  mctx.imageSmoothingEnabled=false;
+  mctx.drawImage(pc, 0, 0, sz, sz);
+
+  fabric.Image.fromURL(mc.toDataURL(), mImg=>{
+    mImg.set({
+      left:pt.x-sz/2, top:pt.y-sz/2,
+      width:sz, height:sz,
+      scaleX:1, scaleY:1,
+      selectable:false, evented:false,
+      opacity:1
+    });
+    canvas.add(mImg);
+    canvas.renderAll();
   });
 }
+
+/* 편집 완료 → modalImages 반영 후 추가모달로 */
 function finishEdit(){
   if(!canvas) return;
-  const dataUrl=canvas.toDataURL({format:'jpeg',quality:0.92});
-  const idx=modalImages.findIndex(m=>m.id===editImgId);
-  if(idx>=0) modalImages[idx].dataUrl=dataUrl;
-  closeModal('modalEdit'); openModal('modalAdd'); renderModalSlides();
+  // 크롭 오버레이 정리
+  cropOverlays.forEach(o=>canvas.remove(o)); cropOverlays=[];
+  if(cropRect){ canvas.remove(cropRect); cropRect=null; }
+  canvas.renderAll();
+
+  const dataUrl = canvas.toDataURL({format:'jpeg', quality:0.95});
+  const idx = modalImages.findIndex(m=>m.id===editImgId);
+  if(idx>=0){
+    modalImages[idx].dataUrl = dataUrl;
+  } else {
+    // id 못 찾으면 현재 슬라이드에 반영
+    if(modalImages[modalSlide]) modalImages[modalSlide].dataUrl = dataUrl;
+  }
+  closeModal('modalEdit');
+  openModal('modalAdd');
+  renderModalSlides();
+  showToast('✅ 편집 내용이 저장되었습니다');
 }
 
 /* ── 카테고리 추가 공통 함수 ── */
@@ -678,16 +979,24 @@ async function init(){
   document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>{
     b.onclick=()=>{
       const t=b.dataset.tool;
-      if(t==='rect') addShape('rect');
+      if(t==='rect')   addShape('rect');
       else if(t==='circle') addShape('circle');
+      else if(t==='arrow')  addArrow();
       else setTool(t);
     };
   });
   document.getElementById('toolColor').onchange = ()=>{ if(canvas&&canvas.isDrawingMode) canvas.freeDrawingBrush.color=document.getElementById('toolColor').value; };
   document.getElementById('toolSize').onchange  = ()=>{ if(canvas&&canvas.isDrawingMode) canvas.freeDrawingBrush.width=parseInt(document.getElementById('toolSize').value); };
   document.getElementById('btnDelObj').onclick   = ()=>{ if(canvas){const o=canvas.getActiveObject();if(o){canvas.remove(o);canvas.renderAll();}} };
+  document.getElementById('btnRotateL').onclick  = ()=>rotateImage(-90);
+  document.getElementById('btnRotateR').onclick  = ()=>rotateImage(90);
   document.getElementById('btnApplyCrop').onclick  = applyCrop;
-  document.getElementById('btnCancelCrop').onclick = ()=>{ if(cropRect){canvas.remove(cropRect);cropRect=null;} document.getElementById('cropControls').classList.add('hidden'); setTool('select'); };
+  document.getElementById('btnCancelCrop').onclick = ()=>{
+    cropOverlays.forEach(o=>canvas.remove(o)); cropOverlays=[];
+    if(cropRect){canvas.remove(cropRect);cropRect=null;}
+    document.getElementById('cropControls').classList.add('hidden');
+    setTool('select');
+  };
   document.getElementById('btnAddText').onclick    = addText;
   document.getElementById('textInput').onkeydown   = e=>{ if(e.key==='Enter') addText(); };
 
