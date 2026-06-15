@@ -1,4 +1,5 @@
-/* photos-scan.js  v4.0-20260616d
+/* photos-scan.js  v5.3-20260616
+   수정: 카메라→자동감지모달, 크롭엣지핸들수정, 버전표시, 상세보기전체화면
    URL ?mode=personal (기본) / ?mode=work 로 개인/업무 완전 분리
    - IndexedDB: PhotoScanDB_personal / PhotoScanDB_work
    - localStorage 키: photoscan_photos_personal / photoscan_photos_work 등
@@ -292,9 +293,22 @@ async function handleFiles(files, append=false, autoScan=false){
     results.push({id:uid(), dataUrl:await blobToDataUrl(blob)});
   }
   if(append){ modalImages.push(...results); renderModalSlides(); }
-  else{
+  else if(autoScan && results.length===1){
+    // 카메라 촬영 → 추가모달 열고 즉시 문서감지 모달 띄움
     openAddModal(results);
-    if(autoScan && results.length===1) setTimeout(()=>aiDocCrop(true), 500);
+    // OpenCV 준비되면 바로, 아니면 500ms 대기 후 시도
+    const tryDocScan = ()=>{
+      if(cvReady){
+        aiDocCrop(true);
+      } else if(!cvError){
+        setTimeout(tryDocScan, 300);
+      } else {
+        aiDocCrop(true); // fallback AI
+      }
+    };
+    setTimeout(tryDocScan, 300);
+  } else {
+    openAddModal(results);
   }
 }
 const blobToDataUrl = blob => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(blob); });
@@ -765,7 +779,7 @@ async function openViewModal(pid){
   document.getElementById('viewDate').textContent=p.date||'';
   document.getElementById('viewMemo').textContent=p.memo||'';
   await updateViewImg();
-  openModal('modalView');
+  const mv=document.getElementById('modalView'); mv.style.display='flex';
 }
 async function updateViewImg(){
   const url = viewImgIds[viewSlide] ? await idbGet(viewImgIds[viewSlide]) : null;
@@ -783,7 +797,7 @@ async function deletePhoto(pid){
   const idx=photos.findIndex(x=>x.id===pid); if(idx<0) return;
   await Promise.all((photos[idx].imgIds||[]).map(id=>idbDelete(id)));
   photos.splice(idx,1); savePhotos();
-  closeModal('modalView'); renderGallery(); showToast('삭제되었습니다');
+  document.getElementById('modalView').style.display='none'; renderGallery(); showToast('삭제되었습니다');
 }
 
 /* ── 공유 ── */
@@ -943,36 +957,60 @@ function openCropUI(){
     box.id = 'cropUIBox';
     box.style.cssText = 'position:absolute;border:2px solid #FFD700;box-sizing:border-box;';
 
-    // 8개 핸들 (모서리 4 + 엣지 4)
-    const handles = [
-      {id:'lt',style:'top:-8px;left:-8px;cursor:nwse-resize;','data-h':'lt'},
-      {id:'rt',style:'top:-8px;right:-8px;cursor:nesw-resize;','data-h':'rt'},
-      {id:'rb',style:'bottom:-8px;right:-8px;cursor:nwse-resize;','data-h':'rb'},
-      {id:'lb',style:'bottom:-8px;left:-8px;cursor:nesw-resize;','data-h':'lb'},
-      {id:'t', style:'top:-7px;left:50%;transform:translateX(-50%);cursor:ns-resize;','data-h':'t'},
-      {id:'r', style:'right:-7px;top:50%;transform:translateY(-50%);cursor:ew-resize;','data-h':'r'},
-      {id:'b', style:'bottom:-7px;left:50%;transform:translateX(-50%);cursor:ns-resize;','data-h':'b'},
-      {id:'l', style:'left:-7px;top:50%;transform:translateY(-50%);cursor:ew-resize;','data-h':'l'},
+    // 모서리 4개 — 큰 원형 핸들
+    const corners = [
+      {dh:'lt', s:'top:-14px;left:-14px;cursor:nwse-resize;'},
+      {dh:'rt', s:'top:-14px;right:-14px;cursor:nesw-resize;'},
+      {dh:'rb', s:'bottom:-14px;right:-14px;cursor:nwse-resize;'},
+      {dh:'lb', s:'bottom:-14px;left:-14px;cursor:nesw-resize;'},
     ];
-    handles.forEach(h=>{
+    corners.forEach(c=>{
       const el=document.createElement('div');
-      el.setAttribute('data-h', h['data-h']);
-      el.style.cssText = `position:absolute;width:16px;height:16px;background:#FFD700;border:2px solid #fff;border-radius:50%;${h.style}`;
+      el.setAttribute('data-h', c.dh);
+      el.style.cssText=`position:absolute;width:28px;height:28px;background:#FFD700;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:2;${c.s}`;
+      box.appendChild(el);
+    });
+    // 엣지 4개 — 넓은 막대기 형태 (터치 잡기 쉽게)
+    const edges = [
+      {dh:'t', s:'top:-10px;left:20%;right:20%;height:20px;cursor:ns-resize;border-radius:10px;'},
+      {dh:'b', s:'bottom:-10px;left:20%;right:20%;height:20px;cursor:ns-resize;border-radius:10px;'},
+      {dh:'l', s:'left:-10px;top:20%;bottom:20%;width:20px;cursor:ew-resize;border-radius:10px;'},
+      {dh:'r', s:'right:-10px;top:20%;bottom:20%;width:20px;cursor:ew-resize;border-radius:10px;'},
+    ];
+    edges.forEach(e=>{
+      const el=document.createElement('div');
+      el.setAttribute('data-h', e.dh);
+      el.style.cssText=`position:absolute;background:#FFD700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);z-index:2;${e.s}`;
       box.appendChild(el);
     });
     ov.appendChild(box);
     wrap.style.position='relative';
     wrap.appendChild(ov);
 
-    /* 이벤트: pointerdown/move/up — 명함앱 완전 동일 패턴 */
+    /* 이벤트: pointerdown/move/up
+       핸들 data-h 속성으로 식별, 박스 내부면 이동, 바깥이면 무시
+       단, 핸들은 박스 경계를 벗어나 있으므로 data-h 우선 확인 */
     ov.addEventListener('pointerdown', e=>{
-      const h = e.target.getAttribute && e.target.getAttribute('data-h');
-      // 핸들 클릭이면 해당 handle, 박스 내부면 move, 바깥이면 무시
-      const boxEl = document.getElementById('cropUIBox');
-      const boxR  = boxEl.getBoundingClientRect();
-      const inBox = e.clientX>=boxR.left&&e.clientX<=boxR.right&&e.clientY>=boxR.top&&e.clientY<=boxR.bottom;
-      if(!h && !inBox) return;
-      cDrag = h || 'move';
+      // 1) 핸들 클릭 여부 — target 또는 부모에서 data-h 찾기
+      let h = null;
+      let el = e.target;
+      while(el && el !== ov){
+        const dh = el.getAttribute && el.getAttribute('data-h');
+        if(dh){ h=dh; break; }
+        el=el.parentElement;
+      }
+      if(h){
+        // 핸들 드래그
+        cDrag=h;
+      } else {
+        // 박스 내부면 이동
+        const boxEl=document.getElementById('cropUIBox');
+        const boxR=boxEl.getBoundingClientRect();
+        const inBox=e.clientX>=boxR.left&&e.clientX<=boxR.right
+                  &&e.clientY>=boxR.top &&e.clientY<=boxR.bottom;
+        if(!inBox) return;
+        cDrag='move';
+      }
       cSX=e.clientX; cSY=e.clientY; cSB={...cBox};
       try{ ov.setPointerCapture(e.pointerId); }catch(_){}
       e.preventDefault();
@@ -1361,11 +1399,11 @@ async function init(){
   document.getElementById('textInput').onkeydown   = e=>{ if(e.key==='Enter') addText(); };
 
   /* 상세 보기 */
-  document.getElementById('btnViewClose').onclick  = ()=>closeModal('modalView');
+  document.getElementById('btnViewClose').onclick  = ()=>{ document.getElementById('modalView').style.display='none'; };
   document.getElementById('btnViewPrev').onclick   = ()=>viewNavSlide(-1);
   document.getElementById('btnViewNext').onclick   = ()=>viewNavSlide(1);
   document.getElementById('btnViewShare').onclick  = sharePhoto;
-  document.getElementById('btnViewEdit').onclick   = ()=>{ closeModal('modalView'); openEditMetaModal(viewPhotoId); };
+  document.getElementById('btnViewEdit').onclick   = ()=>{ document.getElementById('modalView').style.display='none'; openEditMetaModal(viewPhotoId); };
   document.getElementById('btnViewDelete').onclick = ()=>deletePhoto(viewPhotoId);
 
   /* AI 검색 */
@@ -1378,7 +1416,7 @@ async function init(){
   document.getElementById('btnSaveApiKey').onclick  = ()=>{ localStorage.setItem(LS_API_KEY,document.getElementById('apiKeyInput').value.trim()); closeModal('modalApiKey'); showToast('API 키 저장됨'); };
 
   /* ESC */
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){['modalAdd','modalEdit','modalView','modalApiKey'].forEach(closeModal); document.getElementById('panelSearch').classList.remove('open'); } });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){['modalAdd','modalEdit','modalApiKey'].forEach(closeModal); document.getElementById('modalView').style.display='none'; document.getElementById('panelSearch').classList.remove('open'); } });
 
   /* 드래그앤드롭 */
   document.addEventListener('dragover',e=>e.preventDefault());

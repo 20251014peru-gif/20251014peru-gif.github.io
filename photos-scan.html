@@ -15,7 +15,10 @@
 <header class="app-header">
   <div class="header-left">
     <button class="btn-icon" id="btnMenu">☰</button>
-    <h1 class="app-title" id="appTitle">📷 사진 스캔</h1>
+    <div>
+      <h1 class="app-title" id="appTitle">📷 사진 스캔</h1>
+      <span class="app-version">v5.3</span>
+    </div>
   </div>
   <div class="header-right">
     <button class="btn-icon" id="btnSearch" title="AI검색">🔍</button>
@@ -219,29 +222,26 @@
 </div>
 
 <!-- 상세 보기 모달 -->
-<div class="modal-bg" id="modalView">
-  <div class="modal modal-view">
-    <div class="modal-header">
-      <span id="viewTitle"></span>
-      <div class="view-header-btns">
-        <button class="btn-icon" id="btnViewShare"  title="공유">📤</button>
-        <button class="btn-icon" id="btnViewEdit"   title="수정">✏️</button>
-        <button class="btn-icon" id="btnViewDelete" title="삭제">🗑️</button>
-        <button class="btn-icon" id="btnViewClose">✕</button>
-      </div>
+<!-- 상세보기: 전체화면 -->
+<div class="view-fullscreen" id="modalView" style="display:none">
+  <div class="vf-header">
+    <span class="vf-title" id="viewTitle"></span>
+    <div class="vf-btns">
+      <button class="vf-btn" id="btnViewShare">📤</button>
+      <button class="vf-btn" id="btnViewEdit">✏️</button>
+      <button class="vf-btn" id="btnViewDelete">🗑️</button>
+      <button class="vf-btn" id="btnViewClose">✕</button>
     </div>
-    <div class="view-img-area">
-      <button class="view-nav" id="btnViewPrev">‹</button>
-      <img id="viewImg" src="" alt="">
-      <button class="view-nav" id="btnViewNext">›</button>
-    </div>
-    <div class="view-meta">
-      <div class="view-badges">
-        <span class="badge" id="viewCat"></span>
-        <span class="view-date" id="viewDate"></span>
-      </div>
-      <p id="viewMemo"></p>
-    </div>
+  </div>
+  <div class="vf-img-wrap">
+    <button class="vf-nav" id="btnViewPrev">‹</button>
+    <img id="viewImg" src="" alt="">
+    <button class="vf-nav" id="btnViewNext">›</button>
+  </div>
+  <div class="vf-meta">
+    <span class="badge" id="viewCat"></span>
+    <span class="view-date" id="viewDate"></span>
+    <p id="viewMemo"></p>
   </div>
 </div>
 
