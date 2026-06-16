@@ -736,6 +736,32 @@ function openEditor(){
   requestAnimationFrame(()=>requestAnimationFrame(()=>initCanvas(editSrc)));
 }
 
+/* 상세보기에서 바로 편집창 진입 (사진 추가 모달 안 거침) */
+let _editFromView=false;
+async function openEditorFromView(){
+  const p=photos.find(x=>x.id===vId); if(!p){ toast('사진을 찾을 수 없어요'); return; }
+  _editFromView=true;
+  // 현재 보고 있는 슬라이드 이미지 로드
+  const imgId = vImgIds[vSlide];
+  const url = await idbGet(imgId);
+  if(!url){ toast('이미지를 불러올 수 없어요'); return; }
+  // mImgs를 이 사진으로 세팅 (편집 후 저장 시 이 사진에 반영)
+  mEditId = p.id;
+  mImgs = await Promise.all((p.imgIds||[]).map(id=>idbGet(id).then(u=>({id,data:u}))));
+  mImgs = mImgs.filter(x=>x.data);
+  mSlide = vSlide;
+  // 폼 값도 채워둠 (저장 시 유지)
+  $('fTitle').value=p.title||''; $('fMemo').value=p.memo||''; $('fDate').value=p.date||today();
+  if($('fType')) $('fType').value=p.type||'';
+  populateCatSel(p.cat);
+  // 편집창 진입
+  editId=mImgs[mSlide].id; editSrc=mImgs[mSlide].data;
+  history=[];
+  $('viewFs').style.display='none';
+  $('modalEdit').style.display='flex';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>initCanvas(editSrc)));
+}
+
 function initCanvas(src){
   editSrc=src;
   const wrap=$('canvasWrap'); if(!wrap) return;
@@ -1034,11 +1060,29 @@ function applyMosaic(e){
   fabric.Image.fromURL(mc.toDataURL(),mi=>{ mi.set({left:px-sz/2,top:py-sz/2,width:sz,height:sz,scaleX:1,scaleY:1,selectable:false,evented:false}); canvas.add(mi); canvas.renderAll(); });
 }
 
-function finishEdit(){
+async function finishEdit(){
   if(!canvas) return;
   const url=canvas.toDataURL({format:'jpeg',quality:0.95});
   const idx=mImgs.findIndex(m=>m.id===editId);
   if(idx>=0) mImgs[idx].data=url;
+
+  if(_editFromView){
+    // 상세보기에서 편집 → 바로 photos에 저장
+    _editFromView=false;
+    const p=photos.find(x=>x.id===mEditId);
+    if(p){
+      await Promise.all((p.imgIds||[]).map(id=>idbDel(id)));
+      const ids=[]; for(const m of mImgs){ const nid=m.id||uid(); await idbPut(nid,m.data); ids.push(nid); }
+      p.imgIds=ids;
+      savePhotos();
+    }
+    if(canvas){ try{ canvas.dispose(); }catch(_){} canvas=null; }
+    $('modalEdit').style.display='none';
+    renderGallery();
+    toast('✅ 편집 저장 완료');
+    return;
+  }
+
   $('modalEdit').style.display='none'; $('modalAdd').style.display='flex'; renderSlides();
   toast('✅ 편집 저장 완료');
 }
@@ -1120,7 +1164,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v10.0';
+  if($('appVersion')) $('appVersion').textContent='v10.1';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -1182,7 +1226,8 @@ async function init(){
     if(canvas){ try{ canvas.dispose(); }catch(_){} canvas=null; }
     history=[]; editId=null; editSrc='';
     $('modalEdit').style.display='none';
-    $('modalAdd').style.display='flex';
+    if(_editFromView){ _editFromView=false; $('viewFs').style.display='flex'; }
+    else { $('modalAdd').style.display='flex'; }
     toast('편집 취소됨');
   });
   $on('btnEditDone',  finishEdit);
@@ -1218,7 +1263,7 @@ async function init(){
   $on('btnVPrev',  ()=>vNav(-1));
   $on('btnVNext',  ()=>vNav(1));
   $on('btnVShare', shareView);
-  $on('btnVEdit',  ()=>{ $('viewFs').style.display='none'; openAddModal(vId); });
+  $on('btnVEdit',  openEditorFromView);
   $on('btnVDel',   ()=>delPhoto(vId));
 
   // ── 이미지 팝업 ──
