@@ -2,396 +2,361 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>📷 사진 스캔</title>
-<link rel="stylesheet" href="photos-scan.css?v=20260616f">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>사진 스캔</title>
+<link rel="stylesheet" href="photos-scan.css?v=8">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
 </head>
 <body>
 
-<!-- ===== 헤더 ===== -->
-<header class="app-header">
-  <div class="header-left">
-    <h1 class="app-title" id="appTitle">📷 사진 스캔</h1>
-    <span class="app-version" id="appVersion">v8.0</span>
+<!-- 헤더 -->
+<header id="appHeader">
+  <div class="hdr-left">
+    <span class="hdr-title" id="appTitle">📷 사진 스캔</span>
+    <span class="hdr-ver" id="appVersion">v8.0</span>
   </div>
-  <div class="header-right">
-    <button class="btn-icon" id="btnHome"       title="홈">🏠</button>
-    <button class="btn-icon" id="btnBackup"     title="OneDrive 백업">☁️</button>
-    <button class="btn-icon" id="btnApiKey"     title="AI API 키">🔑</button>
-    <button class="btn-icon" id="btnCatManage2" title="카테고리 관리">📂</button>
-    <button class="btn-icon" id="btnLocalExp"   title="백업 내보내기">⬇️</button>
-    <button class="btn-icon" id="btnLocalImp"   title="백업 불러오기">⬆️</button>
+  <div class="hdr-right">
+    <button class="hbtn" id="btnHome"      title="홈">🏠</button>
+    <button class="hbtn" id="btnBackup"    title="OneDrive 백업">☁️</button>
+    <button class="hbtn" id="btnApiKey"    title="AI 키">🔑</button>
+    <button class="hbtn" id="btnCatMgr"   title="카테고리">📂</button>
+    <button class="hbtn" id="btnExpBak"   title="백업 내보내기">⬇️</button>
+    <button class="hbtn" id="btnImpBak"   title="백업 불러오기">⬆️</button>
   </div>
 </header>
 
-<!-- ===== 메인 ===== -->
-<main class="main-content">
-  <section class="view active" id="viewGallery">
+<!-- 메인 -->
+<main id="mainWrap">
 
-    <!-- 필터칩 -->
-    <div class="filter-bar">
-      <div class="filter-chips" id="filterChips"></div>
-      <button class="btn-chip-add" id="btnAddCat" title="카테고리 추가">＋</button>
-    </div>
+  <!-- 필터칩 -->
+  <div id="filterBar">
+    <div id="filterChips"></div>
+    <button class="chip-add" id="btnAddCat">＋</button>
+  </div>
 
-    <!-- 검색 -->
-    <div class="action-bar">
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="gallerySearch" placeholder="검색... (AI: @ 붙여서 Enter)">
-        <button class="search-ai-btn" id="btnAiSearchInline" title="AI 검색">🤖</button>
-      </div>
-    </div>
+  <!-- 검색 -->
+  <div id="searchBar">
+    <span class="search-ic">🔍</span>
+    <input id="gallerySearch" placeholder="검색 (AI: @ 입력 후 Enter)">
+    <button id="btnAiSearch">🤖</button>
+  </div>
 
-    <!-- 모드 탭 -->
-    <div class="mode-tab-bar">
-      <button class="mode-tab active" id="tabPhoto" onclick="setMode('photo')">📷 일반사진</button>
-      <button class="mode-tab"        id="tabScan"  onclick="setMode('scan')">📄 문서스캔</button>
-    </div>
+  <!-- 모드 탭 -->
+  <div id="modeTabs">
+    <button class="mtab active" id="tabPhoto" onclick="setMode('photo')">📷 일반사진</button>
+    <button class="mtab"        id="tabScan"  onclick="setMode('scan')">📄 문서스캔</button>
+  </div>
 
-    <!-- 일반사진 버튼 -->
-    <div class="mode-actions" id="modePhoto">
-      <button class="mode-act-btn btn-cam" id="btnPhotoCamera">
-        <span style="font-size:22px">📷</span>
-        카메라 촬영
-        <span class="mode-act-hint">연속 촬영 가능</span>
-      </button>
-      <button class="mode-act-btn btn-gal" id="btnPhotoGallery">
-        <span style="font-size:22px">🖼️</span>
-        갤러리 선택
-        <span class="mode-act-hint">여러 장 한번에</span>
-      </button>
-    </div>
+  <!-- 일반사진 버튼 -->
+  <div id="modePhoto" class="modePanel">
+    <button class="modeBtn blue" id="btnPhotoCamera">
+      <span class="modeIcon">📷</span>
+      <span class="modeTxt">카메라 촬영</span>
+      <span class="modeHint">연속 촬영</span>
+    </button>
+    <button class="modeBtn purple" id="btnPhotoGallery">
+      <span class="modeIcon">🖼️</span>
+      <span class="modeTxt">갤러리 선택</span>
+      <span class="modeHint">여러 장 가능</span>
+    </button>
+  </div>
 
-    <!-- 문서스캔 버튼 -->
-    <div class="mode-actions" id="modeScan" style="display:none">
-      <button class="mode-act-btn btn-scan" id="btnScanCamera">
-        <span style="font-size:22px">📷</span>
-        카메라 스캔
-        <span class="mode-act-hint">촬영 후 자동 문서감지</span>
-      </button>
-      <button class="mode-act-btn btn-gal" id="btnScanGallery">
-        <span style="font-size:22px">🖼️</span>
-        갤러리 스캔
-        <span class="mode-act-hint">사진 선택 후 감지</span>
-      </button>
-    </div>
+  <!-- 문서스캔 버튼 -->
+  <div id="modeScan" class="modePanel" style="display:none">
+    <button class="modeBtn green" id="btnScanCamera">
+      <span class="modeIcon">📷</span>
+      <span class="modeTxt">카메라 스캔</span>
+      <span class="modeHint">자동 문서감지</span>
+    </button>
+    <button class="modeBtn purple" id="btnScanGallery">
+      <span class="modeIcon">🖼️</span>
+      <span class="modeTxt">갤러리 스캔</span>
+      <span class="modeHint">사진 선택 후 감지</span>
+    </button>
+  </div>
 
-    <!-- 갤러리 그리드 -->
-    <div class="photo-grid" id="photoGrid">
-      <div class="empty-state" id="emptyState">
-        <div class="empty-icon">📷</div>
-        <p>위 버튼으로 사진을 추가하세요</p>
-      </div>
+  <!-- 갤러리 그리드 -->
+  <div id="photoGrid">
+    <div id="emptyState">
+      <div style="font-size:48px">📷</div>
+      <p>사진을 추가하세요</p>
     </div>
-  </section>
+  </div>
 </main>
 
-<!-- ===== 파일 입력 ===== -->
-<input type="file" id="fileInputGallery" accept="image/*,.heic" multiple style="display:none">
-<input type="file" id="fileInputCamera"  accept="image/*" capture="environment" multiple style="display:none">
-<input type="file" id="fileScanCamera"   accept="image/*" capture="environment" style="display:none">
-<input type="file" id="fileScanGallery"  accept="image/*,.heic" style="display:none">
-<input type="file" id="addMoreGal"       accept="image/*,.heic" multiple style="display:none">
-<input type="file" id="addMoreCam"       accept="image/*" capture="environment" style="display:none">
-<input type="file" id="backupInput"      accept=".json" style="display:none">
+<!-- 파일 입력 -->
+<input type="file" id="fGallery"   accept="image/*,.heic" multiple style="display:none">
+<input type="file" id="fCamera"    accept="image/*" capture="environment" multiple style="display:none">
+<input type="file" id="fScanCam"   accept="image/*" capture="environment" style="display:none">
+<input type="file" id="fScanGal"   accept="image/*,.heic" style="display:none">
+<input type="file" id="fMoreGal"   accept="image/*,.heic" multiple style="display:none">
+<input type="file" id="fMoreCam"   accept="image/*" capture="environment" style="display:none">
+<input type="file" id="fBackup"    accept=".json" style="display:none">
 
-<!-- ===== 연속촬영 오버레이 ===== -->
-<div class="burst-overlay" id="burstOverlay">
-  <div class="burst-count" id="burstCount">0장</div>
-  <div class="burst-thumbs" id="burstThumbs"></div>
-  <div class="burst-btns">
-    <button class="burst-btn add"    id="burstAddMore">📷 추가 촬영</button>
-    <button class="burst-btn done"   id="burstDone">✓ 완료 · 저장</button>
-    <button class="burst-btn cancel" id="burstCancel">✕ 취소</button>
+<!-- 연속촬영 오버레이 -->
+<div id="burstOv" style="display:none">
+  <div id="burstCount">0장</div>
+  <div id="burstThumbs"></div>
+  <div id="burstBtns">
+    <button id="burstAdd">📷 추가촬영</button>
+    <button id="burstDone">✓ 완료·저장</button>
+    <button id="burstCancel">✕ 취소</button>
   </div>
 </div>
 
 <!-- ===== 사진 추가/수정 모달 ===== -->
-<div class="modal-bg" id="modalAdd">
-  <div class="modal modal-add">
-    <div class="modal-header">
-      <span id="modalAddTitle">사진 추가</span>
-      <button class="btn-icon" id="btnModalAddClose">✕</button>
+<div class="overlay" id="modalAdd" style="display:none">
+  <div class="modal" id="modalAddBox">
+    <div class="modal-hdr">
+      <span id="addModalTitle">사진 추가</span>
+      <button class="xbtn" id="btnAddClose">✕</button>
     </div>
     <div class="modal-body">
-      <!-- 이미지 슬라이더 — 크게 표시 -->
-      <div class="img-preview-area">
-        <div class="img-slides" id="imgSlides">
-          <div class="no-img-placeholder">사진 없음</div>
-        </div>
-        <div class="img-nav">
-          <button class="btn-icon" id="btnSlidePrev">‹</button>
-          <span id="slideCount">0 / 0</span>
-          <button class="btn-icon" id="btnSlideNext">›</button>
-          <button class="btn-icon-sm" id="btnExpandImg" title="크게 보기">🔍</button>
-          <button class="btn-icon-sm" id="btnAddMoreCam" title="카메라">📷</button>
-          <button class="btn-icon-sm" id="btnAddMoreGal" title="갤러리">🖼️</button>
-          <button class="btn-icon-sm danger" id="btnDelImg" title="삭제">🗑</button>
+      <!-- 미리보기 -->
+      <div id="previewArea">
+        <div id="slides"><div class="noimg">사진 없음</div></div>
+        <div id="slideNav">
+          <button class="navbtn" id="btnPrev">‹</button>
+          <span id="slideCnt">0/0</span>
+          <button class="navbtn" id="btnNext">›</button>
+          <button class="smBtn" id="btnZoom">🔍</button>
+          <button class="smBtn" id="btnMoreCam">📷</button>
+          <button class="smBtn" id="btnMoreGal">🖼️</button>
+          <button class="smBtn red" id="btnDelSlide">🗑</button>
         </div>
       </div>
-      <!-- AI 문서감지 -->
-      <div class="ai-crop-row">
-        <button class="btn-ai" id="btnAiCrop">📄 문서 자동감지</button>
-        <span class="ai-status" id="aiCropStatus"></span>
+      <!-- AI 감지 -->
+      <div id="aiRow">
+        <button id="btnAiCrop">📄 문서 자동감지</button>
+        <span id="aiStatus"></span>
       </div>
-      <!-- 문서 유형 -->
-      <div class="form-row">
+      <!-- 폼 -->
+      <div class="frow">
         <label>문서 유형</label>
-        <select id="photoType">
+        <select id="fType">
           <option value="">── 일반 사진 ──</option>
           <option value="영수증">🧾 영수증</option>
           <option value="계약서">📄 계약서</option>
           <option value="행정문서">📋 행정문서</option>
         </select>
       </div>
-      <!-- 제목 -->
-      <div class="form-row">
-        <label>제목</label>
-        <input type="text" id="photoTitle" placeholder="사진 제목">
+      <div class="frow">
+        <label>제목 <span class="req">*</span></label>
+        <input id="fTitle" placeholder="사진 제목">
       </div>
-      <!-- 카테고리 -->
-      <div class="form-row">
+      <div class="frow">
         <label>카테고리</label>
-        <div class="cat-select-row">
-          <select id="photoCat" class="cat-select"></select>
-          <button class="btn-cat-add" id="btnInlineCatAdd" title="추가">＋</button>
-          <button class="btn-cat-del" id="btnInlineCatDel" title="삭제">✕</button>
+        <div class="cat-row">
+          <select id="fCat"></select>
+          <button id="btnCatAdd2">＋</button>
+          <button id="btnCatDel2">✕</button>
         </div>
       </div>
-      <!-- 메모 -->
-      <div class="form-row">
+      <div class="frow">
         <label>메모</label>
-        <textarea id="photoMemo" rows="3" placeholder="메모..."></textarea>
+        <textarea id="fMemo" rows="3" placeholder="메모..."></textarea>
       </div>
-      <!-- 날짜 -->
-      <div class="form-row">
+      <div class="frow">
         <label>날짜</label>
-        <input type="date" id="photoDate">
+        <input type="date" id="fDate">
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" id="btnEditPhoto">✏️ 편집</button>
-      <button class="btn-primary"   id="btnSavePhoto">💾 저장</button>
+    <div class="modal-ftr">
+      <button class="btn-sec" id="btnEdit">✏️ 편집</button>
+      <button class="btn-pri" id="btnSave">💾 저장</button>
     </div>
-  </div>
-</div>
-
-<!-- ===== 이미지 크게 보기 ===== -->
-<div class="img-popup" id="imgPopup" style="display:none" onclick="closeImgPopup()">
-  <button class="img-popup-close" onclick="closeImgPopup()">✕</button>
-  <button class="img-popup-nav left"  id="popupPrev" onclick="event.stopPropagation();popupNav(-1)">‹</button>
-  <img id="imgPopupImg" src="" alt="">
-  <button class="img-popup-nav right" id="popupNext" onclick="event.stopPropagation();popupNav(1)">›</button>
-</div>
-
-<!-- ===== 문서감지 풀스크린 ===== -->
-<div class="docscan-fs" id="modalDocScan">
-  <div class="docscan-fs-header">
-    <span>📄 문서 감지 — 핸들로 범위 조정</span>
-    <div class="ds-hbtns">
-      <button class="ds-hbtn" id="btnDocScanZoomIn">＋</button>
-      <button class="ds-hbtn" id="btnDocScanZoomOut">－</button>
-      <button class="ds-hbtn" id="btnDocScanRetry">🔄</button>
-      <button class="ds-hbtn" id="btnDocScanClose">✕</button>
-    </div>
-  </div>
-  <div class="docscan-fs-body" id="docScanBody">
-    <div class="docscan-canvas-wrap" id="docScanWrap">
-      <canvas id="docScanCanvas"></canvas>
-      <!-- 모서리 4개 -->
-      <div class="ds-corner" id="ch0"></div>
-      <div class="ds-corner" id="ch1"></div>
-      <div class="ds-corner" id="ch2"></div>
-      <div class="ds-corner" id="ch3"></div>
-      <!-- 엣지 막대 4개 -->
-      <div class="ds-bar-h" id="ch4"></div>
-      <div class="ds-bar-h" id="ch5"></div>
-      <div class="ds-bar-v" id="ch6"></div>
-      <div class="ds-bar-v" id="ch7"></div>
-    </div>
-  </div>
-  <div class="docscan-fs-footer">
-    <span class="docscan-hint">모서리·막대 드래그로 조정</span>
-    <button class="btn-primary" id="btnDocScanApply">✅ 크롭</button>
   </div>
 </div>
 
 <!-- ===== 편집 모달 ===== -->
-<div class="modal-bg" id="modalEdit">
-  <div class="modal modal-edit">
-    <div class="modal-header">
-      <span>✏️ 사진 편집</span>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button class="btn-sm btn-secondary" id="btnEditUndo">↩ 되돌리기</button>
-        <button class="btn-sm btn-primary"   id="btnEditDone">✓ 완료</button>
-        <button class="btn-icon"             id="btnEditClose">✕</button>
+<div class="overlay" id="modalEdit" style="display:none">
+  <div class="modal fullModal">
+    <div class="modal-hdr">
+      <span>사진 편집</span>
+      <div class="hdr-btns">
+        <button class="smBtn2" id="btnUndo">↩ 되돌리기</button>
+        <button class="smBtn2 pri" id="btnEditDone">✓ 완료</button>
+        <button class="xbtn" id="btnEditClose">✕</button>
       </div>
     </div>
-    <div class="edit-body">
-      <div class="edit-toolbar">
-        <button class="tool-btn active" data-tool="select" title="선택">↖️</button>
-        <button class="tool-btn" data-tool="crop"   title="자르기">✂️</button>
-        <button class="tool-btn" data-tool="text"   title="텍스트">🔤</button>
-        <button class="tool-btn" data-tool="rect"   title="사각형">⬜</button>
-        <button class="tool-btn" data-tool="circle" title="원">⭕</button>
-        <button class="tool-btn" data-tool="arrow"  title="화살표">➡️</button>
-        <button class="tool-btn" data-tool="draw"   title="그리기">✏️</button>
-        <button class="tool-btn" data-tool="mosaic" title="모자이크">🟫</button>
-        <div class="tool-sep"></div>
-        <label class="tool-label">색</label>
-        <input type="color" id="toolColor" value="#FF0000">
-        <label class="tool-label">굵기</label>
-        <select id="toolSize">
-          <option value="2">얇게</option>
-          <option value="5" selected>보통</option>
-          <option value="10">굵게</option>
-          <option value="20">매우굵게</option>
-        </select>
-        <label class="tool-label" id="lblMosaic" style="display:none">모자이크</label>
-        <select id="mosaicSize" style="display:none">
-          <option value="20">작게</option>
-          <option value="40" selected>보통</option>
-          <option value="70">크게</option>
-        </select>
-        <div class="tool-sep"></div>
-        <button class="tool-btn" id="btnRotateL" title="↺ 회전">↺</button>
-        <button class="tool-btn" id="btnRotateR" title="↻ 회전">↻</button>
-        <div class="tool-sep"></div>
-        <button class="tool-btn" id="btnUndoAction"  title="되돌리기">↩️</button>
-        <button class="tool-btn danger" id="btnDelSelected" title="선택 삭제">🗑️</button>
+    <!-- 툴바 -->
+    <div id="editToolbar">
+      <button class="tbtn active" data-t="select">↖</button>
+      <button class="tbtn" data-t="crop">✂</button>
+      <button class="tbtn" data-t="text">T</button>
+      <button class="tbtn" data-t="rect">▭</button>
+      <button class="tbtn" data-t="circle">◯</button>
+      <button class="tbtn" data-t="arrow">→</button>
+      <button class="tbtn" data-t="draw">✏</button>
+      <button class="tbtn" data-t="mosaic">⬛</button>
+      <div class="tsep"></div>
+      <input type="color" id="tColor" value="#FF0000" title="색상">
+      <select id="tSize">
+        <option value="2">얇게</option>
+        <option value="5" selected>보통</option>
+        <option value="10">굵게</option>
+      </select>
+      <select id="mosaicSz" style="display:none">
+        <option value="20">작게</option>
+        <option value="40" selected>보통</option>
+        <option value="80">크게</option>
+      </select>
+      <div class="tsep"></div>
+      <button class="tbtn" id="btnRotL">↺</button>
+      <button class="tbtn" id="btnRotR">↻</button>
+      <button class="tbtn red" id="btnDelObj">🗑</button>
+    </div>
+    <!-- 캔버스 -->
+    <div id="canvasWrap">
+      <canvas id="editCanvas"></canvas>
+    </div>
+    <!-- 크롭 오버레이 -->
+    <div id="cropOv" style="display:none">
+      <div id="cropBox">
+        <!-- 모서리 -->
+        <div class="cH cLT" data-h="lt"></div>
+        <div class="cH cRT" data-h="rt"></div>
+        <div class="cH cRB" data-h="rb"></div>
+        <div class="cH cLB" data-h="lb"></div>
+        <!-- 막대 -->
+        <div class="cB cBT" data-h="t"></div>
+        <div class="cB cBB" data-h="b"></div>
+        <div class="cB cBL" data-h="l"></div>
+        <div class="cB cBR" data-h="r"></div>
       </div>
-      <div class="canvas-wrapper" id="canvasWrapper">
-        <canvas id="editCanvas"></canvas>
-      </div>
-      <!-- 크롭 전용 풀스크린 오버레이 -->
-      <div class="crop-overlay-fs" id="cropOverlay">
-        <div class="crop-overlay-header">
-          <span>✂️ 크롭</span>
-          <div style="display:flex;gap:6px">
-            <button class="vf-btn" id="cropRotateBtn">↻</button>
-            <button class="btn-sm btn-primary"   id="cropDoneBtn">✓ 적용</button>
-            <button class="btn-sm btn-secondary" id="cropCancelBtn">취소</button>
-          </div>
-        </div>
-        <div id="cropArea" class="crop-area-fs">
-          <img id="cropImg" alt="">
-          <div id="cropBox">
-            <div class="ch" data-h="lt"></div>
-            <div class="ch" data-h="rt"></div>
-            <div class="ch" data-h="rb"></div>
-            <div class="ch" data-h="lb"></div>
-            <div class="ce ce-t" data-h="t"></div>
-            <div class="ce ce-b" data-h="b"></div>
-            <div class="ce ce-l" data-h="l"></div>
-            <div class="ce ce-r" data-h="r"></div>
-          </div>
-        </div>
-        <p class="crop-hint-fs">모서리·막대 드래그 → ✓ 적용</p>
-      </div>
-      <div class="text-input-row hidden" id="textInputRow">
-        <input type="text" id="textInput" placeholder="텍스트 입력">
-        <button class="btn-sm btn-primary" id="btnAddText">추가</button>
+      <div id="cropBtns">
+        <button id="btnCropApply">✂ 크롭 적용</button>
+        <button id="btnCropCancel">취소</button>
       </div>
     </div>
+    <!-- 텍스트 입력 -->
+    <div id="textRow" style="display:none">
+      <input id="textInp" placeholder="텍스트 입력">
+      <button id="btnAddTxt">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 문서감지 풀스크린 ===== -->
+<div id="docScanFs" style="display:none">
+  <div id="docScanHdr">
+    <span>📄 문서 자동감지</span>
+    <div>
+      <button class="dsbtn" id="btnDsZoomIn">＋</button>
+      <button class="dsbtn" id="btnDsZoomOut">－</button>
+      <button class="dsbtn" id="btnDsRetry">🔄</button>
+      <button class="dsbtn" id="btnDsClose">✕</button>
+    </div>
+  </div>
+  <div id="docScanBody">
+    <div id="docScanWrap">
+      <canvas id="docScanCanvas"></canvas>
+      <!-- 모서리 4 + 막대 4 -->
+      <div class="dH dLT" id="dh0"></div>
+      <div class="dH dRT" id="dh1"></div>
+      <div class="dH dRB" id="dh2"></div>
+      <div class="dH dLB" id="dh3"></div>
+      <div class="dBar dBT" id="dh4"></div>
+      <div class="dBar dBB" id="dh5"></div>
+      <div class="dBar dBL" id="dh6"></div>
+      <div class="dBar dBR" id="dh7"></div>
+    </div>
+  </div>
+  <div id="docScanFtr">
+    <span style="color:#aaa;font-size:13px">꼭짓점·막대를 드래그해서 조정</span>
+    <button id="btnDsApply">✅ 이 영역으로 크롭</button>
   </div>
 </div>
 
 <!-- ===== 상세보기 풀스크린 ===== -->
-<div class="view-fullscreen" id="modalView" style="display:none">
-  <div class="vf-header">
-    <span class="vf-title" id="viewTitle"></span>
-    <div class="vf-btns">
-      <button class="vf-btn" id="btnViewShare">📤</button>
-      <button class="vf-btn" id="btnViewEdit">✏️</button>
-      <button class="vf-btn" id="btnViewDelete">🗑️</button>
-      <button class="vf-btn" id="btnViewClose">✕</button>
+<div id="viewFs" style="display:none">
+  <div id="viewHdr">
+    <span id="viewTitle"></span>
+    <div>
+      <button class="dsbtn" id="btnVShare">📤</button>
+      <button class="dsbtn" id="btnVEdit">✏️</button>
+      <button class="dsbtn" id="btnVDel">🗑</button>
+      <button class="dsbtn" id="btnVClose">✕</button>
     </div>
   </div>
-  <div class="vf-img-wrap">
-    <button class="vf-nav" id="btnViewPrev">‹</button>
+  <div id="viewImgWrap">
+    <button class="vnav" id="btnVPrev">‹</button>
     <img id="viewImg" src="" alt="">
-    <button class="vf-nav" id="btnViewNext">›</button>
+    <button class="vnav" id="btnVNext">›</button>
   </div>
-  <div class="vf-meta">
-    <span class="badge badge-type" id="viewType" style="display:none"></span>
-    <span class="badge" id="viewCat"></span>
-    <span class="view-date" id="viewDate"></span>
-    <p id="viewMemo"></p>
+  <div id="viewMeta">
+    <span id="viewTypeBadge"></span>
+    <span id="viewCatBadge"></span>
+    <span id="viewDateTxt"></span>
+    <p id="viewMemoTxt"></p>
   </div>
 </div>
 
-<!-- ===== AI 검색 드롭다운 ===== -->
-<div class="ai-search-dropdown" id="aiSearchDropdown" style="display:none">
-  <div class="ai-search-drop-header">
-    <span>🤖 AI 검색 결과</span>
-    <button onclick="closeAiDrop()">✕</button>
-  </div>
-  <div id="aiSearchDropResult"></div>
+<!-- ===== 이미지 확대 팝업 ===== -->
+<div id="imgPopup" style="display:none" onclick="closeImgPopup()">
+  <button id="popupClose">✕</button>
+  <button class="pnav" id="popupPrev" onclick="event.stopPropagation();popupNav(-1)">‹</button>
+  <img id="popupImg" src="" alt="">
+  <button class="pnav" id="popupNext" onclick="event.stopPropagation();popupNav(1)">›</button>
 </div>
 
 <!-- ===== 카테고리 관리 모달 ===== -->
-<div class="modal-bg" id="modalCat">
-  <div class="modal modal-sm">
-    <div class="modal-header">
-      <span>📂 카테고리 관리</span>
-      <button class="btn-icon" id="btnCatClose">✕</button>
-    </div>
+<div class="overlay" id="modalCat" style="display:none">
+  <div class="modal smModal">
+    <div class="modal-hdr"><span>📂 카테고리 관리</span><button class="xbtn" id="btnCatClose">✕</button></div>
     <div class="modal-body">
       <div class="cat-add-row">
-        <input type="text" id="catNewName" placeholder="새 카테고리 이름">
-        <button class="btn-primary" id="btnCatAdd">추가</button>
+        <input id="catNewName" placeholder="새 카테고리 이름">
+        <button id="btnCatAddOk">추가</button>
       </div>
-      <ul class="cat-list" id="catList"></ul>
+      <ul id="catList"></ul>
     </div>
   </div>
 </div>
 
 <!-- ===== API 키 모달 ===== -->
-<div class="modal-bg" id="modalApiKey">
-  <div class="modal modal-sm">
-    <div class="modal-header">
-      <span>🔑 AI API 키 설정</span>
-      <button class="btn-icon" id="btnApiKeyClose">✕</button>
-    </div>
+<div class="overlay" id="modalKey" style="display:none">
+  <div class="modal smModal">
+    <div class="modal-hdr"><span>🔑 AI API 키</span><button class="xbtn" id="btnKeyClose">✕</button></div>
     <div class="modal-body">
-      <p class="hint-text">Anthropic API 키 (브라우저에만 저장)</p>
-      <input type="password" id="apiKeyInput" placeholder="sk-ant-...">
+      <p style="font-size:13px;color:#64748b;margin-bottom:10px">Anthropic API 키 (브라우저에만 저장)</p>
+      <input type="password" id="apiKeyInp" placeholder="sk-ant-...">
     </div>
-    <div class="modal-footer">
-      <button class="btn-primary" id="btnSaveApiKey">저장</button>
-    </div>
+    <div class="modal-ftr"><button class="btn-pri" id="btnKeySave">저장</button></div>
   </div>
 </div>
 
-<!-- ===== OneDrive 백업 모달 ===== -->
-<div class="modal-bg" id="modalOneDrive">
-  <div class="modal modal-sm">
-    <div class="modal-header">
-      <span>☁️ OneDrive 백업</span>
-      <button class="btn-icon" id="btnOneDriveClose">✕</button>
-    </div>
+<!-- ===== OneDrive 모달 ===== -->
+<div class="overlay" id="modalOD" style="display:none">
+  <div class="modal smModal">
+    <div class="modal-hdr"><span>☁️ OneDrive 백업</span><button class="xbtn" id="btnODClose">✕</button></div>
     <div class="modal-body">
-      <div id="oneDriveStatus" class="od-status">☁️ 준비됨</div>
+      <div id="odStatus" style="padding:12px;background:#f0f6ff;border-radius:10px;font-size:13px;min-height:50px">준비됨</div>
     </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" id="btnOdLocalExport">⬇️ 로컬 저장</button>
-      <button class="btn-primary"   id="btnOdUpload">☁️ OneDrive 업로드</button>
+    <div class="modal-ftr">
+      <button class="btn-sec" id="btnODLocal">⬇️ 로컬 저장</button>
+      <button class="btn-pri" id="btnODUpload">☁️ OneDrive</button>
     </div>
   </div>
 </div>
 
-<!-- ===== 스캔 진행 오버레이 ===== -->
-<div class="scan-overlay-modal" id="scanOverlay" style="display:none">
-  <div class="scan-overlay-box">
-    <div class="scan-spinner">📄</div>
-    <p id="scanOverlayMsg">문서 감지 중...</p>
+<!-- AI 검색 드롭다운 -->
+<div id="aiDrop" style="display:none">
+  <div id="aiDropHdr"><span>🤖 AI 검색 결과</span><button onclick="closeAiDrop()">✕</button></div>
+  <div id="aiDropBody"></div>
+</div>
+
+<!-- 스캔 로딩 -->
+<div id="scanLoader" style="display:none">
+  <div id="scanLoaderBox">
+    <div style="font-size:40px;animation:spin 1s linear infinite">🤖</div>
+    <p id="scanLoaderMsg">문서 감지 중...</p>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
-<script src="photos-scan.js?v=20260616f"></script>
+<div id="toast"></div>
+
+<script src="photos-scan.js?v=8"></script>
 </body>
 </html>
