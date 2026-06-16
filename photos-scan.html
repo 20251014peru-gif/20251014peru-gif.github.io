@@ -354,6 +354,22 @@
   </div>
 </div>
 
+<!-- 🐞 디버그 버튼 (우측하단 고정) -->
+<button id="dbgBtn" onclick="toggleDbg()">🐞</button>
+
+<!-- 디버그 패널 -->
+<div id="dbgPanel" style="display:none">
+  <div id="dbgHdr">
+    <span>🐞 디버그 로그</span>
+    <div>
+      <button onclick="copyDbg()">📋 복사</button>
+      <button onclick="clearDbg()">🗑 비우기</button>
+      <button onclick="toggleDbg()">✕</button>
+    </div>
+  </div>
+  <div id="dbgBody"></div>
+</div>
+
 <div id="toast"></div>
 
 <script src="photos-scan.js?v=8"></script>

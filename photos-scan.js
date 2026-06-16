@@ -3,6 +3,47 @@
 */
 'use strict';
 
+/* ═══════════════════════════════════════
+   디버그 로그 시스템 — 폰에서도 에러 확인 가능
+   화면 우측하단 🐞 버튼 → 패널 열림
+   ═══════════════════════════════════════ */
+const _dbgLogs = [];
+function dbg(msg, type='log'){
+  const t = new Date().toLocaleTimeString();
+  const entry = {t, type, msg:String(msg)};
+  _dbgLogs.push(entry);
+  if(_dbgLogs.length>100) _dbgLogs.shift();
+  if(type==='error') console.error('🐞',msg);
+  else console.log('🐞',msg);
+  // 패널 열려있으면 실시간 갱신
+  if(document.getElementById('dbgPanel')?.style.display==='flex') renderDbg();
+}
+// 전역 에러 자동 캡처
+window.addEventListener('error', e => dbg(`❌ ${e.message} @ ${e.filename?.split('/').pop()}:${e.lineno}`,'error'));
+window.addEventListener('unhandledrejection', e => dbg(`❌ Promise: ${e.reason?.message||e.reason}`,'error'));
+
+function renderDbg(){
+  const body = document.getElementById('dbgBody'); if(!body) return;
+  body.innerHTML = _dbgLogs.slice().reverse().map(e=>{
+    const col = e.type==='error'?'#ef4444':'#22c55e';
+    return `<div style="border-bottom:1px solid #333;padding:4px 0;font-size:11px;line-height:1.4"><span style="color:${col}">[${e.t}]</span> ${e.msg.replace(/</g,'&lt;')}</div>`;
+  }).join('') || '<div style="color:#888;padding:10px">로그 없음</div>';
+}
+function toggleDbg(){
+  const p = document.getElementById('dbgPanel');
+  if(!p) return;
+  p.style.display = p.style.display==='flex'?'none':'flex';
+  if(p.style.display==='flex') renderDbg();
+}
+function clearDbg(){ _dbgLogs.length=0; renderDbg(); }
+function copyDbg(){
+  const txt = _dbgLogs.map(e=>`[${e.t}][${e.type}] ${e.msg}`).join('\n');
+  navigator.clipboard?.writeText(txt).then(()=>toast('로그 복사됨')).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('로그 복사됨');
+  });
+}
+
+
 /* ═══ 상수 ═══ */
 const FIREBASE_PROJECT = 'my-system-25497';
 const FIREBASE_KEY     = 'AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
@@ -22,10 +63,27 @@ const MODE_COLOR = MODE==='work' ? '#2563EB' : '#7C3AED';
 let idb = null;
 function openIDB(){
   return new Promise((res,rej)=>{
-    const r = indexedDB.open('PhotoScanDB_'+MODE, 1);
-    r.onupgradeneeded = e => e.target.result.createObjectStore('imgs',{keyPath:'id'});
-    r.onsuccess = e => { idb=e.target.result; res(); };
-    r.onerror = rej;
+    // v2로 올려서 옛 DB에 store 없으면 자동 생성
+    const r = indexedDB.open('PhotoScanDB_'+MODE, 2);
+    r.onupgradeneeded = e => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains('imgs')){
+        db.createObjectStore('imgs',{keyPath:'id'});
+      }
+    };
+    r.onsuccess = e => {
+      idb = e.target.result;
+      // store 확인 — 없으면 DB 삭제 후 재생성
+      if(!idb.objectStoreNames.contains('imgs')){
+        idb.close();
+        const del = indexedDB.deleteDatabase('PhotoScanDB_'+MODE);
+        del.onsuccess = ()=>{ openIDB().then(res).catch(rej); };
+        del.onerror = rej;
+      } else {
+        res();
+      }
+    };
+    r.onerror = e => { dbg('IDB open error: '+e.target.error?.message); rej(e); };
   });
 }
 const idbPut = (id,data) => new Promise((r,j)=>{ const t=idb.transaction('imgs','readwrite'); t.objectStore('imgs').put({id,data}); t.oncomplete=r; t.onerror=j; });
@@ -321,7 +379,7 @@ function closeDocScan(){ $('docScanFs').style.display='none'; }
 
 function renderDocScan(){
   const body=$('docScanBody'), cvs=$('docScanCanvas'), wrap=$('docScanWrap');
-  if(!dsOrig||!cvs||!body) return;
+  if(!dsOrig||!cvs||!body){ dbg('renderDocScan: missing elements','error'); return; }
   const bW=body.clientWidth||window.innerWidth;
   const bH=body.clientHeight||(window.innerHeight-100);
   const scale=Math.min(bW/dsOrig.width, bH/dsOrig.height)*dsZoom;
@@ -329,6 +387,7 @@ function renderDocScan(){
   const dw=Math.round(dsOrig.width*scale), dh=Math.round(dsOrig.height*scale);
   cvs.width=dw; cvs.height=dh;
   wrap.style.width=dw+'px'; wrap.style.height=dh+'px';
+  dbg(`docScan: body=${bW}×${bH}, canvas=${dw}×${dh}, scale=${scale.toFixed(3)}`);
   const ctx=cvs.getContext('2d');
   ctx.drawImage(dsOrig,0,0,dw,dh);
   dsDrawLines(ctx,dw,dh);
@@ -394,7 +453,9 @@ function dsCornerBind(h,idx,cvs,dw,dh){
 function dsBarBind(h,type,cvs,dw,dh){
   h.style.touchAction='none';
   h.addEventListener('pointerdown',e=>{
-    e.preventDefault(); e.stopPropagation(); h.setPointerCapture(e.pointerId);
+    e.preventDefault(); e.stopPropagation();
+    dbg(`bar ${type} pointerdown @ ${e.clientX},${e.clientY}`);
+    try{ h.setPointerCapture(e.pointerId); }catch(_){ dbg('setPointerCapture failed','error'); }
     const mv=ev=>{ ev.preventDefault(); const {x,y}=dsCanvasPos(ev,cvs); const ox=x/dsScale,oy=y/dsScale;
       if(type==='t'){ dsCorners[0]={...dsCorners[0],y:oy}; dsCorners[1]={...dsCorners[1],y:oy}; }
       if(type==='b'){ dsCorners[2]={...dsCorners[2],y:oy}; dsCorners[3]={...dsCorners[3],y:oy}; }
@@ -720,7 +781,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v8.2';
+  if($('appVersion')) $('appVersion').textContent='v8.3';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
