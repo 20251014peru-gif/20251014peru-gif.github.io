@@ -270,7 +270,6 @@ function setAddTab(tab){
   $('scanPhotoBtns').style.display=tab==='scan'?'flex':'none';
   $('securePhotoBtns').style.display=tab==='secure'?'flex':'none';
 }
-  if(photoId){
 function renderSlides(){
   const wrap=$('slides'); if(!wrap) return;
   wrap.innerHTML='';
@@ -1307,14 +1306,17 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 
 /* ═══ INIT ═══ */
 async function init(){
-  await openIDB(); loadData();
-  // 버전/모드
+  // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
   if($('appVersion')) $('appVersion').textContent='v10.4';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
   document.body.appendChild(bar);
+
+  // IDB 실패해도 계속 진행
+  try{ await openIDB(); } catch(e){ dbg('IDB init failed: '+e.message,'error'); }
+  loadData();
 
   renderCatDropdown(); renderGallery(); populateCatSel(); renderCatList();
 
@@ -1493,4 +1495,3 @@ async function init(){
 }
 
 document.addEventListener('DOMContentLoaded', init);
-}
