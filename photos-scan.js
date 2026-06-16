@@ -262,7 +262,7 @@ function getExifOrientation(dataUrl){
 }
 
 function autoRotateImage(dataUrl){
-  // 세로 사진(h>w) → 시계방향 90° 회전해 가로로
+  // 세로 사진(h>w)이면 반시계방향 90° (-π/2) 회전해서 가로 정상으로
   return new Promise(resolve=>{
     const img=new Image();
     img.onload=()=>{
@@ -271,11 +271,11 @@ function autoRotateImage(dataUrl){
       const c=document.createElement('canvas');
       c.width=h; c.height=w;
       const ctx=c.getContext('2d');
-      // 시계방향 90°
-      ctx.translate(h, 0);
-      ctx.rotate(Math.PI/2);
+      // 반시계방향 -90°
+      ctx.translate(0, w);
+      ctx.rotate(-Math.PI/2);
       ctx.drawImage(img, 0, 0);
-      dbg(`auto-rotate CW: ${w}×${h} → ${h}×${w}`);
+      dbg(`auto-rotate -90°: ${w}×${h} → ${h}×${w}`);
       resolve(c.toDataURL('image/jpeg', 0.95));
     };
     img.onerror=()=>resolve(dataUrl);
@@ -623,70 +623,22 @@ function dsBindCanvas(cvs){
 /* ── 호환용 글로벌 (이미 위에서 선언됨) ── */
 
 /* ── 크롭 적용 ── */
-/* ── 캔버스 기반 4점 원근 보정 (서버 없을 때 fallback) ──
-   삼각형 메쉬로 근사 (충분히 부드러움) */
+/* ── 캔버스 기반 4점 원근 보정 (메쉬 제거 — 깔끔한 단순 크롭) ──
+   서버 OpenCV가 가장 정확. 서버 없을 땐 bounding-box로 단순 크롭. */
 async function canvasWarp(src, corners){
+  // 메쉬 분할은 가장자리에 선이 생기므로 사용하지 않음
+  // 단순 4점의 bounding box로 크롭만 (서버 없을 때 fallback)
   const img = await loadImg(src);
-  const s = sortCorners(corners); // [tl, tr, br, bl]
-  const [tl,tr,br,bl] = s;
-  // 출력 크기: 각 변의 평균 길이
-  const wTop = Math.hypot(tr.x-tl.x, tr.y-tl.y);
-  const wBot = Math.hypot(br.x-bl.x, br.y-bl.y);
-  const hLeft= Math.hypot(bl.x-tl.x, bl.y-tl.y);
-  const hRight= Math.hypot(br.x-tr.x, br.y-tr.y);
-  const outW = Math.round(Math.max(wTop, wBot));
-  const outH = Math.round(Math.max(hLeft, hRight));
-  if(outW<50 || outH<50) throw new Error('영역이 너무 작음');
-
+  const xs = corners.map(p=>p.x), ys = corners.map(p=>p.y);
+  const sx = Math.max(0, Math.min(...xs));
+  const sy = Math.max(0, Math.min(...ys));
+  const sw = Math.min(img.width-sx,  Math.max(...xs)-sx);
+  const sh = Math.min(img.height-sy, Math.max(...ys)-sy);
+  if(sw<20 || sh<20) throw new Error('영역이 너무 작음');
   const c = document.createElement('canvas');
-  c.width = outW; c.height = outH;
-  const ctx = c.getContext('2d');
-
-  // 격자 분할 (16x16 = 256 셀)
-  const N = 16;
-  for(let row=0; row<N; row++){
-    for(let col=0; col<N; col++){
-      const u0 = col/N,    v0 = row/N;
-      const u1 = (col+1)/N, v1 = (row+1)/N;
-      // 4점 보간 (bilinear)
-      const lerp = (a,b,t)=>({x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t});
-      const interp = (u,v)=>{
-        const topP = lerp(tl,tr,u);
-        const botP = lerp(bl,br,u);
-        return lerp(topP, botP, v);
-      };
-      const p00=interp(u0,v0), p10=interp(u1,v0), p11=interp(u1,v1), p01=interp(u0,v1);
-      const dx0=u0*outW, dy0=v0*outH, dx1=u1*outW, dy1=v1*outH;
-      // 두 삼각형으로 그리기
-      drawTri(ctx, img, p00,p10,p11, {x:dx0,y:dy0},{x:dx1,y:dy0},{x:dx1,y:dy1});
-      drawTri(ctx, img, p00,p11,p01, {x:dx0,y:dy0},{x:dx1,y:dy1},{x:dx0,y:dy1});
-    }
-  }
-  return c.toDataURL('image/jpeg',0.95);
-}
-
-/* 어파인 삼각형 매핑 (원본 삼각형 → 목적지 삼각형) */
-function drawTri(ctx, img, s0,s1,s2, d0,d1,d2){
-  const denom = (s1.x-s0.x)*(s2.y-s0.y) - (s2.x-s0.x)*(s1.y-s0.y);
-  if(Math.abs(denom) < 0.001) return;
-  // 목적지에서 원본으로의 어파인 행렬 역
-  // 우리는 dest 좌표에 원본 픽셀을 그려야 하므로
-  // src 좌표 → dest 좌표 매핑의 어파인을 구함
-  // dest = M * src + t
-  const m11 = ((d1.x-d0.x)*(s2.y-s0.y) - (d2.x-d0.x)*(s1.y-s0.y)) / denom;
-  const m12 = ((d2.x-d0.x)*(s1.x-s0.x) - (d1.x-d0.x)*(s2.x-s0.x)) / denom;
-  const m21 = ((d1.y-d0.y)*(s2.y-s0.y) - (d2.y-d0.y)*(s1.y-s0.y)) / denom;
-  const m22 = ((d2.y-d0.y)*(s1.x-s0.x) - (d1.y-d0.y)*(s2.x-s0.x)) / denom;
-  const tx = d0.x - m11*s0.x - m12*s0.y;
-  const ty = d0.y - m21*s0.x - m22*s0.y;
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(d0.x, d0.y); ctx.lineTo(d1.x, d1.y); ctx.lineTo(d2.x, d2.y); ctx.closePath();
-  ctx.clip();
-  ctx.setTransform(m11, m21, m12, m22, tx, ty);
-  ctx.drawImage(img, 0, 0);
-  ctx.restore();
-  ctx.setTransform(1,0,0,1,0,0);
+  c.width = Math.round(sw); c.height = Math.round(sh);
+  c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.95);
 }
 
 /* ── AI 보정: 잘린 사진의 휘어짐/명암을 다듬어 반듯하게 ── */
@@ -1166,7 +1118,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v9.6';
+  if($('appVersion')) $('appVersion').textContent='v9.7';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -1235,6 +1187,17 @@ async function init(){
   $('tColor') && ($('tColor').onchange=()=>{ if(canvas&&canvas.isDrawingMode) canvas.freeDrawingBrush.color=$('tColor').value; });
   $('tSize')  && ($('tSize').onchange =()=>{ if(canvas&&canvas.isDrawingMode) canvas.freeDrawingBrush.width=parseInt($('tSize').value); });
   $on('btnDelObj',    ()=>{ if(canvas){ const objs=canvas.getActiveObjects(); objs.forEach(o=>canvas.remove(o)); canvas.discardActiveObject(); canvas.renderAll(); }});
+  $on('btnClearAll',  ()=>{
+    if(!canvas) return;
+    const cnt = canvas.getObjects().length;
+    if(cnt===0){ toast('편집한 내용이 없어요'); return; }
+    if(!confirm(`편집한 ${cnt}개 객체를 모두 지울까요?`)) return;
+    canvas.getObjects().slice().forEach(o=>canvas.remove(o));
+    canvas.discardActiveObject();
+    canvas.renderAll();
+    history=[];
+    toast('🧹 편집 초기화됨');
+  });
   $on('btnRotL',      ()=>rotateImg(-90));
   $on('btnRotR',      ()=>rotateImg(90));
   $on('btnCropApply', applyCrop);
