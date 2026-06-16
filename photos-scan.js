@@ -629,47 +629,62 @@ async function savePhoto(){
   const secure=addTab==='secure';
   const scan=addTab==='scan';
 
-  // 저장 버튼 비활성화 + 진행 표시
-  const btnSave=$('btnSave'); if(btnSave){ btnSave.disabled=true; btnSave.textContent='⏫ 업로드 중...'; }
+  const btnSave=$('btnSave');
+  if(btnSave){ btnSave.disabled=true; btnSave.textContent='⏫ 업로드 중...'; }
 
   try{
+    // 1. ID 목록 생성
+    const ids=mImgs.map(m=>m.id||uid());
+
+    // 2. 로컬 IndexedDB 저장
+    for(let i=0;i<mImgs.length;i++) await idbPut(ids[i], mImgs[i].data);
+
+    // 3. Firebase Storage 직접 업로드 (mImgs.data에서 바로)
+    const imgUrls={};
+    for(let i=0;i<mImgs.length;i++){
+      if(btnSave) btnSave.textContent=`⏫ ${i+1}/${mImgs.length} 업로드 중...`;
+      dbg(`uploading ${i+1}/${mImgs.length}, size=${Math.round(mImgs[i].data.length/1024)}KB`);
+      try{
+        const url=await stUpload(ids[i], mImgs[i].data);
+        imgUrls[ids[i]]=url;
+        dbg(`img ${i+1} OK: ${url.slice(0,60)}`);
+      }catch(e){ dbg('stUpload fail: '+e.message,'error'); }
+    }
+
+    // 4. 메타데이터 구성 + Firestore 저장
     if(mEditId){
       const p=photos.find(x=>x.id===mEditId); if(!p) return;
-      for(const id of (p.imgIds||[])){ await idbDel(id); await stDelete(id); }
-      const ids=[];
-      for(let i=0;i<mImgs.length;i++){
-        const m=mImgs[i];
-        if(btnSave) btnSave.textContent=`⏫ ${i+1}/${mImgs.length} 업로드 중...`;
-        const nid=m.id||uid();
-        await idbPut(nid,m.data);
-        ids.push(nid);
-      }
-      p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.type=type; p.imgIds=ids;
-      await fsSave(p);
+      for(const oid of (p.imgIds||[])) { idbDel(oid).catch(()=>{}); stDelete(oid).catch(()=>{}); }
+      p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.type=type;
+      p.imgIds=ids; p.imgUrls=JSON.stringify(imgUrls);
+      const fd={...p}; delete fd.id;
+      const r=await fetch(`${FS_BASE}/${FS_COL()}/${p.id}?key=${FIREBASE_KEY}`,{
+        method:'PATCH', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(toFS(fd))
+      });
+      dbg(`Firestore PATCH: ${r.status}`);
     } else {
-      const pid=uid(), ids=[];
-      for(let i=0;i<mImgs.length;i++){
-        const m=mImgs[i];
-        if(btnSave) btnSave.textContent=`⏫ ${i+1}/${mImgs.length} 업로드 중...`;
-        const iid=uid();
-        await idbPut(iid,m.data);
-        ids.push(iid);
-      }
-      const np={id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids};
+      const pid=uid();
+      const np={id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids,imgUrls:JSON.stringify(imgUrls)};
       photos.unshift(np);
-      await fsSave(np);
+      const fd={...np}; delete fd.id;
+      const r=await fetch(`${FS_BASE}/${FS_COL()}/${pid}?key=${FIREBASE_KEY}`,{
+        method:'PATCH', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(toFS(fd))
+      });
+      dbg(`Firestore PATCH new: ${r.status}`);
     }
+
     savePhotos();
     $('modalAdd').style.display='none';
     renderGallery();
-    toast('✅ 저장 완료');
+    toast('✅ 저장 완료 — 다른 기기에서도 바로 보입니다');
   } catch(e){
     dbg('savePhoto error: '+e.message,'error');
-    // Firebase 실패해도 로컬은 저장
     savePhotos();
     $('modalAdd').style.display='none';
     renderGallery();
-    toast('⚠️ 로컬 저장됨 (클라우드 업로드 실패)');
+    toast('⚠️ 로컬 저장됨 (클라우드 실패)');
   } finally{
     if(btnSave){ btnSave.disabled=false; btnSave.textContent='💾 저장'; }
   }
@@ -1692,7 +1707,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v11.2';
+  if($('appVersion')) $('appVersion').textContent='v11.3';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
