@@ -623,6 +623,8 @@ function moveSection(toSection){
 
 async function savePhoto(){
   const title=$('fTitle').value.trim();
+  dbg(`savePhoto: title="${title}", mImgs.length=${mImgs.length}`);
+  if(mImgs.length>0) dbg(`mImgs[0].data type=${typeof mImgs[0].data}, length=${mImgs[0].data?.length||0}, starts=${mImgs[0].data?.slice(0,20)}`);
   if(!mImgs.length){ toast('사진을 추가하세요'); return; }
   if(!title){ toast('제목을 입력하세요'); return; }
   const cat=$('fCat').value, memo=$('fMemo').value.trim(), date=$('fDate').value||today(), type='';
@@ -1707,7 +1709,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v11.4';
+  if($('appVersion')) $('appVersion').textContent='v11.4b';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
