@@ -48,6 +48,143 @@ function copyDbg(){
 const FIREBASE_PROJECT = 'my-system-25497';
 const FIREBASE_KEY     = 'AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 const FS_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents`;
+const ST_BASE = `https://firebasestorage.googleapis.com/v0/b/${FIREBASE_PROJECT}.appspot.com/o`;
+const FS_COL  = () => `psc_photos_${MODE}`; // Firestore 컬렉션
+
+/* ══ Firestore 헬퍼 ══ */
+function toFS(obj){
+  const f={};
+  for(const [k,v] of Object.entries(obj)){
+    if(v===null||v===undefined) f[k]={nullValue:null};
+    else if(typeof v==='boolean') f[k]={booleanValue:v};
+    else if(typeof v==='number') f[k]={doubleValue:v};
+    else if(typeof v==='string') f[k]={stringValue:v};
+    else f[k]={stringValue:JSON.stringify(v)};
+  }
+  return {fields:f};
+}
+function fromFS(doc){
+  const o={id:doc.name.split('/').pop()};
+  for(const [k,v] of Object.entries(doc.fields||{})){
+    if(v.stringValue!==undefined){
+      const s=v.stringValue;
+      if((s.startsWith('[')||s.startsWith('{'))&&k!=='url'){
+        try{o[k]=JSON.parse(s);}catch{o[k]=s;}
+      } else o[k]=s;
+    }
+    else if(v.booleanValue!==undefined) o[k]=v.booleanValue;
+    else if(v.doubleValue!==undefined)  o[k]=v.doubleValue;
+    else o[k]=null;
+  }
+  return o;
+}
+
+/* ══ Firebase Storage — 이미지 업로드/다운로드/삭제 ══ */
+async function stUpload(imgId, dataUrl){
+  const blob=await fetch(dataUrl).then(r=>r.blob());
+  const path=encodeURIComponent(`psc_imgs/${MODE}/${imgId}.jpg`);
+  const r=await fetch(`${ST_BASE}/${path}?uploadType=media&name=psc_imgs%2F${MODE}%2F${imgId}.jpg`,{
+    method:'POST', headers:{'Content-Type':'image/jpeg'},
+    body:blob
+  });
+  if(!r.ok) throw new Error(`Storage upload failed: ${r.status}`);
+  const d=await r.json();
+  return `${ST_BASE}/${encodeURIComponent(d.name)}?alt=media&token=${d.downloadTokens}`;
+}
+async function stDelete(imgId){
+  const path=encodeURIComponent(`psc_imgs/${MODE}/${imgId}.jpg`);
+  await fetch(`${ST_BASE}/${path}`,{method:'DELETE'}).catch(()=>{});
+}
+async function stGet(imgId){
+  // 먼저 IndexedDB 캐시 확인
+  const cached=await idbGet(imgId);
+  if(cached) return cached;
+  // 없으면 Storage에서 다운로드 후 캐시
+  const path=encodeURIComponent(`psc_imgs/${MODE}/${imgId}.jpg`);
+  const r=await fetch(`${ST_BASE}/${path}?alt=media`);
+  if(!r.ok) return null;
+  const blob=await r.blob();
+  const dataUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(blob);});
+  await idbPut(imgId, dataUrl); // 로컬 캐시
+  return dataUrl;
+}
+
+/* ══ Firestore — 메타데이터 저장/불러오기/삭제 ══ */
+async function fsLoad(){
+  try{
+    const r=await fetch(`${FS_BASE}/${FS_COL()}?key=${FIREBASE_KEY}&pageSize=200`);
+    if(!r.ok) return null;
+    const d=await r.json();
+    return (d.documents||[]).map(fromFS);
+  }catch(e){ dbg('fsLoad error: '+e.message,'error'); return null; }
+}
+async function fsSave(photo){
+  // 이미지들 Storage에 업로드 → URL 저장
+  const imgUrls={};
+  for(const imgId of (photo.imgIds||[])){
+    const cached=await idbGet(imgId);
+    if(cached && cached.startsWith('data:')){
+      try{
+        const url=await stUpload(imgId,cached);
+        imgUrls[imgId]=url;
+      }catch(e){ dbg('stUpload error: '+e.message,'error'); }
+    }
+  }
+  // 메타데이터 Firestore 저장
+  const data={...photo, imgUrls:JSON.stringify(imgUrls)};
+  delete data.id;
+  const r=await fetch(`${FS_BASE}/${FS_COL()}/${photo.id}?key=${FIREBASE_KEY}`,{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(toFS(data))
+  });
+  if(!r.ok){ dbg('fsSave error: '+r.status,'error'); }
+}
+async function fsDelete(photoId, imgIds){
+  // 이미지 Storage 삭제
+  for(const imgId of (imgIds||[])){
+    await stDelete(imgId);
+  }
+  // Firestore 삭제
+  await fetch(`${FS_BASE}/${FS_COL()}/${photoId}?key=${FIREBASE_KEY}`,{method:'DELETE'}).catch(()=>{});
+}
+
+/* ══ 동기화: Firebase → 로컬 병합 ══ */
+async function syncFromFirebase(){
+  dbg('syncFromFirebase start');
+  const remote=await fsLoad();
+  if(!remote){ dbg('sync: no remote data'); return; }
+
+  // 원격 데이터를 로컬에 병합 (원격 우선)
+  const localIds=new Set(photos.map(p=>p.id));
+  let updated=false;
+  for(const rp of remote){
+    const local=photos.find(p=>p.id===rp.id);
+    // imgUrls가 있으면 IndexedDB에 없는 이미지 미리 캐시
+    if(rp.imgUrls){
+      const urlMap=typeof rp.imgUrls==='string'?JSON.parse(rp.imgUrls):rp.imgUrls;
+      for(const [imgId,url] of Object.entries(urlMap)){
+        const cached=await idbGet(imgId);
+        if(!cached && url){
+          // 백그라운드 캐시 (non-blocking)
+          stGet(imgId).catch(()=>{});
+        }
+      }
+    }
+    if(!local){
+      photos.unshift(rp);
+      updated=true;
+    }
+  }
+  // 원격에 없는 로컬 항목 제거 (다른 기기에서 삭제된 것)
+  const remoteIds=new Set(remote.map(p=>p.id));
+  photos=photos.filter(p=>remoteIds.has(p.id));
+
+  if(updated) savePhotos();
+  dbg(`sync done: ${remote.length} items`);
+  renderGallery();
+  toast('☁️ 동기화 완료');
+}
 const LS_PHOTOS  = 'psc_photos';
 const LS_CATS    = 'psc_cats';
 const LS_API_KEY = 'psc_apikey';
@@ -232,7 +369,7 @@ async function renderGallery(){
     iw.appendChild(img);
     if((p.imgIds||[]).length>1){ const mb=document.createElement('span'); mb.className='card-multi'; mb.textContent='×'+p.imgIds.length; iw.appendChild(mb); }
     if(p.secure){ const lk=document.createElement('div'); lk.className='card-locked'; lk.innerHTML='<span>🔒</span><p>보안 사진</p>'; iw.appendChild(lk); }
-    if(!p.secure){ const firstId=(p.imgIds||[])[0]; if(firstId) idbGet(firstId).then(u=>{ if(u) img.src=u; }); }
+    if(!p.secure){ const firstId=(p.imgIds||[])[0]; if(firstId) stGet(firstId).then(u=>{ if(u) img.src=u; }); }
     else { img.style.background='#1e293b'; }
 
     const info=document.createElement('div'); info.className='card-info';
@@ -279,7 +416,7 @@ function openAddModal(photoId=null, preserveImgs=false, forceSecure=false){
       setAddTab(tab, true); // 수정 모드 — 비번 재확인 없이
       $('fTitle').value=p.title||''; $('fMemo').value=p.memo||''; $('fDate').value=p.date||today();
       populateCatSel(p.cat);
-      Promise.all((p.imgIds||[]).map(id=>idbGet(id).then(u=>({id,data:u})))).then(imgs=>{ mImgs=imgs.filter(x=>x.data); renderSlides(); });
+      Promise.all((p.imgIds||[]).map(id=>stGet(id).then(u=>({id,data:u})))).then(imgs=>{ mImgs=imgs.filter(x=>x.data); renderSlides(); });
       // 이동 버튼 표시
       const mr=$('moveSectionRow'); if(mr) mr.style.display='flex';
       // 현재 섹션 이동 버튼 숨김
@@ -462,12 +599,18 @@ async function savePhoto(){
   const scan=addTab==='scan';
   if(mEditId){
     const p=photos.find(x=>x.id===mEditId); if(!p) return;
-    await Promise.all((p.imgIds||[]).map(id=>idbDel(id)));
+    // 기존 이미지 삭제 (로컬+Storage)
+    for(const id of (p.imgIds||[])){ await idbDel(id); await stDelete(id); }
     const ids=[]; for(const m of mImgs){ const nid=m.id||uid(); await idbPut(nid,m.data); ids.push(nid); }
     p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.type=type; p.imgIds=ids;
+    // Firebase 동기화 (백그라운드)
+    fsSave(p).catch(e=>dbg('fsSave error: '+e.message,'error'));
   } else {
     const pid=uid(), ids=[]; for(const m of mImgs){ const iid=uid(); await idbPut(iid,m.data); ids.push(iid); }
-    photos.unshift({id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids});
+    const np={id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids};
+    photos.unshift(np);
+    // Firebase 동기화 (백그라운드)
+    fsSave(np).catch(e=>dbg('fsSave error: '+e.message,'error'));
   }
   savePhotos(); $('modalAdd').style.display='none'; renderGallery(); toast('저장되었습니다');
 }
@@ -475,8 +618,12 @@ async function savePhoto(){
 async function delPhoto(id){
   if(!confirm('삭제할까요?')) return;
   const i=photos.findIndex(x=>x.id===id); if(i<0) return;
-  await Promise.all((photos[i].imgIds||[]).map(iid=>idbDel(iid)));
+  const imgIds=photos[i].imgIds||[];
+  // 로컬 삭제
+  await Promise.all(imgIds.map(iid=>idbDel(iid)));
   photos.splice(i,1); savePhotos(); $('viewFs').style.display='none'; renderGallery(); toast('삭제됨');
+  // Firebase 삭제 (백그라운드)
+  fsDelete(id, imgIds).catch(e=>dbg('fsDelete error: '+e.message,'error'));
 }
 
 /* ═══ 이미지 확대 팝업 ═══ */
@@ -600,7 +747,7 @@ function renderViewDots(){
 }
 
 async function loadViewImg(){
-  const url=vImgIds[vSlide]?await idbGet(vImgIds[vSlide]):null;
+  const url=vImgIds[vSlide]?await stGet(vImgIds[vSlide]):null;
   $('viewImg').src=url||'';
   $('btnVPrev').style.display=vImgIds.length>1?'':'none';
   $('btnVNext').style.display=vImgIds.length>1?'':'none';
@@ -1058,11 +1205,11 @@ async function openEditorFromView(){
   _editFromView=true;
   // 현재 보고 있는 슬라이드 이미지 로드
   const imgId = vImgIds[vSlide];
-  const url = await idbGet(imgId);
+  const url = await stGet(imgId);
   if(!url){ toast('이미지를 불러올 수 없어요'); return; }
   // mImgs를 이 사진으로 세팅 (편집 후 저장 시 이 사진에 반영)
   mEditId = p.id;
-  mImgs = await Promise.all((p.imgIds||[]).map(id=>idbGet(id).then(u=>({id,data:u}))));
+  mImgs = await Promise.all((p.imgIds||[]).map(id=>stGet(id).then(u=>({id,data:u}))));
   mImgs = mImgs.filter(x=>x.data);
   mSlide = vSlide;
   // 폼 값도 채워둠 (저장 시 유지)
@@ -1386,7 +1533,7 @@ async function finishEdit(){
     _editFromView=false;
     const p=photos.find(x=>x.id===mEditId);
     if(p){
-      await Promise.all((p.imgIds||[]).map(id=>idbDel(id)));
+      for(const id of (p.imgIds||[])){ await idbDel(id); await stDelete(id); }
       const ids=[]; for(const m of mImgs){ const nid=m.id||uid(); await idbPut(nid,m.data); ids.push(nid); }
       p.imgIds=ids;
       savePhotos();
@@ -1478,7 +1625,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v10.9';
+  if($('appVersion')) $('appVersion').textContent='v11.0';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -1490,9 +1637,12 @@ async function init(){
 
   renderCatDropdown(); renderGallery(); populateCatSel(); renderCatList();
 
+  // 앱 시작 시 Firebase 동기화 (백그라운드)
+  syncFromFirebase().catch(e=>dbg('sync error: '+e.message,'error'));
+
   // ── 헤더 ──
   $on('btnHome',    ()=>location.href='index.html');
-  $on('btnBackup',  ()=>{ $('modalOD').style.display='flex'; });
+  $on('btnBackup',  ()=>{ syncFromFirebase().catch(()=>{}); $('modalOD').style.display='flex'; });
   $on('btnApiKey',  ()=>{ $('apiKeyInp').value=getApiKey(); $('modalKey').style.display='flex'; });
   $on('btnCatMgr',  ()=>{ renderCatList(); $('modalCat').style.display='flex'; });
   $on('btnExpBak',  exportBackup);
