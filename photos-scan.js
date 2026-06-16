@@ -461,9 +461,16 @@ function dsBarBind(h,type,cvs,dw,dh){
   h.style.touchAction='none';
   h.addEventListener('pointerdown',e=>{
     e.preventDefault(); e.stopPropagation();
-    dbg(`bar ${type} pointerdown @ ${e.clientX.toFixed(0)},${e.clientY.toFixed(0)}`);
-    try{ h.setPointerCapture(e.pointerId); }catch(_){ dbg('setPointerCapture failed','error'); }
-    const mv=ev=>{ ev.preventDefault();
+    dbg(`bar ${type} DOWN @ ${e.clientX.toFixed(0)},${e.clientY.toFixed(0)} id=${e.pointerId} type=${e.pointerType}`);
+    let captured=false;
+    try{ h.setPointerCapture(e.pointerId); captured=true; }catch(err){ dbg('capture fail: '+err.message,'error'); }
+    dbg(`bar ${type} captured=${captured}`);
+
+    let moveCount=0;
+    const mv=ev=>{
+      ev.preventDefault();
+      moveCount++;
+      if(moveCount<3 || moveCount%10===0) dbg(`bar ${type} MOVE #${moveCount} @ ${ev.clientX.toFixed(0)},${ev.clientY.toFixed(0)}`);
       const r=cvs.getBoundingClientRect();
       const x=Math.max(0,Math.min(cvs.width,  ev.clientX-r.left));
       const y=Math.max(0,Math.min(cvs.height, ev.clientY-r.top));
@@ -474,8 +481,16 @@ function dsBarBind(h,type,cvs,dw,dh){
       if(type==='r'){ dsCorners[1]={...dsCorners[1],x:ox}; dsCorners[2]={...dsCorners[2],x:ox}; }
       dsRedraw(cvs,dw,dh);
     };
-    const up=()=>{ h.removeEventListener('pointermove',mv); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up); };
-    h.addEventListener('pointermove',mv,{passive:false}); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
+    const up=ev=>{
+      dbg(`bar ${type} UP (moves=${moveCount})`);
+      h.removeEventListener('pointermove',mv);
+      h.removeEventListener('pointerup',up);
+      h.removeEventListener('pointercancel',up);
+    };
+    h.addEventListener('pointermove',mv,{passive:false});
+    h.addEventListener('pointerup',up);
+    h.addEventListener('pointercancel',up);
+    dbg(`bar ${type} listeners attached`);
   },{passive:false});
 }
 
@@ -792,7 +807,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v8.4';
+  if($('appVersion')) $('appVersion').textContent='v8.5';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
