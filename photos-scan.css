@@ -736,3 +736,11 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
 
 /* 상세보기 이동 버튼 */
 #btnVMove{background:rgba(63,124,184,.7) !important;border-color:#3F7CB8 !important}
+
+/* 모달 하단 카메라/갤러리 버튼 */
+.ftr-cam,.ftr-gal{
+  width:44px;height:44px;border:none;border-radius:10px;
+  font-size:20px;cursor:pointer;flex-shrink:0;
+}
+.ftr-cam{background:#ebf3fc}
+.ftr-gal{background:#f0ebfc}

@@ -1707,7 +1707,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v11.3';
+  if($('appVersion')) $('appVersion').textContent='v11.4';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -1781,6 +1781,15 @@ async function init(){
   // ── 추가 모달 사진 선택 버튼 ──
   $on('btnPhotoCamera', ()=>{ startBurst(); $('fCamera').click(); });
   $on('btnPhotoGallery',()=>$('fGallery').click());
+  // 하단 푸터 카메라/갤러리 (현재 탭에 맞게 동작)
+  $on('btnFootCam', ()=>{
+    if(addTab==='scan') $('fScanCam').click();
+    else{ startBurst(); $('fCamera').click(); }
+  });
+  $on('btnFootGal', ()=>{
+    if(addTab==='scan') $('fScanGal').click();
+    else $('fGallery').click();
+  });
   $on('btnScanCamera',  ()=>$('fScanCam').click());
   $on('btnScanGallery', ()=>$('fScanGal').click());
   $on('btnSecCam',      ()=>{ startBurst(); $('fCamera').click(); });
