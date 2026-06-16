@@ -369,7 +369,16 @@ async function renderGallery(){
     iw.appendChild(img);
     if((p.imgIds||[]).length>1){ const mb=document.createElement('span'); mb.className='card-multi'; mb.textContent='×'+p.imgIds.length; iw.appendChild(mb); }
     if(p.secure){ const lk=document.createElement('div'); lk.className='card-locked'; lk.innerHTML='<span>🔒</span><p>보안 사진</p>'; iw.appendChild(lk); }
-    if(!p.secure){ const firstId=(p.imgIds||[])[0]; if(firstId) stGet(firstId).then(u=>{ if(u) img.src=u; }); }
+    if(!p.secure){
+      const firstId=(p.imgIds||[])[0];
+      if(firstId){
+        // imgUrls에 Storage URL 있으면 직접 사용 (다른 기기에서 빠르게 로드)
+        const urlMap = p.imgUrls ? (typeof p.imgUrls==='string'?JSON.parse(p.imgUrls):p.imgUrls) : {};
+        const directUrl = urlMap[firstId];
+        if(directUrl){ img.src=directUrl; }
+        else { stGet(firstId).then(u=>{ if(u) img.src=u; }); }
+      }
+    }
     else { img.style.background='#1e293b'; }
 
     const info=document.createElement('div'); info.className='card-info';
@@ -597,22 +606,50 @@ async function savePhoto(){
   const cat=$('fCat').value, memo=$('fMemo').value.trim(), date=$('fDate').value||today(), type='';
   const secure=addTab==='secure';
   const scan=addTab==='scan';
-  if(mEditId){
-    const p=photos.find(x=>x.id===mEditId); if(!p) return;
-    // 기존 이미지 삭제 (로컬+Storage)
-    for(const id of (p.imgIds||[])){ await idbDel(id); await stDelete(id); }
-    const ids=[]; for(const m of mImgs){ const nid=m.id||uid(); await idbPut(nid,m.data); ids.push(nid); }
-    p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.type=type; p.imgIds=ids;
-    // Firebase 동기화 (백그라운드)
-    fsSave(p).catch(e=>dbg('fsSave error: '+e.message,'error'));
-  } else {
-    const pid=uid(), ids=[]; for(const m of mImgs){ const iid=uid(); await idbPut(iid,m.data); ids.push(iid); }
-    const np={id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids};
-    photos.unshift(np);
-    // Firebase 동기화 (백그라운드)
-    fsSave(np).catch(e=>dbg('fsSave error: '+e.message,'error'));
+
+  // 저장 버튼 비활성화 + 진행 표시
+  const btnSave=$('btnSave'); if(btnSave){ btnSave.disabled=true; btnSave.textContent='⏫ 업로드 중...'; }
+  toast('☁️ 사진 업로드 중...');
+
+  try{
+    if(mEditId){
+      const p=photos.find(x=>x.id===mEditId); if(!p) return;
+      for(const id of (p.imgIds||[])){ await idbDel(id); await stDelete(id); }
+      const ids=[];
+      for(const m of mImgs){
+        const nid=m.id||uid();
+        await idbPut(nid,m.data);
+        ids.push(nid);
+      }
+      p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.type=type; p.imgIds=ids;
+      // Storage 업로드 완료 후 Firestore 저장
+      await fsSave(p);
+    } else {
+      const pid=uid(), ids=[];
+      for(const m of mImgs){
+        const iid=uid();
+        await idbPut(iid,m.data);
+        ids.push(iid);
+      }
+      const np={id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids};
+      photos.unshift(np);
+      // Storage 업로드 완료 후 Firestore 저장
+      await fsSave(np);
+    }
+    savePhotos();
+    $('modalAdd').style.display='none';
+    renderGallery();
+    toast('✅ 저장 완료');
+  } catch(e){
+    dbg('savePhoto error: '+e.message,'error');
+    // Firebase 실패해도 로컬은 저장
+    savePhotos();
+    $('modalAdd').style.display='none';
+    renderGallery();
+    toast('⚠️ 로컬 저장됨 (클라우드 업로드 실패)');
+  } finally{
+    if(btnSave){ btnSave.disabled=false; btnSave.textContent='💾 저장'; }
   }
-  savePhotos(); $('modalAdd').style.display='none'; renderGallery(); toast('저장되었습니다');
 }
 
 async function delPhoto(id){
@@ -747,7 +784,14 @@ function renderViewDots(){
 }
 
 async function loadViewImg(){
-  const url=vImgIds[vSlide]?await stGet(vImgIds[vSlide]):null;
+  let url=null;
+  const imgId=vImgIds[vSlide];
+  if(imgId){
+    // 현재 보는 사진의 imgUrls에서 직접 URL 추출
+    const p=photos.find(x=>x.id===vId);
+    const urlMap=p?.imgUrls?(typeof p.imgUrls==='string'?JSON.parse(p.imgUrls):p.imgUrls):{};
+    url=urlMap[imgId]||await stGet(imgId);
+  }
   $('viewImg').src=url||'';
   $('btnVPrev').style.display=vImgIds.length>1?'':'none';
   $('btnVNext').style.display=vImgIds.length>1?'':'none';
@@ -1625,7 +1669,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v11.0';
+  if($('appVersion')) $('appVersion').textContent='v11.1';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
