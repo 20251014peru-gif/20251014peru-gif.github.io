@@ -374,6 +374,10 @@ function loadImage(src){
 let cvReady = false;  // 브라우저 OpenCV (예비)
 let cvError  = false;
 
+/* 문서감지 상태 변수 */
+let docCorners     = [];    // [{x,y}] 4개 꼭짓점 (원본 이미지 픽셀 좌표)
+let docScanImgData = null;  // 원본 dataUrl
+
 function onOpenCvReady(){ cvReady=true; const b=document.getElementById('cvStatusBadge'); if(b) b.remove(); }
 function onOpenCvError(){ cvError=true;  const b=document.getElementById('cvStatusBadge'); if(b) b.remove(); }
 
@@ -434,7 +438,7 @@ async function runServerScan(silent, statusEl){
   try{
     const m = modalImages[modalSlide];
     // 1600px 리사이즈 후 서버 전송
-    const small = await resizeForAI(m.dataUrl, 1600);
+    const small = await resizeForAI(m.dataUrl, 1024);
 
     const resp = await fetch(SCAN_SERVER + '/api/scan/detect', {
       method: 'POST',
@@ -497,7 +501,7 @@ async function aiDocCropFallback(silent, statusEl, btn){
 
     /* ── 1단계: 문서 위치 + 신뢰도 ── */
     statusEl.textContent = '🤖 1단계: 문서 위치 파악 중...';
-    const small1 = await resizeForAI(enhanced, 1600);
+    const small1 = await resizeForAI(enhanced, 1024); // 1600→1024 payload 축소
     const [mt1, b641] = getB64Parts(small1);
     const [rW1, rH1]  = (await getImgSize(small1)).split('x').map(Number);
 
@@ -929,6 +933,23 @@ async function firebaseBackupMeta(){
 
 /* ── 편집기 (명함앱 검증 방식 — img+overlay, Fabric 크롭 대신 native canvas) ── */
 let canvas=null, editImgId=null, editTool='select', mosaicActive=false;
+let editHistory=[];   // 뒤로가기 히스토리 스택
+const MAX_HISTORY=20;
+
+function pushHistory(){
+  if(!canvas) return;
+  const state = JSON.stringify(canvas.toJSON());
+  editHistory.push(state);
+  if(editHistory.length > MAX_HISTORY) editHistory.shift();
+}
+function popHistory(){
+  if(!canvas || editHistory.length===0){ showToast('더 이상 되돌릴 수 없습니다'); return; }
+  const state = editHistory.pop();
+  canvas.loadFromJSON(state, ()=>{
+    // 배경 이미지 복원
+    canvas.renderAll();
+  });
+}
 let cropImgSrc='';  // 현재 크롭/편집 중인 원본 dataUrl
 
 function openEditor(){
@@ -1537,7 +1558,7 @@ async function init(){
   /* ── 버전/모드 표시 ── */
   const _el = id => document.getElementById(id);
   if(_el('appTitle'))   _el('appTitle').textContent   = MODE_LABEL;
-  if(_el('appVersion')) _el('appVersion').textContent = 'v7.0';
+  if(_el('appVersion')) _el('appVersion').textContent = 'v7.1';
   document.title = MODE_LABEL;
   // 상단 모드 컬러 바
   const modeBar = document.createElement('div');
@@ -1664,7 +1685,23 @@ async function init(){
   $on('toolColor', null);
   _el('toolColor') && (_el('toolColor').onchange=()=>{ if(canvas&&canvas.isDrawingMode) canvas.freeDrawingBrush.color=_el('toolColor').value; });
   _el('toolSize')  && (_el('toolSize').onchange =()=>{ if(canvas&&canvas.isDrawingMode) canvas.freeDrawingBrush.width=parseInt(_el('toolSize').value); });
-  $on('btnDelObj',    ()=>{ if(canvas){const o=canvas.getActiveObject();if(o){canvas.remove(o);canvas.renderAll();}} });
+  // 뒤로가기
+  $on('btnUndoAction',  popHistory);
+  $on('btnEditUndo',    popHistory);
+  // 선택 객체 삭제
+  $on('btnDelSelected', ()=>{
+    if(!canvas) return;
+    const objs = canvas.getActiveObjects();
+    if(!objs.length){ showToast('삭제할 객체를 선택하세요'); return; }
+    objs.forEach(o=>canvas.remove(o));
+    canvas.discardActiveObject();
+    canvas.renderAll();
+  });
+  $on('btnDelObj', ()=>{ // 기존 호환
+    if(!canvas) return;
+    const o=canvas.getActiveObject();
+    if(o){canvas.remove(o);canvas.renderAll();}
+  });
   $on('btnRotateL',   ()=>rotateImage(-90));
   $on('btnRotateR',   ()=>rotateImage(90));
   $on('btnApplyCrop', applyCrop);

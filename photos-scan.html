@@ -233,6 +233,9 @@
         <button class="tool-btn" data-tool="draw"   title="그리기">✏️</button>
         <button class="tool-btn" data-tool="mosaic" title="모자이크(드래그)">🟫</button>
         <div class="tool-sep"></div>
+        <button class="tool-btn" id="btnUndoAction" title="뒤로가기">↩️</button>
+        <button class="tool-btn danger" id="btnDelSelected" title="선택 삭제">🗑️</button>
+        <div class="tool-sep"></div>
         <label class="tool-label">색상</label>
         <input type="color" id="toolColor" value="#FF0000">
         <label class="tool-label">굵기</label>
@@ -253,7 +256,6 @@
         <button class="tool-btn" id="btnRotateL" title="왼쪽 90° 회전">↺</button>
         <button class="tool-btn" id="btnRotateR" title="오른쪽 90° 회전">↻</button>
         <div class="tool-sep"></div>
-        <button class="tool-btn danger" id="btnDelObj" title="삭제">🗑️</button>
       </div>
       <div class="canvas-wrapper" id="canvasWrapper">
         <canvas id="editCanvas"></canvas>
