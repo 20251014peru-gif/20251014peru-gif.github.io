@@ -138,8 +138,10 @@ function populateCatSel(sel){
   s.innerHTML=cats.map(c=>`<option value="${c}"${c===prev?' selected':''}>${c}</option>`).join('');
 }
 
-function openAddModal(photoId=null){
-  mEditId=photoId; mImgs=[]; mSlide=0;
+function openAddModal(photoId=null, preserveImgs=false){
+  mEditId=photoId;
+  // 사진 첨부 후 호출되는 경우 mImgs 보존 (preserveImgs=true)
+  if(!preserveImgs){ mImgs=[]; mSlide=0; }
   $('addModalTitle').textContent=photoId?'사진 수정':'사진 추가';
   $('fTitle').value=''; $('fMemo').value=''; $('fDate').value=today();
   $('fType') && ($('fType').value='');
@@ -174,8 +176,9 @@ async function handleFiles(files, append=false, autoScan=false){
   }
   if(append){ mImgs.push(...results); renderSlides(); return; }
   mImgs=[...results]; mSlide=0;
-  if(autoScan&&results.length===1){ openAddModal(); setTimeout(()=>runDocScan(true),300); }
-  else openAddModal();
+  // ★ preserveImgs=true: openAddModal이 mImgs를 비우지 않도록
+  if(autoScan&&results.length===1){ openAddModal(null,true); setTimeout(()=>runDocScan(true),300); }
+  else openAddModal(null,true);
 }
 
 async function savePhoto(){
@@ -311,8 +314,6 @@ async function runDocScan(silent=false){
 /* ── 문서감지 풀스크린 ── */
 function openDocScan(){
   const fs=$('docScanFs'); if(!fs||!dsOrig) return;
-  // 핸들 inited 초기화
-  for(let i=0;i<8;i++){ const h=$('dh'+i); if(h){ h._inited=false; } }
   fs.style.display='flex';
   requestAnimationFrame(renderDocScan);
 }
@@ -349,11 +350,15 @@ function dsDrawLines(ctx,dw,dh){
 function dsPlaceHandles(dw,dh){
   const p=dsCorners.map(c=>({x:Math.round(Math.max(0,Math.min(dw,c.x*dsScale))),y:Math.round(Math.max(0,Math.min(dh,c.y*dsScale)))}));
   const [tl,tr,br,bl]=p;
-  // 모서리 4개
+  const cvs=$('docScanCanvas');
+  // 모서리 4개 — 매번 새로 바인딩 (cloneNode로 이벤트 초기화)
   [['dh0',tl,0],['dh1',tr,1],['dh2',br,2],['dh3',bl,3]].forEach(([id,pt,idx])=>{
-    const h=$(id); if(!h) return;
+    let h=$(id); if(!h) return;
     h.style.left=(pt.x-10)+'px'; h.style.top=(pt.y-10)+'px';
-    if(!h._inited){ h._inited=true; dsCornerBind(h,idx,$('docScanCanvas'),dw,dh); }
+    // 이벤트 재바인딩 — clone으로 기존 핸들러 제거
+    const nh=h.cloneNode(true);
+    h.parentNode.replaceChild(nh,h);
+    dsCornerBind(nh,idx,cvs,dw,dh);
   });
   // 막대 4개
   const mT={x:Math.round((tl.x+tr.x)/2)-20, y:Math.min(tl.y,tr.y)-5};
@@ -361,11 +366,13 @@ function dsPlaceHandles(dw,dh){
   const mL={x:Math.min(tl.x,bl.x)-5, y:Math.round((tl.y+bl.y)/2)-20};
   const mR={x:Math.max(tr.x,br.x)-5, y:Math.round((tr.y+br.y)/2)-20};
   [['dh4',mT,'t'],['dh5',mB,'b'],['dh6',mL,'l'],['dh7',mR,'r']].forEach(([id,pt,type])=>{
-    const h=$(id); if(!h) return;
+    let h=$(id); if(!h) return;
     h.style.left=pt.x+'px'; h.style.top=pt.y+'px';
     if(type==='t'||type==='b'){ h.style.width='40px'; h.style.height='10px'; }
     else { h.style.width='10px'; h.style.height='40px'; }
-    if(!h._inited){ h._inited=true; dsBarBind(h,type,$('docScanCanvas'),dw,dh); }
+    const nh=h.cloneNode(true);
+    h.parentNode.replaceChild(nh,h);
+    dsBarBind(nh,type,cvs,dw,dh);
   });
 }
 
@@ -497,8 +504,10 @@ function setTool(t){
     canvas.freeDrawingBrush.color=$('tColor').value;
   } else if(t==='crop'){
     canvas.selection=false;
-    // 크롭 박스 초기화
     const cw=canvas.width, ch=canvas.height, pad=Math.round(Math.min(cw,ch)*0.07);
+    // canvasInner 크기를 캔버스와 동일하게 — cropOv가 정확히 겹치도록
+    const inner=$('canvasInner');
+    if(inner){ inner.style.width=cw+'px'; inner.style.height=ch+'px'; }
     const box=$('cropBox');
     box.style.left=pad+'px'; box.style.top=pad+'px';
     box.style.width=(cw-pad*2)+'px'; box.style.height=(ch-pad*2)+'px';
@@ -509,10 +518,16 @@ function setTool(t){
 }
 
 /* ── 크롭 드래그 ── */
-let cBox={x:0,y:0,w:0,h:0}, cDrag=null, cSX=0, cSY=0, cSB=null;
+let cDrag=null, cSX=0, cSY=0, cSB=null;
 
 function initCropDrag(){
-  const ov=$('cropOv'); if(!ov||ov._inited) return; ov._inited=true;
+  // 매번 새로 바인딩 — clone으로 기존 이벤트 제거
+  let ov=$('cropOv'); if(!ov) return;
+  const newOv=ov.cloneNode(true);
+  ov.parentNode.replaceChild(newOv,ov);
+  ov=newOv;
+  ov.style.display='block';
+
   ov.addEventListener('pointerdown',e=>{
     let h=null, el=e.target;
     while(el&&el!==ov){ const dh=el.getAttribute&&el.getAttribute('data-h'); if(dh){h=dh;break;} el=el.parentElement; }
@@ -528,6 +543,7 @@ function initCropDrag(){
     try{ ov.setPointerCapture(e.pointerId); }catch(_){}
     e.preventDefault();
   },{passive:false});
+
   ov.addEventListener('pointermove',e=>{
     if(!cDrag) return;
     const dx=e.clientX-cSX, dy=e.clientY-cSY;
@@ -704,7 +720,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v8.1';
+  if($('appVersion')) $('appVersion').textContent='v8.2';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -778,8 +794,8 @@ async function init(){
   $on('btnDsClose',  closeDocScan);
   $on('btnDsRetry',  ()=>{ closeDocScan(); runDocScan(false); });
   $on('btnDsApply',  applyDocScan);
-  $on('btnDsZoomIn', ()=>{ dsZoom=Math.min(dsZoom*1.4,4); for(let i=0;i<8;i++){ const h=$('dh'+i); if(h) h._inited=false; } renderDocScan(); });
-  $on('btnDsZoomOut',()=>{ dsZoom=Math.max(dsZoom/1.4,0.5); for(let i=0;i<8;i++){ const h=$('dh'+i); if(h) h._inited=false; } renderDocScan(); });
+  $on('btnDsZoomIn', ()=>{ dsZoom=Math.min(dsZoom*1.4,4); renderDocScan(); });
+  $on('btnDsZoomOut',()=>{ dsZoom=Math.max(dsZoom/1.4,0.5); renderDocScan(); });
 
   // ── 상세보기 ──
   $on('btnVClose', ()=>{ $('viewFs').style.display='none'; });
