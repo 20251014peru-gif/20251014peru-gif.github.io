@@ -537,3 +537,179 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
   cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.5);
 }
 .ds-floating-apply:active{background:#2c5f8a}
+
+/* ══ v10.3 추가 ══ */
+
+/* 헤더 추가 드롭다운 */
+.hdr-add-wrap{position:relative}
+.hbtn-add{background:#3F7CB8 !important;color:#fff !important;border-radius:8px;font-size:20px;font-weight:700}
+.hdr-drop{
+  position:absolute;top:44px;right:0;z-index:500;
+  background:#fff;border-radius:12px;
+  box-shadow:0 4px 20px rgba(0,0,0,.15);
+  border:1.5px solid #e2e8f0;min-width:180px;overflow:hidden;
+}
+.hdrop-item{
+  display:block;width:100%;padding:12px 16px;
+  border:none;background:none;text-align:left;
+  font-size:14px;font-weight:600;cursor:pointer;color:#1e293b;
+}
+.hdrop-item:hover{background:#f0f6ff}
+
+/* 폼 한 줄 */
+.frow-row{display:flex;gap:10px;align-items:flex-start}
+
+/* 보안 체크박스 */
+.sec-chk-wrap{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 0;font-size:14px;font-weight:600;cursor:pointer;
+}
+.sec-chk-wrap input{width:18px;height:18px;cursor:pointer}
+
+/* 상세보기 버튼 크게 */
+#viewHdr .dsbtn{
+  height:40px;padding:0 14px;border-radius:10px;
+  background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.3);
+  color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;
+}
+#viewHdr .dsbtn:active{background:rgba(255,255,255,.35)}
+#btnVEdit{background:rgba(63,124,184,.8) !important;border-color:#3F7CB8 !important}
+#btnVDel{background:rgba(239,68,68,.7) !important;border-color:#ef4444 !important}
+#viewHdr div{display:flex;gap:6px;flex-wrap:wrap}
+
+/* 핀치줌 이미지 래퍼 */
+#viewImgWrap{
+  flex:1;position:relative;
+  display:flex;align-items:center;justify-content:center;
+  background:#000;min-height:0;overflow:hidden;touch-action:none;
+}
+#viewImgInner{
+  position:relative;display:inline-flex;
+  transform-origin:center center;
+  touch-action:none;
+}
+#viewImg{max-width:100%;max-height:100%;object-fit:contain;display:block;user-select:none;-webkit-user-drag:none}
+
+/* 화살표 — 항상 보이게 (그림자) */
+.vnav{
+  position:absolute;top:50%;transform:translateY(-50%);z-index:10;
+  background:rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.6);
+  color:#fff;font-size:36px;width:50px;height:70px;
+  border-radius:10px;cursor:pointer;
+  text-shadow:0 1px 4px rgba(0,0,0,.8);
+  box-shadow:0 2px 12px rgba(0,0,0,.5);
+}
+#btnVPrev{left:8px}#btnVNext{right:8px}
+
+/* 하단 메타 */
+#viewMeta{
+  padding:10px 16px;background:rgba(0,0,0,.75);
+  flex-shrink:0;
+}
+#viewMetaMain{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+#viewCatBadge{font-size:12px;padding:3px 9px;border-radius:12px;background:rgba(255,255,255,.2);color:#fff;font-weight:600}
+#viewDateTxt{font-size:12px;color:#aaa}
+#viewSecBadge{font-size:12px;color:#fbbf24;font-weight:700}
+#viewMemoTxt{font-size:13px;color:#ccc;white-space:pre-wrap;margin:0}
+
+/* 슬라이드 인디케이터 점 */
+#viewDots{display:flex;gap:5px;justify-content:center;margin-top:8px;min-height:8px}
+.vdot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.35);transition:background .2s}
+.vdot.active{background:#fff}
+
+/* 보안 사진 잠금 오버레이 */
+.card-locked{position:absolute;inset:0;background:rgba(15,23,42,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:0}
+.card-locked span{font-size:28px}
+.card-locked p{font-size:12px;color:#fff;font-weight:700}
+
+/* ══ v10.4 ══ */
+
+/* 상단바 */
+#topBar{background:#fff;border-bottom:1px solid #e2e8f0;flex-shrink:0}
+
+/* 섹션 탭 */
+#sectionTabs{display:flex;border-bottom:1px solid #e2e8f0}
+.stab{
+  flex:1;padding:10px 0;border:none;background:none;
+  font-size:13px;font-weight:700;color:#94a3b8;cursor:pointer;
+  border-bottom:3px solid transparent;margin-bottom:-1px;
+}
+.stab.active{color:#3F7CB8;border-bottom-color:#3F7CB8;background:#fff}
+
+/* 필터 행 */
+#filterRow{display:flex;align-items:center;gap:8px;padding:8px 10px}
+
+/* 카테고리 드롭다운 */
+.cat-drop-wrap{position:relative;flex-shrink:0}
+.cat-drop-btn{
+  height:38px;padding:0 12px;
+  border:2px solid #3F7CB8;border-radius:10px;
+  background:#f0f6ff;color:#3F7CB8;font-size:13px;font-weight:700;
+  cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;
+}
+#catDropMenu{
+  position:absolute;top:44px;left:0;z-index:400;
+  background:#fff;border-radius:12px;min-width:160px;
+  box-shadow:0 4px 20px rgba(0,0,0,.15);border:1.5px solid #e2e8f0;
+  max-height:260px;overflow-y:auto;
+}
+.cdrop-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;
+}
+.cdrop-item:hover{background:#f0f6ff}
+.cdrop-item.active{color:#3F7CB8;background:#ebf3fc}
+.cdrop-del{border:none;background:none;color:#94a3b8;cursor:pointer;font-size:14px;padding:2px 4px}
+.cdrop-del:hover{color:#ef4444}
+.cdrop-add{
+  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  border-top:1px solid #e2e8f0;cursor:pointer;font-size:13px;color:#3F7CB8;font-weight:700;
+}
+
+/* 검색 인라인 */
+#searchInline{
+  flex:1;position:relative;display:flex;align-items:center;
+}
+#searchInline .search-ic{position:absolute;left:12px;font-size:16px;pointer-events:none}
+#gallerySearch{
+  flex:1;height:38px;padding-left:36px;padding-right:6px;
+  border:2px solid #3F7CB8;border-radius:10px;
+  font-size:13px;font-weight:600;background:#f0f6ff;outline:none;
+}
+#btnAiSearch{border:none;background:none;font-size:18px;cursor:pointer;margin-left:4px}
+
+/* ＋ 추가 버튼 */
+.add-btn{
+  flex-shrink:0;height:38px;padding:0 14px;
+  background:#3F7CB8;color:#fff;border:none;border-radius:10px;
+  font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;
+}
+.add-btn:active{background:#2c5f8a}
+
+/* 사진추가 모달 탭 */
+#addTabs{display:flex;border-bottom:2px solid #e2e8f0;flex-shrink:0}
+.atab{
+  flex:1;padding:10px 0;border:none;background:none;
+  font-size:13px;font-weight:700;color:#94a3b8;cursor:pointer;
+  border-bottom:3px solid transparent;margin-bottom:-2px;
+}
+.atab.active{color:#3F7CB8;border-bottom-color:#3F7CB8}
+
+/* 탭별 사진 선택 버튼 */
+#addPhotoRow{flex-shrink:0}
+.add-photo-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 0}
+.mini-btn{
+  height:36px;padding:0 14px;border:none;border-radius:10px;
+  font-size:13px;font-weight:700;cursor:pointer;color:#fff;
+}
+.mini-btn.blue  {background:#3F7CB8}
+.mini-btn.purple{background:#7C3AED}
+.mini-btn.green {background:#059669}
+.mini-btn.orange{background:#f59e0b}
+.mini-btn:active{opacity:.8}
+
+/* 이동 버튼 행 */
+#moveSectionRow{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:10px 0;border-top:1px solid #e2e8f0;
+}

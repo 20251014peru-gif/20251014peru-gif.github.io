@@ -92,7 +92,7 @@ const idbDel = id => new Promise((r,j)=>{ const t=idb.transaction('imgs','readwr
 const idbAll = () => new Promise((r,j)=>{ const req=idb.transaction('imgs','readonly').objectStore('imgs').getAll(); req.onsuccess=e=>r(e.target.result); req.onerror=j; });
 
 /* ═══ 상태 ═══ */
-let photos=[], cats=[], filter='all', searchQ='';
+let photos=[], cats=[], filter='all', searchQ='', curSection='normal', addTab='normal';
 function loadData(){
   try{ photos=JSON.parse(localStorage.getItem(LS_PHOTOS+'_'+MODE)||'[]'); }catch{ photos=[]; }
   try{ cats=JSON.parse(localStorage.getItem(LS_CATS+'_'+MODE)||JSON.stringify(DEFAULT_CATS)); }catch{ cats=[...DEFAULT_CATS]; }
@@ -137,23 +137,49 @@ async function callAI(messages, maxTok=512){
 }
 
 /* ═══ 필터칩 ═══ */
-function renderChips(){
-  const area=$('filterChips'); if(!area) return;
-  area.innerHTML='';
-  const mk=(label,val)=>{
-    const b=document.createElement('button');
-    b.className='chip'+(filter===val?' active':'');
-    const lbl=document.createElement('span'); lbl.textContent=label; lbl.onclick=()=>{ filter=val; renderChips(); renderGallery(); };
-    b.appendChild(lbl);
-    if(val!=='all'){
-      const x=document.createElement('span'); x.className='chipX'; x.textContent=' ✕'; x.title=`"${val}" 삭제`;
-      x.onclick=e=>{ e.stopPropagation(); if(!confirm(`"${val}" 삭제?`)) return; cats=cats.filter(c=>c!==val); saveCats(); if(filter===val) filter='all'; renderChips(); renderGallery(); populateCatSel(); };
-      b.appendChild(x);
-    }
-    area.appendChild(b);
-  };
-  mk('전체','all');
-  cats.forEach(c=>mk(c,c));
+/* ═══ 카테고리 드롭다운 ═══ */
+function renderCatDropdown(){
+  const btn=$('catDropLabel'); if(btn) btn.textContent=filter==='all'?'전체':filter;
+  const menu=$('catDropMenu'); if(!menu) return;
+  menu.innerHTML='';
+
+  // 전체
+  const allItem=document.createElement('div');
+  allItem.className='cdrop-item'+(filter==='all'?' active':'');
+  allItem.innerHTML='<span>전체</span>';
+  allItem.onclick=()=>{ filter='all'; renderCatDropdown(); renderGallery(); menu.style.display='none'; };
+  menu.appendChild(allItem);
+
+  // 카테고리 목록
+  cats.forEach(cat=>{
+    const item=document.createElement('div');
+    item.className='cdrop-item'+(filter===cat?' active':'');
+    item.innerHTML=`<span>${cat}</span><button class="cdrop-del" title="삭제">✕</button>`;
+    item.querySelector('span').onclick=()=>{ filter=cat; renderCatDropdown(); renderGallery(); menu.style.display='none'; };
+    item.querySelector('.cdrop-del').onclick=e=>{ e.stopPropagation(); if(!confirm(`"${cat}" 삭제?`)) return; cats=cats.filter(c=>c!==cat); saveCats(); if(filter===cat) filter='all'; renderCatDropdown(); renderGallery(); populateCatSel(); };
+    menu.appendChild(item);
+  });
+
+  // 카테고리 추가
+  const addRow=document.createElement('div');
+  addRow.className='cdrop-add';
+  addRow.innerHTML='＋ 카테고리 추가';
+  addRow.onclick=()=>{ const n=prompt('새 카테고리 이름'); if(n?.trim()) addCat(n.trim()); menu.style.display='none'; };
+  menu.appendChild(addRow);
+}
+
+// 드롭다운 토글
+function toggleCatDrop(){
+  const menu=$('catDropMenu'); if(!menu) return;
+  renderCatDropdown();
+  menu.style.display=menu.style.display==='none'?'block':'none';
+}
+
+// 섹션 전환
+function setSection(sec){
+  curSection=sec;
+  document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('active',b.dataset.sec===sec));
+  filter='all'; renderCatDropdown(); renderGallery();
 }
 
 /* ═══ 갤러리 ═══ */
@@ -162,9 +188,13 @@ async function renderGallery(){
   grid.querySelectorAll('.card').forEach(c=>c.remove());
   const q=searchQ.toLowerCase();
   const list=photos.filter(p=>{
+    // 섹션 필터: normal=보안아닌것, scan=스캔, secure=보안
+    const ms_sec = curSection==='secure' ? p.secure
+                 : curSection==='scan'   ? (!p.secure && p.scan)
+                 :                         (!p.secure && !p.scan);
     const mc=filter==='all'||p.cat===filter;
     const ms=!q||(p.title||'').toLowerCase().includes(q)||(p.memo||'').toLowerCase().includes(q);
-    return mc&&ms;
+    return ms_sec && mc && ms;
   }).sort((a,b)=>b.id.localeCompare(a.id));
   if(empty) empty.style.display=list.length?'none':'';
   for(const p of list){
@@ -172,15 +202,19 @@ async function renderGallery(){
     const iw=document.createElement('div'); iw.className='card-img-wrap';
     const img=document.createElement('img'); img.className='card-img'; img.alt=p.title||'';
     iw.appendChild(img);
-    if(p.type){ const tb=document.createElement('span'); tb.className='card-type'; tb.textContent={'영수증':'🧾','계약서':'📄','행정문서':'📋'}[p.type]||''; iw.appendChild(tb); }
     if((p.imgIds||[]).length>1){ const mb=document.createElement('span'); mb.className='card-multi'; mb.textContent='×'+p.imgIds.length; iw.appendChild(mb); }
+    if(p.secure){
+      const lk=document.createElement('div'); lk.className='card-locked';
+      lk.innerHTML='<span>🔒</span><p>보안 사진</p>'; iw.appendChild(lk);
+    }
     const acts=document.createElement('div'); acts.className='card-acts';
     const e1=document.createElement('button'); e1.className='cAct edit'; e1.textContent='✏️ 수정'; e1.onclick=ev=>{ ev.stopPropagation(); openAddModal(p.id); };
     const e2=document.createElement('button'); e2.className='cAct del';  e2.textContent='🗑 삭제'; e2.onclick=ev=>{ ev.stopPropagation(); delPhoto(p.id); };
     acts.append(e1,e2); iw.appendChild(acts);
-    const firstId=(p.imgIds||[])[0]; if(firstId) idbGet(firstId).then(u=>{ if(u) img.src=u; });
+    if(!p.secure){ const firstId=(p.imgIds||[])[0]; if(firstId) idbGet(firstId).then(u=>{ if(u) img.src=u; }); }
+    else { img.style.background='#1e293b'; }
     const info=document.createElement('div'); info.className='card-info';
-    info.innerHTML=`<div class="card-title">${p.title||'(제목없음)'}</div><div class="card-meta"><span class="badge">${p.cat||''}</span><span class="card-date">${(p.date||'').slice(5)}</span></div>`;
+    info.innerHTML=`<div class="card-title">${p.secure?'🔒 ':''}${p.title||'(제목없음)'}</div><div class="card-meta"><span class="badge">${p.cat||''}</span><span class="card-date">${(p.date||'').slice(5)}</span></div>`;
     card.append(iw,info);
     card.onclick=()=>openView(p.id);
     grid.insertBefore(card,empty);
@@ -196,26 +230,47 @@ function populateCatSel(sel){
   s.innerHTML=cats.map(c=>`<option value="${c}"${c===prev?' selected':''}>${c}</option>`).join('');
 }
 
-function openAddModal(photoId=null, preserveImgs=false){
+function openAddModal(photoId=null, preserveImgs=false, forceSecure=false){
   mEditId=photoId;
-  // 사진 첨부 후 호출되는 경우 mImgs 보존 (preserveImgs=true)
   if(!preserveImgs){ mImgs=[]; mSlide=0; }
   $('addModalTitle').textContent=photoId?'사진 수정':'사진 추가';
   $('fTitle').value=''; $('fMemo').value=''; $('fDate').value=today();
-  $('fType') && ($('fType').value='');
   $('aiStatus').textContent='';
   populateCatSel();
+
+  // 탭 설정
   if(photoId){
-    const p=photos.find(x=>x.id===photoId); if(!p) return;
-    $('fTitle').value=p.title||''; $('fMemo').value=p.memo||''; $('fDate').value=p.date||today();
-    if($('fType')) $('fType').value=p.type||'';
-    populateCatSel(p.cat);
-    Promise.all((p.imgIds||[]).map(id=>idbGet(id).then(u=>({id,data:u})))).then(imgs=>{ mImgs=imgs.filter(x=>x.data); renderSlides(); });
+    const p=photos.find(x=>x.id===photoId);
+    if(p){
+      const tab=p.secure?'secure':p.scan?'scan':'normal';
+      setAddTab(tab);
+      $('fTitle').value=p.title||''; $('fMemo').value=p.memo||''; $('fDate').value=p.date||today();
+      populateCatSel(p.cat);
+      Promise.all((p.imgIds||[]).map(id=>idbGet(id).then(u=>({id,data:u})))).then(imgs=>{ mImgs=imgs.filter(x=>x.data); renderSlides(); });
+      // 이동 버튼 표시
+      const mr=$('moveSectionRow'); if(mr) mr.style.display='flex';
+      // 현재 섹션 이동 버튼 숨김
+      const btnMap={'normal':'btnMoveNormal','scan':'btnMoveScan','secure':'btnMoveSecure'};
+      Object.values(btnMap).forEach(id=>{ const b=$(id); if(b) b.style.display=''; });
+      const cur=btnMap[tab]; if($(cur)) $(cur).style.display='none';
+    }
+  } else {
+    setAddTab(forceSecure?'secure':'normal');
+    const mr=$('moveSectionRow'); if(mr) mr.style.display='none';
   }
+
   renderSlides();
   $('modalAdd').style.display='flex';
 }
 
+function setAddTab(tab){
+  addTab=tab;
+  document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  $('normalPhotoBtns').style.display=tab==='normal'?'flex':'none';
+  $('scanPhotoBtns').style.display=tab==='scan'?'flex':'none';
+  $('securePhotoBtns').style.display=tab==='secure'?'flex':'none';
+}
+  if(photoId){
 function renderSlides(){
   const wrap=$('slides'); if(!wrap) return;
   wrap.innerHTML='';
@@ -282,11 +337,27 @@ async function handleFiles(files, append=false, autoScan=false){
   else openAddModal(null,true);
 }
 
+/* 사진 섹션 이동 (일반↔스캔↔보안) */
+function moveSection(toSection){
+  if(!mEditId) return;
+  const p=photos.find(x=>x.id===mEditId); if(!p) return;
+  const labels={'normal':'일반사진','scan':'스캔','secure':'보안사진'};
+  if(!confirm(`"${p.title}" 을 ${labels[toSection]}으로 이동할까요?`)) return;
+  p.secure = toSection==='secure';
+  p.scan   = toSection==='scan';
+  savePhotos();
+  $('modalAdd').style.display='none';
+  renderGallery();
+  toast(`✅ ${labels[toSection]}으로 이동됨`);
+}
+
 async function savePhoto(){
   const title=$('fTitle').value.trim();
   if(!mImgs.length){ toast('사진을 추가하세요'); return; }
   if(!title){ toast('제목을 입력하세요'); return; }
-  const cat=$('fCat').value, memo=$('fMemo').value.trim(), date=$('fDate').value||today(), type=$('fType')?.value||'';
+  const cat=$('fCat').value, memo=$('fMemo').value.trim(), date=$('fDate').value||today(), type='';
+  const secure=addTab==='secure';
+  const scan=addTab==='scan';
   if(mEditId){
     const p=photos.find(x=>x.id===mEditId); if(!p) return;
     await Promise.all((p.imgIds||[]).map(id=>idbDel(id)));
@@ -294,7 +365,7 @@ async function savePhoto(){
     p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.type=type; p.imgIds=ids;
   } else {
     const pid=uid(), ids=[]; for(const m of mImgs){ const iid=uid(); await idbPut(iid,m.data); ids.push(iid); }
-    photos.unshift({id:pid,title,cat,memo,date,type,imgIds:ids});
+    photos.unshift({id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids});
   }
   savePhotos(); $('modalAdd').style.display='none'; renderGallery(); toast('저장되었습니다');
 }
@@ -319,24 +390,99 @@ function popupNav(d){ mSlide=(mSlide+d+mImgs.length)%mImgs.length; renderSlides(
 
 /* ═══ 상세보기 ═══ */
 let vId=null, vSlide=0, vImgIds=[];
+let _vPinching=false, _vScale=1, _vLastDist=0, _vSwipeX=0;
+
 async function openView(id){
+  const p=photos.find(x=>x.id===id); if(!p) return;
+  // 보안 사진 처리
+  if(p.secure){
+    _pendingViewId=id;
+    $('pinInp').value=''; $('pinErr').style.display='none';
+    $('modalPin').style.display='flex';
+    return;
+  }
+  _openViewDirect(id);
+}
+
+let _pendingViewId=null;
+const SEC_PASS_KEY='psc_secpass';
+
+async function _openViewDirect(id){
   const p=photos.find(x=>x.id===id); if(!p) return;
   vId=id; vSlide=0; vImgIds=p.imgIds||[];
   $('viewTitle').textContent=p.title||'(제목없음)';
-  $('viewTypeBadge').textContent=p.type?({'영수증':'🧾','계약서':'📄','행정문서':'📋'}[p.type]||'')+' '+p.type:'';
   $('viewCatBadge').textContent=p.cat||'';
   $('viewDateTxt').textContent=p.date||'';
   $('viewMemoTxt').textContent=p.memo||'';
+  $('viewSecBadge').textContent=p.secure?'🔒 보안':'';
+  _vScale=1; resetViewTransform();
+  renderViewDots();
   await loadViewImg();
   $('viewFs').style.display='flex';
+  bindViewGestures();
 }
+
+function renderViewDots(){
+  const dots=$('viewDots'); if(!dots) return;
+  dots.innerHTML='';
+  if(vImgIds.length<=1){ dots.style.display='none'; return; }
+  dots.style.display='flex';
+  vImgIds.forEach((_,i)=>{ const d=document.createElement('div'); d.className='vdot'+(i===vSlide?' active':''); dots.appendChild(d); });
+}
+
 async function loadViewImg(){
   const url=vImgIds[vSlide]?await idbGet(vImgIds[vSlide]):null;
   $('viewImg').src=url||'';
   $('btnVPrev').style.display=vImgIds.length>1?'':'none';
   $('btnVNext').style.display=vImgIds.length>1?'':'none';
+  renderViewDots();
+  _vScale=1; resetViewTransform();
 }
-async function vNav(d){ vSlide=(vSlide+d+vImgIds.length)%vImgIds.length; await loadViewImg(); }
+
+function resetViewTransform(){
+  const inner=$('viewImgInner'); if(inner) inner.style.transform='scale(1) translate(0,0)';
+}
+
+async function vNav(d){
+  vSlide=(vSlide+d+vImgIds.length)%vImgIds.length;
+  await loadViewImg();
+}
+
+/* 핀치줌 + 스와이프 */
+function bindViewGestures(){
+  const wrap=$('viewImgWrap'); if(!wrap||wrap._gestBound) return; wrap._gestBound=true;
+  const inner=$('viewImgInner');
+  let tx=0, ty=0;
+
+  wrap.addEventListener('touchstart',e=>{
+    if(e.touches.length===2){
+      _vPinching=true;
+      _vLastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    } else if(e.touches.length===1){
+      _vSwipeX=e.touches[0].clientX;
+    }
+  },{passive:true});
+
+  wrap.addEventListener('touchmove',e=>{
+    if(e.touches.length===2 && _vPinching){
+      const dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      _vScale=Math.max(1, Math.min(4, _vScale*(dist/_vLastDist)));
+      _vLastDist=dist;
+      inner.style.transform=`scale(${_vScale})`;
+      e.preventDefault();
+    }
+  },{passive:false});
+
+  wrap.addEventListener('touchend',e=>{
+    if(_vPinching && e.touches.length<2){ _vPinching=false; return; }
+    if(e.touches.length===0 && !_vPinching && _vScale<=1.05){
+      const dx=e.changedTouches[0].clientX-_vSwipeX;
+      if(Math.abs(dx)>50 && vImgIds.length>1){
+        vNav(dx<0?1:-1);
+      }
+    }
+  },{passive:true});
+}
 
 async function shareView(){
   const src=$('viewImg').src; if(!src) return;
@@ -347,12 +493,12 @@ async function shareView(){
 }
 
 /* ═══ 카테고리 ═══ */
-function addCat(name){ const n=name?.trim(); if(!n) return; if(cats.includes(n)){ toast('이미 있는 카테고리'); return; } cats.push(n); saveCats(); renderChips(); populateCatSel(n); renderCatList(); toast(`"${n}" 추가`); }
+function addCat(name){ const n=name?.trim(); if(!n) return; if(cats.includes(n)){ toast('이미 있는 카테고리'); return; } cats.push(n); saveCats(); renderCatDropdown(); populateCatSel(n); renderCatList(); toast(`"${n}" 추가`); }
 function renderCatList(){
   const ul=$('catList'); if(!ul) return; ul.innerHTML='';
   cats.forEach((c,i)=>{ const li=document.createElement('li'); li.className='catItem';
     li.innerHTML=`<span class="catItemName">${c}</span><button class="catItemDel" title="삭제">🗑</button>`;
-    li.querySelector('button').onclick=()=>{ if(!confirm(`"${c}" 삭제?`)) return; cats.splice(i,1); saveCats(); renderCatList(); renderChips(); populateCatSel(); };
+    li.querySelector('button').onclick=()=>{ if(!confirm(`"${c}" 삭제?`)) return; cats.splice(i,1); saveCats(); renderCatList(); renderCatDropdown(); populateCatSel(); };
     ul.appendChild(li); });
 }
 
@@ -752,7 +898,7 @@ async function openEditorFromView(){
   mSlide = vSlide;
   // 폼 값도 채워둠 (저장 시 유지)
   $('fTitle').value=p.title||''; $('fMemo').value=p.memo||''; $('fDate').value=p.date||today();
-  if($('fType')) $('fType').value=p.type||'';
+  // fType removed
   populateCatSel(p.cat);
   // 편집창 진입
   editId=mImgs[mSlide].id; editSrc=mImgs[mSlide].data;
@@ -1102,7 +1248,7 @@ async function importBackup(file){
     if(!confirm(`백업 불러오기 (${d.photos.length}개)? 현재 데이터가 대체됩니다.`)) return;
     if(d.imgs) for(const im of d.imgs) await idbPut(im.id,im.data);
     photos=d.photos; cats=d.cats||cats;
-    savePhotos(); saveCats(); renderChips(); renderGallery(); populateCatSel(); renderCatList();
+    savePhotos(); saveCats(); renderCatDropdown(); renderGallery(); populateCatSel(); renderCatList();
     toast('백업 불러오기 완료');
   }catch(e){ toast('오류: '+e.message); }
 }
@@ -1164,13 +1310,13 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v10.2';
+  if($('appVersion')) $('appVersion').textContent='v10.4';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
   document.body.appendChild(bar);
 
-  renderChips(); renderGallery(); populateCatSel(); renderCatList();
+  renderCatDropdown(); renderGallery(); populateCatSel(); renderCatList();
 
   // ── 헤더 ──
   $on('btnHome',    ()=>location.href='index.html');
@@ -1180,11 +1326,21 @@ async function init(){
   $on('btnExpBak',  exportBackup);
   $on('btnImpBak',  ()=>$('fBackup').click());
 
-  // ── 모드 버튼 ──
-  $on('btnPhotoCamera',  ()=>{ startBurst(); $('fCamera').click(); });
-  $on('btnPhotoGallery', ()=>$('fGallery').click());
-  $on('btnScanCamera',   ()=>$('fScanCam').click());
-  $on('btnScanGallery',  ()=>$('fScanGal').click());
+  // ── ＋ 드롭다운 ──
+  // ── 섹션 탭 ──
+  document.querySelectorAll('.stab').forEach(b=>{
+    b.onclick=()=>setSection(b.dataset.sec);
+  });
+
+  // ── 카테고리 드롭다운 ──
+  $on('btnCatDrop', toggleCatDrop);
+  document.addEventListener('click', e=>{
+    const wrap=document.querySelector('.cat-drop-wrap');
+    if(wrap && !wrap.contains(e.target)) { const m=$('catDropMenu'); if(m) m.style.display='none'; }
+  });
+
+  // ── ＋ 추가 버튼 ──
+  $on('btnAdd', ()=>openAddModal(null,false,false));
 
   // ── 파일 입력 ──
   $('fCamera')  && ($('fCamera').onchange  = e=>{ if(e.target.files.length) addBurstFiles(e.target.files); e.target.value=''; });
@@ -1205,7 +1361,23 @@ async function init(){
   $('gallerySearch') && $('gallerySearch').addEventListener('keydown',e=>{ if(e.key==='Enter'&&$('gallerySearch').value.startsWith('@')){ e.preventDefault(); runAiSearch($('gallerySearch').value); }});
   $on('btnAiSearch', ()=>runAiSearch($('gallerySearch')?.value||''));
 
-  // ── 추가 모달 ──
+  // ── 추가 모달 탭 ──
+  document.querySelectorAll('.atab').forEach(b=>{ b.onclick=()=>setAddTab(b.dataset.tab); });
+
+  // ── 추가 모달 사진 선택 버튼 ──
+  $on('btnPhotoCamera', ()=>{ startBurst(); $('fCamera').click(); });
+  $on('btnPhotoGallery',()=>$('fGallery').click());
+  $on('btnScanCamera',  ()=>$('fScanCam').click());
+  $on('btnScanGallery', ()=>$('fScanGal').click());
+  $on('btnSecCam',      ()=>{ startBurst(); $('fCamera').click(); });
+  $on('btnSecGal',      ()=>$('fGallery').click());
+
+  // ── 섹션 이동 ──
+  $on('btnMoveNormal', ()=>moveSection('normal'));
+  $on('btnMoveScan',   ()=>moveSection('scan'));
+  $on('btnMoveSecure', ()=>moveSection('secure'));
+
+  // ── 추가 모달 기타 ──
   $on('btnAddClose', ()=>{ $('modalAdd').style.display='none'; });
   $on('btnPrev',     ()=>goSlide(-1));
   $on('btnNext',     ()=>goSlide(1));
@@ -1219,7 +1391,7 @@ async function init(){
   $on('btnSave',     savePhoto);
   $on('btnEdit',     openEditor);
   $on('btnCatAdd2',  ()=>{ const n=prompt('새 카테고리'); if(n) addCat(n); });
-  $on('btnCatDel2',  ()=>{ const v=$('fCat')?.value; if(!v) return; if(!confirm(`"${v}" 삭제?`)) return; cats=cats.filter(c=>c!==v); saveCats(); populateCatSel(); renderChips(); toast('삭제됨'); });
+  $on('btnCatDel2',  ()=>{ const v=$('fCat')?.value; if(!v) return; if(!confirm(`"${v}" 삭제?`)) return; cats=cats.filter(c=>c!==v); saveCats(); populateCatSel(); renderCatDropdown(); toast('삭제됨'); });
 
   // ── 편집 모달 ──
   $on('btnEditClose', ()=>{
@@ -1267,6 +1439,22 @@ async function init(){
   $on('btnVEdit',  openEditorFromView);
   $on('btnVDel',   ()=>delPhoto(vId));
 
+  // ── 보안 PIN 모달 ──
+  $on('btnPinClose', ()=>{ $('modalPin').style.display='none'; _pendingViewId=null; });
+  $on('btnPinOk', ()=>{
+    const pw=$('pinInp').value;
+    const saved=localStorage.getItem(SEC_PASS_KEY)||'1234';
+    if(pw===saved){
+      $('modalPin').style.display='none';
+      if(_pendingViewId) _openViewDirect(_pendingViewId);
+      _pendingViewId=null;
+    } else {
+      $('pinErr').style.display='block';
+      $('pinInp').value=''; $('pinInp').focus();
+    }
+  });
+  $('pinInp') && ($('pinInp').onkeydown=e=>{ if(e.key==='Enter') $('btnPinOk')?.click(); });
+
   // ── 이미지 팝업 ──
   $on('popupClose', closeImgPopup);
 
@@ -1305,3 +1493,4 @@ async function init(){
 }
 
 document.addEventListener('DOMContentLoaded', init);
+}
