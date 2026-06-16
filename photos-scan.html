@@ -121,7 +121,8 @@
       <button class="btn-icon" id="btnModalAddClose">✕</button>
     </div>
     <div class="modal-body">
-      <div class="img-preview-area">
+      <!-- 이미지 미리보기 — 클릭하면 크게 보기 -->
+      <div class="img-preview-area" id="imgPreviewArea">
         <div class="img-slides" id="imgSlides">
           <div class="no-img-placeholder">사진 없음</div>
         </div>
@@ -129,6 +130,7 @@
           <button class="btn-icon" id="btnSlidePrev">‹</button>
           <span id="slideCount">0 / 0</span>
           <button class="btn-icon" id="btnSlideNext">›</button>
+          <button class="btn-icon-sm" id="btnExpandImg" title="크게 보기">🔍</button>
           <button class="btn-icon-sm" id="btnAddMoreCam" title="카메라">📷</button>
           <button class="btn-icon-sm" id="btnAddMoreGal" title="갤러리">🖼️</button>
           <button class="btn-icon-sm danger" id="btnDelImg" title="삭제">🗑</button>
@@ -379,6 +381,15 @@
     <button onclick="closeAiDrop()">✕</button>
   </div>
   <div id="aiSearchDropResult"></div>
+</div>
+
+<!-- 이미지 크게 보기 팝업 -->
+<div class="img-popup" id="imgPopup" style="display:none" onclick="closeImgPopup()">
+  <button class="img-popup-close" onclick="closeImgPopup()">✕</button>
+  <button class="img-popup-nav left" id="popupPrev" onclick="event.stopPropagation();popupNav(-1)">‹</button>
+  <img id="imgPopupImg" src="" alt="">
+  <button class="img-popup-nav right" id="popupNext" onclick="event.stopPropagation();popupNav(1)">›</button>
+  <p class="img-popup-hint">탭하면 닫힘</p>
 </div>
 
 <!-- 카테고리 관리 모달 -->

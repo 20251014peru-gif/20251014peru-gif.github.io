@@ -349,12 +349,12 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
   border-radius:4px;
   z-index:3;
 }
-/* 상하 막대기 */
-.ce-t{top:-6px; left:25%; right:25%; height:12px; cursor:ns-resize;}
-.ce-b{bottom:-6px; left:25%; right:25%; height:12px; cursor:ns-resize;}
+/* 상하 막대기 — 터치 영역 좁게 */
+.ce-t{top:-5px; left:35%; right:35%; height:10px; cursor:ns-resize;}
+.ce-b{bottom:-5px; left:35%; right:35%; height:10px; cursor:ns-resize;}
 /* 좌우 막대기 */
-.ce-l{left:-6px; top:25%; bottom:25%; width:12px; cursor:ew-resize;}
-.ce-r{right:-6px; top:25%; bottom:25%; width:12px; cursor:ew-resize;}
+.ce-l{left:-5px; top:35%; bottom:35%; width:10px; cursor:ew-resize;}
+.ce-r{right:-5px; top:35%; bottom:35%; width:10px; cursor:ew-resize;}
 
 /* 힌트 */
 .crop-hint-fs{
@@ -531,3 +531,34 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
 .cat-item .cat-name{flex:1;font-size:14px;font-weight:600;}
 .cat-item button{border:none;background:none;cursor:pointer;font-size:18px;color:var(--muted);padding:3px 6px;border-radius:6px;}
 .cat-item button:hover{background:#fee2e2;color:var(--danger);}
+
+/* ── 이미지 크게 보기 팝업 ── */
+.img-popup{
+  position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,.92);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;
+}
+.img-popup img{
+  max-width:96vw;max-height:82vh;
+  object-fit:contain;border-radius:8px;
+  box-shadow:0 4px 30px rgba(0,0,0,.6);
+}
+.img-popup-close{
+  position:absolute;top:16px;right:16px;
+  background:rgba(255,255,255,.15);border:none;
+  color:#fff;font-size:24px;width:44px;height:44px;
+  border-radius:50%;cursor:pointer;z-index:1;
+}
+.img-popup-nav{
+  position:absolute;top:50%;transform:translateY(-50%);
+  background:rgba(255,255,255,.15);border:none;
+  color:#fff;font-size:36px;width:48px;height:64px;
+  border-radius:8px;cursor:pointer;
+}
+.img-popup-nav.left{left:8px;}
+.img-popup-nav.right{right:8px;}
+.img-popup-hint{
+  color:rgba(255,255,255,.4);font-size:12px;
+  position:absolute;bottom:16px;
+}

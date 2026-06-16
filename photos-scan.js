@@ -210,13 +210,18 @@ async function renderGallery(){
 let modalImages=[], modalSlide=0, editingPhotoId=null;
 
 function openAddModal(preImages=[]){
-  editingPhotoId=null; modalImages=preImages; modalSlide=0;
+  editingPhotoId=null;
+  // 배열 깊은 복사 — 참조 공유 방지 (폰 저장 오류 원인)
+  modalImages = preImages.map(m=>({...m}));
+  modalSlide=0;
   document.getElementById('modalAddTitle').textContent = '사진 추가';
   document.getElementById('photoTitle').value='';
   document.getElementById('photoMemo').value='';
   document.getElementById('photoDate').value=today();
   document.getElementById('aiCropStatus').textContent='';
   populateCatSelect();
+  const ptEl=document.getElementById('photoType');
+  if(ptEl) ptEl.value='';
   renderModalSlides();
   openModal('modalAdd');
 }
@@ -314,6 +319,42 @@ async function handleFiles(files, append=false, autoScan=false){
 const blobToDataUrl = blob => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(blob); });
 
 /* 이미지 로드 헬퍼 — AI 크롭에서 사용 */
+function sortCorners(pts){
+  if(!pts||!pts.length) return pts;
+  const arr = pts.map(p=>({x:+p.x||0, y:+p.y||0}));
+  const cx = arr.reduce((s,p)=>s+p.x,0)/arr.length;
+  const cy = arr.reduce((s,p)=>s+p.y,0)/arr.length;
+  const tl=arr.find(p=>p.x<=cx&&p.y<=cy)||arr[0];
+  const tr=arr.find(p=>p.x>cx&&p.y<=cy)||arr[1];
+  const br=arr.find(p=>p.x>cx&&p.y>cy)||arr[2];
+  const bl=arr.find(p=>p.x<=cx&&p.y>cy)||arr[3];
+  return [tl,tr,br,bl].map((p,i)=>p||arr[i]);
+}
+
+/* ── 이미지 크게 보기 팝업 ── */
+function openImgPopup(){
+  if(!modalImages.length) return;
+  const url = modalImages[modalSlide]?.dataUrl;
+  if(!url) return;
+  const popup = document.getElementById('imgPopup');
+  const img   = document.getElementById('imgPopupImg');
+  img.src = url;
+  popup.style.display = 'flex';
+  // 좌우 버튼 표시 여부
+  document.getElementById('popupPrev').style.display = modalImages.length>1?'':'none';
+  document.getElementById('popupNext').style.display = modalImages.length>1?'':'none';
+}
+function closeImgPopup(){
+  const popup = document.getElementById('imgPopup');
+  if(popup) popup.style.display='none';
+}
+function popupNav(dir){
+  modalSlide=(modalSlide+dir+modalImages.length)%modalImages.length;
+  renderModalSlides();
+  const img=document.getElementById('imgPopupImg');
+  if(img) img.src=modalImages[modalSlide]?.dataUrl||'';
+}
+
 function loadImage(src){
   return new Promise((res,rej)=>{
     const img=new Image();
@@ -1496,7 +1537,7 @@ async function init(){
   /* ── 버전/모드 표시 ── */
   const _el = id => document.getElementById(id);
   if(_el('appTitle'))   _el('appTitle').textContent   = MODE_LABEL;
-  if(_el('appVersion')) _el('appVersion').textContent = 'v6.9';
+  if(_el('appVersion')) _el('appVersion').textContent = 'v7.0';
   document.title = MODE_LABEL;
   // 상단 모드 컬러 바
   const modeBar = document.createElement('div');
@@ -1581,6 +1622,7 @@ async function init(){
   $on('btnModalAddClose', ()=>closeModal('modalAdd'));
   $on('btnSlidePrev',     ()=>goSlide(-1));
   $on('btnSlideNext',     ()=>goSlide(1));
+  $on('btnExpandImg',     openImgPopup);
   $on('btnAddMoreCam',    ()=>_el('addMoreCam')?.click());
   $on('btnAddMoreGal',    ()=>_el('addMoreGal')?.click());
   $on('btnDelImg', ()=>{
