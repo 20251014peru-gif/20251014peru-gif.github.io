@@ -455,9 +455,8 @@ function setAddTab(tab, skipSecureCheck=false){
   }
   addTab=tab;
   document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  $('normalPhotoBtns').style.display=tab==='normal'?'flex':'none';
-  $('scanPhotoBtns').style.display=tab==='scan'?'flex':'none';
-  $('securePhotoBtns').style.display=tab==='secure'?'flex':'none';
+  const scanB=$('scanPhotoBtns'); if(scanB) scanB.style.display=tab==='scan'?'flex':'none';
+  const secB=$('securePhotoBtns'); if(secB) secB.style.display=tab==='secure'?'flex':'none';
 }
 function renderSlides(){
   const wrap=$('slides'); if(!wrap) return;
@@ -1691,7 +1690,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v11.5';
+  if($('appVersion')) $('appVersion').textContent='v11.6';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;

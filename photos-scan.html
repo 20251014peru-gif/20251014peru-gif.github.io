@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>사진 스캔</title>
-<link rel="stylesheet" href="photos-scan.css?v=11.5-1781601657">
+<link rel="stylesheet" href="photos-scan.css?v=11.6-1781602654">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
 </head>
@@ -113,22 +113,13 @@
       </div>
       <!-- 탭별 사진 선택 버튼 -->
       <div id="addPhotoRow">
-        <!-- 일반사진 -->
-        <div class="add-photo-btns" id="normalPhotoBtns">
-          <button class="mini-btn blue" id="btnPhotoCamera">📷 카메라</button>
-          <button class="mini-btn purple" id="btnPhotoGallery">🖼️ 갤러리</button>
-        </div>
-        <!-- 스캔 -->
+        <!-- 스캔 탭에서만 자동감지 버튼 표시 -->
         <div class="add-photo-btns" id="scanPhotoBtns" style="display:none">
-          <button class="mini-btn green" id="btnScanCamera">📷 카메라 스캔</button>
-          <button class="mini-btn purple" id="btnScanGallery">🖼️ 갤러리 스캔</button>
           <button id="btnAiCrop" class="mini-btn orange">📄 문서 자동감지</button>
           <span id="aiStatus" style="font-size:12px;color:#64748b"></span>
         </div>
-        <!-- 보안사진 -->
+        <!-- 보안사진 안내 -->
         <div class="add-photo-btns" id="securePhotoBtns" style="display:none">
-          <button class="mini-btn blue" id="btnSecCam">📷 카메라</button>
-          <button class="mini-btn purple" id="btnSecGal">🖼️ 갤러리</button>
           <span style="font-size:12px;color:#f59e0b;font-weight:600">🔒 비밀번호로 보호됩니다</span>
         </div>
       </div>
@@ -370,6 +361,6 @@
 
 <div id="toast"></div>
 
-<script src="photos-scan.js?v=11.5-1781601657"></script>
+<script src="photos-scan.js?v=11.6-1781602654"></script>
 </body>
 </html>
