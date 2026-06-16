@@ -569,7 +569,7 @@
 <body>
 
 <!-- 🐞 디버그 패널 -->
-<button class="dbg-btn" onclick="toggleDbg()">🐞</button>
+<button class="dbg-btn" onclick="window.toggleDbg&&window.toggleDbg()">🐞</button>
 <div class="dbg-panel" id="dbgPanel">
   <button class="dbg-copy" onclick="copyDbg()">📋 복사</button>
   <div id="dbgLog"></div>
@@ -1976,7 +1976,7 @@
 
   function toLocalUrl(path){
     if(!path) return '#';
-    return 'localfile://'+encodeURI(path.replace(/\/g,'/'));
+    return 'localfile://'+encodeURI(path.split('\\').join('/'));
   }
 
   const TYPE_COLOR = {
