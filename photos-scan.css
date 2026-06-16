@@ -713,3 +713,7 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   padding:10px 0;border-top:1px solid #e2e8f0;
 }
+
+/* 카드 이동 버튼 */
+.cAct.move{background:rgba(63,124,184,.85);color:#fff}
+.cAct.move:hover{background:#3F7CB8}

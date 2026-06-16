@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>사진 스캔</title>
-<link rel="stylesheet" href="photos-scan.css?v=10.4b-20260616t1730">
+<link rel="stylesheet" href="photos-scan.css?v=10.6-20260616t1840">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
 </head>
@@ -132,10 +132,14 @@
           <span style="font-size:12px;color:#f59e0b;font-weight:600">🔒 비밀번호로 보호됩니다</span>
         </div>
       </div>
-      <!-- 폼 -->
+      <!-- 폼 — 메모 먼저, 그 다음 카테고리+날짜 -->
       <div class="frow">
         <label>제목 <span class="req">*</span></label>
         <input id="fTitle" placeholder="사진 제목">
+      </div>
+      <div class="frow">
+        <label>메모</label>
+        <textarea id="fMemo" rows="2" placeholder="메모..."></textarea>
       </div>
       <div class="frow-row">
         <div class="frow" style="flex:1">
@@ -150,10 +154,6 @@
           <label>날짜</label>
           <input type="date" id="fDate">
         </div>
-      </div>
-      <div class="frow">
-        <label>메모</label>
-        <textarea id="fMemo" rows="2" placeholder="메모..."></textarea>
       </div>
       <!-- 이동 버튼 (수정 모드일 때만 표시) -->
       <div id="moveSectionRow" style="display:none">
@@ -269,11 +269,12 @@
 <!-- 비밀번호 확인 모달 -->
 <div class="overlay" id="modalPin" style="display:none">
   <div class="modal smModal">
-    <div class="modal-hdr"><span>🔒 보안 사진</span><button class="xbtn" id="btnPinClose">✕</button></div>
+    <div class="modal-hdr"><span id="pinTitle">🔒 보안 사진</span><button class="xbtn" id="btnPinClose">✕</button></div>
     <div class="modal-body" style="gap:14px">
-      <p style="font-size:14px;color:#64748b">비밀번호를 입력하세요</p>
+      <p id="pinDesc" style="font-size:14px;color:#64748b"></p>
       <input type="password" id="pinInp" placeholder="비밀번호" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-size:16px;outline:none;width:100%">
-      <p id="pinErr" style="color:#ef4444;font-size:13px;display:none">비밀번호가 틀렸어요</p>
+      <input type="password" id="pinInp2" placeholder="비밀번호 확인" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-size:16px;outline:none;width:100%;display:none">
+      <p id="pinErr" style="color:#ef4444;font-size:13px;display:none"></p>
     </div>
     <div class="modal-ftr"><button class="btn-pri" id="btnPinOk">확인</button></div>
   </div>
@@ -357,6 +358,6 @@
 
 <div id="toast"></div>
 
-<script src="photos-scan.js?v=10.4b-20260616t1730"></script>
+<script src="photos-scan.js?v=10.6-20260616t1840"></script>
 </body>
 </html>

@@ -177,6 +177,19 @@ function toggleCatDrop(){
 
 // 섹션 전환
 function setSection(sec){
+  if(sec==='secure' && !hasSecurePass()){
+    openPinSetup(()=>setSection('secure'));
+    return;
+  }
+  if(sec==='secure' && hasSecurePass()){
+    // 보안 섹션 진입 시 비번 확인
+    openPinVerify(()=>{
+      curSection=sec;
+      document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('active',b.dataset.sec===sec));
+      filter='all'; renderCatDropdown(); renderGallery();
+    });
+    return;
+  }
   curSection=sec;
   document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('active',b.dataset.sec===sec));
   filter='all'; renderCatDropdown(); renderGallery();
@@ -207,10 +220,13 @@ async function renderGallery(){
       const lk=document.createElement('div'); lk.className='card-locked';
       lk.innerHTML='<span>🔒</span><p>보안 사진</p>'; iw.appendChild(lk);
     }
+    // 카드 버튼: 이동 + 삭제 (hover 시 표시)
     const acts=document.createElement('div'); acts.className='card-acts';
-    const e1=document.createElement('button'); e1.className='cAct edit'; e1.textContent='✏️ 수정'; e1.onclick=ev=>{ ev.stopPropagation(); openAddModal(p.id); };
-    const e2=document.createElement('button'); e2.className='cAct del';  e2.textContent='🗑 삭제'; e2.onclick=ev=>{ ev.stopPropagation(); delPhoto(p.id); };
-    acts.append(e1,e2); iw.appendChild(acts);
+    const bMove=document.createElement('button'); bMove.className='cAct move'; bMove.textContent='↗ 이동';
+    bMove.onclick=ev=>{ ev.stopPropagation(); openMovePopup(p.id); };
+    const bDel=document.createElement('button');  bDel.className='cAct del';  bDel.textContent='🗑 삭제';
+    bDel.onclick=ev=>{ ev.stopPropagation(); delPhoto(p.id); };
+    acts.append(bMove, bDel); iw.appendChild(acts);
     if(!p.secure){ const firstId=(p.imgIds||[])[0]; if(firstId) idbGet(firstId).then(u=>{ if(u) img.src=u; }); }
     else { img.style.background='#1e293b'; }
     const info=document.createElement('div'); info.className='card-info';
@@ -243,7 +259,7 @@ function openAddModal(photoId=null, preserveImgs=false, forceSecure=false){
     const p=photos.find(x=>x.id===photoId);
     if(p){
       const tab=p.secure?'secure':p.scan?'scan':'normal';
-      setAddTab(tab);
+      setAddTab(tab, true); // 수정 모드 — 비번 재확인 없이
       $('fTitle').value=p.title||''; $('fMemo').value=p.memo||''; $('fDate').value=p.date||today();
       populateCatSel(p.cat);
       Promise.all((p.imgIds||[]).map(id=>idbGet(id).then(u=>({id,data:u})))).then(imgs=>{ mImgs=imgs.filter(x=>x.data); renderSlides(); });
@@ -255,7 +271,9 @@ function openAddModal(photoId=null, preserveImgs=false, forceSecure=false){
       const cur=btnMap[tab]; if($(cur)) $(cur).style.display='none';
     }
   } else {
-    setAddTab(forceSecure?'secure':'normal');
+    // 새 사진 추가 시 현재 보고 있는 섹션 탭으로 바로 열기
+    const defaultTab = forceSecure ? 'secure' : curSection;
+    setAddTab(defaultTab);
     const mr=$('moveSectionRow'); if(mr) mr.style.display='none';
   }
 
@@ -263,7 +281,11 @@ function openAddModal(photoId=null, preserveImgs=false, forceSecure=false){
   $('modalAdd').style.display='flex';
 }
 
-function setAddTab(tab){
+function setAddTab(tab, skipSecureCheck=false){
+  if(tab==='secure' && !skipSecureCheck && !hasSecurePass()){
+    openPinSetup(()=>setAddTab('secure', true));
+    return;
+  }
   addTab=tab;
   document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   $('normalPhotoBtns').style.display=tab==='normal'?'flex':'none';
@@ -337,17 +359,71 @@ async function handleFiles(files, append=false, autoScan=false){
 }
 
 /* 사진 섹션 이동 (일반↔스캔↔보안) */
+/* 카드에서 바로 이동 — 작은 팝업 */
+function openMovePopup(photoId){
+  const p=photos.find(x=>x.id===photoId); if(!p) return;
+  const cur=p.secure?'secure':p.scan?'scan':'normal';
+  const labels={'normal':'📷 일반사진','scan':'📄 스캔','secure':'🔒 보안사진'};
+
+  // 기존 팝업 제거
+  const old=document.getElementById('movePopup'); if(old) old.remove();
+
+  const pop=document.createElement('div');
+  pop.id='movePopup';
+  pop.style.cssText='position:fixed;inset:0;z-index:800;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45)';
+  pop.innerHTML=`
+    <div style="background:#fff;border-radius:16px;padding:20px;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+      <div style="font-size:15px;font-weight:700;margin-bottom:6px">↗ 이동</div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:14px">"${p.title||'(제목없음)'}"</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${['normal','scan','secure'].filter(s=>s!==cur).map(s=>`
+          <button data-to="${s}" style="padding:12px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;font-size:14px;font-weight:700;cursor:pointer;text-align:left">
+            ${labels[s]}
+          </button>`).join('')}
+      </div>
+      <button id="movePopupCancel" style="margin-top:12px;width:100%;padding:10px;border:none;background:#f1f5f9;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#64748b">취소</button>
+    </div>`;
+
+  pop.querySelectorAll('[data-to]').forEach(btn=>{
+    btn.onclick=()=>{
+      const to=btn.dataset.to;
+      const doMove=()=>{
+        p.secure=to==='secure'; p.scan=to==='scan';
+        savePhotos(); pop.remove(); renderGallery();
+        toast(`✅ ${labels[to]}으로 이동됨`);
+      };
+      if(to==='secure' && !hasSecurePass()){ openPinSetup(doMove); return; }
+      doMove();
+    };
+    btn.onmouseover=()=>btn.style.borderColor='#3F7CB8';
+    btn.onmouseout=()=>btn.style.borderColor='#e2e8f0';
+  });
+  document.getElementById('movePopupCancel').onclick=()=>pop.remove();
+  pop.onclick=e=>{ if(e.target===pop) pop.remove(); };
+  document.body.appendChild(pop);
+}
+
 function moveSection(toSection){
   if(!mEditId) return;
   const p=photos.find(x=>x.id===mEditId); if(!p) return;
   const labels={'normal':'일반사진','scan':'스캔','secure':'보안사진'};
-  if(!confirm(`"${p.title}" 을 ${labels[toSection]}으로 이동할까요?`)) return;
-  p.secure = toSection==='secure';
-  p.scan   = toSection==='scan';
-  savePhotos();
-  $('modalAdd').style.display='none';
-  renderGallery();
-  toast(`✅ ${labels[toSection]}으로 이동됨`);
+
+  const doMove=()=>{
+    if(!confirm(`"${p.title}" 을 ${labels[toSection]}으로 이동할까요?`)) return;
+    p.secure = toSection==='secure';
+    p.scan   = toSection==='scan';
+    savePhotos();
+    $('modalAdd').style.display='none';
+    renderGallery();
+    toast(`✅ ${labels[toSection]}으로 이동됨`);
+  };
+
+  // 보안으로 이동 시 비번 없으면 설정 먼저
+  if(toSection==='secure' && !hasSecurePass()){
+    openPinSetup(doMove);
+    return;
+  }
+  doMove();
 }
 
 async function savePhoto(){
@@ -393,18 +469,79 @@ let _vPinching=false, _vScale=1, _vLastDist=0, _vSwipeX=0;
 
 async function openView(id){
   const p=photos.find(x=>x.id===id); if(!p) return;
-  // 보안 사진 처리
   if(p.secure){
-    _pendingViewId=id;
-    $('pinInp').value=''; $('pinErr').style.display='none';
-    $('modalPin').style.display='flex';
+    openPinVerify(()=>_openViewDirect(id));
     return;
   }
   _openViewDirect(id);
 }
 
 let _pendingViewId=null;
+/* ═══ 비밀번호 시스템 ═══ */
 const SEC_PASS_KEY='psc_secpass';
+let _pinMode='verify'; // 'verify' | 'setup'
+let _pinCallback=null;
+
+function hasSecurePass(){
+  return !!localStorage.getItem(SEC_PASS_KEY);
+}
+
+/* 비밀번호 설정 모달 열기 */
+function openPinSetup(callback){
+  _pinMode='setup'; _pinCallback=callback;
+  $('pinTitle').textContent='🔒 보안 비밀번호 설정';
+  $('pinDesc').textContent='보안 사진에 사용할 비밀번호를 설정하세요';
+  $('pinInp').value=''; $('pinInp').placeholder='새 비밀번호';
+  $('pinInp2').value=''; $('pinInp2').style.display='block';
+  $('pinErr').style.display='none';
+  $('modalPin').style.display='flex';
+  setTimeout(()=>$('pinInp')?.focus(),100);
+}
+
+/* 비밀번호 확인 모달 열기 */
+function openPinVerify(callback){
+  _pinMode='verify'; _pinCallback=callback;
+  $('pinTitle').textContent='🔒 보안 사진';
+  $('pinDesc').textContent='비밀번호를 입력하세요';
+  $('pinInp').value=''; $('pinInp').placeholder='비밀번호';
+  $('pinInp2').style.display='none';
+  $('pinErr').style.display='none';
+  $('modalPin').style.display='flex';
+  setTimeout(()=>$('pinInp')?.focus(),100);
+}
+
+function closePinModal(){
+  $('modalPin').style.display='none';
+  _pinCallback=null;
+}
+
+function confirmPin(){
+  if(_pinMode==='setup'){
+    const pw=$('pinInp').value;
+    const pw2=$('pinInp2').value;
+    if(pw.length<4){ showPinErr('비밀번호는 4자 이상이어야 해요'); return; }
+    if(pw!==pw2){ showPinErr('비밀번호가 일치하지 않아요'); return; }
+    localStorage.setItem(SEC_PASS_KEY, pw);
+    closePinModal();
+    toast('🔒 비밀번호 설정 완료');
+    if(_pinCallback) _pinCallback();
+  } else {
+    const pw=$('pinInp').value;
+    const saved=localStorage.getItem(SEC_PASS_KEY)||'';
+    if(pw===saved){
+      closePinModal();
+      if(_pinCallback) _pinCallback();
+    } else {
+      showPinErr('비밀번호가 틀렸어요');
+      $('pinInp').value='';
+      $('pinInp')?.focus();
+    }
+  }
+}
+
+function showPinErr(msg){
+  const el=$('pinErr'); if(el){ el.textContent=msg; el.style.display='block'; }
+}
 
 async function _openViewDirect(id){
   const p=photos.find(x=>x.id===id); if(!p) return;
@@ -1308,7 +1445,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v10.4';
+  if($('appVersion')) $('appVersion').textContent='v10.6';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -1342,7 +1479,17 @@ async function init(){
   });
 
   // ── ＋ 추가 버튼 ──
-  $on('btnAdd', ()=>openAddModal(null,false,false));
+  $on('btnAdd', ()=>{
+    if(curSection==='secure' && !hasSecurePass()){
+      openPinSetup(()=>openAddModal(null,false,false));
+      return;
+    }
+    if(curSection==='secure'){
+      openPinVerify(()=>openAddModal(null,false,false));
+      return;
+    }
+    openAddModal(null,false,false);
+  });
 
   // ── 파일 입력 ──
   $('fCamera')  && ($('fCamera').onchange  = e=>{ if(e.target.files.length) addBurstFiles(e.target.files); e.target.value=''; });
@@ -1441,21 +1588,16 @@ async function init(){
   $on('btnVEdit',  openEditorFromView);
   $on('btnVDel',   ()=>delPhoto(vId));
 
-  // ── 보안 PIN 모달 ──
-  $on('btnPinClose', ()=>{ $('modalPin').style.display='none'; _pendingViewId=null; });
-  $on('btnPinOk', ()=>{
-    const pw=$('pinInp').value;
-    const saved=localStorage.getItem(SEC_PASS_KEY)||'1234';
-    if(pw===saved){
-      $('modalPin').style.display='none';
-      if(_pendingViewId) _openViewDirect(_pendingViewId);
-      _pendingViewId=null;
-    } else {
-      $('pinErr').style.display='block';
-      $('pinInp').value=''; $('pinInp').focus();
-    }
+  // ── 비밀번호 모달 ──
+  $on('btnPinClose', closePinModal);
+  $on('btnPinOk',    confirmPin);
+  $('pinInp')  && ($('pinInp').onkeydown =e=>{
+    if(e.key!=='Enter') return;
+    const p2=$('pinInp2');
+    if(p2 && p2.style.display!=='none') p2.focus();
+    else confirmPin();
   });
-  $('pinInp') && ($('pinInp').onkeydown=e=>{ if(e.key==='Enter') $('btnPinOk')?.click(); });
+  $('pinInp2') && ($('pinInp2').onkeydown=e=>{ if(e.key==='Enter') confirmPin(); });
 
   // ── 이미지 팝업 ──
   $on('popupClose', closeImgPopup);
