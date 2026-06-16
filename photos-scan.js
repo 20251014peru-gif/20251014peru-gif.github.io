@@ -1010,16 +1010,25 @@ const MAX_HISTORY=20;
 
 function pushHistory(){
   if(!canvas) return;
-  const state = JSON.stringify(canvas.toJSON());
+  const state = JSON.stringify(canvas.toJSON(['selectable','evented']));
   editHistory.push(state);
   if(editHistory.length > MAX_HISTORY) editHistory.shift();
 }
 function popHistory(){
   if(!canvas || editHistory.length===0){ showToast('더 이상 되돌릴 수 없습니다'); return; }
   const state = editHistory.pop();
-  canvas.loadFromJSON(state, ()=>{
-    // 배경 이미지 복원
-    canvas.renderAll();
+  canvas.loadFromJSON(JSON.parse(state), ()=>{
+    // 배경이미지 재설정
+    if(cropImgSrc){
+      const img = new Image();
+      img.onload = ()=>{
+        const fImg = new fabric.Image(img, {scaleX:canvas.width/img.width, scaleY:canvas.height/img.height, selectable:false, evented:false});
+        canvas.setBackgroundImage(fImg, canvas.renderAll.bind(canvas));
+      };
+      img.src = cropImgSrc;
+    } else {
+      canvas.renderAll();
+    }
   });
 }
 let cropImgSrc='';  // 현재 크롭/편집 중인 원본 dataUrl
@@ -1053,7 +1062,14 @@ function initCanvas(dataUrl){
     const ch = Math.round(_img.height * scale);
     canvas.setWidth(cw); canvas.setHeight(ch);
     const fImg = new fabric.Image(_img, {scaleX:scale,scaleY:scale,selectable:false,evented:false});
-    canvas.setBackgroundImage(fImg, canvas.renderAll.bind(canvas));
+    canvas.setBackgroundImage(fImg, ()=>{
+      canvas.renderAll();
+      // 히스토리 이벤트
+      canvas.off('object:added').off('object:modified').off('object:removed');
+      canvas.on('object:added',    ()=>pushHistory());
+      canvas.on('object:modified', ()=>pushHistory());
+      canvas.on('object:removed',  ()=>pushHistory());
+    });
 
     /* 모자이크 드래그 */
     canvas.on('mouse:down', opt=>{ if(editTool==='mosaic'){ mosaicActive=true; applyMosaicAt(opt.e); }});
@@ -1153,6 +1169,11 @@ function _cMeasure(){
 function openCropUI(){
   cropImgSrc = (modalImages[modalSlide]||{}).dataUrl || cropImgSrc;
   if(!cropImgSrc){ showToast('사진이 없습니다'); return; }
+  // 핸들 초기화
+  const box = document.getElementById('cropBox');
+  if(box){
+    box.querySelectorAll('.ch,.ce').forEach(h=>{ h.style.display='block'; });
+  }
   const im = document.getElementById('cropImg');
   im.onload = ()=>{ _cTries=0; requestAnimationFrame(_cReady); };
   im.src = cropImgSrc;
@@ -1630,7 +1651,7 @@ async function init(){
   /* ── 버전/모드 표시 ── */
   const _el = id => document.getElementById(id);
   if(_el('appTitle'))   _el('appTitle').textContent   = MODE_LABEL;
-  if(_el('appVersion')) _el('appVersion').textContent = 'v7.5';
+  if(_el('appVersion')) _el('appVersion').textContent = 'v7.6';
   document.title = MODE_LABEL;
   // 상단 모드 컬러 바
   const modeBar = document.createElement('div');
