@@ -8,13 +8,45 @@ function logErr(msg){
 window.onerror=function(m,src,line,col){ logErr(m+' ('+line+':'+col+')'); };
 window.addEventListener('unhandledrejection',function(e){ logErr('Promise: '+(e.reason&&e.reason.message||e.reason)); });
 
-/* ===== 잠금 (PIN + 지문) ===== */
-var PIN_KEY='personal-pin';
-var sessionPin='';   // 현재 세션 PIN (보관함 암호화 열쇠)
+/* ===== 잠금 (PIN — Firebase 마스터 동기화) ===== */
+var PIN_KEY='personal-pin';           // localStorage 캐시용
+var PIN_FB_DOC='__master_pin__';      // Firestore 문서 ID
+var sessionPin='';
 var BIO_KEY='personal-bio-enabled';
-var pinBuffer='',pinMode='enter'; // enter | set | confirm
+var pinBuffer='',pinMode='enter';
 var pinFirst='';
+var _pinChecked=false; // Firebase PIN 체크 완료 여부
+
 function hashPin(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)+s.charCodeAt(i);return 'p'+(h>>>0);}
+
+/* Firebase PIN 저장 */
+function savePinToFB(hash){
+  var FB_BASE='https://firestore.googleapis.com/v1/projects/my-system-25497/databases/(default)/documents';
+  fetch(FB_BASE+'/personal_config/'+PIN_FB_DOC,{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({fields:{pinHash:{stringValue:hash}}})
+  }).catch(function(e){console.warn('PIN FB 저장 실패',e);});
+}
+
+/* Firebase에서 PIN 불러와 localStorage 동기화 후 콜백 */
+function loadPinFromFB(cb){
+  var FB_BASE='https://firestore.googleapis.com/v1/projects/my-system-25497/databases/(default)/documents';
+  fetch(FB_BASE+'/personal_config/'+PIN_FB_DOC)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var hash=(d.fields&&d.fields.pinHash&&d.fields.pinHash.stringValue)||'';
+      if(hash){
+        localStorage.setItem(PIN_KEY,hash); // 로컬 동기화
+      }
+      cb(hash);
+    })
+    .catch(function(){
+      // 네트워크 실패 시 로컬 캐시 사용
+      cb(localStorage.getItem(PIN_KEY)||'');
+    });
+}
+
 function hasPin(){return !!localStorage.getItem(PIN_KEY);}
 function buildPad(){
   var pad=document.getElementById('pinPad');if(!pad)return;
@@ -48,7 +80,9 @@ function pinComplete(){
   }
   if(pinMode==='confirm'){
     if(pinBuffer===pinFirst){
-      localStorage.setItem(PIN_KEY,hashPin(pinBuffer));
+      var h=hashPin(pinBuffer);
+      localStorage.setItem(PIN_KEY,h);
+      savePinToFB(h); // Firebase에도 저장 (마스터)
       sessionPin=pinBuffer;
       unlock();tryEnableBio();
     }else{
@@ -57,9 +91,26 @@ function pinComplete(){
     }
     return;
   }
-  // enter
-  if(hashPin(pinBuffer)===localStorage.getItem(PIN_KEY)){sessionPin=pinBuffer;unlock();}
-  else{pinBuffer='';renderDots();lockMsg('PIN이 틀렸어요');}
+  // enter — Firebase에서 PIN 먼저 동기화 후 검증
+  var entered=pinBuffer;
+  if(!_pinChecked){
+    lockMsg('확인 중…');
+    loadPinFromFB(function(hash){
+      _pinChecked=true;
+      if(!hash){
+        // Firebase에도 없으면 새 PIN 설정으로
+        localStorage.removeItem(PIN_KEY);
+        pinBuffer='';pinFirst='';renderDots();pinMode='set';
+        setLockText('PIN 설정','마스터 PIN 4자리를 설정하세요');lockMsg('');
+        return;
+      }
+      if(hashPin(entered)===hash){sessionPin=entered;unlock();}
+      else{pinBuffer='';renderDots();lockMsg('PIN이 틀렸어요');}
+    });
+  } else {
+    if(hashPin(entered)===localStorage.getItem(PIN_KEY)){sessionPin=entered;unlock();}
+    else{pinBuffer='';renderDots();lockMsg('PIN이 틀렸어요');}
+  }
 }
 function unlock(){
   pinBuffer='';lockMsg('');
@@ -67,15 +118,23 @@ function unlock(){
 }
 function startLock(){
   buildPad();renderDots();
-  if(!hasPin()){
-    pinMode='set';setLockText('PIN 설정','처음이에요. 사용할 PIN 4자리를 정하세요');
-  }else{
-    pinMode='enter';setLockText('개인 관리 잠금','PIN 4자리를 입력하세요');
-    if(localStorage.getItem(BIO_KEY)==='1'&&window.PublicKeyCredential){
-      document.getElementById('lockBio').style.display='inline-block';
-      // 자동 지문 시도 제거: 사용자가 직접 지문 버튼을 눌러야 시도 (구글 PIN 창 충돌 방지)
+  _pinChecked=false;
+  // Firebase에서 마스터 PIN 먼저 동기화
+  setLockText('개인 관리 잠금','PIN을 불러오는 중…');
+  loadPinFromFB(function(hash){
+    if(!hash){
+      // 아직 마스터 PIN 없음 → 새로 설정
+      pinMode='set';
+      setLockText('PIN 설정','처음이에요. 마스터 PIN 4자리를 정하세요');
+    } else {
+      _pinChecked=true;
+      pinMode='enter';
+      setLockText('개인 관리 잠금','PIN 4자리를 입력하세요');
+      if(localStorage.getItem(BIO_KEY)==='1'&&window.PublicKeyCredential){
+        document.getElementById('lockBio').style.display='inline-block';
+      }
     }
-  }
+  });
 }
 /* 지문 (WebAuthn) — 지원 기기에서만, 실패하면 PIN으로 */
 function tryEnableBio(){
@@ -103,8 +162,12 @@ function disableBio(){
   toast('🚫 지문 잠금 해제됨 — PIN으로만 열려요');
 }
 function changePin(){
-  if(!confirm('PIN을 새로 설정할까요? 잠금 화면으로 이동합니다.'))return;
+  if(!confirm('PIN을 새로 설정할까요? 모든 기기의 마스터 PIN이 변경됩니다.'))return;
   localStorage.removeItem(PIN_KEY);localStorage.removeItem(BIO_KEY);
+  _pinChecked=false;
+  // Firebase PIN도 삭제
+  var FB_BASE='https://firestore.googleapis.com/v1/projects/my-system-25497/databases/(default)/documents';
+  fetch(FB_BASE+'/personal_config/'+PIN_FB_DOC,{method:'DELETE'}).catch(function(){});
   document.getElementById('lockScreen').classList.remove('hidden');
   document.getElementById('lockBio').style.display='none';
   pinBuffer='';pinFirst='';startLock();
