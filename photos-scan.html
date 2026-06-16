@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>사진 스캔</title>
-<link rel="stylesheet" href="photos-scan.css?v=9.9-20260616t1530">
+<link rel="stylesheet" href="photos-scan.css?v=10.0-20260616t1545">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
 </head>
@@ -178,13 +178,12 @@
       <span>사진 편집</span>
       <div class="hdr-btns">
         <button class="smBtn2" id="btnUndo">↩ 되돌리기</button>
-        <button class="smBtn2 pri" id="btnEditDone">✓ 완료</button>
+        <button class="btn-pri" id="btnEditDone" style="padding:8px 16px;font-size:14px;font-weight:700">💾 저장</button>
         <button class="xbtn" id="btnEditClose">✕</button>
       </div>
     </div>
     <!-- 툴바 -->
     <div id="editToolbar">
-      <button class="tbtn active" data-t="select">↖</button>
       <button class="tbtn" data-t="crop">✂</button>
       <button class="tbtn" data-t="text">T</button>
       <button class="tbtn" data-t="rect">▭</button>
@@ -205,8 +204,8 @@
         <option value="80">크게</option>
       </select>
       <div class="tsep"></div>
-      <button class="tbtn" id="btnRotL">↺</button>
-      <button class="tbtn" id="btnRotR">↻</button>
+      <button class="tbtn" id="btnRotL" title="반시계 회전">↺</button>
+      <button class="tbtn" id="btnRotR" title="시계 회전">↻</button>
       <button class="tbtn red" id="btnDelObj" title="선택 객체 삭제">🗑</button>
       <button class="tbtn red" id="btnClearAll" title="모든 편집 초기화">🧹</button>
     </div>
@@ -343,6 +342,6 @@
 
 <div id="toast"></div>
 
-<script src="photos-scan.js?v=9.9-20260616t1530"></script>
+<script src="photos-scan.js?v=10.0-20260616t1545"></script>
 </body>
 </html>
