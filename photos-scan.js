@@ -512,7 +512,6 @@ function openPinSetup(callback){
   setTimeout(()=>$('pinInp')?.focus(),100);
 }
 
-/* 비밀번호 확인 모달 열기 */
 function openPinVerify(callback){
   _pinMode='verify'; _pinCallback=callback;
   $('pinTitle').textContent='🔒 보안 사진';
@@ -521,6 +520,7 @@ function openPinVerify(callback){
   $('pinInp2').style.display='none';
   $('pinErr').style.display='none';
   $('modalPin').style.display='flex';
+  dbg('openPinVerify: waiting for input');
   setTimeout(()=>$('pinInp')?.focus(),100);
 }
 
@@ -531,8 +531,9 @@ function closePinModal(){
 
 function confirmPin(){
   if(_pinMode==='setup'){
-    const pw=$('pinInp').value;
-    const pw2=$('pinInp2').value;
+    const pw=$('pinInp').value.trim();
+    const pw2=$('pinInp2').value.trim();
+    dbg(`setup: pw.length=${pw.length}`);
     if(pw.length<4){ showPinErr('비밀번호는 4자 이상이어야 해요'); return; }
     if(pw!==pw2){ showPinErr('비밀번호가 일치하지 않아요'); return; }
     localStorage.setItem(SEC_PASS_KEY, pw);
@@ -540,11 +541,12 @@ function confirmPin(){
     toast('🔒 비밀번호 설정 완료');
     if(_pinCallback) _pinCallback();
   } else {
-    const pw=$('pinInp').value;
+    const pw=$('pinInp').value.trim();
     const saved=localStorage.getItem(SEC_PASS_KEY)||'';
+    dbg(`verify: input="${pw}" saved="${saved}" match=${pw===saved}`);
     if(pw===saved){
       closePinModal();
-      if(_pinCallback) _pinCallback();
+      if(_pinCallback){ dbg('callback executing'); _pinCallback(); }
     } else {
       showPinErr('비밀번호가 틀렸어요');
       $('pinInp').value='';
@@ -1459,7 +1461,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v10.7b';
+  if($('appVersion')) $('appVersion').textContent='v10.8';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;

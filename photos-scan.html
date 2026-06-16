@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>사진 스캔</title>
-<link rel="stylesheet" href="photos-scan.css?v=10.7b-20260616t1940">
+<link rel="stylesheet" href="photos-scan.css?v=10.8-20260616t1950">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
 </head>
@@ -273,8 +273,17 @@
     <div class="modal-hdr"><span id="pinTitle">🔒 보안 사진</span><button class="xbtn" id="btnPinClose">✕</button></div>
     <div class="modal-body" style="gap:14px">
       <p id="pinDesc" style="font-size:14px;color:#64748b"></p>
-      <input type="password" id="pinInp" placeholder="비밀번호" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-size:16px;outline:none;width:100%">
-      <input type="password" id="pinInp2" placeholder="비밀번호 확인" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-size:16px;outline:none;width:100%;display:none">
+      <!-- 크롬 자동완성 차단용 더미 필드 -->
+      <input type="text" style="display:none" aria-hidden="true">
+      <input type="password" style="display:none" aria-hidden="true">
+      <input type="text" id="pinInp" placeholder="비밀번호"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        inputmode="numeric"
+        style="-webkit-text-security:disc;border:2px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-size:16px;outline:none;width:100%;letter-spacing:4px">
+      <input type="text" id="pinInp2" placeholder="비밀번호 확인"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        inputmode="numeric"
+        style="-webkit-text-security:disc;border:2px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-size:16px;outline:none;width:100%;letter-spacing:4px;display:none">
       <p id="pinErr" style="color:#ef4444;font-size:13px;display:none"></p>
     </div>
     <div class="modal-ftr"><button class="btn-pri" id="btnPinOk">확인</button></div>
@@ -359,6 +368,6 @@
 
 <div id="toast"></div>
 
-<script src="photos-scan.js?v=10.7b-20260616t1940"></script>
+<script src="photos-scan.js?v=10.8-20260616t1950"></script>
 </body>
 </html>
