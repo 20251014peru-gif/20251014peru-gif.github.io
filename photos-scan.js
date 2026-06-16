@@ -10,6 +10,8 @@ const FS_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT
 const LS_PHOTOS  = 'psc_photos';
 const LS_CATS    = 'psc_cats';
 const LS_API_KEY = 'psc_apikey';
+// 다른 앱들의 키 이름들 — 호환성
+const LS_API_KEYS = ['psc_apikey','claude_api_key','anthropic_key','CLAUDE_API_KEY','ANTHROPIC_API_KEY'];
 const SCAN_SERVER= 'http://localhost:8080';
 const DEFAULT_CATS = ['영수증','계약서','행정문서'];
 const MODE = new URLSearchParams(location.search).get('mode')==='work' ? 'work' : 'personal';
@@ -59,8 +61,12 @@ function cropPx(src,sx,sy,sw,sh){ return new Promise(r=>{ const i=new Image(); i
 function sortCorners(pts){ const cx=pts.reduce((s,p)=>s+p.x,0)/4, cy=pts.reduce((s,p)=>s+p.y,0)/4; return [ pts.find(p=>p.x<=cx&&p.y<=cy)||pts[0], pts.find(p=>p.x>cx&&p.y<=cy)||pts[1], pts.find(p=>p.x>cx&&p.y>cy)||pts[2], pts.find(p=>p.x<=cx&&p.y>cy)||pts[3] ]; }
 
 /* ═══ AI API ═══ */
+function getApiKey(){
+  for(const k of LS_API_KEYS){ const v=(localStorage.getItem(k)||'').trim(); if(v) return v; }
+  return '';
+}
 async function callAI(messages, maxTok=512){
-  const key=localStorage.getItem(LS_API_KEY)||'';
+  const key=getApiKey();
   if(!key) throw new Error('AI 키 없음 — 🔑 버튼에서 설정');
   const r=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
@@ -482,6 +488,7 @@ function setTool(t){
   $('textRow').style.display=t==='text'?'flex':'none';
   $('mosaicSz').style.display=t==='mosaic'?'inline-block':'none';
   $('cropOv').style.display=t==='crop'?'block':'none';
+  const cb=$('cropBtns'); if(cb) cb.style.display=t==='crop'?'flex':'none';
   if(!canvas) return;
   canvas.isDrawingMode=false; canvas.selection=true; canvas.defaultCursor='default';
   if(t==='draw'){
@@ -697,7 +704,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v8.0';
+  if($('appVersion')) $('appVersion').textContent='v8.1';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -708,7 +715,7 @@ async function init(){
   // ── 헤더 ──
   $on('btnHome',    ()=>location.href='index.html');
   $on('btnBackup',  ()=>{ $('modalOD').style.display='flex'; });
-  $on('btnApiKey',  ()=>{ $('apiKeyInp').value=localStorage.getItem(LS_API_KEY)||''; $('modalKey').style.display='flex'; });
+  $on('btnApiKey',  ()=>{ $('apiKeyInp').value=getApiKey(); $('modalKey').style.display='flex'; });
   $on('btnCatMgr',  ()=>{ renderCatList(); $('modalCat').style.display='flex'; });
   $on('btnExpBak',  exportBackup);
   $on('btnImpBak',  ()=>$('fBackup').click());
@@ -792,7 +799,14 @@ async function init(){
 
   // ── API 키 모달 ──
   $on('btnKeyClose', ()=>{ $('modalKey').style.display='none'; });
-  $on('btnKeySave',  ()=>{ localStorage.setItem(LS_API_KEY,$('apiKeyInp').value.trim()); $('modalKey').style.display='none'; toast('API 키 저장'); });
+  $on('btnKeySave',  ()=>{
+    const v=$('apiKeyInp').value.trim();
+    if(!v){ toast('키를 입력하세요'); return; }
+    // 모든 앱과 공유되는 키 이름들에 동일하게 저장
+    LS_API_KEYS.forEach(k=>localStorage.setItem(k,v));
+    $('modalKey').style.display='none';
+    toast('✅ API 키 저장됨');
+  });
 
   // ── OneDrive 모달 ──
   $on('btnODClose',  ()=>{ $('modalOD').style.display='none'; });

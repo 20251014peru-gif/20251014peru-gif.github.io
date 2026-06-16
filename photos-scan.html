@@ -207,25 +207,24 @@
       <button class="tbtn" id="btnRotR">↻</button>
       <button class="tbtn red" id="btnDelObj">🗑</button>
     </div>
-    <!-- 캔버스 -->
+    <!-- 캔버스 + 크롭 오버레이 (오버레이는 캔버스 위에 absolute) -->
     <div id="canvasWrap">
-      <canvas id="editCanvas"></canvas>
-    </div>
-    <!-- 크롭 오버레이 -->
-    <div id="cropOv" style="display:none">
-      <div id="cropBox">
-        <!-- 모서리 -->
-        <div class="cH cLT" data-h="lt"></div>
-        <div class="cH cRT" data-h="rt"></div>
-        <div class="cH cRB" data-h="rb"></div>
-        <div class="cH cLB" data-h="lb"></div>
-        <!-- 막대 -->
-        <div class="cB cBT" data-h="t"></div>
-        <div class="cB cBB" data-h="b"></div>
-        <div class="cB cBL" data-h="l"></div>
-        <div class="cB cBR" data-h="r"></div>
+      <div id="canvasInner">
+        <canvas id="editCanvas"></canvas>
+        <div id="cropOv" style="display:none">
+          <div id="cropBox">
+            <div class="cH cLT" data-h="lt"></div>
+            <div class="cH cRT" data-h="rt"></div>
+            <div class="cH cRB" data-h="rb"></div>
+            <div class="cH cLB" data-h="lb"></div>
+            <div class="cB cBT" data-h="t"></div>
+            <div class="cB cBB" data-h="b"></div>
+            <div class="cB cBL" data-h="l"></div>
+            <div class="cB cBR" data-h="r"></div>
+          </div>
+        </div>
       </div>
-      <div id="cropBtns">
+      <div id="cropBtns" style="display:none">
         <button id="btnCropApply">✂ 크롭 적용</button>
         <button id="btnCropCancel">취소</button>
       </div>
