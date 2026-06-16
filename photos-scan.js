@@ -374,6 +374,15 @@ function openDocScan(){
   const fs=$('docScanFs'); if(!fs||!dsOrig) return;
   fs.style.display='flex';
   requestAnimationFrame(renderDocScan);
+  // 진단용: 캔버스 영역 어디 눌렀는지 추적
+  const body=$('docScanBody');
+  if(body && !body._dbgBound){
+    body._dbgBound=true;
+    body.addEventListener('pointerdown',e=>{
+      const tag = e.target.tagName + (e.target.id?'#'+e.target.id:'') + (e.target.className?'.'+e.target.className:'');
+      dbg(`body tap: target=${tag} @ ${e.clientX.toFixed(0)},${e.clientY.toFixed(0)}`);
+    },{capture:true});
+  }
 }
 function closeDocScan(){ $('docScanFs').style.display='none'; }
 
@@ -410,27 +419,43 @@ function dsPlaceHandles(dw,dh){
   const p=dsCorners.map(c=>({x:Math.round(Math.max(0,Math.min(dw,c.x*dsScale))),y:Math.round(Math.max(0,Math.min(dh,c.y*dsScale)))}));
   const [tl,tr,br,bl]=p;
   const cvs=$('docScanCanvas');
-  // 모서리 4개 — 매번 새로 바인딩 (cloneNode로 이벤트 초기화)
+
+  // 모서리 4개
   [['dh0',tl,0],['dh1',tr,1],['dh2',br,2],['dh3',bl,3]].forEach(([id,pt,idx])=>{
     let h=$(id); if(!h) return;
-    h.style.left=(pt.x-10)+'px'; h.style.top=(pt.y-10)+'px';
+    h.style.left=(pt.x-11)+'px'; h.style.top=(pt.y-11)+'px';
+    h.style.width='22px'; h.style.height='22px';
     const nh=h.cloneNode(true);
     h.parentNode.replaceChild(nh,h);
     dsCornerBind(nh,idx,cvs,dw,dh);
   });
-  // ★ 막대 4개 — 캔버스 안쪽으로 배치 (밖이 아닌 안쪽 5px 들여서)
-  const bW=40, bH=10;
-  const mT={x:Math.round((tl.x+tr.x)/2)-bW/2, y:Math.min(tl.y,tr.y)+2};   // 상단 변 + 2px 안쪽
-  const mB={x:Math.round((bl.x+br.x)/2)-bW/2, y:Math.max(bl.y,br.y)-bH-2}; // 하단 변 - 12px 안쪽
-  const mL={x:Math.min(tl.x,bl.x)+2, y:Math.round((tl.y+bl.y)/2)-bW/2};
-  const mR={x:Math.max(tr.x,br.x)-bH-2, y:Math.round((tr.y+br.y)/2)-bW/2};
-  [['dh4',mT,'t'],['dh5',mB,'b'],['dh6',mL,'l'],['dh7',mR,'r']].forEach(([id,pt,type])=>{
-    let h=$(id); if(!h) return;
-    h.style.left=pt.x+'px'; h.style.top=pt.y+'px';
-    if(type==='t'||type==='b'){ h.style.width=bW+'px'; h.style.height=bH+'px'; }
-    else { h.style.width=bH+'px'; h.style.height=bW+'px'; }
-    const nh=h.cloneNode(true);
-    h.parentNode.replaceChild(nh,h);
+
+  // ★ 막대 4개 — 변의 정중앙 위에 + 크게(터치 영역 확보)
+  const bL=60;  // 막대 길이
+  const bT=24;  // 막대 두께 (터치 영역 충분히)
+  const cx=Math.round((tl.x+tr.x)/2), bx=Math.round((bl.x+br.x)/2);
+  const cy=Math.round((tl.y+bl.y)/2), ry=Math.round((tr.y+br.y)/2);
+  const tY=Math.round((tl.y+tr.y)/2), bY=Math.round((bl.y+br.y)/2);
+  const lX=Math.round((tl.x+bl.x)/2), rX=Math.round((tr.x+br.x)/2);
+
+  // 위치: 변의 정중앙. 막대 중심이 변 위에 정확히 오도록 -bL/2, -bT/2
+  const bars=[
+    {id:'dh4', type:'t', x:cx-bL/2, y:tY-bT/2, w:bL, h:bT},
+    {id:'dh5', type:'b', x:bx-bL/2, y:bY-bT/2, w:bL, h:bT},
+    {id:'dh6', type:'l', x:lX-bT/2, y:cy-bL/2, w:bT, h:bL},
+    {id:'dh7', type:'r', x:rX-bT/2, y:ry-bL/2, w:bT, h:bL},
+  ];
+  bars.forEach(({id,type,x,y,w,h})=>{
+    let el=$(id); if(!el) return;
+    el.style.left=x+'px'; el.style.top=y+'px';
+    el.style.width=w+'px'; el.style.height=h+'px';
+    el.style.zIndex='100';  // 무조건 위
+    el.style.background='#FFD700';
+    el.style.border='2px solid #fff';
+    el.style.borderRadius='6px';
+    el.style.boxShadow='0 2px 8px rgba(0,0,0,.5)';
+    const nh=el.cloneNode(true);
+    el.parentNode.replaceChild(nh,el);
     dsBarBind(nh,type,cvs,dw,dh);
   });
 }
@@ -807,7 +832,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v8.5';
+  if($('appVersion')) $('appVersion').textContent='v8.6';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
