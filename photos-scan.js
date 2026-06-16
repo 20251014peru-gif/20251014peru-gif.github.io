@@ -338,7 +338,7 @@ async function runDocScan(silent=false){
       const origI=await loadImg(src), sI=await loadImg(small);
       const sx=origI.width/sI.width, sy=origI.height/sI.height;
       dsCorners=d.corners.map(([x,y])=>({x:x*sx,y:y*sy}));
-      dsOrig=origI; dsZoom=1;
+      dsOrig=origI; _ds.orig=origI; _ds.corners=dsCorners;
       if(st) st.textContent=d.found?'✅ 서버 감지 완료':'⚠️ 경계 불명확 — 조정하세요';
     } else {
       // AI
@@ -355,7 +355,7 @@ async function runDocScan(silent=false){
       if(!j.found){ dsCorners=[{x:oi.width*.07,y:oi.height*.07},{x:oi.width*.93,y:oi.height*.07},{x:oi.width*.93,y:oi.height*.93},{x:oi.width*.07,y:oi.height*.93}]; }
       else { const sx=oi.width/si.width,sy=oi.height/si.height; dsCorners=[j.tl,j.tr,j.br,j.bl].map(([x,y])=>({x:x*sx,y:y*sy})); }
       dsCorners=sortCorners(dsCorners);
-      dsOrig=oi; dsZoom=1;
+      dsOrig=oi; _ds.orig=oi; _ds.corners=dsCorners;
       if(st) st.textContent=j.found?'✅ AI 감지 완료':'⚠️ 문서 미감지 — 조정하세요';
     }
     openDocScan();
@@ -369,168 +369,202 @@ async function runDocScan(silent=false){
   }
 }
 
-/* ── 문서감지 풀스크린 ── */
+/* ══════════════════════════════════════════════════
+   문서감지 — 캔버스 단일 렌더 방식 v9.0
+   사진/꼭짓점/막대 모두 캔버스에 그림
+   포인터 이벤트도 캔버스 하나에만 등록 — 단순/안정
+   ══════════════════════════════════════════════════ */
+let _ds = {
+  orig: null,      // 원본 Image
+  corners: [],     // 원본 좌표 [{x,y}] x4 — tl,tr,br,bl
+  scale: 1,        // 표시 배율
+  dragIdx: -1,     // 드래그 중인 핸들 인덱스 (-1=없음, 0~3=모서리, 4~7=막대 t/b/l/r)
+};
+
 function openDocScan(){
-  const fs=$('docScanFs'); if(!fs||!dsOrig) return;
+  if(!_ds.orig){ dbg('no image to scan','error'); return; }
+  const fs=$('docScanFs');
   fs.style.display='flex';
-  requestAnimationFrame(renderDocScan);
-  // 진단용: 캔버스 영역 어디 눌렀는지 추적
-  const body=$('docScanBody');
-  if(body && !body._dbgBound){
-    body._dbgBound=true;
-    body.addEventListener('pointerdown',e=>{
-      const tag = e.target.tagName + (e.target.id?'#'+e.target.id:'') + (e.target.className?'.'+e.target.className:'');
-      dbg(`body tap: target=${tag} @ ${e.clientX.toFixed(0)},${e.clientY.toFixed(0)}`);
-    },{capture:true});
-  }
+  // 캔버스 이벤트 바인딩 (한 번만)
+  const cvs=$('docScanCanvas');
+  if(!cvs._bound){ cvs._bound=true; dsBindCanvas(cvs); }
+  requestAnimationFrame(dsRender);
 }
+
 function closeDocScan(){ $('docScanFs').style.display='none'; }
 
-function renderDocScan(){
-  const body=$('docScanBody'), cvs=$('docScanCanvas'), wrap=$('docScanWrap');
-  if(!dsOrig||!cvs||!body){ dbg('renderDocScan: missing elements','error'); return; }
-  const bW=body.clientWidth||window.innerWidth;
-  const bH=body.clientHeight||(window.innerHeight-100);
-  const scale=Math.min(bW/dsOrig.width, bH/dsOrig.height)*dsZoom;
-  dsScale=scale;
-  const dw=Math.round(dsOrig.width*scale), dh=Math.round(dsOrig.height*scale);
+/* ── 렌더: 사진 + 어두운 외부 + 노란 선 + 핸들 모두 캔버스에 ── */
+function dsRender(){
+  const cvs=$('docScanCanvas'); if(!cvs||!_ds.orig) return;
+
+  // 화면 크기에 맞게 캔버스 크기 결정
+  const sW=window.innerWidth, sH=window.innerHeight;
+  const scale=Math.min(sW/_ds.orig.width, sH/_ds.orig.height);
+  _ds.scale=scale;
+  const dw=Math.round(_ds.orig.width*scale);
+  const dh=Math.round(_ds.orig.height*scale);
   cvs.width=dw; cvs.height=dh;
-  wrap.style.width=dw+'px'; wrap.style.height=dh+'px';
-  dbg(`docScan: body=${bW}×${bH}, canvas=${dw}×${dh}, scale=${scale.toFixed(3)}`);
+  cvs.style.width=dw+'px'; cvs.style.height=dh+'px';
+
   const ctx=cvs.getContext('2d');
-  ctx.drawImage(dsOrig,0,0,dw,dh);
-  dsDrawLines(ctx,dw,dh);
-  dsPlaceHandles(dw,dh);
-}
+  // 1. 사진
+  ctx.drawImage(_ds.orig, 0, 0, dw, dh);
 
-function dsDrawLines(ctx,dw,dh){
-  const p=dsCorners.map(c=>({x:Math.round(c.x*dsScale),y:Math.round(c.y*dsScale)}));
+  // 2. 꼭짓점 → 화면 좌표
+  const p = _ds.corners.map(c=>({
+    x: Math.round(Math.max(0,Math.min(dw, c.x*scale))),
+    y: Math.round(Math.max(0,Math.min(dh, c.y*scale)))
+  }));
+
+  // 3. 외부 어둡게 (evenodd 채우기)
   ctx.save();
-  ctx.fillStyle='rgba(0,0,0,.44)';
-  ctx.beginPath(); ctx.rect(0,0,dw,dh);
-  ctx.moveTo(p[0].x,p[0].y); p.forEach(c=>ctx.lineTo(c.x,c.y)); ctx.closePath();
+  ctx.fillStyle='rgba(0,0,0,.45)';
+  ctx.beginPath();
+  ctx.rect(0,0,dw,dh);
+  ctx.moveTo(p[0].x,p[0].y);
+  p.forEach(pt=>ctx.lineTo(pt.x,pt.y));
+  ctx.closePath();
   ctx.fill('evenodd');
-  ctx.strokeStyle='#FFD700'; ctx.lineWidth=2.5;
-  ctx.beginPath(); ctx.moveTo(p[0].x,p[0].y); p.forEach(c=>ctx.lineTo(c.x,c.y)); ctx.closePath(); ctx.stroke();
+
+  // 4. 노란 선
+  ctx.strokeStyle='#FFD700';
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(p[0].x,p[0].y);
+  p.forEach(pt=>ctx.lineTo(pt.x,pt.y));
+  ctx.closePath();
+  ctx.stroke();
+
+  // 5. 막대 (변 정중앙) — 그림으로 그림 (div 없음)
+  const bars = dsBarRects(p);
+  bars.forEach(b=>{
+    ctx.fillStyle='#FFD700';
+    ctx.strokeStyle='#fff';
+    ctx.lineWidth=2;
+    dsRoundRect(ctx, b.x, b.y, b.w, b.h, 4);
+    ctx.fill(); ctx.stroke();
+  });
+
+  // 6. 모서리 동그라미
+  p.forEach(pt=>{
+    ctx.fillStyle='#FFD700';
+    ctx.strokeStyle='#fff';
+    ctx.lineWidth=2.5;
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 12, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+  });
+
   ctx.restore();
+
+  // 화면 좌표 저장 (히트테스트용)
+  _ds.dispCorners = p;
+  _ds.dispBars = bars;
 }
 
-function dsPlaceHandles(dw,dh){
-  const p=dsCorners.map(c=>({x:Math.round(Math.max(0,Math.min(dw,c.x*dsScale))),y:Math.round(Math.max(0,Math.min(dh,c.y*dsScale)))}));
+function dsRoundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+/* 막대 사각형 좌표 — 변 정중앙에 위치 */
+function dsBarRects(p){
   const [tl,tr,br,bl]=p;
-  const cvs=$('docScanCanvas');
-
-  // 모서리 4개
-  [['dh0',tl,0],['dh1',tr,1],['dh2',br,2],['dh3',bl,3]].forEach(([id,pt,idx])=>{
-    let h=$(id); if(!h) return;
-    h.style.left=(pt.x-11)+'px'; h.style.top=(pt.y-11)+'px';
-    h.style.width='22px'; h.style.height='22px';
-    const nh=h.cloneNode(true);
-    h.parentNode.replaceChild(nh,h);
-    dsCornerBind(nh,idx,cvs,dw,dh);
-  });
-
-  // ★ 막대 4개 — 변의 정중앙 위에 + 크게(터치 영역 확보)
-  const bL=60;  // 막대 길이
-  const bT=24;  // 막대 두께 (터치 영역 충분히)
-  const cx=Math.round((tl.x+tr.x)/2), bx=Math.round((bl.x+br.x)/2);
-  const cy=Math.round((tl.y+bl.y)/2), ry=Math.round((tr.y+br.y)/2);
-  const tY=Math.round((tl.y+tr.y)/2), bY=Math.round((bl.y+br.y)/2);
-  const lX=Math.round((tl.x+bl.x)/2), rX=Math.round((tr.x+br.x)/2);
-
-  // 위치: 변의 정중앙. 막대 중심이 변 위에 정확히 오도록 -bL/2, -bT/2
-  const bars=[
-    {id:'dh4', type:'t', x:cx-bL/2, y:tY-bT/2, w:bL, h:bT},
-    {id:'dh5', type:'b', x:bx-bL/2, y:bY-bT/2, w:bL, h:bT},
-    {id:'dh6', type:'l', x:lX-bT/2, y:cy-bL/2, w:bT, h:bL},
-    {id:'dh7', type:'r', x:rX-bT/2, y:ry-bL/2, w:bT, h:bL},
+  const BL=50, BT=16;  // 막대 길이/두께
+  return [
+    // t: 상단 변 정중앙 (가로)
+    {type:'t', x:Math.round((tl.x+tr.x)/2)-BL/2, y:Math.round((tl.y+tr.y)/2)-BT/2, w:BL, h:BT},
+    // b: 하단 변 정중앙 (가로)
+    {type:'b', x:Math.round((bl.x+br.x)/2)-BL/2, y:Math.round((bl.y+br.y)/2)-BT/2, w:BL, h:BT},
+    // l: 좌측 변 정중앙 (세로)
+    {type:'l', x:Math.round((tl.x+bl.x)/2)-BT/2, y:Math.round((tl.y+bl.y)/2)-BL/2, w:BT, h:BL},
+    // r: 우측 변 정중앙 (세로)
+    {type:'r', x:Math.round((tr.x+br.x)/2)-BT/2, y:Math.round((tr.y+br.y)/2)-BL/2, w:BT, h:BL},
   ];
-  bars.forEach(({id,type,x,y,w,h})=>{
-    let el=$(id); if(!el) return;
-    el.style.left=x+'px'; el.style.top=y+'px';
-    el.style.width=w+'px'; el.style.height=h+'px';
-    el.style.zIndex='100';  // 무조건 위
-    el.style.background='#FFD700';
-    el.style.border='2px solid #fff';
-    el.style.borderRadius='6px';
-    el.style.boxShadow='0 2px 8px rgba(0,0,0,.5)';
-    const nh=el.cloneNode(true);
-    el.parentNode.replaceChild(nh,el);
-    dsBarBind(nh,type,cvs,dw,dh);
-  });
 }
 
-/* ★ 캔버스 좌표 — 막대가 캔버스 밖이어도 정확히 매핑 (클램프 없음) */
-function dsCanvasPos(ev,cvs){
-  const r=cvs.getBoundingClientRect();
-  // 클램프는 호출하는 쪽에서 — 여기는 raw 좌표
-  return { x: ev.clientX-r.left, y: ev.clientY-r.top };
+/* ── 히트테스트: 어느 핸들 위에 있는지 ── */
+function dsHitTest(x, y){
+  if(!_ds.dispCorners) return -1;
+  // 모서리 먼저 (우선순위 높음)
+  for(let i=0; i<4; i++){
+    const c=_ds.dispCorners[i];
+    const dx=x-c.x, dy=y-c.y;
+    if(dx*dx + dy*dy < 30*30) return i; // 반경 30px 터치 영역
+  }
+  // 막대
+  if(_ds.dispBars){
+    for(let i=0; i<4; i++){
+      const b=_ds.dispBars[i];
+      // 막대 사각형 + 여유 8px
+      if(x >= b.x-8 && x <= b.x+b.w+8 &&
+         y >= b.y-8 && y <= b.y+b.h+8) return 4+i;
+    }
+  }
+  return -1;
 }
 
-function dsCornerBind(h,idx,cvs,dw,dh){
-  h.style.touchAction='none';
-  h.addEventListener('pointerdown',e=>{
-    e.preventDefault(); e.stopPropagation(); h.setPointerCapture(e.pointerId);
-    const mv=ev=>{ ev.preventDefault();
-      const r=cvs.getBoundingClientRect();
-      const x=Math.max(0,Math.min(cvs.width, ev.clientX-r.left));
-      const y=Math.max(0,Math.min(cvs.height, ev.clientY-r.top));
-      dsCorners[idx]={x:x/dsScale,y:y/dsScale}; dsRedraw(cvs,dw,dh);
-    };
-    const up=()=>{ h.removeEventListener('pointermove',mv); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up); };
-    h.addEventListener('pointermove',mv,{passive:false}); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
-  },{passive:false});
-}
+/* ── 캔버스에 단일 이벤트 ── */
+function dsBindCanvas(cvs){
+  cvs.style.touchAction='none';
 
-function dsBarBind(h,type,cvs,dw,dh){
-  h.style.touchAction='none';
-  h.addEventListener('pointerdown',e=>{
-    e.preventDefault(); e.stopPropagation();
-    dbg(`bar ${type} DOWN @ ${e.clientX.toFixed(0)},${e.clientY.toFixed(0)} id=${e.pointerId} type=${e.pointerType}`);
-    let captured=false;
-    try{ h.setPointerCapture(e.pointerId); captured=true; }catch(err){ dbg('capture fail: '+err.message,'error'); }
-    dbg(`bar ${type} captured=${captured}`);
+  cvs.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    const r=cvs.getBoundingClientRect();
+    const x=e.clientX-r.left, y=e.clientY-r.top;
+    const hit=dsHitTest(x,y);
+    if(hit<0){ dbg(`tap miss @ ${x.toFixed(0)},${y.toFixed(0)}`); return; }
+    _ds.dragIdx=hit;
+    dbg(`drag start: idx=${hit} @ ${x.toFixed(0)},${y.toFixed(0)}`);
 
-    let moveCount=0;
-    const mv=ev=>{
+    const onMove=ev=>{
       ev.preventDefault();
-      moveCount++;
-      if(moveCount<3 || moveCount%10===0) dbg(`bar ${type} MOVE #${moveCount} @ ${ev.clientX.toFixed(0)},${ev.clientY.toFixed(0)}`);
-      const r=cvs.getBoundingClientRect();
-      const x=Math.max(0,Math.min(cvs.width,  ev.clientX-r.left));
-      const y=Math.max(0,Math.min(cvs.height, ev.clientY-r.top));
-      const ox=x/dsScale, oy=y/dsScale;
-      if(type==='t'){ dsCorners[0]={...dsCorners[0],y:oy}; dsCorners[1]={...dsCorners[1],y:oy}; }
-      if(type==='b'){ dsCorners[2]={...dsCorners[2],y:oy}; dsCorners[3]={...dsCorners[3],y:oy}; }
-      if(type==='l'){ dsCorners[0]={...dsCorners[0],x:ox}; dsCorners[3]={...dsCorners[3],x:ox}; }
-      if(type==='r'){ dsCorners[1]={...dsCorners[1],x:ox}; dsCorners[2]={...dsCorners[2],x:ox}; }
-      dsRedraw(cvs,dw,dh);
+      const r2=cvs.getBoundingClientRect();
+      const mx=Math.max(0,Math.min(cvs.width, ev.clientX-r2.left));
+      const my=Math.max(0,Math.min(cvs.height,ev.clientY-r2.top));
+      const ox=mx/_ds.scale, oy=my/_ds.scale;
+
+      if(_ds.dragIdx>=0 && _ds.dragIdx<4){
+        // 모서리
+        _ds.corners[_ds.dragIdx] = {x:ox, y:oy};
+      } else if(_ds.dragIdx===4){ // t
+        _ds.corners[0].y=oy; _ds.corners[1].y=oy;
+      } else if(_ds.dragIdx===5){ // b
+        _ds.corners[2].y=oy; _ds.corners[3].y=oy;
+      } else if(_ds.dragIdx===6){ // l
+        _ds.corners[0].x=ox; _ds.corners[3].x=ox;
+      } else if(_ds.dragIdx===7){ // r
+        _ds.corners[1].x=ox; _ds.corners[2].x=ox;
+      }
+      dsRender();
     };
-    const up=ev=>{
-      dbg(`bar ${type} UP (moves=${moveCount})`);
-      h.removeEventListener('pointermove',mv);
-      h.removeEventListener('pointerup',up);
-      h.removeEventListener('pointercancel',up);
+    const onUp=()=>{
+      dbg(`drag end: idx=${_ds.dragIdx}`);
+      _ds.dragIdx=-1;
+      document.removeEventListener('pointermove',onMove);
+      document.removeEventListener('pointerup',onUp);
+      document.removeEventListener('pointercancel',onUp);
     };
-    h.addEventListener('pointermove',mv,{passive:false});
-    h.addEventListener('pointerup',up);
-    h.addEventListener('pointercancel',up);
-    dbg(`bar ${type} listeners attached`);
+    document.addEventListener('pointermove',onMove,{passive:false});
+    document.addEventListener('pointerup',onUp);
+    document.addEventListener('pointercancel',onUp);
   },{passive:false});
 }
 
-function dsRedraw(cvs,dw,dh){
-  const ctx=cvs.getContext('2d'); ctx.clearRect(0,0,dw,dh); ctx.drawImage(dsOrig,0,0,dw,dh);
-  dsDrawLines(ctx,dw,dh); dsPlaceHandles(dw,dh);
-}
+/* ── 호환용 글로벌 (이미 위에서 선언됨) ── */
 
+/* ── 크롭 적용 ── */
 async function applyDocScan(){
-  if(!dsCorners.length||!mImgs[mSlide]){ toast('감지된 문서가 없습니다'); return; }
-  const src=mImgs[mSlide].data; const s=sortCorners(dsCorners);
+  if(!_ds.corners.length||!mImgs[mSlide]){ toast('감지된 문서가 없습니다'); return; }
+  const src=mImgs[mSlide].data; const s=sortCorners(_ds.corners);
   const xs=s.map(p=>p.x),ys=s.map(p=>p.y);
   const sx=Math.max(0,Math.min(...xs)), sy=Math.max(0,Math.min(...ys));
   const sw=Math.max(20,Math.max(...xs)-sx), sh=Math.max(20,Math.max(...ys)-sy);
-  // 서버 warp 시도
   let result;
   try{
     const alive=await serverAlive();
@@ -832,7 +866,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v8.6';
+  if($('appVersion')) $('appVersion').textContent='v9.0';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -903,11 +937,8 @@ async function init(){
   $('textInp') && ($('textInp').onkeydown=e=>{ if(e.key==='Enter') addText(); });
 
   // ── 문서감지 ──
-  $on('btnDsClose',  closeDocScan);
-  $on('btnDsRetry',  ()=>{ closeDocScan(); runDocScan(false); });
-  $on('btnDsApply',  applyDocScan);
-  $on('btnDsZoomIn', ()=>{ dsZoom=Math.min(dsZoom*1.4,4); renderDocScan(); });
-  $on('btnDsZoomOut',()=>{ dsZoom=Math.max(dsZoom/1.4,0.5); renderDocScan(); });
+  $on('btnDsClose', closeDocScan);
+  $on('btnDsApply', applyDocScan);
 
   // ── 상세보기 ──
   $on('btnVClose', ()=>{ $('viewFs').style.display='none'; });
