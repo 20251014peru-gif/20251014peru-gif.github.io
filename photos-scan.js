@@ -644,7 +644,6 @@ function openDocScanModal(origImg){
 function _dsRender(){
   const body   = document.getElementById('docScanBody');
   const canvas = document.getElementById('docScanCanvas');
-  const wrap   = document.getElementById('docScanWrap');
   if(!_dsOrig || !canvas) return;
 
   const maxW = (body.clientWidth  || window.innerWidth)  * _dsZoom;
@@ -663,15 +662,42 @@ function _dsRender(){
   // 꼭짓점 → 화면 좌표
   const disp = docCorners.map(p=>({ x: p.x*scale, y: p.y*scale }));
   _dsDrawOutline(ctx, disp, dw, dh);
+  _dsUpdateHandles(disp, dw, dh, canvas);
+}
 
-  // 핸들 위치
-  disp.forEach((p,i)=>{
-    const h = document.getElementById(`ch${i}`);
-    if(!h) return;
-    h.style.left = p.x + 'px';
-    h.style.top  = p.y + 'px';
-    // 이벤트는 한번만 등록
-    if(!h._dsInited){ h._dsInited=true; _dsMakeDraggable(h, i, canvas, dw, dh); }
+/* 핸들 위치 계산 & 이벤트 등록 */
+function _dsUpdateHandles(disp, dw, dh, canvas){
+  // disp: [tl, tr, br, bl] 순서
+  const [tl, tr, br, bl] = disp;
+
+  // 모서리 4개
+  const corners = [
+    {id:'ch0', x:tl.x, y:tl.y},
+    {id:'ch1', x:tr.x, y:tr.y},
+    {id:'ch2', x:br.x, y:br.y},
+    {id:'ch3', x:bl.x, y:bl.y},
+  ];
+
+  // 엣지 막대 4개 — 각 변의 중점, 위치는 절대값으로
+  const bars = [
+    {id:'ch4', type:'t', x:(tl.x+tr.x)/2, y:Math.min(tl.y,tr.y)},  // 상단
+    {id:'ch5', type:'b', x:(bl.x+br.x)/2, y:Math.max(bl.y,br.y)},  // 하단
+    {id:'ch6', type:'l', x:Math.min(tl.x,bl.x), y:(tl.y+bl.y)/2},  // 좌측
+    {id:'ch7', type:'r', x:Math.max(tr.x,br.x), y:(tr.y+br.y)/2},  // 우측
+  ];
+
+  corners.forEach(({id,x,y}, idx)=>{
+    const h = document.getElementById(id); if(!h) return;
+    h.style.left = x + 'px';
+    h.style.top  = y + 'px';
+    if(!h._dsInited){ h._dsInited=true; _dsMakeDraggable(h, 'corner', idx, canvas, dw, dh); }
+  });
+
+  bars.forEach(({id,type,x,y})=>{
+    const h = document.getElementById(id); if(!h) return;
+    // 막대는 CSS로 left/right/top/bottom을 자동 배치하므로 위치만 힌트로 저장
+    h._barType = type;
+    if(!h._dsInited){ h._dsInited=true; _dsMakeDraggable(h, 'bar', type, canvas, dw, dh); }
   });
 }
 
@@ -696,25 +722,65 @@ function _dsDrawOutline(ctx, corners, dw, dh){
   ctx.restore();
 }
 
-/* 핸들 드래그 */
-function _dsMakeDraggable(handle, idx, canvas, dw, dh){
+/* 핸들 드래그 — 모서리(corner) / 막대(bar) */
+function _dsMakeDraggable(handle, kind, param, canvas, dw, dh){
   handle.style.touchAction = 'none';
   handle.addEventListener('pointerdown', function(e){
     e.preventDefault(); e.stopPropagation();
     handle.setPointerCapture(e.pointerId);
+
     function onMove(ev){
       ev.preventDefault();
       const cr = canvas.getBoundingClientRect();
       const cx = Math.max(0, Math.min(dw, ev.clientX - cr.left));
       const cy = Math.max(0, Math.min(dh, ev.clientY - cr.top));
-      handle.style.left = cx + 'px';
-      handle.style.top  = cy + 'px';
-      docCorners[idx] = { x: cx/_dsScale, y: cy/_dsScale };
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0,0,dw,dh);
-      ctx.drawImage(_dsOrig,0,0,dw,dh);
-      _dsDrawOutline(ctx, docCorners.map(p=>({x:p.x*_dsScale,y:p.y*_dsScale})), dw, dh);
+
+      if(kind === 'corner'){
+        // 꼭짓점: 해당 점만 이동
+        const idx = param; // 0=tl,1=tr,2=br,3=bl
+        handle.style.left = cx + 'px';
+        handle.style.top  = cy + 'px';
+        docCorners[idx] = { x: cx/_dsScale, y: cy/_dsScale };
+
+      } else if(kind === 'bar'){
+        // 막대: 해당 변 전체를 이동
+        const type = param; // 't','b','l','r'
+        if(type==='t'){
+          // 상단 막대: tl, tr의 y를 cx/cy로 이동
+          const dy = cy/_dsScale;
+          docCorners[0] = {...docCorners[0], y: dy};
+          docCorners[1] = {...docCorners[1], y: dy};
+        } else if(type==='b'){
+          const dy = cy/_dsScale;
+          docCorners[2] = {...docCorners[2], y: dy};
+          docCorners[3] = {...docCorners[3], y: dy};
+        } else if(type==='l'){
+          const dx = cx/_dsScale;
+          docCorners[0] = {...docCorners[0], x: dx};
+          docCorners[3] = {...docCorners[3], x: dx};
+        } else if(type==='r'){
+          const dx = cx/_dsScale;
+          docCorners[1] = {...docCorners[1], x: dx};
+          docCorners[2] = {...docCorners[2], x: dx};
+        }
+      }
+
+      // 캔버스 다시 그리기
+      const ctx2 = canvas.getContext('2d');
+      ctx2.clearRect(0,0,dw,dh);
+      ctx2.drawImage(_dsOrig,0,0,dw,dh);
+      const disp2 = docCorners.map(p=>({x:p.x*_dsScale, y:p.y*_dsScale}));
+      _dsDrawOutline(ctx2, disp2, dw, dh);
+
+      // 핸들 위치 동기화
+      const ids = ['ch0','ch1','ch2','ch3'];
+      ids.forEach((id,i)=>{
+        const h2=document.getElementById(id); if(!h2) return;
+        h2.style.left = disp2[i].x + 'px';
+        h2.style.top  = disp2[i].y + 'px';
+      });
     }
+
     function onEnd(){
       handle.removeEventListener('pointermove',   onMove);
       handle.removeEventListener('pointerup',     onEnd);
@@ -1563,7 +1629,7 @@ async function init(){
   /* ── 버전/모드 표시 ── */
   const _el = id => document.getElementById(id);
   if(_el('appTitle'))   _el('appTitle').textContent   = MODE_LABEL;
-  if(_el('appVersion')) _el('appVersion').textContent = 'v7.2';
+  if(_el('appVersion')) _el('appVersion').textContent = 'v7.3';
   document.title = MODE_LABEL;
   // 상단 모드 컬러 바
   const modeBar = document.createElement('div');

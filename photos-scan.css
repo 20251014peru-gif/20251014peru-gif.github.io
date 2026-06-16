@@ -613,3 +613,19 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
 .ds-rt{ width:18px;height:18px;top:-9px;right:-9px;border-radius:50%;cursor:nesw-resize; }
 .ds-rb{ width:18px;height:18px;bottom:-9px;right:-9px;border-radius:50%;cursor:nwse-resize; }
 .ds-lb{ width:18px;height:18px;bottom:-9px;left:-9px;border-radius:50%;cursor:nesw-resize; }
+
+/* 문서감지 엣지 막대 */
+.ds-bar{
+  position:absolute;
+  background:#FFD700;
+  border:1.5px solid #fff;
+  box-shadow:0 1px 5px rgba(0,0,0,.5);
+  border-radius:4px;
+  cursor:grab;
+  touch-action:none;
+  z-index:20;
+}
+.ds-t{ top:-5px; left:25%; right:25%; height:10px; cursor:ns-resize; }
+.ds-b{ bottom:-5px; left:25%; right:25%; height:10px; cursor:ns-resize; }
+.ds-l{ left:-5px; top:25%; bottom:25%; width:10px; cursor:ew-resize; }
+.ds-r{ right:-5px; top:25%; bottom:25%; width:10px; cursor:ew-resize; }

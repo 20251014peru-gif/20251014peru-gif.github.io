@@ -201,11 +201,15 @@
   <div class="docscan-fs-body" id="docScanBody">
     <div class="docscan-canvas-wrap" id="docScanWrap">
       <canvas id="docScanCanvas"></canvas>
-      <!-- 막대식 핸들 (수동편집과 동일) -->
-      <div class="ds-handle ds-lt" id="ch0"></div>
-      <div class="ds-handle ds-rt" id="ch1"></div>
-      <div class="ds-handle ds-rb" id="ch2"></div>
-      <div class="ds-handle ds-lb" id="ch3"></div>
+      <!-- 모서리 4개 + 엣지 막대 4개 -->
+      <div class="ds-handle ds-lt" id="ch0" data-h="lt"></div>
+      <div class="ds-handle ds-rt" id="ch1" data-h="rt"></div>
+      <div class="ds-handle ds-rb" id="ch2" data-h="rb"></div>
+      <div class="ds-handle ds-lb" id="ch3" data-h="lb"></div>
+      <div class="ds-bar  ds-t"  id="ch4" data-h="t"></div>
+      <div class="ds-bar  ds-b"  id="ch5" data-h="b"></div>
+      <div class="ds-bar  ds-l"  id="ch6" data-h="l"></div>
+      <div class="ds-bar  ds-r"  id="ch7" data-h="r"></div>
     </div>
   </div>
   <div class="docscan-fs-footer">
