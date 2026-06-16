@@ -545,8 +545,11 @@ function confirmPin(){
     const saved=localStorage.getItem(SEC_PASS_KEY)||'';
     dbg(`verify: input="${pw}" saved="${saved}" match=${pw===saved}`);
     if(pw===saved){
-      closePinModal();
-      if(_pinCallback){ dbg('callback executing'); _pinCallback(); }
+      dbg(`verify match=true, callback=${typeof _pinCallback}`);
+      const cb=_pinCallback; // 클로저로 미리 저장
+      closePinModal(); // closePinModal이 _pinCallback=null 하기 전에 저장
+      if(cb){ dbg('callback executing'); cb(); }
+      else { dbg('callback is null!','error'); }
     } else {
       showPinErr('비밀번호가 틀렸어요');
       $('pinInp').value='';
@@ -1461,7 +1464,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v10.8';
+  if($('appVersion')) $('appVersion').textContent='v10.8b';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
