@@ -262,28 +262,21 @@ function getExifOrientation(dataUrl){
 }
 
 function autoRotateImage(dataUrl){
+  // 세로 사진(h>w) → 시계방향 90° 회전해 가로로
   return new Promise(resolve=>{
-    const r=getExifOrientation(dataUrl);
-    if(!r || r===1){ resolve(dataUrl); return; }
     const img=new Image();
     img.onload=()=>{
-      const c=document.createElement('canvas');
-      const ctx=c.getContext('2d');
       const w=img.width, h=img.height;
-      if(r>=5 && r<=8){ c.width=h; c.height=w; }
-      else { c.width=w; c.height=h; }
-      switch(r){
-        case 2: ctx.translate(w,0); ctx.scale(-1,1); break;
-        case 3: ctx.translate(w,h); ctx.rotate(Math.PI); break;
-        case 4: ctx.translate(0,h); ctx.scale(1,-1); break;
-        case 5: ctx.rotate(Math.PI/2); ctx.scale(1,-1); break;
-        case 6: ctx.rotate(Math.PI/2); ctx.translate(0,-h); break;
-        case 7: ctx.rotate(Math.PI/2); ctx.translate(w,-h); ctx.scale(-1,1); break;
-        case 8: ctx.rotate(-Math.PI/2); ctx.translate(-w,0); break;
-      }
-      ctx.drawImage(img,0,0);
-      dbg(`EXIF rotation: ${r} (${w}x${h} → ${c.width}x${c.height})`);
-      resolve(c.toDataURL('image/jpeg',0.95));
+      if(w >= h){ resolve(dataUrl); return; }
+      const c=document.createElement('canvas');
+      c.width=h; c.height=w;
+      const ctx=c.getContext('2d');
+      // 시계방향 90°
+      ctx.translate(h, 0);
+      ctx.rotate(Math.PI/2);
+      ctx.drawImage(img, 0, 0);
+      dbg(`auto-rotate CW: ${w}×${h} → ${h}×${w}`);
+      resolve(c.toDataURL('image/jpeg', 0.95));
     };
     img.onerror=()=>resolve(dataUrl);
     img.src=dataUrl;
@@ -1173,7 +1166,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v9.2';
+  if($('appVersion')) $('appVersion').textContent='v9.6';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
