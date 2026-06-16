@@ -262,25 +262,8 @@ function getExifOrientation(dataUrl){
 }
 
 function autoRotateImage(dataUrl){
-  // 세로 사진(h>w)이면 반시계방향 90° (-π/2) 회전해서 가로 정상으로
-  return new Promise(resolve=>{
-    const img=new Image();
-    img.onload=()=>{
-      const w=img.width, h=img.height;
-      if(w >= h){ resolve(dataUrl); return; }
-      const c=document.createElement('canvas');
-      c.width=h; c.height=w;
-      const ctx=c.getContext('2d');
-      // 반시계방향 -90°
-      ctx.translate(0, w);
-      ctx.rotate(-Math.PI/2);
-      ctx.drawImage(img, 0, 0);
-      dbg(`auto-rotate -90°: ${w}×${h} → ${h}×${w}`);
-      resolve(c.toDataURL('image/jpeg', 0.95));
-    };
-    img.onerror=()=>resolve(dataUrl);
-    img.src=dataUrl;
-  });
+  // 자동 회전 비활성화 — 사용자가 편집에서 직접 ↺/↻ 회전
+  return Promise.resolve(dataUrl);
 }
 
 async function handleFiles(files, append=false, autoScan=false){
@@ -984,6 +967,25 @@ function applyCrop(){
   tmp.src=full;
 }
 
+function rotateSlide(deg){
+  if(!mImgs.length){ toast('사진이 없어요'); return; }
+  const src = mImgs[mSlide].data;
+  const i = new Image();
+  i.onload = ()=>{
+    const c = document.createElement('canvas');
+    if(Math.abs(deg)===90){ c.width=i.height; c.height=i.width; }
+    else{ c.width=i.width; c.height=i.height; }
+    const ctx = c.getContext('2d');
+    ctx.translate(c.width/2, c.height/2);
+    ctx.rotate(deg*Math.PI/180);
+    ctx.drawImage(i, -i.width/2, -i.height/2);
+    mImgs[mSlide].data = c.toDataURL('image/jpeg', 0.95);
+    renderSlides();
+    toast(deg<0 ? '↺ 반시계 회전' : '↻ 시계 회전');
+  };
+  i.src = src;
+}
+
 function rotateImg(deg){
   const src=editSrc||canvas.toDataURL({format:'jpeg',quality:0.95});
   const i=new Image(); i.onload=()=>{
@@ -1118,7 +1120,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v9.7';
+  if($('appVersion')) $('appVersion').textContent='v9.9';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -1167,6 +1169,8 @@ async function init(){
   $on('btnMoreCam',  ()=>$('fMoreCam').click());
   $on('btnMoreGal',  ()=>$('fMoreGal').click());
   $on('btnDelSlide', ()=>{ if(!mImgs.length) return; mImgs.splice(mSlide,1); mSlide=Math.min(mSlide,mImgs.length-1); renderSlides(); });
+  $on('btnSlideRotL', ()=>rotateSlide(-90));
+  $on('btnSlideRotR', ()=>rotateSlide(90));
   $on('btnAiCrop',   ()=>runDocScan(false));
   $on('btnSave',     savePhoto);
   $on('btnEdit',     openEditor);
