@@ -353,12 +353,13 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
   touch-action:none;
   cursor:grab;
   z-index:10;
-  transform:translate(-50%,-50%);  /* 중심 기준 */
+  /* transform 없음 — JS에서 중심 보정(11px) */
   pointer-events:all;
 }
+.ds-handle:active{ opacity:.8; }
 .ds-handle:active{ transform:translate(-50%,-50%) scale(1.2); }
 
-/* 엣지 막대 — 해당 변의 중앙에 위치 */
+/* 엣지 막대 */
 .ds-bar{
   position:absolute;
   background:#FFD700;
@@ -371,9 +372,9 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
   pointer-events:all;
 }
 /* 상하: 가로 막대 */
-.ds-t,.ds-b{ height:10px;width:40px;transform:translateX(-50%); }
+.ds-t,.ds-b{ width:40px;height:10px; }
 /* 좌우: 세로 막대 */
-.ds-l,.ds-r{ width:10px;height:40px;transform:translateY(-50%); }
+.ds-l,.ds-r{ width:10px;height:40px; }
 
 .docscan-fs-footer{
   flex-shrink:0;

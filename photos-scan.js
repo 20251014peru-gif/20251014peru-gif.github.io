@@ -628,42 +628,49 @@ function enhanceImage(dataUrl){
 
 
 /* ══════════════════════════════════════════════════
-   문서감지 풀스크린 v7.4 — 완전 재작성
+   문서감지 풀스크린 v7.5 — 핵심 재작성
+   핵심: 핸들을 캔버스 좌표계 기준으로 absolute 배치
+         transform 없이 left/top = 캔버스 상의 좌표
    ══════════════════════════════════════════════════ */
-let _dsOrig  = null;  // 원본 Image element
-let _dsScale = 1;     // 표시 배율
-let _dsZoom  = 1;     // 사용자 줌
+let _dsOrig  = null;
+let _dsScale = 1;
+let _dsZoom  = 1;
+let _dsRendering = false; // 중복 렌더 방지
 
 /* ── 열기 ── */
 function openDocScanModal(origImg){
   _dsOrig = origImg;
   _dsZoom = 1;
-  // 핸들 inited 초기화 (재진입 대비)
+  _dsRendering = false;
+  // 핸들 초기화
   for(let i=0;i<8;i++){
     const h=document.getElementById('ch'+i);
-    if(h) h._dsInited=false;
+    if(h){ h._dsInited=false; h.style.display='none'; }
   }
-  const fs = document.getElementById('modalDocScan');
-  fs.classList.add('show');
-  fs.style.display='flex';
-  requestAnimationFrame(()=>requestAnimationFrame(()=>_dsRender()));
+  const fs=document.getElementById('modalDocScan');
+  fs.style.cssText='display:flex;';
+  // 단 한번만 렌더
+  requestAnimationFrame(()=>_dsRender());
 }
 
-/* ── 닫기 ── */
 function closeDocScanModal(){
   const fs=document.getElementById('modalDocScan');
-  if(fs){ fs.classList.remove('show'); fs.style.display='none'; }
+  if(fs) fs.style.display='none';
 }
 
-/* ── 렌더 ── */
+/* ── 렌더 (1회) ── */
 function _dsRender(){
+  if(_dsRendering) return;
+  _dsRendering = true;
+
   const body   = document.getElementById('docScanBody');
   const canvas = document.getElementById('docScanCanvas');
-  if(!_dsOrig||!canvas||!body) return;
+  const wrap   = document.getElementById('docScanWrap');
+  if(!_dsOrig||!canvas||!body){ _dsRendering=false; return; }
 
-  // 캔버스 크기: body 전체를 꽉 채우되 이미지 비율 유지
+  // 캔버스 크기 계산
   const bW = body.clientWidth  || window.innerWidth;
-  const bH = body.clientHeight || (window.innerHeight - 110);
+  const bH = body.clientHeight || (window.innerHeight-110);
   const scale = Math.min(bW/_dsOrig.width, bH/_dsOrig.height) * _dsZoom;
   _dsScale = scale;
 
@@ -671,174 +678,147 @@ function _dsRender(){
   const dh = Math.round(_dsOrig.height * scale);
   canvas.width  = dw;
   canvas.height = dh;
+  // wrap 크기 명시 (핸들 absolute 기준점)
+  wrap.style.width  = dw+'px';
+  wrap.style.height = dh+'px';
 
   // 이미지 그리기
   const ctx = canvas.getContext('2d');
   ctx.drawImage(_dsOrig, 0, 0, dw, dh);
 
-  // 꼭짓점 → 화면 좌표
-  const disp = docCorners.map(p=>({x:Math.round(p.x*scale), y:Math.round(p.y*scale)}));
+  // 선 + 핸들
+  _dsUpdate();
+  _dsRendering = false;
+}
+
+/* ── 선 + 핸들 위치 갱신 ── */
+function _dsUpdate(){
+  const canvas=document.getElementById('docScanCanvas');
+  if(!canvas||!_dsOrig) return;
+  const dw=canvas.width, dh=canvas.height;
+
+  // 꼭짓점 → 캔버스 좌표 [tl,tr,br,bl]
+  const p = docCorners.map(pt=>({
+    x: Math.round(Math.max(0,Math.min(dw, pt.x*_dsScale))),
+    y: Math.round(Math.max(0,Math.min(dh, pt.y*_dsScale)))
+  }));
 
   // 선 그리기
-  _dsDrawLines(ctx, disp, dw, dh);
-
-  // 핸들 배치
-  _dsPlaceHandles(disp);
-}
-
-/* ── 선 그리기 (외부 어둡게) ── */
-function _dsDrawLines(ctx, pts, dw, dh){
-  if(pts.length<4) return;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,dw,dh);
+  ctx.drawImage(_dsOrig,0,0,dw,dh);
   ctx.save();
-  // 외부 어둡게
-  ctx.fillStyle='rgba(0,0,0,0.45)';
-  ctx.beginPath();
-  ctx.rect(0,0,dw,dh);
-  ctx.moveTo(pts[0].x,pts[0].y);
-  pts.forEach(p=>ctx.lineTo(p.x,p.y));
-  ctx.closePath();
-  ctx.fill('evenodd');
-  // 테두리 선
-  ctx.strokeStyle='#FFD700';
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x,pts[0].y);
-  pts.forEach(p=>ctx.lineTo(p.x,p.y));
-  ctx.closePath();
-  ctx.stroke();
+  ctx.fillStyle='rgba(0,0,0,0.42)';
+  ctx.beginPath(); ctx.rect(0,0,dw,dh);
+  ctx.moveTo(p[0].x,p[0].y);
+  p.forEach(pt=>ctx.lineTo(pt.x,pt.y));
+  ctx.closePath(); ctx.fill('evenodd');
+  ctx.strokeStyle='#FFD700'; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.moveTo(p[0].x,p[0].y);
+  p.forEach(pt=>ctx.lineTo(pt.x,pt.y));
+  ctx.closePath(); ctx.stroke();
   ctx.restore();
+
+  // 모서리 핸들 (left/top = 캔버스 좌표, transform:none)
+  [0,1,2,3].forEach(i=>{
+    const h=document.getElementById('ch'+i); if(!h) return;
+    h.style.display='block';
+    h.style.left=(p[i].x-11)+'px'; // 22px/2=11 중심
+    h.style.top =(p[i].y-11)+'px';
+    if(!h._dsInited){ h._dsInited=true; _dsCornerBind(h,i); }
+  });
+
+  // 막대 핸들 (변의 중점)
+  const bars=[
+    {id:'ch4', x:Math.round((p[0].x+p[1].x)/2)-20, y:Math.min(p[0].y,p[1].y)-5, type:'t'}, // 상
+    {id:'ch5', x:Math.round((p[2].x+p[3].x)/2)-20, y:Math.max(p[2].y,p[3].y)-5, type:'b'}, // 하
+    {id:'ch6', x:Math.min(p[0].x,p[3].x)-5, y:Math.round((p[0].y+p[3].y)/2)-20, type:'l'}, // 좌
+    {id:'ch7', x:Math.max(p[1].x,p[2].x)-5, y:Math.round((p[1].y+p[2].y)/2)-20, type:'r'}, // 우
+  ];
+  bars.forEach(({id,x,y,type})=>{
+    const h=document.getElementById(id); if(!h) return;
+    h.style.display='block';
+    h.style.left=x+'px';
+    h.style.top =y+'px';
+    if(!h._dsInited){ h._dsInited=true; _dsBarBind(h,type); }
+  });
 }
 
-/* ── 핸들 배치 (absolute position) ── */
-function _dsPlaceHandles(disp){
-  const [tl,tr,br,bl] = disp;
-
-  // 모서리 4개 — transform:translate(-50%,-50%) 이미 CSS에 있음
-  const corners=[
-    {id:'ch0',x:tl.x,y:tl.y},
-    {id:'ch1',x:tr.x,y:tr.y},
-    {id:'ch2',x:br.x,y:br.y},
-    {id:'ch3',x:bl.x,y:bl.y},
-  ];
-  corners.forEach(({id,x,y},i)=>{
-    const h=document.getElementById(id); if(!h) return;
-    h.style.left=x+'px'; h.style.top=y+'px';
-    if(!h._dsInited){ h._dsInited=true; _dsBindCorner(h,i); }
-  });
-
-  // 엣지 막대 4개
-  const bars=[
-    {id:'ch4', x:(tl.x+tr.x)/2, y:Math.min(tl.y,tr.y), cls:'ds-t'},
-    {id:'ch5', x:(bl.x+br.x)/2, y:Math.max(bl.y,br.y), cls:'ds-b'},
-    {id:'ch6', x:Math.min(tl.x,bl.x), y:(tl.y+bl.y)/2, cls:'ds-l'},
-    {id:'ch7', x:Math.max(tr.x,br.x), y:(tr.y+br.y)/2, cls:'ds-r'},
-  ];
-  const barTypes=['t','b','l','r'];
-  bars.forEach(({id,x,y,cls},i)=>{
-    const h=document.getElementById(id); if(!h) return;
-    h.style.left=x+'px'; h.style.top=y+'px';
-    if(!h._dsInited){ h._dsInited=true; _dsBindBar(h, barTypes[i]); }
-  });
+/* ── 캔버스 상의 포인터 좌표 ── */
+function _dsCanvasPos(ev){
+  const canvas=document.getElementById('docScanCanvas');
+  const r=canvas.getBoundingClientRect();
+  return {
+    x: Math.max(0,Math.min(canvas.width,  ev.clientX-r.left)),
+    y: Math.max(0,Math.min(canvas.height, ev.clientY-r.top))
+  };
 }
 
 /* ── 모서리 드래그 ── */
-function _dsBindCorner(handle, idx){
-  handle.style.touchAction='none';
-  handle.addEventListener('pointerdown', e=>{
+function _dsCornerBind(h,idx){
+  h.style.touchAction='none';
+  h.addEventListener('pointerdown',e=>{
     e.preventDefault(); e.stopPropagation();
-    handle.setPointerCapture(e.pointerId);
-
-    function onMove(ev){
+    h.setPointerCapture(e.pointerId);
+    const onMove=ev=>{
       ev.preventDefault();
-      const cr = document.getElementById('docScanCanvas').getBoundingClientRect();
-      const cx = Math.max(0, Math.min(canvas_dw(), ev.clientX-cr.left));
-      const cy = Math.max(0, Math.min(canvas_dh(), ev.clientY-cr.top));
-      // 원본 좌표 업데이트
-      docCorners[idx]={x:cx/_dsScale, y:cy/_dsScale};
-      _dsRedraw();
-    }
-    function onEnd(){
-      handle.removeEventListener('pointermove',onMove);
-      handle.removeEventListener('pointerup',onEnd);
-      handle.removeEventListener('pointercancel',onEnd);
-    }
-    handle.addEventListener('pointermove',onMove,{passive:false});
-    handle.addEventListener('pointerup',onEnd);
-    handle.addEventListener('pointercancel',onEnd);
+      const {x,y}=_dsCanvasPos(ev);
+      docCorners[idx]={x:x/_dsScale, y:y/_dsScale};
+      _dsUpdate();
+    };
+    const onEnd=()=>{
+      h.removeEventListener('pointermove',onMove);
+      h.removeEventListener('pointerup',onEnd);
+      h.removeEventListener('pointercancel',onEnd);
+    };
+    h.addEventListener('pointermove',onMove,{passive:false});
+    h.addEventListener('pointerup',onEnd);
+    h.addEventListener('pointercancel',onEnd);
   },{passive:false});
 }
 
 /* ── 막대 드래그 ── */
-function _dsBindBar(handle, type){
-  handle.style.touchAction='none';
-  handle.addEventListener('pointerdown', e=>{
+function _dsBarBind(h,type){
+  h.style.touchAction='none';
+  h.addEventListener('pointerdown',e=>{
     e.preventDefault(); e.stopPropagation();
-    handle.setPointerCapture(e.pointerId);
-
-    function onMove(ev){
+    h.setPointerCapture(e.pointerId);
+    const onMove=ev=>{
       ev.preventDefault();
-      const cr = document.getElementById('docScanCanvas').getBoundingClientRect();
-      const cx = Math.max(0, Math.min(canvas_dw(), ev.clientX-cr.left));
-      const cy = Math.max(0, Math.min(canvas_dh(), ev.clientY-cr.top));
-      const ox = cx/_dsScale, oy = cy/_dsScale;
-
-      // 해당 변의 두 꼭짓점 이동
-      if(type==='t'){       // 상단: tl(0),tr(1) y
-        docCorners[0]={...docCorners[0],y:oy};
-        docCorners[1]={...docCorners[1],y:oy};
-      } else if(type==='b'){ // 하단: br(2),bl(3) y
-        docCorners[2]={...docCorners[2],y:oy};
-        docCorners[3]={...docCorners[3],y:oy};
-      } else if(type==='l'){ // 좌: tl(0),bl(3) x
-        docCorners[0]={...docCorners[0],x:ox};
-        docCorners[3]={...docCorners[3],x:ox};
-      } else if(type==='r'){ // 우: tr(1),br(2) x
-        docCorners[1]={...docCorners[1],x:ox};
-        docCorners[2]={...docCorners[2],x:ox};
-      }
-      _dsRedraw();
-    }
-    function onEnd(){
-      handle.removeEventListener('pointermove',onMove);
-      handle.removeEventListener('pointerup',onEnd);
-      handle.removeEventListener('pointercancel',onEnd);
-    }
-    handle.addEventListener('pointermove',onMove,{passive:false});
-    handle.addEventListener('pointerup',onEnd);
-    handle.addEventListener('pointercancel',onEnd);
+      const {x,y}=_dsCanvasPos(ev);
+      const ox=x/_dsScale, oy=y/_dsScale;
+      if(type==='t'){ docCorners[0]={...docCorners[0],y:oy}; docCorners[1]={...docCorners[1],y:oy}; }
+      if(type==='b'){ docCorners[2]={...docCorners[2],y:oy}; docCorners[3]={...docCorners[3],y:oy}; }
+      if(type==='l'){ docCorners[0]={...docCorners[0],x:ox}; docCorners[3]={...docCorners[3],x:ox}; }
+      if(type==='r'){ docCorners[1]={...docCorners[1],x:ox}; docCorners[2]={...docCorners[2],x:ox}; }
+      _dsUpdate();
+    };
+    const onEnd=()=>{
+      h.removeEventListener('pointermove',onMove);
+      h.removeEventListener('pointerup',onEnd);
+      h.removeEventListener('pointercancel',onEnd);
+    };
+    h.addEventListener('pointermove',onMove,{passive:false});
+    h.addEventListener('pointerup',onEnd);
+    h.addEventListener('pointercancel',onEnd);
   },{passive:false});
 }
 
-/* ── 캔버스 크기 ── */
-function canvas_dw(){ const c=document.getElementById('docScanCanvas'); return c?c.width:0; }
-function canvas_dh(){ const c=document.getElementById('docScanCanvas'); return c?c.height:0; }
-
-/* ── 다시 그리기 (드래그 중) ── */
-function _dsRedraw(){
-  const canvas=document.getElementById('docScanCanvas'); if(!canvas||!_dsOrig) return;
-  const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.drawImage(_dsOrig,0,0,canvas.width,canvas.height);
-  const disp=docCorners.map(p=>({x:Math.round(p.x*_dsScale),y:Math.round(p.y*_dsScale)}));
-  _dsDrawLines(ctx,disp,canvas.width,canvas.height);
-  _dsPlaceHandles(disp);
-}
-
 /* ── 줌 ── */
-function _dsZoomIn(){  _dsZoom=Math.min(_dsZoom*1.4,4); _dsRender(); }
-function _dsZoomOut(){ _dsZoom=Math.max(_dsZoom/1.4,0.5); _dsRender(); }
+function _dsZoomIn(){  _dsZoom=Math.min(_dsZoom*1.4,4); _dsRendering=false; _dsRender(); }
+function _dsZoomOut(){ _dsZoom=Math.max(_dsZoom/1.4,0.5); _dsRendering=false; _dsRender(); }
 
 /* ── 크롭 적용 ── */
 async function applyDocScanCrop(){
   if(!docCorners.length||!docScanImgData){ showToast('감지된 문서가 없습니다'); return; }
   const btn=document.getElementById('btnDocScanApply');
-  if(btn) btn.disabled=true;
   const statusEl=document.getElementById('aiCropStatus');
+  if(btn) btn.disabled=true;
   if(statusEl) statusEl.textContent='⏳ 크롭 중...';
   try{
     let result;
     try{ result=await serverWarp(docScanImgData,docCorners); }
-    catch(e){ result=await canvasWarp(docScanImgData,docCorners); }
+    catch(e){ result=await _canvasWarp(docScanImgData,docCorners); }
     closeDocScanModal();
     if(!modalImages.length) modalImages=[{id:uid(),dataUrl:result}];
     else modalImages[modalSlide]={id:modalImages[modalSlide]?.id||uid(),dataUrl:result};
@@ -846,7 +826,6 @@ async function applyDocScanCrop(){
     if(statusEl) statusEl.textContent='✅ 크롭 완료';
     showToast('✅ 문서 크롭 완료!');
   } catch(e){
-    console.error(e);
     if(statusEl) statusEl.textContent='⚠️ '+e.message;
     showToast('크롭 오류: '+e.message);
   } finally{
@@ -854,20 +833,24 @@ async function applyDocScanCrop(){
   }
 }
 
-/* ── canvas bounding box 크롭 ── */
-async function canvasWarp(dataUrl,corners){
+async function _canvasWarp(dataUrl,corners){
   const img=await loadImage(dataUrl);
   const s=sortCorners(corners);
   const xs=s.map(p=>p.x),ys=s.map(p=>p.y);
   const sx=Math.max(0,Math.min(...xs)), sy=Math.max(0,Math.min(...ys));
-  const sw=Math.min(img.width-sx,Math.max(...xs)-sx);
-  const sh=Math.min(img.height-sy,Math.max(...ys)-sy);
-  if(sw<20||sh<20) throw new Error('크롭 영역이 너무 작습니다');
+  const sw=Math.min(img.width-sx, Math.max(...xs)-sx);
+  const sh=Math.min(img.height-sy, Math.max(...ys)-sy);
+  if(sw<20||sh<20) throw new Error('영역이 너무 작습니다');
   return cropImageByPixel(dataUrl,Math.round(sx),Math.round(sy),Math.round(sw),Math.round(sh));
 }
 
 /* 구버전 호환 */
-function drawDocOutline(ctx,c,dw,dh){ _dsDrawLines(ctx,c,dw,dh); }
+function canvasWarp(d,c){ return _canvasWarp(d,c); }
+function drawDocOutline(ctx,pts,dw,dh){
+  ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+  pts.forEach(p=>ctx.lineTo(p.x,p.y)); ctx.closePath(); ctx.stroke();
+}
 function makeDraggable(){}
 
 
@@ -1647,7 +1630,7 @@ async function init(){
   /* ── 버전/모드 표시 ── */
   const _el = id => document.getElementById(id);
   if(_el('appTitle'))   _el('appTitle').textContent   = MODE_LABEL;
-  if(_el('appVersion')) _el('appVersion').textContent = 'v7.4';
+  if(_el('appVersion')) _el('appVersion').textContent = 'v7.5';
   document.title = MODE_LABEL;
   // 상단 모드 컬러 바
   const modeBar = document.createElement('div');
