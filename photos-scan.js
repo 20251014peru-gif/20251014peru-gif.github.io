@@ -176,20 +176,33 @@ function toggleCatDrop(){
 }
 
 // 섹션 전환
+let _sectionLock=false;
 function setSection(sec){
+  if(_sectionLock){ dbg('setSection locked, skip'); return; }
+
   if(sec==='secure' && !hasSecurePass()){
-    openPinSetup(()=>setSection('secure'));
-    return;
-  }
-  if(sec==='secure' && hasSecurePass()){
-    // 보안 섹션 진입 시 비번 확인
-    openPinVerify(()=>{
-      curSection=sec;
-      document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('active',b.dataset.sec===sec));
-      filter='all'; renderCatDropdown(); renderGallery();
+    _sectionLock=true;
+    openPinSetup(()=>{
+      _sectionLock=false;
+      _doSetSection('secure');
     });
     return;
   }
+  if(sec==='secure'){
+    _sectionLock=true;
+    dbg('setSection: opening verify for secure');
+    openPinVerify(()=>{
+      dbg('setSection secure: callback fired');
+      _sectionLock=false;
+      _doSetSection('secure');
+    });
+    return;
+  }
+  _doSetSection(sec);
+}
+
+function _doSetSection(sec){
+  dbg(`_doSetSection: ${sec}`);
   curSection=sec;
   document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('active',b.dataset.sec===sec));
   filter='all'; renderCatDropdown(); renderGallery();
@@ -527,6 +540,7 @@ function openPinVerify(callback){
 function closePinModal(){
   $('modalPin').style.display='none';
   _pinCallback=null;
+  _sectionLock=false; // 취소 시 lock 해제
 }
 
 function confirmPin(){
@@ -1464,7 +1478,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v10.8b';
+  if($('appVersion')) $('appVersion').textContent='v10.9';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
