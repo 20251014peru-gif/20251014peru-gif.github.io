@@ -212,26 +212,30 @@ async function renderGallery(){
   if(empty) empty.style.display=list.length?'none':'';
   for(const p of list){
     const card=document.createElement('div'); card.className='card';
+    card.oncontextmenu=e=>e.preventDefault(); // 꾹 눌러도 브라우저 메뉴 안 뜸
+
     const iw=document.createElement('div'); iw.className='card-img-wrap';
     const img=document.createElement('img'); img.className='card-img'; img.alt=p.title||'';
     iw.appendChild(img);
     if((p.imgIds||[]).length>1){ const mb=document.createElement('span'); mb.className='card-multi'; mb.textContent='×'+p.imgIds.length; iw.appendChild(mb); }
-    if(p.secure){
-      const lk=document.createElement('div'); lk.className='card-locked';
-      lk.innerHTML='<span>🔒</span><p>보안 사진</p>'; iw.appendChild(lk);
-    }
-    // 카드 버튼: 이동 + 삭제 (hover 시 표시)
-    const acts=document.createElement('div'); acts.className='card-acts';
-    const bMove=document.createElement('button'); bMove.className='cAct move'; bMove.textContent='↗ 이동';
-    bMove.onclick=ev=>{ ev.stopPropagation(); openMovePopup(p.id); };
-    const bDel=document.createElement('button');  bDel.className='cAct del';  bDel.textContent='🗑 삭제';
-    bDel.onclick=ev=>{ ev.stopPropagation(); delPhoto(p.id); };
-    acts.append(bMove, bDel); iw.appendChild(acts);
+    if(p.secure){ const lk=document.createElement('div'); lk.className='card-locked'; lk.innerHTML='<span>🔒</span><p>보안 사진</p>'; iw.appendChild(lk); }
     if(!p.secure){ const firstId=(p.imgIds||[])[0]; if(firstId) idbGet(firstId).then(u=>{ if(u) img.src=u; }); }
     else { img.style.background='#1e293b'; }
+
     const info=document.createElement('div'); info.className='card-info';
     info.innerHTML=`<div class="card-title">${p.secure?'🔒 ':''}${p.title||'(제목없음)'}</div><div class="card-meta"><span class="badge">${p.cat||''}</span><span class="card-date">${(p.date||'').slice(5)}</span></div>`;
-    card.append(iw,info);
+
+    // 항상 보이는 버튼 행 (카드 하단)
+    const btnRow=document.createElement('div'); btnRow.className='card-btn-row';
+    const bMove=document.createElement('button'); bMove.className='cbtn-move'; bMove.textContent='↗ 이동';
+    bMove.onclick=ev=>{ ev.stopPropagation(); ev.preventDefault(); openMovePopup(p.id); };
+    bMove.oncontextmenu=ev=>ev.preventDefault();
+    const bDel=document.createElement('button'); bDel.className='cbtn-del'; bDel.textContent='🗑 삭제';
+    bDel.onclick=ev=>{ ev.stopPropagation(); ev.preventDefault(); delPhoto(p.id); };
+    bDel.oncontextmenu=ev=>ev.preventDefault();
+    btnRow.append(bMove, bDel);
+
+    card.append(iw, info, btnRow);
     card.onclick=()=>openView(p.id);
     grid.insertBefore(card,empty);
   }
@@ -1445,7 +1449,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v10.6';
+  if($('appVersion')) $('appVersion').textContent='v10.7';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -1585,6 +1589,7 @@ async function init(){
   $on('btnVPrev',  ()=>vNav(-1));
   $on('btnVNext',  ()=>vNav(1));
   $on('btnVShare', shareView);
+  $on('btnVMove',  ()=>{ $('viewFs').style.display='none'; openMovePopup(vId); });
   $on('btnVEdit',  openEditorFromView);
   $on('btnVDel',   ()=>delPhoto(vId));
 

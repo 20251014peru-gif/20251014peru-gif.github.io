@@ -717,3 +717,21 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
 /* 카드 이동 버튼 */
 .cAct.move{background:rgba(63,124,184,.85);color:#fff}
 .cAct.move:hover{background:#3F7CB8}
+
+/* 카드 하단 항상 보이는 버튼 행 */
+.card-btn-row{
+  display:flex;gap:6px;padding:6px 8px;
+  border-top:1px solid #f1f5f9;background:#fff;
+}
+.cbtn-move,.cbtn-del{
+  flex:1;padding:7px 4px;border:none;border-radius:8px;
+  font-size:12px;font-weight:700;cursor:pointer;
+  -webkit-user-select:none;user-select:none;
+}
+.cbtn-move{background:#ebf3fc;color:#3F7CB8}
+.cbtn-move:active{background:#3F7CB8;color:#fff}
+.cbtn-del{background:#fee2e2;color:#ef4444}
+.cbtn-del:active{background:#ef4444;color:#fff}
+
+/* 상세보기 이동 버튼 */
+#btnVMove{background:rgba(63,124,184,.7) !important;border-color:#3F7CB8 !important}
