@@ -1164,7 +1164,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v10.1';
+  if($('appVersion')) $('appVersion').textContent='v10.2';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -1231,6 +1231,7 @@ async function init(){
     toast('편집 취소됨');
   });
   $on('btnEditDone',  finishEdit);
+  $on('btnEditDone2', finishEdit);
   $on('btnUndo',      popHist);
   document.querySelectorAll('.tbtn[data-t]').forEach(b=>{ b.onclick=()=>{ const t=b.dataset.t; if(t==='rect') addShape('rect'); else if(t==='circle') addShape('circle'); else if(t==='arrow') addArrow(); else setTool(t); }; });
   $('tColor') && ($('tColor').onchange=()=>{ if(canvas&&canvas.isDrawingMode) canvas.freeDrawingBrush.color=$('tColor').value; });
