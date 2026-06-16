@@ -627,28 +627,44 @@ function enhanceImage(dataUrl){
 }
 
 
-/* ── 문서감지 풀스크린 열기 ── */
-let _dsScale = 1;   // 현재 표시 배율
-let _dsOrig  = null; // 원본 이미지 element
-let _dsZoom  = 1;   // 사용자 줌 배율
+/* ══════════════════════════════════════════════════
+   문서감지 풀스크린 v7.4 — 완전 재작성
+   ══════════════════════════════════════════════════ */
+let _dsOrig  = null;  // 원본 Image element
+let _dsScale = 1;     // 표시 배율
+let _dsZoom  = 1;     // 사용자 줌
 
+/* ── 열기 ── */
 function openDocScanModal(origImg){
-  _dsOrig  = origImg;
-  _dsZoom  = 1;
+  _dsOrig = origImg;
+  _dsZoom = 1;
+  // 핸들 inited 초기화 (재진입 대비)
+  for(let i=0;i<8;i++){
+    const h=document.getElementById('ch'+i);
+    if(h) h._dsInited=false;
+  }
   const fs = document.getElementById('modalDocScan');
-  fs.style.display = 'flex';
-  // requestAnimationFrame으로 DOM 크기 확정 후 그리기
+  fs.classList.add('show');
+  fs.style.display='flex';
   requestAnimationFrame(()=>requestAnimationFrame(()=>_dsRender()));
 }
 
+/* ── 닫기 ── */
+function closeDocScanModal(){
+  const fs=document.getElementById('modalDocScan');
+  if(fs){ fs.classList.remove('show'); fs.style.display='none'; }
+}
+
+/* ── 렌더 ── */
 function _dsRender(){
   const body   = document.getElementById('docScanBody');
   const canvas = document.getElementById('docScanCanvas');
-  if(!_dsOrig || !canvas) return;
+  if(!_dsOrig||!canvas||!body) return;
 
-  const maxW = (body.clientWidth  || window.innerWidth)  * _dsZoom;
-  const maxH = (body.clientHeight || window.innerHeight * 0.78) * _dsZoom;
-  const scale = Math.min(maxW / _dsOrig.width, maxH / _dsOrig.height, _dsZoom);
+  // 캔버스 크기: body 전체를 꽉 채우되 이미지 비율 유지
+  const bW = body.clientWidth  || window.innerWidth;
+  const bH = body.clientHeight || (window.innerHeight - 110);
+  const scale = Math.min(bW/_dsOrig.width, bH/_dsOrig.height) * _dsZoom;
   _dsScale = scale;
 
   const dw = Math.round(_dsOrig.width  * scale);
@@ -656,201 +672,203 @@ function _dsRender(){
   canvas.width  = dw;
   canvas.height = dh;
 
+  // 이미지 그리기
   const ctx = canvas.getContext('2d');
   ctx.drawImage(_dsOrig, 0, 0, dw, dh);
 
   // 꼭짓점 → 화면 좌표
-  const disp = docCorners.map(p=>({ x: p.x*scale, y: p.y*scale }));
-  _dsDrawOutline(ctx, disp, dw, dh);
-  _dsUpdateHandles(disp, dw, dh, canvas);
+  const disp = docCorners.map(p=>({x:Math.round(p.x*scale), y:Math.round(p.y*scale)}));
+
+  // 선 그리기
+  _dsDrawLines(ctx, disp, dw, dh);
+
+  // 핸들 배치
+  _dsPlaceHandles(disp);
 }
 
-/* 핸들 위치 계산 & 이벤트 등록 */
-function _dsUpdateHandles(disp, dw, dh, canvas){
-  // disp: [tl, tr, br, bl] 순서
-  const [tl, tr, br, bl] = disp;
-
-  // 모서리 4개
-  const corners = [
-    {id:'ch0', x:tl.x, y:tl.y},
-    {id:'ch1', x:tr.x, y:tr.y},
-    {id:'ch2', x:br.x, y:br.y},
-    {id:'ch3', x:bl.x, y:bl.y},
-  ];
-
-  // 엣지 막대 4개 — 각 변의 중점, 위치는 절대값으로
-  const bars = [
-    {id:'ch4', type:'t', x:(tl.x+tr.x)/2, y:Math.min(tl.y,tr.y)},  // 상단
-    {id:'ch5', type:'b', x:(bl.x+br.x)/2, y:Math.max(bl.y,br.y)},  // 하단
-    {id:'ch6', type:'l', x:Math.min(tl.x,bl.x), y:(tl.y+bl.y)/2},  // 좌측
-    {id:'ch7', type:'r', x:Math.max(tr.x,br.x), y:(tr.y+br.y)/2},  // 우측
-  ];
-
-  corners.forEach(({id,x,y}, idx)=>{
-    const h = document.getElementById(id); if(!h) return;
-    h.style.left = x + 'px';
-    h.style.top  = y + 'px';
-    if(!h._dsInited){ h._dsInited=true; _dsMakeDraggable(h, 'corner', idx, canvas, dw, dh); }
-  });
-
-  bars.forEach(({id,type,x,y})=>{
-    const h = document.getElementById(id); if(!h) return;
-    // 막대는 CSS로 left/right/top/bottom을 자동 배치하므로 위치만 힌트로 저장
-    h._barType = type;
-    if(!h._dsInited){ h._dsInited=true; _dsMakeDraggable(h, 'bar', type, canvas, dw, dh); }
-  });
-}
-
-/* 선 그리기 */
-function _dsDrawOutline(ctx, corners, dw, dh){
+/* ── 선 그리기 (외부 어둡게) ── */
+function _dsDrawLines(ctx, pts, dw, dh){
+  if(pts.length<4) return;
   ctx.save();
-  ctx.fillStyle='rgba(0,0,0,0.42)';
+  // 외부 어둡게
+  ctx.fillStyle='rgba(0,0,0,0.45)';
   ctx.beginPath();
   ctx.rect(0,0,dw,dh);
-  ctx.moveTo(corners[0].x,corners[0].y);
-  corners.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.moveTo(pts[0].x,pts[0].y);
+  pts.forEach(p=>ctx.lineTo(p.x,p.y));
   ctx.closePath();
   ctx.fill('evenodd');
+  // 테두리 선
   ctx.strokeStyle='#FFD700';
   ctx.lineWidth=2;
-  ctx.setLineDash([]);
   ctx.beginPath();
-  ctx.moveTo(corners[0].x,corners[0].y);
-  corners.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.moveTo(pts[0].x,pts[0].y);
+  pts.forEach(p=>ctx.lineTo(p.x,p.y));
   ctx.closePath();
   ctx.stroke();
   ctx.restore();
 }
 
-/* 핸들 드래그 — 모서리(corner) / 막대(bar) */
-function _dsMakeDraggable(handle, kind, param, canvas, dw, dh){
-  handle.style.touchAction = 'none';
-  handle.addEventListener('pointerdown', function(e){
+/* ── 핸들 배치 (absolute position) ── */
+function _dsPlaceHandles(disp){
+  const [tl,tr,br,bl] = disp;
+
+  // 모서리 4개 — transform:translate(-50%,-50%) 이미 CSS에 있음
+  const corners=[
+    {id:'ch0',x:tl.x,y:tl.y},
+    {id:'ch1',x:tr.x,y:tr.y},
+    {id:'ch2',x:br.x,y:br.y},
+    {id:'ch3',x:bl.x,y:bl.y},
+  ];
+  corners.forEach(({id,x,y},i)=>{
+    const h=document.getElementById(id); if(!h) return;
+    h.style.left=x+'px'; h.style.top=y+'px';
+    if(!h._dsInited){ h._dsInited=true; _dsBindCorner(h,i); }
+  });
+
+  // 엣지 막대 4개
+  const bars=[
+    {id:'ch4', x:(tl.x+tr.x)/2, y:Math.min(tl.y,tr.y), cls:'ds-t'},
+    {id:'ch5', x:(bl.x+br.x)/2, y:Math.max(bl.y,br.y), cls:'ds-b'},
+    {id:'ch6', x:Math.min(tl.x,bl.x), y:(tl.y+bl.y)/2, cls:'ds-l'},
+    {id:'ch7', x:Math.max(tr.x,br.x), y:(tr.y+br.y)/2, cls:'ds-r'},
+  ];
+  const barTypes=['t','b','l','r'];
+  bars.forEach(({id,x,y,cls},i)=>{
+    const h=document.getElementById(id); if(!h) return;
+    h.style.left=x+'px'; h.style.top=y+'px';
+    if(!h._dsInited){ h._dsInited=true; _dsBindBar(h, barTypes[i]); }
+  });
+}
+
+/* ── 모서리 드래그 ── */
+function _dsBindCorner(handle, idx){
+  handle.style.touchAction='none';
+  handle.addEventListener('pointerdown', e=>{
     e.preventDefault(); e.stopPropagation();
     handle.setPointerCapture(e.pointerId);
 
     function onMove(ev){
       ev.preventDefault();
-      const cr = canvas.getBoundingClientRect();
-      const cx = Math.max(0, Math.min(dw, ev.clientX - cr.left));
-      const cy = Math.max(0, Math.min(dh, ev.clientY - cr.top));
-
-      if(kind === 'corner'){
-        // 꼭짓점: 해당 점만 이동
-        const idx = param; // 0=tl,1=tr,2=br,3=bl
-        handle.style.left = cx + 'px';
-        handle.style.top  = cy + 'px';
-        docCorners[idx] = { x: cx/_dsScale, y: cy/_dsScale };
-
-      } else if(kind === 'bar'){
-        // 막대: 해당 변 전체를 이동
-        const type = param; // 't','b','l','r'
-        if(type==='t'){
-          // 상단 막대: tl, tr의 y를 cx/cy로 이동
-          const dy = cy/_dsScale;
-          docCorners[0] = {...docCorners[0], y: dy};
-          docCorners[1] = {...docCorners[1], y: dy};
-        } else if(type==='b'){
-          const dy = cy/_dsScale;
-          docCorners[2] = {...docCorners[2], y: dy};
-          docCorners[3] = {...docCorners[3], y: dy};
-        } else if(type==='l'){
-          const dx = cx/_dsScale;
-          docCorners[0] = {...docCorners[0], x: dx};
-          docCorners[3] = {...docCorners[3], x: dx};
-        } else if(type==='r'){
-          const dx = cx/_dsScale;
-          docCorners[1] = {...docCorners[1], x: dx};
-          docCorners[2] = {...docCorners[2], x: dx};
-        }
-      }
-
-      // 캔버스 다시 그리기
-      const ctx2 = canvas.getContext('2d');
-      ctx2.clearRect(0,0,dw,dh);
-      ctx2.drawImage(_dsOrig,0,0,dw,dh);
-      const disp2 = docCorners.map(p=>({x:p.x*_dsScale, y:p.y*_dsScale}));
-      _dsDrawOutline(ctx2, disp2, dw, dh);
-
-      // 핸들 위치 동기화
-      const ids = ['ch0','ch1','ch2','ch3'];
-      ids.forEach((id,i)=>{
-        const h2=document.getElementById(id); if(!h2) return;
-        h2.style.left = disp2[i].x + 'px';
-        h2.style.top  = disp2[i].y + 'px';
-      });
+      const cr = document.getElementById('docScanCanvas').getBoundingClientRect();
+      const cx = Math.max(0, Math.min(canvas_dw(), ev.clientX-cr.left));
+      const cy = Math.max(0, Math.min(canvas_dh(), ev.clientY-cr.top));
+      // 원본 좌표 업데이트
+      docCorners[idx]={x:cx/_dsScale, y:cy/_dsScale};
+      _dsRedraw();
     }
-
     function onEnd(){
-      handle.removeEventListener('pointermove',   onMove);
-      handle.removeEventListener('pointerup',     onEnd);
-      handle.removeEventListener('pointercancel', onEnd);
+      handle.removeEventListener('pointermove',onMove);
+      handle.removeEventListener('pointerup',onEnd);
+      handle.removeEventListener('pointercancel',onEnd);
     }
-    handle.addEventListener('pointermove',   onMove,  {passive:false});
-    handle.addEventListener('pointerup',     onEnd);
-    handle.addEventListener('pointercancel', onEnd);
-  }, {passive:false});
+    handle.addEventListener('pointermove',onMove,{passive:false});
+    handle.addEventListener('pointerup',onEnd);
+    handle.addEventListener('pointercancel',onEnd);
+  },{passive:false});
 }
 
-/* 줌 */
-function _dsZoomIn(){  _dsZoom = Math.min(_dsZoom*1.4, 4); _dsRender(); }
-function _dsZoomOut(){ _dsZoom = Math.max(_dsZoom/1.4, 0.5); _dsRender(); }
+/* ── 막대 드래그 ── */
+function _dsBindBar(handle, type){
+  handle.style.touchAction='none';
+  handle.addEventListener('pointerdown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    handle.setPointerCapture(e.pointerId);
 
-/* ── 원근 보정 크롭 ── */
+    function onMove(ev){
+      ev.preventDefault();
+      const cr = document.getElementById('docScanCanvas').getBoundingClientRect();
+      const cx = Math.max(0, Math.min(canvas_dw(), ev.clientX-cr.left));
+      const cy = Math.max(0, Math.min(canvas_dh(), ev.clientY-cr.top));
+      const ox = cx/_dsScale, oy = cy/_dsScale;
+
+      // 해당 변의 두 꼭짓점 이동
+      if(type==='t'){       // 상단: tl(0),tr(1) y
+        docCorners[0]={...docCorners[0],y:oy};
+        docCorners[1]={...docCorners[1],y:oy};
+      } else if(type==='b'){ // 하단: br(2),bl(3) y
+        docCorners[2]={...docCorners[2],y:oy};
+        docCorners[3]={...docCorners[3],y:oy};
+      } else if(type==='l'){ // 좌: tl(0),bl(3) x
+        docCorners[0]={...docCorners[0],x:ox};
+        docCorners[3]={...docCorners[3],x:ox};
+      } else if(type==='r'){ // 우: tr(1),br(2) x
+        docCorners[1]={...docCorners[1],x:ox};
+        docCorners[2]={...docCorners[2],x:ox};
+      }
+      _dsRedraw();
+    }
+    function onEnd(){
+      handle.removeEventListener('pointermove',onMove);
+      handle.removeEventListener('pointerup',onEnd);
+      handle.removeEventListener('pointercancel',onEnd);
+    }
+    handle.addEventListener('pointermove',onMove,{passive:false});
+    handle.addEventListener('pointerup',onEnd);
+    handle.addEventListener('pointercancel',onEnd);
+  },{passive:false});
+}
+
+/* ── 캔버스 크기 ── */
+function canvas_dw(){ const c=document.getElementById('docScanCanvas'); return c?c.width:0; }
+function canvas_dh(){ const c=document.getElementById('docScanCanvas'); return c?c.height:0; }
+
+/* ── 다시 그리기 (드래그 중) ── */
+function _dsRedraw(){
+  const canvas=document.getElementById('docScanCanvas'); if(!canvas||!_dsOrig) return;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(_dsOrig,0,0,canvas.width,canvas.height);
+  const disp=docCorners.map(p=>({x:Math.round(p.x*_dsScale),y:Math.round(p.y*_dsScale)}));
+  _dsDrawLines(ctx,disp,canvas.width,canvas.height);
+  _dsPlaceHandles(disp);
+}
+
+/* ── 줌 ── */
+function _dsZoomIn(){  _dsZoom=Math.min(_dsZoom*1.4,4); _dsRender(); }
+function _dsZoomOut(){ _dsZoom=Math.max(_dsZoom/1.4,0.5); _dsRender(); }
+
+/* ── 크롭 적용 ── */
 async function applyDocScanCrop(){
-  if(!docCorners.length || !docScanImgData){ showToast('감지된 문서가 없습니다'); return; }
-
-  const btn = document.getElementById('btnDocScanApply');
-  if(btn) btn.disabled = true;
-  const statusEl = document.getElementById('aiCropStatus');
-  if(statusEl) statusEl.textContent = '⏳ 크롭 중...';
-
+  if(!docCorners.length||!docScanImgData){ showToast('감지된 문서가 없습니다'); return; }
+  const btn=document.getElementById('btnDocScanApply');
+  if(btn) btn.disabled=true;
+  const statusEl=document.getElementById('aiCropStatus');
+  if(statusEl) statusEl.textContent='⏳ 크롭 중...';
   try{
     let result;
-    try{
-      result = await serverWarp(docScanImgData, docCorners);
-    } catch(e){
-      console.warn('serverWarp failed, canvas fallback:', e.message);
-      result = await canvasWarp(docScanImgData, docCorners);
-    }
-
-    // 모달 닫고 modalAdd에 반영
-    document.getElementById('modalDocScan').style.display = 'none';
-
-    if(!modalImages.length) modalImages = [{id:uid(), dataUrl:result}];
-    else modalImages[modalSlide] = {id:modalImages[modalSlide]?.id||uid(), dataUrl:result};
-
+    try{ result=await serverWarp(docScanImgData,docCorners); }
+    catch(e){ result=await canvasWarp(docScanImgData,docCorners); }
+    closeDocScanModal();
+    if(!modalImages.length) modalImages=[{id:uid(),dataUrl:result}];
+    else modalImages[modalSlide]={id:modalImages[modalSlide]?.id||uid(),dataUrl:result};
     renderModalSlides();
-    if(statusEl) statusEl.textContent = '✅ 크롭 완료';
+    if(statusEl) statusEl.textContent='✅ 크롭 완료';
     showToast('✅ 문서 크롭 완료!');
-
   } catch(e){
-    console.error('applyDocScanCrop error:', e);
-    if(statusEl) statusEl.textContent = '⚠️ ' + e.message;
-    showToast('크롭 오류: ' + e.message);
+    console.error(e);
+    if(statusEl) statusEl.textContent='⚠️ '+e.message;
+    showToast('크롭 오류: '+e.message);
   } finally{
-    if(btn) btn.disabled = false;
+    if(btn) btn.disabled=false;
   }
 }
 
-/* canvas 기반 bounding box 크롭 */
-async function canvasWarp(dataUrl, corners){
-  const img    = await loadImage(dataUrl);
-  const sorted = sortCorners(corners);
-  const xs = sorted.map(p=>p.x), ys = sorted.map(p=>p.y);
-  const sx = Math.max(0, Math.min(...xs));
-  const sy = Math.max(0, Math.min(...ys));
-  const sw = Math.min(img.width-sx,  Math.max(...xs)-Math.min(...xs));
-  const sh = Math.min(img.height-sy, Math.max(...ys)-Math.min(...ys));
+/* ── canvas bounding box 크롭 ── */
+async function canvasWarp(dataUrl,corners){
+  const img=await loadImage(dataUrl);
+  const s=sortCorners(corners);
+  const xs=s.map(p=>p.x),ys=s.map(p=>p.y);
+  const sx=Math.max(0,Math.min(...xs)), sy=Math.max(0,Math.min(...ys));
+  const sw=Math.min(img.width-sx,Math.max(...xs)-sx);
+  const sh=Math.min(img.height-sy,Math.max(...ys)-sy);
   if(sw<20||sh<20) throw new Error('크롭 영역이 너무 작습니다');
-  return cropImageByPixel(dataUrl, Math.round(sx), Math.round(sy), Math.round(sw), Math.round(sh));
+  return cropImageByPixel(dataUrl,Math.round(sx),Math.round(sy),Math.round(sw),Math.round(sh));
 }
 
-/* 기존 함수 호환 */
-function drawDocOutline(ctx,corners,dw,dh){ _dsDrawOutline(ctx,corners,dw,dh); }
-function makeDraggable(h,i,s,img,ox,oy,dw,dh){ /* 구버전 호환 — 미사용 */ }
-
-
+/* 구버전 호환 */
+function drawDocOutline(ctx,c,dw,dh){ _dsDrawLines(ctx,c,dw,dh); }
+function makeDraggable(){}
 
 
 /* ── Anthropic AI fallback (OpenCV 실패 시) ── */
@@ -1629,7 +1647,7 @@ async function init(){
   /* ── 버전/모드 표시 ── */
   const _el = id => document.getElementById(id);
   if(_el('appTitle'))   _el('appTitle').textContent   = MODE_LABEL;
-  if(_el('appVersion')) _el('appVersion').textContent = 'v7.3';
+  if(_el('appVersion')) _el('appVersion').textContent = 'v7.4';
   document.title = MODE_LABEL;
   // 상단 모드 컬러 바
   const modeBar = document.createElement('div');
@@ -1808,8 +1826,8 @@ async function init(){
   /* ══════════════════════════════════════
      OpenCV 문서감지 모달
      ══════════════════════════════════════ */
-  $on('btnDocScanClose', ()=>{ document.getElementById('modalDocScan').style.display='none'; });
-  $on('btnDocScanRetry', ()=>{ document.getElementById('modalDocScan').style.display='none'; aiDocCrop(false); });
+  $on('btnDocScanClose', closeDocScanModal);
+  $on('btnDocScanRetry', ()=>{ closeDocScanModal(); aiDocCrop(false); });
   $on('btnDocScanApply', applyDocScanCrop);
   $on('btnDocScanZoomIn',  _dsZoomIn);
   $on('btnDocScanZoomOut', _dsZoomOut);
@@ -1847,7 +1865,7 @@ async function init(){
     if(e.key==='Escape'){
       ['modalAdd','modalEdit','modalApiKey','modalOneDrive','modalCat'].forEach(closeModal);
       if(_el('modalView'))    _el('modalView').style.display='none';
-      if(_el('modalDocScan')) _el('modalDocScan').style.display='none';
+      closeDocScanModal();
       if(_el('imgPopup'))     _el('imgPopup').style.display='none';
       closeAiDrop(); closeCropUI();
     }
