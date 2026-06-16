@@ -101,12 +101,13 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
 
 /* ── 카드 ── */
 .card{
-  background:#fff;border-radius:12px;overflow:hidden;
+  background:#fff;border-radius:12px;
   box-shadow:0 2px 8px rgba(0,0,0,.08);cursor:pointer;
   transition:transform .12s,box-shadow .12s;
+  display:flex;flex-direction:column;
 }
 .card:hover{transform:translateY(-2px);box-shadow:0 5px 16px rgba(63,124,184,.18)}
-.card-img-wrap{position:relative}
+.card-img-wrap{position:relative;overflow:hidden;border-radius:12px 12px 0 0;}
 .card-img{width:100%;aspect-ratio:4/3;object-fit:cover;background:#f0f4f8;display:block}
 .card-multi{
   position:absolute;top:5px;right:5px;

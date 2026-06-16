@@ -374,37 +374,47 @@ function openMovePopup(photoId){
 
   const pop=document.createElement('div');
   pop.id='movePopup';
-  pop.style.cssText='position:fixed;inset:0;z-index:800;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45)';
-  pop.innerHTML=`
-    <div style="background:#fff;border-radius:16px;padding:20px;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
-      <div style="font-size:15px;font-weight:700;margin-bottom:6px">↗ 이동</div>
-      <div style="font-size:13px;color:#64748b;margin-bottom:14px">"${p.title||'(제목없음)'}"</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${['normal','scan','secure'].filter(s=>s!==cur).map(s=>`
-          <button data-to="${s}" style="padding:12px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;font-size:14px;font-weight:700;cursor:pointer;text-align:left">
-            ${labels[s]}
-          </button>`).join('')}
-      </div>
-      <button id="movePopupCancel" style="margin-top:12px;width:100%;padding:10px;border:none;background:#f1f5f9;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#64748b">취소</button>
-    </div>`;
+  pop.style.cssText='position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5)';
 
-  pop.querySelectorAll('[data-to]').forEach(btn=>{
+  const box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:16px;padding:20px;min-width:240px;max-width:300px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.25)';
+
+  const title=document.createElement('div');
+  title.style.cssText='font-size:15px;font-weight:700;margin-bottom:4px';
+  title.textContent='↗ 이동';
+
+  const sub=document.createElement('div');
+  sub.style.cssText='font-size:13px;color:#64748b;margin-bottom:14px';
+  sub.textContent=`"${p.title||'(제목없음)'}"`;
+
+  const btnWrap=document.createElement('div');
+  btnWrap.style.cssText='display:flex;flex-direction:column;gap:8px';
+
+  ['normal','scan','secure'].filter(s=>s!==cur).forEach(s=>{
+    const btn=document.createElement('button');
+    btn.style.cssText='padding:13px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;font-size:14px;font-weight:700;cursor:pointer;text-align:left;width:100%';
+    btn.textContent=labels[s];
     btn.onclick=()=>{
-      const to=btn.dataset.to;
       const doMove=()=>{
-        p.secure=to==='secure'; p.scan=to==='scan';
+        p.secure=s==='secure'; p.scan=s==='scan';
         savePhotos(); pop.remove(); renderGallery();
-        toast(`✅ ${labels[to]}으로 이동됨`);
+        toast(`✅ ${labels[s]}으로 이동됨`);
       };
-      if(to==='secure' && !hasSecurePass()){ openPinSetup(doMove); return; }
+      if(s==='secure'&&!hasSecurePass()){ openPinSetup(doMove); return; }
       doMove();
     };
-    btn.onmouseover=()=>btn.style.borderColor='#3F7CB8';
-    btn.onmouseout=()=>btn.style.borderColor='#e2e8f0';
+    btnWrap.appendChild(btn);
   });
-  document.getElementById('movePopupCancel').onclick=()=>pop.remove();
+
+  const cancelBtn=document.createElement('button');
+  cancelBtn.style.cssText='margin-top:12px;width:100%;padding:11px;border:none;background:#f1f5f9;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#64748b';
+  cancelBtn.textContent='취소';
+  cancelBtn.onclick=()=>pop.remove();
+
+  box.append(title, sub, btnWrap, cancelBtn);
+  pop.appendChild(box);
   pop.onclick=e=>{ if(e.target===pop) pop.remove(); };
-  document.body.appendChild(pop);
+  document.body.appendChild(pop); // ★ append 먼저 한 후 이벤트는 이미 위에서 처리
 }
 
 function moveSection(toSection){
@@ -1449,7 +1459,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v10.7';
+  if($('appVersion')) $('appVersion').textContent='v10.7b';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
@@ -1589,7 +1599,11 @@ async function init(){
   $on('btnVPrev',  ()=>vNav(-1));
   $on('btnVNext',  ()=>vNav(1));
   $on('btnVShare', shareView);
-  $on('btnVMove',  ()=>{ $('viewFs').style.display='none'; openMovePopup(vId); });
+  $on('btnVMove',  ()=>{
+    dbg(`btnVMove clicked, vId=${vId}`);
+    if(!vId){ toast('사진을 먼저 선택하세요'); return; }
+    openMovePopup(vId);
+  });
   $on('btnVEdit',  openEditorFromView);
   $on('btnVDel',   ()=>delPhoto(vId));
 
