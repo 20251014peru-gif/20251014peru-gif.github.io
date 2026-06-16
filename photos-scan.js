@@ -80,8 +80,8 @@ function fromFS(doc){
 }
 
 /* ══ Firebase Storage — 이미지 업로드/다운로드/삭제 ══ */
-/* 업로드 전 이미지 리사이즈 (최대 1200px, JPEG 0.85) */
-function resizeForUpload(dataUrl, maxPx=1200, quality=0.85){
+/* 이미지 압축 — 최대 800px, JPEG 0.75 → Firestore 직접 저장용 */
+function compressImg(dataUrl, maxPx=800, quality=0.75){
   return new Promise(res=>{
     const img=new Image();
     img.onload=()=>{
@@ -94,24 +94,9 @@ function resizeForUpload(dataUrl, maxPx=1200, quality=0.85){
       c.getContext('2d').drawImage(img,0,0,w,h);
       res(c.toDataURL('image/jpeg',quality));
     };
-    img.onerror=()=>res(dataUrl); // 실패 시 원본 그대로
+    img.onerror=()=>res(dataUrl);
     img.src=dataUrl;
   });
-}
-
-async function stUpload(imgId, dataUrl){
-  // 업로드 전 리사이즈 (원본 수 MB → 수백 KB)
-  const resized=await resizeForUpload(dataUrl);
-  const blob=await fetch(resized).then(r=>r.blob());
-  const path=encodeURIComponent(`psc_imgs/${MODE}/${imgId}.jpg`);
-  const r=await fetch(`${ST_BASE}/${path}?uploadType=media&name=psc_imgs%2F${MODE}%2F${imgId}.jpg`,{
-    method:'POST', headers:{'Content-Type':'image/jpeg'},
-    body:blob
-  });
-  if(!r.ok) throw new Error(`Storage upload failed: ${r.status}`);
-  const d=await r.json();
-  dbg(`stUpload ok: ${imgId}, size=${(blob.size/1024).toFixed(0)}KB`);
-  return `${ST_BASE}/${encodeURIComponent(d.name)}?alt=media&token=${d.downloadTokens}`;
 }
 async function stDelete(imgId){
   const path=encodeURIComponent(`psc_imgs/${MODE}/${imgId}.jpg`);
@@ -182,15 +167,12 @@ async function syncFromFirebase(){
   let updated=false;
   for(const rp of remote){
     const local=photos.find(p=>p.id===rp.id);
-    // imgUrls가 있으면 IndexedDB에 없는 이미지 미리 캐시
-    if(rp.imgUrls){
-      const urlMap=typeof rp.imgUrls==='string'?JSON.parse(rp.imgUrls):rp.imgUrls;
-      for(const [imgId,url] of Object.entries(urlMap)){
+    // imgData가 있으면 IndexedDB에 캐시
+    if(rp.imgData){
+      const dataMap=typeof rp.imgData==='string'?JSON.parse(rp.imgData):rp.imgData;
+      for(const [imgId,dataUrl] of Object.entries(dataMap)){
         const cached=await idbGet(imgId);
-        if(!cached && url){
-          // 백그라운드 캐시 (non-blocking)
-          stGet(imgId).catch(()=>{});
-        }
+        if(!cached && dataUrl) idbPut(imgId,dataUrl).catch(()=>{});
       }
     }
     if(!local){
@@ -638,36 +620,36 @@ async function savePhoto(){
     // 1. ID 목록 생성
     const ids=mImgs.map(m=>m.id||uid());
 
-    // 2. 로컬 IndexedDB 저장
-    for(let i=0;i<mImgs.length;i++) await idbPut(ids[i], mImgs[i].data);
-
-    // 3. Firebase Storage 직접 업로드 (mImgs.data에서 바로)
-    const imgUrls={};
+    // 2. 이미지 압축 (800px JPEG 0.75 → ~100-200KB)
+    const compressed=[];
     for(let i=0;i<mImgs.length;i++){
-      if(btnSave) btnSave.textContent=`⏫ ${i+1}/${mImgs.length} 업로드 중...`;
-      dbg(`uploading ${i+1}/${mImgs.length}, size=${Math.round(mImgs[i].data.length/1024)}KB`);
-      try{
-        const url=await stUpload(ids[i], mImgs[i].data);
-        imgUrls[ids[i]]=url;
-        dbg(`img ${i+1} OK: ${url.slice(0,60)}`);
-      }catch(e){ dbg('stUpload fail: '+e.message,'error'); }
+      if(btnSave) btnSave.textContent=`⏫ ${i+1}/${mImgs.length} 압축 중...`;
+      const comp=await compressImg(mImgs[i].data);
+      compressed.push(comp);
+      dbg(`img ${i+1} compressed: ${Math.round(comp.length/1024)}KB`);
     }
 
-    // 4. 메타데이터 구성 + Firestore 저장
+    // 3. 로컬 IndexedDB 저장 (압축본)
+    for(let i=0;i<mImgs.length;i++) await idbPut(ids[i], compressed[i]);
+
+    // 4. Firestore에 이미지 base64 + 메타데이터 함께 저장
+    if(btnSave) btnSave.textContent='☁️ 저장 중...';
+    const imgData=JSON.stringify(Object.fromEntries(ids.map((id,i)=>[id,compressed[i]])));
+
     if(mEditId){
       const p=photos.find(x=>x.id===mEditId); if(!p) return;
-      for(const oid of (p.imgIds||[])) { idbDel(oid).catch(()=>{}); stDelete(oid).catch(()=>{}); }
+      for(const oid of (p.imgIds||[])) idbDel(oid).catch(()=>{});
       p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.type=type;
-      p.imgIds=ids; p.imgUrls=JSON.stringify(imgUrls);
+      p.imgIds=ids; p.imgData=imgData;
       const fd={...p}; delete fd.id;
       const r=await fetch(`${FS_BASE}/${FS_COL()}/${p.id}?key=${FIREBASE_KEY}`,{
         method:'PATCH', headers:{'Content-Type':'application/json'},
         body:JSON.stringify(toFS(fd))
       });
-      dbg(`Firestore PATCH: ${r.status}`);
+      dbg(`Firestore PATCH edit: ${r.status}`);
     } else {
       const pid=uid();
-      const np={id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids,imgUrls:JSON.stringify(imgUrls)};
+      const np={id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids,imgData};
       photos.unshift(np);
       const fd={...np}; delete fd.id;
       const r=await fetch(`${FS_BASE}/${FS_COL()}/${pid}?key=${FIREBASE_KEY}`,{
@@ -1709,7 +1691,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v11.4b';
+  if($('appVersion')) $('appVersion').textContent='v11.5';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
