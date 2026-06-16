@@ -1,132 +1,10 @@
 /* ===== 설정 ===== */
 const APP_VERSION = "v43-20260617";
-// v43-20260617 변경사항: Google Calendar 연동 추가
-
-/* ===== Google Calendar 연동 ===== */
-const GCAL_CLIENT_ID = "65353408416-kih200tt2r9vtndl6n0vvr94freejuf7.apps.googleusercontent.com";
-const GCAL_SCOPE = "https://www.googleapis.com/auth/calendar.events";
-const GCAL_LS_KEY = "gcal_access_token";
-const GCAL_EXP_KEY = "gcal_token_exp";
-
-let gcalToken = localStorage.getItem(GCAL_LS_KEY) || null;
-
-// 토큰 유효 여부
-function gcalIsAuthed(){
-  const exp = parseInt(localStorage.getItem(GCAL_EXP_KEY)||"0");
-  return !!gcalToken && Date.now() < exp;
-}
-
-// 로그인 버튼 상태 업데이트
-function gcalUpdateBtn(){
-  const btn = document.getElementById("gcalBtnLabel");
-  if(!btn) return;
-  if(gcalIsAuthed()){
-    btn.textContent = "📅 연동됨";
-    document.getElementById("btnGcal").style.background = "#e8f5e9";
-    document.getElementById("btnGcal").style.borderColor = "#4caf50";
-  } else {
-    btn.textContent = "캘린더 연동";
-    document.getElementById("btnGcal").style.background = "#fff";
-    document.getElementById("btnGcal").style.borderColor = "#ddd";
-  }
-}
-
-// Google 로그인 (OAuth 팝업)
-function gcalLogin(){
-  if(gcalIsAuthed()){
-    if(confirm("Google Calendar 연동을 해제할까요?")){ 
-      gcalToken=null; 
-      localStorage.removeItem(GCAL_LS_KEY); 
-      localStorage.removeItem(GCAL_EXP_KEY);
-      gcalUpdateBtn(); 
-      toast("연동 해제됨"); 
-    }
-    return;
-  }
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: GCAL_CLIENT_ID,
-    scope: GCAL_SCOPE,
-    callback: (resp)=>{
-      if(resp.error){ toast("Google 로그인 실패: "+resp.error); return; }
-      gcalToken = resp.access_token;
-      localStorage.setItem(GCAL_LS_KEY, gcalToken);
-      localStorage.setItem(GCAL_EXP_KEY, String(Date.now() + (resp.expires_in||3600)*1000));
-      gcalUpdateBtn();
-      toast("✅ Google Calendar 연동 완료!");
-    }
-  });
-  client.requestAccessToken();
-}
-
-// Google Calendar에 일정 추가
-async function gcalAddEvent(rec){
-  if(!gcalIsAuthed()) return; // 연동 안 됐으면 스킵
-  
-  // 업무/스케줄/오늘계획만 캘린더에 추가
-  if(!["work","schedule","plan"].includes(rec.kind)) return;
-  
-  const title = rec.title || rec.text || rec.sType || "(제목없음)";
-  const date = rec.date || rec.sDate || todayStr();
-  const memo = rec.detail || rec.memo || rec.text || "";
-  
-  // 종일 이벤트로 생성
-  const event = {
-    summary: `[업무일지] ${title}`,
-    description: memo + (rec.field ? `\n분야: ${rec.field}` : "") + (rec.loc ? `\n위치: ${rec.loc}` : ""),
-    start: { date: date },
-    end: { date: date },
-    colorId: rec.kind==="work" ? "9" : rec.kind==="schedule" ? "6" : "3"
-    // 9=파랑, 6=초록, 3=보라
-  };
-  
-  try{
-    const r = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
-      method: "POST",
-      headers: { 
-        "Authorization": "Bearer "+gcalToken,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(event)
-    });
-    if(r.ok){
-      const d = await r.json();
-      dbg(`캘린더 추가: ${title} (${d.id})`);
-      // 캘린더 이벤트 ID를 레코드에 저장 (나중에 삭제/수정용)
-      rec.gcalId = d.id;
-      updateRecord(rec.id, rec);
-    } else {
-      const err = await r.json();
-      dbg("캘린더 추가 실패: "+JSON.stringify(err.error?.message), "error");
-      if(r.status===401){ gcalToken=null; localStorage.removeItem(GCAL_LS_KEY); gcalUpdateBtn(); }
-    }
-  }catch(e){ dbg("캘린더 오류: "+e.message, "error"); }
-}
-
-// Google Calendar 이벤트 삭제
-async function gcalDeleteEvent(gcalId){
-  if(!gcalIsAuthed() || !gcalId) return;
-  await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${gcalId}`,{
-    method:"DELETE", headers:{"Authorization":"Bearer "+gcalToken}
-  }).catch(()=>{});
-}
-
-// Google Calendar 이벤트 가져오기 (달력에 표시용)
-async function gcalFetchEvents(yearMonth){ // "2026-06"
-  if(!gcalIsAuthed()) return [];
-  const [y,m] = yearMonth.split("-");
-  const start = `${y}-${m}-01T00:00:00Z`;
-  const end = new Date(parseInt(y), parseInt(m), 1).toISOString();
-  try{
-    const r = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${start}&timeMax=${end}&singleEvents=true&maxResults=100`,
-      { headers:{"Authorization":"Bearer "+gcalToken} }
-    );
-    if(!r.ok) return [];
-    const d = await r.json();
-    return (d.items||[]).filter(e=>!e.summary?.startsWith("[업무일지]")); // 업무일지에서 추가한 건 제외
-  }catch(e){ return []; }
-}
-
+// v43-20260617 변경사항:
+// - 업무 입력창: 위치/단가/택배비/개선사항 필드 제거
+// - 합계→지출금액으로 이름 변경
+// - 지출종류: 없음/개인비용/후불청구로 변경
+// v42-20260608 변경사항:
 // - 업무 목록: 체크박스 다중선택 삭제 추가, 삭제버튼 항상 표시
 // - 업무 추가창: 분야/지출종류 → 해당층/위치 아래로 이동, 자재사양/단가/수량/합계/택배비 필드 추가
 // - 급한메모: 패널 밖 클릭 시 닫기
@@ -283,19 +161,15 @@ const SCHEMA={
     {k:"date",label:"날짜",type:"date",req:true},
     {k:"status",label:"완료 상태",type:"status"},
     {k:"floor",label:"해당층",type:"floor"},
-    {k:"loc",label:"위치 (수동 입력)",type:"text"},
     {k:"field",label:"분야",type:"field"},
-    {k:"expType",label:"지출종류",type:"select",opts:["없음","개인지출(품의서)","세금계산서"]},
+    {k:"expType",label:"지출종류",type:"select",opts:["없음","개인비용","후불청구"]},
     {k:"title",label:"업무내역",type:"text",full:true,req:true},
     {k:"detail",label:"세부내용",type:"textarea",full:true},
     {k:"material",label:"자재명",type:"text"},
     {k:"matSpec",label:"자재 사양",type:"text"},
     {k:"qty",label:"수량",type:"number"},
-    {k:"unitPrice",label:"단가 (원)",type:"number"},
-    {k:"cost",label:"합계 (원)",type:"number"},
-    {k:"delivery",label:"택배비 (원)",type:"number"},
+    {k:"cost",label:"지출금액 (원)",type:"number"},
     {k:"vendor",label:"업체명 (지출시)",type:"text"},
-    {k:"improve",label:"앞으로 개선사항",type:"textarea",full:true},
   ],
   plan:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"text",label:"할 일",type:"text",full:true,req:true} ],
   memo:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"title",label:"제목(선택)",type:"text",full:true}, {k:"body",label:"내용",type:"textarea",full:true,req:true} ],
@@ -555,13 +429,9 @@ function lsLoad(){ try{ return JSON.parse(localStorage.getItem("wl_"+COL)||"[]")
 function lsSave(){ try{ localStorage.setItem("wl_"+COL, JSON.stringify(entries)); }catch(e){} }
 function genId(){ return online ? db.collection(COL).doc().id : "L"+Date.now()+Math.floor(Math.random()*100000); }
 function syncSet(id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.collection(COL).doc(id).set(payload).catch(e=>{ logErr("저장 동기화", e); toast("클라우드 동기화 지연 — 이 기기에는 저장됨"); }); }
-function addRecord(data){ const id=genId(); const rec={...data,id}; entries.push(rec); if(online) syncSet(id,rec); lsSave(); gcalAddEvent(rec); return rec; }
+function addRecord(data){ const id=genId(); const rec={...data,id}; entries.push(rec); if(online) syncSet(id,rec); lsSave(); return rec; }
 function updateRecord(id,patch){ const i=entries.findIndex(x=>x.id===id); if(i<0) return; entries[i]={...entries[i],...patch}; if(online) syncSet(id,entries[i]); lsSave(); }
-function deleteRecord(id){ 
-  const rec = entries.find(x=>x.id===id);
-  if(rec?.gcalId) gcalDeleteEvent(rec.gcalId);
-  entries=entries.filter(x=>x.id!==id); if(online) db.collection(COL).doc(id).delete().catch(e=>logErr("삭제 동기화", e)); lsSave(); 
-}
+function deleteRecord(id){ entries=entries.filter(x=>x.id!==id); if(online) db.collection(COL).doc(id).delete().catch(e=>logErr("삭제 동기화", e)); lsSave(); }
 const TEMP_BK="wl_tempbackup";
 function saveTempBackup(){ try{ localStorage.setItem(TEMP_BK, JSON.stringify({at:Date.now(),entries})); }catch(e){} }
 function restoreRecord(rec){
@@ -668,7 +538,7 @@ async function init(){
   await loadAll();
   migrateTissueToJumbo(); // v26: 휴지 → 점보롤 자동 변환
   migrateBadMemoAttachments(); // v38: 깨진 첨부 정리
-  renderStatusChips(); renderAll(); gcalUpdateBtn();
+  renderStatusChips(); renderAll();
   try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
   // v41: contacts 연동 초기화
   loadContactCats().catch(()=>{});
@@ -734,13 +604,9 @@ function migrateBadMemoAttachments(){
 
 function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
 
-// v42: 업무 저장 시 합계 자동계산 (qty × unitPrice + delivery)
+// v43: 지출금액 직접 입력 (단가/택배비 제거)
 function calcWorkTotal(obj){
-  const qty  = Number(obj.qty)||0;
-  const up   = Number(obj.unitPrice)||0;
-  const del  = Number(obj.delivery)||0;
-  if(qty>0 && up>0) obj.cost = qty*up + del;
-  else if(del>0 && !obj.cost) obj.cost = del;
+  // 지출금액(cost)은 직접 입력 — 자동계산 없음
 }
 
 
@@ -761,11 +627,11 @@ function syncWorkExpense(workObj, workId, savedId){
   const expData = {
     kind:"expense",
     date: workObj.date||todayStr(),
-    expType: expType==="개인지출(품의서)" ? "개인지출" : "세금계산서",
+    expType: expType==="개인비용" ? "개인비용" : "후불청구",
     title: workObj.title||(workObj.field||""),
     amount: Number(workObj.cost)||0,
     vendor: workObj.vendor||"",
-    memo: (workObj.floor||"")+(workObj.loc?" "+workObj.loc:"")+(workObj.field?" ["+workObj.field+"]":""),
+    memo: (workObj.floor||"")+(workObj.field?" ["+workObj.field+"]":""),
     workId: id, // 업무와 연결 키
     createdAt: Date.now()
   };
@@ -1173,7 +1039,7 @@ function openEditor(kind,id){
       const showHint=()=>{ const h=FIELD_HINT[fe.value]; if(h){ hintBox.textContent="💡 "+h; hintBox.style.display=""; } else hintBox.style.display="none"; };
       fe.addEventListener("change",showHint); showHint();
     }
-    // 자재 단가×수량 → 합계 자동 계산 + 택배비 포함
+    // v43: 지출금액 직접 입력 방식으로 변경 (자동계산 제거)
     const calcWorkCost = ()=>{
       const qty = Number(($("m-qty")||{}).value)||0;
       const up  = Number(($("m-unitPrice")||{}).value)||0;
@@ -1486,7 +1352,7 @@ function renderWork(){
     <td>${esc(en.title||"")}${(en.photos&&en.photos.length)?" 📷":""}${(en.attachments&&en.attachments.length)?" 📎":""}</td>
     <td><span class="pill ${fieldClass(en.field)}">${esc(en.field||"")}</span></td>
     <td class="num">${en.cost?won(en.cost):""}</td>
-    <td>${en.expType&&en.expType!=="없음"?'<span class="pill '+(en.expType==="세금계산서"?"amount":"tech")+'" style="font-size:10px">'+(en.expType==="세금계산서"?"📃세금":"💸품의")+"</span>":""}</td>
+    <td>${en.expType&&en.expType!=="없음"?'<span class="pill '+(en.expType==="후불청구"?"amount":"tech")+'" style="font-size:10px">'+(en.expType==="후불청구"?"📃후불":"💸개인")+"</span>":""}</td>
     <td style="text-align:center"><button class="rowdel wk-rowdel-vis" data-del="${en.id}" title="삭제">🗑</button></td></tr>`).join("");
   // 전체선택 체크박스 헤더 동기화
   const thChk = document.querySelector("#panel-work thead .wk-allchk");
@@ -1508,7 +1374,7 @@ function renderWork(){
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(b.dataset.del, "업무"); }));
 }
 function workCopyLine(en){
-  const head=((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim();
+  const head=((en.floor?en.floor+" ":"")+(en.title||"")).trim();
   const matQty = [en.material, en.qty].filter(Boolean).join(" ") || "";
   const parts=[head, en.detail, matQty, (Number(en.cost)?won(en.cost):"")].map(x=>(x||"").toString().trim()).filter(Boolean);
   return cleanCell(parts.join("_"));
@@ -1976,19 +1842,20 @@ function scheduleStatusColor(s){
 function scheduleStatusHex(s){
   return s==="완료"?"#15803d":s==="진행중"?"#b45309":s==="연기"?"#666":"#0891b2";
 }
-async function renderCalendar(){
+function renderCalendar(){
   bindCalControls();
+  // 모드/뷰 버튼 active 상태 동기화
   document.querySelectorAll("[data-calmode]").forEach(b=>b.classList.toggle("active", b.dataset.calmode===calMode));
   document.querySelectorAll("[data-calview]").forEach(b=>b.classList.toggle("active", b.dataset.calview===calView));
+  // 빠른추가 버튼은 스케줄 모드일 때만 표시
   $("calQuickAdd").style.display = calMode==="schedule" ? "" : "none";
   if(calView==="year"){
     renderYearView();
   } else {
-    await renderMonthView();
+    renderMonthView();
   }
 }
-let _gcalEvents = {}; // 날짜별 Google Calendar 이벤트 캐시
-async function renderMonthView(){
+function renderMonthView(){
   $("calMonth").textContent=`${calY}년 ${calM+1}월`;
   $("calGrid").style.display="";
   $("calYearGrid").style.display="none";
@@ -2082,27 +1949,8 @@ async function renderMonthView(){
       });
     }
     if(hasContent) cls.push("has");
-    // Google Calendar 이벤트 표시
-    const gcArr = _gcalEvents[ds] || [];
-    if(gcArr.length){
-      hasContent=true; cls.push("has");
-      let gb=""; gcArr.forEach(ev=>{ gb+=`<div class="otitle" style="color:#1a73e8">📅 ${esc((ev.summary||"").replace("[업무일지] ","").slice(0,20))}</div>`; });
-      inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#1a73e8">Google 일정 ${gcArr.length}</div>${gb}</div>`;
-    }
     html+=`<div class="${cls.join(" ")}" data-d="${ds}"><span class="dnum">${d}</span>${inner}</div>`;
   }
-  // Google Calendar 이벤트 비동기 로드 후 재렌더
-  const ym = `${calY}-${String(calM+1).padStart(2,"0")}`;
-  gcalFetchEvents(ym).then(evts=>{
-    if(!evts.length) return;
-    _gcalEvents = {};
-    evts.forEach(ev=>{
-      const d = ev.start?.date || ev.start?.dateTime?.slice(0,10);
-      if(d){ (_gcalEvents[d]=_gcalEvents[d]||[]).push(ev); }
-    });
-    // Google 일정이 있으면 달력 재렌더
-    renderMonthView();
-  }).catch(()=>{});
   $("calGrid").innerHTML=html;
   $("calGrid").querySelectorAll("[data-d]").forEach(el=>{
     el.addEventListener("click",(e)=>{
