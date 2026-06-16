@@ -627,59 +627,66 @@ function enhanceImage(dataUrl){
 }
 
 
-/* ── 문서감지 모달 열기 + 꼭짓점 UI ── */
+/* ── 문서감지 풀스크린 열기 ── */
+let _dsScale = 1;   // 현재 표시 배율
+let _dsOrig  = null; // 원본 이미지 element
+let _dsZoom  = 1;   // 사용자 줌 배율
+
 function openDocScanModal(origImg){
-  openModal('modalDocScan');
+  _dsOrig  = origImg;
+  _dsZoom  = 1;
+  const fs = document.getElementById('modalDocScan');
+  fs.style.display = 'flex';
+  // requestAnimationFrame으로 DOM 크기 확정 후 그리기
+  requestAnimationFrame(()=>requestAnimationFrame(()=>_dsRender()));
+}
 
-  const wrap   = document.getElementById('docScanWrap');
+function _dsRender(){
+  const body   = document.getElementById('docScanBody');
   const canvas = document.getElementById('docScanCanvas');
+  const wrap   = document.getElementById('docScanWrap');
+  if(!_dsOrig || !canvas) return;
 
-  // 캔버스 크기: wrap 기준으로 맞춤
-  const maxW = Math.min(wrap.clientWidth  || 500, 560);
-  const maxH = Math.min(wrap.clientHeight || 400, 440);
-  const scale = Math.min(maxW/origImg.width, maxH/origImg.height, 1);
-  const dw = Math.round(origImg.width  * scale);
-  const dh = Math.round(origImg.height * scale);
+  const maxW = (body.clientWidth  || window.innerWidth)  * _dsZoom;
+  const maxH = (body.clientHeight || window.innerHeight * 0.78) * _dsZoom;
+  const scale = Math.min(maxW / _dsOrig.width, maxH / _dsOrig.height, _dsZoom);
+  _dsScale = scale;
 
+  const dw = Math.round(_dsOrig.width  * scale);
+  const dh = Math.round(_dsOrig.height * scale);
   canvas.width  = dw;
   canvas.height = dh;
 
-  // 이미지 그리기
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(origImg, 0, 0, dw, dh);
+  ctx.drawImage(_dsOrig, 0, 0, dw, dh);
 
-  // 꼭짓점을 캔버스 좌표로 변환
-  const dispCorners = docCorners.map(p=>({ x:p.x*scale, y:p.y*scale }));
-  drawDocOutline(ctx, dispCorners, dw, dh);
+  // 꼭짓점 → 화면 좌표
+  const disp = docCorners.map(p=>({ x: p.x*scale, y: p.y*scale }));
+  _dsDrawOutline(ctx, disp, dw, dh);
 
-  // 핸들 위치 설정
-  const wrapRect = wrap.getBoundingClientRect();
-  const canvRect = canvas.getBoundingClientRect();
-  const offsetX  = canvRect.left - wrapRect.left;
-  const offsetY  = canvRect.top  - wrapRect.top;
-
-  dispCorners.forEach((p,i)=>{
+  // 핸들 위치
+  disp.forEach((p,i)=>{
     const h = document.getElementById(`ch${i}`);
-    h.style.left = (offsetX + p.x) + 'px';
-    h.style.top  = (offsetY + p.y) + 'px';
-    makeDraggable(h, i, scale, origImg, offsetX, offsetY, dw, dh);
+    if(!h) return;
+    h.style.left = p.x + 'px';
+    h.style.top  = p.y + 'px';
+    // 이벤트는 한번만 등록
+    if(!h._dsInited){ h._dsInited=true; _dsMakeDraggable(h, i, canvas, dw, dh); }
   });
 }
 
-/* 윤곽선 + 꼭짓점 그리기 */
-function drawDocOutline(ctx, corners, dw, dh){
+/* 선 그리기 */
+function _dsDrawOutline(ctx, corners, dw, dh){
   ctx.save();
-  // 외부 어둡게
-  ctx.fillStyle='rgba(0,0,0,0.45)';
+  ctx.fillStyle='rgba(0,0,0,0.42)';
   ctx.beginPath();
   ctx.rect(0,0,dw,dh);
   ctx.moveTo(corners[0].x,corners[0].y);
   corners.forEach(p=>ctx.lineTo(p.x,p.y));
   ctx.closePath();
   ctx.fill('evenodd');
-  // 선
   ctx.strokeStyle='#FFD700';
-  ctx.lineWidth=2.5;
+  ctx.lineWidth=2;
   ctx.setLineDash([]);
   ctx.beginPath();
   ctx.moveTo(corners[0].x,corners[0].y);
@@ -689,97 +696,95 @@ function drawDocOutline(ctx, corners, dw, dh){
   ctx.restore();
 }
 
-/* 핸들 드래그 — pointerdown+setPointerCapture (완전히 새로 작성) */
-function makeDraggable(handle, idx, dispScale, origImg, offX, offY, dw, dh){
-  const cvs = document.getElementById('docScanCanvas');
-  handle.style.touchAction = 'none'; // 스크롤 방지
-
+/* 핸들 드래그 */
+function _dsMakeDraggable(handle, idx, canvas, dw, dh){
+  handle.style.touchAction = 'none';
   handle.addEventListener('pointerdown', function(e){
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     handle.setPointerCapture(e.pointerId);
-
     function onMove(ev){
       ev.preventDefault();
-      const wrap  = document.getElementById('docScanWrap');
-      const wRect = wrap.getBoundingClientRect();
-      // 캔버스 실제 위치 (이미지가 wrap 안에서 중앙정렬될 수 있으므로)
-      const cx = Math.max(0, Math.min(dw, ev.clientX - wRect.left - offX));
-      const cy = Math.max(0, Math.min(dh, ev.clientY - wRect.top  - offY));
-
-      handle.style.left = (offX + cx) + 'px';
-      handle.style.top  = (offY + cy) + 'px';
-      docCorners[idx] = { x: cx / dispScale, y: cy / dispScale };
-
-      const ctx = cvs.getContext('2d');
-      ctx.clearRect(0, 0, dw, dh);
-      ctx.drawImage(origImg, 0, 0, dw, dh);
-      drawDocOutline(ctx, docCorners.map(p=>({x:p.x*dispScale, y:p.y*dispScale})), dw, dh);
+      const cr = canvas.getBoundingClientRect();
+      const cx = Math.max(0, Math.min(dw, ev.clientX - cr.left));
+      const cy = Math.max(0, Math.min(dh, ev.clientY - cr.top));
+      handle.style.left = cx + 'px';
+      handle.style.top  = cy + 'px';
+      docCorners[idx] = { x: cx/_dsScale, y: cy/_dsScale };
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,dw,dh);
+      ctx.drawImage(_dsOrig,0,0,dw,dh);
+      _dsDrawOutline(ctx, docCorners.map(p=>({x:p.x*_dsScale,y:p.y*_dsScale})), dw, dh);
     }
-
     function onEnd(){
       handle.removeEventListener('pointermove',   onMove);
       handle.removeEventListener('pointerup',     onEnd);
       handle.removeEventListener('pointercancel', onEnd);
     }
-
     handle.addEventListener('pointermove',   onMove,  {passive:false});
     handle.addEventListener('pointerup',     onEnd);
     handle.addEventListener('pointercancel', onEnd);
   }, {passive:false});
 }
 
+/* 줌 */
+function _dsZoomIn(){  _dsZoom = Math.min(_dsZoom*1.4, 4); _dsRender(); }
+function _dsZoomOut(){ _dsZoom = Math.max(_dsZoom/1.4, 0.5); _dsRender(); }
 
-/* ── 원근 보정 크롭 (서버 API 또는 canvas fallback) ── */
+/* ── 원근 보정 크롭 ── */
 async function applyDocScanCrop(){
   if(!docCorners.length || !docScanImgData){ showToast('감지된 문서가 없습니다'); return; }
 
+  const btn = document.getElementById('btnDocScanApply');
+  if(btn) btn.disabled = true;
   const statusEl = document.getElementById('aiCropStatus');
-  const btn      = document.getElementById('btnDocScanApply');
-  btn.disabled   = true;
-  statusEl.textContent = '⏳ 원근 보정 중...';
+  if(statusEl) statusEl.textContent = '⏳ 크롭 중...';
 
   try{
     let result;
     try{
-      // 1순위: 서버 Python OpenCV warp (가장 정확)
       result = await serverWarp(docScanImgData, docCorners);
-      statusEl.textContent = '✅ 서버 원근 보정 완료 (고품질)';
-    } catch(serverErr){
-      // 2순위: canvas 기반 warp (서버 없을 때)
-      console.warn('Server warp failed, using canvas:', serverErr);
+    } catch(e){
+      console.warn('serverWarp failed, canvas fallback:', e.message);
       result = await canvasWarp(docScanImgData, docCorners);
-      statusEl.textContent = '✅ 크롭 완료';
     }
-    applyResultToModal(result);
+
+    // 모달 닫고 modalAdd에 반영
+    document.getElementById('modalDocScan').style.display = 'none';
+
+    if(!modalImages.length) modalImages = [{id:uid(), dataUrl:result}];
+    else modalImages[modalSlide] = {id:modalImages[modalSlide]?.id||uid(), dataUrl:result};
+
+    renderModalSlides();
+    if(statusEl) statusEl.textContent = '✅ 크롭 완료';
+    showToast('✅ 문서 크롭 완료!');
+
   } catch(e){
-    statusEl.textContent = '⚠️ ' + e.message;
+    console.error('applyDocScanCrop error:', e);
+    if(statusEl) statusEl.textContent = '⚠️ ' + e.message;
+    showToast('크롭 오류: ' + e.message);
   } finally{
-    btn.disabled = false;
+    if(btn) btn.disabled = false;
   }
 }
 
-/* canvas 기반 원근 변환 (서버 없을 때 fallback) */
+/* canvas 기반 bounding box 크롭 */
 async function canvasWarp(dataUrl, corners){
-  const img = await loadImage(dataUrl);
+  const img    = await loadImage(dataUrl);
   const sorted = sortCorners(corners);
-  const [tl,tr,br2,bl] = sorted;
-  const wTop  = Math.hypot(tr.x-tl.x, tr.y-tl.y);
-  const wBot  = Math.hypot(br2.x-bl.x, br2.y-bl.y);
-  const hLeft = Math.hypot(bl.x-tl.x, bl.y-tl.y);
-  const hRight= Math.hypot(br2.x-tr.x, br2.y-tr.y);
-  const outW  = Math.round(Math.max(wTop,wBot));
-  const outH  = Math.round(Math.max(hLeft,hRight));
-  if(outW<50||outH<50) throw new Error('크롭 영역이 너무 작습니다');
-
-  // bounding box 크롭 (원근변환 없이)
   const xs = sorted.map(p=>p.x), ys = sorted.map(p=>p.y);
-  const sx = Math.max(0,Math.min(...xs));
-  const sy = Math.max(0,Math.min(...ys));
-  const sw = Math.min(img.width-sx, Math.max(...xs)-sx);
-  const sh = Math.min(img.height-sy, Math.max(...ys)-sy);
-  return await cropImageByPixel(dataUrl, sx, sy, sw, sh);
+  const sx = Math.max(0, Math.min(...xs));
+  const sy = Math.max(0, Math.min(...ys));
+  const sw = Math.min(img.width-sx,  Math.max(...xs)-Math.min(...xs));
+  const sh = Math.min(img.height-sy, Math.max(...ys)-Math.min(...ys));
+  if(sw<20||sh<20) throw new Error('크롭 영역이 너무 작습니다');
+  return cropImageByPixel(dataUrl, Math.round(sx), Math.round(sy), Math.round(sw), Math.round(sh));
 }
+
+/* 기존 함수 호환 */
+function drawDocOutline(ctx,corners,dw,dh){ _dsDrawOutline(ctx,corners,dw,dh); }
+function makeDraggable(h,i,s,img,ox,oy,dw,dh){ /* 구버전 호환 — 미사용 */ }
+
+
 
 
 /* ── Anthropic AI fallback (OpenCV 실패 시) ── */
@@ -1558,7 +1563,7 @@ async function init(){
   /* ── 버전/모드 표시 ── */
   const _el = id => document.getElementById(id);
   if(_el('appTitle'))   _el('appTitle').textContent   = MODE_LABEL;
-  if(_el('appVersion')) _el('appVersion').textContent = 'v7.1';
+  if(_el('appVersion')) _el('appVersion').textContent = 'v7.2';
   document.title = MODE_LABEL;
   // 상단 모드 컬러 바
   const modeBar = document.createElement('div');
@@ -1737,9 +1742,11 @@ async function init(){
   /* ══════════════════════════════════════
      OpenCV 문서감지 모달
      ══════════════════════════════════════ */
-  $on('btnDocScanClose', ()=>closeModal('modalDocScan'));
-  $on('btnDocScanRetry', ()=>{ closeModal('modalDocScan'); aiDocCrop(false); });
+  $on('btnDocScanClose', ()=>{ document.getElementById('modalDocScan').style.display='none'; });
+  $on('btnDocScanRetry', ()=>{ document.getElementById('modalDocScan').style.display='none'; aiDocCrop(false); });
   $on('btnDocScanApply', applyDocScanCrop);
+  $on('btnDocScanZoomIn',  _dsZoomIn);
+  $on('btnDocScanZoomOut', _dsZoomOut);
 
   /* ══════════════════════════════════════
      카테고리 관리 모달
@@ -1772,8 +1779,10 @@ async function init(){
      ══════════════════════════════════════ */
   document.addEventListener('keydown', e=>{
     if(e.key==='Escape'){
-      ['modalAdd','modalEdit','modalApiKey','modalOneDrive','modalCat','modalDocScan'].forEach(closeModal);
-      if(_el('modalView')) _el('modalView').style.display='none';
+      ['modalAdd','modalEdit','modalApiKey','modalOneDrive','modalCat'].forEach(closeModal);
+      if(_el('modalView'))    _el('modalView').style.display='none';
+      if(_el('modalDocScan')) _el('modalDocScan').style.display='none';
+      if(_el('imgPopup'))     _el('imgPopup').style.display='none';
       closeAiDrop(); closeCropUI();
     }
   });

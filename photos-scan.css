@@ -562,3 +562,54 @@ html,body{height:100%;overflow:hidden;font-family:'Apple SD Gothic Neo','Malgun 
   color:rgba(255,255,255,.4);font-size:12px;
   position:absolute;bottom:16px;
 }
+
+/* ══════════════════════════════════════
+   문서감지 풀스크린 v7.2
+   ══════════════════════════════════════ */
+.docscan-fs{
+  display:none;position:fixed;inset:0;z-index:700;
+  background:#111;flex-direction:column;
+}
+.docscan-fs[style*="flex"],.docscan-fs.show{ display:flex; }
+.docscan-fs-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:rgba(0,0,0,.85);flex-shrink:0;
+  color:#fff;font-size:15px;font-weight:700;
+}
+.docscan-fs-body{
+  flex:1;overflow:auto;display:flex;
+  align-items:center;justify-content:center;
+  touch-action:pan-x pan-y pinch-zoom;
+  min-height:0;background:#1a1a2e;
+}
+.docscan-canvas-wrap{
+  position:relative;display:inline-block;
+  flex-shrink:0;
+}
+#docScanCanvas{
+  display:block;max-width:100%;
+  user-select:none;-webkit-user-select:none;
+}
+.docscan-fs-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;background:rgba(0,0,0,.85);flex-shrink:0;
+  gap:12px;
+}
+.docscan-hint{ color:#aaa;font-size:13px; }
+
+/* ── 막대식 핸들 (수동편집과 동일 스타일) ── */
+.ds-handle{
+  position:absolute;
+  background:#FFD700;
+  border:2px solid #fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.55);
+  border-radius:4px;
+  cursor:grab;
+  touch-action:none;
+  z-index:20;
+}
+/* 모서리 — 정사각형 */
+.ds-lt{ width:18px;height:18px;top:-9px;left:-9px;border-radius:50%;cursor:nwse-resize; }
+.ds-rt{ width:18px;height:18px;top:-9px;right:-9px;border-radius:50%;cursor:nesw-resize; }
+.ds-rb{ width:18px;height:18px;bottom:-9px;right:-9px;border-radius:50%;cursor:nwse-resize; }
+.ds-lb{ width:18px;height:18px;bottom:-9px;left:-9px;border-radius:50%;cursor:nesw-resize; }

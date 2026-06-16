@@ -186,28 +186,31 @@
 </div>
 
 <!-- ===== OpenCV 문서감지 모달 ===== -->
-<div class="modal-bg" id="modalDocScan">
-  <div class="modal modal-docscan">
-    <div class="modal-header">
-      <span>📄 문서 자동감지</span>
-      <button class="btn-icon" id="btnDocScanClose">✕</button>
+<!-- 문서 자동감지 풀스크린 -->
+<div class="docscan-fs" id="modalDocScan" style="display:none">
+  <div class="docscan-fs-header">
+    <span>📄 문서 자동감지</span>
+    <div style="display:flex;gap:6px">
+      <button class="vf-btn" id="btnDocScanZoomIn"  title="확대">＋</button>
+      <button class="vf-btn" id="btnDocScanZoomOut" title="축소">－</button>
+      <button class="vf-btn" id="btnDocScanRetry">🔄</button>
+      <button class="vf-btn" id="btnDocScanClose">✕</button>
     </div>
-    <div class="docscan-body">
-      <!-- 캔버스: 꼭짓점 표시 + 조정 -->
-      <div class="docscan-canvas-wrap" id="docScanWrap">
-        <canvas id="docScanCanvas"></canvas>
-        <!-- 4개 드래그 핸들 -->
-        <div class="corner-handle" id="ch0"></div>
-        <div class="corner-handle" id="ch1"></div>
-        <div class="corner-handle" id="ch2"></div>
-        <div class="corner-handle" id="ch3"></div>
-      </div>
-      <p class="docscan-hint">꼭짓점을 드래그해서 정밀하게 조정하세요</p>
+  </div>
+  <!-- 캔버스 영역 — 핀치줌/스크롤 가능 -->
+  <div class="docscan-fs-body" id="docScanBody">
+    <div class="docscan-canvas-wrap" id="docScanWrap">
+      <canvas id="docScanCanvas"></canvas>
+      <!-- 막대식 핸들 (수동편집과 동일) -->
+      <div class="ds-handle ds-lt" id="ch0"></div>
+      <div class="ds-handle ds-rt" id="ch1"></div>
+      <div class="ds-handle ds-rb" id="ch2"></div>
+      <div class="ds-handle ds-lb" id="ch3"></div>
     </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" id="btnDocScanRetry">🔄 다시 감지</button>
-      <button class="btn-primary"   id="btnDocScanApply">✅ 이 영역으로 크롭</button>
-    </div>
+  </div>
+  <div class="docscan-fs-footer">
+    <p class="docscan-hint">꼭짓점을 드래그해서 조정 후 크롭</p>
+    <button class="btn-primary" id="btnDocScanApply">✅ 이 영역으로 크롭</button>
   </div>
 </div>
 
