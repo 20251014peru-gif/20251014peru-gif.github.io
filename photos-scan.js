@@ -80,8 +80,29 @@ function fromFS(doc){
 }
 
 /* ══ Firebase Storage — 이미지 업로드/다운로드/삭제 ══ */
+/* 업로드 전 이미지 리사이즈 (최대 1200px, JPEG 0.85) */
+function resizeForUpload(dataUrl, maxPx=1200, quality=0.85){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      let {width:w,height:h}=img;
+      if(w>maxPx||h>maxPx){
+        if(w>h){ h=Math.round(h*maxPx/w); w=maxPx; }
+        else   { w=Math.round(w*maxPx/h); h=maxPx; }
+      }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      res(c.toDataURL('image/jpeg',quality));
+    };
+    img.onerror=()=>res(dataUrl); // 실패 시 원본 그대로
+    img.src=dataUrl;
+  });
+}
+
 async function stUpload(imgId, dataUrl){
-  const blob=await fetch(dataUrl).then(r=>r.blob());
+  // 업로드 전 리사이즈 (원본 수 MB → 수백 KB)
+  const resized=await resizeForUpload(dataUrl);
+  const blob=await fetch(resized).then(r=>r.blob());
   const path=encodeURIComponent(`psc_imgs/${MODE}/${imgId}.jpg`);
   const r=await fetch(`${ST_BASE}/${path}?uploadType=media&name=psc_imgs%2F${MODE}%2F${imgId}.jpg`,{
     method:'POST', headers:{'Content-Type':'image/jpeg'},
@@ -89,6 +110,7 @@ async function stUpload(imgId, dataUrl){
   });
   if(!r.ok) throw new Error(`Storage upload failed: ${r.status}`);
   const d=await r.json();
+  dbg(`stUpload ok: ${imgId}, size=${(blob.size/1024).toFixed(0)}KB`);
   return `${ST_BASE}/${encodeURIComponent(d.name)}?alt=media&token=${d.downloadTokens}`;
 }
 async function stDelete(imgId){
@@ -609,31 +631,32 @@ async function savePhoto(){
 
   // 저장 버튼 비활성화 + 진행 표시
   const btnSave=$('btnSave'); if(btnSave){ btnSave.disabled=true; btnSave.textContent='⏫ 업로드 중...'; }
-  toast('☁️ 사진 업로드 중...');
 
   try{
     if(mEditId){
       const p=photos.find(x=>x.id===mEditId); if(!p) return;
       for(const id of (p.imgIds||[])){ await idbDel(id); await stDelete(id); }
       const ids=[];
-      for(const m of mImgs){
+      for(let i=0;i<mImgs.length;i++){
+        const m=mImgs[i];
+        if(btnSave) btnSave.textContent=`⏫ ${i+1}/${mImgs.length} 업로드 중...`;
         const nid=m.id||uid();
         await idbPut(nid,m.data);
         ids.push(nid);
       }
       p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.type=type; p.imgIds=ids;
-      // Storage 업로드 완료 후 Firestore 저장
       await fsSave(p);
     } else {
       const pid=uid(), ids=[];
-      for(const m of mImgs){
+      for(let i=0;i<mImgs.length;i++){
+        const m=mImgs[i];
+        if(btnSave) btnSave.textContent=`⏫ ${i+1}/${mImgs.length} 업로드 중...`;
         const iid=uid();
         await idbPut(iid,m.data);
         ids.push(iid);
       }
       const np={id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids};
       photos.unshift(np);
-      // Storage 업로드 완료 후 Firestore 저장
       await fsSave(np);
     }
     savePhotos();
@@ -1669,7 +1692,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v11.1';
+  if($('appVersion')) $('appVersion').textContent='v11.2';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
