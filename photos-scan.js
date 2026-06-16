@@ -414,37 +414,44 @@ function dsPlaceHandles(dw,dh){
   [['dh0',tl,0],['dh1',tr,1],['dh2',br,2],['dh3',bl,3]].forEach(([id,pt,idx])=>{
     let h=$(id); if(!h) return;
     h.style.left=(pt.x-10)+'px'; h.style.top=(pt.y-10)+'px';
-    // 이벤트 재바인딩 — clone으로 기존 핸들러 제거
     const nh=h.cloneNode(true);
     h.parentNode.replaceChild(nh,h);
     dsCornerBind(nh,idx,cvs,dw,dh);
   });
-  // 막대 4개
-  const mT={x:Math.round((tl.x+tr.x)/2)-20, y:Math.min(tl.y,tr.y)-5};
-  const mB={x:Math.round((bl.x+br.x)/2)-20, y:Math.max(bl.y,br.y)-5};
-  const mL={x:Math.min(tl.x,bl.x)-5, y:Math.round((tl.y+bl.y)/2)-20};
-  const mR={x:Math.max(tr.x,br.x)-5, y:Math.round((tr.y+br.y)/2)-20};
+  // ★ 막대 4개 — 캔버스 안쪽으로 배치 (밖이 아닌 안쪽 5px 들여서)
+  const bW=40, bH=10;
+  const mT={x:Math.round((tl.x+tr.x)/2)-bW/2, y:Math.min(tl.y,tr.y)+2};   // 상단 변 + 2px 안쪽
+  const mB={x:Math.round((bl.x+br.x)/2)-bW/2, y:Math.max(bl.y,br.y)-bH-2}; // 하단 변 - 12px 안쪽
+  const mL={x:Math.min(tl.x,bl.x)+2, y:Math.round((tl.y+bl.y)/2)-bW/2};
+  const mR={x:Math.max(tr.x,br.x)-bH-2, y:Math.round((tr.y+br.y)/2)-bW/2};
   [['dh4',mT,'t'],['dh5',mB,'b'],['dh6',mL,'l'],['dh7',mR,'r']].forEach(([id,pt,type])=>{
     let h=$(id); if(!h) return;
     h.style.left=pt.x+'px'; h.style.top=pt.y+'px';
-    if(type==='t'||type==='b'){ h.style.width='40px'; h.style.height='10px'; }
-    else { h.style.width='10px'; h.style.height='40px'; }
+    if(type==='t'||type==='b'){ h.style.width=bW+'px'; h.style.height=bH+'px'; }
+    else { h.style.width=bH+'px'; h.style.height=bW+'px'; }
     const nh=h.cloneNode(true);
     h.parentNode.replaceChild(nh,h);
     dsBarBind(nh,type,cvs,dw,dh);
   });
 }
 
+/* ★ 캔버스 좌표 — 막대가 캔버스 밖이어도 정확히 매핑 (클램프 없음) */
 function dsCanvasPos(ev,cvs){
   const r=cvs.getBoundingClientRect();
-  return { x:Math.max(0,Math.min(cvs.width, ev.clientX-r.left)), y:Math.max(0,Math.min(cvs.height,ev.clientY-r.top)) };
+  // 클램프는 호출하는 쪽에서 — 여기는 raw 좌표
+  return { x: ev.clientX-r.left, y: ev.clientY-r.top };
 }
 
 function dsCornerBind(h,idx,cvs,dw,dh){
   h.style.touchAction='none';
   h.addEventListener('pointerdown',e=>{
     e.preventDefault(); e.stopPropagation(); h.setPointerCapture(e.pointerId);
-    const mv=ev=>{ ev.preventDefault(); const {x,y}=dsCanvasPos(ev,cvs); dsCorners[idx]={x:x/dsScale,y:y/dsScale}; dsRedraw(cvs,dw,dh); };
+    const mv=ev=>{ ev.preventDefault();
+      const r=cvs.getBoundingClientRect();
+      const x=Math.max(0,Math.min(cvs.width, ev.clientX-r.left));
+      const y=Math.max(0,Math.min(cvs.height, ev.clientY-r.top));
+      dsCorners[idx]={x:x/dsScale,y:y/dsScale}; dsRedraw(cvs,dw,dh);
+    };
     const up=()=>{ h.removeEventListener('pointermove',mv); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up); };
     h.addEventListener('pointermove',mv,{passive:false}); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
   },{passive:false});
@@ -454,9 +461,13 @@ function dsBarBind(h,type,cvs,dw,dh){
   h.style.touchAction='none';
   h.addEventListener('pointerdown',e=>{
     e.preventDefault(); e.stopPropagation();
-    dbg(`bar ${type} pointerdown @ ${e.clientX},${e.clientY}`);
+    dbg(`bar ${type} pointerdown @ ${e.clientX.toFixed(0)},${e.clientY.toFixed(0)}`);
     try{ h.setPointerCapture(e.pointerId); }catch(_){ dbg('setPointerCapture failed','error'); }
-    const mv=ev=>{ ev.preventDefault(); const {x,y}=dsCanvasPos(ev,cvs); const ox=x/dsScale,oy=y/dsScale;
+    const mv=ev=>{ ev.preventDefault();
+      const r=cvs.getBoundingClientRect();
+      const x=Math.max(0,Math.min(cvs.width,  ev.clientX-r.left));
+      const y=Math.max(0,Math.min(cvs.height, ev.clientY-r.top));
+      const ox=x/dsScale, oy=y/dsScale;
       if(type==='t'){ dsCorners[0]={...dsCorners[0],y:oy}; dsCorners[1]={...dsCorners[1],y:oy}; }
       if(type==='b'){ dsCorners[2]={...dsCorners[2],y:oy}; dsCorners[3]={...dsCorners[3],y:oy}; }
       if(type==='l'){ dsCorners[0]={...dsCorners[0],x:ox}; dsCorners[3]={...dsCorners[3],x:ox}; }
@@ -781,7 +792,7 @@ async function init(){
   await openIDB(); loadData();
   // 버전/모드
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v8.3';
+  if($('appVersion')) $('appVersion').textContent='v8.4';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
