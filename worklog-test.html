@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<script>
+// 캐시 강제 무효화 - CSS/JS 항상 최신버전
+(function(){
+  var v="20260604080434";
+  var css=document.getElementById("main-css");
+  if(css) css.href="worklog-test.css?v="+v;
+})();
+</script>
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>업무일지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="stylesheet" id="main-css" href="worklog-test.css?v=20260608001">
+  <!-- Google Identity + Calendar API -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="head-row">
+      <div class="brand"><h1>업무일지</h1><span class="sub">분야관리 · ⚡급한메모 · 자재 · 청소 · 달력 <b style="color:#9aa7b4" id="verBadge">v42</b></span></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
+        <div class="nav-group nav-group-tools">
+          <button class="nav-btn nav-quick" id="btnQuickMemo" title="급한 메모 (Ctrl+Shift+M)">⚡ 급한메모</button>
+          <!-- 검색창으로 대체됨 -->
+        </div>
+        <div class="nav-group nav-group-navi">
+          <button class="nav-btn nav-back" id="btnBack" title="이전 화면으로 (5단계까지)" disabled>↶ 뒤로</button>
+          <button class="nav-btn" id="btnGcal" title="Google Calendar 연동" onclick="gcalLogin()" style="background:#fff;border:1.5px solid #ddd;display:flex;align-items:center;gap:5px;font-size:13px">
+            <img src="https://www.google.com/favicon.ico" style="width:16px;height:16px"> <span id="gcalBtnLabel">캘린더 연동</span>
+          </button>
+          <a class="nav-btn nav-home" href="index.html">⌂ 홈</a>
+        </div>
+      </div>
+    </div>
+    <!-- 항상 보이는 전체 검색창 -->
+    <div style="padding:6px 0 6px">
+      <div style="position:relative">
+        <span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:20px;pointer-events:none;z-index:1">🔍</span>
+        <input type="text" id="globalSearchBar"
+          placeholder="어디서나 검색 — 업무·통화·메모·자재·청소·달력..."
+          style="width:100%;box-sizing:border-box;padding-left:50px;height:52px;font-size:16px;font-weight:600;border:none;border-radius:16px;background:#fff;box-shadow:0 2px 16px rgba(0,0,0,.12);outline:none;font-family:inherit;color:#222;letter-spacing:-0.2px">
+      </div>
+    </div>
+    <div class="tabs-wrap">
+      <button class="tab-arrow left" id="tabArrowL" aria-label="이전 탭">‹</button>
+      <nav class="tabs" id="tabs">
+        <button data-tab="work" class="active">업무</button>
+        <button data-tab="material">📦 자재</button>
+        <button data-tab="cleaning">🧹 청소</button>
+        <button data-tab="calendar">달력</button>
+        <button data-tab="memo">메모</button>
+        <button data-tab="plan">오늘계획</button>
+        <button data-tab="password">🔐 비번</button>
+        <button data-tab="diag">자가진단</button>
+        <button data-tab="ai">AI</button>
+      </nav>
+      <button class="tab-arrow right" id="tabArrowR" aria-label="다음 탭">›</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- 📁 파일링크 -->
+  <section class="panel" id="panel-filelink">
+    <div class="card">
+      <div class="list-head">
+        <h2>📁 점검일지·관리폴더</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" data-add="filelink">➕ 파일 추가</button>
+          <button class="btn btn-ghost btn-sm" id="btnFileCatMgr">⚙ 카테고리 관리</button>
+        </div>
+      </div>
+      <!-- 검색창 맨 위 -->
+      <div style="position:relative;margin-bottom:14px">
+        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none">🔍</span>
+
+      </div>
+      <!-- 툴바: 검색 아래 한 줄 -->
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <select id="fileLinkViewSelect" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;cursor:pointer">
+          <option value="card">🎴 카드형</option>
+          <option value="list">📋 목록형</option>
+          <option value="tile">🏷 타일형</option>
+        </select>
+        <select id="fileTypeSelect" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;cursor:pointer">
+          <option value="all">📂 전체</option>
+          <option value="folder">📁 폴더만</option>
+          <option value="file">📄 파일만</option>
+        </select>
+        <select class="sort-select" data-sort="filelink" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;cursor:pointer">
+          <option value="name">🔤 이름순</option>
+          <option value="recent">🕐 최근 사용순</option>
+          <option value="created">📅 등록일순</option>
+        </select>
+      </div>
+      <!-- 숨겨진 요소 (JS 호환용) -->
+      <span class="view-mode-group" id="fileTypeFilter" style="display:none">
+        <button data-ft="all" class="active">전체</button>
+        <button data-ft="folder">폴더</button>
+        <button data-ft="file">파일</button>
+      </span>
+      <select id="fileCatFilter" style="display:none"></select>
+      <select id="fileSubFilter" style="display:none"></select>
+      <div id="fileCatJump" style="display:none"></div>
+      <div id="fileList"></div>
+    </div>
+  </section>
+
+  <!-- 🌐 사이트 -->
+  <section class="panel" id="panel-site">
+    <div class="card">
+      <div class="list-head">
+        <h2>🌐 사이트</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" data-add="site">➕ 사이트 추가</button>
+          <button class="btn btn-ghost btn-sm" id="btnSiteCatMgr">⚙ 카테고리 관리</button>
+        </div>
+      </div>
+      <p class="desc">자주 가는 인터넷 사이트를 카테고리별로 정리합니다.</p>
+      <div class="toolbar-row">
+        <span class="tb-label">보기</span>
+        <span class="view-mode-group" data-vm="site">
+          <button data-v="card">🎴 카드</button>
+          <button data-v="list">📋 목록</button>
+          <button data-v="tile">🏷 타일</button>
+        </span>
+        <span class="tb-label" style="margin-left:6px">정렬</span>
+        <select class="sort-select" data-sort="site">
+          <option value="name">이름순</option>
+          <option value="recent">최근 사용순</option>
+          <option value="created">등록일순</option>
+        </select>
+        <button class="tb-toggle" data-compact="site">컴팩트</button>
+        <button class="tb-toggle" data-collapse="site">전체 접기</button>
+      </div>
+      <div class="filt-row">
+        <select id="siteCatFilter"></select>
+      </div>
+      <div class="sub-chips" id="siteSubFilter"></div>
+
+      <div id="siteCatJump"></div>
+      <div id="siteList"></div>
+    </div>
+  </section>
+
+  <!-- 업무 -->
+  <section class="panel active" id="panel-work">
+    <!-- v29: 업무 탭 서브탭 네비 -->
+    <nav class="subtabs" id="workSubtabs">
+      <button data-subtab="general" class="active">🏢 일반업무</button>
+      <button data-subtab="filelink">📁 점검일지</button>
+      <button data-subtab="call">📞 통화</button>
+      <button data-subtab="site">🌐 사이트</button>
+      <button data-subtab="vacation">🌴 휴가</button>
+      <button data-subtab="meeting">💼 회의</button>
+      <button data-subtab="deliver">📢 전달</button>
+      <button data-subtab="expense">💰 지출</button>
+      <button data-subtab="staff" data-extlink="staff.html">👥 직원관리</button>
+      <button data-subtab="contacts" data-extlink="contacts.html">📋 업체연락처</button>
+    </nav>
+
+    <!-- 일반 업무 (기본) -->
+    <div class="work-subpanel" data-subpanel="general">
+    <div class="card">
+      <div class="list-head">
+        <h2>업무</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" data-add="work">➕ 업무 추가</button>
+          <button class="btn btn-danger btn-sm" id="btnWkDelSelected" style="display:none">🗑 선택 삭제</button>
+          <button class="btn btn-ghost btn-sm" id="btnCopyExcel">📋 엑셀 복사</button>
+          <button class="btn btn-ghost btn-sm" id="btnBackup">⬇ 백업</button>
+        </div>
+      </div>
+      <div class="chips" id="statusChips"></div>
+      <div class="filt-row">
+        <input type="date" id="wkFrom" title="시작일">
+        <span style="align-self:center;color:var(--ink-soft);font-size:13px;flex:0 0 auto">~</span>
+        <input type="date" id="wkTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="wkDateClear" style="flex:0 0 auto">기간 해제</button>
+        <select id="floorFilter"></select>
+        <select id="locFilter"></select>
+        <select id="fieldFilter"></select>
+      </div>
+
+      <div class="table-wrap">
+        <table class="rec"><thead><tr>
+          <th style="width:36px;text-align:center"><input type="checkbox" class="wk-allchk" title="전체선택" style="width:18px;height:18px;cursor:pointer"></th>
+          <th>날짜</th><th>완료</th><th>해당층</th><th>위치</th><th>업무내역</th><th>분야</th>
+          <th style="text-align:right">합계</th><th>지출</th><th style="width:40px"></th>
+        </tr></thead><tbody id="wkBody"></tbody><tfoot id="wkFoot"></tfoot></table>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px"><span id="wkCount"></span> · 행 클릭: 상세보기 · 체크박스 선택 후 [선택 삭제] 가능</p>
+    </div>
+    </div>
+    <!-- 다른 서브패널들은 JS로 동적 이동/표시 -->
+    <div id="workSubpanelHost"></div>
+  </section>
+
+  <!-- 오늘계획 -->
+  <section class="panel" id="panel-plan">
+    <div class="card">
+      <h2 style="margin-bottom:4px">오늘계획</h2>
+      <p class="desc">체크하면 완료 목록으로 이동하고, 업무일지에도 자동 기록됩니다.</p>
+      <div class="plan-add">
+        <input type="date" id="planDate" class="dt">
+        <input type="text" id="planInput" placeholder="할 일을 입력하고 Enter">
+        <button class="btn btn-primary" id="planAdd">추가</button>
+      </div>
+      <div class="filt-row">
+        <input type="date" id="planFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="planTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="planRangeClear" style="flex:0 0 auto">기간 해제</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+
+        <button class="btn btn-ghost btn-sm" id="btnPlanExcel">📋 엑셀 복사</button>
+      </div>
+      <div id="planList"></div>
+    </div>
+  </section>
+
+  <!-- 메모 -->
+  <section class="panel" id="panel-memo">
+    <div class="card">
+      <div class="list-head"><h2>메모</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" data-add="memo">➕ 메모 추가</button>
+          <button class="btn btn-ghost btn-sm" id="btnMemoExcel">📋 엑셀 복사</button>
+        </div>
+      </div>
+      <div class="filt-row">
+        <input type="date" id="memoFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="memoTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="memoRangeClear" style="flex:0 0 auto">기간 해제</button>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span class="view-toggle" data-vt="memo"><button data-v="card">카드형</button><button data-v="list">목록형</button></span></div>
+      <div id="memoList"></div>
+    </div>
+  </section>
+
+  <!-- 통화 -->
+  <section class="panel" id="panel-call">
+    <div class="card">
+      <div class="list-head"><h2>통화 기록</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" data-add="call">➕ 통화 추가</button>
+          <button class="btn btn-ghost btn-sm" id="btnCallExcel">📋 엑셀 복사</button>
+        </div>
+      </div>
+      <div class="chips" id="callDirChips"></div>
+      <div class="filt-row">
+        <input type="date" id="callFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="callTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="callRangeClear" style="flex:0 0 auto">기간 해제</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="rec"><thead><tr>
+          <th>날짜</th><th>시간</th><th>구분</th><th>상대</th><th>전화번호</th><th>통화내용</th><th>조치</th><th title="후속조치 완료 여부">조치완료</th><th></th>
+        </tr></thead><tbody id="callBody"></tbody></table>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">선택한 기간의 통화만 복사됩니다 · 순서: 날짜·구분·상대·전화번호·통화내용·조치</p>
+    </div>
+  </section>
+
+  <!-- 휴가 -->
+  <section class="panel" id="panel-vacation">
+    <div class="card">
+      <div class="list-head"><h2>휴가</h2><button class="btn btn-primary btn-sm" data-add="vacation">➕ 휴가 추가</button></div>
+      <p class="desc">등록한 휴가는 달력에 바로 표시됩니다.</p>
+
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span class="view-toggle" data-vt="vacation"><button data-v="card">카드형</button><button data-v="list">목록형</button></span></div>
+      <div id="vacList"></div>
+    </div>
+  </section>
+
+  <!-- 회의메모 -->
+  <section class="panel" id="panel-meeting">
+    <div class="card">
+      <div class="list-head"><h2>회의메모 (주간회의)</h2><button class="btn btn-primary btn-sm" data-add="meeting">➕ 회의 추가</button></div>
+
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span class="view-toggle" data-vt="meeting"><button data-v="card">카드형</button><button data-v="list">목록형</button></span></div>
+      <div id="meetList"></div>
+    </div>
+  </section>
+
+  <!-- 전달사항 -->
+  <section class="panel" id="panel-deliver">
+    <div class="card">
+      <div class="list-head"><h2>전달사항 (내가 전달할 내용)</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" data-add="deliver">➕ 전달 추가</button>
+          <button class="btn btn-ghost btn-sm" id="btnDelExcel">📋 엑셀 복사</button>
+        </div>
+      </div>
+      <p class="desc">회의 때 전달할 내용을 따로 모아 관리합니다. <b>주간전달</b>은 정기 주간회의용, <b>즉시전달</b>은 빠르게 전달해야 할 내용입니다.</p>
+      <div class="chips" id="delDtypeChips"></div>
+      <div class="filt-row">
+        <input type="date" id="delFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="delTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="delRangeClear" style="flex:0 0 auto">기간 해제</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="rec"><thead><tr>
+          <th>날짜</th><th>전달종류</th><th>제목</th><th>전달할 내용</th><th title="전달 완료 여부">전달완료</th><th></th>
+        </tr></thead><tbody id="delBody"></tbody></table>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">선택한 기간의 전달사항만 복사됩니다 · 순서: 날짜·전달종류·제목·내용</p>
+    </div>
+  </section>
+
+  <!-- 달력 -->
+  <section class="panel" id="panel-calendar">
+    <div class="card">
+      <div class="cal-head">
+        <span class="mo" id="calMonth"></span>
+        <div class="cal-nav">
+          <button id="calPrev">‹</button>
+          <button id="calToday" style="font-size:14px;font-weight:600;padding:0 12px">오늘</button>
+          <button id="calNext">›</button>
+          <button id="calPrint" style="font-size:13px;font-weight:600;padding:0 12px">🖨 인쇄</button>
+        </div>
+      </div>
+      <div class="cal-toolbar">
+        <span class="tb-label">모드</span>
+        <span class="cal-toggle">
+          <button data-calmode="work" class="active">🛠 업무 달력</button>
+          <button data-calmode="schedule">📅 스케줄 달력</button>
+        </span>
+        <span class="tb-label" style="margin-left:8px">보기</span>
+        <span class="cal-toggle">
+          <button data-calview="month" class="active">월간</button>
+          <button data-calview="year">연간 계획표</button>
+        </span>
+        <button class="btn btn-primary btn-sm" id="calQuickAdd" style="margin-left:auto;display:none">➕ 예정 추가</button>
+      </div>
+      <div class="cal-legend">
+        <span><span class="lg-dot" style="background:var(--peach)"></span>미완료</span>
+        <span><span class="lg-dot" style="background:var(--gold)"></span>진행중</span>
+        <span><span class="lg-dot" style="background:var(--mint)"></span>완료</span>
+        <span><span class="lg-dot" style="background:#0891b2"></span>예정</span>
+        <span>🌴 휴가</span>
+      </div>
+      <!-- v37: 달력 종류별 필터 -->
+      <div class="cal-filter" id="calFilter">
+        <span class="cf-label">표시:</span>
+        <button class="cf-btn active" data-calf="all">🔵 전체</button>
+        <button class="cf-btn active" data-calf="work">🛠 업무</button>
+        <button class="cf-btn active" data-calf="cleaning">🧹 청소</button>
+        <button class="cf-btn active" data-calf="memo">📝 메모</button>
+        <button class="cf-btn active" data-calf="call">📞 통화</button>
+        <button class="cf-btn active" data-calf="meeting">💼 회의</button>
+        <button class="cf-btn active" data-calf="deliver">📢 전달</button>
+        <button class="cf-btn active" data-calf="vacation">🌴 휴가</button>
+        <button class="cf-btn active" data-calf="expense_tax">📃 세금</button>
+        <button class="cf-btn active" data-calf="expense_personal">💸 개인</button>
+        <button class="cf-btn active" data-calf="plan">📋 계획</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div id="calYearGrid" style="display:none;overflow-x:auto"></div>
+      <div class="day-detail" id="dayDetail"></div>
+    </div>
+  </section>
+
+  <!-- 📦 자재 -->
+  <section class="panel" id="panel-material">
+    <div class="card">
+      <div class="list-head">
+        <h2>📦 자재 관리</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="btnAddStock">📥 입출고 추가</button>
+          <button class="btn btn-ghost btn-sm" id="btnAddItem">➕ 품목 등록</button>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="서브원 등 쇼핑몰 구매내역 엑셀을 올리면 자동으로 품목 등록 + 입고 처리됩니다">
+            📤 구매내역 엑셀 업로드
+            <input type="file" id="matFileUpload" accept=".xlsx,.xls,.csv" style="display:none">
+          </label>
+          <button class="btn btn-ghost btn-sm" id="btnAIExtract" title="엑셀 내용을 텍스트로 붙여넣어 AI가 자동 추출">🤖 AI 텍스트 추출</button>
+          <button class="btn btn-ghost btn-sm" id="btnMatExcel">📋 엑셀 복사</button>
+        </div>
+      </div>
+      <p class="desc">품목을 한 번 등록해두면, 입출고를 기록할 때마다 자동으로 재고가 계산됩니다. 안전재고 미달 품목은 빨갛게 표시돼요.</p>
+
+
+
+      <div id="matMonthlySummary"></div>
+
+      <div class="mat-tabs">
+        <button data-mattab="stock" class="active">📋 품목·재고</button>
+        <button data-mattab="tx">📥 입출고 내역</button>
+      </div>
+
+      <div class="filt-row">
+        <select id="matFieldFilter"></select>
+        <select id="matRecFilter"></select>
+        <button class="btn btn-ghost btn-sm" id="matLowToggle" style="flex:0 0 auto">⚠ 부족만</button>
+      </div>
+
+      <div id="matStockPanel">
+        <div class="table-wrap">
+          <table class="rec"><thead><tr>
+            <th>상품ID</th><th>품목명/규격</th><th>단위</th><th>분야</th><th>제조원</th><th>거래처</th>
+            <th style="text-align:right">단가</th><th style="text-align:right">재고</th><th>주기</th><th></th>
+          </tr></thead><tbody id="matStockBody"></tbody></table>
+        </div>
+      </div>
+
+      <div id="matItemPanel" style="display:none"></div>
+
+      <div id="matTxPanel" style="display:none">
+        <div class="table-wrap">
+          <table class="rec"><thead><tr>
+            <th>거래일</th><th>구분</th><th>품목/규격</th><th>단위</th>
+            <th style="text-align:right">수량</th><th style="text-align:right">단가</th><th style="text-align:right">금액</th>
+            <th>거래처</th><th>사용처/메모</th><th></th>
+          </tr></thead><tbody id="matTxBody"></tbody></table>
+        </div>
+        <p id="matTxSummary" style="font-size:13px;color:var(--ink-soft);margin-top:8px;text-align:right"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🧹 청소 -->
+  <section class="panel" id="panel-cleaning">
+    <div class="card">
+      <div class="list-head">
+        <h2>🧹 청소일지 (미화반)</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="btnAddCleaning">➕ 일지 추가</button>
+          <button class="btn btn-ghost btn-sm" id="btnCleanStaffMgr">⚙ 명단·반장 관리</button>
+        </div>
+      </div>
+      <p class="desc">청소반장이 작성한 일지를 사진으로 올리면 AI가 자동 분석합니다. 휴지·핸드타월 입출고는 자재 탭으로 자동 연동돼요.</p>
+
+
+      <div id="clnStats"></div>
+
+      <!-- v35: 청소 전용 달력 -->
+      <div class="clean-cal-wrap">
+        <div class="clean-cal-head">
+          <button class="cc-nav" id="cleanCalPrev">‹</button>
+          <span class="cc-title" id="cleanCalTitle"></span>
+          <button class="cc-nav" id="cleanCalNext">›</button>
+        </div>
+        <div class="clean-cal-grid" id="cleanCalGrid"></div>
+      </div>
+
+      <div class="filt-row" style="margin-top:10px">
+        <input type="date" id="clnFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="clnTo" title="종료일">
+        <button class="btn btn-ghost btn-sm" id="clnRangeClear" style="flex:0 0 auto">기간 해제</button>
+      </div>
+      <div id="clnList"></div>
+    </div>
+  </section>
+
+  <!-- 💰 지출 -->
+  <section class="panel" id="panel-expense">
+    <div class="card">
+      <div class="list-head">
+        <h2>💰 지출 / 세금계산서</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="btnAddExpense">➕ 지출 추가</button>
+          <button class="btn btn-ghost btn-sm" id="btnExpExcel">📋 엑셀 복사</button>
+        </div>
+      </div>
+      <p class="desc">개인 지출(품의서용)과 세금계산서 발급 내역(확인용)을 따로 관리합니다. 달력에서 날짜별로도 확인할 수 있어요.</p>
+
+
+
+      <!-- 탭 + 월필터 한 줄 -->
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <button data-exptab="personal" class="mat-tab active" style="padding:8px 18px;border-radius:10px;border:2px solid var(--primary);background:var(--primary);color:#fff;font-size:14px;font-weight:700;cursor:pointer">💸 개인 지출</button>
+        <button data-exptab="tax" class="mat-tab" style="padding:8px 18px;border-radius:10px;border:2px solid var(--line);background:#fff;color:var(--ink);font-size:14px;font-weight:700;cursor:pointer">📃 세금계산서</button>
+        <select id="expMonthFilter" style="margin-left:auto;height:38px;padding:0 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;font-weight:600;background:#fff;cursor:pointer;min-width:120px"></select>
+      </div>
+
+      <div id="expStats"></div>
+
+      <div class="table-wrap">
+        <table class="rec" id="expTable"><thead id="expThead"><tr>
+          <th style="text-align:right;width:45px">NO</th>
+          <th>지출내역</th>
+          <th style="text-align:right">금액</th>
+          <th>업체명</th>
+          <th style="width:100px">날짜</th>
+          <th>비고</th>
+          <th style="width:40px"></th>
+        </tr></thead><tbody id="expBody"></tbody></table>
+      </div>
+      <p id="expTotal" style="font-size:14px;color:var(--ink);margin-top:8px;text-align:right"></p>
+    </div>
+  </section>
+
+  <!-- 🔐 비밀번호 -->
+  <section class="panel" id="panel-password">
+    <div class="card">
+      <div class="list-head">
+        <h2>🔐 비밀번호</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="pwHeaderBtns"></div>
+      </div>
+      <div id="pwLockScreen"></div>
+      <div id="pwMainArea" style="display:none">
+        <p class="desc">사이트별 계정·비밀번호를 안전하게 보관합니다. 모든 비밀 데이터는 마스터 비번으로 암호화되어 저장됩니다.</p>
+        <div class="toolbar-row">
+          <span class="tb-label">보기</span>
+          <span class="view-mode-group" data-vm="password">
+            <button data-v="card">🎴 카드</button>
+            <button data-v="list">📋 목록</button>
+          </span>
+          <span class="tb-label" style="margin-left:6px">정렬</span>
+          <select class="sort-select" data-sort="password">
+            <option value="name">이름순</option>
+            <option value="created">등록일순</option>
+          </select>
+          <button class="tb-toggle" data-collapse="password">전체 접기</button>
+        </div>
+        <div class="filt-row">
+          <select id="pwCatFilter"></select>
+        </div>
+        <div class="sub-chips" id="pwSubFilter"></div>
+        <input type="text" id="pwSearch" class="search" placeholder="🔍 검색 — 사이트명·아이디·메모">
+        <div id="pwCatJump"></div>
+        <div id="pwList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 자가진단 -->
+  <section class="panel" id="panel-diag">
+    <div class="card">
+      <h2 style="margin-bottom:4px">자가진단 · 데이터 관리</h2>
+      <p class="desc">연결 상태와 저장 현황을 확인하고, 전체 데이터를 백업·복구하거나 CSV로 내보냅니다.</p>
+      <div id="diagStatus"></div>
+      <div class="sec-head">파일링크 사용법</div>
+      <div style="background:var(--primary-soft);border-radius:11px;padding:12px 14px;font-size:13px;line-height:1.7;color:#33567d">
+        💡 <b>최초 1회 설정 필요</b> — 아래 내용을 메모장에 붙여넣고 <code>localfile.reg</code>로 저장 후 더블클릭하세요.<br>
+        <pre style="background:#fff;padding:8px 10px;border-radius:8px;margin-top:6px;font-size:12px;overflow-x:auto;color:#333">Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\localfile]
+"URL Protocol"=""
+@="URL:Local File Protocol"
+
+[HKEY_CLASSES_ROOT\localfile\shell\open\command]
+@="cmd /c start \"\" \"%1\""</pre>
+        등록 후, 업무·메모·회의·전달 항목에 파일 또는 폴더 경로를 입력하면 클릭 한 번으로 열 수 있습니다.<br>
+        예시: <code>C:\서희타워\품의서\26-5-2.docx</code> 또는 <code>D:\업무\</code>
+      </div>
+      <div class="sec-head">진단</div>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn btn-ghost btn-sm" id="diagRefresh">🔄 다시 진단</button>
+        <button class="btn btn-primary btn-sm" id="diagConnTest">🔌 연결 테스트</button>
+        <button class="btn btn-ghost btn-sm" id="diagClearErr">🧹 오류기록 지우기</button>
+      </div>
+      <div id="diagErrors" style="margin-top:12px"></div>
+      <div class="sec-head">백업 / 복구</div>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 10px">백업은 사진까지 포함한 전체 데이터를 JSON 파일로 저장합니다. 복구는 백업 파일을 불러와 기존 데이터에 합칩니다(같은 항목은 덮어씀).</p>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn btn-primary btn-sm" id="diagBackup">⬇ 전체 백업 (JSON)</button>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 백업 복구<input type="file" id="diagRestore" accept="application/json,.json" style="display:none"></label>
+      </div>
+      <div class="sec-head">CSV 내보내기 (엑셀)</div>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 10px">항목별로 엑셀에서 바로 열 수 있는 CSV 파일을 내보냅니다. 사진은 제외됩니다.</p>
+      <div class="btn-row" style="margin-top:0;gap:8px">
+        <button class="btn btn-ghost btn-sm" data-csv="work">업무</button>
+        <button class="btn btn-ghost btn-sm" data-csv="plan">오늘계획</button>
+        <button class="btn btn-ghost btn-sm" data-csv="memo">메모</button>
+        <button class="btn btn-ghost btn-sm" data-csv="call">통화</button>
+        <button class="btn btn-ghost btn-sm" data-csv="vacation">휴가</button>
+        <button class="btn btn-ghost btn-sm" data-csv="meeting">회의메모</button>
+        <button class="btn btn-ghost btn-sm" data-csv="deliver">전달사항</button>
+        <button class="btn btn-primary btn-sm" data-csv="all">전체(여러파일)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI -->
+  <section class="panel" id="panel-ai">
+    <div class="card">
+      <h2 style="margin-bottom:4px">AI 대화 · 분석</h2>
+      <p class="desc">업무일지 데이터를 바탕으로 질문하거나 분석을 받을 수 있습니다. API 키는 이 브라우저에만 저장되며 코드/서버로 전송되지 않습니다.</p>
+      <div class="sec-head">API 키 (Anthropic)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+        <input type="password" id="aiKey" class="search" style="flex:1;margin:0;min-width:200px" placeholder="sk-ant-... 키를 입력">
+        <button class="btn btn-primary btn-sm" id="aiKeySave">저장</button>
+        <button class="btn btn-ghost btn-sm" id="aiKeyClear">삭제</button>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 4px"><span id="aiKeyState"></span> · 이 키는 localStorage에만 저장됩니다.</p>
+      <div class="sec-head">빠른 분석</div>
+      <div class="btn-row" style="margin-top:0;gap:8px">
+        <button class="btn btn-ghost btn-sm" data-ai="today">오늘 요약</button>
+        <button class="btn btn-ghost btn-sm" data-ai="week">이번주 요약</button>
+        <button class="btn btn-ghost btn-sm" data-ai="pending">미완료/할일 정리</button>
+        <button class="btn btn-ghost btn-sm" data-ai="cost">비용 분석</button>
+        <button class="btn btn-ghost btn-sm" data-ai="improve">개선사항 종합</button>
+      </div>
+      <div class="sec-head">대화</div>
+      <div id="aiChat" style="border:1px solid var(--line);border-radius:14px;background:#fbfdff;padding:12px;min-height:160px;max-height:420px;overflow:auto;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <textarea id="aiInput" style="flex:1;min-width:200px;min-height:48px" placeholder="질문을 입력하세요 (예: 이번주 소방 관련 업무 정리해줘)"></textarea>
+        <button class="btn btn-primary" id="aiSend">보내기</button>
+        <button class="btn btn-ghost btn-sm" id="aiClear">대화 지우기</button>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">데이터(업무·계획·메모·통화·휴가·회의·전달)가 질문과 함께 AI에 전달됩니다. 사진은 전송되지 않습니다.</p>
+    </div>
+  </section>
+</main>
+
+<!-- 공용 추가/수정 모달 -->
+<div class="overlay" id="overlay"><div class="modal">
+  <h3 id="mTitle">추가</h3>
+  <div class="grid" id="mFields"></div>
+
+  <!-- 첨부파일 링크 영역 (v15 신규) -->
+  <div class="field full attach-area" id="mAttachArea" style="margin-top:14px">
+    <label>📎 파일/폴더 링크 (선택)</label>
+    <div style="font-size:11.5px;color:var(--ink-soft);margin-top:-2px">경로 예시: <code>C:\서희타워\품의서\26-5-2.docx</code> 또는 폴더 <code>D:\업무\</code></div>
+    <div class="attach-add-row">
+      <input type="text" id="mAttachLabel" placeholder="별칭 (예: 품의서 원본)">
+      <input type="text" id="mAttachPath" class="attach-path" placeholder="C:\경로\파일명.확장자">
+      <button type="button" class="attach-add-btn" id="mAttachAdd">➕ 추가</button>
+    </div>
+    <div class="attach-list" id="mAttachList"></div>
+  </div>
+
+  <!-- 사진 미리보기 -->
+  <div class="thumbs" id="m-thumbs" style="margin-top:8px"></div>
+  <!-- 버튼 행: 사진 있는 종류 = [촬영][선택] ─────── [저장][취소][삭제]
+               사진 없는 종류 = ─────────────────── [저장][취소][삭제] -->
+  <div id="mBtnRow" style="margin-top:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div id="mPhotoArea" style="display:none;align-items:center;gap:6px">
+      <label class="photo-btn">📷 촬영<input type="file" id="m-cam" accept="image/*" capture="environment" style="display:none"></label>
+      <label class="photo-btn">🖼 사진 선택<input type="file" id="m-file" accept="image/*" multiple style="display:none"></label>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <button class="btn btn-primary" id="mSave">저장</button>
+      <button class="btn btn-ghost" id="mCancel">취소</button>
+      <button class="btn btn-danger" id="mDelete">삭제</button>
+    </div>
+  </div>
+</div></div>
+
+<div id="imgOverlay"><img id="imgFull" src="" alt=""></div>
+
+<!-- 보기(확대) 모달 -->
+<div class="overlay" id="viewOverlay"><div class="modal view-modal">
+  <h3 id="vTitle">상세보기</h3>
+  <div id="vBody"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="vEdit">수정</button>
+    <button class="btn btn-ghost" id="vClose">닫기</button>
+    <button class="btn btn-danger" id="vDel" style="margin-left:auto">삭제</button>
+  </div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 카테고리 관리 모달 -->
+<div class="overlay" id="catMgrOverlay"><div class="modal">
+  <h3 id="catMgrTitle">카테고리 관리</h3>
+  <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">카테고리를 추가·이름변경·삭제할 수 있습니다. 카테고리를 삭제해도 기존 항목은 그대로 유지되며, 해당 항목들의 카테고리는 "(미분류)"로 표시됩니다.</p>
+  <div style="display:flex;gap:6px;margin-bottom:10px">
+    <input type="text" id="catNewName" placeholder="새 카테고리 이름" style="flex:1">
+    <button class="btn btn-primary btn-sm" id="catAddBtn" style="flex:0 0 auto">➕ 추가</button>
+  </div>
+  <div id="catList" style="max-height:340px;overflow:auto"></div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="catMgrClose" style="margin-left:auto">닫기</button>
+  </div>
+</div></div>
+
+<!-- 🧹 청소일지 모달 -->
+<div class="overlay" id="cleaningOverlay"><div class="modal" style="max-width:780px">
+  <h3 id="clnTitle">청소 일지</h3>
+  <div id="clnFields"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="clnSave">저장</button>
+    <button class="btn btn-ghost" id="clnCancel">취소</button>
+    <button class="btn btn-danger" id="clnDelete" style="margin-left:auto;display:none">삭제</button>
+  </div>
+</div></div>
+
+<!-- v35: 전체 검색 오버레이 -->
+<div class="overlay" id="globalSearchOverlay"><div class="modal" style="max-width:720px;max-height:85vh;display:flex;flex-direction:column">
+  <h3 style="margin:0 0 12px;display:flex;justify-content:space-between;align-items:center">🔍 전체 검색 <button class="btn btn-ghost btn-sm" id="gsClose" style="font-size:14px">닫기 (Esc)</button></h3>
+  <input type="text" id="gsInput" class="search search-big" placeholder="🔍 모든 탭에서 검색 — 키워드 입력" autocomplete="off" autofocus style="margin-bottom:12px">
+  <div id="gsResults" style="flex:1;overflow-y:auto;min-height:200px"></div>
+</div></div>
+
+<!-- v37: ⚡ 급한 메모 사이드 패널 -->
+<div id="quickMemoSide" class="quick-memo-side">
+  <div class="qm-head">
+    <span class="qm-title">⚡ 급한 메모</span>
+    <div class="qm-actions">
+      <button class="qm-btn" id="qmToMemo" title="정식 메모로 저장">📋 메모로</button>
+      <button class="qm-btn qm-clear" id="qmClear" title="모두 지우기">🗑 지우기</button>
+      <button class="qm-btn qm-close" id="qmClose" title="닫기">✕</button>
+    </div>
+  </div>
+  <div id="qmText" contenteditable="true" data-placeholder="여기에 막 쓰세요... 자동으로 저장돼요. Ctrl+V로 사진을 텍스트 사이에 붙여넣을 수 있어요."></div>
+  <div class="qm-photo-area">
+    <label class="qm-photo-btn">
+      📷 사진 첨부
+      <input type="file" id="qmFile" accept="image/*" multiple style="display:none">
+    </label>
+    <div id="qmPhotoList"></div>
+  </div>
+  <div class="qm-status" id="qmStatus">💾 자동 저장됨</div>
+</div>
+
+<!-- v39: 사진 확대 오버레이 -->
+<div id="qmZoomOverlay"><img id="qmZoomImg" src=""></div>
+
+<!-- 분야 관리 모달 -->
+<div class="overlay" id="fieldMgrOverlay"><div class="modal">
+  <h3>⚙ 분야 관리</h3>
+  <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">업무·자재 등에서 사용하는 분야를 관리합니다. 삭제 시 해당 분야의 데이터는 "기타"로 자동 변경됩니다.</p>
+  <div id="fieldMgrList" style="max-height:340px;overflow:auto;margin-bottom:10px"></div>
+  <div style="display:flex;gap:6px;margin-bottom:10px">
+    <input type="text" id="fieldMgrNew" placeholder="새 분야 이름" style="flex:1">
+    <button class="btn btn-primary btn-sm" id="fieldMgrAddBtn">➕ 추가</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="fieldMgrClose" style="margin-left:auto">닫기</button>
+  </div>
+</div></div>
+
+<!-- 💰 지출 모달 -->
+<div class="overlay" id="expenseOverlay"><div class="modal" style="max-width:560px">
+  <h3 id="expTitle">지출 내역</h3>
+  <div id="expFields"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="expSave">저장</button>
+    <button class="btn btn-ghost" id="expCancel">취소</button>
+    <button class="btn btn-danger" id="expDelete" style="margin-left:auto;display:none">삭제</button>
+  </div>
+</div></div>
+
+<!-- 미화반 명단 관리 모달 -->
+<div class="overlay" id="cleanStaffOverlay"><div class="modal">
+  <h3>⚙ 미화반 명단·반장 관리</h3>
+  <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">반장 이름과 담당자 명단·담당 층을 관리합니다. 변경하면 일지 추가 시 자동 반영됩니다.</p>
+  <div class="field" style="margin-bottom:14px">
+    <label>반장 이름</label>
+    <input type="text" id="cleanForemanInput" placeholder="배옥식">
+  </div>
+  <div style="font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:6px">담당자 명단</div>
+  <div id="cleanStaffList" style="max-height:340px;overflow:auto;margin-bottom:10px"></div>
+  <button class="btn btn-primary btn-sm" id="cleanStaffAdd" style="margin-bottom:10px">➕ 담당자 추가</button>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="cleanStaffClose" style="margin-left:auto">닫기</button>
+  </div>
+</div></div>
+
+<div id="printArea"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="worklog-test.js?v=20260608001"></script>
+</body>
+</html>
