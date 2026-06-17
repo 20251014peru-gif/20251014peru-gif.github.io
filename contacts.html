@@ -163,6 +163,32 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
         <select id="catDropdown" style="height:44px;padding:0 36px 0 14px;border:1.5px solid var(--line);border-radius:12px;font-size:14px;font-weight:700;background:#fff;cursor:pointer;min-width:140px;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22 viewBox=%220 0 12 8%22><path fill=%22%23666%22 d=%22M0 0l6 8 6-8z%22/></svg>');background-repeat:no-repeat;background-position:right 12px center">
           <option value="전체">📂 전체</option>
         </select>
+        <select id="floorDropdown" style="height:44px;padding:0 14px;border:1.5px solid var(--line);border-radius:12px;font-size:14px;font-weight:700;background:#fff;cursor:pointer;min-width:110px">
+          <option value="전체">🏢 전체층</option>
+          <option value="공용">공용</option>
+          <option value="20">20층</option>
+          <option value="19">19층</option>
+          <option value="18">18층</option>
+          <option value="17">17층</option>
+          <option value="16">16층</option>
+          <option value="15">15층</option>
+          <option value="14">14층</option>
+          <option value="13">13층</option>
+          <option value="12">12층</option>
+          <option value="11">11층</option>
+          <option value="10">10층</option>
+          <option value="9">9층</option>
+          <option value="8">8층</option>
+          <option value="7">7층</option>
+          <option value="6">6층</option>
+          <option value="501">5층 501호</option>
+          <option value="502">5층 502호</option>
+          <option value="4">4층</option>
+          <option value="3">3층</option>
+          <option value="2">2층</option>
+          <option value="1">1층</option>
+          <option value="B1">B1층</option>
+        </select>
         <button class="btn btn-ghost btn-sm" id="btnCatMgrTop" title="분야 관리" style="height:44px;padding:0 14px;font-size:13px;white-space:nowrap">⚙ 분야관리</button>
       </div>
     </div>
@@ -199,7 +225,6 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
     <select id="c-floor" style="width:100%">
       <option value="">-- 선택 안 함 --</option>
       <option value="공용">공용</option>
-      <option value="옥탑">옥탑층</option>
       <option value="20">20층</option>
       <option value="19">19층</option>
       <option value="18">18층</option>
@@ -495,7 +520,7 @@ async function init(){
 function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
 
 /* ===== 필터/검색 ===== */
-let cat="전체", q="", viewMode="card";
+let cat="전체", q="", viewMode="card", floorFilter="전체";
 function renderChips(){
   const opts=["전체",...CATS];
   // 숨겨진 칩 (JS 호환)
@@ -517,6 +542,7 @@ function renderChips(){
 $("search").addEventListener("input",e=>{ q=e.target.value; render(); });
 function match(it){
   if(cat!=="전체" && it.cat!==cat) return false;
+  if(floorFilter!=="전체" && (it.floor||"")!==floorFilter) return false;
   if(!q.trim()) return true;
   const s=[it.name,it.cat,it.person,it.title,it.phone,it.email,it.address,it.memo].join(" ").toLowerCase();
   return s.includes(q.trim().toLowerCase());
@@ -625,6 +651,7 @@ function openEditor(id){
   $("overlay").querySelector(".modal").scrollTop=0;
 }
 $("btnAdd").addEventListener("click",()=>openEditor(null));
+$("floorDropdown").addEventListener("change",e=>{ floorFilter=e.target.value; render(); });
 $("mCancel").addEventListener("click",()=>$("overlay").classList.remove("show"));
 $("mSave").addEventListener("click",()=>{
   const name=$("c-name").value.trim(); if(!name){ toast("업체명을 입력하세요"); return; }
