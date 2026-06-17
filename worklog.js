@@ -3297,9 +3297,9 @@ async function pwRenderList(){
   const favs=list.filter(e=>e.starred);
   const rest=list.filter(e=>!e.starred);
   const groups={};
-  rest.forEach(e=>{ var c=e.category||"(미분류)"; if(c==="개인용도"||c==="기타") c="(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
-  const orderedCats=CATEGORIES.password.filter(c=>groups[c]);
-  Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
+  rest.forEach(e=>{ var c=e.category||"(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
+  // 업무시스템만 표시, 나머지 제외
+  const orderedCats=["업무시스템"].filter(c=>groups[c]);
   const jumpGroups={};
   if(favs.length) jumpGroups["⭐ 즐겨찾기"]=favs;
   orderedCats.forEach(c=>{ jumpGroups[c]=groups[c]; });
