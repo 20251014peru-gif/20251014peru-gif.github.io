@@ -1573,15 +1573,9 @@
     if(name==='main') setTimeout(()=>{ if(typeof v43Refresh==='function') v43Refresh(); }, 50);
   }
 
-  // v43 탭 클릭 이벤트 - 클릭할 때마다 강제 active 재적용
+  // v43 탭 클릭 이벤트
   document.querySelectorAll('.v43-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      // worklog.js activateTab이 덮어쓰기 전에 딜레이로 재적용
-      const name = btn.dataset.v43tab;
-      v43ActivateTab(name);
-      setTimeout(() => v43ActivateTab(name), 150);
-      setTimeout(() => v43ActivateTab(name), 400);
-    });
+    btn.addEventListener('click', () => v43ActivateTab(btn.dataset.v43tab));
   });
 
   // 카테고리 드롭다운
@@ -1692,13 +1686,21 @@
     }catch(e){ v43ActivateTab('main'); }
   }
 
-  // worklog.js init() 완료 후 v43Refresh가 호출됨 (worklog.js에 훅 추가)
-  // 안전망: 탭 복원은 바로, 데이터 갱신은 시간차로
+  // worklog.js init 완료 감지 후 v43 초기화
   restoreTab();
-  setTimeout(refreshV43, 1000);
-  setTimeout(refreshV43, 3000);
-  setTimeout(refreshV43, 6000);
-  dbg('v43 대기 중 - worklog.js init 완료 시 자동 갱신');
+  let _initWait = 0;
+  function waitWlInit(){
+    if(window._wlInitDone){
+      dbg('wlInitDone 감지 - v43 갱신');
+      refreshV43();
+    } else if(_initWait++ < 60){
+      setTimeout(waitWlInit, 200);
+    } else {
+      dbg('wlInit timeout - 강제 갱신');
+      refreshV43();
+    }
+  }
+  setTimeout(waitWlInit, 300);
 
   // 전역 노출 (worklog.js에서 호출 가능)
   window.v43ActivateTab = v43ActivateTab;

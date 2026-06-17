@@ -541,13 +541,9 @@ async function init(){
   renderStatusChips(); renderAll();
   // v43: 통합 UI 갱신 훅
   try{ if(typeof window.v43Refresh==='function') window.v43Refresh(); }catch(e){}
-  try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
-  // v43: init 완료 후 v43 UI 갱신 (탭 복원은 v43 자체에서 처리)
-  try{
-    setTimeout(()=>{
-      if(typeof window.v43Refresh==='function') window.v43Refresh();
-    }, 300);
-  }catch(e){}
+  // v43 모드: 탭 복원은 v43ActivateTab이 처리 (worklog.js activateTab 복원 비활성)
+  // v43: init 완료 신호
+  try{ window._wlInitDone = true; }catch(e){}
   // v41: contacts 연동 초기화
   loadContactCats().catch(()=>{});
   loadContactsCache().catch(()=>{});
