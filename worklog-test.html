@@ -2122,14 +2122,15 @@
     const years = getYears();
     const cur = new Date().getFullYear().toString();
     sel.innerHTML = '<option value="all">전체 연도</option>' +
-      years.map(y=>`<option value="${y}" ${y===cur?'selected':''}>${y}년</option>`).join('');
-    inspYearFilter = sel.value;
+      years.map(y=>`<option value="${y}">${y}년</option>`).join('');
+    inspYearFilter = 'all'; // 기본값 전체
   }
 
   function getFiltered(){
     return insps.filter(d=>{
       if(inspTypeFilter!=='all' && d.type!==inspTypeFilter) return false;
-      if(inspYearFilter!=='all' && !(d.month||'').startsWith(inspYearFilter)) return false;
+      // month 비어있는 항목(마이그레이션 데이터)은 년도 필터에서 제외하지 않음
+      if(inspYearFilter!=='all' && d.month && !d.month.startsWith(inspYearFilter)) return false;
       return true;
     }).sort((a,b)=>(b.month||'').localeCompare(a.month||''));
   }
