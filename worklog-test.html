@@ -1549,7 +1549,30 @@
       <button class="btn btn-danger" id="mDelete">삭제</button>
     </div>
   </div>
+
+  <!-- 지출 연결 영역 (업무 종류일 때만 표시) -->
+  <div id="mExpLinkArea" style="display:none;margin-top:14px;border-top:1.5px solid #f0f6ff;padding-top:14px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="font-size:14px;font-weight:700;color:#1a2f45">💰 관련 지출</span>
+      <button id="mExpLinkBtn" style="height:34px;padding:0 14px;background:linear-gradient(135deg,#3f7cb8,#2563a8);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(63,124,184,.3)">+ 지출 연결</button>
+    </div>
+    <div id="mExpLinkList" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
 </div></div>
+
+<!-- 지출 선택 팝업 -->
+<div id="expPickOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10001;display:none;align-items:flex-end;justify-content:center">
+  <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:540px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
+    <div style="padding:18px 20px 12px;border-bottom:1.5px solid #f0f6ff;flex-shrink:0">
+      <div style="font-size:16px;font-weight:800;color:#1a2f45;margin-bottom:10px">💰 지출 선택</div>
+      <input type="text" id="expPickSearch" placeholder="🔍 내역·분야·금액 검색..." style="width:100%;box-sizing:border-box;height:40px;padding:0 14px;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f7faff">
+    </div>
+    <div id="expPickList" style="overflow:auto;flex:1;padding:10px 16px"></div>
+    <div style="padding:12px 16px;border-top:1.5px solid #f0f6ff;flex-shrink:0">
+      <button id="expPickCancel" style="width:100%;padding:12px;border-radius:12px;border:2px solid #dbe6f4;background:#f7faff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;color:#7a92a8">닫기</button>
+    </div>
+  </div>
+</div>
 
 <div id="imgOverlay"><img id="imgFull" src="" alt=""></div>
 

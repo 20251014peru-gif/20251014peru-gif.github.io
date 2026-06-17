@@ -24,6 +24,14 @@ const CALLDIR  = ["수신","발신"];
 const VTYPES   = ["년차휴가","오전반차","오후반차","병가","경조","기타"];
 const FLOORS   = ["","옥탑층","20층","19층","18층","17층","16층","15층","14층","13층","12층","11층","10층","9층","8층","7층","6층","5층","4층","3층","2층","1층","지하1층","지하2층","지하3층","지하4층","지하5층","지하6층"];
 // v37: 분야를 평면 배열로 (트리 구조 제거, 들여쓰기 없음)
+// 지출 전용 분야
+const EXP_FIELDS_LS = 'wl_exp_fields';
+function loadExpFields(){
+  try{ const a=JSON.parse(localStorage.getItem(EXP_FIELDS_LS)||'null'); if(Array.isArray(a)&&a.length) return a; }catch(e){}
+  return [];
+}
+function saveExpFields(arr){ try{ localStorage.setItem(EXP_FIELDS_LS,JSON.stringify(arr)); }catch(e){} }
+
 const DEFAULT_FIELDS = [
   "전기","엘리베이터","카리프트","통신","기계","냉난방","누수",
   "소방","소화전","스프링클러","감지기","수신기","펌프",
@@ -894,6 +902,13 @@ function openEditor(kind,id){
 
   $("mDelete").style.display=id?"":"none";
 
+  // 지출 연결 영역: 업무 종류일 때만 표시
+  const expLinkArea=$("mExpLinkArea");
+  if(expLinkArea){
+    expLinkArea.style.display = (kind==="work") ? "" : "none";
+    if(kind==="work") renderExpLinkList(id);
+  }
+
   // v21+: 카테고리·소분류 모두 드롭다운에서 선택 또는 새로 직접 입력
   if(kind==="filelink" || kind==="site"){
     const ctx=kind;
@@ -1171,6 +1186,10 @@ document.addEventListener("keydown", e=>{
   e.preventDefault();
   $("mSave").click();
 });
+$("mExpLinkBtn")?.addEventListener("click", openExpPick);
+$("expPickCancel")?.addEventListener("click",()=>{ document.getElementById("expPickOverlay").style.display="none"; });
+$("expPickOverlay")?.addEventListener("click",e=>{ if(e.target===document.getElementById("expPickOverlay")) document.getElementById("expPickOverlay").style.display="none"; });
+
 $("mSave").addEventListener("click",async ()=>{
   // v16: 비밀번호 종류는 별도 처리 (암호화)
   if(mKind==="password"){
@@ -1252,7 +1271,7 @@ $("mSave").addEventListener("click",async ()=>{
   else if(mKind==="site"){ renderSite(); }
   else renderAll();
   // 업무 저장 시 지출 자동 연동 + 합계 자동계산
-  if(mKind==="work"){ calcWorkTotal(obj); syncWorkExpense(obj, mId, savedId); }
+  if(mKind==="work"){ calcWorkTotal(obj); syncWorkExpense(obj, mId, savedId); applyExpLinks(savedId); }
   $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
 });
 $("mDelete").addEventListener("click",()=>{
@@ -5350,15 +5369,19 @@ function renderExpenseModal(id){
         <select id="exp-utype" onchange="expChangeType(this.value)">
           <option value="자재구매" ${utype==="자재구매"?"selected":""}>🛒 자재구매</option>
           <option value="공사/용역" ${utype==="공사/용역"?"selected":""}>🏗 공사/용역</option>
-          <option value="택배" ${utype==="택배"?"selected":""}>📦 택배</option>
           <option value="기타" ${utype==="기타"?"selected":""}>📝 기타</option>
         </select>
       </div>
     </div>
     <div class="grid" style="margin-top:10px">
       <div class="field">
-        <label>분야</label>
-        <select id="exp-field">${fieldOpts}</select>
+        <label>분야
+          <button onclick="openExpFieldMgr()" style="margin-left:6px;font-size:11px;padding:2px 8px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;cursor:pointer;font-family:inherit;color:#3f7cb8;font-weight:700">⚙ 관리</button>
+        </label>
+        <select id="exp-field">
+          <option value="">-- 선택 --</option>
+          ${loadExpFields().map(f=>`<option value="${esc(f)}" ${d.field===f?"selected":""}>${esc(f)}</option>`).join("")}
+        </select>
       </div>
       <div class="field">
         <label>정산종류</label>
@@ -5421,11 +5444,6 @@ function expChangeType(utype){
         <div class="field"><label>계약금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="0" min="0"></div>
         <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="0" min="0"></div>
       </div>`,
-    "택배": `
-      <div class="grid" style="margin-top:10px">
-        <div class="field"><label>품목</label><input type="text" id="exp-matname" placeholder="예: 소화기 부품"></div>
-        <div class="field"><label>택배비 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="0" min="0"></div>
-      </div>`,
     "기타": `
       <div class="field full" style="margin-top:10px">
         <label>금액 (원) <span class="req">*</span></label>
@@ -5456,6 +5474,81 @@ async function handleExpensePhoto(e){
   const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
   try{ expensePhoto = await compressImage(f, 1400, 0.7); renderExpensePhoto(); }
   catch(err){ toast("사진 처리 실패"); }
+}
+
+// 지출 분야 관리 모달
+function openExpFieldMgr(){
+  const overlay = document.getElementById('expFieldMgrOverlay');
+  if(!overlay) {
+    // 모달 동적 생성
+    const el = document.createElement('div');
+    el.id = 'expFieldMgrOverlay';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:flex-end;justify-content:center';
+    el.innerHTML = `
+      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:24px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
+        <h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:#1a2f45">⚙ 지출 분야 관리</h3>
+        <div id="expFieldMgrList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:14px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <input type="text" id="expFieldMgrNew" placeholder="새 분야 이름" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;outline:none;background:#f7faff">
+          <button onclick="expFieldMgrAdd()" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+        </div>
+        <button onclick="document.getElementById('expFieldMgrOverlay').classList.remove('show')" style="width:100%;padding:13px;border-radius:14px;border:2px solid #dbe6f4;background:#f7faff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;color:#7a92a8">닫기</button>
+      </div>`;
+    el.addEventListener('click', e=>{ if(e.target===el) el.classList.remove('show'); });
+    document.body.appendChild(el);
+  }
+  document.getElementById('expFieldMgrOverlay').classList.add('show');
+  expFieldMgrRender();
+}
+
+function expFieldMgrRender(){
+  const list = document.getElementById('expFieldMgrList');
+  if(!list) return;
+  const fields = loadExpFields();
+  list.innerHTML = fields.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7faff;border-radius:10px;border:1.5px solid #e8f0fa">
+      <input type="text" value="${esc(f)}" data-fi="${i}" style="flex:1;border:none;background:transparent;font-size:14px;font-family:inherit;outline:none;color:#1a2f45;font-weight:600">
+      <button data-fsave="${i}" style="background:#eaf1fb;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#3f7cb8;cursor:pointer;font-family:inherit">저장</button>
+      <button data-fdel="${i}" style="background:#fde8e8;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-fsave]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.fsave);
+      const inp=list.querySelector(`[data-fi="${i}"]`);
+      if(!inp||!inp.value.trim()) return;
+      const arr=loadExpFields(); arr[i]=inp.value.trim(); saveExpFields(arr);
+      expFieldMgrRender(); expRefreshFieldSelect();
+      if(typeof toast==='function') toast('저장됐어요');
+    });
+  });
+  list.querySelectorAll('[data-fdel]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.fdel);
+      const arr=loadExpFields(); if(!confirm(`"${arr[i]}" 분야를 삭제할까요?`)) return;
+      arr.splice(i,1); saveExpFields(arr);
+      expFieldMgrRender(); expRefreshFieldSelect();
+    });
+  });
+}
+
+function expFieldMgrAdd(){
+  const inp=document.getElementById('expFieldMgrNew');
+  const name=(inp&&inp.value||'').trim();
+  if(!name) return;
+  const arr=loadExpFields();
+  if(arr.includes(name)){ if(typeof toast==='function') toast('이미 있는 분야예요'); return; }
+  arr.push(name); saveExpFields(arr);
+  if(inp) inp.value='';
+  expFieldMgrRender(); expRefreshFieldSelect();
+  if(typeof toast==='function') toast('추가됐어요');
+}
+
+function expRefreshFieldSelect(){
+  const sel=document.getElementById('exp-field');
+  if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">-- 선택 --</option>'+loadExpFields().map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join('');
+  if(cur) sel.value=cur;
 }
 
 function saveExpense(){
@@ -5496,6 +5589,98 @@ function saveExpense(){
   $("expenseOverlay").classList.remove("show");
   renderAll();
   toast(id?"수정되었습니다":"저장되었습니다");
+}
+
+/* ===== 업무-지출 연결 ===== */
+let mLinkedExpIds = []; // 현재 업무에 연결된 지출 ID 목록
+
+function renderExpLinkList(workId){
+  mLinkedExpIds = workId
+    ? entries.filter(e=>e.kind==="expense"&&e.workId===workId).map(e=>e.id)
+    : [];
+  refreshExpLinkUI();
+}
+
+function refreshExpLinkUI(){
+  const list = document.getElementById("mExpLinkList");
+  if(!list) return;
+  const linked = entries.filter(e=>e.kind==="expense"&&mLinkedExpIds.includes(e.id));
+  if(!linked.length){
+    list.innerHTML = "<div style='font-size:13px;color:#aab8c8;padding:4px 0'>연결된 지출이 없습니다</div>";
+    return;
+  }
+  const total = linked.reduce((s,e)=>s+Number(e.amount||0),0);
+  list.innerHTML = linked.map(e=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7faff;border-radius:10px;border:1.5px solid #e8f0fa">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#1a2f45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.title||"")}</div>
+        <div style="font-size:11px;color:#aab8c8;margin-top:2px">${esc(e.date||"")} · ${esc(e.utype||e.expType||"")} · ${Number(e.amount||0).toLocaleString()}원</div>
+      </div>
+      <button data-unlinkid="${e.id}" style="background:#fde8e8;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit;flex-shrink:0">해제</button>
+    </div>`).join("")+
+    `<div style="text-align:right;font-size:13px;font-weight:800;color:#3f7cb8;margin-top:6px">합계: ${total.toLocaleString()}원</div>`;
+  list.querySelectorAll("[data-unlinkid]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      mLinkedExpIds = mLinkedExpIds.filter(id=>id!==btn.dataset.unlinkid);
+      refreshExpLinkUI();
+    });
+  });
+}
+
+function openExpPick(){
+  const overlay = document.getElementById("expPickOverlay");
+  if(!overlay) return;
+  overlay.style.display="flex";
+  renderExpPickList("");
+  const inp = document.getElementById("expPickSearch");
+  if(inp){ inp.value=""; inp.focus(); inp.oninput=()=>renderExpPickList(inp.value); }
+}
+
+function renderExpPickList(q){
+  const list = document.getElementById("expPickList");
+  if(!list) return;
+  const expenses = entries.filter(e=>e.kind==="expense")
+    .filter(e=>{
+      if(mLinkedExpIds.includes(e.id)) return false; // 이미 연결된 것 제외
+      if(!q.trim()) return true;
+      const s=[e.title,e.utype,e.expType,e.field,e.vendor,String(e.amount||"")].filter(Boolean).join(" ").toLowerCase();
+      return s.includes(q.trim().toLowerCase());
+    })
+    .sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  if(!expenses.length){
+    list.innerHTML="<div style='text-align:center;padding:30px;color:#aab8c8;font-size:14px'>조건에 맞는 지출이 없습니다</div>";
+    return;
+  }
+  list.innerHTML = expenses.map(e=>`
+    <div data-pickid="${e.id}" style="display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid #f0f6ff;cursor:pointer;transition:background .1s" onmouseenter="this.style.background='#f0f6ff'" onmouseleave="this.style.background=''">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;color:#1a2f45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.title||"")}</div>
+        <div style="font-size:12px;color:#aab8c8;margin-top:3px">
+          ${esc(e.date||"")} · <span style="background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">${esc(e.utype||e.expType||"")}</span> ${e.field?"· "+esc(e.field):""}
+        </div>
+      </div>
+      <div style="font-size:14px;font-weight:800;color:#3f7cb8;white-space:nowrap;flex-shrink:0">${Number(e.amount||0).toLocaleString()}원</div>
+    </div>`).join("");
+  list.querySelectorAll("[data-pickid]").forEach(el=>{
+    el.addEventListener("click",()=>{
+      mLinkedExpIds.push(el.dataset.pickid);
+      refreshExpLinkUI();
+      document.getElementById("expPickOverlay").style.display="none";
+    });
+  });
+}
+
+// 저장 시 연결 처리 (mSave 클릭 후 호출)
+function applyExpLinks(workId){
+  if(!workId) return;
+  // 기존 연결 해제 (현재 목록에 없는 것)
+  entries.filter(e=>e.kind==="expense"&&e.workId===workId)
+    .forEach(e=>{ if(!mLinkedExpIds.includes(e.id)) updateRecord(e.id,{workId:null}); });
+  // 새 연결
+  mLinkedExpIds.forEach(eid=>{
+    const ex=entries.find(e=>e.id===eid);
+    if(ex&&ex.workId!==workId) updateRecord(eid,{workId});
+  });
 }
 
 function wireExpenseModal(){
