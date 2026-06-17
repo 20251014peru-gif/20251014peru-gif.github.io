@@ -1819,7 +1819,7 @@
 
   // v43 탭 전환
   function v43ActivateTab(name){
-    const v43tabs=['main','memo','calendar','filelink','docs','material','password','diag','ai'];
+    const v43tabs=['main','memo','calendar','filelink','docs','common','indiv','material','password','diag','ai'];
     if(!v43tabs.includes(name)) name='main';
     document.querySelectorAll('.v43-tab').forEach(b => b.classList.toggle('active', b.dataset.v43tab===name));
     document.querySelectorAll('.v43-panel').forEach(p => p.classList.remove('active'));
@@ -1968,7 +1968,7 @@
   // 마지막 탭 복원
   function restoreTab(){
     try{
-      const v43tabs=['main','memo','calendar','filelink','docs','material','password','diag','ai'];
+      const v43tabs=['main','memo','calendar','filelink','docs','common','indiv','material','password','diag','ai'];
       const saved = localStorage.getItem('v43_tab')||'main';
       const safeTab = v43tabs.includes(saved) ? saved : 'main';
       v43ActivateTab(safeTab);
