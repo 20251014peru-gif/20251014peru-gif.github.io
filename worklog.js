@@ -178,6 +178,7 @@ const SCHEMA={
     {k:"workContact",label:"담당자",type:"text"},
     {k:"workRole",label:"직책",type:"text"},
     {k:"workPhone",label:"담당자 전화",type:"tel"},
+    {k:"workMemo",label:"업체 메모",type:"text"},
     {k:"title",label:"업무내역",type:"text",full:true,req:true},
     {k:"detail",label:"세부내용",type:"textarea",full:true},
     {k:"material",label:"자재명",type:"text"},
@@ -984,11 +985,13 @@ function openEditor(kind,id){
         const contactEl=$("m-workContact"); if(contactEl) contactEl.value=c.person||'';
         const roleEl=$("m-workRole"); if(roleEl) roleEl.value=c.title||'';
         const phoneEl=$("m-workPhone"); if(phoneEl) phoneEl.value=c.phone||'';
+        const memoEl=$("m-workMemo"); if(memoEl) memoEl.value=c.memo||'';
       }, ()=>{
         // ✕ 클릭 시 초기화
         const contactEl=$("m-workContact"); if(contactEl) contactEl.value='';
         const roleEl=$("m-workRole"); if(roleEl) roleEl.value='';
         const phoneEl=$("m-workPhone"); if(phoneEl) phoneEl.value='';
+        const memoEl=$("m-workMemo"); if(memoEl) memoEl.value='';
       });
     }
     // 통화 담당자 검색
@@ -5846,6 +5849,8 @@ function fillWorkVendor(vendorName){
   const roleEl=document.getElementById('m-workRole');
   if(roleEl&&!roleEl.value) roleEl.value=contact.title||'';
   if(phoneEl&&!phoneEl.value) phoneEl.value=contact.phone||'';
+  const memoEl=document.getElementById('m-workMemo');
+  if(memoEl&&!memoEl.value) memoEl.value=contact.memo||'';
 }
 
 function refreshWorkVendorSelect(){
