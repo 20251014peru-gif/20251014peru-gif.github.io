@@ -4,318 +4,723 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<script>
-// 캐시 강제 무효화 - CSS/JS 항상 최신버전
-(function(){
-  var v="20260604080434";
-  var css=document.getElementById("main-css");
-  if(css) css.href="worklog.css?v="+v;
-})();
-</script>
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지</title>
+<title>업무일지 v43</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-<link rel="stylesheet" id="main-css" href="worklog.css?v=20260608001">
+<link rel="stylesheet" id="main-css" href="worklog.css?v=43-20260617t1781675790">
+<style>
+/* ===== v43 통합 UI 추가 스타일 ===== */
+
+/* 카테고리 필터칩 */
+.v43-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 14px 0 10px;
+}
+.v43-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 2px solid #dbe6f4;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a6a8a;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  font-family: inherit;
+  touch-action: manipulation;
+}
+.v43-chip:hover { border-color: #3f7cb8; color: #3f7cb8; }
+.v43-chip.active {
+  background: #3f7cb8;
+  border-color: #3f7cb8;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(63,124,184,.3);
+}
+.v43-chip .cnt {
+  background: rgba(255,255,255,.3);
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.v43-chip:not(.active) .cnt {
+  background: #eaf1fb;
+  color: #3f7cb8;
+}
+
+/* 통합 목록 */
+.v43-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.v43-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fff;
+  border: 1.5px solid #e8f0fa;
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+}
+.v43-item:hover {
+  border-color: #3f7cb8;
+  box-shadow: 0 2px 10px rgba(63,124,184,.12);
+  transform: translateY(-1px);
+}
+.v43-item-icon {
+  font-size: 20px;
+  flex: 0 0 28px;
+  text-align: center;
+  margin-top: 1px;
+}
+.v43-item-body { flex: 1; min-width: 0; }
+.v43-item-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a2f45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+.v43-item-meta {
+  font-size: 12px;
+  color: #7a92a8;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.v43-item-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.v43-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.v43-item-date { font-size: 12px; color: #9aaab8; font-weight: 600; }
+.v43-item-del {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity .15s;
+  color: #c0392b;
+}
+.v43-item:hover .v43-item-del { opacity: 1; }
+
+/* 카테고리별 좌측 선 색상 */
+.v43-item[data-kind="work"]     { border-left: 4px solid #3f7cb8; }
+.v43-item[data-kind="cleaning"] { border-left: 4px solid #27ae60; }
+.v43-item[data-kind="memo"]     { border-left: 4px solid #f39c12; }
+.v43-item[data-kind="call"]     { border-left: 4px solid #8e44ad; }
+.v43-item[data-kind="meeting"]  { border-left: 4px solid #2980b9; }
+.v43-item[data-kind="deliver"]  { border-left: 4px solid #e74c3c; }
+.v43-item[data-kind="vacation"] { border-left: 4px solid #1abc9c; }
+.v43-item[data-kind="expense"]  { border-left: 4px solid #e67e22; }
+.v43-item[data-kind="plan"]     { border-left: 4px solid #95a5a6; }
+.v43-item[data-kind="schedule"] { border-left: 4px solid #0891b2; }
+
+/* ➕ 추가 FAB 버튼 */
+.v43-fab {
+  position: fixed;
+  right: 22px;
+  bottom: 28px;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3f7cb8, #2563a8);
+  color: #fff;
+  font-size: 30px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(63,124,184,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  transition: all .15s;
+  touch-action: manipulation;
+}
+.v43-fab:hover { transform: scale(1.1); box-shadow: 0 6px 22px rgba(63,124,184,.55); }
+.v43-fab:active { transform: scale(.95); }
+
+/* 카테고리 선택 팝업 */
+.v43-cat-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 3000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.v43-cat-overlay.show {
+  opacity: 1;
+  pointer-events: all;
+}
+.v43-cat-sheet {
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  padding: 24px 20px 36px;
+  width: 100%;
+  max-width: 540px;
+  transform: translateY(100%);
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+}
+.v43-cat-overlay.show .v43-cat-sheet { transform: translateY(0); }
+.v43-cat-sheet h3 {
+  font-size: 17px;
+  font-weight: 800;
+  color: #1a2f45;
+  margin: 0 0 18px;
+  text-align: center;
+}
+.v43-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.v43-cat-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 14px 8px;
+  border-radius: 16px;
+  border: 2px solid #e8f0fa;
+  background: #f7faff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+  touch-action: manipulation;
+}
+.v43-cat-btn:hover, .v43-cat-btn:active {
+  border-color: #3f7cb8;
+  background: #eaf1fb;
+  transform: scale(.97);
+}
+.v43-cat-btn .ci { font-size: 22px; }
+.v43-cat-btn .cl { font-size: 12px; font-weight: 700; color: #33567d; }
+.v43-cat-cancel {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 13px;
+  border-radius: 14px;
+  border: none;
+  background: #f0f4f8;
+  font-size: 15px;
+  font-weight: 700;
+  color: #7a92a8;
+  cursor: pointer;
+  font-family: inherit;
+  touch-action: manipulation;
+}
+
+/* 날짜 그룹 헤더 */
+.v43-date-group { margin-top: 14px; margin-bottom: 4px; }
+.v43-date-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #7a92a8;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  padding: 4px 10px;
+  background: #f0f6ff;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+/* 탭 (달력/점검/비번/자가진단) */
+.v43-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.v43-tabs::-webkit-scrollbar { display: none; }
+.v43-tab {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 2px solid #dbe6f4;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  color: #4a6a8a;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+.v43-tab:hover { border-color: #3f7cb8; color: #3f7cb8; }
+.v43-tab.active { background: #3f7cb8; border-color: #3f7cb8; color: #fff; }
+
+/* 섹션 패널 */
+.v43-panel { display: none; }
+.v43-panel.active { display: block; }
+
+/* 검색바 */
+.v43-search-wrap { position: relative; margin-bottom: 6px; }
+.v43-search-icon {
+  position: absolute; left: 16px; top: 50%;
+  transform: translateY(-50%); font-size: 18px;
+  pointer-events: none; z-index: 1;
+}
+.v43-search {
+  width: 100%; box-sizing: border-box;
+  padding-left: 44px; height: 48px;
+  font-size: 15px; font-weight: 600;
+  border: 2.5px solid #3f7cb8;
+  border-radius: 14px;
+  background: #f0f6ff;
+  box-shadow: 0 2px 12px rgba(63,124,184,.15);
+  outline: none; font-family: inherit; color: #222;
+}
+.v43-search:focus { background: #fff; box-shadow: 0 2px 16px rgba(63,124,184,.25); }
+
+/* 빈 상태 */
+.v43-empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: #aab8c8;
+  font-size: 15px;
+}
+.v43-empty .ei { font-size: 40px; margin-bottom: 10px; }
+
+/* 상태 뱃지 */
+.st-done   { background:#e6f9f0; color:#1a7a4a; }
+.st-wip    { background:#fff7e0; color:#a07000; }
+.st-todo   { background:#fde8e8; color:#b52929; }
+.st-skip   { background:#f0f0f0; color:#888; }
+
+/* 🐞 디버그 패널 */
+.dbg-btn {
+  position: fixed; top: 10px; right: 10px; z-index: 9999;
+  background: rgba(255,80,80,.85); color: #fff;
+  border: none; border-radius: 8px; padding: 4px 10px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: inherit; touch-action: manipulation;
+}
+.dbg-panel {
+  position: fixed; top: 40px; right: 10px; z-index: 9998;
+  background: rgba(0,0,0,.9); color: #0f0; border-radius: 10px;
+  padding: 10px; width: 88vw; max-width: 400px;
+  max-height: 50vh; overflow: auto;
+  font-size: 11px; font-family: monospace; display: none;
+}
+.dbg-panel.show { display: block; }
+.dbg-copy {
+  background: #333; color: #fff; border: none; border-radius: 6px;
+  padding: 4px 10px; font-size: 11px; cursor: pointer; margin-bottom: 6px;
+  font-family: inherit;
+}
+
+/* 스케줄 알림 뱃지 */
+.v43-alert-dot {
+  display: inline-block; width: 8px; height: 8px;
+  background: #e74c3c; border-radius: 50%; margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* ===== 메모 목록형 ===== */
+.sticky-list-item {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:12px 16px; background:#fff;
+  border-bottom:1px solid #f0f6ff;
+  transition:background .12s;
+}
+.sticky-list-item:hover { background:#f7faff; }
+.sticky-list-item:first-child { border-radius:14px 14px 0 0; }
+.sticky-list-item:last-child { border-bottom:none; border-radius:0 0 14px 14px; }
+.sticky-list-wrap {
+  background:#fff; border-radius:14px;
+  border:1.5px solid #e8f0fa; overflow:hidden;
+}
+.sticky-list-color { width:4px; border-radius:4px; flex-shrink:0; align-self:stretch; min-height:40px; }
+.sticky-list-body { flex:1; min-width:0; }
+.sticky-list-title { font-size:14px; font-weight:700; color:#1a2f45; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sticky-list-content { font-size:13px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sticky-list-date { font-size:11px; color:#aab8c8; margin-top:4px; }
+.sticky-list-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+.sticky-list-btn {
+  width:32px; height:32px; border-radius:8px; border:1.5px solid #e8f0fa;
+  background:#f7faff; cursor:pointer; display:flex; align-items:center;
+  justify-content:center; font-size:14px; transition:all .12s;
+  touch-action:manipulation;
+}
+.sticky-list-btn:hover { background:#eaf1fb; border-color:#3f7cb8; }
+.memo-view-active { background:#3f7cb8 !important; border-color:#3f7cb8 !important; }
+.memo-view-active svg { stroke:#fff !important; }
+.memo-view-active circle { fill:#fff !important; }
+
+/* ===== 포스트잇 메모 ===== */
+.sticky-input-wrap {
+  background: #fff9c4;
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 3px 14px rgba(0,0,0,.1);
+  border: 1.5px solid #f0e060;
+}
+.sticky-input {
+  width: 100%; box-sizing: border-box;
+  min-height: 90px; border: none; background: transparent;
+  font-size: 15px; font-family: inherit; color: #333;
+  outline: none; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word;
+}
+.sticky-input:empty:before {
+  content: attr(data-placeholder);
+  color: #bba; pointer-events: none;
+}
+.sticky-photo-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(255,255,255,.6); border: 1.5px solid #e0d060;
+  font-size: 18px; cursor: pointer; transition: background .15s;
+  touch-action: manipulation;
+}
+.sticky-photo-btn:hover { background: rgba(255,255,255,.9); }
+.sticky-photo-preview-img {
+  position: relative; display: inline-block;
+}
+.sticky-photo-preview-img img {
+  width: 64px; height: 64px; object-fit: cover;
+  border-radius: 8px; border: 2px solid rgba(255,255,255,.8);
+}
+.sticky-photo-preview-img .rm-photo {
+  position: absolute; top: -6px; right: -6px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #e74c3c; color: #fff; border: none;
+  font-size: 11px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center; font-weight: 700;
+}
+.sticky-input-photos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+/* 입력창 안 인라인 이미지 */
+.sticky-input img {
+  max-width: 120px; max-height: 120px; border-radius: 8px;
+  vertical-align: middle; margin: 2px 4px;
+  border: 2px solid rgba(255,255,255,.8);
+}
+.sticky-input-row {
+  display: flex; gap: 8px; align-items: center;
+  margin-top: 8px; flex-wrap: wrap;
+}
+.sticky-title-inp {
+  flex: 1; min-width: 120px;
+  border: 1.5px solid #e0d060; border-radius: 8px;
+  padding: 6px 10px; font-size: 13px; font-family: inherit;
+  background: rgba(255,255,255,.6); outline: none; color: #444;
+}
+.sticky-title-inp:focus { background: #fff; }
+.sticky-colors { display: flex; gap: 5px; }
+.sc-btn {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2.5px solid transparent; cursor: pointer;
+  transition: all .15s; padding: 0;
+}
+.sc-btn.active { border-color: #555; transform: scale(1.2); }
+.sticky-save-btn {
+  padding: 7px 18px; border-radius: 10px;
+  background: #3f7cb8; color: #fff; border: none;
+  font-size: 14px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: background .15s;
+  touch-action: manipulation;
+}
+.sticky-save-btn:hover { background: #2563a8; }
+
+/* 포스트잇 그리드 */
+.sticky-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.sticky-note {
+  border-radius: 14px;
+  padding: 14px 13px 12px;
+  min-height: 120px;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 3px 10px rgba(0,0,0,.1), 2px 4px 0 rgba(0,0,0,.05);
+  transition: all .15s;
+  display: flex; flex-direction: column;
+  word-break: break-word;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.sticky-note:hover {
+  transform: translateY(-3px) rotate(0.5deg);
+  box-shadow: 0 6px 18px rgba(0,0,0,.14);
+}
+.sticky-note:active { transform: scale(.97); }
+/* 색상 */
+.sticky-note.yellow { background: #fff9c4; border: 1.5px solid #f0e060; }
+.sticky-note.blue   { background: #dbeafe; border: 1.5px solid #93c5fd; }
+.sticky-note.green  { background: #dcfce7; border: 1.5px solid #86efac; }
+.sticky-note.pink   { background: #fce7f3; border: 1.5px solid #f9a8d4; }
+.sticky-note.orange { background: #ffedd5; border: 1.5px solid #fdba74; }
+
+.sticky-note-title {
+  font-size: 13px; font-weight: 800; color: #222;
+  margin-bottom: 5px; line-height: 1.3;
+}
+.sticky-note-body {
+  font-size: 13px; color: #444; flex: 1;
+  line-height: 1.55; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+}
+.sticky-note-date {
+  font-size: 10px; color: #999; margin-top: 8px;
+  text-align: right;
+}
+.sn-card-btns {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-top: 8px;
+  border-top: 1px solid rgba(0,0,0,.07); padding-top: 7px;
+}
+.sn-btn-edit, .sn-btn-del, .sn-btn-del2 {
+  background: none; border: none; cursor: pointer;
+  font-size: 15px; padding: 3px 6px; border-radius: 7px;
+  transition: background .12s; touch-action: manipulation;
+}
+.sn-btn-edit:hover { background: rgba(0,0,0,.08); }
+.sn-btn-del:hover, .sn-btn-del2:hover { background: #fde8e8; }
+.sn-btn-save {
+  background: #3f7cb8; color: #fff; border: none;
+  border-radius: 8px; padding: 5px 12px; font-size: 13px;
+  font-weight: 700; cursor: pointer; font-family: inherit;
+  touch-action: manipulation;
+}
+.sn-btn-save:hover { background: #2563a8; }
+.sn-btn-cancel {
+  background: rgba(0,0,0,.07); border: none; border-radius: 8px;
+  padding: 5px 10px; font-size: 13px; font-weight: 600;
+  cursor: pointer; color: #666; font-family: inherit;
+  touch-action: manipulation;
+}
+.sn-btn-del2 {
+  font-size: 13px; font-weight: 600; color: #c0392b;
+  background: #fde8e8; border-radius: 8px; padding: 5px 10px;
+}
+.sn-edit-title {
+  width: 100%; box-sizing: border-box;
+  border: none; border-bottom: 1.5px solid rgba(0,0,0,.15);
+  background: transparent; font-size: 14px; font-weight: 700;
+  font-family: inherit; outline: none; padding: 3px 0;
+  margin-bottom: 7px; color: #222;
+}
+.sn-edit-body {
+  min-height: 60px; outline: none; font-size: 13px;
+  color: #444; line-height: 1.6; white-space: pre-wrap;
+  word-break: break-word;
+}
+.sn-edit-body:empty:before { content: '내용 입력…'; color: #bbb; }
+
+/* 수정 오버레이 */
+.sticky-edit-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  z-index: 4000; display: flex; align-items: center;
+  justify-content: center; opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+}
+.sticky-edit-overlay.show { opacity: 1; pointer-events: all; }
+.sticky-edit-modal {
+  background: #fff9c4; border-radius: 20px;
+  padding: 20px; width: 90%; max-width: 420px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  transform: scale(.92);
+  transition: transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.sticky-edit-overlay.show .sticky-edit-modal { transform: scale(1); }
+.sticky-edit-modal textarea {
+  width: 100%; box-sizing: border-box;
+  min-height: 160px; border: none; background: transparent;
+  font-size: 15px; font-family: inherit; color: #333;
+  resize: vertical; outline: none; line-height: 1.6;
+}
+.sticky-edit-modal input[type=text] {
+  width: 100%; box-sizing: border-box;
+  border: none; border-bottom: 1.5px solid #e0d060;
+  background: transparent; font-size: 15px; font-weight: 700;
+  font-family: inherit; color: #222; outline: none;
+  padding: 4px 0; margin-bottom: 10px;
+}
+.sticky-edit-btns {
+  display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px;
+}
+.sticky-edit-btns button {
+  padding: 8px 18px; border-radius: 10px; border: none;
+  font-size: 14px; font-weight: 700; font-family: inherit;
+  cursor: pointer; touch-action: manipulation;
+}
+.sticky-edit-colors { display: flex; gap: 6px; margin-bottom: 12px; }
+
+/* 반응형 */
+@media(max-width:480px){
+  .v43-cat-grid { grid-template-columns: repeat(3, 1fr); }
+  .v43-fab { right: 16px; bottom: 20px; width: 52px; height: 52px; font-size: 26px; }
+  .sticky-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
 </head>
 <body>
+
+<!-- 🐞 디버그 패널 -->
+<button class="dbg-btn" onclick="window.toggleDbg&&window.toggleDbg()">🐞</button>
+<button id="v43FabHeader" title="기록 추가" style="
+  position:fixed; right:0; top:62px;
+  width:56px; height:108px;
+  background:linear-gradient(170deg,#5b9bd5 0%,#2563a8 60%,#1a4a8a 100%);
+  color:#fff; border:none; border-radius:18px 0 0 18px;
+  cursor:pointer; z-index:9998;
+  box-shadow:-3px 0 24px rgba(37,99,168,.45),inset 1px 0 0 rgba(255,255,255,.15);
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:8px;
+  touch-action:manipulation; transition:width .2s,box-shadow .2s;
+">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+  <span style="font-size:11px;font-weight:700;letter-spacing:.5px;opacity:.9">추가</span>
+</button>
+<style>
+#v43FabHeader:hover{width:64px;box-shadow:-4px 0 30px rgba(37,99,168,.6);}
+#v43FabHeader:active{filter:brightness(.9);}
+</style>
+<div class="dbg-panel" id="dbgPanel">
+  <button class="dbg-copy" onclick="copyDbg()">📋 복사</button>
+  <div id="dbgLog"></div>
+</div>
+
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업무일지</h1><span class="sub">분야관리 · ⚡급한메모 · 자재 · 청소 · 달력 <b style="color:#9aa7b4" id="verBadge">v42</b></span></div>
+      <div class="brand">
+        <h1>업무일지</h1>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v43</b></span>
+      </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
-        <div class="nav-group nav-group-tools">
-          <button class="nav-btn nav-quick" id="btnQuickMemo" title="급한 메모 (Ctrl+Shift+M)">⚡ 급한메모</button>
-          <!-- 검색창으로 대체됨 -->
-        </div>
-        <div class="nav-group nav-group-navi">
-          <button class="nav-btn nav-back" id="btnBack" title="이전 화면으로 (5단계까지)" disabled>↶ 뒤로</button>
-          <a class="nav-btn nav-home" href="index.html">⌂ 홈</a>
-        </div>
+        <button class="nav-btn" id="btnGCal" title="구글 캘린더 연동" style="background:#fff;border:1.5px solid #dbe6f4;color:#444;display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+          <img src="https://www.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png" style="width:18px;height:18px;object-fit:cover;border-radius:3px"> 연동됨
+        </button>
+        <button class="nav-btn nav-back" id="btnBack" title="이전 화면" disabled>↶ 뒤로</button>
+        <a class="nav-btn" href="staff.html" target="_blank" style="background:#6366f1;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">👥 직원</a>
+        <a class="nav-btn" href="contacts.html" target="_blank" style="background:#0891b2;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">📋 연락처</a>
+        <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
       </div>
     </div>
-    <!-- 항상 보이는 전체 검색창 -->
-    <div style="padding:6px 0 6px">
-      <div style="position:relative">
-        <span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:20px;pointer-events:none;z-index:1">🔍</span>
-        <input type="text" id="globalSearchBar"
-          placeholder="어디서나 검색 — 업무·통화·메모·자재·청소·달력..."
-          style="width:100%;box-sizing:border-box;padding-left:50px;height:52px;font-size:16px;font-weight:600;border:none;border-radius:16px;background:#fff;box-shadow:0 2px 16px rgba(0,0,0,.12);outline:none;font-family:inherit;color:#222;letter-spacing:-0.2px">
+
+    <!-- 검색바 -->
+    <div style="padding:6px 0 8px">
+      <div class="v43-search-wrap">
+        <span class="v43-search-icon">🔍</span>
+        <input type="text" id="globalSearchBar" class="v43-search"
+          placeholder="업무·통화·메모·청소·회의·전달 검색…">
       </div>
     </div>
-    <div class="tabs-wrap">
-      <button class="tab-arrow left" id="tabArrowL" aria-label="이전 탭">‹</button>
-      <nav class="tabs" id="tabs">
-        <button data-tab="work" class="active">업무</button>
-        <button data-tab="material">📦 자재</button>
-        <button data-tab="cleaning">🧹 청소</button>
-        <button data-tab="calendar">달력</button>
-        <button data-tab="memo">메모</button>
-        <button data-tab="plan">오늘계획</button>
-        <button data-tab="password">🔐 비번</button>
-        <button data-tab="diag">자가진단</button>
-        <button data-tab="ai">AI</button>
-      </nav>
-      <button class="tab-arrow right" id="tabArrowR" aria-label="다음 탭">›</button>
+
+    <!-- 상단 탭: 달력 / 점검일지 / 자재 / 비번 / 자가진단 / AI -->
+    <div class="v43-tabs" id="v43Tabs">
+      <button class="v43-tab active" data-v43tab="main">📋 기록</button>
+      <button class="v43-tab" data-v43tab="memo">📝 메모</button>
+      <button class="v43-tab" data-v43tab="calendar">📅 달력</button>
+      <button class="v43-tab" data-v43tab="filelink">📋 점검일지</button>
+      <button class="v43-tab" data-v43tab="docs">📁 운영실무</button>
+      <button class="v43-tab" data-v43tab="common">🏢 임대공용</button>
+      <button class="v43-tab" data-v43tab="indiv">🚪 임대개별</button>
+      <button class="v43-tab" data-v43tab="material">📦 자재</button>
+      <button class="v43-tab" data-v43tab="password">🔐 비번</button>
+      <button class="v43-tab" data-v43tab="diag">🔧 진단</button>
+      <button class="v43-tab" data-v43tab="ai">🤖 AI</button>
+
     </div>
   </div>
 </header>
 
-<main class="wrap">
-  <!-- 📁 파일링크 -->
-  <section class="panel" id="panel-filelink">
-    <div class="card">
-      <div class="list-head">
-        <h2>📁 점검일지·관리폴더</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" data-add="filelink">➕ 파일 추가</button>
-          <button class="btn btn-ghost btn-sm" id="btnFileCatMgr">⚙ 카테고리 관리</button>
-        </div>
-      </div>
-      <!-- 검색창 맨 위 -->
-      <div style="position:relative;margin-bottom:14px">
-        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none">🔍</span>
+<main class="wrap" style="padding-bottom:100px">
 
-      </div>
-      <!-- 툴바: 검색 아래 한 줄 -->
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-        <select id="fileLinkViewSelect" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;cursor:pointer">
-          <option value="card">🎴 카드형</option>
-          <option value="list">📋 목록형</option>
-          <option value="tile">🏷 타일형</option>
-        </select>
-        <select id="fileTypeSelect" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;cursor:pointer">
-          <option value="all">📂 전체</option>
-          <option value="folder">📁 폴더만</option>
-          <option value="file">📄 파일만</option>
-        </select>
-        <select class="sort-select" data-sort="filelink" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;cursor:pointer">
-          <option value="name">🔤 이름순</option>
-          <option value="recent">🕐 최근 사용순</option>
-          <option value="created">📅 등록일순</option>
-        </select>
-      </div>
-      <!-- 숨겨진 요소 (JS 호환용) -->
-      <span class="view-mode-group" id="fileTypeFilter" style="display:none">
-        <button data-ft="all" class="active">전체</button>
-        <button data-ft="folder">폴더</button>
-        <button data-ft="file">파일</button>
-      </span>
-      <select id="fileCatFilter" style="display:none"></select>
-      <select id="fileSubFilter" style="display:none"></select>
-      <div id="fileCatJump" style="display:none"></div>
-      <div id="fileList"></div>
+  <!-- ===== 메인: 통합 기록 ===== -->
+  <div class="v43-panel active" id="v43-main">
+
+    <!-- 카테고리 드롭다운 필터 -->
+    <div style="display:flex;gap:8px;align-items:center;padding:10px 0 6px">
+      <select id="v43CatSelect" style="flex:1;height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;box-shadow:0 2px 12px rgba(63,124,184,.15)">
+        <option value="all">전체</option>
+        <option value="work" selected>🛠 업무</option>
+        <option value="call">📞 통화</option>
+        <option value="meeting">💼 회의</option>
+        <option value="deliver">📢 전달</option>
+        <option value="vacation">🌴 휴가</option>
+        <option value="expense">💰 지출</option>
+        <option value="schedule">📅 예정</option>
+      </select>
     </div>
-  </section>
+    <!-- cnt 요소 (JS 호환용) -->
+    <span id="cntAll" style="display:none">0</span>
+    <span id="cntWork" style="display:none">0</span>
+    <span id="cntCleaning" style="display:none">0</span>
+    <span id="cntMemo" style="display:none">0</span>
+    <span id="cntCall" style="display:none">0</span>
+    <span id="cntMeeting" style="display:none">0</span>
+    <span id="cntDeliver" style="display:none">0</span>
+    <span id="cntVacation" style="display:none">0</span>
+    <span id="cntExpense" style="display:none">0</span>
+    <span id="cntSchedule" style="display:none">0</span>
 
-  <!-- 🌐 사이트 -->
-  <section class="panel" id="panel-site">
-    <div class="card">
-      <div class="list-head">
-        <h2>🌐 사이트</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" data-add="site">➕ 사이트 추가</button>
-          <button class="btn btn-ghost btn-sm" id="btnSiteCatMgr">⚙ 카테고리 관리</button>
-        </div>
-      </div>
-      <p class="desc">자주 가는 인터넷 사이트를 카테고리별로 정리합니다.</p>
-      <div class="toolbar-row">
-        <span class="tb-label">보기</span>
-        <span class="view-mode-group" data-vm="site">
-          <button data-v="card">🎴 카드</button>
-          <button data-v="list">📋 목록</button>
-          <button data-v="tile">🏷 타일</button>
-        </span>
-        <span class="tb-label" style="margin-left:6px">정렬</span>
-        <select class="sort-select" data-sort="site">
-          <option value="name">이름순</option>
-          <option value="recent">최근 사용순</option>
-          <option value="created">등록일순</option>
-        </select>
-        <button class="tb-toggle" data-compact="site">컴팩트</button>
-        <button class="tb-toggle" data-collapse="site">전체 접기</button>
-      </div>
-      <div class="filt-row">
-        <select id="siteCatFilter"></select>
-      </div>
-      <div class="sub-chips" id="siteSubFilter"></div>
-
-      <div id="siteCatJump"></div>
-      <div id="siteList"></div>
+    <!-- 날짜 필터 2열 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <input type="date" id="v43From" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
+      <input type="date" id="v43To" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
     </div>
-  </section>
-
-  <!-- 업무 -->
-  <section class="panel active" id="panel-work">
-    <!-- v29: 업무 탭 서브탭 네비 -->
-    <nav class="subtabs" id="workSubtabs">
-      <button data-subtab="general" class="active">🏢 일반업무</button>
-      <button data-subtab="filelink">📁 점검일지</button>
-      <button data-subtab="call">📞 통화</button>
-      <button data-subtab="site">🌐 사이트</button>
-      <button data-subtab="vacation">🌴 휴가</button>
-      <button data-subtab="meeting">💼 회의</button>
-      <button data-subtab="deliver">📢 전달</button>
-      <button data-subtab="expense">💰 지출</button>
-      <button data-subtab="staff" data-extlink="staff.html">👥 직원관리</button>
-      <button data-subtab="contacts" data-extlink="contacts.html">📋 업체연락처</button>
-    </nav>
-
-    <!-- 일반 업무 (기본) -->
-    <div class="work-subpanel" data-subpanel="general">
-    <div class="card">
-      <div class="list-head">
-        <h2>업무</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" data-add="work">➕ 업무 추가</button>
-          <button class="btn btn-danger btn-sm" id="btnWkDelSelected" style="display:none">🗑 선택 삭제</button>
-          <button class="btn btn-ghost btn-sm" id="btnCopyExcel">📋 엑셀 복사</button>
-          <button class="btn btn-ghost btn-sm" id="btnBackup">⬇ 백업</button>
-        </div>
-      </div>
-      <div class="chips" id="statusChips"></div>
-      <div class="filt-row">
-        <input type="date" id="wkFrom" title="시작일">
-        <span style="align-self:center;color:var(--ink-soft);font-size:13px;flex:0 0 auto">~</span>
-        <input type="date" id="wkTo" title="종료일">
-        <button class="btn btn-ghost btn-sm" id="wkDateClear" style="flex:0 0 auto">기간 해제</button>
-        <select id="floorFilter"></select>
-        <select id="locFilter"></select>
-        <select id="fieldFilter"></select>
-      </div>
-
-      <div class="table-wrap">
-        <table class="rec"><thead><tr>
-          <th style="width:36px;text-align:center"><input type="checkbox" class="wk-allchk" title="전체선택" style="width:18px;height:18px;cursor:pointer"></th>
-          <th>날짜</th><th>완료</th><th>해당층</th><th>위치</th><th>업무내역</th><th>분야</th>
-          <th style="text-align:right">합계</th><th>지출</th><th style="width:40px"></th>
-        </tr></thead><tbody id="wkBody"></tbody><tfoot id="wkFoot"></tfoot></table>
-      </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px"><span id="wkCount"></span> · 행 클릭: 상세보기 · 체크박스 선택 후 [선택 삭제] 가능</p>
+    <div style="display:flex;align-items:center;margin-bottom:10px;gap:8px">
+      <button id="v43DateClear" style="height:34px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer;color:#7a92a8;font-weight:600">기간해제</button>
+      <span id="v43Count" style="font-size:12px;color:#aab8c8;margin-left:auto"></span>
     </div>
+
+    <!-- 통합 목록 -->
+    <div class="v43-list" id="v43List">
+      <div class="v43-empty"><div class="ei">📋</div>데이터를 불러오는 중…</div>
     </div>
-    <!-- 다른 서브패널들은 JS로 동적 이동/표시 -->
-    <div id="workSubpanelHost"></div>
-  </section>
+  </div>
 
-  <!-- 오늘계획 -->
-  <section class="panel" id="panel-plan">
-    <div class="card">
-      <h2 style="margin-bottom:4px">오늘계획</h2>
-      <p class="desc">체크하면 완료 목록으로 이동하고, 업무일지에도 자동 기록됩니다.</p>
-      <div class="plan-add">
-        <input type="date" id="planDate" class="dt">
-        <input type="text" id="planInput" placeholder="할 일을 입력하고 Enter">
-        <button class="btn btn-primary" id="planAdd">추가</button>
-      </div>
-      <div class="filt-row">
-        <input type="date" id="planFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="planTo" title="종료일">
-        <button class="btn btn-ghost btn-sm" id="planRangeClear" style="flex:0 0 auto">기간 해제</button>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-
-        <button class="btn btn-ghost btn-sm" id="btnPlanExcel">📋 엑셀 복사</button>
-      </div>
-      <div id="planList"></div>
-    </div>
-  </section>
-
-  <!-- 메모 -->
-  <section class="panel" id="panel-memo">
-    <div class="card">
-      <div class="list-head"><h2>메모</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" data-add="memo">➕ 메모 추가</button>
-          <button class="btn btn-ghost btn-sm" id="btnMemoExcel">📋 엑셀 복사</button>
-        </div>
-      </div>
-      <div class="filt-row">
-        <input type="date" id="memoFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="memoTo" title="종료일">
-        <button class="btn btn-ghost btn-sm" id="memoRangeClear" style="flex:0 0 auto">기간 해제</button>
-      </div>
-
-      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span class="view-toggle" data-vt="memo"><button data-v="card">카드형</button><button data-v="list">목록형</button></span></div>
-      <div id="memoList"></div>
-    </div>
-  </section>
-
-  <!-- 통화 -->
-  <section class="panel" id="panel-call">
-    <div class="card">
-      <div class="list-head"><h2>통화 기록</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" data-add="call">➕ 통화 추가</button>
-          <button class="btn btn-ghost btn-sm" id="btnCallExcel">📋 엑셀 복사</button>
-        </div>
-      </div>
-      <div class="chips" id="callDirChips"></div>
-      <div class="filt-row">
-        <input type="date" id="callFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="callTo" title="종료일">
-        <button class="btn btn-ghost btn-sm" id="callRangeClear" style="flex:0 0 auto">기간 해제</button>
-      </div>
-
-      <div class="table-wrap">
-        <table class="rec"><thead><tr>
-          <th>날짜</th><th>시간</th><th>구분</th><th>상대</th><th>전화번호</th><th>통화내용</th><th>조치</th><th title="후속조치 완료 여부">조치완료</th><th></th>
-        </tr></thead><tbody id="callBody"></tbody></table>
-      </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">선택한 기간의 통화만 복사됩니다 · 순서: 날짜·구분·상대·전화번호·통화내용·조치</p>
-    </div>
-  </section>
-
-  <!-- 휴가 -->
-  <section class="panel" id="panel-vacation">
-    <div class="card">
-      <div class="list-head"><h2>휴가</h2><button class="btn btn-primary btn-sm" data-add="vacation">➕ 휴가 추가</button></div>
-      <p class="desc">등록한 휴가는 달력에 바로 표시됩니다.</p>
-
-      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span class="view-toggle" data-vt="vacation"><button data-v="card">카드형</button><button data-v="list">목록형</button></span></div>
-      <div id="vacList"></div>
-    </div>
-  </section>
-
-  <!-- 회의메모 -->
-  <section class="panel" id="panel-meeting">
-    <div class="card">
-      <div class="list-head"><h2>회의메모 (주간회의)</h2><button class="btn btn-primary btn-sm" data-add="meeting">➕ 회의 추가</button></div>
-
-      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span class="view-toggle" data-vt="meeting"><button data-v="card">카드형</button><button data-v="list">목록형</button></span></div>
-      <div id="meetList"></div>
-    </div>
-  </section>
-
-  <!-- 전달사항 -->
-  <section class="panel" id="panel-deliver">
-    <div class="card">
-      <div class="list-head"><h2>전달사항 (내가 전달할 내용)</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" data-add="deliver">➕ 전달 추가</button>
-          <button class="btn btn-ghost btn-sm" id="btnDelExcel">📋 엑셀 복사</button>
-        </div>
-      </div>
-      <p class="desc">회의 때 전달할 내용을 따로 모아 관리합니다. <b>주간전달</b>은 정기 주간회의용, <b>즉시전달</b>은 빠르게 전달해야 할 내용입니다.</p>
-      <div class="chips" id="delDtypeChips"></div>
-      <div class="filt-row">
-        <input type="date" id="delFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="delTo" title="종료일">
-        <button class="btn btn-ghost btn-sm" id="delRangeClear" style="flex:0 0 auto">기간 해제</button>
-      </div>
-
-      <div class="table-wrap">
-        <table class="rec"><thead><tr>
-          <th>날짜</th><th>전달종류</th><th>제목</th><th>전달할 내용</th><th title="전달 완료 여부">전달완료</th><th></th>
-        </tr></thead><tbody id="delBody"></tbody></table>
-      </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">선택한 기간의 전달사항만 복사됩니다 · 순서: 날짜·전달종류·제목·내용</p>
-    </div>
-  </section>
-
-  <!-- 달력 -->
-  <section class="panel" id="panel-calendar">
-    <div class="card">
+  <!-- ===== 달력 패널 (기존 HTML 재활용) ===== -->
+  <div class="v43-panel" id="v43-calendar">
+    <div class="card" style="margin-top:14px">
       <div class="cal-head">
         <span class="mo" id="calMonth"></span>
         <div class="cal-nav">
@@ -345,7 +750,6 @@
         <span><span class="lg-dot" style="background:#0891b2"></span>예정</span>
         <span>🌴 휴가</span>
       </div>
-      <!-- v37: 달력 종류별 필터 -->
       <div class="cal-filter" id="calFilter">
         <span class="cf-label">표시:</span>
         <button class="cf-btn active" data-calf="all">🔵 전체</button>
@@ -364,259 +768,771 @@
       <div id="calYearGrid" style="display:none;overflow-x:auto"></div>
       <div class="day-detail" id="dayDetail"></div>
     </div>
-  </section>
+  </div>
 
-  <!-- 📦 자재 -->
-  <section class="panel" id="panel-material">
-    <div class="card">
-      <div class="list-head">
-        <h2>📦 자재 관리</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" id="btnAddStock">📥 입출고 추가</button>
-          <button class="btn btn-ghost btn-sm" id="btnAddItem">➕ 품목 등록</button>
-          <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="서브원 등 쇼핑몰 구매내역 엑셀을 올리면 자동으로 품목 등록 + 입고 처리됩니다">
-            📤 구매내역 엑셀 업로드
-            <input type="file" id="matFileUpload" accept=".xlsx,.xls,.csv" style="display:none">
+  <!-- ===== 메모 포스트잇 패널 ===== -->
+  <div class="v43-panel" id="v43-memo">
+    <div style="margin-top:14px">
+
+      <!-- 입력창 -->
+      <div class="sticky-input-wrap" id="stickyInputWrap">
+        <!-- 사진 미리보기 -->
+        <input type="text" id="stickyTitle" placeholder="제목" class="sticky-title-inp" style="width:100%;box-sizing:border-box;margin-bottom:8px;border:none;border-bottom:1.5px solid rgba(0,0,0,.12);background:transparent;font-size:15px;font-weight:700;font-family:inherit;outline:none;padding:4px 0;color:#222">
+        <div id="stickyPhotoPreview" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+        <!-- contenteditable 입력창 (사진 붙여넣기 지원) -->
+        <div id="stickyInput" class="sticky-input" contenteditable="true"
+          data-placeholder="빠르게 메모하세요… Ctrl+V로 사진 붙여넣기, Ctrl+Enter로 저장"></div>
+        <div class="sticky-input-row">
+          <div class="sticky-colors">
+            <button class="sc-btn active" data-color="yellow" style="background:#fff9c4" title="노랑"></button>
+            <button class="sc-btn" data-color="blue" style="background:#dbeafe" title="파랑"></button>
+            <button class="sc-btn" data-color="green" style="background:#dcfce7" title="초록"></button>
+            <button class="sc-btn" data-color="pink" style="background:#fce7f3" title="핑크"></button>
+            <button class="sc-btn" data-color="orange" style="background:#ffedd5" title="주황"></button>
+          </div>
+        </div>
+        <div class="sticky-input-row" style="margin-top:6px">
+          <!-- 사진 버튼들 -->
+          <label class="sticky-photo-btn" title="카메라로 촬영">
+            📷
+            <input type="file" id="stickyCam" accept="image/*" capture="environment" style="display:none">
           </label>
-          <button class="btn btn-ghost btn-sm" id="btnAIExtract" title="엑셀 내용을 텍스트로 붙여넣어 AI가 자동 추출">🤖 AI 텍스트 추출</button>
-          <button class="btn btn-ghost btn-sm" id="btnMatExcel">📋 엑셀 복사</button>
-        </div>
-      </div>
-      <p class="desc">품목을 한 번 등록해두면, 입출고를 기록할 때마다 자동으로 재고가 계산됩니다. 안전재고 미달 품목은 빨갛게 표시돼요.</p>
-
-
-
-      <div id="matMonthlySummary"></div>
-
-      <div class="mat-tabs">
-        <button data-mattab="stock" class="active">📋 품목·재고</button>
-        <button data-mattab="tx">📥 입출고 내역</button>
-      </div>
-
-      <div class="filt-row">
-        <select id="matFieldFilter"></select>
-        <select id="matRecFilter"></select>
-        <button class="btn btn-ghost btn-sm" id="matLowToggle" style="flex:0 0 auto">⚠ 부족만</button>
-      </div>
-
-      <div id="matStockPanel">
-        <div class="table-wrap">
-          <table class="rec"><thead><tr>
-            <th>상품ID</th><th>품목명/규격</th><th>단위</th><th>분야</th><th>제조원</th><th>거래처</th>
-            <th style="text-align:right">단가</th><th style="text-align:right">재고</th><th>주기</th><th></th>
-          </tr></thead><tbody id="matStockBody"></tbody></table>
+          <label class="sticky-photo-btn" title="파일에서 선택">
+            🖼
+            <input type="file" id="stickyFile" accept="image/*" multiple style="display:none">
+          </label>
+          <span style="font-size:11px;color:#bba;flex:1">Ctrl+V 붙여넣기 가능</span>
+          <button class="sticky-save-btn" id="stickySave">저장</button>
         </div>
       </div>
 
-      <div id="matItemPanel" style="display:none"></div>
-
-      <div id="matTxPanel" style="display:none">
-        <div class="table-wrap">
-          <table class="rec"><thead><tr>
-            <th>거래일</th><th>구분</th><th>품목/규격</th><th>단위</th>
-            <th style="text-align:right">수량</th><th style="text-align:right">단가</th><th style="text-align:right">금액</th>
-            <th>거래처</th><th>사용처/메모</th><th></th>
-          </tr></thead><tbody id="matTxBody"></tbody></table>
+      <!-- 검색 + 보기전환 -->
+      <div class="v43-search-wrap" style="margin:10px 0 6px">
+        <span class="v43-search-icon">🔍</span>
+        <input type="text" id="stickySearch" class="v43-search" placeholder="메모 검색…">
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span id="stickyCount" style="font-size:12px;color:#aab8c8"></span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button id="memoViewCard" style="width:36px;height:36px;border-radius:10px;border:1.5px solid #dbe6f4;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s" title="카드형">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3f7cb8" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+          <button id="memoViewList" style="width:36px;height:36px;border-radius:10px;border:1.5px solid #dbe6f4;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s" title="목록형">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3f7cb8" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="#3f7cb8" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="#3f7cb8" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="#3f7cb8" stroke="none"/></svg>
+          </button>
         </div>
-        <p id="matTxSummary" style="font-size:13px;color:var(--ink-soft);margin-top:8px;text-align:right"></p>
+      </div>
+
+      <!-- 포스트잇 그리드 / 목록 -->
+      <div class="sticky-grid" id="stickyGrid">
+        <div class="v43-empty"><div class="ei">📝</div>메모를 추가해보세요!</div>
+      </div>
+      <div id="stickyList" style="display:none;flex-direction:column;gap:0"></div>
+    </div>
+  </div>
+
+
+  <!-- ===== 점검일지 패널 (문서 탭과 동일 구조) ===== -->
+  <div class="v43-panel" id="v43-filelink">
+    <div style="margin-top:14px">
+
+      <!-- 툴바 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <select id="inspTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="inspYearFilter" style="height:40px;padding:0 10px;border:2px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="inspMonthFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <button id="inspYearMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#8e44ad;border:1.5px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
+        <button id="inspCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
+        <button id="inspAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
+      </div>
+
+      <!-- 건수 -->
+      <div style="margin-bottom:8px">
+        <span id="inspCount" style="font-size:12px;color:#aab8c8"></span>
+      </div>
+
+      <!-- 목록 테이블 -->
+      <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+          <thead>
+            <tr style="background:#f0f6ff;border-bottom:1.5px solid #e8f0fa">
+              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left;width:70px">월</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left;width:80px">종류</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left">파일명/내용</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:60px">열기</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:50px"></th>
+            </tr>
+          </thead>
+          <tbody id="inspBody">
+            <tr><td colspan="5" style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">➕ 추가 버튼으로 점검일지를 등록해보세요</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- 🧹 청소 -->
-  <section class="panel" id="panel-cleaning">
-    <div class="card">
-      <div class="list-head">
-        <h2>🧹 청소일지 (미화반)</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" id="btnAddCleaning">➕ 일지 추가</button>
-          <button class="btn btn-ghost btn-sm" id="btnCleanStaffMgr">⚙ 명단·반장 관리</button>
-        </div>
-      </div>
-      <p class="desc">청소반장이 작성한 일지를 사진으로 올리면 AI가 자동 분석합니다. 휴지·핸드타월 입출고는 자재 탭으로 자동 연동돼요.</p>
-
-
-      <div id="clnStats"></div>
-
-      <!-- v35: 청소 전용 달력 -->
-      <div class="clean-cal-wrap">
-        <div class="clean-cal-head">
-          <button class="cc-nav" id="cleanCalPrev">‹</button>
-          <span class="cc-title" id="cleanCalTitle"></span>
-          <button class="cc-nav" id="cleanCalNext">›</button>
-        </div>
-        <div class="clean-cal-grid" id="cleanCalGrid"></div>
-      </div>
-
-      <div class="filt-row" style="margin-top:10px">
-        <input type="date" id="clnFrom" title="시작일"><span class="rng-sep">~</span><input type="date" id="clnTo" title="종료일">
-        <button class="btn btn-ghost btn-sm" id="clnRangeClear" style="flex:0 0 auto">기간 해제</button>
-      </div>
-      <div id="clnList"></div>
-    </div>
-  </section>
-
-  <!-- 💰 지출 -->
-  <section class="panel" id="panel-expense">
-    <div class="card">
-      <div class="list-head">
-        <h2>💰 지출 / 세금계산서</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" id="btnAddExpense">➕ 지출 추가</button>
-          <button class="btn btn-ghost btn-sm" id="btnExpExcel">📋 엑셀 복사</button>
-        </div>
-      </div>
-      <p class="desc">개인 지출(품의서용)과 세금계산서 발급 내역(확인용)을 따로 관리합니다. 달력에서 날짜별로도 확인할 수 있어요.</p>
-
-
-
-      <!-- 탭 + 월필터 한 줄 -->
-      <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-        <button data-exptab="personal" class="mat-tab active" style="padding:8px 18px;border-radius:10px;border:2px solid var(--primary);background:var(--primary);color:#fff;font-size:14px;font-weight:700;cursor:pointer">💸 개인 지출</button>
-        <button data-exptab="tax" class="mat-tab" style="padding:8px 18px;border-radius:10px;border:2px solid var(--line);background:#fff;color:var(--ink);font-size:14px;font-weight:700;cursor:pointer">📃 세금계산서</button>
-        <select id="expMonthFilter" style="margin-left:auto;height:38px;padding:0 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;font-weight:600;background:#fff;cursor:pointer;min-width:120px"></select>
-      </div>
-
-      <div id="expStats"></div>
-
-      <div class="table-wrap">
-        <table class="rec" id="expTable"><thead id="expThead"><tr>
-          <th style="text-align:right;width:45px">NO</th>
-          <th>지출내역</th>
-          <th style="text-align:right">금액</th>
-          <th>업체명</th>
-          <th style="width:100px">날짜</th>
-          <th>비고</th>
-          <th style="width:40px"></th>
-        </tr></thead><tbody id="expBody"></tbody></table>
-      </div>
-      <p id="expTotal" style="font-size:14px;color:var(--ink);margin-top:8px;text-align:right"></p>
-    </div>
-  </section>
-
-  <!-- 🔐 비밀번호 -->
-  <section class="panel" id="panel-password">
-    <div class="card">
-      <div class="list-head">
-        <h2>🔐 비밀번호</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap" id="pwHeaderBtns"></div>
-      </div>
-      <div id="pwLockScreen"></div>
-      <div id="pwMainArea" style="display:none">
-        <p class="desc">사이트별 계정·비밀번호를 안전하게 보관합니다. 모든 비밀 데이터는 마스터 비번으로 암호화되어 저장됩니다.</p>
-        <div class="toolbar-row">
-          <span class="tb-label">보기</span>
-          <span class="view-mode-group" data-vm="password">
-            <button data-v="card">🎴 카드</button>
-            <button data-v="list">📋 목록</button>
-          </span>
-          <span class="tb-label" style="margin-left:6px">정렬</span>
-          <select class="sort-select" data-sort="password">
-            <option value="name">이름순</option>
-            <option value="created">등록일순</option>
+  <!-- 점검일지 추가/수정 모달 -->
+  <div class="v43-cat-overlay" id="inspModal">
+    <div class="v43-cat-sheet" style="padding-bottom:28px">
+      <h3 id="inspModalTitle">점검일지 추가</h3>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
+          <select id="inspModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;color:#1a2f45;outline:none">
+            <option value="일점검">일점검</option>
+            <option value="전기">전기</option>
+            <option value="소방">소방</option>
+            <option value="기계">기계</option>
+            <option value="위생">위생</option>
+            <option value="관리비">관리비</option>
+            <option value="기타">기타</option>
           </select>
-          <button class="tb-toggle" data-collapse="password">전체 접기</button>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월 (예: 2026-06)</label>
+          <select id="inspModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <div style="display:flex;gap:8px;margin-bottom:4px">
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="inspModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="inspModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
+            </label>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
+          <input type="text" id="inspModalName" placeholder="예: 6월 전기 안전점검" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일/폴더 경로</label>
+          <input type="text" id="inspModalPath" placeholder="예: D:\서희타워 관련\점검일지6-06" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">메모 (선택)</label>
+          <input type="text" id="inspModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button id="inspModalCancel" class="v43-cat-cancel" style="margin-top:0;flex:1">취소</button>
+        <button id="inspModalDel" style="flex:1;padding:13px;border-radius:14px;border:none;background:#fde8e8;color:#b52929;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
+        <button id="inspModalSave" style="flex:1;padding:13px;border-radius:14px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
+      </div>
+    </div>
+  </div>
+
+    <!-- ===== 운영실무 패널 (문서 탭) ===== -->
+  <div class="v43-panel" id="v43-docs">
+    <div style="margin-top:14px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <select id="docsTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="docsYearFilter" style="height:40px;padding:0 10px;border:2px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="docsMonthFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <button id="docsYearMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#8e44ad;border:1.5px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
+        <button id="docsMonthMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#27ae60;border:1.5px solid #27ae60;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
+        <button id="docsCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
+        <button id="docsAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
+      </div>
+      <div style="margin-bottom:8px"><span id="docsCount" style="font-size:12px;color:#aab8c8"></span></div>
+      <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+          <thead><tr style="background:#f0f6ff;border-bottom:1.5px solid #e8f0fa">
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left;width:70px">월</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left;width:100px">종류</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left">파일명/내용</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:60px">열기</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:50px"></th>
+          </tr></thead>
+          <tbody id="docsBody"><tr><td colspan="5" style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">➕ 추가 버튼으로 문서를 등록해보세요</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 운영실무 추가/수정 모달 -->
+  <div class="v43-cat-overlay" id="docsModal">
+    <div class="v43-cat-sheet" style="padding-bottom:28px">
+      <h3 id="docsModalTitle">운영실무 추가</h3>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
+          <select id="docsModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월</label>
+          <select id="docsModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <div style="display:flex;gap:8px;margin-bottom:4px">
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="docsModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="docsModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
+            </label>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
+          <input type="text" id="docsModalName" placeholder="예: 6월 엘리베이터 품의서" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일/폴더 경로</label>
+          <input type="text" id="docsModalPath" placeholder="예: D:\서희타워 관련\품의서6-06" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">메모 (선택)</label>
+          <input type="text" id="docsModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button id="docsModalCancel" class="v43-cat-cancel" style="margin-top:0;flex:1">취소</button>
+        <button id="docsModalDel" style="flex:1;padding:13px;border-radius:14px;border:none;background:#fde8e8;color:#b52929;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
+        <button id="docsModalSave" style="flex:1;padding:13px;border-radius:14px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 임대공용 패널 ===== -->
+  <div class="v43-panel" id="v43-common">
+    <div style="margin-top:14px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <select id="commonTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="commonYearFilter" style="height:40px;padding:0 10px;border:2px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="commonMonthFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <button id="commonYearMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#8e44ad;border:1.5px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
+        <button id="commonMonthMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#27ae60;border:1.5px solid #27ae60;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
+        <button id="commonCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
+        <button id="commonAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
+      </div>
+      <div style="margin-bottom:8px"><span id="commonCount" style="font-size:12px;color:#aab8c8"></span></div>
+      <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+          <thead><tr style="background:#f0f6ff;border-bottom:1.5px solid #e8f0fa">
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left;width:70px">월</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left;width:90px">종류</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left">파일명/내용</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:60px">열기</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:50px"></th>
+          </tr></thead>
+          <tbody id="commonBody"><tr><td colspan="5" style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">➕ 추가 버튼으로 문서를 등록해보세요</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 임대개별 패널 ===== -->
+  <div class="v43-panel" id="v43-indiv">
+    <div style="margin-top:14px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <select id="indivTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <button id="indivCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
+        <button id="indivAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
+      </div>
+      <div style="margin-bottom:8px"><span id="indivCount" style="font-size:12px;color:#aab8c8"></span></div>
+      <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+          <thead><tr style="background:#f0f6ff;border-bottom:1.5px solid #e8f0fa">
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left;width:60px">층</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left;width:60px">호수</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left;width:100px">종류</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left">파일명/내용</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:60px">열기</th>
+            <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:50px"></th>
+          </tr></thead>
+          <tbody id="indivBody"><tr><td colspan="6" style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">➕ 추가 버튼으로 문서를 등록해보세요</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 임대공용 추가/수정 모달 -->
+  <div class="v43-cat-overlay" id="commonModal">
+    <div class="v43-cat-sheet" style="padding-bottom:28px">
+      <h3 id="commonModalTitle">임대공용 추가</h3>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
+          <select id="commonModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월 (예: 2026-06)</label>
+          <select id="commonModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <div style="display:flex;gap:8px;margin-bottom:4px">
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="commonModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="commonModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
+            </label>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
+          <input type="text" id="commonModalName" placeholder="예: 건물 건축물대장" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일/폴더 경로</label>
+          <input type="text" id="commonModalPath" placeholder="예: D:\서희타워 관련\임대공용" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">메모 (선택)</label>
+          <input type="text" id="commonModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button id="commonModalCancel" class="v43-cat-cancel" style="margin-top:0;flex:1">취소</button>
+        <button id="commonModalDel" style="flex:1;padding:13px;border-radius:14px;border:none;background:#fde8e8;color:#b52929;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
+        <button id="commonModalSave" style="flex:1;padding:13px;border-radius:14px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 임대개별 추가/수정 모달 -->
+  <div class="v43-cat-overlay" id="indivModal">
+    <div class="v43-cat-sheet" style="padding-bottom:28px">
+      <h3 id="indivModalTitle">임대개별 추가</h3>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">층</label>
+            <select id="indivModalFloor" style="width:100%;height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+              <option value="">층 선택</option>
+          <option value="B1">B1</option>
+          <option value="1F">1F</option>
+          <option value="2F">2F</option>
+          <option value="3F">3F</option>
+          <option value="4F">4F</option>
+          <option value="5F">5F</option>
+          <option value="6F">6F</option>
+          <option value="7F">7F</option>
+          <option value="8F">8F</option>
+          <option value="9F">9F</option>
+          <option value="10F">10F</option>
+          <option value="11F">11F</option>
+          <option value="12F">12F</option>
+          <option value="13F">13F</option>
+          <option value="14F">14F</option>
+          <option value="15F">15F</option>
+          <option value="16F">16F</option>
+          <option value="17F">17F</option>
+          <option value="18F">18F</option>
+          <option value="19F">19F</option>
+          <option value="20F">20F</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">호수</label>
+            <input type="text" id="indivModalUnit" placeholder="예: 501" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
+          <select id="indivModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월</label>
+          <select id="indivModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <div style="display:flex;gap:8px;margin-bottom:4px">
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="indivModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="indivModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
+            </label>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
+          <input type="text" id="indivModalName" placeholder="예: 502호 임대차계약서" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일/폴더 경로</label>
+          <input type="text" id="indivModalPath" placeholder="예: D:\서희타워 관련\임대개별층ł호" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">메모 (선택)</label>
+          <input type="text" id="indivModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button id="indivModalCancel" class="v43-cat-cancel" style="margin-top:0;flex:1">취소</button>
+        <button id="indivModalDel" style="flex:1;padding:13px;border-radius:14px;border:none;background:#fde8e8;color:#b52929;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
+        <button id="indivModalSave" style="flex:1;padding:13px;border-radius:14px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 종류 관리 모달 (공통) -->
+  <div class="v43-cat-overlay" id="catMgrModal">
+    <div class="v43-cat-sheet" style="padding-bottom:28px">
+      <h3 id="catMgrModalTitle">종류 관리</h3>
+      <div id="catMgrList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:300px;overflow:auto"></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input type="text" id="catMgrNewName" placeholder="새 종류 이름" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        <button id="catMgrAddBtn" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+      </div>
+      <button id="catMgrClose" class="v43-cat-cancel" style="margin-top:0">닫기</button>
+    </div>
+  </div>
+
+  <!-- 월 관리 모달 (공통) -->
+  <div class="v43-cat-overlay" id="monthMgrModal">
+    <div class="v43-cat-sheet" style="padding-bottom:28px">
+      <h3 id="monthMgrTitle">월 관리</h3>
+      <div id="monthMgrList" style="max-height:280px;overflow:auto;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input type="month" id="monthMgrNewVal" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        <button id="monthMgrAddBtn" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+      </div>
+      <button id="monthMgrClose" class="v43-cat-cancel" style="margin-top:0">닫기</button>
+    </div>
+  </div>
+
+  <!-- 년 관리 모달 (공통) -->
+  <div class="v43-cat-overlay" id="yearMgrModal">
+    <div class="v43-cat-sheet" style="padding-bottom:28px">
+      <h3 id="yearMgrTitle">년 관리</h3>
+      <div id="yearMgrList" style="max-height:280px;overflow:auto;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input type="number" id="yearMgrNewVal" placeholder="예: 2026" min="2020" max="2099" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        <button id="yearMgrAddBtn" style="height:44px;padding:0 18px;background:#8e44ad;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+      </div>
+      <button id="yearMgrClose" class="v43-cat-cancel" style="margin-top:0">닫기</button>
+    </div>
+  </div>
+
+  <!-- ===== 자재 패널 ===== -->
+  <div class="v43-panel" id="v43-material">
+    <section class="panel active" id="panel-material" style="margin-top:14px">
+      <div class="card">
+        <div class="list-head">
+          <h2>📦 자재 관리</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" id="btnAddStock">📥 입출고 추가</button>
+            <button class="btn btn-ghost btn-sm" id="btnAddItem">➕ 품목 등록</button>
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer">
+              📤 구매내역 엑셀 업로드
+              <input type="file" id="matFileUpload" accept=".xlsx,.xls,.csv" style="display:none">
+            </label>
+            <button class="btn btn-ghost btn-sm" id="btnAIExtract">🤖 AI 텍스트 추출</button>
+            <button class="btn btn-ghost btn-sm" id="btnMatExcel">📋 엑셀 복사</button>
+          </div>
+        </div>
+        <p class="desc">품목을 한 번 등록해두면, 입출고를 기록할 때마다 자동으로 재고가 계산됩니다.</p>
+        <div id="matMonthlySummary"></div>
+        <div class="mat-tabs">
+          <button data-mattab="stock" class="active">📋 품목·재고</button>
+          <button data-mattab="tx">📥 입출고 내역</button>
         </div>
         <div class="filt-row">
-          <select id="pwCatFilter"></select>
+          <select id="matFieldFilter"></select>
+          <select id="matRecFilter"></select>
+          <button class="btn btn-ghost btn-sm" id="matLowToggle" style="flex:0 0 auto">⚠ 부족만</button>
         </div>
-        <div class="sub-chips" id="pwSubFilter"></div>
-        <input type="text" id="pwSearch" class="search" placeholder="🔍 검색 — 사이트명·아이디·메모">
-        <div id="pwCatJump"></div>
-        <div id="pwList"></div>
+        <div id="matStockPanel">
+          <div class="table-wrap">
+            <table class="rec"><thead><tr>
+              <th>상품ID</th><th>품목명/규격</th><th>단위</th><th>분야</th><th>제조원</th><th>거래처</th>
+              <th style="text-align:right">단가</th><th style="text-align:right">재고</th><th>주기</th><th></th>
+            </tr></thead><tbody id="matStockBody"></tbody></table>
+          </div>
+        </div>
+        <div id="matItemPanel" style="display:none"></div>
+        <div id="matTxPanel" style="display:none">
+          <div class="table-wrap">
+            <table class="rec"><thead><tr>
+              <th>거래일</th><th>구분</th><th>품목/규격</th><th>단위</th>
+              <th style="text-align:right">수량</th><th style="text-align:right">단가</th><th style="text-align:right">금액</th>
+              <th>거래처</th><th>사용처/메모</th><th></th>
+            </tr></thead><tbody id="matTxBody"></tbody></table>
+          </div>
+          <p id="matTxSummary" style="font-size:13px;color:var(--ink-soft);margin-top:8px;text-align:right"></p>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 
-  <!-- 자가진단 -->
-  <section class="panel" id="panel-diag">
-    <div class="card">
-      <h2 style="margin-bottom:4px">자가진단 · 데이터 관리</h2>
-      <p class="desc">연결 상태와 저장 현황을 확인하고, 전체 데이터를 백업·복구하거나 CSV로 내보냅니다.</p>
-      <div id="diagStatus"></div>
-      <div class="sec-head">파일링크 사용법</div>
-      <div style="background:var(--primary-soft);border-radius:11px;padding:12px 14px;font-size:13px;line-height:1.7;color:#33567d">
-        💡 <b>최초 1회 설정 필요</b> — 아래 내용을 메모장에 붙여넣고 <code>localfile.reg</code>로 저장 후 더블클릭하세요.<br>
-        <pre style="background:#fff;padding:8px 10px;border-radius:8px;margin-top:6px;font-size:12px;overflow-x:auto;color:#333">Windows Registry Editor Version 5.00
 
-[HKEY_CLASSES_ROOT\localfile]
-"URL Protocol"=""
-@="URL:Local File Protocol"
+  <!-- ===== 비번 패널 ===== -->
+  <div class="v43-panel" id="v43-password">
+    <section class="panel active" id="panel-password" style="margin-top:14px">
+      <div class="card">
+        <div class="list-head">
+          <h2>🔐 비밀번호</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="pwHeaderBtns"></div>
+        </div>
+        <div id="pwLockScreen"></div>
+        <div id="pwMainArea" style="display:none">
+          <!-- 숨김 호환 요소 -->
+          <select id="pwCatFilter" style="display:none"></select>
+          <select id="pwSubFilter" style="display:none"></select>
+          <div id="pwCatJump" style="display:none"></div>
+          <div id="pwList"></div>
+        </div>
+      </div>
+    </section>
+  </div>
 
-[HKEY_CLASSES_ROOT\localfile\shell\open\command]
-@="cmd /c start \"\" \"%1\""</pre>
-        등록 후, 업무·메모·회의·전달 항목에 파일 또는 폴더 경로를 입력하면 클릭 한 번으로 열 수 있습니다.<br>
-        예시: <code>C:\서희타워\품의서\26-5-2.docx</code> 또는 <code>D:\업무\</code>
+  <!-- ===== 자가진단 패널 ===== -->
+  <div class="v43-panel" id="v43-diag">
+    <section class="panel active" id="panel-diag" style="margin-top:14px">
+      <div class="card">
+        <h2 style="margin-bottom:4px">🔧 자가진단 · 데이터 관리</h2>
+        <p class="desc">연결 상태와 저장 현황을 확인하고, 데이터를 백업·복구합니다.</p>
+        <div id="diagStatus"></div>
+        <div class="sec-head">진단</div>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn btn-ghost btn-sm" id="diagRefresh">🔄 다시 진단</button>
+          <button class="btn btn-primary btn-sm" id="diagConnTest">🔌 연결 테스트</button>
+          <button class="btn btn-ghost btn-sm" id="diagClearErr">🧹 오류기록 지우기</button>
+        </div>
+        <div id="diagErrors" style="margin-top:12px"></div>
+        <div class="sec-head">백업 / 복구</div>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn btn-primary btn-sm" id="diagBackup">⬇ 전체 백업 (JSON)</button>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 백업 복구<input type="file" id="diagRestore" accept="application/json,.json" style="display:none"></label>
+        </div>
+        <div class="sec-head">CSV 내보내기 (엑셀)</div>
+        <div class="btn-row" style="margin-top:0;gap:8px">
+          <button class="btn btn-ghost btn-sm" data-csv="work">업무</button>
+          <button class="btn btn-ghost btn-sm" data-csv="memo">메모</button>
+          <button class="btn btn-ghost btn-sm" data-csv="call">통화</button>
+          <button class="btn btn-ghost btn-sm" data-csv="vacation">휴가</button>
+          <button class="btn btn-ghost btn-sm" data-csv="meeting">회의</button>
+          <button class="btn btn-ghost btn-sm" data-csv="deliver">전달</button>
+          <button class="btn btn-primary btn-sm" data-csv="all">전체</button>
+        </div>
       </div>
-      <div class="sec-head">진단</div>
-      <div class="btn-row" style="margin-top:0">
-        <button class="btn btn-ghost btn-sm" id="diagRefresh">🔄 다시 진단</button>
-        <button class="btn btn-primary btn-sm" id="diagConnTest">🔌 연결 테스트</button>
-        <button class="btn btn-ghost btn-sm" id="diagClearErr">🧹 오류기록 지우기</button>
-      </div>
-      <div id="diagErrors" style="margin-top:12px"></div>
-      <div class="sec-head">백업 / 복구</div>
-      <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 10px">백업은 사진까지 포함한 전체 데이터를 JSON 파일로 저장합니다. 복구는 백업 파일을 불러와 기존 데이터에 합칩니다(같은 항목은 덮어씀).</p>
-      <div class="btn-row" style="margin-top:0">
-        <button class="btn btn-primary btn-sm" id="diagBackup">⬇ 전체 백업 (JSON)</button>
-        <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 백업 복구<input type="file" id="diagRestore" accept="application/json,.json" style="display:none"></label>
-      </div>
-      <div class="sec-head">CSV 내보내기 (엑셀)</div>
-      <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 10px">항목별로 엑셀에서 바로 열 수 있는 CSV 파일을 내보냅니다. 사진은 제외됩니다.</p>
-      <div class="btn-row" style="margin-top:0;gap:8px">
-        <button class="btn btn-ghost btn-sm" data-csv="work">업무</button>
-        <button class="btn btn-ghost btn-sm" data-csv="plan">오늘계획</button>
-        <button class="btn btn-ghost btn-sm" data-csv="memo">메모</button>
-        <button class="btn btn-ghost btn-sm" data-csv="call">통화</button>
-        <button class="btn btn-ghost btn-sm" data-csv="vacation">휴가</button>
-        <button class="btn btn-ghost btn-sm" data-csv="meeting">회의메모</button>
-        <button class="btn btn-ghost btn-sm" data-csv="deliver">전달사항</button>
-        <button class="btn btn-primary btn-sm" data-csv="all">전체(여러파일)</button>
-      </div>
-    </div>
-  </section>
+    </section>
+  </div>
 
-  <!-- AI -->
-  <section class="panel" id="panel-ai">
-    <div class="card">
-      <h2 style="margin-bottom:4px">AI 대화 · 분석</h2>
-      <p class="desc">업무일지 데이터를 바탕으로 질문하거나 분석을 받을 수 있습니다. API 키는 이 브라우저에만 저장되며 코드/서버로 전송되지 않습니다.</p>
-      <div class="sec-head">API 키 (Anthropic)</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
-        <input type="password" id="aiKey" class="search" style="flex:1;margin:0;min-width:200px" placeholder="sk-ant-... 키를 입력">
-        <button class="btn btn-primary btn-sm" id="aiKeySave">저장</button>
-        <button class="btn btn-ghost btn-sm" id="aiKeyClear">삭제</button>
+  <!-- ===== AI 패널 ===== -->
+  <div class="v43-panel" id="v43-ai">
+    <section class="panel active" id="panel-ai" style="margin-top:14px">
+      <div class="card">
+        <h2 style="margin-bottom:4px">🤖 AI 대화 · 분석</h2>
+        <p class="desc">업무일지 데이터를 바탕으로 질문하거나 분석을 받을 수 있습니다.</p>
+        <div class="sec-head">API 키 (Anthropic)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+          <input type="password" id="aiKey" class="search" style="flex:1;margin:0;min-width:200px" placeholder="sk-ant-... 키를 입력">
+          <button class="btn btn-primary btn-sm" id="aiKeySave">저장</button>
+          <button class="btn btn-ghost btn-sm" id="aiKeyClear">삭제</button>
+        </div>
+        <p style="font-size:12px;color:var(--ink-soft);margin:0 0 4px"><span id="aiKeyState"></span></p>
+        <div class="sec-head">빠른 분석</div>
+        <div class="btn-row" style="margin-top:0;gap:8px">
+          <button class="btn btn-ghost btn-sm" data-ai="today">오늘 요약</button>
+          <button class="btn btn-ghost btn-sm" data-ai="week">이번주 요약</button>
+          <button class="btn btn-ghost btn-sm" data-ai="pending">미완료/할일 정리</button>
+          <button class="btn btn-ghost btn-sm" data-ai="cost">비용 분석</button>
+          <button class="btn btn-ghost btn-sm" data-ai="improve">개선사항 종합</button>
+        </div>
+        <div class="sec-head">대화</div>
+        <div id="aiChat" style="border:1px solid var(--line);border-radius:14px;background:#fbfdff;padding:12px;min-height:160px;max-height:420px;overflow:auto;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <textarea id="aiInput" style="flex:1;min-width:200px;min-height:48px" placeholder="질문을 입력하세요"></textarea>
+          <button class="btn btn-primary" id="aiSend">보내기</button>
+          <button class="btn btn-ghost btn-sm" id="aiClear">대화 지우기</button>
+        </div>
       </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 4px"><span id="aiKeyState"></span> · 이 키는 localStorage에만 저장됩니다.</p>
-      <div class="sec-head">빠른 분석</div>
-      <div class="btn-row" style="margin-top:0;gap:8px">
-        <button class="btn btn-ghost btn-sm" data-ai="today">오늘 요약</button>
-        <button class="btn btn-ghost btn-sm" data-ai="week">이번주 요약</button>
-        <button class="btn btn-ghost btn-sm" data-ai="pending">미완료/할일 정리</button>
-        <button class="btn btn-ghost btn-sm" data-ai="cost">비용 분석</button>
-        <button class="btn btn-ghost btn-sm" data-ai="improve">개선사항 종합</button>
-      </div>
-      <div class="sec-head">대화</div>
-      <div id="aiChat" style="border:1px solid var(--line);border-radius:14px;background:#fbfdff;padding:12px;min-height:160px;max-height:420px;overflow:auto;margin-bottom:10px"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-        <textarea id="aiInput" style="flex:1;min-width:200px;min-height:48px" placeholder="질문을 입력하세요 (예: 이번주 소방 관련 업무 정리해줘)"></textarea>
-        <button class="btn btn-primary" id="aiSend">보내기</button>
-        <button class="btn btn-ghost btn-sm" id="aiClear">대화 지우기</button>
-      </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">데이터(업무·계획·메모·통화·휴가·회의·전달)가 질문과 함께 AI에 전달됩니다. 사진은 전송되지 않습니다.</p>
-    </div>
-  </section>
+    </section>
+  </div>
+
 </main>
 
-<!-- 공용 추가/수정 모달 -->
+
+
+<!-- 우측 고정 추가 버튼 -->
+
+
+<!-- 카테고리 선택 시트 -->
+<div class="v43-cat-overlay" id="v43CatOverlay">
+  <div class="v43-cat-sheet">
+    <h3>무엇을 기록할까요?</h3>
+    <div class="v43-cat-grid">
+      <button class="v43-cat-btn" data-add="work"><span class="ci">🛠</span><span class="cl">업무</span></button>
+      <button class="v43-cat-btn" data-add="memo"><span class="ci">📝</span><span class="cl">메모</span></button>
+      <button class="v43-cat-btn" data-add="call"><span class="ci">📞</span><span class="cl">통화</span></button>
+      <button class="v43-cat-btn" data-add="meeting"><span class="ci">💼</span><span class="cl">회의</span></button>
+      <button class="v43-cat-btn" data-add="deliver"><span class="ci">📢</span><span class="cl">전달</span></button>
+      <button class="v43-cat-btn" data-add="vacation"><span class="ci">🌴</span><span class="cl">휴가</span></button>
+      <button class="v43-cat-btn" data-add="expense"><span class="ci">💰</span><span class="cl">지출</span></button>
+      <button class="v43-cat-btn" data-add="schedule"><span class="ci">📅</span><span class="cl">예정</span></button>
+    </div>
+    <button class="v43-cat-cancel" id="v43CatCancel">취소</button>
+  </div>
+</div>
+
+<!-- ===== 기존 JS에 필요한 숨겨진 요소들 ===== -->
+<div style="display:none">
+  <!-- plan JS 호환 요소 -->
+  <section class="panel" id="panel-plan">
+    <input type="date" id="planDate">
+    <input type="text" id="planInput">
+    <button id="planAdd"></button>
+    <input type="date" id="planFrom"><input type="date" id="planTo">
+    <button id="planRangeClear"></button>
+    <button id="btnPlanExcel"></button>
+    <div id="planList"></div>
+  </section>
+
+  <!-- filelink JS 호환 요소 (worklog.js renderFileLink 오류 방지) -->
+  <section class="panel" id="panel-filelink" style="display:none">
+    <button id="btnFileCatMgr"></button>
+    <select id="fileLinkViewSelect"><option value="list">목록형</option></select>
+    <select id="fileTypeSelect"><option value="all">전체</option></select>
+    <select class="sort-select" data-sort="filelink"><option value="name">이름순</option></select>
+    <select id="fileCatFilter"></select>
+    <select id="fileSubFilter"></select>
+    <div id="fileCatJump"></div>
+    <div id="fileList"></div>
+  </section>
+
+  <!-- cleaning JS 호환 요소 -->
+  <section class="panel active" id="panel-cleaning">
+    <button id="btnAddCleaning"></button>
+    <button id="btnCleanStaffMgr"></button>
+    <div id="clnStats"></div>
+    <div class="clean-cal-wrap">
+      <div class="clean-cal-head">
+        <button class="cc-nav" id="cleanCalPrev">‹</button>
+        <span class="cc-title" id="cleanCalTitle"></span>
+        <button class="cc-nav" id="cleanCalNext">›</button>
+      </div>
+      <div class="clean-cal-grid" id="cleanCalGrid"></div>
+    </div>
+    <input type="date" id="clnFrom"><input type="date" id="clnTo">
+    <button id="clnRangeClear"></button>
+    <div id="clnList"></div>
+  </section>
+
+  <!-- 기존 탭/서브탭 구조 (JS가 참조) -->
+  <nav class="tabs" id="tabs">
+    <button data-tab="work" class="active"></button>
+    <button data-tab="material"></button>
+    <button data-tab="cleaning"></button>
+    <button data-tab="calendar"></button>
+    <button data-tab="memo"></button>
+    <button data-tab="plan"></button>
+    <button data-tab="password"></button>
+    <button data-tab="diag"></button>
+    <button data-tab="ai"></button>
+  </nav>
+  <button id="tabArrowL"></button>
+  <button id="tabArrowR"></button>
+  <nav id="workSubtabs">
+    <button data-subtab="general" class="active"></button>
+    <button data-subtab="filelink"></button>
+    <button data-subtab="call"></button>
+    <button data-subtab="site"></button>
+    <button data-subtab="vacation"></button>
+    <button data-subtab="meeting"></button>
+    <button data-subtab="deliver"></button>
+    <button data-subtab="expense"></button>
+  </nav>
+  <!-- 기존 패널들 (JS가 참조) - 숨김 -->
+  <section class="panel active" id="panel-work">
+    <div class="work-subpanel" data-subpanel="general">
+      <div class="chips" id="statusChips"></div>
+      <div class="filt-row">
+        <input type="date" id="wkFrom"><input type="date" id="wkTo">
+        <button id="wkDateClear"></button>
+        <select id="floorFilter"></select>
+        <select id="locFilter"></select>
+        <select id="fieldFilter"></select>
+      </div>
+      <span id="wkCount"></span>
+      <button id="btnWkDelSelected" style="display:none"></button>
+      <button id="btnCopyExcel"></button>
+      <button id="btnBackup"></button>
+      <table><tbody id="wkBody"></tbody><tfoot id="wkFoot"></tfoot></table>
+    </div>
+    <div id="workSubpanelHost"></div>
+  </section>
+  <section class="panel" id="panel-memo">
+    <button data-add="memo"></button>
+    <button id="btnMemoExcel"></button>
+    <input type="date" id="memoFrom"><input type="date" id="memoTo">
+    <button id="memoRangeClear"></button>
+    <span class="view-toggle" data-vt="memo"><button data-v="card">카드형</button><button data-v="list">목록형</button></span>
+    <div id="memoList"></div>
+  </section>
+  <section class="panel" id="panel-call">
+    <button data-add="call"></button>
+    <button id="btnCallExcel"></button>
+    <div class="chips" id="callDirChips"></div>
+    <input type="date" id="callFrom"><input type="date" id="callTo">
+    <button id="callRangeClear"></button>
+    <table><tbody id="callBody"></tbody></table>
+  </section>
+  <section class="panel" id="panel-vacation">
+    <button data-add="vacation"></button>
+    <span class="view-toggle" data-vt="vacation"><button data-v="card">카드형</button><button data-v="list">목록형</button></span>
+    <div id="vacList"></div>
+  </section>
+  <section class="panel" id="panel-meeting">
+    <button data-add="meeting"></button>
+    <span class="view-toggle" data-vt="meeting"><button data-v="card">카드형</button><button data-v="list">목록형</button></span>
+    <div id="meetList"></div>
+  </section>
+  <section class="panel" id="panel-deliver">
+    <button data-add="deliver"></button>
+    <button id="btnDelExcel"></button>
+    <div class="chips" id="delDtypeChips"></div>
+    <input type="date" id="delFrom"><input type="date" id="delTo">
+    <button id="delRangeClear"></button>
+    <table><tbody id="delBody"></tbody></table>
+  </section>
+  <section class="panel" id="panel-expense">
+    <button id="btnAddExpense"></button>
+    <button id="btnExpExcel"></button>
+    <select id="expMonthFilter"></select>
+    <div id="expStats"></div>
+    <table id="expTable"><thead id="expThead"></thead><tbody id="expBody"></tbody></table>
+    <p id="expTotal"></p>
+  </section>
+  <section class="panel" id="panel-site">
+    <button data-add="site"></button>
+    <button id="btnSiteCatMgr"></button>
+    <span class="view-mode-group" data-vm="site">
+      <button data-v="card">🎴 카드</button><button data-v="list">📋 목록</button><button data-v="tile">🏷 타일</button>
+    </span>
+    <select class="sort-select" data-sort="site"><option value="name">이름순</option><option value="recent">최근 사용순</option><option value="created">등록일순</option></select>
+    <button class="tb-toggle" data-compact="site">컴팩트</button>
+    <button class="tb-toggle" data-collapse="site">전체 접기</button>
+    <select id="siteCatFilter"></select>
+    <div class="sub-chips" id="siteSubFilter"></div>
+    <div id="siteCatJump"></div>
+    <div id="siteList"></div>
+  </section>
+</div>
+
+<!-- 기존 모달들 (변경 없음) -->
 <div class="overlay" id="overlay"><div class="modal">
   <h3 id="mTitle">추가</h3>
   <div class="grid" id="mFields"></div>
-
-  <!-- 첨부파일 링크 영역 (v15 신규) -->
   <div class="field full attach-area" id="mAttachArea" style="margin-top:14px">
     <label>📎 파일/폴더 링크 (선택)</label>
-    <div style="font-size:11.5px;color:var(--ink-soft);margin-top:-2px">경로 예시: <code>C:\서희타워\품의서\26-5-2.docx</code> 또는 폴더 <code>D:\업무\</code></div>
+    <div style="font-size:11.5px;color:var(--ink-soft);margin-top:-2px">경로 예시: <code>C:\서희타워\품의서\26-5-2.docx</code></div>
     <div class="attach-add-row">
       <input type="text" id="mAttachLabel" placeholder="별칭 (예: 품의서 원본)">
       <input type="text" id="mAttachPath" class="attach-path" placeholder="C:\경로\파일명.확장자">
@@ -624,11 +1540,7 @@
     </div>
     <div class="attach-list" id="mAttachList"></div>
   </div>
-
-  <!-- 사진 미리보기 -->
   <div class="thumbs" id="m-thumbs" style="margin-top:8px"></div>
-  <!-- 버튼 행: 사진 있는 종류 = [촬영][선택] ─────── [저장][취소][삭제]
-               사진 없는 종류 = ─────────────────── [저장][취소][삭제] -->
   <div id="mBtnRow" style="margin-top:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <div id="mPhotoArea" style="display:none;align-items:center;gap:6px">
       <label class="photo-btn">📷 촬영<input type="file" id="m-cam" accept="image/*" capture="environment" style="display:none"></label>
@@ -640,11 +1552,32 @@
       <button class="btn btn-danger" id="mDelete">삭제</button>
     </div>
   </div>
+
+  <!-- 지출 연결 현황 (지출종류 선택 시 자동 표시) -->
+  <div id="mExpLinkArea" style="display:none;margin-top:14px;border-top:1.5px solid #f0f6ff;padding-top:14px">
+    <div style="margin-bottom:8px">
+      <span style="font-size:13px;font-weight:700;color:#3f7cb8">💰 연결된 지출</span>
+    </div>
+    <div id="mExpLinkList" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
 </div></div>
+
+<!-- 지출 선택 팝업 -->
+<div id="expPickOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10001;display:none;align-items:flex-end;justify-content:center">
+  <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:540px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
+    <div style="padding:18px 20px 12px;border-bottom:1.5px solid #f0f6ff;flex-shrink:0">
+      <div style="font-size:16px;font-weight:800;color:#1a2f45;margin-bottom:10px">💰 지출 선택</div>
+      <input type="text" id="expPickSearch" placeholder="🔍 내역·분야·금액 검색..." style="width:100%;box-sizing:border-box;height:40px;padding:0 14px;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f7faff">
+    </div>
+    <div id="expPickList" style="overflow:auto;flex:1;padding:10px 16px"></div>
+    <div style="padding:12px 16px;border-top:1.5px solid #f0f6ff;flex-shrink:0">
+      <button id="expPickCancel" style="width:100%;padding:12px;border-radius:12px;border:2px solid #dbe6f4;background:#f7faff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;color:#7a92a8">닫기</button>
+    </div>
+  </div>
+</div>
 
 <div id="imgOverlay"><img id="imgFull" src="" alt=""></div>
 
-<!-- 보기(확대) 모달 -->
 <div class="overlay" id="viewOverlay"><div class="modal view-modal">
   <h3 id="vTitle">상세보기</h3>
   <div id="vBody"></div>
@@ -657,10 +1590,9 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- 카테고리 관리 모달 -->
 <div class="overlay" id="catMgrOverlay"><div class="modal">
   <h3 id="catMgrTitle">카테고리 관리</h3>
-  <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">카테고리를 추가·이름변경·삭제할 수 있습니다. 카테고리를 삭제해도 기존 항목은 그대로 유지되며, 해당 항목들의 카테고리는 "(미분류)"로 표시됩니다.</p>
+  <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">카테고리를 추가·이름변경·삭제할 수 있습니다.</p>
   <div style="display:flex;gap:6px;margin-bottom:10px">
     <input type="text" id="catNewName" placeholder="새 카테고리 이름" style="flex:1">
     <button class="btn btn-primary btn-sm" id="catAddBtn" style="flex:0 0 auto">➕ 추가</button>
@@ -671,7 +1603,6 @@
   </div>
 </div></div>
 
-<!-- 🧹 청소일지 모달 -->
 <div class="overlay" id="cleaningOverlay"><div class="modal" style="max-width:780px">
   <h3 id="clnTitle">청소 일지</h3>
   <div id="clnFields"></div>
@@ -682,14 +1613,12 @@
   </div>
 </div></div>
 
-<!-- v35: 전체 검색 오버레이 -->
 <div class="overlay" id="globalSearchOverlay"><div class="modal" style="max-width:720px;max-height:85vh;display:flex;flex-direction:column">
   <h3 style="margin:0 0 12px;display:flex;justify-content:space-between;align-items:center">🔍 전체 검색 <button class="btn btn-ghost btn-sm" id="gsClose" style="font-size:14px">닫기 (Esc)</button></h3>
-  <input type="text" id="gsInput" class="search search-big" placeholder="🔍 모든 탭에서 검색 — 키워드 입력" autocomplete="off" autofocus style="margin-bottom:12px">
+  <input type="text" id="gsInput" class="search search-big" placeholder="🔍 모든 탭에서 검색" autocomplete="off" autofocus style="margin-bottom:12px">
   <div id="gsResults" style="flex:1;overflow-y:auto;min-height:200px"></div>
 </div></div>
 
-<!-- v37: ⚡ 급한 메모 사이드 패널 -->
 <div id="quickMemoSide" class="quick-memo-side">
   <div class="qm-head">
     <span class="qm-title">⚡ 급한 메모</span>
@@ -699,24 +1628,19 @@
       <button class="qm-btn qm-close" id="qmClose" title="닫기">✕</button>
     </div>
   </div>
-  <div id="qmText" contenteditable="true" data-placeholder="여기에 막 쓰세요... 자동으로 저장돼요. Ctrl+V로 사진을 텍스트 사이에 붙여넣을 수 있어요."></div>
+  <div id="qmText" contenteditable="true" data-placeholder="여기에 막 쓰세요... 자동으로 저장돼요."></div>
   <div class="qm-photo-area">
-    <label class="qm-photo-btn">
-      📷 사진 첨부
-      <input type="file" id="qmFile" accept="image/*" multiple style="display:none">
-    </label>
+    <label class="qm-photo-btn">📷 사진 첨부<input type="file" id="qmFile" accept="image/*" multiple style="display:none"></label>
     <div id="qmPhotoList"></div>
   </div>
   <div class="qm-status" id="qmStatus">💾 자동 저장됨</div>
 </div>
 
-<!-- v39: 사진 확대 오버레이 -->
 <div id="qmZoomOverlay"><img id="qmZoomImg" src=""></div>
 
-<!-- 분야 관리 모달 -->
 <div class="overlay" id="fieldMgrOverlay"><div class="modal">
   <h3>⚙ 분야 관리</h3>
-  <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">업무·자재 등에서 사용하는 분야를 관리합니다. 삭제 시 해당 분야의 데이터는 "기타"로 자동 변경됩니다.</p>
+  <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">업무·자재 등에서 사용하는 분야를 관리합니다.</p>
   <div id="fieldMgrList" style="max-height:340px;overflow:auto;margin-bottom:10px"></div>
   <div style="display:flex;gap:6px;margin-bottom:10px">
     <input type="text" id="fieldMgrNew" placeholder="새 분야 이름" style="flex:1">
@@ -727,7 +1651,6 @@
   </div>
 </div></div>
 
-<!-- 💰 지출 모달 -->
 <div class="overlay" id="expenseOverlay"><div class="modal" style="max-width:560px">
   <h3 id="expTitle">지출 내역</h3>
   <div id="expFields"></div>
@@ -738,10 +1661,8 @@
   </div>
 </div></div>
 
-<!-- 미화반 명단 관리 모달 -->
 <div class="overlay" id="cleanStaffOverlay"><div class="modal">
   <h3>⚙ 미화반 명단·반장 관리</h3>
-  <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">반장 이름과 담당자 명단·담당 층을 관리합니다. 변경하면 일지 추가 시 자동 반영됩니다.</p>
   <div class="field" style="margin-bottom:14px">
     <label>반장 이름</label>
     <input type="text" id="cleanForemanInput" placeholder="배옥식">
@@ -756,9 +1677,1974 @@
 
 <div id="printArea"></div>
 
+<!-- Google API -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=20260608001"></script>
+<script src="worklog.js?v=43-20260617t1781675790"></script>
+
+<script>
+/* ===== v43 통합 UI 컨트롤러 ===== */
+(function(){
+  // 🐞 디버그 패널
+  const dbgLogs = [];
+  function dbg(msg){
+    const t = new Date().toTimeString().slice(0,8);
+    dbgLogs.unshift('['+t+'] '+msg);
+    if(dbgLogs.length>80) dbgLogs.pop();
+    const el = document.getElementById('dbgPanel');
+    if(el && el.classList.contains('show')){
+      document.getElementById('dbgLog').textContent = dbgLogs.join('\n');
+    }
+  }
+  window.toggleDbg = function(){
+    const p = document.getElementById('dbgPanel');
+    p.classList.toggle('show');
+    if(p.classList.contains('show')) document.getElementById('dbgLog').textContent = dbgLogs.join('\n');
+  };
+  window.copyDbg = function(){
+    navigator.clipboard && navigator.clipboard.writeText(dbgLogs.join('\n')).then(()=>alert('복사됨'));
+  };
+  window.onerror = function(m,s,l,c,e){ dbg('ERR: '+m+' ('+l+':'+c+')'); };
+
+  // 종류별 아이콘/색상 매핑
+  const KIND_ICON  = {work:'🛠',cleaning:'🧹',memo:'📝',call:'📞',meeting:'💼',deliver:'📢',vacation:'🌴',expense:'💰',plan:'✅',schedule:'📅'};
+  const KIND_LABEL = {work:'업무',cleaning:'청소',memo:'메모',call:'통화',meeting:'회의',deliver:'전달',vacation:'휴가',expense:'지출',plan:'계획',schedule:'예정'};
+  const STATUS_CLASS = {'완료':'st-done','진행중':'st-wip','미완료':'st-todo','보류':'st-skip'};
+
+  // 현재 활성 카테고리/필터
+  let activeCat = 'work'; // 기본값 업무
+  let v43From = '', v43To = '';
+  let v43Search = '';
+
+  // 통합 목록 렌더 (entries는 worklog.js 전역)
+  function getEntries(){
+    if(typeof entries !== 'undefined') return entries;
+    return [];
+  }
+
+  function getMainList(){
+    const MAIN_KINDS = ['work','call','meeting','deliver','vacation','expense','schedule','plan'];
+    let list = getEntries().filter(e => MAIN_KINDS.includes(e.kind));
+
+    // 카테고리 필터
+    if(activeCat !== 'all') list = list.filter(e => e.kind === activeCat);
+
+    // 날짜 필터
+    if(v43From || v43To){
+      list = list.filter(e => {
+        const d = e.date || e.start || '';
+        return (!v43From || d >= v43From) && (!v43To || d <= v43To);
+      });
+    }
+
+    // 검색 필터
+    if(v43Search.trim()){
+      const q = v43Search.trim().toLowerCase();
+      list = list.filter(e => {
+        const text = [e.title,e.body,e.content,e.text,e.name,e.field,e.loc,e.floor,e.material,e.note,e.followup].filter(Boolean).join(' ').toLowerCase();
+        return text.includes(q);
+      });
+    }
+
+    // 날짜 내림차순
+    list.sort((a,b) => {
+      const da = a.date||a.start||'', db = b.date||b.start||'';
+      return db.localeCompare(da) || ((b.createdAt||0)-(a.createdAt||0));
+    });
+    return list;
+  }
+
+  function countByKind(){
+    const all = getEntries();
+    const MAIN_KINDS = ['work','call','meeting','deliver','vacation','expense','schedule','plan'];
+    const cnt = {};
+    MAIN_KINDS.forEach(k => cnt[k]=0);
+    all.forEach(e => { if(cnt[e.kind]!==undefined) cnt[e.kind]++; });
+    return cnt;
+  }
+
+  function renderV43Counts(){
+    const cnt = countByKind();
+    const total = Object.values(cnt).reduce((s,v)=>s+v,0);
+    // 드롭다운 옵션 텍스트에 건수 반영
+    const sel = document.getElementById('v43CatSelect');
+    if(sel){
+      const map = {
+        all: `전체 (${total})`,
+        work: `🛠 업무 (${cnt.work||0})`,
+        call: `📞 통화 (${cnt.call||0})`,
+        meeting: `💼 회의 (${cnt.meeting||0})`,
+        deliver: `📢 전달 (${cnt.deliver||0})`,
+        vacation: `🌴 휴가 (${cnt.vacation||0})`,
+        expense: `💰 지출 (${cnt.expense||0})`,
+        schedule: `📅 예정 (${cnt.schedule||0})`,
+      };
+      sel.querySelectorAll('option').forEach(opt => {
+        if(map[opt.value]) opt.textContent = map[opt.value];
+      });
+    }
+  }
+
+  function esc(s){ return (s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+  function itemTitle(en){
+    switch(en.kind){
+      case 'work': return en.title||'(제목없음)';
+      case 'cleaning': return en.date ? en.date+' 청소일지' : '청소일지';
+      case 'memo': return en.title||en.body||'(메모)';
+      case 'call': return [en.name,en.company,en.content].filter(Boolean).join(' · ')||'(통화)';
+      case 'meeting': return en.title||'(회의)';
+      case 'deliver': return en.title||en.content||'(전달사항)';
+      case 'vacation': return (en.name||'')+(en.vtype?' '+en.vtype:'');
+      case 'expense': return en.title||'(지출)';
+      case 'plan': return en.text||'(계획)';
+      case 'schedule': return en.title||'(예정)';
+      default: return '(항목)';
+    }
+  }
+
+  function itemSub(en){
+    const parts = [];
+    if(en.floor) parts.push(en.floor);
+    if(en.loc) parts.push(en.loc);
+    if(en.field) parts.push(en.field);
+    if(en.dir) parts.push(en.dir);
+    if(en.dtype) parts.push(en.dtype);
+    if(en.vtype) parts.push(en.vtype);
+    if(en.cost && en.kind==='work') parts.push((Math.round(Number(en.cost))||0).toLocaleString('ko-KR')+'원');
+    if(en.amount && en.kind==='expense') parts.push((Math.round(Number(en.amount))||0).toLocaleString('ko-KR')+'원');
+    if(en.attendees) parts.push('참석: '+en.attendees);
+    return parts.join(' · ');
+  }
+
+  function itemDate(en){
+    return en.date || en.start || '';
+  }
+
+  function statusBadge(en){
+    if(en.kind!=='work') return '';
+    const s = en.status||'미완료';
+    const cls = STATUS_CLASS[s]||'st-todo';
+    return `<span class="v43-item-badge ${cls}">${esc(s)}</span>`;
+  }
+
+  function renderV43List(){
+    const list = getMainList();
+    const box = document.getElementById('v43List');
+    if(!box) return;
+    const cnt = document.getElementById('v43Count');
+    if(cnt) cnt.textContent = list.length+'건';
+
+    if(!list.length){
+      const msg = getEntries().length===0 ? '아직 기록이 없어요. ➕ 버튼으로 추가해보세요!' : '조건에 맞는 기록이 없습니다.';
+      box.innerHTML = `<div class="v43-empty"><div class="ei">${activeCat==='all'?'📋':KIND_ICON[activeCat]||'📋'}</div>${esc(msg)}</div>`;
+      return;
+    }
+
+    // 날짜별 그룹핑
+    const groups = {};
+    const groupOrder = [];
+    list.forEach(en => {
+      const d = itemDate(en)||'날짜없음';
+      if(!groups[d]){ groups[d]=[]; groupOrder.push(d); }
+      groups[d].push(en);
+    });
+
+    let html = '';
+    groupOrder.forEach(d => {
+      const today = new Date(); const t = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+      const yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
+      const ye = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+      let dLabel = d;
+      if(d===t) dLabel='오늘 '+d;
+      else if(d===ye) dLabel='어제 '+d;
+
+      html += `<div class="v43-date-group"><span class="v43-date-label">${esc(dLabel)}</span></div>`;
+      groups[d].forEach(en => {
+        const sub = itemSub(en);
+        html += `<div class="v43-item" data-id="${esc(en.id)}" data-kind="${esc(en.kind)}" ontouchstart>
+          <div class="v43-item-icon">${KIND_ICON[en.kind]||'📄'}</div>
+          <div class="v43-item-body">
+            <div class="v43-item-title">${esc(itemTitle(en))}${en.photos&&en.photos.length?' 📷':''}</div>
+            <div class="v43-item-meta">
+              <span class="v43-item-badge" style="background:#eaf1fb;color:#3f7cb8">${esc(KIND_LABEL[en.kind]||en.kind)}</span>
+              ${statusBadge(en)}
+              ${sub?`<span>${esc(sub)}</span>`:''}
+            </div>
+          </div>
+          <div class="v43-item-right">
+            <span class="v43-item-date">${esc(itemDate(en))}</span>
+            <button class="v43-item-del" data-del="${esc(en.id)}" onclick="event.stopPropagation()" title="삭제">🗑</button>
+          </div>
+        </div>`;
+      });
+    });
+    box.innerHTML = html;
+
+    // 클릭 이벤트
+    box.querySelectorAll('.v43-item').forEach(el => {
+      el.addEventListener('click', e => {
+        if(e.target.closest('[data-del]')) return;
+        const id = el.dataset.id, kind = el.dataset.kind;
+        dbg('item click: kind='+kind+' id='+id);
+        if(typeof openViewer === 'function') openViewer(kind, id);
+      });
+    });
+    box.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = btn.dataset.del;
+        const en = getEntries().find(x=>x.id===id);
+        if(!en) return;
+        if(typeof deleteWithUndo==='function') deleteWithUndo(id, KIND_LABEL[en.kind]||'항목');
+        setTimeout(refreshV43, 300);
+      });
+    });
+  }
+
+  // v43 탭 전환
+  function v43ActivateTab(name){
+    const v43tabs=['main','memo','calendar','filelink','docs','common','indiv','material','password','diag','ai'];
+    if(!v43tabs.includes(name)) name='main';
+    document.querySelectorAll('.v43-tab').forEach(b => b.classList.toggle('active', b.dataset.v43tab===name));
+    document.querySelectorAll('.v43-panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById('v43-'+name);
+    if(panel) panel.classList.add('active');
+    try{ localStorage.setItem('v43_tab', name); }catch(e){}
+    dbg('tab: '+name);
+    if(name==='calendar' && typeof renderCalendar==='function') setTimeout(renderCalendar, 100);
+    if(name==='memo') setTimeout(()=>{ if(typeof renderStickyGrid==='function') renderStickyGrid(); }, 100);
+    if(name==='main') setTimeout(()=>{ if(typeof v43Refresh==='function') v43Refresh(); }, 50);
+    // 문서계열 탭: makeDocTab이 등록한 렌더 함수 호출
+    if(['docs','common','indiv','filelink'].includes(name)){
+      setTimeout(()=>{
+        // 해당 탭의 v43-tab 버튼에 click 이벤트 디스패치 (makeDocTab 탭 이벤트 트리거)
+        const tabBtns = document.querySelectorAll('.v43-tab[data-v43tab="'+name+'"]');
+        tabBtns.forEach(b=>{ try{ b.dispatchEvent(new CustomEvent('tab-render')); }catch(e){} });
+        // makeDocTab 렌더함수는 탭클릭 이벤트로 호출되므로 직접 트리거
+        if(window['_docTabRender_'+name]) window['_docTabRender_'+name]();
+      }, 100);
+    }
+    // filelink/material/password/diag 등은 worklog.js가 panel을 이동시키므로 재이동
+    const movedPanels = {
+      material:'panel-material',
+      password:'panel-password', diag:'panel-diag', ai:'panel-ai'
+      // common/indiv/docs/filelink: v43 패널이 직접 관리
+    };
+    if(movedPanels[name]){
+      setTimeout(()=>{
+        const target = document.getElementById('v43-'+name);
+        const panelEl = document.getElementById(movedPanels[name]);
+        if(target && panelEl && panelEl.parentElement !== target){
+          target.appendChild(panelEl);
+          panelEl.classList.add('active');
+          panelEl.style.display = '';
+          dbg('panel 재이동: '+movedPanels[name]+' → v43-'+name);
+        }
+        // worklog.js 렌더 재호출
+        if(typeof renderAll==='function') renderAll();
+      }, 50);
+    }
+  }
+
+  // v43 탭 클릭 이벤트
+  document.querySelectorAll('.v43-tab').forEach(btn => {
+    btn.addEventListener('click', () => v43ActivateTab(btn.dataset.v43tab));
+  });
+
+  // 카테고리 드롭다운
+  // 기본값 업무로
+  const catSelect = document.getElementById('v43CatSelect');
+  // localStorage에 저장된 값 있으면 복원, 없으면 work 기본
+  const savedCat = localStorage.getItem('v43_cat_sel') || 'work';
+  activeCat = savedCat;
+  if(catSelect) catSelect.value = savedCat;
+  if(catSelect){
+    catSelect.addEventListener('change', () => {
+      activeCat = catSelect.value;
+      localStorage.setItem('v43_cat_sel', activeCat);
+      renderV43List();
+      dbg('cat: '+activeCat);
+    });
+  }
+
+  // 날짜 필터
+  const v43FromEl = document.getElementById('v43From');
+  const v43ToEl = document.getElementById('v43To');
+  if(v43FromEl) v43FromEl.addEventListener('change', () => { v43From=v43FromEl.value; renderV43List(); });
+  if(v43ToEl) v43ToEl.addEventListener('change', () => { v43To=v43ToEl.value; renderV43List(); });
+  const v43DateClear = document.getElementById('v43DateClear');
+  if(v43DateClear) v43DateClear.addEventListener('click', () => {
+    v43From=''; v43To='';
+    if(v43FromEl) v43FromEl.value='';
+    if(v43ToEl) v43ToEl.value='';
+    renderV43List();
+  });
+
+  // 검색
+  const gsBar = document.getElementById('globalSearchBar');
+  if(gsBar){
+    let searchTimer;
+    gsBar.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        v43Search = gsBar.value;
+        renderV43List();
+      }, 250);
+    });
+    gsBar.addEventListener('focus', () => {
+      // 메인 탭으로 이동
+      v43ActivateTab('main');
+    });
+  }
+
+  // FAB 버튼
+  const fab = document.getElementById('v43FabHeader');
+  const catOverlay = document.getElementById('v43CatOverlay');
+  if(fab) fab.addEventListener('click', () => {
+    catOverlay && catOverlay.classList.add('show');
+    dbg('fab click');
+  });
+  // 카테고리 선택
+  document.querySelectorAll('.v43-cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const kind = btn.dataset.add;
+      catOverlay && catOverlay.classList.remove('show');
+      dbg('add kind: '+kind);
+      setTimeout(() => {
+        if(kind==='expense' && typeof openExpenseEditor==='function'){
+          openExpenseEditor(null);
+        } else if(typeof openEditor==='function'){
+          openEditor(kind, null);
+        }
+      }, 200);
+    });
+  });
+  // 취소
+  const catCancel = document.getElementById('v43CatCancel');
+  if(catCancel) catCancel.addEventListener('click', () => catOverlay && catOverlay.classList.remove('show'));
+  if(catOverlay) catOverlay.addEventListener('click', e => { if(e.target===catOverlay) catOverlay.classList.remove('show'); });
+
+  // 기록 저장 후 목록 갱신
+  function refreshV43(){
+    renderV43Counts();
+    renderV43List();
+  }
+  window.v43Refresh = refreshV43;
+
+  // worklog.js의 renderAll을 훅 (Firebase 로드 완료 시점 포착)
+  const origRA = window.renderAll;
+  window.renderAll = function(){
+    if(origRA) origRA();
+    setTimeout(refreshV43, 100);
+  };
+  // Firebase onSnapshot 완료 훅
+  const origSetEntries = window.setEntries;
+  if(typeof origSetEntries === 'function'){
+    window.setEntries = function(arr){
+      origSetEntries(arr);
+      setTimeout(refreshV43, 200);
+    };
+  }
+
+  // 저장 버튼 훅 (모달 저장 후 목록 갱신)
+  const mSave = document.getElementById('mSave');
+  if(mSave){
+    const origClick = mSave.onclick;
+    mSave.addEventListener('click', () => {
+      setTimeout(refreshV43, 400);
+    });
+  }
+
+  // 마지막 탭 복원
+  function restoreTab(){
+    try{
+      const v43tabs=['main','memo','calendar','filelink','docs','common','indiv','material','password','diag','ai'];
+      const saved = localStorage.getItem('v43_tab')||'main';
+      const safeTab = v43tabs.includes(saved) ? saved : 'main';
+      v43ActivateTab(safeTab);
+    }catch(e){ v43ActivateTab('main'); }
+  }
+
+  // worklog.js init 완료 감지 후 v43 초기화
+  restoreTab();
+  let _initWait = 0;
+  function waitWlInit(){
+    if(window._wlInitDone){
+      dbg('wlInitDone 감지 - v43 갱신');
+      refreshV43();
+    } else if(_initWait++ < 60){
+      setTimeout(waitWlInit, 200);
+    } else {
+      dbg('wlInit timeout - 강제 갱신');
+      refreshV43();
+    }
+  }
+  setTimeout(waitWlInit, 300);
+
+  // 전역 노출 (worklog.js에서 호출 가능)
+  window.v43ActivateTab = v43ActivateTab;
+  dbg('v43 init OK');
+})();
+
+/* ===== 점검일지 탭 (문서 탭과 동일 구조) ===== */
+(function(){
+  const INSP_LS = 'wl_insp_v43';
+  let insps = [];
+  let editingInspId = null;
+  let inspTypeFilter = 'all';
+  let inspYearFilter = 'all';
+
+  function loadInsps(){
+    try{ insps = JSON.parse(localStorage.getItem(INSP_LS)||'[]'); }
+    catch(e){ insps = []; }
+  }
+
+  function saveInsps(){
+    try{ localStorage.setItem(INSP_LS, JSON.stringify(insps)); }catch(e){}
+  }
+
+  function genInspId(){ return 'insp_'+Date.now()+'_'+Math.floor(Math.random()*10000); }
+
+  function getYears(){
+    const years = [...new Set(insps.map(d=>(d.month||'').slice(0,4)).filter(Boolean))].sort().reverse();
+    const cur = new Date().getFullYear().toString();
+    if(!years.includes(cur)) years.unshift(cur);
+    return years;
+  }
+
+  function updateYearSelect(){
+    const sel = document.getElementById('inspYearFilter');
+    if(!sel) return;
+    const years = getYears();
+    const cur = new Date().getFullYear().toString();
+    sel.innerHTML = '<option value="all">전체 연도</option>' +
+      years.map(y=>`<option value="${y}">${y}년</option>`).join('');
+    inspYearFilter = 'all'; // 기본값 전체
+  }
+
+  function getFiltered(){
+    return insps.filter(d=>{
+      if(inspTypeFilter!=='all' && d.type!==inspTypeFilter) return false;
+      // month 비어있는 항목(마이그레이션 데이터)은 년도 필터에서 제외하지 않음
+      if(inspYearFilter!=='all' && d.month && !d.month.startsWith(inspYearFilter)) return false;
+      return true;
+    }).sort((a,b)=>(b.month||'').localeCompare(a.month||''));
+  }
+
+  function toLocalUrl(path){
+    if(!path) return '#';
+    return 'localfile://'+encodeURI(path.split('\\').join('/'));
+  }
+
+  const TYPE_COLOR = {
+    '일점검':'#3f7cb8','전기':'#f39c12','소방':'#e74c3c',
+    '기계':'#27ae60','위생':'#8e44ad','관리비':'#0891b2','기타':'#7a92a8'
+  };
+
+  function renderInsps(){
+    const body = document.getElementById('inspBody');
+    const cnt  = document.getElementById('inspCount');
+    if(!body) return;
+    const list = getFiltered();
+    if(cnt) cnt.textContent = list.length+'건';
+    if(!list.length){
+      body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">조건에 맞는 점검일지가 없습니다</td></tr>';
+      return;
+    }
+    const groups = {};
+    list.forEach(d=>{ const m=d.month||'날짜없음'; if(!groups[m]) groups[m]=[]; groups[m].push(d); });
+    let html2 = '';
+    Object.keys(groups).sort().reverse().forEach(month=>{
+      const label = month.length===7 ? month.slice(0,4)+'년 '+month.slice(5)+'월' : month;
+      html2 += `<tr style="background:#f7faff"><td colspan="5" style="padding:8px 14px;font-size:12px;font-weight:800;color:#7a92a8;border-bottom:1px solid #e8f0fa">${label}</td></tr>`;
+      groups[month].forEach(d=>{
+        const color = TYPE_COLOR[d.type]||'#7a92a8';
+        html2 += `<tr class="insp-row" data-inspid="${d.id}" style="border-bottom:1px solid #f0f6ff;cursor:pointer;transition:background .12s">
+          <td style="padding:12px 14px;font-size:13px;color:#7a92a8;white-space:nowrap">${(d.month||'').slice(5)}월</td>
+          <td style="padding:12px 14px">
+            <span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:12px;font-weight:700;background:${color}22;color:${color}">${d.type||''}</span>
+          </td>
+          <td style="padding:12px 14px">
+            <div style="font-size:14px;font-weight:600;color:#1a2f45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.name||''}</div>
+            ${d.memo?`<div style="font-size:12px;color:#aab8c8;margin-top:2px">${d.memo}</div>`:''}
+          </td>
+          <td style="padding:12px 14px;text-align:center">
+            ${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:20px;text-decoration:none" title="${d.path}">${d.fileType==='file'?'📄':'📁'}</a>`:'<span style="color:#ddd">—</span>'}
+          </td>
+          <td style="padding:12px 14px;text-align:center">
+            <button class="insp-edit-btn" data-inspid="${d.id}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px 6px;border-radius:6px" title="수정">✏️</button>
+          </td>
+        </tr>`;
+      });
+    });
+    body.innerHTML = html2;
+    body.querySelectorAll('.insp-row').forEach(tr=>{
+      tr.addEventListener('mouseenter', ()=>tr.style.background='#f0f6ff');
+      tr.addEventListener('mouseleave', ()=>tr.style.background='');
+      tr.addEventListener('click', e=>{ if(e.target.closest('a,.insp-edit-btn')) return; openInspModal(tr.dataset.inspid); });
+    });
+    body.querySelectorAll('.insp-edit-btn').forEach(btn=>{
+      btn.addEventListener('click', e=>{ e.stopPropagation(); openInspModal(btn.dataset.inspid); });
+    });
+  }
+
+  function openInspModal(id){
+    editingInspId = id||null;
+    const d = id ? insps.find(x=>x.id===id) : null;
+    const titleEl = document.getElementById('inspModalTitle');
+    const delBtn  = document.getElementById('inspModalDel');
+    if(titleEl) titleEl.textContent = id ? '점검일지 수정' : '점검일지 추가';
+    if(delBtn)  delBtn.style.display = id ? '' : 'none';
+    const today = new Date();
+    const defMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+    const typeEl  = document.getElementById('inspModalType');
+    const monthEl = document.getElementById('inspModalMonth');
+    const nameEl  = document.getElementById('inspModalName');
+    const pathEl  = document.getElementById('inspModalPath');
+    const memoEl  = document.getElementById('inspModalMemo');
+    if(typeEl)  typeEl.value  = d ? (d.type||'일점검') : '일점검';
+    if(monthEl) monthEl.value = d ? (d.month||defMonth) : defMonth;
+    if(nameEl)  nameEl.value  = d ? (d.name||'') : '';
+    if(pathEl)  pathEl.value  = d ? (d.path||'') : '';
+    if(memoEl)  memoEl.value  = d ? (d.memo||'') : '';
+    const modal = document.getElementById('inspModal');
+    if(modal) modal.classList.add('show');
+    setTimeout(()=>{ if(nameEl) nameEl.focus(); }, 200);
+  }
+
+  function closeInspModal(){
+    const modal = document.getElementById('inspModal');
+    if(modal) modal.classList.remove('show');
+    editingInspId = null;
+  }
+
+  function saveInsp(){
+    const type  = (document.getElementById('inspModalType')||{}).value||'기타';
+    const month = (document.getElementById('inspModalMonth')||{}).value||'';
+    const name  = ((document.getElementById('inspModalName')||{}).value||'').trim();
+    const path  = ((document.getElementById('inspModalPath')||{}).value||'').trim();
+    const memo  = ((document.getElementById('inspModalMemo')||{}).value||'').trim();
+    const inspFt = document.querySelector('input[name="inspModalFileType"]:checked');
+    const fileType = inspFt ? inspFt.value : 'folder';
+    if(!name){ if(typeof toast==='function') toast('파일명/내용을 입력해주세요'); else alert('파일명/내용을 입력해주세요'); return; }
+    if(editingInspId){
+      const i = insps.findIndex(x=>x.id===editingInspId);
+      if(i>=0) insps[i] = {...insps[i], type, month, name, path, memo, updatedAt:Date.now()};
+    } else {
+      insps.push({id:genInspId(), type, month, name, path, memo, fileType, createdAt:Date.now()});
+    }
+    saveInsps();
+    closeInspModal();
+    updateYearSelect();
+    renderInsps();
+    if(typeof toast==='function') toast('저장됐어요');
+  }
+
+  function deleteInsp(){
+    if(!editingInspId) return;
+    if(!confirm('이 항목을 삭제할까요?')) return;
+    insps = insps.filter(x=>x.id!==editingInspId);
+    saveInsps();
+    closeInspModal();
+    updateYearSelect();
+    renderInsps();
+    if(typeof toast==='function') toast('삭제됐어요');
+  }
+
+  document.getElementById('inspAddBtn')?.addEventListener('click', ()=>openInspModal(null));
+  document.getElementById('inspModalSave')?.addEventListener('click', saveInsp);
+  document.getElementById('inspModalDel')?.addEventListener('click', deleteInsp);
+  document.getElementById('inspModalCancel')?.addEventListener('click', closeInspModal);
+  document.getElementById('inspModal')?.addEventListener('click', e=>{ if(e.target===document.getElementById('inspModal')) closeInspModal(); });
+  document.getElementById('inspTypeFilter')?.addEventListener('change', e=>{ inspTypeFilter=e.target.value; renderInsps(); });
+  document.getElementById('inspYearFilter')?.addEventListener('change', e=>{ inspYearFilter=e.target.value; renderInsps(); });
+
+  document.querySelectorAll('.v43-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(btn.dataset.v43tab==='filelink'){ updateYearSelect(); renderInsps(); }
+    });
+  });
+
+  // 점검일지 전역 렌더 함수 등록
+  window['_docTabRender_filelink'] = function(){
+    if(typeof buildInspTypeSelect==='function') buildInspTypeSelect();
+    const msel = document.getElementById('inspMonthFilter');
+    if(msel){ let arr=[]; try{arr=JSON.parse(localStorage.getItem('wl_insp_v43_months')||'[]');}catch(e){} msel.innerHTML='<option value="all">전체 월</option>'+arr.sort().reverse().map(m=>`<option value="${m}">${m}</option>`).join(''); }
+  };
+
+  // 종류관리 버튼 추가 (동적)
+  const inspToolbar = document.getElementById('inspAddBtn');
+  if(inspToolbar && !document.getElementById('inspCatMgrBtn')){
+    const catBtn = document.createElement('button');
+    catBtn.id = 'inspCatMgrBtn';
+    catBtn.textContent = '⚙ 종류관리';
+    catBtn.style.cssText = 'height:44px;padding:0 14px;background:#fff;color:#3f7cb8;border:2px solid #3f7cb8;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer';
+    inspToolbar.parentElement.insertBefore(catBtn, inspToolbar);
+  }
+
+  // 종류 드롭다운 동적 로드
+  function buildInspTypeSelect(){
+    const sel = document.getElementById('inspTypeFilter');
+    if(!sel || !window.loadCats) return;
+    const cats = window.loadCats('insp');
+    sel.innerHTML = '<option value="all">전체 종류</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  }
+  function buildInspModalType(){
+    const sel = document.getElementById('inspModalType');
+    if(!sel || !window.loadCats) return;
+    const cats = window.loadCats('insp');
+    sel.innerHTML = cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  }
+  setTimeout(()=>{ buildInspTypeSelect(); buildInspModalType(); }, 100);
+
+  loadInsps();
+  updateYearSelect();
+})();
+
+/* ===== 포스트잇 메모 컨트롤러 ===== */
+(function(){
+  const COLORS = ['yellow','blue','green','pink','orange'];
+  const COLOR_BG = {yellow:'#fff9c4',blue:'#dbeafe',green:'#dcfce7',pink:'#fce7f3',orange:'#ffedd5'};
+  let activeStickyColor = 'yellow';
+  let stickySearch = '';
+  let editingId = null;
+
+  // 수정은 카드 인라인으로 처리 (모달 불필요)
+
+  function esc(s){ return (s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+  function getMemos(){
+    if(typeof entries === 'undefined') return [];
+    return entries.filter(e=>e.kind==='memo').sort((a,b)=>((b.createdAt||0)-(a.createdAt||0)));
+  }
+
+  function getColor(en){
+    return COLORS.includes(en.stickyColor) ? en.stickyColor : 'yellow';
+  }
+
+  let stickyViewMode = localStorage.getItem('sticky_view')||'card';
+
+  function setStickyView(mode){
+    stickyViewMode = mode;
+    localStorage.setItem('sticky_view', mode);
+    const cardBtn = document.getElementById('memoViewCard');
+    const listBtn = document.getElementById('memoViewList');
+    if(cardBtn) cardBtn.classList.toggle('memo-view-active', mode==='card');
+    if(listBtn) listBtn.classList.toggle('memo-view-active', mode==='list');
+    const grid = document.getElementById('stickyGrid');
+    const list = document.getElementById('stickyList');
+    if(grid) grid.style.display = mode==='card' ? '' : 'none';
+    if(list) list.style.display = mode==='list' ? 'flex' : 'none';
+    renderStickyGrid();
+  }
+
+  document.getElementById('memoViewCard')?.addEventListener('click', ()=>setStickyView('card'));
+  document.getElementById('memoViewList')?.addEventListener('click', ()=>setStickyView('list'));
+
+  function renderStickyGrid(){
+    const grid = document.getElementById('stickyGrid');
+    if(!grid) return;
+    let list = getMemos();
+    if(stickySearch.trim()){
+      const q = stickySearch.trim().toLowerCase();
+      list = list.filter(e=>(e.title||'').toLowerCase().includes(q)||(e.body||'').toLowerCase().includes(q));
+    }
+    const cnt = document.getElementById('stickyCount');
+    if(cnt) cnt.textContent = list.length+'개';
+    if(!list.length){
+      grid.innerHTML = `<div class="v43-empty" style="grid-column:1/-1"><div class="ei">📝</div>${stickySearch?'검색 결과가 없어요':'메모를 추가해보세요!'}</div>`;
+      return;
+    }
+    grid.innerHTML = list.map(en=>`
+      <div class="sticky-note ${getColor(en)}" data-sid="${esc(en.id)}">
+        <!-- 읽기 모드 -->
+        <div class="sn-view" data-snview="${esc(en.id)}">
+          ${en.title?`<div class="sticky-note-title">${esc(en.title)}</div>`:''}
+          <div class="sticky-note-body">${esc(en.body||'').replace(/\n/g,'<br>')}</div>
+          ${en.photos&&en.photos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${en.photos.slice(0,3).map(p=>`<img src="${p}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:2px solid rgba(255,255,255,.8)">`).join('')}${en.photos.length>3?`<span style="font-size:11px;color:#999;align-self:center">+${en.photos.length-3}</span>`:''}</div>`:''}
+          <div class="sn-card-btns">
+            <span class="sticky-note-date">${esc(en.date||'')}</span>
+            <div style="display:flex;gap:4px">
+              <button class="sn-btn-edit" data-sedit="${esc(en.id)}" title="수정">✏️</button>
+              <button class="sn-btn-copy" data-scopy="${esc(en.id)}" title="복사">📋</button>
+              <button class="sn-btn-del" data-sdel="${esc(en.id)}" title="삭제">🗑</button>
+            </div>
+          </div>
+        </div>
+        <!-- 편집 모드 (숨김) -->
+        <div class="sn-edit" data-snedit="${esc(en.id)}" style="display:none">
+          <input type="text" class="sn-edit-title" value="${esc(en.title||'')}" placeholder="제목 (선택)">
+          <div class="sn-edit-body" contenteditable="true">${esc(en.body||'')}</div>
+          <div class="sn-card-btns" style="margin-top:8px">
+            <button class="sn-btn-cancel" data-scancel="${esc(en.id)}">취소</button>
+            <div style="display:flex;gap:4px">
+              <button class="sn-btn-del2" data-sdel="${esc(en.id)}" title="삭제">🗑 삭제</button>
+              <button class="sn-btn-save" data-ssave="${esc(en.id)}" title="저장">💾 저장</button>
+            </div>
+          </div>
+        </div>
+      </div>`).join('');
+
+    // 수정 버튼 → 편집 모드 전환
+    grid.querySelectorAll('[data-sedit]').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        e.stopPropagation();
+        const id=btn.dataset.sedit;
+        const card=btn.closest('.sticky-note');
+        card.querySelector('.sn-view').style.display='none';
+        card.querySelector('.sn-edit').style.display='';
+        const bodyEl=card.querySelector('.sn-edit-body');
+        if(bodyEl){ bodyEl.focus(); const r=document.createRange(); r.selectNodeContents(bodyEl); r.collapse(false); const s=window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+      });
+    });
+    // 취소 → 읽기 모드 복귀
+    grid.querySelectorAll('[data-scancel]').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        e.stopPropagation();
+        const card=btn.closest('.sticky-note');
+        card.querySelector('.sn-view').style.display='';
+        card.querySelector('.sn-edit').style.display='none';
+      });
+    });
+    // 저장
+    grid.querySelectorAll('[data-ssave]').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        e.stopPropagation();
+        const id=btn.dataset.ssave;
+        const card=btn.closest('.sticky-note');
+        const t=card.querySelector('.sn-edit-title').value||'';
+        const b=(card.querySelector('.sn-edit-body').innerText||'').trim();
+        if(!b){ if(typeof toast==='function') toast('내용을 입력해주세요'); return; }
+        if(typeof updateRecord==='function') updateRecord(id,{title:t.trim(),body:b});
+        if(typeof toast==='function') toast('저장됐어요');
+        setTimeout(renderStickyGrid,200);
+      });
+    });
+    // 카드 복사
+    grid.querySelectorAll('[data-scopy]').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        e.stopPropagation();
+        const en=(typeof entries!=='undefined')&&entries.find(x=>x.id===btn.dataset.scopy);
+        if(!en) return;
+        const txt=[en.title,en.body].filter(Boolean).join('\n');
+        navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>{ if(typeof toast==='function') toast('복사됐어요'); });
+      });
+    });
+    // 삭제
+    grid.querySelectorAll('[data-sdel]').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        e.stopPropagation();
+        if(!confirm('이 메모를 삭제할까요?')) return;
+        if(typeof deleteWithUndo==='function') deleteWithUndo(btn.dataset.sdel,'메모');
+        setTimeout(renderStickyGrid,300);
+      });
+    });
+
+    // ===== 목록형 렌더 =====
+    const listBox = document.getElementById('stickyList');
+    if(listBox){
+      const COLOR_BG2={yellow:'#f0c520',blue:'#3b82f6',green:'#22c55e',pink:'#ec4899',orange:'#f97316'};
+      if(!list.length){
+        listBox.innerHTML='<div class="v43-empty" style="width:100%;padding:40px 0;text-align:center"><div class="ei">📝</div>'+(stickySearch?'검색 결과가 없어요':'메모를 추가해보세요!')+'</div>';
+      } else {
+        listBox.innerHTML='<div class="sticky-list-wrap">'+list.map(en=>`
+          <div class="sticky-list-item" data-sid="${esc(en.id)}">
+            <div class="sticky-list-color" style="background:${COLOR_BG2[getColor(en)]||'#f0c520'}"></div>
+            <div class="sticky-list-body">
+              ${en.title?`<div class="sticky-list-title">${esc(en.title)}</div>`:''}
+              <div class="sticky-list-content">${esc((en.body||'').replace(/\n/g,' '))}</div>
+              <div class="sticky-list-date">${esc(en.date||'')}</div>
+            </div>
+            <div class="sticky-list-actions">
+              <button class="sticky-list-btn" data-scopy2="${esc(en.id)}" title="복사">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3f7cb8" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+              <button class="sticky-list-btn" data-sedit2="${esc(en.id)}" title="수정">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3f7cb8" stroke-width="2.2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="sticky-list-btn" data-sdel2="${esc(en.id)}" title="삭제" style="border-color:#fde8e8">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
+            </div>
+          </div>`).join('')+'</div>';
+        listBox.querySelectorAll('[data-scopy2]').forEach(btn=>{
+          btn.addEventListener('click',()=>{
+            const en=(typeof entries!=='undefined')&&entries.find(x=>x.id===btn.dataset.scopy2);
+            if(!en) return;
+            const txt=[en.title,en.body].filter(Boolean).join('\n');
+            navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>{ if(typeof toast==='function') toast('복사됐어요'); });
+          });
+        });
+        listBox.querySelectorAll('[data-sedit2]').forEach(btn=>{
+          btn.addEventListener('click',()=>openStickyEdit(btn.dataset.sedit2));
+        });
+        listBox.querySelectorAll('[data-sdel2]').forEach(btn=>{
+          btn.addEventListener('click',()=>{
+            if(!confirm('이 메모를 삭제할까요?')) return;
+            if(typeof deleteWithUndo==='function') deleteWithUndo(btn.dataset.sdel2,'메모');
+            setTimeout(renderStickyGrid,300);
+          });
+        });
+      }
+      listBox.style.display=stickyViewMode==='list'?'flex':'none';
+      grid.style.display=stickyViewMode==='card'?'':'none';
+    }
+    // 버튼 활성 상태
+    const cb=document.getElementById('memoViewCard');
+    const lb=document.getElementById('memoViewList');
+    if(cb) cb.classList.toggle('memo-view-active',stickyViewMode==='card');
+    if(lb) lb.classList.toggle('memo-view-active',stickyViewMode==='list');
+  }
+
+  // 색상 선택
+  document.querySelectorAll('.sc-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      activeStickyColor = btn.dataset.color;
+      document.querySelectorAll('.sc-btn').forEach(b=>b.classList.toggle('active', b.dataset.color===activeStickyColor));
+      // 입력창 배경 변경
+      const wrap = document.getElementById('stickyInputWrap');
+      if(wrap){
+        const colorMap = {yellow:['#fff9c4','#f0e060'],blue:['#dbeafe','#93c5fd'],green:['#dcfce7','#86efac'],pink:['#fce7f3','#f9a8d4'],orange:['#ffedd5','#fdba74']};
+        const [bg,br] = colorMap[activeStickyColor]||colorMap.yellow;
+        wrap.style.background = bg;
+        wrap.style.borderColor = br;
+      }
+    });
+  });
+
+  // 사진 압축 (worklog.js의 compressImage 활용)
+  async function compressStickyImg(file){
+    return new Promise((resolve,reject)=>{
+      const r=new FileReader();
+      r.onload=e=>{
+        const img=new Image();
+        img.onload=()=>{
+          let w=img.width,h=img.height,maxD=1100;
+          if(w>h){if(w>maxD){h=Math.round(h*maxD/w);w=maxD;}}
+          else{if(h>maxD){w=Math.round(w*maxD/h);h=maxD;}}
+          const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+          cv.getContext('2d').drawImage(img,0,0,w,h);
+          resolve(cv.toDataURL('image/jpeg',0.7));
+        };
+        img.onerror=reject; img.src=e.target.result;
+      };
+      r.onerror=reject; r.readAsDataURL(file);
+    });
+  }
+
+  // 입력창에 이미지 삽입
+  function insertStickyImg(dataUrl){
+    const el=document.getElementById('stickyInput');
+    if(!el) return;
+    el.focus();
+    const img=document.createElement('img');
+    img.src=dataUrl; img.style.maxWidth='120px'; img.style.borderRadius='8px'; img.style.margin='2px 4px';
+    const sel=window.getSelection();
+    if(sel&&sel.rangeCount){
+      const r=sel.getRangeAt(0); r.collapse(false);
+      r.insertNode(img); r.setStartAfter(img); r.collapse(true);
+      sel.removeAllRanges(); sel.addRange(r);
+    } else { el.appendChild(img); }
+  }
+
+  // 카메라/파일 선택
+  async function handleStickyPhoto(files){
+    for(const f of files){
+      if(!f.type.startsWith('image/')) continue;
+      try{ const d=await compressStickyImg(f); insertStickyImg(d); }
+      catch(e){ console.warn('사진 처리 실패',e); }
+    }
+  }
+  const camEl=document.getElementById('stickyCam');
+  const fileEl=document.getElementById('stickyFile');
+  if(camEl) camEl.addEventListener('change',e=>{ handleStickyPhoto([...e.target.files]); e.target.value=''; });
+  if(fileEl) fileEl.addEventListener('change',e=>{ handleStickyPhoto([...e.target.files]); e.target.value=''; });
+
+  // Ctrl+V 붙여넣기
+  const stickyInputEl = document.getElementById('stickyInput');
+  if(stickyInputEl){
+    stickyInputEl.addEventListener('paste', async e=>{
+      const items=[...(e.clipboardData||e.originalEvent?.clipboardData||{items:[]}).items||[]];
+      const imgItem=items.find(i=>i.type.startsWith('image/'));
+      if(imgItem){
+        e.preventDefault();
+        const file=imgItem.getAsFile();
+        if(file){ const d=await compressStickyImg(file); insertStickyImg(d); }
+      }
+      // 텍스트는 기본 동작 허용
+    });
+    stickyInputEl.addEventListener('keydown', e=>{
+      if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); saveSticky(); }
+    });
+  }
+
+  // 저장
+  function saveSticky(){
+    const inputEl = document.getElementById('stickyInput');
+    const title = (document.getElementById('stickyTitle')||{}).value||'';
+    if(!inputEl){ return; }
+    // 텍스트 추출
+    const body = (inputEl.innerText||inputEl.textContent||'').trim();
+    // 사진 추출
+    const photos = [...inputEl.querySelectorAll('img')].map(i=>i.src);
+    if(!body && !photos.length){ if(typeof toast==='function') toast('내용을 입력해주세요'); else alert('내용을 입력해주세요'); return; }
+    const today=new Date();
+    const d=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    if(typeof addRecord==='function'){
+      addRecord({kind:'memo', date:d, title:title.trim(), body:body, photos:photos, stickyColor:activeStickyColor, createdAt:Date.now()});
+    }
+    // 초기화
+    inputEl.innerHTML='';
+    document.getElementById('stickyTitle').value='';
+    if(typeof toast==='function') toast('메모가 저장됐어요');
+    setTimeout(()=>{ renderStickyGrid(); if(typeof v43Refresh==='function') v43Refresh(); }, 200);
+  }
+
+  const saveBtnEl = document.getElementById('stickySave');
+  if(saveBtnEl) saveBtnEl.addEventListener('click', saveSticky);
+
+  // 검색
+  const searchEl = document.getElementById('stickySearch');
+  if(searchEl){
+    let t;
+    searchEl.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(()=>{ stickySearch=searchEl.value; renderStickyGrid(); },200); });
+  }
+
+  // 수정/삭제는 카드 인라인 버튼으로 처리
+
+  // 탭 전환 시 렌더
+  document.querySelectorAll('.v43-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(btn.dataset.v43tab==='memo') setTimeout(renderStickyGrid, 100);
+    });
+  });
+
+/* ===== 문서 탭 (품의서·견적서 월별 관리) ===== */
+(function(){
+  const DOCS_LS = 'wl_docs_v43';
+  let docs = [];
+  let editingDocId = null;
+  let docsTypeFilter = 'all';
+  let docsYearFilter = 'all';
+
+  function loadDocs(){
+    try{ docs = JSON.parse(localStorage.getItem(DOCS_LS)||'[]'); }
+    catch(e){ docs = []; }
+  }
+
+  function saveDocs(){
+    try{ localStorage.setItem(DOCS_LS, JSON.stringify(docs)); }catch(e){}
+  }
+
+  function genDocId(){ return 'doc_'+Date.now()+'_'+Math.floor(Math.random()*10000); }
+
+  function getYears(){
+    const years = [...new Set(docs.map(d=>(d.month||'').slice(0,4)).filter(Boolean))].sort().reverse();
+    const cur = new Date().getFullYear().toString();
+    if(!years.includes(cur)) years.unshift(cur);
+    return years;
+  }
+
+  function updateYearSelect(){
+    const sel = document.getElementById('docsYearFilter');
+    if(!sel) return;
+    const years = getYears();
+    const cur = new Date().getFullYear().toString();
+    sel.innerHTML = '<option value="all">전체 연도</option>' +
+      years.map(y=>`<option value="${y}" ${y===cur?'selected':''}>${y}년</option>`).join('');
+    docsYearFilter = sel.value;
+  }
+
+  function getFiltered(){
+    return docs.filter(d=>{
+      if(docsTypeFilter!=='all' && d.type!==docsTypeFilter) return false;
+      if(docsYearFilter!=='all' && !(d.month||'').startsWith(docsYearFilter)) return false;
+      return true;
+    }).sort((a,b)=>(b.month||'').localeCompare(a.month||''));
+  }
+
+  function toLocalUrl(path){
+    if(!path) return '#';
+    return 'localfile://'+encodeURI(path.split('\\').join('/'));
+  }
+
+  const TYPE_COLOR = {
+    '품의서':'#3f7cb8','견적서':'#27ae60','계약서':'#8e44ad','기타':'#7a92a8'
+  };
+
+  function renderDocs(){
+    const body = document.getElementById('docsBody');
+    const cnt  = document.getElementById('docsCount');
+    if(!body) return;
+    const list = getFiltered();
+    if(cnt) cnt.textContent = list.length+'건';
+    if(!list.length){
+      body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">조건에 맞는 문서가 없습니다</td></tr>';
+      return;
+    }
+    // 월별 그룹핑
+    const groups = {};
+    list.forEach(d=>{
+      const m = d.month||'날짜없음';
+      if(!groups[m]) groups[m]=[];
+      groups[m].push(d);
+    });
+    let html = '';
+    Object.keys(groups).sort().reverse().forEach(month=>{
+      const label = month.length===7 ? month.slice(0,4)+'년 '+month.slice(5)+'월' : month;
+      html += `<tr style="background:#f7faff"><td colspan="5" style="padding:8px 14px;font-size:12px;font-weight:800;color:#7a92a8;border-bottom:1px solid #e8f0fa">${label}</td></tr>`;
+      groups[month].forEach(d=>{
+        const color = TYPE_COLOR[d.type]||'#7a92a8';
+        html += `<tr class="docs-row" data-docid="${d.id}" style="border-bottom:1px solid #f0f6ff;cursor:pointer;transition:background .12s">
+          <td style="padding:12px 14px;font-size:13px;color:#7a92a8;white-space:nowrap">${(d.month||'').slice(5)}월</td>
+          <td style="padding:12px 14px">
+            <span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:12px;font-weight:700;background:${color}22;color:${color}">${d.type||''}</span>
+          </td>
+          <td style="padding:12px 14px">
+            <div style="font-size:14px;font-weight:600;color:#1a2f45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.name||''}</div>
+            ${d.memo?`<div style="font-size:12px;color:#aab8c8;margin-top:2px">${d.memo}</div>`:''}
+          </td>
+          <td style="padding:12px 14px;text-align:center">
+            ${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:20px;text-decoration:none" title="${d.path}">${d.fileType==='file'?'📄':'📁'}</a>`:'<span style="color:#ddd">—</span>'}
+          </td>
+          <td style="padding:12px 14px;text-align:center">
+            <button class="docs-edit-btn" data-docid="${d.id}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px 6px;border-radius:6px" title="수정">✏️</button>
+          </td>
+        </tr>`;
+      });
+    });
+    body.innerHTML = html;
+
+    // 행 클릭 → 수정
+    body.querySelectorAll('.docs-row').forEach(tr=>{
+      tr.addEventListener('mouseenter', ()=>tr.style.background='#f0f6ff');
+      tr.addEventListener('mouseleave', ()=>tr.style.background='');
+      tr.addEventListener('click', e=>{
+        if(e.target.closest('a,.docs-edit-btn')) return;
+        openDocsModal(tr.dataset.docid);
+      });
+    });
+    body.querySelectorAll('.docs-edit-btn').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        e.stopPropagation();
+        openDocsModal(btn.dataset.docid);
+      });
+    });
+  }
+
+  function openDocsModal(id){
+    editingDocId = id||null;
+    const d = id ? docs.find(x=>x.id===id) : null;
+    const modal = document.getElementById('docsModal');
+    const titleEl = document.getElementById('docsModalTitle');
+    const delBtn = document.getElementById('docsModalDel');
+    if(titleEl) titleEl.textContent = id ? '문서 수정' : '문서 추가';
+    if(delBtn) delBtn.style.display = id ? '' : 'none';
+
+    const today = new Date();
+    const defMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+
+    const typeEl  = document.getElementById('docsModalType');
+    const monthEl = document.getElementById('docsModalMonth');
+    const nameEl  = document.getElementById('docsModalName');
+    const pathEl  = document.getElementById('docsModalPath');
+    const memoEl  = document.getElementById('docsModalMemo');
+
+    if(typeEl)  typeEl.value  = d ? (d.type||'품의서') : '품의서';
+    if(monthEl) monthEl.value = d ? (d.month||defMonth) : defMonth;
+    if(nameEl)  nameEl.value  = d ? (d.name||'') : '';
+    if(pathEl)  pathEl.value  = d ? (d.path||'') : '';
+    if(memoEl)  memoEl.value  = d ? (d.memo||'') : '';
+
+    if(modal) modal.classList.add('show');
+    setTimeout(()=>{ if(nameEl) nameEl.focus(); }, 200);
+  }
+
+  function closeDocsModal(){
+    const modal = document.getElementById('docsModal');
+    if(modal) modal.classList.remove('show');
+    editingDocId = null;
+  }
+
+  function saveDoc(){
+    const type  = (document.getElementById('docsModalType')||{}).value||'기타';
+    const month = (document.getElementById('docsModalMonth')||{}).value||'';
+    const name  = ((document.getElementById('docsModalName')||{}).value||'').trim();
+    const path  = ((document.getElementById('docsModalPath')||{}).value||'').trim();
+    const memo  = ((document.getElementById('docsModalMemo')||{}).value||'').trim();
+
+    if(!name){ if(typeof toast==='function') toast('파일명/내용을 입력해주세요'); else alert('파일명/내용을 입력해주세요'); return; }
+
+    if(editingDocId){
+      const i = docs.findIndex(x=>x.id===editingDocId);
+      if(i>=0) docs[i] = {...docs[i], type, month, name, path, memo, updatedAt:Date.now()};
+    } else {
+      docs.push({id:genDocId(), type, month, name, path, memo, createdAt:Date.now()});
+    }
+    saveDocs();
+    closeDocsModal();
+    updateYearSelect();
+    renderDocs();
+    if(typeof toast==='function') toast('저장됐어요');
+  }
+
+  function deleteDoc(){
+    if(!editingDocId) return;
+    if(!confirm('이 문서를 삭제할까요?')) return;
+    docs = docs.filter(x=>x.id!==editingDocId);
+    saveDocs();
+    closeDocsModal();
+    updateYearSelect();
+    renderDocs();
+    if(typeof toast==='function') toast('삭제됐어요');
+  }
+
+  // 이벤트 바인딩
+  document.getElementById('docsAddBtn')?.addEventListener('click', ()=>openDocsModal(null));
+  document.getElementById('docsModalSave')?.addEventListener('click', saveDoc);
+  document.getElementById('docsModalDel')?.addEventListener('click', deleteDoc);
+  document.getElementById('docsModalCancel')?.addEventListener('click', closeDocsModal);
+  document.getElementById('docsModal')?.addEventListener('click', e=>{
+    if(e.target===document.getElementById('docsModal')) closeDocsModal();
+  });
+
+  // 필터 이벤트
+  document.getElementById('docsTypeFilter')?.addEventListener('change', e=>{
+    docsTypeFilter = e.target.value; renderDocs();
+  });
+  document.getElementById('docsYearFilter')?.addEventListener('change', e=>{
+    docsYearFilter = e.target.value; renderDocs();
+  });
+
+  // 탭 전환 시 렌더
+  document.querySelectorAll('.v43-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(btn.dataset.v43tab==='docs'){
+        updateYearSelect(); renderDocs();
+      }
+    });
+  });
+
+  // 초기화
+  loadDocs();
+  updateYearSelect();
+
+})();
+
+  // renderAll 훅에 연결
+  const prevRefresh = window.v43Refresh;
+  window.v43Refresh = function(){ if(prevRefresh) prevRefresh(); renderStickyGrid(); };
+
+  // 초기 렌더 대기
+  let t2=0;
+  function waitAndRender(){
+    if(typeof entries!=='undefined'){ renderStickyGrid(); }
+    else if(t2++<30){ setTimeout(waitAndRender,300); }
+  }
+  setTimeout(waitAndRender, 800);
+})();
+
+/* ===== 구글 캘린더 연동 ===== */
+(function(){
+  var GCAL_CLIENT_ID = '65353408416-kih200tt2r9vtndl6n0vvr94freejuf7.apps.googleusercontent.com';
+  var GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar';
+
+  // 종류별 캘린더 ID 매핑
+  var GCAL_IDS = {
+    work:     '20251014peru@gmail.com',
+    schedule: '13fd7bc2a6a168b133d6099bb203cf74ac531cd35d8df8f512d8e2cc42aea3f8@group.calendar.google.com',
+    deliver:  '93d1c2405a1ad12075b0cdfdad696c1666bf218789757813b3bb98597b4a574f@group.calendar.google.com',
+    expense:  '8cde12aede6c5bb8590fceffaee07f29c82cbda83a6e3e4f941c89dc961a3880@group.calendar.google.com',
+    call:     '55b77cab30c5e75c12ca3fa783904acd05e4b4a6b56c4f153f4341f0b963c495@group.calendar.google.com',
+    vacation: '2e2c34c11ddffe738d69fc5436383900af25c16a00e794878d06625f4d94707f@group.calendar.google.com',
+    memo:     'family07802825348481193196@group.calendar.google.com',
+  };
+  var GCAL_LS = 'wl_gcal_token';
+  var tokenClient = null;
+  var accessToken = null;
+  var gcalReady = false;
+
+  function dbgG(msg){ if(typeof dbg==='function') dbg('[GCal] '+msg); }
+
+  // 버튼 상태 업데이트
+  function updateGCalBtn(state){
+    var btn = document.getElementById('btnGCal');
+    if(!btn) return;
+    if(state==='connected'){
+      btn.innerHTML = '<img src="https://www.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png" style="width:18px;height:18px;object-fit:cover;border-radius:3px"> 연동됨';
+      btn.style.background = '#e8f5e9'; btn.style.color = '#2e7d32';
+      btn.style.borderColor = '#a5d6a7';
+    } else {
+      btn.innerHTML = '<img src="https://www.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png" style="width:18px;height:18px;object-fit:cover;border-radius:3px"> G캘린더';
+      btn.style.background = '#fff'; btn.style.color = '#444';
+      btn.style.borderColor = '#dbe6f4';
+    }
+  }
+
+  // 저장된 토큰 복구
+  function loadToken(){
+    try{
+      var t = JSON.parse(localStorage.getItem(GCAL_LS)||'null');
+      if(t && t.access_token && t.expires_at > Date.now()){
+        accessToken = t.access_token;
+        updateGCalBtn('connected');
+        dbgG('저장된 토큰 복구됨');
+        return true;
+      }
+    }catch(e){}
+    return false;
+  }
+
+  // 구글 로그인
+  function signIn(){
+    if(!tokenClient){ alert('구글 API가 아직 로드 중입니다. 잠시 후 다시 시도해주세요.'); return; }
+    tokenClient.requestAccessToken({prompt:''});
+  }
+
+  // 구글 로그아웃
+  function signOut(){
+    accessToken = null;
+    localStorage.removeItem(GCAL_LS);
+    updateGCalBtn('disconnected');
+    if(typeof toast==='function') toast('구글 캘린더 연동 해제됨');
+  }
+
+  // 예정 → 구글 캘린더 등록
+  function syncScheduleToGCal(en){
+    if(!accessToken){ signIn(); return; }
+    var calId = GCAL_IDS[en.kind];
+    if(!calId) return;
+
+    var startDate = en.date || en.start || '';
+    if(!startDate) return;
+
+    // 종류별 제목/설명/색상
+    var summary = '', description = '';
+    var colorMap = {work:'9',schedule:'7',call:'6',deliver:'4',vacation:'2',expense:'11',memo:'5'};
+    switch(en.kind){
+      case 'work':
+        summary = en.title||'업무';
+        description = [en.floor, en.field, en.detail].filter(Boolean).join(' · ');
+        break;
+      case 'schedule':
+        summary = en.title||'예정';
+        description = (en.sType||'')+(en.memo?'\n'+en.memo:'');
+        break;
+      case 'call':
+        summary = (en.name||'')+(en.company?' ('+en.company+')':'');
+        description = en.content||'';
+        break;
+      case 'deliver':
+        summary = en.title||en.content||'전달';
+        description = en.memo||'';
+        break;
+      case 'vacation':
+        summary = (en.name||'')+' '+(en.vtype||'휴가');
+        description = en.memo||'';
+        break;
+      case 'expense':
+        summary = en.title||'지출';
+        description = (en.amount?Number(en.amount).toLocaleString()+'원':'')+(en.vendor?' · '+en.vendor:'');
+        break;
+      case 'memo':
+        summary = en.title||en.body||'메모';
+        description = en.body||'';
+        break;
+      default:
+        summary = en.title||en.kind;
+        description = en.memo||'';
+    }
+
+    // 종일 이벤트
+    var event = {
+      summary: summary,
+      description: description,
+      start: { date: startDate },
+      end:   { date: startDate },
+      colorId: colorMap[en.kind]||'1',
+      extendedProperties: {
+        private: { wl_id: en.id||'', wl_kind: en.kind }
+      }
+    };
+
+    // 기존 구글 이벤트 ID 있으면 업데이트, 없으면 생성
+    var gcalId = en.gcalEventId;
+    var url = gcalId
+      ? 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calId) + '/events/' + gcalId
+      : 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calId) + '/events';
+    var method = gcalId ? 'PUT' : 'POST';
+
+    fetch(url, {
+      method: method,
+      headers: {
+        'Authorization': 'Bearer ' + accessToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(event)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d.id){
+        dbgG('등록 완료: ' + d.id);
+        // gcalEventId를 Firebase에도 저장
+        if(typeof updateRecord==='function' && en.id){
+          updateRecord(en.id, {gcalEventId: d.id});
+        }
+        if(typeof toast==='function') toast('📅 구글 캘린더에 등록됐어요!');
+      } else {
+        dbgG('등록 실패: ' + JSON.stringify(d));
+        if(d.error && d.error.code===401){ accessToken=null; localStorage.removeItem(GCAL_LS); signIn(); }
+      }
+    })
+    .catch(function(e){ dbgG('fetch 오류: '+e); });
+  }
+
+  // 구글 캘린더에서 삭제
+  function deleteFromGCal(gcalEventId){
+    if(!accessToken || !gcalEventId) return;
+    fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + gcalEventId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + accessToken }
+    }).then(function(){
+      dbgG('삭제 완료: ' + gcalEventId);
+    }).catch(function(e){ dbgG('삭제 오류: '+e); });
+  }
+
+  // 전역 노출 (worklog.js에서 호출 가능)
+  window.gcalSync = syncScheduleToGCal;
+  window.gcalDelete = deleteFromGCal;
+  window.gcalSignIn = signIn;
+  window.gcalSignOut = signOut;
+
+  // 예정 저장 훅 (addRecord/updateRecord 래핑)
+  function hookSaveRecord(){
+    var origAdd = window.addRecord;
+    if(origAdd && !origAdd._gcalHooked){
+      window.addRecord = function(obj){
+        var result = origAdd.apply(this, arguments);
+        if(obj && GCAL_IDS[obj.kind] && accessToken){
+          setTimeout(function(){ syncScheduleToGCal(obj); }, 500);
+        }
+        return result;
+      };
+      window.addRecord._gcalHooked = true;
+    }
+
+    var origUpdate = window.updateRecord;
+    if(origUpdate && !origUpdate._gcalHooked){
+      window.updateRecord = function(id, obj){
+        var result = origUpdate.apply(this, arguments);
+        if(obj && accessToken){
+          setTimeout(function(){
+            var en = (typeof entries!=='undefined') && entries.find(function(x){return x.id===id;});
+            if(en && GCAL_IDS[en.kind]) syncScheduleToGCal(en);
+          }, 500);
+        }
+        return result;
+      };
+      window.updateRecord._gcalHooked = true;
+    }
+  }
+
+  // Google API 초기화
+  function initGApi(){
+    if(!window.google || !window.google.accounts){
+      setTimeout(initGApi, 500); return;
+    }
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GCAL_CLIENT_ID,
+      scope: GCAL_SCOPE,
+      callback: function(resp){
+        if(resp.error){ dbgG('로그인 오류: '+resp.error); return; }
+        accessToken = resp.access_token;
+        // 토큰 저장 (1시간)
+        try{
+          localStorage.setItem(GCAL_LS, JSON.stringify({
+            access_token: resp.access_token,
+            expires_at: Date.now() + (resp.expires_in||3600)*1000
+          }));
+        }catch(e){}
+        updateGCalBtn('connected');
+        if(typeof toast==='function') toast('✅ 구글 캘린더 연동됐어요!');
+        dbgG('로그인 완료');
+        hookSaveRecord();
+      }
+    });
+    gcalReady = true;
+    dbgG('Google API 초기화 완료');
+
+    // 저장된 토큰 복구 시도
+    if(loadToken()) hookSaveRecord();
+  }
+
+  // 버튼 이벤트
+  function bindBtn(){
+    var btn = document.getElementById('btnGCal');
+    if(!btn){ setTimeout(bindBtn, 300); return; }
+    btn.addEventListener('click', function(){
+      if(accessToken){
+        if(confirm('구글 캘린더 연동을 해제할까요?')) signOut();
+      } else {
+        signIn();
+      }
+    });
+    dbgG('버튼 바인딩 완료');
+  }
+
+  // 초기화 순서
+  setTimeout(initGApi, 800);
+  setTimeout(bindBtn, 300);
+  setTimeout(function(){
+    // worklog.js 로드 후 훅
+    if(accessToken) hookSaveRecord();
+  }, 2000);
+
+  dbgG('모듈 로드됨');
+})();
+</script>
+<script>
+/* ===== 공통 유틸: 종류(카테고리) 관리 ===== */
+(function(){
+  // 탭별 기본 종류
+  const DEFAULT_CATS = {
+    insp:   ['전기','소방','기계','위생','용역'],
+    docs:   ['품의서','견적서','계약서','공문','회의록'],
+    common: ['건축물대장','토지대장','도면','관리규약','인허가'],
+    indiv:  ['임대차계약서','건축물대장','등기부등본','임대료','기타']
+  };
+  const CAT_LS_PREFIX = 'wl_cats_v43_';
+
+  function loadCats(tab){
+    try{ return JSON.parse(localStorage.getItem(CAT_LS_PREFIX+tab)||'null') || DEFAULT_CATS[tab]||[]; }
+    catch(e){ return DEFAULT_CATS[tab]||[]; }
+  }
+  function saveCats(tab, arr){
+    try{ localStorage.setItem(CAT_LS_PREFIX+tab, JSON.stringify(arr)); }catch(e){}
+  }
+  window.loadCats = loadCats;
+  window.saveCats = saveCats;
+
+  // 종류 관리 모달
+  let _catTab = '', _catOnSave = null;
+  window.openCatMgr = function(tab, onSave){
+    _catTab = tab; _catOnSave = onSave;
+    const titleMap = {insp:'점검일지 종류관리',docs:'운영실무 종류관리',common:'임대공용 종류관리',indiv:'임대개별 종류관리'};
+    const el = id => document.getElementById(id);
+    el('catMgrModalTitle').textContent = titleMap[tab]||'종류 관리';
+    el('catMgrNewName').value = '';
+    renderCatMgrList();
+    el('catMgrModal').classList.add('show');
+  };
+
+  function renderCatMgrList(){
+    const cats = loadCats(_catTab);
+    const list = document.getElementById('catMgrList');
+    if(!list) return;
+    list.innerHTML = cats.map((c,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7faff;border-radius:10px;border:1.5px solid #e8f0fa">
+        <input type="text" value="${c}" data-ci="${i}" style="flex:1;border:none;background:transparent;font-size:14px;font-family:inherit;outline:none;color:#1a2f45;font-weight:600">
+        <button data-save="${i}" style="background:#eaf1fb;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#3f7cb8;cursor:pointer;font-family:inherit">저장</button>
+        <button data-del="${i}" style="background:#fde8e8;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+      </div>`).join('');
+    list.querySelectorAll('[data-save]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const i = parseInt(btn.dataset.save);
+        const inp = list.querySelector(`[data-ci="${i}"]`);
+        if(!inp||!inp.value.trim()) return;
+        const cats2 = loadCats(_catTab);
+        cats2[i] = inp.value.trim();
+        saveCats(_catTab, cats2);
+        renderCatMgrList();
+        if(_catOnSave) _catOnSave();
+        if(typeof toast==='function') toast('저장됐어요');
+      });
+    });
+    list.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const i = parseInt(btn.dataset.del);
+        const cats2 = loadCats(_catTab);
+        if(!confirm(`"${cats2[i]}" 종류를 삭제할까요?`)) return;
+        cats2.splice(i,1);
+        saveCats(_catTab, cats2);
+        renderCatMgrList();
+        if(_catOnSave) _catOnSave();
+      });
+    });
+  }
+
+  document.getElementById('catMgrAddBtn')?.addEventListener('click', ()=>{
+    const name = (document.getElementById('catMgrNewName')||{}).value?.trim();
+    if(!name) return;
+    const cats = loadCats(_catTab);
+    if(cats.includes(name)){ if(typeof toast==='function') toast('이미 있는 종류예요'); return; }
+    cats.push(name);
+    saveCats(_catTab, cats);
+    document.getElementById('catMgrNewName').value='';
+    renderCatMgrList();
+    if(_catOnSave) _catOnSave();
+    if(typeof toast==='function') toast('추가됐어요');
+  });
+  document.getElementById('catMgrClose')?.addEventListener('click', ()=>{
+    document.getElementById('catMgrModal').classList.remove('show');
+  });
+  // 월관리 공통 이벤트
+  document.getElementById('monthMgrAddBtn')?.addEventListener('click',()=>{
+    const val=document.getElementById('monthMgrNewVal')?.value;
+    if(!val) return;
+    let arr=[]; try{arr=JSON.parse(localStorage.getItem(window._monthMgrLS)||'[]');}catch(e){}
+    if(arr.includes(val)){ if(typeof toast==='function') toast('이미 있는 월이에요'); return; }
+    arr.push(val);
+    localStorage.setItem(window._monthMgrLS,JSON.stringify(arr));
+    document.getElementById('monthMgrNewVal').value='';
+    renderMonthMgrList();
+    if(window._monthMgrOnSave) window._monthMgrOnSave();
+    if(typeof toast==='function') toast('추가됐어요');
+  });
+  document.getElementById('monthMgrClose')?.addEventListener('click',()=>{
+    document.getElementById('monthMgrModal').classList.remove('show');
+  });
+  document.getElementById('monthMgrModal')?.addEventListener('click',e=>{
+    if(e.target===document.getElementById('monthMgrModal'))
+      document.getElementById('monthMgrModal').classList.remove('show');
+  });
+  document.getElementById('catMgrModal')?.addEventListener('click', e=>{
+    if(e.target===document.getElementById('catMgrModal'))
+      document.getElementById('catMgrModal').classList.remove('show');
+  });
+})();
+
+/* ===== 공통 문서 탭 팩토리 ===== */
+function makeDocTab(cfg){
+  const LS = cfg.dataLS;
+  const MONTH_LS = cfg.dataLS+'_months';
+  let items=[], editId=null;
+  let typeFilter='all', monthFilter='all', yearFilter='all';
+
+  function load(){ try{ items=JSON.parse(localStorage.getItem(LS)||'[]'); }catch(e){ items=[]; } }
+  function save(){ try{ localStorage.setItem(LS,JSON.stringify(items)); }catch(e){} }
+  function loadMonths(){ try{ return JSON.parse(localStorage.getItem(MONTH_LS)||'[]'); }catch(e){ return []; } }
+  function saveMonths(arr){ try{ localStorage.setItem(MONTH_LS,JSON.stringify(arr)); }catch(e){} }
+  function genId(){ return cfg.tab+'_'+Date.now()+'_'+Math.floor(Math.random()*9999); }
+  function toLocalUrl(p){ return p?'localfile://'+encodeURI(p.split('\\').join('/')):'#'; }
+
+  // 종류 드롭다운 채우기
+  function buildTypeSelect(selId){
+    const sel=document.getElementById(selId); if(!sel) return;
+    const cats=window.loadCats(cfg.tab);
+    sel.innerHTML='<option value="all">전체 종류</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  }
+
+  // 월 드롭다운 채우기
+  function buildMonthSelect(selId){
+    const sel=document.getElementById(selId); if(!sel) return;
+    const months=loadMonths().sort().reverse();
+    sel.innerHTML='<option value="all">전체 월</option>'+months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  }
+
+  // 필터링
+  function getFiltered(){
+    let list=items.filter(d=>{
+      if(typeFilter!=='all'&&d.type!==typeFilter) return false;
+      if(monthFilter!=='all'&&d.month!==monthFilter) return false;
+      if(yearFilter!=='all'&&!(d.month||'').startsWith(yearFilter)) return false;
+      if(cfg.extraFilter) return cfg.extraFilter(d);
+      return true;
+    });
+    return list.sort((a,b)=>(b.month||'').localeCompare(a.month||'')||(b.createdAt||0)-(a.createdAt||0));
+  }
+
+  const TYPE_COLOR={'전기':'#f39c12','소방':'#e74c3c','기계':'#27ae60','위생':'#8e44ad',
+    '용역':'#0891b2','품의서':'#3f7cb8','견적서':'#27ae60','계약서':'#8e44ad',
+    '공문':'#e67e22','회의록':'#7f8c8d','건축물대장':'#2980b9','토지대장':'#16a085',
+    '도면':'#8e44ad','관리규약':'#c0392b','인허가':'#d35400',
+    '임대차계약서':'#2ecc71','등기부등본':'#3498db','임대료':'#e74c3c','기타':'#7a92a8'};
+
+  function render(){
+    const body=document.getElementById(cfg.bodyId);
+    const cnt=document.getElementById(cfg.countId);
+    if(!body) return;
+    const list=getFiltered();
+    if(cnt) cnt.textContent=list.length+'건';
+    if(!list.length){
+      body.innerHTML=`<tr><td colspan="${cfg.cols||5}" style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">➕ 추가 버튼으로 등록해보세요</td></tr>`;
+      return;
+    }
+    const groups={};
+    list.forEach(d=>{ const m=d.month||'날짜없음'; if(!groups[m]) groups[m]=[]; groups[m].push(d); });
+    let h='';
+    Object.keys(groups).sort().reverse().forEach(month=>{
+      const label=month.length===7?month.slice(0,4)+'년 '+month.slice(5)+'월':month;
+      h+=`<tr style="background:#f7faff"><td colspan="${cfg.cols||5}" style="padding:8px 14px;font-size:12px;font-weight:800;color:#7a92a8;border-bottom:1px solid #e8f0fa">${label}</td></tr>`;
+      groups[month].forEach(d=>{
+        const color=TYPE_COLOR[d.type]||'#7a92a8';
+        const extraCells=cfg.extraCells?cfg.extraCells(d):'';
+        h+=`<tr class="doc-row-${cfg.tab}" data-docid="${d.id}" style="border-bottom:1px solid #f0f6ff;cursor:pointer;transition:background .12s">
+          ${extraCells}
+          <td style="padding:12px 14px;font-size:13px;color:#7a92a8;white-space:nowrap">${(d.month||'').slice(5)}월</td>
+          <td style="padding:12px 14px"><span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:12px;font-weight:700;background:${color}22;color:${color}">${d.type||''}</span></td>
+          <td style="padding:12px 14px">
+            <div style="font-size:14px;font-weight:600;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name||''}</div>
+            ${d.memo?`<div style="font-size:12px;color:#aab8c8;margin-top:2px">${d.memo}</div>`:''}
+          </td>
+          <td style="padding:12px 14px;text-align:center">${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:20px;text-decoration:none" title="${d.path}">${d.fileType==='file'?'📄':'📁'}</a>`:'<span style="color:#ddd">—</span>'}</td>
+          <td style="padding:12px 14px;text-align:center"><button class="doc-edit-${cfg.tab}" data-docid="${d.id}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px 6px;border-radius:6px">✏️</button></td>
+        </tr>`;
+      });
+    });
+    body.innerHTML=h;
+    body.querySelectorAll(`.doc-row-${cfg.tab}`).forEach(tr=>{
+      tr.addEventListener('mouseenter',()=>tr.style.background='#f0f6ff');
+      tr.addEventListener('mouseleave',()=>tr.style.background='');
+      tr.addEventListener('click',e=>{ if(e.target.closest('a,.doc-edit-'+cfg.tab)) return; openModal(tr.dataset.docid); });
+    });
+    body.querySelectorAll(`.doc-edit-${cfg.tab}`).forEach(btn=>{
+      btn.addEventListener('click',e=>{ e.stopPropagation(); openModal(btn.dataset.docid); });
+    });
+  }
+
+  function openModal(id){
+    editId=id||null;
+    const d=id?items.find(x=>x.id===id):null;
+    const el=i=>document.getElementById(i);
+    el(cfg.modalTitleId).textContent=id?(cfg.defaultTitle+' 수정'):(cfg.defaultTitle+' 추가');
+    el(cfg.modalDelId).style.display=id?'':'none';
+    // 종류 드롭다운
+    const cats=window.loadCats(cfg.tab);
+    el(cfg.modalTypeId).innerHTML=cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+    el(cfg.modalTypeId).value=d?(d.type||cats[0]):cats[0];
+    // 월 드롭다운
+    const months=loadMonths().sort().reverse();
+    const today=new Date();
+    const defMonth=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+    el(cfg.modalMonthId).innerHTML=months.map(m=>`<option value="${m}">${m}</option>`).join('');
+    if(d) el(cfg.modalMonthId).value=d.month||months[0]||defMonth;
+    else if(months.length) el(cfg.modalMonthId).value=months[0];
+    el(cfg.modalNameId).value=d?(d.name||''):'';
+    el(cfg.modalPathId).value=d?(d.path||''):'';
+    el(cfg.modalMemoId).value=d?(d.memo||''):'';
+    // 파일/폴더 라디오 복원
+    const ftVal=d?(d.fileType||'folder'):'folder';
+    const ftRadioRestore=document.querySelector(`input[name="${cfg.tab}ModalFileType"][value="${ftVal}"]`);
+    if(ftRadioRestore) ftRadioRestore.checked=true;
+    if(cfg.fillExtraFields) cfg.fillExtraFields(d);
+    el(cfg.modalId).classList.add('show');
+    setTimeout(()=>el(cfg.modalNameId).focus(),200);
+  }
+
+  function closeModal(){
+    document.getElementById(cfg.modalId).classList.remove('show');
+    editId=null;
+  }
+
+  function saveItem(){
+    const el=i=>document.getElementById(i);
+    const type=el(cfg.modalTypeId).value||'기타';
+    const month=el(cfg.modalMonthId).value||'';
+    const name=(el(cfg.modalNameId).value||'').trim();
+    const path=(el(cfg.modalPathId).value||'').trim();
+    const memo=(el(cfg.modalMemoId).value||'').trim();
+    const ftRadio=document.querySelector(`input[name="${cfg.tab}ModalFileType"]:checked`);
+    const fileType=ftRadio?ftRadio.value:'folder';
+    if(!name){ if(typeof toast==='function') toast('파일명/내용을 입력해주세요'); return; }
+    const extra=cfg.getExtraFields?cfg.getExtraFields():{};
+    if(editId){
+      const i=items.findIndex(x=>x.id===editId);
+      if(i>=0) items[i]={...items[i],...extra,type,month,name,path,memo,updatedAt:Date.now()};
+    } else {
+      items.push({id:genId(),...extra,type,month,name,path,memo,fileType,createdAt:Date.now()});
+    }
+    save(); closeModal();
+    buildTypeSelect(cfg.typeFilterId); buildMonthSelect(cfg.monthFilterId); render();
+    if(typeof toast==='function') toast('저장됐어요');
+  }
+
+  function deleteItem(){
+    if(!editId||!confirm('삭제할까요?')) return;
+    items=items.filter(x=>x.id!==editId);
+    save(); closeModal();
+    buildTypeSelect(cfg.typeFilterId); buildMonthSelect(cfg.monthFilterId); render();
+    if(typeof toast==='function') toast('삭제됐어요');
+  }
+
+  // 월 관리 모달
+  function openMonthMgr(){
+    window._monthMgrTab = cfg.tab;
+    window._monthMgrLS = MONTH_LS;
+    window._monthMgrOnSave = ()=>{ buildMonthSelect(cfg.monthFilterId); buildMonthSelect(cfg.modalMonthId); render(); };
+    const titleMap={insp:'점검일지',docs:'운영실무',common:'임대공용',indiv:'임대개별'};
+    document.getElementById('monthMgrTitle').textContent=(titleMap[cfg.tab]||'')+' 월 관리';
+    renderMonthMgrList();
+    document.getElementById('monthMgrNewVal').value='';
+    document.getElementById('monthMgrModal').classList.add('show');
+  }
+
+  // 이벤트 바인딩
+  const el=i=>document.getElementById(i);
+  el(cfg.addBtnId)?.addEventListener('click',()=>openModal(null));
+  el(cfg.modalSaveId)?.addEventListener('click',saveItem);
+  el(cfg.modalDelId)?.addEventListener('click',deleteItem);
+  el(cfg.modalCancelId)?.addEventListener('click',closeModal);
+  el(cfg.modalId)?.addEventListener('click',e=>{ if(e.target===el(cfg.modalId)) closeModal(); });
+  el(cfg.typeFilterId)?.addEventListener('change',e=>{ typeFilter=e.target.value; render(); });
+  el(cfg.monthFilterId)?.addEventListener('change',e=>{ monthFilter=e.target.value; render(); });
+  el(cfg.catMgrBtnId)?.addEventListener('click',()=>window.openCatMgr(cfg.tab,()=>{
+    buildTypeSelect(cfg.typeFilterId); buildTypeSelect(cfg.modalTypeId); render();
+  }));
+  el(cfg.monthMgrBtnId)?.addEventListener('click', openMonthMgr);
+
+  // 년관리
+  function openYearMgr(){
+    window._yearMgrLS = cfg.dataLS+'_years';
+    window._yearMgrOnSave = ()=>{ buildYearSelect(cfg.yearFilterId); render(); };
+    document.getElementById('yearMgrTitle').textContent=(cfg.defaultTitle||'')+' 년 관리';
+    renderYearMgrList();
+    document.getElementById('yearMgrNewVal').value='';
+    document.getElementById('yearMgrModal').classList.add('show');
+  }
+  if(cfg.yearMgrBtnId) el(cfg.yearMgrBtnId)?.addEventListener('click', openYearMgr);
+
+  // 년 필터 select 채우기
+  function buildYearSelect(selId){
+    const sel=document.getElementById(selId); if(!sel) return;
+    let arr=[]; try{arr=JSON.parse(localStorage.getItem(cfg.dataLS+'_years')||'[]');}catch(e){}
+    sel.innerHTML='<option value="all">전체 년도</option>'+arr.sort().reverse().map(y=>`<option value="${y}">${y}년</option>`).join('');
+  }
+  if(cfg.yearFilterId){
+    buildYearSelect(cfg.yearFilterId);
+    el(cfg.yearFilterId)?.addEventListener('change',e=>{ yearFilter=e.target.value; render(); });
+  }
+
+  // 탭 전환 시 렌더
+  document.querySelectorAll('.v43-tab').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(btn.dataset.v43tab===cfg.tabKey){
+        buildTypeSelect(cfg.typeFilterId); buildMonthSelect(cfg.monthFilterId); render();
+      }
+    });
+  });
+
+  // 전역 렌더 함수 등록 (v43ActivateTab에서 직접 호출용)
+  window['_docTabRender_'+cfg.tab] = function(){
+    buildTypeSelect(cfg.typeFilterId);
+    buildMonthSelect(cfg.monthFilterId);
+    render();
+  };
+
+  load();
+  buildTypeSelect(cfg.typeFilterId); buildTypeSelect(cfg.modalTypeId);
+  buildMonthSelect(cfg.monthFilterId); buildMonthSelect(cfg.modalMonthId);
+}
+
+// 월 관리 공통 렌더
+function renderMonthMgrList(){
+  const list=document.getElementById('monthMgrList'); if(!list) return;
+  let months=[];
+  try{ months=JSON.parse(localStorage.getItem(window._monthMgrLS)||'[]'); }catch(e){}
+  months=months.sort().reverse();
+  list.innerHTML=months.map((m,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7faff;border-radius:10px;border:1.5px solid #e8f0fa;margin-bottom:6px">
+      <input type="month" value="${m}" data-mi="${i}" style="flex:1;border:none;background:transparent;font-size:14px;font-family:inherit;outline:none;color:#1a2f45;font-weight:600">
+      <button data-msave="${i}" style="background:#eaf1fb;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#3f7cb8;cursor:pointer;font-family:inherit">저장</button>
+      <button data-mdel="${i}" style="background:#fde8e8;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-msave]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.msave);
+      const inp=list.querySelector(`[data-mi="${i}"]`);
+      if(!inp||!inp.value) return;
+      let arr=[]; try{ arr=JSON.parse(localStorage.getItem(window._monthMgrLS)||'[]'); }catch(e){}
+      arr[i]=inp.value;
+      localStorage.setItem(window._monthMgrLS,JSON.stringify(arr));
+      renderMonthMgrList();
+      if(window._monthMgrOnSave) window._monthMgrOnSave();
+      if(typeof toast==='function') toast('저장됐어요');
+    });
+  });
+  list.querySelectorAll('[data-mdel]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.mdel);
+      let arr=[]; try{ arr=JSON.parse(localStorage.getItem(window._monthMgrLS)||'[]'); }catch(e){}
+      if(!confirm(`"${arr[i]}" 월을 삭제할까요?`)) return;
+      arr.splice(i,1);
+      localStorage.setItem(window._monthMgrLS,JSON.stringify(arr));
+      renderMonthMgrList();
+      if(window._monthMgrOnSave) window._monthMgrOnSave();
+    });
+  });
+}
+
+/* ===== 운영실무 탭 초기화 ===== */
+makeDocTab({
+  tab:'docs', dataLS:'wl_docs_v43', tabKey:'docs',
+  defaultTitle:'운영실무',
+  bodyId:'docsBody', countId:'docsCount',
+  typeFilterId:'docsTypeFilter', monthFilterId:'docsMonthFilter',
+  catMgrBtnId:'docsCatMgrBtn', monthMgrBtnId:'docsMonthMgrBtn', yearMgrBtnId:'docsYearMgrBtn', yearFilterId:'docsYearFilter', addBtnId:'docsAddBtn',
+  modalId:'docsModal', modalTitleId:'docsModalTitle',
+  modalTypeId:'docsModalType', modalMonthId:'docsModalMonth',
+  modalNameId:'docsModalName', modalPathId:'docsModalPath',
+  modalMemoId:'docsModalMemo',
+  modalSaveId:'docsModalSave', modalDelId:'docsModalDel', modalCancelId:'docsModalCancel',
+  cols:5
+});
+
+/* ===== 임대공용 탭 초기화 ===== */
+makeDocTab({
+  tab:'common', dataLS:'wl_common_v43', tabKey:'common',
+  defaultTitle:'임대공용',
+  bodyId:'commonBody', countId:'commonCount',
+  typeFilterId:'commonTypeFilter', monthFilterId:'commonMonthFilter',
+  catMgrBtnId:'commonCatMgrBtn', monthMgrBtnId:'commonMonthMgrBtn', yearMgrBtnId:'commonYearMgrBtn', yearFilterId:'commonYearFilter', addBtnId:'commonAddBtn',
+  modalId:'commonModal', modalTitleId:'commonModalTitle',
+  modalTypeId:'commonModalType', modalMonthId:'commonModalMonth',
+  modalNameId:'commonModalName', modalPathId:'commonModalPath',
+  modalMemoId:'commonModalMemo',
+  modalSaveId:'commonModalSave', modalDelId:'commonModalDel', modalCancelId:'commonModalCancel',
+  cols:5
+});
+
+/* ===== 임대개별 탭 초기화 ===== */
+makeDocTab({
+  tab:'indiv', dataLS:'wl_indiv_v43', tabKey:'indiv',
+  defaultTitle:'임대개별',
+  bodyId:'indivBody', countId:'indivCount',
+  typeFilterId:'indivTypeFilter', monthFilterId:null,
+  catMgrBtnId:'indivCatMgrBtn', monthMgrBtnId:'indivMonthMgrBtn', addBtnId:'indivAddBtn',
+  modalId:'indivModal', modalTitleId:'indivModalTitle',
+  modalTypeId:'indivModalType', modalMonthId:'indivModalMonth',
+  modalNameId:'indivModalName', modalPathId:'indivModalPath',
+  modalMemoId:'indivModalMemo',
+  modalSaveId:'indivModalSave', modalDelId:'indivModalDel', modalCancelId:'indivModalCancel',
+  cols:6,
+  extraCells: d=>`
+    <td style="padding:12px 14px;font-size:13px;color:#7a92a8;white-space:nowrap">${d.floor||''}</td>
+    <td style="padding:12px 14px;font-size:13px;color:#1a2f45;font-weight:600">${d.unit||''}</td>`,
+  extraFilter: d=>{
+    const floorFilter = document.getElementById('indivFloorFilter')?.value||'all';
+    if(floorFilter!=='all'&&d.floor!==floorFilter) return false;
+    return true;
+  },
+  fillExtraFields: d=>{
+    const fl=document.getElementById('indivModalFloor');
+    const un=document.getElementById('indivModalUnit');
+    if(fl) fl.value=d?(d.floor||''):'';
+    if(un) un.value=d?(d.unit||''):'';
+  },
+  getExtraFields: ()=>({
+    floor: document.getElementById('indivModalFloor')?.value||'',
+    unit: document.getElementById('indivModalUnit')?.value||''
+  })
+});
+
+// 임대개별 층 필터 이벤트
+document.getElementById('indivFloorFilter')?.addEventListener('change', ()=>{
+  const body=document.getElementById('indivBody');
+  if(body) body.dispatchEvent(new Event('rerender'));
+  // 간단히 재렌더 트리거
+  document.querySelectorAll('.v43-tab').forEach(b=>{ if(b.dataset.v43tab==='indiv') b.click(); });
+});
+
+// 점검일지 종류관리 버튼 (기존 점검일지 JS와 통합)
+// 년관리 공통 함수
+function renderYearMgrList(){
+  const list=document.getElementById('yearMgrList'); if(!list) return;
+  let years=[];
+  try{ years=JSON.parse(localStorage.getItem(window._yearMgrLS)||'[]'); }catch(e){}
+  years=years.sort().reverse();
+  list.innerHTML=years.map((y,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f0ff;border-radius:10px;border:1.5px solid #e8d5f5;margin-bottom:6px">
+      <input type="number" value="${y}" data-yi="${i}" min="2020" max="2099" style="flex:1;border:none;background:transparent;font-size:14px;font-family:inherit;outline:none;color:#1a2f45;font-weight:600">
+      <button data-ysave="${i}" style="background:#f3e5ff;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#8e44ad;cursor:pointer;font-family:inherit">저장</button>
+      <button data-ydel="${i}" style="background:#fde8e8;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-ysave]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.ysave);
+      const inp=list.querySelector(`[data-yi="${i}"]`);
+      if(!inp||!inp.value) return;
+      let arr=[]; try{arr=JSON.parse(localStorage.getItem(window._yearMgrLS)||'[]');}catch(e){}
+      arr[i]=inp.value;
+      localStorage.setItem(window._yearMgrLS,JSON.stringify(arr));
+      renderYearMgrList();
+      if(window._yearMgrOnSave) window._yearMgrOnSave();
+      if(typeof toast==='function') toast('저장됐어요');
+    });
+  });
+  list.querySelectorAll('[data-ydel]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.ydel);
+      let arr=[]; try{arr=JSON.parse(localStorage.getItem(window._yearMgrLS)||'[]');}catch(e){}
+      if(!confirm(`"${arr[i]}" 년을 삭제할까요?`)) return;
+      arr.splice(i,1);
+      localStorage.setItem(window._yearMgrLS,JSON.stringify(arr));
+      renderYearMgrList();
+      if(window._yearMgrOnSave) window._yearMgrOnSave();
+    });
+  });
+}
+
+document.getElementById('yearMgrAddBtn')?.addEventListener('click',()=>{
+  const val=document.getElementById('yearMgrNewVal')?.value;
+  if(!val) return;
+  let arr=[]; try{arr=JSON.parse(localStorage.getItem(window._yearMgrLS)||'[]');}catch(e){}
+  if(arr.includes(val)){ if(typeof toast==='function') toast('이미 있는 년도예요'); return; }
+  arr.push(val);
+  localStorage.setItem(window._yearMgrLS,JSON.stringify(arr));
+  document.getElementById('yearMgrNewVal').value='';
+  renderYearMgrList();
+  if(window._yearMgrOnSave) window._yearMgrOnSave();
+  if(typeof toast==='function') toast('추가됐어요');
+});
+document.getElementById('yearMgrClose')?.addEventListener('click',()=>document.getElementById('yearMgrModal').classList.remove('show'));
+document.getElementById('yearMgrModal')?.addEventListener('click',e=>{ if(e.target===document.getElementById('yearMgrModal')) document.getElementById('yearMgrModal').classList.remove('show'); });
+
+// 점검일지 년관리 버튼
+document.getElementById('inspYearMgrBtn')?.addEventListener('click',()=>{
+  window._yearMgrLS='wl_insp_v43_years';
+  window._yearMgrOnSave=()=>{
+    const sel=document.getElementById('inspYearFilter');
+    if(sel){ let arr=[]; try{arr=JSON.parse(localStorage.getItem('wl_insp_v43_years')||'[]');}catch(e){} sel.innerHTML='<option value="all">전체 년도</option>'+arr.sort().reverse().map(y=>`<option value="${y}">${y}년</option>`).join(''); }
+  };
+  document.getElementById('yearMgrTitle').textContent='점검일지 년 관리';
+  renderYearMgrList();
+  document.getElementById('yearMgrNewVal').value='';
+  document.getElementById('yearMgrModal').classList.add('show');
+});
+
+// 점검일지 년도 필터 이벤트
+document.getElementById('inspYearFilter')?.addEventListener('change',e=>{
+  if(typeof inspYearFilter!=='undefined') window._inspYearFilter=e.target.value;
+});
+
+document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
+    window._monthMgrTab='insp';
+    window._monthMgrLS='wl_insp_v43_months';
+    window._monthMgrOnSave=()=>{
+      const sel=document.getElementById('inspTypeFilter');
+      if(sel&&window.loadCats){ const c=window.loadCats('insp'); sel.innerHTML='<option value="all">전체 종류</option>'+c.map(x=>`<option value="${x}">${x}</option>`).join(''); }
+      const msel=document.getElementById('inspMonthFilter');
+      if(msel){ let arr=[]; try{arr=JSON.parse(localStorage.getItem('wl_insp_v43_months')||'[]');}catch(e){} msel.innerHTML='<option value="all">전체 월</option>'+arr.sort().reverse().map(m=>`<option value="${m}">${m}</option>`).join(''); }
+      const mmsel=document.getElementById('inspModalMonth');
+      if(mmsel){ let arr=[]; try{arr=JSON.parse(localStorage.getItem('wl_insp_v43_months')||'[]');}catch(e){} mmsel.innerHTML=arr.sort().reverse().map(m=>`<option value="${m}">${m}</option>`).join(''); }
+    };
+    document.getElementById('monthMgrTitle').textContent='점검일지 월 관리';
+    renderMonthMgrList();
+    document.getElementById('monthMgrNewVal').value='';
+    document.getElementById('monthMgrModal').classList.add('show');
+  });
+  document.getElementById('inspCatMgrBtn')?.addEventListener('click',()=>{
+  window.openCatMgr('insp',()=>{
+    const sel=document.getElementById('inspTypeFilter');
+    if(sel){ const cats=window.loadCats('insp'); sel.innerHTML='<option value="all">전체 종류</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join(''); }
+    const mSel=document.getElementById('inspModalType');
+    if(mSel){ const cats=window.loadCats('insp'); mSel.innerHTML=cats.map(c=>`<option value="${c}">${c}</option>`).join(''); }
+  });
+});
+
+</script>
 </body>
 </html>
