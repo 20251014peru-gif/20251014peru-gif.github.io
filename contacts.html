@@ -193,34 +193,35 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 
   <div class="field"><label>업체명 <span class="req">*</span></label><input type="text" id="c-name"></div>
   <div class="field"><label>분야</label><div style="display:flex;gap:6px;align-items:center"><select id="c-cat" style="flex:1" onchange="onCatChange()"></select><button type="button" id="btnCatMgr" style="flex-shrink:0;padding:7px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink-soft);font-size:13px;cursor:pointer;font-family:inherit" title="분야 추가/삭제">⚙ 관리</button></div></div>
-  <!-- 임차인 전용 층 입력 -->
-  <div class="field" id="floorField" style="display:none">
-    <label>층</label>
+  <!-- 층 선택 (항상 표시) -->
+  <div class="field" id="floorField">
+    <label>층/호실</label>
     <select id="c-floor" style="width:100%">
-      <option value="">-- 선택 --</option>
-      <option value="B2">B2층</option>
-      <option value="B1">B1층</option>
-      <option value="1">1층</option>
-      <option value="2">2층</option>
-      <option value="3">3층</option>
-      <option value="4">4층</option>
-      <option value="5">5층</option>
-      <option value="6">6층</option>
-      <option value="7">7층</option>
-      <option value="8">8층</option>
-      <option value="9">9층</option>
-      <option value="10">10층</option>
-      <option value="11">11층</option>
-      <option value="12">12층</option>
-      <option value="13">13층</option>
-      <option value="14">14층</option>
-      <option value="15">15층</option>
-      <option value="16">16층</option>
-      <option value="17">17층</option>
-      <option value="18">18층</option>
-      <option value="19">19층</option>
-      <option value="20">20층</option>
+      <option value="">-- 선택 안 함 --</option>
+      <option value="공용">공용</option>
       <option value="옥탑">옥탑층</option>
+      <option value="20">20층</option>
+      <option value="19">19층</option>
+      <option value="18">18층</option>
+      <option value="17">17층</option>
+      <option value="16">16층</option>
+      <option value="15">15층</option>
+      <option value="14">14층</option>
+      <option value="13">13층</option>
+      <option value="12">12층</option>
+      <option value="11">11층</option>
+      <option value="10">10층</option>
+      <option value="9">9층</option>
+      <option value="8">8층</option>
+      <option value="7">7층</option>
+      <option value="6">6층</option>
+      <option value="501">5층 501호</option>
+      <option value="502">5층 502호</option>
+      <option value="4">4층</option>
+      <option value="3">3층</option>
+      <option value="2">2층</option>
+      <option value="1">1층</option>
+      <option value="B1">B1층</option>
     </select>
   </div>
   <div class="field"><label>담당자</label><input type="text" id="c-person"></div>
@@ -320,9 +321,7 @@ let CATS = (()=>{
 })();
 
 function onCatChange(){
-  const cat = document.getElementById('c-cat')?.value||'';
-  const ff = document.getElementById('floorField');
-  if(ff) ff.style.display = cat==='임차인' ? '' : 'none';
+  // 층은 항상 표시 (분야 무관)
 }
 
 function addMemoRow(val){
