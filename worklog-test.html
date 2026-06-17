@@ -1712,7 +1712,7 @@
   const STATUS_CLASS = {'완료':'st-done','진행중':'st-wip','미완료':'st-todo','보류':'st-skip'};
 
   // 현재 활성 카테고리/필터
-  let activeCat = 'all';
+  let activeCat = 'work'; // 기본값 업무
   let v43From = '', v43To = '';
   let v43Search = '';
 
@@ -1955,10 +1955,14 @@
   // 카테고리 드롭다운
   // 기본값 업무로
   const catSelect = document.getElementById('v43CatSelect');
-  if(catSelect && !localStorage.getItem('v43_cat_sel')) catSelect.value = 'work';
+  // localStorage에 저장된 값 있으면 복원, 없으면 work 기본
+  const savedCat = localStorage.getItem('v43_cat_sel') || 'work';
+  activeCat = savedCat;
+  if(catSelect) catSelect.value = savedCat;
   if(catSelect){
     catSelect.addEventListener('change', () => {
       activeCat = catSelect.value;
+      localStorage.setItem('v43_cat_sel', activeCat);
       renderV43List();
       dbg('cat: '+activeCat);
     });
