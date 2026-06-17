@@ -5302,40 +5302,84 @@ function openExpenseEditor(id){
 function renderExpenseModal(id){
   $("expTitle").textContent = (id?"수정":"추가")+" · 💰 지출 내역";
   const d = expenseData;
-  // 자주 쓰는 내역 자동완성 (지난 90일 내역에서)
-  const recent = entries.filter(e=>e.kind==="expense" && e.title && e.expType===d.expType)
-    .map(e=>e.title)
-    .filter((v,i,a)=>a.indexOf(v)===i)
-    .slice(0,30);
-  const datalistOpts = recent.map(t=>`<option value="${esc(t)}">`).join("");
+  const fieldOpts = (typeof FIELDS!=="undefined"?FIELDS:["전기","기계/냉난방","소방","영선","청소","기타"])
+    .map(f=>`<option value="${esc(f)}" ${d.field===f?"selected":""}>${esc(f)}</option>`).join("");
+  const utype = d.utype||"자재구매"; // 유형: 자재구매/공사용역/택배/기타
+
+  // 유형별 추가 필드
+  const typeFields = {
+    "자재구매": `
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>자재명 <span class="req">*</span></label><input type="text" id="exp-matname" value="${esc(d.matName||"")}" placeholder="예: 형광등, 소화기"></div>
+        <div class="field"><label>규격/사양</label><input type="text" id="exp-spec" value="${esc(d.spec||"")}" placeholder="예: 36W, 3.3kg"></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>단가 (원)</label><input type="number" id="exp-unitprice" value="${Number(d.unitPrice)||0}" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>수량</label><input type="number" id="exp-qty" value="${Number(d.qty)||1}" min="1" oninput="expCalcTotal()"></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="${Number(d.deliveryFee)||0}" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>합계 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0" placeholder="자동계산"></div>
+      </div>`,
+    "공사/용역": `
+      <div class="field full" style="margin-top:10px">
+        <label>공사/용역명 <span class="req">*</span></label>
+        <input type="text" id="exp-matname" value="${esc(d.matName||"")}" placeholder="예: 외벽 도색, 엘리베이터 점검">
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>계약금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0"></div>
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="${Number(d.deliveryFee)||0}" min="0"></div>
+      </div>`,
+    "택배": `
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>품목</label><input type="text" id="exp-matname" value="${esc(d.matName||"")}" placeholder="예: 소화기 부품"></div>
+        <div class="field"><label>택배비 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0"></div>
+      </div>`,
+    "기타": `
+      <div class="field full" style="margin-top:10px">
+        <label>금액 (원) <span class="req">*</span></label>
+        <input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0">
+      </div>`
+  };
+
   $("expFields").innerHTML = `
     <div class="grid">
       <div class="field"><label>날짜 <span class="req">*</span></label><input type="date" id="exp-date" value="${esc(d.date||todayStr())}"></div>
       <div class="field">
-        <label>종류 <span class="req">*</span></label>
-        <select id="exp-type">
-          <option value="개인지출" ${(d.expType==="개인지출")?"selected":""}>💸 개인지출 (품의서용)</option>
-          <option value="세금계산서" ${(d.expType==="세금계산서")?"selected":""}>📃 세금계산서 (발급 확인)</option>
+        <label>지출유형 <span class="req">*</span></label>
+        <select id="exp-utype" onchange="expChangeType(this.value)">
+          <option value="자재구매" ${utype==="자재구매"?"selected":""}>🛒 자재구매</option>
+          <option value="공사/용역" ${utype==="공사/용역"?"selected":""}>🏗 공사/용역</option>
+          <option value="택배" ${utype==="택배"?"selected":""}>📦 택배</option>
+          <option value="기타" ${utype==="기타"?"selected":""}>📝 기타</option>
         </select>
       </div>
-    </div>
-    <div class="field full" style="margin-top:14px">
-      <label>내역 <span class="req">*</span></label>
-      <input type="text" id="exp-title" value="${esc(d.title||"")}" list="expTitleList" placeholder="예: 종량제 봉투, 정화조 수리, 점심식사">
-      <datalist id="expTitleList">${datalistOpts}</datalist>
-    </div>
-    <div class="grid" style="margin-top:14px">
-      <div class="field"><label>금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0"></div>
-      <div class="field"><label>업체명</label><input type="text" id="exp-vendor" value="${esc(d.vendor||"")}" placeholder="예: 삼성에어컨, 한국전기"></div>
     </div>
     <div class="grid" style="margin-top:10px">
       <div class="field">
         <label>분야</label>
-        <div style="display:flex;gap:6px">
-          <select id="exp-field" style="flex:1">${(typeof FIELDS!=="undefined"?FIELDS:["전기","기계/냉난방","소방","영선","청소","기타"]).map(f=>`<option value="${esc(f)}" ${d.field===f?"selected":""}>${esc(f)}</option>`).join("")}</select>
-        </div>
+        <select id="exp-field">${fieldOpts}</select>
       </div>
-      <div class="field"><label>비고</label><input type="text" id="exp-memo" value="${esc(d.memo||"")}" placeholder="예: 100장, 5층·6층 30개"></div>
+      <div class="field">
+        <label>정산종류</label>
+        <select id="exp-type">
+          <option value="개인지출" ${(d.expType==="개인지출")?"selected":""}>💸 개인지출</option>
+          <option value="세금계산서" ${(d.expType==="세금계산서")?"selected":""}>📃 세금계산서</option>
+        </select>
+      </div>
+    </div>
+    <div class="field full" style="margin-top:10px">
+      <label>내역 <span class="req">*</span></label>
+      <input type="text" id="exp-title" value="${esc(d.title||"")}" placeholder="예: 종량제 봉투 구매, 외벽 도색 공사">
+    </div>
+    <div class="field full" style="margin-top:10px">
+      <label>업체명</label>
+      <input type="text" id="exp-vendor" value="${esc(d.vendor||"")}" placeholder="예: 삼성에어컨, 한국전기">
+    </div>
+    <div id="exp-typeFields">${typeFields[utype]||typeFields["기타"]}</div>
+    <div class="field full" style="margin-top:10px">
+      <label>비고</label>
+      <input type="text" id="exp-memo" value="${esc(d.memo||"")}" placeholder="예: 5층 창고 보관">
     </div>
     <div class="field full" style="margin-top:14px">
       <label>📷 영수증 사진 (선택)</label>
@@ -5350,6 +5394,56 @@ function renderExpenseModal(id){
   $("exp-cam").addEventListener("change",e=>handleExpensePhoto(e));
   $("exp-file").addEventListener("change",e=>handleExpensePhoto(e));
   $("expDelete").style.display = id?"":"none";
+}
+
+// 유형 변경 시 필드 전환
+function expChangeType(utype){
+  const typeFields = {
+    "자재구매": `
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>자재명 <span class="req">*</span></label><input type="text" id="exp-matname" placeholder="예: 형광등, 소화기"></div>
+        <div class="field"><label>규격/사양</label><input type="text" id="exp-spec" placeholder="예: 36W, 3.3kg"></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>단가 (원)</label><input type="number" id="exp-unitprice" value="0" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>수량</label><input type="number" id="exp-qty" value="1" min="1" oninput="expCalcTotal()"></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="0" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>합계 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="0" min="0" placeholder="자동계산"></div>
+      </div>`,
+    "공사/용역": `
+      <div class="field full" style="margin-top:10px">
+        <label>공사/용역명</label>
+        <input type="text" id="exp-matname" placeholder="예: 외벽 도색, 엘리베이터 점검">
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>계약금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="0" min="0"></div>
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="0" min="0"></div>
+      </div>`,
+    "택배": `
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>품목</label><input type="text" id="exp-matname" placeholder="예: 소화기 부품"></div>
+        <div class="field"><label>택배비 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="0" min="0"></div>
+      </div>`,
+    "기타": `
+      <div class="field full" style="margin-top:10px">
+        <label>금액 (원) <span class="req">*</span></label>
+        <input type="number" id="exp-amount" value="0" min="0">
+      </div>`
+  };
+  const box = $("exp-typeFields");
+  if(box) box.innerHTML = typeFields[utype]||typeFields["기타"];
+}
+
+// 합계 자동계산 (자재구매)
+function expCalcTotal(){
+  const up = Number($("exp-unitprice")||{value:0}).value||0;
+  const qty = Number($("exp-qty")||{value:1}).value||1;
+  const del = Number($("exp-delivery")||{value:0}).value||0;
+  const total = (up*qty)+del;
+  const amtEl = $("exp-amount");
+  if(amtEl) amtEl.value = total;
 }
 
 function renderExpensePhoto(){
@@ -5370,12 +5464,20 @@ function saveExpense(){
   const amount = Number($("exp-amount").value)||0;
   if(!title){ toast("내역을 입력하세요"); return; }
   if(amount<=0){ toast("금액을 입력하세요"); return; }
+  const utype = ($("exp-utype")||{value:"기타"}).value||"기타";
+  const unitPrice = Number(($("exp-unitprice")||{value:0}).value)||0;
+  const qty = Number(($("exp-qty")||{value:1}).value)||1;
+  const deliveryFee = Number(($("exp-delivery")||{value:0}).value)||0;
   const obj = {
     kind: "expense",
     date: $("exp-date").value || todayStr(),
-    expType: $("exp-type").value || "개인지출",
+    expType: ($("exp-type")||{value:"개인지출"}).value || "개인지출",
+    utype,
     title,
     amount,
+    matName: ($("exp-matname")||{value:""}).value.trim(),
+    spec: ($("exp-spec")||{value:""}).value.trim(),
+    unitPrice, qty, deliveryFee,
     memo: ($("exp-memo")||{value:""}).value || "",
     vendor: ($("exp-vendor")||{value:""}).value.trim(),
     field: ($("exp-field")||{value:""}).value,

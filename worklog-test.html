@@ -678,7 +678,7 @@
     <div style="display:flex;gap:8px;align-items:center;padding:10px 0 6px">
       <select id="v43CatSelect" style="flex:1;height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;box-shadow:0 2px 12px rgba(63,124,184,.15)">
         <option value="all">전체</option>
-        <option value="work">🛠 업무</option>
+        <option value="work" selected>🛠 업무</option>
         <option value="call">📞 통화</option>
         <option value="meeting">💼 회의</option>
         <option value="deliver">📢 전달</option>
@@ -1931,7 +1931,9 @@
   });
 
   // 카테고리 드롭다운
+  // 기본값 업무로
   const catSelect = document.getElementById('v43CatSelect');
+  if(catSelect && !localStorage.getItem('v43_cat_sel')) catSelect.value = 'work';
   if(catSelect){
     catSelect.addEventListener('change', () => {
       activeCat = catSelect.value;
