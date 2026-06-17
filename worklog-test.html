@@ -2712,6 +2712,17 @@
 (function(){
   var GCAL_CLIENT_ID = '65353408416-kih200tt2r9vtndl6n0vvr94freejuf7.apps.googleusercontent.com';
   var GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar';
+
+  // 종류별 캘린더 ID 매핑
+  var GCAL_IDS = {
+    work:     '20251014peru@gmail.com',
+    schedule: '13fd7bc2a6a168b133d6099bb203cf74ac531cd35d8df8f512d8e2cc42aea3f8@group.calendar.google.com',
+    deliver:  '93d1c2405a1ad12075b0cdfdad696c1666bf218789757813b3bb98597b4a574f@group.calendar.google.com',
+    expense:  '8cde12aede6c5bb8590fceffaee07f29c82cbda83a6e3e4f941c89dc961a3880@group.calendar.google.com',
+    call:     '55b77cab30c5e75c12ca3fa783904acd05e4b4a6b56c4f153f4341f0b963c495@group.calendar.google.com',
+    vacation: '2e2c34c11ddffe738d69fc5436383900af25c16a00e794878d06625f4d94707f@group.calendar.google.com',
+    memo:     'family07802825348481193196@group.calendar.google.com',
+  };
   var GCAL_LS = 'wl_gcal_token';
   var tokenClient = null;
   var accessToken = null;
@@ -2765,28 +2776,67 @@
   // 예정 → 구글 캘린더 등록
   function syncScheduleToGCal(en){
     if(!accessToken){ signIn(); return; }
-    if(en.kind !== 'schedule') return;
+    var calId = GCAL_IDS[en.kind];
+    if(!calId) return;
 
-    var startDate = en.date || '';
+    var startDate = en.date || en.start || '';
     if(!startDate) return;
+
+    // 종류별 제목/설명/색상
+    var summary = '', description = '';
+    var colorMap = {work:'9',schedule:'7',call:'6',deliver:'4',vacation:'2',expense:'11',memo:'5'};
+    switch(en.kind){
+      case 'work':
+        summary = en.title||'업무';
+        description = [en.floor, en.field, en.detail].filter(Boolean).join(' · ');
+        break;
+      case 'schedule':
+        summary = en.title||'예정';
+        description = (en.sType||'')+(en.memo?'
+'+en.memo:'');
+        break;
+      case 'call':
+        summary = (en.name||'')+(en.company?' ('+en.company+')':'');
+        description = en.content||'';
+        break;
+      case 'deliver':
+        summary = en.title||en.content||'전달';
+        description = en.memo||'';
+        break;
+      case 'vacation':
+        summary = (en.name||'')+' '+(en.vtype||'휴가');
+        description = en.memo||'';
+        break;
+      case 'expense':
+        summary = en.title||'지출';
+        description = (en.amount?Number(en.amount).toLocaleString()+'원':'')+(en.vendor?' · '+en.vendor:'');
+        break;
+      case 'memo':
+        summary = en.title||en.body||'메모';
+        description = en.body||'';
+        break;
+      default:
+        summary = en.title||en.kind;
+        description = en.memo||'';
+    }
 
     // 종일 이벤트
     var event = {
-      summary: en.title||'업무예정',
-      description: (en.sType||'') + (en.memo ? '\n' + en.memo : ''),
+      summary: summary,
+      description: description,
       start: { date: startDate },
       end:   { date: startDate },
-      colorId: '7', // 청록색
+      colorId: colorMap[en.kind]||'1',
       extendedProperties: {
-        private: { wl_id: en.id||'', wl_kind: 'schedule' }
+        private: { wl_id: en.id||'', wl_kind: en.kind }
       }
     };
 
     // 기존 구글 이벤트 ID 있으면 업데이트, 없으면 생성
     var gcalId = en.gcalEventId;
     var url = gcalId
-      ? 'https://www.googleapis.com/calendar/v3/calendars/primary/events/' + gcalId
-      : 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+      ? 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calId) + '/events/' + gcalId
+      : 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calId) + '/events';
     var method = gcalId ? 'PUT' : 'POST';
 
     fetch(url, {
@@ -2837,7 +2887,7 @@
     if(origAdd && !origAdd._gcalHooked){
       window.addRecord = function(obj){
         var result = origAdd.apply(this, arguments);
-        if(obj && obj.kind==='schedule' && accessToken){
+        if(obj && GCAL_IDS[obj.kind] && accessToken){
           setTimeout(function(){ syncScheduleToGCal(obj); }, 500);
         }
         return result;
@@ -2852,7 +2902,7 @@
         if(obj && accessToken){
           setTimeout(function(){
             var en = (typeof entries!=='undefined') && entries.find(function(x){return x.id===id;});
-            if(en && en.kind==='schedule') syncScheduleToGCal(en);
+            if(en && GCAL_IDS[en.kind]) syncScheduleToGCal(en);
           }, 500);
         }
         return result;
