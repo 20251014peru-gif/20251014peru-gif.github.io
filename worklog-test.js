@@ -24,6 +24,19 @@ const CALLDIR  = ["수신","발신"];
 const VTYPES   = ["년차휴가","오전반차","오후반차","병가","경조","기타"];
 const FLOORS   = ["","옥탑층","20층","19층","18층","17층","16층","15층","14층","13층","12층","11층","10층","9층","8층","7층","6층","5층","4층","3층","2층","1층","지하1층","지하2층","지하3층","지하4층","지하5층","지하6층"];
 // v37: 분야를 평면 배열로 (트리 구조 제거, 들여쓰기 없음)
+// 지출 전용 분야
+const EXP_FIELDS_LS = 'wl_exp_fields';
+
+// 담당업체 목록 관리
+const WORK_VENDORS_LS = 'wl_work_vendors';
+function loadWorkVendors(){ try{ return JSON.parse(localStorage.getItem(WORK_VENDORS_LS)||'[]'); }catch(e){ return []; } }
+function saveWorkVendors(arr){ try{ localStorage.setItem(WORK_VENDORS_LS,JSON.stringify(arr)); }catch(e){} }
+function loadExpFields(){
+  try{ const a=JSON.parse(localStorage.getItem(EXP_FIELDS_LS)||'null'); if(Array.isArray(a)&&a.length) return a; }catch(e){}
+  return [];
+}
+function saveExpFields(arr){ try{ localStorage.setItem(EXP_FIELDS_LS,JSON.stringify(arr)); }catch(e){} }
+
 const DEFAULT_FIELDS = [
   "전기","엘리베이터","카리프트","통신","기계","냉난방","누수",
   "소방","소화전","스프링클러","감지기","수신기","펌프",
@@ -60,7 +73,7 @@ async function loadSharedCats(){
       DEFAULT_SHARED_CATS.forEach(c=>{ if(!merged.includes(c)) merged.push(c); });
       merged.sort((a,b)=>a.localeCompare(b,"ko"));
       FIELDS = merged;
-      if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = merged.slice();
+      // CONTACT_CATS는 독립 관리 (공유 제거)
       return;
     }
   }catch(e){}
@@ -75,7 +88,7 @@ async function loadSharedCats(){
         DEFAULT_SHARED_CATS.forEach(c=>{ if(!merged.includes(c)) merged.push(c); });
         merged.sort((a,b)=>a.localeCompare(b,"ko"));
         FIELDS = merged;
-        if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = merged.slice();
+        // CONTACT_CATS는 독립 관리 (공유 제거)
         try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(FIELDS)); }catch(e){}
       }
     } else {
@@ -99,10 +112,8 @@ function loadFields(){
 }
 function saveFields(){
   FIELDS.sort((a,b)=>a.localeCompare(b,"ko"));
-  if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = FIELDS.slice();
   try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(FIELDS)); }catch(e){}
   // CONTACT_CATS도 동기화
-  if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = FIELDS.slice();
   // Firestore 동기화 (contact_cats + worklog_meta 모두)
   if(online && db){
     db.collection(SHARED_CATS_COL).doc("list").set({cats:FIELDS, updatedAt:Date.now()}).catch(()=>{});
@@ -125,14 +136,14 @@ const FIELD_HINT={
 function statusClass(s){ return s==="완료"?"done":s==="진행중"?"prog":"todo"; }
 function statusColor(s){ return s==="완료"?"var(--mint)":s==="진행중"?"var(--gold)":"var(--peach)"; }
 
-const KIND_LABEL={work:"업무",plan:"오늘계획",memo:"메모",call:"통화",vacation:"휴가",meeting:"회의메모",deliver:"전달사항",filelink:"파일링크",site:"사이트",password:"비밀번호",schedule:"업무예정",item:"품목",stock:"입출고",cleaning:"청소일지",expense:"지출"};
+const KIND_LABEL={work:"업무",plan:"오늘계획",memo:"메모",call:"통화",vacation:"휴가",meeting:"회의메모",deliver:"전달사항",filelink:"파일링크",site:"사이트",password:"비밀번호",schedule:"예정",item:"품목",stock:"입출고",cleaning:"청소일지",expense:"지출"};
 const PHOTO_KINDS=["work","memo","meeting"];
 const ATTACH_KINDS=["work","memo","meeting"];
 
 /* ===== v16 카테고리 시스템 ===== */
 const DEFAULT_CATS_FILE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도"];
 const DEFAULT_CATS_SITE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도","견적전용업체"];
-const DEFAULT_CATS_PW   = ["업무시스템","거래처","공적업무","개인용도","기타"];
+const DEFAULT_CATS_PW   = ["업무시스템","거래처","공적업무"];
 const CAT_LS_KEY = "wl_categories_v16";
 let CATEGORIES = { filelink: DEFAULT_CATS_FILE.slice(), site: DEFAULT_CATS_SITE.slice(), password: DEFAULT_CATS_PW.slice() };
 function loadCategories(){
@@ -163,19 +174,23 @@ const SCHEMA={
     {k:"floor",label:"해당층",type:"floor"},
     {k:"field",label:"분야",type:"field"},
     {k:"expType",label:"지출종류",type:"select",opts:["없음","개인비용","후불청구"]},
+    {k:"workVendor",label:"담당업체",type:"workvendor"},
+    {k:"workContact",label:"담당자",type:"text"},
+    {k:"workRole",label:"직책",type:"text"},
+    {k:"workPhone",label:"담당자 전화",type:"tel"},
+    {k:"workMemo",label:"업체 메모",type:"text"},
     {k:"title",label:"업무내역",type:"text",full:true,req:true},
     {k:"detail",label:"세부내용",type:"textarea",full:true},
     {k:"material",label:"자재명",type:"text"},
     {k:"matSpec",label:"자재 사양",type:"text"},
     {k:"qty",label:"수량",type:"number"},
-    {k:"cost",label:"지출금액 (원)",type:"number"},
-    {k:"vendor",label:"업체명 (지출시)",type:"text"},
   ],
   plan:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"text",label:"할 일",type:"text",full:true,req:true} ],
   memo:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"title",label:"제목(선택)",type:"text",full:true}, {k:"body",label:"내용",type:"textarea",full:true,req:true} ],
   call:[
     {k:"date",label:"날짜",type:"date",req:true}, {k:"time",label:"시간",type:"time"},
     {k:"dir",label:"구분",type:"select",opts:CALLDIR},
+    {k:"callContact",label:"담당업체/담당자",type:"callcontact"},
     {k:"name",label:"이름",type:"text"},
     {k:"role",label:"직책",type:"text"},
     {k:"company",label:"업체",type:"text"},
@@ -215,11 +230,12 @@ const SCHEMA={
     {k:"memo",label:"메모(선택)",type:"textarea",full:true},
   ],
   schedule:[
-    {k:"date",label:"예정일",type:"date",req:true},
-    {k:"sStatus",label:"상태",type:"select",opts:["예정","진행중","완료","연기"]},
-    {k:"sType",label:"종류",type:"select",opts:["정기점검","협력업체점검","회의","행사","공사","기타"]},
+    {k:"date",label:"예정일",type:"date",req:true,full:true},
+    {k:"startTime",label:"시작 시간",type:"timepick",full:true},
     {k:"title",label:"예정 내용",type:"text",full:true,req:true},
     {k:"memo",label:"메모(선택)",type:"textarea",full:true},
+    {k:"alertBefore",label:"🔔 알림 설정",type:"alertbefore",full:true},
+    {k:"alertMethod",label:"알림 방법",type:"select",opts:["팝업","이메일","팝업+이메일"],full:true},
   ],
   item:[
     {k:"itemCode",label:"품목 ID (내부 관리용)",type:"text"},
@@ -539,10 +555,15 @@ async function init(){
   migrateTissueToJumbo(); // v26: 휴지 → 점보롤 자동 변환
   migrateBadMemoAttachments(); // v38: 깨진 첨부 정리
   renderStatusChips(); renderAll();
-  try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
+  // v43: 통합 UI 갱신 훅
+  try{ if(typeof window.v43Refresh==='function') window.v43Refresh(); }catch(e){}
+  // v43 모드: 탭 복원은 v43ActivateTab이 처리 (worklog.js activateTab 복원 비활성)
+  // v43: init 완료 신호
+  try{ window._wlInitDone = true; }catch(e){}
   // v41: contacts 연동 초기화
   loadContactCats().catch(()=>{});
   loadContactsCache().catch(()=>{});
+  loadContactCats().catch(()=>{});
   // 드래그 앤 드롭 순서 로드
   loadFlOrder().catch(()=>{});
   // 공통 분야 로드 (업무·통화·contacts 통합)
@@ -709,7 +730,7 @@ function activateTab(name){
   }
   const btn=document.querySelector(`.tabs button[data-tab="${name}"]`); if(!btn) return;
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".panel:not(.v43-panel)").forEach(x=>x.classList.remove("active"));
   btn.classList.add("active"); $("panel-"+name).classList.add("active");
   // 업무 탭이면 마지막 서브탭 복원
   if(name==="work"){
@@ -824,6 +845,57 @@ function fieldHTML(f){
         <button type="button" class="btn btn-ghost btn-sm" onclick="openContactCatMgrFromModal()" style="flex:0 0 auto;padding:0 10px" title="분야 추가/삭제">⚙</button>
       </div></div>`;
   }
+  if(f.type==="callcontact"){
+    return `<div class="field full" style="position:relative"><label>${esc(f.label)}</label>
+      <input type="text" id="m-${f.k}" placeholder="이름·업체·전화번호 검색..." autocomplete="off"
+        style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+      <div id="m-${f.k}-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow:auto"></div>
+    </div>`;
+  }
+  if(f.type==="alertbefore"){
+    return `<div class="field full"><label>${esc(f.label)}</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="m-alertDays" onchange="syncAlertBefore()" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+          <option value="0">0일</option><option value="1">1일</option><option value="2">2일</option><option value="3">3일</option><option value="4">4일</option><option value="5">5일</option><option value="6">6일</option><option value="7">7일</option>
+        </select>
+        <select id="m-alertHours" onchange="syncAlertBefore()" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+          <option value="0">0시간</option><option value="1">1시간</option><option value="2">2시간</option><option value="3">3시간</option><option value="4">4시간</option><option value="5">5시간</option><option value="6">6시간</option><option value="7">7시간</option><option value="8">8시간</option><option value="9">9시간</option><option value="10">10시간</option><option value="11">11시간</option><option value="12">12시간</option><option value="13">13시간</option><option value="14">14시간</option><option value="15">15시간</option><option value="16">16시간</option><option value="17">17시간</option><option value="18">18시간</option><option value="19">19시간</option><option value="20">20시간</option><option value="21">21시간</option><option value="22">22시간</option><option value="23">23시간</option>
+        </select>
+        <select id="m-alertMins" onchange="syncAlertBefore()" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+          <option value="0">0분</option><option value="5">5분</option><option value="10">10분</option><option value="15">15분</option><option value="20">20분</option><option value="30">30분</option><option value="45">45분</option>
+        </select>
+        <span style="font-size:13px;color:#3f7cb8;font-weight:700;white-space:nowrap">전에 알림</span>
+        <input type="hidden" id="m-${f.k}">
+      </div></div>`;
+  }
+if(f.type==="timepick"){
+    const fid=`m-${f.k}`;
+    return `<div class="field${f.full?' full':''}"><label>${esc(f.label)}</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="${fid}-ampm" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 8px;border:2px solid #dbe6f4;border-radius:12px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:0 0 68px">
+          <option value="AM">오전</option>
+          <option value="PM">오후</option>
+        </select>
+        <select id="${fid}-h" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 8px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
+          <option value="">시</option>
+          <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
+        </select>
+        <span style="font-size:18px;font-weight:700;color:#3f7cb8">:</span>
+        <select id="${fid}-m" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 8px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
+          <option value="">분</option>
+          <option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option>
+        </select>
+        <input type="hidden" id="${fid}">
+      </div></div>`;
+  }
+
+  if(f.type==="workvendor"){
+    return `<div class="field" style="position:relative"><label>${esc(f.label)} <a href="contacts.html" target="_blank" style="margin-left:4px;font-size:11px;padding:2px 7px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;color:#3f7cb8;font-weight:700;text-decoration:none">📋 연락처관리</a></label>
+      <input type="text" id="m-${f.k}" placeholder="업체명 검색..." autocomplete="off"
+        style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+      <div id="m-${f.k}-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow:auto"></div>
+    </div>`;
+  }
   if(f.type==="textarea") inner=`<textarea id="m-${f.k}"></textarea>`;
   else if(f.type==="select") inner=`<select id="m-${f.k}">${f.opts.map(o=>`<option>${o}</option>`).join("")}</select>`;
   else if(f.type==="status") inner=`<select id="m-${f.k}">${STATUSES.map(o=>`<option>${o}</option>`).join("")}</select>`;
@@ -872,9 +944,19 @@ function openEditor(kind,id){
   if(kind==="filelink" && id && !data.ptype){
     data.ptype = /[\\\/]\s*$/.test(data.path||"") ? "폴더" : "파일";
   }
-  $("mTitle").textContent = (id?"수정":"추가")+" · "+KIND_LABEL[kind];
+  $("mTitle").textContent = (id?"수정":"추가")+" · "+(kind==="work"?"업무":kind==="schedule"?"예정":KIND_LABEL[kind]);
   $("mFields").innerHTML = sc.map(fieldHTML).join("");
-  sc.forEach(f=>{ const el=$("m-"+f.k); if(!el) return; const v=data[f.k]; if(v!==undefined&&v!==null&&v!=="") el.value=v; });
+  sc.forEach(f=>{ 
+    if(f.type==="timepick"){
+      setTimeout(()=>restoreTimepick('m-'+f.k, data[f.k]||''), 50);
+      return;
+    }
+    if(f.type==="alertbefore"){
+      setTimeout(()=>restoreAlertBefore(data[f.k]||0), 50);
+      return;
+    }
+    const el=$("m-"+f.k); if(!el) return; const v=data[f.k]; if(v!==undefined&&v!==null&&v!=="") el.value=v; 
+  });
   const hasPhoto=PHOTO_KINDS.includes(kind);
   $("mPhotoArea").style.display=hasPhoto?"flex":"none";
   modalPhotos=hasPhoto?((data.photos||[]).slice()):[];
@@ -889,6 +971,60 @@ function openEditor(kind,id){
   $("mAttachLabel").value=""; $("mAttachPath").value="";
 
   $("mDelete").style.display=id?"":"none";
+
+  // 지출 연결 영역 제거 (지출종류 select로 통합)
+  const expLinkArea=$("mExpLinkArea");
+  if(expLinkArea) expLinkArea.style.display="none";
+
+  // 검색 UI 초기화 (렌더 후 바인딩)
+  setTimeout(()=>{
+    // 업무 담당업체 검색
+    if(kind==="work"){
+      makeContactSearchUI('m-workVendor','m-workVendor-list',(c)=>{
+        // 무조건 덮어쓰기
+        const contactEl=$("m-workContact"); if(contactEl) contactEl.value=c.person||'';
+        const roleEl=$("m-workRole"); if(roleEl) roleEl.value=c.title||'';
+        const phoneEl=$("m-workPhone"); if(phoneEl) phoneEl.value=c.phone||'';
+        const memoEl=$("m-workMemo"); if(memoEl) memoEl.value=c.memo||'';
+      }, ()=>{
+        // ✕ 클릭 시 초기화
+        const contactEl=$("m-workContact"); if(contactEl) contactEl.value='';
+        const roleEl=$("m-workRole"); if(roleEl) roleEl.value='';
+        const phoneEl=$("m-workPhone"); if(phoneEl) phoneEl.value='';
+        const memoEl=$("m-workMemo"); if(memoEl) memoEl.value='';
+      });
+    }
+    // 통화 담당자 검색
+    if(kind==="call"){
+      makeContactSearchUI('m-callContact','m-callContact-list',(c)=>{
+        // 무조건 덮어쓰기
+        const nameEl=$("m-name"); if(nameEl) nameEl.value=c.person||c.name||'';
+        const roleEl=$("m-role"); if(roleEl) roleEl.value=c.title||'';
+        const compEl=$("m-company"); if(compEl) compEl.value=c.name||'';
+        const phoneEl=$("m-phone"); if(phoneEl) phoneEl.value=c.phone||'';
+      }, ()=>{
+        // ✕ 클릭 시 초기화
+        const nameEl=$("m-name"); if(nameEl) nameEl.value='';
+        const roleEl=$("m-role"); if(roleEl) roleEl.value='';
+        const compEl=$("m-company"); if(compEl) compEl.value='';
+        const phoneEl=$("m-phone"); if(phoneEl) phoneEl.value='';
+      });
+    }
+  },100);
+
+  // 업무 종류일 때 지출종류 select 이벤트
+  if(kind==="work"){
+    renderExpLinkList(id);
+    setTimeout(()=>{
+      const expTypeSel=$("m-expType");
+      if(expTypeSel && !expTypeSel._expBound){
+        expTypeSel._expBound=true;
+        expTypeSel.addEventListener("change",()=>{
+          if(expTypeSel.value!=="없음") openExpPick();
+        });
+      }
+    },100);
+  }
 
   // v21+: 카테고리·소분류 모두 드롭다운에서 선택 또는 새로 직접 입력
   if(kind==="filelink" || kind==="site"){
@@ -1167,6 +1303,10 @@ document.addEventListener("keydown", e=>{
   e.preventDefault();
   $("mSave").click();
 });
+$("mExpLinkBtn")?.addEventListener("click", openExpPick);
+$("expPickCancel")?.addEventListener("click",()=>{ document.getElementById("expPickOverlay").style.display="none"; });
+$("expPickOverlay")?.addEventListener("click",e=>{ if(e.target===document.getElementById("expPickOverlay")) document.getElementById("expPickOverlay").style.display="none"; });
+
 $("mSave").addEventListener("click",async ()=>{
   // v16: 비밀번호 종류는 별도 처리 (암호화)
   if(mKind==="password"){
@@ -1248,8 +1388,15 @@ $("mSave").addEventListener("click",async ()=>{
   else if(mKind==="site"){ renderSite(); }
   else renderAll();
   // 업무 저장 시 지출 자동 연동 + 합계 자동계산
-  if(mKind==="work"){ calcWorkTotal(obj); syncWorkExpense(obj, mId, savedId); }
+  if(mKind==="work"){ calcWorkTotal(obj); syncWorkExpense(obj, mId, savedId); applyExpLinks(savedId); }
   $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
+  // 구글캘린더 자동 동기화
+  if(typeof window.gcalSync==="function" && typeof accessToken!=="undefined" && accessToken){
+    const savedEntry = entries.find(e=>e.id===savedId);
+    if(savedEntry && typeof GCAL_IDS!=="undefined" && GCAL_IDS[savedEntry.kind]){
+      setTimeout(()=>window.gcalSync(savedEntry), 500);
+    }
+  }
 });
 $("mDelete").addEventListener("click",()=>{
   if(!mId) return;
@@ -2565,8 +2712,8 @@ function bindDnD(box){
 }
 function wireFileLinkTab(){
   const _fileSearch=$("fileSearch"); if(_fileSearch) _fileSearch.addEventListener("input",e=>{ CAT_FILTER.filelink.q=e.target.value; renderFileLink(); });
-  $("fileCatFilter").addEventListener("change",e=>{ CAT_FILTER.filelink.cat=e.target.value; CAT_FILTER.filelink.sub="전체"; renderFileLink(); });
-  $("btnFileCatMgr").addEventListener("click",()=>openCatMgr("filelink"));
+  const _fileCatFilter=$("fileCatFilter"); if(_fileCatFilter) _fileCatFilter.addEventListener("change",e=>{ CAT_FILTER.filelink.cat=e.target.value; CAT_FILTER.filelink.sub="전체"; renderFileLink(); });
+  const _btnFileCatMgr=$("btnFileCatMgr"); if(_btnFileCatMgr) _btnFileCatMgr.addEventListener("click",()=>openCatMgr("filelink"));
   // 보기 드롭다운
   const vsel=$("fileLinkViewSelect");
   if(vsel){
@@ -2848,7 +2995,7 @@ function renderSite(){
   const favs=list.filter(e=>e.starred);
   const rest=list.filter(e=>!e.starred);
   const groups={};
-  rest.forEach(e=>{ const c=e.category||"(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
+  rest.forEach(e=>{ var c=e.category||"(미분류)"; if(c==="개인용도"||c==="기타") c="(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
   const orderedCats=CATEGORIES.site.filter(c=>groups[c]);
   Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
   const jumpGroups={};
@@ -2868,11 +3015,30 @@ function renderSite(){
     const collapsed=VIEW_PREFS.site.collapsed[c];
     const colorClass=catColorClass("site",c);
     return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}">
-      <div class="cat-group-h"><span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span></div>
+      <div class="cat-group-h pw-cat-hdr" data-cat="${esc(c)}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none">
+        <span class="ch-arrow" style="font-size:14px;transition:transform .2s;display:inline-block;${collapsed?'transform:rotate(-90deg)':''}">▾</span>
+        <span style="font-size:15px;font-weight:800;letter-spacing:-.3px">${esc(c)}</span>
+        <span style="background:rgba(255,255,255,.3);border-radius:20px;padding:2px 10px;font-size:13px;font-weight:700">${items.length}</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
+          <!-- 전체접기 -->
+          <button class="pw-hdr-btn" data-pvcollapse="${esc(c)}" title="접기/펼치기" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </button>
+          <!-- 카드형 -->
+          <button class="pw-hdr-btn pw-view-btn ${VIEW_PREFS.password.mode==='card'?'pw-view-active':''}" data-pvmode="card" title="카드형" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+          <!-- 목록형 -->
+          <button class="pw-hdr-btn pw-view-btn ${VIEW_PREFS.password.mode==='list'?'pw-view-active':''}" data-pvmode="list" title="목록형" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+          </button>
+        </div>
+      </div>
       <div class="cat-items">${items.map(e=>siteCardHTML(e)).join("")}</div></div>`;
   }).join("");
   box.innerHTML=html;
-  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",()=>{
+  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",(ev)=>{
+    if(ev.target.closest(".view-mode-group")) return;
     const g=h.parentElement; const cat=g.dataset.cat;
     VIEW_PREFS.site.collapsed[cat]=!VIEW_PREFS.site.collapsed[cat];
     saveViewPrefs(); g.classList.toggle("collapsed");
@@ -3250,6 +3416,20 @@ async function pwRenderList(){
     && (f.sub==="전체"||e.subcategory===f.sub)
     && pwMatches(e,f.q));
 
+  // 목록형 CSS 동적 추가
+  if(!document.getElementById('pw-list-style')){
+    const st=document.createElement('style'); st.id='pw-list-style';
+    st.textContent=`
+      .pw-list-table{width:100%;border-collapse:collapse;font-size:13px}
+      .pw-list-table th{background:#f0f6ff;padding:9px 12px;text-align:left;font-weight:700;color:#33567d;border-bottom:2px solid #dbe6f4;white-space:nowrap}
+      .pw-list-table td{padding:9px 12px;border-bottom:1px solid #f0f6ff;color:#1a2f45;vertical-align:middle}
+      .pw-list-table tr:hover td{background:#f7faff}
+      .pw-list-table .pw-mini-btn{padding:3px 8px;font-size:11px;border:1px solid #dbe6f4;border-radius:6px;background:#fff;cursor:pointer}
+      .pw-hdr-btn:hover{background:rgba(255,255,255,.45)!important}
+      .pw-view-active{background:rgba(255,255,255,.5)!important;box-shadow:0 0 0 2px rgba(255,255,255,.6)}
+    `;
+    document.head.appendChild(st);
+  }
   const box=$("pwList");
   if(!list.length){
     $("pwCatJump").innerHTML="";
@@ -3260,9 +3440,9 @@ async function pwRenderList(){
   const favs=list.filter(e=>e.starred);
   const rest=list.filter(e=>!e.starred);
   const groups={};
-  rest.forEach(e=>{ const c=e.category||"(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
-  const orderedCats=CATEGORIES.password.filter(c=>groups[c]);
-  Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
+  rest.forEach(e=>{ var c=e.category||"(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
+  // 업무시스템만 표시, 나머지 제외
+  const orderedCats=["업무시스템"].filter(c=>groups[c]);
   const jumpGroups={};
   if(favs.length) jumpGroups["⭐ 즐겨찾기"]=favs;
   orderedCats.forEach(c=>{ jumpGroups[c]=groups[c]; });
@@ -3297,22 +3477,75 @@ async function pwRenderList(){
     const collapsed=VIEW_PREFS.password.collapsed[c];
     const colorClass=catColorClass("password",c);
     return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}" style="margin-bottom:14px">
-      <div class="cat-group-h"><span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span></div>
-      <div class="cat-items" style="display:block">${items.map(pwCardPlaceholder).join("")}</div></div>`;
+      <div class="cat-group-h pw-cat-hdr" data-cat="${esc(c)}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none">
+        <span class="ch-arrow" style="font-size:14px;transition:transform .2s;display:inline-block;${collapsed?'transform:rotate(-90deg)':''}">▾</span>
+        <span style="font-size:15px;font-weight:800;letter-spacing:-.3px">${esc(c)}</span>
+        <span style="background:rgba(255,255,255,.3);border-radius:20px;padding:2px 10px;font-size:13px;font-weight:700">${items.length}</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
+          <!-- 전체접기 -->
+          <button class="pw-hdr-btn" data-pvcollapse="${esc(c)}" title="접기/펼치기" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </button>
+          <!-- 카드형 -->
+          <button class="pw-hdr-btn pw-view-btn ${VIEW_PREFS.password.mode==='card'?'pw-view-active':''}" data-pvmode="card" title="카드형" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+          <!-- 목록형 -->
+          <button class="pw-hdr-btn pw-view-btn ${VIEW_PREFS.password.mode==='list'?'pw-view-active':''}" data-pvmode="list" title="목록형" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="cat-items" data-cat-items="${esc(c)}" style="${VIEW_PREFS.password.mode==='list'?'':'display:flex;flex-wrap:wrap;gap:10px;padding:10px 0'}">
+        ${VIEW_PREFS.password.mode==='list'?`
+        <table class="pw-list-table">
+          <thead><tr><th>사이트명</th><th>카테고리</th><th>아이디</th><th>비밀번호</th><th>URL</th><th>메모</th><th></th></tr></thead>
+          <tbody>${items.map(e=>`<tr data-pid="${e.id}">
+            <td style="font-weight:600">${e.starred?'⭐ ':''}${esc(e.name||'')}</td>
+            <td><span style="background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">${esc(e.category||'')}</span></td>
+            <td data-fields-user>-</td><td data-fields-pw>-</td><td data-fields-url>-</td><td data-fields-memo>-</td>
+            <td style="white-space:nowrap"><button class="pw-mini-btn" data-pact="edit">수정</button> <button class="pw-mini-btn" data-pact="del" style="color:#e74c3c">삭제</button></td>
+          </tr>`).join('')}</tbody>
+        </table>`:items.map(pwCardPlaceholder).join("")}
+      </div></div>`;
   }).join("");
   box.innerHTML=html;
 
   // 접기 이벤트
-  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",()=>{
-    const g=h.parentElement; const cat=g.dataset.cat;
+  box.querySelectorAll(".pw-cat-hdr").forEach(h=>h.addEventListener("click",(ev)=>{
+    if(ev.target.closest("[data-pvmode],[data-pvcollapse]")) return;
+    const g=h.parentElement; const cat=g.dataset.cat||h.dataset.cat;
     VIEW_PREFS.password.collapsed[cat]=!VIEW_PREFS.password.collapsed[cat];
     saveViewPrefs(); g.classList.toggle("collapsed");
-    // 접힘 처리 (display:none 으로)
     const items=g.querySelector(".cat-items");
-    if(items) items.style.display = g.classList.contains("collapsed") ? "none" : "block";
+    if(items) items.style.display=g.classList.contains("collapsed")?"none":"";
+    const arrow=h.querySelector(".ch-arrow");
+    if(arrow) arrow.style.transform=g.classList.contains("collapsed")?"rotate(-90deg)":"";
   }));
+  // 접기 버튼 개별 클릭
+  box.querySelectorAll("[data-pvcollapse]").forEach(btn=>{
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      const g=btn.closest(".cat-group"); const cat=btn.dataset.pvcollapse;
+      VIEW_PREFS.password.collapsed[cat]=!VIEW_PREFS.password.collapsed[cat];
+      saveViewPrefs(); g.classList.toggle("collapsed");
+      const items=g.querySelector(".cat-items");
+      if(items) items.style.display=g.classList.contains("collapsed")?"none":"";
+      const arrow=g.querySelector(".ch-arrow");
+      if(arrow) arrow.style.transform=g.classList.contains("collapsed")?"rotate(-90deg)":"";
+    });
+  });
   // 초기 접힘 상태 반영
   box.querySelectorAll(".cat-group.collapsed .cat-items").forEach(el=>el.style.display="none");
+
+  // 카드/목록 전환
+  box.querySelectorAll("[data-pvmode]").forEach(btn=>{
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      VIEW_PREFS.password.mode=btn.dataset.pvmode;
+      saveViewPrefs(); pwRenderList();
+    });
+  });
 
   // 복호화 채우기
   for(const e of list){
@@ -3329,15 +3562,49 @@ async function pwRenderList(){
       ${data.url?`<div class="pw-field"><span class="pw-field-k">URL</span><span class="pw-field-v"><a href="${esc(normUrl(data.url))}" target="_blank" rel="noopener" style="color:var(--primary-deep);text-decoration:none">${esc(data.url)}</a></span></div>`:""}
       ${data.memo?`<div class="pw-memo">📝 ${esc(data.memo)}</div>`:""}
     `;
-    const fb=card.querySelector("[data-fields]"); fb.innerHTML=fieldsHTML;
-    fb.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>{
-      if(pwShownIds.has(e.id)) pwShownIds.delete(e.id); else pwShownIds.add(e.id);
-      pwRenderList();
-    }));
-    fb.querySelectorAll("[data-copy]").forEach(b=>b.addEventListener("click",()=>{
-      copyText(b.dataset.copy, b.dataset.label+" 복사됨");
-    }));
-    card.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",async ev=>{
+    const fb=card?card.querySelector("[data-fields]"):null;
+    if(fb) fb.innerHTML=fieldsHTML;
+
+    // 목록형 복호화 + 이벤트
+    const tr=box.querySelector(`tr[data-pid="${e.id}"]`);
+    if(tr){
+      const uEl=tr.querySelector("[data-fields-user]");
+      if(uEl) uEl.innerHTML=data.username?`${esc(data.username)} <button class="pw-mini-btn" data-copy="${esc(data.username).replace(/"/g,"&quot;")}" data-label="아이디">📋</button>`:"-";
+      const pwEl=tr.querySelector("[data-fields-pw]");
+      if(pwEl){
+        const sh=pwShownIds.has(e.id);
+        pwEl.innerHTML=data.password
+          ? `<span style="${sh?'':'font-family:monospace'}">${sh?esc(data.password):"••••••"}</span> <button class="pw-mini-btn" data-toggle>${sh?"🙈":"👁"}</button> <button class="pw-mini-btn" data-copy="${esc(data.password).replace(/"/g,"&quot;")}" data-label="비밀번호">📋</button>`
+          : "-";
+        pwEl.querySelector("[data-toggle]")?.addEventListener("click",()=>{ if(pwShownIds.has(e.id)) pwShownIds.delete(e.id); else pwShownIds.add(e.id); pwRenderList(); });
+        pwEl.querySelector("[data-copy]")?.addEventListener("click",function(){ copyText(this.dataset.copy, this.dataset.label+" 복사됨"); });
+      }
+      const urlEl=tr.querySelector("[data-fields-url]");
+      if(urlEl) urlEl.innerHTML=data.url?`<a href="${esc(normUrl(data.url))}" target="_blank" style="color:var(--primary-deep)">${esc(data.url)}</a>`:"-";
+      const mEl=tr.querySelector("[data-fields-memo]");
+      if(mEl) mEl.textContent=data.memo||"-";
+      // 수정/삭제 이벤트
+      tr.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",async ev=>{
+        ev.stopPropagation();
+        if(b.dataset.pact==="edit") pwOpenEditor(e.id);
+        else if(b.dataset.pact==="del"){
+          if(!confirm(`"${e.name}" 비밀번호를 삭제하시겠습니까?`)) return;
+          deleteWithUndo(e.id,"비밀번호");
+        }
+      }));
+    }
+
+    // 카드형 이벤트
+    if(fb){
+      fb.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>{
+        if(pwShownIds.has(e.id)) pwShownIds.delete(e.id); else pwShownIds.add(e.id);
+        pwRenderList();
+      }));
+      fb.querySelectorAll("[data-copy]").forEach(b=>b.addEventListener("click",()=>{
+        copyText(b.dataset.copy, b.dataset.label+" 복사됨");
+      }));
+    }
+    if(card) card.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",async ev=>{
       ev.stopPropagation();
       const act=b.dataset.pact;
       if(act==="edit") pwOpenEditor(e.id);
@@ -5178,40 +5445,88 @@ function openExpenseEditor(id){
 function renderExpenseModal(id){
   $("expTitle").textContent = (id?"수정":"추가")+" · 💰 지출 내역";
   const d = expenseData;
-  // 자주 쓰는 내역 자동완성 (지난 90일 내역에서)
-  const recent = entries.filter(e=>e.kind==="expense" && e.title && e.expType===d.expType)
-    .map(e=>e.title)
-    .filter((v,i,a)=>a.indexOf(v)===i)
-    .slice(0,30);
-  const datalistOpts = recent.map(t=>`<option value="${esc(t)}">`).join("");
+  const fieldOpts = (typeof FIELDS!=="undefined"?FIELDS:["전기","기계/냉난방","소방","영선","청소","기타"])
+    .map(f=>`<option value="${esc(f)}" ${d.field===f?"selected":""}>${esc(f)}</option>`).join("");
+  const utype = d.utype||"자재구매"; // 유형: 자재구매/공사용역/택배/기타
+
+  // 유형별 추가 필드
+  const typeFields = {
+    "자재구매": `
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>자재명 <span class="req">*</span></label><input type="text" id="exp-matname" value="${esc(d.matName||"")}" placeholder="예: 형광등, 소화기"></div>
+        <div class="field"><label>규격/사양</label><input type="text" id="exp-spec" value="${esc(d.spec||"")}" placeholder="예: 36W, 3.3kg"></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>단가 (원)</label><input type="number" id="exp-unitprice" value="${Number(d.unitPrice)||0}" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>수량</label><input type="number" id="exp-qty" value="${Number(d.qty)||1}" min="1" oninput="expCalcTotal()"></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="${Number(d.deliveryFee)||0}" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>합계 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0" placeholder="자동계산"></div>
+      </div>`,
+    "공사/용역": `
+      <div class="field full" style="margin-top:10px">
+        <label>공사/용역명 <span class="req">*</span></label>
+        <input type="text" id="exp-matname" value="${esc(d.matName||"")}" placeholder="예: 외벽 도색, 엘리베이터 점검">
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>계약금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0"></div>
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="${Number(d.deliveryFee)||0}" min="0"></div>
+      </div>`,
+    "택배": `
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>품목</label><input type="text" id="exp-matname" value="${esc(d.matName||"")}" placeholder="예: 소화기 부품"></div>
+        <div class="field"><label>택배비 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0"></div>
+      </div>`,
+    "기타": `
+      <div class="field full" style="margin-top:10px">
+        <label>금액 (원) <span class="req">*</span></label>
+        <input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0">
+      </div>`
+  };
+
   $("expFields").innerHTML = `
     <div class="grid">
       <div class="field"><label>날짜 <span class="req">*</span></label><input type="date" id="exp-date" value="${esc(d.date||todayStr())}"></div>
       <div class="field">
-        <label>종류 <span class="req">*</span></label>
-        <select id="exp-type">
-          <option value="개인지출" ${(d.expType==="개인지출")?"selected":""}>💸 개인지출 (품의서용)</option>
-          <option value="세금계산서" ${(d.expType==="세금계산서")?"selected":""}>📃 세금계산서 (발급 확인)</option>
+        <label>지출유형 <span class="req">*</span></label>
+        <select id="exp-utype" onchange="expChangeType(this.value)">
+          <option value="자재구매" ${utype==="자재구매"?"selected":""}>🛒 자재구매</option>
+          <option value="공사/용역" ${utype==="공사/용역"?"selected":""}>🏗 공사/용역</option>
+          <option value="기타" ${utype==="기타"?"selected":""}>📝 기타</option>
         </select>
       </div>
     </div>
-    <div class="field full" style="margin-top:14px">
-      <label>내역 <span class="req">*</span></label>
-      <input type="text" id="exp-title" value="${esc(d.title||"")}" list="expTitleList" placeholder="예: 종량제 봉투, 정화조 수리, 점심식사">
-      <datalist id="expTitleList">${datalistOpts}</datalist>
-    </div>
-    <div class="grid" style="margin-top:14px">
-      <div class="field"><label>금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0"></div>
-      <div class="field"><label>업체명</label><input type="text" id="exp-vendor" value="${esc(d.vendor||"")}" placeholder="예: 삼성에어컨, 한국전기"></div>
-    </div>
     <div class="grid" style="margin-top:10px">
       <div class="field">
-        <label>분야</label>
-        <div style="display:flex;gap:6px">
-          <select id="exp-field" style="flex:1">${(typeof FIELDS!=="undefined"?FIELDS:["전기","기계/냉난방","소방","영선","청소","기타"]).map(f=>`<option value="${esc(f)}" ${d.field===f?"selected":""}>${esc(f)}</option>`).join("")}</select>
-        </div>
+        <label>분야
+          <button onclick="openExpFieldMgr()" style="margin-left:6px;font-size:11px;padding:2px 8px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;cursor:pointer;font-family:inherit;color:#3f7cb8;font-weight:700">⚙ 관리</button>
+        </label>
+        <select id="exp-field">
+          <option value="">-- 선택 --</option>
+          ${loadExpFields().map(f=>`<option value="${esc(f)}" ${d.field===f?"selected":""}>${esc(f)}</option>`).join("")}
+        </select>
       </div>
-      <div class="field"><label>비고</label><input type="text" id="exp-memo" value="${esc(d.memo||"")}" placeholder="예: 100장, 5층·6층 30개"></div>
+      <div class="field">
+        <label>정산종류</label>
+        <select id="exp-type">
+          <option value="개인지출" ${(d.expType==="개인지출")?"selected":""}>💸 개인지출</option>
+          <option value="세금계산서" ${(d.expType==="세금계산서")?"selected":""}>📃 세금계산서</option>
+        </select>
+      </div>
+    </div>
+    <div class="field full" style="margin-top:10px">
+      <label>내역 <span class="req">*</span></label>
+      <input type="text" id="exp-title" value="${esc(d.title||"")}" placeholder="예: 종량제 봉투 구매, 외벽 도색 공사">
+    </div>
+    <div class="field full" style="margin-top:10px">
+      <label>업체명</label>
+      <input type="text" id="exp-vendor" value="${esc(d.vendor||"")}" placeholder="예: 삼성에어컨, 한국전기">
+    </div>
+    <div id="exp-typeFields">${typeFields[utype]||typeFields["기타"]}</div>
+    <div class="field full" style="margin-top:10px">
+      <label>비고</label>
+      <input type="text" id="exp-memo" value="${esc(d.memo||"")}" placeholder="예: 5층 창고 보관">
     </div>
     <div class="field full" style="margin-top:14px">
       <label>📷 영수증 사진 (선택)</label>
@@ -5228,6 +5543,51 @@ function renderExpenseModal(id){
   $("expDelete").style.display = id?"":"none";
 }
 
+// 유형 변경 시 필드 전환
+function expChangeType(utype){
+  const typeFields = {
+    "자재구매": `
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>자재명 <span class="req">*</span></label><input type="text" id="exp-matname" placeholder="예: 형광등, 소화기"></div>
+        <div class="field"><label>규격/사양</label><input type="text" id="exp-spec" placeholder="예: 36W, 3.3kg"></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>단가 (원)</label><input type="number" id="exp-unitprice" value="0" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>수량</label><input type="number" id="exp-qty" value="1" min="1" oninput="expCalcTotal()"></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="0" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>합계 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="0" min="0" placeholder="자동계산"></div>
+      </div>`,
+    "공사/용역": `
+      <div class="field full" style="margin-top:10px">
+        <label>공사/용역명</label>
+        <input type="text" id="exp-matname" placeholder="예: 외벽 도색, 엘리베이터 점검">
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label>계약금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="0" min="0"></div>
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="0" min="0"></div>
+      </div>`,
+    "기타": `
+      <div class="field full" style="margin-top:10px">
+        <label>금액 (원) <span class="req">*</span></label>
+        <input type="number" id="exp-amount" value="0" min="0">
+      </div>`
+  };
+  const box = $("exp-typeFields");
+  if(box) box.innerHTML = typeFields[utype]||typeFields["기타"];
+}
+
+// 합계 자동계산 (자재구매)
+function expCalcTotal(){
+  const up = Number($("exp-unitprice")||{value:0}).value||0;
+  const qty = Number($("exp-qty")||{value:1}).value||1;
+  const del = Number($("exp-delivery")||{value:0}).value||0;
+  const total = (up*qty)+del;
+  const amtEl = $("exp-amount");
+  if(amtEl) amtEl.value = total;
+}
+
 function renderExpensePhoto(){
   const area = $("exp-photoArea");
   if(!expensePhoto){ area.innerHTML = `<div style="font-size:12px;color:var(--ink-soft);margin-top:6px">영수증을 촬영하거나 사진으로 첨부하세요. (선택)</div>`; return; }
@@ -5240,18 +5600,362 @@ async function handleExpensePhoto(e){
   catch(err){ toast("사진 처리 실패"); }
 }
 
+// 지출 분야 관리 모달
+function openWorkVendorMgr(){
+  const overlay = document.getElementById('workVendorMgrOverlay');
+  if(!overlay){
+    const el=document.createElement('div');
+    el.id='workVendorMgrOverlay';
+    el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:none;align-items:flex-end;justify-content:center';
+    el.innerHTML=`
+      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:24px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
+        <h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:#1a2f45">🏢 담당업체 관리</h3>
+        <div id="workVendorList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:14px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <input type="text" id="workVendorNew" placeholder="새 업체명" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <button onclick="workVendorAdd()" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+        </div>
+        <button onclick="document.getElementById('workVendorMgrOverlay').style.display='none'" style="width:100%;padding:13px;border-radius:14px;border:2px solid #dbe6f4;background:#f7faff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;color:#7a92a8">닫기</button>
+      </div>`;
+    el.addEventListener('click',e=>{ if(e.target===el) el.style.display='none'; });
+    document.body.appendChild(el);
+  }
+  document.getElementById('workVendorMgrOverlay').style.display='flex';
+  workVendorRender();
+}
+
+function workVendorRender(){
+  const list=document.getElementById('workVendorList'); if(!list) return;
+  const vendors=loadWorkVendors();
+  list.innerHTML=vendors.map((v,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7faff;border-radius:10px;border:1.5px solid #e8f0fa">
+      <input type="text" value="${esc(v)}" data-vi="${i}" style="flex:1;border:none;background:transparent;font-size:14px;font-family:inherit;outline:none;color:#1a2f45;font-weight:600">
+      <button data-vsave="${i}" style="background:#eaf1fb;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#3f7cb8;cursor:pointer;font-family:inherit">저장</button>
+      <button data-vdel="${i}" style="background:#fde8e8;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-vsave]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.vsave);
+      const inp=list.querySelector(`[data-vi="${i}"]`);
+      if(!inp||!inp.value.trim()) return;
+      const arr=loadWorkVendors(); arr[i]=inp.value.trim(); saveWorkVendors(arr);
+      workVendorRender(); refreshWorkVendorSelect();
+      if(typeof toast==='function') toast('저장됐어요');
+    });
+  });
+  list.querySelectorAll('[data-vdel]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.vdel);
+      const arr=loadWorkVendors(); if(!confirm(`"${arr[i]}" 업체를 삭제할까요?`)) return;
+      arr.splice(i,1); saveWorkVendors(arr);
+      workVendorRender(); refreshWorkVendorSelect();
+    });
+  });
+}
+
+function workVendorAdd(){
+  const inp=document.getElementById('workVendorNew');
+  const name=(inp&&inp.value||'').trim();
+  if(!name) return;
+  const arr=loadWorkVendors();
+  if(arr.includes(name)){ if(typeof toast==='function') toast('이미 있는 업체예요'); return; }
+  arr.push(name); saveWorkVendors(arr);
+  if(inp) inp.value='';
+  workVendorRender(); refreshWorkVendorSelect();
+  if(typeof toast==='function') toast('추가됐어요');
+}
+
+
+// 검색 가능한 연락처 선택 드롭다운
+// timepick 동기화 (hidden input에 HH:MM 값 저장)
+// alertbefore - 일/시간/분 → 총 분으로 변환해서 hidden에 저장
+function syncAlertBefore(){
+  const d = parseInt(document.getElementById('m-alertDays')?.value||0);
+  const h = parseInt(document.getElementById('m-alertHours')?.value||0);
+  const m = parseInt(document.getElementById('m-alertMins')?.value||0);
+  const total = d*24*60 + h*60 + m;
+  const el = document.getElementById('m-alertBefore');
+  if(el) el.value = String(total);
+}
+
+// alertbefore 복원
+function restoreAlertBefore(total){
+  total = parseInt(total)||0;
+  const d = Math.floor(total/(24*60));
+  const h = Math.floor((total%(24*60))/60);
+  const m = total%60;
+  const dEl=document.getElementById('m-alertDays');
+  const hEl=document.getElementById('m-alertHours');
+  const mEl=document.getElementById('m-alertMins');
+  if(dEl) dEl.value=String(d);
+  if(hEl) hEl.value=String(h);
+  // 분은 가장 가까운 5분 단위로
+  const mOpts=[0,5,10,15,20,30,45];
+  const closest=mOpts.reduce((a,b)=>Math.abs(b-m)<Math.abs(a-m)?b:a);
+  if(mEl) mEl.value=String(closest);
+  syncAlertBefore();
+}
+
+function syncTimepick(fid){
+  const ampm = (document.getElementById(fid+'-ampm')||{}).value||'AM';
+  const h = parseInt((document.getElementById(fid+'-h')||{}).value||'0');
+  const m = (document.getElementById(fid+'-m')||{}).value||'';
+  if(!h||m==='') { const el=document.getElementById(fid); if(el) el.value=''; return; }
+  let h24 = h;
+  if(ampm==='AM' && h===12) h24=0;
+  else if(ampm==='PM' && h!==12) h24=h+12;
+  const val = `${String(h24).padStart(2,'0')}:${m}`;
+  const el=document.getElementById(fid); if(el) el.value=val;
+}
+
+// timepick 기존값 복원 (수정 시)
+function restoreTimepick(fid, val){
+  if(!val) return;
+  const [hStr,mStr]=val.split(':');
+  let h24=parseInt(hStr); const m=mStr;
+  const ampmEl=document.getElementById(fid+'-ampm');
+  const hEl=document.getElementById(fid+'-h');
+  const mEl=document.getElementById(fid+'-m');
+  if(!ampmEl||!hEl||!mEl) return;
+  let ampm='AM'; let h12=h24;
+  if(h24===0){ ampm='AM'; h12=12; }
+  else if(h24<12){ ampm='AM'; h12=h24; }
+  else if(h24===12){ ampm='PM'; h12=12; }
+  else { ampm='PM'; h12=h24-12; }
+  ampmEl.value=ampm;
+  hEl.value=String(h12);
+  mEl.value=m;
+}
+
+function makeContactSearchUI(inputId, listId, onSelect, onClear){
+  const inp = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if(!inp||!list) return;
+  const contacts = (typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name);
+
+  // ✕ 초기화 버튼 추가
+  const wrap = inp.parentElement;
+  if(wrap && !wrap.querySelector('.csl-clear')){
+    wrap.style.position='relative';
+    const clearBtn=document.createElement('button');
+    clearBtn.type='button';
+    clearBtn.className='csl-clear';
+    clearBtn.textContent='✕';
+    clearBtn.style.cssText='position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:16px;color:#aab8c8;cursor:pointer;padding:4px;display:none;line-height:1';
+    clearBtn.addEventListener('mousedown',e=>{
+      e.preventDefault();
+      inp.value='';
+      clearBtn.style.display='none';
+      list.style.display='none';
+      if(onClear) onClear();
+    });
+    wrap.appendChild(clearBtn);
+
+    inp.addEventListener('input',()=>{
+      clearBtn.style.display=inp.value?'block':'none';
+    });
+  }
+
+  function render(q){
+    const filtered = q
+      ? contacts.filter(c=>(c.name||'').includes(q)||(c.cat||'').includes(q)||(c.phone||'').includes(q)||(c.person||'').includes(q)||(c.title||'').includes(q))
+      : contacts;
+    if(!filtered.length){
+      list.innerHTML='<div style="padding:10px 14px;color:#aab8c8;font-size:13px">검색 결과 없음</div>';
+      list.style.display='block'; return;
+    }
+    list.innerHTML=filtered.map(c=>`
+      <div class="csl-item" data-idx="${contacts.indexOf(c)}" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f6ff;transition:background .1s">
+        <div style="font-size:14px;font-weight:700;color:#1a2f45">${esc(c.name)}${c.person?' <span style="font-size:12px;color:#3f7cb8;font-weight:600">· '+esc(c.person)+'</span>':''}</div>
+        <div style="font-size:12px;color:#aab8c8;margin-top:2px">${[c.cat,c.title,c.phone].filter(Boolean).join(' · ')}</div>
+      </div>`).join('');
+    list.style.display='block';
+    list.querySelectorAll('.csl-item').forEach(el=>{
+      el.addEventListener('mouseenter',()=>el.style.background='#f0f6ff');
+      el.addEventListener('mouseleave',()=>el.style.background='');
+      el.addEventListener('mousedown',e=>{
+        e.preventDefault();
+        const c=contacts[parseInt(el.dataset.idx)];
+        inp.value=c.name;
+        list.style.display='none';
+        const cb=inp.parentElement&&inp.parentElement.querySelector('.csl-clear');
+        if(cb) cb.style.display='block';
+        onSelect(c); // 무조건 덮어쓰기
+      });
+    });
+  }
+
+  let activeIdx = -1;
+
+  function updateActive(items){
+    items.forEach((el,i)=>{ el.style.background = i===activeIdx ? '#e8f0fb' : ''; });
+  }
+
+  inp.addEventListener('keydown',e=>{
+    const items=[...list.querySelectorAll('.csl-item')];
+    if(!items.length) return;
+    if(e.key==='ArrowDown'){
+      e.preventDefault();
+      activeIdx=Math.min(activeIdx+1, items.length-1);
+      updateActive(items);
+      items[activeIdx]?.scrollIntoView({block:'nearest'});
+    } else if(e.key==='ArrowUp'){
+      e.preventDefault();
+      activeIdx=Math.max(activeIdx-1, 0);
+      updateActive(items);
+      items[activeIdx]?.scrollIntoView({block:'nearest'});
+    } else if(e.key==='Enter'){
+      e.preventDefault();
+      e.stopPropagation();
+      const target = activeIdx>=0 ? items[activeIdx] : items[0];
+      if(target) target.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));
+    } else if(e.key==='Escape'){
+      list.style.display='none';
+      activeIdx=-1;
+    }
+  });
+
+  inp.addEventListener('input',()=>{ activeIdx=-1; render(inp.value); });
+  inp.addEventListener('focus',()=>{ activeIdx=-1; render(inp.value); });
+  inp.addEventListener('blur',()=>setTimeout(()=>{ list.style.display='none'; activeIdx=-1; },200));
+}
+
+// 통화 - 연락처 선택 시 자동입력
+function fillCallContact(val){
+  if(!val) return;
+  try{
+    const c=JSON.parse(val);
+    const nameEl=document.getElementById('m-name');
+    const roleEl=document.getElementById('m-role');
+    const compEl=document.getElementById('m-company');
+    const phoneEl=document.getElementById('m-phone');
+    if(nameEl&&c.name) nameEl.value=c.name;
+    if(roleEl&&c.role) roleEl.value=c.role;
+    if(compEl&&c.company) compEl.value=c.company;
+    if(phoneEl&&c.phone) phoneEl.value=c.phone;
+  }catch(e){}
+}
+
+// 업무 - 담당업체 선택 시 담당자/전화 자동입력
+function fillWorkVendor(vendorName){
+  if(!vendorName) return;
+  const contacts=(typeof contactsCache!=='undefined'?contactsCache:[]);
+  // 업체명으로 첫 번째 담당자 찾기
+  const contact=contacts.find(c=>c.name===vendorName||c.company===vendorName);
+  if(!contact) return;
+  const contactEl=document.getElementById('m-workContact');
+  const phoneEl=document.getElementById('m-workPhone');
+  if(contactEl&&!contactEl.value) contactEl.value=contact.person||'';
+  const roleEl=document.getElementById('m-workRole');
+  if(roleEl&&!roleEl.value) roleEl.value=contact.title||'';
+  if(phoneEl&&!phoneEl.value) phoneEl.value=contact.phone||'';
+  const memoEl=document.getElementById('m-workMemo');
+  if(memoEl&&!memoEl.value) memoEl.value=contact.memo||'';
+}
+
+function refreshWorkVendorSelect(){
+  const sel=document.getElementById('m-workVendor');
+  if(!sel) return;
+  const cur=sel.value;
+  const contacts=(typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name&&c.cat!=='직원(재직중)'&&c.cat!=='직원(퇴직)');
+  sel.innerHTML='<option value="">-- 선택 --</option>'+contacts.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}${c.cat?' ('+esc(c.cat)+')':''}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+
+function openExpFieldMgr(){
+  const overlay = document.getElementById('expFieldMgrOverlay');
+  if(!overlay) {
+    // 모달 동적 생성
+    const el = document.createElement('div');
+    el.id = 'expFieldMgrOverlay';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:flex-end;justify-content:center';
+    el.innerHTML = `
+      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:24px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
+        <h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:#1a2f45">⚙ 지출 분야 관리</h3>
+        <div id="expFieldMgrList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:14px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <input type="text" id="expFieldMgrNew" placeholder="새 분야 이름" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;outline:none;background:#f7faff">
+          <button onclick="expFieldMgrAdd()" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+        </div>
+        <button onclick="document.getElementById('expFieldMgrOverlay').classList.remove('show')" style="width:100%;padding:13px;border-radius:14px;border:2px solid #dbe6f4;background:#f7faff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;color:#7a92a8">닫기</button>
+      </div>`;
+    el.addEventListener('click', e=>{ if(e.target===el) el.classList.remove('show'); });
+    document.body.appendChild(el);
+  }
+  document.getElementById('expFieldMgrOverlay').classList.add('show');
+  expFieldMgrRender();
+}
+
+function expFieldMgrRender(){
+  const list = document.getElementById('expFieldMgrList');
+  if(!list) return;
+  const fields = loadExpFields();
+  list.innerHTML = fields.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7faff;border-radius:10px;border:1.5px solid #e8f0fa">
+      <input type="text" value="${esc(f)}" data-fi="${i}" style="flex:1;border:none;background:transparent;font-size:14px;font-family:inherit;outline:none;color:#1a2f45;font-weight:600">
+      <button data-fsave="${i}" style="background:#eaf1fb;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#3f7cb8;cursor:pointer;font-family:inherit">저장</button>
+      <button data-fdel="${i}" style="background:#fde8e8;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-fsave]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.fsave);
+      const inp=list.querySelector(`[data-fi="${i}"]`);
+      if(!inp||!inp.value.trim()) return;
+      const arr=loadExpFields(); arr[i]=inp.value.trim(); saveExpFields(arr);
+      expFieldMgrRender(); expRefreshFieldSelect();
+      if(typeof toast==='function') toast('저장됐어요');
+    });
+  });
+  list.querySelectorAll('[data-fdel]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.fdel);
+      const arr=loadExpFields(); if(!confirm(`"${arr[i]}" 분야를 삭제할까요?`)) return;
+      arr.splice(i,1); saveExpFields(arr);
+      expFieldMgrRender(); expRefreshFieldSelect();
+    });
+  });
+}
+
+function expFieldMgrAdd(){
+  const inp=document.getElementById('expFieldMgrNew');
+  const name=(inp&&inp.value||'').trim();
+  if(!name) return;
+  const arr=loadExpFields();
+  if(arr.includes(name)){ if(typeof toast==='function') toast('이미 있는 분야예요'); return; }
+  arr.push(name); saveExpFields(arr);
+  if(inp) inp.value='';
+  expFieldMgrRender(); expRefreshFieldSelect();
+  if(typeof toast==='function') toast('추가됐어요');
+}
+
+function expRefreshFieldSelect(){
+  const sel=document.getElementById('exp-field');
+  if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">-- 선택 --</option>'+loadExpFields().map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+
 function saveExpense(){
   const id = expenseData && expenseData.id;
   const title = ($("exp-title").value||"").trim();
   const amount = Number($("exp-amount").value)||0;
   if(!title){ toast("내역을 입력하세요"); return; }
   if(amount<=0){ toast("금액을 입력하세요"); return; }
+  const utype = ($("exp-utype")||{value:"기타"}).value||"기타";
+  const unitPrice = Number(($("exp-unitprice")||{value:0}).value)||0;
+  const qty = Number(($("exp-qty")||{value:1}).value)||1;
+  const deliveryFee = Number(($("exp-delivery")||{value:0}).value)||0;
   const obj = {
     kind: "expense",
     date: $("exp-date").value || todayStr(),
-    expType: $("exp-type").value || "개인지출",
+    expType: ($("exp-type")||{value:"개인지출"}).value || "개인지출",
+    utype,
     title,
     amount,
+    matName: ($("exp-matname")||{value:""}).value.trim(),
+    spec: ($("exp-spec")||{value:""}).value.trim(),
+    unitPrice, qty, deliveryFee,
     memo: ($("exp-memo")||{value:""}).value || "",
     vendor: ($("exp-vendor")||{value:""}).value.trim(),
     field: ($("exp-field")||{value:""}).value,
@@ -5270,6 +5974,117 @@ function saveExpense(){
   $("expenseOverlay").classList.remove("show");
   renderAll();
   toast(id?"수정되었습니다":"저장되었습니다");
+  // 구글캘린더 자동 동기화
+  if(typeof window.gcalSync==="function" && typeof accessToken!=="undefined" && accessToken){
+    const savedExp = entries.find(e=>e.id===(id||entries[entries.length-1]?.id));
+    if(savedExp && typeof GCAL_IDS!=="undefined" && GCAL_IDS[savedExp.kind]){
+      setTimeout(()=>window.gcalSync(savedExp), 500);
+    }
+  }
+}
+
+/* ===== 업무-지출 연결 ===== */
+let mLinkedExpIds = []; // 현재 업무에 연결된 지출 ID 목록
+
+function renderExpLinkList(workId){
+  mLinkedExpIds = workId
+    ? entries.filter(e=>e.kind==="expense"&&e.workId===workId).map(e=>e.id)
+    : [];
+  // 연결된 지출 있으면 영역 표시
+  const area=$("mExpLinkArea");
+  if(area) area.style.display = mLinkedExpIds.length ? "" : "none";
+  refreshExpLinkUI();
+}
+
+function refreshExpLinkUI(){
+  const list = document.getElementById("mExpLinkList");
+  if(!list) return;
+  const linked = entries.filter(e=>e.kind==="expense"&&mLinkedExpIds.includes(e.id));
+  if(!linked.length){
+    list.innerHTML = "<div style='font-size:13px;color:#aab8c8;padding:4px 0'>연결된 지출이 없습니다</div>";
+    return;
+  }
+  const total = linked.reduce((s,e)=>s+Number(e.amount||0),0);
+  list.innerHTML = linked.map(e=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7faff;border-radius:10px;border:1.5px solid #e8f0fa">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#1a2f45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.title||"")}</div>
+        <div style="font-size:11px;color:#aab8c8;margin-top:2px">${esc(e.date||"")} · ${esc(e.utype||e.expType||"")} · ${Number(e.amount||0).toLocaleString()}원</div>
+      </div>
+      <button data-unlinkid="${e.id}" style="background:#fde8e8;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit;flex-shrink:0">해제</button>
+    </div>`).join("")+
+    `<div style="text-align:right;font-size:13px;font-weight:800;color:#3f7cb8;margin-top:6px">합계: ${total.toLocaleString()}원</div>`;
+  list.querySelectorAll("[data-unlinkid]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      mLinkedExpIds = mLinkedExpIds.filter(id=>id!==btn.dataset.unlinkid);
+      refreshExpLinkUI();
+    });
+  });
+}
+
+function openExpPick(){
+  const overlay = document.getElementById("expPickOverlay");
+  if(!overlay) return;
+  overlay.style.display="flex";
+  renderExpPickList("");
+  const inp = document.getElementById("expPickSearch");
+  if(inp){ inp.value=""; inp.focus(); inp.oninput=()=>renderExpPickList(inp.value); }
+}
+
+function renderExpPickList(q){
+  const list = document.getElementById("expPickList");
+  if(!list) return;
+  const expenses = entries.filter(e=>e.kind==="expense")
+    .filter(e=>{
+      if(mLinkedExpIds.includes(e.id)) return false; // 이미 연결된 것 제외
+      if(!q.trim()) return true;
+      const s=[e.title,e.utype,e.expType,e.field,e.vendor,String(e.amount||"")].filter(Boolean).join(" ").toLowerCase();
+      return s.includes(q.trim().toLowerCase());
+    })
+    .sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  if(!expenses.length){
+    list.innerHTML="<div style='text-align:center;padding:30px;color:#aab8c8;font-size:14px'>조건에 맞는 지출이 없습니다</div>";
+    return;
+  }
+  list.innerHTML = expenses.map(e=>`
+    <div data-pickid="${e.id}" style="display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid #f0f6ff;cursor:pointer;transition:background .1s" onmouseenter="this.style.background='#f0f6ff'" onmouseleave="this.style.background=''">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;color:#1a2f45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.title||"")}</div>
+        <div style="font-size:12px;color:#aab8c8;margin-top:3px">
+          ${esc(e.date||"")} · <span style="background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">${esc(e.utype||e.expType||"")}</span> ${e.field?"· "+esc(e.field):""}
+        </div>
+      </div>
+      <div style="font-size:14px;font-weight:800;color:#3f7cb8;white-space:nowrap;flex-shrink:0">${Number(e.amount||0).toLocaleString()}원</div>
+    </div>`).join("");
+  list.querySelectorAll("[data-pickid]").forEach(el=>{
+    el.addEventListener("click",()=>{
+      const eid = el.dataset.pickid;
+      // 이미 있으면 제거 후 다시 추가 (중복 방지)
+      mLinkedExpIds = mLinkedExpIds.filter(i=>i!==eid);
+      mLinkedExpIds.push(eid);
+      document.getElementById("expPickOverlay").style.display="none";
+      // 업무 모달의 지출 연결 현황 간단히 표시
+      const linked=entries.find(e=>e.id===eid);
+      if(linked){
+        const area=$("mExpLinkArea"); if(area) area.style.display="";
+        refreshExpLinkUI();
+      }
+      if(typeof toast==="function") toast("💰 지출 연결됐어요");
+    });
+  });
+}
+
+// 저장 시 연결 처리 (mSave 클릭 후 호출)
+function applyExpLinks(workId){
+  if(!workId) return;
+  // 기존 연결 해제 (현재 목록에 없는 것)
+  entries.filter(e=>e.kind==="expense"&&e.workId===workId)
+    .forEach(e=>{ if(!mLinkedExpIds.includes(e.id)) updateRecord(e.id,{workId:null}); });
+  // 새 연결
+  mLinkedExpIds.forEach(eid=>{
+    const ex=entries.find(e=>e.id===eid);
+    if(ex&&ex.workId!==workId) updateRecord(eid,{workId});
+  });
 }
 
 function wireExpenseModal(){
@@ -5441,15 +6256,34 @@ const DEFAULT_CONTACT_CATS = ["전기","설비","기계/냉난방","통신","승
 let CONTACT_CATS = DEFAULT_CONTACT_CATS.slice();
 
 async function loadContactCats(){
-  // contact_cats = FIELDS와 동일 컬렉션 사용
-  await loadSharedCats();
-  CONTACT_CATS = FIELDS.slice();
+  // 연락처 분야 독립 로드 (업무 분야와 분리)
+  try{
+    const ls=JSON.parse(localStorage.getItem(CONTACT_CATS_LS)||'null');
+    if(Array.isArray(ls)&&ls.length){ CONTACT_CATS=ls; return; }
+  }catch(e){}
+  // Firestore에서 로드
+  if(online&&db){
+    try{
+      const snap=await db.collection('ct_cats_v2').doc('list').get();
+      if(snap.exists){
+        const d=snap.data();
+        if(Array.isArray(d.cats)&&d.cats.length){
+          CONTACT_CATS=d.cats;
+          try{ localStorage.setItem(CONTACT_CATS_LS,JSON.stringify(CONTACT_CATS)); }catch(e){}
+          return;
+        }
+      }
+    }catch(e){}
+  }
+  CONTACT_CATS=DEFAULT_CONTACT_CATS.slice();
 }
 
 async function saveContactCats(){
-  // FIELDS와 동기화 후 공통 저장
-  FIELDS = CONTACT_CATS.slice();
-  saveFields();
+  // 연락처 분야 독립 저장 (업무 분야 건드리지 않음)
+  try{ localStorage.setItem(CONTACT_CATS_LS,JSON.stringify(CONTACT_CATS)); }catch(e){}
+  if(online&&db){
+    db.collection('ct_cats_v2').doc('list').set({cats:CONTACT_CATS,updatedAt:Date.now()}).catch(()=>{});
+  }
 }
 
 /* ── 분야 관리 모달 ──────────────────────────────────────── */
