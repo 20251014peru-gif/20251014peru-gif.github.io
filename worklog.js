@@ -176,8 +176,6 @@ const SCHEMA={
     {k:"material",label:"자재명",type:"text"},
     {k:"matSpec",label:"자재 사양",type:"text"},
     {k:"qty",label:"수량",type:"number"},
-    {k:"cost",label:"지출금액 (원)",type:"number"},
-    {k:"vendor",label:"업체명 (지출시)",type:"text"},
   ],
   plan:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"text",label:"할 일",type:"text",full:true,req:true} ],
   memo:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"title",label:"제목(선택)",type:"text",full:true}, {k:"body",label:"내용",type:"textarea",full:true,req:true} ],
