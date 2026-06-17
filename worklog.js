@@ -229,14 +229,14 @@ const SCHEMA={
     {k:"memo",label:"메모(선택)",type:"textarea",full:true},
   ],
   schedule:[
-    {k:"date",label:"예정일",type:"date",req:true},
-    {k:"startTime",label:"시작 시간",type:"timepick"},
-    {k:"endTime",label:"종료 시간",type:"timepick"},
+    {k:"date",label:"예정일",type:"date",req:true,full:true},
     {k:"title",label:"예정 내용",type:"text",full:true,req:true},
-    {k:"alertDate",label:"🔔 알림 날짜",type:"date"},
-    {k:"alertTime",label:"알림 시간",type:"timepick"},
-    {k:"alertMethod",label:"알림 방법",type:"select",opts:["팝업","이메일","팝업+이메일"]},
     {k:"memo",label:"메모(선택)",type:"textarea",full:true},
+    {k:"startTime",label:"시작 시간",type:"timepick",full:true},
+    {k:"endTime",label:"종료 시간",type:"timepick",full:true},
+    {k:"alertDate",label:"🔔 알림 날짜",type:"date",full:true},
+    {k:"alertTime",label:"알림 시간",type:"timepick",full:true},
+    {k:"alertMethod",label:"알림 방법",type:"select",opts:["팝업","이메일","팝업+이메일"],full:true},
   ],
   item:[
     {k:"itemCode",label:"품목 ID (내부 관리용)",type:"text"},
@@ -855,23 +855,25 @@ function fieldHTML(f){
   }
   if(f.type==="timepick"){
     const fid=`m-${f.k}`;
-    return `<div class="field"><label>${esc(f.label)}</label>
+    return `<div class="field${f.full?' full':''}"><label>${esc(f.label)}</label>
       <div style="display:flex;gap:6px;align-items:center">
-        <select id="${fid}-ampm" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:0 0 auto">
+        <select id="${fid}-ampm" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 8px;border:2px solid #dbe6f4;border-radius:12px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:0 0 68px">
           <option value="AM">오전</option>
           <option value="PM">오후</option>
         </select>
-        <select id="${fid}-h" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+        <select id="${fid}-h" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 8px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
           <option value="">시</option>
-          <option value="1">1시</option><option value="2">2시</option><option value="3">3시</option><option value="4">4시</option><option value="5">5시</option><option value="6">6시</option><option value="7">7시</option><option value="8">8시</option><option value="9">9시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option>
+          <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
         </select>
-        <select id="${fid}-m" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+        <span style="font-size:18px;font-weight:700;color:#3f7cb8">:</span>
+        <select id="${fid}-m" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 8px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
           <option value="">분</option>
-          <option value="00">00분</option><option value="05">05분</option><option value="10">10분</option><option value="15">15분</option><option value="20">20분</option><option value="25">25분</option><option value="30">30분</option><option value="35">35분</option><option value="40">40분</option><option value="45">45분</option><option value="50">50분</option><option value="55">55분</option>
+          <option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option>
         </select>
         <input type="hidden" id="${fid}">
       </div></div>`;
   }
+
   if(f.type==="workvendor"){
     return `<div class="field" style="position:relative"><label>${esc(f.label)} <a href="contacts.html" target="_blank" style="margin-left:4px;font-size:11px;padding:2px 7px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;color:#3f7cb8;font-weight:700;text-decoration:none">📋 연락처관리</a></label>
       <input type="text" id="m-${f.k}" placeholder="업체명 검색..." autocomplete="off"
