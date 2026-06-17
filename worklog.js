@@ -230,12 +230,10 @@ const SCHEMA={
   ],
   schedule:[
     {k:"date",label:"예정일",type:"date",req:true,full:true},
+    {k:"startTime",label:"시작 시간",type:"timepick",full:true},
     {k:"title",label:"예정 내용",type:"text",full:true,req:true},
     {k:"memo",label:"메모(선택)",type:"textarea",full:true},
-    {k:"startTime",label:"시작 시간",type:"timepick",full:true},
-    {k:"endTime",label:"종료 시간",type:"timepick",full:true},
-    {k:"alertDate",label:"🔔 알림 날짜",type:"date",full:true},
-    {k:"alertTime",label:"알림 시간",type:"timepick",full:true},
+    {k:"alertBefore",label:"🔔 알림 설정",type:"alertbefore",full:true},
     {k:"alertMethod",label:"알림 방법",type:"select",opts:["팝업","이메일","팝업+이메일"],full:true},
   ],
   item:[
@@ -853,7 +851,23 @@ function fieldHTML(f){
       <div id="m-${f.k}-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow:auto"></div>
     </div>`;
   }
-  if(f.type==="timepick"){
+  if(f.type==="alertbefore"){
+    return `<div class="field full"><label>${esc(f.label)}</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="m-alertDays" onchange="syncAlertBefore()" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+          <option value="0">0일</option><option value="1">1일</option><option value="2">2일</option><option value="3">3일</option><option value="4">4일</option><option value="5">5일</option><option value="6">6일</option><option value="7">7일</option>
+        </select>
+        <select id="m-alertHours" onchange="syncAlertBefore()" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+          <option value="0">0시간</option><option value="1">1시간</option><option value="2">2시간</option><option value="3">3시간</option><option value="4">4시간</option><option value="5">5시간</option><option value="6">6시간</option><option value="7">7시간</option><option value="8">8시간</option><option value="9">9시간</option><option value="10">10시간</option><option value="11">11시간</option><option value="12">12시간</option><option value="13">13시간</option><option value="14">14시간</option><option value="15">15시간</option><option value="16">16시간</option><option value="17">17시간</option><option value="18">18시간</option><option value="19">19시간</option><option value="20">20시간</option><option value="21">21시간</option><option value="22">22시간</option><option value="23">23시간</option>
+        </select>
+        <select id="m-alertMins" onchange="syncAlertBefore()" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+          <option value="0">0분</option><option value="5">5분</option><option value="10">10분</option><option value="15">15분</option><option value="20">20분</option><option value="30">30분</option><option value="45">45분</option>
+        </select>
+        <span style="font-size:13px;color:#3f7cb8;font-weight:700;white-space:nowrap">전에 알림</span>
+        <input type="hidden" id="m-${f.k}">
+      </div></div>`;
+  }
+if(f.type==="timepick"){
     const fid=`m-${f.k}`;
     return `<div class="field${f.full?' full':''}"><label>${esc(f.label)}</label>
       <div style="display:flex;gap:6px;align-items:center">
@@ -934,6 +948,10 @@ function openEditor(kind,id){
   sc.forEach(f=>{ 
     if(f.type==="timepick"){
       setTimeout(()=>restoreTimepick('m-'+f.k, data[f.k]||''), 50);
+      return;
+    }
+    if(f.type==="alertbefore"){
+      setTimeout(()=>restoreAlertBefore(data[f.k]||0), 50);
       return;
     }
     const el=$("m-"+f.k); if(!el) return; const v=data[f.k]; if(v!==undefined&&v!==null&&v!=="") el.value=v; 
@@ -5647,6 +5665,34 @@ function workVendorAdd(){
 
 // 검색 가능한 연락처 선택 드롭다운
 // timepick 동기화 (hidden input에 HH:MM 값 저장)
+// alertbefore - 일/시간/분 → 총 분으로 변환해서 hidden에 저장
+function syncAlertBefore(){
+  const d = parseInt(document.getElementById('m-alertDays')?.value||0);
+  const h = parseInt(document.getElementById('m-alertHours')?.value||0);
+  const m = parseInt(document.getElementById('m-alertMins')?.value||0);
+  const total = d*24*60 + h*60 + m;
+  const el = document.getElementById('m-alertBefore');
+  if(el) el.value = String(total);
+}
+
+// alertbefore 복원
+function restoreAlertBefore(total){
+  total = parseInt(total)||0;
+  const d = Math.floor(total/(24*60));
+  const h = Math.floor((total%(24*60))/60);
+  const m = total%60;
+  const dEl=document.getElementById('m-alertDays');
+  const hEl=document.getElementById('m-alertHours');
+  const mEl=document.getElementById('m-alertMins');
+  if(dEl) dEl.value=String(d);
+  if(hEl) hEl.value=String(h);
+  // 분은 가장 가까운 5분 단위로
+  const mOpts=[0,5,10,15,20,30,45];
+  const closest=mOpts.reduce((a,b)=>Math.abs(b-m)<Math.abs(a-m)?b:a);
+  if(mEl) mEl.value=String(closest);
+  syncAlertBefore();
+}
+
 function syncTimepick(fid){
   const ampm = (document.getElementById(fid+'-ampm')||{}).value||'AM';
   const h = parseInt((document.getElementById(fid+'-h')||{}).value||'0');

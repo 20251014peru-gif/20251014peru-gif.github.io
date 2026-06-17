@@ -2960,30 +2960,24 @@
         description = en.memo||'';
     }
 
-    // 알림 설정
+    // 알림 설정 (alertBefore = 총 분, 시작시간 기준)
     var reminders = { useDefault: false, overrides: [] };
-    if(en.kind==='schedule' && en.alertDate){
-      var alertDt = new Date((en.alertDate||startDate)+'T'+(en.alertTime||'09:00')+':00');
-      var eventStartDt = new Date(startDate+'T'+(en.startTime||'00:00')+':00');
-      var minutesBefore = Math.round((eventStartDt - alertDt) / 60000);
+    if(en.kind==='schedule' && en.alertBefore){
+      var minutesBefore = parseInt(en.alertBefore)||0;
       if(minutesBefore > 0){
         if((en.alertMethod||'팝업').includes('팝업')) reminders.overrides.push({method:'popup', minutes:minutesBefore});
         if((en.alertMethod||'').includes('이메일')) reminders.overrides.push({method:'email', minutes:minutesBefore});
       }
-    } else if(en.kind==='schedule' && en.startTime){
-      // 알림날짜 없어도 시작 10분 전 기본 팝업
+    } else if(en.kind==='schedule'){
       reminders.overrides.push({method:'popup', minutes:10});
     }
 
-    // 시간 지정 or 종일 이벤트
+    // 시작시간 있으면 시간지정 이벤트, 없으면 종일
     var eventStart, eventEnd;
     if(en.kind==='schedule' && en.startTime){
-      // 시간 지정 이벤트
-      var endTime = en.endTime || en.startTime;
       eventStart = { dateTime: startDate+'T'+en.startTime+':00', timeZone:'Asia/Seoul' };
-      eventEnd   = { dateTime: startDate+'T'+endTime+':00',   timeZone:'Asia/Seoul' };
+      eventEnd   = { dateTime: startDate+'T'+en.startTime+':00', timeZone:'Asia/Seoul' };
     } else {
-      // 종일 이벤트 (시간 없는 경우)
       eventStart = { date: startDate };
       eventEnd   = { date: startDate };
     }
