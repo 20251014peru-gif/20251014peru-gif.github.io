@@ -274,9 +274,9 @@ const firebaseConfig = {
   storageBucket: "my-system-25497.firebasestorage.app",
 };
 const COL = "contacts";
-const DEFAULT_CATS = ["전기","설비","기계/냉난방","통신","승강기","소방","영선","청소","공사/인테리어","인테리어","서희타워공사","견적업체","자재","행정","임차인","직원(재직중)","직원(퇴사)","기타"];
-const SHARED_CATS_COL = "contact_cats"; // worklog와 공통 컬렉션
-const SHARED_CATS_LS  = "wl_shared_cats_v1"; // worklog와 동일 키
+const DEFAULT_CATS = ["전기","설비","기계/냉난방","통신","승강기","소방","영선","청소","공사/인테리어","인테리어","서희타워공사","견적업체","자재","행정","임차인","직원(재직중)","직원(퇴직)","기타"];
+const SHARED_CATS_COL = "ct_cats_v2"; // 연락처 전용 컬렉션 (worklog와 분리)
+const SHARED_CATS_LS  = "ct_cats_v2_ls"; // 연락처 전용 localStorage
 let CATS = (()=>{
   try{
     const s=localStorage.getItem(SHARED_CATS_LS)||localStorage.getItem("ct_cats");

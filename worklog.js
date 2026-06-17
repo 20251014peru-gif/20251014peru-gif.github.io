@@ -73,7 +73,7 @@ async function loadSharedCats(){
       DEFAULT_SHARED_CATS.forEach(c=>{ if(!merged.includes(c)) merged.push(c); });
       merged.sort((a,b)=>a.localeCompare(b,"ko"));
       FIELDS = merged;
-      if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = merged.slice();
+      // CONTACT_CATS는 독립 관리 (공유 제거)
       return;
     }
   }catch(e){}
@@ -88,7 +88,7 @@ async function loadSharedCats(){
         DEFAULT_SHARED_CATS.forEach(c=>{ if(!merged.includes(c)) merged.push(c); });
         merged.sort((a,b)=>a.localeCompare(b,"ko"));
         FIELDS = merged;
-        if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = merged.slice();
+        // CONTACT_CATS는 독립 관리 (공유 제거)
         try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(FIELDS)); }catch(e){}
       }
     } else {
@@ -112,10 +112,8 @@ function loadFields(){
 }
 function saveFields(){
   FIELDS.sort((a,b)=>a.localeCompare(b,"ko"));
-  if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = FIELDS.slice();
   try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(FIELDS)); }catch(e){}
   // CONTACT_CATS도 동기화
-  if(typeof CONTACT_CATS!=="undefined") CONTACT_CATS = FIELDS.slice();
   // Firestore 동기화 (contact_cats + worklog_meta 모두)
   if(online && db){
     db.collection(SHARED_CATS_COL).doc("list").set({cats:FIELDS, updatedAt:Date.now()}).catch(()=>{});
@@ -563,6 +561,7 @@ async function init(){
   // v41: contacts 연동 초기화
   loadContactCats().catch(()=>{});
   loadContactsCache().catch(()=>{});
+  loadContactCats().catch(()=>{});
   // 드래그 앤 드롭 순서 로드
   loadFlOrder().catch(()=>{});
   // 공통 분야 로드 (업무·통화·contacts 통합)
@@ -933,18 +932,31 @@ function openEditor(kind,id){
     // 업무 담당업체 검색
     if(kind==="work"){
       makeContactSearchUI('m-workVendor','m-workVendor-list',(c)=>{
-        const contactEl=$("m-workContact"); if(contactEl&&!contactEl.value) contactEl.value=c.person||c.name||'';
-        const roleEl=$("m-workRole"); if(roleEl&&!roleEl.value) roleEl.value=(c.role||(c.memo?c.memo.split(' · ')[0]:'')||'');
-        const phoneEl=$("m-workPhone"); if(phoneEl&&!phoneEl.value) phoneEl.value=c.phone||'';
+        // 무조건 덮어쓰기
+        const contactEl=$("m-workContact"); if(contactEl) contactEl.value=c.person||'';
+        const roleEl=$("m-workRole"); if(roleEl) roleEl.value=c.title||'';
+        const phoneEl=$("m-workPhone"); if(phoneEl) phoneEl.value=c.phone||'';
+      }, ()=>{
+        // ✕ 클릭 시 초기화
+        const contactEl=$("m-workContact"); if(contactEl) contactEl.value='';
+        const roleEl=$("m-workRole"); if(roleEl) roleEl.value='';
+        const phoneEl=$("m-workPhone"); if(phoneEl) phoneEl.value='';
       });
     }
     // 통화 담당자 검색
     if(kind==="call"){
       makeContactSearchUI('m-callContact','m-callContact-list',(c)=>{
-        const nameEl=$("m-name"); if(nameEl) nameEl.value=c.name||'';
-        const roleEl=$("m-role"); if(roleEl) roleEl.value=(c.role||(c.memo?c.memo.split(' · ')[0]:'')||'');
-        const compEl=$("m-company"); if(compEl) compEl.value=c.company||c.cat||'';
+        // 무조건 덮어쓰기
+        const nameEl=$("m-name"); if(nameEl) nameEl.value=c.person||c.name||'';
+        const roleEl=$("m-role"); if(roleEl) roleEl.value=c.title||'';
+        const compEl=$("m-company"); if(compEl) compEl.value=c.name||'';
         const phoneEl=$("m-phone"); if(phoneEl) phoneEl.value=c.phone||'';
+      }, ()=>{
+        // ✕ 클릭 시 초기화
+        const nameEl=$("m-name"); if(nameEl) nameEl.value='';
+        const roleEl=$("m-role"); if(roleEl) roleEl.value='';
+        const compEl=$("m-company"); if(compEl) compEl.value='';
+        const phoneEl=$("m-phone"); if(phoneEl) phoneEl.value='';
       });
     }
   },100);
@@ -5597,15 +5609,38 @@ function workVendorAdd(){
 
 
 // 검색 가능한 연락처 선택 드롭다운
-function makeContactSearchUI(inputId, listId, onSelect){
+function makeContactSearchUI(inputId, listId, onSelect, onClear){
   const inp = document.getElementById(inputId);
   const list = document.getElementById(listId);
   if(!inp||!list) return;
   const contacts = (typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name);
 
+  // ✕ 초기화 버튼 추가
+  const wrap = inp.parentElement;
+  if(wrap && !wrap.querySelector('.csl-clear')){
+    wrap.style.position='relative';
+    const clearBtn=document.createElement('button');
+    clearBtn.type='button';
+    clearBtn.className='csl-clear';
+    clearBtn.textContent='✕';
+    clearBtn.style.cssText='position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:16px;color:#aab8c8;cursor:pointer;padding:4px;display:none;line-height:1';
+    clearBtn.addEventListener('mousedown',e=>{
+      e.preventDefault();
+      inp.value='';
+      clearBtn.style.display='none';
+      list.style.display='none';
+      if(onClear) onClear();
+    });
+    wrap.appendChild(clearBtn);
+
+    inp.addEventListener('input',()=>{
+      clearBtn.style.display=inp.value?'block':'none';
+    });
+  }
+
   function render(q){
     const filtered = q
-      ? contacts.filter(c=>(c.name||'').includes(q)||(c.cat||'').includes(q)||(c.phone||'').includes(q))
+      ? contacts.filter(c=>(c.name||'').includes(q)||(c.cat||'').includes(q)||(c.phone||'').includes(q)||(c.person||'').includes(q)||(c.title||'').includes(q))
       : contacts;
     if(!filtered.length){
       list.innerHTML='<div style="padding:10px 14px;color:#aab8c8;font-size:13px">검색 결과 없음</div>';
@@ -5613,8 +5648,8 @@ function makeContactSearchUI(inputId, listId, onSelect){
     }
     list.innerHTML=filtered.map(c=>`
       <div class="csl-item" data-idx="${contacts.indexOf(c)}" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f6ff;transition:background .1s">
-        <div style="font-size:14px;font-weight:700;color:#1a2f45">${esc(c.name)}</div>
-        <div style="font-size:12px;color:#aab8c8;margin-top:2px">${[c.cat,c.role||c.memo,c.phone].filter(Boolean).join(' · ')}</div>
+        <div style="font-size:14px;font-weight:700;color:#1a2f45">${esc(c.name)}${c.person?' <span style="font-size:12px;color:#3f7cb8;font-weight:600">· '+esc(c.person)+'</span>':''}</div>
+        <div style="font-size:12px;color:#aab8c8;margin-top:2px">${[c.cat,c.title,c.phone].filter(Boolean).join(' · ')}</div>
       </div>`).join('');
     list.style.display='block';
     list.querySelectorAll('.csl-item').forEach(el=>{
@@ -5625,7 +5660,9 @@ function makeContactSearchUI(inputId, listId, onSelect){
         const c=contacts[parseInt(el.dataset.idx)];
         inp.value=c.name;
         list.style.display='none';
-        onSelect(c);
+        const cb=inp.parentElement&&inp.parentElement.querySelector('.csl-clear');
+        if(cb) cb.style.display='block';
+        onSelect(c); // 무조건 덮어쓰기
       });
     });
   }
@@ -5660,9 +5697,9 @@ function fillWorkVendor(vendorName){
   if(!contact) return;
   const contactEl=document.getElementById('m-workContact');
   const phoneEl=document.getElementById('m-workPhone');
-  if(contactEl&&!contactEl.value) contactEl.value=contact.person||contact.name||'';
+  if(contactEl&&!contactEl.value) contactEl.value=contact.person||'';
   const roleEl=document.getElementById('m-workRole');
-  if(roleEl&&!roleEl.value) roleEl.value=(contact.role||(contact.memo?contact.memo.split(' · ')[0]:'')||'');
+  if(roleEl&&!roleEl.value) roleEl.value=contact.title||'';
   if(phoneEl&&!phoneEl.value) phoneEl.value=contact.phone||'';
 }
 
@@ -6062,15 +6099,34 @@ const DEFAULT_CONTACT_CATS = ["전기","설비","기계/냉난방","통신","승
 let CONTACT_CATS = DEFAULT_CONTACT_CATS.slice();
 
 async function loadContactCats(){
-  // contact_cats = FIELDS와 동일 컬렉션 사용
-  await loadSharedCats();
-  CONTACT_CATS = FIELDS.slice();
+  // 연락처 분야 독립 로드 (업무 분야와 분리)
+  try{
+    const ls=JSON.parse(localStorage.getItem(CONTACT_CATS_LS)||'null');
+    if(Array.isArray(ls)&&ls.length){ CONTACT_CATS=ls; return; }
+  }catch(e){}
+  // Firestore에서 로드
+  if(online&&db){
+    try{
+      const snap=await db.collection('ct_cats_v2').doc('list').get();
+      if(snap.exists){
+        const d=snap.data();
+        if(Array.isArray(d.cats)&&d.cats.length){
+          CONTACT_CATS=d.cats;
+          try{ localStorage.setItem(CONTACT_CATS_LS,JSON.stringify(CONTACT_CATS)); }catch(e){}
+          return;
+        }
+      }
+    }catch(e){}
+  }
+  CONTACT_CATS=DEFAULT_CONTACT_CATS.slice();
 }
 
 async function saveContactCats(){
-  // FIELDS와 동기화 후 공통 저장
-  FIELDS = CONTACT_CATS.slice();
-  saveFields();
+  // 연락처 분야 독립 저장 (업무 분야 건드리지 않음)
+  try{ localStorage.setItem(CONTACT_CATS_LS,JSON.stringify(CONTACT_CATS)); }catch(e){}
+  if(online&&db){
+    db.collection('ct_cats_v2').doc('list').set({cats:CONTACT_CATS,updatedAt:Date.now()}).catch(()=>{});
+  }
 }
 
 /* ── 분야 관리 모달 ──────────────────────────────────────── */
