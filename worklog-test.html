@@ -785,8 +785,11 @@
           <option value="관리비">관리비</option>
           <option value="기타">기타</option>
         </select>
-        <select id="inspYearFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:110px">
-        </select>
+        <select id="inspYearFilter" style="height:44px;padding:0 14px;border:2.5px solid #8e44ad;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none;min-width:110px"></select>
+        <select id="inspMonthFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:120px"></select>
+        <button id="inspYearMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#8e44ad;border:2px solid #8e44ad;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
+        <button id="inspMonthMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#27ae60;border:2px solid #27ae60;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
+        <button id="inspCatMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#3f7cb8;border:2px solid #3f7cb8;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
         <button id="inspAddBtn" style="height:44px;padding:0 20px;background:#3f7cb8;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
       </div>
 
@@ -834,7 +837,7 @@
         </div>
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월 (예: 2026-06)</label>
-          <select id="inspModalMonth" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <select id="inspModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
@@ -863,6 +866,8 @@
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
         <select id="docsTypeFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:160px"></select>
         <select id="docsMonthFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:120px"></select>
+        <select id="docsYearFilter" style="height:44px;padding:0 14px;border:2.5px solid #8e44ad;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none;min-width:110px"></select>
+        <button id="docsYearMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#8e44ad;border:2px solid #8e44ad;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
         <button id="docsMonthMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#27ae60;border:2px solid #27ae60;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
         <button id="docsCatMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#3f7cb8;border:2px solid #3f7cb8;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
         <button id="docsAddBtn" style="height:44px;padding:0 20px;background:#3f7cb8;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto">➕ 추가</button>
@@ -923,6 +928,8 @@
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
         <select id="commonTypeFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:160px"></select>
         <select id="commonMonthFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:120px"></select>
+        <select id="commonYearFilter" style="height:44px;padding:0 14px;border:2.5px solid #8e44ad;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none;min-width:110px"></select>
+        <button id="commonYearMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#8e44ad;border:2px solid #8e44ad;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
         <button id="commonMonthMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#27ae60;border:2px solid #27ae60;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
         <button id="commonCatMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#3f7cb8;border:2px solid #3f7cb8;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
         <button id="commonAddBtn" style="height:44px;padding:0 20px;background:#3f7cb8;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto">➕ 추가</button>
@@ -1117,6 +1124,19 @@
         <button id="monthMgrAddBtn" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
       </div>
       <button id="monthMgrClose" class="v43-cat-cancel" style="margin-top:0">닫기</button>
+    </div>
+  </div>
+
+  <!-- 년 관리 모달 (공통) -->
+  <div class="v43-cat-overlay" id="yearMgrModal">
+    <div class="v43-cat-sheet" style="padding-bottom:28px">
+      <h3 id="yearMgrTitle">년 관리</h3>
+      <div id="yearMgrList" style="max-height:280px;overflow:auto;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input type="number" id="yearMgrNewVal" placeholder="예: 2026" min="2020" max="2099" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        <button id="yearMgrAddBtn" style="height:44px;padding:0 18px;background:#8e44ad;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+      </div>
+      <button id="yearMgrClose" class="v43-cat-cancel" style="margin-top:0">닫기</button>
     </div>
   </div>
 
@@ -1810,6 +1830,16 @@
     if(name==='calendar' && typeof renderCalendar==='function') setTimeout(renderCalendar, 100);
     if(name==='memo') setTimeout(()=>{ if(typeof renderStickyGrid==='function') renderStickyGrid(); }, 100);
     if(name==='main') setTimeout(()=>{ if(typeof v43Refresh==='function') v43Refresh(); }, 50);
+    // 문서계열 탭: makeDocTab이 등록한 렌더 함수 호출
+    if(['docs','common','indiv','filelink'].includes(name)){
+      setTimeout(()=>{
+        // 해당 탭의 v43-tab 버튼에 click 이벤트 디스패치 (makeDocTab 탭 이벤트 트리거)
+        const tabBtns = document.querySelectorAll('.v43-tab[data-v43tab="'+name+'"]');
+        tabBtns.forEach(b=>{ try{ b.dispatchEvent(new CustomEvent('tab-render')); }catch(e){} });
+        // makeDocTab 렌더함수는 탭클릭 이벤트로 호출되므로 직접 트리거
+        if(window['_docTabRender_'+name]) window['_docTabRender_'+name]();
+      }, 100);
+    }
     // filelink/material/password/diag 등은 worklog.js가 panel을 이동시키므로 재이동
     const movedPanels = {
       material:'panel-material',
@@ -2141,6 +2171,13 @@
       if(btn.dataset.v43tab==='filelink'){ updateYearSelect(); renderInsps(); }
     });
   });
+
+  // 점검일지 전역 렌더 함수 등록
+  window['_docTabRender_filelink'] = function(){
+    if(typeof buildInspTypeSelect==='function') buildInspTypeSelect();
+    const msel = document.getElementById('inspMonthFilter');
+    if(msel){ let arr=[]; try{arr=JSON.parse(localStorage.getItem('wl_insp_v43_months')||'[]');}catch(e){} msel.innerHTML='<option value="all">전체 월</option>'+arr.sort().reverse().map(m=>`<option value="${m}">${m}</option>`).join(''); }
+  };
 
   // 종류관리 버튼 추가 (동적)
   const inspToolbar = document.getElementById('inspAddBtn');
@@ -2954,7 +2991,7 @@ function makeDocTab(cfg){
   const LS = cfg.dataLS;
   const MONTH_LS = cfg.dataLS+'_months';
   let items=[], editId=null;
-  let typeFilter='all', monthFilter='all';
+  let typeFilter='all', monthFilter='all', yearFilter='all';
 
   function load(){ try{ items=JSON.parse(localStorage.getItem(LS)||'[]'); }catch(e){ items=[]; } }
   function save(){ try{ localStorage.setItem(LS,JSON.stringify(items)); }catch(e){} }
@@ -2982,6 +3019,7 @@ function makeDocTab(cfg){
     let list=items.filter(d=>{
       if(typeFilter!=='all'&&d.type!==typeFilter) return false;
       if(monthFilter!=='all'&&d.month!==monthFilter) return false;
+      if(yearFilter!=='all'&&!(d.month||'').startsWith(yearFilter)) return false;
       if(cfg.extraFilter) return cfg.extraFilter(d);
       return true;
     });
@@ -3121,6 +3159,28 @@ function makeDocTab(cfg){
   }));
   el(cfg.monthMgrBtnId)?.addEventListener('click', openMonthMgr);
 
+  // 년관리
+  function openYearMgr(){
+    window._yearMgrLS = cfg.dataLS+'_years';
+    window._yearMgrOnSave = ()=>{ buildYearSelect(cfg.yearFilterId); render(); };
+    document.getElementById('yearMgrTitle').textContent=(cfg.defaultTitle||'')+' 년 관리';
+    renderYearMgrList();
+    document.getElementById('yearMgrNewVal').value='';
+    document.getElementById('yearMgrModal').classList.add('show');
+  }
+  if(cfg.yearMgrBtnId) el(cfg.yearMgrBtnId)?.addEventListener('click', openYearMgr);
+
+  // 년 필터 select 채우기
+  function buildYearSelect(selId){
+    const sel=document.getElementById(selId); if(!sel) return;
+    let arr=[]; try{arr=JSON.parse(localStorage.getItem(cfg.dataLS+'_years')||'[]');}catch(e){}
+    sel.innerHTML='<option value="all">전체 년도</option>'+arr.sort().reverse().map(y=>`<option value="${y}">${y}년</option>`).join('');
+  }
+  if(cfg.yearFilterId){
+    buildYearSelect(cfg.yearFilterId);
+    el(cfg.yearFilterId)?.addEventListener('change',e=>{ yearFilter=e.target.value; render(); });
+  }
+
   // 탭 전환 시 렌더
   document.querySelectorAll('.v43-tab').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -3129,6 +3189,13 @@ function makeDocTab(cfg){
       }
     });
   });
+
+  // 전역 렌더 함수 등록 (v43ActivateTab에서 직접 호출용)
+  window['_docTabRender_'+cfg.tab] = function(){
+    buildTypeSelect(cfg.typeFilterId);
+    buildMonthSelect(cfg.monthFilterId);
+    render();
+  };
 
   load();
   buildTypeSelect(cfg.typeFilterId); buildTypeSelect(cfg.modalTypeId);
@@ -3179,7 +3246,7 @@ makeDocTab({
   defaultTitle:'운영실무',
   bodyId:'docsBody', countId:'docsCount',
   typeFilterId:'docsTypeFilter', monthFilterId:'docsMonthFilter',
-  catMgrBtnId:'docsCatMgrBtn', monthMgrBtnId:'docsMonthMgrBtn', addBtnId:'docsAddBtn',
+  catMgrBtnId:'docsCatMgrBtn', monthMgrBtnId:'docsMonthMgrBtn', yearMgrBtnId:'docsYearMgrBtn', yearFilterId:'docsYearFilter', addBtnId:'docsAddBtn',
   modalId:'docsModal', modalTitleId:'docsModalTitle',
   modalTypeId:'docsModalType', modalMonthId:'docsModalMonth',
   modalNameId:'docsModalName', modalPathId:'docsModalPath',
@@ -3194,7 +3261,7 @@ makeDocTab({
   defaultTitle:'임대공용',
   bodyId:'commonBody', countId:'commonCount',
   typeFilterId:'commonTypeFilter', monthFilterId:'commonMonthFilter',
-  catMgrBtnId:'commonCatMgrBtn', monthMgrBtnId:'commonMonthMgrBtn', addBtnId:'commonAddBtn',
+  catMgrBtnId:'commonCatMgrBtn', monthMgrBtnId:'commonMonthMgrBtn', yearMgrBtnId:'commonYearMgrBtn', yearFilterId:'commonYearFilter', addBtnId:'commonAddBtn',
   modalId:'commonModal', modalTitleId:'commonModalTitle',
   modalTypeId:'commonModalType', modalMonthId:'commonModalMonth',
   modalNameId:'commonModalName', modalPathId:'commonModalPath',
@@ -3245,6 +3312,77 @@ document.getElementById('indivFloorFilter')?.addEventListener('change', ()=>{
 });
 
 // 점검일지 종류관리 버튼 (기존 점검일지 JS와 통합)
+// 년관리 공통 함수
+function renderYearMgrList(){
+  const list=document.getElementById('yearMgrList'); if(!list) return;
+  let years=[];
+  try{ years=JSON.parse(localStorage.getItem(window._yearMgrLS)||'[]'); }catch(e){}
+  years=years.sort().reverse();
+  list.innerHTML=years.map((y,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f0ff;border-radius:10px;border:1.5px solid #e8d5f5;margin-bottom:6px">
+      <input type="number" value="${y}" data-yi="${i}" min="2020" max="2099" style="flex:1;border:none;background:transparent;font-size:14px;font-family:inherit;outline:none;color:#1a2f45;font-weight:600">
+      <button data-ysave="${i}" style="background:#f3e5ff;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#8e44ad;cursor:pointer;font-family:inherit">저장</button>
+      <button data-ydel="${i}" style="background:#fde8e8;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-ysave]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.ysave);
+      const inp=list.querySelector(`[data-yi="${i}"]`);
+      if(!inp||!inp.value) return;
+      let arr=[]; try{arr=JSON.parse(localStorage.getItem(window._yearMgrLS)||'[]');}catch(e){}
+      arr[i]=inp.value;
+      localStorage.setItem(window._yearMgrLS,JSON.stringify(arr));
+      renderYearMgrList();
+      if(window._yearMgrOnSave) window._yearMgrOnSave();
+      if(typeof toast==='function') toast('저장됐어요');
+    });
+  });
+  list.querySelectorAll('[data-ydel]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.ydel);
+      let arr=[]; try{arr=JSON.parse(localStorage.getItem(window._yearMgrLS)||'[]');}catch(e){}
+      if(!confirm(`"${arr[i]}" 년을 삭제할까요?`)) return;
+      arr.splice(i,1);
+      localStorage.setItem(window._yearMgrLS,JSON.stringify(arr));
+      renderYearMgrList();
+      if(window._yearMgrOnSave) window._yearMgrOnSave();
+    });
+  });
+}
+
+document.getElementById('yearMgrAddBtn')?.addEventListener('click',()=>{
+  const val=document.getElementById('yearMgrNewVal')?.value;
+  if(!val) return;
+  let arr=[]; try{arr=JSON.parse(localStorage.getItem(window._yearMgrLS)||'[]');}catch(e){}
+  if(arr.includes(val)){ if(typeof toast==='function') toast('이미 있는 년도예요'); return; }
+  arr.push(val);
+  localStorage.setItem(window._yearMgrLS,JSON.stringify(arr));
+  document.getElementById('yearMgrNewVal').value='';
+  renderYearMgrList();
+  if(window._yearMgrOnSave) window._yearMgrOnSave();
+  if(typeof toast==='function') toast('추가됐어요');
+});
+document.getElementById('yearMgrClose')?.addEventListener('click',()=>document.getElementById('yearMgrModal').classList.remove('show'));
+document.getElementById('yearMgrModal')?.addEventListener('click',e=>{ if(e.target===document.getElementById('yearMgrModal')) document.getElementById('yearMgrModal').classList.remove('show'); });
+
+// 점검일지 년관리 버튼
+document.getElementById('inspYearMgrBtn')?.addEventListener('click',()=>{
+  window._yearMgrLS='wl_insp_v43_years';
+  window._yearMgrOnSave=()=>{
+    const sel=document.getElementById('inspYearFilter');
+    if(sel){ let arr=[]; try{arr=JSON.parse(localStorage.getItem('wl_insp_v43_years')||'[]');}catch(e){} sel.innerHTML='<option value="all">전체 년도</option>'+arr.sort().reverse().map(y=>`<option value="${y}">${y}년</option>`).join(''); }
+  };
+  document.getElementById('yearMgrTitle').textContent='점검일지 년 관리';
+  renderYearMgrList();
+  document.getElementById('yearMgrNewVal').value='';
+  document.getElementById('yearMgrModal').classList.add('show');
+});
+
+// 점검일지 년도 필터 이벤트
+document.getElementById('inspYearFilter')?.addEventListener('change',e=>{
+  if(typeof inspYearFilter!=='undefined') window._inspYearFilter=e.target.value;
+});
+
 document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     window._monthMgrTab='insp';
     window._monthMgrLS='wl_insp_v43_months';
