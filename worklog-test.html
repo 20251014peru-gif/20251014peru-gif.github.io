@@ -1678,8 +1678,10 @@
   // 마지막 탭 복원
   function restoreTab(){
     try{
+      const v43tabs=['main','memo','calendar','filelink','docs','material','password','diag','ai'];
       const saved = localStorage.getItem('v43_tab')||'main';
-      v43ActivateTab(saved);
+      const safeTab = v43tabs.includes(saved) ? saved : 'main';
+      v43ActivateTab(safeTab);
     }catch(e){ v43ActivateTab('main'); }
   }
 

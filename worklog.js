@@ -544,13 +544,15 @@ async function init(){
   try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
   // v43: activateTab 이후 v43 탭 복원 (worklog.js 탭과 충돌 방지)
   try{
+    const v43tabs=['main','memo','calendar','filelink','docs','material','password','diag','ai'];
     const v43t=localStorage.getItem('v43_tab')||'main';
+    const safeTab=v43tabs.includes(v43t)?v43t:'main';
     setTimeout(()=>{
       if(typeof window.v43ActivateTab==='function'){
-        window.v43ActivateTab(v43t);
+        window.v43ActivateTab(safeTab);
         if(typeof window.v43Refresh==='function') window.v43Refresh();
       }
-    }, 100);
+    }, 200);
   }catch(e){}
   // v41: contacts 연동 초기화
   loadContactCats().catch(()=>{});
@@ -721,7 +723,7 @@ function activateTab(name){
   }
   const btn=document.querySelector(`.tabs button[data-tab="${name}"]`); if(!btn) return;
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".panel:not(.v43-panel)").forEach(x=>x.classList.remove("active"));
   btn.classList.add("active"); $("panel-"+name).classList.add("active");
   // 업무 탭이면 마지막 서브탭 복원
   if(name==="work"){
