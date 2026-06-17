@@ -934,7 +934,7 @@ function openEditor(kind,id){
     if(kind==="work"){
       makeContactSearchUI('m-workVendor','m-workVendor-list',(c)=>{
         const contactEl=$("m-workContact"); if(contactEl&&!contactEl.value) contactEl.value=c.person||c.name||'';
-        const roleEl=$("m-workRole"); if(roleEl&&!roleEl.value) roleEl.value=c.role||c.memo||'';
+        const roleEl=$("m-workRole"); if(roleEl&&!roleEl.value) roleEl.value=c.role||'';
         const phoneEl=$("m-workPhone"); if(phoneEl&&!phoneEl.value) phoneEl.value=c.phone||'';
       });
     }
@@ -942,7 +942,7 @@ function openEditor(kind,id){
     if(kind==="call"){
       makeContactSearchUI('m-callContact','m-callContact-list',(c)=>{
         const nameEl=$("m-name"); if(nameEl) nameEl.value=c.name||'';
-        const roleEl=$("m-role"); if(roleEl) roleEl.value=c.role||c.memo||'';
+        const roleEl=$("m-role"); if(roleEl) roleEl.value=c.role||'';
         const compEl=$("m-company"); if(compEl) compEl.value=c.company||c.cat||'';
         const phoneEl=$("m-phone"); if(phoneEl) phoneEl.value=c.phone||'';
       });
@@ -5662,7 +5662,7 @@ function fillWorkVendor(vendorName){
   const phoneEl=document.getElementById('m-workPhone');
   if(contactEl&&!contactEl.value) contactEl.value=contact.person||contact.name||'';
   const roleEl=document.getElementById('m-workRole');
-  if(roleEl&&!roleEl.value) roleEl.value=contact.role||contact.memo||'';
+  if(roleEl&&!roleEl.value) roleEl.value=contact.role||'';
   if(phoneEl&&!phoneEl.value) phoneEl.value=contact.phone||'';
 }
 
