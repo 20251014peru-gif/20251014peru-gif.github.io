@@ -230,6 +230,8 @@ const SCHEMA={
   ],
   schedule:[
     {k:"date",label:"예정일",type:"date",req:true},
+    {k:"startTime",label:"시작 시간",type:"time"},
+    {k:"endTime",label:"종료 시간",type:"time"},
     {k:"sStatus",label:"상태",type:"select",opts:["예정","진행중","완료","연기"]},
     {k:"sType",label:"종류",type:"select",opts:["정기점검","협력업체점검","회의","행사","공사","기타"]},
     {k:"title",label:"예정 내용",type:"text",full:true,req:true},

@@ -2960,27 +2960,39 @@
         description = en.memo||'';
     }
 
-    // 알림 설정 (예정 종류일 때)
+    // 알림 설정
     var reminders = { useDefault: false, overrides: [] };
     if(en.kind==='schedule' && en.alertDate){
-      // 알림 시간 계산 (예정일 - 알림날짜 = 분 단위)
       var alertDt = new Date((en.alertDate||startDate)+'T'+(en.alertTime||'09:00')+':00');
-      var eventDt = new Date(startDate+'T00:00:00');
-      var minutesBefore = Math.round((eventDt - alertDt) / 60000);
+      var eventStartDt = new Date(startDate+'T'+(en.startTime||'00:00')+':00');
+      var minutesBefore = Math.round((eventStartDt - alertDt) / 60000);
       if(minutesBefore > 0){
-        var method1 = (en.alertMethod||'팝업').includes('팝업') ? 'popup' : null;
-        var method2 = (en.alertMethod||'').includes('이메일') ? 'email' : null;
-        if(method1) reminders.overrides.push({method:'popup', minutes: minutesBefore});
-        if(method2) reminders.overrides.push({method:'email', minutes: minutesBefore});
+        if((en.alertMethod||'팝업').includes('팝업')) reminders.overrides.push({method:'popup', minutes:minutesBefore});
+        if((en.alertMethod||'').includes('이메일')) reminders.overrides.push({method:'email', minutes:minutesBefore});
       }
+    } else if(en.kind==='schedule' && en.startTime){
+      // 알림날짜 없어도 시작 10분 전 기본 팝업
+      reminders.overrides.push({method:'popup', minutes:10});
     }
 
-    // 종일 이벤트
+    // 시간 지정 or 종일 이벤트
+    var eventStart, eventEnd;
+    if(en.kind==='schedule' && en.startTime){
+      // 시간 지정 이벤트
+      var endTime = en.endTime || en.startTime;
+      eventStart = { dateTime: startDate+'T'+en.startTime+':00', timeZone:'Asia/Seoul' };
+      eventEnd   = { dateTime: startDate+'T'+endTime+':00',   timeZone:'Asia/Seoul' };
+    } else {
+      // 종일 이벤트 (시간 없는 경우)
+      eventStart = { date: startDate };
+      eventEnd   = { date: startDate };
+    }
+
     var event = {
       summary: summary,
       description: description,
-      start: { date: startDate },
-      end:   { date: startDate },
+      start: eventStart,
+      end:   eventEnd,
       colorId: colorMap[en.kind]||'1',
       reminders: reminders,
       extendedProperties: {
