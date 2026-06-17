@@ -638,6 +638,7 @@
         <button class="nav-btn" id="btnGCal" title="구글 캘린더 연동" style="background:#fff;border:1.5px solid #dbe6f4;color:#444;display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
           <img src="https://www.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png" style="width:18px;height:18px;object-fit:cover;border-radius:3px"> 연동됨
         </button>
+        <button class="nav-btn" onclick="window.gcalSyncAll&&window.gcalSyncAll()" style="background:#34a853;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="전체 구글캘린더 동기화">📅 전체동기화</button>
         <button class="nav-btn nav-back" id="btnBack" title="이전 화면" disabled>↶ 뒤로</button>
         <a class="nav-btn" href="staff.html" target="_blank" style="background:#6366f1;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">👥 직원</a>
         <a class="nav-btn" href="contacts.html" target="_blank" style="background:#0891b2;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">📋 연락처</a>
@@ -3016,6 +3017,35 @@
 
   // 전역 노출 (worklog.js에서 호출 가능)
   window.gcalSync = syncScheduleToGCal;
+
+  // 전체 일괄 동기화
+  window.gcalSyncAll = async function(){
+    if(!accessToken){ signIn(); toast('먼저 구글 로그인 해주세요'); return; }
+    const kinds = Object.keys(GCAL_IDS);
+    const targets = entries.filter(e=>
+      kinds.includes(e.kind) &&
+      e.date &&
+      !e.gcalEventId // 아직 동기화 안 된 것만
+    );
+    if(!targets.length){ toast('동기화할 항목이 없습니다'); return; }
+    if(!confirm(targets.length+'건을 구글캘린더에 동기화할까요?\n(시간이 걸릴 수 있어요)')) return;
+    toast('동기화 시작... 0/'+targets.length);
+    let done=0, fail=0;
+    for(const en of targets){
+      try{
+        await new Promise((resolve,reject)=>{
+          syncScheduleToGCal(en);
+          setTimeout(resolve, 300); // API 호출 간격
+        });
+        done++;
+        if(done%10===0) toast(`동기화 중... ${done}/${targets.length}`);
+      }catch(e){
+        fail++;
+      }
+    }
+    toast(`✅ 완료! ${done}건 성공${fail?', '+fail+'건 실패':''}`);
+    renderAll();
+  };
   window.gcalDelete = deleteFromGCal;
   window.gcalSignIn = signIn;
   window.gcalSignOut = signOut;
