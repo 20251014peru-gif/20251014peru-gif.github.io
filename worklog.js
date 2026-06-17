@@ -132,7 +132,7 @@ const ATTACH_KINDS=["work","memo","meeting"];
 /* ===== v16 카테고리 시스템 ===== */
 const DEFAULT_CATS_FILE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도"];
 const DEFAULT_CATS_SITE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도","견적전용업체"];
-const DEFAULT_CATS_PW   = ["업무시스템","거래처","공적업무","기타"];
+const DEFAULT_CATS_PW   = ["업무시스템","거래처","공적업무"];
 const CAT_LS_KEY = "wl_categories_v16";
 let CATEGORIES = { filelink: DEFAULT_CATS_FILE.slice(), site: DEFAULT_CATS_SITE.slice(), password: DEFAULT_CATS_PW.slice() };
 function loadCategories(){
@@ -2852,7 +2852,7 @@ function renderSite(){
   const favs=list.filter(e=>e.starred);
   const rest=list.filter(e=>!e.starred);
   const groups={};
-  rest.forEach(e=>{ var c=e.category||"(미분류)"; if(c==="개인용도") c="기타"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
+  rest.forEach(e=>{ var c=e.category||"(미분류)"; if(c==="개인용도"||c==="기타") c="(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
   const orderedCats=CATEGORIES.site.filter(c=>groups[c]);
   Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
   const jumpGroups={};
@@ -2872,12 +2872,24 @@ function renderSite(){
     const collapsed=VIEW_PREFS.site.collapsed[c];
     const colorClass=catColorClass("site",c);
     return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}">
-      <div class="cat-group-h" style="display:flex;align-items:center;gap:8px">
-        <span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span>
-        <span class="view-mode-group" data-vm="password" style="margin-left:auto" onclick="event.stopPropagation()">
-          <button data-v="card" style="font-size:12px;padding:2px 8px">🎴</button>
-          <button data-v="list" style="font-size:12px;padding:2px 8px">📋</button>
-        </span>
+      <div class="cat-group-h pw-cat-hdr" data-cat="${esc(c)}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none">
+        <span class="ch-arrow" style="font-size:14px;transition:transform .2s;display:inline-block;${collapsed?'transform:rotate(-90deg)':''}">▾</span>
+        <span style="font-size:15px;font-weight:800;letter-spacing:-.3px">${esc(c)}</span>
+        <span style="background:rgba(255,255,255,.3);border-radius:20px;padding:2px 10px;font-size:13px;font-weight:700">${items.length}</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
+          <!-- 전체접기 -->
+          <button class="pw-hdr-btn" data-pvcollapse="${esc(c)}" title="접기/펼치기" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </button>
+          <!-- 카드형 -->
+          <button class="pw-hdr-btn pw-view-btn ${VIEW_PREFS.password.mode==='card'?'pw-view-active':''}" data-pvmode="card" title="카드형" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+          <!-- 목록형 -->
+          <button class="pw-hdr-btn pw-view-btn ${VIEW_PREFS.password.mode==='list'?'pw-view-active':''}" data-pvmode="list" title="목록형" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+          </button>
+        </div>
       </div>
       <div class="cat-items">${items.map(e=>siteCardHTML(e)).join("")}</div></div>`;
   }).join("");
@@ -3261,6 +3273,20 @@ async function pwRenderList(){
     && (f.sub==="전체"||e.subcategory===f.sub)
     && pwMatches(e,f.q));
 
+  // 목록형 CSS 동적 추가
+  if(!document.getElementById('pw-list-style')){
+    const st=document.createElement('style'); st.id='pw-list-style';
+    st.textContent=`
+      .pw-list-table{width:100%;border-collapse:collapse;font-size:13px}
+      .pw-list-table th{background:#f0f6ff;padding:9px 12px;text-align:left;font-weight:700;color:#33567d;border-bottom:2px solid #dbe6f4;white-space:nowrap}
+      .pw-list-table td{padding:9px 12px;border-bottom:1px solid #f0f6ff;color:#1a2f45;vertical-align:middle}
+      .pw-list-table tr:hover td{background:#f7faff}
+      .pw-list-table .pw-mini-btn{padding:3px 8px;font-size:11px;border:1px solid #dbe6f4;border-radius:6px;background:#fff;cursor:pointer}
+      .pw-hdr-btn:hover{background:rgba(255,255,255,.45)!important}
+      .pw-view-active{background:rgba(255,255,255,.5)!important;box-shadow:0 0 0 2px rgba(255,255,255,.6)}
+    `;
+    document.head.appendChild(st);
+  }
   const box=$("pwList");
   if(!list.length){
     $("pwCatJump").innerHTML="";
@@ -3271,7 +3297,7 @@ async function pwRenderList(){
   const favs=list.filter(e=>e.starred);
   const rest=list.filter(e=>!e.starred);
   const groups={};
-  rest.forEach(e=>{ var c=e.category||"(미분류)"; if(c==="개인용도") c="기타"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
+  rest.forEach(e=>{ var c=e.category||"(미분류)"; if(c==="개인용도"||c==="기타") c="(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
   const orderedCats=CATEGORIES.password.filter(c=>groups[c]);
   Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
   const jumpGroups={};
@@ -3308,29 +3334,75 @@ async function pwRenderList(){
     const collapsed=VIEW_PREFS.password.collapsed[c];
     const colorClass=catColorClass("password",c);
     return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}" style="margin-bottom:14px">
-      <div class="cat-group-h" style="display:flex;align-items:center;gap:8px">
-        <span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span>
-        <span class="view-mode-group" data-vm="password" style="margin-left:auto" onclick="event.stopPropagation()">
-          <button data-v="card" style="font-size:12px;padding:2px 8px">🎴</button>
-          <button data-v="list" style="font-size:12px;padding:2px 8px">📋</button>
-        </span>
+      <div class="cat-group-h pw-cat-hdr" data-cat="${esc(c)}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none">
+        <span class="ch-arrow" style="font-size:14px;transition:transform .2s;display:inline-block;${collapsed?'transform:rotate(-90deg)':''}">▾</span>
+        <span style="font-size:15px;font-weight:800;letter-spacing:-.3px">${esc(c)}</span>
+        <span style="background:rgba(255,255,255,.3);border-radius:20px;padding:2px 10px;font-size:13px;font-weight:700">${items.length}</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
+          <!-- 전체접기 -->
+          <button class="pw-hdr-btn" data-pvcollapse="${esc(c)}" title="접기/펼치기" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </button>
+          <!-- 카드형 -->
+          <button class="pw-hdr-btn pw-view-btn ${VIEW_PREFS.password.mode==='card'?'pw-view-active':''}" data-pvmode="card" title="카드형" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+          <!-- 목록형 -->
+          <button class="pw-hdr-btn pw-view-btn ${VIEW_PREFS.password.mode==='list'?'pw-view-active':''}" data-pvmode="list" title="목록형" style="width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+          </button>
+        </div>
       </div>
-      <div class="cat-items" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px 0">${items.map(pwCardPlaceholder).join("")}</div></div>`;
+      <div class="cat-items" data-cat-items="${esc(c)}" style="${VIEW_PREFS.password.mode==='list'?'':'display:flex;flex-wrap:wrap;gap:10px;padding:10px 0'}">
+        ${VIEW_PREFS.password.mode==='list'?`
+        <table class="pw-list-table">
+          <thead><tr><th>사이트명</th><th>카테고리</th><th>아이디</th><th>비밀번호</th><th>URL</th><th>메모</th><th></th></tr></thead>
+          <tbody>${items.map(e=>`<tr data-pid="${e.id}">
+            <td style="font-weight:600">${e.starred?'⭐ ':''}${esc(e.name||'')}</td>
+            <td><span style="background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">${esc(e.category||'')}</span></td>
+            <td data-fields-user>-</td><td data-fields-pw>-</td><td data-fields-url>-</td><td data-fields-memo>-</td>
+            <td style="white-space:nowrap"><button class="pw-mini-btn" data-pact="edit">수정</button> <button class="pw-mini-btn" data-pact="del" style="color:#e74c3c">삭제</button></td>
+          </tr>`).join('')}</tbody>
+        </table>`:items.map(pwCardPlaceholder).join("")}
+      </div></div>`;
   }).join("");
   box.innerHTML=html;
 
   // 접기 이벤트
-  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",(ev)=>{
-    if(ev.target.closest(".view-mode-group")) return;
-    const g=h.parentElement; const cat=g.dataset.cat;
+  box.querySelectorAll(".pw-cat-hdr").forEach(h=>h.addEventListener("click",(ev)=>{
+    if(ev.target.closest("[data-pvmode],[data-pvcollapse]")) return;
+    const g=h.parentElement; const cat=g.dataset.cat||h.dataset.cat;
     VIEW_PREFS.password.collapsed[cat]=!VIEW_PREFS.password.collapsed[cat];
     saveViewPrefs(); g.classList.toggle("collapsed");
-    // 접힘 처리 (display:none 으로)
     const items=g.querySelector(".cat-items");
-    if(items) items.style.display = g.classList.contains("collapsed") ? "none" : "block";
+    if(items) items.style.display=g.classList.contains("collapsed")?"none":"";
+    const arrow=h.querySelector(".ch-arrow");
+    if(arrow) arrow.style.transform=g.classList.contains("collapsed")?"rotate(-90deg)":"";
   }));
+  // 접기 버튼 개별 클릭
+  box.querySelectorAll("[data-pvcollapse]").forEach(btn=>{
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      const g=btn.closest(".cat-group"); const cat=btn.dataset.pvcollapse;
+      VIEW_PREFS.password.collapsed[cat]=!VIEW_PREFS.password.collapsed[cat];
+      saveViewPrefs(); g.classList.toggle("collapsed");
+      const items=g.querySelector(".cat-items");
+      if(items) items.style.display=g.classList.contains("collapsed")?"none":"";
+      const arrow=g.querySelector(".ch-arrow");
+      if(arrow) arrow.style.transform=g.classList.contains("collapsed")?"rotate(-90deg)":"";
+    });
+  });
   // 초기 접힘 상태 반영
   box.querySelectorAll(".cat-group.collapsed .cat-items").forEach(el=>el.style.display="none");
+
+  // 카드/목록 전환
+  box.querySelectorAll("[data-pvmode]").forEach(btn=>{
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      VIEW_PREFS.password.mode=btn.dataset.pvmode;
+      saveViewPrefs(); pwRenderList();
+    });
+  });
 
   // 복호화 채우기
   for(const e of list){
@@ -3347,7 +3419,16 @@ async function pwRenderList(){
       ${data.url?`<div class="pw-field"><span class="pw-field-k">URL</span><span class="pw-field-v"><a href="${esc(normUrl(data.url))}" target="_blank" rel="noopener" style="color:var(--primary-deep);text-decoration:none">${esc(data.url)}</a></span></div>`:""}
       ${data.memo?`<div class="pw-memo">📝 ${esc(data.memo)}</div>`:""}
     `;
-    const fb=card.querySelector("[data-fields]"); fb.innerHTML=fieldsHTML;
+    const fb=card.querySelector("[data-fields]"); if(fb) fb.innerHTML=fieldsHTML;
+    // 목록형 복호화
+    const tr=box.querySelector(`tr[data-pid="${e.id}"]`);
+    if(tr){
+      const uEl=tr.querySelector("[data-fields-user]"); if(uEl) uEl.textContent=data.username||"-";
+      const pwEl=tr.querySelector("[data-fields-pw]");
+      if(pwEl){ const shown=pwShownIds.has(e.id); pwEl.innerHTML=shown?`<span>${esc(data.password||"")}</span> <button class="pw-mini-btn" data-toggle>🙈</button>`:`<span>••••••</span> <button class="pw-mini-btn" data-toggle>👁</button>`; pwEl.querySelector("[data-toggle]")?.addEventListener("click",()=>{ if(pwShownIds.has(e.id)) pwShownIds.delete(e.id); else pwShownIds.add(e.id); pwRenderList(); }); }
+      const urlEl=tr.querySelector("[data-fields-url]"); if(urlEl) urlEl.innerHTML=data.url?`<a href="${esc(normUrl(data.url))}" target="_blank" style="color:var(--primary-deep)">${esc(data.url)}</a>`:"-";
+      const mEl=tr.querySelector("[data-fields-memo]"); if(mEl) mEl.textContent=data.memo||"-";
+    }
     fb.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>{
       if(pwShownIds.has(e.id)) pwShownIds.delete(e.id); else pwShownIds.add(e.id);
       pwRenderList();

@@ -1240,21 +1240,10 @@
         </div>
         <div id="pwLockScreen"></div>
         <div id="pwMainArea" style="display:none">
-          <!-- 1행 필터 툴바 -->
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-            <span class="view-mode-group" data-vm="password">
-              <button data-v="card">🎴</button>
-              <button data-v="list">📋</button>
-            </span>
-            <select class="sort-select" data-sort="password" style="height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;cursor:pointer;outline:none">
-              <option value="name">이름순</option>
-              <option value="created">등록일순</option>
-            </select>
-            <select id="pwCatFilter" style="height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;cursor:pointer;outline:none;min-width:100px"></select>
-            <select id="pwSubFilter" style="height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;cursor:pointer;outline:none;min-width:80px"></select>
-            <button class="tb-toggle" data-collapse="password" style="height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-weight:600;background:#fff;cursor:pointer;white-space:nowrap">전체접기</button>
-          </div>
-          <div id="pwCatJump"></div>
+          <!-- 숨김 호환 요소 -->
+          <select id="pwCatFilter" style="display:none"></select>
+          <select id="pwSubFilter" style="display:none"></select>
+          <div id="pwCatJump" style="display:none"></div>
           <div id="pwList"></div>
         </div>
       </div>
