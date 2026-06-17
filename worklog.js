@@ -1,5 +1,9 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v42-20260608";
+const APP_VERSION = "v43-20260617";
+// v43-20260617 변경사항:
+// - 업무 입력창: 위치/단가/택배비/개선사항 필드 제거
+// - 합계→지출금액으로 이름 변경
+// - 지출종류: 없음/개인비용/후불청구로 변경
 // v42-20260608 변경사항:
 // - 업무 목록: 체크박스 다중선택 삭제 추가, 삭제버튼 항상 표시
 // - 업무 추가창: 분야/지출종류 → 해당층/위치 아래로 이동, 자재사양/단가/수량/합계/택배비 필드 추가
@@ -157,19 +161,15 @@ const SCHEMA={
     {k:"date",label:"날짜",type:"date",req:true},
     {k:"status",label:"완료 상태",type:"status"},
     {k:"floor",label:"해당층",type:"floor"},
-    {k:"loc",label:"위치 (수동 입력)",type:"text"},
     {k:"field",label:"분야",type:"field"},
-    {k:"expType",label:"지출종류",type:"select",opts:["없음","개인지출(품의서)","세금계산서"]},
+    {k:"expType",label:"지출종류",type:"select",opts:["없음","개인비용","후불청구"]},
     {k:"title",label:"업무내역",type:"text",full:true,req:true},
     {k:"detail",label:"세부내용",type:"textarea",full:true},
     {k:"material",label:"자재명",type:"text"},
     {k:"matSpec",label:"자재 사양",type:"text"},
     {k:"qty",label:"수량",type:"number"},
-    {k:"unitPrice",label:"단가 (원)",type:"number"},
-    {k:"cost",label:"합계 (원)",type:"number"},
-    {k:"delivery",label:"택배비 (원)",type:"number"},
+    {k:"cost",label:"지출금액 (원)",type:"number"},
     {k:"vendor",label:"업체명 (지출시)",type:"text"},
-    {k:"improve",label:"앞으로 개선사항",type:"textarea",full:true},
   ],
   plan:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"text",label:"할 일",type:"text",full:true,req:true} ],
   memo:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"title",label:"제목(선택)",type:"text",full:true}, {k:"body",label:"내용",type:"textarea",full:true,req:true} ],
@@ -604,13 +604,9 @@ function migrateBadMemoAttachments(){
 
 function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
 
-// v42: 업무 저장 시 합계 자동계산 (qty × unitPrice + delivery)
+// v43: 지출금액 직접 입력 (단가/택배비 제거)
 function calcWorkTotal(obj){
-  const qty  = Number(obj.qty)||0;
-  const up   = Number(obj.unitPrice)||0;
-  const del  = Number(obj.delivery)||0;
-  if(qty>0 && up>0) obj.cost = qty*up + del;
-  else if(del>0 && !obj.cost) obj.cost = del;
+  // 지출금액(cost)은 직접 입력 — 자동계산 없음
 }
 
 
@@ -631,11 +627,11 @@ function syncWorkExpense(workObj, workId, savedId){
   const expData = {
     kind:"expense",
     date: workObj.date||todayStr(),
-    expType: expType==="개인지출(품의서)" ? "개인지출" : "세금계산서",
+    expType: expType==="개인비용" ? "개인비용" : "후불청구",
     title: workObj.title||(workObj.field||""),
     amount: Number(workObj.cost)||0,
     vendor: workObj.vendor||"",
-    memo: (workObj.floor||"")+(workObj.loc?" "+workObj.loc:"")+(workObj.field?" ["+workObj.field+"]":""),
+    memo: (workObj.floor||"")+(workObj.field?" ["+workObj.field+"]":""),
     workId: id, // 업무와 연결 키
     createdAt: Date.now()
   };
@@ -1043,7 +1039,7 @@ function openEditor(kind,id){
       const showHint=()=>{ const h=FIELD_HINT[fe.value]; if(h){ hintBox.textContent="💡 "+h; hintBox.style.display=""; } else hintBox.style.display="none"; };
       fe.addEventListener("change",showHint); showHint();
     }
-    // 자재 단가×수량 → 합계 자동 계산 + 택배비 포함
+    // v43: 지출금액 직접 입력 방식으로 변경 (자동계산 제거)
     const calcWorkCost = ()=>{
       const qty = Number(($("m-qty")||{}).value)||0;
       const up  = Number(($("m-unitPrice")||{}).value)||0;
@@ -1356,7 +1352,7 @@ function renderWork(){
     <td>${esc(en.title||"")}${(en.photos&&en.photos.length)?" 📷":""}${(en.attachments&&en.attachments.length)?" 📎":""}</td>
     <td><span class="pill ${fieldClass(en.field)}">${esc(en.field||"")}</span></td>
     <td class="num">${en.cost?won(en.cost):""}</td>
-    <td>${en.expType&&en.expType!=="없음"?'<span class="pill '+(en.expType==="세금계산서"?"amount":"tech")+'" style="font-size:10px">'+(en.expType==="세금계산서"?"📃세금":"💸품의")+"</span>":""}</td>
+    <td>${en.expType&&en.expType!=="없음"?'<span class="pill '+(en.expType==="후불청구"?"amount":"tech")+'" style="font-size:10px">'+(en.expType==="후불청구"?"📃후불":"💸개인")+"</span>":""}</td>
     <td style="text-align:center"><button class="rowdel wk-rowdel-vis" data-del="${en.id}" title="삭제">🗑</button></td></tr>`).join("");
   // 전체선택 체크박스 헤더 동기화
   const thChk = document.querySelector("#panel-work thead .wk-allchk");
@@ -1378,7 +1374,7 @@ function renderWork(){
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(b.dataset.del, "업무"); }));
 }
 function workCopyLine(en){
-  const head=((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim();
+  const head=((en.floor?en.floor+" ":"")+(en.title||"")).trim();
   const matQty = [en.material, en.qty].filter(Boolean).join(" ") || "";
   const parts=[head, en.detail, matQty, (Number(en.cost)?won(en.cost):"")].map(x=>(x||"").toString().trim()).filter(Boolean);
   return cleanCell(parts.join("_"));
