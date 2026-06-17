@@ -2398,8 +2398,7 @@
         e.stopPropagation();
         const en=(typeof entries!=='undefined')&&entries.find(x=>x.id===btn.dataset.scopy);
         if(!en) return;
-        const txt=[en.title,en.body].filter(Boolean).join('
-');
+        const txt=[en.title,en.body].filter(Boolean).join('\n');
         navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>{ if(typeof toast==='function') toast('복사됐어요'); });
       });
     });
@@ -2425,8 +2424,7 @@
             <div class="sticky-list-color" style="background:${COLOR_BG2[getColor(en)]||'#f0c520'}"></div>
             <div class="sticky-list-body">
               ${en.title?`<div class="sticky-list-title">${esc(en.title)}</div>`:''}
-              <div class="sticky-list-content">${esc((en.body||'').replace(/
-/g,' '))}</div>
+              <div class="sticky-list-content">${esc((en.body||'').replace(/\n/g,' '))}</div>
               <div class="sticky-list-date">${esc(en.date||'')}</div>
             </div>
             <div class="sticky-list-actions">
@@ -2445,8 +2443,7 @@
           btn.addEventListener('click',()=>{
             const en=(typeof entries!=='undefined')&&entries.find(x=>x.id===btn.dataset.scopy2);
             if(!en) return;
-            const txt=[en.title,en.body].filter(Boolean).join('
-');
+            const txt=[en.title,en.body].filter(Boolean).join('\n');
             navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>{ if(typeof toast==='function') toast('복사됐어요'); });
           });
         });
