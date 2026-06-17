@@ -356,6 +356,37 @@
   vertical-align: middle;
 }
 
+/* ===== 메모 목록형 ===== */
+.sticky-list-item {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:12px 16px; background:#fff;
+  border-bottom:1px solid #f0f6ff;
+  transition:background .12s;
+}
+.sticky-list-item:hover { background:#f7faff; }
+.sticky-list-item:first-child { border-radius:14px 14px 0 0; }
+.sticky-list-item:last-child { border-bottom:none; border-radius:0 0 14px 14px; }
+.sticky-list-wrap {
+  background:#fff; border-radius:14px;
+  border:1.5px solid #e8f0fa; overflow:hidden;
+}
+.sticky-list-color { width:4px; border-radius:4px; flex-shrink:0; align-self:stretch; min-height:40px; }
+.sticky-list-body { flex:1; min-width:0; }
+.sticky-list-title { font-size:14px; font-weight:700; color:#1a2f45; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sticky-list-content { font-size:13px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sticky-list-date { font-size:11px; color:#aab8c8; margin-top:4px; }
+.sticky-list-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+.sticky-list-btn {
+  width:32px; height:32px; border-radius:8px; border:1.5px solid #e8f0fa;
+  background:#f7faff; cursor:pointer; display:flex; align-items:center;
+  justify-content:center; font-size:14px; transition:all .12s;
+  touch-action:manipulation;
+}
+.sticky-list-btn:hover { background:#eaf1fb; border-color:#3f7cb8; }
+.memo-view-active { background:#3f7cb8 !important; border-color:#3f7cb8 !important; }
+.memo-view-active svg { stroke:#fff !important; }
+.memo-view-active circle { fill:#fff !important; }
+
 /* ===== 포스트잇 메모 ===== */
 .sticky-input-wrap {
   background: #fff9c4;
@@ -772,20 +803,28 @@
         </div>
       </div>
 
-      <!-- 검색 -->
+      <!-- 검색 + 보기전환 -->
       <div class="v43-search-wrap" style="margin:10px 0 6px">
         <span class="v43-search-icon">🔍</span>
         <input type="text" id="stickySearch" class="v43-search" placeholder="메모 검색…">
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <span id="stickyCount" style="font-size:12px;color:#aab8c8"></span>
-        <span style="font-size:12px;color:#aab8c8">꾹 누르면 삭제</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button id="memoViewCard" style="width:36px;height:36px;border-radius:10px;border:1.5px solid #dbe6f4;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s" title="카드형">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3f7cb8" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+          <button id="memoViewList" style="width:36px;height:36px;border-radius:10px;border:1.5px solid #dbe6f4;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s" title="목록형">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3f7cb8" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="#3f7cb8" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="#3f7cb8" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="#3f7cb8" stroke="none"/></svg>
+          </button>
+        </div>
       </div>
 
-      <!-- 포스트잇 그리드 -->
+      <!-- 포스트잇 그리드 / 목록 -->
       <div class="sticky-grid" id="stickyGrid">
         <div class="v43-empty"><div class="ei">📝</div>메모를 추가해보세요!</div>
       </div>
+      <div id="stickyList" style="display:none;flex-direction:column;gap:0"></div>
     </div>
   </div>
 
@@ -2255,6 +2294,25 @@
     return COLORS.includes(en.stickyColor) ? en.stickyColor : 'yellow';
   }
 
+  let stickyViewMode = localStorage.getItem('sticky_view')||'card';
+
+  function setStickyView(mode){
+    stickyViewMode = mode;
+    localStorage.setItem('sticky_view', mode);
+    const cardBtn = document.getElementById('memoViewCard');
+    const listBtn = document.getElementById('memoViewList');
+    if(cardBtn) cardBtn.classList.toggle('memo-view-active', mode==='card');
+    if(listBtn) listBtn.classList.toggle('memo-view-active', mode==='list');
+    const grid = document.getElementById('stickyGrid');
+    const list = document.getElementById('stickyList');
+    if(grid) grid.style.display = mode==='card' ? '' : 'none';
+    if(list) list.style.display = mode==='list' ? 'flex' : 'none';
+    renderStickyGrid();
+  }
+
+  document.getElementById('memoViewCard')?.addEventListener('click', ()=>setStickyView('card'));
+  document.getElementById('memoViewList')?.addEventListener('click', ()=>setStickyView('list'));
+
   function renderStickyGrid(){
     const grid = document.getElementById('stickyGrid');
     if(!grid) return;
@@ -2280,6 +2338,7 @@
             <span class="sticky-note-date">${esc(en.date||'')}</span>
             <div style="display:flex;gap:4px">
               <button class="sn-btn-edit" data-sedit="${esc(en.id)}" title="수정">✏️</button>
+              <button class="sn-btn-copy" data-scopy="${esc(en.id)}" title="복사">📋</button>
               <button class="sn-btn-del" data-sdel="${esc(en.id)}" title="삭제">🗑</button>
             </div>
           </div>
@@ -2333,6 +2392,17 @@
         setTimeout(renderStickyGrid,200);
       });
     });
+    // 카드 복사
+    grid.querySelectorAll('[data-scopy]').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        e.stopPropagation();
+        const en=(typeof entries!=='undefined')&&entries.find(x=>x.id===btn.dataset.scopy);
+        if(!en) return;
+        const txt=[en.title,en.body].filter(Boolean).join('
+');
+        navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>{ if(typeof toast==='function') toast('복사됐어요'); });
+      });
+    });
     // 삭제
     grid.querySelectorAll('[data-sdel]').forEach(btn=>{
       btn.addEventListener('click', e=>{
@@ -2342,6 +2412,63 @@
         setTimeout(renderStickyGrid,300);
       });
     });
+
+    // ===== 목록형 렌더 =====
+    const listBox = document.getElementById('stickyList');
+    if(listBox){
+      const COLOR_BG2={yellow:'#f0c520',blue:'#3b82f6',green:'#22c55e',pink:'#ec4899',orange:'#f97316'};
+      if(!list.length){
+        listBox.innerHTML='<div class="v43-empty" style="width:100%;padding:40px 0;text-align:center"><div class="ei">📝</div>'+(stickySearch?'검색 결과가 없어요':'메모를 추가해보세요!')+'</div>';
+      } else {
+        listBox.innerHTML='<div class="sticky-list-wrap">'+list.map(en=>`
+          <div class="sticky-list-item" data-sid="${esc(en.id)}">
+            <div class="sticky-list-color" style="background:${COLOR_BG2[getColor(en)]||'#f0c520'}"></div>
+            <div class="sticky-list-body">
+              ${en.title?`<div class="sticky-list-title">${esc(en.title)}</div>`:''}
+              <div class="sticky-list-content">${esc((en.body||'').replace(/
+/g,' '))}</div>
+              <div class="sticky-list-date">${esc(en.date||'')}</div>
+            </div>
+            <div class="sticky-list-actions">
+              <button class="sticky-list-btn" data-scopy2="${esc(en.id)}" title="복사">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3f7cb8" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+              <button class="sticky-list-btn" data-sedit2="${esc(en.id)}" title="수정">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3f7cb8" stroke-width="2.2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="sticky-list-btn" data-sdel2="${esc(en.id)}" title="삭제" style="border-color:#fde8e8">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
+            </div>
+          </div>`).join('')+'</div>';
+        listBox.querySelectorAll('[data-scopy2]').forEach(btn=>{
+          btn.addEventListener('click',()=>{
+            const en=(typeof entries!=='undefined')&&entries.find(x=>x.id===btn.dataset.scopy2);
+            if(!en) return;
+            const txt=[en.title,en.body].filter(Boolean).join('
+');
+            navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>{ if(typeof toast==='function') toast('복사됐어요'); });
+          });
+        });
+        listBox.querySelectorAll('[data-sedit2]').forEach(btn=>{
+          btn.addEventListener('click',()=>openStickyEdit(btn.dataset.sedit2));
+        });
+        listBox.querySelectorAll('[data-sdel2]').forEach(btn=>{
+          btn.addEventListener('click',()=>{
+            if(!confirm('이 메모를 삭제할까요?')) return;
+            if(typeof deleteWithUndo==='function') deleteWithUndo(btn.dataset.sdel2,'메모');
+            setTimeout(renderStickyGrid,300);
+          });
+        });
+      }
+      listBox.style.display=stickyViewMode==='list'?'flex':'none';
+      grid.style.display=stickyViewMode==='card'?'':'none';
+    }
+    // 버튼 활성 상태
+    const cb=document.getElementById('memoViewCard');
+    const lb=document.getElementById('memoViewList');
+    if(cb) cb.classList.toggle('memo-view-active',stickyViewMode==='card');
+    if(lb) lb.classList.toggle('memo-view-active',stickyViewMode==='list');
   }
 
   // 색상 선택
