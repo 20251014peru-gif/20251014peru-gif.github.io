@@ -834,7 +834,7 @@
         </div>
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월 (예: 2026-06)</label>
-          <input type="month" id="inspModalMonth" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <select id="inspModalMonth" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
@@ -863,6 +863,7 @@
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
         <select id="docsTypeFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:160px"></select>
         <select id="docsMonthFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:120px"></select>
+        <button id="docsMonthMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#27ae60;border:2px solid #27ae60;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
         <button id="docsCatMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#3f7cb8;border:2px solid #3f7cb8;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
         <button id="docsAddBtn" style="height:44px;padding:0 20px;background:#3f7cb8;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto">➕ 추가</button>
       </div>
@@ -893,7 +894,7 @@
         </div>
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월</label>
-          <input type="month" id="docsModalMonth" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <select id="docsModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
@@ -922,6 +923,7 @@
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
         <select id="commonTypeFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:160px"></select>
         <select id="commonMonthFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:120px"></select>
+        <button id="commonMonthMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#27ae60;border:2px solid #27ae60;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
         <button id="commonCatMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#3f7cb8;border:2px solid #3f7cb8;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
         <button id="commonAddBtn" style="height:44px;padding:0 20px;background:#3f7cb8;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto">➕ 추가</button>
       </div>
@@ -970,6 +972,7 @@
           <option value="20F">20F</option>
         </select>
         <select id="indivTypeFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:160px"></select>
+        <button id="indivMonthMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#27ae60;border:2px solid #27ae60;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
         <button id="indivCatMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#3f7cb8;border:2px solid #3f7cb8;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
         <button id="indivAddBtn" style="height:44px;padding:0 20px;background:#3f7cb8;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto">➕ 추가</button>
       </div>
@@ -1001,7 +1004,7 @@
         </div>
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월 (예: 2026-06)</label>
-          <input type="month" id="commonModalMonth" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <select id="commonModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
@@ -1067,6 +1070,10 @@
           <select id="indivModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월</label>
+          <select id="indivModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+        </div>
+        <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
           <input type="text" id="indivModalName" placeholder="예: 502호 임대차계약서" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
         </div>
@@ -1097,6 +1104,19 @@
         <button id="catMgrAddBtn" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
       </div>
       <button id="catMgrClose" class="v43-cat-cancel" style="margin-top:0">닫기</button>
+    </div>
+  </div>
+
+  <!-- 월 관리 모달 (공통) -->
+  <div class="v43-cat-overlay" id="monthMgrModal">
+    <div class="v43-cat-sheet" style="padding-bottom:28px">
+      <h3 id="monthMgrTitle">월 관리</h3>
+      <div id="monthMgrList" style="max-height:280px;overflow:auto;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input type="month" id="monthMgrNewVal" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        <button id="monthMgrAddBtn" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+      </div>
+      <button id="monthMgrClose" class="v43-cat-cancel" style="margin-top:0">닫기</button>
     </div>
   </div>
 
@@ -1287,6 +1307,18 @@
     <button id="planRangeClear"></button>
     <button id="btnPlanExcel"></button>
     <div id="planList"></div>
+  </section>
+
+  <!-- filelink JS 호환 요소 (worklog.js renderFileLink 오류 방지) -->
+  <section class="panel" id="panel-filelink" style="display:none">
+    <button id="btnFileCatMgr"></button>
+    <select id="fileLinkViewSelect"><option value="list">목록형</option></select>
+    <select id="fileTypeSelect"><option value="all">전체</option></select>
+    <select class="sort-select" data-sort="filelink"><option value="name">이름순</option></select>
+    <select id="fileCatFilter"></select>
+    <select id="fileSubFilter"></select>
+    <div id="fileCatJump"></div>
+    <div id="fileList"></div>
   </section>
 
   <!-- cleaning JS 호환 요소 -->
@@ -1782,6 +1814,7 @@
     const movedPanels = {
       material:'panel-material',
       password:'panel-password', diag:'panel-diag', ai:'panel-ai'
+      // common/indiv/docs/filelink: v43 패널이 직접 관리
     };
     if(movedPanels[name]){
       setTimeout(()=>{
@@ -2890,6 +2923,26 @@
   document.getElementById('catMgrClose')?.addEventListener('click', ()=>{
     document.getElementById('catMgrModal').classList.remove('show');
   });
+  // 월관리 공통 이벤트
+  document.getElementById('monthMgrAddBtn')?.addEventListener('click',()=>{
+    const val=document.getElementById('monthMgrNewVal')?.value;
+    if(!val) return;
+    let arr=[]; try{arr=JSON.parse(localStorage.getItem(window._monthMgrLS)||'[]');}catch(e){}
+    if(arr.includes(val)){ if(typeof toast==='function') toast('이미 있는 월이에요'); return; }
+    arr.push(val);
+    localStorage.setItem(window._monthMgrLS,JSON.stringify(arr));
+    document.getElementById('monthMgrNewVal').value='';
+    renderMonthMgrList();
+    if(window._monthMgrOnSave) window._monthMgrOnSave();
+    if(typeof toast==='function') toast('추가됐어요');
+  });
+  document.getElementById('monthMgrClose')?.addEventListener('click',()=>{
+    document.getElementById('monthMgrModal').classList.remove('show');
+  });
+  document.getElementById('monthMgrModal')?.addEventListener('click',e=>{
+    if(e.target===document.getElementById('monthMgrModal'))
+      document.getElementById('monthMgrModal').classList.remove('show');
+  });
   document.getElementById('catMgrModal')?.addEventListener('click', e=>{
     if(e.target===document.getElementById('catMgrModal'))
       document.getElementById('catMgrModal').classList.remove('show');
@@ -2898,40 +2951,41 @@
 
 /* ===== 공통 문서 탭 팩토리 ===== */
 function makeDocTab(cfg){
-  // cfg: { tab, dataLS, bodyId, countId, typeFilterId, monthFilterId,
-  //        catMgrBtnId, addBtnId, modalId, modalTitleId, modalTypeId,
-  //        modalMonthId, modalNameId, modalPathId, modalMemoId,
-  //        modalSaveId, modalDelId, modalCancelId,
-  //        extraFields(optional), tabKey, defaultTitle }
   const LS = cfg.dataLS;
-  let items = [], editId = null;
+  const MONTH_LS = cfg.dataLS+'_months';
+  let items=[], editId=null;
   let typeFilter='all', monthFilter='all';
 
   function load(){ try{ items=JSON.parse(localStorage.getItem(LS)||'[]'); }catch(e){ items=[]; } }
   function save(){ try{ localStorage.setItem(LS,JSON.stringify(items)); }catch(e){} }
+  function loadMonths(){ try{ return JSON.parse(localStorage.getItem(MONTH_LS)||'[]'); }catch(e){ return []; } }
+  function saveMonths(arr){ try{ localStorage.setItem(MONTH_LS,JSON.stringify(arr)); }catch(e){} }
   function genId(){ return cfg.tab+'_'+Date.now()+'_'+Math.floor(Math.random()*9999); }
-
   function toLocalUrl(p){ return p?'localfile://'+encodeURI(p.split('\\').join('/')):'#'; }
 
+  // 종류 드롭다운 채우기
   function buildTypeSelect(selId){
     const sel=document.getElementById(selId); if(!sel) return;
     const cats=window.loadCats(cfg.tab);
     sel.innerHTML='<option value="all">전체 종류</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
   }
 
-  function buildMonthSelect(){
-    const sel=document.getElementById(cfg.monthFilterId); if(!sel) return;
-    const months=[...new Set(items.map(d=>d.month||'').filter(Boolean))].sort().reverse();
+  // 월 드롭다운 채우기
+  function buildMonthSelect(selId){
+    const sel=document.getElementById(selId); if(!sel) return;
+    const months=loadMonths().sort().reverse();
     sel.innerHTML='<option value="all">전체 월</option>'+months.map(m=>`<option value="${m}">${m}</option>`).join('');
   }
 
+  // 필터링
   function getFiltered(){
-    return items.filter(d=>{
+    let list=items.filter(d=>{
       if(typeFilter!=='all'&&d.type!==typeFilter) return false;
       if(monthFilter!=='all'&&d.month!==monthFilter) return false;
       if(cfg.extraFilter) return cfg.extraFilter(d);
       return true;
-    }).sort((a,b)=>(b.month||'').localeCompare(a.month||'')||(b.createdAt||0)-(a.createdAt||0));
+    });
+    return list.sort((a,b)=>(b.month||'').localeCompare(a.month||'')||(b.createdAt||0)-(a.createdAt||0));
   }
 
   const TYPE_COLOR={'전기':'#f39c12','소방':'#e74c3c','기계':'#27ae60','위생':'#8e44ad',
@@ -2950,22 +3004,21 @@ function makeDocTab(cfg){
       body.innerHTML=`<tr><td colspan="${cfg.cols||5}" style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">➕ 추가 버튼으로 등록해보세요</td></tr>`;
       return;
     }
-    // 월별 그룹핑
     const groups={};
     list.forEach(d=>{ const m=d.month||'날짜없음'; if(!groups[m]) groups[m]=[]; groups[m].push(d); });
-    let html='';
+    let h='';
     Object.keys(groups).sort().reverse().forEach(month=>{
       const label=month.length===7?month.slice(0,4)+'년 '+month.slice(5)+'월':month;
-      html+=`<tr style="background:#f7faff"><td colspan="${cfg.cols||5}" style="padding:8px 14px;font-size:12px;font-weight:800;color:#7a92a8;border-bottom:1px solid #e8f0fa">${label}</td></tr>`;
+      h+=`<tr style="background:#f7faff"><td colspan="${cfg.cols||5}" style="padding:8px 14px;font-size:12px;font-weight:800;color:#7a92a8;border-bottom:1px solid #e8f0fa">${label}</td></tr>`;
       groups[month].forEach(d=>{
         const color=TYPE_COLOR[d.type]||'#7a92a8';
-        const extraCells = cfg.extraCells ? cfg.extraCells(d) : '';
-        html+=`<tr class="doc-row-${cfg.tab}" data-docid="${d.id}" style="border-bottom:1px solid #f0f6ff;cursor:pointer;transition:background .12s">
+        const extraCells=cfg.extraCells?cfg.extraCells(d):'';
+        h+=`<tr class="doc-row-${cfg.tab}" data-docid="${d.id}" style="border-bottom:1px solid #f0f6ff;cursor:pointer;transition:background .12s">
           ${extraCells}
           <td style="padding:12px 14px;font-size:13px;color:#7a92a8;white-space:nowrap">${(d.month||'').slice(5)}월</td>
           <td style="padding:12px 14px"><span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:12px;font-weight:700;background:${color}22;color:${color}">${d.type||''}</span></td>
           <td style="padding:12px 14px">
-            <div style="font-size:14px;font-weight:600;color:#1a2f45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.name||''}</div>
+            <div style="font-size:14px;font-weight:600;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name||''}</div>
             ${d.memo?`<div style="font-size:12px;color:#aab8c8;margin-top:2px">${d.memo}</div>`:''}
           </td>
           <td style="padding:12px 14px;text-align:center">${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:20px;text-decoration:none">📂</a>`:'<span style="color:#ddd">—</span>'}</td>
@@ -2973,7 +3026,7 @@ function makeDocTab(cfg){
         </tr>`;
       });
     });
-    body.innerHTML=html;
+    body.innerHTML=h;
     body.querySelectorAll(`.doc-row-${cfg.tab}`).forEach(tr=>{
       tr.addEventListener('mouseenter',()=>tr.style.background='#f0f6ff');
       tr.addEventListener('mouseleave',()=>tr.style.background='');
@@ -2990,17 +3043,20 @@ function makeDocTab(cfg){
     const el=i=>document.getElementById(i);
     el(cfg.modalTitleId).textContent=id?(cfg.defaultTitle+' 수정'):(cfg.defaultTitle+' 추가');
     el(cfg.modalDelId).style.display=id?'':'none';
-    const today=new Date();
-    const defMonth=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-    // 종류 드롭다운 채우기
+    // 종류 드롭다운
     const cats=window.loadCats(cfg.tab);
     el(cfg.modalTypeId).innerHTML=cats.map(c=>`<option value="${c}">${c}</option>`).join('');
     el(cfg.modalTypeId).value=d?(d.type||cats[0]):cats[0];
-    if(el(cfg.modalMonthId)) el(cfg.modalMonthId).value=d?(d.month||defMonth):defMonth;
+    // 월 드롭다운
+    const months=loadMonths().sort().reverse();
+    const today=new Date();
+    const defMonth=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+    el(cfg.modalMonthId).innerHTML=months.map(m=>`<option value="${m}">${m}</option>`).join('');
+    if(d) el(cfg.modalMonthId).value=d.month||months[0]||defMonth;
+    else if(months.length) el(cfg.modalMonthId).value=months[0];
     el(cfg.modalNameId).value=d?(d.name||''):'';
     el(cfg.modalPathId).value=d?(d.path||''):'';
     el(cfg.modalMemoId).value=d?(d.memo||''):'';
-    // 추가 필드
     if(cfg.fillExtraFields) cfg.fillExtraFields(d);
     el(cfg.modalId).classList.add('show');
     setTimeout(()=>el(cfg.modalNameId).focus(),200);
@@ -3014,27 +3070,41 @@ function makeDocTab(cfg){
   function saveItem(){
     const el=i=>document.getElementById(i);
     const type=el(cfg.modalTypeId).value||'기타';
-    const month=el(cfg.modalMonthId)?el(cfg.modalMonthId).value:'';
+    const month=el(cfg.modalMonthId).value||'';
     const name=(el(cfg.modalNameId).value||'').trim();
     const path=(el(cfg.modalPathId).value||'').trim();
     const memo=(el(cfg.modalMemoId).value||'').trim();
-    if(!name){ if(typeof toast==='function') toast('파일명/내용을 입력해주세요'); else alert('필수 입력'); return; }
-    const extra = cfg.getExtraFields ? cfg.getExtraFields() : {};
+    if(!name){ if(typeof toast==='function') toast('파일명/내용을 입력해주세요'); return; }
+    const extra=cfg.getExtraFields?cfg.getExtraFields():{};
     if(editId){
       const i=items.findIndex(x=>x.id===editId);
       if(i>=0) items[i]={...items[i],...extra,type,month,name,path,memo,updatedAt:Date.now()};
     } else {
       items.push({id:genId(),...extra,type,month,name,path,memo,createdAt:Date.now()});
     }
-    save(); closeModal(); buildTypeSelect(cfg.typeFilterId); buildMonthSelect(); render();
+    save(); closeModal();
+    buildTypeSelect(cfg.typeFilterId); buildMonthSelect(cfg.monthFilterId); render();
     if(typeof toast==='function') toast('저장됐어요');
   }
 
   function deleteItem(){
     if(!editId||!confirm('삭제할까요?')) return;
     items=items.filter(x=>x.id!==editId);
-    save(); closeModal(); buildTypeSelect(cfg.typeFilterId); buildMonthSelect(); render();
+    save(); closeModal();
+    buildTypeSelect(cfg.typeFilterId); buildMonthSelect(cfg.monthFilterId); render();
     if(typeof toast==='function') toast('삭제됐어요');
+  }
+
+  // 월 관리 모달
+  function openMonthMgr(){
+    window._monthMgrTab = cfg.tab;
+    window._monthMgrLS = MONTH_LS;
+    window._monthMgrOnSave = ()=>{ buildMonthSelect(cfg.monthFilterId); buildMonthSelect(cfg.modalMonthId); render(); };
+    const titleMap={insp:'점검일지',docs:'운영실무',common:'임대공용',indiv:'임대개별'};
+    document.getElementById('monthMgrTitle').textContent=(titleMap[cfg.tab]||'')+' 월 관리';
+    renderMonthMgrList();
+    document.getElementById('monthMgrNewVal').value='';
+    document.getElementById('monthMgrModal').classList.add('show');
   }
 
   // 이벤트 바인딩
@@ -3045,17 +3115,62 @@ function makeDocTab(cfg){
   el(cfg.modalCancelId)?.addEventListener('click',closeModal);
   el(cfg.modalId)?.addEventListener('click',e=>{ if(e.target===el(cfg.modalId)) closeModal(); });
   el(cfg.typeFilterId)?.addEventListener('change',e=>{ typeFilter=e.target.value; render(); });
-  if(cfg.monthFilterId) el(cfg.monthFilterId)?.addEventListener('change',e=>{ monthFilter=e.target.value; render(); });
-  el(cfg.catMgrBtnId)?.addEventListener('click',()=>window.openCatMgr(cfg.tab,()=>{ buildTypeSelect(cfg.typeFilterId); buildTypeSelect(cfg.modalTypeId); render(); }));
+  el(cfg.monthFilterId)?.addEventListener('change',e=>{ monthFilter=e.target.value; render(); });
+  el(cfg.catMgrBtnId)?.addEventListener('click',()=>window.openCatMgr(cfg.tab,()=>{
+    buildTypeSelect(cfg.typeFilterId); buildTypeSelect(cfg.modalTypeId); render();
+  }));
+  el(cfg.monthMgrBtnId)?.addEventListener('click', openMonthMgr);
 
   // 탭 전환 시 렌더
   document.querySelectorAll('.v43-tab').forEach(btn=>{
     btn.addEventListener('click',()=>{
-      if(btn.dataset.v43tab===cfg.tabKey){ buildTypeSelect(cfg.typeFilterId); buildMonthSelect(); render(); }
+      if(btn.dataset.v43tab===cfg.tabKey){
+        buildTypeSelect(cfg.typeFilterId); buildMonthSelect(cfg.monthFilterId); render();
+      }
     });
   });
 
-  load(); buildTypeSelect(cfg.typeFilterId); buildTypeSelect(cfg.modalTypeId); buildMonthSelect();
+  load();
+  buildTypeSelect(cfg.typeFilterId); buildTypeSelect(cfg.modalTypeId);
+  buildMonthSelect(cfg.monthFilterId); buildMonthSelect(cfg.modalMonthId);
+}
+
+// 월 관리 공통 렌더
+function renderMonthMgrList(){
+  const list=document.getElementById('monthMgrList'); if(!list) return;
+  let months=[];
+  try{ months=JSON.parse(localStorage.getItem(window._monthMgrLS)||'[]'); }catch(e){}
+  months=months.sort().reverse();
+  list.innerHTML=months.map((m,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7faff;border-radius:10px;border:1.5px solid #e8f0fa;margin-bottom:6px">
+      <input type="month" value="${m}" data-mi="${i}" style="flex:1;border:none;background:transparent;font-size:14px;font-family:inherit;outline:none;color:#1a2f45;font-weight:600">
+      <button data-msave="${i}" style="background:#eaf1fb;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#3f7cb8;cursor:pointer;font-family:inherit">저장</button>
+      <button data-mdel="${i}" style="background:#fde8e8;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-msave]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.msave);
+      const inp=list.querySelector(`[data-mi="${i}"]`);
+      if(!inp||!inp.value) return;
+      let arr=[]; try{ arr=JSON.parse(localStorage.getItem(window._monthMgrLS)||'[]'); }catch(e){}
+      arr[i]=inp.value;
+      localStorage.setItem(window._monthMgrLS,JSON.stringify(arr));
+      renderMonthMgrList();
+      if(window._monthMgrOnSave) window._monthMgrOnSave();
+      if(typeof toast==='function') toast('저장됐어요');
+    });
+  });
+  list.querySelectorAll('[data-mdel]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.mdel);
+      let arr=[]; try{ arr=JSON.parse(localStorage.getItem(window._monthMgrLS)||'[]'); }catch(e){}
+      if(!confirm(`"${arr[i]}" 월을 삭제할까요?`)) return;
+      arr.splice(i,1);
+      localStorage.setItem(window._monthMgrLS,JSON.stringify(arr));
+      renderMonthMgrList();
+      if(window._monthMgrOnSave) window._monthMgrOnSave();
+    });
+  });
 }
 
 /* ===== 운영실무 탭 초기화 ===== */
@@ -3064,7 +3179,7 @@ makeDocTab({
   defaultTitle:'운영실무',
   bodyId:'docsBody', countId:'docsCount',
   typeFilterId:'docsTypeFilter', monthFilterId:'docsMonthFilter',
-  catMgrBtnId:'docsCatMgrBtn', addBtnId:'docsAddBtn',
+  catMgrBtnId:'docsCatMgrBtn', monthMgrBtnId:'docsMonthMgrBtn', addBtnId:'docsAddBtn',
   modalId:'docsModal', modalTitleId:'docsModalTitle',
   modalTypeId:'docsModalType', modalMonthId:'docsModalMonth',
   modalNameId:'docsModalName', modalPathId:'docsModalPath',
@@ -3079,7 +3194,7 @@ makeDocTab({
   defaultTitle:'임대공용',
   bodyId:'commonBody', countId:'commonCount',
   typeFilterId:'commonTypeFilter', monthFilterId:'commonMonthFilter',
-  catMgrBtnId:'commonCatMgrBtn', addBtnId:'commonAddBtn',
+  catMgrBtnId:'commonCatMgrBtn', monthMgrBtnId:'commonMonthMgrBtn', addBtnId:'commonAddBtn',
   modalId:'commonModal', modalTitleId:'commonModalTitle',
   modalTypeId:'commonModalType', modalMonthId:'commonModalMonth',
   modalNameId:'commonModalName', modalPathId:'commonModalPath',
@@ -3094,7 +3209,7 @@ makeDocTab({
   defaultTitle:'임대개별',
   bodyId:'indivBody', countId:'indivCount',
   typeFilterId:'indivTypeFilter', monthFilterId:null,
-  catMgrBtnId:'indivCatMgrBtn', addBtnId:'indivAddBtn',
+  catMgrBtnId:'indivCatMgrBtn', monthMgrBtnId:'indivMonthMgrBtn', addBtnId:'indivAddBtn',
   modalId:'indivModal', modalTitleId:'indivModalTitle',
   modalTypeId:'indivModalType', modalMonthId:'indivModalMonth',
   modalNameId:'indivModalName', modalPathId:'indivModalPath',
@@ -3130,7 +3245,23 @@ document.getElementById('indivFloorFilter')?.addEventListener('change', ()=>{
 });
 
 // 점검일지 종류관리 버튼 (기존 점검일지 JS와 통합)
-document.getElementById('inspCatMgrBtn')?.addEventListener('click',()=>{
+document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
+    window._monthMgrTab='insp';
+    window._monthMgrLS='wl_insp_v43_months';
+    window._monthMgrOnSave=()=>{
+      const sel=document.getElementById('inspTypeFilter');
+      if(sel&&window.loadCats){ const c=window.loadCats('insp'); sel.innerHTML='<option value="all">전체 종류</option>'+c.map(x=>`<option value="${x}">${x}</option>`).join(''); }
+      const msel=document.getElementById('inspMonthFilter');
+      if(msel){ let arr=[]; try{arr=JSON.parse(localStorage.getItem('wl_insp_v43_months')||'[]');}catch(e){} msel.innerHTML='<option value="all">전체 월</option>'+arr.sort().reverse().map(m=>`<option value="${m}">${m}</option>`).join(''); }
+      const mmsel=document.getElementById('inspModalMonth');
+      if(mmsel){ let arr=[]; try{arr=JSON.parse(localStorage.getItem('wl_insp_v43_months')||'[]');}catch(e){} mmsel.innerHTML=arr.sort().reverse().map(m=>`<option value="${m}">${m}</option>`).join(''); }
+    };
+    document.getElementById('monthMgrTitle').textContent='점검일지 월 관리';
+    renderMonthMgrList();
+    document.getElementById('monthMgrNewVal').value='';
+    document.getElementById('monthMgrModal').classList.add('show');
+  });
+  document.getElementById('inspCatMgrBtn')?.addEventListener('click',()=>{
   window.openCatMgr('insp',()=>{
     const sel=document.getElementById('inspTypeFilter');
     if(sel){ const cats=window.loadCats('insp'); sel.innerHTML='<option value="all">전체 종류</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join(''); }
