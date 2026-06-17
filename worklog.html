@@ -710,7 +710,7 @@
     </div>
     <div style="display:flex;align-items:center;margin-bottom:10px;gap:8px">
       <button id="v43DateClear" style="height:34px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer;color:#7a92a8;font-weight:600">기간해제</button>
-      <button id="v43CopyExcel" style="height:34px;padding:0 12px;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-family:inherit;background:#f0f6ff;cursor:pointer;color:#3f7cb8;font-weight:700">📋 엑셀복사</button>
+      <button id="v43CopyExcel" onclick="v43CopyWorkExcel()" style="height:34px;padding:0 12px;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-family:inherit;background:#f0f6ff;cursor:pointer;color:#3f7cb8;font-weight:700">📋 엑셀복사</button>
       <span id="v43Count" style="font-size:12px;color:#aab8c8;margin-left:auto"></span>
     </div>
 
@@ -1979,36 +1979,6 @@
   if(v43FromEl) v43FromEl.addEventListener('change', () => { v43From=v43FromEl.value; renderV43List(); });
   if(v43ToEl) v43ToEl.addEventListener('change', () => { v43To=v43ToEl.value; renderV43List(); });
   const v43DateClear = document.getElementById('v43DateClear');
-  // 엑셀 복사
-  const v43CopyExcelBtn = document.getElementById('v43CopyExcel');
-  if(v43CopyExcelBtn) v43CopyExcelBtn.addEventListener('click', ()=>{
-    const ents = getEntries().filter(e=>{
-      if(activeCat!=='all' && e.kind!==activeCat) return false;
-      if(e.kind!=='work') return false; // 업무만
-      if(v43From && e.date < v43From) return false;
-      if(v43To && e.date > v43To) return false;
-      return true;
-    }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    if(!ents.length){ if(typeof toast==='function') toast('복사할 업무가 없어요'); return; }
-    const rows = ents.map(e=>[
-      e.date||'',
-      e.floor||'',
-      e.loc||'',
-      e.title||'',
-      e.detail||'',
-      e.material||'',
-      e.matSpec||'',
-      e.qty||''
-    ].map(v=>String(v).replace(/	/g,' ')).join('	'));
-    const header = ['날짜','해당층','위치','업무내역','세부내용','자재명','자재사양','수량'].join('	');
-    const text = header+'
-'+rows.join('
-');
-    navigator.clipboard&&navigator.clipboard.writeText(text).then(()=>{
-      if(typeof toast==='function') toast(`📋 ${ents.length}건 복사됐어요!`);
-    });
-  });
-
   if(v43DateClear) v43DateClear.addEventListener('click', () => {
     v43From=''; v43To='';
     if(v43FromEl) v43FromEl.value='';

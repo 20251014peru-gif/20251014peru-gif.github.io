@@ -6087,6 +6087,34 @@ function applyExpLinks(workId){
   });
 }
 
+// v43 업무 엑셀 복사
+function v43CopyWorkExcel(){
+  const allEnt = (typeof entries!=='undefined') ? entries : [];
+  const v43From = (document.getElementById('v43From')||{}).value||'';
+  const v43To = (document.getElementById('v43To')||{}).value||'';
+  const activeCat = (document.getElementById('v43CatSelect')||{}).value||'all';
+  const ents = allEnt.filter(e=>{
+    if(e.kind!=='work') return false;
+    if(v43From && (e.date||'')<v43From) return false;
+    if(v43To && (e.date||'')>v43To) return false;
+    return true;
+  }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(!ents.length){ toast('복사할 업무가 없어요'); return; }
+  const rows = ents.map(e=>[
+    e.date||'',
+    e.floor||'',
+    e.loc||'',
+    e.title||'',
+    (e.detail||'').replace(/\n/g,' '),
+    e.material||'',
+    e.matSpec||'',
+    e.qty||''
+  ].map(v=>String(v).replace(/	/g,' ')).join('	'));
+  const header=['날짜','해당층','위치','업무내역','세부내용','자재명','자재사양','수량'].join('	');
+  const text=header+'\n'+rows.join('\n');
+  navigator.clipboard&&navigator.clipboard.writeText(text).then(()=>toast(`📋 ${ents.length}건 복사됐어요!`));
+}
+
 function wireExpenseModal(){
   $("expCancel").addEventListener("click",()=>$("expenseOverlay").classList.remove("show"));
   $("expSave").addEventListener("click",saveExpense);
