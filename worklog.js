@@ -902,11 +902,22 @@ function openEditor(kind,id){
 
   $("mDelete").style.display=id?"":"none";
 
-  // 지출 연결 영역: 업무 종류일 때만 표시
+  // 지출 연결 영역 제거 (지출종류 select로 통합)
   const expLinkArea=$("mExpLinkArea");
-  if(expLinkArea){
-    expLinkArea.style.display = (kind==="work") ? "" : "none";
-    if(kind==="work") renderExpLinkList(id);
+  if(expLinkArea) expLinkArea.style.display="none";
+
+  // 업무 종류일 때 지출종류 select 이벤트
+  if(kind==="work"){
+    renderExpLinkList(id);
+    setTimeout(()=>{
+      const expTypeSel=$("m-expType");
+      if(expTypeSel && !expTypeSel._expBound){
+        expTypeSel._expBound=true;
+        expTypeSel.addEventListener("change",()=>{
+          if(expTypeSel.value!=="없음") openExpPick();
+        });
+      }
+    },100);
   }
 
   // v21+: 카테고리·소분류 모두 드롭다운에서 선택 또는 새로 직접 입력
@@ -5598,6 +5609,9 @@ function renderExpLinkList(workId){
   mLinkedExpIds = workId
     ? entries.filter(e=>e.kind==="expense"&&e.workId===workId).map(e=>e.id)
     : [];
+  // 연결된 지출 있으면 영역 표시
+  const area=$("mExpLinkArea");
+  if(area) area.style.display = mLinkedExpIds.length ? "" : "none";
   refreshExpLinkUI();
 }
 
@@ -5663,9 +5677,18 @@ function renderExpPickList(q){
     </div>`).join("");
   list.querySelectorAll("[data-pickid]").forEach(el=>{
     el.addEventListener("click",()=>{
-      mLinkedExpIds.push(el.dataset.pickid);
-      refreshExpLinkUI();
+      const eid = el.dataset.pickid;
+      // 이미 있으면 제거 후 다시 추가 (중복 방지)
+      mLinkedExpIds = mLinkedExpIds.filter(i=>i!==eid);
+      mLinkedExpIds.push(eid);
       document.getElementById("expPickOverlay").style.display="none";
+      // 업무 모달의 지출 연결 현황 간단히 표시
+      const linked=entries.find(e=>e.id===eid);
+      if(linked){
+        const area=$("mExpLinkArea"); if(area) area.style.display="";
+        refreshExpLinkUI();
+      }
+      if(typeof toast==="function") toast("💰 지출 연결됐어요");
     });
   });
 }
