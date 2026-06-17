@@ -3033,6 +3033,15 @@
 
   // 전역 노출 (worklog.js에서 호출 가능)
   window.gcalSync = syncScheduleToGCal;
+  // worklog.js에서 accessToken/GCAL_IDS 접근 가능하게 노출
+  Object.defineProperty(window, 'accessToken', {
+    get: function(){ return accessToken; },
+    configurable: true
+  });
+  Object.defineProperty(window, 'GCAL_IDS', {
+    get: function(){ return GCAL_IDS; },
+    configurable: true
+  });
 
   // 전체 일괄 동기화
   window.gcalSyncAll = async function(){

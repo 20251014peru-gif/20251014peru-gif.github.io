@@ -1342,6 +1342,13 @@ $("mSave").addEventListener("click",async ()=>{
   // 업무 저장 시 지출 자동 연동 + 합계 자동계산
   if(mKind==="work"){ calcWorkTotal(obj); syncWorkExpense(obj, mId, savedId); applyExpLinks(savedId); }
   $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
+  // 구글캘린더 자동 동기화
+  if(typeof window.gcalSync==="function" && typeof accessToken!=="undefined" && accessToken){
+    const savedEntry = entries.find(e=>e.id===savedId);
+    if(savedEntry && typeof GCAL_IDS!=="undefined" && GCAL_IDS[savedEntry.kind]){
+      setTimeout(()=>window.gcalSync(savedEntry), 500);
+    }
+  }
 });
 $("mDelete").addEventListener("click",()=>{
   if(!mId) return;
@@ -5857,6 +5864,13 @@ function saveExpense(){
   $("expenseOverlay").classList.remove("show");
   renderAll();
   toast(id?"수정되었습니다":"저장되었습니다");
+  // 구글캘린더 자동 동기화
+  if(typeof window.gcalSync==="function" && typeof accessToken!=="undefined" && accessToken){
+    const savedExp = entries.find(e=>e.id===(id||entries[entries.length-1]?.id));
+    if(savedExp && typeof GCAL_IDS!=="undefined" && GCAL_IDS[savedExp.kind]){
+      setTimeout(()=>window.gcalSync(savedExp), 500);
+    }
+  }
 }
 
 /* ===== 업무-지출 연결 ===== */
