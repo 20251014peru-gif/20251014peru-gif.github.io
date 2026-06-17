@@ -648,12 +648,13 @@
     <span id="cntExpense" style="display:none">0</span>
     <span id="cntSchedule" style="display:none">0</span>
 
-    <!-- 날짜 필터 -->
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-      <input type="date" id="v43From" style="height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit">
-      <span style="color:#aab8c8;font-size:13px">~</span>
-      <input type="date" id="v43To" style="height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit">
-      <button id="v43DateClear" style="height:36px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer;color:#7a92a8;font-weight:600">기간해제</button>
+    <!-- 날짜 필터 2열 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <input type="date" id="v43From" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
+      <input type="date" id="v43To" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
+    </div>
+    <div style="display:flex;align-items:center;margin-bottom:10px;gap:8px">
+      <button id="v43DateClear" style="height:34px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer;color:#7a92a8;font-weight:600">기간해제</button>
       <span id="v43Count" style="font-size:12px;color:#aab8c8;margin-left:auto"></span>
     </div>
 
@@ -722,12 +723,12 @@
       <!-- 입력창 -->
       <div class="sticky-input-wrap" id="stickyInputWrap">
         <!-- 사진 미리보기 -->
+        <input type="text" id="stickyTitle" placeholder="제목" class="sticky-title-inp" style="width:100%;box-sizing:border-box;margin-bottom:8px;border:none;border-bottom:1.5px solid rgba(0,0,0,.12);background:transparent;font-size:15px;font-weight:700;font-family:inherit;outline:none;padding:4px 0;color:#222">
         <div id="stickyPhotoPreview" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
         <!-- contenteditable 입력창 (사진 붙여넣기 지원) -->
         <div id="stickyInput" class="sticky-input" contenteditable="true"
           data-placeholder="빠르게 메모하세요… Ctrl+V로 사진 붙여넣기, Ctrl+Enter로 저장"></div>
         <div class="sticky-input-row">
-          <input type="text" id="stickyTitle" placeholder="제목 (선택)" class="sticky-title-inp">
           <div class="sticky-colors">
             <button class="sc-btn active" data-color="yellow" style="background:#fff9c4" title="노랑"></button>
             <button class="sc-btn" data-color="blue" style="background:#dbeafe" title="파랑"></button>
@@ -774,23 +775,15 @@
     <div style="margin-top:14px">
 
       <!-- 툴바 -->
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-        <select id="inspTypeFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:140px">
-          <option value="all">전체</option>
-          <option value="일점검">일점검</option>
-          <option value="전기">전기</option>
-          <option value="소방">소방</option>
-          <option value="기계">기계</option>
-          <option value="위생">위생</option>
-          <option value="관리비">관리비</option>
-          <option value="기타">기타</option>
-        </select>
-        <select id="inspYearFilter" style="height:44px;padding:0 14px;border:2.5px solid #8e44ad;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none;min-width:110px"></select>
-        <select id="inspMonthFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:120px"></select>
-        <button id="inspYearMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#8e44ad;border:2px solid #8e44ad;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
-        <button id="inspMonthMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#27ae60;border:2px solid #27ae60;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
-        <button id="inspCatMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#3f7cb8;border:2px solid #3f7cb8;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
-        <button id="inspAddBtn" style="height:44px;padding:0 20px;background:#3f7cb8;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <select id="inspTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="inspYearFilter" style="height:40px;padding:0 10px;border:2px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="inspMonthFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <button id="inspYearMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#8e44ad;border:1.5px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
+        <button id="inspCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
+        <button id="inspAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
       </div>
 
       <!-- 건수 -->
@@ -840,6 +833,17 @@
           <select id="inspModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <div style="display:flex;gap:8px;margin-bottom:4px">
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="inspModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="inspModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
+            </label>
+          </div>
+        </div>
+        <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
           <input type="text" id="inspModalName" placeholder="예: 6월 전기 안전점검" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
         </div>
@@ -863,14 +867,16 @@
     <!-- ===== 운영실무 패널 (문서 탭) ===== -->
   <div class="v43-panel" id="v43-docs">
     <div style="margin-top:14px">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-        <select id="docsTypeFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:160px"></select>
-        <select id="docsMonthFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:120px"></select>
-        <select id="docsYearFilter" style="height:44px;padding:0 14px;border:2.5px solid #8e44ad;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none;min-width:110px"></select>
-        <button id="docsYearMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#8e44ad;border:2px solid #8e44ad;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
-        <button id="docsMonthMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#27ae60;border:2px solid #27ae60;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
-        <button id="docsCatMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#3f7cb8;border:2px solid #3f7cb8;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
-        <button id="docsAddBtn" style="height:44px;padding:0 20px;background:#3f7cb8;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto">➕ 추가</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <select id="docsTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="docsYearFilter" style="height:40px;padding:0 10px;border:2px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="docsMonthFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <button id="docsYearMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#8e44ad;border:1.5px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
+        <button id="docsMonthMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#27ae60;border:1.5px solid #27ae60;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
+        <button id="docsCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
+        <button id="docsAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
       </div>
       <div style="margin-bottom:8px"><span id="docsCount" style="font-size:12px;color:#aab8c8"></span></div>
       <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
@@ -902,6 +908,17 @@
           <select id="docsModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <div style="display:flex;gap:8px;margin-bottom:4px">
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="docsModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="docsModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
+            </label>
+          </div>
+        </div>
+        <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
           <input type="text" id="docsModalName" placeholder="예: 6월 엘리베이터 품의서" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
         </div>
@@ -925,14 +942,16 @@
   <!-- ===== 임대공용 패널 ===== -->
   <div class="v43-panel" id="v43-common">
     <div style="margin-top:14px">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-        <select id="commonTypeFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:160px"></select>
-        <select id="commonMonthFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:120px"></select>
-        <select id="commonYearFilter" style="height:44px;padding:0 14px;border:2.5px solid #8e44ad;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none;min-width:110px"></select>
-        <button id="commonYearMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#8e44ad;border:2px solid #8e44ad;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
-        <button id="commonMonthMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#27ae60;border:2px solid #27ae60;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
-        <button id="commonCatMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#3f7cb8;border:2px solid #3f7cb8;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
-        <button id="commonAddBtn" style="height:44px;padding:0 20px;background:#3f7cb8;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto">➕ 추가</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <select id="commonTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="commonYearFilter" style="height:40px;padding:0 10px;border:2px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+        <select id="commonMonthFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <button id="commonYearMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#8e44ad;border:1.5px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
+        <button id="commonMonthMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#27ae60;border:1.5px solid #27ae60;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
+        <button id="commonCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
+        <button id="commonAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
       </div>
       <div style="margin-bottom:8px"><span id="commonCount" style="font-size:12px;color:#aab8c8"></span></div>
       <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
@@ -953,35 +972,12 @@
   <!-- ===== 임대개별 패널 ===== -->
   <div class="v43-panel" id="v43-indiv">
     <div style="margin-top:14px">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-        <select id="indivFloorFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:100px">
-          <option value="all">전체 층</option>
-          <option value="B1">B1</option>
-          <option value="1F">1F</option>
-          <option value="2F">2F</option>
-          <option value="3F">3F</option>
-          <option value="4F">4F</option>
-          <option value="5F">5F</option>
-          <option value="6F">6F</option>
-          <option value="7F">7F</option>
-          <option value="8F">8F</option>
-          <option value="9F">9F</option>
-          <option value="10F">10F</option>
-          <option value="11F">11F</option>
-          <option value="12F">12F</option>
-          <option value="13F">13F</option>
-          <option value="14F">14F</option>
-          <option value="15F">15F</option>
-          <option value="16F">16F</option>
-          <option value="17F">17F</option>
-          <option value="18F">18F</option>
-          <option value="19F">19F</option>
-          <option value="20F">20F</option>
-        </select>
-        <select id="indivTypeFilter" style="height:44px;padding:0 14px;border:2.5px solid #3f7cb8;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none;min-width:160px"></select>
-        <button id="indivMonthMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#27ae60;border:2px solid #27ae60;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
-        <button id="indivCatMgrBtn" style="height:44px;padding:0 14px;background:#fff;color:#3f7cb8;border:2px solid #3f7cb8;border-radius:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
-        <button id="indivAddBtn" style="height:44px;padding:0 20px;background:#3f7cb8;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto">➕ 추가</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <select id="indivTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <button id="indivCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
+        <button id="indivAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
       </div>
       <div style="margin-bottom:8px"><span id="indivCount" style="font-size:12px;color:#aab8c8"></span></div>
       <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
@@ -1012,6 +1008,17 @@
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월 (예: 2026-06)</label>
           <select id="commonModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <div style="display:flex;gap:8px;margin-bottom:4px">
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="commonModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="commonModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
+            </label>
+          </div>
         </div>
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
@@ -1079,6 +1086,17 @@
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월</label>
           <select id="indivModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <div style="display:flex;gap:8px;margin-bottom:4px">
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="indivModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+              <input type="radio" name="indivModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
+            </label>
+          </div>
         </div>
         <div>
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
@@ -2078,7 +2096,7 @@
             ${d.memo?`<div style="font-size:12px;color:#aab8c8;margin-top:2px">${d.memo}</div>`:''}
           </td>
           <td style="padding:12px 14px;text-align:center">
-            ${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:20px;text-decoration:none" title="${d.path}">📂</a>`:'<span style="color:#ddd">—</span>'}
+            ${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:20px;text-decoration:none" title="${d.path}">${d.fileType==='file'?'📄':'📁'}</a>`:'<span style="color:#ddd">—</span>'}
           </td>
           <td style="padding:12px 14px;text-align:center">
             <button class="insp-edit-btn" data-inspid="${d.id}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px 6px;border-radius:6px" title="수정">✏️</button>
@@ -2133,12 +2151,14 @@
     const name  = ((document.getElementById('inspModalName')||{}).value||'').trim();
     const path  = ((document.getElementById('inspModalPath')||{}).value||'').trim();
     const memo  = ((document.getElementById('inspModalMemo')||{}).value||'').trim();
+    const inspFt = document.querySelector('input[name="inspModalFileType"]:checked');
+    const fileType = inspFt ? inspFt.value : 'folder';
     if(!name){ if(typeof toast==='function') toast('파일명/내용을 입력해주세요'); else alert('파일명/내용을 입력해주세요'); return; }
     if(editingInspId){
       const i = insps.findIndex(x=>x.id===editingInspId);
       if(i>=0) insps[i] = {...insps[i], type, month, name, path, memo, updatedAt:Date.now()};
     } else {
-      insps.push({id:genInspId(), type, month, name, path, memo, createdAt:Date.now()});
+      insps.push({id:genInspId(), type, month, name, path, memo, fileType, createdAt:Date.now()});
     }
     saveInsps();
     closeInspModal();
@@ -2527,7 +2547,7 @@
             ${d.memo?`<div style="font-size:12px;color:#aab8c8;margin-top:2px">${d.memo}</div>`:''}
           </td>
           <td style="padding:12px 14px;text-align:center">
-            ${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:20px;text-decoration:none" title="${d.path}">📂</a>`:'<span style="color:#ddd">—</span>'}
+            ${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:20px;text-decoration:none" title="${d.path}">${d.fileType==='file'?'📄':'📁'}</a>`:'<span style="color:#ddd">—</span>'}
           </td>
           <td style="padding:12px 14px;text-align:center">
             <button class="docs-edit-btn" data-docid="${d.id}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px 6px;border-radius:6px" title="수정">✏️</button>
@@ -3059,7 +3079,7 @@ function makeDocTab(cfg){
             <div style="font-size:14px;font-weight:600;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name||''}</div>
             ${d.memo?`<div style="font-size:12px;color:#aab8c8;margin-top:2px">${d.memo}</div>`:''}
           </td>
-          <td style="padding:12px 14px;text-align:center">${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:20px;text-decoration:none">📂</a>`:'<span style="color:#ddd">—</span>'}</td>
+          <td style="padding:12px 14px;text-align:center">${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:20px;text-decoration:none" title="${d.path}">${d.fileType==='file'?'📄':'📁'}</a>`:'<span style="color:#ddd">—</span>'}</td>
           <td style="padding:12px 14px;text-align:center"><button class="doc-edit-${cfg.tab}" data-docid="${d.id}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px 6px;border-radius:6px">✏️</button></td>
         </tr>`;
       });
@@ -3095,6 +3115,10 @@ function makeDocTab(cfg){
     el(cfg.modalNameId).value=d?(d.name||''):'';
     el(cfg.modalPathId).value=d?(d.path||''):'';
     el(cfg.modalMemoId).value=d?(d.memo||''):'';
+    // 파일/폴더 라디오 복원
+    const ftVal=d?(d.fileType||'folder'):'folder';
+    const ftRadioRestore=document.querySelector(`input[name="${cfg.tab}ModalFileType"][value="${ftVal}"]`);
+    if(ftRadioRestore) ftRadioRestore.checked=true;
     if(cfg.fillExtraFields) cfg.fillExtraFields(d);
     el(cfg.modalId).classList.add('show');
     setTimeout(()=>el(cfg.modalNameId).focus(),200);
@@ -3112,13 +3136,15 @@ function makeDocTab(cfg){
     const name=(el(cfg.modalNameId).value||'').trim();
     const path=(el(cfg.modalPathId).value||'').trim();
     const memo=(el(cfg.modalMemoId).value||'').trim();
+    const ftRadio=document.querySelector(`input[name="${cfg.tab}ModalFileType"]:checked`);
+    const fileType=ftRadio?ftRadio.value:'folder';
     if(!name){ if(typeof toast==='function') toast('파일명/내용을 입력해주세요'); return; }
     const extra=cfg.getExtraFields?cfg.getExtraFields():{};
     if(editId){
       const i=items.findIndex(x=>x.id===editId);
       if(i>=0) items[i]={...items[i],...extra,type,month,name,path,memo,updatedAt:Date.now()};
     } else {
-      items.push({id:genId(),...extra,type,month,name,path,memo,createdAt:Date.now()});
+      items.push({id:genId(),...extra,type,month,name,path,memo,fileType,createdAt:Date.now()});
     }
     save(); closeModal();
     buildTypeSelect(cfg.typeFilterId); buildMonthSelect(cfg.monthFilterId); render();
