@@ -1571,6 +1571,25 @@
     if(name==='calendar' && typeof renderCalendar==='function') setTimeout(renderCalendar, 100);
     if(name==='memo') setTimeout(()=>{ if(typeof renderStickyGrid==='function') renderStickyGrid(); }, 100);
     if(name==='main') setTimeout(()=>{ if(typeof v43Refresh==='function') v43Refresh(); }, 50);
+    // filelink/material/password/diag 등은 worklog.js가 panel을 이동시키므로 재이동
+    const movedPanels = {
+      filelink:'panel-filelink', material:'panel-material',
+      password:'panel-password', diag:'panel-diag', ai:'panel-ai'
+    };
+    if(movedPanels[name]){
+      setTimeout(()=>{
+        const target = document.getElementById('v43-'+name);
+        const panelEl = document.getElementById(movedPanels[name]);
+        if(target && panelEl && panelEl.parentElement !== target){
+          target.appendChild(panelEl);
+          panelEl.classList.add('active');
+          panelEl.style.display = '';
+          dbg('panel 재이동: '+movedPanels[name]+' → v43-'+name);
+        }
+        // worklog.js 렌더 재호출
+        if(typeof renderAll==='function') renderAll();
+      }, 50);
+    }
   }
 
   // v43 탭 클릭 이벤트
