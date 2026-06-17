@@ -542,6 +542,16 @@ async function init(){
   // v43: 통합 UI 갱신 훅
   try{ if(typeof window.v43Refresh==='function') window.v43Refresh(); }catch(e){}
   try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
+  // v43: activateTab 이후 v43 탭 복원 (worklog.js 탭과 충돌 방지)
+  try{
+    const v43t=localStorage.getItem('v43_tab')||'main';
+    setTimeout(()=>{
+      if(typeof window.v43ActivateTab==='function'){
+        window.v43ActivateTab(v43t);
+        if(typeof window.v43Refresh==='function') window.v43Refresh();
+      }
+    }, 100);
+  }catch(e){}
   // v41: contacts 연동 초기화
   loadContactCats().catch(()=>{});
   loadContactsCache().catch(()=>{});

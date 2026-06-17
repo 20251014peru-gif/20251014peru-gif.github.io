@@ -1691,6 +1691,8 @@
   setTimeout(refreshV43, 6000);
   dbg('v43 대기 중 - worklog.js init 완료 시 자동 갱신');
 
+  // 전역 노출 (worklog.js에서 호출 가능)
+  window.v43ActivateTab = v43ActivateTab;
   dbg('v43 init OK');
 })();
 
