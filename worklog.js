@@ -233,6 +233,9 @@ const SCHEMA={
     {k:"sStatus",label:"상태",type:"select",opts:["예정","진행중","완료","연기"]},
     {k:"sType",label:"종류",type:"select",opts:["정기점검","협력업체점검","회의","행사","공사","기타"]},
     {k:"title",label:"예정 내용",type:"text",full:true,req:true},
+    {k:"alertDate",label:"🔔 알림 날짜",type:"date"},
+    {k:"alertTime",label:"알림 시간",type:"time"},
+    {k:"alertMethod",label:"알림 방법",type:"select",opts:["팝업","이메일","팝업+이메일"]},
     {k:"memo",label:"메모(선택)",type:"textarea",full:true},
   ],
   item:[

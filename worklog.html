@@ -2960,6 +2960,21 @@
         description = en.memo||'';
     }
 
+    // 알림 설정 (예정 종류일 때)
+    var reminders = { useDefault: false, overrides: [] };
+    if(en.kind==='schedule' && en.alertDate){
+      // 알림 시간 계산 (예정일 - 알림날짜 = 분 단위)
+      var alertDt = new Date((en.alertDate||startDate)+'T'+(en.alertTime||'09:00')+':00');
+      var eventDt = new Date(startDate+'T00:00:00');
+      var minutesBefore = Math.round((eventDt - alertDt) / 60000);
+      if(minutesBefore > 0){
+        var method1 = (en.alertMethod||'팝업').includes('팝업') ? 'popup' : null;
+        var method2 = (en.alertMethod||'').includes('이메일') ? 'email' : null;
+        if(method1) reminders.overrides.push({method:'popup', minutes: minutesBefore});
+        if(method2) reminders.overrides.push({method:'email', minutes: minutesBefore});
+      }
+    }
+
     // 종일 이벤트
     var event = {
       summary: summary,
@@ -2967,6 +2982,7 @@
       start: { date: startDate },
       end:   { date: startDate },
       colorId: colorMap[en.kind]||'1',
+      reminders: reminders,
       extendedProperties: {
         private: { wl_id: en.id||'', wl_kind: en.kind }
       }
