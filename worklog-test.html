@@ -1240,25 +1240,20 @@
         </div>
         <div id="pwLockScreen"></div>
         <div id="pwMainArea" style="display:none">
-          <p class="desc">사이트별 계정·비밀번호를 안전하게 보관합니다.</p>
-          <div class="toolbar-row">
-            <span class="tb-label">보기</span>
+          <!-- 1행 필터 툴바 -->
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
             <span class="view-mode-group" data-vm="password">
-              <button data-v="card">🎴 카드</button>
-              <button data-v="list">📋 목록</button>
+              <button data-v="card">🎴</button>
+              <button data-v="list">📋</button>
             </span>
-            <span class="tb-label" style="margin-left:6px">정렬</span>
-            <select class="sort-select" data-sort="password">
+            <select class="sort-select" data-sort="password" style="height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;cursor:pointer;outline:none">
               <option value="name">이름순</option>
               <option value="created">등록일순</option>
             </select>
-            <button class="tb-toggle" data-collapse="password">전체 접기</button>
+            <select id="pwCatFilter" style="height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;cursor:pointer;outline:none;min-width:100px"></select>
+            <select id="pwSubFilter" style="height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;cursor:pointer;outline:none;min-width:80px"></select>
+            <button class="tb-toggle" data-collapse="password" style="height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-weight:600;background:#fff;cursor:pointer;white-space:nowrap">전체접기</button>
           </div>
-          <div class="filt-row">
-            <select id="pwCatFilter"></select>
-          </div>
-          <div class="sub-chips" id="pwSubFilter"></div>
-          <input type="text" id="pwSearch" class="search" placeholder="🔍 검색 — 사이트명·아이디·메모">
           <div id="pwCatJump"></div>
           <div id="pwList"></div>
         </div>

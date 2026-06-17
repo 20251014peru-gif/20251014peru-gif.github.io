@@ -132,7 +132,7 @@ const ATTACH_KINDS=["work","memo","meeting"];
 /* ===== v16 카테고리 시스템 ===== */
 const DEFAULT_CATS_FILE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도"];
 const DEFAULT_CATS_SITE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도","견적전용업체"];
-const DEFAULT_CATS_PW   = ["업무시스템","거래처","공적업무","개인용도","기타"];
+const DEFAULT_CATS_PW   = ["업무시스템","거래처","공적업무","기타"];
 const CAT_LS_KEY = "wl_categories_v16";
 let CATEGORIES = { filelink: DEFAULT_CATS_FILE.slice(), site: DEFAULT_CATS_SITE.slice(), password: DEFAULT_CATS_PW.slice() };
 function loadCategories(){
@@ -2569,8 +2569,8 @@ function bindDnD(box){
 }
 function wireFileLinkTab(){
   const _fileSearch=$("fileSearch"); if(_fileSearch) _fileSearch.addEventListener("input",e=>{ CAT_FILTER.filelink.q=e.target.value; renderFileLink(); });
-  $("fileCatFilter").addEventListener("change",e=>{ CAT_FILTER.filelink.cat=e.target.value; CAT_FILTER.filelink.sub="전체"; renderFileLink(); });
-  $("btnFileCatMgr").addEventListener("click",()=>openCatMgr("filelink"));
+  const _fileCatFilter=$("fileCatFilter"); if(_fileCatFilter) _fileCatFilter.addEventListener("change",e=>{ CAT_FILTER.filelink.cat=e.target.value; CAT_FILTER.filelink.sub="전체"; renderFileLink(); });
+  const _btnFileCatMgr=$("btnFileCatMgr"); if(_btnFileCatMgr) _btnFileCatMgr.addEventListener("click",()=>openCatMgr("filelink"));
   // 보기 드롭다운
   const vsel=$("fileLinkViewSelect");
   if(vsel){
@@ -2852,7 +2852,7 @@ function renderSite(){
   const favs=list.filter(e=>e.starred);
   const rest=list.filter(e=>!e.starred);
   const groups={};
-  rest.forEach(e=>{ const c=e.category||"(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
+  rest.forEach(e=>{ var c=e.category||"(미분류)"; if(c==="개인용도") c="기타"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
   const orderedCats=CATEGORIES.site.filter(c=>groups[c]);
   Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
   const jumpGroups={};
@@ -2872,11 +2872,18 @@ function renderSite(){
     const collapsed=VIEW_PREFS.site.collapsed[c];
     const colorClass=catColorClass("site",c);
     return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}">
-      <div class="cat-group-h"><span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span></div>
+      <div class="cat-group-h" style="display:flex;align-items:center;gap:8px">
+        <span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span>
+        <span class="view-mode-group" data-vm="password" style="margin-left:auto" onclick="event.stopPropagation()">
+          <button data-v="card" style="font-size:12px;padding:2px 8px">🎴</button>
+          <button data-v="list" style="font-size:12px;padding:2px 8px">📋</button>
+        </span>
+      </div>
       <div class="cat-items">${items.map(e=>siteCardHTML(e)).join("")}</div></div>`;
   }).join("");
   box.innerHTML=html;
-  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",()=>{
+  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",(ev)=>{
+    if(ev.target.closest(".view-mode-group")) return;
     const g=h.parentElement; const cat=g.dataset.cat;
     VIEW_PREFS.site.collapsed[cat]=!VIEW_PREFS.site.collapsed[cat];
     saveViewPrefs(); g.classList.toggle("collapsed");
@@ -3264,7 +3271,7 @@ async function pwRenderList(){
   const favs=list.filter(e=>e.starred);
   const rest=list.filter(e=>!e.starred);
   const groups={};
-  rest.forEach(e=>{ const c=e.category||"(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
+  rest.forEach(e=>{ var c=e.category||"(미분류)"; if(c==="개인용도") c="기타"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
   const orderedCats=CATEGORIES.password.filter(c=>groups[c]);
   Object.keys(groups).forEach(c=>{ if(!orderedCats.includes(c)) orderedCats.push(c); });
   const jumpGroups={};
@@ -3301,13 +3308,20 @@ async function pwRenderList(){
     const collapsed=VIEW_PREFS.password.collapsed[c];
     const colorClass=catColorClass("password",c);
     return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}" style="margin-bottom:14px">
-      <div class="cat-group-h"><span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span></div>
-      <div class="cat-items" style="display:block">${items.map(pwCardPlaceholder).join("")}</div></div>`;
+      <div class="cat-group-h" style="display:flex;align-items:center;gap:8px">
+        <span class="ch-arrow">▼</span>${esc(c)}<span class="ch-cnt">${items.length}</span>
+        <span class="view-mode-group" data-vm="password" style="margin-left:auto" onclick="event.stopPropagation()">
+          <button data-v="card" style="font-size:12px;padding:2px 8px">🎴</button>
+          <button data-v="list" style="font-size:12px;padding:2px 8px">📋</button>
+        </span>
+      </div>
+      <div class="cat-items" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px 0">${items.map(pwCardPlaceholder).join("")}</div></div>`;
   }).join("");
   box.innerHTML=html;
 
   // 접기 이벤트
-  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",()=>{
+  box.querySelectorAll(".cat-group-h").forEach(h=>h.addEventListener("click",(ev)=>{
+    if(ev.target.closest(".view-mode-group")) return;
     const g=h.parentElement; const cat=g.dataset.cat;
     VIEW_PREFS.password.collapsed[cat]=!VIEW_PREFS.password.collapsed[cat];
     saveViewPrefs(); g.classList.toggle("collapsed");
