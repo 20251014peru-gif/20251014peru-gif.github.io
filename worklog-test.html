@@ -1651,12 +1651,20 @@
   }
   window.v43Refresh = refreshV43;
 
-  // worklog.js의 renderAll을 훅
+  // worklog.js의 renderAll을 훅 (Firebase 로드 완료 시점 포착)
   const origRA = window.renderAll;
   window.renderAll = function(){
     if(origRA) origRA();
-    refreshV43();
+    setTimeout(refreshV43, 100);
   };
+  // Firebase onSnapshot 완료 훅
+  const origSetEntries = window.setEntries;
+  if(typeof origSetEntries === 'function'){
+    window.setEntries = function(arr){
+      origSetEntries(arr);
+      setTimeout(refreshV43, 200);
+    };
+  }
 
   // 저장 버튼 훅 (모달 저장 후 목록 갱신)
   const mSave = document.getElementById('mSave');
@@ -1678,21 +1686,29 @@
   // init 완료 후 실행 (worklog.js init이 비동기이므로 대기)
   let initTries = 0;
   function waitForInit(){
-    if(typeof entries !== 'undefined'){
+    const ok = typeof entries !== 'undefined' && Array.isArray(entries) && entries.length > 0;
+    if(ok){
       dbg('entries ready: '+entries.length);
       restoreTab();
-      setTimeout(refreshV43, 500);
+      refreshV43();
+    } else if(typeof entries !== 'undefined' && Array.isArray(entries)){
+      // entries 있지만 아직 0개 — Firebase 로딩 중
+      initTries++;
+      dbg('entries ready: 0, waiting... ('+initTries+')');
+      if(initTries < 80) setTimeout(waitForInit, 300);
+      else { dbg('waitForInit timeout'); restoreTab(); refreshV43(); }
     } else {
       initTries++;
-      if(initTries < 40) setTimeout(waitForInit, 250);
+      if(initTries < 60) setTimeout(waitForInit, 250);
       else { dbg('waitForInit timeout'); restoreTab(); }
     }
   }
   waitForInit();
 
-  // Firebase 로드 후에도 갱신
+  // Firebase 로드 후 추가 갱신 (안전망)
   setTimeout(refreshV43, 2000);
-  setTimeout(refreshV43, 5000);
+  setTimeout(refreshV43, 4000);
+  setTimeout(refreshV43, 7000);
 
   dbg('v43 init OK');
 })();
