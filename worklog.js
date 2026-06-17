@@ -539,6 +539,8 @@ async function init(){
   migrateTissueToJumbo(); // v26: 휴지 → 점보롤 자동 변환
   migrateBadMemoAttachments(); // v38: 깨진 첨부 정리
   renderStatusChips(); renderAll();
+  // v43: 통합 UI 갱신 훅
+  try{ if(typeof window.v43Refresh==='function') window.v43Refresh(); }catch(e){}
   try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
   // v41: contacts 연동 초기화
   loadContactCats().catch(()=>{});

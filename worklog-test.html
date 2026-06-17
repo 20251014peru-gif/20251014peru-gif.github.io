@@ -1683,32 +1683,13 @@
     }catch(e){ v43ActivateTab('main'); }
   }
 
-  // init 완료 후 실행 (worklog.js init이 비동기이므로 대기)
-  let initTries = 0;
-  function waitForInit(){
-    const ok = typeof entries !== 'undefined' && Array.isArray(entries) && entries.length > 0;
-    if(ok){
-      dbg('entries ready: '+entries.length);
-      restoreTab();
-      refreshV43();
-    } else if(typeof entries !== 'undefined' && Array.isArray(entries)){
-      // entries 있지만 아직 0개 — Firebase 로딩 중
-      initTries++;
-      dbg('entries ready: 0, waiting... ('+initTries+')');
-      if(initTries < 80) setTimeout(waitForInit, 300);
-      else { dbg('waitForInit timeout'); restoreTab(); refreshV43(); }
-    } else {
-      initTries++;
-      if(initTries < 60) setTimeout(waitForInit, 250);
-      else { dbg('waitForInit timeout'); restoreTab(); }
-    }
-  }
-  waitForInit();
-
-  // Firebase 로드 후 추가 갱신 (안전망)
-  setTimeout(refreshV43, 2000);
-  setTimeout(refreshV43, 4000);
-  setTimeout(refreshV43, 7000);
+  // worklog.js init() 완료 후 v43Refresh가 호출됨 (worklog.js에 훅 추가)
+  // 안전망: 탭 복원은 바로, 데이터 갱신은 시간차로
+  restoreTab();
+  setTimeout(refreshV43, 1000);
+  setTimeout(refreshV43, 3000);
+  setTimeout(refreshV43, 6000);
+  dbg('v43 대기 중 - worklog.js init 완료 시 자동 갱신');
 
   dbg('v43 init OK');
 })();
