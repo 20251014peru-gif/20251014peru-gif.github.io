@@ -5667,9 +5667,39 @@ function makeContactSearchUI(inputId, listId, onSelect, onClear){
     });
   }
 
-  inp.addEventListener('input',()=>render(inp.value));
-  inp.addEventListener('focus',()=>render(inp.value));
-  inp.addEventListener('blur',()=>setTimeout(()=>list.style.display='none',200));
+  let activeIdx = -1;
+
+  function updateActive(items){
+    items.forEach((el,i)=>{ el.style.background = i===activeIdx ? '#e8f0fb' : ''; });
+  }
+
+  inp.addEventListener('keydown',e=>{
+    const items=[...list.querySelectorAll('.csl-item')];
+    if(!items.length) return;
+    if(e.key==='ArrowDown'){
+      e.preventDefault();
+      activeIdx=Math.min(activeIdx+1, items.length-1);
+      updateActive(items);
+      items[activeIdx]?.scrollIntoView({block:'nearest'});
+    } else if(e.key==='ArrowUp'){
+      e.preventDefault();
+      activeIdx=Math.max(activeIdx-1, 0);
+      updateActive(items);
+      items[activeIdx]?.scrollIntoView({block:'nearest'});
+    } else if(e.key==='Enter'){
+      e.preventDefault();
+      e.stopPropagation();
+      const target = activeIdx>=0 ? items[activeIdx] : items[0];
+      if(target) target.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));
+    } else if(e.key==='Escape'){
+      list.style.display='none';
+      activeIdx=-1;
+    }
+  });
+
+  inp.addEventListener('input',()=>{ activeIdx=-1; render(inp.value); });
+  inp.addEventListener('focus',()=>{ activeIdx=-1; render(inp.value); });
+  inp.addEventListener('blur',()=>setTimeout(()=>{ list.style.display='none'; activeIdx=-1; },200));
 }
 
 // 통화 - 연락처 선택 시 자동입력
