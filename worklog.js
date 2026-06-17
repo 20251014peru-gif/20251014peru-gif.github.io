@@ -542,17 +542,11 @@ async function init(){
   // v43: 통합 UI 갱신 훅
   try{ if(typeof window.v43Refresh==='function') window.v43Refresh(); }catch(e){}
   try{ const t=localStorage.getItem("wl_tab"); if(t) activateTab(t); }catch(e){}
-  // v43: activateTab 이후 v43 탭 복원 (worklog.js 탭과 충돌 방지)
+  // v43: init 완료 후 v43 UI 갱신 (탭 복원은 v43 자체에서 처리)
   try{
-    const v43tabs=['main','memo','calendar','filelink','docs','material','password','diag','ai'];
-    const v43t=localStorage.getItem('v43_tab')||'main';
-    const safeTab=v43tabs.includes(v43t)?v43t:'main';
     setTimeout(()=>{
-      if(typeof window.v43ActivateTab==='function'){
-        window.v43ActivateTab(safeTab);
-        if(typeof window.v43Refresh==='function') window.v43Refresh();
-      }
-    }, 200);
+      if(typeof window.v43Refresh==='function') window.v43Refresh();
+    }, 300);
   }catch(e){}
   // v41: contacts 연동 초기화
   loadContactCats().catch(()=>{});

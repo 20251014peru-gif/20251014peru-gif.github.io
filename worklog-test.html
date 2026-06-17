@@ -1560,21 +1560,28 @@
 
   // v43 탭 전환
   function v43ActivateTab(name){
+    const v43tabs=['main','memo','calendar','filelink','docs','material','password','diag','ai'];
+    if(!v43tabs.includes(name)) name='main';
     document.querySelectorAll('.v43-tab').forEach(b => b.classList.toggle('active', b.dataset.v43tab===name));
     document.querySelectorAll('.v43-panel').forEach(p => p.classList.remove('active'));
     const panel = document.getElementById('v43-'+name);
     if(panel) panel.classList.add('active');
     try{ localStorage.setItem('v43_tab', name); }catch(e){}
     dbg('tab: '+name);
-    // 달력 탭으로 전환 시 렌더 재호출
-    if(name==='calendar' && typeof renderCalendar==='function'){
-      setTimeout(renderCalendar, 100);
-    }
+    if(name==='calendar' && typeof renderCalendar==='function') setTimeout(renderCalendar, 100);
+    if(name==='memo') setTimeout(()=>{ if(typeof renderStickyGrid==='function') renderStickyGrid(); }, 100);
+    if(name==='main') setTimeout(()=>{ if(typeof v43Refresh==='function') v43Refresh(); }, 50);
   }
 
-  // v43 탭 클릭 이벤트
+  // v43 탭 클릭 이벤트 - 클릭할 때마다 강제 active 재적용
   document.querySelectorAll('.v43-tab').forEach(btn => {
-    btn.addEventListener('click', () => v43ActivateTab(btn.dataset.v43tab));
+    btn.addEventListener('click', () => {
+      // worklog.js activateTab이 덮어쓰기 전에 딜레이로 재적용
+      const name = btn.dataset.v43tab;
+      v43ActivateTab(name);
+      setTimeout(() => v43ActivateTab(name), 150);
+      setTimeout(() => v43ActivateTab(name), 400);
+    });
   });
 
   // 카테고리 드롭다운
