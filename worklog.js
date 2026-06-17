@@ -177,6 +177,8 @@ const SCHEMA={
     {k:"field",label:"분야",type:"field"},
     {k:"expType",label:"지출종류",type:"select",opts:["없음","개인비용","후불청구"]},
     {k:"workVendor",label:"담당업체",type:"workvendor"},
+    {k:"workContact",label:"담당자",type:"text"},
+    {k:"workPhone",label:"담당자 전화",type:"tel"},
     {k:"title",label:"업무내역",type:"text",full:true,req:true},
     {k:"detail",label:"세부내용",type:"textarea",full:true},
     {k:"material",label:"자재명",type:"text"},
@@ -188,6 +190,7 @@ const SCHEMA={
   call:[
     {k:"date",label:"날짜",type:"date",req:true}, {k:"time",label:"시간",type:"time"},
     {k:"dir",label:"구분",type:"select",opts:CALLDIR},
+    {k:"callContact",label:"담당업체/담당자",type:"callcontact"},
     {k:"name",label:"이름",type:"text"},
     {k:"role",label:"직책",type:"text"},
     {k:"company",label:"업체",type:"text"},
@@ -840,11 +843,33 @@ function fieldHTML(f){
         <button type="button" class="btn btn-ghost btn-sm" onclick="openContactCatMgrFromModal()" style="flex:0 0 auto;padding:0 10px" title="분야 추가/삭제">⚙</button>
       </div></div>`;
   }
+  if(f.type==="callcontact"){
+    // 연락처 전체 목록 (업체+사람 모두)
+    const allContacts=(typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name);
+    const grouped={};
+    allContacts.forEach(c=>{
+      const g=c.cat||'기타';
+      if(!grouped[g]) grouped[g]=[];
+      grouped[g].push(c);
+    });
+    let opts='<option value="">-- 선택 --</option>';
+    Object.keys(grouped).sort().forEach(g=>{
+      opts+=`<optgroup label="${esc(g)}">`;
+      grouped[g].forEach(c=>{
+        const val=JSON.stringify({name:c.name||'',role:c.role||c.memo||'',company:c.company||c.cat||'',phone:c.phone||''});
+        opts+=`<option value='${val.replace(/'/g,"&#39;")}'>${esc(c.name)}${c.phone?' · '+esc(c.phone):''}</option>`;
+      });
+      opts+='</optgroup>';
+    });
+    return `<div class="field full"><label>${esc(f.label)}</label>
+      <select id="m-${f.k}" onchange="fillCallContact(this.value)" style="width:100%">${opts}</select>
+    </div>`;
+  }
   if(f.type==="workvendor"){
     // 연락처에서 업체 목록 불러오기 (직원 제외)
     const contacts = (typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name&&c.cat!=='직원(재직중)'&&c.cat!=='직원(퇴직)');
     const vendorOpts = contacts.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}${c.cat?' ('+esc(c.cat)+')':''}</option>`).join('');
-    return `<div class="field"><label>${esc(f.label)} <a href="contacts.html" target="_blank" style="margin-left:4px;font-size:11px;padding:2px 7px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;cursor:pointer;color:#3f7cb8;font-weight:700;text-decoration:none">📋 연락처에서 관리</a></label><select id="m-${f.k}" style="width:100%"><option value="">-- 선택 --</option>${vendorOpts}</select></div>`;
+    return `<div class="field"><label>${esc(f.label)} <a href="contacts.html" target="_blank" style="margin-left:4px;font-size:11px;padding:2px 7px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;cursor:pointer;color:#3f7cb8;font-weight:700;text-decoration:none">📋 연락처에서 관리</a></label><select id="m-${f.k}" onchange="fillWorkVendor(this.value)" style="width:100%"><option value="">-- 선택 --</option>${vendorOpts}</select></div>`;
   }
   if(f.type==="textarea") inner=`<textarea id="m-${f.k}"></textarea>`;
   else if(f.type==="select") inner=`<select id="m-${f.k}">${f.opts.map(o=>`<option>${o}</option>`).join("")}</select>`;
@@ -5560,6 +5585,35 @@ function workVendorAdd(){
   if(inp) inp.value='';
   workVendorRender(); refreshWorkVendorSelect();
   if(typeof toast==='function') toast('추가됐어요');
+}
+
+// 통화 - 연락처 선택 시 자동입력
+function fillCallContact(val){
+  if(!val) return;
+  try{
+    const c=JSON.parse(val);
+    const nameEl=document.getElementById('m-name');
+    const roleEl=document.getElementById('m-role');
+    const compEl=document.getElementById('m-company');
+    const phoneEl=document.getElementById('m-phone');
+    if(nameEl&&c.name) nameEl.value=c.name;
+    if(roleEl&&c.role) roleEl.value=c.role;
+    if(compEl&&c.company) compEl.value=c.company;
+    if(phoneEl&&c.phone) phoneEl.value=c.phone;
+  }catch(e){}
+}
+
+// 업무 - 담당업체 선택 시 담당자/전화 자동입력
+function fillWorkVendor(vendorName){
+  if(!vendorName) return;
+  const contacts=(typeof contactsCache!=='undefined'?contactsCache:[]);
+  // 업체명으로 첫 번째 담당자 찾기
+  const contact=contacts.find(c=>c.name===vendorName||c.company===vendorName);
+  if(!contact) return;
+  const contactEl=document.getElementById('m-workContact');
+  const phoneEl=document.getElementById('m-workPhone');
+  if(contactEl&&!contactEl.value) contactEl.value=contact.person||contact.name||'';
+  if(phoneEl&&!phoneEl.value) phoneEl.value=contact.phone||'';
 }
 
 function refreshWorkVendorSelect(){
