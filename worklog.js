@@ -854,11 +854,23 @@ function fieldHTML(f){
     </div>`;
   }
   if(f.type==="timepick"){
+    const fid=`m-${f.k}`;
     return `<div class="field"><label>${esc(f.label)}</label>
-      <select id="m-${f.k}" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
-        <option value="">-- 선택 --</option>
-        <option value="00:00">오전 12:00</option><option value="00:05">오전 12:05</option><option value="00:10">오전 12:10</option><option value="00:15">오전 12:15</option><option value="00:20">오전 12:20</option><option value="00:25">오전 12:25</option><option value="00:30">오전 12:30</option><option value="00:35">오전 12:35</option><option value="00:40">오전 12:40</option><option value="00:45">오전 12:45</option><option value="00:50">오전 12:50</option><option value="00:55">오전 12:55</option><option value="01:00">오전 1:00</option><option value="01:05">오전 1:05</option><option value="01:10">오전 1:10</option><option value="01:15">오전 1:15</option><option value="01:20">오전 1:20</option><option value="01:25">오전 1:25</option><option value="01:30">오전 1:30</option><option value="01:35">오전 1:35</option><option value="01:40">오전 1:40</option><option value="01:45">오전 1:45</option><option value="01:50">오전 1:50</option><option value="01:55">오전 1:55</option><option value="02:00">오전 2:00</option><option value="02:05">오전 2:05</option><option value="02:10">오전 2:10</option><option value="02:15">오전 2:15</option><option value="02:20">오전 2:20</option><option value="02:25">오전 2:25</option><option value="02:30">오전 2:30</option><option value="02:35">오전 2:35</option><option value="02:40">오전 2:40</option><option value="02:45">오전 2:45</option><option value="02:50">오전 2:50</option><option value="02:55">오전 2:55</option><option value="03:00">오전 3:00</option><option value="03:05">오전 3:05</option><option value="03:10">오전 3:10</option><option value="03:15">오전 3:15</option><option value="03:20">오전 3:20</option><option value="03:25">오전 3:25</option><option value="03:30">오전 3:30</option><option value="03:35">오전 3:35</option><option value="03:40">오전 3:40</option><option value="03:45">오전 3:45</option><option value="03:50">오전 3:50</option><option value="03:55">오전 3:55</option><option value="04:00">오전 4:00</option><option value="04:05">오전 4:05</option><option value="04:10">오전 4:10</option><option value="04:15">오전 4:15</option><option value="04:20">오전 4:20</option><option value="04:25">오전 4:25</option><option value="04:30">오전 4:30</option><option value="04:35">오전 4:35</option><option value="04:40">오전 4:40</option><option value="04:45">오전 4:45</option><option value="04:50">오전 4:50</option><option value="04:55">오전 4:55</option><option value="05:00">오전 5:00</option><option value="05:05">오전 5:05</option><option value="05:10">오전 5:10</option><option value="05:15">오전 5:15</option><option value="05:20">오전 5:20</option><option value="05:25">오전 5:25</option><option value="05:30">오전 5:30</option><option value="05:35">오전 5:35</option><option value="05:40">오전 5:40</option><option value="05:45">오전 5:45</option><option value="05:50">오전 5:50</option><option value="05:55">오전 5:55</option><option value="06:00">오전 6:00</option><option value="06:05">오전 6:05</option><option value="06:10">오전 6:10</option><option value="06:15">오전 6:15</option><option value="06:20">오전 6:20</option><option value="06:25">오전 6:25</option><option value="06:30">오전 6:30</option><option value="06:35">오전 6:35</option><option value="06:40">오전 6:40</option><option value="06:45">오전 6:45</option><option value="06:50">오전 6:50</option><option value="06:55">오전 6:55</option><option value="07:00">오전 7:00</option><option value="07:05">오전 7:05</option><option value="07:10">오전 7:10</option><option value="07:15">오전 7:15</option><option value="07:20">오전 7:20</option><option value="07:25">오전 7:25</option><option value="07:30">오전 7:30</option><option value="07:35">오전 7:35</option><option value="07:40">오전 7:40</option><option value="07:45">오전 7:45</option><option value="07:50">오전 7:50</option><option value="07:55">오전 7:55</option><option value="08:00">오전 8:00</option><option value="08:05">오전 8:05</option><option value="08:10">오전 8:10</option><option value="08:15">오전 8:15</option><option value="08:20">오전 8:20</option><option value="08:25">오전 8:25</option><option value="08:30">오전 8:30</option><option value="08:35">오전 8:35</option><option value="08:40">오전 8:40</option><option value="08:45">오전 8:45</option><option value="08:50">오전 8:50</option><option value="08:55">오전 8:55</option><option value="09:00">오전 9:00</option><option value="09:05">오전 9:05</option><option value="09:10">오전 9:10</option><option value="09:15">오전 9:15</option><option value="09:20">오전 9:20</option><option value="09:25">오전 9:25</option><option value="09:30">오전 9:30</option><option value="09:35">오전 9:35</option><option value="09:40">오전 9:40</option><option value="09:45">오전 9:45</option><option value="09:50">오전 9:50</option><option value="09:55">오전 9:55</option><option value="10:00">오전 10:00</option><option value="10:05">오전 10:05</option><option value="10:10">오전 10:10</option><option value="10:15">오전 10:15</option><option value="10:20">오전 10:20</option><option value="10:25">오전 10:25</option><option value="10:30">오전 10:30</option><option value="10:35">오전 10:35</option><option value="10:40">오전 10:40</option><option value="10:45">오전 10:45</option><option value="10:50">오전 10:50</option><option value="10:55">오전 10:55</option><option value="11:00">오전 11:00</option><option value="11:05">오전 11:05</option><option value="11:10">오전 11:10</option><option value="11:15">오전 11:15</option><option value="11:20">오전 11:20</option><option value="11:25">오전 11:25</option><option value="11:30">오전 11:30</option><option value="11:35">오전 11:35</option><option value="11:40">오전 11:40</option><option value="11:45">오전 11:45</option><option value="11:50">오전 11:50</option><option value="11:55">오전 11:55</option><option value="12:00">오후 12:00</option><option value="12:05">오후 12:05</option><option value="12:10">오후 12:10</option><option value="12:15">오후 12:15</option><option value="12:20">오후 12:20</option><option value="12:25">오후 12:25</option><option value="12:30">오후 12:30</option><option value="12:35">오후 12:35</option><option value="12:40">오후 12:40</option><option value="12:45">오후 12:45</option><option value="12:50">오후 12:50</option><option value="12:55">오후 12:55</option><option value="13:00">오후 1:00</option><option value="13:05">오후 1:05</option><option value="13:10">오후 1:10</option><option value="13:15">오후 1:15</option><option value="13:20">오후 1:20</option><option value="13:25">오후 1:25</option><option value="13:30">오후 1:30</option><option value="13:35">오후 1:35</option><option value="13:40">오후 1:40</option><option value="13:45">오후 1:45</option><option value="13:50">오후 1:50</option><option value="13:55">오후 1:55</option><option value="14:00">오후 2:00</option><option value="14:05">오후 2:05</option><option value="14:10">오후 2:10</option><option value="14:15">오후 2:15</option><option value="14:20">오후 2:20</option><option value="14:25">오후 2:25</option><option value="14:30">오후 2:30</option><option value="14:35">오후 2:35</option><option value="14:40">오후 2:40</option><option value="14:45">오후 2:45</option><option value="14:50">오후 2:50</option><option value="14:55">오후 2:55</option><option value="15:00">오후 3:00</option><option value="15:05">오후 3:05</option><option value="15:10">오후 3:10</option><option value="15:15">오후 3:15</option><option value="15:20">오후 3:20</option><option value="15:25">오후 3:25</option><option value="15:30">오후 3:30</option><option value="15:35">오후 3:35</option><option value="15:40">오후 3:40</option><option value="15:45">오후 3:45</option><option value="15:50">오후 3:50</option><option value="15:55">오후 3:55</option><option value="16:00">오후 4:00</option><option value="16:05">오후 4:05</option><option value="16:10">오후 4:10</option><option value="16:15">오후 4:15</option><option value="16:20">오후 4:20</option><option value="16:25">오후 4:25</option><option value="16:30">오후 4:30</option><option value="16:35">오후 4:35</option><option value="16:40">오후 4:40</option><option value="16:45">오후 4:45</option><option value="16:50">오후 4:50</option><option value="16:55">오후 4:55</option><option value="17:00">오후 5:00</option><option value="17:05">오후 5:05</option><option value="17:10">오후 5:10</option><option value="17:15">오후 5:15</option><option value="17:20">오후 5:20</option><option value="17:25">오후 5:25</option><option value="17:30">오후 5:30</option><option value="17:35">오후 5:35</option><option value="17:40">오후 5:40</option><option value="17:45">오후 5:45</option><option value="17:50">오후 5:50</option><option value="17:55">오후 5:55</option><option value="18:00">오후 6:00</option><option value="18:05">오후 6:05</option><option value="18:10">오후 6:10</option><option value="18:15">오후 6:15</option><option value="18:20">오후 6:20</option><option value="18:25">오후 6:25</option><option value="18:30">오후 6:30</option><option value="18:35">오후 6:35</option><option value="18:40">오후 6:40</option><option value="18:45">오후 6:45</option><option value="18:50">오후 6:50</option><option value="18:55">오후 6:55</option><option value="19:00">오후 7:00</option><option value="19:05">오후 7:05</option><option value="19:10">오후 7:10</option><option value="19:15">오후 7:15</option><option value="19:20">오후 7:20</option><option value="19:25">오후 7:25</option><option value="19:30">오후 7:30</option><option value="19:35">오후 7:35</option><option value="19:40">오후 7:40</option><option value="19:45">오후 7:45</option><option value="19:50">오후 7:50</option><option value="19:55">오후 7:55</option><option value="20:00">오후 8:00</option><option value="20:05">오후 8:05</option><option value="20:10">오후 8:10</option><option value="20:15">오후 8:15</option><option value="20:20">오후 8:20</option><option value="20:25">오후 8:25</option><option value="20:30">오후 8:30</option><option value="20:35">오후 8:35</option><option value="20:40">오후 8:40</option><option value="20:45">오후 8:45</option><option value="20:50">오후 8:50</option><option value="20:55">오후 8:55</option><option value="21:00">오후 9:00</option><option value="21:05">오후 9:05</option><option value="21:10">오후 9:10</option><option value="21:15">오후 9:15</option><option value="21:20">오후 9:20</option><option value="21:25">오후 9:25</option><option value="21:30">오후 9:30</option><option value="21:35">오후 9:35</option><option value="21:40">오후 9:40</option><option value="21:45">오후 9:45</option><option value="21:50">오후 9:50</option><option value="21:55">오후 9:55</option><option value="22:00">오후 10:00</option><option value="22:05">오후 10:05</option><option value="22:10">오후 10:10</option><option value="22:15">오후 10:15</option><option value="22:20">오후 10:20</option><option value="22:25">오후 10:25</option><option value="22:30">오후 10:30</option><option value="22:35">오후 10:35</option><option value="22:40">오후 10:40</option><option value="22:45">오후 10:45</option><option value="22:50">오후 10:50</option><option value="22:55">오후 10:55</option><option value="23:00">오후 11:00</option><option value="23:05">오후 11:05</option><option value="23:10">오후 11:10</option><option value="23:15">오후 11:15</option><option value="23:20">오후 11:20</option><option value="23:25">오후 11:25</option><option value="23:30">오후 11:30</option><option value="23:35">오후 11:35</option><option value="23:40">오후 11:40</option><option value="23:45">오후 11:45</option><option value="23:50">오후 11:50</option><option value="23:55">오후 11:55</option>
-      </select></div>`;
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="${fid}-ampm" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:0 0 auto">
+          <option value="AM">오전</option>
+          <option value="PM">오후</option>
+        </select>
+        <select id="${fid}-h" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+          <option value="">시</option>
+          <option value="1">1시</option><option value="2">2시</option><option value="3">3시</option><option value="4">4시</option><option value="5">5시</option><option value="6">6시</option><option value="7">7시</option><option value="8">8시</option><option value="9">9시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option>
+        </select>
+        <select id="${fid}-m" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+          <option value="">분</option>
+          <option value="00">00분</option><option value="05">05분</option><option value="10">10분</option><option value="15">15분</option><option value="20">20분</option><option value="25">25분</option><option value="30">30분</option><option value="35">35분</option><option value="40">40분</option><option value="45">45분</option><option value="50">50분</option><option value="55">55분</option>
+        </select>
+        <input type="hidden" id="${fid}">
+      </div></div>`;
   }
   if(f.type==="workvendor"){
     return `<div class="field" style="position:relative"><label>${esc(f.label)} <a href="contacts.html" target="_blank" style="margin-left:4px;font-size:11px;padding:2px 7px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;color:#3f7cb8;font-weight:700;text-decoration:none">📋 연락처관리</a></label>
@@ -917,7 +929,13 @@ function openEditor(kind,id){
   }
   $("mTitle").textContent = (id?"수정":"추가")+" · "+(kind==="work"?"업무":kind==="schedule"?"예정":KIND_LABEL[kind]);
   $("mFields").innerHTML = sc.map(fieldHTML).join("");
-  sc.forEach(f=>{ const el=$("m-"+f.k); if(!el) return; const v=data[f.k]; if(v!==undefined&&v!==null&&v!=="") el.value=v; });
+  sc.forEach(f=>{ 
+    if(f.type==="timepick"){
+      setTimeout(()=>restoreTimepick('m-'+f.k, data[f.k]||''), 50);
+      return;
+    }
+    const el=$("m-"+f.k); if(!el) return; const v=data[f.k]; if(v!==undefined&&v!==null&&v!=="") el.value=v; 
+  });
   const hasPhoto=PHOTO_KINDS.includes(kind);
   $("mPhotoArea").style.display=hasPhoto?"flex":"none";
   modalPhotos=hasPhoto?((data.photos||[]).slice()):[];
@@ -5626,6 +5644,38 @@ function workVendorAdd(){
 
 
 // 검색 가능한 연락처 선택 드롭다운
+// timepick 동기화 (hidden input에 HH:MM 값 저장)
+function syncTimepick(fid){
+  const ampm = (document.getElementById(fid+'-ampm')||{}).value||'AM';
+  const h = parseInt((document.getElementById(fid+'-h')||{}).value||'0');
+  const m = (document.getElementById(fid+'-m')||{}).value||'';
+  if(!h||m==='') { const el=document.getElementById(fid); if(el) el.value=''; return; }
+  let h24 = h;
+  if(ampm==='AM' && h===12) h24=0;
+  else if(ampm==='PM' && h!==12) h24=h+12;
+  const val = `${String(h24).padStart(2,'0')}:${m}`;
+  const el=document.getElementById(fid); if(el) el.value=val;
+}
+
+// timepick 기존값 복원 (수정 시)
+function restoreTimepick(fid, val){
+  if(!val) return;
+  const [hStr,mStr]=val.split(':');
+  let h24=parseInt(hStr); const m=mStr;
+  const ampmEl=document.getElementById(fid+'-ampm');
+  const hEl=document.getElementById(fid+'-h');
+  const mEl=document.getElementById(fid+'-m');
+  if(!ampmEl||!hEl||!mEl) return;
+  let ampm='AM'; let h12=h24;
+  if(h24===0){ ampm='AM'; h12=12; }
+  else if(h24<12){ ampm='AM'; h12=h24; }
+  else if(h24===12){ ampm='PM'; h12=12; }
+  else { ampm='PM'; h12=h24-12; }
+  ampmEl.value=ampm;
+  hEl.value=String(h12);
+  mEl.value=m;
+}
+
 function makeContactSearchUI(inputId, listId, onSelect, onClear){
   const inp = document.getElementById(inputId);
   const list = document.getElementById(listId);
