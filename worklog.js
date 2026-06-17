@@ -178,6 +178,7 @@ const SCHEMA={
     {k:"expType",label:"지출종류",type:"select",opts:["없음","개인비용","후불청구"]},
     {k:"workVendor",label:"담당업체",type:"workvendor"},
     {k:"workContact",label:"담당자",type:"text"},
+    {k:"workRole",label:"직책",type:"text"},
     {k:"workPhone",label:"담당자 전화",type:"tel"},
     {k:"title",label:"업무내역",type:"text",full:true,req:true},
     {k:"detail",label:"세부내용",type:"textarea",full:true},
@@ -844,32 +845,18 @@ function fieldHTML(f){
       </div></div>`;
   }
   if(f.type==="callcontact"){
-    // 연락처 전체 목록 (업체+사람 모두)
-    const allContacts=(typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name);
-    const grouped={};
-    allContacts.forEach(c=>{
-      const g=c.cat||'기타';
-      if(!grouped[g]) grouped[g]=[];
-      grouped[g].push(c);
-    });
-    let opts='<option value="">-- 선택 --</option>';
-    Object.keys(grouped).sort().forEach(g=>{
-      opts+=`<optgroup label="${esc(g)}">`;
-      grouped[g].forEach(c=>{
-        const val=JSON.stringify({name:c.name||'',role:c.role||c.memo||'',company:c.company||c.cat||'',phone:c.phone||''});
-        opts+=`<option value='${val.replace(/'/g,"&#39;")}'>${esc(c.name)}${c.phone?' · '+esc(c.phone):''}</option>`;
-      });
-      opts+='</optgroup>';
-    });
-    return `<div class="field full"><label>${esc(f.label)}</label>
-      <select id="m-${f.k}" onchange="fillCallContact(this.value)" style="width:100%">${opts}</select>
+    return `<div class="field full" style="position:relative"><label>${esc(f.label)}</label>
+      <input type="text" id="m-${f.k}" placeholder="이름·업체·전화번호 검색..." autocomplete="off"
+        style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+      <div id="m-${f.k}-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow:auto"></div>
     </div>`;
   }
   if(f.type==="workvendor"){
-    // 연락처에서 업체 목록 불러오기 (직원 제외)
-    const contacts = (typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name&&c.cat!=='직원(재직중)'&&c.cat!=='직원(퇴직)');
-    const vendorOpts = contacts.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}${c.cat?' ('+esc(c.cat)+')':''}</option>`).join('');
-    return `<div class="field"><label>${esc(f.label)} <a href="contacts.html" target="_blank" style="margin-left:4px;font-size:11px;padding:2px 7px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;cursor:pointer;color:#3f7cb8;font-weight:700;text-decoration:none">📋 연락처에서 관리</a></label><select id="m-${f.k}" onchange="fillWorkVendor(this.value)" style="width:100%"><option value="">-- 선택 --</option>${vendorOpts}</select></div>`;
+    return `<div class="field" style="position:relative"><label>${esc(f.label)} <a href="contacts.html" target="_blank" style="margin-left:4px;font-size:11px;padding:2px 7px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;color:#3f7cb8;font-weight:700;text-decoration:none">📋 연락처관리</a></label>
+      <input type="text" id="m-${f.k}" placeholder="업체명 검색..." autocomplete="off"
+        style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+      <div id="m-${f.k}-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow:auto"></div>
+    </div>`;
   }
   if(f.type==="textarea") inner=`<textarea id="m-${f.k}"></textarea>`;
   else if(f.type==="select") inner=`<select id="m-${f.k}">${f.opts.map(o=>`<option>${o}</option>`).join("")}</select>`;
@@ -940,6 +927,27 @@ function openEditor(kind,id){
   // 지출 연결 영역 제거 (지출종류 select로 통합)
   const expLinkArea=$("mExpLinkArea");
   if(expLinkArea) expLinkArea.style.display="none";
+
+  // 검색 UI 초기화 (렌더 후 바인딩)
+  setTimeout(()=>{
+    // 업무 담당업체 검색
+    if(kind==="work"){
+      makeContactSearchUI('m-workVendor','m-workVendor-list',(c)=>{
+        const contactEl=$("m-workContact"); if(contactEl&&!contactEl.value) contactEl.value=c.person||c.name||'';
+        const roleEl=$("m-workRole"); if(roleEl&&!roleEl.value) roleEl.value=c.role||c.memo||'';
+        const phoneEl=$("m-workPhone"); if(phoneEl&&!phoneEl.value) phoneEl.value=c.phone||'';
+      });
+    }
+    // 통화 담당자 검색
+    if(kind==="call"){
+      makeContactSearchUI('m-callContact','m-callContact-list',(c)=>{
+        const nameEl=$("m-name"); if(nameEl) nameEl.value=c.name||'';
+        const roleEl=$("m-role"); if(roleEl) roleEl.value=c.role||c.memo||'';
+        const compEl=$("m-company"); if(compEl) compEl.value=c.company||c.cat||'';
+        const phoneEl=$("m-phone"); if(phoneEl) phoneEl.value=c.phone||'';
+      });
+    }
+  },100);
 
   // 업무 종류일 때 지출종류 select 이벤트
   if(kind==="work"){
@@ -5587,6 +5595,46 @@ function workVendorAdd(){
   if(typeof toast==='function') toast('추가됐어요');
 }
 
+
+// 검색 가능한 연락처 선택 드롭다운
+function makeContactSearchUI(inputId, listId, onSelect){
+  const inp = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if(!inp||!list) return;
+  const contacts = (typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name);
+
+  function render(q){
+    const filtered = q
+      ? contacts.filter(c=>(c.name||'').includes(q)||(c.cat||'').includes(q)||(c.phone||'').includes(q))
+      : contacts;
+    if(!filtered.length){
+      list.innerHTML='<div style="padding:10px 14px;color:#aab8c8;font-size:13px">검색 결과 없음</div>';
+      list.style.display='block'; return;
+    }
+    list.innerHTML=filtered.map(c=>`
+      <div class="csl-item" data-idx="${contacts.indexOf(c)}" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f6ff;transition:background .1s">
+        <div style="font-size:14px;font-weight:700;color:#1a2f45">${esc(c.name)}</div>
+        <div style="font-size:12px;color:#aab8c8;margin-top:2px">${[c.cat,c.role||c.memo,c.phone].filter(Boolean).join(' · ')}</div>
+      </div>`).join('');
+    list.style.display='block';
+    list.querySelectorAll('.csl-item').forEach(el=>{
+      el.addEventListener('mouseenter',()=>el.style.background='#f0f6ff');
+      el.addEventListener('mouseleave',()=>el.style.background='');
+      el.addEventListener('mousedown',e=>{
+        e.preventDefault();
+        const c=contacts[parseInt(el.dataset.idx)];
+        inp.value=c.name;
+        list.style.display='none';
+        onSelect(c);
+      });
+    });
+  }
+
+  inp.addEventListener('input',()=>render(inp.value));
+  inp.addEventListener('focus',()=>render(inp.value));
+  inp.addEventListener('blur',()=>setTimeout(()=>list.style.display='none',200));
+}
+
 // 통화 - 연락처 선택 시 자동입력
 function fillCallContact(val){
   if(!val) return;
@@ -5613,6 +5661,8 @@ function fillWorkVendor(vendorName){
   const contactEl=document.getElementById('m-workContact');
   const phoneEl=document.getElementById('m-workPhone');
   if(contactEl&&!contactEl.value) contactEl.value=contact.person||contact.name||'';
+  const roleEl=document.getElementById('m-workRole');
+  if(roleEl&&!roleEl.value) roleEl.value=contact.role||contact.memo||'';
   if(phoneEl&&!phoneEl.value) phoneEl.value=contact.phone||'';
 }
 
