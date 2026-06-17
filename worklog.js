@@ -3419,24 +3419,49 @@ async function pwRenderList(){
       ${data.url?`<div class="pw-field"><span class="pw-field-k">URL</span><span class="pw-field-v"><a href="${esc(normUrl(data.url))}" target="_blank" rel="noopener" style="color:var(--primary-deep);text-decoration:none">${esc(data.url)}</a></span></div>`:""}
       ${data.memo?`<div class="pw-memo">📝 ${esc(data.memo)}</div>`:""}
     `;
-    const fb=card.querySelector("[data-fields]"); if(fb) fb.innerHTML=fieldsHTML;
-    // 목록형 복호화
+    const fb=card?card.querySelector("[data-fields]"):null;
+    if(fb) fb.innerHTML=fieldsHTML;
+
+    // 목록형 복호화 + 이벤트
     const tr=box.querySelector(`tr[data-pid="${e.id}"]`);
     if(tr){
-      const uEl=tr.querySelector("[data-fields-user]"); if(uEl) uEl.textContent=data.username||"-";
+      const uEl=tr.querySelector("[data-fields-user]");
+      if(uEl) uEl.innerHTML=data.username?`${esc(data.username)} <button class="pw-mini-btn" data-copy="${esc(data.username).replace(/"/g,"&quot;")}" data-label="아이디">📋</button>`:"-";
       const pwEl=tr.querySelector("[data-fields-pw]");
-      if(pwEl){ const shown=pwShownIds.has(e.id); pwEl.innerHTML=shown?`<span>${esc(data.password||"")}</span> <button class="pw-mini-btn" data-toggle>🙈</button>`:`<span>••••••</span> <button class="pw-mini-btn" data-toggle>👁</button>`; pwEl.querySelector("[data-toggle]")?.addEventListener("click",()=>{ if(pwShownIds.has(e.id)) pwShownIds.delete(e.id); else pwShownIds.add(e.id); pwRenderList(); }); }
-      const urlEl=tr.querySelector("[data-fields-url]"); if(urlEl) urlEl.innerHTML=data.url?`<a href="${esc(normUrl(data.url))}" target="_blank" style="color:var(--primary-deep)">${esc(data.url)}</a>`:"-";
-      const mEl=tr.querySelector("[data-fields-memo]"); if(mEl) mEl.textContent=data.memo||"-";
+      if(pwEl){
+        const sh=pwShownIds.has(e.id);
+        pwEl.innerHTML=data.password
+          ? `<span style="${sh?'':'font-family:monospace'}">${sh?esc(data.password):"••••••"}</span> <button class="pw-mini-btn" data-toggle>${sh?"🙈":"👁"}</button> <button class="pw-mini-btn" data-copy="${esc(data.password).replace(/"/g,"&quot;")}" data-label="비밀번호">📋</button>`
+          : "-";
+        pwEl.querySelector("[data-toggle]")?.addEventListener("click",()=>{ if(pwShownIds.has(e.id)) pwShownIds.delete(e.id); else pwShownIds.add(e.id); pwRenderList(); });
+        pwEl.querySelector("[data-copy]")?.addEventListener("click",function(){ copyText(this.dataset.copy, this.dataset.label+" 복사됨"); });
+      }
+      const urlEl=tr.querySelector("[data-fields-url]");
+      if(urlEl) urlEl.innerHTML=data.url?`<a href="${esc(normUrl(data.url))}" target="_blank" style="color:var(--primary-deep)">${esc(data.url)}</a>`:"-";
+      const mEl=tr.querySelector("[data-fields-memo]");
+      if(mEl) mEl.textContent=data.memo||"-";
+      // 수정/삭제 이벤트
+      tr.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",async ev=>{
+        ev.stopPropagation();
+        if(b.dataset.pact==="edit") pwOpenEditor(e.id);
+        else if(b.dataset.pact==="del"){
+          if(!confirm(`"${e.name}" 비밀번호를 삭제하시겠습니까?`)) return;
+          deleteWithUndo(e.id,"비밀번호");
+        }
+      }));
     }
-    fb.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>{
-      if(pwShownIds.has(e.id)) pwShownIds.delete(e.id); else pwShownIds.add(e.id);
-      pwRenderList();
-    }));
-    fb.querySelectorAll("[data-copy]").forEach(b=>b.addEventListener("click",()=>{
-      copyText(b.dataset.copy, b.dataset.label+" 복사됨");
-    }));
-    card.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",async ev=>{
+
+    // 카드형 이벤트
+    if(fb){
+      fb.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>{
+        if(pwShownIds.has(e.id)) pwShownIds.delete(e.id); else pwShownIds.add(e.id);
+        pwRenderList();
+      }));
+      fb.querySelectorAll("[data-copy]").forEach(b=>b.addEventListener("click",()=>{
+        copyText(b.dataset.copy, b.dataset.label+" 복사됨");
+      }));
+    }
+    if(card) card.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",async ev=>{
       ev.stopPropagation();
       const act=b.dataset.pact;
       if(act==="edit") pwOpenEditor(e.id);
