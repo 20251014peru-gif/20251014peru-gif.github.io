@@ -26,6 +26,11 @@ const FLOORS   = ["","옥탑층","20층","19층","18층","17층","16층","15층"
 // v37: 분야를 평면 배열로 (트리 구조 제거, 들여쓰기 없음)
 // 지출 전용 분야
 const EXP_FIELDS_LS = 'wl_exp_fields';
+
+// 담당업체 목록 관리
+const WORK_VENDORS_LS = 'wl_work_vendors';
+function loadWorkVendors(){ try{ return JSON.parse(localStorage.getItem(WORK_VENDORS_LS)||'[]'); }catch(e){ return []; } }
+function saveWorkVendors(arr){ try{ localStorage.setItem(WORK_VENDORS_LS,JSON.stringify(arr)); }catch(e){} }
 function loadExpFields(){
   try{ const a=JSON.parse(localStorage.getItem(EXP_FIELDS_LS)||'null'); if(Array.isArray(a)&&a.length) return a; }catch(e){}
   return [];
@@ -171,6 +176,7 @@ const SCHEMA={
     {k:"floor",label:"해당층",type:"floor"},
     {k:"field",label:"분야",type:"field"},
     {k:"expType",label:"지출종류",type:"select",opts:["없음","개인비용","후불청구"]},
+    {k:"workVendor",label:"담당업체",type:"workvendor"},
     {k:"title",label:"업무내역",type:"text",full:true,req:true},
     {k:"detail",label:"세부내용",type:"textarea",full:true},
     {k:"material",label:"자재명",type:"text"},
@@ -833,6 +839,12 @@ function fieldHTML(f){
         <select id="m-${f.k}" style="flex:1">${opts}</select>
         <button type="button" class="btn btn-ghost btn-sm" onclick="openContactCatMgrFromModal()" style="flex:0 0 auto;padding:0 10px" title="분야 추가/삭제">⚙</button>
       </div></div>`;
+  }
+  if(f.type==="workvendor"){
+    // 연락처에서 업체 목록 불러오기 (직원 제외)
+    const contacts = (typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name&&c.cat!=='직원(재직중)'&&c.cat!=='직원(퇴직)');
+    const vendorOpts = contacts.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}${c.cat?' ('+esc(c.cat)+')':''}</option>`).join('');
+    return `<div class="field"><label>${esc(f.label)} <a href="contacts.html" target="_blank" style="margin-left:4px;font-size:11px;padding:2px 7px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;cursor:pointer;color:#3f7cb8;font-weight:700;text-decoration:none">📋 연락처에서 관리</a></label><select id="m-${f.k}" style="width:100%"><option value="">-- 선택 --</option>${vendorOpts}</select></div>`;
   }
   if(f.type==="textarea") inner=`<textarea id="m-${f.k}"></textarea>`;
   else if(f.type==="select") inner=`<select id="m-${f.k}">${f.opts.map(o=>`<option>${o}</option>`).join("")}</select>`;
@@ -5486,6 +5498,79 @@ async function handleExpensePhoto(e){
 }
 
 // 지출 분야 관리 모달
+function openWorkVendorMgr(){
+  const overlay = document.getElementById('workVendorMgrOverlay');
+  if(!overlay){
+    const el=document.createElement('div');
+    el.id='workVendorMgrOverlay';
+    el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:none;align-items:flex-end;justify-content:center';
+    el.innerHTML=`
+      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:24px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
+        <h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:#1a2f45">🏢 담당업체 관리</h3>
+        <div id="workVendorList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:14px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <input type="text" id="workVendorNew" placeholder="새 업체명" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <button onclick="workVendorAdd()" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+        </div>
+        <button onclick="document.getElementById('workVendorMgrOverlay').style.display='none'" style="width:100%;padding:13px;border-radius:14px;border:2px solid #dbe6f4;background:#f7faff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;color:#7a92a8">닫기</button>
+      </div>`;
+    el.addEventListener('click',e=>{ if(e.target===el) el.style.display='none'; });
+    document.body.appendChild(el);
+  }
+  document.getElementById('workVendorMgrOverlay').style.display='flex';
+  workVendorRender();
+}
+
+function workVendorRender(){
+  const list=document.getElementById('workVendorList'); if(!list) return;
+  const vendors=loadWorkVendors();
+  list.innerHTML=vendors.map((v,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7faff;border-radius:10px;border:1.5px solid #e8f0fa">
+      <input type="text" value="${esc(v)}" data-vi="${i}" style="flex:1;border:none;background:transparent;font-size:14px;font-family:inherit;outline:none;color:#1a2f45;font-weight:600">
+      <button data-vsave="${i}" style="background:#eaf1fb;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#3f7cb8;cursor:pointer;font-family:inherit">저장</button>
+      <button data-vdel="${i}" style="background:#fde8e8;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-vsave]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.vsave);
+      const inp=list.querySelector(`[data-vi="${i}"]`);
+      if(!inp||!inp.value.trim()) return;
+      const arr=loadWorkVendors(); arr[i]=inp.value.trim(); saveWorkVendors(arr);
+      workVendorRender(); refreshWorkVendorSelect();
+      if(typeof toast==='function') toast('저장됐어요');
+    });
+  });
+  list.querySelectorAll('[data-vdel]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.vdel);
+      const arr=loadWorkVendors(); if(!confirm(`"${arr[i]}" 업체를 삭제할까요?`)) return;
+      arr.splice(i,1); saveWorkVendors(arr);
+      workVendorRender(); refreshWorkVendorSelect();
+    });
+  });
+}
+
+function workVendorAdd(){
+  const inp=document.getElementById('workVendorNew');
+  const name=(inp&&inp.value||'').trim();
+  if(!name) return;
+  const arr=loadWorkVendors();
+  if(arr.includes(name)){ if(typeof toast==='function') toast('이미 있는 업체예요'); return; }
+  arr.push(name); saveWorkVendors(arr);
+  if(inp) inp.value='';
+  workVendorRender(); refreshWorkVendorSelect();
+  if(typeof toast==='function') toast('추가됐어요');
+}
+
+function refreshWorkVendorSelect(){
+  const sel=document.getElementById('m-workVendor');
+  if(!sel) return;
+  const cur=sel.value;
+  const contacts=(typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name&&c.cat!=='직원(재직중)'&&c.cat!=='직원(퇴직)');
+  sel.innerHTML='<option value="">-- 선택 --</option>'+contacts.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}${c.cat?' ('+esc(c.cat)+')':''}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+
 function openExpFieldMgr(){
   const overlay = document.getElementById('expFieldMgrOverlay');
   if(!overlay) {
