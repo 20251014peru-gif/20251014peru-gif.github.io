@@ -189,9 +189,6 @@ const SCHEMA={
     {k:"material",label:"자재명",type:"text"},
     {k:"matSpec",label:"자재 사양",type:"text"},
     {k:"qty",label:"수량",type:"number"},
-    {k:"unitPrice",label:"단가 (원)",type:"number"},
-    {k:"deliveryFee",label:"택배비 (원)",type:"number"},
-    {k:"cost",label:"💰 합계 (원)",type:"number"},
     {k:"workNote",label:"비고",type:"textarea",full:true},
   ],
   plan:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"text",label:"할 일",type:"text",full:true,req:true} ],
@@ -314,6 +311,131 @@ function fieldOptionsHTML(){
   const opts = FIELDS.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("");
   return opts + `<option value="__new__">➕ 새 분야 추가</option>`;
 }
+
+/* v44: 한글 초성 추출 (예: "전기" → "ㅈㄱ") */
+const HANGUL_CHOSUNG = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+function getChosung(str){
+  let r = "";
+  for(const ch of (str||"")){
+    const code = ch.charCodeAt(0);
+    if(code >= 0xAC00 && code <= 0xD7A3){
+      // 한글 음절 → 초성 인덱스
+      r += HANGUL_CHOSUNG[Math.floor((code - 0xAC00) / 588)];
+    } else if(code >= 0x3131 && code <= 0x314E){
+      // 이미 자음
+      r += ch;
+    } else {
+      r += ch;
+    }
+  }
+  return r;
+}
+function isChosungOnly(str){
+  if(!str) return false;
+  return /^[ㄱ-ㅎ]+$/.test(str);
+}
+
+/* v44: 분야 검색 가능한 UI (초성검색 지원) */
+function makeFieldSearchUI(inputId, listId, onSelect){
+  const inp = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if(!inp || !list) return;
+  if(inp._fieldACwired) return;
+  inp._fieldACwired = true;
+  
+  function render(q){
+    q = (q||"").trim();
+    let filtered;
+    if(!q){
+      filtered = FIELDS.slice();
+    } else if(isChosungOnly(q)){
+      // 초성검색
+      filtered = FIELDS.filter(f => getChosung(f).includes(q));
+    } else {
+      // 일반 검색 (포함 또는 초성 포함)
+      const ql = q.toLowerCase();
+      filtered = FIELDS.filter(f => {
+        if(f.toLowerCase().includes(ql)) return true;
+        if(getChosung(f).includes(q)) return true;
+        return false;
+      });
+    }
+    if(!filtered.length){
+      list.innerHTML = `<div style="padding:10px 14px;color:#aab8c8;font-size:13px">"${esc(q)}" 검색 결과 없음 — Enter로 새 분야 추가</div>`;
+      list.style.display = "block";
+      return;
+    }
+    list.innerHTML = filtered.map((f,i)=>`
+      <div class="fsl-item" data-fv="${esc(f)}" data-idx="${i}" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f6ff;transition:background .1s;font-size:14px;font-weight:600;color:#1a2f45">
+        <span class="pill ${fieldClass(f)}" style="margin-right:8px;font-size:11px">${esc(f)}</span>
+        <span style="font-size:11px;color:#aab8c8">${esc(getChosung(f))}</span>
+      </div>`).join("");
+    list.style.display = "block";
+    list.querySelectorAll(".fsl-item").forEach(el=>{
+      el.addEventListener("mouseenter",()=>el.style.background="#f0f6ff");
+      el.addEventListener("mouseleave",()=>el.style.background="");
+      el.addEventListener("mousedown",e=>{
+        e.preventDefault();
+        inp.value = el.dataset.fv;
+        list.style.display = "none";
+        if(onSelect) onSelect(el.dataset.fv);
+      });
+    });
+  }
+  
+  let activeIdx = -1;
+  function updateActive(items){
+    items.forEach((el,i)=>{ el.style.background = i===activeIdx ? "#e8f0fb" : ""; });
+  }
+  
+  inp.addEventListener("input", ()=>{ activeIdx=-1; render(inp.value); });
+  inp.addEventListener("focus", ()=>{ activeIdx=-1; render(inp.value); });
+  inp.addEventListener("blur", ()=>setTimeout(()=>{ list.style.display="none"; activeIdx=-1; }, 200));
+  inp.addEventListener("keydown", e=>{
+    const items = [...list.querySelectorAll(".fsl-item")];
+    if(e.key==="ArrowDown"){
+      e.preventDefault();
+      if(!items.length) return;
+      activeIdx = Math.min(activeIdx+1, items.length-1);
+      updateActive(items);
+      if(items[activeIdx]) items[activeIdx].scrollIntoView({block:"nearest"});
+    } else if(e.key==="ArrowUp"){
+      e.preventDefault();
+      if(!items.length) return;
+      activeIdx = Math.max(activeIdx-1, 0);
+      updateActive(items);
+      if(items[activeIdx]) items[activeIdx].scrollIntoView({block:"nearest"});
+    } else if(e.key==="Enter"){
+      e.preventDefault();
+      e.stopPropagation();
+      if(activeIdx >= 0 && items[activeIdx]){
+        items[activeIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));
+      } else if(items.length > 0){
+        items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));
+      } else {
+        // 검색 결과 없으면 → 새 분야로 추가
+        const v = inp.value.trim();
+        if(v && !FIELDS.includes(v)){
+          FIELDS.push(v);
+          saveFields();
+          list.style.display = "none";
+          if(onSelect) onSelect(v);
+          toast(`✅ "${v}" 분야 추가됨`);
+        }
+      }
+    } else if(e.key==="Escape"){
+      list.style.display = "none";
+      activeIdx = -1;
+    } else if(e.key==="Tab"){
+      // Tab → 첫 결과 자동 선택
+      if(items.length > 0){
+        e.preventDefault();
+        items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));
+      }
+    }
+  });
+}
+
 function datesBetween(start,end){
   const out=[]; if(!start) return out;
   let s=new Date(start+"T00:00:00"); const e=new Date(((end||start))+"T00:00:00");
@@ -881,11 +1003,12 @@ if(f.type==="timepick"){
   if(f.type==="textarea") inner=`<textarea id="m-${f.k}"></textarea>`;
   else if(f.type==="select") inner=`<select id="m-${f.k}">${f.opts.map(o=>`<option>${o}</option>`).join("")}</select>`;
   else if(f.type==="status") inner=`<select id="m-${f.k}">${STATUSES.map(o=>`<option>${o}</option>`).join("")}</select>`;
-  else if(f.type==="field") inner=`<div style="display:flex;gap:6px;align-items:stretch">
-      <select id="m-${f.k}" style="flex:1">${fieldOptionsHTML()}</select>
+  else if(f.type==="field") inner=`<div style="display:flex;gap:6px;align-items:stretch;position:relative">
+      <input type="text" id="m-${f.k}" placeholder="분야 검색 (초성 가능, 예: ㅈㄱ → 전기)" autocomplete="off" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
       <button type="button" class="btn btn-ghost btn-sm" data-fieldmgr style="flex:0 0 auto;padding:0 10px" title="분야 관리">⚙</button>
+      <div id="m-${f.k}-list" style="display:none;position:absolute;top:48px;left:0;right:46px;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:240px;overflow:auto"></div>
     </div>
-    <input type="text" id="m-${f.k}-new" class="cat-new" autocomplete="off" placeholder="새 분야 이름 입력 후 Enter" style="display:none;margin-top:6px">`;
+    <input type="hidden" id="m-${f.k}-new">`;
   else if(f.type==="floor") inner=`<select id="m-${f.k}">${FLOORS.map(o=>`<option value="${o}">${o===""?"(층 선택 안 함)":o}</option>`).join("")}</select>`;
   else if(f.type==="catselect"){
     inner=`<select id="m-${f.k}" class="cat-sel" data-ctx="${f.ctx}"></select>
@@ -994,18 +1117,10 @@ function openEditor(kind,id){
     }
   },100);
 
-  // 업무 종류일 때 지출종류 select 이벤트
+  // 업무 종류일 때: v44에서는 자동 팝업 제거 (저장 후 지출 모달 자동 호출됨)
   if(kind==="work"){
     renderExpLinkList(id);
-    setTimeout(()=>{
-      const expTypeSel=$("m-expType");
-      if(expTypeSel && !expTypeSel._expBound){
-        expTypeSel._expBound=true;
-        expTypeSel.addEventListener("change",()=>{
-          if(expTypeSel.value!=="없음") openExpPick();
-        });
-      }
-    },100);
+    // v44: openExpPick 자동 호출 제거 - 저장 후 openExpenseFromWork가 처리함
   }
 
   // v21+: 카테고리·소분류 모두 드롭다운에서 선택 또는 새로 직접 입력
@@ -1099,50 +1214,26 @@ function openEditor(kind,id){
     $("m-unitPrice").addEventListener("input",recalcAmount);
   }
 
-  // v37: field 타입 입력에 ➕ 새 분야 추가 / ⚙ 관리 버튼 처리
-  document.querySelectorAll("#mFields select[id^='m-']").forEach(sel=>{
-    const fieldKey = sel.id.replace("m-","");
+  // v44: field 타입 — 검색 가능한 input + 초성 자동완성
+  document.querySelectorAll("#mFields input[id^='m-']").forEach(inp=>{
+    const fieldKey = inp.id.replace("m-","");
+    // 끝에 -new, -list 같은 건 제외
+    if(fieldKey.endsWith("-new") || fieldKey.endsWith("-list")) return;
     const fieldDef = SCHEMA[kind].find(f=>f.k===fieldKey && f.type==="field");
     if(!fieldDef) return;
-    const newInp = $(`m-${fieldKey}-new`);
-    const mgrBtn = sel.parentElement.querySelector("[data-fieldmgr]");
+    const listEl = $(`m-${fieldKey}-list`);
+    const mgrBtn = inp.parentElement.querySelector("[data-fieldmgr]");
     // 기존 값 복원
-    if(data[fieldKey]){
-      if(FIELDS.includes(data[fieldKey])) sel.value = data[fieldKey];
-      else { sel.value = "__new__"; if(newInp){ newInp.style.display=""; newInp.value=data[fieldKey]; } }
-    }
-    sel.addEventListener("change", ()=>{
-      if(sel.value==="__new__"){
-        if(newInp){ newInp.style.display=""; newInp.value=""; newInp.focus(); }
-      } else {
-        if(newInp){ newInp.style.display="none"; newInp.value=""; }
-      }
+    if(data[fieldKey]) inp.value = data[fieldKey];
+    // 자동완성 UI 연결
+    makeFieldSearchUI(inp.id, `m-${fieldKey}-list`, (val)=>{
+      // 선택 시 별도 처리 필요시 추가
     });
-    if(newInp){
-      newInp.addEventListener("keydown", e=>{
-        if(e.key==="Enter"){
-          e.preventDefault();
-          const v = newInp.value.trim();
-          if(v && !FIELDS.includes(v)){
-            FIELDS.push(v); saveFields();
-            // 옵션 재구성
-            sel.innerHTML = fieldOptionsHTML();
-            sel.value = v;
-            newInp.style.display = "none";
-            newInp.value = "";
-            toast(`✅ "${v}" 분야가 추가되었습니다`);
-          }
-        }
-      });
-    }
     if(mgrBtn){
       mgrBtn.addEventListener("click", e=>{
         e.preventDefault();
         openFieldManager(()=>{
-          // 닫힌 후 옵션 재구성
-          const curVal = sel.value;
-          sel.innerHTML = fieldOptionsHTML();
-          if(FIELDS.includes(curVal)) sel.value = curVal;
+          // 닫힌 후 입력칸은 그대로
         });
       });
     }
@@ -1155,7 +1246,9 @@ function openEditor(kind,id){
       hintBox.id="fieldHint"; hintBox.style.cssText="grid-column:1/-1;font-size:12.5px;color:var(--primary-deep);background:var(--primary-soft);border-radius:9px;padding:8px 11px;display:none";
       te.closest(".field").after(hintBox);
       const showHint=()=>{ const h=FIELD_HINT[fe.value]; if(h){ hintBox.textContent="💡 "+h; hintBox.style.display=""; } else hintBox.style.display="none"; };
-      fe.addEventListener("change",showHint); showHint();
+      fe.addEventListener("change",showHint);
+      fe.addEventListener("input",showHint);  // v44: input도 감지
+      showHint();
     }
     // v44: 지출유형에 따른 모달 색상 표시 (자재 칸은 항상 표시)
     const updateExpMode = ()=>{
@@ -1360,12 +1453,13 @@ $("mSave").addEventListener("click",async ()=>{
       if(sel && sel.value==="__new__"){ const inp=$("m-"+f.k); v=inp?inp.value.trim():""; }
       else if(sel){ v=sel.value; }
     } else if(f.type==="field"){
-      // v37: 분야 — __new__ 면 입력칸에서 값 가져오기 + 자동 등록
-      const sel=$("m-"+f.k);
-      if(sel && sel.value==="__new__"){
-        const inp=$("m-"+f.k+"-new"); v=inp?inp.value.trim():"";
-        if(v && !FIELDS.includes(v)){ FIELDS.push(v); saveFields(); }
-      } else if(sel){ v=sel.value; }
+      // v44: 분야 — input 값 그대로. 신규면 자동 등록
+      const inp=$("m-"+f.k);
+      v = inp ? inp.value.trim() : "";
+      if(v && !FIELDS.includes(v)){
+        FIELDS.push(v);
+        saveFields();
+      }
     } else if(f.type==="catselect"){
       const sel=$("m-"+f.k);
       if(sel && sel.value==="__new__"){
@@ -5460,19 +5554,20 @@ function openExpenseFromWork(info){
   const expType = info.expType || "개인비용";
   const isPersonal = expType === "개인비용";
   // 지출 모달 데이터 준비 (업무 정보로 자동 채움)
+  // 단가/택배비/합계는 사용자가 지출 모달에서 직접 입력
   expenseData = {
     date: w.date || todayStr(),
     expType: isPersonal ? "개인지출" : "세금계산서",
     utype: isPersonal ? "자재구매" : "공사/용역",
-    title: w.title || "",
+    title: w.title || "",  // 업무내역 → 지출 내역에 자동 채움
     vendor: w.workVendor || "",
     field: w.field || "",
-    matName: isPersonal ? (w.material || "") : (w.title || ""),
+    matName: isPersonal ? (w.material || "") : "",
     spec: w.matSpec || "",
-    qty: Number(w.qty) || 1,
-    unitPrice: Number(w.unitPrice) || 0,
-    deliveryFee: Number(w.deliveryFee) || 0,
-    amount: Number(w.cost) || 0,
+    qty: isPersonal ? (Number(w.qty) || 1) : 1,
+    unitPrice: 0,
+    deliveryFee: 0,
+    amount: 0,
     memo: w.workNote || ((w.floor||"")+(w.field?" ["+w.field+"]":"")),
     workId: info.workId,  // 업무와 연결
     photo: null
@@ -5928,7 +6023,7 @@ function openExpFieldMgr(){
     // 모달 동적 생성
     const el = document.createElement('div');
     el.id = 'expFieldMgrOverlay';
-    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:flex-end;justify-content:center';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:none;align-items:flex-end;justify-content:center';
     el.innerHTML = `
       <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:24px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
         <h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:#1a2f45">⚙ 지출 분야 관리</h3>
@@ -5937,12 +6032,12 @@ function openExpFieldMgr(){
           <input type="text" id="expFieldMgrNew" placeholder="새 분야 이름" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;outline:none;background:#f7faff">
           <button onclick="expFieldMgrAdd()" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
         </div>
-        <button onclick="document.getElementById('expFieldMgrOverlay').classList.remove('show')" style="width:100%;padding:13px;border-radius:14px;border:2px solid #dbe6f4;background:#f7faff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;color:#7a92a8">닫기</button>
+        <button onclick="document.getElementById('expFieldMgrOverlay').style.display='none'" style="width:100%;padding:13px;border-radius:14px;border:2px solid #dbe6f4;background:#f7faff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;color:#7a92a8">닫기</button>
       </div>`;
-    el.addEventListener('click', e=>{ if(e.target===el) el.classList.remove('show'); });
+    el.addEventListener('click', e=>{ if(e.target===el) el.style.display='none'; });
     document.body.appendChild(el);
   }
-  document.getElementById('expFieldMgrOverlay').classList.add('show');
+  document.getElementById('expFieldMgrOverlay').style.display='flex';
   expFieldMgrRender();
 }
 
