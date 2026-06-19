@@ -141,7 +141,7 @@ const FIELD_HINT={
 function statusClass(s){ return s==="완료"?"done":s==="진행중"?"prog":"todo"; }
 function statusColor(s){ return s==="완료"?"var(--mint)":s==="진행중"?"var(--gold)":"var(--peach)"; }
 
-const KIND_LABEL={work:"업무",plan:"오늘계획",memo:"메모",call:"통화",vacation:"휴가",meeting:"회의메모",deliver:"전달사항",filelink:"파일링크",site:"사이트",password:"비밀번호",schedule:"예정",item:"품목",stock:"입출고",cleaning:"청소일지",expense:"지출"};
+const KIND_LABEL={work:"업무",plan:"오늘계획",memo:"메모",call:"통화",vacation:"휴가",meeting:"회의메모",deliver:"전달사항",filelink:"파일링크",site:"사이트",password:"비밀번호",schedule:"예정",item:"품목",stock:"입출고",cleaning:"청소일지",expense:"지출",accident:"사고"};
 const PHOTO_KINDS=["work","memo","meeting"];
 const ATTACH_KINDS=["work","memo","meeting"];
 
@@ -276,6 +276,28 @@ const SCHEMA={
     {k:"title",label:"내역",type:"text",full:true,req:true},
     {k:"amount",label:"금액 (원)",type:"number",req:true},
     {k:"memo",label:"비고",type:"text",full:true},
+  ],
+  // v44: 사고 처리 내역
+  accident:[
+    {k:"date",label:"발생 날짜",type:"date",req:true},
+    {k:"time",label:"발생 시각",type:"time"},
+    {k:"accType",label:"사고 종류",type:"select",opts:["누수","화재","미끄러짐","추락","차량파손","도난","폭행/시비","엘리베이터","주차장","승강기","감전","기타"],req:true},
+    {k:"status",label:"처리 상태",type:"select",opts:["⏳ 접수","🔍 조사중","⚙ 처리중","✅ 완료","📋 종결"],req:true},
+    {k:"floor",label:"발생 층",type:"floor"},
+    {k:"location",label:"상세 위치",type:"text",full:true},
+    {k:"field",label:"분야",type:"field"},
+    {k:"partyName",label:"당사자 이름",type:"text"},
+    {k:"partyType",label:"당사자 유형",type:"select",opts:["임차인","방문객","직원","외부인","불명"]},
+    {k:"partyPhone",label:"당사자 연락처",type:"text"},
+    {k:"title",label:"사고 제목",type:"text",full:true,req:true},
+    {k:"detail",label:"사고 경위 (상세)",type:"textarea",full:true},
+    {k:"emergency",label:"응급조치 내용",type:"textarea",full:true},
+    {k:"reported",label:"신고 여부",type:"select",opts:["없음","경찰 112","소방 119","구급차","보험사","본사 보고","기타"]},
+    {k:"repairCost",label:"수리비 (원)",type:"number"},
+    {k:"compensation",label:"배상금 (원)",type:"number"},
+    {k:"insurance",label:"보험금 (원)",type:"number"},
+    {k:"followUp",label:"후속 조치 / 재발 방지책",type:"textarea",full:true},
+    {k:"memo",label:"비고",type:"textarea",full:true},
   ],
 };
 
@@ -813,7 +835,7 @@ function renderAll(){
     ["deliver", renderDeliver], ["calendar", renderCalendar],
     ["filelink", renderFileLink], ["site", renderSite], ["password", renderPassword],
     ["material", renderMaterial], ["cleaning", renderCleaning],
-    ["expense", renderExpense], ["diag", renderDiag]
+    ["expense", renderExpense], ["accident", renderAccidents], ["diag", renderDiag]
   ];
   fns.forEach(([name, fn])=>{
     try{ fn(); }catch(err){ console.error(`render${name} 에러:`, err); }
@@ -893,7 +915,7 @@ function activateWorkSubtab(sub){
   const host = $("workSubpanelHost");
   if(!host) return;
   // 모든 통합 패널 강제 숨김 + 호스트 안으로 이동
-  ["filelink","call","site","vacation","meeting","deliver","expense"].forEach(name=>{
+  ["filelink","call","site","vacation","meeting","deliver","expense","accident"].forEach(name=>{
     const p = document.getElementById("panel-"+name);
     if(p){
       if(p.parentElement !== host) host.appendChild(p);
@@ -906,6 +928,8 @@ function activateWorkSubtab(sub){
     if(panel){
       panel.style.display = "block";
       panel.classList.add("active");
+      // v44: 사고 탭이면 렌더
+      if(sub==="accident" && typeof renderAccidents==="function") renderAccidents();
     }
   }
   // 페이지 맨 위로 스크롤
@@ -930,7 +954,7 @@ function wireWorkSubtabs(){
   // 페이지 로드 직후 통합 대상 패널들을 모두 host 안으로 즉시 이동 + 숨김
   const host = $("workSubpanelHost");
   if(host){
-    ["filelink","call","site","vacation","meeting","deliver","expense"].forEach(name=>{
+    ["filelink","call","site","vacation","meeting","deliver","expense","accident"].forEach(name=>{
       const p = document.getElementById("panel-"+name);
       if(p && p.parentElement !== host){
         host.appendChild(p);
@@ -969,6 +993,7 @@ function defaults(kind){
   if(kind==="item") return {field:"전기", recurring:"비주기", safetyStock:0, unitPrice:0};
   if(kind==="stock") return {date:t, stockType:"입고", qty:1, unitPrice:0, amount:0};
   if(kind==="expense") return {date:t, expType:"개인지출", amount:0};
+  if(kind==="accident") return {date:t, time:nowTime(), accType:"누수", status:"⏳ 접수", partyType:"임차인", reported:"없음"};
   return {date:t};
 }
 function fieldHTML(f){
@@ -5945,6 +5970,141 @@ function wireExpenseTab(){
   $("expMonthFilter").addEventListener("change",e=>{ EXP_FILTER.ym=e.target.value; renderExpense(); });
   $("btnAddExpense").addEventListener("click",()=>openExpenseEditor(null));
   $("btnExpExcel").addEventListener("click",copyExpenseExcel);
+}
+
+/* ===== v44: 사고 처리 내역 ===== */
+const ACCIDENT_FILTER = { status:"전체", type:"all", from:"", to:"" };
+const ACCIDENT_STATUS = ["⏳ 접수","🔍 조사중","⚙ 처리중","✅ 완료","📋 종결"];
+const ACCIDENT_STATUS_COLOR = {
+  "⏳ 접수": {bg:"#fef3c7", fg:"#92400e", border:"#f59e0b"},
+  "🔍 조사중": {bg:"#dbeafe", fg:"#1e40af", border:"#3b82f6"},
+  "⚙ 처리중": {bg:"#fce7f3", fg:"#9f1239", border:"#ec4899"},
+  "✅ 완료": {bg:"#d1fae5", fg:"#065f46", border:"#10b981"},
+  "📋 종결": {bg:"#e5e7eb", fg:"#374151", border:"#6b7280"},
+};
+const ACCIDENT_TYPE_ICON = {
+  "누수":"💧","화재":"🔥","미끄러짐":"🛝","추락":"⬇","차량파손":"🚗",
+  "도난":"🔓","폭행/시비":"⚠️","엘리베이터":"🛗","주차장":"🅿️","승강기":"🛗","감전":"⚡","기타":"📌"
+};
+
+function setupAccidentTab(){
+  // 상태 칩 렌더
+  renderAccidentStatusChips();
+  // 추가 버튼
+  const addBtn = document.getElementById("btnAddAccident");
+  if(addBtn && !addBtn._wired){
+    addBtn._wired = true;
+    addBtn.addEventListener("click", ()=>openEditor("accident", null));
+  }
+  // 종류 필터
+  const typeSel = document.getElementById("accidentTypeFilter");
+  if(typeSel && !typeSel._wired){
+    typeSel._wired = true;
+    typeSel.addEventListener("change", ()=>{
+      ACCIDENT_FILTER.type = typeSel.value;
+      renderAccidents();
+    });
+  }
+  // 기간 필터
+  const fromEl = document.getElementById("accidentDateFrom");
+  const toEl = document.getElementById("accidentDateTo");
+  const clearEl = document.getElementById("accidentDateClear");
+  if(fromEl && !fromEl._wired){
+    fromEl._wired = true;
+    fromEl.addEventListener("change", ()=>{ ACCIDENT_FILTER.from = fromEl.value; renderAccidents(); });
+  }
+  if(toEl && !toEl._wired){
+    toEl._wired = true;
+    toEl.addEventListener("change", ()=>{ ACCIDENT_FILTER.to = toEl.value; renderAccidents(); });
+  }
+  if(clearEl && !clearEl._wired){
+    clearEl._wired = true;
+    clearEl.addEventListener("click", ()=>{
+      ACCIDENT_FILTER.from = "";
+      ACCIDENT_FILTER.to = "";
+      if(fromEl) fromEl.value = "";
+      if(toEl) toEl.value = "";
+      renderAccidents();
+    });
+  }
+}
+
+function renderAccidentStatusChips(){
+  const box = document.getElementById("accidentStatusChips");
+  if(!box) return;
+  const allAccidents = entries.filter(e=>e.kind==="accident");
+  // 전체 + 상태별 카운트
+  const counts = {};
+  ACCIDENT_STATUS.forEach(s=>{ counts[s] = allAccidents.filter(a=>a.status===s).length; });
+  let html = `<button class="acc-chip" data-acc-status="전체" style="padding:8px 14px;border-radius:20px;border:2px solid ${ACCIDENT_FILTER.status==='전체'?'#1a2f45':'#dbe6f4'};background:${ACCIDENT_FILTER.status==='전체'?'#1a2f45':'#fff'};color:${ACCIDENT_FILTER.status==='전체'?'#fff':'#1a2f45'};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📋 전체 ${allAccidents.length}</button>`;
+  ACCIDENT_STATUS.forEach(s=>{
+    const c = ACCIDENT_STATUS_COLOR[s];
+    const isActive = ACCIDENT_FILTER.status===s;
+    html += `<button class="acc-chip" data-acc-status="${esc(s)}" style="padding:8px 14px;border-radius:20px;border:2px solid ${isActive?c.border:'#dbe6f4'};background:${isActive?c.border:c.bg};color:${isActive?'#fff':c.fg};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${esc(s)} ${counts[s]}</button>`;
+  });
+  box.innerHTML = html;
+  box.querySelectorAll(".acc-chip").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      ACCIDENT_FILTER.status = btn.dataset.accStatus;
+      renderAccidents();
+    });
+  });
+}
+
+function renderAccidents(){
+  setupAccidentTab();
+  renderAccidentStatusChips();
+  const list = document.getElementById("accidentList");
+  if(!list) return;
+  let arr = entries.filter(e=>e.kind==="accident");
+  // 필터링
+  if(ACCIDENT_FILTER.status !== "전체") arr = arr.filter(a=>a.status===ACCIDENT_FILTER.status);
+  if(ACCIDENT_FILTER.type !== "all") arr = arr.filter(a=>a.accType===ACCIDENT_FILTER.type);
+  if(ACCIDENT_FILTER.from) arr = arr.filter(a=>(a.date||"")>=ACCIDENT_FILTER.from);
+  if(ACCIDENT_FILTER.to) arr = arr.filter(a=>(a.date||"")<=ACCIDENT_FILTER.to);
+  // 최신순 정렬
+  arr.sort((a,b)=>(b.date||"").localeCompare(a.date||"") || (b.time||"").localeCompare(a.time||""));
+  // 카운트 표시
+  const cnt = document.getElementById("accidentCount");
+  if(cnt) cnt.textContent = `${arr.length}건`;
+  if(!arr.length){
+    list.innerHTML = `<div style="padding:60px 20px;text-align:center;color:#aab8c8;background:#f7faff;border-radius:12px">
+      <div style="font-size:40px;margin-bottom:10px">🚨</div>
+      <div style="font-size:14px;font-weight:700">사고 기록이 없어요</div>
+      <div style="font-size:12px;margin-top:6px">상단 "➕ 사고 등록" 버튼으로 등록하세요</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML = arr.map(a=>{
+    const c = ACCIDENT_STATUS_COLOR[a.status] || ACCIDENT_STATUS_COLOR["⏳ 접수"];
+    const icon = ACCIDENT_TYPE_ICON[a.accType] || "📌";
+    const totalCost = (Number(a.repairCost)||0)+(Number(a.compensation)||0)+(Number(a.insurance)||0);
+    return `<div class="acc-card" data-acc-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:box-shadow .12s">
+      <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-size:20px">${icon}</span>
+            <span style="font-size:11px;font-weight:700;background:${c.bg};color:${c.fg};padding:3px 8px;border-radius:6px">${esc(a.status||'⏳ 접수')}</span>
+            <span style="font-size:11px;font-weight:700;background:#f0f6ff;color:#3f7cb8;padding:3px 8px;border-radius:6px">${esc(a.accType||'기타')}</span>
+            ${a.partyType?`<span style="font-size:11px;color:#7a92a8">${esc(a.partyType)}</span>`:''}
+          </div>
+          <div style="font-size:15px;font-weight:700;color:#1a2f45;margin-bottom:4px">${esc(a.title||'(제목 없음)')}</div>
+          <div style="font-size:12px;color:#7a92a8;display:flex;gap:12px;flex-wrap:wrap">
+            <span>📅 ${esc(a.date||'')} ${esc(a.time||'')}</span>
+            ${a.floor?`<span>🏢 ${esc(a.floor)}${a.location?' · '+esc(a.location):''}</span>`:(a.location?`<span>📍 ${esc(a.location)}</span>`:'')}
+            ${a.partyName?`<span>👤 ${esc(a.partyName)}${a.partyPhone?' · '+esc(a.partyPhone):''}</span>`:''}
+          </div>
+          ${a.detail?`<div style="font-size:12.5px;color:#33567d;margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(a.detail)}</div>`:''}
+        </div>
+        ${totalCost>0?`<div style="text-align:right;font-size:14px;font-weight:800;color:#e74c3c;white-space:nowrap">💰 ${won(totalCost)}</div>`:''}
+      </div>
+    </div>`;
+  }).join("");
+  list.querySelectorAll(".acc-card").forEach(card=>{
+    card.addEventListener("mouseenter", ()=>card.style.boxShadow="0 4px 16px rgba(0,0,0,.08)");
+    card.addEventListener("mouseleave", ()=>card.style.boxShadow="");
+    card.addEventListener("click", ()=>openEditor("accident", card.dataset.accId));
+  });
 }
 
 function renderExpense(){
