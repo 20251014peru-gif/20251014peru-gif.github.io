@@ -1,10 +1,10 @@
 /* ===== 설정 ===== */
 const APP_VERSION = "v44-20260619";
 // v44-20260619 변경사항:
-// - 업무 추가 모달에서 지출유형 선택 시 자동으로 모드 전환
-// - 개인비용 선택 → 💸 자재구매 모드 (자재명/단가/수량/택배비/합계 자동계산)
-// - 후불청구 선택 → 📃 공사용역 모드 (자재 칸 숨김, 계약금액만 입력)
-// - 저장 시 지출 탭에 자동 등록 (개인비용→개인지출, 후불청구→세금계산서)
+// - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
+// - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
+// - 업무 데이터(날짜·업체·자재·수량·단가·합계)가 지출 모달에 자동 채워짐
+// - syncWorkExpense 자동 생성/삭제 제거 — 기존 지출 내역 안전 보호
 // v43-20260617 변경사항:
 // - 업무 입력창: 위치/단가/택배비/개선사항 필드 제거
 // - 합계→지출금액으로 이름 변경
@@ -640,51 +640,14 @@ function calcWorkTotal(obj){
 }
 
 
-/* ── v44: 업무 → 지출 자동 연동 (개인비용/후불청구 구분) ── */
+/* ── v44: syncWorkExpense 비활성화 ────────────────────────
+   사용자가 업무 모달에서 지출유형 선택 시,
+   저장 후 지출 모달이 자동으로 열리고 사용자가 직접 작성하는 구조로 변경됨.
+   자동 생성/삭제는 더 이상 하지 않음.
+   기존에 만들어진 연동 expense는 유지됨. */
 function syncWorkExpense(workObj, workId, savedId){
-  const id = workId || savedId;
-  if(!id) return;
-  const expType = workObj.expType||"없음";
-  // 기존 연동 expense 찾기
-  const linked = entries.filter(e=>e.kind==="expense"&&e.workId===id);
-
-  if(expType==="없음"||!Number(workObj.cost)){
-    // 지출 없음 → 기존 연동 expense 삭제
-    linked.forEach(e=>deleteRecord(e.id));
-    return;
-  }
-
-  // 개인비용 → 자재구매(품의용), 개인지출 탭에 등록
-  // 후불청구 → 공사/용역, 세금계산서 탭에 등록
-  const isPersonal = expType==="개인비용";
-  const expData = {
-    kind:"expense",
-    date: workObj.date||todayStr(),
-    expType: isPersonal ? "개인지출" : "세금계산서",
-    utype: isPersonal ? "자재구매" : "공사/용역",
-    title: workObj.title||(workObj.field||""),
-    amount: Number(workObj.cost)||0,
-    vendor: workObj.workVendor||workObj.vendor||"",
-    field: workObj.field||"",
-    matName: isPersonal ? (workObj.material||"") : "",
-    spec: isPersonal ? (workObj.matSpec||"") : "",
-    qty: isPersonal ? (Number(workObj.qty)||1) : 1,
-    unitPrice: isPersonal ? (Number(workObj.unitPrice)||0) : 0,
-    deliveryFee: isPersonal ? (Number(workObj.deliveryFee)||0) : 0,
-    memo: workObj.workNote || ((workObj.floor||"")+(workObj.field?" ["+workObj.field+"]":"")),
-    workId: id, // 업무와 연결 키
-    createdAt: Date.now()
-  };
-
-  if(linked.length){
-    // 기존 expense 업데이트
-    updateRecord(linked[0].id, expData);
-    linked.slice(1).forEach(e=>deleteRecord(e.id)); // 중복 제거
-  } else {
-    // 새 expense 생성
-    addRecord(expData);
-  }
-  renderAll();
+  // 의도적으로 비워둠 - 사용자가 직접 통제
+  return;
 }
 
 function renderAll(){
@@ -1194,7 +1157,7 @@ function openEditor(kind,id){
       const showHint=()=>{ const h=FIELD_HINT[fe.value]; if(h){ hintBox.textContent="💡 "+h; hintBox.style.display=""; } else hintBox.style.display="none"; };
       fe.addEventListener("change",showHint); showHint();
     }
-    // v44: 지출유형에 따른 동적 필드 표시
+    // v44: 지출유형에 따른 모달 색상 표시 (자재 칸은 항상 표시)
     const updateExpMode = ()=>{
       const expType = ($("m-expType")||{}).value||"없음";
       const modal = document.querySelector("#overlay .modal");
@@ -1204,15 +1167,6 @@ function openEditor(kind,id){
         else if(expType==="후불청구") modal.classList.add("exp-mode-tax");
         else modal.classList.add("exp-mode-none");
       }
-      // 후불청구: 자재 입력 칸 숨기기 (자재명/사양/수량/단가/택배비)
-      const matFields = ["material","matSpec","qty","unitPrice","deliveryFee"];
-      matFields.forEach(k=>{
-        const f = $("m-"+k);
-        if(!f) return;
-        const wrap = f.closest(".field");
-        if(!wrap) return;
-        wrap.style.display = (expType==="후불청구") ? "none" : "";
-      });
       // 합계 라벨 변경
       const costEl = $("m-cost");
       if(costEl){
@@ -1443,9 +1397,25 @@ $("mSave").addEventListener("click",async ()=>{
   if(mKind==="filelink"){ setTimeout(()=>renderFileLink(),50); }
   else if(mKind==="site"){ renderSite(); }
   else renderAll();
-  // 업무 저장 시 지출 자동 연동 + 합계 자동계산
-  if(mKind==="work"){ calcWorkTotal(obj); syncWorkExpense(obj, mId, savedId); applyExpLinks(savedId); }
+  // v44: 업무 저장 후 지출유형이 개인비용/후불청구면 → 지출 모달 자동으로 열기
+  let _v44OpenExpenseAfter = null;
+  if(mKind==="work" && !mId){ // 신규 업무만
+    const expType = obj.expType||"없음";
+    if(expType==="개인비용" || expType==="후불청구"){
+      _v44OpenExpenseAfter = {
+        workObj: obj,
+        workId: savedId,
+        expType: expType
+      };
+    }
+  }
+  // 업무 저장 시 합계 자동계산 (자동 연동은 v44에서 비활성)
+  if(mKind==="work"){ calcWorkTotal(obj); applyExpLinks(savedId); }
   $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
+  // v44: 지출 모달 자동 호출
+  if(_v44OpenExpenseAfter){
+    setTimeout(()=>openExpenseFromWork(_v44OpenExpenseAfter), 400);
+  }
   // 구글캘린더 자동 동기화
   if(typeof window.gcalSync==="function" && typeof accessToken!=="undefined" && accessToken){
     const savedEntry = entries.find(e=>e.id===savedId);
@@ -5483,6 +5453,40 @@ function renderExpenseStats(){
 // ===== 지출 추가/수정 모달 =====
 let expenseData = null;
 let expensePhoto = null;
+
+/* v44: 업무 저장 후 호출됨 - 업무 데이터로 지출 모달 자동 채워서 열기 */
+function openExpenseFromWork(info){
+  const w = info.workObj || {};
+  const expType = info.expType || "개인비용";
+  const isPersonal = expType === "개인비용";
+  // 지출 모달 데이터 준비 (업무 정보로 자동 채움)
+  expenseData = {
+    date: w.date || todayStr(),
+    expType: isPersonal ? "개인지출" : "세금계산서",
+    utype: isPersonal ? "자재구매" : "공사/용역",
+    title: w.title || "",
+    vendor: w.workVendor || "",
+    field: w.field || "",
+    matName: isPersonal ? (w.material || "") : (w.title || ""),
+    spec: w.matSpec || "",
+    qty: Number(w.qty) || 1,
+    unitPrice: Number(w.unitPrice) || 0,
+    deliveryFee: Number(w.deliveryFee) || 0,
+    amount: Number(w.cost) || 0,
+    memo: w.workNote || ((w.floor||"")+(w.field?" ["+w.field+"]":"")),
+    workId: info.workId,  // 업무와 연결
+    photo: null
+  };
+  expensePhoto = null;
+  // 탭도 해당 종류로 전환
+  EXP_FILTER.tab = isPersonal ? "personal" : "tax";
+  renderExpenseModal(null);
+  $("expenseOverlay").classList.add("show");
+  const m=$("expenseOverlay").querySelector(".modal"); if(m) m.scrollTop=0;
+  // 안내 토스트
+  toast(`💡 ${isPersonal?"💸 개인비용":"📃 후불청구"} 작성 — 업무 정보가 자동 입력됐어요`);
+}
+
 function openExpenseEditor(id){
   expenseData = id ? Object.assign({}, entries.find(e=>e.id===id)||{}) : {
     date: todayStr(),
