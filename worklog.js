@@ -6092,7 +6092,6 @@ function v43CopyWorkExcel(){
   const allEnt = (typeof entries!=='undefined') ? entries : [];
   const v43From = (document.getElementById('v43From')||{}).value||'';
   const v43To = (document.getElementById('v43To')||{}).value||'';
-  const activeCat = (document.getElementById('v43CatSelect')||{}).value||'all';
   const ents = allEnt.filter(e=>{
     if(e.kind!=='work') return false;
     if(v43From && (e.date||'')<v43From) return false;
@@ -6100,19 +6099,30 @@ function v43CopyWorkExcel(){
     return true;
   }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(!ents.length){ toast('복사할 업무가 없어요'); return; }
-  const rows = ents.map(e=>[
-    e.date||'',
-    e.floor||'',
-    e.loc||'',
-    e.title||'',
-    (e.detail||'').replace(/\n/g,' '),
-    e.material||'',
-    e.matSpec||'',
-    e.qty||''
-  ].map(v=>String(v).replace(/	/g,' ')).join('	'));
-  const header=['날짜','해당층','위치','업무내역','세부내용','자재명','자재사양','수량'].join('	');
-  const text=header+'\n'+rows.join('\n');
-  navigator.clipboard&&navigator.clipboard.writeText(text).then(()=>toast(`📋 ${ents.length}건 복사됐어요!`));
+  const rows = ents.map(e=>{
+    const floor = (e.floor||'').trim();
+    const title = (e.title||'').trim();
+    const detail = (e.detail||'').trim().replace(/[\t\n]/g,' ');
+    const matParts = [];
+    if(e.material) matParts.push(String(e.material).trim());
+    if(e.matSpec) matParts.push(String(e.matSpec).trim());
+    if(Number(e.qty)>0) matParts.push(e.qty+'개');
+    const material = matParts.join('_').replace(/[\t\n]/g,' ');
+    return [floor, title, detail, material].join('\t');
+  });
+  const text = rows.join('\n');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(
+      ()=>toast(`📋 ${ents.length}건 복사됐어요! 엑셀에 Ctrl+V`),
+      ()=>{
+        const ta=document.createElement('textarea');
+        ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.select();
+        try{ document.execCommand('copy'); toast(`📋 ${ents.length}건 복사됨`); }catch(e){ toast('복사 실패'); }
+        ta.remove();
+      }
+    );
+  }
 }
 
 function wireExpenseModal(){
