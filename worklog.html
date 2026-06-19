@@ -2516,6 +2516,18 @@
 
   // 전역 노출 (worklog.js에서 호출 가능)
   window.v43ActivateTab = v43ActivateTab;
+  // v44: 페이지 로드 시 중복 필터/그리드 호스트 청소
+  setTimeout(()=>{
+    ['filelink','docs','common','indiv','etc'].forEach(panel=>{
+      const p = document.getElementById('v43-'+panel);
+      if(!p) return;
+      // 첫 번째 필터/그리드만 남기고 나머지 제거
+      const filters = p.querySelectorAll('.doc-filter-host');
+      const grids = p.querySelectorAll('.doc-card-grid-host');
+      for(let i=1; i<filters.length; i++) filters[i].remove();
+      for(let i=1; i<grids.length; i++) grids[i].remove();
+    });
+  }, 500);
   dbg('v43 init OK');
 })();
 
@@ -4202,25 +4214,36 @@ function makeDocTab(cfg){
     if(!body) return;
     const list=getFiltered();
     if(cnt) cnt.textContent=list.length+'건';
-    // v44: 강화된 필터 영역 + 카드 그리드
+    // v44: 강화된 필터 영역 + 카드 그리드 (탭별 고유 ID로 중복 방지)
+    const gridHostId = `docGridHost-${cfg.tab}`;
+    const filterHostId = `docFilterHost-${cfg.tab}`;
     const table = body.closest('table');
-    let gridHost = table ? table.nextElementSibling : null;
-    if(!gridHost || !gridHost.classList.contains('doc-card-grid-host')){
+    let gridHost = document.getElementById(gridHostId);
+    if(!gridHost){
       gridHost = document.createElement('div');
+      gridHost.id = gridHostId;
       gridHost.className = 'doc-card-grid-host';
       if(table){
         table.style.display = 'none';
         table.parentNode.insertBefore(gridHost, table.nextSibling);
       }
     }
-    // v44: 필터 영역 별도 호스트
-    let filterHost = gridHost.previousElementSibling;
-    if(!filterHost || !filterHost.classList.contains('doc-filter-host')){
+    // v44: 필터 영역 별도 호스트 (ID 기반 중복 방지)
+    let filterHost = document.getElementById(filterHostId);
+    if(!filterHost){
       filterHost = document.createElement('div');
+      filterHost.id = filterHostId;
       filterHost.className = 'doc-filter-host';
       filterHost.style.cssText = 'margin-bottom:14px';
       gridHost.parentNode.insertBefore(filterHost, gridHost);
     }
+    // v44: 중복 호스트 제거 (혹시 모를 잔재)
+    document.querySelectorAll(`#v43-${cfg.tab=='insp'?'filelink':cfg.tab} .doc-filter-host`).forEach(el=>{
+      if(el.id !== filterHostId) el.remove();
+    });
+    document.querySelectorAll(`#v43-${cfg.tab=='insp'?'filelink':cfg.tab} .doc-card-grid-host`).forEach(el=>{
+      if(el.id !== gridHostId) el.remove();
+    });
     // v44: 필터 UI 렌더
     renderFilterUI(filterHost);
 
