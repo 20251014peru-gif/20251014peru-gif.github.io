@@ -1090,22 +1090,30 @@ function openNewMaterialModal(prefilledName, onSaved){
       <h3 style="margin:0 0 16px;font-size:18px;font-weight:800;color:#0369a1">📦 새 자재 추가</h3>
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">자재명 <span style="color:#e74c3c">*</span></label>
-          <input type="text" id="newMatName" value="${esc(prefilledName||'')}" placeholder="예: 형광등 36W" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">서브원 상품ID <span style="color:#aab8c8;font-weight:500">(선택)</span></label>
+          <input type="text" id="newMatShopId" placeholder="예: 6573068" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">규격/사양</label>
-          <input type="text" id="newMatSpec" placeholder="예: LED, 5500K, 800lm" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">품목명 <span style="color:#e74c3c">*</span></label>
+          <input type="text" id="newMatName" value="${esc(prefilledName||'')}" placeholder="예: 형광등, 점보롤" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">규격 <span style="color:#aab8c8;font-weight:500">(간단히 - 정확한 규격만)</span></label>
+          <input type="text" id="newMatSpec" placeholder="예: 36W / LED / 5500K" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div style="display:flex;gap:10px">
           <div style="flex:1">
-            <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">단위</label>
-            <input type="text" id="newMatUnit" placeholder="EA, 박스, 롤" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+            <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">단위코드</label>
+            <input type="text" id="newMatUnit" placeholder="EA, BOX, ROL" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
           </div>
           <div style="flex:1">
-            <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">기본 단가 (원)</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">판매단가 (원)</label>
             <input type="number" id="newMatPrice" placeholder="0" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
           </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">제조원</label>
+          <input type="text" id="newMatMaker" placeholder="예: (주)동원피앤아이" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">분야</label>
@@ -1114,8 +1122,8 @@ function openNewMaterialModal(prefilledName, onSaved){
           </select>
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">거래처 (선택)</label>
-          <input type="text" id="newMatVendor" placeholder="예: 한국전기" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">거래처 <span style="color:#aab8c8;font-weight:500">(기본: 서브원)</span></label>
+          <input type="text" id="newMatVendor" value="서브원" placeholder="예: 서브원" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button id="newMatCancel" type="button" style="flex:1;height:48px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
@@ -1124,7 +1132,7 @@ function openNewMaterialModal(prefilledName, onSaved){
       </div>
     </div>`;
   document.body.appendChild(ov);
-  // 자재명 입력칸에 포커스
+  // 품목명 입력칸에 포커스
   setTimeout(()=>{
     const nameEl = document.getElementById('newMatName');
     if(nameEl){ nameEl.focus(); nameEl.select(); }
@@ -1136,22 +1144,24 @@ function openNewMaterialModal(prefilledName, onSaved){
   // 저장
   document.getElementById('newMatSave').addEventListener('click', ()=>{
     const name = (document.getElementById('newMatName').value||'').trim();
-    if(!name){ toast('자재명을 입력하세요'); return; }
+    if(!name){ toast('품목명을 입력하세요'); return; }
+    const shopId = (document.getElementById('newMatShopId').value||'').trim();
     const spec = (document.getElementById('newMatSpec').value||'').trim();
     const unit = (document.getElementById('newMatUnit').value||'').trim();
     const price = Number(document.getElementById('newMatPrice').value)||0;
+    const maker = (document.getElementById('newMatMaker').value||'').trim();
     const field = document.getElementById('newMatField').value||'';
     const vendor = (document.getElementById('newMatVendor').value||'').trim();
     // 자재 탭에 새 item 추가
     const newItem = {
       kind: "item",
       itemCode: (typeof nextItemCode==='function')?nextItemCode():"M"+Date.now(),
-      shopId: "",
+      shopId: shopId,
       itemName: name,
       spec: spec,
       unit: unit,
       field: field,
-      maker: "",
+      maker: maker,
       vendor: vendor,
       unitPrice: price,
       safetyStock: 0,
@@ -1168,7 +1178,7 @@ function openNewMaterialModal(prefilledName, onSaved){
     try{ if(typeof renderMaterial==='function') renderMaterial(); }catch(e){}
   });
   // Enter 키로 저장
-  ['newMatName','newMatSpec','newMatUnit','newMatPrice','newMatVendor'].forEach(id=>{
+  ['newMatShopId','newMatName','newMatSpec','newMatUnit','newMatPrice','newMatMaker','newMatVendor'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.addEventListener('keydown', e=>{
       if(e.key==='Enter'){ e.preventDefault(); document.getElementById('newMatSave').click(); }
@@ -4523,6 +4533,8 @@ function renderMaterial(){
   }
   // 월별 통계
   renderMatMonthlySummary();
+  // v44: 분야별 칩
+  renderMatFieldChips();
   // 탭별 렌더
   $("matStockPanel").style.display = MAT_FILTER.tab==="stock" ? "" : "none";
   $("matItemPanel").style.display  = MAT_FILTER.tab==="item"  ? "" : "none";
@@ -4530,6 +4542,57 @@ function renderMaterial(){
   if(MAT_FILTER.tab==="stock") renderStockOverview();
   else if(MAT_FILTER.tab==="item") renderItemList();
   else if(MAT_FILTER.tab==="tx") renderTxList();
+}
+
+// v44: 자재 탭 - 분야별 빠른 필터 칩
+function renderMatFieldChips(){
+  let chipsBox = document.getElementById('matFieldChips');
+  if(!chipsBox){
+    // matMonthlySummary 다음에 칩 영역 동적 추가
+    const summary = document.getElementById('matMonthlySummary');
+    if(!summary) return;
+    chipsBox = document.createElement('div');
+    chipsBox.id = 'matFieldChips';
+    chipsBox.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin:12px 0';
+    summary.parentNode.insertBefore(chipsBox, summary.nextSibling);
+  }
+  const items = entries.filter(e=>e.kind==="item");
+  if(!items.length){ chipsBox.innerHTML=''; return; }
+  // 분야별 카운트
+  const cnt = {};
+  items.forEach(it=>{
+    const f = it.field || '기타';
+    cnt[f] = (cnt[f]||0) + 1;
+  });
+  // 색상 매핑
+  const colors = {
+    '청소': {bg:'#e8f5e9', fg:'#27ae60'},
+    '영선': {bg:'#e3f2fd', fg:'#3f7cb8'},
+    '전기': {bg:'#fff8e1', fg:'#f39c12'},
+    '소방': {bg:'#ffebee', fg:'#e74c3c'},
+    '기계': {bg:'#f3e5f5', fg:'#8e44ad'},
+    '기타': {bg:'#eceff1', fg:'#7a92a8'},
+  };
+  // 전체 칩 + 분야별 칩
+  const total = items.length;
+  let html = `<button class="mat-field-chip" data-mfc="전체" style="padding:6px 12px;border-radius:20px;border:2px solid ${MAT_FILTER.field==='전체'?'#3f7cb8':'#dbe6f4'};background:${MAT_FILTER.field==='전체'?'#3f7cb8':'#fff'};color:${MAT_FILTER.field==='전체'?'#fff':'#1a2f45'};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📦 전체 ${total}</button>`;
+  // 분야별 (카운트 많은 순)
+  const sortedFields = Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);
+  sortedFields.forEach(f=>{
+    const c = colors[f] || colors['기타'];
+    const isActive = MAT_FILTER.field === f;
+    html += `<button class="mat-field-chip" data-mfc="${esc(f)}" style="padding:6px 12px;border-radius:20px;border:2px solid ${isActive?c.fg:'#dbe6f4'};background:${isActive?c.fg:c.bg};color:${isActive?'#fff':c.fg};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${esc(f)} ${cnt[f]}</button>`;
+  });
+  chipsBox.innerHTML = html;
+  chipsBox.querySelectorAll('.mat-field-chip').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      MAT_FILTER.field = btn.dataset.mfc;
+      // 셀렉트도 동기화
+      const sel = $("matFieldFilter");
+      if(sel) sel.value = MAT_FILTER.field;
+      renderMaterial();
+    });
+  });
 }
 
 // v26: 자재 탭 상단 — 월별 구매·사용 요약
