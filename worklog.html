@@ -1113,16 +1113,16 @@
   <div class="v43-panel" id="v43-filelink">
     <div style="margin-top:14px">
 
-      <!-- 툴바 -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-        <select id="inspTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
-        <select id="inspYearFilter" style="height:40px;padding:0 10px;border:2px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none"></select>
-        <select id="inspMonthFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      <!-- 툴바 (v44: makeDocTab의 새 필터가 대체. 옛 필터는 숨김. 단 ID는 유지) -->
+      <div style="display:none">
+        <select id="inspTypeFilter"></select>
+        <select id="inspYearFilter"></select>
+        <select id="inspMonthFilter"></select>
+        <button id="inspYearMgrBtn"></button>
+        <button id="inspCatMgrBtn"></button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-        <button id="inspYearMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#8e44ad;border:1.5px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
-        <button id="inspCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
-        <button id="inspAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;justify-content:flex-end">
+        <button id="inspAddBtn" style="height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation">➕ 추가</button>
       </div>
 
       <!-- 건수 -->
@@ -1167,7 +1167,7 @@
             <option value="기타">기타</option>
           </select>
         </div>
-        <div>
+        <div style="display:none">
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월 (예: 2026-06)</label>
           <select id="inspModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
@@ -1206,16 +1206,17 @@
     <!-- ===== 운영실무 패널 (문서 탭) ===== -->
   <div class="v43-panel" id="v43-docs">
     <div style="margin-top:14px">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-        <select id="docsTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
-        <select id="docsYearFilter" style="height:40px;padding:0 10px;border:2px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none"></select>
-        <select id="docsMonthFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      <!-- v44: 옛 필터는 숨김 (makeDocTab 새 필터가 대체). ID는 호환 위해 유지 -->
+      <div style="display:none">
+        <select id="docsTypeFilter"></select>
+        <select id="docsYearFilter"></select>
+        <select id="docsMonthFilter"></select>
+        <button id="docsYearMgrBtn"></button>
+        <button id="docsMonthMgrBtn"></button>
+        <button id="docsCatMgrBtn"></button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-        <button id="docsYearMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#8e44ad;border:1.5px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
-        <button id="docsMonthMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#27ae60;border:1.5px solid #27ae60;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
-        <button id="docsCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
-        <button id="docsAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;justify-content:flex-end">
+        <button id="docsAddBtn" style="height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation">➕ 추가</button>
       </div>
       <div style="margin-bottom:8px"><span id="docsCount" style="font-size:12px;color:#aab8c8"></span></div>
       <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
@@ -1242,7 +1243,7 @@
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
           <select id="docsModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
-        <div>
+        <div style="display:none">
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월</label>
           <select id="docsModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
@@ -1281,16 +1282,17 @@
   <!-- ===== 임대공용 패널 ===== -->
   <div class="v43-panel" id="v43-common">
     <div style="margin-top:14px">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-        <select id="commonTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
-        <select id="commonYearFilter" style="height:40px;padding:0 10px;border:2px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f8f0ff;color:#1a2f45;cursor:pointer;outline:none"></select>
-        <select id="commonMonthFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      <!-- v44: 옛 필터 숨김 -->
+      <div style="display:none">
+        <select id="commonTypeFilter"></select>
+        <select id="commonYearFilter"></select>
+        <select id="commonMonthFilter"></select>
+        <button id="commonYearMgrBtn"></button>
+        <button id="commonMonthMgrBtn"></button>
+        <button id="commonCatMgrBtn"></button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-        <button id="commonYearMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#8e44ad;border:1.5px solid #8e44ad;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📆 년관리</button>
-        <button id="commonMonthMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#27ae60;border:1.5px solid #27ae60;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📅 월관리</button>
-        <button id="commonCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
-        <button id="commonAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;justify-content:flex-end">
+        <button id="commonAddBtn" style="height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation">➕ 추가</button>
       </div>
       <div style="margin-bottom:8px"><span id="commonCount" style="font-size:12px;color:#aab8c8"></span></div>
       <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
@@ -1311,12 +1313,14 @@
   <!-- ===== 임대개별 패널 ===== -->
   <div class="v43-panel" id="v43-indiv">
     <div style="margin-top:14px">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <select id="indivTypeFilter" style="height:40px;padding:0 10px;border:2px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:#f0f6ff;color:#1a2f45;cursor:pointer;outline:none"></select>
+      <!-- v44: 옛 필터 숨김 (indivFloorFilter는 호환 위해 유지) -->
+      <div style="display:none">
+        <select id="indivTypeFilter"></select>
+        <select id="indivFloorFilter"></select>
+        <button id="indivCatMgrBtn"></button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-        <button id="indivCatMgrBtn" style="height:36px;padding:0 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 종류관리</button>
-        <button id="indivAddBtn" style="height:36px;padding:0 16px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:auto;touch-action:manipulation">➕ 추가</button>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;justify-content:flex-end">
+        <button id="indivAddBtn" style="height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation">➕ 추가</button>
       </div>
       <div style="margin-bottom:8px"><span id="indivCount" style="font-size:12px;color:#aab8c8"></span></div>
       <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
@@ -1344,7 +1348,7 @@
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
           <select id="commonModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
-        <div>
+        <div style="display:none">
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월 (예: 2026-06)</label>
           <select id="commonModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
@@ -1422,7 +1426,7 @@
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
           <select id="indivModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
-        <div>
+        <div style="display:none">
           <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월</label>
           <select id="indivModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
@@ -4421,6 +4425,8 @@ function makeDocTab(cfg){
           opt.value = v; opt.textContent = v;
           sel.appendChild(opt);
           sel.value = v;
+          // v44: 필터 영역의 종류 select도 즉시 갱신
+          render();
           if(typeof toast==='function') toast('종류 추가됨');
         }
       });
@@ -4444,13 +4450,15 @@ function makeDocTab(cfg){
       typeLabel.appendChild(addBtn);
       typeLabel.appendChild(mgrBtn);
     }
-    // 월 드롭다운
+    // 월 드롭다운 (v44: 자동으로 오늘 월 채움 - 사용자 안 보임)
     const months=loadMonths().sort().reverse();
     const today=new Date();
     const defMonth=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+    // 기본 옵션에 오늘 월 추가
+    if(!months.includes(defMonth)) months.unshift(defMonth);
     el(cfg.modalMonthId).innerHTML=months.map(m=>`<option value="${m}">${m}</option>`).join('');
-    if(d) el(cfg.modalMonthId).value=d.month||months[0]||defMonth;
-    else if(months.length) el(cfg.modalMonthId).value=months[0];
+    if(d) el(cfg.modalMonthId).value=d.month||defMonth;
+    else el(cfg.modalMonthId).value=defMonth;
     el(cfg.modalNameId).value=d?(d.name||''):'';
     el(cfg.modalPathId).value=d?(d.path||''):'';
     el(cfg.modalMemoId).value=d?(d.memo||''):'';
@@ -4563,6 +4571,8 @@ function makeDocTab(cfg){
       opt.value = v; opt.textContent = v; opt.selected = true;
       sel.appendChild(opt);
       sel.value = v;
+      // v44: 필터 영역도 즉시 갱신
+      render();
       if(typeof toast==='function') toast('분야 추가됨');
     });
     // v44: 분야 관리 모달
