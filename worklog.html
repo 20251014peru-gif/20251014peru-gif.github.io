@@ -2368,7 +2368,7 @@
   // 마지막 탭 복원
   function restoreTab(){
     try{
-      const v43tabs=['main','memo','calendar','filelink','docs','common','indiv','material','password','diag','ai'];
+      const v43tabs=['main','memo','calendar','filelink','docs','common','indiv','accident','material','password','diag','ai'];
       const saved = localStorage.getItem('v43_tab')||'main';
       const safeTab = v43tabs.includes(saved) ? saved : 'main';
       v43ActivateTab(safeTab);
