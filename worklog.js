@@ -1076,6 +1076,106 @@ if(f.type==="timepick"){
   return `<div class="field ${f.full?"full":""}"><label>${f.label}${req}</label>${inner}</div>`;
 }
 /* v44: 자재명 검색 가능한 UI (자재 탭의 item과 연동, 초성검색 지원) */
+/* v44: 새 자재 빠르게 추가하는 미니 모달 */
+function openNewMaterialModal(prefilledName, onSaved){
+  // 기존 오버레이 있으면 제거
+  const oldOv = document.getElementById('newMatOverlay');
+  if(oldOv) oldOv.remove();
+  // 새 오버레이 생성
+  const ov = document.createElement('div');
+  ov.id = 'newMatOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.2);max-height:90vh;overflow:auto">
+      <h3 style="margin:0 0 16px;font-size:18px;font-weight:800;color:#0369a1">📦 새 자재 추가</h3>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">자재명 <span style="color:#e74c3c">*</span></label>
+          <input type="text" id="newMatName" value="${esc(prefilledName||'')}" placeholder="예: 형광등 36W" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">규격/사양</label>
+          <input type="text" id="newMatSpec" placeholder="예: LED, 5500K, 800lm" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">단위</label>
+            <input type="text" id="newMatUnit" placeholder="EA, 박스, 롤" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          </div>
+          <div style="flex:1">
+            <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">기본 단가 (원)</label>
+            <input type="number" id="newMatPrice" placeholder="0" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">분야</label>
+          <select id="newMatField" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+            ${FIELDS.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">거래처 (선택)</label>
+          <input type="text" id="newMatVendor" placeholder="예: 한국전기" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="newMatCancel" type="button" style="flex:1;height:48px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
+          <button id="newMatSave" type="button" style="flex:2;height:48px;padding:0 14px;border:none;border-radius:12px;background:#0369a1;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">📦 자재 탭에 저장</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  // 자재명 입력칸에 포커스
+  setTimeout(()=>{
+    const nameEl = document.getElementById('newMatName');
+    if(nameEl){ nameEl.focus(); nameEl.select(); }
+  }, 100);
+  // 닫기 처리
+  const close = ()=>{ ov.remove(); };
+  document.getElementById('newMatCancel').addEventListener('click', close);
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  // 저장
+  document.getElementById('newMatSave').addEventListener('click', ()=>{
+    const name = (document.getElementById('newMatName').value||'').trim();
+    if(!name){ toast('자재명을 입력하세요'); return; }
+    const spec = (document.getElementById('newMatSpec').value||'').trim();
+    const unit = (document.getElementById('newMatUnit').value||'').trim();
+    const price = Number(document.getElementById('newMatPrice').value)||0;
+    const field = document.getElementById('newMatField').value||'';
+    const vendor = (document.getElementById('newMatVendor').value||'').trim();
+    // 자재 탭에 새 item 추가
+    const newItem = {
+      kind: "item",
+      itemCode: (typeof nextItemCode==='function')?nextItemCode():"M"+Date.now(),
+      shopId: "",
+      itemName: name,
+      spec: spec,
+      unit: unit,
+      field: field,
+      maker: "",
+      vendor: vendor,
+      unitPrice: price,
+      safetyStock: 0,
+      recurring: "비주기",
+      location: "",
+      memo: "업무 입력 시 새로 추가됨",
+      createdAt: Date.now()
+    };
+    const saved = addRecord(newItem);
+    close();
+    toast(`✅ "${name}" 자재가 자재 탭에 저장됐어요`);
+    if(onSaved) onSaved(saved||newItem);
+    // 자재 탭 새로고침
+    try{ if(typeof renderMaterial==='function') renderMaterial(); }catch(e){}
+  });
+  // Enter 키로 저장
+  ['newMatName','newMatSpec','newMatUnit','newMatPrice','newMatVendor'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); document.getElementById('newMatSave').click(); }
+    });
+  });
+}
+
 function makeMaterialSearchUI(inputId, listId, onSelect){
   const inp = document.getElementById(inputId);
   const list = document.getElementById(listId);
@@ -1108,17 +1208,9 @@ function makeMaterialSearchUI(inputId, listId, onSelect){
 
   function render(q){
     q = (q||"").trim();
-    // 자재 탭의 item들 + 기존 업무에서 쓰던 material 이름 (중복 제거)
+    // v44: 자재 탭의 item만 표시 (기록 항목은 제외)
     const items = entries.filter(e=>e.kind==="item"&&e.itemName);
-    // 기존 업무 자재명도 함께 (item에 없는 것)
-    const itemNames = new Set(items.map(it=>(it.itemName||"").trim()));
-    const workMatNames = [...new Set(entries.filter(e=>e.kind==="work"&&e.material).map(e=>(e.material||"").trim()))]
-      .filter(n=>n && !itemNames.has(n));
-    // 합치기: item 우선
-    const all = [
-      ...items.map(it=>({type:"item",name:it.itemName||"",spec:it.spec||"",unit:it.unit||"",field:it.field||"",vendor:it.vendor||""})),
-      ...workMatNames.map(n=>({type:"work",name:n,spec:"",unit:"",field:"",vendor:""}))
-    ];
+    const all = items.map(it=>({type:"item",id:it.id,name:it.itemName||"",spec:it.spec||"",unit:it.unit||"",field:it.field||"",vendor:it.vendor||""}));
     let filtered;
     if(!q){
       filtered = all.slice(0,50);
@@ -1134,27 +1226,37 @@ function makeMaterialSearchUI(inputId, listId, onSelect){
       });
     }
     if(!filtered.length){
-      list.innerHTML = `<div style="padding:14px;color:#aab8c8;font-size:13px">
-        "${esc(q)}" 검색 결과 없음<br>
-        <span style="color:#3f7cb8;font-weight:700">Enter 또는 클릭으로 새 자재 "${esc(q)}" 추가</span>
-      </div>`;
+      // v44: 없을 때 → 새 자재 추가 모달 열기 버튼
+      const newName = q || "";
+      list.innerHTML = `
+        <div style="padding:14px;text-align:center;background:#f7faff;border-radius:8px">
+          <div style="font-size:13px;color:#7a92a8;margin-bottom:10px">
+            ${newName ? `"<b style="color:#1a2f45">${esc(newName)}</b>" 자재가 없어요` : '자재가 없어요'}
+          </div>
+          <button type="button" class="msl-add-new" style="background:#3f7cb8;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">
+            ➕ 새 자재로 추가하기
+          </button>
+        </div>`;
       list.style.display = "block";
-      // 클릭으로도 추가 가능
-      list.querySelector("div").style.cursor = "pointer";
-      list.querySelector("div").addEventListener("mousedown",e=>{
-        e.preventDefault();
-        inp.value = q;
-        list.style.display = "none";
-        const cb = wrap && wrap.querySelector('.msl-clear');
-        if(cb) cb.style.display = 'block';
-        if(onSelect) onSelect({type:"new",name:q,spec:"",unit:""});
-      });
+      const addBtn = list.querySelector(".msl-add-new");
+      if(addBtn){
+        addBtn.addEventListener("mousedown", e=>{
+          e.preventDefault();
+          list.style.display = "none";
+          // 자재 추가 모달 열기 (이름은 미리 채움)
+          openNewMaterialModal(newName, (newItem)=>{
+            // 저장 후 input에 자동 채움
+            inp.value = newItem.itemName || newName;
+            const cb = wrap && wrap.querySelector('.msl-clear');
+            if(cb) cb.style.display = 'block';
+            if(onSelect) onSelect({type:"item",name:newItem.itemName,spec:newItem.spec,unit:newItem.unit,field:newItem.field});
+          });
+        });
+      }
       return;
     }
     list.innerHTML = filtered.map((it,i)=>{
-      const badge = it.type==="item"
-        ? `<span style="background:#0369a1;color:#fff;font-size:10px;padding:1px 6px;border-radius:5px;font-weight:700;margin-right:6px">📦 자재</span>`
-        : `<span style="background:#aab8c8;color:#fff;font-size:10px;padding:1px 6px;border-radius:5px;font-weight:700;margin-right:6px">기록</span>`;
+      const badge = `<span style="background:#0369a1;color:#fff;font-size:10px;padding:1px 6px;border-radius:5px;font-weight:700;margin-right:6px">📦 자재</span>`;
       const sub = [it.spec, it.unit && `[${it.unit}]`].filter(Boolean).join(" · ");
       return `
         <div class="msl-item" data-idx="${i}" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f6ff;transition:background .1s">
@@ -1497,6 +1599,37 @@ function openEditor(kind,id){
           specEl.value = `[${picked.unit}]`;
         }
       });
+      // v44: 수량 필드 옆에 ➕ 자재 추가 버튼 동적 추가
+      const qtyEl = $("m-qty");
+      if(qtyEl){
+        const qtyWrap = qtyEl.closest(".field");
+        if(qtyWrap && !qtyWrap.querySelector(".btn-add-material")){
+          const lbl = qtyWrap.querySelector("label");
+          if(lbl){
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "btn-add-material";
+            btn.innerHTML = "➕ 자재 추가";
+            btn.style.cssText = "margin-left:8px;background:#0369a1;color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;vertical-align:middle";
+            btn.addEventListener("click", (e)=>{
+              e.preventDefault();
+              // 자재명 input에 있는 값을 미리 채움
+              const matInp = $("m-material");
+              const preFilled = matInp ? (matInp.value||"").trim() : "";
+              openNewMaterialModal(preFilled, (newItem)=>{
+                // 저장 후 자재명/사양/단위 자동 채움
+                if(matInp) matInp.value = newItem.itemName || "";
+                const specEl = $("m-matSpec");
+                if(specEl){
+                  if(newItem.spec) specEl.value = newItem.spec;
+                  else if(newItem.unit) specEl.value = `[${newItem.unit}]`;
+                }
+              });
+            });
+            lbl.appendChild(btn);
+          }
+        }
+      }
     }, 100);
   }
   $("overlay").classList.add("show");
