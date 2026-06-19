@@ -342,7 +342,30 @@ function makeFieldSearchUI(inputId, listId, onSelect){
   if(!inp || !list) return;
   if(inp._fieldACwired) return;
   inp._fieldACwired = true;
-  
+
+  // ✕ 클리어 버튼 추가 (담당업체와 동일하게)
+  const wrap = inp.parentElement;
+  if(wrap && !wrap.querySelector('.fsl-clear')){
+    wrap.style.position = 'relative';
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'fsl-clear';
+    clearBtn.textContent = '✕';
+    clearBtn.style.cssText = 'position:absolute;right:56px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:16px;color:#aab8c8;cursor:pointer;padding:4px;display:none;line-height:1;z-index:10';
+    clearBtn.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      inp.value = '';
+      clearBtn.style.display = 'none';
+      list.style.display = 'none';
+      inp.focus();
+      render(''); // 클리어 후 전체 목록 표시
+    });
+    wrap.appendChild(clearBtn);
+    inp.addEventListener('input', ()=>{
+      clearBtn.style.display = inp.value ? 'block' : 'none';
+    });
+  }
+
   function render(q){
     q = (q||"").trim();
     let filtered;
@@ -378,18 +401,22 @@ function makeFieldSearchUI(inputId, listId, onSelect){
         e.preventDefault();
         inp.value = el.dataset.fv;
         list.style.display = "none";
+        const cb = wrap && wrap.querySelector('.fsl-clear');
+        if(cb) cb.style.display = 'block';
         if(onSelect) onSelect(el.dataset.fv);
       });
     });
   }
-  
+
   let activeIdx = -1;
   function updateActive(items){
     items.forEach((el,i)=>{ el.style.background = i===activeIdx ? "#e8f0fb" : ""; });
   }
-  
+
   inp.addEventListener("input", ()=>{ activeIdx=-1; render(inp.value); });
   inp.addEventListener("focus", ()=>{ activeIdx=-1; render(inp.value); });
+  // v44: 클릭 시에도 목록 다시 표시 (이미 focus 상태에서 클릭한 경우)
+  inp.addEventListener("click", ()=>{ activeIdx=-1; render(inp.value); });
   inp.addEventListener("blur", ()=>setTimeout(()=>{ list.style.display="none"; activeIdx=-1; }, 200));
   inp.addEventListener("keydown", e=>{
     const items = [...list.querySelectorAll(".fsl-item")];
@@ -434,6 +461,12 @@ function makeFieldSearchUI(inputId, listId, onSelect){
       }
     }
   });
+
+  // 초기 클리어 버튼 상태 (값이 이미 있으면 표시)
+  setTimeout(()=>{
+    const cb = wrap && wrap.querySelector('.fsl-clear');
+    if(cb) cb.style.display = inp.value ? 'block' : 'none';
+  }, 50);
 }
 
 function datesBetween(start,end){
@@ -1030,14 +1063,174 @@ if(f.type==="timepick"){
       const titles=[...new Set(entries.filter(e=>e.kind==="work"&&e.title).map(e=>e.title))].sort();
       inner=`<input type="text" id="m-${f.k}" list="dl-title" autocomplete="off"><datalist id="dl-title">${titles.map(v=>`<option value="${esc(v)}"></option>`).join("")}</datalist>`;
     } else if(f.k==="material"){
-      const mats=[...new Set(entries.filter(e=>e.kind==="work"&&e.material).map(e=>e.material))].sort();
-      inner=`<input type="text" id="m-${f.k}" list="dl-material" autocomplete="off"><datalist id="dl-material">${mats.map(v=>`<option value="${esc(v)}"></option>`).join("")}</datalist>`;
+      // v44: 자재명 - 자재 탭의 품목과 연동된 검색 가능한 입력창
+      inner=`<div style="position:relative">
+        <input type="text" id="m-${f.k}" placeholder="클릭하면 자재 목록, 검색 가능, 없으면 새로 추가" autocomplete="off" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        <div id="m-${f.k}-list" style="display:none;position:absolute;top:48px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:260px;overflow:auto"></div>
+      </div>`;
     } else if(f.k==="name" && mKind==="call"){
       inner=`<input type="text" id="m-${f.k}" autocomplete="off" placeholder="이름 입력 시 연락처 자동완성">`;
     } else inner=`<input type="${t}" id="m-${f.k}"${im}>`;
   }
   const req=f.req?' <span class="req">*</span>':'';
   return `<div class="field ${f.full?"full":""}"><label>${f.label}${req}</label>${inner}</div>`;
+}
+/* v44: 자재명 검색 가능한 UI (자재 탭의 item과 연동, 초성검색 지원) */
+function makeMaterialSearchUI(inputId, listId, onSelect){
+  const inp = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if(!inp || !list) return;
+  if(inp._matACwired) return;
+  inp._matACwired = true;
+
+  // ✕ 클리어 버튼
+  const wrap = inp.parentElement;
+  if(wrap && !wrap.querySelector('.msl-clear')){
+    wrap.style.position = 'relative';
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'msl-clear';
+    clearBtn.textContent = '✕';
+    clearBtn.style.cssText = 'position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:16px;color:#aab8c8;cursor:pointer;padding:4px;display:none;line-height:1;z-index:10';
+    clearBtn.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      inp.value = '';
+      clearBtn.style.display = 'none';
+      list.style.display = 'none';
+      inp.focus();
+      render('');
+    });
+    wrap.appendChild(clearBtn);
+    inp.addEventListener('input', ()=>{
+      clearBtn.style.display = inp.value ? 'block' : 'none';
+    });
+  }
+
+  function render(q){
+    q = (q||"").trim();
+    // 자재 탭의 item들 + 기존 업무에서 쓰던 material 이름 (중복 제거)
+    const items = entries.filter(e=>e.kind==="item"&&e.itemName);
+    // 기존 업무 자재명도 함께 (item에 없는 것)
+    const itemNames = new Set(items.map(it=>(it.itemName||"").trim()));
+    const workMatNames = [...new Set(entries.filter(e=>e.kind==="work"&&e.material).map(e=>(e.material||"").trim()))]
+      .filter(n=>n && !itemNames.has(n));
+    // 합치기: item 우선
+    const all = [
+      ...items.map(it=>({type:"item",name:it.itemName||"",spec:it.spec||"",unit:it.unit||"",field:it.field||"",vendor:it.vendor||""})),
+      ...workMatNames.map(n=>({type:"work",name:n,spec:"",unit:"",field:"",vendor:""}))
+    ];
+    let filtered;
+    if(!q){
+      filtered = all.slice(0,50);
+    } else if(isChosungOnly(q)){
+      filtered = all.filter(it => getChosung(it.name).includes(q));
+    } else {
+      const ql = q.toLowerCase();
+      filtered = all.filter(it => {
+        const text = (it.name+" "+it.spec).toLowerCase();
+        if(text.includes(ql)) return true;
+        if(getChosung(it.name).includes(q)) return true;
+        return false;
+      });
+    }
+    if(!filtered.length){
+      list.innerHTML = `<div style="padding:14px;color:#aab8c8;font-size:13px">
+        "${esc(q)}" 검색 결과 없음<br>
+        <span style="color:#3f7cb8;font-weight:700">Enter 또는 클릭으로 새 자재 "${esc(q)}" 추가</span>
+      </div>`;
+      list.style.display = "block";
+      // 클릭으로도 추가 가능
+      list.querySelector("div").style.cursor = "pointer";
+      list.querySelector("div").addEventListener("mousedown",e=>{
+        e.preventDefault();
+        inp.value = q;
+        list.style.display = "none";
+        const cb = wrap && wrap.querySelector('.msl-clear');
+        if(cb) cb.style.display = 'block';
+        if(onSelect) onSelect({type:"new",name:q,spec:"",unit:""});
+      });
+      return;
+    }
+    list.innerHTML = filtered.map((it,i)=>{
+      const badge = it.type==="item"
+        ? `<span style="background:#0369a1;color:#fff;font-size:10px;padding:1px 6px;border-radius:5px;font-weight:700;margin-right:6px">📦 자재</span>`
+        : `<span style="background:#aab8c8;color:#fff;font-size:10px;padding:1px 6px;border-radius:5px;font-weight:700;margin-right:6px">기록</span>`;
+      const sub = [it.spec, it.unit && `[${it.unit}]`].filter(Boolean).join(" · ");
+      return `
+        <div class="msl-item" data-idx="${i}" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f6ff;transition:background .1s">
+          <div style="font-size:14px;font-weight:700;color:#1a2f45">${badge}${esc(it.name)}</div>
+          ${sub?`<div style="font-size:12px;color:#aab8c8;margin-top:2px;margin-left:48px">${esc(sub)}</div>`:""}
+        </div>`;
+    }).join("");
+    list.style.display = "block";
+    list.querySelectorAll(".msl-item").forEach((el,i)=>{
+      el.addEventListener("mouseenter",()=>el.style.background="#f0f6ff");
+      el.addEventListener("mouseleave",()=>el.style.background="");
+      el.addEventListener("mousedown",e=>{
+        e.preventDefault();
+        const picked = filtered[i];
+        inp.value = picked.name;
+        list.style.display = "none";
+        const cb = wrap && wrap.querySelector('.msl-clear');
+        if(cb) cb.style.display = 'block';
+        if(onSelect) onSelect(picked);
+      });
+    });
+  }
+
+  let activeIdx = -1;
+  function updateActive(items){
+    items.forEach((el,i)=>{ el.style.background = i===activeIdx ? "#e8f0fb" : ""; });
+  }
+
+  inp.addEventListener("input", ()=>{ activeIdx=-1; render(inp.value); });
+  inp.addEventListener("focus", ()=>{ activeIdx=-1; render(inp.value); });
+  inp.addEventListener("click", ()=>{ activeIdx=-1; render(inp.value); });
+  inp.addEventListener("blur", ()=>setTimeout(()=>{ list.style.display="none"; activeIdx=-1; }, 200));
+  inp.addEventListener("keydown", e=>{
+    const items = [...list.querySelectorAll(".msl-item")];
+    if(e.key==="ArrowDown"){
+      e.preventDefault();
+      if(!items.length) return;
+      activeIdx = Math.min(activeIdx+1, items.length-1);
+      updateActive(items);
+      if(items[activeIdx]) items[activeIdx].scrollIntoView({block:"nearest"});
+    } else if(e.key==="ArrowUp"){
+      e.preventDefault();
+      if(!items.length) return;
+      activeIdx = Math.max(activeIdx-1, 0);
+      updateActive(items);
+      if(items[activeIdx]) items[activeIdx].scrollIntoView({block:"nearest"});
+    } else if(e.key==="Enter"){
+      e.preventDefault();
+      e.stopPropagation();
+      if(activeIdx >= 0 && items[activeIdx]){
+        items[activeIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));
+      } else if(items.length > 0){
+        items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));
+      } else {
+        // 검색 결과 없으면 → 그냥 텍스트로 사용
+        const v = inp.value.trim();
+        if(v){
+          list.style.display = "none";
+          if(onSelect) onSelect({type:"new",name:v,spec:"",unit:""});
+        }
+      }
+    } else if(e.key==="Escape"){
+      list.style.display = "none";
+      activeIdx = -1;
+    } else if(e.key==="Tab"){
+      if(items.length > 0){
+        e.preventDefault();
+        items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));
+      }
+    }
+  });
+
+  setTimeout(()=>{
+    const cb = wrap && wrap.querySelector('.msl-clear');
+    if(cb) cb.style.display = inp.value ? 'block' : 'none';
+  }, 50);
 }
 function openEditor(kind,id){
   // v16: 비밀번호는 별도 에디터로
@@ -1291,6 +1484,20 @@ function openEditor(kind,id){
       expTypeEl.addEventListener("change", updateExpMode);
       setTimeout(updateExpMode, 100); // 초기 적용
     }
+    // v44: 자재명 검색 UI 연결 (선택 시 자재 사양 자동 채움)
+    setTimeout(()=>{
+      makeMaterialSearchUI('m-material', 'm-material-list', (picked)=>{
+        // 자재 사양 자동 채움 (비어있을 때만)
+        const specEl = $("m-matSpec");
+        if(specEl && picked.spec && !specEl.value.trim()){
+          specEl.value = picked.spec;
+        }
+        // 단위가 있으면 사양에 추가 (사양이 비어있을 때만)
+        if(specEl && !specEl.value.trim() && picked.unit){
+          specEl.value = `[${picked.unit}]`;
+        }
+      });
+    }, 100);
   }
   $("overlay").classList.add("show");
   const modalEl=$("overlay").querySelector(".modal"); if(modalEl) modalEl.scrollTop=0;
