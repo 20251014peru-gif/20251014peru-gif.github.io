@@ -296,6 +296,9 @@ const SCHEMA={
     {k:"repairCost",label:"수리비 (원)",type:"number"},
     {k:"compensation",label:"배상금 (원)",type:"number"},
     {k:"insurance",label:"보험금 (원)",type:"number"},
+    {k:"relatedVendor",label:"관련업체 (시공/처리/보험사 등)",type:"text",full:true},
+    {k:"relatedVendorPhone",label:"관련업체 연락처",type:"text"},
+    {k:"relatedVendorMemo",label:"관련업체 비고",type:"textarea",full:true},
     {k:"followUp",label:"후속 조치 / 재발 방지책",type:"textarea",full:true},
     {k:"memo",label:"비고",type:"textarea",full:true},
   ],
@@ -915,7 +918,7 @@ function activateWorkSubtab(sub){
   const host = $("workSubpanelHost");
   if(!host) return;
   // 모든 통합 패널 강제 숨김 + 호스트 안으로 이동
-  ["filelink","call","site","vacation","meeting","deliver","expense","accident"].forEach(name=>{
+  ["filelink","call","site","vacation","meeting","deliver","expense"].forEach(name=>{
     const p = document.getElementById("panel-"+name);
     if(p){
       if(p.parentElement !== host) host.appendChild(p);
@@ -928,8 +931,6 @@ function activateWorkSubtab(sub){
     if(panel){
       panel.style.display = "block";
       panel.classList.add("active");
-      // v44: 사고 탭이면 렌더
-      if(sub==="accident" && typeof renderAccidents==="function") renderAccidents();
     }
   }
   // 페이지 맨 위로 스크롤
@@ -954,7 +955,7 @@ function wireWorkSubtabs(){
   // 페이지 로드 직후 통합 대상 패널들을 모두 host 안으로 즉시 이동 + 숨김
   const host = $("workSubpanelHost");
   if(host){
-    ["filelink","call","site","vacation","meeting","deliver","expense","accident"].forEach(name=>{
+    ["filelink","call","site","vacation","meeting","deliver","expense"].forEach(name=>{
       const p = document.getElementById("panel-"+name);
       if(p && p.parentElement !== host){
         host.appendChild(p);
@@ -6095,6 +6096,7 @@ function renderAccidents(){
             ${a.partyName?`<span>👤 ${esc(a.partyName)}${a.partyPhone?' · '+esc(a.partyPhone):''}</span>`:''}
           </div>
           ${a.detail?`<div style="font-size:12.5px;color:#33567d;margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(a.detail)}</div>`:''}
+          ${a.relatedVendor?`<div style="font-size:12px;color:#0369a1;margin-top:6px;padding:6px 10px;background:#eaf3fb;border-radius:8px;display:inline-block">🏢 ${esc(a.relatedVendor)}${a.relatedVendorPhone?' · 📞 '+esc(a.relatedVendorPhone):''}</div>`:''}
         </div>
         ${totalCost>0?`<div style="text-align:right;font-size:14px;font-weight:800;color:#e74c3c;white-space:nowrap">💰 ${won(totalCost)}</div>`:''}
       </div>

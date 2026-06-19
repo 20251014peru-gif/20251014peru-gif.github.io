@@ -929,6 +929,7 @@
       <button class="v43-tab" data-v43tab="docs">📁 운영실무</button>
       <button class="v43-tab" data-v43tab="common">🏢 임대공용</button>
       <button class="v43-tab" data-v43tab="indiv">🚪 임대개별</button>
+      <button class="v43-tab" data-v43tab="accident">🚨 사고</button>
       <button class="v43-tab" data-v43tab="material">📦 자재</button>
       <button class="v43-tab" data-v43tab="password">🔐 비번</button>
       <button class="v43-tab" data-v43tab="diag">🔧 진단</button>
@@ -1494,6 +1495,37 @@
     </div>
   </div>
 
+  <!-- ===== v44: 사고 처리 내역 패널 ===== -->
+  <div class="v43-panel" id="v43-accident">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:14px;margin-bottom:14px">
+      <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">🚨 사고 처리 내역</h3>
+      <button id="btnAddAccident" style="background:#e74c3c;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 사고 등록</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="accidentStatusChips"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <select id="accidentTypeFilter" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
+        <option value="all">전체 종류</option>
+        <option value="누수">💧 누수</option>
+        <option value="화재">🔥 화재</option>
+        <option value="미끄러짐">🛝 미끄러짐</option>
+        <option value="추락">⬇ 추락</option>
+        <option value="차량파손">🚗 차량파손</option>
+        <option value="도난">🔓 도난</option>
+        <option value="폭행/시비">⚠️ 폭행/시비</option>
+        <option value="엘리베이터">🛗 엘리베이터</option>
+        <option value="주차장">🅿️ 주차장</option>
+        <option value="승강기">🛗 승강기</option>
+        <option value="감전">⚡ 감전</option>
+        <option value="기타">기타</option>
+      </select>
+      <input type="date" id="accidentDateFrom" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
+      <input type="date" id="accidentDateTo" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
+      <button id="accidentDateClear" style="padding:8px 14px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">기간해제</button>
+      <span id="accidentCount" style="margin-left:auto;color:#7a92a8;font-weight:700;align-self:center"></span>
+    </div>
+    <div id="accidentList"></div>
+  </div>
+
   <!-- ===== 자재 패널 ===== -->
   <div class="v43-panel" id="v43-material">
     <section class="panel active" id="panel-material" style="margin-top:14px">
@@ -1721,7 +1753,6 @@
     <button data-subtab="meeting"></button>
     <button data-subtab="deliver"></button>
     <button data-subtab="expense"></button>
-    <button data-subtab="accident">🚨 사고</button>
   </nav>
   <!-- 기존 패널들 (JS가 참조) - 숨김 -->
   <section class="panel active" id="panel-work">
@@ -1783,36 +1814,6 @@
     <div id="expStats"></div>
     <table id="expTable"><thead id="expThead"></thead><tbody id="expBody"></tbody></table>
     <p id="expTotal"></p>
-  </section>
-  <!-- v44: 사고 처리 내역 패널 -->
-  <section class="panel" id="panel-accident">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-      <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">🚨 사고 처리 내역</h3>
-      <button id="btnAddAccident" style="background:#e74c3c;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 사고 등록</button>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="accidentStatusChips"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <select id="accidentTypeFilter" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
-        <option value="all">전체 종류</option>
-        <option value="누수">💧 누수</option>
-        <option value="화재">🔥 화재</option>
-        <option value="미끄러짐">🛝 미끄러짐</option>
-        <option value="추락">⬇ 추락</option>
-        <option value="차량파손">🚗 차량파손</option>
-        <option value="도난">🔓 도난</option>
-        <option value="폭행/시비">⚠️ 폭행/시비</option>
-        <option value="엘리베이터">🛗 엘리베이터</option>
-        <option value="주차장">🅿️ 주차장</option>
-        <option value="승강기">🛗 승강기</option>
-        <option value="감전">⚡ 감전</option>
-        <option value="기타">기타</option>
-      </select>
-      <input type="date" id="accidentDateFrom" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
-      <input type="date" id="accidentDateTo" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
-      <button id="accidentDateClear" style="padding:8px 14px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">기간해제</button>
-      <span id="accidentCount" style="margin-left:auto;color:#7a92a8;font-weight:700;align-self:center"></span>
-    </div>
-    <div id="accidentList"></div>
   </section>
   <section class="panel" id="panel-site">
     <button data-add="site"></button>
@@ -2211,7 +2212,7 @@
 
   // v43 탭 전환
   function v43ActivateTab(name){
-    const v43tabs=['main','memo','calendar','filelink','docs','common','indiv','material','password','diag','ai'];
+    const v43tabs=['main','memo','calendar','filelink','docs','common','indiv','accident','material','password','diag','ai'];
     if(!v43tabs.includes(name)) name='main';
     document.querySelectorAll('.v43-tab').forEach(b => b.classList.toggle('active', b.dataset.v43tab===name));
     document.querySelectorAll('.v43-panel').forEach(p => p.classList.remove('active'));
@@ -2222,6 +2223,7 @@
     if(name==='calendar' && typeof renderCalendar==='function') setTimeout(renderCalendar, 100);
     if(name==='memo') setTimeout(()=>{ if(typeof renderStickyGrid==='function') renderStickyGrid(); }, 100);
     if(name==='main') setTimeout(()=>{ if(typeof v43Refresh==='function') v43Refresh(); }, 50);
+    if(name==='accident') setTimeout(()=>{ if(typeof renderAccidents==='function') renderAccidents(); }, 50);
     // 문서계열 탭: makeDocTab이 등록한 렌더 함수 호출
     if(['docs','common','indiv','filelink'].includes(name)){
       setTimeout(()=>{
