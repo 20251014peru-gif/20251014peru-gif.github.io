@@ -6099,6 +6099,7 @@ function v43CopyWorkExcel(){
     return true;
   }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(!ents.length){ toast('복사할 업무가 없어요'); return; }
+  // 한 셀에 들어가도록 공백 구분 (탭 X)
   const rows = ents.map(e=>{
     const floor = (e.floor||'').trim();
     const title = (e.title||'').trim();
@@ -6108,12 +6109,13 @@ function v43CopyWorkExcel(){
     if(e.matSpec) matParts.push(String(e.matSpec).trim());
     if(Number(e.qty)>0) matParts.push(e.qty+'개');
     const material = matParts.join('_').replace(/[\t\n]/g,' ');
-    return [floor, title, detail, material].join('\t');
+    // 4개 항목을 공백으로 연결 (한 셀에 다 들어감)
+    return [floor, title, detail, material].filter(Boolean).join(' ');
   });
   const text = rows.join('\n');
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text).then(
-      ()=>toast(`📋 ${ents.length}건 복사됐어요! 엑셀에 Ctrl+V`),
+      ()=>toast(`📋 ${ents.length}건 복사됐어요! 셀 클릭 → Ctrl+V`),
       ()=>{
         const ta=document.createElement('textarea');
         ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
@@ -6124,7 +6126,6 @@ function v43CopyWorkExcel(){
     );
   }
 }
-
 function wireExpenseModal(){
   $("expCancel").addEventListener("click",()=>$("expenseOverlay").classList.remove("show"));
   $("expSave").addEventListener("click",saveExpense);
