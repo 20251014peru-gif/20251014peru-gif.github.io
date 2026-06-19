@@ -1695,6 +1695,11 @@
           <button class="btn btn-primary btn-sm" id="diagBackup">⬇ 전체 백업 (JSON)</button>
           <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 백업 복구<input type="file" id="diagRestore" accept="application/json,.json" style="display:none"></label>
         </div>
+        <div class="sec-head">📋 자료 일괄 정리 (v44)</div>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn btn-primary btn-sm" id="diagBulkOrganize" style="background:#27ae60">🗂 일괄 정리 도구 열기</button>
+          <span style="font-size:12px;color:#7a92a8;align-self:center">점검일지·운영실무·임대공용·임대개별·서류폴더 자료를 한 화면에서 정리</span>
+        </div>
         <div class="sec-head">CSV 내보내기 (엑셀)</div>
         <div class="btn-row" style="margin-top:0;gap:8px">
           <button class="btn btn-ghost btn-sm" data-csv="work">업무</button>
@@ -1707,6 +1712,36 @@
         </div>
       </div>
     </section>
+  </div>
+
+  <!-- ===== v44: 일괄 정리 모달 ===== -->
+  <div id="bulkOrgOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10003;align-items:center;justify-content:center;padding:20px;overflow:auto">
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:1200px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1.5px solid #e8f0fa;display:flex;align-items:center;gap:12px">
+        <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">📋 자료 일괄 정리</h3>
+        <span style="font-size:12px;color:#aab8c8">5개 탭 자료를 한 화면에서 정리·이동·삭제</span>
+        <button id="bulkOrgClose" style="margin-left:auto;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">✕ 닫기</button>
+      </div>
+      <div style="padding:14px 20px;border-bottom:1.5px solid #e8f0fa;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f7faff">
+        <button class="bulk-tab-chip active" data-bulktab="all" style="padding:6px 12px;border-radius:14px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📊 전체</button>
+        <button class="bulk-tab-chip" data-bulktab="docs" style="padding:6px 12px;border-radius:14px;border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📁 운영실무</button>
+        <button class="bulk-tab-chip" data-bulktab="insp" style="padding:6px 12px;border-radius:14px;border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📋 점검일지</button>
+        <button class="bulk-tab-chip" data-bulktab="common" style="padding:6px 12px;border-radius:14px;border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🏢 임대공용</button>
+        <button class="bulk-tab-chip" data-bulktab="indiv" style="padding:6px 12px;border-radius:14px;border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🚪 임대개별</button>
+        <button class="bulk-tab-chip" data-bulktab="etc" style="padding:6px 12px;border-radius:14px;border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗂 서류폴더</button>
+        <input type="text" id="bulkOrgSearch" placeholder="🔍 이름·메모 검색..." style="flex:1;min-width:160px;height:32px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#fff">
+        <span id="bulkOrgStats" style="font-size:11px;color:#7a92a8;align-self:center">0건</span>
+      </div>
+      <div style="padding:10px 20px;border-bottom:1.5px solid #e8f0fa;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:11px;font-weight:700;color:#7a92a8">선택 일괄:</span>
+        <button id="bulkMoveBtn2" style="padding:6px 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📦 탭 이동</button>
+        <button id="bulkTypeBtn2" style="padding:6px 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📑 종류 변경</button>
+        <button id="bulkFieldBtn2" style="padding:6px 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🏷 분야 변경</button>
+        <button id="bulkDelBtn2" style="padding:6px 12px;background:#fde8e8;color:#b52929;border:1.5px solid #f5b5b5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑 삭제</button>
+        <button id="bulkOrgSave" style="margin-left:auto;padding:8px 18px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">💾 변경사항 저장</button>
+      </div>
+      <div id="bulkOrgTable" style="flex:1;overflow:auto;padding:14px 20px;background:#fff"></div>
+    </div>
   </div>
 
   <!-- ===== AI 패널 ===== -->
@@ -4983,6 +5018,296 @@ makeDocTab({
   modalSaveId:'etcModalSave', modalDelId:'etcModalDel', modalCancelId:'etcModalCancel',
   cols:5
 });
+
+/* ===== v44: 일괄 정리 모달 ===== */
+(function(){
+  const BULK_TABS = {
+    docs:   {label:'📁 운영실무', LS:'wl_docs_v43'},
+    insp:   {label:'📋 점검일지', LS:'wl_insp_v43'},
+    common: {label:'🏢 임대공용', LS:'wl_common_v43'},
+    indiv:  {label:'🚪 임대개별', LS:'wl_indiv_v43'},
+    etc:    {label:'🗂 서류폴더', LS:'wl_etc_v44'}
+  };
+  const BULK_DEFAULT_FIELDS = {
+    insp: ['전기','소방','기계','영선','승강기','일반'],
+    docs: ['전기','소방','기계','영선','승강기','청소','직원관련','일반'],
+    common: ['공용설비','관리규약','임대일반','보험','기타'],
+    indiv: ['임대차','관리비','등기부','임차인','기타'],
+    etc: ['시스템','다운로드','임시저장','참고자료','기타']
+  };
+  const FIELD_LS_SUFFIX = '_fields';
+
+  let bulkItems = [], bulkActiveTab = 'all', bulkSearch = '', bulkChanges = new Set();
+
+  function bulkLoadCats(tab){
+    if(window.loadCats) return window.loadCats(tab);
+    return [];
+  }
+  function bulkLoadFields(tab){
+    try{ return JSON.parse(localStorage.getItem(BULK_TABS[tab].LS + FIELD_LS_SUFFIX)||'null') || BULK_DEFAULT_FIELDS[tab]||[]; }
+    catch(e){ return BULK_DEFAULT_FIELDS[tab]||[]; }
+  }
+  function bulkLoadItems(tab){
+    try{ return JSON.parse(localStorage.getItem(BULK_TABS[tab].LS)||'[]'); }
+    catch(e){ return []; }
+  }
+  function bulkSaveItems(tab, arr){
+    try{ localStorage.setItem(BULK_TABS[tab].LS, JSON.stringify(arr)); }catch(e){}
+  }
+  function bulkEsc(s){ return (s||'').toString().replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+  function bulkLoadAll(){
+    bulkItems = [];
+    bulkChanges = new Set();
+    Object.keys(BULK_TABS).forEach(t=>{
+      bulkLoadItems(t).forEach(it=>{
+        bulkItems.push({...it, _tab:t, _origTab:t});
+      });
+    });
+    bulkRenderTable();
+  }
+
+  function bulkRenderTable(){
+    const host = document.getElementById('bulkOrgTable');
+    if(!host) return;
+    let list = bulkItems.slice();
+    if(bulkActiveTab !== 'all') list = list.filter(it=>it._tab === bulkActiveTab);
+    if(bulkSearch){
+      const q = bulkSearch.toLowerCase();
+      list = list.filter(it=>{
+        const text = [it.name, it.memo, it.type, it.field, it.path].filter(Boolean).join(' ').toLowerCase();
+        return text.includes(q);
+      });
+    }
+    document.getElementById('bulkOrgStats').textContent = `${list.length}건 / 전체 ${bulkItems.length}건 (변경 ${bulkChanges.size}건)`;
+    if(!list.length){
+      host.innerHTML = '<div style="padding:60px;text-align:center;color:#aab8c8">조건에 맞는 항목이 없어요</div>';
+      return;
+    }
+    let h = '<table style="width:100%;border-collapse:separate;border-spacing:0">';
+    h += '<thead><tr>';
+    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa;width:36px"><input type="checkbox" id="bulkSelAll" style="width:16px;height:16px;cursor:pointer"></th>';
+    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa;width:110px">탭</th>';
+    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa">이름</th>';
+    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa;width:130px">종류</th>';
+    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa;width:110px">분야</th>';
+    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa;width:70px">년도</th>';
+    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:center;border-bottom:1.5px solid #e8f0fa;width:50px">상태</th>';
+    h += '</tr></thead><tbody>';
+    list.forEach(it=>{
+      const isChanged = bulkChanges.has(it.id);
+      const tabCats = bulkLoadCats(it._tab);
+      const tabFields = bulkLoadFields(it._tab);
+      const bg = isChanged ? '#fff8e1' : 'transparent';
+      h += `<tr data-id="${bulkEsc(it.id)}" style="border-bottom:1px solid #f0f6ff;background:${bg}">`;
+      h += `<td style="padding:6px 10px;font-size:12px"><input type="checkbox" class="bulk-item-check" data-id="${bulkEsc(it.id)}" style="width:16px;height:16px;cursor:pointer"></td>`;
+      h += `<td style="padding:6px 10px;font-size:12px"><select class="bulk-cell bulk-tab-sel" data-id="${bulkEsc(it.id)}" style="width:100%;padding:5px 6px;border:1px solid #dbe6f4;border-radius:6px;font-size:11px;font-family:inherit;background:#f7faff">`;
+      Object.keys(BULK_TABS).forEach(t=>{
+        h += `<option value="${t}" ${it._tab===t?'selected':''}>${BULK_TABS[t].label}</option>`;
+      });
+      h += `</select></td>`;
+      h += `<td style="padding:6px 10px;font-size:12px"><div style="font-weight:700;color:#1a2f45">${bulkEsc(it.name||'(이름없음)')}</div>`;
+      if(it.memo) h += `<div style="font-size:10px;color:#aab8c8;margin-top:2px">${bulkEsc(it.memo)}</div>`;
+      if(it.path) h += `<div style="font-size:10px;color:#aab8c8;margin-top:1px">📁 ${bulkEsc(it.path)}</div>`;
+      h += `</td>`;
+      h += `<td style="padding:6px 10px;font-size:12px"><select class="bulk-cell bulk-type-sel" data-id="${bulkEsc(it.id)}" style="width:100%;padding:5px 6px;border:1px solid #dbe6f4;border-radius:6px;font-size:11px;font-family:inherit;background:#f7faff">`;
+      h += `<option value="">(없음)</option>`;
+      tabCats.forEach(c=>{
+        h += `<option value="${bulkEsc(c)}" ${it.type===c?'selected':''}>${bulkEsc(c)}</option>`;
+      });
+      if(it.type && !tabCats.includes(it.type)){
+        h += `<option value="${bulkEsc(it.type)}" selected>⚠ ${bulkEsc(it.type)}</option>`;
+      }
+      h += `</select></td>`;
+      h += `<td style="padding:6px 10px;font-size:12px"><select class="bulk-cell bulk-field-sel" data-id="${bulkEsc(it.id)}" style="width:100%;padding:5px 6px;border:1px solid #dbe6f4;border-radius:6px;font-size:11px;font-family:inherit;background:#f7faff">`;
+      h += `<option value="">(없음)</option>`;
+      tabFields.forEach(f=>{
+        h += `<option value="${bulkEsc(f)}" ${it.field===f?'selected':''}>${bulkEsc(f)}</option>`;
+      });
+      if(it.field && !tabFields.includes(it.field)){
+        h += `<option value="${bulkEsc(it.field)}" selected>⚠ ${bulkEsc(it.field)}</option>`;
+      }
+      h += `</select></td>`;
+      const yr = it.year || (it.month?it.month.slice(0,4):'');
+      h += `<td style="padding:6px 10px;font-size:12px"><input type="text" class="bulk-cell bulk-year-input" data-id="${bulkEsc(it.id)}" value="${bulkEsc(yr)}" placeholder="년도" maxlength="4" style="width:100%;box-sizing:border-box;padding:5px 6px;border:1px solid #dbe6f4;border-radius:6px;font-size:11px;font-family:inherit;background:#f7faff"></td>`;
+      h += `<td style="padding:6px 10px;font-size:12px;text-align:center">${isChanged?'<span style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;background:#fff3c4;color:#7c5e1a">변경</span>':''}</td>`;
+      h += '</tr>';
+    });
+    h += '</tbody></table>';
+    host.innerHTML = h;
+    // 이벤트
+    document.getElementById('bulkSelAll').addEventListener('change', e=>{
+      host.querySelectorAll('.bulk-item-check').forEach(c=>c.checked = e.target.checked);
+    });
+    host.querySelectorAll('.bulk-tab-sel').forEach(sel=>{
+      sel.addEventListener('change', e=>{
+        const id = sel.dataset.id;
+        const it = bulkItems.find(x=>x.id===id);
+        if(it){ it._tab = e.target.value; bulkChanges.add(id); bulkRenderTable(); }
+      });
+    });
+    host.querySelectorAll('.bulk-type-sel').forEach(sel=>{
+      sel.addEventListener('change', e=>{
+        const id = sel.dataset.id;
+        const it = bulkItems.find(x=>x.id===id);
+        if(it){ it.type = e.target.value; bulkChanges.add(id); bulkRenderTable(); }
+      });
+    });
+    host.querySelectorAll('.bulk-field-sel').forEach(sel=>{
+      sel.addEventListener('change', e=>{
+        const id = sel.dataset.id;
+        const it = bulkItems.find(x=>x.id===id);
+        if(it){ it.field = e.target.value; bulkChanges.add(id); bulkRenderTable(); }
+      });
+    });
+    host.querySelectorAll('.bulk-year-input').forEach(inp=>{
+      inp.addEventListener('input', e=>{
+        const id = inp.dataset.id;
+        const it = bulkItems.find(x=>x.id===id);
+        if(it){ it.year = e.target.value; bulkChanges.add(id); }
+      });
+    });
+  }
+
+  function bulkGetSelected(){
+    return [...document.querySelectorAll('.bulk-item-check:checked')].map(c=>c.dataset.id);
+  }
+
+  // 일괄정리 모달 열기
+  window.openBulkOrganize = function(){
+    document.getElementById('bulkOrgOverlay').style.display = 'flex';
+    bulkLoadAll();
+  };
+
+  // 진단 탭 버튼 → 일괄정리 열기
+  document.getElementById('diagBulkOrganize')?.addEventListener('click', ()=>{
+    window.openBulkOrganize();
+  });
+
+  // 닫기
+  document.getElementById('bulkOrgClose')?.addEventListener('click', ()=>{
+    if(bulkChanges.size > 0){
+      if(!confirm(`변경사항 ${bulkChanges.size}건이 있어요. 저장하지 않고 닫을까요?`)) return;
+    }
+    document.getElementById('bulkOrgOverlay').style.display = 'none';
+  });
+
+  // 탭 칩 클릭
+  document.querySelectorAll('.bulk-tab-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.bulk-tab-chip').forEach(b=>{
+        b.style.background = '#fff';
+        b.style.color = '#7a92a8';
+        b.style.borderColor = '#dbe6f4';
+        b.classList.remove('active');
+      });
+      btn.style.background = '#3f7cb8';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#3f7cb8';
+      btn.classList.add('active');
+      bulkActiveTab = btn.dataset.bulktab;
+      bulkRenderTable();
+    });
+  });
+
+  // 검색
+  document.getElementById('bulkOrgSearch')?.addEventListener('input', e=>{
+    bulkSearch = e.target.value;
+    bulkRenderTable();
+  });
+
+  // 일괄 탭 이동
+  document.getElementById('bulkMoveBtn2')?.addEventListener('click', ()=>{
+    const sel = bulkGetSelected();
+    if(!sel.length){ alert('선택된 항목이 없어요'); return; }
+    const tabKeys = Object.keys(BULK_TABS);
+    const choice = prompt(`${sel.length}개 항목을 어느 탭으로 이동할까요?\n\n${tabKeys.map((k,i)=>`${i+1}. ${BULK_TABS[k].label}`).join('\n')}\n\n번호 입력:`);
+    const idx = parseInt(choice)-1;
+    if(isNaN(idx) || idx<0 || idx>=tabKeys.length){ return; }
+    const targetTab = tabKeys[idx];
+    sel.forEach(id=>{
+      const it = bulkItems.find(x=>x.id===id);
+      if(it){ it._tab = targetTab; bulkChanges.add(id); }
+    });
+    bulkRenderTable();
+  });
+
+  // 일괄 종류 변경
+  document.getElementById('bulkTypeBtn2')?.addEventListener('click', ()=>{
+    const sel = bulkGetSelected();
+    if(!sel.length){ alert('선택된 항목이 없어요'); return; }
+    const newType = prompt(`${sel.length}개 항목의 종류를 무엇으로 변경할까요?`);
+    if(!newType) return;
+    sel.forEach(id=>{
+      const it = bulkItems.find(x=>x.id===id);
+      if(it){ it.type = newType.trim(); bulkChanges.add(id); }
+    });
+    bulkRenderTable();
+  });
+
+  // 일괄 분야 변경
+  document.getElementById('bulkFieldBtn2')?.addEventListener('click', ()=>{
+    const sel = bulkGetSelected();
+    if(!sel.length){ alert('선택된 항목이 없어요'); return; }
+    const newField = prompt(`${sel.length}개 항목의 분야를 무엇으로 변경할까요?`);
+    if(newField === null) return;
+    sel.forEach(id=>{
+      const it = bulkItems.find(x=>x.id===id);
+      if(it){ it.field = newField.trim(); bulkChanges.add(id); }
+    });
+    bulkRenderTable();
+  });
+
+  // 일괄 삭제
+  document.getElementById('bulkDelBtn2')?.addEventListener('click', ()=>{
+    const sel = bulkGetSelected();
+    if(!sel.length){ alert('선택된 항목이 없어요'); return; }
+    if(!confirm(`${sel.length}개 항목을 삭제할까요? (저장 전까지 되돌릴 수 있어요)`)) return;
+    sel.forEach(id=>{
+      const it = bulkItems.find(x=>x.id===id);
+      if(it){ it._deleted = true; bulkChanges.add(id); }
+    });
+    bulkItems = bulkItems.filter(it=>!it._deleted);
+    bulkRenderTable();
+  });
+
+  // 저장
+  document.getElementById('bulkOrgSave')?.addEventListener('click', ()=>{
+    if(!bulkChanges.size){
+      alert('변경사항이 없어요');
+      return;
+    }
+    if(!confirm(`변경사항 ${bulkChanges.size}건을 저장할까요?`)) return;
+    const newByTab = {};
+    Object.keys(BULK_TABS).forEach(t=>{ newByTab[t] = []; });
+    bulkItems.forEach(it=>{
+      const tab = it._tab;
+      if(!newByTab[tab]) return;
+      const copy = {...it};
+      delete copy._tab;
+      delete copy._origTab;
+      delete copy._deleted;
+      newByTab[tab].push(copy);
+    });
+    Object.keys(newByTab).forEach(t=>{
+      bulkSaveItems(t, newByTab[t]);
+    });
+    if(typeof toast==='function') toast('✅ 저장 완료! 새로고침하면 적용된 모습이 보입니다.');
+    else alert('✅ 저장 완료!');
+    bulkChanges.clear();
+    bulkLoadAll();
+  });
+
+  // 오버레이 클릭 시 닫기
+  document.getElementById('bulkOrgOverlay')?.addEventListener('click', e=>{
+    if(e.target.id === 'bulkOrgOverlay'){
+      if(bulkChanges.size > 0){
+        if(!confirm(`변경사항 ${bulkChanges.size}건이 있어요. 저장하지 않고 닫을까요?`)) return;
+      }
+      document.getElementById('bulkOrgOverlay').style.display = 'none';
+    }
+  });
+})();
 
 // 점검일지 종류관리 버튼 (기존 점검일지 JS와 통합)
 // 년관리 공통 함수
