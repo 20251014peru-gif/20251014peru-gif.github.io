@@ -1716,7 +1716,7 @@
 
   <!-- ===== v44: 일괄 정리 모달 ===== -->
   <div id="bulkOrgOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10003;align-items:center;justify-content:center;padding:20px;overflow:auto">
-    <div style="background:#fff;border-radius:16px;width:100%;max-width:1200px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:1400px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden">
       <div style="padding:16px 20px;border-bottom:1.5px solid #e8f0fa;display:flex;align-items:center;gap:12px">
         <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">📋 자료 일괄 정리</h3>
         <span style="font-size:12px;color:#aab8c8">5개 탭 자료를 한 화면에서 정리·이동·삭제</span>
@@ -5107,53 +5107,60 @@ makeDocTab({
       host.innerHTML = '<div style="padding:60px;text-align:center;color:#aab8c8">조건에 맞는 항목이 없어요</div>';
       return;
     }
-    let h = '<table style="width:100%;border-collapse:separate;border-spacing:0">';
+    let h = '<table style="width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed">';
+    h += '<colgroup>';
+    h += '<col style="width:32px"><col style="width:90px"><col style="width:auto"><col style="width:110px"><col style="width:90px"><col style="width:60px"><col style="width:40px">';
+    h += '</colgroup>';
     h += '<thead><tr>';
-    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa;width:36px"><input type="checkbox" id="bulkSelAll" style="width:16px;height:16px;cursor:pointer"></th>';
-    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa;width:110px">탭</th>';
-    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa">이름</th>';
-    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa;width:130px">종류</th>';
-    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa;width:110px">분야</th>';
-    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa;width:70px">년도</th>';
-    h += '<th style="background:#f0f6ff;padding:8px 10px;font-size:11px;font-weight:800;color:#33567d;text-align:center;border-bottom:1.5px solid #e8f0fa;width:50px">상태</th>';
+    h += '<th style="background:#f0f6ff;padding:6px 4px;font-size:11px;font-weight:800;color:#33567d;text-align:center;border-bottom:1.5px solid #e8f0fa"><input type="checkbox" id="bulkSelAll" style="width:15px;height:15px;cursor:pointer"></th>';
+    h += '<th style="background:#f0f6ff;padding:6px 4px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa">탭</th>';
+    h += '<th style="background:#f0f6ff;padding:6px 8px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa">이름</th>';
+    h += '<th style="background:#f0f6ff;padding:6px 4px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa">종류</th>';
+    h += '<th style="background:#f0f6ff;padding:6px 4px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa">분야</th>';
+    h += '<th style="background:#f0f6ff;padding:6px 4px;font-size:11px;font-weight:800;color:#33567d;text-align:left;border-bottom:1.5px solid #e8f0fa">년도</th>';
+    h += '<th style="background:#f0f6ff;padding:6px 2px;font-size:11px;font-weight:800;color:#33567d;text-align:center;border-bottom:1.5px solid #e8f0fa">상태</th>';
     h += '</tr></thead><tbody>';
     list.forEach(it=>{
       const isChanged = bulkChanges.has(it.id);
       const tabCats = bulkLoadCats(it._tab);
       const tabFields = bulkLoadFields(it._tab);
       const bg = isChanged ? '#fff8e1' : 'transparent';
+      const tabShort = {docs:'📁운영',insp:'📋점검',common:'🏢공용',indiv:'🚪개별',etc:'🗂서류'};
       h += `<tr data-id="${bulkEsc(it.id)}" style="border-bottom:1px solid #f0f6ff;background:${bg}">`;
-      h += `<td style="padding:6px 10px;font-size:12px"><input type="checkbox" class="bulk-item-check" data-id="${bulkEsc(it.id)}" style="width:16px;height:16px;cursor:pointer"></td>`;
-      h += `<td style="padding:6px 10px;font-size:12px"><select class="bulk-cell bulk-tab-sel" data-id="${bulkEsc(it.id)}" style="width:100%;padding:5px 6px;border:1px solid #dbe6f4;border-radius:6px;font-size:11px;font-family:inherit;background:#f7faff">`;
+      h += `<td style="padding:4px;text-align:center"><input type="checkbox" class="bulk-item-check" data-id="${bulkEsc(it.id)}" style="width:15px;height:15px;cursor:pointer"></td>`;
+      h += `<td style="padding:4px"><select class="bulk-cell bulk-tab-sel" data-id="${bulkEsc(it.id)}" style="width:100%;box-sizing:border-box;padding:4px 4px;border:1px solid #dbe6f4;border-radius:5px;font-size:11px;font-family:inherit;background:#f7faff">`;
       Object.keys(BULK_TABS).forEach(t=>{
-        h += `<option value="${t}" ${it._tab===t?'selected':''}>${BULK_TABS[t].label}</option>`;
+        h += `<option value="${t}" ${it._tab===t?'selected':''}>${tabShort[t]||BULK_TABS[t].label}</option>`;
       });
       h += `</select></td>`;
-      h += `<td style="padding:6px 10px;font-size:12px"><div style="font-weight:700;color:#1a2f45">${bulkEsc(it.name||'(이름없음)')}</div>`;
-      if(it.memo) h += `<div style="font-size:10px;color:#aab8c8;margin-top:2px">${bulkEsc(it.memo)}</div>`;
-      if(it.path) h += `<div style="font-size:10px;color:#aab8c8;margin-top:1px">📁 ${bulkEsc(it.path)}</div>`;
+      h += `<td style="padding:6px 8px;font-size:12px;overflow:hidden">`;
+      h += `<div style="font-weight:700;color:#1a2f45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${bulkEsc(it.name||'')}">${bulkEsc(it.name||'(이름없음)')}</div>`;
+      if(it.path){
+        const shortPath = it.path.length > 50 ? '...'+it.path.slice(-47) : it.path;
+        h += `<div style="font-size:10px;color:#aab8c8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${bulkEsc(it.path)}">📁 ${bulkEsc(shortPath)}</div>`;
+      }
       h += `</td>`;
-      h += `<td style="padding:6px 10px;font-size:12px"><select class="bulk-cell bulk-type-sel" data-id="${bulkEsc(it.id)}" style="width:100%;padding:5px 6px;border:1px solid #dbe6f4;border-radius:6px;font-size:11px;font-family:inherit;background:#f7faff">`;
+      h += `<td style="padding:4px"><select class="bulk-cell bulk-type-sel" data-id="${bulkEsc(it.id)}" style="width:100%;box-sizing:border-box;padding:4px 4px;border:1px solid #dbe6f4;border-radius:5px;font-size:11px;font-family:inherit;background:#f7faff">`;
       h += `<option value="">(없음)</option>`;
       tabCats.forEach(c=>{
         h += `<option value="${bulkEsc(c)}" ${it.type===c?'selected':''}>${bulkEsc(c)}</option>`;
       });
       if(it.type && !tabCats.includes(it.type)){
-        h += `<option value="${bulkEsc(it.type)}" selected>⚠ ${bulkEsc(it.type)}</option>`;
+        h += `<option value="${bulkEsc(it.type)}" selected>⚠${bulkEsc(it.type)}</option>`;
       }
       h += `</select></td>`;
-      h += `<td style="padding:6px 10px;font-size:12px"><select class="bulk-cell bulk-field-sel" data-id="${bulkEsc(it.id)}" style="width:100%;padding:5px 6px;border:1px solid #dbe6f4;border-radius:6px;font-size:11px;font-family:inherit;background:#f7faff">`;
+      h += `<td style="padding:4px"><select class="bulk-cell bulk-field-sel" data-id="${bulkEsc(it.id)}" style="width:100%;box-sizing:border-box;padding:4px 4px;border:1px solid #dbe6f4;border-radius:5px;font-size:11px;font-family:inherit;background:#f7faff">`;
       h += `<option value="">(없음)</option>`;
       tabFields.forEach(f=>{
         h += `<option value="${bulkEsc(f)}" ${it.field===f?'selected':''}>${bulkEsc(f)}</option>`;
       });
       if(it.field && !tabFields.includes(it.field)){
-        h += `<option value="${bulkEsc(it.field)}" selected>⚠ ${bulkEsc(it.field)}</option>`;
+        h += `<option value="${bulkEsc(it.field)}" selected>⚠${bulkEsc(it.field)}</option>`;
       }
       h += `</select></td>`;
       const yr = it.year || (it.month?it.month.slice(0,4):'');
-      h += `<td style="padding:6px 10px;font-size:12px"><input type="text" class="bulk-cell bulk-year-input" data-id="${bulkEsc(it.id)}" value="${bulkEsc(yr)}" placeholder="년도" maxlength="4" style="width:100%;box-sizing:border-box;padding:5px 6px;border:1px solid #dbe6f4;border-radius:6px;font-size:11px;font-family:inherit;background:#f7faff"></td>`;
-      h += `<td style="padding:6px 10px;font-size:12px;text-align:center">${isChanged?'<span style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;background:#fff3c4;color:#7c5e1a">변경</span>':''}</td>`;
+      h += `<td style="padding:4px"><input type="text" class="bulk-cell bulk-year-input" data-id="${bulkEsc(it.id)}" value="${bulkEsc(yr)}" placeholder="년" maxlength="4" style="width:100%;box-sizing:border-box;padding:4px 4px;border:1px solid #dbe6f4;border-radius:5px;font-size:11px;font-family:inherit;background:#f7faff;text-align:center"></td>`;
+      h += `<td style="padding:4px 2px;text-align:center">${isChanged?'<span style="display:inline-block;padding:1px 5px;border-radius:5px;font-size:9px;font-weight:700;background:#fff3c4;color:#7c5e1a">변경</span>':''}</td>`;
       h += '</tr>';
     });
     h += '</tbody></table>';
