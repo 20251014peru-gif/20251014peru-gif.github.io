@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260619-2";
+const APP_VERSION = "v44-20260619-3";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -296,11 +296,9 @@ const SCHEMA={
     {k:"repairCost",label:"수리비 (원)",type:"number"},
     {k:"compensation",label:"배상금 (원)",type:"number"},
     {k:"insurance",label:"보험금 (원)",type:"number"},
-    {k:"relatedVendor",label:"관련업체 (시공/처리/보험사 등)",type:"text",full:true},
-    {k:"relatedVendorPhone",label:"관련업체 연락처",type:"text"},
-    {k:"relatedVendorMemo",label:"관련업체 비고",type:"textarea",full:true},
     {k:"followUp",label:"후속 조치 / 재발 방지책",type:"textarea",full:true},
     {k:"memo",label:"비고",type:"textarea",full:true},
+    // v44: vendors=[{name,phone,memo}], history=[{date,time,by,action,status,memo}]는 데이터 배열로 저장
   ],
 };
 
@@ -1668,10 +1666,102 @@ function openEditor(kind,id){
       }
     }, 100);
   }
+  // v44: 사고 모달 - 처리 단계 동적 추가
+  if(kind==="accident"){
+    setTimeout(()=>{
+      renderAccidentSteps(data.steps || []);
+    }, 100);
+  }
   $("overlay").classList.add("show");
   const modalEl=$("overlay").querySelector(".modal"); if(modalEl) modalEl.scrollTop=0;
 
 }
+
+/* v44: 사고 처리 단계 (시간순 조치+업체) 동적 UI */
+let _accidentSteps = [];
+function renderAccidentSteps(steps){
+  _accidentSteps = (steps && Array.isArray(steps)) ? steps.slice() : [];
+  // 모달 그리드의 마지막에 처리단계 영역 추가
+  const grid = $("mFields");
+  if(!grid) return;
+  // 기존 영역 제거
+  const old = document.getElementById("accStepsArea");
+  if(old) old.remove();
+  // 새 영역 생성
+  const area = document.createElement("div");
+  area.id = "accStepsArea";
+  area.className = "field full";
+  area.style.cssText = "grid-column:1/-1;margin-top:8px;padding:14px;background:#fff8e1;border:2px solid #ffd54f;border-radius:12px";
+  area.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <label style="font-weight:800;font-size:14px;color:#7c5e1a;margin:0">📋 처리 단계 (시간순)</label>
+      <button type="button" id="btnAddAccStep" style="background:#f59e0b;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 단계 추가</button>
+    </div>
+    <div id="accStepsList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="accStepsEmpty" style="display:none;text-align:center;padding:20px;color:#aab8c8;font-size:13px">아직 처리 단계가 없어요 — "➕ 단계 추가" 버튼을 누르세요</div>
+  `;
+  grid.appendChild(area);
+  // 단계 추가 버튼
+  document.getElementById("btnAddAccStep").addEventListener("click", ()=>{
+    _accidentSteps.push({
+      date: todayStr(),
+      action: "",
+      vendor: "",
+      vendorPhone: "",
+      memo: ""
+    });
+    redrawAccStepList();
+  });
+  redrawAccStepList();
+}
+
+function redrawAccStepList(){
+  const list = document.getElementById("accStepsList");
+  const empty = document.getElementById("accStepsEmpty");
+  if(!list) return;
+  if(!_accidentSteps.length){
+    list.innerHTML = "";
+    if(empty) empty.style.display = "block";
+    return;
+  }
+  if(empty) empty.style.display = "none";
+  list.innerHTML = _accidentSteps.map((s,i)=>`
+    <div class="acc-step-card" data-idx="${i}" style="background:#fff;border:1.5px solid #ffd54f;border-radius:10px;padding:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="background:#f59e0b;color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:12px">${i+1}단계</span>
+        <button type="button" class="acc-step-del" data-idx="${i}" style="background:#fde8e8;color:#b52929;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:8px">
+        <input type="date" class="acc-step-input" data-idx="${i}" data-k="date" value="${esc(s.date||'')}" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
+        <input type="text" class="acc-step-input" data-idx="${i}" data-k="action" value="${esc(s.action||'')}" placeholder="📝 조치 내용 (예: 누수 확인, 보험사 접수, 시공 완료)" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <input type="text" class="acc-step-input" data-idx="${i}" data-k="vendor" value="${esc(s.vendor||'')}" placeholder="🏢 업체명 (예: 삼성화재, 한국방수)" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
+        <input type="text" class="acc-step-input" data-idx="${i}" data-k="vendorPhone" value="${esc(s.vendorPhone||'')}" placeholder="📞 연락처" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
+      </div>
+      <input type="text" class="acc-step-input" data-idx="${i}" data-k="memo" value="${esc(s.memo||'')}" placeholder="💬 비고 (예: 견적 80만원, 사고번호 ACC-2026, 야간 출동)" style="width:100%;box-sizing:border-box;height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
+    </div>
+  `).join("");
+  // 입력 변경 이벤트
+  list.querySelectorAll(".acc-step-input").forEach(inp=>{
+    inp.addEventListener("input", ()=>{
+      const idx = Number(inp.dataset.idx);
+      const k = inp.dataset.k;
+      if(_accidentSteps[idx]) _accidentSteps[idx][k] = inp.value;
+    });
+  });
+  // 삭제 버튼
+  list.querySelectorAll(".acc-step-del").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const idx = Number(btn.dataset.idx);
+      if(confirm(`${idx+1}단계를 삭제할까요?`)){
+        _accidentSteps.splice(idx, 1);
+        redrawAccStepList();
+      }
+    });
+  });
+}
+
 function renderModalThumbs(){ renderThumbs($("m-thumbs"),modalPhotos,i=>{ modalPhotos.splice(i,1); renderModalThumbs(); }); }
 
 /* ===== 첨부파일 모달 UI (v15 신규) ===== */
@@ -1861,6 +1951,10 @@ $("mSave").addEventListener("click",async ()=>{
   if(PHOTO_KINDS.includes(mKind)) obj.photos=modalPhotos.slice();
   if(ATTACH_KINDS.includes(mKind)) obj.attachments=modalAttachments.slice();
   if(mKind==="vacation" && !obj.end) obj.end=obj.start;
+  // v44: 사고면 처리 단계 함께 저장
+  if(mKind==="accident"){
+    obj.steps = (_accidentSteps||[]).filter(s=>s.action||s.vendor||s.memo);
+  }
   let savedId=mId;
   if(mId) updateRecord(mId,obj); else { obj.createdAt=Date.now(); if(mKind==="plan") obj.done=false; if(mKind==="filelink"||mKind==="site") obj.starred=false; const nr=addRecord(obj); savedId=nr?nr.id:obj.id; }
   // filelink 수정 시 위치 유지 (renderAll 대신 renderFileLink만)
@@ -6096,7 +6190,10 @@ function renderAccidents(){
             ${a.partyName?`<span>👤 ${esc(a.partyName)}${a.partyPhone?' · '+esc(a.partyPhone):''}</span>`:''}
           </div>
           ${a.detail?`<div style="font-size:12.5px;color:#33567d;margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(a.detail)}</div>`:''}
-          ${a.relatedVendor?`<div style="font-size:12px;color:#0369a1;margin-top:6px;padding:6px 10px;background:#eaf3fb;border-radius:8px;display:inline-block">🏢 ${esc(a.relatedVendor)}${a.relatedVendorPhone?' · 📞 '+esc(a.relatedVendorPhone):''}</div>`:''}
+          ${a.steps&&a.steps.length?`<div style="margin-top:8px;padding:8px 10px;background:#fff8e1;border:1px solid #ffd54f;border-radius:8px">
+            <div style="font-size:11px;color:#7c5e1a;font-weight:700;margin-bottom:4px">📋 처리 단계 ${a.steps.length}건 · 최근: ${esc((a.steps[a.steps.length-1].date||''))}</div>
+            <div style="font-size:12px;color:#1a2f45">▶ ${esc(a.steps[a.steps.length-1].action||'(내용 없음)')}${a.steps[a.steps.length-1].vendor?` · 🏢 ${esc(a.steps[a.steps.length-1].vendor)}`:''}</div>
+          </div>`:''}
         </div>
         ${totalCost>0?`<div style="text-align:right;font-size:14px;font-weight:800;color:#e74c3c;white-space:nowrap">💰 ${won(totalCost)}</div>`:''}
       </div>
