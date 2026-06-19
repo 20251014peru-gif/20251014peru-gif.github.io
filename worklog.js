@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260619-3";
+const APP_VERSION = "v44-20260619-5";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -142,8 +142,8 @@ function statusClass(s){ return s==="완료"?"done":s==="진행중"?"prog":"todo
 function statusColor(s){ return s==="완료"?"var(--mint)":s==="진행중"?"var(--gold)":"var(--peach)"; }
 
 const KIND_LABEL={work:"업무",plan:"오늘계획",memo:"메모",call:"통화",vacation:"휴가",meeting:"회의메모",deliver:"전달사항",filelink:"파일링크",site:"사이트",password:"비밀번호",schedule:"예정",item:"품목",stock:"입출고",cleaning:"청소일지",expense:"지출",accident:"사고"};
-const PHOTO_KINDS=["work","memo","meeting"];
-const ATTACH_KINDS=["work","memo","meeting"];
+const PHOTO_KINDS=["work","memo","meeting","accident"];
+const ATTACH_KINDS=["work","memo","meeting","accident"];
 
 /* ===== v16 카테고리 시스템 ===== */
 const DEFAULT_CATS_FILE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도"];
@@ -1838,6 +1838,70 @@ $("vDel").addEventListener("click",()=>{ if(!vId) return; $("viewOverlay").class
 $("viewOverlay").addEventListener("click",e=>{ if(e.target===$("viewOverlay")) $("viewOverlay").classList.remove("show"); });
 $("m-cam").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("m-file").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
+
+// v44: 모달에 드래그앤드롭 + 클립보드 붙여넣기로 사진 추가
+(function setupModalImageInputs(){
+  const overlay = $("overlay");
+  if(!overlay) return;
+  const modal = overlay.querySelector(".modal");
+  if(!modal) return;
+  // 드래그 오버 - 모달 전체에 시각 효과
+  let dragCounter = 0;
+  modal.addEventListener("dragenter", e=>{
+    if(!overlay.classList.contains("show")) return;
+    if(!PHOTO_KINDS.includes(mKind)) return;
+    e.preventDefault();
+    dragCounter++;
+    modal.style.outline = "3px dashed #3f7cb8";
+    modal.style.outlineOffset = "-6px";
+    modal.style.background = "#eaf3fb";
+  });
+  modal.addEventListener("dragleave", e=>{
+    if(!PHOTO_KINDS.includes(mKind)) return;
+    dragCounter--;
+    if(dragCounter<=0){
+      dragCounter = 0;
+      modal.style.outline = "";
+      modal.style.outlineOffset = "";
+      modal.style.background = "";
+    }
+  });
+  modal.addEventListener("dragover", e=>{
+    if(!overlay.classList.contains("show")) return;
+    if(!PHOTO_KINDS.includes(mKind)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  });
+  modal.addEventListener("drop", e=>{
+    if(!overlay.classList.contains("show")) return;
+    if(!PHOTO_KINDS.includes(mKind)) return;
+    e.preventDefault();
+    dragCounter = 0;
+    modal.style.outline = "";
+    modal.style.outlineOffset = "";
+    modal.style.background = "";
+    const files = [...(e.dataTransfer.files||[])].filter(f=>f.type.startsWith("image/"));
+    if(files.length){
+      addPhotos(files, modalPhotos, renderModalThumbs);
+      toast(`📷 사진 ${files.length}장 추가됨`);
+    }
+  });
+  // 붙여넣기 (Ctrl+V / Cmd+V)
+  modal.addEventListener("paste", e=>{
+    if(!overlay.classList.contains("show")) return;
+    if(!PHOTO_KINDS.includes(mKind)) return;
+    const items = [...(e.clipboardData?.items||[])];
+    const files = items
+      .filter(it=>it.type.startsWith("image/"))
+      .map(it=>it.getAsFile())
+      .filter(Boolean);
+    if(files.length){
+      e.preventDefault();
+      addPhotos(files, modalPhotos, renderModalThumbs);
+      toast(`📋 클립보드에서 사진 ${files.length}장 추가됨`);
+    }
+  });
+})();
 $("mCancel").addEventListener("click",()=>$("overlay").classList.remove("show"));
 
 // ── 탭키: datalist 자동완성 첫 항목 선택 (capture:true로 브라우저 포커스이동 차단) ──
@@ -6193,6 +6257,10 @@ function renderAccidents(){
           ${a.steps&&a.steps.length?`<div style="margin-top:8px;padding:8px 10px;background:#fff8e1;border:1px solid #ffd54f;border-radius:8px">
             <div style="font-size:11px;color:#7c5e1a;font-weight:700;margin-bottom:4px">📋 처리 단계 ${a.steps.length}건 · 최근: ${esc((a.steps[a.steps.length-1].date||''))}</div>
             <div style="font-size:12px;color:#1a2f45">▶ ${esc(a.steps[a.steps.length-1].action||'(내용 없음)')}${a.steps[a.steps.length-1].vendor?` · 🏢 ${esc(a.steps[a.steps.length-1].vendor)}`:''}</div>
+          </div>`:''}
+          ${a.photos&&a.photos.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+            ${a.photos.slice(0,4).map(p=>`<img src="${esc(p)}" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #e8f0fa">`).join('')}
+            ${a.photos.length>4?`<div style="width:54px;height:54px;background:#f0f6ff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#3f7cb8">+${a.photos.length-4}</div>`:''}
           </div>`:''}
         </div>
         ${totalCost>0?`<div style="text-align:right;font-size:14px;font-weight:800;color:#e74c3c;white-space:nowrap">💰 ${won(totalCost)}</div>`:''}
