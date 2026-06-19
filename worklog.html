@@ -2406,8 +2406,11 @@
   dbg('v43 init OK');
 })();
 
-/* ===== 점검일지 탭 (문서 탭과 동일 구조) ===== */
-(function(){
+/* ===== 점검일지 탭 (v44: makeDocTab으로 통합됨 - 아래 IIFE는 비활성화) ===== */
+(function(){ /* v44 비활성화 - 호환을 위해 빈 함수만 유지 */
+  window._oldInsp_disabled = true;
+  return;
+  // 이하 코드는 실행되지 않음
   const INSP_LS = 'wl_insp_v43';
   let insps = [];
   let editingInspId = null;
@@ -4698,6 +4701,21 @@ function renderMonthMgrList(){
     });
   });
 }
+
+/* ===== 점검일지 탭 초기화 (v44: makeDocTab 적용) ===== */
+makeDocTab({
+  tab:'insp', dataLS:'wl_insp_v43', tabKey:'filelink',
+  defaultTitle:'점검일지',
+  bodyId:'inspBody', countId:'inspCount',
+  typeFilterId:'inspTypeFilter', monthFilterId:null,
+  catMgrBtnId:'inspCatMgrBtn', monthMgrBtnId:null, yearMgrBtnId:null, yearFilterId:'inspYearFilter', addBtnId:'inspAddBtn',
+  modalId:'inspModal', modalTitleId:'inspModalTitle',
+  modalTypeId:'inspModalType', modalMonthId:'inspModalMonth',
+  modalNameId:'inspModalName', modalPathId:'inspModalPath',
+  modalMemoId:'inspModalMemo',
+  modalSaveId:'inspModalSave', modalDelId:'inspModalDel', modalCancelId:'inspModalCancel',
+  cols:5
+});
 
 /* ===== 운영실무 탭 초기화 ===== */
 makeDocTab({
