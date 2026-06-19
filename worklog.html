@@ -595,6 +595,174 @@
   .v43-fab { right: 16px; bottom: 20px; width: 52px; height: 52px; font-size: 26px; }
   .sticky-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ===== 체크박스 할 일 목록 ===== */
+.sticky-input .checklist-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  min-height: 28px;
+  user-select: none;
+  transition: padding-left .2s ease, transform .15s ease, background .15s ease;
+}
+.sticky-input .checklist-row[data-indent="1"] {
+  padding-left: 28px;
+}
+.sticky-input .checklist-cb {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #999;
+  border-radius: 5px;
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: transparent;
+  flex-shrink: 0;
+  user-select: none;
+  transition: all .15s;
+  margin-top: 1px;
+}
+.sticky-input .checklist-cb:hover {
+  border-color: #3f7cb8;
+  background: #eaf1fb;
+}
+.sticky-input .checklist-row.done .checklist-cb {
+  background: #3f7cb8;
+  border-color: #3f7cb8;
+  color: #fff;
+}
+.sticky-input .checklist-cb::before { content: ""; }
+.sticky-input .checklist-row.done .checklist-cb::before { content: "✓"; }
+.sticky-input .checklist-text {
+  flex: 1;
+  min-height: 24px;
+  outline: none;
+  line-height: 1.5;
+  padding: 2px 4px;
+  word-break: break-word;
+}
+.sticky-input .checklist-text:empty::before {
+  content: "할 일 입력...";
+  color: #bba;
+  pointer-events: none;
+}
+.sticky-input .checklist-row.done .checklist-text {
+  text-decoration: line-through;
+  color: #999;
+}
+.sticky-input .checklist-row.swipe-right {
+  transform: translateX(8px);
+  background: #eaf1fb;
+  border-radius: 6px;
+}
+.sticky-input .checklist-row.swipe-left {
+  transform: translateX(-8px);
+  background: #fde8e8;
+  border-radius: 6px;
+}
+.sticky-note-body .checklist-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 2px 0;
+  min-height: 22px;
+}
+.sticky-note-body .checklist-row[data-indent="1"] {
+  padding-left: 22px;
+}
+.sticky-note-body .checklist-cb {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #888;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: transparent;
+  flex-shrink: 0;
+  user-select: none;
+  margin-top: 1px;
+  transition: all .12s;
+}
+.sticky-note-body .checklist-row.done .checklist-cb {
+  background: #3f7cb8;
+  border-color: #3f7cb8;
+  color: #fff;
+}
+.sticky-note-body .checklist-cb::before { content: ""; }
+.sticky-note-body .checklist-row.done .checklist-cb::before { content: "✓"; }
+.sticky-note-body .checklist-text {
+  flex: 1;
+  line-height: 1.4;
+  font-size: 13px;
+  word-break: break-word;
+}
+.sticky-note-body .checklist-row.done .checklist-text {
+  text-decoration: line-through;
+  color: #999;
+}
+.sn-edit-body .checklist-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 2px 0;
+  min-height: 24px;
+}
+.sn-edit-body .checklist-row[data-indent="1"] {
+  padding-left: 24px;
+}
+.sn-edit-body .checklist-cb {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid #888;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: transparent;
+  flex-shrink: 0;
+  user-select: none;
+  margin-top: 2px;
+}
+.sn-edit-body .checklist-row.done .checklist-cb {
+  background: #3f7cb8;
+  border-color: #3f7cb8;
+  color: #fff;
+}
+.sn-edit-body .checklist-cb::before { content: ""; }
+.sn-edit-body .checklist-row.done .checklist-cb::before { content: "✓"; }
+.sn-edit-body .checklist-text {
+  flex: 1;
+  outline: none;
+  line-height: 1.4;
+  font-size: 13px;
+  word-break: break-word;
+}
+.sn-edit-body .checklist-row.done .checklist-text {
+  text-decoration: line-through;
+  color: #999;
+}
+.sticky-photo-btn.todo-active {
+  background: #3f7cb8 !important;
+  color: #fff !important;
+  border-color: #3f7cb8 !important;
+}
 </style>
 </head>
 <body>
@@ -803,6 +971,7 @@
             🖼
             <input type="file" id="stickyFile" accept="image/*" multiple style="display:none">
           </label>
+          <button type="button" class="sticky-photo-btn" id="stickyTodoBtn" title="할 일 목록 (체크리스트)">☑</button>
           <span style="font-size:11px;color:#bba;flex:1">Ctrl+V 붙여넣기 가능</span>
           <button class="sticky-save-btn" id="stickySave">저장</button>
         </div>
@@ -2366,7 +2535,7 @@
         <!-- 읽기 모드 -->
         <div class="sn-view" data-snview="${esc(en.id)}">
           ${en.title?`<div class="sticky-note-title">${esc(en.title)}</div>`:''}
-          <div class="sticky-note-body">${esc(en.body||'').replace(/\n/g,'<br>')}</div>
+          <div class="sticky-note-body">${renderMemoBody(en.body||'')}</div>
           ${en.photos&&en.photos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${en.photos.slice(0,3).map(p=>`<img src="${p}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:2px solid rgba(255,255,255,.8)">`).join('')}${en.photos.length>3?`<span style="font-size:11px;color:#999;align-self:center">+${en.photos.length-3}</span>`:''}</div>`:''}
           <div class="sn-card-btns">
             <span class="sticky-note-date">${esc(en.date||'')}</span>
@@ -2380,7 +2549,7 @@
         <!-- 편집 모드 (숨김) -->
         <div class="sn-edit" data-snedit="${esc(en.id)}" style="display:none">
           <input type="text" class="sn-edit-title" value="${esc(en.title||'')}" placeholder="제목 (선택)">
-          <div class="sn-edit-body" contenteditable="true">${esc(en.body||'')}</div>
+          <div class="sn-edit-body" contenteditable="true">${renderMemoBody(en.body||'')}</div>
           <div class="sn-card-btns" style="margin-top:8px">
             <button class="sn-btn-cancel" data-scancel="${esc(en.id)}">취소</button>
             <div style="display:flex;gap:4px">
@@ -2419,7 +2588,11 @@
         const id=btn.dataset.ssave;
         const card=btn.closest('.sticky-note');
         const t=card.querySelector('.sn-edit-title').value||'';
-        const b=(card.querySelector('.sn-edit-body').innerText||'').trim();
+        const editBody = card.querySelector('.sn-edit-body');
+        const hasChecklistEdit = editBody.querySelector('.checklist-row');
+        const b = hasChecklistEdit
+          ? editBody.innerHTML.trim()
+          : (editBody.innerText||'').trim();
         if(!b){ if(typeof toast==='function') toast('내용을 입력해주세요'); return; }
         if(typeof updateRecord==='function') updateRecord(id,{title:t.trim(),body:b});
         if(typeof toast==='function') toast('저장됐어요');
@@ -2584,13 +2757,294 @@
     });
   }
 
+  // ===== 체크박스 할 일 목록 =====
+  function makeChecklistRow(text, done, indent){
+    const row = document.createElement('div');
+    row.className = 'checklist-row' + (done?' done':'');
+    row.contentEditable = 'false';
+    row.dataset.indent = String(indent||0);
+    const safeText = text ? text.replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m])) : '';
+    row.innerHTML = '<span class="checklist-cb" contenteditable="false"></span>' +
+                    '<span class="checklist-text" contenteditable="true">'+safeText+'</span>';
+    return row;
+  }
+
+  function insertChecklistRow(){
+    const editor = document.getElementById('stickyInput');
+    if(!editor) return null;
+    editor.focus();
+    const row = makeChecklistRow('', false, 0);
+    const sel = window.getSelection();
+    if(sel && sel.rangeCount){
+      const range = sel.getRangeAt(0);
+      if(editor.contains(range.startContainer)){
+        let curBlock = range.startContainer;
+        while(curBlock && curBlock.parentElement !== editor) curBlock = curBlock.parentElement;
+        if(curBlock && curBlock !== editor){
+          curBlock.after(row);
+        } else {
+          editor.appendChild(row);
+        }
+      } else {
+        editor.appendChild(row);
+      }
+    } else {
+      editor.appendChild(row);
+    }
+    setTimeout(function(){
+      const t = row.querySelector('.checklist-text');
+      if(t){
+        t.focus();
+        const r = document.createRange();
+        r.selectNodeContents(t);
+        r.collapse(true);
+        const s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+      }
+    }, 20);
+    return row;
+  }
+
+  function findChecklistRow(){
+    const editor = document.getElementById('stickyInput');
+    if(!editor) return null;
+    const sel = window.getSelection();
+    if(!sel.rangeCount) return null;
+    const node = sel.anchorNode;
+    if(!node) return null;
+    let el = node.nodeType===1 ? node : node.parentElement;
+    while(el && el !== editor){
+      if(el.classList && el.classList.contains('checklist-row')) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function syncTodoBtnState(){
+    const btn = document.getElementById('stickyTodoBtn');
+    if(!btn) return;
+    btn.classList.toggle('todo-active', !!findChecklistRow());
+  }
+
+  function bindChecklistFeature(){
+    const btn = document.getElementById('stickyTodoBtn');
+    const editor = document.getElementById('stickyInput');
+    if(!btn || !editor){ return; }
+    if(btn._bound){ return; }
+    btn._bound = true;
+
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      const row = findChecklistRow();
+      if(row){
+        const txt = (row.querySelector('.checklist-text')||{}).innerText||'';
+        const p = document.createElement('div');
+        const safeText = txt.replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+        p.innerHTML = safeText || '<br>';
+        row.replaceWith(p);
+        editor.focus();
+        const r = document.createRange();
+        r.selectNodeContents(p);
+        r.collapse(false);
+        const s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+        btn.classList.remove('todo-active');
+      } else {
+        insertChecklistRow();
+        btn.classList.add('todo-active');
+      }
+    });
+
+    editor.addEventListener('click', function(e){
+      const cb = e.target.closest('.checklist-cb');
+      if(!cb) return;
+      e.preventDefault();
+      const row = cb.closest('.checklist-row');
+      if(row) row.classList.toggle('done');
+    });
+
+    editor.addEventListener('keydown', function(e){
+      const row = findChecklistRow();
+      if(!row) return;
+
+      if(e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        const txt = (row.querySelector('.checklist-text')||{}).innerText||'';
+        if(!txt.trim()){
+          const p = document.createElement('div');
+          p.innerHTML = '<br>';
+          row.replaceWith(p);
+          editor.focus();
+          const r = document.createRange();
+          r.selectNodeContents(p);
+          r.collapse(false);
+          const s = window.getSelection();
+          s.removeAllRanges();
+          s.addRange(r);
+          btn.classList.remove('todo-active');
+          return;
+        }
+        const indent = Number(row.dataset.indent||0);
+        const newRow = makeChecklistRow('', false, indent);
+        row.after(newRow);
+        const t = newRow.querySelector('.checklist-text');
+        if(t){
+          t.focus();
+          const r = document.createRange();
+          r.selectNodeContents(t);
+          r.collapse(true);
+          const s = window.getSelection();
+          s.removeAllRanges();
+          s.addRange(r);
+        }
+        return;
+      }
+
+      if(e.key === 'Tab' && !e.shiftKey){
+        e.preventDefault();
+        const cur = Number(row.dataset.indent||0);
+        if(cur < 1) row.dataset.indent = String(cur+1);
+        return;
+      }
+      if(e.key === 'Tab' && e.shiftKey){
+        e.preventDefault();
+        const cur = Number(row.dataset.indent||0);
+        if(cur > 0) row.dataset.indent = String(cur-1);
+        return;
+      }
+      if(e.key === 'Backspace'){
+        const txt = (row.querySelector('.checklist-text')||{}).innerText||'';
+        if(!txt){
+          e.preventDefault();
+          row.remove();
+          editor.focus();
+          btn.classList.remove('todo-active');
+          return;
+        }
+      }
+    });
+
+    // 모바일 스와이프
+    let touchX = 0, touchY = 0, touchRow = null, touchStartT = 0;
+    editor.addEventListener('touchstart', function(e){
+      const row = e.target.closest('.checklist-row');
+      if(!row) return;
+      const t = e.touches[0];
+      touchX = t.clientX;
+      touchY = t.clientY;
+      touchRow = row;
+      touchStartT = Date.now();
+    }, {passive:true});
+
+    editor.addEventListener('touchmove', function(e){
+      if(!touchRow) return;
+      const t = e.touches[0];
+      const dx = t.clientX - touchX;
+      const dy = t.clientY - touchY;
+      if(Math.abs(dy) > 20){
+        touchRow.classList.remove('swipe-right', 'swipe-left');
+        touchRow = null;
+        return;
+      }
+      if(dx > 20){
+        touchRow.classList.add('swipe-right');
+        touchRow.classList.remove('swipe-left');
+      } else if(dx < -20){
+        touchRow.classList.add('swipe-left');
+        touchRow.classList.remove('swipe-right');
+      } else {
+        touchRow.classList.remove('swipe-right', 'swipe-left');
+      }
+    }, {passive:true});
+
+    editor.addEventListener('touchend', function(e){
+      if(!touchRow) return;
+      const ch = e.changedTouches[0];
+      const dx = ch.clientX - touchX;
+      const elapsed = Date.now() - touchStartT;
+      touchRow.classList.remove('swipe-right', 'swipe-left');
+      if(elapsed < 600 && Math.abs(dx) > 50){
+        const cur = Number(touchRow.dataset.indent||0);
+        if(dx > 0 && cur < 1) touchRow.dataset.indent = String(cur+1);
+        else if(dx < 0 && cur > 0) touchRow.dataset.indent = String(cur-1);
+      }
+      touchRow = null;
+    }, {passive:true});
+
+    editor.addEventListener('keyup', syncTodoBtnState);
+    editor.addEventListener('mouseup', syncTodoBtnState);
+    editor.addEventListener('focus', syncTodoBtnState);
+  }
+
+  // 카드 보기의 체크박스 클릭 — 토글 + 저장
+  document.addEventListener('click', function(e){
+    const cb = e.target.closest('.sticky-note-body .checklist-cb, .sn-edit-body .checklist-cb');
+    if(!cb) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const row = cb.closest('.checklist-row');
+    if(!row) return;
+    row.classList.toggle('done');
+    const card = cb.closest('.sticky-note');
+    if(!card) return;
+    const id = card.dataset.sid;
+    if(!id || typeof entries==='undefined' || typeof updateRecord!=='function') return;
+    const en = entries.find(function(x){return x.id===id;});
+    if(!en || !en.body) return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = en.body;
+    const savedRows = tmp.querySelectorAll('.checklist-row');
+    const liveRows = card.querySelectorAll('.sticky-note-body .checklist-row, .sn-edit-body .checklist-row');
+    if(savedRows.length === liveRows.length){
+      for(let i=0; i<savedRows.length; i++){
+        if(liveRows[i].classList.contains('done')) savedRows[i].classList.add('done');
+        else savedRows[i].classList.remove('done');
+      }
+      updateRecord(id, {body: tmp.innerHTML});
+    }
+  });
+
+  // 메모 본문 렌더링 — 체크박스는 HTML 그대로, 일반 텍스트는 escape
+  function renderMemoBody(html){
+    if(!html) return '';
+    if(html.indexOf('checklist-row') >= 0){
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      tmp.querySelectorAll('script,style,iframe,object,embed').forEach(function(n){n.remove();});
+      tmp.querySelectorAll('*').forEach(function(el){
+        [].slice.call(el.attributes).forEach(function(a){
+          if(a.name.toLowerCase().startsWith('on')) el.removeAttribute(a.name);
+          if(a.name.toLowerCase()==='href' && /^javascript:/i.test(a.value)) el.removeAttribute(a.name);
+        });
+      });
+      return tmp.innerHTML;
+    }
+    const esc2 = (s)=>(s||'').replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+    return esc2(html).replace(/\n/g,'<br>');
+  }
+
+  // 초기 바인딩
+  setTimeout(bindChecklistFeature, 500);
+  setTimeout(function(){
+    document.querySelectorAll('.v43-tab[data-v43tab="memo"]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        setTimeout(bindChecklistFeature, 200);
+      });
+    });
+  }, 1000);
+
   // 저장
   function saveSticky(){
     const inputEl = document.getElementById('stickyInput');
     const title = (document.getElementById('stickyTitle')||{}).value||'';
     if(!inputEl){ return; }
-    // 텍스트 추출
-    const body = (inputEl.innerText||inputEl.textContent||'').trim();
+    // 텍스트 추출 (체크박스가 있으면 HTML 전체, 없으면 텍스트만)
+    const hasChecklist = inputEl.querySelector('.checklist-row');
+    const body = hasChecklist
+      ? inputEl.innerHTML.trim()
+      : (inputEl.innerText||inputEl.textContent||'').trim();
     // 사진 추출
     const photos = [...inputEl.querySelectorAll('img')].map(i=>i.src);
     if(!body && !photos.length){ if(typeof toast==='function') toast('내용을 입력해주세요'); else alert('내용을 입력해주세요'); return; }
