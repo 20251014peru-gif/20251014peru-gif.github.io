@@ -1,5 +1,10 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v43-20260617";
+const APP_VERSION = "v44-20260619";
+// v44-20260619 변경사항:
+// - 업무 추가 모달에서 지출유형 선택 시 자동으로 모드 전환
+// - 개인비용 선택 → 💸 자재구매 모드 (자재명/단가/수량/택배비/합계 자동계산)
+// - 후불청구 선택 → 📃 공사용역 모드 (자재 칸 숨김, 계약금액만 입력)
+// - 저장 시 지출 탭에 자동 등록 (개인비용→개인지출, 후불청구→세금계산서)
 // v43-20260617 변경사항:
 // - 업무 입력창: 위치/단가/택배비/개선사항 필드 제거
 // - 합계→지출금액으로 이름 변경
@@ -184,6 +189,10 @@ const SCHEMA={
     {k:"material",label:"자재명",type:"text"},
     {k:"matSpec",label:"자재 사양",type:"text"},
     {k:"qty",label:"수량",type:"number"},
+    {k:"unitPrice",label:"단가 (원)",type:"number"},
+    {k:"deliveryFee",label:"택배비 (원)",type:"number"},
+    {k:"cost",label:"💰 합계 (원)",type:"number"},
+    {k:"workNote",label:"비고",type:"textarea",full:true},
   ],
   plan:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"text",label:"할 일",type:"text",full:true,req:true} ],
   memo:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"title",label:"제목(선택)",type:"text",full:true}, {k:"body",label:"내용",type:"textarea",full:true,req:true} ],
@@ -631,7 +640,7 @@ function calcWorkTotal(obj){
 }
 
 
-/* ── 업무 → 지출 자동 연동 ─────────────────────────────── */
+/* ── v44: 업무 → 지출 자동 연동 (개인비용/후불청구 구분) ── */
 function syncWorkExpense(workObj, workId, savedId){
   const id = workId || savedId;
   if(!id) return;
@@ -645,14 +654,24 @@ function syncWorkExpense(workObj, workId, savedId){
     return;
   }
 
+  // 개인비용 → 자재구매(품의용), 개인지출 탭에 등록
+  // 후불청구 → 공사/용역, 세금계산서 탭에 등록
+  const isPersonal = expType==="개인비용";
   const expData = {
     kind:"expense",
     date: workObj.date||todayStr(),
-    expType: expType==="개인비용" ? "개인비용" : "후불청구",
+    expType: isPersonal ? "개인지출" : "세금계산서",
+    utype: isPersonal ? "자재구매" : "공사/용역",
     title: workObj.title||(workObj.field||""),
     amount: Number(workObj.cost)||0,
-    vendor: workObj.vendor||"",
-    memo: (workObj.floor||"")+(workObj.field?" ["+workObj.field+"]":""),
+    vendor: workObj.workVendor||workObj.vendor||"",
+    field: workObj.field||"",
+    matName: isPersonal ? (workObj.material||"") : "",
+    spec: isPersonal ? (workObj.matSpec||"") : "",
+    qty: isPersonal ? (Number(workObj.qty)||1) : 1,
+    unitPrice: isPersonal ? (Number(workObj.unitPrice)||0) : 0,
+    deliveryFee: isPersonal ? (Number(workObj.deliveryFee)||0) : 0,
+    memo: workObj.workNote || ((workObj.floor||"")+(workObj.field?" ["+workObj.field+"]":"")),
     workId: id, // 업무와 연결 키
     createdAt: Date.now()
   };
@@ -1175,19 +1194,56 @@ function openEditor(kind,id){
       const showHint=()=>{ const h=FIELD_HINT[fe.value]; if(h){ hintBox.textContent="💡 "+h; hintBox.style.display=""; } else hintBox.style.display="none"; };
       fe.addEventListener("change",showHint); showHint();
     }
-    // v43: 지출금액 직접 입력 방식으로 변경 (자동계산 제거)
+    // v44: 지출유형에 따른 동적 필드 표시
+    const updateExpMode = ()=>{
+      const expType = ($("m-expType")||{}).value||"없음";
+      const modal = document.querySelector("#overlay .modal");
+      if(modal){
+        modal.classList.remove("exp-mode-personal","exp-mode-tax","exp-mode-none");
+        if(expType==="개인비용") modal.classList.add("exp-mode-personal");
+        else if(expType==="후불청구") modal.classList.add("exp-mode-tax");
+        else modal.classList.add("exp-mode-none");
+      }
+      // 후불청구: 자재 입력 칸 숨기기 (자재명/사양/수량/단가/택배비)
+      const matFields = ["material","matSpec","qty","unitPrice","deliveryFee"];
+      matFields.forEach(k=>{
+        const f = $("m-"+k);
+        if(!f) return;
+        const wrap = f.closest(".field");
+        if(!wrap) return;
+        wrap.style.display = (expType==="후불청구") ? "none" : "";
+      });
+      // 합계 라벨 변경
+      const costEl = $("m-cost");
+      if(costEl){
+        const lbl = costEl.closest(".field") ? costEl.closest(".field").querySelector("label") : null;
+        if(lbl){
+          if(expType==="후불청구") lbl.textContent = "💰 계약금액 (원)";
+          else lbl.textContent = "💰 합계 (원)";
+        }
+      }
+    };
+    // v44: 자재 자동계산 (개인비용 모드일 때만)
     const calcWorkCost = ()=>{
+      const expType = ($("m-expType")||{}).value||"없음";
+      if(expType==="후불청구") return; // 후불은 수동 입력
       const qty = Number(($("m-qty")||{}).value)||0;
       const up  = Number(($("m-unitPrice")||{}).value)||0;
-      const del = Number(($("m-delivery")||{}).value)||0;
+      const del = Number(($("m-deliveryFee")||{}).value)||0;
       const costEl = $("m-cost");
       if(costEl && (qty>0||up>0)){
         costEl.value = qty*up + del;
       }
     };
-    ["m-qty","m-unitPrice","m-delivery"].forEach(id=>{
+    ["m-qty","m-unitPrice","m-deliveryFee"].forEach(id=>{
       const el=$(id); if(el) el.addEventListener("input", calcWorkCost);
     });
+    // expType 변경 → 모드 전환
+    const expTypeEl = $("m-expType");
+    if(expTypeEl){
+      expTypeEl.addEventListener("change", updateExpMode);
+      setTimeout(updateExpMode, 100); // 초기 적용
+    }
   }
   $("overlay").classList.add("show");
   const modalEl=$("overlay").querySelector(".modal"); if(modalEl) modalEl.scrollTop=0;

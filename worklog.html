@@ -822,6 +822,44 @@
 .checklist-done-section.expanded .checklist-done-list {
   display: block;
 }
+
+/* ===== v44: 지출유형별 모달 모드 표시 ===== */
+.modal.exp-mode-personal {
+  border-top: 4px solid #0369a1 !important;
+  box-shadow: 0 0 0 1px rgba(3,105,161,.15), 0 8px 28px rgba(3,105,161,.18);
+}
+.modal.exp-mode-personal #mTitle::after {
+  content: " · 💸 개인비용(자재구매·품의용)";
+  font-size: 13px;
+  color: #0369a1;
+  font-weight: 600;
+  margin-left: 4px;
+}
+.modal.exp-mode-tax {
+  border-top: 4px solid #c2410c !important;
+  box-shadow: 0 0 0 1px rgba(194,65,12,.15), 0 8px 28px rgba(194,65,12,.18);
+}
+.modal.exp-mode-tax #mTitle::after {
+  content: " · 📃 후불청구(공사/용역)";
+  font-size: 13px;
+  color: #c2410c;
+  font-weight: 600;
+  margin-left: 4px;
+}
+.modal.exp-mode-none {
+  border-top: 4px solid #dbe6f4;
+}
+/* 합계 칸 강조 */
+.modal.exp-mode-personal .field label[for="m-cost"],
+.modal.exp-mode-personal #m-cost {
+  font-weight: 800;
+  color: #0369a1;
+}
+.modal.exp-mode-tax .field label[for="m-cost"],
+.modal.exp-mode-tax #m-cost {
+  font-weight: 800;
+  color: #c2410c;
+}
 </style>
 </head>
 <body>
