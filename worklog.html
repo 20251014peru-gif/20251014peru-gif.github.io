@@ -763,6 +763,65 @@
   color: #fff !important;
   border-color: #3f7cb8 !important;
 }
+
+/* ===== 메모 필터 버튼 ===== */
+.memo-filter-btn {
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: 1.5px solid #dbe6f4;
+  background: #fff;
+  color: #5a7a9a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.memo-filter-btn:hover {
+  background: #f0f6fc;
+}
+.memo-filter-btn.active {
+  background: #3f7cb8;
+  border-color: #3f7cb8;
+  color: #fff;
+}
+
+/* ===== 완료 항목 접기/펼치기 ===== */
+.checklist-done-section {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #dbe6f4;
+}
+.checklist-done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #7a8fa8;
+  padding: 4px 2px;
+  user-select: none;
+  border-radius: 4px;
+  transition: background .12s;
+}
+.checklist-done-toggle:hover {
+  background: rgba(63,124,184,.08);
+}
+.checklist-done-toggle .arrow {
+  display: inline-block;
+  transition: transform .2s;
+  font-size: 10px;
+}
+.checklist-done-section.expanded .checklist-done-toggle .arrow {
+  transform: rotate(180deg);
+}
+.checklist-done-list {
+  display: none;
+  margin-top: 4px;
+}
+.checklist-done-section.expanded .checklist-done-list {
+  display: block;
+}
 </style>
 </head>
 <body>
@@ -981,6 +1040,12 @@
       <div class="v43-search-wrap" style="margin:10px 0 6px">
         <span class="v43-search-icon">🔍</span>
         <input type="text" id="stickySearch" class="v43-search" placeholder="메모 검색…">
+      </div>
+      <!-- 메모 필터 버튼 -->
+      <div class="memo-filter-row" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <button type="button" class="memo-filter-btn active" data-mfilter="all">📋 메모</button>
+        <button type="button" class="memo-filter-btn" data-mfilter="done">✅ 완료</button>
+        <button type="button" class="memo-filter-btn" data-mfilter="todo">☐ 미완료</button>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <span id="stickyCount" style="font-size:12px;color:#aab8c8"></span>
@@ -2516,6 +2581,8 @@
   document.getElementById('memoViewCard')?.addEventListener('click', ()=>setStickyView('card'));
   document.getElementById('memoViewList')?.addEventListener('click', ()=>setStickyView('list'));
 
+  let memoFilter = 'all'; // 'all' | 'done' | 'todo'
+
   function renderStickyGrid(){
     const grid = document.getElementById('stickyGrid');
     if(!grid) return;
@@ -2524,10 +2591,28 @@
       const q = stickySearch.trim().toLowerCase();
       list = list.filter(e=>(e.title||'').toLowerCase().includes(q)||(e.body||'').toLowerCase().includes(q));
     }
+    // 필터 적용: 완료/미완료
+    if(memoFilter === 'done' || memoFilter === 'todo'){
+      list = list.filter(e=>{
+        if(!e.body || e.body.indexOf('checklist-row')<0) return false;
+        const tmp = document.createElement('div');
+        tmp.innerHTML = e.body;
+        const rows = tmp.querySelectorAll('.checklist-row');
+        if(!rows.length) return false;
+        const doneCount = tmp.querySelectorAll('.checklist-row.done').length;
+        const todoCount = rows.length - doneCount;
+        if(memoFilter === 'done') return doneCount > 0;
+        if(memoFilter === 'todo') return todoCount > 0;
+        return true;
+      });
+    }
     const cnt = document.getElementById('stickyCount');
     if(cnt) cnt.textContent = list.length+'개';
     if(!list.length){
-      grid.innerHTML = `<div class="v43-empty" style="grid-column:1/-1"><div class="ei">📝</div>${stickySearch?'검색 결과가 없어요':'메모를 추가해보세요!'}</div>`;
+      const emptyMsg = memoFilter==='done' ? '완료한 항목이 없어요'
+                     : memoFilter==='todo' ? '할 일이 없어요 🎉'
+                     : (stickySearch ? '검색 결과가 없어요' : '메모를 추가해보세요!');
+      grid.innerHTML = `<div class="v43-empty" style="grid-column:1/-1"><div class="ei">📝</div>${emptyMsg}</div>`;
       return;
     }
     grid.innerHTML = list.map(en=>`
@@ -2535,7 +2620,7 @@
         <!-- 읽기 모드 -->
         <div class="sn-view" data-snview="${esc(en.id)}">
           ${en.title?`<div class="sticky-note-title">${esc(en.title)}</div>`:''}
-          <div class="sticky-note-body">${renderMemoBody(en.body||'')}</div>
+          <div class="sticky-note-body">${renderMemoBody(en.body||'', {splitDone:true})}</div>
           ${en.photos&&en.photos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${en.photos.slice(0,3).map(p=>`<img src="${p}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:2px solid rgba(255,255,255,.8)">`).join('')}${en.photos.length>3?`<span style="font-size:11px;color:#999;align-self:center">+${en.photos.length-3}</span>`:''}</div>`:''}
           <div class="sn-card-btns">
             <span class="sticky-note-date">${esc(en.date||'')}</span>
@@ -2978,7 +3063,7 @@
     editor.addEventListener('focus', syncTodoBtnState);
   }
 
-  // 카드 보기의 체크박스 클릭 — 토글 + 저장
+  // 카드 보기의 체크박스 클릭 — 토글 + 저장 + 자동 정렬
   document.addEventListener('click', function(e){
     const cb = e.target.closest('.sticky-note-body .checklist-cb, .sn-edit-body .checklist-cb');
     if(!cb) return;
@@ -2993,22 +3078,47 @@
     if(!id || typeof entries==='undefined' || typeof updateRecord!=='function') return;
     const en = entries.find(function(x){return x.id===id;});
     if(!en || !en.body) return;
+    // 원본 body에서 체크박스 상태 업데이트
     const tmp = document.createElement('div');
     tmp.innerHTML = en.body;
-    const savedRows = tmp.querySelectorAll('.checklist-row');
+    // 카드의 모든 체크박스 라인 (분리된 완료 영역 포함)
     const liveRows = card.querySelectorAll('.sticky-note-body .checklist-row, .sn-edit-body .checklist-row');
+    const savedRows = tmp.querySelectorAll('.checklist-row');
+    // 텍스트 매칭으로 동기화 (정렬이 달라도 작동)
+    const isCardView = !!cb.closest('.sticky-note-body');
     if(savedRows.length === liveRows.length){
-      for(let i=0; i<savedRows.length; i++){
-        if(liveRows[i].classList.contains('done')) savedRows[i].classList.add('done');
-        else savedRows[i].classList.remove('done');
-      }
+      // 순서가 같다고 가정 - 텍스트 기준 매칭
+      const liveTexts = Array.from(liveRows).map(function(r){
+        const t = r.querySelector('.checklist-text');
+        return { text: (t?t.innerText:'').trim(), done: r.classList.contains('done') };
+      });
+      const usedIdx = new Set();
+      savedRows.forEach(function(sr){
+        const srText = ((sr.querySelector('.checklist-text')||{}).innerText||'').trim();
+        // 같은 텍스트의 live row 중 아직 안 쓴 것 찾기
+        for(let i=0; i<liveTexts.length; i++){
+          if(usedIdx.has(i)) continue;
+          if(liveTexts[i].text === srText){
+            if(liveTexts[i].done) sr.classList.add('done');
+            else sr.classList.remove('done');
+            usedIdx.add(i);
+            break;
+          }
+        }
+      });
       updateRecord(id, {body: tmp.innerHTML});
+      // 카드 보기일 때만 자동 재정렬 (편집 모드는 사용자가 편집 중이라 안 건드림)
+      if(isCardView){
+        // 약간의 딜레이로 시각적 피드백을 준 뒤 재렌더링
+        setTimeout(function(){ renderStickyGrid(); }, 250);
+      }
     }
   });
 
   // 메모 본문 렌더링 — 체크박스는 HTML 그대로, 일반 텍스트는 escape
-  function renderMemoBody(html){
+  function renderMemoBody(html, opts){
     if(!html) return '';
+    const splitDone = opts && opts.splitDone;
     if(html.indexOf('checklist-row') >= 0){
       const tmp = document.createElement('div');
       tmp.innerHTML = html;
@@ -3019,6 +3129,27 @@
           if(a.name.toLowerCase()==='href' && /^javascript:/i.test(a.value)) el.removeAttribute(a.name);
         });
       });
+      // 카드 보기일 때만 완료 항목을 아래로 분리
+      if(splitDone){
+        const doneRows = tmp.querySelectorAll('.checklist-row.done');
+        if(doneRows.length){
+          const doneSection = document.createElement('div');
+          doneSection.className = 'checklist-done-section';
+          const doneList = document.createElement('div');
+          doneList.className = 'checklist-done-list';
+          // 완료 항목들을 doneList로 이동
+          doneRows.forEach(function(r){
+            doneList.appendChild(r);
+          });
+          // 토글 버튼
+          const toggle = document.createElement('div');
+          toggle.className = 'checklist-done-toggle';
+          toggle.innerHTML = '<span class="arrow">▼</span> ✅ 완료 ('+doneRows.length+')';
+          doneSection.appendChild(toggle);
+          doneSection.appendChild(doneList);
+          tmp.appendChild(doneSection);
+        }
+      }
       return tmp.innerHTML;
     }
     const esc2 = (s)=>(s||'').replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
@@ -3034,6 +3165,27 @@
       });
     });
   }, 1000);
+
+  // 메모 필터 버튼
+  setTimeout(function(){
+    document.querySelectorAll('.memo-filter-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('.memo-filter-btn').forEach(function(b){b.classList.remove('active');});
+        btn.classList.add('active');
+        memoFilter = btn.dataset.mfilter || 'all';
+        renderStickyGrid();
+      });
+    });
+  }, 200);
+
+  // 완료 영역 펼치기/접기 (이벤트 위임)
+  document.addEventListener('click', function(e){
+    const toggle = e.target.closest('.checklist-done-toggle');
+    if(!toggle) return;
+    e.stopPropagation();
+    const section = toggle.closest('.checklist-done-section');
+    if(section) section.classList.toggle('expanded');
+  });
 
   // 저장
   function saveSticky(){
