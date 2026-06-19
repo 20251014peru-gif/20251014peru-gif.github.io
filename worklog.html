@@ -1738,6 +1738,10 @@
         <button id="bulkTypeBtn2" style="padding:6px 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📑 종류 변경</button>
         <button id="bulkFieldBtn2" style="padding:6px 12px;background:#fff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🏷 분야 변경</button>
         <button id="bulkDelBtn2" style="padding:6px 12px;background:#fde8e8;color:#b52929;border:1.5px solid #f5b5b5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑 삭제</button>
+        <span style="width:1px;height:24px;background:#dbe6f4;margin:0 4px"></span>
+        <span style="font-size:11px;font-weight:700;color:#7a92a8">목록 관리:</span>
+        <button id="bulkTypeMgrBtn" style="padding:6px 12px;background:#fff;color:#8e44ad;border:1.5px solid #8e44ad;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">⚙ 종류 관리</button>
+        <button id="bulkFieldMgrBtn" style="padding:6px 12px;background:#fff;color:#0369a1;border:1.5px solid #0369a1;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">⚙ 분야 관리</button>
         <button id="bulkOrgSave" style="margin-left:auto;padding:8px 18px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">💾 변경사항 저장</button>
       </div>
       <div id="bulkOrgTable" style="flex:1;overflow:auto;padding:14px 20px;background:#fff"></div>
@@ -4354,78 +4358,176 @@ function makeDocTab(cfg){
     if(!host) return;
     const allTags = getAllTags();
     const favCount = items.filter(d=>d.favorite).length;
-    host.innerHTML = `
-      <input type="text" id="${cfg.tab}-search" placeholder="🔍 검색 (이름·메모·태그·경로)" value="${esc(searchQuery)}" style="width:100%;box-sizing:border-box;height:42px;padding:0 16px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;margin-bottom:10px">
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-        <button id="${cfg.tab}-fav-btn" style="padding:7px 14px;border-radius:18px;border:2px solid ${favOnly?'#f59e0b':'#dbe6f4'};background:${favOnly?'#f59e0b':'#fff'};color:${favOnly?'#fff':'#7a92a8'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">⭐ 즐겨찾기 ${favCount}</button>
-        ${(typeFilter!=='all'||fieldFilter!=='all'||yearFilter!=='all'||tagFilter||favOnly||searchQuery)?`<button id="${cfg.tab}-clear-btn" style="padding:7px 14px;border-radius:18px;border:2px solid #fde8e8;background:#fff;color:#b52929;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✕ 필터 초기화</button>`:''}
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px">
-        <div>
-          <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
-            <label style="font-size:11px;font-weight:700;color:#7a92a8">📑 종류</label>
-            <button id="${cfg.tab}-type-mgr" style="background:none;border:none;cursor:pointer;font-size:11px;color:#3f7cb8;padding:0">[관리]</button>
+    // v44: 검색창은 한 번만 만들고 보존 (한글 IME 보호)
+    let searchInput = document.getElementById(`${cfg.tab}-search`);
+    const isSearchFocused = searchInput && document.activeElement === searchInput;
+    const cursorPos = isSearchFocused ? searchInput.selectionStart : null;
+    
+    // 검색창 + 나머지 영역을 분리해서 관리
+    let restHost = host.querySelector('.filter-rest-host');
+    if(!searchInput || !restHost){
+      // 최초 생성
+      host.innerHTML = `
+        <input type="text" id="${cfg.tab}-search" placeholder="🔍 검색 (이름·메모·태그·경로)" value="${esc(searchQuery)}" style="width:100%;box-sizing:border-box;height:42px;padding:0 16px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;margin-bottom:10px">
+        <div class="filter-rest-host"></div>
+      `;
+      searchInput = document.getElementById(`${cfg.tab}-search`);
+      restHost = host.querySelector('.filter-rest-host');
+      // 검색 이벤트 (한 번만)
+      searchInput.addEventListener('input', e=>{ 
+        searchQuery = e.target.value; 
+        renderRestUI();
+        // 결과만 다시 렌더 (검색창은 건드리지 않음)
+        renderResultsOnly();
+      });
+    }
+    
+    function renderRestUI(){
+      restHost.innerHTML = `
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          <button id="${cfg.tab}-fav-btn" style="padding:7px 14px;border-radius:18px;border:2px solid ${favOnly?'#f59e0b':'#dbe6f4'};background:${favOnly?'#f59e0b':'#fff'};color:${favOnly?'#fff':'#7a92a8'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">⭐ 즐겨찾기 ${favCount}</button>
+          ${(typeFilter!=='all'||fieldFilter!=='all'||yearFilter!=='all'||tagFilter||favOnly||searchQuery)?`<button id="${cfg.tab}-clear-btn" style="padding:7px 14px;border-radius:18px;border:2px solid #fde8e8;background:#fff;color:#b52929;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✕ 필터 초기화</button>`:''}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px">
+          <div>
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
+              <label style="font-size:11px;font-weight:700;color:#7a92a8">📑 종류</label>
+              <button id="${cfg.tab}-type-mgr" style="background:none;border:none;cursor:pointer;font-size:11px;color:#3f7cb8;padding:0">[관리]</button>
+            </div>
+            <select id="${cfg.tab}-type-filter" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff"></select>
           </div>
-          <select id="${cfg.tab}-type-filter" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff"></select>
-        </div>
-        <div>
-          <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
-            <label style="font-size:11px;font-weight:700;color:#7a92a8">🏷 분야</label>
-            <button id="${cfg.tab}-field-mgr" style="background:none;border:none;cursor:pointer;font-size:11px;color:#3f7cb8;padding:0">[관리]</button>
+          <div>
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
+              <label style="font-size:11px;font-weight:700;color:#7a92a8">🏷 분야</label>
+              <button id="${cfg.tab}-field-mgr" style="background:none;border:none;cursor:pointer;font-size:11px;color:#3f7cb8;padding:0">[관리]</button>
+            </div>
+            <select id="${cfg.tab}-field-filter" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff"></select>
           </div>
-          <select id="${cfg.tab}-field-filter" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff"></select>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">📅 년도</label>
+            <select id="${cfg.tab}-year-filter" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff"></select>
+          </div>
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">📅 년도</label>
-          <select id="${cfg.tab}-year-filter" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff"></select>
-        </div>
-      </div>
-      ${allTags.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
-        <span style="font-size:11px;font-weight:700;color:#7a92a8;align-self:center;margin-right:4px">🏷 태그:</span>
-        ${allTags.map(t=>{
-          const cnt = items.filter(d=>Array.isArray(d.tags) && d.tags.includes(t)).length;
-          const active = tagFilter===t;
-          return `<button class="tag-quick-${cfg.tab}" data-tag="${esc(t)}" style="padding:4px 10px;border-radius:14px;border:1.5px solid ${active?'#3f7cb8':'#dbe6f4'};background:${active?'#3f7cb8':'#eaf3fb'};color:${active?'#fff':'#3f7cb8'};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">#${esc(t)} ${cnt}</button>`;
-        }).join('')}
-      </div>`:''}
-    `;
-    // 셀렉트 채우기
-    buildTypeSelect(`${cfg.tab}-type-filter`);
-    buildFieldSelect(`${cfg.tab}-field-filter`);
-    buildYearAutoSelect(`${cfg.tab}-year-filter`);
-    document.getElementById(`${cfg.tab}-type-filter`).value = typeFilter;
-    document.getElementById(`${cfg.tab}-field-filter`).value = fieldFilter;
-    document.getElementById(`${cfg.tab}-year-filter`).value = yearFilter;
-    // 이벤트
-    document.getElementById(`${cfg.tab}-search`).addEventListener('input', e=>{ searchQuery=e.target.value; render(); document.getElementById(`${cfg.tab}-search`).focus(); });
-    document.getElementById(`${cfg.tab}-type-filter`).addEventListener('change', e=>{ typeFilter=e.target.value; render(); });
-    document.getElementById(`${cfg.tab}-field-filter`).addEventListener('change', e=>{ fieldFilter=e.target.value; render(); });
-    document.getElementById(`${cfg.tab}-year-filter`).addEventListener('change', e=>{ yearFilter=e.target.value; render(); });
-    document.getElementById(`${cfg.tab}-fav-btn`).addEventListener('click', ()=>{ favOnly = !favOnly; render(); });
-    const clearBtn = document.getElementById(`${cfg.tab}-clear-btn`);
-    if(clearBtn) clearBtn.addEventListener('click', ()=>{
-      typeFilter='all'; fieldFilter='all'; yearFilter='all'; tagFilter=''; favOnly=false; searchQuery='';
-      render();
-    });
-    document.getElementById(`${cfg.tab}-type-mgr`).addEventListener('click', ()=>{
-      window.openCatMgr(cfg.tab, ()=>render());
-    });
-    document.getElementById(`${cfg.tab}-field-mgr`).addEventListener('click', ()=>{
-      openFieldManager();
-    });
-    // 태그 클릭
-    host.querySelectorAll(`.tag-quick-${cfg.tab}`).forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        tagFilter = (tagFilter === btn.dataset.tag) ? '' : btn.dataset.tag;
+        ${allTags.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:700;color:#7a92a8;align-self:center;margin-right:4px">🏷 태그:</span>
+          ${allTags.map(t=>{
+            const cnt = items.filter(d=>Array.isArray(d.tags) && d.tags.includes(t)).length;
+            const active = tagFilter===t;
+            return `<button class="tag-quick-${cfg.tab}" data-tag="${esc(t)}" style="padding:4px 10px;border-radius:14px;border:1.5px solid ${active?'#3f7cb8':'#dbe6f4'};background:${active?'#3f7cb8':'#eaf3fb'};color:${active?'#fff':'#3f7cb8'};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">#${esc(t)} ${cnt}</button>`;
+          }).join('')}
+        </div>`:''}
+      `;
+      bindRestEvents();
+    }
+    
+    function bindRestEvents(){
+      buildTypeSelect(`${cfg.tab}-type-filter`);
+      buildFieldSelect(`${cfg.tab}-field-filter`);
+      buildYearAutoSelect(`${cfg.tab}-year-filter`);
+      document.getElementById(`${cfg.tab}-type-filter`).value = typeFilter;
+      document.getElementById(`${cfg.tab}-field-filter`).value = fieldFilter;
+      document.getElementById(`${cfg.tab}-year-filter`).value = yearFilter;
+      document.getElementById(`${cfg.tab}-type-filter`).addEventListener('change', e=>{ typeFilter=e.target.value; render(); });
+      document.getElementById(`${cfg.tab}-field-filter`).addEventListener('change', e=>{ fieldFilter=e.target.value; render(); });
+      document.getElementById(`${cfg.tab}-year-filter`).addEventListener('change', e=>{ yearFilter=e.target.value; render(); });
+      document.getElementById(`${cfg.tab}-fav-btn`).addEventListener('click', ()=>{ favOnly = !favOnly; render(); });
+      const clearBtn = document.getElementById(`${cfg.tab}-clear-btn`);
+      if(clearBtn) clearBtn.addEventListener('click', ()=>{
+        typeFilter='all'; fieldFilter='all'; yearFilter='all'; tagFilter=''; favOnly=false; searchQuery='';
+        if(searchInput) searchInput.value = '';
         render();
       });
-    });
-    // 검색창 포커스 유지 (재렌더 후)
-    const searchEl = document.getElementById(`${cfg.tab}-search`);
-    if(searchEl && document.activeElement !== searchEl && searchQuery){
-      // 커서 위치 보존
-      searchEl.focus();
-      searchEl.setSelectionRange(searchEl.value.length, searchEl.value.length);
+      document.getElementById(`${cfg.tab}-type-mgr`).addEventListener('click', ()=>{
+        window.openCatMgr(cfg.tab, ()=>render());
+      });
+      document.getElementById(`${cfg.tab}-field-mgr`).addEventListener('click', ()=>{
+        openFieldManager();
+      });
+      restHost.querySelectorAll(`.tag-quick-${cfg.tab}`).forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          tagFilter = (tagFilter === btn.dataset.tag) ? '' : btn.dataset.tag;
+          render();
+        });
+      });
+    }
+    
+    function renderResultsOnly(){
+      // 결과 그리드만 다시 렌더 (검색창은 건드리지 않음)
+      const gridHostId = `docGridHost-${cfg.tab}`;
+      const gridHost = document.getElementById(gridHostId);
+      if(!gridHost) return;
+      const list = getFiltered();
+      const cnt = document.getElementById(cfg.countId);
+      if(cnt) cnt.textContent = list.length+'건';
+      if(!list.length){
+        gridHost.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#aab8c8;background:#f7faff;border-radius:12px">
+          <div style="font-size:40px;margin-bottom:10px">📂</div>
+          <div style="font-size:14px;font-weight:700">조건에 맞는 항목이 없어요</div>
+          <div style="font-size:12px;margin-top:6px">검색어를 확인해보세요</div>
+        </div>`;
+        return;
+      }
+      let h = '';
+      if(yearFilter === 'all'){
+        const groups = {};
+        list.forEach(d=>{
+          const y = d.year || (d.month?d.month.slice(0,4):'') || '미분류';
+          if(!groups[y]) groups[y]=[];
+          groups[y].push(d);
+        });
+        Object.keys(groups).sort().reverse().forEach(year=>{
+          h+=`<div style="padding:10px 4px 8px;font-size:14px;font-weight:800;color:#3f7cb8;border-bottom:2px solid #e8f0fa;margin-bottom:10px;margin-top:14px">📅 ${year==='미분류'?year:year+'년'} <span style="font-size:12px;color:#aab8c8;font-weight:600">${groups[year].length}건</span></div>`;
+          h+=`<div class="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:14px">`;
+          groups[year].forEach(d=>{ h += renderDocCard(d); });
+          h+=`</div>`;
+        });
+      } else {
+        const groups = {};
+        list.forEach(d=>{
+          const k = d.type || '미분류';
+          if(!groups[k]) groups[k]=[];
+          groups[k].push(d);
+        });
+        Object.keys(groups).sort().forEach(type=>{
+          const color = TYPE_COLOR[type] || '#7a92a8';
+          h+=`<div style="padding:10px 4px 8px;font-size:14px;font-weight:800;color:${color};border-bottom:2px solid ${color}33;margin-bottom:10px;margin-top:14px">📑 ${type} <span style="font-size:12px;color:#aab8c8;font-weight:600">${groups[type].length}건</span></div>`;
+          h+=`<div class="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:14px">`;
+          groups[type].forEach(d=>{ h += renderDocCard(d); });
+          h+=`</div>`;
+        });
+      }
+      gridHost.innerHTML=h;
+      gridHost.querySelectorAll(`.doc-card-${cfg.tab}`).forEach(card=>{
+        card.addEventListener('mouseenter',()=>{ card.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'; card.style.transform='translateY(-1px)'; });
+        card.addEventListener('mouseleave',()=>{ card.style.boxShadow=''; card.style.transform=''; });
+        card.addEventListener('click',e=>{ if(e.target.closest('a,.doc-edit-'+cfg.tab+',.doc-fav-'+cfg.tab+',.doc-tag-chip')) return; openModal(card.dataset.docid); });
+      });
+      gridHost.querySelectorAll(`.doc-edit-${cfg.tab}`).forEach(btn=>{
+        btn.addEventListener('click',e=>{ e.stopPropagation(); openModal(btn.dataset.docid); });
+      });
+      gridHost.querySelectorAll(`.doc-fav-${cfg.tab}`).forEach(btn=>{
+        btn.addEventListener('click',e=>{
+          e.stopPropagation();
+          const id = btn.dataset.docid;
+          const it = items.find(x=>x.id===id);
+          if(it){ it.favorite = !it.favorite; save(); render(); }
+        });
+      });
+      gridHost.querySelectorAll('.doc-tag-chip').forEach(chip=>{
+        chip.addEventListener('click',e=>{
+          e.stopPropagation();
+          tagFilter = chip.dataset.tag;
+          render();
+        });
+      });
+    }
+    
+    // 항상 나머지 영역은 갱신
+    renderRestUI();
+    
+    // 검색창의 값은 외부 변경 시에만 동기화 (사용자 입력 중에는 건드리지 않음)
+    if(!isSearchFocused && searchInput && searchInput.value !== searchQuery){
+      searchInput.value = searchQuery;
     }
   }
 
@@ -5299,6 +5401,220 @@ makeDocTab({
     });
     bulkItems = bulkItems.filter(it=>!it._deleted);
     bulkRenderTable();
+  });
+
+  // v44: 종류 관리 (일괄정리 안에서)
+  function openBulkTypeMgr(tab){
+    const cats = (window.loadCats && window.loadCats(tab)) || [];
+    let ov = document.getElementById('bulkTypeMgrOv');
+    if(ov) ov.remove();
+    ov = document.createElement('div');
+    ov.id = 'bulkTypeMgrOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10005;display:flex;align-items:center;justify-content:center;padding:20px';
+    const usage = {};
+    bulkItems.forEach(d=>{ if(d._tab===tab && d.type) usage[d.type]=(usage[d.type]||0)+1; });
+    ov.innerHTML = `
+      <div style="background:#fff;border-radius:14px;width:100%;max-width:480px;padding:20px;max-height:90vh;overflow:auto">
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:800;color:#8e44ad">📑 종류 관리 — ${BULK_TABS[tab].label}</h3>
+        <div style="font-size:12px;color:#aab8c8;margin-bottom:14px">종류를 추가·수정·삭제하면 메인 앱에도 자동 반영돼요</div>
+        <div id="bulkTypeMgrList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <input type="text" id="bulkTypeMgrNew" placeholder="새 종류 이름" style="flex:1;height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
+          <button id="bulkTypeMgrAdd" style="height:38px;padding:0 14px;background:#8e44ad;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+        </div>
+        <button id="bulkTypeMgrClose" style="width:100%;height:40px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">닫기</button>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    function renderList(){
+      const list = document.getElementById('bulkTypeMgrList');
+      const cs = (window.loadCats && window.loadCats(tab)) || [];
+      list.innerHTML = cs.map((c,i)=>`
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#f7faff;border-radius:8px;border:1px solid #e8f0fa">
+          <input type="text" data-ci="${i}" value="${bulkEsc(c)}" style="flex:1;border:none;background:transparent;font-size:13px;font-weight:600;color:#1a2f45;outline:none;font-family:inherit">
+          <span style="font-size:10px;color:#aab8c8">${usage[c]||0}건</span>
+          <button data-csave="${i}" style="background:#eaf1fb;border:none;border-radius:5px;padding:3px 8px;font-size:11px;font-weight:700;color:#3f7cb8;cursor:pointer;font-family:inherit">저장</button>
+          <button data-cdel="${i}" style="background:#fde8e8;border:none;border-radius:5px;padding:3px 8px;font-size:11px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+        </div>
+      `).join('');
+      list.querySelectorAll('[data-csave]').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          const i = +btn.dataset.csave;
+          const inp = list.querySelector(`[data-ci="${i}"]`);
+          const newName = (inp.value||'').trim();
+          if(!newName) return;
+          const cs2 = (window.loadCats && window.loadCats(tab)) || [];
+          const oldName = cs2[i];
+          if(oldName === newName) return;
+          if(cs2.includes(newName) && cs2[i] !== newName){ alert('이미 있는 종류예요'); return; }
+          // 이름 변경 시 기존 항목 자동 업데이트 (메인 앱 데이터까지)
+          if(oldName && oldName !== newName){
+            // bulkItems(메모리)에서도 변경
+            bulkItems.forEach(d=>{
+              if(d._tab===tab && d.type===oldName){ d.type = newName; bulkChanges.add(d.id); }
+            });
+          }
+          cs2[i] = newName;
+          if(window.saveCats) window.saveCats(tab, cs2);
+          renderList();
+          bulkRenderTable();
+        });
+      });
+      list.querySelectorAll('[data-cdel]').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          const i = +btn.dataset.cdel;
+          const cs2 = (window.loadCats && window.loadCats(tab)) || [];
+          const name = cs2[i];
+          const cnt = usage[name] || 0;
+          if(cnt>0){
+            if(!confirm(`"${name}"에 ${cnt}건의 자료가 있어요. 삭제하면 자료의 종류가 빈 값이 됩니다. 진행할까요?`)) return;
+            bulkItems.forEach(d=>{
+              if(d._tab===tab && d.type===name){ d.type=''; bulkChanges.add(d.id); }
+            });
+          } else {
+            if(!confirm(`"${name}" 종류를 삭제할까요?`)) return;
+          }
+          cs2.splice(i,1);
+          if(window.saveCats) window.saveCats(tab, cs2);
+          renderList();
+          bulkRenderTable();
+        });
+      });
+    }
+    renderList();
+    document.getElementById('bulkTypeMgrAdd').addEventListener('click',()=>{
+      const inp = document.getElementById('bulkTypeMgrNew');
+      const v = (inp.value||'').trim();
+      if(!v) return;
+      const cs2 = (window.loadCats && window.loadCats(tab)) || [];
+      if(cs2.includes(v)){ alert('이미 있는 종류예요'); return; }
+      cs2.push(v);
+      if(window.saveCats) window.saveCats(tab, cs2);
+      inp.value='';
+      renderList();
+      bulkRenderTable();
+    });
+    document.getElementById('bulkTypeMgrNew').addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); document.getElementById('bulkTypeMgrAdd').click(); }
+    });
+    document.getElementById('bulkTypeMgrClose').addEventListener('click',()=>ov.remove());
+    ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+  }
+
+  // v44: 분야 관리 (일괄정리 안에서)
+  function openBulkFieldMgr(tab){
+    let ov = document.getElementById('bulkFieldMgrOv');
+    if(ov) ov.remove();
+    ov = document.createElement('div');
+    ov.id = 'bulkFieldMgrOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10005;display:flex;align-items:center;justify-content:center;padding:20px';
+    const usage = {};
+    bulkItems.forEach(d=>{ if(d._tab===tab && d.field) usage[d.field]=(usage[d.field]||0)+1; });
+    const fieldLS = BULK_TABS[tab].LS + FIELD_LS_SUFFIX;
+    function saveFs(arr){ try{ localStorage.setItem(fieldLS, JSON.stringify(arr)); }catch(e){} }
+    ov.innerHTML = `
+      <div style="background:#fff;border-radius:14px;width:100%;max-width:480px;padding:20px;max-height:90vh;overflow:auto">
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:800;color:#0369a1">🏷 분야 관리 — ${BULK_TABS[tab].label}</h3>
+        <div style="font-size:12px;color:#aab8c8;margin-bottom:14px">분야를 추가·수정·삭제하면 메인 앱에도 자동 반영돼요</div>
+        <div id="bulkFieldMgrList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <input type="text" id="bulkFieldMgrNew" placeholder="새 분야 이름 (예: 전기, 소방)" style="flex:1;height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
+          <button id="bulkFieldMgrAdd" style="height:38px;padding:0 14px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+        </div>
+        <button id="bulkFieldMgrClose" style="width:100%;height:40px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">닫기</button>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    function renderList(){
+      const list = document.getElementById('bulkFieldMgrList');
+      const fs = bulkLoadFields(tab);
+      list.innerHTML = fs.map((f,i)=>`
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#f7faff;border-radius:8px;border:1px solid #e8f0fa">
+          <input type="text" data-fi="${i}" value="${bulkEsc(f)}" style="flex:1;border:none;background:transparent;font-size:13px;font-weight:600;color:#1a2f45;outline:none;font-family:inherit">
+          <span style="font-size:10px;color:#aab8c8">${usage[f]||0}건</span>
+          <button data-fsave="${i}" style="background:#eaf1fb;border:none;border-radius:5px;padding:3px 8px;font-size:11px;font-weight:700;color:#3f7cb8;cursor:pointer;font-family:inherit">저장</button>
+          <button data-fdel="${i}" style="background:#fde8e8;border:none;border-radius:5px;padding:3px 8px;font-size:11px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+        </div>
+      `).join('');
+      list.querySelectorAll('[data-fsave]').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          const i = +btn.dataset.fsave;
+          const inp = list.querySelector(`[data-fi="${i}"]`);
+          const newName = (inp.value||'').trim();
+          if(!newName) return;
+          const fs2 = bulkLoadFields(tab);
+          const oldName = fs2[i];
+          if(oldName === newName) return;
+          if(fs2.includes(newName) && fs2[i] !== newName){ alert('이미 있는 분야예요'); return; }
+          // 이름 변경 시 기존 항목 자동 업데이트
+          if(oldName && oldName !== newName){
+            bulkItems.forEach(d=>{
+              if(d._tab===tab && d.field===oldName){ d.field = newName; bulkChanges.add(d.id); }
+            });
+          }
+          fs2[i] = newName;
+          saveFs(fs2);
+          renderList();
+          bulkRenderTable();
+        });
+      });
+      list.querySelectorAll('[data-fdel]').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          const i = +btn.dataset.fdel;
+          const fs2 = bulkLoadFields(tab);
+          const name = fs2[i];
+          const cnt = usage[name] || 0;
+          if(cnt>0){
+            if(!confirm(`"${name}"에 ${cnt}건의 자료가 있어요. 삭제하면 자료의 분야가 빈 값이 됩니다. 진행할까요?`)) return;
+            bulkItems.forEach(d=>{
+              if(d._tab===tab && d.field===name){ d.field=''; bulkChanges.add(d.id); }
+            });
+          } else {
+            if(!confirm(`"${name}" 분야를 삭제할까요?`)) return;
+          }
+          fs2.splice(i,1);
+          saveFs(fs2);
+          renderList();
+          bulkRenderTable();
+        });
+      });
+    }
+    renderList();
+    document.getElementById('bulkFieldMgrAdd').addEventListener('click',()=>{
+      const inp = document.getElementById('bulkFieldMgrNew');
+      const v = (inp.value||'').trim();
+      if(!v) return;
+      const fs2 = bulkLoadFields(tab);
+      if(fs2.includes(v)){ alert('이미 있는 분야예요'); return; }
+      fs2.push(v);
+      saveFs(fs2);
+      inp.value='';
+      renderList();
+      bulkRenderTable();
+    });
+    document.getElementById('bulkFieldMgrNew').addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); document.getElementById('bulkFieldMgrAdd').click(); }
+    });
+    document.getElementById('bulkFieldMgrClose').addEventListener('click',()=>ov.remove());
+    ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+  }
+
+  // 종류 관리 버튼 — 탭 선택 후 모달
+  document.getElementById('bulkTypeMgrBtn')?.addEventListener('click', ()=>{
+    const tabKeys = Object.keys(BULK_TABS);
+    const choice = prompt(`어느 탭의 종류를 관리할까요?\n\n${tabKeys.map((k,i)=>`${i+1}. ${BULK_TABS[k].label}`).join('\n')}\n\n번호 입력:`);
+    const idx = parseInt(choice)-1;
+    if(isNaN(idx) || idx<0 || idx>=tabKeys.length) return;
+    openBulkTypeMgr(tabKeys[idx]);
+  });
+
+  // 분야 관리 버튼 — 탭 선택 후 모달
+  document.getElementById('bulkFieldMgrBtn')?.addEventListener('click', ()=>{
+    const tabKeys = Object.keys(BULK_TABS);
+    const choice = prompt(`어느 탭의 분야를 관리할까요?\n\n${tabKeys.map((k,i)=>`${i+1}. ${BULK_TABS[k].label}`).join('\n')}\n\n번호 입력:`);
+    const idx = parseInt(choice)-1;
+    if(isNaN(idx) || idx<0 || idx>=tabKeys.length) return;
+    openBulkFieldMgr(tabKeys[idx]);
   });
 
   // 저장
