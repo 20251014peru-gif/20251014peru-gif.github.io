@@ -4039,6 +4039,66 @@ function makeDocTab(cfg){
     if(cfg.fillExtraFields) cfg.fillExtraFields(d);
     el(cfg.modalId).classList.add('show');
     setTimeout(()=>el(cfg.modalNameId).focus(),200);
+    // v44: 다른 탭으로 이동 버튼 추가 (수정 모드일 때만)
+    setupMoveButton(id);
+  }
+
+  // v44: 다른 탭으로 이동 버튼 (수정 모드일 때만 표시)
+  function setupMoveButton(id){
+    const el=i=>document.getElementById(i);
+    const modal = el(cfg.modalId);
+    if(!modal) return;
+    // 기존 이동 버튼 제거
+    const oldBtn = modal.querySelector('.move-tab-area');
+    if(oldBtn) oldBtn.remove();
+    if(!id) return; // 신규 추가일 때는 표시 안 함
+    // 삭제 버튼 옆에 이동 영역 추가
+    const delBtn = el(cfg.modalDelId);
+    if(!delBtn) return;
+    const moveBox = document.createElement('div');
+    moveBox.className = 'move-tab-area';
+    moveBox.style.cssText = 'margin-top:14px;padding:12px;background:#fff8e1;border:2px solid #ffd54f;border-radius:12px';
+    const tabLabels = {insp:'📋 점검일지', docs:'📁 운영실무', common:'🏢 임대공용', indiv:'🚪 임대개별'};
+    const tabLS = {insp:'wl_insp_v43', docs:'wl_docs_v43', common:'wl_common_v43', indiv:'wl_indiv_v43'};
+    // 현재 탭 제외한 나머지 탭들
+    const otherTabs = Object.keys(tabLabels).filter(k=>k!==cfg.tab);
+    moveBox.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#7c5e1a;margin-bottom:8px">📦 다른 탭으로 이동</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${otherTabs.map(tk=>`<button type="button" class="move-tab-btn" data-target="${tk}" style="flex:1;min-width:0;padding:10px 8px;background:#fff;color:#1a2f45;border:2px solid #ffd54f;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .1s">${tabLabels[tk]}</button>`).join('')}
+      </div>
+    `;
+    delBtn.parentElement.appendChild(moveBox);
+    moveBox.querySelectorAll('.move-tab-btn').forEach(btn=>{
+      btn.addEventListener('mouseenter',()=>btn.style.background='#fff3c4');
+      btn.addEventListener('mouseleave',()=>btn.style.background='#fff');
+      btn.addEventListener('click',()=>{
+        const target = btn.dataset.target;
+        const targetLabel = tabLabels[target];
+        if(!confirm(`이 항목을 "${targetLabel}" 탭으로 이동할까요?`)) return;
+        // 현재 항목 찾기
+        const item = items.find(x=>x.id===id);
+        if(!item){ if(typeof toast==='function') toast('항목을 찾을 수 없어요'); return; }
+        // 대상 탭의 LS에 추가
+        const targetLS = tabLS[target];
+        let targetItems = [];
+        try{ targetItems = JSON.parse(localStorage.getItem(targetLS)||'[]'); }catch(e){}
+        // 새 ID 생성 (대상 탭 prefix로)
+        const newItem = {...item, id:target+'_'+Date.now()+'_'+Math.floor(Math.random()*9999)};
+        targetItems.push(newItem);
+        try{ localStorage.setItem(targetLS, JSON.stringify(targetItems)); }catch(e){}
+        // 현재 탭에서 제거
+        items = items.filter(x=>x.id!==id);
+        save();
+        closeModal();
+        render();
+        if(typeof toast==='function') toast(`✅ "${targetLabel}"로 이동됨`);
+        // 대상 탭 렌더 함수 호출 (열려있으면 갱신)
+        if(typeof window['_docTabRender_'+target]==='function'){
+          window['_docTabRender_'+target]();
+        }
+      });
+    });
   }
 
   function closeModal(){
