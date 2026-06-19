@@ -4716,11 +4716,122 @@ function renderItemList(){
     <td>${esc(it.vendor||"")}</td>
     <td class="num">${it.unitPrice?won(it.unitPrice):""}</td>
     <td>${it.recurring&&it.recurring!=="비주기"?`<span class="pill leave">🔁 ${esc(it.recurring)}</span>`:esc(it.recurring||"")}</td>
-    <td><button class="rowdel" data-del="${it.id}" title="삭제">🗑</button></td>
+    <td style="white-space:nowrap">
+      <button class="mini-btn" data-quickedit="${it.id}" title="빠른 수정" style="background:#eaf1fb;border:1px solid #dbe6f4;color:#3f7cb8;padding:4px 8px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer;margin-right:4px">✏️ 수정</button>
+      <button class="rowdel" data-del="${it.id}" title="삭제">🗑</button>
+    </td>
   </tr>`).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
-    tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openEditor("item",tr.dataset.id); });
+    tr.addEventListener("click",e=>{ 
+      if(e.target.closest("[data-del],[data-quickedit]")) return; 
+      // 행 자체 클릭은 빠른 수정으로
+      openQuickEditMaterial(tr.dataset.id);
+    });
     tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(tr.dataset.id,"품목"); });
+    tr.querySelector("[data-quickedit]").addEventListener("click",e=>{
+      e.stopPropagation();
+      openQuickEditMaterial(tr.dataset.id);
+    });
+  });
+}
+
+/* v44: 자재 빠른 수정 모달 - 새 자재 추가 모달과 같은 구조 */
+function openQuickEditMaterial(id){
+  const item = entries.find(e=>e.id===id && e.kind==="item");
+  if(!item){ toast("자재를 찾을 수 없어요"); return; }
+  // 기존 오버레이 있으면 제거
+  const oldOv = document.getElementById('quickEditMatOverlay');
+  if(oldOv) oldOv.remove();
+  const ov = document.createElement('div');
+  ov.id = 'quickEditMatOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.2);max-height:90vh;overflow:auto">
+      <h3 style="margin:0 0 6px;font-size:18px;font-weight:800;color:#0369a1">✏️ 자재 수정</h3>
+      <div style="font-size:12px;color:#aab8c8;margin-bottom:16px">규격을 간단하게 정리하거나, 분야/단가 등을 빠르게 수정하세요</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">서브원 상품ID</label>
+          <input type="text" id="qeShopId" value="${esc(item.shopId||'')}" placeholder="예: 6573068" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">품목명 <span style="color:#e74c3c">*</span></label>
+          <input type="text" id="qeName" value="${esc(item.itemName||'')}" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">규격 <span style="color:#aab8c8;font-weight:500">(짧게 정리)</span></label>
+          <input type="text" id="qeSpec" value="${esc(item.spec||'')}" placeholder="예: 8W / Φ60mm" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">단위코드</label>
+            <input type="text" id="qeUnit" value="${esc(item.unit||'')}" placeholder="EA, BOX, ROL" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          </div>
+          <div style="flex:1">
+            <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">판매단가 (원)</label>
+            <input type="number" id="qePrice" value="${Number(item.unitPrice)||0}" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">제조원</label>
+          <input type="text" id="qeMaker" value="${esc(item.maker||'')}" placeholder="예: (주)동원피앤아이" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">분야</label>
+          <select id="qeField" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+            ${FIELDS.map(f=>`<option value="${esc(f)}" ${item.field===f?'selected':''}>${esc(f)}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">거래처</label>
+          <input type="text" id="qeVendor" value="${esc(item.vendor||'')}" placeholder="예: 서브원" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="qeCancel" type="button" style="flex:1;height:48px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
+          <button id="qeDelete" type="button" style="flex:1;height:48px;padding:0 14px;border:2px solid #fde8e8;border-radius:12px;background:#fff;color:#e74c3c;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>
+          <button id="qeSave" type="button" style="flex:2;height:48px;padding:0 14px;border:none;border-radius:12px;background:#0369a1;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">💾 저장</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  // 포커스 - 규격 칸에 (가장 많이 수정할 칸)
+  setTimeout(()=>{
+    const specEl = document.getElementById('qeSpec');
+    if(specEl){ specEl.focus(); specEl.select(); }
+  }, 100);
+  const close = ()=>{ ov.remove(); };
+  document.getElementById('qeCancel').addEventListener('click', close);
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  // 저장
+  document.getElementById('qeSave').addEventListener('click', ()=>{
+    const name = (document.getElementById('qeName').value||'').trim();
+    if(!name){ toast('품목명을 입력하세요'); return; }
+    const patch = {
+      shopId: (document.getElementById('qeShopId').value||'').trim(),
+      itemName: name,
+      spec: (document.getElementById('qeSpec').value||'').trim(),
+      unit: (document.getElementById('qeUnit').value||'').trim(),
+      unitPrice: Number(document.getElementById('qePrice').value)||0,
+      maker: (document.getElementById('qeMaker').value||'').trim(),
+      field: document.getElementById('qeField').value||'',
+      vendor: (document.getElementById('qeVendor').value||'').trim(),
+    };
+    updateRecord(id, patch);
+    close();
+    toast(`✅ "${name}" 수정됨`);
+    renderMaterial();
+  });
+  // 삭제
+  document.getElementById('qeDelete').addEventListener('click', ()=>{
+    close();
+    deleteWithUndo(id, "품목");
+  });
+  // Enter 키 → 저장 (textarea 제외)
+  ['qeShopId','qeName','qeSpec','qeUnit','qePrice','qeMaker','qeVendor'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); document.getElementById('qeSave').click(); }
+    });
   });
 }
 
