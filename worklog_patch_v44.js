@@ -945,3 +945,153 @@
 
   console.log('[worklog_patch_v44] 로드 완료');
 })();
+
+
+/* ─────────────────────────────────────────
+   PART 3: 누락 함수 보완 + 검색 파일 바로 열기
+───────────────────────────────────────── */
+(function patchMisc() {
+  'use strict';
+
+  /* ── openStickyEdit: 목록형 수정버튼이 호출하는 함수 ── */
+  window.openStickyEdit = function(id) {
+    if (typeof entries === 'undefined') return;
+    var en = entries.find(function(x) { return x.id === id; });
+    if (!en) return;
+
+    /* 카드형으로 전환 후 해당 카드 수정 모드 */
+    var cardView = document.getElementById('memoViewCard');
+    var listView = document.getElementById('memoViewList');
+    var grid     = document.getElementById('stickyGrid');
+    var list     = document.getElementById('stickyList');
+
+    if (cardView && listView && grid && list) {
+      /* 카드형으로 전환 */
+      try { localStorage.setItem('sticky_view', 'card'); } catch(e) {}
+      grid.style.display = '';
+      list.style.display = 'none';
+      cardView.classList.add('memo-view-active');
+      listView.classList.remove('memo-view-active');
+
+      /* 그리드 재렌더 후 해당 카드 수정 모드 열기 */
+      if (typeof renderStickyGrid === 'function') renderStickyGrid();
+      setTimeout(function() {
+        var btn = document.querySelector('[data-sedit="' + id + '"]');
+        if (btn) btn.click();
+      }, 150);
+    }
+  };
+
+  /* ── 목록형 카드 클릭 → 수정 모드 ── */
+  function bindListItemClick() {
+    var listBox = document.getElementById('stickyList');
+    if (!listBox || listBox._v44listClick) return;
+    listBox._v44listClick = true;
+
+    listBox.addEventListener('click', function(e) {
+      /* 수정 버튼 */
+      var editBtn = e.target.closest('[data-sedit2]');
+      if (editBtn) {
+        e.stopPropagation();
+        window.openStickyEdit(editBtn.dataset.sedit2);
+        return;
+      }
+      /* 카드 자체 클릭 → 수정 모드 */
+      var item = e.target.closest('.sticky-list-item[data-sid]');
+      if (item && !e.target.closest('button')) {
+        window.openStickyEdit(item.dataset.sid);
+      }
+    });
+  }
+
+  /* ── 전체 검색 — 파일링크 결과 클릭 시 바로 열기 ── */
+  function patchGlobalSearch() {
+    if (window._v44searchPatched) return;
+    var orig = window.runGlobalSearch;
+    if (!orig) return;
+
+    window.runGlobalSearch = function(q) {
+      orig.apply(this, arguments);
+
+      /* 렌더 완료 후 파일링크 항목에 직접 열기 이벤트 추가 */
+      setTimeout(function() {
+        var box = document.getElementById('gsResults');
+        if (!box) return;
+        box.querySelectorAll('.gs-item[data-kind="filelink"], .gs-item[data-kind="site"]').forEach(function(el) {
+          if (el._v44patched) return;
+          el._v44patched = true;
+
+          /* 기존 클릭 이벤트 제거하고 새로 바인딩 */
+          var newEl = el.cloneNode(true);
+          el.parentNode.replaceChild(newEl, el);
+
+          newEl.addEventListener('click', function(e) {
+            var kind = newEl.dataset.kind;
+            var id   = newEl.dataset.id;
+            if (!id || typeof entries === 'undefined') return;
+
+            var entry = entries.find(function(x) { return x.id === id; });
+            if (!entry) return;
+
+            /* 검색창 닫기 */
+            var overlay = document.getElementById('globalSearchOverlay');
+            if (overlay) overlay.classList.remove('show');
+            var bar = document.getElementById('globalSearchBar');
+            if (bar) bar.value = '';
+
+            if (kind === 'filelink' && entry.path) {
+              /* 파일/폴더 바로 열기 */
+              var url = 'localfile://' + encodeURI(entry.path.replace(/\\/g, '/'));
+              window.open(url, '_self');
+            } else if (kind === 'site' && entry.url) {
+              /* 사이트 바로 열기 */
+              var surl = entry.url;
+              if (!/^https?:\/\//i.test(surl)) surl = 'https://' + surl;
+              window.open(surl, '_blank', 'noopener');
+            }
+          });
+        });
+      }, 100);
+    };
+
+    window._v44searchPatched = true;
+  }
+
+  /* renderStickyGrid 훅에 목록 클릭 바인딩 추가 */
+  function hookStickyGridForList() {
+    if (window._v44listHooked) return;
+    var orig = window.renderStickyGrid;
+    if (!orig) return;
+    window.renderStickyGrid = function() {
+      orig.apply(this, arguments);
+      setTimeout(bindListItemClick, 60);
+    };
+    window._v44listHooked = true;
+  }
+
+  function init() {
+    bindListItemClick();
+    hookStickyGridForList();
+    patchGlobalSearch();
+
+    /* runGlobalSearch 로드 대기 */
+    var t = 0;
+    var wait = setInterval(function() {
+      if (window.runGlobalSearch && !window._v44searchPatched) {
+        patchGlobalSearch();
+        clearInterval(wait);
+      }
+      if (++t > 30) clearInterval(wait);
+    }, 300);
+
+    /* 메모 탭 전환 시 재바인딩 */
+    document.querySelectorAll('.v43-tab[data-v43tab="memo"]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        setTimeout(bindListItemClick, 400);
+      });
+    });
+  }
+
+  setTimeout(init, 1000);
+  setTimeout(init, 2500);
+})();
