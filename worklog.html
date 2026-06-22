@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-1737</title>
+<title>업무일지 v44-0622-1812</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1737</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1812</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -5971,7 +5971,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0622-1737';
+    if(el) el.textContent = 'v44-0622-1812';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -6699,6 +6699,253 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   });
 
   window._openExpV2=openExpV2;
+
+/* ===== 업무↔통화 연결 ===== */
+(function(){
+  var g = function(id){ return document.getElementById(id); };
+  var esc2 = function(s){ return (s||'').replace(/[&<>"]/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]);}); };
+
+  /* openViewer 훅 — 통화일 때 연결 버튼 추가 */
+  function hookCallViewer(){
+    if(!window.openViewer || window.openViewer._callHooked) return;
+    var orig = window.openViewer;
+    window.openViewer = function(kind, id){
+      orig(kind, id);
+      if(kind !== 'call') return;
+      setTimeout(function(){
+        addCallWorkButtons(id);
+      }, 50);
+    };
+    window.openViewer._callHooked = true;
+    window.openViewer._expV2 = window.openViewer._expV2; /* 기존 플래그 유지 */
+  }
+
+  function addCallWorkButtons(callId){
+    var vBody = g('vBody'); if(!vBody) return;
+    if(vBody.querySelector('.call-work-btns')) return;
+
+    var en = typeof entries!=='undefined' ? entries.find(function(x){return x.id===callId;}) : null;
+    if(!en) return;
+
+    /* 연결된 업무 표시 */
+    var linkedWork = en.linkedWorkId && typeof entries!=='undefined'
+      ? entries.find(function(x){return x.id===en.linkedWorkId;}) : null;
+
+    var area = document.createElement('div');
+    area.className = 'call-work-btns';
+    area.style.cssText = 'margin-top:14px;padding-top:14px;border-top:1.5px solid #f0f6ff';
+
+    if(linkedWork){
+      area.innerHTML =
+        '<div style="font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:6px">🔗 연결된 업무</div>'
+        +'<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f0f6ff;border-radius:10px;border:1.5px solid #dbe6f4;margin-bottom:8px">'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:13px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc2(linkedWork.title||'(제목없음)')+'</div>'
+        +'<div style="font-size:11px;color:#aab8c8;margin-top:2px">'+esc2(linkedWork.date||'')+(linkedWork.field?' · '+esc2(linkedWork.field):'')+'</div>'
+        +'</div>'
+        +'<button id="callWorkViewBtn" style="background:#3f7cb8;color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">열기</button>'
+        +'<button id="callWorkUnlinkBtn" style="background:#fde8e8;color:#b52929;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">해제</button>'
+        +'</div>'
+        +'<div style="display:flex;gap:6px">'
+        +'<button id="callToWorkNewBtn" style="flex:1;height:36px;background:#f7faff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">➕ 새 업무 생성</button>'
+        +'</div>';
+    } else {
+      area.innerHTML =
+        '<div style="font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:8px">🔗 업무 연결</div>'
+        +'<div style="display:flex;gap:6px">'
+        +'<button id="callToWorkLinkBtn" style="flex:1;height:38px;background:#f7faff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🔍 기존 업무에 연결</button>'
+        +'<button id="callToWorkNewBtn" style="flex:1;height:38px;background:#3f7cb8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">➕ 업무로 생성</button>'
+        +'</div>';
+    }
+
+    vBody.appendChild(area);
+
+    /* 연결된 업무 열기 */
+    var vBtn = g('callWorkViewBtn');
+    if(vBtn) vBtn.addEventListener('click', function(){
+      g('viewOverlay').classList.remove('show');
+      setTimeout(function(){ if(typeof openViewer==='function') orig('work', en.linkedWorkId); }, 100);
+    });
+
+    /* 연결 해제 */
+    var ulBtn = g('callWorkUnlinkBtn');
+    if(ulBtn) ulBtn.addEventListener('click', function(){
+      if(!confirm('업무 연결을 해제할까요?')) return;
+      if(typeof updateRecord==='function'){
+        updateRecord(callId, {linkedWorkId: null});
+        if(en.linkedWorkId) updateRecord(en.linkedWorkId, {linkedCallId: null});
+      }
+      g('viewOverlay').classList.remove('show');
+      if(typeof toast==='function') toast('연결 해제됐어요');
+    });
+
+    /* 기존 업무에 연결 */
+    var lBtn = g('callToWorkLinkBtn');
+    if(lBtn) lBtn.addEventListener('click', function(){
+      openCallWorkPick(callId, en);
+    });
+
+    /* 업무로 생성 */
+    var nBtn = g('callToWorkNewBtn');
+    if(nBtn) nBtn.addEventListener('click', function(){
+      g('viewOverlay').classList.remove('show');
+      setTimeout(function(){
+        /* 통화 정보로 업무 모달 자동 채움 */
+        if(typeof openEditor === 'function'){
+          openEditor('work', null);
+          setTimeout(function(){
+            var dateEl = g('m-date'); if(dateEl) dateEl.value = en.date||'';
+            var titleEl = g('m-title'); if(titleEl) titleEl.value = en.content||en.followup||'';
+            var vendorEl = g('m-workVendor'); if(vendorEl){ vendorEl.value = en.company||en.name||''; vendorEl.dispatchEvent(new Event('input')); }
+            var memoEl = g('m-workMemo'); if(memoEl) memoEl.value = '[통화연결] '+esc2(en.name||'')+(en.phone?' '+en.phone:'');
+            /* 저장 후 callId 연결 */
+            var origAdd = window.addRecord;
+            window.addRecord = function(obj){
+              obj.linkedCallId = callId;
+              var r = origAdd(obj);
+              window.addRecord = origAdd;
+              /* 통화에도 역방향 연결 */
+              setTimeout(function(){
+                var newWork = typeof entries!=='undefined' ? entries.find(function(x){return x.linkedCallId===callId&&x.kind==='work';}) : null;
+                if(newWork && typeof updateRecord==='function'){
+                  updateRecord(callId, {linkedWorkId: newWork.id});
+                }
+              }, 500);
+              return r;
+            };
+            if(typeof toast==='function') toast('통화 정보가 자동 입력됐어요 — 저장하면 연결돼요');
+          }, 300);
+        }
+      }, 200);
+    });
+  }
+
+  /* 업무 선택 팝업 (통화↔업무 연결용) */
+  function openCallWorkPick(callId, callEn){
+    var ov = document.getElementById('callWorkPickOv');
+    if(ov) ov.remove();
+    ov = document.createElement('div');
+    ov.id = 'callWorkPickOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9500;display:flex;align-items:flex-end;justify-content:center;font-family:inherit';
+    ov.innerHTML =
+      '<div style="background:#fff;width:100%;max-width:540px;max-height:80vh;display:flex;flex-direction:column;border-radius:22px 22px 0 0;box-shadow:0 -4px 32px rgba(0,0,0,.18)">'
+      +'<div style="padding:16px 18px 10px;border-bottom:1.5px solid #f0f6ff;flex-shrink:0">'
+      +'<div style="font-size:16px;font-weight:800;color:#1a2f45;margin-bottom:10px">🔗 연결할 업무 선택</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<select id="cwpMonthSel" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;width:100%;box-sizing:border-box"><option value="">전체 월</option></select>'
+      +'<input type="date" id="cwpDateInp" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;width:100%;box-sizing:border-box">'
+      +'</div>'
+      +'<input type="text" id="cwpSearch" placeholder="🔍 업무 제목·분야·층 검색…" style="width:100%;box-sizing:border-box;height:40px;padding:0 14px;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f7faff">'
+      +'</div>'
+      +'<div id="cwpList" style="overflow-y:auto;flex:1;padding:8px 14px"></div>'
+      +'<div style="padding:12px 16px;border-top:1.5px solid #f0f6ff;flex-shrink:0">'
+      +'<button id="cwpCancel" style="width:100%;height:44px;border-radius:12px;border:2px solid #dbe6f4;background:#f7faff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;color:#7a92a8">닫기</button>'
+      +'</div></div>';
+    document.body.appendChild(ov);
+
+    /* 월 옵션 채우기 */
+    var works = typeof entries!=='undefined' ? entries.filter(function(e){return e.kind==='work';}) : [];
+    var months = [...new Set(works.map(function(e){return (e.date||'').slice(0,7);}).filter(Boolean))].sort().reverse();
+    var mSel = g('cwpMonthSel');
+    months.forEach(function(m){
+      var opt = document.createElement('option'); opt.value=m; opt.textContent=m;
+      mSel.appendChild(opt);
+    });
+    /* 통화 날짜로 기본 선택 */
+    var callMonth = (callEn.date||'').slice(0,7);
+    if(callMonth) mSel.value = callMonth;
+
+    function renderList(){
+      var list = g('cwpList'); if(!list) return;
+      var month = (g('cwpMonthSel')||{value:''}).value||'';
+      var date  = (g('cwpDateInp')||{value:''}).value||'';
+      var q     = ((g('cwpSearch')||{value:''}).value||'').trim().toLowerCase();
+      var filtered = works.filter(function(e){
+        if(month && !(e.date||'').startsWith(month)) return false;
+        if(date  && e.date !== date) return false;
+        if(q){
+          var text=[e.title,e.field,e.floor,e.loc].filter(Boolean).join(' ').toLowerCase();
+          if(!text.includes(q)) return false;
+        }
+        return true;
+      }).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+
+      if(!filtered.length){
+        list.innerHTML = '<div style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">조건에 맞는 업무가 없어요</div>';
+        return;
+      }
+      var SC = {'완료':'#1a7a4a','진행중':'#a07000','미완료':'#b52929'};
+      var SB = {'완료':'#e6f9f0','진행중':'#fff7e0','미완료':'#fde8e8'};
+      list.innerHTML = filtered.map(function(e){
+        return '<div data-cwpid="'+esc2(e.id)+'" style="display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid #f0f6ff;cursor:pointer">'
+          +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:14px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc2(e.title||'(제목없음)')+'</div>'
+          +'<div style="font-size:11px;color:#aab8c8;margin-top:2px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">'
+          +'<span>'+esc2(e.date||'')+'</span>'
+          +(e.floor?'<span>'+esc2(e.floor)+'</span>':'')
+          +(e.field?'<span>'+esc2(e.field)+'</span>':'')
+          +(e.status?'<span style="background:'+(SB[e.status]||'#f0f0f0')+';color:'+(SC[e.status]||'#888')+';border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700">'+esc2(e.status)+'</span>':'')
+          +'</div></div>'
+          +'<span style="font-size:18px;color:#dbe6f4">○</span>'
+          +'</div>';
+      }).join('');
+
+      list.querySelectorAll('[data-cwpid]').forEach(function(el){
+        el.addEventListener('mouseenter', function(){ el.style.background='#f7faff'; });
+        el.addEventListener('mouseleave', function(){ el.style.background=''; });
+        el.addEventListener('click', function(){
+          var workId = el.dataset.cwpid;
+          /* 양방향 연결 저장 */
+          if(typeof updateRecord==='function'){
+            updateRecord(callId, {linkedWorkId: workId});
+            updateRecord(workId, {linkedCallId: callId});
+          }
+          ov.remove();
+          g('viewOverlay').classList.remove('show');
+          if(typeof toast==='function') toast('🔗 업무와 통화가 연결됐어요');
+        });
+      });
+    }
+
+    renderList();
+    ['cwpMonthSel','cwpDateInp','cwpSearch'].forEach(function(fid){
+      var el=g(fid); if(el){ el.addEventListener('input',renderList); el.addEventListener('change',renderList); }
+    });
+    g('cwpCancel').addEventListener('click', function(){ ov.remove(); });
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  }
+
+  /* v43 메인목록 통화 카드에 연결 업무 뱃지 표시 */
+  var origV43Refresh2 = window.v43Refresh;
+  window.v43Refresh = function(){
+    if(origV43Refresh2) origV43Refresh2();
+    setTimeout(function(){
+      var list = g('v43List'); if(!list) return;
+      list.querySelectorAll('.v43-item[data-kind="call"]').forEach(function(card){
+        var id = card.dataset.id;
+        var en = typeof entries!=='undefined' ? entries.find(function(x){return x.id===id;}) : null;
+        if(!en || !en.linkedWorkId) return;
+        if(card.querySelector('.call-work-badge')) return;
+        var work = typeof entries!=='undefined' ? entries.find(function(x){return x.id===en.linkedWorkId;}) : null;
+        if(!work) return;
+        var badge = document.createElement('span');
+        badge.className = 'call-work-badge';
+        badge.style.cssText = 'background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;cursor:pointer';
+        badge.textContent = '🔗 '+( work.title||'업무');
+        badge.addEventListener('click', function(e){
+          e.stopPropagation();
+          if(typeof openViewer==='function') openViewer('work', work.id);
+        });
+        var meta = card.querySelector('.v43-item-meta');
+        if(meta) meta.appendChild(badge);
+      });
+    }, 200);
+  };
+
+  setTimeout(hookCallViewer, 500);
+  setTimeout(hookCallViewer, 2000);
+  console.log('[callWorkLink] 업무-통화 연결 로드');
+})();
   console.log('[expV2] v44-0622-1651 로드');
 })();
 </script>
