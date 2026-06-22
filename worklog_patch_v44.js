@@ -1441,12 +1441,11 @@
   var _wait = 0;
   var _inited = false;
   function waitAndInit() {
-    /* _wlInitDone: worklog.js init() 완료 신호 (wireWorkSubtabs 포함) */
-    if (window._wlInitDone && typeof entries !== 'undefined' && typeof addRecord !== 'undefined') {
+    if (typeof entries !== 'undefined' && typeof addRecord !== 'undefined') {
       if (!_inited) { _inited = true; init(); }
       return;
     }
-    if (_wait++ < 60) setTimeout(waitAndInit, 300);
+    if (_wait++ < 40) setTimeout(waitAndInit, 500);
   }
   waitAndInit();
   console.log('[worklog_patch_v44] PART2 지출 패치 로드');
