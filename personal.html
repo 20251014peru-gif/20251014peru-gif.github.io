@@ -618,18 +618,18 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
   <!-- 업로드 존 -->
   <div id="scanUploadZone" style="border:2.5px dashed var(--blue);border-radius:16px;padding:28px 20px;text-align:center;cursor:pointer;background:var(--blue-lt);transition:all .2s;margin-bottom:12px"
-    onclick="g('scanFileInp').click()"
+    onclick="g('scanCamInp').click()"
     ondragover="event.preventDefault();this.style.background='#dbeafe'"
     ondragleave="this.style.background='var(--blue-lt)'"
     ondrop="event.preventDefault();this.style.background='var(--blue-lt)';handleScanFiles(event.dataTransfer.files)">
     <div style="font-size:36px;margin-bottom:8px">📸</div>
-    <div style="font-size:15px;font-weight:800;color:var(--blue);margin-bottom:4px">사진 촬영 또는 업로드</div>
+    <div style="font-size:15px;font-weight:800;color:var(--blue);margin-bottom:4px">📷 카메라로 바로 촬영</div>
     <div style="font-size:12px;color:var(--ink-soft)">영수증·맛집·차량·명함·처방전 — AI가 자동 분석</div>
     <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
-      <label style="padding:8px 16px;background:var(--blue);color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+      <label onclick="event.stopPropagation()" style="padding:8px 16px;background:var(--blue);color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
         📷 카메라<input type="file" id="scanCamInp" accept="image/*" capture="environment" style="display:none" onchange="handleScanFiles(this.files);this.value=''">
       </label>
-      <label style="padding:8px 16px;background:var(--white);color:var(--blue);border:1.5px solid var(--blue);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+      <label onclick="event.stopPropagation()" style="padding:8px 16px;background:var(--white);color:var(--blue);border:1.5px solid var(--blue);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
         🖼 갤러리<input type="file" id="scanFileInp" accept="image/*" multiple style="display:none" onchange="handleScanFiles(this.files);this.value=''">
       </label>
       <button onclick="event.stopPropagation();scanPasteFromClipboard()" style="padding:8px 16px;background:var(--white);color:var(--ink-soft);border:1.5px solid var(--blue-bd);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📋 붙여넣기</button>
@@ -1016,6 +1016,25 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 <!-- 이미지 뷰어 -->
 <div id="imgOverlay" onclick="this.classList.remove('show')">
   <img id="imgFull" src="" alt="">
+</div>
+
+<!-- ===== 사진 크롭 모달 (영수증만 잘라내기) ===== -->
+<div id="cropOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99998;flex-direction:column;align-items:center;justify-content:center">
+  <div id="cropHeader" style="position:absolute;top:0;left:0;right:0;padding:14px 18px;background:rgba(0,0,0,.6);display:flex;justify-content:space-between;align-items:center;z-index:10">
+    <div style="color:#fff;font-size:14px;font-weight:700">✂️ 영수증만 잘라내기</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button id="cropAiDetect" style="padding:7px 14px;background:#f39c12;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px">🤖 AI 자동감지</button>
+      <button id="cropReset" style="padding:7px 14px;background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">↻ 초기화</button>
+      <button id="cropClose" style="padding:7px 14px;background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✕ 닫기</button>
+    </div>
+  </div>
+  <div id="cropCanvasWrap" style="position:relative;max-width:96vw;max-height:75vh;display:flex;align-items:center;justify-content:center">
+    <canvas id="cropCanvas" style="max-width:100%;max-height:100%;touch-action:none"></canvas>
+  </div>
+  <div id="cropFooter" style="position:absolute;bottom:0;left:0;right:0;padding:14px 18px;background:rgba(0,0,0,.6);display:flex;justify-content:center;gap:10px;z-index:10">
+    <button id="cropApply" style="padding:11px 22px;background:#27ae60;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(39,174,96,.4)">✅ 이 영역으로 크롭 + 재분석</button>
+  </div>
+  <div id="cropStatus" style="position:absolute;top:65px;left:50%;transform:translateX(-50%);color:#ffd788;font-size:12px;background:rgba(0,0,0,.5);padding:4px 12px;border-radius:6px;display:none"></div>
 </div>
 
 <!-- 토스트 -->
@@ -3342,56 +3361,85 @@ window.showImg=function(src){g('imgFull').src=src;g('imgOverlay').classList.add(
 
   // ── 핵심 OCR 프롬프트 ──
   function buildScanPrompt(imgIdx,total){
-    return `당신은 한국어 문서/영수증/사진 전문 OCR AI입니다.
-이미지 ${imgIdx+1}/${total}장을 정밀 분석하세요.
+    return `당신은 한국 영수증/문서 전문 OCR 분석가입니다.
+이미지 ${imgIdx+1}/${total}장을 **극도로 정밀하게** 분석하세요.
 
-【한글 인식 강화 규칙】
-- 한글 자모가 붙어있는 경우: 글자 단위로 조합하여 읽으세요
-- 흔히 혼동되는 글자 쌍: 러↔러, 의↔의, 원↔월, 집↔집, 식↔직, 당↔탕, 관↔관
-- 숫자 혼동 주의: 0↔6, 1↔7, 5↔6, 8↔6
-- 영수증 한글: 상호명에 자주 쓰이는 글자 (삼성, 현대, 롯데, 이마트, 편의점, 카페, 식당, 주유소, 약국, 병원 등) 참고
-- 글자가 불명확할 때: 문맥(음식점인지, 약국인지, 주유소인지)을 고려해 가장 그럴듯한 한글로 복원
-- 가게 이름의 고유명사도 최대한 추측하여 복원 (예: ○○횟집, △△순대국 등)
-- 주소 한글: 시/군/구/동/로/길 같은 행정단위 글자를 적극 활용
-- 전화번호: 02-, 031- 등 지역번호, 010- 등 휴대폰 패턴 적극 인식
+【🔬 텍스트 인식 강화 - 최우선 적용】
+1. **모든 한글을 한 글자도 빠짐없이** 읽어내세요. 흐릿하거나 일부 가려진 글자도 문맥/패턴으로 추론
+2. **숫자는 절대 0/6/8/9 헷갈리지 말 것**. 영수증 가격은 천원/만원 단위 패턴 확인
+3. **표/열 구조 인식**: 영수증의 품목명-수량-단가-금액 4열 구조를 정확히 파악
+4. **글자 크기 차이 활용**: 큰 글자=상호명/총금액, 작은 글자=품목/세부
+5. **위치 의미**: 상단=상호/주소, 중간=품목내역, 하단=합계/결제정보
+6. **부분 가려진 글자 복원**: 한국 가게명 패턴 활용 (예: ○○분식, ○○○카페)
+7. **숫자 단위 표기**: 1,000원/1000원/1천원 모두 정확히 1000으로 변환
+8. **흐릿한 도장/스탬프도 읽기 시도**: 사업자등록번호, 대표자명, 가맹점번호(단 카드번호는 제외)
+
+【⭐ 절대 추출 금지 (보안)】
+❌ 카드번호 (1234-****-5678 같은 거)
+❌ 카드 승인번호  
+❌ 가맹점번호, 단말기번호
+❌ 거래번호, 영수증번호
+→ rawText 포함 어디에도 넣지 마세요
 
 【분류】
-이미지를 보고 아래 중 하나로 분류하세요:
-- restaurant: 식당/카페/음식점 영수증, 메뉴판, 식당 사진
-- purchase: 마트/쇼핑/편의점 영수증, 쇼핑 영수증, 온라인 주문
-- health: 처방전, 약봉투, 병원 영수증, 의료 관련
-- car: 주유 영수증, 정비 영수증, 주차 영수증, 차량 관련
-- business: 명함, 업체 안내, 간판
-- other: 그 외 모든 것
+- restaurant: 식당/카페/음식점 영수증
+- purchase: 마트/쇼핑/편의점/온라인 영수증
+- health: 처방전/약봉투/병원 영수증
+- car: 주유/정비/세차/주차 영수증
+- business: 명함/업체안내/간판
+- other: 그 외
 
-【추출 필드 — 종류별로 채울 수 있는 것만 채우세요】
-공통: date(YYYY-MM-DD), title(핵심 제목 한 줄), amount(숫자만, 총금액), note(기타 메모)
+【⭐ 품목 배열 추출 (핵심)】
+영수증의 모든 품목을 빠짐없이 items 배열로:
+[{"name":"품목명","qty":수량,"price":단가,"subtotal":소계}]
+- 한 줄에 품목+수량+단가+금액이 모두 적혀있으면 → 그대로 분리
+- 한 줄에 품목만, 다음 줄에 가격만 적혀있어도 → 같은 품목으로 묶기
+- 수량 표시 없으면 qty=1
+- 할인/쿠폰 항목은 별도 행으로 (price: 음수)
 
-restaurant 추가: place(상호명), phone(전화번호), addr(주소), menu(주문한 메뉴들 쉼표구분), persons(인원수)
-purchase 추가: place(상호명/가게), phone(전화), addr(주소), items(구매품목들 쉼표구분), payMethod(카드/현금/간편결제)
-health 추가: hospital(병원명), pharmacy(약국명), doctor(의사명), drugs(처방약 목록), diagnosis(진단명)
-car 추가: carType(주유/정비/세차/주차), shop(업체명), phone(전화), addr(주소), liters(주유량 숫자), pricePerL(리터당단가), vehicle(차량번호 또는 차종)
-business 추가: company(회사명), person(담당자), phone(전화), email(이메일), addr(주소), dept(부서)
+【⭐ 결제시각 분리】
+영수증에 "2026-06-23 14:35:42" 또는 "2026/06/23 14:35" 식으로 적혀있으면:
+- date: "2026-06-23"
+- payTime: "14:35"
 
-날짜가 없으면 오늘(${today()})로 설정하세요.
-금액은 총합만, 숫자만 (원 제외, 콤마 제외).
+【공통 필드 - 가능한 모든 정보 추출】
+- date: YYYY-MM-DD (없으면 ${today()})
+- payTime: HH:MM
+- title: 핵심 제목
+- amount: 총금액 숫자만
+- place: 상호명/가게명 (전체, 줄임 없이)
+- phone: 02-xxx-xxxx, 031-xxx-xxxx, 010-xxxx-xxxx 정확히
+- addr: 도로명 주소 전체 (시/도+구/군+동/로+번지)
+- payMethod: 카드(어느 카드사 ok)/현금/계좌이체/간편결제/포인트
+- items: 위 형식 배열
+- note: "" (사용자가 직접 채울 영역, 절대 채우지 말것)
 
-【응답 형식】
-순수 JSON만 (마크다운 없이):
+【종류별 추가 필드】
+restaurant: persons(인원수), tableNo(테이블), foodType(한식/중식/일식/양식/카페)
+health: hospital(병원명), pharmacy(약국명), doctor(의사명), drugs(처방약 목록), diagnosis(진단명)
+car: carType(주유/정비/세차/주차), liters(주유량 L), pricePerL(리터당단가 원), vehicle(차량번호/차종)
+business: company(회사명), person(담당자), email(이메일), dept(부서), title(직책)
+
+【응답 - 순수 JSON만 (마크다운 코드블록 ❌)】
 {
-  "kind": "restaurant",
-  "confidence": "high",
+  "kind": "purchase",
+  "confidence": "high|medium|low",
   "fields": {
     "date": "2026-06-23",
-    "title": "을밀대 냉면",
-    "place": "을밀대",
-    "phone": "02-123-4567",
-    "addr": "서울 마포구 망원동 123",
-    "amount": 28000,
-    "menu": "평양냉면, 왕만두",
+    "payTime": "14:35",
+    "title": "이마트 망원점",
+    "place": "이마트 망원점",
+    "phone": "02-1234-5678",
+    "addr": "서울 마포구 망원로 123",
+    "amount": 47200,
+    "payMethod": "신한카드",
+    "items": [
+      {"name":"매일우유 1L","qty":2,"price":2900,"subtotal":5800},
+      {"name":"바나나 1송이","qty":1,"price":3500,"subtotal":3500}
+    ],
     "note": ""
   },
-  "rawText": "이미지에서 읽은 전체 텍스트 (줄바꿈 \\n으로)"
+  "rawText": "영수증의 모든 한글/숫자/영문을 빠짐없이 읽은 텍스트 (카드번호·승인번호 제외, 줄바꿈 \\n)"
 }`;
   }
 
@@ -3477,40 +3525,66 @@ business 추가: company(회사명), person(담당자), phone(전화), email(이
     const confColor=parsed.confidence==='high'?'#27ae60':parsed.confidence==='medium'?'#f39c12':'#e74c3c';
     const confLabel={'high':'높음','medium':'보통','low':'낮음'}[parsed.confidence]||'?';
 
+    // ⭐ 모든 종류 공통 필드: 날짜·결제시각·금액·제목·상호·전화·주소·결제수단
+    const commonFields=`
+      <div class="scan-field-grid">
+        <div class="scan-field"><label>📅 날짜</label><input type="date" id="sc${idx}_date" value="${esc(f.date||today())}"></div>
+        <div class="scan-field"><label>🕐 결제시각</label><input type="time" id="sc${idx}_payTime" value="${esc(f.payTime||'')}" step="300"></div>
+        <div class="scan-field"><label>💰 총금액 (원)</label><input type="number" id="sc${idx}_amount" value="${f.amount||''}"></div>
+        <div class="scan-field"><label>💳 결제수단</label><input type="text" id="sc${idx}_payMethod" value="${esc(f.payMethod||'')}" placeholder="카드/현금/계좌이체"></div>
+        <div class="scan-field scan-field-full"><label>📝 제목</label><input type="text" id="sc${idx}_title" value="${esc(f.title||'')}"></div>
+        <div class="scan-field"><label>🏪 상호명</label><input type="text" id="sc${idx}_place" value="${esc(f.place||'')}"></div>
+        <div class="scan-field"><label>📞 전화번호</label><input type="tel" id="sc${idx}_phone" value="${esc(f.phone||'')}"></div>
+        <div class="scan-field scan-field-full"><label>📍 주소</label><input type="text" id="sc${idx}_addr" value="${esc(f.addr||'')}"></div>
+      </div>`;
+
     // 종류별 추가 필드
     let extraFields='';
     if(parsed.kind==='restaurant'){
-      extraFields=`
-        <div class="scan-field"><label>상호명</label><input type="text" id="sc${idx}_place" value="${esc(f.place||'')}"></div>
-        <div class="scan-field"><label>전화</label><input type="tel" id="sc${idx}_phone" value="${esc(f.phone||'')}"></div>
-        <div class="scan-field scan-field-full"><label>주소</label><input type="text" id="sc${idx}_addr" value="${esc(f.addr||'')}"></div>
-        <div class="scan-field scan-field-full"><label>메뉴</label><input type="text" id="sc${idx}_menu" value="${esc(f.menu||'')}"></div>`;
-    } else if(parsed.kind==='purchase'){
-      extraFields=`
-        <div class="scan-field"><label>상호/가게</label><input type="text" id="sc${idx}_place" value="${esc(f.place||'')}"></div>
-        <div class="scan-field"><label>결제수단</label><input type="text" id="sc${idx}_payMethod" value="${esc(f.payMethod||'')}"></div>
-        <div class="scan-field scan-field-full"><label>구매 품목</label><input type="text" id="sc${idx}_items" value="${esc(f.items||'')}"></div>`;
+      extraFields=`<div class="scan-field-grid" style="margin-top:8px">
+        <div class="scan-field"><label>인원수</label><input type="number" id="sc${idx}_persons" value="${f.persons||''}"></div>
+        <div class="scan-field"><label>테이블</label><input type="text" id="sc${idx}_tableNo" value="${esc(f.tableNo||'')}"></div>
+      </div>`;
     } else if(parsed.kind==='health'){
-      extraFields=`
-        <div class="scan-field"><label>병원</label><input type="text" id="sc${idx}_hospital" value="${esc(f.hospital||'')}"></div>
-        <div class="scan-field"><label>약국</label><input type="text" id="sc${idx}_pharmacy" value="${esc(f.pharmacy||'')}"></div>
+      extraFields=`<div class="scan-field-grid" style="margin-top:8px">
+        <div class="scan-field"><label>🏥 병원</label><input type="text" id="sc${idx}_hospital" value="${esc(f.hospital||'')}"></div>
+        <div class="scan-field"><label>💊 약국</label><input type="text" id="sc${idx}_pharmacy" value="${esc(f.pharmacy||'')}"></div>
+        <div class="scan-field"><label>의사</label><input type="text" id="sc${idx}_doctor" value="${esc(f.doctor||'')}"></div>
+        <div class="scan-field"><label>진단명</label><input type="text" id="sc${idx}_diagnosis" value="${esc(f.diagnosis||'')}"></div>
         <div class="scan-field scan-field-full"><label>처방약</label><input type="text" id="sc${idx}_drugs" value="${esc(f.drugs||'')}"></div>
-        <div class="scan-field scan-field-full"><label>진단명</label><input type="text" id="sc${idx}_diagnosis" value="${esc(f.diagnosis||'')}"></div>`;
+      </div>`;
     } else if(parsed.kind==='car'){
-      extraFields=`
-        <div class="scan-field"><label>종류</label><input type="text" id="sc${idx}_carType" value="${esc(f.carType||'')}"></div>
-        <div class="scan-field"><label>업체명</label><input type="text" id="sc${idx}_shop" value="${esc(f.shop||'')}"></div>
-        <div class="scan-field"><label>전화</label><input type="tel" id="sc${idx}_phone" value="${esc(f.phone||'')}"></div>
-        <div class="scan-field"><label>주소</label><input type="text" id="sc${idx}_addr" value="${esc(f.addr||'')}"></div>
-        <div class="scan-field"><label>주유량(L)</label><input type="number" id="sc${idx}_liters" value="${f.liters||''}"></div>
-        <div class="scan-field"><label>리터당 단가</label><input type="number" id="sc${idx}_pricePerL" value="${f.pricePerL||''}"></div>`;
+      extraFields=`<div class="scan-field-grid" style="margin-top:8px">
+        <div class="scan-field"><label>종류</label><input type="text" id="sc${idx}_carType" value="${esc(f.carType||'')}" placeholder="주유/정비/세차"></div>
+        <div class="scan-field"><label>차량</label><input type="text" id="sc${idx}_vehicle" value="${esc(f.vehicle||'')}"></div>
+        <div class="scan-field"><label>주유량(L)</label><input type="number" step="0.01" id="sc${idx}_liters" value="${f.liters||''}"></div>
+        <div class="scan-field"><label>리터당 단가</label><input type="number" id="sc${idx}_pricePerL" value="${f.pricePerL||''}"></div>
+      </div>`;
     } else if(parsed.kind==='business'){
-      extraFields=`
+      extraFields=`<div class="scan-field-grid" style="margin-top:8px">
         <div class="scan-field"><label>회사명</label><input type="text" id="sc${idx}_company" value="${esc(f.company||'')}"></div>
         <div class="scan-field"><label>담당자</label><input type="text" id="sc${idx}_person" value="${esc(f.person||'')}"></div>
-        <div class="scan-field"><label>전화</label><input type="tel" id="sc${idx}_phone" value="${esc(f.phone||'')}"></div>
         <div class="scan-field"><label>이메일</label><input type="text" id="sc${idx}_email" value="${esc(f.email||'')}"></div>
-        <div class="scan-field scan-field-full"><label>주소</label><input type="text" id="sc${idx}_addr" value="${esc(f.addr||'')}"></div>`;
+        <div class="scan-field"><label>부서</label><input type="text" id="sc${idx}_dept" value="${esc(f.dept||'')}"></div>
+      </div>`;
+    }
+
+    // ⭐ 품목 배열 (모든 종류 공통)
+    const itemsArr = Array.isArray(f.items)?f.items:[];
+    let itemRows = '';
+    if(itemsArr.length){
+      itemRows = itemsArr.map((it,i)=>`
+        <div class="scan-item-row" data-row="${i}" style="display:grid;grid-template-columns:1fr 60px 90px 90px 28px;gap:5px;margin-bottom:4px;align-items:center">
+          <input type="text" class="scrow-name" placeholder="품목명" value="${esc(it.name||'')}"
+            style="height:34px;padding:0 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;background:#fff;outline:none;width:100%;box-sizing:border-box">
+          <input type="number" class="scrow-qty" placeholder="수량" value="${it.qty||1}"
+            style="height:34px;padding:0 6px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;background:#fff;outline:none;width:100%;box-sizing:border-box;text-align:center">
+          <input type="number" class="scrow-price" placeholder="단가" value="${it.price||''}"
+            style="height:34px;padding:0 6px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;background:#fff;outline:none;width:100%;box-sizing:border-box">
+          <input type="number" class="scrow-sub" placeholder="소계" value="${it.subtotal||''}"
+            style="height:34px;padding:0 6px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;width:100%;box-sizing:border-box;font-weight:700">
+          <button class="scrow-del" data-row-del="${i}" style="width:28px;height:28px;border:none;background:#fde8e8;color:#c0392b;border-radius:7px;cursor:pointer;font-size:13px">✕</button>
+        </div>`).join('');
     }
 
     const html=`
@@ -3524,15 +3598,26 @@ business 추가: company(회사명), person(담당자), phone(전화), email(이
         <div class="src-conf" style="background:${confColor}22;color:${confColor}">인식률 ${confLabel}</div>
       </div>
       <div class="src-body">
-        ${parsed._imgBase64?`<img src="${parsed._imgBase64}" class="scan-thumb" onclick="showImg('${parsed._imgBase64}')">`:''}
-        <div class="scan-field-grid">
-          <div class="scan-field"><label>날짜</label><input type="date" id="sc${idx}_date" value="${esc(f.date||today())}"></div>
-          <div class="scan-field"><label>금액 (원)</label><input type="number" id="sc${idx}_amount" value="${f.amount||''}"></div>
-          <div class="scan-field scan-field-full"><label>제목</label><input type="text" id="sc${idx}_title" value="${esc(f.title||'')}"></div>
-          ${extraFields}
-          <div class="scan-field scan-field-full"><label>메모</label><textarea id="sc${idx}_note" rows="2">${esc(f.note||'')}</textarea></div>
+        ${parsed._imgBase64?`
+        <div style="position:relative;margin-bottom:10px">
+          <img src="${parsed._imgBase64}" class="scan-thumb" id="scanImg${idx}" onclick="showImg(scanResultCardsImg(${idx}))">
+          <button onclick="openCropModal(${idx})" style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,.95);color:#1a2f45;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,.2)">✂️ 영수증만 자르기</button>
+        </div>`:''}
+        ${commonFields}
+        ${extraFields}
+        <div style="font-size:12px;font-weight:800;color:var(--blue);margin:14px 0 8px;padding:6px 10px;background:var(--blue-lt);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+          <span>🛒 구매 품목 ${itemsArr.length>0?`(${itemsArr.length}개)`:''}</span>
+          <button id="sc${idx}_addItem" style="font-size:11px;font-weight:700;padding:3px 10px;border:1.5px solid var(--blue);border-radius:6px;background:#fff;color:var(--blue);cursor:pointer;font-family:inherit">➕ 추가</button>
         </div>
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        ${itemsArr.length?`<div style="display:grid;grid-template-columns:1fr 60px 90px 90px 28px;gap:5px;font-size:10px;color:var(--ink-faint);font-weight:700;padding:0 2px;margin-bottom:4px">
+          <span>품목명</span><span style="text-align:center">수량</span><span>단가</span><span>소계</span><span></span>
+        </div>`:''}
+        <div id="sc${idx}_itemsList">${itemRows}</div>
+        <div class="scan-field scan-field-full" style="margin-top:10px">
+          <label>📝 메모 <span style="font-size:10px;color:var(--ink-faint);font-weight:400">(직접 입력 — AI가 자동으로 채우지 않음)</span></label>
+          <textarea id="sc${idx}_note" rows="2" placeholder="여기에 직접 메모를 입력하세요"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;margin-top:8px">
           <button onclick="toggleScanRaw(${idx})" style="font-size:11px;color:var(--ink-faint);background:none;border:none;cursor:pointer;padding:2px 6px">📄 원문 텍스트 보기</button>
         </div>
         <div class="scan-raw-text" id="scanRaw${idx}">${esc(parsed.rawText||'')}</div>
@@ -3544,6 +3629,44 @@ business 추가: company(회사명), person(담당자), phone(전화), email(이
       </div>
     </div>`;
     g('scanResultList').insertAdjacentHTML('beforeend',html);
+
+    // 품목 추가 버튼
+    const addBtn = g(`sc${idx}_addItem`);
+    if(addBtn) addBtn.addEventListener('click',()=>addScanItemRow(idx));
+    // 품목 행 자동 소계 계산
+    const itemsList = g(`sc${idx}_itemsList`);
+    if(itemsList){
+      itemsList.addEventListener('input',(e)=>{
+        const row = e.target.closest('.scan-item-row');
+        if(!row) return;
+        if(e.target.classList.contains('scrow-qty') || e.target.classList.contains('scrow-price')){
+          const qty = parseFloat(row.querySelector('.scrow-qty').value)||0;
+          const price = parseFloat(row.querySelector('.scrow-price').value)||0;
+          row.querySelector('.scrow-sub').value = Math.round(qty*price);
+        }
+      });
+      itemsList.addEventListener('click',(e)=>{
+        const del = e.target.closest('[data-row-del]');
+        if(del) del.closest('.scan-item-row').remove();
+      });
+    }
+  }
+
+  function addScanItemRow(idx){
+    const list = g(`sc${idx}_itemsList`);
+    if(!list) return;
+    const i = list.querySelectorAll('.scan-item-row').length;
+    const div = document.createElement('div');
+    div.className='scan-item-row';
+    div.dataset.row=i;
+    div.style.cssText='display:grid;grid-template-columns:1fr 60px 90px 90px 28px;gap:5px;margin-bottom:4px;align-items:center';
+    div.innerHTML=`
+      <input type="text" class="scrow-name" placeholder="품목명" style="height:34px;padding:0 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;background:#fff;outline:none;width:100%;box-sizing:border-box">
+      <input type="number" class="scrow-qty" placeholder="수량" value="1" style="height:34px;padding:0 6px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;background:#fff;outline:none;width:100%;box-sizing:border-box;text-align:center">
+      <input type="number" class="scrow-price" placeholder="단가" style="height:34px;padding:0 6px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;background:#fff;outline:none;width:100%;box-sizing:border-box">
+      <input type="number" class="scrow-sub" placeholder="소계" style="height:34px;padding:0 6px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;width:100%;box-sizing:border-box;font-weight:700">
+      <button class="scrow-del" data-row-del="${i}" style="width:28px;height:28px;border:none;background:#fde8e8;color:#c0392b;border-radius:7px;cursor:pointer;font-size:13px">✕</button>`;
+    list.appendChild(div);
   }
 
   window.toggleScanRaw=function(idx){
@@ -3553,28 +3676,44 @@ business 추가: company(회사명), person(담당자), phone(전화), email(이
 
   function getScanCardData(idx){
     const gv2=(id)=>{const el=g('sc'+idx+'_'+id);return el?(el.value||'').trim():'';}
+    // 품목 배열 수집
+    const itemsList = g('sc'+idx+'_itemsList');
+    const items = [];
+    if(itemsList){
+      itemsList.querySelectorAll('.scan-item-row').forEach(row=>{
+        const name = (row.querySelector('.scrow-name')||{}).value||'';
+        const qty = parseFloat((row.querySelector('.scrow-qty')||{}).value)||0;
+        const price = parseFloat((row.querySelector('.scrow-price')||{}).value)||0;
+        const subtotal = parseFloat((row.querySelector('.scrow-sub')||{}).value)||0;
+        if(name.trim()) items.push({name:name.trim(),qty,price,subtotal});
+      });
+    }
     return {
       date:gv2('date')||today(),
+      payTime:gv2('payTime'),
       title:gv2('title'),
       amount:parseInt(gv2('amount'))||0,
       note:gv2('note'),
       place:gv2('place'),
       phone:gv2('phone'),
       addr:gv2('addr'),
-      menu:gv2('menu'),
-      items:gv2('items'),
       payMethod:gv2('payMethod'),
+      items:items,
+      persons:parseInt(gv2('persons'))||0,
+      tableNo:gv2('tableNo'),
       hospital:gv2('hospital'),
       pharmacy:gv2('pharmacy'),
+      doctor:gv2('doctor'),
       drugs:gv2('drugs'),
       diagnosis:gv2('diagnosis'),
       carType:gv2('carType'),
-      shop:gv2('shop'),
+      vehicle:gv2('vehicle'),
       liters:parseFloat(gv2('liters'))||0,
       pricePerL:parseInt(gv2('pricePerL'))||0,
       company:gv2('company'),
       person:gv2('person'),
       email:gv2('email'),
+      dept:gv2('dept'),
     };
   }
 
@@ -3604,16 +3743,33 @@ business 추가: company(회사명), person(담당자), phone(전화), email(이
     let obj={};
     const kind=parsed.kind;
 
+    // 품목 배열을 텍스트로 변환 (기록에 표시용)
+    const itemsText = d.items.length
+      ? d.items.map(i=>`${i.name} ${i.qty>1?'x'+i.qty:''} ${i.subtotal?numFmt(i.subtotal):''}`.trim()).join(', ')
+      : '';
+
     if(kind==='restaurant'){
-      obj={kind:'restaurant',date:d.date,place:d.place||d.title,phone:d.phone,addr:d.addr,menu:d.menu,amount:d.amount,note:d.note,photos};
+      obj={kind:'restaurant',date:d.date,payTime:d.payTime,place:d.place||d.title,phone:d.phone,addr:d.addr,
+        menuRows:d.items.map(i=>({name:i.name,price:i.subtotal||i.price,qty:i.qty})),
+        amount:d.amount,payMethod:d.payMethod,persons:d.persons,tableNo:d.tableNo,note:d.note,photos};
     } else if(kind==='purchase'){
-      obj={kind:'purchase',date:d.date,title:d.title||d.items,place:d.place,amount:d.amount,payMethod:d.payMethod,note:d.items+(d.note?'\n'+d.note:''),photos};
+      obj={kind:'purchase',date:d.date,payTime:d.payTime,title:d.title||itemsText,place:d.place,phone:d.phone,addr:d.addr,
+        amount:d.amount,payMethod:d.payMethod,
+        itemRows:d.items,note:d.note,photos};
     } else if(kind==='health'){
-      obj={kind:'health',date:d.date,title:d.title,hospital:d.hospital,pharmacy:d.pharmacy,drug:d.drugs,diagnosis:d.diagnosis,amount:d.amount,note:d.note,photos};
+      obj={kind:'health',date:d.date,payTime:d.payTime,title:d.title,hospital:d.hospital,hospitalAddr:d.addr,phone:d.phone,
+        pharmacy:d.pharmacy,doctor:d.doctor,drug:d.drugs,diagnosis:d.diagnosis,amount:d.amount,
+        itemRows:d.items,note:d.note,photos};
     } else if(kind==='car'){
-      obj={kind:'car',vehicle:curVehicle,date:d.date,carType:d.carType||'기타',shop:d.shop,shopPhone:d.phone,shopAddr:d.addr,liters:d.liters,pricePerL:d.pricePerL,amount:d.amount,note:d.note,photos};
+      obj={kind:'car',vehicle:curVehicle||'소나타',date:d.date,carType:d.carType||'기타',
+        shop:d.place,shopPhone:d.phone,shopAddr:d.addr,
+        liters:d.liters,pricePerL:d.pricePerL,amount:d.amount,
+        repairRows:d.items.map(i=>({item:i.name,cost:i.subtotal||i.price,memo:''})),
+        note:d.note,photos};
     } else {
-      obj={kind:'other',date:d.date,title:d.title||'스캔 기록',body:d.note,photos};
+      obj={kind:'other',date:d.date,payTime:d.payTime,title:d.title||'스캔 기록',
+        place:d.place,phone:d.phone,addr:d.addr,amount:d.amount,
+        body:[itemsText,d.note].filter(Boolean).join('\n\n'),photos};
     }
     addEntry(obj);
     toast('✅ 기록 탭에 저장됐어요!');
@@ -3678,6 +3834,425 @@ business 추가: company(회사명), person(담당자), phone(전화), email(이
       </div>`;
     }).join('');
   };
+
+  // 스캔 이미지 접근 헬퍼
+  window.scanResultCardsImg = function(idx){
+    const p = scanResultCards[idx];
+    return p ? p._imgBase64 : '';
+  };
+
+  /* ==================== ✂️ 사진 크롭 (영수증만 잘라내기) ==================== */
+  let cropState = {
+    idx: -1,           // 어느 스캔 카드인지
+    img: null,         // Image 객체
+    canvas: null,
+    ctx: null,
+    scale: 1,          // canvas / 원본 비율
+    points: [],        // 4개 모서리 [{x,y}, ...] - 캔버스 좌표
+    dragIdx: -1,
+    HANDLE_R: 14,
+  };
+
+  window.openCropModal = function(idx){
+    const parsed = scanResultCards[idx];
+    if(!parsed || !parsed._imgBase64){ toast('이미지를 찾을 수 없어요'); return; }
+    cropState.idx = idx;
+    const ov = document.getElementById('cropOverlay');
+    ov.style.display = 'flex';
+
+    const canvas = document.getElementById('cropCanvas');
+    const ctx = canvas.getContext('2d');
+    cropState.canvas = canvas;
+    cropState.ctx = ctx;
+
+    const img = new Image();
+    img.onload = function(){
+      cropState.img = img;
+      // 캔버스 크기 = 화면에 맞게 축소
+      const maxW = Math.min(window.innerWidth * 0.92, 1200);
+      const maxH = window.innerHeight * 0.72;
+      let cw = img.width, ch = img.height;
+      const ratio = Math.min(maxW / cw, maxH / ch, 1);
+      cw = Math.round(cw * ratio);
+      ch = Math.round(ch * ratio);
+      cropState.scale = ratio;
+      canvas.width = cw;
+      canvas.height = ch;
+      // 기본 4점 - 이미지 모서리 안쪽 5%
+      const m = Math.min(cw, ch) * 0.05;
+      cropState.points = [
+        {x: m, y: m},
+        {x: cw - m, y: m},
+        {x: cw - m, y: ch - m},
+        {x: m, y: ch - m},
+      ];
+      drawCrop();
+    };
+    img.src = parsed._imgBase64;
+  };
+
+  function drawCrop(){
+    const {canvas, ctx, img, points, HANDLE_R} = cropState;
+    if(!canvas || !img) return;
+    // 배경 이미지
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    // 어둠 마스크
+    ctx.fillStyle = 'rgba(0,0,0,.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // 선택 영역만 다시 그리기
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for(let i = 1; i < 4; i++) ctx.lineTo(points[i].x, points[i].y);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    // 외곽선
+    ctx.strokeStyle = '#27ae60';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for(let i = 1; i < 4; i++) ctx.lineTo(points[i].x, points[i].y);
+    ctx.closePath();
+    ctx.stroke();
+    // 핸들
+    points.forEach((p, i) => {
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#27ae60';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, HANDLE_R, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // 번호
+      ctx.fillStyle = '#27ae60';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(i + 1), p.x, p.y);
+    });
+  }
+
+  function getCanvasPos(e){
+    const rect = cropState.canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    const sx = cropState.canvas.width / rect.width;
+    const sy = cropState.canvas.height / rect.height;
+    return {x: cx * sx, y: cy * sy};
+  }
+
+  function setupCropEvents(){
+    const canvas = cropState.canvas;
+    if(!canvas) return;
+
+    function start(e){
+      e.preventDefault();
+      const pos = getCanvasPos(e);
+      cropState.dragIdx = -1;
+      cropState.points.forEach((p, i) => {
+        const dx = p.x - pos.x, dy = p.y - pos.y;
+        if(Math.sqrt(dx*dx + dy*dy) < cropState.HANDLE_R + 12) cropState.dragIdx = i;
+      });
+    }
+    function move(e){
+      if(cropState.dragIdx < 0) return;
+      e.preventDefault();
+      const pos = getCanvasPos(e);
+      cropState.points[cropState.dragIdx] = {
+        x: Math.max(0, Math.min(cropState.canvas.width, pos.x)),
+        y: Math.max(0, Math.min(cropState.canvas.height, pos.y)),
+      };
+      drawCrop();
+    }
+    function end(){ cropState.dragIdx = -1; }
+
+    canvas.onmousedown = start;
+    canvas.onmousemove = move;
+    canvas.onmouseup = end;
+    canvas.onmouseleave = end;
+    canvas.ontouchstart = start;
+    canvas.ontouchmove = move;
+    canvas.ontouchend = end;
+  }
+  // 초기 1회 바인딩
+  setTimeout(() => {
+    const c = document.getElementById('cropCanvas');
+    if(c){
+      cropState.canvas = c;
+      setupCropEvents();
+    }
+  }, 100);
+
+  // 닫기 / 초기화
+  const cropClose = document.getElementById('cropClose');
+  if(cropClose) cropClose.onclick = () => {
+    document.getElementById('cropOverlay').style.display = 'none';
+  };
+  const cropReset = document.getElementById('cropReset');
+  if(cropReset) cropReset.onclick = () => {
+    if(!cropState.img) return;
+    const cw = cropState.canvas.width, ch = cropState.canvas.height;
+    const m = Math.min(cw, ch) * 0.05;
+    cropState.points = [
+      {x: m, y: m}, {x: cw - m, y: m},
+      {x: cw - m, y: ch - m}, {x: m, y: ch - m},
+    ];
+    drawCrop();
+  };
+
+  // 🤖 AI 자동감지 - 영수증 4모서리 좌표 받아오기
+  const cropAiDetect = document.getElementById('cropAiDetect');
+  if(cropAiDetect) cropAiDetect.onclick = async () => {
+    if(!aiKey){ toast('AI 키를 먼저 설정해주세요'); return; }
+    if(!cropState.img){ toast('이미지가 없어요'); return; }
+    const status = document.getElementById('cropStatus');
+    status.textContent = '🤖 AI가 영수증 경계를 감지 중…';
+    status.style.display = 'block';
+    cropAiDetect.disabled = true;
+
+    try {
+      const parsed = scanResultCards[cropState.idx];
+      const b64 = parsed._imgBase64.split(',')[1];
+      const mediaType = parsed._imgBase64.split(';')[0].split(':')[1] || 'image/jpeg';
+
+      const prompt = `이 이미지에서 영수증/문서/명함/주요 객체의 4개 모서리 좌표를 정확히 찾아주세요.
+
+이미지 크기: ${cropState.img.width} x ${cropState.img.height} 픽셀
+
+【응답 형식】
+순수 JSON만 (마크다운, 설명 없이):
+{
+  "found": true,
+  "corners": {
+    "tl": [x, y],
+    "tr": [x, y],
+    "br": [x, y],
+    "bl": [x, y]
+  },
+  "confidence": "high"
+}
+
+- tl=top-left, tr=top-right, br=bottom-right, bl=bottom-left
+- 좌표는 원본 이미지 픽셀 단위
+- 영수증이 비스듬해도 정확한 모서리 4개 찾기
+- 영수증이 없으면 {"found": false}`;
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': aiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 500,
+          messages: [{
+            role: 'user',
+            content: [
+              {type: 'image', source: {type: 'base64', media_type: mediaType, data: b64}},
+              {type: 'text', text: prompt}
+            ]
+          }]
+        })
+      });
+      if(!res.ok) throw new Error('API ' + res.status);
+      const data = await res.json();
+      let raw = data.content[0].text.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const result = JSON.parse(raw);
+
+      if(!result.found || !result.corners){
+        status.textContent = '⚠️ 영수증 경계를 찾지 못했어요. 수동으로 조정하세요.';
+        setTimeout(() => status.style.display = 'none', 3000);
+        cropAiDetect.disabled = false;
+        return;
+      }
+
+      // 원본 좌표 → 캔버스 좌표 변환
+      const s = cropState.scale;
+      const c = result.corners;
+      cropState.points = [
+        {x: c.tl[0] * s, y: c.tl[1] * s},
+        {x: c.tr[0] * s, y: c.tr[1] * s},
+        {x: c.br[0] * s, y: c.br[1] * s},
+        {x: c.bl[0] * s, y: c.bl[1] * s},
+      ];
+      drawCrop();
+      status.textContent = '✅ 자동감지 완료! 4개 핸들을 조정하거나 바로 적용하세요.';
+      status.style.color = '#7fffb2';
+      setTimeout(() => { status.style.display = 'none'; status.style.color = '#ffd788'; }, 3000);
+    } catch(e) {
+      status.textContent = '오류: ' + e.message;
+      setTimeout(() => status.style.display = 'none', 3000);
+    } finally {
+      cropAiDetect.disabled = false;
+    }
+  };
+
+  // ✅ 적용 — 4점 영역만 잘라서 원근 보정
+  const cropApply = document.getElementById('cropApply');
+  if(cropApply) cropApply.onclick = async () => {
+    if(!cropState.img || cropState.idx < 0) return;
+    const status = document.getElementById('cropStatus');
+    status.textContent = '✂️ 영수증을 잘라내고 보정 중…';
+    status.style.display = 'block';
+    cropApply.disabled = true;
+
+    try {
+      // 원본 좌표 (캔버스 좌표 → 원본 픽셀)
+      const s = cropState.scale;
+      const pts = cropState.points.map(p => ({x: p.x / s, y: p.y / s}));
+
+      // 출력 캔버스 크기 (잘라낸 영역의 평균 가로/세로)
+      const widthTop = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      const widthBot = Math.hypot(pts[2].x - pts[3].x, pts[2].y - pts[3].y);
+      const heightL  = Math.hypot(pts[3].x - pts[0].x, pts[3].y - pts[0].y);
+      const heightR  = Math.hypot(pts[2].x - pts[1].x, pts[2].y - pts[1].y);
+      const outW = Math.round(Math.max(widthTop, widthBot));
+      const outH = Math.round(Math.max(heightL, heightR));
+
+      // 원근 보정 - 4점 → 직사각형으로 변환
+      const out = document.createElement('canvas');
+      out.width = outW;
+      out.height = outH;
+      const octx = out.getContext('2d');
+
+      // 간단한 원근 보정: scanline 단위로 4점 보간
+      // 정확한 perspective transform은 4x4 매트릭스 필요하지만,
+      // 영수증은 거의 직사각이라 bilinear interpolation으로 충분
+      const tmp = document.createElement('canvas');
+      tmp.width = cropState.img.width;
+      tmp.height = cropState.img.height;
+      const tctx = tmp.getContext('2d');
+      tctx.drawImage(cropState.img, 0, 0);
+      const srcData = tctx.getImageData(0, 0, tmp.width, tmp.height);
+      const dstData = octx.createImageData(outW, outH);
+
+      // bilinear: (u, v) ∈ [0,1] 좌표 → 4점 영역의 원본 픽셀
+      for(let y = 0; y < outH; y++){
+        const v = y / outH;
+        // 좌측 모서리: tl → bl 보간
+        const lx = pts[0].x + (pts[3].x - pts[0].x) * v;
+        const ly = pts[0].y + (pts[3].y - pts[0].y) * v;
+        // 우측 모서리: tr → br 보간
+        const rx = pts[1].x + (pts[2].x - pts[1].x) * v;
+        const ry = pts[1].y + (pts[2].y - pts[1].y) * v;
+        for(let x = 0; x < outW; x++){
+          const u = x / outW;
+          const sx = Math.round(lx + (rx - lx) * u);
+          const sy = Math.round(ly + (ry - ly) * u);
+          if(sx >= 0 && sx < srcData.width && sy >= 0 && sy < srcData.height){
+            const srcIdx = (sy * srcData.width + sx) * 4;
+            const dstIdx = (y * outW + x) * 4;
+            dstData.data[dstIdx]     = srcData.data[srcIdx];
+            dstData.data[dstIdx + 1] = srcData.data[srcIdx + 1];
+            dstData.data[dstIdx + 2] = srcData.data[srcIdx + 2];
+            dstData.data[dstIdx + 3] = 255;
+          }
+        }
+      }
+      octx.putImageData(dstData, 0, 0);
+
+      // ⭐ 텍스트 인식 강화 - 대비 향상
+      enhanceForOCR(out);
+
+      // JPEG로 압축
+      const newBase64 = out.toDataURL('image/jpeg', 0.92);
+      const parsed = scanResultCards[cropState.idx];
+      parsed._imgBase64 = newBase64;
+
+      // 카드 썸네일 갱신
+      const imgEl = document.getElementById('scanImg' + cropState.idx);
+      if(imgEl) imgEl.src = newBase64;
+
+      // 닫기
+      document.getElementById('cropOverlay').style.display = 'none';
+      status.style.display = 'none';
+
+      // 잘린 이미지로 재분석
+      if(confirm('✂️ 크롭 완료! 잘라낸 이미지로 다시 분석할까요?\n(한글 인식률이 더 좋아져요)')){
+        await reanalyzeCard(cropState.idx);
+      } else {
+        toast('✅ 크롭됐어요. 필요시 ✅ 저장하세요.');
+      }
+    } catch(e) {
+      console.error(e);
+      toast('크롭 오류: ' + e.message);
+      status.style.display = 'none';
+    } finally {
+      cropApply.disabled = false;
+    }
+  };
+
+  // 텍스트 인식 강화: 대비 향상 + 약간의 sharpening
+  function enhanceForOCR(canvas){
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    // 대비 + 명도 살짝 올리기 (영수증 글자 또렷하게)
+    const contrast = 1.25;  // 1.0 = 원본
+    const brightness = 8;
+    const factor = (259 * (contrast * 100 + 255)) / (255 * (259 - contrast * 100));
+    for(let i = 0; i < d.length; i += 4){
+      d[i]     = Math.max(0, Math.min(255, factor * (d[i] - 128) + 128 + brightness));
+      d[i + 1] = Math.max(0, Math.min(255, factor * (d[i + 1] - 128) + 128 + brightness));
+      d[i + 2] = Math.max(0, Math.min(255, factor * (d[i + 2] - 128) + 128 + brightness));
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  // 잘라낸 이미지로 재분석
+  async function reanalyzeCard(idx){
+    if(!aiKey){ toast('AI 키 없음'); return; }
+    const parsed = scanResultCards[idx];
+    if(!parsed) return;
+    toast('🔄 재분석 중…');
+    try {
+      const b64 = parsed._imgBase64.split(',')[1];
+      const mediaType = parsed._imgBase64.split(';')[0].split(':')[1] || 'image/jpeg';
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': aiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 2500,
+          messages: [{
+            role: 'user',
+            content: [
+              {type: 'image', source: {type: 'base64', media_type: mediaType, data: b64}},
+              {type: 'text', text: buildScanPrompt(idx, scanImages.length)}
+            ]
+          }]
+        })
+      });
+      if(!res.ok) throw new Error('API ' + res.status);
+      const data = await res.json();
+      let raw = data.content[0].text.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      let newParsed;
+      try { newParsed = JSON.parse(raw); }
+      catch(e) { newParsed = {kind:'other', confidence:'low', fields:{date:today(),title:'재분석 실패',note:raw}, rawText:raw}; }
+      newParsed._imgBase64 = parsed._imgBase64;
+      newParsed._imgIdx = parsed._imgIdx;
+      scanResultCards[idx] = newParsed;
+      // 카드 다시 그리기
+      const oldCard = document.getElementById('scanCard' + idx);
+      if(oldCard) oldCard.remove();
+      renderScanCard(newParsed, idx);
+      toast('✅ 재분석 완료!');
+    } catch(e) {
+      toast('재분석 오류: ' + e.message);
+    }
+  }
 
   // 탭 전환 시 초기화
   document.querySelectorAll('.v43-tab[data-tab="scan"]').forEach(btn=>{
