@@ -174,7 +174,10 @@
           t.contentEditable = 'true';
         });
       } else {
-        bodyEl.innerText = en.body || '';
+        /* 일반 텍스트도 줄바꿈 보존해서 표시 */
+        bodyEl.innerHTML = (en.body || '').replace(/[&<>"]/g, function(m) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m];
+        }).replace(/[\r\n]/g, '<br>');
       }
     }
 
@@ -504,6 +507,7 @@
   /* ── 초기화 ── */
   function init() {
     hookRenderStickyGrid();
+    hookOpenViewer();
     rebindViewBtns();
     bindStickySearch();
     bindMemoFilter();
@@ -533,11 +537,77 @@
     }
   }
 
+  /* openViewer 훅 — 상세보기에서 체크리스트 HTML 태그 노출 방지 */
+  function hookOpenViewer() {
+    if (window._v44viewerHooked) return;
+    var origViewer = window.openViewer;
+    if (!origViewer) return;
+    window.openViewer = function(kind, id) {
+      origViewer(kind, id);
+      if (kind !== 'memo') return;
+      /* 렌더 완료 후 vBody 내용을 HTML로 교체 */
+      setTimeout(function() {
+        var vBody = document.getElementById('vBody');
+        if (!vBody) return;
+        /* vBody 안에서 내용 필드 찾기 */
+        var rows = vBody.querySelectorAll('tr, .field, [data-field]');
+        rows.forEach(function(row) {
+          var label = row.querySelector('td:first-child, label, .field-label');
+          var val   = row.querySelector('td:last-child, .field-value, p');
+          if (!label || !val) return;
+          var labelTxt = (label.textContent || '').trim();
+          if (labelTxt === '내용' || labelTxt === 'body' || labelTxt === '본문') {
+            var rawHtml = val.textContent || val.innerText || '';
+            if (rawHtml.indexOf('checklist-row') >= 0 || rawHtml.indexOf('<div') >= 0) {
+              /* HTML 태그가 텍스트로 보이는 경우 → 실제 HTML로 렌더 */
+              var tmp = sanitize(rawHtml);
+              val.innerHTML = '';
+              /* 체크리스트 스타일 적용 */
+              var wrapper = document.createElement('div');
+              wrapper.className = 'sticky-note-body';
+              wrapper.innerHTML = tmp.innerHTML;
+              val.appendChild(wrapper);
+            }
+          }
+        });
+        /* 테이블 구조가 아닌 경우 - vBody 전체에서 직접 찾기 */
+        if(typeof entries !== 'undefined'){
+          var en = entries.find(function(x){return x.id===id;});
+          if(en && en.body && en.body.indexOf('checklist-row')>=0){
+            /* vBody 전체 텍스트에 HTML 태그가 보이면 교체 */
+            var fullText = vBody.innerHTML || '';
+            if(fullText.indexOf('&lt;div class=&quot;checklist') >= 0 || fullText.indexOf('<div class="checklist') < 0){
+              /* HTML 이스케이프된 채로 들어간 경우 */
+              var tmp2 = sanitize(en.body);
+              var bodyWrapper = document.createElement('div');
+              bodyWrapper.className = 'sticky-note-body';
+              bodyWrapper.innerHTML = tmp2.innerHTML;
+              /* 내용 셀을 찾아서 교체 */
+              var tds = vBody.querySelectorAll('td');
+              tds.forEach(function(td, i) {
+                var txt = (td.textContent||'').trim();
+                if(txt.indexOf('checklist-row')>=0 || txt.indexOf('<div class=')>=0){
+                  td.innerHTML = '';
+                  td.appendChild(bodyWrapper);
+                }
+              });
+            }
+          }
+        }
+      }, 80);
+    };
+    window.openViewer._v44hooked = true;
+    window._v44viewerHooked = true;
+  }
+
   /* entries 로드 대기 */
   var _wait = 0;
   function waitAndInit() {
     if (typeof entries !== 'undefined') {
       init();
+      /* openViewer는 늦게 로드될 수 있어서 별도 재시도 */
+      setTimeout(hookOpenViewer, 500);
+      setTimeout(hookOpenViewer, 1500);
     } else if (_wait++ < 30) {
       setTimeout(waitAndInit, 300);
     }
