@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-1819</title>
+<title>업무일지 v44-0622-1824</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1819</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1824</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -5971,7 +5971,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0622-1819';
+    if(el) el.textContent = 'v44-0622-1824';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -6741,12 +6741,11 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(linkedWork){
       area.innerHTML =
         '<div style="font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:6px">🔗 연결된 업무</div>'
-        +'<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f0f6ff;border-radius:10px;border:1.5px solid #dbe6f4;margin-bottom:8px">'
+        +'<div id="callWorkCard" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f0f6ff;border-radius:10px;border:1.5px solid #dbe6f4;margin-bottom:8px;cursor:pointer">'
         +'<div style="flex:1;min-width:0">'
         +'<div style="font-size:13px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc2(linkedWork.title||'(제목없음)')+'</div>'
         +'<div style="font-size:11px;color:#aab8c8;margin-top:2px">'+esc2(linkedWork.date||'')+(linkedWork.field?' · '+esc2(linkedWork.field):'')+'</div>'
         +'</div>'
-        +'<button id="callWorkViewBtn" style="background:#3f7cb8;color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">열기</button>'
         +'<button id="callWorkUnlinkBtn" style="background:#fde8e8;color:#b52929;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">해제</button>'
         +'</div>'
         +'<div style="display:flex;gap:6px">'
@@ -6763,9 +6762,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
     vBody.appendChild(area);
 
-    /* 연결된 업무 열기 */
-    var vBtn = g('callWorkViewBtn');
-    if(vBtn) vBtn.addEventListener('click', function(){
+    /* 연결된 업무 카드 클릭 → 열기 */
+    var vCard = g('callWorkCard');
+    if(vCard) vCard.addEventListener('click', function(e){
+      if(e.target.closest('#callWorkUnlinkBtn')) return;
       g('viewOverlay').classList.remove('show');
       setTimeout(function(){ var fn=window._origOpenViewer||window.openViewer; if(fn) fn('work', en.linkedWorkId); }, 100);
     });
