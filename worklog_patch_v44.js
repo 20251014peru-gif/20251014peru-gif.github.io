@@ -613,20 +613,19 @@
             wrapper.innerHTML = tmp.innerHTML;
             valEl.innerHTML = '';
             valEl.appendChild(wrapper);
-            /* 상세보기: 체크박스 클릭 가능, 텍스트 수정 불가 */
-            /* 저장 버튼 동적 추가 */
+            /* 저장 버튼 추가 — 타이밍 보장을 위해 여기서 삽입 */
             var vBtnRow = document.querySelector('#viewOverlay .btn-row');
-            if (vBtnRow && !vBtnRow.querySelector('#vMemoSave')) {
+            if (vBtnRow && !document.getElementById('vMemoSave')) {
               var saveBtn = document.createElement('button');
               saveBtn.id = 'vMemoSave';
               saveBtn.className = 'btn btn-primary';
               saveBtn.textContent = '💾 저장';
-              saveBtn.style.display = 'none';
+              saveBtn.style.cssText = 'display:none;margin-right:auto';
               saveBtn.addEventListener('click', function() {
                 if (typeof updateRecord === 'function' && data && data.id) {
-                  var wrapper = valEl.querySelector('.sticky-note-body');
-                  if (wrapper) {
-                    updateRecord(data.id, { body: wrapper.innerHTML });
+                  var w = valEl.querySelector('.sticky-note-body');
+                  if (w) {
+                    updateRecord(data.id, { body: w.innerHTML });
                     if (typeof toast === 'function') toast('저장됐어요');
                     saveBtn.style.display = 'none';
                   }
@@ -634,7 +633,7 @@
               });
               vBtnRow.insertBefore(saveBtn, vBtnRow.firstChild);
             }
-
+            /* 상세보기: 체크박스 클릭 가능, 텍스트 수정 불가 */
             valEl.querySelectorAll('.checklist-cb').forEach(function(cb) {
               cb.addEventListener('click', function(e) {
                 e.preventDefault(); e.stopPropagation();
