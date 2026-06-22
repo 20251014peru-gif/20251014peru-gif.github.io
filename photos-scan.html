@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>사진 스캔</title>
 <link rel="stylesheet" href="photos-scan.css?v=11.6-1781602654">
+<style>
+#appHeader .hdr-right{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow-x:auto;max-width:70vw}
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
 </head>
@@ -17,6 +20,16 @@
     <span class="hdr-ver" id="appVersion">v11.3</span>
   </div>
   <div class="hdr-right">
+    <!-- 앱 이동 링크 -->
+    <a href="./personal.html" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;height:32px;border-radius:9px;border:1.5px solid #c8d8f0;background:#e8f0fa;color:#1a2f45;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1a2f45" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>개인일지</a>
+    <a href="./links.html" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;height:32px;border-radius:9px;border:1.5px solid #B5D4F4;background:#E8F3FD;color:#185FA5;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>링크</a>
+    <a href="./links-recipes.html" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;height:32px;border-radius:9px;border:1.5px solid #c4b5fd;background:#f5f3ff;color:#7c3aed;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>컬렉션</a>
+    <a href="./materials.html" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;height:32px;border-radius:9px;border:1.5px solid #D4956A;background:#FDF0E6;color:#8B4513;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8B4513" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>자재</a>
+    <!-- 기존 버튼 -->
     <button class="hbtn" id="btnHome"   title="홈">🏠</button>
     <button class="hbtn" id="btnBackup" title="백업">☁️</button>
     <button class="hbtn" id="btnApiKey" title="AI 키">🔑</button>
