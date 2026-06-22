@@ -447,7 +447,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
         <h1>개인일지</h1>
         <span class="sub">달님의 개인 기록 <b style="color:#9aa7b4" id="verBadge">v2-0623</b></span>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow-x:auto">
         <span class="status"><span class="dot" id="fbDot"></span><span id="fbText">연결 중…</span></span>
         <button class="nav-btn" id="aiKeyBtn">🤖 AI키</button>
         <a class="nav-btn" href="links.html"
@@ -1294,7 +1294,8 @@ function closeRecordModal(){
   editingId=null;currentKind=null;recPhotos=[];
 }
 g('recordCancel').addEventListener('click',closeRecordModal);
-g('recordOverlay').addEventListener('click',e=>{if(e.target===g('recordOverlay'))closeRecordModal();});
+// 외부 클릭으로 닫히지 않음 — 저장/취소/삭제 버튼으로만 닫힘
+// g('recordOverlay').addEventListener('click',e=>{if(e.target===g('recordOverlay'))closeRecordModal();});
 g('recordDelete').addEventListener('click',()=>{
   if(!editingId||!confirm('삭제할까요?')) return;
   deleteEntry(editingId);toast('삭제됐어요');closeRecordModal();
@@ -1331,8 +1332,14 @@ function buildFields(kind,en){
     html+=`<div class="field"><label>병원/기관</label>
       <div style="display:flex;gap:6px;align-items:center">
         <input type="text" id="rf-hospital" placeholder="예: 세브란스 내과" style="flex:1;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
-        <input type="tel" id="rf-phone" placeholder="전화" style="width:130px;height:44px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
+        <input type="tel" id="rf-phone" placeholder="전화" style="width:120px;height:44px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         <a id="rf-phoneBtn" href="#" onclick="return false;" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#27ae60;color:#fff;font-size:20px;text-decoration:none;flex-shrink:0" title="전화걸기">📞</a>
+      </div>
+    </div>`;
+    html+=`<div class="field"><label>병원 주소</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="rf-hospitalAddr" placeholder="도로명 주소" style="flex:1;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        <a id="rf-hospitalNavBtn" href="#" target="_blank" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#03C75A;color:#fff;font-size:14px;font-weight:800;text-decoration:none;flex-shrink:0" title="네이버 지도">N</a>
       </div>
     </div>`;
     html+='<div class="field-row">'+
@@ -1354,7 +1361,12 @@ function buildFields(kind,en){
         <a id="rf-pharmacyPhoneBtn" href="#" onclick="return false;" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#27ae60;color:#fff;font-size:20px;text-decoration:none;flex-shrink:0" title="전화걸기">📞</a>
       </div>
     </div>`;
-    html+=F('pharmacyAddr','약국 주소','text',{placeholder:'약국 주소'});
+    html+=`<div class="field"><label>약국 주소</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="rf-pharmacyAddr" placeholder="약국 주소" style="flex:1;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        <a id="rf-pharmacyNavBtn" href="#" target="_blank" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#03C75A;color:#fff;font-size:14px;font-weight:800;text-decoration:none;flex-shrink:0" title="네이버 지도">N</a>
+      </div>
+    </div>`;
     html+='<div class="field-row">'+F('drugCost','약값 (원)','number',{placeholder:'15000'})+F('drugDays','처방일수','number',{placeholder:'3일, 7일…'})+'</div>';
     // ── 건강 수치 ──
     html+=`<div style="font-size:12px;font-weight:800;color:var(--blue);margin:10px 0 10px;padding:6px 10px;background:var(--blue-lt);border-radius:8px">📊 건강 수치</div>`;
@@ -1372,16 +1384,35 @@ function buildFields(kind,en){
       `<div class="field"><label>음식 종류</label><select id="rf-foodType"><option value="">선택</option><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>카페/디저트</option><option>패스트푸드</option><option>해산물</option><option>고기구이</option><option>기타</option></select></div>`+
       `<div class="field"><label>시/도</label><select id="rf-sido"><option value="">선택</option><option>서울</option><option>부산</option><option>대구</option><option>인천</option><option>광주</option><option>대전</option><option>울산</option><option>세종</option><option>경기</option><option>강원</option><option>충북</option><option>충남</option><option>전북</option><option>전남</option><option>경북</option><option>경남</option><option>제주</option></select></div>`+
     '</div>';
-    html+='<div class="field-row">'+F('sigungu','구/군','text',{placeholder:'마포구, 수원시…'})+F('addr','상세주소','text',{placeholder:'도로명 주소'})+'</div>';
+    html+='<div class="field-row">'+F('sigungu','구/군','text',{placeholder:'마포구, 수원시…'})+F('addr','상세주소','text',{placeholder:'도로명 주소 (예: 망원동 123-4)'})+'</div>';
+    html+=`<div class="field"><label>주소 지도 검색</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="rf-addrSearch" placeholder="도로명 주소 입력 후 N 클릭"
+          style="flex:1;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;color:var(--ink)">
+        <a id="rf-naverBtn" href="#" target="_blank"
+          style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#03C75A;color:#fff;font-size:16px;font-weight:800;text-decoration:none;flex-shrink:0" title="네이버 지도로 주소 검색">N</a>
+      </div>
+    </div>`;
     html+=`<div class="field"><label>전화번호</label>
       <div style="display:flex;gap:6px;align-items:center">
-        <input type="tel" id="rf-phone" placeholder="02-123-4567" style="flex:1;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
-        <a id="rf-phoneBtn" href="#" onclick="return false;" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#27ae60;color:#fff;font-size:20px;text-decoration:none;flex-shrink:0" title="전화걸기">📞</a>
-        <a id="rf-naverBtn" href="#" target="_blank" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#03C75A;color:#fff;font-size:16px;text-decoration:none;flex-shrink:0;font-weight:800" title="네이버 지도">N</a>
+        <input type="tel" id="rf-phone" placeholder="02-123-4567"
+          style="flex:1;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        <a id="rf-phoneBtn" href="#" onclick="return false;"
+          style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#27ae60;color:#fff;font-size:20px;text-decoration:none;flex-shrink:0" title="전화걸기">📞</a>
       </div>
     </div>`;
     html+=`<div style="font-size:12px;font-weight:800;color:var(--blue);margin:10px 0 10px;padding:6px 10px;background:var(--blue-lt);border-radius:8px">🕐 운영 정보</div>`;
-    html+='<div class="field-row">'+F('hours','영업시간','text',{placeholder:'11:00~21:00'})+F('holiday','휴무일','text',{placeholder:'매주 월요일'})+'</div>';
+    html+=`<div class="field-row">
+      <div class="field"><label>오픈 시간</label>
+        <input type="time" id="rf-openTime" value="${(()=>{try{return '';}catch{return '';}})()}"
+          style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+      </div>
+      <div class="field"><label>클로즈 시간</label>
+        <input type="time" id="rf-closeTime"
+          style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+      </div>
+    </div>`;
+    html+=F('holiday','휴무일','text',{placeholder:'매주 월요일 / 연중무휴'});
     html+=`<div class="field"><label>주차</label><select id="rf-parking"><option value="">선택</option><option value="가능">✅ 가능</option><option value="불가">❌ 불가</option><option value="유료">💳 유료주차</option><option value="근처">🅿 근처 유료</option></select></div>`;
     html+=`<div style="font-size:12px;font-weight:800;color:var(--blue);margin:10px 0 10px;padding:6px 10px;background:var(--blue-lt);border-radius:8px">🍽 방문 기록</div>`;
     html+='<div class="field-row">'+F('amount','지출 금액','number',{placeholder:'원'})+F('companion','동행','text',{placeholder:'가족, 친구…'})+'</div>';
@@ -1465,14 +1496,18 @@ function fillFields(kind,en){
   sv('date',en.date);
   if(kind==='purchase'){sv('title',en.title);sv('amount',en.amount);sv('place',en.place);sv('payMethod',en.payMethod);sv('brand',en.brand);sv('note',en.note);}
   else if(kind==='health'){
-    sv('title',en.title);sv('hospital',en.hospital);sv('phone',en.phone);sv('dept',en.dept);sv('visitType',en.visitType);
+    sv('title',en.title);sv('hospital',en.hospital);sv('hospitalAddr',en.hospitalAddr);sv('phone',en.phone);sv('dept',en.dept);sv('visitType',en.visitType);
     sv('symptoms',en.symptoms);sv('diagnosis',en.diagnosis);sv('doctorNote',en.doctorNote);
     sv('pharmacy',en.pharmacy);sv('pharmacyPhone',en.pharmacyPhone);sv('pharmacyAddr',en.pharmacyAddr);
     sv('drugCost',en.drugCost);sv('drugDays',en.drugDays);
     sv('bp',en.bp);sv('pulse',en.pulse);sv('bloodSugar',en.bloodSugar);sv('temp',en.temp);sv('weight',en.weight);sv('height',en.height);
     sv('amount',en.amount);sv('insurance',en.insurance);sv('note',en.note);
   }
-  else if(kind==='restaurant'){sv('place',en.place);sv('foodType',en.foodType);sv('sido',en.sido);sv('sigungu',en.sigungu);sv('addr',en.addr);sv('phone',en.phone);sv('hours',en.hours);sv('holiday',en.holiday);sv('parking',en.parking);sv('amount',en.amount);sv('companion',en.companion);sv('revisit',en.revisit);sv('portion',en.portion);sv('smell',en.smell);sv('note',en.note);setStars(en.stars);}
+  else if(kind==='restaurant'){sv('place',en.place);sv('foodType',en.foodType);sv('sido',en.sido);sv('sigungu',en.sigungu);sv('addr',en.addr);
+    // 주소 검색 필드에도 미러링
+    const as=g('rf-addrSearch');if(as) as.value=en.addr||'';
+    sv('phone',en.phone);sv('openTime',en.openTime);sv('closeTime',en.closeTime);sv('holiday',en.holiday);sv('parking',en.parking);sv('amount',en.amount);sv('companion',en.companion);sv('revisit',en.revisit);sv('portion',en.portion);sv('smell',en.smell);sv('note',en.note);setStars(en.stars);
+  }
   else if(kind==='diary'){sv('title',en.title);sv('mood',en.mood);sv('weather',en.weather);sv('body',en.body);}
   else if(kind==='thought'){sv('title',en.title);sv('body',en.body);sv('tags',en.tags);}
   else if(kind==='reading'){sv('bookTitle',en.bookTitle);sv('author',en.author);sv('publisher',en.publisher);sv('genre',en.genre);sv('lang',en.lang);sv('totalPages',en.totalPages);sv('currentPage',en.currentPage);sv('startDate',en.startDate);sv('endDate',en.endDate);setStars(en.stars);sv('recommend',en.recommend);sv('reread',en.reread);}
@@ -1503,7 +1538,7 @@ g('recordSave').addEventListener('click',()=>{
       if(name) drugRows.push({name,dose,freq,days,memo});
     });
     obj={...obj,
-      title:gv('title'),hospital:gv('hospital'),phone:gv('phone'),dept:gv('dept'),visitType:gv('visitType'),
+      title:gv('title'),hospital:gv('hospital'),hospitalAddr:gv('hospitalAddr'),phone:gv('phone'),dept:gv('dept'),visitType:gv('visitType'),
       symptoms:gv('symptoms'),diagnosis:gv('diagnosis'),doctorNote:gv('doctorNote'),
       drugRows,
       pharmacy:gv('pharmacy'),pharmacyPhone:gv('pharmacyPhone'),pharmacyAddr:gv('pharmacyAddr'),
@@ -1523,7 +1558,9 @@ g('recordSave').addEventListener('click',()=>{
       const comment=(row.querySelector('.mrow-comment')||{}).value||'';
       if(name) menuRows.push({name,price,taste,comment});
     });
-    obj={...obj,place:gv('place'),foodType:gv('foodType'),sido:gv('sido'),sigungu:gv('sigungu'),addr:gv('addr'),phone:gv('phone'),hours:gv('hours'),holiday:gv('holiday'),parking:gv('parking'),amount:parseInt(gv('amount'))||0,companion:gv('companion'),revisit:gv('revisit'),portion:gv('portion'),smell:gv('smell'),stars:parseInt(g('rf-stars')?g('rf-stars').value:0)||0,note:gv('note'),menuRows,photos:recPhotos};
+    obj={...obj,place:gv('place'),foodType:gv('foodType'),sido:gv('sido'),sigungu:gv('sigungu'),addr:gv('addr'),phone:gv('phone'),
+      openTime:gv('openTime'),closeTime:gv('closeTime'),
+      holiday:gv('holiday'),parking:gv('parking'),amount:parseInt(gv('amount'))||0,companion:gv('companion'),revisit:gv('revisit'),portion:gv('portion'),smell:gv('smell'),stars:parseInt(g('rf-stars')?g('rf-stars').value:0)||0,note:gv('note'),menuRows,photos:recPhotos};
   } else if(kind==='diary'){
     if(!gv('body')){toast('일기 내용을 입력해주세요');return;}
     obj={...obj,title:gv('title'),mood:gv('mood'),weather:gv('weather'),body:gv('body'),photos:recPhotos};
@@ -1720,7 +1757,8 @@ function buildViewBody(en){
   return html;
 }
 g('viewClose2').addEventListener('click',()=>g('viewOverlay').classList.remove('show'));
-g('viewOverlay').addEventListener('click',e=>{if(e.target===g('viewOverlay'))g('viewOverlay').classList.remove('show');});
+// 외부 클릭으로 닫히지 않음
+// g('viewOverlay').addEventListener('click',e=>{if(e.target===g('viewOverlay'))g('viewOverlay').classList.remove('show');});
 
 /* ========== 포스트잇 메모 ========== */
 (function initMemo(){
@@ -2051,18 +2089,37 @@ setTimeout(bindChecklist,500);
 
 /* ========== 맛집 모달 동적 바인딩 ========== */
 function bindRestaurantModal(en){
-  // 전화 버튼
-  const phoneInp=g('rf-phone');const phoneBtn=g('rf-phoneBtn');const naverBtn=g('rf-naverBtn');
-  function updateBtns(){
-    const ph=(phoneInp.value||'').trim();
-    const pl=(g('rf-place').value||'').trim();
-    if(phoneBtn) phoneBtn.href=ph?'tel:'+ph.replace(/[^0-9+]/g,''):'#';
-    if(naverBtn) naverBtn.href=pl?'https://map.naver.com/v5/search/'+encodeURIComponent(pl):'#';
+  // 주소 기반 네이버 지도
+  const addrSearchInp=g('rf-addrSearch');const naverBtn=g('rf-naverBtn');
+  // 초기값: addr 필드 값을 addrSearch에 미러링
+  const addrInp=g('rf-addr');
+  if(addrInp&&addrSearchInp){
+    if(addrInp.value) addrSearchInp.value=addrInp.value;
+    addrInp.addEventListener('input',()=>{if(addrSearchInp)addrSearchInp.value=addrInp.value;updateNaverBtn();});
   }
-  if(phoneInp) phoneInp.addEventListener('input',updateBtns);
-  const placeInp=g('rf-place');
-  if(placeInp) placeInp.addEventListener('input',updateBtns);
-  updateBtns();
+  function updateNaverBtn(){
+    const place=(g('rf-place')&&g('rf-place').value||'').trim();
+    const sido=(g('rf-sido')&&g('rf-sido').value||'');
+    const sigungu=(g('rf-sigungu')&&g('rf-sigungu').value||'').trim();
+    const addr=(addrSearchInp&&addrSearchInp.value||'').trim()||(addrInp&&addrInp.value||'').trim();
+    const query=[sido,sigungu,addr,place].filter(Boolean).join(' ').trim();
+    if(naverBtn) naverBtn.href=query?'https://map.naver.com/v5/search/'+encodeURIComponent(query):'#';
+  }
+  if(addrSearchInp) addrSearchInp.addEventListener('input',()=>{if(addrInp)addrInp.value=addrSearchInp.value;updateNaverBtn();});
+  if(g('rf-sido')) g('rf-sido').addEventListener('change',updateNaverBtn);
+  if(g('rf-sigungu')) g('rf-sigungu').addEventListener('input',updateNaverBtn);
+  if(g('rf-place')) g('rf-place').addEventListener('input',updateNaverBtn);
+  updateNaverBtn();
+
+  // 전화 버튼
+  const phoneInp=g('rf-phone');const phoneBtn=g('rf-phoneBtn');
+  function updatePhoneBtn(){
+    const ph=(phoneInp&&phoneInp.value||'').trim();
+    if(phoneBtn) phoneBtn.href=ph?'tel:'+ph.replace(/[^0-9+]/g,''):'#';
+    if(phoneBtn) phoneBtn.onclick=ph?null:function(){return false;};
+  }
+  if(phoneInp) phoneInp.addEventListener('input',updatePhoneBtn);
+  updatePhoneBtn();
 
   // 메뉴행 추가
   const menuContainer=g('rf-menuRows');
@@ -2103,17 +2160,44 @@ function bindHealthModal(en){
   function updatePhoneBtn(){
     const ph=(phoneInp&&phoneInp.value||'').trim();
     if(phoneBtn) phoneBtn.href=ph?'tel:'+ph.replace(/[^0-9+]/g,''):'#';
+    if(phoneBtn) phoneBtn.onclick=ph?null:function(){return false;};
   }
   if(phoneInp) phoneInp.addEventListener('input',updatePhoneBtn);
   updatePhoneBtn();
+
+  // 병원 주소 네이버 버튼
+  const hospInp=g('rf-hospital');const hospAddrInp=g('rf-hospitalAddr');const hospNav=g('rf-hospitalNavBtn');
+  function upHospNav(){
+    const hosp=(hospInp&&hospInp.value||'').trim();
+    const addr=(hospAddrInp&&hospAddrInp.value||'').trim();
+    const q=[addr,hosp].filter(Boolean).join(' ');
+    if(hospNav) hospNav.href=q?'https://map.naver.com/v5/search/'+encodeURIComponent(q):'#';
+  }
+  if(hospInp) hospInp.addEventListener('input',upHospNav);
+  if(hospAddrInp) hospAddrInp.addEventListener('input',upHospNav);
+  upHospNav();
+
   // 약국 전화 버튼
   const ppInp=g('rf-pharmacyPhone');const ppBtn=g('rf-pharmacyPhoneBtn');
   function updatePPBtn(){
     const ph=(ppInp&&ppInp.value||'').trim();
     if(ppBtn) ppBtn.href=ph?'tel:'+ph.replace(/[^0-9+]/g,''):'#';
+    if(ppBtn) ppBtn.onclick=ph?null:function(){return false;};
   }
   if(ppInp) ppInp.addEventListener('input',updatePPBtn);
   updatePPBtn();
+
+  // 약국 주소 네이버 버튼
+  const pharmInp=g('rf-pharmacy');const pharmAddrInp=g('rf-pharmacyAddr');const pharmNav=g('rf-pharmacyNavBtn');
+  function upPharmNav(){
+    const pharm=(pharmInp&&pharmInp.value||'').trim();
+    const addr=(pharmAddrInp&&pharmAddrInp.value||'').trim();
+    const q=[addr,pharm].filter(Boolean).join(' ');
+    if(pharmNav) pharmNav.href=q?'https://map.naver.com/v5/search/'+encodeURIComponent(q):'#';
+  }
+  if(pharmInp) pharmInp.addEventListener('input',upPharmNav);
+  if(pharmAddrInp) pharmAddrInp.addEventListener('input',upPharmNav);
+  upPharmNav();
   // 처방약 행 추가
   const drugContainer=g('rf-drugRows');
   const drugAddBtn=g('rf-drugAdd');
@@ -2311,6 +2395,8 @@ function closeCtModal(){g('ctOverlay').classList.remove('show');ctEditId=null;}
 g('ctAddBtn').addEventListener('click',()=>openCtModal(null));
 g('ctCancel').addEventListener('click',closeCtModal);
 g('ctOverlay').addEventListener('click',e=>{if(e.target===g('ctOverlay'))closeCtModal();});
+// 외부 클릭으로 닫히지 않음 - 위 줄 주석처리
+
 g('ctSave').addEventListener('click',()=>{
   const name=(g('ct-name').value||'').trim();
   const phone2=(g('ct-phone').value||'').trim();
@@ -2409,14 +2495,17 @@ function carShopInfoHtml(en,label){
   return `
   <div style="font-size:12px;font-weight:800;color:var(--blue);margin:10px 0 8px;padding:6px 10px;background:var(--blue-lt);border-radius:8px">📍 ${label} 정보</div>
   <div class="field"><label>${label}명</label>
+    <input type="text" id="rf-shop" placeholder="예: GS칼텍스 강남점" value="${esc(en.shop||'')}"
+      style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;box-sizing:border-box">
+  </div>
+  <div class="field"><label>주소</label>
     <div style="display:flex;gap:6px;align-items:center">
-      <input type="text" id="rf-shop" placeholder="예: GS칼텍스 강남점" value="${esc(en.shop||'')}"
+      <input type="text" id="rf-shopAddr" placeholder="도로명 주소" value="${esc(en.shopAddr||'')}"
         style="flex:1;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
-      <a id="rf-shopNav" href="#" target="_blank"
-        style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#03C75A;color:#fff;font-size:14px;font-weight:800;text-decoration:none;flex-shrink:0" title="네이버 지도">N</a>
+      <a id="rf-shopNav" href="${en.shopAddr?'https://map.naver.com/v5/search/'+encodeURIComponent(en.shopAddr+(en.shop?' '+en.shop:'')):'#'}" target="_blank"
+        style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#03C75A;color:#fff;font-size:14px;font-weight:800;text-decoration:none;flex-shrink:0" title="네이버 지도 (주소 기반)">N</a>
     </div>
   </div>
-  <div class="field"><label>주소</label><input type="text" id="rf-shopAddr" placeholder="도로명 주소" value="${esc(en.shopAddr||'')}"></div>
   <div class="field"><label>전화번호</label>
     <div style="display:flex;gap:6px;align-items:center">
       <input type="tel" id="rf-shopPhone" placeholder="02-1234-5678" value="${esc(en.shopPhone||'')}"
@@ -2426,18 +2515,33 @@ function carShopInfoHtml(en,label){
     </div>
   </div>
   <div class="field-row">
-    <div class="field"><label>영업시간</label><input type="text" id="rf-shopHours" placeholder="07:00~23:00" value="${esc(en.shopHours||'')}"></div>
-    <div class="field"><label>휴무일</label><input type="text" id="rf-shopHoliday" placeholder="연중무휴" value="${esc(en.shopHoliday||'')}"></div>
+    <div class="field"><label>오픈 시간</label>
+      <input type="time" id="rf-shopOpenTime" value="${esc(en.shopOpenTime||'')}"
+        style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;box-sizing:border-box">
+    </div>
+    <div class="field"><label>클로즈 시간</label>
+      <input type="time" id="rf-shopCloseTime" value="${esc(en.shopCloseTime||'')}"
+        style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;box-sizing:border-box">
+    </div>
+  </div>
+  <div class="field"><label>휴무일</label>
+    <input type="text" id="rf-shopHoliday" placeholder="연중무휴 / 매주 월요일" value="${esc(en.shopHoliday||'')}"
+      style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;box-sizing:border-box">
   </div>`;
 }
 
 function bindCarShopBtns(){
-  const shopInp=g('rf-shop');const nav=g('rf-shopNav');
+  const shopInp=g('rf-shop');const addrInp=g('rf-shopAddr');const nav=g('rf-shopNav');
   const phoneInp=g('rf-shopPhone');const phoneBtn=g('rf-shopPhoneBtn');
-  if(shopInp&&nav){
-    const upNav=()=>{const v=(shopInp.value||'').trim();if(nav)nav.href=v?'https://map.naver.com/v5/search/'+encodeURIComponent(v):'#';};
-    shopInp.addEventListener('input',upNav);upNav();
+  function upNav(){
+    const shop=(shopInp&&shopInp.value||'').trim();
+    const addr=(addrInp&&addrInp.value||'').trim();
+    const query=[addr,shop].filter(Boolean).join(' ');
+    if(nav) nav.href=query?'https://map.naver.com/v5/search/'+encodeURIComponent(query):'#';
   }
+  if(shopInp) shopInp.addEventListener('input',upNav);
+  if(addrInp) addrInp.addEventListener('input',upNav);
+  upNav();
   if(phoneInp&&phoneBtn){
     const upTel=()=>{const v=(phoneInp.value||'').trim();if(phoneBtn)phoneBtn.href=v?'tel:'+v.replace(/[^0-9+]/g,''):'#';};
     phoneInp.addEventListener('input',upTel);upTel();
@@ -2446,11 +2550,10 @@ function bindCarShopBtns(){
 
 function getCarFields(){
   const sv=(id)=>{const el=g('rf-'+id);return el?(el.value||'').trim():'';}
-  const ni=(id)=>{const el=g('rf-'+id);return el?parseInt(el.value)||0:0;}
-  const nf=(id)=>{const el=g('rf-'+id);return el?parseFloat(el.value)||0:0;}
   return {
     shop:sv('shop'),shopAddr:sv('shopAddr'),shopPhone:sv('shopPhone'),
-    shopHours:sv('shopHours'),shopHoliday:sv('shopHoliday'),note:sv('note')
+    shopOpenTime:sv('shopOpenTime'),shopCloseTime:sv('shopCloseTime'),
+    shopHoliday:sv('shopHoliday'),note:sv('note')
   };
 }
 
@@ -2824,7 +2927,8 @@ function closeFileModal(){g('fileOverlay').classList.remove('show');fileEditId=n
 g('fileAddBtn').addEventListener('click',()=>openFileModal(null));
 g('fileCancel').addEventListener('click',closeFileModal);
 g('fileModalClose')&&g('fileModalClose').addEventListener('click',closeFileModal);
-g('fileOverlay').addEventListener('click',e=>{if(e.target===g('fileOverlay'))closeFileModal();});
+// 외부 클릭으로 닫히지 않음
+// g('fileOverlay').addEventListener('click',e=>{if(e.target===g('fileOverlay'))closeFileModal();});
 g('fileSave').addEventListener('click',()=>{
   const name=(g('fileNameInp').value||'').trim();
   const path=(g('filePathInp').value||'').trim();
@@ -2913,7 +3017,8 @@ function closePwModal(){g('pwOverlay').classList.remove('show');pwEditId=null;pw
 g('pwAddBtn').addEventListener('click',()=>openPwModal(null));
 g('pwCancel').addEventListener('click',closePwModal);
 g('pwModalClose')&&g('pwModalClose').addEventListener('click',closePwModal);
-g('pwOverlay').addEventListener('click',e=>{if(e.target===g('pwOverlay'))closePwModal();});
+// 외부 클릭으로 닫히지 않음
+// g('pwOverlay').addEventListener('click',e=>{if(e.target===g('pwOverlay'))closePwModal();});
 g('pwToggleShow').addEventListener('click',()=>{const inp=g('pwVal');inp.type=inp.type==='password'?'text':'password';g('pwToggleShow').textContent=inp.type==='password'?'👁':'🙈';});
 // 비번 사진 버튼
 g('pwCam').addEventListener('change',e=>{handlePwPhotos(e.target.files);e.target.value='';});
@@ -2956,7 +3061,8 @@ g('aiKeyBtn').addEventListener('click',()=>{g('aiKeyInput').value=aiKey||'';g('a
 g('aiKeySave').addEventListener('click',()=>{aiKey=(g('aiKeyInput').value||'').trim();localStorage.setItem('pj_ai_key',aiKey);g('aiKeyOverlay').classList.remove('show');updateAiKeyState();toast('AI 키 저장됐어요');});
 g('aiKeyCancel').addEventListener('click',()=>g('aiKeyOverlay').classList.remove('show'));
 g('aiKeyClose')&&g('aiKeyClose').addEventListener('click',()=>g('aiKeyOverlay').classList.remove('show'));
-g('aiKeyOverlay').addEventListener('click',e=>{if(e.target===g('aiKeyOverlay'))g('aiKeyOverlay').classList.remove('show');});
+// 외부 클릭으로 닫히지 않음
+// g('aiKeyOverlay').addEventListener('click',e=>{if(e.target===g('aiKeyOverlay'))g('aiKeyOverlay').classList.remove('show');});
 
 function appendAiMsg(role,text){
   const chat=g('aiChat');
@@ -3489,6 +3595,16 @@ business 추가: company(회사명), person(담당자), phone(전화), email(이
 })();
 
 /* ==================== END 스캔 탭 ==================== */
+
+// Escape 키로 수정 모달 닫히지 않게 방지
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    const modals=['recordOverlay','viewOverlay','fileOverlay','pwOverlay','ctOverlay','aiKeyOverlay'];
+    if(modals.some(id=>g(id)&&g(id).classList.contains('show'))){
+      e.preventDefault();e.stopPropagation();
+    }
+  }
+},true);
 
 console.log('[개인일지] v2-0623 로드 완료');
 </script>
