@@ -102,7 +102,11 @@
           'box-shadow:0 8px 32px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto;',
           'transform:scale(.92);transition:transform .2s cubic-bezier(.34,1.56,.64,1)">',
           '<input type="text" id="stickyV44EditTitle" style="width:100%;box-sizing:border-box;border:none;border-bottom:1.5px solid #e0d060;',
-            'background:transparent;font-size:15px;font-weight:700;font-family:inherit;color:#222;outline:none;padding:4px 0;margin-bottom:10px">',
+            'background:transparent;font-size:15px;font-weight:700;font-family:inherit;color:#222;outline:none;padding:4px 0;margin-bottom:6px">',
+          '<div style="margin-bottom:8px">',
+            '<button type="button" id="stickyV44AddCb" style="padding:5px 12px;border:1.5px solid #e0d060;border-radius:8px;background:rgba(255,255,255,.6);',
+              'font-size:13px;font-family:inherit;cursor:pointer;color:#666">☑ 항목 추가</button>',
+          '</div>',
           '<div id="stickyV44EditBody" class="sn-edit-body" contenteditable="true" style="min-height:120px;outline:none;font-size:14px;color:#444;',
             'line-height:1.6;word-break:break-word;padding:4px 0"></div>',
           '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap">',
@@ -150,13 +154,54 @@
         }, 300);
       });
 
-      /* 체크박스 클릭 */
+      /* 체크박스 클릭 — 토글 */
       document.getElementById('stickyV44EditBody').addEventListener('click', function(e) {
         var cb = e.target.closest('.checklist-cb');
         if (!cb) return;
         e.preventDefault();
         var row = cb.closest('.checklist-row');
         if (row) row.classList.toggle('done');
+      });
+
+      /* Enter 키 — 체크리스트 행 안에서 새 행 추가 */
+      document.getElementById('stickyV44EditBody').addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter') return;
+        var bodyEl = document.getElementById('stickyV44EditBody');
+        var sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+        var node = sel.anchorNode;
+        var row = null;
+        var cur = node;
+        while (cur && cur !== bodyEl) {
+          if (cur.classList && cur.classList.contains('checklist-row')) { row = cur; break; }
+          cur = cur.parentElement;
+        }
+        if (!row) return; /* 체크리스트 행이 아니면 기본 동작 */
+        e.preventDefault();
+        /* 현재 행 텍스트가 비어있으면 → 체크리스트 탈출 */
+        var textEl = row.querySelector('.checklist-text');
+        var txt = textEl ? (textEl.innerText || '').trim() : '';
+        if (!txt) {
+          row.remove();
+          var p = document.createElement('div'); p.innerHTML = '<br>';
+          bodyEl.appendChild(p);
+          var r = document.createRange(); r.selectNodeContents(p); r.collapse(false);
+          sel.removeAllRanges(); sel.addRange(r);
+          return;
+        }
+        /* 새 체크리스트 행 삽입 */
+        var newRow = document.createElement('div');
+        newRow.className = 'checklist-row';
+        newRow.contentEditable = 'false';
+        newRow.dataset.indent = row.dataset.indent || '0';
+        newRow.innerHTML = '<span class="checklist-cb" contenteditable="false"></span><span class="checklist-text" contenteditable="true"></span>';
+        row.after(newRow);
+        var newText = newRow.querySelector('.checklist-text');
+        if (newText) {
+          newText.focus();
+          var r2 = document.createRange(); r2.selectNodeContents(newText); r2.collapse(true);
+          sel.removeAllRanges(); sel.addRange(r2);
+        }
       });
     }
 
@@ -552,19 +597,22 @@
       /* 원본 openViewer 호출 (모달 틀 세팅) */
       origOpenViewer(kind, id);
 
-      /* 뷰어 모달의 "수정" 버튼 → openStickyEditModal로 교체 */
+      /* 뷰어 모달의 "수정" 버튼 → openStickyEditModal로 교체 (매 호출마다 갱신) */
       setTimeout(function() {
         var vEditBtn = document.getElementById('vEdit');
-        if (vEditBtn && !vEditBtn._v44memoHooked) {
-          vEditBtn._v44memoHooked = true;
-          vEditBtn.addEventListener('click', function(e) {
-            e.stopImmediatePropagation();
-            e.preventDefault();
-            var overlay = document.getElementById('viewOverlay');
-            if (overlay) overlay.classList.remove('show');
-            window.openStickyEditModal(id);
-          }, true);
+        if (!vEditBtn) return;
+        /* 기존 훅 핸들러 제거 후 재등록 */
+        if (vEditBtn._v44handler) {
+          vEditBtn.removeEventListener('click', vEditBtn._v44handler, true);
         }
+        vEditBtn._v44handler = function(e) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          var overlay = document.getElementById('viewOverlay');
+          if (overlay) overlay.classList.remove('show');
+          window.openStickyEditModal(id);
+        };
+        vEditBtn.addEventListener('click', vEditBtn._v44handler, true);
       }, 30);
 
       /* vBody의 body 필드 셀을 체크리스트로 교체 */
