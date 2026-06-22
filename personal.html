@@ -159,7 +159,20 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 .filter-clear-btn{height:34px;padding:0 12px;border:1.5px solid var(--blue-bd);border-radius:10px;font-size:13px;font-family:inherit;background:var(--white);cursor:pointer;color:var(--ink-soft);font-weight:600}
 .list-count{font-size:12px;color:var(--ink-faint);margin-left:auto}
 
-/* ===== 포스트잇 메모 ===== */
+/* ===== 기록 탭 카드 필터 ===== */
+.main-filter-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 12px}
+.main-filter-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 8px;border-radius:16px;border:2px solid var(--blue-bd);background:#f7faff;cursor:pointer;font-family:inherit;transition:all .18s;touch-action:manipulation;position:relative}
+.main-filter-card:hover{border-color:var(--blue);background:var(--blue-lt);transform:translateY(-2px);box-shadow:0 4px 14px rgba(63,124,184,.15)}
+.main-filter-card.active{border-color:var(--blue);background:var(--blue-lt);box-shadow:0 4px 14px rgba(63,124,184,.18)}
+.main-filter-card .mfc-icon{font-size:28px;line-height:1}
+.main-filter-card .mfc-label{font-size:13px;font-weight:700;color:#33567d}
+.main-filter-card .mfc-count{position:absolute;top:6px;right:8px;font-size:10px;font-weight:800;color:var(--blue);opacity:.7}
+.main-filter-card.active .mfc-label{color:var(--blue)}
+.main-filter-all{grid-column:1/-1;flex-direction:row;padding:10px 16px;gap:10px;justify-content:flex-start}
+.main-filter-all .mfc-icon{font-size:18px}
+.main-filter-all .mfc-label{font-size:14px}
+
+/* ===== 기록 탭 카드 필터 ===== */
 .sticky-input-wrap{background:#fff9c4;border-radius:16px;padding:14px;box-shadow:0 3px 14px rgba(0,0,0,.1);border:1.5px solid #f0e060;transition:background .2s,border-color .2s;margin-bottom:14px}
 .sticky-title-inp{width:100%;box-sizing:border-box;border:none;border-bottom:1.5px solid rgba(0,0,0,.12);background:transparent;font-size:15px;font-weight:700;font-family:inherit;outline:none;padding:4px 0;color:#222;margin-bottom:8px;display:block}
 .sticky-input{min-height:90px;border:none;background:transparent;font-size:15px;font-family:inherit;color:#333;outline:none;line-height:1.6;white-space:pre-wrap;word-break:break-word;width:100%;box-sizing:border-box}
@@ -478,8 +491,8 @@ main.wrap{padding-bottom:100px;padding-top:12px}
     </div>
     <!-- 탭 -->
     <div class="v43-tabs" id="mainTabs">
-      <button class="v43-tab active" data-tab="main">📋 기록</button>
-      <button class="v43-tab" data-tab="memo">📝 메모</button>
+      <button class="v43-tab" data-tab="main">📋 기록</button>
+      <button class="v43-tab active" data-tab="memo">📝 메모</button>
       <button class="v43-tab" data-tab="scan">📸 스캔</button>
       <button class="v43-tab" data-tab="car">🚗 차계부</button>
       <button class="v43-tab" data-tab="contacts">📞 연락처</button>
@@ -495,18 +508,49 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 <main class="wrap">
 
 <!-- ===== 기록 탭 ===== -->
-<div class="v43-panel active" id="panel-main">
-  <div class="cat-select-wrap">
-    <select class="cat-select" id="mainCatSelect">
-      <option value="all">🔵 전체</option>
-      <option value="purchase">🛒 구매</option>
-      <option value="health">🏥 건강</option>
-      <option value="restaurant">🍽 맛집</option>
-      <option value="diary">📔 일상</option>
-      <option value="thought">💭 생각</option>
-      <option value="reading">📚 독서</option>
-      <option value="other">📎 기타</option>
-    </select>
+<div class="v43-panel" id="panel-main">
+  <!-- 카드 필터 -->
+  <div class="main-filter-grid" id="mainFilterGrid">
+    <button class="main-filter-card main-filter-all active" data-kind="all">
+      <span class="mfc-icon">🔵</span>
+      <span class="mfc-label">전체</span>
+      <span class="mfc-count" id="mfc-count-all"></span>
+    </button>
+    <button class="main-filter-card" data-kind="purchase">
+      <span class="mfc-icon">🛒</span>
+      <span class="mfc-label">구매</span>
+      <span class="mfc-count" id="mfc-count-purchase"></span>
+    </button>
+    <button class="main-filter-card" data-kind="health">
+      <span class="mfc-icon">🏥</span>
+      <span class="mfc-label">건강</span>
+      <span class="mfc-count" id="mfc-count-health"></span>
+    </button>
+    <button class="main-filter-card" data-kind="restaurant">
+      <span class="mfc-icon">🍽</span>
+      <span class="mfc-label">맛집</span>
+      <span class="mfc-count" id="mfc-count-restaurant"></span>
+    </button>
+    <button class="main-filter-card" data-kind="diary">
+      <span class="mfc-icon">📔</span>
+      <span class="mfc-label">일상</span>
+      <span class="mfc-count" id="mfc-count-diary"></span>
+    </button>
+    <button class="main-filter-card" data-kind="thought">
+      <span class="mfc-icon">💭</span>
+      <span class="mfc-label">생각</span>
+      <span class="mfc-count" id="mfc-count-thought"></span>
+    </button>
+    <button class="main-filter-card" data-kind="reading">
+      <span class="mfc-icon">📚</span>
+      <span class="mfc-label">독서</span>
+      <span class="mfc-count" id="mfc-count-reading"></span>
+    </button>
+    <button class="main-filter-card" data-kind="other">
+      <span class="mfc-icon">📎</span>
+      <span class="mfc-label">기타</span>
+      <span class="mfc-count" id="mfc-count-other"></span>
+    </button>
   </div>
   <div class="date-filter-row">
     <input type="date" id="mainFrom">
@@ -522,7 +566,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 </div>
 
 <!-- ===== 메모 탭 ===== -->
-<div class="v43-panel" id="panel-memo">
+<div class="v43-panel active" id="panel-memo">
   <!-- 입력창 -->
   <div class="sticky-input-wrap" id="stickyWrap">
     <input type="text" id="stickyTitle" class="sticky-title-inp" placeholder="제목 (선택)">
@@ -1176,13 +1220,14 @@ document.querySelectorAll('.cat-btn').forEach(btn=>{
 
 /* ========== 기록 탭 렌더 ========== */
 const MAIN_KINDS=['purchase','health','restaurant','diary','thought','reading','other'];
+let mainKindFilter='all';
+
 function getMainList(){
-  const cat=g('mainCatSelect').value||'all';
   const from=g('mainFrom').value||'';
   const to=g('mainTo').value||'';
   const q=(g('globalSearch').value||'').trim().toLowerCase();
   let list=entries.filter(e=>MAIN_KINDS.includes(e.kind));
-  if(cat!=='all') list=list.filter(e=>e.kind===cat);
+  if(mainKindFilter!=='all') list=list.filter(e=>e.kind===mainKindFilter);
   if(from) list=list.filter(e=>(e.date||'')>=from);
   if(to) list=list.filter(e=>(e.date||'')<=to);
   if(q) list=list.filter(e=>{
@@ -1192,7 +1237,16 @@ function getMainList(){
   list.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||((b.createdAt||0)-(a.createdAt||0)));
   return list;
 }
+function updateFilterCounts(){
+  const all=entries.filter(e=>MAIN_KINDS.includes(e.kind));
+  const cnt=(k)=>k==='all'?all.length:all.filter(e=>e.kind===k).length;
+  ['all','purchase','health','restaurant','diary','thought','reading','other'].forEach(k=>{
+    const el=g('mfc-count-'+k);
+    if(el){const n=cnt(k);el.textContent=n>0?n:'';}
+  });
+}
 function renderMain(){
+  updateFilterCounts();
   const list=getMainList();
   g('mainCount').textContent=list.length+'건';
   renderMainList(list);
@@ -1201,7 +1255,6 @@ function renderMainList(list){
   const el=g('mainList');
   if(!el) return;
   if(!list.length){el.innerHTML='<div class="v43-empty"><div class="ei">📋</div>기록이 없어요</div>';return;}
-  // 날짜 그룹
   const groups={};
   list.forEach(e=>{const d=e.date||'날짜없음';if(!groups[d])groups[d]=[];groups[d].push(e);});
   let html='';
@@ -1272,7 +1325,15 @@ function formatDateLabel(date){
     return base;
   }catch{return date;}
 }
-g('mainCatSelect').addEventListener('change',renderMain);
+// 카드 필터 이벤트
+document.querySelectorAll('.main-filter-card').forEach(card=>{
+  card.addEventListener('click',()=>{
+    document.querySelectorAll('.main-filter-card').forEach(c=>c.classList.remove('active'));
+    card.classList.add('active');
+    mainKindFilter=card.dataset.kind||'all';
+    renderMain();
+  });
+});
 g('mainFrom').addEventListener('change',renderMain);
 g('mainTo').addEventListener('change',renderMain);
 g('mainDateClear').addEventListener('click',()=>{g('mainFrom').value='';g('mainTo').value='';renderMain();});
