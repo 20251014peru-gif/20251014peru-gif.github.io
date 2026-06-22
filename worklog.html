@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-0626</title>
+<title>업무일지 v44-0622-0654</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-0626</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-0654</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1001,25 +1001,27 @@
       </div>
       <!-- 대시보드 -->
       <div id="expV2Dashboard" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px"></div>
-      <!-- 필터 -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-        <select id="expV2MonthSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45">
+      <!-- 필터 1행 3열 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <select id="expV2MonthSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45;width:100%;box-sizing:border-box">
           <option value="">전체 월</option>
         </select>
-        <select id="expV2TypeSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45">
+        <select id="expV2TypeSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45;width:100%;box-sizing:border-box">
           <option value="">전체 종류</option>
           <option value="개인지출">💸 개인지출</option>
           <option value="세금계산서">📃 세금계산서</option>
         </select>
-        <select id="expV2IssuedSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45">
+        <select id="expV2IssuedSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45;width:100%;box-sizing:border-box">
           <option value="">발급여부 전체</option>
           <option value="issued">✅ 발급완료</option>
           <option value="unissued">⏳ 미발급</option>
         </select>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#7a92a8;cursor:pointer">
           <input type="checkbox" id="expV2HideJeonpyo" style="width:15px;height:15px;cursor:pointer;accent-color:#3f7cb8"> 전표 숨기기
         </label>
-        <span id="expV2ListCount" style="margin-left:auto;font-size:12px;color:#aab8c8;font-weight:600"></span>
+        <span id="expV2ListCount" style="font-size:12px;color:#aab8c8;font-weight:600"></span>
       </div>
       <!-- 목록 -->
       <div id="expV2ListArea"></div>
@@ -2228,13 +2230,20 @@
       <input type="text" id="expV2Memo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
     </div>
 
+    <!-- 비용 처리 여부 (항상 표시) -->
+    <div style="margin-bottom:12px;padding:12px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:700;color:#166534">
+        <input type="checkbox" id="expV2IsCost" style="width:17px;height:17px;accent-color:#27ae60;cursor:pointer">
+        💰 비용으로 처리 (대시보드 집계에 포함)
+      </label>
+    </div>
     <!-- 전표 여부 + 세금계산서 발급여부 -->
     <div id="expV2TaxOptions" style="display:none;margin-bottom:14px;padding:12px;background:#fff7ed;border:1.5px solid #fdba74;border-radius:12px">
       <div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:8px">📃 세금계산서 옵션</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#1a2f45">
           <input type="checkbox" id="expV2IsJeonpyo" style="width:16px;height:16px;accent-color:#c2410c;cursor:pointer">
-          전표 (비용 아님 — 단순 전표 처리)
+          전표 (단순 전표 처리)
         </label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#1a2f45">
           <input type="checkbox" id="expV2IsIssued" style="width:16px;height:16px;accent-color:#27ae60;cursor:pointer">
@@ -5932,7 +5941,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0622-0640';
+    if(el) el.textContent = 'v44-0622-0654';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -6105,6 +6114,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var aEl=g('expV2Amount');
     if(aEl){ aEl.value=en?(en.amount||0):0; aEl._manual=false; aEl.addEventListener('input',function(){ aEl._manual=true; }); }
     // 전표/발급여부 체크 복원
+    var cEl=g('expV2IsCost'); if(cEl) cEl.checked=en?!!(en.isCost):false;
     var jpEl=g('expV2IsJeonpyo'); if(jpEl) jpEl.checked=en?!!(en.isJeonpyo):false;
     var isEl=g('expV2IsIssued');  if(isEl) isEl.checked=en?!!(en.isIssued):false;
     if(en){
@@ -6135,13 +6145,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var amount=parseFloat((g('expV2Amount')||{value:0}).value)||0;
     var vendor=((g('expV2Vendor')||{value:''}).value||'').trim();
     var memo=((g('expV2Memo')||{value:''}).value||'').trim();
+    var isCost=!!(g('expV2IsCost')&&g('expV2IsCost').checked);
     var isJeonpyo=!!(g('expV2IsJeonpyo')&&g('expV2IsJeonpyo').checked);
     var isIssued=!!(g('expV2IsIssued')&&g('expV2IsIssued').checked);
     if(!title){ if(typeof toast==='function') toast('내역을 입력하세요'); return; }
     if(!amount){ if(typeof toast==='function') toast('금액을 입력하세요'); return; }
     var obj={kind:'expense',date:date,expType:_expType,title:title,amount:amount,
       vendor:vendor,memo:memo,purpose:_selPurpose,purposes:_selPurpose?[_selPurpose]:[],
-      isJeonpyo:isJeonpyo,isIssued:isIssued,
+      isCost:isCost,isJeonpyo:isJeonpyo,isIssued:isIssued,
       matItems:_matItems.slice(),mealItems:_mealItems.slice(),wasteItems:_wasteItems.slice()};
     if(_editId){ if(typeof updateRecord==='function') updateRecord(_editId,obj); }
     else{ obj.createdAt=Date.now(); if(typeof addRecord==='function') addRecord(obj); }
@@ -6227,8 +6238,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var now=new Date();
     var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
     var tm=all.filter(function(e){return (e.date||'').startsWith(ym);} );
-    var personal=tm.filter(function(e){return e.expType!=='세금계산서'&&!e.isJeonpyo;});
-    var tax=tm.filter(function(e){return e.expType==='세금계산서'&&!e.isJeonpyo;});
+    var personal=tm.filter(function(e){return e.isCost&&e.expType!=='세금계산서';});
+    var tax=tm.filter(function(e){return e.isCost&&e.expType==='세금계산서';});
     var pSum=personal.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
     var tSum=tax.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
     var taxUnissued=tax.filter(function(e){return !e.isIssued;}).length;
@@ -6368,7 +6379,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookOpenViewer,2000); setTimeout(hookOpenViewer,4000);
 
   window._openExpV2=openExpV2;
-  console.log('[expV2] v44-0622-0640 로드');
+  console.log('[expV2] v44-0622-0654 로드');
 })();
 </script>
   </body>
