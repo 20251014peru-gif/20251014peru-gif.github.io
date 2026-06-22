@@ -34,6 +34,7 @@ body{background:#FDF0E6}
 .tag-chip-del{color:#8B4513}
 .hdr-btn{background:#FDF0E6}
 .back-btn{background:#FDF0E6;color:#8B4513}
+.header-right{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto}
 .cal-nav{background:#FDF0E6;color:#8B4513}
 .zoom-btn.active{background:#8B4513;border-color:#8B4513}
 .cal-cell.today{background:#FDF0E6;border-color:#D4956A}
@@ -65,13 +66,13 @@ body{background:#FDF0E6}
 <div class="app-header">
   <div class="app-title">자재<span>관리</span> 🔧</div>
   <div class="header-right">
-    <a href="./personal.html" class="hdr-btn" title="개인일지" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:#e8f0fa;color:#1a2f45;border-radius:10px;padding:6px 10px;font-size:13px;font-weight:700">
+    <a href="./personal.html" class="hdr-btn" title="개인일지" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;background:#e8f0fa;color:#1a2f45;border-radius:10px;padding:6px 10px;font-size:13px;font-weight:700">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a2f45" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>개인일지</a>
-    <a href="./links.html" class="hdr-btn" title="링크컬렉션" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:#E8F3FD;color:#185FA5;border-radius:10px;padding:6px 10px;font-size:13px;font-weight:700">
+    <a href="./links.html" class="hdr-btn" title="링크컬렉션" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;background:#E8F3FD;color:#185FA5;border-radius:10px;padding:6px 10px;font-size:13px;font-weight:700">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>링크</a>
-    <a href="./links-recipes.html" class="hdr-btn" title="컬렉션" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:#f5f3ff;color:#7c3aed;border-radius:10px;padding:6px 10px;font-size:13px;font-weight:700">
+    <a href="./links-recipes.html" class="hdr-btn" title="컬렉션" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;background:#f5f3ff;color:#7c3aed;border-radius:10px;padding:6px 10px;font-size:13px;font-weight:700">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>컬렉션</a>
-    <a href="./photos-scan.html?mode=personal" class="hdr-btn" title="사진스캔" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:#f0fdfa;color:#0f766e;border-radius:10px;padding:6px 10px;font-size:13px;font-weight:700">
+    <a href="./photos-scan.html?mode=personal" class="hdr-btn" title="사진스캔" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;background:#f0fdfa;color:#0f766e;border-radius:10px;padding:6px 10px;font-size:13px;font-weight:700">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2.2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>사진스캔</a>
     <a href="./index.html" class="back-btn">🏠</a>
     <button class="hdr-btn" id="darkToggle" style="background:var(--or)">🌙</button>
@@ -313,8 +314,8 @@ function renderItemCards(arr, list, emoji, label){
     const tagsHtml=tags.map((t,i)=>`<span class="tag ${tagColor(i)}">${esc(t)}</span>`).join('');
     const catHtml=it.cat?`<span class="tag tag-or">${esc(it.cat)}</span>`:'';
     const priceHtml=prices.length?`<div style="margin-top:6px;font-size:12px;color:var(--or3);font-weight:700">${prices.map(p=>`💰 ${esc(p.label?p.label+': ':'')}${esc(p.amount)}`).join(' · ')}</div>`:'';
-    const telHtml=it.phone?`<a href="tel:${esc(it.phone.replace(/[^0-9+]/g,''))}" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mn3);font-weight:700;text-decoration:none;padding:3px 8px;background:var(--mn);border-radius:8px;margin-right:4px">📞 ${esc(it.phone)}</a>`:'';
-    const addrHtml=it.address?`<button onclick="event.stopPropagation();openNaver('${esc(it.address)}')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--bl3);font-weight:700;border:none;background:var(--bl);border-radius:8px;padding:3px 8px;cursor:pointer">📍 ${esc(it.address.slice(0,14))}${it.address.length>14?'...':''}</button>`:'';
+    const telHtml=it.phone?`<a href="tel:${esc(it.phone.replace(/[^0-9+]/g,''))}" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;font-size:11px;color:var(--mn3);font-weight:700;text-decoration:none;padding:3px 8px;background:var(--mn);border-radius:8px;margin-right:4px">📞 ${esc(it.phone)}</a>`:'';
+    const addrHtml=it.address?`<button onclick="event.stopPropagation();openNaver('${esc(it.address)}')" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;font-size:11px;color:var(--bl3);font-weight:700;border:none;background:var(--bl);border-radius:8px;padding:3px 8px;cursor:pointer">📍 ${esc(it.address.slice(0,14))}${it.address.length>14?'...':''}</button>`:'';
     const imgHtml=imgs.length?`<img class="card-img" src="${imgs[0]}" alt="">`:'';
     return `<div class="item-card" onclick="openDetail('${it.id}')">
       <div class="card-top">
