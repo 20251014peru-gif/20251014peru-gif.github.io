@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-1816</title>
+<title>업무일지 v44-0622-1819</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1816</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1819</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -5971,7 +5971,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0622-1816';
+    if(el) el.textContent = 'v44-0622-1819';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -6708,7 +6708,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   /* openViewer 훅 — 통화일 때 연결 버튼 추가 */
   function hookCallViewer(){
     if(!window.openViewer || window.openViewer._callHooked) return;
-    var orig = window.openViewer;
+    window._origOpenViewer = window.openViewer;
+    var orig = window._origOpenViewer;
     window.openViewer = function(kind, id){
       orig(kind, id);
       if(kind === 'call'){
@@ -6766,7 +6767,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var vBtn = g('callWorkViewBtn');
     if(vBtn) vBtn.addEventListener('click', function(){
       g('viewOverlay').classList.remove('show');
-      setTimeout(function(){ if(typeof openViewer==='function') orig('work', en.linkedWorkId); }, 100);
+      setTimeout(function(){ var fn=window._origOpenViewer||window.openViewer; if(fn) fn('work', en.linkedWorkId); }, 100);
     });
 
     /* 연결 해제 */
@@ -6867,7 +6868,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       el.addEventListener('click', function(e){
         if(e.target.closest('[data-callunlink]')) return;
         g('viewOverlay').classList.remove('show');
-        setTimeout(function(){ if(typeof openViewer==='function') orig('call', el.dataset.callid); }, 100);
+        setTimeout(function(){ var fn=window._origOpenViewer||window.openViewer; if(fn) fn('call', el.dataset.callid); }, 100);
       });
     });
 
