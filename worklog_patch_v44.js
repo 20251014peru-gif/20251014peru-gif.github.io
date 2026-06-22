@@ -698,7 +698,8 @@
   var _editId    = null;
   var _matItems  = [];   /* [{name,qty,price,delivery}] 자재/소모품 */
   var _mealItems = [];   /* [{menu,people,price}] 식대 */
-  var _wasteItems= [];   /* [{desc,amount}] 폐기물 */
+  var _wasteItems= [];   /* [{desc,amount}] 폐기물 (후불청구) */
+  var _personalWasteItems = []; /* [{desc,amount}] 폐기물 (개인비용) */
   var _selPurpose= {};
   var _purposes  = [];
   var _linkedWorkId = null;
@@ -756,6 +757,24 @@
           +'<button id="expV6MealAdd" style="width:100%;height:34px;border:1.5px dashed #86efac;border-radius:10px;background:transparent;font-size:13px;font-weight:600;color:#166534;cursor:pointer;font-family:inherit;margin-top:4px">➕ 메뉴 추가</button>'
           +'<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:8px 12px;background:#fff;border:1.5px solid #86efac;border-radius:10px"><span style="font-size:13px;font-weight:700;color:#166534">합계</span><span id="expV6MealTotal" style="font-size:18px;font-weight:800;color:#166534">₩0</span></div>'
         +'</div></div>'
+
+        /* 폐기물 처리 영역 (개인비용) */
+        +'<div id="expV6PersonalWasteArea" style="display:none;margin-bottom:12px">'
+          +'<div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:12px;padding:12px">'
+            +'<div style="font-size:12px;font-weight:700;color:#c2410c;margin-bottom:10px">🗑 폐기물 처리 청구 항목</div>'
+            +'<div style="display:grid;grid-template-columns:1fr 100px 28px;gap:4px;margin-bottom:5px">'
+              +'<div style="font-size:10px;font-weight:700;color:#7a92a8">항목명</div>'
+              +'<div style="font-size:10px;font-weight:700;color:#7a92a8;text-align:right">금액(원)</div>'
+              +'<div></div>'
+            +'</div>'
+            +'<div id="expV6PersonalWasteList"></div>'
+            +'<button id="expV6PersonalWasteAdd" style="width:100%;height:34px;border:1.5px dashed #fdba74;border-radius:10px;background:transparent;font-size:13px;font-weight:600;color:#c2410c;cursor:pointer;font-family:inherit;margin-top:4px">➕ 항목 추가</button>'
+            +'<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:8px 12px;background:#fff;border:1.5px solid #fdba74;border-radius:10px">'
+              +'<span style="font-size:13px;font-weight:700;color:#c2410c">합계</span>'
+              +'<span id="expV6PersonalWasteTotal" style="font-size:18px;font-weight:800;color:#c2410c">₩0</span>'
+            +'</div>'
+          +'</div>'
+        +'</div>'
 
         /* 금액 + 영수증 */
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div><label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">금액 (원)</label><input type="number" id="expV6Amount" placeholder="0" min="0" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #3f7cb8;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;background:#f7faff;outline:none;color:#185FA5;text-align:right"></div><div><label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:6px">영수증</label><div style="display:flex;gap:6px"><button data-receipt="있음" class="expReceiptBtn" style="flex:1;height:40px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#f7faff;color:#7a92a8">있음</button><button data-receipt="없음" class="expReceiptBtn" style="flex:1;height:40px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#f7faff;color:#7a92a8">없음</button></div></div></div>'
@@ -949,13 +968,15 @@
 
   /* ── 용도별 섹션 표시/숨김 ── */
   function updatePurposeAreas() {
-    var matOn  = !!(_selPurpose['자재구매'] || _selPurpose['소모품']);
-    var mealOn = !!_selPurpose['식대'];
-    var matArea  = g('expV6MatArea');
-    var mealArea = g('expV6MealArea');
-    if (matArea)  matArea.style.display  = matOn  ? '' : 'none';
-    if (mealArea) mealArea.style.display = mealOn ? '' : 'none';
-    /* 자재/식대 합계 → 금액 자동채움 */
+    var matOn   = !!(_selPurpose['자재구매'] || _selPurpose['소모품']);
+    var mealOn  = !!_selPurpose['식대'];
+    var wasteOn = !!_selPurpose['폐기물 처리'];
+    var matArea   = g('expV6MatArea');
+    var mealArea  = g('expV6MealArea');
+    var wasteArea = g('expV6PersonalWasteArea');
+    if (matArea)   matArea.style.display   = matOn   ? '' : 'none';
+    if (mealArea)  mealArea.style.display  = mealOn  ? '' : 'none';
+    if (wasteArea) wasteArea.style.display = wasteOn ? '' : 'none';
     syncTotalToAmount();
   }
 
@@ -1056,11 +1077,38 @@
     /* 후불청구는 deferAmount 없이 wasteItems 합계로만 계산 */
   }
 
+  /* ── 개인비용 폐기물 목록 렌더 ── */
+  function renderPersonalWasteList() {
+    var list = g('expV6PersonalWasteList'); if (!list) return;
+    list.innerHTML = '';
+    _personalWasteItems.forEach(function(it, i) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:1fr 100px 28px;gap:4px;margin-bottom:4px;align-items:center';
+      var descInp   = inp('text',   it.desc||'',   '항목명');
+      var amountInp = inp('number', it.amount||'', '금액');
+      amountInp.style.textAlign = 'right';
+      var delBtn = document.createElement('button');
+      delBtn.textContent = '🗑';
+      delBtn.style.cssText = 'border:none;background:none;font-size:14px;cursor:pointer;padding:0';
+      descInp.addEventListener('input',   function(){ _personalWasteItems[i].desc   = descInp.value; });
+      amountInp.addEventListener('input', function(){ _personalWasteItems[i].amount = parseFloat(amountInp.value)||0; calcPersonalWasteTotal(); });
+      (function(idx){ delBtn.addEventListener('click', function(){ _personalWasteItems.splice(idx,1); renderPersonalWasteList(); calcPersonalWasteTotal(); }); })(i);
+      row.appendChild(descInp); row.appendChild(amountInp); row.appendChild(delBtn);
+      list.appendChild(row);
+    });
+  }
+  function calcPersonalWasteTotal() {
+    var total = _personalWasteItems.reduce(function(s,it){ return s+(it.amount||0); }, 0);
+    var el = g('expV6PersonalWasteTotal'); if (el) el.textContent = fmt(total);
+    syncTotalToAmount();
+  }
+
   /* ── 합계 → 금액란 자동채움 ── */
   function syncTotalToAmount() {
-    var matTotal  = _matItems.reduce(function(s,it){ return s+((it.qty||0)*(it.price||0))+(it.delivery||0); }, 0);
-    var mealTotal = _mealItems.reduce(function(s,it){ return s+((it.people||0)*(it.price||0)); }, 0);
-    var auto = matTotal + mealTotal;
+    var matTotal   = _matItems.reduce(function(s,it){ return s+((it.qty||0)*(it.price||0))+(it.delivery||0); }, 0);
+    var mealTotal  = _mealItems.reduce(function(s,it){ return s+((it.people||0)*(it.price||0)); }, 0);
+    var wasteTotal = _personalWasteItems.reduce(function(s,it){ return s+(it.amount||0); }, 0);
+    var auto = matTotal + mealTotal + wasteTotal;
     if (auto > 0) {
       var a = g('expV6Amount');
       if (a && !a._manual) a.value = auto;
@@ -1155,7 +1203,15 @@
       if (rows.length) rows[rows.length-1].focus();
     });
 
-    /* 폐기물 항목 추가 */
+    /* 개인비용 폐기물 추가 버튼 */
+    g('expV6PersonalWasteAdd').addEventListener('click', function() {
+      _personalWasteItems.push({desc:'',amount:''});
+      renderPersonalWasteList();
+      var rows = g('expV6PersonalWasteList').querySelectorAll('input[type=text]');
+      if (rows.length) rows[rows.length-1].focus();
+    });
+
+    /* 폐기물 항목 추가 (후불청구) */
     g('expV6WasteAdd').addEventListener('click', function() {
       _wasteItems.push({desc:'',amount:''});
       renderWasteList();
@@ -1197,7 +1253,7 @@
   function open(id, fromWork) {
     ensureModal();
     _editId = id||null;
-    _matItems=[]; _mealItems=[]; _wasteItems=[];
+    _matItems=[]; _mealItems=[]; _wasteItems=[]; _personalWasteItems=[];
     _selPurpose={}; _purposes=loadPurposes(); _fromWorkData=fromWork||null;
     _linkedWorkId=null; _expType='없음'; _payMethod='💳 카드'; _receipt='없음';
 
