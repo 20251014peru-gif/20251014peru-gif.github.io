@@ -992,11 +992,36 @@
   <!-- ===== 지출 패널 ===== -->
   <div class="v43-panel" id="v43-expense">
     <div style="margin-top:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">💰 지출 관리</h3>
-        <button id="btnAddExpenseV2" style="background:#3f7cb8;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 지출 등록</button>
+        <div style="display:flex;gap:6px">
+          <button id="btnExpV2PurposeMgr" style="background:#f7faff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 용도 관리</button>
+          <button id="btnAddExpenseV2" style="background:#3f7cb8;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 지출 등록</button>
+        </div>
       </div>
-      <div id="expV2Dashboard" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"></div>
+      <!-- 대시보드 -->
+      <div id="expV2Dashboard" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px"></div>
+      <!-- 필터 -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+        <select id="expV2MonthSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45">
+          <option value="">전체 월</option>
+        </select>
+        <select id="expV2TypeSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45">
+          <option value="">전체 종류</option>
+          <option value="개인지출">💸 개인지출</option>
+          <option value="세금계산서">📃 세금계산서</option>
+        </select>
+        <select id="expV2IssuedSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45">
+          <option value="">발급여부 전체</option>
+          <option value="issued">✅ 발급완료</option>
+          <option value="unissued">⏳ 미발급</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#7a92a8;cursor:pointer">
+          <input type="checkbox" id="expV2HideJeonpyo" style="width:15px;height:15px;cursor:pointer;accent-color:#3f7cb8"> 전표 숨기기
+        </label>
+        <span id="expV2ListCount" style="margin-left:auto;font-size:12px;color:#aab8c8;font-weight:600"></span>
+      </div>
+      <!-- 목록 -->
       <div id="expV2ListArea"></div>
     </div>
   </div>
@@ -2203,6 +2228,20 @@
       <input type="text" id="expV2Memo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
     </div>
 
+    <!-- 전표 여부 + 세금계산서 발급여부 -->
+    <div id="expV2TaxOptions" style="display:none;margin-bottom:14px;padding:12px;background:#fff7ed;border:1.5px solid #fdba74;border-radius:12px">
+      <div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:8px">📃 세금계산서 옵션</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#1a2f45">
+          <input type="checkbox" id="expV2IsJeonpyo" style="width:16px;height:16px;accent-color:#c2410c;cursor:pointer">
+          전표 (비용 아님 — 단순 전표 처리)
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#1a2f45">
+          <input type="checkbox" id="expV2IsIssued" style="width:16px;height:16px;accent-color:#27ae60;cursor:pointer">
+          ✅ 세금계산서 발급 완료
+        </label>
+      </div>
+    </div>
     <!-- 저장/삭제 버튼 -->
     <div style="display:flex;gap:8px">
       <button type="button" id="expV2Del" style="flex:1;height:48px;border-radius:12px;border:none;background:#fde8e8;color:#b52929;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;display:none">🗑 삭제</button>
@@ -5893,7 +5932,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0622-0626';
+    if(el) el.textContent = 'v44-0622-0640';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -5901,185 +5940,188 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(setVer, 3000);
 })();
 
-/* ===== 지출 모달 v2 (용도별 동적 필드) ===== */
+/* ===== 지출 모달 v2 ===== */
 (function(){
   var _editId = null;
   var _expType = '개인지출';
-  var _matItems = [];
-  var _mealItems = [];
-  var _wasteItems = [];
-  var _selPurpose = {};
+  var _selPurpose = null; // 단일선택: 문자열 or null
+  var _matItems = [], _mealItems = [], _wasteItems = [];
 
-  var PURPOSES = ['자재구매','소모품','식대','폐기물 처리','기타'];
+  var PURPOSE_LS = 'wl_exp_purposes_v44';
+  var DEFAULT_PURPOSES = ['자재구매','소모품','식대','폐기물 처리','기타'];
+
+  function loadPurposes(){ try{ return JSON.parse(localStorage.getItem(PURPOSE_LS)||'null')||DEFAULT_PURPOSES.slice(); }catch(e){ return DEFAULT_PURPOSES.slice(); } }
+  function savePurposes(arr){ try{ localStorage.setItem(PURPOSE_LS, JSON.stringify(arr)); }catch(e){} }
+
   var g = function(id){ return document.getElementById(id); };
   var fmt = function(n){ return Math.round(Number(n)||0).toLocaleString('ko-KR'); };
+  var esc = function(s){ return (s||'').toString().replace(/[&<>"]/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]);}); };
 
   function mkInp(type, val, ph){
     var el = document.createElement('input');
-    el.type = type; el.value = val||''; el.placeholder = ph||'';
-    el.style.cssText = 'width:100%;box-sizing:border-box;height:36px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45';
+    el.type=type; el.value=val||''; el.placeholder=ph||'';
+    el.style.cssText='width:100%;box-sizing:border-box;height:36px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45';
     return el;
   }
 
-  /* 자재 목록 */
+  /* ── 자재 ── */
   function renderMatList(){
-    var list = g('expV2MatList'); if(!list) return;
-    list.innerHTML = '';
+    var list=g('expV2MatList'); if(!list) return;
+    list.innerHTML='';
     _matItems.forEach(function(it,i){
-      var row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:1fr 52px 76px 64px 28px;gap:4px;margin-bottom:4px;align-items:center';
-      var n = mkInp('text',   it.name||'',     '품명·규격');
-      var q = mkInp('number', it.qty||'',      '수량');
-      var p = mkInp('number', it.price||'',    '단가');
-      var d = mkInp('number', it.delivery||'', '택배비');
-      q.style.textAlign = p.style.textAlign = d.style.textAlign = 'right';
-      var del = document.createElement('button');
+      var row=document.createElement('div');
+      row.style.cssText='display:grid;grid-template-columns:1fr 52px 76px 64px 28px;gap:4px;margin-bottom:4px;align-items:center';
+      var n=mkInp('text',it.name||'','품명·규격');
+      var q=mkInp('number',it.qty||'','수량');
+      var p=mkInp('number',it.price||'','단가');
+      var d=mkInp('number',it.delivery||'','택배비');
+      q.style.textAlign=p.style.textAlign=d.style.textAlign='right';
+      var del=document.createElement('button');
       del.textContent='🗑'; del.type='button';
       del.style.cssText='border:none;background:none;font-size:14px;cursor:pointer;padding:0';
-      n.addEventListener('input', function(){ _matItems[i].name     = n.value; });
-      q.addEventListener('input', function(){ _matItems[i].qty      = parseFloat(q.value)||0; calcMatTotal(); });
-      p.addEventListener('input', function(){ _matItems[i].price    = parseFloat(p.value)||0; calcMatTotal(); });
-      d.addEventListener('input', function(){ _matItems[i].delivery = parseFloat(d.value)||0; calcMatTotal(); });
-      (function(idx){ del.addEventListener('click', function(){ _matItems.splice(idx,1); renderMatList(); calcMatTotal(); }); })(i);
+      n.addEventListener('input',function(){ _matItems[i].name=n.value; });
+      q.addEventListener('input',function(){ _matItems[i].qty=parseFloat(q.value)||0; calcMatTotal(); });
+      p.addEventListener('input',function(){ _matItems[i].price=parseFloat(p.value)||0; calcMatTotal(); });
+      d.addEventListener('input',function(){ _matItems[i].delivery=parseFloat(d.value)||0; calcMatTotal(); });
+      (function(idx){ del.addEventListener('click',function(){ _matItems.splice(idx,1); renderMatList(); calcMatTotal(); }); })(i);
       row.appendChild(n); row.appendChild(q); row.appendChild(p); row.appendChild(d); row.appendChild(del);
       list.appendChild(row);
     });
   }
   function calcMatTotal(){
-    var t = _matItems.reduce(function(s,it){ return s+((it.qty||0)*(it.price||0))+(it.delivery||0); },0);
+    var t=_matItems.reduce(function(s,it){ return s+((it.qty||0)*(it.price||0))+(it.delivery||0); },0);
     var el=g('expV2MatTotal'); if(el) el.textContent=fmt(t)+'원';
     var a=g('expV2Amount'); if(a&&!a._manual&&t>0) a.value=t;
   }
 
-  /* 식대 목록 */
+  /* ── 식대 ── */
   function renderMealList(){
-    var list = g('expV2MealList'); if(!list) return;
-    list.innerHTML = '';
+    var list=g('expV2MealList'); if(!list) return;
+    list.innerHTML='';
     _mealItems.forEach(function(it,i){
-      var row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:1fr 52px 80px 28px;gap:4px;margin-bottom:4px;align-items:center';
-      var m = mkInp('text',   it.menu||'',   '메뉴명');
-      var pe= mkInp('number', it.people||'', '인원');
-      var p = mkInp('number', it.price||'',  '1인 단가');
-      pe.style.textAlign = p.style.textAlign = 'right';
-      var del = document.createElement('button');
+      var row=document.createElement('div');
+      row.style.cssText='display:grid;grid-template-columns:1fr 52px 80px 28px;gap:4px;margin-bottom:4px;align-items:center';
+      var m=mkInp('text',it.menu||'','메뉴명');
+      var pe=mkInp('number',it.people||'','인원');
+      var p=mkInp('number',it.price||'','1인 단가');
+      pe.style.textAlign=p.style.textAlign='right';
+      var del=document.createElement('button');
       del.textContent='🗑'; del.type='button';
       del.style.cssText='border:none;background:none;font-size:14px;cursor:pointer;padding:0';
-      m.addEventListener('input',  function(){ _mealItems[i].menu  = m.value; });
-      pe.addEventListener('input', function(){ _mealItems[i].people= parseFloat(pe.value)||0; calcMealTotal(); });
-      p.addEventListener('input',  function(){ _mealItems[i].price = parseFloat(p.value)||0;  calcMealTotal(); });
-      (function(idx){ del.addEventListener('click', function(){ _mealItems.splice(idx,1); renderMealList(); calcMealTotal(); }); })(i);
+      m.addEventListener('input',function(){ _mealItems[i].menu=m.value; });
+      pe.addEventListener('input',function(){ _mealItems[i].people=parseFloat(pe.value)||0; calcMealTotal(); });
+      p.addEventListener('input',function(){ _mealItems[i].price=parseFloat(p.value)||0; calcMealTotal(); });
+      (function(idx){ del.addEventListener('click',function(){ _mealItems.splice(idx,1); renderMealList(); calcMealTotal(); }); })(i);
       row.appendChild(m); row.appendChild(pe); row.appendChild(p); row.appendChild(del);
       list.appendChild(row);
     });
   }
   function calcMealTotal(){
-    var t = _mealItems.reduce(function(s,it){ return s+((it.people||0)*(it.price||0)); },0);
+    var t=_mealItems.reduce(function(s,it){ return s+((it.people||0)*(it.price||0)); },0);
     var el=g('expV2MealTotal'); if(el) el.textContent=fmt(t)+'원';
     var a=g('expV2Amount'); if(a&&!a._manual&&t>0) a.value=t;
   }
 
-  /* 폐기물 목록 */
+  /* ── 폐기물 ── */
   function renderWasteList(){
-    var list = g('expV2WasteList'); if(!list) return;
-    list.innerHTML = '';
+    var list=g('expV2WasteList'); if(!list) return;
+    list.innerHTML='';
     _wasteItems.forEach(function(it,i){
-      var row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:1fr 100px 28px;gap:4px;margin-bottom:4px;align-items:center';
-      var desc = mkInp('text',   it.desc||'',   '항목명 (예: 대형폐기물)');
-      var amt  = mkInp('number', it.amount||'', '금액');
-      amt.style.textAlign = 'right';
-      var del = document.createElement('button');
+      var row=document.createElement('div');
+      row.style.cssText='display:grid;grid-template-columns:1fr 100px 28px;gap:4px;margin-bottom:4px;align-items:center';
+      var desc=mkInp('text',it.desc||'','항목명');
+      var amt=mkInp('number',it.amount||'','금액');
+      amt.style.textAlign='right';
+      var del=document.createElement('button');
       del.textContent='🗑'; del.type='button';
       del.style.cssText='border:none;background:none;font-size:14px;cursor:pointer;padding:0';
-      desc.addEventListener('input', function(){ _wasteItems[i].desc   = desc.value; });
-      amt.addEventListener('input',  function(){ _wasteItems[i].amount = parseFloat(amt.value)||0; calcWasteTotal(); });
-      (function(idx){ del.addEventListener('click', function(){ _wasteItems.splice(idx,1); renderWasteList(); calcWasteTotal(); }); })(i);
+      desc.addEventListener('input',function(){ _wasteItems[i].desc=desc.value; });
+      amt.addEventListener('input',function(){ _wasteItems[i].amount=parseFloat(amt.value)||0; calcWasteTotal(); });
+      (function(idx){ del.addEventListener('click',function(){ _wasteItems.splice(idx,1); renderWasteList(); calcWasteTotal(); }); })(i);
       row.appendChild(desc); row.appendChild(amt); row.appendChild(del);
       list.appendChild(row);
     });
   }
   function calcWasteTotal(){
-    var t = _wasteItems.reduce(function(s,it){ return s+(it.amount||0); },0);
+    var t=_wasteItems.reduce(function(s,it){ return s+(it.amount||0); },0);
     var el=g('expV2WasteTotal'); if(el) el.textContent=fmt(t)+'원';
     var a=g('expV2Amount'); if(a&&!a._manual&&t>0) a.value=t;
   }
 
-  /* 용도별 섹션 표시 */
+  /* ── 용도별 섹션 ── */
   function updateAreas(){
-    var matOn   = !!(_selPurpose['자재구매']||_selPurpose['소모품']);
-    var mealOn  = !!_selPurpose['식대'];
-    var wasteOn = !!_selPurpose['폐기물 처리'];
-    var ma=g('expV2MatArea'), me=g('expV2MealArea'), wa=g('expV2WasteArea');
-    if(ma) ma.style.display = matOn   ? '' : 'none';
-    if(me) me.style.display = mealOn  ? '' : 'none';
-    if(wa) wa.style.display = wasteOn ? '' : 'none';
+    var p=_selPurpose||'';
+    var ma=g('expV2MatArea'),me=g('expV2MealArea'),wa=g('expV2WasteArea');
+    if(ma) ma.style.display=(p==='자재구매'||p==='소모품')?'':'none';
+    if(me) me.style.display=(p==='식대')?'':'none';
+    if(wa) wa.style.display=(p==='폐기물 처리')?'':'none';
   }
 
-  /* 용도 칩 */
+  /* ── 용도 칩 (단일선택) ── */
   function renderChips(){
-    var wrap = g('expV2PurposeWrap'); if(!wrap) return;
-    wrap.innerHTML = '';
-    PURPOSES.forEach(function(p){
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = p;
-      var on = !!_selPurpose[p];
-      btn.style.cssText = 'padding:6px 14px;border-radius:18px;border:1.5px solid '+(on?'#3f7cb8':'#dbe6f4')+';background:'+(on?'#3f7cb8':'#f7faff')+';color:'+(on?'#fff':'#7a92a8')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit';
-      btn.addEventListener('click', function(){
-        if(_selPurpose[p]) delete _selPurpose[p]; else _selPurpose[p]=true;
+    var wrap=g('expV2PurposeWrap'); if(!wrap) return;
+    wrap.innerHTML='';
+    loadPurposes().forEach(function(p){
+      var btn=document.createElement('button');
+      btn.type='button'; btn.textContent=p;
+      var on=(_selPurpose===p);
+      btn.style.cssText='padding:6px 14px;border-radius:18px;border:1.5px solid '+(on?'#3f7cb8':'#dbe6f4')+';background:'+(on?'#3f7cb8':'#f7faff')+';color:'+(on?'#fff':'#7a92a8')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s';
+      btn.addEventListener('click',function(){
+        _selPurpose=(_selPurpose===p)?null:p;
         renderChips(); updateAreas();
       });
       wrap.appendChild(btn);
     });
   }
 
-  /* 정산종류 버튼 */
+  /* ── 정산종류 버튼 ── */
   function updateTypeBtns(){
     document.querySelectorAll('.expV2TypeBtn').forEach(function(btn){
-      var on = btn.dataset.etype === _expType;
-      btn.style.background   = on ? '#3f7cb8' : '#f7faff';
-      btn.style.color        = on ? '#fff'     : '#7a92a8';
-      btn.style.borderColor  = on ? '#3f7cb8' : '#dbe6f4';
+      var on=btn.dataset.etype===_expType;
+      btn.style.background=on?'#3f7cb8':'#f7faff';
+      btn.style.color=on?'#fff':'#7a92a8';
+      btn.style.borderColor=on?'#3f7cb8':'#dbe6f4';
     });
-    var sh = g('expV2Sheet');
-    if(sh) sh.style.borderTopColor = _expType==='세금계산서' ? '#c2410c' : '#3f7cb8';
+    var sh=g('expV2Sheet');
+    if(sh) sh.style.borderTopColor=_expType==='세금계산서'?'#c2410c':'#3f7cb8';
+    // 세금계산서 옵션 표시
+    var taxOpts=g('expV2TaxOptions');
+    if(taxOpts) taxOpts.style.display=_expType==='세금계산서'?'':'none';
   }
 
-  /* 열기 */
+  /* ── 열기 ── */
   function openExpV2(id){
-    _editId=id||null; _matItems=[]; _mealItems=[]; _wasteItems=[]; _selPurpose={};
+    _editId=id||null; _matItems=[]; _mealItems=[]; _wasteItems=[]; _selPurpose=null;
     _expType='개인지출';
-    var en = id && typeof entries!=='undefined' ? entries.find(function(x){return x.id===id;}) : null;
-
-    var ts=g('expV2TitleSpan'); if(ts) ts.textContent = id?'지출 수정':'지출 등록';
-    var delBtn=g('expV2Del'); if(delBtn) delBtn.style.display = id?'':'none';
-
+    var en=id&&typeof entries!=='undefined'?entries.find(function(x){return x.id===id;}):null;
+    var ts=g('expV2TitleSpan'); if(ts) ts.textContent=id?'지출 수정':'지출 등록';
+    var delBtn=g('expV2Del'); if(delBtn) delBtn.style.display=id?'':'none';
     var today=new Date();
     var td=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-    var dEl=g('expV2Date'); if(dEl) dEl.value = en?(en.date||td):td;
-    var vEl=g('expV2Vendor'); if(vEl) vEl.value = en?(en.vendor||''):'';
-    var tEl=g('expV2TitleInput'); if(tEl) tEl.value = en?(en.title||''):'';
-    var mEl=g('expV2Memo'); if(mEl) mEl.value = en?(en.memo||''):'';
+    var dEl=g('expV2Date'); if(dEl) dEl.value=en?(en.date||td):td;
+    var vEl=g('expV2Vendor'); if(vEl) vEl.value=en?(en.vendor||''):'';
+    var tEl=g('expV2TitleInput'); if(tEl) tEl.value=en?(en.title||''):'';
+    var mEl=g('expV2Memo'); if(mEl) mEl.value=en?(en.memo||''):'';
     var aEl=g('expV2Amount');
-    if(aEl){ aEl.value=en?(en.amount||0):0; aEl._manual=false;
-      aEl.addEventListener('input',function(){ aEl._manual=true; }); }
-
+    if(aEl){ aEl.value=en?(en.amount||0):0; aEl._manual=false; aEl.addEventListener('input',function(){ aEl._manual=true; }); }
+    // 전표/발급여부 체크 복원
+    var jpEl=g('expV2IsJeonpyo'); if(jpEl) jpEl.checked=en?!!(en.isJeonpyo):false;
+    var isEl=g('expV2IsIssued');  if(isEl) isEl.checked=en?!!(en.isIssued):false;
     if(en){
-      _expType = en.expType==='세금계산서'?'세금계산서':'개인지출';
-      if(en.matItems)   _matItems   = JSON.parse(JSON.stringify(en.matItems));
-      if(en.mealItems)  _mealItems  = JSON.parse(JSON.stringify(en.mealItems));
-      if(en.wasteItems) _wasteItems = JSON.parse(JSON.stringify(en.wasteItems));
-      if(en.purposes)   en.purposes.forEach(function(p){ _selPurpose[p]=true; });
+      _expType=en.expType==='세금계산서'?'세금계산서':'개인지출';
+      if(en.matItems)   _matItems=JSON.parse(JSON.stringify(en.matItems));
+      if(en.mealItems)  _mealItems=JSON.parse(JSON.stringify(en.mealItems));
+      if(en.wasteItems) _wasteItems=JSON.parse(JSON.stringify(en.wasteItems));
+      // 단일선택 복원: purposes 배열 첫번째, 또는 purpose 단일 필드
+      if(en.purpose) _selPurpose=en.purpose;
+      else if(en.purposes&&en.purposes.length) _selPurpose=en.purposes[0];
     }
-
     updateTypeBtns();
     renderChips(); updateAreas();
     renderMatList(); calcMatTotal();
     renderMealList(); calcMealTotal();
     renderWasteList(); calcWasteTotal();
-
-    var ov=g('expV2Overlay'); if(ov){ ov.style.display='flex'; }
+    var ov=g('expV2Overlay'); if(ov) ov.style.display='flex';
     var sh=g('expV2Sheet');   if(sh) sh.scrollTop=0;
   }
 
@@ -6093,16 +6135,18 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var amount=parseFloat((g('expV2Amount')||{value:0}).value)||0;
     var vendor=((g('expV2Vendor')||{value:''}).value||'').trim();
     var memo=((g('expV2Memo')||{value:''}).value||'').trim();
+    var isJeonpyo=!!(g('expV2IsJeonpyo')&&g('expV2IsJeonpyo').checked);
+    var isIssued=!!(g('expV2IsIssued')&&g('expV2IsIssued').checked);
     if(!title){ if(typeof toast==='function') toast('내역을 입력하세요'); return; }
     if(!amount){ if(typeof toast==='function') toast('금액을 입력하세요'); return; }
-    var purposes=Object.keys(_selPurpose).filter(function(k){return _selPurpose[k];});
     var obj={kind:'expense',date:date,expType:_expType,title:title,amount:amount,
-      vendor:vendor,memo:memo,purposes:purposes,
+      vendor:vendor,memo:memo,purpose:_selPurpose,purposes:_selPurpose?[_selPurpose]:[],
+      isJeonpyo:isJeonpyo,isIssued:isIssued,
       matItems:_matItems.slice(),mealItems:_mealItems.slice(),wasteItems:_wasteItems.slice()};
     if(_editId){ if(typeof updateRecord==='function') updateRecord(_editId,obj); }
-    else { obj.createdAt=Date.now(); if(typeof addRecord==='function') addRecord(obj); }
+    else{ obj.createdAt=Date.now(); if(typeof addRecord==='function') addRecord(obj); }
     closeExpV2();
-    if(typeof renderAll==='function') renderAll();
+    setTimeout(function(){ renderExpV2List(); renderExpV2Dashboard(); },300);
     if(typeof toast==='function') toast(_editId?'수정됐어요':'저장됐어요');
   }
 
@@ -6110,107 +6154,195 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(!_editId||!confirm('삭제할까요?')) return;
     if(typeof deleteWithUndo==='function') deleteWithUndo(_editId,'지출');
     closeExpV2();
+    setTimeout(function(){ renderExpV2List(); renderExpV2Dashboard(); },300);
   }
 
-  /* 이벤트 바인딩 */
-  function bind(){
-    /* 닫기 */
-    var cl=g('expV2Close'); if(cl&&!cl._b){cl._b=true;cl.addEventListener('click',closeExpV2);}
-    var ov=g('expV2Overlay'); if(ov&&!ov._b){ov._b=true;ov.addEventListener('click',function(e){if(e.target===ov)closeExpV2();});}
-    /* 저장/삭제 */
-    var sv=g('expV2Save'); if(sv&&!sv._b){sv._b=true;sv.addEventListener('click',saveExpV2);}
-    var dl=g('expV2Del');  if(dl&&!dl._b){dl._b=true;dl.addEventListener('click',deleteExpV2);}
-    /* 정산종류 */
-    document.querySelectorAll('.expV2TypeBtn').forEach(function(btn){
-      if(!btn._b){btn._b=true;btn.addEventListener('click',function(){_expType=btn.dataset.etype;updateTypeBtns();});}
+  /* ── 목록 렌더 ── */
+  window.renderExpV2List=function(){
+    var box=g('expV2ListArea'); if(!box) return;
+    var monthSel=(g('expV2MonthSel')||{}).value||'';
+    var typeSel=(g('expV2TypeSel')||{}).value||'';
+    var issuedSel=(g('expV2IssuedSel')||{}).value||'';
+    var hideJeonpyo=!!(g('expV2HideJeonpyo')&&g('expV2HideJeonpyo').checked);
+    var all=typeof entries!=='undefined'?entries.filter(function(e){return e.kind==='expense';}):[];
+    all.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');} );
+    var list=all.filter(function(e){
+      if(monthSel&&!(e.date||'').startsWith(monthSel)) return false;
+      if(typeSel&&e.expType!==typeSel) return false;
+      if(issuedSel==='issued'&&!e.isIssued) return false;
+      if(issuedSel==='unissued'&&e.isIssued) return false;
+      if(hideJeonpyo&&e.isJeonpyo) return false;
+      return true;
     });
-    /* 자재/식대/폐기물 추가 버튼 */
-    var ma=g('expV2MatAdd');   if(ma&&!ma._b){ma._b=true;ma.addEventListener('click',function(){_matItems.push({name:'',qty:'',price:'',delivery:''});renderMatList();var r=g('expV2MatList').querySelectorAll('input[type=text]');if(r.length)r[r.length-1].focus();});}
-    var me=g('expV2MealAdd');  if(me&&!me._b){me._b=true;me.addEventListener('click',function(){_mealItems.push({menu:'',people:'',price:''});renderMealList();var r=g('expV2MealList').querySelectorAll('input[type=text]');if(r.length)r[r.length-1].focus();});}
-    var wa=g('expV2WasteAdd'); if(wa&&!wa._b){wa._b=true;wa.addEventListener('click',function(){_wasteItems.push({desc:'',amount:''});renderWasteList();});}
-
-    /* openExpenseEditor 교체 */
-    window.openExpenseEditor = function(id){ openExpV2(id); };
-
-    /* v43 메인목록 expense 클릭 교체 - openViewer 로드 후 안전하게 */
-    /* bind()에서는 제거 - hookOpenViewer()에서 처리 */
-
-    /* btnAddExpense */
-    var addBtn=g('btnAddExpense');
-    if(addBtn&&!addBtn._expV2){addBtn._expV2=true;addBtn.addEventListener('click',function(){openExpV2(null);});}
-  }
-
-  /* DOM 준비 후 바인딩 */
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind);
-  else bind();
-  setTimeout(bind, 800);
-  setTimeout(bind, 2500);
-
-  window._openExpV2 = openExpV2;
-
-  /* ── 지출 목록 렌더 ── */
-  window.renderExpV2List = function(){
-    var box = g('expV2ListArea'); if(!box) return;
-    var list = (typeof entries!=='undefined') ? entries.filter(function(e){return e.kind==='expense';}) : [];
-    list.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+    var cntEl=g('expV2ListCount'); if(cntEl) cntEl.textContent=list.length+'건';
     if(!list.length){
-      box.innerHTML='<div style="text-align:center;padding:60px 20px;color:#aab8c8"><div style="font-size:40px;margin-bottom:10px">💰</div><div style="font-size:14px;font-weight:700">지출 내역이 없어요</div><div style="font-size:12px;margin-top:6px">➕ 지출 등록 버튼을 눌러보세요</div></div>';
+      box.innerHTML='<div style="text-align:center;padding:60px 20px;color:#aab8c8"><div style="font-size:40px;margin-bottom:10px">💰</div><div style="font-size:14px;font-weight:700">지출 내역이 없어요</div></div>';
       return;
     }
     var html='<div style="display:flex;flex-direction:column;gap:8px">';
     list.forEach(function(e){
-      var color = e.expType==='세금계산서' ? '#c2410c' : '#3f7cb8';
-      var badge = e.expType==='세금계산서' ? '📃 세금계산서' : '💸 개인지출';
-      var purposes = (e.purposes&&e.purposes.length) ? e.purposes.join(', ') : '';
-      html+='<div data-expid="'+e.id+'" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid '+color+';border-radius:12px;padding:14px 16px;cursor:pointer;transition:box-shadow .12s">'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
-        +'<div style="flex:1;min-width:0">'
+      var color=e.expType==='세금계산서'?'#c2410c':'#3f7cb8';
+      var badge=e.expType==='세금계산서'?'📃 세금계산서':'💸 개인지출';
+      var jeonpyoBadge=e.isJeonpyo?'<span style="background:#f0f0f0;color:#888;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">전표</span>':'';
+      var issuedBadge=e.expType==='세금계산서'?(e.isIssued?'<span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">✅ 발급완료</span>':'<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">⏳ 미발급</span>'):'';
+      var purposeBadge=e.purpose?('<span style="background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">'+esc(e.purpose)+'</span>'):'';
+      html+='<div style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid '+color+';border-radius:12px;padding:14px 16px;position:relative">'
+        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
+        +'<div style="flex:1;min-width:0;cursor:pointer" data-expid="'+esc(e.id)+'">'
         +'<div style="font-size:15px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e.title||'(내역없음)')+'</div>'
-        +'<div style="font-size:12px;color:#7a92a8;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap">'
+        +'<div style="font-size:12px;color:#7a92a8;margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">'
         +'<span>'+esc(e.date||'')+'</span>'
         +(e.vendor?'<span>'+esc(e.vendor)+'</span>':'')
-        +(purposes?'<span style="background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">'+esc(purposes)+'</span>':'')
+        +jeonpyoBadge+issuedBadge+purposeBadge
         +'<span style="background:'+color+'22;color:'+color+';border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">'+badge+'</span>'
         +'</div>'
+        +(e.memo?'<div style="font-size:12px;color:#aab8c8;margin-top:4px">'+esc(e.memo)+'</div>':'')
         +'</div>'
-        +'<div style="font-size:17px;font-weight:800;color:'+color+';white-space:nowrap">'+fmt(e.amount)+'원</div>'
+        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'
+        +'<div style="font-size:17px;font-weight:800;color:'+color+'">'+fmt(e.amount)+'원</div>'
+        +'<button data-expdel="'+esc(e.id)+'" style="background:#fde8e8;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">🗑 삭제</button>'
         +'</div>'
-        +(e.memo?'<div style="font-size:12px;color:#aab8c8;margin-top:6px">'+esc(e.memo)+'</div>':'')
+        +'</div>'
         +'</div>';
     });
     html+='</div>';
     box.innerHTML=html;
     box.querySelectorAll('[data-expid]').forEach(function(el){
-      el.addEventListener('mouseenter',function(){el.style.boxShadow='0 4px 16px rgba(0,0,0,.08)';});
-      el.addEventListener('mouseleave',function(){el.style.boxShadow='';});
-      el.addEventListener('click',function(){openExpV2(el.dataset.expid);});
+      el.addEventListener('click',function(){ openExpV2(el.dataset.expid); });
+    });
+    box.querySelectorAll('[data-expdel]').forEach(function(btn){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        if(!confirm('삭제할까요?')) return;
+        if(typeof deleteWithUndo==='function') deleteWithUndo(btn.dataset.expdel,'지출');
+        setTimeout(function(){ renderExpV2List(); renderExpV2Dashboard(); },300);
+      });
     });
   };
 
-  window.renderExpV2Dashboard = function(){
-    var box = g('expV2Dashboard'); if(!box) return;
-    var all = (typeof entries!=='undefined') ? entries.filter(function(e){return e.kind==='expense';}) : [];
-    var now = new Date();
-    var ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-    var thisMonth = all.filter(function(e){return (e.date||'').startsWith(ym);});
-    var personal = thisMonth.filter(function(e){return e.expType!=='세금계산서';});
-    var tax      = thisMonth.filter(function(e){return e.expType==='세금계산서';});
-    var pSum = personal.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
-    var tSum = tax.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+  /* ── 대시보드 ── */
+  window.renderExpV2Dashboard=function(){
+    var box=g('expV2Dashboard'); if(!box) return;
+    var all=typeof entries!=='undefined'?entries.filter(function(e){return e.kind==='expense';}):[];
+    var now=new Date();
+    var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    var tm=all.filter(function(e){return (e.date||'').startsWith(ym);} );
+    var personal=tm.filter(function(e){return e.expType!=='세금계산서'&&!e.isJeonpyo;});
+    var tax=tm.filter(function(e){return e.expType==='세금계산서'&&!e.isJeonpyo;});
+    var pSum=personal.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    var tSum=tax.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    var taxUnissued=tax.filter(function(e){return !e.isIssued;}).length;
     box.innerHTML=
       '<div style="background:#f0f6ff;border:1.5px solid #93c5fd;border-radius:12px;padding:14px">'
       +'<div style="font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:4px">💸 이달 개인지출</div>'
-      +'<div style="font-size:22px;font-weight:800;color:#3f7cb8">'+fmt(pSum)+'<span style="font-size:13px;font-weight:600">원</span></div>'
+      +'<div style="font-size:22px;font-weight:800;color:#3f7cb8">'+fmt(pSum)+'<span style="font-size:13px">원</span></div>'
       +'<div style="font-size:12px;color:#aab8c8;margin-top:2px">'+personal.length+'건</div>'
       +'</div>'
       +'<div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:12px;padding:14px">'
       +'<div style="font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:4px">📃 이달 세금계산서</div>'
-      +'<div style="font-size:22px;font-weight:800;color:#c2410c">'+fmt(tSum)+'<span style="font-size:13px;font-weight:600">원</span></div>'
-      +'<div style="font-size:12px;color:#aab8c8;margin-top:2px">'+tax.length+'건</div>'
+      +'<div style="font-size:22px;font-weight:800;color:#c2410c">'+fmt(tSum)+'<span style="font-size:13px">원</span></div>'
+      +'<div style="font-size:12px;margin-top:2px">'
+      +tax.length+'건'+(taxUnissued>0?' · <span style="color:#c2410c;font-weight:700">미발급 '+taxUnissued+'건</span>':'')
+      +'</div>'
       +'</div>';
+    // 월 필터 셀렉트 채우기
+    var months=[...new Set(all.map(function(e){return (e.date||'').slice(0,7);}).filter(Boolean))].sort().reverse();
+    var mSel=g('expV2MonthSel');
+    if(mSel){
+      var cur=mSel.value;
+      mSel.innerHTML='<option value="">전체 월</option>'+months.map(function(m){return '<option value="'+m+'"'+(m===cur?' selected':'')+'>'+m+'</option>';}).join('');
+    }
   };
 
-  /* openViewer._expV2 에러 방지 - openViewer 로드 후 안전하게 훅 */
+  /* ── 용도 관리 모달 ── */
+  function openPurposeMgr(){
+    var ov=document.getElementById('expV2PurposeMgrOv');
+    if(ov) ov.remove();
+    ov=document.createElement('div');
+    ov.id='expV2PurposeMgrOv';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+    ov.innerHTML='<div style="background:#fff;border-radius:18px;width:100%;max-width:400px;padding:22px;box-shadow:0 8px 32px rgba(0,0,0,.2)">'
+      +'<h3 style="margin:0 0 14px;font-size:17px;font-weight:800;color:#1a2f45">⚙ 용도 관리</h3>'
+      +'<div id="purposeMgrList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;max-height:280px;overflow:auto"></div>'
+      +'<div style="display:flex;gap:6px;margin-bottom:12px">'
+      +'<input type="text" id="purposeMgrNew" placeholder="새 용도 입력" style="flex:1;height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:14px;font-family:inherit;outline:none;background:#f7faff">'
+      +'<button id="purposeMgrAdd" style="height:38px;padding:0 14px;background:#3f7cb8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>'
+      +'</div>'
+      +'<button id="purposeMgrClose" style="width:100%;height:42px;background:#f7faff;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;color:#7a92a8;font-family:inherit;cursor:pointer">닫기</button>'
+      +'</div>';
+    document.body.appendChild(ov);
+
+    function renderList(){
+      var purposes=loadPurposes();
+      var list=document.getElementById('purposeMgrList');
+      list.innerHTML=purposes.map(function(p,i){
+        return '<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:#f7faff;border-radius:8px;border:1px solid #e8f0fa">'
+          +'<input type="text" data-pi="'+i+'" value="'+esc(p)+'" style="flex:1;border:none;background:transparent;font-size:14px;font-weight:600;color:#1a2f45;font-family:inherit;outline:none">'
+          +'<button data-psave="'+i+'" style="background:#eaf1fb;border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;color:#3f7cb8;cursor:pointer;font-family:inherit">저장</button>'
+          +'<button data-pdel="'+i+'" style="background:#fde8e8;border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>'
+          +'</div>';
+      }).join('');
+      list.querySelectorAll('[data-psave]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var i=+btn.dataset.psave;
+          var inp=list.querySelector('[data-pi="'+i+'"]');
+          var v=(inp.value||'').trim(); if(!v) return;
+          var arr=loadPurposes(); arr[i]=v; savePurposes(arr);
+          renderList();
+          if(typeof toast==='function') toast('저장됐어요');
+        });
+      });
+      list.querySelectorAll('[data-pdel]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var i=+btn.dataset.pdel;
+          var arr=loadPurposes();
+          if(!confirm('"'+arr[i]+'" 용도를 삭제할까요?')) return;
+          arr.splice(i,1); savePurposes(arr);
+          renderList();
+        });
+      });
+    }
+    renderList();
+    document.getElementById('purposeMgrAdd').addEventListener('click',function(){
+      var inp=document.getElementById('purposeMgrNew');
+      var v=(inp.value||'').trim(); if(!v) return;
+      var arr=loadPurposes();
+      if(arr.includes(v)){ if(typeof toast==='function') toast('이미 있는 용도예요'); return; }
+      arr.push(v); savePurposes(arr); inp.value='';
+      renderList();
+      if(typeof toast==='function') toast('추가됐어요');
+    });
+    document.getElementById('purposeMgrNew').addEventListener('keydown',function(e){
+      if(e.key==='Enter') document.getElementById('purposeMgrAdd').click();
+    });
+    document.getElementById('purposeMgrClose').addEventListener('click',function(){ ov.remove(); });
+    ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+  }
+
+  /* ── 이벤트 바인딩 ── */
+  function bind(){
+    var cl=g('expV2Close'); if(cl&&!cl._b){cl._b=true;cl.addEventListener('click',closeExpV2);}
+    var ov=g('expV2Overlay'); if(ov&&!ov._b){ov._b=true;ov.addEventListener('click',function(e){if(e.target===ov)closeExpV2();});}
+    var sv=g('expV2Save'); if(sv&&!sv._b){sv._b=true;sv.addEventListener('click',saveExpV2);}
+    var dl=g('expV2Del');  if(dl&&!dl._b){dl._b=true;dl.addEventListener('click',deleteExpV2);}
+    document.querySelectorAll('.expV2TypeBtn').forEach(function(btn){
+      if(!btn._b){btn._b=true;btn.addEventListener('click',function(){_expType=btn.dataset.etype;updateTypeBtns();});}
+    });
+    var ma=g('expV2MatAdd');   if(ma&&!ma._b){ma._b=true;ma.addEventListener('click',function(){_matItems.push({name:'',qty:'',price:'',delivery:''});renderMatList();var r=g('expV2MatList').querySelectorAll('input[type=text]');if(r.length)r[r.length-1].focus();});}
+    var me=g('expV2MealAdd');  if(me&&!me._b){me._b=true;me.addEventListener('click',function(){_mealItems.push({menu:'',people:'',price:''});renderMealList();var r=g('expV2MealList').querySelectorAll('input[type=text]');if(r.length)r[r.length-1].focus();});}
+    var wa=g('expV2WasteAdd'); if(wa&&!wa._b){wa._b=true;wa.addEventListener('click',function(){_wasteItems.push({desc:'',amount:''});renderWasteList();});}
+    // 필터 이벤트
+    ['expV2MonthSel','expV2TypeSel','expV2IssuedSel','expV2HideJeonpyo'].forEach(function(id){
+      var el=g(id); if(el&&!el._f){el._f=true;el.addEventListener('change',function(){renderExpV2List();});}
+    });
+    // 용도 관리
+    var pmBtn=g('btnExpV2PurposeMgr'); if(pmBtn&&!pmBtn._b){pmBtn._b=true;pmBtn.addEventListener('click',openPurposeMgr);}
+    // openExpenseEditor 교체
+    window.openExpenseEditor=function(id){openExpV2(id);};
+    // btnAddExpense
+    var addBtn=g('btnAddExpense'); if(addBtn&&!addBtn._x){addBtn._x=true;addBtn.addEventListener('click',function(){openExpV2(null);});}
+  }
+
   function hookOpenViewer(){
     if(!window.openViewer||window.openViewer._expV2) return;
     var orig=window.openViewer;
@@ -6220,23 +6352,23 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     };
     window.openViewer._expV2=true;
   }
-  setTimeout(hookOpenViewer,300);
-  setTimeout(hookOpenViewer,800);
-  setTimeout(hookOpenViewer,2000);
-  setTimeout(hookOpenViewer,4000);
 
-  /* v43Refresh 훅 - 지출 탭 열려있으면 자동 갱신 */
-  var origV43Refresh = window.v43Refresh;
-  window.v43Refresh = function(){
+  /* v43Refresh 훅 */
+  var origV43Refresh=window.v43Refresh;
+  window.v43Refresh=function(){
     if(origV43Refresh) origV43Refresh();
-    var expPanel = g('v43-expense');
-    if(expPanel && expPanel.classList.contains('active')){
-      renderExpV2List();
-      renderExpV2Dashboard();
-    }
+    var p=g('v43-expense');
+    if(p&&p.classList.contains('active')){ renderExpV2List(); renderExpV2Dashboard(); }
   };
 
-  console.log('[expV2] 지출 모달 로드');
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind);
+  else bind();
+  setTimeout(bind,800); setTimeout(bind,2500);
+  setTimeout(hookOpenViewer,300); setTimeout(hookOpenViewer,800);
+  setTimeout(hookOpenViewer,2000); setTimeout(hookOpenViewer,4000);
+
+  window._openExpV2=openExpV2;
+  console.log('[expV2] v44-0622-0640 로드');
 })();
 </script>
   </body>
