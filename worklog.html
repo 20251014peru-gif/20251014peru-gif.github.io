@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v43</title>
+<title>업무일지 v44-0622-0611</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v43</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-0611</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -924,6 +924,7 @@
     <!-- 상단 탭: 달력 / 점검일지 / 자재 / 비번 / 자가진단 / AI -->
     <div class="v43-tabs" id="v43Tabs">
       <button class="v43-tab active" data-v43tab="main">📋 기록</button>
+      <button class="v43-tab" data-v43tab="expense">💰 지출</button>
       <button class="v43-tab" data-v43tab="memo">📝 메모</button>
       <button class="v43-tab" data-v43tab="calendar">📅 달력</button>
       <button class="v43-tab" data-v43tab="filelink">📋 점검일지</button>
@@ -985,6 +986,56 @@
     <!-- 통합 목록 -->
     <div class="v43-list" id="v43List">
       <div class="v43-empty"><div class="ei">📋</div>데이터를 불러오는 중…</div>
+    </div>
+  </div>
+
+  <!-- ===== 지출 패널 ===== -->
+  <div class="v43-panel" id="v43-expense">
+    <div style="margin-top:14px">
+      <!-- 이달 요약 -->
+      <div id="expV2Dashboard" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"></div>
+      <!-- 필터 -->
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <select id="expV2MonthFilter" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
+          <option value="">전체 월</option>
+        </select>
+        <select id="expV2TypeFilter" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
+          <option value="">전체 종류</option>
+          <option value="개인지출">💸 개인지출</option>
+          <option value="세금계산서">📃 세금계산서</option>
+        </select>
+        <button id="expV2AddBtn" style="margin-left:auto;height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 지출 등록</button>
+      </div>
+      <!-- 목록 -->
+      <div id="expV2ListWrap" style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#f0f6ff;border-bottom:1.5px solid #e8f0fa">
+              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left">날짜</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left">내역</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left">업체</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:right">금액</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:50px"></th>
+            </tr>
+          </thead>
+          <tbody id="expV2ListBody">
+            <tr><td colspan="5" style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">지출 내역이 없습니다</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="expV2ListTotal" style="text-align:right;font-size:13px;color:#7a92a8;margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- ===== 지출 패널 ===== -->
+  <div class="v43-panel" id="v43-expense">
+    <div style="margin-top:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">💰 지출 관리</h3>
+        <button id="btnAddExpenseV2" style="background:#3f7cb8;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 지출 등록</button>
+      </div>
+      <div id="expV2Dashboard" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"></div>
+      <div id="expV2ListArea"></div>
     </div>
   </div>
 
@@ -2455,6 +2506,12 @@
     if(name==='calendar' && typeof renderCalendar==='function') setTimeout(renderCalendar, 100);
     if(name==='memo') setTimeout(()=>{ if(typeof renderStickyGrid==='function') renderStickyGrid(); }, 100);
     if(name==='main') setTimeout(()=>{ if(typeof v43Refresh==='function') v43Refresh(); }, 50);
+    if(name==='expense') setTimeout(()=>{
+      renderExpV2List();
+      renderExpV2Dashboard();
+      var ab=document.getElementById('btnAddExpenseV2');
+      if(ab&&!ab._v2b){ab._v2b=true;ab.addEventListener('click',function(){window._openExpV2&&window._openExpV2(null);});}
+    }, 50);
     if(name==='accident') setTimeout(()=>{ 
       try{
         if(typeof renderAccidents==='function'){
@@ -6123,6 +6180,93 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(bind, 2500);
 
   window._openExpV2 = openExpV2;
+
+  /* ── 지출 목록 렌더 ── */
+  window.renderExpV2List = function(){
+    var box = g('expV2ListArea'); if(!box) return;
+    var list = (typeof entries!=='undefined') ? entries.filter(function(e){return e.kind==='expense';}) : [];
+    list.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+    if(!list.length){
+      box.innerHTML='<div style="text-align:center;padding:60px 20px;color:#aab8c8"><div style="font-size:40px;margin-bottom:10px">💰</div><div style="font-size:14px;font-weight:700">지출 내역이 없어요</div><div style="font-size:12px;margin-top:6px">➕ 지출 등록 버튼을 눌러보세요</div></div>';
+      return;
+    }
+    var html='<div style="display:flex;flex-direction:column;gap:8px">';
+    list.forEach(function(e){
+      var color = e.expType==='세금계산서' ? '#c2410c' : '#3f7cb8';
+      var badge = e.expType==='세금계산서' ? '📃 세금계산서' : '💸 개인지출';
+      var purposes = (e.purposes&&e.purposes.length) ? e.purposes.join(', ') : '';
+      html+='<div data-expid="'+e.id+'" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid '+color+';border-radius:12px;padding:14px 16px;cursor:pointer;transition:box-shadow .12s">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:15px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e.title||'(내역없음)')+'</div>'
+        +'<div style="font-size:12px;color:#7a92a8;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap">'
+        +'<span>'+esc(e.date||'')+'</span>'
+        +(e.vendor?'<span>'+esc(e.vendor)+'</span>':'')
+        +(purposes?'<span style="background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">'+esc(purposes)+'</span>':'')
+        +'<span style="background:'+color+'22;color:'+color+';border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">'+badge+'</span>'
+        +'</div>'
+        +'</div>'
+        +'<div style="font-size:17px;font-weight:800;color:'+color+';white-space:nowrap">'+fmt(e.amount)+'원</div>'
+        +'</div>'
+        +(e.memo?'<div style="font-size:12px;color:#aab8c8;margin-top:6px">'+esc(e.memo)+'</div>':'')
+        +'</div>';
+    });
+    html+='</div>';
+    box.innerHTML=html;
+    box.querySelectorAll('[data-expid]').forEach(function(el){
+      el.addEventListener('mouseenter',function(){el.style.boxShadow='0 4px 16px rgba(0,0,0,.08)';});
+      el.addEventListener('mouseleave',function(){el.style.boxShadow='';});
+      el.addEventListener('click',function(){openExpV2(el.dataset.expid);});
+    });
+  };
+
+  window.renderExpV2Dashboard = function(){
+    var box = g('expV2Dashboard'); if(!box) return;
+    var all = (typeof entries!=='undefined') ? entries.filter(function(e){return e.kind==='expense';}) : [];
+    var now = new Date();
+    var ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    var thisMonth = all.filter(function(e){return (e.date||'').startsWith(ym);});
+    var personal = thisMonth.filter(function(e){return e.expType!=='세금계산서';});
+    var tax      = thisMonth.filter(function(e){return e.expType==='세금계산서';});
+    var pSum = personal.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    var tSum = tax.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    box.innerHTML=
+      '<div style="background:#f0f6ff;border:1.5px solid #93c5fd;border-radius:12px;padding:14px">'
+      +'<div style="font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:4px">💸 이달 개인지출</div>'
+      +'<div style="font-size:22px;font-weight:800;color:#3f7cb8">'+fmt(pSum)+'<span style="font-size:13px;font-weight:600">원</span></div>'
+      +'<div style="font-size:12px;color:#aab8c8;margin-top:2px">'+personal.length+'건</div>'
+      +'</div>'
+      +'<div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:12px;padding:14px">'
+      +'<div style="font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:4px">📃 이달 세금계산서</div>'
+      +'<div style="font-size:22px;font-weight:800;color:#c2410c">'+fmt(tSum)+'<span style="font-size:13px;font-weight:600">원</span></div>'
+      +'<div style="font-size:12px;color:#aab8c8;margin-top:2px">'+tax.length+'건</div>'
+      +'</div>';
+  };
+
+  /* openViewer._expV2 에러 방지 - openViewer 로드 후 안전하게 훅 */
+  function hookOpenViewer(){
+    if(!window.openViewer||window.openViewer._expV2) return;
+    var orig=window.openViewer;
+    window.openViewer=function(kind,id){
+      if(kind==='expense'){openExpV2(id);return;}
+      orig(kind,id);
+    };
+    window.openViewer._expV2=true;
+  }
+  setTimeout(hookOpenViewer,500);
+  setTimeout(hookOpenViewer,2000);
+
+  /* v43Refresh 훅 - 지출 탭 열려있으면 자동 갱신 */
+  var origV43Refresh = window.v43Refresh;
+  window.v43Refresh = function(){
+    if(origV43Refresh) origV43Refresh();
+    var expPanel = g('v43-expense');
+    if(expPanel && expPanel.classList.contains('active')){
+      renderExpV2List();
+      renderExpV2Dashboard();
+    }
+  };
+
   console.log('[expV2] 지출 모달 로드');
 })();
 </script>
