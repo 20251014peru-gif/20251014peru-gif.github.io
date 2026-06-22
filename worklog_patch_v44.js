@@ -552,6 +552,21 @@
       /* 원본 openViewer 호출 (모달 틀 세팅) */
       origOpenViewer(kind, id);
 
+      /* 뷰어 모달의 "수정" 버튼 → openStickyEditModal로 교체 */
+      setTimeout(function() {
+        var vEditBtn = document.getElementById('vEdit');
+        if (vEditBtn && !vEditBtn._v44memoHooked) {
+          vEditBtn._v44memoHooked = true;
+          vEditBtn.addEventListener('click', function(e) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            var overlay = document.getElementById('viewOverlay');
+            if (overlay) overlay.classList.remove('show');
+            window.openStickyEditModal(id);
+          }, true);
+        }
+      }, 30);
+
       /* vBody의 body 필드 셀을 체크리스트로 교체 */
       setTimeout(function() {
         var vBody = document.getElementById('vBody');
