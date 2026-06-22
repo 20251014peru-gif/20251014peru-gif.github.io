@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>개인일지 데이터 이전 도구</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Pretendard','Apple SD Gothic Neo',sans-serif}
+:root{--blue:#3f7cb8;--blue-lt:#f0f6ff;--blue-bd:#dbe6f4;--ink:#1a2f45;--ink-soft:#7a92a8;--bg:#f4f8fd;--white:#fff;--line:#e8f0fa;--radius:14px}
+body{background:var(--bg);min-height:100vh;padding:24px 16px 60px}
+.wrap{max-width:680px;margin:0 auto}
+.hdr{text-align:center;margin-bottom:28px}
+.hdr h1{font-size:22px;font-weight:800;color:var(--ink);margin-bottom:6px}
+.hdr p{font-size:14px;color:var(--ink-soft);line-height:1.6}
+.card{background:var(--white);border:1.5px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.step-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:800;flex-shrink:0}
+.desc{font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:14px}
+.desc code{background:#f0f4f8;padding:2px 6px;border-radius:5px;font-size:12px;font-family:monospace;color:var(--blue)}
+.btn{padding:11px 20px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:7px}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:#2563a8}
+.btn-primary:disabled{background:#aab8c8;cursor:not-allowed}
+.btn-ghost{background:#f0f4f8;color:var(--ink-soft);border:1.5px solid var(--blue-bd)}
+.btn-ghost:hover{background:var(--blue-lt);color:var(--blue)}
+.btn-danger{background:#fde8e8;color:#b52929}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--blue-lt);border:1.5px solid var(--blue-bd);border-radius:10px;padding:12px;text-align:center}
+.stat-val{font-size:22px;font-weight:800;color:var(--blue)}
+.stat-lbl{font-size:11px;color:var(--ink-soft);margin-top:2px;font-weight:600}
+.progress-wrap{margin-top:14px;display:none}
+.progress-bar-bg{height:10px;background:#e8f0fa;border-radius:6px;overflow:hidden;margin-bottom:6px}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--blue),#27ae60);border-radius:6px;transition:width .3s;width:0%}
+.progress-txt{font-size:12px;color:var(--ink-soft);text-align:center}
+.log-box{background:#1a2f45;color:#7fffb2;border-radius:10px;padding:14px;font-size:12px;font-family:monospace;max-height:260px;overflow-y:auto;margin-top:12px;line-height:1.7;display:none}
+.log-box .log-err{color:#ff8888}
+.log-box .log-ok{color:#7fffb2}
+.log-box .log-info{color:#88d4ff}
+.log-box .log-warn{color:#ffd788}
+.result-card{padding:14px;border-radius:10px;margin-top:12px;font-size:14px;font-weight:700;display:none;text-align:center}
+.result-ok{background:#e6f9f0;color:#16a34a;border:1.5px solid #86efac}
+.result-err{background:#fde8e8;color:#b52929;border:1.5px solid #fca5a5}
+.cat-map-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.cat-map-table th{background:var(--blue-lt);color:var(--ink-soft);padding:7px 10px;text-align:left;font-weight:700;border-bottom:1.5px solid var(--blue-bd)}
+.cat-map-table td{padding:7px 10px;border-bottom:1px solid var(--line);color:var(--ink)}
+.cat-map-table tr:last-child td{border-bottom:none}
+.arrow{color:var(--blue);font-weight:800}
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1a2f45;color:#fff;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9999;white-space:nowrap}
+.toast.show{opacity:1}
+.divider{border:none;border-top:1.5px dashed var(--line);margin:16px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hdr">
+    <div style="font-size:40px;margin-bottom:8px">🔄</div>
+    <h1>개인일지 데이터 이전 도구</h1>
+    <p>기존 <b>personal.html (v67)</b> 데이터를<br>새 <b>개인일지 (personal_entries)</b> Firebase로 이전합니다</p>
+  </div>
+
+  <!-- STEP 1: 기존 데이터 확인 -->
+  <div class="card">
+    <div class="card-title"><span class="step-badge">1</span> 기존 데이터 확인</div>
+    <div class="desc">
+      기존 앱은 <code>localStorage</code>의 <code>personal-records-v1</code> 키에 데이터를 저장합니다.<br>
+      이 페이지를 기존 앱과 <b>같은 도메인(GitHub Pages)</b>에서 열어야 데이터를 읽을 수 있어요.
+    </div>
+    <div class="stat-grid" id="statGrid">
+      <div class="stat"><div class="stat-val" id="statTotal">-</div><div class="stat-lbl">전체 기록</div></div>
+      <div class="stat"><div class="stat-val" id="statCats">-</div><div class="stat-lbl">카테고리 수</div></div>
+      <div class="stat"><div class="stat-val" id="statPhotos">-</div><div class="stat-lbl">사진 포함</div></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="loadOldData()">📂 기존 데이터 읽기</button>
+      <button class="btn btn-ghost" onclick="loadFromFirebase()">☁️ Firebase에서 불러오기</button>
+    </div>
+    <div id="oldDataResult"></div>
+  </div>
+
+  <!-- 카테고리 매핑 안내 -->
+  <div class="card" id="catMapCard" style="display:none">
+    <div class="card-title">📋 카테고리 변환 안내</div>
+    <table class="cat-map-table">
+      <thead><tr><th>기존 (personal v67)</th><th></th><th>새 개인일지</th></tr></thead>
+      <tbody>
+        <tr><td>🛒 구매</td><td class="arrow">→</td><td>🛒 purchase</td></tr>
+        <tr><td>💊 건강</td><td class="arrow">→</td><td>🏥 health</td></tr>
+        <tr><td>🍜 맛집</td><td class="arrow">→</td><td>🍽 restaurant</td></tr>
+        <tr><td>🚗 차계부</td><td class="arrow">→</td><td>🚗 car</td></tr>
+        <tr><td>📔 일상</td><td class="arrow">→</td><td>📔 diary</td></tr>
+        <tr><td>💭 생각</td><td class="arrow">→</td><td>💭 thought</td></tr>
+        <tr><td>📖 독서</td><td class="arrow">→</td><td>📚 reading</td></tr>
+        <tr><td>✈️ 여행</td><td class="arrow">→</td><td>📎 other (제목: 여행)</td></tr>
+        <tr><td>👤 사람</td><td class="arrow">→</td><td>📎 other (제목: 사람)</td></tr>
+        <tr><td>📌 기타</td><td class="arrow">→</td><td>📎 other</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- STEP 2: 이전 실행 -->
+  <div class="card" id="migrateCard" style="display:none">
+    <div class="card-title"><span class="step-badge">2</span> Firebase로 이전</div>
+    <div class="desc">
+      새 개인일지의 <code>personal_entries</code> 컬렉션으로 데이터를 저장합니다.<br>
+      기존 데이터는 <b>삭제되지 않고</b> 새 컬렉션에 복사됩니다. 안전합니다.
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="migrateBtn" onclick="startMigrate()">🚀 이전 시작</button>
+      <button class="btn btn-ghost" onclick="previewData()">👁 변환 미리보기</button>
+    </div>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="progress-txt" id="progressTxt">준비 중…</div>
+    </div>
+    <div class="result-card" id="resultCard"></div>
+    <div class="log-box" id="logBox"></div>
+  </div>
+
+  <!-- STEP 3: 완료 후 -->
+  <div class="card" id="doneCard" style="display:none">
+    <div class="card-title"><span class="step-badge">3</span> 이전 완료</div>
+    <div class="desc">데이터 이전이 완료됐어요. 이제 새 개인일지에서 확인해보세요!</div>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="personal.html">📋 새 개인일지 열기</a>
+      <button class="btn btn-ghost" onclick="resetAll()">🔄 처음부터 다시</button>
+    </div>
+  </div>
+
+  <!-- 고급: JSON 파일로 불러오기 -->
+  <div class="card">
+    <div class="card-title">📁 JSON 백업 파일로 이전</div>
+    <div class="desc">
+      기존 앱 진단탭에서 내보낸 <b>JSON 백업 파일</b>을 직접 올려서 이전할 수도 있어요.<br>
+      도메인이 달라서 localStorage를 못 읽을 때 이 방법을 쓰세요.
+    </div>
+    <div class="btn-row">
+      <label class="btn btn-ghost" style="cursor:pointer">
+        📂 JSON 파일 선택
+        <input type="file" id="jsonFileInp" accept=".json" style="display:none" onchange="loadFromJson(this)">
+      </label>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ===== Firebase 초기화 ===== */
+firebase.initializeApp({
+  apiKey:"AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
+  authDomain:"my-system-25497.firebaseapp.com",
+  projectId:"my-system-25497",
+  storageBucket:"my-system-25497.firebasestorage.app"
+});
+const db = firebase.firestore();
+const NEW_COL = 'personal_entries';
+const OLD_KEY = 'personal-records-v1';
+const OLD_FB_COL = 'personal';
+const FB_KEY = 'AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
+const FB_BASE = 'https://firestore.googleapis.com/v1/projects/my-system-25497/databases/(default)/documents';
+
+let oldRecords = [];
+
+/* ===== 유틸 ===== */
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function log(msg, type='info'){
+  const box=document.getElementById('logBox');
+  box.style.display='block';
+  const cls = type==='err'?'log-err':type==='ok'?'log-ok':type==='warn'?'log-warn':'log-info';
+  box.innerHTML+=`<div class="${cls}">${msg}</div>`;
+  box.scrollTop=box.scrollHeight;
+}
+function setProgress(pct, txt){
+  document.getElementById('progressBar').style.width=pct+'%';
+  document.getElementById('progressTxt').textContent=txt;
+}
+
+/* ===== STEP1: localStorage에서 읽기 ===== */
+function loadOldData(){
+  try{
+    const raw = localStorage.getItem(OLD_KEY);
+    if(!raw){ showNoData('localStorage에 데이터가 없어요. Firebase에서 불러오기를 시도해보세요.'); return; }
+    const arr = JSON.parse(raw);
+    if(!Array.isArray(arr)||!arr.length){ showNoData('데이터가 비어있어요.'); return; }
+    oldRecords = arr;
+    showStats(arr);
+  }catch(e){
+    showNoData('읽기 오류: '+e.message);
+  }
+}
+
+/* ===== STEP1-B: Firebase REST API에서 읽기 (기존 앱 방식) ===== */
+async function loadFromFirebase(){
+  document.getElementById('oldDataResult').innerHTML='<div style="color:var(--blue);font-size:13px;margin-top:10px">☁️ Firebase에서 불러오는 중…</div>';
+  try{
+    // pageSize 300으로 가져오기 (기존 앱과 동일)
+    let url = `${FB_BASE}/${OLD_FB_COL}?key=${FB_KEY}&pageSize=300`;
+    let all = [];
+    while(url){
+      const res = await fetch(url);
+      const data = await res.json();
+      if(data.documents){
+        data.documents.forEach(doc=>{
+          const o = fromFS(doc);
+          if(o&&o.id){
+            o.photoIds = o.photoIds?String(o.photoIds).split(',').filter(Boolean):[];
+            o.photos = [];
+            all.push(o);
+          }
+        });
+      }
+      url = data.nextPageToken ? `${FB_BASE}/${OLD_FB_COL}?key=${FB_KEY}&pageSize=300&pageToken=${data.nextPageToken}` : null;
+    }
+    if(!all.length){ showNoData('Firebase에도 데이터가 없어요.'); return; }
+    oldRecords = all;
+    showStats(all);
+    toast('☁️ Firebase에서 '+all.length+'건 불러옴');
+  }catch(e){
+    showNoData('Firebase 오류: '+e.message);
+  }
+}
+
+/* Firestore REST 응답 → JS 객체 변환 (기존 앱 fromFS와 동일) */
+function fromFS(doc){
+  if(!doc||!doc.fields) return null;
+  const o={};
+  Object.keys(doc.fields).forEach(k=>{
+    const v=doc.fields[k];
+    if(v.stringValue!==undefined) o[k]=v.stringValue;
+    else if(v.integerValue!==undefined) o[k]=Number(v.integerValue);
+    else if(v.doubleValue!==undefined) o[k]=v.doubleValue;
+    else if(v.booleanValue!==undefined) o[k]=v.booleanValue;
+    else if(v.nullValue!==undefined) o[k]=null;
+    else if(v.arrayValue) o[k]=(v.arrayValue.values||[]).map(x=>x.stringValue||x.integerValue||'');
+    else o[k]=null;
+  });
+  return o;
+}
+
+/* ===== JSON 파일에서 읽기 ===== */
+function loadFromJson(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      let arr = [];
+      // 기존 앱 백업 형식: {records:[...]} 또는 바로 배열
+      if(Array.isArray(data)) arr = data;
+      else if(data.records && Array.isArray(data.records)) arr = data.records;
+      else { toast('인식할 수 없는 형식이에요'); return; }
+      if(!arr.length){ toast('데이터가 없어요'); return; }
+      oldRecords = arr;
+      showStats(arr);
+      toast('📂 JSON에서 '+arr.length+'건 로드됨');
+    }catch(err){ toast('JSON 파싱 오류: '+err.message); }
+  };
+  reader.readAsText(file);
+}
+
+function showNoData(msg){
+  document.getElementById('oldDataResult').innerHTML=`<div style="color:#e74c3c;font-size:13px;margin-top:10px">⚠️ ${msg}</div>`;
+}
+
+function showStats(arr){
+  document.getElementById('statTotal').textContent = arr.length;
+  const cats = [...new Set(arr.map(r=>r.cat).filter(Boolean))];
+  document.getElementById('statCats').textContent = cats.length;
+  const withPhoto = arr.filter(r=>(r.photos&&r.photos.length)||(r.photoIds&&r.photoIds.length)).length;
+  document.getElementById('statPhotos').textContent = withPhoto;
+  document.getElementById('oldDataResult').innerHTML=`
+    <div style="color:#27ae60;font-size:13px;font-weight:700;margin-top:10px">
+      ✅ 데이터 확인됨 — 카테고리: ${cats.map(c=>`<span style="background:#e8f0fa;padding:2px 7px;border-radius:6px;margin-right:4px;font-size:11px">${c}</span>`).join('')}
+    </div>`;
+  document.getElementById('catMapCard').style.display='';
+  document.getElementById('migrateCard').style.display='';
+}
+
+/* ===== 변환 함수: 기존 레코드 → 새 personal_entries 형식 ===== */
+function convertRecord(r){
+  const catMap={
+    '구매':'purchase', '건강':'health', '맛집':'restaurant',
+    '차계부':'car', '일상':'diary', '생각':'thought',
+    '독서':'reading', '여행':'other', '사람':'other', '기타':'other'
+  };
+  const kind = catMap[r.cat] || 'other';
+  const base = {
+    kind,
+    date: r.date || new Date().toISOString().slice(0,10),
+    createdAt: r.created ? new Date(r.created).getTime() : Date.now(),
+    _migrated: true,
+    _oldId: r.id,
+    _oldCat: r.cat,
+  };
+
+  if(kind==='purchase'){
+    return {...base,
+      title: r.title||'',
+      amount: r.amount||0,
+      place: r.who||'',  // 기존 who = 쇼핑몰/구입처
+      note: [r.detail, r.link?'링크: '+r.link:'', r.pay?'결제: '+r.pay:''].filter(Boolean).join('\n'),
+      photos: r.photos||[]
+    };
+  }
+  if(kind==='health'){
+    const totalAmt = r.amount || (r.items?r.items.reduce((s,i)=>s+(Number(i.price)||0),0):0);
+    return {...base,
+      title: r.title||'',
+      hospital: r.who||'',
+      phone: r.phone||'',
+      addr: r.addr||'',
+      amount: totalAmt,
+      insurance: r.insur||'',
+      note: [r.detail, r.items?r.items.map(i=>`${i.name||''} ${i.price?i.price+'원':''}`).join(', '):''].filter(Boolean).join('\n'),
+      photos: r.photos||[]
+    };
+  }
+  if(kind==='restaurant'){
+    const menuItems = r.items ? r.items.map(i=>({name:i.name||'',price:Number(i.price)||0,taste:'',comment:''})).filter(i=>i.name) : [];
+    const totalAmt = r.amount || (r.items?r.items.reduce((s,i)=>s+(Number(i.price)||0),0):0);
+    return {...base,
+      place: r.title||'',  // 기존 title = 가게이름
+      location: r.who||'', // 기존 who = 위치/지역
+      phone: r.phone||'',
+      addr: r.addr||'',
+      stars: r.stars||0,
+      amount: totalAmt,
+      menuRows: menuItems,
+      note: r.detail||'',
+      photos: r.photos||[]
+    };
+  }
+  if(kind==='car'){
+    const carType = r.title||'주유'; // 기존 title = 주유/정비/보험/기타
+    const repairRows = (r.items && carType==='정비') ? r.items.map(i=>({item:i.name||'',cost:Number(i.price)||0,memo:''})).filter(i=>i.item) : [];
+    return {...base,
+      carType,
+      vehicle: r.who||'소나타', // 기존 who = 차량명
+      amount: r.amount||0,
+      mileage: r.odo||0,
+      liters: r.liters||0,
+      pricePerL: r.fuelunit||0,
+      shop: r.addr||'',
+      repairRows,
+      note: r.detail||'',
+      photos: r.photos||[]
+    };
+  }
+  if(kind==='diary'){
+    return {...base,
+      title: r.title||'',
+      body: r.detail||'',
+      photos: r.photos||[]
+    };
+  }
+  if(kind==='thought'){
+    const thoughtItems = r.items ? r.items.map(i=>({quote:i.quote||i.name||'',thought:i.thought||''})).filter(i=>i.quote) : [];
+    return {...base,
+      title: r.title||'',
+      body: [r.detail, thoughtItems.map(i=>`${i.quote}${i.thought?' → '+i.thought:''}`).join('\n')].filter(Boolean).join('\n'),
+      tags: r.subtype||'',
+      photos: r.photos||[]
+    };
+  }
+  if(kind==='reading'){
+    return {...base,
+      bookTitle: r.title||'',
+      author: r.who||'',
+      stars: r.stars||0,
+      totalPages: r.totalpg||0,
+      currentPage: r.readpg||0,
+      note: r.detail||'',
+      noteRows: r.items ? r.items.map(i=>({page:'',type:'📌 인상 구절',text:i.quote||i.name||''})).filter(i=>i.text) : [],
+      photos: r.photos||[]
+    };
+  }
+  // other (여행, 사람, 기타)
+  let body = r.detail||'';
+  if(r.items&&r.items.length){
+    body += (body?'\n\n':'') + r.items.map(i=>[i.name,i.price?i.price+'원':'',i.quote,i.thought].filter(Boolean).join(' / ')).join('\n');
+  }
+  const extraFields = [
+    r.who?'대상: '+r.who:'',
+    r.phone?'전화: '+r.phone:'',
+    r.addr?'주소: '+r.addr:'',
+    r.subtype?'유형: '+r.subtype:'',
+  ].filter(Boolean).join('\n');
+  return {...base,
+    title: r.title || (r.cat==='사람'?r.who:'') || '',
+    body: [body, extraFields].filter(Boolean).join('\n'),
+    amount: r.amount||0,
+    photos: r.photos||[]
+  };
+}
+
+/* ===== 미리보기 ===== */
+function previewData(){
+  if(!oldRecords.length){ toast('먼저 데이터를 읽어주세요'); return; }
+  const logBox = document.getElementById('logBox');
+  logBox.innerHTML = '';
+  logBox.style.display = 'block';
+  log(`[미리보기] 총 ${oldRecords.length}건 변환 결과:`, 'info');
+  oldRecords.slice(0,10).forEach((r,i)=>{
+    const converted = convertRecord(r);
+    log(`[${i+1}] ${r.cat} → ${converted.kind} | ${r.date} | ${r.title||r.who||''}`, 'ok');
+  });
+  if(oldRecords.length>10) log(`... 외 ${oldRecords.length-10}건`, 'info');
+}
+
+/* ===== 이전 실행 ===== */
+async function startMigrate(){
+  if(!oldRecords.length){ toast('먼저 데이터를 읽어주세요'); return; }
+  const btn = document.getElementById('migrateBtn');
+  btn.disabled = true;
+  btn.textContent = '이전 중…';
+  document.getElementById('progressWrap').style.display = '';
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('logBox').style.display = 'block';
+  document.getElementById('resultCard').style.display = 'none';
+
+  let ok=0, fail=0, skip=0;
+  const total = oldRecords.length;
+
+  log(`[시작] ${total}건 이전 시작`, 'info');
+
+  for(let i=0; i<total; i++){
+    const r = oldRecords[i];
+    setProgress(Math.round((i/total)*100), `${i+1}/${total} 처리 중… (${r.cat}: ${r.title||r.who||''})`);
+    try{
+      // 이미 이전된 항목 체크
+      const existing = await db.collection(NEW_COL).where('_oldId','==',r.id).limit(1).get();
+      if(!existing.empty){
+        log(`[SKIP] ${r.date} ${r.cat} ${r.title||''} — 이미 이전됨`, 'warn');
+        skip++; continue;
+      }
+      const converted = convertRecord(r);
+      // photos가 너무 크면 제거 (Firestore 1MB 제한)
+      if(converted.photos && converted.photos.length){
+        const totalSize = converted.photos.reduce((s,p)=>s+(p?p.length:0),0);
+        if(totalSize > 800000){
+          log(`[PHOTO SKIP] ${r.date} ${r.cat} — 사진 용량 초과, 메타데이터만 이전`, 'warn');
+          converted.photos = [];
+        }
+      }
+      await db.collection(NEW_COL).add(converted);
+      log(`[OK] ${r.date} ${r.cat}→${converted.kind} ${r.title||r.who||'(제목없음)'}`, 'ok');
+      ok++;
+    }catch(e){
+      log(`[ERR] ${r.date} ${r.cat} ${r.title||''}: ${e.message}`, 'err');
+      fail++;
+    }
+    // 딜레이 (Firebase 쓰기 제한 방지)
+    await new Promise(res=>setTimeout(res,120));
+  }
+
+  setProgress(100, '완료!');
+  const resultEl = document.getElementById('resultCard');
+  resultEl.style.display = 'block';
+  if(fail===0){
+    resultEl.className='result-card result-ok';
+    resultEl.innerHTML=`✅ 이전 완료! 성공 ${ok}건 / 스킵 ${skip}건`;
+    document.getElementById('doneCard').style.display='';
+    log(`\n[완료] 성공 ${ok}건, 스킵 ${skip}건, 실패 ${fail}건`, 'ok');
+  } else {
+    resultEl.className='result-card result-err';
+    resultEl.innerHTML=`⚠️ 완료 (일부 오류) — 성공 ${ok}건 / 실패 ${fail}건 / 스킵 ${skip}건`;
+    log(`\n[완료] 성공 ${ok}건, 실패 ${fail}건, 스킵 ${skip}건`, 'warn');
+  }
+  btn.disabled = false;
+  btn.textContent = '🚀 이전 시작';
+}
+
+function resetAll(){
+  oldRecords=[];
+  document.getElementById('statTotal').textContent='-';
+  document.getElementById('statCats').textContent='-';
+  document.getElementById('statPhotos').textContent='-';
+  document.getElementById('oldDataResult').innerHTML='';
+  document.getElementById('catMapCard').style.display='none';
+  document.getElementById('migrateCard').style.display='none';
+  document.getElementById('doneCard').style.display='none';
+  document.getElementById('logBox').innerHTML='';
+  document.getElementById('logBox').style.display='none';
+  document.getElementById('resultCard').style.display='none';
+  document.getElementById('progressWrap').style.display='none';
+  document.getElementById('progressBar').style.width='0%';
+}
+</script>
+</body>
+</html>
