@@ -982,7 +982,7 @@ $("tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!
 let mKind=null, mId=null, modalPhotos=[], modalAttachments=[]; // v15: modalAttachments 추가
 function defaults(kind){
   const t=todayStr();
-  if(kind==="work") return {date:t,status:"미완료",field:"전기"};
+  if(kind==="work") return {date:t,status:"미완료",field:""};
   if(kind==="call") return {date:t,time:nowTime(),dir:"수신"};
   if(kind==="vacation") return {start:t,end:t,vtype:"년차휴가"};
   if(kind==="filelink") return {category:(CATEGORIES.filelink[0]||""), ptype:"파일"};
