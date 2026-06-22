@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-1642</title>
+<title>업무일지 v44-0622-1653</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1642</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1653</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2120,6 +2120,27 @@
   <button id="expSave"></button><button id="expCancel"></button><button id="expDelete"></button>
 </div></div>
 
+<!-- ===== 업무 선택 팝업 (지출↔업무 연결) ===== -->
+<div id="expV2WorkPickOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9500;display:none;align-items:flex-end;justify-content:center;font-family:inherit">
+  <div style="background:#fff;width:100%;max-width:540px;max-height:80vh;display:flex;flex-direction:column;border-radius:22px 22px 0 0;box-shadow:0 -4px 32px rgba(0,0,0,.18)">
+    <div style="padding:16px 18px 10px;border-bottom:1.5px solid #f0f6ff;flex-shrink:0">
+      <div style="font-size:16px;font-weight:800;color:#1a2f45;margin-bottom:10px">🔗 업무 선택</div>
+      <!-- 필터 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <select id="expV2WorkPickMonth" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45;width:100%;box-sizing:border-box">
+          <option value="">전체 월</option>
+        </select>
+        <input type="date" id="expV2WorkPickDate" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45;width:100%;box-sizing:border-box">
+      </div>
+      <input type="text" id="expV2WorkPickSearch" placeholder="🔍 업무 제목·분야·층 검색…" style="width:100%;box-sizing:border-box;height:40px;padding:0 14px;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f7faff">
+    </div>
+    <div id="expV2WorkPickList" style="overflow-y:auto;flex:1;padding:8px 14px"></div>
+    <div style="padding:12px 16px;border-top:1.5px solid #f0f6ff;flex-shrink:0">
+      <button id="expV2WorkPickCancel" style="width:100%;height:44px;border-radius:12px;border:2px solid #dbe6f4;background:#f7faff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;color:#7a92a8">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 새 지출 모달 (v44) ===== -->
 <div id="expV2Overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:none;align-items:flex-end;justify-content:center;font-family:inherit">
   <div id="expV2Sheet" style="background:#fff;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;border-radius:22px 22px 0 0;padding:20px 18px 36px;box-shadow:0 -4px 32px rgba(0,0,0,.18);border-top:3px solid #3f7cb8">
@@ -2244,6 +2265,24 @@
         </label>
       </div>
     </div>
+    <!-- 연결된 업무 -->
+    <div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <label style="font-size:11px;font-weight:700;color:#7a92a8">🔗 연결된 업무</label>
+        <button type="button" id="expV2WorkPickBtn" style="background:#f0f6ff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">+ 업무 선택</button>
+      </div>
+      <div id="expV2WorkLinkArea" style="display:none;padding:10px 12px;background:#f7faff;border:1.5px solid #e8f0fa;border-radius:10px">
+        <div id="expV2WorkLinkInfo" style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div id="expV2WorkLinkTitle" style="font-size:13px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+            <div id="expV2WorkLinkMeta" style="font-size:11px;color:#aab8c8;margin-top:2px"></div>
+          </div>
+          <button type="button" id="expV2WorkUnlink" style="background:#fde8e8;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit;flex-shrink:0">해제</button>
+        </div>
+      </div>
+      <div id="expV2WorkLinkEmpty" style="font-size:12px;color:#aab8c8;padding:4px 0">업무를 선택하면 연결돼요</div>
+    </div>
+
     <!-- 저장/삭제/취소 버튼 -->
     <div style="display:flex;gap:8px">
       <button type="button" id="expV2Del" style="flex:1;height:48px;border-radius:12px;border:none;background:#fde8e8;color:#b52929;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;display:none">🗑 삭제</button>
@@ -2511,8 +2550,16 @@
     if(name==='memo') setTimeout(()=>{ if(typeof renderStickyGrid==='function') renderStickyGrid(); }, 100);
     if(name==='main') setTimeout(()=>{ if(typeof v43Refresh==='function') v43Refresh(); }, 50);
     if(name==='expense') setTimeout(()=>{
-      renderExpV2List();
+      /* 이번 달로 기본 필터 */
+      var now = new Date();
+      var ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+      var mSel = document.getElementById('expV2MonthSel');
+      if(mSel && !mSel._initialized) {
+        mSel._initialized = true;
+        mSel.value = ym;
+      }
       renderExpV2Dashboard();
+      renderExpV2List();
       var ab=document.getElementById('btnAddExpenseV2');
       if(ab&&!ab._v2b){ab._v2b=true;ab.addEventListener('click',function(){window._openExpV2&&window._openExpV2(null);});}
     }, 50);
@@ -5935,7 +5982,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0622-1642';
+    if(el) el.textContent = 'v44-0622-1653';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -6384,8 +6431,171 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookOpenViewer,300); setTimeout(hookOpenViewer,800);
   setTimeout(hookOpenViewer,2000); setTimeout(hookOpenViewer,4000);
 
+  /* ── 업무↔지출 양방향 연결 ── */
+  var _linkedWorkId = null;
+
+  function setWorkLink(workId) {
+    _linkedWorkId = workId || null;
+    var area  = g('expV2WorkLinkArea');
+    var empty = g('expV2WorkLinkEmpty');
+    var titleEl = g('expV2WorkLinkTitle');
+    var metaEl  = g('expV2WorkLinkMeta');
+    if (!workId) {
+      if (area)  area.style.display  = 'none';
+      if (empty) empty.style.display = '';
+      return;
+    }
+    var work = typeof entries !== 'undefined' ? entries.find(function(e){ return e.id === workId; }) : null;
+    if (!work) { _linkedWorkId = null; return; }
+    if (area)  area.style.display  = '';
+    if (empty) empty.style.display = 'none';
+    if (titleEl) titleEl.textContent = work.title || '(제목없음)';
+    if (metaEl)  metaEl.textContent  = [work.date, work.floor, work.field, work.status].filter(Boolean).join(' · ');
+  }
+
+  function openWorkPick() {
+    var ov = g('expV2WorkPickOverlay'); if (!ov) return;
+    ov.style.display = 'flex';
+    buildWorkPickMonths();
+    renderWorkPickList();
+    var si = g('expV2WorkPickSearch'); if (si) { si.value = ''; si.focus(); }
+    var di = g('expV2WorkPickDate');   if (di) di.value = '';
+  }
+
+  function buildWorkPickMonths() {
+    var sel = g('expV2WorkPickMonth'); if (!sel) return;
+    var works = typeof entries !== 'undefined' ? entries.filter(function(e){ return e.kind === 'work'; }) : [];
+    var months = [...new Set(works.map(function(e){ return (e.date||'').slice(0,7); }).filter(Boolean))].sort().reverse();
+    sel.innerHTML = '<option value="">전체 월</option>' + months.map(function(m){
+      return '<option value="' + m + '">' + m + '</option>';
+    }).join('');
+  }
+
+  function renderWorkPickList() {
+    var list  = g('expV2WorkPickList'); if (!list) return;
+    var month = (g('expV2WorkPickMonth')||{value:''}).value || '';
+    var date  = (g('expV2WorkPickDate')||{value:''}).value  || '';
+    var q     = ((g('expV2WorkPickSearch')||{value:''}).value || '').trim().toLowerCase();
+    var works = typeof entries !== 'undefined' ? entries.filter(function(e){ return e.kind === 'work'; }) : [];
+    works = works.filter(function(e){
+      if (month && !(e.date||'').startsWith(month)) return false;
+      if (date  && e.date !== date) return false;
+      if (q) {
+        var text = [e.title, e.field, e.floor, e.loc, e.workVendor].filter(Boolean).join(' ').toLowerCase();
+        if (!text.includes(q)) return false;
+      }
+      return true;
+    }).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+
+    if (!works.length) {
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">조건에 맞는 업무가 없어요</div>';
+      return;
+    }
+    var STATUS_COLOR = {'완료':'#1a7a4a','진행중':'#a07000','미완료':'#b52929','보류':'#888'};
+    var STATUS_BG    = {'완료':'#e6f9f0','진행중':'#fff7e0','미완료':'#fde8e8','보류':'#f0f0f0'};
+    list.innerHTML = works.map(function(e){
+      var isLinked = e.id === _linkedWorkId;
+      var sc = STATUS_COLOR[e.status] || '#7a92a8';
+      var sb = STATUS_BG[e.status]    || '#f0f0f0';
+      return '<div data-wpid="' + esc(e.id) + '" style="display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid #f0f6ff;cursor:pointer;background:' + (isLinked?'#eaf1fb':'') + '">'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-size:14px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(e.title||'(제목없음)') + '</div>'
+        + '<div style="font-size:11px;color:#aab8c8;margin-top:3px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">'
+        + '<span>' + esc(e.date||'') + '</span>'
+        + (e.floor ? '<span>' + esc(e.floor) + '</span>' : '')
+        + (e.field ? '<span>' + esc(e.field) + '</span>' : '')
+        + (e.status ? '<span style="background:' + sb + ';color:' + sc + ';border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700">' + esc(e.status) + '</span>' : '')
+        + '</div></div>'
+        + (isLinked ? '<span style="font-size:18px">✅</span>' : '<span style="font-size:18px;color:#dbe6f4">○</span>')
+        + '</div>';
+    }).join('');
+    list.querySelectorAll('[data-wpid]').forEach(function(el){
+      el.addEventListener('mouseenter', function(){ if(el.dataset.wpid !== _linkedWorkId) el.style.background='#f7faff'; });
+      el.addEventListener('mouseleave', function(){ if(el.dataset.wpid !== _linkedWorkId) el.style.background=''; });
+      el.addEventListener('click', function(){
+        var newId = (el.dataset.wpid === _linkedWorkId) ? null : el.dataset.wpid;
+        setWorkLink(newId);
+        g('expV2WorkPickOverlay').style.display = 'none';
+        if (typeof toast === 'function') toast(newId ? '🔗 업무 연결됐어요' : '연결 해제됐어요');
+      });
+    });
+  }
+
+  /* openExpV2에서 workId 복원 */
+  var _origOpen = openExpV2;
+  openExpV2 = function(id) {
+    _origOpen(id);
+    var en = id && typeof entries !== 'undefined' ? entries.find(function(x){ return x.id===id; }) : null;
+    setTimeout(function(){ setWorkLink(en ? (en.workId||null) : null); }, 50);
+  };
+
+  /* saveExpV2 래핑 — workId 주입 */
+  var _origSave = saveExpV2;
+  saveExpV2 = function() {
+    var origAdd = window.addRecord;
+    var origUpd = window.updateRecord;
+    window.addRecord = function(obj) {
+      obj.workId = _linkedWorkId || null;
+      var r = origAdd(obj);
+      window.addRecord = origAdd;
+      if (_linkedWorkId && typeof renderExpLinkList === 'function')
+        setTimeout(function(){ renderExpLinkList(_linkedWorkId); }, 400);
+      return r;
+    };
+    window.updateRecord = function(id, obj) {
+      if (obj.workId === undefined) obj.workId = _linkedWorkId;
+      var r = origUpd(id, obj);
+      window.updateRecord = origUpd;
+      if (_linkedWorkId && typeof renderExpLinkList === 'function')
+        setTimeout(function(){ renderExpLinkList(_linkedWorkId); }, 400);
+      return r;
+    };
+    _origSave();
+  };
+
+  /* bind() 래핑 — 업무 선택 버튼 바인딩 */
+  var _origBind = bind;
+  bind = function() {
+    _origBind();
+    var wpBtn = g('expV2WorkPickBtn');
+    if (wpBtn&&!wpBtn._wp){ wpBtn._wp=true; wpBtn.addEventListener('click', openWorkPick); }
+    var wuBtn = g('expV2WorkUnlink');
+    if (wuBtn&&!wuBtn._wp){ wuBtn._wp=true; wuBtn.addEventListener('click', function(){ setWorkLink(null); if(typeof toast==='function') toast('연결 해제됐어요'); }); }
+    var wpCan = g('expV2WorkPickCancel');
+    if (wpCan&&!wpCan._wp){ wpCan._wp=true; wpCan.addEventListener('click', function(){ g('expV2WorkPickOverlay').style.display='none'; }); }
+    var wpOv = g('expV2WorkPickOverlay');
+    if (wpOv&&!wpOv._wp){ wpOv._wp=true; wpOv.addEventListener('click', function(e){ if(e.target===wpOv) wpOv.style.display='none'; }); }
+    ['expV2WorkPickMonth','expV2WorkPickDate','expV2WorkPickSearch'].forEach(function(fid){
+      var el=g(fid); if(el&&!el._wf){el._wf=true;el.addEventListener('input',renderWorkPickList);el.addEventListener('change',renderWorkPickList);}
+    });
+  };
+
+  /* 지출 목록 카드에 연결 업무 표시 래핑 */
+  var _origRenderList = window.renderExpV2List;
+  window.renderExpV2List = function() {
+    _origRenderList();
+    var box = g('expV2ListArea'); if (!box) return;
+    box.querySelectorAll('[data-expid]').forEach(function(cardBody){
+      var card = cardBody.closest ? cardBody.closest('[style*="border-left"]') : cardBody.parentElement;
+      if (!card) return;
+      var eid = cardBody.dataset.expid;
+      var en = typeof entries !== 'undefined' ? entries.find(function(x){ return x.id===eid; }) : null;
+      if (!en || !en.workId) return;
+      var work = typeof entries !== 'undefined' ? entries.find(function(x){ return x.id===en.workId; }) : null;
+      if (!work) return;
+      if (card.querySelector('.work-link-badge')) return;
+      var badge = document.createElement('div');
+      badge.className = 'work-link-badge';
+      badge.style.cssText = 'font-size:11px;color:#3f7cb8;margin-top:5px;padding-top:5px;border-top:1px solid #f0f6ff;display:flex;align-items:center;gap:4px;cursor:pointer';
+      badge.innerHTML = '🔗 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">' + esc(work.title||'') + '</span>'
+        + '<span style="font-size:10px;color:#aab8c8">' + esc(work.date||'') + '</span>';
+      badge.addEventListener('click', function(e){ e.stopPropagation(); if(typeof openViewer==='function') openViewer('work', work.id); });
+      card.appendChild(badge);
+    });
+  };
+
   window._openExpV2=openExpV2;
-  console.log('[expV2] v44-0622-1642 로드');
+  console.log('[expV2] v44-0622-1651 로드');
 })();
 </script>
   </body>
