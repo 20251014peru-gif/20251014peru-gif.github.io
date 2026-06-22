@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-1719</title>
+<title>업무일지 v44-0622-1731</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1719</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1731</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2149,7 +2149,7 @@
     <!-- 날짜 -->
     <div style="margin-bottom:12px">
       <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">날짜</label>
-      <input type="date" id="expV2Date" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+      <input type="date" id="expV2Date" name="exp_date" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
     </div>
 
     <!-- 정산종류 -->
@@ -2164,13 +2164,13 @@
     <!-- 업체명 -->
     <div style="margin-bottom:12px">
       <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">업체명</label>
-      <input type="text" id="expV2Vendor" placeholder="예: 성신철물, 서브원" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+      <input type="text" id="expV2Vendor" name="exp_vendor" autocomplete="on" placeholder="예: 성신철물, 서브원" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
     </div>
 
     <!-- 내역 -->
     <div style="margin-bottom:12px">
       <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">내역 *</label>
-      <input type="text" id="expV2TitleInput" placeholder="예: 형광등 교체, 엘리베이터 점검" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+      <input type="text" id="expV2TitleInput" name="exp_title" autocomplete="on" placeholder="예: 형광등 교체, 엘리베이터 점검" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
     </div>
 
     <!-- 용도 칩 -->
@@ -2245,7 +2245,7 @@
     <!-- 메모 -->
     <div style="margin-bottom:16px">
       <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">메모</label>
-      <input type="text" id="expV2Memo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+      <input type="text" id="expV2Memo" name="exp_memo" autocomplete="on" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
     </div>
 
     <!-- 전표 여부 + 세금계산서 발급여부 -->
@@ -5971,7 +5971,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0622-1719';
+    if(el) el.textContent = 'v44-0622-1731';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -6442,6 +6442,33 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var pmBtn=g('btnExpV2PurposeMgr'); if(pmBtn&&!pmBtn._b){pmBtn._b=true;pmBtn.addEventListener('click',openPurposeMgr);}
     // openExpenseEditor 교체
     window.openExpenseEditor=function(id){openExpV2(id);};
+
+    /* openExpenseFromWork 교체 — 업무 저장 후 지출 모달 자동 열기 */
+    window.openExpenseFromWork=function(info){
+      var w=info.workObj||{};
+      var expType=info.expType||'개인비용';
+      var isPersonal=expType==='개인비용';
+      _linkedWorkId=info.workId||null;
+      _editId=null; _matItems=[]; _mealItems=[]; _wasteItems=[]; _selPurpose=null;
+      _expType=isPersonal?'개인지출':'세금계산서';
+      if(isPersonal) _selPurpose='자재구매';
+      var ts=g('expV2TitleSpan'); if(ts) ts.textContent='지출 등록';
+      var delBtn=g('expV2Del'); if(delBtn) delBtn.style.display='none';
+      var dEl=g('expV2Date'); if(dEl) dEl.value=w.date||(new Date().toISOString().slice(0,10));
+      var vEl=g('expV2Vendor'); if(vEl) vEl.value=w.workVendor||'';
+      var tEl=g('expV2TitleInput'); if(tEl) tEl.value=w.title||'';
+      var mEl=g('expV2Memo'); if(mEl) mEl.value=w.workNote||((w.floor||'')+(w.field?' ['+w.field+']':''));
+      var aEl=g('expV2Amount'); if(aEl){aEl.value=0;aEl._manual=false;}
+      updateTypeBtns();
+      renderChips(); updateAreas();
+      renderMatList(); calcMatTotal();
+      renderMealList(); calcMealTotal();
+      renderWasteList(); calcWasteTotal();
+      setTimeout(function(){setWorkLink(info.workId||null);},50);
+      var ov=g('expV2Overlay'); if(ov) ov.style.display='flex';
+      var sh=g('expV2Sheet'); if(sh) sh.scrollTop=0;
+      if(typeof toast==='function') toast('💡 '+(isPersonal?'💸 개인비용':'📃 후불청구')+' 작성 — 업무 정보가 자동 입력됐어요');
+    };
     // btnAddExpense
     var addBtn=g('btnAddExpense'); if(addBtn&&!addBtn._x){addBtn._x=true;addBtn.addEventListener('click',function(){openExpV2(null);});}
   }
@@ -6593,21 +6620,23 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   };
 
   /* bind() 래핑 — 업무 선택 버튼 바인딩 */
-  var _origBind = bind;
-  bind = function() {
-    _origBind();
-    var wpBtn = g('expV2WorkPickBtn');
-    if (wpBtn&&!wpBtn._wp){ wpBtn._wp=true; wpBtn.addEventListener('click', openWorkPick); }
-    var wuBtn = g('expV2WorkUnlink');
-    if (wuBtn&&!wuBtn._wp){ wuBtn._wp=true; wuBtn.addEventListener('click', function(){ setWorkLink(null); if(typeof toast==='function') toast('연결 해제됐어요'); }); }
-    var wpCan = g('expV2WorkPickCancel');
-    if (wpCan&&!wpCan._wp){ wpCan._wp=true; wpCan.addEventListener('click', function(){ g('expV2WorkPickOverlay').style.display='none'; }); }
-    var wpOv = g('expV2WorkPickOverlay');
-    if (wpOv&&!wpOv._wp){ wpOv._wp=true; wpOv.addEventListener('click', function(e){ if(e.target===wpOv) wpOv.style.display='none'; }); }
+  /* 업무 선택 팝업 버튼 직접 바인딩 */
+  function bindWorkPick(){
+    var wpBtn=g('expV2WorkPickBtn');
+    if(wpBtn&&!wpBtn._wp){wpBtn._wp=true;wpBtn.addEventListener('click',openWorkPick);}
+    var wuBtn=g('expV2WorkUnlink');
+    if(wuBtn&&!wuBtn._wp){wuBtn._wp=true;wuBtn.addEventListener('click',function(){setWorkLink(null);if(typeof toast==='function')toast('연결 해제됐어요');});}
+    var wpCan=g('expV2WorkPickCancel');
+    if(wpCan&&!wpCan._wp){wpCan._wp=true;wpCan.addEventListener('click',function(){g('expV2WorkPickOverlay').style.display='none';});}
+    var wpOv=g('expV2WorkPickOverlay');
+    if(wpOv&&!wpOv._wp){wpOv._wp=true;wpOv.addEventListener('click',function(e){if(e.target===wpOv)wpOv.style.display='none';});}
     ['expV2WorkPickMonth','expV2WorkPickDate','expV2WorkPickSearch'].forEach(function(fid){
-      var el=g(fid); if(el&&!el._wf){el._wf=true;el.addEventListener('input',renderWorkPickList);el.addEventListener('change',renderWorkPickList);}
+      var el=g(fid);if(el&&!el._wf){el._wf=true;el.addEventListener('input',renderWorkPickList);el.addEventListener('change',renderWorkPickList);}
     });
-  };
+  }
+  setTimeout(bindWorkPick,500);
+  setTimeout(bindWorkPick,1500);
+  setTimeout(bindWorkPick,3000);
 
   /* 지출 목록 카드에 연결 업무 표시 래핑 */
   var _origRenderList = window.renderExpV2List;
@@ -6632,6 +6661,18 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       card.appendChild(badge);
     });
   };
+
+  /* 모든 모달 input autocomplete 통일 */
+  function applyAutocompleteToModals(){
+    document.querySelectorAll('.overlay .modal, #expV2Sheet, .v43-cat-sheet').forEach(function(modal){
+      modal.querySelectorAll('input[type=text], input[type=tel], textarea').forEach(function(inp){
+        if(!inp.getAttribute('autocomplete')) inp.setAttribute('autocomplete','on');
+        if(!inp.name && inp.id) inp.name = inp.id;
+      });
+    });
+  }
+  setTimeout(applyAutocompleteToModals, 1000);
+  setTimeout(applyAutocompleteToModals, 3000);
 
   window._openExpV2=openExpV2;
   console.log('[expV2] v44-0622-1651 로드');
