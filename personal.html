@@ -37,6 +37,9 @@ header{background:var(--white);border-bottom:1.5px solid var(--blue-bd);position
 .nav-btn:hover{border-color:var(--blue);color:var(--blue)}
 .nav-home{background:var(--blue-lt);color:var(--blue);border-color:var(--blue)}
 
+/* ===== 날짜 필터 입력 ===== */
+.date-filter-row input[type=date]{height:36px;padding:0 8px;border:2px solid var(--blue-bd);border-radius:10px;font-size:12px;font-family:inherit;width:130px;flex-shrink:0;box-sizing:border-box;background:var(--white);color:var(--ink)}
+
 /* ===== 검색바 ===== */
 .v43-search-wrap{position:relative;margin:6px 0 8px}
 .v43-search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none;z-index:1}
@@ -44,8 +47,8 @@ header{background:var(--white);border-bottom:1.5px solid var(--blue-bd);position
 .v43-search:focus{background:var(--white);box-shadow:0 2px 16px rgba(63,124,184,.25)}
 
 /* ===== 탭 ===== */
-.v43-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:8px 0 6px}
-.v43-tab{flex:0 0 auto;padding:7px 14px;border-radius:10px;border:2px solid var(--blue-bd);background:var(--white);font-size:13px;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit;transition:all .15s;touch-action:manipulation;white-space:nowrap}
+.v43-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 0 0}
+.v43-tab{flex:0 0 auto;padding:7px 13px;height:36px;box-sizing:border-box;border-radius:10px;border:2px solid var(--blue-bd);background:var(--white);font-size:13px;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit;transition:all .15s;touch-action:manipulation;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
 .v43-tab:hover{border-color:var(--blue);color:var(--blue)}
 .v43-tab.active{background:var(--blue);border-color:var(--blue);color:var(--white)}
 
@@ -153,24 +156,24 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 /* ===== 드롭다운 필터 ===== */
 .cat-select-wrap{display:flex;gap:8px;align-items:center;padding:10px 0 6px}
 .cat-select{flex:1;height:44px;padding:0 14px;border:2.5px solid var(--blue);border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;background:var(--blue-lt);color:var(--ink);cursor:pointer;outline:none;box-shadow:0 2px 12px rgba(63,124,184,.15)}
-.date-filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-.date-filter-row input{height:40px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box}
-.filter-tool-row{display:flex;align-items:center;margin-bottom:10px;gap:8px}
-.filter-clear-btn{height:34px;padding:0 12px;border:1.5px solid var(--blue-bd);border-radius:10px;font-size:13px;font-family:inherit;background:var(--white);cursor:pointer;color:var(--ink-soft);font-weight:600}
+.date-filter-row{display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:nowrap}
+.date-filter-row .date-sep{font-size:12px;color:var(--ink-faint);flex-shrink:0}
+.filter-tool-row{display:flex;align-items:center;margin-bottom:10px;gap:6px}
+.filter-clear-btn{height:36px;padding:0 13px;border:2px solid var(--blue-bd);border-radius:10px;font-size:13px;font-family:inherit;background:var(--white);cursor:pointer;color:var(--ink-soft);font-weight:700;display:inline-flex;align-items:center;white-space:nowrap;flex-shrink:0}
 .list-count{font-size:12px;color:var(--ink-faint);margin-left:auto}
 
 /* ===== 기록 탭 카드 필터 ===== */
-.main-filter-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 12px}
-.main-filter-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 8px;border-radius:16px;border:2px solid var(--blue-bd);background:#f7faff;cursor:pointer;font-family:inherit;transition:all .18s;touch-action:manipulation;position:relative}
-.main-filter-card:hover{border-color:var(--blue);background:var(--blue-lt);transform:translateY(-2px);box-shadow:0 4px 14px rgba(63,124,184,.15)}
-.main-filter-card.active{border-color:var(--blue);background:var(--blue-lt);box-shadow:0 4px 14px rgba(63,124,184,.18)}
-.main-filter-card .mfc-icon{font-size:28px;line-height:1}
-.main-filter-card .mfc-label{font-size:13px;font-weight:700;color:#33567d}
-.main-filter-card .mfc-count{position:absolute;top:6px;right:8px;font-size:10px;font-weight:800;color:var(--blue);opacity:.7}
-.main-filter-card.active .mfc-label{color:var(--blue)}
-.main-filter-all{grid-column:1/-1;flex-direction:row;padding:10px 16px;gap:10px;justify-content:flex-start}
-.main-filter-all .mfc-icon{font-size:18px}
-.main-filter-all .mfc-label{font-size:14px}
+.main-filter-grid{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 10px;padding:0}
+.main-filter-card{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;height:36px;box-sizing:border-box;
+  border-radius:10px;border:2px solid #f0c040;background:#fffbe6;
+  cursor:pointer;font-family:inherit;transition:all .15s;touch-action:manipulation;
+  font-size:13px;font-weight:700;color:#7a5c00;white-space:nowrap;flex-shrink:0}
+.main-filter-card:hover{border-color:#e0a800;background:#fff3cc;transform:translateY(-1px)}
+.main-filter-card.active{border-color:#e0a800;background:#f5c800;color:#3a2e00;box-shadow:0 2px 8px rgba(224,168,0,.35)}
+.main-filter-card .mfc-icon{font-size:15px;line-height:1}
+.main-filter-card .mfc-label{font-size:13px;font-weight:700}
+.main-filter-card .mfc-count{font-size:11px;font-weight:800;background:rgba(0,0,0,.1);color:inherit;padding:1px 5px;border-radius:8px;margin-left:1px}
+.main-filter-card.active .mfc-count{background:rgba(0,0,0,.15)}
 
 /* ===== 기록 탭 카드 필터 ===== */
 .sticky-input-wrap{background:#fff9c4;border-radius:16px;padding:14px;box-shadow:0 3px 14px rgba(0,0,0,.1);border:1.5px solid #f0e060;transition:background .2s,border-color .2s;margin-bottom:14px}
@@ -386,18 +389,18 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ===== 잠금 화면 ===== */
 #lockScreen{position:fixed;inset:0;background:linear-gradient(135deg,#1a2f45 0%,#2563a8 100%);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column}
-.lock-box{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);border-radius:24px;padding:32px 28px;width:90%;max-width:340px;text-align:center;backdrop-filter:blur(10px)}
+.lock-box{background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);border-radius:24px;padding:28px 20px 24px;width:92%;max-width:360px;text-align:center;backdrop-filter:blur(10px);overflow:visible;box-sizing:border-box}
 .lock-ico{font-size:48px;margin-bottom:12px}
 .lock-title{font-size:20px;font-weight:800;color:#fff;margin-bottom:4px}
 .lock-sub{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:20px}
-.pin-dots{display:flex;justify-content:center;gap:12px;margin-bottom:20px}
+.pin-dots{display:flex;justify-content:center;gap:12px;margin-bottom:24px}
 .pin-dot{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);border:2px solid rgba(255,255,255,.5);transition:all .15s}
 .pin-dot.filled{background:#fff;border-color:#fff}
-.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.pin-key{height:58px;border-radius:14px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.25);color:#fff;font-size:20px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;touch-action:manipulation}
-.pin-key:hover{background:rgba(255,255,255,.25)}
-.pin-key:active{transform:scale(.93)}
-.lock-msg{font-size:13px;color:#ff8888;min-height:18px;margin-top:10px}
+.pin-pad{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:10px!important;width:100%!important;box-sizing:border-box!important;visibility:visible!important;overflow:visible!important}
+.pin-key{height:60px!important;width:100%!important;min-height:60px!important;border-radius:14px!important;background:rgba(255,255,255,.15)!important;border:1.5px solid rgba(255,255,255,.25)!important;color:#fff!important;font-size:22px!important;font-weight:700!important;cursor:pointer!important;font-family:inherit!important;transition:all .15s!important;touch-action:manipulation!important;box-sizing:border-box!important;display:block!important;visibility:visible!important}
+.pin-key:hover{background:rgba(255,255,255,.28)}
+.pin-key:active{transform:scale(.93);background:rgba(255,255,255,.35)}
+.lock-msg{font-size:13px;color:#ff8888;min-height:18px;margin-top:12px}
 
 /* 급한 메모 */
 .quick-memo-side{position:fixed;right:-360px;top:0;width:340px;height:100vh;background:var(--white);border-left:2px solid var(--blue-bd);box-shadow:-4px 0 24px rgba(0,0,0,.12);z-index:8000;display:flex;flex-direction:column;transition:right .25s cubic-bezier(.34,1.56,.64,1);padding:0}
@@ -416,14 +419,20 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 <body>
 
 <!-- 잠금 화면 -->
-<div id="lockScreen">
-  <div class="lock-box">
-    <div class="lock-ico">🔒</div>
-    <div class="lock-title">개인일지</div>
-    <div class="lock-sub">PIN 6자리를 입력하세요</div>
-    <div class="pin-dots" id="pinDots"></div>
-    <div class="pin-pad" id="pinPad"></div>
-    <div class="lock-msg" id="lockMsg"></div>
+<div id="lockScreen" style="position:fixed;inset:0;background:linear-gradient(135deg,#1a2f45 0%,#2563a8 100%);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column">
+  <div style="background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);border-radius:24px;padding:28px 20px 24px;width:92%;max-width:340px;text-align:center;box-sizing:border-box">
+    <div style="font-size:48px;margin-bottom:12px">🔒</div>
+    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px">개인일지</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:20px">PIN 6자리를 입력하세요</div>
+    <div id="pinDots" style="display:flex;justify-content:center;gap:12px;margin-bottom:20px"></div>
+    <div id="pinPad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;box-sizing:border-box"></div>
+    <div id="lockMsg" style="font-size:13px;color:#ff8888;min-height:18px;margin-top:10px"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
+      <button onclick="(function(){localStorage.setItem('shared_pin','102800');location.reload();})()"
+        style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer;font-family:inherit">PIN 초기화(102800)</button>
+      <button onclick="(function(){const ls=document.getElementById('lockScreen');if(ls)ls.style.display='none';loadEntries();loadFiles();loadPasswords();loadManualContacts();})()"
+        style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer;font-family:inherit">잠금 해제</button>
+    </div>
   </div>
 </div>
 
@@ -491,8 +500,8 @@ main.wrap{padding-bottom:100px;padding-top:12px}
     </div>
     <!-- 탭 -->
     <div class="v43-tabs" id="mainTabs">
-      <button class="v43-tab" data-tab="main">📋 기록</button>
       <button class="v43-tab active" data-tab="memo">📝 메모</button>
+      <button class="v43-tab" data-tab="main">📋 기록</button>
       <button class="v43-tab" data-tab="scan">📸 스캔</button>
       <button class="v43-tab" data-tab="car">🚗 차계부</button>
       <button class="v43-tab" data-tab="contacts">📞 연락처</button>
@@ -511,52 +520,35 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 <div class="v43-panel" id="panel-main">
   <!-- 카드 필터 -->
   <div class="main-filter-grid" id="mainFilterGrid">
-    <button class="main-filter-card main-filter-all active" data-kind="all">
-      <span class="mfc-icon">🔵</span>
-      <span class="mfc-label">전체</span>
-      <span class="mfc-count" id="mfc-count-all"></span>
+    <button class="main-filter-card active" data-kind="all">
+      <span class="mfc-icon">🔵</span><span class="mfc-label">전체</span><span class="mfc-count" id="mfc-count-all"></span>
     </button>
     <button class="main-filter-card" data-kind="purchase">
-      <span class="mfc-icon">🛒</span>
-      <span class="mfc-label">구매</span>
-      <span class="mfc-count" id="mfc-count-purchase"></span>
+      <span class="mfc-icon">🛒</span><span class="mfc-label">구매</span><span class="mfc-count" id="mfc-count-purchase"></span>
     </button>
     <button class="main-filter-card" data-kind="health">
-      <span class="mfc-icon">🏥</span>
-      <span class="mfc-label">건강</span>
-      <span class="mfc-count" id="mfc-count-health"></span>
+      <span class="mfc-icon">🏥</span><span class="mfc-label">건강</span><span class="mfc-count" id="mfc-count-health"></span>
     </button>
     <button class="main-filter-card" data-kind="restaurant">
-      <span class="mfc-icon">🍽</span>
-      <span class="mfc-label">맛집</span>
-      <span class="mfc-count" id="mfc-count-restaurant"></span>
+      <span class="mfc-icon">🍽</span><span class="mfc-label">맛집</span><span class="mfc-count" id="mfc-count-restaurant"></span>
     </button>
     <button class="main-filter-card" data-kind="diary">
-      <span class="mfc-icon">📔</span>
-      <span class="mfc-label">일상</span>
-      <span class="mfc-count" id="mfc-count-diary"></span>
+      <span class="mfc-icon">📔</span><span class="mfc-label">일상</span><span class="mfc-count" id="mfc-count-diary"></span>
     </button>
     <button class="main-filter-card" data-kind="thought">
-      <span class="mfc-icon">💭</span>
-      <span class="mfc-label">생각</span>
-      <span class="mfc-count" id="mfc-count-thought"></span>
+      <span class="mfc-icon">💭</span><span class="mfc-label">생각</span><span class="mfc-count" id="mfc-count-thought"></span>
     </button>
     <button class="main-filter-card" data-kind="reading">
-      <span class="mfc-icon">📚</span>
-      <span class="mfc-label">독서</span>
-      <span class="mfc-count" id="mfc-count-reading"></span>
+      <span class="mfc-icon">📚</span><span class="mfc-label">독서</span><span class="mfc-count" id="mfc-count-reading"></span>
     </button>
     <button class="main-filter-card" data-kind="other">
-      <span class="mfc-icon">📎</span>
-      <span class="mfc-label">기타</span>
-      <span class="mfc-count" id="mfc-count-other"></span>
+      <span class="mfc-icon">📎</span><span class="mfc-label">기타</span><span class="mfc-count" id="mfc-count-other"></span>
     </button>
   </div>
   <div class="date-filter-row">
     <input type="date" id="mainFrom">
+    <span class="date-sep">~</span>
     <input type="date" id="mainTo">
-  </div>
-  <div class="filter-tool-row">
     <button class="filter-clear-btn" id="mainDateClear">기간 해제</button>
     <span class="list-count" id="mainCount"></span>
   </div>
@@ -1127,7 +1119,7 @@ function deleteEntry(id){
     el.innerHTML='';
     for(let i=0;i<6;i++){
       const d=document.createElement('div');
-      d.className='pin-dot'+(i<buf.length?' filled':'');
+      d.style.cssText='width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.5);display:inline-block;transition:all .15s;'+(i<buf.length?'background:#fff;border-color:#fff':'background:rgba(255,255,255,.3)');
       el.appendChild(d);
     }
   }
@@ -1138,8 +1130,12 @@ function deleteEntry(id){
     const keys=['1','2','3','4','5','6','7','8','9','','0','⌫'];
     keys.forEach(k=>{
       const btn=document.createElement('button');
-      btn.className='pin-key';btn.textContent=k||'';
-      if(!k) btn.style.background='transparent';
+      btn.textContent=k||'';
+      btn.style.cssText=k
+        ?'height:58px;width:100%;border-radius:14px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.25);color:#fff;font-size:22px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;touch-action:manipulation;box-sizing:border-box'
+        :'height:58px;width:100%;border:none;background:transparent;cursor:default';
+      btn.addEventListener('pointerdown',()=>{if(k&&k!=='⌫') btn.style.background='rgba(255,255,255,.35)';});
+      btn.addEventListener('pointerup',()=>{if(k&&k!=='⌫') btn.style.background='rgba(255,255,255,.15)';});
       btn.addEventListener('click',()=>{
         if(!k) return;
         if(k==='⌫'){buf=buf.slice(0,-1);}
@@ -1465,11 +1461,11 @@ function buildFields(kind,en){
     html+=`<div style="font-size:12px;font-weight:800;color:var(--blue);margin:10px 0 10px;padding:6px 10px;background:var(--blue-lt);border-radius:8px">🕐 운영 정보</div>`;
     html+=`<div class="field-row">
       <div class="field"><label>오픈 시간</label>
-        <input type="time" id="rf-openTime" value="${(()=>{try{return '';}catch{return '';}})()}"
+        <input type="time" id="rf-openTime" value="${(()= step="300">{try{return '';}catch{return '';}})()}"
           style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
       </div>
       <div class="field"><label>클로즈 시간</label>
-        <input type="time" id="rf-closeTime"
+        <input type="time" step="300" id="rf-closeTime"
           style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
       </div>
     </div>`;
@@ -2577,11 +2573,11 @@ function carShopInfoHtml(en,label){
   </div>
   <div class="field-row">
     <div class="field"><label>오픈 시간</label>
-      <input type="time" id="rf-shopOpenTime" value="${esc(en.shopOpenTime||'')}"
+      <input type="time" step="300" id="rf-shopOpenTime" value="${esc(en.shopOpenTime||'')}"
         style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;box-sizing:border-box">
     </div>
     <div class="field"><label>클로즈 시간</label>
-      <input type="time" id="rf-shopCloseTime" value="${esc(en.shopCloseTime||'')}"
+      <input type="time" step="300" id="rf-shopCloseTime" value="${esc(en.shopCloseTime||'')}"
         style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;box-sizing:border-box">
     </div>
   </div>
