@@ -681,6 +681,31 @@
       +'<div style="display:flex;gap:8px"><button id="expV6Del" style="flex:1;height:48px;border-radius:12px;border:none;background:#fde8e8;color:#b52929;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button><button id="expV6Save" style="flex:2;height:48px;border-radius:12px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button></div>'
       +'</div>';
     document.body.appendChild(div);
+
+    /* 체크박스 스타일 인라인 주입 — sn-edit-body가 overlay 밖이라 CSS 미적용 문제 해결 */
+    if (!document.getElementById('v44ChecklistStyle')) {
+      var st = document.createElement('style');
+      st.id = 'v44ChecklistStyle';
+      st.textContent = [
+        '#stickyV44EditBody .checklist-row{display:flex;align-items:flex-start;gap:8px;padding:3px 0;min-height:26px}',
+        '#stickyV44EditBody .checklist-cb{flex:0 0 20px;width:20px;height:20px;border:1.5px solid #888;border-radius:4px;',
+          'background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;',
+          'font-size:14px;font-weight:700;color:transparent;flex-shrink:0;user-select:none;margin-top:2px}',
+        '#stickyV44EditBody .checklist-row.done .checklist-cb{background:#3f7cb8;border-color:#3f7cb8;color:#fff}',
+        '#stickyV44EditBody .checklist-cb::before{content:""}',
+        '#stickyV44EditBody .checklist-row.done .checklist-cb::before{content:"✓"}',
+        '#stickyV44EditBody .checklist-text{flex:1;outline:none;line-height:1.5;font-size:14px;',
+          'word-break:break-word;min-height:20px}',
+        '#stickyV44EditBody .checklist-row.done .checklist-text{text-decoration:line-through;color:#999}',
+        '#stickyV44EditBody .checklist-done-section{margin-top:6px;padding-top:6px;border-top:1px dashed #dbe6f4}',
+        '#stickyV44EditBody .checklist-done-toggle{display:flex;align-items:center;gap:4px;cursor:pointer;',
+          'font-size:12px;color:#7a8fa8;padding:4px 2px;user-select:none}',
+        '#stickyV44EditBody .checklist-done-list{display:none}',
+        '#stickyV44EditBody .checklist-done-section.expanded .checklist-done-list{display:block}',
+      ].join('');
+      document.head.appendChild(st);
+    }
+
     bindModalEvents();
   }
 
