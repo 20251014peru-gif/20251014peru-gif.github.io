@@ -1408,6 +1408,22 @@
     /* openExpenseEditor 교체 */
     window.openExpenseEditor = function(id) { open(id, null); };
 
+    /* 지출 탭은 worklog.html에 이미 있으므로 동적 추가 안 함 */
+    /* panel-expense — 기존 버튼만 교체 (패널은 worklog.html에 이미 있음) */
+    var existPanel = document.getElementById('panel-expense');
+    if (existPanel) {
+      /* btnAddExpense 버튼을 새 open() 로 교체 */
+      var addBtn = document.getElementById('btnAddExpense');
+      if (addBtn) {
+        var newBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newBtn, addBtn);
+        newBtn.addEventListener('click', function(){ open(null, null); });
+      }
+      /* btnAddExpV6 도 연결 (혹시 있으면) */
+      var addBtn2 = document.getElementById('btnAddExpV6');
+      if (addBtn2) addBtn2.addEventListener('click', function(){ open(null, null); });
+    }
+
     /* openExpenseFromWork 교체 */
     window.openExpenseFromWork = function(info) {
       var w = info.workObj||{};
