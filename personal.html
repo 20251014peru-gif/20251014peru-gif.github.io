@@ -627,7 +627,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
     <div style="font-size:12px;color:var(--ink-soft)">영수증·맛집·차량·명함·처방전 — AI가 자동 분석</div>
     <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
       <label onclick="event.stopPropagation()" style="padding:8px 16px;background:var(--blue);color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
-        📷 카메라<input type="file" id="scanCamInp" accept="image/*" capture="environment" style="display:none" onchange="handleScanFiles(this.files);this.value=''">
+        📷 카메라<input type="file" id="scanCamInp" accept="image/*" capture="environment" style="display:none" onchange="handleScanCameraShot(this.files);this.value=''">
       </label>
       <label onclick="event.stopPropagation()" style="padding:8px 16px;background:var(--white);color:var(--blue);border:1.5px solid var(--blue);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
         🖼 갤러리<input type="file" id="scanFileInp" accept="image/*" multiple style="display:none" onchange="handleScanFiles(this.files);this.value=''">
@@ -3306,7 +3306,7 @@ window.showImg=function(src){g('imgFull').src=src;g('imgOverlay').classList.add(
     else{el.textContent='🔑 AI 키 없음 — 우측 상단 [AI키] 버튼에서 먼저 설정해주세요';el.style.color='#e74c3c';}
   }
 
-  // 파일 처리
+  // 파일 처리 (갤러리/드래그)
   window.handleScanFiles=async function(files){
     for(const f of [...files]){
       if(!f.type.startsWith('image/')) continue;
@@ -3318,6 +3318,64 @@ window.showImg=function(src){g('imgFull').src=src;g('imgOverlay').classList.add(
     }
     renderScanPreviews();
     g('scanAnalyzeWrap').style.display=scanImages.length?'':'none';
+  };
+
+  // 📷 카메라 사진 → 바로 크롭 모달
+  window.handleScanCameraShot = async function(files){
+    if(!files || !files.length) return;
+    const f = files[0];
+    if(!f.type.startsWith('image/')) return;
+    try{
+      const base64 = await compressImg(f);
+      const mediaType = base64.split(';')[0].split(':')[1];
+      scanImages.push({base64, mediaType, name: f.name || 'camera'});
+      renderScanPreviews();
+      g('scanAnalyzeWrap').style.display = scanImages.length ? '' : 'none';
+      // 바로 크롭 모달 열기 (방금 추가한 이미지로)
+      openCropForPreview(scanImages.length - 1);
+    }catch(e){dbg('camera shot err:' + e);}
+  };
+
+  // 미리보기 이미지를 크롭 모달에 띄우기 (재분석은 X, 단순히 크롭만)
+  window.openCropForPreview = function(imgIdx){
+    const item = scanImages[imgIdx];
+    if(!item) return;
+    cropState.idx = -1;           // 결과카드 아님을 표시
+    cropState.previewIdx = imgIdx; // 미리보기 인덱스 저장
+    const ov = document.getElementById('cropOverlay');
+    ov.style.display = 'flex';
+    const canvas = document.getElementById('cropCanvas');
+    const ctx = canvas.getContext('2d');
+    cropState.canvas = canvas;
+    cropState.ctx = ctx;
+    const img = new Image();
+    img.onload = function(){
+      cropState.img = img;
+      const maxW = Math.min(window.innerWidth * 0.92, 1200);
+      const maxH = window.innerHeight * 0.72;
+      let cw = img.width, ch = img.height;
+      const ratio = Math.min(maxW / cw, maxH / ch, 1);
+      cw = Math.round(cw * ratio);
+      ch = Math.round(ch * ratio);
+      cropState.scale = ratio;
+      canvas.width = cw;
+      canvas.height = ch;
+      const m = Math.min(cw, ch) * 0.05;
+      cropState.points = [
+        {x: m, y: m}, {x: cw - m, y: m},
+        {x: cw - m, y: ch - m}, {x: m, y: ch - m},
+      ];
+      drawCrop();
+      // 자동으로 AI 자동감지 트리거 (선택)
+      const status = document.getElementById('cropStatus');
+      if(status){
+        status.textContent = '📷 사진 촬영 완료! 영수증 영역을 조정하거나 🤖 AI 자동감지를 누르세요';
+        status.style.color = '#7fffb2';
+        status.style.display = 'block';
+        setTimeout(() => { status.style.display = 'none'; status.style.color = '#ffd788'; }, 4000);
+      }
+    };
+    img.src = item.base64;
   };
 
   window.scanPasteFromClipboard=async function(){
@@ -3843,7 +3901,8 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
 
   /* ==================== ✂️ 사진 크롭 (영수증만 잘라내기) ==================== */
   let cropState = {
-    idx: -1,           // 어느 스캔 카드인지
+    idx: -1,           // 어느 스캔 카드인지 (결과카드 모드)
+    previewIdx: -1,    // scanImages 인덱스 (촬영 직후 미리보기 모드)
     img: null,         // Image 객체
     canvas: null,
     ctx: null,
@@ -3857,6 +3916,7 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
     const parsed = scanResultCards[idx];
     if(!parsed || !parsed._imgBase64){ toast('이미지를 찾을 수 없어요'); return; }
     cropState.idx = idx;
+    cropState.previewIdx = -1;  // 결과카드 모드
     const ov = document.getElementById('cropOverlay');
     ov.style.display = 'flex';
 
@@ -3917,7 +3977,39 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
     for(let i = 1; i < 4; i++) ctx.lineTo(points[i].x, points[i].y);
     ctx.closePath();
     ctx.stroke();
-    // 핸들
+
+    // ⭐ 변 중간 핸들 (4개) - 막대 모양
+    for(let i = 0; i < 4; i++){
+      const p1 = points[i], p2 = points[(i + 1) % 4];
+      const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+      // 변의 방향 벡터 → 수직 막대
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy);
+      if(len < 1) continue;
+      const ux = dx / len, uy = dy / len;
+      // 막대: 변 방향으로 길게, 두께 얇게
+      const barLen = 28, barW = 10;
+      ctx.save();
+      ctx.translate(mx, my);
+      ctx.rotate(Math.atan2(dy, dx));
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#27ae60';
+      ctx.lineWidth = 2.5;
+      // 모서리 둥근 막대
+      const r = barW / 2;
+      ctx.beginPath();
+      ctx.moveTo(-barLen/2 + r, -barW/2);
+      ctx.lineTo(barLen/2 - r, -barW/2);
+      ctx.arc(barLen/2 - r, 0, r, -Math.PI/2, Math.PI/2);
+      ctx.lineTo(-barLen/2 + r, barW/2);
+      ctx.arc(-barLen/2 + r, 0, r, Math.PI/2, -Math.PI/2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 모서리 핸들 (4개)
     points.forEach((p, i) => {
       ctx.fillStyle = '#fff';
       ctx.strokeStyle = '#27ae60';
@@ -3948,26 +4040,85 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
     const canvas = cropState.canvas;
     if(!canvas) return;
 
+    // dragIdx 의미:
+    //  0~3 = 모서리 점 인덱스
+    //  10~13 = 변 핸들 (10=상변[p0-p1], 11=우변[p1-p2], 12=하변[p2-p3], 13=좌변[p3-p0])
+    //  -1 = 안 잡힘
+    let dragStart = null;     // 시작 시 마우스 좌표
+    let edgeStartPts = null;  // 시작 시 변의 두 점 좌표 (변 드래그용)
+
     function start(e){
       e.preventDefault();
       const pos = getCanvasPos(e);
       cropState.dragIdx = -1;
-      cropState.points.forEach((p, i) => {
+      dragStart = pos;
+
+      // 1) 모서리 핸들 먼저 검사 (우선순위)
+      for(let i = 0; i < 4; i++){
+        const p = cropState.points[i];
         const dx = p.x - pos.x, dy = p.y - pos.y;
-        if(Math.sqrt(dx*dx + dy*dy) < cropState.HANDLE_R + 12) cropState.dragIdx = i;
-      });
+        if(Math.sqrt(dx*dx + dy*dy) < cropState.HANDLE_R + 14){
+          cropState.dragIdx = i;
+          return;
+        }
+      }
+
+      // 2) 변 핸들 검사 (변 중점 근처 클릭)
+      for(let i = 0; i < 4; i++){
+        const p1 = cropState.points[i];
+        const p2 = cropState.points[(i + 1) % 4];
+        const mx = (p1.x + p2.x) / 2;
+        const my = (p1.y + p2.y) / 2;
+        const dx = mx - pos.x, dy = my - pos.y;
+        if(Math.sqrt(dx*dx + dy*dy) < 22){
+          cropState.dragIdx = 10 + i;
+          // 시작 시 변의 두 점 좌표 저장 (이동 기준점)
+          edgeStartPts = {
+            p1: {x: p1.x, y: p1.y},
+            p2: {x: p2.x, y: p2.y},
+          };
+          return;
+        }
+      }
     }
+
     function move(e){
       if(cropState.dragIdx < 0) return;
       e.preventDefault();
       const pos = getCanvasPos(e);
-      cropState.points[cropState.dragIdx] = {
-        x: Math.max(0, Math.min(cropState.canvas.width, pos.x)),
-        y: Math.max(0, Math.min(cropState.canvas.height, pos.y)),
-      };
+
+      if(cropState.dragIdx < 4){
+        // 모서리 1점만 이동
+        cropState.points[cropState.dragIdx] = {
+          x: Math.max(0, Math.min(cropState.canvas.width, pos.x)),
+          y: Math.max(0, Math.min(cropState.canvas.height, pos.y)),
+        };
+      } else if(cropState.dragIdx >= 10 && cropState.dragIdx <= 13 && edgeStartPts){
+        // 변 핸들 - 변의 두 점을 같이 이동 (변 수직 방향으로 이동)
+        const edgeIdx = cropState.dragIdx - 10;
+        const i1 = edgeIdx, i2 = (edgeIdx + 1) % 4;
+        const dx = pos.x - dragStart.x;
+        const dy = pos.y - dragStart.y;
+        // 두 점 모두 같은 방향으로 이동
+        const newP1 = {
+          x: Math.max(0, Math.min(cropState.canvas.width, edgeStartPts.p1.x + dx)),
+          y: Math.max(0, Math.min(cropState.canvas.height, edgeStartPts.p1.y + dy)),
+        };
+        const newP2 = {
+          x: Math.max(0, Math.min(cropState.canvas.width, edgeStartPts.p2.x + dx)),
+          y: Math.max(0, Math.min(cropState.canvas.height, edgeStartPts.p2.y + dy)),
+        };
+        cropState.points[i1] = newP1;
+        cropState.points[i2] = newP2;
+      }
       drawCrop();
     }
-    function end(){ cropState.dragIdx = -1; }
+
+    function end(){
+      cropState.dragIdx = -1;
+      dragStart = null;
+      edgeStartPts = null;
+    }
 
     canvas.onmousedown = start;
     canvas.onmousemove = move;
@@ -3990,6 +4141,8 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
   const cropClose = document.getElementById('cropClose');
   if(cropClose) cropClose.onclick = () => {
     document.getElementById('cropOverlay').style.display = 'none';
+    cropState.idx = -1;
+    cropState.previewIdx = -1;
   };
   const cropReset = document.getElementById('cropReset');
   if(cropReset) cropReset.onclick = () => {
@@ -4096,7 +4249,9 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
   // ✅ 적용 — 4점 영역만 잘라서 원근 보정
   const cropApply = document.getElementById('cropApply');
   if(cropApply) cropApply.onclick = async () => {
-    if(!cropState.img || cropState.idx < 0) return;
+    if(!cropState.img) return;
+    // 둘 중 하나는 활성: 결과카드(idx>=0) 또는 미리보기(previewIdx>=0)
+    if(cropState.idx < 0 && (cropState.previewIdx == null || cropState.previewIdx < 0)) return;
     const status = document.getElementById('cropStatus');
     status.textContent = '✂️ 영수증을 잘라내고 보정 중…';
     status.style.display = 'block';
@@ -4121,9 +4276,6 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
       out.height = outH;
       const octx = out.getContext('2d');
 
-      // 간단한 원근 보정: scanline 단위로 4점 보간
-      // 정확한 perspective transform은 4x4 매트릭스 필요하지만,
-      // 영수증은 거의 직사각이라 bilinear interpolation으로 충분
       const tmp = document.createElement('canvas');
       tmp.width = cropState.img.width;
       tmp.height = cropState.img.height;
@@ -4132,13 +4284,10 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
       const srcData = tctx.getImageData(0, 0, tmp.width, tmp.height);
       const dstData = octx.createImageData(outW, outH);
 
-      // bilinear: (u, v) ∈ [0,1] 좌표 → 4점 영역의 원본 픽셀
       for(let y = 0; y < outH; y++){
         const v = y / outH;
-        // 좌측 모서리: tl → bl 보간
         const lx = pts[0].x + (pts[3].x - pts[0].x) * v;
         const ly = pts[0].y + (pts[3].y - pts[0].y) * v;
-        // 우측 모서리: tr → br 보간
         const rx = pts[1].x + (pts[2].x - pts[1].x) * v;
         const ry = pts[1].y + (pts[2].y - pts[1].y) * v;
         for(let x = 0; x < outW; x++){
@@ -4156,28 +4305,39 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
         }
       }
       octx.putImageData(dstData, 0, 0);
-
-      // ⭐ 텍스트 인식 강화 - 대비 향상
       enhanceForOCR(out);
-
-      // JPEG로 압축
       const newBase64 = out.toDataURL('image/jpeg', 0.92);
-      const parsed = scanResultCards[cropState.idx];
-      parsed._imgBase64 = newBase64;
 
-      // 카드 썸네일 갱신
-      const imgEl = document.getElementById('scanImg' + cropState.idx);
-      if(imgEl) imgEl.src = newBase64;
-
-      // 닫기
-      document.getElementById('cropOverlay').style.display = 'none';
-      status.style.display = 'none';
-
-      // 잘린 이미지로 재분석
-      if(confirm('✂️ 크롭 완료! 잘라낸 이미지로 다시 분석할까요?\n(한글 인식률이 더 좋아져요)')){
-        await reanalyzeCard(cropState.idx);
-      } else {
-        toast('✅ 크롭됐어요. 필요시 ✅ 저장하세요.');
+      // 모드 분기
+      if(cropState.idx >= 0){
+        // === 결과 카드 모드: 이미지 교체 후 재분석 옵션 ===
+        const parsed = scanResultCards[cropState.idx];
+        parsed._imgBase64 = newBase64;
+        const imgEl = document.getElementById('scanImg' + cropState.idx);
+        if(imgEl) imgEl.src = newBase64;
+        document.getElementById('cropOverlay').style.display = 'none';
+        status.style.display = 'none';
+        if(confirm('✂️ 크롭 완료! 잘라낸 이미지로 다시 분석할까요?\n(한글 인식률이 더 좋아져요)')){
+          await reanalyzeCard(cropState.idx);
+        } else {
+          toast('✅ 크롭됐어요.');
+        }
+      } else if(cropState.previewIdx != null && cropState.previewIdx >= 0){
+        // === 미리보기 모드 (카메라 촬영 직후): scanImages 교체 후 자동 분석 ===
+        const item = scanImages[cropState.previewIdx];
+        if(item){
+          item.base64 = newBase64;
+          item.mediaType = 'image/jpeg';
+        }
+        renderScanPreviews();
+        document.getElementById('cropOverlay').style.display = 'none';
+        status.style.display = 'none';
+        cropState.previewIdx = -1;
+        toast('✂️ 잘라냈어요! AI 분석을 시작합니다…');
+        // 자동으로 분석 시작
+        setTimeout(() => {
+          if(typeof window.runScanOCR === 'function') window.runScanOCR();
+        }, 300);
       }
     } catch(e) {
       console.error(e);
