@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-0611</title>
+<title>업무일지 v44-0622-0616</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-0611</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-0616</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -6158,15 +6158,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     /* openExpenseEditor 교체 */
     window.openExpenseEditor = function(id){ openExpV2(id); };
 
-    /* v43 메인목록 expense 클릭 교체 */
-    if(!window.openViewer._expV2){
-      var orig=window.openViewer;
-      window.openViewer=function(kind,id){
-        if(kind==='expense'){openExpV2(id);return;}
-        if(orig) orig(kind,id);
-      };
-      window.openViewer._expV2=true;
-    }
+    /* v43 메인목록 expense 클릭 교체 - openViewer 로드 후 안전하게 */
+    /* bind()에서는 제거 - hookOpenViewer()에서 처리 */
 
     /* btnAddExpense */
     var addBtn=g('btnAddExpense');
@@ -6253,8 +6246,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     };
     window.openViewer._expV2=true;
   }
-  setTimeout(hookOpenViewer,500);
+  setTimeout(hookOpenViewer,300);
+  setTimeout(hookOpenViewer,800);
   setTimeout(hookOpenViewer,2000);
+  setTimeout(hookOpenViewer,4000);
 
   /* v43Refresh 훅 - 지출 탭 열려있으면 자동 갱신 */
   var origV43Refresh = window.v43Refresh;
