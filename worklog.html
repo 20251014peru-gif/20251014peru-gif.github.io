@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-1824</title>
+<title>업무일지 v44-0622-1836</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1824</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1836</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -5971,7 +5971,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0622-1824';
+    if(el) el.textContent = 'v44-0622-1836';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -6135,17 +6135,25 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var en=id&&typeof entries!=='undefined'?entries.find(function(x){return x.id===id;}):null;
     var ts=g('expV2TitleSpan'); if(ts) ts.textContent=id?'지출 수정':'지출 등록';
     var delBtn=g('expV2Del'); if(delBtn) delBtn.style.display=id?'':'none';
+    /* worklog.js에서 세팅한 업무 연동 데이터 처리 */
+    var fromWork = !id && window._expV2FromWork;
+    if(fromWork){ window._expV2FromWork=null; }
     var today=new Date();
     var td=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-    var dEl=g('expV2Date'); if(dEl) dEl.value=en?(en.date||td):td;
-    var vEl=g('expV2Vendor'); if(vEl) vEl.value=en?(en.vendor||''):'';
-    var tEl=g('expV2TitleInput'); if(tEl) tEl.value=en?(en.title||''):'';
-    var mEl=g('expV2Memo'); if(mEl) mEl.value=en?(en.memo||''):'';
+    var dEl=g('expV2Date'); if(dEl) dEl.value=fromWork?(fromWork.date||td):en?(en.date||td):td;
+    var vEl=g('expV2Vendor'); if(vEl) vEl.value=fromWork?(fromWork.vendor||''):en?(en.vendor||''):'';
+    var tEl=g('expV2TitleInput'); if(tEl) tEl.value=fromWork?(fromWork.title||''):en?(en.title||''):'';
+    var mEl=g('expV2Memo'); if(mEl) mEl.value=fromWork?(fromWork.memo||''):en?(en.memo||''):'';
     var aEl=g('expV2Amount');
     if(aEl){ aEl.value=en?(en.amount||0):0; aEl._manual=false; aEl.addEventListener('input',function(){ aEl._manual=true; }); }
     // 전표/발급여부 체크 복원
     var jpEl=g('expV2IsJeonpyo'); if(jpEl) jpEl.checked=en?!!(en.isJeonpyo):false;
     var isEl=g('expV2IsIssued');  if(isEl) isEl.checked=en?!!(en.isIssued):false;
+    if(fromWork){
+      _expType=fromWork.expType||'개인지출';
+      if(fromWork.purpose) _selPurpose=fromWork.purpose;
+      setTimeout(function(){setWorkLink(fromWork.workId||null);},50);
+    }
     if(en){
       _expType=en.expType==='세금계산서'?'세금계산서':'개인지출';
       if(en.matItems)   _matItems=JSON.parse(JSON.stringify(en.matItems));
@@ -6440,47 +6448,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     });
     // 용도 관리
     var pmBtn=g('btnExpV2PurposeMgr'); if(pmBtn&&!pmBtn._b){pmBtn._b=true;pmBtn.addEventListener('click',openPurposeMgr);}
-    // openExpenseEditor 교체
-    window.openExpenseEditor=function(id){openExpV2(id);};
-
-    /* openExpenseFromWork 교체 — 업무 저장 후 지출 모달 자동 열기 */
-    window.openExpenseFromWork=function(info){
-      var w=info.workObj||{};
-      var expType=info.expType||'개인비용';
-      var isPersonal=expType==='개인비용';
-      _linkedWorkId=info.workId||null;
-      _editId=null; _matItems=[]; _mealItems=[]; _wasteItems=[]; _selPurpose=null;
-      _expType=isPersonal?'개인지출':'세금계산서';
-      if(isPersonal) _selPurpose='자재구매';
-      var ts=g('expV2TitleSpan'); if(ts) ts.textContent='지출 등록';
-      var delBtn=g('expV2Del'); if(delBtn) delBtn.style.display='none';
-      var dEl=g('expV2Date'); if(dEl) dEl.value=w.date||(new Date().toISOString().slice(0,10));
-      var vEl=g('expV2Vendor'); if(vEl) vEl.value=w.workVendor||'';
-      var tEl=g('expV2TitleInput'); if(tEl) tEl.value=w.title||'';
-      var mEl=g('expV2Memo'); if(mEl) mEl.value=w.workNote||((w.floor||'')+(w.field?' ['+w.field+']':''));
-      var aEl=g('expV2Amount'); if(aEl){aEl.value=0;aEl._manual=false;}
-      updateTypeBtns();
-      renderChips(); updateAreas();
-      renderMatList(); calcMatTotal();
-      renderMealList(); calcMealTotal();
-      renderWasteList(); calcWasteTotal();
-      setTimeout(function(){setWorkLink(info.workId||null);},50);
-      var ov=g('expV2Overlay'); if(ov) ov.style.display='flex';
-      var sh=g('expV2Sheet'); if(sh) sh.scrollTop=0;
-      if(typeof toast==='function') toast('💡 '+(isPersonal?'💸 개인비용':'📃 후불청구')+' 작성 — 업무 정보가 자동 입력됐어요');
-    };
     // btnAddExpense
     var addBtn=g('btnAddExpense'); if(addBtn&&!addBtn._x){addBtn._x=true;addBtn.addEventListener('click',function(){openExpV2(null);});}
-  }
-
-  function hookOpenViewer(){
-    if(!window.openViewer||window.openViewer._expV2) return;
-    var orig=window.openViewer;
-    window.openViewer=function(kind,id){
-      if(kind==='expense'){openExpV2(id);return;}
-      orig(kind,id);
-    };
-    window.openViewer._expV2=true;
   }
 
   /* v43Refresh 훅 */
@@ -6494,8 +6463,6 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind);
   else bind();
   setTimeout(bind,800); setTimeout(bind,2500);
-  setTimeout(hookOpenViewer,300); setTimeout(hookOpenViewer,800);
-  setTimeout(hookOpenViewer,2000); setTimeout(hookOpenViewer,4000);
 
   /* ── 업무↔지출 양방향 연결 ── */
   var _linkedWorkId = null;
@@ -6674,31 +6641,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(applyAutocompleteToModals, 1000);
   setTimeout(applyAutocompleteToModals, 3000);
 
-  /* makeContactSearchUI Tab키 패치 — 담당업체 자동완성에서 Tab → 첫 항목 선택 */
-  function patchContactSearchTab(){
-    var inp = document.getElementById('m-workVendor');
-    if(!inp || inp._tabPatched) return;
-    inp._tabPatched = true;
-    inp.addEventListener('keydown', function(e){
-      if(e.key !== 'Tab') return;
-      var list = document.getElementById('m-workVendor-list');
-      if(!list || list.style.display==='none') return;
-      var items = list.querySelectorAll('.csl-item');
-      if(!items.length) return;
-      e.preventDefault();
-      /* 활성 항목 또는 첫 항목 선택 */
-      var activeEl = list.querySelector('.csl-item[style*="e8f0fb"]') || items[0];
-      activeEl.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));
-    }, true); /* capture=true로 worklog.js 핸들러보다 먼저 처리 */
-  }
-  setTimeout(patchContactSearchTab, 1000);
-  setTimeout(patchContactSearchTab, 2500);
-  /* 모달 열릴 때마다 패치 */
-  document.addEventListener('click', function(e){
-    if(e.target.closest('[data-add],[data-v43tab]')) setTimeout(patchContactSearchTab, 400);
-  });
-
-  window._openExpV2=openExpV2;
+    window._openExpV2=openExpV2;
 
 /* ===== 업무↔통화 연결 ===== */
 (function(){
@@ -6706,21 +6649,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   var esc2 = function(s){ return (s||'').replace(/[&<>"]/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]);}); };
 
   /* openViewer 훅 — 통화일 때 연결 버튼 추가 */
+  /* worklog.js의 openViewer가 직접 호출 — 전역 함수로 노출 */
   function hookCallViewer(){
-    if(!window.openViewer || window.openViewer._callHooked) return;
-    window._origOpenViewer = window.openViewer;
-    var orig = window._origOpenViewer;
-    window.openViewer = function(kind, id){
-      orig(kind, id);
-      if(kind === 'call'){
-        setTimeout(function(){ addCallWorkButtons(id); }, 50);
-      }
-      if(kind === 'work'){
-        setTimeout(function(){ addWorkCallSection(id); }, 50);
-      }
-    };
-    window.openViewer._callHooked = true;
-    window.openViewer._expV2 = window.openViewer._expV2; /* 기존 플래그 유지 */
+    window._addCallWorkButtons = addCallWorkButtons;
+    window._addWorkCallSection = addWorkCallSection;
   }
 
   function addCallWorkButtons(callId){
@@ -6767,7 +6699,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(vCard) vCard.addEventListener('click', function(e){
       if(e.target.closest('#callWorkUnlinkBtn')) return;
       g('viewOverlay').classList.remove('show');
-      setTimeout(function(){ var fn=window._origOpenViewer||window.openViewer; if(fn) fn('work', en.linkedWorkId); }, 100);
+      setTimeout(function(){ if(typeof openViewer==='function') openViewer('work', en.linkedWorkId); }, 100);
     });
 
     /* 연결 해제 */
@@ -6868,7 +6800,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       el.addEventListener('click', function(e){
         if(e.target.closest('[data-callunlink]')) return;
         g('viewOverlay').classList.remove('show');
-        setTimeout(function(){ var fn=window._origOpenViewer||window.openViewer; if(fn) fn('call', el.dataset.callid); }, 100);
+        setTimeout(function(){ if(typeof openViewer==='function') openViewer('call', el.dataset.callid); }, 100);
       });
     });
 
