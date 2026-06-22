@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-0616</title>
+<title>업무일지 v44-0622-0626</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-0616</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-0626</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -986,44 +986,6 @@
     <!-- 통합 목록 -->
     <div class="v43-list" id="v43List">
       <div class="v43-empty"><div class="ei">📋</div>데이터를 불러오는 중…</div>
-    </div>
-  </div>
-
-  <!-- ===== 지출 패널 ===== -->
-  <div class="v43-panel" id="v43-expense">
-    <div style="margin-top:14px">
-      <!-- 이달 요약 -->
-      <div id="expV2Dashboard" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"></div>
-      <!-- 필터 -->
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-        <select id="expV2MonthFilter" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
-          <option value="">전체 월</option>
-        </select>
-        <select id="expV2TypeFilter" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
-          <option value="">전체 종류</option>
-          <option value="개인지출">💸 개인지출</option>
-          <option value="세금계산서">📃 세금계산서</option>
-        </select>
-        <button id="expV2AddBtn" style="margin-left:auto;height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 지출 등록</button>
-      </div>
-      <!-- 목록 -->
-      <div id="expV2ListWrap" style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
-        <table style="width:100%;border-collapse:collapse">
-          <thead>
-            <tr style="background:#f0f6ff;border-bottom:1.5px solid #e8f0fa">
-              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left">날짜</th>
-              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left">내역</th>
-              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left">업체</th>
-              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:right">금액</th>
-              <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:50px"></th>
-            </tr>
-          </thead>
-          <tbody id="expV2ListBody">
-            <tr><td colspan="5" style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">지출 내역이 없습니다</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div id="expV2ListTotal" style="text-align:right;font-size:13px;color:#7a92a8;margin-top:8px"></div>
     </div>
   </div>
 
@@ -2495,7 +2457,7 @@
 
   // v43 탭 전환
   function v43ActivateTab(name){
-    const v43tabs=['main','memo','calendar','filelink','docs','common','indiv','etc','accident','material','password','diag','ai'];
+    const v43tabs=['main','expense','memo','calendar','filelink','docs','common','indiv','etc','accident','material','password','diag','ai'];
     if(!v43tabs.includes(name)) name='main';
     document.querySelectorAll('.v43-tab').forEach(b => b.classList.toggle('active', b.dataset.v43tab===name));
     document.querySelectorAll('.v43-panel').forEach(p => p.classList.remove('active'));
@@ -2666,7 +2628,7 @@
   // 마지막 탭 복원
   function restoreTab(){
     try{
-      const v43tabs=['main','memo','calendar','filelink','docs','common','indiv','etc','accident','material','password','diag','ai'];
+      const v43tabs=['main','expense','memo','calendar','filelink','docs','common','indiv','etc','accident','material','password','diag','ai'];
       const saved = localStorage.getItem('v43_tab')||'main';
       const safeTab = v43tabs.includes(saved) ? saved : 'main';
       v43ActivateTab(safeTab);
@@ -5927,6 +5889,18 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   <script src="worklog_patch_v44.js"></script>
 
 <script>
+/* ===== 버전 배지 강제 덮어쓰기 ===== */
+(function(){
+  function setVer(){
+    var el = document.getElementById('verBadge');
+    if(el) el.textContent = 'v44-0622-0626';
+  }
+  setVer();
+  setTimeout(setVer, 500);
+  setTimeout(setVer, 1500);
+  setTimeout(setVer, 3000);
+})();
+
 /* ===== 지출 모달 v2 (용도별 동적 필드) ===== */
 (function(){
   var _editId = null;
