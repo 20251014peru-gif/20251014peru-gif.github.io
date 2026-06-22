@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-<title>개인일지 v2-0623</title>
+<title>개인일지 v20260623-1510</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -465,7 +465,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
     <div class="head-row">
       <div class="brand">
         <h1>개인일지</h1>
-        <span class="sub">달님의 개인 기록 <b style="color:#9aa7b4" id="verBadge">v2-0623</b></span>
+        <span class="sub">달님의 개인 기록 <b style="color:#9aa7b4" id="verBadge">v20260623-1510</b></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow-x:auto">
         <span class="status"><span class="dot" id="fbDot"></span><span id="fbText">연결 중…</span></span>
@@ -1025,6 +1025,63 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+/* ==================== 🚨 화면 에러 표시기 (모든 앱 기본 탑재) ==================== */
+(function setupErrorDisplay(){
+  const errBox = document.createElement('div');
+  errBox.id = '__errorDisplay__';
+  errBox.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#dc2626;color:#fff;padding:0;font-family:Consolas,monospace;font-size:12px;z-index:2147483647;max-height:50vh;overflow-y:auto;display:none;box-shadow:0 4px 16px rgba(0,0,0,.3)';
+  errBox.innerHTML = '<div id="__errorHead__" style="padding:8px 14px;background:#991b1b;font-weight:800;display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>🚨 JS 에러 발생</span><span style="display:flex;gap:6px"><button id="__errCopy__" style="background:#fff;color:#991b1b;border:none;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">📋 복사</button><button id="__errClear__" style="background:#fff;color:#991b1b;border:none;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑 비우기</button><button id="__errClose__" style="background:#fff;color:#991b1b;border:none;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">✕ 닫기</button></span></div><div id="__errorList__" style="padding:10px 14px;white-space:pre-wrap;line-height:1.5"></div>';
+  document.documentElement.appendChild(errBox);
+  // 버튼 이벤트는 DOM 준비 후
+  function bindBtns(){
+    const close = document.getElementById('__errClose__');
+    const copy = document.getElementById('__errCopy__');
+    const clear = document.getElementById('__errClear__');
+    if(close) close.onclick = ()=>errBox.style.display='none';
+    if(copy) copy.onclick = ()=>{
+      const t = document.getElementById('__errorList__').textContent;
+      navigator.clipboard && navigator.clipboard.writeText(t);
+      copy.textContent = '✅ 복사됨';
+      setTimeout(()=>copy.textContent='📋 복사', 1500);
+    };
+    if(clear) clear.onclick = ()=>{
+      document.getElementById('__errorList__').innerHTML='';
+      errBox.style.display='none';
+    };
+  }
+  if(document.readyState!=='loading') bindBtns();
+  else document.addEventListener('DOMContentLoaded', bindBtns);
+
+  let errCount = 0;
+  function logError(type, msg, src, line, col, stack){
+    errCount++;
+    const list = document.getElementById('__errorList__');
+    if(!list) return;
+    const time = new Date().toTimeString().slice(0,8);
+    const item = document.createElement('div');
+    item.style.cssText = 'border-bottom:1px solid rgba(255,255,255,.2);padding:6px 0';
+    const file = (src||'').split('/').pop().split('?')[0];
+    item.innerHTML = `<div style="font-weight:700;color:#fef08a">[${time}] ${type} #${errCount}</div>
+      <div style="margin-top:3px">📝 <b>${escapeHtml(msg||'')}</b></div>
+      ${file?`<div style="margin-top:2px;color:#fecaca">📍 ${escapeHtml(file)}${line?':'+line:''}${col?':'+col:''}</div>`:''}
+      ${stack?`<details style="margin-top:4px"><summary style="cursor:pointer;color:#fecaca">스택 추적</summary><pre style="margin:4px 0 0;font-size:11px;color:#fff;background:rgba(0,0,0,.3);padding:6px;border-radius:4px;overflow-x:auto">${escapeHtml(stack)}</pre></details>`:''}`;
+    list.appendChild(item);
+    errBox.style.display = 'block';
+  }
+  function escapeHtml(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+
+  // 동기 에러
+  window.addEventListener('error', function(e){
+    logError('SyntaxError/RuntimeError', e.message, e.filename, e.lineno, e.colno, e.error && e.error.stack);
+  });
+  // 비동기 Promise 에러
+  window.addEventListener('unhandledrejection', function(e){
+    const r = e.reason;
+    logError('UnhandledRejection', (r && r.message)||String(r), '', 0, 0, r && r.stack);
+  });
+  window.__showError__ = (msg) => logError('Manual', msg, '', 0, 0, new Error().stack);
+})();
+
 /* ==================== 전역 초기화 ==================== */
 const FB_CONFIG = {
   apiKey:"AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
@@ -1154,9 +1211,9 @@ g('globalSearch')&&g('globalSearch').addEventListener('input',e=>{
 });
 
 /* ========== FAB / 카테고리 시트 ========== */
-g('fabBtn').addEventListener('click',()=>g('catOverlay').classList.add('show'));
-g('catCancel').addEventListener('click',()=>g('catOverlay').classList.remove('show'));
-g('catOverlay').addEventListener('click',e=>{if(e.target===g('catOverlay'))g('catOverlay').classList.remove('show');});
+if(g('fabBtn')){g('fabBtn').addEventListener('click',()=>g('catOverlay').classList.add('show'));}
+if(g('catCancel')){g('catCancel').addEventListener('click',()=>g('catOverlay').classList.remove('show'));}
+if(g('catOverlay')){g('catOverlay').addEventListener('click',e=>{if(e.target===g('catOverlay'))g('catOverlay').classList.remove('show');});}
 document.querySelectorAll('.cat-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     g('catOverlay').classList.remove('show');
@@ -1282,9 +1339,9 @@ document.querySelectorAll('.main-filter-card').forEach(card=>{
     renderMain();
   });
 });
-g('mainFrom').addEventListener('change',renderMain);
-g('mainTo').addEventListener('change',renderMain);
-g('mainDateClear').addEventListener('click',()=>{g('mainFrom').value='';g('mainTo').value='';renderMain();});
+if(g('mainFrom')){g('mainFrom').addEventListener('change',renderMain);}
+if(g('mainTo')){g('mainTo').addEventListener('change',renderMain);}
+if(g('mainDateClear')){g('mainDateClear').addEventListener('click',()=>{g('mainFrom').value='';g('mainTo').value='';renderMain();});}
 
 /* ========== 기록 입력 모달 ========== */
 function openRecordModal(kind,id){
@@ -1302,13 +1359,15 @@ function closeRecordModal(){
   g('recordOverlay').classList.remove('show');
   editingId=null;currentKind=null;recPhotos=[];
 }
-g('recordCancel').addEventListener('click',closeRecordModal);
+if(g('recordCancel')){g('recordCancel').addEventListener('click',closeRecordModal);}
 // 외부 클릭으로 닫히지 않음 — 저장/취소/삭제 버튼으로만 닫힘
 // g('recordOverlay').addEventListener('click',e=>{if(e.target===g('recordOverlay'))closeRecordModal();});
+if(g('recordDelete')){
 g('recordDelete').addEventListener('click',()=>{
   if(!editingId||!confirm('삭제할까요?')) return;
   deleteEntry(editingId);toast('삭제됐어요');closeRecordModal();
 });
+}
 
 function F(id,label,type,opts){
   // 필드 빌더: {id,label,type:'text'|'date'|'number'|'select'|'textarea'|'stars', options:[{v,l}], placeholder, required}
@@ -1529,6 +1588,7 @@ function setStars(n){
   if(sw) sw.querySelectorAll('.star-btn').forEach((b,i)=>b.classList.toggle('on',i<n));
 }
 function gv(id){const el=g('rf-'+id);return el?(el.value||'').trim():'';}
+if(g('recordSave')){
 g('recordSave').addEventListener('click',()=>{
   if(!currentKind) return;
   const kind=currentKind;
@@ -1596,6 +1656,7 @@ g('recordSave').addEventListener('click',()=>{
   else{addEntry(obj);toast('저장됐어요');}
   closeRecordModal();
 });
+}
 
 /* ===== 사진 처리 ===== */
 async function compressImg(file){
@@ -1628,8 +1689,8 @@ function renderRecThumbs(){
   if(!el) return;
   el.innerHTML=recPhotos.map((p,i)=>`<div class="thumb-wrap"><img src="${p}" onclick="showImg('${p}')"><button class="thumb-del" onclick="recPhotos.splice(${i},1);renderRecThumbs()">✕</button></div>`).join('');
 }
-g('recCam').addEventListener('change',e=>{handleRecPhotos([...e.target.files]);e.target.value='';});
-g('recFile').addEventListener('change',e=>{handleRecPhotos([...e.target.files]);e.target.value='';});
+if(g('recCam')){g('recCam').addEventListener('change',e=>{handleRecPhotos([...e.target.files]);e.target.value='';});}
+if(g('recFile')){g('recFile').addEventListener('change',e=>{handleRecPhotos([...e.target.files]);e.target.value='';});}
 // 기록 모달 열려있을 때 Ctrl+V 사진 붙여넣기
 document.addEventListener('paste',async e=>{
   if(!g('recordOverlay').classList.contains('show')) return;
@@ -1765,7 +1826,7 @@ function buildViewBody(en){
   if(en.photos&&en.photos.length){html+='<hr class="view-divider"><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">'+en.photos.map(p=>`<img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:10px;cursor:pointer;border:2px solid var(--line)" onclick="showImg('${p}')">`).join('')+'</div>';}
   return html;
 }
-g('viewClose2').addEventListener('click',()=>g('viewOverlay').classList.remove('show'));
+if(g('viewClose2')){g('viewClose2').addEventListener('click',()=>g('viewOverlay').classList.remove('show'));}
 // 외부 클릭으로 닫히지 않음
 // g('viewOverlay').addEventListener('click',e=>{if(e.target===g('viewOverlay'))g('viewOverlay').classList.remove('show');});
 
@@ -1930,8 +1991,8 @@ g('viewClose2').addEventListener('click',()=>g('viewOverlay').classList.remove('
     g('memoViewList').classList.toggle('memo-view-active',mode==='list');
     renderStickyGrid();
   }
-  g('memoViewCard').addEventListener('click',()=>setStickyView('card'));
-  g('memoViewList').addEventListener('click',()=>setStickyView('list'));
+  if(g('memoViewCard')){  g('memoViewCard').addEventListener('click',()=>setStickyView('card'));}
+  if(g('memoViewList')){  g('memoViewList').addEventListener('click',()=>setStickyView('list'));}
 
   // 색상 선택
   document.querySelectorAll('.sc-btn').forEach(btn=>{
@@ -1952,7 +2013,7 @@ g('viewClose2').addEventListener('click',()=>g('viewOverlay').classList.remove('
   });
 
   // 검색
-  g('stickySearch').addEventListener('input',()=>{clearTimeout(g('stickySearch')._t);g('stickySearch')._t=setTimeout(renderStickyGrid,200);});
+  if(g('stickySearch')){  g('stickySearch').addEventListener('input',()=>{clearTimeout(g('stickySearch')._t);g('stickySearch')._t=setTimeout(renderStickyGrid,200);});}
 
   // 저장
   function saveSticky(){
@@ -1965,8 +2026,8 @@ g('viewClose2').addEventListener('click',()=>g('viewOverlay').classList.remove('
     titleEl.value='';inputEl.innerHTML='';
     toast('메모 저장됐어요');setTimeout(renderStickyGrid,300);
   }
-  g('stickySave').addEventListener('click',saveSticky);
-  g('stickyInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();saveSticky();}});
+  if(g('stickySave')){  g('stickySave').addEventListener('click',saveSticky);}
+  if(g('stickyInput')){  g('stickyInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();saveSticky();}});}
   const stickyToggleBtn=g('stickyToggleBtn');
   const stickyBody=g('stickyInput');
   if(stickyToggleBtn){
@@ -1993,13 +2054,15 @@ g('viewClose2').addEventListener('click',()=>g('viewOverlay').classList.remove('
     if(sel&&sel.rangeCount){const r=sel.getRangeAt(0);r.collapse(false);r.insertNode(img);r.setStartAfter(img);r.collapse(true);sel.removeAllRanges();sel.addRange(r);}
     else el.appendChild(img);
   }
-  g('stickyCam').addEventListener('change',e=>{stickyPhotoHandler([...e.target.files]);e.target.value='';});
-  g('stickyFile').addEventListener('change',e=>{stickyPhotoHandler([...e.target.files]);e.target.value='';});
-  g('stickyInput').addEventListener('paste',async e=>{
+  if(g('stickyCam')){  g('stickyCam').addEventListener('change',e=>{stickyPhotoHandler([...e.target.files]);e.target.value='';});}
+  if(g('stickyFile')){  g('stickyFile').addEventListener('change',e=>{stickyPhotoHandler([...e.target.files]);e.target.value='';});}
+    if(g('stickyInput')){
+    g('stickyInput').addEventListener('paste',async e=>{
     const items=[...(e.clipboardData||{items:[]}).items||[]];
     const img=items.find(i=>i.type.startsWith('image/'));
     if(img){e.preventDefault();const f=img.getAsFile();if(f){const d=await compressImg(f);insertStickyImg(d);}}
   });
+    }
 })();
 
 /* ========== 체크리스트 ========== */
@@ -2412,11 +2475,12 @@ function openCtModal(id){
   setTimeout(()=>g('ct-name').focus(),100);
 }
 function closeCtModal(){g('ctOverlay').classList.remove('show');ctEditId=null;}
-g('ctAddBtn').addEventListener('click',()=>openCtModal(null));
-g('ctCancel').addEventListener('click',closeCtModal);
-g('ctOverlay').addEventListener('click',e=>{if(e.target===g('ctOverlay'))closeCtModal();});
+if(g('ctAddBtn')){g('ctAddBtn').addEventListener('click',()=>openCtModal(null));}
+if(g('ctCancel')){g('ctCancel').addEventListener('click',closeCtModal);}
+if(g('ctOverlay')){g('ctOverlay').addEventListener('click',e=>{if(e.target===g('ctOverlay'))closeCtModal();});}
 // 외부 클릭으로 닫히지 않음 - 위 줄 주석처리
 
+if(g('ctSave')){
 g('ctSave').addEventListener('click',()=>{
   const name=(g('ct-name').value||'').trim();
   const phone2=(g('ct-phone').value||'').trim();
@@ -2428,12 +2492,15 @@ g('ctSave').addEventListener('click',()=>{
   else manualContacts.push(obj);
   saveManualContacts();renderContacts();closeCtModal();toast('저장됐어요');
 });
+}
+if(g('ctDelete')){
 g('ctDelete').addEventListener('click',()=>{
   if(!ctEditId||!confirm('삭제?')) return;
   manualContacts=manualContacts.filter(c=>c.id!==ctEditId);
   saveManualContacts();renderContacts();closeCtModal();toast('삭제됐어요');
 });
-g('ctSearch').addEventListener('input',()=>{clearTimeout(g('ctSearch')._t);g('ctSearch')._t=setTimeout(renderContacts,200);});
+}
+if(g('ctSearch')){g('ctSearch').addEventListener('input',()=>{clearTimeout(g('ctSearch')._t);g('ctSearch')._t=setTimeout(renderContacts,200);});}
 document.querySelectorAll('[data-ctf]').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('[data-ctf]').forEach(b=>b.classList.remove('active'));
@@ -2507,7 +2574,7 @@ document.querySelectorAll('.car-vehicle-tab').forEach(btn=>{
     renderCar();
   });
 });
-g('carAddBtn').addEventListener('click',()=>openCarModal(null));
+if(g('carAddBtn')){g('carAddBtn').addEventListener('click',()=>openCarModal(null));}
 
 /* ---- 공통 주유소/정비소 인포 HTML 빌더 ---- */
 function carShopInfoHtml(en,label){
@@ -2844,8 +2911,8 @@ function renderCar(){
   el.querySelectorAll('.v43-item').forEach(item=>{item.addEventListener('click',e=>{if(e.target.closest('[data-del]')) return;openCarModal(item.dataset.id);});});
   el.querySelectorAll('[data-del]').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();if(!confirm('삭제?')) return;deleteEntry(btn.dataset.del);toast('삭제됐어요');});});
 }
-g('carMonthSel').addEventListener('change',renderCar);
-g('carTypeSel').addEventListener('change',renderCar);
+if(g('carMonthSel')){g('carMonthSel').addEventListener('change',renderCar);}
+if(g('carTypeSel')){g('carTypeSel').addEventListener('change',renderCar);}
 
 /* ========== 달력 ========== */
 (function initCalendar(){
@@ -2899,9 +2966,9 @@ g('carTypeSel').addEventListener('change',renderCar);
       });
     });
   };
-  g('calPrev').addEventListener('click',()=>{calMonth_n--;if(calMonth_n<0){calMonth_n=11;calYear--;}renderCalendar();});
-  g('calNext').addEventListener('click',()=>{calMonth_n++;if(calMonth_n>11){calMonth_n=0;calYear++;}renderCalendar();});
-  g('calTodayBtn').addEventListener('click',()=>{const now2=new Date();calYear=now2.getFullYear();calMonth_n=now2.getMonth();renderCalendar();});
+  if(g('calPrev')){  g('calPrev').addEventListener('click',()=>{calMonth_n--;if(calMonth_n<0){calMonth_n=11;calYear--;}renderCalendar();});}
+  if(g('calNext')){  g('calNext').addEventListener('click',()=>{calMonth_n++;if(calMonth_n>11){calMonth_n=0;calYear++;}renderCalendar();});}
+  if(g('calTodayBtn')){  g('calTodayBtn').addEventListener('click',()=>{const now2=new Date();calYear=now2.getFullYear();calMonth_n=now2.getMonth();renderCalendar();});}
 })();
 
 /* ========== 파일 관리 ========== */
@@ -2944,11 +3011,12 @@ function openFileModal(id){
   g('fileOverlay').classList.add('show');
 }
 function closeFileModal(){g('fileOverlay').classList.remove('show');fileEditId=null;}
-g('fileAddBtn').addEventListener('click',()=>openFileModal(null));
-g('fileCancel').addEventListener('click',closeFileModal);
+if(g('fileAddBtn')){g('fileAddBtn').addEventListener('click',()=>openFileModal(null));}
+if(g('fileCancel')){g('fileCancel').addEventListener('click',closeFileModal);}
 g('fileModalClose')&&g('fileModalClose').addEventListener('click',closeFileModal);
 // 외부 클릭으로 닫히지 않음
 // g('fileOverlay').addEventListener('click',e=>{if(e.target===g('fileOverlay'))closeFileModal();});
+if(g('fileSave')){
 g('fileSave').addEventListener('click',()=>{
   const name=(g('fileNameInp').value||'').trim();
   const path=(g('filePathInp').value||'').trim();
@@ -2964,11 +3032,14 @@ g('fileSave').addEventListener('click',()=>{
   }
   saveFiles();renderFiles();closeFileModal();toast('저장됐어요');
 });
+}
+if(g('fileDelete')){
 g('fileDelete').addEventListener('click',()=>{
   if(!fileEditId||!confirm('삭제?')) return;
   files=files.filter(f=>f.id!==fileEditId);
   saveFiles();renderFiles();closeFileModal();toast('삭제됐어요');
 });
+}
 
 /* ========== 비밀번호 보관함 ========== */
 let passwords=[];
@@ -3034,20 +3105,20 @@ function openPwModal(id){
   setTimeout(()=>g('pwSite').focus(),100);
 }
 function closePwModal(){g('pwOverlay').classList.remove('show');pwEditId=null;pwPhotos=[];}
-g('pwAddBtn').addEventListener('click',()=>openPwModal(null));
-g('pwCancel').addEventListener('click',closePwModal);
+if(g('pwAddBtn')){g('pwAddBtn').addEventListener('click',()=>openPwModal(null));}
+if(g('pwCancel')){g('pwCancel').addEventListener('click',closePwModal);}
 g('pwModalClose')&&g('pwModalClose').addEventListener('click',closePwModal);
 // 외부 클릭으로 닫히지 않음
 // g('pwOverlay').addEventListener('click',e=>{if(e.target===g('pwOverlay'))closePwModal();});
-g('pwToggleShow').addEventListener('click',()=>{const inp=g('pwVal');inp.type=inp.type==='password'?'text':'password';g('pwToggleShow').textContent=inp.type==='password'?'👁':'🙈';});
+if(g('pwToggleShow')){g('pwToggleShow').addEventListener('click',()=>{const inp=g('pwVal');inp.type=inp.type==='password'?'text':'password';g('pwToggleShow').textContent=inp.type==='password'?'👁':'🙈';});}
 // 비번 사진 버튼
-g('pwCam').addEventListener('change',e=>{handlePwPhotos(e.target.files);e.target.value='';});
-g('pwFile').addEventListener('change',e=>{handlePwPhotos(e.target.files);e.target.value='';});
+if(g('pwCam')){g('pwCam').addEventListener('change',e=>{handlePwPhotos(e.target.files);e.target.value='';});}
+if(g('pwFile')){g('pwFile').addEventListener('change',e=>{handlePwPhotos(e.target.files);e.target.value='';});}
 // paste zone 클릭 시 파일 선택 트리거
-g('pwPasteZone').addEventListener('click',()=>g('pwFile').click());
-g('pwPasteZone').addEventListener('dragover',e=>{e.preventDefault();g('pwPasteZone').style.borderColor='var(--blue)';});
-g('pwPasteZone').addEventListener('dragleave',()=>g('pwPasteZone').style.borderColor='var(--blue-bd)');
-g('pwPasteZone').addEventListener('drop',e=>{e.preventDefault();g('pwPasteZone').style.borderColor='var(--blue-bd)';handlePwPhotos(e.dataTransfer.files);});
+if(g('pwPasteZone')){g('pwPasteZone').addEventListener('click',()=>g('pwFile').click());}
+if(g('pwPasteZone')){g('pwPasteZone').addEventListener('dragover',e=>{e.preventDefault();g('pwPasteZone').style.borderColor='var(--blue)';});}
+if(g('pwPasteZone')){g('pwPasteZone').addEventListener('dragleave',()=>g('pwPasteZone').style.borderColor='var(--blue-bd)');}
+if(g('pwPasteZone')){g('pwPasteZone').addEventListener('drop',e=>{e.preventDefault();g('pwPasteZone').style.borderColor='var(--blue-bd)';handlePwPhotos(e.dataTransfer.files);});}
 // 전역 paste — 비번 모달 열려있을 때
 document.addEventListener('paste',async e=>{
   if(!g('pwOverlay').classList.contains('show')) return;
@@ -3055,6 +3126,7 @@ document.addEventListener('paste',async e=>{
   const imgItem=items.find(i=>i.type.startsWith('image/'));
   if(imgItem){e.preventDefault();const f=imgItem.getAsFile();if(f)handlePwPhotos([f]);}
 });
+if(g('pwSave')){
 g('pwSave').addEventListener('click',()=>{
   const site=(g('pwSite').value||'').trim();const val=(g('pwVal').value||'').trim();
   if(!site||!val){toast('사이트와 비밀번호를 입력해주세요');return;}
@@ -3063,12 +3135,15 @@ g('pwSave').addEventListener('click',()=>{
   else passwords.push(obj);
   savePasswords();renderPasswords();closePwModal();toast('저장됐어요');
 });
+}
+if(g('pwDelete')){
 g('pwDelete').addEventListener('click',()=>{
   if(!pwEditId||!confirm('삭제?')) return;
   passwords=passwords.filter(p=>p.id!==pwEditId);
   savePasswords();renderPasswords();closePwModal();toast('삭제됐어요');
 });
-g('pwSearch').addEventListener('input',()=>{clearTimeout(g('pwSearch')._t);g('pwSearch')._t=setTimeout(renderPasswords,200);});
+}
+if(g('pwSearch')){g('pwSearch').addEventListener('input',()=>{clearTimeout(g('pwSearch')._t);g('pwSearch')._t=setTimeout(renderPasswords,200);});}
 
 /* ========== AI 탭 ========== */
 function updateAiKeyState(){
@@ -3077,9 +3152,9 @@ function updateAiKeyState(){
   if(aiKey){el.textContent='✅ AI 키 설정됨 — 대화 가능';el.style.color='#27ae60';}
   else{el.textContent='🔑 AI 키 미설정 — 우측 상단 [AI키] 버튼에서 입력하세요';el.style.color='var(--ink-faint)';}
 }
-g('aiKeyBtn').addEventListener('click',()=>{g('aiKeyInput').value=aiKey||'';g('aiKeyOverlay').classList.add('show');});
-g('aiKeySave').addEventListener('click',()=>{aiKey=(g('aiKeyInput').value||'').trim();localStorage.setItem('pj_ai_key',aiKey);g('aiKeyOverlay').classList.remove('show');updateAiKeyState();toast('AI 키 저장됐어요');});
-g('aiKeyCancel').addEventListener('click',()=>g('aiKeyOverlay').classList.remove('show'));
+if(g('aiKeyBtn')){g('aiKeyBtn').addEventListener('click',()=>{g('aiKeyInput').value=aiKey||'';g('aiKeyOverlay').classList.add('show');});}
+if(g('aiKeySave')){g('aiKeySave').addEventListener('click',()=>{aiKey=(g('aiKeyInput').value||'').trim();localStorage.setItem('pj_ai_key',aiKey);g('aiKeyOverlay').classList.remove('show');updateAiKeyState();toast('AI 키 저장됐어요');});}
+if(g('aiKeyCancel')){g('aiKeyCancel').addEventListener('click',()=>g('aiKeyOverlay').classList.remove('show'));}
 g('aiKeyClose')&&g('aiKeyClose').addEventListener('click',()=>g('aiKeyOverlay').classList.remove('show'));
 // 외부 클릭으로 닫히지 않음
 // g('aiKeyOverlay').addEventListener('click',e=>{if(e.target===g('aiKeyOverlay'))g('aiKeyOverlay').classList.remove('show');});
@@ -3113,9 +3188,9 @@ async function sendAi(userText){
     loadDiv.remove();appendAiMsg('ai',text);
   }catch(e){loadDiv.remove();appendAiMsg('ai','오류: '+e.message);}
 }
-g('aiSend').addEventListener('click',()=>{const inp=g('aiInput');sendAi(inp.value);inp.value='';});
-g('aiInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const inp=g('aiInput');sendAi(inp.value);inp.value='';}});
-g('aiClear').addEventListener('click',()=>{g('aiChat').innerHTML='';aiMessages=[];});
+if(g('aiSend')){g('aiSend').addEventListener('click',()=>{const inp=g('aiInput');sendAi(inp.value);inp.value='';});}
+if(g('aiInput')){g('aiInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const inp=g('aiInput');sendAi(inp.value);inp.value='';}});}
+if(g('aiClear')){g('aiClear').addEventListener('click',()=>{g('aiChat').innerHTML='';aiMessages=[];});}
 document.querySelectorAll('.ai-quick-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     const type=btn.dataset.ai;
@@ -3130,6 +3205,7 @@ function renderDiag(){
   const bs=g('backupStatus');
   if(bs){const last=localStorage.getItem('pj_last_backup');bs.textContent=last?'마지막 백업: '+last:'백업 없음';}
 }
+if(g('diagRunBtn')){
 g('diagRunBtn').addEventListener('click',async()=>{
   const out=g('diagOut');out.innerHTML='진단 중…';
   const results=[];
@@ -3142,6 +3218,8 @@ g('diagRunBtn').addEventListener('click',async()=>{
   results.push('LocalStorage: '+(function(){try{localStorage.setItem('_t','1');localStorage.removeItem('_t');return'✅ 정상';}catch{return'❌ 오류';}})());
   out.innerHTML=results.map(r=>`<div style="padding:5px 0;border-bottom:1px solid var(--line);font-size:13px">${r}</div>`).join('');
 });
+}
+if(g('backupBtn')){
 g('backupBtn').addEventListener('click',()=>{
   const data={entries,files,passwords,exportedAt:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
@@ -3151,6 +3229,8 @@ g('backupBtn').addEventListener('click',()=>{
   localStorage.setItem('pj_last_backup',today());
   toast('백업 파일 다운로드됐어요');
 });
+}
+if(g('restoreInput')){
 g('restoreInput').addEventListener('change',e=>{
   const file=e.target.files[0];if(!file) return;
   const r=new FileReader();r.onload=ev=>{
@@ -3163,6 +3243,7 @@ g('restoreInput').addEventListener('change',e=>{
     }catch(err){toast('JSON 파싱 오류: '+err.message);}
   };r.readAsText(file);
 });
+}
 
 /* ========== 급한 메모 ========== */
 (function initQM(){
@@ -3173,8 +3254,8 @@ g('restoreInput').addEventListener('change',e=>{
   load();
   let saveT;
   txt.addEventListener('input',()=>{sts.textContent='수정 중…';clearTimeout(saveT);saveT=setTimeout(save,600);});
-  g('qmBtn').addEventListener('click',()=>{side.classList.toggle('open');if(side.classList.contains('open'))txt.focus();});
-  g('qmClose').addEventListener('click',()=>{side.classList.remove('open');save();});
+  if(g('qmBtn')) g('qmBtn').addEventListener('click',()=>{side.classList.toggle('open');if(side.classList.contains('open'))txt.focus();});
+  if(g('qmClose')){  g('qmClose').addEventListener('click',()=>{side.classList.remove('open');save();});}
   document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.shiftKey&&e.key==='M'){e.preventDefault();side.classList.toggle('open');}});
 })();
 
@@ -3627,6 +3708,62 @@ document.addEventListener('keydown',e=>{
 },true);
 
 /* ========== PIN 잠금 ========== */
+// 스크립트 어디서 에러나도 PIN 패드는 반드시 뜨도록 별도 실행
+window.addEventListener('error', function(e){
+  console.error('전역 에러:', e.message, 'at', e.filename+':'+e.lineno);
+  // PIN 패드가 비어있으면 강제로 그리기
+  try {
+    const pad = document.getElementById('pinPad');
+    if(pad && !pad.children.length){
+      const pin = localStorage.getItem('shared_pin') || '102800';
+      let buf = '';
+      const renderDots = () => {
+        const el = document.getElementById('pinDots');
+        if(!el) return;
+        el.innerHTML = '';
+        for(let i=0;i<6;i++){
+          const d = document.createElement('div');
+          d.style.cssText = 'width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.5);display:inline-block;'
+            +(i<buf.length?'background:#fff;border-color:#fff;':'background:rgba(255,255,255,.3);');
+          el.appendChild(d);
+        }
+      };
+      ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k=>{
+        const btn = document.createElement('button');
+        btn.textContent = k;
+        btn.style.cssText = k
+          ? 'height:58px;width:100%;border-radius:14px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.25);color:#fff;font-size:22px;font-weight:700;cursor:pointer;'
+          : 'height:58px;width:100%;border:none;background:transparent;pointer-events:none;';
+        if(k){
+          btn.onclick = () => {
+            if(k==='⌫') buf = buf.slice(0,-1);
+            else if(buf.length<6) buf += k;
+            renderDots();
+            if(buf.length===6){
+              if(buf===pin){
+                document.getElementById('lockScreen').style.display='none';
+                location.reload();
+              } else {
+                const m = document.getElementById('lockMsg');
+                if(m) m.textContent = 'PIN이 틀렸어요';
+                buf = '';
+                setTimeout(()=>{if(m)m.textContent='';renderDots();}, 700);
+              }
+            }
+          };
+        }
+        pad.appendChild(btn);
+      });
+      renderDots();
+      const eu = document.getElementById('emergencyUnlock');
+      if(eu) eu.onclick = () => {
+        localStorage.setItem('shared_pin','102800');
+        location.reload();
+      };
+    }
+  } catch(err) { console.error('fallback fail:', err); }
+});
+
 (function initLock(){
   const PKEY='shared_pin';
   const DEFAULT_PIN='102800';
@@ -3706,7 +3843,7 @@ document.addEventListener('keydown',e=>{
   buildPad();
 })();
 
-console.log('[개인일지] v2-0623 로드 완료');
+console.log('[개인일지] v20260623-1510 로드 완료');
 </script>
 </body>
 </html>
