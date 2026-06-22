@@ -165,7 +165,6 @@
 
       /* Enter 키 — 체크리스트 행 안에서 새 행 추가 */
       document.getElementById('stickyV44EditBody').addEventListener('keydown', function(e) {
-        if (e.key !== 'Enter') return;
         var bodyEl = document.getElementById('stickyV44EditBody');
         var sel = window.getSelection();
         if (!sel || !sel.rangeCount) return;
@@ -176,17 +175,42 @@
           if (cur.classList && cur.classList.contains('checklist-row')) { row = cur; break; }
           cur = cur.parentElement;
         }
+
+        /* Backspace — 빈 행 삭제 */
+        if (e.key === 'Backspace' && row) {
+          var textEl2 = row.querySelector('.checklist-text');
+          var txt2 = textEl2 ? (textEl2.innerText || '').trim() : '';
+          if (!txt2) {
+            e.preventDefault();
+            var prev = row.previousElementSibling;
+            row.remove();
+            if (prev) {
+              var prevText = prev.querySelector('.checklist-text') || prev;
+              prevText.focus();
+              var rr = document.createRange();
+              rr.selectNodeContents(prevText);
+              rr.collapse(false);
+              sel.removeAllRanges(); sel.addRange(rr);
+            }
+          }
+          return;
+        }
+
+        if (e.key !== 'Enter') return;
         if (!row) return; /* 체크리스트 행이 아니면 기본 동작 */
         e.preventDefault();
-        /* 현재 행 텍스트가 비어있으면 → 체크리스트 탈출 */
+        /* 현재 행 텍스트가 비어있으면 → 행 삭제 */
         var textEl = row.querySelector('.checklist-text');
         var txt = textEl ? (textEl.innerText || '').trim() : '';
         if (!txt) {
+          var prevRow = row.previousElementSibling;
           row.remove();
-          var p = document.createElement('div'); p.innerHTML = '<br>';
-          bodyEl.appendChild(p);
-          var r = document.createRange(); r.selectNodeContents(p); r.collapse(false);
-          sel.removeAllRanges(); sel.addRange(r);
+          if (prevRow) {
+            var pt = prevRow.querySelector('.checklist-text') || prevRow;
+            pt.focus();
+            var rPrev = document.createRange(); rPrev.selectNodeContents(pt); rPrev.collapse(false);
+            sel.removeAllRanges(); sel.addRange(rPrev);
+          }
           return;
         }
         /* 새 체크리스트 행 삽입 */
