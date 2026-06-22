@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-0654</title>
+<title>업무일지 v44-0622-0703</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-0654</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-0703</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2230,13 +2230,6 @@
       <input type="text" id="expV2Memo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
     </div>
 
-    <!-- 비용 처리 여부 (항상 표시) -->
-    <div style="margin-bottom:12px;padding:12px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:700;color:#166534">
-        <input type="checkbox" id="expV2IsCost" style="width:17px;height:17px;accent-color:#27ae60;cursor:pointer">
-        💰 비용으로 처리 (대시보드 집계에 포함)
-      </label>
-    </div>
     <!-- 전표 여부 + 세금계산서 발급여부 -->
     <div id="expV2TaxOptions" style="display:none;margin-bottom:14px;padding:12px;background:#fff7ed;border:1.5px solid #fdba74;border-radius:12px">
       <div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:8px">📃 세금계산서 옵션</div>
@@ -2251,9 +2244,10 @@
         </label>
       </div>
     </div>
-    <!-- 저장/삭제 버튼 -->
+    <!-- 저장/삭제/취소 버튼 -->
     <div style="display:flex;gap:8px">
       <button type="button" id="expV2Del" style="flex:1;height:48px;border-radius:12px;border:none;background:#fde8e8;color:#b52929;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;display:none">🗑 삭제</button>
+      <button type="button" id="expV2Cancel" style="flex:1;height:48px;border-radius:12px;border:2px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
       <button type="button" id="expV2Save" style="flex:2;height:48px;border-radius:12px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">💾 저장</button>
     </div>
   </div>
@@ -5941,7 +5935,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0622-0654';
+    if(el) el.textContent = 'v44-0622-0703';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -6114,7 +6108,6 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var aEl=g('expV2Amount');
     if(aEl){ aEl.value=en?(en.amount||0):0; aEl._manual=false; aEl.addEventListener('input',function(){ aEl._manual=true; }); }
     // 전표/발급여부 체크 복원
-    var cEl=g('expV2IsCost'); if(cEl) cEl.checked=en?!!(en.isCost):false;
     var jpEl=g('expV2IsJeonpyo'); if(jpEl) jpEl.checked=en?!!(en.isJeonpyo):false;
     var isEl=g('expV2IsIssued');  if(isEl) isEl.checked=en?!!(en.isIssued):false;
     if(en){
@@ -6145,9 +6138,13 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var amount=parseFloat((g('expV2Amount')||{value:0}).value)||0;
     var vendor=((g('expV2Vendor')||{value:''}).value||'').trim();
     var memo=((g('expV2Memo')||{value:''}).value||'').trim();
-    var isCost=!!(g('expV2IsCost')&&g('expV2IsCost').checked);
     var isJeonpyo=!!(g('expV2IsJeonpyo')&&g('expV2IsJeonpyo').checked);
     var isIssued=!!(g('expV2IsIssued')&&g('expV2IsIssued').checked);
+    /* 전표 자동 감지: 내역/메모에 [전표] 포함되거나 전표 체크하면 전표 처리 */
+    var autoJeonpyo = /\[전표\]/.test(title) || /\[전표\]/.test(memo);
+    isJeonpyo = isJeonpyo || autoJeonpyo;
+    /* isCost: 전표면 false, 아니면 true */
+    var isCost = !isJeonpyo;
     if(!title){ if(typeof toast==='function') toast('내역을 입력하세요'); return; }
     if(!amount){ if(typeof toast==='function') toast('금액을 입력하세요'); return; }
     var obj={kind:'expense',date:date,expType:_expType,title:title,amount:amount,
@@ -6182,7 +6179,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       if(typeSel&&e.expType!==typeSel) return false;
       if(issuedSel==='issued'&&!e.isIssued) return false;
       if(issuedSel==='unissued'&&e.isIssued) return false;
-      if(hideJeonpyo&&e.isJeonpyo) return false;
+      var isJp=e.isJeonpyo||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'');
+      if(hideJeonpyo&&isJp) return false;
       return true;
     });
     var cntEl=g('expV2ListCount'); if(cntEl) cntEl.textContent=list.length+'건';
@@ -6194,7 +6192,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     list.forEach(function(e){
       var color=e.expType==='세금계산서'?'#c2410c':'#3f7cb8';
       var badge=e.expType==='세금계산서'?'📃 세금계산서':'💸 개인지출';
-      var jeonpyoBadge=e.isJeonpyo?'<span style="background:#f0f0f0;color:#888;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">전표</span>':'';
+      var isJp2=e.isJeonpyo||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'');
+      var jeonpyoBadge=isJp2?'<span style="background:#f0f0f0;color:#888;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">전표</span>':'';
       var issuedBadge=e.expType==='세금계산서'?(e.isIssued?'<span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">✅ 발급완료</span>':'<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">⏳ 미발급</span>'):'';
       var purposeBadge=e.purpose?('<span style="background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">'+esc(e.purpose)+'</span>'):'';
       html+='<div style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid '+color+';border-radius:12px;padding:14px 16px;position:relative">'
@@ -6238,8 +6237,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var now=new Date();
     var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
     var tm=all.filter(function(e){return (e.date||'').startsWith(ym);} );
-    var personal=tm.filter(function(e){return e.isCost&&e.expType!=='세금계산서';});
-    var tax=tm.filter(function(e){return e.isCost&&e.expType==='세금계산서';});
+    function isCostFn(e){
+      /* isCost 없는 기존 데이터: [전표] 포함이거나 isJeonpyo면 비용 아님 */
+      if(e.isCost!==undefined&&e.isCost!==null) return e.isCost;
+      var isJp = e.isJeonpyo || /\[전표\]/.test(e.title||'') || /\[전표\]/.test(e.memo||'');
+      return !isJp;
+    }
+    var personal=tm.filter(function(e){ return isCostFn(e)&&e.expType!=='세금계산서'; });
+    var tax=tm.filter(function(e){ return isCostFn(e)&&e.expType==='세금계산서'; });
     var pSum=personal.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
     var tSum=tax.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
     var taxUnissued=tax.filter(function(e){return !e.isIssued;}).length;
@@ -6333,6 +6338,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   /* ── 이벤트 바인딩 ── */
   function bind(){
     var cl=g('expV2Close'); if(cl&&!cl._b){cl._b=true;cl.addEventListener('click',closeExpV2);}
+    var cc=g('expV2Cancel'); if(cc&&!cc._b){cc._b=true;cc.addEventListener('click',closeExpV2);}
     var ov=g('expV2Overlay'); if(ov&&!ov._b){ov._b=true;ov.addEventListener('click',function(e){if(e.target===ov)closeExpV2();});}
     var sv=g('expV2Save'); if(sv&&!sv._b){sv._b=true;sv.addEventListener('click',saveExpV2);}
     var dl=g('expV2Del');  if(dl&&!dl._b){dl._b=true;dl.addEventListener('click',deleteExpV2);}
@@ -6379,7 +6385,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookOpenViewer,2000); setTimeout(hookOpenViewer,4000);
 
   window._openExpV2=openExpV2;
-  console.log('[expV2] v44-0622-0654 로드');
+  console.log('[expV2] v44-0622-0703 로드');
 })();
 </script>
   </body>
