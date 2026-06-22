@@ -597,6 +597,33 @@
       /* 원본 openViewer 호출 (모달 틀 세팅) */
       origOpenViewer(kind, id);
 
+      /* body 필드를 즉시(0ms) 체크박스로 교체 — 깜빡임 방지 */
+      setTimeout(function() {
+        var vBody = document.getElementById('vBody');
+        if (vBody && data.body && data.body.indexOf('checklist-row') >= 0) {
+          var rows = vBody.querySelectorAll('.vrow');
+          rows.forEach(function(row) {
+            var keyEl = row.querySelector('.vk');
+            var valEl = row.querySelector('.vv');
+            if (!keyEl || !valEl) return;
+            if ((keyEl.textContent || '').trim() !== '내용') return;
+            var tmp = sanitize(data.body);
+            var wrapper = document.createElement('div');
+            wrapper.className = 'sticky-note-body';
+            wrapper.innerHTML = tmp.innerHTML;
+            valEl.innerHTML = '';
+            valEl.appendChild(wrapper);
+            valEl.querySelectorAll('.checklist-cb').forEach(function(cb) {
+              cb.addEventListener('click', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                var r = cb.closest('.checklist-row');
+                if (r) r.classList.toggle('done');
+              });
+            });
+          });
+        }
+      }, 0);
+
       /* 뷰어 모달의 "수정" 버튼 → openStickyEditModal로 교체 (매 호출마다 갱신) */
       setTimeout(function() {
         var vEditBtn = document.getElementById('vEdit');
@@ -615,39 +642,7 @@
         vEditBtn.addEventListener('click', vEditBtn._v44handler, true);
       }, 30);
 
-      /* vBody의 body 필드 셀을 체크리스트로 교체 */
-      setTimeout(function() {
-        var vBody = document.getElementById('vBody');
-        if (!vBody || !data.body || data.body.indexOf('checklist-row') < 0) return;
 
-        /* vrow 행에서 "내용" 또는 body 라벨을 찾아서 값 셀 교체 */
-        var rows = vBody.querySelectorAll('.vrow');
-        rows.forEach(function(row) {
-          var keyEl = row.querySelector('.vk');
-          var valEl = row.querySelector('.vv');
-          if (!keyEl || !valEl) return;
-          var keyTxt = (keyEl.textContent || '').trim();
-          /* SCHEMA memo의 body 필드 라벨 = "내용" */
-          if (keyTxt !== '내용') return;
-          /* 현재 vv에 HTML 태그가 텍스트로 들어있으면 교체 */
-          var rawTxt = valEl.textContent || '';
-          if (rawTxt.indexOf('checklist-row') < 0 && rawTxt.indexOf('<div') < 0) return;
-          var tmp = sanitize(data.body);
-          var wrapper = document.createElement('div');
-          wrapper.className = 'sticky-note-body';
-          wrapper.innerHTML = tmp.innerHTML;
-          valEl.innerHTML = '';
-          valEl.appendChild(wrapper);
-          /* 체크박스 클릭 토글 (확인 모달에서도 체크 가능) */
-          valEl.querySelectorAll('.checklist-cb').forEach(function(cb) {
-            cb.addEventListener('click', function(e) {
-              e.preventDefault(); e.stopPropagation();
-              var row2 = cb.closest('.checklist-row');
-              if (row2) row2.classList.toggle('done');
-            });
-          });
-        });
-      }, 60);
     };
     window.openViewer._v44hooked = true;
     window._v44viewerHooked = true;
