@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-1659</title>
+<title>업무일지 v44-0622-1701</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -897,7 +897,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1659</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0622-1701</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -5974,7 +5974,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0622-1659';
+    if(el) el.textContent = 'v44-0622-1701';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -6207,6 +6207,15 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   /* ── 목록 렌더 ── */
   window.renderExpV2List=function(){
     var box=g('expV2ListArea'); if(!box) return;
+    /* 월 셀렉트가 비어있으면 이번달로 강제 설정 */
+    var mSelEl=g('expV2MonthSel');
+    if(mSelEl && !mSelEl.value && mSelEl.options.length>1){
+      var now0=new Date();
+      var thisYm=now0.getFullYear()+'-'+String(now0.getMonth()+1).padStart(2,'0');
+      for(var oi=0;oi<mSelEl.options.length;oi++){
+        if(mSelEl.options[oi].value===thisYm){ mSelEl.value=thisYm; break; }
+      }
+    }
     var monthSel=(g('expV2MonthSel')||{}).value||'';
     var typeSel=(g('expV2TypeSel')||{}).value||'';
     var issuedSel=(g('expV2IssuedSel')||{}).value||'';
