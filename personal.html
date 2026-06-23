@@ -493,18 +493,20 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 </header>
 
 <main class="wrap">
-<!-- 검색 -->
+<!-- 검색 + scan-app 빠른 진입 -->
 <div style="padding:4px 0 8px">
   <div class="v43-search-wrap">
     <span class="v43-search-icon">🔍</span>
     <input type="text" id="globalSearch" class="v43-search" placeholder="기록·메모·차계부·파일 검색…">
+  </div>
+  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+    <a href="https://20251014peru-gif.github.io/scan-app.html" target="_blank" style="flex:1;min-width:160px;padding:10px 14px;background:linear-gradient(135deg,#3f7cb8,#5a96d3);color:#fff;border-radius:12px;font-size:13px;font-weight:700;text-decoration:none;text-align:center;box-shadow:0 2px 8px rgba(63,124,184,.25)">📷 scan-app 열기 (영수증·명함·스캔)</a>
   </div>
 </div>
 <!-- 탭 -->
 <div class="v43-tabs" id="mainTabs">
   <button class="v43-tab active" data-tab="memo">📝 메모</button>
   <button class="v43-tab" data-tab="main">📋 기록</button>
-  <button class="v43-tab" data-tab="scan">📸 스캔</button>
   <button class="v43-tab" data-tab="car">🚗 차계부</button>
   <button class="v43-tab" data-tab="contacts">📞 연락처</button>
   <button class="v43-tab" data-tab="calendar">📅 달력</button>
@@ -610,83 +612,10 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 </div>
 
 <!-- ===== 스캔 탭 ===== -->
-<div class="v43-panel" id="panel-scan">
-<div style="margin-top:14px">
-
-  <!-- AI 키 상태 -->
-  <div id="scanKeyState" style="font-size:12px;color:var(--ink-faint);margin-bottom:10px;padding:7px 12px;background:#f7faff;border-radius:8px;border:1.5px solid var(--blue-bd)"></div>
-
-  <!-- 업로드 존 -->
-  <div id="scanUploadZone" style="border:2.5px dashed var(--blue);border-radius:16px;padding:28px 20px;text-align:center;cursor:pointer;background:var(--blue-lt);transition:all .2s;margin-bottom:12px"
-    onclick="g('scanCamInp').click()"
-    ondragover="event.preventDefault();this.style.background='#dbeafe'"
-    ondragleave="this.style.background='var(--blue-lt)'"
-    ondrop="event.preventDefault();this.style.background='var(--blue-lt)';handleScanFiles(event.dataTransfer.files)">
-    <div style="font-size:36px;margin-bottom:8px">📸</div>
-    <div style="font-size:15px;font-weight:800;color:var(--blue);margin-bottom:4px">📷 카메라로 바로 촬영</div>
-    <div style="font-size:12px;color:var(--ink-soft)">영수증·맛집·차량·명함·처방전 — AI가 자동 분석</div>
-    <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
-      <label onclick="event.stopPropagation()" style="padding:8px 16px;background:var(--blue);color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
-        📷 카메라<input type="file" id="scanCamInp" accept="image/*" capture="environment" style="display:none" onchange="handleScanCameraShot(this.files);this.value=''">
-      </label>
-      <label onclick="event.stopPropagation()" style="padding:8px 16px;background:var(--white);color:var(--blue);border:1.5px solid var(--blue);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
-        🖼 갤러리<input type="file" id="scanFileInp" accept="image/*" multiple style="display:none" onchange="handleScanFiles(this.files);this.value=''">
-      </label>
-      <button onclick="event.stopPropagation();scanPasteFromClipboard()" style="padding:8px 16px;background:var(--white);color:var(--ink-soft);border:1.5px solid var(--blue-bd);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📋 붙여넣기</button>
-    </div>
-  </div>
-
-  <!-- 미리보기 -->
-  <div id="scanPreviews" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
-
-  <!-- 분석 버튼 -->
-  <div id="scanAnalyzeWrap" style="display:none;margin-bottom:12px">
-    <button id="scanAnalyzeBtn" onclick="runScanOCR()" style="width:100%;height:52px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.5px;box-shadow:0 4px 16px rgba(37,99,168,.3)">
-      🔍 AI 스캔 분석 시작
-    </button>
-    <div id="scanProgress" style="display:none;margin-top:10px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-bottom:4px">
-        <span id="scanProgressTxt">분석 중…</span><span id="scanProgressPct">0%</span>
-      </div>
-      <div style="height:8px;background:#e8f0fa;border-radius:6px;overflow:hidden">
-        <div id="scanProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--blue),#27ae60);border-radius:6px;transition:width .3s"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 결과 카드 목록 -->
-  <div id="scanResultList"></div>
-
-  <!-- 스캔 보관함 -->
-  <div style="margin-top:18px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="font-size:15px;font-weight:800;color:var(--ink)">📂 스캔 보관함</div>
-      <div style="display:flex;gap:6px">
-        <select id="scanStoreFilter" onchange="renderScanStore()" style="height:34px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
-          <option value="all">전체</option>
-          <option value="restaurant">🍽 맛집</option>
-          <option value="purchase">🛒 구매/영수증</option>
-          <option value="health">🏥 건강/처방</option>
-          <option value="car">🚗 차계부</option>
-          <option value="diary">📔 일상</option>
-          <option value="thought">💭 생각</option>
-          <option value="reading">📚 독서</option>
-          <option value="memo">📝 메모</option>
-          <option value="business">💼 명함</option>
-          <option value="other">📎 기타</option>
-        </select>
-        <button onclick="clearScanStore()" style="height:34px;padding:0 12px;border:1.5px solid #fde8e8;background:#fff5f5;color:#c0392b;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">전체 삭제</button>
-      </div>
-    </div>
-    <div id="scanStoreList">
-      <div class="v43-empty"><div class="ei">📸</div>스캔한 항목이 없어요</div>
-    </div>
-  </div>
-
-</div>
+<div class="v43-panel" id="panel-scan" style="display:none">
+  <!-- 📸 스캔 탭은 scan-app으로 통합되었어요. (자동 마이그레이션 후 제거됨) -->
 </div>
 
-<!-- ===== 차계부 탭 ===== -->
 <div class="v43-panel" id="panel-car">
   <div style="margin-top:14px">
     <!-- 차량 선택 탭 -->
@@ -1348,7 +1277,6 @@ document.querySelectorAll('.v43-tab').forEach(btn=>{
     const panel=g('panel-'+btn.dataset.tab);
     if(panel) panel.classList.add('active');
     if(btn.dataset.tab==='memo'){setTimeout(()=>{renderStickyGrid();bindChecklist();},100);}
-    if(btn.dataset.tab==='scan'){setTimeout(()=>{if(typeof renderScanStore==='function')renderScanStore();},100);}
     if(btn.dataset.tab==='car') renderCar();
     if(btn.dataset.tab==='contacts') renderContacts();
     if(btn.dataset.tab==='calendar') renderCalendar();
@@ -5163,6 +5091,205 @@ console.log('[개인일지] 로드 완료');
   const pad = n => String(n).padStart(2,'0');
   const ver = `v${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
   el.textContent = ver;
+})();
+
+/* ════════════════════════════════════════════════════════
+   📸 스캔 데이터 → scan-app 마이그레이션 (1회성)
+   ════════════════════════════════════════════════════════ */
+(function(){
+  const SCAN_STORE_KEY = 'pj_scan_store';
+  const MIGRATED_FLAG = 'pj_scan_migrated_to_scanapp';
+  const SCAN_USER_ID = '달님';
+  const SCAN_APP_URL = 'https://20251014peru-gif.github.io/scan-app.html';
+
+  /* personal의 카테고리 → scan-app 타입 매핑 */
+  function mapToScanType(cat){
+    /* restaurant/purchase/health/car/diary/thought/reading/memo/business/other */
+    if(cat === 'business') return 'card';   /* 명함 */
+    if(cat === 'purchase') return 'receipt'; /* 영수증 */
+    return 'text';  /* 그 외는 텍스트 메모로 */
+  }
+  function mapTextType(cat){
+    const m = {
+      restaurant: '🍽 맛집',
+      purchase: '🛒 구매',
+      health: '🏥 건강·처방',
+      car: '🚗 차량 정보',
+      diary: '📔 일상',
+      thought: '💭 생각',
+      reading: '📚 독서',
+      memo: '📝 메모',
+      business: '💼 명함',
+      other: '📎 기타',
+    };
+    return m[cat] || '📝 메모';
+  }
+
+  /* scan-app 형식으로 변환 */
+  function toScanAppFormat(item){
+    const t = mapToScanType(item.cat);
+    const id = 'pjmig_' + (item.id || Math.random().toString(36).slice(2));
+    const updated = item.savedAt || Date.now();
+    const photo = item.photo || item.image || '';  /* base64 image */
+    const ocr = item.ocr || item.text || '';
+    const memo = item.memo || item.note || '';
+    const title = item.title || item.name || (ocr.slice(0,40)) || '(제목 없음)';
+
+    if(t === 'card'){
+      return {
+        type: 'card',
+        data: {
+          id, name: title, company:'', position:'', dept:'',
+          mobile:'', phone:'', fax:'', email:'', website:'', addr:'',
+          memo: (memo || '') + (ocr ? '\n\n[OCR]\n' + ocr : '') + '\n\n[from personal 스캔]',
+          photoId:'', photoUrl:'', updated,
+          linkedTo: ['personal:migrated']
+        },
+        photo
+      };
+    }else if(t === 'receipt'){
+      return {
+        type: 'receipt',
+        data: {
+          id, place: title, date: item.date || '', payTime: '',
+          phone:'', addr:'', amount: item.amount || 0, payMethod:'',
+          items: [],
+          memo: (memo || '') + (ocr ? '\n\n[OCR]\n' + ocr : '') + '\n\n[from personal 스캔]',
+          photoId:'', photoUrl:'', updated,
+          linkedTo: ['personal:migrated']
+        },
+        photo
+      };
+    }else{
+      return {
+        type: 'text',
+        data: {
+          id, date: item.date || '', type: mapTextType(item.cat),
+          title, tags: item.cat || '',
+          text: ocr,
+          memo: (memo || '') + '\n\n[from personal 스캔]',
+          photoId:'', photoUrl:'', updated,
+          linkedTo: ['personal:migrated']
+        },
+        photo
+      };
+    }
+  }
+
+  async function migrate(){
+    if(localStorage.getItem(MIGRATED_FLAG) === 'done') return { skipped: true };
+    let store = [];
+    try{ store = JSON.parse(localStorage.getItem(SCAN_STORE_KEY) || '[]'); }catch{ store = []; }
+    if(!store.length){
+      localStorage.setItem(MIGRATED_FLAG, 'done');
+      return { skipped: true, reason: 'empty' };
+    }
+    if(typeof firebase === 'undefined' || typeof db === 'undefined'){
+      console.warn('[migration] Firebase 없음');
+      return { error: 'no-firebase' };
+    }
+
+    const summary = { receipts: 0, cards: 0, texts: 0, failed: 0 };
+    const batch = db.batch();
+    let batchCount = 0;
+    for(const item of store){
+      try{
+        const conv = toScanAppFormat(item);
+        const coll = conv.type + 's';
+        const ref = db.collection('scanapp').doc(SCAN_USER_ID).collection(coll).doc(conv.data.id);
+        batch.set(ref, conv.data);
+        summary[coll]++;
+        batchCount++;
+        if(batchCount >= 400){
+          await batch.commit();
+          batchCount = 0;
+        }
+      }catch(e){
+        console.error('[migration] item failed', e);
+        summary.failed++;
+      }
+    }
+    if(batchCount > 0) await batch.commit();
+
+    /* 백업 보관 (한 번 더 안전) */
+    try{
+      localStorage.setItem(SCAN_STORE_KEY + '_backup_' + Date.now(), JSON.stringify(store));
+    }catch{}
+    /* 마이그레이션 완료 플래그 */
+    localStorage.setItem(MIGRATED_FLAG, 'done');
+    return summary;
+  }
+
+  /* 안내 모달 한 번 표시 (수동 트리거 옵션 + 자동 실행) */
+  async function showMigrationDialog(){
+    if(localStorage.getItem(MIGRATED_FLAG) === 'done') return;
+    let store = [];
+    try{ store = JSON.parse(localStorage.getItem(SCAN_STORE_KEY) || '[]'); }catch{}
+    const count = store.length;
+    if(count === 0){
+      localStorage.setItem(MIGRATED_FLAG, 'done');
+      return;
+    }
+    /* 모달 동적 생성 */
+    const overlay = document.createElement('div');
+    overlay.id = 'scanMigrateOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:inherit';
+    overlay.innerHTML = `
+      <div style="background:#fff;max-width:480px;width:90%;border-radius:18px;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+        <div style="font-size:18px;font-weight:800;color:#1a2f45;margin-bottom:10px">📸 스캔 데이터 이전</div>
+        <div style="font-size:13px;color:#5a6d80;line-height:1.6;margin-bottom:14px">
+          personal의 <strong>📸 스캔 탭</strong>이 통합 스캔 앱(<strong>scan-app</strong>)으로 옮겨졌어요.<br><br>
+          현재 보관함에 있는 <strong style="color:#3f7cb8">${count}개 항목</strong>을 자동으로 scan-app으로 이전하시겠어요?<br><br>
+          • 명함(💼)은 → scan-app 명함으로<br>
+          • 영수증/구매(🛒)는 → scan-app 영수증으로<br>
+          • 그 외는 → scan-app 텍스트 메모로<br><br>
+          <span style="color:#aab8c8;font-size:12px">로컬 데이터는 백업으로 보존되며, 1회만 실행됩니다.</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button id="migDeferBtn" style="flex:1;height:44px;border-radius:10px;border:2px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">나중에</button>
+          <button id="migSkipBtn" style="flex:1;height:44px;border-radius:10px;border:none;background:#fde8e8;color:#b52929;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">건너뛰기</button>
+          <button id="migRunBtn" style="flex:1.5;height:44px;border-radius:10px;border:none;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📦 이전 시작</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById('migDeferBtn').onclick = () => overlay.remove();
+    document.getElementById('migSkipBtn').onclick = () => {
+      if(confirm('이전을 건너뛸까요?\n다음에도 묻지 않습니다.\n(로컬 데이터는 그대로 남아있어요)')){
+        localStorage.setItem(MIGRATED_FLAG, 'done');
+        overlay.remove();
+      }
+    };
+    document.getElementById('migRunBtn').onclick = async () => {
+      const btn = document.getElementById('migRunBtn');
+      btn.disabled = true; btn.textContent = '⏳ 이전 중…';
+      const result = await migrate();
+      btn.textContent = '✅ 완료';
+      setTimeout(() => {
+        overlay.innerHTML = `
+          <div style="background:#fff;max-width:480px;width:90%;border-radius:18px;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.3);text-align:center">
+            <div style="font-size:32px;margin-bottom:10px">✅</div>
+            <div style="font-size:18px;font-weight:800;color:#1a2f45;margin-bottom:10px">이전 완료</div>
+            <div style="font-size:13px;color:#5a6d80;line-height:1.8;margin-bottom:14px">
+              📃 텍스트: <strong>${result.texts||0}개</strong><br>
+              🧾 영수증: <strong>${result.receipts||0}개</strong><br>
+              💼 명함: <strong>${result.cards||0}개</strong><br>
+              ${result.failed?'<span style="color:#b52929">⚠ 실패: '+result.failed+'개</span>':''}
+            </div>
+            <div style="display:flex;gap:8px">
+              <button onclick="document.getElementById('scanMigrateOverlay').remove()" style="flex:1;height:44px;border-radius:10px;border:2px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">닫기</button>
+              <a href="${SCAN_APP_URL}" target="_blank" style="flex:1.5;height:44px;border-radius:10px;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;text-decoration:none">🚀 scan-app 열기</a>
+            </div>
+          </div>`;
+      }, 600);
+    };
+  }
+
+  /* 페이지 로드 후 잠시 대기하다 안내 */
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => setTimeout(showMigrationDialog, 1500));
+  }else{
+    setTimeout(showMigrationDialog, 1500);
+  }
 })();
 </script>
 </body>
