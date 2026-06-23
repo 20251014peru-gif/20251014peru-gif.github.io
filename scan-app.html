@@ -591,6 +591,22 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
   </div>
 </div>
 
+<!-- 🧾💼📝 스캔 상세보기 모달 -->
+<div class="overlay" id="scanDetailOverlay">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-head">
+      <div class="modal-title" id="scanDetailTitle">상세보기</div>
+      <button class="hbtn" id="scanDetailClose">✕</button>
+    </div>
+    <div class="modal-body" id="scanDetailBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-flex" id="scanDetailCloseBtn">닫기</button>
+      <button class="btn btn-red" id="scanDetailDel">🗑 삭제</button>
+      <button class="btn btn-blue btn-flex" id="scanDetailEdit">✏️ 수정</button>
+    </div>
+  </div>
+</div>
+
 <!-- ✏️ 편집 모달 (fabric.js) -->
 <div id="editOverlay">
   <div id="editHeader">
@@ -2006,6 +2022,7 @@ function renderTextList(q){
 }
 
 function bindRowActions(container,type){
+  // 액션 버튼 (편집/복사/삭제)
   container.querySelectorAll('[data-act]').forEach(btn=>{
     btn.onclick=e=>{
       e.stopPropagation();
@@ -2040,7 +2057,135 @@ function bindRowActions(container,type){
       }
     };
   });
+  // 카드/row 본문 클릭 → 상세보기 (버튼 클릭은 제외)
+  container.querySelectorAll('[data-id]').forEach(el=>{
+    el.style.cursor='pointer';
+    el.onclick=e=>{
+      if(e.target.closest('[data-act]'))return;
+      if(e.target.closest('a'))return; // 링크(tel:, 주소 등) 클릭은 그대로 동작
+      openScanDetail(type,el.dataset.id);
+    };
+  });
 }
+
+/* ════════════════════════════════════════════════════════
+   🔍 스캔 상세보기 (영수증/명함/텍스트 공용)
+   ════════════════════════════════════════════════════════ */
+let _scanDetailCtx=null;
+
+function _detailRow(label,value){
+  return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)">
+    <div style="flex:0 0 90px;color:var(--ink-faint);font-weight:700;font-size:11px">${label}</div>
+    <div style="flex:1;color:var(--ink);font-size:13px;word-break:break-word;line-height:1.6">${value}</div>
+  </div>`;
+}
+
+async function openScanDetail(type,id){
+  let item,title;
+  if(type==='receipt'){
+    item=receipts.find(r=>r.id===id);
+    title='🧾 '+(item?.place||'영수증');
+  }else if(type==='card'){
+    item=cards.find(c=>c.id===id);
+    title='💼 '+(item?.name||'명함');
+  }else if(type==='text'){
+    item=texts.find(t=>t.id===id);
+    title=(item?.type||'📝')+' '+(item?.title||'텍스트');
+  }
+  if(!item)return;
+  _scanDetailCtx={type,id};
+  $('scanDetailTitle').textContent=title;
+
+  let html='';
+  // 사진 슬롯 (있으면 비동기 로드)
+  if(item.photoId){
+    html+=`<div id="scanDetailPhotoWrap" style="text-align:center;margin-bottom:14px;background:var(--blue-soft);border-radius:10px;padding:8px">
+      <div style="color:var(--ink-faint);font-size:11px">사진 로드 중…</div></div>`;
+  }
+
+  // 타입별 필드
+  if(type==='receipt'){
+    if(item.date||item.payTime) html+=_detailRow('📅 일자',esc(`${item.date||''} ${item.payTime||''}`.trim()));
+    if(item.amount) html+=_detailRow('💰 금액',`<strong style="color:var(--blue);font-size:18px">${numFmt(item.amount)}원</strong>`);
+    if(item.phone) html+=_detailRow('📞 전화',`<a class="link-tel" href="${telLink(item.phone)}">${esc(item.phone)} 📞</a>`);
+    if(item.payMethod) html+=_detailRow('💳 결제',esc(item.payMethod));
+    if(item.addr) html+=_detailRow('📍 주소',`<a class="link-addr" href="${naverMap(item.addr)}" target="_blank">${esc(item.addr)} 🗺</a>`);
+    if(item.items&&item.items.length){
+      const itemsHtml=item.items.map(it=>`<div style="padding:2px 0">${esc(it.name||'')}${it.qty>1?' × '+it.qty:''}${it.subtotal?' · '+numFmt(it.subtotal)+'원':''}</div>`).join('');
+      html+=_detailRow('🛒 품목',itemsHtml);
+    }
+    if(item.memo) html+=_detailRow('📝 메모',`<div style="white-space:pre-wrap">${esc(item.memo)}</div>`);
+  }else if(type==='card'){
+    if(item.company) html+=_detailRow('🏢 회사',`<strong>${esc(item.company)}</strong>`);
+    if(item.position||item.dept) html+=_detailRow('🎯 직책',esc(`${item.position||''}${item.dept?' / '+item.dept:''}`));
+    if(item.mobile) html+=_detailRow('📱 휴대폰',`<a class="link-tel" href="${telLink(item.mobile)}">${esc(item.mobile)} 📞</a>`);
+    if(item.phone) html+=_detailRow('🏢 사무실',`<a class="link-tel" href="${telLink(item.phone)}">${esc(item.phone)} 📞</a>`);
+    if(item.email) html+=_detailRow('📧 이메일',`<a class="link-addr" href="${mailLink(item.email)}">${esc(item.email)}</a>`);
+    if(item.website) html+=_detailRow('🌐 웹',`<a class="link-addr" href="${esc(item.website)}" target="_blank">${esc(item.website)}</a>`);
+    if(item.addr) html+=_detailRow('📍 주소',`<a class="link-addr" href="${naverMap(item.addr)}" target="_blank">${esc(item.addr)} 🗺</a>`);
+    if(item.memo) html+=_detailRow('📝 메모',`<div style="white-space:pre-wrap">${esc(item.memo)}</div>`);
+  }else if(type==='text'){
+    if(item.date) html+=_detailRow('📅 일자',esc(item.date));
+    if(item.type) html+=_detailRow('📂 종류',esc(item.type));
+    if(item.tags) html+=_detailRow('🏷 태그',esc(item.tags));
+    if(item.text) html+=_detailRow('✨ 추출 텍스트',`<div style="white-space:pre-wrap;font-family:Consolas,Menlo,monospace;font-size:12px;line-height:1.6;max-height:280px;overflow-y:auto;padding:8px;background:var(--blue-soft);border-radius:6px">${esc(item.text)}</div>`);
+    if(item.memo) html+=_detailRow('📝 메모',`<div style="white-space:pre-wrap">${esc(item.memo)}</div>`);
+  }
+
+  $('scanDetailBody').innerHTML=html;
+
+  // 사진 비동기 로드
+  if(item.photoId){
+    try{
+      const data=await idbGet(item.photoId);
+      const wrap=$('scanDetailPhotoWrap');
+      if(data&&wrap){
+        wrap.innerHTML=`<img src="${data}" alt="" style="max-width:100%;max-height:280px;border-radius:8px;cursor:zoom-in;display:block;margin:0 auto" id="_scanDetImg">`;
+        $('_scanDetImg').onclick=()=>showImg(data,title);
+      }else if(wrap){
+        wrap.innerHTML='<div style="color:var(--ink-faint);font-size:11px;padding:8px">사진 없음</div>';
+      }
+    }catch(e){
+      const wrap=$('scanDetailPhotoWrap');
+      if(wrap)wrap.innerHTML='<div style="color:var(--red);font-size:11px;padding:8px">사진 로드 실패</div>';
+    }
+  }
+
+  $('scanDetailOverlay').classList.add('show');
+}
+
+function closeScanDetail(){$('scanDetailOverlay').classList.remove('show');_scanDetailCtx=null;}
+$('scanDetailClose').onclick=closeScanDetail;
+$('scanDetailCloseBtn').onclick=closeScanDetail;
+$('scanDetailEdit').onclick=()=>{
+  if(!_scanDetailCtx)return;
+  const {type,id}=_scanDetailCtx;
+  closeScanDetail();
+  if(type==='receipt'){const r=receipts.find(x=>x.id===id);if(r)openReceiptModal(r);}
+  else if(type==='card'){const c=cards.find(x=>x.id===id);if(c)openCardModal(c);}
+  else if(type==='text'){const t=texts.find(x=>x.id===id);if(t)openTextModal(t);}
+};
+$('scanDetailDel').onclick=async()=>{
+  if(!_scanDetailCtx)return;
+  const {type,id}=_scanDetailCtx;
+  if(type==='receipt'){
+    const r=receipts.find(x=>x.id===id);
+    if(!r||!confirm(`'${r.place||'영수증'}'을 삭제할까요?`))return;
+    if(r.photoId){try{await idbDel(r.photoId);}catch(e){}}
+    receipts=receipts.filter(x=>x.id!==id);saveReceipts();
+  }else if(type==='card'){
+    const c=cards.find(x=>x.id===id);
+    if(!c||!confirm(`'${c.name||'명함'}'을 삭제할까요?`))return;
+    if(c.photoId){try{await idbDel(c.photoId);}catch(e){}}
+    cards=cards.filter(x=>x.id!==id);saveCards();
+  }else if(type==='text'){
+    const t=texts.find(x=>x.id===id);
+    if(!t||!confirm(`'${t.title||'메모'}'를 삭제할까요?`))return;
+    if(t.photoId){try{await idbDel(t.photoId);}catch(e){}}
+    texts=texts.filter(x=>x.id!==id);saveTexts();
+  }
+  closeScanDetail();renderScanList();toast('삭제됐어요');
+};
 
 function copyReceiptToClipboard(r){
   const row=[r.date||'',r.payTime||'',r.place||'',r.phone||'',r.amount||'',
@@ -2747,7 +2892,7 @@ $('secureCancel').onclick=()=>{
   // 구버전 데이터 마이그레이션: photo:base64 → photoId + IDB
   await migrateOldPhotos();
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260623-1335';
+  $('appVer').textContent='v20260623-1411';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
