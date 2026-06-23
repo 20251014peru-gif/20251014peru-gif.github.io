@@ -91,7 +91,7 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
 .empty .ei{font-size:48px;margin-bottom:8px}
 
 /* 모달 */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:4000;
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;
   display:none;align-items:center;justify-content:center;padding:20px}
 .overlay.show{display:flex}
 .modal{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:92vh;
@@ -101,6 +101,13 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
 .modal-title{font-size:15px;font-weight:800;color:var(--ink)}
 .modal-body{padding:14px 18px;overflow-y:auto;flex:1}
 .modal-foot{padding:12px 18px;border-top:1.5px solid var(--line);display:flex;gap:6px;flex-wrap:wrap}
+/* 입력 필드 모바일 명시 활성화 */
+.modal input,.modal textarea,.modal select{
+  -webkit-user-select:text!important;user-select:text!important;
+  pointer-events:auto!important;
+  -webkit-touch-callout:default!important;
+  touch-action:auto!important;
+}
 
 .field{margin-bottom:10px}
 .field label{display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px}
@@ -917,11 +924,49 @@ function loadData(){
   try{texts=JSON.parse(localStorage.getItem(LS_TEXTS)||'[]');}catch{texts=[];}
   apiKey=localStorage.getItem(LS_API_KEY)||'';
 }
-function savePhotos(){try{localStorage.setItem(LS_PHOTOS,JSON.stringify(photos));syncPush('photos');return true;}catch(e){toast('저장 공간 부족');return false;}}
+/* base64 데이터URL은 localStorage에서 빼고 저장 (IndexedDB/Storage URL만 유지) */
+function _stripBase64(arr){
+  return arr.map(item=>{
+    const copy = {...item};
+    /* photoUrl이 data:URL이면 비움 (IndexedDB의 photoId로 복원 가능) */
+    if(typeof copy.photoUrl === 'string' && copy.photoUrl.startsWith('data:')){
+      copy.photoUrl = '';
+    }
+    /* imgUrls 객체도 같은 처리 (일반사진용) */
+    if(copy.imgUrls && typeof copy.imgUrls === 'object'){
+      const u = {};
+      for(const k in copy.imgUrls){
+        if(typeof copy.imgUrls[k] === 'string' && !copy.imgUrls[k].startsWith('data:')){
+          u[k] = copy.imgUrls[k];
+        }
+      }
+      copy.imgUrls = u;
+    }
+    return copy;
+  });
+}
+function _safeLSSet(key, arr){
+  try{
+    localStorage.setItem(key, JSON.stringify(arr));
+    return true;
+  }catch(e){
+    /* 용량 초과 시 base64 제거 후 재시도 */
+    try{
+      const stripped = _stripBase64(arr);
+      localStorage.setItem(key, JSON.stringify(stripped));
+      console.warn('[scan-app] localStorage 용량 부족 → base64 제거 후 저장');
+      return true;
+    }catch(e2){
+      toast('저장 실패: '+e2.message+' (휴지통을 비우거나 오래된 항목을 삭제해주세요)');
+      return false;
+    }
+  }
+}
+function savePhotos(){if(_safeLSSet(LS_PHOTOS, photos)){syncPush('photos');return true;}return false;}
 function saveCats(){try{localStorage.setItem(LS_CATS,JSON.stringify(cats));}catch(e){}}
-function saveReceipts(){try{localStorage.setItem(LS_RECEIPTS,JSON.stringify(receipts));syncPush('receipts');return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
-function saveCards(){try{localStorage.setItem(LS_CARDS,JSON.stringify(cards));syncPush('cards');return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
-function saveTexts(){try{localStorage.setItem(LS_TEXTS,JSON.stringify(texts));syncPush('texts');return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
+function saveReceipts(){if(_safeLSSet(LS_RECEIPTS, receipts)){syncPush('receipts');return true;}return false;}
+function saveCards(){if(_safeLSSet(LS_CARDS, cards)){syncPush('cards');return true;}return false;}
+function saveTexts(){if(_safeLSSet(LS_TEXTS, texts)){syncPush('texts');return true;}return false;}
 
 /* ════════════════════════════════════════════════════════
    ☁️ Firebase 동기화 (메타데이터만)
@@ -1050,11 +1095,11 @@ async function syncPullAll(){
     texts=merge(texts,tSnap.docs);
     // 일반사진: 메타만 동기화 (imgIds는 동기화하되 실제 사진은 IDB에만)
     photos=merge(photos,pSnap.docs);
-    // 로컬 저장 (push 트리거 막기 위해 직접)
-    try{localStorage.setItem(LS_RECEIPTS,JSON.stringify(receipts));}catch(e){}
-    try{localStorage.setItem(LS_CARDS,JSON.stringify(cards));}catch(e){}
-    try{localStorage.setItem(LS_TEXTS,JSON.stringify(texts));}catch(e){}
-    try{localStorage.setItem(LS_PHOTOS,JSON.stringify(photos));}catch(e){}
+    // 로컬 저장 (push 트리거 막기 위해 직접) - base64 자동 strip
+    _safeLSSet(LS_RECEIPTS, receipts);
+    _safeLSSet(LS_CARDS, cards);
+    _safeLSSet(LS_TEXTS, texts);
+    _safeLSSet(LS_PHOTOS, photos);
     localStorage.setItem(LS_FB_LAST,String(Date.now()));
     setFbStatus('','green');
     return true;
@@ -1115,6 +1160,11 @@ $('btnFirebase').onclick=()=>{
   const user=localStorage.getItem(LS_FB_USER)||'달님';
   $('fbConfigInp').value=cfg?cfg:'';
   $('fbUserIdInp').value=user;
+  // 모바일 입력 보장 - readonly/disabled 강제 해제
+  $('fbConfigInp').removeAttribute('readonly');
+  $('fbConfigInp').removeAttribute('disabled');
+  $('fbUserIdInp').removeAttribute('readonly');
+  $('fbUserIdInp').removeAttribute('disabled');
   const last=localStorage.getItem(LS_FB_LAST);
   const st=$('firebaseStatus');
   if(_fbDb){
@@ -1240,11 +1290,11 @@ async function uploadMissingPhotos(){
       }catch(e){}
     }
   }
-  // 로컬 저장 (자동 push 안 됨 - 다음 syncPushAll에서)
-  try{localStorage.setItem(LS_RECEIPTS,JSON.stringify(receipts));}catch(e){}
-  try{localStorage.setItem(LS_CARDS,JSON.stringify(cards));}catch(e){}
-  try{localStorage.setItem(LS_TEXTS,JSON.stringify(texts));}catch(e){}
-  try{localStorage.setItem(LS_PHOTOS,JSON.stringify(photos));}catch(e){}
+  // 로컬 저장 (자동 push 안 됨 - 다음 syncPushAll에서) - base64 자동 strip
+  _safeLSSet(LS_RECEIPTS, receipts);
+  _safeLSSet(LS_CARDS, cards);
+  _safeLSSet(LS_TEXTS, texts);
+  _safeLSSet(LS_PHOTOS, photos);
 }
 $('firebaseDisconnect').onclick=()=>{
   if(!confirm('클라우드 연결을 해제할까요?\n(로컬 데이터는 보존됩니다)'))return;
@@ -3477,7 +3527,7 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260623-1502';
+  $('appVer').textContent='v20260623-1900';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
