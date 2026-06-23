@@ -265,6 +265,7 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
   background:#3a3a3a;color:#fff;font-size:12px;font-family:inherit;font-weight:700}
 #editCanvasWrap{flex:1;display:flex;align-items:center;justify-content:center;
   padding:14px;background:#1a1a1a;overflow:auto}
+#editCanvasWrap .canvas-container{box-shadow:0 0 20px rgba(0,0,0,.5);border-radius:4px;overflow:hidden}
 #editTextInputRow{display:none;padding:10px 14px;background:#2a2a2a;
   gap:8px;align-items:center;border-top:1px solid #3a3a3a}
 #editTextInputRow.show{display:flex}
@@ -1145,7 +1146,8 @@ function openEditModal(dataUrl,callback){
     const wrap=$('editCanvasWrap');
     const maxW=wrap.clientWidth-20,maxH=wrap.clientHeight-20;
     fabric.Image.fromURL(dataUrl,img=>{
-      const scale=Math.min(maxW/img.width,maxH/img.height,1);
+      // 작은 사진도 화면 꽉 채우도록 1 제한 제거
+      const scale=Math.min(maxW/img.width,maxH/img.height);
       const cw=Math.round(img.width*scale),ch=Math.round(img.height*scale);
       _fab=new fabric.Canvas('editCanvas',{width:cw,height:ch,backgroundColor:'#fff'});
       img.set({scaleX:scale,scaleY:scale,selectable:false,evented:false});
@@ -1437,13 +1439,16 @@ let _fabZoom=1;
 function bindEditZoom(){
   const wrap=$('editCanvasWrap');if(!wrap)return;
 
-  // 마우스 휠 줌
+  // 마우스 휠 줌 (마우스 커서 위치 기준)
   wrap.addEventListener('wheel',e=>{
     if(!_fab)return;
     e.preventDefault();
     const delta=e.deltaY<0?1.1:0.9;
     _fabZoom=Math.max(0.3,Math.min(5,_fabZoom*delta));
-    _fab.setZoom(_fabZoom);
+    // 마우스 커서 위치를 캔버스 좌표로 변환
+    const rect=_fab.upperCanvasEl.getBoundingClientRect();
+    const point={x:e.clientX-rect.left,y:e.clientY-rect.top};
+    _fab.zoomToPoint(point,_fabZoom);
     _fab.renderAll();
     showZoomIndicator();
   },{passive:false});
@@ -1494,14 +1499,17 @@ function bindEditZoom(){
       const dist=Math.hypot(dx,dy);
       const cx=(t1.clientX+t2.clientX)/2;
       const cy=(t1.clientY+t2.clientY)/2;
-      // 줌 (핀치 거리 변화)
+      // 줌 기준점 = 두 손가락 중심 (캔버스 좌표로 변환)
+      const rect=_fab.upperCanvasEl.getBoundingClientRect();
+      const point={x:cx-rect.left,y:cy-rect.top};
+      // 줌 (핀치 거리 변화) - 중심점 기준
       if(lastDist){
         const factor=dist/lastDist;
         _fabZoom=Math.max(0.3,Math.min(5,_fabZoom*factor));
-        _fab.setZoom(_fabZoom);
+        _fab.zoomToPoint(point,_fabZoom);
         showZoomIndicator();
       }
-      // 팬 (두 손가락 중심점 이동)
+      // 팬 (두 손가락 중심점 이동분만큼)
       if(lastCenterX){
         const moveX=cx-lastCenterX,moveY=cy-lastCenterY;
         const vpt=_fab.viewportTransform;
