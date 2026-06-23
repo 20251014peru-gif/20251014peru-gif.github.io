@@ -917,12 +917,64 @@ function fileToDataUrl(file){
 }
 
 function loadData(){
+  /* 🧹 시작 시 자동 정리: localStorage 용량 확보 */
+  try{
+    let removed = 0;
+    let freedKB = 0;
+    const toDelete = [];
+    for(const k in localStorage){
+      if(!localStorage.hasOwnProperty(k)) continue;
+      /* 1. personal 마이그레이션 백업 (Firebase에 있으니 안전하게 제거) */
+      if(k.startsWith('pj_scan_store_backup_')){
+        toDelete.push(k);
+      }
+      /* 2. scan-app 자체 옛 백업 */
+      else if(k.startsWith('scanapp_backup_') && k !== 'scanapp_last_auto_backup'){
+        toDelete.push(k);
+      }
+      /* 3. 임시/실험용 키들 */
+      else if(k.startsWith('_tmp_') || k.includes('_old_')){
+        toDelete.push(k);
+      }
+    }
+    toDelete.forEach(k=>{
+      freedKB += (localStorage[k]?.length||0)/1024;
+      localStorage.removeItem(k);
+      removed++;
+    });
+    if(removed > 0){
+      console.log(`[scan-app] 시작 시 자동 정리: ${removed}개 키 제거, ${freedKB.toFixed(1)}KB 확보`);
+      setTimeout(()=>{
+        if(typeof toast==='function') toast(`🧹 ${freedKB.toFixed(0)}KB 저장공간 확보`);
+      }, 500);
+    }
+  }catch(e){console.warn('cleanup error',e);}
+
   try{photos=JSON.parse(localStorage.getItem(LS_PHOTOS)||'[]');}catch{photos=[];}
   try{const c=localStorage.getItem(LS_CATS);cats=c?JSON.parse(c):[...DEFAULT_CATS];}catch{cats=[...DEFAULT_CATS];}
   try{receipts=JSON.parse(localStorage.getItem(LS_RECEIPTS)||'[]');}catch{receipts=[];}
   try{cards=JSON.parse(localStorage.getItem(LS_CARDS)||'[]');}catch{cards=[];}
   try{texts=JSON.parse(localStorage.getItem(LS_TEXTS)||'[]');}catch{texts=[];}
   apiKey=localStorage.getItem(LS_API_KEY)||'';
+
+  /* 🧹 로드 후 base64 strip 재저장 (기존 데이터 정리) */
+  setTimeout(()=>{
+    try{
+      let needCleanup = false;
+      const checkBase64 = arr => arr.some(it => typeof it.photoUrl === 'string' && it.photoUrl.startsWith('data:'));
+      if(checkBase64(receipts) || checkBase64(cards) || checkBase64(texts) || checkBase64(photos)){
+        needCleanup = true;
+      }
+      if(needCleanup){
+        console.log('[scan-app] base64 데이터 발견 → 정리 중...');
+        _safeLSSet(LS_RECEIPTS, receipts);
+        _safeLSSet(LS_CARDS, cards);
+        _safeLSSet(LS_TEXTS, texts);
+        _safeLSSet(LS_PHOTOS, photos);
+        if(typeof toast==='function') toast('🧹 저장공간 최적화 완료');
+      }
+    }catch(e){console.warn(e);}
+  }, 1000);
 }
 /* base64 데이터URL은 localStorage에서 빼고 저장 (IndexedDB/Storage URL만 유지) */
 function _stripBase64(arr){
@@ -3527,7 +3579,7 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260623-1900';
+  $('appVer').textContent='v20260623-1925';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
