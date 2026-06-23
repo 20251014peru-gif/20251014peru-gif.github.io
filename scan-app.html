@@ -9,6 +9,9 @@
 <link rel="stylesheet" as="style" crossorigin
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <style>
 /* ===== 디자인 토큰 (worklog 기반) ===== */
 :root{
@@ -303,8 +306,11 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
     <span class="sub" id="appVer">독립앱</span>
   </div>
   <div class="hdr-right">
+    <button class="hbtn" id="btnGlobalSearch" title="전체 검색">🔎</button>
+    <button class="hbtn" id="btnFirebase" title="클라우드 동기화">☁️</button>
     <button class="hbtn" id="btnApiKey" title="AI 키 설정">🔑</button>
     <button class="hbtn" id="btnCatMgr" title="카테고리">📂</button>
+    <button class="hbtn" id="btnTrash" title="휴지통">🗑</button>
     <button class="hbtn" id="btnExport" title="JSON 내보내기">⬇️</button>
     <button class="hbtn" id="btnImport" title="JSON 불러오기">⬆️</button>
   </div>
@@ -592,6 +598,92 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
   </div>
 </div>
 
+<!-- 🔎 통합 검색 -->
+<div class="overlay" id="globalSearchOverlay">
+  <div class="modal" style="max-width:720px;max-height:88vh">
+    <div class="modal-head">
+      <input type="text" id="globalSearchInp" placeholder="🔎 영수증·명함·텍스트·사진 전체 검색…"
+        style="flex:1;height:38px;padding:0 14px;border:1.5px solid var(--blue-bd);border-radius:9px;font-size:14px;font-family:inherit;background:var(--blue-soft);color:var(--ink);outline:none;margin-right:8px">
+      <button class="hbtn" id="globalSearchClose">✕</button>
+    </div>
+    <div class="modal-body" id="globalSearchResults">
+      <div style="text-align:center;color:var(--ink-faint);padding:40px 20px">
+        <div style="font-size:36px">🔎</div>
+        <div style="margin-top:8px">검색어를 입력하세요</div>
+        <div style="font-size:11px;margin-top:6px">모든 영수증·명함·텍스트·사진을 한 번에 검색합니다</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ☁️ Firebase 동기화 설정 -->
+<div class="overlay" id="firebaseOverlay">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <div class="modal-title">☁️ 클라우드 동기화</div>
+      <button class="hbtn" id="firebaseClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="firebaseStatus" style="padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:12px;font-weight:700"></div>
+
+      <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px;padding:10px;background:#fff9e6;border:1.5px solid #f0c040;border-radius:8px;line-height:1.6">
+        <strong style="color:#a07000">💡 안내</strong><br>
+        worklog와 같은 Firebase 프로젝트(<code>my-system-25497</code>)를 사용합니다.
+        브라우저 콘솔에서 worklog가 쓰는 <code>firebaseConfig</code> 객체를 복사해서 붙여넣어주세요.<br>
+        <strong>📷 사진까지 완전 동기화</strong> (Firebase Storage 사용)
+      </div>
+
+      <div class="field">
+        <label>🔑 Firebase 설정 (JSON)</label>
+        <textarea id="fbConfigInp" rows="9" placeholder='{
+  "apiKey": "...",
+  "authDomain": "my-system-25497.firebaseapp.com",
+  "projectId": "my-system-25497",
+  "storageBucket": "my-system-25497.appspot.com",
+  "messagingSenderId": "...",
+  "appId": "..."
+}' style="font-family:Consolas,monospace;font-size:11px;line-height:1.5"></textarea>
+      </div>
+      <div class="field">
+        <label>👤 사용자 ID (기기 구분용, 영문/숫자)</label>
+        <input type="text" id="fbUserIdInp" placeholder="달님" value="달님">
+      </div>
+
+      <div style="font-size:11px;color:var(--ink-faint);line-height:1.6">
+        <strong>📌 동작 방식</strong><br>
+        • 데이터 저장 시 자동으로 클라우드에 푸시<br>
+        • 앱 시작 시 클라우드에서 가져와 병합 (최신 우선)<br>
+        • 휴지통 항목도 동기화 (다른 기기에서 복원 가능)
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-flex" id="firebaseCancel">취소</button>
+      <button class="btn btn-red" id="firebaseDisconnect" style="display:none">🔌 연결 해제</button>
+      <button class="btn btn-blue btn-flex" id="firebaseConnect">🔌 연결 + 즉시 동기화</button>
+    </div>
+  </div>
+</div>
+
+<!-- 🗑 휴지통 -->
+<div class="overlay" id="trashOverlay">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-head">
+      <div class="modal-title">🗑 휴지통 <span id="trashCount" style="font-size:12px;color:var(--ink-faint);font-weight:600"></span></div>
+      <button class="hbtn" id="trashClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:11px;color:var(--ink-faint);margin-bottom:12px;padding:8px 12px;background:var(--blue-soft);border-radius:8px">
+        💡 30일이 지나면 자동으로 영구삭제됩니다. 그 전에 복원 가능.
+      </div>
+      <div id="trashList"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-flex" id="trashCloseBtn">닫기</button>
+      <button class="btn btn-red" id="trashEmpty">🔥 휴지통 비우기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 🧾💼📝 스캔 상세보기 모달 -->
 <div class="overlay" id="scanDetailOverlay">
   <div class="modal" style="max-width:580px">
@@ -602,6 +694,7 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
     <div class="modal-body" id="scanDetailBody"></div>
     <div class="modal-foot">
       <button class="btn btn-ghost btn-flex" id="scanDetailCloseBtn">닫기</button>
+      <button class="btn btn-green" id="scanDetailVcard" style="display:none">📥 vCard</button>
       <button class="btn btn-red" id="scanDetailDel">🗑 삭제</button>
       <button class="btn btn-blue btn-flex" id="scanDetailEdit">✏️ 수정</button>
     </div>
@@ -824,11 +917,345 @@ function loadData(){
   try{texts=JSON.parse(localStorage.getItem(LS_TEXTS)||'[]');}catch{texts=[];}
   apiKey=localStorage.getItem(LS_API_KEY)||'';
 }
-function savePhotos(){try{localStorage.setItem(LS_PHOTOS,JSON.stringify(photos));return true;}catch(e){toast('저장 공간 부족');return false;}}
+function savePhotos(){try{localStorage.setItem(LS_PHOTOS,JSON.stringify(photos));syncPush('photos');return true;}catch(e){toast('저장 공간 부족');return false;}}
 function saveCats(){try{localStorage.setItem(LS_CATS,JSON.stringify(cats));}catch(e){}}
-function saveReceipts(){try{localStorage.setItem(LS_RECEIPTS,JSON.stringify(receipts));return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
-function saveCards(){try{localStorage.setItem(LS_CARDS,JSON.stringify(cards));return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
-function saveTexts(){try{localStorage.setItem(LS_TEXTS,JSON.stringify(texts));return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
+function saveReceipts(){try{localStorage.setItem(LS_RECEIPTS,JSON.stringify(receipts));syncPush('receipts');return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
+function saveCards(){try{localStorage.setItem(LS_CARDS,JSON.stringify(cards));syncPush('cards');return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
+function saveTexts(){try{localStorage.setItem(LS_TEXTS,JSON.stringify(texts));syncPush('texts');return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
+
+/* ════════════════════════════════════════════════════════
+   ☁️ Firebase 동기화 (메타데이터만)
+   ════════════════════════════════════════════════════════ */
+const LS_FB_CONFIG='scanapp_fb_config';
+const LS_FB_USER='scanapp_fb_user';
+const LS_FB_LAST='scanapp_fb_last';
+const LS_LAST_AUTO_BACKUP='scanapp_last_auto_backup';
+const AUTO_BACKUP_INTERVAL_MS=24*60*60*1000;
+const BACKUP_RETENTION_MS=30*24*60*60*1000;
+
+let _fbApp=null,_fbDb=null,_fbStorage=null,_fbUser='',_fbConfig=null;
+let _fbSyncTimer=null,_fbSyncing=false;
+
+function setFbStatus(text,color){
+  const ico=$('btnFirebase');
+  if(color==='green'){ico.style.color='var(--green)';ico.title='동기화됨';}
+  else if(color==='orange'){ico.style.color='var(--orange)';ico.title='동기화 중…';}
+  else if(color==='red'){ico.style.color='var(--red)';ico.title='연결 실패';}
+  else{ico.style.color='';ico.title='클라우드 동기화 (미설정)';}
+}
+
+async function initFirebase(){
+  const cfgStr=localStorage.getItem(LS_FB_CONFIG);
+  const user=localStorage.getItem(LS_FB_USER)||'';
+  if(!cfgStr||!user)return false;
+  try{
+    _fbConfig=JSON.parse(cfgStr);
+    _fbUser=user;
+    if(typeof firebase==='undefined')throw new Error('Firebase SDK 로드 실패');
+    if(!_fbApp){
+      _fbApp=firebase.initializeApp(_fbConfig,'scanapp');
+      _fbDb=firebase.firestore(_fbApp);
+      try{_fbStorage=firebase.storage(_fbApp);}catch(e){console.warn('[Storage] 비활성',e);}
+    }
+    setFbStatus('','green');
+    return true;
+  }catch(e){
+    console.error('[Firebase] init failed',e);
+    setFbStatus('','red');
+    return false;
+  }
+}
+
+// 🖼 base64 → Storage 업로드 → download URL 반환
+async function uploadPhotoToStorage(path,base64){
+  if(!_fbStorage||!base64)return '';
+  try{
+    const ref=_fbStorage.ref(`scanapp/${_fbUser}/${path}`);
+    // base64 dataURL을 blob으로
+    const res=await fetch(base64);
+    const blob=await res.blob();
+    await ref.put(blob,{contentType:'image/jpeg'});
+    return await ref.getDownloadURL();
+  }catch(e){
+    console.error('[Storage] upload failed',path,e);
+    return '';
+  }
+}
+
+// 🖼 URL → base64 (IDB 캐싱용)
+async function downloadPhotoAsBase64(url){
+  try{
+    const res=await fetch(url);
+    if(!res.ok)return null;
+    const blob=await res.blob();
+    return await new Promise((resolve,reject)=>{
+      const r=new FileReader();
+      r.onload=()=>resolve(r.result);
+      r.onerror=reject;
+      r.readAsDataURL(blob);
+    });
+  }catch(e){
+    console.error('[Storage] download failed',url,e);
+    return null;
+  }
+}
+
+// 🖼 photoId 사용 - IDB 우선, 없으면 URL에서 다운로드 + 캐싱
+async function loadPhotoSmart(photoId,photoUrl){
+  if(photoId){
+    try{const d=await idbGet(photoId);if(d)return d;}catch(e){}
+  }
+  if(photoUrl){
+    const data=await downloadPhotoAsBase64(photoUrl);
+    if(data&&photoId){try{await idbPut(photoId,data);}catch(e){}}  // 캐싱
+    return data;
+  }
+  return null;
+}
+
+// 🖼 Storage에서 삭제
+async function deletePhotoFromStorage(path){
+  if(!_fbStorage)return;
+  try{await _fbStorage.ref(`scanapp/${_fbUser}/${path}`).delete();}catch(e){}
+}
+
+function fbCollection(kind){
+  // user별 sub-document로 격리
+  return _fbDb.collection('scanapp').doc(_fbUser).collection(kind);
+}
+
+async function syncPullAll(){
+  if(!_fbDb||!_fbUser){return false;}
+  _fbSyncing=true;setFbStatus('','orange');
+  try{
+    const [rSnap,cSnap,tSnap,pSnap]=await Promise.all([
+      fbCollection('receipts').get(),
+      fbCollection('cards').get(),
+      fbCollection('texts').get(),
+      fbCollection('photos').get(),
+    ]);
+    // 병합: 같은 id면 updated 큰 것 우선
+    function merge(local,remoteDocs){
+      const map=new Map();
+      for(const x of local)map.set(x.id,x);
+      remoteDocs.forEach(doc=>{
+        const r=doc.data();
+        const ex=map.get(r.id);
+        if(!ex||(r.updated||0)>(ex.updated||0))map.set(r.id,r);
+      });
+      return Array.from(map.values()).sort((a,b)=>(b.updated||0)-(a.updated||0));
+    }
+    receipts=merge(receipts,rSnap.docs);
+    cards=merge(cards,cSnap.docs);
+    texts=merge(texts,tSnap.docs);
+    // 일반사진: 메타만 동기화 (imgIds는 동기화하되 실제 사진은 IDB에만)
+    photos=merge(photos,pSnap.docs);
+    // 로컬 저장 (push 트리거 막기 위해 직접)
+    try{localStorage.setItem(LS_RECEIPTS,JSON.stringify(receipts));}catch(e){}
+    try{localStorage.setItem(LS_CARDS,JSON.stringify(cards));}catch(e){}
+    try{localStorage.setItem(LS_TEXTS,JSON.stringify(texts));}catch(e){}
+    try{localStorage.setItem(LS_PHOTOS,JSON.stringify(photos));}catch(e){}
+    localStorage.setItem(LS_FB_LAST,String(Date.now()));
+    setFbStatus('','green');
+    return true;
+  }catch(e){
+    console.error('[Firebase] pull failed',e);
+    setFbStatus('','red');
+    return false;
+  }finally{_fbSyncing=false;}
+}
+
+async function syncPushAll(){
+  if(!_fbDb||!_fbUser)return false;
+  _fbSyncing=true;setFbStatus('','orange');
+  try{
+    // 사진 데이터(photo, photoId의 실제 base64)는 제외하고 메타만
+    const stripPhoto=obj=>{const{photo,...rest}=obj;return rest;};  // 구버전 photo 필드만 제거
+    const batch=_fbDb.batch();
+    receipts.forEach(r=>{batch.set(fbCollection('receipts').doc(r.id),stripPhoto(r));});
+    cards.forEach(c=>{batch.set(fbCollection('cards').doc(c.id),stripPhoto(c));});
+    texts.forEach(t=>{batch.set(fbCollection('texts').doc(t.id),stripPhoto(t));});
+    photos.forEach(p=>{batch.set(fbCollection('photos').doc(p.id),stripPhoto(p));});
+    await batch.commit();
+    localStorage.setItem(LS_FB_LAST,String(Date.now()));
+    setFbStatus('','green');
+    return true;
+  }catch(e){
+    console.error('[Firebase] push failed',e);
+    setFbStatus('','red');
+    return false;
+  }finally{_fbSyncing=false;}
+}
+
+// 데이터 저장 시 자동 푸시 (debounce 3초)
+function syncPush(kind){
+  if(!_fbDb||!_fbUser)return;
+  clearTimeout(_fbSyncTimer);
+  _fbSyncTimer=setTimeout(async()=>{
+    if(_fbSyncing)return;
+    _fbSyncing=true;setFbStatus('','orange');
+    try{
+      const collMap={receipts,cards,texts,photos};
+      const arr=collMap[kind];
+      if(!arr)return;
+      const batch=_fbDb.batch();
+      const stripPhoto=obj=>{const{photo,...rest}=obj;return rest;};
+      arr.forEach(x=>{batch.set(fbCollection(kind).doc(x.id),stripPhoto(x));});
+      await batch.commit();
+      localStorage.setItem(LS_FB_LAST,String(Date.now()));
+      setFbStatus('','green');
+    }catch(e){console.error('[Firebase] auto push failed',e);setFbStatus('','red');}
+    finally{_fbSyncing=false;}
+  },3000);
+}
+
+// 모달 핸들러
+$('btnFirebase').onclick=()=>{
+  const cfg=localStorage.getItem(LS_FB_CONFIG)||'';
+  const user=localStorage.getItem(LS_FB_USER)||'달님';
+  $('fbConfigInp').value=cfg?cfg:'';
+  $('fbUserIdInp').value=user;
+  const last=localStorage.getItem(LS_FB_LAST);
+  const st=$('firebaseStatus');
+  if(_fbDb){
+    const t=last?new Date(parseInt(last)):null;
+    st.style.background='#e6f9f0';st.style.color='var(--green)';
+    st.innerHTML=`✅ 연결됨 (${esc(_fbUser)})${t?'<br>마지막 동기화: '+t.toLocaleString('ko-KR'):''}`;
+    $('firebaseDisconnect').style.display='';
+  }else{
+    st.style.background='#fff9e6';st.style.color='#7a5c00';
+    st.innerHTML='⚠️ 미연결 - 클라우드 동기화 안 됨';
+    $('firebaseDisconnect').style.display='none';
+  }
+  $('firebaseOverlay').classList.add('show');
+};
+$('firebaseClose').onclick=()=>$('firebaseOverlay').classList.remove('show');
+$('firebaseCancel').onclick=()=>$('firebaseOverlay').classList.remove('show');
+$('firebaseConnect').onclick=async()=>{
+  const cfgStr=$('fbConfigInp').value.trim();
+  const user=$('fbUserIdInp').value.trim();
+  if(!cfgStr||!user){toast('설정과 사용자 ID를 입력하세요');return;}
+  try{JSON.parse(cfgStr);}catch(e){toast('JSON 형식이 잘못됐어요');return;}
+  localStorage.setItem(LS_FB_CONFIG,cfgStr);
+  localStorage.setItem(LS_FB_USER,user);
+  $('firebaseConnect').disabled=true;
+  $('firebaseConnect').textContent='연결 중…';
+  const ok=await initFirebase();
+  if(!ok){
+    toast('연결 실패: 설정 확인');
+    $('firebaseConnect').disabled=false;
+    $('firebaseConnect').textContent='🔌 연결 + 즉시 동기화';
+    return;
+  }
+  // 즉시 풀 + 푸시 (양방향 병합)
+  toast('☁️ 동기화 중…');
+  await syncPullAll();
+  // 기존 사진들 Storage에 업로드 (URL 없는 것들)
+  if(_fbStorage){
+    $('firebaseConnect').textContent='📷 사진 업로드 중…';
+    await uploadMissingPhotos();
+  }
+  await syncPushAll();
+  refreshCatSelects();renderScanList();renderGallery();
+  toast('✅ 동기화 완료');
+  $('firebaseConnect').disabled=false;
+  $('firebaseConnect').textContent='🔌 연결 + 즉시 동기화';
+  $('firebaseOverlay').classList.remove('show');
+};
+
+// 🔄 매일 자동 백업 (Firebase Storage)
+async function autoBackupIfNeeded(){
+  if(!_fbStorage||!_fbUser)return;
+  const last=parseInt(localStorage.getItem(LS_LAST_AUTO_BACKUP)||'0');
+  if(Date.now()-last<AUTO_BACKUP_INTERVAL_MS)return;
+  try{
+    const today=new Date().toISOString().slice(0,10);
+    const backupData={
+      app:'scan-app',version:2,
+      backedUpAt:new Date().toISOString(),
+      photos,cats,receipts,cards,texts,
+    };
+    const blob=new Blob([JSON.stringify(backupData)],{type:'application/json'});
+    const ref=_fbStorage.ref(`scanapp/${_fbUser}/backups/${today}.json`);
+    await ref.put(blob,{contentType:'application/json'});
+    localStorage.setItem(LS_LAST_AUTO_BACKUP,String(Date.now()));
+    console.log('[자동 백업] 완료:',today);
+    // 30일 이상 된 백업 정리 (비동기, await 안 함)
+    cleanOldBackups().catch(()=>{});
+  }catch(e){
+    console.error('[자동 백업] 실패',e);
+  }
+}
+
+async function cleanOldBackups(){
+  if(!_fbStorage||!_fbUser)return;
+  try{
+    const list=await _fbStorage.ref(`scanapp/${_fbUser}/backups`).listAll();
+    const cutoff=Date.now()-BACKUP_RETENTION_MS;
+    for(const item of list.items){
+      try{
+        const meta=await item.getMetadata();
+        if(new Date(meta.timeCreated).getTime()<cutoff){
+          await item.delete();
+        }
+      }catch(e){}
+    }
+  }catch(e){console.error('[백업 정리] 실패',e);}
+}
+async function uploadMissingPhotos(){
+  // 영수증
+  for(const r of receipts){
+    if(!r.deletedAt&&r.photoId&&!r.photoUrl){
+      try{
+        const data=await idbGet(r.photoId);
+        if(data){const url=await uploadPhotoToStorage(`receipts/${r.photoId}.jpg`,data);if(url)r.photoUrl=url;}
+      }catch(e){}
+    }
+  }
+  for(const c of cards){
+    if(!c.deletedAt&&c.photoId&&!c.photoUrl){
+      try{
+        const data=await idbGet(c.photoId);
+        if(data){const url=await uploadPhotoToStorage(`cards/${c.photoId}.jpg`,data);if(url)c.photoUrl=url;}
+      }catch(e){}
+    }
+  }
+  for(const t of texts){
+    if(!t.deletedAt&&t.photoId&&!t.photoUrl){
+      try{
+        const data=await idbGet(t.photoId);
+        if(data){const url=await uploadPhotoToStorage(`texts/${t.photoId}.jpg`,data);if(url)t.photoUrl=url;}
+      }catch(e){}
+    }
+  }
+  // 일반사진
+  for(const p of photos){
+    if(p.deletedAt||!p.imgIds)continue;
+    if(!p.imgUrls)p.imgUrls={};
+    for(const iid of p.imgIds){
+      if(p.imgUrls[iid])continue;
+      try{
+        const data=await idbGet(iid);
+        if(data){const url=await uploadPhotoToStorage(`photos/${iid}.jpg`,data);if(url)p.imgUrls[iid]=url;}
+      }catch(e){}
+    }
+  }
+  // 로컬 저장 (자동 push 안 됨 - 다음 syncPushAll에서)
+  try{localStorage.setItem(LS_RECEIPTS,JSON.stringify(receipts));}catch(e){}
+  try{localStorage.setItem(LS_CARDS,JSON.stringify(cards));}catch(e){}
+  try{localStorage.setItem(LS_TEXTS,JSON.stringify(texts));}catch(e){}
+  try{localStorage.setItem(LS_PHOTOS,JSON.stringify(photos));}catch(e){}
+}
+$('firebaseDisconnect').onclick=()=>{
+  if(!confirm('클라우드 연결을 해제할까요?\n(로컬 데이터는 보존됩니다)'))return;
+  localStorage.removeItem(LS_FB_CONFIG);
+  localStorage.removeItem(LS_FB_USER);
+  localStorage.removeItem(LS_FB_LAST);
+  _fbApp=null;_fbDb=null;_fbUser='';_fbConfig=null;
+  setFbStatus('','');
+  toast('🔌 연결 해제됨');
+  $('firebaseOverlay').classList.remove('show');
+};
 
 /* ════════════════════════════════════════════════════════
    🔍 사진 확대 뷰어 (핀치줌)
@@ -1001,6 +1428,7 @@ function refreshCatSelects(){
 
 async function renderGallery(){
   const list=photos.filter(p=>{
+    if(p.deletedAt)return false;
     const sec=p.secure?'secure':'normal';
     if(sec!==curSection)return false;
     if(catFilter!=='all'&&p.cat!==catFilter)return false;
@@ -1050,17 +1478,24 @@ async function renderGallery(){
       if(btn.dataset.pact==='edit'){
         openAddModal(p);
       }else if(btn.dataset.pact==='del'){
-        if(!confirm(`'${p.title||'사진'}'을 삭제할까요?`))return;
-        for(const id of (p.imgIds||[]))await idbDel(id).catch(()=>{});
-        photos=photos.filter(x=>x.id!==pid);
-        savePhotos();renderGallery();toast('삭제됐어요');
+        if(!confirm(`'${p.title||'사진'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
+        p.deletedAt=Date.now();
+        savePhotos();renderGallery();toast('🗑 휴지통으로 이동');
       }
     };
   });
   for(const img of gallery.querySelectorAll('.thumb')){
     const id=img.dataset.thumb;
     if(!id)continue;
-    try{const data=await idbGet(id);if(data)img.src=data;}catch(e){}
+    try{
+      // 카드의 photo 객체 찾아서 url 폴백
+      const card=img.closest('.photo-card');
+      const pid=card?card.dataset.pid:null;
+      const p=pid?photos.find(x=>x.id===pid):null;
+      const url=p&&p.imgUrls?p.imgUrls[id]:null;
+      const data=await loadPhotoSmart(id,url);
+      if(data)img.src=data;
+    }catch(e){}
   }
 }
 
@@ -1080,7 +1515,11 @@ function openAddModal(photo){
   if(photo&&photo.imgIds&&photo.imgIds.length){
     (async()=>{
       for(const id of photo.imgIds){
-        try{const data=await idbGet(id);if(data)mImgs.push({id,data});}catch(e){}
+        try{
+          const url=(photo.imgUrls||{})[id];
+          const data=await loadPhotoSmart(id,url);
+          if(data)mImgs.push({id,data});
+        }catch(e){}
       }
       renderPreviews();
     })();
@@ -1130,19 +1569,37 @@ $('addSave').onclick=async()=>{
   try{
     const ids=mImgs.map(m=>m.id||uid());
     for(let i=0;i<mImgs.length;i++)await idbPut(ids[i],mImgs[i].data);
+    // Storage 업로드 (Firebase 연결됐을 때만)
+    const imgUrls={};
+    // 기존 URL 보존
+    const old=editingId?photos.find(x=>x.id===editingId):null;
+    if(old&&old.imgUrls)Object.assign(imgUrls,old.imgUrls);
+    if(_fbStorage){
+      $('addSave').textContent='☁️ 업로드 중…';
+      for(let i=0;i<mImgs.length;i++){
+        // 이미 URL 있으면 건너뜀 (편집 시 기존 사진)
+        if(imgUrls[ids[i]])continue;
+        const url=await uploadPhotoToStorage(`photos/${ids[i]}.jpg`,mImgs[i].data);
+        if(url)imgUrls[ids[i]]=url;
+      }
+    }
     const data={
       id:editingId||uid(),
       title,cat:$('fCat').value,memo:$('fMemo').value.trim(),
       date:$('fDate').value||today(),
       secure:curSection==='secure',
-      imgIds:ids,updated:Date.now(),
+      imgIds:ids,imgUrls,updated:Date.now(),
     };
     if(editingId){
       const idx=photos.findIndex(x=>x.id===editingId);
       if(idx>=0){
-        const old=photos[idx];
-        for(const oid of (old.imgIds||[]))if(!ids.includes(oid))idbDel(oid).catch(()=>{});
-        photos[idx]={...old,...data};
+        const o=photos[idx];
+        for(const oid of (o.imgIds||[]))if(!ids.includes(oid)){
+          idbDel(oid).catch(()=>{});
+          // Storage에서도 삭제
+          if(_fbStorage&&o.imgUrls&&o.imgUrls[oid])deletePhotoFromStorage(`photos/${oid}.jpg`);
+        }
+        photos[idx]={...o,...data};
       }
     }else photos.unshift(data);
     if(!savePhotos())return;
@@ -1152,11 +1609,11 @@ $('addSave').onclick=async()=>{
 };
 $('addDelete').onclick=async()=>{
   if(!editingId)return;
-  if(!confirm('정말 삭제하시겠습니까?'))return;
+  if(!confirm('이 사진을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)'))return;
   const idx=photos.findIndex(x=>x.id===editingId);
   if(idx>=0){
-    for(const id of (photos[idx].imgIds||[]))await idbDel(id).catch(()=>{});
-    photos.splice(idx,1);savePhotos();toast('삭제됐어요');closeAddModal();renderGallery();
+    photos[idx].deletedAt=Date.now();savePhotos();
+    toast('🗑 휴지통으로 이동');closeAddModal();renderGallery();
   }
 };
 
@@ -1170,7 +1627,9 @@ async function openDetail(pid){
   $('detailMemoBox').textContent=p.memo||'(메모 없음)';
   if(p.imgIds&&p.imgIds[0]){
     try{
-      const data=await idbGet(p.imgIds[0]);
+      const firstId=p.imgIds[0];
+      const firstUrl=(p.imgUrls||{})[firstId];
+      const data=await loadPhotoSmart(firstId,firstUrl);
       $('detailImg').src=data||'';
       $('detailImg').onclick=()=>showImg(data,p.title);
     }catch(e){}
@@ -1888,6 +2347,39 @@ function itemsToString(items){
   return items.map(it=>`${it.name||''}${it.qty>1?' x'+it.qty:''}`).filter(Boolean).join(', ');
 }
 
+// 📊 이번 달 영수증 통계 위젯
+function buildReceiptStats(){
+  const now=new Date();
+  const ym=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthList=receipts.filter(r=>!r.deletedAt&&(r.date||'').startsWith(ym));
+  if(!monthList.length)return '';
+  const total=monthList.reduce((s,r)=>s+(r.amount||0),0);
+  // 가게별 빈도/합계
+  const byPlace={};
+  monthList.forEach(r=>{
+    const p=r.place||'(이름없음)';
+    if(!byPlace[p])byPlace[p]={count:0,sum:0};
+    byPlace[p].count++;
+    byPlace[p].sum+=r.amount||0;
+  });
+  const top=Object.entries(byPlace).sort((a,b)=>b[1].count-a[1].count)[0];
+  return `<div style="background:linear-gradient(135deg,var(--blue-soft) 0%,var(--blue-lt) 100%);
+    border:1.5px solid var(--blue-bd);border-radius:14px;padding:14px 16px;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--ink-soft)">📊 ${now.getFullYear()}년 ${now.getMonth()+1}월</div>
+        <div style="font-size:22px;font-weight:800;color:var(--blue);margin-top:2px;font-variant-numeric:tabular-nums">${numFmt(total)}원</div>
+        <div style="font-size:11px;color:var(--ink-faint);margin-top:2px">영수증 ${monthList.length}장</div>
+      </div>
+      ${top?`<div style="text-align:right;font-size:12px;color:var(--ink-soft)">
+        <div style="font-weight:700">🥇 가장 많이 쓴 곳</div>
+        <div style="margin-top:2px"><strong>${esc(top[0])}</strong> ${top[1].count}회</div>
+        <div style="font-variant-numeric:tabular-nums;color:var(--blue);font-weight:700">${numFmt(top[1].sum)}원</div>
+      </div>`:''}
+    </div>
+  </div>`;
+}
+
 function renderScanList(){
   const q=($('scanSearch').value||'').trim().toLowerCase();
   if(curScanType==='receipt'){
@@ -1903,9 +2395,19 @@ function renderScanList(){
 }
 
 function renderReceiptList(q){
-  const list=receipts.filter(r=>!q||[r.place,r.phone,r.addr,r.payMethod,r.memo,r.amount&&String(r.amount)]
-    .some(v=>(v||'').toLowerCase().includes(q)));
-  if(!list.length){$('receiptList').innerHTML='';$('scanEmpty').style.display='';return;}
+  const list=receipts.filter(r=>{
+    if(r.deletedAt)return false;
+    if(!q)return true;
+    // 메타데이터
+    if([r.place,r.phone,r.addr,r.payMethod,r.memo,r.amount&&String(r.amount)]
+      .some(v=>(v||'').toLowerCase().includes(q)))return true;
+    // 품목 이름까지 검색
+    if(r.items&&r.items.some(it=>(it.name||'').toLowerCase().includes(q)))return true;
+    return false;
+  });
+  // 📊 이번 달 통계 위젯
+  const statsHtml=buildReceiptStats();
+  if(!list.length){$('receiptList').innerHTML=statsHtml;$('scanEmpty').style.display='';return;}
   $('scanEmpty').style.display='none';
   const tableHtml=`<div class="scan-table"><table>
     <thead><tr><th>날짜</th><th>시각</th><th>상호</th><th>전화</th><th class="num">금액</th>
@@ -1939,13 +2441,17 @@ function renderReceiptList(q){
       <button class="row-act-btn" data-act="edit">✏️ 수정</button>
       <button class="row-act-btn red" data-act="del">🗑 삭제</button>
     </div></div>`).join('')}</div>`;
-  $('receiptList').innerHTML=tableHtml+cardHtml;
+  $('receiptList').innerHTML=statsHtml+tableHtml+cardHtml;
   bindRowActions($('receiptList'),'receipt');
 }
 
 function renderCardList(q){
-  const list=cards.filter(c=>!q||[c.company,c.name,c.position,c.phone,c.mobile,c.fax,c.email,c.addr,c.memo]
-    .some(v=>(v||'').toLowerCase().includes(q)));
+  const list=cards.filter(c=>{
+    if(c.deletedAt)return false;
+    if(!q)return true;
+    return [c.company,c.name,c.position,c.phone,c.mobile,c.fax,c.email,c.addr,c.memo]
+      .some(v=>(v||'').toLowerCase().includes(q));
+  });
   if(!list.length){$('cardList').innerHTML='';$('scanEmpty').style.display='';return;}
   $('scanEmpty').style.display='none';
   const tableHtml=`<div class="scan-table"><table>
@@ -1989,8 +2495,12 @@ function renderCardList(q){
 }
 
 function renderTextList(q){
-  const list=texts.filter(t=>!q||[t.title,t.text,t.memo,t.tags,t.type]
-    .some(v=>(v||'').toLowerCase().includes(q)));
+  const list=texts.filter(t=>{
+    if(t.deletedAt)return false;
+    if(!q)return true;
+    return [t.title,t.text,t.memo,t.tags,t.type]
+      .some(v=>(v||'').toLowerCase().includes(q));
+  });
   if(!list.length){$('textList').innerHTML='';$('scanEmpty').style.display='';return;}
   $('scanEmpty').style.display='none';
   const preview=s=>(s||'').slice(0,80)+((s||'').length>80?'…':'');
@@ -2035,8 +2545,8 @@ function bindRowActions(container,type){
         if(act==='copy')copyReceiptToClipboard(r);
         else if(act==='edit')openReceiptModal(r);
         else if(act==='del'){
-          if(confirm(`'${r.place||'영수증'}'을 삭제할까요?`)){
-            receipts=receipts.filter(x=>x.id!==id);saveReceipts();renderScanList();toast('삭제됐어요');
+          if(confirm(`'${r.place||'영수증'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`)){
+            r.deletedAt=Date.now();saveReceipts();renderScanList();toast('🗑 휴지통으로 이동');
           }
         }
       }else if(type==='card'){
@@ -2044,8 +2554,8 @@ function bindRowActions(container,type){
         if(act==='copy')copyCardToClipboard(c);
         else if(act==='edit')openCardModal(c);
         else if(act==='del'){
-          if(confirm(`'${c.name||'명함'}'을 삭제할까요?`)){
-            cards=cards.filter(x=>x.id!==id);saveCards();renderScanList();toast('삭제됐어요');
+          if(confirm(`'${c.name||'명함'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`)){
+            c.deletedAt=Date.now();saveCards();renderScanList();toast('🗑 휴지통으로 이동');
           }
         }
       }else if(type==='text'){
@@ -2053,8 +2563,8 @@ function bindRowActions(container,type){
         if(act==='copy')copyTextToClipboard(t);
         else if(act==='edit')openTextModal(t);
         else if(act==='del'){
-          if(confirm(`'${t.title||'텍스트'}'을 삭제할까요?`)){
-            texts=texts.filter(x=>x.id!==id);saveTexts();renderScanList();toast('삭제됐어요');
+          if(confirm(`'${t.title||'텍스트'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`)){
+            t.deletedAt=Date.now();saveTexts();renderScanList();toast('🗑 휴지통으로 이동');
           }
         }
       }
@@ -2101,7 +2611,7 @@ async function openScanDetail(type,id){
 
   let html='';
   // 사진 슬롯 (있으면 비동기 로드)
-  if(item.photoId){
+  if(item.photoId||item.photoUrl){
     html+=`<div id="scanDetailPhotoWrap" style="text-align:center;margin-bottom:14px;background:var(--blue-soft);border-radius:10px;padding:8px">
       <div style="color:var(--ink-faint);font-size:11px">사진 로드 중…</div></div>`;
   }
@@ -2139,9 +2649,9 @@ async function openScanDetail(type,id){
   $('scanDetailBody').innerHTML=html;
 
   // 사진 비동기 로드
-  if(item.photoId){
+  if(item.photoId||item.photoUrl){
     try{
-      const data=await idbGet(item.photoId);
+      const data=await loadPhotoSmart(item.photoId,item.photoUrl);
       const wrap=$('scanDetailPhotoWrap');
       if(data&&wrap){
         wrap.innerHTML=`<img src="${data}" alt="" style="max-width:100%;max-height:280px;border-radius:8px;cursor:zoom-in;display:block;margin:0 auto" id="_scanDetImg">`;
@@ -2154,6 +2664,9 @@ async function openScanDetail(type,id){
       if(wrap)wrap.innerHTML='<div style="color:var(--red);font-size:11px;padding:8px">사진 로드 실패</div>';
     }
   }
+
+  // vCard 버튼은 명함일 때만
+  $('scanDetailVcard').style.display=(type==='card')?'':'none';
 
   $('scanDetailOverlay').classList.add('show');
 }
@@ -2172,24 +2685,58 @@ $('scanDetailEdit').onclick=()=>{
 $('scanDetailDel').onclick=async()=>{
   if(!_scanDetailCtx)return;
   const {type,id}=_scanDetailCtx;
+  // 휴지통으로 이동 (실제 삭제 대신 deletedAt 마킹, 30일 후 자동 영구삭제)
   if(type==='receipt'){
     const r=receipts.find(x=>x.id===id);
-    if(!r||!confirm(`'${r.place||'영수증'}'을 삭제할까요?`))return;
-    if(r.photoId){try{await idbDel(r.photoId);}catch(e){}}
-    receipts=receipts.filter(x=>x.id!==id);saveReceipts();
+    if(!r||!confirm(`'${r.place||'영수증'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
+    r.deletedAt=Date.now();saveReceipts();
   }else if(type==='card'){
     const c=cards.find(x=>x.id===id);
-    if(!c||!confirm(`'${c.name||'명함'}'을 삭제할까요?`))return;
-    if(c.photoId){try{await idbDel(c.photoId);}catch(e){}}
-    cards=cards.filter(x=>x.id!==id);saveCards();
+    if(!c||!confirm(`'${c.name||'명함'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
+    c.deletedAt=Date.now();saveCards();
   }else if(type==='text'){
     const t=texts.find(x=>x.id===id);
-    if(!t||!confirm(`'${t.title||'메모'}'를 삭제할까요?`))return;
-    if(t.photoId){try{await idbDel(t.photoId);}catch(e){}}
-    texts=texts.filter(x=>x.id!==id);saveTexts();
+    if(!t||!confirm(`'${t.title||'메모'}'를 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
+    t.deletedAt=Date.now();saveTexts();
   }
-  closeScanDetail();renderScanList();toast('삭제됐어요');
+  closeScanDetail();renderScanList();toast('🗑 휴지통으로 이동');
 };
+
+// 📥 vCard 다운로드
+$('scanDetailVcard').onclick=()=>{
+  if(!_scanDetailCtx||_scanDetailCtx.type!=='card')return;
+  const c=cards.find(x=>x.id===_scanDetailCtx.id);
+  if(!c)return;
+  const vcard=buildVCard(c);
+  const blob=new Blob([vcard],{type:'text/vcard;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`${(c.name||'card').replace(/[\\/:*?"<>|]/g,'')}.vcf`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📥 vCard 다운로드됨');
+};
+function buildVCard(c){
+  const lines=['BEGIN:VCARD','VERSION:3.0'];
+  if(c.name)lines.push(`FN:${c.name}`);
+  if(c.name)lines.push(`N:${c.name};;;;`);
+  if(c.company||c.dept){
+    const org=[c.company||''];
+    if(c.dept)org.push(c.dept);
+    lines.push(`ORG:${org.join(';')}`);
+  }
+  if(c.position)lines.push(`TITLE:${c.position}`);
+  if(c.mobile)lines.push(`TEL;TYPE=CELL:${c.mobile}`);
+  if(c.phone)lines.push(`TEL;TYPE=WORK,VOICE:${c.phone}`);
+  if(c.fax)lines.push(`TEL;TYPE=WORK,FAX:${c.fax}`);
+  if(c.email)lines.push(`EMAIL;TYPE=WORK:${c.email}`);
+  if(c.website)lines.push(`URL:${c.website}`);
+  if(c.addr)lines.push(`ADR;TYPE=WORK:;;${c.addr};;;;`);
+  if(c.memo)lines.push(`NOTE:${c.memo.replace(/\n/g,'\\n')}`);
+  lines.push('END:VCARD');
+  return lines.join('\r\n');
+}
 
 function copyReceiptToClipboard(r){
   const row=[r.date||'',r.payTime||'',r.place||'',r.phone||'',r.amount||'',
@@ -2248,8 +2795,8 @@ function openReceiptModal(receipt){
   _rcptImg=null;
   // 구버전(photo:base64)과 신버전(photoId) 모두 지원
   if(receipt){
-    if(receipt.photoId){
-      idbGet(receipt.photoId).then(d=>{if(d){_rcptImg=d;showReceiptPhoto();}}).catch(()=>{});
+    if(receipt.photoId||receipt.photoUrl){
+      loadPhotoSmart(receipt.photoId,receipt.photoUrl).then(d=>{if(d){_rcptImg=d;showReceiptPhoto();}}).catch(()=>{});
     }else if(receipt.photo){
       _rcptImg=receipt.photo;
     }
@@ -2408,9 +2955,17 @@ $('receiptSave').onclick=async()=>{
   });
   // 사진은 IDB에 저장, 객체에는 photoId만
   let photoId='';
+  let photoUrl='';
   if(_rcptImg){
     photoId=(_rcptEditing&&_rcptEditing.photoId)||('r_'+uid());
     try{await idbPut(photoId,_rcptImg);}catch(e){toast('사진 저장 실패: '+e.message);return;}
+    // Storage 업로드 (Firebase 연결됐을 때만)
+    if(_fbStorage){
+      const url=await uploadPhotoToStorage(`receipts/${photoId}.jpg`,_rcptImg);
+      if(url)photoUrl=url;
+    }
+    // 이미 photoUrl이 있고 새로 못 받았으면 유지
+    if(!photoUrl&&_rcptEditing&&_rcptEditing.photoUrl)photoUrl=_rcptEditing.photoUrl;
   }
   const data={
     id:_rcptEditing?_rcptEditing.id:uid(),
@@ -2422,7 +2977,7 @@ $('receiptSave').onclick=async()=>{
     amount:parseInt($('r_amount').value)||0,
     payMethod:$('r_payMethod').value.trim(),
     items,memo:$('r_memo').value.trim(),
-    photoId,updated:Date.now(),
+    photoId,photoUrl,updated:Date.now(),
   };
   if(_rcptEditing){
     const idx=receipts.findIndex(r=>r.id===_rcptEditing.id);
@@ -2433,12 +2988,12 @@ $('receiptSave').onclick=async()=>{
   if(!saveReceipts())return;
   closeReceiptModal();renderScanList();toast('✅ 저장됐어요');
 };
-$('receiptDelete').onclick=async()=>{
+$('receiptDelete').onclick=()=>{
   if(!_rcptEditing)return;
-  if(!confirm(`'${_rcptEditing.place||'영수증'}'을 삭제할까요?`))return;
-  if(_rcptEditing.photoId){try{await idbDel(_rcptEditing.photoId);}catch(e){}}
-  receipts=receipts.filter(r=>r.id!==_rcptEditing.id);
-  saveReceipts();closeReceiptModal();renderScanList();toast('삭제됐어요');
+  if(!confirm(`'${_rcptEditing.place||'영수증'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
+  const r=receipts.find(x=>x.id===_rcptEditing.id);
+  if(r){r.deletedAt=Date.now();saveReceipts();}
+  closeReceiptModal();renderScanList();toast('🗑 휴지통으로 이동');
 };
 
 // CHUNK_9 - 명함 모달
@@ -2448,8 +3003,8 @@ function openCardModal(card){
   _cardEditing=card||null;
   _cardImg=null;
   if(card){
-    if(card.photoId){
-      idbGet(card.photoId).then(d=>{if(d){_cardImg=d;showCardPhoto();}}).catch(()=>{});
+    if(card.photoId||card.photoUrl){
+      loadPhotoSmart(card.photoId,card.photoUrl).then(d=>{if(d){_cardImg=d;showCardPhoto();}}).catch(()=>{});
     }else if(card.photo){
       _cardImg=card.photo;
     }
@@ -2565,9 +3120,15 @@ $('cardSave').onclick=async()=>{
   if(!name){toast('이름을 입력하세요');return;}
   // 사진은 IDB에 저장
   let photoId='';
+  let photoUrl='';
   if(_cardImg){
     photoId=(_cardEditing&&_cardEditing.photoId)||('c_'+uid());
     try{await idbPut(photoId,_cardImg);}catch(e){toast('사진 저장 실패: '+e.message);return;}
+    if(_fbStorage){
+      const url=await uploadPhotoToStorage(`cards/${photoId}.jpg`,_cardImg);
+      if(url)photoUrl=url;
+    }
+    if(!photoUrl&&_cardEditing&&_cardEditing.photoUrl)photoUrl=_cardEditing.photoUrl;
   }
   const data={
     id:_cardEditing?_cardEditing.id:uid(),
@@ -2582,7 +3143,7 @@ $('cardSave').onclick=async()=>{
     website:$('c_website').value.trim(),
     addr:$('c_addr').value.trim(),
     memo:$('c_memo').value.trim(),
-    photoId,updated:Date.now(),
+    photoId,photoUrl,updated:Date.now(),
   };
   if(_cardEditing){
     const idx=cards.findIndex(c=>c.id===_cardEditing.id);
@@ -2592,12 +3153,12 @@ $('cardSave').onclick=async()=>{
   if(!saveCards())return;
   closeCardModal();renderScanList();toast('✅ 저장됐어요');
 };
-$('cardDelete').onclick=async()=>{
+$('cardDelete').onclick=()=>{
   if(!_cardEditing)return;
-  if(!confirm(`'${_cardEditing.name||'명함'}'을 삭제할까요?`))return;
-  if(_cardEditing.photoId){try{await idbDel(_cardEditing.photoId);}catch(e){}}
-  cards=cards.filter(c=>c.id!==_cardEditing.id);
-  saveCards();closeCardModal();renderScanList();toast('삭제됐어요');
+  if(!confirm(`'${_cardEditing.name||'명함'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
+  const c=cards.find(x=>x.id===_cardEditing.id);
+  if(c){c.deletedAt=Date.now();saveCards();}
+  closeCardModal();renderScanList();toast('🗑 휴지통으로 이동');
 };
 
 // CHUNK_10 - 텍스트 메모 모달
@@ -2607,8 +3168,8 @@ function openTextModal(t){
   _textEditing=t||null;
   _textImg=null;
   if(t){
-    if(t.photoId){
-      idbGet(t.photoId).then(d=>{if(d){_textImg=d;showTextPhoto();}}).catch(()=>{});
+    if(t.photoId||t.photoUrl){
+      loadPhotoSmart(t.photoId,t.photoUrl).then(d=>{if(d){_textImg=d;showTextPhoto();}}).catch(()=>{});
     }else if(t.photo){
       _textImg=t.photo;
     }
@@ -2715,9 +3276,15 @@ $('textSave').onclick=async()=>{
   if(!title){toast('제목을 입력하세요');return;}
   // 사진은 IDB에 저장
   let photoId='';
+  let photoUrl='';
   if(_textImg){
     photoId=(_textEditing&&_textEditing.photoId)||('t_'+uid());
     try{await idbPut(photoId,_textImg);}catch(e){toast('사진 저장 실패: '+e.message);return;}
+    if(_fbStorage){
+      const url=await uploadPhotoToStorage(`texts/${photoId}.jpg`,_textImg);
+      if(url)photoUrl=url;
+    }
+    if(!photoUrl&&_textEditing&&_textEditing.photoUrl)photoUrl=_textEditing.photoUrl;
   }
   const data={
     id:_textEditing?_textEditing.id:uid(),
@@ -2727,7 +3294,7 @@ $('textSave').onclick=async()=>{
     tags:$('t_tags').value.trim(),
     text:$('t_text').value,
     memo:$('t_memo').value.trim(),
-    photoId,updated:Date.now(),
+    photoId,photoUrl,updated:Date.now(),
   };
   if(_textEditing){
     const idx=texts.findIndex(x=>x.id===_textEditing.id);
@@ -2737,12 +3304,12 @@ $('textSave').onclick=async()=>{
   if(!saveTexts())return;
   closeTextModal();renderScanList();toast('✅ 저장됐어요');
 };
-$('textDelete').onclick=async()=>{
+$('textDelete').onclick=()=>{
   if(!_textEditing)return;
-  if(!confirm(`'${_textEditing.title||'텍스트 메모'}'를 삭제할까요?`))return;
-  if(_textEditing.photoId){try{await idbDel(_textEditing.photoId);}catch(e){}}
-  texts=texts.filter(x=>x.id!==_textEditing.id);
-  saveTexts();closeTextModal();renderScanList();toast('삭제됐어요');
+  if(!confirm(`'${_textEditing.title||'텍스트 메모'}'를 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
+  const t=texts.find(x=>x.id===_textEditing.id);
+  if(t){t.deletedAt=Date.now();saveTexts();}
+  closeTextModal();renderScanList();toast('🗑 휴지통으로 이동');
 };
 
 // CHUNK_11 - AI 키 / 카테고리 / 백업 / PIN / 초기화
@@ -2900,8 +3467,17 @@ $('secureCancel').onclick=()=>{
   try{await openIDB();}catch(e){console.error(e);}
   // 구버전 데이터 마이그레이션: photo:base64 → photoId + IDB
   await migrateOldPhotos();
+  // 휴지통 30일 지난 항목 자동 영구삭제
+  await purgeOldTrash();
+  // ☁️ Firebase 자동 연결 + 풀
+  const fbOk=await initFirebase();
+  if(fbOk){
+    await syncPullAll();
+    // 자동 백업 (비동기, await 안 함 - 백그라운드)
+    autoBackupIfNeeded().catch(e=>console.error(e));
+  }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260623-1417';
+  $('appVer').textContent='v20260623-1502';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
@@ -2933,6 +3509,431 @@ async function migrateOldPhotos(){
     console.log('[마이그레이션] 기존 사진을 IndexedDB로 이전 완료');
   }
 }
+
+/* ════════════════════════════════════════════════════════
+   🗑 휴지통 (30일 보관 → 자동 영구삭제)
+   ════════════════════════════════════════════════════════ */
+const TRASH_DAYS=30;
+const TRASH_MS=TRASH_DAYS*24*60*60*1000;
+
+async function purgeOldTrash(){
+  const cutoff=Date.now()-TRASH_MS;
+  let changed=false;
+  // 영수증
+  const r2=[];
+  for(const r of receipts){
+    if(r.deletedAt&&r.deletedAt<cutoff){
+      if(r.photoId){try{await idbDel(r.photoId);}catch(e){}}
+      changed=true;
+    }else r2.push(r);
+  }
+  if(r2.length!==receipts.length){receipts=r2;saveReceipts();}
+  // 명함
+  const c2=[];
+  for(const c of cards){
+    if(c.deletedAt&&c.deletedAt<cutoff){
+      if(c.photoId){try{await idbDel(c.photoId);}catch(e){}}
+      changed=true;
+    }else c2.push(c);
+  }
+  if(c2.length!==cards.length){cards=c2;saveCards();}
+  // 텍스트
+  const t2=[];
+  for(const t of texts){
+    if(t.deletedAt&&t.deletedAt<cutoff){
+      if(t.photoId){try{await idbDel(t.photoId);}catch(e){}}
+      changed=true;
+    }else t2.push(t);
+  }
+  if(t2.length!==texts.length){texts=t2;saveTexts();}
+  // 일반사진
+  const p2=[];
+  for(const p of photos){
+    if(p.deletedAt&&p.deletedAt<cutoff){
+      for(const id of (p.imgIds||[])){try{await idbDel(id);}catch(e){}}
+      changed=true;
+    }else p2.push(p);
+  }
+  if(p2.length!==photos.length){photos=p2;savePhotos();}
+  if(changed)console.log('[휴지통] 30일 지난 항목 영구삭제 완료');
+}
+
+function getTrashItems(){
+  // {type, id, label, deletedAt, daysLeft} 배열
+  const arr=[];
+  receipts.forEach(r=>{
+    if(r.deletedAt)arr.push({type:'receipt',id:r.id,label:'🧾 '+(r.place||'영수증'),deletedAt:r.deletedAt,obj:r});
+  });
+  cards.forEach(c=>{
+    if(c.deletedAt)arr.push({type:'card',id:c.id,label:'💼 '+(c.name||'명함'),deletedAt:c.deletedAt,obj:c});
+  });
+  texts.forEach(t=>{
+    if(t.deletedAt)arr.push({type:'text',id:t.id,label:(t.type||'📝')+' '+(t.title||'텍스트'),deletedAt:t.deletedAt,obj:t});
+  });
+  photos.forEach(p=>{
+    if(p.deletedAt)arr.push({type:'photo',id:p.id,label:'📷 '+(p.title||'사진'),deletedAt:p.deletedAt,obj:p});
+  });
+  return arr.sort((a,b)=>b.deletedAt-a.deletedAt);
+}
+
+function renderTrashList(){
+  const arr=getTrashItems();
+  $('trashCount').textContent=arr.length?`(${arr.length}개)`:'';
+  if(!arr.length){
+    $('trashList').innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--ink-faint)"><div style="font-size:40px">🗑</div><div>휴지통이 비어있습니다</div></div>';
+    return;
+  }
+  $('trashList').innerHTML=arr.map(it=>{
+    const daysLeft=Math.max(0,Math.ceil((it.deletedAt+TRASH_MS-Date.now())/(24*60*60*1000)));
+    const d=new Date(it.deletedAt);
+    const delDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--blue-soft);border-radius:9px;margin-bottom:6px;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.label)}</div>
+        <div style="font-size:10px;color:var(--ink-faint);margin-top:2px">${delDate} 삭제 · ${daysLeft}일 후 영구삭제</div>
+      </div>
+      <button class="row-act-btn green" data-trestore="${it.type}|${it.id}" style="width:auto;padding:6px 10px;font-size:11px">↩ 복원</button>
+      <button class="row-act-btn red" data-tperm="${it.type}|${it.id}" style="width:auto;padding:6px 10px;font-size:11px">🔥 영구</button>
+    </div>`;
+  }).join('');
+  // 복원
+  $('trashList').querySelectorAll('[data-trestore]').forEach(b=>{
+    b.onclick=()=>{
+      const [type,id]=b.dataset.trestore.split('|');
+      restoreTrashItem(type,id);
+    };
+  });
+  // 영구삭제
+  $('trashList').querySelectorAll('[data-tperm]').forEach(b=>{
+    b.onclick=async()=>{
+      const [type,id]=b.dataset.tperm.split('|');
+      if(!confirm('영구적으로 삭제합니다.\n복원할 수 없습니다. 계속할까요?'))return;
+      await permanentDelete(type,id);
+      renderTrashList();
+      renderScanList();renderGallery();
+      toast('🔥 영구삭제됨');
+    };
+  });
+}
+
+function restoreTrashItem(type,id){
+  let obj;
+  if(type==='receipt')obj=receipts.find(x=>x.id===id);
+  else if(type==='card')obj=cards.find(x=>x.id===id);
+  else if(type==='text')obj=texts.find(x=>x.id===id);
+  else if(type==='photo')obj=photos.find(x=>x.id===id);
+  if(!obj)return;
+  delete obj.deletedAt;
+  if(type==='receipt')saveReceipts();
+  else if(type==='card')saveCards();
+  else if(type==='text')saveTexts();
+  else if(type==='photo')savePhotos();
+  renderTrashList();renderScanList();renderGallery();
+  toast('↩ 복원됨');
+}
+
+async function permanentDelete(type,id){
+  if(type==='receipt'){
+    const r=receipts.find(x=>x.id===id);
+    if(r){
+      if(r.photoId){try{await idbDel(r.photoId);}catch(e){}}
+      if(_fbStorage&&r.photoId)deletePhotoFromStorage(`receipts/${r.photoId}.jpg`);
+      if(_fbDb)try{await fbCollection('receipts').doc(id).delete();}catch(e){}
+    }
+    receipts=receipts.filter(x=>x.id!==id);saveReceipts();
+  }else if(type==='card'){
+    const c=cards.find(x=>x.id===id);
+    if(c){
+      if(c.photoId){try{await idbDel(c.photoId);}catch(e){}}
+      if(_fbStorage&&c.photoId)deletePhotoFromStorage(`cards/${c.photoId}.jpg`);
+      if(_fbDb)try{await fbCollection('cards').doc(id).delete();}catch(e){}
+    }
+    cards=cards.filter(x=>x.id!==id);saveCards();
+  }else if(type==='text'){
+    const t=texts.find(x=>x.id===id);
+    if(t){
+      if(t.photoId){try{await idbDel(t.photoId);}catch(e){}}
+      if(_fbStorage&&t.photoId)deletePhotoFromStorage(`texts/${t.photoId}.jpg`);
+      if(_fbDb)try{await fbCollection('texts').doc(id).delete();}catch(e){}
+    }
+    texts=texts.filter(x=>x.id!==id);saveTexts();
+  }else if(type==='photo'){
+    const p=photos.find(x=>x.id===id);
+    if(p){
+      for(const iid of (p.imgIds||[])){
+        try{await idbDel(iid);}catch(e){}
+        if(_fbStorage)deletePhotoFromStorage(`photos/${iid}.jpg`);
+      }
+      if(_fbDb)try{await fbCollection('photos').doc(id).delete();}catch(e){}
+    }
+    photos=photos.filter(x=>x.id!==id);savePhotos();
+  }
+}
+
+$('btnTrash').onclick=()=>{renderTrashList();$('trashOverlay').classList.add('show');};
+$('trashClose').onclick=()=>$('trashOverlay').classList.remove('show');
+$('trashCloseBtn').onclick=()=>$('trashOverlay').classList.remove('show');
+$('trashEmpty').onclick=async()=>{
+  const arr=getTrashItems();
+  if(!arr.length){toast('이미 비어있어요');return;}
+  if(!confirm(`휴지통 ${arr.length}개 항목을 모두 영구삭제할까요?\n복원할 수 없습니다.`))return;
+  for(const it of arr)await permanentDelete(it.type,it.id);
+  renderTrashList();renderScanList();renderGallery();
+  toast('🔥 휴지통 비움');
+};
+
+/* ════════════════════════════════════════════════════════
+   🔎 통합 검색 (영수증·명함·텍스트·사진 동시)
+   ════════════════════════════════════════════════════════ */
+function globalSearch(q){
+  q=(q||'').trim().toLowerCase();
+  if(!q)return {receipts:[],cards:[],texts:[],photos:[]};
+  return {
+    receipts:receipts.filter(r=>{
+      if(r.deletedAt)return false;
+      if([r.place,r.phone,r.addr,r.payMethod,r.memo,r.amount&&String(r.amount)]
+        .some(v=>(v||'').toLowerCase().includes(q)))return true;
+      if(r.items&&r.items.some(it=>(it.name||'').toLowerCase().includes(q)))return true;
+      return false;
+    }),
+    cards:cards.filter(c=>!c.deletedAt&&
+      [c.company,c.name,c.position,c.dept,c.phone,c.mobile,c.fax,c.email,c.addr,c.memo]
+        .some(v=>(v||'').toLowerCase().includes(q))),
+    texts:texts.filter(t=>!t.deletedAt&&
+      [t.title,t.text,t.memo,t.tags,t.type]
+        .some(v=>(v||'').toLowerCase().includes(q))),
+    photos:photos.filter(p=>!p.deletedAt&&
+      [p.title,p.memo,p.cat]
+        .some(v=>(v||'').toLowerCase().includes(q))),
+  };
+}
+
+function renderGlobalSearch(q){
+  if(!q.trim()){
+    $('globalSearchResults').innerHTML=`<div style="text-align:center;color:var(--ink-faint);padding:40px 20px">
+      <div style="font-size:36px">🔎</div>
+      <div style="margin-top:8px">검색어를 입력하세요</div>
+      <div style="font-size:11px;margin-top:6px">모든 영수증·명함·텍스트·사진을 한 번에 검색합니다</div>
+      <div style="font-size:11px;margin-top:10px;color:var(--ink-soft)">💡 단축키: Ctrl+K (또는 ⌘+K)</div></div>`;
+    return;
+  }
+  const r=globalSearch(q);
+  const total=r.receipts.length+r.cards.length+r.texts.length+r.photos.length;
+  if(!total){
+    $('globalSearchResults').innerHTML=`<div style="text-align:center;color:var(--ink-faint);padding:40px 20px">
+      <div style="font-size:36px">😶</div>
+      <div style="margin-top:8px">"${esc(q)}" 검색 결과 없음</div></div>`;
+    return;
+  }
+  let html=`<div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px;font-weight:700">총 ${total}개 결과</div>`;
+  const sectionTitle=(emoji,label,count)=>`<div style="font-weight:800;font-size:13px;margin:14px 0 6px;color:var(--blue)">${emoji} ${label} <span style="color:var(--ink-faint);font-weight:600">${count}</span></div>`;
+
+  if(r.receipts.length){
+    html+=sectionTitle('🧾','영수증',r.receipts.length);
+    html+=r.receipts.slice(0,10).map(item=>`
+      <div class="gs-result" data-stype="receipt" data-sid="${esc(item.id)}"
+        style="padding:10px 12px;background:var(--blue-soft);border-radius:9px;margin-bottom:6px;cursor:pointer;border:1.5px solid transparent">
+        <div style="font-weight:700;font-size:13px">${esc(item.place||'영수증')}</div>
+        <div style="font-size:11px;color:var(--ink-faint);margin-top:2px">${esc(item.date||'')}${item.amount?' · '+numFmt(item.amount)+'원':''}</div>
+        ${item.items&&item.items.length?`<div style="font-size:11px;color:var(--ink-soft);margin-top:2px">${esc(itemsToString(item.items).slice(0,80))}</div>`:''}
+      </div>`).join('');
+    if(r.receipts.length>10)html+=`<div style="font-size:11px;color:var(--ink-faint);padding:4px 12px">+${r.receipts.length-10}개 더 있음</div>`;
+  }
+  if(r.cards.length){
+    html+=sectionTitle('💼','명함',r.cards.length);
+    html+=r.cards.slice(0,10).map(item=>`
+      <div class="gs-result" data-stype="card" data-sid="${esc(item.id)}"
+        style="padding:10px 12px;background:var(--blue-soft);border-radius:9px;margin-bottom:6px;cursor:pointer;border:1.5px solid transparent">
+        <div style="font-weight:700;font-size:13px">${esc(item.name||'명함')} <span style="font-weight:500;color:var(--ink-soft)">${esc(item.position||'')}</span></div>
+        <div style="font-size:11px;color:var(--ink-faint);margin-top:2px">${esc(item.company||'')}${item.mobile?' · '+esc(item.mobile):''}</div>
+      </div>`).join('');
+    if(r.cards.length>10)html+=`<div style="font-size:11px;color:var(--ink-faint);padding:4px 12px">+${r.cards.length-10}개 더 있음</div>`;
+  }
+  if(r.texts.length){
+    html+=sectionTitle('📝','텍스트 메모',r.texts.length);
+    html+=r.texts.slice(0,10).map(item=>`
+      <div class="gs-result" data-stype="text" data-sid="${esc(item.id)}"
+        style="padding:10px 12px;background:var(--blue-soft);border-radius:9px;margin-bottom:6px;cursor:pointer;border:1.5px solid transparent">
+        <div style="font-weight:700;font-size:13px">${esc(item.type||'')} ${esc(item.title||'')}</div>
+        <div style="font-size:11px;color:var(--ink-soft);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((item.text||'').slice(0,100))}</div>
+      </div>`).join('');
+    if(r.texts.length>10)html+=`<div style="font-size:11px;color:var(--ink-faint);padding:4px 12px">+${r.texts.length-10}개 더 있음</div>`;
+  }
+  if(r.photos.length){
+    html+=sectionTitle('📷','사진',r.photos.length);
+    html+=r.photos.slice(0,10).map(item=>`
+      <div class="gs-result" data-stype="photo" data-sid="${esc(item.id)}"
+        style="padding:10px 12px;background:var(--blue-soft);border-radius:9px;margin-bottom:6px;cursor:pointer;border:1.5px solid transparent">
+        <div style="font-weight:700;font-size:13px">${esc(item.title||'사진')} ${item.secure?'🔒':''}</div>
+        <div style="font-size:11px;color:var(--ink-faint);margin-top:2px">${esc(item.cat||'')} · ${esc(item.date||'')}</div>
+      </div>`).join('');
+    if(r.photos.length>10)html+=`<div style="font-size:11px;color:var(--ink-faint);padding:4px 12px">+${r.photos.length-10}개 더 있음</div>`;
+  }
+  $('globalSearchResults').innerHTML=html;
+
+  // 결과 클릭 → 해당 상세
+  $('globalSearchResults').querySelectorAll('.gs-result').forEach(el=>{
+    el.onmouseover=()=>{el.style.borderColor='var(--blue)';};
+    el.onmouseout=()=>{el.style.borderColor='transparent';};
+    el.onclick=()=>{
+      const type=el.dataset.stype;
+      const id=el.dataset.sid;
+      // picker 모드면 부모창에 알림
+      if(_pickerMode){
+        notifyParent('selected',{type,id,data:findItemById(type,id)});
+        return;
+      }
+      $('globalSearchOverlay').classList.remove('show');
+      if(type==='photo'){
+        const p=photos.find(x=>x.id===id);
+        if(p&&p.secure&&!secureUnlocked){toast('🔒 보안 잠금 해제 후 다시 시도');return;}
+        openDetail(id);
+      }else{
+        openScanDetail(type,id);
+      }
+    };
+  });
+}
+
+$('btnGlobalSearch').onclick=()=>{
+  $('globalSearchInp').value='';
+  renderGlobalSearch('');
+  $('globalSearchOverlay').classList.add('show');
+  setTimeout(()=>$('globalSearchInp').focus(),100);
+};
+$('globalSearchClose').onclick=()=>$('globalSearchOverlay').classList.remove('show');
+$('globalSearchInp').addEventListener('input',e=>renderGlobalSearch(e.target.value));
+// Ctrl/Cmd + K 단축키
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='k'){
+    e.preventDefault();
+    $('btnGlobalSearch').click();
+  }
+  if(e.key==='Escape'&&$('globalSearchOverlay').classList.contains('show')){
+    $('globalSearchOverlay').classList.remove('show');
+  }
+});
+
+/* ════════════════════════════════════════════════════════
+   🔗 외부 앱 통합 (worklog · 부동산에서 호출)
+   ════════════════════════════════════════════════════════ */
+let _pickerMode=false;        // ?mode=picker
+let _pickerType='';            // ?type=receipt|card|text|photo|all
+let _pickerLinkedTo='';        // ?linkedTo=worklog:xxx (선택 후 자동 태깅)
+
+function findItemById(type,id){
+  if(type==='receipt')return receipts.find(x=>x.id===id);
+  if(type==='card')return cards.find(x=>x.id===id);
+  if(type==='text')return texts.find(x=>x.id===id);
+  if(type==='photo')return photos.find(x=>x.id===id);
+  return null;
+}
+
+function notifyParent(action,payload){
+  if(window.parent&&window.parent!==window){
+    window.parent.postMessage({source:'scan-app',action,payload},'*');
+  }
+}
+
+// 외부 앱이 호출할 수 있는 공개 API
+window.ScanApp={
+  // 항목 검색 (외부 앱에서 사용)
+  search:(q)=>globalSearch(q),
+  // 항목 단건 조회
+  getReceipt:(id)=>receipts.find(x=>x.id===id&&!x.deletedAt),
+  getCard:(id)=>cards.find(x=>x.id===id&&!x.deletedAt),
+  getText:(id)=>texts.find(x=>x.id===id&&!x.deletedAt),
+  getPhoto:(id)=>photos.find(x=>x.id===id&&!x.deletedAt),
+  // 사진 base64 가져오기 (photoId + photoUrl 폴백)
+  getPhotoData:async(photoId,photoUrl)=>await loadPhotoSmart(photoId,photoUrl),
+  // 전체 리스트
+  listReceipts:()=>receipts.filter(x=>!x.deletedAt),
+  listCards:()=>cards.filter(x=>!x.deletedAt),
+  listTexts:()=>texts.filter(x=>!x.deletedAt),
+  listPhotos:()=>photos.filter(x=>!x.deletedAt),
+  // 다른 앱에서 외부 링크 태깅: 영수증 등에 linkedTo 추가
+  linkItem:(type,id,linkedTo)=>{
+    const item=findItemById(type,id);
+    if(!item)return false;
+    if(!item.linkedTo)item.linkedTo=[];
+    if(!item.linkedTo.includes(linkedTo))item.linkedTo.push(linkedTo);
+    item.updated=Date.now();
+    if(type==='receipt')saveReceipts();
+    else if(type==='card')saveCards();
+    else if(type==='text')saveTexts();
+    else if(type==='photo')savePhotos();
+    return true;
+  },
+};
+
+// URL 파라미터 처리
+(function initEmbed(){
+  const params=new URLSearchParams(window.location.search);
+  const mode=params.get('mode');
+  const type=params.get('type');
+  const linkedTo=params.get('linkedTo');
+  if(mode==='picker'){
+    _pickerMode=true;
+    _pickerType=type||'all';
+    _pickerLinkedTo=linkedTo||'';
+    document.body.classList.add('picker-mode');
+    // picker 모드일 때 UI 조정 (헤더 일부 숨김)
+    const style=document.createElement('style');
+    style.textContent=`
+      body.picker-mode header{background:linear-gradient(135deg,#fff9e6,#fff3cc)}
+      body.picker-mode .brand h1::after{content:' (선택 모드)';font-size:12px;color:#a07000}
+      body.picker-mode #btnApiKey,body.picker-mode #btnCatMgr,
+      body.picker-mode #btnTrash,body.picker-mode #btnExport,
+      body.picker-mode #btnImport,body.picker-mode #btnFirebase{display:none}
+    `;
+    document.head.appendChild(style);
+    // 검색 모달 자동 오픈 (선택 작업 진행)
+    setTimeout(()=>{
+      if(_pickerType!=='all'){
+        // 특정 탭으로 이동
+        if(_pickerType==='receipt'||_pickerType==='card'||_pickerType==='text'){
+          selectSection('scan');
+          curScanType=_pickerType;
+          document.querySelectorAll('#scanSubTabs .tab').forEach(x=>x.classList.toggle('active',x.dataset.scan===curScanType));
+          renderScanList();
+        }
+      }
+      notifyParent('ready',{});
+    },300);
+  }
+  // 부모창 메시지 수신 (외부 검색 등)
+  window.addEventListener('message',e=>{
+    if(!e.data||e.data.target!=='scan-app')return;
+    const {action,payload}=e.data;
+    if(action==='search'){
+      const r=globalSearch(payload.q);
+      notifyParent('searchResult',r);
+    }else if(action==='close'){
+      notifyParent('closed',{});
+    }
+  });
+})();
+
+// 카드/row 클릭 시 picker 모드면 선택 알림 (renderScanList의 bindRowActions 보강)
+const _origBindRowActions=bindRowActions;
+bindRowActions=function(container,type){
+  _origBindRowActions(container,type);
+  if(_pickerMode){
+    container.querySelectorAll('[data-id]').forEach(el=>{
+      const oldOnclick=el.onclick;
+      el.onclick=e=>{
+        if(e.target.closest('[data-act]'))return;
+        if(e.target.closest('a'))return;
+        e.preventDefault();e.stopPropagation();
+        const item=findItemById(type,el.dataset.id);
+        if(_pickerLinkedTo&&item){
+          window.ScanApp.linkItem(type,el.dataset.id,_pickerLinkedTo);
+        }
+        notifyParent('selected',{type,id:el.dataset.id,data:item});
+      };
+    });
+  }
+};
 
 console.log('[사진 스캐너 v2] 로드 완료');
 </script>
