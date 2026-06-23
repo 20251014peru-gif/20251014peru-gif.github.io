@@ -2714,8 +2714,7 @@ $('secureCancel').onclick=()=>{
   // 구버전 데이터 마이그레이션: photo:base64 → photoId + IDB
   await migrateOldPhotos();
   refreshCatSelects();refreshKeyState();buildPinPad();
-  const d=new Date(),pad=n=>String(n).padStart(2,'0');
-  $('appVer').textContent=`v${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+  $('appVer').textContent='v20260623-1324';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
