@@ -699,6 +699,9 @@ function cmPriceEdit(id){
 }
 function cmPriceForm(p){
   const catOpts=PRICE_GROUPS.map(c=>`<option${p.cat===c?" selected":""}>${c}</option>`).join("");
+  // scanRefs 초기화 (모달 열릴 때마다)
+  window._cmPriceScanRefs = (p.scanRefs||[]).slice();
+  setTimeout(()=>{ if(typeof renderCmPriceScanAttached==='function') renderCmPriceScanAttached(); }, 50);
   return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div><label style="font-size:12px;color:#888">카테고리</label><select id="cmp-cat" style="width:100%;padding:7px;border:1px solid var(--line);border-radius:8px">${catOpts}</select></div>
     <div><label style="font-size:12px;color:#888">항목명 *</label><input id="cmp-item" value="${esc(p.item||"")}" placeholder="도배(합지)" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
@@ -706,6 +709,11 @@ function cmPriceForm(p){
     <div><label style="font-size:12px;color:#888">최저 단가(원)</label><input id="cmp-min" type="number" value="${p.minPrice||""}" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
     <div><label style="font-size:12px;color:#888">최고 단가(원)</label><input id="cmp-max" type="number" value="${p.maxPrice||""}" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
     <div><label style="font-size:12px;color:#888">메모</label><input id="cmp-note" value="${esc(p.note||"")}" placeholder="지역·시기 기준 등" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:8px"></div>
+  </div>
+  <div style="grid-column:1/-1;background:#f7faff;border:1.5px solid var(--blue-bd);border-radius:10px;padding:10px;margin-top:12px">
+    <label style="display:block;font-weight:700;color:var(--blue);margin-bottom:8px;font-size:12px">🧾 견적서·영수증 첨부 (scan-app)</label>
+    <div id="cmp_scanAttached" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+    <button type="button" class="btn btn-line btn-sm" onclick="openScanPickerForCmPrice()" style="width:100%">🧾 견적서·영수증 선택/추가</button>
   </div>`;
 }
 
@@ -960,9 +968,25 @@ async function cmSubSave(){
         unit:(document.getElementById("cmp-unit")?.value||"").trim(),
         minPrice:Number(document.getElementById("cmp-min")?.value)||0,
         maxPrice:Number(document.getElementById("cmp-max")?.value)||0,
-        note:(document.getElementById("cmp-note")?.value||"").trim(),updatedAt:Date.now()};
-      if(_cmEditId){ await db.collection(CM_PRICE).doc(_cmEditId).update(data); const i=_cmPrices.findIndex(x=>x.id===_cmEditId); if(i>=0)_cmPrices[i]={..._cmPrices[i],...data}; }
-      else{ const ref=await db.collection(CM_PRICE).add({...data,createdAt:Date.now()}); _cmPrices.push({id:ref.id,...data,createdAt:Date.now()}); }
+        note:(document.getElementById("cmp-note")?.value||"").trim(),
+        scanRefs:(window._cmPriceScanRefs||[]).map(r=>({type:r.type, id:r.id})),
+        updatedAt:Date.now()};
+      let savedId;
+      if(_cmEditId){ 
+        await db.collection(CM_PRICE).doc(_cmEditId).update(data); 
+        savedId=_cmEditId;
+        const i=_cmPrices.findIndex(x=>x.id===_cmEditId); if(i>=0)_cmPrices[i]={..._cmPrices[i],...data}; 
+      }
+      else{ 
+        const refp=await db.collection(CM_PRICE).add({...data,createdAt:Date.now()}); 
+        savedId=refp.id;
+        _cmPrices.push({id:refp.id,...data,createdAt:Date.now()}); 
+      }
+      /* 양방향 링크 */
+      const linkedTo = 'realestate:cmprice_'+savedId;
+      for(const r of (window._cmPriceScanRefs||[])){
+        await linkScanItemBack(r.type, r.id, linkedTo).catch(()=>{});
+      }
     }else if(_cmEditCol===CM_CHK){
       const text=(document.getElementById("cmchk-text")?.value||"").trim();
       if(!text){alert("내용을 입력하세요");return;}
@@ -2600,16 +2624,29 @@ function openVisit(id){
   document.getElementById("vs_date").value=today();
   document.getElementById("vs_count").value="0";
   document.getElementById("vs_memo").value="";
+  /* 🔗 방문기록은 매번 새로 추가되는 항목 → scanRefs 초기화 */
+  _vsScanRefs = [];
+  renderVsScanAttached();
   openModal("visitModal");
 }
 async function saveVisit(){
   const id=document.getElementById("vs_id").value;
   const a=agents.find(x=>x.id===id); if(!a) return;
   const count=Number(val("vs_count"))||0;
-  const visit={date:val("vs_date")||today(), count, memo:val("vs_memo").trim()};
+  const visitId = 'v_'+Date.now();
+  const visit={
+    id: visitId,
+    date:val("vs_date")||today(), count, memo:val("vs_memo").trim(),
+    scanRefs: _vsScanRefs.map(r=>({type:r.type, id:r.id}))
+  };
   const visits=(a.visits||[]).concat([visit]);
   try{
     await db.collection(AGENTS).doc(id).update({visits});
+    /* 양방향 링크 */
+    const linkedTo = 'realestate:visit_'+visitId;
+    for(const r of _vsScanRefs){
+      await linkScanItemBack(r.type, r.id, linkedTo).catch(()=>{});
+    }
     closeModal("visitModal"); await reloadCurrent();
   }catch(err){ showError("방문 기록", err); }
 }
@@ -3850,6 +3887,157 @@ async function linkScanItemBack(type, id, linkedTo){
   }catch(e){console.warn('[link back]',e);}
 }
 
+/* ────────────────────────────────────────────────────────
+   방문기록 (visit) - 명함·영수증 첨부
+   ──────────────────────────────────────────────────────── */
+let _vsScanRefs = [];
+
+function renderVsScanAttached(){
+  const wrap = document.getElementById('vs_scanAttached');
+  if(!wrap) return;
+  if(!_vsScanRefs.length){
+    wrap.innerHTML = '<div style="font-size:11px;color:var(--ink-faint);padding:4px 2px">아직 첨부 항목 없음</div>';
+    return;
+  }
+  wrap.innerHTML = _vsScanRefs.map((r, idx) => buildScanCardHtml(r, idx, 'vsrmidx')).join('');
+  wrap.querySelectorAll('[data-vsrmidx]').forEach(b=>{
+    b.addEventListener('click',()=>{_vsScanRefs.splice(parseInt(b.dataset.vsrmidx,10),1);renderVsScanAttached();});
+  });
+}
+
+function openScanPickerForVisit(type){
+  const visitId = document.getElementById('vs_id').value;
+  const linkedTo = `realestate:visit_${visitId||'new'}`;
+  openScanPicker(type, linkedTo, (selType, selId, data)=>{
+    if(!data) return;
+    if(_vsScanRefs.some(r=>r.type===selType && r.id===selId)){ alert('이미 첨부됐어요'); return; }
+    _vsScanRefs.push({type:selType, id:selId, data});
+    /* 빈 칸만 자동 채움 */
+    const setIfEmpty = (id, val)=>{ const el=document.getElementById(id); if(el && !el.value.trim() && val) el.value = val; };
+    if(selType === 'card'){
+      const memoEl = document.getElementById('vs_memo');
+      if(memoEl && !memoEl.value.trim()){
+        const parts = [];
+        if(data.name) parts.push(data.name);
+        if(data.company) parts.push(data.company);
+        if(data.mobile) parts.push(data.mobile);
+        memoEl.value = parts.filter(Boolean).join(' · ');
+      }
+    } else if(selType === 'receipt'){
+      setIfEmpty('vs_date', data.date || '');
+      const memoEl = document.getElementById('vs_memo');
+      if(memoEl && !memoEl.value.trim() && data.place){
+        memoEl.value = '🧾 ' + data.place + (data.amount?(' '+data.amount.toLocaleString()+'원'):'');
+      }
+    }
+    renderVsScanAttached();
+  });
+}
+
+/* ────────────────────────────────────────────────────────
+   프로젝트 - 영수증·명함 첨부
+   ──────────────────────────────────────────────────────── */
+let _pfScanRefs = [];
+
+function renderPfScanAttached(){
+  const wrap = document.getElementById('pf_scanAttached');
+  if(!wrap) return;
+  if(!_pfScanRefs.length){
+    wrap.innerHTML = '<div style="font-size:11px;color:var(--ink-faint);padding:4px 2px">아직 첨부 항목 없음</div>';
+    return;
+  }
+  wrap.innerHTML = _pfScanRefs.map((r, idx) => buildScanCardHtml(r, idx, 'pfrmidx')).join('');
+  wrap.querySelectorAll('[data-pfrmidx]').forEach(b=>{
+    b.addEventListener('click',()=>{_pfScanRefs.splice(parseInt(b.dataset.pfrmidx,10),1);renderPfScanAttached();});
+  });
+}
+
+function openScanPickerForProject(type){
+  const projId = document.getElementById('pf_id').value;
+  const linkedTo = `realestate:project_${projId||'new'}`;
+  openScanPicker(type, linkedTo, (selType, selId, data)=>{
+    if(!data) return;
+    if(_pfScanRefs.some(r=>r.type===selType && r.id===selId)){ alert('이미 첨부됐어요'); return; }
+    _pfScanRefs.push({type:selType, id:selId, data});
+    /* 빈 칸만 자동 채움 */
+    const setIfEmpty = (id, val)=>{ const el=document.getElementById(id); if(el && !el.value.trim() && val) el.value = val; };
+    if(selType === 'receipt'){
+      setIfEmpty('pf_addr', data.addr || '');
+    } else if(selType === 'card'){
+      const memoEl = document.getElementById('pf_memo');
+      if(memoEl){
+        const note = `💼 ${data.name||''}${data.company?(' / '+data.company):''}${data.mobile?(' / '+data.mobile):''}`;
+        if(!memoEl.value.includes(note.trim())){
+          memoEl.value = (memoEl.value ? memoEl.value+'\n' : '') + note;
+        }
+      }
+    }
+    renderPfScanAttached();
+  });
+}
+
+/* ────────────────────────────────────────────────────────
+   단가기준표 (cmPrice) - 견적서 영수증 첨부
+   ──────────────────────────────────────────────────────── */
+function renderCmPriceScanAttached(){
+  const wrap = document.getElementById('cmp_scanAttached');
+  if(!wrap) return;
+  const refs = window._cmPriceScanRefs || [];
+  if(!refs.length){
+    wrap.innerHTML = '<div style="font-size:11px;color:var(--ink-faint);padding:4px 2px">견적서·영수증 없음</div>';
+    return;
+  }
+  /* 데이터 fetch */
+  (async()=>{
+    for(const r of refs){
+      if(!r.data) r.data = await fetchScanItem(r.type, r.id);
+    }
+    wrap.innerHTML = refs.map((r, idx) => buildScanCardHtml(r, idx, 'cmprmidx')).join('');
+    wrap.querySelectorAll('[data-cmprmidx]').forEach(b=>{
+      b.addEventListener('click',()=>{refs.splice(parseInt(b.dataset.cmprmidx,10),1);renderCmPriceScanAttached();});
+    });
+  })();
+}
+
+function openScanPickerForCmPrice(){
+  const linkedTo = 'realestate:cmprice_'+(_cmEditId||'new');
+  openScanPicker('receipt', linkedTo, (selType, selId, data)=>{
+    if(!data) return;
+    const refs = window._cmPriceScanRefs || (window._cmPriceScanRefs = []);
+    if(refs.some(r=>r.type===selType && r.id===selId)){ alert('이미 첨부됐어요'); return; }
+    refs.push({type:selType, id:selId, data});
+    /* 자동 채움: 영수증 금액 → 단가 (참고용으로 최저/최고에 그대로) */
+    const setIfEmpty = (id, val)=>{ const el=document.getElementById(id); if(el && !el.value.trim() && val) el.value = val; };
+    if(data.amount){
+      setIfEmpty('cmp-min', data.amount);
+      setIfEmpty('cmp-max', data.amount);
+    }
+    if(data.place){
+      setIfEmpty('cmp-note', data.place + (data.date?(' / '+data.date):''));
+    }
+    renderCmPriceScanAttached();
+  });
+}
+
+/* 카드 렌더 공통 헬퍼 */
+function buildScanCardHtml(r, idx, attribute){
+  const d = r.data || {};
+  const icon = r.type==='receipt' ? '🧾' : '💼';
+  const title = r.type==='receipt' ? (d.place||'영수증') : (d.name||'명함');
+  const sub = r.type==='receipt'
+    ? `${d.date||''}${d.amount?(' · '+d.amount.toLocaleString()+'원'):''}`
+    : `${d.company||''}${d.mobile?(' · '+d.mobile):''}`;
+  const photoUrl = d.photoUrl||'';
+  return `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#fff;border:1.5px solid var(--blue-bd);border-radius:8px">
+    ${photoUrl?`<img src="${photoUrl}" style="width:42px;height:42px;object-fit:cover;border-radius:6px" loading="lazy">`:'<div style="width:42px;height:42px;background:var(--blue-lt);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px">'+icon+'</div>'}
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${icon} ${esc(title)}</div>
+      <div style="font-size:11px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sub)}</div>
+    </div>
+    <button type="button" data-${attribute}="${idx}" class="btn btn-ghost btn-sm" style="padding:4px 8px">×</button>
+  </div>`;
+}
+
 async function saveCostEdit(){
   const id=document.getElementById("ce_id").value;
   const title=document.getElementById("ce_title").value.trim();
@@ -4252,23 +4440,55 @@ function openProjectModal(id){
     document.getElementById("pf_date").value=p.startDate||today();
     document.getElementById("pf_budget").value=p.budget!=null?p.budget:"";
     document.getElementById("pf_memo").value=p.memo||"";
+    /* 🔗 scan-app 첨부 로드 */
+    _pfScanRefs = [];
+    renderPfScanAttached();
+    if(p.scanRefs && p.scanRefs.length){
+      (async()=>{
+        for(const ref of p.scanRefs){
+          const data = await fetchScanItem(ref.type, ref.id);
+          if(data) _pfScanRefs.push({type:ref.type, id:ref.id, data});
+        }
+        renderPfScanAttached();
+      })();
+    }
   } else {
     document.getElementById("projectModalTitle").textContent="새 프로젝트";
     document.getElementById("pf_id").value="";
     document.getElementById("pf_date").value=today();
     ["pf_name","pf_addr","pf_memo","pf_budget"].forEach(x=>document.getElementById(x).value="");
     document.getElementById("pf_status").value="진행중";
+    /* 🔗 새 프로젝트 - scanRefs 초기화 */
+    _pfScanRefs = [];
+    renderPfScanAttached();
   }
   openModal("projectModal");
 }
 async function saveProject(){
   const name=val("pf_name").trim(); if(!name){alert("프로젝트명을 입력하세요.");return;}
   const data={name,address:val("pf_addr").trim(),status:val("pf_status"),startDate:val("pf_date"),
-    budget:val("pf_budget")?Number(val("pf_budget")):null,memo:val("pf_memo").trim()};
+    budget:val("pf_budget")?Number(val("pf_budget")):null,memo:val("pf_memo").trim(),
+    scanRefs:_pfScanRefs.map(r=>({type:r.type, id:r.id}))};
   try{
     const id=document.getElementById("pf_id").value;
-    if(id){ await db.collection(PROJECTS).doc(id).update(data); closeModal("projectModal"); await loadProjects(); if(currentProjectId===id) await reloadCurrent(); }
-    else { data.stageStatus={}; data.createdAt=firebase.firestore.FieldValue.serverTimestamp(); await db.collection(PROJECTS).add(data); closeModal("projectModal"); await loadProjects(); }
+    let savedId;
+    if(id){ 
+      await db.collection(PROJECTS).doc(id).update(data); 
+      savedId=id;
+      closeModal("projectModal"); await loadProjects(); 
+      if(currentProjectId===id) await reloadCurrent(); 
+    }
+    else { 
+      data.stageStatus={}; data.createdAt=firebase.firestore.FieldValue.serverTimestamp(); 
+      const ref = await db.collection(PROJECTS).add(data);
+      savedId = ref.id;
+      closeModal("projectModal"); await loadProjects(); 
+    }
+    /* 양방향 링크 */
+    const linkedTo = 'realestate:project_'+savedId;
+    for(const r of _pfScanRefs){
+      await linkScanItemBack(r.type, r.id, linkedTo).catch(()=>{});
+    }
   }catch(err){ showError("프로젝트 저장", err); }
 }
 async function deleteProject(){

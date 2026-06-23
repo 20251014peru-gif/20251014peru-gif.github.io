@@ -91,6 +91,15 @@
     </div>
     <div class="field"><label>총 예산 (원, 선택)</label><input id="pf_budget" type="number" placeholder="예: 30000000"></div>
     <div class="field"><label>메모</label><textarea id="pf_memo" placeholder="프로젝트 개요, 담당자, 평형, 예산 등"></textarea></div>
+    <!-- 🧾 scan-app 첨부 (계약서·등기영수증·중개사 명함 등) -->
+    <div class="field" style="background:#f7faff;border:1.5px solid var(--blue-bd);border-radius:10px;padding:10px;margin-top:10px">
+      <label style="margin-bottom:8px;display:block;font-weight:700;color:var(--blue)">🧾 scan-app 영수증·명함 첨부 <span style="font-size:11px;font-weight:500;color:var(--ink-faint)">(계약/등기/중개사·인테리어 명함 등)</span></label>
+      <div id="pf_scanAttached" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" class="btn btn-line" onclick="openScanPickerForProject('receipt')" style="flex:1;min-width:120px;padding:8px;font-size:13px">🧾 영수증 선택</button>
+        <button type="button" class="btn btn-line" onclick="openScanPickerForProject('card')" style="flex:1;min-width:120px;padding:8px;font-size:13px">💼 명함 선택</button>
+      </div>
+    </div>
     <div class="modal-acts">
       <button class="btn btn-primary" onclick="saveProject()">저장</button>
       <button class="btn btn-line" onclick="closeModal('projectModal')">취소</button>
@@ -637,6 +646,15 @@
       <div class="field"><label>데려온 인원(선택)</label><input id="vs_count" type="number" min="0" value="0" placeholder="손님 수"></div>
     </div>
     <div class="field"><label>특이사항 / 방문자</label><input id="vs_memo" placeholder="예: 김OO 부부 / 가격 협의 / 재방문 예정"></div>
+    <!-- 💼 scan-app 명함 연결 -->
+    <div class="field" style="background:#f7faff;border:1.5px solid var(--blue-bd);border-radius:10px;padding:10px;margin-top:10px">
+      <label style="margin-bottom:8px;display:block;font-weight:700;color:var(--blue)">💼 scan-app 명함·영수증 첨부</label>
+      <div id="vs_scanAttached" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" class="btn btn-line" onclick="openScanPickerForVisit('card')" style="flex:1;min-width:120px;padding:8px;font-size:13px">💼 명함 선택</button>
+        <button type="button" class="btn btn-line" onclick="openScanPickerForVisit('receipt')" style="flex:1;min-width:120px;padding:8px;font-size:13px">🧾 영수증 선택</button>
+      </div>
+    </div>
     <div class="modal-acts">
       <button class="btn btn-primary" onclick="saveVisit()">방문 1회 기록</button>
       <button class="btn btn-line" onclick="closeModal('visitModal')">취소</button>
