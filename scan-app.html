@@ -264,8 +264,7 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
 .edit-toolbar select{height:38px;padding:0 8px;border:1.5px solid #4a4a4a;border-radius:9px;
   background:#3a3a3a;color:#fff;font-size:12px;font-family:inherit;font-weight:700}
 #editCanvasWrap{flex:1;display:flex;align-items:center;justify-content:center;
-  padding:14px;background:#1a1a1a;overflow:auto}
-#editCanvasWrap .canvas-container{box-shadow:0 0 20px rgba(0,0,0,.5);border-radius:4px;overflow:hidden}
+  padding:14px;background:#1a1a1a;overflow:hidden}
 #editTextInputRow{display:none;padding:10px 14px;background:#2a2a2a;
   gap:8px;align-items:center;border-top:1px solid #3a3a3a}
 #editTextInputRow.show{display:flex}
@@ -1142,19 +1141,25 @@ function openEditModal(dataUrl,callback){
   $('editOverlay').classList.add('show');
   $('editTextInputRow').classList.remove('show');
   if(_fab){try{_fab.dispose();}catch(e){}_fab=null;}
-  setTimeout(()=>{
+  // 레이아웃이 완전히 적용된 다음에 캔버스 만들기
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
     const wrap=$('editCanvasWrap');
-    const maxW=wrap.clientWidth-20,maxH=wrap.clientHeight-20;
+    const cw=Math.max(300,wrap.clientWidth-28);
+    const ch=Math.max(300,wrap.clientHeight-28);
     fabric.Image.fromURL(dataUrl,img=>{
-      // 작은 사진도 화면 꽉 채우도록 1 제한 제거
-      const scale=Math.min(maxW/img.width,maxH/img.height);
-      const cw=Math.round(img.width*scale),ch=Math.round(img.height*scale);
-      _fab=new fabric.Canvas('editCanvas',{width:cw,height:ch,backgroundColor:'#fff'});
-      img.set({scaleX:scale,scaleY:scale,selectable:false,evented:false});
+      // 캔버스는 화면 꽉 채우고, 이미지는 그 안에 비율 맞춰 배치
+      const scale=Math.min(cw/img.width,ch/img.height);
+      _fab=new fabric.Canvas('editCanvas',{width:cw,height:ch,backgroundColor:'#1a1a1a'});
+      img.set({
+        scaleX:scale,scaleY:scale,
+        left:(cw-img.width*scale)/2,
+        top:(ch-img.height*scale)/2,
+        selectable:false,evented:false,
+      });
       _fab.add(img);_fab.sendToBack(img);_fab.renderAll();
       pushHistory();setEditTool('select');
     },{crossOrigin:'anonymous'});
-  },100);
+  }));
 }
 function closeEditModal(){
   $('editOverlay').classList.remove('show');
@@ -1447,7 +1452,7 @@ function bindEditZoom(){
     _fabZoom=Math.max(0.3,Math.min(5,_fabZoom*delta));
     // 마우스 커서 위치를 캔버스 좌표로 변환
     const rect=_fab.upperCanvasEl.getBoundingClientRect();
-    const point={x:e.clientX-rect.left,y:e.clientY-rect.top};
+    const point=new fabric.Point(e.clientX-rect.left,e.clientY-rect.top);
     _fab.zoomToPoint(point,_fabZoom);
     _fab.renderAll();
     showZoomIndicator();
@@ -1480,6 +1485,8 @@ function bindEditZoom(){
   let lastDist=0,lastCenterX=0,lastCenterY=0,twoTouchActive=false;
   wrap.addEventListener('touchstart',e=>{
     if(e.touches.length===2){
+      e.preventDefault();
+      e.stopPropagation();
       const t1=e.touches[0],t2=e.touches[1];
       const dx=t1.clientX-t2.clientX,dy=t1.clientY-t2.clientY;
       lastDist=Math.hypot(dx,dy);
@@ -1487,9 +1494,14 @@ function bindEditZoom(){
       lastCenterY=(t1.clientY+t2.clientY)/2;
       twoTouchActive=true;
       // 두 손가락 시작 시 fabric의 단일 손가락 드래그 차단
-      if(_fab){_fab.isDrawingMode=false;_fab.discardActiveObject();_fab.renderAll();}
+      if(_fab){
+        _fab.isDrawingMode=false;
+        _fab.selection=false;
+        _fab.discardActiveObject();
+        _fab.renderAll();
+      }
     }
-  },{passive:true});
+  },{passive:false,capture:true});
   wrap.addEventListener('touchmove',e=>{
     if(e.touches.length===2&&_fab&&twoTouchActive){
       e.preventDefault();
@@ -1501,30 +1513,32 @@ function bindEditZoom(){
       const cy=(t1.clientY+t2.clientY)/2;
       // 줌 기준점 = 두 손가락 중심 (캔버스 좌표로 변환)
       const rect=_fab.upperCanvasEl.getBoundingClientRect();
-      const point={x:cx-rect.left,y:cy-rect.top};
-      // 줌 (핀치 거리 변화) - 중심점 기준
+      const point=new fabric.Point(cx-rect.left,cy-rect.top);
+      // 1. 줌 (핀치 거리 변화) - 중심점 기준
       if(lastDist){
         const factor=dist/lastDist;
-        _fabZoom=Math.max(0.3,Math.min(5,_fabZoom*factor));
-        _fab.zoomToPoint(point,_fabZoom);
+        const newZoom=Math.max(0.3,Math.min(5,_fabZoom*factor));
+        _fabZoom=newZoom;
+        _fab.zoomToPoint(point,newZoom);
         showZoomIndicator();
       }
-      // 팬 (두 손가락 중심점 이동분만큼)
+      // 2. 팬 (두 손가락 중심점 이동분만큼) - relativePan 사용
       if(lastCenterX){
         const moveX=cx-lastCenterX,moveY=cy-lastCenterY;
-        const vpt=_fab.viewportTransform;
-        vpt[4]+=moveX;vpt[5]+=moveY;
-        _fab.setViewportTransform(vpt);
+        _fab.relativePan(new fabric.Point(moveX,moveY));
       }
       _fab.renderAll();
       lastDist=dist;lastCenterX=cx;lastCenterY=cy;
     }
-  },{passive:false});
+  },{passive:false,capture:true});
   wrap.addEventListener('touchend',e=>{
     if(e.touches.length<2){
       lastDist=0;lastCenterX=0;lastCenterY=0;twoTouchActive=false;
-      // 그리기 모드 복원
-      if(_fab&&_fabTool==='draw')_fab.isDrawingMode=true;
+      // 그리기 모드 복원 + 선택 모드 복원
+      if(_fab){
+        _fab.selection=(_fabTool==='select');
+        if(_fabTool==='draw')_fab.isDrawingMode=true;
+      }
     }
   },{passive:true});
 }
@@ -1546,7 +1560,6 @@ function showZoomIndicator(){
 function resetEditZoom(){
   if(!_fab)return;
   _fabZoom=1;
-  _fab.setZoom(1);
   _fab.setViewportTransform([1,0,0,1,0,0]);
   _fab.renderAll();
   showZoomIndicator();
