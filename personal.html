@@ -800,6 +800,15 @@ main.wrap{padding-bottom:100px;padding-top:12px}
       </div>
       <div class="photo-row" id="recThumbs" style="margin-top:8px"></div>
     </div>
+    <!-- 🧾 scan-app 영수증·명함 첨부 (차계부 전용) -->
+    <div class="field" id="recScanArea" style="display:none;background:#f7faff;border:1.5px solid var(--blue-bd);border-radius:10px;padding:10px;margin-top:8px">
+      <label style="margin-bottom:8px;display:block;font-weight:700;color:var(--blue)">🧾 scan-app 영수증·명함 첨부</label>
+      <div id="rec_scanAttached" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" id="rec_pickReceipt" class="btn btn-line" style="flex:1;min-width:130px;padding:8px;font-size:13px">🧾 영수증 선택/추가</button>
+        <button type="button" id="rec_pickCard" class="btn btn-line" style="flex:1;min-width:130px;padding:8px;font-size:13px">💼 명함 선택/추가</button>
+      </div>
+    </div>
     <div class="modal-btns">
       <button class="btn btn-primary btn-flex" id="recordSave">💾 저장</button>
       <button class="btn btn-ghost" id="recordCancel">취소</button>
@@ -924,6 +933,12 @@ main.wrap{padding-bottom:100px;padding-top:12px}
     </div>
     <div class="field"><label>상세 주소</label><input type="text" id="ct-addr" placeholder="상세 주소 입력"></div>
     <div class="field"><label>메모</label><input type="text" id="ct-memo" placeholder="메모"></div>
+    <!-- 💼 scan-app 명함 연결 -->
+    <div class="field" style="background:#f7faff;border:1.5px solid var(--blue-bd);border-radius:10px;padding:10px;margin-top:8px">
+      <label style="margin-bottom:8px;display:block;font-weight:700;color:var(--blue)">💼 scan-app 명함 연결</label>
+      <div id="ct_scanAttached" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <button type="button" id="ct_pickCard" class="btn btn-line" style="width:100%;padding:8px;font-size:13px">💼 scan-app 명함 선택/추가</button>
+    </div>
     <div class="modal-btns">
       <button class="btn btn-primary btn-flex" id="ctSave">💾 저장</button>
       <button class="btn btn-ghost" id="ctCancel">취소</button>
@@ -1438,7 +1453,14 @@ function openRecordModal(kind,id){
   g('recordClose').onclick=closeRecordModal;
   g('recordDelete').style.display=id?'':'none';
   g('recThumbs').innerHTML='';
+  /* scan 영역: 차계부/구매/건강/맛집/독서일 때 표시 */
+  const recScanArea = g('recScanArea');
+  const scanKinds = ['car','purchase','health','restaurant','reading'];
+  if(recScanArea) recScanArea.style.display = scanKinds.indexOf(kind) >= 0 ? '' : 'none';
+  /* scanRefs 로드 */
   const en=id?entries.find(e=>e.id===id):null;
+  window._recScanRefs = (en && en.scanRefs) ? en.scanRefs.slice() : [];
+  if(typeof window._renderRecScanAttached === 'function') window._renderRecScanAttached();
   buildFields(kind,en);
   setTimeout(()=>{const f=g('recordFields').querySelector('input,textarea');if(f)f.focus();},200);
 }
@@ -1739,8 +1761,35 @@ g('recordSave').addEventListener('click',()=>{
     if(!gv('title')){toast('제목을 입력해주세요');return;}
     obj={...obj,title:gv('title'),body:gv('body'),photos:recPhotos};
   }
-  if(editingId){updateEntry(editingId,obj);toast('수정됐어요');}
-  else{addEntry(obj);toast('저장됐어요');}
+  /* 🔗 모든 record kind에 scanRefs 자동 포함 (있는 경우만) */
+  if(window._recScanRefs && window._recScanRefs.length){
+    obj.scanRefs = window._recScanRefs.map(r=>({type:r.type,id:r.id}));
+  }
+  if(editingId){
+    updateEntry(editingId,obj);
+    /* 양방향 링크 */
+    if(typeof window._linkScanItemBack === 'function'){
+      (window._recScanRefs||[]).forEach(r=>{
+        window._linkScanItemBack(r.type, r.id, 'personal:'+kind+'_'+editingId);
+      });
+    }
+    toast('수정됐어요');
+  }
+  else{
+    addEntry(obj);
+    /* 새로 추가 시 ID는 비동기 → 잠시 후 링크 */
+    if(window._recScanRefs && window._recScanRefs.length){
+      setTimeout(()=>{
+        const latest = entries.filter(e=>e.kind===kind).sort((a,b)=>(b.createdAt||b.savedAt||0)-(a.createdAt||a.savedAt||0))[0];
+        if(latest && typeof window._linkScanItemBack === 'function'){
+          (window._recScanRefs||[]).forEach(r=>{
+            window._linkScanItemBack(r.type, r.id, 'personal:'+kind+'_'+latest.id);
+          });
+        }
+      }, 500);
+    }
+    toast('저장됐어요');
+  }
   closeRecordModal();
 });
 }
@@ -2626,6 +2675,9 @@ function openCtModal(id){
   g('ct-sigungu').value=c?c.sigungu||'':'';
   g('ct-addr').value=c?c.addr||'':'';
   g('ct-memo').value=c?c.memo||'':'';
+  /* 🔗 scan-app 명함 연결 로드 */
+  window._ctScanRefs = (c && c.scanRefs) ? c.scanRefs.slice() : [];
+  if(typeof window._renderCtScanAttached === 'function') window._renderCtScanAttached();
   g('ctOverlay').classList.add('show');
   setTimeout(()=>g('ct-name').focus(),100);
 }
@@ -2642,10 +2694,17 @@ g('ctSave').addEventListener('click',()=>{
   const addr2=(g('ct-addr').value||'').trim();
   if(!name){toast('이름을 입력해주세요');return;}
   if(!phone2&&!addr2){toast('전화번호나 주소 중 하나는 필요해요');return;}
-  const obj={id:ctEditId||'ct_'+Date.now(),name,cat:g('ct-cat').value,phone:(g('ct-phone').value||'').trim(),sido:g('ct-sido').value,sigungu:(g('ct-sigungu').value||'').trim(),addr:(g('ct-addr').value||'').trim(),memo:(g('ct-memo').value||'').trim(),auto:false};
+  const obj={id:ctEditId||'ct_'+Date.now(),name,cat:g('ct-cat').value,phone:(g('ct-phone').value||'').trim(),sido:g('ct-sido').value,sigungu:(g('ct-sigungu').value||'').trim(),addr:(g('ct-addr').value||'').trim(),memo:(g('ct-memo').value||'').trim(),auto:false,
+    scanRefs:(window._ctScanRefs||[]).map(r=>({type:r.type,id:r.id}))};
   if(ctEditId){const i=manualContacts.findIndex(c=>c.id===ctEditId);if(i>=0)manualContacts[i]=obj;else manualContacts.push(obj);}
   else manualContacts.push(obj);
   saveManualContacts();renderContacts();closeCtModal();toast('저장됐어요');
+  /* 양방향 링크 (scan-app 명함에 → personal:contact 추가) */
+  if(typeof window._linkScanItemBack === 'function'){
+    (window._ctScanRefs||[]).forEach(r=>{
+      window._linkScanItemBack(r.type, r.id, 'personal:contact_'+obj.id);
+    });
+  }
 });
 }
 if(g('ctDelete')){
@@ -2809,6 +2868,11 @@ function openCarModal(id){
   g('recordClose').onclick=closeRecordModal;
   g('recordDelete').style.display=id?'':'none';
   g('recThumbs').innerHTML='';
+  /* 🔗 scan-app 영수증 첨부 영역 활성화 + 데이터 로드 */
+  const recScanArea = g('recScanArea');
+  if(recScanArea) recScanArea.style.display = '';
+  window._recScanRefs = (en && en.scanRefs) ? en.scanRefs.slice() : [];
+  if(typeof window._renderRecScanAttached === 'function') window._renderRecScanAttached();
 
   function buildCarFields(type){
     let html=`<div class="field"><label>날짜 *</label><input type="date" id="rf-date" value="${en?en.date:today()}"></div>`;
@@ -2916,7 +2980,8 @@ function openCarModal(id){
     const ct=(g('rf-carType')||{}).value||'주유';
     const amount=parseInt((g('rf-amount')||{}).value)||0;
     const mileage=parseInt((g('rf-mileage')||{}).value)||0;
-    const base={kind:'car',vehicle:en?en.vehicle:curVehicle,date,carType:ct,amount,mileage,photos:recPhotos};
+    const base={kind:'car',vehicle:en?en.vehicle:curVehicle,date,carType:ct,amount,mileage,photos:recPhotos,
+      scanRefs:(window._recScanRefs||[]).map(r=>({type:r.type,id:r.id}))};
     const sv2=(id)=>{const el=g('rf-'+id);return el?(el.value||'').trim():'';}
     const cb=(id)=>{const el=g('rf-'+id);return el?el.checked:false;}
     let obj={...base,...getCarFields()};
@@ -2938,7 +3003,28 @@ function openCarModal(id){
         insLiab:cb('insLiab'),insProp:cb('insProp'),insSelf:cb('insSelf'),insVehicle:cb('insVehicle'),insUnins:cb('insUnins'),insRoad:cb('insRoad'),
         insContact:sv2('insContact'),note:sv2('note')};
     }
-    if(editingId){updateEntry(editingId,obj);toast('수정됐어요');}else{addEntry(obj);toast('저장됐어요');}
+    if(editingId){
+      updateEntry(editingId,obj);
+      /* 양방향 링크 */
+      if(typeof window._linkScanItemBack === 'function'){
+        (window._recScanRefs||[]).forEach(r=>{
+          window._linkScanItemBack(r.type, r.id, 'personal:car_'+editingId);
+        });
+      }
+      toast('수정됐어요');
+    }else{
+      addEntry(obj);
+      /* 새로 추가 시 ID는 비동기 → 잠시 후 링크 */
+      setTimeout(()=>{
+        const latest = entries.filter(e=>e.kind==='car').sort((a,b)=>(b.createdAt||b.savedAt||0)-(a.createdAt||a.savedAt||0))[0];
+        if(latest && typeof window._linkScanItemBack === 'function'){
+          (window._recScanRefs||[]).forEach(r=>{
+            window._linkScanItemBack(r.type, r.id, 'personal:car_'+latest.id);
+          });
+        }
+      }, 500);
+      toast('저장됐어요');
+    }
     closeRecordModal();g('recordSave').onclick=null;
   };
 }
@@ -5091,6 +5177,303 @@ console.log('[개인일지] 로드 완료');
   const pad = n => String(n).padStart(2,'0');
   const ver = `v${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
   el.textContent = ver;
+})();
+
+/* ════════════════════════════════════════════════════════
+   🔗 scan-app picker (연락처 명함 / 차계부 영수증)
+   ════════════════════════════════════════════════════════ */
+(function(){
+  const SCAN_APP_URL = 'https://20251014peru-gif.github.io/scan-app.html';
+  const SCAN_USER_ID = '달님';
+  let _pickerCtx = null;
+
+  /* picker iframe + 닫기 버튼 동적으로 만들기 */
+  function ensurePickerOverlay(){
+    if(document.getElementById('scanPickerOverlay')) return;
+    const ov = document.createElement('div');
+    ov.id = 'scanPickerOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99998;display:none;align-items:center;justify-content:center';
+    ov.innerHTML = `
+      <div style="background:#fff;width:95%;max-width:720px;height:90vh;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1.5px solid #dbe6f4;background:#f7faff">
+          <span style="font-size:15px;font-weight:700;color:#1a2f45">📷 scan-app에서 선택</span>
+          <button type="button" id="_scanPickerClose" style="background:#fde8e8;border:none;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">✕ 닫기</button>
+        </div>
+        <iframe id="_scanPickerFrame" style="flex:1;width:100%;border:none;background:#fff" src="about:blank"></iframe>
+      </div>`;
+    document.body.appendChild(ov);
+    document.getElementById('_scanPickerClose').addEventListener('click', closeScanPicker);
+    ov.addEventListener('click', e=>{ if(e.target === ov) closeScanPicker(); });
+  }
+
+  function openScanPicker(type, linkedTo, onSelect){
+    ensurePickerOverlay();
+    _pickerCtx = { type, onSelect };
+    const url = SCAN_APP_URL + '?mode=picker&type=' + type + '&linkedTo=' + encodeURIComponent(linkedTo||'');
+    document.getElementById('_scanPickerFrame').src = url;
+    document.getElementById('scanPickerOverlay').style.display = 'flex';
+  }
+  function closeScanPicker(){
+    const ov = document.getElementById('scanPickerOverlay');
+    const fr = document.getElementById('_scanPickerFrame');
+    if(ov) ov.style.display = 'none';
+    if(fr) fr.src = 'about:blank';
+    _pickerCtx = null;
+  }
+  window.addEventListener('message', (e)=>{
+    if(!e.data || e.data.source !== 'scan-app') return;
+    if(e.data.action === 'selected' && _pickerCtx){
+      _pickerCtx.onSelect(e.data.payload.type, e.data.payload.id, e.data.payload.data);
+      closeScanPicker();
+    }
+  });
+
+  /* scan-app Firestore 직접 조회 (personal과 같은 Firebase 가정) */
+  async function fetchScanItem(type, id){
+    try{
+      if(typeof db === 'undefined') return null;
+      const doc = await db.collection('scanapp').doc(SCAN_USER_ID).collection(type+'s').doc(id).get();
+      if(doc.exists){
+        const data = doc.data();
+        if(data.deletedAt) return null;
+        return data;
+      }
+    }catch(e){ console.error('[scan fetch]',e); }
+    return null;
+  }
+
+  async function linkScanItemBack(type, id, linkedTo){
+    try{
+      if(typeof db === 'undefined') return;
+      const docRef = db.collection('scanapp').doc(SCAN_USER_ID).collection(type+'s').doc(id);
+      const doc = await docRef.get();
+      if(doc.exists){
+        const data = doc.data();
+        const linkedArr = data.linkedTo || [];
+        if(linkedArr.indexOf(linkedTo) === -1){
+          linkedArr.push(linkedTo);
+          await docRef.update({ linkedTo: linkedArr, updated: Date.now() });
+        }
+      }
+    }catch(e){ console.warn('[link back]',e); }
+  }
+  window._linkScanItemBack = linkScanItemBack;
+
+  /* ── 카드 렌더링 (연락처용 & 차계부용 공통 헬퍼) ── */
+  function buildScanCardHtml(r, idx, attribute){
+    const d = r.data || {};
+    const icon = r.type==='receipt' ? '🧾' : '💼';
+    const title = r.type==='receipt' ? (d.place||'영수증') : (d.name||'명함');
+    const sub = r.type==='receipt'
+      ? `${d.date||''}${d.amount?' · '+d.amount.toLocaleString()+'원':''}`
+      : `${d.company||''}${d.mobile?' · '+d.mobile:''}${d.fax?' · 📠'+d.fax:''}`;
+    const photoUrl = d.photoUrl||'';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#fff;border:1.5px solid #dbe6f4;border-radius:8px">
+      ${photoUrl?`<img src="${photoUrl}" style="width:42px;height:42px;object-fit:cover;border-radius:6px" loading="lazy">`:'<div style="width:42px;height:42px;background:#f0f6ff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px">'+icon+'</div>'}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${icon} ${esc(title)}</div>
+        <div style="font-size:11px;color:#7a92a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sub)}</div>
+      </div>
+      <button type="button" data-${attribute}="${idx}" style="background:#fde8e8;border:none;border-radius:6px;padding:6px 10px;font-size:12px;color:#b52929;cursor:pointer;font-family:inherit">×</button>
+    </div>`;
+  }
+
+  /* ── 연락처(Contact) 명함 첨부 ── */
+  async function renderCtScanAttached(){
+    const wrap = document.getElementById('ct_scanAttached'); if(!wrap) return;
+    const refs = window._ctScanRefs || [];
+    if(!refs.length){
+      wrap.innerHTML = '<div style="font-size:11px;color:#aab8c8;padding:4px 2px">scan-app 명함과 연결되지 않음</div>';
+      return;
+    }
+    /* 데이터 fetch */
+    for(const r of refs){
+      if(!r.data) r.data = await fetchScanItem(r.type, r.id);
+    }
+    wrap.innerHTML = refs.map((r, i)=>buildScanCardHtml(r, i, 'ctrmidx')).join('');
+    wrap.querySelectorAll('[data-ctrmidx]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const i = parseInt(b.dataset.ctrmidx, 10);
+        window._ctScanRefs.splice(i, 1);
+        renderCtScanAttached();
+      });
+    });
+  }
+  window._renderCtScanAttached = renderCtScanAttached;
+
+  /* 연락처 - 명함 선택 버튼 */
+  const ctPickBtn = document.getElementById('ct_pickCard');
+  if(ctPickBtn){
+    ctPickBtn.addEventListener('click', ()=>{
+      const editId = (typeof ctEditId !== 'undefined') ? ctEditId : null;
+      const linkedTo = 'personal:contact_' + (editId || 'new');
+      openScanPicker('card', linkedTo, (selType, selId, data)=>{
+        if(!data) return;
+        const refs = window._ctScanRefs || (window._ctScanRefs = []);
+        if(refs.some(r=>r.type===selType && r.id===selId)){
+          if(typeof toast==='function') toast('이미 연결됐어요'); return;
+        }
+        refs.push({type:selType, id:selId, data});
+        /* 빈 칸만 자동 채움 */
+        const set = (id, v)=>{ const el = document.getElementById(id); if(el && !el.value.trim() && v) el.value = v; };
+        set('ct-name', data.company || data.name || '');
+        set('ct-phone', data.mobile || data.phone || '');
+        /* 주소 split */
+        if(data.addr && !document.getElementById('ct-addr').value.trim()){
+          document.getElementById('ct-addr').value = data.addr;
+        }
+        /* 명함 카테고리 자동 (회사 있으면 기타, 없으면 개인) */
+        const catSel = document.getElementById('ct-cat');
+        if(catSel && catSel.value === '개인' && data.company){
+          catSel.value = '기타';
+        }
+        /* 메모 자동 */
+        const memoEl = document.getElementById('ct-memo');
+        if(memoEl && !memoEl.value.trim()){
+          const parts = [];
+          if(data.position) parts.push(data.position);
+          if(data.fax) parts.push('📠 '+data.fax);
+          if(data.email) parts.push(data.email);
+          memoEl.value = parts.join(' / ');
+        }
+        renderCtScanAttached();
+      });
+    });
+  }
+
+  /* ── 차계부(Record) 영수증/명함 첨부 ── */
+  async function renderRecScanAttached(){
+    const wrap = document.getElementById('rec_scanAttached'); if(!wrap) return;
+    const refs = window._recScanRefs || [];
+    if(!refs.length){
+      wrap.innerHTML = '<div style="font-size:11px;color:#aab8c8;padding:4px 2px">아직 첨부된 영수증·명함이 없어요</div>';
+      return;
+    }
+    for(const r of refs){
+      if(!r.data) r.data = await fetchScanItem(r.type, r.id);
+    }
+    wrap.innerHTML = refs.map((r, i)=>buildScanCardHtml(r, i, 'recrmidx')).join('');
+    wrap.querySelectorAll('[data-recrmidx]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const i = parseInt(b.dataset.recrmidx, 10);
+        window._recScanRefs.splice(i, 1);
+        renderRecScanAttached();
+      });
+    });
+  }
+  window._renderRecScanAttached = renderRecScanAttached;
+
+  /* ── 카테고리별 자동 채움 (영수증/명함) ── */
+  function autofillByKind(itemType, data){
+    const kind = (typeof currentKind !== 'undefined') ? currentKind : null;
+    if(!kind) return;
+    const set = (id, v)=>{ const el = document.getElementById('rf-'+id); if(el && !el.value.trim() && v) el.value = v; };
+    const append = (id, v)=>{
+      const el = document.getElementById('rf-'+id);
+      if(!el || !v) return;
+      if(!el.value.trim()) el.value = v;
+      else if(el.value.indexOf(v) === -1) el.value = el.value + ' / ' + v;
+    };
+
+    /* 공통: 날짜 */
+    set('date', data.date || '');
+
+    if(itemType === 'receipt'){
+      if(kind === 'car'){
+        set('amount', data.amount || '');
+      } else if(kind === 'purchase'){
+        set('title', data.place || ''); /* 품목명 — 영수증 가게로 임시 */
+        set('amount', data.amount || '');
+        set('place', data.place || '');
+        /* 메모에 품목 자동 추가 */
+        if(data.items && data.items.length){
+          const itemTxt = data.items.map(it=>`${it.name||''}${it.qty>1?(' x'+it.qty):''}`).filter(Boolean).join(', ');
+          if(itemTxt) append('note', '🛒 ' + itemTxt);
+        }
+      } else if(kind === 'health'){
+        set('title', data.place || ''); /* 병원/약국명을 제목으로 */
+        set('hospital', data.place || '');
+        set('phone', data.phone || '');
+        set('hospitalAddr', data.addr || '');
+        set('amount', data.amount || '');
+        /* 약국 영수증인 경우 약값에도 */
+        if(data.place && /약국/.test(data.place)){
+          set('pharmacy', data.place || '');
+          set('pharmacyPhone', data.phone || '');
+          set('pharmacyAddr', data.addr || '');
+          set('drugCost', data.amount || '');
+        }
+        /* 메모에 OCR 추가 */
+        if(data.items && data.items.length){
+          const txt = data.items.map(it=>it.name||'').filter(Boolean).join(', ');
+          if(txt) append('note', '💊 ' + txt);
+        }
+      } else if(kind === 'restaurant'){
+        set('place', data.place || '');
+        set('addr', data.addr || '');
+        set('phone', data.phone || '');
+        set('amount', data.amount || '');
+      } else if(kind === 'reading'){
+        /* 책 영수증인 경우 (인터넷서점 등) → 출판사 정도만 */
+        set('publisher', data.place || '');
+      }
+    } else if(itemType === 'card'){
+      if(kind === 'car'){
+        /* 차계부 - 명함은 단순 참조만 (자동 채움 없음) */
+      } else if(kind === 'purchase'){
+        set('place', data.company || data.name || '');
+        set('brand', data.company || '');
+      } else if(kind === 'health'){
+        set('hospital', data.company || data.name || '');
+        set('phone', data.mobile || data.phone || '');
+        set('hospitalAddr', data.addr || '');
+      } else if(kind === 'restaurant'){
+        set('place', data.company || data.name || '');
+        set('phone', data.mobile || data.phone || '');
+        set('addr', data.addr || '');
+      } else if(kind === 'reading'){
+        set('publisher', data.company || '');
+      }
+    }
+  }
+
+  /* 차계부 - 영수증/명함 선택 버튼 */
+  const recPickReceipt = document.getElementById('rec_pickReceipt');
+  if(recPickReceipt){
+    recPickReceipt.addEventListener('click', ()=>{
+      const eid = (typeof editingId !== 'undefined') ? editingId : null;
+      const kind = (typeof currentKind !== 'undefined') ? currentKind : 'car';
+      const linkedTo = 'personal:'+kind+'_' + (eid || 'new');
+      openScanPicker('receipt', linkedTo, (selType, selId, data)=>{
+        if(!data) return;
+        const refs = window._recScanRefs || (window._recScanRefs = []);
+        if(refs.some(r=>r.type===selType && r.id===selId)){
+          if(typeof toast==='function') toast('이미 첨부됐어요'); return;
+        }
+        refs.push({type:selType, id:selId, data});
+        autofillByKind('receipt', data);
+        renderRecScanAttached();
+      });
+    });
+  }
+  const recPickCard = document.getElementById('rec_pickCard');
+  if(recPickCard){
+    recPickCard.addEventListener('click', ()=>{
+      const eid = (typeof editingId !== 'undefined') ? editingId : null;
+      const kind = (typeof currentKind !== 'undefined') ? currentKind : 'car';
+      const linkedTo = 'personal:'+kind+'_' + (eid || 'new');
+      openScanPicker('card', linkedTo, (selType, selId, data)=>{
+        if(!data) return;
+        const refs = window._recScanRefs || (window._recScanRefs = []);
+        if(refs.some(r=>r.type===selType && r.id===selId)){
+          if(typeof toast==='function') toast('이미 연결됐어요'); return;
+        }
+        refs.push({type:selType, id:selId, data});
+        autofillByKind('card', data);
+        renderRecScanAttached();
+      });
+    });
+  }
 })();
 
 /* ════════════════════════════════════════════════════════
