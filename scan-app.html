@@ -179,9 +179,14 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
 .scan-card .date{font-size:11px;color:var(--ink-faint);font-weight:700;white-space:nowrap}
 .scan-card .amount{font-size:18px;font-weight:800;color:var(--blue)}
 .scan-card .row{display:flex;gap:8px;align-items:flex-start;font-size:12px}
-.scan-card .label{color:var(--ink-faint);font-weight:700;flex:0 0 50px}
+.scan-card .label{color:var(--ink-faint);font-weight:700;flex:0 0 80px;font-size:11px}
 .scan-card .val{color:var(--ink);flex:1;word-break:break-word}
-.scan-card .actions{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
+.scan-card .actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.scan-card .actions .row-act-btn,
+.photo-card .card-actions .row-act-btn{
+  width:auto;height:auto;padding:8px 12px;white-space:nowrap;font-size:12px;
+  display:inline-flex;align-items:center;gap:4px;justify-content:center
+}
 
 @media (max-width:768px){
   .scan-table{display:none !important}
@@ -1003,10 +1008,38 @@ async function renderGallery(){
         <div class="title">${esc(p.title||'(제목 없음)')}</div>
         <div class="meta">${esc(p.date||'')}${p.imgIds&&p.imgIds.length>1?' · '+p.imgIds.length+'장':''}</div>
         <span style="display:inline-block;padding:2px 8px;border-radius:6px;background:var(--blue-lt);color:var(--blue);font-size:10px;font-weight:700;margin-top:4px">${esc(p.cat||'기타')}</span>
+        <div class="card-actions" style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <button class="row-act-btn" data-pact="edit">✏️ 수정</button>
+          <button class="row-act-btn red" data-pact="del">🗑 삭제</button>
+        </div>
       </div>
     </div>`;
   }).join('');
-  gallery.querySelectorAll('.photo-card').forEach(card=>card.onclick=()=>openDetail(card.dataset.pid));
+  // 카드 클릭 → 상세보기 (단 버튼 클릭은 제외)
+  gallery.querySelectorAll('.photo-card').forEach(card=>{
+    card.onclick=e=>{
+      if(e.target.closest('[data-pact]'))return;
+      openDetail(card.dataset.pid);
+    };
+  });
+  // 카드 안 버튼 이벤트
+  gallery.querySelectorAll('[data-pact]').forEach(btn=>{
+    btn.onclick=async e=>{
+      e.stopPropagation();
+      const card=btn.closest('.photo-card');
+      const pid=card.dataset.pid;
+      const p=photos.find(x=>x.id===pid);
+      if(!p)return;
+      if(btn.dataset.pact==='edit'){
+        openAddModal(p);
+      }else if(btn.dataset.pact==='del'){
+        if(!confirm(`'${p.title||'사진'}'을 삭제할까요?`))return;
+        for(const id of (p.imgIds||[]))await idbDel(id).catch(()=>{});
+        photos=photos.filter(x=>x.id!==pid);
+        savePhotos();renderGallery();toast('삭제됐어요');
+      }
+    };
+  });
   for(const img of gallery.querySelectorAll('.thumb')){
     const id=img.dataset.thumb;
     if(!id)continue;
@@ -1922,11 +1955,11 @@ function renderCardList(q){
       </div>
       <div class="date">${esc(c.company||'')}</div>
     </div>
-    ${c.mobile?`<div class="row"><div class="label">📱</div><div class="val"><a class="link-tel" href="${telLink(c.mobile)}">${esc(c.mobile)} 📞</a></div></div>`:''}
-    ${c.phone?`<div class="row"><div class="label">📞</div><div class="val"><a class="link-tel" href="${telLink(c.phone)}">${esc(c.phone)} 📞</a></div></div>`:''}
-    ${c.email?`<div class="row"><div class="label">📧</div><div class="val"><a class="link-addr" href="${mailLink(c.email)}">${esc(c.email)}</a></div></div>`:''}
-    ${c.addr?`<div class="row"><div class="label">📍</div><div class="val"><a class="link-addr" href="${naverMap(c.addr)}" target="_blank">${esc(c.addr)} 🗺</a></div></div>`:''}
-    ${c.memo?`<div class="row"><div class="label">📝</div><div class="val" style="font-size:12px;color:var(--ink-soft)">${esc(c.memo)}</div></div>`:''}
+    ${c.mobile?`<div class="row"><div class="label">📱 휴대폰</div><div class="val"><a class="link-tel" href="${telLink(c.mobile)}">${esc(c.mobile)}</a></div></div>`:''}
+    ${c.phone?`<div class="row"><div class="label">🏢 사무실</div><div class="val"><a class="link-tel" href="${telLink(c.phone)}">${esc(c.phone)}</a></div></div>`:''}
+    ${c.email?`<div class="row"><div class="label">📧 이메일</div><div class="val"><a class="link-addr" href="${mailLink(c.email)}">${esc(c.email)}</a></div></div>`:''}
+    ${c.addr?`<div class="row"><div class="label">📍 주소</div><div class="val"><a class="link-addr" href="${naverMap(c.addr)}" target="_blank">${esc(c.addr)} 🗺</a></div></div>`:''}
+    ${c.memo?`<div class="row"><div class="label">📝 메모</div><div class="val" style="font-size:12px;color:var(--ink-soft)">${esc(c.memo)}</div></div>`:''}
     <div class="actions">
       <button class="row-act-btn green" data-act="copy">📋 엑셀 복사</button>
       <button class="row-act-btn" data-act="edit">✏️ 수정</button>
@@ -2714,7 +2747,7 @@ $('secureCancel').onclick=()=>{
   // 구버전 데이터 마이그레이션: photo:base64 → photoId + IDB
   await migrateOldPhotos();
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260623-1324';
+  $('appVer').textContent='v20260623-1335';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
