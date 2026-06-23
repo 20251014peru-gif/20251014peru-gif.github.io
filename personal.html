@@ -24,7 +24,7 @@ a{text-decoration:none;color:inherit}
 input,select,textarea,button{font-family:inherit}
 
 /* ===== 헤더 ===== */
-header{background:var(--white);border-bottom:1.5px solid var(--blue-bd);position:sticky;top:0;z-index:1000}
+header{background:var(--white);border-bottom:1.5px solid var(--blue-bd)}
 .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
 .head-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;gap:10px;flex-wrap:wrap}
 .brand h1{font-size:18px;font-weight:800;color:var(--ink)}
@@ -489,30 +489,30 @@ main.wrap{padding-bottom:100px;padding-top:12px}
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
       </div>
     </div>
-    <!-- 검색 -->
-    <div style="padding:4px 0 8px">
-      <div class="v43-search-wrap">
-        <span class="v43-search-icon">🔍</span>
-        <input type="text" id="globalSearch" class="v43-search" placeholder="기록·메모·차계부·파일 검색…">
-      </div>
-    </div>
-    <!-- 탭 -->
-    <div class="v43-tabs" id="mainTabs">
-      <button class="v43-tab active" data-tab="memo">📝 메모</button>
-      <button class="v43-tab" data-tab="main">📋 기록</button>
-      <button class="v43-tab" data-tab="scan">📸 스캔</button>
-      <button class="v43-tab" data-tab="car">🚗 차계부</button>
-      <button class="v43-tab" data-tab="contacts">📞 연락처</button>
-      <button class="v43-tab" data-tab="calendar">📅 달력</button>
-      <button class="v43-tab" data-tab="file">📁 파일</button>
-      <button class="v43-tab" data-tab="password">🔐 비번</button>
-      <button class="v43-tab" data-tab="ai">🤖 AI</button>
-      <button class="v43-tab" data-tab="diag">🔧 진단</button>
-    </div>
   </div>
 </header>
 
 <main class="wrap">
+<!-- 검색 -->
+<div style="padding:4px 0 8px">
+  <div class="v43-search-wrap">
+    <span class="v43-search-icon">🔍</span>
+    <input type="text" id="globalSearch" class="v43-search" placeholder="기록·메모·차계부·파일 검색…">
+  </div>
+</div>
+<!-- 탭 -->
+<div class="v43-tabs" id="mainTabs">
+  <button class="v43-tab active" data-tab="memo">📝 메모</button>
+  <button class="v43-tab" data-tab="main">📋 기록</button>
+  <button class="v43-tab" data-tab="scan">📸 스캔</button>
+  <button class="v43-tab" data-tab="car">🚗 차계부</button>
+  <button class="v43-tab" data-tab="contacts">📞 연락처</button>
+  <button class="v43-tab" data-tab="calendar">📅 달력</button>
+  <button class="v43-tab" data-tab="file">📁 파일</button>
+  <button class="v43-tab" data-tab="password">🔐 비번</button>
+  <button class="v43-tab" data-tab="ai">🤖 AI</button>
+  <button class="v43-tab" data-tab="diag">🔧 진단</button>
+</div>
 
 <!-- ===== 기록 탭 ===== -->
 <div class="v43-panel" id="panel-main">
@@ -4663,12 +4663,19 @@ memo: title(메모 제목), body(메모 전체 텍스트), tags(분류 키워드
           y: Math.max(0, Math.min(cropState.canvas.height, pos.y)),
         };
       } else if(cropState.dragIdx >= 10 && cropState.dragIdx <= 13 && edgeStartPts){
-        // 변 핸들 - 변의 두 점을 같이 이동 (변 수직 방향으로 이동)
+        // 변 핸들 - 상/하변(0,2)은 수직만, 좌/우변(1,3)은 수평만
         const edgeIdx = cropState.dragIdx - 10;
         const i1 = edgeIdx, i2 = (edgeIdx + 1) % 4;
-        const dx = pos.x - dragStart.x;
-        const dy = pos.y - dragStart.y;
-        // 두 점 모두 같은 방향으로 이동
+        let dx = pos.x - dragStart.x;
+        let dy = pos.y - dragStart.y;
+        // 상변(0) / 하변(2) → 수직만 (dx 무시)
+        if(edgeIdx === 0 || edgeIdx === 2){
+          dx = 0;
+        }
+        // 우변(1) / 좌변(3) → 수평만 (dy 무시)
+        if(edgeIdx === 1 || edgeIdx === 3){
+          dy = 0;
+        }
         const newP1 = {
           x: Math.max(0, Math.min(cropState.canvas.width, edgeStartPts.p1.x + dx)),
           y: Math.max(0, Math.min(cropState.canvas.height, edgeStartPts.p1.y + dy)),
