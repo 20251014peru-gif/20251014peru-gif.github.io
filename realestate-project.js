@@ -3628,13 +3628,228 @@ function editCost(id){
   // 세부값 선택 (목록에 없으면 추가)
   if(dispSub){ const sel=document.getElementById("ce_cat"); if(![...sel.options].some(o=>o.value===dispSub)){ sel.innerHTML+=`<option>${esc(dispSub)}</option>`; } sel.value=dispSub; }
   ceMapHint();
+  // 🔗 scan-app 첨부 항목 로드
+  _ceScanRefs = [];
+  renderCeScanAttached();
+  if(e.scanRefs && e.scanRefs.length){
+    (async ()=>{
+      for(const ref of e.scanRefs){
+        const data = await fetchScanItem(ref.type, ref.id);
+        if(data) _ceScanRefs.push({ type:ref.type, id:ref.id, data });
+      }
+      renderCeScanAttached();
+    })();
+  }
   openModal("costEditModal");
+}
+// 비용 추가 모드 진입점 (기존 함수가 있다면 이걸로 reset 호출)
+function resetCostEditScanRefs(){
+  _ceScanRefs = [];
+  renderCeScanAttached();
 }
 function ceMapHint(){
   const addr=document.getElementById("ce_addr").value.trim();
   const a=document.getElementById("ce_mapBtn");
   if(a){ if(addr){ a.style.display="inline-block"; a.href=naverMapUrl(addr); } else { a.style.display="none"; } }
 }
+/* ════════════════════════════════════════════════════════
+   🔗 scan-app 통합 (영수증·명함 데이터 허브)
+   ════════════════════════════════════════════════════════ */
+const SCAN_APP_URL = 'https://20251014peru-gif.github.io/scan-app.html';
+const SCAN_USER_ID = '달님';  // scan-app의 user ID와 동일하게
+
+let _ceScanRefs = [];   // 비용 모달 현재 첨부 항목 [{type, id, data}]
+let _vfScanRefs = [];   // VENDOR 모달 현재 명함 [{type, id, data}]
+let _scanPickerCtx = null; // 현재 picker 컨텍스트
+
+// scan-app에서 영수증/명함 단건 조회 (Firestore 직접 읽기)
+async function fetchScanItem(type, id){
+  try{
+    const coll = type + 's';
+    const doc = await db.collection('scanapp').doc(SCAN_USER_ID).collection(coll).doc(id).get();
+    if(doc.exists){
+      const data = doc.data();
+      if(data.deletedAt) return null;
+      return data;
+    }
+  }catch(e){console.error('[scan fetch]',e);}
+  return null;
+}
+
+// picker iframe 열기
+function openScanPicker(type, linkedTo, onSelect){
+  _scanPickerCtx = { type, onSelect };
+  const url = `${SCAN_APP_URL}?mode=picker&type=${type}&linkedTo=${encodeURIComponent(linkedTo||'')}`;
+  document.getElementById('scanPickerFrame').src = url;
+  document.getElementById('scanPickerModal').classList.add('open');
+}
+function closeScanPicker(){
+  document.getElementById('scanPickerModal').classList.remove('open');
+  document.getElementById('scanPickerFrame').src = 'about:blank';
+  _scanPickerCtx = null;
+}
+
+// scan-app에서 보내는 메시지 받기
+window.addEventListener('message', (e) => {
+  if(!e.data || e.data.source !== 'scan-app') return;
+  const { action, payload } = e.data;
+  if(action === 'selected' && _scanPickerCtx){
+    _scanPickerCtx.onSelect(payload.type, payload.id, payload.data);
+    closeScanPicker();
+  }
+});
+
+// 비용 모달 - 영수증/명함 선택 버튼
+function openScanPickerForCost(type){
+  const id = document.getElementById('ce_id').value;
+  const linkedTo = `realestate:entry_${id||'new'}`;
+  openScanPicker(type, linkedTo, (selType, selId, data) => {
+    if(!data) return;
+    // 중복 방지
+    if(_ceScanRefs.some(r => r.type===selType && r.id===selId)){
+      alert('이미 첨부됐어요'); return;
+    }
+    _ceScanRefs.push({ type:selType, id:selId, data });
+    // 빈 칸만 자동 채움
+    autofillCostFields(selType, data);
+    renderCeScanAttached();
+  });
+}
+
+// 영수증/명함 → 비용 필드 자동 채움 (빈 칸만)
+function autofillCostFields(type, data){
+  const setIfEmpty = (id, val) => {
+    const el = document.getElementById(id);
+    if(el && !el.value.trim() && val) el.value = val;
+  };
+  if(type === 'receipt'){
+    setIfEmpty('ce_title', data.place || '');
+    setIfEmpty('ce_date', data.date || '');
+    setIfEmpty('ce_amount', data.amount || '');
+    setIfEmpty('ce_vendor', data.place || '');
+    setIfEmpty('ce_phone', data.phone || '');
+    setIfEmpty('ce_addr', data.addr || '');
+    // 메모에 품목 추가
+    const memoEl = document.getElementById('ce_memo');
+    if(memoEl && data.items && data.items.length){
+      const itemTxt = data.items.map(it => `${it.name||''}${it.qty>1?' x'+it.qty:''}`).filter(Boolean).join(', ');
+      if(itemTxt && !memoEl.value.includes(itemTxt)){
+        memoEl.value = (memoEl.value ? memoEl.value + '\n' : '') + '🛒 ' + itemTxt;
+      }
+    }
+  }else if(type === 'card'){
+    setIfEmpty('ce_vendor', data.company || data.name || '');
+    setIfEmpty('ce_phone', data.mobile || data.phone || '');
+    setIfEmpty('ce_addr', data.addr || '');
+  }
+  ceMapHint();
+}
+
+// 비용 모달 - 첨부된 영수증/명함 카드 렌더
+function renderCeScanAttached(){
+  const wrap = document.getElementById('ce_scanAttached');
+  if(!wrap) return;
+  if(!_ceScanRefs.length){
+    wrap.innerHTML = '<div style="font-size:11px;color:var(--ink-faint);padding:6px 4px">아직 첨부된 항목 없음</div>';
+    return;
+  }
+  wrap.innerHTML = _ceScanRefs.map((r, idx) => {
+    const d = r.data || {};
+    const icon = r.type==='receipt' ? '🧾' : '💼';
+    const title = r.type==='receipt' ? (d.place||'영수증') : (d.name||'명함');
+    const sub = r.type==='receipt' 
+      ? `${d.date||''} · ${d.amount?d.amount.toLocaleString()+'원':''}` 
+      : `${d.company||''}${d.mobile?' · '+d.mobile:''}`;
+    const photoUrl = d.photoUrl||'';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#fff;border:1.5px solid var(--blue-bd);border-radius:8px">
+      ${photoUrl?`<img src="${photoUrl}" style="width:42px;height:42px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openViewer('${photoUrl}','${esc(title)}')">`:'<div style="width:42px;height:42px;background:var(--blue-lt);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px">'+icon+'</div>'}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${icon} ${esc(title)}</div>
+        <div style="font-size:11px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sub)}</div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="removeCeScanRef(${idx})" style="padding:4px 8px">×</button>
+    </div>`;
+  }).join('');
+}
+function removeCeScanRef(idx){
+  _ceScanRefs.splice(idx, 1);
+  renderCeScanAttached();
+}
+
+// VENDOR 모달 - 명함 선택
+function openScanPickerForVendor(){
+  const linkedTo = `realestate:vendor_${editingVendorId||'new'}`;
+  openScanPicker('card', linkedTo, (selType, selId, data) => {
+    if(!data) return;
+    if(_vfScanRefs.some(r => r.id===selId)){
+      alert('이미 연결됐어요'); return;
+    }
+    _vfScanRefs.push({ type:'card', id:selId, data });
+    // 빈 칸만 자동 채움
+    const setIfEmpty = (id, val) => {
+      const el = document.getElementById(id);
+      if(el && !el.value.trim() && val) el.value = val;
+    };
+    setIfEmpty('vf_name', data.company || data.name || '');
+    setIfEmpty('vf_phone', data.mobile || data.phone || '');
+    // 메모 자동 추가
+    const memoEl = document.getElementById('vf_memo');
+    if(memoEl){
+      const lines = [];
+      if(data.name && data.company && data.name!==data.company) lines.push(`담당: ${data.name}`);
+      if(data.position) lines.push(`직책: ${data.position}`);
+      if(data.email) lines.push(`이메일: ${data.email}`);
+      if(data.fax) lines.push(`팩스: ${data.fax}`);
+      const newTxt = lines.join(' / ');
+      if(newTxt && !memoEl.value.includes(newTxt)){
+        memoEl.value = (memoEl.value ? memoEl.value + '\n' : '') + newTxt;
+      }
+    }
+    renderVfScanAttached();
+  });
+}
+
+function renderVfScanAttached(){
+  const wrap = document.getElementById('vf_scanAttached');
+  if(!wrap) return;
+  if(!_vfScanRefs.length){
+    wrap.innerHTML = '<div style="font-size:11px;color:var(--ink-faint);padding:6px 4px">scan-app 명함과 연결되지 않음</div>';
+    return;
+  }
+  wrap.innerHTML = _vfScanRefs.map((r, idx) => {
+    const d = r.data || {};
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#fff;border:1.5px solid var(--blue-bd);border-radius:8px">
+      ${d.photoUrl?`<img src="${d.photoUrl}" style="width:42px;height:42px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openViewer('${d.photoUrl}','${esc(d.name||'')}')">`:'<div style="width:42px;height:42px;background:var(--blue-lt);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px">💼</div>'}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">💼 ${esc(d.name||'명함')} <span style="font-weight:500;color:var(--ink-soft);font-size:11px">${esc(d.position||'')}</span></div>
+        <div style="font-size:11px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.company||'')}${d.mobile?' · '+esc(d.mobile):''}${d.fax?' · 📠'+esc(d.fax):''}</div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="removeVfScanRef(${idx})" style="padding:4px 8px">×</button>
+    </div>`;
+  }).join('');
+}
+function removeVfScanRef(idx){
+  _vfScanRefs.splice(idx, 1);
+  renderVfScanAttached();
+}
+
+// scan-app 영수증/명함에 양방향 링크 추가
+async function linkScanItemBack(type, id, linkedTo){
+  try{
+    const coll = type + 's';
+    const docRef = db.collection('scanapp').doc(SCAN_USER_ID).collection(coll).doc(id);
+    const doc = await docRef.get();
+    if(doc.exists){
+      const data = doc.data();
+      const linkedArr = data.linkedTo || [];
+      if(!linkedArr.includes(linkedTo)){
+        linkedArr.push(linkedTo);
+        await docRef.update({ linkedTo: linkedArr, updated: Date.now() });
+      }
+    }
+  }catch(e){console.warn('[link back]',e);}
+}
+
 async function saveCostEdit(){
   const id=document.getElementById("ce_id").value;
   const title=document.getElementById("ce_title").value.trim();
@@ -3660,9 +3875,19 @@ async function saveCostEdit(){
     pay:document.getElementById("ce_pay").value,
     phone:document.getElementById("ce_phone").value.trim()||null,
     addr:document.getElementById("ce_addr").value.trim()||null,
-    memo:document.getElementById("ce_memo").value.trim()
+    memo:document.getElementById("ce_memo").value.trim(),
+    // 🔗 scan-app 참조
+    scanRefs: _ceScanRefs.map(r => ({type:r.type, id:r.id}))
   };
-  try{ await db.collection(ENTRIES).doc(id).update(upd); closeModal("costEditModal"); await reloadCurrent(); }
+  try{
+    await db.collection(ENTRIES).doc(id).update(upd);
+    // scan-app 영수증/명함에 양방향 링크 자동 추가
+    const linkedTo = `realestate:entry_${id}`;
+    for(const r of _ceScanRefs){
+      await linkScanItemBack(r.type, r.id, linkedTo).catch(()=>{});
+    }
+    closeModal("costEditModal"); await reloadCurrent();
+  }
   catch(err){ showError("비용 수정", err); }
 }
 
@@ -3953,6 +4178,9 @@ function openVendorModal(){
   document.getElementById("vendorModalTitle").textContent="업체 / 연락처 추가";
   buildOptSelect("vf_trade","vendor_roles","");
   ["vf_name","vf_phone","vf_memo"].forEach(id=>document.getElementById(id).value="");
+  // 🔗 scan-app 명함 연결 reset
+  _vfScanRefs = [];
+  renderVfScanAttached();
   openModal("vendorModal");
 }
 function editVendor(id){
@@ -3961,15 +4189,47 @@ function editVendor(id){
   document.getElementById("vendorModalTitle").textContent="업체 / 연락처 수정";
   buildOptSelect("vf_trade","vendor_roles",v.trade||"");
   document.getElementById("vf_name").value=v.name||""; document.getElementById("vf_phone").value=v.phone||""; document.getElementById("vf_memo").value=v.memo||"";
+  // 🔗 scan-app 명함 연결 로드
+  _vfScanRefs = [];
+  renderVfScanAttached();
+  if(v.scanRefs && v.scanRefs.length){
+    (async ()=>{
+      for(const ref of v.scanRefs){
+        const data = await fetchScanItem(ref.type, ref.id);
+        if(data) _vfScanRefs.push({ type:ref.type, id:ref.id, data });
+      }
+      renderVfScanAttached();
+    })();
+  }
   openModal("vendorModal");
+}
+function resetVendorScanRefs(){
+  _vfScanRefs = [];
+  renderVfScanAttached();
 }
 async function saveVendor(){
   const name=val("vf_name").trim(), phone=val("vf_phone").trim();
   if(!name||!phone){alert("업체명과 전화번호를 입력하세요.");return;}
   try{
-    const data={projectId:currentProjectId,name,trade:val("vf_trade"),phone,memo:val("vf_memo").trim()};
-    if(editingVendorId){ await db.collection(VENDORS).doc(editingVendorId).update(data); }
-    else { data.createdAt=firebase.firestore.FieldValue.serverTimestamp(); await db.collection(VENDORS).add(data); }
+    const data={
+      projectId:currentProjectId, name, trade:val("vf_trade"), phone,
+      memo:val("vf_memo").trim(),
+      scanRefs: _vfScanRefs.map(r => ({type:r.type, id:r.id}))
+    };
+    let savedId;
+    if(editingVendorId){
+      await db.collection(VENDORS).doc(editingVendorId).update(data);
+      savedId = editingVendorId;
+    } else {
+      data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      const ref = await db.collection(VENDORS).add(data);
+      savedId = ref.id;
+    }
+    // 🔗 scan-app 명함에 양방향 링크 자동 추가
+    const linkedTo = `realestate:vendor_${savedId}`;
+    for(const r of _vfScanRefs){
+      await linkScanItemBack(r.type, r.id, linkedTo).catch(()=>{});
+    }
     editingVendorId=null; closeModal("vendorModal"); await reloadCurrent();
   }catch(err){ showError("업체 저장", err); }
 }
