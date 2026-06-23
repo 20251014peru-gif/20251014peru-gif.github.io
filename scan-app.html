@@ -2,14 +2,15 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <title>📷 사진 스캐너</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <style>
-/* ========= worklog 디자인 시스템 ========= */
+/* ===== 디자인 토큰 (worklog 기반) ===== */
 :root{
   --blue:#3f7cb8;
   --blue-dark:#2563a8;
@@ -25,340 +26,267 @@
   --green:#27ae60;
   --green-lt:#e6f9f0;
   --orange:#f39c12;
-  --orange-lt:#fff7e0;
   --red:#c0392b;
   --red-lt:#fde8e8;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.5}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:14px;line-height:1.5}
 
-/* 헤더 */
-header{
-  background:var(--white);
-  border-bottom:1.5px solid var(--blue-bd);
-  padding:14px 18px;
-  display:flex;justify-content:space-between;align-items:center;
-  flex-wrap:wrap;gap:10px;
-}
+header{background:var(--white);border-bottom:1.5px solid var(--blue-bd);
+  padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .brand{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .brand h1{margin:0;font-size:20px;font-weight:800;color:var(--ink)}
 .brand .sub{font-size:11px;color:var(--ink-faint);font-weight:600}
 .hdr-right{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.hbtn{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:36px;height:36px;border-radius:10px;
-  border:1.5px solid var(--blue-bd);background:var(--white);
-  cursor:pointer;font-size:16px;font-family:inherit;
-  transition:all .15s;touch-action:manipulation;
-}
+.hbtn{display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:10px;border:1.5px solid var(--blue-bd);
+  background:var(--white);cursor:pointer;font-size:16px;font-family:inherit;transition:all .15s}
 .hbtn:hover{border-color:var(--blue);background:var(--blue-soft)}
-.hbtn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
 
 main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
 
-/* 탭 (worklog 스타일) */
-.tabs{
-  display:flex;gap:6px;flex-wrap:wrap;padding:12px 0 8px;
-}
-.tab{
-  flex:0 0 auto;
-  padding:8px 16px;border-radius:10px;
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 0 8px}
+.tab{flex:0 0 auto;padding:8px 16px;border-radius:10px;
   border:2px solid var(--blue-bd);background:var(--white);
   font-size:13px;font-weight:700;color:var(--ink-soft);
-  cursor:pointer;font-family:inherit;
-  transition:all .15s;touch-action:manipulation;
-  white-space:nowrap;
-}
+  cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
 .tab:hover{border-color:var(--blue);color:var(--blue)}
 .tab.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(63,124,184,.3)}
-.panel{display:none}
-.panel.active{display:block}
 
-/* 검색·필터·추가 행 */
-.bar{
-  display:flex;gap:8px;align-items:center;margin:8px 0 12px;flex-wrap:wrap;
-}
-.search-wrap{
-  position:relative;flex:1;min-width:200px;
-}
-.search-wrap input{
-  width:100%;height:38px;padding:0 12px 0 36px;
+.bar{display:flex;gap:8px;align-items:center;margin:8px 0 12px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap input{width:100%;height:38px;padding:0 12px 0 36px;
   border:1.5px solid var(--blue-bd);border-radius:10px;
-  font-size:13px;font-family:inherit;background:var(--blue-soft);
-  outline:none;color:var(--ink);
-}
+  font-size:13px;font-family:inherit;background:var(--blue-soft);outline:none;color:var(--ink)}
 .search-wrap input:focus{border-color:var(--blue);background:#fff}
-.search-icon{
-  position:absolute;left:11px;top:50%;transform:translateY(-50%);
-  font-size:14px;pointer-events:none;color:var(--ink-faint);
-}
-.cat-select{
-  height:38px;padding:0 12px;border:1.5px solid var(--blue-bd);
-  border-radius:10px;background:var(--blue-soft);font-size:13px;
-  font-family:inherit;color:var(--ink);outline:none;cursor:pointer;
-}
-.btn-primary{
-  height:38px;padding:0 16px;border:none;border-radius:10px;
-  background:var(--blue);color:#fff;font-size:13px;font-weight:700;
-  cursor:pointer;font-family:inherit;touch-action:manipulation;
-  display:inline-flex;align-items:center;gap:5px;
-  transition:all .15s;
-}
-.btn-primary:hover{background:var(--blue-dark);box-shadow:0 2px 8px rgba(63,124,184,.4)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);
+  font-size:14px;pointer-events:none;color:var(--ink-faint)}
+.cat-select{height:38px;padding:0 12px;border:1.5px solid var(--blue-bd);border-radius:10px;
+  background:var(--blue-soft);font-size:13px;font-family:inherit;color:var(--ink);outline:none;cursor:pointer}
 
-/* 갤러리 그리드 */
-.gallery{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
-  gap:12px;margin-top:8px;
-}
-.photo-card{
-  background:var(--white);border:1.5px solid var(--blue-bd);border-radius:14px;
-  overflow:hidden;cursor:pointer;transition:all .15s;
-}
+.btn-primary{height:38px;padding:0 16px;border:none;border-radius:10px;
+  background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;gap:5px;transition:all .15s}
+.btn-primary:hover{background:var(--blue-dark)}
+.btn-csv{height:38px;padding:0 14px;border:none;border-radius:10px;
+  background:var(--green);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+
+/* 갤러리 */
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:8px}
+.photo-card{background:#fff;border:1.5px solid var(--blue-bd);border-radius:14px;
+  overflow:hidden;cursor:pointer;transition:all .15s}
 .photo-card:hover{border-color:var(--blue);transform:translateY(-2px);box-shadow:0 4px 14px rgba(63,124,184,.18)}
-.photo-card .thumb{
-  width:100%;aspect-ratio:1/1;object-fit:cover;background:#f0f0f0;display:block;
-}
+.photo-card .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;background:#f0f0f0;display:block}
 .photo-card .info{padding:10px 12px}
 .photo-card .title{font-size:13px;font-weight:700;color:var(--ink);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
-.photo-card .meta{font-size:11px;color:var(--ink-faint);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.photo-card .cat-badge{
-  display:inline-block;padding:2px 8px;border-radius:6px;
-  background:var(--blue-lt);color:var(--blue);
-  font-size:10px;font-weight:700;margin-top:4px;
-}
+.photo-card .meta{font-size:11px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* 빈 상태 */
-.empty{
-  padding:60px 20px;text-align:center;color:var(--ink-faint);
-}
+.empty{padding:60px 20px;text-align:center;color:var(--ink-faint)}
 .empty .ei{font-size:48px;margin-bottom:8px}
-.empty p{margin:8px 0;font-size:14px}
 
-/* 오버레이 모달 */
-.overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.55);
-  z-index:4000;display:none;align-items:center;justify-content:center;padding:20px;
-}
+/* 모달 */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:4000;
+  display:none;align-items:center;justify-content:center;padding:20px}
 .overlay.show{display:flex}
-.modal{
-  background:#fff;border-radius:16px;width:100%;max-width:560px;
-  max-height:92vh;overflow:hidden;display:flex;flex-direction:column;
-  box-shadow:0 8px 28px rgba(0,0,0,.18);
-}
-.modal-head{
-  padding:14px 18px;border-bottom:1.5px solid var(--line);
-  display:flex;align-items:center;justify-content:space-between;
-  background:var(--blue-soft);
-}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:92vh;
+  overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 28px rgba(0,0,0,.18)}
+.modal-head{padding:14px 18px;border-bottom:1.5px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;background:var(--blue-soft)}
 .modal-title{font-size:15px;font-weight:800;color:var(--ink)}
 .modal-body{padding:14px 18px;overflow-y:auto;flex:1}
-.modal-foot{
-  padding:12px 18px;border-top:1.5px solid var(--line);
-  display:flex;gap:6px;flex-wrap:wrap;
-}
+.modal-foot{padding:12px 18px;border-top:1.5px solid var(--line);display:flex;gap:6px;flex-wrap:wrap}
+
 .field{margin-bottom:10px}
-.field label{
-  display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;
-}
-.field input[type=text],.field input[type=date],.field input[type=number],
-.field textarea,.field select{
-  width:100%;padding:8px 12px;border:1.5px solid var(--blue-bd);border-radius:9px;
-  font-size:13px;font-family:inherit;background:var(--blue-soft);color:var(--ink);outline:none;
-}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px}
+.field input,.field textarea,.field select{width:100%;padding:8px 12px;
+  border:1.5px solid var(--blue-bd);border-radius:9px;font-size:13px;font-family:inherit;
+  background:var(--blue-soft);color:var(--ink);outline:none}
 .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--blue);background:#fff}
 .field textarea{resize:vertical;min-height:60px;line-height:1.5}
 
-.btn{
-  height:38px;padding:0 14px;border:none;border-radius:10px;
-  font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
-  transition:all .15s;display:inline-flex;align-items:center;gap:5px;
-  touch-action:manipulation;
-}
+.btn{height:38px;padding:0 14px;border:none;border-radius:10px;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
 .btn-ghost{background:#f1f5f9;color:var(--ink-soft)}
-.btn-ghost:hover{background:#e2e8f0}
 .btn-blue{background:var(--blue);color:#fff}
-.btn-blue:hover{background:var(--blue-dark)}
 .btn-green{background:var(--green);color:#fff}
-.btn-green:hover{background:#22a358}
 .btn-red{background:var(--red-lt);color:var(--red);border:1.5px solid #fca5a5}
-.btn-red:hover{background:#fdd3d3}
-.btn-orange{background:var(--orange);color:#fff}
 .btn-flex{flex:1}
 
-/* 사진 추가 영역 */
-.add-photo-zone{
-  border:2.5px dashed var(--blue);border-radius:14px;padding:24px;text-align:center;
-  background:var(--blue-soft);margin-bottom:14px;cursor:pointer;transition:all .15s;
-}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.form-grid .full{grid-column:1/-1}
+@media (max-width:520px){.form-grid{grid-template-columns:1fr}}
+
+.add-photo-zone{border:2.5px dashed var(--blue);border-radius:14px;padding:24px;
+  text-align:center;background:var(--blue-soft);margin-bottom:14px;cursor:pointer;transition:all .15s}
 .add-photo-zone:hover{background:#dceaf8}
 .add-photo-zone .ico{font-size:36px;margin-bottom:6px}
 .add-photo-zone .tt{font-size:14px;font-weight:800;color:var(--blue);margin-bottom:4px}
 .add-photo-zone .desc{font-size:11px;color:var(--ink-faint)}
 .add-btn-row{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
-.add-btn-row label,.add-btn-row button{
-  padding:8px 14px;border-radius:9px;font-size:12px;font-weight:700;
-  cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px;border:1.5px solid var(--blue-bd);background:#fff;color:var(--blue);
-}
+.add-btn-row label{padding:8px 14px;border-radius:9px;font-size:12px;font-weight:700;
+  cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px;
+  border:1.5px solid var(--blue-bd);background:#fff;color:var(--blue)}
 .add-btn-row label.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
 
-/* 사진 미리보기 (추가 모달 안) */
-.preview-list{
-  display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;
-}
-.preview-item{
-  position:relative;width:90px;height:90px;border-radius:10px;overflow:hidden;
-  border:1.5px solid var(--blue-bd);
-}
+.preview-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.preview-item{position:relative;width:90px;height:90px;border-radius:10px;
+  overflow:hidden;border:1.5px solid var(--blue-bd)}
 .preview-item img{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer}
-.preview-del{
-  position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;
-  background:rgba(192,57,43,.92);color:#fff;border:none;cursor:pointer;
-  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;
-}
+.preview-del{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;
+  background:rgba(192,57,43,.92);color:#fff;border:none;cursor:pointer;font-size:11px;font-weight:700}
 
-/* 액션 버튼 (크롭/추출) */
-.tool-row{
-  display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;
-}
-.tool-btn{
-  padding:7px 12px;border:1.5px solid var(--blue-bd);border-radius:9px;
-  background:#fff;color:var(--blue);font-size:12px;font-weight:700;
-  cursor:pointer;font-family:inherit;
-  transition:all .15s;display:inline-flex;align-items:center;gap:5px;
-}
+.tool-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tool-btn{padding:7px 12px;border:1.5px solid var(--blue-bd);border-radius:9px;
+  background:#fff;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:all .15s;display:inline-flex;align-items:center;gap:5px}
 .tool-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
 .tool-btn.orange{background:#fff7e0;color:#a07000;border-color:#f0c040}
-.tool-btn.orange:hover{background:var(--orange);color:#fff;border-color:var(--orange)}
+.tool-btn.green{background:#e6f9f0;color:var(--green);border-color:#86efac}
+
+.ai-progress{padding:10px 14px;background:#fff9e6;border:1.5px solid #f0c040;
+  border-radius:10px;color:#7a5c00;font-size:12px;font-weight:600;margin:8px 0;display:none}
+.ai-progress.show{display:block}
+
+/* 스캔 테이블 */
+.scan-table{width:100%;background:#fff;border-radius:12px;overflow:hidden;
+  border:1.5px solid var(--blue-bd);margin-top:8px}
+.scan-table table{width:100%;border-collapse:collapse;font-size:13px}
+.scan-table th{background:var(--blue-soft);color:var(--ink-soft);text-align:left;
+  padding:10px 8px;font-size:11px;font-weight:800;border-bottom:1.5px solid var(--blue-bd);white-space:nowrap}
+.scan-table td{padding:9px 8px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle}
+.scan-table tr:hover td{background:var(--blue-soft)}
+.scan-table .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.scan-table .truncate{max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scan-table .row-actions{display:flex;gap:4px;justify-content:flex-end}
+.row-act-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--blue-bd);
+  background:#fff;cursor:pointer;font-size:13px;font-family:inherit;
+  display:inline-flex;align-items:center;justify-content:center}
+.row-act-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+.row-act-btn.green{background:#e6f9f0;color:#16a34a;border-color:#86efac}
+.row-act-btn.red{background:#fde8e8;color:#c0392b;border-color:#fca5a5}
+
+.link-tel{color:var(--blue);font-weight:700;text-decoration:none}
+.link-addr{color:#16a34a;font-weight:700;text-decoration:none}
+
+.scan-card-list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.scan-card{background:#fff;border:1.5px solid var(--blue-bd);border-radius:14px;
+  padding:14px;display:flex;flex-direction:column;gap:8px}
+.scan-card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.scan-card .ttl{font-size:15px;font-weight:800;color:var(--ink);flex:1}
+.scan-card .date{font-size:11px;color:var(--ink-faint);font-weight:700;white-space:nowrap}
+.scan-card .amount{font-size:18px;font-weight:800;color:var(--blue)}
+.scan-card .row{display:flex;gap:8px;align-items:flex-start;font-size:12px}
+.scan-card .label{color:var(--ink-faint);font-weight:700;flex:0 0 50px}
+.scan-card .val{color:var(--ink);flex:1;word-break:break-word}
+.scan-card .actions{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
+
+@media (max-width:768px){
+  .scan-table{display:none !important}
+  .scan-card-list{display:flex !important}
+}
+@media (min-width:769px){
+  .scan-card-list{display:none !important}
+}
+
+/* 품목 행 */
+.item-row{display:grid;grid-template-columns:1fr 60px 90px 90px 28px;gap:5px;margin-bottom:4px;align-items:center}
+.item-row input{height:34px;padding:0 8px;border:1.5px solid var(--blue-bd);
+  border-radius:7px;font-size:12px;background:#fff;outline:none;width:100%;box-sizing:border-box;font-family:inherit}
+.item-row input.qty{text-align:center}
+.item-row input.sub{background:#f7faff;font-weight:700}
+.item-row .del-btn{width:28px;height:28px;border:none;background:#fde8e8;color:#c0392b;
+  border-radius:7px;cursor:pointer;font-size:13px}
+.items-head{display:grid;grid-template-columns:1fr 60px 90px 90px 28px;gap:5px;
+  font-size:10px;color:var(--ink-faint);font-weight:700;padding:0 2px;margin-bottom:4px}
 
 /* 토스트 */
-.toast{
-  position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
   background:var(--ink);color:#fff;padding:12px 22px;border-radius:12px;
-  font-size:13px;font-weight:700;z-index:9999;opacity:0;
-  transition:opacity .2s;pointer-events:none;
-  box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:90vw;text-align:center;
-}
+  font-size:13px;font-weight:700;z-index:99999;opacity:0;transition:opacity .2s;
+  pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:90vw;text-align:center}
 .toast.show{opacity:1}
 
-/* 큰 이미지 보기 */
-#imgOverlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9000;
-  display:none;align-items:center;justify-content:center;padding:20px;
-}
-#imgOverlay img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
-#imgOverlay .x{
-  position:absolute;top:20px;right:20px;background:rgba(255,255,255,.15);color:#fff;
-  border:1.5px solid rgba(255,255,255,.3);border-radius:50%;width:42px;height:42px;
-  font-size:18px;cursor:pointer;
-}
-
-/* 상세보기 */
-#detailOverlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:5000;
-  display:none;align-items:center;justify-content:center;padding:20px;
-}
-#detailOverlay.show{display:flex}
-.detail-modal{
-  background:#fff;border-radius:16px;width:100%;max-width:600px;
-  max-height:92vh;display:flex;flex-direction:column;overflow:hidden;
-}
-.detail-img{
-  width:100%;max-height:300px;object-fit:contain;background:#f0f0f0;cursor:pointer;
-}
+/* 사진 확대 뷰어 */
+#zoomViewer{display:none;position:fixed;inset:0;background:#000;z-index:99000;overflow:hidden;touch-action:none}
+#zoomViewer.show{display:flex;align-items:center;justify-content:center}
+#zoomImg{max-width:none;max-height:none;transform-origin:0 0;user-select:none;-webkit-user-drag:none}
+#zoomHeader{position:absolute;top:0;left:0;right:0;padding:14px 18px;
+  background:linear-gradient(rgba(0,0,0,.65),transparent);z-index:10;
+  display:flex;justify-content:space-between;align-items:center;color:#fff}
+.zoom-btn{width:42px;height:42px;border-radius:50%;border:1.5px solid rgba(255,255,255,.3);
+  background:rgba(255,255,255,.15);color:#fff;font-size:16px;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;justify-content:center}
+#zoomFooter{position:absolute;bottom:0;left:0;right:0;padding:14px 18px;
+  background:linear-gradient(transparent,rgba(0,0,0,.65));z-index:10;
+  display:flex;justify-content:center;gap:10px}
 
 /* 크롭 모달 */
-#cropOverlay{
-  display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99998;
-  flex-direction:column;align-items:center;justify-content:center;
-}
+#cropOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99998;
+  flex-direction:column;align-items:center;justify-content:center}
 #cropOverlay.show{display:flex}
-.crop-header{
-  position:absolute;top:0;left:0;right:0;padding:14px 18px;
+.crop-header{position:absolute;top:0;left:0;right:0;padding:14px 18px;
   background:rgba(0,0,0,.6);display:flex;justify-content:space-between;
-  align-items:center;z-index:10;flex-wrap:wrap;gap:8px;
-}
-.crop-header-btn{
-  padding:7px 14px;border:1.5px solid rgba(255,255,255,.3);
+  align-items:center;z-index:10;flex-wrap:wrap;gap:8px}
+.crop-header-btn{padding:7px 14px;border:1.5px solid rgba(255,255,255,.3);
   background:rgba(255,255,255,.15);color:#fff;border-radius:8px;
-  font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
-}
+  font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
 .crop-header-btn.orange{background:var(--orange);border-color:var(--orange)}
-.crop-canvas-wrap{
-  max-width:96vw;max-height:75vh;display:flex;align-items:center;justify-content:center;
-}
+.crop-canvas-wrap{max-width:96vw;max-height:75vh;display:flex;align-items:center;justify-content:center}
 #cropCanvas{max-width:100%;max-height:100%;touch-action:none}
-.crop-footer{
-  position:absolute;bottom:0;left:0;right:0;padding:14px 18px;
-  background:rgba(0,0,0,.6);display:flex;justify-content:center;gap:10px;z-index:10;
-}
-.crop-apply-btn{
-  padding:11px 22px;background:var(--green);color:#fff;border:none;border-radius:10px;
-  font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;
-  box-shadow:0 4px 12px rgba(39,174,96,.4);
-}
-#cropStatus{
-  position:absolute;top:65px;left:50%;transform:translateX(-50%);
-  color:#ffd788;font-size:12px;background:rgba(0,0,0,.5);
-  padding:6px 14px;border-radius:6px;display:none;white-space:nowrap;text-align:center;
-}
+.crop-footer{position:absolute;bottom:0;left:0;right:0;padding:14px 18px;
+  background:rgba(0,0,0,.6);display:flex;justify-content:center;gap:10px;z-index:10}
+.crop-apply-btn{padding:11px 22px;background:var(--green);color:#fff;border:none;border-radius:10px;
+  font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(39,174,96,.4)}
+#cropStatus{position:absolute;top:65px;left:50%;transform:translateX(-50%);
+  color:#ffd788;font-size:12px;background:rgba(0,0,0,.5);padding:6px 14px;
+  border-radius:6px;display:none;white-space:nowrap}
 
-/* 텍스트 추출 모달 */
-#extractOverlay{
-  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99997;
-  align-items:center;justify-content:center;padding:20px;
-}
-#extractOverlay.show{display:flex}
-.extract-modal{
-  background:#fff;border-radius:14px;max-width:600px;width:100%;
-  max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
-}
-.extract-head{
-  padding:14px 18px;border-bottom:1.5px solid #e6ebf2;
-  background:linear-gradient(135deg,#fff9e6 0%,#fff3cc 100%);
-  display:flex;align-items:center;gap:10px;
-}
-.extract-status{
-  padding:10px 14px;background:#fff9e6;border:1.5px solid #f0c040;
-  border-radius:10px;color:#7a5c00;font-size:12px;font-weight:600;
-  margin-bottom:12px;display:none;
-}
-.extract-textarea{
-  width:100%;padding:12px;border:2px solid var(--blue-bd);border-radius:10px;
-  font-size:13px;background:#fff;font-family:Consolas,Menlo,monospace;
-  outline:none;resize:vertical;line-height:1.6;box-sizing:border-box;min-height:200px;
-}
+/* 편집 모달 (fabric.js) */
+#editOverlay{display:none;position:fixed;inset:0;background:#1a1a1a;z-index:99996;flex-direction:column}
+#editOverlay.show{display:flex}
+#editHeader{padding:12px 18px;background:#2a2a2a;display:flex;justify-content:space-between;
+  align-items:center;color:#fff;flex-wrap:wrap;gap:8px}
+#editHeader .ttl{font-size:14px;font-weight:700}
+.edit-toolbar{background:#2a2a2a;padding:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+  border-top:1px solid #3a3a3a;border-bottom:1px solid #3a3a3a}
+.edit-tool{width:38px;height:38px;border-radius:9px;border:1.5px solid #4a4a4a;
+  background:#3a3a3a;color:#fff;font-size:15px;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;justify-content:center}
+.edit-tool:hover{background:#4a5568}
+.edit-tool.active{background:var(--blue);border-color:var(--blue)}
+.edit-tool.red{background:#5b2222;color:#fca5a5}
+.edit-tool.green{background:#27ae60;border-color:#27ae60;width:auto;padding:0 12px;font-size:13px;font-weight:700}
+.edit-sep{width:1px;height:24px;background:#4a4a4a;margin:0 4px}
+.edit-toolbar input[type=color]{width:38px;height:38px;border:1.5px solid #4a4a4a;border-radius:9px;background:none;cursor:pointer;padding:0}
+.edit-toolbar select{height:38px;padding:0 8px;border:1.5px solid #4a4a4a;border-radius:9px;
+  background:#3a3a3a;color:#fff;font-size:12px;font-family:inherit;font-weight:700}
+#editCanvasWrap{flex:1;display:flex;align-items:center;justify-content:center;
+  padding:14px;background:#1a1a1a;overflow:auto}
+#editTextInputRow{display:none;padding:10px 14px;background:#2a2a2a;
+  gap:8px;align-items:center;border-top:1px solid #3a3a3a}
+#editTextInputRow.show{display:flex}
+#editTextInputRow input{flex:1;padding:8px 12px;border:1.5px solid #4a4a4a;
+  border-radius:8px;background:#3a3a3a;color:#fff;font-size:14px;font-family:inherit;outline:none}
+#editTextInputRow button{padding:8px 14px;background:var(--blue);color:#fff;border:none;
+  border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
 
-/* AI 키 모달 */
-.key-input{
-  width:100%;padding:10px 12px;border:1.5px solid var(--blue-bd);border-radius:10px;
-  font-size:13px;font-family:Consolas,monospace;background:var(--blue-soft);outline:none;
-}
-
-/* PIN 잠금 */
-#secureLock{
-  display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:6000;
-  align-items:center;justify-content:center;flex-direction:column;color:#fff;padding:20px;
-}
+/* PIN */
+#secureLock{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:6000;
+  align-items:center;justify-content:center;flex-direction:column;color:#fff;padding:20px}
 #secureLock.show{display:flex}
-.pin-display{
-  display:flex;gap:10px;margin:18px 0;
-}
-.pin-dot{
-  width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,.4);
-}
+.pin-display{display:flex;gap:10px;margin:18px 0}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,.4)}
 .pin-dot.filled{background:#fff;border-color:#fff}
-.pin-pad{
-  display:grid;grid-template-columns:repeat(3,70px);gap:12px;
-}
-.pin-key{
-  width:70px;height:70px;border-radius:50%;border:1.5px solid rgba(255,255,255,.3);
-  background:rgba(255,255,255,.08);color:#fff;font-size:22px;font-weight:700;
-  cursor:pointer;font-family:inherit;
-}
+.pin-pad{display:grid;grid-template-columns:repeat(3,70px);gap:12px}
+.pin-key{width:70px;height:70px;border-radius:50%;border:1.5px solid rgba(255,255,255,.3);
+  background:rgba(255,255,255,.08);color:#fff;font-size:22px;font-weight:700;cursor:pointer;font-family:inherit}
 .pin-key:active{background:rgba(255,255,255,.25)}
+
+.key-input{width:100%;padding:10px 12px;border:1.5px solid var(--blue-bd);border-radius:10px;
+  font-size:13px;font-family:Consolas,monospace;background:var(--blue-soft);outline:none}
 </style>
 </head>
 <body>
@@ -371,7 +299,7 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
   </div>
   <div class="hdr-right">
     <button class="hbtn" id="btnApiKey" title="AI 키 설정">🔑</button>
-    <button class="hbtn" id="btnCatMgr" title="카테고리 관리">📂</button>
+    <button class="hbtn" id="btnCatMgr" title="카테고리">📂</button>
     <button class="hbtn" id="btnExport" title="JSON 내보내기">⬇️</button>
     <button class="hbtn" id="btnImport" title="JSON 불러오기">⬆️</button>
   </div>
@@ -385,9 +313,8 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
     <button class="tab" data-sec="secure">🔒 보안</button>
   </div>
 
-  <!-- 일반/보안 섹션 - 기존 갤러리 -->
+  <!-- 일반/보안 갤러리 -->
   <div id="generalView">
-    <!-- 검색·카테고리·추가 -->
     <div class="bar">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
@@ -398,391 +325,67 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
       </select>
       <button class="btn-primary" id="btnAdd">＋ 사진 추가</button>
     </div>
-
-    <!-- 갤러리 -->
     <div id="gallery" class="gallery"></div>
     <div id="emptyState" class="empty">
       <div class="ei">📷</div>
       <p>아직 사진이 없습니다</p>
-      <p style="font-size:12px">[＋ 사진 추가]로 시작하세요</p>
     </div>
   </div>
 
-  <!-- 📄 스캔 섹션 - 영수증/명함 분리 -->
+  <!-- 스캔 영역 -->
   <div id="scanView" style="display:none">
-    <!-- 영수증/명함 서브탭 -->
     <div class="tabs" id="scanSubTabs" style="padding-top:0">
       <button class="tab active" data-scan="receipt">🧾 영수증</button>
       <button class="tab" data-scan="card">💼 명함</button>
+      <button class="tab" data-scan="text">📝 텍스트 메모</button>
     </div>
-
-    <!-- 검색 + 추가 + CSV -->
     <div class="bar">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input type="text" id="scanSearch" placeholder="검색 (상호/이름/금액/회사…)">
+        <input type="text" id="scanSearch" placeholder="검색…">
       </div>
       <button class="btn-primary" id="btnScanAdd">＋ <span id="scanAddLabel">영수증 추가</span></button>
-      <button class="btn" style="background:#27ae60;color:#fff;height:38px;padding:0 14px;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit" id="btnScanCsv">📥 CSV 내보내기</button>
+      <button class="btn-csv" id="btnScanCsv">📥 CSV</button>
     </div>
-
-    <!-- 영수증 테이블 (데스크탑) / 카드 (모바일) -->
     <div id="receiptList"></div>
     <div id="cardList" style="display:none"></div>
-
+    <div id="textList" style="display:none"></div>
     <div id="scanEmpty" class="empty" style="display:none">
       <div class="ei">🧾</div>
       <p id="scanEmptyMsg">아직 영수증이 없습니다</p>
-      <p style="font-size:12px">[＋ 추가] 버튼으로 시작하세요</p>
     </div>
   </div>
 </main>
 
-<style>
-/* 스캔 - 테이블 (데스크탑) */
-.scan-table{
-  width:100%;background:#fff;border-radius:12px;overflow:hidden;
-  border:1.5px solid var(--blue-bd);
-  margin-top:8px;
-}
-.scan-table table{
-  width:100%;border-collapse:collapse;font-size:13px;
-}
-.scan-table th{
-  background:var(--blue-soft);color:var(--ink-soft);text-align:left;
-  padding:10px 8px;font-size:11px;font-weight:800;
-  border-bottom:1.5px solid var(--blue-bd);white-space:nowrap;
-}
-.scan-table td{
-  padding:9px 8px;border-bottom:1px solid var(--line);
-  color:var(--ink);vertical-align:middle;
-}
-.scan-table tr:last-child td{border-bottom:none}
-.scan-table tr:hover td{background:var(--blue-soft)}
-.scan-table .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
-.scan-table .truncate{max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.scan-table .row-actions{display:flex;gap:4px;justify-content:flex-end}
-.row-act-btn{
-  width:30px;height:30px;border-radius:8px;border:1.5px solid var(--blue-bd);
-  background:#fff;cursor:pointer;font-size:13px;font-family:inherit;
-  display:inline-flex;align-items:center;justify-content:center;
-}
-.row-act-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
-.row-act-btn.green{background:#e6f9f0;color:#16a34a;border-color:#86efac}
-.row-act-btn.green:hover{background:#16a34a;color:#fff}
-.row-act-btn.red{background:#fde8e8;color:#c0392b;border-color:#fca5a5}
-.row-act-btn.red:hover{background:#c0392b;color:#fff}
-
-/* 링크 (전화/주소) */
-.link-tel{color:var(--blue);font-weight:700;text-decoration:none;font-variant-numeric:tabular-nums}
-.link-tel:hover{text-decoration:underline}
-.link-addr{color:#16a34a;font-weight:700;text-decoration:none}
-.link-addr:hover{text-decoration:underline}
-
-/* 모바일 카드 뷰 */
-.scan-card-list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
-.scan-card{
-  background:#fff;border:1.5px solid var(--blue-bd);border-radius:14px;
-  padding:14px;display:flex;flex-direction:column;gap:8px;
-}
-.scan-card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.scan-card .ttl{font-size:15px;font-weight:800;color:var(--ink);flex:1}
-.scan-card .date{font-size:11px;color:var(--ink-faint);font-weight:700;white-space:nowrap}
-.scan-card .amount{font-size:18px;font-weight:800;color:var(--blue);font-variant-numeric:tabular-nums}
-.scan-card .row{display:flex;gap:8px;align-items:center;font-size:12px}
-.scan-card .label{color:var(--ink-faint);font-weight:700;flex:0 0 50px}
-.scan-card .val{color:var(--ink);flex:1;word-break:break-all}
-.scan-card .actions{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
-
-/* 자동 전환 - 모바일에서는 카드, 데스크탑에서는 테이블 */
-@media (max-width: 768px){
-  .scan-table{display:none !important}
-  .scan-card-list{display:flex !important}
-}
-@media (min-width: 769px){
-  .scan-card-list{display:none !important}
-}
-
-/* AI 분석 진행 표시 */
-.ai-progress{
-  padding:10px 14px;background:#fff9e6;border:1.5px solid #f0c040;
-  border-radius:10px;color:#7a5c00;font-size:12px;font-weight:600;
-  margin:8px 0;display:none;
-}
-.ai-progress.show{display:block}
-
-/* 폼 그리드 (영수증/명함 모달) */
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-.form-grid .full{grid-column:1/-1}
-@media (max-width:520px){
-  .form-grid{grid-template-columns:1fr}
-}
-
-/* 품목 행 */
-.item-row{
-  display:grid;grid-template-columns:1fr 60px 90px 90px 28px;gap:5px;
-  margin-bottom:4px;align-items:center;
-}
-.item-row input{
-  height:34px;padding:0 8px;border:1.5px solid var(--blue-bd);
-  border-radius:7px;font-size:12px;background:#fff;outline:none;
-  width:100%;box-sizing:border-box;font-family:inherit;
-}
-.item-row input.qty{text-align:center;padding:0 4px}
-.item-row input.sub{background:#f7faff;font-weight:700}
-.item-row .del-btn{
-  width:28px;height:28px;border:none;background:#fde8e8;color:#c0392b;
-  border-radius:7px;cursor:pointer;font-size:13px;
-}
-.items-head{
-  display:grid;grid-template-columns:1fr 60px 90px 90px 28px;gap:5px;
-  font-size:10px;color:var(--ink-faint);font-weight:700;
-  padding:0 2px;margin-bottom:4px;
-}
-.items-head span:nth-child(2){text-align:center}
-
-@media (max-width:520px){
-  .item-row, .items-head{grid-template-columns:1fr 50px 80px 80px 28px}
-}
-</style>
-
-<!-- ===== 🧾 영수증 추가/수정 모달 ===== -->
-<div class="overlay" id="receiptOverlay">
-  <div class="modal" style="max-width:600px">
-    <div class="modal-head">
-      <div class="modal-title" id="receiptTitle">🧾 영수증 추가</div>
-      <button class="hbtn" id="receiptClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="receiptId">
-
-      <!-- 사진 미리보기 + AI 분석 -->
-      <div id="receiptPhotoZone" class="add-photo-zone">
-        <div class="ico">🧾</div>
-        <div class="tt">영수증 사진 추가</div>
-        <div class="desc">AI가 자동으로 정보를 읽어옵니다</div>
-        <div class="add-btn-row">
-          <label class="primary" onclick="event.stopPropagation()">
-            📷 카메라
-            <input type="file" id="rcptCam" accept="image/*" capture="environment" style="display:none">
-          </label>
-          <label onclick="event.stopPropagation()">
-            🖼 갤러리
-            <input type="file" id="rcptGal" accept="image/*" style="display:none">
-          </label>
-        </div>
-      </div>
-      <div id="receiptPhotoPreview" class="preview-list"></div>
-      <div id="receiptTools" class="tool-row" style="display:none">
-        <button class="tool-btn orange" id="rcptCrop">✂️ 영수증 크롭</button>
-        <button class="tool-btn" id="rcptAnalyze">🤖 AI 자동분석</button>
-      </div>
-      <div id="receiptAiProgress" class="ai-progress"></div>
-
-      <!-- 필드 -->
-      <div class="form-grid">
-        <div class="field">
-          <label>📅 날짜</label>
-          <input type="date" id="r_date">
-        </div>
-        <div class="field">
-          <label>🕐 결제시각</label>
-          <input type="time" id="r_payTime" step="300">
-        </div>
-        <div class="field full">
-          <label>🏪 상호명 *</label>
-          <input type="text" id="r_place" placeholder="가게/상점 이름">
-        </div>
-        <div class="field">
-          <label>📞 전화</label>
-          <input type="tel" id="r_phone" placeholder="02-1234-5678">
-        </div>
-        <div class="field">
-          <label>💳 결제수단</label>
-          <input type="text" id="r_payMethod" placeholder="신용카드/현금/계좌이체">
-        </div>
-        <div class="field full">
-          <label>📍 주소</label>
-          <input type="text" id="r_addr" placeholder="서울 강남구 ...">
-        </div>
-        <div class="field full">
-          <label>💰 총금액 (원)</label>
-          <input type="number" id="r_amount" placeholder="0">
-        </div>
-      </div>
-
-      <!-- 품목 배열 -->
-      <div style="font-size:12px;font-weight:800;color:var(--blue);margin:14px 0 8px;padding:6px 10px;background:var(--blue-lt);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
-        <span>🛒 구매 품목 <span id="r_itemsCount" style="font-weight:600;color:var(--ink-soft)"></span></span>
-        <button class="tool-btn" id="r_addItem" style="font-size:11px;padding:3px 10px;height:auto">➕ 추가</button>
-      </div>
-      <div class="items-head">
-        <span>품목명</span><span>수량</span><span>단가</span><span>소계</span><span></span>
-      </div>
-      <div id="r_itemsList"></div>
-
-      <div class="field" style="margin-top:10px">
-        <label>📝 메모</label>
-        <textarea id="r_memo" rows="2" placeholder="직접 작성하는 메모"></textarea>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost btn-flex" id="receiptCancel">취소</button>
-      <button class="btn btn-red" id="receiptDelete" style="display:none">🗑 삭제</button>
-      <button class="btn btn-blue btn-flex" id="receiptSave">💾 저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 💼 명함 추가/수정 모달 ===== -->
-<div class="overlay" id="cardOverlay">
-  <div class="modal" style="max-width:600px">
-    <div class="modal-head">
-      <div class="modal-title" id="cardModalTitle">💼 명함 추가</div>
-      <button class="hbtn" id="cardClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="cardId">
-
-      <!-- 사진 + AI 분석 -->
-      <div id="cardPhotoZone" class="add-photo-zone">
-        <div class="ico">💼</div>
-        <div class="tt">명함 사진 추가</div>
-        <div class="desc">AI가 자동으로 정보를 읽어옵니다</div>
-        <div class="add-btn-row">
-          <label class="primary" onclick="event.stopPropagation()">
-            📷 카메라
-            <input type="file" id="cardCam" accept="image/*" capture="environment" style="display:none">
-          </label>
-          <label onclick="event.stopPropagation()">
-            🖼 갤러리
-            <input type="file" id="cardGal" accept="image/*" style="display:none">
-          </label>
-        </div>
-      </div>
-      <div id="cardPhotoPreview" class="preview-list"></div>
-      <div id="cardTools" class="tool-row" style="display:none">
-        <button class="tool-btn orange" id="cardCrop">✂️ 명함 크롭</button>
-        <button class="tool-btn" id="cardAnalyze">🤖 AI 자동분석</button>
-      </div>
-      <div id="cardAiProgress" class="ai-progress"></div>
-
-      <!-- 필드 -->
-      <div class="form-grid">
-        <div class="field">
-          <label>🏢 회사명</label>
-          <input type="text" id="c_company" placeholder="회사명">
-        </div>
-        <div class="field">
-          <label>👤 이름 *</label>
-          <input type="text" id="c_name" placeholder="홍길동">
-        </div>
-        <div class="field">
-          <label>🎯 직책</label>
-          <input type="text" id="c_position" placeholder="부장">
-        </div>
-        <div class="field">
-          <label>📂 부서</label>
-          <input type="text" id="c_dept" placeholder="영업1팀">
-        </div>
-        <div class="field">
-          <label>📱 휴대폰</label>
-          <input type="tel" id="c_mobile" placeholder="010-1234-5678">
-        </div>
-        <div class="field">
-          <label>📞 회사 전화</label>
-          <input type="tel" id="c_phone" placeholder="02-1234-5678">
-        </div>
-        <div class="field full">
-          <label>📧 이메일</label>
-          <input type="email" id="c_email" placeholder="email@company.com">
-        </div>
-        <div class="field full">
-          <label>🌐 웹사이트</label>
-          <input type="url" id="c_website" placeholder="https://company.com">
-        </div>
-        <div class="field full">
-          <label>📍 주소</label>
-          <input type="text" id="c_addr" placeholder="서울 강남구 ...">
-        </div>
-        <div class="field full">
-          <label>📝 메모</label>
-          <textarea id="c_memo" rows="2" placeholder="만난 날짜, 소개 등"></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost btn-flex" id="cardCancel">취소</button>
-      <button class="btn btn-red" id="cardDelete" style="display:none">🗑 삭제</button>
-      <button class="btn btn-blue btn-flex" id="cardSave">💾 저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 사진 추가/수정 모달 ===== -->
+<!-- 일반/보안 사진 추가/수정 모달 -->
 <div class="overlay" id="addOverlay">
-  <div class="modal" style="max-width:560px">
+  <div class="modal">
     <div class="modal-head">
       <div class="modal-title" id="addTitle">📷 사진 추가</div>
       <button class="hbtn" id="addClose">✕</button>
     </div>
     <div class="modal-body">
-      <input type="hidden" id="editingId">
-
-      <!-- 사진 추가 영역 -->
       <div id="addZone" class="add-photo-zone">
         <div class="ico">📸</div>
         <div class="tt">사진 촬영 또는 업로드</div>
-        <div class="desc">여러 장 한 번에 추가 가능</div>
+        <div class="desc">선택 후 자동으로 편집 모달이 열립니다</div>
         <div class="add-btn-row">
           <label class="primary" onclick="event.stopPropagation()">
             📷 카메라
-            <input type="file" id="camInp" accept="image/*" capture="environment" style="display:none" multiple>
+            <input type="file" id="camInp" accept="image/*" capture="environment" style="display:none">
           </label>
           <label onclick="event.stopPropagation()">
             🖼 갤러리
-            <input type="file" id="galInp" accept="image/*" style="display:none" multiple>
+            <input type="file" id="galInp" accept="image/*" style="display:none">
           </label>
         </div>
       </div>
-
-      <!-- 미리보기 -->
       <div id="previewList" class="preview-list"></div>
-
-      <!-- 도구 (사진이 있을 때만) -->
-      <div id="toolRow" class="tool-row" style="display:none">
-        <button class="tool-btn orange" id="btnCrop">✂️ 영수증 크롭</button>
-        <button class="tool-btn" id="btnExtract">✨ 텍스트 추출</button>
-      </div>
-
-      <!-- 입력 폼 -->
-      <div class="field">
-        <label>제목 *</label>
-        <input type="text" id="fTitle" placeholder="제목을 입력하세요">
-      </div>
-      <div class="field">
-        <label>메모</label>
-        <textarea id="fMemo" rows="3" placeholder="메모, 추출한 텍스트 등"></textarea>
-      </div>
+      <div class="field"><label>제목 *</label><input type="text" id="fTitle"></div>
+      <div class="field"><label>메모</label><textarea id="fMemo" rows="3"></textarea></div>
       <div style="display:flex;gap:8px">
-        <div class="field" style="flex:1">
-          <label>카테고리</label>
-          <select id="fCat"></select>
-        </div>
-        <div class="field" style="flex:0 0 140px">
-          <label>날짜</label>
-          <input type="date" id="fDate">
-        </div>
-      </div>
-
-      <!-- 섹션 이동 (수정 모드) -->
-      <div id="moveSectionRow" style="display:none;padding:10px;background:var(--blue-soft);border-radius:10px;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:6px">다른 섹션으로 이동:</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="tool-btn" data-move="normal">📷 일반</button>
-          <button class="tool-btn" data-move="scan">📄 스캔</button>
-          <button class="tool-btn" data-move="secure">🔒 보안</button>
-        </div>
+        <div class="field" style="flex:1"><label>카테고리</label><select id="fCat"></select></div>
+        <div class="field" style="flex:0 0 140px"><label>날짜</label><input type="date" id="fDate"></div>
       </div>
     </div>
     <div class="modal-foot">
@@ -793,15 +396,15 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
   </div>
 </div>
 
-<!-- ===== 상세보기 모달 ===== -->
-<div id="detailOverlay">
-  <div class="detail-modal">
+<!-- 상세보기 -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal">
     <div class="modal-head">
       <div class="modal-title" id="detailTitle">상세보기</div>
       <button class="hbtn" id="detailClose">✕</button>
     </div>
     <div class="modal-body">
-      <img id="detailImg" class="detail-img" src="" alt="">
+      <img id="detailImg" style="width:100%;max-height:300px;object-fit:contain;background:#f0f0f0;cursor:zoom-in;border-radius:8px" alt="">
       <div style="margin-top:14px">
         <div style="font-size:11px;color:var(--ink-faint);font-weight:700">제목</div>
         <div id="detailT" style="font-size:15px;font-weight:800;color:var(--ink);margin-top:3px"></div>
@@ -809,7 +412,8 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
       <div style="margin-top:10px;font-size:12px;color:var(--ink-soft)">
         <span id="detailCat"></span> · <span id="detailDate"></span>
       </div>
-      <div id="detailMemoBox" style="margin-top:12px;padding:10px;background:var(--blue-soft);border-radius:10px;font-size:13px;line-height:1.6;color:var(--ink);white-space:pre-wrap"></div>
+      <div id="detailMemoBox" style="margin-top:12px;padding:10px;background:var(--blue-soft);border-radius:10px;
+        font-size:13px;line-height:1.6;white-space:pre-wrap"></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost btn-flex" id="detailCloseBtn">닫기</button>
@@ -818,52 +422,228 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
   </div>
 </div>
 
-<!-- ===== 크롭 모달 ===== -->
+<!-- 🧾 영수증 모달 -->
+<div class="overlay" id="receiptOverlay">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-head">
+      <div class="modal-title" id="receiptTitle">🧾 영수증 추가</div>
+      <button class="hbtn" id="receiptClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="receiptPhotoZone" class="add-photo-zone">
+        <div class="ico">🧾</div>
+        <div class="tt">영수증 사진 추가</div>
+        <div class="desc">선택 후 자동 크롭 모달로 이동</div>
+        <div class="add-btn-row">
+          <label class="primary" onclick="event.stopPropagation()">📷 카메라
+            <input type="file" id="rcptCam" accept="image/*" capture="environment" style="display:none"></label>
+          <label onclick="event.stopPropagation()">🖼 갤러리
+            <input type="file" id="rcptGal" accept="image/*" style="display:none"></label>
+        </div>
+      </div>
+      <div id="receiptPhotoPreview" class="preview-list"></div>
+      <div id="receiptTools" class="tool-row" style="display:none">
+        <button class="tool-btn orange" id="rcptCrop">✂️ 다시 크롭</button>
+        <button class="tool-btn" id="rcptAnalyze">🤖 AI 자동분석</button>
+      </div>
+      <div id="receiptAiProgress" class="ai-progress"></div>
+      <div class="form-grid">
+        <div class="field"><label>📅 날짜</label><input type="date" id="r_date"></div>
+        <div class="field"><label>🕐 결제시각</label><input type="time" id="r_payTime" step="300"></div>
+        <div class="field full"><label>🏪 상호명 *</label><input type="text" id="r_place"></div>
+        <div class="field"><label>📞 전화</label><input type="tel" id="r_phone"></div>
+        <div class="field"><label>💳 결제수단</label><input type="text" id="r_payMethod"></div>
+        <div class="field full"><label>📍 주소</label><input type="text" id="r_addr"></div>
+        <div class="field full"><label>💰 총금액 (원)</label><input type="number" id="r_amount"></div>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:var(--blue);margin:14px 0 8px;padding:6px 10px;
+        background:var(--blue-lt);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+        <span>🛒 구매 품목 <span id="r_itemsCount" style="font-weight:600;color:var(--ink-soft)"></span></span>
+        <button class="tool-btn" id="r_addItem" style="font-size:11px;padding:3px 10px;height:auto">➕ 추가</button>
+      </div>
+      <div class="items-head">
+        <span>품목명</span><span style="text-align:center">수량</span><span>단가</span><span>소계</span><span></span>
+      </div>
+      <div id="r_itemsList"></div>
+      <div class="field" style="margin-top:10px"><label>📝 메모</label><textarea id="r_memo" rows="2"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-flex" id="receiptCancel">취소</button>
+      <button class="btn btn-red" id="receiptDelete" style="display:none">🗑 삭제</button>
+      <button class="btn btn-blue btn-flex" id="receiptSave">💾 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 💼 명함 모달 -->
+<div class="overlay" id="cardOverlay">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-head">
+      <div class="modal-title" id="cardModalTitle">💼 명함 추가</div>
+      <button class="hbtn" id="cardClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="cardPhotoZone" class="add-photo-zone">
+        <div class="ico">💼</div>
+        <div class="tt">명함 사진 추가</div>
+        <div class="desc">선택 후 자동 크롭 모달로 이동</div>
+        <div class="add-btn-row">
+          <label class="primary" onclick="event.stopPropagation()">📷 카메라
+            <input type="file" id="cardCam" accept="image/*" capture="environment" style="display:none"></label>
+          <label onclick="event.stopPropagation()">🖼 갤러리
+            <input type="file" id="cardGal" accept="image/*" style="display:none"></label>
+        </div>
+      </div>
+      <div id="cardPhotoPreview" class="preview-list"></div>
+      <div id="cardTools" class="tool-row" style="display:none">
+        <button class="tool-btn orange" id="cardCrop">✂️ 다시 크롭</button>
+        <button class="tool-btn" id="cardAnalyze">🤖 AI 자동분석</button>
+      </div>
+      <div id="cardAiProgress" class="ai-progress"></div>
+      <div class="form-grid">
+        <div class="field"><label>🏢 회사명</label><input type="text" id="c_company"></div>
+        <div class="field"><label>👤 이름 *</label><input type="text" id="c_name"></div>
+        <div class="field"><label>🎯 직책</label><input type="text" id="c_position"></div>
+        <div class="field"><label>📂 부서</label><input type="text" id="c_dept"></div>
+        <div class="field"><label>📱 휴대폰</label><input type="tel" id="c_mobile"></div>
+        <div class="field"><label>📞 회사 전화</label><input type="tel" id="c_phone"></div>
+        <div class="field full"><label>📧 이메일</label><input type="email" id="c_email"></div>
+        <div class="field full"><label>🌐 웹사이트</label><input type="url" id="c_website"></div>
+        <div class="field full"><label>📍 주소</label><input type="text" id="c_addr"></div>
+        <div class="field full"><label>📝 메모</label><textarea id="c_memo" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-flex" id="cardCancel">취소</button>
+      <button class="btn btn-red" id="cardDelete" style="display:none">🗑 삭제</button>
+      <button class="btn btn-blue btn-flex" id="cardSave">💾 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📝 텍스트 메모 모달 -->
+<div class="overlay" id="textOverlay">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-head">
+      <div class="modal-title" id="textModalTitle">📝 텍스트 메모 추가</div>
+      <button class="hbtn" id="textClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="textPhotoZone" class="add-photo-zone">
+        <div class="ico">📝</div>
+        <div class="tt">텍스트 사진 추가</div>
+        <div class="desc">책·메모·강의·표지판·문서 등</div>
+        <div class="add-btn-row">
+          <label class="primary" onclick="event.stopPropagation()">📷 카메라
+            <input type="file" id="textCam" accept="image/*" capture="environment" style="display:none"></label>
+          <label onclick="event.stopPropagation()">🖼 갤러리
+            <input type="file" id="textGal" accept="image/*" style="display:none"></label>
+        </div>
+      </div>
+      <div id="textPhotoPreview" class="preview-list"></div>
+      <div id="textTools" class="tool-row" style="display:none">
+        <button class="tool-btn orange" id="textCrop">✂️ 다시 크롭</button>
+        <button class="tool-btn" id="textExtract">✨ AI 텍스트 추출</button>
+      </div>
+      <div id="textAiProgress" class="ai-progress"></div>
+      <div class="form-grid">
+        <div class="field"><label>📅 날짜</label><input type="date" id="t_date"></div>
+        <div class="field"><label>📂 종류</label>
+          <select id="t_type">
+            <option value="📚 책/문서 인용">📚 책/문서 인용</option>
+            <option value="💭 메모/아이디어">💭 메모/아이디어</option>
+            <option value="📋 회의록/노트">📋 회의록/노트</option>
+            <option value="🪧 표지판/안내">🪧 표지판/안내</option>
+            <option value="📎 기타">📎 기타</option>
+          </select>
+        </div>
+        <div class="field full"><label>📝 제목 *</label><input type="text" id="t_title"></div>
+        <div class="field full"><label>🏷 태그 (쉼표 구분)</label>
+          <input type="text" id="t_tags" placeholder="예: 자기계발, 책, 인사이트"></div>
+        <div class="field full">
+          <label>✨ 추출된 텍스트
+            <button class="tool-btn green" id="t_copy" style="float:right;font-size:10px;padding:2px 8px;height:auto">📋 복사</button>
+          </label>
+          <textarea id="t_text" rows="8" style="font-family:Consolas,monospace;font-size:12px"></textarea></div>
+        <div class="field full"><label>📝 추가 메모</label><textarea id="t_memo" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-flex" id="textCancel">취소</button>
+      <button class="btn btn-red" id="textDelete" style="display:none">🗑 삭제</button>
+      <button class="btn btn-blue btn-flex" id="textSave">💾 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ✏️ 편집 모달 (fabric.js) -->
+<div id="editOverlay">
+  <div id="editHeader">
+    <div class="ttl">✏️ 사진 편집</div>
+    <div style="display:flex;gap:6px">
+      <button class="edit-tool" id="editUndo" title="되돌리기">↩</button>
+      <button class="edit-tool" id="editClose" title="닫기">✕</button>
+      <button class="edit-tool green" id="editDone">💾 저장</button>
+    </div>
+  </div>
+  <div class="edit-toolbar">
+    <button class="edit-tool" data-tool="select" title="선택">🖱</button>
+    <button class="edit-tool" data-tool="crop" title="자르기">✂</button>
+    <button class="edit-tool" data-tool="text" title="텍스트">T</button>
+    <button class="edit-tool" data-tool="rect" title="사각형">▭</button>
+    <button class="edit-tool" data-tool="circle" title="원">◯</button>
+    <button class="edit-tool" data-tool="arrow" title="화살표">→</button>
+    <button class="edit-tool" data-tool="draw" title="자유 그리기">✏</button>
+    <button class="edit-tool" data-tool="blur" title="블러">🔲</button>
+    <div class="edit-sep"></div>
+    <input type="color" id="editColor" value="#FF0000" title="색상">
+    <select id="editSize" title="굵기">
+      <option value="2">얇게</option>
+      <option value="5" selected>보통</option>
+      <option value="10">굵게</option>
+      <option value="20">매우 굵게</option>
+    </select>
+    <select id="editTextSize" title="글자크기" style="display:none">
+      <option value="16">작게</option>
+      <option value="24" selected>보통</option>
+      <option value="36">크게</option>
+      <option value="48">매우 크게</option>
+    </select>
+    <div class="edit-sep"></div>
+    <button class="edit-tool" id="editRotL" title="반시계 회전">↺</button>
+    <button class="edit-tool" id="editRotR" title="시계 회전">↻</button>
+    <div class="edit-sep"></div>
+    <button class="edit-tool red" id="editDelObj" title="선택 삭제">🗑</button>
+    <button class="edit-tool red" id="editClearAll" title="전체 초기화">🧹</button>
+  </div>
+  <div id="editCanvasWrap">
+    <canvas id="editCanvas"></canvas>
+  </div>
+  <div id="editTextInputRow">
+    <input type="text" id="editTextInp" placeholder="텍스트 입력 후 Enter">
+    <button id="editTextAdd">추가</button>
+  </div>
+</div>
+
+<!-- ✂️ 크롭 모달 -->
 <div id="cropOverlay">
   <div class="crop-header">
-    <div style="color:#fff;font-size:14px;font-weight:700">✂️ 영역만 잘라내기</div>
+    <div style="color:#fff;font-size:14px;font-weight:700" id="cropTitle">✂️ 영역만 잘라내기</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="crop-header-btn orange" id="cropAiDetect">🤖 AI 자동감지</button>
       <button class="crop-header-btn" id="cropReset">↻ 초기화</button>
+      <button class="crop-header-btn" id="cropSkip">⏭ 건너뛰기</button>
       <button class="crop-header-btn" id="cropClose">✕ 닫기</button>
     </div>
   </div>
-  <div class="crop-canvas-wrap">
-    <canvas id="cropCanvas"></canvas>
-  </div>
+  <div class="crop-canvas-wrap"><canvas id="cropCanvas"></canvas></div>
   <div class="crop-footer">
     <button class="crop-apply-btn" id="cropApply">✅ 이 영역으로 크롭</button>
   </div>
   <div id="cropStatus"></div>
 </div>
 
-<!-- ===== 텍스트 추출 모달 ===== -->
-<div id="extractOverlay">
-  <div class="extract-modal">
-    <div class="extract-head">
-      <div style="font-size:26px">✨</div>
-      <div style="flex:1">
-        <div style="font-size:11px;color:#7a5c00;font-weight:700">AI 텍스트 추출</div>
-        <div style="font-size:15px;font-weight:800;color:#3a2e00">사진에서 읽어낸 텍스트</div>
-      </div>
-      <button class="hbtn" id="extractClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="extractStatus" class="extract-status"></div>
-      <textarea id="extractResult" class="extract-textarea" placeholder="추출된 텍스트가 여기 표시됩니다…"></textarea>
-      <div style="font-size:11px;color:var(--ink-faint);margin-top:8px;text-align:right">
-        <span id="extractCount">0</span>자
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost btn-flex" id="extractCancel">취소</button>
-      <button class="btn btn-ghost" id="extractCopyBtn">📋 복사</button>
-      <button class="btn btn-green btn-flex" id="extractInsert">✅ 메모에 삽입</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== AI 키 모달 ===== -->
+<!-- 🔑 AI 키 모달 -->
 <div class="overlay" id="apiKeyOverlay">
   <div class="modal" style="max-width:480px">
     <div class="modal-head">
@@ -875,9 +655,6 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
         Claude API 키를 입력하세요. 키는 이 브라우저에만 저장됩니다.
       </div>
       <input type="password" id="apiKeyInp" class="key-input" placeholder="sk-ant-api03-...">
-      <div style="font-size:11px;color:var(--ink-faint);margin-top:8px">
-        AI 자동감지·텍스트 추출 기능에 사용됩니다.
-      </div>
       <div id="apiKeyState" style="margin-top:10px;font-size:12px;font-weight:700"></div>
     </div>
     <div class="modal-foot">
@@ -888,7 +665,7 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
   </div>
 </div>
 
-<!-- ===== 카테고리 관리 모달 ===== -->
+<!-- 📂 카테고리 -->
 <div class="overlay" id="catMgrOverlay">
   <div class="modal" style="max-width:440px">
     <div class="modal-head">
@@ -897,7 +674,7 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
     </div>
     <div class="modal-body">
       <div style="display:flex;gap:6px;margin-bottom:12px">
-        <input type="text" id="catNewInp" placeholder="새 카테고리 이름"
+        <input type="text" id="catNewInp" placeholder="새 카테고리"
           style="flex:1;padding:8px 12px;border:1.5px solid var(--blue-bd);border-radius:9px;background:var(--blue-soft);font-size:13px;outline:none;font-family:inherit">
         <button class="btn btn-blue" id="catAddBtn">＋ 추가</button>
       </div>
@@ -909,7 +686,7 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
   </div>
 </div>
 
-<!-- ===== 보안 PIN 잠금 ===== -->
+<!-- 🔒 PIN 잠금 -->
 <div id="secureLock">
   <div style="font-size:38px">🔒</div>
   <div style="font-size:15px;font-weight:700;margin-top:8px" id="secureLockMsg">보안 사진 잠금 해제</div>
@@ -918,10 +695,21 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
   <button style="margin-top:18px;background:none;border:1.5px solid rgba(255,255,255,.3);color:#fff;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" id="secureCancel">취소</button>
 </div>
 
-<!-- 큰 이미지 보기 -->
-<div id="imgOverlay">
-  <button class="x" onclick="document.getElementById('imgOverlay').style.display='none'">✕</button>
-  <img id="bigImg" src="" alt="">
+<!-- 🔍 사진 확대 뷰어 (핀치줌) -->
+<div id="zoomViewer">
+  <div id="zoomHeader">
+    <button class="zoom-btn" id="zoomClose" title="닫기">✕</button>
+    <div style="font-size:13px;font-weight:700" id="zoomTitle"></div>
+    <button class="zoom-btn" id="zoomDownload" title="다운로드">⬇</button>
+  </div>
+  <img id="zoomImg" src="" alt="">
+  <div id="zoomFooter">
+    <button class="zoom-btn" id="zoomRotL" title="반시계">↺</button>
+    <button class="zoom-btn" id="zoomZoomOut" title="축소">−</button>
+    <button class="zoom-btn" id="zoomFit" title="원본 크기">⤢</button>
+    <button class="zoom-btn" id="zoomZoomIn" title="확대">+</button>
+    <button class="zoom-btn" id="zoomRotR" title="시계">↻</button>
+  </div>
 </div>
 
 <!-- 토스트 -->
@@ -929,1190 +717,853 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
 
 <!-- 파일 입력 (백업) -->
 <input type="file" id="importInp" accept=".json" style="display:none">
-
 <script>
 /* ════════════════════════════════════════════════════════
-   📷 사진 스캐너 - 독립 앱
-   - localStorage / IndexedDB만 사용 (외부 연동 없음)
-   - Claude API: 사용자가 직접 키 입력 시에만
+   📷 사진 스캐너 v2 - 풀형 편집기 + 핀치줌 + 텍스트메모
    ════════════════════════════════════════════════════════ */
 
-// ============= 데이터 ===========
-const LS_PHOTOS = 'scanapp_photos';
-const LS_CATS = 'scanapp_cats';
-const LS_API_KEY = 'scanapp_apikey';
-const LS_PIN = 'scanapp_pin';
-const LS_RECEIPTS = 'scanapp_receipts';  // 🧾 영수증 (배열)
-const LS_CARDS = 'scanapp_cards';        // 💼 명함 (배열)
-const DEFAULT_CATS = ['영수증', '계약서', '명함', '문서', '기타'];
+const LS_PHOTOS='scanapp_photos', LS_CATS='scanapp_cats', LS_API_KEY='scanapp_apikey',
+      LS_PIN='scanapp_pin', LS_RECEIPTS='scanapp_receipts', LS_CARDS='scanapp_cards', LS_TEXTS='scanapp_texts';
+const DEFAULT_CATS=['영수증','계약서','명함','문서','기타'];
 
-let photos = [];
-let cats = [];
-let apiKey = '';
-let curSection = 'normal'; // 'normal' | 'scan' | 'secure'
-let curScanType = 'receipt'; // 'receipt' | 'card' (스캔 섹션 내부 서브탭)
-let receipts = [];   // 🧾 영수증 데이터
-let cards = [];      // 💼 명함 데이터
-let catFilter = 'all';
-let searchQ = '';
-let secureUnlocked = false;
+let photos=[], cats=[], receipts=[], cards=[], texts=[];
+let apiKey='';
+let curSection='normal', curScanType='receipt';
+let catFilter='all', searchQ='';
+let secureUnlocked=false;
 
-// IndexedDB (이미지 base64 저장)
-let idb = null;
-function openIDB(){
-  return new Promise((res, rej) => {
-    const req = indexedDB.open('scanapp_imgs', 1);
-    req.onupgradeneeded = e => {
-      const db = e.target.result;
-      if(!db.objectStoreNames.contains('imgs')) db.createObjectStore('imgs', {keyPath:'id'});
-    };
-    req.onsuccess = e => { idb = e.target.result; res(idb); };
-    req.onerror = e => rej(e);
-  });
-}
-function idbPut(id, data){
-  return new Promise((r,j)=>{
-    const t = idb.transaction('imgs','readwrite');
-    t.objectStore('imgs').put({id, data});
-    t.oncomplete = r; t.onerror = j;
-  });
-}
-function idbGet(id){
-  return new Promise((r,j)=>{
-    const req = idb.transaction('imgs','readonly').objectStore('imgs').get(id);
-    req.onsuccess = e => r(e.target.result?.data || null);
-    req.onerror = j;
-  });
-}
-function idbDel(id){
-  return new Promise((r,j)=>{
-    const t = idb.transaction('imgs','readwrite');
-    t.objectStore('imgs').delete(id);
-    t.oncomplete = r; t.onerror = j;
-  });
-}
+// IndexedDB
+let idb=null;
+function openIDB(){return new Promise((res,rej)=>{
+  const req=indexedDB.open('scanapp_imgs',1);
+  req.onupgradeneeded=e=>{const db=e.target.result;
+    if(!db.objectStoreNames.contains('imgs'))db.createObjectStore('imgs',{keyPath:'id'});};
+  req.onsuccess=e=>{idb=e.target.result;res(idb);};
+  req.onerror=e=>rej(e);
+});}
+const idbPut=(id,data)=>new Promise((r,j)=>{const t=idb.transaction('imgs','readwrite');
+  t.objectStore('imgs').put({id,data});t.oncomplete=r;t.onerror=j;});
+const idbGet=id=>new Promise((r,j)=>{
+  const req=idb.transaction('imgs','readonly').objectStore('imgs').get(id);
+  req.onsuccess=e=>r(e.target.result?.data||null);req.onerror=j;});
+const idbDel=id=>new Promise((r,j)=>{const t=idb.transaction('imgs','readwrite');
+  t.objectStore('imgs').delete(id);t.oncomplete=r;t.onerror=j;});
 
-// ============= 헬퍼 =============
-const $ = id => document.getElementById(id);
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-const today = () => new Date().toISOString().slice(0,10);
-const esc = s => String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+// 헬퍼
+const $=id=>document.getElementById(id);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const today=()=>new Date().toISOString().slice(0,10);
+const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+const numFmt=n=>Number(n||0).toLocaleString('ko-KR');
+const naverMap=addr=>`https://map.naver.com/v5/search/${encodeURIComponent(addr)}`;
+const telLink=num=>`tel:${String(num||'').replace(/[^0-9+]/g,'')}`;
+const mailLink=m=>`mailto:${m}`;
 
 let _toastTimer;
-function toast(msg, ms=2200){
-  const t = $('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(()=> t.classList.remove('show'), ms);
+function toast(msg,ms=2200){
+  const t=$('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>t.classList.remove('show'),ms);
 }
 
-// 이미지 압축
-function compressImg(dataUrl, maxPx=1600, quality=0.85){
-  return new Promise((res, rej) => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(maxPx/img.width, maxPx/img.height, 1);
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
-      res(c.toDataURL('image/jpeg', quality));
+function compressImg(dataUrl,maxPx=1600,quality=0.85){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(maxPx/img.width,maxPx/img.height,1);
+      const w=Math.round(img.width*scale),h=Math.round(img.height*scale);
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      res(c.toDataURL('image/jpeg',quality));
     };
-    img.onerror = rej;
-    img.src = dataUrl;
+    img.onerror=rej;img.src=dataUrl;
   });
 }
-
 function fileToDataUrl(file){
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result);
-    r.onerror = rej;
-    r.readAsDataURL(file);
+  return new Promise((res,rej)=>{
+    const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);
   });
 }
 
-// ============= 데이터 로드/저장 =============
 function loadData(){
-  try { photos = JSON.parse(localStorage.getItem(LS_PHOTOS) || '[]'); } catch { photos = []; }
-  try {
-    const c = localStorage.getItem(LS_CATS);
-    cats = c ? JSON.parse(c) : [...DEFAULT_CATS];
-  } catch { cats = [...DEFAULT_CATS]; }
-  try { receipts = JSON.parse(localStorage.getItem(LS_RECEIPTS) || '[]'); } catch { receipts = []; }
-  try { cards = JSON.parse(localStorage.getItem(LS_CARDS) || '[]'); } catch { cards = []; }
-  apiKey = localStorage.getItem(LS_API_KEY) || '';
+  try{photos=JSON.parse(localStorage.getItem(LS_PHOTOS)||'[]');}catch{photos=[];}
+  try{const c=localStorage.getItem(LS_CATS);cats=c?JSON.parse(c):[...DEFAULT_CATS];}catch{cats=[...DEFAULT_CATS];}
+  try{receipts=JSON.parse(localStorage.getItem(LS_RECEIPTS)||'[]');}catch{receipts=[];}
+  try{cards=JSON.parse(localStorage.getItem(LS_CARDS)||'[]');}catch{cards=[];}
+  try{texts=JSON.parse(localStorage.getItem(LS_TEXTS)||'[]');}catch{texts=[];}
+  apiKey=localStorage.getItem(LS_API_KEY)||'';
 }
-function savePhotos(){ localStorage.setItem(LS_PHOTOS, JSON.stringify(photos)); }
-function saveCats(){ localStorage.setItem(LS_CATS, JSON.stringify(cats)); }
-function saveReceipts(){ localStorage.setItem(LS_RECEIPTS, JSON.stringify(receipts)); }
-function saveCards(){ localStorage.setItem(LS_CARDS, JSON.stringify(cards)); }
+function savePhotos(){try{localStorage.setItem(LS_PHOTOS,JSON.stringify(photos));return true;}catch(e){toast('저장 공간 부족');return false;}}
+function saveCats(){try{localStorage.setItem(LS_CATS,JSON.stringify(cats));}catch(e){}}
+function saveReceipts(){try{localStorage.setItem(LS_RECEIPTS,JSON.stringify(receipts));return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
+function saveCards(){try{localStorage.setItem(LS_CARDS,JSON.stringify(cards));return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
+function saveTexts(){try{localStorage.setItem(LS_TEXTS,JSON.stringify(texts));return true;}catch(e){toast('저장 실패: '+e.message);return false;}}
 
-// ============= 섹션 탭 =============
-function selectSection(sec){
-  if(sec === 'secure' && !secureUnlocked){
-    openSecureLock();
-    return;
+/* ════════════════════════════════════════════════════════
+   🔍 사진 확대 뷰어 (핀치줌)
+   ════════════════════════════════════════════════════════ */
+let _zoom={scale:1,x:0,y:0,rot:0,lastTouchDist:0,lastTouchX:0,lastTouchY:0,dragging:false};
+
+function openZoomViewer(src,title){
+  const v=$('zoomViewer'),img=$('zoomImg');
+  v.classList.add('show');
+  $('zoomTitle').textContent=title||'';
+  img.src=src;
+  img.onload=()=>fitZoom();
+}
+function closeZoomViewer(){$('zoomViewer').classList.remove('show');$('zoomImg').src='';}
+function applyZoomTransform(){
+  $('zoomImg').style.transform=`translate(${_zoom.x}px, ${_zoom.y}px) scale(${_zoom.scale}) rotate(${_zoom.rot}deg)`;
+}
+function fitZoom(){
+  const v=$('zoomViewer'),img=$('zoomImg');
+  const rect=v.getBoundingClientRect();
+  const iw=img.naturalWidth,ih=img.naturalHeight;
+  if(!iw||!ih)return;
+  const scale=Math.min(rect.width/iw,rect.height/ih)*0.95;
+  _zoom.scale=scale;_zoom.x=(rect.width-iw*scale)/2;_zoom.y=(rect.height-ih*scale)/2;_zoom.rot=0;
+  applyZoomTransform();
+}
+function zoomBy(factor){_zoom.scale=Math.max(0.1,Math.min(10,_zoom.scale*factor));applyZoomTransform();}
+
+$('zoomClose').onclick=closeZoomViewer;
+$('zoomZoomIn').onclick=()=>zoomBy(1.25);
+$('zoomZoomOut').onclick=()=>zoomBy(0.8);
+$('zoomFit').onclick=fitZoom;
+$('zoomRotL').onclick=()=>{_zoom.rot-=90;applyZoomTransform();};
+$('zoomRotR').onclick=()=>{_zoom.rot+=90;applyZoomTransform();};
+$('zoomDownload').onclick=()=>{const a=document.createElement('a');a.href=$('zoomImg').src;a.download='photo.jpg';a.click();};
+
+// 마우스 휠/드래그
+$('zoomViewer').addEventListener('wheel',e=>{e.preventDefault();zoomBy(e.deltaY<0?1.15:0.87);},{passive:false});
+$('zoomImg').addEventListener('mousedown',e=>{
+  e.preventDefault();_zoom.dragging=true;
+  _zoom.lastTouchX=e.clientX;_zoom.lastTouchY=e.clientY;
+});
+window.addEventListener('mousemove',e=>{
+  if(!_zoom.dragging)return;
+  _zoom.x+=e.clientX-_zoom.lastTouchX;_zoom.y+=e.clientY-_zoom.lastTouchY;
+  _zoom.lastTouchX=e.clientX;_zoom.lastTouchY=e.clientY;applyZoomTransform();
+});
+window.addEventListener('mouseup',()=>{_zoom.dragging=false;});
+
+// 터치 (핀치줌)
+$('zoomViewer').addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    _zoom.lastTouchDist=Math.hypot(dx,dy);
+  }else if(e.touches.length===1){
+    _zoom.dragging=true;_zoom.lastTouchX=e.touches[0].clientX;_zoom.lastTouchY=e.touches[0].clientY;
   }
-  curSection = sec;
-  document.querySelectorAll('#sectionTabs .tab').forEach(b => {
-    b.classList.toggle('active', b.dataset.sec === sec);
-  });
-  // 일반/보안 vs 스캔 뷰 토글
-  if(sec === 'scan'){
-    $('generalView').style.display = 'none';
-    $('scanView').style.display = '';
+},{passive:true});
+$('zoomViewer').addEventListener('touchmove',e=>{
+  if(e.touches.length===2){
+    e.preventDefault();
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const dist=Math.hypot(dx,dy);
+    if(_zoom.lastTouchDist)zoomBy(dist/_zoom.lastTouchDist);
+    _zoom.lastTouchDist=dist;
+  }else if(e.touches.length===1&&_zoom.dragging){
+    _zoom.x+=e.touches[0].clientX-_zoom.lastTouchX;
+    _zoom.y+=e.touches[0].clientY-_zoom.lastTouchY;
+    _zoom.lastTouchX=e.touches[0].clientX;_zoom.lastTouchY=e.touches[0].clientY;
+    applyZoomTransform();
+  }
+},{passive:false});
+$('zoomViewer').addEventListener('touchend',e=>{
+  if(e.touches.length===0){_zoom.dragging=false;_zoom.lastTouchDist=0;}
+},{passive:true});
+
+window.showImg=(src,title)=>openZoomViewer(src,title);
+
+// CHUNK_3 - 섹션/갤러리/필터
+function selectSection(sec){
+  if(sec==='secure'&&!secureUnlocked){openSecureLock();return;}
+  curSection=sec;
+  document.querySelectorAll('#sectionTabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.sec===sec));
+  if(sec==='scan'){
+    $('generalView').style.display='none';
+    $('scanView').style.display='';
     renderScanList();
-  } else {
-    $('generalView').style.display = '';
-    $('scanView').style.display = 'none';
+  }else{
+    $('generalView').style.display='';
+    $('scanView').style.display='none';
     renderGallery();
   }
 }
-document.querySelectorAll('#sectionTabs .tab').forEach(b => {
-  b.onclick = () => selectSection(b.dataset.sec);
-});
+document.querySelectorAll('#sectionTabs .tab').forEach(b=>b.onclick=()=>selectSection(b.dataset.sec));
 
-// 스캔 서브탭 (영수증 / 명함)
-document.querySelectorAll('#scanSubTabs .tab').forEach(b => {
-  b.onclick = () => {
-    curScanType = b.dataset.scan;
-    document.querySelectorAll('#scanSubTabs .tab').forEach(x =>
-      x.classList.toggle('active', x.dataset.scan === curScanType));
-    $('scanAddLabel').textContent = curScanType === 'receipt' ? '영수증 추가' : '명함 추가';
-    $('scanEmptyMsg').textContent = curScanType === 'receipt'
-      ? '아직 영수증이 없습니다'
-      : '아직 명함이 없습니다';
+document.querySelectorAll('#scanSubTabs .tab').forEach(b=>{
+  b.onclick=()=>{
+    curScanType=b.dataset.scan;
+    document.querySelectorAll('#scanSubTabs .tab').forEach(x=>x.classList.toggle('active',x.dataset.scan===curScanType));
+    const labels={receipt:'영수증',card:'명함',text:'텍스트 메모'};
+    const emp={receipt:'아직 영수증이 없습니다',card:'아직 명함이 없습니다',text:'아직 텍스트 메모가 없습니다'};
+    $('scanAddLabel').textContent=labels[curScanType]+' 추가';
+    $('scanEmptyMsg').textContent=emp[curScanType];
     renderScanList();
   };
 });
-
-// 스캔 검색
-$('scanSearch').addEventListener('input', e => renderScanList());
-
-// 스캔 추가 버튼
-$('btnScanAdd').onclick = () => {
-  if(curScanType === 'receipt') openReceiptModal(null);
-  else openCardModal(null);
+$('scanSearch').addEventListener('input',()=>renderScanList());
+$('btnScanAdd').onclick=()=>{
+  if(curScanType==='receipt')openReceiptModal(null);
+  else if(curScanType==='card')openCardModal(null);
+  else openTextModal(null);
 };
+$('btnScanCsv').onclick=()=>exportScanCsv();
 
-// CSV 내보내기
-$('btnScanCsv').onclick = () => exportScanCsv();
+// 일반/보안 검색·필터
+$('searchInp').addEventListener('input',e=>{searchQ=e.target.value.trim();renderGallery();});
+$('catFilter').addEventListener('change',e=>{catFilter=e.target.value;renderGallery();});
 
-// ============= 카테고리 셀렉트 채우기 =============
 function refreshCatSelects(){
-  const filter = $('catFilter');
-  filter.innerHTML = '<option value="all">전체 카테고리</option>' +
-    cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  filter.value = cats.includes(catFilter) ? catFilter : 'all';
-
-  const fCat = $('fCat');
-  fCat.innerHTML = cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  const f=$('catFilter');
+  f.innerHTML='<option value="all">전체 카테고리</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  f.value=cats.includes(catFilter)?catFilter:'all';
+  $('fCat').innerHTML=cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
 }
 
-// ============= 갤러리 렌더 =============
 async function renderGallery(){
-  const list = photos.filter(p => {
-    const sec = p.secure ? 'secure' : (p.scan ? 'scan' : 'normal');
-    if(sec !== curSection) return false;
-    if(catFilter !== 'all' && p.cat !== catFilter) return false;
+  const list=photos.filter(p=>{
+    const sec=p.secure?'secure':'normal';
+    if(sec!==curSection)return false;
+    if(catFilter!=='all'&&p.cat!==catFilter)return false;
     if(searchQ){
-      const q = searchQ.toLowerCase();
-      const hit = (p.title||'').toLowerCase().includes(q) ||
-                  (p.memo||'').toLowerCase().includes(q) ||
-                  (p.cat||'').toLowerCase().includes(q);
-      if(!hit) return false;
+      const q=searchQ.toLowerCase();
+      return [p.title,p.memo,p.cat].some(v=>(v||'').toLowerCase().includes(q));
     }
     return true;
   });
-
-  const gallery = $('gallery');
-  const empty = $('emptyState');
+  const gallery=$('gallery'),empty=$('emptyState');
   if(!list.length){
-    gallery.innerHTML = '';
-    empty.style.display = 'block';
-    empty.querySelector('p').textContent = searchQ ? '검색 결과가 없습니다' : '아직 사진이 없습니다';
+    gallery.innerHTML='';empty.style.display='block';
+    empty.querySelector('p').textContent=searchQ?'검색 결과가 없습니다':'아직 사진이 없습니다';
     return;
   }
-  empty.style.display = 'none';
-
-  // 카드 먼저 그리고 이미지는 비동기 로드
-  gallery.innerHTML = list.map(p => {
-    const thumb = (p.imgIds && p.imgIds.length) ? p.imgIds[0] : '';
+  empty.style.display='none';
+  gallery.innerHTML=list.map(p=>{
+    const thumb=(p.imgIds&&p.imgIds[0])||'';
     return `<div class="photo-card" data-pid="${p.id}">
       <img class="thumb" data-thumb="${thumb}" alt="">
       <div class="info">
-        <div class="title">${esc(p.title || '(제목 없음)')}</div>
-        <div class="meta">${esc(p.date || '')}${p.imgIds && p.imgIds.length>1 ? ' · '+p.imgIds.length+'장' : ''}</div>
-        <span class="cat-badge">${esc(p.cat || '기타')}</span>
+        <div class="title">${esc(p.title||'(제목 없음)')}</div>
+        <div class="meta">${esc(p.date||'')}${p.imgIds&&p.imgIds.length>1?' · '+p.imgIds.length+'장':''}</div>
+        <span style="display:inline-block;padding:2px 8px;border-radius:6px;background:var(--blue-lt);color:var(--blue);font-size:10px;font-weight:700;margin-top:4px">${esc(p.cat||'기타')}</span>
       </div>
     </div>`;
   }).join('');
-
-  // 클릭 이벤트
-  gallery.querySelectorAll('.photo-card').forEach(card => {
-    card.onclick = () => openDetail(card.dataset.pid);
-  });
-
-  // 썸네일 로드
+  gallery.querySelectorAll('.photo-card').forEach(card=>card.onclick=()=>openDetail(card.dataset.pid));
   for(const img of gallery.querySelectorAll('.thumb')){
-    const id = img.dataset.thumb;
-    if(!id) continue;
-    try {
-      const data = await idbGet(id);
-      if(data) img.src = data;
-    } catch(e){}
+    const id=img.dataset.thumb;
+    if(!id)continue;
+    try{const data=await idbGet(id);if(data)img.src=data;}catch(e){}
   }
 }
 
-// ============= 검색·필터 =============
-$('searchInp').addEventListener('input', e => {
-  searchQ = e.target.value.trim();
-  renderGallery();
-});
-$('catFilter').addEventListener('change', e => {
-  catFilter = e.target.value;
-  renderGallery();
-});
-
-// ============= 추가 모달 =============
-let mImgs = []; // [{data, id}]  편집 중인 이미지 목록
-let editingId = null;
+// CHUNK_4 - 일반/보안 추가/수정 모달
+let mImgs=[],editingId=null;
 
 function openAddModal(photo){
-  editingId = photo ? photo.id : null;
-  mImgs = [];
-  $('addTitle').textContent = photo ? '✏️ 사진 수정' : '📷 사진 추가';
-  $('editingId').value = photo ? photo.id : '';
-  $('fTitle').value = photo ? (photo.title||'') : '';
-  $('fMemo').value = photo ? (photo.memo||'') : '';
-  $('fDate').value = photo ? (photo.date||today()) : today();
+  editingId=photo?photo.id:null;
+  mImgs=[];
+  $('addTitle').textContent=photo?'✏️ 사진 수정':'📷 사진 추가';
+  $('fTitle').value=photo?(photo.title||''):'';
+  $('fMemo').value=photo?(photo.memo||''):'';
+  $('fDate').value=photo?(photo.date||today()):today();
   refreshCatSelects();
-  $('fCat').value = photo ? (photo.cat || cats[0]) : cats[0];
-  $('addDelete').style.display = photo ? '' : 'none';
-  $('moveSectionRow').style.display = photo ? '' : 'none';
-
-  if(photo && photo.imgIds && photo.imgIds.length){
+  $('fCat').value=photo?(photo.cat||cats[0]):cats[0];
+  $('addDelete').style.display=photo?'':'none';
+  if(photo&&photo.imgIds&&photo.imgIds.length){
     (async()=>{
       for(const id of photo.imgIds){
-        try {
-          const data = await idbGet(id);
-          if(data) mImgs.push({id, data});
-        } catch(e){}
+        try{const data=await idbGet(id);if(data)mImgs.push({id,data});}catch(e){}
       }
       renderPreviews();
     })();
-  } else {
-    renderPreviews();
-  }
+  }else renderPreviews();
   $('addOverlay').classList.add('show');
 }
-function closeAddModal(){ $('addOverlay').classList.remove('show'); mImgs=[]; editingId=null; }
-
-$('btnAdd').onclick = () => openAddModal(null);
-$('addClose').onclick = closeAddModal;
-$('addCancel').onclick = closeAddModal;
+function closeAddModal(){$('addOverlay').classList.remove('show');mImgs=[];editingId=null;}
+$('btnAdd').onclick=()=>openAddModal(null);
+$('addClose').onclick=closeAddModal;
+$('addCancel').onclick=closeAddModal;
 
 function renderPreviews(){
-  const wrap = $('previewList');
-  wrap.innerHTML = mImgs.map((m,i)=>`
+  const wrap=$('previewList');
+  wrap.innerHTML=mImgs.map((m,i)=>`
     <div class="preview-item">
       <img src="${m.data}" alt="" data-idx="${i}">
       <button class="preview-del" data-del="${i}">✕</button>
     </div>`).join('');
-  wrap.querySelectorAll('img').forEach(img => {
-    img.onclick = () => {
-      $('bigImg').src = img.src;
-      $('imgOverlay').style.display = 'flex';
-    };
+  wrap.querySelectorAll('img').forEach(img=>img.onclick=()=>showImg(img.src));
+  wrap.querySelectorAll('.preview-del').forEach(b=>{
+    b.onclick=()=>{mImgs.splice(parseInt(b.dataset.del),1);renderPreviews();};
   });
-  wrap.querySelectorAll('.preview-del').forEach(b => {
-    b.onclick = () => {
-      const idx = parseInt(b.dataset.del);
-      mImgs.splice(idx, 1);
+  $('addZone').style.padding=mImgs.length?'14px':'24px';
+}
+
+// 일반/보안 - 카메라/갤러리 → 자동 편집 모달
+async function handleNormalFile(files){
+  if(!files||!files.length)return;
+  const f=files[0];if(!f.type.startsWith('image/'))return;
+  try{
+    const raw=await fileToDataUrl(f);
+    const compressed=await compressImg(raw,1800,0.88);
+    openEditModal(compressed,edited=>{
+      mImgs.push({id:uid(),data:edited});
       renderPreviews();
+    });
+  }catch(e){toast('사진 로드 실패');}
+}
+$('camInp').addEventListener('change',e=>{handleNormalFile(e.target.files);e.target.value='';});
+$('galInp').addEventListener('change',e=>{handleNormalFile(e.target.files);e.target.value='';});
+$('addZone').onclick=()=>$('camInp').click();
+
+$('addSave').onclick=async()=>{
+  const title=$('fTitle').value.trim();
+  if(!title){toast('제목을 입력하세요');return;}
+  if(!mImgs.length){toast('사진을 추가하세요');return;}
+  $('addSave').disabled=true;$('addSave').textContent='💾 저장 중…';
+  try{
+    const ids=mImgs.map(m=>m.id||uid());
+    for(let i=0;i<mImgs.length;i++)await idbPut(ids[i],mImgs[i].data);
+    const data={
+      id:editingId||uid(),
+      title,cat:$('fCat').value,memo:$('fMemo').value.trim(),
+      date:$('fDate').value||today(),
+      secure:curSection==='secure',
+      imgIds:ids,updated:Date.now(),
     };
-  });
-  $('toolRow').style.display = mImgs.length ? 'flex' : 'none';
-  // 추가 영역도 사진 있으면 작게
-  $('addZone').style.padding = mImgs.length ? '14px' : '24px';
-}
-
-// 사진 파일 처리
-async function handleFiles(files){
-  for(const f of files){
-    if(!f.type.startsWith('image/')) continue;
-    try {
-      const raw = await fileToDataUrl(f);
-      const compressed = await compressImg(raw);
-      mImgs.push({id: uid(), data: compressed});
-    } catch(e){ console.error(e); }
-  }
-  renderPreviews();
-}
-$('camInp').addEventListener('change', e => {
-  handleFiles([...e.target.files]);
-  e.target.value = '';
-});
-$('galInp').addEventListener('change', e => {
-  handleFiles([...e.target.files]);
-  e.target.value = '';
-});
-$('addZone').onclick = () => $('camInp').click();
-
-// 섹션 이동 버튼
-document.querySelectorAll('[data-move]').forEach(b => {
-  b.onclick = () => {
-    if(!editingId) return;
-    const target = b.dataset.move;
-    const p = photos.find(x => x.id === editingId);
-    if(!p) return;
-    p.secure = target === 'secure';
-    p.scan = target === 'scan';
-    savePhotos();
-    toast(`${target==='secure'?'🔒 보안':target==='scan'?'📄 스캔':'📷 일반'}으로 이동했어요`);
-    closeAddModal();
-    renderGallery();
-  };
-});
-
-// 저장
-$('addSave').onclick = async () => {
-  const title = $('fTitle').value.trim();
-  if(!title){ toast('제목을 입력하세요'); return; }
-  if(!mImgs.length){ toast('사진을 추가하세요'); return; }
-  const cat = $('fCat').value;
-  const memo = $('fMemo').value.trim();
-  const date = $('fDate').value || today();
-  $('addSave').disabled = true;
-  $('addSave').textContent = '💾 저장 중…';
-  try {
-    const ids = mImgs.map(m => m.id || uid());
-    // IDB에 이미지 저장
-    for(let i = 0; i < mImgs.length; i++){
-      await idbPut(ids[i], mImgs[i].data);
-    }
     if(editingId){
-      const p = photos.find(x => x.id === editingId);
-      if(p){
-        const oldIds = p.imgIds || [];
-        for(const oid of oldIds){
-          if(!ids.includes(oid)) idbDel(oid).catch(()=>{});
-        }
-        p.title = title; p.cat = cat; p.memo = memo; p.date = date;
-        p.imgIds = ids;
+      const idx=photos.findIndex(x=>x.id===editingId);
+      if(idx>=0){
+        const old=photos[idx];
+        for(const oid of (old.imgIds||[]))if(!ids.includes(oid))idbDel(oid).catch(()=>{});
+        photos[idx]={...old,...data};
       }
-    } else {
-      photos.unshift({
-        id: uid(),
-        title, cat, memo, date,
-        secure: curSection === 'secure',
-        scan: curSection === 'scan',
-        imgIds: ids,
-        created: Date.now(),
-      });
-    }
-    savePhotos();
-    toast('✅ 저장됐어요');
-    closeAddModal();
-    renderGallery();
-  } catch(e){
-    toast('저장 실패: ' + e.message);
-    console.error(e);
-  } finally {
-    $('addSave').disabled = false;
-    $('addSave').textContent = '💾 저장';
+    }else photos.unshift(data);
+    if(!savePhotos())return;
+    toast('✅ 저장됐어요');closeAddModal();renderGallery();
+  }catch(e){toast('저장 실패: '+e.message);}
+  finally{$('addSave').disabled=false;$('addSave').textContent='💾 저장';}
+};
+$('addDelete').onclick=async()=>{
+  if(!editingId)return;
+  if(!confirm('정말 삭제하시겠습니까?'))return;
+  const idx=photos.findIndex(x=>x.id===editingId);
+  if(idx>=0){
+    for(const id of (photos[idx].imgIds||[]))await idbDel(id).catch(()=>{});
+    photos.splice(idx,1);savePhotos();toast('삭제됐어요');closeAddModal();renderGallery();
   }
 };
 
-// 삭제
-$('addDelete').onclick = async () => {
-  if(!editingId) return;
-  if(!confirm('정말 삭제하시겠습니까?')) return;
-  const idx = photos.findIndex(x => x.id === editingId);
-  if(idx >= 0){
-    const p = photos[idx];
-    for(const id of (p.imgIds||[])) await idbDel(id).catch(()=>{});
-    photos.splice(idx, 1);
-    savePhotos();
-    toast('삭제됐어요');
-    closeAddModal();
-    renderGallery();
-  }
-};
-
-// ============= 상세 보기 =============
+// 상세보기
 async function openDetail(pid){
-  const p = photos.find(x => x.id === pid);
-  if(!p) return;
-  $('detailTitle').textContent = p.title || '(제목 없음)';
-  $('detailT').textContent = p.title || '(제목 없음)';
-  $('detailCat').textContent = p.cat || '기타';
-  $('detailDate').textContent = p.date || '';
-  $('detailMemoBox').textContent = p.memo || '(메모 없음)';
-  if(p.imgIds && p.imgIds[0]){
-    try {
-      const data = await idbGet(p.imgIds[0]);
-      $('detailImg').src = data || '';
-      $('detailImg').onclick = () => {
-        $('bigImg').src = data;
-        $('imgOverlay').style.display = 'flex';
-      };
-    } catch(e){}
+  const p=photos.find(x=>x.id===pid);if(!p)return;
+  $('detailTitle').textContent=p.title||'(제목 없음)';
+  $('detailT').textContent=p.title||'(제목 없음)';
+  $('detailCat').textContent=p.cat||'기타';
+  $('detailDate').textContent=p.date||'';
+  $('detailMemoBox').textContent=p.memo||'(메모 없음)';
+  if(p.imgIds&&p.imgIds[0]){
+    try{
+      const data=await idbGet(p.imgIds[0]);
+      $('detailImg').src=data||'';
+      $('detailImg').onclick=()=>showImg(data,p.title);
+    }catch(e){}
   }
-  $('detailEdit').onclick = () => {
-    $('detailOverlay').classList.remove('show');
-    openAddModal(p);
-  };
+  $('detailEdit').onclick=()=>{$('detailOverlay').classList.remove('show');openAddModal(p);};
   $('detailOverlay').classList.add('show');
 }
-$('detailClose').onclick = () => $('detailOverlay').classList.remove('show');
-$('detailCloseBtn').onclick = () => $('detailOverlay').classList.remove('show');
+$('detailClose').onclick=()=>$('detailOverlay').classList.remove('show');
+$('detailCloseBtn').onclick=()=>$('detailOverlay').classList.remove('show');
 
-/* ════════════════════════════════════════════════════════
-   ✂️ 크롭 모달
-   ════════════════════════════════════════════════════════ */
-let _crop = {
-  imgIdx: -1, img: null, canvas: null, ctx: null, scale: 1,
-  points: [], dragIdx: -1, dragStart: null, edgeStartPts: null,
-  HANDLE_R: 14,
+// CHUNK_5 - 풀형 편집기 (fabric.js)
+let _fab=null,_fabCallback=null,_fabTool='select',_fabHistory=[],_fabCropRect=null;
+
+function openEditModal(dataUrl,callback){
+  _fabCallback=callback;
+  _fabHistory=[];
+  $('editOverlay').classList.add('show');
+  $('editTextInputRow').classList.remove('show');
+  if(_fab){try{_fab.dispose();}catch(e){}_fab=null;}
+  setTimeout(()=>{
+    const wrap=$('editCanvasWrap');
+    const maxW=wrap.clientWidth-20,maxH=wrap.clientHeight-20;
+    fabric.Image.fromURL(dataUrl,img=>{
+      const scale=Math.min(maxW/img.width,maxH/img.height,1);
+      const cw=Math.round(img.width*scale),ch=Math.round(img.height*scale);
+      _fab=new fabric.Canvas('editCanvas',{width:cw,height:ch,backgroundColor:'#fff'});
+      img.set({scaleX:scale,scaleY:scale,selectable:false,evented:false});
+      _fab.add(img);_fab.sendToBack(img);_fab.renderAll();
+      pushHistory();setEditTool('select');
+    },{crossOrigin:'anonymous'});
+  },100);
+}
+function closeEditModal(){
+  $('editOverlay').classList.remove('show');
+  if(_fab){try{_fab.dispose();}catch(e){}_fab=null;}
+  _fabCallback=null;
+}
+$('editClose').onclick=()=>{if(confirm('편집을 취소할까요?'))closeEditModal();};
+
+function pushHistory(){
+  if(!_fab)return;
+  _fabHistory.push(JSON.stringify(_fab.toJSON()));
+  if(_fabHistory.length>30)_fabHistory.shift();
+}
+$('editUndo').onclick=()=>{
+  if(!_fab||_fabHistory.length<2)return;
+  _fabHistory.pop();
+  const prev=_fabHistory[_fabHistory.length-1];
+  _fab.loadFromJSON(prev,()=>_fab.renderAll());
 };
 
-function openCrop(idx){
-  if(!mImgs[idx]) return;
-  _crop.imgIdx = idx;
+function setEditTool(tool){
+  if(!_fab)return;
+  _fabTool=tool;_fab.isDrawingMode=false;
+  document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
+  $('editTextSize').style.display=tool==='text'?'block':'none';
+  $('editTextInputRow').classList.toggle('show',tool==='text');
+  if(_fabCropRect){_fab.remove(_fabCropRect);_fabCropRect=null;_fab.renderAll();}
+  if(tool==='draw'){
+    _fab.isDrawingMode=true;
+    _fab.freeDrawingBrush.color=$('editColor').value;
+    _fab.freeDrawingBrush.width=parseInt($('editSize').value);
+  }else if(tool==='select'){_fab.selection=true;}
+  else if(tool==='crop'){
+    const cw=_fab.width,ch=_fab.height;
+    _fabCropRect=new fabric.Rect({
+      left:cw*0.1,top:ch*0.1,width:cw*0.8,height:ch*0.8,
+      fill:'rgba(63,124,184,0.2)',stroke:'#3f7cb8',strokeWidth:2,
+      strokeDashArray:[8,4],cornerColor:'#3f7cb8',cornerSize:12,
+      hasControls:true,hasBorders:true,lockRotation:true,
+    });
+    _fab.add(_fabCropRect);_fab.setActiveObject(_fabCropRect);
+    toast('크롭 영역 조정 후 ✂ 다시 클릭');
+  }
+}
+document.querySelectorAll('[data-tool]').forEach(b=>{
+  b.onclick=()=>{
+    if(b.dataset.tool==='crop'&&_fabCropRect)applyEditCrop();
+    else if(b.dataset.tool==='rect')addRect();
+    else if(b.dataset.tool==='circle')addCircle();
+    else if(b.dataset.tool==='arrow')addArrow();
+    else if(b.dataset.tool==='blur')addBlur();
+    else setEditTool(b.dataset.tool);
+  };
+});
+
+function applyEditCrop(){
+  if(!_fab||!_fabCropRect)return;
+  const r=_fabCropRect;
+  const cw=r.getScaledWidth(),ch=r.getScaledHeight();
+  const cx=r.left,cy=r.top;
+  _fab.remove(_fabCropRect);_fabCropRect=null;
+  const dataUrl=_fab.toDataURL({left:cx,top:cy,width:cw,height:ch,format:'jpeg',quality:0.92});
+  openEditModal(dataUrl,_fabCallback);
+}
+function addRect(){
+  if(!_fab)return;
+  const r=new fabric.Rect({left:50,top:50,width:100,height:80,
+    fill:'transparent',stroke:$('editColor').value,strokeWidth:parseInt($('editSize').value)});
+  _fab.add(r);_fab.setActiveObject(r);pushHistory();
+}
+function addCircle(){
+  if(!_fab)return;
+  const c=new fabric.Circle({left:50,top:50,radius:40,
+    fill:'transparent',stroke:$('editColor').value,strokeWidth:parseInt($('editSize').value)});
+  _fab.add(c);_fab.setActiveObject(c);pushHistory();
+}
+function addArrow(){
+  if(!_fab)return;
+  const color=$('editColor').value,sw=parseInt($('editSize').value);
+  const line=new fabric.Line([0,0,150,0],{stroke:color,strokeWidth:sw});
+  const head=new fabric.Triangle({left:150,top:0,width:sw*4,height:sw*4,
+    fill:color,angle:90,originX:'center',originY:'center'});
+  const group=new fabric.Group([line,head],{left:60,top:60});
+  _fab.add(group);_fab.setActiveObject(group);pushHistory();
+}
+function addBlur(){
+  if(!_fab)return;
+  // 블러형 효과 - 반투명 사각형 + 그림자
+  const r=new fabric.Rect({
+    left:50,top:50,width:120,height:60,
+    fill:'rgba(255,255,255,0.6)',
+    stroke:'rgba(0,0,0,0.08)',strokeWidth:1,
+  });
+  r.shadow=new fabric.Shadow({color:'rgba(0,0,0,0.4)',blur:18,offsetX:0,offsetY:0});
+  _fab.add(r);_fab.setActiveObject(r);pushHistory();
+  toast('💡 블러 영역 (위치/크기 조정 가능)');
+}
+
+$('editTextAdd').onclick=()=>{
+  const t=$('editTextInp').value.trim();
+  if(!t||!_fab)return;
+  const txt=new fabric.IText(t,{
+    left:50,top:50,
+    fill:$('editColor').value,
+    fontSize:parseInt($('editTextSize').value),
+    fontFamily:'Pretendard, sans-serif',fontWeight:700,
+  });
+  _fab.add(txt);_fab.setActiveObject(txt);pushHistory();
+  $('editTextInp').value='';
+};
+$('editTextInp').addEventListener('keydown',e=>{if(e.key==='Enter')$('editTextAdd').click();});
+
+$('editRotL').onclick=()=>{
+  if(!_fab)return;
+  const obj=_fab.getActiveObject();
+  if(obj){obj.rotate((obj.angle||0)-90);_fab.renderAll();pushHistory();}
+  else{
+    const dataUrl=_fab.toDataURL({format:'jpeg',quality:0.92});
+    rotateImage(dataUrl,-90).then(r=>openEditModal(r,_fabCallback));
+  }
+};
+$('editRotR').onclick=()=>{
+  if(!_fab)return;
+  const obj=_fab.getActiveObject();
+  if(obj){obj.rotate((obj.angle||0)+90);_fab.renderAll();pushHistory();}
+  else{
+    const dataUrl=_fab.toDataURL({format:'jpeg',quality:0.92});
+    rotateImage(dataUrl,90).then(r=>openEditModal(r,_fabCallback));
+  }
+};
+function rotateImage(dataUrl,deg){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas');
+      const w=img.width,h=img.height;
+      const rad=deg*Math.PI/180;
+      const absSin=Math.abs(Math.sin(rad)),absCos=Math.abs(Math.cos(rad));
+      c.width=w*absCos+h*absSin;c.height=w*absSin+h*absCos;
+      const ctx=c.getContext('2d');
+      ctx.translate(c.width/2,c.height/2);ctx.rotate(rad);
+      ctx.drawImage(img,-w/2,-h/2);
+      res(c.toDataURL('image/jpeg',0.92));
+    };
+    img.src=dataUrl;
+  });
+}
+
+$('editDelObj').onclick=()=>{
+  if(!_fab)return;
+  const objs=_fab.getActiveObjects();
+  if(!objs.length){toast('삭제할 객체를 선택하세요');return;}
+  objs.forEach(o=>_fab.remove(o));
+  _fab.discardActiveObject();_fab.renderAll();pushHistory();
+};
+$('editClearAll').onclick=()=>{
+  if(!_fab)return;
+  if(!confirm('편집 내용 모두 지울까요? (사진은 유지)'))return;
+  const bg=_fab.getObjects().find(o=>o.type==='image');
+  _fab.clear();_fab.backgroundColor='#fff';
+  if(bg)_fab.add(bg);_fab.renderAll();pushHistory();
+};
+$('editColor').addEventListener('change',()=>{if(_fab&&_fab.isDrawingMode)_fab.freeDrawingBrush.color=$('editColor').value;});
+$('editSize').addEventListener('change',()=>{if(_fab&&_fab.isDrawingMode)_fab.freeDrawingBrush.width=parseInt($('editSize').value);});
+
+$('editDone').onclick=()=>{
+  if(!_fab)return;
+  if(_fabCropRect){_fab.remove(_fabCropRect);_fabCropRect=null;}
+  _fab.discardActiveObject();
+  const dataUrl=_fab.toDataURL({format:'jpeg',quality:0.9,multiplier:1});
+  if(_fabCallback)_fabCallback(dataUrl);
+  closeEditModal();
+  toast('✅ 편집 완료');
+};
+
+// CHUNK_6 - 크롭 모달 (영수증/명함/텍스트용)
+let _crop={img:null,canvas:null,ctx:null,scale:1,points:[],dragIdx:-1,
+  dragStart:null,edgeStartPts:null,HANDLE_R:14,callback:null,originalDataUrl:''};
+
+function openCropModal(dataUrl,callback,title){
+  _crop.callback=callback;_crop.originalDataUrl=dataUrl;
+  $('cropTitle').textContent=title||'✂️ 영역만 잘라내기';
   $('cropOverlay').classList.add('show');
-  const canvas = $('cropCanvas');
-  _crop.canvas = canvas;
-  _crop.ctx = canvas.getContext('2d');
-  const img = new Image();
-  img.onload = () => {
-    _crop.img = img;
-    const maxW = Math.min(window.innerWidth * 0.92, 1200);
-    const maxH = window.innerHeight * 0.72;
-    const ratio = Math.min(maxW/img.width, maxH/img.height, 1);
-    const cw = Math.round(img.width * ratio);
-    const ch = Math.round(img.height * ratio);
-    _crop.scale = ratio;
-    canvas.width = cw; canvas.height = ch;
-    const m = Math.min(cw, ch) * 0.05;
-    _crop.points = [
-      {x:m, y:m}, {x:cw-m, y:m},
-      {x:cw-m, y:ch-m}, {x:m, y:ch-m},
-    ];
+  const canvas=$('cropCanvas');
+  _crop.canvas=canvas;_crop.ctx=canvas.getContext('2d');
+  const img=new Image();
+  img.onload=()=>{
+    _crop.img=img;
+    const maxW=Math.min(window.innerWidth*0.92,1200);
+    const maxH=window.innerHeight*0.72;
+    const ratio=Math.min(maxW/img.width,maxH/img.height,1);
+    const cw=Math.round(img.width*ratio),ch=Math.round(img.height*ratio);
+    _crop.scale=ratio;canvas.width=cw;canvas.height=ch;
+    const m=Math.min(cw,ch)*0.05;
+    _crop.points=[{x:m,y:m},{x:cw-m,y:m},{x:cw-m,y:ch-m},{x:m,y:ch-m}];
     drawCrop();
   };
-  img.src = mImgs[idx].data;
+  img.src=dataUrl;
 }
 
 function drawCrop(){
-  const {canvas, ctx, img, points, HANDLE_R} = _crop;
-  if(!canvas || !img) return;
+  const {canvas,ctx,img,points,HANDLE_R}=_crop;
+  if(!canvas||!img)return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.drawImage(img,0,0,canvas.width,canvas.height);
-  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  ctx.fillStyle='rgba(0,0,0,.5)';
   ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(points[0].x, points[0].y);
-  for(let i=1;i<4;i++) ctx.lineTo(points[i].x, points[i].y);
-  ctx.closePath();
-  ctx.clip();
+  ctx.moveTo(points[0].x,points[0].y);
+  for(let i=1;i<4;i++)ctx.lineTo(points[i].x,points[i].y);
+  ctx.closePath();ctx.clip();
   ctx.drawImage(img,0,0,canvas.width,canvas.height);
   ctx.restore();
-  ctx.strokeStyle = '#27ae60';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(points[0].x, points[0].y);
-  for(let i=1;i<4;i++) ctx.lineTo(points[i].x, points[i].y);
-  ctx.closePath();
-  ctx.stroke();
+  ctx.strokeStyle='#27ae60';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
+  for(let i=1;i<4;i++)ctx.lineTo(points[i].x,points[i].y);
+  ctx.closePath();ctx.stroke();
   // 변 막대
   for(let i=0;i<4;i++){
-    const p1=points[i], p2=points[(i+1)%4];
-    const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
-    const dx=p2.x-p1.x, dy=p2.y-p1.y;
-    const len=Math.hypot(dx,dy);
-    if(len<1) continue;
-    const barLen=28, barW=10;
-    ctx.save();
-    ctx.translate(mx,my);
-    ctx.rotate(Math.atan2(dy,dx));
-    ctx.fillStyle='#fff';
-    ctx.strokeStyle='#27ae60';
-    ctx.lineWidth=2.5;
+    const p1=points[i],p2=points[(i+1)%4];
+    const mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;
+    const dx=p2.x-p1.x,dy=p2.y-p1.y;
+    if(Math.hypot(dx,dy)<1)continue;
+    const barLen=28,barW=10;
+    ctx.save();ctx.translate(mx,my);ctx.rotate(Math.atan2(dy,dx));
+    ctx.fillStyle='#fff';ctx.strokeStyle='#27ae60';ctx.lineWidth=2.5;
     const r=barW/2;
     ctx.beginPath();
-    ctx.moveTo(-barLen/2+r, -barW/2);
-    ctx.lineTo(barLen/2-r, -barW/2);
-    ctx.arc(barLen/2-r, 0, r, -Math.PI/2, Math.PI/2);
-    ctx.lineTo(-barLen/2+r, barW/2);
-    ctx.arc(-barLen/2+r, 0, r, Math.PI/2, -Math.PI/2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
+    ctx.moveTo(-barLen/2+r,-barW/2);ctx.lineTo(barLen/2-r,-barW/2);
+    ctx.arc(barLen/2-r,0,r,-Math.PI/2,Math.PI/2);
+    ctx.lineTo(-barLen/2+r,barW/2);
+    ctx.arc(-barLen/2+r,0,r,Math.PI/2,-Math.PI/2);
+    ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
   }
   // 모서리 핸들
   points.forEach((p,i)=>{
-    ctx.fillStyle='#fff';
-    ctx.strokeStyle='#27ae60';
-    ctx.lineWidth=3;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, HANDLE_R, 0, Math.PI*2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle='#27ae60';
-    ctx.font='bold 12px sans-serif';
-    ctx.textAlign='center';
-    ctx.textBaseline='middle';
-    ctx.fillText(String(i+1), p.x, p.y);
+    ctx.fillStyle='#fff';ctx.strokeStyle='#27ae60';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(p.x,p.y,HANDLE_R,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#27ae60';ctx.font='bold 12px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(String(i+1),p.x,p.y);
   });
 }
 
 function getCropPos(e){
-  const rect = _crop.canvas.getBoundingClientRect();
-  const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-  const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-  return {
-    x: cx * (_crop.canvas.width / rect.width),
-    y: cy * (_crop.canvas.height / rect.height),
-  };
+  const rect=_crop.canvas.getBoundingClientRect();
+  const cx=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+  const cy=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+  return {x:cx*(_crop.canvas.width/rect.width),y:cy*(_crop.canvas.height/rect.height)};
 }
 
-(function setupCropEvents(){
-  let canvas = null;
-  function bind(){
-    if(canvas) return;
-    canvas = $('cropCanvas');
-    if(!canvas) return;
-    canvas.onmousedown = start;
-    canvas.onmousemove = move;
-    canvas.onmouseup = end;
-    canvas.onmouseleave = end;
-    canvas.ontouchstart = start;
-    canvas.ontouchmove = move;
-    canvas.ontouchend = end;
-  }
+let _cropBound=false;
+function bindCropEvents(){
+  if(_cropBound)return;
+  const canvas=$('cropCanvas');if(!canvas)return;
   function start(e){
     e.preventDefault();
-    const pos = getCropPos(e);
-    _crop.dragIdx = -1;
-    _crop.dragStart = pos;
+    const pos=getCropPos(e);_crop.dragIdx=-1;_crop.dragStart=pos;
     for(let i=0;i<4;i++){
-      const p = _crop.points[i];
-      const dx = p.x-pos.x, dy = p.y-pos.y;
-      if(Math.sqrt(dx*dx+dy*dy) < _crop.HANDLE_R+14){
-        _crop.dragIdx = i; return;
-      }
+      const p=_crop.points[i];
+      const dx=p.x-pos.x,dy=p.y-pos.y;
+      if(Math.sqrt(dx*dx+dy*dy)<_crop.HANDLE_R+14){_crop.dragIdx=i;return;}
     }
     for(let i=0;i<4;i++){
-      const p1 = _crop.points[i], p2 = _crop.points[(i+1)%4];
-      const mx = (p1.x+p2.x)/2, my = (p1.y+p2.y)/2;
-      const dx = mx-pos.x, dy = my-pos.y;
-      if(Math.sqrt(dx*dx+dy*dy) < 22){
-        _crop.dragIdx = 10+i;
-        _crop.edgeStartPts = {p1:{x:p1.x,y:p1.y}, p2:{x:p2.x,y:p2.y}};
+      const p1=_crop.points[i],p2=_crop.points[(i+1)%4];
+      const mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;
+      const dx=mx-pos.x,dy=my-pos.y;
+      if(Math.sqrt(dx*dx+dy*dy)<22){
+        _crop.dragIdx=10+i;
+        _crop.edgeStartPts={p1:{x:p1.x,y:p1.y},p2:{x:p2.x,y:p2.y}};
         return;
       }
     }
   }
   function move(e){
-    if(_crop.dragIdx < 0) return;
+    if(_crop.dragIdx<0)return;
     e.preventDefault();
-    const pos = getCropPos(e);
-    if(_crop.dragIdx < 4){
-      _crop.points[_crop.dragIdx] = {
-        x: Math.max(0, Math.min(_crop.canvas.width, pos.x)),
-        y: Math.max(0, Math.min(_crop.canvas.height, pos.y)),
+    const pos=getCropPos(e);
+    if(_crop.dragIdx<4){
+      _crop.points[_crop.dragIdx]={
+        x:Math.max(0,Math.min(_crop.canvas.width,pos.x)),
+        y:Math.max(0,Math.min(_crop.canvas.height,pos.y))
       };
-    } else if(_crop.dragIdx >= 10 && _crop.dragIdx <= 13 && _crop.edgeStartPts){
-      const edgeIdx = _crop.dragIdx - 10;
-      const i1 = edgeIdx, i2 = (edgeIdx+1) % 4;
-      let dx = pos.x - _crop.dragStart.x;
-      let dy = pos.y - _crop.dragStart.y;
-      // 상/하변(0,2)은 수직만, 좌/우변(1,3)은 수평만
-      if(edgeIdx === 0 || edgeIdx === 2) dx = 0;
-      if(edgeIdx === 1 || edgeIdx === 3) dy = 0;
-      _crop.points[i1] = {
-        x: Math.max(0, Math.min(_crop.canvas.width, _crop.edgeStartPts.p1.x + dx)),
-        y: Math.max(0, Math.min(_crop.canvas.height, _crop.edgeStartPts.p1.y + dy)),
+    }else if(_crop.dragIdx>=10&&_crop.dragIdx<=13&&_crop.edgeStartPts){
+      const ei=_crop.dragIdx-10;
+      let dx=pos.x-_crop.dragStart.x,dy=pos.y-_crop.dragStart.y;
+      if(ei===0||ei===2)dx=0;
+      if(ei===1||ei===3)dy=0;
+      _crop.points[ei]={
+        x:Math.max(0,Math.min(_crop.canvas.width,_crop.edgeStartPts.p1.x+dx)),
+        y:Math.max(0,Math.min(_crop.canvas.height,_crop.edgeStartPts.p1.y+dy))
       };
-      _crop.points[i2] = {
-        x: Math.max(0, Math.min(_crop.canvas.width, _crop.edgeStartPts.p2.x + dx)),
-        y: Math.max(0, Math.min(_crop.canvas.height, _crop.edgeStartPts.p2.y + dy)),
+      _crop.points[(ei+1)%4]={
+        x:Math.max(0,Math.min(_crop.canvas.width,_crop.edgeStartPts.p2.x+dx)),
+        y:Math.max(0,Math.min(_crop.canvas.height,_crop.edgeStartPts.p2.y+dy))
       };
     }
     drawCrop();
   }
-  function end(){ _crop.dragIdx = -1; _crop.dragStart = null; _crop.edgeStartPts = null; }
-  bind();
-  // 모달이 늦게 표시될 수 있으니 약간 지연
-  setTimeout(bind, 200);
-})();
+  function end(){_crop.dragIdx=-1;_crop.dragStart=null;_crop.edgeStartPts=null;}
+  canvas.onmousedown=start;canvas.onmousemove=move;canvas.onmouseup=end;canvas.onmouseleave=end;
+  canvas.ontouchstart=start;canvas.ontouchmove=move;canvas.ontouchend=end;
+  _cropBound=true;
+}
+bindCropEvents();
 
-$('cropClose').onclick = () => $('cropOverlay').classList.remove('show');
-$('cropReset').onclick = () => {
-  if(!_crop.img) return;
-  const cw = _crop.canvas.width, ch = _crop.canvas.height;
-  const m = Math.min(cw,ch) * 0.05;
-  _crop.points = [
-    {x:m,y:m}, {x:cw-m,y:m},
-    {x:cw-m,y:ch-m}, {x:m,y:ch-m},
-  ];
+$('cropClose').onclick=()=>$('cropOverlay').classList.remove('show');
+$('cropSkip').onclick=()=>{
+  if(_crop.callback)_crop.callback(_crop.originalDataUrl);
+  $('cropOverlay').classList.remove('show');
+};
+$('cropReset').onclick=()=>{
+  if(!_crop.img)return;
+  const cw=_crop.canvas.width,ch=_crop.canvas.height;
+  const m=Math.min(cw,ch)*0.05;
+  _crop.points=[{x:m,y:m},{x:cw-m,y:m},{x:cw-m,y:ch-m},{x:m,y:ch-m}];
   drawCrop();
 };
 
-// AI 자동감지
-$('cropAiDetect').onclick = async () => {
-  if(!apiKey){ toast('AI 키를 먼저 설정하세요 (🔑)'); return; }
-  if(!_crop.img){ toast('이미지가 없어요'); return; }
-  const st = $('cropStatus');
-  st.textContent = '🤖 AI가 문서 경계를 감지 중…';
-  st.style.color = '#ffd788';
-  st.style.display = 'block';
-  $('cropAiDetect').disabled = true;
-  try {
-    const data = mImgs[_crop.imgIdx].data;
-    const b64 = data.split(',')[1];
-    const mt = data.split(';')[0].split(':')[1] || 'image/jpeg';
-    const prompt = `이 이미지에서 영수증/문서/명함/주요 객체의 4개 모서리 좌표를 정확히 찾아주세요.
+$('cropAiDetect').onclick=async()=>{
+  if(!apiKey){toast('AI 키를 먼저 설정하세요 (🔑)');return;}
+  if(!_crop.img){toast('이미지가 없어요');return;}
+  const st=$('cropStatus');
+  st.textContent='🤖 AI가 경계를 감지 중…';st.style.color='#ffd788';st.style.display='block';
+  $('cropAiDetect').disabled=true;
+  try{
+    const data=_crop.originalDataUrl;
+    const b64=data.split(',')[1];
+    const mt=data.split(';')[0].split(':')[1]||'image/jpeg';
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:500,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mt,data:b64}},
+          {type:'text',text:`이 이미지에서 영수증/문서/명함/주요 객체의 4개 모서리 좌표를 찾아주세요.
 이미지 크기: ${_crop.img.width} x ${_crop.img.height} 픽셀
-
-순수 JSON만 출력 (마크다운 없이):
+순수 JSON만:
 {"found":true,"corners":{"tl":[x,y],"tr":[x,y],"br":[x,y],"bl":[x,y]}}
-또는 {"found":false}
-- 좌표는 원본 이미지 픽셀
-- 영수증이 비스듬해도 정확한 4개 모서리`;
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 500,
-        messages: [{
-          role: 'user',
-          content: [
-            {type:'image', source:{type:'base64', media_type:mt, data:b64}},
-            {type:'text', text:prompt}
-          ]
-        }]
+또는 {"found":false}`}
+        ]}]
       })
     });
-    if(!res.ok) throw new Error('API ' + res.status);
-    const j = await res.json();
-    let raw = j.content[0].text.trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-    const result = JSON.parse(raw);
-    if(!result.found || !result.corners){
-      st.textContent = '⚠️ 경계를 찾지 못했어요. 수동 조정하세요.';
-      setTimeout(()=>st.style.display='none', 3000);
-      return;
+    if(!res.ok)throw new Error('API '+res.status);
+    const j=await res.json();
+    let raw=j.content[0].text.trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const result=JSON.parse(raw);
+    if(!result.found){
+      st.textContent='⚠️ 경계를 못 찾았어요. 수동 조정하세요.';
+      setTimeout(()=>st.style.display='none',3000);return;
     }
-    const s = _crop.scale, c = result.corners;
-    _crop.points = [
-      {x:c.tl[0]*s, y:c.tl[1]*s},
-      {x:c.tr[0]*s, y:c.tr[1]*s},
-      {x:c.br[0]*s, y:c.br[1]*s},
-      {x:c.bl[0]*s, y:c.bl[1]*s},
+    const s=_crop.scale,c=result.corners;
+    _crop.points=[
+      {x:c.tl[0]*s,y:c.tl[1]*s},{x:c.tr[0]*s,y:c.tr[1]*s},
+      {x:c.br[0]*s,y:c.br[1]*s},{x:c.bl[0]*s,y:c.bl[1]*s}
     ];
     drawCrop();
-    st.textContent = '✅ 자동감지 완료! 핸들 조정 후 적용하세요.';
-    st.style.color = '#7fffb2';
-    setTimeout(()=>{ st.style.display='none'; st.style.color='#ffd788'; }, 3000);
-  } catch(e){
-    st.textContent = '오류: ' + e.message;
-    setTimeout(()=>st.style.display='none', 3000);
-  } finally {
-    $('cropAiDetect').disabled = false;
-  }
+    st.textContent='✅ 감지 완료!';st.style.color='#7fffb2';
+    setTimeout(()=>{st.style.display='none';st.style.color='#ffd788';},2000);
+  }catch(e){
+    st.textContent='오류: '+e.message;
+    setTimeout(()=>st.style.display='none',3000);
+  }finally{$('cropAiDetect').disabled=false;}
 };
 
 function enhanceForOCR(canvas){
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  const imgData = ctx.getImageData(0,0,w,h);
-  const d = imgData.data;
-  const contrast = 1.25, brightness = 8;
-  const factor = (259*(contrast*100+255))/(255*(259-contrast*100));
+  const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+  const imgData=ctx.getImageData(0,0,w,h),d=imgData.data;
+  const contrast=1.2,brightness=5;
+  const factor=(259*(contrast*100+255))/(255*(259-contrast*100));
   for(let i=0;i<d.length;i+=4){
-    d[i]   = Math.max(0,Math.min(255, factor*(d[i]-128)+128+brightness));
-    d[i+1] = Math.max(0,Math.min(255, factor*(d[i+1]-128)+128+brightness));
-    d[i+2] = Math.max(0,Math.min(255, factor*(d[i+2]-128)+128+brightness));
+    d[i]=Math.max(0,Math.min(255,factor*(d[i]-128)+128+brightness));
+    d[i+1]=Math.max(0,Math.min(255,factor*(d[i+1]-128)+128+brightness));
+    d[i+2]=Math.max(0,Math.min(255,factor*(d[i+2]-128)+128+brightness));
   }
   ctx.putImageData(imgData,0,0);
 }
 
-$('cropApply').onclick = () => {
-  if(!_crop.img || _crop.imgIdx < 0) return;
-  const st = $('cropStatus');
-  st.textContent = '✂️ 잘라내고 보정 중…';
-  st.style.color = '#ffd788';
-  st.style.display = 'block';
-  $('cropApply').disabled = true;
-  try {
-    const s = _crop.scale;
-    const pts = _crop.points.map(p=>({x:p.x/s, y:p.y/s}));
-    const widthTop = Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y);
-    const widthBot = Math.hypot(pts[2].x-pts[3].x, pts[2].y-pts[3].y);
-    const heightL = Math.hypot(pts[3].x-pts[0].x, pts[3].y-pts[0].y);
-    const heightR = Math.hypot(pts[2].x-pts[1].x, pts[2].y-pts[1].y);
-    const outW = Math.round(Math.max(widthTop, widthBot));
-    const outH = Math.round(Math.max(heightL, heightR));
-    const out = document.createElement('canvas');
-    out.width = outW; out.height = outH;
-    const octx = out.getContext('2d');
-    const tmp = document.createElement('canvas');
-    tmp.width = _crop.img.width;
-    tmp.height = _crop.img.height;
-    tmp.getContext('2d').drawImage(_crop.img, 0, 0);
-    const srcData = tmp.getContext('2d').getImageData(0, 0, tmp.width, tmp.height);
-    const dstData = octx.createImageData(outW, outH);
-    for(let y=0; y<outH; y++){
-      const v = y/outH;
-      const lx = pts[0].x + (pts[3].x-pts[0].x)*v;
-      const ly = pts[0].y + (pts[3].y-pts[0].y)*v;
-      const rx = pts[1].x + (pts[2].x-pts[1].x)*v;
-      const ry = pts[1].y + (pts[2].y-pts[1].y)*v;
-      for(let x=0; x<outW; x++){
-        const u = x/outW;
-        const sx = Math.round(lx + (rx-lx)*u);
-        const sy = Math.round(ly + (ry-ly)*u);
-        if(sx>=0 && sx<srcData.width && sy>=0 && sy<srcData.height){
-          const srcIdx = (sy*srcData.width + sx)*4;
-          const dstIdx = (y*outW + x)*4;
-          dstData.data[dstIdx]   = srcData.data[srcIdx];
-          dstData.data[dstIdx+1] = srcData.data[srcIdx+1];
-          dstData.data[dstIdx+2] = srcData.data[srcIdx+2];
-          dstData.data[dstIdx+3] = 255;
+$('cropApply').onclick=()=>{
+  if(!_crop.img)return;
+  const st=$('cropStatus');
+  st.textContent='✂️ 잘라내는 중…';st.style.color='#ffd788';st.style.display='block';
+  $('cropApply').disabled=true;
+  try{
+    const s=_crop.scale;
+    const pts=_crop.points.map(p=>({x:p.x/s,y:p.y/s}));
+    const widthTop=Math.hypot(pts[1].x-pts[0].x,pts[1].y-pts[0].y);
+    const widthBot=Math.hypot(pts[2].x-pts[3].x,pts[2].y-pts[3].y);
+    const heightL=Math.hypot(pts[3].x-pts[0].x,pts[3].y-pts[0].y);
+    const heightR=Math.hypot(pts[2].x-pts[1].x,pts[2].y-pts[1].y);
+    const outW=Math.round(Math.max(widthTop,widthBot));
+    const outH=Math.round(Math.max(heightL,heightR));
+    const out=document.createElement('canvas');
+    out.width=outW;out.height=outH;
+    const octx=out.getContext('2d');
+    const tmp=document.createElement('canvas');
+    tmp.width=_crop.img.width;tmp.height=_crop.img.height;
+    tmp.getContext('2d').drawImage(_crop.img,0,0);
+    const srcData=tmp.getContext('2d').getImageData(0,0,tmp.width,tmp.height);
+    const dstData=octx.createImageData(outW,outH);
+    for(let y=0;y<outH;y++){
+      const v=y/outH;
+      const lx=pts[0].x+(pts[3].x-pts[0].x)*v;
+      const ly=pts[0].y+(pts[3].y-pts[0].y)*v;
+      const rx=pts[1].x+(pts[2].x-pts[1].x)*v;
+      const ry=pts[1].y+(pts[2].y-pts[1].y)*v;
+      for(let x=0;x<outW;x++){
+        const u=x/outW;
+        const sx=Math.round(lx+(rx-lx)*u);
+        const sy=Math.round(ly+(ry-ly)*u);
+        if(sx>=0&&sx<srcData.width&&sy>=0&&sy<srcData.height){
+          const si=(sy*srcData.width+sx)*4;
+          const di=(y*outW+x)*4;
+          dstData.data[di]=srcData.data[si];
+          dstData.data[di+1]=srcData.data[si+1];
+          dstData.data[di+2]=srcData.data[si+2];
+          dstData.data[di+3]=255;
         }
       }
     }
-    octx.putImageData(dstData, 0, 0);
+    octx.putImageData(dstData,0,0);
     enhanceForOCR(out);
-    const newBase64 = out.toDataURL('image/jpeg', 0.92);
-    mImgs[_crop.imgIdx].data = newBase64;
-    renderPreviews();
+    const newBase64=out.toDataURL('image/jpeg',0.9);
+    if(_crop.callback)_crop.callback(newBase64);
     $('cropOverlay').classList.remove('show');
-    st.style.display = 'none';
-    toast('✅ 크롭됐어요');
-  } catch(e){
-    console.error(e);
-    toast('크롭 오류: ' + e.message);
-    st.style.display = 'none';
-  } finally {
-    $('cropApply').disabled = false;
-  }
+    st.style.display='none';toast('✅ 크롭됐어요');
+  }catch(e){
+    toast('크롭 오류: '+e.message);st.style.display='none';
+  }finally{$('cropApply').disabled=false;}
 };
 
-// 추가 모달의 ✂️ 크롭 버튼 - 첫 사진 크롭
-$('btnCrop').onclick = () => {
-  if(!mImgs.length){ toast('먼저 사진을 추가하세요'); return; }
-  openCrop(0);
-};
-
-/* ════════════════════════════════════════════════════════
-   ✨ 텍스트 추출
-   ════════════════════════════════════════════════════════ */
-$('btnExtract').onclick = async () => {
-  if(!apiKey){ toast('AI 키를 먼저 설정하세요 (🔑)'); return; }
-  if(!mImgs.length){ toast('먼저 사진을 추가하세요'); return; }
-  $('extractOverlay').classList.add('show');
-  $('extractResult').value = '';
-  $('extractCount').textContent = '0';
-  const st = $('extractStatus');
-  st.style.display = 'block';
-  st.style.background = '#fff9e6';
-  st.style.borderColor = '#f0c040';
-  st.style.color = '#7a5c00';
-  st.textContent = `🤖 AI가 ${mImgs.length}장 사진에서 텍스트 추출 중…`;
-  try {
-    let allText = '';
-    for(let i=0; i<mImgs.length; i++){
-      st.textContent = `🤖 추출 중… (${i+1}/${mImgs.length})`;
-      const data = mImgs[i].data;
-      const b64 = data.split(',')[1];
-      const mt = data.split(';')[0].split(':')[1] || 'image/jpeg';
-      const prompt = `당신은 사진에서 모든 텍스트를 정확히 추출하는 OCR 전문가입니다.
-
-【추출 원칙】
-- 사진의 모든 텍스트를 한 글자도 빠짐없이 옮기세요
-- 한글/영문/일본/중국어/숫자 모두 정확히 인식
-- 손글씨/인쇄물/화이트보드/책/영수증 모두 지원
-- 흐릿한 글자도 문맥/패턴으로 합리적 추론
-- 표/리스트/제목/단락 구조를 최대한 보존
-- 마크다운으로 표현 (# 제목, - 항목, | 표 |)
-
-【주의】
-- 내용을 임의 추가/생략 절대 금지
-- 설명/해석 절대 금지
-- 마크다운 코드블록(\`\`\`) 사용 금지
-- 오직 사진 속 텍스트만 출력
-
-순수 텍스트만 출력.`;
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type':'application/json',
-          'x-api-key':apiKey,
-          'anthropic-version':'2023-06-01',
-          'anthropic-dangerous-direct-browser-access':'true'
-        },
-        body: JSON.stringify({
-          model:'claude-sonnet-4-6',
-          max_tokens:4000,
-          messages:[{
-            role:'user',
-            content:[
-              {type:'image', source:{type:'base64', media_type:mt, data:b64}},
-              {type:'text', text:prompt}
-            ]
-          }]
-        })
-      });
-      if(!res.ok) throw new Error('API ' + res.status);
-      const j = await res.json();
-      let text = (j.content[0].text || '').trim();
-      text = text.replace(/^```[\w]*\n?/gm,'').replace(/```$/gm,'').trim();
-      if(mImgs.length > 1){
-        allText += (allText?'\n\n':'') + `━━━ 📷 사진 ${i+1} ━━━\n\n` + text;
-      } else {
-        allText = text;
-      }
-    }
-    $('extractResult').value = allText;
-    $('extractCount').textContent = allText.length;
-    st.style.background = '#e6f9f0';
-    st.style.borderColor = '#86efac';
-    st.style.color = '#16a34a';
-    st.textContent = `✅ 추출 완료! ${allText.length}자`;
-    setTimeout(()=>st.style.display='none', 2500);
-  } catch(e){
-    console.error(e);
-    st.style.background = '#fde8e8';
-    st.style.borderColor = '#fca5a5';
-    st.style.color = '#b52929';
-    st.textContent = '❌ 추출 실패: ' + e.message;
-  }
-};
-
-$('extractResult').addEventListener('input', e => {
-  $('extractCount').textContent = e.target.value.length;
-});
-$('extractClose').onclick = () => $('extractOverlay').classList.remove('show');
-$('extractCancel').onclick = () => $('extractOverlay').classList.remove('show');
-$('extractCopyBtn').onclick = () => {
-  const t = $('extractResult').value || '';
-  if(!t){ toast('복사할 텍스트가 없어요'); return; }
-  navigator.clipboard && navigator.clipboard.writeText(t);
-  $('extractCopyBtn').textContent = '✅ 복사됨';
-  setTimeout(()=>$('extractCopyBtn').textContent = '📋 복사', 1500);
-};
-$('extractInsert').onclick = () => {
-  const t = ($('extractResult').value || '').trim();
-  if(!t){ toast('삽입할 텍스트가 없어요'); return; }
-  const memo = $('fMemo');
-  const prev = (memo.value || '').trim();
-  memo.value = prev ? (prev + '\n\n' + t) : t;
-  $('extractOverlay').classList.remove('show');
-  toast('✅ 메모에 삽입됐어요');
-};
-
-/* ════════════════════════════════════════════════════════
-   🔑 AI 키 모달
-   ════════════════════════════════════════════════════════ */
-function refreshKeyState(){
-  const el = $('apiKeyState');
-  if(apiKey){
-    el.textContent = '✅ AI 키 설정됨 (' + apiKey.slice(0,12) + '…)';
-    el.style.color = 'var(--green)';
-  } else {
-    el.textContent = '⚠️ 키 없음 - AI 기능 사용 불가';
-    el.style.color = 'var(--red)';
-  }
+// CHUNK_7 - 스캔 리스트 렌더링
+function itemsToString(items){
+  if(!items||!items.length)return '';
+  return items.map(it=>`${it.name||''}${it.qty>1?' x'+it.qty:''}`).filter(Boolean).join(', ');
 }
-$('btnApiKey').onclick = () => {
-  $('apiKeyInp').value = apiKey;
-  refreshKeyState();
-  $('apiKeyOverlay').classList.add('show');
-};
-$('apiKeyClose').onclick = () => $('apiKeyOverlay').classList.remove('show');
-$('apiKeyCancel').onclick = () => $('apiKeyOverlay').classList.remove('show');
-$('apiKeySave').onclick = () => {
-  const v = $('apiKeyInp').value.trim();
-  if(!v){ toast('키를 입력하세요'); return; }
-  apiKey = v;
-  localStorage.setItem(LS_API_KEY, v);
-  refreshKeyState();
-  toast('💾 키 저장됨');
-  $('apiKeyOverlay').classList.remove('show');
-};
-$('apiKeyClear').onclick = () => {
-  if(!confirm('AI 키를 삭제할까요?')) return;
-  apiKey = '';
-  localStorage.removeItem(LS_API_KEY);
-  $('apiKeyInp').value = '';
-  refreshKeyState();
-  toast('🗑 키 삭제됨');
-};
 
-/* ════════════════════════════════════════════════════════
-   📂 카테고리 관리
-   ════════════════════════════════════════════════════════ */
-function renderCatList(){
-  $('catList').innerHTML = cats.map((c,i)=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--blue-soft);border-radius:9px;margin-bottom:6px">
-      <span style="font-size:13px;font-weight:600;color:var(--ink)">${esc(c)}</span>
-      <button class="btn btn-red" data-cdel="${i}" style="height:28px;padding:0 10px;font-size:11px">삭제</button>
-    </div>`).join('');
-  $('catList').querySelectorAll('[data-cdel]').forEach(b => {
-    b.onclick = () => {
-      const idx = parseInt(b.dataset.cdel);
-      if(cats.length <= 1){ toast('최소 1개는 남겨두세요'); return; }
-      if(!confirm(`'${cats[idx]}' 카테고리를 삭제할까요?`)) return;
-      cats.splice(idx,1);
-      saveCats();
-      renderCatList();
-      refreshCatSelects();
-    };
-  });
-}
-$('btnCatMgr').onclick = () => {
-  renderCatList();
-  $('catMgrOverlay').classList.add('show');
-};
-$('catMgrClose').onclick = () => $('catMgrOverlay').classList.remove('show');
-$('catMgrCloseBtn').onclick = () => $('catMgrOverlay').classList.remove('show');
-$('catAddBtn').onclick = () => {
-  const v = $('catNewInp').value.trim();
-  if(!v){ toast('이름을 입력하세요'); return; }
-  if(cats.includes(v)){ toast('이미 있는 카테고리'); return; }
-  cats.push(v);
-  saveCats();
-  $('catNewInp').value = '';
-  renderCatList();
-  refreshCatSelects();
-  toast('✅ 추가됐어요');
-};
-
-/* ════════════════════════════════════════════════════════
-   ⬇️ JSON 내보내기/불러오기
-   ════════════════════════════════════════════════════════ */
-$('btnExport').onclick = async () => {
-  if(!photos.length){ toast('내보낼 사진이 없어요'); return; }
-  toast('💾 백업 만드는 중…');
-  try {
-    // 이미지 데이터 포함해서 내보내기
-    const imgsMap = {};
-    for(const p of photos){
-      for(const id of (p.imgIds||[])){
-        try {
-          const d = await idbGet(id);
-          if(d) imgsMap[id] = d;
-        } catch(e){}
-      }
-    }
-    const blob = new Blob([JSON.stringify({
-      app: 'scan-app', version: 1,
-      exportedAt: new Date().toISOString(),
-      photos, cats, imgsMap
-    }, null, 2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `scan-app-backup-${today()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('✅ 백업 파일 다운로드됨');
-  } catch(e){
-    toast('내보내기 실패: ' + e.message);
-  }
-};
-
-$('btnImport').onclick = () => $('importInp').click();
-$('importInp').addEventListener('change', async e => {
-  const f = e.target.files[0];
-  if(!f) return;
-  if(!confirm('현재 데이터에 추가로 불러올까요? (덮어쓰지는 않습니다)')) return;
-  try {
-    const txt = await f.text();
-    const d = JSON.parse(txt);
-    if(d.app !== 'scan-app') throw new Error('이 파일은 사진 스캐너 백업이 아닙니다');
-    // 카테고리 병합
-    for(const c of (d.cats||[])){
-      if(!cats.includes(c)) cats.push(c);
-    }
-    // 이미지 복원
-    if(d.imgsMap){
-      for(const id in d.imgsMap){
-        try { await idbPut(id, d.imgsMap[id]); } catch(e){}
-      }
-    }
-    // 사진 병합 (id 중복 시 새 id)
-    for(const p of (d.photos||[])){
-      if(photos.find(x => x.id === p.id)) p.id = uid();
-      photos.unshift(p);
-    }
-    savePhotos();
-    saveCats();
-    refreshCatSelects();
-    renderGallery();
-    toast(`✅ ${d.photos.length}개 사진 불러옴`);
-  } catch(e){
-    toast('불러오기 실패: ' + e.message);
-  }
-  e.target.value = '';
-});
-
-/* ════════════════════════════════════════════════════════
-   🔒 보안 PIN
-   ════════════════════════════════════════════════════════ */
-let pinBuf = '';
-function buildPinPad(){
-  const pad = $('pinPad');
-  const layout = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
-  pad.innerHTML = layout.map(k => k ? `<button class="pin-key" data-k="${k}">${k}</button>` : '<div></div>').join('');
-  pad.querySelectorAll('[data-k]').forEach(b => {
-    b.onclick = () => {
-      const k = b.dataset.k;
-      if(k === '⌫'){
-        pinBuf = pinBuf.slice(0,-1);
-      } else if(pinBuf.length < 6){
-        pinBuf += k;
-      }
-      renderPinDots();
-      if(pinBuf.length === 6){
-        setTimeout(checkPin, 100);
-      }
-    };
-  });
-}
-function renderPinDots(){
-  $('pinDots').innerHTML = Array(6).fill(0).map((_,i)=>
-    `<div class="pin-dot${i<pinBuf.length?' filled':''}"></div>`).join('');
-}
-function checkPin(){
-  const stored = localStorage.getItem(LS_PIN);
-  if(!stored){
-    // 첫 설정
-    if(pinBuf.length === 6){
-      if(confirm(`보안 PIN을 '${pinBuf}'로 설정할까요?`)){
-        localStorage.setItem(LS_PIN, pinBuf);
-        secureUnlocked = true;
-        $('secureLock').classList.remove('show');
-        pinBuf = '';
-        renderPinDots();
-        selectSection('secure');
-      } else {
-        pinBuf = '';
-        renderPinDots();
-      }
-    }
-    return;
-  }
-  if(pinBuf === stored){
-    secureUnlocked = true;
-    $('secureLock').classList.remove('show');
-    pinBuf = '';
-    renderPinDots();
-    selectSection('secure');
-  } else {
-    toast('PIN이 일치하지 않습니다');
-    pinBuf = '';
-    renderPinDots();
-  }
-}
-function openSecureLock(){
-  pinBuf = '';
-  const has = localStorage.getItem(LS_PIN);
-  $('secureLockMsg').textContent = has ? '보안 사진 잠금 해제' : '🔒 새 PIN 6자리 설정';
-  renderPinDots();
-  $('secureLock').classList.add('show');
-}
-$('secureCancel').onclick = () => {
-  $('secureLock').classList.remove('show');
-  pinBuf = '';
-  renderPinDots();
-  selectSection('normal');
-};
-
-/* ════════════════════════════════════════════════════════
-   초기화
-   ════════════════════════════════════════════════════════ */
-(async function init(){
-  loadData();
-  try { await openIDB(); } catch(e){ console.error('IDB 열기 실패:', e); }
-  refreshCatSelects();
-  refreshKeyState();
-  buildPinPad();
-  // 버전 표시
-  const d = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  $('appVer').textContent = `v${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
-  await renderGallery();
-})();
-
-// 모달 외부 클릭으로 닫지 않게 (실수 방지)
-document.querySelectorAll('.overlay').forEach(ov => {
-  ov.addEventListener('click', e => {
-    if(e.target === ov){
-      // 외부 클릭 무시
-      e.stopPropagation();
-    }
-  });
-});
-
-/* ════════════════════════════════════════════════════════
-   🧾 영수증 / 💼 명함 - 전용 모듈
-   ════════════════════════════════════════════════════════ */
-
-const numFmt = n => Number(n||0).toLocaleString('ko-KR');
-const naverMap = addr => `https://map.naver.com/v5/search/${encodeURIComponent(addr)}`;
-const telLink = num => `tel:${String(num||'').replace(/[^0-9+]/g,'')}`;
-const mailLink = m => `mailto:${m}`;
-
-// ============= 렌더링 =============
 function renderScanList(){
-  const search = ($('scanSearch').value || '').trim().toLowerCase();
-  if(curScanType === 'receipt'){
-    renderReceiptList(search);
-    $('receiptList').style.display = '';
-    $('cardList').style.display = 'none';
-  } else {
-    renderCardList(search);
-    $('receiptList').style.display = 'none';
-    $('cardList').style.display = '';
+  const q=($('scanSearch').value||'').trim().toLowerCase();
+  if(curScanType==='receipt'){
+    renderReceiptList(q);
+    $('receiptList').style.display='';$('cardList').style.display='none';$('textList').style.display='none';
+  }else if(curScanType==='card'){
+    renderCardList(q);
+    $('receiptList').style.display='none';$('cardList').style.display='';$('textList').style.display='none';
+  }else{
+    renderTextList(q);
+    $('receiptList').style.display='none';$('cardList').style.display='none';$('textList').style.display='';
   }
 }
 
 function renderReceiptList(q){
-  const list = receipts.filter(r => {
-    if(!q) return true;
-    return [r.place, r.phone, r.addr, r.payMethod, r.memo, r.amount && String(r.amount)]
-      .some(v => (v||'').toLowerCase().includes(q));
-  });
-  if(!list.length){
-    $('receiptList').innerHTML = '';
-    $('scanEmpty').style.display = '';
-    return;
-  }
-  $('scanEmpty').style.display = 'none';
-
-  // 데스크탑 테이블
-  const tableHtml = `<div class="scan-table"><table>
-    <thead><tr>
-      <th>날짜</th><th>시각</th><th>상호</th><th>전화</th><th class="num">금액</th>
-      <th>결제</th><th>주소</th><th>품목</th><th style="text-align:right">작업</th>
-    </tr></thead>
-    <tbody>${list.map((r,i)=>`<tr data-id="${esc(r.id)}">
-      <td>${esc(r.date||'')}</td>
-      <td>${esc(r.payTime||'')}</td>
+  const list=receipts.filter(r=>!q||[r.place,r.phone,r.addr,r.payMethod,r.memo,r.amount&&String(r.amount)]
+    .some(v=>(v||'').toLowerCase().includes(q)));
+  if(!list.length){$('receiptList').innerHTML='';$('scanEmpty').style.display='';return;}
+  $('scanEmpty').style.display='none';
+  const tableHtml=`<div class="scan-table"><table>
+    <thead><tr><th>날짜</th><th>시각</th><th>상호</th><th>전화</th><th class="num">금액</th>
+    <th>결제</th><th>주소</th><th>품목</th><th style="text-align:right">작업</th></tr></thead>
+    <tbody>${list.map(r=>`<tr data-id="${esc(r.id)}">
+      <td>${esc(r.date||'')}</td><td>${esc(r.payTime||'')}</td>
       <td class="truncate" style="font-weight:700">${esc(r.place||'')}</td>
       <td>${r.phone?`<a class="link-tel" href="${telLink(r.phone)}">${esc(r.phone)}</a>`:''}</td>
       <td class="num">${r.amount?numFmt(r.amount)+'원':''}</td>
@@ -2120,55 +1571,38 @@ function renderReceiptList(q){
       <td class="truncate">${r.addr?`<a class="link-addr" href="${naverMap(r.addr)}" target="_blank">${esc(r.addr)}</a>`:''}</td>
       <td class="truncate" style="font-size:11px;color:var(--ink-faint)">${esc(itemsToString(r.items))}</td>
       <td><div class="row-actions">
-        <button class="row-act-btn green" data-act="copy" title="엑셀 복사">📋</button>
-        <button class="row-act-btn" data-act="edit" title="수정">✏️</button>
-        <button class="row-act-btn red" data-act="del" title="삭제">🗑</button>
-      </div></td>
-    </tr>`).join('')}</tbody></table></div>`;
-
-  // 모바일 카드
-  const cardHtml = `<div class="scan-card-list">${list.map(r=>`
-    <div class="scan-card" data-id="${esc(r.id)}">
-      <div class="top">
-        <div class="ttl">🧾 ${esc(r.place||'(상호없음)')}</div>
-        <div class="date">${esc(r.date||'')}${r.payTime?' '+esc(r.payTime):''}</div>
-      </div>
-      ${r.amount?`<div class="amount">${numFmt(r.amount)}원</div>`:''}
-      ${r.phone?`<div class="row"><div class="label">전화</div><div class="val"><a class="link-tel" href="${telLink(r.phone)}">${esc(r.phone)} 📞</a></div></div>`:''}
-      ${r.payMethod?`<div class="row"><div class="label">결제</div><div class="val">${esc(r.payMethod)}</div></div>`:''}
-      ${r.addr?`<div class="row"><div class="label">주소</div><div class="val"><a class="link-addr" href="${naverMap(r.addr)}" target="_blank">${esc(r.addr)} 🗺</a></div></div>`:''}
-      ${r.items&&r.items.length?`<div class="row"><div class="label">품목</div><div class="val" style="font-size:12px;color:var(--ink-soft)">${esc(itemsToString(r.items))}</div></div>`:''}
-      ${r.memo?`<div class="row"><div class="label">메모</div><div class="val" style="font-size:12px;color:var(--ink-soft)">${esc(r.memo)}</div></div>`:''}
-      <div class="actions">
-        <button class="row-act-btn green" data-act="copy">📋 엑셀 복사</button>
-        <button class="row-act-btn" data-act="edit">✏️ 수정</button>
-        <button class="row-act-btn red" data-act="del">🗑 삭제</button>
-      </div>
-    </div>`).join('')}</div>`;
-
-  $('receiptList').innerHTML = tableHtml + cardHtml;
-  bindRowActions($('receiptList'), 'receipt');
+        <button class="row-act-btn green" data-act="copy">📋</button>
+        <button class="row-act-btn" data-act="edit">✏️</button>
+        <button class="row-act-btn red" data-act="del">🗑</button>
+      </div></td></tr>`).join('')}</tbody></table></div>`;
+  const cardHtml=`<div class="scan-card-list">${list.map(r=>`<div class="scan-card" data-id="${esc(r.id)}">
+    <div class="top">
+      <div class="ttl">🧾 ${esc(r.place||'(상호없음)')}</div>
+      <div class="date">${esc(r.date||'')}${r.payTime?' '+esc(r.payTime):''}</div>
+    </div>
+    ${r.amount?`<div class="amount">${numFmt(r.amount)}원</div>`:''}
+    ${r.phone?`<div class="row"><div class="label">전화</div><div class="val"><a class="link-tel" href="${telLink(r.phone)}">${esc(r.phone)} 📞</a></div></div>`:''}
+    ${r.payMethod?`<div class="row"><div class="label">결제</div><div class="val">${esc(r.payMethod)}</div></div>`:''}
+    ${r.addr?`<div class="row"><div class="label">주소</div><div class="val"><a class="link-addr" href="${naverMap(r.addr)}" target="_blank">${esc(r.addr)} 🗺</a></div></div>`:''}
+    ${r.items&&r.items.length?`<div class="row"><div class="label">품목</div><div class="val" style="font-size:12px;color:var(--ink-soft)">${esc(itemsToString(r.items))}</div></div>`:''}
+    ${r.memo?`<div class="row"><div class="label">메모</div><div class="val" style="font-size:12px;color:var(--ink-soft)">${esc(r.memo)}</div></div>`:''}
+    <div class="actions">
+      <button class="row-act-btn green" data-act="copy">📋 엑셀 복사</button>
+      <button class="row-act-btn" data-act="edit">✏️ 수정</button>
+      <button class="row-act-btn red" data-act="del">🗑 삭제</button>
+    </div></div>`).join('')}</div>`;
+  $('receiptList').innerHTML=tableHtml+cardHtml;
+  bindRowActions($('receiptList'),'receipt');
 }
 
 function renderCardList(q){
-  const list = cards.filter(c => {
-    if(!q) return true;
-    return [c.company, c.name, c.position, c.phone, c.mobile, c.email, c.addr, c.memo]
-      .some(v => (v||'').toLowerCase().includes(q));
-  });
-  if(!list.length){
-    $('cardList').innerHTML = '';
-    $('scanEmpty').style.display = '';
-    return;
-  }
-  $('scanEmpty').style.display = 'none';
-
-  // 데스크탑 테이블
-  const tableHtml = `<div class="scan-table"><table>
-    <thead><tr>
-      <th>회사</th><th>이름</th><th>직책</th><th>휴대폰</th><th>회사전화</th>
-      <th>이메일</th><th>주소</th><th style="text-align:right">작업</th>
-    </tr></thead>
+  const list=cards.filter(c=>!q||[c.company,c.name,c.position,c.phone,c.mobile,c.email,c.addr,c.memo]
+    .some(v=>(v||'').toLowerCase().includes(q)));
+  if(!list.length){$('cardList').innerHTML='';$('scanEmpty').style.display='';return;}
+  $('scanEmpty').style.display='none';
+  const tableHtml=`<div class="scan-table"><table>
+    <thead><tr><th>회사</th><th>이름</th><th>직책</th><th>휴대폰</th><th>회사전화</th>
+    <th>이메일</th><th>주소</th><th style="text-align:right">작업</th></tr></thead>
     <tbody>${list.map(c=>`<tr data-id="${esc(c.id)}">
       <td class="truncate" style="font-weight:700">${esc(c.company||'')}</td>
       <td>${esc(c.name||'')}</td>
@@ -2178,73 +1612,98 @@ function renderCardList(q){
       <td class="truncate">${c.email?`<a class="link-addr" href="${mailLink(c.email)}">${esc(c.email)}</a>`:''}</td>
       <td class="truncate">${c.addr?`<a class="link-addr" href="${naverMap(c.addr)}" target="_blank">${esc(c.addr)}</a>`:''}</td>
       <td><div class="row-actions">
-        <button class="row-act-btn green" data-act="copy" title="엑셀 복사">📋</button>
-        <button class="row-act-btn" data-act="edit" title="수정">✏️</button>
-        <button class="row-act-btn red" data-act="del" title="삭제">🗑</button>
-      </div></td>
-    </tr>`).join('')}</tbody></table></div>`;
-
-  // 모바일 카드
-  const cardHtml = `<div class="scan-card-list">${list.map(c=>`
-    <div class="scan-card" data-id="${esc(c.id)}">
-      <div class="top">
-        <div>
-          <div class="ttl">💼 ${esc(c.name||'(이름없음)')}</div>
-          <div style="font-size:12px;color:var(--ink-soft);font-weight:600;margin-top:2px">${esc(c.position||'')}${c.dept?' / '+esc(c.dept):''}</div>
-        </div>
-        <div class="date">${esc(c.company||'')}</div>
+        <button class="row-act-btn green" data-act="copy">📋</button>
+        <button class="row-act-btn" data-act="edit">✏️</button>
+        <button class="row-act-btn red" data-act="del">🗑</button>
+      </div></td></tr>`).join('')}</tbody></table></div>`;
+  const cardHtml=`<div class="scan-card-list">${list.map(c=>`<div class="scan-card" data-id="${esc(c.id)}">
+    <div class="top">
+      <div>
+        <div class="ttl">💼 ${esc(c.name||'(이름없음)')}</div>
+        <div style="font-size:12px;color:var(--ink-soft);font-weight:600;margin-top:2px">${esc(c.position||'')}${c.dept?' / '+esc(c.dept):''}</div>
       </div>
-      ${c.mobile?`<div class="row"><div class="label">📱</div><div class="val"><a class="link-tel" href="${telLink(c.mobile)}">${esc(c.mobile)} 📞</a></div></div>`:''}
-      ${c.phone?`<div class="row"><div class="label">📞</div><div class="val"><a class="link-tel" href="${telLink(c.phone)}">${esc(c.phone)} 📞</a></div></div>`:''}
-      ${c.email?`<div class="row"><div class="label">📧</div><div class="val"><a class="link-addr" href="${mailLink(c.email)}">${esc(c.email)}</a></div></div>`:''}
-      ${c.website?`<div class="row"><div class="label">🌐</div><div class="val"><a class="link-addr" href="${esc(c.website)}" target="_blank">${esc(c.website)}</a></div></div>`:''}
-      ${c.addr?`<div class="row"><div class="label">📍</div><div class="val"><a class="link-addr" href="${naverMap(c.addr)}" target="_blank">${esc(c.addr)} 🗺</a></div></div>`:''}
-      ${c.memo?`<div class="row"><div class="label">📝</div><div class="val" style="font-size:12px;color:var(--ink-soft)">${esc(c.memo)}</div></div>`:''}
-      <div class="actions">
-        <button class="row-act-btn green" data-act="copy">📋 엑셀 복사</button>
-        <button class="row-act-btn" data-act="edit">✏️ 수정</button>
-        <button class="row-act-btn red" data-act="del">🗑 삭제</button>
-      </div>
-    </div>`).join('')}</div>`;
-
-  $('cardList').innerHTML = tableHtml + cardHtml;
-  bindRowActions($('cardList'), 'card');
+      <div class="date">${esc(c.company||'')}</div>
+    </div>
+    ${c.mobile?`<div class="row"><div class="label">📱</div><div class="val"><a class="link-tel" href="${telLink(c.mobile)}">${esc(c.mobile)} 📞</a></div></div>`:''}
+    ${c.phone?`<div class="row"><div class="label">📞</div><div class="val"><a class="link-tel" href="${telLink(c.phone)}">${esc(c.phone)} 📞</a></div></div>`:''}
+    ${c.email?`<div class="row"><div class="label">📧</div><div class="val"><a class="link-addr" href="${mailLink(c.email)}">${esc(c.email)}</a></div></div>`:''}
+    ${c.addr?`<div class="row"><div class="label">📍</div><div class="val"><a class="link-addr" href="${naverMap(c.addr)}" target="_blank">${esc(c.addr)} 🗺</a></div></div>`:''}
+    ${c.memo?`<div class="row"><div class="label">📝</div><div class="val" style="font-size:12px;color:var(--ink-soft)">${esc(c.memo)}</div></div>`:''}
+    <div class="actions">
+      <button class="row-act-btn green" data-act="copy">📋 엑셀 복사</button>
+      <button class="row-act-btn" data-act="edit">✏️ 수정</button>
+      <button class="row-act-btn red" data-act="del">🗑 삭제</button>
+    </div></div>`).join('')}</div>`;
+  $('cardList').innerHTML=tableHtml+cardHtml;
+  bindRowActions($('cardList'),'card');
 }
 
-function itemsToString(items){
-  if(!items || !items.length) return '';
-  return items.map(it => `${it.name||''}${it.qty>1?' x'+it.qty:''}`).filter(Boolean).join(', ');
+function renderTextList(q){
+  const list=texts.filter(t=>!q||[t.title,t.text,t.memo,t.tags,t.type]
+    .some(v=>(v||'').toLowerCase().includes(q)));
+  if(!list.length){$('textList').innerHTML='';$('scanEmpty').style.display='';return;}
+  $('scanEmpty').style.display='none';
+  const preview=s=>(s||'').slice(0,80)+((s||'').length>80?'…':'');
+  const tableHtml=`<div class="scan-table"><table>
+    <thead><tr><th>날짜</th><th>제목</th><th>종류</th><th>태그</th><th>텍스트 미리보기</th><th style="text-align:right">작업</th></tr></thead>
+    <tbody>${list.map(t=>`<tr data-id="${esc(t.id)}">
+      <td>${esc(t.date||'')}</td>
+      <td class="truncate" style="font-weight:700">${esc(t.title||'')}</td>
+      <td><span style="font-size:11px;padding:2px 8px;background:var(--blue-lt);color:var(--blue);border-radius:6px;font-weight:700">${esc(t.type||'기타')}</span></td>
+      <td class="truncate" style="font-size:11px;color:var(--ink-soft)">${esc(t.tags||'')}</td>
+      <td class="truncate" style="font-size:11px;color:var(--ink-soft);max-width:300px">${esc(preview(t.text))}</td>
+      <td><div class="row-actions">
+        <button class="row-act-btn green" data-act="copy">📋</button>
+        <button class="row-act-btn" data-act="edit">✏️</button>
+        <button class="row-act-btn red" data-act="del">🗑</button>
+      </div></td></tr>`).join('')}</tbody></table></div>`;
+  const cardHtml=`<div class="scan-card-list">${list.map(t=>`<div class="scan-card" data-id="${esc(t.id)}">
+    <div class="top">
+      <div class="ttl">${esc(t.type||'📎')} ${esc(t.title||'(제목없음)')}</div>
+      <div class="date">${esc(t.date||'')}</div>
+    </div>
+    ${t.tags?`<div class="row"><div class="label">태그</div><div class="val" style="font-size:12px;color:var(--blue);font-weight:700">${esc(t.tags)}</div></div>`:''}
+    ${t.text?`<div class="row"><div class="label">내용</div><div class="val" style="font-size:12px;color:var(--ink);white-space:pre-wrap">${esc(t.text.slice(0,150))}${t.text.length>150?'…':''}</div></div>`:''}
+    ${t.memo?`<div class="row"><div class="label">메모</div><div class="val" style="font-size:12px;color:var(--ink-soft)">${esc(t.memo)}</div></div>`:''}
+    <div class="actions">
+      <button class="row-act-btn green" data-act="copy">📋 엑셀 복사</button>
+      <button class="row-act-btn" data-act="edit">✏️ 수정</button>
+      <button class="row-act-btn red" data-act="del">🗑 삭제</button>
+    </div></div>`).join('')}</div>`;
+  $('textList').innerHTML=tableHtml+cardHtml;
+  bindRowActions($('textList'),'text');
 }
 
-function bindRowActions(container, type){
-  container.querySelectorAll('[data-act]').forEach(btn => {
-    btn.onclick = (e) => {
+function bindRowActions(container,type){
+  container.querySelectorAll('[data-act]').forEach(btn=>{
+    btn.onclick=e=>{
       e.stopPropagation();
-      const row = btn.closest('[data-id]');
-      const id = row.dataset.id;
-      const act = btn.dataset.act;
-      if(type === 'receipt'){
-        const r = receipts.find(x => x.id === id);
-        if(!r) return;
-        if(act === 'copy') copyReceiptToClipboard(r);
-        else if(act === 'edit') openReceiptModal(r);
-        else if(act === 'del'){
+      const row=btn.closest('[data-id]'),id=row.dataset.id,act=btn.dataset.act;
+      if(type==='receipt'){
+        const r=receipts.find(x=>x.id===id);if(!r)return;
+        if(act==='copy')copyReceiptToClipboard(r);
+        else if(act==='edit')openReceiptModal(r);
+        else if(act==='del'){
           if(confirm(`'${r.place||'영수증'}'을 삭제할까요?`)){
-            receipts = receipts.filter(x => x.id !== id);
-            saveReceipts(); renderScanList();
-            toast('삭제됐어요');
+            receipts=receipts.filter(x=>x.id!==id);saveReceipts();renderScanList();toast('삭제됐어요');
           }
         }
-      } else {
-        const c = cards.find(x => x.id === id);
-        if(!c) return;
-        if(act === 'copy') copyCardToClipboard(c);
-        else if(act === 'edit') openCardModal(c);
-        else if(act === 'del'){
+      }else if(type==='card'){
+        const c=cards.find(x=>x.id===id);if(!c)return;
+        if(act==='copy')copyCardToClipboard(c);
+        else if(act==='edit')openCardModal(c);
+        else if(act==='del'){
           if(confirm(`'${c.name||'명함'}'을 삭제할까요?`)){
-            cards = cards.filter(x => x.id !== id);
-            saveCards(); renderScanList();
-            toast('삭제됐어요');
+            cards=cards.filter(x=>x.id!==id);saveCards();renderScanList();toast('삭제됐어요');
+          }
+        }
+      }else if(type==='text'){
+        const t=texts.find(x=>x.id===id);if(!t)return;
+        if(act==='copy')copyTextToClipboard(t);
+        else if(act==='edit')openTextModal(t);
+        else if(act==='del'){
+          if(confirm(`'${t.title||'텍스트'}'을 삭제할까요?`)){
+            texts=texts.filter(x=>x.id!==id);saveTexts();renderScanList();toast('삭제됐어요');
           }
         }
       }
@@ -2252,624 +1711,658 @@ function bindRowActions(container, type){
   });
 }
 
-// ============= 클립보드 복사 (탭 구분 TSV → 엑셀 한 줄 붙여넣기) =============
 function copyReceiptToClipboard(r){
-  const itemsStr = itemsToString(r.items);
-  const row = [
-    r.date || '', r.payTime || '', r.place || '', r.phone || '',
-    r.amount || '', r.payMethod || '', r.addr || '', itemsStr, r.memo || ''
-  ].join('\t');
-  navigator.clipboard.writeText(row).then(() => {
-    toast('📋 엑셀용 한 줄 복사됨 (붙여넣기 가능)');
-  }).catch(e => toast('복사 실패: ' + e.message));
+  const row=[r.date||'',r.payTime||'',r.place||'',r.phone||'',r.amount||'',
+    r.payMethod||'',r.addr||'',itemsToString(r.items),r.memo||''].join('\t');
+  navigator.clipboard.writeText(row).then(()=>toast('📋 엑셀 복사됨'));
 }
 function copyCardToClipboard(c){
-  const row = [
-    c.company || '', c.name || '', c.position || '', c.dept || '',
-    c.mobile || '', c.phone || '', c.email || '',
-    c.website || '', c.addr || '', c.memo || ''
-  ].join('\t');
-  navigator.clipboard.writeText(row).then(() => {
-    toast('📋 엑셀용 한 줄 복사됨 (붙여넣기 가능)');
-  }).catch(e => toast('복사 실패: ' + e.message));
+  const row=[c.company||'',c.name||'',c.position||'',c.dept||'',c.mobile||'',
+    c.phone||'',c.email||'',c.website||'',c.addr||'',c.memo||''].join('\t');
+  navigator.clipboard.writeText(row).then(()=>toast('📋 엑셀 복사됨'));
+}
+function copyTextToClipboard(t){
+  const row=[t.date||'',t.title||'',t.type||'',t.tags||'',
+    (t.text||'').replace(/\t/g,' ').replace(/\n/g,' '),t.memo||''].join('\t');
+  navigator.clipboard.writeText(row).then(()=>toast('📋 엑셀 복사됨'));
 }
 
-// ============= CSV 내보내기 =============
 function exportScanCsv(){
-  let rows = [];
-  let filename = '';
-  if(curScanType === 'receipt'){
-    if(!receipts.length){ toast('내보낼 영수증이 없어요'); return; }
-    rows = [['날짜','결제시각','상호명','전화','금액','결제수단','주소','품목','메모']];
-    receipts.forEach(r => rows.push([
-      r.date||'', r.payTime||'', r.place||'', r.phone||'',
-      r.amount||'', r.payMethod||'', r.addr||'',
-      itemsToString(r.items), r.memo||''
-    ]));
-    filename = `영수증_${today()}.csv`;
-  } else {
-    if(!cards.length){ toast('내보낼 명함이 없어요'); return; }
-    rows = [['회사명','이름','직책','부서','휴대폰','회사전화','이메일','웹사이트','주소','메모']];
-    cards.forEach(c => rows.push([
-      c.company||'', c.name||'', c.position||'', c.dept||'',
-      c.mobile||'', c.phone||'', c.email||'',
-      c.website||'', c.addr||'', c.memo||''
-    ]));
-    filename = `명함_${today()}.csv`;
+  let rows=[],filename='';
+  if(curScanType==='receipt'){
+    if(!receipts.length){toast('내보낼 영수증이 없어요');return;}
+    rows=[['날짜','결제시각','상호명','전화','금액','결제수단','주소','품목','메모']];
+    receipts.forEach(r=>rows.push([r.date||'',r.payTime||'',r.place||'',r.phone||'',
+      r.amount||'',r.payMethod||'',r.addr||'',itemsToString(r.items),r.memo||'']));
+    filename=`영수증_${today()}.csv`;
+  }else if(curScanType==='card'){
+    if(!cards.length){toast('내보낼 명함이 없어요');return;}
+    rows=[['회사명','이름','직책','부서','휴대폰','회사전화','이메일','웹사이트','주소','메모']];
+    cards.forEach(c=>rows.push([c.company||'',c.name||'',c.position||'',c.dept||'',
+      c.mobile||'',c.phone||'',c.email||'',c.website||'',c.addr||'',c.memo||'']));
+    filename=`명함_${today()}.csv`;
+  }else{
+    if(!texts.length){toast('내보낼 텍스트가 없어요');return;}
+    rows=[['날짜','제목','종류','태그','텍스트','메모']];
+    texts.forEach(t=>rows.push([t.date||'',t.title||'',t.type||'',t.tags||'',
+      (t.text||'').replace(/\t/g,' ').replace(/\n/g,' '),t.memo||'']));
+    filename=`텍스트메모_${today()}.csv`;
   }
-  // CSV: 셀 안 콤마/줄바꿈/따옴표 → "" 처리
-  const csv = rows.map(r => r.map(cell => {
-    const v = String(cell);
-    if(v.includes(',') || v.includes('"') || v.includes('\n')){
-      return '"' + v.replace(/"/g,'""') + '"';
-    }
+  const csv=rows.map(r=>r.map(c=>{
+    const v=String(c);
+    if(v.includes(',')||v.includes('"')||v.includes('\n'))return '"'+v.replace(/"/g,'""')+'"';
     return v;
   }).join(',')).join('\n');
-  // UTF-8 BOM (한글 엑셀 호환)
-  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;a.click();
   URL.revokeObjectURL(url);
-  toast(`📥 ${filename} 다운로드됨`);
+  toast(`📥 ${filename}`);
 }
 
-/* ════════════════════════════════════════════════════════
-   🧾 영수증 모달
-   ════════════════════════════════════════════════════════ */
-let _rcptImg = null;  // 첨부된 사진 base64
-let _rcptEditing = null;
+// CHUNK_8 - 영수증 모달
+let _rcptImg=null,_rcptEditing=null;
 
 function openReceiptModal(receipt){
-  _rcptEditing = receipt;
-  _rcptImg = null;
-  $('receiptId').value = receipt ? receipt.id : '';
-  $('receiptTitle').textContent = receipt ? '✏️ 영수증 수정' : '🧾 영수증 추가';
-  $('receiptDelete').style.display = receipt ? '' : 'none';
-
-  // 필드 채우기
-  $('r_date').value = receipt ? (receipt.date || today()) : today();
-  $('r_payTime').value = receipt ? (receipt.payTime || '') : '';
-  $('r_place').value = receipt ? (receipt.place || '') : '';
-  $('r_phone').value = receipt ? (receipt.phone || '') : '';
-  $('r_payMethod').value = receipt ? (receipt.payMethod || '') : '';
-  $('r_addr').value = receipt ? (receipt.addr || '') : '';
-  $('r_amount').value = receipt ? (receipt.amount || '') : '';
-  $('r_memo').value = receipt ? (receipt.memo || '') : '';
-
-  // 사진
-  if(receipt && receipt.photo){
-    _rcptImg = receipt.photo;
-    showReceiptPhoto();
-  } else {
-    $('receiptPhotoPreview').innerHTML = '';
-    $('receiptTools').style.display = 'none';
-  }
-
-  // 품목
-  const items = receipt ? (receipt.items || []) : [];
-  renderReceiptItems(items);
-
+  _rcptEditing=receipt||null;
+  _rcptImg=receipt?(receipt.photo||null):null;
+  $('receiptTitle').textContent=receipt?'✏️ 영수증 수정':'🧾 영수증 추가';
+  $('receiptDelete').style.display=receipt?'':'none';
+  $('r_date').value=receipt?(receipt.date||today()):today();
+  $('r_payTime').value=receipt?(receipt.payTime||''):'';
+  $('r_place').value=receipt?(receipt.place||''):'';
+  $('r_phone').value=receipt?(receipt.phone||''):'';
+  $('r_payMethod').value=receipt?(receipt.payMethod||''):'';
+  $('r_addr').value=receipt?(receipt.addr||''):'';
+  $('r_amount').value=receipt?(receipt.amount||''):'';
+  $('r_memo').value=receipt?(receipt.memo||''):'';
+  showReceiptPhoto();
+  renderReceiptItems(receipt?(receipt.items||[]):[]);
   $('receiptAiProgress').classList.remove('show');
   $('receiptOverlay').classList.add('show');
 }
-function closeReceiptModal(){ $('receiptOverlay').classList.remove('show'); }
-
 function showReceiptPhoto(){
   if(!_rcptImg){
-    $('receiptPhotoPreview').innerHTML = '';
-    $('receiptTools').style.display = 'none';
-    return;
+    $('receiptPhotoPreview').innerHTML='';
+    $('receiptTools').style.display='none';return;
   }
-  $('receiptPhotoPreview').innerHTML = `
-    <div class="preview-item" style="width:140px;height:140px">
-      <img src="${_rcptImg}" alt="" onclick="document.getElementById('bigImg').src=this.src;document.getElementById('imgOverlay').style.display='flex';">
-      <button class="preview-del" onclick="_rcptImg=null;showReceiptPhoto()">✕</button>
-    </div>`;
-  $('receiptTools').style.display = 'flex';
+  $('receiptPhotoPreview').innerHTML=`<div class="preview-item" style="width:140px;height:140px">
+    <img src="${_rcptImg}" alt="" id="rcptThumb">
+    <button class="preview-del" id="rcptDel">✕</button></div>`;
+  $('rcptThumb').onclick=()=>showImg(_rcptImg);
+  $('rcptDel').onclick=()=>{_rcptImg=null;showReceiptPhoto();};
+  $('receiptTools').style.display='flex';
 }
-
 function renderReceiptItems(items){
-  const list = $('r_itemsList');
-  list.innerHTML = items.map((it,i) => receiptItemRowHtml(it,i)).join('');
-  $('r_itemsCount').textContent = items.length ? `(${items.length}개)` : '';
+  $('r_itemsList').innerHTML=items.map((it,i)=>receiptItemRowHtml(it,i)).join('');
+  $('r_itemsCount').textContent=items.length?`(${items.length}개)`:'';
   bindReceiptItemEvents();
 }
 function receiptItemRowHtml(it,i){
   return `<div class="item-row" data-row="${i}">
     <input type="text" class="rrow-name" placeholder="품목명" value="${esc(it.name||'')}">
-    <input type="number" class="rrow-qty qty" placeholder="수량" value="${it.qty||1}">
+    <input type="number" class="rrow-qty qty" value="${it.qty||1}">
     <input type="number" class="rrow-price" placeholder="단가" value="${it.price||''}">
     <input type="number" class="rrow-sub sub" placeholder="소계" value="${it.subtotal||''}">
-    <button class="del-btn" data-row-del="${i}">✕</button>
-  </div>`;
+    <button class="del-btn" data-row-del="${i}">✕</button></div>`;
 }
 function bindReceiptItemEvents(){
-  const list = $('r_itemsList');
-  list.oninput = (e) => {
-    const row = e.target.closest('.item-row');
-    if(!row) return;
-    if(e.target.classList.contains('rrow-qty') || e.target.classList.contains('rrow-price')){
-      const qty = parseFloat(row.querySelector('.rrow-qty').value)||0;
-      const price = parseFloat(row.querySelector('.rrow-price').value)||0;
-      row.querySelector('.rrow-sub').value = Math.round(qty*price) || '';
+  const list=$('r_itemsList');
+  list.oninput=e=>{
+    const row=e.target.closest('.item-row');if(!row)return;
+    if(e.target.classList.contains('rrow-qty')||e.target.classList.contains('rrow-price')){
+      const qty=parseFloat(row.querySelector('.rrow-qty').value)||0;
+      const price=parseFloat(row.querySelector('.rrow-price').value)||0;
+      row.querySelector('.rrow-sub').value=Math.round(qty*price)||'';
     }
   };
-  list.onclick = (e) => {
-    const del = e.target.closest('[data-row-del]');
-    if(del) del.closest('.item-row').remove();
+  list.onclick=e=>{
+    const del=e.target.closest('[data-row-del]');
+    if(del)del.closest('.item-row').remove();
   };
 }
-$('r_addItem').onclick = () => {
-  const list = $('r_itemsList');
-  const i = list.querySelectorAll('.item-row').length;
-  list.insertAdjacentHTML('beforeend', receiptItemRowHtml({name:'',qty:1,price:'',subtotal:''}, i));
+$('r_addItem').onclick=()=>{
+  const list=$('r_itemsList');
+  const i=list.querySelectorAll('.item-row').length;
+  list.insertAdjacentHTML('beforeend',receiptItemRowHtml({name:'',qty:1,price:'',subtotal:''},i));
   bindReceiptItemEvents();
 };
 
-// 영수증 사진 선택
+// 영수증 - 카메라/갤러리 → 자동 크롭 모달
 async function handleReceiptFile(files){
-  if(!files || !files.length) return;
-  const f = files[0];
-  if(!f.type.startsWith('image/')) return;
-  try {
-    const raw = await fileToDataUrl(f);
-    _rcptImg = await compressImg(raw, 1600, 0.88);
-    showReceiptPhoto();
-  } catch(e){ toast('사진 로드 실패'); }
+  if(!files||!files.length)return;
+  const f=files[0];if(!f.type.startsWith('image/'))return;
+  try{
+    const raw=await fileToDataUrl(f);
+    const compressed=await compressImg(raw,1800,0.88);
+    openCropModal(compressed,cropped=>{_rcptImg=cropped;showReceiptPhoto();},'✂️ 영수증만 잘라내기');
+  }catch(e){toast('사진 로드 실패');}
 }
-$('rcptCam').addEventListener('change', e => { handleReceiptFile(e.target.files); e.target.value=''; });
-$('rcptGal').addEventListener('change', e => { handleReceiptFile(e.target.files); e.target.value=''; });
-$('receiptPhotoZone').onclick = () => $('rcptCam').click();
-
-// 영수증 크롭 (기존 크롭 모달 재사용)
-$('rcptCrop').onclick = () => {
-  if(!_rcptImg){ toast('먼저 사진을 추가하세요'); return; }
-  // 임시로 mImgs에 넣고 크롭 호출
-  mImgs = [{id:'tmp', data: _rcptImg}];
-  openCrop(0);
-  // 크롭 완료 후 _rcptImg를 동기화하는 hook
-  _cropTargetReceipt = true;
+$('rcptCam').addEventListener('change',e=>{handleReceiptFile(e.target.files);e.target.value='';});
+$('rcptGal').addEventListener('change',e=>{handleReceiptFile(e.target.files);e.target.value='';});
+$('receiptPhotoZone').onclick=()=>$('rcptCam').click();
+$('rcptCrop').onclick=()=>{
+  if(!_rcptImg){toast('먼저 사진을 추가하세요');return;}
+  openCropModal(_rcptImg,cropped=>{_rcptImg=cropped;showReceiptPhoto();});
 };
 
-let _cropTargetReceipt = false;
-let _cropTargetCard = false;
-// cropApply를 영수증/명함/일반 모두 분기 처리하도록 재정의
-$('cropApply').onclick = function(){
-  // 원본 함수 실행 - mImgs 업데이트됨
-  const origFn = arguments.callee._original;
-  // 직접 새 로직으로 처리
-  if(!_crop.img || _crop.imgIdx < 0) return;
-  const st = $('cropStatus');
-  st.textContent = '✂️ 잘라내고 보정 중…';
-  st.style.color = '#ffd788';
-  st.style.display = 'block';
-  $('cropApply').disabled = true;
-  try {
-    const s = _crop.scale;
-    const pts = _crop.points.map(p=>({x:p.x/s, y:p.y/s}));
-    const widthTop = Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y);
-    const widthBot = Math.hypot(pts[2].x-pts[3].x, pts[2].y-pts[3].y);
-    const heightL = Math.hypot(pts[3].x-pts[0].x, pts[3].y-pts[0].y);
-    const heightR = Math.hypot(pts[2].x-pts[1].x, pts[2].y-pts[1].y);
-    const outW = Math.round(Math.max(widthTop, widthBot));
-    const outH = Math.round(Math.max(heightL, heightR));
-    const out = document.createElement('canvas');
-    out.width = outW; out.height = outH;
-    const octx = out.getContext('2d');
-    const tmp = document.createElement('canvas');
-    tmp.width = _crop.img.width;
-    tmp.height = _crop.img.height;
-    tmp.getContext('2d').drawImage(_crop.img, 0, 0);
-    const srcData = tmp.getContext('2d').getImageData(0, 0, tmp.width, tmp.height);
-    const dstData = octx.createImageData(outW, outH);
-    for(let y=0; y<outH; y++){
-      const v = y/outH;
-      const lx = pts[0].x + (pts[3].x-pts[0].x)*v;
-      const ly = pts[0].y + (pts[3].y-pts[0].y)*v;
-      const rx = pts[1].x + (pts[2].x-pts[1].x)*v;
-      const ry = pts[1].y + (pts[2].y-pts[1].y)*v;
-      for(let x=0; x<outW; x++){
-        const u = x/outW;
-        const sx = Math.round(lx + (rx-lx)*u);
-        const sy = Math.round(ly + (ry-ly)*u);
-        if(sx>=0 && sx<srcData.width && sy>=0 && sy<srcData.height){
-          const srcIdx = (sy*srcData.width + sx)*4;
-          const dstIdx = (y*outW + x)*4;
-          dstData.data[dstIdx]   = srcData.data[srcIdx];
-          dstData.data[dstIdx+1] = srcData.data[srcIdx+1];
-          dstData.data[dstIdx+2] = srcData.data[srcIdx+2];
-          dstData.data[dstIdx+3] = 255;
-        }
-      }
-    }
-    octx.putImageData(dstData, 0, 0);
-    enhanceForOCR(out);
-    const newBase64 = out.toDataURL('image/jpeg', 0.92);
-    mImgs[_crop.imgIdx].data = newBase64;
-    // 모달 분기
-    if(_cropTargetReceipt){
-      _rcptImg = newBase64;
-      _cropTargetReceipt = false;
-      showReceiptPhoto();
-    } else if(_cropTargetCard){
-      _cardImg = newBase64;
-      _cropTargetCard = false;
-      showCardPhoto();
-    } else {
-      renderPreviews();
-    }
-    $('cropOverlay').classList.remove('show');
-    st.style.display = 'none';
-    toast('✅ 크롭됐어요');
-  } catch(e){
-    console.error(e);
-    toast('크롭 오류: ' + e.message);
-    st.style.display = 'none';
-  } finally {
-    $('cropApply').disabled = false;
-  }
-};
-
-// AI 자동분석 (영수증)
-$('rcptAnalyze').onclick = async () => {
-  if(!apiKey){ toast('AI 키를 먼저 설정하세요 (🔑)'); return; }
-  if(!_rcptImg){ toast('먼저 사진을 추가하세요'); return; }
-  const prog = $('receiptAiProgress');
+$('rcptAnalyze').onclick=async()=>{
+  if(!apiKey){toast('AI 키를 먼저 설정하세요 (🔑)');return;}
+  if(!_rcptImg){toast('먼저 사진을 추가하세요');return;}
+  const prog=$('receiptAiProgress');
   prog.classList.add('show');
-  prog.style.background = '#fff9e6';
-  prog.style.borderColor = '#f0c040';
-  prog.style.color = '#7a5c00';
-  prog.textContent = '🤖 영수증 AI 분석 중…';
-  $('rcptAnalyze').disabled = true;
-  try {
-    const b64 = _rcptImg.split(',')[1];
-    const mt = _rcptImg.split(';')[0].split(':')[1] || 'image/jpeg';
-    const prompt = `이 영수증을 정밀 분석해서 모든 정보를 추출하세요.
+  prog.style.background='#fff9e6';prog.style.borderColor='#f0c040';prog.style.color='#7a5c00';
+  prog.textContent='🤖 영수증 AI 분석 중…';
+  $('rcptAnalyze').disabled=true;
+  try{
+    const b64=_rcptImg.split(',')[1];
+    const mt=_rcptImg.split(';')[0].split(':')[1]||'image/jpeg';
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:2500,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mt,data:b64}},
+          {type:'text',text:`이 영수증을 분석해서 모든 정보를 추출하세요.
 
-【한글 정확 인식】
-- 흐릿한 글자도 문맥으로 추론 (가게명, 메뉴명 등)
-- 숫자 0/6/8/9 헷갈리지 말 것
-- 천원/만원/1,000원 → 1000으로 통일
+【보안 - 절대 추출 금지】
+카드번호, 카드 승인번호, 가맹점번호, 거래번호, 단말기번호
 
-【⭐ 절대 추출 금지 (보안)】
-❌ 카드번호 (1234-****-****-5678)
-❌ 카드 승인번호
-❌ 가맹점번호, 거래번호, 단말기번호
-→ 어디에도 넣지 마세요
-
-【⭐ 품목 배열】
-영수증의 모든 품목을 빠짐없이 items 배열로:
-[{"name":"품목명","qty":수량,"price":단가,"subtotal":소계}]
-- 수량 없으면 qty=1
-- 할인/쿠폰은 음수 price로
+【품목 배열】
+모든 품목 빠짐없이: [{"name":"품목명","qty":수량,"price":단가,"subtotal":소계}]
 
 【응답 - 순수 JSON만】
-{
-  "date": "YYYY-MM-DD",
-  "payTime": "HH:MM",
-  "place": "상호명",
-  "phone": "02-1234-5678",
-  "addr": "도로명 주소 전체",
-  "amount": 총금액숫자,
-  "payMethod": "신용카드/현금/계좌이체/간편결제",
-  "items": [...]
-}
+{"date":"YYYY-MM-DD","payTime":"HH:MM","place":"상호","phone":"02-1234-5678","addr":"주소","amount":숫자,"payMethod":"결제수단","items":[...]}
 
-날짜 없으면 ${today()}. 마크다운 코드블록 사용 금지.`;
-
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type':'application/json',
-        'x-api-key':apiKey,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 2500,
-        messages: [{
-          role:'user',
-          content:[
-            {type:'image', source:{type:'base64', media_type:mt, data:b64}},
-            {type:'text', text:prompt}
-          ]
+날짜 없으면 ${today()}.`}]
         }]
       })
     });
-    if(!res.ok) throw new Error('API ' + res.status);
-    const j = await res.json();
-    let raw = j.content[0].text.trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-    const r = JSON.parse(raw);
-
-    // 폼에 자동 채움
-    if(r.date) $('r_date').value = r.date;
-    if(r.payTime) $('r_payTime').value = r.payTime;
-    if(r.place) $('r_place').value = r.place;
-    if(r.phone) $('r_phone').value = r.phone;
-    if(r.addr) $('r_addr').value = r.addr;
-    if(r.amount) $('r_amount').value = r.amount;
-    if(r.payMethod) $('r_payMethod').value = r.payMethod;
-    if(r.items && Array.isArray(r.items)) renderReceiptItems(r.items);
-
-    prog.style.background = '#e6f9f0';
-    prog.style.borderColor = '#86efac';
-    prog.style.color = '#16a34a';
-    prog.textContent = '✅ 분석 완료! 필요시 수정 후 저장하세요.';
-    setTimeout(()=>prog.classList.remove('show'), 2500);
-  } catch(e){
-    console.error(e);
-    prog.style.background = '#fde8e8';
-    prog.style.borderColor = '#fca5a5';
-    prog.style.color = '#b52929';
-    prog.textContent = '❌ 분석 실패: ' + e.message;
-  } finally {
-    $('rcptAnalyze').disabled = false;
-  }
+    if(!res.ok)throw new Error('API '+res.status);
+    const j=await res.json();
+    let raw=j.content[0].text.trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const r=JSON.parse(raw);
+    if(r.date)$('r_date').value=r.date;
+    if(r.payTime)$('r_payTime').value=r.payTime;
+    if(r.place)$('r_place').value=r.place;
+    if(r.phone)$('r_phone').value=r.phone;
+    if(r.addr)$('r_addr').value=r.addr;
+    if(r.amount)$('r_amount').value=r.amount;
+    if(r.payMethod)$('r_payMethod').value=r.payMethod;
+    if(r.items&&Array.isArray(r.items))renderReceiptItems(r.items);
+    prog.style.background='#e6f9f0';prog.style.borderColor='#86efac';prog.style.color='#16a34a';
+    prog.textContent='✅ 분석 완료! 확인 후 저장하세요.';
+    setTimeout(()=>prog.classList.remove('show'),2500);
+  }catch(e){
+    prog.style.background='#fde8e8';prog.style.borderColor='#fca5a5';prog.style.color='#b52929';
+    prog.textContent='❌ 분석 실패: '+e.message;
+  }finally{$('rcptAnalyze').disabled=false;}
 };
 
-// 영수증 저장
-$('receiptSave').onclick = () => {
-  const place = $('r_place').value.trim();
-  if(!place){ toast('상호명을 입력하세요'); return; }
-  // 품목 수집
-  const items = [];
-  $('r_itemsList').querySelectorAll('.item-row').forEach(row => {
-    const name = (row.querySelector('.rrow-name')||{}).value || '';
-    if(!name.trim()) return;
+function closeReceiptModal(){$('receiptOverlay').classList.remove('show');_rcptEditing=null;_rcptImg=null;}
+$('receiptClose').onclick=closeReceiptModal;
+$('receiptCancel').onclick=closeReceiptModal;
+$('receiptSave').onclick=()=>{
+  const place=$('r_place').value.trim();
+  if(!place){toast('상호명을 입력하세요');return;}
+  const items=[];
+  $('r_itemsList').querySelectorAll('.item-row').forEach(row=>{
+    const name=(row.querySelector('.rrow-name')||{}).value||'';
+    if(!name.trim())return;
     items.push({
-      name: name.trim(),
-      qty: parseFloat((row.querySelector('.rrow-qty')||{}).value) || 1,
-      price: parseFloat((row.querySelector('.rrow-price')||{}).value) || 0,
-      subtotal: parseFloat((row.querySelector('.rrow-sub')||{}).value) || 0,
+      name:name.trim(),
+      qty:parseFloat((row.querySelector('.rrow-qty')||{}).value)||1,
+      price:parseFloat((row.querySelector('.rrow-price')||{}).value)||0,
+      subtotal:parseFloat((row.querySelector('.rrow-sub')||{}).value)||0,
     });
   });
-  const data = {
-    id: _rcptEditing ? _rcptEditing.id : uid(),
-    date: $('r_date').value || today(),
-    payTime: $('r_payTime').value || '',
+  const data={
+    id:_rcptEditing?_rcptEditing.id:uid(),
+    date:$('r_date').value||today(),
+    payTime:$('r_payTime').value||'',
     place,
-    phone: $('r_phone').value.trim(),
-    addr: $('r_addr').value.trim(),
-    amount: parseInt($('r_amount').value) || 0,
-    payMethod: $('r_payMethod').value.trim(),
-    items,
-    memo: $('r_memo').value.trim(),
-    photo: _rcptImg || '',
-    updated: Date.now(),
+    phone:$('r_phone').value.trim(),
+    addr:$('r_addr').value.trim(),
+    amount:parseInt($('r_amount').value)||0,
+    payMethod:$('r_payMethod').value.trim(),
+    items,memo:$('r_memo').value.trim(),
+    photo:_rcptImg||'',updated:Date.now(),
   };
   if(_rcptEditing){
-    const idx = receipts.findIndex(r => r.id === _rcptEditing.id);
-    if(idx >= 0) receipts[idx] = data;
-  } else {
-    receipts.unshift(data);
-  }
-  saveReceipts();
-  closeReceiptModal();
-  renderScanList();
-  toast('✅ 저장됐어요');
+    const idx=receipts.findIndex(r=>r.id===_rcptEditing.id);
+    if(idx>=0)receipts[idx]=data;
+  }else receipts.unshift(data);
+  if(!saveReceipts())return;
+  closeReceiptModal();renderScanList();toast('✅ 저장됐어요');
 };
-$('receiptDelete').onclick = () => {
-  if(!_rcptEditing) return;
-  if(!confirm(`'${_rcptEditing.place||'영수증'}'을 삭제할까요?`)) return;
-  receipts = receipts.filter(r => r.id !== _rcptEditing.id);
-  saveReceipts();
-  closeReceiptModal();
-  renderScanList();
-  toast('삭제됐어요');
+$('receiptDelete').onclick=()=>{
+  if(!_rcptEditing)return;
+  if(!confirm(`'${_rcptEditing.place||'영수증'}'을 삭제할까요?`))return;
+  receipts=receipts.filter(r=>r.id!==_rcptEditing.id);
+  saveReceipts();closeReceiptModal();renderScanList();toast('삭제됐어요');
 };
-$('receiptClose').onclick = closeReceiptModal;
-$('receiptCancel').onclick = closeReceiptModal;
 
-/* ════════════════════════════════════════════════════════
-   💼 명함 모달
-   ════════════════════════════════════════════════════════ */
-let _cardImg = null;
-let _cardEditing = null;
+// CHUNK_9 - 명함 모달
+let _cardImg=null,_cardEditing=null;
 
 function openCardModal(card){
-  _cardEditing = card;
-  _cardImg = null;
-  $('cardId').value = card ? card.id : '';
-  $('cardModalTitle').textContent = card ? '✏️ 명함 수정' : '💼 명함 추가';
-  $('cardDelete').style.display = card ? '' : 'none';
-
-  $('c_company').value = card ? (card.company || '') : '';
-  $('c_name').value = card ? (card.name || '') : '';
-  $('c_position').value = card ? (card.position || '') : '';
-  $('c_dept').value = card ? (card.dept || '') : '';
-  $('c_mobile').value = card ? (card.mobile || '') : '';
-  $('c_phone').value = card ? (card.phone || '') : '';
-  $('c_email').value = card ? (card.email || '') : '';
-  $('c_website').value = card ? (card.website || '') : '';
-  $('c_addr').value = card ? (card.addr || '') : '';
-  $('c_memo').value = card ? (card.memo || '') : '';
-
-  if(card && card.photo){
-    _cardImg = card.photo;
-    showCardPhoto();
-  } else {
-    $('cardPhotoPreview').innerHTML = '';
-    $('cardTools').style.display = 'none';
-  }
-
+  _cardEditing=card||null;
+  _cardImg=card?(card.photo||null):null;
+  $('cardModalTitle').textContent=card?'✏️ 명함 수정':'💼 명함 추가';
+  $('cardDelete').style.display=card?'':'none';
+  $('c_company').value=card?(card.company||''):'';
+  $('c_name').value=card?(card.name||''):'';
+  $('c_position').value=card?(card.position||''):'';
+  $('c_dept').value=card?(card.dept||''):'';
+  $('c_mobile').value=card?(card.mobile||''):'';
+  $('c_phone').value=card?(card.phone||''):'';
+  $('c_email').value=card?(card.email||''):'';
+  $('c_website').value=card?(card.website||''):'';
+  $('c_addr').value=card?(card.addr||''):'';
+  $('c_memo').value=card?(card.memo||''):'';
+  showCardPhoto();
   $('cardAiProgress').classList.remove('show');
   $('cardOverlay').classList.add('show');
 }
-function closeCardModal(){ $('cardOverlay').classList.remove('show'); }
-
+function closeCardModal(){$('cardOverlay').classList.remove('show');_cardEditing=null;_cardImg=null;}
 function showCardPhoto(){
   if(!_cardImg){
-    $('cardPhotoPreview').innerHTML = '';
-    $('cardTools').style.display = 'none';
-    return;
+    $('cardPhotoPreview').innerHTML='';
+    $('cardTools').style.display='none';return;
   }
-  $('cardPhotoPreview').innerHTML = `
-    <div class="preview-item" style="width:140px;height:140px">
-      <img src="${_cardImg}" alt="" onclick="document.getElementById('bigImg').src=this.src;document.getElementById('imgOverlay').style.display='flex';">
-      <button class="preview-del" onclick="_cardImg=null;showCardPhoto()">✕</button>
-    </div>`;
-  $('cardTools').style.display = 'flex';
+  $('cardPhotoPreview').innerHTML=`<div class="preview-item" style="width:140px;height:140px">
+    <img src="${_cardImg}" alt="" id="cardThumb">
+    <button class="preview-del" id="cardDelBtn">✕</button></div>`;
+  $('cardThumb').onclick=()=>showImg(_cardImg);
+  $('cardDelBtn').onclick=()=>{_cardImg=null;showCardPhoto();};
+  $('cardTools').style.display='flex';
 }
 
 async function handleCardFile(files){
-  if(!files || !files.length) return;
-  const f = files[0];
-  if(!f.type.startsWith('image/')) return;
-  try {
-    const raw = await fileToDataUrl(f);
-    _cardImg = await compressImg(raw, 1600, 0.88);
-    showCardPhoto();
-  } catch(e){ toast('사진 로드 실패'); }
+  if(!files||!files.length)return;
+  const f=files[0];if(!f.type.startsWith('image/'))return;
+  try{
+    const raw=await fileToDataUrl(f);
+    const compressed=await compressImg(raw,1800,0.88);
+    openCropModal(compressed,cropped=>{_cardImg=cropped;showCardPhoto();},'✂️ 명함만 잘라내기');
+  }catch(e){toast('사진 로드 실패');}
 }
-$('cardCam').addEventListener('change', e => { handleCardFile(e.target.files); e.target.value=''; });
-$('cardGal').addEventListener('change', e => { handleCardFile(e.target.files); e.target.value=''; });
-$('cardPhotoZone').onclick = () => $('cardCam').click();
-
-$('cardCrop').onclick = () => {
-  if(!_cardImg){ toast('먼저 사진을 추가하세요'); return; }
-  mImgs = [{id:'tmp', data: _cardImg}];
-  openCrop(0);
-  _cropTargetCard = true;
+$('cardCam').addEventListener('change',e=>{handleCardFile(e.target.files);e.target.value='';});
+$('cardGal').addEventListener('change',e=>{handleCardFile(e.target.files);e.target.value='';});
+$('cardPhotoZone').onclick=()=>$('cardCam').click();
+$('cardCrop').onclick=()=>{
+  if(!_cardImg){toast('먼저 사진을 추가하세요');return;}
+  openCropModal(_cardImg,cropped=>{_cardImg=cropped;showCardPhoto();});
 };
 
-// AI 자동분석 (명함)
-$('cardAnalyze').onclick = async () => {
-  if(!apiKey){ toast('AI 키를 먼저 설정하세요 (🔑)'); return; }
-  if(!_cardImg){ toast('먼저 사진을 추가하세요'); return; }
-  const prog = $('cardAiProgress');
+$('cardAnalyze').onclick=async()=>{
+  if(!apiKey){toast('AI 키를 먼저 설정하세요 (🔑)');return;}
+  if(!_cardImg){toast('먼저 사진을 추가하세요');return;}
+  const prog=$('cardAiProgress');
   prog.classList.add('show');
-  prog.style.background = '#fff9e6';
-  prog.style.borderColor = '#f0c040';
-  prog.style.color = '#7a5c00';
-  prog.textContent = '🤖 명함 AI 분석 중…';
-  $('cardAnalyze').disabled = true;
-  try {
-    const b64 = _cardImg.split(',')[1];
-    const mt = _cardImg.split(';')[0].split(':')[1] || 'image/jpeg';
-    const prompt = `이 명함에서 모든 정보를 정확히 추출하세요.
-
-【한글 정확 인식】
-- 회사명, 이름, 직책 정확히 (한자/영문 병기 시 한글 우선)
-- 흐릿한 글자도 문맥으로 추론
+  prog.style.background='#fff9e6';prog.style.borderColor='#f0c040';prog.style.color='#7a5c00';
+  prog.textContent='🤖 명함 AI 분석 중…';
+  $('cardAnalyze').disabled=true;
+  try{
+    const b64=_cardImg.split(',')[1];
+    const mt=_cardImg.split(';')[0].split(':')[1]||'image/jpeg';
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:1500,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mt,data:b64}},
+          {type:'text',text:`이 명함에서 모든 정보를 추출하세요.
 
 【전화번호 구분】
-- 010, 011 등으로 시작 → "mobile" (휴대폰)
-- 02, 031 등 지역번호 → "phone" (회사 전화)
-- 둘 다 있으면 각각 분리
+010, 011 → "mobile" / 02, 031 등 → "phone"
 
 【응답 - 순수 JSON만】
-{
-  "company": "회사명",
-  "name": "이름",
-  "position": "직책 (예: 부장, 과장, 대표)",
-  "dept": "부서명 (예: 영업1팀, 개발팀)",
-  "mobile": "010-xxxx-xxxx",
-  "phone": "02-xxxx-xxxx",
-  "email": "email@company.com",
-  "website": "https://...",
-  "addr": "전체 주소"
-}
+{"company":"","name":"","position":"","dept":"","mobile":"","phone":"","email":"","website":"","addr":""}
 
-빈 필드는 ""로. 마크다운 코드블록 사용 금지.`;
-
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type':'application/json',
-        'x-api-key':apiKey,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
-        messages: [{
-          role:'user',
-          content:[
-            {type:'image', source:{type:'base64', media_type:mt, data:b64}},
-            {type:'text', text:prompt}
-          ]
+빈 필드는 "".`}]
         }]
       })
     });
-    if(!res.ok) throw new Error('API ' + res.status);
-    const j = await res.json();
-    let raw = j.content[0].text.trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-    const c = JSON.parse(raw);
-
-    if(c.company) $('c_company').value = c.company;
-    if(c.name) $('c_name').value = c.name;
-    if(c.position) $('c_position').value = c.position;
-    if(c.dept) $('c_dept').value = c.dept;
-    if(c.mobile) $('c_mobile').value = c.mobile;
-    if(c.phone) $('c_phone').value = c.phone;
-    if(c.email) $('c_email').value = c.email;
-    if(c.website) $('c_website').value = c.website;
-    if(c.addr) $('c_addr').value = c.addr;
-
-    prog.style.background = '#e6f9f0';
-    prog.style.borderColor = '#86efac';
-    prog.style.color = '#16a34a';
-    prog.textContent = '✅ 분석 완료! 필요시 수정 후 저장하세요.';
-    setTimeout(()=>prog.classList.remove('show'), 2500);
-  } catch(e){
-    console.error(e);
-    prog.style.background = '#fde8e8';
-    prog.style.borderColor = '#fca5a5';
-    prog.style.color = '#b52929';
-    prog.textContent = '❌ 분석 실패: ' + e.message;
-  } finally {
-    $('cardAnalyze').disabled = false;
-  }
+    if(!res.ok)throw new Error('API '+res.status);
+    const j=await res.json();
+    let raw=j.content[0].text.trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const c=JSON.parse(raw);
+    if(c.company)$('c_company').value=c.company;
+    if(c.name)$('c_name').value=c.name;
+    if(c.position)$('c_position').value=c.position;
+    if(c.dept)$('c_dept').value=c.dept;
+    if(c.mobile)$('c_mobile').value=c.mobile;
+    if(c.phone)$('c_phone').value=c.phone;
+    if(c.email)$('c_email').value=c.email;
+    if(c.website)$('c_website').value=c.website;
+    if(c.addr)$('c_addr').value=c.addr;
+    prog.style.background='#e6f9f0';prog.style.borderColor='#86efac';prog.style.color='#16a34a';
+    prog.textContent='✅ 분석 완료!';
+    setTimeout(()=>prog.classList.remove('show'),2500);
+  }catch(e){
+    prog.style.background='#fde8e8';prog.style.borderColor='#fca5a5';prog.style.color='#b52929';
+    prog.textContent='❌ 분석 실패: '+e.message;
+  }finally{$('cardAnalyze').disabled=false;}
 };
 
-// 명함 저장
-$('cardSave').onclick = () => {
-  const name = $('c_name').value.trim();
-  if(!name){ toast('이름을 입력하세요'); return; }
-  const data = {
-    id: _cardEditing ? _cardEditing.id : uid(),
-    company: $('c_company').value.trim(),
+$('cardClose').onclick=closeCardModal;
+$('cardCancel').onclick=closeCardModal;
+$('cardSave').onclick=()=>{
+  const name=$('c_name').value.trim();
+  if(!name){toast('이름을 입력하세요');return;}
+  const data={
+    id:_cardEditing?_cardEditing.id:uid(),
+    company:$('c_company').value.trim(),
     name,
-    position: $('c_position').value.trim(),
-    dept: $('c_dept').value.trim(),
-    mobile: $('c_mobile').value.trim(),
-    phone: $('c_phone').value.trim(),
-    email: $('c_email').value.trim(),
-    website: $('c_website').value.trim(),
-    addr: $('c_addr').value.trim(),
-    memo: $('c_memo').value.trim(),
-    photo: _cardImg || '',
-    updated: Date.now(),
+    position:$('c_position').value.trim(),
+    dept:$('c_dept').value.trim(),
+    mobile:$('c_mobile').value.trim(),
+    phone:$('c_phone').value.trim(),
+    email:$('c_email').value.trim(),
+    website:$('c_website').value.trim(),
+    addr:$('c_addr').value.trim(),
+    memo:$('c_memo').value.trim(),
+    photo:_cardImg||'',updated:Date.now(),
   };
   if(_cardEditing){
-    const idx = cards.findIndex(c => c.id === _cardEditing.id);
-    if(idx >= 0) cards[idx] = data;
-  } else {
-    cards.unshift(data);
-  }
-  saveCards();
-  closeCardModal();
-  renderScanList();
-  toast('✅ 저장됐어요');
+    const idx=cards.findIndex(c=>c.id===_cardEditing.id);
+    if(idx>=0)cards[idx]=data;
+  }else cards.unshift(data);
+  if(!saveCards())return;
+  closeCardModal();renderScanList();toast('✅ 저장됐어요');
 };
-$('cardDelete').onclick = () => {
-  if(!_cardEditing) return;
-  if(!confirm(`'${_cardEditing.name||'명함'}'을 삭제할까요?`)) return;
-  cards = cards.filter(c => c.id !== _cardEditing.id);
-  saveCards();
-  closeCardModal();
-  renderScanList();
-  toast('삭제됐어요');
+$('cardDelete').onclick=()=>{
+  if(!_cardEditing)return;
+  if(!confirm(`'${_cardEditing.name||'명함'}'을 삭제할까요?`))return;
+  cards=cards.filter(c=>c.id!==_cardEditing.id);
+  saveCards();closeCardModal();renderScanList();toast('삭제됐어요');
 };
-$('cardClose').onclick = closeCardModal;
-$('cardCancel').onclick = closeCardModal;
 
-console.log('[사진 스캐너] 독립앱 로드 완료');
+// CHUNK_10 - 텍스트 메모 모달
+let _textImg=null,_textEditing=null;
+
+function openTextModal(t){
+  _textEditing=t||null;
+  _textImg=t?(t.photo||null):null;
+  $('textModalTitle').textContent=t?'✏️ 텍스트 메모 수정':'📝 텍스트 메모 추가';
+  $('textDelete').style.display=t?'':'none';
+  $('t_date').value=t?(t.date||today()):today();
+  $('t_type').value=t?(t.type||'📚 책/문서 인용'):'📚 책/문서 인용';
+  $('t_title').value=t?(t.title||''):'';
+  $('t_tags').value=t?(t.tags||''):'';
+  $('t_text').value=t?(t.text||''):'';
+  $('t_memo').value=t?(t.memo||''):'';
+  showTextPhoto();
+  $('textAiProgress').classList.remove('show');
+  $('textOverlay').classList.add('show');
+}
+function closeTextModal(){$('textOverlay').classList.remove('show');_textEditing=null;_textImg=null;}
+function showTextPhoto(){
+  if(!_textImg){
+    $('textPhotoPreview').innerHTML='';
+    $('textTools').style.display='none';return;
+  }
+  $('textPhotoPreview').innerHTML=`<div class="preview-item" style="width:140px;height:140px">
+    <img src="${_textImg}" alt="" id="textThumb">
+    <button class="preview-del" id="textDelBtn">✕</button></div>`;
+  $('textThumb').onclick=()=>showImg(_textImg);
+  $('textDelBtn').onclick=()=>{_textImg=null;showTextPhoto();};
+  $('textTools').style.display='flex';
+}
+
+async function handleTextFile(files){
+  if(!files||!files.length)return;
+  const f=files[0];if(!f.type.startsWith('image/'))return;
+  try{
+    const raw=await fileToDataUrl(f);
+    const compressed=await compressImg(raw,1800,0.88);
+    openCropModal(compressed,cropped=>{_textImg=cropped;showTextPhoto();},'✂️ 텍스트 영역만 잘라내기');
+  }catch(e){toast('사진 로드 실패');}
+}
+$('textCam').addEventListener('change',e=>{handleTextFile(e.target.files);e.target.value='';});
+$('textGal').addEventListener('change',e=>{handleTextFile(e.target.files);e.target.value='';});
+$('textPhotoZone').onclick=()=>$('textCam').click();
+$('textCrop').onclick=()=>{
+  if(!_textImg){toast('먼저 사진을 추가하세요');return;}
+  openCropModal(_textImg,cropped=>{_textImg=cropped;showTextPhoto();});
+};
+
+$('textExtract').onclick=async()=>{
+  if(!apiKey){toast('AI 키를 먼저 설정하세요 (🔑)');return;}
+  if(!_textImg){toast('먼저 사진을 추가하세요');return;}
+  const prog=$('textAiProgress');
+  prog.classList.add('show');
+  prog.style.background='#fff9e6';prog.style.borderColor='#f0c040';prog.style.color='#7a5c00';
+  prog.textContent='🤖 AI 텍스트 추출 중…';
+  $('textExtract').disabled=true;
+  try{
+    const b64=_textImg.split(',')[1];
+    const mt=_textImg.split(';')[0].split(':')[1]||'image/jpeg';
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:4000,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mt,data:b64}},
+          {type:'text',text:`사진의 모든 텍스트를 정확히 추출하세요.
+
+- 한글/영문/숫자 모두 정확히
+- 표/리스트/제목 구조 보존 (마크다운)
+- 흐릿한 글자는 문맥으로 추론
+- 본인 임의로 추가/생략 금지
+- 설명/해석 금지
+- 마크다운 코드블록 사용 금지
+
+순수 텍스트만 출력.`}]
+        }]
+      })
+    });
+    if(!res.ok)throw new Error('API '+res.status);
+    const j=await res.json();
+    let text=(j.content[0].text||'').trim().replace(/^```[\w]*\n?/gm,'').replace(/```$/gm,'').trim();
+    const prev=$('t_text').value.trim();
+    $('t_text').value=prev?(prev+'\n\n'+text):text;
+    prog.style.background='#e6f9f0';prog.style.borderColor='#86efac';prog.style.color='#16a34a';
+    prog.textContent=`✅ ${text.length}자 추출 완료`;
+    setTimeout(()=>prog.classList.remove('show'),2500);
+  }catch(e){
+    prog.style.background='#fde8e8';prog.style.borderColor='#fca5a5';prog.style.color='#b52929';
+    prog.textContent='❌ 추출 실패: '+e.message;
+  }finally{$('textExtract').disabled=false;}
+};
+
+$('t_copy').onclick=()=>{
+  const t=$('t_text').value||'';
+  if(!t){toast('복사할 텍스트가 없어요');return;}
+  navigator.clipboard.writeText(t).then(()=>toast('📋 복사됨'));
+};
+
+$('textClose').onclick=closeTextModal;
+$('textCancel').onclick=closeTextModal;
+$('textSave').onclick=()=>{
+  const title=$('t_title').value.trim();
+  if(!title){toast('제목을 입력하세요');return;}
+  const data={
+    id:_textEditing?_textEditing.id:uid(),
+    date:$('t_date').value||today(),
+    type:$('t_type').value,
+    title,
+    tags:$('t_tags').value.trim(),
+    text:$('t_text').value,
+    memo:$('t_memo').value.trim(),
+    photo:_textImg||'',updated:Date.now(),
+  };
+  if(_textEditing){
+    const idx=texts.findIndex(x=>x.id===_textEditing.id);
+    if(idx>=0)texts[idx]=data;
+  }else texts.unshift(data);
+  if(!saveTexts())return;
+  closeTextModal();renderScanList();toast('✅ 저장됐어요');
+};
+$('textDelete').onclick=()=>{
+  if(!_textEditing)return;
+  if(!confirm(`'${_textEditing.title||'텍스트 메모'}'를 삭제할까요?`))return;
+  texts=texts.filter(x=>x.id!==_textEditing.id);
+  saveTexts();closeTextModal();renderScanList();toast('삭제됐어요');
+};
+
+// CHUNK_11 - AI 키 / 카테고리 / 백업 / PIN / 초기화
+function refreshKeyState(){
+  const el=$('apiKeyState');
+  if(apiKey){el.textContent='✅ AI 키 설정됨 ('+apiKey.slice(0,12)+'…)';el.style.color='var(--green)';}
+  else{el.textContent='⚠️ 키 없음 - AI 기능 사용 불가';el.style.color='var(--red)';}
+}
+$('btnApiKey').onclick=()=>{$('apiKeyInp').value=apiKey;refreshKeyState();$('apiKeyOverlay').classList.add('show');};
+$('apiKeyClose').onclick=()=>$('apiKeyOverlay').classList.remove('show');
+$('apiKeyCancel').onclick=()=>$('apiKeyOverlay').classList.remove('show');
+$('apiKeySave').onclick=()=>{
+  const v=$('apiKeyInp').value.trim();
+  if(!v){toast('키를 입력하세요');return;}
+  apiKey=v;localStorage.setItem(LS_API_KEY,v);
+  refreshKeyState();toast('💾 키 저장됨');
+  $('apiKeyOverlay').classList.remove('show');
+};
+$('apiKeyClear').onclick=()=>{
+  if(!confirm('AI 키를 삭제할까요?'))return;
+  apiKey='';localStorage.removeItem(LS_API_KEY);
+  $('apiKeyInp').value='';refreshKeyState();toast('🗑 키 삭제됨');
+};
+
+function renderCatList(){
+  $('catList').innerHTML=cats.map((c,i)=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--blue-soft);border-radius:9px;margin-bottom:6px">
+      <span style="font-size:13px;font-weight:600">${esc(c)}</span>
+      <button class="btn btn-red" data-cdel="${i}" style="height:28px;padding:0 10px;font-size:11px">삭제</button>
+    </div>`).join('');
+  $('catList').querySelectorAll('[data-cdel]').forEach(b=>{
+    b.onclick=()=>{
+      const idx=parseInt(b.dataset.cdel);
+      if(cats.length<=1){toast('최소 1개는 남겨두세요');return;}
+      if(!confirm(`'${cats[idx]}' 삭제할까요?`))return;
+      cats.splice(idx,1);saveCats();renderCatList();refreshCatSelects();
+    };
+  });
+}
+$('btnCatMgr').onclick=()=>{renderCatList();$('catMgrOverlay').classList.add('show');};
+$('catMgrClose').onclick=()=>$('catMgrOverlay').classList.remove('show');
+$('catMgrCloseBtn').onclick=()=>$('catMgrOverlay').classList.remove('show');
+$('catAddBtn').onclick=()=>{
+  const v=$('catNewInp').value.trim();
+  if(!v){toast('이름을 입력하세요');return;}
+  if(cats.includes(v)){toast('이미 있어요');return;}
+  cats.push(v);saveCats();$('catNewInp').value='';renderCatList();refreshCatSelects();
+  toast('✅ 추가됨');
+};
+
+// 백업
+$('btnExport').onclick=async()=>{
+  toast('💾 백업 만드는 중…');
+  try{
+    const imgsMap={};
+    for(const p of photos){
+      for(const id of (p.imgIds||[])){
+        try{const d=await idbGet(id);if(d)imgsMap[id]=d;}catch(e){}
+      }
+    }
+    const blob=new Blob([JSON.stringify({
+      app:'scan-app',version:2,exportedAt:new Date().toISOString(),
+      photos,cats,receipts,cards,texts,imgsMap
+    },null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=`scan-app-backup-${today()}.json`;a.click();
+    URL.revokeObjectURL(url);
+    toast('✅ 백업 다운로드됨');
+  }catch(e){toast('내보내기 실패');}
+};
+$('btnImport').onclick=()=>$('importInp').click();
+$('importInp').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(!confirm('현재 데이터에 병합 불러올까요?'))return;
+  try{
+    const d=JSON.parse(await f.text());
+    if(d.app!=='scan-app')throw new Error('잘못된 파일');
+    for(const c of (d.cats||[]))if(!cats.includes(c))cats.push(c);
+    if(d.imgsMap){for(const id in d.imgsMap){try{await idbPut(id,d.imgsMap[id]);}catch(e){}}}
+    for(const p of (d.photos||[])){if(photos.find(x=>x.id===p.id))p.id=uid();photos.unshift(p);}
+    for(const r of (d.receipts||[])){if(receipts.find(x=>x.id===r.id))r.id=uid();receipts.unshift(r);}
+    for(const c of (d.cards||[])){if(cards.find(x=>x.id===c.id))c.id=uid();cards.unshift(c);}
+    for(const t of (d.texts||[])){if(texts.find(x=>x.id===t.id))t.id=uid();texts.unshift(t);}
+    savePhotos();saveCats();saveReceipts();saveCards();saveTexts();
+    refreshCatSelects();renderGallery();renderScanList();
+    toast('✅ 불러옴');
+  }catch(e){toast('불러오기 실패: '+e.message);}
+  e.target.value='';
+});
+
+// PIN
+let pinBuf='';
+function buildPinPad(){
+  const pad=$('pinPad');
+  const layout=['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  pad.innerHTML=layout.map(k=>k?`<button class="pin-key" data-k="${k}">${k}</button>`:'<div></div>').join('');
+  pad.querySelectorAll('[data-k]').forEach(b=>{
+    b.onclick=()=>{
+      const k=b.dataset.k;
+      if(k==='⌫')pinBuf=pinBuf.slice(0,-1);
+      else if(pinBuf.length<6)pinBuf+=k;
+      renderPinDots();
+      if(pinBuf.length===6)setTimeout(checkPin,100);
+    };
+  });
+}
+function renderPinDots(){
+  $('pinDots').innerHTML=Array(6).fill(0).map((_,i)=>`<div class="pin-dot${i<pinBuf.length?' filled':''}"></div>`).join('');
+}
+function checkPin(){
+  const stored=localStorage.getItem(LS_PIN);
+  if(!stored){
+    if(pinBuf.length===6){
+      if(confirm(`보안 PIN을 '${pinBuf}'로 설정할까요?`)){
+        localStorage.setItem(LS_PIN,pinBuf);
+        secureUnlocked=true;
+        $('secureLock').classList.remove('show');
+        pinBuf='';renderPinDots();selectSection('secure');
+      }else{pinBuf='';renderPinDots();}
+    }
+    return;
+  }
+  if(pinBuf===stored){
+    secureUnlocked=true;
+    $('secureLock').classList.remove('show');
+    pinBuf='';renderPinDots();selectSection('secure');
+  }else{toast('PIN 불일치');pinBuf='';renderPinDots();}
+}
+function openSecureLock(){
+  pinBuf='';
+  const has=localStorage.getItem(LS_PIN);
+  $('secureLockMsg').textContent=has?'보안 사진 잠금 해제':'🔒 새 PIN 6자리 설정';
+  renderPinDots();
+  $('secureLock').classList.add('show');
+}
+$('secureCancel').onclick=()=>{
+  $('secureLock').classList.remove('show');
+  pinBuf='';renderPinDots();selectSection('normal');
+};
+
+// 초기화
+(async function init(){
+  loadData();
+  try{await openIDB();}catch(e){console.error(e);}
+  refreshCatSelects();refreshKeyState();buildPinPad();
+  const d=new Date(),pad=n=>String(n).padStart(2,'0');
+  $('appVer').textContent=`v${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+  await renderGallery();
+})();
+
+console.log('[사진 스캐너 v2] 로드 완료');
 </script>
 </body>
 </html>
+
