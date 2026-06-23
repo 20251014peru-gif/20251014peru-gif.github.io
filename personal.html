@@ -577,6 +577,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
       <label class="sticky-photo-btn" title="카메라">📷<input type="file" id="stickyCam" accept="image/*" capture="environment" style="display:none"></label>
       <label class="sticky-photo-btn" title="사진선택">🖼<input type="file" id="stickyFile" accept="image/*" multiple style="display:none"></label>
       <button class="sticky-photo-btn" id="stickyTodoBtn" title="체크리스트">☑</button>
+      <button class="sticky-photo-btn" id="stickyExtractText" title="사진에서 텍스트 추출" style="background:#fff9e6;border-color:#f0c040">✨</button>
       <span style="font-size:11px;color:#bba;flex:1">Ctrl+Enter 저장</span>
       <button class="sticky-save-btn" id="stickySave">저장</button>
     </div>
@@ -863,6 +864,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
       <div class="photo-row">
         <label class="photo-btn">📷 카메라<input type="file" id="recCam" accept="image/*" capture="environment" style="display:none"></label>
         <label class="photo-btn">🖼 선택<input type="file" id="recFile" accept="image/*" multiple style="display:none"></label>
+        <button type="button" class="photo-btn" id="recExtractText" style="background:#fff9e6;border-color:#f0c040;color:#7a5c00;font-weight:700">✨ 텍스트 추출</button>
       </div>
       <div class="photo-row" id="recThumbs" style="margin-top:8px"></div>
     </div>
@@ -1018,6 +1020,104 @@ main.wrap{padding-bottom:100px;padding-top:12px}
   <img id="imgFull" src="" alt="">
 </div>
 
+<!-- ===== ✨ 사진 텍스트 추출 미리보기 모달 ===== -->
+<div class="overlay" id="textExtractOverlay">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-head" style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1.5px solid var(--blue-bd);background:linear-gradient(135deg,#fff9e6 0%,#fff3cc 100%)">
+      <div style="font-size:26px">✨</div>
+      <div style="flex:1">
+        <div style="font-size:11px;color:#7a5c00;font-weight:700">AI 텍스트 추출</div>
+        <div style="font-size:15px;font-weight:800;color:#3a2e00">사진에서 읽어낸 텍스트</div>
+      </div>
+      <button class="btn btn-ghost" id="textExtractClose" style="padding:6px 10px">✕</button>
+    </div>
+    <div class="modal-body" style="padding:14px 18px">
+      <div id="textExtractStatus" style="padding:10px 14px;background:#fff9e6;border:1.5px solid #f0c040;border-radius:10px;color:#7a5c00;font-size:12px;font-weight:600;margin-bottom:12px;display:none">
+        🤖 AI가 텍스트를 추출하는 중…
+      </div>
+
+      <!-- 추출 옵션 -->
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <label style="font-size:11px;color:var(--ink-soft);font-weight:700;display:flex;align-items:center;gap:5px;padding:6px 10px;background:#f7faff;border-radius:8px;border:1.5px solid var(--blue-bd);cursor:pointer">
+          <input type="checkbox" id="textExtractKeepStructure" checked> 표/리스트 구조 유지
+        </label>
+        <label style="font-size:11px;color:var(--ink-soft);font-weight:700;display:flex;align-items:center;gap:5px;padding:6px 10px;background:#f7faff;border-radius:8px;border:1.5px solid var(--blue-bd);cursor:pointer">
+          <input type="checkbox" id="textExtractCleanSpaces"> 줄바꿈 정리
+        </label>
+      </div>
+
+      <div style="position:relative">
+        <textarea id="textExtractResult" rows="14" placeholder="추출된 텍스트가 여기 표시됩니다…"
+          style="width:100%;padding:12px;border:2px solid var(--blue-bd);border-radius:10px;font-size:13px;background:#fff;font-family:'Consolas','Menlo',monospace;outline:none;resize:vertical;line-height:1.6;box-sizing:border-box;min-height:200px"></textarea>
+        <button id="textExtractCopy" style="position:absolute;top:8px;right:8px;padding:5px 12px;background:rgba(63,124,184,.9);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">📋 복사</button>
+      </div>
+
+      <div style="font-size:11px;color:var(--ink-faint);margin-top:8px;text-align:right">
+        <span id="textExtractCount">0</span>자 · 사진 <span id="textExtractImgCount">0</span>장 추출
+      </div>
+    </div>
+    <div class="modal-foot" style="display:flex;gap:6px;padding:12px 18px;border-top:1.5px solid var(--blue-bd)">
+      <button class="btn btn-ghost" id="textExtractCancel" style="flex:1">취소</button>
+      <button class="btn btn-primary" id="textExtractRetry" style="background:#f39c12;color:#fff;border:none">🔄 다시 추출</button>
+      <button class="btn btn-primary" id="textExtractInsert" style="background:#27ae60;color:#fff;border:none">✅ 삽입</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 스캔 보관함 상세/편집 모달 ===== -->
+<div class="overlay" id="scanDetailOverlay">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head" id="scanDetailHead" style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1.5px solid var(--blue-bd)">
+      <div id="scanDetailIcon" style="font-size:28px"></div>
+      <div style="flex:1">
+        <div style="font-size:11px;color:var(--ink-soft);font-weight:700">스캔 보관함 - 보기/수정</div>
+        <div id="scanDetailKindLabel" style="font-size:15px;font-weight:800;color:var(--ink)"></div>
+      </div>
+      <button class="btn btn-ghost" id="scanDetailClose" style="padding:6px 10px">✕</button>
+    </div>
+    <div class="modal-body" style="padding:14px 18px;max-height:calc(90vh - 120px);overflow-y:auto">
+      <input type="hidden" id="scanDetailId">
+      <div id="scanDetailPhoto" style="margin-bottom:12px"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">📅 날짜</label><input type="date" id="sd_date" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">🕐 결제시각</label><input type="time" id="sd_payTime" step="300" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">💰 총금액</label><input type="number" id="sd_amount" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">💳 결제수단</label><input type="text" id="sd_payMethod" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--ink-soft);font-weight:700">📝 제목</label><input type="text" id="sd_title" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">🏪 상호명</label><input type="text" id="sd_place" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">📞 전화</label><input type="tel" id="sd_phone" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--ink-soft);font-weight:700">📍 주소</label><input type="text" id="sd_addr" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+      </div>
+
+      <!-- 종류별 추가 필드 -->
+      <div id="scanDetailExtra" style="margin-bottom:10px"></div>
+
+      <!-- 품목 배열 -->
+      <div style="font-size:12px;font-weight:800;color:var(--blue);margin:14px 0 8px;padding:6px 10px;background:var(--blue-lt);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+        <span>🛒 구매 품목 <span id="sd_itemsCount" style="font-weight:600;color:var(--ink-soft)"></span></span>
+        <button onclick="addScanDetailItemRow()" style="font-size:11px;font-weight:700;padding:3px 10px;border:1.5px solid var(--blue);border-radius:6px;background:#fff;color:var(--blue);cursor:pointer;font-family:inherit">➕ 추가</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 60px 90px 90px 28px;gap:5px;font-size:10px;color:var(--ink-faint);font-weight:700;padding:0 2px;margin-bottom:4px">
+        <span>품목명</span><span style="text-align:center">수량</span><span>단가</span><span>소계</span><span></span>
+      </div>
+      <div id="sd_itemsList"></div>
+
+      <!-- 메모 -->
+      <div style="margin-top:14px">
+        <label style="font-size:11px;color:var(--ink-soft);font-weight:700">📝 메모</label>
+        <textarea id="sd_note" rows="3" style="width:100%;padding:8px 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff;font-family:inherit;outline:none;box-sizing:border-box;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot" style="display:flex;gap:6px;padding:12px 18px;border-top:1.5px solid var(--blue-bd);flex-wrap:wrap">
+      <button class="btn btn-ghost" id="scanDetailCancel" style="flex:1">취소</button>
+      <button class="btn" onclick="scanDetailDelete()" style="background:#fde8e8;color:#c0392b;border:1.5px solid #fca5a5;padding:0 14px;height:40px;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">🗑 삭제</button>
+      <button class="btn" onclick="saveScanStoreDetail()" style="background:var(--blue);color:#fff;border:none;padding:0 14px;height:40px;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">💾 저장</button>
+      <button class="btn" onclick="scanDetailMoveToRecord()" style="background:#27ae60;color:#fff;border:none;padding:0 14px;height:40px;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">✅ 기록으로 이동</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 사진 크롭 모달 (영수증만 잘라내기) ===== -->
 <div id="cropOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99998;flex-direction:column;align-items:center;justify-content:center">
   <div id="cropHeader" style="position:absolute;top:0;left:0;right:0;padding:14px 18px;background:rgba(0,0,0,.6);display:flex;justify-content:space-between;align-items:center;z-index:10">
@@ -1153,6 +1253,176 @@ function toggleDbg(){
   p.classList.toggle('show');
   if(p.classList.contains('show')) document.getElementById('dbgLog').textContent=dbgLogs.join('\n');
 }
+
+/* ==================== ✨ 사진 텍스트 추출 (공통) ==================== */
+let textExtractState = {
+  photos: [],        // base64 배열
+  targetFn: null,    // 삽입 콜백 (텍스트를 받아 처리)
+  lastExtracted: '', // 마지막 추출 결과
+};
+
+window.openTextExtract = function(photos, targetCallback){
+  if(!photos || !photos.length){ toast('먼저 사진을 첨부해주세요'); return; }
+  if(typeof aiKey === 'undefined' || !aiKey){ toast('AI 키를 먼저 설정해주세요 (🤖 AI키 버튼)'); return; }
+  textExtractState.photos = photos;
+  textExtractState.targetFn = targetCallback;
+  textExtractState.lastExtracted = '';
+  const ov = document.getElementById('textExtractOverlay');
+  document.getElementById('textExtractResult').value = '';
+  document.getElementById('textExtractCount').textContent = '0';
+  document.getElementById('textExtractImgCount').textContent = photos.length;
+  ov.classList.add('show');
+  // 자동 추출 시작
+  runTextExtract();
+};
+
+async function runTextExtract(){
+  const status = document.getElementById('textExtractStatus');
+  const resultEl = document.getElementById('textExtractResult');
+  const retryBtn = document.getElementById('textExtractRetry');
+  const insertBtn = document.getElementById('textExtractInsert');
+  if(retryBtn) retryBtn.disabled = true;
+  if(insertBtn) insertBtn.disabled = true;
+
+  const keepStructure = document.getElementById('textExtractKeepStructure').checked;
+  const cleanSpaces = document.getElementById('textExtractCleanSpaces').checked;
+
+  status.style.display = 'block';
+  status.style.background = '#fff9e6';
+  status.style.borderColor = '#f0c040';
+  status.style.color = '#7a5c00';
+  status.textContent = `🤖 AI가 ${textExtractState.photos.length}장의 사진에서 텍스트를 추출 중…`;
+
+  try {
+    let allText = '';
+    for(let i = 0; i < textExtractState.photos.length; i++){
+      status.textContent = `🤖 추출 중… (${i+1}/${textExtractState.photos.length})`;
+      const photo = textExtractState.photos[i];
+      const b64 = photo.split(',')[1];
+      const mediaType = photo.split(';')[0].split(':')[1] || 'image/jpeg';
+
+      const prompt = buildTextExtractPrompt(keepStructure);
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': aiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4000,
+          messages: [{
+            role: 'user',
+            content: [
+              {type:'image', source:{type:'base64', media_type:mediaType, data:b64}},
+              {type:'text', text: prompt}
+            ]
+          }]
+        })
+      });
+      if(!res.ok) throw new Error('API ' + res.status);
+      const data = await res.json();
+      let text = (data.content[0].text || '').trim();
+      // 마크다운 코드 블록 제거
+      text = text.replace(/^```[\w]*\n?/gm, '').replace(/```$/gm, '').trim();
+      if(textExtractState.photos.length > 1){
+        allText += `\n\n━━━ 📷 사진 ${i+1} ━━━\n\n` + text;
+      } else {
+        allText = text;
+      }
+    }
+
+    // 정리 옵션
+    if(cleanSpaces){
+      allText = allText.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n');
+    }
+
+    textExtractState.lastExtracted = allText.trim();
+    resultEl.value = textExtractState.lastExtracted;
+    document.getElementById('textExtractCount').textContent = textExtractState.lastExtracted.length;
+    status.style.background = '#e6f9f0';
+    status.style.borderColor = '#86efac';
+    status.style.color = '#16a34a';
+    status.textContent = '✅ 추출 완료! 편집 후 삽입하거나 복사하세요.';
+    setTimeout(() => { status.style.display = 'none'; }, 2500);
+  } catch(e){
+    console.error(e);
+    status.style.background = '#fde8e8';
+    status.style.borderColor = '#fca5a5';
+    status.style.color = '#b52929';
+    status.textContent = '❌ 추출 실패: ' + e.message;
+  } finally {
+    if(retryBtn) retryBtn.disabled = false;
+    if(insertBtn) insertBtn.disabled = false;
+  }
+}
+
+function buildTextExtractPrompt(keepStructure){
+  return `당신은 사진에서 모든 텍스트를 정확히 추출하는 OCR 전문가입니다.
+
+【추출 원칙】
+- 사진에 보이는 **모든 텍스트를 한 글자도 빠짐없이** 읽어 그대로 옮기세요
+- 한글, 영문, 일본어, 중국어, 숫자 등 모든 언어 정확히 인식
+- 손글씨, 인쇄물, 화이트보드, 책 페이지, 표지판 등 모든 형태 지원
+- 흐릿하거나 일부 가려진 글자는 문맥/패턴으로 합리적 추론
+
+【구조 처리】
+${keepStructure ? '- **표/리스트/제목/단락 구조를 최대한 보존**하세요\n- 표: 마크다운 표 또는 정렬된 공백으로 표현\n- 리스트: - 또는 1. 2. 3. 으로 유지\n- 제목: # ## ### 로 표시 (큰 글자일 경우)\n- 들여쓰기와 줄바꿈도 가능한 한 유지' : '- 단순히 텍스트만 추출, 구조는 무시\n- 자연스러운 줄바꿈만 유지'}
+
+【주의사항】
+- 본인 임의로 내용을 추가/생략하지 말 것
+- 설명/해석/주석 절대 추가하지 말 것
+- 마크다운 코드 블록(\`\`\`) 사용하지 말 것
+- 오직 사진 속 텍스트만 출력
+
+【응답 형식】
+순수 텍스트만 출력. 추출된 내용 외 다른 말 일절 추가하지 마세요.`;
+}
+
+// 모달 이벤트 - DOM 로드 후
+function initTextExtractModal(){
+  const close = document.getElementById('textExtractClose');
+  const cancel = document.getElementById('textExtractCancel');
+  const retry = document.getElementById('textExtractRetry');
+  const insert = document.getElementById('textExtractInsert');
+  const copy = document.getElementById('textExtractCopy');
+  const result = document.getElementById('textExtractResult');
+
+  if(close) close.onclick = () => document.getElementById('textExtractOverlay').classList.remove('show');
+  if(cancel) cancel.onclick = () => document.getElementById('textExtractOverlay').classList.remove('show');
+  if(retry) retry.onclick = () => runTextExtract();
+  if(insert) insert.onclick = () => {
+    const text = (result.value || '').trim();
+    if(!text){ toast('삽입할 텍스트가 없어요'); return; }
+    if(typeof textExtractState.targetFn === 'function'){
+      textExtractState.targetFn(text);
+      toast('✅ 텍스트가 삽입됐어요');
+    } else {
+      // fallback: 클립보드 복사
+      navigator.clipboard && navigator.clipboard.writeText(text);
+      toast('📋 클립보드에 복사됐어요');
+    }
+    document.getElementById('textExtractOverlay').classList.remove('show');
+  };
+  if(copy) copy.onclick = () => {
+    const t = result.value || '';
+    if(!t){ toast('복사할 텍스트가 없어요'); return; }
+    navigator.clipboard && navigator.clipboard.writeText(t);
+    copy.textContent = '✅ 복사됨';
+    setTimeout(() => copy.textContent = '📋 복사', 1500);
+  };
+  if(result){
+    result.addEventListener('input', () => {
+      document.getElementById('textExtractCount').textContent = result.value.length;
+    });
+  }
+  // 옵션 변경 시 재추출 옵션은 안 함 (사용자가 🔄 다시 추출 누르면 됨)
+}
+if(document.readyState !== 'loading') initTextExtractModal();
+else document.addEventListener('DOMContentLoaded', initTextExtractModal);
+
 // 디버그 버튼 이벤트
 const dbgToggleBtn=document.getElementById('dbgToggleBtn');
 if(dbgToggleBtn) dbgToggleBtn.addEventListener('click',toggleDbg);
@@ -1710,6 +1980,33 @@ function renderRecThumbs(){
 }
 if(g('recCam')){g('recCam').addEventListener('change',e=>{handleRecPhotos([...e.target.files]);e.target.value='';});}
 if(g('recFile')){g('recFile').addEventListener('change',e=>{handleRecPhotos([...e.target.files]);e.target.value='';});}
+
+// ✨ 기록 모달 텍스트 추출 버튼
+if(g('recExtractText')){
+  g('recExtractText').addEventListener('click',()=>{
+    if(!recPhotos.length){ toast('먼저 사진을 첨부해주세요'); return; }
+    openTextExtract(recPhotos, (text) => {
+      // 종류별로 적절한 필드에 삽입
+      let targetId = 'rf-note';  // 기본은 메모
+      if(currentKind === 'diary' || currentKind === 'thought' || currentKind === 'other'){
+        targetId = 'rf-body';
+      } else if(currentKind === 'reading'){
+        // 독서는 noteRows에 추가하지 말고 일단 노트에 삽입
+        targetId = 'rf-note';
+      }
+      const target = g(targetId);
+      if(target){
+        const prev = (target.value || '').trim();
+        target.value = prev ? (prev + '\n\n' + text) : text;
+        target.focus();
+      } else {
+        // fallback: 메모 영역 못 찾으면 클립보드
+        navigator.clipboard && navigator.clipboard.writeText(text);
+        toast('📋 메모 영역을 못 찾아 클립보드에 복사했어요');
+      }
+    });
+  });
+}
 // 기록 모달 열려있을 때 Ctrl+V 사진 붙여넣기
 document.addEventListener('paste',async e=>{
   if(!g('recordOverlay').classList.contains('show')) return;
@@ -2047,6 +2344,47 @@ if(g('viewClose2')){g('viewClose2').addEventListener('click',()=>g('viewOverlay'
   }
   if(g('stickySave')){  g('stickySave').addEventListener('click',saveSticky);}
   if(g('stickyInput')){  g('stickyInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();saveSticky();}});}
+
+  // ✨ 메모 - 입력창 안의 사진에서 텍스트 추출
+  if(g('stickyExtractText')){
+    g('stickyExtractText').addEventListener('click',()=>{
+      const editor = g('stickyInput');
+      if(!editor){ toast('메모 입력창을 찾을 수 없어요'); return; }
+      // 입력창 안의 모든 img 수집
+      const imgs = [...editor.querySelectorAll('img')];
+      // 첨부 영역의 사진들도 포함
+      const previewImgs = [...document.querySelectorAll('#stickyPhotoPreview img')];
+      const allImgs = [...imgs, ...previewImgs];
+      const photos = allImgs.map(img => img.src).filter(src => src.startsWith('data:'));
+      if(!photos.length){ toast('메모에 사진을 먼저 첨부해주세요 (📷/🖼)'); return; }
+      openTextExtract(photos, (text) => {
+        // 메모 입력창 끝에 추가
+        const editor = g('stickyInput');
+        if(!editor) return;
+        editor.focus();
+        // 줄바꿈 보존하면서 텍스트 노드로 삽입
+        const lines = text.split('\n');
+        const frag = document.createDocumentFragment();
+        // 기존 내용 끝에 추가
+        if((editor.textContent || '').trim()){
+          frag.appendChild(document.createElement('br'));
+          frag.appendChild(document.createElement('br'));
+        }
+        lines.forEach((ln, i) => {
+          frag.appendChild(document.createTextNode(ln));
+          if(i < lines.length - 1) frag.appendChild(document.createElement('br'));
+        });
+        editor.appendChild(frag);
+        // 커서를 끝으로
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      });
+    });
+  }
   const stickyToggleBtn=g('stickyToggleBtn');
   const stickyBody=g('stickyInput');
   if(stickyToggleBtn){
@@ -3680,8 +4018,8 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
         </div>
         <div class="scan-raw-text" id="scanRaw${idx}">${esc(parsed.rawText||'')}</div>
         <div class="scan-action-row">
-          <button class="scan-save-btn primary" onclick="saveScanToStore(${idx})">📂 보관함에 저장</button>
-          <button class="scan-save-btn primary" onclick="saveScanToRecord(${idx})" style="background:#27ae60">✅ 기록으로 바로 저장</button>
+          <button class="scan-save-btn primary" onclick="saveScanToStore(${idx})" style="background:var(--blue);font-weight:800">📂 스캔 보관함에 저장</button>
+          <button class="scan-save-btn primary" onclick="saveScanBothPlaces(${idx})" style="background:#27ae60">✅ 보관함 + 기록 함께 저장</button>
           <button class="scan-save-btn ghost" onclick="document.getElementById('scanCard${idx}').remove()">✕ 닫기</button>
         </div>
       </div>
@@ -3774,6 +4112,56 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
       dept:gv2('dept'),
     };
   }
+
+  // 📂 보관함 + ✅ 기록 둘 다 저장
+  window.saveScanBothPlaces = function(idx){
+    const parsed = scanResultCards[idx]; if(!parsed) return;
+    const d = getScanCardData(idx);
+    // 1) 보관함에 저장
+    const storeItem = {
+      id: 'scan_' + Date.now() + '_' + idx,
+      kind: parsed.kind,
+      savedAt: Date.now(),
+      photo: parsed._imgBase64 || '',
+      ...d,
+      rawText: parsed.rawText || ''
+    };
+    scanStore.unshift(storeItem);
+    saveStore();
+    if(typeof renderScanStore === 'function') renderScanStore();
+    // 2) 기록에도 저장 (saveScanToRecord 로직 인라인)
+    const photos = parsed._imgBase64 ? [parsed._imgBase64] : [];
+    const itemsText = d.items.length
+      ? d.items.map(i=>`${i.name} ${i.qty>1?'x'+i.qty:''} ${i.subtotal?numFmt(i.subtotal):''}`.trim()).join(', ')
+      : '';
+    const kind = parsed.kind;
+    let obj = {};
+    if(kind === 'restaurant'){
+      obj = {kind:'restaurant',date:d.date,payTime:d.payTime,place:d.place||d.title,phone:d.phone,addr:d.addr,
+        menuRows:d.items.map(i=>({name:i.name,price:i.subtotal||i.price,qty:i.qty})),
+        amount:d.amount,payMethod:d.payMethod,persons:d.persons,tableNo:d.tableNo,note:d.note,photos};
+    } else if(kind === 'purchase'){
+      obj = {kind:'purchase',date:d.date,payTime:d.payTime,title:d.title||itemsText,place:d.place,phone:d.phone,addr:d.addr,
+        amount:d.amount,payMethod:d.payMethod,itemRows:d.items,note:d.note,photos};
+    } else if(kind === 'health'){
+      obj = {kind:'health',date:d.date,payTime:d.payTime,title:d.title,hospital:d.hospital,hospitalAddr:d.addr,phone:d.phone,
+        pharmacy:d.pharmacy,doctor:d.doctor,drug:d.drugs,diagnosis:d.diagnosis,amount:d.amount,
+        itemRows:d.items,note:d.note,photos};
+    } else if(kind === 'car'){
+      obj = {kind:'car',vehicle:curVehicle||'소나타',date:d.date,carType:d.carType||'기타',
+        shop:d.place,shopPhone:d.phone,shopAddr:d.addr,
+        liters:d.liters,pricePerL:d.pricePerL,amount:d.amount,
+        repairRows:d.items.map(i=>({item:i.name,cost:i.subtotal||i.price,memo:''})),
+        note:d.note,photos};
+    } else {
+      obj = {kind:'other',date:d.date,payTime:d.payTime,title:d.title||'스캔 기록',
+        place:d.place,phone:d.phone,addr:d.addr,amount:d.amount,
+        body:[itemsText,d.note].filter(Boolean).join('\n\n'),photos};
+    }
+    addEntry(obj);
+    toast('✅ 보관함 + 기록 둘 다 저장됐어요!');
+    document.getElementById('scanCard' + idx) && document.getElementById('scanCard' + idx).remove();
+  };
 
   // 보관함에 저장
   window.saveScanToStore=function(idx){
@@ -3875,23 +4263,213 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
     const km=KIND_MAP;
     el.innerHTML=list.map(item=>{
       const k=km[item.kind]||km.other;
-      const meta=[item.date,item.amount?numFmt(item.amount):'',item.place||item.shop||item.hospital||''].filter(Boolean).join(' · ');
-      return `<div class="scan-store-item">
-        ${item.photo?`<img src="${item.photo}" class="scan-store-thumb" onclick="showImg('${item.photo}')">`:`<div style="width:48px;height:48px;border-radius:8px;background:${k.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${k.icon}</div>`}
-        <div class="scan-store-body">
+      const meta=[item.date,item.payTime,item.amount?numFmt(item.amount):'',item.place||item.shop||item.hospital||''].filter(Boolean).join(' · ');
+      const itemsCount = (item.items&&item.items.length)?` · ${item.items.length}개 품목`:'';
+      return `<div class="scan-store-item" style="cursor:pointer" data-store-id="${esc(item.id)}">
+        ${item.photo?`<img src="${item.photo}" class="scan-store-thumb" data-show-img="${esc(item.photo)}">`:`<div style="width:48px;height:48px;border-radius:8px;background:${k.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${k.icon}</div>`}
+        <div class="scan-store-body" data-open-store="${esc(item.id)}">
           <div class="scan-store-title">
             <span class="scan-store-badge" style="background:${k.bg};color:${k.color}">${k.icon} ${k.label}</span>
             ${esc(item.title||item.place||item.shop||'(제목없음)')}
           </div>
-          <div class="scan-store-meta">${esc(meta)}</div>
+          <div class="scan-store-meta">${esc(meta)}${itemsCount}</div>
         </div>
         <div class="scan-store-actions">
-          <button class="scan-store-btn" onclick="moveScanStoreToRecord('${esc(item.id)}')" title="기록으로 이동" style="background:#e8f5e9;border-color:#86efac">✅</button>
-          <button class="scan-store-btn" onclick="deleteScanStoreItem('${esc(item.id)}')" title="삭제" style="background:#fff5f5;border-color:#fca5a5">🗑</button>
+          <button class="scan-store-btn" data-edit-store="${esc(item.id)}" title="보기/수정" style="background:#e8f0fa;border-color:#c8d8f0">📝</button>
+          <button class="scan-store-btn" data-move-store="${esc(item.id)}" title="기록으로 이동" style="background:#e8f5e9;border-color:#86efac">✅</button>
+          <button class="scan-store-btn" data-del-store="${esc(item.id)}" title="삭제" style="background:#fff5f5;border-color:#fca5a5">🗑</button>
         </div>
       </div>`;
     }).join('');
+    // 이벤트 위임
+    el.querySelectorAll('[data-show-img]').forEach(img=>{
+      img.addEventListener('click',e=>{e.stopPropagation();showImg(img.dataset.showImg);});
+    });
+    el.querySelectorAll('[data-open-store]').forEach(body=>{
+      body.addEventListener('click',e=>{e.stopPropagation();openScanStoreDetail(body.dataset.openStore);});
+    });
+    el.querySelectorAll('[data-edit-store]').forEach(btn=>{
+      btn.addEventListener('click',e=>{e.stopPropagation();openScanStoreDetail(btn.dataset.editStore);});
+    });
+    el.querySelectorAll('[data-move-store]').forEach(btn=>{
+      btn.addEventListener('click',e=>{e.stopPropagation();moveScanStoreToRecord(btn.dataset.moveStore);});
+    });
+    el.querySelectorAll('[data-del-store]').forEach(btn=>{
+      btn.addEventListener('click',e=>{e.stopPropagation();
+        if(confirm('이 항목을 삭제할까요?')) deleteScanStoreItem(btn.dataset.delStore);
+      });
+    });
   };
+
+  // 보관함 항목 상세 보기 + 편집
+  window.openScanStoreDetail = function(storeId){
+    const item = scanStore.find(s=>s.id===storeId);
+    if(!item){ toast('항목을 찾을 수 없어요'); return; }
+    const km = KIND_MAP[item.kind] || KIND_MAP.other;
+    const ov = g('scanDetailOverlay');
+    if(!ov) return;
+    g('scanDetailHead').style.background = km.bg;
+    g('scanDetailIcon').textContent = km.icon;
+    g('scanDetailKindLabel').textContent = km.label;
+    g('scanDetailId').value = storeId;
+
+    // 사진
+    const photoBox = g('scanDetailPhoto');
+    if(item.photo){
+      photoBox.innerHTML = `<img src="${item.photo}" style="width:100%;max-height:200px;object-fit:contain;border-radius:10px;border:1.5px solid var(--line);cursor:pointer" onclick="showImg('${item.photo}')">`;
+    } else {
+      photoBox.innerHTML = `<div style="padding:30px;text-align:center;background:${km.bg};border-radius:10px;font-size:36px">${km.icon}</div>`;
+    }
+
+    // 공통 필드 채우기
+    g('sd_date').value = item.date || today();
+    g('sd_payTime').value = item.payTime || '';
+    g('sd_amount').value = item.amount || '';
+    g('sd_payMethod').value = item.payMethod || '';
+    g('sd_title').value = item.title || '';
+    g('sd_place').value = item.place || item.shop || item.hospital || '';
+    g('sd_phone').value = item.phone || item.shopPhone || '';
+    g('sd_addr').value = item.addr || item.shopAddr || '';
+    g('sd_note').value = item.note || '';
+
+    // 종류별 추가 필드 표시
+    const extraBox = g('scanDetailExtra');
+    let extraHtml = '';
+    if(item.kind === 'restaurant'){
+      extraHtml = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">인원수</label><input type="number" id="sd_persons" value="${item.persons||''}" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">테이블</label><input type="text" id="sd_tableNo" value="${esc(item.tableNo||'')}" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+      </div>`;
+    } else if(item.kind === 'health'){
+      extraHtml = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">병원</label><input type="text" id="sd_hospital" value="${esc(item.hospital||'')}" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">약국</label><input type="text" id="sd_pharmacy" value="${esc(item.pharmacy||'')}" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">의사</label><input type="text" id="sd_doctor" value="${esc(item.doctor||'')}" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">진단명</label><input type="text" id="sd_diagnosis" value="${esc(item.diagnosis||'')}" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--ink-soft);font-weight:700">처방약</label><input type="text" id="sd_drugs" value="${esc(item.drugs||'')}" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+      </div>`;
+    } else if(item.kind === 'car'){
+      extraHtml = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">종류</label><input type="text" id="sd_carType" value="${esc(item.carType||'')}" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">차량</label><input type="text" id="sd_vehicle" value="${esc(item.vehicle||'')}" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">주유량(L)</label><input type="number" step="0.01" id="sd_liters" value="${item.liters||''}" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+        <div><label style="font-size:11px;color:var(--ink-soft);font-weight:700">단가(원/L)</label><input type="number" id="sd_pricePerL" value="${item.pricePerL||''}" style="width:100%;height:36px;padding:0 10px;border:1.5px solid var(--blue-bd);border-radius:8px;font-size:13px;background:#f7faff"></div>
+      </div>`;
+    }
+    extraBox.innerHTML = extraHtml;
+
+    // 품목 배열 렌더링
+    const itemsBox = g('sd_itemsList');
+    const itemsArr = Array.isArray(item.items)?item.items:[];
+    itemsBox.innerHTML = itemsArr.map((it,i)=>renderItemRow(it,i)).join('');
+    g('sd_itemsCount').textContent = itemsArr.length?`(${itemsArr.length}개)`:'';
+
+    // 품목 행 이벤트
+    itemsBox.addEventListener('input',handleItemRowInput);
+    itemsBox.addEventListener('click',handleItemRowClick);
+
+    ov.classList.add('show');
+  };
+
+  function renderItemRow(it,i){
+    return `<div class="sd-item-row" data-row="${i}" style="display:grid;grid-template-columns:1fr 60px 90px 90px 28px;gap:5px;margin-bottom:4px;align-items:center">
+      <input type="text" class="sdrow-name" placeholder="품목명" value="${esc(it.name||'')}" style="height:34px;padding:0 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;background:#fff;outline:none;width:100%;box-sizing:border-box">
+      <input type="number" class="sdrow-qty" placeholder="수량" value="${it.qty||1}" style="height:34px;padding:0 6px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;background:#fff;outline:none;width:100%;box-sizing:border-box;text-align:center">
+      <input type="number" class="sdrow-price" placeholder="단가" value="${it.price||''}" style="height:34px;padding:0 6px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;background:#fff;outline:none;width:100%;box-sizing:border-box">
+      <input type="number" class="sdrow-sub" placeholder="소계" value="${it.subtotal||''}" style="height:34px;padding:0 6px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;background:#f7faff;outline:none;width:100%;box-sizing:border-box;font-weight:700">
+      <button class="sdrow-del" data-row-del="${i}" style="width:28px;height:28px;border:none;background:#fde8e8;color:#c0392b;border-radius:7px;cursor:pointer;font-size:13px">✕</button>
+    </div>`;
+  }
+  function handleItemRowInput(e){
+    const row = e.target.closest('.sd-item-row'); if(!row) return;
+    if(e.target.classList.contains('sdrow-qty') || e.target.classList.contains('sdrow-price')){
+      const qty = parseFloat(row.querySelector('.sdrow-qty').value)||0;
+      const price = parseFloat(row.querySelector('.sdrow-price').value)||0;
+      row.querySelector('.sdrow-sub').value = Math.round(qty*price);
+    }
+  }
+  function handleItemRowClick(e){
+    const del = e.target.closest('[data-row-del]');
+    if(del) del.closest('.sd-item-row').remove();
+  }
+  window.addScanDetailItemRow = function(){
+    const list = g('sd_itemsList');
+    if(!list) return;
+    const i = list.querySelectorAll('.sd-item-row').length;
+    const div = document.createElement('div');
+    div.innerHTML = renderItemRow({name:'',qty:1,price:'',subtotal:''}, i);
+    list.appendChild(div.firstChild);
+  };
+
+  // 상세 모달에서 보관함 업데이트 저장
+  window.saveScanStoreDetail = function(){
+    const id = g('scanDetailId').value;
+    const idx = scanStore.findIndex(s=>s.id===id);
+    if(idx<0){ toast('항목을 찾을 수 없어요'); return; }
+    const item = scanStore[idx];
+    // 공통
+    item.date = g('sd_date').value;
+    item.payTime = g('sd_payTime').value;
+    item.amount = parseInt(g('sd_amount').value)||0;
+    item.payMethod = g('sd_payMethod').value;
+    item.title = g('sd_title').value;
+    item.place = g('sd_place').value;
+    item.phone = g('sd_phone').value;
+    item.addr = g('sd_addr').value;
+    item.note = g('sd_note').value;
+    // 종류별
+    if(g('sd_persons')) item.persons = parseInt(g('sd_persons').value)||0;
+    if(g('sd_tableNo')) item.tableNo = g('sd_tableNo').value;
+    if(g('sd_hospital')) item.hospital = g('sd_hospital').value;
+    if(g('sd_pharmacy')) item.pharmacy = g('sd_pharmacy').value;
+    if(g('sd_doctor')) item.doctor = g('sd_doctor').value;
+    if(g('sd_diagnosis')) item.diagnosis = g('sd_diagnosis').value;
+    if(g('sd_drugs')) item.drugs = g('sd_drugs').value;
+    if(g('sd_carType')) item.carType = g('sd_carType').value;
+    if(g('sd_vehicle')) item.vehicle = g('sd_vehicle').value;
+    if(g('sd_liters')) item.liters = parseFloat(g('sd_liters').value)||0;
+    if(g('sd_pricePerL')) item.pricePerL = parseInt(g('sd_pricePerL').value)||0;
+    // 품목 배열
+    const itemsList = g('sd_itemsList');
+    const newItems = [];
+    if(itemsList){
+      itemsList.querySelectorAll('.sd-item-row').forEach(row=>{
+        const name = (row.querySelector('.sdrow-name')||{}).value||'';
+        if(!name.trim()) return;
+        newItems.push({
+          name: name.trim(),
+          qty: parseFloat((row.querySelector('.sdrow-qty')||{}).value)||1,
+          price: parseFloat((row.querySelector('.sdrow-price')||{}).value)||0,
+          subtotal: parseFloat((row.querySelector('.sdrow-sub')||{}).value)||0,
+        });
+      });
+    }
+    item.items = newItems;
+    scanStore[idx] = item;
+    saveStore(); renderScanStore();
+    toast('💾 수정됐어요');
+    g('scanDetailOverlay').classList.remove('show');
+  };
+
+  // 상세 모달에서 기록으로 이동
+  window.scanDetailMoveToRecord = function(){
+    saveScanStoreDetail();  // 먼저 변경사항 저장
+    const id = g('scanDetailId').value;
+    if(id) moveScanStoreToRecord(id);
+    g('scanDetailOverlay').classList.remove('show');
+  };
+  // 상세 모달에서 삭제
+  window.scanDetailDelete = function(){
+    if(!confirm('이 항목을 삭제할까요?')) return;
+    const id = g('scanDetailId').value;
+    if(id) deleteScanStoreItem(id);
+    g('scanDetailOverlay').classList.remove('show');
+  };
+
+  // 닫기/취소 버튼
+  if(g('scanDetailClose')) g('scanDetailClose').addEventListener('click',()=>g('scanDetailOverlay').classList.remove('show'));
+  if(g('scanDetailCancel')) g('scanDetailCancel').addEventListener('click',()=>g('scanDetailOverlay').classList.remove('show'));
+
 
   // 스캔 이미지 접근 헬퍼
   window.scanResultCardsImg = function(idx){
@@ -4435,7 +5013,7 @@ business: company(회사명), person(담당자), email(이메일), dept(부서),
 // Escape 키로 수정 모달 닫히지 않게 방지
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    const modals=['recordOverlay','viewOverlay','fileOverlay','pwOverlay','ctOverlay','aiKeyOverlay'];
+    const modals=['recordOverlay','viewOverlay','fileOverlay','pwOverlay','ctOverlay','aiKeyOverlay','scanDetailOverlay'];
     if(modals.some(id=>g(id)&&g(id).classList.contains('show'))){
       e.preventDefault();e.stopPropagation();
     }
