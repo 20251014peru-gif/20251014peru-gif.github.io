@@ -2063,7 +2063,15 @@ let _rcptImg=null,_rcptEditing=null;
 
 function openReceiptModal(receipt){
   _rcptEditing=receipt||null;
-  _rcptImg=receipt?(receipt.photo||null):null;
+  _rcptImg=null;
+  // 구버전(photo:base64)과 신버전(photoId) 모두 지원
+  if(receipt){
+    if(receipt.photoId){
+      idbGet(receipt.photoId).then(d=>{if(d){_rcptImg=d;showReceiptPhoto();}}).catch(()=>{});
+    }else if(receipt.photo){
+      _rcptImg=receipt.photo;
+    }
+  }
   $('receiptTitle').textContent=receipt?'✏️ 영수증 수정':'🧾 영수증 추가';
   $('receiptDelete').style.display=receipt?'':'none';
   $('r_date').value=receipt?(receipt.date||today()):today();
@@ -2202,7 +2210,7 @@ $('rcptAnalyze').onclick=async()=>{
 function closeReceiptModal(){$('receiptOverlay').classList.remove('show');_rcptEditing=null;_rcptImg=null;}
 $('receiptClose').onclick=closeReceiptModal;
 $('receiptCancel').onclick=closeReceiptModal;
-$('receiptSave').onclick=()=>{
+$('receiptSave').onclick=async()=>{
   const place=$('r_place').value.trim();
   if(!place){toast('상호명을 입력하세요');return;}
   const items=[];
@@ -2216,6 +2224,12 @@ $('receiptSave').onclick=()=>{
       subtotal:parseFloat((row.querySelector('.rrow-sub')||{}).value)||0,
     });
   });
+  // 사진은 IDB에 저장, 객체에는 photoId만
+  let photoId='';
+  if(_rcptImg){
+    photoId=(_rcptEditing&&_rcptEditing.photoId)||('r_'+uid());
+    try{await idbPut(photoId,_rcptImg);}catch(e){toast('사진 저장 실패: '+e.message);return;}
+  }
   const data={
     id:_rcptEditing?_rcptEditing.id:uid(),
     date:$('r_date').value||today(),
@@ -2226,18 +2240,21 @@ $('receiptSave').onclick=()=>{
     amount:parseInt($('r_amount').value)||0,
     payMethod:$('r_payMethod').value.trim(),
     items,memo:$('r_memo').value.trim(),
-    photo:_rcptImg||'',updated:Date.now(),
+    photoId,updated:Date.now(),
   };
   if(_rcptEditing){
     const idx=receipts.findIndex(r=>r.id===_rcptEditing.id);
     if(idx>=0)receipts[idx]=data;
+    // 구버전 photo 필드 정리
+    delete receipts[idx].photo;
   }else receipts.unshift(data);
   if(!saveReceipts())return;
   closeReceiptModal();renderScanList();toast('✅ 저장됐어요');
 };
-$('receiptDelete').onclick=()=>{
+$('receiptDelete').onclick=async()=>{
   if(!_rcptEditing)return;
   if(!confirm(`'${_rcptEditing.place||'영수증'}'을 삭제할까요?`))return;
+  if(_rcptEditing.photoId){try{await idbDel(_rcptEditing.photoId);}catch(e){}}
   receipts=receipts.filter(r=>r.id!==_rcptEditing.id);
   saveReceipts();closeReceiptModal();renderScanList();toast('삭제됐어요');
 };
@@ -2247,7 +2264,14 @@ let _cardImg=null,_cardEditing=null;
 
 function openCardModal(card){
   _cardEditing=card||null;
-  _cardImg=card?(card.photo||null):null;
+  _cardImg=null;
+  if(card){
+    if(card.photoId){
+      idbGet(card.photoId).then(d=>{if(d){_cardImg=d;showCardPhoto();}}).catch(()=>{});
+    }else if(card.photo){
+      _cardImg=card.photo;
+    }
+  }
   $('cardModalTitle').textContent=card?'✏️ 명함 수정':'💼 명함 추가';
   $('cardDelete').style.display=card?'':'none';
   $('c_company').value=card?(card.company||''):'';
@@ -2350,9 +2374,15 @@ $('cardAnalyze').onclick=async()=>{
 
 $('cardClose').onclick=closeCardModal;
 $('cardCancel').onclick=closeCardModal;
-$('cardSave').onclick=()=>{
+$('cardSave').onclick=async()=>{
   const name=$('c_name').value.trim();
   if(!name){toast('이름을 입력하세요');return;}
+  // 사진은 IDB에 저장
+  let photoId='';
+  if(_cardImg){
+    photoId=(_cardEditing&&_cardEditing.photoId)||('c_'+uid());
+    try{await idbPut(photoId,_cardImg);}catch(e){toast('사진 저장 실패: '+e.message);return;}
+  }
   const data={
     id:_cardEditing?_cardEditing.id:uid(),
     company:$('c_company').value.trim(),
@@ -2365,18 +2395,20 @@ $('cardSave').onclick=()=>{
     website:$('c_website').value.trim(),
     addr:$('c_addr').value.trim(),
     memo:$('c_memo').value.trim(),
-    photo:_cardImg||'',updated:Date.now(),
+    photoId,updated:Date.now(),
   };
   if(_cardEditing){
     const idx=cards.findIndex(c=>c.id===_cardEditing.id);
     if(idx>=0)cards[idx]=data;
+    delete cards[idx].photo;
   }else cards.unshift(data);
   if(!saveCards())return;
   closeCardModal();renderScanList();toast('✅ 저장됐어요');
 };
-$('cardDelete').onclick=()=>{
+$('cardDelete').onclick=async()=>{
   if(!_cardEditing)return;
   if(!confirm(`'${_cardEditing.name||'명함'}'을 삭제할까요?`))return;
+  if(_cardEditing.photoId){try{await idbDel(_cardEditing.photoId);}catch(e){}}
   cards=cards.filter(c=>c.id!==_cardEditing.id);
   saveCards();closeCardModal();renderScanList();toast('삭제됐어요');
 };
@@ -2386,7 +2418,14 @@ let _textImg=null,_textEditing=null;
 
 function openTextModal(t){
   _textEditing=t||null;
-  _textImg=t?(t.photo||null):null;
+  _textImg=null;
+  if(t){
+    if(t.photoId){
+      idbGet(t.photoId).then(d=>{if(d){_textImg=d;showTextPhoto();}}).catch(()=>{});
+    }else if(t.photo){
+      _textImg=t.photo;
+    }
+  }
   $('textModalTitle').textContent=t?'✏️ 텍스트 메모 수정':'📝 텍스트 메모 추가';
   $('textDelete').style.display=t?'':'none';
   $('t_date').value=t?(t.date||today()):today();
@@ -2484,9 +2523,15 @@ $('t_copy').onclick=()=>{
 
 $('textClose').onclick=closeTextModal;
 $('textCancel').onclick=closeTextModal;
-$('textSave').onclick=()=>{
+$('textSave').onclick=async()=>{
   const title=$('t_title').value.trim();
   if(!title){toast('제목을 입력하세요');return;}
+  // 사진은 IDB에 저장
+  let photoId='';
+  if(_textImg){
+    photoId=(_textEditing&&_textEditing.photoId)||('t_'+uid());
+    try{await idbPut(photoId,_textImg);}catch(e){toast('사진 저장 실패: '+e.message);return;}
+  }
   const data={
     id:_textEditing?_textEditing.id:uid(),
     date:$('t_date').value||today(),
@@ -2495,18 +2540,20 @@ $('textSave').onclick=()=>{
     tags:$('t_tags').value.trim(),
     text:$('t_text').value,
     memo:$('t_memo').value.trim(),
-    photo:_textImg||'',updated:Date.now(),
+    photoId,updated:Date.now(),
   };
   if(_textEditing){
     const idx=texts.findIndex(x=>x.id===_textEditing.id);
     if(idx>=0)texts[idx]=data;
+    delete texts[idx].photo;
   }else texts.unshift(data);
   if(!saveTexts())return;
   closeTextModal();renderScanList();toast('✅ 저장됐어요');
 };
-$('textDelete').onclick=()=>{
+$('textDelete').onclick=async()=>{
   if(!_textEditing)return;
   if(!confirm(`'${_textEditing.title||'텍스트 메모'}'를 삭제할까요?`))return;
+  if(_textEditing.photoId){try{await idbDel(_textEditing.photoId);}catch(e){}}
   texts=texts.filter(x=>x.id!==_textEditing.id);
   saveTexts();closeTextModal();renderScanList();toast('삭제됐어요');
 };
@@ -2564,10 +2611,21 @@ $('btnExport').onclick=async()=>{
   toast('💾 백업 만드는 중…');
   try{
     const imgsMap={};
+    // 일반/보안 사진 IDB
     for(const p of photos){
       for(const id of (p.imgIds||[])){
         try{const d=await idbGet(id);if(d)imgsMap[id]=d;}catch(e){}
       }
+    }
+    // 영수증/명함/텍스트 IDB
+    for(const r of receipts){
+      if(r.photoId){try{const d=await idbGet(r.photoId);if(d)imgsMap[r.photoId]=d;}catch(e){}}
+    }
+    for(const c of cards){
+      if(c.photoId){try{const d=await idbGet(c.photoId);if(d)imgsMap[c.photoId]=d;}catch(e){}}
+    }
+    for(const t of texts){
+      if(t.photoId){try{const d=await idbGet(t.photoId);if(d)imgsMap[t.photoId]=d;}catch(e){}}
     }
     const blob=new Blob([JSON.stringify({
       app:'scan-app',version:2,exportedAt:new Date().toISOString(),
@@ -2653,6 +2711,8 @@ $('secureCancel').onclick=()=>{
 (async function init(){
   loadData();
   try{await openIDB();}catch(e){console.error(e);}
+  // 구버전 데이터 마이그레이션: photo:base64 → photoId + IDB
+  await migrateOldPhotos();
   refreshCatSelects();refreshKeyState();buildPinPad();
   const d=new Date(),pad=n=>String(n).padStart(2,'0');
   $('appVer').textContent=`v${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
@@ -2661,6 +2721,32 @@ $('secureCancel').onclick=()=>{
   $('scanView').style.display='';
   renderScanList();
 })();
+
+async function migrateOldPhotos(){
+  let changed=false;
+  for(const r of receipts){
+    if(r.photo&&!r.photoId){
+      r.photoId='r_'+uid();
+      try{await idbPut(r.photoId,r.photo);delete r.photo;changed=true;}catch(e){}
+    }
+  }
+  for(const c of cards){
+    if(c.photo&&!c.photoId){
+      c.photoId='c_'+uid();
+      try{await idbPut(c.photoId,c.photo);delete c.photo;changed=true;}catch(e){}
+    }
+  }
+  for(const t of texts){
+    if(t.photo&&!t.photoId){
+      t.photoId='t_'+uid();
+      try{await idbPut(t.photoId,t.photo);delete t.photo;changed=true;}catch(e){}
+    }
+  }
+  if(changed){
+    saveReceipts();saveCards();saveTexts();
+    console.log('[마이그레이션] 기존 사진을 IndexedDB로 이전 완료');
+  }
+}
 
 console.log('[사진 스캐너 v2] 로드 완료');
 </script>
