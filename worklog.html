@@ -2248,6 +2248,16 @@
       <input type="text" id="expV2Memo" name="exp_memo" autocomplete="on" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
     </div>
 
+    <!-- 🧾 영수증·명함 첨부 (scan-app) -->
+    <div style="margin-bottom:14px;padding:12px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:12px">
+      <label style="font-size:11px;font-weight:700;color:#3f7cb8;display:block;margin-bottom:8px">🧾 영수증·명함 첨부 <span style="font-weight:500;color:#7a92a8">(scan-app)</span></label>
+      <div id="expV2ScanAttached" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" id="expV2PickReceipt" style="flex:1;min-width:130px;height:38px;border:1.5px solid #3f7cb8;background:#fff;color:#3f7cb8;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🧾 영수증 선택/추가</button>
+        <button type="button" id="expV2PickCard" style="flex:1;min-width:130px;height:38px;border:1.5px solid #3f7cb8;background:#fff;color:#3f7cb8;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">💼 명함 선택/추가</button>
+      </div>
+    </div>
+
     <!-- 전표 여부 + 세금계산서 발급여부 -->
     <div id="expV2TaxOptions" style="display:none;margin-bottom:14px;padding:12px;background:#fff7ed;border:1.5px solid #fdba74;border-radius:12px">
       <div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:8px">📃 세금계산서 옵션</div>
@@ -2304,6 +2314,17 @@
 </div></div>
 
 <div id="printArea"></div>
+
+<!-- 🔗 scan-app picker iframe 모달 -->
+<div id="scanPickerOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:none;align-items:center;justify-content:center">
+  <div style="background:#fff;width:95%;max-width:720px;height:90vh;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1.5px solid #dbe6f4;background:#f7faff">
+      <span style="font-size:15px;font-weight:700;color:#1a2f45">📷 scan-app에서 선택</span>
+      <button type="button" id="scanPickerCloseBtn" style="background:#fde8e8;border:none;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">✕ 닫기</button>
+    </div>
+    <iframe id="scanPickerFrame" style="flex:1;width:100%;border:none;background:#fff" src="about:blank"></iframe>
+  </div>
+</div>
 
 <!-- Google API -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -6160,6 +6181,13 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     renderMatList(); calcMatTotal();
     renderMealList(); calcMealTotal();
     renderWasteList(); calcWasteTotal();
+    // 🔗 scan-app 영수증/명함 참조 로드
+    window._expV2ScanRefs = [];
+    window._expV2EditId = _editId;
+    if(en && en.scanRefs && en.scanRefs.length){
+      window._expV2ScanRefs = en.scanRefs.slice();
+    }
+    if(typeof window._renderExpV2ScanAttached==='function') window._renderExpV2ScanAttached();
     var ov=g('expV2Overlay'); if(ov) ov.style.display='flex';
     var sh=g('expV2Sheet');   if(sh) sh.scrollTop=0;
   }
@@ -6186,9 +6214,33 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var obj={kind:'expense',date:date,expType:_expType,title:title,amount:amount,
       vendor:vendor,memo:memo,purpose:_selPurpose,purposes:_selPurpose?[_selPurpose]:[],
       isCost:isCost,isJeonpyo:isJeonpyo,isIssued:isIssued,
-      matItems:_matItems.slice(),mealItems:_mealItems.slice(),wasteItems:_wasteItems.slice()};
+      matItems:_matItems.slice(),mealItems:_mealItems.slice(),wasteItems:_wasteItems.slice(),
+      /* 🔗 scan-app 참조 */
+      scanRefs:(window._expV2ScanRefs||[]).map(function(r){return {type:r.type,id:r.id};})};
+    var savedId = _editId;
     if(_editId){ if(typeof updateRecord==='function') updateRecord(_editId,obj); }
-    else{ obj.createdAt=Date.now(); if(typeof addRecord==='function') addRecord(obj); }
+    else{ obj.createdAt=Date.now(); if(typeof addRecord==='function') {
+        addRecord(obj);
+        /* 새로 추가 시 ID는 비동기로 들어옴 — 잠시 후 가장 최신 expense에 링크 */
+        setTimeout(function(){
+          if(typeof entries!=='undefined'){
+            var latest = entries.filter(function(e){return e.kind==='expense';})
+              .sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);})[0];
+            if(latest && window._linkScanItemBack){
+              (window._expV2ScanRefs||[]).forEach(function(r){
+                window._linkScanItemBack(r.type, r.id, 'worklog:expense_'+latest.id);
+              });
+            }
+          }
+        }, 500);
+      }
+    }
+    /* 수정 시 즉시 링크 */
+    if(_editId && window._linkScanItemBack){
+      (window._expV2ScanRefs||[]).forEach(function(r){
+        window._linkScanItemBack(r.type, r.id, 'worklog:expense_'+_editId);
+      });
+    }
     closeExpV2();
     setTimeout(function(){ renderExpV2List(); renderExpV2Dashboard(); },300);
     if(typeof toast==='function') toast(_editId?'수정됐어요':'저장됐어요');
@@ -6699,6 +6751,192 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   });
 
   window._openExpV2=openExpV2;
+
+/* ════════════════════════════════════════════════════════
+   🔗 scan-app 통합 (영수증·명함 picker)
+   ════════════════════════════════════════════════════════ */
+(function(){
+  var SCAN_APP_URL = 'https://20251014peru-gif.github.io/scan-app.html';
+  var SCAN_USER_ID = '달님';  // scan-app 의 user ID와 동일
+  var g = function(id){ return document.getElementById(id); };
+  var esc2 = function(s){ return (s||'').replace(/[&<>"]/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]);}); };
+  var _pickerCtx = null;
+
+  /* scan-app Firestore에서 영수증/명함 조회 (worklog가 같은 Firebase 프로젝트 사용 가정) */
+  async function fetchScanItem(type, id){
+    try{
+      if(typeof db === 'undefined') return null;
+      var coll = type + 's';
+      var doc = await db.collection('scanapp').doc(SCAN_USER_ID).collection(coll).doc(id).get();
+      if(doc.exists){
+        var data = doc.data();
+        if(data.deletedAt) return null;
+        return data;
+      }
+    }catch(e){ console.error('[scan fetch]',e); }
+    return null;
+  }
+
+  /* scan-app 영수증/명함에 양방향 링크 추가 */
+  async function linkScanItemBack(type, id, linkedTo){
+    try{
+      if(typeof db === 'undefined') return;
+      var coll = type + 's';
+      var docRef = db.collection('scanapp').doc(SCAN_USER_ID).collection(coll).doc(id);
+      var doc = await docRef.get();
+      if(doc.exists){
+        var data = doc.data();
+        var linkedArr = data.linkedTo || [];
+        if(linkedArr.indexOf(linkedTo) === -1){
+          linkedArr.push(linkedTo);
+          await docRef.update({ linkedTo: linkedArr, updated: Date.now() });
+        }
+      }
+    }catch(e){ console.warn('[link back]',e); }
+  }
+  window._linkScanItemBack = linkScanItemBack;
+
+  /* picker iframe 열기 */
+  function openScanPicker(type, linkedTo, onSelect){
+    _pickerCtx = { type: type, onSelect: onSelect };
+    var url = SCAN_APP_URL + '?mode=picker&type=' + type + '&linkedTo=' + encodeURIComponent(linkedTo||'');
+    g('scanPickerFrame').src = url;
+    g('scanPickerOverlay').style.display = 'flex';
+  }
+  function closeScanPicker(){
+    g('scanPickerOverlay').style.display = 'none';
+    g('scanPickerFrame').src = 'about:blank';
+    _pickerCtx = null;
+  }
+  /* 닫기 버튼 + 백그라운드 클릭으로 닫기 */
+  g('scanPickerCloseBtn').addEventListener('click', closeScanPicker);
+  g('scanPickerOverlay').addEventListener('click', function(e){
+    if(e.target === g('scanPickerOverlay')) closeScanPicker();
+  });
+
+  /* scan-app → worklog postMessage 수신 */
+  window.addEventListener('message', function(e){
+    if(!e.data || e.data.source !== 'scan-app') return;
+    if(e.data.action === 'selected' && _pickerCtx){
+      _pickerCtx.onSelect(e.data.payload.type, e.data.payload.id, e.data.payload.data);
+      closeScanPicker();
+    }
+  });
+
+  /* expV2 모달 — 영수증/명함 첨부 카드 렌더링 */
+  async function renderExpV2ScanAttached(){
+    var wrap = g('expV2ScanAttached'); if(!wrap) return;
+    var refs = window._expV2ScanRefs || [];
+    if(!refs.length){
+      wrap.innerHTML = '<div style="font-size:11px;color:#aab8c8;padding:4px 2px">아직 첨부된 영수증·명함이 없어요</div>';
+      return;
+    }
+    /* 데이터 일괄 fetch (캐싱) */
+    var dataMap = {};
+    for(var i=0;i<refs.length;i++){
+      var r = refs[i];
+      var key = r.type + ':' + r.id;
+      if(r.data){ dataMap[key] = r.data; }
+      else { dataMap[key] = await fetchScanItem(r.type, r.id); }
+    }
+    wrap.innerHTML = refs.map(function(r, idx){
+      var d = dataMap[r.type+':'+r.id] || {};
+      var icon = r.type==='receipt' ? '🧾' : '💼';
+      var title = r.type==='receipt' ? (d.place||'영수증') : (d.name||'명함');
+      var sub = r.type==='receipt'
+        ? ((d.date||'') + (d.amount?(' · '+d.amount.toLocaleString()+'원'):''))
+        : ((d.company||'') + (d.mobile?(' · '+d.mobile):''));
+      var photoUrl = d.photoUrl || '';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#fff;border:1.5px solid #dbe6f4;border-radius:8px">'
+        + (photoUrl
+            ? '<img src="'+photoUrl+'" style="width:42px;height:42px;object-fit:cover;border-radius:6px" loading="lazy">'
+            : '<div style="width:42px;height:42px;background:#f0f6ff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px">'+icon+'</div>')
+        + '<div style="flex:1;min-width:0">'
+          + '<div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+icon+' '+esc2(title)+'</div>'
+          + '<div style="font-size:11px;color:#7a92a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc2(sub)+'</div>'
+        + '</div>'
+        + '<button type="button" data-rmidx="'+idx+'" style="background:#fde8e8;border:none;border-radius:6px;padding:6px 10px;font-size:12px;color:#b52929;cursor:pointer;font-family:inherit">×</button>'
+      + '</div>';
+    }).join('');
+    /* 제거 버튼 */
+    wrap.querySelectorAll('[data-rmidx]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var idx = parseInt(b.dataset.rmidx,10);
+        window._expV2ScanRefs.splice(idx, 1);
+        renderExpV2ScanAttached();
+      });
+    });
+  }
+  window._renderExpV2ScanAttached = renderExpV2ScanAttached;
+
+  /* 빈 칸만 자동 채움 (영수증 선택 시) */
+  function autofillExpV2(type, data){
+    var setIfEmpty = function(id, val){ var el=g(id); if(el && !el.value.trim() && val) el.value = val; };
+    if(type === 'receipt'){
+      setIfEmpty('expV2Date', data.date || '');
+      setIfEmpty('expV2Vendor', data.place || '');
+      setIfEmpty('expV2TitleInput', data.place || '');
+      /* 금액은 빈값일 때만 (수동 입력 안 됐을 때만) */
+      var amtEl = g('expV2Amount');
+      if(amtEl && (!amtEl.value || amtEl.value==='0') && data.amount){
+        amtEl.value = data.amount;
+      }
+      /* 메모에 품목 자동 추가 */
+      var memoEl = g('expV2Memo');
+      if(memoEl && data.items && data.items.length){
+        var itemTxt = data.items.map(function(it){ return (it.name||'')+(it.qty>1?(' x'+it.qty):''); }).filter(Boolean).join(', ');
+        if(itemTxt && memoEl.value.indexOf(itemTxt) === -1){
+          memoEl.value = (memoEl.value ? memoEl.value+' / ' : '') + '🛒 ' + itemTxt;
+        }
+      }
+    }else if(type === 'card'){
+      setIfEmpty('expV2Vendor', data.company || data.name || '');
+    }
+  }
+
+  /* 영수증 선택 버튼 */
+  var pickReceiptBtn = g('expV2PickReceipt');
+  if(pickReceiptBtn){
+    pickReceiptBtn.addEventListener('click', function(){
+      var entryId = window._expV2EditId || 'new';
+      var linkedTo = 'worklog:expense_' + entryId;
+      openScanPicker('receipt', linkedTo, function(selType, selId, data){
+        if(!data) return;
+        var refs = window._expV2ScanRefs || (window._expV2ScanRefs = []);
+        if(refs.some(function(r){ return r.type===selType && r.id===selId; })){
+          if(typeof toast==='function') toast('이미 첨부됐어요');
+          return;
+        }
+        refs.push({ type: selType, id: selId, data: data });
+        autofillExpV2(selType, data);
+        renderExpV2ScanAttached();
+      });
+    });
+  }
+  /* 명함 선택 버튼 */
+  var pickCardBtn = g('expV2PickCard');
+  if(pickCardBtn){
+    pickCardBtn.addEventListener('click', function(){
+      var entryId = window._expV2EditId || 'new';
+      var linkedTo = 'worklog:expense_' + entryId;
+      openScanPicker('card', linkedTo, function(selType, selId, data){
+        if(!data) return;
+        var refs = window._expV2ScanRefs || (window._expV2ScanRefs = []);
+        if(refs.some(function(r){ return r.type===selType && r.id===selId; })){
+          if(typeof toast==='function') toast('이미 연결됐어요');
+          return;
+        }
+        refs.push({ type: selType, id: selId, data: data });
+        autofillExpV2(selType, data);
+        renderExpV2ScanAttached();
+      });
+    });
+  }
+
+  /* 외부 노출 (다른 곳에서도 사용 가능) */
+  window._openScanPicker = openScanPicker;
+  window._fetchScanItem = fetchScanItem;
+})();
 
 /* ===== 업무↔통화 연결 ===== */
 (function(){
