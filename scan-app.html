@@ -521,8 +521,9 @@ main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
         <div class="field"><label>🎯 직책</label><input type="text" id="c_position"></div>
         <div class="field"><label>📂 부서</label><input type="text" id="c_dept"></div>
         <div class="field"><label>📱 휴대폰</label><input type="tel" id="c_mobile"></div>
-        <div class="field"><label>📞 회사 전화</label><input type="tel" id="c_phone"></div>
-        <div class="field full"><label>📧 이메일</label><input type="email" id="c_email"></div>
+        <div class="field"><label>🏢 유선전화</label><input type="tel" id="c_phone"></div>
+        <div class="field"><label>📠 팩스</label><input type="tel" id="c_fax"></div>
+        <div class="field"><label>📧 이메일</label><input type="email" id="c_email"></div>
         <div class="field full"><label>🌐 웹사이트</label><input type="url" id="c_website"></div>
         <div class="field full"><label>📍 주소</label><input type="text" id="c_addr"></div>
         <div class="field full"><label>📝 메모</label><textarea id="c_memo" rows="2"></textarea></div>
@@ -1943,12 +1944,12 @@ function renderReceiptList(q){
 }
 
 function renderCardList(q){
-  const list=cards.filter(c=>!q||[c.company,c.name,c.position,c.phone,c.mobile,c.email,c.addr,c.memo]
+  const list=cards.filter(c=>!q||[c.company,c.name,c.position,c.phone,c.mobile,c.fax,c.email,c.addr,c.memo]
     .some(v=>(v||'').toLowerCase().includes(q)));
   if(!list.length){$('cardList').innerHTML='';$('scanEmpty').style.display='';return;}
   $('scanEmpty').style.display='none';
   const tableHtml=`<div class="scan-table"><table>
-    <thead><tr><th>회사</th><th>이름</th><th>직책</th><th>휴대폰</th><th>회사전화</th>
+    <thead><tr><th>회사</th><th>이름</th><th>직책</th><th>휴대폰</th><th>유선</th><th>팩스</th>
     <th>이메일</th><th>주소</th><th style="text-align:right">작업</th></tr></thead>
     <tbody>${list.map(c=>`<tr data-id="${esc(c.id)}">
       <td class="truncate" style="font-weight:700">${esc(c.company||'')}</td>
@@ -1956,6 +1957,7 @@ function renderCardList(q){
       <td style="font-size:12px;color:var(--ink-soft)">${esc(c.position||'')}${c.dept?' / '+esc(c.dept):''}</td>
       <td>${c.mobile?`<a class="link-tel" href="${telLink(c.mobile)}">${esc(c.mobile)}</a>`:''}</td>
       <td>${c.phone?`<a class="link-tel" href="${telLink(c.phone)}">${esc(c.phone)}</a>`:''}</td>
+      <td>${esc(c.fax||'')}</td>
       <td class="truncate">${c.email?`<a class="link-addr" href="${mailLink(c.email)}">${esc(c.email)}</a>`:''}</td>
       <td class="truncate">${c.addr?`<a class="link-addr" href="${naverMap(c.addr)}" target="_blank">${esc(c.addr)}</a>`:''}</td>
       <td><div class="row-actions">
@@ -1972,7 +1974,8 @@ function renderCardList(q){
       <div class="date">${esc(c.company||'')}</div>
     </div>
     ${c.mobile?`<div class="row"><div class="label">📱 휴대폰</div><div class="val"><a class="link-tel" href="${telLink(c.mobile)}">${esc(c.mobile)}</a></div></div>`:''}
-    ${c.phone?`<div class="row"><div class="label">🏢 사무실</div><div class="val"><a class="link-tel" href="${telLink(c.phone)}">${esc(c.phone)}</a></div></div>`:''}
+    ${c.phone?`<div class="row"><div class="label">🏢 유선</div><div class="val"><a class="link-tel" href="${telLink(c.phone)}">${esc(c.phone)}</a></div></div>`:''}
+    ${c.fax?`<div class="row"><div class="label">📠 팩스</div><div class="val">${esc(c.fax)}</div></div>`:''}
     ${c.email?`<div class="row"><div class="label">📧 이메일</div><div class="val"><a class="link-addr" href="${mailLink(c.email)}">${esc(c.email)}</a></div></div>`:''}
     ${c.addr?`<div class="row"><div class="label">📍 주소</div><div class="val"><a class="link-addr" href="${naverMap(c.addr)}" target="_blank">${esc(c.addr)} 🗺</a></div></div>`:''}
     ${c.memo?`<div class="row"><div class="label">📝 메모</div><div class="val" style="font-size:12px;color:var(--ink-soft)">${esc(c.memo)}</div></div>`:''}
@@ -2119,7 +2122,8 @@ async function openScanDetail(type,id){
     if(item.company) html+=_detailRow('🏢 회사',`<strong>${esc(item.company)}</strong>`);
     if(item.position||item.dept) html+=_detailRow('🎯 직책',esc(`${item.position||''}${item.dept?' / '+item.dept:''}`));
     if(item.mobile) html+=_detailRow('📱 휴대폰',`<a class="link-tel" href="${telLink(item.mobile)}">${esc(item.mobile)} 📞</a>`);
-    if(item.phone) html+=_detailRow('🏢 사무실',`<a class="link-tel" href="${telLink(item.phone)}">${esc(item.phone)} 📞</a>`);
+    if(item.phone) html+=_detailRow('🏢 유선전화',`<a class="link-tel" href="${telLink(item.phone)}">${esc(item.phone)} 📞</a>`);
+    if(item.fax) html+=_detailRow('📠 팩스',esc(item.fax));
     if(item.email) html+=_detailRow('📧 이메일',`<a class="link-addr" href="${mailLink(item.email)}">${esc(item.email)}</a>`);
     if(item.website) html+=_detailRow('🌐 웹',`<a class="link-addr" href="${esc(item.website)}" target="_blank">${esc(item.website)}</a>`);
     if(item.addr) html+=_detailRow('📍 주소',`<a class="link-addr" href="${naverMap(item.addr)}" target="_blank">${esc(item.addr)} 🗺</a>`);
@@ -2194,7 +2198,7 @@ function copyReceiptToClipboard(r){
 }
 function copyCardToClipboard(c){
   const row=[c.company||'',c.name||'',c.position||'',c.dept||'',c.mobile||'',
-    c.phone||'',c.email||'',c.website||'',c.addr||'',c.memo||''].join('\t');
+    c.phone||'',c.fax||'',c.email||'',c.website||'',c.addr||'',c.memo||''].join('\t');
   navigator.clipboard.writeText(row).then(()=>toast('📋 엑셀 복사됨'));
 }
 function copyTextToClipboard(t){
@@ -2213,9 +2217,9 @@ function exportScanCsv(){
     filename=`영수증_${today()}.csv`;
   }else if(curScanType==='card'){
     if(!cards.length){toast('내보낼 명함이 없어요');return;}
-    rows=[['회사명','이름','직책','부서','휴대폰','회사전화','이메일','웹사이트','주소','메모']];
+    rows=[['회사명','이름','직책','부서','휴대폰','유선전화','팩스','이메일','웹사이트','주소','메모']];
     cards.forEach(c=>rows.push([c.company||'',c.name||'',c.position||'',c.dept||'',
-      c.mobile||'',c.phone||'',c.email||'',c.website||'',c.addr||'',c.memo||'']));
+      c.mobile||'',c.phone||'',c.fax||'',c.email||'',c.website||'',c.addr||'',c.memo||'']));
     filename=`명함_${today()}.csv`;
   }else{
     if(!texts.length){toast('내보낼 텍스트가 없어요');return;}
@@ -2458,6 +2462,7 @@ function openCardModal(card){
   $('c_dept').value=card?(card.dept||''):'';
   $('c_mobile').value=card?(card.mobile||''):'';
   $('c_phone').value=card?(card.phone||''):'';
+  $('c_fax').value=card?(card.fax||''):'';
   $('c_email').value=card?(card.email||''):'';
   $('c_website').value=card?(card.website||''):'';
   $('c_addr').value=card?(card.addr||''):'';
@@ -2519,10 +2524,12 @@ $('cardAnalyze').onclick=async()=>{
           {type:'text',text:`이 명함에서 모든 정보를 추출하세요.
 
 【전화번호 구분】
-010, 011 → "mobile" / 02, 031 등 → "phone"
+010, 011 → "mobile" (휴대폰)
+02, 031, 032 등 지역번호 → "phone" (유선전화)
+"FAX", "F", "팩스" 표시 옆 번호 → "fax" (팩스)
 
 【응답 - 순수 JSON만】
-{"company":"","name":"","position":"","dept":"","mobile":"","phone":"","email":"","website":"","addr":""}
+{"company":"","name":"","position":"","dept":"","mobile":"","phone":"","fax":"","email":"","website":"","addr":""}
 
 빈 필드는 "".`}]
         }]
@@ -2538,6 +2545,7 @@ $('cardAnalyze').onclick=async()=>{
     if(c.dept)$('c_dept').value=c.dept;
     if(c.mobile)$('c_mobile').value=c.mobile;
     if(c.phone)$('c_phone').value=c.phone;
+    if(c.fax)$('c_fax').value=c.fax;
     if(c.email)$('c_email').value=c.email;
     if(c.website)$('c_website').value=c.website;
     if(c.addr)$('c_addr').value=c.addr;
@@ -2569,6 +2577,7 @@ $('cardSave').onclick=async()=>{
     dept:$('c_dept').value.trim(),
     mobile:$('c_mobile').value.trim(),
     phone:$('c_phone').value.trim(),
+    fax:$('c_fax').value.trim(),
     email:$('c_email').value.trim(),
     website:$('c_website').value.trim(),
     addr:$('c_addr').value.trim(),
@@ -2892,7 +2901,7 @@ $('secureCancel').onclick=()=>{
   // 구버전 데이터 마이그레이션: photo:base64 → photoId + IDB
   await migrateOldPhotos();
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260623-1411';
+  $('appVer').textContent='v20260623-1417';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
