@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260619-16";
+const APP_VERSION = "v44-20260624-2";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1055,6 +1055,7 @@ if(f.type==="timepick"){
       <input type="text" id="m-${f.k}" placeholder="업체명 검색..." autocomplete="off"
         style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
       <div id="m-${f.k}-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow:auto"></div>
+      <div id="m-vendorContractBadge" style="display:none;margin-top:6px;align-items:center;gap:6px;flex-wrap:wrap"></div>
     </div>`;
   }
   if(f.type==="textarea") inner=`<textarea id="m-${f.k}"></textarea>`;
@@ -1420,12 +1421,15 @@ function openEditor(kind,id){
         const roleEl=$("m-workRole"); if(roleEl) roleEl.value=c.title||'';
         const phoneEl=$("m-workPhone"); if(phoneEl) phoneEl.value=c.phone||'';
         const memoEl=$("m-workMemo"); if(memoEl) memoEl.value=c.memo||'';
+        // 계약형태 뱃지 표시
+        showVendorContractBadge(c);
       }, ()=>{
         // ✕ 클릭 시 초기화
         const contactEl=$("m-workContact"); if(contactEl) contactEl.value='';
         const roleEl=$("m-workRole"); if(roleEl) roleEl.value='';
         const phoneEl=$("m-workPhone"); if(phoneEl) phoneEl.value='';
         const memoEl=$("m-workMemo"); if(memoEl) memoEl.value='';
+        const badge=$("m-vendorContractBadge"); if(badge) badge.style.display='none';
       });
     }
     // 통화 담당자 검색
@@ -1450,6 +1454,14 @@ function openEditor(kind,id){
   if(kind==="work"){
     renderExpLinkList(id);
     // v44: openExpPick 자동 호출 제거 - 저장 후 openExpenseFromWork가 처리함
+    // v44-0624: 수정 시 기존 업체 계약형태 뱃지 복원
+    if(id && data && data.workVendor){
+      const vendorName = data.workVendor;
+      setTimeout(()=>{
+        const c = (typeof contactsCache!=='undefined'?contactsCache:[]).find(x=>x.name===vendorName);
+        if(c && typeof showVendorContractBadge==='function') showVendorContractBadge(c);
+      }, 200);
+    }
   }
 
   // v21+: 카테고리·소분류 모두 드롭다운에서 선택 또는 새로 직접 입력
@@ -6760,18 +6772,32 @@ function makeContactSearchUI(inputId, listId, onSelect, onClear){
   }
 
   function render(q){
-    const filtered = q
+    const all = q
       ? contacts.filter(c=>(c.name||'').includes(q)||(c.cat||'').includes(q)||(c.phone||'').includes(q)||(c.person||'').includes(q)||(c.title||'').includes(q))
       : contacts;
-    if(!filtered.length){
+    if(!all.length){
       list.innerHTML='<div style="padding:10px 14px;color:#aab8c8;font-size:13px">검색 결과 없음</div>';
       list.style.display='block'; return;
     }
-    list.innerHTML=filtered.map(c=>`
-      <div class="csl-item" data-idx="${contacts.indexOf(c)}" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f6ff;transition:background .1s">
-        <div style="font-size:14px;font-weight:700;color:#1a2f45">${esc(c.name)}${c.person?' <span style="font-size:12px;color:#3f7cb8;font-weight:600">· '+esc(c.person)+'</span>':''}</div>
+    // 등록업체 먼저, 일회성은 맨 아래
+    const reg = all.filter(c=>(c.vendorType||'등록업체')!=='일회성');
+    const one = all.filter(c=>c.vendorType==='일회성');
+    const filtered = [...reg, ...one];
+    list.innerHTML = filtered.map(c=>{
+      const isOnetime = c.vendorType==='일회성';
+      const onetimeBadge = isOnetime ? '<span style="font-size:10px;font-weight:700;background:#f1f5f9;color:#94a3b8;border-radius:6px;padding:1px 6px;margin-left:4px">🕐 일회성</span>' : '';
+      return `<div class="csl-item" data-idx="${contacts.indexOf(c)}" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f6ff;transition:background .1s${isOnetime?';opacity:.65':''}">
+        <div style="font-size:14px;font-weight:700;color:#1a2f45">${esc(c.name)}${onetimeBadge}${c.person?' <span style="font-size:12px;color:#3f7cb8;font-weight:600">· '+esc(c.person)+'</span>':''}</div>
         <div style="font-size:12px;color:#aab8c8;margin-top:2px">${[c.cat,c.title,c.phone].filter(Boolean).join(' · ')}</div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
+    if(one.length && reg.length){
+      // 일회성 구분선
+      const divider = document.createElement('div');
+      divider.style.cssText='padding:4px 14px;font-size:10px;font-weight:700;color:#94a3b8;background:#f8fafc;border-bottom:1px solid #f0f6ff';
+      divider.textContent='🕐 일회성 업체';
+      list.querySelectorAll('.csl-item')[reg.length]?.before(divider);
+    }
     list.style.display='block';
     list.querySelectorAll('.csl-item').forEach(el=>{
       el.addEventListener('mouseenter',()=>el.style.background='#f0f6ff');
@@ -6783,7 +6809,7 @@ function makeContactSearchUI(inputId, listId, onSelect, onClear){
         list.style.display='none';
         const cb=inp.parentElement&&inp.parentElement.querySelector('.csl-clear');
         if(cb) cb.style.display='block';
-        onSelect(c); // 무조건 덮어쓰기
+        onSelect(c);
       });
     });
   }
@@ -7454,10 +7480,13 @@ function searchContacts(q){
     const nm = (c.name||"").toLowerCase();
     const ps = (c.person||"").toLowerCase();
     if(nm.includes(ql)||ps.includes(ql)){
+      const ct = c.contractType||'';
       results.push({
-        label: c.name+(c.person?" / "+c.person:"")+(c.cat?" ["+c.cat+"]":""),
+        label: c.name+(c.person?" / "+c.person:"")+(ct?" ["+ct+"]":"")+(c.cat?" ["+c.cat+"]":""),
         phone: c.phone||"",
-        name: c.name||c.person||""
+        name: c.name||c.person||"",
+        contractType: ct,
+        contractCycle: c.contractCycle||""
       });
     }
   });
@@ -7586,6 +7615,22 @@ async function doAddToContacts(saved){
     contactsCache.push(rec);
     toast(`✅ "${rec.name}" 업체 연락처에 추가되었습니다`);
   }catch(e){ toast("연락처 추가 실패: "+(e.message||e)); }
+}
+
+/* ═══════════════════════════════════════════════
+   📋 업체 구분 뱃지 (v44-0624 단순화)
+   vendorType: "등록업체" | "일회성"
+   ═══════════════════════════════════════════════ */
+
+/* 담당업체 선택 시 일회성 여부를 업무 모달에 표시 */
+function showVendorContractBadge(c){
+  const box = $("m-vendorContractBadge");
+  if(!box) return;
+  const vt = c.vendorType||"등록업체";
+  box.style.display = "flex";
+  box.innerHTML = vt==="일회성"
+    ? '<span style="font-size:11px;font-weight:700;background:#f1f5f9;color:#94a3b8;border-radius:8px;padding:3px 10px;">🕐 일회성 업체</span>'
+    : '<span style="font-size:11px;font-weight:700;background:#d1fae5;color:#166534;border-radius:8px;padding:3px 10px;">✅ 등록업체</span>';
 }
 
 /* ── mSave 클릭 인터셉트 (capture phase) ────────────────── */
