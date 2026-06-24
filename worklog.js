@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260624-12";
+const APP_VERSION = "v44-20260624-14";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1529,23 +1529,21 @@ function renderWorkModal(data, mode){
     <textarea id="m-detail" placeholder="작업 내용, 특이사항 등" style="${S.ta}">${e2(d.detail||"")}</textarea>
   </div>`;
 
-  /* ── 자재 토글 (상세 아래) ── */
+  /* ── 자재 토글 (세로 배열) ── */
   const matSection = `
   <details id="wMatMore" style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;cursor:pointer;list-style:none;user-select:none">
       <span style="font-size:12px;font-weight:700;color:#64748b;flex:1">📦 자재 사용 내역</span>
       <span style="font-size:10px;color:#94a3b8">▼</span>
     </summary>
-    <div style="padding:12px 14px">
-      <div style="display:grid;grid-template-columns:1fr 80px;gap:8px">
-        <div>
-          <label style="${S.lbl}">자재명·규격</label>
-          <input type="text" id="m-material" value="${e2(d.material||"")}" placeholder="예: LED 8W 직부등" style="${S.inp}">
-        </div>
-        <div>
-          <label style="${S.lbl}">수량</label>
-          <input type="number" id="m-qty" value="${e2(d.qty||"")}" min="0" placeholder="0" style="${S.inp};text-align:right">
-        </div>
+    <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+      <div>
+        <label style="${S.lbl}">자재명·규격</label>
+        <input type="text" id="m-material" value="${e2(d.material||"")}" placeholder="예: LED 8W 직부등 Φ100" style="${S.inp}">
+      </div>
+      <div>
+        <label style="${S.lbl}">수량</label>
+        <input type="number" id="m-qty" value="${e2(d.qty||"")}" min="0" placeholder="0" style="${S.inp};max-width:120px">
       </div>
     </div>
   </details>`;
@@ -1620,6 +1618,7 @@ function renderWorkModal(data, mode){
 
   /* ── 조립 순서: 탭 → 날짜/상태 → 층/분야 → 업무내역 → 상세내용 → [외주전용] → 자재 ── */
   $("mFields").innerHTML = tabs + rowDateStatus + rowFloorField + rowTitle + rowDetail + modeExtra + matSection;
+  $("mFields").className = ""; /* 업무 모달은 grid 클래스 제거 — 1열 full width */
   window._wModalData = data;
 
   /* expType 변경 */
@@ -1786,6 +1785,7 @@ function openEditor(kind,id){
   }
 
   const sc=SCHEMA[kind];
+  $("mFields").className = "grid"; /* 일반 모달은 grid 복원 */
   $("mFields").innerHTML = sc.map(fieldHTML).join("");
   sc.forEach(f=>{ 
     if(f.type==="timepick"){
@@ -5232,6 +5232,8 @@ function renderMatFieldChips(){
     const count = cnt[f]||0;
     html += `<button class="mat-field-chip" data-mfc="${esc(f)}" style="padding:6px 12px;border-radius:20px;border:2px solid ${isActive?c.fg:'#dbe6f4'};background:${isActive?c.fg:c.bg};color:${isActive?'#fff':c.fg};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${esc(f)} ${count}</button>`;
   });
+  // ⚙ 분야 관리 버튼을 칩 끝에 추가
+  html += `<button id="btnMatFieldMgr" style="padding:6px 12px;border-radius:20px;border:1.5px solid #dbe6f4;background:#fff;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:4px">⚙ 분야</button>`;
   chipsBox.innerHTML = html;
   chipsBox.querySelectorAll('.mat-field-chip').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -5240,7 +5242,6 @@ function renderMatFieldChips(){
       renderMaterial();
     });
   });
-  // ⚙ 분야 관리 버튼 바인딩
   const mgrBtn = document.getElementById("btnMatFieldMgr");
   if(mgrBtn && !mgrBtn._bound){ mgrBtn._bound=true; mgrBtn.addEventListener("click", openMatFieldMgr); }
 }
@@ -5311,23 +5312,22 @@ function renderStockOverview(){
     const it=r.item, st=r.stock;
     const safe=Number(it.safetyStock||0);
     const lowCls = safe>0 && st<safe ? "st-low" : (st<=0 ? "st-zero" : "");
-    // 품목명에서 [반품생성주문] 등 접두어 제거
     const cleanName = (it.itemName||"").replace(/^\[.*?\]/,"").trim();
     const shopId = it.shopId||it.itemCode||"";
     return `<tr data-id="${it.id}" class="${lowCls}" style="cursor:pointer">
-      <td style="font-size:11px;color:#94a3b8;font-weight:600">${esc(shopId)}</td>
-      <td title="${esc(it.spec||"")}" style="max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+      <td style="font-size:11px;color:#94a3b8;font-weight:600;padding-right:6px">${esc(shopId)}</td>
+      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;padding-left:8px" title="${esc(it.itemName||"")}${it.spec?' / '+esc(it.spec):''}">
         <b style="font-size:13px">${esc(cleanName)}</b>
-        ${it.spec?`<span style="font-size:10px;color:#94a3b8;margin-left:4px">${esc(it.spec.slice(0,30))}${it.spec.length>30?'…':''}</span>`:""}
+        ${it.spec?`<span style="font-size:10px;color:#94a3b8;margin-left:5px">${esc(it.spec.slice(0,28))}${it.spec.length>28?'…':''}</span>`:""}
       </td>
-      <td style="font-size:12px;color:#64748b">${esc(it.unit||"")}</td>
+      <td style="font-size:12px;color:#64748b;text-align:center">${esc(it.unit||"")}</td>
       <td><span class="pill ${fieldClass(it.field)}" style="font-size:10px">${esc(it.field||"")}</span></td>
       <td class="num" style="font-size:12px">${it.unitPrice?won(it.unitPrice):""}</td>
       <td class="num"><b style="font-size:14px;color:${st<=0?'#e74c3c':safe>0&&st<safe?'#f39c12':'#1a2f45'}">${st}</b></td>
-      <td style="text-align:center;white-space:nowrap;padding:4px 6px">
-        <button class="mini-btn" data-act="in" style="padding:3px 7px;font-size:11px;background:#e0f7fa;border-color:#4dd0e1;color:#0097a7" title="입고">📥</button>
-        <button class="mini-btn" data-act="out" style="padding:3px 7px;font-size:11px;background:#fce4ec;border-color:#f48fb1;color:#c2185b" title="출고">📤</button>
-        <button class="mini-btn" data-act="edit" style="padding:3px 7px;font-size:11px" title="수정">✏️</button>
+      <td style="text-align:center;white-space:nowrap;padding:4px 4px">
+        <button class="mini-btn" data-act="in" style="padding:3px 7px;font-size:11px;background:#e0f7fa;border-color:#4dd0e1;color:#0097a7" title="입고">입고</button>
+        <button class="mini-btn" data-act="out" style="padding:3px 7px;font-size:11px;background:#fce4ec;border-color:#f48fb1;color:#c2185b" title="출고">출고</button>
+        <button class="mini-btn" data-act="edit" style="padding:3px 7px;font-size:11px" title="수정">수정</button>
       </td></tr>`;
   }).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{

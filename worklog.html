@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0624-1151</title>
+<title>업무일지 v44-0624-1224</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1676,18 +1676,17 @@
           <select id="matFieldFilter"></select>
           <select id="matRecFilter"></select>
           <button class="btn btn-ghost btn-sm" id="matLowToggle" style="flex:0 0 auto">⚠ 부족만</button>
-          <button class="btn btn-ghost btn-sm" id="btnMatFieldMgr" style="flex:0 0 auto">⚙ 분야</button>
         </div>
         <div id="matStockPanel">
           <div class="table-wrap">
             <table class="rec" style="table-layout:fixed;width:100%"><thead><tr>
-              <th style="width:44px">ID</th>
-              <th>품목명</th>
-              <th style="width:44px">단위</th>
-              <th style="width:60px">분야</th>
-              <th style="width:72px;text-align:right">단가</th>
-              <th style="width:48px;text-align:right">재고</th>
-              <th style="width:112px;text-align:center">액션</th>
+              <th style="width:70px;padding-right:8px">ID</th>
+              <th style="padding-left:8px">품목명</th>
+              <th style="width:40px">단위</th>
+              <th style="width:56px">분야</th>
+              <th style="width:68px;text-align:right">단가</th>
+              <th style="width:44px;text-align:right">재고</th>
+              <th style="width:120px;text-align:center">액션</th>
             </tr></thead><tbody id="matStockBody"></tbody></table>
           </div>
         </div>
@@ -2013,7 +2012,7 @@
 <!-- 기존 모달들 (변경 없음) -->
 <div class="overlay" id="overlay"><div class="modal">
   <h3 id="mTitle">추가</h3>
-  <div class="grid" id="mFields"></div>
+  <div id="mFields" style="display:block"></div>
   <div class="field full attach-area" id="mAttachArea" style="margin-top:14px">
     <label>📎 파일/폴더 링크 (선택)</label>
     <div style="font-size:11.5px;color:var(--ink-soft);margin-top:-2px">경로 예시: <code>C:\서희타워\품의서\26-5-2.docx</code></div>
@@ -2360,7 +2359,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260624-1151"></script>
+<script src="worklog.js?v=44-20260624-1224"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -7280,7 +7279,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0624-1151';
+    if(el) el.textContent = 'v44-0624-1224';
   }
   setVer();
   setTimeout(setVer, 500);
