@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0624-1314</title>
+<title>업무일지 v44-0624-1327</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -986,32 +986,32 @@
       <input type="date" id="v43From" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
       <input type="date" id="v43To" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
     </div>
-    <div style="display:flex;align-items:center;margin-bottom:10px;gap:6px;flex-wrap:wrap">
-      <button id="v43DateClear" style="height:34px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer;color:#7a92a8;font-weight:600">기간해제</button>
-      <button id="v43CopyExcel" onclick="v43CopyWorkExcel()" style="height:34px;padding:0 12px;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-family:inherit;background:#f0f6ff;cursor:pointer;color:#3f7cb8;font-weight:700">📋 엑셀복사</button>
-      <!-- 업무 필터 (업무 탭일 때 노출) -->
-      <div id="wkFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <select id="wfModeEl" style="height:34px;padding:0 9px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none">
+    <div style="display:flex;align-items:center;margin-bottom:10px;gap:6px">
+      <button id="v43DateClear" style="height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:12px;font-family:inherit;background:#fff;cursor:pointer;color:#94a3b8;font-weight:600;white-space:nowrap;flex-shrink:0">기간해제</button>
+      <button id="v43CopyExcel" onclick="v43CopyWorkExcel()" style="height:34px;padding:0 10px;border:1.5px solid #3f7cb8;border-radius:9px;font-size:12px;font-family:inherit;background:#f0f6ff;cursor:pointer;color:#3f7cb8;font-weight:700;white-space:nowrap;flex-shrink:0">📋 복사</button>
+      <!-- 업무 필터 -->
+      <div id="wkFilterRow" style="display:flex;gap:5px;flex:1;align-items:center;min-width:0">
+        <select id="wfModeEl" style="height:34px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1;min-width:0">
           <option value="전체">전체</option>
           <option value="일반업무">🏢 일반</option>
           <option value="외주비용">💰 외주</option>
         </select>
-        <select id="wfStatusEl" style="height:34px;padding:0 9px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none">
-          <option value="전체">상태 전체</option>
+        <select id="wfStatusEl" style="height:34px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1;min-width:0">
+          <option value="전체">상태</option>
           <option value="완료">완료</option>
           <option value="진행중">진행중</option>
           <option value="미완료">미완료</option>
           <option value="보류">보류</option>
         </select>
-        <select id="wfFieldEl" style="height:34px;padding:0 9px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;max-width:110px">
-          <option value="전체">분야 전체</option>
+        <select id="wfFieldEl" style="height:34px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1.2;min-width:0">
+          <option value="전체">분야</option>
         </select>
-        <select id="wfFloorEl" style="height:34px;padding:0 9px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;max-width:90px">
-          <option value="전체">층 전체</option>
+        <select id="wfFloorEl" style="height:34px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1;min-width:0">
+          <option value="전체">층</option>
         </select>
-        <button id="wfClearBtn" style="height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:12px;font-family:inherit;background:#fff;color:#94a3b8;cursor:pointer;font-weight:600">✕</button>
+        <button id="wfClearBtn" style="height:34px;width:34px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:13px;font-family:inherit;background:#fff;color:#94a3b8;cursor:pointer;font-weight:700;flex-shrink:0;padding:0">✕</button>
       </div>
-      <span id="v43Count" style="font-size:12px;color:#aab8c8;margin-left:auto"></span>
+      <span id="v43Count" style="font-size:12px;color:#aab8c8;white-space:nowrap;flex-shrink:0"></span>
     </div>
     <div class="v43-list" id="v43List">
       <div class="v43-empty"><div class="ei">📋</div>데이터를 불러오는 중…</div>
@@ -2380,7 +2380,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260624-1314"></script>
+<script src="worklog.js?v=44-20260624-1327"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -7362,7 +7362,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0624-1314';
+    if(el) el.textContent = 'v44-0624-1327';
   }
   setVer();
   setTimeout(setVer, 500);
