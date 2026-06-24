@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260624-11";
+const APP_VERSION = "v44-20260624-12";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1671,7 +1671,6 @@ function renderWorkModal(data, mode){
   const fb=document.querySelector('#mFields [data-fieldmgr]');
   if(fb&&!fb._bound){ fb._bound=true; fb.addEventListener("click",e=>{ e.preventDefault(); openFieldManager(()=>{}); }); }
 }
-  _workMode = mode||"simple";
 
 function saveWorkEntry(){
   const mode = _workMode;
@@ -3039,9 +3038,9 @@ function cardWork(en){
 }
 
 /* ===== 달력 (v21: 업무/스케줄 모드 + 월간/연간 뷰) ===== */
-let calY,calM,selDay=null;
-let calMode="work";   // "work" or "schedule"
-let calView="month";  // "month" or "year"
+var calY, calM, selDay=null;
+var calMode="work";   // "work" or "schedule"
+var calView="month";  // "month" or "year"
 // v37: 달력 종류별 필터 (true=표시)
 const CAL_FILTER = {
   work:true, cleaning:true, memo:true, call:true, meeting:true,
@@ -6628,8 +6627,8 @@ function wireExpenseTab(){
 
 /* ===== v44: 사고 처리 내역 ===== */
 const ACCIDENT_FILTER = { status:"전체", type:"all", from:"", to:"" };
-const ACCIDENT_STATUS = ["⏳ 접수","🔍 조사중","⚙ 처리중","✅ 완료","📋 종결"];
-const ACCIDENT_STATUS_COLOR = {
+var ACCIDENT_STATUS = ["⏳ 접수","🔍 조사중","⚙ 처리중","✅ 완료","📋 종결"];
+var ACCIDENT_STATUS_COLOR = {
   "⏳ 접수": {bg:"#fef3c7", fg:"#92400e", border:"#f59e0b"},
   "🔍 조사중": {bg:"#dbeafe", fg:"#1e40af", border:"#3b82f6"},
   "⚙ 처리중": {bg:"#fce7f3", fg:"#9f1239", border:"#ec4899"},
