@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>업체 연락처 v10</title>
+<title>업체 연락처</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -124,16 +124,13 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 #imgOverlay img{max-width:100%;max-height:100%;border-radius:12px}
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:#33567d;color:#fff;padding:12px 22px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:all .3s;z-index:100;pointer-events:none;max-width:90%;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.badge-onetime{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;vertical-align:middle;margin-left:4px}
-.btn-toggle-onetime{background:#fff;color:var(--ink-soft);border:1.5px solid var(--line);border-radius:10px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
-.btn-toggle-onetime.showing{background:#fef3c7;color:#92400e;border-color:#f59e0b}
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업체 연락처</h1><span class="sub">등록업체 · 일회성 구분 <b style="color:#9aa7b4">v10</b></span></div>
+      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 초점/회전/얇은크롭 <b style="color:#9aa7b4">v9</b></span></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="worklog.html">📋 업무일지</a>
@@ -151,7 +148,6 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary btn-sm" id="btnAdd">➕ 업체 추가</button>
         <button class="btn btn-ghost btn-sm" id="btnView">📋 한 줄 보기</button>
-        <button class="btn-toggle-onetime" id="btnShowOnetime">🕐 일회성 보기</button>
         <button class="btn btn-ghost btn-sm" id="btnExcel">📋 엑셀 복사</button>
         <button class="btn btn-ghost btn-sm" id="btnBackup">⬇ 백업</button>
         <button class="btn btn-ghost btn-sm" id="btnSettings">⚙ OCR 설정</button>
@@ -196,19 +192,6 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
   </div>
 
   <div class="field"><label>업체명 <span class="req">*</span></label><input type="text" id="c-name"></div>
-
-  <!-- 업체 구분 -->
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button type="button" id="vt-reg"
-      style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--primary);background:var(--primary);color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">
-      ✅ 등록업체
-    </button>
-    <button type="button" id="vt-one"
-      style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--line);background:#fff;color:var(--ink-soft);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">
-      🕐 일회성
-    </button>
-  </div>
-
   <div class="field"><label>분야</label><div style="display:flex;gap:6px;align-items:center"><select id="c-cat" style="flex:1"></select><button type="button" id="btnCatMgr" style="flex-shrink:0;padding:7px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink-soft);font-size:13px;cursor:pointer;font-family:inherit" title="분야 추가/삭제">⚙ 관리</button></div></div>
   <div class="field"><label>담당자</label><input type="text" id="c-person"></div>
   <div class="field"><label>직책</label><input type="text" id="c-title" placeholder="예: 부장, 과장, 대리"></div>
@@ -408,17 +391,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   // 드롭다운 분야 필터
   const dd=$("catDropdown");
   if(dd) dd.addEventListener("change",()=>{ cat=dd.value; renderChips(); render(); });
-  // 일회성 토글
-  const btnOnetime=$("btnShowOnetime");
-  if(btnOnetime) btnOnetime.addEventListener("click",()=>{
-    showOnetime=!showOnetime;
-    btnOnetime.textContent = showOnetime ? "✅ 등록업체 보기" : "🕐 일회성 보기";
-    btnOnetime.classList.toggle("showing", showOnetime);
-    render();
-  });
-  // 업체 구분 버튼 (모달 내)
-  const vtReg=$("vt-reg"); if(vtReg) vtReg.addEventListener("click",()=>setVendorType("등록업체"));
-  const vtOne=$("vt-one"); if(vtOne) vtOne.addEventListener("click",()=>setVendorType("일회성"));
   // 상단 분야관리 버튼
   const mgrTop=$("btnCatMgrTop");
   if(mgrTop) mgrTop.addEventListener("click",openCatMgr);
@@ -465,23 +437,7 @@ async function init(){
 function setStatus(on){ const el=$("status"); el.classList.toggle("on",on); el.classList.toggle("off",!on); $("statusText").textContent=on?"클라우드 연결됨":"오프라인 (이 기기에 저장)"; }
 
 /* ===== 필터/검색 ===== */
-let cat="전체", q="", viewMode="card", showOnetime=false;
-
-/* 업체 구분 토글 */
-let _vendorType = "등록업체";
-function setVendorType(t){
-  _vendorType = t;
-  const reg = document.getElementById("vt-reg");
-  const one = document.getElementById("vt-one");
-  if(!reg||!one) return;
-  const isReg = t==="등록업체";
-  reg.style.background = isReg ? "var(--primary)" : "#fff";
-  reg.style.color      = isReg ? "#fff" : "var(--ink-soft)";
-  reg.style.borderColor= isReg ? "var(--primary)" : "var(--line)";
-  one.style.background = !isReg ? "#fef3c7" : "#fff";
-  one.style.color      = !isReg ? "#92400e" : "var(--ink-soft)";
-  one.style.borderColor= !isReg ? "#f59e0b" : "var(--line)";
-}
+let cat="전체", q="", viewMode="card";
 function renderChips(){
   const opts=["전체",...CATS];
   // 숨겨진 칩 (JS 호환)
@@ -503,10 +459,6 @@ function renderChips(){
 $("search").addEventListener("input",e=>{ q=e.target.value; render(); });
 function match(it){
   if(cat!=="전체" && it.cat!==cat) return false;
-  // 기본: 등록업체만. showOnetime=true면 일회성만
-  const vt = it.vendorType||"등록업체";
-  if(showOnetime){ if(vt!=="일회성") return false; }
-  else { if(vt==="일회성") return false; }
   if(!q.trim()) return true;
   const s=[it.name,it.cat,it.person,it.title,it.phone,it.email,it.address,it.memo].join(" ").toLowerCase();
   return s.includes(q.trim().toLowerCase());
@@ -520,10 +472,9 @@ function cardHTML(it){
   const addr = it.address ? `<div class="m">📍 ${esc(it.address)}</div>` : "";
   const memo = it.memo ? `<div class="m">📝 ${esc(it.memo)}</div>` : "";
   const img = it.card ? `<img class="cardimg zimg" src="${it.card}" alt="명함">` : "";
-  const onetimeBadge = (it.vendorType==="일회성") ? `<span class="badge-onetime">🕐 일회성</span>` : "";
   return `<div class="row-item" data-id="${it.id}">
     <div class="grow">
-      <div class="t"><span class="star ${it.fav?"on":""}" data-star>${it.fav?"★":"☆"}</span> ${esc(it.name||"(이름없음)")} <span class="pill">${esc(it.cat||"기타")}</span>${onetimeBadge}</div>
+      <div class="t"><span class="star ${it.fav?"on":""}" data-star>${it.fav?"★":"☆"}</span> ${esc(it.name||"(이름없음)")} <span class="pill">${esc(it.cat||"기타")}</span></div>
       ${line2?`<div class="m">${line2}</div>`:""}
       ${addr}${memo}${img}
       <div class="card-acts"><button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div>
@@ -564,9 +515,8 @@ function renderTable(list){
   });
   const rows=sorted.map(it=>{
     const tel = it.phone ? `<a href="tel:${esc(it.phone)}" onclick="event.stopPropagation()">${esc(it.phone)}</a>` : "";
-    const onetimeBadge = (it.vendorType==="일회성") ? `<span class="badge-onetime">🕐</span>` : "";
     return `<tr data-id="${it.id}">
-      <td class="c-name">${it.fav?"★ ":""}${esc(it.name||"(이름없음)")}${onetimeBadge}</td>
+      <td class="c-name">${it.fav?"★ ":""}${esc(it.name||"(이름없음)")}</td>
       <td class="c-cat">${esc(it.cat||"기타")}</td>
       <td>${esc(it.person||"")}${it.title?" "+esc(it.title):""}</td>
       <td>${tel}</td>
@@ -605,7 +555,6 @@ function openEditor(id){
   $("c-email").value=it.email||"";
   $("c-address").value=it.address||"";
   $("c-memo").value=it.memo||"";
-  setVendorType(it.vendorType||"등록업체");
   cardImg=it.card||"";
   refreshPhotoUI();
   $("ocrStatus").textContent=getKey()?"AI 인식 사용 중 (정확)":"기기내 인식 모드 — 정확한 인식은 ⚙ OCR 설정에서 API 키를 등록하세요"; $("ocrText").style.display="none"; $("ocrText").value="";
@@ -618,8 +567,7 @@ $("mCancel").addEventListener("click",()=>$("overlay").classList.remove("show"))
 $("mSave").addEventListener("click",()=>{
   const name=$("c-name").value.trim(); if(!name){ toast("업체명을 입력하세요"); return; }
   const obj={ name, cat:$("c-cat").value, person:$("c-person").value.trim(), title:$("c-title").value.trim(), phone:$("c-phone").value.trim(),
-    email:$("c-email").value.trim(), address:$("c-address").value.trim(), memo:$("c-memo").value.trim(), card:cardImg,
-    vendorType: _vendorType };
+    email:$("c-email").value.trim(), address:$("c-address").value.trim(), memo:$("c-memo").value.trim(), card:cardImg };
   if(mId) updateRecord(mId,obj); else { obj.fav=false; obj.createdAt=Date.now(); addRecord(obj); }
   render(); $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
 });

@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260624-2";
+const APP_VERSION = "v44-20260624-3";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -314,9 +314,11 @@ function logErr(where, e){
   return rec;
 }
 const won = n => (Math.round(Number(n)||0)).toLocaleString("ko-KR");
-const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
-const nowTime = () => { const d=new Date(); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
-const clockStr = ts => { if(!ts) return ""; const d=new Date(ts); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+const kstNow = () => new Date(Date.now() + 9*60*60*1000);
+const todayStr = () => { const d=kstNow(); return d.toISOString().slice(0,10); };
+const yesterdayStr = () => { const d=kstNow(); d.setUTCDate(d.getUTCDate()-1); return d.toISOString().slice(0,10); };
+const nowTime = () => { const d=kstNow(); return d.toISOString().slice(11,16); };
+const clockStr = ts => { if(!ts) return ""; const d=new Date(ts); const k=new Date(d.getTime()+9*60*60*1000); return k.toISOString().slice(11,16); };
 const $ = id => document.getElementById(id);
 const esc = s => (s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 function toast(msg){ const t=$("toast"); t.innerHTML=esc(msg); t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
@@ -595,8 +597,8 @@ function attachMiniRO(arr){
 
 /* 날짜 범위 필터 */
 const RANGES=["전체","오늘","어제","2일전","3일전","이번주","이번달"];
-function dayOffset(n){ const d=new Date(); d.setDate(d.getDate()-n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
-function weekRange(){ const d=new Date(); const dow=(d.getDay()+6)%7; const mon=new Date(d); mon.setDate(d.getDate()-dow); const sun=new Date(mon); sun.setDate(mon.getDate()+6); const f=x=>`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`; return [f(mon),f(sun)]; }
+function dayOffset(n){ const d=kstNow(); d.setUTCDate(d.getUTCDate()-n); return d.toISOString().slice(0,10); }
+function weekRange(){ const d=kstNow(); const dow=(d.getUTCDay()+6)%7; const mon=new Date(d); mon.setUTCDate(d.getUTCDate()-dow); const sun=new Date(mon); sun.setUTCDate(mon.getUTCDate()+6); return [mon.toISOString().slice(0,10), sun.toISOString().slice(0,10)]; }
 function inDateRange(d,from,to){ d=d||""; return (!from||d>=from)&&(!to||d<=to); }
 
 /* ===== 사진 ===== */
@@ -1055,7 +1057,13 @@ if(f.type==="timepick"){
       <input type="text" id="m-${f.k}" placeholder="업체명 검색..." autocomplete="off"
         style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
       <div id="m-${f.k}-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow:auto"></div>
-      <div id="m-vendorContractBadge" style="display:none;margin-top:6px;align-items:center;gap:6px;flex-wrap:wrap"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;font-weight:700;color:#94a3b8;margin:0">
+          <input type="checkbox" id="m-isOnetime" style="width:15px;height:15px;accent-color:#f59e0b;cursor:pointer">
+          🕐 일회성 업체
+        </label>
+        <div id="m-vendorContractBadge" style="display:none;align-items:center;gap:6px;flex-wrap:wrap"></div>
+      </div>
     </div>`;
   }
   if(f.type==="textarea") inner=`<textarea id="m-${f.k}"></textarea>`;
@@ -1095,6 +1103,13 @@ if(f.type==="timepick"){
       </div>`;
     } else if(f.k==="name" && mKind==="call"){
       inner=`<input type="text" id="m-${f.k}" autocomplete="off" placeholder="이름 입력 시 연락처 자동완성">`;
+    } else if(f.k==="date" && (mKind==="work"||mKind==="call")){
+      // 날짜 + 어제 토글 버튼
+      inner=`<div style="display:flex;gap:6px;align-items:center">
+        <input type="date" id="m-${f.k}" style="flex:1;height:44px;padding:0 12px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        <button type="button" id="btn-yesterday" style="height:44px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:12px;font-size:12px;font-weight:700;color:#7a92a8;background:#f7faff;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0"
+          onclick="(function(){const el=document.getElementById('m-date');if(!el)return;const yd=yesterdayStr();if(el.value===yd){el.value=(window._todayBeforeYd||todayStr());this.textContent='어제';this.style.background='#f7faff';this.style.color='#7a92a8';}else{window._todayBeforeYd=el.value||todayStr();el.value=yd;this.textContent='✓ 어제';this.style.background='#fef3c7';this.style.color='#92400e';}}).call(this)">어제</button>
+      </div>`;
     } else inner=`<input type="${t}" id="m-${f.k}"${im}>`;
   }
   const req=f.req?' <span class="req">*</span>':'';
@@ -1421,6 +1436,8 @@ function openEditor(kind,id){
         const roleEl=$("m-workRole"); if(roleEl) roleEl.value=c.title||'';
         const phoneEl=$("m-workPhone"); if(phoneEl) phoneEl.value=c.phone||'';
         const memoEl=$("m-workMemo"); if(memoEl) memoEl.value=c.memo||'';
+        // 일회성 체크박스 자동 반영
+        const cb=$("m-isOnetime"); if(cb) cb.checked=(c.vendorType==='일회성');
         // 계약형태 뱃지 표시
         showVendorContractBadge(c);
       }, ()=>{
@@ -1429,6 +1446,7 @@ function openEditor(kind,id){
         const roleEl=$("m-workRole"); if(roleEl) roleEl.value='';
         const phoneEl=$("m-workPhone"); if(phoneEl) phoneEl.value='';
         const memoEl=$("m-workMemo"); if(memoEl) memoEl.value='';
+        const cb=$("m-isOnetime"); if(cb) cb.checked=false;
         const badge=$("m-vendorContractBadge"); if(badge) badge.style.display='none';
       });
     }
@@ -1453,6 +1471,17 @@ function openEditor(kind,id){
   // 업무 종류일 때: v44에서는 자동 팝업 제거 (저장 후 지출 모달 자동 호출됨)
   if(kind==="work"){
     renderExpLinkList(id);
+    // 일회성 체크박스 복원
+    setTimeout(()=>{
+      const cb=$("m-isOnetime"); if(cb) cb.checked=!!(data&&data.isOnetime);
+      // 담당업체 선택 시 일회성 연동
+      const vendorInp=$("m-workVendor");
+      if(vendorInp&&!vendorInp._onetimePatch){
+        vendorInp._onetimePatch=true;
+        // 자동완성에서 업체 선택 시 vendorType 반영
+        const origSelect=window._lastContactSelectFn;
+      }
+    },150);
     // v44: openExpPick 자동 호출 제거 - 저장 후 openExpenseFromWork가 처리함
     // v44-0624: 수정 시 기존 업체 계약형태 뱃지 복원
     if(id && data && data.workVendor){
@@ -2027,6 +2056,10 @@ $("mSave").addEventListener("click",async ()=>{
   if(PHOTO_KINDS.includes(mKind)) obj.photos=modalPhotos.slice();
   if(ATTACH_KINDS.includes(mKind)) obj.attachments=modalAttachments.slice();
   if(mKind==="vacation" && !obj.end) obj.end=obj.start;
+  // 업무: 일회성 업체 여부 저장
+  if(mKind==="work"){
+    const cb=$("m-isOnetime"); obj.isOnetime=cb?cb.checked:false;
+  }
   // v44: 사고면 처리 단계 함께 저장
   if(mKind==="accident"){
     obj.steps = (_accidentSteps||[]).filter(s=>s.action||s.vendor||s.memo);
@@ -7138,8 +7171,12 @@ function v43CopyWorkExcel(){
     if(e.matSpec) matParts.push(String(e.matSpec).trim());
     if(Number(e.qty)>0) matParts.push(e.qty+'개');
     const material = matParts.join('_').replace(/[\t\n]/g,' ');
-    // 4개 항목을 공백으로 연결 (한 셀에 다 들어감)
-    return [floor, title, detail, material].filter(Boolean).join(' ');
+    // 지출종류가 개인비용/후불청구이면 금액 추가
+    const expType = e.expType||'없음';
+    const costPart = (expType==='개인비용'||expType==='후불청구') && Number(e.cost)>0
+      ? `${expType==='후불청구'?'후불':'개인'}${Math.round(Number(e.cost)).toLocaleString('ko-KR')}원`
+      : '';
+    return [floor, title, detail, material, costPart].filter(Boolean).join(' ');
   });
   const text = rows.join('\n');
   if(navigator.clipboard && navigator.clipboard.writeText){
