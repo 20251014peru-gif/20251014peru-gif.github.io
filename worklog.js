@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260624-14";
+const APP_VERSION = "v44-20260624-15";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1537,9 +1537,10 @@ function renderWorkModal(data, mode){
       <span style="font-size:10px;color:#94a3b8">▼</span>
     </summary>
     <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
-      <div>
-        <label style="${S.lbl}">자재명·규격</label>
-        <input type="text" id="m-material" value="${e2(d.material||"")}" placeholder="예: LED 8W 직부등 Φ100" style="${S.inp}">
+      <div style="position:relative">
+        <label style="${S.lbl}">자재명·규격 <span style="font-size:10px;font-weight:500;color:#94a3b8">(클릭하면 자재 목록, 없으면 직접 입력)</span></label>
+        <input type="text" id="m-material" value="${e2(d.material||"")}" placeholder="자재명 검색 또는 직접 입력" autocomplete="off" style="${S.inp}">
+        <div id="m-material-list" style="display:none;position:absolute;top:68px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:600;max-height:220px;overflow:auto"></div>
       </div>
       <div>
         <label style="${S.lbl}">수량</label>
@@ -1669,6 +1670,30 @@ function renderWorkModal(data, mode){
   /* 분야 관리 버튼 */
   const fb=document.querySelector('#mFields [data-fieldmgr]');
   if(fb&&!fb._bound){ fb._bound=true; fb.addEventListener("click",e=>{ e.preventDefault(); openFieldManager(()=>{}); }); }
+
+  /* 자재 검색 UI 연결 — 자재탭 품목목록과 연동 */
+  setTimeout(()=>{
+    const matInp = $('m-material');
+    if(matInp) matInp._matACwired = false; // 탭 전환 시 재바인딩 허용
+    if(typeof makeMaterialSearchUI==='function'){
+      makeMaterialSearchUI('m-material','m-material-list',(picked)=>{
+        const inp=$('m-material');
+        if(inp){
+          inp.value = picked.name||picked.itemName||'';
+          // 선택된 itemId 저장 (출고 자동기록에서 정확한 매칭용)
+          inp.dataset.matItemId = picked.id||'';
+        }
+        // 수량 포커스
+        const qtyEl=$('m-qty');
+        if(qtyEl) setTimeout(()=>{ qtyEl.focus(); qtyEl.select(); },50);
+      });
+    }
+    // 자재 details 열릴 때 input 자동 포커스
+    const wMat=document.getElementById('wMatMore');
+    if(wMat&&!wMat._mfBound){ wMat._mfBound=true;
+      wMat.addEventListener('toggle',()=>{ if(wMat.open){ const inp=$('m-material'); if(inp) setTimeout(()=>inp.focus(),80); } });
+    }
+  },120);
 }
 
 function saveWorkEntry(){
@@ -1708,8 +1733,12 @@ function saveWorkEntry(){
   // 자재 출고 자동 기록 (신규 업무에서 자재명+수량 있을 때)
   if(!mId && obj.material && obj.qty>0){
     const matName = obj.material.trim();
-    // 품목 마스터에서 매칭
-    const matchItem = entries.find(e=>e.kind==="item" && (e.itemName||"").includes(matName));
+    const matInpEl = $("m-material");
+    const savedItemId = matInpEl ? matInpEl.dataset.matItemId : "";
+    // itemId 직접 지정 → 없으면 이름으로 검색
+    const matchItem = savedItemId
+      ? entries.find(e=>e.id===savedItemId && e.kind==="item")
+      : entries.find(e=>e.kind==="item" && (e.itemName||"").replace(/^\[.*?\]/,"").trim()===matName);
     const stockRec = {
       kind:"stock",
       stockType:"출고",
@@ -1725,7 +1754,7 @@ function saveWorkEntry(){
       createdAt: Date.now(),
     };
     addRecord(stockRec);
-    if(typeof toast==="function") toast(`📦 "${matName}" ${obj.qty}개 출고 기록됐어요`);
+    toast(`📦 "${matName}" ${obj.qty}개 출고 기록됐어요`);
   }
 
   $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
