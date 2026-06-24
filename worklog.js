@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260624-7";
+const APP_VERSION = "v44-20260624-9";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1451,191 +1451,187 @@ function renderWorkModal(data, mode){
   const d = data||{};
   const expType = d.expType&&d.expType!=="없음" ? d.expType : "개인비용";
 
-  /* ── 공통 스타일 상수 ── */
-  const inp  = `width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;transition:border-color .15s`;
-  const sel  = `width:100%;box-sizing:border-box;height:44px;padding:0 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;cursor:pointer`;
-  const lbl  = `display:block;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.4px;margin-bottom:5px;text-transform:uppercase`;
-  const ta   = `width:100%;box-sizing:border-box;min-height:72px;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;resize:vertical;line-height:1.6`;
-  const sec  = `border:1.5px solid #f1f5f9;border-radius:12px;overflow:hidden;margin-top:12px`;
-  const secH = `display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f8fafc;cursor:pointer;user-select:none`;
-  const secB = `padding:14px`;
+  const S = { /* 공통 스타일 */
+    inp: `width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45`,
+    sel: `width:100%;box-sizing:border-box;height:44px;padding:0 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;cursor:pointer`,
+    lbl: `display:block;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px;text-transform:uppercase`,
+    ta:  `width:100%;box-sizing:border-box;min-height:68px;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;resize:vertical;line-height:1.6`,
+    row: `display:grid;grid-template-columns:110px 1fr;gap:10px;margin-bottom:12px`, /* 층(작게)+분야(크게) */
+    mb:  `margin-bottom:12px`,
+  };
 
   /* ── 탭 ── */
   const tabs = `
-  <div style="display:flex;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0;margin-bottom:16px">
+  <div style="display:flex;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0;margin-bottom:18px">
     <button type="button" onclick="renderWorkModal(window._wModalData,'simple')"
-      style="flex:1;padding:10px 0;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;letter-spacing:.2px;
+      style="flex:1;padding:11px 0;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;
       background:${_workMode==='simple'?'#2563a8':'#f8fafc'};color:${_workMode==='simple'?'#fff':'#64748b'}">
       🏢 일반업무
     </button>
     <button type="button" onclick="renderWorkModal(window._wModalData,'full')"
-      style="flex:1;padding:10px 0;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #e2e8f0;letter-spacing:.2px;
+      style="flex:1;padding:11px 0;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #e2e8f0;
       background:${_workMode==='full'?'#c2410c':'#f8fafc'};color:${_workMode==='full'?'#fff':'#64748b'}">
       💰 외주·비용
     </button>
   </div>`;
 
-  /* ── 공통 Row1: 날짜 + 상태 ── */
-  const row1 = `
-  <div style="display:grid;grid-template-columns:1fr auto 80px;gap:8px;align-items:end;margin-bottom:10px">
+  /* ── 날짜+상태 (2열) ── */
+  const rowDateStatus = `
+  <div style="display:grid;grid-template-columns:1fr auto 100px;gap:8px;align-items:end;${S.mb}">
     <div>
-      <label style="${lbl}">날짜 *</label>
-      <input type="date" id="m-date" value="${e2(d.date||td)}" style="${inp}">
+      <label style="${S.lbl}">날짜 *</label>
+      <input type="date" id="m-date" value="${e2(d.date||td)}" style="${S.inp}">
     </div>
     <button type="button" id="btn-yesterday"
-      style="height:44px;padding:0 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;letter-spacing:.1px"
-      onclick="(function(b){const e=document.getElementById('m-date');if(!e)return;const y=yesterdayStr();if(e.value===y){e.value=window._wTodayBk||todayStr();b.textContent='어제';b.style.background='#f8fafc';b.style.color='#64748b';}else{window._wTodayBk=e.value||todayStr();e.value=y;b.textContent='✓어제';b.style.background='#fef3c7';b.style.color='#92400e';}})(this)">어제</button>
+      style="height:44px;padding:0 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap"
+      onclick="(function(b){const e=document.getElementById('m-date');if(!e)return;const y=yesterdayStr();if(e.value===y){e.value=window._wTodayBk||todayStr();b.textContent='어제';b.style.background='#f8fafc';b.style.color='#64748b';}else{window._wTodayBk=e.value||todayStr();e.value=y;b.textContent='✓ 어제';b.style.background='#fef3c7';b.style.color='#92400e';}})(this)">어제</button>
     <div>
-      <label style="${lbl}">상태</label>
-      <select id="m-status" style="${sel}">
+      <label style="${S.lbl}">상태</label>
+      <select id="m-status" style="${S.sel}">
         ${["미완료","진행중","완료","보류"].map(o=>`<option${(d.status||"미완료")===o?" selected":""}>${o}</option>`).join("")}
       </select>
     </div>
   </div>`;
 
-  /* ── 공통 Row2: 층(작게) + 분야(크게) ── */
-  const row2 = `
-  <div style="display:grid;grid-template-columns:100px 1fr;gap:8px;margin-bottom:10px">
+  /* ── 층(작게) + 분야(크게) 2열 ── */
+  const rowFloorField = `
+  <div style="${S.row};${S.mb}">
     <div>
-      <label style="${lbl}">층</label>
-      <select id="m-floor" style="${sel};font-size:13px">
+      <label style="${S.lbl}">층</label>
+      <select id="m-floor" style="${S.sel};font-size:13px">
         ${FLOORS.map(o=>`<option value="${e2(o)}"${(d.floor||"")===o?" selected":""}>${o===""?"—":o}</option>`).join("")}
       </select>
     </div>
     <div style="position:relative">
-      <label style="${lbl}">분야</label>
-      <div style="display:flex;gap:6px;position:relative">
-        <input type="text" id="m-field" value="${e2(d.field||"")}" placeholder="분야 입력 또는 검색 (초성 가능)" autocomplete="off"
-          style="${inp};flex:1;padding-right:38px">
-        <button type="button" data-fieldmgr title="분야 관리"
-          style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer;padding:4px;line-height:1">⚙</button>
-        <div id="m-field-list" style="display:none;position:absolute;top:48px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:600;max-height:220px;overflow:auto"></div>
-      </div>
+      <label style="${S.lbl}">분야</label>
+      <input type="text" id="m-field" value="${e2(d.field||"")}" placeholder="분야 입력 또는 검색" autocomplete="off"
+        style="${S.inp}">
+      <button type="button" data-fieldmgr title="분야 관리"
+        style="position:absolute;right:10px;top:70%;transform:translateY(-50%);background:none;border:none;color:#cbd5e1;font-size:15px;cursor:pointer;padding:2px">⚙</button>
+      <div id="m-field-list" style="display:none;position:absolute;top:48px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:600;max-height:220px;overflow:auto"></div>
       <input type="hidden" id="m-field-new">
     </div>
   </div>`;
 
-  /* ── 공통: 업무내역 ── */
-  const titleRow = `
-  <div style="margin-bottom:10px">
-    <label style="${lbl}">업무내역 *</label>
+  /* ── 업무내역 (1열 풀) ── */
+  const rowTitle = `
+  <div style="${S.mb}">
+    <label style="${S.lbl}">업무내역 *</label>
     <input type="text" id="m-title" value="${e2(d.title||"")}" list="dl-title" autocomplete="off"
-      placeholder="무엇을 했나요?" style="${inp};font-size:15px;font-weight:600;border-color:#3f7cb8">
+      placeholder="무엇을 했나요?" style="${S.inp};font-size:15px;font-weight:600;border-color:#3b82f6">
     <datalist id="dl-title">${[...new Set(entries.filter(e=>e.kind==="work"&&e.title).map(e=>e.title))].sort().map(v=>`<option value="${e2(v)}"></option>`).join("")}</datalist>
   </div>`;
 
-  /* ── 공통: 상세내용 (항상 보임) ── */
-  const detailRow = `
-  <div style="margin-bottom:10px">
-    <label style="${lbl}">상세내용</label>
-    <textarea id="m-detail" placeholder="작업 내용, 특이사항 등" style="${ta}">${e2(d.detail||"")}</textarea>
+  /* ── 상세내용 (1열 풀, 항상 표시) ── */
+  const rowDetail = `
+  <div style="${S.mb}">
+    <label style="${S.lbl}">상세내용</label>
+    <textarea id="m-detail" placeholder="작업 내용, 특이사항 등" style="${S.ta}">${e2(d.detail||"")}</textarea>
   </div>`;
 
-  /* ── 공통: 자재 토글 섹션 ── */
+  /* ── 자재 토글 (상세 아래) ── */
   const matSection = `
-  <details id="wMatMore" style="${sec}">
-    <summary style="${secH};list-style:none" onclick="this.parentElement.querySelector('.wmat-arrow').textContent=this.parentElement.open?'▲':'▼'">
+  <details id="wMatMore" style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;cursor:pointer;list-style:none;user-select:none">
       <span style="font-size:12px;font-weight:700;color:#64748b;flex:1">📦 자재 사용 내역</span>
-      <span class="wmat-arrow" style="font-size:10px;color:#94a3b8">▼</span>
+      <span style="font-size:10px;color:#94a3b8">▼</span>
     </summary>
-    <div style="${secB}">
+    <div style="padding:12px 14px">
       <div style="display:grid;grid-template-columns:1fr 80px;gap:8px">
         <div>
-          <label style="${lbl}">자재명·규격</label>
-          <input type="text" id="m-material" value="${e2(d.material||"")}" placeholder="예: LED 8W 직부등 Φ100" style="${inp}">
+          <label style="${S.lbl}">자재명·규격</label>
+          <input type="text" id="m-material" value="${e2(d.material||"")}" placeholder="예: LED 8W 직부등" style="${S.inp}">
         </div>
         <div>
-          <label style="${lbl}">수량</label>
-          <input type="number" id="m-qty" value="${e2(d.qty||"")}" min="0" placeholder="0" style="${inp};text-align:right">
+          <label style="${S.lbl}">수량</label>
+          <input type="number" id="m-qty" value="${e2(d.qty||"")}" min="0" placeholder="0" style="${S.inp};text-align:right">
         </div>
       </div>
     </div>
   </details>`;
 
-  let modeSection = "";
+  /* ════════════════ 모드별 추가 필드 ════════════════ */
+  let modeExtra = "";
 
-  if(_workMode === "simple"){
-    /* 일반업무: 탭+공통+상세+자재 끝 */
-    modeSection = "";
-  } else {
-    /* ── 외주: 지출종류 + 금액 ── */
-    const costRow = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;padding:12px 14px;background:${expType==="후불청구"?"#fff7ed":"#eff6ff"};border-radius:12px;border:1.5px solid ${expType==="후불청구"?"#fdba74":"#bfdbfe"}">
-      <div>
-        <label style="${lbl.replace('#94a3b8',expType==="후불청구"?'#c2410c':'#1d4ed8')}">지출종류</label>
-        <select id="m-expType" style="${sel};background:transparent;border-color:${expType==="후불청구"?"#fdba74":"#bfdbfe"}">
+  if(_workMode === "full"){
+
+    /* ── 지출종류 + 금액 (1열씩) ── */
+    const isPost = expType==="후불청구";
+    const costSection = `
+    <div style="padding:14px;background:${isPost?"#fff7ed":"#eff6ff"};border:1.5px solid ${isPost?"#fdba74":"#bfdbfe"};border-radius:12px;${S.mb}">
+      <div style="${S.mb.replace('12px','10px')}">
+        <label style="${S.lbl.replace('#94a3b8',isPost?'#c2410c':'#1d4ed8')}">지출종류</label>
+        <select id="m-expType" style="${S.sel};background:transparent;border-color:${isPost?"#fdba74":"#bfdbfe"}">
           ${["개인비용","후불청구"].map(o=>`<option${expType===o?" selected":""}>${o}</option>`).join("")}
         </select>
       </div>
       <div>
-        <label id="lbl-cost" style="${lbl.replace('#94a3b8',expType==="후불청구"?'#c2410c':'#1d4ed8')}">${expType==="후불청구"?"계약금액 (원)":"금액 (원)"}</label>
+        <label id="lbl-cost" style="${S.lbl.replace('#94a3b8',isPost?'#c2410c':'#1d4ed8')}">${isPost?"계약금액 (원)":"금액 (원)"}</label>
         <input type="number" id="m-cost" value="${e2(d.cost||"")}" placeholder="0"
-          style="${inp};background:transparent;border-color:${expType==="후불청구"?"#fdba74":"#bfdbfe"};font-size:16px;font-weight:700;text-align:right;color:${expType==="후불청구"?"#c2410c":"#1d4ed8"}">
+          style="${S.inp};background:transparent;border-color:${isPost?"#fdba74":"#bfdbfe"};font-size:17px;font-weight:700;text-align:right;color:${isPost?"#c2410c":"#1d4ed8"}">
       </div>
     </div>`;
 
-    /* ── 외주: 담당업체 섹션 ── */
+    /* ── 담당업체 (1열, 토글) ── */
     const vendorSection = `
-    <details id="wVendorArea" ${d.workVendor||d.vendor?"open":""} style="${sec}">
-      <summary style="${secH};list-style:none" onclick="this.parentElement.querySelector('.wv-arrow').textContent=this.parentElement.open?'▲':'▼'">
+    <details id="wVendorArea" ${d.workVendor||d.vendor?"open":""} style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
+      <summary style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;cursor:pointer;list-style:none;user-select:none">
         <span style="font-size:13px">🏢</span>
-        <span style="font-size:12px;font-weight:700;color:#64748b;flex:1">담당업체 <span style="font-weight:500;color:#94a3b8">— 선택 시 자동 채움</span></span>
+        <span style="font-size:12px;font-weight:700;color:#64748b;flex:1">담당업체</span>
         <a href="contacts.html" target="_blank" onclick="event.stopPropagation()"
           style="font-size:11px;padding:2px 8px;border:1px solid #dbe6f4;border-radius:6px;background:#fff;color:#3f7cb8;font-weight:700;text-decoration:none;margin-right:6px">연락처</a>
-        <span class="wv-arrow" style="font-size:10px;color:#94a3b8">${d.workVendor||d.vendor?"▲":"▼"}</span>
+        <span style="font-size:10px;color:#94a3b8">${d.workVendor||d.vendor?"▲":"▼"}</span>
       </summary>
-      <div style="${secB}">
-        <div style="position:relative;margin-bottom:10px">
-          <input type="text" id="m-workVendor" value="${e2(d.workVendor||d.vendor||"")}" placeholder="업체명 검색…" autocomplete="off" style="${inp}">
-          <div id="m-workVendor-list" style="display:none;position:absolute;top:48px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:600;max-height:220px;overflow:auto"></div>
+      <div style="padding:12px 14px">
+        <div style="position:relative;${S.mb}">
+          <label style="${S.lbl}">업체명</label>
+          <input type="text" id="m-workVendor" value="${e2(d.workVendor||d.vendor||"")}" placeholder="업체명 검색…" autocomplete="off" style="${S.inp}">
+          <div id="m-workVendor-list" style="display:none;position:absolute;top:68px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:600;max-height:200px;overflow:auto"></div>
           <label style="display:flex;align-items:center;gap:6px;margin-top:7px;cursor:pointer;font-size:12px;font-weight:600;color:#94a3b8">
-            <input type="checkbox" id="m-isOnetime" ${d.isOnetime?"checked":""} style="width:14px;height:14px;accent-color:#f59e0b;cursor:pointer">
-            🕐 일회성 업체
+            <input type="checkbox" id="m-isOnetime" ${d.isOnetime?"checked":""} style="width:14px;height:14px;accent-color:#f59e0b"> 🕐 일회성 업체
           </label>
           <div id="m-vendorContractBadge" style="display:none;margin-top:6px;align-items:center;gap:6px;flex-wrap:wrap"></div>
         </div>
         <div id="wVendorSubFields" style="${d.workVendor||d.vendor?'':'display:none'}">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div><label style="${lbl}">담당자</label><input type="text" id="m-workContact" value="${e2(d.workContact||"")}" style="${inp}"></div>
-            <div><label style="${lbl}">직책</label><input type="text" id="m-workRole" value="${e2(d.workRole||"")}" style="${inp}"></div>
-            <div><label style="${lbl}">전화</label><input type="tel" id="m-workPhone" value="${e2(d.workPhone||"")}" style="${inp}"></div>
-            <div><label style="${lbl}">업체 메모</label><input type="text" id="m-workMemo" value="${e2(d.workMemo||d.memo||"")}" style="${inp}"></div>
+            <div><label style="${S.lbl}">담당자</label><input type="text" id="m-workContact" value="${e2(d.workContact||"")}" style="${S.inp}"></div>
+            <div><label style="${S.lbl}">직책</label><input type="text" id="m-workRole" value="${e2(d.workRole||"")}" style="${S.inp}"></div>
+            <div><label style="${S.lbl}">전화</label><input type="tel" id="m-workPhone" value="${e2(d.workPhone||"")}" style="${S.inp}"></div>
+            <div><label style="${S.lbl}">업체 메모</label><input type="text" id="m-workMemo" value="${e2(d.workMemo||d.memo||"")}" style="${S.inp}"></div>
           </div>
         </div>
       </div>
     </details>`;
 
-    /* ── 외주: 견적메모 토글 ── */
+    /* ── 견적 메모 (1열, 토글) ── */
     const estimateSection = `
-    <details style="${sec}">
-      <summary style="${secH};list-style:none" onclick="this.parentElement.querySelector('.we-arrow').textContent=this.parentElement.open?'▲':'▼'">
+    <details style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
+      <summary style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;cursor:pointer;list-style:none;user-select:none">
         <span style="font-size:12px;font-weight:700;color:#64748b;flex:1">📋 견적 메모</span>
-        <span class="we-arrow" style="font-size:10px;color:#94a3b8">▼</span>
+        <span style="font-size:10px;color:#94a3b8">▼</span>
       </summary>
-      <div style="${secB}">
-        <textarea id="m-estimateMemo" placeholder="견적 내용, 계약 조건 등" style="${ta}">${e2(d.estimateMemo||"")}</textarea>
+      <div style="padding:12px 14px">
+        <textarea id="m-estimateMemo" placeholder="견적 내용, 계약 조건 등" style="${S.ta}">${e2(d.estimateMemo||"")}</textarea>
       </div>
     </details>`;
 
-    modeSection = costRow + vendorSection + estimateSection;
+    modeExtra = costSection + vendorSection + estimateSection;
   }
 
-  $("mFields").innerHTML = tabs + row1 + row2 + titleRow + detailRow + modeSection + matSection;
+  /* ── 조립 순서: 탭 → 날짜/상태 → 층/분야 → 업무내역 → 상세내용 → [외주전용] → 자재 ── */
+  $("mFields").innerHTML = tabs + rowDateStatus + rowFloorField + rowTitle + rowDetail + modeExtra + matSection;
   window._wModalData = data;
 
-  /* ── expType 변경 리스너 ── */
-  const expTypeEl = $("m-expType");
+  /* expType 변경 */
+  const expTypeEl=$("m-expType");
   if(expTypeEl){
     expTypeEl.addEventListener("change",()=>{
-      const isPost = expTypeEl.value==="후불청구";
+      const isPost=expTypeEl.value==="후불청구";
       const lbl2=$("lbl-cost"); if(lbl2) lbl2.textContent=isPost?"계약금액 (원)":"금액 (원)";
-      const costBox=expTypeEl.closest("div[style*='background']");
-      if(costBox){
-        costBox.style.background=isPost?"#fff7ed":"#eff6ff";
-        costBox.style.borderColor=isPost?"#fdba74":"#bfdbfe";
-      }
-      const costInp=$("m-cost");
-      if(costInp){ costInp.style.color=isPost?"#c2410c":"#1d4ed8"; costInp.style.borderColor=isPost?"#fdba74":"#bfdbfe"; }
+      const box=expTypeEl.closest("div[style*='background']");
+      if(box){ box.style.background=isPost?"#fff7ed":"#eff6ff"; box.style.borderColor=isPost?"#fdba74":"#bfdbfe"; }
+      const ci=$("m-cost");
+      if(ci){ ci.style.color=isPost?"#c2410c":"#1d4ed8"; ci.style.borderColor=isPost?"#fdba74":"#bfdbfe"; }
       const modal=document.querySelector("#overlay .modal");
       if(modal){ modal.classList.remove("exp-mode-personal","exp-mode-tax","exp-mode-none");
         modal.classList.add(isPost?"exp-mode-tax":"exp-mode-personal"); }
@@ -1643,18 +1639,17 @@ function renderWorkModal(data, mode){
     setTimeout(()=>expTypeEl.dispatchEvent(new Event("change")),50);
   }
 
-  /* ── 담당업체 자동펼침 + 검색UI ── */
-  const vendorInp=$("m-workVendor");
-  if(vendorInp){
+  /* 담당업체 자동펼침 + 검색 */
+  const vi=$("m-workVendor");
+  if(vi){
     const showSub=()=>{
-      const sub=$("wVendorSubFields"), area=$("wVendorArea");
-      if(vendorInp.value.trim()){ if(sub) sub.style.display=""; if(area&&!area.open) area.open=true; }
+      const sub=$("wVendorSubFields"),area=$("wVendorArea");
+      if(vi.value.trim()){ if(sub) sub.style.display=""; if(area&&!area.open) area.open=true; }
     };
-    vendorInp.addEventListener("input",showSub);
-    showSub();
+    vi.addEventListener("input",showSub); showSub();
     setTimeout(()=>{
       makeContactSearchUI('m-workVendor','m-workVendor-list',(c)=>{
-        const sub=$("wVendorSubFields"), area=$("wVendorArea");
+        const sub=$("wVendorSubFields"),area=$("wVendorArea");
         if(sub) sub.style.display=""; if(area) area.open=true;
         const fv=(id,v)=>{const el=$(id);if(el)el.value=v||"";};
         fv("m-workContact",c.person); fv("m-workRole",c.title);
@@ -1669,13 +1664,14 @@ function renderWorkModal(data, mode){
     },100);
   }
 
-  /* ── 분야 검색 UI ── */
+  /* 분야 검색 */
   setTimeout(()=>{ makeFieldSearchUI&&makeFieldSearchUI('m-field','m-field-list'); },80);
 
-  /* ── 분야 관리 버튼 ── */
-  const fmgrBtn=document.querySelector('#mFields [data-fieldmgr]');
-  if(fmgrBtn&&!fmgrBtn._bound){ fmgrBtn._bound=true; fmgrBtn.addEventListener("click",e=>{ e.preventDefault(); openFieldManager(()=>{}); }); }
+  /* 분야 관리 버튼 */
+  const fb=document.querySelector('#mFields [data-fieldmgr]');
+  if(fb&&!fb._bound){ fb._bound=true; fb.addEventListener("click",e=>{ e.preventDefault(); openFieldManager(()=>{}); }); }
 }
+  _workMode = mode||"simple";
 
 function saveWorkEntry(){
   const mode = _workMode;
@@ -5316,20 +5312,23 @@ function renderStockOverview(){
     const it=r.item, st=r.stock;
     const safe=Number(it.safetyStock||0);
     const lowCls = safe>0 && st<safe ? "st-low" : (st<=0 ? "st-zero" : "");
-    return `<tr data-id="${it.id}" class="${lowCls}">
-      <td>${esc(it.shopId||it.itemCode||"")}</td>
-      <td><b>${esc(it.itemName||"")}</b>${it.spec?`<br><span style="font-size:11px;color:var(--ink-soft)">${esc(it.spec)}</span>`:""}</td>
-      <td>${esc(it.unit||"")}</td>
-      <td><span class="pill ${fieldClass(it.field)}">${esc(it.field||"")}</span></td>
-      <td>${esc(it.maker||"")}</td>
-      <td>${esc(it.vendor||"")}</td>
-      <td class="num">${it.unitPrice?won(it.unitPrice):""}</td>
-      <td class="num"><b style="font-size:15px">${st}</b>${safe?`<br><span style="font-size:10.5px;color:var(--ink-soft)">안전 ${safe}</span>`:""}</td>
-      <td>${it.recurring&&it.recurring!=="비주기"?`<span class="pill leave">🔁 ${esc(it.recurring)}</span>`:""}</td>
-      <td>
-        <button class="mini-btn" data-act="in">📥 입고</button>
-        <button class="mini-btn" data-act="out">📤 출고</button>
-        <button class="mini-btn" data-act="edit">수정</button>
+    // 품목명에서 [반품생성주문] 등 접두어 제거
+    const cleanName = (it.itemName||"").replace(/^\[.*?\]/,"").trim();
+    const shopId = it.shopId||it.itemCode||"";
+    return `<tr data-id="${it.id}" class="${lowCls}" style="cursor:pointer">
+      <td style="font-size:11px;color:#94a3b8;font-weight:600">${esc(shopId)}</td>
+      <td title="${esc(it.spec||"")}" style="max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        <b style="font-size:13px">${esc(cleanName)}</b>
+        ${it.spec?`<span style="font-size:10px;color:#94a3b8;margin-left:4px">${esc(it.spec.slice(0,30))}${it.spec.length>30?'…':''}</span>`:""}
+      </td>
+      <td style="font-size:12px;color:#64748b">${esc(it.unit||"")}</td>
+      <td><span class="pill ${fieldClass(it.field)}" style="font-size:10px">${esc(it.field||"")}</span></td>
+      <td class="num" style="font-size:12px">${it.unitPrice?won(it.unitPrice):""}</td>
+      <td class="num"><b style="font-size:14px;color:${st<=0?'#e74c3c':safe>0&&st<safe?'#f39c12':'#1a2f45'}">${st}</b></td>
+      <td style="text-align:center;white-space:nowrap;padding:4px 6px">
+        <button class="mini-btn" data-act="in" style="padding:3px 7px;font-size:11px;background:#e0f7fa;border-color:#4dd0e1;color:#0097a7" title="입고">📥</button>
+        <button class="mini-btn" data-act="out" style="padding:3px 7px;font-size:11px;background:#fce4ec;border-color:#f48fb1;color:#c2185b" title="출고">📤</button>
+        <button class="mini-btn" data-act="edit" style="padding:3px 7px;font-size:11px" title="수정">✏️</button>
       </td></tr>`;
   }).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
@@ -5361,21 +5360,24 @@ function renderItemList(){
     .sort((a,b)=>(a.itemName||"").localeCompare(b.itemName||"","ko"));
   const body=$("matItemBody");
   if(!items.length){ body.innerHTML=`<tr><td colspan="10" class="empty">등록된 품목이 없습니다.</td></tr>`; return; }
-  body.innerHTML=items.map(it=>`<tr data-id="${it.id}">
-    <td>${esc(it.shopId||it.itemCode||"")}</td>
-    <td><b>${esc(it.itemName||"")}</b></td>
-    <td>${esc(it.spec||"")}</td>
-    <td>${esc(it.unit||"")}</td>
-    <td><span class="pill ${fieldClass(it.field)}">${esc(it.field||"")}</span></td>
-    <td>${esc(it.maker||"")}</td>
-    <td>${esc(it.vendor||"")}</td>
-    <td class="num">${it.unitPrice?won(it.unitPrice):""}</td>
-    <td>${it.recurring&&it.recurring!=="비주기"?`<span class="pill leave">🔁 ${esc(it.recurring)}</span>`:esc(it.recurring||"")}</td>
-    <td style="white-space:nowrap">
-      <button class="mini-btn" data-quickedit="${it.id}" title="빠른 수정" style="background:#eaf1fb;border:1px solid #dbe6f4;color:#3f7cb8;padding:4px 8px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer;margin-right:4px">✏️ 수정</button>
-      <button class="rowdel" data-del="${it.id}" title="삭제">🗑</button>
+  body.innerHTML=items.map(it=>{
+    const cleanName = (it.itemName||"").replace(/^\[.*?\]/,"").trim();
+    return `<tr data-id="${it.id}">
+    <td style="font-size:11px;color:#94a3b8">${esc(it.shopId||it.itemCode||"")}</td>
+    <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0" title="${esc(it.itemName||"")}"><b style="font-size:12px">${esc(cleanName)}</b></td>
+    <td style="font-size:12px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0" title="${esc(it.spec||"")}">${esc(it.spec||"")}</td>
+    <td style="font-size:12px">${esc(it.unit||"")}</td>
+    <td><span class="pill ${fieldClass(it.field)}" style="font-size:10px">${esc(it.field||"")}</span></td>
+    <td style="font-size:12px;color:#64748b">${esc(it.maker||"")}</td>
+    <td style="font-size:12px;color:#64748b">${esc(it.vendor||"")}</td>
+    <td class="num" style="font-size:12px">${it.unitPrice?won(it.unitPrice):""}</td>
+    <td>${it.recurring&&it.recurring!=="비주기"?`<span class="pill leave" style="font-size:10px">🔁 ${esc(it.recurring)}</span>`:""}</td>
+    <td style="white-space:nowrap;text-align:center;padding:4px 6px">
+      <button class="mini-btn" data-quickedit="${it.id}" style="padding:3px 8px;font-size:11px;background:#eaf1fb;border-color:#dbe6f4;color:#3f7cb8" title="수정">✏️ 수정</button>
+      <button class="rowdel" data-del="${it.id}" style="padding:3px 7px;font-size:11px" title="삭제">🗑</button>
     </td>
-  </tr>`).join("");
+  </tr>`;
+  }).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
     tr.addEventListener("click",e=>{ 
       if(e.target.closest("[data-del],[data-quickedit]")) return; 
@@ -5491,36 +5493,55 @@ function openQuickEditMaterial(id){
 }
 
 // 입출고 거래 내역
+let _txSubTab = "전체"; // "전체" | "입고" | "출고"
+
 function renderTxList(){
+  // 서브탭 버튼 바인딩 (최초 1회)
+  document.querySelectorAll(".tx-sub-tab").forEach(btn=>{
+    if(btn._txBound) return; btn._txBound=true;
+    btn.addEventListener("click",()=>{
+      _txSubTab = btn.dataset.txtab;
+      document.querySelectorAll(".tx-sub-tab").forEach(b=>{
+        const on = b.dataset.txtab===_txSubTab;
+        b.style.background = on?"#3f7cb8":"#f7faff";
+        b.style.color = on?"#fff":"#7a92a8";
+      });
+      renderTxList();
+    });
+  });
+
   const items=entries.filter(e=>e.kind==="item");
   const itemById={}; items.forEach(it=>itemById[it.id]=it);
   const txs=entries.filter(e=>e.kind==="stock")
     .filter(t=>{
+      if(_txSubTab!=="전체" && t.stockType!==_txSubTab) return false;
       const it=itemById[t.itemId];
       if(MAT_FILTER.field!=="전체" && (!it || it.field!==MAT_FILTER.field)) return false;
       if(!MAT_FILTER.q.trim()) return true;
-      const s=[t.date,t.vendor,t.docNo,t.useTarget,t.memo,(it&&it.itemName)||"",(it&&it.spec)||""].filter(Boolean).join(" ").toLowerCase();
+      const s=[t.date,t.useTarget,t.memo,(it&&it.itemName)||"",(it&&it.spec)||""].filter(Boolean).join(" ").toLowerCase();
       return s.includes(MAT_FILTER.q.trim().toLowerCase());
     })
     .sort(byDateDesc);
   const body=$("matTxBody");
-  if(!txs.length){ body.innerHTML=`<tr><td colspan="10" class="empty">입출고 내역이 없습니다.</td></tr>`; return; }
+  if(!txs.length){ body.innerHTML=`<tr><td colspan="8" class="empty">${_txSubTab==="전체"?"입출고 내역이 없습니다.":_txSubTab+" 내역이 없습니다."}</td></tr>`; return; }
   body.innerHTML=txs.map(t=>{
     const it=itemById[t.itemId];
-    const tCls = t.stockType==="입고" ? "in" : "out";
+    const isIn = t.stockType==="입고";
+    const tCls = isIn ? "in" : "out";
+    const cleanName = it ? (it.itemName||"").replace(/^\[.*?\]/,"").trim() : "";
     return `<tr data-id="${t.id}">
-      <td>${t.date||""}</td>
-      <td><span class="dir ${tCls}">${esc(t.stockType||"")}</span></td>
-      <td>${it?`<b>${esc(it.itemName||"")}</b>${it.spec?"<br><span style='font-size:11px;color:var(--ink-soft)'>"+esc(it.spec)+"</span>":""}`:"<span style='color:var(--peach)'>(품목 삭제됨)</span>"}</td>
-      <td>${it?esc(it.unit||""):""}</td>
-      <td class="num">${t.qty||0}</td>
-      <td class="num">${t.unitPrice?won(t.unitPrice):""}</td>
-      <td class="num">${t.amount?won(t.amount):""}</td>
-      <td>${esc(t.vendor||"")}</td>
-      <td class="clip" data-tip="${esc(t.useTarget||t.memo||"")}" title="${esc(t.useTarget||t.memo||"")}">${esc(t.useTarget||t.memo||"")}</td>
-      <td style="white-space:nowrap">
-        <button class="mini-btn" data-txedit="${t.id}" style="background:#eaf1fb;border:1px solid #dbe6f4;color:#3f7cb8;padding:4px 8px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer;margin-right:4px">✏️</button>
-        <button class="rowdel" data-del="${t.id}" title="삭제">🗑</button>
+      <td style="font-size:12px">${t.date||""}</td>
+      <td><span class="dir ${tCls}" style="font-size:11px">${esc(t.stockType||"")}</span></td>
+      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0" title="${esc(it?it.itemName:"")}">
+        ${it?`<b style="font-size:12px">${esc(cleanName)}</b>`:"<span style='color:var(--peach);font-size:11px'>(삭제됨)</span>"}
+      </td>
+      <td style="font-size:12px;color:#64748b">${it?esc(it.unit||""):""}</td>
+      <td class="num" style="font-weight:700">${t.qty||0}</td>
+      <td class="num" style="font-size:12px">${t.unitPrice?won(t.unitPrice):""}</td>
+      <td style="font-size:12px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0" title="${esc(t.useTarget||t.memo||"")}">${esc((t.useTarget||t.memo||"").slice(0,30))}</td>
+      <td style="text-align:center;white-space:nowrap;padding:4px 6px">
+        <button class="mini-btn" data-txedit="${t.id}" style="padding:3px 7px;font-size:11px" title="수정">✏️</button>
+        <button class="rowdel" data-del="${t.id}" style="padding:3px 7px;font-size:11px" title="삭제">🗑</button>
       </td>
     </tr>`;
   }).join("");
@@ -5529,10 +5550,9 @@ function renderTxList(){
     tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(tr.dataset.id,"입출고 내역"); });
     tr.querySelector("[data-txedit]").addEventListener("click",e=>{ e.stopPropagation(); openEditor("stock",tr.dataset.id); });
   });
-  // 합계
-  const totalIn=txs.filter(t=>t.stockType==="입고").reduce((s,t)=>s+(Number(t.amount)||0),0);
-  const totalOut=txs.filter(t=>t.stockType==="출고").reduce((s,t)=>s+(Number(t.amount)||0),0);
-  $("matTxSummary").innerHTML=`입고 합계 <b style="color:#2c7d62">${won(totalIn)}원</b> · 출고 합계 <b style="color:#36699c">${won(totalOut)}원</b> · 총 ${txs.length}건`;
+  const inCnt=txs.filter(t=>t.stockType==="입고").length;
+  const outCnt=txs.filter(t=>t.stockType==="출고").length;
+  $("matTxSummary").innerHTML=`총 ${txs.length}건 · 📥 입고 ${inCnt}건 · 📤 출고 ${outCnt}건`;
 }
 
 function matExcelCopy(){

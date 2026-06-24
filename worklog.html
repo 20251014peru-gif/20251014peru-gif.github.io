@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0624-1100</title>
+<title>업무일지 v44-0624-1116</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1680,19 +1680,35 @@
         </div>
         <div id="matStockPanel">
           <div class="table-wrap">
-            <table class="rec"><thead><tr>
-              <th>상품ID</th><th>품목명/규격</th><th>단위</th><th>분야</th><th>제조원</th><th>거래처</th>
-              <th style="text-align:right">단가</th><th style="text-align:right">재고</th><th>주기</th><th></th>
+            <table class="rec" style="table-layout:fixed;width:100%"><thead><tr>
+              <th style="width:44px">ID</th>
+              <th>품목명</th>
+              <th style="width:44px">단위</th>
+              <th style="width:60px">분야</th>
+              <th style="width:72px;text-align:right">단가</th>
+              <th style="width:48px;text-align:right">재고</th>
+              <th style="width:112px;text-align:center">액션</th>
             </tr></thead><tbody id="matStockBody"></tbody></table>
           </div>
         </div>
         <div id="matItemPanel" style="display:none"></div>
         <div id="matTxPanel" style="display:none">
+          <!-- 입고/출고 서브탭 -->
+          <div style="display:flex;gap:0;margin-bottom:10px;border-radius:8px;overflow:hidden;border:1.5px solid #dbe6f4;width:fit-content">
+            <button id="txTabAll"  class="tx-sub-tab active" data-txtab="전체" style="padding:6px 16px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;background:#3f7cb8;color:#fff">전체</button>
+            <button id="txTabIn"   class="tx-sub-tab" data-txtab="입고"  style="padding:6px 16px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8">📥 입고</button>
+            <button id="txTabOut"  class="tx-sub-tab" data-txtab="출고"  style="padding:6px 16px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8">📤 출고</button>
+          </div>
           <div class="table-wrap">
-            <table class="rec"><thead><tr>
-              <th>거래일</th><th>구분</th><th>품목/규격</th><th>단위</th>
-              <th style="text-align:right">수량</th><th style="text-align:right">단가</th><th style="text-align:right">금액</th>
-              <th>거래처</th><th>사용처/메모</th><th></th>
+            <table class="rec" style="table-layout:fixed;width:100%"><thead><tr>
+              <th style="width:82px">거래일</th>
+              <th style="width:44px">구분</th>
+              <th>품목명</th>
+              <th style="width:40px">단위</th>
+              <th style="width:44px;text-align:right">수량</th>
+              <th style="width:72px;text-align:right">단가</th>
+              <th>사용처/메모</th>
+              <th style="width:56px;text-align:center">액션</th>
             </tr></thead><tbody id="matTxBody"></tbody></table>
           </div>
           <p id="matTxSummary" style="font-size:13px;color:var(--ink-soft);margin-top:8px;text-align:right"></p>
@@ -6004,7 +6020,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0624-1100';
+    if(el) el.textContent = 'v44-0624-1116';
   }
   setVer();
   setTimeout(setVer, 500);
