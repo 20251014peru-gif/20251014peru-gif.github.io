@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260624-15";
+const APP_VERSION = "v44-20260624-16";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1443,6 +1443,139 @@ function makeMaterialSearchUI(inputId, listId, onSelect){
   }, 50);
 }
 /* ── 업무 모달 탭 렌더러 ── */
+/* ── 자재 선택 팝업 ── */
+function openMatPickerPopup(){
+  const old = document.getElementById('matPickerOv'); if(old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'matPickerOv';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:12000;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  const curMat = ($('m-material')||{}).value||'';
+  const curQty = ($('m-qty')||{}).value||'';
+
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:440px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.22)">
+      <div style="padding:16px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">📦</span>
+        <span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">자재 선택</span>
+        <button id="matPopClose" type="button" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer;padding:4px">✕</button>
+      </div>
+      <div style="padding:14px 18px 0;position:relative">
+        <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">자재명 검색</div>
+        <input type="text" id="matPopSearch" value="${esc(curMat)}" placeholder="자재명 또는 초성 검색…" autocomplete="off"
+          style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:1.5px solid #3b82f6;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45">
+        <div id="matPopList" style="position:absolute;left:18px;right:18px;top:84px;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:100;max-height:220px;overflow:auto;display:none"></div>
+      </div>
+      <div style="padding:10px 18px 14px;display:flex;align-items:flex-end;gap:10px">
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">선택된 자재</div>
+          <div id="matPopSelected" style="min-height:38px;padding:8px 12px;background:#f8fafc;border-radius:8px;font-size:13px;font-weight:600;color:#1a2f45;border:1.5px solid #e2e8f0;line-height:1.4">${curMat||'<span style="color:#94a3b8;font-weight:400">없음</span>'}</div>
+        </div>
+        <div style="width:88px">
+          <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">수량</div>
+          <input type="number" id="matPopQty" value="${esc(curQty)}" min="0" placeholder="0"
+            style="width:100%;box-sizing:border-box;height:38px;padding:0 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:15px;font-weight:700;font-family:inherit;background:#fff;outline:none;text-align:right">
+        </div>
+      </div>
+      <div style="padding:4px 18px 16px;display:flex;gap:8px;border-top:1px solid #f1f5f9">
+        <button id="matPopClear" type="button" style="padding:0 14px;height:44px;border:1.5px solid #e2e8f0;border-radius:10px;background:#fff;color:#94a3b8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">지우기</button>
+        <button id="matPopOk" type="button" style="flex:1;height:44px;border:none;border-radius:10px;background:#2563a8;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">✓ 확인</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(ov);
+
+  let _pickedId = ($('m-mat-item-id')||{}).value||'';
+  let _pickedName = curMat;
+
+  const searchEl = document.getElementById('matPopSearch');
+  const listEl   = document.getElementById('matPopList');
+  const selEl    = document.getElementById('matPopSelected');
+
+  function renderList(q){
+    q = (q||'').trim();
+    const items = entries.filter(e=>e.kind==='item'&&e.itemName);
+    let filtered = items.map(it=>({
+      id:it.id,
+      name:(it.itemName||'').replace(/^\[.*?\]/,'').trim(),
+      rawName:it.itemName||'',
+      spec:it.spec||'',
+      unit:it.unit||''
+    }));
+    if(q){
+      if(typeof isChosungOnly==='function'&&isChosungOnly(q)){
+        filtered=filtered.filter(it=>typeof getChosung==='function'&&getChosung(it.name).includes(q));
+      } else {
+        const ql=q.toLowerCase();
+        filtered=filtered.filter(it=>(it.name+' '+it.spec).toLowerCase().includes(ql)||
+          (typeof getChosung==='function'&&getChosung(it.name).includes(q)));
+      }
+    }
+    filtered=filtered.slice(0,60);
+    if(!filtered.length){
+      listEl.innerHTML=`<div style="padding:12px 14px;text-align:center;color:#94a3b8;font-size:13px">결과 없음 — 그대로 직접 입력하세요</div>`;
+    } else {
+      listEl.innerHTML=filtered.map((it,i)=>`
+        <div class="mpp-item" data-idx="${i}"
+          style="padding:9px 14px;cursor:pointer;border-bottom:1px solid #f8fafc;display:flex;align-items:center;gap:8px">
+          <span style="background:#0369a1;color:#fff;font-size:10px;padding:1px 6px;border-radius:5px;font-weight:700;flex-shrink:0">자재</span>
+          <div style="min-width:0">
+            <div style="font-size:13px;font-weight:700;color:#1a2f45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.name)}</div>
+            ${it.spec?`<div style="font-size:11px;color:#94a3b8">${esc(it.spec.slice(0,40))}${it.unit?' ['+esc(it.unit)+']':''}</div>`:''}
+          </div>
+        </div>`).join('');
+      listEl.querySelectorAll('.mpp-item').forEach((el,i)=>{
+        el.addEventListener('mouseenter',()=>el.style.background='#f0f6ff');
+        el.addEventListener('mouseleave',()=>el.style.background='');
+        el.addEventListener('mousedown',e=>{
+          e.preventDefault();
+          const it=filtered[i];
+          _pickedId=it.id; _pickedName=it.name;
+          searchEl.value=it.name;
+          selEl.innerHTML=`<b>${esc(it.name)}</b>${it.spec?`<br><span style="font-size:11px;color:#94a3b8">${esc(it.spec)}</span>`:''}`;
+          listEl.style.display='none';
+          document.getElementById('matPopQty').focus();
+          document.getElementById('matPopQty').select();
+        });
+      });
+    }
+    listEl.style.display='block';
+  }
+
+  renderList('');
+  setTimeout(()=>{ searchEl.focus(); searchEl.select(); },80);
+
+  searchEl.addEventListener('input',()=>{ _pickedId=''; _pickedName=searchEl.value; renderList(searchEl.value); });
+  searchEl.addEventListener('focus',()=>renderList(searchEl.value));
+  searchEl.addEventListener('blur',()=>setTimeout(()=>{ listEl.style.display='none'; },200));
+
+  function doConfirm(){
+    const name=(_pickedName||searchEl.value).trim();
+    const qty=Number(document.getElementById('matPopQty').value)||0;
+    const mInp=$('m-material'); if(mInp) mInp.value=name;
+    const qInp=$('m-qty');      if(qInp) qInp.value=qty||'';
+    const idInp=$('m-mat-item-id'); if(idInp) idInp.value=_pickedId||'';
+    const lbl=document.getElementById('wMatLabel');
+    if(lbl) lbl.innerHTML = name&&qty
+      ? `📦 자재: <b>${esc(name)}</b> × ${qty}`
+      : `📦 자재 사용 내역`;
+    ov.remove();
+  }
+
+  document.getElementById('matPopOk').addEventListener('click', doConfirm);
+  document.getElementById('matPopClear').addEventListener('click',()=>{
+    const mInp=$('m-material'); if(mInp) mInp.value='';
+    const qInp=$('m-qty');      if(qInp) qInp.value='';
+    const idInp=$('m-mat-item-id'); if(idInp) idInp.value='';
+    const lbl=document.getElementById('wMatLabel');
+    if(lbl) lbl.innerHTML='📦 자재 사용 내역';
+    ov.remove();
+  });
+  document.getElementById('matPopClose').addEventListener('click',()=>ov.remove());
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+  document.getElementById('matPopQty').addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();doConfirm();} });
+}
+
 let _workMode = "simple";
 function renderWorkModal(data, mode){
   _workMode = mode||"simple";
@@ -1529,25 +1662,21 @@ function renderWorkModal(data, mode){
     <textarea id="m-detail" placeholder="작업 내용, 특이사항 등" style="${S.ta}">${e2(d.detail||"")}</textarea>
   </div>`;
 
-  /* ── 자재 토글 (세로 배열) ── */
+  /* ── 자재 사용 내역 — 클릭 시 팝업 ── */
+  const matLabel = d.material && d.qty
+    ? `📦 자재: <b>${e2(d.material)}</b> × ${e2(String(d.qty))}`
+    : `📦 자재 사용 내역`;
   const matSection = `
-  <details id="wMatMore" style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;cursor:pointer;list-style:none;user-select:none">
-      <span style="font-size:12px;font-weight:700;color:#64748b;flex:1">📦 자재 사용 내역</span>
-      <span style="font-size:10px;color:#94a3b8">▼</span>
-    </summary>
-    <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
-      <div style="position:relative">
-        <label style="${S.lbl}">자재명·규격 <span style="font-size:10px;font-weight:500;color:#94a3b8">(클릭하면 자재 목록, 없으면 직접 입력)</span></label>
-        <input type="text" id="m-material" value="${e2(d.material||"")}" placeholder="자재명 검색 또는 직접 입력" autocomplete="off" style="${S.inp}">
-        <div id="m-material-list" style="display:none;position:absolute;top:68px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:600;max-height:220px;overflow:auto"></div>
-      </div>
-      <div>
-        <label style="${S.lbl}">수량</label>
-        <input type="number" id="m-qty" value="${e2(d.qty||"")}" min="0" placeholder="0" style="${S.inp};max-width:120px">
-      </div>
-    </div>
-  </details>`;
+  <div id="wMatRow" style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
+    <button type="button" id="btnOpenMatPop"
+      style="width:100%;display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;border:none;cursor:pointer;font-family:inherit;text-align:left">
+      <span id="wMatLabel" style="font-size:12px;font-weight:700;color:#64748b;flex:1">${matLabel}</span>
+      <span style="font-size:10px;color:#94a3b8">▶ 클릭해서 입력</span>
+    </button>
+    <input type="hidden" id="m-material" value="${e2(d.material||"")}">
+    <input type="hidden" id="m-qty" value="${e2(d.qty||"")}">
+    <input type="hidden" id="m-mat-item-id" value="">
+  </div>`;
 
   /* ════════════════ 모드별 추가 필드 ════════════════ */
   let modeExtra = "";
@@ -1671,29 +1800,11 @@ function renderWorkModal(data, mode){
   const fb=document.querySelector('#mFields [data-fieldmgr]');
   if(fb&&!fb._bound){ fb._bound=true; fb.addEventListener("click",e=>{ e.preventDefault(); openFieldManager(()=>{}); }); }
 
-  /* 자재 검색 UI 연결 — 자재탭 품목목록과 연동 */
+  /* 자재 팝업 버튼 바인딩 */
   setTimeout(()=>{
-    const matInp = $('m-material');
-    if(matInp) matInp._matACwired = false; // 탭 전환 시 재바인딩 허용
-    if(typeof makeMaterialSearchUI==='function'){
-      makeMaterialSearchUI('m-material','m-material-list',(picked)=>{
-        const inp=$('m-material');
-        if(inp){
-          inp.value = picked.name||picked.itemName||'';
-          // 선택된 itemId 저장 (출고 자동기록에서 정확한 매칭용)
-          inp.dataset.matItemId = picked.id||'';
-        }
-        // 수량 포커스
-        const qtyEl=$('m-qty');
-        if(qtyEl) setTimeout(()=>{ qtyEl.focus(); qtyEl.select(); },50);
-      });
-    }
-    // 자재 details 열릴 때 input 자동 포커스
-    const wMat=document.getElementById('wMatMore');
-    if(wMat&&!wMat._mfBound){ wMat._mfBound=true;
-      wMat.addEventListener('toggle',()=>{ if(wMat.open){ const inp=$('m-material'); if(inp) setTimeout(()=>inp.focus(),80); } });
-    }
-  },120);
+    const btn = document.getElementById('btnOpenMatPop');
+    if(btn && !btn._bound){ btn._bound=true; btn.addEventListener('click', openMatPickerPopup); }
+  }, 80);
 }
 
 function saveWorkEntry(){
@@ -1734,7 +1845,7 @@ function saveWorkEntry(){
   if(!mId && obj.material && obj.qty>0){
     const matName = obj.material.trim();
     const matInpEl = $("m-material");
-    const savedItemId = matInpEl ? matInpEl.dataset.matItemId : "";
+    const savedItemId = ($("m-mat-item-id")||{}).value||'';
     // itemId 직접 지정 → 없으면 이름으로 검색
     const matchItem = savedItemId
       ? entries.find(e=>e.id===savedItemId && e.kind==="item")
@@ -5563,10 +5674,10 @@ function renderTxList(){
       <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0" title="${esc(it?it.itemName:"")}">
         ${it?`<b style="font-size:12px">${esc(cleanName)}</b>`:"<span style='color:var(--peach);font-size:11px'>(삭제됨)</span>"}
       </td>
-      <td style="font-size:12px;color:#64748b">${it?esc(it.unit||""):""}</td>
-      <td class="num" style="font-weight:700">${t.qty||0}</td>
-      <td class="num" style="font-size:12px">${t.unitPrice?won(t.unitPrice):""}</td>
-      <td style="font-size:12px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0" title="${esc(t.useTarget||t.memo||"")}">${esc((t.useTarget||t.memo||"").slice(0,30))}</td>
+      <td style="font-size:12px;color:#64748b;text-align:center">${it?esc(it.unit||""):""}</td>
+      <td class="num" style="font-weight:700;font-size:13px">${t.qty||0}</td>
+      <td class="num" style="font-size:11px">${t.unitPrice?won(t.unitPrice):""}</td>
+      <td style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0" title="${esc(t.useTarget||t.memo||"")}">${esc((t.useTarget||t.memo||"").slice(0,20))}</td>
       <td style="text-align:center;white-space:nowrap;padding:4px 6px">
         <button class="mini-btn" data-txedit="${t.id}" style="padding:3px 7px;font-size:11px" title="수정">✏️</button>
         <button class="rowdel" data-del="${t.id}" style="padding:3px 7px;font-size:11px" title="삭제">🗑</button>
