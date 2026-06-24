@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260624-6";
+const APP_VERSION = "v44-20260624-7";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1443,166 +1443,222 @@ function makeMaterialSearchUI(inputId, listId, onSelect){
   }, 50);
 }
 /* ── 업무 모달 탭 렌더러 ── */
-let _workMode = "simple"; // "simple" | "full"
+let _workMode = "simple";
 function renderWorkModal(data, mode){
   _workMode = mode||"simple";
-  const esc2 = s=>(s||"").toString().replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
-  const kstN = () => new Date(Date.now()+9*60*60*1000);
-  const td = kstN().toISOString().slice(0,10);
+  const e2 = s=>(s||"").toString().replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+  const td = kstNow().toISOString().slice(0,10);
   const d = data||{};
+  const expType = d.expType&&d.expType!=="없음" ? d.expType : "개인비용";
 
-  const tabBar = `<div style="display:flex;gap:0;margin-bottom:14px;border-radius:10px;overflow:hidden;border:1.5px solid #dbe6f4">
-    <button type="button" id="wTab-simple" onclick="renderWorkModal(window._wModalData,'simple')"
-      style="flex:1;padding:9px 0;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;
-      background:${_workMode==='simple'?'#3f7cb8':'#f7faff'};color:${_workMode==='simple'?'#fff':'#7a92a8'}">
+  /* ── 공통 스타일 상수 ── */
+  const inp  = `width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;transition:border-color .15s`;
+  const sel  = `width:100%;box-sizing:border-box;height:44px;padding:0 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;cursor:pointer`;
+  const lbl  = `display:block;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.4px;margin-bottom:5px;text-transform:uppercase`;
+  const ta   = `width:100%;box-sizing:border-box;min-height:72px;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;resize:vertical;line-height:1.6`;
+  const sec  = `border:1.5px solid #f1f5f9;border-radius:12px;overflow:hidden;margin-top:12px`;
+  const secH = `display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f8fafc;cursor:pointer;user-select:none`;
+  const secB = `padding:14px`;
+
+  /* ── 탭 ── */
+  const tabs = `
+  <div style="display:flex;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0;margin-bottom:16px">
+    <button type="button" onclick="renderWorkModal(window._wModalData,'simple')"
+      style="flex:1;padding:10px 0;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;letter-spacing:.2px;
+      background:${_workMode==='simple'?'#2563a8':'#f8fafc'};color:${_workMode==='simple'?'#fff':'#64748b'}">
       🏢 일반업무
     </button>
-    <button type="button" id="wTab-full" onclick="renderWorkModal(window._wModalData,'full')"
-      style="flex:1;padding:9px 0;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #dbe6f4;
-      background:${_workMode==='full'?'#e67e22':'#f7faff'};color:${_workMode==='full'?'#fff':'#7a92a8'}">
+    <button type="button" onclick="renderWorkModal(window._wModalData,'full')"
+      style="flex:1;padding:10px 0;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #e2e8f0;letter-spacing:.2px;
+      background:${_workMode==='full'?'#c2410c':'#f8fafc'};color:${_workMode==='full'?'#fff':'#64748b'}">
       💰 외주·비용
     </button>
   </div>`;
 
-  // 공통 상단 필드
-  const commonTop = `
-    <div class="grid">
-      <div class="field"><label>날짜 <span class="req">*</span></label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input type="date" id="m-date" value="${esc2(d.date||td)}" style="flex:1;height:44px;padding:0 12px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
-          <button type="button" id="btn-yesterday" style="height:44px;padding:0 11px;border:1.5px solid #dbe6f4;border-radius:12px;font-size:12px;font-weight:700;color:#7a92a8;background:#f7faff;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0"
-            onclick="(function(b){const e=document.getElementById('m-date');if(!e)return;const y=yesterdayStr();if(e.value===y){e.value=window._wTodayBk||todayStr();b.textContent='어제';b.style.background='#f7faff';b.style.color='#7a92a8';}else{window._wTodayBk=e.value||todayStr();e.value=y;b.textContent='✓ 어제';b.style.background='#fef3c7';b.style.color='#92400e';}})(this)">어제</button>
+  /* ── 공통 Row1: 날짜 + 상태 ── */
+  const row1 = `
+  <div style="display:grid;grid-template-columns:1fr auto 80px;gap:8px;align-items:end;margin-bottom:10px">
+    <div>
+      <label style="${lbl}">날짜 *</label>
+      <input type="date" id="m-date" value="${e2(d.date||td)}" style="${inp}">
+    </div>
+    <button type="button" id="btn-yesterday"
+      style="height:44px;padding:0 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;letter-spacing:.1px"
+      onclick="(function(b){const e=document.getElementById('m-date');if(!e)return;const y=yesterdayStr();if(e.value===y){e.value=window._wTodayBk||todayStr();b.textContent='어제';b.style.background='#f8fafc';b.style.color='#64748b';}else{window._wTodayBk=e.value||todayStr();e.value=y;b.textContent='✓어제';b.style.background='#fef3c7';b.style.color='#92400e';}})(this)">어제</button>
+    <div>
+      <label style="${lbl}">상태</label>
+      <select id="m-status" style="${sel}">
+        ${["미완료","진행중","완료","보류"].map(o=>`<option${(d.status||"미완료")===o?" selected":""}>${o}</option>`).join("")}
+      </select>
+    </div>
+  </div>`;
+
+  /* ── 공통 Row2: 층(작게) + 분야(크게) ── */
+  const row2 = `
+  <div style="display:grid;grid-template-columns:100px 1fr;gap:8px;margin-bottom:10px">
+    <div>
+      <label style="${lbl}">층</label>
+      <select id="m-floor" style="${sel};font-size:13px">
+        ${FLOORS.map(o=>`<option value="${e2(o)}"${(d.floor||"")===o?" selected":""}>${o===""?"—":o}</option>`).join("")}
+      </select>
+    </div>
+    <div style="position:relative">
+      <label style="${lbl}">분야</label>
+      <div style="display:flex;gap:6px;position:relative">
+        <input type="text" id="m-field" value="${e2(d.field||"")}" placeholder="분야 입력 또는 검색 (초성 가능)" autocomplete="off"
+          style="${inp};flex:1;padding-right:38px">
+        <button type="button" data-fieldmgr title="분야 관리"
+          style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer;padding:4px;line-height:1">⚙</button>
+        <div id="m-field-list" style="display:none;position:absolute;top:48px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:600;max-height:220px;overflow:auto"></div>
+      </div>
+      <input type="hidden" id="m-field-new">
+    </div>
+  </div>`;
+
+  /* ── 공통: 업무내역 ── */
+  const titleRow = `
+  <div style="margin-bottom:10px">
+    <label style="${lbl}">업무내역 *</label>
+    <input type="text" id="m-title" value="${e2(d.title||"")}" list="dl-title" autocomplete="off"
+      placeholder="무엇을 했나요?" style="${inp};font-size:15px;font-weight:600;border-color:#3f7cb8">
+    <datalist id="dl-title">${[...new Set(entries.filter(e=>e.kind==="work"&&e.title).map(e=>e.title))].sort().map(v=>`<option value="${e2(v)}"></option>`).join("")}</datalist>
+  </div>`;
+
+  /* ── 공통: 상세내용 (항상 보임) ── */
+  const detailRow = `
+  <div style="margin-bottom:10px">
+    <label style="${lbl}">상세내용</label>
+    <textarea id="m-detail" placeholder="작업 내용, 특이사항 등" style="${ta}">${e2(d.detail||"")}</textarea>
+  </div>`;
+
+  /* ── 공통: 자재 토글 섹션 ── */
+  const matSection = `
+  <details id="wMatMore" style="${sec}">
+    <summary style="${secH};list-style:none" onclick="this.parentElement.querySelector('.wmat-arrow').textContent=this.parentElement.open?'▲':'▼'">
+      <span style="font-size:12px;font-weight:700;color:#64748b;flex:1">📦 자재 사용 내역</span>
+      <span class="wmat-arrow" style="font-size:10px;color:#94a3b8">▼</span>
+    </summary>
+    <div style="${secB}">
+      <div style="display:grid;grid-template-columns:1fr 80px;gap:8px">
+        <div>
+          <label style="${lbl}">자재명·규격</label>
+          <input type="text" id="m-material" value="${e2(d.material||"")}" placeholder="예: LED 8W 직부등 Φ100" style="${inp}">
         </div>
-      </div>
-      <div class="field"><label>완료 상태</label>
-        <select id="m-status" style="height:44px;padding:0 12px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
-          ${["미완료","진행중","완료","보류"].map(o=>`<option${(d.status||"미완료")===o?" selected":""}>${o}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field"><label>해당층</label>
-        <select id="m-floor" style="height:44px;padding:0 12px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
-          ${FLOORS.map(o=>`<option value="${esc2(o)}"${(d.floor||"")===(o)?" selected":""}>${o===""?"(층 선택 안 함)":o}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field"><label>분야</label>
-        <div style="display:flex;gap:6px;align-items:stretch;position:relative">
-          <input type="text" id="m-field" value="${esc2(d.field||"")}" placeholder="분야 검색 (초성 가능)" autocomplete="off" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
-          <button type="button" class="btn btn-ghost btn-sm" data-fieldmgr style="flex:0 0 auto;padding:0 10px" title="분야 관리">⚙</button>
-          <div id="m-field-list" style="display:none;position:absolute;top:48px;left:0;right:46px;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:240px;overflow:auto"></div>
+        <div>
+          <label style="${lbl}">수량</label>
+          <input type="number" id="m-qty" value="${e2(d.qty||"")}" min="0" placeholder="0" style="${inp};text-align:right">
         </div>
-        <input type="hidden" id="m-field-new">
       </div>
     </div>
-    <div class="field full" style="margin-top:4px">
-      <label>업무내역 <span class="req">*</span></label>
-      <input type="text" id="m-title" value="${esc2(d.title||"")}" list="dl-title" autocomplete="off"
-        style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
-      <datalist id="dl-title">${[...new Set(entries.filter(e=>e.kind==="work"&&e.title).map(e=>e.title))].sort().map(v=>`<option value="${esc2(v)}"></option>`).join("")}</datalist>
+  </details>`;
+
+  let modeSection = "";
+
+  if(_workMode === "simple"){
+    /* 일반업무: 탭+공통+상세+자재 끝 */
+    modeSection = "";
+  } else {
+    /* ── 외주: 지출종류 + 금액 ── */
+    const costRow = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;padding:12px 14px;background:${expType==="후불청구"?"#fff7ed":"#eff6ff"};border-radius:12px;border:1.5px solid ${expType==="후불청구"?"#fdba74":"#bfdbfe"}">
+      <div>
+        <label style="${lbl.replace('#94a3b8',expType==="후불청구"?'#c2410c':'#1d4ed8')}">지출종류</label>
+        <select id="m-expType" style="${sel};background:transparent;border-color:${expType==="후불청구"?"#fdba74":"#bfdbfe"}">
+          ${["개인비용","후불청구"].map(o=>`<option${expType===o?" selected":""}>${o}</option>`).join("")}
+        </select>
+      </div>
+      <div>
+        <label id="lbl-cost" style="${lbl.replace('#94a3b8',expType==="후불청구"?'#c2410c':'#1d4ed8')}">${expType==="후불청구"?"계약금액 (원)":"금액 (원)"}</label>
+        <input type="number" id="m-cost" value="${e2(d.cost||"")}" placeholder="0"
+          style="${inp};background:transparent;border-color:${expType==="후불청구"?"#fdba74":"#bfdbfe"};font-size:16px;font-weight:700;text-align:right;color:${expType==="후불청구"?"#c2410c":"#1d4ed8"}">
+      </div>
     </div>`;
 
-  let modeFields = "";
-  if(_workMode === "simple"){
-    modeFields = `
-      <details style="margin-top:12px" id="wSimpleMore">
-        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:#7a92a8;padding:6px 0;border-top:1.5px solid #f0f6ff;list-style:none;display:flex;align-items:center;gap:4px">
-          <span id="wSimpleArrow">▶</span> 추가 입력 (자재·상세내용)
-        </summary>
-        <div style="padding-top:10px">
-          <div class="field full"><label>상세내용</label>
-            <textarea id="m-detail" style="width:100%;box-sizing:border-box;min-height:60px;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;resize:vertical">${esc2(d.detail||"")}</textarea>
-          </div>
-          <div class="grid">
-            <div class="field"><label>자재명·규격</label><input type="text" id="m-material" value="${esc2(d.material||d.matSpec?((d.material||"")+(d.matSpec?" "+d.matSpec:"")):"")}" style="height:44px;width:100%;box-sizing:border-box;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none"></div>
-            <div class="field"><label>수량</label><input type="number" id="m-qty" value="${esc2(d.qty||"")}" style="height:44px;width:100%;box-sizing:border-box;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none"></div>
-          </div>
+    /* ── 외주: 담당업체 섹션 ── */
+    const vendorSection = `
+    <details id="wVendorArea" ${d.workVendor||d.vendor?"open":""} style="${sec}">
+      <summary style="${secH};list-style:none" onclick="this.parentElement.querySelector('.wv-arrow').textContent=this.parentElement.open?'▲':'▼'">
+        <span style="font-size:13px">🏢</span>
+        <span style="font-size:12px;font-weight:700;color:#64748b;flex:1">담당업체 <span style="font-weight:500;color:#94a3b8">— 선택 시 자동 채움</span></span>
+        <a href="contacts.html" target="_blank" onclick="event.stopPropagation()"
+          style="font-size:11px;padding:2px 8px;border:1px solid #dbe6f4;border-radius:6px;background:#fff;color:#3f7cb8;font-weight:700;text-decoration:none;margin-right:6px">연락처</a>
+        <span class="wv-arrow" style="font-size:10px;color:#94a3b8">${d.workVendor||d.vendor?"▲":"▼"}</span>
+      </summary>
+      <div style="${secB}">
+        <div style="position:relative;margin-bottom:10px">
+          <input type="text" id="m-workVendor" value="${e2(d.workVendor||d.vendor||"")}" placeholder="업체명 검색…" autocomplete="off" style="${inp}">
+          <div id="m-workVendor-list" style="display:none;position:absolute;top:48px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:600;max-height:220px;overflow:auto"></div>
+          <label style="display:flex;align-items:center;gap:6px;margin-top:7px;cursor:pointer;font-size:12px;font-weight:600;color:#94a3b8">
+            <input type="checkbox" id="m-isOnetime" ${d.isOnetime?"checked":""} style="width:14px;height:14px;accent-color:#f59e0b;cursor:pointer">
+            🕐 일회성 업체
+          </label>
+          <div id="m-vendorContractBadge" style="display:none;margin-top:6px;align-items:center;gap:6px;flex-wrap:wrap"></div>
         </div>
-      </details>`;
-  } else {
-    const expType = d.expType&&d.expType!=="없음" ? d.expType : "개인비용";
-    modeFields = `
-      <div class="grid" style="margin-top:12px">
-        <div class="field"><label>지출종류</label>
-          <select id="m-expType" style="height:44px;padding:0 12px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
-            ${["개인비용","후불청구"].map(o=>`<option${expType===o?" selected":""}>${o}</option>`).join("")}
-          </select>
-        </div>
-        <div class="field"><label id="lbl-cost">${expType==="후불청구"?"💰 계약금액 (원)":"💰 금액 (원)"}</label>
-          <input type="number" id="m-cost" value="${esc2(d.cost||"")}" placeholder="0" style="height:44px;width:100%;box-sizing:border-box;padding:0 14px;border:2px solid #3f7cb8;border-radius:12px;font-size:15px;font-weight:700;font-family:inherit;background:#f7faff;outline:none;color:#185FA5;text-align:right">
+        <div id="wVendorSubFields" style="${d.workVendor||d.vendor?'':'display:none'}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><label style="${lbl}">담당자</label><input type="text" id="m-workContact" value="${e2(d.workContact||"")}" style="${inp}"></div>
+            <div><label style="${lbl}">직책</label><input type="text" id="m-workRole" value="${e2(d.workRole||"")}" style="${inp}"></div>
+            <div><label style="${lbl}">전화</label><input type="tel" id="m-workPhone" value="${e2(d.workPhone||"")}" style="${inp}"></div>
+            <div><label style="${lbl}">업체 메모</label><input type="text" id="m-workMemo" value="${e2(d.workMemo||d.memo||"")}" style="${inp}"></div>
+          </div>
         </div>
       </div>
-      <details style="margin-top:12px" id="wVendorArea">
-        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:#7a92a8;padding:6px 0;border-top:1.5px solid #f0f6ff;list-style:none;display:flex;align-items:center;gap:4px">
-          <span>▶</span> 담당업체 (선택 시 자동 펼침)
-        </summary>
-        <div style="padding-top:10px">
-          <div class="field full" style="position:relative">
-            <label>담당업체 <a href="contacts.html" target="_blank" style="margin-left:4px;font-size:11px;padding:2px 7px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;color:#3f7cb8;font-weight:700;text-decoration:none">📋 연락처관리</a></label>
-            <input type="text" id="m-workVendor" value="${esc2(d.workVendor||d.vendor||"")}" placeholder="업체명 검색..." autocomplete="off"
-              style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
-            <div id="m-workVendor-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow:auto"></div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
-              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;font-weight:700;color:#94a3b8;margin:0">
-                <input type="checkbox" id="m-isOnetime" ${d.isOnetime?"checked":""} style="width:15px;height:15px;accent-color:#f59e0b;cursor:pointer"> 🕐 일회성 업체
-              </label>
-              <div id="m-vendorContractBadge" style="display:none;align-items:center;gap:6px;flex-wrap:wrap"></div>
-            </div>
-          </div>
-          <div id="wVendorSubFields" style="${d.workVendor||d.vendor?'':'display:none'}">
-            <div class="grid" style="margin-top:8px">
-              <div class="field"><label>담당자</label><input type="text" id="m-workContact" value="${esc2(d.workContact||"")}" style="height:44px;width:100%;box-sizing:border-box;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none"></div>
-              <div class="field"><label>직책</label><input type="text" id="m-workRole" value="${esc2(d.workRole||"")}" style="height:44px;width:100%;box-sizing:border-box;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none"></div>
-              <div class="field"><label>담당자 전화</label><input type="tel" id="m-workPhone" value="${esc2(d.workPhone||"")}" style="height:44px;width:100%;box-sizing:border-box;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none"></div>
-              <div class="field"><label>업체 메모</label><input type="text" id="m-workMemo" value="${esc2(d.workMemo||d.memo||"")}" style="height:44px;width:100%;box-sizing:border-box;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none"></div>
-            </div>
-          </div>
-        </div>
-      </details>
-      <details style="margin-top:8px">
-        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:#7a92a8;padding:6px 0;border-top:1.5px solid #f0f6ff;list-style:none;display:flex;align-items:center;gap:4px">
-          <span>▶</span> 세부내용·견적메모 (선택)
-        </summary>
-        <div style="padding-top:10px">
-          <div class="field full"><label>상세내용</label>
-            <textarea id="m-detail" style="width:100%;box-sizing:border-box;min-height:60px;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;resize:vertical">${esc2(d.detail||"")}</textarea>
-          </div>
-          <div class="field full"><label>견적 메모</label>
-            <textarea id="m-estimateMemo" style="width:100%;box-sizing:border-box;min-height:54px;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;resize:vertical">${esc2(d.estimateMemo||"")}</textarea>
-          </div>
-        </div>
-      </details>`;
+    </details>`;
+
+    /* ── 외주: 견적메모 토글 ── */
+    const estimateSection = `
+    <details style="${sec}">
+      <summary style="${secH};list-style:none" onclick="this.parentElement.querySelector('.we-arrow').textContent=this.parentElement.open?'▲':'▼'">
+        <span style="font-size:12px;font-weight:700;color:#64748b;flex:1">📋 견적 메모</span>
+        <span class="we-arrow" style="font-size:10px;color:#94a3b8">▼</span>
+      </summary>
+      <div style="${secB}">
+        <textarea id="m-estimateMemo" placeholder="견적 내용, 계약 조건 등" style="${ta}">${e2(d.estimateMemo||"")}</textarea>
+      </div>
+    </details>`;
+
+    modeSection = costRow + vendorSection + estimateSection;
   }
 
-  $("mFields").innerHTML = tabBar + commonTop + modeFields;
+  $("mFields").innerHTML = tabs + row1 + row2 + titleRow + detailRow + modeSection + matSection;
   window._wModalData = data;
 
-  // expType 변경 → 라벨 변경
+  /* ── expType 변경 리스너 ── */
   const expTypeEl = $("m-expType");
   if(expTypeEl){
     expTypeEl.addEventListener("change",()=>{
-      const lbl=$("lbl-cost"); if(lbl) lbl.textContent=expTypeEl.value==="후불청구"?"💰 계약금액 (원)":"💰 금액 (원)";
+      const isPost = expTypeEl.value==="후불청구";
+      const lbl2=$("lbl-cost"); if(lbl2) lbl2.textContent=isPost?"계약금액 (원)":"금액 (원)";
+      const costBox=expTypeEl.closest("div[style*='background']");
+      if(costBox){
+        costBox.style.background=isPost?"#fff7ed":"#eff6ff";
+        costBox.style.borderColor=isPost?"#fdba74":"#bfdbfe";
+      }
+      const costInp=$("m-cost");
+      if(costInp){ costInp.style.color=isPost?"#c2410c":"#1d4ed8"; costInp.style.borderColor=isPost?"#fdba74":"#bfdbfe"; }
       const modal=document.querySelector("#overlay .modal");
       if(modal){ modal.classList.remove("exp-mode-personal","exp-mode-tax","exp-mode-none");
-        if(expTypeEl.value==="개인비용") modal.classList.add("exp-mode-personal");
-        else modal.classList.add("exp-mode-tax"); }
+        modal.classList.add(isPost?"exp-mode-tax":"exp-mode-personal"); }
     });
-    setTimeout(()=>{ expTypeEl.dispatchEvent(new Event("change")); },50);
+    setTimeout(()=>expTypeEl.dispatchEvent(new Event("change")),50);
   }
 
-  // 담당업체 입력 시 서브필드 자동 펼침
+  /* ── 담당업체 자동펼침 + 검색UI ── */
   const vendorInp=$("m-workVendor");
   if(vendorInp){
     const showSub=()=>{
-      const sub=$("wVendorSubFields"); const area=$("wVendorArea");
+      const sub=$("wVendorSubFields"), area=$("wVendorArea");
       if(vendorInp.value.trim()){ if(sub) sub.style.display=""; if(area&&!area.open) area.open=true; }
     };
     vendorInp.addEventListener("input",showSub);
     showSub();
     setTimeout(()=>{
       makeContactSearchUI('m-workVendor','m-workVendor-list',(c)=>{
-        const sub=$("wVendorSubFields"); const area=$("wVendorArea");
+        const sub=$("wVendorSubFields"), area=$("wVendorArea");
         if(sub) sub.style.display=""; if(area) area.open=true;
-        const f=(id,v)=>{const e=$(id);if(e)e.value=v||"";};
-        f("m-workContact",c.person); f("m-workRole",c.title); f("m-workPhone",c.phone); f("m-workMemo",c.memo);
+        const fv=(id,v)=>{const el=$(id);if(el)el.value=v||"";};
+        fv("m-workContact",c.person); fv("m-workRole",c.title);
+        fv("m-workPhone",c.phone); fv("m-workMemo",c.memo);
         const cb=$("m-isOnetime"); if(cb) cb.checked=(c.vendorType==="일회성");
         showVendorContractBadge(c);
       },()=>{
@@ -1610,16 +1666,15 @@ function renderWorkModal(data, mode){
         const badge=$("m-vendorContractBadge"); if(badge) badge.style.display="none";
         const cb=$("m-isOnetime"); if(cb) cb.checked=false;
       });
-      // 분야 검색 UI
-      makeFieldSearchUI&&makeFieldSearchUI('m-field','m-field-list');
     },100);
   }
 
-  // 일반업무 details 열림/닫힘 화살표
-  const det=$("wSimpleMore");
-  if(det) det.addEventListener("toggle",()=>{
-    const ar=$("wSimpleArrow"); if(ar) ar.textContent=det.open?"▼":"▶";
-  });
+  /* ── 분야 검색 UI ── */
+  setTimeout(()=>{ makeFieldSearchUI&&makeFieldSearchUI('m-field','m-field-list'); },80);
+
+  /* ── 분야 관리 버튼 ── */
+  const fmgrBtn=document.querySelector('#mFields [data-fieldmgr]');
+  if(fmgrBtn&&!fmgrBtn._bound){ fmgrBtn._bound=true; fmgrBtn.addEventListener("click",e=>{ e.preventDefault(); openFieldManager(()=>{}); }); }
 }
 
 function saveWorkEntry(){

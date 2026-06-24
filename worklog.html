@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0624-1700</title>
+<title>업무일지 v44-0624-1100</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -830,7 +830,7 @@
   box-shadow: 0 0 0 1px rgba(3,105,161,.15), 0 8px 28px rgba(3,105,161,.18);
 }
 .modal.exp-mode-personal #mTitle::after {
-  content: " · 💸 개인비용";
+  content: "";
   font-size: 13px;
   color: #0369a1;
   font-weight: 600;
@@ -841,7 +841,7 @@
   box-shadow: 0 0 0 1px rgba(194,65,12,.15), 0 8px 28px rgba(194,65,12,.18);
 }
 .modal.exp-mode-tax #mTitle::after {
-  content: " · 📃 후불청구";
+  content: "";
   font-size: 13px;
   color: #c2410c;
   font-weight: 600;
@@ -861,6 +861,14 @@
   font-weight: 800;
   color: #c2410c;
 }
+/* ── 업무 모달 인풋 포커스 ── */
+#overlay input[type=text]:focus, #overlay input[type=date]:focus,
+#overlay input[type=number]:focus, #overlay input[type=tel]:focus,
+#overlay textarea:focus, #overlay select:focus {
+  border-color: #3f7cb8 !important;
+  box-shadow: 0 0 0 3px rgba(63,124,184,.12);
+}
+#overlay details summary::-webkit-details-marker { display:none; }
 </style>
 </head>
 <body>
@@ -5996,7 +6004,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0624-1700';
+    if(el) el.textContent = 'v44-0624-1100';
   }
   setVer();
   setTimeout(setVer, 500);
