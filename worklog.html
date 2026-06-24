@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0622-1824</title>
+<title>업무일지 v44-0624-1200</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -2175,7 +2175,10 @@
 
     <!-- 용도 칩 -->
     <div style="margin-bottom:12px">
-      <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:8px">용도</label>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <label style="font-size:11px;font-weight:700;color:#7a92a8">용도</label>
+        <button type="button" id="expV2InlinePurposeMgr" style="background:#f7faff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 추가·삭제</button>
+      </div>
       <div id="expV2PurposeWrap" style="display:flex;flex-wrap:wrap;gap:6px"></div>
     </div>
 
@@ -5992,7 +5995,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0622-1824';
+    if(el) el.textContent = 'v44-0624-1200';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -6469,15 +6472,25 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     document.getElementById('purposeMgrNew').addEventListener('keydown',function(e){
       if(e.key==='Enter') document.getElementById('purposeMgrAdd').click();
     });
-    document.getElementById('purposeMgrClose').addEventListener('click',function(){ ov.remove(); });
-    ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+    document.getElementById('purposeMgrClose').addEventListener('click',function(){ ov.remove(); renderChips(); });
+    ov.addEventListener('click',function(e){ if(e.target===ov){ ov.remove(); renderChips(); } });
   }
 
   /* ── 이벤트 바인딩 ── */
   function bind(){
     var cl=g('expV2Close'); if(cl&&!cl._b){cl._b=true;cl.addEventListener('click',closeExpV2);}
     var cc=g('expV2Cancel'); if(cc&&!cc._b){cc._b=true;cc.addEventListener('click',closeExpV2);}
-    var ov=g('expV2Overlay'); if(ov&&!ov._b){ov._b=true;ov.addEventListener('click',function(e){if(e.target===ov)closeExpV2();});}
+    var ov=g('expV2Overlay');
+    if(ov&&!ov._b){
+      ov._b=true;
+      var _expOvMousedownTarget=null;
+      ov.addEventListener('mousedown',function(e){ _expOvMousedownTarget=e.target; });
+      ov.addEventListener('click',function(e){
+        // 드래그로 overlay까지 온 경우 무시 (mousedown이 sheet 안에서 시작됐으면 닫지 않음)
+        if(_expOvMousedownTarget && _expOvMousedownTarget!==ov) return;
+        if(e.target===ov) closeExpV2();
+      });
+    }
     var sv=g('expV2Save'); if(sv&&!sv._b){sv._b=true;sv.addEventListener('click',saveExpV2);}
     var dl=g('expV2Del');  if(dl&&!dl._b){dl._b=true;dl.addEventListener('click',deleteExpV2);}
     document.querySelectorAll('.expV2TypeBtn').forEach(function(btn){
@@ -6490,8 +6503,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     ['expV2MonthSel','expV2TypeSel','expV2IssuedSel'].forEach(function(id){
       var el=g(id); if(el&&!el._f){el._f=true;el.addEventListener('change',function(){renderExpV2List();});}
     });
-    // 용도 관리
+    // 용도 관리 (지출 패널 버튼)
     var pmBtn=g('btnExpV2PurposeMgr'); if(pmBtn&&!pmBtn._b){pmBtn._b=true;pmBtn.addEventListener('click',openPurposeMgr);}
+    // 용도 관리 (모달 내 버튼)
+    var pmBtn2=g('expV2InlinePurposeMgr'); if(pmBtn2&&!pmBtn2._b){pmBtn2._b=true;pmBtn2.addEventListener('click',function(){ openPurposeMgr(); });}
     // openExpenseEditor 교체
     window.openExpenseEditor=function(id){openExpV2(id);};
 
@@ -6519,7 +6534,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       setTimeout(function(){setWorkLink(info.workId||null);},50);
       var ov=g('expV2Overlay'); if(ov) ov.style.display='flex';
       var sh=g('expV2Sheet'); if(sh) sh.scrollTop=0;
-      if(typeof toast==='function') toast('💡 '+(isPersonal?'💸 개인비용':'📃 후불청구')+' 작성 — 업무 정보가 자동 입력됐어요');
+      var isEdit=info.isEdit||false;
+      if(typeof toast==='function') toast('💡 '+(isPersonal?'💸 개인비용':'📃 후불청구')+' '+(isEdit?'수정 — 아직 연결된 지출이 없어 새로 등록해요':'작성 — 업무 정보가 자동 입력됐어요'));
     };
     // btnAddExpense
     var addBtn=g('btnAddExpense'); if(addBtn&&!addBtn._x){addBtn._x=true;addBtn.addEventListener('click',function(){openExpV2(null);});}

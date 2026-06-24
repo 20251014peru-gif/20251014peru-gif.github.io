@@ -2026,15 +2026,22 @@ $("mSave").addEventListener("click",async ()=>{
   else if(mKind==="site"){ renderSite(); }
   else renderAll();
   // v44: 업무 저장 후 지출유형이 개인비용/후불청구면 → 지출 모달 자동으로 열기
+  // v44-0624: 수정 저장 시에도 연동 (신규=새 지출 등록, 수정=기존 연결 지출이 없으면 새로 등록)
   let _v44OpenExpenseAfter = null;
-  if(mKind==="work" && !mId){ // 신규 업무만
+  if(mKind==="work"){
     const expType = obj.expType||"없음";
     if(expType==="개인비용" || expType==="후불청구"){
-      _v44OpenExpenseAfter = {
-        workObj: obj,
-        workId: savedId,
-        expType: expType
-      };
+      // 수정 시: 이미 연결된 지출이 있으면 건너뜀 (중복 방지)
+      const alreadyLinked = mId && typeof entries!=="undefined"
+        && entries.some(e=>e.kind==="expense" && e.workId===savedId);
+      if(!alreadyLinked){
+        _v44OpenExpenseAfter = {
+          workObj: obj,
+          workId: savedId,
+          expType: expType,
+          isEdit: !!mId  // 수정인지 신규인지 플래그
+        };
+      }
     }
   }
   // 업무 저장 시 합계 자동계산 (자동 연동은 v44에서 비활성)
