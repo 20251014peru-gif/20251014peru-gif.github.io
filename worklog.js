@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260624-16";
+const APP_VERSION = "v44-20260624-18";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1577,6 +1577,90 @@ function openMatPickerPopup(){
 }
 
 let _workMode = "simple";
+
+/* ── 담당업체 선택 팝업 ── */
+function openVendorPickerPopup(){
+  const old=document.getElementById('vendorPickerOv'); if(old) old.remove();
+  const ov=document.createElement('div');
+  ov.id='vendorPickerOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:12000;display:flex;align-items:center;justify-content:center;padding:16px';
+  const cur={
+    vendor:($('m-workVendor')||{}).value||'',
+    contact:($('m-workContact')||{}).value||'',
+    role:($('m-workRole')||{}).value||'',
+    phone:($('m-workPhone')||{}).value||'',
+    memo:($('m-workMemo')||{}).value||'',
+    onetime:($('m-isOnetime')||{}).value||''
+  };
+  const SI='width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45';
+  const LB='display:block;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px';
+  ov.innerHTML=`
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:460px;max-height:90vh;overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,.22)">
+      <div style="padding:16px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;position:sticky;top:0;background:#fff">
+        <span style="font-size:18px">🏢</span>
+        <span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">담당업체 입력</span>
+        <a href="contacts.html" target="_blank" style="font-size:11px;padding:3px 10px;border:1px solid #dbe6f4;border-radius:7px;background:#f7faff;color:#3f7cb8;font-weight:700;text-decoration:none;margin-right:6px">연락처 관리</a>
+        <button id="vpClose" type="button" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer;padding:4px">✕</button>
+      </div>
+      <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px">
+        <div style="position:relative">
+          <label style="${LB}">업체명 검색</label>
+          <input type="text" id="vpSearch" value="${esc(cur.vendor)}" placeholder="업체명 또는 연락처 검색…" autocomplete="off"
+            style="${SI};border-color:#3b82f6">
+          <div id="vpList" style="position:absolute;top:68px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:100;max-height:180px;overflow:auto;display:none"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label style="${LB}">담당자</label><input type="text" id="vpContact" value="${esc(cur.contact)}" style="${SI}"></div>
+          <div><label style="${LB}">직책</label><input type="text" id="vpRole" value="${esc(cur.role)}" style="${SI}"></div>
+          <div><label style="${LB}">전화번호</label><input type="tel" id="vpPhone" value="${esc(cur.phone)}" style="${SI}"></div>
+          <div><label style="${LB}">업체 메모</label><input type="text" id="vpMemo" value="${esc(cur.memo)}" style="${SI}"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:#64748b">
+          <input type="checkbox" id="vpOnetime" ${cur.onetime?"checked":""} style="width:15px;height:15px;accent-color:#f59e0b">
+          🕐 일회성 업체
+        </label>
+      </div>
+      <div style="padding:4px 18px 18px;display:flex;gap:8px;border-top:1px solid #f1f5f9;margin-top:4px">
+        <button id="vpClear" type="button" style="padding:0 14px;height:44px;border:1.5px solid #e2e8f0;border-radius:10px;background:#fff;color:#94a3b8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">지우기</button>
+        <button id="vpOk" type="button" style="flex:1;height:44px;border:none;border-radius:10px;background:#2563a8;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">✓ 확인</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  if(typeof makeContactSearchUI==='function'){
+    setTimeout(()=>{
+      makeContactSearchUI('vpSearch','vpList',(c)=>{
+        document.getElementById('vpSearch').value=c.company||c.name||'';
+        document.getElementById('vpContact').value=c.person||'';
+        document.getElementById('vpRole').value=c.title||'';
+        document.getElementById('vpPhone').value=c.phone||'';
+        document.getElementById('vpMemo').value=c.memo||'';
+        document.getElementById('vpOnetime').checked=(c.vendorType==='일회성');
+      },()=>{});
+    },80);
+  }
+  setTimeout(()=>{ document.getElementById('vpSearch').focus(); },80);
+  function doConfirm(){
+    const v=document.getElementById('vpSearch').value.trim();
+    const fv=(id)=>(document.getElementById(id)||{}).value||'';
+    const fo=(id)=>(document.getElementById(id)||{}).checked||false;
+    const set=(id,val)=>{ const el=$(id); if(el) el.value=val; };
+    set('m-workVendor',v); set('m-workContact',fv('vpContact'));
+    set('m-workRole',fv('vpRole')); set('m-workPhone',fv('vpPhone'));
+    set('m-workMemo',fv('vpMemo')); set('m-isOnetime',fo('vpOnetime')?'1':'');
+    const lbl=document.getElementById('wVendorLabel');
+    if(lbl) lbl.innerHTML=v?`🏢 담당업체: <b>${esc(v)}</b>${fv('vpContact')?' · '+esc(fv('vpContact')):''}` :`🏢 담당업체 입력`;
+    ov.remove();
+  }
+  document.getElementById('vpOk').addEventListener('click',doConfirm);
+  document.getElementById('vpClear').addEventListener('click',()=>{
+    ['m-workVendor','m-workContact','m-workRole','m-workPhone','m-workMemo','m-isOnetime'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
+    const lbl=document.getElementById('wVendorLabel'); if(lbl) lbl.innerHTML='🏢 담당업체 입력';
+    ov.remove();
+  });
+  document.getElementById('vpClose').addEventListener('click',()=>ov.remove());
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+}
+
 function renderWorkModal(data, mode){
   _workMode = mode||"simple";
   const e2 = s=>(s||"").toString().replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
@@ -1621,7 +1705,7 @@ function renderWorkModal(data, mode){
     <div>
       <label style="${S.lbl}">상태</label>
       <select id="m-status" style="${S.sel}">
-        ${["미완료","진행중","완료","보류"].map(o=>`<option${(d.status||"미완료")===o?" selected":""}>${o}</option>`).join("")}
+        ${["미완료","진행중","완료","보류"].map(o=>`<option${(d.status||"완료")===o?" selected":""}>${o}</option>`).join("")}
       </select>
     </div>
   </div>`;
@@ -1700,38 +1784,26 @@ function renderWorkModal(data, mode){
       </div>
     </div>`;
 
-    /* ── 담당업체 (1열, 토글) ── */
+    /* ── 담당업체 팝업 버튼 ── */
+    const vendorLabel = d.workVendor||d.vendor
+      ? `🏢 담당업체: <b>${e2(d.workVendor||d.vendor)}</b>${d.workContact?` · ${e2(d.workContact)}`:""}`
+      : `🏢 담당업체 입력`;
     const vendorSection = `
-    <details id="wVendorArea" ${d.workVendor||d.vendor?"open":""} style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
-      <summary style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;cursor:pointer;list-style:none;user-select:none">
-        <span style="font-size:13px">🏢</span>
-        <span style="font-size:12px;font-weight:700;color:#64748b;flex:1">담당업체</span>
-        <a href="contacts.html" target="_blank" onclick="event.stopPropagation()"
-          style="font-size:11px;padding:2px 8px;border:1px solid #dbe6f4;border-radius:6px;background:#fff;color:#3f7cb8;font-weight:700;text-decoration:none;margin-right:6px">연락처</a>
-        <span style="font-size:10px;color:#94a3b8">${d.workVendor||d.vendor?"▲":"▼"}</span>
-      </summary>
-      <div style="padding:12px 14px">
-        <div style="position:relative;${S.mb}">
-          <label style="${S.lbl}">업체명</label>
-          <input type="text" id="m-workVendor" value="${e2(d.workVendor||d.vendor||"")}" placeholder="업체명 검색…" autocomplete="off" style="${S.inp}">
-          <div id="m-workVendor-list" style="display:none;position:absolute;top:68px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:600;max-height:200px;overflow:auto"></div>
-          <label style="display:flex;align-items:center;gap:6px;margin-top:7px;cursor:pointer;font-size:12px;font-weight:600;color:#94a3b8">
-            <input type="checkbox" id="m-isOnetime" ${d.isOnetime?"checked":""} style="width:14px;height:14px;accent-color:#f59e0b"> 🕐 일회성 업체
-          </label>
-          <div id="m-vendorContractBadge" style="display:none;margin-top:6px;align-items:center;gap:6px;flex-wrap:wrap"></div>
-        </div>
-        <div id="wVendorSubFields" style="${d.workVendor||d.vendor?'':'display:none'}">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div><label style="${S.lbl}">담당자</label><input type="text" id="m-workContact" value="${e2(d.workContact||"")}" style="${S.inp}"></div>
-            <div><label style="${S.lbl}">직책</label><input type="text" id="m-workRole" value="${e2(d.workRole||"")}" style="${S.inp}"></div>
-            <div><label style="${S.lbl}">전화</label><input type="tel" id="m-workPhone" value="${e2(d.workPhone||"")}" style="${S.inp}"></div>
-            <div><label style="${S.lbl}">업체 메모</label><input type="text" id="m-workMemo" value="${e2(d.workMemo||d.memo||"")}" style="${S.inp}"></div>
-          </div>
-        </div>
-      </div>
-    </details>`;
+    <div style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
+      <button type="button" id="btnOpenVendorPop"
+        style="width:100%;display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;border:none;cursor:pointer;font-family:inherit;text-align:left">
+        <span id="wVendorLabel" style="font-size:12px;font-weight:700;color:#64748b;flex:1">${vendorLabel}</span>
+        <span style="font-size:10px;color:#94a3b8">▶ 클릭해서 입력</span>
+      </button>
+      <input type="hidden" id="m-workVendor"  value="${e2(d.workVendor||d.vendor||"")}">
+      <input type="hidden" id="m-workContact" value="${e2(d.workContact||"")}">
+      <input type="hidden" id="m-workRole"    value="${e2(d.workRole||"")}">
+      <input type="hidden" id="m-workPhone"   value="${e2(d.workPhone||"")}">
+      <input type="hidden" id="m-workMemo"    value="${e2(d.workMemo||d.memo||"")}">
+      <input type="hidden" id="m-isOnetime"   value="${d.isOnetime?"1":""}">
+    </div>`;
 
-    /* ── 견적 메모 (1열, 토글) ── */
+    /* ── 견적 메모 (토글) ── */
     const estimateSection = `
     <details style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
       <summary style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;cursor:pointer;list-style:none;user-select:none">
@@ -1746,10 +1818,15 @@ function renderWorkModal(data, mode){
     modeExtra = costSection + vendorSection + estimateSection;
   }
 
-  /* ── 조립 순서: 탭 → 날짜/상태 → 층/분야 → 업무내역 → 상세내용 → [외주전용] → 자재 ── */
+  /* ── 조립: 탭 → 날짜/상태 → 층/분야 → 업무내역 → 상세내용 → [외주전용] → 자재 ── */
   $("mFields").innerHTML = tabs + rowDateStatus + rowFloorField + rowTitle + rowDetail + modeExtra + matSection;
-  $("mFields").className = ""; /* 업무 모달은 grid 클래스 제거 — 1열 full width */
+  $("mFields").className = "";
   window._wModalData = data;
+
+  /* 외주 모달: 상태를 항상 완료로 강제 */
+  if(_workMode==="full"){
+    const stEl=$("m-status"); if(stEl) stEl.value="완료";
+  }
 
   /* expType 변경 */
   const expTypeEl=$("m-expType");
@@ -1768,30 +1845,11 @@ function renderWorkModal(data, mode){
     setTimeout(()=>expTypeEl.dispatchEvent(new Event("change")),50);
   }
 
-  /* 담당업체 자동펼침 + 검색 */
-  const vi=$("m-workVendor");
-  if(vi){
-    const showSub=()=>{
-      const sub=$("wVendorSubFields"),area=$("wVendorArea");
-      if(vi.value.trim()){ if(sub) sub.style.display=""; if(area&&!area.open) area.open=true; }
-    };
-    vi.addEventListener("input",showSub); showSub();
-    setTimeout(()=>{
-      makeContactSearchUI('m-workVendor','m-workVendor-list',(c)=>{
-        const sub=$("wVendorSubFields"),area=$("wVendorArea");
-        if(sub) sub.style.display=""; if(area) area.open=true;
-        const fv=(id,v)=>{const el=$(id);if(el)el.value=v||"";};
-        fv("m-workContact",c.person); fv("m-workRole",c.title);
-        fv("m-workPhone",c.phone); fv("m-workMemo",c.memo);
-        const cb=$("m-isOnetime"); if(cb) cb.checked=(c.vendorType==="일회성");
-        showVendorContractBadge(c);
-      },()=>{
-        const sub=$("wVendorSubFields"); if(sub) sub.style.display="none";
-        const badge=$("m-vendorContractBadge"); if(badge) badge.style.display="none";
-        const cb=$("m-isOnetime"); if(cb) cb.checked=false;
-      });
-    },100);
-  }
+  /* 담당업체 팝업 버튼 바인딩 */
+  setTimeout(()=>{
+    const vBtn=document.getElementById('btnOpenVendorPop');
+    if(vBtn&&!vBtn._bound){ vBtn._bound=true; vBtn.addEventListener('click', openVendorPickerPopup); }
+  },80);
 
   /* 분야 검색 */
   setTimeout(()=>{ makeFieldSearchUI&&makeFieldSearchUI('m-field','m-field-list'); },80);
@@ -1829,7 +1887,7 @@ function saveWorkEntry(){
     workPhone:($("m-workPhone")||{}).value?.trim()||"",
     workMemo:($("m-workMemo")||{}).value?.trim()||"",
     estimateMemo:($("m-estimateMemo")||{}).value?.trim()||"",
-    isOnetime:!!($("m-isOnetime")||{}).checked,
+    isOnetime:_workMode==="full" ? !!($("m-isOnetime")||{}).value : !!($("m-isOnetime")||{}).checked,
   };
   // 분야 신규 자동 등록
   if(obj.field && !FIELDS.includes(obj.field)){ FIELDS.push(obj.field); saveFields(); }
@@ -1892,7 +1950,7 @@ function openEditor(kind,id){
   if(kind==="filelink" && id && !data.ptype){
     data.ptype = /[\\\/]\s*$/.test(data.path||"") ? "폴더" : "파일";
   }
-  $("mTitle").textContent = (id?"수정":"추가")+" · "+(kind==="work"?"업무":kind==="schedule"?"예정":KIND_LABEL[kind]);
+  $("mTitle").textContent = (id?"수정":"추가")+" · "+(kind==="work"?(data&&data.workMode==="full"?"외주·비용":"업무"):kind==="schedule"?"예정":KIND_LABEL[kind]);
 
   // ── 업무 모달: 탭 분리 렌더 ──
   if(kind==="work"){
