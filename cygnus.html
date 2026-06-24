@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CYGNUS — 세계 경제 지표</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d47;
+    --accent: #3b7dd8;
+    --accent2: #5b9cf6;
+    --text: #e2e8f0;
+    --text2: #8899b4;
+    --text3: #4a5a78;
+    --up: #34d399;
+    --down: #f87171;
+    --neutral: #94a3b8;
+    --warn: #fbbf24;
+    --font-mono: 'JetBrains Mono', 'Fira Mono', monospace;
+    --font: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* 헤더 */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-symbol {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo-text h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text);
+  }
+
+  .logo-text p {
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.06em;
+    margin-top: 1px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .last-updated {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--font-mono);
+  }
+
+  .btn-collect {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s, transform 0.1s;
+    letter-spacing: 0.02em;
+  }
+
+  .btn-collect:hover { background: var(--accent2); }
+  .btn-collect:active { transform: scale(0.97); }
+  .btn-collect:disabled { background: var(--text3); cursor: not-allowed; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .loading .spinner { display: block; }
+  .loading .btn-icon { display: none; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 에러 박스 */
+  #error-box {
+    display: none;
+    background: #2d1b1b;
+    border: 1px solid #f87171;
+    color: #fca5a5;
+    padding: 12px 20px;
+    margin: 16px 32px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+  }
+
+  /* 메인 */
+  main {
+    padding: 28px 32px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* VIX 경보 배너 */
+  #vix-banner {
+    display: none;
+    background: linear-gradient(135deg, #2d1515, #3d1a1a);
+    border: 1px solid #ef4444;
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fca5a5;
+  }
+
+  #vix-banner.hidden { display: none; }
+
+  /* 요약 카드 */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    transition: border-color 0.2s;
+  }
+
+  .summary-card:hover { border-color: var(--accent); }
+
+  .card-label {
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .card-value {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .card-dir {
+    font-size: 12px;
+    font-family: var(--font-mono);
+  }
+
+  .card-dir.up { color: var(--up); }
+  .card-dir.down { color: var(--down); }
+  .card-dir.neutral { color: var(--neutral); }
+
+  /* 히스토리 테이블 */
+  .section-title {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    min-width: 1100px;
+  }
+
+  thead {
+    background: var(--surface2);
+    position: sticky;
+    top: 77px;
+    z-index: 10;
+  }
+
+  th {
+    padding: 12px 14px;
+    text-align: right;
+    color: var(--text3);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    font-size: 11px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  th:first-child { text-align: left; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody tr.today-row { background: rgba(59, 125, 216, 0.06); }
+
+  td {
+    padding: 11px 14px;
+    text-align: right;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  td:first-child {
+    text-align: left;
+    color: var(--text2);
+  }
+
+  .date-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .date-main { color: var(--text); font-weight: 600; font-size: 12px; }
+  .date-time { color: var(--text3); font-size: 10px; }
+
+  .cell-val { display: block; }
+  .cell-chg {
+    display: block;
+    font-size: 10px;
+    margin-top: 1px;
+  }
+
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .neutral { color: var(--neutral); }
+  .na { color: var(--text3); }
+
+  .dir-badge {
+    display: inline-block;
+    font-size: 13px;
+    margin-left: 3px;
+  }
+
+  /* 빈 상태 */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+
+  .empty-state .icon { font-size: 40px; margin-bottom: 14px; }
+  .empty-state p { font-size: 14px; line-height: 1.8; }
+
+  /* 삭제 버튼 */
+  .btn-del {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    border-radius: 4px;
+    transition: color 0.15s;
+  }
+  .btn-del:hover { color: var(--down); }
+
+  /* 반응형 */
+  @media (max-width: 900px) {
+    header { padding: 14px 16px; }
+    main { padding: 16px; }
+    .summary-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (max-width: 500px) {
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .logo-text p { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-symbol">🦢</div>
+    <div class="logo-text">
+      <h1>CYGNUS</h1>
+      <p>세계 경제 지표 추적 시스템</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="last-updated">—</span>
+    <button class="btn-collect" id="btn-collect" onclick="collect()">
+      <span class="btn-icon">📡</span>
+      <div class="spinner"></div>
+      데이터 수집
+    </button>
+  </div>
+</header>
+
+<div id="error-box"></div>
+
+<main>
+
+  <!-- VIX 경보 -->
+  <div id="vix-banner" class="hidden">
+    🚨 <span id="vix-msg"></span>
+  </div>
+
+  <!-- 최신 요약 카드 -->
+  <div class="section-title">최신 지표</div>
+  <div class="summary-grid" id="summary-grid">
+    <!-- JS로 채움 -->
+  </div>
+
+  <!-- 누적 히스토리 -->
+  <div class="section-title" style="margin-top:32px">수집 이력</div>
+  <div class="table-wrap">
+    <table id="history-table">
+      <thead>
+        <tr>
+          <th>날짜</th>
+          <th>달러 DXY</th>
+          <th>유가 WTI</th>
+          <th>구리</th>
+          <th>VIX</th>
+          <th>금</th>
+          <th>BDRY</th>
+          <th>10년물</th>
+          <th>2년물</th>
+          <th>ISM PMI</th>
+          <th>M2</th>
+          <th>연준 BS</th>
+          <th>중국 PMI</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="history-body">
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+const API = 'http://localhost:7070/api';
+
+const ORDER = ['dxy','wti','copper','vix','gold','bdry','us10y','us2y','ism_pmi','m2','fed_bs','cn_pmi'];
+
+const CARD_KEYS = ['dxy','wti','vix','gold','us10y','us2y'];
+
+function fmt(val) {
+  if (val === null || val === undefined) return '—';
+  if (val >= 10000) return val.toLocaleString('ko-KR', {maximumFractionDigits: 0});
+  if (val >= 1000) return val.toLocaleString('ko-KR', {maximumFractionDigits: 1});
+  return val.toFixed(2);
+}
+
+function chgClass(chg) {
+  if (chg === null || chg === undefined) return 'neutral';
+  return chg > 0 ? 'up' : chg < 0 ? 'down' : 'neutral';
+}
+
+function dirClass(dir) {
+  if (dir === '↑') return 'up';
+  if (dir === '↓') return 'down';
+  return 'neutral';
+}
+
+function renderSummary(latest) {
+  const grid = document.getElementById('summary-grid');
+  if (!latest) { grid.innerHTML = ''; return; }
+  grid.innerHTML = CARD_KEYS.map(key => {
+    const ind = latest.indicators[key];
+    if (!ind) return '';
+    const dc = dirClass(ind.dir);
+    const chg = ind.chg !== null && ind.chg !== undefined
+      ? `${ind.chg > 0 ? '+' : ''}${ind.chg}%`
+      : '';
+    return `
+      <div class="summary-card">
+        <div class="card-label">${ind.name}</div>
+        <div class="card-value">${fmt(ind.value)}</div>
+        <div class="card-dir ${dc}">${ind.dir || '—'} ${chg}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function checkVix(latest) {
+  if (!latest) return;
+  const vix = latest.indicators['vix'];
+  const banner = document.getElementById('vix-banner');
+  const msg = document.getElementById('vix-msg');
+  if (!vix || vix.chg === null) { banner.classList.add('hidden'); return; }
+  if (vix.chg >= 10) {
+    msg.textContent = `VIX 급등 +${vix.chg}% — 즉시 전체 포지션 이탈`;
+    banner.classList.remove('hidden');
+  } else if (vix.chg >= 7) {
+    msg.textContent = `VIX 경보 +${vix.chg}% — 포지션 점검 필요`;
+    banner.classList.remove('hidden');
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
+function cellHtml(ind) {
+  if (!ind) return '<td><span class="na">—</span></td>';
+  const dc = dirClass(ind.dir);
+  const chgTxt = ind.chg !== null && ind.chg !== undefined
+    ? `<span class="cell-chg ${dc}">${ind.chg > 0 ? '+' : ''}${ind.chg}%</span>`
+    : '';
+  return `<td>
+    <span class="cell-val ${dc}">${fmt(ind.value)} <span class="dir-badge">${ind.dir || '—'}</span></span>
+    ${chgTxt}
+  </td>`;
+}
+
+function renderHistory(data) {
+  const tbody = document.getElementById('history-body');
+  if (!data || data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="14">
+      <div class="empty-state">
+        <div class="icon">📡</div>
+        <p>아직 수집된 데이터가 없어요.<br>상단 <strong>데이터 수집</strong> 버튼을 눌러 시작하세요.</p>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  const todayStr = new Date(Date.now() + 9*60*60*1000).toISOString().slice(0,10);
+
+  tbody.innerHTML = data.map(row => {
+    const isToday = row.date === todayStr;
+    return `<tr class="${isToday ? 'today-row' : ''}">
+      <td>
+        <div class="date-cell">
+          <span class="date-main">${row.date}</span>
+          <span class="date-time">${row.time || ''}</span>
+        </div>
+      </td>
+      ${ORDER.map(key => cellHtml(row.indicators?.[key])).join('')}
+      <td>
+        <button class="btn-del" onclick="deleteRow('${row.date}')" title="삭제">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // 최신값 요약 카드
+  renderSummary(data[0]);
+  checkVix(data[0]);
+
+  // 마지막 수집 시간
+  const last = data[0];
+  document.getElementById('last-updated').textContent = `마지막 수집: ${last.date} ${last.time}`;
+}
+
+async function loadHistory() {
+  try {
+    const r = await fetch(`${API}/history`);
+    const data = await r.json();
+    renderHistory(data);
+  } catch(e) {
+    showError('서버에 연결할 수 없어요. app.py가 실행 중인지 확인해 주세요.');
+  }
+}
+
+async function collect() {
+  const btn = document.getElementById('btn-collect');
+  btn.disabled = true;
+  btn.classList.add('loading');
+  hideError();
+
+  try {
+    const r = await fetch(`${API}/collect`, { method: 'POST' });
+    const res = await r.json();
+    if (res.status === 'ok') {
+      await loadHistory();
+    } else {
+      showError('수집 중 오류가 발생했어요: ' + JSON.stringify(res));
+    }
+  } catch(e) {
+    showError('서버 연결 실패. app.py가 켜져 있는지 확인해 주세요. (' + e.message + ')');
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
+}
+
+async function deleteRow(date) {
+  if (!confirm(`${date} 데이터를 삭제할까요?`)) return;
+  await fetch(`${API}/delete/${date}`, { method: 'DELETE' });
+  await loadHistory();
+}
+
+function showError(msg) {
+  const box = document.getElementById('error-box');
+  box.textContent = '⚠ ' + msg;
+  box.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('error-box').style.display = 'none';
+}
+
+window.onerror = (msg, src, line) => showError(`JS 오류: ${msg} (${line})`);
+
+loadHistory();
+</script>
+</body>
+</html>
