@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0624-1259</title>
+<title>업무일지 v44-0624-1314</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -986,13 +986,33 @@
       <input type="date" id="v43From" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
       <input type="date" id="v43To" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
     </div>
-    <div style="display:flex;align-items:center;margin-bottom:10px;gap:8px">
+    <div style="display:flex;align-items:center;margin-bottom:10px;gap:6px;flex-wrap:wrap">
       <button id="v43DateClear" style="height:34px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer;color:#7a92a8;font-weight:600">기간해제</button>
       <button id="v43CopyExcel" onclick="v43CopyWorkExcel()" style="height:34px;padding:0 12px;border:1.5px solid #3f7cb8;border-radius:10px;font-size:13px;font-family:inherit;background:#f0f6ff;cursor:pointer;color:#3f7cb8;font-weight:700">📋 엑셀복사</button>
+      <!-- 업무 필터 (업무 탭일 때 노출) -->
+      <div id="wkFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select id="wfModeEl" style="height:34px;padding:0 9px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none">
+          <option value="전체">전체</option>
+          <option value="일반업무">🏢 일반</option>
+          <option value="외주비용">💰 외주</option>
+        </select>
+        <select id="wfStatusEl" style="height:34px;padding:0 9px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none">
+          <option value="전체">상태 전체</option>
+          <option value="완료">완료</option>
+          <option value="진행중">진행중</option>
+          <option value="미완료">미완료</option>
+          <option value="보류">보류</option>
+        </select>
+        <select id="wfFieldEl" style="height:34px;padding:0 9px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;max-width:110px">
+          <option value="전체">분야 전체</option>
+        </select>
+        <select id="wfFloorEl" style="height:34px;padding:0 9px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:12px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;max-width:90px">
+          <option value="전체">층 전체</option>
+        </select>
+        <button id="wfClearBtn" style="height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:12px;font-family:inherit;background:#fff;color:#94a3b8;cursor:pointer;font-weight:600">✕</button>
+      </div>
       <span id="v43Count" style="font-size:12px;color:#aab8c8;margin-left:auto"></span>
     </div>
-
-    <!-- 통합 목록 -->
     <div class="v43-list" id="v43List">
       <div class="v43-empty"><div class="ei">📋</div>데이터를 불러오는 중…</div>
     </div>
@@ -2360,7 +2380,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260624-1259"></script>
+<script src="worklog.js?v=44-20260624-1314"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -2395,6 +2415,11 @@
   let activeCat = 'work'; // 기본값 업무
   let v43From = '', v43To = '';
   let v43Search = '';
+  // 업무 전용 필터
+  let wfMode = '전체';   // 전체 / 일반업무 / 외주비용
+  let wfStatus = '전체'; // 전체 / 완료 / 진행중 / 미완료 / 보류
+  let wfField = '전체';  // 전체 / 분야명
+  let wfFloor = '전체';  // 전체 / 층명
 
   // 통합 목록 렌더 (entries는 worklog.js 전역)
   function getEntries(){
@@ -2408,6 +2433,17 @@
 
     // 카테고리 필터
     if(activeCat !== 'all') list = list.filter(e => e.kind === activeCat);
+
+    // 업무 전용 필터
+    if(activeCat === 'work'){
+      if(wfMode !== '전체'){
+        if(wfMode === '일반업무') list = list.filter(e => e.workMode !== 'full');
+        if(wfMode === '외주비용') list = list.filter(e => e.workMode === 'full');
+      }
+      if(wfStatus !== '전체') list = list.filter(e => (e.status||'') === wfStatus);
+      if(wfField  !== '전체') list = list.filter(e => (e.field||'') === wfField);
+      if(wfFloor  !== '전체') list = list.filter(e => (e.floor||'') === wfFloor);
+    }
 
     // 날짜 필터
     if(v43From || v43To){
@@ -2509,6 +2545,7 @@
   }
 
   function renderV43List(){
+    if(activeCat==='work') populateWorkFilterOptions();
     const list = getMainList();
     const box = document.getElementById('v43List');
     if(!box) return;
@@ -2659,6 +2696,8 @@
     catSelect.addEventListener('change', () => {
       activeCat = catSelect.value;
       localStorage.setItem('v43_cat_sel', activeCat);
+      updateWorkFilterVisibility();
+      if(activeCat==='work') populateWorkFilterOptions();
       renderV43List();
       dbg('cat: '+activeCat);
     });
@@ -2676,6 +2715,49 @@
     if(v43ToEl) v43ToEl.value='';
     renderV43List();
   });
+
+  // 업무 전용 필터 바인딩
+  function updateWorkFilterVisibility(){
+    const row = document.getElementById('wkFilterRow');
+    if(row) row.style.display = activeCat==='work' ? 'flex' : 'none';
+  }
+  function populateWorkFilterOptions(){
+    const works = getEntries().filter(e=>e.kind==='work');
+    // 분야
+    const fieldEl = document.getElementById('wfFieldEl');
+    if(fieldEl){
+      const fields = [...new Set(works.map(e=>e.field||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+      const cur = fieldEl.value;
+      fieldEl.innerHTML = '<option value="전체">분야 전체</option>' + fields.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join('');
+      if(fields.includes(cur)) fieldEl.value=cur;
+    }
+    // 층
+    const floorEl = document.getElementById('wfFloorEl');
+    if(floorEl){
+      const floors = [...new Set(works.map(e=>e.floor||'').filter(Boolean))].sort();
+      const cur = floorEl.value;
+      floorEl.innerHTML = '<option value="전체">층 전체</option>' + floors.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join('');
+      if(floors.includes(cur)) floorEl.value=cur;
+    }
+  }
+  const wfModeEl   = document.getElementById('wfModeEl');
+  const wfStatusEl = document.getElementById('wfStatusEl');
+  const wfFieldEl  = document.getElementById('wfFieldEl');
+  const wfFloorEl  = document.getElementById('wfFloorEl');
+  const wfClearBtn = document.getElementById('wfClearBtn');
+  if(wfModeEl)   wfModeEl.addEventListener('change',   ()=>{ wfMode=wfModeEl.value;     renderV43List(); });
+  if(wfStatusEl) wfStatusEl.addEventListener('change', ()=>{ wfStatus=wfStatusEl.value; renderV43List(); });
+  if(wfFieldEl)  wfFieldEl.addEventListener('change',  ()=>{ wfField=wfFieldEl.value;   renderV43List(); });
+  if(wfFloorEl)  wfFloorEl.addEventListener('change',  ()=>{ wfFloor=wfFloorEl.value;   renderV43List(); });
+  if(wfClearBtn) wfClearBtn.addEventListener('click',  ()=>{
+    wfMode='전체'; wfStatus='전체'; wfField='전체'; wfFloor='전체';
+    if(wfModeEl)   wfModeEl.value='전체';
+    if(wfStatusEl) wfStatusEl.value='전체';
+    if(wfFieldEl)  wfFieldEl.value='전체';
+    if(wfFloorEl)  wfFloorEl.value='전체';
+    renderV43List();
+  });
+  updateWorkFilterVisibility();
 
   // 검색
   const gsBar = document.getElementById('globalSearchBar');
@@ -7280,7 +7362,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0624-1259';
+    if(el) el.textContent = 'v44-0624-1314';
   }
   setVer();
   setTimeout(setVer, 500);
