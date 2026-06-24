@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260624-5";
+const APP_VERSION = "v44-20260624-6";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -52,6 +52,55 @@ const DEFAULT_FIELDS = [
 ];
 let FIELDS = DEFAULT_FIELDS.slice();
 const FIELDS_LS_KEY = "wl_fields_v37";
+
+// 자재 전용 분야 (필터 칩용)
+const MAT_FIELDS_LS = "wl_mat_fields_v44";
+const DEFAULT_MAT_FIELDS = ["영선","전기","청소","소방","기계","환경","기타"];
+let MAT_FIELDS = (()=>{ try{ const s=JSON.parse(localStorage.getItem(MAT_FIELDS_LS)||"null"); if(Array.isArray(s)&&s.length) return s; }catch(e){} return DEFAULT_MAT_FIELDS.slice(); })();
+function saveMatFields(){ try{ localStorage.setItem(MAT_FIELDS_LS, JSON.stringify(MAT_FIELDS)); }catch(e){} }
+function openMatFieldMgr(){
+  const old=document.getElementById("matFieldMgrOv"); if(old) old.remove();
+  const ov=document.createElement("div");
+  ov.id="matFieldMgrOv";
+  ov.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit";
+  ov.innerHTML=`<div style="background:#fff;border-radius:18px;width:100%;max-width:380px;padding:22px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <h3 style="margin:0 0 14px;font-size:17px;font-weight:800;color:#1a2f45">⚙ 자재 분야 관리</h3>
+    <div id="mfmList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;max-height:280px;overflow:auto"></div>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <input type="text" id="mfmNew" placeholder="새 분야 입력" style="flex:1;height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:14px;font-family:inherit;outline:none;background:#f7faff">
+      <button id="mfmAdd" style="height:38px;padding:0 14px;background:#3f7cb8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
+    </div>
+    <button id="mfmClose" style="width:100%;height:42px;background:#f7faff;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;color:#7a92a8;font-family:inherit;cursor:pointer">닫기</button>
+  </div>`;
+  document.body.appendChild(ov);
+  function renderList(){
+    const box=document.getElementById("mfmList");
+    box.innerHTML=MAT_FIELDS.map((f,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:#f7faff;border-radius:8px;border:1px solid #e8f0fa">
+      <span style="flex:1;font-size:14px;font-weight:600;color:#1a2f45">${f}</span>
+      <button data-mfmdel="${i}" style="background:#fde8e8;border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">삭제</button>
+    </div>`).join("");
+    box.querySelectorAll("[data-mfmdel]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const i=+btn.dataset.mfmdel;
+        if(!confirm(`"${MAT_FIELDS[i]}" 분야를 삭제할까요?`)) return;
+        MAT_FIELDS.splice(i,1); saveMatFields(); renderList();
+        renderMatFieldChips(); renderMaterial();
+      });
+    });
+  }
+  renderList();
+  document.getElementById("mfmAdd").addEventListener("click",()=>{
+    const inp=document.getElementById("mfmNew");
+    const v=(inp.value||"").trim(); if(!v) return;
+    if(MAT_FIELDS.includes(v)){ if(typeof toast==="function") toast("이미 있는 분야예요"); return; }
+    MAT_FIELDS.push(v); saveMatFields(); inp.value=""; renderList();
+    renderMatFieldChips(); renderMaterial();
+    if(typeof toast==="function") toast("추가됐어요");
+  });
+  document.getElementById("mfmNew").addEventListener("keydown",e=>{ if(e.key==="Enter") document.getElementById("mfmAdd").click(); });
+  document.getElementById("mfmClose").addEventListener("click",()=>ov.remove());
+  ov.addEventListener("click",e=>{ if(e.target===ov) ov.remove(); });
+}
 
 // 분야별 색상 자동 배정 (10가지 색 풀)
 const FIELD_COLOR_POOL = ["tech","env","admin","etc","peach","mint","gold","blue","purple","rose"];
@@ -1606,6 +1655,30 @@ function saveWorkEntry(){
   else { obj.createdAt=Date.now(); const nr=addRecord(obj); savedId=nr?nr.id:obj.id; }
   renderAll();
   calcWorkTotal(obj); applyExpLinks(savedId);
+
+  // 자재 출고 자동 기록 (신규 업무에서 자재명+수량 있을 때)
+  if(!mId && obj.material && obj.qty>0){
+    const matName = obj.material.trim();
+    // 품목 마스터에서 매칭
+    const matchItem = entries.find(e=>e.kind==="item" && (e.itemName||"").includes(matName));
+    const stockRec = {
+      kind:"stock",
+      stockType:"출고",
+      date: obj.date,
+      itemId: matchItem ? matchItem.id : null,
+      itemName: matchItem ? matchItem.itemName : matName,
+      qty: obj.qty,
+      unitPrice: matchItem ? (Number(matchItem.unitPrice)||0) : 0,
+      amount: matchItem ? (Number(matchItem.unitPrice)||0)*obj.qty : 0,
+      useTarget: `업무: ${obj.title}`,
+      memo: `업무 자동출고 (${obj.date})`,
+      workId: savedId,
+      createdAt: Date.now(),
+    };
+    addRecord(stockRec);
+    if(typeof toast==="function") toast(`📦 "${matName}" ${obj.qty}개 출고 기록됐어요`);
+  }
+
   $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
   // 외주모드에서 비용 있으면 지출 모달 연동
   if(mode==="full" && (obj.expType==="개인비용"||obj.expType==="후불청구")){
@@ -5064,7 +5137,7 @@ function renderMaterial(){
   // 필터/필드 옵션 초기화
   const fieldEl=$("matFieldFilter");
   if(fieldEl && !fieldEl.options.length){
-    fieldEl.innerHTML=`<option value="전체">분야 전체</option>`+fieldOptionsHTML();
+    fieldEl.innerHTML=`<option value="전체">분야 전체</option>`+MAT_FIELDS.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("");
     $("matRecFilter").innerHTML=`<option value="전체">주기 전체</option>`+["비주기","월간","분기","반기","연간","수시"].map(o=>`<option value="${o}">${o}</option>`).join("");
   }
   // 월별 통계
@@ -5080,11 +5153,10 @@ function renderMaterial(){
   else if(MAT_FILTER.tab==="tx") renderTxList();
 }
 
-// v44: 자재 탭 - 분야별 빠른 필터 칩
+// v44: 자재 탭 - 분야별 빠른 필터 칩 (MAT_FIELDS 기반)
 function renderMatFieldChips(){
   let chipsBox = document.getElementById('matFieldChips');
   if(!chipsBox){
-    // matMonthlySummary 다음에 칩 영역 동적 추가
     const summary = document.getElementById('matMonthlySummary');
     if(!summary) return;
     chipsBox = document.createElement('div');
@@ -5093,42 +5165,34 @@ function renderMatFieldChips(){
     summary.parentNode.insertBefore(chipsBox, summary.nextSibling);
   }
   const items = entries.filter(e=>e.kind==="item");
-  if(!items.length){ chipsBox.innerHTML=''; return; }
   // 분야별 카운트
   const cnt = {};
-  items.forEach(it=>{
-    const f = it.field || '기타';
-    cnt[f] = (cnt[f]||0) + 1;
-  });
-  // 색상 매핑
-  const colors = {
-    '청소': {bg:'#e8f5e9', fg:'#27ae60'},
-    '영선': {bg:'#e3f2fd', fg:'#3f7cb8'},
-    '전기': {bg:'#fff8e1', fg:'#f39c12'},
-    '소방': {bg:'#ffebee', fg:'#e74c3c'},
-    '기계': {bg:'#f3e5f5', fg:'#8e44ad'},
-    '기타': {bg:'#eceff1', fg:'#7a92a8'},
-  };
-  // 전체 칩 + 분야별 칩
+  items.forEach(it=>{ const f=it.field||'기타'; cnt[f]=(cnt[f]||0)+1; });
   const total = items.length;
+  const colors = {
+    '청소':{bg:'#e8f5e9',fg:'#27ae60'},'영선':{bg:'#e3f2fd',fg:'#3f7cb8'},
+    '전기':{bg:'#fff8e1',fg:'#f39c12'},'소방':{bg:'#ffebee',fg:'#e74c3c'},
+    '기계':{bg:'#f3e5f5',fg:'#8e44ad'},'환경':{bg:'#e0f7fa',fg:'#00838f'},
+    '기타':{bg:'#eceff1',fg:'#7a92a8'},
+  };
   let html = `<button class="mat-field-chip" data-mfc="전체" style="padding:6px 12px;border-radius:20px;border:2px solid ${MAT_FILTER.field==='전체'?'#3f7cb8':'#dbe6f4'};background:${MAT_FILTER.field==='전체'?'#3f7cb8':'#fff'};color:${MAT_FILTER.field==='전체'?'#fff':'#1a2f45'};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📦 전체 ${total}</button>`;
-  // 분야별 (카운트 많은 순)
-  const sortedFields = Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);
-  sortedFields.forEach(f=>{
-    const c = colors[f] || colors['기타'];
-    const isActive = MAT_FILTER.field === f;
-    html += `<button class="mat-field-chip" data-mfc="${esc(f)}" style="padding:6px 12px;border-radius:20px;border:2px solid ${isActive?c.fg:'#dbe6f4'};background:${isActive?c.fg:c.bg};color:${isActive?'#fff':c.fg};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${esc(f)} ${cnt[f]}</button>`;
+  MAT_FIELDS.forEach(f=>{
+    const c = colors[f]||colors['기타'];
+    const isActive = MAT_FILTER.field===f;
+    const count = cnt[f]||0;
+    html += `<button class="mat-field-chip" data-mfc="${esc(f)}" style="padding:6px 12px;border-radius:20px;border:2px solid ${isActive?c.fg:'#dbe6f4'};background:${isActive?c.fg:c.bg};color:${isActive?'#fff':c.fg};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${esc(f)} ${count}</button>`;
   });
   chipsBox.innerHTML = html;
   chipsBox.querySelectorAll('.mat-field-chip').forEach(btn=>{
     btn.addEventListener('click',()=>{
       MAT_FILTER.field = btn.dataset.mfc;
-      // 셀렉트도 동기화
-      const sel = $("matFieldFilter");
-      if(sel) sel.value = MAT_FILTER.field;
+      const sel=$("matFieldFilter"); if(sel) sel.value=MAT_FILTER.field;
       renderMaterial();
     });
   });
+  // ⚙ 분야 관리 버튼 바인딩
+  const mgrBtn = document.getElementById("btnMatFieldMgr");
+  if(mgrBtn && !mgrBtn._bound){ mgrBtn._bound=true; mgrBtn.addEventListener("click", openMatFieldMgr); }
 }
 
 // v26: 자재 탭 상단 — 월별 구매·사용 요약
@@ -5399,12 +5463,16 @@ function renderTxList(){
       <td class="num">${t.amount?won(t.amount):""}</td>
       <td>${esc(t.vendor||"")}</td>
       <td class="clip" data-tip="${esc(t.useTarget||t.memo||"")}" title="${esc(t.useTarget||t.memo||"")}">${esc(t.useTarget||t.memo||"")}</td>
-      <td><button class="rowdel" data-del="${t.id}" title="삭제">🗑</button></td>
+      <td style="white-space:nowrap">
+        <button class="mini-btn" data-txedit="${t.id}" style="background:#eaf1fb;border:1px solid #dbe6f4;color:#3f7cb8;padding:4px 8px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer;margin-right:4px">✏️</button>
+        <button class="rowdel" data-del="${t.id}" title="삭제">🗑</button>
+      </td>
     </tr>`;
   }).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
-    tr.addEventListener("click",e=>{ if(e.target.closest("[data-del]")) return; openEditor("stock",tr.dataset.id); });
+    tr.addEventListener("click",e=>{ if(e.target.closest("[data-del],[data-txedit]")) return; openEditor("stock",tr.dataset.id); });
     tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(tr.dataset.id,"입출고 내역"); });
+    tr.querySelector("[data-txedit]").addEventListener("click",e=>{ e.stopPropagation(); openEditor("stock",tr.dataset.id); });
   });
   // 합계
   const totalIn=txs.filter(t=>t.stockType==="입고").reduce((s,t)=>s+(Number(t.amount)||0),0);

@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0624-1400</title>
+<title>업무일지 v44-0624-1700</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -830,7 +830,7 @@
   box-shadow: 0 0 0 1px rgba(3,105,161,.15), 0 8px 28px rgba(3,105,161,.18);
 }
 .modal.exp-mode-personal #mTitle::after {
-  content: " · 💸 개인비용(자재구매·품의용)";
+  content: " · 💸 개인비용";
   font-size: 13px;
   color: #0369a1;
   font-weight: 600;
@@ -841,7 +841,7 @@
   box-shadow: 0 0 0 1px rgba(194,65,12,.15), 0 8px 28px rgba(194,65,12,.18);
 }
 .modal.exp-mode-tax #mTitle::after {
-  content: " · 📃 후불청구(공사/용역)";
+  content: " · 📃 후불청구";
   font-size: 13px;
   color: #c2410c;
   font-weight: 600;
@@ -1668,6 +1668,7 @@
           <select id="matFieldFilter"></select>
           <select id="matRecFilter"></select>
           <button class="btn btn-ghost btn-sm" id="matLowToggle" style="flex:0 0 auto">⚠ 부족만</button>
+          <button class="btn btn-ghost btn-sm" id="btnMatFieldMgr" style="flex:0 0 auto">⚙ 분야</button>
         </div>
         <div id="matStockPanel">
           <div class="table-wrap">
@@ -5995,7 +5996,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0624-1400';
+    if(el) el.textContent = 'v44-0624-1700';
   }
   setVer();
   setTimeout(setVer, 500);
