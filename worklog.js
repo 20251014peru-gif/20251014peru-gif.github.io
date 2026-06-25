@@ -4942,6 +4942,14 @@ async function pwRenderList(){
       if(urlEl) urlEl.innerHTML=data.url?`<a href="${esc(normUrl(data.url))}" target="_blank" style="color:var(--primary-deep)">${esc(data.url)}</a>`:"-";
       const mEl=tr.querySelector("[data-fields-memo]");
       if(mEl) mEl.textContent=data.memo||"-";
+      /* 행 자체 클릭 → 보기 팝업 (수정/삭제/복사/토글 버튼은 제외) */
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', function(ev){
+        if(ev.target.closest('[data-pact],[data-copy],[data-toggle],button,a')) return;
+        if(typeof window.openPwViewer === 'function'){
+          window.openPwViewer(e.id);
+        }
+      });
       // 수정/삭제 이벤트
       tr.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",async ev=>{
         ev.stopPropagation();
@@ -4963,7 +4971,16 @@ async function pwRenderList(){
         copyText(b.dataset.copy, b.dataset.label+" 복사됨");
       }));
     }
-    if(card) card.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",async ev=>{
+    if(card) {
+      /* 카드 자체 클릭 → 보기 팝업 (내부 버튼 제외) */
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', function(ev){
+        if(ev.target.closest('[data-pact],[data-copy],[data-toggle],button,a')) return;
+        if(typeof window.openPwViewer === 'function'){
+          window.openPwViewer(e.id);
+        }
+      });
+      card.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",async ev=>{
       ev.stopPropagation();
       const act=b.dataset.pact;
       if(act==="edit") pwOpenEditor(e.id);
@@ -4973,6 +4990,7 @@ async function pwRenderList(){
       }
       else if(act==="star"){ updateRecord(e.id,{starred:!e.starred}); pwRenderList(); }
     }));
+    } /* if(card) close */
   }
 }
 
@@ -5610,8 +5628,12 @@ function renderItemList(){
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
     tr.addEventListener("click",e=>{ 
       if(e.target.closest("[data-del],[data-quickedit]")) return; 
-      // 행 자체 클릭은 빠른 수정으로
-      openQuickEditMaterial(tr.dataset.id);
+      /* 행 클릭은 보기 팝업 (수정 모달 X) */
+      if(typeof window.openItemViewer === 'function'){
+        window.openItemViewer(tr.dataset.id);
+      } else {
+        openQuickEditMaterial(tr.dataset.id);
+      }
     });
     tr.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(tr.dataset.id,"품목"); });
     tr.querySelector("[data-quickedit]").addEventListener("click",e=>{

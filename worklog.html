@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0625-1236</title>
+<title>업무일지 v44-0625-1254</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1093,92 +1093,144 @@
 <style>
 #v43FabHeader:hover{width:64px;box-shadow:-4px 0 30px rgba(37,99,168,.6);}
 #v43FabHeader:active{filter:brightness(.9);}
-#v43FabHeader.dragging{cursor:grabbing;opacity:.85;transition:none;transform:scale(1.05);box-shadow:-6px 0 36px rgba(37,99,168,.7);}
-/* 드래그 가능 힌트 - 상하 화살표 작게 표시 */
-#v43FabHeader::before{
-  content:"⋮⋮";
+#v43FabHeader.dragging{cursor:grabbing;opacity:.95;transition:none;transform:scale(1.1);box-shadow:-8px 0 40px rgba(37,99,168,.8);z-index:99999}
+/* 드래그 핸들 - 상단에 명확한 영역 */
+#v43FabHeader .fab-grip{
   position:absolute;
-  top:6px;
-  right:8px;
-  font-size:10px;
-  color:rgba(255,255,255,.6);
-  letter-spacing:-1px;
-  pointer-events:none;
+  top:0;
+  left:0;
+  right:0;
+  height:24px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,.15);
+  border-radius:32px 0 0 0;
+  font-size:14px;
+  color:rgba(255,255,255,.85);
+  letter-spacing:-2px;
+  cursor:grab;
+  touch-action:none;
+  user-select:none;
+  z-index:2;
+}
+#v43FabHeader .fab-grip:active{cursor:grabbing;background:rgba(255,255,255,.3)}
+#v43FabHeader .fab-body{
+  position:absolute;
+  top:24px;
+  left:0;
+  right:0;
+  bottom:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
 }
 </style>
 <script>
-/* 📍 추가 버튼 상하 드래그 (모바일 친화) - v2 슬라이드 방식 */
+/* 📍 추가 버튼 상하 드래그 (모바일 친화) - v3 그립 핸들 분리 방식 */
 (function(){
   var fab = document.getElementById('v43FabHeader');
   if(!fab) return;
-  var dragging=false, pendingDrag=false, startY=0, startTop=0;
+
+  /* 기존 내부 컨텐츠를 fab-body로 감싸기 + 그립 핸들 추가 */
+  if(!fab.querySelector('.fab-grip')){
+    var origContent = fab.innerHTML;
+    fab.innerHTML = '<div class="fab-grip" title="잡고 위/아래로 끌어 이동">⋮⋮ 이동</div><div class="fab-body">'+origContent+'</div>';
+  }
+
+  var grip = fab.querySelector('.fab-grip');
+  var body = fab.querySelector('.fab-body');
+  var dragging=false, startY=0, startTop=0;
+
   /* 저장된 위치 복원 */
   try{
     var saved=localStorage.getItem('v43_fab_top');
     if(saved){ fab.style.top = saved+'px'; }
   }catch{}
 
-  function startTracking(clientY){
-    pendingDrag = true;
-    dragging = false;
+  function onStart(clientY, cancelable){
+    dragging = true;
     startY = clientY;
-    startTop = parseInt(window.getComputedStyle(fab).top,10) || 62;
+    startTop = parseInt(window.getComputedStyle(fab).top, 10) || 62;
+    fab.classList.add('dragging');
+    navigator.vibrate && navigator.vibrate(15);
   }
-  function updateDrag(clientY, cancelable){
-    if(!pendingDrag && !dragging) return;
+  function onMove(clientY, cancelable, e){
+    if(!dragging) return;
     var dy = clientY - startY;
-    /* 5px 이상 움직이면 드래그 시작 */
-    if(!dragging && Math.abs(dy) > 5){
+    var newTop = Math.max(10, Math.min(window.innerHeight - 130, startTop + dy));
+    fab.style.top = newTop + 'px';
+    if(cancelable && e && e.preventDefault) e.preventDefault();
+  }
+  function onEnd(){
+    if(!dragging) return;
+    dragging = false;
+    fab.classList.remove('dragging');
+    try{ localStorage.setItem('v43_fab_top', parseInt(fab.style.top, 10)); }catch{}
+  }
+
+  /* 그립 영역: 드래그 전용 (클릭 안 됨) */
+  grip.addEventListener('touchstart', function(e){
+    var t = e.touches[0];
+    onStart(t.clientY, e.cancelable);
+    if(e.cancelable) e.preventDefault();
+  }, {passive:false});
+  grip.addEventListener('mousedown', function(e){
+    onStart(e.clientY, true);
+    e.preventDefault();
+  });
+
+  /* 본체 영역: 클릭 전용 - 단, 일정 거리 이상 움직이면 드래그로 전환 */
+  var bodyPendingDrag = false;
+  body.addEventListener('touchstart', function(e){
+    var t = e.touches[0];
+    bodyPendingDrag = true;
+    startY = t.clientY;
+    startTop = parseInt(window.getComputedStyle(fab).top, 10) || 62;
+  }, {passive:true});
+  body.addEventListener('touchmove', function(e){
+    if(!bodyPendingDrag && !dragging) return;
+    var t = e.touches[0];
+    var dy = t.clientY - startY;
+    /* 8px 이상 움직이면 본체에서도 드래그 시작 */
+    if(!dragging && Math.abs(dy) > 8){
       dragging = true;
-      pendingDrag = false;
+      bodyPendingDrag = false;
       fab.classList.add('dragging');
-      navigator.vibrate && navigator.vibrate(20);
+      navigator.vibrate && navigator.vibrate(15);
     }
     if(dragging){
       var newTop = Math.max(10, Math.min(window.innerHeight - 130, startTop + dy));
       fab.style.top = newTop + 'px';
-      return true; /* 드래그 중 - preventDefault 필요 */
+      if(e.cancelable) e.preventDefault();
     }
-    return false;
-  }
-  function endDrag(){
+  }, {passive:false});
+  body.addEventListener('touchend', function(){
     if(dragging){
-      dragging = false;
-      fab.classList.remove('dragging');
-      try{ localStorage.setItem('v43_fab_top', parseInt(fab.style.top,10)); }catch{}
-      /* 드래그 후 click 이벤트 차단 */
-      var stopClick = function(ev){ 
-        ev.stopPropagation(); 
-        ev.preventDefault(); 
-        fab.removeEventListener('click', stopClick, true); 
-      };
+      onEnd();
+      /* 클릭 차단 (드래그 후 클릭 방지) */
+      var stopClick = function(ev){ ev.stopPropagation(); ev.preventDefault(); fab.removeEventListener('click', stopClick, true); };
       fab.addEventListener('click', stopClick, true);
       setTimeout(function(){ fab.removeEventListener('click', stopClick, true); }, 100);
     }
-    pendingDrag = false;
-  }
-
-  /* 터치 (모바일) */
-  fab.addEventListener('touchstart', function(e){
-    var t = e.touches[0];
-    startTracking(t.clientY);
-  }, {passive:true});
-  fab.addEventListener('touchmove', function(e){
-    var t = e.touches[0];
-    var shouldPreventDefault = updateDrag(t.clientY, e.cancelable);
-    if(shouldPreventDefault && e.cancelable) e.preventDefault();
-  }, {passive:false});
-  fab.addEventListener('touchend', endDrag);
-  fab.addEventListener('touchcancel', endDrag);
-
-  /* PC 마우스 - 그냥 누르고 위아래 드래그 (Shift 불필요) */
-  fab.addEventListener('mousedown', function(e){
-    startTracking(e.clientY);
+    bodyPendingDrag = false;
   });
+
+  /* 전역 마우스 이벤트 (그립에서 시작한 드래그) */
   document.addEventListener('mousemove', function(e){
-    updateDrag(e.clientY, true);
+    onMove(e.clientY, true, e);
   });
-  document.addEventListener('mouseup', endDrag);
+  document.addEventListener('touchmove', function(e){
+    if(dragging){
+      var t = e.touches[0];
+      onMove(t.clientY, e.cancelable, e);
+    }
+  }, {passive:false});
+  document.addEventListener('mouseup', onEnd);
+  document.addEventListener('touchend', onEnd);
+  document.addEventListener('touchcancel', onEnd);
 })();
 </script>
 <div class="dbg-panel" id="dbgPanel">
@@ -1191,7 +1243,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1236</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1254</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2677,7 +2729,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260625t1236"></script>
+<script src="worklog.js?v=44-20260625t1254"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -7726,7 +7778,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0625-1236';
+    if(el) el.textContent = 'v44-0625-1254';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -9278,6 +9330,280 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   /* 그룹 데이터 설정 노출 (나중에 사용자가 수정 가능하도록) */
   window.QUICK_JOURNAL_GROUPS = QUICK_JOURNAL_GROUPS;
   console.log('[journal] 일지 빠른진입 시스템 로드');
+})();
+
+/* ─────────────────────────────────────────────────────────
+   👁 보기 팝업 시스템 (품목·비밀번호 공통)
+   - 행 클릭 시 보기 전용, 수정은 [수정] 버튼으로
+   ───────────────────────────────────────────────────────── */
+(function(){
+  /* 공통 보기 팝업 생성 */
+  function createViewerOverlay(title, contentHTML, onEdit, onDelete){
+    /* 기존 제거 */
+    var old = document.getElementById('viewerOverlay');
+    if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'viewerOverlay';
+    ov.className = 'overlay show';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:11500;display:flex;align-items:center;justify-content:center;padding:16px';
+    ov.innerHTML = '<div id="viewerSheet" class="draggable-modal" style="background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.25);position:relative">'
+      +'<div class="draggable-handle" style="padding:14px 18px;border-bottom:1.5px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;cursor:move;background:linear-gradient(180deg,#f7faff 0%,#fff 100%);border-radius:16px 16px 0 0;user-select:none">'
+      +'  <h3 style="margin:0;font-size:17px;font-weight:800;color:#1a2f45;display:flex;align-items:center;gap:8px">👁 '+title+' <span style="font-size:10px;color:#94a3b8;font-weight:600;cursor:move">⋮⋮ 끌어이동</span></h3>'
+      +'  <button id="viewerClose" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer;padding:0;width:30px;height:30px;border-radius:6px">✕</button>'
+      +'</div>'
+      +'<div style="padding:18px;overflow-y:auto;flex:1">'+contentHTML+'</div>'
+      +'<div style="padding:12px 18px;border-top:1.5px solid #eef2f7;display:flex;justify-content:flex-end;gap:8px;background:#fafbfc;border-radius:0 0 16px 16px">'
+      + (onDelete ? '<button id="viewerDel" class="btn-action btn-action-sm btn-action-danger" style="padding:0 16px;height:36px">🗑 삭제</button>' : '')
+      + (onEdit ? '<button id="viewerEdit" class="btn-action btn-action-sm btn-action-primary" style="padding:0 16px;height:36px">✏️ 수정</button>' : '')
+      +'  <button id="viewerCloseBtn" class="btn-action btn-action-sm" style="padding:0 16px;height:36px">닫기</button>'
+      +'</div>'
+      +'</div>';
+    document.body.appendChild(ov);
+
+    function close(){ ov.remove(); }
+    ov.addEventListener('click', function(e){ if(e.target === ov) close(); });
+    ov.querySelector('#viewerClose').addEventListener('click', close);
+    ov.querySelector('#viewerCloseBtn').addEventListener('click', close);
+    if(onEdit) ov.querySelector('#viewerEdit').addEventListener('click', function(){
+      close();
+      onEdit();
+    });
+    if(onDelete) ov.querySelector('#viewerDel').addEventListener('click', function(){
+      onDelete(close);
+    });
+
+    /* ESC 닫기 */
+    var escHandler = function(e){
+      if(e.key === 'Escape'){
+        close();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    /* 드래그 기능 */
+    makeModalDraggable(ov.querySelector('#viewerSheet'));
+  }
+
+  /* 자재 품목 보기 팝업 */
+  window.openItemViewer = function(id){
+    var item = (window.entries||[]).find(function(e){ return e.id===id && e.kind==='item'; });
+    if(!item){
+      if(typeof toast === 'function') toast('자재를 찾을 수 없어요');
+      return;
+    }
+    var cleanName = (item.itemName||'').replace(/^\[.*?\]/,'').trim();
+    var esc2 = function(s){ return String(s||'').replace(/[<>&"']/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); };
+    var won2 = function(n){ return (Number(n)||0).toLocaleString('ko-KR')+' 원'; };
+    var row = function(label, val, color){
+      if(!val && val !== 0) return '';
+      return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9"><div style="flex:0 0 110px;font-size:12px;font-weight:700;color:#94a3b8">'+label+'</div><div style="flex:1;font-size:14px;color:'+(color||'#1a2f45')+';font-weight:500;word-break:break-word">'+esc2(val)+'</div></div>';
+    };
+    var fieldColor = {'청소':'#27ae60','영선':'#3f7cb8','전기':'#f39c12','소방':'#e74c3c','기계':'#8e44ad','환경':'#00838f'}[item.field] || '#7a92a8';
+    var content = '<div style="font-size:18px;font-weight:800;color:#1a2f45;margin-bottom:6px;padding:10px 12px;background:linear-gradient(180deg,'+fieldColor+'15 0%,'+fieldColor+'05 100%);border-radius:10px;border-left:4px solid '+fieldColor+'">'+esc2(cleanName)+(item.spec?'<div style="font-size:13px;color:#64748b;font-weight:500;margin-top:4px">'+esc2(item.spec)+'</div>':'')+'</div>';
+    content += '<div style="margin-top:12px">';
+    content += row('품목 ID', item.itemCode||'');
+    content += row('서브원 ID', item.shopId||'');
+    content += row('단위', item.unit||'');
+    content += row('분야', item.field||'');
+    content += row('제조원', item.maker||'');
+    content += row('주거래처', item.vendor||'');
+    content += row('판매단가', item.unitPrice ? won2(item.unitPrice) : '', '#0891b2');
+    content += row('안전재고', item.safetyStock||'');
+    content += row('구매주기', item.recurring && item.recurring!=='비주기' ? '🔁 '+item.recurring : '');
+    content += row('보관위치', item.location||'');
+    content += row('메모', item.memo||'');
+    content += '</div>';
+
+    createViewerOverlay('품목 정보', content,
+      function(){ if(typeof openQuickEditMaterial === 'function') openQuickEditMaterial(id); },
+      function(close){
+        if(confirm('"'+cleanName+'" 품목을 삭제하시겠습니까?')){
+          if(typeof deleteWithUndo === 'function') deleteWithUndo(id, '품목');
+          close();
+        }
+      }
+    );
+  };
+
+  /* 비밀번호 보기 팝업 */
+  window.openPwViewer = async function(id){
+    if(!window.masterPassword){
+      if(typeof toast === 'function') toast('먼저 잠금을 해제하세요');
+      return;
+    }
+    var e = (window.entries||[]).find(function(x){ return x.id===id; });
+    if(!e){ if(typeof toast === 'function') toast('비밀번호를 찾을 수 없어요'); return; }
+    var data = {username:'',password:'',url:'',memo:''};
+    try{ if(e.encrypted && typeof decryptStr === 'function') data = JSON.parse(await decryptStr(e.encrypted, window.masterPassword)); }
+    catch(err){
+      if(typeof toast === 'function') toast('복호화 실패');
+      return;
+    }
+    var esc2 = function(s){ return String(s||'').replace(/[<>&"']/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); };
+    var category = e.category||'';
+    var subcategory = e.subcategory||'';
+    var content = '<div style="font-size:18px;font-weight:800;color:#1a2f45;margin-bottom:6px;padding:10px 12px;background:linear-gradient(180deg,#fff7ed 0%,#fed7aa30 100%);border-radius:10px;border-left:4px solid #f59e0b">🔐 '+esc2(e.name||'')+(category?'<div style="font-size:12px;color:#94a3b8;font-weight:500;margin-top:4px">'+esc2(category)+(subcategory?' · '+esc2(subcategory):'')+'</div>':'')+'</div>';
+    
+    var copyBtn = function(text, label){
+      return '<button class="pw-copy-btn" data-pwcopy="'+esc2(text).replace(/"/g,'&quot;')+'" data-pwlabel="'+esc2(label)+'" style="padding:4px 10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#3f7cb8;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">📋 복사</button>';
+    };
+
+    content += '<div style="margin-top:12px">';
+    if(data.username){
+      content += '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9;align-items:center">';
+      content += '<div style="flex:0 0 90px;font-size:12px;font-weight:700;color:#94a3b8">아이디</div>';
+      content += '<div style="flex:1;font-size:14px;color:#1a2f45;font-weight:500;word-break:break-all">'+esc2(data.username)+'</div>';
+      content += copyBtn(data.username, '아이디');
+      content += '</div>';
+    }
+    if(data.password){
+      content += '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9;align-items:center">';
+      content += '<div style="flex:0 0 90px;font-size:12px;font-weight:700;color:#94a3b8">비밀번호</div>';
+      content += '<div style="flex:1;font-size:15px;color:#1a2f45;font-weight:700;word-break:break-all;font-family:monospace" id="pwvShown">'+esc2(data.password.replace(/./g,'•'))+'</div>';
+      content += '<button id="pwvToggle" data-shown="0" style="padding:4px 10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#3f7cb8;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;margin-right:4px">👁 보기</button>';
+      content += copyBtn(data.password, '비밀번호');
+      content += '</div>';
+    }
+    if(data.url){
+      content += '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9;align-items:center">';
+      content += '<div style="flex:0 0 90px;font-size:12px;font-weight:700;color:#94a3b8">URL</div>';
+      content += '<div style="flex:1;font-size:13px;color:#3f7cb8;word-break:break-all"><a href="'+esc2(data.url.match(/^https?:/)?data.url:'https://'+data.url)+'" target="_blank" style="color:#3f7cb8;text-decoration:none">'+esc2(data.url)+'</a></div>';
+      content += '</div>';
+    }
+    if(data.memo){
+      content += '<div style="padding:10px 0">';
+      content += '<div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px">📝 메모</div>';
+      content += '<div style="font-size:13px;color:#1a2f45;white-space:pre-wrap;line-height:1.55">'+esc2(data.memo)+'</div>';
+      content += '</div>';
+    }
+    content += '</div>';
+
+    createViewerOverlay('비밀번호 정보', content,
+      function(){ if(typeof pwOpenEditor === 'function') pwOpenEditor(id); },
+      function(close){
+        if(confirm('"'+e.name+'" 비밀번호를 삭제하시겠습니까?')){
+          if(typeof deleteWithUndo === 'function') deleteWithUndo(id, '비밀번호');
+          close();
+        }
+      }
+    );
+    /* 비밀번호 보기/복사 핸들러 */
+    setTimeout(function(){
+      var toggle = document.getElementById('pwvToggle');
+      var shown = document.getElementById('pwvShown');
+      if(toggle && shown){
+        toggle.addEventListener('click', function(){
+          if(toggle.dataset.shown === '0'){
+            shown.textContent = data.password;
+            toggle.dataset.shown = '1';
+            toggle.textContent = '🙈 가리기';
+          } else {
+            shown.textContent = data.password.replace(/./g,'•');
+            toggle.dataset.shown = '0';
+            toggle.textContent = '👁 보기';
+          }
+        });
+      }
+      document.querySelectorAll('#viewerOverlay [data-pwcopy]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var t = b.dataset.pwcopy;
+          if(typeof copyText === 'function'){
+            copyText(t, b.dataset.pwlabel+' 복사됨');
+          } else {
+            navigator.clipboard.writeText(t);
+            if(typeof toast === 'function') toast(b.dataset.pwlabel+' 복사됨');
+          }
+        });
+      });
+    }, 100);
+  };
+
+  console.log('[viewer] 보기 팝업 시스템 로드');
+})();
+
+/* ─────────────────────────────────────────────────────────
+   🖱 모달 드래그 시스템 (모든 모달 공통)
+   - 모달 헤더(h3 또는 첫 부분) 잡고 끌면 이동
+   ───────────────────────────────────────────────────────── */
+window.makeModalDraggable = function(modal){
+  if(!modal || modal._draggableHooked) return;
+  modal._draggableHooked = true;
+  /* 드래그 핸들 결정: .draggable-handle 우선, 없으면 첫 h3 */
+  var handle = modal.querySelector('.draggable-handle') || modal.querySelector('h3');
+  if(!handle) return;
+  handle.style.cursor = 'move';
+  handle.style.userSelect = 'none';
+  /* 시각 힌트 (이미 핸들이 정의돼 있지 않을 때만 ⋮⋮ 추가) */
+  if(!handle.classList.contains('draggable-handle') && !handle.querySelector('.drag-hint')){
+    var hint = document.createElement('span');
+    hint.className = 'drag-hint';
+    hint.style.cssText = 'font-size:10px;color:#94a3b8;margin-left:8px;font-weight:600;cursor:move';
+    hint.textContent = '⋮⋮';
+    handle.appendChild(hint);
+  }
+  /* 초기 위치 absolute로 설정 */
+  modal.style.position = 'relative';
+  var dragging = false, startX = 0, startY = 0;
+  var origLeft = 0, origTop = 0;
+
+  function onDown(e){
+    /* 버튼/링크 클릭은 무시 */
+    if(e.target.closest('button,a,input,select,textarea')) return;
+    dragging = true;
+    var pt = e.touches ? e.touches[0] : e;
+    startX = pt.clientX; startY = pt.clientY;
+    var style = window.getComputedStyle(modal);
+    var matrix = new DOMMatrix(style.transform);
+    origLeft = matrix.m41;
+    origTop = matrix.m42;
+    modal.style.transition = 'none';
+    if(e.cancelable) e.preventDefault();
+  }
+  function onMove(e){
+    if(!dragging) return;
+    var pt = e.touches ? e.touches[0] : e;
+    var dx = pt.clientX - startX;
+    var dy = pt.clientY - startY;
+    modal.style.transform = 'translate('+(origLeft+dx)+'px, '+(origTop+dy)+'px)';
+    if(e.cancelable) e.preventDefault();
+  }
+  function onUp(){ dragging = false; }
+
+  handle.addEventListener('mousedown', onDown);
+  handle.addEventListener('touchstart', onDown, {passive:false});
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchend', onUp);
+};
+
+/* MutationObserver: 새로 열리는 모달에 자동 적용 */
+(function(){
+  var observer = new MutationObserver(function(records){
+    records.forEach(function(r){
+      if(r.attributeName === 'class' || r.attributeName === 'style'){
+        var el = r.target;
+        if(el.classList && (el.classList.contains('show') || el.classList.contains('active'))){
+          /* 모달 내부의 .modal 또는 첫 자식을 드래그 가능하게 */
+          var inner = el.querySelector('.modal, [class*="-modal"], .draggable-modal');
+          if(inner) setTimeout(function(){ window.makeModalDraggable(inner); }, 50);
+        }
+      }
+    });
+  });
+  observer.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class', 'style'],
+    subtree: true
+  });
+  /* 페이지 로드 시 이미 열려있는 모달 처리 */
+  setTimeout(function(){
+    document.querySelectorAll('.overlay .modal, .overlay [class*="-modal"]').forEach(function(m){
+      window.makeModalDraggable(m);
+    });
+  }, 800);
+  console.log('[drag] 모달 드래그 시스템 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
