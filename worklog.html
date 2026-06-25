@@ -2526,12 +2526,23 @@
 </div>
 
 <!-- ===== 새 지출 모달 (v44) ===== -->
-<div id="expV2Overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:none;align-items:flex-end;justify-content:center;font-family:inherit">
-  <div id="expV2Sheet" style="background:#fff;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;border-radius:22px 22px 0 0;padding:20px 18px 36px;box-shadow:0 -4px 32px rgba(0,0,0,.18);border-top:3px solid #3f7cb8">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <span id="expV2TitleSpan" style="font-size:16px;font-weight:700;color:#1a2f45">지출 등록</span>
-      <button type="button" id="expV2Close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#7a92a8">✕</button>
+<div id="expV2Overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:none;align-items:center;justify-content:center;font-family:inherit">
+  <div id="expV2Sheet" style="background:#fff;width:92%;max-width:540px;max-height:92vh;overflow-y:auto;border-radius:18px;padding:0 0 24px;box-shadow:0 8px 40px rgba(0,0,0,.22);border-top:3px solid #3f7cb8;position:relative">
+    <!-- 드래그 핸들 헤더 -->
+    <div id="expV2DragHandle" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;border-bottom:1.5px solid #f0f6ff;cursor:move;user-select:none;background:#f7faff;border-radius:15px 15px 0 0">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px;color:#b0bec5;font-weight:900">⠿</span>
+        <span id="expV2TitleSpan" style="font-size:15px;font-weight:700;color:#1a2f45">지출 등록</span>
+      </div>
+      <button type="button" id="expV2Close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#7a92a8;line-height:1">✕</button>
     </div>
+    <!-- 조회 모드 액션 버튼 -->
+    <div id="expV2ViewActions" style="display:none;padding:10px 16px 0;display:none;gap:8px">
+      <button type="button" id="expV2EditBtn" style="flex:1;height:42px;border-radius:10px;border:2px solid #3f7cb8;background:#fff;color:#3f7cb8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">✏️ 수정</button>
+      <button type="button" id="expV2DelViewBtn" style="height:42px;padding:0 18px;border-radius:10px;border:none;background:#fde8e8;color:#b52929;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>
+      <button type="button" id="expV2CloseViewBtn" style="height:42px;padding:0 18px;border-radius:10px;border:2px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">✕ 닫기</button>
+    </div>
+    <div style="padding:16px 18px 0">
 
     <!-- 날짜 -->
     <div style="margin-bottom:12px">
@@ -2681,12 +2692,13 @@
       <div id="expV2WorkLinkEmpty" style="font-size:12px;color:#aab8c8;padding:4px 0">업무를 선택하면 연결돼요</div>
     </div>
 
-    <!-- 저장/삭제/취소 버튼 -->
-    <div style="display:flex;gap:8px">
+    <!-- 수정 모드 저장/취소 버튼 (수정 모드일 때만 표시) -->
+    <div id="expV2EditActions" style="display:flex;gap:8px;margin-top:4px">
       <button type="button" id="expV2Del" style="flex:1;height:48px;border-radius:12px;border:none;background:#fde8e8;color:#b52929;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;display:none">🗑 삭제</button>
       <button type="button" id="expV2Cancel" style="flex:1;height:48px;border-radius:12px;border:2px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
       <button type="button" id="expV2Save" style="flex:2;height:48px;border-radius:12px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">💾 저장</button>
     </div>
+    </div><!-- /padding wrapper -->
   </div>
 </div>
 
@@ -7929,13 +7941,45 @@ console.log('[expenseV2] 지출 모달 패치 로드');
     if(taxOpts) taxOpts.style.display=_expType==='세금계산서'?'':'none';
   }
 
+  /* ── 뷰/편집 모드 전환 ── */
+  function setExpV2Mode(mode){
+    /* mode: 'view' | 'edit' | 'new' */
+    var isView=(mode==='view');
+    var isNew=(mode==='new');
+    /* 헤더 타이틀 */
+    var ts=g('expV2TitleSpan');
+    if(ts) ts.textContent=isNew?'지출 등록':(isView?'지출 조회':'지출 수정');
+    /* 조회 액션 행 */
+    var va=g('expV2ViewActions');
+    if(va){ va.style.display=isView?'flex':'none'; }
+    /* 수정/저장 액션 행 */
+    var ea=g('expV2EditActions');
+    if(ea){ ea.style.display=isView?'none':'flex'; }
+    /* 삭제 버튼 (수정 모드에서만 표시) */
+    var delBtn=g('expV2Del');
+    if(delBtn) delBtn.style.display=(mode==='edit'&&_editId)?'':'none';
+    /* 폼 필드 읽기전용 여부 */
+    var sh=g('expV2Sheet');
+    if(sh){
+      sh.querySelectorAll('input,select,textarea,button:not(#expV2Close):not(#expV2EditBtn):not(#expV2DelViewBtn):not(#expV2CloseViewBtn):not(#expV2Cancel):not(#expV2Save):not(#expV2Del)').forEach(function(el){
+        if(isView){
+          el.setAttribute('disabled','');
+          el.style.opacity='0.75';
+          el.style.pointerEvents='none';
+        } else {
+          el.removeAttribute('disabled');
+          el.style.opacity='';
+          el.style.pointerEvents='';
+        }
+      });
+    }
+  }
+
   /* ── 열기 ── */
   function openExpV2(id){
     _editId=id||null; _matItems=[]; _mealItems=[]; _wasteItems=[]; _selPurpose=null;
     _expType='개인지출';
     var en=id&&typeof entries!=='undefined'?entries.find(function(x){return x.id===id;}):null;
-    var ts=g('expV2TitleSpan'); if(ts) ts.textContent=id?'지출 수정':'지출 등록';
-    var delBtn=g('expV2Del'); if(delBtn) delBtn.style.display=id?'':'none';
     var today=new Date();
     var td=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
     var dEl=g('expV2Date'); if(dEl) dEl.value=en?(en.date||td):td;
@@ -7968,12 +8012,48 @@ console.log('[expenseV2] 지출 모달 패치 로드');
       window._expV2ScanRefs = en.scanRefs.slice();
     }
     if(typeof window._renderExpV2ScanAttached==='function') window._renderExpV2ScanAttached();
+    /* 기존 항목 → 조회 모드 / 신규 → 수정 모드 */
+    setExpV2Mode(id ? 'view' : 'new');
+    /* 드래그 초기화 */
+    _expV2DragInit();
     var ov=g('expV2Overlay'); if(ov) ov.style.display='flex';
-    var sh=g('expV2Sheet');   if(sh) sh.scrollTop=0;
+    var sh=g('expV2Sheet');   if(sh){ sh.scrollTop=0; sh.style.transform=''; }
+  }
+
+  /* ── 드래그 이동 ── */
+  function _expV2DragInit(){
+    var sheet=g('expV2Sheet'); var handle=g('expV2DragHandle');
+    if(!sheet||!handle||handle._dragOk) return;
+    handle._dragOk=true;
+    var dragging=false,sx=0,sy=0,ox=0,oy=0;
+    function onDown(e){
+      if(e.target.closest('button')) return;
+      dragging=true;
+      var pt=e.touches?e.touches[0]:e;
+      sx=pt.clientX; sy=pt.clientY;
+      var m=new DOMMatrix(window.getComputedStyle(sheet).transform);
+      ox=m.m41; oy=m.m42;
+      sheet.style.transition='none';
+      if(e.cancelable) e.preventDefault();
+    }
+    function onMove(e){
+      if(!dragging) return;
+      var pt=e.touches?e.touches[0]:e;
+      sheet.style.transform='translate('+(ox+pt.clientX-sx)+'px,'+(oy+pt.clientY-sy)+'px)';
+      if(e.cancelable) e.preventDefault();
+    }
+    function onUp(){ dragging=false; }
+    handle.addEventListener('mousedown',onDown);
+    handle.addEventListener('touchstart',onDown,{passive:false});
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('touchmove',onMove,{passive:false});
+    document.addEventListener('mouseup',onUp);
+    document.addEventListener('touchend',onUp);
   }
 
   function closeExpV2(){
     var ov=g('expV2Overlay'); if(ov) ov.style.display='none';
+    var sh=g('expV2Sheet'); if(sh) sh.style.transform='';
   }
 
   function saveExpV2(){
@@ -8257,6 +8337,10 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   function bind(){
     var cl=g('expV2Close'); if(cl&&!cl._b){cl._b=true;cl.addEventListener('click',closeExpV2);}
     var cc=g('expV2Cancel'); if(cc&&!cc._b){cc._b=true;cc.addEventListener('click',closeExpV2);}
+    /* 조회 모드 버튼 */
+    var eb=g('expV2EditBtn'); if(eb&&!eb._b){eb._b=true;eb.addEventListener('click',function(){setExpV2Mode('edit');});}
+    var dvb=g('expV2DelViewBtn'); if(dvb&&!dvb._b){dvb._b=true;dvb.addEventListener('click',deleteExpV2);}
+    var cvb=g('expV2CloseViewBtn'); if(cvb&&!cvb._b){cvb._b=true;cvb.addEventListener('click',closeExpV2);}
     var ov=g('expV2Overlay');
     if(ov&&!ov._b){
       ov._b=true;
@@ -8309,8 +8393,9 @@ console.log('[expenseV2] 지출 모달 패치 로드');
       renderMealList(); calcMealTotal();
       renderWasteList(); calcWasteTotal();
       setTimeout(function(){setWorkLink(info.workId||null);},50);
+      setExpV2Mode('new'); _expV2DragInit();
       var ov=g('expV2Overlay'); if(ov) ov.style.display='flex';
-      var sh=g('expV2Sheet'); if(sh) sh.scrollTop=0;
+      var sh=g('expV2Sheet'); if(sh){ sh.scrollTop=0; sh.style.transform=''; }
       var isEdit=info.isEdit||false;
       if(typeof toast==='function') toast('💡 '+(isPersonal?'💸 개인비용':'📃 후불청구')+' '+(isEdit?'수정 — 아직 연결된 지출이 없어 새로 등록해요':'작성 — 업무 정보가 자동 입력됐어요'));
     };
