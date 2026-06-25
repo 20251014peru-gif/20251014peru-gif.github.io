@@ -144,7 +144,7 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 <main class="wrap">
   <div class="card">
     <div class="list-head">
-      <h2>업체 목록</h2>
+      <h2>업체 목록 <span id="vendorCntBadge" style="font-size:13px;font-weight:600;color:#94a3b8"></span></h2>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary btn-sm" id="btnAdd">➕ 업체 추가</button>
         <button class="btn btn-ghost btn-sm" id="btnView">📋 한 줄 보기</button>
@@ -482,6 +482,13 @@ function cardHTML(it){
 }
 function render(){
   const box=$("list");
+  /* 카운트 배지 업데이트 */
+  const cntBadge=$("vendorCntBadge");
+  if(cntBadge){
+    const regCnt = items.filter(i=>(i.vendorType||'등록업체')!=='일회성').length;
+    const oneCnt = items.filter(i=>i.vendorType==='일회성').length;
+    cntBadge.textContent = `(등록 ${regCnt} · 일회성 ${oneCnt})`;
+  }
   const list=sortItems(items.filter(match));
   if(!list.length){ box.innerHTML=`<div class="empty">${items.length?"조건에 맞는 업체가 없습니다.":"➕ 업체 추가 또는 명함 스캔으로 시작하세요."}</div>`; return; }
   if(viewMode==="table"){ renderTable(list); return; }
@@ -555,6 +562,7 @@ function openEditor(id){
   $("c-email").value=it.email||"";
   $("c-address").value=it.address||"";
   $("c-memo").value=it.memo||"";
+  const onetimeCb=$("c-onetime"); if(onetimeCb) onetimeCb.checked=!!(it.vendorType==='일회성');
   cardImg=it.card||"";
   refreshPhotoUI();
   $("ocrStatus").textContent=getKey()?"AI 인식 사용 중 (정확)":"기기내 인식 모드 — 정확한 인식은 ⚙ OCR 설정에서 API 키를 등록하세요"; $("ocrText").style.display="none"; $("ocrText").value="";
@@ -562,12 +570,15 @@ function openEditor(id){
   $("overlay").classList.add("show");
   $("overlay").querySelector(".modal").scrollTop=0;
 }
+bindVendorTypeTabs();
 $("btnAdd").addEventListener("click",()=>openEditor(null));
 $("mCancel").addEventListener("click",()=>$("overlay").classList.remove("show"));
 $("mSave").addEventListener("click",()=>{
   const name=$("c-name").value.trim(); if(!name){ toast("업체명을 입력하세요"); return; }
+  const onetimeVal = $("c-onetime") && $("c-onetime").checked;
   const obj={ name, cat:$("c-cat").value, person:$("c-person").value.trim(), title:$("c-title").value.trim(), phone:$("c-phone").value.trim(),
-    email:$("c-email").value.trim(), address:$("c-address").value.trim(), memo:$("c-memo").value.trim(), card:cardImg };
+    email:$("c-email").value.trim(), address:$("c-address").value.trim(), memo:$("c-memo").value.trim(), card:cardImg,
+    vendorType: onetimeVal ? '일회성' : '등록업체' };
   if(mId) updateRecord(mId,obj); else { obj.fav=false; obj.createdAt=Date.now(); addRecord(obj); }
   render(); $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
 });
