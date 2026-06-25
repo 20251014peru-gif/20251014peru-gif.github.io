@@ -1982,8 +1982,22 @@ function openEditor(kind,id){
   }
 
   const sc=SCHEMA[kind];
-  $("mFields").className = "grid kind-" + kind; /* kind별 그리드 적용 */
-  $("mFields").innerHTML = sc.map(fieldHTML).join("");
+  const mf = $("mFields");
+  mf.className = "grid kind-" + kind; /* kind별 그리드 적용 */
+  /* 통화 모달은 인라인 스타일로도 강제 (CSS 충돌 방지) */
+  if(kind === 'call'){
+    mf.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px';
+  } else {
+    mf.style.cssText = 'display:block';
+  }
+  mf.innerHTML = sc.map(fieldHTML).join("");
+  /* call 모달의 .field에 인라인 스타일 보강 */
+  if(kind === 'call'){
+    mf.querySelectorAll('.field').forEach(f=>{
+      f.style.margin = '0';
+      if(f.classList.contains('full')) f.style.gridColumn = '1 / -1';
+    });
+  }
   sc.forEach(f=>{ 
     if(f.type==="timepick"){
       setTimeout(()=>restoreTimepick('m-'+f.k, data[f.k]||''), 50);
