@@ -3241,7 +3241,7 @@ var calMode="work";   // "work" or "schedule"
 var calView="month";  // "month" or "year"
 // v37: 달력 종류별 필터 (true=표시)
 const CAL_FILTER = {
-  work:true, cleaning:true, memo:true, call:true, meeting:true,
+  work:true, cleaning:true, cleaning_lead:true, memo:true, call:true, meeting:true,
   deliver:true, vacation:true, expense:true, expense_tax:true, expense_personal:true, plan:true, schedule:true
 };
 (function(){ const d=new Date(); calY=d.getFullYear(); calM=d.getMonth(); })();
@@ -3364,12 +3364,21 @@ function renderMonthView(){
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.vacation}">${CAL_KIND_LABEL.vacation}</div><div class="vac">${esc(vArr.join(", "))}</div></div>`;
       }
     } else {
-      const wArr=work[ds]||[]; const vArr=vac[ds]||[]; const oArr=other[ds]||[]; const sArr=sched[ds]||[]; const clArr=cleaning[ds]||[]; const exArr=expense[ds]||[];
+      const wArrAll=work[ds]||[]; const vArr=vac[ds]||[]; const oArr=other[ds]||[]; const sArr=sched[ds]||[]; const clArr=cleaning[ds]||[]; const exArr=expense[ds]||[];
+      /* 🧹 청소반장 일일업무 분리 (field 매칭) */
+      const isCleaningLead = (e) => /청소반장/.test(e.field||'') || /청소반장/.test(e.title||'');
+      const wArr = wArrAll.filter(e=>!isCleaningLead(e));
+      const wLeadArr = wArrAll.filter(isCleaningLead);
       // v37: 필터 적용
       if(wArr.length && CAL_FILTER.work){
         hasContent=true;
         let b=""; wArr.forEach(en=> b+=`<div class="wtitle" data-kind="work" data-id="${en.id}"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.work}">${CAL_KIND_LABEL.work} ${wArr.length}</div>${b}</div>`;
+      }
+      if(wLeadArr.length && CAL_FILTER.cleaning_lead){
+        hasContent=true;
+        let lb=""; wLeadArr.forEach(en=> lb+=`<div class="wtitle" data-kind="work" data-id="${en.id}"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
+        inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#1f7a3a">🧹 청소반장 ${wLeadArr.length}</div>${lb}</div>`;
       }
       if(clArr.length && CAL_FILTER.cleaning){
         hasContent=true;
