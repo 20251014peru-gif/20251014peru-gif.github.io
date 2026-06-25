@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0625-1654";
+const APP_VERSION = "v44-0625-1706";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1646,14 +1646,37 @@ function openVendorPickerPopup(){
     set('m-workVendor',v); set('m-workContact',fv('vpContact'));
     set('m-workRole',fv('vpRole')); set('m-workPhone',fv('vpPhone'));
     set('m-workMemo',fv('vpMemo')); set('m-isOnetime',fo('vpOnetime')?'1':'');
+    // 라벨 업데이트
     const lbl=document.getElementById('wVendorLabel');
-    if(lbl) lbl.innerHTML=v?`🏢 담당업체: <b>${esc(v)}</b>${fv('vpContact')?' · '+esc(fv('vpContact')):''}` :`🏢 담당업체 입력`;
+    const phone2=fv('vpPhone'); const contact2=fv('vpContact'); const role2=fv('vpRole');
+    if(lbl) lbl.innerHTML=v
+      ? `🏢 <b>${esc(v)}</b>${contact2?' · '+esc(contact2):''}${role2?' ('+esc(role2)+')':''}`
+      : `🏢 담당업체 입력`;
+    // 전화번호 행 업데이트 (버튼 다음 형제 a 태그)
+    const vendorBtn=document.getElementById('btnOpenVendorPop');
+    if(vendorBtn){
+      // 기존 전화 행 제거
+      const oldA=vendorBtn.nextElementSibling;
+      if(oldA&&oldA.tagName==='A') oldA.remove();
+      // 새 전화 행 삽입
+      if(v && phone2){
+        const a=document.createElement('a');
+        a.href='tel:'+phone2.replace(/[^0-9+]/g,'');
+        a.onclick=e=>e.stopPropagation();
+        a.style.cssText='display:flex;align-items:center;gap:6px;padding:7px 14px 9px;background:#f0f7ff;border-top:1px solid #e8f0fa;font-size:13px;font-weight:700;color:#0369a1;text-decoration:none;font-family:inherit';
+        a.innerHTML=`📞 ${esc(phone2)} <span style="font-size:10px;color:#94a3b8;font-weight:400">터치해서 전화</span>`;
+        vendorBtn.parentElement.insertBefore(a, vendorBtn.nextSibling);
+      }
+    }
     ov.remove();
   }
   document.getElementById('vpOk').addEventListener('click',doConfirm);
   document.getElementById('vpClear').addEventListener('click',()=>{
     ['m-workVendor','m-workContact','m-workRole','m-workPhone','m-workMemo','m-isOnetime'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
     const lbl=document.getElementById('wVendorLabel'); if(lbl) lbl.innerHTML='🏢 담당업체 입력';
+    // 전화 행 제거
+    const vendorBtn=document.getElementById('btnOpenVendorPop');
+    if(vendorBtn){ const oldA=vendorBtn.nextElementSibling; if(oldA&&oldA.tagName==='A') oldA.remove(); }
     ov.remove();
   });
   document.getElementById('vpClose').addEventListener('click',()=>ov.remove());
@@ -1745,6 +1768,24 @@ function renderWorkModal(data, mode){
     <textarea id="m-detail" placeholder="작업 내용, 특이사항 등" style="${S.ta}">${e2(d.detail||"")}</textarea>
   </div>`;
 
+  /* ── 임시 전화번호 (저장 안 됨, 메모용) ── */
+  const rowTempPhone = `
+  <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;${S.mb}">
+    <div>
+      <label style="${S.lbl}">📞 전화번호 <span style="font-size:10px;color:#f59e0b;font-weight:600;letter-spacing:0">저장 안 됨 · 메모용</span></label>
+      <input type="tel" id="m-tempPhone" value="" placeholder="010-0000-0000"
+        style="${S.inp};border-color:#fde68a;background:#fffbea"
+        oninput="this.style.borderColor=this.value?'#f59e0b':'#fde68a'">
+    </div>
+    <a id="m-tempPhoneCall" href="#"
+      style="height:44px;padding:0 14px;border-radius:10px;border:1.5px solid #fde68a;background:#fffbea;
+             color:#92400e;font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;
+             text-decoration:none;white-space:nowrap;font-family:inherit"
+      onclick="(function(a){var v=document.getElementById('m-tempPhone').value.replace(/[^0-9+]/g,'');if(!v){return false;}a.href='tel:'+v;})(this)">
+      📲 전화
+    </a>
+  </div>`;
+
   /* ── 자재 사용 내역 — 클릭 시 팝업 ── */
   const matLabel = d.material && d.qty
     ? `📦 자재: <b>${e2(d.material)}</b> × ${e2(String(d.qty))}`
@@ -1784,20 +1825,34 @@ function renderWorkModal(data, mode){
     </div>`;
 
     /* ── 담당업체 팝업 버튼 ── */
-    const vendorLabel = d.workVendor||d.vendor
-      ? `🏢 담당업체: <b>${e2(d.workVendor||d.vendor)}</b>${d.workContact?` · ${e2(d.workContact)}`:""}`
+    const _vName = d.workVendor||d.vendor||'';
+    const _vPhone = d.workPhone||'';
+    const _vContact = d.workContact||'';
+    const _vRole = d.workRole||'';
+    const vendorLabel = _vName
+      ? `🏢 <b>${e2(_vName)}</b>${_vContact?` · ${e2(_vContact)}`:''}${_vRole?` (${e2(_vRole)})`:''}`
       : `🏢 담당업체 입력`;
+    const vendorPhoneRow = (_vName && _vPhone)
+      ? `<a href="tel:${_vPhone.replace(/[^0-9+]/g,'')}"
+           onclick="event.stopPropagation()"
+           style="display:flex;align-items:center;gap:6px;padding:7px 14px 9px;background:#f0f7ff;border-top:1px solid #e8f0fa;
+                  font-size:13px;font-weight:700;color:#0369a1;text-decoration:none;font-family:inherit">
+          📞 ${e2(_vPhone)}
+          <span style="font-size:10px;color:#94a3b8;font-weight:400">터치해서 전화</span>
+        </a>`
+      : '';
     const vendorSection = `
     <div style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
       <button type="button" id="btnOpenVendorPop"
         style="width:100%;display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;border:none;cursor:pointer;font-family:inherit;text-align:left">
         <span id="wVendorLabel" style="font-size:12px;font-weight:700;color:#64748b;flex:1">${vendorLabel}</span>
-        <span style="font-size:10px;color:#94a3b8">▶ 클릭해서 입력</span>
+        <span style="font-size:10px;color:#94a3b8">✏️ 수정</span>
       </button>
-      <input type="hidden" id="m-workVendor"  value="${e2(d.workVendor||d.vendor||"")}">
-      <input type="hidden" id="m-workContact" value="${e2(d.workContact||"")}">
-      <input type="hidden" id="m-workRole"    value="${e2(d.workRole||"")}">
-      <input type="hidden" id="m-workPhone"   value="${e2(d.workPhone||"")}">
+      ${vendorPhoneRow}
+      <input type="hidden" id="m-workVendor"  value="${e2(_vName)}">
+      <input type="hidden" id="m-workContact" value="${e2(_vContact)}">
+      <input type="hidden" id="m-workRole"    value="${e2(_vRole)}">
+      <input type="hidden" id="m-workPhone"   value="${e2(_vPhone)}">
       <input type="hidden" id="m-workMemo"    value="${e2(d.workMemo||d.memo||"")}">
       <input type="hidden" id="m-isOnetime"   value="${d.isOnetime?"1":""}">
     </div>`;
@@ -1822,7 +1877,7 @@ function renderWorkModal(data, mode){
   const mfEl = $("mFields");
   mfEl.style.cssText = "display:block";
   mfEl.className = "";
-  mfEl.innerHTML = tabs + rowDateStatus + rowFloorField + rowTitle + rowDetail + modeExtra + matSection;
+  mfEl.innerHTML = tabs + rowDateStatus + rowFloorField + rowTitle + rowDetail + rowTempPhone + modeExtra + matSection;
   window._wModalData = data;
 
   /* 외주 모달: 상태를 항상 완료로 강제 */
