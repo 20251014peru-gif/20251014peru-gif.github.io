@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0626-0030</title>
+<title>업무일지 v44-0626-0045</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1271,7 +1271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0626-0030</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0626-0045</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2773,7 +2773,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260626t0030"></script>
+<script src="worklog.js?v=44-20260626t0045"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -4829,16 +4829,18 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   }
 
   // 캘린더 + Tasks 동시 동기화 (schedule 저장 시 핵심 함수)
-  function syncScheduleAll(en, onDone){
-    if(en.kind !== 'schedule'){ syncScheduleToGCal(en, onDone); return; }
+  function syncScheduleAll(en, onDone, silent){
+    if(en.kind !== "schedule"){ syncScheduleToGCal(en, onDone); return; }
     var calDone=false, taskDone=false, calOk=false, taskOk=false;
     function check(){
       if(!calDone || !taskDone) return;
       var ok = calOk || taskOk;
-      if(calOk && taskOk) toast('📅 구글 캘린더 + Tasks 에 등록됐어요!');
-      else if(calOk)      toast('📅 캘린더 등록됨 (Tasks 실패)');
-      else if(taskOk)     toast('✅ Tasks 등록됨 (캘린더 실패)');
-      if(typeof renderAll==='function') setTimeout(renderAll, 400);
+      if(!silent){
+        if(calOk && taskOk) toast("📅 구글 캘린더 + Tasks 에 등록됐어요!");
+        else if(calOk)      toast("📅 캘린더 등록됨 (Tasks 실패)");
+        else if(taskOk)     toast("✅ Tasks 등록됨 (캘린더 실패)");
+      }
+      if(typeof renderAll==="function") setTimeout(renderAll, 400);
       if(onDone) onDone(ok);
     }
     syncScheduleToGCal(en, function(ok){ calOk=ok; calDone=true; check(); });
@@ -4881,7 +4883,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     let done=0, fail=0;
     for(const en of targets){
       await new Promise(resolve=>{
-        var fn = (en.kind==='schedule') ? syncScheduleAll : syncScheduleToGCal;
+        var fn = (en.kind==='schedule') ? function(e,cb){ syncScheduleAll(e,cb,true); } : syncScheduleToGCal;
         fn(en, function(ok){ if(ok) done++; else fail++; resolve(); });
         setTimeout(resolve, 500);
       });
@@ -8312,7 +8314,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0626-0030';
+    if(el) el.textContent = 'v44-0626-0045';
   }
   setVer();
   setTimeout(setVer, 500);
