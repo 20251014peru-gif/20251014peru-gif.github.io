@@ -1040,7 +1040,7 @@ $("tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!
 let mKind=null, mId=null, modalPhotos=[], modalAttachments=[]; // v15: modalAttachments 추가
 function defaults(kind){
   const t=todayStr();
-  if(kind==="work") return {date:t,status:"미완료",field:""};
+  if(kind==="work") return {date:t,status:"완료",field:""};
   if(kind==="call") return {date:t,time:nowTime(),dir:"수신"};
   if(kind==="vacation") return {start:t,end:t,vtype:"년차휴가"};
   if(kind==="filelink") return {category:(CATEGORIES.filelink[0]||""), ptype:"파일"};
@@ -1451,7 +1451,7 @@ function openMatPickerPopup(){
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:12000;display:flex;align-items:center;justify-content:center;padding:16px';
 
   const curMat = ($('m-material')||{}).value||'';
-  const curQty = ($('m-qty')||{}).value||'';
+  const curQty = ($('m-qty')||{}).value||'1';  /* 기본값 1 */
 
   ov.innerHTML = `
     <div style="background:#fff;border-radius:16px;width:100%;max-width:440px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.22)">
@@ -7145,12 +7145,12 @@ function renderExpenseModal(id){
         <div class="field"><label>규격/사양</label><input type="text" id="exp-spec" value="${esc(d.spec||"")}" placeholder="예: 36W, 3.3kg"></div>
       </div>
       <div class="grid" style="margin-top:10px">
-        <div class="field"><label>단가 (원)</label><input type="number" id="exp-unitprice" value="${Number(d.unitPrice)||0}" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>단가 (원)</label><input type="number" id="exp-unitprice" value="${d.unitPrice||''}" min="0" oninput="expCalcTotal()"></div>
         <div class="field"><label>수량</label><input type="number" id="exp-qty" value="${Number(d.qty)||1}" min="1" oninput="expCalcTotal()"></div>
       </div>
       <div class="grid" style="margin-top:10px">
-        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="${Number(d.deliveryFee)||0}" min="0" oninput="expCalcTotal()"></div>
-        <div class="field"><label>합계 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0" placeholder="자동계산"></div>
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="${d.deliveryFee||''}" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>합계 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${d.amount||''}" min="0" placeholder="자동계산"></div>
       </div>`,
     "공사/용역": `
       <div class="field full" style="margin-top:10px">
@@ -7158,18 +7158,18 @@ function renderExpenseModal(id){
         <input type="text" id="exp-matname" value="${esc(d.matName||"")}" placeholder="예: 외벽 도색, 엘리베이터 점검">
       </div>
       <div class="grid" style="margin-top:10px">
-        <div class="field"><label>계약금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0"></div>
-        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="${Number(d.deliveryFee)||0}" min="0"></div>
+        <div class="field"><label>계약금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${d.amount||''}" min="0"></div>
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="${d.deliveryFee||''}" min="0"></div>
       </div>`,
     "택배": `
       <div class="grid" style="margin-top:10px">
         <div class="field"><label>품목</label><input type="text" id="exp-matname" value="${esc(d.matName||"")}" placeholder="예: 소화기 부품"></div>
-        <div class="field"><label>택배비 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0"></div>
+        <div class="field"><label>택배비 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="${d.amount||''}" min="0"></div>
       </div>`,
     "기타": `
       <div class="field full" style="margin-top:10px">
         <label>금액 (원) <span class="req">*</span></label>
-        <input type="number" id="exp-amount" value="${Number(d.amount)||0}" min="0">
+        <input type="number" id="exp-amount" value="${d.amount||''}" min="0">
       </div>`
   };
 
@@ -7240,12 +7240,12 @@ function expChangeType(utype){
         <div class="field"><label>규격/사양</label><input type="text" id="exp-spec" placeholder="예: 36W, 3.3kg"></div>
       </div>
       <div class="grid" style="margin-top:10px">
-        <div class="field"><label>단가 (원)</label><input type="number" id="exp-unitprice" value="0" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>단가 (원)</label><input type="number" id="exp-unitprice" value="" placeholder="0" min="0" oninput="expCalcTotal()"></div>
         <div class="field"><label>수량</label><input type="number" id="exp-qty" value="1" min="1" oninput="expCalcTotal()"></div>
       </div>
       <div class="grid" style="margin-top:10px">
-        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="0" min="0" oninput="expCalcTotal()"></div>
-        <div class="field"><label>합계 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="0" min="0" placeholder="자동계산"></div>
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="" placeholder="0" min="0" oninput="expCalcTotal()"></div>
+        <div class="field"><label>합계 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="" placeholder="0" min="0" placeholder="자동계산"></div>
       </div>`,
     "공사/용역": `
       <div class="field full" style="margin-top:10px">
@@ -7253,13 +7253,13 @@ function expChangeType(utype){
         <input type="text" id="exp-matname" placeholder="예: 외벽 도색, 엘리베이터 점검">
       </div>
       <div class="grid" style="margin-top:10px">
-        <div class="field"><label>계약금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="0" min="0"></div>
-        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="0" min="0"></div>
+        <div class="field"><label>계약금액 (원) <span class="req">*</span></label><input type="number" id="exp-amount" value="" placeholder="0" min="0"></div>
+        <div class="field"><label>택배비</label><input type="number" id="exp-delivery" value="" placeholder="0" min="0"></div>
       </div>`,
     "기타": `
       <div class="field full" style="margin-top:10px">
         <label>금액 (원) <span class="req">*</span></label>
-        <input type="number" id="exp-amount" value="0" min="0">
+        <input type="number" id="exp-amount" value="" placeholder="0" min="0">
       </div>`
   };
   const box = $("exp-typeFields");
