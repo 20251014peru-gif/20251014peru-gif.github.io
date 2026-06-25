@@ -1046,7 +1046,7 @@ function defaults(kind){
   if(kind==="site") return {category:(CATEGORIES.site[0]||"")};
   if(kind==="deliver") return {date:t, dtype:"즉시전달"};
   if(kind==="schedule") return {date:t, sStatus:"예정", sType:"정기점검", scheduleType:"일회성"};
-  if(kind==="item") return {field:"전기", recurring:"비주기", safetyStock:0, unitPrice:0};
+  if(kind==="item") return {field:"", recurring:"비주기", safetyStock:0, unitPrice:0};
   if(kind==="stock") return {date:t, stockType:"입고", qty:1, unitPrice:0, amount:0};
   if(kind==="expense") return {date:t, expType:"개인지출", amount:0};
   if(kind==="accident") return {date:t, time:nowTime(), accType:"누수", status:"⏳ 접수", partyType:"임차인", reported:"없음"};
@@ -1056,7 +1056,7 @@ function fieldHTML(f){
   let inner;
   if(f.type==="callfield"){
     const _cats = (typeof CONTACT_CATS!=="undefined") ? CONTACT_CATS : ["전기","설비","기타"];
-    const opts = _cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    const opts = '<option value="">(선택 안 함)</option>' + _cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
     return `<div class="field ${f.full?"full":""}"><label>${esc(f.label||"분야")}</label>
       <div style="display:flex;gap:6px;align-items:stretch">
         <select id="m-${f.k}" style="flex:1">${opts}</select>
@@ -5586,6 +5586,17 @@ function renderStockOverview(){
   }).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
     const id=tr.dataset.id;
+    /* 🆕 행 자체 클릭 → 보기 팝업 (버튼 영역 제외) */
+    tr.style.cursor = "pointer";
+    tr.addEventListener("click", function(e){
+      if(e.target.closest("[data-act]")) return;
+      console.log('[stock-row click] id=', id, 'openItemViewer=', typeof window.openItemViewer);
+      if(typeof window.openItemViewer === 'function'){
+        window.openItemViewer(id);
+      } else {
+        openEditor("item", id);
+      }
+    });
     tr.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",e=>{
       e.stopPropagation();
       if(b.dataset.act==="edit") openEditor("item",id);
