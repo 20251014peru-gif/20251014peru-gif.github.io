@@ -2846,6 +2846,7 @@ $("expPickCancel")?.addEventListener("click",()=>{ document.getElementById("expP
 $("expPickOverlay")?.addEventListener("click",e=>{ if(e.target===document.getElementById("expPickOverlay")) document.getElementById("expPickOverlay").style.display="none"; });
 
 $("mSave").addEventListener("click",async ()=>{
+  try {
   // 업무 모달은 별도 저장 함수로 처리
   if(mKind==="work"){ saveWorkEntry(); return; }
   // v16: 비밀번호 종류는 별도 처리 (암호화)
@@ -2968,6 +2969,10 @@ $("mSave").addEventListener("click",async ()=>{
     if(savedEntry && typeof GCAL_IDS!=="undefined" && GCAL_IDS[savedEntry.kind]){
       setTimeout(()=>window.gcalSync(savedEntry), 500);
     }
+  }
+  } catch(err) {
+    console.error('[mSave 오류]', err);
+    toast('저장 중 오류: ' + (err && err.message ? err.message : String(err)));
   }
 });
 $("mDelete").addEventListener("click",()=>{
