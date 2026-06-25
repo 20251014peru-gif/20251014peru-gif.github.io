@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0625-2336</title>
+<title>업무일지 v44-0625-2345</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1271,7 +1271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-2336</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-2345</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1279,7 +1279,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           <img src="https://www.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png" style="width:18px;height:18px;object-fit:cover;border-radius:3px"> 연동됨
         </button>
         <button class="nav-btn" onclick="window.gcalSyncAll&&window.gcalSyncAll()" style="background:#34a853;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="전체 구글캘린더 동기화">📅 전체동기화</button>
-        <button class="nav-btn" onclick="window.gcalPull&&window.gcalPull(false)" style="background:#1a73e8;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 캘린더에서 새 예정 가져오기">📥 구글←가져오기</button>
+        <button class="nav-btn" onclick="window.gcalPullAll&&window.gcalPullAll(false)" style="background:#1a73e8;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 캘린더에서 새 예정 가져오기">📥 구글←가져오기</button>
         <button class="nav-btn nav-back" id="btnBack" title="이전 화면" disabled>↶ 뒤로</button>
         <a class="nav-btn" href="staff.html" target="_blank" style="background:#6366f1;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">👥 직원</a>
         <a class="nav-btn" href="contacts.html" target="_blank" style="background:#0891b2;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">📋 연락처</a>
@@ -2773,7 +2773,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260625t2336"></script>
+<script src="worklog.js?v=44-20260625t2345"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5030,11 +5030,120 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     // 마지막 pull로부터 5분 이상 지났을 때만
     if(now - last < 5 * 60 * 1000) return;
     dbgG('자동 pull 시작...');
-    pullFromGCal(true); // silent=true (토스트 안 띄움)
+    pullAll(true); // 캘린더+Tasks 동시 pull (silent)
   }
 
   // 전역 노출
   window.gcalPull = pullFromGCal;
+
+  // ── 구글 Tasks → 업무일지 역방향 동기화 (v44-0625) ────
+  function pullFromTasks(silent){
+    if(!accessToken) return;
+
+    var url = 'https://tasks.googleapis.com/tasks/v1/lists/'
+      + encodeURIComponent(TASKS_LIST_ID) + '/tasks'
+      + '?showCompleted=true&showHidden=false&maxResults=200'
+      + '&fields=items(id,title,notes,due,status,updated)';
+
+    fetch(url, {
+      headers: { 'Authorization': 'Bearer ' + accessToken }
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.items){
+        if(d.error && d.error.code===401){
+          accessToken=null; localStorage.removeItem(GCAL_LS);
+          updateGCalBtn('disconnected');
+          toast('🔑 구글 로그인 만료 — G캘린더 버튼을 다시 눌러주세요', 5000);
+        }
+        return;
+      }
+
+      var added=0, updated=0, skipped=0;
+
+      d.items.forEach(function(it){
+        if(!it.title || !it.title.trim()){ skipped++; return; }
+
+        // 날짜 파싱 (due: "2026-06-25T00:00:00.000Z")
+        var date = it.due ? it.due.slice(0,10) : '';
+
+        // 이미 gTaskId로 연결된 항목 확인
+        var existing = typeof entries!=='undefined' && entries.find(function(e){
+          return e.kind==='schedule' && e.gTaskId===it.id;
+        });
+
+        // Tasks 상태 → sStatus 변환
+        var sStatus = it.status==='completed' ? '완료' : '예정';
+
+        if(existing){
+          // 구글 Tasks에서 수정된 경우 업데이트
+          var gUpdated  = new Date(it.updated||0).getTime();
+          var wlUpdated = existing.updatedAt || existing.createdAt || 0;
+          if(gUpdated > wlUpdated + 5000){
+            if(typeof updateRecord==='function'){
+              updateRecord(existing.id, {
+                title: it.title,
+                date: date || existing.date,
+                memo: it.notes || existing.memo,
+                sStatus: sStatus,
+                updatedAt: Date.now()
+              });
+              updated++;
+            }
+          } else { skipped++; }
+        } else {
+          // 새 항목 추가 (날짜 없으면 오늘)
+          if(typeof addRecord==='function'){
+            var today = (function(){
+              var d=new Date(); var m=d.getMonth()+1; var dd=d.getDate();
+              return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(dd<10?'0':'')+dd;
+            })();
+            addRecord({
+              kind: 'schedule',
+              title: it.title,
+              date: date || today,
+              sStatus: sStatus,
+              sType: '',
+              scheduleType: '일회성',
+              memo: it.notes || '',
+              gTaskId: it.id,       // Tasks ID 연결
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              _fromTasks: true
+            });
+            added++;
+          }
+        }
+      });
+
+      if(!silent){
+        var msg = added || updated
+          ? '✅ Tasks→업무일지: '+added+'건 추가'+(updated?', '+updated+'건 업데이트':'')
+          : '✅ Tasks 새 항목 없음 (이미 동기화됨)';
+        if(typeof toast==='function') toast(msg, 3000);
+      }
+
+      if((added||updated) && typeof renderAll==='function'){
+        setTimeout(renderAll, 300);
+      }
+
+      dbgG('Tasks pull 완료: 추가='+added+', 업데이트='+updated+', 스킵='+skipped);
+    })
+    .catch(function(e){
+      dbgG('Tasks pull 오류: '+e);
+      if(!silent && typeof toast==='function') toast('Tasks 가져오기 오류: '+e.message, 4000);
+    });
+  }
+
+  // 캘린더 + Tasks 동시 pull
+  function pullAll(silent){
+    pullFromGCal(silent);
+    setTimeout(function(){ pullFromTasks(silent); }, 800);
+  }
+
+  window.gcalPullTasks = pullFromTasks;
+  window.gcalPullAll   = pullAll;
+
 
   // 로그인 완료 후 자동 pull
   var _origCallback = null;
@@ -5065,7 +5174,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         saveToken(resp);
         updateGCalBtn('connected');
         if(typeof toast==='function') toast('✅ 구글 캘린더 연동됐어요! 이제 예정·업무 저장 시 자동 등록됩니다.');
-        setTimeout(function(){ pullFromGCal(false); }, 1500); // 로그인 후 즉시 pull
+        setTimeout(function(){ pullAll(false); }, 1500); // 로그인 후 즉시 캘린더+Tasks pull
         dbgG('로그인 완료');
       }
     });
@@ -8135,7 +8244,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0625-2336';
+    if(el) el.textContent = 'v44-0625-2345';
   }
   setVer();
   setTimeout(setVer, 500);
