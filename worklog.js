@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-20260624-20";
+const APP_VERSION = "v44-0625-1648";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1818,8 +1818,11 @@ function renderWorkModal(data, mode){
   }
 
   /* ── 조립: 탭 → 날짜/상태 → 층/분야 → 업무내역 → 상세내용 → [외주전용] → 자재 ── */
-  $("mFields").innerHTML = tabs + rowDateStatus + rowFloorField + rowTitle + rowDetail + modeExtra + matSection;
-  $("mFields").className = "";
+  /* v44-fix: 이전 kind에서 남은 grid style 초기화 */
+  const mfEl = $("mFields");
+  mfEl.style.cssText = "display:block";
+  mfEl.className = "";
+  mfEl.innerHTML = tabs + rowDateStatus + rowFloorField + rowTitle + rowDetail + modeExtra + matSection;
   window._wModalData = data;
 
   /* 외주 모달: 상태를 항상 완료로 강제 */
