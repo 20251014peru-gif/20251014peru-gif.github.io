@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0625-1308</title>
+<title>업무일지 v44-0625-1313</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1237,7 +1237,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1308</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1313</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2723,7 +2723,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260625t1308"></script>
+<script src="worklog.js?v=44-20260625t1313"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -7772,7 +7772,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0625-1308';
+    if(el) el.textContent = 'v44-0625-1313';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -9381,11 +9381,16 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 
   /* 자재 품목 보기 팝업 */
   window.openItemViewer = function(id){
-    var item = (window.entries||[]).find(function(e){ return e.id===id && e.kind==='item'; });
+    /* let 변수는 window에 등록 안 되므로 글로벌 스코프 직접 접근 */
+    var ents;
+    try { ents = entries; } catch(err) { ents = window.entries || []; }
+    var item = ents.find(function(e){ return e.id===id && e.kind==='item'; });
     if(!item){
+      console.warn('[openItemViewer] 자재 없음 id=', id, 'entries.length=', ents.length);
       if(typeof toast === 'function') toast('자재를 찾을 수 없어요');
       return;
     }
+    console.log('[openItemViewer] 표시:', item.itemName);
     var cleanName = (item.itemName||'').replace(/^\[.*?\]/,'').trim();
     var esc2 = function(s){ return String(s||'').replace(/[<>&"']/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); };
     var won2 = function(n){ return (Number(n)||0).toLocaleString('ko-KR')+' 원'; };
@@ -9422,15 +9427,27 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 
   /* 비밀번호 보기 팝업 */
   window.openPwViewer = async function(id){
-    if(!window.masterPassword){
+    /* let 변수는 window에 등록 안 되므로 글로벌 스코프 직접 접근 */
+    var mp;
+    try { mp = masterPassword; } catch(err) { mp = window.masterPassword; }
+    console.log('[openPwViewer] masterPassword=', mp ? '(있음)' : '(없음)');
+    if(!mp){
       if(typeof toast === 'function') toast('먼저 잠금을 해제하세요');
       return;
     }
-    var e = (window.entries||[]).find(function(x){ return x.id===id; });
-    if(!e){ if(typeof toast === 'function') toast('비밀번호를 찾을 수 없어요'); return; }
+    var ents;
+    try { ents = entries; } catch(err) { ents = window.entries || []; }
+    var e = ents.find(function(x){ return x.id===id; });
+    if(!e){ 
+      console.warn('[openPwViewer] entry 없음 id=', id);
+      if(typeof toast === 'function') toast('비밀번호를 찾을 수 없어요'); 
+      return; 
+    }
+    console.log('[openPwViewer] 표시:', e.name);
     var data = {username:'',password:'',url:'',memo:''};
-    try{ if(e.encrypted && typeof decryptStr === 'function') data = JSON.parse(await decryptStr(e.encrypted, window.masterPassword)); }
+    try{ if(e.encrypted && typeof decryptStr === 'function') data = JSON.parse(await decryptStr(e.encrypted, mp)); }
     catch(err){
+      console.error('[openPwViewer] 복호화 실패:', err);
       if(typeof toast === 'function') toast('복호화 실패');
       return;
     }
