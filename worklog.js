@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0625-2246";
+const APP_VERSION = "v44-0625-2258";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -693,6 +693,16 @@ function genId(){ return online ? db.collection(COL).doc().id : "L"+Date.now()+M
 function syncSet(id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.collection(COL).doc(id).set(payload).catch(e=>{ logErr("저장 동기화", e); toast("클라우드 동기화 지연 — 이 기기에는 저장됨"); }); }
 function addRecord(data){ const id=genId(); const rec={...data,id}; entries.push(rec); if(online) syncSet(id,rec); lsSave(); return rec; }
 function updateRecord(id,patch){ const i=entries.findIndex(x=>x.id===id); if(i<0) return; entries[i]={...entries[i],...patch}; if(online) syncSet(id,entries[i]); lsSave(); }
+// schedule sStatus 변경 시 Tasks 완료 자동 처리 (v44-0625)
+function updateRecordWithTasksSync(id, patch){
+  updateRecord(id, patch);
+  if(patch.sStatus && typeof window.completeTask==="function" && typeof accessToken!=="undefined" && accessToken){
+    const en = entries.find(e=>e.id===id);
+    if(en && en.kind==="schedule" && en.gTaskId){
+      window.completeTask(en.gTaskId, patch.sStatus==="완료");
+    }
+  }
+}
 function deleteRecord(id){ entries=entries.filter(x=>x.id!==id); if(online) db.collection(COL).doc(id).delete().catch(e=>logErr("삭제 동기화", e)); lsSave(); }
 const TEMP_BK="wl_tempbackup";
 function saveTempBackup(){ try{ localStorage.setItem(TEMP_BK, JSON.stringify({at:Date.now(),entries})); }catch(e){} }
@@ -3245,20 +3255,25 @@ $("mSave").addEventListener("click",async ()=>{
   if(_v44OpenExpenseAfter){
     setTimeout(()=>openExpenseFromWork(_v44OpenExpenseAfter), 400);
   }
-  // 구글캘린더 자동 동기화 (v44-0625: 실패 toast 강화)
+  // 구글 캘린더+Tasks 자동 동기화 (v44-0625)
   if(typeof window.gcalSync==="function" && typeof accessToken!=="undefined" && accessToken){
     const savedEntry = entries.find(e=>e.id===savedId);
     if(savedEntry && typeof GCAL_IDS!=="undefined" && GCAL_IDS[savedEntry.kind]){
       setTimeout(()=>{
-        try{ window.gcalSync(savedEntry); }
-        catch(ge){ console.error("[gcalSync 오류]",ge); toast("📅 캘린더 동기화 오류: "+ge.message); }
+        try{
+          // schedule → 캘린더+Tasks 동시 / 나머지 → 캘린더만
+          if(savedEntry.kind==="schedule" && typeof window.gcalSyncSchedule==="function"){
+            window.gcalSyncSchedule(savedEntry);
+          } else {
+            window.gcalSync(savedEntry);
+          }
+        } catch(ge){ console.error("[gcalSync 오류]",ge); toast("📅 캘린더 동기화 오류: "+ge.message); }
       }, 500);
     }
   } else if(typeof window.gcalSync==="function" && typeof GCAL_IDS!=="undefined"){
-    // 로그인 안 된 상태에서 schedule 저장 시 안내
     const savedEntry2 = entries.find(e=>e.id===savedId);
     if(savedEntry2 && savedEntry2.kind==="schedule"){
-      setTimeout(()=>toast("📅 예정 저장됨 — 구글 캘린더 동기화하려면 G캘린더 버튼을 눌러 로그인하세요",4000), 600);
+      setTimeout(()=>toast("📅 예정 저장됨 — 구글 캘린더+Tasks 동기화하려면 G캘린더 버튼을 눌러 로그인하세요",4000), 600);
     }
   }
   } catch(err) {
@@ -3268,10 +3283,21 @@ $("mSave").addEventListener("click",async ()=>{
 });
 $("mDelete").addEventListener("click",()=>{
   if(!mId) return;
+  const delEntry = entries.find(e=>e.id===mId);
   // 업무 삭제 시 연동 expense도 함께 삭제
   if(mKind==="work"){
     const linked=entries.filter(e=>e.kind==="expense"&&e.workId===mId);
     linked.forEach(e=>deleteRecord(e.id));
+  }
+  // schedule 삭제 시 구글 캘린더 + Tasks도 삭제
+  if(mKind==="schedule" && delEntry){
+    if(delEntry.gcalEventId && typeof window.gcalDelete==="function" && typeof accessToken!=="undefined" && accessToken){
+      var calId = typeof GCAL_IDS!=="undefined" ? GCAL_IDS.schedule : null;
+      window.gcalDelete(delEntry.gcalEventId, calId);
+    }
+    if(delEntry.gTaskId && typeof window.deleteFromTasks==="function" && typeof accessToken!=="undefined" && accessToken){
+      window.deleteFromTasks(delEntry.gTaskId);
+    }
   }
   $("overlay").classList.remove("show");
   deleteWithUndo(mId, KIND_LABEL[mKind]||"항목");
@@ -4222,15 +4248,19 @@ function cardSchedule(s){
   const stCls = st==="완료"?"done":st==="진행중"?"prog":st==="연기"?"etc":"todo";
   const repeatLabel = s.scheduleType==="월간반복" ? "🔁월간" : s.scheduleType==="연간반복" ? "📅연간" : "";
   const repeatBadge = repeatLabel ? `<span style="background:#e0f2fe;color:#0369a1;font-size:10px;border-radius:5px;padding:1px 5px;margin-left:4px">${repeatLabel}</span>` : "";
-  const gcalBadge = s.gcalEventId
-    ? `<span title="구글 캘린더 동기화됨 (알림 설정됨)" style="color:#34a853;font-size:11px;margin-left:4px">✅캘</span>`
-    : `<span title="구글 캘린더 미동기화 — 클릭해서 등록" style="color:#f59e0b;font-size:11px;margin-left:4px;cursor:pointer" onclick="event.stopPropagation();window.gcalResyncOne&&window.gcalResyncOne('${s.id}')">⚠캘</span>`;
+  // 캘린더+Tasks 각각 상태 뱃지
+  const calBadge = s.gcalEventId
+    ? `<span title="구글 캘린더 등록됨" style="color:#34a853;font-size:10px;margin-left:3px;background:#f0fdf4;border-radius:4px;padding:1px 4px">✅캘</span>`
+    : `<span title="캘린더 미등록 — 클릭해서 등록" style="color:#f59e0b;font-size:10px;margin-left:3px;background:#fffbeb;border-radius:4px;padding:1px 4px;cursor:pointer" onclick="event.stopPropagation();window.gcalResyncOne&&window.gcalResyncOne('${s.id}')">⚠캘</span>`;
+  const taskBadge = s.gTaskId
+    ? `<span title="Google Tasks 등록됨" style="color:#1a73e8;font-size:10px;margin-left:3px;background:#e8f0fe;border-radius:4px;padding:1px 4px">✅할일</span>`
+    : `<span title="Tasks 미등록 — 클릭해서 등록" style="color:#f59e0b;font-size:10px;margin-left:3px;background:#fffbeb;border-radius:4px;padding:1px 4px;cursor:pointer" onclick="event.stopPropagation();window.gcalResyncOne&&window.gcalResyncOne('${s.id}')">⚠할일</span>`;
   const acts = s._repeat
     ? `<div class="card-acts"><button class="mini-btn" onclick="event.stopPropagation();openEditor('schedule','${s.id}')">✏️ 원본수정</button></div>`
     : `<div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div>`;
   const repeatNote = s._repeat ? `<div style="font-size:11px;color:#0369a1;margin-top:2px">🔁 반복 예정 (원본: ${s.date.replace(/-/g,"/").slice(5)}일)</div>` : "";
   return `<div class="row-item" data-kind="schedule" data-id="${s.id}">
-    <div class="grow"><div class="t">📅 ${esc(s.title||"")} <span class="st ${stCls}">${esc(st)}</span> <span class="pill etc">${esc(s.sType||"")}</span>${repeatBadge}${gcalBadge}</div>
+    <div class="grow"><div class="t">📅 ${esc(s.title||"")} <span class="st ${stCls}">${esc(st)}</span> <span class="pill etc">${esc(s.sType||"")}</span>${repeatBadge}${calBadge}${taskBadge}</div>
     ${repeatNote}<div class="m">${s.memo?esc(s.memo):""}</div>
     ${acts}</div>
     <span class="rtime">${s.date||""}</span></div>`;

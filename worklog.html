@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0625-2246</title>
+<title>업무일지 v44-0625-2258</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1263,7 +1263,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-2246</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-2258</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2764,7 +2764,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260625t2246"></script>
+<script src="worklog.js?v=44-20260625t2258"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -4472,7 +4472,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 /* ===== 구글 캘린더 연동 v44-0625 ===== */
 (function(){
   var GCAL_CLIENT_ID = '65353408416-kih200tt2r9vtndl6n0vvr94freejuf7.apps.googleusercontent.com';
-  var GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar';
+  var GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks';
 
   // 종류별 캘린더 ID 매핑
   var GCAL_IDS = {
@@ -4712,28 +4712,153 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   }
 
   // ── 단건 재동기화 (카드 ⚠캘 버튼용) ────────────────────
+  // ══════════════════════════════════════════════════════
+  // ── 구글 Tasks 연동 (v44-0625) ─────────────────────────
+  // ══════════════════════════════════════════════════════
+  var TASKS_LIST_ID = '@default'; // 기본 Tasks 목록
+  var TASKS_LS = 'wl_tasks_listid';
+
+  // Tasks 목록 ID 로드 (저장된 것 우선)
+  function loadTasksListId(){
+    try{ var v=localStorage.getItem(TASKS_LS); if(v) TASKS_LIST_ID=v; }catch(e){}
+  }
+
+  // schedule → Tasks 등록/업데이트
+  function syncToTasks(en, onDone){
+    if(!accessToken){ if(onDone) onDone(false); return; }
+    if(en.kind !== 'schedule'){ if(onDone) onDone(false); return; }
+
+    var title = (en.sType ? '['+en.sType+'] ' : '') + (en.title||'예정');
+    var notes = [
+      en.sStatus ? '상태: '+en.sStatus : '',
+      en.scheduleType && en.scheduleType!=='일회성' ? '반복: '+en.scheduleType : '',
+      en.memo || ''
+    ].filter(Boolean).join('
+');
+
+    // 마감일: RFC 3339 형식 (Tasks API는 날짜만 지원 → T00:00:00.000Z)
+    var due = en.date ? en.date + 'T00:00:00.000Z' : undefined;
+
+    var body = { title: title };
+    if(notes) body.notes = notes;
+    if(due)   body.due   = due;
+
+    var taskId = en.gTaskId;
+    var url = taskId
+      ? 'https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(TASKS_LIST_ID) + '/tasks/' + taskId
+      : 'https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(TASKS_LIST_ID) + '/tasks';
+    var method = taskId ? 'PATCH' : 'POST';
+
+    fetch(url, {
+      method: method,
+      headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d.id){
+        dbgG('Tasks 등록 완료: ' + d.id);
+        if(typeof updateRecord==='function' && en.id){
+          updateRecord(en.id, {gTaskId: d.id});
+        }
+        if(onDone) onDone(true, d.id);
+      } else {
+        var msg = (d.error&&d.error.message) ? d.error.message : JSON.stringify(d.error||d);
+        dbgG('Tasks 등록 실패: ' + msg);
+        if(d.error && d.error.code===401){
+          accessToken=null; localStorage.removeItem(GCAL_LS);
+          updateGCalBtn('disconnected');
+          toast('🔑 구글 로그인이 만료됐어요. G캘린더 버튼을 다시 눌러주세요', 5000);
+        }
+        if(onDone) onDone(false);
+      }
+    })
+    .catch(function(e){
+      dbgG('Tasks fetch 오류: '+e);
+      if(onDone) onDone(false);
+    });
+  }
+
+  // Tasks 완료 처리 (sStatus="완료" 시 자동 호출)
+  function completeTask(taskId, complete){
+    if(!accessToken || !taskId) return;
+    var body = { status: complete ? 'completed' : 'needsAction' };
+    if(!complete) body.completed = null;
+    fetch('https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(TASKS_LIST_ID) + '/tasks/' + taskId, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function(r){ return r.json(); })
+    .then(function(d){ dbgG('Tasks 완료처리: '+(d.status||d.error&&d.error.message)); })
+    .catch(function(e){ dbgG('Tasks 완료 오류: '+e); });
+  }
+
+  // Tasks 삭제
+  function deleteFromTasks(taskId){
+    if(!accessToken || !taskId) return;
+    fetch('https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(TASKS_LIST_ID) + '/tasks/' + taskId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + accessToken }
+    }).then(function(){ dbgG('Tasks 삭제 완료: '+taskId); })
+    .catch(function(e){ dbgG('Tasks 삭제 오류: '+e); });
+  }
+
+  // 캘린더 + Tasks 동시 동기화 (schedule 저장 시 핵심 함수)
+  function syncScheduleAll(en, onDone){
+    if(en.kind !== 'schedule'){ syncScheduleToGCal(en, onDone); return; }
+    var calDone=false, taskDone=false, calOk=false, taskOk=false;
+    function check(){
+      if(!calDone || !taskDone) return;
+      var ok = calOk || taskOk;
+      if(calOk && taskOk) toast('📅 구글 캘린더 + Tasks 에 등록됐어요!');
+      else if(calOk)      toast('📅 캘린더 등록됨 (Tasks 실패)');
+      else if(taskOk)     toast('✅ Tasks 등록됨 (캘린더 실패)');
+      if(typeof renderAll==='function') setTimeout(renderAll, 400);
+      if(onDone) onDone(ok);
+    }
+    syncScheduleToGCal(en, function(ok){ calOk=ok; calDone=true; check(); });
+    syncToTasks(en,       function(ok){ taskOk=ok; taskDone=true; check(); });
+  }
+
+  // 전역 노출
+  window.syncToTasks     = syncToTasks;
+  window.completeTask    = completeTask;
+  window.deleteFromTasks = deleteFromTasks;
+  window.gcalTasksResync = function(entryId){
+    if(!accessToken){ signIn(); return; }
+    if(typeof entries==='undefined') return;
+    var en = entries.find(function(x){ return x.id===entryId; });
+    if(!en){ toast('항목을 찾을 수 없습니다'); return; }
+    toast('📅 캘린더+Tasks 재동기화 중...');
+    syncScheduleAll(en);
+  };
+
+  loadTasksListId();
+
   window.gcalResyncOne = function(entryId){
     if(!accessToken){ signIn(); return; }
     if(typeof entries==='undefined'){ toast('데이터 로딩 중입니다'); return; }
     var en = entries.find(function(x){ return x.id===entryId; });
     if(!en){ toast('항목을 찾을 수 없습니다'); return; }
-    toast('📅 재동기화 중...');
-    syncScheduleToGCal(en);
+    toast('📅 캘린더+Tasks 재동기화 중...');
+    syncScheduleAll(en);
   };
 
   // ── 전체 일괄 동기화 ────────────────────────────────────
   window.gcalSyncAll = async function(){
     if(!accessToken){ signIn(); toast('먼저 구글 로그인 해주세요'); return; }
     const kinds = Object.keys(GCAL_IDS);
-    const targets = entries.filter(e=> kinds.includes(e.kind) && e.date && !e.gcalEventId);
+    // 미동기화 = gcalEventId 없거나 (schedule은 gTaskId도 없는 것)
+    const targets = entries.filter(e=> kinds.includes(e.kind) && e.date && (!e.gcalEventId || (e.kind==='schedule' && !e.gTaskId)));
     if(!targets.length){ toast('📅 미동기화 항목이 없습니다 (모두 완료됨)'); return; }
-    if(!confirm(targets.length+'건을 구글캘린더에 동기화할까요?\n(잠시 기다려 주세요)')) return;
+    if(!confirm(targets.length+'건을 구글 캘린더+Tasks에 동기화할까요?\n(잠시 기다려 주세요)')) return;
     toast('동기화 시작... 0/'+targets.length);
     let done=0, fail=0;
     for(const en of targets){
       await new Promise(resolve=>{
-        syncScheduleToGCal(en, function(ok){ if(ok) done++; else fail++; resolve(); });
-        setTimeout(resolve, 400); // 최대 400ms 대기
+        var fn = (en.kind==='schedule') ? syncScheduleAll : syncScheduleToGCal;
+        fn(en, function(ok){ if(ok) done++; else fail++; resolve(); });
+        setTimeout(resolve, 500);
       });
       if((done+fail)%5===0) toast('동기화 중... '+(done+fail)+'/'+targets.length);
     }
@@ -4743,6 +4868,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // ── 전역 노출 ───────────────────────────────────────────
   window.gcalSync = syncScheduleToGCal;
+  window.gcalSyncSchedule = syncScheduleAll;   // schedule: 캘린더+Tasks 동시
   window.gcalDelete = deleteFromGCal;
   window.gcalSignIn = signIn;
   window.gcalSignOut = signOut;
@@ -7834,7 +7960,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0625-2246';
+    if(el) el.textContent = 'v44-0625-2258';
   }
   setVer();
   setTimeout(setVer, 500);
