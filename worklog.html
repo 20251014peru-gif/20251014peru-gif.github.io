@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0625-1045</title>
+<title>업무일지 v44-0625-1056</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1045,7 +1045,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1045</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1056</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1120,46 +1120,45 @@
     <span id="cntExpense" style="display:none">0</span>
     <span id="cntSchedule" style="display:none">0</span>
 
-    <!-- ⚡ 빠른 기간 필터 + 복사 -->
-    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+    <!-- 날짜 필터 2열 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <input type="date" id="v43From" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
+      <input type="date" id="v43To" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
+    </div>
+    <!-- ⚡ 통합 필터 한 줄: 빠른기간 + 기간해제 + 셀렉트4 + ✕ + 복사 + 개수 -->
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;align-items:center">
       <button class="btn-action btn-action-sm" data-qrange="today">📅 오늘</button>
       <button class="btn-action btn-action-sm" data-qrange="yesterday">어제</button>
       <button class="btn-action btn-action-sm" data-qrange="d2">2일전</button>
       <button class="btn-action btn-action-sm" data-qrange="d3">3일전</button>
       <button class="btn-action btn-action-sm" data-qrange="month">이번달</button>
       <button class="btn-action btn-action-sm btn-action-danger" data-qrange="clear">기간해제</button>
-      <button id="v43CopyExcel" onclick="v43CopyWorkExcel()" class="btn-action btn-action-sm btn-action-primary" style="margin-left:auto">📋 복사</button>
-    </div>
-    <!-- 날짜 필터 2열 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <input type="date" id="v43From" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
-      <input type="date" id="v43To" style="height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
-    </div>
-    <div style="display:flex;align-items:center;margin-bottom:10px;gap:6px">
-      <button id="v43DateClear" class="btn-action btn-action-sm btn-action-danger" style="flex-shrink:0;display:none">기간해제</button>
-      <!-- 업무 필터 (셀렉트 폭 축소) -->
-      <div id="wkFilterRow" style="display:flex;gap:4px;flex:1;align-items:center;min-width:0">
-        <select id="wfModeEl" style="height:34px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:11px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1;min-width:0;width:0">
+      <!-- 셀렉트 4개 (업무 탭에서만 표시) -->
+      <div id="wkFilterRow" style="display:flex;gap:3px;align-items:center;min-width:0;flex:1 1 240px">
+        <select id="wfModeEl" style="height:30px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:11px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1;min-width:0;width:0">
           <option value="전체">모드</option>
           <option value="일반업무">🏢 일반</option>
           <option value="외주비용">💰 외주</option>
         </select>
-        <select id="wfStatusEl" style="height:34px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:11px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1;min-width:0;width:0">
+        <select id="wfStatusEl" style="height:30px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:11px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1;min-width:0;width:0">
           <option value="전체">상태</option>
           <option value="완료">완료</option>
           <option value="진행중">진행중</option>
           <option value="미완료">미완료</option>
           <option value="보류">보류</option>
         </select>
-        <select id="wfFieldEl" style="height:34px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:11px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1.2;min-width:0;width:0">
+        <select id="wfFieldEl" style="height:30px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:11px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1.2;min-width:0;width:0">
           <option value="전체">분야</option>
         </select>
-        <select id="wfFloorEl" style="height:34px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:11px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1;min-width:0;width:0">
+        <select id="wfFloorEl" style="height:30px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:11px;font-family:inherit;background:#fff;color:#1a2f45;cursor:pointer;outline:none;flex:1;min-width:0;width:0">
           <option value="전체">층</option>
         </select>
-        <button id="wfClearBtn" class="btn-action-danger" style="height:34px;width:30px;border:1.5px solid #e88a8a;border-radius:9px;font-size:12px;font-family:inherit;background:linear-gradient(180deg,#fff,#ffe5e5);color:#b52929;cursor:pointer;font-weight:700;flex-shrink:0;padding:0">✕</button>
+        <button id="wfClearBtn" style="height:30px;width:28px;border:1.5px solid #e88a8a;border-radius:8px;font-size:11px;font-family:inherit;background:linear-gradient(180deg,#fff,#ffe5e5);color:#b52929;cursor:pointer;font-weight:700;flex-shrink:0;padding:0">✕</button>
       </div>
-      <span id="v43Count" style="font-size:12px;color:#aab8c8;white-space:nowrap;flex-shrink:0"></span>
+      <button id="v43CopyExcel" onclick="v43CopyWorkExcel()" class="btn-action btn-action-sm btn-action-primary" style="margin-left:auto">📋 복사</button>
+      <span id="v43Count" style="font-size:12px;color:#aab8c8;white-space:nowrap;flex-shrink:0;margin-left:4px"></span>
+      <!-- 호환용 숨김 -->
+      <button id="v43DateClear" style="display:none">기간해제</button>
     </div>
     <div class="v43-list" id="v43List">
       <div class="v43-empty"><div class="ei">📋</div>데이터를 불러오는 중…</div>
@@ -2529,7 +2528,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260625t1045"></script>
+<script src="worklog.js?v=44-20260625t1056"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -2957,24 +2956,36 @@
       if(typeof renderV43List === 'function') renderV43List();
     });
   });
-    gsBar.addEventListener('keydown', (e) => {
-      if(e.key === 'Enter'){
+    gsBar.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.keyCode === 13){
         e.preventDefault();
+        e.stopPropagation();
+        if(typeof dbg === 'function') dbg('search enter: ' + gsBar.value);
         clearTimeout(searchTimer);
         v43Search = gsBar.value;
         /* 메인 탭으로 강제 이동 */
         if(typeof v43ActivateTab === 'function') v43ActivateTab('main');
         if(typeof renderV43List === 'function') renderV43List();
-        /* 카드 렌더 끝날 때까지 대기 후 첫 카드 클릭 */
-        setTimeout(() => {
-          const firstCard = document.querySelector('#v43List .v43-item');
+        /* 모바일 키보드 닫기 + 잠시 대기 후 첫 카드 클릭 */
+        gsBar.blur();
+        setTimeout(function(){
+          var firstCard = document.querySelector('#v43List .v43-item');
+          if(typeof dbg === 'function') dbg('found card: ' + !!firstCard);
           if(firstCard){
             firstCard.click();
-            gsBar.blur();
-          } else if(typeof toast === 'function'){
-            toast('검색 결과가 없어요');
+          } else {
+            if(typeof toast === 'function') toast('검색 결과가 없어요');
           }
-        }, 450);
+        }, 500);
+        return false;
+      }
+    });
+    /* keypress 폴백 (모바일 IME 호환) */
+    gsBar.addEventListener('keypress', function(e){
+      if(e.key === 'Enter' || e.keyCode === 13){
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
       }
     });
   }
@@ -7565,7 +7576,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0625-1045';
+    if(el) el.textContent = 'v44-0625-1056';
   }
   setVer();
   setTimeout(setVer, 500);
