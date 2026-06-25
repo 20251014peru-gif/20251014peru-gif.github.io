@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0625-1322</title>
+<title>업무일지 v44-0625-1654</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -374,12 +374,15 @@
 .sticky-list-item {
   display:flex; align-items:flex-start; gap:12px;
   padding:12px 16px; background:#fff;
-  border-bottom:1px solid #f0f6ff;
-  transition:background .12s;
+  transition:background .12s, box-shadow .12s;
 }
-.sticky-list-item:hover { background:#f7faff; }
-.sticky-list-item:first-child { border-radius:14px 14px 0 0; }
-.sticky-list-item:last-child { border-bottom:none; border-radius:0 0 14px 14px; }
+/* v44: grid 카드형 - wrap 제거, 개별 카드 스타일 */
+.sticky-list-card {
+  border-radius:12px;
+  border:1.5px solid #e8f0fa;
+  box-shadow:0 1px 4px rgba(0,0,0,.05);
+}
+.sticky-list-card:hover { background:#f7faff; box-shadow:0 4px 14px rgba(0,0,0,.08); }
 .sticky-list-wrap {
   background:#fff; border-radius:14px;
   border:1.5px solid #e8f0fa; overflow:hidden;
@@ -1249,7 +1252,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1322</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1654</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1525,7 +1528,7 @@
       <div class="sticky-grid" id="stickyGrid">
         <div class="v43-empty"><div class="ei">📝</div>메모를 추가해보세요!</div>
       </div>
-      <div id="stickyList" style="display:none;flex-direction:column;gap:0"></div>
+      <div id="stickyList" style="display:none;gap:0"></div>
     </div>
   </div>
 
@@ -2750,7 +2753,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260625t1322"></script>
+<script src="worklog.js?v=44-20260625t1654"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -3701,8 +3704,8 @@
       if(!list.length){
         listBox.innerHTML='<div class="v43-empty" style="width:100%;padding:40px 0;text-align:center"><div class="ei">📝</div>'+(stickySearch?'검색 결과가 없어요':'메모를 추가해보세요!')+'</div>';
       } else {
-        listBox.innerHTML='<div class="sticky-list-wrap">'+list.map(en=>`
-          <div class="sticky-list-item" data-sid="${esc(en.id)}">
+        listBox.innerHTML=list.map(en=>`
+          <div class="sticky-list-item sticky-list-card" data-sid="${esc(en.id)}" style="border-radius:12px;border:1.5px solid #e8f0fa;">
             <div class="sticky-list-color" style="background:${COLOR_BG2[getColor(en)]||'#f0c520'}"></div>
             <div class="sticky-list-body">
               ${en.title?`<div class="sticky-list-title">${esc(en.title)}</div>`:''}
@@ -3720,7 +3723,7 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
               </button>
             </div>
-          </div>`).join('')+'</div>';
+          </div>`).join('');
         listBox.querySelectorAll('[data-scopy2]').forEach(btn=>{
           btn.addEventListener('click',()=>{
             const en=(typeof entries!=='undefined')&&entries.find(x=>x.id===btn.dataset.scopy2);
@@ -3740,7 +3743,13 @@
           });
         });
       }
-      listBox.style.display=stickyViewMode==='list'?'flex':'none';
+      if(stickyViewMode==='list'){
+        listBox.style.display='grid';
+        listBox.style.gridTemplateColumns='repeat(auto-fill,minmax(340px,1fr))';
+        listBox.style.gap='8px';
+      } else {
+        listBox.style.display='none';
+      }
       grid.style.display=stickyViewMode==='card'?'':'none';
     }
     // 버튼 활성 상태
@@ -6975,10 +6984,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         listBox.innerHTML = '<div class="v43-empty" style="width:100%;padding:40px 0;text-align:center"><div class="ei">📝</div>' +
           (stickySearch ? '검색 결과가 없어요' : '메모를 추가해보세요!') + '</div>';
       } else {
-        listBox.innerHTML = '<div class="sticky-list-wrap">' + list.map(function(en) {
+        listBox.innerHTML = list.map(function(en) {
           var color = getColor(en);
           var preview = bodyPreview(en.body || '');  /* ← HTML 태그 없는 텍스트 */
-          return '<div class="sticky-list-item" data-sid="' + esc(en.id) + '">' +
+          return '<div class="sticky-list-item sticky-list-card" data-sid="' + esc(en.id) + '" style="border-radius:12px;border:1.5px solid #e8f0fa;">' +
             '<div class="sticky-list-color" style="background:' + (COLOR_BG2[color] || '#f0c520') + '"></div>' +
             '<div class="sticky-list-body">' +
               (en.title ? '<div class="sticky-list-title">' + esc(en.title) + '</div>' : '') +
@@ -6997,7 +7006,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
               '</button>' +
             '</div>' +
           '</div>';
-        }).join('') + '</div>';
+        }).join('');
 
         /* 목록형 이벤트 */
         listBox.querySelectorAll('.sticky-list-item').forEach(function(item) {
@@ -7036,7 +7045,13 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       }
 
       /* 보기 전환 */
-      listBox.style.display = stickyViewMode === 'list' ? 'flex' : 'none';
+      if(stickyViewMode === 'list'){
+        listBox.style.display='grid';
+        listBox.style.gridTemplateColumns='repeat(auto-fill,minmax(340px,1fr))';
+        listBox.style.gap='8px';
+      } else {
+        listBox.style.display='none';
+      }
       grid.style.display    = stickyViewMode === 'card' ? '' : 'none';
     }
 
@@ -7799,7 +7814,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0625-1322';
+    if(el) el.textContent = 'v44-0625-1654';
   }
   setVer();
   setTimeout(setVer, 500);

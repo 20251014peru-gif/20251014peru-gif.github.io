@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0625-1648";
+const APP_VERSION = "v44-0625-1654";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -7013,6 +7013,7 @@ function renderAccidents(){
   const cnt = document.getElementById("accidentCount");
   if(cnt) cnt.textContent = `${arr.length}건`;
   if(!arr.length){
+    list.style.cssText = '';
     list.innerHTML = `<div style="padding:60px 20px;text-align:center;color:#aab8c8;background:#f7faff;border-radius:12px">
       <div style="font-size:40px;margin-bottom:10px">🚨</div>
       <div style="font-size:14px;font-weight:700">사고 기록이 없어요</div>
@@ -7020,11 +7021,13 @@ function renderAccidents(){
     </div>`;
     return;
   }
+  /* v44-fix: 다열 그리드 적용 */
+  list.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:10px';
   list.innerHTML = arr.map(a=>{
     const c = ACCIDENT_STATUS_COLOR[a.status] || ACCIDENT_STATUS_COLOR["⏳ 접수"];
     const icon = ACCIDENT_TYPE_ICON[a.accType] || "📌";
     const totalCost = (Number(a.repairCost)||0)+(Number(a.compensation)||0)+(Number(a.insurance)||0);
-    return `<div class="acc-card" data-acc-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:box-shadow .12s">
+    return `<div class="acc-card" data-acc-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:12px;padding:14px 16px;cursor:pointer;transition:box-shadow .12s">
       <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
         <div style="flex:1;min-width:200px">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
