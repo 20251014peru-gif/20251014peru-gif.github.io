@@ -3076,7 +3076,7 @@ function wrapView(kind, list, cardFn){
   if(mode==="list"){
     return `<div class="list-rows compact">`+list.map(cardFn).join("")+`</div>`;
   }
-  return `<div class="card-grid">`+list.map(cardFn).join("")+`</div>`;
+  return `<div class="resp-grid">`+list.map(cardFn).join("")+`</div>`;
 }
 function syncViewToggle(kind){
   const tg=document.querySelector(`.view-toggle[data-vt="${kind}"]`); if(!tg) return;
