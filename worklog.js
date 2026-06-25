@@ -4946,8 +4946,11 @@ async function pwRenderList(){
       tr.style.cursor = 'pointer';
       tr.addEventListener('click', function(ev){
         if(ev.target.closest('[data-pact],[data-copy],[data-toggle],button,a')) return;
+        console.log('[pw-row click] id=', e.id, 'openPwViewer=', typeof window.openPwViewer);
         if(typeof window.openPwViewer === 'function'){
           window.openPwViewer(e.id);
+        } else {
+          console.warn('[pw-row] openPwViewer 미정의');
         }
       });
       // 수정/삭제 이벤트
@@ -4976,8 +4979,11 @@ async function pwRenderList(){
       card.style.cursor = 'pointer';
       card.addEventListener('click', function(ev){
         if(ev.target.closest('[data-pact],[data-copy],[data-toggle],button,a')) return;
+        console.log('[pw-card click] id=', e.id, 'openPwViewer=', typeof window.openPwViewer);
         if(typeof window.openPwViewer === 'function'){
           window.openPwViewer(e.id);
+        } else {
+          console.warn('[pw-card] openPwViewer 미정의');
         }
       });
       card.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",async ev=>{
@@ -5626,12 +5632,15 @@ function renderItemList(){
   </tr>`;
   }).join("");
   body.querySelectorAll("tr[data-id]").forEach(tr=>{
+    tr.style.cursor = "pointer";
     tr.addEventListener("click",e=>{ 
       if(e.target.closest("[data-del],[data-quickedit]")) return; 
+      console.log('[item-row click] id=', tr.dataset.id, 'openItemViewer=', typeof window.openItemViewer);
       /* 행 클릭은 보기 팝업 (수정 모달 X) */
       if(typeof window.openItemViewer === 'function'){
         window.openItemViewer(tr.dataset.id);
       } else {
+        console.warn('[item-row] openItemViewer 미정의 → 수정 모달로 폴백');
         openQuickEditMaterial(tr.dataset.id);
       }
     });
