@@ -6699,6 +6699,23 @@ function wireGlobalSearch(){
     runGlobalSearch(e.target.value);
     if(bar) bar.value=e.target.value; // 팝업→상단 검색창 동기화
   });
+  /* 🔍 엔터로 첫 결과 열기 */
+  $("gsInput").addEventListener("keydown", function(e){
+    if(e.key === 'Enter' || e.keyCode === 13){
+      e.preventDefault();
+      e.stopPropagation();
+      var gi = $("gsInput");
+      runGlobalSearch(gi.value);  /* 검색 즉시 실행 */
+      setTimeout(function(){
+        var firstItem = document.querySelector('#gsResults .gs-item');
+        if(firstItem){
+          firstItem.click();  /* 첫 결과 클릭 */
+        } else if(typeof toast === 'function'){
+          toast('검색 결과가 없어요');
+        }
+      }, 100);
+    }
+  });
 }
 function openGlobalSearch(){
   $("globalSearchOverlay").classList.add("show");
