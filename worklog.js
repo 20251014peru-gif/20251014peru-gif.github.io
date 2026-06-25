@@ -251,14 +251,13 @@ const SCHEMA={
   call:[
     {k:"date",label:"날짜",type:"date",req:true}, {k:"time",label:"시간",type:"time"},
     {k:"dir",label:"구분",type:"select",opts:CALLDIR},
+    {k:"content",label:"통화 내용",type:"textarea",full:true,req:true},
     {k:"callContact",label:"담당업체/담당자",type:"callcontact"},
     {k:"name",label:"이름",type:"text"},
     {k:"role",label:"직책",type:"text"},
     {k:"company",label:"업체",type:"text"},
     {k:"phone",label:"전화번호",type:"tel"},
     {k:"callField",label:"분야",type:"callfield"},
-    {k:"content",label:"통화 내용",type:"textarea",full:true,req:true},
-    {k:"followup",label:"조치 / 후속내용",type:"textarea",full:true},
   ],
   vacation:[
     {k:"name",label:"이름",type:"text",req:true}, {k:"vtype",label:"종류",type:"select",opts:VTYPES},
@@ -1983,7 +1982,7 @@ function openEditor(kind,id){
   }
 
   const sc=SCHEMA[kind];
-  $("mFields").className = "grid"; /* 일반 모달은 grid 복원 */
+  $("mFields").className = "grid kind-" + kind; /* kind별 그리드 적용 */
   $("mFields").innerHTML = sc.map(fieldHTML).join("");
   sc.forEach(f=>{ 
     if(f.type==="timepick"){
