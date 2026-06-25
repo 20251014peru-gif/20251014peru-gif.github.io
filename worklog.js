@@ -1768,22 +1768,40 @@ function renderWorkModal(data, mode){
     <textarea id="m-detail" placeholder="작업 내용, 특이사항 등" style="${S.ta}">${e2(d.detail||"")}</textarea>
   </div>`;
 
-  /* ── 임시 전화번호 (저장 안 됨, 메모용) ── */
+  /* ── 임시 전화번호 — 연락처 검색 + 전화 + 저장 통합 UI ── */
   const rowTempPhone = `
-  <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;${S.mb}">
-    <div>
-      <label style="${S.lbl}">📞 전화번호 <span style="font-size:10px;color:#f59e0b;font-weight:600;letter-spacing:0">저장 안 됨 · 메모용</span></label>
-      <input type="tel" id="m-tempPhone" value="" placeholder="010-0000-0000"
-        style="${S.inp};border-color:#fde68a;background:#fffbea"
-        oninput="this.style.borderColor=this.value?'#f59e0b':'#fde68a'">
+  <div id="wTempPhoneBox" style="border:1.5px solid #fde68a;border-radius:12px;overflow:visible;background:#fffbea;${S.mb}">
+    <div style="padding:8px 12px 6px;display:flex;align-items:center;justify-content:space-between">
+      <label style="font-size:11px;font-weight:700;color:#92400e;letter-spacing:.4px">📞 전화번호 메모 <span style="font-weight:400;color:#b45309">(저장 안 됨)</span></label>
+      <button type="button" id="btnTpSearch"
+        style="font-size:11px;padding:2px 8px;border:1px solid #fcd34d;border-radius:6px;background:#fff8e1;color:#92400e;font-weight:700;font-family:inherit;cursor:pointer">
+        🔍 연락처 검색
+      </button>
     </div>
-    <a id="m-tempPhoneCall" href="#"
-      style="height:44px;padding:0 14px;border-radius:10px;border:1.5px solid #fde68a;background:#fffbea;
-             color:#92400e;font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;
-             text-decoration:none;white-space:nowrap;font-family:inherit"
-      onclick="(function(a){var v=document.getElementById('m-tempPhone').value.replace(/[^0-9+]/g,'');if(!v){return false;}a.href='tel:'+v;})(this)">
-      📲 전화
-    </a>
+    <div style="position:relative;padding:0 10px 10px">
+      <div id="tpSearchWrap" style="display:none;margin-bottom:8px;position:relative">
+        <input type="text" id="tpSearchInp" placeholder="업체명·이름·번호 검색…" autocomplete="off"
+          style="width:100%;box-sizing:border-box;height:40px;padding:0 36px 0 12px;border:1.5px solid #fcd34d;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45">
+        <button type="button" id="tpSearchClear"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:15px;color:#aab8c8;cursor:pointer;display:none">✕</button>
+        <div id="tpSearchList"
+          style="position:absolute;top:44px;left:0;right:0;background:#fff;border:1.5px solid #fcd34d;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:800;max-height:200px;overflow:auto;display:none"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center">
+        <input type="tel" id="m-tempPhone" value="" placeholder="010-0000-0000"
+          style="height:42px;padding:0 12px;border:1.5px solid #fcd34d;border-radius:8px;font-size:14px;font-weight:600;font-family:inherit;background:#fff;outline:none;color:#1a2f45;width:100%;box-sizing:border-box">
+        <a id="m-tempPhoneCall" href="#"
+          style="height:42px;padding:0 12px;border-radius:8px;border:1.5px solid #fcd34d;background:#fff;color:#0369a1;font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;text-decoration:none;white-space:nowrap;font-family:inherit"
+          onclick="(function(a){var v=document.getElementById('m-tempPhone').value.replace(/[^0-9+]/g,'');if(!v)return false;a.href='tel:'+v;})(this)">
+          📲 전화
+        </a>
+        <button type="button" id="btnTpSave"
+          style="height:42px;padding:0 12px;border-radius:8px;border:1.5px solid #fcd34d;background:#fff;color:#065f46;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;display:none">
+          💾 저장
+        </button>
+      </div>
+      <div id="tpMatchInfo" style="display:none;margin-top:6px;padding:6px 10px;background:#f0fdf4;border-radius:7px;border:1px solid #bbf7d0;font-size:12px;color:#065f46;font-weight:600"></div>
+    </div>
   </div>`;
 
   /* ── 자재 사용 내역 — 클릭 시 팝업 ── */
@@ -1920,6 +1938,155 @@ function renderWorkModal(data, mode){
     const btn = document.getElementById('btnOpenMatPop');
     if(btn && !btn._bound){ btn._bound=true; btn.addEventListener('click', openMatPickerPopup); }
   }, 80);
+
+  /* ── 임시 전화번호 통합 UI 바인딩 ── */
+  setTimeout(()=>{ bindTempPhoneUI(); }, 100);
+}
+
+function bindTempPhoneUI(){
+  const searchBtn  = document.getElementById('btnTpSearch');
+  const searchWrap = document.getElementById('tpSearchWrap');
+  const searchInp  = document.getElementById('tpSearchInp');
+  const searchClear= document.getElementById('tpSearchClear');
+  const searchList = document.getElementById('tpSearchList');
+  const phoneInp   = document.getElementById('m-tempPhone');
+  const saveBtn    = document.getElementById('btnTpSave');
+  const matchInfo  = document.getElementById('tpMatchInfo');
+  if(!searchBtn||!phoneInp) return;
+
+  /* 🔍 연락처 검색 토글 */
+  searchBtn.addEventListener('click', ()=>{
+    const shown = searchWrap.style.display!=='none';
+    searchWrap.style.display = shown ? 'none' : 'block';
+    if(!shown) setTimeout(()=>searchInp.focus(), 50);
+  });
+
+  /* 검색창 입력 → 연락처 드롭다운 */
+  function renderTpList(q){
+    const contacts = (typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name||c.phone);
+    const ql = (q||'').trim().toLowerCase();
+    let arr = ql
+      ? contacts.filter(c=>
+          (c.name||'').toLowerCase().includes(ql)||
+          (c.person||'').toLowerCase().includes(ql)||
+          (c.phone||'').replace(/[^0-9]/g,'').includes(ql.replace(/[^0-9]/g,''))||
+          (c.cat||'').toLowerCase().includes(ql)
+        )
+      : contacts.slice(0, 20);
+    if(!arr.length){
+      searchList.innerHTML='<div style="padding:10px 14px;color:#aab8c8;font-size:13px">검색 결과 없음</div>';
+      searchList.style.display='block'; return;
+    }
+    /* 등록업체 먼저, 일회성 뒤 */
+    const reg = arr.filter(c=>(c.vendorType||'등록업체')!=='일회성');
+    const one = arr.filter(c=>c.vendorType==='일회성');
+    arr = [...reg, ...one];
+    searchList.innerHTML = arr.map((c,i)=>{
+      const isOne = c.vendorType==='일회성';
+      const badge = isOne ? '<span style="font-size:10px;background:#f1f5f9;color:#94a3b8;border-radius:5px;padding:1px 5px;margin-left:4px">🕐 일회성</span>' : '';
+      return `<div class="tp-item" data-i="${i}"
+        style="padding:9px 14px;cursor:pointer;border-bottom:1px solid #fef9c3;display:flex;justify-content:space-between;align-items:center${isOne?';opacity:.7':''}">
+        <div>
+          <span style="font-size:13px;font-weight:700;color:#1a2f45">${esc(c.name||c.person||'(이름없음)')}${badge}</span>
+          ${c.person&&c.name?`<span style="font-size:12px;color:#3f7cb8;margin-left:4px">· ${esc(c.person)}</span>`:''}
+          <div style="font-size:11px;color:#94a3b8;margin-top:1px">${[c.cat,c.title].filter(Boolean).join(' · ')}</div>
+        </div>
+        <span style="font-size:13px;font-weight:700;color:#0369a1;white-space:nowrap">${esc(c.phone||'')}</span>
+      </div>`;
+    }).join('');
+    /* 일회성 구분선 */
+    if(one.length && reg.length){
+      const div=document.createElement('div');
+      div.style.cssText='padding:3px 14px;font-size:10px;font-weight:700;color:#94a3b8;background:#fef9c3';
+      div.textContent='🕐 일회성 업체';
+      searchList.querySelectorAll('.tp-item')[reg.length]?.before(div);
+    }
+    searchList.style.display='block';
+    /* 클릭 → 전화번호 채우기 */
+    searchList.querySelectorAll('.tp-item').forEach((el,i2)=>{
+      el.addEventListener('mouseenter',()=>el.style.background='#fef3c7');
+      el.addEventListener('mouseleave',()=>el.style.background='');
+      el.addEventListener('mousedown', e=>{
+        e.preventDefault();
+        const c = arr[parseInt(el.dataset.i)];
+        phoneInp.value = c.phone||'';
+        searchWrap.style.display='none';
+        searchList.style.display='none';
+        /* 매칭 정보 표시 */
+        matchInfo.style.display='block';
+        matchInfo.textContent = `✅ ${c.name||c.person||''} ${c.person&&c.name?'· '+c.person:''} ${c.phone||''}`;
+        /* 이미 연락처에 있으면 저장 버튼 숨김 */
+        saveBtn.style.display = (c.vendorType==='일회성') ? 'flex' : 'none';
+        if(c.vendorType==='일회성') saveBtn.title='일회성 업체 — 연락처에 저장';
+        checkTpSaveBtn();
+      });
+    });
+  }
+
+  searchInp.addEventListener('input', ()=>{
+    searchClear.style.display = searchInp.value ? 'block' : 'none';
+    renderTpList(searchInp.value);
+  });
+  searchInp.addEventListener('focus', ()=>{ if(!searchInp.value) renderTpList(''); });
+  searchClear.addEventListener('mousedown', e=>{
+    e.preventDefault();
+    searchInp.value=''; searchList.style.display='none';
+    searchClear.style.display='none';
+  });
+
+  /* 전화번호 직접 입력 시 → 저장 버튼 표시 여부 */
+  function checkTpSaveBtn(){
+    const v = (phoneInp.value||'').replace(/[^0-9]/g,'');
+    if(!v){ saveBtn.style.display='none'; matchInfo.style.display='none'; return; }
+    /* 이미 연락처에 있는 번호면 저장 버튼 숨김 */
+    const exists = (typeof contactsCache!=='undefined'?contactsCache:[])
+      .find(c=>(c.phone||'').replace(/[^0-9]/g,'')===v);
+    if(exists){
+      matchInfo.style.display='block';
+      matchInfo.innerHTML=`<span style="color:#065f46">📇 ${esc(exists.name||'')}${exists.person?' · '+esc(exists.person):''} — 이미 연락처에 있어요</span>`;
+      saveBtn.style.display='none';
+    } else {
+      matchInfo.style.display='none';
+      saveBtn.style.display='flex';
+    }
+  }
+  phoneInp.addEventListener('input', checkTpSaveBtn);
+
+  /* 💾 저장 버튼 → Firebase contacts에 저장 */
+  saveBtn.addEventListener('click', async ()=>{
+    const phone = (phoneInp.value||'').trim();
+    if(!phone){ toast('전화번호를 입력하세요'); return; }
+    const name = prompt('연락처에 저장할 이름을 입력하세요:', '');
+    if(name===null) return; /* 취소 */
+    const isOne = confirm('일회성 업체로 저장할까요?\n[확인] 일회성  /  [취소] 등록업체');
+    if(!online||!db){ toast('오프라인 — 연락처 저장 불가'); return; }
+    const rec = {
+      name: name||phone,
+      cat: '기타',
+      person: '',
+      phone,
+      vendorType: isOne ? '일회성' : '등록업체',
+      memo: '업무 모달 전화번호에서 저장 ('+kstNow().toLocaleDateString('ko-KR')+')',
+      fav: false,
+      createdAt: Date.now()
+    };
+    try{
+      const ref = await db.collection('contacts').add(rec);
+      rec.id = ref.id;
+      contactsCache.push(rec);
+      toast(`✅ "${rec.name}" 연락처에 저장됐어요`);
+      saveBtn.style.display='none';
+      matchInfo.style.display='block';
+      matchInfo.innerHTML=`<span style="color:#065f46">📇 ${esc(rec.name)} — 연락처에 저장됐어요</span>`;
+    }catch(e){ toast('저장 실패: '+(e.message||e)); }
+  });
+
+  /* 닫기: 검색 목록이 열린 상태에서 외부 클릭 */
+  document.addEventListener('mousedown', function tpClose(e){
+    if(!searchWrap.contains(e.target) && e.target!==searchBtn){
+      searchList.style.display='none';
+    }
+  });
 }
 
 function saveWorkEntry(){
