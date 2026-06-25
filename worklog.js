@@ -1771,14 +1771,21 @@ function renderWorkModal(data, mode){
   /* ── 임시 전화번호 — 연락처 검색 + 전화 + 저장 통합 UI ── */
   const rowTempPhone = `
   <div id="wTempPhoneBox" style="border:1.5px solid #fde68a;border-radius:12px;overflow:visible;background:#fffbea;${S.mb}">
-    <div style="padding:8px 12px 6px;display:flex;align-items:center;justify-content:space-between">
-      <label style="font-size:11px;font-weight:700;color:#92400e;letter-spacing:.4px">📞 전화번호 메모 <span style="font-weight:400;color:#b45309">(저장 안 됨)</span></label>
+    <div style="padding:8px 12px 6px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+      <label style="font-size:11px;font-weight:700;color:#92400e;flex:1;min-width:80px">📞 전화번호 메모 <span style="font-weight:400;color:#b45309">(저장 안 됨)</span></label>
+      <button type="button" id="btnTpAddReg"
+        style="font-size:11px;padding:3px 9px;border:1.5px solid #86efac;border-radius:6px;background:#f0fdf4;color:#065f46;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap">
+        📇 연락처 추가
+      </button>
+      <button type="button" id="btnTpAddOne"
+        style="font-size:11px;padding:3px 9px;border:1.5px solid #fde68a;border-radius:6px;background:#fff8e1;color:#92400e;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap">
+        🕐 임시번호
+      </button>
       <button type="button" id="btnTpSearch"
-        style="font-size:11px;padding:2px 8px;border:1px solid #fcd34d;border-radius:6px;background:#fff8e1;color:#92400e;font-weight:700;font-family:inherit;cursor:pointer">
-        🔍 연락처 검색
+        style="font-size:11px;padding:3px 9px;border:1.5px solid #dbe6f4;border-radius:6px;background:#f7faff;color:#3f7cb8;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap">
+        🔍 검색
       </button>
     </div>
-    <div style="position:relative;padding:0 10px 10px">
       <div id="tpSearchWrap" style="display:none;margin-bottom:8px;position:relative">
         <input type="text" id="tpSearchInp" placeholder="업체명·이름·번호 검색…" autocomplete="off"
           style="width:100%;box-sizing:border-box;height:40px;padding:0 36px 0 12px;border:1.5px solid #fcd34d;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45">
@@ -2094,6 +2101,94 @@ function bindTempPhoneUI(){
       searchList.style.display='none';
     }
   });
+
+  /* 📇 연락처 추가 / 🕐 임시번호 버튼 바인딩 */
+  const btnReg = document.getElementById("btnTpAddReg");
+  if(btnReg && !btnReg._bound){ btnReg._bound=true; btnReg.addEventListener("click", ()=>openTpContactForm(phoneInp,"등록업체")); }
+  const btnOne = document.getElementById("btnTpAddOne");
+  if(btnOne && !btnOne._bound){ btnOne._bound=true; btnOne.addEventListener("click", ()=>openTpContactForm(phoneInp,"일회성")); }
+}
+
+
+/* ── 연락처 추가 팝업 (등록업체 / 일회성) ── */
+function openTpContactForm(phoneInpRef, defaultType){
+  var old=document.getElementById('tpCfOv'); if(old) old.remove();
+  var curPhone=(phoneInpRef&&phoneInpRef.value)?phoneInpRef.value.trim():'';
+  var SI='width:100%;box-sizing:border-box;height:42px;padding:0 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45';
+  var LB='display:block;font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:4px';
+  var isOne=(defaultType==='일회성');
+  var ov=document.createElement('div');
+  ov.id='tpCfOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:13000;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML=
+    '<div style="background:#fff;border-radius:18px;width:100%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,.25);overflow:hidden">'+
+      '<div style="padding:14px 18px 12px;background:'+(isOne?'#fffbea':'#f8faff')+';border-bottom:1.5px solid '+(isOne?'#fde68a':'#e8f0fa')+';display:flex;align-items:center;justify-content:space-between">'+
+        '<span style="font-size:16px;font-weight:800;color:#1a2f45">'+(isOne?'🕐 임시번호 저장':'📇 연락처 추가')+'</span>'+
+        '<button id="tpCfX" type="button" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer;line-height:1">✕</button>'+
+      '</div>'+
+      '<div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">'+
+        '<div><label style="'+LB+'">업체명 / 이름 <span style="color:#e74c3c">*</span></label>'+
+          '<input type="text" id="tpCfName" placeholder="예: 서희건설, 김상동" autocomplete="off" style="'+SI+';border-color:#3b82f6;font-weight:600"></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+          '<div><label style="'+LB+'">담당자</label><input type="text" id="tpCfPerson" placeholder="담당자 이름" style="'+SI+'"></div>'+
+          '<div><label style="'+LB+'">직책</label><input type="text" id="tpCfRole" placeholder="예: 소장" style="'+SI+'"></div>'+
+        '</div>'+
+        '<div><label style="'+LB+'">전화번호 <span style="color:#e74c3c">*</span></label>'+
+          '<input type="tel" id="tpCfPhone" value="'+curPhone+'" placeholder="010-0000-0000" style="'+SI+'"></div>'+
+        '<div><label style="'+LB+'">분야</label>'+
+          '<input type="text" id="tpCfCat" placeholder="예: 전기, 설비, 영선" style="'+SI+'"></div>'+
+        '<div><label style="'+LB+'">메모</label>'+
+          '<input type="text" id="tpCfMemo" placeholder="간단한 메모" style="'+SI+'"></div>'+
+      '</div>'+
+      '<div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:6px">'+
+        '<button id="tpCfSaveReg" type="button" style="width:100%;height:48px;border:none;border-radius:12px;background:'+(isOne?'#f1f5f9':'#3f7cb8')+';color:'+(isOne?'#94a3b8':'#fff')+';font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">'+
+          '🏢 등록업체로 저장</button>'+
+        '<button id="tpCfSaveOne" type="button" style="width:100%;height:48px;border:none;border-radius:12px;background:'+(isOne?'#f59e0b':'#f8fafc')+';color:'+(isOne?'#fff':'#92400e')+';border:2px solid '+(isOne?'#f59e0b':'#fde68a')+';font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">'+
+          '🕐 임시번호 (일회성)로 저장</button>'+
+        '<p style="font-size:11px;color:#94a3b8;text-align:center;margin:0">일회성은 연락처에서 별도 탭으로 관리됩니다</p>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+
+  function doSave(vendorType){
+    var name=(document.getElementById('tpCfName').value||'').trim();
+    var phone=(document.getElementById('tpCfPhone').value||'').trim();
+    if(!name){toast('업체명 또는 이름을 입력하세요');document.getElementById('tpCfName').focus();return;}
+    if(!phone){toast('전화번호를 입력하세요');document.getElementById('tpCfPhone').focus();return;}
+    var phoneClean=phone.replace(/[^0-9]/g,'');
+    var dup=(typeof contactsCache!=='undefined'?contactsCache:[]).find(function(c){return (c.phone||'').replace(/[^0-9]/g,'')=== phoneClean;});
+    if(dup&&!confirm('"'+dup.name+'"과 같은 번호예요. 그래도 추가할까요?')) return;
+    if(!online||!db){toast('오프라인 — 저장 불가');return;}
+    var rec={
+      name:name,
+      cat:(document.getElementById('tpCfCat').value||'').trim()||'기타',
+      person:(document.getElementById('tpCfPerson').value||'').trim(),
+      title:(document.getElementById('tpCfRole').value||'').trim(),
+      phone:phone,
+      memo:(document.getElementById('tpCfMemo').value||'').trim(),
+      vendorType:vendorType,
+      fav:false,
+      createdAt:Date.now()
+    };
+    var btn=document.getElementById(vendorType==='일회성'?'tpCfSaveOne':'tpCfSaveReg');
+    if(btn){btn.disabled=true;btn.textContent='저장 중…';}
+    db.collection('contacts').add(rec).then(function(ref){
+      rec.id=ref.id;
+      if(typeof contactsCache!=='undefined') contactsCache.push(rec);
+      if(phoneInpRef) phoneInpRef.value=phone;
+      ov.remove();
+      toast('✅ "'+name+'" '+(vendorType==='일회성'?'일회성':'등록업체')+'로 저장됐어요');
+    }).catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent=vendorType==='일회성'?'🕐 임시번호 (일회성)로 저장':'🏢 등록업체로 저장';}
+      toast('저장 실패: '+(e.message||e));
+    });
+  }
+
+  document.getElementById('tpCfSaveReg').addEventListener('click',function(){doSave('등록업체');});
+  document.getElementById('tpCfSaveOne').addEventListener('click',function(){doSave('일회성');});
+  document.getElementById('tpCfX').addEventListener('click',function(){ov.remove();});
+  ov.addEventListener('click',function(e){if(e.target===ov)ov.remove();});
+  setTimeout(function(){var n=document.getElementById('tpCfName');if(n)n.focus();},80);
 }
 
 function saveWorkEntry(){
