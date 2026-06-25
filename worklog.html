@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0625-1154</title>
+<title>업무일지 v44-0625-1158</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -914,43 +914,60 @@
 }
 
 /* 📋 기록 카드 3열 그리드 (PC 넓을 때만) */
+/* ⚡ 헤더·메인 컨테이너 더 넓게 사용 */
+.wrap {
+  max-width: 1600px !important;
+  width: 100% !important;
+}
 @media (min-width: 900px) {
   #v43List {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    gap: 6px;
     align-items: start;
   }
   #v43List .v43-date-group {
     grid-column: 1 / -1; /* 날짜 헤더는 전체 폭 */
   }
   #v43List .v43-item {
-    /* 카드 내부 컴팩트하게 */
-    padding: 10px 12px !important;
+    /* 카드 내부 더 컴팩트하게 */
+    padding: 8px 10px !important;
+    min-width: 0; /* grid item이 컨테이너 넘치는 것 방지 */
   }
   #v43List .v43-item-title {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 14px;
+    font-size: 13px;
+  }
+  #v43List .v43-item-icon {
+    font-size: 18px;
+    flex-shrink: 0;
   }
   #v43List .v43-item-meta {
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 3px;
   }
   #v43List .v43-item-meta span {
-    font-size: 11px;
+    font-size: 10px;
+    padding: 1px 5px !important;
   }
   #v43List .v43-item-right {
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
+    gap: 2px;
+    flex-shrink: 0;
   }
   #v43List .v43-item-date {
+    font-size: 10px;
+  }
+  #v43List .v43-item-del {
+    width: 22px;
+    height: 22px;
     font-size: 11px;
   }
 }
-/* 1400px 이상 큰 모니터: 4열도 가능 */
+/* 1400px 이상 큰 모니터: 4열 */
 @media (min-width: 1400px) {
   #v43List {
     grid-template-columns: repeat(4, 1fr);
@@ -1153,7 +1170,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1154</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1158</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2639,7 +2656,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260625t1154"></script>
+<script src="worklog.js?v=44-20260625t1158"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -7688,7 +7705,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0625-1154';
+    if(el) el.textContent = 'v44-0625-1158';
   }
   setVer();
   setTimeout(setVer, 500);
