@@ -1963,16 +1963,23 @@ function bindTempPhoneUI(){
 
   /* 검색창 입력 → 연락처 드롭다운 */
   function renderTpList(q){
-    const contacts = (typeof contactsCache!=='undefined'?contactsCache:[]).filter(c=>c.name||c.phone);
+    const contacts = (typeof contactsCache!=='undefined') ? contactsCache : [];
+    if(!contacts.length){
+      searchList.innerHTML='<div style="padding:10px 14px;color:#aab8c8;font-size:13px">⏳ 연락처 로드 중… 잠시 후 다시 시도하세요</div>';
+      searchList.style.display='block';
+      if(typeof loadContactsCache==='function') loadContactsCache().then(()=>renderTpList(q)).catch(()=>{});
+      return;
+    }
     const ql = (q||'').trim().toLowerCase();
+    const qlNum = ql.replace(/[^0-9]/g,'');
     let arr = ql
-      ? contacts.filter(c=>
-          (c.name||'').toLowerCase().includes(ql)||
-          (c.person||'').toLowerCase().includes(ql)||
-          (c.phone||'').replace(/[^0-9]/g,'').includes(ql.replace(/[^0-9]/g,''))||
-          (c.cat||'').toLowerCase().includes(ql)
-        )
-      : contacts.slice(0, 20);
+      ? contacts.filter(c=>{
+          const hay = [c.name,c.person,c.title,c.cat,c.memo,c.address,c.email,c.company]
+            .map(v=>String(v||'')).join(' ').toLowerCase();
+          const ph = (c.phone||'').replace(/[^0-9]/g,'');
+          return hay.includes(ql) || (qlNum.length>=2 && ph.includes(qlNum));
+        })
+      : contacts.slice(0, 30);
     if(!arr.length){
       searchList.innerHTML='<div style="padding:10px 14px;color:#aab8c8;font-size:13px">검색 결과 없음</div>';
       searchList.style.display='block'; return;
