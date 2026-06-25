@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0625-1158</title>
+<title>업무일지 v44-0625-1236</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -872,25 +872,46 @@
 #overlay details summary::-webkit-details-marker { display:none; }
 
 /* 📞 통화 모달 - 3열 그리드 (한 화면 직관) */
-.modal #mFields.kind-call {
+.modal #mFields.kind-call,
+.modal #mFields.kind-accident,
+.modal #mFields.kind-item,
+.modal #mFields.kind-stock,
+.modal #mFields.kind-meeting,
+.modal #mFields.kind-deliver,
+.modal #mFields.kind-vacation,
+.modal #mFields.kind-schedule {
   display: grid !important;
   grid-template-columns: repeat(3, 1fr) !important;
   gap: 10px !important;
 }
-.modal #mFields.kind-call > .field { 
+.modal #mFields.kind-call > .field,
+.modal #mFields.kind-accident > .field,
+.modal #mFields.kind-item > .field,
+.modal #mFields.kind-stock > .field,
+.modal #mFields.kind-meeting > .field,
+.modal #mFields.kind-deliver > .field,
+.modal #mFields.kind-vacation > .field,
+.modal #mFields.kind-schedule > .field { 
   margin: 0 !important;
   width: auto !important;
 }
-.modal #mFields.kind-call > .field.full { 
+.modal #mFields.kind-call > .field.full,
+.modal #mFields.kind-accident > .field.full,
+.modal #mFields.kind-item > .field.full,
+.modal #mFields.kind-stock > .field.full,
+.modal #mFields.kind-meeting > .field.full,
+.modal #mFields.kind-deliver > .field.full,
+.modal #mFields.kind-vacation > .field.full,
+.modal #mFields.kind-schedule > .field.full { 
   grid-column: 1 / -1 !important;
 }
 @media (max-width: 700px) {
-  .modal #mFields.kind-call {
+  .modal #mFields[class*="kind-"] {
     grid-template-columns: 1fr 1fr !important;
   }
 }
 @media (max-width: 420px) {
-  .modal #mFields.kind-call {
+  .modal #mFields[class*="kind-"] {
     grid-template-columns: 1fr !important;
   }
 }
@@ -1170,7 +1191,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1158</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1236</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2656,7 +2677,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260625t1158"></script>
+<script src="worklog.js?v=44-20260625t1236"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -7705,7 +7726,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0625-1158';
+    if(el) el.textContent = 'v44-0625-1236';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -9277,6 +9298,16 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 
   function markModalFields(modal){
     if(!modal) return;
+    /* 🚫 수정/편집 모달은 마킹 제외 (저장된 값이 자동으로 보이는 문제 방지) */
+    var titleEl = modal.querySelector('h3, .modal-title, [id$=Title], [id*=Title]');
+    var title = titleEl ? (titleEl.textContent||'') : '';
+    if(title.indexOf('수정') !== -1 || title.indexOf('편집') !== -1){
+      /* 이미 마킹된 필드 모두 제거 */
+      modal.querySelectorAll('.field-auto').forEach(function(el){
+        el.classList.remove('field-auto');
+      });
+      return;
+    }
     var inputs = modal.querySelectorAll('input:not([type=hidden]):not([type=file]):not([type=checkbox]):not([type=radio]), textarea, select');
     inputs.forEach(function(el){
       /* 이미 처리된 필드는 다시 처리 안 함 */

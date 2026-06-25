@@ -1984,15 +1984,16 @@ function openEditor(kind,id){
   const sc=SCHEMA[kind];
   const mf = $("mFields");
   mf.className = "grid kind-" + kind; /* kind별 그리드 적용 */
-  /* 통화 모달은 인라인 스타일로도 강제 (CSS 충돌 방지) */
-  if(kind === 'call'){
+  /* 여러 필드가 있는 모달은 인라인으로도 그리드 강제 (CSS 충돌 방지) */
+  const GRID_KINDS = ['call', 'accident', 'item', 'stock', 'meeting', 'deliver', 'vacation', 'schedule'];
+  if(GRID_KINDS.includes(kind)){
     mf.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px';
   } else {
     mf.style.cssText = 'display:block';
   }
   mf.innerHTML = sc.map(fieldHTML).join("");
-  /* call 모달의 .field에 인라인 스타일 보강 */
-  if(kind === 'call'){
+  /* .field 마진 제거 + full은 전체 폭 */
+  if(GRID_KINDS.includes(kind)){
     mf.querySelectorAll('.field').forEach(f=>{
       f.style.margin = '0';
       if(f.classList.contains('full')) f.style.gridColumn = '1 / -1';
@@ -2007,7 +2008,13 @@ function openEditor(kind,id){
       setTimeout(()=>restoreAlertBefore(data[f.k]||0), 50);
       return;
     }
-    const el=$("m-"+f.k); if(!el) return; const v=data[f.k]; if(v!==undefined&&v!==null&&v!=="") el.value=v; 
+    const el=$("m-"+f.k); if(!el) return; const v=data[f.k]; 
+    /* number 타입에서 0이면 빈셀로 (사용자 가독성 ↑) */
+    if(f.type === 'number' && (v === 0 || v === '0' || v === undefined || v === null)){
+      el.value = '';
+    } else if(v!==undefined&&v!==null&&v!=="") {
+      el.value=v;
+    }
   });
   const hasPhoto=PHOTO_KINDS.includes(kind);
   $("mPhotoArea").style.display=hasPhoto?"flex":"none";
