@@ -2191,7 +2191,141 @@ function openTpContactForm(phoneInpRef, defaultType){
   setTimeout(function(){var n=document.getElementById('tpCfName');if(n)n.focus();},80);
 }
 
-function saveWorkEntry(){
+
+/* ══════════════════════════════════════════════
+   🔤 맞춤법 AI 검사 (저장 전 자동 실행)
+   ══════════════════════════════════════════════ */
+async function saveWorkEntry(){
+  const title = ($("m-title")||{}).value?.trim();
+  const detail = ($("m-detail")||{}).value?.trim();
+  if(!title){ toast("업무내역을 입력하세요"); return; }
+
+  // AI 키 없으면 바로 저장
+  const apiKey = (typeof aiGetKey==="function") ? aiGetKey() : "";
+  if(!apiKey){ _doSaveWorkEntry(); return; }
+
+  // 검사할 텍스트 수집
+  const checkTexts = [];
+  if(title)  checkTexts.push({field:"업무내역", text:title});
+  if(detail) checkTexts.push({field:"상세내용", text:detail});
+  if(!checkTexts.length){ _doSaveWorkEntry(); return; }
+
+  // 로딩 표시
+  const saveBtn = $("mSave");
+  const origText = saveBtn ? saveBtn.textContent : "";
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent="✍️ 검사 중…"; }
+
+  try{
+    const prompt = `다음 업무일지 내용의 맞춤법과 띄어쓰기를 검사해주세요.
+오류가 있으면 JSON으로만 응답하세요. 오류가 없으면 {"ok":true} 만 응답하세요.
+
+${checkTexts.map(t=>`[${t.field}]: ${t.text}`).join("\n")}
+
+응답 형식(오류 있을 때):
+{"ok":false,"items":[{"field":"필드명","original":"원본","corrected":"수정본","reason":"이유"}]}`;
+
+    const res = await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-6",
+        max_tokens:1000,
+        messages:[{role:"user",content:prompt}]
+      })
+    });
+    const data = await res.json();
+    const raw = (data.content||[]).map(b=>b.text||"").join("").trim();
+
+    let result;
+    try{ result = JSON.parse(raw.replace(/```json|```/g,"").trim()); }
+    catch(e){ result = {ok:true}; }
+
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent=origText; }
+
+    if(result.ok){ _doSaveWorkEntry(); return; }
+
+    // 오류 있으면 수정 제안 팝업
+    showSpellCorrectPopup(result.items||[], ()=>_doSaveWorkEntry());
+
+  }catch(err){
+    console.warn("[맞춤법 검사 오류]", err);
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent=origText; }
+    // 네트워크 오류 등은 그냥 저장
+    _doSaveWorkEntry();
+  }
+}
+
+/* 맞춤법 수정 제안 팝업 */
+function showSpellCorrectPopup(items, onSave, kind){
+  const ov = document.createElement("div");
+  ov.id = "spellCheckOv";
+  ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:13000;display:flex;align-items:center;justify-content:center;padding:16px";
+
+  const itemsHTML = items.map((it,i)=>`
+    <div style="background:#fff;border:1.5px solid #e8f0fa;border-radius:12px;padding:12px 14px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:6px">[${it.field}]</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:14px;color:#e74c3c;text-decoration:line-through">${esc(it.original)}</span>
+        <span style="font-size:16px;color:#94a3b8">→</span>
+        <span style="font-size:14px;font-weight:700;color:#065f46">${esc(it.corrected)}</span>
+      </div>
+      <div style="font-size:11px;color:#7a92a8;margin-top:4px">💡 ${esc(it.reason||"")}</div>
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer;font-size:13px;font-weight:600;color:#1a2f45">
+        <input type="checkbox" class="spell-apply" data-idx="${i}" checked
+          style="width:15px;height:15px;accent-color:#3f7cb8;cursor:pointer">
+        이 수정 적용
+      </label>
+    </div>`).join("");
+
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;max-height:85vh;overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+      <div style="padding:14px 18px 12px;background:linear-gradient(135deg,#fef3c7,#fff);border-bottom:1.5px solid #fde68a;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">✍️</span>
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:800;color:#1a2f45">맞춤법 검사 결과</div>
+          <div style="font-size:12px;color:#92400e">${items.length}개 수정 제안</div>
+        </div>
+        <button id="spellClose" type="button" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer">✕</button>
+      </div>
+      <div style="padding:14px 18px">${itemsHTML}</div>
+      <div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:8px">
+        <button id="spellApply" type="button"
+          style="width:100%;height:48px;border:none;border-radius:12px;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">
+          ✅ 선택 수정 후 저장
+        </button>
+        <button id="spellSkip" type="button"
+          style="width:100%;height:42px;border:1.5px solid #e2e8f0;border-radius:12px;background:#f8fafc;color:#64748b;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">
+          그냥 저장 (수정 안 함)
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+
+  document.getElementById("spellClose").addEventListener("click", ()=>ov.remove());
+  document.getElementById("spellSkip").addEventListener("click", ()=>{ ov.remove(); onSave(); });
+  document.getElementById("spellApply").addEventListener("click", ()=>{
+    ov.querySelectorAll(".spell-apply:checked").forEach(cb=>{
+      const it = items[parseInt(cb.dataset.idx)];
+      if(!it) return;
+      // SCHEMA에서 label 일치하는 필드 찾아서 적용
+      const sc3 = (kind && SCHEMA[kind]) ? SCHEMA[kind] : (SCHEMA[mKind]||[]);
+      const fd = sc3.find(f=>f.label.replace(/\s*\*$/,"")===it.field);
+      if(fd){
+        const el=$("m-"+fd.k);
+        if(el) el.value=el.value.replace(it.original, it.corrected);
+      } else {
+        // 업무 모달 fallback
+        if(it.field==="업무내역"){ const el=$("m-title"); if(el) el.value=el.value.replace(it.original,it.corrected); }
+        if(it.field==="상세내용"){ const el=$("m-detail"); if(el) el.value=el.value.replace(it.original,it.corrected); }
+      }
+    });
+    ov.remove();
+    onSave();
+  });
+  ov.addEventListener("click", e=>{ if(e.target===ov) ov.remove(); });
+}
+
+function _doSaveWorkEntry(){
   const mode = _workMode;
   const title=($("m-title")||{}).value?.trim();
   if(!title){ toast("업무내역을 입력하세요"); return; }
@@ -2951,6 +3085,50 @@ $("mSave").addEventListener("click",async ()=>{
   try {
   // 업무 모달은 별도 저장 함수로 처리
   if(mKind==="work"){ saveWorkEntry(); return; }
+  // ── 맞춤법 검사 대상 kind ──
+  const SPELL_CHECK_KINDS = ["call","plan","memo","meeting","deliver","vacation","schedule","accident","cleaning"];
+  if(SPELL_CHECK_KINDS.includes(mKind)){
+    const apiKey = (typeof aiGetKey==="function") ? aiGetKey() : "";
+    if(apiKey){
+      // 현재 kind의 text/textarea 필드 수집
+      const sc2 = SCHEMA[mKind]||[];
+      const checkTexts2 = [];
+      sc2.filter(f=>f.type==="text"||f.type==="textarea").forEach(f=>{
+        const el=$("m-"+f.k);
+        const v = el ? (el.value||"").trim() : "";
+        if(v.length>1) checkTexts2.push({field:f.label.replace(/\s*\*$/,""), text:v});
+      });
+      if(checkTexts2.length){
+        const saveBtn2 = $("mSave");
+        const origTxt2 = saveBtn2 ? saveBtn2.textContent : "";
+        if(saveBtn2){ saveBtn2.disabled=true; saveBtn2.textContent="✍️ 검사 중…"; }
+        try{
+          const prompt2 = "다음 내용의 맞춤법과 띄어쓰기를 검사해주세요.\n오류가 있으면 JSON으로만 응답하세요. 오류가 없으면 {\"ok\":true} 만 응답하세요.\n\n"
+            + checkTexts2.map(function(t){return "["+t.field+"]: "+t.text;}).join("\n")
+            + "\n\n응답 형식(오류 있을 때):\n{\"ok\":false,\"items\":[{\"field\":\"필드명\",\"original\":\"원본\",\"corrected\":\"수정본\",\"reason\":\"이유\"}]}";
+          const res2 = await fetch("https://api.anthropic.com/v1/messages",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,messages:[{role:"user",content:prompt2}]})
+          });
+          const data2 = await res2.json();
+          const raw2 = (data2.content||[]).map(b=>b.text||"").join("").trim();
+          let result2;
+          try{ result2=JSON.parse(raw2.replace(/```json|```/g,"").trim()); }catch(e){ result2={ok:true}; }
+          if(saveBtn2){ saveBtn2.disabled=false; saveBtn2.textContent=origTxt2; }
+          if(!result2.ok && (result2.items||[]).length){
+            // 맞춤법 오류 팝업 — 확인 후 계속 진행하는 콜백 방식
+            await new Promise(resolve=>{
+              showSpellCorrectPopup(result2.items||[], resolve, mKind);
+            });
+          }
+        }catch(e2){
+          console.warn("[맞춤법 검사]",e2);
+          if(saveBtn2){ saveBtn2.disabled=false; saveBtn2.textContent=origTxt2; }
+        }
+      }
+    }
+  }
   // v16: 비밀번호 종류는 별도 처리 (암호화)
   if(mKind==="password"){
     const name=$("m-pwname").value.trim();
