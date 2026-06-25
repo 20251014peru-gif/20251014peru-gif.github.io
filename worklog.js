@@ -3365,8 +3365,8 @@ function renderMonthView(){
       }
     } else {
       const wArrAll=work[ds]||[]; const vArr=vac[ds]||[]; const oArr=other[ds]||[]; const sArr=sched[ds]||[]; const clArr=cleaning[ds]||[]; const exArr=expense[ds]||[];
-      /* 🧹 청소반장 일일업무 분리 (field 매칭) */
-      const isCleaningLead = (e) => /청소반장/.test(e.field||'') || /청소반장/.test(e.title||'');
+      /* 🧹 청소반장 일일업무 분리 (분야 정확히 매칭) */
+      const isCleaningLead = (e) => (e.field||'') === '청소반장일일업무';
       const wArr = wArrAll.filter(e=>!isCleaningLead(e));
       const wLeadArr = wArrAll.filter(isCleaningLead);
       // v37: 필터 적용
