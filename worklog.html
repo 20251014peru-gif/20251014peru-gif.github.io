@@ -8154,23 +8154,22 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 
     function makeCard(e){
       var color=e.expType==='세금계산서'?'#c2410c':'#3f7cb8';
+      var bgGrad=e.expType==='세금계산서'?'linear-gradient(135deg,#fff8f0 0%,#fff 100%)':'linear-gradient(135deg,#f0f6ff 0%,#fff 100%)';
       var issuedBadge=e.expType==='세금계산서'?(e.isIssued?'<span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">✅ 발급완료</span>':'<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">⏳ 미발급</span>'):'';
       var purposeBadge=e.purpose?('<span style="background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">'+esc(e.purpose)+'</span>'):'';
-      return '<div style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid '+color+';border-radius:12px;padding:14px 16px">'
-        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
-        +'<div style="flex:1;min-width:0;cursor:pointer" data-expid="'+esc(e.id)+'">'
-        +'<div style="font-size:15px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e.title||'(내역없음)')+'</div>'
-        +'<div style="font-size:12px;color:#7a92a8;margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">'
-        +'<span>'+esc(e.date||'')+'</span>'
-        +(e.vendor?'<span>'+esc(e.vendor)+'</span>':'')
-        +issuedBadge+purposeBadge
+      return '<div style="background:'+bgGrad+';border:1.5px solid #e8f0fa;border-left:4px solid '+color+';border-radius:12px;padding:13px 14px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;transition:box-shadow .12s,transform .12s" data-expid="'+esc(e.id)+'">'
+        +'<div>'
+        +'<div style="font-size:14px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:5px">'+esc(e.title||'(내역없음)')+'</div>'
+        +'<div style="font-size:12px;color:#7a92a8;display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:4px">'
+        +'<span>📅 '+esc(e.date||'')+'</span>'
+        +(e.vendor?'<span>🏢 '+esc(e.vendor)+'</span>':'')
         +'</div>'
-        +(e.memo?'<div style="font-size:12px;color:#aab8c8;margin-top:4px">'+esc(e.memo)+'</div>':'')
+        +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">'+issuedBadge+purposeBadge+'</div>'
+        +(e.memo?'<div style="font-size:11px;color:#aab8c8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e.memo)+'</div>':'')
         +'</div>'
-        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'
-        +'<div style="font-size:17px;font-weight:800;color:'+color+'">'+fmt(e.amount)+'원</div>'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid #f0f4f8">'
+        +'<span style="font-size:16px;font-weight:800;color:'+color+'">'+fmt(e.amount)+'원</span>'
         +'<button data-expdel="'+esc(e.id)+'" style="background:#fde8e8;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">🗑 삭제</button>'
-        +'</div>'
         +'</div>'
         +'</div>';
     }
@@ -8189,7 +8188,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
           +'<span style="font-size:14px;font-weight:800;color:#3f7cb8">💸 개인지출</span>'
           +'<span style="font-size:14px;font-weight:800;color:#3f7cb8">'+fmt(pSum)+'원 · '+personal.length+'건</span>'
           +'</div>'
-          +'<div style="display:flex;flex-direction:column;gap:8px">'
+          +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">'
           +personal.map(makeCard).join('')
           +'</div></div>';
       }
@@ -8201,13 +8200,13 @@ console.log('[expenseV2] 지출 모달 패치 로드');
           +'<span style="font-size:14px;font-weight:800;color:#c2410c">📃 세금계산서</span>'
           +'<span style="font-size:13px;font-weight:800;color:#c2410c">'+fmt(tSum)+'원 · '+tax.length+'건'+(tUnissued?' · <span style="color:#c2410c">미발급 '+tUnissued+'건</span>':'')+'</span>'
           +'</div>'
-          +'<div style="display:flex;flex-direction:column;gap:8px">'
+          +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">'
           +tax.map(makeCard).join('')
           +'</div></div>';
       }
     } else {
       /* 특정 종류 필터 — 그냥 목록 */
-      html = '<div style="display:flex;flex-direction:column;gap:8px">'+list.map(makeCard).join('')+'</div>';
+      html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">'+list.map(makeCard).join('')+'</div>';
     }
     box.innerHTML=html;
     box.querySelectorAll('[data-expid]').forEach(function(el){
@@ -8574,7 +8573,8 @@ console.log('[expenseV2] 지출 모달 패치 로드');
     _origRenderList();
     var box = g('expV2ListArea'); if (!box) return;
     box.querySelectorAll('[data-expid]').forEach(function(cardBody){
-      var card = cardBody.closest ? cardBody.closest('[style*="border-left"]') : cardBody.parentElement;
+      /* data-expid가 카드 루트에 있으므로 자기 자신이 card */
+      var card = cardBody;
       if (!card) return;
       var eid = cardBody.dataset.expid;
       var en = typeof entries !== 'undefined' ? entries.find(function(x){ return x.id===eid; }) : null;
