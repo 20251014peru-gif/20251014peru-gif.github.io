@@ -327,7 +327,7 @@ const SCHEMA={
   ],
   expense:[
     {k:"date",label:"날짜",type:"date",req:true},
-    {k:"expType",label:"종류",type:"select",opts:["개인지출","세금계산서"],req:true},
+    {k:"expType",label:"종류",type:"select",opts:["개인지출","세금계산서","전표"],req:true},
     {k:"title",label:"내역",type:"text",full:true,req:true},
     {k:"amount",label:"금액 (원)",type:"number",req:true},
     {k:"memo",label:"비고",type:"text",full:true},
@@ -3255,7 +3255,7 @@ var calView="month";  // "month" or "year"
 // v37: 달력 종류별 필터 (true=표시)
 const CAL_FILTER = {
   work:true, cleaning:true, cleaning_lead:true, memo:true, call:true, meeting:true,
-  deliver:true, vacation:true, expense:true, expense_tax:true, expense_personal:true, plan:true, schedule:true
+  deliver:true, vacation:true, expense:true, expense_tax:true, expense_personal:true, expense_voucher:true, plan:true, schedule:true
 };
 (function(){ const d=new Date(); calY=d.getFullYear(); calM=d.getMonth(); })();
 function bindCalControls(){
@@ -3408,25 +3408,28 @@ function renderMonthView(){
         });
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#15803d">🧹 청소 ${clArr.length}</div>${cb}</div>`;
       }
-      // 지출: 세금계산서 / 개인지출 분리 필터
+      // 지출: 세금계산서 / 개인지출 / 전표 분리 필터
       const taxArr = exArr.filter(e=>e.expType==="세금계산서");
-      const personalArr = exArr.filter(e=>e.expType!=="세금계산서");
-      const renderExpGroup = (arr, isTax) => {
+      const voucherArr = exArr.filter(e=>e.expType==="전표");
+      const personalArr = exArr.filter(e=>e.expType!=="세금계산서" && e.expType!=="전표");
+      const renderExpGroup = (arr, mode) => {
         if(!arr.length) return;
-        if(isTax && !CAL_FILTER.expense_tax) return;
-        if(!isTax && !CAL_FILTER.expense_personal) return;
+        if(mode==='tax' && !CAL_FILTER.expense_tax) return;
+        if(mode==='voucher' && !CAL_FILTER.expense_voucher) return;
+        if(mode==='personal' && !CAL_FILTER.expense_personal) return;
         hasContent=true;
-        const icon = isTax ? "📃" : "💸";
-        const color = isTax ? "#c2410c" : "#0369a1";
-        const label = isTax ? "📃 세금계산서" : "💸 개인지출";
+        const icon = mode==='tax'?"📃":(mode==='voucher'?"📋":"💸");
+        const color = mode==='tax'?"#c2410c":(mode==='voucher'?"#7c3aed":"#0369a1");
+        const label = mode==='tax'?"📃 세금계산서":(mode==='voucher'?"📋 전표":"💸 개인지출");
         let eb="";
         arr.forEach(e=>{
           eb += `<div class="otitle" data-kind="expense" data-id="${e.id}">${icon} ${esc((e.title||"").slice(0,18))} <b style="color:${color}">${won(Number(e.amount)||0)}원</b></div>`;
         });
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${color}">${label} ${arr.length}</div>${eb}</div>`;
       };
-      renderExpGroup(taxArr, true);
-      renderExpGroup(personalArr, false);
+      renderExpGroup(taxArr, 'tax');
+      renderExpGroup(voucherArr, 'voucher');
+      renderExpGroup(personalArr, 'personal');
       if(vArr.length && CAL_FILTER.vacation){
         hasContent=true;
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.vacation}">${CAL_KIND_LABEL.vacation}</div><div class="vac">${esc(vArr.join(", "))}</div></div>`;

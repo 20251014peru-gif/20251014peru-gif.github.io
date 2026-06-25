@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0625-1138</title>
+<title>업무일지 v44-0625-1147</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1011,70 +1011,92 @@
 <style>
 #v43FabHeader:hover{width:64px;box-shadow:-4px 0 30px rgba(37,99,168,.6);}
 #v43FabHeader:active{filter:brightness(.9);}
-#v43FabHeader.dragging{cursor:grabbing;opacity:.85;transition:none}
+#v43FabHeader.dragging{cursor:grabbing;opacity:.85;transition:none;transform:scale(1.05);box-shadow:-6px 0 36px rgba(37,99,168,.7);}
+/* 드래그 가능 힌트 - 상하 화살표 작게 표시 */
+#v43FabHeader::before{
+  content:"⋮⋮";
+  position:absolute;
+  top:6px;
+  right:8px;
+  font-size:10px;
+  color:rgba(255,255,255,.6);
+  letter-spacing:-1px;
+  pointer-events:none;
+}
 </style>
 <script>
-/* 📍 추가 버튼 상하 드래그 (모바일 우선) */
+/* 📍 추가 버튼 상하 드래그 (모바일 친화) - v2 슬라이드 방식 */
 (function(){
   var fab = document.getElementById('v43FabHeader');
   if(!fab) return;
-  var dragging=false, startY=0, startTop=0, moved=false;
+  var dragging=false, pendingDrag=false, startY=0, startTop=0;
   /* 저장된 위치 복원 */
   try{
     var saved=localStorage.getItem('v43_fab_top');
     if(saved){ fab.style.top = saved+'px'; }
   }catch{}
 
-  function onStart(e){
-    var t = e.touches?e.touches[0]:e;
-    dragging=true; moved=false;
-    startY=t.clientY;
-    startTop=parseInt(window.getComputedStyle(fab).top,10)||62;
-    fab.classList.add('dragging');
+  function startTracking(clientY){
+    pendingDrag = true;
+    dragging = false;
+    startY = clientY;
+    startTop = parseInt(window.getComputedStyle(fab).top,10) || 62;
   }
-  function onMove(e){
-    if(!dragging) return;
-    var t = e.touches?e.touches[0]:e;
-    var dy = t.clientY - startY;
-    if(Math.abs(dy) > 4) moved = true;
-    var newTop = Math.max(10, Math.min(window.innerHeight - 130, startTop + dy));
-    fab.style.top = newTop+'px';
-    if(e.cancelable) e.preventDefault();
-  }
-  function onEnd(e){
-    if(!dragging) return;
-    dragging=false;
-    fab.classList.remove('dragging');
-    if(moved){
-      /* 드래그 후 클릭 이벤트 차단 */
-      try{ localStorage.setItem('v43_fab_top', parseInt(fab.style.top,10)); }catch{}
-      var stopClick = function(ev){ ev.stopPropagation(); ev.preventDefault(); fab.removeEventListener('click', stopClick, true); };
-      fab.addEventListener('click', stopClick, true);
-      setTimeout(()=>fab.removeEventListener('click', stopClick, true), 50);
+  function updateDrag(clientY, cancelable){
+    if(!pendingDrag && !dragging) return;
+    var dy = clientY - startY;
+    /* 5px 이상 움직이면 드래그 시작 */
+    if(!dragging && Math.abs(dy) > 5){
+      dragging = true;
+      pendingDrag = false;
+      fab.classList.add('dragging');
+      navigator.vibrate && navigator.vibrate(20);
     }
+    if(dragging){
+      var newTop = Math.max(10, Math.min(window.innerHeight - 130, startTop + dy));
+      fab.style.top = newTop + 'px';
+      return true; /* 드래그 중 - preventDefault 필요 */
+    }
+    return false;
   }
-  /* 터치 (모바일) - 길게 누르고 드래그 */
-  var pressTimer=null;
+  function endDrag(){
+    if(dragging){
+      dragging = false;
+      fab.classList.remove('dragging');
+      try{ localStorage.setItem('v43_fab_top', parseInt(fab.style.top,10)); }catch{}
+      /* 드래그 후 click 이벤트 차단 */
+      var stopClick = function(ev){ 
+        ev.stopPropagation(); 
+        ev.preventDefault(); 
+        fab.removeEventListener('click', stopClick, true); 
+      };
+      fab.addEventListener('click', stopClick, true);
+      setTimeout(function(){ fab.removeEventListener('click', stopClick, true); }, 100);
+    }
+    pendingDrag = false;
+  }
+
+  /* 터치 (모바일) */
   fab.addEventListener('touchstart', function(e){
-    pressTimer = setTimeout(function(){
-      onStart(e);
-      navigator.vibrate&&navigator.vibrate(30);
-    }, 250); /* 250ms 길게 눌러야 드래그 */
+    var t = e.touches[0];
+    startTracking(t.clientY);
   }, {passive:true});
   fab.addEventListener('touchmove', function(e){
-    if(dragging) onMove(e);
-    else if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
+    var t = e.touches[0];
+    var shouldPreventDefault = updateDrag(t.clientY, e.cancelable);
+    if(shouldPreventDefault && e.cancelable) e.preventDefault();
   }, {passive:false});
-  fab.addEventListener('touchend', function(e){
-    if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
-    if(dragging) onEnd(e);
-  });
-  /* PC 마우스 - Shift+드래그 */
+  fab.addEventListener('touchend', endDrag);
+  fab.addEventListener('touchcancel', endDrag);
+
+  /* PC 마우스 - 그냥 누르고 위아래 드래그 (Shift 불필요) */
   fab.addEventListener('mousedown', function(e){
-    if(e.shiftKey){ onStart(e); e.preventDefault(); }
+    startTracking(e.clientY);
   });
-  document.addEventListener('mousemove', function(e){ if(dragging) onMove(e); });
-  document.addEventListener('mouseup', onEnd);
+  document.addEventListener('mousemove', function(e){
+    updateDrag(e.clientY, true);
+  });
+  document.addEventListener('mouseup', endDrag);
 })();
 </script>
 <div class="dbg-panel" id="dbgPanel">
@@ -1087,7 +1109,7 @@
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1138</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0625-1147</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1098,6 +1120,7 @@
         <button class="nav-btn nav-back" id="btnBack" title="이전 화면" disabled>↶ 뒤로</button>
         <a class="nav-btn" href="staff.html" target="_blank" style="background:#6366f1;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">👥 직원</a>
         <a class="nav-btn" href="contacts.html" target="_blank" style="background:#0891b2;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">📋 연락처</a>
+        <button class="nav-btn" id="btnQuickJournal" style="background:#f59e0b;color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer" title="자주 쓰는 일지 빠른 진입">📓 일지</button>
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
       </div>
     </div>
@@ -1288,6 +1311,7 @@
         <button class="cf-btn active" data-calf="vacation">🌴 휴가</button>
         <button class="cf-btn active" data-calf="expense_tax">📃 세금</button>
         <button class="cf-btn active" data-calf="expense_personal">💸 개인</button>
+        <button class="cf-btn active" data-calf="expense_voucher">📋 전표</button>
         <button class="cf-btn active" data-calf="plan">📋 계획</button>
       </div>
       <div class="cal-grid" id="calGrid"></div>
@@ -2390,9 +2414,10 @@
     <!-- 정산종류 -->
     <div style="margin-bottom:12px">
       <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:6px">정산종류</label>
-      <div style="display:flex;gap:6px">
-        <button type="button" data-etype="개인지출" class="expV2TypeBtn" style="flex:1;height:40px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">💸 개인지출</button>
-        <button type="button" data-etype="세금계산서" class="expV2TypeBtn" style="flex:1;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📃 세금계산서</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" data-etype="개인지출" class="expV2TypeBtn" style="flex:1;min-width:90px;height:40px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">💸 개인지출</button>
+        <button type="button" data-etype="세금계산서" class="expV2TypeBtn" style="flex:1;min-width:90px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📃 세금계산서</button>
+        <button type="button" data-etype="전표" class="expV2TypeBtn" style="flex:1;min-width:90px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 전표</button>
       </div>
     </div>
 
@@ -2570,7 +2595,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260625t1138"></script>
+<script src="worklog.js?v=44-20260625t1147"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -7259,9 +7284,10 @@ function buildExpenseModalHTML() {
     +'</div>'
     +'<div style="margin-bottom:12px">'
     +'<label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">정산종류</label>'
-    +'<div style="display:flex;gap:6px">'
-    +'<button type="button" data-etype="개인지출" class="expV2TypeBtn" style="flex:1;height:40px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">💸 개인지출</button>'
-    +'<button type="button" data-etype="세금계산서" class="expV2TypeBtn" style="flex:1;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📃 세금계산서</button>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    +'<button type="button" data-etype="개인지출" class="expV2TypeBtn" style="flex:1;min-width:90px;height:40px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">💸 개인지출</button>'
+    +'<button type="button" data-etype="세금계산서" class="expV2TypeBtn" style="flex:1;min-width:90px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📃 세금계산서</button>'
+    +'<button type="button" data-etype="전표" class="expV2TypeBtn" style="flex:1;min-width:90px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 전표</button>'
     +'</div>'
     +'</div>'
     +'<div style="margin-bottom:12px">'
@@ -7618,7 +7644,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0625-1138';
+    if(el) el.textContent = 'v44-0625-1147';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -9004,6 +9030,172 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
   console.log('[expV2] v44-0622-1651 로드');
+})();
+
+/* ─────────────────────────────────────────────────────────
+   📓 일지 빠른 진입 메뉴
+   - 점검일지(wl_insp_v43)와 운영실무(wl_docs_v43)에서 이름/메모 매칭
+   - 일일/주간/월간 분류
+   ───────────────────────────────────────────────────────── */
+(function(){
+  /* 분류별 키워드 → 매칭할 일지명 (사용자가 등록한 것과 매칭) */
+  var QUICK_JOURNAL_GROUPS = [
+    {
+      title: '📅 일일',
+      color: '#3f7cb8',
+      items: [
+        {label:'일일업무일지', keywords:['일일업무','일일 업무','daily']},
+        {label:'수전일지', keywords:['수전','수전일지']},
+        {label:'엘리베이터일지', keywords:['엘리베이터','승강기','elevator']},
+      ]
+    },
+    {
+      title: '📆 주간',
+      color: '#0891b2',
+      items: [
+        {label:'전기설비 주간점검', keywords:['전기설비 주간','전기 주간','주간점검']},
+        {label:'비상발전기 점검', keywords:['비상발전기','발전기']},
+        {label:'주간 회의록', keywords:['주간회의','주간 회의','회의록']},
+      ]
+    },
+    {
+      title: '🗓 월간',
+      color: '#7c3aed',
+      items: [
+        {label:'전기설비 점검(월)', keywords:['전기설비 점검','전기 월간','월간 전기']},
+        {label:'전기안전 교육', keywords:['전기안전','안전교육','전기 교육']},
+      ]
+    }
+  ];
+
+  function getJournalData(){
+    var insp = [], docs = [];
+    try{ insp = JSON.parse(localStorage.getItem('wl_insp_v43')||'[]'); }catch{}
+    try{ docs = JSON.parse(localStorage.getItem('wl_docs_v43')||'[]'); }catch{}
+    return [].concat(insp.map(d=>Object.assign({_source:'점검일지'},d)), docs.map(d=>Object.assign({_source:'운영실무'},d)));
+  }
+
+  function findMatching(keywords){
+    var all = getJournalData();
+    var matches = [];
+    var lowerKws = keywords.map(k=>k.toLowerCase().replace(/\s+/g,''));
+    all.forEach(function(d){
+      var hay = ((d.name||'')+' '+(d.type||'')+' '+(d.memo||'')).toLowerCase().replace(/\s+/g,'');
+      if(lowerKws.some(k=>hay.includes(k))){
+        matches.push(d);
+      }
+    });
+    /* 최신순 정렬 */
+    matches.sort((a,b)=>(b.month||'').localeCompare(a.month||''));
+    return matches;
+  }
+
+  function openJournalFile(d){
+    if(!d || !d.path){
+      if(typeof toast === 'function') toast('파일 경로가 없어요');
+      return;
+    }
+    /* localfile:// 프로토콜로 열기 */
+    var url = 'localfile://' + encodeURI(d.path.split('\\').join('/'));
+    try{
+      window.location.href = url;
+    }catch(e){
+      if(typeof toast === 'function') toast('파일 열기 실패: '+e.message);
+    }
+  }
+
+  function openMainModal(){
+    var ov = document.getElementById('quickJournalOverlay');
+    if(!ov){
+      ov = document.createElement('div');
+      ov.id = 'quickJournalOverlay';
+      ov.className = 'overlay';
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:11000;display:flex;align-items:center;justify-content:center;padding:16px';
+      ov.innerHTML = '<div id="quickJournalSheet" style="background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:85vh;overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,.22);padding:18px"></div>';
+      ov.addEventListener('click', function(e){
+        if(e.target === ov) ov.remove();
+      });
+      document.body.appendChild(ov);
+    }
+    var sheet = ov.querySelector('#quickJournalSheet');
+    var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="margin:0;font-size:18px;color:#1a2f45">📓 일지 빠른 진입</h3><button onclick="document.getElementById(\'quickJournalOverlay\').remove()" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer">✕</button></div>';
+    QUICK_JOURNAL_GROUPS.forEach(function(grp){
+      html += '<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:800;color:'+grp.color+';margin-bottom:8px;padding:6px 10px;background:'+grp.color+'15;border-radius:8px">'+grp.title+'</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:6px">';
+      grp.items.forEach(function(it){
+        var matches = findMatching(it.keywords);
+        var hasMatch = matches.length > 0;
+        var latestPath = hasMatch ? (matches[0].path||'') : '';
+        var subText = hasMatch ? ('최신: '+(matches[0].name||'').slice(0,30)+(matches[0].month?(' / '+matches[0].month):'')) : '등록된 파일 없음 (점검일지·운영실무에 추가하세요)';
+        html += '<div data-quickjournal="'+it.label+'" style="padding:10px 12px;background:'+(hasMatch?'#f7faff':'#f5f5f5')+';border:1.5px solid '+(hasMatch?'#dbe6f4':'#e5e5e5')+';border-radius:10px;cursor:'+(hasMatch?'pointer':'default')+';transition:all .12s">';
+        html += '  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">';
+        html += '    <div><div style="font-weight:700;font-size:14px;color:#1a2f45">'+it.label+'</div><div style="font-size:11px;color:#7a92a8;margin-top:2px">'+subText+'</div></div>';
+        if(hasMatch){
+          html += '<div style="display:flex;gap:4px;flex-shrink:0"><button data-open-path="'+encodeURIComponent(latestPath)+'" class="btn-action btn-action-sm btn-action-primary" style="padding:0 10px;height:28px;font-size:11px">▶ 열기</button>';
+          if(matches.length > 1){
+            html += '<button data-show-all="'+it.label+'" class="btn-action btn-action-sm" style="padding:0 8px;height:28px;font-size:11px">+'+(matches.length-1)+'개</button>';
+          }
+          html += '</div>';
+        }
+        html += '  </div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    });
+    html += '<div style="font-size:11px;color:#94a3b8;text-align:center;margin-top:10px">💡 점검일지·운영실무 탭에 일지를 등록하면 자동으로 매칭됩니다</div>';
+    sheet.innerHTML = html;
+
+    /* 클릭 핸들러 */
+    sheet.querySelectorAll('[data-open-path]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var path = decodeURIComponent(btn.dataset.openPath);
+        openJournalFile({path:path});
+      });
+    });
+    sheet.querySelectorAll('[data-show-all]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var label = btn.dataset.showAll;
+        var grp = QUICK_JOURNAL_GROUPS.find(g=>g.items.some(i=>i.label===label));
+        var item = grp ? grp.items.find(i=>i.label===label) : null;
+        if(!item) return;
+        var matches = findMatching(item.keywords);
+        var listHtml = '<h4 style="margin:0 0 12px">📂 '+label+' - 전체 ('+matches.length+'개)</h4>';
+        listHtml += '<div style="display:flex;flex-direction:column;gap:6px">';
+        matches.forEach(function(d){
+          listHtml += '<div data-open-this="'+encodeURIComponent(d.path||'')+'" style="padding:10px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:8px;cursor:pointer"><div style="font-weight:700;font-size:13px">'+(d.name||'')+'</div><div style="font-size:11px;color:#7a92a8">'+(d.month||'')+' · '+(d._source||'')+'</div></div>';
+        });
+        listHtml += '</div><div style="margin-top:14px;text-align:right"><button onclick="document.getElementById(\'quickJournalOverlay\').remove()" class="btn-action btn-action-sm">닫기</button></div>';
+        sheet.innerHTML = listHtml;
+        sheet.querySelectorAll('[data-open-this]').forEach(function(el){
+          el.addEventListener('click', function(){
+            var p = decodeURIComponent(el.dataset.openThis);
+            openJournalFile({path:p});
+          });
+        });
+      });
+    });
+  }
+
+  /* 헤더 버튼 바인딩 */
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = document.getElementById('btnQuickJournal');
+    if(btn) btn.addEventListener('click', openMainModal);
+  });
+  /* 이미 로드됐다면 즉시 */
+  if(document.readyState !== 'loading'){
+    setTimeout(function(){
+      var btn = document.getElementById('btnQuickJournal');
+      if(btn && !btn._bound){
+        btn._bound = true;
+        btn.addEventListener('click', openMainModal);
+      }
+    }, 100);
+  }
+  /* 그룹 데이터 설정 노출 (나중에 사용자가 수정 가능하도록) */
+  window.QUICK_JOURNAL_GROUPS = QUICK_JOURNAL_GROUPS;
+  console.log('[journal] 일지 빠른진입 시스템 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
