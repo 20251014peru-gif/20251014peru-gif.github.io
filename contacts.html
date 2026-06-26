@@ -413,9 +413,9 @@ async function init(){
   $("c-cat").innerHTML=CATS.map(c=>`<option>${c}</option>`).join("");
   try{
     if(typeof firebase==="undefined") throw new Error("sdk");
-    firebase.initializeApp(firebaseConfig); db=firebase.firestore();
-    try{ await db.enablePersistence({synchronizeTabs:true}); }catch(_){}
-    await Promise.race([ db.collection(COL).limit(1).get(), new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),6000)) ]);
+    if(!firebase.apps.length){firebase.initializeApp(firebaseConfig);}db=firebase.firestore();
+    // enablePersistence 제거 (v10 compat 버그)
+    await Promise.race([ db.collection(COL).limit(1).get(), new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),3000)) ]);
     online=true; setStatus(true);
   }catch(e){ online=false; setStatus(false); }
   await loadAll();
@@ -903,8 +903,11 @@ $("btnBackup").addEventListener("click",()=>{
 });
 
 // DOM + 외부 스크립트 완전 로드 후 실행
-if(document.readyState === "complete") init();
-else window.addEventListener("load", init);
+if(document.readyState==="complete"||document.readyState==="interactive"){
+  setTimeout(init,0);
+}else{
+  window.addEventListener("load",init);
+}
 </script>
 </body>
 </html>
