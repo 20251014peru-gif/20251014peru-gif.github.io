@@ -195,6 +195,16 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 .scan-table table{width:100%;border-collapse:collapse;font-size:13px}
 .scan-table th{background:var(--blue-soft);color:var(--ink-soft);text-align:left;
   padding:10px 8px;font-size:11px;font-weight:800;border-bottom:1.5px solid var(--blue-bd);white-space:nowrap}
+.scan-table th.sortable{cursor:pointer;user-select:none}
+.scan-table th.sortable:hover{background:var(--blue-lt);color:var(--blue)}
+.scan-table th.sort-asc::after{content:' ▲';color:var(--blue)}
+.scan-table th.sort-desc::after{content:' ▼';color:var(--blue)}
+/* 컬럼 필터 입력 */
+.scan-table .col-filter-row th{background:#fff;padding:3px 4px;border-bottom:1.5px solid var(--blue-bd)}
+.scan-table .col-filter-row input{width:100%;padding:4px 6px;font-size:11px;border:1.5px solid var(--blue-bd);
+  border-radius:6px;font-family:inherit;color:var(--ink);background:#fff;outline:none;box-sizing:border-box}
+.scan-table .col-filter-row input:focus{border-color:var(--blue)}
+.scan-table .col-filter-row input::placeholder{color:var(--ink-faint)}
 .scan-table td{padding:9px 8px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle}
 .scan-table tr:hover td{background:var(--blue-soft)}
 .scan-table .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
@@ -918,6 +928,9 @@ const LS_PHOTOS='scanapp_photos', LS_CATS='scanapp_cats', LS_API_KEY='scanapp_ap
 const DEFAULT_CATS=['영수증','계약서','명함','문서','기타'];
 
 let photos=[], cats=[], receipts=[], cards=[], texts=[];
+/* 영수증 테이블 정렬·필터 상태 */
+let _rSort={col:'date',dir:'desc'};
+let _rColFilter={date:'',amount:'',place:'',payMethod:'',addr:'',items:''};
 let apiKey='';
 let curSection='scan', curScanType='receipt';
 let catFilter='all', searchQ='';
@@ -2584,6 +2597,7 @@ function buildReceiptStats(){
 
 function renderScanList(){
   const q=($('scanSearch').value||'').trim().toLowerCase();
+  window._lastQ=q;
   if(curScanType==='receipt'){
     renderReceiptList(q);
     $('receiptList').style.display='';$('cardList').style.display='none';$('textList').style.display='none';
@@ -2672,26 +2686,48 @@ function renderReceiptList(q){
     return false;
   });
   list = _applyReceiptFilters(list);
+
+  /* 컬럼 필터 적용 */
+  const cf=_rColFilter;
+  if(cf.date)    list=list.filter(r=>(r.date||'').includes(cf.date));
+  if(cf.amount)  list=list.filter(r=>String(r.amount||'').includes(cf.amount.replace(/,/g,'')));
+  if(cf.place)   list=list.filter(r=>(r.place||'').toLowerCase().includes(cf.place.toLowerCase()));
+  if(cf.payMethod) list=list.filter(r=>(r.payMethod||'').toLowerCase().includes(cf.payMethod.toLowerCase()));
+  if(cf.addr)    list=list.filter(r=>(r.addr||'').toLowerCase().includes(cf.addr.toLowerCase()));
+  if(cf.items)   list=list.filter(r=>itemsToString(r.items).toLowerCase().includes(cf.items.toLowerCase()));
+
+  /* 정렬 */
+  list=list.slice().sort((a,b)=>{
+    let va,vb;
+    if(_rSort.col==='date'){
+      va=(a.date||'')+(a.payTime||''); vb=(b.date||'')+(b.payTime||'');
+    } else if(_rSort.col==='amount'){
+      va=Number(a.amount||0); vb=Number(b.amount||0);
+      return _rSort.dir==='asc'?va-vb:vb-va;
+    } else if(_rSort.col==='place'){
+      va=a.place||''; vb=b.place||'';
+    } else if(_rSort.col==='payMethod'){
+      va=a.payMethod||''; vb=b.payMethod||'';
+    } else if(_rSort.col==='addr'){
+      va=a.addr||''; vb=b.addr||'';
+    } else if(_rSort.col==='items'){
+      va=itemsToString(a.items); vb=itemsToString(b.items);
+    } else { va=''; vb=''; }
+    if(va<vb) return _rSort.dir==='asc'?-1:1;
+    if(va>vb) return _rSort.dir==='asc'?1:-1;
+    return 0;
+  });
+
   // 📊 이번 달 통계 위젯
   const statsHtml=buildReceiptStats();
-  if(!list.length){$('receiptList').innerHTML=statsHtml;$('scanEmpty').style.display='';return;}
+  if(!list.length){
+    $('receiptList').innerHTML=statsHtml+_buildReceiptTable([],q);
+    _bindReceiptTableEvents();
+    $('scanEmpty').style.display='';return;
+  }
   $('scanEmpty').style.display='none';
-  const tableHtml=`<div class="scan-table"><table>
-    <thead><tr><th>날짜</th><th>시각</th><th>상호</th><th>전화</th><th class="num">금액</th>
-    <th>결제</th><th>주소</th><th>품목</th><th style="text-align:right">작업</th></tr></thead>
-    <tbody>${list.map(r=>`<tr data-id="${esc(r.id)}">
-      <td>${esc(r.date||'')}</td><td>${esc(r.payTime||'')}</td>
-      <td class="truncate" style="font-weight:700">${esc(r.place||'')}</td>
-      <td>${r.phone?`<a class="link-tel" href="${telLink(r.phone)}">${esc(r.phone)}</a>`:''}</td>
-      <td class="num">${r.amount?numFmt(r.amount)+'원':''}</td>
-      <td>${esc(r.payMethod||'')}</td>
-      <td class="truncate">${r.addr?`<a class="link-addr" href="${naverMap(r.addr)}" target="_blank">${esc(r.addr)}</a>`:''}</td>
-      <td class="truncate" style="font-size:11px;color:var(--ink-faint)">${esc(itemsToString(r.items))}</td>
-      <td><div class="row-actions">
-        <button class="row-act-btn green" data-act="copy">📋</button>
-        <button class="row-act-btn" data-act="edit">✏️</button>
-        <button class="row-act-btn red" data-act="del">🗑</button>
-      </div></td></tr>`).join('')}</tbody></table></div>`;
+
+  const tableHtml=_buildReceiptTable(list,q);
   const cardHtml=`<div class="scan-card-list">${list.map(r=>`<div class="scan-card" data-id="${esc(r.id)}">
     <div class="top">
       <div class="ttl">🧾 ${esc(r.place||'(상호없음)')} <span style="font-size:11px;font-weight:500;color:var(--ink-faint);padding:2px 6px;background:var(--blue-soft);border-radius:8px;margin-left:4px">${categorizeReceipt(r)}</span></div>
@@ -2709,7 +2745,85 @@ function renderReceiptList(q){
       <button class="row-act-btn red" data-act="del">🗑 삭제</button>
     </div></div>`).join('')}</div>`;
   $('receiptList').innerHTML=statsHtml+tableHtml+cardHtml;
+  _bindReceiptTableEvents();
   bindRowActions($('receiptList'),'receipt');
+}
+
+function _thSort(col,label){
+  const active=_rSort.col===col;
+  const cls='sortable'+(active?(_rSort.dir==='asc'?' sort-asc':' sort-desc'):'');
+  return `<th class="${cls}" data-sort="${col}">${label}</th>`;
+}
+
+function _buildReceiptTable(list,q){
+  const cf=_rColFilter;
+  return `<div class="scan-table"><table>
+    <thead>
+      <tr>
+        ${_thSort('date','날짜')}
+        <th>시각</th>
+        ${_thSort('place','상호')}
+        <th>전화</th>
+        ${_thSort('amount','금액')}
+        ${_thSort('payMethod','결제')}
+        ${_thSort('addr','주소')}
+        ${_thSort('items','품목')}
+        <th style="text-align:right">작업</th>
+      </tr>
+      <tr class="col-filter-row">
+        <th><input type="text" data-cf="date" placeholder="날짜 필터" value="${esc(cf.date)}"></th>
+        <th></th>
+        <th><input type="text" data-cf="place" placeholder="상호 필터" value="${esc(cf.place)}"></th>
+        <th></th>
+        <th><input type="text" data-cf="amount" placeholder="금액 필터" value="${esc(cf.amount)}" style="text-align:right"></th>
+        <th><input type="text" data-cf="payMethod" placeholder="결제 필터" value="${esc(cf.payMethod)}"></th>
+        <th><input type="text" data-cf="addr" placeholder="주소 필터" value="${esc(cf.addr)}"></th>
+        <th><input type="text" data-cf="items" placeholder="품목 필터" value="${esc(cf.items)}"></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>${list.map(r=>`<tr data-id="${esc(r.id)}">
+      <td>${esc(r.date||'')}</td><td>${esc(r.payTime||'')}</td>
+      <td class="truncate" style="font-weight:700">${esc(r.place||'')}</td>
+      <td>${r.phone?`<a class="link-tel" href="${telLink(r.phone)}">${esc(r.phone)}</a>`:''}</td>
+      <td class="num">${r.amount?numFmt(r.amount)+'원':''}</td>
+      <td>${esc(r.payMethod||'')}</td>
+      <td class="truncate">${r.addr?`<a class="link-addr" href="${naverMap(r.addr)}" target="_blank">${esc(r.addr)}</a>`:''}</td>
+      <td class="truncate" style="font-size:11px;color:var(--ink-faint)">${esc(itemsToString(r.items))}</td>
+      <td><div class="row-actions">
+        <button class="row-act-btn green" data-act="copy">📋</button>
+        <button class="row-act-btn" data-act="edit">✏️</button>
+        <button class="row-act-btn red" data-act="del">🗑</button>
+      </div></td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function _bindReceiptTableEvents(){
+  const tbl=$('receiptList');
+  if(!tbl)return;
+  /* 정렬 헤더 클릭 */
+  tbl.querySelectorAll('th[data-sort]').forEach(th=>{
+    th.addEventListener('click',()=>{
+      const col=th.dataset.sort;
+      if(_rSort.col===col){ _rSort.dir=_rSort.dir==='asc'?'desc':'asc'; }
+      else{ _rSort.col=col; _rSort.dir=col==='amount'?'desc':'asc'; }
+      renderReceiptList(_lastQ||'');
+    });
+  });
+  /* 컬럼 필터 입력 */
+  tbl.querySelectorAll('input[data-cf]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      _rColFilter[inp.dataset.cf]=inp.value;
+      renderReceiptList(_lastQ||'');
+    });
+    /* 포커스 유지 — 리렌더 후 같은 필드로 복구 */
+    inp.addEventListener('focus',()=>{ inp._focused=true; });
+  });
+  /* 포커스 복구 */
+  const focused=tbl.querySelector('input[data-cf]:focus');
+  if(!focused){
+    const pending=tbl.querySelector('input[data-cf][data-pending-focus]');
+    if(pending){ pending.focus(); pending.removeAttribute('data-pending-focus'); }
+  }
 }
 
 function renderCardList(q){
@@ -3769,7 +3883,7 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260623-2105';
+  $('appVer').textContent='v20260626-1513';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
