@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1057</title>
+<title>직원 관리 v44-0626-1030</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -377,8 +377,8 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <div class="lock-title" id="lockTitle">직원 관리</div>
     <div class="lock-sub" id="lockSub">PIN 번호를 입력하세요</div>
     <div class="pin-dots" id="pinDots">
-      <span class="pin-dot" id="pd0"></span><span class="pin-dot" id="pd1"></span>
-      <span class="pin-dot" id="pd2"></span><span class="pin-dot" id="pd3"></span>
+      <span class="pin-dot" id="pd0"></span><span class="pin-dot" id="pd1"></span><span class="pin-dot" id="pd2"></span>
+      <span class="pin-dot" id="pd3"></span><span class="pin-dot" id="pd4"></span><span class="pin-dot" id="pd5"></span>
     </div>
     <div class="pin-err" id="pinErr"></div>
     <div id="pinPad" style="display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box">
@@ -444,7 +444,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <a href="./contacts.html" style="background:var(--bg);border:2px solid var(--border2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;text-decoration:none;" title="업체연락처">📞 업체연락처</a>
     <button onclick="$('backupModal').classList.add('show')" style="background:var(--bg);border:2px solid var(--border2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;" title="백업·복구">💾 백업</button>
     <button onclick="lockApp()" style="background:var(--bg);border:2px solid var(--border2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;" title="화면 잠금">🔐 잠금</button>
-    <span class="ver-badge" id="verBadge">v44-0626-1057</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1030</span>
   <span class="badge" id="staffCntBadge">☁ 동기화</span>
   </div>
 </div>
@@ -712,7 +712,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <script>
 /* ===== 설정 ===== */
-var APP_VERSION='v44-0626-1057';
+var APP_VERSION='v44-0626-1030';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;})();
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
@@ -1400,12 +1400,12 @@ var pinBuffer = '';
 var pinMode = 'unlock'; // 'unlock' | 'setup1' | 'setup2' | 'change1' | 'change2'
 var pinTemp = '';
 
-function getPIN(){ try{ var p=localStorage.getItem(PIN_LS); return (p&&p.length>=4)?p:'1028'; }catch(e){ return '1028'; } }
+function getPIN(){ try{ var p=localStorage.getItem(PIN_LS); return (p&&p.length>=4)?p:'102800'; }catch(e){ return '1028'; } }
 function setPIN(p){ try{localStorage.setItem(PIN_LS,p);localStorage.setItem(PIN_SET_LS,'1');}catch(e){} }
 function hasPIN(){ try{ var p=localStorage.getItem(PIN_LS); return !!(p&&p.length>=4); }catch(e){ return false; } }
 
 function initLock(){
-  if(!hasPIN()){ setPIN('1028'); }
+  if(!hasPIN()){ setPIN('102800'); }
   if(false){
     // 최초: PIN 설정 화면
     $('lockTitle').textContent = '🔐 PIN 설정';
@@ -1430,14 +1430,14 @@ function showUnlockScreen(){
   updateDots();
 }
 function updateDots(){
-  for(var i=0;i<4;i++){
+  for(var i=0;i<6;i++){
     var d=$('pd'+i);
     d.classList.toggle('filled', i < pinBuffer.length);
     d.classList.remove('err');
   }
 }
 function pinError(msg){
-  for(var i=0;i<4;i++) $('pd'+i).classList.add('err');
+  for(var i=0;i<6;i++) $('pd'+i).classList.add('err');
   $('pinErr').textContent = msg;
   setTimeout(function(){ pinBuffer=''; updateDots(); $('pinErr').textContent=''; },700);
 }
@@ -1454,10 +1454,10 @@ function lockApp(){
 // 숫자 입력
 document.querySelectorAll('.pin-btn[data-n]').forEach(function(btn){
   btn.addEventListener('click',function(){
-    if(pinBuffer.length>=4) return;
+    if(pinBuffer.length>=6) return;
     pinBuffer += btn.dataset.n;
     updateDots();
-    if(pinBuffer.length===4) setTimeout(processPIN, 80);
+    if(pinBuffer.length===6) setTimeout(processPIN, 80);
   });
 });
 $('pinDel').addEventListener('click',function(){
