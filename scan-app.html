@@ -2752,7 +2752,7 @@ function _applyReceiptFilters(list){
 }
 
 /* ── 영수증 목록 렌더 (DOM 보존 — 한글 IME 버그 방지) ── */
-let _rTableBound=false; // 헤더 이벤트 1회만 바인딩
+/* 영수증 테이블 이벤트는 DOMContentLoaded에서 바인딩 */
 
 function renderReceiptList(q){
   let list=receipts.filter(r=>{
@@ -2845,9 +2845,6 @@ function renderReceiptList(q){
   /* tbody 행 액션 바인딩 */
   bindRowActions(tbody,'receipt');
   bindRowActions(cardArea,'receipt');
-
-  /* 헤더/필터 이벤트 1회만 바인딩 */
-  if(!_rTableBound){ _bindReceiptTableEvents(); _rTableBound=true; }
 }
 
 function _updateSortHeaders(){
@@ -4076,7 +4073,7 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260626-1558';
+  $('appVer').textContent='v20260626-1612';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
@@ -4637,6 +4634,9 @@ console.log('[사진 스캐너 v2] 로드 완료');
   /* 주기적 통계 갱신 */
   setInterval(()=>{if($('debugOverlay').classList.contains('show'))_dbStats();},3000);
 })();
+
+/* 영수증 필터/정렬 이벤트 — 페이지 로드 후 1회 직접 바인딩 */
+_bindReceiptTableEvents();
 </script>
 </body>
 </html>
