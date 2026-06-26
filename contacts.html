@@ -151,7 +151,7 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
   <div class="lock-card">
     <div class="lock-icon">📞</div>
     <div class="lock-title">업체 연락처</div>
-    <div class="lock-ver" id="lockVer">v44-0626-1334</div>
+    <div class="lock-ver" id="lockVer">v44-0626-1345</div>
     <div class="lock-sub" id="lockSub"></div>
     <div class="pin-dots" id="pinDots" style="display:none">
       <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -175,7 +175,7 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · AI 명함인식 <b id="verBadge" style="color:#5b9bd5">v44-0626-1334</b></span></div>
+      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · AI 명함인식 <b id="verBadge" style="color:#5b9bd5">v44-0626-1345</b></span></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="worklog.html">📋 업무일지</a>
@@ -313,7 +313,7 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 <script>
 
 /* ===== 버전 ===== */
-var APP_VERSION='v44-0626-1334';
+var APP_VERSION='v44-0626-1345';
 (function(){
   var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;
   var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;
@@ -683,6 +683,8 @@ function openEditor(id){
   $("overlay").classList.add("show");
   $("overlay").querySelector(".modal").scrollTop=0;
 }
+/* bindVendorTypeTabs — 일회성/등록업체 탭 (미구현 안전처리) */
+function bindVendorTypeTabs(){}
 bindVendorTypeTabs();
 $("btnAdd").addEventListener("click",()=>openEditor(null));
 $("mCancel").addEventListener("click",()=>$("overlay").classList.remove("show"));
