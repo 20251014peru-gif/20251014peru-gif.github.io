@@ -124,13 +124,58 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 #imgOverlay img{max-width:100%;max-height:100%;border-radius:12px}
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:#33567d;color:#fff;padding:12px 22px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:all .3s;z-index:100;pointer-events:none;max-width:90%;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ===== PIN 잠금 (shared_pin / 102800 6자리) ===== */
+.lock-screen{position:fixed;inset:0;background:linear-gradient(145deg,#f0f6ff 0%,#e3eef8 100%);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.lock-screen.hide{display:none;}
+.lock-card{background:#fff;border:2px solid #e4ebf2;border-radius:24px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(91,155,213,.15);text-align:center;}
+.lock-icon{font-size:40px;margin-bottom:10px;}
+.lock-title{font-size:20px;font-weight:900;color:#3f4a57;margin-bottom:4px;}
+.lock-sub{font-size:13px;color:#8893a1;font-weight:600;margin-bottom:20px;min-height:20px;}
+.lock-ver{font-size:11px;color:#b0bbc8;font-weight:600;margin-bottom:6px;}
+.pin-dots{display:flex;gap:10px;justify-content:center;margin-bottom:20px;}
+.pin-dot{width:13px;height:13px;border-radius:50%;border:2.5px solid #cdd6df;background:transparent;transition:.15s;}
+.pin-dot.filled{background:#5b9bd5;border-color:#5b9bd5;}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.pin-btn{height:54px;border-radius:14px;border:2px solid #e4ebf2;background:#f3f7fb;font-size:20px;font-weight:800;color:#3f4a57;cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;justify-content:center;}
+.pin-btn:hover{background:#e3f0fb;border-color:#5b9bd5;}
+.pin-btn:active{transform:scale(.95);}
+.pin-change-btns{text-align:center;margin-top:6px;}
+.pin-change-link{background:none;border:none;font-size:12px;color:#8893a1;font-weight:700;cursor:pointer;font-family:inherit;}
 </style>
 </head>
 <body>
+
+<!-- ===== PIN 잠금 ===== -->
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-card">
+    <div class="lock-icon">📞</div>
+    <div class="lock-title">업체 연락처</div>
+    <div class="lock-ver" id="lockVer">v44-0626-1334</div>
+    <div class="lock-sub" id="lockSub"></div>
+    <div class="pin-dots" id="pinDots" style="display:none">
+      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+      <div class="pin-dot" id="pd4"></div><div class="pin-dot" id="pd5"></div>
+    </div>
+    <div class="pin-pad" id="pinPad" style="display:none">
+      <button class="pin-btn" data-n="1">1</button><button class="pin-btn" data-n="2">2</button><button class="pin-btn" data-n="3">3</button>
+      <button class="pin-btn" data-n="4">4</button><button class="pin-btn" data-n="5">5</button><button class="pin-btn" data-n="6">6</button>
+      <button class="pin-btn" data-n="7">7</button><button class="pin-btn" data-n="8">8</button><button class="pin-btn" data-n="9">9</button>
+      <button class="pin-btn" id="pinDel">⌫</button>
+      <button class="pin-btn" data-n="0">0</button>
+      <button class="pin-btn" style="font-size:13px;color:#8893a1" id="pinLockBtn">🔒</button>
+    </div>
+    <div class="pin-change-btns" id="pinChangeBtns" style="display:none">
+      <button class="pin-change-link" id="pinChangeBtn">PIN 변경</button>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · 초점/회전/얇은크롭 <b style="color:#9aa7b4">v9</b></span></div>
+      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · AI 명함인식 <b id="verBadge" style="color:#5b9bd5">v44-0626-1334</b></span></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="worklog.html">📋 업무일지</a>
@@ -266,6 +311,74 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+
+/* ===== 버전 ===== */
+var APP_VERSION='v44-0626-1334';
+(function(){
+  var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;
+  var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;
+})();
+
+/* ===== PIN 잠금 — shared_pin / 102800 (6자리) ===== */
+var PIN_LS='shared_pin';
+var pinBuffer='',pinMode='unlock',pinTemp='';
+
+function getPIN(){try{var p=localStorage.getItem(PIN_LS);return(p&&p.length>=4)?p:'102800';}catch(e){return'102800';}}
+function setPIN(p){try{localStorage.setItem(PIN_LS,p);}catch(e){}}
+
+function processPIN(){
+  var stored=getPIN();
+  if(pinMode==='unlock'){
+    if(pinBuffer===stored)unlockApp();
+    else{pinShake();setTimeout(function(){pinBuffer='';updateDots();setLockSub('PIN이 틀렸습니다. 다시 입력하세요');},200);}
+  }else if(pinMode==='change1'){
+    if(pinBuffer===stored){pinTemp='';pinBuffer='';updateDots();pinMode='change2';setLockSub('새 PIN 6자리를 입력하세요');}
+    else{pinShake();setTimeout(function(){pinBuffer='';updateDots();setLockSub('현재 PIN이 틀렸습니다');},200);}
+  }else if(pinMode==='change2'){
+    pinTemp=pinBuffer;pinBuffer='';updateDots();setLockSub('새 PIN을 한 번 더 입력하세요');pinMode='change3';
+  }else if(pinMode==='change3'){
+    if(pinBuffer===pinTemp){setPIN(pinBuffer);unlockApp();toast('🔐 PIN이 변경되었습니다');}
+    else{pinShake();setTimeout(function(){pinBuffer='';pinTemp='';updateDots();pinMode='change2';setLockSub('PIN이 일치하지 않습니다. 다시 입력하세요');},200);}
+  }
+}
+function setLockSub(msg){var el=document.getElementById('lockSub');if(el)el.textContent=msg;}
+function pinShake(){for(var i=0;i<6;i++){var d=document.getElementById('pd'+i);if(d){d.style.background='#e57373';d.style.borderColor='#e57373';}}}
+function updateDots(){for(var i=0;i<6;i++){var d=document.getElementById('pd'+i);if(!d)continue;d.style.background=i<pinBuffer.length?'#5b9bd5':'transparent';d.style.borderColor=i<pinBuffer.length?'#5b9bd5':'#cdd6df';}}
+function unlockApp(){pinBuffer='';updateDots();var ls=document.getElementById('lockScreen');if(ls)ls.classList.add('hide');}
+function lockApp(){pinBuffer='';pinMode='unlock';var ls=document.getElementById('lockScreen');if(ls)ls.classList.remove('hide');showUnlockScreen();}
+function showUnlockScreen(){
+  pinMode='unlock';pinBuffer='';
+  setLockSub('PIN 6자리를 입력하세요');
+  var el;
+  el=document.getElementById('pinPad');if(el)el.style.display='grid';
+  el=document.getElementById('pinDots');if(el)el.style.display='flex';
+  el=document.getElementById('pinChangeBtns');if(el)el.style.display='block';
+  updateDots();
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  /* PIN 숫자버튼 */
+  document.querySelectorAll('.pin-btn[data-n]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      if(pinBuffer.length>=6)return;
+      pinBuffer+=btn.dataset.n;updateDots();
+      if(pinBuffer.length===6)setTimeout(processPIN,30);
+    });
+  });
+  var delBtn=document.getElementById('pinDel');
+  if(delBtn)delBtn.addEventListener('click',function(){if(pinBuffer.length>0){pinBuffer=pinBuffer.slice(0,-1);updateDots();}});
+  var lockBtn=document.getElementById('pinLockBtn');
+  if(lockBtn)lockBtn.addEventListener('click',lockApp);
+  var changeBtn=document.getElementById('pinChangeBtn');
+  if(changeBtn)changeBtn.addEventListener('click',function(){
+    pinMode='change1';pinBuffer='';updateDots();
+    setLockSub('현재 PIN 6자리를 입력하세요');
+    var pcb=document.getElementById('pinChangeBtns');if(pcb)pcb.style.display='none';
+  });
+  /* PIN 초기화 */
+  showUnlockScreen();
+});
+
 /* ===== 설정 (이 부분만 고치면 됩니다) ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
