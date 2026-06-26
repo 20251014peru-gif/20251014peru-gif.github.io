@@ -272,15 +272,18 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 #zoomViewer{display:none;position:fixed;inset:0;background:#000;z-index:99000;overflow:hidden;touch-action:none}
 #zoomViewer.show{display:flex;align-items:center;justify-content:center}
 #zoomImg{max-width:none;max-height:none;transform-origin:center center;user-select:none;-webkit-user-drag:none;position:absolute}
-#zoomHeader{position:absolute;top:0;left:0;right:0;padding:14px 18px;
-  background:linear-gradient(rgba(0,0,0,.65),transparent);z-index:10;
-  display:flex;justify-content:space-between;align-items:center;color:#fff}
-.zoom-btn{width:42px;height:42px;border-radius:50%;border:1.5px solid rgba(255,255,255,.3);
-  background:rgba(255,255,255,.15);color:#fff;font-size:16px;cursor:pointer;font-family:inherit;
-  display:inline-flex;align-items:center;justify-content:center}
-#zoomFooter{position:absolute;bottom:0;left:0;right:0;padding:14px 18px;
-  background:linear-gradient(transparent,rgba(0,0,0,.65));z-index:10;
-  display:flex;justify-content:center;gap:10px}
+#zoomHeader{position:absolute;top:0;left:0;right:0;padding:16px 20px;
+  background:linear-gradient(rgba(0,0,0,.7),transparent);z-index:10;
+  display:flex;justify-content:space-between;align-items:center;color:#fff;gap:12px}
+.zoom-btn{width:54px;height:54px;border-radius:50%;border:2px solid rgba(255,255,255,.4);
+  background:rgba(255,255,255,.2);color:#fff;font-size:22px;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.zoom-btn:hover{background:rgba(255,255,255,.35);border-color:rgba(255,255,255,.7)}
+#zoomTitle{font-size:16px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);
+  max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#zoomFooter{position:absolute;bottom:0;left:0;right:0;padding:18px 18px 22px;
+  background:linear-gradient(transparent,rgba(0,0,0,.75));z-index:10;
+  display:flex;justify-content:center;gap:14px}
 
 /* 크롭 모달 */
 #cropOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99998;
@@ -1027,8 +1030,8 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 <!-- 🔍 사진 확대 뷰어 (핀치줌) -->
 <div id="zoomViewer">
   <div id="zoomHeader">
-    <div style="font-size:13px;font-weight:700" id="zoomTitle"></div>
-    <div style="display:flex;gap:8px;align-items:center">
+    <div id="zoomTitle"></div>
+    <div style="display:flex;gap:14px;align-items:center">
       <button class="zoom-btn" id="zoomShare" title="공유">📤</button>
       <button class="zoom-btn" id="zoomDownload" title="다운로드">⬇</button>
       <button class="zoom-btn" id="zoomClose" title="닫기">✕</button>
@@ -4286,7 +4289,7 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260626-1644';
+  $('appVer').textContent='v20260626-1700';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
