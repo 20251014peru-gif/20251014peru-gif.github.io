@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1038</title>
+<title>직원 관리 v44-0626-1101</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -74,9 +74,9 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .sc.retired{opacity:.4;filter:grayscale(.7);}
 .sc-av{width:40px;height:40px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;font-weight:900;box-shadow:0 2px 8px rgba(0,0,0,.15);}
 .sc-info{flex:1;min-width:0;}
-.sc-name{font-size:13px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.sc-role{font-size:10px;color:var(--ink3);font-weight:600;margin-top:1px;}
-.sc-phone-link{font-size:10px;font-weight:700;color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:2px;margin-top:3px;white-space:nowrap;}
+.sc-name{font-size:14px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-role{font-size:12px;color:var(--ink3);font-weight:600;margin-top:2px;}
+.sc-phone-link{font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:2px;margin-top:3px;white-space:nowrap;}
 .sc-badge{position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);font-size:9px;font-weight:900;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg);}
 .tenure-badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--accent-s);color:var(--accent);margin-left:3px;}
 
@@ -92,18 +92,18 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .rec-card.s-진행중{border-left:4px solid var(--amber);}
 .rec-card.s-미해결{border-left:4px solid var(--red);}
 .rc-row1{display:flex;align-items:center;gap:5px;margin-bottom:5px;flex-wrap:wrap;}
-.rc-title{font-size:12px;font-weight:800;color:var(--ink);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rc-title{font-size:13px;font-weight:800;color:var(--ink);margin:4px 0;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .rc-row2{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
 .rc-date{font-size:10px;color:var(--ink3);font-weight:600;margin-left:auto;}
-.cat-tag{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;}
+.cat-tag{font-size:12px;padding:3px 8px;border-radius:6px;font-weight:700;}
 .cat-업무지시{background:var(--blue-s);color:var(--blue);}
 .cat-근태{background:var(--amber-s);color:var(--amber);}
 .cat-주의경고{background:var(--red-s);color:var(--red);}
-.st-badge{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;}
+.st-badge{font-size:12px;padding:3px 8px;border-radius:6px;font-weight:700;}
 .st-완료{background:var(--green-s);color:var(--green);}
 .st-진행중{background:var(--amber-s);color:var(--amber);}
 .st-미해결{background:var(--red-s);color:var(--red);}
-.who-tag{font-size:10px;padding:2px 7px;border-radius:6px;background:var(--accent-s);color:var(--accent);font-weight:700;}
+.who-tag{font-size:12px;padding:3px 8px;border-radius:6px;background:var(--accent-s);color:var(--accent);font-weight:700;}
 /* 삭제 버튼 항상 보임 (지침) */
 .rc-del{position:absolute;top:6px;right:6px;font-size:11px;padding:2px 7px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-weight:700;background:var(--red-s);color:var(--red);}
 .rc-del:hover{background:var(--red);color:#fff;}
@@ -156,8 +156,8 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .hist-date{font-size:12px;color:var(--ink3);font-weight:700;white-space:nowrap;flex-shrink:0;}
 .hist-del{font-size:11px;padding:3px 9px;border-radius:20px;border:none;cursor:pointer;font-family:inherit;font-weight:700;background:var(--red-s);color:var(--red);margin-top:6px;display:inline-block;}
 /* 달력 마커 */
-.cal-hire{font-size:9px;font-weight:800;color:var(--green);background:var(--green-s);border-radius:4px;padding:1px 4px;margin-top:2px;}
-.cal-resign{font-size:9px;font-weight:800;color:var(--red);background:var(--red-s);border-radius:4px;padding:1px 4px;margin-top:2px;}
+.cal-hire{font-size:11px;font-weight:800;color:var(--green);background:var(--green-s);border-radius:4px;padding:2px 6px;margin-top:2px;}
+.cal-resign{font-size:11px;font-weight:800;color:var(--red);background:var(--red-s);border-radius:4px;padding:2px 6px;margin-top:2px;}
 
 /* ===== 달력 ===== */
 .cal-nav-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
@@ -165,22 +165,23 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .cal-nav-btns{display:flex;gap:6px;}
 .cal-nav-btn{width:34px;height:34px;border-radius:10px;border:2px solid var(--border2);background:var(--card);color:var(--ink2);font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;}
 .cal-today-btn{padding:6px 14px;border-radius:10px;border:2px solid var(--border2);background:var(--card);color:var(--ink2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
-.cal-legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.cal-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.leg-filter.on{background:var(--accent-s);border-color:var(--accent)!important;color:var(--accent);font-weight:800;}
 .leg-item{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--ink2);}
 .leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;border-radius:var(--r);overflow:hidden;}
-.cal-dow{background:var(--card2);padding:7px 4px;text-align:center;font-size:11px;font-weight:800;color:var(--ink3);}
-.cal-cell{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:6px 5px;min-height:80px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;}
+.cal-dow{background:var(--card2);padding:8px 4px;text-align:center;font-size:13px;font-weight:800;color:var(--ink3);}
+.cal-cell{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:8px 6px;min-height:110px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;}
 .cal-cell:hover{border-color:var(--accent2);background:var(--accent-s);}
 .cal-cell.today{border-color:var(--accent);border-width:2px;background:var(--accent-s);}
 .cal-cell.selected{border-color:var(--accent);border-width:2.5px;}
 .cal-cell.empty{background:transparent;border-color:transparent;cursor:default;}
 .cal-cell.empty:hover{background:transparent;border-color:transparent;}
-.cal-dnum{font-size:12px;font-weight:800;color:var(--ink2);margin-bottom:3px;}
+.cal-dnum{font-size:14px;font-weight:800;color:var(--ink2);margin-bottom:4px;}
 .cal-cell.today .cal-dnum{color:var(--accent);}
 .cal-dot-row{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:2px;}
 .cal-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-.cal-item{font-size:9px;color:var(--ink2);line-height:1.3;overflow:hidden;margin-top:1px;}
+.cal-item{font-size:11px;color:var(--ink2);line-height:1.4;overflow:hidden;margin-top:2px;}
 .cal-detail{background:var(--card);border:2px solid var(--border2);border-radius:var(--r);padding:14px;margin-top:12px;}
 .cal-detail-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
 .cal-detail-hdr h3{font-size:14px;font-weight:800;}
@@ -251,6 +252,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
   <div class="lock-card">
     <div class="lock-icon">🏢</div>
     <div class="lock-title" id="lockTitle">직원 관리</div>
+    <div style="font-size:11px;color:var(--ink3);font-weight:600;margin-bottom:4px" id="lockVer"></div>
     <div class="lock-sub" id="lockSub"></div>
     <div class="pin-dots" id="pinDots" style="display:none">
       <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -282,7 +284,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
   </div>
   <div class="hdr-right">
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1038</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1101</span>
   </div>
 </div>
 
@@ -310,9 +312,8 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <button class="sf-chip on" data-sf="재직중">✅ 재직중</button>
     <button class="sf-chip" data-sf="퇴사">🚪 퇴사자</button>
     <button class="sf-chip" data-sf="전체">🗂 전체</button>
+    <button class="sf-chip" id="addStaffBtn" style="background:var(--green-s);color:var(--green);border-color:var(--green);margin-left:auto">➕ 신규 등록</button>
   </div>
-  <div style="height:8px"></div>
-  <button class="add-staff-btn" id="addStaffBtn">➕ 신규 직원 등록</button>
   <div class="staff-grid" id="staffGrid"></div>
   <div id="searchResult" style="display:none">
     <div class="recent-head"><h3 id="searchResultLabel"></h3></div>
@@ -363,12 +364,13 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <h2 id="calTitle"></h2>
     <button class="cal-today-btn" id="calToday">오늘</button>
   </div>
-  <div class="cal-legend">
-    <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div>업무지시</div>
-    <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div>근태</div>
-    <div class="leg-item"><div class="leg-dot" style="background:var(--red)"></div>주의경고</div>
-    <div class="leg-item"><span class="cal-hire">입사</span></div>
-    <div class="leg-item"><span class="cal-resign">퇴사</span></div>
+  <div class="cal-legend" id="calLegend">
+    <div class="leg-item leg-filter on" data-cf="전체" style="cursor:pointer;padding:4px 10px;border-radius:20px;border:2px solid var(--border2)">🗂 전체</div>
+    <div class="leg-item leg-filter" data-cf="업무지시" style="cursor:pointer;padding:4px 10px;border-radius:20px;border:2px solid var(--border2)"><div class="leg-dot" style="background:var(--blue)"></div>업무지시</div>
+    <div class="leg-item leg-filter" data-cf="근태" style="cursor:pointer;padding:4px 10px;border-radius:20px;border:2px solid var(--border2)"><div class="leg-dot" style="background:var(--amber)"></div>근태</div>
+    <div class="leg-item leg-filter" data-cf="주의경고" style="cursor:pointer;padding:4px 10px;border-radius:20px;border:2px solid var(--border2)"><div class="leg-dot" style="background:var(--red)"></div>주의경고</div>
+    <div class="leg-item leg-filter" data-cf="입사" style="cursor:pointer;padding:4px 10px;border-radius:20px;border:2px solid var(--border2)"><span class="cal-hire" style="margin:0">입사</span></div>
+    <div class="leg-item leg-filter" data-cf="퇴사" style="cursor:pointer;padding:4px 10px;border-radius:20px;border:2px solid var(--border2)"><span class="cal-resign" style="margin:0">퇴사</span></div>
   </div>
   <div class="cal-grid" id="calGrid"></div>
   <div id="calDetail"></div>
@@ -521,8 +523,8 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <script>
 /* ===== 설정 ===== */
-var APP_VERSION='v44-0626-1038';
-(function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;})();
+var APP_VERSION='v44-0626-1101';
+(function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;})();
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
 
@@ -548,7 +550,7 @@ var CAT_COLOR={'업무지시':'#3B82F6','근태':'#D97706','주의경고':'#DC26
 var STAFF=[];
 var allRecs=[],allHistory=[];
 var selSid=null,allFilt='전체',staffFilt='재직중',histFilt='전체';
-var calY=new Date().getFullYear(),calM=new Date().getMonth(),calSelDay=null;
+var calY=new Date().getFullYear(),calM=new Date().getMonth(),calSelDay=null,calFilt='전체';
 var curRecId=null,searchQ='';
 
 /* ===== 유틸 ===== */
@@ -604,22 +606,37 @@ function drawGrid(){
   });
   var activeCnt=STAFF.filter(function(s){return s.status==='재직중';}).length;
   $('staffCntBadge').textContent='재직 '+activeCnt+'명';
-  $('staffGrid').innerHTML=filtered.map(function(s){
-    var recs=allRecs.filter(function(r){return r.staffId===s.id;});
-    var unr=recs.filter(function(r){return r.status==='미해결';}).length;
-    var c=RC[s.role]||'#4C6EF5';
-    var ret=s.status==='퇴사';
-    var tenure=calcTenure(s.hired,ret?s.resigned:'');
-    var h='<div class="sc'+(ret?' retired':'')+'" data-sid="'+s.id+'" tabindex="0">';
-    if(unr>0)h+='<span class="sc-badge">'+unr+'</span>';
-    h+='<div class="sc-av" style="background:'+c+'">'+s.name[0]+'</div>';
-    h+='<div class="sc-info">';
-    h+='<div class="sc-name">'+esc(s.name)+(ret?' <span style="font-size:9px;color:var(--red)">(퇴사)</span>':'')+(tenure?'<span class="tenure-badge">'+tenure+'</span>':'')+'</div>';
-    h+='<div class="sc-role">'+esc(s.role)+(s.floor?' · '+esc(s.floor):'')+'</div>';
-    if(s.phone)h+='<a class="sc-phone-link" href="tel:'+s.phone+'" onclick="event.stopPropagation()">📞 '+esc(s.phone)+'</a>';
-    h+='</div></div>';
-    return h;
-  }).join('');
+  var roleOrder=['실장','경비','청소반장','미화'];
+  var roleColor={'실장':'#E53E3E','경비':'#2563EB','청소반장':'#16A34A','미화':'#B7791F'};
+  var grouped={};
+  filtered.forEach(function(s){(grouped[s.role]=grouped[s.role]||[]).push(s);});
+  // 직책순서 외 직책도 포함
+  var extraRoles=Object.keys(grouped).filter(function(r){return roleOrder.indexOf(r)<0;});
+  var allRoles=roleOrder.concat(extraRoles);
+  var html='';
+  allRoles.forEach(function(role){
+    if(!grouped[role]||!grouped[role].length)return;
+    html+='<div style="grid-column:1/-1;font-size:13px;font-weight:800;color:var(--ink2);padding:8px 2px 4px;border-top:2px solid var(--border);margin-top:4px;display:flex;align-items:center;gap:7px">'+
+      '<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+(roleColor[role]||'#4C6EF5')+'"></span>'+
+      role+' <span style="font-size:12px;color:var(--ink3);font-weight:600">'+grouped[role].length+'명</span></div>';
+    html+=grouped[role].map(function(s){
+      var recs=allRecs.filter(function(r){return r.staffId===s.id;});
+      var unr=recs.filter(function(r){return r.status==='미해결';}).length;
+      var c=roleColor[s.role]||'#4C6EF5';
+      var ret=s.status==='퇴사';
+      var tenure=calcTenure(s.hired,ret?s.resigned:'');
+      var h='<div class="sc'+(ret?' retired':'')+'" data-sid="'+s.id+'" tabindex="0">';
+      if(unr>0)h+='<span class="sc-badge">'+unr+'</span>';
+      h+='<div class="sc-av" style="background:'+c+'">'+s.name[0]+'</div>';
+      h+='<div class="sc-info">';
+      h+='<div class="sc-name">'+esc(s.name)+(ret?' <span style="font-size:9px;color:var(--red)">(퇴사)</span>':'')+(tenure?'<span class="tenure-badge">'+tenure+'</span>':'')+'</div>';
+      h+='<div class="sc-role">'+esc(s.role)+(s.floor?' · '+esc(s.floor):'')+'</div>';
+      if(s.phone)h+='<a class="sc-phone-link" href="tel:'+s.phone+'" onclick="event.stopPropagation()">📞 '+esc(s.phone)+'</a>';
+      h+='</div></div>';
+      return h;
+    }).join('');
+  });
+  $('staffGrid').innerHTML=html;
   // 클릭 바인딩
   $('staffGrid').querySelectorAll('.sc').forEach(function(el){
     el.addEventListener('click',function(){openStaffModal(el.dataset.sid,'view');});
@@ -805,11 +822,21 @@ function renderCal(){
   $('calTitle').textContent=calY+'년 '+(calM+1)+'월';
   var first=new Date(calY,calM,1).getDay(),daysInMonth=new Date(calY,calM+1,0).getDate();
   var today=todayStr();
-  var byDate={};allRecs.forEach(function(r){if(r.date)(byDate[r.date]=byDate[r.date]||[]).push(r);});
+  var byDate={};
+  allRecs.forEach(function(r){if(r.date)(byDate[r.date]=byDate[r.date]||[]).push(r);});
   var hireByDate={},resignByDate={};
   allHistory.forEach(function(h){
     if(h.type==='입사'&&h.date)(hireByDate[h.date]=hireByDate[h.date]||[]).push(h);
     if(h.type==='퇴사'&&h.date)(resignByDate[h.date]=resignByDate[h.date]||[]).push(h);
+  });
+  // 직원 hired 날짜도 입사 마커로
+  STAFF.forEach(function(s){
+    if(!s.hired)return;
+    try{var p=s.hired.split('.');var y=parseInt(p[0]);if(y<100)y+=2000;
+      var ds2=y+'-'+pad(parseInt(p[1]||1))+'-'+pad(parseInt(p[2]||1));
+      if(!(hireByDate[ds2]||[]).find(function(h){return h.staffId===s.id;}))
+        (hireByDate[ds2]=hireByDate[ds2]||[]).push({staffId:s.id,staffName:s.name,type:'입사'});
+    }catch(e){}
   });
   var html=days.map(function(d,i){return'<div class="cal-dow'+(i===0?' sun':'')+'">'+(d)+'</div>';}).join('');
   for(var i=0;i<first;i++)html+='<div class="cal-cell empty"></div>';
@@ -817,12 +844,32 @@ function renderCal(){
     var ds=calY+'-'+pad(calM+1)+'-'+pad(d);
     var wd=new Date(calY,calM,d).getDay();
     var cls='cal-cell'+(wd===0?' sun':'')+(ds===today?' today':'')+(ds===calSelDay?' selected':'');
-    var dayRecs=byDate[ds]||[];
-    var dots=dayRecs.slice(0,6).map(function(r){return'<span class="cal-dot" style="background:'+(CAT_COLOR[r.cat]||'#8C99C0')+'"></span>';}).join('');
-    var items=dayRecs.slice(0,2).map(function(r){return'<div class="cal-item"><b style="color:'+(CAT_COLOR[r.cat]||'#8C99C0')+'">'+esc(r.staffId||'')+'</b> '+esc((r.content||'').slice(0,8))+'</div>';}).join('');
-    var hires=(hireByDate[ds]||[]).map(function(h){return'<div class="cal-hire">입사 '+esc(h.staffName||'')+'</div>';}).join('');
-    var resigns=(resignByDate[ds]||[]).map(function(h){return'<div class="cal-resign">퇴사 '+esc(h.staffName||'')+'</div>';}).join('');
-    html+='<div class="'+cls+'" data-day="'+ds+'"><div class="cal-dnum">'+d+'</div><div class="cal-dot-row">'+dots+'</div>'+hires+resigns+items+'</div>';
+    var allDayRecs=byDate[ds]||[];
+    // 필터 적용
+    var dayRecs=calFilt==='전체'?allDayRecs:allDayRecs.filter(function(r){return r.cat===calFilt||r.status===calFilt;});
+    var hires=hireByDate[ds]||[];
+    var resigns=resignByDate[ds]||[];
+    var showHires=(calFilt==='전체'||calFilt==='입사')?hires:[];
+    var showResigns=(calFilt==='전체'||calFilt==='퇴사')?resigns:[];
+    var dots=allDayRecs.slice(0,8).map(function(r){return'<span class="cal-dot" style="background:'+(CAT_COLOR[r.cat]||'#8C99C0')+'"></span>';}).join('');
+    // 입퇴사 마커
+    var hireMarkers=showHires.map(function(h){return'<div class="cal-hire">🟢 '+esc(h.staffName||'')+'</div>';}).join('');
+    var resignMarkers=showResigns.map(function(h){return'<div class="cal-resign">🔴 '+esc(h.staffName||'')+'</div>';}).join('');
+    // 기록 항목 — 더 구체적으로 (이름+내용 전체)
+    var items=dayRecs.slice(0,3).map(function(r){
+      var cont=(r.content||'').split('\n').join(' ');
+      var preview=cont.length>16?cont.slice(0,16)+'…':cont;
+      return'<div class="cal-item" style="font-size:11px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+
+        '<span style="font-weight:800;color:'+(CAT_COLOR[r.cat]||'#8C99C0')+'">'+esc(r.staffId||'')+'</span> '+
+        '<span style="color:var(--ink2)">'+esc(preview)+'</span>'+
+      '</div>';
+    }).join('');
+    var more=(dayRecs.length+hires.length+resigns.length)>3?'<div style="font-size:10px;color:var(--ink3)">+'+( dayRecs.length+hires.length+resigns.length-3)+'건</div>':'';
+    html+='<div class="'+cls+'" data-day="'+ds+'">'+
+      '<div class="cal-dnum">'+d+'</div>'+
+      '<div class="cal-dot-row">'+dots+'</div>'+
+      hireMarkers+resignMarkers+items+more+
+    '</div>';
   }
   $('calGrid').innerHTML=html;
   $('calGrid').querySelectorAll('[data-day]').forEach(function(el){
@@ -888,15 +935,15 @@ function processPIN(){
   var stored=getPIN();
   if(pinMode==='unlock'){
     if(pinBuffer===stored)unlockApp();
-    else{pinShake();setTimeout(function(){pinBuffer='';updateDots();setLockSub('PIN이 틀렸습니다. 다시 입력하세요');},300);}
+    else{pinShake();setTimeout(function(){pinBuffer='';updateDots();setLockSub('PIN이 틀렸습니다. 다시 입력하세요');},200);}
   }else if(pinMode==='change1'){
     if(pinBuffer===stored){pinTemp='';pinBuffer='';updateDots();pinMode='change2';setLockSub('새 PIN 6자리를 입력하세요');}
-    else{pinShake();setTimeout(function(){pinBuffer='';updateDots();setLockSub('현재 PIN이 틀렸습니다');},300);}
+    else{pinShake();setTimeout(function(){pinBuffer='';updateDots();setLockSub('현재 PIN이 틀렸습니다');},200);}
   }else if(pinMode==='change2'){
     pinTemp=pinBuffer;pinBuffer='';updateDots();setLockSub('새 PIN을 한 번 더 입력하세요');pinMode='change3';
   }else if(pinMode==='change3'){
     if(pinBuffer===pinTemp){setPIN(pinBuffer);unlockApp();toast('🔐 PIN이 변경되었습니다');}
-    else{pinShake();setTimeout(function(){pinBuffer='';pinTemp='';updateDots();pinMode='change2';setLockSub('PIN이 일치하지 않습니다. 다시 입력하세요');},300);}
+    else{pinShake();setTimeout(function(){pinBuffer='';pinTemp='';updateDots();pinMode='change2';setLockSub('PIN이 일치하지 않습니다. 다시 입력하세요');},200);}
   }
 }
 function setLockSub(msg){var el=$('lockSub');if(el)el.textContent=msg;}
@@ -929,7 +976,7 @@ document.addEventListener('DOMContentLoaded',function(){
     btn.addEventListener('click',function(){
       if(pinBuffer.length>=6)return;
       pinBuffer+=btn.dataset.n;updateDots();
-      if(pinBuffer.length===6)setTimeout(processPIN,80);
+      if(pinBuffer.length===6)setTimeout(processPIN,30);
     });
   });
   var delBtn=$('pinDel');
@@ -1113,6 +1160,13 @@ document.addEventListener('DOMContentLoaded',function(){
   var sc=$('searchClear');
   if(sc)sc.addEventListener('click',function(){$('searchInput').value='';searchQ='';applySearch();});
 
+  /* 달력 범례 필터 */
+  document.querySelectorAll('.leg-filter').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('.leg-filter').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on');calFilt=b.dataset.cf;renderCal();
+    });
+  });
   /* 달력 */
   var cp=$('calPrev');if(cp)cp.addEventListener('click',function(){calM--;if(calM<0){calM=11;calY--;}calSelDay=null;renderCal();});
   var cn=$('calNext');if(cn)cn.addEventListener('click',function(){calM++;if(calM>11){calM=0;calY++;}calSelDay=null;renderCal();});
