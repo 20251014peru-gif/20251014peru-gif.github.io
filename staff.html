@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1235</title>
+<title>직원 관리 v44-0626-1248</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -295,7 +295,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <a class="hdr-link green" href="worklog.html" title="업무일지">📋 업무일지</a>
     <a class="hdr-link blue" href="worklog.html#contacts" id="contactsLink" title="업체 연락처">📞 연락처</a>
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1235</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1248</span>
   </div>
 </div>
 
@@ -536,7 +536,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <script>
 /* ===== 설정 ===== */
-var APP_VERSION='v44-0626-1235';
+var APP_VERSION='v44-0626-1248';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;})();
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
@@ -926,11 +926,6 @@ function renderCal(){
   var byDate={};
   allRecs.forEach(function(r){if(r.date)(byDate[r.date]=byDate[r.date]||[]).push(r);});
   var hireByDate={},resignByDate={};
-  allHistory.forEach(function(h){
-    if(h.type==='입사'&&h.date)(hireByDate[h.date]=hireByDate[h.date]||[]).push(h);
-    if(h.type==='퇴사'&&h.date)(resignByDate[h.date]=resignByDate[h.date]||[]).push(h);
-  });
-  // 직원 hired 날짜도 입사 마커로
   // allHistory에서 입퇴사 마커 (중복 제거)
   var histIds={}; // staffId+date 조합으로 중복 체크
   allHistory.forEach(function(h){
