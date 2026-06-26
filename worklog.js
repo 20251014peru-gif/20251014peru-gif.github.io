@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0625-1706";
+const APP_VERSION = "v44-0626-1513";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -686,14 +686,68 @@ document.addEventListener("click",e=>{ const im=e.target.closest("img.zimg"); if
 
 /* ===== 저장소 ===== */
 function lsLoad(){ try{ return JSON.parse(localStorage.getItem("wl_"+COL)||"[]"); }catch(e){ return []; } }
-function lsSave(){ try{ localStorage.setItem("wl_"+COL, JSON.stringify(entries)); }catch(e){} }
+
+/* localStorage 전체 용량 확인 (bytes) */
+function lsTotalSize(){
+  let t=0;
+  try{ for(let k in localStorage){ if(localStorage.hasOwnProperty(k)) t+=(localStorage.getItem(k)||"").length; } }catch(e){}
+  return t;
+}
+
+/* 오래된 캐시 자동 정리 — 4.5MB 초과 시 호출 */
+function lsAutoClean(){
+  const targets=[
+    "wl_tempbackup",       // 임시백업 (삭제 무방)
+    "psc_photos_personal", // 연락처 사진 캐시 (재로드 가능)
+  ];
+  targets.forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} });
+  console.warn("[worklog] localStorage 자동 정리 완료. 현재:", (lsTotalSize()/1024).toFixed(0)+"KB");
+}
+
+/* 안전 lsSave — 용량 초과 시 자동 정리 후 재시도 */
+function lsSave(){
+  try{
+    localStorage.setItem("wl_"+COL, JSON.stringify(entries));
+  }catch(e){
+    // 1차: 자동 정리 후 재시도
+    try{
+      lsAutoClean();
+      localStorage.setItem("wl_"+COL, JSON.stringify(entries));
+      toast("💾 저장 공간 자동 정리 후 저장했습니다");
+    }catch(e2){
+      // 2차: Firebase에는 저장되므로 사용자에게 안내
+      console.error("[worklog] lsSave 실패:", e2);
+      toast("⚠️ 로컬 저장 실패 — 클라우드에는 저장됩니다 (브라우저 저장공간 부족)");
+    }
+  }
+}
+
 function genId(){ return online ? db.collection(COL).doc().id : "L"+Date.now()+Math.floor(Math.random()*100000); }
 function syncSet(id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.collection(COL).doc(id).set(payload).catch(e=>{ logErr("저장 동기화", e); toast("클라우드 동기화 지연 — 이 기기에는 저장됨"); }); }
 function addRecord(data){ const id=genId(); const rec={...data,id}; entries.push(rec); if(online) syncSet(id,rec); lsSave(); return rec; }
 function updateRecord(id,patch){ const i=entries.findIndex(x=>x.id===id); if(i<0) return; entries[i]={...entries[i],...patch}; if(online) syncSet(id,entries[i]); lsSave(); }
 function deleteRecord(id){ entries=entries.filter(x=>x.id!==id); if(online) db.collection(COL).doc(id).delete().catch(e=>logErr("삭제 동기화", e)); lsSave(); }
 const TEMP_BK="wl_tempbackup";
-function saveTempBackup(){ try{ localStorage.setItem(TEMP_BK, JSON.stringify({at:Date.now(),entries})); }catch(e){} }
+/* tempbackup — 24시간 만료 적용 */
+function saveTempBackup(){
+  try{
+    // 용량 4.5MB 초과 시 tempbackup 저장 생략
+    if(lsTotalSize() > 4.5*1024*1024){ console.warn("[worklog] 용량 부족으로 tempbackup 생략"); return; }
+    localStorage.setItem(TEMP_BK, JSON.stringify({at:Date.now(),entries}));
+  }catch(e){}
+}
+/* 앱 시작 시 24시간 지난 tempbackup 자동 삭제 */
+(function cleanExpiredTempBackup(){
+  try{
+    const raw=localStorage.getItem(TEMP_BK);
+    if(!raw) return;
+    const obj=JSON.parse(raw);
+    if(Date.now()-obj.at > 24*60*60*1000){
+      localStorage.removeItem(TEMP_BK);
+      console.log("[worklog] 만료된 tempbackup 삭제");
+    }
+  }catch(e){ try{ localStorage.removeItem(TEMP_BK); }catch(e2){} }
+})();
 function restoreRecord(rec){
   if(!rec) return;
   const i=entries.findIndex(x=>x.id===rec.id);
