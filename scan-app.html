@@ -1602,16 +1602,23 @@ $('zoomRotR').onclick=()=>{_zoom.rot+=90;applyZoomTransform();};
 $('zoomDownload').onclick=()=>{
   const src=$('zoomImg').src;
   const title=$('zoomTitle').textContent||'사진';
-  const a=document.createElement('a');
-  a.href=src;
-  a.download=title.replace(/[/\\:*?"<>|]/g,'_')+'.jpg';
-  a.click();
+  if(src.startsWith('data:')){
+    const a=document.createElement('a');
+    a.href=src;
+    a.download=title.replace(/[/\\:*?"<>|]/g,'_')+'.jpg';
+    a.click();
+  } else {
+    // Firebase Storage URL — 새 탭으로 열기
+    const w=window.open(src,'_blank');
+    if(!w) toast('팝업 차단됨 — 브라우저 팝업 허용 후 다시 시도');
+    else toast('새 탭에서 열림 — 마우스 우클릭 → 이미지 저장');
+  }
 };
 $('zoomShare').onclick=async()=>{
   const src=$('zoomImg').src;
   const title=($('zoomTitle').textContent||'사진').replace(/[/\\:*?"<>|]/g,'_');
   try{
-    if(navigator.share&&navigator.canShare){
+    if(src.startsWith('data:')&&navigator.share&&navigator.canShare){
       const res=await fetch(src);
       const blob=await res.blob();
       const file=new File([blob],title+'.jpg',{type:'image/jpeg'});
@@ -1620,10 +1627,10 @@ $('zoomShare').onclick=async()=>{
         return;
       }
     }
-    /* 폴백: 새 탭 */
-    const w=window.open();
-    if(w){w.document.write(`<img src="${src}" style="max-width:100%">`);toast('새 탭에서 사진 열림 — 길게 눌러 저장/공유하세요');}
-    else toast('팝업 차단됨 — ⬇ 다운로드 버튼을 이용하세요');
+    /* Storage URL이거나 폴백 — 새 탭 */
+    const w=window.open(src,'_blank');
+    if(w) toast('새 탭에서 열림 — 길게 눌러 저장/공유');
+    else toast('팝업 차단됨 — ⬇ 다운로드 버튼 이용');
   }catch(e){
     if(e.name!=='AbortError') toast('공유 실패: '+e.message);
   }
@@ -4289,7 +4296,7 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260626-1700';
+  $('appVer').textContent='v20260626-1719';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';

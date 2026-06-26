@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0626-1711";
+const APP_VERSION = "v44-0626-1719";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -714,21 +714,31 @@ $("ivRotR").addEventListener("click",()=>{_iv.rot+=90;_ivApply();});
 $("ivDownload").addEventListener("click",()=>{
   const src=$("imgFull").src;
   const title=$("imgViewerTitle").textContent||"사진";
-  const a=document.createElement("a");
-  a.href=src; a.download=title.replace(/[/\\:*?"<>|]/g,"_")+".jpg"; a.click();
+  // base64면 직접 다운로드, Storage URL이면 새 탭
+  if(src.startsWith("data:")){
+    const a=document.createElement("a");
+    a.href=src; a.download=title.replace(/[/\\:*?"<>|]/g,"_")+".jpg"; a.click();
+  } else {
+    // Storage URL — 새 탭에서 열어서 저장
+    const w=window.open(src,"_blank");
+    if(!w) toast("팝업 차단됨 — 브라우저에서 팝업 허용 후 다시 시도하세요");
+    else toast("새 탭에서 열림 — 마우스 우클릭 → 이미지 저장");
+  }
 });
 $("ivShare").addEventListener("click",async()=>{
   const src=$("imgFull").src;
   const title=($("imgViewerTitle").textContent||"사진").replace(/[/\\:*?"<>|]/g,"_");
   try{
-    if(navigator.share&&navigator.canShare){
+    if(src.startsWith("data:") && navigator.share && navigator.canShare){
+      // base64일 때만 파일 공유 시도
       const res=await fetch(src);
       const blob=await res.blob();
       const file=new File([blob],title+".jpg",{type:"image/jpeg"});
       if(navigator.canShare({files:[file]})){await navigator.share({files:[file],title});return;}
     }
-    const w=window.open();
-    if(w){w.document.write(`<img src="${src}" style="max-width:100%">`);toast("새 탭에서 열림 — 길게 눌러 저장/공유");}
+    // Storage URL이거나 Web Share 미지원이면 새 탭
+    const w=window.open(src.startsWith("data:")? src : src,"_blank");
+    if(w) toast("새 탭에서 열림 — 길게 눌러 저장/공유");
     else toast("팝업 차단됨 — ⬇ 다운로드 버튼 이용");
   }catch(e){if(e.name!=="AbortError")toast("공유 실패: "+e.message);}
 });
@@ -3139,10 +3149,21 @@ function openViewer(kind,id){
   $("vBody").querySelectorAll('[data-scan-type]').forEach(chip=>{
     chip.addEventListener('click',async()=>{
       const type=chip.dataset.scanType, id=chip.dataset.scanId;
-      if(typeof fetchScanItem==='function'){
-        const d=await fetchScanItem(type,id).catch(()=>({}));
-        if(d&&d.photoUrl) showImg(d.photoUrl,d.place||d.name||'영수증');
-        else toast('사진 없음');
+      // scanRefs에서 이미 가진 data 우선 사용
+      const cached=(data.scanRefs||[]).find(r=>r.id===id);
+      const d=cached&&cached.data ? cached.data : null;
+      const photoUrl=d&&d.photoUrl ? d.photoUrl : null;
+      const title=(d&&(d.place||d.name))||'영수증';
+      if(photoUrl){
+        showImg(photoUrl, title);
+      } else if(typeof window._fetchScanItem==='function'){
+        try{
+          const fd=await window._fetchScanItem(type,id);
+          if(fd&&fd.photoUrl) showImg(fd.photoUrl, fd.place||fd.name||title);
+          else toast('사진 없음');
+        }catch(e){ toast('사진 로드 실패'); }
+      } else {
+        toast('사진 없음');
       }
     });
   });
@@ -3438,8 +3459,19 @@ $("mSave").addEventListener("click",async ()=>{
   }
   if(PHOTO_KINDS.includes(mKind)) obj.photos=modalPhotos.slice();
   if(ATTACH_KINDS.includes(mKind)) obj.attachments=modalAttachments.slice();
-  /* scan-app 연결 영수증 저장 */
-  if(_mScanRefs.length) obj.scanRefs=_mScanRefs.map(r=>({type:r.type,id:r.id}));
+  /* scan-app 연결 영수증 저장 — photoUrl 등 핵심 data 함께 보존 */
+  if(_mScanRefs.length) obj.scanRefs=_mScanRefs.map(r=>({
+    type:r.type,
+    id:r.id,
+    data:r.data ? {
+      place:r.data.place||'',
+      name:r.data.name||'',
+      date:r.data.date||'',
+      amount:r.data.amount||0,
+      photoUrl:r.data.photoUrl||'',
+      photoId:r.data.photoId||''
+    } : {}
+  }));
   if(mKind==="vacation" && !obj.end) obj.end=obj.start;
   // 업무: 일회성 업체 여부 저장
   if(mKind==="work"){
