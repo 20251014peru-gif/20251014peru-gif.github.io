@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1147</title>
+<title>직원 관리 v44-0626-1152</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -276,7 +276,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 <!-- ===== HEADER ===== -->
 <div class="hdr">
   <div class="hdr-left">
-    <a class="back" href="worklog.html">←</a>
+    <button class="back" onclick="history.back()">←</button>
     <div class="hdr-info">
       <h1>👥 직원 관리</h1>
       <p id="hd"></p>
@@ -284,7 +284,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
   </div>
   <div class="hdr-right">
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1147</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1152</span>
   </div>
 </div>
 
@@ -523,7 +523,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <script>
 /* ===== 설정 ===== */
-var APP_VERSION='v44-0626-1147';
+var APP_VERSION='v44-0626-1152';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;})();
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
