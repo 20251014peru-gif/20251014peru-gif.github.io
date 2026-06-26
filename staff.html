@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1101</title>
+<title>직원 관리 v44-0626-1144</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -140,7 +140,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .hist-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
 .hf-chip{padding:5px 13px;border-radius:20px;border:2px solid var(--border2);background:var(--card);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink3);transition:.15s;}
 .hf-chip.on{background:var(--accent);color:#fff;border-color:var(--accent);}
-.hist-card{background:var(--card);border:2px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;display:flex;gap:14px;align-items:flex-start;}
+.hist-card{background:var(--card);border:2px solid var(--border);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:8px;}
 .hist-card.type-입사{border-left:4px solid var(--green);}
 .hist-card.type-퇴사{border-left:4px solid var(--red);}
 .hist-card.type-복직{border-left:4px solid var(--accent);}
@@ -284,7 +284,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
   </div>
   <div class="hdr-right">
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1101</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1144</span>
   </div>
 </div>
 
@@ -351,7 +351,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <button class="hf-chip" data-hf="복직">🔵 복직</button>
   </div>
   <div id="histKpi" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px"></div>
-  <div id="histList"><div class="loading">⏳ 불러오는 중...</div></div>
+  <div id="histList" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"><div class="loading" style="grid-column:1/-1">⏳ 불러오는 중...</div></div>
 </div>
 
 <!-- ===== 달력 탭 ===== -->
@@ -523,7 +523,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <script>
 /* ===== 설정 ===== */
-var APP_VERSION='v44-0626-1101';
+var APP_VERSION='v44-0626-1144';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;})();
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
@@ -560,6 +560,25 @@ function $(id){return document.getElementById(id);}
 function esc(s){return(s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function toast(msg){var t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},2400);}
 
+function resignedToDate(resignedStr){
+  if(!resignedStr)return todayStr();
+  // YY.MM.DD 또는 YYYY-MM-DD 또는 YYYY.MM.DD
+  if(resignedStr.includes('-'))return resignedStr;
+  try{
+    var p=resignedStr.split('.');
+    var y=parseInt(p[0]);if(y<100)y+=2000;
+    return y+'-'+pad(parseInt(p[1]||1))+'-'+pad(parseInt(p[2]||1));
+  }catch(e){return todayStr();}
+}
+function hiredToDate(hiredStr){
+  // YY.MM.DD 또는 YYYY.MM.DD → YYYY-MM-DD
+  if(!hiredStr)return todayStr();
+  try{
+    var p=hiredStr.split('.');
+    var y=parseInt(p[0]);if(y<100)y+=2000;
+    return y+'-'+pad(parseInt(p[1]||1))+'-'+pad(parseInt(p[2]||1));
+  }catch(e){return todayStr();}
+}
 function calcTenure(hiredStr,resignedStr){
   if(!hiredStr)return'';
   try{
@@ -584,8 +603,35 @@ function fbAll(col){return fetch(colUrl(col)+'?key='+FB_KEY+'&pageSize=300').the
 function fbQuery(col,field,value){var url='https://firestore.googleapis.com/v1/projects/'+PRJ+'/databases/(default)/documents:runQuery?key='+FB_KEY;var body={structuredQuery:{from:[{collectionId:col}],where:{fieldFilter:{field:{fieldPath:field},op:'EQUAL',value:{stringValue:value}}}}};return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(d){return Array.isArray(d)?d.filter(function(x){return x.document;}).map(function(x){return fromFS(x.document);}):[];});}
 
 /* ===== 직원 로드/저장 ===== */
-function loadStaff(){try{var s=JSON.parse(localStorage.getItem('staff_v5')||'null');if(Array.isArray(s)&&s.length)return s;}catch(e){}return STAFF_DEFAULT.map(function(x){return Object.assign({},x);});}
-function saveStaff(){try{localStorage.setItem('staff_v5',JSON.stringify(STAFF));}catch(e){}}
+function loadStaff(){
+  try{var s=JSON.parse(localStorage.getItem('staff_v5')||'null');if(Array.isArray(s)&&s.length)return s;}catch(e){}
+  return STAFF_DEFAULT.map(function(x){return Object.assign({},x);});
+}
+function saveStaff(){
+  try{localStorage.setItem('staff_v5',JSON.stringify(STAFF));}catch(e){}
+}
+async function loadStaffFromFirebase(){
+  try{
+    var docs=await fbAll('staff-members');
+    if(docs&&docs.length>0){
+      STAFF=docs;
+      saveStaff(); // 로컬에도 캐시
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+async function saveStaffToFirebase(s){
+  try{ await fbPatch('staff-members', s.id, s); }catch(e){}
+}
+async function deleteStaffFromFirebase(sid){
+  try{ await fbDel('staff-members', sid); }catch(e){}
+}
+async function saveAllStaffToFirebase(){
+  for(var i=0;i<STAFF.length;i++){
+    try{ await fbPatch('staff-members', STAFF[i].id, STAFF[i]); }catch(e){}
+  }
+}
 
 /* ===== 탭 ===== */
 function switchTab(name){
@@ -797,21 +843,22 @@ function drawHist(){
   var list=allHistory.slice();
   if(histFilt!=='전체')list=list.filter(function(h){return h.type===histFilt;});
   list.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')||((b.ts||0)-(a.ts||0));});
-  if(!list.length){$('histList').innerHTML='<div class="empty"><span class="empty-ico">📋</span>입퇴사 이력 없음<br><span style="font-size:12px">➕ 이력 등록 버튼으로 추가하세요</span></div>';return;}
+  var hl=$('histList');hl.style.display='grid';hl.style.gridTemplateColumns='repeat(3,1fr)';hl.style.gap='10px';
+  if(!list.length){hl.innerHTML='<div class="empty" style="grid-column:1/-1"><span class="empty-ico">📋</span>입퇴사 이력 없음<br><span style="font-size:12px">➕ 이력 등록 버튼으로 추가하세요</span></div>';return;}
   var ico={'입사':'🟢','퇴사':'🔴','복직':'🔵'};
   $('histList').innerHTML=list.map(function(h){
     var s=STAFF.find(function(x){return x.id===h.staffId||x.name===h.staffName;});
     var rc=s?(RC[s.role]||'#4C6EF5'):'#8C99C0';
     return'<div class="hist-card type-'+(h.type||'')+'">'+
-      '<div class="hist-icon">'+(ico[h.type]||'📋')+'</div>'+
-      '<div class="hist-body">'+
+      '<div style="display:flex;align-items:center;gap:8px">'+
+        '<span style="font-size:20px">'+(ico[h.type]||'📋')+'</span>'+
         '<span class="hist-type-badge type-badge-'+(h.type||'')+'">'+(h.type||'')+'</span>'+
-        '<div class="hist-name" style="color:'+rc+'">'+esc(h.staffName||h.staffId||'')+(s?' <span style="font-size:11px;color:var(--ink3)">'+s.role+'</span>':'')+'</div>'+
-        '<div class="hist-meta">'+(h.date?'📅 '+esc(h.date):'')+'</div>'+
-        (h.memo?'<div class="hist-memo">'+esc(h.memo)+'</div>':'')+
-        '<button class="hist-del" data-hdel="'+esc(h._id||String(h.ts||''))+'">🗑 삭제</button>'+
+        '<span style="font-size:11px;color:var(--ink3);margin-left:auto">'+(h.date||'').slice(5)+'</span>'+
       '</div>'+
-      '<div class="hist-date">'+(h.date||'').slice(5)+'</div>'+
+      '<div class="hist-name" style="color:'+rc+';font-size:15px">'+esc(h.staffName||h.staffId||'')+(s?' <span style="font-size:11px;color:var(--ink3)">'+s.role+'</span>':'')+'</div>'+
+      '<div style="font-size:12px;color:var(--ink3)">📅 '+esc(h.date||'')+'</div>'+
+      (h.memo&&h.memo!=='자동 등록'&&h.memo!=='직원 등록 시 자동'&&h.memo!=='상태 변경 자동'?'<div class="hist-memo">'+esc(h.memo)+'</div>':'')+
+      '<button class="hist-del" data-hdel="'+esc(h._id||String(h.ts||''))+'">🗑 삭제</button>'+
     '</div>';
   }).join('');
 }
@@ -831,12 +878,22 @@ function renderCal(){
   });
   // 직원 hired 날짜도 입사 마커로
   STAFF.forEach(function(s){
-    if(!s.hired)return;
-    try{var p=s.hired.split('.');var y=parseInt(p[0]);if(y<100)y+=2000;
-      var ds2=y+'-'+pad(parseInt(p[1]||1))+'-'+pad(parseInt(p[2]||1));
-      if(!(hireByDate[ds2]||[]).find(function(h){return h.staffId===s.id;}))
-        (hireByDate[ds2]=hireByDate[ds2]||[]).push({staffId:s.id,staffName:s.name,type:'입사'});
-    }catch(e){}
+    // 입사 마커
+    if(s.hired){
+      try{
+        var ds2=hiredToDate(s.hired);
+        if(!(hireByDate[ds2]||[]).find(function(h){return h.staffId===s.id;}))
+          (hireByDate[ds2]=hireByDate[ds2]||[]).push({staffId:s.id,staffName:s.name,type:'입사'});
+      }catch(e){}
+    }
+    // 퇴사 마커
+    if(s.status==='퇴사'&&s.resigned){
+      try{
+        var ds3=resignedToDate(s.resigned);
+        if(!(resignByDate[ds3]||[]).find(function(h){return h.staffId===s.id;}))
+          (resignByDate[ds3]=resignByDate[ds3]||[]).push({staffId:s.id,staffName:s.name,type:'퇴사'});
+      }catch(e){}
+    }
   });
   var html=days.map(function(d,i){return'<div class="cal-dow'+(i===0?' sun':'')+'">'+(d)+'</div>';}).join('');
   for(var i=0;i<first;i++)html+='<div class="cal-cell empty"></div>';
@@ -1036,12 +1093,25 @@ document.addEventListener('DOMContentLoaded',function(){
       if(STAFF.find(function(x){return x.name===name;})){toast('이미 같은 이름의 직원이 있습니다');return;}
       STAFF.push(s);
     }
+    var prevStaff = _smSid ? STAFF.find(function(x){return x.id===_smSid;}) : null;
+    var prevStatus = prevStaff ? prevStaff.status : null;
     saveStaff();
-    try{await fbPatch('staff-members',s.id,s);}catch(e){}
-    // 퇴사 자동 이력
-    if(s.status==='퇴사'&&s.resigned){
-      var already=allHistory.find(function(h){return h.staffId===s.id&&h.type==='퇴사';});
-      if(!already){try{await addHistEntry({staffId:s.id,staffName:s.name,type:'퇴사',date:s.resigned,memo:'자동 등록',ts:Date.now()});}catch(e){}}
+    // Firebase 저장
+    await saveStaffToFirebase(s);
+    // 상태 변경에 따른 이력 자동 등록
+    var today = todayStr();
+    if(!_smSid){
+      // 신규 등록 → 입사 이력 자동
+      var hireDate = s.hired ? hiredToDate(s.hired) : today;
+      try{await addHistEntry({staffId:s.id,staffName:s.name,type:'입사',date:hireDate,memo:'직원 등록 시 자동',ts:Date.now()});}catch(e){}
+    } else if(prevStatus==='재직중' && s.status==='퇴사'){
+      // 재직→퇴사
+      var resDate = s.resigned || today;
+      var already=allHistory.find(function(h){return h.staffId===s.id&&h.type==='퇴사'&&h.date===resDate;});
+      if(!already){try{await addHistEntry({staffId:s.id,staffName:s.name,type:'퇴사',date:resDate,memo:'상태 변경 자동',ts:Date.now()});}catch(e){}}
+    } else if(prevStatus==='퇴사' && s.status==='재직중'){
+      // 퇴사→복직
+      try{await addHistEntry({staffId:s.id,staffName:s.name,type:'복직',date:today,memo:'상태 변경 자동',ts:Date.now()});}catch(e){}
     }
     try{await syncContact(s);}catch(e){}
     closeStaffModal();drawGrid();refreshAll();
@@ -1063,7 +1133,7 @@ document.addEventListener('DOMContentLoaded',function(){
     if(!confirm((s?s.name:'직원')+'을(를) 삭제할까요?'))return;
     STAFF=STAFF.filter(function(x){return x.id!==_smSid;});
     saveStaff();
-    try{fbDel('staff-members',_smSid).catch(function(){});}catch(e){}
+    deleteStaffFromFirebase(_smSid);
     closeStaffModal();drawGrid();toast('🗑 삭제됨');
   }
   var sdb=$('staffDelBtn');if(sdb)sdb.addEventListener('click',delStaff);
@@ -1196,15 +1266,33 @@ document.addEventListener('DOMContentLoaded',function(){
   });
   $('histModal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
 
-  /* 앱 초기화 */
-  STAFF=loadStaff();
-  fbAll('staff-records').then(function(docs){
-    allRecs=docs.sort(function(a,b){return(b.ts||0)-(a.ts||0);});
-    fbAll('staff-history').then(function(hdocs){
-      allHistory=hdocs.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')||((b.ts||0)-(a.ts||0));});
-      drawGrid();
-    }).catch(function(){drawGrid();});
-  }).catch(function(){drawGrid();toast('⚠️ 오프라인');});
+  /* 앱 초기화 — Firebase 우선 로드 */
+  STAFF=loadStaff(); // 먼저 로컬로 빠르게 렌더
+  drawGrid();
+  // Firebase에서 최신 데이터 로드
+  Promise.all([
+    fbAll('staff-members'),
+    fbAll('staff-records'),
+    fbAll('staff-history')
+  ]).then(function(results){
+    var staffDocs=results[0],recDocs=results[1],histDocs=results[2];
+    if(staffDocs&&staffDocs.length>0){
+      STAFF=staffDocs;
+      saveStaff();
+    } else if(STAFF.length>0){
+      // Firebase에 없으면 로컬 데이터를 Firebase에 업로드
+      saveAllStaffToFirebase();
+    }
+    allRecs=recDocs.sort(function(a,b){return(b.ts||0)-(a.ts||0);});
+    allHistory=histDocs.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')||((b.ts||0)-(a.ts||0));});
+    drawGrid();
+    if($('panel-all').classList.contains('on'))drawAll();
+    if($('panel-hist').classList.contains('on'))drawHist();
+    if($('panel-cal').classList.contains('on'))renderCal();
+  }).catch(function(e){
+    console.error('Firebase 로드 오류',e);
+    toast('⚠️ 오프라인 — 로컬 데이터 사용');
+  });
 
   /* PIN 초기화 */
   initLock();
