@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1010</title>
+<title>직원 관리 v44-0626-1048</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -410,7 +410,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1010</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1048</span>
   </div>
 </div>
 
@@ -700,7 +700,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 /* ===== 설정 ===== */
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
-var APP_VERSION='v44-0626-1010';
+var APP_VERSION='v44-0626-1048';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;})();
 
 /* ===== 직원 기본 데이터 (Firebase 없을 때 폴백) ===== */
@@ -1050,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 /* =========================================================
-   PIN 잠금 시스템 v44-0626-1010
+   PIN 잠금 시스템 v44-0626-1048
    - shared_pin 키 (worklog 공통)
    - 최초 실행 시 102800 자동 세팅
    - 모든 DOM 접근은 DOMContentLoaded 안에서만
@@ -1060,17 +1060,11 @@ var pinBuffer = '';
 var pinMode = 'unlock';
 var pinTemp = '';
 
-function getPIN(){ try{ return localStorage.getItem(PIN_LS) || ''; }catch(e){ return '102800'; } }
+function getPIN(){ try{ return localStorage.getItem(PIN_LS) || ''; }catch(e){ return '1028'; } }
 function setPIN(p){ try{ localStorage.setItem(PIN_LS, p); }catch(e){} }
 function hasPIN(){ try{ var p = localStorage.getItem(PIN_LS); return !!(p && p.length >= 4); }catch(e){ return false; } }
 
 function processPIN(){
-  // 디버그
-  var stored = getPIN();
-  console.log('[PIN디버그] 입력:', pinBuffer, '저장된PIN:', stored, '모드:', pinMode);
-  // lockSub에 임시 표시
-  var dbg = document.getElementById('lockSub');
-  if(dbg) dbg.textContent = '입력:'+pinBuffer+' / 저장:'+stored;
   if(pinMode === 'unlock'){
     if(pinBuffer === getPIN()) unlockApp();
     else pinError('PIN이 틀렸습니다');
@@ -1138,7 +1132,7 @@ function pinError(msg){
 
 function initLock(){
   // shared_pin 없으면 102800 기본값 세팅
-  if(!hasPIN()){ setPIN('102800'); }
+  if(!hasPIN()){ setPIN('1028'); }
   showUnlockScreen();
 }
 
@@ -1146,7 +1140,6 @@ document.addEventListener('DOMContentLoaded', function(){
   // 숫자 버튼
   document.querySelectorAll('.pin-btn[data-n]').forEach(function(btn){
     btn.addEventListener('click', function(){
-      console.log('[PIN디버그] 버튼클릭:', btn.dataset.n, 'buffer:', pinBuffer);
       if(pinBuffer.length >= 4) return;
       pinBuffer += btn.dataset.n;
       updateDots();
