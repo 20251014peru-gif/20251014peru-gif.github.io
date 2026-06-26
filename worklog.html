@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0626-0045</title>
+<title>업무일지 v44-0626-1711</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1091,6 +1091,22 @@
   transform:translateY(1px);
   box-shadow:0 0 0 rgba(0,0,0,0), inset 0 1.5px 3px rgba(0,0,0,.1) !important;
 }
+/* ── 풀스크린 이미지 뷰어 (scan-app 동일) ── */
+#imgOverlay{display:none;position:fixed;inset:0;background:#000;z-index:99900;overflow:hidden;touch-action:none}
+#imgOverlay.show{display:flex;align-items:center;justify-content:center}
+#imgFull{max-width:none;max-height:none;transform-origin:center center;user-select:none;-webkit-user-drag:none;position:absolute}
+#imgViewerHeader{position:absolute;top:0;left:0;right:0;padding:16px 20px;
+  background:linear-gradient(rgba(0,0,0,.7),transparent);z-index:10;
+  display:flex;justify-content:space-between;align-items:center;gap:12px}
+#imgViewerTitle{font-size:16px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);
+  max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#imgViewerFooter{position:absolute;bottom:0;left:0;right:0;padding:18px 18px 22px;
+  background:linear-gradient(transparent,rgba(0,0,0,.75));z-index:10;
+  display:flex;justify-content:center;gap:14px}
+.iv-btn{width:54px;height:54px;border-radius:50%;border:2px solid rgba(255,255,255,.4);
+  background:rgba(255,255,255,.2);color:#fff;font-size:22px;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.iv-btn:hover{background:rgba(255,255,255,.35);border-color:rgba(255,255,255,.7)}
 </style>
 </head>
 <body>
@@ -1271,7 +1287,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0626-0045</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0626-1711</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2423,10 +2439,13 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="attach-list" id="mAttachList"></div>
   </div>
   <div class="thumbs" id="m-thumbs" style="margin-top:8px"></div>
+  <!-- scan-app 연결 영수증 표시 영역 -->
+  <div id="mScanRefs" style="margin-top:6px;display:flex;flex-direction:column;gap:6px"></div>
   <div id="mBtnRow" style="margin-top:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <div id="mPhotoArea" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
       <label class="photo-btn">📷 촬영<input type="file" id="m-cam" accept="image/*" capture="environment" style="display:none"></label>
       <label class="photo-btn">🖼 사진 선택<input type="file" id="m-file" accept="image/*" multiple style="display:none"></label>
+      <button type="button" id="mScanPickBtn" class="photo-btn" style="background:#e8f0fa;color:#3f7cb8;border:1.5px solid #dbe6f4">🧾 스캔앱 선택</button>
       <span style="font-size:11px;color:#7a92a8">💡 끌어놓기 · Ctrl+V 붙여넣기도 됩니다</span>
     </div>
     <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
@@ -2459,7 +2478,24 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   </div>
 </div>
 
-<div id="imgOverlay"><img id="imgFull" src="" alt=""></div>
+<div id="imgOverlay">
+  <div id="imgViewerHeader">
+    <div id="imgViewerTitle"></div>
+    <div style="display:flex;gap:12px;align-items:center">
+      <button class="iv-btn" id="ivShare" title="공유">📤</button>
+      <button class="iv-btn" id="ivDownload" title="다운로드">⬇</button>
+      <button class="iv-btn" id="ivClose" title="닫기">✕</button>
+    </div>
+  </div>
+  <img id="imgFull" src="" alt="">
+  <div id="imgViewerFooter">
+    <button class="iv-btn" id="ivRotL" title="반시계">↺</button>
+    <button class="iv-btn" id="ivZoomOut" title="축소">−</button>
+    <button class="iv-btn" id="ivFit" title="화면에 맞추기">⤢</button>
+    <button class="iv-btn" id="ivZoomIn" title="확대">+</button>
+    <button class="iv-btn" id="ivRotR" title="시계">↻</button>
+  </div>
+</div>
 
 <div class="overlay" id="viewOverlay"><div class="modal view-modal">
   <h3 id="vTitle">상세보기</h3>
@@ -8314,7 +8350,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0626-0045';
+    if(el) el.textContent = 'v44-0626-1711';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -9200,6 +9236,11 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   g('scanPickerOverlay').addEventListener('click', function(e){
     if(e.target === g('scanPickerOverlay')) closeScanPicker();
   });
+
+  /* 업무 모달용 picker 노출 */
+  window._openScanPickerForWork = function(onSelect){
+    openScanPicker('receipt', '', onSelect);
+  };
 
   /* scan-app → worklog postMessage 수신 */
   window.addEventListener('message', function(e){

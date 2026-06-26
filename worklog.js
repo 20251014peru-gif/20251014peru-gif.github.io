@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0626-1513";
+const APP_VERSION = "v44-0626-1711";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -680,8 +680,107 @@ function renderThumbs(container, arr, onRemove){
   container.querySelectorAll("[data-rm]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); onRemove(Number(b.dataset.rm)); }));
 }
 function thumbsRO(arr){ return (arr&&arr.length)?`<div class="detail-thumbs">${arr.map(p=>`<div class="thumb"><img class="zimg" src="${p}"></div>`).join("")}</div>`:""; }
-function showImg(src){ $("imgFull").src=src; $("imgOverlay").classList.add("show"); }
-$("imgOverlay").addEventListener("click",()=>$("imgOverlay").classList.remove("show"));
+/* ── 풀스크린 이미지 뷰어 (scan-app 동일) ── */
+let _iv={scale:1,x:0,y:0,rot:0,dragging:false,lastX:0,lastY:0};
+
+function showImg(src,title){
+  const ov=$("imgOverlay"), img=$("imgFull");
+  ov.classList.add("show");
+  $("imgViewerTitle").textContent=title||"";
+  img.src=src;
+  img.onload=()=>_ivFit();
+}
+function _ivApply(){
+  $("imgFull").style.transform=`translate(${_iv.x}px,${_iv.y}px) scale(${_iv.scale}) rotate(${_iv.rot}deg)`;
+}
+function _ivFit(){
+  const ov=$("imgOverlay"),img=$("imgFull");
+  const r=ov.getBoundingClientRect();
+  const iw=img.naturalWidth,ih=img.naturalHeight;
+  if(!iw||!ih)return;
+  _iv.scale=Math.min(r.width/iw,(r.height-120)/ih)*0.95;
+  _iv.x=0;_iv.y=0;_iv.rot=0;
+  _ivApply();
+}
+function _ivClose(){ $("imgOverlay").classList.remove("show"); $("imgFull").src=""; }
+
+/* 버튼 이벤트 */
+$("ivClose").addEventListener("click",_ivClose);
+$("ivFit").addEventListener("click",_ivFit);
+$("ivZoomIn").addEventListener("click",()=>{_iv.scale=Math.min(10,_iv.scale*1.25);_ivApply();});
+$("ivZoomOut").addEventListener("click",()=>{_iv.scale=Math.max(0.1,_iv.scale*0.8);_ivApply();});
+$("ivRotL").addEventListener("click",()=>{_iv.rot-=90;_ivApply();});
+$("ivRotR").addEventListener("click",()=>{_iv.rot+=90;_ivApply();});
+$("ivDownload").addEventListener("click",()=>{
+  const src=$("imgFull").src;
+  const title=$("imgViewerTitle").textContent||"사진";
+  const a=document.createElement("a");
+  a.href=src; a.download=title.replace(/[/\\:*?"<>|]/g,"_")+".jpg"; a.click();
+});
+$("ivShare").addEventListener("click",async()=>{
+  const src=$("imgFull").src;
+  const title=($("imgViewerTitle").textContent||"사진").replace(/[/\\:*?"<>|]/g,"_");
+  try{
+    if(navigator.share&&navigator.canShare){
+      const res=await fetch(src);
+      const blob=await res.blob();
+      const file=new File([blob],title+".jpg",{type:"image/jpeg"});
+      if(navigator.canShare({files:[file]})){await navigator.share({files:[file],title});return;}
+    }
+    const w=window.open();
+    if(w){w.document.write(`<img src="${src}" style="max-width:100%">`);toast("새 탭에서 열림 — 길게 눌러 저장/공유");}
+    else toast("팝업 차단됨 — ⬇ 다운로드 버튼 이용");
+  }catch(e){if(e.name!=="AbortError")toast("공유 실패: "+e.message);}
+});
+
+/* 휠 줌 */
+$("imgOverlay").addEventListener("wheel",e=>{
+  e.preventDefault();
+  _iv.scale=Math.max(0.1,Math.min(10,_iv.scale*(e.deltaY<0?1.15:0.87)));
+  _ivApply();
+},{passive:false});
+
+/* 마우스 드래그 */
+$("imgFull").addEventListener("mousedown",e=>{
+  e.preventDefault();_iv.dragging=true;_iv.lastX=e.clientX;_iv.lastY=e.clientY;
+});
+window.addEventListener("mousemove",e=>{
+  if(!_iv.dragging)return;
+  _iv.x+=e.clientX-_iv.lastX;_iv.y+=e.clientY-_iv.lastY;
+  _iv.lastX=e.clientX;_iv.lastY=e.clientY;_ivApply();
+});
+window.addEventListener("mouseup",()=>{_iv.dragging=false;});
+
+/* 터치 핀치줌 */
+$("imgOverlay").addEventListener("touchstart",e=>{
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    _iv._td=Math.hypot(dx,dy);
+  }else if(e.touches.length===1){
+    _iv.dragging=true;_iv.lastX=e.touches[0].clientX;_iv.lastY=e.touches[0].clientY;
+  }
+},{passive:true});
+$("imgOverlay").addEventListener("touchmove",e=>{
+  if(e.touches.length===2){
+    e.preventDefault();
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const d=Math.hypot(dx,dy);
+    if(_iv._td){_iv.scale=Math.max(0.1,Math.min(10,_iv.scale*d/_iv._td));_ivApply();}
+    _iv._td=d;
+  }else if(e.touches.length===1&&_iv.dragging){
+    _iv.x+=e.touches[0].clientX-_iv.lastX;_iv.y+=e.touches[0].clientY-_iv.lastY;
+    _iv.lastX=e.touches[0].clientX;_iv.lastY=e.touches[0].clientY;_ivApply();
+  }
+},{passive:false});
+$("imgOverlay").addEventListener("touchend",()=>{_iv.dragging=false;_iv._td=0;});
+
+/* ESC 닫기 */
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("imgOverlay").classList.contains("show"))_ivClose();});
+
+/* 썸네일 클릭 → 뷰어 열기 (기존 zimg 이벤트 유지) */
+document.addEventListener("click",e=>{ const im=e.target.closest("img.zimg"); if(im){ e.stopPropagation(); showImg(im.src,im.dataset.title||""); } });
 document.addEventListener("click",e=>{ const im=e.target.closest("img.zimg"); if(im){ e.stopPropagation(); showImg(im.src); } });
 
 /* ===== 저장소 ===== */
@@ -2477,6 +2576,9 @@ function openEditor(kind,id){
     $("mPhotoArea").style.display=hasPhoto?"flex":"none";
     modalPhotos=hasPhoto?((data.photos||[]).slice()):[];
     renderModalThumbs();
+    /* scan-app 연결 초기화 */
+    _mScanRefs=(data.scanRefs||[]).map(r=>({type:r.type,id:r.id,data:r.data||{}}));
+    renderMScanRefs();
     const hasAttach=ATTACH_KINDS.includes(kind);
     $("mAttachArea").style.display=hasAttach?"":"none";
     modalAttachments=hasAttach?((data.attachments||[]).slice().map(a=>({label:a.label||"",path:a.path||""}))):[];
@@ -2535,9 +2637,9 @@ function openEditor(kind,id){
   $("mPhotoArea").style.display=hasPhoto?"flex":"none";
   modalPhotos=hasPhoto?((data.photos||[]).slice()):[];
   renderModalThumbs();
-
-
-  // v15: 첨부파일 영역
+  /* scan-app 연결 초기화 */
+  _mScanRefs=(data.scanRefs||[]).map(r=>({type:r.type,id:r.id,data:r.data||{}}));
+  renderMScanRefs();
   const hasAttach=ATTACH_KINDS.includes(kind);
   $("mAttachArea").style.display=hasAttach?"":"none";
   modalAttachments=hasAttach?((data.attachments||[]).slice().map(a=>({label:a.label||"",path:a.path||""}))):[];
@@ -3022,7 +3124,28 @@ function openViewer(kind,id){
   }
   let photos="";
   if((data.photos||[]).length) photos=`<div class="vrow"><div class="vk">사진</div><div class="vv">${thumbsRO(data.photos)}</div></div>`;
-  $("vBody").innerHTML=`<dl>${rows}${photos}</dl>`;
+  /* scan-app 연결 영수증 표시 */
+  let scanRefsHtml="";
+  if((data.scanRefs||[]).length){
+    const chips=data.scanRefs.map(r=>{
+      const icon=r.type==='receipt'?'🧾':'💼';
+      const label=r.type==='receipt'?'영수증':'명함';
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:#e8f0fa;color:#3f7cb8;font-size:12px;font-weight:700;cursor:pointer" data-scan-type="${r.type}" data-scan-id="${r.id}">${icon} ${label}</span>`;
+    }).join(' ');
+    scanRefsHtml=`<div class="vrow"><div class="vk">🔗 영수증</div><div class="vv" id="vScanRefs">${chips}</div></div>`;
+  }
+  $("vBody").innerHTML=`<dl>${rows}${photos}${scanRefsHtml}</dl>`;
+  /* 영수증 칩 클릭 → 사진 팝업 */
+  $("vBody").querySelectorAll('[data-scan-type]').forEach(chip=>{
+    chip.addEventListener('click',async()=>{
+      const type=chip.dataset.scanType, id=chip.dataset.scanId;
+      if(typeof fetchScanItem==='function'){
+        const d=await fetchScanItem(type,id).catch(()=>({}));
+        if(d&&d.photoUrl) showImg(d.photoUrl,d.place||d.name||'영수증');
+        else toast('사진 없음');
+      }
+    });
+  });
   $("viewOverlay").classList.add("show");
   const m=$("viewOverlay").querySelector(".modal"); if(m) m.scrollTop=0;
 }
@@ -3033,6 +3156,65 @@ $("vDel").addEventListener("click",()=>{ if(!vId) return; $("viewOverlay").class
 $("viewOverlay").addEventListener("click",e=>{ if(e.target===$("viewOverlay")) $("viewOverlay").classList.remove("show"); });
 $("m-cam").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("m-file").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
+
+/* 업무 모달 scan-app 연결 영수증 */
+let _mScanRefs = [];
+function renderMScanRefs(){
+  const wrap = $("mScanRefs"); if(!wrap) return;
+  if(!_mScanRefs.length){ wrap.innerHTML=''; return; }
+  wrap.innerHTML = _mScanRefs.map(function(r,idx){
+    const d = r.data || {};
+    const icon = r.type==='receipt'?'🧾':'💼';
+    const title = r.type==='receipt'?(d.place||'영수증'):(d.name||'명함');
+    const sub = r.type==='receipt'
+      ? ((d.date||'')+(d.amount?(' · '+(d.amount).toLocaleString()+'원'):''))
+      : ((d.company||'')+(d.mobile?(' · '+d.mobile):''));
+    const photoUrl = d.photoUrl||'';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#fff;border:1.5px solid #dbe6f4;border-radius:8px;margin-bottom:4px">'
+      +(photoUrl
+        ?'<img src="'+photoUrl+'" class="zimg" data-title="'+title+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px;cursor:zoom-in">'
+        :'<div style="width:48px;height:48px;background:#f0f6ff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px">'+icon+'</div>')
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+icon+' '+esc(title)+'</div>'
+        +'<div style="font-size:11px;color:#7a92a8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(sub)+'</div>'
+      +'</div>'
+      +(photoUrl?'<button type="button" data-view="'+idx+'" style="background:#e8f0fa;border:none;border-radius:6px;padding:6px 10px;font-size:12px;color:#3f7cb8;cursor:pointer;font-family:inherit">🔍</button>':'')
+      +'<button type="button" data-rmidx="'+idx+'" style="background:#fde8e8;border:none;border-radius:6px;padding:6px 10px;font-size:12px;color:#b52929;cursor:pointer;font-family:inherit">×</button>'
+    +'</div>';
+  }).join('');
+  wrap.querySelectorAll('[data-rmidx]').forEach(b=>{
+    b.addEventListener('click',()=>{ _mScanRefs.splice(parseInt(b.dataset.rmidx),1); renderMScanRefs(); });
+  });
+  wrap.querySelectorAll('[data-view]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const r=_mScanRefs[parseInt(b.dataset.view)];
+      if(r&&r.data&&r.data.photoUrl) showImg(r.data.photoUrl,r.data.place||r.data.name||'영수증');
+    });
+  });
+}
+
+/* 업무 모달 scan-app picker 버튼 */
+const mScanPickBtn = $("mScanPickBtn");
+if(mScanPickBtn){
+  mScanPickBtn.addEventListener("click",()=>{
+    if(typeof openScanPicker==='function'){
+      openScanPicker('receipt', '', function(type,id,data){
+        _mScanRefs.push({type,id,data:data||{}});
+        renderMScanRefs();
+      });
+    } else {
+      // openScanPicker가 IIFE 안에 있으므로 window 통해 호출
+      if(typeof window._openScanPickerForWork==='function'){
+        window._openScanPickerForWork(function(type,id,data){
+          _mScanRefs.push({type,id,data:data||{}});
+          renderMScanRefs();
+        });
+      } else {
+        toast('scan-app picker를 열 수 없습니다');
+      }
+    }
+  });
+}
 
 // v44: 모달에 드래그앤드롭 + 클립보드 붙여넣기로 사진 추가
 (function setupModalImageInputs(){
@@ -3256,6 +3438,8 @@ $("mSave").addEventListener("click",async ()=>{
   }
   if(PHOTO_KINDS.includes(mKind)) obj.photos=modalPhotos.slice();
   if(ATTACH_KINDS.includes(mKind)) obj.attachments=modalAttachments.slice();
+  /* scan-app 연결 영수증 저장 */
+  if(_mScanRefs.length) obj.scanRefs=_mScanRefs.map(r=>({type:r.type,id:r.id}));
   if(mKind==="vacation" && !obj.end) obj.end=obj.start;
   // 업무: 일회성 업체 여부 저장
   if(mKind==="work"){
