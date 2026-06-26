@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1144</title>
+<title>직원 관리 v44-0626-1147</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -284,7 +284,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
   </div>
   <div class="hdr-right">
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1144</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1147</span>
   </div>
 </div>
 
@@ -523,7 +523,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <script>
 /* ===== 설정 ===== */
-var APP_VERSION='v44-0626-1144';
+var APP_VERSION='v44-0626-1147';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;})();
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
@@ -1266,29 +1266,46 @@ document.addEventListener('DOMContentLoaded',function(){
   });
   $('histModal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
 
-  /* 앱 초기화 — Firebase 우선 로드 */
-  STAFF=loadStaff(); // 먼저 로컬로 빠르게 렌더
+  /* 앱 초기화 — 로컬 우선 + Firebase 병합 */
+  STAFF=loadStaff(); // 로컬 데이터로 즉시 렌더
   drawGrid();
-  // Firebase에서 최신 데이터 로드
+  // Firebase에서 전체 로드 후 병합
   Promise.all([
     fbAll('staff-members'),
     fbAll('staff-records'),
     fbAll('staff-history')
   ]).then(function(results){
-    var staffDocs=results[0],recDocs=results[1],histDocs=results[2];
-    if(staffDocs&&staffDocs.length>0){
-      STAFF=staffDocs;
-      saveStaff();
-    } else if(STAFF.length>0){
-      // Firebase에 없으면 로컬 데이터를 Firebase에 업로드
-      saveAllStaffToFirebase();
+    var fbStaff=results[0]||[];
+    var recDocs=results[1]||[];
+    var histDocs=results[2]||[];
+
+    // 직원 병합: 로컬 기본 12명 + Firebase 저장된 직원 합치기
+    // Firebase ID 기준으로 최신 데이터 우선, 없는 직원은 추가
+    var localStaff=STAFF.slice(); // 현재 로컬(기본값 포함)
+    var merged={};
+    // 로컬 먼저
+    localStaff.forEach(function(s){merged[s.id]=s;});
+    // Firebase가 더 최신 → 덮어쓰기
+    fbStaff.forEach(function(s){merged[s.id]=s;});
+    STAFF=Object.values(merged);
+    saveStaff();
+
+    // 로컬에만 있는 직원 → Firebase에 업로드
+    var fbIds=fbStaff.map(function(s){return s.id;});
+    var missing=localStaff.filter(function(s){return fbIds.indexOf(s.id)<0;});
+    if(missing.length>0){
+      missing.forEach(function(s){
+        fbPatch('staff-members',s.id,s).catch(function(){});
+      });
     }
+
     allRecs=recDocs.sort(function(a,b){return(b.ts||0)-(a.ts||0);});
     allHistory=histDocs.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')||((b.ts||0)-(a.ts||0));});
     drawGrid();
     if($('panel-all').classList.contains('on'))drawAll();
     if($('panel-hist').classList.contains('on'))drawHist();
     if($('panel-cal').classList.contains('on'))renderCal();
+    if($('panel-stat').classList.contains('on'))drawStats();
   }).catch(function(e){
     console.error('Firebase 로드 오류',e);
     toast('⚠️ 오프라인 — 로컬 데이터 사용');
