@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1251</title>
+<title>직원 관리 v44-0626-1258</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -350,7 +350,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <a class="hdr-link green" href="worklog.html" title="업무일지">📋 업무일지</a>
     <a class="hdr-link blue" href="worklog.html#contacts" id="contactsLink" title="업체 연락처">📞 연락처</a>
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1251</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1258</span>
   </div>
 </div>
 
@@ -379,6 +379,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <button class="sf-chip" data-sf="퇴사">🚪 퇴사자</button>
     <button class="sf-chip" data-sf="전체">🗂 전체</button>
     <button class="sf-chip" id="addStaffBtn" style="background:var(--green-s);color:var(--green);border-color:var(--green);margin-left:auto">➕ 신규 등록</button>
+    <button class="sf-chip" id="gridAddRecBtn" style="background:var(--blue-s);color:var(--blue);border-color:var(--blue)">📝 기록 추가</button>
   </div>
   <div class="staff-grid" id="staffGrid"></div>
   <div id="searchResult" style="display:none">
@@ -464,6 +465,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <div class="modal-hdr" id="staffModalHdr">
       <h3 id="staffModalTitle">👤 직원 정보</h3>
       <div class="modal-hdr-btns" id="staffModalViewBtns">
+        <button class="mhb" id="staffAddRecBtn" style="background:var(--green-s);color:var(--green);border-color:var(--green)">➕ 기록추가</button>
         <button class="mhb" id="staffEditBtn">✏️ 수정</button>
         <button class="mhb del" id="staffDelBtn">🗑 삭제</button>
         <button class="mhb" onclick="closeStaffModal()">✕</button>
@@ -627,7 +629,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <script>
 /* ===== 설정 ===== */
-var APP_VERSION='v44-0626-1251';
+var APP_VERSION='v44-0626-1258';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;})();
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
@@ -1517,6 +1519,17 @@ document.addEventListener('DOMContentLoaded',function(){
     toast('⚠️ 오프라인 — 로컬 데이터 사용');
   });
 
+  /* 직원 팝업 기록추가 버튼 */
+  var sarb=document.getElementById('staffAddRecBtn');
+  if(sarb&&!sarb._bound){sarb._bound=true;sarb.addEventListener('click',function(){
+    if(_smSid){closeStaffModal();openAddRecModal(_smSid,null);}
+  });}
+  /* 그리드 기록추가 버튼 (직원 선택 후) */
+  var garb=document.getElementById('gridAddRecBtn');
+  if(garb&&!garb._bound){garb._bound=true;garb.addEventListener('click',function(){
+    if(selSid){openAddRecModal(selSid,null);}
+    else{toast('직원 카드를 먼저 클릭해서 선택하세요');}
+  });}
   /* 미니달력 네비 */
   var mcp=document.getElementById('smMiniCalPrev');
   if(mcp&&!mcp._bound){mcp._bound=true;mcp.addEventListener('click',function(){
