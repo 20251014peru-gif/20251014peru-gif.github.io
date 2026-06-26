@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1258</title>
+<title>직원 관리 v44-0626-1308</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -350,7 +350,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <a class="hdr-link green" href="worklog.html" title="업무일지">📋 업무일지</a>
     <a class="hdr-link blue" href="worklog.html#contacts" id="contactsLink" title="업체 연락처">📞 연락처</a>
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1258</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1308</span>
   </div>
 </div>
 
@@ -573,7 +573,9 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     </div>
     <div class="modal-grid">
       <div class="fg"><label>📅 날짜</label><input type="date" id="arDate"></div>
-      <div class="fg"><label>👤 직원</label><input type="text" id="arStaff" disabled></div>
+      <div class="fg"><label>👤 직원 *</label>
+        <select id="arStaff"><option value="">-- 선택 --</option></select>
+      </div>
       <div class="fg"><label>🏷 카테고리</label>
         <select id="arCat">
           <option value="업무지시">📋 업무지시</option>
@@ -629,7 +631,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <script>
 /* ===== 설정 ===== */
-var APP_VERSION='v44-0626-1258';
+var APP_VERSION='v44-0626-1308';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;})();
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
@@ -923,14 +925,21 @@ function closeRecModal(){$('recModal').classList.remove('show');curRecId=null;}
 
 /* ===== 기록 추가 팝업 ===== */
 function openAddRecModal(sid,dateStr){
-  var s=STAFF.find(function(x){return x.id===sid;});
-  $('addRecTitle').textContent='➕ '+(s?s.name:'직원')+' 기록 추가';
+  var s=sid?STAFF.find(function(x){return x.id===sid;}):null;
+  $('addRecTitle').textContent=s?'➕ '+s.name+' 기록 추가':'➕ 기록 추가';
   $('arDate').value=dateStr||todayStr();
-  $('arStaff').value=s?s.name:'';
   $('arCat').value='업무지시';
   $('arStat').value='완료';
   $('arCont').value='';
-  $('arSaveBtn').dataset.sid=sid;
+  $('arSaveBtn').dataset.sid=sid||'';
+  // 직원 선택 드롭다운
+  var sel=$('arStaff');
+  sel.innerHTML='<option value="">-- 직원 선택 --</option>'+
+    STAFF.filter(function(x){return x.status==='재직중';})
+    .map(function(x){
+      return'<option value="'+x.id+'"'+(x.id===sid?' selected':'')+'>'+esc(x.name)+' ('+x.role+')</option>';
+    }).join('');
+  sel.disabled=false;
   $('addRecModal').classList.add('show');
 }
 function closeAddRecModal(){$('addRecModal').classList.remove('show');}
@@ -1349,7 +1358,8 @@ document.addEventListener('DOMContentLoaded',function(){
   /* 기록 추가 모달 */
   var arsb=$('arSaveBtn');
   if(arsb)arsb.addEventListener('click',function(){
-    var sid=this.dataset.sid;
+    var sid=$('arStaff').value; // 드롭다운에서 직접 가져옴
+    if(!sid){toast('직원을 선택하세요');return;}
     var cont=$('arCont').value.trim();if(!cont){toast('내용을 입력하세요');return;}
     var s=STAFF.find(function(x){return x.id===sid;});
     var rec={staffId:sid,staffRole:s?s.role:'',date:$('arDate').value,cat:$('arCat').value,status:$('arStat').value,content:cont,ts:Date.now()};
@@ -1524,11 +1534,10 @@ document.addEventListener('DOMContentLoaded',function(){
   if(sarb&&!sarb._bound){sarb._bound=true;sarb.addEventListener('click',function(){
     if(_smSid){closeStaffModal();openAddRecModal(_smSid,null);}
   });}
-  /* 그리드 기록추가 버튼 (직원 선택 후) */
+  /* 그리드 기록추가 버튼 → 직원선택 팝업 */
   var garb=document.getElementById('gridAddRecBtn');
   if(garb&&!garb._bound){garb._bound=true;garb.addEventListener('click',function(){
-    if(selSid){openAddRecModal(selSid,null);}
-    else{toast('직원 카드를 먼저 클릭해서 선택하세요');}
+    openAddRecModal(null,null); // 직원 선택 포함 모드
   });}
   /* 미니달력 네비 */
   var mcp=document.getElementById('smMiniCalPrev');
