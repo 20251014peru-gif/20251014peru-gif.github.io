@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0625-2258";
+const APP_VERSION = "v44-0625-1706";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -291,8 +291,6 @@ const SCHEMA={
   ],
   schedule:[
     {k:"date",label:"예정일",type:"date",req:true,full:true},
-    {k:"sStatus",label:"진행 상태",type:"select",opts:["예정","진행중","완료","연기"],full:true},
-    {k:"sType",label:"예정 종류",type:"text",full:true},
     {k:"startTime",label:"시작 시간",type:"timepick",full:true},
     {k:"scheduleType",label:"반복 유형",type:"select",opts:["일회성","월간반복","연간반복"],full:true},
     {k:"title",label:"예정 내용",type:"text",full:true,req:true},
@@ -693,16 +691,6 @@ function genId(){ return online ? db.collection(COL).doc().id : "L"+Date.now()+M
 function syncSet(id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.collection(COL).doc(id).set(payload).catch(e=>{ logErr("저장 동기화", e); toast("클라우드 동기화 지연 — 이 기기에는 저장됨"); }); }
 function addRecord(data){ const id=genId(); const rec={...data,id}; entries.push(rec); if(online) syncSet(id,rec); lsSave(); return rec; }
 function updateRecord(id,patch){ const i=entries.findIndex(x=>x.id===id); if(i<0) return; entries[i]={...entries[i],...patch}; if(online) syncSet(id,entries[i]); lsSave(); }
-// schedule sStatus 변경 시 Tasks 완료 자동 처리 (v44-0625)
-function updateRecordWithTasksSync(id, patch){
-  updateRecord(id, patch);
-  if(patch.sStatus && typeof window.completeTask==="function" && typeof accessToken!=="undefined" && accessToken){
-    const en = entries.find(e=>e.id===id);
-    if(en && en.kind==="schedule" && en.gTaskId){
-      window.completeTask(en.gTaskId, patch.sStatus==="완료");
-    }
-  }
-}
 function deleteRecord(id){ entries=entries.filter(x=>x.id!==id); if(online) db.collection(COL).doc(id).delete().catch(e=>logErr("삭제 동기화", e)); lsSave(); }
 const TEMP_BK="wl_tempbackup";
 function saveTempBackup(){ try{ localStorage.setItem(TEMP_BK, JSON.stringify({at:Date.now(),entries})); }catch(e){} }
@@ -2811,11 +2799,11 @@ function openEditor(kind,id){
         if(v==="월간반복"){
           hintEl.style.display="";
           hintEl.style.background="#eff6ff"; hintEl.style.color="#185FA5";
-          hintEl.innerHTML="🔁 <b>매월 반복</b> — G캘린더에 등록하면 매달 폰 알림이 와요. 달력에서도 매달 자동 표시됩니다";
+          hintEl.textContent="🔁 매월 같은 날짜에 반복 — 알림을 설정하면 매월 자동 알림됩니다";
         } else if(v==="연간반복"){
           hintEl.style.display="";
           hintEl.style.background="#f0fdf4"; hintEl.style.color="#166534";
-          hintEl.innerHTML="📅 <b>매년 반복</b> — G캘린더에 등록하면 매년 폰 알림이 와요. 법정검사·계약갱신·보험만기 등에 활용하세요";
+          hintEl.textContent="📅 매년 같은 날짜에 반복 — 법정검사·계약갱신 등에 활용하세요";
         } else {
           hintEl.style.display="none";
         }
@@ -3255,25 +3243,11 @@ $("mSave").addEventListener("click",async ()=>{
   if(_v44OpenExpenseAfter){
     setTimeout(()=>openExpenseFromWork(_v44OpenExpenseAfter), 400);
   }
-  // 구글 캘린더+Tasks 자동 동기화 (v44-0625)
+  // 구글캘린더 자동 동기화
   if(typeof window.gcalSync==="function" && typeof accessToken!=="undefined" && accessToken){
     const savedEntry = entries.find(e=>e.id===savedId);
     if(savedEntry && typeof GCAL_IDS!=="undefined" && GCAL_IDS[savedEntry.kind]){
-      setTimeout(()=>{
-        try{
-          // schedule → 캘린더+Tasks 동시 / 나머지 → 캘린더만
-          if(savedEntry.kind==="schedule" && typeof window.gcalSyncSchedule==="function"){
-            window.gcalSyncSchedule(savedEntry);
-          } else {
-            window.gcalSync(savedEntry);
-          }
-        } catch(ge){ console.error("[gcalSync 오류]",ge); toast("📅 캘린더 동기화 오류: "+ge.message); }
-      }, 500);
-    }
-  } else if(typeof window.gcalSync==="function" && typeof GCAL_IDS!=="undefined"){
-    const savedEntry2 = entries.find(e=>e.id===savedId);
-    if(savedEntry2 && savedEntry2.kind==="schedule"){
-      setTimeout(()=>toast("📅 예정 저장됨 — 구글 캘린더+Tasks 동기화하려면 G캘린더 버튼을 눌러 로그인하세요",4000), 600);
+      setTimeout(()=>window.gcalSync(savedEntry), 500);
     }
   }
   } catch(err) {
@@ -3283,21 +3257,10 @@ $("mSave").addEventListener("click",async ()=>{
 });
 $("mDelete").addEventListener("click",()=>{
   if(!mId) return;
-  const delEntry = entries.find(e=>e.id===mId);
   // 업무 삭제 시 연동 expense도 함께 삭제
   if(mKind==="work"){
     const linked=entries.filter(e=>e.kind==="expense"&&e.workId===mId);
     linked.forEach(e=>deleteRecord(e.id));
-  }
-  // schedule 삭제 시 구글 캘린더 + Tasks도 삭제
-  if(mKind==="schedule" && delEntry){
-    if(delEntry.gcalEventId && typeof window.gcalDelete==="function" && typeof accessToken!=="undefined" && accessToken){
-      var calId = typeof GCAL_IDS!=="undefined" ? GCAL_IDS.schedule : null;
-      window.gcalDelete(delEntry.gcalEventId, calId);
-    }
-    if(delEntry.gTaskId && typeof window.deleteFromTasks==="function" && typeof accessToken!=="undefined" && accessToken){
-      window.deleteFromTasks(delEntry.gTaskId);
-    }
   }
   $("overlay").classList.remove("show");
   deleteWithUndo(mId, KIND_LABEL[mKind]||"항목");
@@ -3877,71 +3840,6 @@ function otherText(o){ if(o.kind==="plan") return o.text||"계획"; if(o.kind===
 const CAL_KIND_COLOR={work:"#3f7cb8",vacation:"#9a6f17",plan:"#15803d",call:"#0e7490",memo:"#7c3aed",meeting:"#334155",deliver:"#be123c",schedule:"#0891b2"};
 const CAL_KIND_LABEL={work:"🛠 업무",vacation:"🌴 휴가",plan:"📋 계획",call:"📞 통화",memo:"📝 메모",meeting:"👥 회의",deliver:"📢 전달",schedule:"📅 예정"};
 const OTHER_ORDER=["plan","call","memo","meeting","deliver"];
-// ── 반복 예정 날짜 계산 (v44-0625) ─────────────────────
-// 월간반복: 매달 같은 일(日) / 연간반복: 매년 같은 월일
-function getRepeatDatesForMonth(en, y, m){
-  // en.date = "YYYY-MM-DD", scheduleType = "월간반복"|"연간반복"
-  if(!en.date || !en.scheduleType || en.scheduleType==="일회성") return [];
-  var parts = en.date.split("-");
-  var origY=parseInt(parts[0]), origM=parseInt(parts[1])-1, origD=parseInt(parts[2]);
-  var results = [];
-  if(en.scheduleType==="월간반복"){
-    // 이 달에 같은 일(日)이 있으면 표시 (단, 원본 달 이후부터)
-    if(y > origY || (y===origY && m >= origM)){
-      var maxD = new Date(y, m+1, 0).getDate();
-      if(origD <= maxD){
-        var ds = y+"-"+String(m+1).padStart(2,"0")+"-"+String(origD).padStart(2,"0");
-        results.push(ds);
-      }
-    }
-  } else if(en.scheduleType==="연간반복"){
-    // 이 연도의 같은 월일 (원본 연도 이후부터)
-    if(y >= origY && m === origM){
-      var maxD2 = new Date(y, m+1, 0).getDate();
-      if(origD <= maxD2){
-        var ds2 = y+"-"+String(m+1).padStart(2,"0")+"-"+String(origD).padStart(2,"0");
-        results.push(ds2);
-      }
-    }
-  }
-  return results;
-}
-// 연간뷰용: 해당 연도의 반복 날짜 모두 반환
-function getRepeatDatesForYear(en, y){
-  if(!en.date || !en.scheduleType || en.scheduleType==="일회성") return [];
-  var parts = en.date.split("-");
-  var origY=parseInt(parts[0]), origM=parseInt(parts[1])-1, origD=parseInt(parts[2]);
-  var results = [];
-  if(en.scheduleType==="월간반복" && y >= origY){
-    for(var m=0; m<12; m++){
-      // 원본 연도이면 원본 달 이후부터
-      if(y===origY && m < origM) continue;
-      var maxD = new Date(y, m+1, 0).getDate();
-      if(origD <= maxD){
-        results.push(y+"-"+String(m+1).padStart(2,"0")+"-"+String(origD).padStart(2,"0"));
-      }
-    }
-  } else if(en.scheduleType==="연간반복" && y >= origY){
-    var maxD2 = new Date(y, origM+1, 0).getDate();
-    if(origD <= maxD2){
-      results.push(y+"-"+String(origM+1).padStart(2,"0")+"-"+String(origD).padStart(2,"0"));
-    }
-  }
-  return results;
-}
-// 특정 날짜(selDay)에 반복 예정 항목 반환
-function getRepeatSchedulesForDay(day){
-  if(!day) return [];
-  var parts = day.split("-");
-  var y=parseInt(parts[0]), m=parseInt(parts[1])-1;
-  return entries.filter(function(e){
-    if(e.kind!=="schedule"||!e.scheduleType||e.scheduleType==="일회성") return false;
-    if(e.date===day) return false; // 원본은 이미 포함됨
-    var ds = getRepeatDatesForMonth(e, y, m);
-    return ds.includes(day);
-  });
-}
-
 function scheduleStatusColor(s){
   return s==="완료"?"var(--mint)":s==="진행중"?"var(--gold)":s==="연기"?"#999":"#0891b2";
 }
@@ -3971,15 +3869,7 @@ function renderMonthView(){
   entries.forEach(e=>{
     if(e.kind==="work"&&e.date){ (work[e.date]=work[e.date]||[]).push(e); }
     else if(e.kind==="vacation"){ datesBetween(e.start,e.end).forEach(d=>{ (vac[d]=vac[d]||[]).push(e.name||"휴가"); }); }
-    else if(e.kind==="schedule"&&e.date){
-      (sched[e.date]=sched[e.date]||[]).push(e);
-      // 반복 예정: 이 달의 반복 날짜에도 표시
-      if(e.scheduleType&&e.scheduleType!=="일회성"){
-        getRepeatDatesForMonth(e,calY,calM).forEach(function(rd){
-          if(rd!==e.date){ var clone=Object.assign({},e,{date:rd,_repeat:true}); (sched[rd]=sched[rd]||[]).push(clone); }
-        });
-      }
-    }
+    else if(e.kind==="schedule"&&e.date){ (sched[e.date]=sched[e.date]||[]).push(e); }
     else if(e.kind==="cleaning"&&e.date){ (cleaning[e.date]=cleaning[e.date]||[]).push(e); }
     else if(e.kind==="expense"&&e.date){ (expense[e.date]=expense[e.date]||[]).push(e); }
     else if(["plan","memo","call","meeting","deliver"].includes(e.kind)&&e.date){ (other[e.date]=other[e.date]||[]).push(e); }
@@ -4113,15 +4003,7 @@ function renderYearView(){
   entries.forEach(e=>{
     if(e.kind==="work"&&e.date && e.date.startsWith(String(calY))){ (work[e.date]=work[e.date]||[]).push(e); }
     else if(e.kind==="vacation"){ datesBetween(e.start,e.end).forEach(d=>{ if(d.startsWith(String(calY))) (vac[d]=vac[d]||[]).push(e); }); }
-    else if(e.kind==="schedule"&&e.date){
-      if(e.date.startsWith(String(calY))) (sched[e.date]=sched[e.date]||[]).push(e);
-      // 연간뷰: 반복 날짜도 포함
-      if(e.scheduleType&&e.scheduleType!=="일회성"){
-        getRepeatDatesForYear(e,calY).forEach(function(rd){
-          if(rd!==e.date){ var clone=Object.assign({},e,{date:rd,_repeat:true}); (sched[rd]=sched[rd]||[]).push(clone); }
-        });
-      }
-    }
+    else if(e.kind==="schedule"&&e.date && e.date.startsWith(String(calY))){ (sched[e.date]=sched[e.date]||[]).push(e); }
   });
   // 표 형식 연간 계획표 (세로:1~31일, 가로:1~12월)
   let html=`<table class="yp-table"><thead><tr><th class="yp-corner">일\\월</th>`;
@@ -4185,10 +4067,7 @@ function renderDayDetail(){
   const c=entries.filter(e=>e.kind==="call"&&e.date===selDay);
   const mt=entries.filter(e=>e.kind==="meeting"&&e.date===selDay).sort(byDateDesc);
   const dv=entries.filter(e=>e.kind==="deliver"&&e.date===selDay).sort(byDateDesc);
-  // 원본 + 반복 예정 합산
-  const scOrig=entries.filter(e=>e.kind==="schedule"&&e.date===selDay);
-  const scRepeat=getRepeatSchedulesForDay(selDay).map(e=>Object.assign({},e,{date:selDay,_repeat:true}));
-  const sc=[...scOrig,...scRepeat].sort(byDateDesc);
+  const sc=entries.filter(e=>e.kind==="schedule"&&e.date===selDay).sort(byDateDesc);
   const cl=entries.filter(e=>e.kind==="cleaning"&&e.date===selDay).sort(byDateDesc);
   const ex=entries.filter(e=>e.kind==="expense"&&e.date===selDay).sort(byDateDesc);
   let h=`<div class="list-head"><h2 style="font-size:16px">${dateLabel(selDay)}</h2>
@@ -4246,23 +4125,10 @@ function renderDayDetail(){
 function cardSchedule(s){
   const st=s.sStatus||"예정";
   const stCls = st==="완료"?"done":st==="진행중"?"prog":st==="연기"?"etc":"todo";
-  const repeatLabel = s.scheduleType==="월간반복" ? "🔁월간" : s.scheduleType==="연간반복" ? "📅연간" : "";
-  const repeatBadge = repeatLabel ? `<span style="background:#e0f2fe;color:#0369a1;font-size:10px;border-radius:5px;padding:1px 5px;margin-left:4px">${repeatLabel}</span>` : "";
-  // 캘린더+Tasks 각각 상태 뱃지
-  const calBadge = s.gcalEventId
-    ? `<span title="구글 캘린더 등록됨" style="color:#34a853;font-size:10px;margin-left:3px;background:#f0fdf4;border-radius:4px;padding:1px 4px">✅캘</span>`
-    : `<span title="캘린더 미등록 — 클릭해서 등록" style="color:#f59e0b;font-size:10px;margin-left:3px;background:#fffbeb;border-radius:4px;padding:1px 4px;cursor:pointer" onclick="event.stopPropagation();window.gcalResyncOne&&window.gcalResyncOne('${s.id}')">⚠캘</span>`;
-  const taskBadge = s.gTaskId
-    ? `<span title="Google Tasks 등록됨" style="color:#1a73e8;font-size:10px;margin-left:3px;background:#e8f0fe;border-radius:4px;padding:1px 4px">✅할일</span>`
-    : `<span title="Tasks 미등록 — 클릭해서 등록" style="color:#f59e0b;font-size:10px;margin-left:3px;background:#fffbeb;border-radius:4px;padding:1px 4px;cursor:pointer" onclick="event.stopPropagation();window.gcalResyncOne&&window.gcalResyncOne('${s.id}')">⚠할일</span>`;
-  const acts = s._repeat
-    ? `<div class="card-acts"><button class="mini-btn" onclick="event.stopPropagation();openEditor('schedule','${s.id}')">✏️ 원본수정</button></div>`
-    : `<div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div>`;
-  const repeatNote = s._repeat ? `<div style="font-size:11px;color:#0369a1;margin-top:2px">🔁 반복 예정 (원본: ${s.date.replace(/-/g,"/").slice(5)}일)</div>` : "";
   return `<div class="row-item" data-kind="schedule" data-id="${s.id}">
-    <div class="grow"><div class="t">📅 ${esc(s.title||"")} <span class="st ${stCls}">${esc(st)}</span> <span class="pill etc">${esc(s.sType||"")}</span>${repeatBadge}${calBadge}${taskBadge}</div>
-    ${repeatNote}<div class="m">${s.memo?esc(s.memo):""}</div>
-    ${acts}</div>
+    <div class="grow"><div class="t">📅 ${esc(s.title||"")} <span class="st ${stCls}">${esc(st)}</span> <span class="pill etc">${esc(s.sType||"")}</span></div>
+    <div class="m">${s.memo?esc(s.memo):""}</div>
+    <div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div></div>
     <span class="rtime">${s.date||""}</span></div>`;
 }
 function buildReport(day){
