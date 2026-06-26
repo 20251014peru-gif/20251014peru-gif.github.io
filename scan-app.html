@@ -473,10 +473,22 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
               style="flex:1;min-width:60px;padding:5px 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;outline:none;text-align:right">
             <button id="cfx-amount" style="display:none;padding:2px 6px;border-radius:6px;border:none;background:#fde8e8;color:#c0392b;font-size:11px;cursor:pointer;font-weight:700">✕</button>
           </div>
-          <div style="display:flex;gap:4px;align-items:center;flex:1;min-width:80px">
-            <input type="text" id="cf-payMethod" placeholder="결제수단"
-              style="flex:1;min-width:60px;padding:5px 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;outline:none">
-            <button id="cfx-payMethod" style="display:none;padding:2px 6px;border-radius:6px;border:none;background:#fde8e8;color:#c0392b;font-size:11px;cursor:pointer;font-weight:700">✕</button>
+          <!-- 결제수단 버튼 필터 -->
+          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--ink-faint);white-space:nowrap">💳</span>
+            <button class="cf-pay-btn" data-pay="" style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">전체</button>
+            <button class="cf-pay-btn" data-pay="계좌이체" style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">계좌이체</button>
+            <button class="cf-pay-btn" data-pay="카드" style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">카드</button>
+            <button class="cf-pay-btn" data-pay="현금" style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">현금</button>
+            <button class="cf-pay-btn" data-pay="지역화폐" style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">지역화폐</button>
+          </div>
+          <!-- 구분 버튼 필터 -->
+          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--ink-faint);white-space:nowrap">📂</span>
+            <button class="cf-owner-btn" data-owner="" style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">전체</button>
+            <button class="cf-owner-btn" data-owner="회사" style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">회사</button>
+            <button class="cf-owner-btn" data-owner="부동산" style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">부동산</button>
+            <button class="cf-owner-btn" data-owner="개인" style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">개인</button>
           </div>
           <div style="display:flex;gap:4px;align-items:center;flex:2;min-width:120px">
             <input type="text" id="cf-addr" placeholder="주소"
@@ -618,7 +630,25 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
         <div class="field"><label>🕐 결제시각</label><input type="time" id="r_payTime" step="300"></div>
         <div class="field full"><label>🏪 상호명 *</label><input type="text" id="r_place"></div>
         <div class="field"><label>📞 전화</label><input type="tel" id="r_phone"></div>
-        <div class="field"><label>💳 결제수단</label><input type="text" id="r_payMethod"></div>
+        <div class="field full">
+          <label>💳 결제수단</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+            <button type="button" class="r-pay-btn" data-pay="계좌이체" style="padding:6px 14px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">계좌이체</button>
+            <button type="button" class="r-pay-btn" data-pay="카드" style="padding:6px 14px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">카드</button>
+            <button type="button" class="r-pay-btn" data-pay="현금" style="padding:6px 14px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">현금</button>
+            <button type="button" class="r-pay-btn" data-pay="지역화폐" style="padding:6px 14px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">지역화폐</button>
+          </div>
+          <input type="hidden" id="r_payMethod">
+        </div>
+        <div class="field full">
+          <label>📂 구분</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+            <button type="button" class="r-owner-btn" data-owner="회사" style="padding:6px 14px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">🏢 회사</button>
+            <button type="button" class="r-owner-btn" data-owner="부동산" style="padding:6px 14px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">🏠 부동산</button>
+            <button type="button" class="r-owner-btn" data-owner="개인" style="padding:6px 14px;border-radius:14px;border:1.5px solid var(--blue-bd);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft)">👤 개인</button>
+          </div>
+          <input type="hidden" id="r_owner">
+        </div>
         <div class="field full"><label>📍 주소</label><input type="text" id="r_addr"></div>
         <div class="field full"><label>💰 총금액 (원)</label><input type="number" id="r_amount"></div>
       </div>
@@ -1027,7 +1057,7 @@ const DEFAULT_CATS=['영수증','계약서','명함','문서','기타'];
 let photos=[], cats=[], receipts=[], cards=[], texts=[];
 /* 영수증 테이블 정렬·필터 상태 */
 let _rSort={col:'date',dir:'desc'};
-let _rColFilter={date:'',amount:'',place:'',payMethod:'',addr:'',items:''};
+let _rColFilter={date:'',amount:'',place:'',payMethod:'',owner:'',addr:'',items:''};
 let apiKey='';
 let curSection='scan', curScanType='receipt';
 let catFilter='all', searchQ='';
@@ -2799,6 +2829,7 @@ function renderReceiptList(q){
   if(cf.amount)   list=list.filter(r=>String(r.amount||'').includes(cf.amount.replace(/,/g,'')));
   if(cf.place)    list=list.filter(r=>(r.place||'').toLowerCase().includes(cf.place.toLowerCase()));
   if(cf.payMethod)list=list.filter(r=>(r.payMethod||'').toLowerCase().includes(cf.payMethod.toLowerCase()));
+  if(cf.owner)    list=list.filter(r=>(r.owner||'')=== cf.owner);
   if(cf.addr)     list=list.filter(r=>(r.addr||'').toLowerCase().includes(cf.addr.toLowerCase()));
   if(cf.items)    list=list.filter(r=>itemsToString(r.items).toLowerCase().includes(cf.items.toLowerCase()));
 
@@ -2900,8 +2931,8 @@ function _bindReceiptTableEvents(){
       });
     });
   }
-  /* 컬럼 필터 — input 이벤트 (DOM 재생성 없음 → IME 정상) */
-  ['date','place','amount','payMethod','addr','items'].forEach(key=>{
+  /* 텍스트 필터 */
+  ['date','place','amount','addr','items'].forEach(key=>{
     const inp=document.getElementById('cf-'+key);
     const clrBtn=document.getElementById('cfx-'+key);
     if(!inp){ console.warn('[필터] cf-'+key+' 못 찾음'); return; }
@@ -2919,16 +2950,56 @@ function _bindReceiptTableEvents(){
       });
     }
   });
+  /* 결제수단 버튼 필터 */
+  document.querySelectorAll('.cf-pay-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      _rColFilter.payMethod=btn.dataset.pay;
+      document.querySelectorAll('.cf-pay-btn').forEach(b=>{
+        const on=b.dataset.pay===btn.dataset.pay;
+        b.style.background=on?'var(--blue)':'#fff';
+        b.style.color=on?'#fff':'var(--ink-soft)';
+        b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
+      });
+      _refreshReceiptBody();
+    });
+  });
+  /* 구분 버튼 필터 */
+  document.querySelectorAll('.cf-owner-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      _rColFilter.owner=btn.dataset.owner;
+      document.querySelectorAll('.cf-owner-btn').forEach(b=>{
+        const on=b.dataset.owner===btn.dataset.owner;
+        b.style.background=on?'#16a34a':'#fff';
+        b.style.color=on?'#fff':'var(--ink-soft)';
+        b.style.borderColor=on?'#16a34a':'var(--blue-bd)';
+      });
+      _refreshReceiptBody();
+    });
+  });
   /* 전체 초기화 */
   const allClr=document.getElementById('cfx-all');
   if(allClr){
     allClr.addEventListener('click',()=>{
-      ['date','place','amount','payMethod','addr','items'].forEach(key=>{
+      ['date','place','amount','addr','items'].forEach(key=>{
         _rColFilter[key]='';
         const inp=document.getElementById('cf-'+key);
         const btn=document.getElementById('cfx-'+key);
         if(inp) inp.value='';
         if(btn) btn.style.display='none';
+      });
+      _rColFilter.payMethod='';
+      _rColFilter.owner='';
+      document.querySelectorAll('.cf-pay-btn').forEach(b=>{
+        const on=b.dataset.pay==='';
+        b.style.background=on?'var(--blue)':'#fff';
+        b.style.color=on?'#fff':'var(--ink-soft)';
+        b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
+      });
+      document.querySelectorAll('.cf-owner-btn').forEach(b=>{
+        const on=b.dataset.owner==='';
+        b.style.background=on?'#16a34a':'#fff';
+        b.style.color=on?'#fff':'var(--ink-soft)';
+        b.style.borderColor=on?'#16a34a':'var(--blue-bd)';
       });
       _refreshReceiptBody();
     });
@@ -2953,6 +3024,7 @@ function _refreshReceiptBody(){
   if(cf.amount)   list=list.filter(r=>String(r.amount||'').includes(cf.amount.replace(/,/g,'')));
   if(cf.place)    list=list.filter(r=>(r.place||'').toLowerCase().includes(cf.place.toLowerCase()));
   if(cf.payMethod)list=list.filter(r=>(r.payMethod||'').toLowerCase().includes(cf.payMethod.toLowerCase()));
+  if(cf.owner)    list=list.filter(r=>(r.owner||'')===cf.owner);
   if(cf.addr)     list=list.filter(r=>(r.addr||'').toLowerCase().includes(cf.addr.toLowerCase()));
   if(cf.items)    list=list.filter(r=>itemsToString(r.items).toLowerCase().includes(cf.items.toLowerCase()));
   list=list.slice().sort((a,b)=>{
@@ -3184,6 +3256,7 @@ async function openScanDetail(type,id){
     if(item.amount) html+=_detailRow('💰 금액',`<strong style="color:var(--blue);font-size:18px">${numFmt(item.amount)}원</strong>`);
     if(item.phone) html+=_detailRow('📞 전화',`<a class="link-tel" href="${telLink(item.phone)}">${esc(item.phone)} 📞</a>`);
     if(item.payMethod) html+=_detailRow('💳 결제',esc(item.payMethod));
+    if(item.owner) html+=_detailRow('📂 구분',esc(item.owner));
     if(item.addr) html+=_detailRow('📍 주소',`<a class="link-addr" href="${naverMap(item.addr)}" target="_blank">${esc(item.addr)} 🗺</a>`);
     if(item.items&&item.items.length){
       const itemsHtml=item.items.map(it=>`<div style="padding:2px 0">${esc(it.name||'')}${it.qty>1?' × '+it.qty:''}${it.subtotal?' · '+numFmt(it.subtotal)+'원':''}</div>`).join('');
@@ -3435,6 +3508,23 @@ function openReceiptModal(receipt){
   $('r_addr').value=receipt?(receipt.addr||''):'';
   $('r_amount').value=receipt?(receipt.amount||''):'';
   $('r_memo').value=receipt?(receipt.memo||''):'';
+  /* 결제수단 버튼 초기화 */
+  const pm=receipt?(receipt.payMethod||''):'';
+  document.querySelectorAll('.r-pay-btn').forEach(b=>{
+    const on=b.dataset.pay===pm;
+    b.style.background=on?'var(--blue)':'#fff';
+    b.style.color=on?'#fff':'var(--ink-soft)';
+    b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
+  });
+  /* 구분 버튼 초기화 */
+  const ow=receipt?(receipt.owner||''):'';
+  $('r_owner').value=ow;
+  document.querySelectorAll('.r-owner-btn').forEach(b=>{
+    const on=b.dataset.owner===ow;
+    b.style.background=on?'#16a34a':'#fff';
+    b.style.color=on?'#fff':'var(--ink-soft)';
+    b.style.borderColor=on?'#16a34a':'var(--blue-bd)';
+  });
   showReceiptPhoto();
   renderReceiptItems(receipt?(receipt.items||[]):[]);
   $('receiptAiProgress').classList.remove('show');
@@ -3555,7 +3645,15 @@ $('rcptAnalyze').onclick=async()=>{
     if(r.phone)$('r_phone').value=r.phone;
     if(r.addr)$('r_addr').value=r.addr;
     if(r.amount)$('r_amount').value=r.amount;
-    if(r.payMethod)$('r_payMethod').value=r.payMethod;
+    if(r.payMethod){
+      $('r_payMethod').value=r.payMethod;
+      document.querySelectorAll('.r-pay-btn').forEach(b=>{
+        const on=b.dataset.pay===r.payMethod;
+        b.style.background=on?'var(--blue)':'#fff';
+        b.style.color=on?'#fff':'var(--ink-soft)';
+        b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
+      });
+    }
     if(r.items&&Array.isArray(r.items))renderReceiptItems(r.items);
     prog.style.background='#e6f9f0';prog.style.borderColor='#86efac';prog.style.color='#16a34a';
     prog.textContent='✅ 분석 완료! 확인 후 저장하세요.';
@@ -3569,6 +3667,33 @@ $('rcptAnalyze').onclick=async()=>{
 function closeReceiptModal(){$('receiptOverlay').classList.remove('show');_rcptEditing=null;_rcptImg=null;}
 $('receiptClose').onclick=closeReceiptModal;
 $('receiptCancel').onclick=closeReceiptModal;
+
+/* 결제수단 버튼 */
+document.querySelectorAll('.r-pay-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const val=btn.dataset.pay;
+    $('r_payMethod').value=val;
+    document.querySelectorAll('.r-pay-btn').forEach(b=>{
+      const on=b.dataset.pay===val;
+      b.style.background=on?'var(--blue)':'#fff';
+      b.style.color=on?'#fff':'var(--ink-soft)';
+      b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
+    });
+  });
+});
+/* 구분 버튼 */
+document.querySelectorAll('.r-owner-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const val=btn.dataset.owner;
+    $('r_owner').value=val;
+    document.querySelectorAll('.r-owner-btn').forEach(b=>{
+      const on=b.dataset.owner===val;
+      b.style.background=on?'#16a34a':'#fff';
+      b.style.color=on?'#fff':'var(--ink-soft)';
+      b.style.borderColor=on?'#16a34a':'var(--blue-bd)';
+    });
+  });
+});
 $('receiptSave').onclick=async()=>{
   const place=$('r_place').value.trim();
   if(!place){toast('상호명을 입력하세요');return;}
@@ -3606,6 +3731,7 @@ $('receiptSave').onclick=async()=>{
     addr:$('r_addr').value.trim(),
     amount:parseInt($('r_amount').value)||0,
     payMethod:$('r_payMethod').value.trim(),
+    owner:$('r_owner').value.trim(),
     items,memo:$('r_memo').value.trim(),
     photoId,photoUrl,updated:Date.now(),
   };
@@ -4117,7 +4243,7 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260626-1617';
+  $('appVer').textContent='v20260626-1628';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
