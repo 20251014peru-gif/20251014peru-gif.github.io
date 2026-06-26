@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1152</title>
+<title>직원 관리 v44-0626-1220</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,7 +30,14 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 /* ===== HEADER ===== */
 .hdr{background:var(--card);border-bottom:2px solid var(--border);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:var(--shadow);}
 .hdr-left{display:flex;align-items:center;gap:10px;}
-.back{width:34px;height:34px;border-radius:10px;border:2px solid var(--border2);background:var(--bg);color:var(--ink2);display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:20px;font-weight:700;}
+.back{width:34px;height:34px;border-radius:10px;border:2px solid var(--border2);background:var(--bg);color:var(--ink2);display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;}
+.back:hover{background:var(--accent-s);border-color:var(--accent);color:var(--accent);}
+.hdr-link{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;border:2px solid var(--border2);background:var(--bg);color:var(--ink2);font-size:12px;font-weight:700;text-decoration:none;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap;}
+.hdr-link:hover{background:var(--accent-s);border-color:var(--accent);color:var(--accent);}
+.hdr-link.green{border-color:var(--green);color:var(--green);background:var(--green-s);}
+.hdr-link.green:hover{background:var(--green);color:#fff;}
+.hdr-link.blue{border-color:var(--blue);color:var(--blue);background:var(--blue-s);}
+.hdr-link.blue:hover{background:var(--blue);color:#fff;}
 .hdr-info h1{font-size:16px;font-weight:900;}
 .hdr-info p{font-size:11px;color:var(--ink3);}
 .hdr-right{display:flex;align-items:center;gap:8px;}
@@ -275,16 +282,20 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <!-- ===== HEADER ===== -->
 <div class="hdr">
-  <div class="hdr-left">
-    <button class="back" onclick="history.back()">←</button>
+  <div class="hdr-left" style="gap:6px">
+    <button class="back" onclick="history.back()" title="실행취소">↩</button>
+    <button class="back" onclick="history.forward()" title="되돌리기">↪</button>
+    <a class="hdr-link" href="worklog.html" title="홈">🏠 홈</a>
     <div class="hdr-info">
       <h1>👥 직원 관리</h1>
       <p id="hd"></p>
     </div>
   </div>
   <div class="hdr-right">
+    <a class="hdr-link green" href="worklog.html" title="업무일지">📋 업무일지</a>
+    <a class="hdr-link blue" href="worklog.html#contacts" id="contactsLink" title="업체 연락처">📞 연락처</a>
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1152</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1220</span>
   </div>
 </div>
 
@@ -523,7 +534,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <script>
 /* ===== 설정 ===== */
-var APP_VERSION='v44-0626-1152';
+var APP_VERSION='v44-0626-1220';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;})();
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
@@ -562,21 +573,28 @@ function toast(msg){var t=$('toast');t.textContent=msg;t.classList.add('show');c
 
 function resignedToDate(resignedStr){
   if(!resignedStr)return todayStr();
-  // YY.MM.DD 또는 YYYY-MM-DD 또는 YYYY.MM.DD
-  if(resignedStr.includes('-'))return resignedStr;
   try{
+    if(/^\d{4}-\d{2}-\d{2}$/.test(resignedStr))return resignedStr;
     var p=resignedStr.split('.');
-    var y=parseInt(p[0]);if(y<100)y+=2000;
-    return y+'-'+pad(parseInt(p[1]||1))+'-'+pad(parseInt(p[2]||1));
+    if(p.length>=3){
+      var y=parseInt(p[0]);if(y<100)y+=2000;
+      return y+'-'+pad(parseInt(p[1]))+'-'+pad(parseInt(p[2]));
+    }
+    return resignedStr;
   }catch(e){return todayStr();}
 }
 function hiredToDate(hiredStr){
-  // YY.MM.DD 또는 YYYY.MM.DD → YYYY-MM-DD
   if(!hiredStr)return todayStr();
   try{
+    // 이미 YYYY-MM-DD 형식이면 그대로
+    if(/^\d{4}-\d{2}-\d{2}$/.test(hiredStr))return hiredStr;
+    // YY.MM.DD 또는 YYYY.MM.DD → YYYY-MM-DD
     var p=hiredStr.split('.');
-    var y=parseInt(p[0]);if(y<100)y+=2000;
-    return y+'-'+pad(parseInt(p[1]||1))+'-'+pad(parseInt(p[2]||1));
+    if(p.length>=3){
+      var y=parseInt(p[0]);if(y<100)y+=2000;
+      return y+'-'+pad(parseInt(p[1]))+'-'+pad(parseInt(p[2]));
+    }
+    return hiredStr;
   }catch(e){return todayStr();}
 }
 function calcTenure(hiredStr,resignedStr){
@@ -877,21 +895,31 @@ function renderCal(){
     if(h.type==='퇴사'&&h.date)(resignByDate[h.date]=resignByDate[h.date]||[]).push(h);
   });
   // 직원 hired 날짜도 입사 마커로
+  // allHistory에서 입퇴사 마커
+  allHistory.forEach(function(h){
+    if(h.type==='입사'&&h.date){
+      var ds=h.date.length===10?h.date:hiredToDate(h.date);
+      (hireByDate[ds]=hireByDate[ds]||[]).push(h);
+    }
+    if((h.type==='퇴사'||h.type==='복직')&&h.date){
+      var ds=h.date.length===10?h.date:resignedToDate(h.date);
+      (resignByDate[ds]=resignByDate[ds]||[]).push(h);
+    }
+  });
+  // STAFF 데이터에서도 보완
   STAFF.forEach(function(s){
-    // 입사 마커
     if(s.hired){
       try{
         var ds2=hiredToDate(s.hired);
         if(!(hireByDate[ds2]||[]).find(function(h){return h.staffId===s.id;}))
-          (hireByDate[ds2]=hireByDate[ds2]||[]).push({staffId:s.id,staffName:s.name,type:'입사'});
+          (hireByDate[ds2]=hireByDate[ds2]||[]).push({staffId:s.id,staffName:s.name,type:'입사',date:ds2});
       }catch(e){}
     }
-    // 퇴사 마커
     if(s.status==='퇴사'&&s.resigned){
       try{
         var ds3=resignedToDate(s.resigned);
         if(!(resignByDate[ds3]||[]).find(function(h){return h.staffId===s.id;}))
-          (resignByDate[ds3]=resignByDate[ds3]||[]).push({staffId:s.id,staffName:s.name,type:'퇴사'});
+          (resignByDate[ds3]=resignByDate[ds3]||[]).push({staffId:s.id,staffName:s.name,type:'퇴사',date:ds3});
       }catch(e){}
     }
   });
@@ -911,7 +939,7 @@ function renderCal(){
     var dots=allDayRecs.slice(0,8).map(function(r){return'<span class="cal-dot" style="background:'+(CAT_COLOR[r.cat]||'#8C99C0')+'"></span>';}).join('');
     // 입퇴사 마커
     var hireMarkers=showHires.map(function(h){return'<div class="cal-hire">🟢 '+esc(h.staffName||'')+'</div>';}).join('');
-    var resignMarkers=showResigns.map(function(h){return'<div class="cal-resign">🔴 '+esc(h.staffName||'')+'</div>';}).join('');
+    var resignMarkers=showResigns.map(function(h){return'<div class="cal-resign">'+(h.type==='복직'?'🔵 복직 ':'🔴 퇴사 ')+esc(h.staffName||'')+'</div>';}).join('');
     // 기록 항목 — 더 구체적으로 (이름+내용 전체)
     var items=dayRecs.slice(0,3).map(function(r){
       var cont=(r.content||'').split('\n').join(' ');
@@ -1230,6 +1258,16 @@ document.addEventListener('DOMContentLoaded',function(){
   var sc=$('searchClear');
   if(sc)sc.addEventListener('click',function(){$('searchInput').value='';searchQ='';applySearch();});
 
+  /* 연락처 링크 — worklog 연락처 탭으로 */
+  var cl=document.getElementById('contactsLink');
+  if(cl){
+    cl.href='worklog.html';
+    cl.addEventListener('click',function(e){
+      // worklog에 탭 전환 메시지 전송 후 이동
+      localStorage.setItem('wl_goto_tab','contacts');
+      // href로 이동 (기본 동작 유지)
+    });
+  }
   /* 달력 범례 필터 */
   document.querySelectorAll('.leg-filter').forEach(function(b){
     b.addEventListener('click',function(){
