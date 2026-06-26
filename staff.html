@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1256</title>
+<title>직원 관리 v44-0626-1251</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -250,6 +250,61 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .pin-btn:active{transform:scale(.95);}
 .pin-change-btns{text-align:center;margin-top:8px;}
 .pin-change-link{background:none;border:none;font-size:12px;color:var(--ink3);font-weight:700;cursor:pointer;font-family:inherit;}
+
+/* ===== 근태 통계 ===== */
+.attend-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+@media(max-width:600px){.attend-grid{grid-template-columns:repeat(2,1fr);}}
+.attend-kpi{background:var(--card);border:2px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
+.attend-kpi-n{font-size:22px;font-weight:900;display:block;}
+.attend-kpi-l{font-size:11px;color:var(--ink3);font-weight:600;margin-top:2px;}
+.attend-row{background:var(--card);border:2px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.15s;}
+.attend-row:hover{border-color:var(--accent2);box-shadow:var(--shadow);}
+.attend-av{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:900;flex-shrink:0;}
+.attend-stat{display:flex;gap:6px;margin-left:auto;flex-shrink:0;}
+.attend-badge{font-size:11px;padding:3px 8px;border-radius:8px;font-weight:700;}
+.ab-지각{background:var(--amber-s);color:var(--amber);}
+.ab-조퇴{background:var(--blue-s);color:var(--blue);}
+.ab-결근{background:var(--red-s);color:var(--red);}
+.ab-완료{background:var(--green-s);color:var(--green);}
+
+/* ===== 빠른 입력 템플릿 ===== */
+.quick-btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.quick-btn{padding:5px 12px;border-radius:20px;border:2px solid var(--border2);background:var(--card);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink2);transition:.15s;white-space:nowrap;}
+.quick-btn:hover{background:var(--accent-s);border-color:var(--accent);color:var(--accent);}
+.quick-btn.cat-근태{border-color:var(--amber);color:var(--amber);background:var(--amber-s);}
+.quick-btn.cat-주의경고{border-color:var(--red);color:var(--red);background:var(--red-s);}
+.quick-btn.cat-업무지시{border-color:var(--blue);color:var(--blue);background:var(--blue-s);}
+
+/* ===== 직원 카드 빠른 기록 버튼 ===== */
+.sc-quick{position:absolute;bottom:6px;right:6px;width:22px;height:22px;border-radius:7px;background:var(--accent);color:#fff;border:none;font-size:12px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:.15s;}
+.sc:hover .sc-quick{opacity:1;}
+
+/* ===== 직원 미니 달력 ===== */
+.mini-cal-wrap{margin-top:14px;}
+.mini-cal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.mini-cal-hdr h4{font-size:13px;font-weight:800;color:var(--ink2);}
+.mini-cal-nav{display:flex;gap:4px;}
+.mini-cal-btn{width:26px;height:26px;border-radius:8px;border:2px solid var(--border2);background:var(--bg);color:var(--ink2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;}
+.mini-cal-btn:hover{border-color:var(--accent);color:var(--accent);}
+.mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.mini-dow{text-align:center;font-size:10px;font-weight:800;color:var(--ink3);padding:3px 0;}
+.mini-cell{border-radius:6px;padding:3px 2px;min-height:36px;cursor:pointer;transition:.15s;position:relative;text-align:center;}
+.mini-cell:hover{background:var(--accent-s);}
+.mini-cell.today{background:var(--accent-s);border:1.5px solid var(--accent);}
+.mini-cell.has-rec{background:var(--card2);}
+.mini-dnum{font-size:10px;font-weight:700;color:var(--ink2);display:block;}
+.mini-cell.today .mini-dnum{color:var(--accent);}
+.mini-dot-row{display:flex;justify-content:center;gap:1px;flex-wrap:wrap;margin-top:1px;}
+.mini-dot{width:5px;height:5px;border-radius:50%;}
+.mini-cell.empty{cursor:default;}
+.mini-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.mini-leg{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--ink3);font-weight:600;}
+.mini-leg-dot{width:7px;height:7px;border-radius:50%;}
+
+/* ===== 현황 탭 월 선택 ===== */
+.stat-month-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+.stat-month-row label{font-size:12px;font-weight:700;color:var(--ink2);}
+.stat-month-sel{border:2px solid var(--border2);border-radius:9px;padding:6px 10px;font-size:13px;font-family:inherit;color:var(--ink);outline:none;background:var(--card);}
 </style>
 </head>
 <body>
@@ -295,7 +350,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <a class="hdr-link green" href="worklog.html" title="업무일지">📋 업무일지</a>
     <a class="hdr-link blue" href="worklog.html#contacts" id="contactsLink" title="업체 연락처">📞 연락처</a>
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1256</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1251</span>
   </div>
 </div>
 
@@ -335,8 +390,8 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 <!-- ===== 전체기록 탭 ===== -->
 <div class="panel" id="panel-all">
   <div class="flt-row">
-    <button class="flt-btn on" data-f="전체">🗂 전체</button>
-    <button class="flt-btn" data-f="재직중">✅ 재직중</button>
+    <button class="flt-btn" data-f="전체">🗂 전체</button>
+    <button class="flt-btn on" data-f="재직중">✅ 재직중</button>
     <button class="flt-btn" data-f="퇴사자">🚪 퇴사자</button>
     <button class="flt-btn" data-f="업무지시">📋 업무지시</button>
     <button class="flt-btn" data-f="근태">🕐 근태</button>
@@ -392,7 +447,14 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 <!-- ===== 현황 탭 ===== -->
 <div class="panel" id="panel-stat">
   <div class="stat-kpi" id="kpiGrid"></div>
-  <div class="divider">📊 직원별 현황</div>
+  <div class="divider">🕐 이번달 근태 현황</div>
+  <div class="stat-month-row">
+    <label>📅 기준 월:</label>
+    <input type="month" id="statMonth" class="stat-month-sel">
+  </div>
+  <div class="attend-grid" id="attendKpi"></div>
+  <div id="attendList"></div>
+  <div class="divider">📊 직원별 기록 현황</div>
   <div id="staffStatList"></div>
 </div>
 
@@ -431,6 +493,24 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
       <div class="fg full"><label>📝 메모</label><input type="text" id="smMemo"></div>
     </div>
     <div class="retire-warn" id="smRetireWarn">⚠️ 퇴사 처리 시 그리드에서 흐리게 표시됩니다. 퇴사일을 입력해주세요.</div>
+    <!-- 미니 달력 (조회 모드에서만 표시) -->
+    <div class="mini-cal-wrap" id="smMiniCalWrap">
+      <div class="divider">📅 기록 달력</div>
+      <div class="mini-cal-hdr">
+        <h4 id="smMiniCalTitle"></h4>
+        <div class="mini-cal-nav">
+          <button class="mini-cal-btn" id="smMiniCalPrev">‹</button>
+          <button class="mini-cal-btn" id="smMiniCalNext">›</button>
+        </div>
+      </div>
+      <div class="mini-grid" id="smMiniCalDow"></div>
+      <div class="mini-grid" id="smMiniCalGrid"></div>
+      <div class="mini-legend">
+        <div class="mini-leg"><div class="mini-leg-dot" style="background:var(--blue)"></div>업무지시</div>
+        <div class="mini-leg"><div class="mini-leg-dot" style="background:var(--amber)"></div>근태</div>
+        <div class="mini-leg"><div class="mini-leg-dot" style="background:var(--red)"></div>주의경고</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -477,6 +557,17 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <div class="modal-hdr">
       <h3 id="addRecTitle">➕ 기록 추가</h3>
       <button class="mhb" onclick="closeAddRecModal()">✕</button>
+    </div>
+    <div class="quick-btns" id="quickBtns">
+      <span style="font-size:11px;color:var(--ink3);font-weight:700;align-self:center">빠른입력:</span>
+      <button class="quick-btn cat-근태" data-q="지각" data-cat="근태">⏰ 지각</button>
+      <button class="quick-btn cat-근태" data-q="조퇴" data-cat="근태">🚶 조퇴</button>
+      <button class="quick-btn cat-근태" data-q="결근" data-cat="근태">❌ 결근</button>
+      <button class="quick-btn cat-근태" data-q="연차" data-cat="근태">📆 연차</button>
+      <button class="quick-btn cat-근태" data-q="반차" data-cat="근태">🌗 반차</button>
+      <button class="quick-btn cat-업무지시" data-q="청소 상태 양호" data-cat="업무지시">✅ 청소양호</button>
+      <button class="quick-btn cat-업무지시" data-q="순찰 완료" data-cat="업무지시">🔍 순찰완료</button>
+      <button class="quick-btn cat-주의경고" data-q="주의 조치" data-cat="주의경고">⚠️ 주의</button>
     </div>
     <div class="modal-grid">
       <div class="fg"><label>📅 날짜</label><input type="date" id="arDate"></div>
@@ -536,7 +627,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <script>
 /* ===== 설정 ===== */
-var APP_VERSION='v44-0626-1256';
+var APP_VERSION='v44-0626-1251';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;})();
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
@@ -562,14 +653,21 @@ var CAT_COLOR={'업무지시':'#3B82F6','근태':'#D97706','주의경고':'#DC26
 /* ===== 상태 ===== */
 var STAFF=[];
 var allRecs=[],allHistory=[];
-var selSid=null,allFilt='전체',staffFilt='재직중',histFilt='전체';
+var selSid=null,allFilt='재직중',staffFilt='재직중',histFilt='전체';
 var tabHistory=['home'],tabHistIdx=0; // 탭 히스토리
-var calY=new Date().getFullYear(),calM=new Date().getMonth(),calSelDay=null,calFilt='전체';
+var miniCalY=kstNow().getUTCFullYear(),miniCalM=kstNow().getUTCMonth(); // 미니달력
+var calY=kstNow().getUTCFullYear(),calM=kstNow().getUTCMonth(),calSelDay=null,calFilt='전체';
 var curRecId=null,searchQ='';
 
 /* ===== 유틸 ===== */
 function pad(n){return String(n).padStart(2,'0');}
-function todayStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+/* KST 시간 (지침: kstNow() 필수 / new Date() 금지) */
+function kstNow(){
+  var now=new Date();
+  var kst=new Date(now.getTime()+9*60*60*1000);
+  return kst;
+}
+function todayStr(){var d=kstNow();return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());}
 function $(id){return document.getElementById(id);}
 function esc(s){return(s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function toast(msg){var t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},2400);}
@@ -604,8 +702,8 @@ function calcTenure(hiredStr,resignedStr){
   if(!hiredStr)return'';
   try{
     var p=hiredStr.split('.');var y=parseInt(p[0]);if(y<100)y+=2000;
-    var start=new Date(y,parseInt(p[1]||1)-1,parseInt(p[2]||1));
-    var end=resignedStr?(function(){var p2=resignedStr.split('.');var y2=parseInt(p2[0]);if(y2<100)y2+=2000;return new Date(y2,parseInt(p2[1]||1)-1,parseInt(p2[2]||1));})():new Date();
+    var start=new Date(Date.UTC(y,parseInt(p[1]||1)-1,parseInt(p[2]||1)));
+    var end=resignedStr?(function(){var p2=resignedStr.split('.');var y2=parseInt(p2[0]);if(y2<100)y2+=2000;return new Date(Date.UTC(y2,parseInt(p2[1]||1)-1,parseInt(p2[2]||1)));})():kstNow();
     var months=Math.floor((end-start)/(1000*60*60*24*30.44));
     if(months<1)return'';if(months<12)return months+'개월';
     var yrs=Math.floor(months/12);var rem=months%12;
@@ -718,7 +816,9 @@ function drawGrid(){
       h+='<div class="sc-name">'+esc(s.name)+(ret?' <span style="font-size:9px;color:var(--red)">(퇴사)</span>':'')+(tenure?'<span class="tenure-badge">'+tenure+'</span>':'')+'</div>';
       h+='<div class="sc-role">'+esc(s.role)+(s.floor?' · '+esc(s.floor):'')+'</div>';
       if(s.phone)h+='<a class="sc-phone-link" href="tel:'+s.phone+'" onclick="event.stopPropagation()">📞 '+esc(s.phone)+'</a>';
-      h+='</div></div>';
+      h+='</div>';
+      h+='<button class="sc-quick" data-qsid="'+s.id+'" onclick="event.stopPropagation();openAddRecModal(\''+s.id+'\',null)" title="기록 추가">+</button>';
+      h+='</div>';
       return h;
     }).join('');
   });
@@ -761,13 +861,20 @@ function openStaffModal(sid,mode){
 function setStaffModalMode(mode){
   _smMode=mode;
   var isEdit=mode==='edit';
-  // 헤더 버튼
   $('staffModalViewBtns').style.display=isEdit?'none':'flex';
   $('staffModalEditBtns').style.display=isEdit?'flex':'none';
-  // 필드 활성/비활성
   ['smName','smRole','smPhone','smBorn','smHired','smFloor','smStatus','smResigned','smMemo'].forEach(function(id){
     var el=$(id);if(el)el.disabled=!isEdit;
   });
+  // 미니달력: 조회모드에서만 표시
+  var mcw=document.getElementById('smMiniCalWrap');
+  if(mcw){
+    mcw.style.display=isEdit?'none':'block';
+    if(!isEdit&&_smSid){
+      miniCalY=kstNow().getUTCFullYear();miniCalM=kstNow().getUTCMonth();
+      renderMiniCal(_smSid);
+    }
+  }
 }
 function closeStaffModal(){$('staffModal').classList.remove('show');_smSid=null;}
 
@@ -851,7 +958,7 @@ function drawStats(){
   var done=allRecs.filter(function(r){return r.status==='완료';}).length;
   var ing=allRecs.filter(function(r){return r.status==='진행중';}).length;
   var unr=allRecs.filter(function(r){return r.status==='미해결';}).length;
-  var nowYM=new Date().getFullYear()+'-'+pad(new Date().getMonth()+1);
+  var nowYM=kstNow().getUTCFullYear()+'-'+pad(kstNow().getUTCMonth()+1);
   function normDate(d){if(!d)return'';if(d.includes('-'))return d;return hiredToDate(d);}
   var mH=allHistory.filter(function(h){return h.type==='입사'&&normDate(h.date).startsWith(nowYM);}).length;
   var mR=allHistory.filter(function(h){return h.type==='퇴사'&&normDate(h.date).startsWith(nowYM);}).length;
@@ -867,6 +974,9 @@ function drawStats(){
     '<div class="kpi"><span class="kpi-n" style="color:var(--green)">'+done+'</span><div class="kpi-l">✅ 완료</div></div>'+
     '<div class="kpi"><span class="kpi-n" style="color:var(--amber)">'+ing+'</span><div class="kpi-l">🟡 진행중</div></div>'+
     '<div class="kpi"><span class="kpi-n" style="color:var(--red)">'+unr+'</span><div class="kpi-l">🔴 미해결</div></div>';
+  // 근태 통계
+  var sm=document.getElementById('statMonth');if(sm&&!sm.value){var n2=kstNow();sm.value=n2.getUTCFullYear()+'-'+pad(n2.getUTCMonth()+1);}
+  drawAttendStats(sm?sm.value:'');
   $('staffStatList').innerHTML=STAFF.filter(function(s){return s.status==='재직중';}).map(function(s){
     var sr=allRecs.filter(function(r){return r.staffId===s.id;});
     var pct=total>0?Math.round(sr.length/total*100):0;
@@ -884,7 +994,7 @@ function drawStats(){
 
 /* ===== 입퇴사 이력 ===== */
 function drawHist(){
-  var nowYM=new Date().getFullYear()+'-'+pad(new Date().getMonth()+1);
+  var nowYM=kstNow().getUTCFullYear()+'-'+pad(kstNow().getUTCMonth()+1);
   function normDate(d){if(!d)return'';if(d.includes('-'))return d;return hiredToDate(d);}
   var mH=allHistory.filter(function(h){return h.type==='입사'&&normDate(h.date).startsWith(nowYM);}).length;
   var mR=allHistory.filter(function(h){return h.type==='퇴사'&&normDate(h.date).startsWith(nowYM);}).length;
@@ -921,7 +1031,7 @@ function drawHist(){
 function renderCal(){
   var days=['일','월','화','수','목','금','토'];
   $('calTitle').textContent=calY+'년 '+(calM+1)+'월';
-  var first=new Date(calY,calM,1).getDay(),daysInMonth=new Date(calY,calM+1,0).getDate();
+  var first=new Date(Date.UTC(calY,calM,1)).getUTCDay(),daysInMonth=new Date(Date.UTC(calY,calM+1,0)).getUTCDate();
   var today=todayStr();
   var byDate={};
   allRecs.forEach(function(r){if(r.date)(byDate[r.date]=byDate[r.date]||[]).push(r);});
@@ -968,7 +1078,7 @@ function renderCal(){
   for(var i=0;i<first;i++)html+='<div class="cal-cell empty"></div>';
   for(var d=1;d<=daysInMonth;d++){
     var ds=calY+'-'+pad(calM+1)+'-'+pad(d);
-    var wd=new Date(calY,calM,d).getDay();
+    var wd=new Date(Date.UTC(calY,calM,d)).getUTCDay();
     var cls='cal-cell'+(wd===0?' sun':'')+(ds===today?' today':'')+(ds===calSelDay?' selected':'');
     var allDayRecs=byDate[ds]||[];
     // 필터 적용
@@ -1005,7 +1115,7 @@ function renderCal(){
 }
 function renderCalDetail(ds){
   var recs=allRecs.filter(function(r){return r.date===ds;}).sort(function(a,b){return(b.ts||0)-(a.ts||0);});
-  var d=new Date(ds+'T00:00:00');
+  var d=new Date(ds+'T00:00:00Z');
   var label=(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+['일','월','화','수','목','금','토'][d.getDay()]+')';
   $('calDetail').innerHTML='<div class="cal-detail">'+
     '<div class="cal-detail-hdr"><h3>📅 '+label+'</h3></div>'+
@@ -1020,6 +1130,8 @@ function refreshAll(){
   if($('panel-stat').classList.contains('on'))drawStats();
   if($('panel-cal').classList.contains('on'))renderCal();
   if($('panel-hist').classList.contains('on'))drawHist();
+  if($('panel-stat').classList.contains('on'))drawAttendStats('');
+  if(_smSid&&document.getElementById('staffModal').classList.contains('show'))renderMiniCal(_smSid);
   if(searchQ)applySearch();
 }
 
@@ -1094,8 +1206,8 @@ function initLock(){showUnlockScreen();}
    ========================================================= */
 document.addEventListener('DOMContentLoaded',function(){
   /* 날짜 헤더 */
-  var n=new Date();var days=['일','월','화','수','목','금','토'];
-  var hd=$('hd');if(hd)hd.textContent=(n.getMonth()+1)+'월 '+n.getDate()+'일 ('+days[n.getDay()]+')';
+  var n=kstNow();var days=['일','월','화','수','목','금','토'];
+  var hd=$('hd');if(hd)hd.textContent=(n.getUTCMonth()+1)+'월 '+n.getUTCDate()+'일 ('+days[n.getUTCDay()]+')';;
 
   /* PIN 버튼 */
   document.querySelectorAll('.pin-btn[data-n]').forEach(function(btn){
@@ -1247,6 +1359,19 @@ document.addEventListener('DOMContentLoaded',function(){
     }).catch(function(e){arsb.disabled=false;arsb.textContent='✅ 기록 추가';toast('⚠️ 오류: '+e.message);});
   });
   $('addRecModal').addEventListener('click',function(e){if(e.target===this)closeAddRecModal();});
+  /* 빠른입력 버튼 */
+  var qb=document.getElementById('quickBtns');
+  if(qb&&!qb._bound){qb._bound=true;
+    qb.addEventListener('click',function(e){
+      var btn=e.target.closest('[data-q]');
+      if(!btn)return;
+      var q=btn.dataset.q,cat=btn.dataset.cat;
+      var cont=document.getElementById('arCont');
+      var catSel=document.getElementById('arCat');
+      if(cont)cont.value=q;
+      if(catSel)catSel.value=cat||'근태';
+    });
+  }
 
   /* 이벤트 위임 — 기록 클릭/삭제, 입퇴사 삭제, 필터, 현황 클릭 */
   document.addEventListener('click',function(e){
@@ -1319,7 +1444,7 @@ document.addEventListener('DOMContentLoaded',function(){
   /* 달력 */
   var cp=$('calPrev');if(cp)cp.addEventListener('click',function(){calM--;if(calM<0){calM=11;calY--;}calSelDay=null;renderCal();});
   var cn=$('calNext');if(cn)cn.addEventListener('click',function(){calM++;if(calM>11){calM=0;calY++;}calSelDay=null;renderCal();});
-  var ct=$('calToday');if(ct)ct.addEventListener('click',function(){var nd=new Date();calY=nd.getFullYear();calM=nd.getMonth();calSelDay=null;renderCal();});
+  var ct=$('calToday');if(ct)ct.addEventListener('click',function(){var nd=kstNow();calY=nd.getUTCFullYear();calM=nd.getUTCMonth();calSelDay=null;renderCal();});
 
   /* 입퇴사 등록 */
   var ahb=$('addHistBtn');
@@ -1383,6 +1508,8 @@ document.addEventListener('DOMContentLoaded',function(){
     drawGrid();
     if($('panel-all').classList.contains('on'))drawAll();
     if($('panel-hist').classList.contains('on'))drawHist();
+  if($('panel-stat').classList.contains('on'))drawAttendStats('');
+  if(_smSid&&document.getElementById('staffModal').classList.contains('show'))renderMiniCal(_smSid);
     if($('panel-cal').classList.contains('on'))renderCal();
     if($('panel-stat').classList.contains('on'))drawStats();
   }).catch(function(e){
@@ -1390,12 +1517,137 @@ document.addEventListener('DOMContentLoaded',function(){
     toast('⚠️ 오프라인 — 로컬 데이터 사용');
   });
 
+  /* 미니달력 네비 */
+  var mcp=document.getElementById('smMiniCalPrev');
+  if(mcp&&!mcp._bound){mcp._bound=true;mcp.addEventListener('click',function(){
+    miniCalM--;if(miniCalM<0){miniCalM=11;miniCalY--;}if(_smSid)renderMiniCal(_smSid);
+  });}
+  var mcn=document.getElementById('smMiniCalNext');
+  if(mcn&&!mcn._bound){mcn._bound=true;mcn.addEventListener('click',function(){
+    miniCalM++;if(miniCalM>11){miniCalM=0;miniCalY++;}if(_smSid)renderMiniCal(_smSid);
+  });}
+  /* 현황 월 선택 */
+  var sm=document.getElementById('statMonth');
+  if(sm&&!sm._bound){sm._bound=true;
+    var n2=kstNow();sm.value=n2.getUTCFullYear()+'-'+pad(n2.getUTCMonth()+1);
+    sm.addEventListener('change',function(){drawAttendStats(this.value);});
+  }
   /* 탭 네비 초기화 */
   updateNavBtns();
   /* PIN 초기화 */
   initLock();
 });
 
+
+/* ===== 근태 키워드 ===== */
+var ATTEND_KEYWORDS={
+  '지각':  {cat:'근태', color:'var(--amber)', label:'지각'},
+  '조퇴':  {cat:'근태', color:'var(--blue)',  label:'조퇴'},
+  '결근':  {cat:'근태', color:'var(--red)',   label:'결근'},
+  '연차':  {cat:'근태', color:'var(--accent)','label':'연차'},
+  '반차':  {cat:'근태', color:'var(--accent2)','label':'반차'},
+};
+function getAttendType(content){
+  var keys=Object.keys(ATTEND_KEYWORDS);
+  for(var i=0;i<keys.length;i++){if((content||'').includes(keys[i]))return keys[i];}
+  return null;
+}
+
+/* ===== 미니달력 ===== */
+function renderMiniCal(sid){
+  var recs=allRecs.filter(function(r){return r.staffId===sid;});
+  var byDate={};
+  recs.forEach(function(r){if(r.date)(byDate[r.date]=byDate[r.date]||[]).push(r);});
+  var title=miniCalY+'년 '+(miniCalM+1)+'월';
+  var el=document.getElementById('smMiniCalTitle');
+  if(el)el.textContent=title;
+  var first=new Date(Date.UTC(miniCalY,miniCalM,1)).getUTCDay();
+  var daysInMonth=new Date(Date.UTC(miniCalY,miniCalM+1,0)).getUTCDate();
+  var today=todayStr();
+  var dow=document.getElementById('smMiniCalDow');
+  if(dow)dow.innerHTML=['일','월','화','수','목','금','토'].map(function(d){return'<div class="mini-dow">'+d+'</div>';}).join('');
+  var html='';
+  for(var i=0;i<first;i++)html+='<div class="mini-cell empty"></div>';
+  for(var d=1;d<=daysInMonth;d++){
+    var ds=miniCalY+'-'+pad(miniCalM+1)+'-'+pad(d);
+    var dayRecs=byDate[ds]||[];
+    var isToday=ds===today;
+    var dots=dayRecs.slice(0,4).map(function(r){
+      return'<div class="mini-dot" style="background:'+(CAT_COLOR[r.cat]||'#8C99C0')+'"></div>';
+    }).join('');
+    var cls='mini-cell'+(isToday?' today':'')+(dayRecs.length?' has-rec':'');
+    html+='<div class="'+cls+'" data-mday="'+ds+'" title="'+dayRecs.length+'건">'+
+      '<span class="mini-dnum">'+d+'</span>'+
+      (dots?'<div class="mini-dot-row">'+dots+'</div>':'')+
+    '</div>';
+  }
+  var grid=document.getElementById('smMiniCalGrid');
+  if(grid){
+    grid.innerHTML=html;
+    grid.querySelectorAll('[data-mday]').forEach(function(el){
+      el.addEventListener('click',function(){
+        // 해당 날짜로 기록 추가 팝업
+        var dayRecs=byDate[el.dataset.mday]||[];
+        if(dayRecs.length===0){
+          openAddRecModal(sid,el.dataset.mday);
+        } else {
+          // 해당 날짜 기록 첫번째 열기
+          openRecModal(dayRecs[0]._id);
+        }
+      });
+    });
+  }
+}
+
+/* ===== 근태 통계 ===== */
+function drawAttendStats(ym){
+  if(!ym){
+    var n=kstNow();
+    ym=n.getUTCFullYear()+'-'+pad(n.getUTCMonth()+1);
+  }
+  var activeStaff=STAFF.filter(function(s){return s.status==='재직중';});
+  var monthRecs=allRecs.filter(function(r){return(r.date||'').startsWith(ym)&&r.cat==='근태';});
+  var late=monthRecs.filter(function(r){return(r.content||'').includes('지각');}).length;
+  var early=monthRecs.filter(function(r){return(r.content||'').includes('조퇴');}).length;
+  var absent=monthRecs.filter(function(r){return(r.content||'').includes('결근');}).length;
+  var leave=monthRecs.filter(function(r){return(r.content||'').includes('연차')||(r.content||'').includes('반차');}).length;
+  var ak=document.getElementById('attendKpi');
+  if(ak)ak.innerHTML=
+    '<div class="attend-kpi"><span class="attend-kpi-n" style="color:var(--amber)">'+late+'</span><div class="attend-kpi-l">⏰ 지각</div></div>'+
+    '<div class="attend-kpi"><span class="attend-kpi-n" style="color:var(--blue)">'+early+'</span><div class="attend-kpi-l">🚶 조퇴</div></div>'+
+    '<div class="attend-kpi"><span class="attend-kpi-n" style="color:var(--red)">'+absent+'</span><div class="attend-kpi-l">❌ 결근</div></div>'+
+    '<div class="attend-kpi"><span class="attend-kpi-n" style="color:var(--accent)">'+leave+'</span><div class="attend-kpi-l">📆 연차/반차</div></div>';
+  // 직원별 근태
+  var al=document.getElementById('attendList');
+  if(!al)return;
+  var rows=activeStaff.map(function(s){
+    var sr=allRecs.filter(function(r){return r.staffId===s.id&&(r.date||'').startsWith(ym)&&r.cat==='근태';});
+    var sl=sr.filter(function(r){return(r.content||'').includes('지각');}).length;
+    var se=sr.filter(function(r){return(r.content||'').includes('조퇴');}).length;
+    var sa=sr.filter(function(r){return(r.content||'').includes('결근');}).length;
+    var sv=sr.filter(function(r){return(r.content||'').includes('연차')||(r.content||'').includes('반차');}).length;
+    return{s:s,late:sl,early:se,absent:sa,leave:sv,total:sr.length};
+  }).filter(function(x){return x.total>0;}).sort(function(a,b){return b.absent-a.absent||b.late-a.late;});
+  if(!rows.length){al.innerHTML='<div class="empty" style="padding:16px"><span class="empty-ico">✅</span>이번달 근태 이슈 없음</div>';return;}
+  al.innerHTML=rows.map(function(item){
+    var c=({실장:'#E53E3E',경비:'#2563EB',청소반장:'#16A34A',미화:'#B7791F'}[item.s.role]||'#4C6EF5');
+    return'<div class="attend-row" data-sid="'+item.s.id+'">'+
+      '<div class="attend-av" style="background:'+c+'">'+item.s.name[0]+'</div>'+
+      '<div style="flex:1"><div style="font-size:13px;font-weight:800">'+esc(item.s.name)+'</div>'+
+      '<div style="font-size:11px;color:var(--ink3)">'+esc(item.s.role)+' · 근태기록 '+item.total+'건</div></div>'+
+      '<div class="attend-stat">'+
+        (item.late?'<span class="attend-badge ab-지각">지각 '+item.late+'</span>':'')+
+        (item.early?'<span class="attend-badge ab-조퇴">조퇴 '+item.early+'</span>':'')+
+        (item.absent?'<span class="attend-badge ab-결근">결근 '+item.absent+'</span>':'')+
+        (item.leave?'<span class="attend-badge ab-완료">연차 '+item.leave+'</span>':'')+
+      '</div>'+
+    '</div>';
+  }).join('');
+  // 클릭 → 직원 팝업
+  al.querySelectorAll('.attend-row[data-sid]').forEach(function(el){
+    el.addEventListener('click',function(){openStaffModal(el.dataset.sid,'view');});
+  });
+}
 /* ===== 입퇴사 이력 추가 ===== */
 async function addHistEntry(h){
   try{var d=await fbAdd('staff-history',h);if(d.name)h._id=d.name.split('/').pop();}catch(e){}
