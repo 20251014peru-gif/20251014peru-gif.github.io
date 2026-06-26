@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리</title>
+<title>직원 관리 v44-0626-0824</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -44,6 +44,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .hdr-info h1{font-size:16px;font-weight:900;}
 .hdr-info p{font-size:11px;color:var(--ink3);}
 .badge{font-size:11px;font-weight:700;padding:4px 11px;border-radius:20px;background:var(--accent-s);color:var(--accent);border:1.5px solid var(--accent2);}
+.ver-badge{font-size:10px;color:var(--ink3);font-weight:600;}
 
 /* ===== SEARCH ===== */
 .search-bar{padding:10px 16px;}
@@ -55,13 +56,19 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .s-clr{font-size:16px;cursor:pointer;color:var(--ink3);background:none;border:none;font-family:inherit;}
 
 /* ===== TABS ===== */
-.tabs{display:flex;margin:0 16px;background:var(--card);border:2px solid var(--border);border-radius:12px;padding:4px;gap:3px;}
-.tab{flex:1;padding:9px 4px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--ink3);border-radius:9px;cursor:pointer;font-family:inherit;transition:.18s;display:flex;align-items:center;justify-content:center;gap:5px;}
+.tabs{display:flex;margin:0 16px;background:var(--card);border:2px solid var(--border);border-radius:12px;padding:4px;gap:3px;overflow-x:auto;}
+.tab{flex:1;min-width:54px;padding:9px 4px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--ink3);border-radius:9px;cursor:pointer;font-family:inherit;transition:.18s;display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;}
 .tab-ico{font-size:18px;}
 .tab.on{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(76,110,245,.35);}
 .tab:not(.on):hover{background:var(--accent-s);}
 .panel{display:none;padding:14px 16px;}
 .panel.on{display:block;}
+
+/* ===== 직원 필터 칩 ===== */
+.staff-filter{display:flex;gap:6px;margin:10px 16px 0;flex-wrap:wrap;}
+.sf-chip{padding:6px 14px;border-radius:20px;border:2px solid var(--border2);background:var(--card);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink3);transition:.15s;display:flex;align-items:center;gap:4px;}
+.sf-chip.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+.sf-chip:hover:not(.on){border-color:var(--border);color:var(--ink2);}
 
 /* ===== 직원 그리드 — 가로형 직사각 ===== */
 .staff-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:14px;}
@@ -108,6 +115,16 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 }
 .sc:hover .sc-edit{opacity:1;}
 .sc-edit:hover{background:var(--accent-s);border-color:var(--accent);}
+
+/* 신규 직원 추가 버튼 */
+.add-staff-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:10px;margin-bottom:10px;
+  background:var(--green-s);border:2px dashed var(--green);border-radius:12px;
+  color:var(--green);font-size:13px;font-weight:800;cursor:pointer;
+  font-family:inherit;transition:.15s;
+}
+.add-staff-btn:hover{background:var(--green);color:#fff;}
 
 /* ===== 최근기록 섹션 ===== */
 .recent-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
@@ -231,6 +248,9 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .cal-dot-row{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:3px;}
 .cal-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .cal-item{font-size:9px;color:var(--ink2);line-height:1.35;overflow:hidden;margin-top:2px;word-break:keep-all;}
+/* 입퇴사 마커 */
+.cal-hire{font-size:9px;font-weight:800;color:var(--green);background:var(--green-s);border-radius:4px;padding:1px 4px;margin-top:2px;}
+.cal-resign{font-size:9px;font-weight:800;color:var(--red);background:var(--red-s);border-radius:4px;padding:1px 4px;margin-top:2px;}
 
 /* 날짜 상세 */
 .cal-detail{background:var(--card);border:2px solid var(--border2);border-radius:var(--r);padding:14px;margin-top:12px;}
@@ -239,7 +259,8 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .cal-add-btn{padding:6px 14px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
 
 /* ===== 현황 ===== */
-.stat-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.stat-kpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px;}
+@media(min-width:540px){.stat-kpi{grid-template-columns:repeat(4,1fr);}}
 .kpi{background:var(--card);border:2px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;}
 .kpi-n{font-size:26px;font-weight:900;display:block;}
 .kpi-l{font-size:11px;color:var(--ink3);font-weight:600;margin-top:2px;}
@@ -252,6 +273,29 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .sr-bar{background:var(--border);border-radius:3px;height:5px;overflow:hidden;}
 .sr-fill{height:100%;border-radius:3px;transition:width .5s;}
 
+/* ===== 입퇴사 이력 탭 ===== */
+.hist-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.hf-chip{padding:5px 13px;border-radius:20px;border:2px solid var(--border2);background:var(--card);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink3);transition:.15s;}
+.hf-chip.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+.hf-chip:hover:not(.on){border-color:var(--border);color:var(--ink2);}
+
+.hist-card{background:var(--card);border:2px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;display:flex;gap:14px;align-items:flex-start;}
+.hist-card.type-입사{border-left:4px solid var(--green);}
+.hist-card.type-퇴사{border-left:4px solid var(--red);}
+.hist-card.type-복직{border-left:4px solid var(--accent);}
+.hist-icon{font-size:24px;flex-shrink:0;}
+.hist-body{flex:1;}
+.hist-type-badge{display:inline-block;font-size:11px;font-weight:800;padding:2px 9px;border-radius:7px;margin-bottom:5px;}
+.type-badge-입사{background:var(--green-s);color:var(--green);}
+.type-badge-퇴사{background:var(--red-s);color:var(--red);}
+.type-badge-복직{background:var(--accent-s);color:var(--accent);}
+.hist-name{font-size:15px;font-weight:900;color:var(--ink);margin-bottom:3px;}
+.hist-meta{font-size:12px;color:var(--ink3);font-weight:600;line-height:1.7;}
+.hist-memo{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.6;}
+.hist-date{font-size:12px;color:var(--ink3);font-weight:700;white-space:nowrap;flex-shrink:0;}
+.hist-del{font-size:11px;padding:3px 9px;border-radius:20px;border:none;cursor:pointer;font-family:inherit;font-weight:700;background:transparent;color:var(--ink3);transition:.15s;margin-top:4px;}
+.hist-del:hover{background:var(--red-s);color:var(--red);}
+
 /* ===== 전체기록 탭 필터 ===== */
 .flt-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
 .flt-btn{padding:6px 13px;border-radius:20px;border:2px solid var(--border2);background:var(--card);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink3);transition:.15s;display:flex;align-items:center;gap:4px;}
@@ -262,10 +306,10 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .copy-btn{padding:6px 13px;border-radius:9px;border:2px solid var(--border2);background:var(--card);color:var(--ink2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;gap:4px;}
 .copy-btn:hover{border-color:var(--accent2);color:var(--accent);}
 
-/* ===== 연락처 편집 모달 ===== */
+/* ===== 신규 직원 등록 모달 ===== */
 .modal-overlay{position:fixed;inset:0;background:rgba(26,37,64,.55);z-index:600;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);}
 .modal-overlay.show{display:flex;}
-.modal-box{background:var(--card);border:2px solid var(--border);border-radius:20px;width:100%;max-width:480px;padding:22px;box-shadow:0 12px 40px rgba(76,110,245,.18);animation:pop .22s cubic-bezier(.34,1.26,.64,1);}
+.modal-box{background:var(--card);border:2px solid var(--border);border-radius:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:22px;box-shadow:0 12px 40px rgba(76,110,245,.18);animation:pop .22s cubic-bezier(.34,1.26,.64,1);}
 @keyframes pop{from{transform:scale(.9);opacity:0;}to{transform:scale(1);opacity:1;}}
 .modal-box h3{font-size:16px;font-weight:900;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
 .modal-box p{font-size:12px;color:var(--ink3);margin-bottom:14px;}
@@ -276,10 +320,16 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .m-cancel{padding:11px 18px;background:var(--bg);border:2px solid var(--border2);color:var(--ink2);border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
 .m-cancel:hover{border-color:var(--red);color:var(--red);}
 .retire-warn{background:var(--amber-s);border:1.5px solid var(--amber);border-radius:9px;padding:9px 12px;font-size:12px;color:var(--amber);font-weight:600;margin-bottom:4px;display:none;}
+.m-del{padding:11px 14px;background:var(--red-s);border:2px solid var(--red);color:var(--red);border-radius:11px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;}
+.m-del:hover{background:var(--red);color:#fff;}
 
 /* ===== 기록 수정 모달 ===== */
 .rec-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
 .rec-edit-grid .fg.full{grid-column:1/-1;}
+
+/* ===== 입퇴사 등록 모달 ===== */
+.hist-reg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.hist-reg-grid .fg.full{grid-column:1/-1;}
 
 /* ===== MISC ===== */
 .empty{text-align:center;color:var(--ink3);padding:28px;font-size:13px;font-weight:600;}
@@ -290,148 +340,112 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 .divider{font-size:11px;font-weight:700;color:var(--ink3);padding:12px 0 6px;display:flex;align-items:center;gap:8px;}
 .divider::after{content:'';flex:1;height:1.5px;background:var(--border);}
 
+/* 근속연수 뱃지 */
+.tenure-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:7px;background:var(--accent-s);color:var(--accent);margin-left:4px;}
+
 /* ===== PIN 잠금 ===== */
 .lock-screen{position:fixed;inset:0;background:linear-gradient(145deg,#F2F5FF 0%,#E8EEFF 100%);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;}
 .lock-screen.hide{display:none;}
 .lock-card{background:#fff;border:2px solid var(--border);border-radius:24px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(76,110,245,.15);text-align:center;box-sizing:border-box;}
-.lock-ico{font-size:48px;margin-bottom:10px;}
-.lock-title{font-size:19px;font-weight:900;color:var(--ink);margin-bottom:4px;}
-.lock-sub{font-size:12px;color:var(--ink3);margin-bottom:22px;}
-.pin-dots{display:flex;justify-content:center;gap:12px;margin-bottom:22px;}
-.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);background:transparent;transition:.15s;}
+.lock-icon{font-size:40px;margin-bottom:10px;}
+.lock-title{font-size:20px;font-weight:900;color:var(--ink);margin-bottom:4px;}
+.lock-sub{font-size:13px;color:var(--ink3);font-weight:600;margin-bottom:20px;}
+.pin-dots{display:flex;gap:12px;justify-content:center;margin-bottom:20px;}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2.5px solid var(--border2);background:transparent;transition:.15s;}
 .pin-dot.filled{background:var(--accent);border-color:var(--accent);}
-.pin-dot.err{background:var(--red);border-color:var(--red);animation:shake .3s;}
-@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}};
-.pin-pad{display:grid;grid-template-columns:repeat(3,1fr) !important;gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box;}
-.pin-btn{background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:0;height:62px;font-size:22px;font-weight:800;color:var(--ink);cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;min-width:0;}
+.pin-dot.err{background:var(--red);border-color:var(--red);}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.pin-btn{height:54px;border-radius:14px;border:2px solid var(--border);background:var(--bg);font-size:20px;font-weight:800;color:var(--ink);cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;justify-content:center;}
 .pin-btn:hover{background:var(--accent-s);border-color:var(--accent2);}
-.pin-btn:active{transform:scale(.92);background:var(--accent-s);}
-.pin-btn.del{font-size:18px;color:var(--ink3);}
-.pin-btn.empty{background:transparent;border-color:transparent;cursor:default;}
-.pin-err{font-size:13px;color:var(--red);font-weight:700;min-height:18px;margin-bottom:8px;}
-.pin-setup-btns{display:flex;flex-direction:column;gap:8px;}
-.pin-setup-btn{padding:12px;border-radius:12px;border:2px solid var(--border2);background:var(--bg);color:var(--ink2);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;}
-.pin-setup-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
-.pin-setup-btn:hover{border-color:var(--accent2);}
-/* 백업 모달 */
-.backup-modal{background:var(--card);border:2px solid var(--border);border-radius:20px;width:100%;max-width:420px;padding:22px;box-shadow:0 12px 40px rgba(76,110,245,.18);animation:pop .22s cubic-bezier(.34,1.26,.64,1);}
-.backup-modal h3{font-size:16px;font-weight:900;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-.backup-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
-.backup-btn{flex:1;padding:12px;border-radius:12px;border:2px solid var(--border2);background:var(--bg);color:var(--ink2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;justify-content:center;gap:6px;min-width:120px;}
-.backup-btn:hover{border-color:var(--accent2);color:var(--accent);}
-.backup-btn.danger:hover{border-color:var(--red);color:var(--red);}
-.backup-info{font-size:12px;color:var(--ink3);line-height:1.6;background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:10px;}
+.pin-btn:active{transform:scale(.95);}
+.pin-err{font-size:12px;color:var(--red);font-weight:700;min-height:18px;margin-bottom:6px;}
+.pin-setup-btns{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.pin-setup-btn{padding:13px;border-radius:12px;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:.15s;}
+.pin-setup-btn.primary{background:var(--accent);color:#fff;}
+.pin-setup-btn.secondary{background:var(--bg);color:var(--ink2);border:2px solid var(--border2);}
+.pin-change-btns{text-align:center;}
+.pin-change-link{background:none;border:none;font-size:12px;color:var(--ink3);font-weight:700;cursor:pointer;font-family:inherit;}
+.pin-change-link:hover{color:var(--accent);}
 </style>
 </head>
 <body>
 
-<!-- ===== PIN 잠금화면 ===== -->
+<!-- ===== PIN 잠금 ===== -->
 <div class="lock-screen" id="lockScreen">
   <div class="lock-card">
-    <div class="lock-ico">🔐</div>
-    <div class="lock-title" id="lockTitle">직원 관리</div>
-    <div class="lock-sub" id="lockSub">PIN 번호를 입력하세요</div>
+    <div class="lock-icon">🏢</div>
+    <div class="lock-title" id="lockTitle">🔐 직원 관리</div>
+    <div class="lock-sub" id="lockSub">PIN 4자리를 입력하세요</div>
     <div class="pin-dots" id="pinDots">
-      <span class="pin-dot" id="pd0"></span><span class="pin-dot" id="pd1"></span>
-      <span class="pin-dot" id="pd2"></span><span class="pin-dot" id="pd3"></span>
+      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
     </div>
     <div class="pin-err" id="pinErr"></div>
-    <div id="pinPad" style="display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box">
-      <button class="pin-btn" data-n="1">1</button>
-      <button class="pin-btn" data-n="2">2</button>
-      <button class="pin-btn" data-n="3">3</button>
-      <button class="pin-btn" data-n="4">4</button>
-      <button class="pin-btn" data-n="5">5</button>
-      <button class="pin-btn" data-n="6">6</button>
-      <button class="pin-btn" data-n="7">7</button>
-      <button class="pin-btn" data-n="8">8</button>
-      <button class="pin-btn" data-n="9">9</button>
-      <button class="pin-btn empty" style="background:transparent;border-color:transparent"></button>
+    <div class="pin-pad" id="pinPad">
+      <button class="pin-btn" data-n="1">1</button><button class="pin-btn" data-n="2">2</button><button class="pin-btn" data-n="3">3</button>
+      <button class="pin-btn" data-n="4">4</button><button class="pin-btn" data-n="5">5</button><button class="pin-btn" data-n="6">6</button>
+      <button class="pin-btn" data-n="7">7</button><button class="pin-btn" data-n="8">8</button><button class="pin-btn" data-n="9">9</button>
+      <button class="pin-btn" style="font-size:13px" id="pinDel">⌫</button>
       <button class="pin-btn" data-n="0">0</button>
-      <button class="pin-btn del" id="pinDel" style="color:var(--ink3);font-size:18px">⌫</button>
+      <button class="pin-btn" style="font-size:13px;color:var(--ink3)" onclick="lockApp&&lockApp()">🔒</button>
     </div>
     <div class="pin-setup-btns" id="pinSetupBtns" style="display:none">
       <button class="pin-setup-btn primary" id="pinSetupOk">🔐 PIN 설정하기</button>
-      <button class="pin-setup-btn" id="pinSkip">잠금 없이 사용</button>
+      <button class="pin-setup-btn secondary" id="pinSkip">잠금 없이 사용</button>
     </div>
-    <div id="pinChangeBtns" style="display:none;margin-top:8px">
-      <button class="pin-setup-btn" id="pinChangeBtn" style="font-size:12px;padding:8px">🔑 PIN 변경</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 백업·복구 모달 ===== -->
-<div class="modal-overlay" id="backupModal">
-  <div class="backup-modal">
-    <h3>💾 백업 &amp; 복구</h3>
-    <div class="backup-info">
-      📌 백업은 모든 기록을 JSON 파일로 저장합니다.<br>
-      📌 복구는 백업 파일을 불러와 기존 데이터에 합칩니다.<br>
-      📌 직원 정보는 이 기기의 localStorage에 저장됩니다.
-    </div>
-    <div class="backup-row">
-      <button class="backup-btn" id="doBackupBtn">⬇ 기록 백업 (JSON)</button>
-      <label class="backup-btn" style="cursor:pointer">⬆ 기록 복구<input type="file" id="restoreFile" accept=".json" style="display:none"></label>
-    </div>
-    <div class="backup-row">
-      <button class="backup-btn" id="doStaffBackupBtn">👥 직원정보 백업</button>
-      <button class="backup-btn danger" id="pinChangeFromBackup">🔑 PIN 변경</button>
-    </div>
-    <div class="m-btn-row" style="margin-top:4px">
-      <button class="m-cancel" onclick="$('backupModal').classList.remove('show')">닫기</button>
+    <div class="pin-change-btns" id="pinChangeBtns">
+      <button class="pin-change-link" id="pinChangeBtn">PIN 변경</button>
     </div>
   </div>
 </div>
 
-
-<!-- HEADER -->
+<!-- ===== HEADER ===== */
 <div class="hdr">
   <div class="hdr-left">
-    <a href="./index.html" class="back">‹</a>
-    <span style="font-size:26px">👥</span>
+    <a class="back" href="worklog.html">←</a>
     <div class="hdr-info">
-      <h1>서희타워 직원 관리</h1>
+      <h1>👥 직원 관리</h1>
       <p id="hd"></p>
     </div>
   </div>
-  <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
-    <a href="./worklog.html" style="background:var(--bg);border:2px solid var(--border2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;text-decoration:none;" title="통합업무일지">📋 업무일지</a>
-    <a href="./contacts.html" style="background:var(--bg);border:2px solid var(--border2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;text-decoration:none;" title="업체연락처">📞 업체연락처</a>
-    <button onclick="$('backupModal').classList.add('show')" style="background:var(--bg);border:2px solid var(--border2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;" title="백업·복구">💾 백업</button>
-    <button onclick="lockApp()" style="background:var(--bg);border:2px solid var(--border2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;" title="화면 잠금">🔐 잠금</button>
-    <span class="badge">☁ 동기화</span>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="badge" id="staffCntBadge">재직 0명</span>
+    <span class="ver-badge" id="verBadge">v44-0626-0824</span>
   </div>
 </div>
 
-<!-- 검색 -->
+<!-- ===== SEARCH ===== -->
 <div class="search-bar">
   <div class="search-inner">
     <span class="s-ico">🔍</span>
-    <input id="searchInput" type="text" placeholder="직원명, 내용, 카테고리 검색...">
+    <input type="search" id="searchInput" placeholder="이름·직책·기록 검색...">
     <button class="s-clr" id="searchClear">✕</button>
   </div>
 </div>
 
-<!-- TABS -->
-<div class="tabs" style="margin-bottom:0">
-  <button class="tab on" data-tab="home"><span class="tab-ico">👥</span>직원·기록</button>
+<!-- ===== TABS ===== -->
+<div class="tabs">
+  <button class="tab on" data-tab="home"><span class="tab-ico">👥</span>직원</button>
   <button class="tab" data-tab="cal"><span class="tab-ico">📅</span>달력</button>
-  <button class="tab" data-tab="all"><span class="tab-ico">📋</span>전체기록</button>
+  <button class="tab" data-tab="hist"><span class="tab-ico">📋</span>입퇴사</button>
+  <button class="tab" data-tab="all"><span class="tab-ico">🗂</span>전체기록</button>
   <button class="tab" data-tab="stat"><span class="tab-ico">📊</span>현황</button>
 </div>
 
-<!-- ===== 홈 패널 (직원 그리드 + 최근기록) ===== -->
+<!-- ===== 직원 탭 ===== -->
 <div class="panel on" id="panel-home">
-  <div class="staff-grid" id="staffGrid"></div>
-  <div id="retiredSection" style="display:none"></div>
-
-  <!-- 검색 결과 -->
-  <div id="searchResult" style="display:none">
-    <div class="divider" id="searchResultLabel">검색 결과</div>
-    <div id="searchResultList"></div>
+  <!-- 재직/퇴사 필터 칩 -->
+  <div class="staff-filter">
+    <button class="sf-chip on" data-sf="재직중">✅ 재직중</button>
+    <button class="sf-chip" data-sf="퇴사">🚪 퇴사자</button>
+    <button class="sf-chip" data-sf="전체">🗂 전체</button>
   </div>
-
-  <!-- 최근기록 -->
+  <div style="height:10px"></div>
+  <!-- 신규 직원 추가 -->
+  <button class="add-staff-btn" id="addStaffBtn">➕ 신규 직원 등록</button>
+  <!-- 직원 그리드 -->
+  <div class="staff-grid" id="staffGrid"></div>
+  <!-- 최근 기록 -->
   <div id="recentSection">
     <div class="recent-head">
       <h3>🕐 최근 기록</h3>
@@ -439,30 +453,51 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     </div>
     <div id="recentList"><div class="loading">⏳ 불러오는 중...</div></div>
   </div>
+  <!-- 검색 결과 -->
+  <div id="searchResult" style="display:none">
+    <div class="recent-head"><h3 id="searchResultLabel"></h3></div>
+    <div id="searchResultList"></div>
+  </div>
 </div>
 
-<!-- ===== 달력 패널 ===== -->
+<!-- ===== 달력 탭 ===== -->
 <div class="panel" id="panel-cal">
   <div class="cal-nav-row">
-    <h2 id="calTitle">2026년 6월</h2>
     <div class="cal-nav-btns">
       <button class="cal-nav-btn" id="calPrev">‹</button>
-      <button class="cal-today-btn" id="calToday">오늘</button>
       <button class="cal-nav-btn" id="calNext">›</button>
     </div>
+    <h2 id="calTitle"></h2>
+    <button class="cal-today-btn" id="calToday">오늘</button>
   </div>
   <div class="cal-legend">
-    <div class="leg-item"><span class="leg-dot" style="background:#3B82F6"></span>업무지시</div>
-    <div class="leg-item"><span class="leg-dot" style="background:#D97706"></span>근태</div>
-    <div class="leg-item"><span class="leg-dot" style="background:#DC2626"></span>주의/경고</div>
-    <div class="leg-item"><span class="leg-dot" style="background:#16A34A"></span>완료</div>
-    <div class="leg-item"><span class="leg-dot" style="background:#DC2626"></span>미해결</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div>업무지시</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div>근태</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--red)"></div>주의경고</div>
+    <div class="leg-item"><span style="background:var(--green-s);color:var(--green);font-size:10px;font-weight:800;padding:1px 5px;border-radius:4px">입사</span></div>
+    <div class="leg-item"><span style="background:var(--red-s);color:var(--red);font-size:10px;font-weight:800;padding:1px 5px;border-radius:4px">퇴사</span></div>
   </div>
   <div class="cal-grid" id="calGrid"></div>
   <div id="calDetail"></div>
 </div>
 
-<!-- ===== 전체기록 패널 ===== -->
+<!-- ===== 입퇴사 이력 탭 ===== -->
+<div class="panel" id="panel-hist">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="font-size:14px;font-weight:900;color:var(--ink)">📋 입퇴사 이력</div>
+    <button class="cal-add-btn" id="addHistBtn">➕ 이력 등록</button>
+  </div>
+  <div class="hist-filter">
+    <button class="hf-chip on" data-hf="전체">🗂 전체</button>
+    <button class="hf-chip" data-hf="입사">🟢 입사</button>
+    <button class="hf-chip" data-hf="퇴사">🔴 퇴사</button>
+    <button class="hf-chip" data-hf="복직">🔵 복직</button>
+  </div>
+  <div id="histKpi" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px"></div>
+  <div id="histList"><div class="loading">⏳ 불러오는 중...</div></div>
+</div>
+
+<!-- ===== 전체기록 탭 ===== -->
 <div class="panel" id="panel-all">
   <div class="flt-row">
     <button class="flt-btn on" data-f="전체">🗂 전체</button>
@@ -546,33 +581,36 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
   </div>
 </div>
 
-<!-- ===== 연락처 편집 모달 ===== -->
-<div class="modal-overlay" id="contactModal">
+<!-- ===== 직원 등록/수정 모달 ===== -->
+<div class="modal-overlay" id="staffModal">
   <div class="modal-box">
-    <h3>👤 직원 연락처 편집</h3>
-    <p>저장하면 업체 연락처·통화 자동완성에 자동 반영됩니다</p>
+    <h3 id="staffModalTitle">👤 신규 직원 등록</h3>
+    <p id="staffModalSub">저장하면 Firebase에 동기화되고 연락처에 자동 반영됩니다</p>
     <div class="modal-grid">
-      <div class="fg"><label>👤 이름</label><input type="text" id="ceditName"></div>
-      <div class="fg"><label>💼 직책</label>
-        <select id="ceditRole">
+      <div class="fg"><label>👤 이름 *</label><input type="text" id="smName" placeholder="홍길동"></div>
+      <div class="fg"><label>💼 직책 *</label>
+        <select id="smRole">
           <option>실장</option><option>경비</option><option>청소반장</option><option>미화</option>
         </select>
       </div>
-      <div class="fg"><label>📞 전화번호</label><input type="tel" id="ceditPhone" inputmode="tel"></div>
-      <div class="fg"><label>🎂 출생년도</label><input type="text" id="ceditBorn" placeholder="예: 75"></div>
-      <div class="fg"><label>📅 입사일</label><input type="text" id="ceditHired" placeholder="예: 24.10.14"></div>
-      <div class="fg"><label>🏢 담당층</label><input type="text" id="ceditFloor"></div>
-      <div class="fg full"><label>🔄 재직 상태</label>
-        <select id="ceditStatus">
+      <div class="fg"><label>📞 전화번호</label><input type="tel" id="smPhone" inputmode="tel" placeholder="010-0000-0000"></div>
+      <div class="fg"><label>🎂 출생년도</label><input type="text" id="smBorn" placeholder="예: 75"></div>
+      <div class="fg"><label>📅 입사일 *</label><input type="text" id="smHired" placeholder="예: 24.10.14"></div>
+      <div class="fg"><label>🏢 담당층</label><input type="text" id="smFloor" placeholder="예: 20·19층"></div>
+      <div class="fg"><label>🔄 재직 상태</label>
+        <select id="smStatus">
           <option value="재직중">✅ 재직중</option>
           <option value="퇴사">🚪 퇴사</option>
         </select>
       </div>
+      <div class="fg" id="smResignedWrap" style="display:none"><label>📅 퇴사일</label><input type="text" id="smResigned" placeholder="예: 26.06.26"></div>
+      <div class="fg full" id="smMemoWrap"><label>📝 메모</label><input type="text" id="smMemo" placeholder="특이사항 등"></div>
     </div>
-    <div class="retire-warn" id="retireWarn">⚠️ 퇴사로 변경 시 그리드에서 흐리게 표시되고 업체 연락처가 "직원(퇴사)"로 변경됩니다</div>
+    <div class="retire-warn" id="staffRetireWarn">⚠️ 퇴사로 변경 시 그리드에서 흐리게 표시됩니다. 퇴사일을 꼭 입력해 주세요.</div>
     <div class="m-btn-row">
-      <button class="m-cancel" onclick="closeContactModal()">취소</button>
-      <button class="m-save" id="saveContactBtn">💾 저장 &amp; 동기화</button>
+      <button class="m-del" id="staffDelBtn" style="display:none">🗑 삭제</button>
+      <button class="m-cancel" onclick="closeStaffModal()">취소</button>
+      <button class="m-save" id="staffSaveBtn">💾 저장</button>
     </div>
   </div>
 </div>
@@ -608,43 +646,90 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
   </div>
 </div>
 
+<!-- ===== 입퇴사 이력 등록 모달 ===== -->
+<div class="modal-overlay" id="histModal">
+  <div class="modal-box">
+    <h3 id="histModalTitle">📋 입퇴사 이력 등록</h3>
+    <p>직원의 입사·퇴사·복직 이력을 기록합니다</p>
+    <div class="hist-reg-grid">
+      <div class="fg"><label>👤 직원 *</label>
+        <select id="hmStaff">
+          <option value="">-- 선택 --</option>
+        </select>
+      </div>
+      <div class="fg"><label>🏷 유형 *</label>
+        <select id="hmType">
+          <option value="입사">🟢 입사</option>
+          <option value="퇴사">🔴 퇴사</option>
+          <option value="복직">🔵 복직</option>
+        </select>
+      </div>
+      <div class="fg full"><label>📅 날짜 *</label><input type="date" id="hmDate"></div>
+      <div class="fg full"><label>📝 메모</label><textarea id="hmMemo" rows="3" placeholder="사유, 특이사항 등..."></textarea></div>
+    </div>
+    <div class="m-btn-row">
+      <button class="m-cancel" onclick="closeHistModal()">취소</button>
+      <button class="m-save" id="histSaveBtn">💾 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 백업 모달 ===== -->
+<div class="modal-overlay" id="backupModal">
+  <div class="modal-box">
+    <h3>💾 백업 & 복구</h3>
+    <p>데이터를 JSON 파일로 내보내거나 복구합니다</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+      <button class="m-save" id="doBackupBtn">📥 기록 백업 (JSON)</button>
+      <button class="m-save" style="background:var(--green)" id="doStaffBackupBtn">📥 직원정보 백업 (JSON)</button>
+      <label class="m-save" style="background:var(--amber);cursor:pointer">
+        📤 복구 (JSON 불러오기)
+        <input type="file" id="restoreFile" accept=".json" style="display:none">
+      </label>
+      <button class="m-save" style="background:var(--ink3)" id="pinChangeFromBackup">🔐 PIN 변경</button>
+    </div>
+    <div class="m-btn-row">
+      <button class="m-cancel" onclick="document.getElementById('backupModal').classList.remove('show')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 /* ===== 설정 ===== */
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
+var APP_VERSION='v44-0626-0824';
+(function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;})();
 
-/* ===== 직원 데이터 ===== */
+/* ===== 직원 기본 데이터 (Firebase 없을 때 폴백) ===== */
 var STAFF_DEFAULT=[
-  {id:'조태경',name:'조태경',role:'실장',    phone:'010-8724-5543',born:'70',hired:'14.09.20',floor:'',status:'재직중'},
-  {id:'김대환',name:'김대환',role:'경비',    phone:'010-3358-4852',born:'73',hired:'24.10.14',floor:'',status:'재직중'},
-  {id:'정지환',name:'정지환',role:'경비',    phone:'010-5520-3157',born:'75',hired:'24.10.14',floor:'',status:'재직중'},
-  {id:'마재곤',name:'마재곤',role:'경비',    phone:'010-7752-2569',born:'68',hired:'25.07.14',floor:'',status:'재직중'},
-  {id:'구자경',name:'구자경',role:'경비',    phone:'010-3842-2566',born:'78',hired:'25.02.13',floor:'',status:'재직중'},
-  {id:'배옥식',name:'배옥식',role:'청소반장',phone:'010-8949-7400',born:'60',hired:'26.04.30',floor:'총괄',status:'재직중'},
-  {id:'김태경',name:'김태경',role:'미화',    phone:'010-7388-4170',born:'68',hired:'21.03.02',floor:'20·19·15층',status:'재직중'},
-  {id:'한광희',name:'한광희',role:'미화',    phone:'010-8215-0047',born:'60',hired:'23.09.07',floor:'18·17·16층',status:'재직중'},
-  {id:'박일월',name:'박일월',role:'미화',    phone:'010-8976-5746',born:'57',hired:'23.08.07',floor:'14·13·12·11층',status:'재직중'},
-  {id:'정은지',name:'정은지',role:'미화',    phone:'010-8937-6265',born:'68',hired:'21.01.01',floor:'10·9·8층',status:'재직중'},
-  {id:'오희성',name:'오희성',role:'미화',    phone:'010-4223-2842',born:'59',hired:'22.05.17',floor:'6·5·4층',status:'재직중'},
-  {id:'차민자',name:'차민자',role:'미화',    phone:'010-7330-5996',born:'56',hired:'23.08.07',floor:'3·1·지하1층',status:'재직중'},
+  {id:'조태경',name:'조태경',role:'실장',    phone:'010-8724-5543',born:'70',hired:'14.09.20',floor:'',resigned:'',memo:'',status:'재직중'},
+  {id:'김대환',name:'김대환',role:'경비',    phone:'010-3358-4852',born:'73',hired:'24.10.14',floor:'',resigned:'',memo:'',status:'재직중'},
+  {id:'정지환',name:'정지환',role:'경비',    phone:'010-5520-3157',born:'75',hired:'24.10.14',floor:'',resigned:'',memo:'',status:'재직중'},
+  {id:'마재곤',name:'마재곤',role:'경비',    phone:'010-7752-2569',born:'68',hired:'25.07.14',floor:'',resigned:'',memo:'',status:'재직중'},
+  {id:'구자경',name:'구자경',role:'경비',    phone:'010-3842-2566',born:'78',hired:'25.02.13',floor:'',resigned:'',memo:'',status:'재직중'},
+  {id:'배옥식',name:'배옥식',role:'청소반장',phone:'010-8949-7400',born:'60',hired:'26.04.30',floor:'총괄',resigned:'',memo:'',status:'재직중'},
+  {id:'김태경',name:'김태경',role:'미화',    phone:'010-7388-4170',born:'68',hired:'21.03.02',floor:'20·19·15층',resigned:'',memo:'',status:'재직중'},
+  {id:'한광희',name:'한광희',role:'미화',    phone:'010-8215-0047',born:'60',hired:'23.09.07',floor:'18·17·16층',resigned:'',memo:'',status:'재직중'},
+  {id:'박일월',name:'박일월',role:'미화',    phone:'010-8976-5746',born:'57',hired:'23.08.07',floor:'14·13·12·11층',resigned:'',memo:'',status:'재직중'},
+  {id:'정은지',name:'정은지',role:'미화',    phone:'010-8937-6265',born:'68',hired:'21.01.01',floor:'10·9·8층',resigned:'',memo:'',status:'재직중'},
+  {id:'오희성',name:'오희성',role:'미화',    phone:'010-4223-2842',born:'59',hired:'22.05.17',floor:'6·5·4층',resigned:'',memo:'',status:'재직중'},
+  {id:'차민자',name:'차민자',role:'미화',    phone:'010-7330-5996',born:'56',hired:'23.08.07',floor:'3·1·지하1층',resigned:'',memo:'',status:'재직중'},
 ];
 var RC={'실장':'#E53E3E','경비':'#2563EB','청소반장':'#16A34A','미화':'#B7791F'};
 var CAT_COLOR={'업무지시':'#3B82F6','근태':'#D97706','주의경고':'#DC2626'};
 var ST_COLOR={'완료':'#16A34A','진행중':'#D97706','미해결':'#DC2626'};
 
-function loadStaff(){
-  try{var s=JSON.parse(localStorage.getItem('staff_v5')||'null');if(Array.isArray(s)&&s.length)return s;}catch(e){}
-  return STAFF_DEFAULT.map(function(x){return Object.assign({},x);});
-}
-function saveStaff(){try{localStorage.setItem('staff_v5',JSON.stringify(STAFF));}catch(e){}}
-var STAFF=loadStaff();
-
 /* ===== 상태 ===== */
-var allRecs=[],selSid=null,allFilt='전체',allView='card',spView='card';
+var STAFF=[];
+var allRecs=[],allHistory=[];
+var selSid=null,allFilt='전체',allView='card',spView='card';
+var staffFilt='재직중',histFilt='전체';
 var calY=new Date().getFullYear(),calM=new Date().getMonth(),calSelDay=null;
-var ceditSid=null,recEditId=null,searchQ='';
+var smEditId=null,recEditId=null,searchQ='';
+var staffLoaded=false;
 
 /* ===== 유틸 ===== */
 function pad(n){return String(n).padStart(2,'0');}
@@ -653,19 +738,111 @@ function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.c
 function esc(s){return(s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function $(id){return document.getElementById(id);}
 
+/* 근속연수 계산 */
+function calcTenure(hiredStr, resignedStr){
+  if(!hiredStr)return'';
+  // 형식: YY.MM.DD 또는 YYYY.MM.DD
+  try{
+    var parts=hiredStr.split('.');
+    var y=parseInt(parts[0]);var m=parseInt(parts[1]||1)-1;var d=parseInt(parts[2]||1);
+    if(y<100)y+=2000;
+    var start=new Date(y,m,d);
+    var end=resignedStr?new Date(resignedStr):new Date();
+    var diff=end-start;
+    if(diff<0)return'';
+    var months=Math.floor(diff/(1000*60*60*24*30.44));
+    if(months<1)return'1개월 미만';
+    if(months<12)return months+'개월';
+    var yrs=Math.floor(months/12);var rem=months%12;
+    return yrs+'년'+(rem>0?' '+rem+'개월':'');
+  }catch(e){return'';}
+}
+
 /* 날짜 헤더 */
 (function(){var n=new Date();var days=['일','월','화','수','목','금','토'];$('hd').textContent=(n.getMonth()+1)+'월 '+n.getDate()+'일 ('+days[n.getDay()]+')'})();
 $('fDate').value=todayStr();
+$('hmDate').value=todayStr();
 
 /* ===== Firestore REST ===== */
 function colUrl(c){return'https://firestore.googleapis.com/v1/projects/'+PRJ+'/databases/(default)/documents/'+c;}
-function toFS(o){var f={};Object.keys(o).forEach(function(k){var v=o[k];if(v===null||v===undefined)f[k]={nullValue:null};else if(typeof v==='string')f[k]={stringValue:v};else if(typeof v==='number')f[k]={integerValue:String(Math.floor(v))};else if(typeof v==='boolean')f[k]={booleanValue:v};else f[k]={stringValue:JSON.stringify(v)};});return{fields:f};}
-function fromFS(doc){if(!doc||!doc.fields)return null;var o={_id:doc.name?doc.name.split('/').pop():''};Object.keys(doc.fields).forEach(function(k){var f=doc.fields[k];if(f.stringValue!==undefined)o[k]=f.stringValue;else if(f.integerValue!==undefined)o[k]=parseInt(f.integerValue);else if(f.booleanValue!==undefined)o[k]=f.booleanValue;else o[k]=null;});return o;}
+function toFS(o){
+  var f={};
+  Object.keys(o).forEach(function(k){
+    var v=o[k];
+    if(v===null||v===undefined)f[k]={nullValue:null};
+    else if(typeof v==='string')f[k]={stringValue:v};
+    else if(typeof v==='number')f[k]={integerValue:String(Math.floor(v))};
+    else if(typeof v==='boolean')f[k]={booleanValue:v};
+    else f[k]={stringValue:JSON.stringify(v)};
+  });
+  return{fields:f};
+}
+function fromFS(doc){
+  if(!doc||!doc.fields)return null;
+  var o={_id:doc.name?doc.name.split('/').pop():''};
+  Object.keys(doc.fields).forEach(function(k){
+    var f=doc.fields[k];
+    if(f.stringValue!==undefined)o[k]=f.stringValue;
+    else if(f.integerValue!==undefined)o[k]=parseInt(f.integerValue);
+    else if(f.booleanValue!==undefined)o[k]=f.booleanValue;
+    else o[k]=null;
+  });
+  return o;
+}
 function fbAdd(col,d){return fetch(colUrl(col)+'?key='+FB_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(toFS(d))}).then(function(r){return r.json();});}
 function fbPatch(col,id,d){return fetch(colUrl(col)+'/'+id+'?key='+FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(toFS(d))}).then(function(r){return r.json();});}
 function fbDel(col,id){return fetch(colUrl(col)+'/'+id+'?key='+FB_KEY,{method:'DELETE'});}
 function fbAll(col){return fetch(colUrl(col)+'?key='+FB_KEY+'&pageSize=300').then(function(r){return r.json();}).then(function(d){return d.documents?d.documents.map(fromFS).filter(Boolean):[];});}
-function fbQuery(col,field,value){var url='https://firestore.googleapis.com/v1/projects/'+PRJ+'/databases/(default)/documents:runQuery?key='+FB_KEY;var body={structuredQuery:{from:[{collectionId:col}],where:{fieldFilter:{field:{fieldPath:field},op:'EQUAL',value:{stringValue:value}}}}};return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(d){return Array.isArray(d)?d.filter(function(x){return x.document;}).map(function(x){return fromFS(x.document);}):[];});}
+function fbQuery(col,field,value){
+  var url='https://firestore.googleapis.com/v1/projects/'+PRJ+'/databases/(default)/documents:runQuery?key='+FB_KEY;
+  var body={structuredQuery:{from:[{collectionId:col}],where:{fieldFilter:{field:{fieldPath:field},op:'EQUAL',value:{stringValue:value}}}}};
+  return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(function(r){return r.json();})
+    .then(function(d){return Array.isArray(d)?d.filter(function(x){return x.document;}).map(function(x){return fromFS(x.document);}):[];});
+}
+
+/* ===== 직원 Firebase 동기화 ===== */
+async function loadStaffFromFirebase(){
+  try{
+    var docs=await fbAll('staff-members');
+    if(docs&&docs.length>0){
+      STAFF=docs;
+      staffLoaded=true;
+      return;
+    }
+  }catch(e){}
+  // Firebase 없으면 기본값 + localStorage
+  try{var s=JSON.parse(localStorage.getItem('staff_v5')||'null');if(Array.isArray(s)&&s.length){STAFF=s;return;}}catch(e){}
+  STAFF=STAFF_DEFAULT.map(function(x){return Object.assign({},x);});
+  // 기본값을 Firebase에 업로드
+  try{
+    for(var i=0;i<STAFF.length;i++){
+      var s=STAFF[i];
+      await fbPatch('staff-members',s.id,s);
+    }
+    staffLoaded=true;
+  }catch(e){}
+}
+
+async function saveStaffToFirebase(s){
+  try{
+    await fbPatch('staff-members',s.id,s);
+    // localStorage도 업데이트
+    try{localStorage.setItem('staff_v5',JSON.stringify(STAFF));}catch(e){}
+  }catch(e){
+    // 오프라인 시 localStorage만
+    try{localStorage.setItem('staff_v5',JSON.stringify(STAFF));}catch(e2){}
+  }
+}
+
+async function deleteStaffFromFirebase(sid){
+  try{
+    await fbDel('staff-members',sid);
+    try{localStorage.setItem('staff_v5',JSON.stringify(STAFF));}catch(e){}
+  }catch(e){
+    try{localStorage.setItem('staff_v5',JSON.stringify(STAFF));}catch(e2){}
+  }
+}
 
 /* ===== 탭 전환 ===== */
 function switchTab(name){
@@ -674,6 +851,7 @@ function switchTab(name){
   if(name==='cal')renderCal();
   if(name==='all')drawAll();
   if(name==='stat')drawStats();
+  if(name==='hist')drawHist();
 }
 document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){switchTab(b.dataset.tab);});});
 
@@ -698,81 +876,87 @@ function applySearch(){
   sr.style.display='block';rSec.style.display='none';
 }
 
+/* ===== 직원 필터 칩 ===== */
+document.querySelectorAll('.sf-chip').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('.sf-chip').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on');
+    staffFilt=b.dataset.sf;
+    drawGrid();
+  });
+});
+
 /* ===== 직원 그리드 ===== */
 function scHTML(s){
   var recs=allRecs.filter(function(r){return r.staffId===s.id;});
   var unr=recs.filter(function(r){return r.status==='미해결';}).length;
   var c=RC[s.role]||'#4C6EF5',ret=s.status==='퇴사';
+  var tenure=calcTenure(s.hired, ret?s.resigned:'');
   var h='<div class="sc'+(ret?' retired':'')+'" data-sid="'+s.id+'"'+(ret?' style="opacity:.4;filter:grayscale(.7)"':'')+' tabindex="0">';
   if(unr>0)h+='<span class="sc-badge">'+unr+'</span>';
-  /* 아바타 */
   h+='<div class="sc-av" style="background:'+c+'">'+s.name[0]+'</div>';
-  /* 텍스트 영역 */
   h+='<div class="sc-info">';
-  h+='<div class="sc-name">'+s.name+(ret?' <span style="font-size:9px;color:var(--ink3)">(퇴사)</span>':'')+'</div>';
+  h+='<div class="sc-name">'+s.name+(ret?' <span style="font-size:9px;color:var(--red)">(퇴사)</span>':'')+(tenure?'<span class="tenure-badge">'+tenure+'</span>':'')+'</div>';
   h+='<div class="sc-role">'+s.role+(s.floor?' · '+s.floor:'')+'</div>';
   if(s.phone)h+='<a class="sc-phone-link" href="tel:'+s.phone+'" data-tel>📞 '+s.phone+'</a>';
   h+='</div>';
-  /* 편집 버튼 */
-  h+='<button class="sc-edit" data-esid="'+s.id+'" title="연락처 편집">✏️</button>';
+  h+='<button class="sc-edit" data-esid="'+s.id+'" title="정보 수정">✏️</button>';
   h+='</div>';
   return h;
+}
+function drawGrid(){
+  var filtered=STAFF.filter(function(s){
+    if(staffFilt==='재직중')return s.status==='재직중';
+    if(staffFilt==='퇴사')return s.status==='퇴사';
+    return true;
+  });
+  var active=STAFF.filter(function(s){return s.status==='재직중';});
+  $('staffCntBadge').textContent='재직 '+active.length+'명';
+  $('staffGrid').innerHTML=filtered.map(scHTML).join('');
+  bindGrid($('staffGrid'));
 }
 function bindGrid(scope){
   scope.querySelectorAll('.sc').forEach(function(el){
     el.addEventListener('click',function(e){
       if(e.target.closest('[data-tel]')||e.target.closest('[data-esid]'))return;
+      scope.querySelectorAll('.sc').forEach(function(x){x.classList.remove('active');});
+      el.classList.add('active');
       openPanel(el.dataset.sid);
     });
+    el.addEventListener('keydown',function(e){if(e.key==='Enter')el.click();});
   });
-  scope.querySelectorAll('[data-tel]').forEach(function(a){a.addEventListener('click',function(e){e.stopPropagation();});});
-  scope.querySelectorAll('[data-esid]').forEach(function(btn){btn.addEventListener('click',function(e){e.stopPropagation();openContactModal(btn.dataset.esid);});});
-}
-function drawGrid(){
-  var active=STAFF.filter(function(s){return s.status!=='퇴사';});
-  var retired=STAFF.filter(function(s){return s.status==='퇴사';});
-  var g=$('staffGrid');
-  g.innerHTML=active.map(scHTML).join('');
-  bindGrid(g);
-  var rw=$('retiredSection');
-  if(retired.length){
-    rw.innerHTML='<div class="divider">퇴사자 '+retired.length+'명</div><div class="staff-grid">'+retired.map(scHTML).join('')+'</div>';
-    rw.style.display='block';bindGrid(rw);
-  } else {rw.innerHTML='';rw.style.display='none';}
+  scope.querySelectorAll('[data-esid]').forEach(function(btn){
+    btn.addEventListener('click',function(e){e.stopPropagation();openStaffModal(btn.dataset.esid);});
+  });
 }
 
-/* ===== 최근기록 ===== */
+/* ===== 최근 기록 ===== */
 function drawRecent(){
-  var list=allRecs.slice().sort(function(a,b){return(b.date||'').localeCompare(a.date||'')||((b.ts||0)-(a.ts||0));}).slice(0,5);
-  $('recentList').innerHTML=list.length?'<div style="display:flex;flex-direction:column;gap:7px">'+list.map(function(r){return makeCard(r,true);}).join('')+'</div>':'<div class="empty"><span class="empty-ico">📭</span>아직 기록이 없어요<br><span style="font-size:12px;color:var(--ink3)">직원 카드를 눌러 기록을 추가하세요</span></div>';
+  var recs=allRecs.slice().sort(function(a,b){return(b.ts||0)-(a.ts||0);}).slice(0,8);
+  $('recentList').innerHTML=recs.length?'<div style="display:flex;flex-direction:column;gap:7px">'+recs.map(function(r){return makeCard(r,true);}).join('')+'</div>':'<div class="empty"><span class="empty-ico">📭</span>최근 기록이 없어요</div>';
 }
 
-/* ===== 기록 카드 HTML ===== */
+/* ===== 카드 / 테이블 ===== */
 function makeCard(r,showName){
-  var catClass='cat-'+(r.cat||'업무지시');
-  var stClass='st-'+(r.status||'진행중');
-  var stBadge='st-'+(r.status||'진행중');
-  return '<div class="rec-card s-'+(r.status||'')+'" id="rc_'+r._id+'">'+
+  var cc=CAT_COLOR[r.cat]||'#8C99C0',sc2=r.status==='완료'?'완료':r.status==='미해결'?'미해결':'진행중';
+  return'<div class="rec-card s-'+sc2+'">'+
     '<div class="rec-top">'+
-      '<span class="rdate">📅 '+(r.date||'')+'</span>'+
-      '<span class="cat-tag '+catClass+'">'+(r.cat||'')+'</span>'+
-      '<span class="st-badge '+stBadge+'">'+(r.status||'')+'</span>'+
-      (showName&&r.staffId?'<span class="who-tag">👤 '+r.staffId+'</span>':'')+
+      '<span class="rdate">'+esc(r.date||'')+'</span>'+
+      '<span class="cat-tag cat-'+(r.cat||'')+'">'+esc(r.cat||'')+'</span>'+
+      (showName?'<span class="who-tag">'+esc(r.staffId||'')+'</span>':'')+
+      '<span class="st-badge st-'+sc2+'">'+sc2+'</span>'+
     '</div>'+
-    '<div class="rcont">'+(r.content||'')+'</div>'+
+    '<div class="rcont">'+esc(r.content||'')+'</div>'+
     '<div class="rec-acts">'+
-      '<button class="act-btn'+(r.status==='진행중'?' on-진행중':'')+'" data-id="'+r._id+'" data-st="진행중">🟡 진행중</button>'+
       '<button class="act-btn'+(r.status==='완료'?' on-완료':'')+'" data-id="'+r._id+'" data-st="완료">✅ 완료</button>'+
+      '<button class="act-btn'+(r.status==='진행중'?' on-진행중':'')+'" data-id="'+r._id+'" data-st="진행중">🟡 진행중</button>'+
       '<button class="act-btn'+(r.status==='미해결'?' on-미해결':'')+'" data-id="'+r._id+'" data-st="미해결">🔴 미해결</button>'+
       '<button class="edit-btn" data-eid="'+r._id+'">✏️ 수정</button>'+
       '<button class="del-btn" data-did="'+r._id+'">🗑</button>'+
     '</div>'+
   '</div>';
 }
-
-/* 테이블 HTML */
 function makeTbl(recs,showName){
-  if(!recs.length)return'<div class="empty"><span class="empty-ico">📭</span>기록 없음</div>';
   var rows=recs.map(function(r){
     var sc=r.status==='완료'?'var(--green)':r.status==='미해결'?'var(--red)':'var(--amber)';
     return'<tr>'+
@@ -802,12 +986,15 @@ document.addEventListener('click',function(e){
   var diBtn=e.target.closest('[data-did]');if(diBtn)delRec(diBtn.dataset.did);
   var fltBtn=e.target.closest('.flt-btn');if(fltBtn){document.querySelectorAll('.flt-btn').forEach(function(b){b.classList.remove('on');});fltBtn.classList.add('on');allFilt=fltBtn.dataset.f;drawAll();}
   var srRow=e.target.closest('.staff-row[data-sid]');if(srRow)openPanel(srRow.dataset.sid);
+  var hfChip=e.target.closest('.hf-chip');if(hfChip){document.querySelectorAll('.hf-chip').forEach(function(b){b.classList.remove('on');});hfChip.classList.add('on');histFilt=hfChip.dataset.hf;drawHist();}
+  var hdBtn=e.target.closest('[data-hdel]');if(hdBtn)delHist(hdBtn.dataset.hdel);
 });
 
 /* ===== 상태변경 / 삭제 ===== */
 function chgStatus(id,st){
   var r=allRecs.find(function(x){return x._id===id;});if(!r)return;
-  r.status=st;fbPatch('staff-records',id,r).then(function(){refreshAll();toast(st==='완료'?'✅ 완료':'st==="미해결"'?'🔴 미해결':'🟡 진행중');});
+  r.status=st;
+  fbPatch('staff-records',id,r).then(function(){refreshAll();toast(st==='완료'?'✅ 완료':st==='미해결'?'🔴 미해결':'🟡 진행중');});
 }
 function delRec(id){
   if(!confirm('삭제할까요?'))return;
@@ -821,7 +1008,12 @@ function openPanel(sid){
   var c=RC[s.role]||'#4C6EF5';
   $('spAv').style.background=c;$('spAv').textContent=s.name[0];
   $('spName').textContent=s.name;
-  var meta=s.role;if(s.born)meta+=' · '+s.born+'년생';if(s.hired)meta+=' · 입사 '+s.hired;if(s.floor)meta+=' · '+s.floor;
+  var tenure=calcTenure(s.hired, s.status==='퇴사'?s.resigned:'');
+  var meta=s.role;
+  if(s.born)meta+=' · '+s.born+'년생';
+  if(s.hired)meta+=' · 입사 '+s.hired;
+  if(s.floor)meta+=' · '+s.floor;
+  if(tenure)meta+=' · 근속 '+tenure;
   $('spRole').textContent=meta;
   $('spPhone').innerHTML=s.phone?'📞 <a href="tel:'+s.phone+'">'+s.phone+'</a>':'번호 없음';
   drawPanelStats(s);drawPanelRecs(s);
@@ -851,7 +1043,6 @@ function drawPanelRecs(s){
   $('spRecCnt').textContent='기록 '+recs.length+'건';
   $('spRecList').innerHTML=recs.length?(spView==='card'?'<div style="display:flex;flex-direction:column;gap:7px">'+recs.map(function(r){return makeCard(r,false);}).join('')+'</div>':makeTbl(recs,false)):'<div class="empty"><span class="empty-ico">📭</span>아직 기록이 없어요</div>';
 }
-/* 패널 뷰 토글 */
 $('spVtGrp').addEventListener('click',function(e){var b=e.target.closest('.vt-btn');if(!b)return;spView=b.dataset.v;this.querySelectorAll('.vt-btn').forEach(function(x){x.classList.toggle('on',x.dataset.v===spView);});var s=STAFF.find(function(x){return x.id===selSid;});if(s)drawPanelRecs(s);});
 
 /* ===== 기록 추가 ===== */
@@ -887,40 +1078,111 @@ $('saveRecEditBtn').addEventListener('click',function(){
   fbPatch('staff-records',recEditId,r).then(function(){closeRecEdit();refreshAll();toast('✅ 수정됨');});
 });
 
-/* ===== 연락처 편집 모달 ===== */
-function openContactModal(sid){
-  ceditSid=sid;var s=STAFF.find(function(x){return x.id===sid;});if(!s)return;
-  $('ceditName').value=s.name||'';$('ceditRole').value=s.role||'미화';$('ceditPhone').value=s.phone||'';
-  $('ceditBorn').value=s.born||'';$('ceditHired').value=s.hired||'';$('ceditFloor').value=s.floor||'';
-  $('ceditStatus').value=s.status||'재직중';
-  $('retireWarn').style.display=(s.status==='퇴사')?'block':'none';
-  $('contactModal').classList.add('show');
-}
-function closeContactModal(){$('contactModal').classList.remove('show');ceditSid=null;}
-$('contactModal').addEventListener('click',function(e){if(e.target===this)closeContactModal();});
-$('ceditStatus').addEventListener('change',function(){$('retireWarn').style.display=this.value==='퇴사'?'block':'none';});
-$('saveContactBtn').addEventListener('click',function(){
-  if(!ceditSid)return;
-  var s=STAFF.find(function(x){return x.id===ceditSid;});if(!s)return;
-  s.name=$('ceditName').value.trim()||s.name;s.role=$('ceditRole').value;s.phone=$('ceditPhone').value.trim();
-  s.born=$('ceditBorn').value.trim();s.hired=$('ceditHired').value.trim();s.floor=$('ceditFloor').value.trim();
-  s.status=$('ceditStatus').value;
-  saveStaff();closeContactModal();drawGrid();
-  // 패널 헤더 갱신
-  if(selSid===s.id){
-    $('spAv').style.background=RC[s.role]||'#4C6EF5';$('spAv').textContent=s.name[0];
-    $('spName').textContent=s.name;
-    $('spPhone').innerHTML=s.phone?'📞 <a href="tel:'+s.phone+'">'+s.phone+'</a>':'번호 없음';
+/* ===== 신규/수정 직원 모달 ===== */
+function openStaffModal(sid){
+  smEditId=sid||null;
+  var isEdit=!!sid;
+  $('staffModalTitle').textContent=isEdit?'✏️ 직원 정보 수정':'👤 신규 직원 등록';
+  $('staffDelBtn').style.display=isEdit?'block':'none';
+  if(isEdit){
+    var s=STAFF.find(function(x){return x.id===sid;});if(!s)return;
+    $('smName').value=s.name||'';
+    $('smRole').value=s.role||'미화';
+    $('smPhone').value=s.phone||'';
+    $('smBorn').value=s.born||'';
+    $('smHired').value=s.hired||'';
+    $('smFloor').value=s.floor||'';
+    $('smStatus').value=s.status||'재직중';
+    $('smResigned').value=s.resigned||'';
+    $('smMemo').value=s.memo||'';
+    $('smResignedWrap').style.display=s.status==='퇴사'?'block':'none';
+    $('staffRetireWarn').style.display=s.status==='퇴사'?'block':'none';
+  }else{
+    $('smName').value='';$('smRole').value='미화';$('smPhone').value='';
+    $('smBorn').value='';$('smHired').value=todayStr().slice(2).replace(/-/g,'.');
+    $('smFloor').value='';$('smStatus').value='재직중';
+    $('smResigned').value='';$('smMemo').value='';
+    $('smResignedWrap').style.display='none';
+    $('staffRetireWarn').style.display='none';
   }
-  syncContact(s).then(function(){toast('✅ 저장 완료 — 연락처 동기화됨');}).catch(function(){toast('✅ 저장 완료');});
+  $('staffModal').classList.add('show');
+}
+function closeStaffModal(){$('staffModal').classList.remove('show');smEditId=null;}
+$('staffModal').addEventListener('click',function(e){if(e.target===this)closeStaffModal();});
+$('smStatus').addEventListener('change',function(){
+  var isRetire=this.value==='퇴사';
+  $('smResignedWrap').style.display=isRetire?'block':'none';
+  $('staffRetireWarn').style.display=isRetire?'block':'none';
 });
+$('addStaffBtn').addEventListener('click',function(){openStaffModal(null);});
+
+$('staffSaveBtn').addEventListener('click',async function(){
+  var name=$('smName').value.trim();
+  if(!name){toast('이름을 입력하세요');return;}
+  var s={
+    id:smEditId||name, // 신규는 이름을 ID로 (기존 호환)
+    name:name,
+    role:$('smRole').value,
+    phone:$('smPhone').value.trim(),
+    born:$('smBorn').value.trim(),
+    hired:$('smHired').value.trim(),
+    floor:$('smFloor').value.trim(),
+    status:$('smStatus').value,
+    resigned:$('smResigned').value.trim(),
+    memo:$('smMemo').value.trim()
+  };
+  try{
+    if(smEditId){
+      var idx=STAFF.findIndex(function(x){return x.id===smEditId;});
+      if(idx>=0)STAFF[idx]=s;
+    }else{
+      // 중복 체크
+      if(STAFF.find(function(x){return x.id===s.id;})){toast('이미 같은 이름의 직원이 있습니다');return;}
+      STAFF.push(s);
+    }
+    closeStaffModal();
+    await saveStaffToFirebase(s);
+    // 퇴사 이력 자동 등록 (상태가 퇴사로 변경됐을 때)
+    if(s.status==='퇴사'&&s.resigned){
+      var already=allHistory.find(function(h){return h.staffId===s.id&&h.type==='퇴사';});
+      if(!already){
+        await addHistoryEntry({staffId:s.id,staffName:s.name,type:'퇴사',date:s.resigned||todayStr(),memo:'직원 정보 수정 시 자동 등록',ts:Date.now()});
+      }
+    }
+    await syncContact(s);
+    drawGrid();refreshAll();
+    toast('✅ 직원 정보 저장됨');
+  }catch(err){toast('⚠️ 오류: '+(err.message||err));}
+});
+
+$('staffDelBtn').addEventListener('click',async function(){
+  if(!smEditId)return;
+  var s=STAFF.find(function(x){return x.id===smEditId;});
+  if(!confirm((s?s.name:'직원')+'을(를) 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.'))return;
+  STAFF=STAFF.filter(function(x){return x.id!==smEditId;});
+  closeStaffModal();
+  try{await deleteStaffFromFirebase(smEditId);}catch(e){}
+  drawGrid();refreshAll();
+  toast('🗑 직원 삭제됨');
+});
+
+/* ===== 연락처 동기화 ===== */
 async function syncContact(s){
-  var ex=await fbQuery('contacts','staffId',s.id);
-  var cat=s.status==='퇴사'?'직원(퇴사)':'직원(재직중)';
-  var rec={name:s.name,cat:cat,person:s.name,phone:s.phone||'',email:'',address:'',
-    memo:s.role+(s.hired?' · 입사 '+s.hired:'')+(s.floor?' · '+s.floor:'')+(s.status==='퇴사'?' · 퇴사':''),
-    fav:false,staffId:s.id,createdAt:Date.now()};
-  if(ex.length)await fbPatch('contacts',ex[0]._id,rec);else await fbAdd('contacts',rec);
+  try{
+    var ex=await fbQuery('contacts','staffId',s.id);
+    var cat=s.status==='퇴사'?'직원(퇴사)':'직원(재직중)';
+    var tenure=calcTenure(s.hired,s.status==='퇴사'?s.resigned:'');
+    var rec={name:s.name,cat:cat,person:s.name,phone:s.phone||'',email:'',address:'',
+      memo:s.role+(s.hired?' · 입사 '+s.hired:'')+(s.floor?' · '+s.floor:'')+(tenure?' · 근속 '+tenure:'')+(s.status==='퇴사'?' · 퇴사':''),
+      fav:false,staffId:s.id,createdAt:Date.now()};
+    if(ex.length)await fbPatch('contacts',ex[0]._id,rec);else await fbAdd('contacts',rec);
+  }catch(e){}
+}
+async function initSyncContacts(){
+  for(var i=0;i<STAFF.length;i++){
+    var s=STAFF[i];if(!s.phone)continue;
+    try{await syncContact(s);}catch(e){}
+  }
 }
 
 /* ===== 전체기록 ===== */
@@ -942,26 +1204,139 @@ $('copyBtn').addEventListener('click',function(){
 
 /* ===== 현황 ===== */
 function drawStats(){
+  var activeStaff=STAFF.filter(function(s){return s.status==='재직중';});
+  var retiredStaff=STAFF.filter(function(s){return s.status==='퇴사';});
   var total=allRecs.length,done=allRecs.filter(function(r){return r.status==='완료';}).length;
   var ing=allRecs.filter(function(r){return r.status==='진행중';}).length,unr=allRecs.filter(function(r){return r.status==='미해결';}).length;
+  // 이번달 입퇴사
+  var now=new Date();var ym=now.getFullYear()+'-'+pad(now.getMonth()+1);
+  var thisMonthHire=allHistory.filter(function(h){return h.type==='입사'&&(h.date||'').startsWith(ym);}).length;
+  var thisMonthResign=allHistory.filter(function(h){return h.type==='퇴사'&&(h.date||'').startsWith(ym);}).length;
   $('kpiGrid').innerHTML=
+    '<div class="kpi"><span class="kpi-n" style="color:var(--green)">'+activeStaff.length+'</span><div class="kpi-l">✅ 재직중</div></div>'+
+    '<div class="kpi"><span class="kpi-n" style="color:var(--ink3)">'+retiredStaff.length+'</span><div class="kpi-l">🚪 퇴사자</div></div>'+
+    '<div class="kpi"><span class="kpi-n" style="color:var(--accent)">'+thisMonthHire+'</span><div class="kpi-l">🟢 이번달 입사</div></div>'+
+    '<div class="kpi"><span class="kpi-n" style="color:var(--red)">'+thisMonthResign+'</span><div class="kpi-l">🔴 이번달 퇴사</div></div>'+
     '<div class="kpi"><span class="kpi-n">'+total+'</span><div class="kpi-l">📁 총 기록</div></div>'+
     '<div class="kpi"><span class="kpi-n" style="color:var(--green)">'+done+'</span><div class="kpi-l">✅ 완료</div></div>'+
     '<div class="kpi"><span class="kpi-n" style="color:var(--amber)">'+ing+'</span><div class="kpi-l">🟡 진행중</div></div>'+
     '<div class="kpi"><span class="kpi-n" style="color:var(--red)">'+unr+'</span><div class="kpi-l">🔴 미해결</div></div>';
-  var rows=STAFF.map(function(s){var sr=allRecs.filter(function(r){return r.staffId===s.id;});return{s:s,cnt:sr.length,unr:sr.filter(function(r){return r.status==='미해결';}).length};}).sort(function(a,b){return b.cnt-a.cnt;});
+  var rows=STAFF.filter(function(s){return s.status==='재직중';}).map(function(s){var sr=allRecs.filter(function(r){return r.staffId===s.id;});return{s:s,cnt:sr.length,unr:sr.filter(function(r){return r.status==='미해결';}).length};}).sort(function(a,b){return b.cnt-a.cnt;});
   $('staffStatList').innerHTML=rows.map(function(item){
     var c=RC[item.s.role]||'#4C6EF5',pct=total>0?Math.round(item.cnt/total*100):0;
+    var tenure=calcTenure(item.s.hired,'');
     return'<div class="staff-row" data-sid="'+item.s.id+'">'+
       '<div class="sr-av" style="background:'+c+'">'+item.s.name[0]+'</div>'+
       '<div class="sr-bar-w">'+
-        '<div class="sr-top"><span class="sr-name">'+item.s.name+'</span><span style="font-size:12px;color:var(--ink3)">'+item.cnt+'건'+(item.unr>0?' <span style="color:var(--red);font-weight:800">🔴'+item.unr+'</span>':'')+'</span></div>'+
+        '<div class="sr-top"><span class="sr-name">'+item.s.name+(tenure?' <span style="font-size:10px;color:var(--ink3)">'+tenure+'</span>':'')+'</span><span style="font-size:12px;color:var(--ink3)">'+item.cnt+'건'+(item.unr>0?' <span style="color:var(--red);font-weight:800">🔴'+item.unr+'</span>':'')+'</span></div>'+
         '<div class="sr-bar"><div class="sr-fill" style="width:'+pct+'%;background:'+c+'"></div></div>'+
       '</div>'+
       '<span style="font-size:11px;color:var(--ink3);font-weight:700;min-width:28px;text-align:right">'+pct+'%</span>'+
     '</div>';
   }).join('');
 }
+
+/* ===== 입퇴사 이력 ===== */
+async function addHistoryEntry(h){
+  try{
+    var d=await fbAdd('staff-history',h);
+    if(d.name)h._id=d.name.split('/').pop();
+    allHistory.unshift(h);
+    return h;
+  }catch(e){return h;}
+}
+
+function drawHist(){
+  // KPI
+  var now=new Date();var ym=now.getFullYear()+'-'+pad(now.getMonth()+1);
+  var mHire=allHistory.filter(function(h){return h.type==='입사'&&(h.date||'').startsWith(ym);}).length;
+  var mResign=allHistory.filter(function(h){return h.type==='퇴사'&&(h.date||'').startsWith(ym);}).length;
+  var total=STAFF.filter(function(s){return s.status==='재직중';}).length;
+  $('histKpi').innerHTML=
+    '<div class="kpi"><span class="kpi-n" style="color:var(--green)">'+total+'</span><div class="kpi-l">현재 재직</div></div>'+
+    '<div class="kpi"><span class="kpi-n" style="color:var(--accent)">'+mHire+'</span><div class="kpi-l">이번달 입사</div></div>'+
+    '<div class="kpi"><span class="kpi-n" style="color:var(--red)">'+mResign+'</span><div class="kpi-l">이번달 퇴사</div></div>';
+
+  var list=allHistory.slice();
+  if(histFilt!=='전체')list=list.filter(function(h){return h.type===histFilt;});
+  list.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')||((b.ts||0)-(a.ts||0));});
+
+  if(!list.length){
+    $('histList').innerHTML='<div class="empty"><span class="empty-ico">📋</span>입퇴사 이력이 없습니다<br><span style="font-size:12px">➕ 이력 등록 버튼을 눌러 추가하세요</span></div>';
+    return;
+  }
+  var typeIcon={'입사':'🟢','퇴사':'🔴','복직':'🔵'};
+  $('histList').innerHTML=list.map(function(h){
+    var s=STAFF.find(function(x){return x.id===h.staffId;});
+    var c=s?RC[s.role]||'#4C6EF5':'#8C99C0';
+    var tenure=s?calcTenure(s.hired,h.type==='퇴사'?h.date:''):'';
+    return'<div class="hist-card type-'+esc(h.type||'')+'">'+
+      '<div class="hist-icon">'+esc(typeIcon[h.type]||'📋')+'</div>'+
+      '<div class="hist-body">'+
+        '<span class="hist-type-badge type-badge-'+esc(h.type||'')+'">'+esc(h.type||'')+'</span>'+
+        '<div class="hist-name" style="color:'+c+'">'+esc(h.staffName||h.staffId||'')+(s?' <span style="font-size:11px;color:var(--ink3)">'+s.role+'</span>':'')+'</div>'+
+        '<div class="hist-meta">'+
+          (h.date?'📅 '+esc(h.date):'')+(tenure?' · 근속 '+tenure:'')+
+        '</div>'+
+        (h.memo?'<div class="hist-memo">'+esc(h.memo)+'</div>':'')+
+        '<div><button class="hist-del" data-hdel="'+esc(h._id||'')+'">🗑 삭제</button></div>'+
+      '</div>'+
+      '<div class="hist-date">'+esc(h.date||'').slice(5)+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function delHist(id){
+  if(!id)return;
+  if(!confirm('이 이력을 삭제할까요?'))return;
+  allHistory=allHistory.filter(function(x){return x._id!==id;});
+  fbDel('staff-history',id).then(function(){drawHist();toast('🗑 삭제됨');});
+}
+
+/* ===== 입퇴사 이력 등록 모달 ===== */
+function openHistModal(){
+  // 직원 목록 채우기
+  var sel=$('hmStaff');
+  sel.innerHTML='<option value="">-- 선택 --</option>'+
+    STAFF.map(function(s){return'<option value="'+esc(s.id)+'">'+esc(s.name)+' ('+esc(s.role)+')'+(s.status==='퇴사'?' [퇴사]':'')+'</option>';}).join('');
+  $('hmDate').value=todayStr();
+  $('hmType').value='입사';
+  $('hmMemo').value='';
+  $('histModal').classList.add('show');
+}
+function closeHistModal(){$('histModal').classList.remove('show');}
+$('histModal').addEventListener('click',function(e){if(e.target===this)closeHistModal();});
+$('addHistBtn').addEventListener('click',openHistModal);
+
+$('histSaveBtn').addEventListener('click',async function(){
+  var sid=$('hmStaff').value;
+  if(!sid){toast('직원을 선택하세요');return;}
+  var s=STAFF.find(function(x){return x.id===sid;});
+  if(!s){toast('직원을 찾을 수 없습니다');return;}
+  var type=$('hmType').value;
+  var date=$('hmDate').value;
+  if(!date){toast('날짜를 입력하세요');return;}
+  var memo=$('hmMemo').value.trim();
+  try{
+    var h={staffId:s.id,staffName:s.name,type:type,date:date,memo:memo,ts:Date.now()};
+    await addHistoryEntry(h);
+    // 퇴사 이력이면 직원 상태 자동 업데이트
+    if(type==='퇴사'){
+      s.status='퇴사';s.resigned=date;
+      await saveStaffToFirebase(s);
+      await syncContact(s);
+    }
+    // 복직이면 재직중으로
+    if(type==='복직'){
+      s.status='재직중';s.resigned='';
+      await saveStaffToFirebase(s);
+      await syncContact(s);
+    }
+    closeHistModal();
+    drawHist();drawGrid();refreshAll();
+    toast('✅ '+type+' 이력 등록됨');
+  }catch(err){toast('⚠️ 오류: '+(err.message||err));}
+});
 
 /* ===== 달력 ===== */
 function renderCal(){
@@ -972,6 +1347,30 @@ function renderCal(){
   /* 날짜별 기록 집계 */
   var byDate={};
   allRecs.forEach(function(r){if(r.date){(byDate[r.date]=byDate[r.date]||[]).push(r);}});
+  /* 입퇴사 날짜 집계 */
+  var hireByDate={},resignByDate={};
+  allHistory.forEach(function(h){
+    if(h.type==='입사'&&h.date)(hireByDate[h.date]=hireByDate[h.date]||[]).push(h);
+    if(h.type==='퇴사'&&h.date)(resignByDate[h.date]=resignByDate[h.date]||[]).push(h);
+  });
+  // 직원 데이터에서도 hired 날짜 집계
+  STAFF.forEach(function(s){
+    if(s.hired){
+      // YY.MM.DD -> YYYY-MM-DD 변환
+      try{
+        var p=s.hired.split('.');var y=parseInt(p[0]);if(y<100)y+=2000;
+        var ds=y+'-'+pad(parseInt(p[1]||1))+'-'+pad(parseInt(p[2]||1));
+        (hireByDate[ds]=hireByDate[ds]||[]).push({staffName:s.name,type:'입사'});
+      }catch(e){}
+    }
+    if(s.resigned&&s.status==='퇴사'){
+      try{
+        var p2=s.resigned.split('.');var y2=parseInt(p2[0]);if(y2<100)y2+=2000;
+        var ds2=y2+'-'+pad(parseInt(p2[1]||1))+'-'+pad(parseInt(p2[2]||1));
+        (resignByDate[ds2]=resignByDate[ds2]||[]).push({staffName:s.name,type:'퇴사'});
+      }catch(e){}
+    }
+  });
   var html=days.map(function(d,i){return'<div class="cal-dow'+(i===0?' sun':'')+'">'+(d)+'</div>';}).join('');
   for(var i=0;i<first;i++)html+='<div class="cal-cell empty"></div>';
   for(var d=1;d<=daysInMonth;d++){
@@ -979,15 +1378,20 @@ function renderCal(){
     var wd=new Date(calY,calM,d).getDay();
     var cls='cal-cell'+(wd===0?' sun':'')+(ds===today?' today':'')+(ds===calSelDay?' selected':'');
     var dayRecs=byDate[ds]||[];
+    var hires=hireByDate[ds]||[];
+    var resigns=resignByDate[ds]||[];
     var dots=dayRecs.slice(0,6).map(function(r){return'<span class="cal-dot" style="background:'+(CAT_COLOR[r.cat]||'#8C99C0')+'"></span>';}).join('');
-    var items=dayRecs.slice(0,3).map(function(r){
+    var items=dayRecs.slice(0,2).map(function(r){
       var cc=CAT_COLOR[r.cat]||'#8C99C0';
       var cont=(r.content||'').replace(/\n/g,' ');
-      var preview=cont.length>14?cont.slice(0,14)+'…':cont;
+      var preview=cont.length>12?cont.slice(0,12)+'…':cont;
       return'<div class="cal-item"><span style="display:block;font-weight:800;color:'+cc+'">'+esc(r.staffId||'')+'</span><span style="color:var(--ink3)">'+esc(preview)+'</span></div>';
     }).join('');
-    var more=dayRecs.length>3?'<div class="cal-item" style="color:var(--ink3)">+'+( dayRecs.length-3)+'건</div>':'';
-    html+='<div class="'+cls+'" data-day="'+ds+'">'+'<div class="cal-dnum">'+d+'</div>'+'<div class="cal-dot-row">'+dots+'</div>'+items+more+'</div>';
+    var more=dayRecs.length>2?'<div class="cal-item" style="color:var(--ink3)">+'+( dayRecs.length-2)+'건</div>':'';
+    // 입퇴사 마커
+    var hireMarkers=hires.map(function(h){return'<div class="cal-hire">입사 '+esc(h.staffName||'')+'</div>';}).join('');
+    var resignMarkers=resigns.map(function(h){return'<div class="cal-resign">퇴사 '+esc(h.staffName||'')+'</div>';}).join('');
+    html+='<div class="'+cls+'" data-day="'+ds+'">'+'<div class="cal-dnum">'+d+'</div>'+'<div class="cal-dot-row">'+dots+'</div>'+hireMarkers+resignMarkers+items+more+'</div>';
   }
   $('calGrid').innerHTML=html;
   $('calGrid').querySelectorAll('[data-day]').forEach(function(el){el.addEventListener('click',function(){calSelDay=el.dataset.day;renderCal();renderCalDetail(el.dataset.day);});});
@@ -998,20 +1402,31 @@ function renderCalDetail(ds){
   var d=new Date(ds+'T00:00:00');
   var wd=['일','월','화','수','목','금','토'][d.getDay()];
   var label=(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+wd+')';
+  // 이 날의 입퇴사 이력
+  var dayHist=allHistory.filter(function(h){return h.date===ds;});
+  var histHtml=dayHist.length?'<div style="margin-bottom:10px">'+dayHist.map(function(h){
+    return'<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--card2);border-radius:8px;margin-bottom:4px">'+
+      '<span style="font-size:14px">'+(h.type==='입사'?'🟢':h.type==='퇴사'?'🔴':'🔵')+'</span>'+
+      '<span style="font-size:13px;font-weight:800">'+esc(h.staffName||h.staffId)+'</span>'+
+      '<span style="font-size:11px;color:var(--ink3)">'+esc(h.type)+'</span>'+
+      (h.memo?'<span style="font-size:11px;color:var(--ink3)">· '+esc(h.memo)+'</span>':'')+
+    '</div>';
+  }).join('')+'</div>':'';
   $('calDetail').innerHTML='<div class="cal-detail">'+
     '<div class="cal-detail-hdr"><h3>📅 '+label+' · '+recs.length+'건</h3>'+
     '<button class="cal-add-btn" data-addday="'+ds+'">➕ 기록 추가</button></div>'+
-    (recs.length?'<div style="display:flex;flex-direction:column;gap:7px">'+recs.map(function(r){return makeCard(r,true);}).join('')+'</div>':'<div class="empty" style="padding:16px">이 날 기록이 없습니다</div>')+
+    histHtml+
+    (recs.length?'<div style="display:flex;flex-direction:column;gap:7px">'+recs.map(function(r){return makeCard(r,true);}).join('')+'</div>':'<div class="empty" style="padding:16px">이 날 업무기록이 없습니다</div>')+
   '</div>';
-  $('calDetail').querySelector('[data-addday]').addEventListener('click',function(){
-    /* 직원 선택 없으면 패널 못 열므로 직원 탭으로 안내 */
-    if(!selSid){
-      toast('👆 직원 탭에서 직원을 먼저 선택하면 기록이 여기에 표시됩니다');
-      switchTab('home');return;
-    }
-    $('fDate').value=ds;
-    document.getElementById('slidePanel').querySelector('#fCont').focus();
-  });
+  var addDayBtn=$('calDetail').querySelector('[data-addday]');
+  if(addDayBtn&&!addDayBtn._bound){
+    addDayBtn._bound=true;
+    addDayBtn.addEventListener('click',function(){
+      if(!selSid){toast('👆 직원 탭에서 직원을 먼저 선택해주세요');switchTab('home');return;}
+      $('fDate').value=ds;
+      $('fCont').focus();
+    });
+  }
 }
 $('calPrev').addEventListener('click',function(){calM--;if(calM<0){calM=11;calY--;}calSelDay=null;renderCal();});
 $('calNext').addEventListener('click',function(){calM++;if(calM>11){calM=0;calY++;}calSelDay=null;renderCal();});
@@ -1023,163 +1438,14 @@ function refreshAll(){
   if($('panel-all').classList.contains('on'))drawAll();
   if($('panel-stat').classList.contains('on'))drawStats();
   if($('panel-cal').classList.contains('on'))renderCal();
+  if($('panel-hist').classList.contains('on'))drawHist();
   if(selSid){var s=STAFF.find(function(x){return x.id===selSid;});if(s){drawPanelStats(s);drawPanelRecs(s);}}
   if(searchQ)applySearch();
 }
 
-/* ===== 초기 동기화 ===== */
-async function initSyncContacts(){
-  for(var i=0;i<STAFF.length;i++){
-    var s=STAFF[i];if(!s.phone)continue;
-    try{await syncContact(s);}catch(e){}
-  }
-}
-
-/* ===== 로드 ===== */
-fbAll('staff-records').then(function(docs){
-  allRecs=docs.sort(function(a,b){return(b.ts||0)-(a.ts||0);});
-  drawGrid();drawRecent();
-  initSyncContacts().catch(function(){});
-}).catch(function(){
-  drawGrid();drawRecent();
-  toast('⚠️ 오프라인 — 데이터를 불러올 수 없습니다');
-});
-
-/* =========================================================
-   ⑥ PIN 잠금 시스템
-   ========================================================= */
-var PIN_LS = 'staff_pin_v5';
-var PIN_SET_LS = 'staff_pin_set_v5';
-var pinBuffer = '';
-var pinMode = 'unlock'; // 'unlock' | 'setup1' | 'setup2' | 'change1' | 'change2'
-var pinTemp = '';
-
-function getPIN(){ try{return localStorage.getItem(PIN_LS)||'';}catch(e){return '';} }
-function setPIN(p){ try{localStorage.setItem(PIN_LS,p);localStorage.setItem(PIN_SET_LS,'1');}catch(e){} }
-function hasPIN(){ try{return !!localStorage.getItem(PIN_SET_LS);}catch(e){return false;} }
-
-function initLock(){
-  if(!hasPIN()){
-    // 최초: PIN 설정 화면
-    $('lockTitle').textContent = '🔐 PIN 설정';
-    $('lockSub').textContent = '앱을 보호할 4자리 PIN을 설정하세요';
-    $('pinPad').style.display = 'none';
-    $('pinSetupBtns').style.display = 'flex';
-    $('pinDots').style.display = 'none';
-    $('pinErr').style.display = 'none';
-  } else {
-    showUnlockScreen();
-  }
-}
-function showUnlockScreen(){
-  pinMode = 'unlock'; pinBuffer = '';
-  $('lockTitle').textContent = '🔐 직원 관리';
-  $('lockSub').textContent = 'PIN 4자리를 입력하세요';
-  $('pinPad').style.display = 'grid';
-  $('pinSetupBtns').style.display = 'none';
-  $('pinChangeBtns').style.display = 'block';
-  $('pinDots').style.display = 'flex';
-  $('pinErr').style.display = 'block';
-  updateDots();
-}
-function updateDots(){
-  for(var i=0;i<4;i++){
-    var d=$('pd'+i);
-    d.classList.toggle('filled', i < pinBuffer.length);
-    d.classList.remove('err');
-  }
-}
-function pinError(msg){
-  for(var i=0;i<4;i++) $('pd'+i).classList.add('err');
-  $('pinErr').textContent = msg;
-  setTimeout(function(){ pinBuffer=''; updateDots(); $('pinErr').textContent=''; },700);
-}
-function unlockApp(){
-  $('lockScreen').classList.add('hide');
-}
-function lockApp(){
-  if(!hasPIN()){toast('먼저 PIN을 설정하세요 (💾 백업 메뉴)');return;}
-  pinBuffer=''; pinMode='unlock';
-  $('lockScreen').classList.remove('hide');
-  showUnlockScreen();
-}
-
-// 숫자 입력
-document.querySelectorAll('.pin-btn[data-n]').forEach(function(btn){
-  btn.addEventListener('click',function(){
-    if(pinBuffer.length>=4) return;
-    pinBuffer += btn.dataset.n;
-    updateDots();
-    if(pinBuffer.length===4) setTimeout(processPIN, 80);
-  });
-});
-$('pinDel').addEventListener('click',function(){
-  if(pinBuffer.length>0){ pinBuffer=pinBuffer.slice(0,-1); updateDots(); }
-});
-
-function processPIN(){
-  if(pinMode==='unlock'){
-    if(pinBuffer===getPIN()){ unlockApp(); }
-    else { pinError('PIN이 틀렸습니다'); }
-  } else if(pinMode==='setup1'){
-    pinTemp=pinBuffer; pinBuffer='';
-    $('lockSub').textContent='한 번 더 입력하세요';
-    updateDots(); pinMode='setup2';
-  } else if(pinMode==='setup2'){
-    if(pinBuffer===pinTemp){ setPIN(pinBuffer); unlockApp(); toast('🔐 PIN이 설정되었습니다'); }
-    else { pinError('PIN이 일치하지 않습니다'); pinMode='setup1'; $('lockSub').textContent='다시 처음부터 입력하세요'; }
-  } else if(pinMode==='change1'){
-    if(pinBuffer===getPIN()){ pinTemp=''; pinBuffer=''; pinMode='change2'; $('lockSub').textContent='새 PIN 4자리를 입력하세요'; updateDots(); }
-    else { pinError('현재 PIN이 틀렸습니다'); }
-  } else if(pinMode==='change2'){
-    if(!pinTemp){ pinTemp=pinBuffer; pinBuffer=''; $('lockSub').textContent='새 PIN을 한 번 더 입력하세요'; updateDots(); pinMode='change3'; }
-  } else if(pinMode==='change3'){
-    if(pinBuffer===pinTemp){ setPIN(pinBuffer); unlockApp(); toast('🔐 PIN이 변경되었습니다'); }
-    else { pinError('PIN이 일치하지 않습니다'); pinMode='change2'; pinTemp=''; $('lockSub').textContent='새 PIN을 다시 입력하세요'; }
-  }
-}
-
-// PIN 설정 버튼들
-$('pinSetupOk').addEventListener('click',function(){
-  pinMode='setup1'; pinBuffer='';
-  $('lockTitle').textContent='PIN 설정';
-  $('lockSub').textContent='사용할 PIN 4자리를 입력하세요';
-  $('pinPad').style.display='grid';
-  $('pinSetupBtns').style.display='none';
-  $('pinDots').style.display='flex';
-  $('pinErr').style.display='block';
-  updateDots();
-});
-$('pinSkip').addEventListener('click',function(){
-  // 잠금 없이 사용 — PIN 미설정 상태로 열기
-  unlockApp();
-});
-$('pinChangeBtn').addEventListener('click',function(){
-  pinMode='change1'; pinBuffer='';
-  $('lockSub').textContent='현재 PIN을 입력하세요';
-  $('pinChangeBtns').style.display='none';
-  updateDots();
-});
-$('pinChangeFromBackup').addEventListener('click',function(){
-  $('backupModal').classList.remove('show');
-  if(!hasPIN()){toast('먼저 PIN을 설정하세요');return;}
-  pinMode='change1'; pinBuffer=''; pinTemp='';
-  $('lockScreen').classList.remove('hide');
-  $('lockTitle').textContent='PIN 변경';
-  $('lockSub').textContent='현재 PIN을 입력하세요';
-  $('pinPad').style.display='grid';
-  $('pinSetupBtns').style.display='none';
-  $('pinChangeBtns').style.display='none';
-  $('pinDots').style.display='flex';
-  $('pinErr').style.display='block';
-  updateDots();
-});
-
-/* =========================================================
-   ⑦ 백업 & 복구
-   ========================================================= */
+/* ===== 백업 ===== */
 $('doBackupBtn').addEventListener('click',function(){
-  var data={app:'staff',version:'v5',exportedAt:new Date().toISOString(),count:allRecs.length,records:allRecs};
+  var data={app:'staff',version:'v44',exportedAt:new Date().toISOString(),count:allRecs.length,records:allRecs};
   var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
@@ -1189,17 +1455,17 @@ $('doBackupBtn').addEventListener('click',function(){
   toast('✅ 기록 백업 파일을 저장했습니다 ('+allRecs.length+'건)');
 });
 $('doStaffBackupBtn').addEventListener('click',function(){
-  var data={app:'staff',version:'v5',exportedAt:new Date().toISOString(),staff:STAFF};
+  var data={app:'staff',version:'v44',exportedAt:new Date().toISOString(),staff:STAFF,history:allHistory};
   var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
   var d=new Date();
   a.href=url;a.download='직원관리_직원정보백업_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.json';
   document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
-  toast('✅ 직원정보 백업 파일을 저장했습니다');
+  toast('✅ 직원정보+이력 백업 완료');
 });
 $('restoreFile').addEventListener('change',function(e){
-  var file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file)return;
+  var file=e.target.files&&e.target.files[0];e.target.value='';if(!file)return;
   var reader=new FileReader();
   reader.onload=function(ev){
     var data;try{data=JSON.parse(ev.target.result);}catch(err){toast('❌ 파일을 읽을 수 없습니다');return;}
@@ -1224,33 +1490,166 @@ $('restoreFile').addEventListener('change',function(e){
   reader.readAsText(file);
 });
 
-/* ⑥ PWA Service Worker 등록 */
+/* ===== 로드 ===== */
+async function initApp(){
+  try{
+    // 1) 직원 데이터 로드
+    await loadStaffFromFirebase();
+    // 2) 기록 로드
+    allRecs=await fbAll('staff-records');
+    allRecs.sort(function(a,b){return(b.ts||0)-(a.ts||0);});
+    // 3) 이력 로드
+    allHistory=await fbAll('staff-history');
+    allHistory.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')||((b.ts||0)-(a.ts||0));});
+    // 4) 렌더
+    drawGrid();drawRecent();
+    initSyncContacts().catch(function(){});
+  }catch(e){
+    drawGrid();drawRecent();
+    toast('⚠️ 오프라인 — 일부 데이터를 불러올 수 없습니다');
+  }
+}
+initApp();
+
+/* =========================================================
+   PIN 잠금 시스템
+   ========================================================= */
+var PIN_LS='staff_pin_v5';
+var PIN_SET_LS='staff_pin_set_v5';
+var pinBuffer='';
+var pinMode='unlock';
+var pinTemp='';
+
+function getPIN(){try{return localStorage.getItem(PIN_LS)||'';}catch(e){return'';}}
+function setPIN(p){try{localStorage.setItem(PIN_LS,p);localStorage.setItem(PIN_SET_LS,'1');}catch(e){}}
+function hasPIN(){try{return !!localStorage.getItem(PIN_SET_LS);}catch(e){return false;}}
+
+function initLock(){
+  if(!hasPIN()){
+    $('lockTitle').textContent='🔐 PIN 설정';
+    $('lockSub').textContent='앱을 보호할 4자리 PIN을 설정하세요';
+    $('pinPad').style.display='none';
+    $('pinSetupBtns').style.display='flex';
+    $('pinDots').style.display='none';
+    $('pinErr').style.display='none';
+  }else{
+    showUnlockScreen();
+  }
+}
+function showUnlockScreen(){
+  pinMode='unlock';pinBuffer='';
+  $('lockTitle').textContent='🔐 직원 관리';
+  $('lockSub').textContent='PIN 4자리를 입력하세요';
+  $('pinPad').style.display='grid';
+  $('pinSetupBtns').style.display='none';
+  $('pinChangeBtns').style.display='block';
+  $('pinDots').style.display='flex';
+  $('pinErr').style.display='block';
+  updateDots();
+}
+function updateDots(){
+  for(var i=0;i<4;i++){
+    var d=$('pd'+i);
+    d.classList.toggle('filled',i<pinBuffer.length);
+    d.classList.remove('err');
+  }
+}
+function pinError(msg){
+  for(var i=0;i<4;i++)$('pd'+i).classList.add('err');
+  $('pinErr').textContent=msg;
+  setTimeout(function(){pinBuffer='';updateDots();$('pinErr').textContent='';},700);
+}
+function unlockApp(){$('lockScreen').classList.add('hide');}
+function lockApp(){
+  if(!hasPIN()){toast('먼저 PIN을 설정하세요');return;}
+  pinBuffer='';pinMode='unlock';
+  $('lockScreen').classList.remove('hide');
+  showUnlockScreen();
+}
+
+document.querySelectorAll('.pin-btn[data-n]').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    if(pinBuffer.length>=4)return;
+    pinBuffer+=btn.dataset.n;
+    updateDots();
+    if(pinBuffer.length===4)setTimeout(processPIN,80);
+  });
+});
+$('pinDel').addEventListener('click',function(){
+  if(pinBuffer.length>0){pinBuffer=pinBuffer.slice(0,-1);updateDots();}
+});
+
+function processPIN(){
+  if(pinMode==='unlock'){
+    if(pinBuffer===getPIN())unlockApp();
+    else pinError('PIN이 틀렸습니다');
+  }else if(pinMode==='setup1'){
+    pinTemp=pinBuffer;pinBuffer='';
+    $('lockSub').textContent='한 번 더 입력하세요';
+    updateDots();pinMode='setup2';
+  }else if(pinMode==='setup2'){
+    if(pinBuffer===pinTemp){setPIN(pinBuffer);unlockApp();toast('🔐 PIN이 설정되었습니다');}
+    else{pinError('PIN이 일치하지 않습니다');pinMode='setup1';$('lockSub').textContent='다시 처음부터 입력하세요';}
+  }else if(pinMode==='change1'){
+    if(pinBuffer===getPIN()){pinTemp='';pinBuffer='';pinMode='change2';$('lockSub').textContent='새 PIN 4자리를 입력하세요';updateDots();}
+    else pinError('현재 PIN이 틀렸습니다');
+  }else if(pinMode==='change2'){
+    if(!pinTemp){pinTemp=pinBuffer;pinBuffer='';$('lockSub').textContent='새 PIN을 한 번 더 입력하세요';updateDots();pinMode='change3';}
+  }else if(pinMode==='change3'){
+    if(pinBuffer===pinTemp){setPIN(pinBuffer);unlockApp();toast('🔐 PIN이 변경되었습니다');}
+    else{pinError('PIN이 일치하지 않습니다');pinMode='change2';pinTemp='';$('lockSub').textContent='새 PIN을 다시 입력하세요';}
+  }
+}
+
+$('pinSetupOk').addEventListener('click',function(){
+  pinMode='setup1';pinBuffer='';
+  $('lockTitle').textContent='PIN 설정';
+  $('lockSub').textContent='사용할 PIN 4자리를 입력하세요';
+  $('pinPad').style.display='grid';
+  $('pinSetupBtns').style.display='none';
+  $('pinDots').style.display='flex';
+  $('pinErr').style.display='block';
+  updateDots();
+});
+$('pinSkip').addEventListener('click',function(){unlockApp();});
+$('pinChangeBtn').addEventListener('click',function(){
+  pinMode='change1';pinBuffer='';
+  $('lockSub').textContent='현재 PIN을 입력하세요';
+  $('pinChangeBtns').style.display='none';
+  updateDots();
+});
+$('pinChangeFromBackup').addEventListener('click',function(){
+  $('backupModal').classList.remove('show');
+  if(!hasPIN()){toast('먼저 PIN을 설정하세요');return;}
+  pinMode='change1';pinBuffer='';pinTemp='';
+  $('lockScreen').classList.remove('hide');
+  $('lockTitle').textContent='PIN 변경';
+  $('lockSub').textContent='현재 PIN을 입력하세요';
+  $('pinPad').style.display='grid';
+  $('pinSetupBtns').style.display='none';
+  $('pinChangeBtns').style.display='none';
+  $('pinDots').style.display='flex';
+  $('pinErr').style.display='block';
+  updateDots();
+});
+
+/* PWA */
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('./staff-sw.js').then(function(reg){
-      // 새 Service Worker가 있으면 즉시 활성화
-      reg.addEventListener('updatefound', function(){
-        const newWorker = reg.installing;
-        newWorker.addEventListener('statechange', function(){
-          if(newWorker.state==='installed' && navigator.serviceWorker.controller){
-            // 새 버전 있음 → 자동 새로고침
-            newWorker.postMessage({type:'SKIP_WAITING'});
-            window.location.reload();
-          }
+      reg.addEventListener('updatefound',function(){
+        var nw=reg.installing;
+        nw.addEventListener('statechange',function(){
+          if(nw.state==='installed'&&navigator.serviceWorker.controller){nw.postMessage({type:'SKIP_WAITING'});window.location.reload();}
         });
       });
     }).catch(function(){});
   });
-  // 새 SW 활성화 후 페이지 새로고침
-  navigator.serviceWorker.addEventListener('controllerchange', function(){
-    window.location.reload();
-  });
+  navigator.serviceWorker.addEventListener('controllerchange',function(){window.location.reload();});
 }
 
-/* 앱 시작 시 잠금 초기화 - DOM 완전 로드 후 */
-if(document.readyState === 'complete') initLock();
-else window.addEventListener('load', initLock);
-
+if(document.readyState==='complete')initLock();
+else window.addEventListener('load',initLock);
 </script>
 </body>
 </html>
