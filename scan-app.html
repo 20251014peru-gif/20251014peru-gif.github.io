@@ -48,7 +48,7 @@ header{background:var(--white);border-bottom:1.5px solid var(--blue-bd);
   background:var(--white);cursor:pointer;font-size:16px;font-family:inherit;transition:all .15s}
 .hbtn:hover{border-color:var(--blue);background:var(--blue-soft)}
 
-main{max-width:1100px;margin:0 auto;padding:0 18px 100px}
+main{max-width:1600px;margin:0 auto;padding:0 18px 100px}
 
 .tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 0 8px}
 /* 헤더 안 통합 탭 */
@@ -190,26 +190,31 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 .ai-progress.show{display:block}
 
 /* 스캔 테이블 */
-.scan-table{width:100%;background:#fff;border-radius:12px;overflow:hidden;
+.scan-table{width:100%;background:#fff;border-radius:12px;overflow:auto;
   border:1.5px solid var(--blue-bd);margin-top:8px}
-.scan-table table{width:100%;border-collapse:collapse;font-size:13px}
+.scan-table table{width:100%;border-collapse:collapse;font-size:13px;min-width:900px}
 .scan-table th{background:var(--blue-soft);color:var(--ink-soft);text-align:left;
   padding:10px 8px;font-size:11px;font-weight:800;border-bottom:1.5px solid var(--blue-bd);white-space:nowrap}
 .scan-table th.sortable{cursor:pointer;user-select:none}
 .scan-table th.sortable:hover{background:var(--blue-lt);color:var(--blue)}
 .scan-table th.sort-asc::after{content:' ▲';color:var(--blue)}
 .scan-table th.sort-desc::after{content:' ▼';color:var(--blue)}
-/* 컬럼 필터 입력 */
-.scan-table .col-filter-row th{background:#fff;padding:3px 4px;border-bottom:1.5px solid var(--blue-bd)}
-.scan-table .col-filter-row input{width:100%;padding:4px 6px;font-size:11px;border:1.5px solid var(--blue-bd);
-  border-radius:6px;font-family:inherit;color:var(--ink);background:#fff;outline:none;box-sizing:border-box}
-.scan-table .col-filter-row input:focus{border-color:var(--blue)}
-.scan-table .col-filter-row input::placeholder{color:var(--ink-faint)}
+/* 컬럼 필터 행 — DOM 고정 (리렌더 없이 유지) */
+.scan-table .col-filter-row th{background:#f0f5ff;padding:4px 4px;border-bottom:2px solid var(--blue-bd)}
+.scan-table .col-filter-row .cf-wrap{display:flex;gap:3px;align-items:center}
+.scan-table .col-filter-row input{flex:1;min-width:0;padding:5px 7px;font-size:12px;border:1.5px solid var(--blue-bd);
+  border-radius:7px;font-family:inherit;color:var(--ink);background:#fff;outline:none;box-sizing:border-box}
+.scan-table .col-filter-row input:focus{border-color:var(--blue);background:#f7faff}
+.scan-table .col-filter-row input::placeholder{color:var(--ink-faint);font-size:11px}
+.scan-table .cf-clear{flex:0 0 auto;width:18px;height:18px;border-radius:5px;border:none;
+  background:#fde8e8;color:#c0392b;font-size:10px;cursor:pointer;display:none;
+  align-items:center;justify-content:center;font-weight:900;padding:0;line-height:1}
+.scan-table .cf-clear.show{display:inline-flex}
 .scan-table td{padding:9px 8px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle}
 .scan-table tr:hover td{background:var(--blue-soft)}
 .scan-table .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
-.scan-table .truncate{max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.scan-table .row-actions{display:flex;gap:4px;justify-content:flex-end}
+.scan-table .truncate{max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scan-table .row-actions{display:flex;gap:4px;justify-content:flex-end;white-space:nowrap}
 .row-act-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--blue-bd);
   background:#fff;cursor:pointer;font-size:13px;font-family:inherit;
   display:inline-flex;align-items:center;justify-content:center}
@@ -444,7 +449,42 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
         </div>
       </details>
     </div>
-    <div id="receiptList"></div>
+    <div id="receiptList">
+      <!-- 통계 영역 (리렌더) -->
+      <div id="rStatsArea"></div>
+      <!-- 테이블: 헤더는 고정 DOM, tbody만 리렌더 -->
+      <div class="scan-table" id="rTableWrap" style="display:none">
+        <table>
+          <thead>
+            <tr id="rSortRow">
+              <th class="sortable" data-sort="date">날짜</th>
+              <th>시각</th>
+              <th class="sortable" data-sort="place">상호</th>
+              <th>전화</th>
+              <th class="sortable num" data-sort="amount">금액</th>
+              <th class="sortable" data-sort="payMethod">결제</th>
+              <th class="sortable" data-sort="addr">주소</th>
+              <th class="sortable" data-sort="items">품목</th>
+              <th style="text-align:right">작업</th>
+            </tr>
+            <tr class="col-filter-row" id="rFilterRow">
+              <th><div class="cf-wrap"><input type="text" id="cf-date" placeholder="날짜 필터"><button class="cf-clear" id="cfx-date" title="지우기">✕</button></div></th>
+              <th></th>
+              <th><div class="cf-wrap"><input type="text" id="cf-place" placeholder="상호 필터"><button class="cf-clear" id="cfx-place" title="지우기">✕</button></div></th>
+              <th></th>
+              <th><div class="cf-wrap"><input type="text" id="cf-amount" placeholder="금액 필터" style="text-align:right"><button class="cf-clear" id="cfx-amount" title="지우기">✕</button></div></th>
+              <th><div class="cf-wrap"><input type="text" id="cf-payMethod" placeholder="결제 필터"><button class="cf-clear" id="cfx-payMethod" title="지우기">✕</button></div></th>
+              <th><div class="cf-wrap"><input type="text" id="cf-addr" placeholder="주소 필터"><button class="cf-clear" id="cfx-addr" title="지우기">✕</button></div></th>
+              <th><div class="cf-wrap"><input type="text" id="cf-items" placeholder="품목 필터"><button class="cf-clear" id="cfx-items" title="지우기">✕</button></div></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="rTbody"></tbody>
+        </table>
+      </div>
+      <!-- 카드 뷰 (모바일) -->
+      <div id="rCardArea"></div>
+    </div>
     <div id="cardList" style="display:none"></div>
     <div id="textList" style="display:none"></div>
     <div id="scanEmpty" class="empty" style="display:none">
@@ -2676,6 +2716,9 @@ function _applyReceiptFilters(list){
   return list;
 }
 
+/* ── 영수증 목록 렌더 (DOM 보존 — 한글 IME 버그 방지) ── */
+let _rTableBound=false; // 헤더 이벤트 1회만 바인딩
+
 function renderReceiptList(q){
   let list=receipts.filter(r=>{
     if(r.deletedAt)return false;
@@ -2689,46 +2732,65 @@ function renderReceiptList(q){
 
   /* 컬럼 필터 적용 */
   const cf=_rColFilter;
-  if(cf.date)    list=list.filter(r=>(r.date||'').includes(cf.date));
-  if(cf.amount)  list=list.filter(r=>String(r.amount||'').includes(cf.amount.replace(/,/g,'')));
-  if(cf.place)   list=list.filter(r=>(r.place||'').toLowerCase().includes(cf.place.toLowerCase()));
-  if(cf.payMethod) list=list.filter(r=>(r.payMethod||'').toLowerCase().includes(cf.payMethod.toLowerCase()));
-  if(cf.addr)    list=list.filter(r=>(r.addr||'').toLowerCase().includes(cf.addr.toLowerCase()));
-  if(cf.items)   list=list.filter(r=>itemsToString(r.items).toLowerCase().includes(cf.items.toLowerCase()));
+  if(cf.date)     list=list.filter(r=>(r.date||'').includes(cf.date));
+  if(cf.amount)   list=list.filter(r=>String(r.amount||'').includes(cf.amount.replace(/,/g,'')));
+  if(cf.place)    list=list.filter(r=>(r.place||'').toLowerCase().includes(cf.place.toLowerCase()));
+  if(cf.payMethod)list=list.filter(r=>(r.payMethod||'').toLowerCase().includes(cf.payMethod.toLowerCase()));
+  if(cf.addr)     list=list.filter(r=>(r.addr||'').toLowerCase().includes(cf.addr.toLowerCase()));
+  if(cf.items)    list=list.filter(r=>itemsToString(r.items).toLowerCase().includes(cf.items.toLowerCase()));
 
   /* 정렬 */
   list=list.slice().sort((a,b)=>{
     let va,vb;
-    if(_rSort.col==='date'){
-      va=(a.date||'')+(a.payTime||''); vb=(b.date||'')+(b.payTime||'');
-    } else if(_rSort.col==='amount'){
-      va=Number(a.amount||0); vb=Number(b.amount||0);
-      return _rSort.dir==='asc'?va-vb:vb-va;
-    } else if(_rSort.col==='place'){
-      va=a.place||''; vb=b.place||'';
-    } else if(_rSort.col==='payMethod'){
-      va=a.payMethod||''; vb=b.payMethod||'';
-    } else if(_rSort.col==='addr'){
-      va=a.addr||''; vb=b.addr||'';
-    } else if(_rSort.col==='items'){
-      va=itemsToString(a.items); vb=itemsToString(b.items);
-    } else { va=''; vb=''; }
-    if(va<vb) return _rSort.dir==='asc'?-1:1;
-    if(va>vb) return _rSort.dir==='asc'?1:-1;
+    if(_rSort.col==='amount'){
+      return _rSort.dir==='asc'?Number(a.amount||0)-Number(b.amount||0):Number(b.amount||0)-Number(a.amount||0);
+    }
+    const colMap={date:(r)=>(r.date||'')+(r.payTime||''),place:(r)=>r.place||'',
+      payMethod:(r)=>r.payMethod||'',addr:(r)=>r.addr||'',items:(r)=>itemsToString(r.items)};
+    const fn=colMap[_rSort.col]||(r=>'');
+    va=fn(a); vb=fn(b);
+    if(va<vb)return _rSort.dir==='asc'?-1:1;
+    if(va>vb)return _rSort.dir==='asc'?1:-1;
     return 0;
   });
 
-  // 📊 이번 달 통계 위젯
-  const statsHtml=buildReceiptStats();
+  /* 통계 */
+  $('rStatsArea').innerHTML=buildReceiptStats();
+
+  /* 정렬 헤더 클래스 갱신 */
+  _updateSortHeaders();
+
+  /* tbody만 교체 (헤더 DOM 유지 → IME 버그 없음) */
+  const tbody=$('rTbody');
+  const wrap=$('rTableWrap');
+  const cardArea=$('rCardArea');
+
   if(!list.length){
-    $('receiptList').innerHTML=statsHtml+_buildReceiptTable([],q);
-    _bindReceiptTableEvents();
-    $('scanEmpty').style.display='';return;
+    wrap.style.display='none';
+    cardArea.innerHTML='';
+    $('scanEmpty').style.display='';
+    return;
   }
   $('scanEmpty').style.display='none';
+  wrap.style.display='';
 
-  const tableHtml=_buildReceiptTable(list,q);
-  const cardHtml=`<div class="scan-card-list">${list.map(r=>`<div class="scan-card" data-id="${esc(r.id)}">
+  tbody.innerHTML=list.map(r=>`<tr data-id="${esc(r.id)}">
+    <td>${esc(r.date||'')}</td>
+    <td style="white-space:nowrap">${esc(r.payTime||'')}</td>
+    <td class="truncate" style="font-weight:700">${esc(r.place||'')}</td>
+    <td style="white-space:nowrap">${r.phone?`<a class="link-tel" href="${telLink(r.phone)}">${esc(r.phone)}</a>`:''}</td>
+    <td class="num">${r.amount?numFmt(r.amount)+'원':''}</td>
+    <td>${esc(r.payMethod||'')}</td>
+    <td class="truncate">${r.addr?`<a class="link-addr" href="${naverMap(r.addr)}" target="_blank">${esc(r.addr)}</a>`:''}</td>
+    <td class="truncate" style="font-size:11px;color:var(--ink-faint)">${esc(itemsToString(r.items))}</td>
+    <td><div class="row-actions">
+      <button class="row-act-btn green" data-act="copy">📋</button>
+      <button class="row-act-btn" data-act="edit">✏️</button>
+      <button class="row-act-btn red" data-act="del">🗑</button>
+    </div></td></tr>`).join('');
+
+  /* 카드뷰 (모바일) */
+  cardArea.innerHTML=`<div class="scan-card-list">${list.map(r=>`<div class="scan-card" data-id="${esc(r.id)}">
     <div class="top">
       <div class="ttl">🧾 ${esc(r.place||'(상호없음)')} <span style="font-size:11px;font-weight:500;color:var(--ink-faint);padding:2px 6px;background:var(--blue-soft);border-radius:8px;margin-left:4px">${categorizeReceipt(r)}</span></div>
       <div class="date">${esc(r.date||'')}${r.payTime?' '+esc(r.payTime):''}</div>
@@ -2744,86 +2806,119 @@ function renderReceiptList(q){
       <button class="row-act-btn" data-act="edit">✏️ 수정</button>
       <button class="row-act-btn red" data-act="del">🗑 삭제</button>
     </div></div>`).join('')}</div>`;
-  $('receiptList').innerHTML=statsHtml+tableHtml+cardHtml;
-  _bindReceiptTableEvents();
-  bindRowActions($('receiptList'),'receipt');
+
+  /* tbody 행 액션 바인딩 */
+  bindRowActions(tbody,'receipt');
+  bindRowActions(cardArea,'receipt');
+
+  /* 헤더/필터 이벤트 1회만 바인딩 */
+  if(!_rTableBound){ _bindReceiptTableEvents(); _rTableBound=true; }
 }
 
-function _thSort(col,label){
-  const active=_rSort.col===col;
-  const cls='sortable'+(active?(_rSort.dir==='asc'?' sort-asc':' sort-desc'):'');
-  return `<th class="${cls}" data-sort="${col}">${label}</th>`;
-}
-
-function _buildReceiptTable(list,q){
-  const cf=_rColFilter;
-  return `<div class="scan-table"><table>
-    <thead>
-      <tr>
-        ${_thSort('date','날짜')}
-        <th>시각</th>
-        ${_thSort('place','상호')}
-        <th>전화</th>
-        ${_thSort('amount','금액')}
-        ${_thSort('payMethod','결제')}
-        ${_thSort('addr','주소')}
-        ${_thSort('items','품목')}
-        <th style="text-align:right">작업</th>
-      </tr>
-      <tr class="col-filter-row">
-        <th><input type="text" data-cf="date" placeholder="날짜 필터" value="${esc(cf.date)}"></th>
-        <th></th>
-        <th><input type="text" data-cf="place" placeholder="상호 필터" value="${esc(cf.place)}"></th>
-        <th></th>
-        <th><input type="text" data-cf="amount" placeholder="금액 필터" value="${esc(cf.amount)}" style="text-align:right"></th>
-        <th><input type="text" data-cf="payMethod" placeholder="결제 필터" value="${esc(cf.payMethod)}"></th>
-        <th><input type="text" data-cf="addr" placeholder="주소 필터" value="${esc(cf.addr)}"></th>
-        <th><input type="text" data-cf="items" placeholder="품목 필터" value="${esc(cf.items)}"></th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>${list.map(r=>`<tr data-id="${esc(r.id)}">
-      <td>${esc(r.date||'')}</td><td>${esc(r.payTime||'')}</td>
-      <td class="truncate" style="font-weight:700">${esc(r.place||'')}</td>
-      <td>${r.phone?`<a class="link-tel" href="${telLink(r.phone)}">${esc(r.phone)}</a>`:''}</td>
-      <td class="num">${r.amount?numFmt(r.amount)+'원':''}</td>
-      <td>${esc(r.payMethod||'')}</td>
-      <td class="truncate">${r.addr?`<a class="link-addr" href="${naverMap(r.addr)}" target="_blank">${esc(r.addr)}</a>`:''}</td>
-      <td class="truncate" style="font-size:11px;color:var(--ink-faint)">${esc(itemsToString(r.items))}</td>
-      <td><div class="row-actions">
-        <button class="row-act-btn green" data-act="copy">📋</button>
-        <button class="row-act-btn" data-act="edit">✏️</button>
-        <button class="row-act-btn red" data-act="del">🗑</button>
-      </div></td></tr>`).join('')}</tbody></table></div>`;
+function _updateSortHeaders(){
+  const row=$('rSortRow');
+  if(!row)return;
+  row.querySelectorAll('th[data-sort]').forEach(th=>{
+    const col=th.dataset.sort;
+    th.classList.remove('sort-asc','sort-desc');
+    if(_rSort.col===col) th.classList.add(_rSort.dir==='asc'?'sort-asc':'sort-desc');
+  });
 }
 
 function _bindReceiptTableEvents(){
-  const tbl=$('receiptList');
-  if(!tbl)return;
-  /* 정렬 헤더 클릭 */
-  tbl.querySelectorAll('th[data-sort]').forEach(th=>{
-    th.addEventListener('click',()=>{
-      const col=th.dataset.sort;
-      if(_rSort.col===col){ _rSort.dir=_rSort.dir==='asc'?'desc':'asc'; }
-      else{ _rSort.col=col; _rSort.dir=col==='amount'?'desc':'asc'; }
-      renderReceiptList(_lastQ||'');
+  /* 정렬 헤더 */
+  const sortRow=$('rSortRow');
+  if(sortRow){
+    sortRow.querySelectorAll('th[data-sort]').forEach(th=>{
+      th.addEventListener('click',()=>{
+        const col=th.dataset.sort;
+        if(_rSort.col===col){ _rSort.dir=_rSort.dir==='asc'?'desc':'asc'; }
+        else{ _rSort.col=col; _rSort.dir=col==='amount'?'desc':'asc'; }
+        renderReceiptList(_lastQ||'');
+      });
     });
-  });
-  /* 컬럼 필터 입력 */
-  tbl.querySelectorAll('input[data-cf]').forEach(inp=>{
-    inp.addEventListener('input',()=>{
-      _rColFilter[inp.dataset.cf]=inp.value;
-      renderReceiptList(_lastQ||'');
-    });
-    /* 포커스 유지 — 리렌더 후 같은 필드로 복구 */
-    inp.addEventListener('focus',()=>{ inp._focused=true; });
-  });
-  /* 포커스 복구 */
-  const focused=tbl.querySelector('input[data-cf]:focus');
-  if(!focused){
-    const pending=tbl.querySelector('input[data-cf][data-pending-focus]');
-    if(pending){ pending.focus(); pending.removeAttribute('data-pending-focus'); }
   }
+  /* 컬럼 필터 — input 이벤트만 (DOM 재생성 없음 → IME 정상) */
+  ['date','place','amount','payMethod','addr','items'].forEach(key=>{
+    const inp=document.getElementById('cf-'+key);
+    const clrBtn=document.getElementById('cfx-'+key);
+    if(!inp)return;
+    inp.addEventListener('input',()=>{
+      _rColFilter[key]=inp.value;
+      clrBtn && (clrBtn.classList.toggle('show', !!inp.value));
+      /* tbody와 cardArea만 갱신 — 필터 입력란 DOM 유지 */
+      _refreshReceiptBody();
+    });
+    if(clrBtn){
+      clrBtn.addEventListener('click',()=>{
+        inp.value=''; _rColFilter[key]='';
+        clrBtn.classList.remove('show');
+        inp.focus();
+        _refreshReceiptBody();
+      });
+    }
+  });
+}
+
+/* tbody + cardArea만 갱신 (필터 입력란 건드리지 않음) */
+function _refreshReceiptBody(){
+  let list=receipts.filter(r=>{
+    if(r.deletedAt)return false;
+    const q=_lastQ||'';
+    if(!q)return true;
+    if([r.place,r.phone,r.addr,r.payMethod,r.memo,r.amount&&String(r.amount)]
+      .some(v=>(v||'').toLowerCase().includes(q)))return true;
+    if(r.items&&r.items.some(it=>(it.name||'').toLowerCase().includes(q)))return true;
+    return false;
+  });
+  list=_applyReceiptFilters(list);
+  const cf=_rColFilter;
+  if(cf.date)     list=list.filter(r=>(r.date||'').includes(cf.date));
+  if(cf.amount)   list=list.filter(r=>String(r.amount||'').includes(cf.amount.replace(/,/g,'')));
+  if(cf.place)    list=list.filter(r=>(r.place||'').toLowerCase().includes(cf.place.toLowerCase()));
+  if(cf.payMethod)list=list.filter(r=>(r.payMethod||'').toLowerCase().includes(cf.payMethod.toLowerCase()));
+  if(cf.addr)     list=list.filter(r=>(r.addr||'').toLowerCase().includes(cf.addr.toLowerCase()));
+  if(cf.items)    list=list.filter(r=>itemsToString(r.items).toLowerCase().includes(cf.items.toLowerCase()));
+  list=list.slice().sort((a,b)=>{
+    if(_rSort.col==='amount') return _rSort.dir==='asc'?Number(a.amount||0)-Number(b.amount||0):Number(b.amount||0)-Number(a.amount||0);
+    const colMap={date:(r)=>(r.date||'')+(r.payTime||''),place:(r)=>r.place||'',
+      payMethod:(r)=>r.payMethod||'',addr:(r)=>r.addr||'',items:(r)=>itemsToString(r.items)};
+    const fn=colMap[_rSort.col]||(()=>'');
+    const va=fn(a),vb=fn(b);
+    if(va<vb)return _rSort.dir==='asc'?-1:1;
+    if(va>vb)return _rSort.dir==='asc'?1:-1;
+    return 0;
+  });
+  const tbody=$('rTbody');
+  const wrap=$('rTableWrap');
+  const cardArea=$('rCardArea');
+  if(!list.length){ wrap.style.display='none'; cardArea.innerHTML=''; $('scanEmpty').style.display=''; return; }
+  $('scanEmpty').style.display='none'; wrap.style.display='';
+  tbody.innerHTML=list.map(r=>`<tr data-id="${esc(r.id)}">
+    <td>${esc(r.date||'')}</td>
+    <td style="white-space:nowrap">${esc(r.payTime||'')}</td>
+    <td class="truncate" style="font-weight:700">${esc(r.place||'')}</td>
+    <td style="white-space:nowrap">${r.phone?`<a class="link-tel" href="${telLink(r.phone)}">${esc(r.phone)}</a>`:''}</td>
+    <td class="num">${r.amount?numFmt(r.amount)+'원':''}</td>
+    <td>${esc(r.payMethod||'')}</td>
+    <td class="truncate">${r.addr?`<a class="link-addr" href="${naverMap(r.addr)}" target="_blank">${esc(r.addr)}</a>`:''}</td>
+    <td class="truncate" style="font-size:11px;color:var(--ink-faint)">${esc(itemsToString(r.items))}</td>
+    <td><div class="row-actions">
+      <button class="row-act-btn green" data-act="copy">📋</button>
+      <button class="row-act-btn" data-act="edit">✏️</button>
+      <button class="row-act-btn red" data-act="del">🗑</button>
+    </div></td></tr>`).join('');
+  cardArea.innerHTML=`<div class="scan-card-list">${list.map(r=>`<div class="scan-card" data-id="${esc(r.id)}">
+    <div class="top"><div class="ttl">🧾 ${esc(r.place||'(상호없음)')}</div><div class="date">${esc(r.date||'')}${r.payTime?' '+esc(r.payTime):''}</div></div>
+    ${r.amount?`<div class="amount">${numFmt(r.amount)}원</div>`:''}
+    ${r.phone?`<div class="row"><div class="label">전화</div><div class="val"><a class="link-tel" href="${telLink(r.phone)}">${esc(r.phone)}</a></div></div>`:''}
+    ${r.payMethod?`<div class="row"><div class="label">결제</div><div class="val">${esc(r.payMethod)}</div></div>`:''}
+    ${r.addr?`<div class="row"><div class="label">주소</div><div class="val"><a class="link-addr" href="${naverMap(r.addr)}" target="_blank">${esc(r.addr)}</a></div></div>`:''}
+    ${r.items&&r.items.length?`<div class="row"><div class="label">품목</div><div class="val" style="font-size:12px">${esc(itemsToString(r.items))}</div></div>`:''}
+    <div class="actions"><button class="row-act-btn green" data-act="copy">📋</button><button class="row-act-btn" data-act="edit">✏️</button><button class="row-act-btn red" data-act="del">🗑</button></div>
+    </div>`).join('')}</div>`;
+  bindRowActions(tbody,'receipt');
+  bindRowActions(cardArea,'receipt');
 }
 
 function renderCardList(q){
