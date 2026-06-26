@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1048</title>
+<title>직원 관리 v44-0626-1050</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -410,7 +410,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1048</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1050</span>
   </div>
 </div>
 
@@ -700,7 +700,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 /* ===== 설정 ===== */
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
-var APP_VERSION='v44-0626-1048';
+var APP_VERSION='v44-0626-1050';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;})();
 
 /* ===== 직원 기본 데이터 (Firebase 없을 때 폴백) ===== */
@@ -1050,155 +1050,133 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 /* =========================================================
-   PIN 잠금 시스템 v44-0626-1048
-   - shared_pin 키 (worklog 공통)
-   - 최초 실행 시 102800 자동 세팅
-   - 모든 DOM 접근은 DOMContentLoaded 안에서만
+   PIN 잠금 시스템 v44-0626-1050
+   - shared_pin 에 저장된 값 사용
+   - 없으면 '1028' 기본값
    ========================================================= */
 var PIN_LS = 'shared_pin';
 var pinBuffer = '';
 var pinMode = 'unlock';
 var pinTemp = '';
 
-function getPIN(){ try{ return localStorage.getItem(PIN_LS) || ''; }catch(e){ return '1028'; } }
-function setPIN(p){ try{ localStorage.setItem(PIN_LS, p); }catch(e){} }
-function hasPIN(){ try{ var p = localStorage.getItem(PIN_LS); return !!(p && p.length >= 4); }catch(e){ return false; } }
+function getPIN(){
+  try{
+    var p = localStorage.getItem(PIN_LS);
+    return (p && p.length >= 4) ? p : '1028';
+  }catch(e){ return '1028'; }
+}
+function setPIN(p){
+  try{ localStorage.setItem(PIN_LS, p); }catch(e){}
+}
 
 function processPIN(){
+  var stored = getPIN();
   if(pinMode === 'unlock'){
-    if(pinBuffer === getPIN()) unlockApp();
-    else pinError('PIN이 틀렸습니다');
+    if(pinBuffer === stored){ unlockApp(); }
+    else { pinShake(); setLockSub('PIN이 틀렸습니다 ❌'); setTimeout(function(){ pinBuffer=''; updateDots(); setLockSub('PIN 4자리를 입력하세요'); }, 800); }
   } else if(pinMode === 'setup1'){
-    pinTemp = pinBuffer; pinBuffer = '';
-    document.getElementById('lockSub').textContent = '한 번 더 입력하세요';
-    updateDots(); pinMode = 'setup2';
+    pinTemp = pinBuffer; pinBuffer = ''; updateDots();
+    setLockSub('한 번 더 입력하세요'); pinMode = 'setup2';
   } else if(pinMode === 'setup2'){
-    if(pinBuffer === pinTemp){ setPIN(pinBuffer); unlockApp(); toast('🔐 PIN이 설정되었습니다'); }
-    else { pinError('PIN이 일치하지 않습니다'); pinMode = 'setup1'; document.getElementById('lockSub').textContent = '다시 처음부터 입력하세요'; }
+    if(pinBuffer === pinTemp){ setPIN(pinBuffer); unlockApp(); }
+    else { pinShake(); setLockSub('일치하지 않습니다. 다시 입력하세요'); setTimeout(function(){ pinBuffer=''; pinTemp=''; updateDots(); pinMode='setup1'; }, 800); }
   } else if(pinMode === 'change1'){
-    if(pinBuffer === getPIN()){ pinTemp = ''; pinBuffer = ''; pinMode = 'change2'; document.getElementById('lockSub').textContent = '새 PIN 4자리를 입력하세요'; updateDots(); }
-    else pinError('현재 PIN이 틀렸습니다');
+    if(pinBuffer === stored){ pinTemp=''; pinBuffer=''; updateDots(); pinMode='change2'; setLockSub('새 PIN 4자리를 입력하세요'); }
+    else { pinShake(); setLockSub('현재 PIN이 틀렸습니다 ❌'); setTimeout(function(){ pinBuffer=''; updateDots(); setLockSub('현재 PIN을 입력하세요'); }, 800); }
   } else if(pinMode === 'change2'){
-    if(!pinTemp){ pinTemp = pinBuffer; pinBuffer = ''; document.getElementById('lockSub').textContent = '새 PIN을 한 번 더 입력하세요'; updateDots(); pinMode = 'change3'; }
+    pinTemp = pinBuffer; pinBuffer = ''; updateDots();
+    setLockSub('새 PIN을 한 번 더 입력하세요'); pinMode = 'change3';
   } else if(pinMode === 'change3'){
     if(pinBuffer === pinTemp){ setPIN(pinBuffer); unlockApp(); toast('🔐 PIN이 변경되었습니다'); }
-    else { pinError('PIN이 일치하지 않습니다'); pinMode = 'change2'; pinTemp = ''; document.getElementById('lockSub').textContent = '새 PIN을 다시 입력하세요'; }
+    else { pinShake(); setLockSub('일치하지 않습니다. 다시 입력하세요'); setTimeout(function(){ pinBuffer=''; pinTemp=''; updateDots(); pinMode='change2'; }, 800); }
   }
 }
 
+function setLockSub(msg){
+  var el = document.getElementById('lockSub');
+  if(el) el.textContent = msg;
+}
+function pinShake(){
+  for(var i=0;i<4;i++){
+    var d=document.getElementById('pd'+i);
+    if(d){ d.style.background='var(--red)'; d.style.borderColor='var(--red)'; }
+  }
+}
+function updateDots(){
+  for(var i=0;i<4;i++){
+    var d=document.getElementById('pd'+i);
+    if(!d) continue;
+    d.style.background = i < pinBuffer.length ? 'var(--accent)' : 'transparent';
+    d.style.borderColor = i < pinBuffer.length ? 'var(--accent)' : 'var(--border2)';
+  }
+}
 function unlockApp(){
-  var ls = document.getElementById('lockScreen');
+  pinBuffer=''; updateDots();
+  var ls=document.getElementById('lockScreen');
   if(ls) ls.classList.add('hide');
 }
 function lockApp(){
-  pinBuffer = ''; pinMode = 'unlock';
-  var ls = document.getElementById('lockScreen');
+  pinBuffer=''; pinMode='unlock';
+  var ls=document.getElementById('lockScreen');
   if(ls) ls.classList.remove('hide');
   showUnlockScreen();
 }
 function showUnlockScreen(){
-  pinMode = 'unlock'; pinBuffer = '';
+  pinMode='unlock'; pinBuffer='';
+  setLockSub('PIN 4자리를 입력하세요');
   var el;
-  el = document.getElementById('lockTitle');    if(el) el.textContent = '🔐 직원 관리';
-  el = document.getElementById('lockSub');      if(el) el.textContent = 'PIN 4자리를 입력하세요';
-  el = document.getElementById('pinPad');       if(el) el.style.display = 'grid';
-  el = document.getElementById('pinSetupBtns'); if(el) el.style.display = 'none';
-  el = document.getElementById('pinChangeBtns');if(el) el.style.display = 'block';
-  el = document.getElementById('pinDots');      if(el) el.style.display = 'flex';
-  el = document.getElementById('pinErr');       if(el) el.style.display = 'block';
+  el=document.getElementById('lockTitle');    if(el) el.textContent='🔐 직원 관리';
+  el=document.getElementById('pinPad');       if(el) el.style.display='grid';
+  el=document.getElementById('pinDots');      if(el) el.style.display='flex';
+  el=document.getElementById('pinErr');       if(el) el.style.display='none';
+  el=document.getElementById('pinSetupBtns'); if(el) el.style.display='none';
+  el=document.getElementById('pinChangeBtns');if(el) el.style.display='block';
   updateDots();
 }
-function updateDots(){
-  for(var i = 0; i < 4; i++){
-    var d = document.getElementById('pd' + i);
-    if(!d) return;
-    d.classList.toggle('filled', i < pinBuffer.length);
-    d.classList.remove('err');
-  }
-}
-function pinError(msg){
-  for(var i = 0; i < 4; i++){
-    var d = document.getElementById('pd' + i);
-    if(d) d.classList.add('err');
-  }
-  var pe = document.getElementById('pinErr');
-  if(pe) pe.textContent = msg;
-  setTimeout(function(){
-    pinBuffer = ''; updateDots();
-    var pe2 = document.getElementById('pinErr');
-    if(pe2) pe2.textContent = '';
-  }, 700);
-}
-
 function initLock(){
-  // shared_pin 없으면 102800 기본값 세팅
-  if(!hasPIN()){ setPIN('1028'); }
   showUnlockScreen();
 }
 
 document.addEventListener('DOMContentLoaded', function(){
-  // 숫자 버튼
+  /* 숫자 버튼 */
   document.querySelectorAll('.pin-btn[data-n]').forEach(function(btn){
     btn.addEventListener('click', function(){
       if(pinBuffer.length >= 4) return;
       pinBuffer += btn.dataset.n;
       updateDots();
-      if(pinBuffer.length === 4) setTimeout(processPIN, 80);
+      if(pinBuffer.length === 4) setTimeout(processPIN, 100);
     });
   });
-  // 지우기
+  /* 지우기 */
   var delBtn = document.getElementById('pinDel');
   if(delBtn) delBtn.addEventListener('click', function(){
-    if(pinBuffer.length > 0){ pinBuffer = pinBuffer.slice(0, -1); updateDots(); }
+    if(pinBuffer.length > 0){ pinBuffer = pinBuffer.slice(0,-1); updateDots(); }
   });
-  // PIN 설정하기 버튼 (최초)
-  var setupOk = document.getElementById('pinSetupOk');
-  if(setupOk) setupOk.addEventListener('click', function(){
-    pinMode = 'setup1'; pinBuffer = '';
-    var el;
-    el = document.getElementById('lockTitle');    if(el) el.textContent = 'PIN 설정';
-    el = document.getElementById('lockSub');      if(el) el.textContent = '사용할 PIN 4자리를 입력하세요';
-    el = document.getElementById('pinPad');       if(el) el.style.display = 'grid';
-    el = document.getElementById('pinSetupBtns'); if(el) el.style.display = 'none';
-    el = document.getElementById('pinDots');      if(el) el.style.display = 'flex';
-    el = document.getElementById('pinErr');       if(el) el.style.display = 'block';
-    updateDots();
-  });
-  // 잠금 없이 사용
-  var skipBtn = document.getElementById('pinSkip');
-  if(skipBtn) skipBtn.addEventListener('click', function(){ unlockApp(); });
-  // PIN 변경
+  /* PIN 변경 */
   var changeBtn = document.getElementById('pinChangeBtn');
   if(changeBtn) changeBtn.addEventListener('click', function(){
-    pinMode = 'change1'; pinBuffer = '';
-    var el = document.getElementById('lockSub');
-    if(el) el.textContent = '현재 PIN을 입력하세요';
-    var pcb = document.getElementById('pinChangeBtns');
-    if(pcb) pcb.style.display = 'none';
-    updateDots();
+    pinMode='change1'; pinBuffer=''; updateDots();
+    setLockSub('현재 PIN을 입력하세요');
+    var pcb=document.getElementById('pinChangeBtns');
+    if(pcb) pcb.style.display='none';
   });
-  // 백업모달에서 PIN 변경
+  /* 백업에서 PIN 변경 */
   var cfbBtn = document.getElementById('pinChangeFromBackup');
   if(cfbBtn) cfbBtn.addEventListener('click', function(){
-    var bm = document.getElementById('backupModal');
-    if(bm) bm.classList.remove('show');
-    pinMode = 'change1'; pinBuffer = ''; pinTemp = '';
-    var ls = document.getElementById('lockScreen');
-    if(ls) ls.classList.remove('hide');
+    var bm=document.getElementById('backupModal'); if(bm) bm.classList.remove('show');
+    pinMode='change1'; pinBuffer=''; pinTemp=''; updateDots();
+    var ls=document.getElementById('lockScreen'); if(ls) ls.classList.remove('hide');
     var el;
-    el = document.getElementById('lockTitle');    if(el) el.textContent = 'PIN 변경';
-    el = document.getElementById('lockSub');      if(el) el.textContent = '현재 PIN을 입력하세요';
-    el = document.getElementById('pinPad');       if(el) el.style.display = 'grid';
-    el = document.getElementById('pinSetupBtns'); if(el) el.style.display = 'none';
-    el = document.getElementById('pinChangeBtns');if(el) el.style.display = 'none';
-    el = document.getElementById('pinDots');      if(el) el.style.display = 'flex';
-    el = document.getElementById('pinErr');       if(el) el.style.display = 'block';
-    updateDots();
+    el=document.getElementById('lockTitle');    if(el) el.textContent='PIN 변경';
+    el=document.getElementById('pinPad');       if(el) el.style.display='grid';
+    el=document.getElementById('pinDots');      if(el) el.style.display='flex';
+    el=document.getElementById('pinSetupBtns'); if(el) el.style.display='none';
+    el=document.getElementById('pinChangeBtns');if(el) el.style.display='none';
+    setLockSub('현재 PIN을 입력하세요');
   });
-  // 잠금 초기화
+  /* 초기화 */
   initLock();
 });
-
 </script>
 </body>
 </html>
