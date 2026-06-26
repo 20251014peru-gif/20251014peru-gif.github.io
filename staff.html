@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>직원 관리 v44-0626-1248</title>
+<title>직원 관리 v44-0626-1256</title>
 <meta name="theme-color" content="#4C6EF5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -295,7 +295,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
     <a class="hdr-link green" href="worklog.html" title="업무일지">📋 업무일지</a>
     <a class="hdr-link blue" href="worklog.html#contacts" id="contactsLink" title="업체 연락처">📞 연락처</a>
     <span class="badge" id="staffCntBadge">재직 0명</span>
-    <span class="ver-badge" id="verBadge">v44-0626-1248</span>
+    <span class="ver-badge" id="verBadge">v44-0626-1256</span>
   </div>
 </div>
 
@@ -536,7 +536,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-
 
 <script>
 /* ===== 설정 ===== */
-var APP_VERSION='v44-0626-1248';
+var APP_VERSION='v44-0626-1256';
 (function(){var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;})();
 var FB_KEY='AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY';
 var PRJ='my-system-25497';
@@ -926,43 +926,43 @@ function renderCal(){
   var byDate={};
   allRecs.forEach(function(r){if(r.date)(byDate[r.date]=byDate[r.date]||[]).push(r);});
   var hireByDate={},resignByDate={};
-  // allHistory에서 입퇴사 마커 (중복 제거)
-  var histIds={}; // staffId+date 조합으로 중복 체크
-  allHistory.forEach(function(h){
-    if(!h.date)return;
-    if(h.type==='입사'){
-      var ds=hiredToDate(h.date);
-      var key=h.staffId+'_'+ds;
-      if(!histIds[key]){histIds[key]=true;(hireByDate[ds]=hireByDate[ds]||[]).push(h);}
-    }
-    if(h.type==='퇴사'||h.type==='복직'){
-      var ds=resignedToDate(h.date);
-      var key=h.staffId+'_'+h.type+'_'+ds;
-      if(!histIds[key]){histIds[key]=true;(resignByDate[ds]=resignByDate[ds]||[]).push(h);}
-    }
-  });
-  // STAFF hired/resigned — allHistory에 없는 경우만 보완
+
+  // 입사 마커: STAFF.hired 날짜만 사용 (정확한 입사일 기준)
   STAFF.forEach(function(s){
-    if(s.hired){
-      try{
-        var ds2=hiredToDate(s.hired);
-        var key2=s.id+'_'+ds2;
-        if(!histIds[key2]){
-          histIds[key2]=true;
-          (hireByDate[ds2]=hireByDate[ds2]||[]).push({staffId:s.id,staffName:s.name,type:'입사',date:ds2});
-        }
-      }catch(e){}
-    }
+    if(!s.hired)return;
+    try{
+      var ds=hiredToDate(s.hired);
+      (hireByDate[ds]=hireByDate[ds]||[]).push({staffId:s.id,staffName:s.name,type:'입사',date:ds});
+    }catch(e){}
+  });
+
+  // 퇴사/복직 마커: STAFF.resigned + allHistory 둘 다 (중복제거)
+  var resignIds={};
+  // STAFF.resigned 우선
+  STAFF.forEach(function(s){
     if(s.status==='퇴사'&&s.resigned){
       try{
-        var ds3=resignedToDate(s.resigned);
-        var key3=s.id+'_퇴사_'+ds3;
-        if(!histIds[key3]){
-          histIds[key3]=true;
-          (resignByDate[ds3]=resignByDate[ds3]||[]).push({staffId:s.id,staffName:s.name,type:'퇴사',date:ds3});
+        var ds=resignedToDate(s.resigned);
+        var key=s.id+'_퇴사_'+ds;
+        if(!resignIds[key]){
+          resignIds[key]=true;
+          (resignByDate[ds]=resignByDate[ds]||[]).push({staffId:s.id,staffName:s.name,type:'퇴사',date:ds});
         }
       }catch(e){}
     }
+  });
+  // allHistory의 퇴사/복직도 추가 (STAFF에 없는 경우)
+  allHistory.forEach(function(h){
+    if(h.type!=='퇴사'&&h.type!=='복직')return;
+    if(!h.date)return;
+    try{
+      var ds=resignedToDate(h.date);
+      var key=h.staffId+'_'+h.type+'_'+ds;
+      if(!resignIds[key]){
+        resignIds[key]=true;
+        (resignByDate[ds]=resignByDate[ds]||[]).push(h);
+      }
+    }catch(e){}
   });
   var html=days.map(function(d,i){return'<div class="cal-dow'+(i===0?' sun':'')+'">'+(d)+'</div>';}).join('');
   for(var i=0;i<first;i++)html+='<div class="cal-cell empty"></div>';
