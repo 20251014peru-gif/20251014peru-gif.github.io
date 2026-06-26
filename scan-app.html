@@ -453,6 +453,45 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
     <div id="receiptList">
       <!-- 통계 영역 (리렌더) -->
       <div id="rStatsArea"></div>
+      <!-- 컬럼 필터 영역 (테이블 위에 독립 배치) -->
+      <div id="rFilterArea" style="display:none;background:#f0f5ff;border:1.5px solid var(--blue-bd);
+        border-radius:10px;padding:8px 10px;margin-top:8px;margin-bottom:4px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:11px;font-weight:800;color:var(--ink-soft);white-space:nowrap">🔍 필터:</span>
+          <div style="display:flex;gap:4px;align-items:center;flex:1;min-width:120px">
+            <input type="text" id="cf-date" placeholder="날짜 (예:06-26)"
+              style="flex:1;min-width:80px;padding:5px 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;outline:none">
+            <button id="cfx-date" style="display:none;padding:2px 6px;border-radius:6px;border:none;background:#fde8e8;color:#c0392b;font-size:11px;cursor:pointer;font-weight:700">✕</button>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;flex:2;min-width:120px">
+            <input type="text" id="cf-place" placeholder="상호명"
+              style="flex:1;min-width:80px;padding:5px 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;outline:none">
+            <button id="cfx-place" style="display:none;padding:2px 6px;border-radius:6px;border:none;background:#fde8e8;color:#c0392b;font-size:11px;cursor:pointer;font-weight:700">✕</button>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;flex:1;min-width:80px">
+            <input type="text" id="cf-amount" placeholder="금액"
+              style="flex:1;min-width:60px;padding:5px 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;outline:none;text-align:right">
+            <button id="cfx-amount" style="display:none;padding:2px 6px;border-radius:6px;border:none;background:#fde8e8;color:#c0392b;font-size:11px;cursor:pointer;font-weight:700">✕</button>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;flex:1;min-width:80px">
+            <input type="text" id="cf-payMethod" placeholder="결제수단"
+              style="flex:1;min-width:60px;padding:5px 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;outline:none">
+            <button id="cfx-payMethod" style="display:none;padding:2px 6px;border-radius:6px;border:none;background:#fde8e8;color:#c0392b;font-size:11px;cursor:pointer;font-weight:700">✕</button>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;flex:2;min-width:120px">
+            <input type="text" id="cf-addr" placeholder="주소"
+              style="flex:1;min-width:80px;padding:5px 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;outline:none">
+            <button id="cfx-addr" style="display:none;padding:2px 6px;border-radius:6px;border:none;background:#fde8e8;color:#c0392b;font-size:11px;cursor:pointer;font-weight:700">✕</button>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;flex:2;min-width:120px">
+            <input type="text" id="cf-items" placeholder="품목"
+              style="flex:1;min-width:80px;padding:5px 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;outline:none">
+            <button id="cfx-items" style="display:none;padding:2px 6px;border-radius:6px;border:none;background:#fde8e8;color:#c0392b;font-size:11px;cursor:pointer;font-weight:700">✕</button>
+          </div>
+          <button id="cfx-all" style="padding:5px 10px;border-radius:7px;border:1.5px solid #fca5a5;
+            background:#fde8e8;color:#c0392b;font-size:11px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap">전체 초기화</button>
+        </div>
+      </div>
       <!-- 테이블: 헤더는 고정 DOM, tbody만 리렌더 -->
       <div class="scan-table" id="rTableWrap" style="display:none">
         <table>
@@ -467,17 +506,6 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
               <th class="sortable" data-sort="addr">주소</th>
               <th class="sortable" data-sort="items">품목</th>
               <th style="text-align:right">작업</th>
-            </tr>
-            <tr class="col-filter-row" id="rFilterRow">
-              <th><div class="cf-wrap"><input type="text" id="cf-date" placeholder="날짜 필터"><button class="cf-clear" id="cfx-date" title="지우기">✕</button></div></th>
-              <th></th>
-              <th><div class="cf-wrap"><input type="text" id="cf-place" placeholder="상호 필터"><button class="cf-clear" id="cfx-place" title="지우기">✕</button></div></th>
-              <th></th>
-              <th><div class="cf-wrap"><input type="text" id="cf-amount" placeholder="금액 필터" style="text-align:right"><button class="cf-clear" id="cfx-amount" title="지우기">✕</button></div></th>
-              <th><div class="cf-wrap"><input type="text" id="cf-payMethod" placeholder="결제 필터"><button class="cf-clear" id="cfx-payMethod" title="지우기">✕</button></div></th>
-              <th><div class="cf-wrap"><input type="text" id="cf-addr" placeholder="주소 필터"><button class="cf-clear" id="cfx-addr" title="지우기">✕</button></div></th>
-              <th><div class="cf-wrap"><input type="text" id="cf-items" placeholder="품목 필터"><button class="cf-clear" id="cfx-items" title="지우기">✕</button></div></th>
-              <th></th>
             </tr>
           </thead>
           <tbody id="rTbody"></tbody>
@@ -2802,12 +2830,14 @@ function renderReceiptList(q){
 
   if(!list.length){
     wrap.style.display='none';
+    const fa=$('rFilterArea'); if(fa) fa.style.display='none';
     cardArea.innerHTML='';
     $('scanEmpty').style.display='';
     return;
   }
   $('scanEmpty').style.display='none';
   wrap.style.display='';
+  const fa=$('rFilterArea'); if(fa) fa.style.display='';
 
   tbody.innerHTML=list.map(r=>`<tr data-id="${esc(r.id)}">
     <td>${esc(r.date||'')}</td>
@@ -2870,26 +2900,40 @@ function _bindReceiptTableEvents(){
       });
     });
   }
-  /* 컬럼 필터 — input 이벤트만 (DOM 재생성 없음 → IME 정상) */
+  /* 컬럼 필터 — input 이벤트 (DOM 재생성 없음 → IME 정상) */
   ['date','place','amount','payMethod','addr','items'].forEach(key=>{
     const inp=document.getElementById('cf-'+key);
     const clrBtn=document.getElementById('cfx-'+key);
-    if(!inp)return;
+    if(!inp){ console.warn('[필터] cf-'+key+' 못 찾음'); return; }
     inp.addEventListener('input',()=>{
       _rColFilter[key]=inp.value;
-      clrBtn && (clrBtn.classList.toggle('show', !!inp.value));
-      /* tbody와 cardArea만 갱신 — 필터 입력란 DOM 유지 */
+      if(clrBtn) clrBtn.style.display=inp.value?'':'none';
       _refreshReceiptBody();
     });
     if(clrBtn){
       clrBtn.addEventListener('click',()=>{
         inp.value=''; _rColFilter[key]='';
-        clrBtn.classList.remove('show');
+        clrBtn.style.display='none';
         inp.focus();
         _refreshReceiptBody();
       });
     }
   });
+  /* 전체 초기화 */
+  const allClr=document.getElementById('cfx-all');
+  if(allClr){
+    allClr.addEventListener('click',()=>{
+      ['date','place','amount','payMethod','addr','items'].forEach(key=>{
+        _rColFilter[key]='';
+        const inp=document.getElementById('cf-'+key);
+        const btn=document.getElementById('cfx-'+key);
+        if(inp) inp.value='';
+        if(btn) btn.style.display='none';
+      });
+      _refreshReceiptBody();
+    });
+  }
+  console.log('[필터] 이벤트 바인딩 완료');
 }
 
 /* tbody + cardArea만 갱신 (필터 입력란 건드리지 않음) */
@@ -4073,7 +4117,7 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260626-1612';
+  $('appVer').textContent='v20260626-1617';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
