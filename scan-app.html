@@ -512,6 +512,7 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
               <th class="sortable" data-sort="date">날짜</th>
               <th>시각</th>
               <th class="sortable" data-sort="place">상호</th>
+              <th class="sortable" data-sort="owner">구분</th>
               <th>전화</th>
               <th class="sortable num" data-sort="amount">금액</th>
               <th class="sortable" data-sort="payMethod">결제</th>
@@ -2809,7 +2810,17 @@ function _applyReceiptFilters(list){
   return list;
 }
 
-/* ── 영수증 목록 렌더 (DOM 보존 — 한글 IME 버그 방지) ── */
+/* 구분 뱃지 */
+function _ownerBadge(owner){
+  if(!owner) return '';
+  const map={
+    '회사': ['#3f7cb8','#e8f0fa','🏢'],
+    '부동산': ['#16a34a','#e6f9f0','🏠'],
+    '개인': ['#d97706','#fef3c7','👤'],
+  };
+  const [color,bg,icon]=map[owner]||['#6b7280','#f3f4f6','📂'];
+  return `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:800;background:${bg};color:${color};white-space:nowrap">${icon} ${owner}</span>`;
+}
 /* 영수증 테이블 이벤트는 DOMContentLoaded에서 바인딩 */
 
 function renderReceiptList(q){
@@ -2840,7 +2851,7 @@ function renderReceiptList(q){
       return _rSort.dir==='asc'?Number(a.amount||0)-Number(b.amount||0):Number(b.amount||0)-Number(a.amount||0);
     }
     const colMap={date:(r)=>(r.date||'')+(r.payTime||''),place:(r)=>r.place||'',
-      payMethod:(r)=>r.payMethod||'',addr:(r)=>r.addr||'',items:(r)=>itemsToString(r.items)};
+      payMethod:(r)=>r.payMethod||'',owner:(r)=>r.owner||'',addr:(r)=>r.addr||'',items:(r)=>itemsToString(r.items)};
     const fn=colMap[_rSort.col]||(r=>'');
     va=fn(a); vb=fn(b);
     if(va<vb)return _rSort.dir==='asc'?-1:1;
@@ -2874,6 +2885,7 @@ function renderReceiptList(q){
     <td>${esc(r.date||'')}</td>
     <td style="white-space:nowrap">${esc(r.payTime||'')}</td>
     <td class="truncate" style="font-weight:700">${esc(r.place||'')}</td>
+    <td style="white-space:nowrap">${_ownerBadge(r.owner)}</td>
     <td style="white-space:nowrap">${r.phone?`<a class="link-tel" href="${telLink(r.phone)}">${esc(r.phone)}</a>`:''}</td>
     <td class="num">${r.amount?numFmt(r.amount)+'원':''}</td>
     <td>${esc(r.payMethod||'')}</td>
@@ -2954,12 +2966,7 @@ function _bindReceiptTableEvents(){
   document.querySelectorAll('.cf-pay-btn').forEach(btn=>{
     btn.addEventListener('click',()=>{
       _rColFilter.payMethod=btn.dataset.pay;
-      document.querySelectorAll('.cf-pay-btn').forEach(b=>{
-        const on=b.dataset.pay===btn.dataset.pay;
-        b.style.background=on?'var(--blue)':'#fff';
-        b.style.color=on?'#fff':'var(--ink-soft)';
-        b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
-      });
+      _updateFilterBtnStyles();
       _refreshReceiptBody();
     });
   });
@@ -2967,12 +2974,7 @@ function _bindReceiptTableEvents(){
   document.querySelectorAll('.cf-owner-btn').forEach(btn=>{
     btn.addEventListener('click',()=>{
       _rColFilter.owner=btn.dataset.owner;
-      document.querySelectorAll('.cf-owner-btn').forEach(b=>{
-        const on=b.dataset.owner===btn.dataset.owner;
-        b.style.background=on?'#16a34a':'#fff';
-        b.style.color=on?'#fff':'var(--ink-soft)';
-        b.style.borderColor=on?'#16a34a':'var(--blue-bd)';
-      });
+      _updateFilterBtnStyles();
       _refreshReceiptBody();
     });
   });
@@ -2989,22 +2991,30 @@ function _bindReceiptTableEvents(){
       });
       _rColFilter.payMethod='';
       _rColFilter.owner='';
-      document.querySelectorAll('.cf-pay-btn').forEach(b=>{
-        const on=b.dataset.pay==='';
-        b.style.background=on?'var(--blue)':'#fff';
-        b.style.color=on?'#fff':'var(--ink-soft)';
-        b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
-      });
-      document.querySelectorAll('.cf-owner-btn').forEach(b=>{
-        const on=b.dataset.owner==='';
-        b.style.background=on?'#16a34a':'#fff';
-        b.style.color=on?'#fff':'var(--ink-soft)';
-        b.style.borderColor=on?'#16a34a':'var(--blue-bd)';
-      });
+      _updateFilterBtnStyles();
       _refreshReceiptBody();
     });
   }
   console.log('[필터] 이벤트 바인딩 완료');
+  /* 초기 활성 버튼 표시 */
+  _updateFilterBtnStyles();
+}
+
+function _updateFilterBtnStyles(){
+  const pm=_rColFilter.payMethod||'';
+  document.querySelectorAll('.cf-pay-btn').forEach(b=>{
+    const on=b.dataset.pay===pm;
+    b.style.background=on?'var(--blue)':'#fff';
+    b.style.color=on?'#fff':'var(--ink-soft)';
+    b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
+  });
+  const ow=_rColFilter.owner||'';
+  document.querySelectorAll('.cf-owner-btn').forEach(b=>{
+    const on=b.dataset.owner===ow;
+    b.style.background=on?'#16a34a':'#fff';
+    b.style.color=on?'#fff':'var(--ink-soft)';
+    b.style.borderColor=on?'#16a34a':'var(--blue-bd)';
+  });
 }
 
 /* tbody + cardArea만 갱신 (필터 입력란 건드리지 않음) */
@@ -3030,7 +3040,7 @@ function _refreshReceiptBody(){
   list=list.slice().sort((a,b)=>{
     if(_rSort.col==='amount') return _rSort.dir==='asc'?Number(a.amount||0)-Number(b.amount||0):Number(b.amount||0)-Number(a.amount||0);
     const colMap={date:(r)=>(r.date||'')+(r.payTime||''),place:(r)=>r.place||'',
-      payMethod:(r)=>r.payMethod||'',addr:(r)=>r.addr||'',items:(r)=>itemsToString(r.items)};
+      payMethod:(r)=>r.payMethod||'',owner:(r)=>r.owner||'',addr:(r)=>r.addr||'',items:(r)=>itemsToString(r.items)};
     const fn=colMap[_rSort.col]||(()=>'');
     const va=fn(a),vb=fn(b);
     if(va<vb)return _rSort.dir==='asc'?-1:1;
@@ -3046,6 +3056,7 @@ function _refreshReceiptBody(){
     <td>${esc(r.date||'')}</td>
     <td style="white-space:nowrap">${esc(r.payTime||'')}</td>
     <td class="truncate" style="font-weight:700">${esc(r.place||'')}</td>
+    <td style="white-space:nowrap">${_ownerBadge(r.owner)}</td>
     <td style="white-space:nowrap">${r.phone?`<a class="link-tel" href="${telLink(r.phone)}">${esc(r.phone)}</a>`:''}</td>
     <td class="num">${r.amount?numFmt(r.amount)+'원':''}</td>
     <td>${esc(r.payMethod||'')}</td>
@@ -4243,7 +4254,7 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260626-1628';
+  $('appVer').textContent='v20260626-1638';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
