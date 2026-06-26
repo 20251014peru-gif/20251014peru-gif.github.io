@@ -53,13 +53,13 @@ body{background:#F0F0F5;color:#1A1A2E;font-family:'Apple SD Gothic Neo','Malgun 
 .new-tag{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;background:#EF4444;color:#fff;padding:2px 6px;border-radius:20px;}
 
 /* 퀵액세스 바 */
-.quick-bar{background:#fff;border-radius:14px;border:1.5px solid #E5E7EB;padding:14px 8px;margin-bottom:12px;display:flex;justify-content:space-around;align-items:center;gap:4px;}
-.quick-item{display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;color:#1A1A2E;flex:1;padding:8px 4px;border-radius:12px;transition:background 0.15s;-webkit-tap-highlight-color:transparent;}
-.quick-item:hover{background:#F3F4F6;}
-.quick-item:active{background:#EDE9FE;transform:scale(0.95);}
-.quick-icon{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;}
-.quick-nm{font-size:11px;font-weight:700;color:#374151;text-align:center;line-height:1.3;white-space:nowrap;}
-.quick-label{font-size:9px;color:#9CA3AF;margin-top:2px;white-space:nowrap;}
+.quick-bar{background:transparent;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.quick-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-decoration:none;color:#1A1A2E;padding:20px 10px;border-radius:16px;background:#fff;border:1.5px solid #E5E7EB;transition:box-shadow 0.15s,transform 0.1s;-webkit-tap-highlight-color:transparent;min-height:110px;}
+.quick-item:hover{box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+.quick-item:active{transform:scale(0.96);box-shadow:none;}
+.quick-icon{width:72px;height:72px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:36px;}
+.quick-nm{font-size:14px;font-weight:700;color:#374151;text-align:center;line-height:1.3;}
+.quick-label{font-size:11px;color:#9CA3AF;text-align:center;}
 
 .quote-box{background:#fff;border-radius:14px;border:1.5px solid #E5E7EB;padding:16px 20px;margin-top:10px;text-align:center;}
 .quote-text{font-size:13px;color:#374151;line-height:1.7;font-style:italic;}
