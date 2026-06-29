@@ -4248,14 +4248,14 @@ function renderMonthView(){
   $("calGrid").innerHTML=html;
   $("calGrid").querySelectorAll("[data-d]").forEach(el=>{
     el.addEventListener("click",(e)=>{
-      // 개별 항목(wtitle, otitle) 클릭 → 수정창 바로 열기
+      // 개별 항목(wtitle, otitle) 클릭 → 조회창 먼저
       const item = e.target.closest("[data-id][data-kind]");
       if(item){
         e.stopPropagation();
         const kind=item.dataset.kind, id=item.dataset.id;
         if(kind==="cleaning") openCleaningEditor(id);
         else if(kind==="expense") openExpenseEditor(id);
-        else openEditor(kind, id);
+        else openViewer(kind, id);
         return;
       }
       // 빈 셀 또는 날짜 클릭 → 상세보기
@@ -7629,7 +7629,7 @@ function runGlobalSearch(q){
       setTimeout(()=>{
         if(kind==="cleaning") openCleaningEditor(id);
         else if(kind==="expense") openExpenseEditor(id);
-        else openEditor(kind, id);
+        else openViewer(kind, id);
       }, 200);
     });
   });
