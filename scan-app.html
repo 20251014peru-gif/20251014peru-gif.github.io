@@ -871,14 +871,14 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
       <button class="hbtn" id="scanDetailClose">✕</button>
     </div>
     <div class="modal-body" id="scanDetailBody"></div>
-    <div class="modal-foot" style="flex-wrap:wrap;gap:6px">
-      <button class="btn btn-ghost btn-flex" id="scanDetailCloseBtn">닫기</button>
-      <button class="btn btn-green" id="scanDetailVcard" style="display:none">📥 vCard</button>
-      <!-- 사진 다운로드/공유 — 사진 있을 때만 표시 -->
-      <button class="btn" id="scanDetailDownload" style="display:none;background:#e6f9f0;color:#16a34a;border:1.5px solid #86efac">📥 사진저장</button>
-      <button class="btn" id="scanDetailShare" style="display:none;background:#f0f5ff;color:var(--blue);border:1.5px solid var(--blue-bd)">📤 공유</button>
-      <button class="btn btn-red" id="scanDetailDel">🗑 삭제</button>
-      <button class="btn btn-blue btn-flex" id="scanDetailEdit">✏️ 수정</button>
+    <div class="modal-foot" style="flex-direction:column;gap:6px;padding:10px 14px">
+      <button class="btn btn-green" id="scanDetailVcard" style="display:none;width:100%">📥 vCard</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%">
+        <button class="btn" id="scanDetailDownload" style="display:none;background:#e6f9f0;color:#16a34a;border:1.5px solid #86efac;height:44px;font-size:13px">📥 사진저장</button>
+        <button class="btn btn-blue" id="scanDetailEdit" style="height:44px;font-size:14px;font-weight:800;grid-column:var(--edit-col,2)">✏️ 수정</button>
+        <button class="btn" id="scanDetailShare" style="display:none;background:#f0f5ff;color:var(--blue);border:1.5px solid var(--blue-bd);height:44px;font-size:13px">📤 공유</button>
+        <button class="btn btn-ghost" id="scanDetailCloseBtn" style="height:44px;font-size:13px;grid-column:var(--close-col,2)">✕ 닫기</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3312,8 +3312,22 @@ async function openScanDetail(type,id){
     if(item.owner) html+=_detailRow('📂 구분',esc(item.owner));
     if(item.addr) html+=_detailRow('📍 주소',`<a class="link-addr" href="${naverMap(item.addr)}" target="_blank">${esc(item.addr)} 🗺</a>`);
     if(item.items&&item.items.length){
-      const itemsHtml=item.items.map(it=>`<div style="padding:2px 0">${esc(it.name||'')}${it.qty>1?' × '+it.qty:''}${it.subtotal?' · '+numFmt(it.subtotal)+'원':''}</div>`).join('');
-      html+=_detailRow('🛒 품목',itemsHtml);
+      const itemsHtml=item.items.map(it=>{
+        const hasTax=it.tax&&it.tax>0;
+        const nameHtml=`<div style="font-size:13px;font-weight:700;color:var(--ink);word-break:keep-all;margin-bottom:4px">${esc(it.name||'')}${hasTax?'<span style="display:inline-block;font-size:9px;padding:1px 5px;background:#fff3cd;color:#856404;border-radius:4px;font-weight:700;margin-left:5px;vertical-align:middle">VAT</span>':''}</div>`;
+        let detailHtml='';
+        if(hasTax){
+          detailHtml=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
+            ${[['단가',numFmt(it.price||0)+'원'],['수량',(it.qty||1)+'개'],['세금',numFmt(it.tax)+'원'],['합계',numFmt(it.subtotal||0)+'원']].map(([l,v])=>`<div style="font-size:10px;color:var(--ink-faint)">${l}<div style="font-size:11px;font-weight:700;color:var(--ink);margin-top:1px">${v}</div></div>`).join('')}
+          </div>`;
+        }else{
+          const cols=[['단가',numFmt(it.price||0)+'원'],['수량',(it.qty||1)+'개']];
+          if(it.subtotal) cols.push(['소계',numFmt(it.subtotal)+'원']);
+          detailHtml=`<div style="display:flex;gap:14px">${cols.map(([l,v])=>`<div style="font-size:10px;color:var(--ink-faint)">${l}<div style="font-size:11px;font-weight:700;color:var(--ink);margin-top:1px">${v}</div></div>`).join('')}</div>`;
+        }
+        return `<div style="margin-bottom:6px;padding:7px 9px;background:var(--blue-soft);border-radius:8px;border:1px solid var(--blue-bd)">${nameHtml}${detailHtml}</div>`;
+      }).join('');
+      html+=_detailRow('🛒 품목',`<div style="margin-top:2px">${itemsHtml}</div>`);
     }
     if(item.memo) html+=_detailRow('📝 메모',`<div style="white-space:pre-wrap">${esc(item.memo)}</div>`);
   }else if(type==='card'){
@@ -3344,7 +3358,7 @@ async function openScanDetail(type,id){
       if(data&&wrap){
         wrap.innerHTML=`<img src="${data}" alt="" style="max-width:100%;max-height:320px;border-radius:8px;cursor:zoom-in;display:block;margin:0 auto" id="_scanDetImg">`;
         $('_scanDetImg').onclick=()=>showImg(data,title);
-        /* 사진 버튼 활성화 */
+        /* 사진 버튼 활성화 — 2열 그리드 완성 */
         window._scanDetailImgData=data;
         $('scanDetailDownload').style.display='';
         $('scanDetailShare').style.display='';
@@ -3423,7 +3437,7 @@ $('scanDetailEdit').onclick=()=>{
   else if(type==='card'){const c=cards.find(x=>x.id===id);if(c)openCardModal(c);}
   else if(type==='text'){const t=texts.find(x=>x.id===id);if(t)openTextModal(t);}
 };
-$('scanDetailDel').onclick=async()=>{
+if($('scanDetailDel'))$('scanDetailDel').onclick=async()=>{
   if(!_scanDetailCtx)return;
   const {type,id}=_scanDetailCtx;
   // 휴지통으로 이동 (실제 삭제 대신 deletedAt 마킹, 30일 후 자동 영구삭제)
@@ -3761,20 +3775,24 @@ $('receiptSave').onclick=async()=>{
       subtotal:parseFloat((row.querySelector('.rrow-sub')||{}).value)||0,
     });
   });
-  // 사진은 IDB에 저장, 객체에는 photoId만
+  const _saveBtn=$('receiptSave');
+  const _saveProg=$('receiptAiProgress');
+  _saveBtn.disabled=true;_saveBtn.textContent='⏳ 저장 중…';
+  if(_saveProg){_saveProg.textContent='📤 저장하는 중입니다. 잠시만 기다려주세요…';_saveProg.classList.add('show');}
+  try{
   let photoId='';
   let photoUrl='';
   if(_rcptImg){
     photoId=(_rcptEditing&&_rcptEditing.photoId)||('r_'+uid());
     try{await idbPut(photoId,_rcptImg);}catch(e){toast('사진 저장 실패: '+e.message);return;}
-    // Storage 업로드 (Firebase 연결됐을 때만)
+    if(_saveProg)_saveProg.textContent='☁️ 클라우드에 업로드 중…';
     if(_fbStorage){
       const url=await uploadPhotoToStorage(`receipts/${photoId}.jpg`,_rcptImg);
       if(url)photoUrl=url;
     }
-    // 이미 photoUrl이 있고 새로 못 받았으면 유지
     if(!photoUrl&&_rcptEditing&&_rcptEditing.photoUrl)photoUrl=_rcptEditing.photoUrl;
   }
+  if(_saveProg)_saveProg.textContent='💾 데이터 저장 중…';
   const data={
     id:_rcptEditing?_rcptEditing.id:uid(),
     date:$('r_date').value||today(),
@@ -3791,11 +3809,14 @@ $('receiptSave').onclick=async()=>{
   if(_rcptEditing){
     const idx=receipts.findIndex(r=>r.id===_rcptEditing.id);
     if(idx>=0)receipts[idx]=data;
-    // 구버전 photo 필드 정리
     delete receipts[idx].photo;
   }else receipts.unshift(data);
   if(!saveReceipts())return;
   closeReceiptModal();renderScanList();toast('✅ 저장됐어요');
+  }finally{
+    _saveBtn.disabled=false;_saveBtn.textContent='💾 저장';
+    if(_saveProg)_saveProg.classList.remove('show');
+  }
 };
 $('receiptDelete').onclick=()=>{
   if(!_rcptEditing)return;
@@ -3932,12 +3953,17 @@ $('cardCancel').onclick=closeCardModal;
 $('cardSave').onclick=async()=>{
   const name=$('c_name').value.trim();
   if(!name){toast('이름을 입력하세요');return;}
-  // 사진은 IDB에 저장
+  const _cSaveBtn=$('cardSave');
+  const _cProg=$('cardAiProgress');
+  _cSaveBtn.disabled=true;_cSaveBtn.textContent='⏳ 저장 중…';
+  if(_cProg){_cProg.textContent='📤 저장하는 중입니다. 잠시만 기다려주세요…';_cProg.classList.add('show');}
+  try{
   let photoId='';
   let photoUrl='';
   if(_cardImg){
     photoId=(_cardEditing&&_cardEditing.photoId)||('c_'+uid());
     try{await idbPut(photoId,_cardImg);}catch(e){toast('사진 저장 실패: '+e.message);return;}
+    if(_cProg)_cProg.textContent='☁️ 클라우드에 업로드 중…';
     if(_fbStorage){
       const url=await uploadPhotoToStorage(`cards/${photoId}.jpg`,_cardImg);
       if(url)photoUrl=url;
@@ -3966,6 +3992,10 @@ $('cardSave').onclick=async()=>{
   }else cards.unshift(data);
   if(!saveCards())return;
   closeCardModal();renderScanList();toast('✅ 저장됐어요');
+  }finally{
+    _cSaveBtn.disabled=false;_cSaveBtn.textContent='💾 저장';
+    if(_cProg)_cProg.classList.remove('show');
+  }
 };
 $('cardDelete').onclick=()=>{
   if(!_cardEditing)return;
@@ -4093,18 +4123,24 @@ $('textCancel').onclick=closeTextModal;
 $('textSave').onclick=async()=>{
   const title=$('t_title').value.trim();
   if(!title){toast('제목을 입력하세요');return;}
-  // 사진은 IDB에 저장
+  const _tSaveBtn=$('textSave');
+  const _tProg=$('textAiProgress');
+  _tSaveBtn.disabled=true;_tSaveBtn.textContent='⏳ 저장 중…';
+  if(_tProg){_tProg.textContent='📤 저장하는 중입니다. 잠시만 기다려주세요…';_tProg.classList.add('show');}
+  try{
   let photoId='';
   let photoUrl='';
   if(_textImg){
     photoId=(_textEditing&&_textEditing.photoId)||('t_'+uid());
     try{await idbPut(photoId,_textImg);}catch(e){toast('사진 저장 실패: '+e.message);return;}
+    if(_tProg)_tProg.textContent='☁️ 클라우드에 업로드 중…';
     if(_fbStorage){
       const url=await uploadPhotoToStorage(`texts/${photoId}.jpg`,_textImg);
       if(url)photoUrl=url;
     }
     if(!photoUrl&&_textEditing&&_textEditing.photoUrl)photoUrl=_textEditing.photoUrl;
   }
+  if(_tProg)_tProg.textContent='💾 데이터 저장 중…';
   const data={
     id:_textEditing?_textEditing.id:uid(),
     date:$('t_date').value||today(),
@@ -4122,6 +4158,10 @@ $('textSave').onclick=async()=>{
   }else texts.unshift(data);
   if(!saveTexts())return;
   closeTextModal();renderScanList();toast('✅ 저장됐어요');
+  }finally{
+    _tSaveBtn.disabled=false;_tSaveBtn.textContent='💾 저장';
+    if(_tProg)_tProg.classList.remove('show');
+  }
 };
 $('textDelete').onclick=()=>{
   if(!_textEditing)return;
