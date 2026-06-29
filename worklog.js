@@ -3325,12 +3325,20 @@ document.addEventListener("keydown", e=>{
 }, true);
 
 // ── 엔터: 셀(input) 안에서도, 셀 밖에서도 저장. textarea·select는 기본동작 유지 ──
+// Shift+Enter: textarea 안에서 줄바꿈 허용
 document.addEventListener("keydown", e=>{
   if(e.key!=="Enter") return;
   const overlay = $("overlay");
   if(!overlay || !overlay.classList.contains("show")) return;
   const tag = (document.activeElement||{}).tagName||"";
-  if(tag==="TEXTAREA"||tag==="SELECT") return;
+  if(tag==="SELECT") return;
+  if(tag==="TEXTAREA"){
+    if(e.shiftKey) return; // Shift+Enter → 줄바꿈 허용
+    e.preventDefault();
+    $("mSave").click();
+    return;
+  }
+  if(e.shiftKey) return; // input에서도 Shift+Enter는 무시
   e.preventDefault();
   $("mSave").click();
 });
@@ -4389,7 +4397,7 @@ function renderDayDetail(){
   if(mt.length) h+=`<div class="detail-block"><div class="bh">👥 회의</div>${mt.map(cardMeeting).join("")}</div>`;
   if(dv.length) h+=`<div class="detail-block"><div class="bh">📢 전달사항</div>${dv.map(cardDeliver).join("")}</div>`;
   box.innerHTML=h;
-  wireCards(box, true); // 달력: 클릭 시 바로 수정창
+  wireCards(box, false); // 달력: 클릭 시 조회창 → 수정 버튼으로 수정
   wireRep();
 }
 function cardSchedule(s){
