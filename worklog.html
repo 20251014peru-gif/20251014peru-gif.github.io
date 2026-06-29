@@ -8525,7 +8525,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
     /* 폼 필드 읽기전용 제어 */
     var sh=g('expV2Sheet');
     if(sh){
-      sh.querySelectorAll('input,select,textarea,button:not([id^="expV2Close"]):not([id^="expV2EditBtn"]):not([id^="expV2DelViewBtn"]):not([id^="expV2CloseViewBtn"]):not([id^="expV2Cancel"]):not([id^="expV2Save"]):not([id^="expV2Del"])').forEach(function(el){
+      sh.querySelectorAll('input,select,textarea,button:not([id^="expV2Close"]):not([id^="expV2EditBtn"]):not([id^="expV2DelViewBtn"]):not([id^="expV2CloseViewBtn"]):not([id^="expV2Cancel"]):not([id^="expV2Save"]):not([id^="expV2Del"]):not([id^="expV2PickReceipt"]):not([id^="expV2PickCard"])').forEach(function(el){
         if(isView){ el.setAttribute('disabled',''); el.style.opacity='0.72'; el.style.pointerEvents='none'; }
         else { el.removeAttribute('disabled'); el.style.opacity=''; el.style.pointerEvents=''; }
       });
