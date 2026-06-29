@@ -251,15 +251,19 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 }
 
 /* 품목 행 */
-.item-row{display:grid;grid-template-columns:1fr 60px 90px 90px 28px;gap:5px;margin-bottom:4px;align-items:center}
+.item-row{display:grid;grid-template-columns:1fr 28px;gap:5px;margin-bottom:8px;align-items:start}
+.item-row .rrow-name{grid-column:1;height:38px;padding:0 10px;border:1.5px solid var(--blue-bd);
+  border-radius:7px;font-size:14px;background:#fff;outline:none;width:100%;box-sizing:border-box;font-family:inherit}
+.item-row .rrow-name:focus{border-color:var(--blue)}
+.item-row-sub{grid-column:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:4px}
+.item-row-sub-label{font-size:10px;color:var(--ink-faint);font-weight:700;margin-bottom:2px;text-align:center}
 .item-row input{height:34px;padding:0 8px;border:1.5px solid var(--blue-bd);
   border-radius:7px;font-size:12px;background:#fff;outline:none;width:100%;box-sizing:border-box;font-family:inherit}
 .item-row input.qty{text-align:center}
 .item-row input.sub{background:#f7faff;font-weight:700}
-.item-row .del-btn{width:28px;height:28px;border:none;background:#fde8e8;color:#c0392b;
-  border-radius:7px;cursor:pointer;font-size:13px}
-.items-head{display:grid;grid-template-columns:1fr 60px 90px 90px 28px;gap:5px;
-  font-size:10px;color:var(--ink-faint);font-weight:700;padding:0 2px;margin-bottom:4px}
+.item-row .del-btn{width:28px;height:38px;border:none;background:#fde8e8;color:#c0392b;
+  border-radius:7px;cursor:pointer;font-size:13px;grid-row:1;grid-column:2}
+.items-head{display:none}
 
 /* 토스트 */
 .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
@@ -3622,11 +3626,14 @@ function renderReceiptItems(items){
 }
 function receiptItemRowHtml(it,i){
   return `<div class="item-row" data-row="${i}">
-    <input type="text" class="rrow-name" placeholder="품목명" value="${esc(it.name||'')}">
-    <input type="number" class="rrow-qty qty" value="${it.qty||1}">
-    <input type="number" class="rrow-price" placeholder="단가" value="${it.price||''}">
-    <input type="number" class="rrow-sub sub" placeholder="소계" value="${it.subtotal||''}">
-    <button class="del-btn" data-row-del="${i}">✕</button></div>`;
+    <input type="text" class="rrow-name" placeholder="품목명 (전체 입력)" value="${esc(it.name||'')}">
+    <button class="del-btn" data-row-del="${i}">✕</button>
+    <div class="item-row-sub">
+      <div><div class="item-row-sub-label">수량</div><input type="number" class="rrow-qty qty" value="${it.qty||1}"></div>
+      <div><div class="item-row-sub-label">단가</div><input type="number" class="rrow-price" placeholder="0" value="${it.price||''}"></div>
+      <div><div class="item-row-sub-label">소계</div><input type="number" class="rrow-sub sub" placeholder="0" value="${it.subtotal||''}"></div>
+    </div>
+  </div>`;
 }
 function bindReceiptItemEvents(){
   const list=$('r_itemsList');
