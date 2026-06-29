@@ -8525,7 +8525,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
     /* 폼 필드 읽기전용 제어 */
     var sh=g('expV2Sheet');
     if(sh){
-      sh.querySelectorAll('input,select,textarea,button:not([id^="expV2Close"]):not([id^="expV2EditBtn"]):not([id^="expV2DelViewBtn"]):not([id^="expV2CloseViewBtn"]):not([id^="expV2Cancel"]):not([id^="expV2Save"]):not([id^="expV2Del"]):not([id^="expV2PickReceipt"]):not([id^="expV2PickCard"])').forEach(function(el){
+      sh.querySelectorAll('input,select,textarea,button:not([id^="expV2Close"]):not([id^="expV2EditBtn"]):not([id^="expV2DelViewBtn"]):not([id^="expV2CloseViewBtn"]):not([id^="expV2Cancel"]):not([id^="expV2Save"]):not([id^="expV2Del"])').forEach(function(el){
         if(isView){ el.setAttribute('disabled',''); el.style.opacity='0.72'; el.style.pointerEvents='none'; }
         else { el.removeAttribute('disabled'); el.style.opacity=''; el.style.pointerEvents=''; }
       });
@@ -9798,38 +9798,53 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 /* ─────────────────────────────────────────────────────────
    📓 일지 빠른 진입 메뉴
    - 점검일지(wl_insp_v43)와 운영실무(wl_docs_v43)에서 이름/메모 매칭
-   - 일일/주간/월간 분류
+   - 일일/주간/월간 분류 (사용자가 직접 추가/삭제/섹션 관리 가능)
    ───────────────────────────────────────────────────────── */
 (function(){
-  /* 분류별 키워드 → 매칭할 일지명 (사용자가 등록한 것과 매칭) */
-  var QUICK_JOURNAL_GROUPS = [
+  var STORAGE_KEY = 'wl_quick_journal_groups_v1';
+
+  /* 기본값 */
+  var DEFAULT_GROUPS = [
     {
-      title: '📅 일일',
-      color: '#3f7cb8',
+      id: 'g1', title: '📅 일일', color: '#3f7cb8',
       items: [
-        {label:'일일업무일지', keywords:['일일업무','일일 업무','daily']},
-        {label:'수전일지', keywords:['수전','수전일지']},
-        {label:'엘리베이터일지', keywords:['엘리베이터','승강기','elevator']},
+        {id:'i1', label:'일일업무일지', keywords:['일일업무','일일 업무','daily']},
+        {id:'i2', label:'수전일지', keywords:['수전','수전일지']},
+        {id:'i3', label:'엘리베이터일지', keywords:['엘리베이터','승강기','elevator']},
       ]
     },
     {
-      title: '📆 주간',
-      color: '#0891b2',
+      id: 'g2', title: '📆 주간', color: '#0891b2',
       items: [
-        {label:'전기설비 주간점검', keywords:['전기설비 주간','전기 주간','주간점검']},
-        {label:'비상발전기 점검', keywords:['비상발전기','발전기']},
-        {label:'주간 회의록', keywords:['주간회의','주간 회의','회의록']},
+        {id:'i4', label:'전기설비 주간점검', keywords:['전기설비 주간','전기 주간','주간점검']},
+        {id:'i5', label:'비상발전기 점검', keywords:['비상발전기','발전기']},
+        {id:'i6', label:'주간 회의록', keywords:['주간회의','주간 회의','회의록']},
       ]
     },
     {
-      title: '🗓 월간',
-      color: '#7c3aed',
+      id: 'g3', title: '🗓 월간', color: '#7c3aed',
       items: [
-        {label:'전기설비 점검(월)', keywords:['전기설비 점검','전기 월간','월간 전기']},
-        {label:'전기안전 교육', keywords:['전기안전','안전교육','전기 교육']},
+        {id:'i7', label:'전기설비 점검(월)', keywords:['전기설비 점검','전기 월간','월간 전기']},
+        {id:'i8', label:'전기안전 교육', keywords:['전기안전','안전교육','전기 교육']},
       ]
     }
   ];
+
+  function uid(){ return Math.random().toString(36).slice(2,8); }
+
+  function loadGroups(){
+    try{
+      var s = localStorage.getItem(STORAGE_KEY);
+      if(s) return JSON.parse(s);
+    }catch(e){}
+    return JSON.parse(JSON.stringify(DEFAULT_GROUPS));
+  }
+
+  function saveGroups(groups){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(groups)); }catch(e){}
+  }
+
+  var QUICK_JOURNAL_GROUPS = loadGroups();
 
   function getJournalData(){
     var insp = [], docs = [];
@@ -9867,6 +9882,209 @@ console.log('[expenseV2] 지출 모달 패치 로드');
     }
   }
 
+  /* ── 관리 모드 렌더 ── */
+  function renderManageMode(sheet){
+    QUICK_JOURNAL_GROUPS = loadGroups();
+    var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+      +'<h3 style="margin:0;font-size:17px;color:#1a2f45">⚙️ 일지 목록 관리</h3>'
+      +'<button id="qjManageClose" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer">✕</button>'
+      +'</div>';
+    QUICK_JOURNAL_GROUPS.forEach(function(grp){
+      html += '<div style="margin-bottom:14px;border:1.5px solid '+grp.color+'33;border-radius:10px;overflow:hidden">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:'+grp.color+'15">';
+      html += '<input data-grp-title="'+grp.id+'" value="'+grp.title+'" style="border:none;background:transparent;font-size:13px;font-weight:800;color:'+grp.color+';outline:none;flex:1">';
+      html += '<button data-del-grp="'+grp.id+'" style="border:none;background:#fde8e8;color:#c0392b;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;flex-shrink:0">섹션 삭제</button>';
+      html += '</div>';
+      html += '<div style="padding:8px 12px;display:flex;flex-direction:column;gap:6px">';
+      grp.items.forEach(function(it){
+        html += '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#f7faff;border-radius:8px;border:1px solid #dbe6f4">';
+        html += '<div style="flex:1">';
+        html += '<input data-item-label="'+it.id+'" value="'+it.label+'" placeholder="목록 제목" style="width:100%;border:none;background:transparent;font-size:13px;font-weight:700;color:#1a2f45;outline:none;margin-bottom:2px">';
+        html += '<input data-item-kw="'+it.id+'" value="'+it.keywords.join(', ')+'" placeholder="키워드 (쉼표 구분)" style="width:100%;border:none;background:transparent;font-size:11px;color:#7a92a8;outline:none">';
+        html += '</div>';
+        html += '<button data-del-item="'+it.id+'" data-del-grp-id="'+grp.id+'" style="border:none;background:#fde8e8;color:#c0392b;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;flex-shrink:0">🗑</button>';
+        html += '</div>';
+      });
+      html += '<button data-add-item="'+grp.id+'" style="margin-top:4px;width:100%;padding:6px;border:1.5px dashed '+grp.color+';background:transparent;color:'+grp.color+';border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ 항목 추가</button>';
+      html += '</div></div>';
+    });
+    html += '<button id="qjAddSection" style="width:100%;padding:8px;border:1.5px dashed #94a3b8;background:transparent;color:#64748b;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px">+ 섹션 추가</button>';
+    html += '<div style="display:flex;gap:8px;justify-content:flex-end">';
+    html += '<button id="qjManageSave" style="padding:8px 20px;background:#3f7cb8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">저장</button>';
+    html += '<button id="qjManageBack" style="padding:8px 16px;background:#f1f5f9;color:#4a6a8a;border:none;border-radius:8px;font-size:13px;cursor:pointer">← 돌아가기</button>';
+    html += '</div>';
+    sheet.innerHTML = html;
+
+    /* 섹션 삭제 */
+    sheet.querySelectorAll('[data-del-grp]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(!confirm('이 섹션을 삭제할까요?')) return;
+        QUICK_JOURNAL_GROUPS = QUICK_JOURNAL_GROUPS.filter(function(g){ return g.id !== btn.dataset.delGrp; });
+        saveGroups(QUICK_JOURNAL_GROUPS);
+        renderManageMode(sheet);
+      });
+    });
+
+    /* 항목 삭제 */
+    sheet.querySelectorAll('[data-del-item]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var gid = btn.dataset.delGrpId, iid = btn.dataset.delItem;
+        var grp = QUICK_JOURNAL_GROUPS.find(function(g){ return g.id===gid; });
+        if(!grp) return;
+        grp.items = grp.items.filter(function(i){ return i.id!==iid; });
+        saveGroups(QUICK_JOURNAL_GROUPS);
+        renderManageMode(sheet);
+      });
+    });
+
+    /* 항목 추가 */
+    sheet.querySelectorAll('[data-add-item]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        collectEdits(sheet);
+        var grp = QUICK_JOURNAL_GROUPS.find(function(g){ return g.id===btn.dataset.addItem; });
+        if(!grp) return;
+        grp.items.push({id:'i'+uid(), label:'새 항목', keywords:[]});
+        saveGroups(QUICK_JOURNAL_GROUPS);
+        renderManageMode(sheet);
+      });
+    });
+
+    /* 섹션 추가 */
+    var addSecBtn = document.getElementById('qjAddSection');
+    if(addSecBtn) addSecBtn.addEventListener('click', function(){
+      collectEdits(sheet);
+      QUICK_JOURNAL_GROUPS.push({id:'g'+uid(), title:'📋 새 섹션', color:'#64748b', items:[]});
+      saveGroups(QUICK_JOURNAL_GROUPS);
+      renderManageMode(sheet);
+    });
+
+    /* 저장 */
+    var saveBtn = document.getElementById('qjManageSave');
+    if(saveBtn) saveBtn.addEventListener('click', function(){
+      collectEdits(sheet);
+      saveGroups(QUICK_JOURNAL_GROUPS);
+      if(typeof toast==='function') toast('✅ 저장됐어요');
+      renderMainMode(sheet);
+    });
+
+    /* 돌아가기 */
+    var backBtn = document.getElementById('qjManageBack');
+    if(backBtn) backBtn.addEventListener('click', function(){
+      collectEdits(sheet);
+      saveGroups(QUICK_JOURNAL_GROUPS);
+      renderMainMode(sheet);
+    });
+
+    /* 닫기 */
+    var closeBtn = document.getElementById('qjManageClose');
+    if(closeBtn) closeBtn.addEventListener('click', function(){
+      var ov = document.getElementById('quickJournalOverlay');
+      if(ov) ov.remove();
+    });
+  }
+
+  /* 편집 중인 값 수집 */
+  function collectEdits(sheet){
+    sheet.querySelectorAll('[data-grp-title]').forEach(function(inp){
+      var grp = QUICK_JOURNAL_GROUPS.find(function(g){ return g.id===inp.dataset.grpTitle; });
+      if(grp) grp.title = inp.value;
+    });
+    sheet.querySelectorAll('[data-item-label]').forEach(function(inp){
+      QUICK_JOURNAL_GROUPS.forEach(function(g){
+        var it = g.items.find(function(i){ return i.id===inp.dataset.itemLabel; });
+        if(it) it.label = inp.value;
+      });
+    });
+    sheet.querySelectorAll('[data-item-kw]').forEach(function(inp){
+      QUICK_JOURNAL_GROUPS.forEach(function(g){
+        var it = g.items.find(function(i){ return i.id===inp.dataset.itemKw; });
+        if(it) it.keywords = inp.value.split(',').map(function(k){ return k.trim(); }).filter(Boolean);
+      });
+    });
+  }
+
+  /* ── 메인 모드 렌더 ── */
+  function renderMainMode(sheet){
+    QUICK_JOURNAL_GROUPS = loadGroups();
+    var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+      +'<h3 style="margin:0;font-size:18px;color:#1a2f45">📓 일지 빠른 진입</h3>'
+      +'<div style="display:flex;gap:6px;align-items:center">'
+      +'<button id="qjManageBtn" style="border:1.5px solid #dbe6f4;background:#f7faff;color:#3f7cb8;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer">⚙️ 관리</button>'
+      +'<button id="qjMainClose" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer">✕</button>'
+      +'</div></div>';
+    QUICK_JOURNAL_GROUPS.forEach(function(grp){
+      html += '<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:800;color:'+grp.color+';margin-bottom:8px;padding:6px 10px;background:'+grp.color+'15;border-radius:8px">'+grp.title+'</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:6px">';
+      grp.items.forEach(function(it){
+        var matches = findMatching(it.keywords);
+        var hasMatch = matches.length > 0;
+        var latestPath = hasMatch ? (matches[0].path||'') : '';
+        var subText = hasMatch ? ('최신: '+(matches[0].name||'').slice(0,30)+(matches[0].month?(' / '+matches[0].month):'')) : '등록된 파일 없음 (점검일지·운영실무에 추가하세요)';
+        html += '<div style="padding:10px 12px;background:'+(hasMatch?'#f7faff':'#f5f5f5')+';border:1.5px solid '+(hasMatch?'#dbe6f4':'#e5e5e5')+';border-radius:10px">';
+        html += '  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">';
+        html += '    <div><div style="font-weight:700;font-size:14px;color:#1a2f45">'+it.label+'</div><div style="font-size:11px;color:#7a92a8;margin-top:2px">'+subText+'</div></div>';
+        if(hasMatch){
+          html += '<div style="display:flex;gap:4px;flex-shrink:0"><button data-open-path="'+encodeURIComponent(latestPath)+'" class="btn-action btn-action-sm btn-action-primary" style="padding:0 10px;height:28px;font-size:11px">▶ 열기</button>';
+          if(matches.length > 1){
+            html += '<button data-show-all="'+it.label+'" data-grp-id="'+grp.id+'" class="btn-action btn-action-sm" style="padding:0 8px;height:28px;font-size:11px">+'+(matches.length-1)+'개</button>';
+          }
+          html += '</div>';
+        }
+        html += '  </div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    });
+    html += '<div style="font-size:11px;color:#94a3b8;text-align:center;margin-top:10px">💡 점검일지·운영실무 탭에 일지를 등록하면 자동으로 매칭됩니다</div>';
+    sheet.innerHTML = html;
+
+    /* 관리 버튼 */
+    var manBtn = document.getElementById('qjManageBtn');
+    if(manBtn) manBtn.addEventListener('click', function(){ renderManageMode(sheet); });
+
+    /* 닫기 */
+    var closeBtn = document.getElementById('qjMainClose');
+    if(closeBtn) closeBtn.addEventListener('click', function(){
+      var ov = document.getElementById('quickJournalOverlay');
+      if(ov) ov.remove();
+    });
+
+    /* 열기 버튼 */
+    sheet.querySelectorAll('[data-open-path]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        openJournalFile({path:decodeURIComponent(btn.dataset.openPath)});
+      });
+    });
+
+    /* +N개 버튼 */
+    sheet.querySelectorAll('[data-show-all]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var label = btn.dataset.showAll;
+        var gid = btn.dataset.grpId;
+        var grp = QUICK_JOURNAL_GROUPS.find(function(g){ return g.id===gid; });
+        var item = grp ? grp.items.find(function(i){ return i.label===label; }) : null;
+        if(!item) return;
+        var matches = findMatching(item.keywords);
+        var listHtml = '<h4 style="margin:0 0 12px">📂 '+label+' - 전체 ('+matches.length+'개)</h4>';
+        listHtml += '<div style="display:flex;flex-direction:column;gap:6px">';
+        matches.forEach(function(d){
+          listHtml += '<div data-open-this="'+encodeURIComponent(d.path||'')+'" style="padding:10px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:8px;cursor:pointer"><div style="font-weight:700;font-size:13px">'+(d.name||'')+'</div><div style="font-size:11px;color:#7a92a8">'+(d.month||'')+' · '+(d._source||'')+'</div></div>';
+        });
+        listHtml += '</div><div style="margin-top:14px;text-align:right"><button id="qjSubClose" class="btn-action btn-action-sm">닫기</button></div>';
+        sheet.innerHTML = listHtml;
+        sheet.querySelectorAll('[data-open-this]').forEach(function(el){
+          el.addEventListener('click', function(){
+            openJournalFile({path:decodeURIComponent(el.dataset.openThis)});
+          });
+        });
+        var sc = document.getElementById('qjSubClose');
+        if(sc) sc.addEventListener('click', function(){ renderMainMode(sheet); });
+      });
+    });
+  }
+
   function openMainModal(){
     var ov = document.getElementById('quickJournalOverlay');
     if(!ov){
@@ -9881,64 +10099,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
       document.body.appendChild(ov);
     }
     var sheet = ov.querySelector('#quickJournalSheet');
-    var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="margin:0;font-size:18px;color:#1a2f45">📓 일지 빠른 진입</h3><button onclick="document.getElementById(\'quickJournalOverlay\').remove()" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer">✕</button></div>';
-    QUICK_JOURNAL_GROUPS.forEach(function(grp){
-      html += '<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:800;color:'+grp.color+';margin-bottom:8px;padding:6px 10px;background:'+grp.color+'15;border-radius:8px">'+grp.title+'</div>';
-      html += '<div style="display:flex;flex-direction:column;gap:6px">';
-      grp.items.forEach(function(it){
-        var matches = findMatching(it.keywords);
-        var hasMatch = matches.length > 0;
-        var latestPath = hasMatch ? (matches[0].path||'') : '';
-        var subText = hasMatch ? ('최신: '+(matches[0].name||'').slice(0,30)+(matches[0].month?(' / '+matches[0].month):'')) : '등록된 파일 없음 (점검일지·운영실무에 추가하세요)';
-        html += '<div data-quickjournal="'+it.label+'" style="padding:10px 12px;background:'+(hasMatch?'#f7faff':'#f5f5f5')+';border:1.5px solid '+(hasMatch?'#dbe6f4':'#e5e5e5')+';border-radius:10px;cursor:'+(hasMatch?'pointer':'default')+';transition:all .12s">';
-        html += '  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">';
-        html += '    <div><div style="font-weight:700;font-size:14px;color:#1a2f45">'+it.label+'</div><div style="font-size:11px;color:#7a92a8;margin-top:2px">'+subText+'</div></div>';
-        if(hasMatch){
-          html += '<div style="display:flex;gap:4px;flex-shrink:0"><button data-open-path="'+encodeURIComponent(latestPath)+'" class="btn-action btn-action-sm btn-action-primary" style="padding:0 10px;height:28px;font-size:11px">▶ 열기</button>';
-          if(matches.length > 1){
-            html += '<button data-show-all="'+it.label+'" class="btn-action btn-action-sm" style="padding:0 8px;height:28px;font-size:11px">+'+(matches.length-1)+'개</button>';
-          }
-          html += '</div>';
-        }
-        html += '  </div>';
-        html += '</div>';
-      });
-      html += '</div></div>';
-    });
-    html += '<div style="font-size:11px;color:#94a3b8;text-align:center;margin-top:10px">💡 점검일지·운영실무 탭에 일지를 등록하면 자동으로 매칭됩니다</div>';
-    sheet.innerHTML = html;
-
-    /* 클릭 핸들러 */
-    sheet.querySelectorAll('[data-open-path]').forEach(function(btn){
-      btn.addEventListener('click', function(e){
-        e.stopPropagation();
-        var path = decodeURIComponent(btn.dataset.openPath);
-        openJournalFile({path:path});
-      });
-    });
-    sheet.querySelectorAll('[data-show-all]').forEach(function(btn){
-      btn.addEventListener('click', function(e){
-        e.stopPropagation();
-        var label = btn.dataset.showAll;
-        var grp = QUICK_JOURNAL_GROUPS.find(g=>g.items.some(i=>i.label===label));
-        var item = grp ? grp.items.find(i=>i.label===label) : null;
-        if(!item) return;
-        var matches = findMatching(item.keywords);
-        var listHtml = '<h4 style="margin:0 0 12px">📂 '+label+' - 전체 ('+matches.length+'개)</h4>';
-        listHtml += '<div style="display:flex;flex-direction:column;gap:6px">';
-        matches.forEach(function(d){
-          listHtml += '<div data-open-this="'+encodeURIComponent(d.path||'')+'" style="padding:10px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:8px;cursor:pointer"><div style="font-weight:700;font-size:13px">'+(d.name||'')+'</div><div style="font-size:11px;color:#7a92a8">'+(d.month||'')+' · '+(d._source||'')+'</div></div>';
-        });
-        listHtml += '</div><div style="margin-top:14px;text-align:right"><button onclick="document.getElementById(\'quickJournalOverlay\').remove()" class="btn-action btn-action-sm">닫기</button></div>';
-        sheet.innerHTML = listHtml;
-        sheet.querySelectorAll('[data-open-this]').forEach(function(el){
-          el.addEventListener('click', function(){
-            var p = decodeURIComponent(el.dataset.openThis);
-            openJournalFile({path:p});
-          });
-        });
-      });
-    });
+    renderMainMode(sheet);
   }
 
   /* 헤더 버튼 바인딩 */
@@ -9956,10 +10117,9 @@ console.log('[expenseV2] 지출 모달 패치 로드');
       }
     }, 100);
   }
-  /* 그룹 데이터 설정 노출 (나중에 사용자가 수정 가능하도록) */
   window.QUICK_JOURNAL_GROUPS = QUICK_JOURNAL_GROUPS;
   window.openMainModal = openMainModal;
-  console.log('[journal] 일지 빠른진입 시스템 로드');
+  console.log('[journal] 일지 빠른진입 시스템 로드 (관리 기능 포함)');
 })();
 
 /* ─────────────────────────────────────────────────────────

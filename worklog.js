@@ -4114,7 +4114,23 @@ function bindCalControls(){
   }
 }
 function dateLabel(k){ if(!k) return "(날짜없음)"; const [y,m,d]=k.split("-"); const w=["일","월","화","수","목","금","토"][new Date(k+"T00:00:00").getDay()]; return `${Number(m)}월 ${Number(d)}일 (${w})`; }
-function otherText(o){ if(o.kind==="plan") return o.text||"계획"; if(o.kind==="memo") return o.title||o.body||"메모"; if(o.kind==="call") return o.name||o.content||"통화"; if(o.kind==="meeting") return o.title||"회의"; if(o.kind==="deliver") return o.title||o.content||"전달"; if(o.kind==="schedule") return o.title||"예정"; return ""; }
+function otherText(o){
+  if(o.kind==="plan") return o.text||"계획";
+  if(o.kind==="memo"){
+    const t=o.title||"메모";
+    const b=(o.body||o.text||"").replace(/\n/g," ");
+    return b ? t+" "+b : t;
+  }
+  if(o.kind==="call"){
+    const n=o.name||"통화";
+    const c=(o.content||"").replace(/\n/g," ");
+    return c ? n+" "+c : n;
+  }
+  if(o.kind==="meeting") return o.title||"회의";
+  if(o.kind==="deliver") return o.title||o.content||"전달";
+  if(o.kind==="schedule") return o.title||"예정";
+  return "";
+}
 const CAL_KIND_COLOR={work:"#3f7cb8",vacation:"#9a6f17",plan:"#15803d",call:"#0e7490",memo:"#7c3aed",meeting:"#334155",deliver:"#be123c",schedule:"#0891b2"};
 const CAL_KIND_LABEL={work:"🛠 업무",vacation:"🌴 휴가",plan:"📋 계획",call:"📞 통화",memo:"📝 메모",meeting:"👥 회의",deliver:"📢 전달",schedule:"📅 예정"};
 const OTHER_ORDER=["plan","call","memo","meeting","deliver"];
@@ -4338,6 +4354,13 @@ function renderYearView(){
 }
 function renderDayDetail(){
   const box=$("dayDetail"); if(!selDay){ box.innerHTML=""; return; }
+  /* card-acts 한 줄 강제 스타일 */
+  if(!document.getElementById('_cardActsStyle')){
+    const st=document.createElement('style');
+    st.id='_cardActsStyle';
+    st.textContent=`.card-acts{display:flex;flex-direction:row;gap:6px;margin-top:6px;flex-wrap:nowrap}.mini-btn{white-space:nowrap}`;
+    document.head.appendChild(st);
+  }
   const w=entries.filter(e=>e.kind==="work"&&e.date===selDay).sort(byDateDesc);
   const v=entries.filter(e=>e.kind==="vacation"&&datesBetween(e.start,e.end).includes(selDay));
   const p=entries.filter(e=>e.kind==="plan"&&e.date===selDay);
@@ -4420,7 +4443,16 @@ function buildReport(day){
   const mt=entries.filter(e=>e.kind==="meeting"&&D(e.date)===day).sort(byDateDesc);
   const dv=entries.filter(e=>e.kind==="deliver"&&D(e.date)===day).sort(byDateDesc);
   const cl=entries.filter(e=>e.kind==="cleaning"&&D(e.date)===day).sort(byDateDesc);
-  let h=`<h1>업무일지 보고서</h1><div class="sub">${dateLabel(day)} · 출력일 ${todayStr()}</div>`;
+  /* 날짜 한 줄로 크게 표시, 출력일 제거 */
+  const dayObj = new Date(day);
+  const weekNames = ['일','월','화','수','목','금','토'];
+  const dayNum = dayObj.getDate();
+  const weekName = weekNames[dayObj.getDay()];
+  const monthNum = dayObj.getMonth()+1;
+  let h=`<div style="display:flex;align-items:center;gap:16px;margin-bottom:8px">`
+    +`<span style="font-size:48px;font-weight:900;color:#1a2f45;line-height:1">${dayNum}</span>`
+    +`<span style="font-size:22px;font-weight:800;color:#1a2f45">${monthNum}월 ${dayNum}일 (${weekName}) 업무일지 보고서</span>`
+    +`</div><hr style="border:none;border-top:2px solid #1a2f45;margin:6px 0 12px">`;
   const sec=(title,items,cls)=> items.length?`<div class="rsec ${cls}"><h2>${title} (${items.length}건)</h2>`+items.join("")+`</div>`:"";
   h+=sec("업무", w.map(en=>`<div class="it"><b>[${esc(en.status||"")}]</b> ${esc(en.floor||"")} ${esc(en.loc||"")} ${esc(en.title||"")}${en.detail?" — "+esc(en.detail):""}${en.field?" ["+esc(en.field)+"]":""}${en.material?" / 자재: "+esc(en.material):""}${Number(en.cost)?" / "+won(en.cost)+"원":""}${en.improve?"<br>↳ 개선: "+esc(en.improve):""}</div>`), "work");
   h+=sec("휴가", v.map(x=>`<div class="it">🌴 ${esc(x.name||"")} (${esc(x.vtype||"")}) ${x.end&&x.end!==x.start?esc(x.start)+" ~ "+esc(x.end):esc(x.start||"")}${x.note?" — "+esc(x.note):""}</div>`), "vac");
