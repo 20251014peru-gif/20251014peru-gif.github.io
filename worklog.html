@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<!-- PWA 설정 v44-0625 -->
+<!-- PWA 설정 v44-0629 -->
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#3f7cb8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0626-1719</title>
+<title>업무일지 v44-0629-1900</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1287,7 +1287,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0626-1719</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0629-1900</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -3299,7 +3299,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   // 취소
   const catCancel = document.getElementById('v43CatCancel');
   if(catCancel) catCancel.addEventListener('click', () => catOverlay && catOverlay.classList.remove('show'));
-  if(catOverlay) catOverlay.addEventListener('click', e => { if(e.target===catOverlay) catOverlay.classList.remove('show'); });
+  /* catOverlay 배경 클릭 닫기 비활성화 */
 
   // 기록 저장 후 목록 갱신
   function refreshV43(){
@@ -4514,7 +4514,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   setTimeout(waitAndRender, 800);
 })();
 
-/* ===== 구글 캘린더 연동 v44-0625 ===== */
+/* ===== 구글 캘린더 연동 v44-0629 ===== */
 (function(){
   var GCAL_CLIENT_ID = '65353408416-kih200tt2r9vtndl6n0vvr94freejuf7.apps.googleusercontent.com';
   var GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks';
@@ -4641,7 +4641,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         description = en.memo||'';
     }
 
-    // 알림 (v44-0625: 반복 이벤트 + 알림 강화)
+    // 알림 (v44-0629: 반복 이벤트 + 알림 강화)
     var reminders = { useDefault: false, overrides: [] };
     if(en.kind==='schedule'){
       var alertMin = parseInt(en.alertBefore)||0;
@@ -4760,7 +4760,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // ── 단건 재동기화 (카드 ⚠캘 버튼용) ────────────────────
   // ══════════════════════════════════════════════════════
-  // ── 구글 Tasks 연동 (v44-0625) ─────────────────────────
+  // ── 구글 Tasks 연동 (v44-0629) ─────────────────────────
   // ══════════════════════════════════════════════════════
   var TASKS_LIST_ID = '@default'; // 기본 Tasks 목록
   var TASKS_LS = 'wl_tasks_listid';
@@ -4934,7 +4934,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   window.gcalSyncSchedule = syncScheduleAll;   // schedule: 캘린더+Tasks 동시
 
   // ══════════════════════════════════════════════════════
-  // ── 구글 캘린더 → 업무일지 역방향 동기화 (v44-0625) ───
+  // ── 구글 캘린더 → 업무일지 역방향 동기화 (v44-0629) ───
   // ══════════════════════════════════════════════════════
 
   // 마지막 pull 시각 저장
@@ -5090,8 +5090,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   // 전역 노출
   window.gcalPull = pullFromGCal;
 
-  // ── 구글 Tasks → 업무일지 역방향 동기화 (v44-0625) ────
-  // ── 구글 Tasks → 업무일지 역방향 동기화 (v44-0626 개선) ─
+  // ── 구글 Tasks → 업무일지 역방향 동기화 (v44-0629) ────
+  // ── 구글 Tasks → 업무일지 역방향 동기화 (v44-0629 개선) ─
   function pullFromTasks(silent){
     if(!accessToken) return;
 
@@ -5945,7 +5945,7 @@ function makeDocTab(cfg){
       if(e.key==='Enter'){ e.preventDefault(); document.getElementById('fldMgrAdd').click(); }
     });
     document.getElementById('fldMgrClose').addEventListener('click', ()=>ov.remove());
-    ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+    /* 배경 클릭 닫기 비활성화 */
   }
 
   function openModal(id){
@@ -6821,7 +6821,7 @@ makeDocTab({
       if(e.key==='Enter'){ e.preventDefault(); document.getElementById('bulkTypeMgrAdd').click(); }
     });
     document.getElementById('bulkTypeMgrClose').addEventListener('click',()=>ov.remove());
-    ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+    /* 배경 클릭 닫기 비활성화 */
   }
 
   // v44: 분야 관리 (일괄정리 안에서)
@@ -6919,7 +6919,7 @@ makeDocTab({
       if(e.key==='Enter'){ e.preventDefault(); document.getElementById('bulkFieldMgrAdd').click(); }
     });
     document.getElementById('bulkFieldMgrClose').addEventListener('click',()=>ov.remove());
-    ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+    /* 배경 클릭 닫기 비활성화 */
   }
 
   // 종류 관리 버튼 — 탭 선택 후 모달
@@ -7030,7 +7030,7 @@ document.getElementById('yearMgrAddBtn')?.addEventListener('click',()=>{
   if(typeof toast==='function') toast('추가됐어요');
 });
 document.getElementById('yearMgrClose')?.addEventListener('click',()=>document.getElementById('yearMgrModal').classList.remove('show'));
-document.getElementById('yearMgrModal')?.addEventListener('click',e=>{ if(e.target===document.getElementById('yearMgrModal')) document.getElementById('yearMgrModal').classList.remove('show'); });
+/* yearMgrModal 배경 클릭 닫기 비활성화 */
 
 // 점검일지 년관리 버튼
 document.getElementById('inspYearMgrBtn')?.addEventListener('click',()=>{
@@ -7203,7 +7203,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
       /* 모달 이벤트 */
       ov.addEventListener('click', function(e) {
-        if (e.target === ov) closeEditModal();
+        /* 배경 클릭 닫기 비활성화 */
       });
       document.getElementById('stickyV44EditCancel').addEventListener('click', closeEditModal);
       document.getElementById('stickyV44EditSave').addEventListener('click', function() {
@@ -8095,7 +8095,7 @@ function ensureOverlay() {
   document.body.appendChild(ov);
 
   g('expV2Close').addEventListener('click', closeOverlay);
-  ov.addEventListener('click', function(e){ if(e.target===ov) closeOverlay(); });
+  /* 배경 클릭 닫기 비활성화 */
   g('expV2Save').addEventListener('click', saveExpenseV2);
   g('expV2Del').addEventListener('click', deleteExpenseV2);
 }
@@ -8350,7 +8350,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0626-1719';
+    if(el) el.textContent = 'v44-0629-1900';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8875,7 +8875,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
       if(e.key==='Enter') document.getElementById('purposeMgrAdd').click();
     });
     document.getElementById('purposeMgrClose').addEventListener('click',function(){ ov.remove(); renderChips(); });
-    ov.addEventListener('click',function(e){ if(e.target===ov){ ov.remove(); renderChips(); } });
+    /* 배경 클릭 닫기 비활성화 */
   }
 
   /* ── 이벤트 바인딩 ── */
@@ -8894,7 +8894,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
       ov.addEventListener('click',function(e){
         // 드래그로 overlay까지 온 경우 무시 (mousedown이 sheet 안에서 시작됐으면 닫지 않음)
         if(_expOvMousedownTarget && _expOvMousedownTarget!==ov) return;
-        if(e.target===ov) closeExpV2();
+        /* 배경 클릭 닫기 비활성화 */
       });
     }
     var sv=g('expV2Save'); if(sv&&!sv._b){sv._b=true;sv.addEventListener('click',saveExpV2);}
@@ -10093,9 +10093,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
       ov.className = 'overlay';
       ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:11000;display:flex;align-items:center;justify-content:center;padding:16px';
       ov.innerHTML = '<div id="quickJournalSheet" style="background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:85vh;overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,.22);padding:18px"></div>';
-      ov.addEventListener('click', function(e){
-        if(e.target === ov) ov.remove();
-      });
+      /* 배경 클릭으로 닫히지 않음 — 닫기 버튼으로만 닫기 */
       document.body.appendChild(ov);
     }
     var sheet = ov.querySelector('#quickJournalSheet');
@@ -10151,7 +10149,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
     document.body.appendChild(ov);
 
     function close(){ ov.remove(); }
-    ov.addEventListener('click', function(e){ if(e.target === ov) close(); });
+    /* 배경 클릭 닫기 비활성화 */
     ov.querySelector('#viewerClose').addEventListener('click', close);
     ov.querySelector('#viewerCloseBtn').addEventListener('click', close);
     if(onEdit) ov.querySelector('#viewerEdit').addEventListener('click', function(){
@@ -10496,7 +10494,7 @@ window.makeModalDraggable = function(modal){
 </script>
   
 <script>
-/* ===== PWA Service Worker 등록 v44-0625 ===== */
+/* ===== PWA Service Worker 등록 v44-0629 ===== */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     navigator.serviceWorker.register('/sw.js')

@@ -99,7 +99,7 @@ function openMatFieldMgr(){
   });
   document.getElementById("mfmNew").addEventListener("keydown",e=>{ if(e.key==="Enter") document.getElementById("mfmAdd").click(); });
   document.getElementById("mfmClose").addEventListener("click",()=>ov.remove());
-  ov.addEventListener("click",e=>{ if(e.target===ov) ov.remove(); });
+  /* 배경 클릭 닫기 비활성화 */
 }
 
 // 분야별 색상 자동 배정 (10가지 색 풀)
@@ -1400,7 +1400,7 @@ function openNewMaterialModal(prefilledName, onSaved){
   // 닫기 처리
   const close = ()=>{ ov.remove(); };
   document.getElementById('newMatCancel').addEventListener('click', close);
-  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  /* 배경 클릭 닫기 비활성화 */
   // 저장
   document.getElementById('newMatSave').addEventListener('click', ()=>{
     const name = (document.getElementById('newMatName').value||'').trim();
@@ -1734,7 +1734,7 @@ function openMatPickerPopup(){
     ov.remove();
   });
   document.getElementById('matPopClose').addEventListener('click',()=>ov.remove());
-  ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+  /* 배경 클릭 닫기 비활성화 */
   document.getElementById('matPopQty').addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();doConfirm();} });
 }
 
@@ -1843,7 +1843,7 @@ function openVendorPickerPopup(){
     ov.remove();
   });
   document.getElementById('vpClose').addEventListener('click',()=>ov.remove());
-  ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+  /* 배경 클릭 닫기 비활성화 */
 }
 
 function renderWorkModal(data, mode){
@@ -2350,7 +2350,7 @@ function openTpContactForm(phoneInpRef, defaultType){
   document.getElementById('tpCfSaveReg').addEventListener('click',function(){doSave('등록업체');});
   document.getElementById('tpCfSaveOne').addEventListener('click',function(){doSave('일회성');});
   document.getElementById('tpCfX').addEventListener('click',function(){ov.remove();});
-  ov.addEventListener('click',function(e){if(e.target===ov)ov.remove();});
+  /* 배경 클릭 닫기 비활성화 */
   setTimeout(function(){var n=document.getElementById('tpCfName');if(n)n.focus();},80);
 }
 
@@ -2485,7 +2485,7 @@ function showSpellCorrectPopup(items, onSave, kind){
     ov.remove();
     onSave();
   });
-  ov.addEventListener("click", e=>{ if(e.target===ov) ov.remove(); });
+  /* 배경 클릭 닫기 비활성화 */
 }
 
 function _doSaveWorkEntry(){
@@ -3174,7 +3174,7 @@ function vrow(k,v){ return `<div class="vrow"><div class="vk">${esc(k)}</div><di
 $("vClose").addEventListener("click",()=>$("viewOverlay").classList.remove("show"));
 $("vEdit").addEventListener("click",()=>{ $("viewOverlay").classList.remove("show"); openEditor(vKind,vId); });
 $("vDel").addEventListener("click",()=>{ if(!vId) return; $("viewOverlay").classList.remove("show"); deleteWithUndo(vId, KIND_LABEL[vKind]||"항목"); });
-$("viewOverlay").addEventListener("click",e=>{ if(e.target===$("viewOverlay")) $("viewOverlay").classList.remove("show"); });
+/* viewOverlay 배경 클릭 닫기 비활성화 */
 $("m-cam").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("m-file").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 
@@ -5261,7 +5261,7 @@ function siteCardHTML(e){
 let catMgrKind=null;
 function wireCatMgr(){
   $("catMgrClose").addEventListener("click",()=>$("catMgrOverlay").classList.remove("show"));
-  $("catMgrOverlay").addEventListener("click",e=>{ if(e.target===$("catMgrOverlay")) $("catMgrOverlay").classList.remove("show"); });
+  /* catMgrOverlay 배경 클릭 닫기 비활성화 */
   $("catAddBtn").addEventListener("click",catAddNew);
   $("catNewName").addEventListener("keydown",e=>{ if(e.key==="Enter") catAddNew(); });
 }
@@ -6549,7 +6549,7 @@ function openQuickEditMaterial(id){
   }, 100);
   const close = ()=>{ ov.remove(); };
   document.getElementById('qeCancel').addEventListener('click', close);
-  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  /* 배경 클릭 닫기 비활성화 */
   // 저장
   document.getElementById('qeSave').addEventListener('click', ()=>{
     const name = (document.getElementById('qeName').value||'').trim();
@@ -6696,10 +6696,10 @@ function wireCleaningModal(){
     linkedStocks.forEach(sid=>deleteRecord(sid));
     deleteWithUndo(id, "청소일지");
   });
-  $("cleaningOverlay").addEventListener("click",e=>{ if(e.target===$("cleaningOverlay")) $("cleaningOverlay").classList.remove("show"); });
+  /* cleaningOverlay 배경 클릭 닫기 비활성화 */
   // 명단 관리 모달
   $("cleanStaffClose").addEventListener("click",()=>$("cleanStaffOverlay").classList.remove("show"));
-  $("cleanStaffOverlay").addEventListener("click",e=>{ if(e.target===$("cleanStaffOverlay")) $("cleanStaffOverlay").classList.remove("show"); });
+  /* cleanStaffOverlay 배경 클릭 닫기 비활성화 */
   $("cleanStaffAdd").addEventListener("click",()=>{
     CLEAN_STAFF.push({name:"", floors:"", tissue:0, towel:0, special:""});
     saveCleanStaff(); renderCleanStaffList();
@@ -8755,7 +8755,7 @@ function wireExpenseModal(){
     $("expenseOverlay").classList.remove("show");
     deleteWithUndo(id, "지출 내역");
   });
-  $("expenseOverlay").addEventListener("click",e=>{ if(e.target===$("expenseOverlay")) $("expenseOverlay").classList.remove("show"); });
+  /* expenseOverlay 배경 클릭 닫기 비활성화 */
 }
 
 // 엑셀 복사 — 품의서 양식에 붙여넣을 수 있도록
