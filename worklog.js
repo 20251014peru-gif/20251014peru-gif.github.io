@@ -293,7 +293,7 @@ const SCHEMA={
     {k:"date",label:"예정일",type:"date",req:true,full:true},
     {k:"startTime",label:"시작 시간",type:"timepick",full:true},
     {k:"scheduleType",label:"반복 유형",type:"select",opts:["일회성","월간반복","연간반복"],full:true},
-    {k:"title",label:"예정 내용",type:"text",full:true,req:true},
+    {k:"title",label:"예정 내용",type:"textarea",full:true,req:true},
     {k:"memo",label:"메모(선택)",type:"textarea",full:true},
     {k:"alertBefore",label:"🔔 알림 설정",type:"alertbefore",full:true},
     {k:"alertMethod",label:"알림 방법",type:"select",opts:["팝업","이메일","팝업+이메일"],full:true},
