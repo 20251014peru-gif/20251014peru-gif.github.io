@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0630-1218";
+const APP_VERSION = "v44-0630-1248";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1067,7 +1067,7 @@ function renderAll(){
     ["deliver", renderDeliver], ["calendar", renderCalendar],
     ["filelink", renderFileLink], ["site", renderSite], ["password", renderPassword],
     ["material", renderMaterial], ["cleaning", renderCleaning],
-    ["expense", renderExpense], ["accident", renderAccidents], ["diag", renderDiag]
+    ["expense", renderExpense], ["accident", renderAccidents], ["progress", renderProgressTasks], ["diag", renderDiag]
   ];
   fns.forEach(([name, fn])=>{
     try{ fn(); }catch(err){ console.error(`render${name} 에러:`, err); }
@@ -1224,6 +1224,7 @@ function defaults(kind){
   if(kind==="stock") return {date:t, stockType:"입고", qty:1, unitPrice:0, amount:0};
   if(kind==="expense") return {date:t, expType:"개인지출", amount:0};
   if(kind==="accident") return {date:t, time:nowTime(), accType:"누수", status:"⏳ 접수", partyType:"임차인", reported:"없음"};
+  if(kind==="progress") return {status:"견적중"};
   return {date:t};
 }
 function fieldHTML(f){
@@ -3599,7 +3600,7 @@ $("mSave").addEventListener("click",async ()=>{
   }
   // v44: 진행업무면 처리 단계 함께 저장 (분야/업체/연락처 포함)
   if(mKind==="progress"){
-    obj.steps = (_progressSteps||[]).filter(s=>s.action||s.field||s.vendor);
+    obj.steps = (typeof _progressSteps!=="undefined" && Array.isArray(_progressSteps)) ? _progressSteps.filter(s=>s.action||s.field||s.vendor) : [];
   }
   let savedId=mId;
   if(mId) updateRecord(mId,obj); else { obj.createdAt=Date.now(); if(mKind==="plan") obj.done=false; if(mKind==="filelink"||mKind==="site") obj.starred=false; const nr=addRecord(obj); savedId=nr?nr.id:obj.id; }
