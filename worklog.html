@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v44-0629-1900</title>
+<title>업무일지 v44-0630-1222</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -351,14 +351,14 @@
 
 /* 🐞 디버그 패널 */
 .dbg-btn {
-  position: fixed; top: 10px; right: 10px; z-index: 9999;
+  position: fixed; bottom: 10px; left: 10px; z-index: 9999;
   background: rgba(255,80,80,.85); color: #fff;
   border: none; border-radius: 8px; padding: 4px 10px;
   font-size: 12px; font-weight: 700; cursor: pointer;
   font-family: inherit; touch-action: manipulation;
 }
 .dbg-panel {
-  position: fixed; top: 40px; right: 10px; z-index: 9998;
+  position: fixed; bottom: 40px; left: 10px; z-index: 9998;
   background: rgba(0,0,0,.9); color: #0f0; border-radius: 10px;
   padding: 10px; width: 88vw; max-width: 400px;
   max-height: 50vh; overflow: auto;
@@ -1113,8 +1113,9 @@
 
 <!-- 🐞 디버그 패널 -->
 <button class="dbg-btn" onclick="window.toggleDbg&&window.toggleDbg()">🐞</button>
+<!-- ➕기록추가 / 📓일지 FAB: 화면 우측 세로 고정 (원래 위치/색) -->
 <button id="v43FabHeader" title="기록 추가" style="
-  position:fixed; right:0; top:62px;
+  position:fixed; right:0; top:100px;
   width:56px; height:108px;
   background:linear-gradient(170deg,#5b9bd5 0%,#2563a8 60%,#1a4a8a 100%);
   color:#fff; border:none; border-radius:18px 0 0 18px;
@@ -1127,13 +1128,12 @@
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
-  <span style="font-size:11px;font-weight:700;letter-spacing:.5px;opacity:.9">추가</span>
+  <span style="font-size:11px;font-weight:700;letter-spacing:.5px;opacity:.9">기록추가</span>
 </button>
 <!-- 📋 일지 FAB: 추가 버튼 아래, 드래그 연동 -->
-<button id="v43FabDiary" title="업무일지" style="position:fixed;right:0;top:178px;width:56px;height:72px;background:linear-gradient(170deg,#f59e0b 0%,#d97706 100%);color:#fff;border:none;border-radius:18px 0 0 18px;cursor:pointer;z-index:9997;box-shadow:-3px 0 18px rgba(217,119,6,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;touch-action:manipulation;transition:width .2s,box-shadow .2s;">
+<button id="v43FabDiary" title="업무일지" style="position:fixed;right:0;top:216px;width:56px;height:72px;background:linear-gradient(170deg,#f59e0b 0%,#d97706 100%);color:#fff;border:none;border-radius:18px 0 0 18px;cursor:pointer;z-index:9997;box-shadow:-3px 0 18px rgba(217,119,6,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;touch-action:manipulation;transition:width .2s,box-shadow .2s;">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
   <span style="font-size:10px;font-weight:700;letter-spacing:.3px">일지</span>
-</button>
 <script>
 document.getElementById("v43FabDiary").addEventListener("click", function(){
   setTimeout(function(){ if(typeof window.openMainModal==="function") window.openMainModal(); }, 0);
@@ -1282,12 +1282,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   <div id="dbgLog"></div>
 </div>
 
-<header>
-  <div class="wrap">
+<header style="position:relative">
+  <div class="wrap" style="position:relative">
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0629-1900</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0630-1222</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1314,22 +1314,28 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     </div>
 
     <!-- 상단 탭: 달력 / 점검일지 / 자재 / 비번 / 자가진단 / AI -->
+    <!-- 1행: 주요탭 + ⚙️폴더탭관리 -->
     <div class="v43-tabs" id="v43Tabs">
       <button class="v43-tab active" data-v43tab="main">📋 기록</button>
       <button class="v43-tab" data-v43tab="expense">💰 지출</button>
       <button class="v43-tab" data-v43tab="memo">📝 메모</button>
       <button class="v43-tab" data-v43tab="calendar">📅 달력</button>
+      <button class="v43-tab" data-v43tab="accident">🚨 사고</button>
+      <button class="v43-tab" data-v43tab="progress">📋 진행업무</button>
+      <button class="v43-tab" data-v43tab="material">📦 자재</button>
+      <button class="v43-tab" data-v43tab="password">🔐 비번</button>
+      <button class="v43-tab" data-v43tab="diag">🔧 진단</button>
+      <button class="v43-tab" data-v43tab="ai">🤖 AI</button>
+      <button id="tabMgrBtn" class="v43-tab" style="background:#f7faff;color:#3f7cb8">⚙️ 폴더탭관리</button>
+    </div>
+    <!-- 2행: 폴더/파일 관리탭 + 일지추가 버튼 (탭 바로 옆에 붙음, flex:1 없음) -->
+    <div class="v43-tabs" id="v43TabsRow2Wrap" style="margin-top:4px">
       <button class="v43-tab" data-v43tab="filelink">📋 점검일지</button>
       <button class="v43-tab" data-v43tab="docs">📁 운영실무</button>
       <button class="v43-tab" data-v43tab="common">🏢 임대공용</button>
       <button class="v43-tab" data-v43tab="indiv">🚪 임대개별</button>
       <button class="v43-tab" data-v43tab="etc">🗂 서류폴더</button>
-      <button class="v43-tab" data-v43tab="accident">🚨 사고</button>
-      <button class="v43-tab" data-v43tab="material">📦 자재</button>
-      <button class="v43-tab" data-v43tab="password">🔐 비번</button>
-      <button class="v43-tab" data-v43tab="diag">🔧 진단</button>
-      <button class="v43-tab" data-v43tab="ai">🤖 AI</button>
-
+      <button id="folderAddBtn" style="flex:0 0 auto;padding:8px 14px;border-radius:10px;border:2px solid #16a34a;background:#16a34a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;white-space:nowrap">📋 일지/폴더추가</button>
     </div>
   </div>
 </header>
@@ -1581,8 +1587,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button id="inspYearMgrBtn"></button>
         <button id="inspCatMgrBtn"></button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;justify-content:flex-end">
-        <button id="inspAddBtn" style="height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation">➕ 추가</button>
+      <!-- 추가 버튼은 탭바 옆(서류폴더 우측)으로 이동, 여기서는 숨김 -->
+      <div style="display:none">
+        <button id="inspAddBtn">➕ 추가</button>
       </div>
 
       <!-- 건수 -->
@@ -1675,9 +1682,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button id="docsMonthMgrBtn"></button>
         <button id="docsCatMgrBtn"></button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;justify-content:flex-end">
-        <button id="docsAddBtn" style="height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation">➕ 추가</button>
-      </div>
+      <div style="display:none"><button id="docsAddBtn">➕ 추가</button></div>
       <div style="margin-bottom:8px"><span id="docsCount" style="font-size:12px;color:#aab8c8"></span></div>
       <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
         <table style="width:100%;border-collapse:collapse;table-layout:fixed">
@@ -1751,9 +1756,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button id="commonMonthMgrBtn"></button>
         <button id="commonCatMgrBtn"></button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;justify-content:flex-end">
-        <button id="commonAddBtn" style="height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation">➕ 추가</button>
-      </div>
+      <div style="display:none"><button id="commonAddBtn">➕ 추가</button></div>
       <div style="margin-bottom:8px"><span id="commonCount" style="font-size:12px;color:#aab8c8"></span></div>
       <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
         <table style="width:100%;border-collapse:collapse;table-layout:fixed">
@@ -1779,9 +1782,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <select id="indivFloorFilter"></select>
         <button id="indivCatMgrBtn"></button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;justify-content:flex-end">
-        <button id="indivAddBtn" style="height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation">➕ 추가</button>
-      </div>
+      <div style="display:none"><button id="indivAddBtn">➕ 추가</button></div>
       <div style="margin-bottom:8px"><span id="indivCount" style="font-size:12px;color:#aab8c8"></span></div>
       <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
         <table style="width:100%;border-collapse:collapse;table-layout:fixed">
@@ -1973,9 +1974,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button id="etcMonthMgrBtn"></button>
         <button id="etcCatMgrBtn"></button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;justify-content:flex-end">
-        <button id="etcAddBtn" style="height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation">➕ 추가</button>
-      </div>
+      <div style="display:none"><button id="etcAddBtn">➕ 추가</button></div>
       <div style="margin-bottom:8px"><span id="etcCount" style="font-size:12px;color:#aab8c8"></span></div>
       <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">
         <table style="width:100%;border-collapse:collapse;table-layout:fixed">
@@ -2062,6 +2061,22 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       <span id="accidentCount" style="margin-left:auto;color:#7a92a8;font-weight:700;align-self:center"></span>
     </div>
     <div id="accidentList"></div>
+  </div>
+
+  <!-- ===== 진행업무 패널 (시간순 처리단계가 쌓이는 업무) ===== -->
+  <div class="v43-panel" id="v43-progress">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:14px;margin-bottom:14px">
+      <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">📋 진행업무</h3>
+      <button id="btnAddProgress" style="background:#3f7cb8;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 진행업무 등록</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="progressStatusChips"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <input type="date" id="progressDateFrom" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
+      <input type="date" id="progressDateTo" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
+      <button id="progressDateClear" style="padding:8px 14px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">기간해제</button>
+      <span id="progressCount" style="margin-left:auto;color:#7a92a8;font-weight:700;align-self:center"></span>
+    </div>
+    <div id="progressList"></div>
   </div>
 
   <!-- ===== 자재 패널 ===== -->
@@ -3050,8 +3065,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // v43 탭 전환
   function v43ActivateTab(name){
-    const v43tabs=['main','expense','memo','calendar','filelink','docs','common','indiv','etc','accident','material','password','diag','ai'];
-    if(!v43tabs.includes(name)) name='main';
+    const v43tabs=['main','expense','memo','calendar','filelink','docs','common','indiv','etc','accident','progress','material','password','diag','ai'];
+    if(!v43tabs.includes(name) && name.indexOf('custom_')!==0) name='main';
     document.querySelectorAll('.v43-tab').forEach(b => b.classList.toggle('active', b.dataset.v43tab===name));
     document.querySelectorAll('.v43-panel').forEach(p => p.classList.remove('active'));
     const panel = document.getElementById('v43-'+name);
@@ -3076,6 +3091,16 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           dbg('❌ renderAccidents 함수 없음');
         }
       }catch(e){ dbg('❌ 사고 탭 에러: '+e.message); }
+    }, 50);
+    if(name==='progress') setTimeout(()=>{ 
+      try{
+        if(typeof renderProgressTasks==='function'){
+          renderProgressTasks();
+          dbg('📋 진행업무 탭 렌더 완료');
+        } else {
+          dbg('❌ renderProgressTasks 함수 없음');
+        }
+      }catch(e){ dbg('❌ 진행업무 탭 에러: '+e.message); }
     }, 50);
     // 문서계열 탭: makeDocTab이 등록한 렌더 함수 호출
     if(['docs','common','indiv','filelink'].includes(name)){
@@ -3335,7 +3360,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   // 마지막 탭 복원
   function restoreTab(){
     try{
-      const v43tabs=['main','expense','memo','calendar','filelink','docs','common','indiv','etc','accident','material','password','diag','ai'];
+      const v43tabs=['main','expense','memo','calendar','filelink','docs','common','indiv','etc','accident','progress','material','password','diag','ai'];
       const saved = localStorage.getItem('v43_tab')||'main';
       const safeTab = v43tabs.includes(saved) ? saved : 'main';
       v43ActivateTab(safeTab);
@@ -3360,6 +3385,394 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // 전역 노출 (worklog.js에서 호출 가능)
   window.v43ActivateTab = v43ActivateTab;
+
+  /* 탭바 옆 '📋 일지/폴더추가' 버튼
+     → 현재 보고 있는 탭이 점검일지~서류폴더 중 하나면 그 탭의 추가 모달을 바로 염
+     → 다른 탭(기록/지출 등)을 보고 있으면 우선 점검일지 탭으로 이동 후 추가 모달 오픈 */
+  var FOLDER_ADD_MAP = {
+    filelink:'inspAddBtn', docs:'docsAddBtn', common:'commonAddBtn',
+    indiv:'indivAddBtn', etc:'etcAddBtn'
+  };
+  var folderAddBtn = document.getElementById('folderAddBtn');
+  if(folderAddBtn){
+    folderAddBtn.addEventListener('click', function(){
+      var activeTabEl = document.querySelector('.v43-tab.active[data-v43tab]');
+      var current = activeTabEl ? activeTabEl.dataset.v43tab : '';
+      var targetTab = FOLDER_ADD_MAP[current] ? current : 'filelink';
+      var addBtnId = FOLDER_ADD_MAP[targetTab];
+
+      if(current !== targetTab){
+        v43ActivateTab(targetTab);
+        setTimeout(function(){
+          var b = document.getElementById(addBtnId);
+          if(b) b.click();
+        }, 80);
+      } else {
+        var b = document.getElementById(addBtnId);
+        if(b) b.click();
+      }
+    });
+  }
+
+  /* ══════════════════════════════════════════════
+     ⚙️ 폴더탭 관리 — 2행(점검일지~서류폴더) 순서변경/추가/삭제
+     ══════════════════════════════════════════════ */
+  (function(){
+    var KEY2 = 'wl_folder_tabs_v1';   /* 2행: 점검일지~서류폴더 */
+    var KEY1 = 'wl_main_tabs_v1';     /* 1행: 기록~AI */
+
+    var DEFAULTS2 = [
+      {id:'filelink', label:'📋 점검일지'},
+      {id:'docs',     label:'📁 운영실무'},
+      {id:'common',   label:'🏢 임대공용'},
+      {id:'indiv',    label:'🚪 임대개별'},
+      {id:'etc',      label:'🗂 서류폴더'},
+    ];
+    var DEFAULTS1 = [
+      {id:'main',     label:'📋 기록'},
+      {id:'expense',  label:'💰 지출'},
+      {id:'memo',     label:'📝 메모'},
+      {id:'calendar', label:'📅 달력'},
+      {id:'accident', label:'🚨 사고'},
+      {id:'progress', label:'📋 진행업무'},
+      {id:'material', label:'📦 자재'},
+      {id:'password', label:'🔐 비번'},
+      {id:'diag',     label:'🔧 진단'},
+      {id:'ai',       label:'🤖 AI'},
+    ];
+    var FIXED2 = ['filelink','docs','common','indiv','etc'];
+    var FIXED1 = ['main','expense','memo','calendar','accident','progress','material','password','diag','ai'];
+
+    function load(key, defaults){
+      try{ var s=localStorage.getItem(key); if(s) return JSON.parse(s); }catch(e){}
+      return JSON.parse(JSON.stringify(defaults));
+    }
+    function save(key, tabs){ try{ localStorage.setItem(key, JSON.stringify(tabs)); }catch(e){} }
+
+    /* 1행(id=v43Tabs) — ⚙️ 버튼은 항상 맨 끝에 고정, 나머지만 순서 적용 */
+    function applyOrder1(){
+      var row1 = document.getElementById('v43Tabs');
+      var mgrBtn = document.getElementById('tabMgrBtn');
+      if(!row1) return;
+      var tabs = load(KEY1, DEFAULTS1);
+
+      var btns = {};
+      row1.querySelectorAll('.v43-tab[data-v43tab]').forEach(function(b){
+        btns[b.dataset.v43tab] = b;
+      });
+
+      tabs.forEach(function(t){
+        var b = btns[t.id];
+        if(!b){
+          b = document.createElement('button');
+          b.className = 'v43-tab';
+          b.dataset.v43tab = t.id;
+          b.textContent = t.label;
+          b.addEventListener('click', function(){ v43ActivateTab(t.id); });
+        }
+        if(mgrBtn) row1.insertBefore(b, mgrBtn);
+        else row1.appendChild(b);
+      });
+    }
+
+    /* 2행 — 일지/폴더추가 버튼(folderAddBtn)은 맨 끝 고정 */
+    function getRow2(){
+      var row1 = document.getElementById('v43Tabs');
+      return row1 ? row1.nextElementSibling : null;
+    }
+    function applyOrder2(){
+      var row2 = getRow2();
+      if(!row2) return;
+      var tabs = load(KEY2, DEFAULTS2);
+      var addBtn = document.getElementById('folderAddBtn');
+
+      var btns = {};
+      row2.querySelectorAll('.v43-tab[data-v43tab]').forEach(function(b){
+        btns[b.dataset.v43tab] = b;
+      });
+
+      tabs.forEach(function(t){
+        var b = btns[t.id];
+        if(!b){
+          b = document.createElement('button');
+          b.className = 'v43-tab';
+          b.dataset.v43tab = t.id;
+          b.textContent = t.label;
+          b.addEventListener('click', function(){ v43ActivateTab(t.id); });
+        }
+        if(addBtn) row2.insertBefore(b, addBtn);
+        else row2.appendChild(b);
+      });
+    }
+
+    if(localStorage.getItem(KEY1)) applyOrder1();
+    if(localStorage.getItem(KEY2)) applyOrder2();
+
+    /* ══════════════════════════════════════════
+       3단계: 커스텀 탭(+ 새 탭 추가로 만든 탭) 클릭 시
+       운영실무와 동일한 파일/폴더 관리 화면을 동적 생성
+       ══════════════════════════════════════════ */
+    var builtCustomTabs = {};
+
+    function escHtml(s){
+      return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+      });
+    }
+
+    function ensureCustomTabPanel(tabId, label){
+      if(builtCustomTabs[tabId]) return;
+      if(document.getElementById('v43-'+tabId)) { builtCustomTabs[tabId]=true; return; }
+
+      var main = document.querySelector('main.wrap');
+      if(!main) return;
+
+      var cleanLabel = label.replace(/^[^\s]*\s*/, '').trim() || label;
+      var pfx = tabId;
+
+      var panelHtml = ''
+        +'<div class="v43-panel" id="v43-'+pfx+'">'
+        +'  <div style="margin-top:14px">'
+        +'    <div style="display:none">'
+        +'      <select id="'+pfx+'TypeFilter"></select>'
+        +'      <select id="'+pfx+'YearFilter"></select>'
+        +'      <select id="'+pfx+'MonthFilter"></select>'
+        +'      <button id="'+pfx+'YearMgrBtn"></button>'
+        +'      <button id="'+pfx+'MonthMgrBtn"></button>'
+        +'      <button id="'+pfx+'CatMgrBtn"></button>'
+        +'    </div>'
+        +'    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;justify-content:flex-end">'
+        +'      <button id="'+pfx+'AddBtn" style="height:38px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation">➕ 추가</button>'
+        +'    </div>'
+        +'    <div style="margin-bottom:8px"><span id="'+pfx+'Count" style="font-size:12px;color:#aab8c8"></span></div>'
+        +'    <div style="background:#fff;border-radius:14px;border:1.5px solid #e8f0fa;overflow:hidden">'
+        +'      <table style="width:100%;border-collapse:collapse;table-layout:fixed">'
+        +'        <thead><tr style="background:#f0f6ff;border-bottom:1.5px solid #e8f0fa">'
+        +'          <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left;width:70px">월</th>'
+        +'          <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left;width:100px">종류</th>'
+        +'          <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:left">파일명/내용</th>'
+        +'          <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:60px">열기</th>'
+        +'          <th style="padding:10px 14px;font-size:13px;font-weight:700;color:#33567d;text-align:center;width:50px"></th>'
+        +'        </tr></thead>'
+        +'        <tbody id="'+pfx+'Body"><tr><td colspan="5" style="text-align:center;padding:40px;color:#aab8c8;font-size:14px">➕ 추가 버튼으로 '+escHtml(cleanLabel)+' 자료를 등록해보세요</td></tr></tbody>'
+        +'      </table>'
+        +'    </div>'
+        +'  </div>'
+        +'</div>'
+        +'<div class="v43-cat-overlay" id="'+pfx+'Modal">'
+        +'  <div class="v43-cat-sheet" style="padding-bottom:28px">'
+        +'    <h3 id="'+pfx+'ModalTitle">'+escHtml(cleanLabel)+' 추가</h3>'
+        +'    <div style="display:flex;flex-direction:column;gap:12px">'
+        +'      <div>'
+        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>'
+        +'        <select id="'+pfx+'ModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>'
+        +'      </div>'
+        +'      <div style="display:none">'
+        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월</label>'
+        +'        <select id="'+pfx+'ModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>'
+        +'      </div>'
+        +'      <div>'
+        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>'
+        +'        <div style="display:flex;gap:8px;margin-bottom:4px">'
+        +'          <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">'
+        +'            <input type="radio" name="'+pfx+'ModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더'
+        +'          </label>'
+        +'          <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">'
+        +'            <input type="radio" name="'+pfx+'ModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일'
+        +'          </label>'
+        +'        </div>'
+        +'      </div>'
+        +'      <div>'
+        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>'
+        +'        <input type="text" id="'+pfx+'ModalName" placeholder="예: 자료 이름" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">'
+        +'      </div>'
+        +'      <div>'
+        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일/폴더 경로</label>'
+        +'        <input type="text" id="'+pfx+'ModalPath" placeholder="예: D:\\서희타워 관련\\자료" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">'
+        +'      </div>'
+        +'      <div>'
+        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">메모 (선택)</label>'
+        +'        <input type="text" id="'+pfx+'ModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">'
+        +'      </div>'
+        +'    </div>'
+        +'    <div style="display:flex;gap:8px;margin-top:16px">'
+        +'      <button id="'+pfx+'ModalCancel" class="v43-cat-cancel" style="margin-top:0;flex:1">취소</button>'
+        +'      <button id="'+pfx+'ModalDel" style="flex:1;padding:13px;border-radius:14px;border:none;background:#fde8e8;color:#b52929;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>'
+        +'      <button id="'+pfx+'ModalSave" style="flex:1;padding:13px;border-radius:14px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>'
+        +'    </div>'
+        +'  </div>'
+        +'</div>';
+
+      main.insertAdjacentHTML('beforeend', panelHtml);
+
+      if(typeof makeDocTab === 'function'){
+        makeDocTab({
+          tab: pfx, dataLS: 'wl_'+pfx+'_v43', tabKey: pfx,
+          defaultTitle: cleanLabel,
+          bodyId: pfx+'Body', countId: pfx+'Count',
+          typeFilterId: pfx+'TypeFilter', monthFilterId: pfx+'MonthFilter',
+          catMgrBtnId: pfx+'CatMgrBtn', monthMgrBtnId: pfx+'MonthMgrBtn', yearMgrBtnId: pfx+'YearMgrBtn', yearFilterId: pfx+'YearFilter', addBtnId: pfx+'AddBtn',
+          modalId: pfx+'Modal', modalTitleId: pfx+'ModalTitle',
+          modalTypeId: pfx+'ModalType', modalMonthId: pfx+'ModalMonth',
+          modalNameId: pfx+'ModalName', modalPathId: pfx+'ModalPath',
+          modalMemoId: pfx+'ModalMemo',
+          modalSaveId: pfx+'ModalSave', modalDelId: pfx+'ModalDel', modalCancelId: pfx+'ModalCancel',
+          cols: 5
+        });
+      }
+      builtCustomTabs[tabId] = true;
+    }
+
+    document.addEventListener('click', function(e){
+      var btn = e.target.closest('.v43-tab[data-v43tab]');
+      if(!btn) return;
+      var id = btn.dataset.v43tab;
+      if(id.indexOf('custom_') === 0){
+        ensureCustomTabPanel(id, btn.textContent.trim());
+        setTimeout(function(){ v43ActivateTab(id); }, 0);
+      }
+    }, true);
+
+    /* ⚙️ 버튼 클릭 → 관리 모달 (1행+2행 통합) */
+    var mgrBtn = document.getElementById('tabMgrBtn');
+    if(mgrBtn){
+      mgrBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        openModal();
+      });
+    }
+
+    function renderSection(container, sectionTitle, tabs, fixedIds, sectionKey){
+      var html = '<div style="font-size:12px;font-weight:700;color:#3f7cb8;margin:14px 0 6px">'+sectionTitle+'</div>';
+      html += '<div class="ftm-list" data-section="'+sectionKey+'" style="display:flex;flex-direction:column;gap:6px">';
+      tabs.forEach(function(t){
+        var fixed = fixedIds.includes(t.id);
+        html += '<div class="ftm-item" data-id="'+t.id+'" data-section="'+sectionKey+'" draggable="true" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:'+(fixed?'#f0f4ff':'#f7faff')+';border:1.5px solid #dbe6f4;border-radius:10px;cursor:grab;user-select:none">';
+        html += '<span style="color:#94a3b8;font-size:15px">☰</span>';
+        html += '<span style="flex:1;font-size:13px;font-weight:600;color:#1a2f45">'+t.label+'</span>';
+        html += fixed
+          ? '<span style="font-size:11px;color:#94a3b8">🔒</span>'
+          : '<button class="ftm-del" data-del="'+t.id+'" data-section="'+sectionKey+'" style="border:none;background:#fde8e8;color:#c0392b;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:12px">✕</button>';
+        html += '</div>';
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function openModal(){
+      var tabs1 = load(KEY1, DEFAULTS1);
+      var tabs2 = load(KEY2, DEFAULTS2);
+      var ov = document.createElement('div');
+      ov.id = 'folderTabMgrOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:12000;display:flex;align-items:center;justify-content:center;padding:16px';
+      document.body.appendChild(ov);
+
+      function render(){
+        var html = '<div style="background:#fff;border-radius:16px;width:100%;max-width:480px;max-height:88vh;overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,.22);padding:18px">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+        html += '<h3 style="margin:0;font-size:17px;color:#1a2f45">⚙️ 탭 관리</h3>';
+        html += '<button id="ftmClose" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer">✕</button>';
+        html += '</div>';
+        html += '<div style="font-size:12px;color:#94a3b8;margin-bottom:6px">☰ 드래그로 같은 행 안에서 순서 변경 · 🔒 기본 탭은 삭제 불가</div>';
+
+        html += renderSection(ov, '1행 — 기록~AI', tabs1, FIXED1, 'row1');
+        html += renderSection(ov, '2행 — 점검일지~서류폴더', tabs2, FIXED2, 'row2');
+
+        html += '<div style="margin-top:12px;padding:10px;background:#f7faff;border:1.5px dashed #dbe6f4;border-radius:10px">';
+        html += '<div style="font-size:12px;font-weight:700;color:#3f7cb8;margin-bottom:6px">+ 새 탭 추가 (2행에 추가됩니다)</div>';
+        html += '<div style="display:flex;gap:6px">';
+        html += '<input id="ftmNewName" placeholder="탭 이름 (예: 🏗 공사관리)" style="flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;outline:none">';
+        html += '<button id="ftmAdd" style="padding:7px 14px;background:#3f7cb8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">추가</button>';
+        html += '</div></div>';
+        html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">';
+        html += '<button id="ftmSave" style="padding:8px 20px;background:#3f7cb8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">저장</button>';
+        html += '<button id="ftmReset" style="padding:8px 14px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:13px;cursor:pointer">기본값</button>';
+        html += '<button id="ftmCancel" style="padding:8px 14px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:13px;cursor:pointer">취소</button>';
+        html += '</div></div>';
+        ov.innerHTML = html;
+
+        /* 드래그앤드롭 — 같은 섹션(같은 data-section) 안에서만 이동 가능 */
+        ov.querySelectorAll('.ftm-list').forEach(function(list){
+          var dragEl = null;
+          list.querySelectorAll('.ftm-item').forEach(function(item){
+            item.addEventListener('dragstart', function(e){
+              dragEl = item; item.style.opacity = '0.4'; e.dataTransfer.effectAllowed = 'move';
+            });
+            item.addEventListener('dragend', function(){
+              item.style.opacity = '1'; dragEl = null;
+              list.querySelectorAll('.ftm-item').forEach(function(i){ i.style.borderColor = '#dbe6f4'; });
+            });
+            item.addEventListener('dragover', function(e){
+              e.preventDefault();
+              if(item === dragEl || !dragEl) return;
+              if(dragEl.dataset.section !== item.dataset.section) return; /* 다른 섹션으로 못 넘어감 */
+              item.style.borderColor = '#3f7cb8';
+              var rect = item.getBoundingClientRect();
+              var mid = rect.top + rect.height/2;
+              list.insertBefore(dragEl, e.clientY < mid ? item : item.nextSibling);
+            });
+            item.addEventListener('dragleave', function(){ item.style.borderColor = '#dbe6f4'; });
+          });
+        });
+
+        /* 삭제 */
+        ov.querySelectorAll('.ftm-del').forEach(function(btn){
+          btn.addEventListener('click', function(e){
+            e.stopPropagation();
+            if(!confirm('이 탭을 삭제할까요?')) return;
+            var sec = btn.dataset.section;
+            if(sec === 'row1') tabs1 = tabs1.filter(function(t){ return t.id !== btn.dataset.del; });
+            else tabs2 = tabs2.filter(function(t){ return t.id !== btn.dataset.del; });
+            render();
+          });
+        });
+
+        /* 추가 (2행에만) */
+        ov.querySelector('#ftmAdd').addEventListener('click', function(){
+          var inp = ov.querySelector('#ftmNewName');
+          var label = inp.value.trim();
+          if(!label){ inp.focus(); return; }
+          tabs2.push({id:'custom_'+Date.now(), label:label});
+          render();
+        });
+        ov.querySelector('#ftmNewName').addEventListener('keydown', function(e){
+          if(e.key === 'Enter'){ e.preventDefault(); ov.querySelector('#ftmAdd').click(); }
+        });
+
+        /* 저장 */
+        ov.querySelector('#ftmSave').addEventListener('click', function(){
+          var newOrder1 = [], newOrder2 = [];
+          ov.querySelectorAll('.ftm-item[data-section="row1"]').forEach(function(item){
+            var t = tabs1.find(function(x){ return x.id === item.dataset.id; });
+            if(t) newOrder1.push(t);
+          });
+          ov.querySelectorAll('.ftm-item[data-section="row2"]').forEach(function(item){
+            var t = tabs2.find(function(x){ return x.id === item.dataset.id; });
+            if(t) newOrder2.push(t);
+          });
+          tabs1 = newOrder1; tabs2 = newOrder2;
+          save(KEY1, tabs1); save(KEY2, tabs2);
+          applyOrder1(); applyOrder2();
+          ov.remove();
+          if(typeof toast === 'function') toast('✅ 탭 순서가 저장됐어요');
+        });
+
+        /* 기본값 복원 (둘 다) */
+        ov.querySelector('#ftmReset').addEventListener('click', function(){
+          if(!confirm('탭 순서를 모두 기본값으로 되돌릴까요?')) return;
+          localStorage.removeItem(KEY1);
+          localStorage.removeItem(KEY2);
+          tabs1 = JSON.parse(JSON.stringify(DEFAULTS1));
+          tabs2 = JSON.parse(JSON.stringify(DEFAULTS2));
+          render();
+        });
+
+        ov.querySelector('#ftmCancel').addEventListener('click', function(){ ov.remove(); });
+        ov.querySelector('#ftmClose').addEventListener('click', function(){ ov.remove(); });
+      }
+      render();
+    }
+  })();
   // v44: 페이지 로드 시 중복 필터/그리드 호스트 청소
   setTimeout(()=>{
     ['filelink','docs','common','indiv','etc'].forEach(panel=>{
@@ -8350,7 +8763,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0629-1900';
+    if(el) el.textContent = 'v44-0630-1222';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -9792,7 +10205,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0622-1651 로드');
+  console.log('[expV2] v44-0630-1222 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────

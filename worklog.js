@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0626-1719";
+const APP_VERSION = "v44-0630-1218";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -190,9 +190,9 @@ const FIELD_HINT={
 function statusClass(s){ return s==="완료"?"done":s==="진행중"?"prog":"todo"; }
 function statusColor(s){ return s==="완료"?"var(--mint)":s==="진행중"?"var(--gold)":"var(--peach)"; }
 
-const KIND_LABEL={work:"업무",plan:"오늘계획",memo:"메모",call:"통화",vacation:"휴가",meeting:"회의메모",deliver:"전달사항",filelink:"파일링크",site:"사이트",password:"비밀번호",schedule:"예정",item:"품목",stock:"입출고",cleaning:"청소일지",expense:"지출",accident:"사고"};
-const PHOTO_KINDS=["work","memo","meeting","accident"];
-const ATTACH_KINDS=["work","memo","meeting","accident"];
+const KIND_LABEL={work:"업무",plan:"오늘계획",memo:"메모",call:"통화",vacation:"휴가",meeting:"회의메모",deliver:"전달사항",filelink:"파일링크",site:"사이트",password:"비밀번호",schedule:"예정",item:"품목",stock:"입출고",cleaning:"청소일지",expense:"지출",accident:"사고",progress:"진행업무"};
+const PHOTO_KINDS=["work","memo","meeting","accident","progress"];
+const ATTACH_KINDS=["work","memo","meeting","accident","progress"];
 
 /* ===== v16 카테고리 시스템 ===== */
 const DEFAULT_CATS_FILE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도"];
@@ -333,6 +333,17 @@ const SCHEMA={
     {k:"memo",label:"비고",type:"text",full:true},
   ],
   // v44: 사고 처리 내역
+  progress:[
+    {k:"status",label:"진행상태",type:"select",opts:["견적중","발주완료","진행중","완료"],req:true},
+    {k:"floor",label:"층",type:"floor"},
+    {k:"location",label:"상세 위치",type:"text",full:true},
+    {k:"title",label:"업무 제목",type:"text",full:true,req:true},
+    {k:"detail",label:"상세 내용",type:"textarea",full:true},
+    {k:"estCost",label:"예상비용 (원)",type:"number"},
+    {k:"finalCost",label:"확정비용 (원)",type:"number"},
+    {k:"memo",label:"비고",type:"textarea",full:true},
+    // v44: steps=[{date,action,field,vendor,vendorPhone}]는 데이터 배열로 저장 (사고탭과 동일 패턴)
+  ],
   accident:[
     {k:"date",label:"발생 날짜",type:"date",req:true},
     {k:"time",label:"발생 시각",type:"time"},
@@ -2612,7 +2623,7 @@ function openEditor(kind,id){
   const mf = $("mFields");
   mf.className = "grid kind-" + kind; /* kind별 그리드 적용 */
   /* 여러 필드가 있는 모달은 인라인으로도 그리드 강제 (CSS 충돌 방지) */
-  const GRID_KINDS = ['call', 'accident', 'item', 'stock', 'meeting', 'deliver', 'vacation', 'schedule'];
+  const GRID_KINDS = ['call', 'accident', 'progress', 'item', 'stock', 'meeting', 'deliver', 'vacation', 'schedule'];
   if(GRID_KINDS.includes(kind)){
     mf.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px';
   } else {
@@ -2951,6 +2962,12 @@ function openEditor(kind,id){
       renderAccidentSteps(data.steps || []);
     }, 100);
   }
+  // v44: 진행업무 모달 - 처리 단계 동적 추가 (분야/업체/연락처 포함)
+  if(kind==="progress"){
+    setTimeout(()=>{
+      renderProgressSteps(data.steps || []);
+    }, 100);
+  }
   // 예정 모달: 반복 유형에 따른 힌트 표시
   if(kind==="schedule"){
     const stEl=$("m-scheduleType");
@@ -3066,6 +3083,98 @@ function redrawAccStepList(){
         redrawAccStepList();
       }
     });
+  });
+}
+
+/* ===== v44: 진행업무 처리단계 (사고탭과 동일 패턴, 분야/업체/연락처 포함) ===== */
+var _progressSteps = [];
+
+function renderProgressSteps(steps){
+  _progressSteps = (steps && Array.isArray(steps)) ? steps.slice() : [];
+  const grid = $("mFields");
+  if(!grid) return;
+  const old = document.getElementById("progStepsArea");
+  if(old) old.remove();
+  const area = document.createElement("div");
+  area.id = "progStepsArea";
+  area.className = "field full";
+  area.style.cssText = "grid-column:1/-1;margin-top:8px;padding:14px;background:#eef6ff;border:2px solid #90c2f0;border-radius:12px";
+  area.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <label style="font-weight:800;font-size:14px;color:#1a4a8a;margin:0">📋 처리 단계 (시간순)</label>
+      <button type="button" id="btnAddProgStep" style="background:#3f7cb8;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 단계 추가</button>
+    </div>
+    <div id="progStepsList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="progStepsEmpty" style="display:none;text-align:center;padding:20px;color:#aab8c8;font-size:13px">아직 처리 단계가 없어요 — "➕ 단계 추가" 버튼을 누르세요</div>
+  `;
+  grid.appendChild(area);
+  document.getElementById("btnAddProgStep").addEventListener("click", ()=>{
+    _progressSteps.push({
+      date: todayStr(),
+      action: "",
+      field: "",
+      vendor: "",
+      vendorPhone: ""
+    });
+    redrawProgStepList();
+  });
+  redrawProgStepList();
+}
+
+function redrawProgStepList(){
+  const list = document.getElementById("progStepsList");
+  const empty = document.getElementById("progStepsEmpty");
+  if(!list) return;
+  if(!_progressSteps.length){
+    list.innerHTML = "";
+    if(empty) empty.style.display = "block";
+    return;
+  }
+  if(empty) empty.style.display = "none";
+  list.innerHTML = _progressSteps.map((s,i)=>`
+    <div class="prog-step-card" data-idx="${i}" style="background:#fff;border:1.5px solid #90c2f0;border-radius:10px;padding:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="background:#3f7cb8;color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:12px">${i+1}단계</span>
+        <button type="button" class="prog-step-del" data-idx="${i}" style="background:#fde8e8;color:#b52929;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:8px">
+        <input type="date" class="prog-step-input" data-idx="${i}" data-k="date" value="${esc(s.date||'')}" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
+        <input type="text" class="prog-step-input" data-idx="${i}" data-k="action" value="${esc(s.action||'')}" placeholder="📝 진행 내용 (예: 견적 접수, 자재 입고, 시공 완료)" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
+      </div>
+      <div style="position:relative;margin-bottom:8px">
+        <input type="text" class="prog-step-input prog-step-field" data-idx="${i}" data-k="field" id="progStepField${i}" value="${esc(s.field||'')}" placeholder="🏷 분야 검색 (초성 가능, 예: ㅈㄱ → 전기)" autocomplete="off" style="width:100%;box-sizing:border-box;height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
+        <div id="progStepField${i}-list" style="display:none;position:absolute;top:40px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:500;max-height:200px;overflow:auto"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input type="text" class="prog-step-input" data-idx="${i}" data-k="vendor" value="${esc(s.vendor||'')}" placeholder="🏢 업체명" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
+        <input type="text" class="prog-step-input" data-idx="${i}" data-k="vendorPhone" value="${esc(s.vendorPhone||'')}" placeholder="📞 연락처" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
+      </div>
+    </div>
+  `).join("");
+
+  list.querySelectorAll(".prog-step-input").forEach(inp=>{
+    inp.addEventListener("input", ()=>{
+      const idx = Number(inp.dataset.idx);
+      const k = inp.dataset.k;
+      if(_progressSteps[idx]) _progressSteps[idx][k] = inp.value;
+    });
+  });
+  list.querySelectorAll(".prog-step-del").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const idx = Number(btn.dataset.idx);
+      if(confirm(`${idx+1}단계를 삭제할까요?`)){
+        _progressSteps.splice(idx, 1);
+        redrawProgStepList();
+      }
+    });
+  });
+  /* 단계별 분야 입력에 초성검색 자동완성 연결 */
+  _progressSteps.forEach((s,i)=>{
+    if(typeof makeFieldSearchUI === 'function'){
+      makeFieldSearchUI(`progStepField${i}`, `progStepField${i}-list`, (val)=>{
+        if(_progressSteps[i]) _progressSteps[i].field = val;
+      });
+    }
   });
 }
 
@@ -3324,8 +3433,7 @@ document.addEventListener("keydown", e=>{
   }
 }, true);
 
-// ── 엔터: 셀(input) 안에서도, 셀 밖에서도 저장. textarea·select는 기본동작 유지 ──
-// Shift+Enter: textarea 안에서 줄바꿈 허용
+// ── 엔터: 셀(input) 안에서도, 셀 밖에서도 저장. Shift+Enter는 줄바꿈 ──
 document.addEventListener("keydown", e=>{
   if(e.key!=="Enter") return;
   const overlay = $("overlay");
@@ -3333,12 +3441,12 @@ document.addEventListener("keydown", e=>{
   const tag = (document.activeElement||{}).tagName||"";
   if(tag==="SELECT") return;
   if(tag==="TEXTAREA"){
-    if(e.shiftKey) return; // Shift+Enter → 줄바꿈 허용
+    if(e.shiftKey) return;
     e.preventDefault();
     $("mSave").click();
     return;
   }
-  if(e.shiftKey) return; // input에서도 Shift+Enter는 무시
+  if(e.shiftKey) return;
   e.preventDefault();
   $("mSave").click();
 });
@@ -3488,6 +3596,10 @@ $("mSave").addEventListener("click",async ()=>{
   // v44: 사고면 처리 단계 함께 저장
   if(mKind==="accident"){
     obj.steps = (_accidentSteps||[]).filter(s=>s.action||s.vendor||s.memo);
+  }
+  // v44: 진행업무면 처리 단계 함께 저장 (분야/업체/연락처 포함)
+  if(mKind==="progress"){
+    obj.steps = (_progressSteps||[]).filter(s=>s.action||s.field||s.vendor);
   }
   let savedId=mId;
   if(mId) updateRecord(mId,obj); else { obj.createdAt=Date.now(); if(mKind==="plan") obj.done=false; if(mKind==="filelink"||mKind==="site") obj.starred=false; const nr=addRecord(obj); savedId=nr?nr.id:obj.id; }
@@ -4116,16 +4228,8 @@ function bindCalControls(){
 function dateLabel(k){ if(!k) return "(날짜없음)"; const [y,m,d]=k.split("-"); const w=["일","월","화","수","목","금","토"][new Date(k+"T00:00:00").getDay()]; return `${Number(m)}월 ${Number(d)}일 (${w})`; }
 function otherText(o){
   if(o.kind==="plan") return o.text||"계획";
-  if(o.kind==="memo"){
-    const t=o.title||"메모";
-    const b=(o.body||o.text||"").replace(/\n/g," ");
-    return b ? t+" "+b : t;
-  }
-  if(o.kind==="call"){
-    const n=o.name||"통화";
-    const c=(o.content||"").replace(/\n/g," ");
-    return c ? n+" "+c : n;
-  }
+  if(o.kind==="memo"){ const t=o.title||"메모"; const b=(o.body||o.text||"").replace(/\n/g," "); return b?t+" "+b:t; }
+  if(o.kind==="call"){ const n=o.name||"통화"; const c=(o.content||"").replace(/\n/g," "); return c?n+" "+c:n; }
   if(o.kind==="meeting") return o.title||"회의";
   if(o.kind==="deliver") return o.title||o.content||"전달";
   if(o.kind==="schedule") return o.title||"예정";
@@ -4354,13 +4458,6 @@ function renderYearView(){
 }
 function renderDayDetail(){
   const box=$("dayDetail"); if(!selDay){ box.innerHTML=""; return; }
-  /* card-acts 한 줄 강제 스타일 */
-  if(!document.getElementById('_cardActsStyle')){
-    const st=document.createElement('style');
-    st.id='_cardActsStyle';
-    st.textContent=`.card-acts{display:flex;flex-direction:row;gap:6px;margin-top:6px;flex-wrap:nowrap}.mini-btn{white-space:nowrap}`;
-    document.head.appendChild(st);
-  }
   const w=entries.filter(e=>e.kind==="work"&&e.date===selDay).sort(byDateDesc);
   const v=entries.filter(e=>e.kind==="vacation"&&datesBetween(e.start,e.end).includes(selDay));
   const p=entries.filter(e=>e.kind==="plan"&&e.date===selDay);
@@ -4420,7 +4517,7 @@ function renderDayDetail(){
   if(mt.length) h+=`<div class="detail-block"><div class="bh">👥 회의</div>${mt.map(cardMeeting).join("")}</div>`;
   if(dv.length) h+=`<div class="detail-block"><div class="bh">📢 전달사항</div>${dv.map(cardDeliver).join("")}</div>`;
   box.innerHTML=h;
-  wireCards(box, false); // 달력: 클릭 시 조회창 → 수정 버튼으로 수정
+  wireCards(box, false); // 달력: 조회창 → 수정 버튼으로 수정
   wireRep();
 }
 function cardSchedule(s){
@@ -4443,16 +4540,8 @@ function buildReport(day){
   const mt=entries.filter(e=>e.kind==="meeting"&&D(e.date)===day).sort(byDateDesc);
   const dv=entries.filter(e=>e.kind==="deliver"&&D(e.date)===day).sort(byDateDesc);
   const cl=entries.filter(e=>e.kind==="cleaning"&&D(e.date)===day).sort(byDateDesc);
-  /* 날짜 한 줄로 크게 표시, 출력일 제거 */
-  const dayObj = new Date(day);
-  const weekNames = ['일','월','화','수','목','금','토'];
-  const dayNum = dayObj.getDate();
-  const weekName = weekNames[dayObj.getDay()];
-  const monthNum = dayObj.getMonth()+1;
-  let h=`<div style="display:flex;align-items:center;gap:16px;margin-bottom:8px">`
-    +`<span style="font-size:48px;font-weight:900;color:#1a2f45;line-height:1">${dayNum}</span>`
-    +`<span style="font-size:22px;font-weight:800;color:#1a2f45">${monthNum}월 ${dayNum}일 (${weekName}) 업무일지 보고서</span>`
-    +`</div><hr style="border:none;border-top:2px solid #1a2f45;margin:6px 0 12px">`;
+  const _dayObj=new Date(day),_wn=['일','월','화','수','목','금','토'];
+  let h=`<div style="display:flex;align-items:center;gap:16px;margin-bottom:8px"><span style="font-size:48px;font-weight:900;color:#1a2f45;line-height:1">${_dayObj.getDate()}</span><span style="font-size:22px;font-weight:800;color:#1a2f45">${_dayObj.getMonth()+1}월 ${_dayObj.getDate()}일 (${_wn[_dayObj.getDay()]}) 업무일지 보고서</span></div><hr style="border:none;border-top:2px solid #1a2f45;margin:6px 0 12px">`;
   const sec=(title,items,cls)=> items.length?`<div class="rsec ${cls}"><h2>${title} (${items.length}건)</h2>`+items.join("")+`</div>`:"";
   h+=sec("업무", w.map(en=>`<div class="it"><b>[${esc(en.status||"")}]</b> ${esc(en.floor||"")} ${esc(en.loc||"")} ${esc(en.title||"")}${en.detail?" — "+esc(en.detail):""}${en.field?" ["+esc(en.field)+"]":""}${en.material?" / 자재: "+esc(en.material):""}${Number(en.cost)?" / "+won(en.cost)+"원":""}${en.improve?"<br>↳ 개선: "+esc(en.improve):""}</div>`), "work");
   h+=sec("휴가", v.map(x=>`<div class="it">🌴 ${esc(x.name||"")} (${esc(x.vtype||"")}) ${x.end&&x.end!==x.start?esc(x.start)+" ~ "+esc(x.end):esc(x.start||"")}${x.note?" — "+esc(x.note):""}</div>`), "vac");
@@ -7877,6 +7966,127 @@ function renderAccidents(){
     card.addEventListener("mouseenter", ()=>card.style.boxShadow="0 4px 16px rgba(0,0,0,.08)");
     card.addEventListener("mouseleave", ()=>card.style.boxShadow="");
     card.addEventListener("click", ()=>openEditor("accident", card.dataset.accId));
+  });
+}
+
+/* ===== v44: 진행업무 — 시간순 처리단계가 쌓이는 업무 (사고탭과 동일 패턴) ===== */
+const PROGRESS_FILTER = { status:"전체", from:"", to:"" };
+var PROGRESS_STATUS = ["견적중","발주완료","진행중","완료"];
+var PROGRESS_STATUS_COLOR = {
+  "견적중":   {bg:"#fef3c7", fg:"#92400e", border:"#f59e0b"},
+  "발주완료": {bg:"#dbeafe", fg:"#1e40af", border:"#3b82f6"},
+  "진행중":   {bg:"#fce7f3", fg:"#9f1239", border:"#ec4899"},
+  "완료":     {bg:"#d1fae5", fg:"#065f46", border:"#10b981"},
+};
+
+function setupProgressTab(){
+  renderProgressStatusChips();
+  const addBtn = document.getElementById("btnAddProgress");
+  if(addBtn && !addBtn._wired){
+    addBtn._wired = true;
+    addBtn.addEventListener("click", ()=>openEditor("progress", null));
+  }
+  const fromEl = document.getElementById("progressDateFrom");
+  const toEl = document.getElementById("progressDateTo");
+  const clearEl = document.getElementById("progressDateClear");
+  if(fromEl && !fromEl._wired){
+    fromEl._wired = true;
+    fromEl.addEventListener("change", ()=>{ PROGRESS_FILTER.from = fromEl.value; renderProgressTasks(); });
+  }
+  if(toEl && !toEl._wired){
+    toEl._wired = true;
+    toEl.addEventListener("change", ()=>{ PROGRESS_FILTER.to = toEl.value; renderProgressTasks(); });
+  }
+  if(clearEl && !clearEl._wired){
+    clearEl._wired = true;
+    clearEl.addEventListener("click", ()=>{
+      PROGRESS_FILTER.from = ""; PROGRESS_FILTER.to = "";
+      if(fromEl) fromEl.value = ""; if(toEl) toEl.value = "";
+      renderProgressTasks();
+    });
+  }
+}
+
+function renderProgressStatusChips(){
+  const box = document.getElementById("progressStatusChips");
+  if(!box) return;
+  const all = entries.filter(e=>e.kind==="progress");
+  const counts = {};
+  PROGRESS_STATUS.forEach(s=>{ counts[s] = all.filter(a=>a.status===s).length; });
+  let html = `<button class="prog-chip" data-prog-status="전체" style="padding:8px 14px;border-radius:20px;border:2px solid ${PROGRESS_FILTER.status==='전체'?'#1a2f45':'#dbe6f4'};background:${PROGRESS_FILTER.status==='전체'?'#1a2f45':'#fff'};color:${PROGRESS_FILTER.status==='전체'?'#fff':'#1a2f45'};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📋 전체 ${all.length}</button>`;
+  PROGRESS_STATUS.forEach(s=>{
+    const c = PROGRESS_STATUS_COLOR[s];
+    const isActive = PROGRESS_FILTER.status===s;
+    html += `<button class="prog-chip" data-prog-status="${esc(s)}" style="padding:8px 14px;border-radius:20px;border:2px solid ${isActive?c.border:'#dbe6f4'};background:${isActive?c.border:c.bg};color:${isActive?'#fff':c.fg};font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${esc(s)} ${counts[s]}</button>`;
+  });
+  box.innerHTML = html;
+  box.querySelectorAll(".prog-chip").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      PROGRESS_FILTER.status = btn.dataset.progStatus;
+      renderProgressTasks();
+    });
+  });
+}
+
+function renderProgressTasks(){
+  setupProgressTab();
+  renderProgressStatusChips();
+  const list = document.getElementById("progressList");
+  if(!list) return;
+  let arr = entries.filter(e=>e.kind==="progress");
+  if(PROGRESS_FILTER.status !== "전체") arr = arr.filter(a=>a.status===PROGRESS_FILTER.status);
+  if(PROGRESS_FILTER.from) arr = arr.filter(a=>{
+    const lastDate = (a.steps&&a.steps.length) ? a.steps[a.steps.length-1].date : a.createdAt&&new Date(a.createdAt).toISOString().slice(0,10);
+    return (lastDate||"")>=PROGRESS_FILTER.from;
+  });
+  if(PROGRESS_FILTER.to) arr = arr.filter(a=>{
+    const lastDate = (a.steps&&a.steps.length) ? a.steps[a.steps.length-1].date : a.createdAt&&new Date(a.createdAt).toISOString().slice(0,10);
+    return (lastDate||"")<=PROGRESS_FILTER.to;
+  });
+  arr.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const cnt = document.getElementById("progressCount");
+  if(cnt) cnt.textContent = `${arr.length}건`;
+  if(!arr.length){
+    list.style.cssText = '';
+    list.innerHTML = `<div style="padding:60px 20px;text-align:center;color:#aab8c8;background:#f7faff;border-radius:12px">
+      <div style="font-size:40px;margin-bottom:10px">📋</div>
+      <div style="font-size:14px;font-weight:700">진행업무가 없어요</div>
+      <div style="font-size:12px;margin-top:6px">상단 "➕ 진행업무 등록" 버튼으로 등록하세요</div>
+    </div>`;
+    return;
+  }
+  list.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:10px';
+  list.innerHTML = arr.map(a=>{
+    const c = PROGRESS_STATUS_COLOR[a.status] || PROGRESS_STATUS_COLOR["견적중"];
+    const lastStep = (a.steps&&a.steps.length) ? a.steps[a.steps.length-1] : null;
+    const totalCost = Number(a.finalCost)||Number(a.estCost)||0;
+    return `<div class="prog-card" data-prog-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:12px;padding:14px 16px;cursor:pointer;transition:box-shadow .12s">
+      <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-size:11px;font-weight:700;background:${c.bg};color:${c.fg};padding:3px 8px;border-radius:6px">${esc(a.status||'견적중')}</span>
+            ${a.floor?`<span style="font-size:11px;color:#7a92a8">${esc(a.floor)}</span>`:''}
+          </div>
+          <div style="font-size:15px;font-weight:700;color:#1a2f45;margin-bottom:4px">${esc(a.title||'(제목 없음)')}</div>
+          ${a.location?`<div style="font-size:12px;color:#7a92a8">📍 ${esc(a.location)}</div>`:''}
+          ${a.detail?`<div style="font-size:12.5px;color:#33567d;margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(a.detail)}</div>`:''}
+          ${a.steps&&a.steps.length?`<div style="margin-top:8px;padding:8px 10px;background:#eef6ff;border:1px solid #90c2f0;border-radius:8px">
+            <div style="font-size:11px;color:#1a4a8a;font-weight:700;margin-bottom:4px">📋 처리 단계 ${a.steps.length}건 · 최근: ${esc(lastStep.date||'')}</div>
+            <div style="font-size:12px;color:#1a2f45">▶ ${esc(lastStep.action||'(내용 없음)')}${lastStep.field?` · 🏷 ${esc(lastStep.field)}`:''}${lastStep.vendor?` · 🏢 ${esc(lastStep.vendor)}`:''}</div>
+          </div>`:''}
+          ${a.photos&&a.photos.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+            ${a.photos.slice(0,4).map(p=>`<img src="${esc(p)}" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #e8f0fa">`).join('')}
+            ${a.photos.length>4?`<div style="width:54px;height:54px;background:#f0f6ff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#3f7cb8">+${a.photos.length-4}</div>`:''}
+          </div>`:''}
+        </div>
+        ${totalCost>0?`<div style="text-align:right;font-size:14px;font-weight:800;color:#3f7cb8;white-space:nowrap">💰 ${won(totalCost)}</div>`:''}
+      </div>
+    </div>`;
+  }).join("");
+  list.querySelectorAll(".prog-card").forEach(card=>{
+    card.addEventListener("mouseenter", ()=>card.style.boxShadow="0 4px 16px rgba(0,0,0,.08)");
+    card.addEventListener("mouseleave", ()=>card.style.boxShadow="");
+    card.addEventListener("click", ()=>openEditor("progress", card.dataset.progId));
   });
 }
 
