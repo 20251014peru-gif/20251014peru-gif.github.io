@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0630-1248";
+const APP_VERSION = "v44-0630-1311";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1297,7 +1297,7 @@ if(f.type==="timepick"){
     </div>`;
   }
   if(f.type==="textarea") inner=`<textarea id="m-${f.k}"></textarea>`;
-  else if(f.type==="select") inner=`<select id="m-${f.k}">${f.opts.map(o=>`<option>${o}</option>`).join("")}</select>`;
+  else if(f.type==="select") inner=`<select id="m-${f.k}">${f.opts.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("")}</select>`;
   else if(f.type==="status") inner=`<select id="m-${f.k}">${STATUSES.map(o=>`<option>${o}</option>`).join("")}</select>`;
   else if(f.type==="field") inner=`<div style="display:flex;gap:6px;align-items:stretch;position:relative">
       <input type="text" id="m-${f.k}" placeholder="분야 검색 (초성 가능, 예: ㅈㄱ → 전기)" autocomplete="off" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
@@ -3568,7 +3568,7 @@ $("mSave").addEventListener("click",async ()=>{
     }
     obj[f.k]=v;
   }
-  for(const f of sc){ if(f.req && !String(obj[f.k]||"").trim()){ toast(f.label+"을(를) 입력하세요"); return; } }
+  for(const f of sc){ if(f.req && !String(obj[f.k]||"").trim()){ console.warn("[저장 막힘] 필수값 누락:", f.k, f.label, "현재값:", obj[f.k]); toast("⚠️ "+f.label+"을(를) 입력하세요"); return; } }
   // v19: filelink가 폴더면 경로 끝에 \ 자동 추가, 파일이면 끝 슬래시 제거
   if(mKind==="filelink" && obj.path){
     if(obj.ptype==="폴더" && !/[\\\/]$/.test(obj.path)) obj.path = obj.path + "\\";
