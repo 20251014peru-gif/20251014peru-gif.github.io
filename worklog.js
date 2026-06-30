@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0630-1311";
+const APP_VERSION = "v44-0630-1315";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -3237,6 +3237,19 @@ function openViewer(kind,id){
     (SCHEMA[kind]||[]).forEach(f=>{ const val=fmtVal(f,data[f.k]); if(val) rows+=vrow(f.label.replace(/\s*\*$/,""),val); });
     if(kind==="call") rows+=vrow("조치완료",data.done?"완료":"미완료");
     if(kind==="deliver") rows+=vrow("전달완료",data.done?"완료":"미완료");
+  }
+  // v44: 진행업무 처리단계 — 조회창에서도 시간순으로 보여줌
+  if(kind==="progress" && (data.steps||[]).length){
+    const stepsHtml = data.steps.map((s,i)=>`
+      <div style="background:#eef6ff;border:1.5px solid #90c2f0;border-radius:8px;padding:10px 12px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="background:#3f7cb8;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px">${i+1}단계</span>
+          <span style="font-size:12px;color:#7a92a8">${esc(s.date||'')}</span>
+        </div>
+        <div style="font-size:13px;color:#1a2f45">${esc(s.action||'')}</div>
+        ${(s.field||s.vendor||s.vendorPhone)?`<div style="font-size:12px;color:#7a92a8;margin-top:3px">${[s.field&&('🏷 '+s.field),s.vendor&&('🏢 '+s.vendor),s.vendorPhone&&('📞 '+s.vendorPhone)].filter(Boolean).map(esc).join(' · ')}</div>`:''}
+      </div>`).join('');
+    rows+=`<div class="vrow"><div class="vk">📋 처리단계</div><div class="vv">${stepsHtml}</div></div>`;
   }
   // v15: 첨부파일 표시
   if((data.attachments||[]).length){
@@ -8061,8 +8074,9 @@ function renderProgressTasks(){
     const c = PROGRESS_STATUS_COLOR[a.status] || PROGRESS_STATUS_COLOR["견적중"];
     const lastStep = (a.steps&&a.steps.length) ? a.steps[a.steps.length-1] : null;
     const totalCost = Number(a.finalCost)||Number(a.estCost)||0;
-    return `<div class="prog-card" data-prog-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:12px;padding:14px 16px;cursor:pointer;transition:box-shadow .12s">
-      <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
+    return `<div class="prog-card" data-prog-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:12px;padding:14px 16px;cursor:pointer;transition:box-shadow .12s;position:relative">
+      <button type="button" class="prog-card-del" data-prog-del="${a.id}" title="삭제" style="position:absolute;top:10px;right:10px;width:26px;height:26px;border:none;background:#fde8e8;color:#b52929;border-radius:6px;font-size:13px;cursor:pointer;z-index:2">🗑</button>
+      <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding-right:32px">
         <div style="flex:1;min-width:200px">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
             <span style="font-size:11px;font-weight:700;background:${c.bg};color:${c.fg};padding:3px 8px;border-radius:6px">${esc(a.status||'견적중')}</span>
@@ -8084,10 +8098,22 @@ function renderProgressTasks(){
       </div>
     </div>`;
   }).join("");
+  /* 카드 클릭 → 조회창(읽기전용). 하단 수정 버튼을 눌러야만 수정 가능 */
   list.querySelectorAll(".prog-card").forEach(card=>{
     card.addEventListener("mouseenter", ()=>card.style.boxShadow="0 4px 16px rgba(0,0,0,.08)");
     card.addEventListener("mouseleave", ()=>card.style.boxShadow="");
-    card.addEventListener("click", ()=>openEditor("progress", card.dataset.progId));
+    card.addEventListener("click", (e)=>{
+      if(e.target.closest("[data-prog-del]")) return;
+      openViewer("progress", card.dataset.progId);
+    });
+  });
+  /* 카드 자체의 삭제 버튼 */
+  list.querySelectorAll("[data-prog-del]").forEach(btn=>{
+    btn.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const id = btn.dataset.progDel;
+      deleteWithUndo(id, "진행업무");
+    });
   });
 }
 
