@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1531</title>
+<title>업무일지 v20260701-1548</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -377,14 +377,14 @@
 
 /* 🐞 디버그 패널 */
 .dbg-btn {
-  position: fixed; top: 8px; left: 8px; z-index: 9999;
+  background:none;border:none;font-size:14px;cursor:pointer;padding:2px 4px;opacity:0.5;
   background: rgba(255,80,80,.85); color: #fff;
   border: none; border-radius: 8px; padding: 4px 10px;
   font-size: 12px; font-weight: 700; cursor: pointer;
   font-family: inherit; touch-action: manipulation;
 }
 .dbg-panel {
-  position: fixed; top: 38px; left: 8px; z-index: 9998;
+  position: fixed; top: 50px; left: auto; right: 10px; z-index: 9998;
   background: rgba(0,0,0,.9); color: #0f0; border-radius: 10px;
   padding: 10px; width: 88vw; max-width: 400px;
   max-height: 50vh; overflow: auto;
@@ -1138,7 +1138,7 @@
 <body>
 
 <!-- 🐞 디버그 패널 -->
-<button class="dbg-btn" onclick="window.toggleDbg&&window.toggleDbg()">🐞</button>
+
 <button id="v43FabHeader" title="기록 추가" style="
   position:fixed; right:0; top:62px;
   width:44px; height:85px;
@@ -1312,9 +1312,10 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1531</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1548</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="dbg-btn" onclick="window.toggleDbg&&window.toggleDbg()" title="디버그">🐞</button>
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <button class="nav-btn" id="btnGCal" title="구글 캘린더 연동" style="background:#fff;border:1.5px solid #dbe6f4;color:#444;display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
           <img src="https://www.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png" style="width:18px;height:18px;object-fit:cover;border-radius:3px"> 연동됨
@@ -8896,7 +8897,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1531';
+    if(el) el.textContent = 'v20260701-1548';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10338,7 +10339,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1531 로드');
+  console.log('[expV2] v20260701-1548 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
