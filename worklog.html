@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1548</title>
+<title>업무일지 v20260701-1553</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -390,7 +390,7 @@
   max-height: 50vh; overflow: auto;
   font-size: 11px; font-family: monospace; display: none;
 }
-.dbg-panel.show { display: block; }
+.dbg-panel.show { display: block; } /* 🐞 버튼으로만 열기 */
 .dbg-copy {
   background: #333; color: #fff; border: none; border-radius: 6px;
   padding: 4px 10px; font-size: 11px; cursor: pointer; margin-bottom: 6px;
@@ -1302,8 +1302,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   document.addEventListener('touchcancel', endDrag);
 })();
 </script>
-<div class="dbg-panel" id="dbgPanel">
-  <button class="dbg-copy" onclick="copyDbg()">📋 복사</button>
+<div class="dbg-panel" id="dbgPanel" style="display:none">
   <div id="dbgLog"></div>
 </div>
 
@@ -1312,7 +1311,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1548</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1553</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button class="dbg-btn" onclick="window.toggleDbg&&window.toggleDbg()" title="디버그">🐞</button>
@@ -8897,7 +8896,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1548';
+    if(el) el.textContent = 'v20260701-1553';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10339,7 +10338,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1548 로드');
+  console.log('[expV2] v20260701-1553 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
