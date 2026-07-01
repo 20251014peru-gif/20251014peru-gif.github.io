@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v20260701-0939";
+const APP_VERSION = "v20260701-0950";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1254,23 +1254,23 @@ function fieldHTML(f){
   if(f.type==="callcontact"){
     return `<div class="field full" style="position:relative"><label>${esc(f.label)}</label>
       <input type="text" id="m-${f.k}" placeholder="이름·업체·전화번호 검색..." autocomplete="off"
-        style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
       <div id="m-${f.k}-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow:auto"></div>
     </div>`;
   }
   if(f.type==="alertbefore"){
     return `<div class="field full"><label>${esc(f.label)}</label>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="m-alertDays" onchange="syncAlertBefore()" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+        <select id="m-alertDays" onchange="syncAlertBefore()" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:1">
           <option value="0">0일</option><option value="1">1일</option><option value="2">2일</option><option value="3">3일</option><option value="4">4일</option><option value="5">5일</option><option value="6">6일</option><option value="7">7일</option>
         </select>
-        <select id="m-alertHours" onchange="syncAlertBefore()" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+        <select id="m-alertHours" onchange="syncAlertBefore()" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:1">
           <option value="0">0시간</option><option value="1">1시간</option><option value="2">2시간</option><option value="3">3시간</option><option value="4">4시간</option><option value="5">5시간</option><option value="6">6시간</option><option value="7">7시간</option><option value="8">8시간</option><option value="9">9시간</option><option value="10">10시간</option><option value="11">11시간</option><option value="12">12시간</option><option value="13">13시간</option><option value="14">14시간</option><option value="15">15시간</option><option value="16">16시간</option><option value="17">17시간</option><option value="18">18시간</option><option value="19">19시간</option><option value="20">20시간</option><option value="21">21시간</option><option value="22">22시간</option><option value="23">23시간</option>
         </select>
-        <select id="m-alertMins" onchange="syncAlertBefore()" style="height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+        <select id="m-alertMins" onchange="syncAlertBefore()" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:1">
           <option value="0">0분</option><option value="5">5분</option><option value="10">10분</option><option value="15">15분</option><option value="20">20분</option><option value="30">30분</option><option value="45">45분</option>
         </select>
-        <span style="font-size:13px;color:#3f7cb8;font-weight:700;white-space:nowrap">전에 알림</span>
+        <span style="font-size:12px;color:#3f7cb8;font-weight:700;white-space:nowrap">전에 알림</span>
         <input type="hidden" id="m-${f.k}">
       </div></div>`;
   }
@@ -1278,16 +1278,16 @@ if(f.type==="timepick"){
     const fid=`m-${f.k}`;
     return `<div class="field${f.full?' full':''}"><label>${esc(f.label)}</label>
       <div style="display:flex;gap:6px;align-items:center">
-        <select id="${fid}-ampm" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 8px;border:2px solid #dbe6f4;border-radius:12px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:0 0 68px">
+        <select id="${fid}-ampm" onchange="syncTimepick('${fid}')" style="height:32px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;flex:0 0 56px">
           <option value="AM">오전</option>
           <option value="PM">오후</option>
         </select>
-        <select id="${fid}-h" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 8px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
+        <select id="${fid}-h" onchange="syncTimepick('${fid}')" style="height:32px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
           <option value="">시</option>
           <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
         </select>
-        <span style="font-size:18px;font-weight:700;color:#3f7cb8">:</span>
-        <select id="${fid}-m" onchange="syncTimepick('${fid}')" style="height:44px;padding:0 8px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
+        <span style="font-size:14px;font-weight:700;color:#3f7cb8">:</span>
+        <select id="${fid}-m" onchange="syncTimepick('${fid}')" style="height:32px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
           <option value="">분</option>
           <option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option>
         </select>
@@ -1298,7 +1298,7 @@ if(f.type==="timepick"){
   if(f.type==="workvendor"){
     return `<div class="field" style="position:relative"><label>${esc(f.label)} <a href="contacts.html" target="_blank" style="margin-left:4px;font-size:11px;padding:2px 7px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;color:#3f7cb8;font-weight:700;text-decoration:none">📋 연락처관리</a></label>
       <input type="text" id="m-${f.k}" placeholder="업체명 검색..." autocomplete="off"
-        style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
       <div id="m-${f.k}-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow:auto"></div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
         <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;font-weight:700;color:#94a3b8;margin:0">
@@ -1313,7 +1313,7 @@ if(f.type==="timepick"){
   else if(f.type==="select") inner=`<select id="m-${f.k}">${f.opts.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("")}</select>`;
   else if(f.type==="status") inner=`<select id="m-${f.k}">${STATUSES.map(o=>`<option>${o}</option>`).join("")}</select>`;
   else if(f.type==="field") inner=`<div style="display:flex;gap:6px;align-items:stretch;position:relative">
-      <input type="text" id="m-${f.k}" placeholder="분야 검색 (초성 가능, 예: ㅈㄱ → 전기)" autocomplete="off" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+      <input type="text" id="m-${f.k}" placeholder="분야 검색 (초성 가능, 예: ㅈㄱ → 전기)" autocomplete="off" style="flex:1;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
       <button type="button" class="btn btn-ghost btn-sm" data-fieldmgr style="flex:0 0 auto;padding:0 10px" title="분야 관리">⚙</button>
       <div id="m-${f.k}-list" style="display:none;position:absolute;top:48px;left:0;right:46px;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:240px;overflow:auto"></div>
     </div>
@@ -1341,7 +1341,7 @@ if(f.type==="timepick"){
     } else if(f.k==="material"){
       // v44: 자재명 - 자재 탭의 품목과 연동된 검색 가능한 입력창
       inner=`<div style="position:relative">
-        <input type="text" id="m-${f.k}" placeholder="클릭하면 자재 목록, 검색 가능, 없으면 새로 추가" autocomplete="off" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        <input type="text" id="m-${f.k}" placeholder="클릭하면 자재 목록, 검색 가능, 없으면 새로 추가" autocomplete="off" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         <div id="m-${f.k}-list" style="display:none;position:absolute;top:48px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:260px;overflow:auto"></div>
       </div>`;
     } else if(f.k==="name" && mKind==="call"){
@@ -1349,7 +1349,7 @@ if(f.type==="timepick"){
     } else if(f.k==="date" && (mKind==="work"||mKind==="call")){
       // 날짜 + 어제 토글 버튼
       inner=`<div style="display:flex;gap:6px;align-items:center">
-        <input type="date" id="m-${f.k}" style="flex:1;height:44px;padding:0 12px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+        <input type="date" id="m-${f.k}" style="flex:1;height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         <button type="button" id="btn-yesterday" style="height:44px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:12px;font-size:12px;font-weight:700;color:#7a92a8;background:#f7faff;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0"
           onclick="(function(){const el=document.getElementById('m-date');if(!el)return;const yd=yesterdayStr();if(el.value===yd){el.value=(window._todayBeforeYd||todayStr());this.textContent='어제';this.style.background='#f7faff';this.style.color='#7a92a8';}else{window._todayBeforeYd=el.value||todayStr();el.value=yd;this.textContent='✓ 어제';this.style.background='#fef3c7';this.style.color='#92400e';}}).call(this)">어제</button>
       </div>`;
@@ -1376,39 +1376,39 @@ function openNewMaterialModal(prefilledName, onSaved){
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">서브원 상품ID <span style="color:#aab8c8;font-weight:500">(선택)</span></label>
-          <input type="text" id="newMatShopId" placeholder="예: 6573068" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <input type="text" id="newMatShopId" placeholder="예: 6573068" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">품목명 <span style="color:#e74c3c">*</span></label>
-          <input type="text" id="newMatName" value="${esc(prefilledName||'')}" placeholder="예: 형광등, 점보롤" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <input type="text" id="newMatName" value="${esc(prefilledName||'')}" placeholder="예: 형광등, 점보롤" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">규격 <span style="color:#aab8c8;font-weight:500">(간단히 - 정확한 규격만)</span></label>
-          <input type="text" id="newMatSpec" placeholder="예: 36W / LED / 5500K" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <input type="text" id="newMatSpec" placeholder="예: 36W / LED / 5500K" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div style="display:flex;gap:10px">
           <div style="flex:1">
             <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">단위코드</label>
-            <input type="text" id="newMatUnit" placeholder="EA, BOX, ROL" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+            <input type="text" id="newMatUnit" placeholder="EA, BOX, ROL" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
           </div>
           <div style="flex:1">
             <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">판매단가 (원)</label>
-            <input type="number" id="newMatPrice" placeholder="0" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+            <input type="number" id="newMatPrice" placeholder="0" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
           </div>
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">제조원</label>
-          <input type="text" id="newMatMaker" placeholder="예: (주)동원피앤아이" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <input type="text" id="newMatMaker" placeholder="예: (주)동원피앤아이" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">분야</label>
-          <select id="newMatField" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <select id="newMatField" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
             ${FIELDS.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("")}
           </select>
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">거래처 <span style="color:#aab8c8;font-weight:500">(기본: 서브원)</span></label>
-          <input type="text" id="newMatVendor" value="서브원" placeholder="예: 서브원" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <input type="text" id="newMatVendor" value="서브원" placeholder="예: 서브원" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button id="newMatCancel" type="button" style="flex:1;height:48px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
@@ -5768,7 +5768,7 @@ async function pwRenderList(){
     const items=groups[c];
     const collapsed=VIEW_PREFS.password.collapsed[c];
     const colorClass=catColorClass("password",c);
-    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}" style="margin-bottom:14px">
+    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}" style="margin-bottom:8px">
       <div class="cat-group-h pw-cat-hdr" data-cat="${esc(c)}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none">
         <span class="ch-arrow" style="font-size:14px;transition:transform .2s;display:inline-block;${collapsed?'transform:rotate(-90deg)':''}">▾</span>
         <span style="font-size:15px;font-weight:800;letter-spacing:-.3px">${esc(c)}</span>
@@ -6613,39 +6613,39 @@ function openQuickEditMaterial(id){
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">서브원 상품ID</label>
-          <input type="text" id="qeShopId" value="${esc(item.shopId||'')}" placeholder="예: 6573068" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <input type="text" id="qeShopId" value="${esc(item.shopId||'')}" placeholder="예: 6573068" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">품목명 <span style="color:#e74c3c">*</span></label>
-          <input type="text" id="qeName" value="${esc(item.itemName||'')}" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <input type="text" id="qeName" value="${esc(item.itemName||'')}" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">규격 <span style="color:#aab8c8;font-weight:500">(짧게 정리)</span></label>
-          <input type="text" id="qeSpec" value="${esc(item.spec||'')}" placeholder="예: 8W / Φ60mm" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <input type="text" id="qeSpec" value="${esc(item.spec||'')}" placeholder="예: 8W / Φ60mm" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div style="display:flex;gap:10px">
           <div style="flex:1">
             <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">단위코드</label>
-            <input type="text" id="qeUnit" value="${esc(item.unit||'')}" placeholder="EA, BOX, ROL" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+            <input type="text" id="qeUnit" value="${esc(item.unit||'')}" placeholder="EA, BOX, ROL" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
           </div>
           <div style="flex:1">
             <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">판매단가 (원)</label>
-            <input type="number" id="qePrice" value="${Number(item.unitPrice)||0}" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+            <input type="number" id="qePrice" value="${Number(item.unitPrice)||0}" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
           </div>
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">제조원</label>
-          <input type="text" id="qeMaker" value="${esc(item.maker||'')}" placeholder="예: (주)동원피앤아이" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <input type="text" id="qeMaker" value="${esc(item.maker||'')}" placeholder="예: (주)동원피앤아이" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">분야</label>
-          <select id="qeField" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <select id="qeField" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
             ${FIELDS.map(f=>`<option value="${esc(f)}" ${item.field===f?'selected':''}>${esc(f)}</option>`).join("")}
           </select>
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">거래처</label>
-          <input type="text" id="qeVendor" value="${esc(item.vendor||'')}" placeholder="예: 서브원" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
+          <input type="text" id="qeVendor" value="${esc(item.vendor||'')}" placeholder="예: 서브원" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button id="qeCancel" type="button" style="flex:1;height:48px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
@@ -7085,12 +7085,12 @@ function renderCleaningModal(id){
     </tr>`).join("");
 
   $("clnFields").innerHTML=`
-    <div class="grid" style="margin-bottom:14px">
+    <div class="grid" style="margin-bottom:8px">
       <div class="field"><label>날짜 <span class="req">*</span></label><input type="date" id="cln-date" value="${esc(d.date||todayStr())}"></div>
       <div class="field"><label>반장</label><input type="text" id="cln-foreman" value="${esc(d.foreman||CLEAN_FOREMAN)}"></div>
     </div>
 
-    <div class="field full" style="margin-bottom:14px">
+    <div class="field full" style="margin-bottom:8px">
       <label>📷 일지 원본 사진 (AI 분석에 사용)</label>
       <div class="photo-btns">
         <label class="photo-btn">📷 촬영<input type="file" id="cln-cam" accept="image/*" capture="environment" style="display:none"></label>
@@ -7101,25 +7101,25 @@ function renderCleaningModal(id){
     </div>
 
     <h3 style="font-family:'Gowun Batang',serif;font-size:16px;color:#33567d;margin:6px 0">👥 담당자별 작업 내역</h3>
-    <div class="table-wrap" style="margin-bottom:14px">
+    <div class="table-wrap" style="margin-bottom:8px">
       <table class="rec cln-staff-table"><thead><tr>
         <th>담당자</th><th>담당 층</th><th>점보롤</th><th>핸드타월</th><th>특이사항</th>
       </tr></thead><tbody id="cln-staffBody">${rows}</tbody></table>
     </div>
 
-    <div class="field full" style="margin-bottom:14px">
+    <div class="field full" style="margin-bottom:8px">
       <label>👔 소장 지시사항 <span style="color:var(--ink-soft);font-weight:400;font-size:11px">— 항목당 한 셀로 추가됩니다</span></label>
       <div id="cln-directorList" class="cln-item-list"></div>
       <button type="button" class="btn btn-ghost btn-sm" data-addcln="director">➕ 항목 추가</button>
     </div>
 
-    <div class="field full" style="margin-bottom:14px">
+    <div class="field full" style="margin-bottom:8px">
       <label>📌 지시 및 전달사항 <span style="color:var(--ink-soft);font-weight:400;font-size:11px">— 항목당 한 셀로 추가됩니다</span></label>
       <div id="cln-directiveList" class="cln-item-list"></div>
       <button type="button" class="btn btn-ghost btn-sm" data-addcln="directive">➕ 항목 추가</button>
     </div>
 
-    <div class="field full" style="margin-bottom:14px">
+    <div class="field full" style="margin-bottom:8px">
       <label>⭐ 특기사항 <span style="color:var(--ink-soft);font-weight:400;font-size:11px">— 항목당 한 셀로 추가됩니다</span></label>
       <div id="cln-specialList" class="cln-item-list"></div>
       <button type="button" class="btn btn-ghost btn-sm" data-addcln="special">➕ 항목 추가</button>
@@ -7952,12 +7952,12 @@ function renderAccidents(){
     return;
   }
   /* v44-fix: 다열 그리드 적용 */
-  list.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:10px';
+  list.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px';
   list.innerHTML = arr.map(a=>{
     const c = ACCIDENT_STATUS_COLOR[a.status] || ACCIDENT_STATUS_COLOR["⏳ 접수"];
     const icon = ACCIDENT_TYPE_ICON[a.accType] || "📌";
     const totalCost = (Number(a.repairCost)||0)+(Number(a.compensation)||0)+(Number(a.insurance)||0);
-    return `<div class="acc-card" data-acc-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:12px;padding:14px 16px;cursor:pointer;transition:box-shadow .12s">
+    return `<div class="acc-card" data-acc-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .12s">
       <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
         <div style="flex:1;min-width:200px">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
@@ -8079,12 +8079,12 @@ function renderProgressTasks(){
     </div>`;
     return;
   }
-  list.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:10px';
+  list.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px';
   list.innerHTML = arr.map(a=>{
     const c = PROGRESS_STATUS_COLOR[a.status] || PROGRESS_STATUS_COLOR["견적중"];
     const lastStep = (a.steps&&a.steps.length) ? a.steps[a.steps.length-1] : null;
     const totalCost = Number(a.finalCost)||Number(a.estCost)||0;
-    return `<div class="prog-card" data-prog-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:12px;padding:14px 16px;cursor:pointer;transition:box-shadow .12s;position:relative">
+    return `<div class="prog-card" data-prog-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .12s;position:relative">
       <button type="button" class="prog-card-del" data-prog-del="${a.id}" title="삭제" style="position:absolute;top:10px;right:10px;width:26px;height:26px;border:none;background:#fde8e8;color:#b52929;border-radius:6px;font-size:13px;cursor:pointer;z-index:2">🗑</button>
       <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding-right:32px">
         <div style="flex:1;min-width:200px">
@@ -8459,8 +8459,8 @@ function openWorkVendorMgr(){
     el.innerHTML=`
       <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:24px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
         <h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:#1a2f45">🏢 담당업체 관리</h3>
-        <div id="workVendorList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:14px"></div>
-        <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div id="workVendorList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
           <input type="text" id="workVendorNew" placeholder="새 업체명" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
           <button onclick="workVendorAdd()" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
         </div>
@@ -8735,8 +8735,8 @@ function openExpFieldMgr(){
     el.innerHTML = `
       <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:24px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
         <h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:#1a2f45">⚙ 지출 분야 관리</h3>
-        <div id="expFieldMgrList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:14px"></div>
-        <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div id="expFieldMgrList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
           <input type="text" id="expFieldMgrNew" placeholder="새 분야 이름" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;outline:none;background:#f7faff">
           <button onclick="expFieldMgrAdd()" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
         </div>
