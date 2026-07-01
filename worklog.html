@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1317</title>
+<title>업무일지 v20260701-1328</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1312,7 +1312,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1317</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1328</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1644,11 +1644,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   <!-- 점검일지 추가/수정 모달 -->
   <div class="v43-cat-overlay" id="inspModal">
-    <div class="v43-cat-sheet" style="padding-bottom:28px">
+    <div class="v43-cat-sheet" style="padding-bottom:16px;padding-top:14px">
       <h3 id="inspModalTitle">점검일지 추가</h3>
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">종류</label>
           <select id="inspModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;color:#1a2f45;outline:none">
             <option value="일점검">일점검</option>
             <option value="전기">전기</option>
@@ -1660,37 +1660,37 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           </select>
         </div>
         <div style="display:none">
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월 (예: 2026-06)</label>
-          <select id="inspModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">월 (예: 2026-06)</label>
+          <select id="inspModalMonth" style="width:100%;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">구분</label>
           <div style="display:flex;gap:8px;margin-bottom:4px">
-            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+            <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">
               <input type="radio" name="inspModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
             </label>
-            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+            <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">
               <input type="radio" name="inspModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
             </label>
           </div>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
-          <input type="text" id="inspModalName" placeholder="예: 6월 전기 안전점검" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일명 / 내용</label>
+          <input type="text" id="inspModalName" placeholder="예: 6월 전기 안전점검" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일/폴더 경로</label>
-          <input type="text" id="inspModalPath" placeholder="예: D:\서희타워 관련\점검일지6-06" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일/폴더 경로</label>
+          <input type="text" id="inspModalPath" placeholder="예: D:\서희타워 관련\점검일지6-06" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">메모 (선택)</label>
-          <input type="text" id="inspModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">메모 (선택)</label>
+          <input type="text" id="inspModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button id="inspModalCancel" class="v43-cat-cancel" style="margin-top:0;flex:1">취소</button>
-        <button id="inspModalDel" style="flex:1;padding:13px;border-radius:14px;border:none;background:#fde8e8;color:#b52929;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
-        <button id="inspModalSave" style="flex:1;padding:13px;border-radius:14px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
+      <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">
+        <button id="inspModalCancel" class="v43-cat-cancel" style="margin-top:0;padding:7px 16px;font-size:12px;border-radius:8px">취소</button>
+        <button id="inspModalDel" style="padding:7px 16px;border-radius:8px;border:none;background:#fde8e8;color:#b52929;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
+        <button id="inspModalSave" style="padding:7px 20px;border-radius:8px;border:none;background:#3f7cb8;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
       </div>
     </div>
   </div>
@@ -1726,45 +1726,45 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   <!-- 운영실무 추가/수정 모달 -->
   <div class="v43-cat-overlay" id="docsModal">
-    <div class="v43-cat-sheet" style="padding-bottom:28px">
+    <div class="v43-cat-sheet" style="padding-bottom:16px;padding-top:14px">
       <h3 id="docsModalTitle">운영실무 추가</h3>
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
-          <select id="docsModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">종류</label>
+          <select id="docsModalType" style="width:100%;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div style="display:none">
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월</label>
-          <select id="docsModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">월</label>
+          <select id="docsModalMonth" style="width:100%;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">구분</label>
           <div style="display:flex;gap:8px;margin-bottom:4px">
-            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+            <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">
               <input type="radio" name="docsModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
             </label>
-            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+            <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">
               <input type="radio" name="docsModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
             </label>
           </div>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
-          <input type="text" id="docsModalName" placeholder="예: 6월 엘리베이터 품의서" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일명 / 내용</label>
+          <input type="text" id="docsModalName" placeholder="예: 6월 엘리베이터 품의서" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일/폴더 경로</label>
-          <input type="text" id="docsModalPath" placeholder="예: D:\서희타워 관련\품의서6-06" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일/폴더 경로</label>
+          <input type="text" id="docsModalPath" placeholder="예: D:\서희타워 관련\품의서6-06" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">메모 (선택)</label>
-          <input type="text" id="docsModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">메모 (선택)</label>
+          <input type="text" id="docsModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button id="docsModalCancel" class="v43-cat-cancel" style="margin-top:0;flex:1">취소</button>
-        <button id="docsModalDel" style="flex:1;padding:13px;border-radius:14px;border:none;background:#fde8e8;color:#b52929;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
-        <button id="docsModalSave" style="flex:1;padding:13px;border-radius:14px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
+      <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">
+        <button id="docsModalCancel" class="v43-cat-cancel" style="margin-top:0;padding:7px 16px;font-size:12px;border-radius:8px">취소</button>
+        <button id="docsModalDel" style="padding:7px 16px;border-radius:8px;border:none;background:#fde8e8;color:#b52929;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
+        <button id="docsModalSave" style="padding:7px 20px;border-radius:8px;border:none;background:#3f7cb8;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
       </div>
     </div>
   </div>
@@ -1827,57 +1827,57 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   <!-- 임대공용 추가/수정 모달 -->
   <div class="v43-cat-overlay" id="commonModal">
-    <div class="v43-cat-sheet" style="padding-bottom:28px">
+    <div class="v43-cat-sheet" style="padding-bottom:16px;padding-top:14px">
       <h3 id="commonModalTitle">임대공용 추가</h3>
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
-          <select id="commonModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">종류</label>
+          <select id="commonModalType" style="width:100%;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div style="display:none">
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월 (예: 2026-06)</label>
-          <select id="commonModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">월 (예: 2026-06)</label>
+          <select id="commonModalMonth" style="width:100%;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">구분</label>
           <div style="display:flex;gap:8px;margin-bottom:4px">
-            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+            <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">
               <input type="radio" name="commonModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
             </label>
-            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+            <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">
               <input type="radio" name="commonModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
             </label>
           </div>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
-          <input type="text" id="commonModalName" placeholder="예: 건물 건축물대장" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일명 / 내용</label>
+          <input type="text" id="commonModalName" placeholder="예: 건물 건축물대장" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일/폴더 경로</label>
-          <input type="text" id="commonModalPath" placeholder="예: D:\서희타워 관련\임대공용" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일/폴더 경로</label>
+          <input type="text" id="commonModalPath" placeholder="예: D:\서희타워 관련\임대공용" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">메모 (선택)</label>
-          <input type="text" id="commonModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">메모 (선택)</label>
+          <input type="text" id="commonModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button id="commonModalCancel" class="v43-cat-cancel" style="margin-top:0;flex:1">취소</button>
-        <button id="commonModalDel" style="flex:1;padding:13px;border-radius:14px;border:none;background:#fde8e8;color:#b52929;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
-        <button id="commonModalSave" style="flex:1;padding:13px;border-radius:14px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
+      <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">
+        <button id="commonModalCancel" class="v43-cat-cancel" style="margin-top:0;padding:7px 16px;font-size:12px;border-radius:8px">취소</button>
+        <button id="commonModalDel" style="padding:7px 16px;border-radius:8px;border:none;background:#fde8e8;color:#b52929;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
+        <button id="commonModalSave" style="padding:7px 20px;border-radius:8px;border:none;background:#3f7cb8;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
       </div>
     </div>
   </div>
 
   <!-- 임대개별 추가/수정 모달 -->
   <div class="v43-cat-overlay" id="indivModal">
-    <div class="v43-cat-sheet" style="padding-bottom:28px">
+    <div class="v43-cat-sheet" style="padding-bottom:16px;padding-top:14px">
       <h3 id="indivModalTitle">임대개별 추가</h3>
       <div style="display:flex;flex-direction:column;gap:12px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div>
-            <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">층</label>
+            <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">층</label>
             <select id="indivModalFloor" style="width:100%;height:44px;padding:0 10px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none">
               <option value="">층 선택</option>
           <option value="B1">B1</option>
@@ -1904,57 +1904,57 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
             </select>
           </div>
           <div>
-            <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">호수</label>
-            <input type="text" id="indivModalUnit" placeholder="예: 501" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+            <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">호수</label>
+            <input type="text" id="indivModalUnit" placeholder="예: 501" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
           </div>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
-          <select id="indivModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">종류</label>
+          <select id="indivModalType" style="width:100%;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div style="display:none">
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월</label>
-          <select id="indivModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">월</label>
+          <select id="indivModalMonth" style="width:100%;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">구분</label>
           <div style="display:flex;gap:8px;margin-bottom:4px">
-            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+            <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">
               <input type="radio" name="indivModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
             </label>
-            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+            <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">
               <input type="radio" name="indivModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
             </label>
           </div>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
-          <input type="text" id="indivModalName" placeholder="예: 502호 임대차계약서" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일명 / 내용</label>
+          <input type="text" id="indivModalName" placeholder="예: 502호 임대차계약서" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일/폴더 경로</label>
-          <input type="text" id="indivModalPath" placeholder="예: D:\서희타워 관련\임대개별층ł호" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일/폴더 경로</label>
+          <input type="text" id="indivModalPath" placeholder="예: D:\서희타워 관련\임대개별층ł호" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">메모 (선택)</label>
-          <input type="text" id="indivModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">메모 (선택)</label>
+          <input type="text" id="indivModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button id="indivModalCancel" class="v43-cat-cancel" style="margin-top:0;flex:1">취소</button>
-        <button id="indivModalDel" style="flex:1;padding:13px;border-radius:14px;border:none;background:#fde8e8;color:#b52929;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
-        <button id="indivModalSave" style="flex:1;padding:13px;border-radius:14px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
+      <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">
+        <button id="indivModalCancel" class="v43-cat-cancel" style="margin-top:0;padding:7px 16px;font-size:12px;border-radius:8px">취소</button>
+        <button id="indivModalDel" style="padding:7px 16px;border-radius:8px;border:none;background:#fde8e8;color:#b52929;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
+        <button id="indivModalSave" style="padding:7px 20px;border-radius:8px;border:none;background:#3f7cb8;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
       </div>
     </div>
   </div>
 
   <!-- 종류 관리 모달 (공통) -->
   <div class="v43-cat-overlay" id="catMgrModal">
-    <div class="v43-cat-sheet" style="padding-bottom:28px">
+    <div class="v43-cat-sheet" style="padding-bottom:16px;padding-top:14px">
       <h3 id="catMgrModalTitle">종류 관리</h3>
       <div id="catMgrList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:300px;overflow:auto"></div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
-        <input type="text" id="catMgrNewName" placeholder="새 종류 이름" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        <input type="text" id="catMgrNewName" placeholder="새 종류 이름" style="flex:1;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         <button id="catMgrAddBtn" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
       </div>
       <button id="catMgrClose" class="v43-cat-cancel" style="margin-top:0">닫기</button>
@@ -1963,11 +1963,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   <!-- 월 관리 모달 (공통) -->
   <div class="v43-cat-overlay" id="monthMgrModal">
-    <div class="v43-cat-sheet" style="padding-bottom:28px">
+    <div class="v43-cat-sheet" style="padding-bottom:16px;padding-top:14px">
       <h3 id="monthMgrTitle">월 관리</h3>
       <div id="monthMgrList" style="max-height:280px;overflow:auto;margin-bottom:14px"></div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
-        <input type="month" id="monthMgrNewVal" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        <input type="month" id="monthMgrNewVal" style="flex:1;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         <button id="monthMgrAddBtn" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
       </div>
       <button id="monthMgrClose" class="v43-cat-cancel" style="margin-top:0">닫기</button>
@@ -1976,11 +1976,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   <!-- 년 관리 모달 (공통) -->
   <div class="v43-cat-overlay" id="yearMgrModal">
-    <div class="v43-cat-sheet" style="padding-bottom:28px">
+    <div class="v43-cat-sheet" style="padding-bottom:16px;padding-top:14px">
       <h3 id="yearMgrTitle">년 관리</h3>
       <div id="yearMgrList" style="max-height:280px;overflow:auto;margin-bottom:14px"></div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
-        <input type="number" id="yearMgrNewVal" placeholder="예: 2026" min="2020" max="2099" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+        <input type="number" id="yearMgrNewVal" placeholder="예: 2026" min="2020" max="2099" style="flex:1;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         <button id="yearMgrAddBtn" style="height:44px;padding:0 18px;background:#8e44ad;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
       </div>
       <button id="yearMgrClose" class="v43-cat-cancel" style="margin-top:0">닫기</button>
@@ -2014,45 +2014,45 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   <!-- 기타 추가/수정 모달 -->
   <div class="v43-cat-overlay" id="etcModal">
-    <div class="v43-cat-sheet" style="padding-bottom:28px">
+    <div class="v43-cat-sheet" style="padding-bottom:16px;padding-top:14px">
       <h3 id="etcModalTitle">서류폴더 추가</h3>
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>
-          <select id="etcModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">종류</label>
+          <select id="etcModalType" style="width:100%;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none"></select>
         </div>
         <div style="display:none">
           <label>월</label>
           <select id="etcModalMonth"></select>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">구분</label>
           <div style="display:flex;gap:8px;margin-bottom:4px">
-            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+            <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">
               <input type="radio" name="etcModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더
             </label>
-            <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">
+            <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">
               <input type="radio" name="etcModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일
             </label>
           </div>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>
-          <input type="text" id="etcModalName" placeholder="예: 카카오톡_파일, 크롬다운로드" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일명 / 내용</label>
+          <input type="text" id="etcModalName" placeholder="예: 카카오톡_파일, 크롬다운로드" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일/폴더 경로</label>
-          <input type="text" id="etcModalPath" placeholder="예: C:\Users\bini6\Downloads" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일/폴더 경로</label>
+          <input type="text" id="etcModalPath" placeholder="예: C:\Users\bini6\Downloads" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
         <div>
-          <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">메모 (선택)</label>
-          <input type="text" id="etcModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">메모 (선택)</label>
+          <input type="text" id="etcModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button id="etcModalCancel" class="v43-cat-cancel" style="margin-top:0;flex:1">취소</button>
-        <button id="etcModalDel" style="flex:1;padding:13px;border-radius:14px;border:none;background:#fde8e8;color:#b52929;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
-        <button id="etcModalSave" style="flex:1;padding:13px;border-radius:14px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
+      <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">
+        <button id="etcModalCancel" class="v43-cat-cancel" style="margin-top:0;padding:7px 16px;font-size:12px;border-radius:8px">취소</button>
+        <button id="etcModalDel" style="padding:7px 16px;border-radius:8px;border:none;background:#fde8e8;color:#b52929;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>
+        <button id="etcModalSave" style="padding:7px 20px;border-radius:8px;border:none;background:#3f7cb8;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>
       </div>
     </div>
   </div>
@@ -3617,45 +3617,45 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         +'  </div>'
         +'</div>'
         +'<div class="v43-cat-overlay" id="'+pfx+'Modal">'
-        +'  <div class="v43-cat-sheet" style="padding-bottom:28px">'
+        +'  <div class="v43-cat-sheet" style="padding-bottom:16px;padding-top:14px">'
         +'    <h3 id="'+pfx+'ModalTitle">'+escHtml(cleanLabel)+' 추가</h3>'
         +'    <div style="display:flex;flex-direction:column;gap:12px">'
         +'      <div>'
-        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">종류</label>'
-        +'        <select id="'+pfx+'ModalType" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>'
+        +'        <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">종류</label>'
+        +'        <select id="'+pfx+'ModalType" style="width:100%;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none"></select>'
         +'      </div>'
         +'      <div style="display:none">'
-        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">월</label>'
-        +'        <select id="'+pfx+'ModalMonth" style="width:100%;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none"></select>'
+        +'        <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">월</label>'
+        +'        <select id="'+pfx+'ModalMonth" style="width:100%;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none"></select>'
         +'      </div>'
         +'      <div>'
-        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">구분</label>'
+        +'        <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">구분</label>'
         +'        <div style="display:flex;gap:8px;margin-bottom:4px">'
-        +'          <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">'
+        +'          <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">'
         +'            <input type="radio" name="'+pfx+'ModalFileType" value="folder" checked style="accent-color:#3f7cb8"> 📁 폴더'
         +'          </label>'
-        +'          <label style="display:flex;align-items:center;gap:6px;flex:1;padding:10px 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">'
+        +'          <label style="display:flex;align-items:center;gap:5px;flex:1;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-size:12px;font-weight:600;color:#1a2f45">'
         +'            <input type="radio" name="'+pfx+'ModalFileType" value="file" style="accent-color:#3f7cb8"> 📄 파일'
         +'          </label>'
         +'        </div>'
         +'      </div>'
         +'      <div>'
-        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일명 / 내용</label>'
-        +'        <input type="text" id="'+pfx+'ModalName" placeholder="예: 자료 이름" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">'
+        +'        <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일명 / 내용</label>'
+        +'        <input type="text" id="'+pfx+'ModalName" placeholder="예: 자료 이름" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">'
         +'      </div>'
         +'      <div>'
-        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">파일/폴더 경로</label>'
-        +'        <input type="text" id="'+pfx+'ModalPath" placeholder="예: D:\\서희타워 관련\\자료" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">'
+        +'        <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">파일/폴더 경로</label>'
+        +'        <input type="text" id="'+pfx+'ModalPath" placeholder="예: D:\\서희타워 관련\\자료" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">'
         +'      </div>'
         +'      <div>'
-        +'        <label style="font-size:13px;font-weight:700;color:#33567d;display:block;margin-bottom:5px">메모 (선택)</label>'
-        +'        <input type="text" id="'+pfx+'ModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">'
+        +'        <label style="font-size:11px;font-weight:700;color:#33567d;display:block;margin-bottom:2px">메모 (선택)</label>'
+        +'        <input type="text" id="'+pfx+'ModalMemo" placeholder="간단한 메모" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">'
         +'      </div>'
         +'    </div>'
-        +'    <div style="display:flex;gap:8px;margin-top:16px">'
-        +'      <button id="'+pfx+'ModalCancel" class="v43-cat-cancel" style="margin-top:0;flex:1">취소</button>'
-        +'      <button id="'+pfx+'ModalDel" style="flex:1;padding:13px;border-radius:14px;border:none;background:#fde8e8;color:#b52929;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>'
-        +'      <button id="'+pfx+'ModalSave" style="flex:1;padding:13px;border-radius:14px;border:none;background:#3f7cb8;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>'
+        +'    <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">'
+        +'      <button id="'+pfx+'ModalCancel" class="v43-cat-cancel" style="margin-top:0;padding:7px 16px;font-size:12px;border-radius:8px">취소</button>'
+        +'      <button id="'+pfx+'ModalDel" style="padding:7px 16px;border-radius:8px;border:none;background:#fde8e8;color:#b52929;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;display:none">삭제</button>'
+        +'      <button id="'+pfx+'ModalSave" style="padding:7px 20px;border-radius:8px;border:none;background:#3f7cb8;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">저장</button>'
         +'    </div>'
         +'  </div>'
         +'</div>';
@@ -6501,8 +6501,7 @@ function makeDocTab(cfg){
     setTimeout(()=>el(cfg.modalNameId).focus(),200);
     // v44: 분야/년도/태그/즐겨찾기 추가 영역 (동적 삽입)
     setupExtraModalFields(d);
-    // v44: 다른 탭으로 이동 버튼 추가 (수정 모드일 때만)
-    setupMoveButton(id);
+    // v44: 다른 탭으로 이동 버튼 제거 (자료 일괄정리에서 이동)
   }
 
   // v44: 모달에 분야/년도/태그/즐겨찾기 동적 추가
@@ -6532,40 +6531,29 @@ function makeDocTab(cfg){
     const isFav = !!(d && d.favorite);
     const area = document.createElement('div');
     area.className = 'extra-modal-fields';
-    area.style.cssText = 'margin-top:12px;padding:12px;background:#f7faff;border-radius:10px;border:1.5px solid #e8f0fa';
+    area.style.cssText = 'margin-top:8px;padding:8px;background:#f7faff;border-radius:8px;border:1.5px solid #e8f0fa';
     area.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
         <div>
-          <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
-            <label style="font-size:11px;font-weight:700;color:#7a92a8">🏷 분야</label>
-            <button type="button" id="modal-field-add-${cfg.tab}" style="background:#0369a1;color:#fff;border:none;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">+ 추가</button>
-            <button type="button" id="modal-field-mgr-${cfg.tab}" style="background:none;border:none;cursor:pointer;font-size:10px;color:#3f7cb8;padding:0;text-decoration:underline">관리</button>
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
+            <label style="font-size:10px;font-weight:700;color:#7a92a8">📅 년도</label>
+            <button type="button" id="modal-year-add-${cfg.tab}" style="background:#0369a1;color:#fff;border:none;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;cursor:pointer;font-family:inherit">+ 추가</button>
           </div>
-          <select id="modal-field-${cfg.tab}" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#fff">
-            <option value="">(선택)</option>
-            ${fields.map(f=>`<option value="${esc(f)}" ${curField===f?'selected':''}>${esc(f)}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
-            <label style="font-size:11px;font-weight:700;color:#7a92a8">📅 년도</label>
-            <button type="button" id="modal-year-add-${cfg.tab}" style="background:#0369a1;color:#fff;border:none;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">+ 추가</button>
-          </div>
-          <select id="modal-year-${cfg.tab}" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#fff">
+          <select id="modal-year-${cfg.tab}" style="width:100%;box-sizing:border-box;height:28px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#fff">
             <option value="">(자동)</option>
             ${years.map(y=>`<option value="${y}" ${String(dYear)===String(y)?'selected':''}>${y}년</option>`).join('')}
           </select>
         </div>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;color:#7a92a8;margin-bottom:2px">🏷 태그 (콤마로 구분)</label>
+          <input type="text" id="modal-tags-${cfg.tab}" value="${esc(dTags.join(', '))}" placeholder="예: 재계약, 긴급" style="width:100%;box-sizing:border-box;height:28px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#fff">
+        </div>
       </div>
-      <div style="margin-bottom:8px">
-        <label style="display:block;font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:3px">🏷 태그 (콤마로 구분)</label>
-        <input type="text" id="modal-tags-${cfg.tab}" value="${esc(dTags.join(', '))}" placeholder="예: 재계약, 긴급, 2026" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#fff">
-        ${allTags.length?`<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">
-          ${allTags.slice(0,8).map(t=>`<button type="button" class="modal-tag-quick" data-tag="${esc(t)}" style="padding:1px 7px;background:#eaf3fb;color:#3f7cb8;border:none;border-radius:8px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit">+${esc(t)}</button>`).join('')}
-        </div>`:''}
-      </div>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#7a92a8;cursor:pointer">
-        <input type="checkbox" id="modal-fav-${cfg.tab}" ${isFav?'checked':''} style="width:16px;height:16px;cursor:pointer">
+      ${allTags.length?`<div style="margin-bottom:6px;display:flex;flex-wrap:wrap;gap:3px">
+        ${allTags.slice(0,8).map(t=>`<button type="button" class="modal-tag-quick" data-tag="${esc(t)}" style="padding:1px 6px;background:#eaf3fb;color:#3f7cb8;border:none;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit">+${esc(t)}</button>`).join('')}
+      </div>`:''}
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#7a92a8;cursor:pointer">
+        <input type="checkbox" id="modal-fav-${cfg.tab}" ${isFav?'checked':''} style="width:14px;height:14px;cursor:pointer">
         <span>⭐ 즐겨찾기 (상단 고정)</span>
       </label>
     `;
@@ -6581,30 +6569,6 @@ function makeDocTab(cfg){
           inp.value = cur.join(', ');
         }
       });
-    });
-    // v44: 분야 + 추가 버튼
-    el(`modal-field-add-${cfg.tab}`).addEventListener('click', ()=>{
-      const newName = prompt('새 분야 이름을 입력하세요:');
-      if(!newName) return;
-      const v = newName.trim();
-      if(!v) return;
-      const fs = loadFields();
-      if(fs.includes(v)){ alert('이미 있는 분야예요'); return; }
-      fs.push(v);
-      saveFieldsList(fs);
-      // 선택지 갱신 + 새로 추가한 값 선택
-      const sel = el(`modal-field-${cfg.tab}`);
-      const opt = document.createElement('option');
-      opt.value = v; opt.textContent = v; opt.selected = true;
-      sel.appendChild(opt);
-      sel.value = v;
-      // v44: 필터 영역도 즉시 갱신
-      render();
-      if(typeof toast==='function') toast('분야 추가됨');
-    });
-    // v44: 분야 관리 모달
-    el(`modal-field-mgr-${cfg.tab}`).addEventListener('click', ()=>{
-      openFieldManager();
     });
     // v44: 년도 + 추가 버튼
     el(`modal-year-add-${cfg.tab}`).addEventListener('click', ()=>{
@@ -8861,7 +8825,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1317';
+    if(el) el.textContent = 'v20260701-1328';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10303,7 +10267,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1317 로드');
+  console.log('[expV2] v20260701-1328 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
