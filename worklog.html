@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1358</title>
+<title>업무일지 v20260701-1407</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1312,7 +1312,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1358</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1407</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -6162,17 +6162,17 @@ function makeDocTab(cfg){
     if(!searchInput || !restHost){
       // 최초 생성
       host.innerHTML = `
-        <div id="${cfg.tab}-filter-row" style="display:flex;gap:5px;align-items:center;flex-wrap:nowrap;margin-bottom:6px;overflow-x:auto">
-          <input type="text" id="${cfg.tab}-search" placeholder="🔍 검색" value="${esc(searchQuery)}" style="flex:1;min-width:80px;box-sizing:border-box;height:28px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
-          <select id="${cfg.tab}-type-filter" title="종류" style="height:28px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;flex-shrink:0"></select>
-          <select id="${cfg.tab}-year-filter" title="년도" style="height:28px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;flex-shrink:0"></select>
-          <select id="${cfg.tab}-filetype-filter" style="height:28px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;flex-shrink:0">
-            <option value="all">📁📄</option>
-            <option value="folder">📁폴더</option>
-            <option value="file">📄파일</option>
+        <div id="${cfg.tab}-filter-row" style="display:flex;gap:5px;align-items:center;flex-wrap:nowrap;margin-bottom:6px">
+          <input type="text" id="${cfg.tab}-search" placeholder="🔍 검색" value="${esc(searchQuery)}" style="flex:2;min-width:0;box-sizing:border-box;height:28px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
+          <select id="${cfg.tab}-type-filter" style="flex:1;min-width:0;height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff"></select>
+          <select id="${cfg.tab}-year-filter" style="flex:1;min-width:0;height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff"></select>
+          <select id="${cfg.tab}-filetype-filter" style="flex:1;min-width:0;height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff">
+            <option value="all">📁📄 전체</option>
+            <option value="folder">📁 폴더</option>
+            <option value="file">📄 파일</option>
           </select>
-          <button id="${cfg.tab}-fav-btn" style="height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">⭐${favCount}</button>
-          <button id="${cfg.tab}-type-mgr" style="height:28px;padding:0 7px;border-radius:7px;border:1.5px solid #dbe6f4;background:#f7faff;color:#3f7cb8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">⚙종류</button>
+          <button id="${cfg.tab}-fav-btn" style="flex-shrink:0;height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">⭐${favCount}</button>
+          <button id="${cfg.tab}-type-mgr" style="flex-shrink:0;height:28px;padding:0 7px;border-radius:7px;border:1.5px solid #dbe6f4;background:#f7faff;color:#3f7cb8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">⚙종류</button>
           <div class="filter-rest-host" style="display:none"></div>
         </div>
       `;
@@ -6515,7 +6515,7 @@ function makeDocTab(cfg){
     const curYear = new Date().getFullYear();
     const years = [];
     for(let y=curYear+1; y>=curYear-10; y--) years.push(y);
-    const dYear = d?(d.year || (d.month?d.month.slice(0,4):'')):'';
+    const dYear = d?(d.year||''):''; // year 명시된 경우만 선택, 없으면 (자동)
     // 태그
     const dTags = (d && Array.isArray(d.tags))?d.tags:[];
     const allTags = getAllTags();
@@ -6660,8 +6660,9 @@ function makeDocTab(cfg){
     const tagsEl = el(`modal-tags-${cfg.tab}`);
     const favEl = el(`modal-fav-${cfg.tab}`);
     const field = fieldEl ? fieldEl.value : '';
+    // 사용자가 명시적으로 년도를 선택한 경우만 저장 (빈 값=자동은 저장 안 함)
     let year = yearEl ? yearEl.value : '';
-    if(!year && month) year = month.slice(0,4); // 자동 추출
+    // year는 사용자가 선택한 값 그대로 (빈 문자열이면 자동)
     const tags = tagsEl ? (tagsEl.value||'').split(',').map(s=>s.trim().replace(/^#/,'')).filter(Boolean) : [];
     const favorite = favEl ? favEl.checked : false;
     const v44Extras = { field, year, tags, favorite };
@@ -8816,7 +8817,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1358';
+    if(el) el.textContent = 'v20260701-1407';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10258,7 +10259,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1358 로드');
+  console.log('[expV2] v20260701-1407 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
