@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1445</title>
+<title>업무일지 v20260701-1512</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1312,7 +1312,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1445</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1512</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -5899,7 +5899,7 @@ function makeDocTab(cfg){
   let items=[], editId=null;
   // v44: 필터 상태 강화
   let typeFilter='all', monthFilter='all', yearFilter='all';
-  let fieldFilter='all', tagFilter='', searchQuery='', favOnly=false, fileTypeFilter='all';
+  let fieldFilter='all', tagFilter='', searchQuery='', favOnly=false, fileTypeFilter='all', sortOrder='newest';
 
   function load(){ try{ items=JSON.parse(localStorage.getItem(LS)||'[]'); }catch(e){ items=[]; } }
   function save(){ try{ localStorage.setItem(LS,JSON.stringify(items)); }catch(e){} }
@@ -6007,8 +6007,15 @@ function makeDocTab(cfg){
     });
     // 정렬: 즐겨찾기 먼저, 그다음 최신순
     return list.sort((a,b)=>{
-      if(!!b.favorite - !!a.favorite !== 0) return (!!b.favorite) - (!!a.favorite);
-      return (b.month||'').localeCompare(a.month||'')||(b.createdAt||0)-(a.createdAt||0);
+      switch(sortOrder){
+        case 'alpha':   return (a.name||'').localeCompare(b.name||'','ko');
+        case 'alpha-r': return (b.name||'').localeCompare(a.name||'','ko');
+        case 'oldest':  return (a.createdAt||0)-(b.createdAt||0);
+        case 'updated': return (b.updatedAt||b.createdAt||0)-(a.updatedAt||a.createdAt||0);
+        case 'fav':     return (!!b.favorite-!!a.favorite)||(b.createdAt||0)-(a.createdAt||0);
+        case 'type':    return (a.type||'').localeCompare(b.type||'','ko')||(a.name||'').localeCompare(b.name||'','ko');
+        default:        return (b.createdAt||0)-(a.createdAt||0); // newest
+      }
     });
   }
 
@@ -6179,20 +6186,31 @@ function makeDocTab(cfg){
     if(!searchInput || !restHost){
       // 최초 생성
       host.innerHTML = `
-        <div id="${cfg.tab}-filter-row" style="display:flex;gap:5px;align-items:center;flex-wrap:nowrap;margin-bottom:6px">
-          <div style="flex:2;min-width:0;position:relative">
+        <div id="${cfg.tab}-filter-row" style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr 1fr;gap:5px;align-items:center;margin-bottom:6px;position:relative">
+          <div style="position:relative">
             <input type="text" id="${cfg.tab}-search" placeholder="🔍 검색 (초성 가능)" value="${esc(searchQuery)}" style="width:100%;box-sizing:border-box;height:28px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
             <div id="${cfg.tab}-autocomplete" style="display:none;position:absolute;top:30px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:500;max-height:360px;overflow-y:auto"></div>
           </div>
-          <select id="${cfg.tab}-type-filter" style="flex:1;min-width:0;height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff"></select>
-          <select id="${cfg.tab}-year-filter" style="flex:1;min-width:0;height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff"></select>
-          <select id="${cfg.tab}-filetype-filter" style="flex:1;min-width:0;height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff">
+          <select id="${cfg.tab}-type-filter" style="height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;width:100%"></select>
+          <select id="${cfg.tab}-year-filter" style="height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;width:100%"></select>
+          <select id="${cfg.tab}-filetype-filter" style="height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;width:100%">
             <option value="all">📁📄 전체</option>
             <option value="folder">📁 폴더</option>
             <option value="file">📄 파일</option>
           </select>
-          <button id="${cfg.tab}-fav-btn" style="flex-shrink:0;height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">⭐${favCount}</button>
-          <button id="${cfg.tab}-type-mgr" style="flex-shrink:0;height:28px;padding:0 7px;border-radius:7px;border:1.5px solid #dbe6f4;background:#f7faff;color:#3f7cb8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">⚙종류</button>
+          <select id="${cfg.tab}-sort-order" style="height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;width:100%">
+            <option value="newest">최신순</option>
+            <option value="oldest">오래된순</option>
+            <option value="alpha">ㄱㄴㄷ순</option>
+            <option value="alpha-r">ㅎㅍㅌ순</option>
+            <option value="updated">수정순</option>
+            <option value="fav">즐겨찾기↑</option>
+            <option value="type">종류별</option>
+          </select>
+          <div style="display:flex;gap:4px">
+            <button id="${cfg.tab}-fav-btn" style="flex:1;height:28px;padding:0 4px;border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border-radius:7px">⭐${favCount}</button>
+            <button id="${cfg.tab}-type-mgr" style="height:28px;padding:0 12px;border-radius:7px;border:1.5px solid #3f7cb8;background:#f0f6ff;color:#3f7cb8;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">⚙</button>
+          </div>
           <div class="filter-rest-host" style="display:none"></div>
         </div>
       `;
@@ -6278,11 +6296,14 @@ function makeDocTab(cfg){
       if(ftF && !ftF._bound){ ftF._bound=true; ftF.value=fileTypeFilter; ftF.addEventListener('change',e=>{fileTypeFilter=e.target.value;render();}); }
       if(favB && !favB._bound){ favB._bound=true; favB.addEventListener('click',()=>{favOnly=!favOnly;render();}); }
       if(typM && !typM._bound){ typM._bound=true; typM.addEventListener('click',()=>{window.openCatMgr(cfg.tab,()=>render());}); }
+      const sortSel = document.getElementById(`${cfg.tab}-sort-order`);
+      if(sortSel && !sortSel._bound){ sortSel._bound=true; sortSel.value=sortOrder; sortSel.addEventListener('change',e=>{sortOrder=e.target.value;render();}); }
+      else if(sortSel){ sortSel.value=sortOrder; }
       // 초기화 버튼은 매번 새로 생성되므로 매번 바인딩
       const clearBtn = document.getElementById(`${cfg.tab}-clear-btn`);
       if(clearBtn) clearBtn.addEventListener('click', ()=>{
         typeFilter='all'; fieldFilter='all'; yearFilter='all'; tagFilter=''; favOnly=false; searchQuery=''; fileTypeFilter='all';
-        if(ftF) ftF.value='all'; if(tyF) tyF.value='all'; if(yrF) yrF.value='all';
+        if(ftF) ftF.value='all'; if(tyF) tyF.value='all'; if(yrF) yrF.value='all'; sortOrder='newest'; const so=document.getElementById(`${cfg.tab}-sort-order`); if(so) so.value='newest';
         if(searchInput) searchInput.value='';
         render();
       });
@@ -8875,7 +8896,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1445';
+    if(el) el.textContent = 'v20260701-1512';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10317,7 +10338,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1445 로드');
+  console.log('[expV2] v20260701-1512 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
