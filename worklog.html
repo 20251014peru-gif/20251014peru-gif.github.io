@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1012</title>
+<title>업무일지 v20260701-1057</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -313,22 +313,24 @@
 
   /* ── 모달 compact: 스크롤 없이 한 화면에 ── */
   #overlay .modal {
-    max-height: 92vh !important;
+    max-height: 94vh !important;
     overflow-y: auto;
-    padding: 16px 18px !important;
+    padding: 12px 14px !important;
   }
   #overlay .modal h3#mTitle {
-    font-size: 16px !important;
-    margin-bottom: 8px !important;
+    font-size: 15px !important;
+    margin-bottom: 6px !important;
   }
-  #overlay .field { margin-bottom: 6px !important; }
-  #overlay .field label { font-size: 10px !important; margin-bottom: 2px !important; }
-  #overlay .attach-area { margin-top: 5px !important; }
-  #overlay .attach-area > label { font-size: 10px !important; margin-bottom: 1px !important; }
+  #overlay .field { margin-bottom: 5px !important; }
+  #overlay .field label { font-size: 10px !important; margin-bottom: 1px !important; }
+  #overlay .attach-area { margin-top: 4px !important; }
+  #overlay .attach-area > label { font-size: 10px !important; margin-bottom: 0 !important; }
   #overlay .attach-area > div[style*="font-size:11"] { font-size: 10px !important; margin-top: 0 !important; }
-  #overlay .attach-add-row { gap: 4px !important; margin-top: 3px !important; }
-  #overlay .attach-add-row input { height: 28px !important; font-size: 12px !important; padding: 0 7px !important; }
-  #overlay .attach-add-btn { height: 28px !important; font-size: 11px !important; padding: 0 8px !important; }
+  #overlay .attach-add-row { gap: 3px !important; margin-top: 2px !important; }
+  #overlay .attach-add-row input { height: 26px !important; font-size: 11px !important; padding: 0 6px !important; }
+  #overlay .attach-add-btn { height: 26px !important; font-size: 11px !important; padding: 0 7px !important; }
+  /* 사진 촬영/선택 버튼 영역 */
+  #overlay .photo-btns, #overlay [id*="mPhotoArea"] { margin-top: 4px !important; gap: 4px !important; }
 
 /* 섹션 패널 */
 .v43-panel { display: none; }
@@ -1305,7 +1307,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1012</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1057</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -8788,7 +8790,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1012';
+    if(el) el.textContent = 'v20260701-1057';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10230,7 +10232,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1012 로드');
+  console.log('[expV2] v20260701-1057 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v20260701-1013";
+const APP_VERSION = "v20260701-1057";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1263,13 +1263,13 @@ function fieldHTML(f){
   if(f.type==="alertbefore"){
     return `<div class="field full"><label style="font-size:10px;margin-bottom:2px">${esc(f.label)}</label>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="m-alertDays" onchange="syncAlertBefore()" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+        <select id="m-alertDays" onchange="syncAlertBefore()" style="height:28px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:6px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;flex:1">
           <option value="0">0일</option><option value="1">1일</option><option value="2">2일</option><option value="3">3일</option><option value="4">4일</option><option value="5">5일</option><option value="6">6일</option><option value="7">7일</option>
         </select>
-        <select id="m-alertHours" onchange="syncAlertBefore()" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+        <select id="m-alertHours" onchange="syncAlertBefore()" style="height:28px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:6px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;flex:1">
           <option value="0">0시간</option><option value="1">1시간</option><option value="2">2시간</option><option value="3">3시간</option><option value="4">4시간</option><option value="5">5시간</option><option value="6">6시간</option><option value="7">7시간</option><option value="8">8시간</option><option value="9">9시간</option><option value="10">10시간</option><option value="11">11시간</option><option value="12">12시간</option><option value="13">13시간</option><option value="14">14시간</option><option value="15">15시간</option><option value="16">16시간</option><option value="17">17시간</option><option value="18">18시간</option><option value="19">19시간</option><option value="20">20시간</option><option value="21">21시간</option><option value="22">22시간</option><option value="23">23시간</option>
         </select>
-        <select id="m-alertMins" onchange="syncAlertBefore()" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:1">
+        <select id="m-alertMins" onchange="syncAlertBefore()" style="height:28px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:6px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;flex:1">
           <option value="0">0분</option><option value="5">5분</option><option value="10">10분</option><option value="15">15분</option><option value="20">20분</option><option value="30">30분</option><option value="45">45분</option>
         </select>
         <span style="font-size:12px;color:#3f7cb8;font-weight:700;white-space:nowrap">전에 알림</span>
@@ -1280,16 +1280,16 @@ if(f.type==="timepick"){
     const fid=`m-${f.k}`;
     return `<div class="field${f.full?' full':''}"><label>${esc(f.label)}</label>
       <div style="display:flex;gap:6px;align-items:center">
-        <select id="${fid}-ampm" onchange="syncTimepick('${fid}')" style="height:32px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;flex:0 0 56px">
+        <select id="${fid}-ampm" onchange="syncTimepick('${fid}')" style="height:28px;padding:0 5px;border:1.5px solid #dbe6f4;border-radius:6px;font-size:11px;font-family:inherit;background:#f7faff;outline:none;flex:0 0 50px">
           <option value="AM">오전</option>
           <option value="PM">오후</option>
         </select>
-        <select id="${fid}-h" onchange="syncTimepick('${fid}')" style="height:32px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
+        <select id="${fid}-h" onchange="syncTimepick('${fid}')" style="height:28px;padding:0 5px;border:1.5px solid #dbe6f4;border-radius:6px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
           <option value="">시</option>
           <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
         </select>
         <span style="font-size:14px;font-weight:700;color:#3f7cb8">:</span>
-        <select id="${fid}-m" onchange="syncTimepick('${fid}')" style="height:32px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
+        <select id="${fid}-m" onchange="syncTimepick('${fid}')" style="height:28px;padding:0 5px;border:1.5px solid #dbe6f4;border-radius:6px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;flex:1;text-align:center">
           <option value="">분</option>
           <option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option>
         </select>
@@ -1880,25 +1880,25 @@ function renderWorkModal(data, mode){
   const d = data||{};
   const expType = d.expType&&d.expType!=="없음" ? d.expType : "개인비용";
 
-  const S = { /* 공통 스타일 — v44 compact (20% 축소) */
-    inp: `width:100%;box-sizing:border-box;height:32px;padding:0 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45`,
-    sel: `width:100%;box-sizing:border-box;height:32px;padding:0 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;cursor:pointer`,
-    lbl: `display:block;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.4px;margin-bottom:2px;text-transform:uppercase`,
-    ta:  `width:100%;box-sizing:border-box;min-height:38px;padding:5px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;resize:vertical;line-height:1.5`,
-    row: `display:grid;grid-template-columns:95px 1fr;gap:7px;margin-bottom:7px`,
-    mb:  `margin-bottom:7px`,
+  const S = { /* 공통 스타일 — v44 compact (35% 축소) */
+    inp: `width:100%;box-sizing:border-box;height:28px;padding:0 7px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:12px;font-family:inherit;background:#fff;outline:none;color:#1a2f45`,
+    sel: `width:100%;box-sizing:border-box;height:28px;padding:0 7px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:12px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;cursor:pointer`,
+    lbl: `display:block;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.3px;margin-bottom:1px;text-transform:uppercase`,
+    ta:  `width:100%;box-sizing:border-box;min-height:32px;padding:4px 7px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:12px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;resize:vertical;line-height:1.5`,
+    row: `display:grid;grid-template-columns:90px 1fr;gap:6px;margin-bottom:6px`,
+    mb:  `margin-bottom:6px`,
   };
 
   /* ── 탭 ── */
   const tabs = `
-  <div style="display:flex;gap:0;border-radius:7px;overflow:hidden;border:1.5px solid #e2e8f0;margin-bottom:8px">
+  <div style="display:flex;gap:0;border-radius:6px;overflow:hidden;border:1.5px solid #e2e8f0;margin-bottom:6px">
     <button type="button" onclick="renderWorkModal(window._wModalData,'simple')"
-      style="flex:1;padding:6px 0;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;
+      style="flex:1;padding:5px 0;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border:none;
       background:${_workMode==='simple'?'#2563a8':'#f8fafc'};color:${_workMode==='simple'?'#fff':'#64748b'}">
       🏢 일반업무
     </button>
     <button type="button" onclick="renderWorkModal(window._wModalData,'full')"
-      style="flex:1;padding:6px 0;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #e2e8f0;
+      style="flex:1;padding:5px 0;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #e2e8f0;
       background:${_workMode==='full'?'#c2410c':'#f8fafc'};color:${_workMode==='full'?'#fff':'#64748b'}">
       💰 외주·비용
     </button>
@@ -1909,12 +1909,12 @@ function renderWorkModal(data, mode){
   <div style="display:flex;gap:6px;align-items:center;${S.mb}">
     <input type="date" id="m-date" value="${e2(d.date||td)}" style="${S.inp};flex:1;min-width:0">
     <button type="button" id="btn-yesterday"
-      style="height:32px;padding:0 8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:11px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0"
+      style="height:28px;padding:0 7px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:11px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0"
       onclick="(function(b){const e=document.getElementById('m-date');if(!e)return;const y=yesterdayStr();if(e.value===y){e.value=window._wTodayBk||todayStr();b.textContent='어제';b.style.background='#f8fafc';b.style.color='#64748b';}else{window._wTodayBk=e.value||todayStr();e.value=y;b.textContent='✓ 어제';b.style.background='#fef3c7';b.style.color='#92400e';}})(this)">어제</button>
     <button type="button" id="btn-3days"
-      style="height:32px;padding:0 8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:11px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0"
+      style="height:28px;padding:0 7px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:11px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0"
       onclick="(function(b){const e=document.getElementById('m-date');if(!e)return;const p=prev3WorkdayStr();if(e.value===p){e.value=window._wTodayBk3||todayStr();b.textContent='3일전';b.style.background='#f8fafc';b.style.color='#64748b';}else{window._wTodayBk3=e.value||todayStr();e.value=p;b.textContent='✓ 3일전';b.style.background='#e0f2fe';b.style.color='#0369a1';}})(this)">3일전</button>
-    <select id="m-status" style="${S.sel};width:80px;flex-shrink:0">
+    <select id="m-status" style="${S.sel};width:72px;flex-shrink:0">
       ${["미완료","진행중","완료","보류"].map(o=>`<option${(d.status||"완료")===o?" selected":""}>${o}</option>`).join("")}
     </select>
   </div>`;
@@ -1973,7 +1973,7 @@ function renderWorkModal(data, mode){
         🔍 검색
       </button>
     </div>
-      <div id="tpSearchWrap" style="display:none;margin-bottom:8px;position:relative">
+      <div id="tpSearchWrap" style="display:none;margin-bottom:6px;position:relative">
         <input type="text" id="tpSearchInp" placeholder="업체명·이름·번호 검색…" autocomplete="off"
           style="width:100%;box-sizing:border-box;height:40px;padding:0 36px 0 12px;border:1.5px solid #fcd34d;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45">
         <button type="button" id="tpSearchClear"
@@ -2449,7 +2449,7 @@ function showSpellCorrectPopup(items, onSave, kind){
   ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:13000;display:flex;align-items:center;justify-content:center;padding:16px";
 
   const itemsHTML = items.map((it,i)=>`
-    <div style="background:#fff;border:1.5px solid #e8f0fa;border-radius:12px;padding:12px 14px;margin-bottom:8px">
+    <div style="background:#fff;border:1.5px solid #e8f0fa;border-radius:12px;padding:12px 14px;margin-bottom:6px">
       <div style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:6px">[${it.field}]</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px;color:#e74c3c;text-decoration:line-through">${esc(it.original)}</span>
@@ -3064,15 +3064,15 @@ function redrawAccStepList(){
   if(empty) empty.style.display = "none";
   list.innerHTML = _accidentSteps.map((s,i)=>`
     <div class="acc-step-card" data-idx="${i}" style="background:#fff;border:1.5px solid #ffd54f;border-radius:10px;padding:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <span style="background:#f59e0b;color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:12px">${i+1}단계</span>
         <button type="button" class="acc-step-del" data-idx="${i}" style="background:#fde8e8;color:#b52929;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:8px">
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:6px">
         <input type="date" class="acc-step-input" data-idx="${i}" data-k="date" value="${esc(s.date||'')}" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
         <input type="text" class="acc-step-input" data-idx="${i}" data-k="action" value="${esc(s.action||'')}" placeholder="📝 조치 내용 (예: 누수 확인, 보험사 접수, 시공 완료)" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
         <input type="text" class="acc-step-input" data-idx="${i}" data-k="vendor" value="${esc(s.vendor||'')}" placeholder="🏢 업체명 (예: 삼성화재, 한국방수)" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
         <input type="text" class="acc-step-input" data-idx="${i}" data-k="vendorPhone" value="${esc(s.vendorPhone||'')}" placeholder="📞 연락처" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
       </div>
@@ -3146,15 +3146,15 @@ function redrawProgStepList(){
   if(empty) empty.style.display = "none";
   list.innerHTML = _progressSteps.map((s,i)=>`
     <div class="prog-step-card" data-idx="${i}" style="background:#fff;border:1.5px solid #90c2f0;border-radius:10px;padding:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <span style="background:#3f7cb8;color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:12px">${i+1}단계</span>
         <button type="button" class="prog-step-del" data-idx="${i}" style="background:#fde8e8;color:#b52929;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:8px">
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:6px">
         <input type="date" class="prog-step-input" data-idx="${i}" data-k="date" value="${esc(s.date||'')}" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
         <input type="text" class="prog-step-input" data-idx="${i}" data-k="action" value="${esc(s.action||'')}" placeholder="📝 진행 내용 (예: 견적 접수, 자재 입고, 시공 완료)" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
       </div>
-      <div style="position:relative;margin-bottom:8px">
+      <div style="position:relative;margin-bottom:6px">
         <input type="text" class="prog-step-input prog-step-field" data-idx="${i}" data-k="field" id="progStepField${i}" value="${esc(s.field||'')}" placeholder="🏷 분야 검색 (초성 가능, 예: ㅈㄱ → 전기)" autocomplete="off" style="width:100%;box-sizing:border-box;height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
         <div id="progStepField${i}-list" style="display:none;position:absolute;top:40px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:500;max-height:200px;overflow:auto"></div>
       </div>
@@ -4567,7 +4567,7 @@ function buildReport(day){
   const dv=entries.filter(e=>e.kind==="deliver"&&D(e.date)===day).sort(byDateDesc);
   const cl=entries.filter(e=>e.kind==="cleaning"&&D(e.date)===day).sort(byDateDesc);
   const _dayObj=new Date(day),_wn=['일','월','화','수','목','금','토'];
-  let h=`<div style="display:flex;align-items:center;gap:16px;margin-bottom:8px"><span style="font-size:48px;font-weight:900;color:#1a2f45;line-height:1">${_dayObj.getDate()}</span><span style="font-size:22px;font-weight:800;color:#1a2f45">${_dayObj.getMonth()+1}월 ${_dayObj.getDate()}일 (${_wn[_dayObj.getDay()]}) 업무일지 보고서</span></div><hr style="border:none;border-top:2px solid #1a2f45;margin:6px 0 12px">`;
+  let h=`<div style="display:flex;align-items:center;gap:16px;margin-bottom:6px"><span style="font-size:48px;font-weight:900;color:#1a2f45;line-height:1">${_dayObj.getDate()}</span><span style="font-size:22px;font-weight:800;color:#1a2f45">${_dayObj.getMonth()+1}월 ${_dayObj.getDate()}일 (${_wn[_dayObj.getDay()]}) 업무일지 보고서</span></div><hr style="border:none;border-top:2px solid #1a2f45;margin:6px 0 12px">`;
   const sec=(title,items,cls)=> items.length?`<div class="rsec ${cls}"><h2>${title} (${items.length}건)</h2>`+items.join("")+`</div>`:"";
   h+=sec("업무", w.map(en=>`<div class="it"><b>[${esc(en.status||"")}]</b> ${esc(en.floor||"")} ${esc(en.loc||"")} ${esc(en.title||"")}${en.detail?" — "+esc(en.detail):""}${en.field?" ["+esc(en.field)+"]":""}${en.material?" / 자재: "+esc(en.material):""}${Number(en.cost)?" / "+won(en.cost)+"원":""}${en.improve?"<br>↳ 개선: "+esc(en.improve):""}</div>`), "work");
   h+=sec("휴가", v.map(x=>`<div class="it">🌴 ${esc(x.name||"")} (${esc(x.vtype||"")}) ${x.end&&x.end!==x.start?esc(x.start)+" ~ "+esc(x.end):esc(x.start||"")}${x.note?" — "+esc(x.note):""}</div>`), "vac");
@@ -5770,7 +5770,7 @@ async function pwRenderList(){
     const items=groups[c];
     const collapsed=VIEW_PREFS.password.collapsed[c];
     const colorClass=catColorClass("password",c);
-    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}" style="margin-bottom:8px">
+    return `<div class="cat-group ${colorClass}${collapsed?" collapsed":""}" data-cat="${esc(c)}" style="margin-bottom:6px">
       <div class="cat-group-h pw-cat-hdr" data-cat="${esc(c)}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none">
         <span class="ch-arrow" style="font-size:14px;transition:transform .2s;display:inline-block;${collapsed?'transform:rotate(-90deg)':''}">▾</span>
         <span style="font-size:15px;font-weight:800;letter-spacing:-.3px">${esc(c)}</span>
@@ -7087,12 +7087,12 @@ function renderCleaningModal(id){
     </tr>`).join("");
 
   $("clnFields").innerHTML=`
-    <div class="grid" style="margin-bottom:8px">
+    <div class="grid" style="margin-bottom:6px">
       <div class="field"><label>날짜 <span class="req">*</span></label><input type="date" id="cln-date" value="${esc(d.date||todayStr())}"></div>
       <div class="field"><label>반장</label><input type="text" id="cln-foreman" value="${esc(d.foreman||CLEAN_FOREMAN)}"></div>
     </div>
 
-    <div class="field full" style="margin-bottom:8px">
+    <div class="field full" style="margin-bottom:6px">
       <label>📷 일지 원본 사진 (AI 분석에 사용)</label>
       <div class="photo-btns">
         <label class="photo-btn">📷 촬영<input type="file" id="cln-cam" accept="image/*" capture="environment" style="display:none"></label>
@@ -7103,32 +7103,32 @@ function renderCleaningModal(id){
     </div>
 
     <h3 style="font-family:'Gowun Batang',serif;font-size:16px;color:#33567d;margin:6px 0">👥 담당자별 작업 내역</h3>
-    <div class="table-wrap" style="margin-bottom:8px">
+    <div class="table-wrap" style="margin-bottom:6px">
       <table class="rec cln-staff-table"><thead><tr>
         <th>담당자</th><th>담당 층</th><th>점보롤</th><th>핸드타월</th><th>특이사항</th>
       </tr></thead><tbody id="cln-staffBody">${rows}</tbody></table>
     </div>
 
-    <div class="field full" style="margin-bottom:8px">
+    <div class="field full" style="margin-bottom:6px">
       <label>👔 소장 지시사항 <span style="color:var(--ink-soft);font-weight:400;font-size:11px">— 항목당 한 셀로 추가됩니다</span></label>
       <div id="cln-directorList" class="cln-item-list"></div>
       <button type="button" class="btn btn-ghost btn-sm" data-addcln="director">➕ 항목 추가</button>
     </div>
 
-    <div class="field full" style="margin-bottom:8px">
+    <div class="field full" style="margin-bottom:6px">
       <label>📌 지시 및 전달사항 <span style="color:var(--ink-soft);font-weight:400;font-size:11px">— 항목당 한 셀로 추가됩니다</span></label>
       <div id="cln-directiveList" class="cln-item-list"></div>
       <button type="button" class="btn btn-ghost btn-sm" data-addcln="directive">➕ 항목 추가</button>
     </div>
 
-    <div class="field full" style="margin-bottom:8px">
+    <div class="field full" style="margin-bottom:6px">
       <label>⭐ 특기사항 <span style="color:var(--ink-soft);font-weight:400;font-size:11px">— 항목당 한 셀로 추가됩니다</span></label>
       <div id="cln-specialList" class="cln-item-list"></div>
       <button type="button" class="btn btn-ghost btn-sm" data-addcln="special">➕ 항목 추가</button>
     </div>
 
     <h3 style="font-family:'Gowun Batang',serif;font-size:16px;color:#33567d;margin:6px 0">📦 소모품 입출고 (자재 탭 자동 연동)</h3>
-    <div style="margin-bottom:8px">
+    <div style="margin-bottom:6px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <span style="font-size:13px;font-weight:700;color:var(--ink-soft)">📥 입고된 자재</span>
         <button type="button" class="btn btn-ghost btn-sm" id="cln-addInItem">➕ 항목 추가</button>
@@ -8467,8 +8467,8 @@ function openWorkVendorMgr(){
     el.innerHTML=`
       <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:24px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
         <h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:#1a2f45">🏢 담당업체 관리</h3>
-        <div id="workVendorList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:8px"></div>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div id="workVendorList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:6px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
           <input type="text" id="workVendorNew" placeholder="새 업체명" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;background:#f7faff;outline:none">
           <button onclick="workVendorAdd()" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
         </div>
@@ -8743,8 +8743,8 @@ function openExpFieldMgr(){
     el.innerHTML = `
       <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:24px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
         <h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:#1a2f45">⚙ 지출 분야 관리</h3>
-        <div id="expFieldMgrList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:8px"></div>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div id="expFieldMgrList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-bottom:6px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
           <input type="text" id="expFieldMgrNew" placeholder="새 분야 이름" style="flex:1;height:44px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;font-size:15px;font-family:inherit;outline:none;background:#f7faff">
           <button onclick="expFieldMgrAdd()" style="height:44px;padding:0 18px;background:#3f7cb8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>
         </div>
