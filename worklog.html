@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1437</title>
+<title>업무일지 v20260701-1445</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -377,14 +377,14 @@
 
 /* 🐞 디버그 패널 */
 .dbg-btn {
-  position: fixed; bottom: 10px; left: 10px; z-index: 9999;
+  position: fixed; top: 8px; right: 480px; z-index: 9999;
   background: rgba(255,80,80,.85); color: #fff;
   border: none; border-radius: 8px; padding: 4px 10px;
   font-size: 12px; font-weight: 700; cursor: pointer;
   font-family: inherit; touch-action: manipulation;
 }
 .dbg-panel {
-  position: fixed; bottom: 40px; left: 10px; z-index: 9998;
+  position: fixed; top: 38px; right: 480px; z-index: 9998;
   background: rgba(0,0,0,.9); color: #0f0; border-radius: 10px;
   padding: 10px; width: 88vw; max-width: 400px;
   max-height: 50vh; overflow: auto;
@@ -1312,7 +1312,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1437</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1445</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -6082,7 +6082,7 @@ function makeDocTab(cfg){
       });
       Object.keys(groups).sort().reverse().forEach(year=>{
         h+=`<div style="padding:10px 4px 8px;font-size:14px;font-weight:800;color:#3f7cb8;border-bottom:2px solid #e8f0fa;margin-bottom:10px;margin-top:14px">📅 ${year==='미분류'?year:year+'년'} <span style="font-size:12px;color:#aab8c8;font-weight:600">${groups[year].length}건</span></div>`;
-        h+=`<div class="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:14px">`;
+        h+=`<div class="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:10px">`;
         groups[year].forEach(d=>{ h += renderDocCard(d); });
         h+=`</div>`;
       });
@@ -6097,7 +6097,7 @@ function makeDocTab(cfg){
       Object.keys(groups).sort().forEach(type=>{
         const color = TYPE_COLOR[type] || '#7a92a8';
         h+=`<div style="padding:10px 4px 8px;font-size:14px;font-weight:800;color:${color};border-bottom:2px solid ${color}33;margin-bottom:10px;margin-top:14px">📑 ${type} <span style="font-size:12px;color:#aab8c8;font-weight:600">${groups[type].length}건</span></div>`;
-        h+=`<div class="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:14px">`;
+        h+=`<div class="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:10px">`;
         groups[type].forEach(d=>{ h += renderDocCard(d); });
         h+=`</div>`;
       });
@@ -6144,21 +6144,21 @@ function makeDocTab(cfg){
       (d.floor?'🏢 '+d.floor:'') + (d.unit?(' '+d.unit+'호'):'')
     }</div>` : '';
     const yearLabel = d.year || (d.month?d.month.slice(0,4):'');
-    return `<div class="doc-card-${cfg.tab}" data-docid="${d.id}" style="background:#fff;border:1.5px solid ${isFav?'#ffd54f':'#e8f0fa'};border-left:4px solid ${color};border-radius:12px;padding:14px;cursor:pointer;transition:box-shadow .12s,transform .08s;display:flex;flex-direction:column;gap:8px;${isFav?'box-shadow:0 2px 12px rgba(245,158,11,.15)':''}">
+    return `<div class="doc-card-${cfg.tab}" data-docid="${d.id}" style="background:#fff;border:1.5px solid ${isFav?'#ffd54f':'#e8f0fa'};border-left:3px solid ${color};border-radius:8px;padding:8px 10px;cursor:pointer;transition:box-shadow .12s,transform .08s;display:flex;flex-direction:column;gap:4px;${isFav?'box-shadow:0 2px 8px rgba(245,158,11,.15)':''}">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
         <span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:800;background:${color}22;color:${color};white-space:nowrap">${d.type||''}</span>
         ${d.field?`<span style="display:inline-block;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700;background:${fieldColor}15;color:${fieldColor};white-space:nowrap;border:1px solid ${fieldColor}33">🏷 ${d.field}</span>`:''}
         ${yearLabel?`<span style="font-size:11px;color:#aab8c8;white-space:nowrap">${yearLabel}${d.month?'/'+d.month.slice(5):''}</span>`:''}
-        <button class="doc-fav-${cfg.tab}" data-docid="${d.id}" style="margin-left:auto;background:none;border:none;font-size:18px;cursor:pointer;padding:2px 4px;line-height:1" title="${isFav?'즐겨찾기 해제':'즐겨찾기'}">${isFav?'⭐':'☆'}</button>
-        <button class="doc-edit-${cfg.tab}" data-docid="${d.id}" style="background:none;border:none;font-size:14px;cursor:pointer;padding:4px 6px;border-radius:6px;color:#7a92a8" title="수정">✏️</button>
+        <button class="doc-fav-${cfg.tab}" data-docid="${d.id}" style="margin-left:auto;background:none;border:none;font-size:14px;cursor:pointer;padding:1px 3px;line-height:1" title="${isFav?'즐겨찾기 해제':'즐겨찾기'}">${isFav?'⭐':'☆'}</button>
+        <button class="doc-edit-${cfg.tab}" data-docid="${d.id}" style="background:none;border:none;font-size:12px;cursor:pointer;padding:2px 4px;border-radius:4px;color:#7a92a8" title="수정">✏️</button>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:14.5px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.4">${d.name||''}</div>
+          <div style="font-size:12px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4">${d.name||''}</div>
           ${extraInfo}
           ${d.memo?`<div style="font-size:12px;color:#aab8c8;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.memo}</div>`:''}
         </div>
-        ${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:36px;text-decoration:none;flex-shrink:0;line-height:1;padding:4px;border-radius:8px;transition:background .1s" title="${esc(d.path)}" onmouseover="this.style.background='#f0f6ff'" onmouseout="this.style.background=''">${d.fileType==='file'?'📄':'📁'}</a>`:'<span style="font-size:36px;opacity:.2;flex-shrink:0;line-height:1">📂</span>'}
+        ${d.path?`<a href="${toLocalUrl(d.path)}" onclick="event.stopPropagation()" style="font-size:24px;text-decoration:none;flex-shrink:0;line-height:1;padding:2px;border-radius:6px;transition:background .1s" title="${esc(d.path)}" onmouseover="this.style.background='#f0f6ff'" onmouseout="this.style.background=''">${d.fileType==='file'?'📄':'📁'}</a>`:'<span style="font-size:24px;opacity:.2;flex-shrink:0;line-height:1">📂</span>'}
       </div>
       ${tags.length?`<div style="display:flex;flex-wrap:wrap;gap:4px">${tags.map(t=>`<span class="doc-tag-chip" data-tag="${esc(t)}" style="font-size:10.5px;background:#eaf3fb;color:#3f7cb8;padding:2px 8px;border-radius:6px;font-weight:600;cursor:pointer">#${esc(t)}</span>`).join('')}</div>`:''}
     </div>`;
@@ -6320,7 +6320,7 @@ function makeDocTab(cfg){
         });
         Object.keys(groups).sort().reverse().forEach(year=>{
           h+=`<div style="padding:10px 4px 8px;font-size:14px;font-weight:800;color:#3f7cb8;border-bottom:2px solid #e8f0fa;margin-bottom:10px;margin-top:14px">📅 ${year==='미분류'?year:year+'년'} <span style="font-size:12px;color:#aab8c8;font-weight:600">${groups[year].length}건</span></div>`;
-          h+=`<div class="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:14px">`;
+          h+=`<div class="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:10px">`;
           groups[year].forEach(d=>{ h += renderDocCard(d); });
           h+=`</div>`;
         });
@@ -6334,7 +6334,7 @@ function makeDocTab(cfg){
         Object.keys(groups).sort().forEach(type=>{
           const color = TYPE_COLOR[type] || '#7a92a8';
           h+=`<div style="padding:10px 4px 8px;font-size:14px;font-weight:800;color:${color};border-bottom:2px solid ${color}33;margin-bottom:10px;margin-top:14px">📑 ${type} <span style="font-size:12px;color:#aab8c8;font-weight:600">${groups[type].length}건</span></div>`;
-          h+=`<div class="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:14px">`;
+          h+=`<div class="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:10px">`;
           groups[type].forEach(d=>{ h += renderDocCard(d); });
           h+=`</div>`;
         });
@@ -8875,7 +8875,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1437';
+    if(el) el.textContent = 'v20260701-1445';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10317,7 +10317,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1437 로드');
+  console.log('[expV2] v20260701-1445 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
