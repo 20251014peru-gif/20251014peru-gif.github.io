@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v20260701-0917";
+const APP_VERSION = "v20260701-0929";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1878,25 +1878,25 @@ function renderWorkModal(data, mode){
   const d = data||{};
   const expType = d.expType&&d.expType!=="없음" ? d.expType : "개인비용";
 
-  const S = { /* 공통 스타일 */
-    inp: `width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45`,
-    sel: `width:100%;box-sizing:border-box;height:44px;padding:0 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;cursor:pointer`,
-    lbl: `display:block;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px;text-transform:uppercase`,
-    ta:  `width:100%;box-sizing:border-box;min-height:68px;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;resize:vertical;line-height:1.6`,
-    row: `display:grid;grid-template-columns:110px 1fr;gap:10px;margin-bottom:12px`, /* 층(작게)+분야(크게) */
-    mb:  `margin-bottom:12px`,
+  const S = { /* 공통 스타일 — v44 compact (25% 축소) */
+    inp: `width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45`,
+    sel: `width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;cursor:pointer`,
+    lbl: `display:block;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase`,
+    ta:  `width:100%;box-sizing:border-box;min-height:52px;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;resize:vertical;line-height:1.5`,
+    row: `display:grid;grid-template-columns:100px 1fr;gap:8px;margin-bottom:8px`, /* 층(작게)+분야(크게) */
+    mb:  `margin-bottom:8px`,
   };
 
   /* ── 탭 ── */
   const tabs = `
-  <div style="display:flex;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0;margin-bottom:18px">
+  <div style="display:flex;gap:0;border-radius:8px;overflow:hidden;border:1.5px solid #e2e8f0;margin-bottom:10px">
     <button type="button" onclick="renderWorkModal(window._wModalData,'simple')"
-      style="flex:1;padding:11px 0;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;
+      style="flex:1;padding:7px 0;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;
       background:${_workMode==='simple'?'#2563a8':'#f8fafc'};color:${_workMode==='simple'?'#fff':'#64748b'}">
       🏢 일반업무
     </button>
     <button type="button" onclick="renderWorkModal(window._wModalData,'full')"
-      style="flex:1;padding:11px 0;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #e2e8f0;
+      style="flex:1;padding:7px 0;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #e2e8f0;
       background:${_workMode==='full'?'#c2410c':'#f8fafc'};color:${_workMode==='full'?'#fff':'#64748b'}">
       💰 외주·비용
     </button>
@@ -1907,17 +1907,16 @@ function renderWorkModal(data, mode){
   <div style="display:grid;grid-template-columns:1fr auto 100px;gap:8px;align-items:end;${S.mb}">
     <div>
       <label style="${S.lbl}">날짜 *</label>
-      <input type="date" id="m-date" value="${e2(d.date||td)}" style="${S.inp};max-width:160px">
+      <input type="date" id="m-date" value="${e2(d.date||td)}" style="${S.inp};max-width:150px">
     </div>
     <button type="button" id="btn-yesterday"
-      style="height:44px;padding:0 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap"
+      style="height:34px;padding:0 8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap"
       onclick="(function(b){const e=document.getElementById('m-date');if(!e)return;const y=yesterdayStr();if(e.value===y){e.value=window._wTodayBk||todayStr();b.textContent='어제';b.style.background='#f8fafc';b.style.color='#64748b';}else{window._wTodayBk=e.value||todayStr();e.value=y;b.textContent='✓ 어제';b.style.background='#fef3c7';b.style.color='#92400e';}})(this)">어제</button>
     <button type="button" id="btn-3days"
-      style="height:44px;padding:0 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap"
+      style="height:34px;padding:0 8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap"
       onclick="(function(b){const e=document.getElementById('m-date');if(!e)return;const p=prev3WorkdayStr();if(e.value===p){e.value=window._wTodayBk3||todayStr();b.textContent='3일전';b.style.background='#f8fafc';b.style.color='#64748b';}else{window._wTodayBk3=e.value||todayStr();e.value=p;b.textContent='✓ 3일전';b.style.background='#e0f2fe';b.style.color='#0369a1';}})(this)">3일전</button>
     <div>
-      <label style="${S.lbl}">상태</label>
-      <select id="m-status" style="${S.sel}">
+      <select id="m-status" style="${S.sel};width:90px">
         ${["미완료","진행중","완료","보류"].map(o=>`<option${(d.status||"완료")===o?" selected":""}>${o}</option>`).join("")}
       </select>
     </div>
