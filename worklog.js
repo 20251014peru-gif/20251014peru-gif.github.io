@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v20260701-1057";
+const APP_VERSION = "v20260701-1117";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -1957,8 +1957,8 @@ function renderWorkModal(data, mode){
 
   /* ── 임시 전화번호 — 연락처 검색 + 전화 + 저장 통합 UI ── */
   const rowTempPhone = `
-  <div id="wTempPhoneBox" style="border:1.5px solid #fde68a;border-radius:12px;overflow:visible;background:#fffbea;${S.mb}">
-    <div style="padding:8px 12px 6px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+  <div id="wTempPhoneBox" style="border:1.5px solid #fde68a;border-radius:8px;overflow:visible;background:#fffbea;${S.mb}">
+    <div style="padding:4px 8px 3px;display:flex;align-items:center;gap:3px;flex-wrap:wrap">
       <label style="font-size:11px;font-weight:700;color:#92400e;flex:1;min-width:80px">📞 전화번호 메모 <span style="font-weight:400;color:#b45309">(저장 안 됨)</span></label>
       <button type="button" id="btnTpAddReg"
         style="font-size:11px;padding:3px 9px;border:1.5px solid #86efac;border-radius:6px;background:#f0fdf4;color:#065f46;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap">
@@ -2022,8 +2022,8 @@ function renderWorkModal(data, mode){
     /* ── 지출종류 + 금액 (1열씩) ── */
     const isPost = expType==="후불청구";
     const costSection = `
-    <div style="padding:14px;background:${isPost?"#fff7ed":"#eff6ff"};border:1.5px solid ${isPost?"#fdba74":"#bfdbfe"};border-radius:12px;${S.mb}">
-      <div style="${S.mb.replace('12px','10px')}">
+    <div style="padding:6px 10px;background:${isPost?"#fff7ed":"#eff6ff"};border:1.5px solid ${isPost?"#fdba74":"#bfdbfe"};border-radius:8px;${S.mb};display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center">
+      <div>
         <label style="${S.lbl.replace('#94a3b8',isPost?'#c2410c':'#1d4ed8')}">지출종류</label>
         <select id="m-expType" style="${S.sel};background:transparent;border-color:${isPost?"#fdba74":"#bfdbfe"}">
           ${["개인비용","후불청구"].map(o=>`<option${expType===o?" selected":""}>${o}</option>`).join("")}
@@ -2032,7 +2032,7 @@ function renderWorkModal(data, mode){
       <div>
         <label id="lbl-cost" style="${S.lbl.replace('#94a3b8',isPost?'#c2410c':'#1d4ed8')}">${isPost?"계약금액 (원)":"금액 (원)"}</label>
         <input type="number" id="m-cost" value="${e2(d.cost||"")}" placeholder="0"
-          style="${S.inp};background:transparent;border-color:${isPost?"#fdba74":"#bfdbfe"};font-size:17px;font-weight:700;text-align:right;color:${isPost?"#c2410c":"#1d4ed8"}">
+          style="${S.inp};background:transparent;border-color:${isPost?"#fdba74":"#bfdbfe"};font-size:14px;font-weight:700;text-align:right;color:${isPost?"#c2410c":"#1d4ed8"}">
       </div>
     </div>`;
 
@@ -2056,7 +2056,7 @@ function renderWorkModal(data, mode){
     const vendorSection = `
     <div style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
       <button type="button" id="btnOpenVendorPop"
-        style="width:100%;display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;border:none;cursor:pointer;font-family:inherit;text-align:left">
+        style="width:100%;display:flex;align-items:center;gap:6px;padding:5px 10px;background:#f8fafc;border:none;cursor:pointer;font-family:inherit;text-align:left">
         <span id="wVendorLabel" style="font-size:12px;font-weight:700;color:#64748b;flex:1">${vendorLabel}</span>
         <span style="font-size:10px;color:#94a3b8">✏️ 수정</span>
       </button>
@@ -2072,11 +2072,11 @@ function renderWorkModal(data, mode){
     /* ── 견적 메모 (토글) ── */
     const estimateSection = `
     <details style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
-      <summary style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f8fafc;cursor:pointer;list-style:none;user-select:none">
+      <summary style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:#f8fafc;cursor:pointer;list-style:none;user-select:none">
         <span style="font-size:12px;font-weight:700;color:#64748b;flex:1">📋 견적 메모</span>
         <span style="font-size:10px;color:#94a3b8">▼</span>
       </summary>
-      <div style="padding:12px 14px">
+      <div style="padding:6px 10px">
         <textarea id="m-estimateMemo" placeholder="견적 내용, 계약 조건 등" style="${S.ta}">${e2(d.estimateMemo||"")}</textarea>
       </div>
     </details>`;
