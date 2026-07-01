@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0630-1315";
+const APP_VERSION = "v20260701-0917";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -123,11 +123,8 @@ async function loadSharedCats(){
   try{
     const ls = JSON.parse(localStorage.getItem(SHARED_CATS_LS)||"null");
     if(Array.isArray(ls)&&ls.length){
-      const merged = [...ls];
-      DEFAULT_SHARED_CATS.forEach(c=>{ if(!merged.includes(c)) merged.push(c); });
-      merged.sort((a,b)=>a.localeCompare(b,"ko"));
-      FIELDS = merged;
-      // CONTACT_CATS는 독립 관리 (공유 제거)
+      // v44: merge 없이 localStorage 값 그대로 사용 (삭제한 분야 복원 방지)
+      FIELDS = ls.slice();
       return;
     }
   }catch(e){}
@@ -138,11 +135,9 @@ async function loadSharedCats(){
     if(snap.exists){
       const d=snap.data();
       if(Array.isArray(d.cats)&&d.cats.length){
-        const merged = [...d.cats];
-        DEFAULT_SHARED_CATS.forEach(c=>{ if(!merged.includes(c)) merged.push(c); });
-        merged.sort((a,b)=>a.localeCompare(b,"ko"));
-        FIELDS = merged;
-        // CONTACT_CATS는 독립 관리 (공유 제거)
+        // v44: merge 없이 Firebase 값 그대로 사용
+        FIELDS = d.cats.slice();
+        FIELDS.sort((a,b)=>a.localeCompare(b,"ko"));
         try{ localStorage.setItem(SHARED_CATS_LS, JSON.stringify(FIELDS)); }catch(e){}
       }
     } else {
@@ -383,6 +378,14 @@ const won = n => (Math.round(Number(n)||0)).toLocaleString("ko-KR");
 const kstNow = () => new Date(Date.now() + 9*60*60*1000);
 const todayStr = () => { const d=kstNow(); return d.toISOString().slice(0,10); };
 const yesterdayStr = () => { const d=kstNow(); d.setUTCDate(d.getUTCDate()-1); return d.toISOString().slice(0,10); };
+/* 3일전 — 월요일이면 지난 금요일(3일전) 반환 */
+const prev3WorkdayStr = () => {
+  const d=kstNow();
+  const dow = d.getUTCDay(); // 0=일,1=월,...,6=토
+  // 월요일(1)이면 3일전=금요일
+  d.setUTCDate(d.getUTCDate()-3);
+  return d.toISOString().slice(0,10);
+};
 const nowTime = () => { const d=kstNow(); return d.toISOString().slice(11,16); };
 const clockStr = ts => { if(!ts) return ""; const d=new Date(ts); const k=new Date(d.getTime()+9*60*60*1000); return k.toISOString().slice(11,16); };
 const $ = id => document.getElementById(id);
@@ -495,6 +498,11 @@ function makeFieldSearchUI(inputId, listId, onSelect){
         const cb = wrap && wrap.querySelector('.fsl-clear');
         if(cb) cb.style.display = 'block';
         if(onSelect) onSelect(el.dataset.fv);
+        // v44: 선택 후 업무내역으로 포커스 이동
+        setTimeout(()=>{
+          const titleEl = document.getElementById('m-title');
+          if(titleEl){ titleEl.focus(); }
+        }, 50);
       });
     });
   }
@@ -508,7 +516,7 @@ function makeFieldSearchUI(inputId, listId, onSelect){
   inp.addEventListener("focus", ()=>{ activeIdx=-1; render(inp.value); });
   // v44: 클릭 시에도 목록 다시 표시 (이미 focus 상태에서 클릭한 경우)
   inp.addEventListener("click", ()=>{ activeIdx=-1; render(inp.value); });
-  inp.addEventListener("blur", ()=>setTimeout(()=>{ list.style.display="none"; activeIdx=-1; }, 200));
+  inp.addEventListener("blur", ()=>setTimeout(()=>{ list.style.display="none"; }, 200));
   inp.addEventListener("keydown", e=>{
     const items = [...list.querySelectorAll(".fsl-item")];
     if(e.key==="ArrowDown"){
@@ -541,6 +549,11 @@ function makeFieldSearchUI(inputId, listId, onSelect){
           toast(`✅ "${v}" 분야 추가됨`);
         }
       }
+      // v44: 분야 선택 후 업무내역 필드로 포커스 이동
+      setTimeout(()=>{
+        const titleEl = document.getElementById("m-title");
+        if(titleEl) titleEl.focus();
+      }, 50);
     } else if(e.key==="Escape"){
       list.style.display = "none";
       activeIdx = -1;
@@ -1570,7 +1583,7 @@ function makeMaterialSearchUI(inputId, listId, onSelect){
   inp.addEventListener("input", ()=>{ activeIdx=-1; render(inp.value); });
   inp.addEventListener("focus", ()=>{ activeIdx=-1; render(inp.value); });
   inp.addEventListener("click", ()=>{ activeIdx=-1; render(inp.value); });
-  inp.addEventListener("blur", ()=>setTimeout(()=>{ list.style.display="none"; activeIdx=-1; }, 200));
+  inp.addEventListener("blur", ()=>setTimeout(()=>{ list.style.display="none"; }, 200));
   inp.addEventListener("keydown", e=>{
     const items = [...list.querySelectorAll(".msl-item")];
     if(e.key==="ArrowDown"){
@@ -1894,11 +1907,14 @@ function renderWorkModal(data, mode){
   <div style="display:grid;grid-template-columns:1fr auto 100px;gap:8px;align-items:end;${S.mb}">
     <div>
       <label style="${S.lbl}">날짜 *</label>
-      <input type="date" id="m-date" value="${e2(d.date||td)}" style="${S.inp}">
+      <input type="date" id="m-date" value="${e2(d.date||td)}" style="${S.inp};max-width:160px">
     </div>
     <button type="button" id="btn-yesterday"
-      style="height:44px;padding:0 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap"
+      style="height:44px;padding:0 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap"
       onclick="(function(b){const e=document.getElementById('m-date');if(!e)return;const y=yesterdayStr();if(e.value===y){e.value=window._wTodayBk||todayStr();b.textContent='어제';b.style.background='#f8fafc';b.style.color='#64748b';}else{window._wTodayBk=e.value||todayStr();e.value=y;b.textContent='✓ 어제';b.style.background='#fef3c7';b.style.color='#92400e';}})(this)">어제</button>
+    <button type="button" id="btn-3days"
+      style="height:44px;padding:0 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:700;color:#64748b;background:#f8fafc;cursor:pointer;font-family:inherit;white-space:nowrap"
+      onclick="(function(b){const e=document.getElementById('m-date');if(!e)return;const p=prev3WorkdayStr();if(e.value===p){e.value=window._wTodayBk3||todayStr();b.textContent='3일전';b.style.background='#f8fafc';b.style.color='#64748b';}else{window._wTodayBk3=e.value||todayStr();e.value=p;b.textContent='✓ 3일전';b.style.background='#e0f2fe';b.style.color='#0369a1';}})(this)">3일전</button>
     <div>
       <label style="${S.lbl}">상태</label>
       <select id="m-status" style="${S.sel}">
