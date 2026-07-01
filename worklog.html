@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1413</title>
+<title>업무일지 v20260701-1437</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1312,7 +1312,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1413</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1437</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -5957,6 +5957,27 @@ function makeDocTab(cfg){
     sel.innerHTML='<option value="all">전체 년도</option>'+years.map(y=>`<option value="${y}">${y}년</option>`).join('');
   }
 
+  /* ── 초성 검색 유틸 (makeDocTab 내부) ── */
+  const _CHOSUNG = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  function _getChosung(str){
+    let r='';
+    for(const ch of (str||'')){
+      const code=ch.charCodeAt(0);
+      if(code>=0xAC00&&code<=0xD7A3) r+=_CHOSUNG[Math.floor((code-0xAC00)/588)];
+      else if(code>=0x3131&&code<=0x314E) r+=ch;
+    }
+    return r;
+  }
+  function _isChosungOnly(s){ return /^[ㄱ-ㅎ]+$/.test(s); }
+  function _matchDoc(d, q){
+    if(!q) return true;
+    const fields = [d.name, d.memo, d.type, d.path, ...(d.tags||[])].filter(Boolean).join(' ');
+    if(_isChosungOnly(q)){
+      return _getChosung(fields).includes(q);
+    }
+    return fields.toLowerCase().includes(q.toLowerCase());
+  }
+
   // v44: 모든 태그 수집
   function getAllTags(){
     const tags = new Set();
@@ -5980,11 +6001,7 @@ function makeDocTab(cfg){
       if(fieldFilter!=='all' && d.field !== fieldFilter) return false;
       if(favOnly && !d.favorite) return false;
       if(tagFilter && (!Array.isArray(d.tags) || !d.tags.includes(tagFilter))) return false;
-      if(q){
-        const text = [d.name, d.memo, d.type, d.field, d.path, ...(d.tags||[])]
-          .filter(Boolean).join(' ').toLowerCase();
-        if(!text.includes(q)) return false;
-      }
+      if(q && !_matchDoc(d, q)) return false;
       if(cfg.extraFilter) return cfg.extraFilter(d);
       return true;
     });
@@ -6163,7 +6180,10 @@ function makeDocTab(cfg){
       // 최초 생성
       host.innerHTML = `
         <div id="${cfg.tab}-filter-row" style="display:flex;gap:5px;align-items:center;flex-wrap:nowrap;margin-bottom:6px">
-          <input type="text" id="${cfg.tab}-search" placeholder="🔍 검색" value="${esc(searchQuery)}" style="flex:2;min-width:0;box-sizing:border-box;height:28px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
+          <div style="flex:2;min-width:0;position:relative">
+            <input type="text" id="${cfg.tab}-search" placeholder="🔍 검색 (초성 가능)" value="${esc(searchQuery)}" style="width:100%;box-sizing:border-box;height:28px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
+            <div id="${cfg.tab}-autocomplete" style="display:none;position:absolute;top:30px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:500;max-height:360px;overflow-y:auto"></div>
+          </div>
           <select id="${cfg.tab}-type-filter" style="flex:1;min-width:0;height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff"></select>
           <select id="${cfg.tab}-year-filter" style="flex:1;min-width:0;height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff"></select>
           <select id="${cfg.tab}-filetype-filter" style="flex:1;min-width:0;height:28px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff">
@@ -6179,12 +6199,51 @@ function makeDocTab(cfg){
       searchInput = document.getElementById(`${cfg.tab}-search`);
       restHost = host.querySelector('.filter-rest-host');
       // 검색 이벤트 (한 번만)
-      searchInput.addEventListener('input', e=>{ 
-        searchQuery = e.target.value; 
+      searchInput.addEventListener('input', e=>{
+        searchQuery = e.target.value;
         renderRestUI();
-        // 결과만 다시 렌더 (검색창은 건드리지 않음)
         renderResultsOnly();
+        showAutocomplete(e.target.value);
       });
+      searchInput.addEventListener('focus', e=>{ showAutocomplete(e.target.value); });
+      searchInput.addEventListener('blur', ()=>{ setTimeout(()=>hideAutocomplete(), 200); });
+      
+      function showAutocomplete(q){
+        const box = document.getElementById(`${cfg.tab}-autocomplete`);
+        if(!box) return;
+        const trimQ = (q||'').trim();
+        // 빈 값이면 전체 목록, 아니면 필터링
+        const matched = (trimQ
+          ? items.filter(d=>_matchDoc(d, trimQ))
+          : items.slice()
+        ).sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
+        if(!matched.length){ box.style.display='none'; return; }
+        box.innerHTML = matched.map(d=>{
+          const icon = (d.fileType||'folder')==='folder' ? '📁' : '📄';
+          const name = esc(d.name||'');
+          const type = d.type ? `<span style="font-size:10px;color:#aab8c8;margin-left:4px">${esc(d.type)}</span>` : '';
+          return `<div class="ac-item-${cfg.tab}" data-name="${name}" style="padding:7px 12px;cursor:pointer;font-size:12px;color:#1a2f45;border-bottom:1px solid #f0f6ff;display:flex;align-items:center;gap:6px">
+            <span>${icon}</span><span style="flex:1">${name}</span>${type}
+          </div>`;
+        }).join('');
+        box.style.display='block';
+        box.querySelectorAll(`.ac-item-${cfg.tab}`).forEach(item=>{
+          item.addEventListener('mouseenter',()=>item.style.background='#f0f6ff');
+          item.addEventListener('mouseleave',()=>item.style.background='');
+          item.addEventListener('mousedown', e=>{
+            e.preventDefault();
+            searchQuery = item.dataset.name;
+            searchInput.value = searchQuery;
+            hideAutocomplete();
+            renderRestUI();
+            renderResultsOnly();
+          });
+        });
+      }
+      function hideAutocomplete(){
+        const box = document.getElementById(`${cfg.tab}-autocomplete`);
+        if(box) box.style.display='none';
+      }
     }
     
     function renderRestUI(){
@@ -8816,7 +8875,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1413';
+    if(el) el.textContent = 'v20260701-1437';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10258,7 +10317,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1413 로드');
+  console.log('[expV2] v20260701-1437 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
