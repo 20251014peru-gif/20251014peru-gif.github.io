@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v20260701-1117";
+const APP_VERSION = "v20260701-1130";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -3196,7 +3196,7 @@ function renderModalThumbs(){ renderThumbs($("m-thumbs"),modalPhotos,i=>{ modalP
 /* ===== 첨부파일 모달 UI (v15 신규) ===== */
 function renderModalAttachList(){
   const box=$("mAttachList");
-  if(!modalAttachments.length){ box.innerHTML=`<div style="font-size:12px;color:var(--ink-soft);padding:6px 2px">아직 추가된 파일/폴더 링크가 없습니다.</div>`; return; }
+  if(!modalAttachments.length){ box.innerHTML=`<div style="font-size:11px;color:var(--ink-soft);padding:1px 2px">아직 추가된 파일/폴더 링크가 없습니다.</div>`; return; }
   box.innerHTML=modalAttachments.map((a,i)=>`<div class="attach-item">
     <span class="ai-icon">${fileIcon(a.path)}</span>
     <div class="ai-body">
