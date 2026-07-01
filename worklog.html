@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1353</title>
+<title>업무일지 v20260701-1358</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1312,7 +1312,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1353</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1358</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -6162,9 +6162,18 @@ function makeDocTab(cfg){
     if(!searchInput || !restHost){
       // 최초 생성
       host.innerHTML = `
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-          <input type="text" id="${cfg.tab}-search" placeholder="🔍 검색" value="${esc(searchQuery)}" style="flex:1;min-width:120px;box-sizing:border-box;height:28px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
-          <div class="filter-rest-host" style="display:contents"></div>
+        <div id="${cfg.tab}-filter-row" style="display:flex;gap:5px;align-items:center;flex-wrap:nowrap;margin-bottom:6px;overflow-x:auto">
+          <input type="text" id="${cfg.tab}-search" placeholder="🔍 검색" value="${esc(searchQuery)}" style="flex:1;min-width:80px;box-sizing:border-box;height:28px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
+          <select id="${cfg.tab}-type-filter" title="종류" style="height:28px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;flex-shrink:0"></select>
+          <select id="${cfg.tab}-year-filter" title="년도" style="height:28px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;flex-shrink:0"></select>
+          <select id="${cfg.tab}-filetype-filter" style="height:28px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;flex-shrink:0">
+            <option value="all">📁📄</option>
+            <option value="folder">📁폴더</option>
+            <option value="file">📄파일</option>
+          </select>
+          <button id="${cfg.tab}-fav-btn" style="height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">⭐${favCount}</button>
+          <button id="${cfg.tab}-type-mgr" style="height:28px;padding:0 7px;border-radius:7px;border:1.5px solid #dbe6f4;background:#f7faff;color:#3f7cb8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">⚙종류</button>
+          <div class="filter-rest-host" style="display:none"></div>
         </div>
       `;
       searchInput = document.getElementById(`${cfg.tab}-search`);
@@ -6179,17 +6188,12 @@ function makeDocTab(cfg){
     }
     
     function renderRestUI(){
+      // 즐겨찾기 버튼 색상 갱신
+      const favBtn = document.getElementById(`${cfg.tab}-fav-btn`);
+      if(favBtn){ favBtn.style.borderColor=favOnly?'#f59e0b':'#dbe6f4'; favBtn.style.background=favOnly?'#f59e0b':'#fff'; favBtn.style.color=favOnly?'#fff':'#7a92a8'; favBtn.textContent='⭐'+favCount; }
+      // 초기화 버튼 + 태그만 restHost에
       restHost.innerHTML = `
-          <select id="${cfg.tab}-type-filter" title="종류" style="height:28px;padding:0 7px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff"></select>
-          <select id="${cfg.tab}-year-filter" title="년도" style="height:28px;padding:0 7px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff"></select>
-          <select id="${cfg.tab}-filetype-filter" style="height:28px;padding:0 7px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff">
-            <option value="all">📁📄</option>
-            <option value="folder">📁폴더</option>
-            <option value="file">📄파일</option>
-          </select>
-          <button id="${cfg.tab}-fav-btn" style="height:28px;padding:0 8px;border-radius:7px;border:1.5px solid ${favOnly?'#f59e0b':'#dbe6f4'};background:${favOnly?'#f59e0b':'#fff'};color:${favOnly?'#fff':'#7a92a8'};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">⭐${favCount}</button>
-          <button id="${cfg.tab}-type-mgr" style="height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #dbe6f4;background:#f7faff;color:#3f7cb8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">⚙종류</button>
-          ${(typeFilter!=='all'||fileTypeFilter!=='all'||yearFilter!=='all'||tagFilter||favOnly||searchQuery)?`<button id="${cfg.tab}-clear-btn" style="height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #fde8e8;background:#fff;color:#b52929;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">✕</button>`:''}
+          ${(typeFilter!=='all'||fileTypeFilter!=='all'||yearFilter!=='all'||tagFilter||favOnly||searchQuery)?`<button id="${cfg.tab}-clear-btn" style="height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #fde8e8;background:#fff;color:#b52929;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✕</button>`:''}
 
         ${allTags.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
           <span style="font-size:11px;font-weight:700;color:#7a92a8;align-self:center;margin-right:4px">🏷 태그:</span>
@@ -6204,24 +6208,24 @@ function makeDocTab(cfg){
     }
     
     function bindRestEvents(){
-      buildTypeSelect(`${cfg.tab}-type-filter`);
-      buildYearAutoSelect(`${cfg.tab}-year-filter`);
-      document.getElementById(`${cfg.tab}-type-filter`).value = typeFilter;
-      document.getElementById(`${cfg.tab}-year-filter`).value = yearFilter;
-      document.getElementById(`${cfg.tab}-type-filter`).addEventListener('change', e=>{ typeFilter=e.target.value; render(); });
-      document.getElementById(`${cfg.tab}-year-filter`).addEventListener('change', e=>{ yearFilter=e.target.value; render(); });
-      document.getElementById(`${cfg.tab}-fav-btn`).addEventListener('click', ()=>{ favOnly = !favOnly; render(); });
-      const ftSel = document.getElementById(`${cfg.tab}-filetype-filter`);
-      if(ftSel){ ftSel.value = fileTypeFilter; ftSel.addEventListener('change', e=>{ fileTypeFilter=e.target.value; render(); }); }
+      // select 초기값 세팅 + 이벤트 (최초 생성 시 1회)
+      const tyF = document.getElementById(`${cfg.tab}-type-filter`);
+      const yrF = document.getElementById(`${cfg.tab}-year-filter`);
+      const ftF = document.getElementById(`${cfg.tab}-filetype-filter`);
+      const favB = document.getElementById(`${cfg.tab}-fav-btn`);
+      const typM = document.getElementById(`${cfg.tab}-type-mgr`);
+      if(tyF && !tyF._bound){ tyF._bound=true; buildTypeSelect(`${cfg.tab}-type-filter`); tyF.value=typeFilter; tyF.addEventListener('change',e=>{typeFilter=e.target.value;render();}); }
+      if(yrF && !yrF._bound){ yrF._bound=true; buildYearAutoSelect(`${cfg.tab}-year-filter`); yrF.value=yearFilter; yrF.addEventListener('change',e=>{yearFilter=e.target.value;render();}); }
+      if(ftF && !ftF._bound){ ftF._bound=true; ftF.value=fileTypeFilter; ftF.addEventListener('change',e=>{fileTypeFilter=e.target.value;render();}); }
+      if(favB && !favB._bound){ favB._bound=true; favB.addEventListener('click',()=>{favOnly=!favOnly;render();}); }
+      if(typM && !typM._bound){ typM._bound=true; typM.addEventListener('click',()=>{window.openCatMgr(cfg.tab,()=>render());}); }
+      // 초기화 버튼은 매번 새로 생성되므로 매번 바인딩
       const clearBtn = document.getElementById(`${cfg.tab}-clear-btn`);
       if(clearBtn) clearBtn.addEventListener('click', ()=>{
         typeFilter='all'; fieldFilter='all'; yearFilter='all'; tagFilter=''; favOnly=false; searchQuery=''; fileTypeFilter='all';
-        if(ftSel) ftSel.value='all';
-        if(searchInput) searchInput.value = '';
+        if(ftF) ftF.value='all'; if(tyF) tyF.value='all'; if(yrF) yrF.value='all';
+        if(searchInput) searchInput.value='';
         render();
-      });
-      document.getElementById(`${cfg.tab}-type-mgr`).addEventListener('click', ()=>{
-        window.openCatMgr(cfg.tab, ()=>render());
       });
       restHost.querySelectorAll(`.tag-quick-${cfg.tab}`).forEach(btn=>{
         btn.addEventListener('click', ()=>{
@@ -8812,7 +8816,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1353';
+    if(el) el.textContent = 'v20260701-1358';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10254,7 +10258,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1353 로드');
+  console.log('[expV2] v20260701-1358 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
