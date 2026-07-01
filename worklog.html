@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1328</title>
+<title>업무일지 v20260701-1353</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1312,7 +1312,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1328</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1353</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -5899,7 +5899,7 @@ function makeDocTab(cfg){
   let items=[], editId=null;
   // v44: 필터 상태 강화
   let typeFilter='all', monthFilter='all', yearFilter='all';
-  let fieldFilter='all', tagFilter='', searchQuery='', favOnly=false;
+  let fieldFilter='all', tagFilter='', searchQuery='', favOnly=false, fileTypeFilter='all';
 
   function load(){ try{ items=JSON.parse(localStorage.getItem(LS)||'[]'); }catch(e){ items=[]; } }
   function save(){ try{ localStorage.setItem(LS,JSON.stringify(items)); }catch(e){} }
@@ -5971,6 +5971,7 @@ function makeDocTab(cfg){
     const q = (searchQuery||'').trim().toLowerCase();
     let list=items.filter(d=>{
       if(typeFilter!=='all'&&d.type!==typeFilter) return false;
+      if(fileTypeFilter!=='all'&&(d.fileType||'folder')!==fileTypeFilter) return false;
       if(monthFilter!=='all'&&d.month&&d.month!==monthFilter) return false;
       if(yearFilter!=='all'){
         const dy = d.year || (d.month?d.month.slice(0,4):'');
@@ -6161,8 +6162,10 @@ function makeDocTab(cfg){
     if(!searchInput || !restHost){
       // 최초 생성
       host.innerHTML = `
-        <input type="text" id="${cfg.tab}-search" placeholder="🔍 검색 (이름·메모·태그·경로)" value="${esc(searchQuery)}" style="width:100%;box-sizing:border-box;height:42px;padding:0 16px;border:2px solid #dbe6f4;border-radius:12px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;margin-bottom:10px">
-        <div class="filter-rest-host"></div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+          <input type="text" id="${cfg.tab}-search" placeholder="🔍 검색" value="${esc(searchQuery)}" style="flex:1;min-width:120px;box-sizing:border-box;height:28px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
+          <div class="filter-rest-host" style="display:contents"></div>
+        </div>
       `;
       searchInput = document.getElementById(`${cfg.tab}-search`);
       restHost = host.querySelector('.filter-rest-host');
@@ -6177,30 +6180,17 @@ function makeDocTab(cfg){
     
     function renderRestUI(){
       restHost.innerHTML = `
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-          <button id="${cfg.tab}-fav-btn" style="padding:7px 14px;border-radius:18px;border:2px solid ${favOnly?'#f59e0b':'#dbe6f4'};background:${favOnly?'#f59e0b':'#fff'};color:${favOnly?'#fff':'#7a92a8'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">⭐ 즐겨찾기 ${favCount}</button>
-          ${(typeFilter!=='all'||fieldFilter!=='all'||yearFilter!=='all'||tagFilter||favOnly||searchQuery)?`<button id="${cfg.tab}-clear-btn" style="padding:7px 14px;border-radius:18px;border:2px solid #fde8e8;background:#fff;color:#b52929;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✕ 필터 초기화</button>`:''}
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px">
-          <div>
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
-              <label style="font-size:11px;font-weight:700;color:#7a92a8">📑 종류</label>
-              <button id="${cfg.tab}-type-mgr" style="background:none;border:none;cursor:pointer;font-size:11px;color:#3f7cb8;padding:0">[관리]</button>
-            </div>
-            <select id="${cfg.tab}-type-filter" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff"></select>
-          </div>
-          <div>
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
-              <label style="font-size:11px;font-weight:700;color:#7a92a8">🏷 분야</label>
-              <button id="${cfg.tab}-field-mgr" style="background:none;border:none;cursor:pointer;font-size:11px;color:#3f7cb8;padding:0">[관리]</button>
-            </div>
-            <select id="${cfg.tab}-field-filter" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff"></select>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">📅 년도</label>
-            <select id="${cfg.tab}-year-filter" style="width:100%;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff"></select>
-          </div>
-        </div>
+          <select id="${cfg.tab}-type-filter" title="종류" style="height:28px;padding:0 7px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff"></select>
+          <select id="${cfg.tab}-year-filter" title="년도" style="height:28px;padding:0 7px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff"></select>
+          <select id="${cfg.tab}-filetype-filter" style="height:28px;padding:0 7px;border:1.5px solid #dbe6f4;border-radius:7px;font-size:12px;font-family:inherit;background:#f7faff">
+            <option value="all">📁📄</option>
+            <option value="folder">📁폴더</option>
+            <option value="file">📄파일</option>
+          </select>
+          <button id="${cfg.tab}-fav-btn" style="height:28px;padding:0 8px;border-radius:7px;border:1.5px solid ${favOnly?'#f59e0b':'#dbe6f4'};background:${favOnly?'#f59e0b':'#fff'};color:${favOnly?'#fff':'#7a92a8'};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">⭐${favCount}</button>
+          <button id="${cfg.tab}-type-mgr" style="height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #dbe6f4;background:#f7faff;color:#3f7cb8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">⚙종류</button>
+          ${(typeFilter!=='all'||fileTypeFilter!=='all'||yearFilter!=='all'||tagFilter||favOnly||searchQuery)?`<button id="${cfg.tab}-clear-btn" style="height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #fde8e8;background:#fff;color:#b52929;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">✕</button>`:''}
+
         ${allTags.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
           <span style="font-size:11px;font-weight:700;color:#7a92a8;align-self:center;margin-right:4px">🏷 태그:</span>
           ${allTags.map(t=>{
@@ -6215,26 +6205,23 @@ function makeDocTab(cfg){
     
     function bindRestEvents(){
       buildTypeSelect(`${cfg.tab}-type-filter`);
-      buildFieldSelect(`${cfg.tab}-field-filter`);
       buildYearAutoSelect(`${cfg.tab}-year-filter`);
       document.getElementById(`${cfg.tab}-type-filter`).value = typeFilter;
-      document.getElementById(`${cfg.tab}-field-filter`).value = fieldFilter;
       document.getElementById(`${cfg.tab}-year-filter`).value = yearFilter;
       document.getElementById(`${cfg.tab}-type-filter`).addEventListener('change', e=>{ typeFilter=e.target.value; render(); });
-      document.getElementById(`${cfg.tab}-field-filter`).addEventListener('change', e=>{ fieldFilter=e.target.value; render(); });
       document.getElementById(`${cfg.tab}-year-filter`).addEventListener('change', e=>{ yearFilter=e.target.value; render(); });
       document.getElementById(`${cfg.tab}-fav-btn`).addEventListener('click', ()=>{ favOnly = !favOnly; render(); });
+      const ftSel = document.getElementById(`${cfg.tab}-filetype-filter`);
+      if(ftSel){ ftSel.value = fileTypeFilter; ftSel.addEventListener('change', e=>{ fileTypeFilter=e.target.value; render(); }); }
       const clearBtn = document.getElementById(`${cfg.tab}-clear-btn`);
       if(clearBtn) clearBtn.addEventListener('click', ()=>{
-        typeFilter='all'; fieldFilter='all'; yearFilter='all'; tagFilter=''; favOnly=false; searchQuery='';
+        typeFilter='all'; fieldFilter='all'; yearFilter='all'; tagFilter=''; favOnly=false; searchQuery=''; fileTypeFilter='all';
+        if(ftSel) ftSel.value='all';
         if(searchInput) searchInput.value = '';
         render();
       });
       document.getElementById(`${cfg.tab}-type-mgr`).addEventListener('click', ()=>{
         window.openCatMgr(cfg.tab, ()=>render());
-      });
-      document.getElementById(`${cfg.tab}-field-mgr`).addEventListener('click', ()=>{
-        openFieldManager();
       });
       restHost.querySelectorAll(`.tag-quick-${cfg.tab}`).forEach(btn=>{
         btn.addEventListener('click', ()=>{
@@ -8825,7 +8812,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1328';
+    if(el) el.textContent = 'v20260701-1353';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10267,7 +10254,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1328 로드');
+  console.log('[expV2] v20260701-1353 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
