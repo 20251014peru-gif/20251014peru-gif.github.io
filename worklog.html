@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1630</title>
+<title>업무일지 v20260701-1633</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -377,7 +377,7 @@
 
 /* 🐞 디버그 패널 */
 .dbg-btn {
-  background:none;border:none;cursor:pointer;font-size:12px;padding:2px 6px;color:#7a92a8;
+  position:fixed;right:0;top:208px;width:34px;height:34px;background:rgba(100,100,100,.15);border:none;border-radius:10px 0 0 10px;cursor:pointer;font-size:16px;z-index:9997;display:flex;align-items:center;justify-content:center;
   background: rgba(255,80,80,.85); color: #fff;
   border: none; border-radius: 8px; padding: 4px 10px;
   font-size: 12px; font-weight: 700; cursor: pointer;
@@ -1311,7 +1311,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1630</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1633</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1351,7 +1351,6 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       <button class="v43-tab" data-v43tab="diag">🔧 진단</button>
       <button class="v43-tab" data-v43tab="ai">🤖 AI</button>
       <button id="tabMgrBtn" class="v43-tab" style="background:#f7faff;color:#3f7cb8">⚙️ 폴더탭관리</button>
-      <button class="dbg-btn" onclick="window.toggleDbg&&window.toggleDbg()" title="디버그">🐞</button>
     </div>
     <!-- 2행: 폴더/파일 관리탭 + 일지추가 버튼 (탭 바로 옆에 붙음, flex:1 없음) -->
     <div class="v43-tabs" id="v43TabsRow2Wrap">
@@ -8939,7 +8938,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1630';
+    if(el) el.textContent = 'v20260701-1633';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10381,7 +10380,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1630 로드');
+  console.log('[expV2] v20260701-1633 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
