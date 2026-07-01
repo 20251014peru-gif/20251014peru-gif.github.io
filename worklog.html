@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1130</title>
+<title>업무일지 v20260701-1226</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1312,7 +1312,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1130</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1226</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2223,6 +2223,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           <button class="btn btn-primary btn-sm" id="diagBulkOrganize" style="background:#27ae60">🗂 일괄 정리 도구 열기</button>
           <span style="font-size:12px;color:#7a92a8;align-self:center">점검일지·운영실무·임대공용·임대개별·서류폴더 자료를 한 화면에서 정리</span>
         </div>
+        <!-- ── 휴지통 섹션 ── -->
+        <div class="sec-head">🗑 휴지통 <span id="trashCount" style="font-size:11px;color:#94a3b8;font-weight:400;margin-left:4px"></span></div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:6px">삭제한 항목은 30일간 보관 후 자동 완전삭제됩니다. 복원하거나 즉시 완전삭제할 수 있어요.</div>
+        <div id="trashList" style="border:1.5px solid #f1f5f9;border-radius:8px;overflow:hidden;max-height:280px;overflow-y:auto;margin-bottom:8px"></div>
+        <button onclick="emptyTrash()" style="padding:5px 14px;background:#fde8e8;color:#b52929;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑 휴지통 비우기</button>
+
         <div class="sec-head">CSV 내보내기 (엑셀)</div>
         <div class="btn-row" style="margin-top:0;gap:8px">
           <button class="btn btn-ghost btn-sm" data-csv="work">업무</button>
@@ -2898,7 +2904,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // 통합 목록 렌더 (entries는 worklog.js 전역)
   function getEntries(){
-    if(typeof entries !== 'undefined') return entries;
+    if(typeof entries !== 'undefined') return entries.filter(e=>!e._deleted);
     return [];
   }
 
@@ -8794,7 +8800,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1130';
+    if(el) el.textContent = 'v20260701-1226';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10236,7 +10242,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1130 로드');
+  console.log('[expV2] v20260701-1226 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────

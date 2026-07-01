@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v20260701-1130";
+const APP_VERSION = "v20260701-1226";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -985,6 +985,7 @@ async function init(){
     online=true; setStatus(true);
   }catch(e){ online=false; setStatus(false); logErr("초기 연결", e); }
   await loadAll();
+  autoCleanTrash(); // v44: 30일 지난 휴지통 자동 정리
   migrateTissueToJumbo(); // v26: 휴지 → 점보롤 자동 변환
   migrateBadMemoAttachments(); // v38: 깨진 첨부 정리
   renderStatusChips(); renderAll();
@@ -3844,6 +3845,7 @@ function renderDiag(){
     <div class="table-wrap" style="min-width:0;margin-top:10px"><table class="rec" style="min-width:0">
     <thead><tr><th>항목</th><th style="text-align:right">기록 수</th></tr></thead><tbody>${kindRows}</tbody></table></div>`;
   renderDiagErrors();
+  renderTrash();
 }
 function fmtTime(ts){ const d=new Date(ts); return `${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`; }
 function renderDiagErrors(){
