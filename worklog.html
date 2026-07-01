@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1407</title>
+<title>업무일지 v20260701-1413</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1312,7 +1312,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1407</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1413</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -5974,7 +5974,7 @@ function makeDocTab(cfg){
       if(fileTypeFilter!=='all'&&(d.fileType||'folder')!==fileTypeFilter) return false;
       if(monthFilter!=='all'&&d.month&&d.month!==monthFilter) return false;
       if(yearFilter!=='all'){
-        const dy = d.year || (d.month?d.month.slice(0,4):'');
+        const dy = d.year || '';
         if(dy !== yearFilter) return false;
       }
       if(fieldFilter!=='all' && d.field !== fieldFilter) return false;
@@ -6059,7 +6059,7 @@ function makeDocTab(cfg){
       // 년도별 그룹핑
       const groups = {};
       list.forEach(d=>{
-        const y = d.year || (d.month?d.month.slice(0,4):'') || '미분류';
+        const y = d.year || '미분류'; // (자동)이면 미분류 그룹
         if(!groups[y]) groups[y]=[];
         groups[y].push(d);
       });
@@ -6255,7 +6255,7 @@ function makeDocTab(cfg){
       if(yearFilter === 'all'){
         const groups = {};
         list.forEach(d=>{
-          const y = d.year || (d.month?d.month.slice(0,4):'') || '미분류';
+          const y = d.year || '미분류'; // (자동)이면 미분류 그룹
           if(!groups[y]) groups[y]=[];
           groups[y].push(d);
         });
@@ -6492,7 +6492,8 @@ function makeDocTab(cfg){
     setTimeout(()=>el(cfg.modalNameId).focus(),200);
     // v44: 분야/년도/태그/즐겨찾기 추가 영역 (동적 삽입)
     setupExtraModalFields(d);
-    // v44: 다른 탭으로 이동 버튼 제거 (자료 일괄정리에서 이동)
+    // v44: 다른 탭으로 이동 버튼 (드롭박스)
+    setupMoveButton(id);
   }
 
   // v44: 모달에 분야/년도/태그/즐겨찾기 동적 추가
@@ -6580,61 +6581,59 @@ function makeDocTab(cfg){
     });
   }
 
-  // v44: 다른 탭으로 이동 버튼 (수정 모드일 때만 표시)
+  // v44: 다른 탭으로 이동 — 드롭박스 (기본탭 + 커스텀탭 모두 포함)
   function setupMoveButton(id){
     const el=i=>document.getElementById(i);
     const modal = el(cfg.modalId);
     if(!modal) return;
-    // 기존 이동 버튼 제거
     const oldBtn = modal.querySelector('.move-tab-area');
     if(oldBtn) oldBtn.remove();
-    if(!id) return; // 신규 추가일 때는 표시 안 함
-    // 삭제 버튼 옆에 이동 영역 추가
-    const delBtn = el(cfg.modalDelId);
-    if(!delBtn) return;
+    if(!id) return;
+    const sheet = modal.querySelector('.v43-cat-sheet');
+    if(!sheet) return;
+    // 기본 탭 목록
+    const BASE_TABS = {insp:'📋 점검일지', docs:'📁 운영실무', common:'🏢 임대공용', indiv:'🚪 임대개별', etc:'🗂 서류폴더'};
+    const BASE_LS = {insp:'wl_insp_v43', docs:'wl_docs_v43', common:'wl_common_v43', indiv:'wl_indiv_v43', etc:'wl_etc_v44'};
+    // 커스텀 탭 추가
+    const allTabs = {...BASE_TABS};
+    const allLS = {...BASE_LS};
+    try{
+      const saved = JSON.parse(localStorage.getItem('wl_folder_tabs_v1')||'[]');
+      saved.forEach(t=>{ if(t.id && t.id.indexOf('custom_')===0){ allTabs[t.id]=t.label; allLS[t.id]='wl_'+t.id+'_v43'; } });
+    }catch(e){}
+    // 현재 탭 제외
+    const otherTabs = Object.keys(allTabs).filter(k=>k!==cfg.tab);
+    if(!otherTabs.length) return;
     const moveBox = document.createElement('div');
     moveBox.className = 'move-tab-area';
-    moveBox.style.cssText = 'margin-top:14px;padding:12px;background:#fff8e1;border:2px solid #ffd54f;border-radius:12px';
-    const tabLabels = {insp:'📋 점검일지', docs:'📁 운영실무', common:'🏢 임대공용', indiv:'🚪 임대개별', etc:'🗂 서류폴더'};
-    const tabLS = {insp:'wl_insp_v43', docs:'wl_docs_v43', common:'wl_common_v43', indiv:'wl_indiv_v43', etc:'wl_etc_v44'};
-    // 현재 탭 제외한 나머지 탭들
-    const otherTabs = Object.keys(tabLabels).filter(k=>k!==cfg.tab);
+    moveBox.style.cssText = 'margin-top:8px;padding:8px 10px;background:#fff8e1;border:1.5px solid #ffd54f;border-radius:8px;display:flex;gap:6px;align-items:center';
     moveBox.innerHTML = `
-      <div style="font-size:13px;font-weight:700;color:#7c5e1a;margin-bottom:8px">📦 다른 탭으로 이동</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${otherTabs.map(tk=>`<button type="button" class="move-tab-btn" data-target="${tk}" style="flex:1;min-width:0;padding:10px 8px;background:#fff;color:#1a2f45;border:2px solid #ffd54f;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .1s">${tabLabels[tk]}</button>`).join('')}
-      </div>
+      <span style="font-size:11px;font-weight:700;color:#7c5e1a;white-space:nowrap">📦 탭 이동</span>
+      <select id="move-tab-sel-${cfg.tab}" style="flex:1;height:28px;padding:0 8px;border:1.5px solid #ffd54f;border-radius:7px;font-size:12px;font-family:inherit;background:#fff">
+        <option value="">이동할 탭 선택...</option>
+        ${otherTabs.map(k=>`<option value="${k}">${allTabs[k]}</option>`).join('')}
+      </select>
+      <button type="button" id="move-tab-btn-${cfg.tab}" style="height:28px;padding:0 12px;background:#f59e0b;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">이동</button>
     `;
-    delBtn.parentElement.appendChild(moveBox);
-    moveBox.querySelectorAll('.move-tab-btn').forEach(btn=>{
-      btn.addEventListener('mouseenter',()=>btn.style.background='#fff3c4');
-      btn.addEventListener('mouseleave',()=>btn.style.background='#fff');
-      btn.addEventListener('click',()=>{
-        const target = btn.dataset.target;
-        const targetLabel = tabLabels[target];
-        if(!confirm(`이 항목을 "${targetLabel}" 탭으로 이동할까요?`)) return;
-        // 현재 항목 찾기
-        const item = items.find(x=>x.id===id);
-        if(!item){ if(typeof toast==='function') toast('항목을 찾을 수 없어요'); return; }
-        // 대상 탭의 LS에 추가
-        const targetLS = tabLS[target];
-        let targetItems = [];
-        try{ targetItems = JSON.parse(localStorage.getItem(targetLS)||'[]'); }catch(e){}
-        // 새 ID 생성 (대상 탭 prefix로)
-        const newItem = {...item, id:target+'_'+Date.now()+'_'+Math.floor(Math.random()*9999)};
-        targetItems.push(newItem);
-        try{ localStorage.setItem(targetLS, JSON.stringify(targetItems)); }catch(e){}
-        // 현재 탭에서 제거
-        items = items.filter(x=>x.id!==id);
-        save();
-        closeModal();
-        render();
-        if(typeof toast==='function') toast(`✅ "${targetLabel}"로 이동됨`);
-        // 대상 탭 렌더 함수 호출 (열려있으면 갱신)
-        if(typeof window['_docTabRender_'+target]==='function'){
-          window['_docTabRender_'+target]();
-        }
-      });
+    sheet.appendChild(moveBox);
+    document.getElementById(`move-tab-btn-${cfg.tab}`).addEventListener('click',()=>{
+      const sel = document.getElementById(`move-tab-sel-${cfg.tab}`);
+      const target = sel ? sel.value : '';
+      if(!target){ if(typeof toast==='function') toast('이동할 탭을 선택하세요'); return; }
+      const targetLabel = allTabs[target];
+      if(!confirm(`"${targetLabel}" 탭으로 이동할까요?`)) return;
+      const item = items.find(x=>x.id===id);
+      if(!item){ if(typeof toast==='function') toast('항목을 찾을 수 없어요'); return; }
+      const targetLS = allLS[target];
+      let targetItems = [];
+      try{ targetItems = JSON.parse(localStorage.getItem(targetLS)||'[]'); }catch(e){}
+      const newItem = {...item, id:target+'_'+Date.now()+'_'+Math.floor(Math.random()*9999)};
+      targetItems.push(newItem);
+      try{ localStorage.setItem(targetLS, JSON.stringify(targetItems)); }catch(e){}
+      items = items.filter(x=>x.id!==id);
+      save(); closeModal(); render();
+      if(typeof toast==='function') toast(`✅ "${targetLabel}"로 이동됨`);
+      if(typeof window['_docTabRender_'+target]==='function') window['_docTabRender_'+target]();
     });
   }
 
@@ -8817,7 +8816,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1407';
+    if(el) el.textContent = 'v20260701-1413';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10259,7 +10258,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1407 로드');
+  console.log('[expV2] v20260701-1413 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
