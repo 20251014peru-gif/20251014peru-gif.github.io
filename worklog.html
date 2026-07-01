@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1633</title>
+<title>업무일지 v20260701-1643</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -375,27 +375,7 @@
 .st-todo   { background:#fde8e8; color:#b52929; }
 .st-skip   { background:#f0f0f0; color:#888; }
 
-/* 🐞 디버그 패널 */
-.dbg-btn {
-  position:fixed;right:0;top:208px;width:34px;height:34px;background:rgba(100,100,100,.15);border:none;border-radius:10px 0 0 10px;cursor:pointer;font-size:16px;z-index:9997;display:flex;align-items:center;justify-content:center;
-  background: rgba(255,80,80,.85); color: #fff;
-  border: none; border-radius: 8px; padding: 4px 10px;
-  font-size: 12px; font-weight: 700; cursor: pointer;
-  font-family: inherit; touch-action: manipulation;
-}
-.dbg-panel {
-  position: fixed; bottom: 40px; left: 10px; z-index: 9998;
-  background: rgba(0,0,0,.9); color: #0f0; border-radius: 10px;
-  padding: 10px; width: 88vw; max-width: 400px;
-  max-height: 50vh; overflow: auto;
-  font-size: 11px; font-family: monospace; display: none;
-}
-.dbg-panel.show { display: block; } /* 🐞 버튼으로만 열기 */
-.dbg-copy {
-  background: #333; color: #fff; border: none; border-radius: 6px;
-  padding: 4px 10px; font-size: 11px; cursor: pointer; margin-bottom: 6px;
-  font-family: inherit;
-}
+
 
 /* 스케줄 알림 뱃지 */
 .v43-alert-dot {
@@ -1101,41 +1081,7 @@
 /* 기존 v43CopyExcel 같은 작은 버튼들에 입체감 적용 */
 #v43CopyExcel,
 .memo-filter-btn,
-.dbg-copy{
-  box-shadow:0 1.5px 0 rgba(63,124,184,.25), 0 2px 6px rgba(63,124,184,.12), inset 0 1px 0 rgba(255,255,255,.7) !important;
-  transition:all .12s !important;
-}
-#v43CopyExcel:hover,
-.memo-filter-btn:hover,
-.dbg-copy:hover{
-  transform:translateY(-1px);
-  box-shadow:0 2.5px 0 rgba(63,124,184,.3), 0 4px 10px rgba(63,124,184,.2), inset 0 1px 0 rgba(255,255,255,.7) !important;
-}
-#v43CopyExcel:active,
-.memo-filter-btn:active,
-.dbg-copy:active{
-  transform:translateY(1px);
-  box-shadow:0 0 0 rgba(0,0,0,0), inset 0 1.5px 3px rgba(0,0,0,.1) !important;
-}
-/* ── 풀스크린 이미지 뷰어 (scan-app 동일) ── */
-#imgOverlay{display:none;position:fixed;inset:0;background:#000;z-index:99900;overflow:hidden;touch-action:none}
-#imgOverlay.show{display:flex;align-items:center;justify-content:center}
-#imgFull{max-width:none;max-height:none;transform-origin:center center;user-select:none;-webkit-user-drag:none;position:absolute}
-#imgViewerHeader{position:absolute;top:0;left:0;right:0;padding:16px 20px;
-  background:linear-gradient(rgba(0,0,0,.7),transparent);z-index:10;
-  display:flex;justify-content:space-between;align-items:center;gap:12px}
-#imgViewerTitle{font-size:16px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);
-  max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#imgViewerFooter{position:absolute;bottom:0;left:0;right:0;padding:18px 18px 22px;
-  background:linear-gradient(transparent,rgba(0,0,0,.75));z-index:10;
-  display:flex;justify-content:center;gap:14px}
-.iv-btn{width:54px;height:54px;border-radius:50%;border:2px solid rgba(255,255,255,.4);
-  background:rgba(255,255,255,.2);color:#fff;font-size:22px;cursor:pointer;font-family:inherit;
-  display:inline-flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-.iv-btn:hover{background:rgba(255,255,255,.35);border-color:rgba(255,255,255,.7)}
-</style>
-</head>
-<body>
+
 
 <!-- 🐞 디버그 패널 -->
 
@@ -1302,16 +1248,13 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   document.addEventListener('touchcancel', endDrag);
 })();
 </script>
-<div class="dbg-panel" id="dbgPanel" style="display:none">
-  <div id="dbgLog"></div>
-</div>
 
 <header>
   <div class="wrap">
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1633</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1643</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -8938,7 +8881,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1633';
+    if(el) el.textContent = 'v20260701-1643';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10380,7 +10323,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1633 로드');
+  console.log('[expV2] v20260701-1643 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
