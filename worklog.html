@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1659</title>
+<title>업무일지 v20260701-1715</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1080,19 +1080,21 @@
 
 /* 기존 v43CopyExcel 같은 작은 버튼들에 입체감 적용 */
 #v43CopyExcel,
-.memo-filter-btn,
-
+.memo-filter-btn {
+  /* 입체감 버튼 스타일 */
+}
+</style>
 
 <!-- 🐞 디버그 패널 -->
 
-<button id="v43FabHeader" title="기록 추가" style="position:fixed !important;right:0 !important;top:160px !important;width:44px !important;height:85px !important;background:linear-gradient(170deg,#5b9bd5 0%,#2563a8 60%,#1a4a8a 100%) !important;color:#fff !important;border:none !important;border-radius:13px 0 0 13px !important;cursor:pointer !important;z-index:9998 !important;box-shadow:-3px 0 24px rgba(37,99,168,.45) !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;gap:4px !important;touch-action:manipulation;transition:width .2s,box-shadow .2s;">
+<button id="v43FabHeader" title="기록 추가" style="position:fixed !important;right:0 !important;top:110px !important;width:44px !important;height:85px !important;background:linear-gradient(170deg,#5b9bd5 0%,#2563a8 60%,#1a4a8a 100%) !important;color:#fff !important;border:none !important;border-radius:13px 0 0 13px !important;cursor:pointer !important;z-index:9998 !important;box-shadow:-3px 0 24px rgba(37,99,168,.45) !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;gap:4px !important;touch-action:manipulation;transition:width .2s,box-shadow .2s;">
   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
   <span style="font-size:10px;font-weight:700;letter-spacing:.3px;opacity:.9">기록추가</span>
 </button>
 <!-- 📋 일지 FAB: 추가 버튼 아래, 드래그 연동 -->
-<button id="v43FabDiary" title="업무일지" style="position:fixed !important;right:0 !important;top:248px !important;width:44px !important;height:57px !important;background:linear-gradient(170deg,#f59e0b 0%,#d97706 100%) !important;color:#fff !important;border:none !important;border-radius:13px 0 0 13px !important;cursor:pointer !important;z-index:9997 !important;box-shadow:-3px 0 18px rgba(217,119,6,.4) !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;gap:3px !important;touch-action:manipulation;transition:width .2s,box-shadow .2s;">
+<button id="v43FabDiary" title="업무일지" style="position:fixed !important;right:0 !important;top:197px !important;width:44px !important;height:57px !important;background:linear-gradient(170deg,#f59e0b 0%,#d97706 100%) !important;color:#fff !important;border:none !important;border-radius:13px 0 0 13px !important;cursor:pointer !important;z-index:9997 !important;box-shadow:-3px 0 18px rgba(217,119,6,.4) !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;gap:3px !important;touch-action:manipulation;transition:width .2s,box-shadow .2s;">
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
   <span style="font-size:10px;font-weight:700;letter-spacing:.2px">일지</span>
 </button>
@@ -1154,7 +1156,14 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   /* 저장된 위치 복원 */
   try{
     var saved = localStorage.getItem('v43_fab_top');
-    if(saved){ fab.style.top=saved+'px'; var _d=document.getElementById('v43FabDiary');if(_d)_d.style.top=(parseInt(saved,10)+87)+'px'; }
+    var sn = parseInt(saved||'0');
+    if(saved && sn > 100 && sn < window.innerHeight * 0.7){
+      fab.style.top=sn+'px';
+      var _d=document.getElementById('v43FabDiary');
+      if(_d)_d.style.top=(sn+87)+'px';
+    } else {
+      try{ localStorage.removeItem('v43_fab_top'); }catch(e){}
+    }
   }catch{}
 
   function startDrag(clientY){
@@ -1246,7 +1255,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1659</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1715</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -8873,7 +8882,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1659';
+    if(el) el.textContent = 'v20260701-1715';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10315,7 +10324,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1659 로드');
+  console.log('[expV2] v20260701-1715 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
