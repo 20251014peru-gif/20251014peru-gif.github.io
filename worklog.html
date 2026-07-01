@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-1226</title>
+<title>업무일지 v20260701-1317</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1312,7 +1312,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1226</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1317</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2248,7 +2248,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div style="background:#fff;border-radius:16px;width:100%;max-width:1400px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden">
       <div style="padding:16px 20px;border-bottom:1.5px solid #e8f0fa;display:flex;align-items:center;gap:12px">
         <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">📋 자료 일괄 정리</h3>
-        <span style="font-size:12px;color:#aab8c8">5개 탭 자료를 한 화면에서 정리·이동·삭제</span>
+        <span style="font-size:12px;color:#aab8c8">전체 탭 자료를 한 화면에서 정리·이동·삭제</span>
         <button id="bulkOrgClose" style="margin-left:auto;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">✕ 닫기</button>
       </div>
       <div style="padding:14px 20px;border-bottom:1.5px solid #e8f0fa;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f7faff">
@@ -3424,29 +3424,49 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   window.v43ActivateTab = v43ActivateTab;
 
   /* 탭바 옆 '📋 일지/폴더추가' 버튼
-     → 현재 보고 있는 탭이 점검일지~서류폴더 중 하나면 그 탭의 추가 모달을 바로 염
-     → 다른 탭(기록/지출 등)을 보고 있으면 우선 점검일지 탭으로 이동 후 추가 모달 오픈 */
-  var FOLDER_ADD_MAP = {
-    filelink:'inspAddBtn', docs:'docsAddBtn', common:'commonAddBtn',
-    indiv:'indivAddBtn', etc:'etcAddBtn'
-  };
+     → 현재 2행 탭에 맞는 추가 모달 직접 호출 (_docTabOpen_ 전역 함수 사용)
+     → 다른 탭이면 점검일지로 이동 후 추가 */
+  var FOLDER_TABS_BASE = ['filelink','docs','common','indiv','etc'];
+  function getFolderTabs(){
+    // 기본 5개 + localStorage에 저장된 커스텀 탭
+    var base = FOLDER_TABS_BASE.slice();
+    try{
+      var saved = JSON.parse(localStorage.getItem('wl_folder_tabs_v1')||'[]');
+      saved.forEach(function(t){ if(!base.includes(t.id)) base.push(t.id); });
+    }catch(e){}
+    return base;
+  }
   var folderAddBtn = document.getElementById('folderAddBtn');
   if(folderAddBtn){
     folderAddBtn.addEventListener('click', function(){
       var activeTabEl = document.querySelector('.v43-tab.active[data-v43tab]');
       var current = activeTabEl ? activeTabEl.dataset.v43tab : '';
-      var targetTab = FOLDER_ADD_MAP[current] ? current : 'filelink';
-      var addBtnId = FOLDER_ADD_MAP[targetTab];
+      var folderTabs = getFolderTabs();
+      var targetTab = folderTabs.includes(current) ? current : 'filelink';
+
+      function doOpen(){
+        // 커스텀 탭이면 패널이 없을 수 있으므로 먼저 생성
+        if(targetTab.indexOf('custom_')===0 && typeof ensureCustomTabPanel==='function'){
+          var activeBtn = document.querySelector('.v43-tab[data-v43tab="'+targetTab+'"]');
+          var label = activeBtn ? activeBtn.textContent.trim() : targetTab;
+          ensureCustomTabPanel(targetTab, label);
+        }
+        var fn = window['_docTabOpen_'+targetTab];
+        if(typeof fn === 'function'){
+          fn();
+        } else {
+          // fallback: 숨겨진 추가 버튼 직접 클릭
+          var map = {filelink:'inspAddBtn',docs:'docsAddBtn',common:'commonAddBtn',indiv:'indivAddBtn',etc:'etcAddBtn'};
+          var b = document.getElementById(map[targetTab]);
+          if(b) b.click();
+        }
+      }
 
       if(current !== targetTab){
         v43ActivateTab(targetTab);
-        setTimeout(function(){
-          var b = document.getElementById(addBtnId);
-          if(b) b.click();
-        }, 80);
+        setTimeout(doOpen, 150);
       } else {
-        var b = document.getElementById(addBtnId);
-        if(b) b.click();
+        doOpen();
       }
     });
   }
@@ -6772,6 +6792,8 @@ function makeDocTab(cfg){
     buildMonthSelect(cfg.monthFilterId);
     render();
   };
+  // v44: 탭별 추가 모달 직접 호출용
+  window['_docTabOpen_'+cfg.tab] = function(){ openModal(null); };
 
   load();
   buildTypeSelect(cfg.typeFilterId); buildTypeSelect(cfg.modalTypeId);
@@ -6926,6 +6948,17 @@ makeDocTab({
     indiv:  {label:'🚪 임대개별', LS:'wl_indiv_v43'},
     etc:    {label:'🗂 서류폴더', LS:'wl_etc_v44'}
   };
+  // v44: 커스텀 탭(용역관리, 계약서 등) 동적 추가
+  (function(){
+    try{
+      var saved = JSON.parse(localStorage.getItem('wl_folder_tabs_v1')||'[]');
+      saved.forEach(function(t){
+        if(t.id && t.id.indexOf('custom_')===0 && !BULK_TABS[t.id]){
+          BULK_TABS[t.id] = {label: t.label, LS: 'wl_'+t.id+'_v43'};
+        }
+      });
+    }catch(e){}
+  })();
   const BULK_DEFAULT_FIELDS = {
     insp: ['전기','소방','기계','영선','승강기','일반'],
     docs: ['전기','소방','기계','영선','승강기','청소','직원관련','일반'],
@@ -7080,9 +7113,37 @@ makeDocTab({
 
   // 일괄정리 모달 열기
   window.openBulkOrganize = function(){
+    addCustomTabsToBulk(); // 커스텀 탭 동적 추가
     document.getElementById('bulkOrgOverlay').style.display = 'flex';
     bulkLoadAll();
   };
+
+  // 커스텀 탭을 BULK_TABS와 탭 버튼 영역에 동적 추가
+  function addCustomTabsToBulk(){
+    try{
+      var saved = JSON.parse(localStorage.getItem('wl_folder_tabs_v1')||'[]');
+      var chipArea = document.querySelector('#bulkOrgOverlay .bulk-tab-chip:last-of-type')?.parentElement;
+      saved.forEach(function(t){
+        if(!t.id || t.id.indexOf('custom_')!==0) return;
+        // BULK_TABS에 추가
+        if(!BULK_TABS[t.id]){
+          BULK_TABS[t.id] = {label: t.label, LS: 'wl_'+t.id+'_v43'};
+        }
+        // 탭 버튼 추가 (없으면)
+        if(chipArea && !chipArea.querySelector('[data-bulktab="'+t.id+'"]')){
+          var btn = document.createElement('button');
+          btn.className = 'bulk-tab-chip';
+          btn.dataset.bulktab = t.id;
+          btn.style.cssText = 'padding:6px 12px;border-radius:14px;border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit';
+          btn.textContent = t.label;
+          // 검색 input 앞에 삽입
+          var searchInput = document.getElementById('bulkOrgSearch');
+          if(searchInput) chipArea.insertBefore(btn, searchInput);
+          else chipArea.appendChild(btn);
+        }
+      });
+    }catch(e){}
+  }
 
   // 진단 탭 버튼 → 일괄정리 열기
   document.getElementById('diagBulkOrganize')?.addEventListener('click', ()=>{
@@ -8800,7 +8861,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-1226';
+    if(el) el.textContent = 'v20260701-1317';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10242,7 +10303,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-1226 로드');
+  console.log('[expV2] v20260701-1317 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
