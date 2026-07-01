@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v20260701-0950";
+const APP_VERSION = "v20260701-1013";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -892,10 +892,12 @@ function deleteWithUndo(id, label){
   const rec=entries.find(x=>x.id===id); if(!rec) return;
   const backup=JSON.parse(JSON.stringify(rec));
   saveTempBackup();
-  deleteRecord(id); renderAll();
+  deleteRecord(id);
+  // toastAction 먼저 — renderAll보다 먼저 등록해야 toastBtn이 덮이지 않음
   toastAction(`${label||"항목"}을(를) 삭제했습니다`, "되돌리기", ()=>{
-    restoreRecord(backup); renderAll(); toast("삭제를 되돌렸습니다");
+    restoreRecord(backup); renderAll(); toast("✅ 삭제를 되돌렸습니다");
   });
+  renderAll();
 }
 async function loadAll(){
   if(online){
@@ -1259,7 +1261,7 @@ function fieldHTML(f){
     </div>`;
   }
   if(f.type==="alertbefore"){
-    return `<div class="field full"><label>${esc(f.label)}</label>
+    return `<div class="field full"><label style="font-size:10px;margin-bottom:2px">${esc(f.label)}</label>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="m-alertDays" onchange="syncAlertBefore()" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;flex:1">
           <option value="0">0일</option><option value="1">1일</option><option value="2">2일</option><option value="3">3일</option><option value="4">4일</option><option value="5">5일</option><option value="6">6일</option><option value="7">7일</option>
@@ -1882,7 +1884,7 @@ function renderWorkModal(data, mode){
     inp: `width:100%;box-sizing:border-box;height:32px;padding:0 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45`,
     sel: `width:100%;box-sizing:border-box;height:32px;padding:0 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;cursor:pointer`,
     lbl: `display:block;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.4px;margin-bottom:2px;text-transform:uppercase`,
-    ta:  `width:100%;box-sizing:border-box;min-height:48px;padding:6px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;resize:vertical;line-height:1.5`,
+    ta:  `width:100%;box-sizing:border-box;min-height:38px;padding:5px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#1a2f45;resize:vertical;line-height:1.5`,
     row: `display:grid;grid-template-columns:95px 1fr;gap:7px;margin-bottom:7px`,
     mb:  `margin-bottom:7px`,
   };
@@ -8013,6 +8015,11 @@ function setupProgressTab(){
   const fromEl = document.getElementById("progressDateFrom");
   const toEl = document.getElementById("progressDateTo");
   const clearEl = document.getElementById("progressDateClear");
+  const statusSelEl = document.getElementById("progressStatusFilter");
+  if(statusSelEl && !statusSelEl._wired){
+    statusSelEl._wired = true;
+    statusSelEl.addEventListener("change", ()=>{ PROGRESS_FILTER.status = statusSelEl.value; renderProgressStatusChips(); renderProgressTasks(); });
+  }
   if(fromEl && !fromEl._wired){
     fromEl._wired = true;
     fromEl.addEventListener("change", ()=>{ PROGRESS_FILTER.from = fromEl.value; renderProgressTasks(); });
@@ -8024,9 +8031,10 @@ function setupProgressTab(){
   if(clearEl && !clearEl._wired){
     clearEl._wired = true;
     clearEl.addEventListener("click", ()=>{
-      PROGRESS_FILTER.from = ""; PROGRESS_FILTER.to = "";
+      PROGRESS_FILTER.from = ""; PROGRESS_FILTER.to = ""; PROGRESS_FILTER.status = "전체";
       if(fromEl) fromEl.value = ""; if(toEl) toEl.value = "";
-      renderProgressTasks();
+      if(statusSelEl) statusSelEl.value = "전체";
+      renderProgressStatusChips(); renderProgressTasks();
     });
   }
 }

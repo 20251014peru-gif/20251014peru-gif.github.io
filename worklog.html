@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>업무일지 v20260701-0909</title>
+<title>업무일지 v20260701-1012</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -310,6 +310,25 @@
 }
 .v43-tab:hover { border-color: #3f7cb8; color: #3f7cb8; }
 .v43-tab.active { background: #3f7cb8; border-color: #3f7cb8; color: #fff; }
+
+  /* ── 모달 compact: 스크롤 없이 한 화면에 ── */
+  #overlay .modal {
+    max-height: 92vh !important;
+    overflow-y: auto;
+    padding: 16px 18px !important;
+  }
+  #overlay .modal h3#mTitle {
+    font-size: 16px !important;
+    margin-bottom: 8px !important;
+  }
+  #overlay .field { margin-bottom: 6px !important; }
+  #overlay .field label { font-size: 10px !important; margin-bottom: 2px !important; }
+  #overlay .attach-area { margin-top: 5px !important; }
+  #overlay .attach-area > label { font-size: 10px !important; margin-bottom: 1px !important; }
+  #overlay .attach-area > div[style*="font-size:11"] { font-size: 10px !important; margin-top: 0 !important; }
+  #overlay .attach-add-row { gap: 4px !important; margin-top: 3px !important; }
+  #overlay .attach-add-row input { height: 28px !important; font-size: 12px !important; padding: 0 7px !important; }
+  #overlay .attach-add-btn { height: 28px !important; font-size: 11px !important; padding: 0 8px !important; }
 
 /* 섹션 패널 */
 .v43-panel { display: none; }
@@ -1286,7 +1305,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-0909</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v20260701-1012</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2038,8 +2057,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       <button id="btnAddAccident" style="background:#e74c3c;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 사고 등록</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="accidentStatusChips"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <select id="accidentTypeFilter" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap;margin-bottom:12px;overflow-x:auto">
+      <select id="accidentTypeFilter" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;background:#f7faff;font-family:inherit;flex-shrink:0">
         <option value="all">전체 종류</option>
         <option value="누수">💧 누수</option>
         <option value="화재">🔥 화재</option>
@@ -2054,10 +2073,10 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <option value="감전">⚡ 감전</option>
         <option value="기타">기타</option>
       </select>
-      <input type="date" id="accidentDateFrom" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
-      <input type="date" id="accidentDateTo" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
-      <button id="accidentDateClear" style="padding:8px 14px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">기간해제</button>
-      <span id="accidentCount" style="margin-left:auto;color:#7a92a8;font-weight:700;align-self:center"></span>
+      <input type="date" id="accidentDateFrom" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;background:#f7faff;font-family:inherit;flex-shrink:0">
+      <input type="date" id="accidentDateTo" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;background:#f7faff;font-family:inherit;flex-shrink:0">
+      <button id="accidentDateClear" style="height:32px;padding:0 10px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit;flex-shrink:0">기간해제</button>
+      <span id="accidentCount" style="margin-left:auto;color:#7a92a8;font-weight:700;font-size:12px;white-space:nowrap"></span>
     </div>
     <div id="accidentList"></div>
   </div>
@@ -2069,11 +2088,18 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       <button id="btnAddProgress" style="background:#3f7cb8;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 진행업무 등록</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="progressStatusChips"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <input type="date" id="progressDateFrom" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
-      <input type="date" id="progressDateTo" style="padding:8px 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;background:#f7faff;font-family:inherit">
-      <button id="progressDateClear" style="padding:8px 14px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">기간해제</button>
-      <span id="progressCount" style="margin-left:auto;color:#7a92a8;font-weight:700;align-self:center"></span>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap;margin-bottom:12px;overflow-x:auto">
+      <select id="progressStatusFilter" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;background:#f7faff;font-family:inherit;flex-shrink:0">
+        <option value="전체">전체 상태</option>
+        <option value="견적중">견적중</option>
+        <option value="발주완료">발주완료</option>
+        <option value="진행중">진행중</option>
+        <option value="완료">완료</option>
+      </select>
+      <input type="date" id="progressDateFrom" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;background:#f7faff;font-family:inherit;flex-shrink:0">
+      <input type="date" id="progressDateTo" style="height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;background:#f7faff;font-family:inherit;flex-shrink:0">
+      <button id="progressDateClear" style="height:32px;padding:0 10px;background:#f7faff;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit;flex-shrink:0">기간해제</button>
+      <span id="progressCount" style="margin-left:auto;color:#7a92a8;font-weight:700;font-size:12px;white-space:nowrap"></span>
     </div>
     <div id="progressList"></div>
   </div>
@@ -8762,7 +8788,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v20260701-0909';
+    if(el) el.textContent = 'v20260701-1012';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10204,7 +10230,7 @@ console.log('[expenseV2] 지출 모달 패치 로드');
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v20260701-0909 로드');
+  console.log('[expV2] v20260701-1012 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
