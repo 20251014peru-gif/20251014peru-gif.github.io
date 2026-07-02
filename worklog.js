@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1154";
+const APP_VERSION = "v44-0702-1218";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6575,7 +6575,7 @@ function renderStockOverview(){
   document.querySelectorAll('[id^="sortIcon_"]').forEach(el=>el.textContent='');
   const curIcon=document.getElementById('sortIcon_'+MAT_FILTER.sortKey);
   if(curIcon) curIcon.textContent=MAT_FILTER.sortAsc?' ▲':' ▼';
-  if(!rows.length){ body.innerHTML=`<tr><td colspan="8" class="empty">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</td></tr>`; return; }
+  if(!rows.length){ body.innerHTML=`<tr><td colspan="9" class="empty">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</td></tr>`; return; }
   body.innerHTML=rows.map(r=>{
     const it=r.item, st=r.stock;
     const safe=Number(it.safetyStock||0);
@@ -6599,7 +6599,8 @@ function renderStockOverview(){
       </td>
       <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#64748b" title="${esc(it.spec||'')}">${esc(it.spec||'')}</td>
       <td style="font-size:13px;color:${recColor};font-weight:700;white-space:nowrap">${recLabel}</td>
-      <td style="font-size:12px;color:#64748b;text-align:center">${esc(it.unit||"")}</td>
+      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#94a3b8" title="${esc(it.memo||'')}">${esc((it.memo||'').slice(0,20))}${(it.memo||'').length>20?'…':''}</td>
+      <td style="font-size:11px;color:#64748b;text-align:center">${esc(it.unit||"")}</td>
       <td class="num" style="font-size:12px">${it.unitPrice?won(it.unitPrice):""}</td>
       <td class="num"><b style="font-size:14px;color:${st<=0?'#e74c3c':safe>0&&st<safe?'#f39c12':'#1a2f45'}">${st}</b></td>
       <td style="text-align:center;white-space:nowrap;padding:4px 4px">
