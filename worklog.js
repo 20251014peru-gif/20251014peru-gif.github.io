@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1102";
+const APP_VERSION = "v44-0702-1105";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6026,7 +6026,7 @@ async function pwOpenEditor(id){
 /* =========================================================
    v22: 자재 관리 (품목 마스터 + 입출고 + 재고 자동계산)
    ========================================================= */
-const MAT_FILTER = { tab:"stock", field:"전체", q:"", recurring:"전체", lowOnly:false, txYm:"thisMonth" };
+const MAT_FILTER = { tab:"stock", field:"전체", q:"", recurring:"전체", lowOnly:false, txYm:"thisMonth", sortKey:"itemName", sortAsc:true };
 
 // 품목별 현재 재고 계산
 function calcStock(itemId){
@@ -6508,12 +6508,36 @@ function renderStockOverview(){
     if(!MAT_FILTER.lowOnly) return true;
     return Number(r.item.safetyStock||0)>0 ? r.stock < Number(r.item.safetyStock) : r.stock<=0;
   }).sort((a,b)=>{
-    const RO=["정기구매","수시구매","계절구매","연간계획","미구매"];
-    const ra=RO.indexOf(a.item.recurring||"수시구매"), rb=RO.indexOf(b.item.recurring||"수시구매");
-    if(ra!==rb) return ra-rb;
-    return (a.item.itemName||"").localeCompare(b.item.itemName||"","ko");
+    const k=MAT_FILTER.sortKey, asc=MAT_FILTER.sortAsc?1:-1;
+    let av, bv;
+    if(k==="stock"){ av=a.stock; bv=b.stock; }
+    else if(k==="unitPrice"){ av=Number(a.item.unitPrice||0); bv=Number(b.item.unitPrice||0); }
+    else { av=(a.item[k]||"").toLowerCase(); bv=(b.item[k]||"").toLowerCase(); }
+    if(av<bv) return -1*asc;
+    if(av>bv) return 1*asc;
+    return 0;
   });
   const body=$("matStockBody");
+  // 헤더 정렬 클릭 바인딩 (1회)
+  if(!window._matSortBound){
+    window._matSortBound=true;
+    document.querySelectorAll('[data-sort]').forEach(th=>{
+      th.addEventListener('click',()=>{
+        const k=th.dataset.sort;
+        if(MAT_FILTER.sortKey===k) MAT_FILTER.sortAsc=!MAT_FILTER.sortAsc;
+        else { MAT_FILTER.sortKey=k; MAT_FILTER.sortAsc=true; }
+        // 아이콘 업데이트
+        document.querySelectorAll('[id^="sortIcon_"]').forEach(el=>el.textContent='');
+        const icon=document.getElementById('sortIcon_'+k);
+        if(icon) icon.textContent=MAT_FILTER.sortAsc?' ▲':' ▼';
+        renderStockOverview();
+      });
+    });
+  }
+  // 현재 정렬 아이콘 표시
+  document.querySelectorAll('[id^="sortIcon_"]').forEach(el=>el.textContent='');
+  const curIcon=document.getElementById('sortIcon_'+MAT_FILTER.sortKey);
+  if(curIcon) curIcon.textContent=MAT_FILTER.sortAsc?' ▲':' ▼';
   if(!rows.length){ body.innerHTML=`<tr><td colspan="7" class="empty">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</td></tr>`; return; }
   body.innerHTML=rows.map(r=>{
     const it=r.item, st=r.stock;
