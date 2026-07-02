@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1005";
+const APP_VERSION = "v44-0702-1013";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -6489,57 +6489,64 @@ function renderStockOverview(){
       const s=[it.itemCode,it.shopId,it.itemName,it.spec,it.maker,it.vendor,it.memo].filter(Boolean).join(" ").toLowerCase();
       return s.includes(MAT_FILTER.q.trim().toLowerCase());
     });
-  // 재고 계산 + 안전재고 필터
   const rows=items.map(it=>({
     item:it,
     stock:calcStock(it.id),
   })).filter(r=>{
     if(!MAT_FILTER.lowOnly) return true;
-    return Number(it.safetyStock||0)>0 ? r.stock < Number(r.item.safetyStock) : r.stock<=0;
+    return Number(r.item.safetyStock||0)>0 ? r.stock < Number(r.item.safetyStock) : r.stock<=0;
   }).sort((a,b)=>(a.item.itemName||"").localeCompare(b.item.itemName||"","ko"));
-  const body=$("matStockBody");
-  if(!rows.length){ body.innerHTML=`<tr><td colspan="8" class="empty">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</td></tr>`; return; }
-  body.innerHTML=rows.map(r=>{
+
+  const wrap = $("matStockWrap");
+  if(!wrap){ return; }
+
+  if(!rows.length){
+    wrap.innerHTML=`<p class="empty" style="padding:20px;text-align:center">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</p>`;
+    return;
+  }
+
+  wrap.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 0">`+rows.map(r=>{
     const it=r.item, st=r.stock;
     const safe=Number(it.safetyStock||0);
-    const lowCls = safe>0 && st<safe ? "st-low" : (st<=0 ? "st-zero" : "");
+    const lowCls = safe>0 && st<safe ? "#fff8e1" : (st<=0 ? "#fff0f0" : "#fff");
+    const stColor = st<=0?'#e74c3c':safe>0&&st<safe?'#f39c12':'#1a2f45';
     const cleanName = (it.itemName||"").replace(/^\[.*?\]/,"").trim();
     const shopId = it.shopId||it.itemCode||"";
-    return `<tr data-id="${it.id}" class="${lowCls}" style="cursor:pointer">
-      <td style="font-size:11px;color:#94a3b8;font-weight:600;padding-right:6px">${esc(shopId)}</td>
-      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;padding-left:8px" title="${esc(it.itemName||"")}">
-        <b style="font-size:13px">${esc(cleanName)}</b>
-      </td>
-      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;padding-left:6px;font-size:11px;color:#64748b" title="${esc(it.spec||'')}">
-        ${esc(it.spec||'')}
-      </td>
-      <td style="font-size:12px;color:#64748b;text-align:center">${esc(it.unit||"")}</td>
-      <td><span class="pill ${fieldClass(it.field)}" style="font-size:10px">${esc(it.field||"")}</span></td>
-      <td class="num" style="font-size:12px">${it.unitPrice?won(it.unitPrice):""}</td>
-      <td class="num"><b style="font-size:14px;color:${st<=0?'#e74c3c':safe>0&&st<safe?'#f39c12':'#1a2f45'}">${st}</b></td>
-      <td style="text-align:center;white-space:nowrap;padding:4px 4px">
-        <button class="mini-btn" data-act="in" style="padding:3px 7px;font-size:11px;background:#e0f7fa;border-color:#4dd0e1;color:#0097a7" title="입고">입고</button>
-        <button class="mini-btn" data-act="out" style="padding:3px 7px;font-size:11px;background:#fce4ec;border-color:#f48fb1;color:#c2185b" title="출고">출고</button>
-        <button class="mini-btn" data-act="edit" style="padding:3px 7px;font-size:11px" title="수정">수정</button>
-      </td></tr>`;
-  }).join("");
-  body.querySelectorAll("tr[data-id]").forEach(tr=>{
-    const id=tr.dataset.id;
-    /* 🆕 행 자체 클릭 → 보기 팝업 (버튼 영역 제외) */
-    tr.style.cursor = "pointer";
-    tr.addEventListener("click", function(e){
+    return `<div data-id="${it.id}" style="background:${lowCls};border:1.5px solid #e8f0fb;border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 2px 8px rgba(63,124,184,.15)'" onmouseout="this.style.boxShadow=''">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px">
+        <div style="min-width:0">
+          <span style="font-size:10px;color:#b0bec5;font-weight:600;margin-right:4px">${esc(shopId)}</span>
+          <b style="font-size:13px;color:#1a2f45">${esc(cleanName)}</b>
+          ${it.spec?`<div style="font-size:11px;color:#7a92a8;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.spec)}">${esc(it.spec)}</div>`:""}
+        </div>
+        <span class="pill ${fieldClass(it.field)}" style="font-size:10px;flex-shrink:0">${esc(it.field||"")}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <div style="font-size:11px;color:#64748b">
+          ${it.unit?`<span style="margin-right:8px">${esc(it.unit)}</span>`:""}
+          ${it.unitPrice?`<span style="color:#3f7cb8;font-weight:700">${won(it.unitPrice)}원</span>`:""}
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <b style="font-size:15px;color:${stColor};min-width:24px;text-align:right">${st}</b>
+          <button class="mini-btn" data-act="in" style="padding:3px 8px;font-size:11px;background:#e0f7fa;border-color:#4dd0e1;color:#0097a7">입고</button>
+          <button class="mini-btn" data-act="out" style="padding:3px 8px;font-size:11px;background:#fce4ec;border-color:#f48fb1;color:#c2185b">출고</button>
+          <button class="mini-btn" data-act="edit" style="padding:3px 8px;font-size:11px">수정</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("")+`</div>`;
+
+  wrap.querySelectorAll("[data-id]").forEach(card=>{
+    const id=card.dataset.id;
+    card.addEventListener("click", function(e){
       if(e.target.closest("[data-act]")) return;
-      console.log('[stock-row click] id=', id, 'openItemViewer=', typeof window.openItemViewer);
-      if(typeof window.openItemViewer === 'function'){
-        window.openItemViewer(id);
-      } else {
-        openEditor("item", id);
-      }
+      if(typeof window.openItemViewer==='function') window.openItemViewer(id);
+      else openEditor("item",id);
     });
-    tr.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",e=>{
+    card.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",e=>{
       e.stopPropagation();
       if(b.dataset.act==="edit") openEditor("item",id);
-      else { // 입고 or 출고 — stock 모달 열고 품목 미리 선택
+      else {
         openEditor("stock",null);
         setTimeout(()=>{
           const sel=$("m-itemId"); if(sel){ sel.value=id; sel.dispatchEvent(new Event("change")); }
@@ -6549,6 +6556,8 @@ function renderStockOverview(){
     }));
   });
 }
+
+
 
 // 품목 목록
 function renderItemList(){
