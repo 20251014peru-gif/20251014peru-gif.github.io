@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0702-1512</title>
+  <title>업무일지 v44-0702-1520</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1512</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1520</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2723,8 +2723,22 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
     <!-- 금액 -->
     <div style="margin-bottom:12px">
-      <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">금액 (원) *</label>
-      <input type="number" id="expV2Amount" placeholder="0" min="0" style="width:100%;box-sizing:border-box;height:40px;padding:0 12px;border:1.5px solid #3f7cb8;border-radius:10px;font-size:16px;font-weight:800;font-family:inherit;background:#f7faff;outline:none;color:#185FA5;text-align:right">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">공급가액 (원)</label>
+          <input type="number" id="expV2SupplyAmt" placeholder="0" min="0" style="width:100%;box-sizing:border-box;height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;background:#f7faff;outline:none;text-align:right"
+            oninput="(function(){var s=parseFloat(this.value)||0;var t=parseFloat(document.getElementById('expV2TaxAmt').value)||0;var el=document.getElementById('expV2Amount');el.value=s+t||'';el._manual=true;}).call(this)">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">부가세 (원)</label>
+          <input type="number" id="expV2TaxAmt" placeholder="0" min="0" style="width:100%;box-sizing:border-box;height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;background:#f7faff;outline:none;text-align:right"
+            oninput="(function(){var s=parseFloat(document.getElementById('expV2SupplyAmt').value)||0;var t=parseFloat(this.value)||0;var el=document.getElementById('expV2Amount');el.value=s+t||'';el._manual=true;}).call(this)">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#3f7cb8;display:block;margin-bottom:4px">합계 (원) *</label>
+          <input type="number" id="expV2Amount" placeholder="0" min="0" style="width:100%;box-sizing:border-box;height:40px;padding:0 10px;border:1.5px solid #3f7cb8;border-radius:10px;font-size:16px;font-weight:800;font-family:inherit;background:#eef5ff;outline:none;color:#185FA5;text-align:right">
+        </div>
+      </div>
     </div>
 
     <!-- 메모 -->
@@ -2825,7 +2839,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260702t1512"></script>
+<script src="worklog.js?v=44-20260702t1520"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8438,7 +8452,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0702-1512';
+    if(el) el.textContent = 'v44-0702-1520';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8698,6 +8712,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var tEl=g('expV2TitleInput'); var title=(tEl?tEl.value:'').trim();
     var date=(g('expV2Date')||{value:''}).value;
     var amount=parseFloat((g('expV2Amount')||{value:0}).value)||0;
+    var supplyAmt=parseFloat((g('expV2SupplyAmt')||{value:0}).value)||0;
+    var taxAmt=parseFloat((g('expV2TaxAmt')||{value:0}).value)||0;
     var vendor=((g('expV2Vendor')||{value:''}).value||'').trim();
     var memo=((g('expV2Memo')||{value:''}).value||'').trim();
     var isJeonpyo=!!(g('expV2IsJeonpyo')&&g('expV2IsJeonpyo').checked);
@@ -8709,7 +8725,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var isCost = !isJeonpyo;
     if(!title){ if(typeof toast==='function') toast('내역을 입력하세요'); return; }
     if(!amount){ if(typeof toast==='function') toast('금액을 입력하세요'); return; }
-    var obj={kind:'expense',date:date,expType:_expType,title:title,amount:amount,
+    var obj={kind:'expense',date:date,expType:_expType,title:title,amount:amount,supplyAmt:supplyAmt,taxAmt:taxAmt,
       vendor:vendor,memo:memo,purpose:_selPurpose,purposes:_selPurpose?[_selPurpose]:[],
       isCost:isCost,isJeonpyo:isJeonpyo,isIssued:isIssued,
       matItems:_matItems.slice(),mealItems:_mealItems.slice(),wasteItems:_wasteItems.slice(),
@@ -8805,6 +8821,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         +(e.memo?'<div style="font-size:12px;color:#aab8c8;margin-top:4px">'+esc(e.memo)+'</div>':'')
         +'</div>'
         +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'
+        +(e.supplyAmt||e.taxAmt?'<div style="font-size:11px;color:#94a3b8;text-align:right">공급가 '+fmt(e.supplyAmt||0)+'원 + 부가세 '+fmt(e.taxAmt||0)+'원</div>':'')
         +'<div style="font-size:17px;font-weight:800;color:'+color+'">'+fmt(e.amount)+'원</div>'
         +'<button data-expdel="'+esc(e.id)+'" style="background:#fde8e8;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">🗑 삭제</button>'
         +'</div>'
@@ -9020,6 +9037,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var tEl=g('expV2TitleInput'); if(tEl) tEl.value=w.title||'';
       var mEl=g('expV2Memo'); if(mEl) mEl.value=w.workNote||((w.floor||'')+(w.field?' ['+w.field+']':''));
       var aEl=g('expV2Amount'); if(aEl){aEl.value='';aEl._manual=false;}
+      var sEl=g('expV2SupplyAmt'); if(sEl) sEl.value='';
+      var tEl2=g('expV2TaxAmt'); if(tEl2) tEl2.value='';
       updateTypeBtns();
       renderChips(); updateAreas();
       renderMatList(); calcMatTotal();
@@ -9408,6 +9427,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       setIfEmpty('expV2TitleInput', data.place || '');
       /* 금액은 빈값일 때만 (수동 입력 안 됐을 때만) */
       var amtEl = g('expV2Amount');
+      var sAmtEl = g('expV2SupplyAmt'); if(sAmtEl) sAmtEl.value = info.supplyAmt||'';
+      var tAmtEl = g('expV2TaxAmt'); if(tAmtEl) tAmtEl.value = info.taxAmt||'';
       if(amtEl && (!amtEl.value || amtEl.value==='0') && data.amount){
         amtEl.value = data.amount;
       }
@@ -9894,7 +9915,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0702-1512 로드');
+  console.log('[expV2] v44-0702-1520 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
