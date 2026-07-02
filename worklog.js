@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1256";
+const APP_VERSION = "v44-0702-1301";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6621,7 +6621,7 @@ function renderStockOverview(){
       </td>
       <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#64748b" title="${esc(it.spec||'')}">${esc(it.spec||'')}</td>
       <td style="font-size:13px;color:${recColor};font-weight:700;white-space:nowrap">${recLabel}</td>
-      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#64748b" title="${esc(it.memo||'')}${it.lastBuyDate?' / 구매일:'+it.lastBuyDate:''}">${it.lastBuyDate?`<span style="color:#3f7cb8;font-weight:600;margin-right:4px">${it.lastBuyDate}</span>`:''} ${esc((it.memo||'').slice(0,16))}${(it.memo||'').length>16?'…':''}</td>
+      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#64748b" title="${esc(it.memo||'')}">${esc((it.memo||"").slice(0,20))}${(it.memo||"").length>20?'…':''}</td>
       <td style="font-size:11px;color:#64748b;text-align:center">${esc(it.unit||"")}</td>
       <td class="num" style="font-size:12px">${it.unitPrice?won(it.unitPrice):""}</td>
       <td class="num"><b style="font-size:14px;color:${st<=0?'#e74c3c':safe>0&&st<safe?'#f39c12':'#1a2f45'}">${st}</b></td>
