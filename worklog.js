@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1137";
+const APP_VERSION = "v44-0702-1144";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -310,7 +310,7 @@ const SCHEMA={
     {k:"vendor",label:"주거래처/공급업체",type:"text"},
     {k:"unitPrice",label:"기본 단가 (원)",type:"number"},
     {k:"safetyStock",label:"안전재고 수량",type:"number"},
-    {k:"recurring",label:"구매 주기",type:"select",opts:["정기구매","수시구매","계절구매","연간계획","미구매"]},
+    {k:"recurring",label:"구매 주기",type:"select",opts:["정기구매","수시구매","비정기구매","계절구매","미구매"]},
     {k:"location",label:"보관 위치",type:"text",full:true},
     {k:"memo",label:"메모",type:"textarea",full:true},
   ],
@@ -6280,7 +6280,7 @@ async function aiExtractFromText(txt, type, key){
     : `당신은 엑셀 데이터를 분석해 자재 품목 마스터를 추출하는 도우미입니다. 반드시 JSON 배열만 응답하세요. 다른 설명, 인사말, 코드블럭 표시(\`\`\`) 모두 금지. 응답은 [로 시작해서 ]로 끝나야 합니다.
 
 각 항목의 필드:
-{"shopId":"상품ID(엑셀의 상품ID 또는 상품코드 컬럼 값을 그대로)","itemName":"품목명","spec":"규격을 간단히 핵심만","unit":"단위","field":"전기|소방|기계|통신|영선|주차|청소|기타","maker":"제조원","vendor":"거래처/공급업체","unitPrice":숫자,"safetyStock":숫자,"recurring":"정기구매|수시구매|계절구매|연간계획|미구매","location":"보관위치","memo":"메모"}
+{"shopId":"상품ID(엑셀의 상품ID 또는 상품코드 컬럼 값을 그대로)","itemName":"품목명","spec":"규격을 간단히 핵심만","unit":"단위","field":"전기|소방|기계|통신|영선|주차|청소|기타","maker":"제조원","vendor":"거래처/공급업체","unitPrice":숫자,"safetyStock":숫자,"recurring":"정기구매|수시구매|비정기구매|계절구매|미구매","location":"보관위치","memo":"메모"}
 
 중요한 규칙:
 - shopId: 엑셀의 "상품ID", "상품코드", "제품번호" 같은 컬럼 값을 그대로. 없으면 빈 문자열.
@@ -6386,11 +6386,11 @@ function renderMaterial(){
   if(fieldEl && !fieldEl.options.length){
     fieldEl.innerHTML=`<option value="전체">분야 전체</option>`+MAT_FIELDS.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("");
     $("matRecFilter").innerHTML=`<option value="전체">주기 전체</option>`+[
-    ["정기구매","정기구매 (청소용품·전구류)"],
-    ["수시구매","수시구매 (소모품·파손·소방)"],
-    ["계절구매","계절구매 (에어컨필터·부동액)"],
-    ["연간계획","연간계획 (연초 일괄구매)"],
-    ["미구매",  "미구매 (단종·교체완료)"],
+    ["정기구매","정기구매 (예: 월 정기발주 청소용품)"],
+    ["수시구매","수시구매 (예: 전구·소모품 소진시)"],
+    ["비정기구매","비정기구매 (예: 공구·부속 파손시)"],
+    ["계절구매","계절구매 (예: 에어컨필터·부동액)"],
+    ["미구매",  "미구매 (예: 단종·교체완료)"],
   ].map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
   }
   // 월별 통계
@@ -6510,7 +6510,7 @@ function renderStockOverview(){
   }).sort((a,b)=>{
     const k=MAT_FILTER.sortKey, asc=MAT_FILTER.sortAsc?1:-1;
     let av, bv;
-    const RO=["정기구매","수시구매","계절구매","연간계획","미구매"];
+    const RO=["정기구매","수시구매","비정기구매","계절구매","미구매"];
     const aRetired=(a.item.recurring||"")==="미구매", bRetired=(b.item.recurring||"")==="미구매";
     if(aRetired!==bRetired) return aRetired?1:-1;
     if(k==="stock"){ av=a.stock; bv=b.stock; }
@@ -6552,8 +6552,8 @@ function renderStockOverview(){
     const isRetired = (it.recurring||'') === '미구매';
     const nameStyle = isRetired ? 'font-size:13px;text-decoration:line-through;color:#b0bec5' : 'font-size:13px';
     const rowOpacity = isRetired ? 'opacity:0.55;' : '';
-    const recLabel = {'정기구매':'정기','수시구매':'수시','계절구매':'계절','연간계획':'연간','미구매':'미구매'}[it.recurring||''] || (it.recurring||'');
-    const recColor = {'정기구매':'#3f7cb8','수시구매':'#64748b','계절구매':'#00838f','연간계획':'#8e44ad','미구매':'#b0bec5'}[it.recurring||''] || '#94a3b8';
+    const recLabel = {'정기구매':'정기','수시구매':'수시','비정기구매':'비정기','계절구매':'계절','미구매':'미구매'}[it.recurring||''] || (it.recurring||'');
+    const recColor = {'정기구매':'#3f7cb8','수시구매':'#64748b','비정기구매':'#e67e22','계절구매':'#00838f','미구매':'#b0bec5'}[it.recurring||''] || '#94a3b8';
     return `<tr data-id="${it.id}" class="${lowCls}" style="cursor:pointer;${rowOpacity}">
       <td style="font-size:11px;color:#94a3b8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(shopId)}</td>
       <td><span class="pill ${fieldClass(it.field)}" style="font-size:10px">${esc(it.field||"")}</span></td>
@@ -6688,10 +6688,10 @@ function openQuickEditMaterial(id){
           <label style="${LBL}">구매 주기</label>
           <select id="qeRecurring" style="${SEL}">
             ${[
-            ["정기구매","정기구매 (예: 청소용품·전구류)"],
-            ["수시구매","수시구매 (예: 소모품·파손·소방)"],
+            ["정기구매","정기구매 (예: 월 정기발주 청소용품)"],
+            ["수시구매","수시구매 (예: 전구·소모품 소진시)"],
+            ["비정기구매","비정기구매 (예: 공구·부속 파손시)"],
             ["계절구매","계절구매 (예: 에어컨필터·부동액)"],
-            ["연간계획","연간계획 (예: 연초 일괄구매)"],
             ["미구매",  "미구매 (예: 단종·교체완료)"],
           ].map(([v,l])=>`<option value="${v}" ${(item.recurring||"수시구매")===v?"selected":""}>${l}</option>`).join("")}
           </select>
