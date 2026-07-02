@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0702-1740</title>
+  <title>업무일지 v44-0702-1746</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1740</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1746</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2839,7 +2839,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260702t1740"></script>
+<script src="worklog.js?v=44-20260702t1746"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8452,7 +8452,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0702-1740';
+    if(el) el.textContent = 'v44-0702-1746';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8929,22 +8929,35 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var isJp = e.isJeonpyo || /\[전표\]/.test(e.title||'') || /\[전표\]/.test(e.memo||'');
       return !isJp;
     }
-    var personal=tm.filter(function(e){ return isCostFn(e)&&e.expType!=='세금계산서'; });
-    var tax=tm.filter(function(e){ return isCostFn(e)&&e.expType==='세금계산서'; });
+    var personal=tm.filter(function(e){ return !e.isJeonpyo&&e.expType!=='세금계산서'&&!(/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); });
+    var tax=tm.filter(function(e){ return !e.isJeonpyo&&e.expType==='세금계산서'&&!(/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); });
+    var jeonpyo=tm.filter(function(e){ return e.isJeonpyo||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||''); });
     var pSum=personal.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
     var tSum=tax.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    var jSum=jeonpyo.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    var total=pSum+tSum+jSum;
     var taxUnissued=tax.filter(function(e){return !e.isIssued;}).length;
-    box.innerHTML=
-      '<div style="background:#f0f6ff;border:1.5px solid #93c5fd;border-radius:12px;padding:14px">'
-      +'<div style="font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:4px">💸 '+ym+' 개인지출</div>'
-      +'<div style="font-size:22px;font-weight:800;color:#3f7cb8">'+fmt(pSum)+'<span style="font-size:13px">원</span></div>'
+    var ymLabel=ym||'전체';
+    box.innerHTML='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">'
+      +'<div style="background:#f0f6ff;border:1.5px solid #93c5fd;border-radius:12px;padding:14px">'
+      +'<div style="font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:4px">💸 개인지출</div>'
+      +'<div style="font-size:20px;font-weight:800;color:#3f7cb8">'+fmt(pSum)+'<span style="font-size:12px">원</span></div>'
       +'<div style="font-size:12px;color:#aab8c8;margin-top:2px">'+personal.length+'건</div>'
       +'</div>'
       +'<div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:12px;padding:14px">'
-      +'<div style="font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:4px">📃 '+ym+' 세금계산서</div>'
-      +'<div style="font-size:22px;font-weight:800;color:#c2410c">'+fmt(tSum)+'<span style="font-size:13px">원</span></div>'
-      +'<div style="font-size:12px;margin-top:2px">'
-      +tax.length+'건'+(taxUnissued>0?' · <span style="color:#c2410c;font-weight:700">미발급 '+taxUnissued+'건</span>':'')
+      +'<div style="font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:4px">📃 세금계산서</div>'
+      +'<div style="font-size:20px;font-weight:800;color:#c2410c">'+fmt(tSum)+'<span style="font-size:12px">원</span></div>'
+      +'<div style="font-size:12px;margin-top:2px">'+tax.length+'건'+(taxUnissued>0?' · <span style="color:#c2410c;font-weight:700">미발급 '+taxUnissued+'건</span>':'')+'</div>'
+      +'</div>'
+      +'<div style="background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:12px;padding:14px">'
+      +'<div style="font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:4px">📋 전표</div>'
+      +'<div style="font-size:20px;font-weight:800;color:#7c3aed">'+fmt(jSum)+'<span style="font-size:12px">원</span></div>'
+      +'<div style="font-size:12px;color:#aab8c8;margin-top:2px">'+jeonpyo.length+'건</div>'
+      +'</div>'
+      +'<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:14px">'
+      +'<div style="font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:4px">💰 '+ymLabel+' 합계</div>'
+      +'<div style="font-size:20px;font-weight:800;color:#16a34a">'+fmt(total)+'<span style="font-size:12px">원</span></div>'
+      +'<div style="font-size:12px;color:#aab8c8;margin-top:2px">'+tm.length+'건</div>'
       +'</div>'
       +'</div>';
     // 월 필터 셀렉트 채우기
@@ -9958,7 +9971,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0702-1740 로드');
+  console.log('[expV2] v44-0702-1746 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
