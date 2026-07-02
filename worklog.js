@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1027";
+const APP_VERSION = "v44-0702-1038";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6652,6 +6652,12 @@ function openQuickEditMaterial(id){
           <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">거래처</label>
           <input type="text" id="qeVendor" value="${esc(item.vendor||'')}" placeholder="예: 서브원" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
         </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">구매 주기</label>
+          <select id="qeRecurring" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
+            ${["비주기","월간","분기","반기","연간","수시"].map(o=>`<option value="${o}" ${(item.recurring||"비주기")===o?"selected":""}>${o}</option>`).join("")}
+          </select>
+        </div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button id="qeCancel" type="button" style="flex:1;height:48px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
           <button id="qeDelete" type="button" style="flex:1;height:48px;padding:0 14px;border:2px solid #fde8e8;border-radius:12px;background:#fff;color:#e74c3c;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>
@@ -6681,6 +6687,7 @@ function openQuickEditMaterial(id){
       maker: (document.getElementById('qeMaker').value||'').trim(),
       field: document.getElementById('qeField').value||'',
       vendor: (document.getElementById('qeVendor').value||'').trim(),
+      recurring: document.getElementById('qeRecurring').value||'비주기',
     };
     updateRecord(id, patch);
     close();
