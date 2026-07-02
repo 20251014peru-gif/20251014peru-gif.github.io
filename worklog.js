@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1253";
+const APP_VERSION = "v44-0702-1256";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6099,6 +6099,23 @@ function wireMaterialTab(){
   $("btnAddItem").addEventListener("click",()=>openEditor("item",null));
   $("btnAddStock").addEventListener("click",()=>openEditor("stock",null));
   $("btnMatExcel").addEventListener("click",matExcelCopy);
+  $("btnGitUpload").addEventListener("click", async ()=>{
+    let tok = localStorage.getItem('_ghToken')||'';
+    if(!tok){
+      tok = prompt('GitHub Personal Access Token 입력:\n(한 번만 입력하면 저장)');
+      if(!tok) return;
+      localStorage.setItem('_ghToken', tok.trim());
+      tok = tok.trim();
+    }
+    toast('🚀 GitHub 업로드 중...');
+    try{
+      await githubUpload(tok);
+      toast('✅ GitHub 업로드 완료!');
+    }catch(e){
+      toast('❌ 업로드 실패: '+e.message);
+      localStorage.removeItem('_ghToken');
+    }
+  });
   $("btnAIExtract").addEventListener("click",aiExtractDialog);
   $("matFileUpload").addEventListener("change",handleMatFileUpload);
 }
@@ -9725,3 +9742,41 @@ fieldHTML = function(f){
 // v41 init은 원본 init()에 직접 통합됨
 
 init();
+
+/* ===== GitHub 자동 업로드 ===== */
+async function githubUpload(token){
+  const OWNER = '20251014peru-gif';
+  const REPO  = '20251014peru-gif.github.io';
+  const BRANCH = 'main';
+  const files = [
+    {path:'worklog.html', url:location.origin+'/worklog.html'},
+    {path:'worklog.js',   url:location.origin+'/worklog.js'},
+  ];
+  for(const f of files){
+    // 파일 내용 가져오기
+    const res = await fetch(f.url+'?v='+Date.now());
+    const blob = await res.blob();
+    const b64 = await new Promise(resolve=>{
+      const r=new FileReader();
+      r.onload=()=>resolve(r.result.split(',')[1]);
+      r.readAsDataURL(blob);
+    });
+    // 현재 SHA
+    const apiUrl = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${f.path}`;
+    const headers = {'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
+    let sha = '';
+    try{
+      const r2 = await fetch(apiUrl,{headers});
+      const d = await r2.json();
+      sha = d.sha||'';
+    }catch(e){}
+    // 업로드
+    const body = JSON.stringify({message:`Update ${f.path} ${APP_VERSION}`,content:b64,branch:BRANCH,sha});
+    const r3 = await fetch(apiUrl,{method:'PUT',headers,body});
+    if(!r3.ok){
+      const err = await r3.json();
+      throw new Error(f.path+': '+(err.message||r3.status));
+    }
+    console.log('[GitHub] '+f.path+' 업로드 완료');
+  }
+}
