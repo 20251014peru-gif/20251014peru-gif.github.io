@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1304";
+const APP_VERSION = "v44-0702-1338";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6608,7 +6608,7 @@ function renderStockOverview(){
     const recLabel = {'정기구매':'정기','수시구매':'수시','비정기구매':'비정기','계절구매':'계절','미구매':'미구매'}[it.recurring||''] || (it.recurring||'');
     const recColor = {'정기구매':'#3f7cb8','수시구매':'#64748b','비정기구매':'#e67e22','계절구매':'#00838f','미구매':'#b0bec5'}[it.recurring||''] || '#94a3b8';
     return `<tr data-id="${it.id}" class="${lowCls}" style="cursor:pointer;${rowOpacity}">
-      <td style="font-size:11px;color:#94a3b8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(shopId)}</td>
+      <td style="font-size:11px;color:#94a3b8;font-weight:600;white-space:nowrap;cursor:pointer" title="클릭하여 복사: ${esc(shopId)}" onclick="copyText('${esc(shopId)}','📋 ${esc(shopId)} 복사됨')">${esc(shopId)}</td>
       <td><span class="pill ${fieldClass(it.field)}" style="font-size:10px">${esc(it.field||"")}</span></td>
       <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px" title="${esc(it.itemName||"")}">
         <b style="${nameStyle}">${esc(cleanName)}</b>
