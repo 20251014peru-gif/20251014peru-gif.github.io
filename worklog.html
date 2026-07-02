@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0701-1808</title>
+  <title>업무일지 v44-0702-0950</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0701-1808</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-0950</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2080,10 +2080,14 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           <button data-mattab="stock" class="active">📋 품목·재고</button>
           <button data-mattab="tx">📥 입출고 내역</button>
         </div>
-        <div class="filt-row">
-          <select id="matFieldFilter"></select>
-          <select id="matRecFilter"></select>
-          <button class="btn btn-ghost btn-sm" id="matLowToggle" style="flex:0 0 auto">⚠ 부족만</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+          <input id="matSearch" type="text" placeholder="🔍 자재명·규격·품목코드 검색..." autocomplete="off"
+            style="flex:1 1 0;min-width:120px;padding:7px 12px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
+          <div style="flex:1 1 0;display:flex;gap:6px;align-items:center;min-width:200px">
+            <select id="matFieldFilter" style="flex:1 1 0;padding:7px 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;background:#fff"></select>
+            <select id="matRecFilter" style="flex:1 1 0;padding:7px 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;background:#fff"></select>
+            <button class="btn btn-ghost btn-sm" id="matLowToggle" style="flex:0 0 auto;white-space:nowrap">⚠ 부족만</button>
+          </div>
         </div>
         <div id="matStockPanel">
           <div class="table-wrap">
@@ -2105,6 +2109,16 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
             <button id="txTabAll"  class="tx-sub-tab active" data-txtab="전체" style="padding:6px 16px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;background:#3f7cb8;color:#fff">전체</button>
             <button id="txTabIn"   class="tx-sub-tab" data-txtab="입고"  style="padding:6px 16px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8">📥 입고</button>
             <button id="txTabOut"  class="tx-sub-tab" data-txtab="출고"  style="padding:6px 16px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;border-left:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8">📤 출고</button>
+          </div>
+          <!-- 월간 기간 필터 -->
+          <div id="matMonthFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+            <span style="font-size:11px;color:#94a3b8;font-weight:700;white-space:nowrap">기간</span>
+            <button class="mat-month-chip active" data-txym="thisMonth" style="padding:4px 10px;border-radius:16px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">이번달</button>
+            <button class="mat-month-chip" data-txym="lastMonth" style="padding:4px 10px;border-radius:16px;border:1.5px solid #dbe6f4;background:#fff;color:#4a6a8a;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">지난달</button>
+            <button class="mat-month-chip" data-txym="2months" style="padding:4px 10px;border-radius:16px;border:1.5px solid #dbe6f4;background:#fff;color:#4a6a8a;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">2달전</button>
+            <button class="mat-month-chip" data-txym="3months" style="padding:4px 10px;border-radius:16px;border:1.5px solid #dbe6f4;background:#fff;color:#4a6a8a;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">3달전</button>
+            <button class="mat-month-chip" data-txym="all" style="padding:4px 10px;border-radius:16px;border:1.5px solid #dbe6f4;background:#fff;color:#4a6a8a;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">전체기간</button>
+            <span id="matTxYmLabel" style="font-size:11px;color:#3f7cb8;font-weight:700;margin-left:4px"></span>
           </div>
           <div class="table-wrap">
             <table class="rec" style="table-layout:fixed;width:100%"><thead><tr>
@@ -2807,7 +2821,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260701t1808"></script>
+<script src="worklog.js?v=44-20260702t0950"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8420,7 +8434,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0701-1808';
+    if(el) el.textContent = 'v44-0702-0950';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -9862,7 +9876,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0701-1808 로드');
+  console.log('[expV2] v44-0702-0950 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────

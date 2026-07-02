@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0701-1808";
+const APP_VERSION = "v44-0702-0950";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -6020,7 +6020,7 @@ async function pwOpenEditor(id){
 /* =========================================================
    v22: 자재 관리 (품목 마스터 + 입출고 + 재고 자동계산)
    ========================================================= */
-const MAT_FILTER = { tab:"stock", field:"전체", q:"", recurring:"전체", lowOnly:false };
+const MAT_FILTER = { tab:"stock", field:"전체", q:"", recurring:"전체", lowOnly:false, txYm:"thisMonth" };
 
 // 품목별 현재 재고 계산
 function calcStock(itemId){
@@ -6718,13 +6718,56 @@ function renderTxList(){
     });
   });
 
+  // 월간 기간 필터 칩 바인딩 (최초 1회)
+  document.querySelectorAll('.mat-month-chip').forEach(btn=>{
+    if(btn._mymBound) return; btn._mymBound=true;
+    btn.addEventListener('click',()=>{
+      MAT_FILTER.txYm = btn.dataset.txym;
+      document.querySelectorAll('.mat-month-chip').forEach(b=>{
+        const on = b.dataset.txym===MAT_FILTER.txYm;
+        b.style.background = on?'#3f7cb8':'#fff';
+        b.style.color = on?'#fff':'#4a6a8a';
+        b.style.borderColor = on?'#3f7cb8':'#dbe6f4';
+      });
+      renderTxList();
+    });
+  });
+
+  // 현재 선택된 기간 라벨 표시
+  (function(){
+    const d0=kstNow();
+    function ymStr(d){ return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'); }
+    function offsetMonth(n){ const d=new Date(d0); d.setUTCMonth(d.getUTCMonth()-n); return ymStr(d); }
+    const ymMap = { thisMonth:offsetMonth(0), lastMonth:offsetMonth(1), '2months':offsetMonth(2), '3months':offsetMonth(3), all:'전체' };
+    const ym = ymMap[MAT_FILTER.txYm] || 'all';
+    const lbl = document.getElementById('matTxYmLabel');
+    if(lbl) lbl.textContent = ym==='전체' ? '' : ym+' 기준';
+    // 활성 칩 스타일 동기화
+    document.querySelectorAll('.mat-month-chip').forEach(b=>{
+      const on = b.dataset.txym===MAT_FILTER.txYm;
+      b.style.background = on?'#3f7cb8':'#fff';
+      b.style.color = on?'#fff':'#4a6a8a';
+      b.style.borderColor = on?'#3f7cb8':'#dbe6f4';
+    });
+  })();
+
   const items=entries.filter(e=>e.kind==="item");
   const itemById={}; items.forEach(it=>itemById[it.id]=it);
+  // 기간 필터 ym 계산
+  const _d0=kstNow();
+  function _ymStr(d){ return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'); }
+  function _offsetYm(n){ const d=new Date(_d0); d.setUTCMonth(d.getUTCMonth()-n); return _ymStr(d); }
+  const _ymMap={ thisMonth:_offsetYm(0), lastMonth:_offsetYm(1), '2months':_offsetYm(2), '3months':_offsetYm(3), all:null };
+  const _filterYm = _ymMap[MAT_FILTER.txYm] ?? null;
+
   const txs=entries.filter(e=>e.kind==="stock")
     .filter(t=>{
       if(_txSubTab!=="전체" && t.stockType!==_txSubTab) return false;
       const it=itemById[t.itemId];
       if(MAT_FILTER.field!=="전체" && (!it || it.field!==MAT_FILTER.field)) return false;
+      // 기간 필터
+      if(_filterYm && !(t.date||"").startsWith(_filterYm)) return false;
+      // 검색 필터
       if(!MAT_FILTER.q.trim()) return true;
       const s=[t.date,t.useTarget,t.memo,(it&&it.itemName)||"",(it&&it.spec)||""].filter(Boolean).join(" ").toLowerCase();
       return s.includes(MAT_FILTER.q.trim().toLowerCase());
@@ -6760,7 +6803,10 @@ function renderTxList(){
   });
   const inCnt=txs.filter(t=>t.stockType==="입고").length;
   const outCnt=txs.filter(t=>t.stockType==="출고").length;
-  $("matTxSummary").innerHTML=`총 ${txs.length}건 · 📥 입고 ${inCnt}건 · 📤 출고 ${outCnt}건`;
+  const outAmt=txs.filter(t=>t.stockType==="출고").reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const inAmt=txs.filter(t=>t.stockType==="입고").reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const ymDisp = _filterYm ? ` (${_filterYm})` : "";
+  $("matTxSummary").innerHTML=`총 ${txs.length}건${ymDisp} · 📥 입고 ${inCnt}건 ${inAmt?won(inAmt)+"원":""} · 📤 출고 ${outCnt}건 ${outAmt?won(outAmt)+"원":""}`;
 }
 
 function matExcelCopy(){
