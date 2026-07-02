@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0702-1616</title>
+  <title>업무일지 v44-0702-1620</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1616</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1620</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2726,13 +2726,13 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end">
         <div>
           <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">공급가액 (원)</label>
-          <input type="number" id="expV2SupplyAmt" placeholder="0" min="0" style="width:100%;box-sizing:border-box;height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;background:#f7faff;outline:none;text-align:right"
-            oninput="(function(){var s=parseFloat(this.value)||0;var t=parseFloat(document.getElementById('expV2TaxAmt').value)||0;var el=document.getElementById('expV2Amount');el.value=s+t||'';el._manual=true;}).call(this)">
+          <input type="number" id="expV2SupplyAmt" placeholder="0" min="0" style="width:100%;box-sizing:border-box;height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;background:#f7faff;outline:none;text-align:right" oninput="expSupplyChanged(this)">
+
         </div>
         <div>
           <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:4px">부가세 (원)</label>
-          <input type="number" id="expV2TaxAmt" placeholder="0" min="0" style="width:100%;box-sizing:border-box;height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;background:#f7faff;outline:none;text-align:right"
-            oninput="(function(){var s=parseFloat(document.getElementById('expV2SupplyAmt').value)||0;var t=parseFloat(this.value)||0;var el=document.getElementById('expV2Amount');el.value=s+t||'';el._manual=true;}).call(this)">
+          <input type="number" id="expV2TaxAmt" placeholder="공급가의 10% 자동" min="0" style="width:100%;box-sizing:border-box;height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;background:#f7faff;outline:none;text-align:right" oninput="expTaxChanged(this)">
+
         </div>
         <div>
           <label style="font-size:11px;font-weight:700;color:#3f7cb8;display:block;margin-bottom:4px">합계 (원) *</label>
@@ -2839,7 +2839,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260702t1616"></script>
+<script src="worklog.js?v=44-20260702t1620"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8452,7 +8452,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0702-1616';
+    if(el) el.textContent = 'v44-0702-1620';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8703,6 +8703,24 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     _initExpDrag();
     var ov=g('expV2Overlay'); if(ov) ov.style.display='flex';
     var sh=g('expV2Sheet'); if(sh){ var sc=sh.querySelector('[style*="overflow-y:auto"]'); if(sc) sc.scrollTop=0; sh.style.transform=''; }
+  }
+
+  function expSupplyChanged(el){
+    var s = parseFloat(el.value)||0;
+    var taxEl = document.getElementById('expV2TaxAmt');
+    if(taxEl && !taxEl._manual){
+      taxEl.value = s ? Math.round(s*0.1) : '';
+    }
+    var t = parseFloat((taxEl&&taxEl.value)||0)||0;
+    var amtEl = document.getElementById('expV2Amount');
+    if(amtEl){ amtEl.value = s+t||''; amtEl._manual=true; }
+  }
+  function expTaxChanged(el){
+    el._manual = true;
+    var s = parseFloat((document.getElementById('expV2SupplyAmt')||{value:0}).value)||0;
+    var t = parseFloat(el.value)||0;
+    var amtEl = document.getElementById('expV2Amount');
+    if(amtEl){ amtEl.value = s+t||''; amtEl._manual=true; }
   }
 
   function closeExpV2(){
@@ -9042,7 +9060,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var mEl=g('expV2Memo'); if(mEl) mEl.value=w.workNote||((w.floor||'')+(w.field?' ['+w.field+']':''));
       var aEl=g('expV2Amount'); if(aEl){aEl.value='';aEl._manual=false;}
       var sEl=g('expV2SupplyAmt'); if(sEl) sEl.value='';
-      var tEl2=g('expV2TaxAmt'); if(tEl2) tEl2.value='';
+      var tEl2=g('expV2TaxAmt'); if(tEl2){ tEl2.value=''; tEl2._manual=false; }
       updateTypeBtns();
       renderChips(); updateAreas();
       renderMatList(); calcMatTotal();
@@ -9919,7 +9937,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0702-1616 로드');
+  console.log('[expV2] v44-0702-1620 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
