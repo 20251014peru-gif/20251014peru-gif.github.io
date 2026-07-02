@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-0950";
+const APP_VERSION = "v44-0702-1005";
 // v44-20260619 변경사항:
 // - 업무 모달에서 지출유형 선택 후 저장 → 지출 모달 자동으로 열림 (직접 작성 구조)
 // - 개인비용/후불청구일 때 모달 위에 색상 표시 (파란/주황)
@@ -6498,7 +6498,7 @@ function renderStockOverview(){
     return Number(it.safetyStock||0)>0 ? r.stock < Number(r.item.safetyStock) : r.stock<=0;
   }).sort((a,b)=>(a.item.itemName||"").localeCompare(b.item.itemName||"","ko"));
   const body=$("matStockBody");
-  if(!rows.length){ body.innerHTML=`<tr><td colspan="10" class="empty">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</td></tr>`; return; }
+  if(!rows.length){ body.innerHTML=`<tr><td colspan="8" class="empty">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</td></tr>`; return; }
   body.innerHTML=rows.map(r=>{
     const it=r.item, st=r.stock;
     const safe=Number(it.safetyStock||0);
@@ -6507,9 +6507,11 @@ function renderStockOverview(){
     const shopId = it.shopId||it.itemCode||"";
     return `<tr data-id="${it.id}" class="${lowCls}" style="cursor:pointer">
       <td style="font-size:11px;color:#94a3b8;font-weight:600;padding-right:6px">${esc(shopId)}</td>
-      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;padding-left:8px" title="${esc(it.itemName||"")}${it.spec?' / '+esc(it.spec):''}">
+      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;padding-left:8px" title="${esc(it.itemName||"")}">
         <b style="font-size:13px">${esc(cleanName)}</b>
-        ${it.spec?`<span style="font-size:10px;color:#94a3b8;margin-left:5px">${esc(it.spec.slice(0,28))}${it.spec.length>28?'…':''}</span>`:""}
+      </td>
+      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;padding-left:6px;font-size:11px;color:#64748b" title="${esc(it.spec||'')}">
+        ${esc(it.spec||'')}
       </td>
       <td style="font-size:12px;color:#64748b;text-align:center">${esc(it.unit||"")}</td>
       <td><span class="pill ${fieldClass(it.field)}" style="font-size:10px">${esc(it.field||"")}</span></td>
