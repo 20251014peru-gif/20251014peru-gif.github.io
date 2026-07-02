@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1227";
+const APP_VERSION = "v44-0702-1250";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6549,6 +6549,11 @@ function renderStockOverview(){
     if(k==="stock"){ av=a.stock; bv=b.stock; }
     else if(k==="unitPrice"){ av=Number(a.item.unitPrice||0); bv=Number(b.item.unitPrice||0); }
     else if(k==="recurring"){ av=RO.indexOf(a.item.recurring||"수시구매"); bv=RO.indexOf(b.item.recurring||"수시구매"); }
+    else if(k==="lastBuy"){
+      const la=entries.filter(e=>e.kind==="stock"&&e.itemId===a.item.id&&e.stockType==="입고").sort((x,y)=>(y.date||"").localeCompare(x.date||"")).shift();
+      const lb=entries.filter(e=>e.kind==="stock"&&e.itemId===b.item.id&&e.stockType==="입고").sort((x,y)=>(y.date||"").localeCompare(x.date||"")).shift();
+      av=la?la.date:""; bv=lb?lb.date:"";
+    }
     else { av=(a.item[k]||"").toLowerCase(); bv=(b.item[k]||"").toLowerCase(); }
     if(av<bv) return -1*asc;
     if(av>bv) return 1*asc;
@@ -6599,7 +6604,7 @@ function renderStockOverview(){
       </td>
       <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#64748b" title="${esc(it.spec||'')}">${esc(it.spec||'')}</td>
       <td style="font-size:13px;color:${recColor};font-weight:700;white-space:nowrap">${recLabel}</td>
-      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#94a3b8" title="${esc(it.memo||'')}">${esc((it.memo||'').slice(0,20))}${(it.memo||'').length>20?'…':''}</td>
+      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#64748b" title="${esc(it.memo||'')}${it.lastBuyDate?' / 구매일:'+it.lastBuyDate:''}">${it.lastBuyDate?`<span style="color:#3f7cb8;font-weight:600;margin-right:4px">${it.lastBuyDate}</span>`:''} ${esc((it.memo||'').slice(0,16))}${(it.memo||'').length>16?'…':''}</td>
       <td style="font-size:11px;color:#64748b;text-align:center">${esc(it.unit||"")}</td>
       <td class="num" style="font-size:12px">${it.unitPrice?won(it.unitPrice):""}</td>
       <td class="num"><b style="font-size:14px;color:${st<=0?'#e74c3c':safe>0&&st<safe?'#f39c12':'#1a2f45'}">${st}</b></td>
@@ -6694,7 +6699,7 @@ function openQuickEditMaterial(id){
   // 마지막 구매일 계산
   const _lastStock = entries.filter(e=>e.kind==="stock"&&e.itemId===id&&e.stockType==="입고")
     .sort((a,b)=>(b.date||"").localeCompare(a.date||"")).shift();
-  const _lastBuyMemo = _lastStock ? `마지막 구매: ${_lastStock.date}` : (item.memo||'');
+  const _cleanMemo = (item.memo||'').replace(/마지막 구매: \d{4}-\d{2}-\d{2}/,'').trim();
   const ov = document.createElement('div');
   ov.id = 'quickEditMatOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px';
@@ -6752,9 +6757,15 @@ function openQuickEditMaterial(id){
           <label style="${LBL}">제조원</label>
           <input type="text" id="qeMaker" value="${esc(item.maker||'')}" placeholder="예: (주)동원피앤아이" style="${INP}">
         </div>
-        <div style="grid-column:1/-1">
-          <label style="${LBL}">메모</label>
-          <textarea id="qeMemo" rows="2" placeholder="보관위치, 특이사항 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;resize:vertical">${esc(_lastBuyMemo)}</textarea>
+        <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 160px;gap:10px">
+          <div>
+            <label style="${LBL}">메모</label>
+            <textarea id="qeMemo" rows="2" placeholder="보관위치, 특이사항 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;resize:none"></textarea>
+          </div>
+          <div>
+            <label style="${LBL}">마지막 구매일</label>
+            <input type="date" id="qeLastBuy" value="${_lastStock?_lastStock.date:''}" style="width:100%;box-sizing:border-box;height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
+          </div>
         </div>
         <div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px">
           <button id="qeCancel" type="button" style="flex:1;height:44px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
@@ -6787,6 +6798,7 @@ function openQuickEditMaterial(id){
       vendor: (document.getElementById('qeVendor').value||'').trim(),
       recurring: document.getElementById('qeRecurring').value||'수시구매',
       memo: (document.getElementById('qeMemo').value||'').trim(),
+      lastBuyDate: document.getElementById('qeLastBuy').value||'',
     };
     updateRecord(id, patch);
     close();
