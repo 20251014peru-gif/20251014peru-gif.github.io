@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0702-1612</title>
+  <title>업무일지 v44-0702-1616</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1612</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1616</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2839,7 +2839,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260702t1612"></script>
+<script src="worklog.js?v=44-20260702t1616"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8452,7 +8452,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0702-1612';
+    if(el) el.textContent = 'v44-0702-1616';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8809,22 +8809,24 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
     function makeCard(e){
       var color=e.expType==='세금계산서'?'#c2410c':'#3f7cb8';
-      var issuedBadge=e.expType==='세금계산서'?(e.isIssued?'<span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">✅ 발급완료</span>':'<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">⏳ 미발급</span>'):'';
-      var purposeBadge=e.purpose?('<span style="background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">'+esc(e.purpose)+'</span>'):'';
+      var issuedBadge=e.expType==='세금계산서'?(e.isIssued?'<span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700">✅ 발급완료</span>':'<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700">⏳ 미발급</span>'):'';
+      var purposeBadge=e.purpose?('<span style="background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700">'+esc(e.purpose)+'</span>'):'';
+      var hasAmt = e.supplyAmt||e.taxAmt;
       return '<div style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid '+color+';border-radius:12px;padding:14px 16px">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
         +'<div style="flex:1;min-width:0;cursor:pointer" data-expid="'+esc(e.id)+'">'
         +'<div style="font-size:15px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e.title||'(내역없음)')+'</div>'
-        +'<div style="font-size:12px;color:#7a92a8;margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">'
+        +'<div style="font-size:13px;color:#7a92a8;margin-top:5px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">'
         +'<span>'+esc(e.date||'')+'</span>'
-        +(e.vendor?'<span>'+esc(e.vendor)+'</span>':'')
+        +(e.vendor?'<span style="font-weight:600">'+esc(e.vendor)+'</span>':'')
         +issuedBadge+purposeBadge
         +'</div>'
         +(e.memo?'<div style="font-size:12px;color:#aab8c8;margin-top:4px">'+esc(e.memo)+'</div>':'')
         +'</div>'
-        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;max-width:120px">'
-        +(e.supplyAmt||e.taxAmt?'<div style="font-size:10px;color:#b0bec5;text-align:right;white-space:nowrap;line-height:1.4">공급가 '+fmt(e.supplyAmt||0)+'<br>부가세 '+fmt(e.taxAmt||0)+'</div>':'')
-        +'<div style="font-size:17px;font-weight:800;color:'+color+';white-space:nowrap">'+fmt(e.amount)+'원</div>'
+        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">'
+        +(hasAmt?'<div style="font-size:12px;color:#94a3b8;text-align:right;white-space:nowrap">공급가 '+fmt(e.supplyAmt||0)+'원</div>':'')
+        +(hasAmt?'<div style="font-size:12px;color:#94a3b8;text-align:right;white-space:nowrap">부가세 '+fmt(e.taxAmt||0)+'원</div>':'')
+        +'<div style="font-size:18px;font-weight:800;color:'+color+';white-space:nowrap">'+fmt(e.amount)+'원</div>'
         +'<button data-expdel="'+esc(e.id)+'" style="background:#fde8e8;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit">🗑 삭제</button>'
         +'</div>'
         +'</div>'
@@ -9917,7 +9919,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0702-1612 로드');
+  console.log('[expV2] v44-0702-1616 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
