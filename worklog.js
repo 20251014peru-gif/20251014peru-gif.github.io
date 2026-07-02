@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1038";
+const APP_VERSION = "v44-0702-1051";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6611,57 +6611,58 @@ function openQuickEditMaterial(id){
   const ov = document.createElement('div');
   ov.id = 'quickEditMatOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px';
+  const INP = 'width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none';
+  const SEL = 'width:100%;box-sizing:border-box;height:32px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none';
+  const LBL = 'display:block;font-size:11px;font-weight:700;color:#7a92a8;margin-bottom:3px';
   ov.innerHTML = `
-    <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.2);max-height:90vh;overflow:auto">
-      <h3 style="margin:0 0 6px;font-size:18px;font-weight:800;color:#0369a1">✏️ 자재 수정</h3>
-      <div style="font-size:12px;color:#aab8c8;margin-bottom:16px">규격을 간단하게 정리하거나, 분야/단가 등을 빠르게 수정하세요</div>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">서브원 상품ID</label>
-          <input type="text" id="qeShopId" value="${esc(item.shopId||'')}" placeholder="예: 6573068" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:560px;padding:20px 24px;box-shadow:0 12px 40px rgba(0,0,0,.2);max-height:90vh;overflow:auto">
+      <h3 style="margin:0 0 4px;font-size:17px;font-weight:800;color:#0369a1">✏️ 자재 수정</h3>
+      <div style="font-size:11px;color:#aab8c8;margin-bottom:14px">규격을 간단하게 정리하거나, 분야/단가 등을 빠르게 수정하세요</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div style="grid-column:1/3">
+          <label style="${LBL}">품목명 <span style="color:#e74c3c">*</span></label>
+          <input type="text" id="qeName" value="${esc(item.itemName||'')}" style="${INP}">
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">품목명 <span style="color:#e74c3c">*</span></label>
-          <input type="text" id="qeName" value="${esc(item.itemName||'')}" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="${LBL}">서브원 상품ID</label>
+          <input type="text" id="qeShopId" value="${esc(item.shopId||'')}" placeholder="예: 6573068" style="${INP}">
+        </div>
+        <div style="grid-column:1/-1">
+          <label style="${LBL}">규격 <span style="color:#aab8c8;font-weight:500">(짧게 정리)</span></label>
+          <input type="text" id="qeSpec" value="${esc(item.spec||'')}" placeholder="예: 8W / Φ60mm" style="${INP}">
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">규격 <span style="color:#aab8c8;font-weight:500">(짧게 정리)</span></label>
-          <input type="text" id="qeSpec" value="${esc(item.spec||'')}" placeholder="예: 8W / Φ60mm" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
-        </div>
-        <div style="display:flex;gap:10px">
-          <div style="flex:1">
-            <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">단위코드</label>
-            <input type="text" id="qeUnit" value="${esc(item.unit||'')}" placeholder="EA, BOX, ROL" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
-          </div>
-          <div style="flex:1">
-            <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">판매단가 (원)</label>
-            <input type="number" id="qePrice" value="${Number(item.unitPrice)||0}" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
-          </div>
+          <label style="${LBL}">단위</label>
+          <input type="text" id="qeUnit" value="${esc(item.unit||'')}" placeholder="EA, BOX" style="${INP}">
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">제조원</label>
-          <input type="text" id="qeMaker" value="${esc(item.maker||'')}" placeholder="예: (주)동원피앤아이" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="${LBL}">판매단가 (원)</label>
+          <input type="number" id="qePrice" value="${Number(item.unitPrice)||0}" style="${INP}">
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">분야</label>
-          <select id="qeField" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="${LBL}">구매 주기</label>
+          <select id="qeRecurring" style="${SEL}">
+            ${["비주기","월간","분기","반기","연간","수시"].map(o=>`<option value="${o}" ${(item.recurring||"비주기")===o?"selected":""}>${o}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label style="${LBL}">분야</label>
+          <select id="qeField" style="${SEL}">
             ${FIELDS.map(f=>`<option value="${esc(f)}" ${item.field===f?'selected':''}>${esc(f)}</option>`).join("")}
           </select>
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">거래처</label>
-          <input type="text" id="qeVendor" value="${esc(item.vendor||'')}" placeholder="예: 서브원" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
+          <label style="${LBL}">거래처</label>
+          <input type="text" id="qeVendor" value="${esc(item.vendor||'')}" placeholder="예: 서브원" style="${INP}">
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#7a92a8;margin-bottom:4px">구매 주기</label>
-          <select id="qeRecurring" style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
-            ${["비주기","월간","분기","반기","연간","수시"].map(o=>`<option value="${o}" ${(item.recurring||"비주기")===o?"selected":""}>${o}</option>`).join("")}
-          </select>
+          <label style="${LBL}">제조원</label>
+          <input type="text" id="qeMaker" value="${esc(item.maker||'')}" placeholder="예: (주)동원피앤아이" style="${INP}">
         </div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button id="qeCancel" type="button" style="flex:1;height:48px;padding:0 14px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
-          <button id="qeDelete" type="button" style="flex:1;height:48px;padding:0 14px;border:2px solid #fde8e8;border-radius:12px;background:#fff;color:#e74c3c;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>
-          <button id="qeSave" type="button" style="flex:2;height:48px;padding:0 14px;border:none;border-radius:12px;background:#0369a1;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">💾 저장</button>
+        <div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px">
+          <button id="qeCancel" type="button" style="flex:1;height:44px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
+          <button id="qeDelete" type="button" style="flex:1;height:44px;border:2px solid #fde8e8;border-radius:12px;background:#fff;color:#e74c3c;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>
+          <button id="qeSave" type="button" style="flex:2;height:44px;border:none;border-radius:12px;background:#0369a1;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">💾 저장</button>
         </div>
       </div>
     </div>`;
