@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1132";
+const APP_VERSION = "v44-0702-1137";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6511,6 +6511,8 @@ function renderStockOverview(){
     const k=MAT_FILTER.sortKey, asc=MAT_FILTER.sortAsc?1:-1;
     let av, bv;
     const RO=["정기구매","수시구매","계절구매","연간계획","미구매"];
+    const aRetired=(a.item.recurring||"")==="미구매", bRetired=(b.item.recurring||"")==="미구매";
+    if(aRetired!==bRetired) return aRetired?1:-1;
     if(k==="stock"){ av=a.stock; bv=b.stock; }
     else if(k==="unitPrice"){ av=Number(a.item.unitPrice||0); bv=Number(b.item.unitPrice||0); }
     else if(k==="recurring"){ av=RO.indexOf(a.item.recurring||"수시구매"); bv=RO.indexOf(b.item.recurring||"수시구매"); }
@@ -6559,7 +6561,7 @@ function renderStockOverview(){
         <b style="${nameStyle}">${esc(cleanName)}</b>
       </td>
       <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#64748b" title="${esc(it.spec||'')}">${esc(it.spec||'')}</td>
-      <td style="font-size:10px;color:${recColor};font-weight:700;white-space:nowrap">${recLabel}</td>
+      <td style="font-size:13px;color:${recColor};font-weight:700;white-space:nowrap">${recLabel}</td>
       <td style="font-size:12px;color:#64748b;text-align:center">${esc(it.unit||"")}</td>
       <td class="num" style="font-size:12px">${it.unitPrice?won(it.unitPrice):""}</td>
       <td class="num"><b style="font-size:14px;color:${st<=0?'#e74c3c':safe>0&&st<safe?'#f39c12':'#1a2f45'}">${st}</b></td>
