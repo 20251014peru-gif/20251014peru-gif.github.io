@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1301";
+const APP_VERSION = "v44-0702-1304";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -1037,33 +1037,27 @@ function migrateTissueToJumbo(){
 }
 // v38: 메모의 잘못된 attachments({type:"image",data:...}) 정리 → photos로 이동
 function migrateItemMemo(){
-  // 이미 실행됐으면 스킵
-  if(localStorage.getItem('_itemMemoMigrated_v1')) return;
+  // v2: 마지막 구매 날짜도 메모에서 제거 (lastBuyDate 필드로 분리됨)
+  if(localStorage.getItem('_itemMemoMigrated_v2')) return;
   let changed = 0;
   entries.forEach(it=>{
     if(it.kind!=="item") return;
     const memo = it.memo||"";
-    // 지울 패턴: 서브원 주문내역, 일괄 등록, 엑셀 구매내역 자동등록 등
-    const junkPatterns = [
-      /서브원\s*주문내역\s*일괄\s*등록/,
-      /엑셀\s*구매내역에서\s*자동\s*등록/,
-      /자동\s*등록/,
-    ];
-    const isJunk = junkPatterns.some(p=>p.test(memo));
+    // 지울 패턴
+    const isJunk = /서브원.{0,10}주문내역|엑셀.{0,10}구매내역|자동\s*등록|마지막\s*구매\s*:\s*\d{4}-\d{2}-\d{2}/.test(memo);
     if(!isJunk) return;
-    // 마지막 입고일 찾기
+    // 마지막 구매일은 lastBuyDate 필드로 따로 저장
     const lastStock = entries.filter(e=>e.kind==="stock"&&e.itemId===it.id&&e.stockType==="입고")
       .sort((a,b)=>(b.date||"").localeCompare(a.date||"")).shift();
-    const newMemo = lastStock ? `마지막 구매: ${lastStock.date}` : "";
-    updateRecord(it.id, {memo: newMemo});
+    const patch = { memo: "" };
+    if(lastStock && !it.lastBuyDate) patch.lastBuyDate = lastStock.date;
+    updateRecord(it.id, patch);
     changed++;
   });
+  localStorage.setItem('_itemMemoMigrated_v2','1');
   if(changed>0){
-    localStorage.setItem('_itemMemoMigrated_v1','1');
-    console.log(`[migrateItemMemo] ${changed}건 메모 정리 완료`);
+    console.log(`[migrateItemMemo v2] ${changed}건 정리 완료`);
     toast(`✅ 품목 메모 ${changed}건 정리 완료`);
-  } else {
-    localStorage.setItem('_itemMemoMigrated_v1','1');
   }
 }
 
