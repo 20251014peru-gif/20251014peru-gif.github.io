@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1144";
+const APP_VERSION = "v44-0702-1154";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -993,6 +993,7 @@ async function init(){
   await loadAll();
   autoCleanTrash(); // v44: 30일 지난 휴지통 자동 정리
   migrateTissueToJumbo(); // v26: 휴지 → 점보롤 자동 변환
+  migrateItemMemo(); // v44: 품목 메모 정리 (서브원 주문내역 → 마지막 구매일)
   migrateBadMemoAttachments(); // v38: 깨진 첨부 정리
   renderStatusChips(); renderAll();
   // v43: 통합 UI 갱신 훅
@@ -1035,6 +1036,37 @@ function migrateTissueToJumbo(){
   }
 }
 // v38: 메모의 잘못된 attachments({type:"image",data:...}) 정리 → photos로 이동
+function migrateItemMemo(){
+  // 이미 실행됐으면 스킵
+  if(localStorage.getItem('_itemMemoMigrated_v1')) return;
+  let changed = 0;
+  entries.forEach(it=>{
+    if(it.kind!=="item") return;
+    const memo = it.memo||"";
+    // 지울 패턴: 서브원 주문내역, 일괄 등록, 엑셀 구매내역 자동등록 등
+    const junkPatterns = [
+      /서브원\s*주문내역\s*일괄\s*등록/,
+      /엑셀\s*구매내역에서\s*자동\s*등록/,
+      /자동\s*등록/,
+    ];
+    const isJunk = junkPatterns.some(p=>p.test(memo));
+    if(!isJunk) return;
+    // 마지막 입고일 찾기
+    const lastStock = entries.filter(e=>e.kind==="stock"&&e.itemId===it.id&&e.stockType==="입고")
+      .sort((a,b)=>(b.date||"").localeCompare(a.date||"")).shift();
+    const newMemo = lastStock ? `마지막 구매: ${lastStock.date}` : "";
+    updateRecord(it.id, {memo: newMemo});
+    changed++;
+  });
+  if(changed>0){
+    localStorage.setItem('_itemMemoMigrated_v1','1');
+    console.log(`[migrateItemMemo] ${changed}건 메모 정리 완료`);
+    toast(`✅ 품목 메모 ${changed}건 정리 완료`);
+  } else {
+    localStorage.setItem('_itemMemoMigrated_v1','1');
+  }
+}
+
 function migrateBadMemoAttachments(){
   let changed = 0;
   entries.forEach(e=>{
@@ -6234,7 +6266,7 @@ async function aiExtractPurchase(txt, purchaseDate, key){
         safetyStock: 0,
         recurring: "수시구매",
         location: "",
-        memo: `엑셀 구매내역에서 자동 등록 (${purchaseDate})`,
+        memo: "",
         createdAt: Date.now()
       });
       addedItems++;
@@ -6497,6 +6529,7 @@ function renderStockOverview(){
     .filter(it=>MAT_FILTER.field==="전체"||it.field===MAT_FILTER.field)
     .filter(it=>MAT_FILTER.recurring==="전체"||it.recurring===MAT_FILTER.recurring)
     .filter(it=>{
+
       if(!MAT_FILTER.q.trim()) return true;
       const s=[it.itemCode,it.shopId,it.itemName,it.spec,it.maker,it.vendor,it.memo].filter(Boolean).join(" ").toLowerCase();
       return s.includes(MAT_FILTER.q.trim().toLowerCase());
@@ -6549,6 +6582,10 @@ function renderStockOverview(){
     const lowCls = safe>0 && st<safe ? "st-low" : (st<=0 ? "st-zero" : "");
     const cleanName = (it.itemName||"").replace(/^\[.*?\]/,"").trim();
     const shopId = it.shopId||it.itemCode||"";
+    // 마지막 입고 날짜 계산
+    const lastStock = entries.filter(e=>e.kind==="stock"&&e.itemId===it.id&&e.stockType==="입고")
+      .sort((a,b)=>(b.date||"").localeCompare(a.date||"")).shift();
+    const lastBuyDate = lastStock ? lastStock.date : null;
     const isRetired = (it.recurring||'') === '미구매';
     const nameStyle = isRetired ? 'font-size:13px;text-decoration:line-through;color:#b0bec5' : 'font-size:13px';
     const rowOpacity = isRetired ? 'opacity:0.55;' : '';
@@ -6653,6 +6690,10 @@ function openQuickEditMaterial(id){
   // 기존 오버레이 있으면 제거
   const oldOv = document.getElementById('quickEditMatOverlay');
   if(oldOv) oldOv.remove();
+  // 마지막 구매일 계산
+  const _lastStock = entries.filter(e=>e.kind==="stock"&&e.itemId===id&&e.stockType==="입고")
+    .sort((a,b)=>(b.date||"").localeCompare(a.date||"")).shift();
+  const _lastBuyMemo = _lastStock ? `마지막 구매: ${_lastStock.date}` : (item.memo||'');
   const ov = document.createElement('div');
   ov.id = 'quickEditMatOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px';
@@ -6712,7 +6753,7 @@ function openQuickEditMaterial(id){
         </div>
         <div style="grid-column:1/-1">
           <label style="${LBL}">메모</label>
-          <textarea id="qeMemo" rows="2" placeholder="보관위치, 특이사항 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;resize:vertical">${esc(item.memo||'')}</textarea>
+          <textarea id="qeMemo" rows="2" placeholder="보관위치, 특이사항 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;resize:vertical">${esc(_lastBuyMemo)}</textarea>
         </div>
         <div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px">
           <button id="qeCancel" type="button" style="flex:1;height:44px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
