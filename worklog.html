@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0702-1154</title>
+  <title>업무일지 v44-0702-1218</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1154</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1218</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2092,15 +2092,16 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <div id="matStockPanel">
           <div class="table-wrap">
             <table class="rec" style="table-layout:fixed;width:100%"><thead><tr>
-              <th style="width:60px">ID</th>
-              <th data-sort="field" style="cursor:pointer;user-select:none" style="width:48px">분야 <span id="sortIcon_field"></span></th>
-              <th data-sort="itemName" style="cursor:pointer;user-select:none" style="width:160px">품목명 <span id="sortIcon_itemName"></span></th>
-              <th data-sort="spec" style="cursor:pointer;user-select:none">규격 <span id="sortIcon_spec"></span></th>
-              <th data-sort="recurring" style="cursor:pointer;user-select:none" style="width:72px">주기 <span id="sortIcon_recurring"></span></th>
-              <th style="width:34px;text-align:center">단위</th>
-              <th data-sort="unitPrice" style="cursor:pointer;user-select:none" style="width:68px;text-align:right">단가 <span id="sortIcon_unitPrice"></span></th>
-              <th data-sort="stock" style="cursor:pointer;user-select:none" style="width:40px;text-align:right">재고 <span id="sortIcon_stock"></span></th>
-              <th style="width:120px;text-align:center">액션</th>
+              <th style="width:56px">ID</th>
+              <th data-sort="field" style="cursor:pointer;user-select:none" style="width:46px">분야 <span id="sortIcon_field"></span></th>
+              <th data-sort="itemName" style="cursor:pointer;user-select:none" style="width:150px">품목명 <span id="sortIcon_itemName"></span></th>
+              <th data-sort="spec" style="cursor:pointer;user-select:none" style="width:18%">규격 <span id="sortIcon_spec"></span></th>
+              <th data-sort="recurring" style="cursor:pointer;user-select:none" style="width:58px">주기 <span id="sortIcon_recurring"></span></th>
+              <th data-sort="memo" style="cursor:pointer;user-select:none">메모 <span id="sortIcon_memo"></span></th>
+              <th style="width:28px;text-align:center">단위</th>
+              <th data-sort="unitPrice" style="cursor:pointer;user-select:none" style="width:56px;text-align:right">단가 <span id="sortIcon_unitPrice"></span></th>
+              <th data-sort="stock" style="cursor:pointer;user-select:none" style="width:34px;text-align:right">재고 <span id="sortIcon_stock"></span></th>
+              <th style="width:110px;text-align:center">액션</th>
             </tr></thead><tbody id="matStockBody"></tbody></table>
           </div>
         </div>
@@ -2823,7 +2824,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260702t1154"></script>
+<script src="worklog.js?v=44-20260702t1218"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8436,7 +8437,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0702-1154';
+    if(el) el.textContent = 'v44-0702-1218';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -9878,7 +9879,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0702-1154 로드');
+  console.log('[expV2] v44-0702-1218 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
