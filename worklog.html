@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0702-1755</title>
+  <title>업무일지 v44-0702-1901</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1755</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1901</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1398,6 +1398,13 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       </div>
       <!-- 대시보드 -->
       <div id="expV2Dashboard" style="width:100%;box-sizing:border-box;margin-bottom:16px"></div>
+      <!-- 서브탭: 목록 / 정산표 -->
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button type="button" id="expSubTabList" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 목록</button>
+        <button type="button" id="expSubTabSettle" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🧮 정산표</button>
+        <button type="button" id="expSubTabMeal" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🍚 중식</button>
+      </div>
+      <div id="expListWrap">
       <!-- 필터 1행 3열 -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
         <select id="expV2MonthSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45;width:100%;box-sizing:border-box">
@@ -1408,6 +1415,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           <option value="개인지출">💸 개인지출</option>
           <option value="세금계산서">📃 세금계산서</option>
           <option value="전표">📋 전표</option>
+          <option value="급여">💼 급여</option>
         </select>
         <select id="expV2IssuedSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45;width:100%;box-sizing:border-box">
           <option value="">발급여부 전체</option>
@@ -1420,6 +1428,36 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       </div>
       <!-- 목록 -->
       <div id="expV2ListArea"></div>
+      </div><!-- /expListWrap -->
+
+      <!-- 정산표 -->
+      <div id="expSettleWrap" style="display:none">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <select id="expSettleMonthSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45"></select>
+          <button type="button" id="expSettleCopyBtn" style="height:38px;padding:0 16px;border-radius:10px;border:1.5px solid #16a34a;background:#16a34a;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📑 엑셀 복사</button>
+          <span id="expSettleCount" style="font-size:12px;color:#aab8c8;font-weight:600;margin-left:auto"></span>
+        </div>
+        <div id="expSettleArea" style="overflow-x:auto"></div>
+      </div>
+
+      <!-- 중식이용내역 -->
+      <div id="expMealWrap" style="display:none">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <select id="expMealMonthSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45"></select>
+          <label style="font-size:12px;font-weight:700;color:#7a92a8;display:flex;align-items:center;gap:4px">일반식
+            <input type="number" id="expMealPriceN" min="0" step="500" style="width:76px;height:36px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;background:#f7faff;outline:none;text-align:right">
+          </label>
+          <label style="font-size:12px;font-weight:700;color:#7a92a8;display:flex;align-items:center;gap:4px">특식
+            <input type="number" id="expMealPriceS" min="0" step="500" style="width:76px;height:36px;padding:0 8px;border:1.5px solid #fbbf24;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;background:#fffbea;outline:none;text-align:right">
+          </label>
+          <button type="button" id="expMealStaffBtn" style="height:38px;padding:0 14px;border-radius:10px;border:1.5px solid #3f7cb8;background:#fff;color:#3f7cb8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">👥 명단 관리</button>
+          <button type="button" id="expMealCopyBtn" style="height:38px;padding:0 16px;border-radius:10px;border:1.5px solid #16a34a;background:#16a34a;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📑 엑셀 복사</button>
+          <span id="expMealStatus" style="font-size:12px;color:#aab8c8;font-weight:600;margin-left:auto"></span>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">셀 클릭=체크 · 날짜 클릭=열 전체 · ⚡=평일 채우기(경비 A조=홀수·B조=짝수) · 비고 클릭=특식→휴무→해제 · 공휴일 자동 · 새 직원은 평일 자동 1</div>
+        <div id="expMealGrid" style="overflow-x:auto;margin-bottom:20px"></div>
+        <div id="expMealSummary" style="overflow-x:auto"></div>
+      </div>
     </div>
   </div>
 
@@ -2637,10 +2675,27 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div style="margin-bottom:12px">
       <label style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:6px">정산종류</label>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button type="button" data-etype="개인지출" class="expV2TypeBtn" style="flex:1;min-width:90px;height:40px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">💸 개인지출</button>
-        <button type="button" data-etype="세금계산서" class="expV2TypeBtn" style="flex:1;min-width:90px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📃 세금계산서</button>
-        <button type="button" data-etype="전표" class="expV2TypeBtn" style="flex:1;min-width:90px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 전표</button>
+        <button type="button" data-etype="개인지출" class="expV2TypeBtn" style="flex:1;min-width:80px;height:40px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">💸 개인지출</button>
+        <button type="button" data-etype="세금계산서" class="expV2TypeBtn" style="flex:1;min-width:80px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📃 세금계산서</button>
+        <button type="button" data-etype="전표" class="expV2TypeBtn" style="flex:1;min-width:80px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 전표</button>
+        <button type="button" data-etype="급여" class="expV2TypeBtn" style="flex:1;min-width:80px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">💼 급여</button>
       </div>
+    </div>
+
+    <!-- 하위 구분 (세금계산서/전표/급여) -->
+    <div id="expV2SubTypeRow" style="display:none;margin-bottom:12px">
+      <label id="expV2SubTypeLabel" style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:6px">하위 구분</label>
+      <div id="expV2SubTypeWrap" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- 정기분 템플릿 (세금계산서-정기분 전용) -->
+    <div id="expV2TplArea" style="display:none;margin-bottom:12px;padding:10px 12px;background:#fffbea;border:1.5px solid #fde68a;border-radius:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:#92400e">📌 정기분 템플릿 (누르면 자동 입력)</span>
+        <button type="button" id="expV2TplMgrBtn" style="background:#fff;color:#92400e;border:1.5px solid #fde68a;border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 관리</button>
+      </div>
+      <div id="expV2TplWrap" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      <div id="expV2TplHint" style="font-size:11px;color:#b45309;margin-top:6px">정기분으로 저장하면 자동으로 템플릿에 등록돼요</div>
     </div>
 
     <!-- 업체명 -->
@@ -2761,9 +2816,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div id="expV2TaxOptions" style="display:none;margin-bottom:14px;padding:12px;background:#fff7ed;border:1.5px solid #fdba74;border-radius:12px">
       <div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:8px">📃 세금계산서 옵션</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#1a2f45">
-          <input type="checkbox" id="expV2IsJeonpyo" style="width:16px;height:16px;accent-color:#c2410c;cursor:pointer">
-          전표 (단순 전표 처리)
+        <label style="display:none">
+          <input type="checkbox" id="expV2IsJeonpyo">
+          전표 (단순 전표 처리 — 구버전 호환용)
         </label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#1a2f45">
           <input type="checkbox" id="expV2IsIssued" style="width:16px;height:16px;accent-color:#27ae60;cursor:pointer">
@@ -2839,7 +2894,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260702t1755"></script>
+<script src="worklog.js?v=44-20260702t1901"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8452,7 +8507,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0702-1755';
+    if(el) el.textContent = 'v44-0702-1901';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8464,6 +8519,20 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   var _editId = null;
   var _expType = '개인지출';
+  var _expSubType = '';                     /* 하위 구분 */
+
+  /* ── 하위 구분 정의 ── */
+  var EXP_SUBTYPES = {
+    '세금계산서': ['정기분','공사성'],
+    '전표': ['전기','수도','유선방송','전화','정수기','기타'],
+    '급여': ['관리인건비','중식대']
+  };
+  var EXP_TYPE_COLORS = { '개인지출':'#3f7cb8', '세금계산서':'#c2410c', '전표':'#7c3aed', '급여':'#16a34a' };
+
+  /* ── 정기분 템플릿 (localStorage) ── */
+  var EXP_TPL_LS = 'wl_expense_templates_v1';
+  function loadExpTpls(){ try{ var a=JSON.parse(localStorage.getItem(EXP_TPL_LS)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function saveExpTpls(a){ try{ localStorage.setItem(EXP_TPL_LS, JSON.stringify(a)); }catch(e){} }
   var _selPurpose = null; // 단일선택: 문자열 or null
   var _matItems = [], _mealItems = [], _wasteItems = [];
 
@@ -8596,17 +8665,129 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
   /* ── 정산종류 버튼 ── */
   function updateTypeBtns(){
+    var tc = EXP_TYPE_COLORS[_expType] || '#3f7cb8';
     document.querySelectorAll('.expV2TypeBtn').forEach(function(btn){
       var on=btn.dataset.etype===_expType;
-      btn.style.background=on?'#3f7cb8':'#f7faff';
+      var c=EXP_TYPE_COLORS[btn.dataset.etype]||'#3f7cb8';
+      btn.style.background=on?c:'#f7faff';
       btn.style.color=on?'#fff':'#7a92a8';
-      btn.style.borderColor=on?'#3f7cb8':'#dbe6f4';
+      btn.style.borderColor=on?c:'#dbe6f4';
     });
     var sh=g('expV2Sheet');
-    if(sh) sh.style.borderTopColor=_expType==='세금계산서'?'#c2410c':'#3f7cb8';
-    // 세금계산서 옵션 표시
+    if(sh) sh.style.borderTopColor=tc;
+    // 세금계산서 옵션 표시 (발급여부)
     var taxOpts=g('expV2TaxOptions');
     if(taxOpts) taxOpts.style.display=_expType==='세금계산서'?'':'none';
+    renderSubTypeChips();
+    renderExpTplChips();
+  }
+
+  /* ── 하위 구분 칩 렌더 ── */
+  function renderSubTypeChips(){
+    var row=g('expV2SubTypeRow'), wrap=g('expV2SubTypeWrap');
+    if(!row||!wrap) return;
+    var opts=EXP_SUBTYPES[_expType];
+    if(!opts){ row.style.display='none'; _expSubType=''; return; }
+    /* 현재 하위구분이 이 종류에 없으면 첫 항목으로 기본 선택 */
+    if(opts.indexOf(_expSubType)<0) _expSubType=opts[0];
+    var tc=EXP_TYPE_COLORS[_expType]||'#3f7cb8';
+    row.style.display='';
+    var lbl=g('expV2SubTypeLabel');
+    if(lbl) lbl.textContent=_expType==='세금계산서'?'세금계산서 구분':(_expType==='전표'?'전표 구분':'급여 구분');
+    wrap.innerHTML='';
+    opts.forEach(function(st){
+      var b=document.createElement('button');
+      b.type='button';
+      var on=(st===_expSubType);
+      b.textContent=st;
+      b.style.cssText='height:34px;padding:0 14px;border-radius:17px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;'
+        +(on?('border:1.5px solid '+tc+';background:'+tc+';color:#fff'):'border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8');
+      b.addEventListener('click',function(){ _expSubType=st; renderSubTypeChips(); renderExpTplChips(); });
+      wrap.appendChild(b);
+    });
+  }
+
+  /* ── 정기분 템플릿 칩 렌더 ── */
+  function renderExpTplChips(){
+    var area=g('expV2TplArea'), wrap=g('expV2TplWrap');
+    if(!area||!wrap) return;
+    var show=(_expType==='세금계산서'&&_expSubType==='정기분');
+    area.style.display=show?'':'none';
+    if(!show) return;
+    var tpls=loadExpTpls();
+    var hint=g('expV2TplHint');
+    if(!tpls.length){
+      wrap.innerHTML='';
+      if(hint) hint.textContent='정기분으로 저장하면 자동으로 템플릿에 등록돼요';
+      return;
+    }
+    if(hint) hint.textContent='누르면 내역·업체·금액이 자동 입력돼요 (✅=이번달 입력완료)';
+    /* 현재 폼 날짜 기준 해당 월에 이미 입력된 템플릿 표시 */
+    var ym=((g('expV2Date')||{}).value||'').slice(0,7);
+    function doneThisMonth(t){
+      if(!ym||typeof entries==='undefined') return false;
+      return entries.some(function(e){
+        return e.kind==='expense'&&e.expType==='세금계산서'&&(e.expSubType||'')==='정기분'
+          &&(e.date||'').slice(0,7)===ym&&(e.title||'')===t.title;
+      });
+    }
+    wrap.innerHTML='';
+    tpls.forEach(function(t){
+      var done=doneThisMonth(t);
+      var b=document.createElement('button');
+      b.type='button';
+      b.textContent=(done?'✅ ':'')+t.title+(t.amount?' · '+fmt(t.amount)+'원':'');
+      b.style.cssText='height:32px;padding:0 12px;border-radius:16px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;'
+        +(done?'border:1.5px solid #d1fae5;background:#f0fdf4;color:#94a3b8':'border:1.5px solid #fbbf24;background:#fff;color:#92400e');
+      b.addEventListener('click',function(){
+        var tEl=g('expV2TitleInput'); if(tEl) tEl.value=t.title||'';
+        var vEl=g('expV2Vendor');     if(vEl) vEl.value=t.vendor||'';
+        var sEl=g('expV2SupplyAmt');  if(sEl) sEl.value=t.supplyAmt||'';
+        var xEl=g('expV2TaxAmt');     if(xEl) xEl.value=t.taxAmt||'';
+        var aEl=g('expV2Amount');     if(aEl){ aEl.value=t.amount||''; aEl._manual=true; }
+        if(typeof toast==='function') toast('📌 템플릿 적용: '+t.title+' — 금액 확인 후 저장하세요');
+      });
+      wrap.appendChild(b);
+    });
+  }
+
+  /* ── 정기분 템플릿 관리 모달 ── */
+  function openExpTplMgr(){
+    var old=document.getElementById('expV2TplMgrOv'); if(old) old.remove();
+    var ov=document.createElement('div');
+    ov.id='expV2TplMgrOv';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9600;display:flex;align-items:center;justify-content:center;font-family:inherit';
+    function esc2(s){ return (s||'').toString().replace(/[&<>"]/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]);}); }
+    function draw(){
+      var tpls=loadExpTpls();
+      var rows=tpls.map(function(t,i){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #f0f6ff">'
+          +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc2(t.title)+'</div>'
+          +'<div style="font-size:11px;color:#94a3b8">'+esc2(t.vendor||'')+(t.amount?' · '+fmt(t.amount)+'원':'')+'</div></div>'
+          +'<button type="button" data-tpldel="'+i+'" style="background:#fde8e8;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;color:#b52929;cursor:pointer;font-family:inherit;flex-shrink:0">삭제</button>'
+          +'</div>';
+      }).join('');
+      ov.innerHTML='<div style="background:#fff;width:92%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,.22);border-top:3px solid #f59e0b">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1.5px solid #f0f6ff">'
+        +'<span style="font-size:15px;font-weight:700;color:#1a2f45">📌 정기분 템플릿 관리</span>'
+        +'<button type="button" id="expV2TplMgrClose" style="background:none;border:none;font-size:20px;cursor:pointer;color:#7a92a8;line-height:1">✕</button></div>'
+        +'<div style="overflow-y:auto;flex:1;padding:6px 16px 14px">'
+        +(rows||'<div style="text-align:center;padding:40px 0;color:#aab8c8;font-size:13px">등록된 템플릿이 없어요<br>정기분으로 지출을 저장하면 자동 등록돼요</div>')
+        +'</div></div>';
+      ov.querySelector('#expV2TplMgrClose').addEventListener('click',function(){ ov.remove(); });
+      ov.querySelectorAll('[data-tpldel]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var i=Number(btn.dataset.tpldel);
+          var arr=loadExpTpls();
+          if(!confirm('"'+(arr[i]&&arr[i].title||'')+'" 템플릿을 삭제할까요?')) return;
+          arr.splice(i,1); saveExpTpls(arr);
+          draw(); renderExpTplChips();
+        });
+      });
+    }
+    draw();
+    ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+    document.body.appendChild(ov);
   }
 
   /* ── 열기 ── */
@@ -8667,7 +8848,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
   function openExpV2(id){
     _editId=id||null; _matItems=[]; _mealItems=[]; _wasteItems=[]; _selPurpose=null;
-    _expType='개인지출';
+    _expType='개인지출'; _expSubType='';
     var en=id&&typeof entries!=='undefined'?entries.find(function(x){return x.id===id;}):null;
     var today=kstNow();
     var td=today.toISOString().slice(0,10);
@@ -8682,7 +8863,12 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var jpEl=g('expV2IsJeonpyo'); if(jpEl) jpEl.checked=en?!!(en.isJeonpyo):false;
     var isEl=g('expV2IsIssued');  if(isEl) isEl.checked=en?!!(en.isIssued):false;
     if(en){
-      _expType=en.expType==='세금계산서'?'세금계산서':'개인지출';
+      /* 종류 복원: 전표(구버전 isJeonpyo 포함)/급여/세금계산서/개인지출 */
+      if(en.expType==='전표'||en.isJeonpyo||/\[전표\]/.test(en.title||'')||/\[전표\]/.test(en.memo||'')) _expType='전표';
+      else if(en.expType==='세금계산서') _expType='세금계산서';
+      else if(en.expType==='급여') _expType='급여';
+      else _expType='개인지출';
+      _expSubType=en.expSubType||'';
       if(en.matItems)   _matItems=JSON.parse(JSON.stringify(en.matItems));
       if(en.mealItems)  _mealItems=JSON.parse(JSON.stringify(en.mealItems));
       if(en.wasteItems) _wasteItems=JSON.parse(JSON.stringify(en.wasteItems));
@@ -8756,16 +8942,17 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var memo=((g('expV2Memo')||{value:''}).value||'').trim();
     var isJeonpyo=!!(g('expV2IsJeonpyo')&&g('expV2IsJeonpyo').checked);
     var isIssued=!!(g('expV2IsIssued')&&g('expV2IsIssued').checked);
-    /* 전표 자동 감지: 내역/메모에 [전표] 포함되거나 전표 체크하면 전표 처리 */
+    /* 전표: 독립 종류로 저장 + 구버전 [전표] 텍스트·체크박스 호환 */
     var autoJeonpyo = /\[전표\]/.test(title) || /\[전표\]/.test(memo);
-    isJeonpyo = isJeonpyo || autoJeonpyo;
+    isJeonpyo = (_expType==='전표') || isJeonpyo || autoJeonpyo;
+    if(isJeonpyo && _expType!=='급여' && _expType!=='세금계산서') _expType='전표';
     /* isCost: 전표면 false, 아니면 true */
     var isCost = !isJeonpyo;
     if(!title){ if(typeof toast==='function') toast('내역을 입력하세요'); return; }
     if(!amount){ if(typeof toast==='function') toast('금액을 입력하세요'); return; }
     var obj={kind:'expense',date:date,expType:_expType,title:title,amount:amount,supplyAmt:supplyAmt,taxAmt:taxAmt,
       vendor:vendor,memo:memo,purpose:_selPurpose,purposes:_selPurpose?[_selPurpose]:[],
-      isCost:isCost,isJeonpyo:isJeonpyo,isIssued:isIssued,
+      isCost:isCost,isJeonpyo:isJeonpyo,isIssued:isIssued,expSubType:_expSubType||'',
       matItems:_matItems.slice(),mealItems:_mealItems.slice(),wasteItems:_wasteItems.slice(),
       /* 🔗 scan-app 참조 */
       scanRefs:(window._expV2ScanRefs||[]).map(function(r){return {type:r.type,id:r.id};})};
@@ -8793,8 +8980,18 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         window._linkScanItemBack(r.type, r.id, 'worklog:expense_'+_editId);
       });
     }
+    /* 세금계산서-정기분 → 템플릿 자동 등록/갱신 (내역 기준) */
+    if(_expType==='세금계산서' && _expSubType==='정기분'){
+      try{
+        var tpls=loadExpTpls();
+        var idx=tpls.findIndex(function(t){ return t.title===title; });
+        var tpl={title:title,vendor:vendor,supplyAmt:supplyAmt,taxAmt:taxAmt,amount:amount};
+        if(idx>=0) tpls[idx]=tpl; else tpls.push(tpl);
+        saveExpTpls(tpls);
+      }catch(e){ console.error('[expV2 템플릿]',e); }
+    }
     closeExpV2();
-    setTimeout(function(){ renderExpV2List(); renderExpV2Dashboard(); },300);
+    setTimeout(function(){ renderExpV2List(); renderExpV2Dashboard(); if(typeof window.renderExpSettle==='function') window.renderExpSettle(); },300);
     if(typeof toast==='function') toast(_editId?'수정됐어요':'저장됐어요');
   }
 
@@ -8802,7 +8999,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(!_editId||!confirm('삭제할까요?')) return;
     if(typeof deleteWithUndo==='function') deleteWithUndo(_editId,'지출');
     closeExpV2();
-    setTimeout(function(){ renderExpV2List(); renderExpV2Dashboard(); },300);
+    setTimeout(function(){ renderExpV2List(); renderExpV2Dashboard(); if(typeof window.renderExpSettle==='function') window.renderExpSettle(); },300);
   }
 
   /* ── 목록 렌더 ── */
@@ -8831,7 +9028,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     all.sort(function(a,b){return (a.date||'').localeCompare(b.date||'');} );
     var list=all.filter(function(e){
       if(monthSel&&!(e.date||'').startsWith(monthSel)) return false;
-      if(typeSel==='전표'){ if(!isJpFilter(e)) return false; }
+      if(typeSel==='전표'){ if(!isJpFilter(e)||e.expType==='급여') return false; }
+      else if(typeSel==='급여'){ if(e.expType!=='급여') return false; }
       else if(typeSel){ if(e.expType!==typeSel||isJpFilter(e)) return false; }
       if(issuedSel==='issued'&&!e.isIssued) return false;
       if(issuedSel==='unissued'&&e.isIssued) return false;
@@ -8844,9 +9042,11 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     }
 
     function makeCard(e){
-      var isJp = !!(e.isJeonpyo||e.expType==='전표'||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||''));
-      var isTax = !isJp && e.expType==='세금계산서';
-      var color = isJp?'#7c3aed':isTax?'#c2410c':'#3f7cb8';
+      var isSal = e.expType==='급여';
+      var isJp = !isSal && !!(e.isJeonpyo||e.expType==='전표'||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||''));
+      var isTax = !isSal && !isJp && e.expType==='세금계산서';
+      var color = isSal?'#16a34a':isJp?'#7c3aed':isTax?'#c2410c':'#3f7cb8';
+      var subBadge = e.expSubType?'<span style="background:#f1f5f9;color:#475569;border-radius:5px;padding:1px 7px;font-size:11px;font-weight:700">'+esc(e.expSubType)+'</span>':'';
       var issuedBadge = isTax?(e.isIssued
         ?'<span style="background:#d1fae5;color:#065f46;border-radius:5px;padding:1px 7px;font-size:11px;font-weight:700">✅발급</span>'
         :'<span style="background:#fef3c7;color:#92400e;border-radius:5px;padding:1px 7px;font-size:11px;font-weight:700">⏳미발급</span>'):'';
@@ -8865,16 +9065,17 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         +'</div>'
         +'</div>'
         +'<div style="font-size:12px;color:#94a3b8;margin-top:4px">'+esc(e.date||'')+(e.vendor?' · <b style="color:#64748b">'+esc(e.vendor)+'</b>':'')+'</div>'
-        +(issuedBadge||purposeBadge?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px">'+issuedBadge+purposeBadge+'</div>':'')
+        +(issuedBadge||purposeBadge||subBadge?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px">'+subBadge+issuedBadge+purposeBadge+'</div>':'')
         +(cleanMemo?'<div style="font-size:11px;color:#b0bec5;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(cleanMemo.slice(0,40))+'</div>':'')
         +'</div>';
     }
 
     /* 종류별 그룹핑 */
     function isJpFn(e){ return !!(e.isJeonpyo||e.expType==='전표'||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); }
-    var personal = list.filter(function(e){ return !isJpFn(e)&&e.expType!=='세금계산서'; });
-    var tax      = list.filter(function(e){ return !isJpFn(e)&&e.expType==='세금계산서'; });
-    var jeonpyo  = list.filter(function(e){ return isJpFn(e); });
+    var salary   = list.filter(function(e){ return e.expType==='급여'; });
+    var personal = list.filter(function(e){ return e.expType!=='급여'&&!isJpFn(e)&&e.expType!=='세금계산서'; });
+    var tax      = list.filter(function(e){ return e.expType!=='급여'&&!isJpFn(e)&&e.expType==='세금계산서'; });
+    var jeonpyo  = list.filter(function(e){ return e.expType!=='급여'&&isJpFn(e); });
     var G = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px';
     var html = '';
 
@@ -8897,6 +9098,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         html += makeSection(tax,'#c2410c','📃','세금계산서',tUnissued?' · <span style="color:#c2410c">미발급 '+tUnissued+'건</span>':'');
       }
       if(jeonpyo.length) html += makeSection(jeonpyo,'#7c3aed','📋','전표');
+      if(salary.length)  html += makeSection(salary,'#16a34a','💼','급여');
     } else {
       html = '<div style="'+G+'">'+list.map(makeCard).join('')+'</div>';
     }
@@ -8909,7 +9111,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         e.stopPropagation();
         if(!confirm('삭제할까요?')) return;
         if(typeof deleteWithUndo==='function') deleteWithUndo(btn.dataset.expdel,'지출');
-        setTimeout(function(){ renderExpV2List(); renderExpV2Dashboard(); },300);
+        setTimeout(function(){ renderExpV2List(); renderExpV2Dashboard(); if(typeof window.renderExpSettle==='function') window.renderExpSettle(); },300);
       });
     });
   };
@@ -8929,34 +9131,41 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var isJp = e.isJeonpyo || /\[전표\]/.test(e.title||'') || /\[전표\]/.test(e.memo||'');
       return !isJp;
     }
-    var personal=tm.filter(function(e){ return !e.isJeonpyo&&e.expType!=='세금계산서'&&!(/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); });
-    var tax=tm.filter(function(e){ return !e.isJeonpyo&&e.expType==='세금계산서'&&!(/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); });
-    var jeonpyo=tm.filter(function(e){ return e.isJeonpyo||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||''); });
+    var salary=tm.filter(function(e){ return e.expType==='급여'; });
+    var personal=tm.filter(function(e){ return e.expType!=='급여'&&!e.isJeonpyo&&e.expType!=='세금계산서'&&e.expType!=='전표'&&!(/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); });
+    var tax=tm.filter(function(e){ return e.expType!=='급여'&&!e.isJeonpyo&&e.expType==='세금계산서'&&!(/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); });
+    var jeonpyo=tm.filter(function(e){ return e.expType!=='급여'&&(e.isJeonpyo||e.expType==='전표'||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); });
     var pSum=personal.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
     var tSum=tax.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
     var jSum=jeonpyo.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
-    var total=pSum+tSum+jSum;
+    var sSum=salary.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    var total=pSum+tSum+jSum+sSum;
     var taxUnissued=tax.filter(function(e){return !e.isIssued;}).length;
     var ymLabel=ym||'전체';
-    box.innerHTML='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%;box-sizing:border-box">'
-      +'<div style="background:#f0f6ff;border:1.5px solid #93c5fd;border-radius:14px;padding:20px 24px">'
+    box.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;width:100%;box-sizing:border-box">'
+      +'<div style="background:#f0f6ff;border:1.5px solid #93c5fd;border-radius:14px;padding:18px 20px">'
       +'<div style="font-size:13px;font-weight:700;color:#7a92a8;margin-bottom:8px">💸 개인지출</div>'
-      +'<div style="font-size:28px;font-weight:800;color:#3f7cb8;line-height:1.1">'+fmt(pSum)+'<span style="font-size:16px">원</span></div>'
+      +'<div style="font-size:26px;font-weight:800;color:#3f7cb8;line-height:1.1">'+fmt(pSum)+'<span style="font-size:15px">원</span></div>'
       +'<div style="font-size:13px;color:#aab8c8;margin-top:6px">'+personal.length+'건</div>'
       +'</div>'
-      +'<div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:14px;padding:20px 24px">'
+      +'<div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:14px;padding:18px 20px">'
       +'<div style="font-size:13px;font-weight:700;color:#7a92a8;margin-bottom:8px">📃 세금계산서</div>'
-      +'<div style="font-size:28px;font-weight:800;color:#c2410c;line-height:1.1">'+fmt(tSum)+'<span style="font-size:16px">원</span></div>'
+      +'<div style="font-size:26px;font-weight:800;color:#c2410c;line-height:1.1">'+fmt(tSum)+'<span style="font-size:15px">원</span></div>'
       +'<div style="font-size:13px;margin-top:6px">'+tax.length+'건'+(taxUnissued>0?' · <span style="color:#c2410c;font-weight:700">미발급 '+taxUnissued+'건</span>':'')+'</div>'
       +'</div>'
-      +'<div style="background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:14px;padding:20px 24px">'
+      +'<div style="background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:14px;padding:18px 20px">'
       +'<div style="font-size:13px;font-weight:700;color:#7a92a8;margin-bottom:8px">📋 전표</div>'
-      +'<div style="font-size:28px;font-weight:800;color:#7c3aed;line-height:1.1">'+fmt(jSum)+'<span style="font-size:16px">원</span></div>'
+      +'<div style="font-size:26px;font-weight:800;color:#7c3aed;line-height:1.1">'+fmt(jSum)+'<span style="font-size:15px">원</span></div>'
       +'<div style="font-size:13px;color:#aab8c8;margin-top:6px">'+jeonpyo.length+'건</div>'
       +'</div>'
-      +'<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:20px 24px">'
+      +'<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:18px 20px">'
+      +'<div style="font-size:13px;font-weight:700;color:#7a92a8;margin-bottom:8px">💼 급여</div>'
+      +'<div style="font-size:26px;font-weight:800;color:#16a34a;line-height:1.1">'+fmt(sSum)+'<span style="font-size:15px">원</span></div>'
+      +'<div style="font-size:13px;color:#aab8c8;margin-top:6px">'+salary.length+'건</div>'
+      +'</div>'
+      +'<div style="background:#eef6ff;border:1.5px solid #7db4e6;border-radius:14px;padding:18px 20px">'
       +'<div style="font-size:13px;font-weight:700;color:#7a92a8;margin-bottom:8px">💰 '+ymLabel+' 합계</div>'
-      +'<div style="font-size:28px;font-weight:800;color:#16a34a;line-height:1.1">'+fmt(total)+'<span style="font-size:16px">원</span></div>'
+      +'<div style="font-size:26px;font-weight:800;color:#0C447C;line-height:1.1">'+fmt(total)+'<span style="font-size:15px">원</span></div>'
       +'<div style="font-size:13px;color:#aab8c8;margin-top:6px">'+tm.length+'건</div>'
       +'</div>'
       +'</div>';
@@ -9074,6 +9283,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var pmBtn=g('btnExpV2PurposeMgr'); if(pmBtn&&!pmBtn._b){pmBtn._b=true;pmBtn.addEventListener('click',openPurposeMgr);}
     // 용도 관리 (모달 내 버튼)
     var pmBtn2=g('expV2InlinePurposeMgr'); if(pmBtn2&&!pmBtn2._b){pmBtn2._b=true;pmBtn2.addEventListener('click',function(){ openPurposeMgr(); });}
+    // 정기분 템플릿 관리 버튼
+    var tplBtn=g('expV2TplMgrBtn'); if(tplBtn&&!tplBtn._b){tplBtn._b=true;tplBtn.addEventListener('click',openExpTplMgr);}
+    // 날짜 변경 → 템플릿 이번달 입력완료 표시 갱신
+    var dtEl=g('expV2Date'); if(dtEl&&!dtEl._tplB){dtEl._tplB=true;dtEl.addEventListener('change',function(){ renderExpTplChips(); });}
     // openExpenseEditor 교체
     window.openExpenseEditor=function(id){openExpV2(id);};
 
@@ -9084,7 +9297,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var isPersonal=expType==='개인비용';
       _linkedWorkId=info.workId||null;
       _editId=null; _matItems=[]; _mealItems=[]; _wasteItems=[]; _selPurpose=null;
-      _expType=isPersonal?'개인지출':'세금계산서';
+      _expType=isPersonal?'개인지출':'세금계산서'; _expSubType=isPersonal?'':'공사성';
       if(isPersonal) _selPurpose='자재구매';
       var ts=g('expV2TitleSpan'); if(ts) ts.textContent='지출 등록';
       var delBtn=g('expV2Del'); if(delBtn) delBtn.style.display='none';
@@ -9971,7 +10184,723 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0702-1755 로드');
+  console.log('[expV2] v44-0702-1901 로드');
+})();
+
+/* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
+(function(){
+  var g=function(id){return document.getElementById(id);};
+  var fmt=function(n){return Math.round(Number(n)||0).toLocaleString('ko-KR');};
+  var esc=function(s){return (s||'').toString().replace(/[&<>"]/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]);});};
+  /* 금액 0 → 빈셀 규칙 */
+  var cell=function(n){ n=Math.round(Number(n)||0); return n===0?'':fmt(n); };
+  var raw=function(n){ n=Math.round(Number(n)||0); return n===0?'':String(n); };
+
+  function isJpFn(e){ return e.expType==='전표'||e.isJeonpyo||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||''); }
+  function classify(e){
+    if(e.expType==='급여') return '급여';
+    if(isJpFn(e)) return '전표';
+    if(e.expType==='세금계산서') return (e.expSubType==='공사성')?'공사':'정기';
+    return '개인';
+  }
+  var GROUPS=[
+    {key:'개인', label:'개인지출',           color:'#3f7cb8', bg:'#f0f6ff'},
+    {key:'전표', label:'전표',               color:'#7c3aed', bg:'#f5f3ff'},
+    {key:'공사', label:'공사성 세금계산서',  color:'#c2410c', bg:'#fff7ed'},
+    {key:'정기', label:'정기분 세금계산서',  color:'#ea580c', bg:'#fffbea'},
+    {key:'급여', label:'급여',               color:'#16a34a', bg:'#f0fdf4'}
+  ];
+
+  function rowVals(e){
+    var amount=Number(e.amount)||0, sup=Number(e.supplyAmt)||0, tax=Number(e.taxAmt)||0;
+    if(!sup&&!tax){ sup=amount; tax=0; }   /* 부가세 미입력 → 금액=합계, 부가세 빈칸 */
+    return {sup:sup, tax:tax, amount:amount};
+  }
+  function rowNote(e){
+    var m=(e.memo||'').replace(/\[전표\]/g,'').trim();
+    return m||e.vendor||'';
+  }
+  function rowTitle(e){
+    if(e.expType==='급여'&&!e.title) return e.expSubType||'급여';
+    return e.title||'(내역없음)';
+  }
+
+  function fillMonthSel(){
+    var sel=g('expSettleMonthSel'); if(!sel) return;
+    var all=(typeof entries!=='undefined'?entries:[]).filter(function(e){return e.kind==='expense';});
+    var months=[];
+    all.forEach(function(e){ var m=(e.date||'').slice(0,7); if(m&&months.indexOf(m)<0) months.push(m); });
+    var thisYm=kstNow().toISOString().slice(0,7);
+    if(months.indexOf(thisYm)<0) months.push(thisYm);
+    months.sort().reverse();
+    var cur=sel._init?sel.value:thisYm;
+    sel._init=true;
+    sel.innerHTML=months.map(function(m){return '<option value="'+m+'"'+(m===cur?' selected':'')+'>'+m+'</option>';}).join('');
+    if(months.indexOf(cur)>=0) sel.value=cur;
+  }
+
+  function buildMap(ym){
+    var all=(typeof entries!=='undefined'?entries:[]).filter(function(e){return e.kind==='expense'&&(e.date||'').startsWith(ym);});
+    all.sort(function(a,b){return (a.date||'').localeCompare(b.date||'')||((a.createdAt||0)-(b.createdAt||0));});
+    var map={'개인':[],'전표':[],'공사':[],'정기':[],'급여':[]};
+    all.forEach(function(e){ map[classify(e)].push(e); });
+    /* 🍚 중식대 자동 반영 (중식이용내역 → 급여 그룹) */
+    try{
+      if(typeof window.getMealMonthTotal==='function'){
+        var meal=window.getMealMonthTotal(ym);
+        if(meal&&meal.total>0){
+          map['급여'].push({__virtual:true, title:'중식대', amount:meal.total, supplyAmt:meal.total, taxAmt:0,
+            memo:'중식 '+meal.count+'건 (일반 '+meal.normal+' · 특식 '+meal.special+')'});
+        }
+      }
+    }catch(e){ console.error('[정산표 중식]',e); }
+    return {map:map, total:all.length+(map['급여'].some(function(x){return x.__virtual;})?1:0)};
+  }
+
+  window.renderExpSettle=function(){
+    var box=g('expSettleArea'); if(!box) return;
+    fillMonthSel();
+    var ym=(g('expSettleMonthSel')||{}).value||kstNow().toISOString().slice(0,7);
+    var d=buildMap(ym);
+    var cnt=g('expSettleCount'); if(cnt) cnt.textContent=ym+' · '+d.total+'건';
+    if(!d.total){
+      box.innerHTML='<div style="text-align:center;padding:60px 20px;color:#aab8c8"><div style="font-size:40px;margin-bottom:10px">🧮</div><div style="font-size:14px;font-weight:700">'+esc(ym)+' 지출 내역이 없어요</div></div>';
+      return;
+    }
+    var TH='padding:9px 10px;font-size:12px;font-weight:800;color:#fff;background:#3f7cb8;border:1px solid #dbe6f4;white-space:nowrap';
+    var TD='padding:8px 10px;font-size:13px;color:#1a2f45;border:1px solid #e8f0fa;background:#fff';
+    var TDR=TD+';text-align:right;white-space:nowrap;font-weight:600';
+    var html='<table style="border-collapse:collapse;width:100%;min-width:680px">'
+      +'<thead><tr>'
+      +'<th style="'+TH+'">구분</th><th style="'+TH+'">NO</th><th style="'+TH+';min-width:160px">지출내용</th>'
+      +'<th style="'+TH+'">금액</th><th style="'+TH+'">부가세</th><th style="'+TH+'">합계</th><th style="'+TH+';min-width:110px">비고</th>'
+      +'</tr></thead><tbody>';
+    var gSum=0,gTax=0,gAmt=0;
+    GROUPS.forEach(function(grp){
+      var arr=d.map[grp.key];
+      if(!arr.length) return;
+      var s=0,t=0,a=0;
+      arr.forEach(function(e,i){
+        var v=rowVals(e);
+        s+=v.sup; t+=v.tax; a+=v.amount;
+        html+='<tr'+(e.id?' data-settleid="'+esc(e.id)+'" style="cursor:pointer"':'')+'>'
+          +(i===0?'<td rowspan="'+(arr.length+1)+'" style="'+TD+';background:'+grp.bg+';color:'+grp.color+';font-weight:800;text-align:center;vertical-align:middle;white-space:nowrap">'+esc(grp.key)+'</td>':'')
+          +'<td style="'+TD+';text-align:center;color:#94a3b8">'+(i+1)+'</td>'
+          +'<td style="'+TD+'">'+esc(rowTitle(e))+'</td>'
+          +'<td style="'+TDR+'">'+cell(v.sup)+'</td>'
+          +'<td style="'+TDR+';color:#94a3b8">'+cell(v.tax)+'</td>'
+          +'<td style="'+TDR+';font-weight:800">'+cell(v.amount)+'</td>'
+          +'<td style="'+TD+';font-size:12px;color:#64748b">'+esc(rowNote(e))+'</td>'
+          +'</tr>';
+      });
+      gSum+=s; gTax+=t; gAmt+=a;
+      html+='<tr>'
+        +'<td colspan="2" style="'+TD+';background:'+grp.bg+';text-align:center;font-weight:800;color:'+grp.color+'">소 계</td>'
+        +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(s)+'</td>'
+        +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+'">'+cell(t)+'</td>'
+        +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(a)+'</td>'
+        +'<td style="'+TD+';background:'+grp.bg+'"></td>'
+        +'</tr>';
+    });
+    html+='<tr>'
+      +'<td colspan="3" style="'+TD+';background:#1a2f45;color:#fff;text-align:center;font-weight:800;font-size:14px">합 계</td>'
+      +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800">'+cell(gSum)+'</td>'
+      +'<td style="'+TDR+';background:#1a2f45;color:#cbd5e1">'+cell(gTax)+'</td>'
+      +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800;font-size:14px">'+cell(gAmt)+'</td>'
+      +'<td style="'+TD+';background:#1a2f45"></td>'
+      +'</tr>';
+    html+='</tbody></table>';
+    box.innerHTML=html;
+    /* 행 클릭 → 지출 조회 팝업 */
+    box.querySelectorAll('[data-settleid]').forEach(function(tr){
+      tr.addEventListener('click',function(){
+        if(typeof window.openExpenseEditor==='function') window.openExpenseEditor(tr.dataset.settleid);
+      });
+    });
+  };
+
+  /* ── 엑셀 복사 (탭 구분 텍스트) ── */
+  function copySettleToExcel(){
+    try{
+      var ym=(g('expSettleMonthSel')||{}).value||kstNow().toISOString().slice(0,7);
+      var d=buildMap(ym);
+      if(!d.total){ if(typeof toast==='function') toast('복사할 내역이 없어요'); return; }
+      var out=[];
+      out.push([ym+' 지출 정산표','','','','','','']);
+      out.push(['구분','NO','지출내용','금액','부가세','합계','비고']);
+      var gSum=0,gTax=0,gAmt=0;
+      GROUPS.forEach(function(grp){
+        var arr=d.map[grp.key];
+        if(!arr.length) return;
+        var s=0,t=0,a=0;
+        arr.forEach(function(e,i){
+          var v=rowVals(e);
+          s+=v.sup; t+=v.tax; a+=v.amount;
+          out.push([i===0?grp.key:'', String(i+1), rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount), rowNote(e)]);
+        });
+        gSum+=s; gTax+=t; gAmt+=a;
+        out.push(['','','소 계', raw(s), raw(t), raw(a), '']);
+      });
+      out.push(['','','합 계', raw(gSum), raw(gTax), raw(gAmt), '']);
+      var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
+      function done(){ if(typeof toast==='function') toast('📑 정산표가 복사됐어요 — 엑셀에 붙여넣기 하세요'); }
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(tsv).then(done).catch(function(){ fallbackCopy(tsv); done(); });
+      } else { fallbackCopy(tsv); done(); }
+    }catch(err){
+      console.error('[정산표 복사]',err);
+      if(typeof toast==='function') toast('복사 오류: '+(err.message||err));
+    }
+  }
+  function fallbackCopy(text){
+    var ta=document.createElement('textarea');
+    ta.value=text; ta.style.cssText='position:fixed;left:-9999px;top:0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    ta.remove();
+  }
+
+  /* ── 서브탭 전환 ── */
+  function setSubTab(which){
+    var lw=g('expListWrap'), sw=g('expSettleWrap'), mw=g('expMealWrap');
+    var bl=g('expSubTabList'), bs=g('expSubTabSettle'), bm=g('expSubTabMeal');
+    if(lw) lw.style.display=which==='list'?'':'none';
+    if(sw) sw.style.display=which==='settle'?'':'none';
+    if(mw) mw.style.display=which==='meal'?'':'none';
+    function paint(btn,on){
+      if(!btn) return;
+      btn.style.background=on?'#3f7cb8':'#f7faff';
+      btn.style.color=on?'#fff':'#7a92a8';
+      btn.style.borderColor=on?'#3f7cb8':'#dbe6f4';
+    }
+    paint(bl,which==='list'); paint(bs,which==='settle'); paint(bm,which==='meal');
+    if(which==='settle') window.renderExpSettle();
+    if(which==='meal'&&typeof window.renderExpMeal==='function') window.renderExpMeal();
+  }
+
+  /* ── 바인딩 (1회) ── */
+  function bindSettle(){
+    var bl=g('expSubTabList');   if(bl&&!bl._b){bl._b=true;bl.addEventListener('click',function(){setSubTab('list');});}
+    var bs=g('expSubTabSettle'); if(bs&&!bs._b){bs._b=true;bs.addEventListener('click',function(){setSubTab('settle');});}
+    var bm=g('expSubTabMeal'); if(bm&&!bm._b){bm._b=true;bm.addEventListener('click',function(){setSubTab('meal');});}
+    var ms=g('expSettleMonthSel'); if(ms&&!ms._b){ms._b=true;ms.addEventListener('change',function(){window.renderExpSettle();});}
+    var cp=g('expSettleCopyBtn');  if(cp&&!cp._b){cp._b=true;cp.addEventListener('click',copySettleToExcel);}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindSettle);
+  else bindSettle();
+  console.log('[expSettle] 정산표 로드');
+})();
+
+/* ===== 중식이용내역 (직원별 일자 체크 + 특식/공휴일 + 월별 정산) ===== */
+(function(){
+  var g=function(id){return document.getElementById(id);};
+  var fmt=function(n){return Math.round(Number(n)||0).toLocaleString('ko-KR');};
+  var esc=function(s){return (s||'').toString().replace(/[&<>"]/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]);});};
+
+  /* ── 한국 공휴일 2026 (회사 휴무 기준: 노동절 포함) ── */
+  var KR_HOLIDAYS={
+    '2026-01-01':'신정','2026-02-16':'설날','2026-02-17':'설날','2026-02-18':'설날',
+    '2026-03-01':'삼일절','2026-03-02':'대체휴일','2026-05-01':'노동절','2026-05-05':'어린이날',
+    '2026-05-24':'부처님오신날','2026-05-25':'대체휴일','2026-06-03':'지방선거','2026-06-06':'현충일',
+    '2026-08-15':'광복절','2026-08-17':'대체휴일','2026-09-24':'추석','2026-09-25':'추석','2026-09-26':'추석',
+    '2026-10-03':'개천절','2026-10-05':'대체휴일','2026-10-09':'한글날','2026-12-25':'크리스마스'
+  };
+  var GROUP_OPTS=['소장','실장','경비반장','경비','미화반장','미화'];
+  /* 기본 명단: 경비 shift A=홀수일 근무, B=짝수일 근무 */
+  var DEFAULT_STAFF=[
+    {name:'안영삼',group:'소장',shift:''},
+    {name:'조태경',group:'실장',shift:''},
+    {name:'김대환',group:'경비반장',shift:'A'},
+    {name:'구자경',group:'경비',shift:'A'},
+    {name:'정지환',group:'경비',shift:'B'},
+    {name:'마재곤',group:'경비',shift:'B'},
+    {name:'김용호',group:'미화반장',shift:''},
+    {name:'김태경',group:'미화',shift:''},
+    {name:'한광희',group:'미화',shift:''},
+    {name:'정은지',group:'미화',shift:''},
+    {name:'오희성',group:'미화',shift:''},
+    {name:'차민자',group:'미화',shift:''},
+    {name:'박일월',group:'미화',shift:''}
+  ];
+  var WD=['일','월','화','수','목','금','토'];
+
+  var _cur=null;          /* 현재 월 데이터 (entries 레코드 또는 가상) */
+  var _saveTimer=null;
+
+  function daysInMonth(ym){
+    var y=Number(ym.slice(0,4)), m=Number(ym.slice(5,7));
+    return new Date(Date.UTC(y,m,0)).getUTCDate();
+  }
+  function weekday(ym,d){
+    var y=Number(ym.slice(0,4)), m=Number(ym.slice(5,7));
+    return new Date(Date.UTC(y,m-1,d)).getUTCDay(); /* 0=일 */
+  }
+  function dstr(ym,d){ return ym+'-'+String(d).padStart(2,'0'); }
+
+  /* 자동 채움 대상 일자: 평일 - 휴무, 경비는 홀짝 조 반영 */
+  function eligibleDays(staff){
+    if(!_cur) return [];
+    var n=daysInMonth(_cur.ym), out=[];
+    for(var d=1;d<=n;d++){
+      var w=weekday(_cur.ym,d);
+      if(w===0||w===6) continue;                   /* 주말 제외 */
+      if(_cur.offDays.indexOf(d)>=0) continue;     /* 공휴일/휴무 제외 */
+      if(staff&&staff.shift==='A'&&d%2===0) continue; /* A조=홀수일 */
+      if(staff&&staff.shift==='B'&&d%2===1) continue; /* B조=짝수일 */
+      out.push(d);
+    }
+    return out;
+  }
+
+  function findMealRec(ym){
+    if(typeof entries==='undefined') return null;
+    return entries.find(function(e){ return e.kind==='meal_month'&&e.ym===ym; })||null;
+  }
+  function prevStaff(ym){
+    if(typeof entries==='undefined') return [];
+    var list=entries.filter(function(e){ return e.kind==='meal_month'&&e.ym<ym&&e.staff&&e.staff.length; })
+      .sort(function(a,b){ return (b.ym||'').localeCompare(a.ym||''); });
+    return list.length?JSON.parse(JSON.stringify(list[0].staff)):[];
+  }
+  function autoOffDays(ym){
+    var out=[], names={};
+    var n=daysInMonth(ym);
+    for(var d=1;d<=n;d++){
+      var nm=KR_HOLIDAYS[dstr(ym,d)];
+      if(nm){ out.push(d); names[d]=nm; }
+    }
+    return {days:out, names:names};
+  }
+  function loadMonth(ym){
+    var rec=findMealRec(ym);
+    if(rec){
+      /* 필드 보정 */
+      rec.staff=rec.staff||[]; rec.checks=rec.checks||{};
+      rec.specialDays=rec.specialDays||[]; rec.offDays=rec.offDays||[];
+      rec.offNames=rec.offNames||{};
+      if(!rec.priceNormal) rec.priceNormal=8000;
+      if(!rec.priceSpecial) rec.priceSpecial=10000;
+      _cur=rec; return;
+    }
+    var auto=autoOffDays(ym);
+    var prev=prevStaff(ym);
+    if(!prev.length) prev=JSON.parse(JSON.stringify(DEFAULT_STAFF));
+    var prevRec=(typeof entries!=='undefined')?entries.filter(function(e){return e.kind==='meal_month'&&e.ym<ym;}).sort(function(a,b){return (b.ym||'').localeCompare(a.ym||'');})[0]:null;
+    _cur={__virtual:true, kind:'meal_month', ym:ym, date:ym+'-01', title:ym+' 중식이용내역',
+      staff:prev, checks:{}, specialDays:[], offDays:auto.days, offNames:auto.names,
+      priceNormal:prevRec&&prevRec.priceNormal||8000, priceSpecial:prevRec&&prevRec.priceSpecial||10000};
+    /* 새 달 생성 시 전원 평일 자동 채움 (경비는 홀짝 조 반영) */
+    _cur.staff.forEach(function(s){ _cur.checks[s.name]=eligibleDays(s); });
+  }
+  function persist(){
+    if(!_cur) return;
+    var st=g('expMealStatus'); if(st) st.textContent='저장 중…';
+    clearTimeout(_saveTimer);
+    _saveTimer=setTimeout(function(){
+      try{
+        var payload={kind:'meal_month', ym:_cur.ym, date:_cur.ym+'-01', title:_cur.ym+' 중식이용내역',
+          staff:_cur.staff, checks:_cur.checks, specialDays:_cur.specialDays,
+          offDays:_cur.offDays, offNames:_cur.offNames,
+          priceNormal:Number(_cur.priceNormal)||8000, priceSpecial:Number(_cur.priceSpecial)||10000};
+        if(_cur.__virtual){
+          payload.createdAt=Date.now();
+          if(typeof addRecord==='function'){ var rec=addRecord(payload); _cur.id=rec.id; delete _cur.__virtual; }
+        } else if(_cur.id && typeof updateRecord==='function'){
+          updateRecord(_cur.id, payload);
+        }
+        var st2=g('expMealStatus');
+        if(st2) st2.textContent='✅ 저장됨 '+kstNow().toISOString().slice(11,16);
+        if(typeof window.renderExpSettle==='function') window.renderExpSettle();
+      }catch(err){
+        console.error('[중식 저장]',err);
+        if(typeof toast==='function') toast('중식 저장 오류: '+(err.message||err));
+      }
+    },600);
+  }
+
+  /* ── 통계 (외부 노출: 정산표 연동) ── */
+  function calcPerson(name){
+    var arr=(_cur.checks[name]||[]);
+    var sp=_cur.specialDays||[];
+    var special=arr.filter(function(d){ return sp.indexOf(d)>=0; }).length;
+    var total=arr.length;
+    var normal=total-special;
+    return {total:total, normal:normal, special:special,
+      amtN:normal*(Number(_cur.priceNormal)||0), amtS:special*(Number(_cur.priceSpecial)||0),
+      amt:normal*(Number(_cur.priceNormal)||0)+special*(Number(_cur.priceSpecial)||0)};
+  }
+  window.getMealMonthTotal=function(ym){
+    var rec=findMealRec(ym);
+    if(!rec||!rec.staff||!rec.staff.length) return null;
+    var pn=Number(rec.priceNormal)||8000, ps=Number(rec.priceSpecial)||10000;
+    var sp=rec.specialDays||[], checks=rec.checks||{};
+    var cnt=0, special=0;
+    rec.staff.forEach(function(s){
+      var arr=checks[s.name]||[];
+      cnt+=arr.length;
+      special+=arr.filter(function(d){ return sp.indexOf(d)>=0; }).length;
+    });
+    var normal=cnt-special;
+    return {count:cnt, normal:normal, special:special, total:normal*pn+special*ps};
+  };
+
+  /* ── 월 셀렉트 ── */
+  function fillMonthSel(){
+    var sel=g('expMealMonthSel'); if(!sel) return;
+    var months=[];
+    (typeof entries!=='undefined'?entries:[]).forEach(function(e){
+      if(e.kind==='meal_month'&&e.ym&&months.indexOf(e.ym)<0) months.push(e.ym);
+      if(e.kind==='expense'){ var m=(e.date||'').slice(0,7); if(m&&months.indexOf(m)<0) months.push(m); }
+    });
+    var thisYm=kstNow().toISOString().slice(0,7);
+    if(months.indexOf(thisYm)<0) months.push(thisYm);
+    months.sort().reverse();
+    var cur=sel._init?sel.value:thisYm;
+    sel._init=true;
+    sel.innerHTML=months.map(function(m){return '<option value="'+m+'"'+(m===cur?' selected':'')+'>'+m+'</option>';}).join('');
+    if(months.indexOf(cur)>=0) sel.value=cur;
+  }
+
+  /* ── 그리드 렌더 ── */
+  window.renderExpMeal=function(){
+    var box=g('expMealGrid'); if(!box) return;
+    fillMonthSel();
+    var ym=(g('expMealMonthSel')||{}).value||kstNow().toISOString().slice(0,7);
+    if(!_cur||_cur.ym!==ym) loadMonth(ym);
+    var pn=g('expMealPriceN'); if(pn&&document.activeElement!==pn) pn.value=_cur.priceNormal;
+    var ps=g('expMealPriceS'); if(ps&&document.activeElement!==ps) ps.value=_cur.priceSpecial;
+    var scrollLeft=box.scrollLeft||0;
+    var n=daysInMonth(ym);
+    var sp=_cur.specialDays, off=_cur.offDays;
+    var days=[]; for(var d=1;d<=n;d++) days.push(d);
+
+    function colBg(d){
+      var w=weekday(ym,d);
+      if(off.indexOf(d)>=0) return '#fde8d8';           /* 공휴일/휴무 */
+      if(w===0) return '#fde8e8';                        /* 일 */
+      if(w===6) return '#e8f0fa';                        /* 토 */
+      if(sp.indexOf(d)>=0) return '#fef08a';             /* 특식 */
+      return '#fff';
+    }
+    function wdColor(d){
+      var w=weekday(ym,d);
+      return w===0?'#dc2626':(w===6?'#2563eb':'#475569');
+    }
+
+    var TH='padding:4px 0;font-size:11px;font-weight:800;border:1px solid #dbe6f4;text-align:center;min-width:26px';
+    var TD='padding:0;font-size:12px;border:1px solid #e8f0fa;text-align:center;height:30px;min-width:26px';
+    var NAME='padding:4px 8px;font-size:12px;font-weight:700;border:1px solid #dbe6f4;background:#f7faff;white-space:nowrap;position:sticky;left:0;z-index:2';
+
+    if(!_cur.staff.length){
+      box.innerHTML='<div style="text-align:center;padding:50px 20px;color:#aab8c8"><div style="font-size:40px;margin-bottom:10px">🍚</div>'
+        +'<div style="font-size:14px;font-weight:700">직원 명단이 없어요</div>'
+        +'<div style="font-size:12px;margin-top:6px">👥 명단 관리에서 직원을 추가하세요</div></div>';
+      renderSummary(ym);
+      return;
+    }
+
+    var html='<table style="border-collapse:collapse;background:#fff">';
+    /* 요일 행 */
+    html+='<tr><th style="'+NAME+';background:#3f7cb8;color:#fff;z-index:3">성명</th>';
+    days.forEach(function(d){ html+='<th style="'+TH+';background:'+colBg(d)+';color:'+wdColor(d)+'">'+WD[weekday(ym,d)]+'</th>'; });
+    html+='<th style="'+TH+';background:#3f7cb8;color:#fff;min-width:44px">합계</th></tr>';
+    /* 날짜 행 (클릭=열 전체 토글) */
+    html+='<tr><th style="'+NAME+'">날짜</th>';
+    days.forEach(function(d){
+      html+='<th data-daycol="'+d+'" style="'+TH+';background:'+colBg(d)+';color:#1a2f45;cursor:pointer" title="클릭: '+d+'일 전체 체크/해제">'+d+'</th>';
+    });
+    html+='<th style="'+TH+'"></th></tr>';
+    /* 직원 행 */
+    _cur.staff.forEach(function(s,si){
+      var arr=_cur.checks[s.name]||[];
+      var shiftBadge=s.shift==='A'?'<span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:0 4px;font-size:9px;font-weight:800;margin-left:3px">A조</span>'
+        :(s.shift==='B'?'<span style="background:#fce7f3;color:#9d174d;border-radius:4px;padding:0 4px;font-size:9px;font-weight:800;margin-left:3px">B조</span>':'');
+      html+='<tr><th style="'+NAME+'">'
+        +'<span style="color:#94a3b8;font-size:10px;margin-right:4px">'+(si+1)+'</span>'+esc(s.name)
+        +(s.group?'<span style="color:#94a3b8;font-size:10px;margin-left:4px">'+esc(s.group)+'</span>':'')
+        +shiftBadge
+        +' <button type="button" data-fillrow="'+esc(s.name)+'" title="평일 전체 채우기/비우기 (경비는 홀짝 조 반영)" style="border:none;background:none;cursor:pointer;font-size:11px;padding:0 2px">⚡</button></th>';
+      days.forEach(function(d){
+        var on=arr.indexOf(d)>=0;
+        html+='<td data-cell="'+esc(s.name)+'|'+d+'" style="'+TD+';cursor:pointer;background:'+(on?(sp.indexOf(d)>=0?'#fde047':'#dbeafe'):colBg(d))+';font-weight:700;color:#1e3a8a">'+(on?'1':'')+'</td>';
+      });
+      html+='<td style="'+TD+';font-weight:800;color:#0C447C;background:#f0f6ff">'+(arr.length||'')+'</td></tr>';
+    });
+    /* 일별 합계 행 */
+    html+='<tr><th style="'+NAME+';background:#eef5ff;color:#0C447C">합계</th>';
+    var grand=0;
+    days.forEach(function(d){
+      var c=0;
+      _cur.staff.forEach(function(s){ if((_cur.checks[s.name]||[]).indexOf(d)>=0) c++; });
+      grand+=c;
+      html+='<td style="'+TD+';background:#eef5ff;font-weight:800;color:#0C447C">'+(c||'')+'</td>';
+    });
+    html+='<td style="'+TD+';background:#0C447C;color:#fff;font-weight:800">'+grand+'</td></tr>';
+    /* 비고 행 (클릭: 없음→특식→휴무→없음 · 공휴일 이름/특식 표시) */
+    html+='<tr><th style="'+NAME+';color:#94a3b8" title="비고 칸 클릭: 특식 → 휴무 → 해제 순환">비고</th>';
+    days.forEach(function(d){
+      var isSp=sp.indexOf(d)>=0, isOff=off.indexOf(d)>=0;
+      var txt=isOff?(_cur.offNames[d]||'휴무'):(isSp?'특식':'');
+      var color=isSp&&!isOff?'#b45309':'#c2410c';
+      html+='<td data-bigo="'+d+'" style="'+TD+';cursor:pointer;background:'+(isSp&&!isOff?'#fbbf24':colBg(d))+'" title="클릭: 특식/휴무 지정">'
+        +'<div style="writing-mode:vertical-rl;font-size:9px;font-weight:700;color:'+color+';margin:2px auto;max-height:56px;overflow:hidden">'+esc(txt)+'</div></td>';
+    });
+    html+='<td style="'+TD+';font-size:10px;color:#b45309;font-weight:700">특'+sp.length+'</td></tr>';
+    html+='</table>';
+    box.innerHTML=html;
+    box.scrollLeft=scrollLeft;
+
+    /* 셀 클릭 */
+    box.querySelectorAll('[data-cell]').forEach(function(td){
+      td.addEventListener('click',function(){
+        var p=td.dataset.cell.split('|'); var name=p[0], d=Number(p[1]);
+        var arr=_cur.checks[name]=(_cur.checks[name]||[]);
+        var i=arr.indexOf(d);
+        if(i>=0) arr.splice(i,1); else arr.push(d);
+        arr.sort(function(a,b){return a-b;});
+        persist(); window.renderExpMeal();
+      });
+    });
+    /* 열 전체 토글 */
+    box.querySelectorAll('[data-daycol]').forEach(function(th){
+      th.addEventListener('click',function(){
+        var d=Number(th.dataset.daycol);
+        var anyUn=_cur.staff.some(function(s){ return (_cur.checks[s.name]||[]).indexOf(d)<0; });
+        _cur.staff.forEach(function(s){
+          var arr=_cur.checks[s.name]=(_cur.checks[s.name]||[]);
+          var i=arr.indexOf(d);
+          if(anyUn){ if(i<0){ arr.push(d); arr.sort(function(a,b){return a-b;}); } }
+          else if(i>=0) arr.splice(i,1);
+        });
+        persist(); window.renderExpMeal();
+      });
+    });
+    /* 비고 순환: 없음 → 특식 → 휴무 → 없음 */
+    box.querySelectorAll('[data-bigo]').forEach(function(td){
+      td.addEventListener('click',function(){
+        var d=Number(td.dataset.bigo);
+        var iSp=_cur.specialDays.indexOf(d), iOff=_cur.offDays.indexOf(d);
+        if(iSp<0&&iOff<0){
+          _cur.specialDays.push(d); _cur.specialDays.sort(function(a,b){return a-b;});
+        } else if(iSp>=0){
+          _cur.specialDays.splice(iSp,1);
+          if(iOff<0){ _cur.offDays.push(d); _cur.offDays.sort(function(a,b){return a-b;}); }
+          if(!_cur.offNames[d]) _cur.offNames[d]=KR_HOLIDAYS[dstr(_cur.ym,d)]||'휴무';
+        } else {
+          _cur.offDays.splice(iOff,1); delete _cur.offNames[d];
+        }
+        persist(); window.renderExpMeal();
+      });
+    });
+    /* 행 평일 채우기/비우기 (경비 홀짝 반영) */
+    box.querySelectorAll('[data-fillrow]').forEach(function(btn){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        var name=btn.dataset.fillrow;
+        var staff=_cur.staff.find(function(s){ return s.name===name; });
+        var target=eligibleDays(staff);
+        var arr=_cur.checks[name]=(_cur.checks[name]||[]);
+        var allFilled=target.length&&target.every(function(d){ return arr.indexOf(d)>=0; });
+        if(allFilled){ _cur.checks[name]=arr.filter(function(d){ return target.indexOf(d)<0; }); }
+        else { target.forEach(function(d){ if(arr.indexOf(d)<0) arr.push(d); }); arr.sort(function(a,b){return a-b;}); }
+        persist(); window.renderExpMeal();
+      });
+    });
+    renderSummary(ym);
+  };
+
+  /* ── 세부 요약 (인별 일반식/특식 금액) ── */
+  function renderSummary(ym){
+    var box=g('expMealSummary'); if(!box||!_cur) return;
+    if(!_cur.staff.length){ box.innerHTML=''; return; }
+    var TH='padding:8px 10px;font-size:12px;font-weight:800;color:#fff;background:#16a34a;border:1px solid #dbe6f4;white-space:nowrap';
+    var TD='padding:7px 10px;font-size:13px;color:#1a2f45;border:1px solid #e8f0fa;background:#fff;text-align:center';
+    var TDR=TD+';text-align:right;font-weight:600;white-space:nowrap';
+    var pn=Number(_cur.priceNormal)||0, ps=Number(_cur.priceSpecial)||0;
+    var html='<div style="font-size:14px;font-weight:800;color:#16a34a;margin-bottom:8px">🍚 '+esc(ym)+' 중식 세부 (일반식 '+fmt(pn)+'원 · 특식 '+fmt(ps)+'원)</div>';
+    html+='<table style="border-collapse:collapse;width:100%;min-width:620px"><thead><tr>'
+      +'<th style="'+TH+'">NO</th><th style="'+TH+'">구분</th><th style="'+TH+'">성명</th><th style="'+TH+'">합계(건)</th>'
+      +'<th style="'+TH+'">일반식</th><th style="'+TH+'">특식</th>'
+      +'<th style="'+TH+'">일반식 금액</th><th style="'+TH+'">특식 금액</th><th style="'+TH+'">합계</th>'
+      +'</tr></thead><tbody>';
+    var T={cnt:0,n:0,s:0,an:0,as:0,a:0};
+    _cur.staff.forEach(function(s,i){
+      var c=calcPerson(s.name);
+      T.cnt+=c.total; T.n+=c.normal; T.s+=c.special; T.an+=c.amtN; T.as+=c.amtS; T.a+=c.amt;
+      html+='<tr>'
+        +'<td style="'+TD+';color:#94a3b8">'+(i+1)+'</td>'
+        +'<td style="'+TD+'">'+esc(s.group||'')+(s.shift?' '+s.shift+'조':'')+'</td>'
+        +'<td style="'+TD+';font-weight:700">'+esc(s.name)+'</td>'
+        +'<td style="'+TD+';font-weight:800;color:#0C447C">'+(c.total||'')+'</td>'
+        +'<td style="'+TD+'">'+(c.normal||'')+'</td>'
+        +'<td style="'+TD+';color:#b45309;font-weight:700">'+(c.special||'')+'</td>'
+        +'<td style="'+TDR+'">'+(c.amtN?fmt(c.amtN):'')+'</td>'
+        +'<td style="'+TDR+';color:#b45309">'+(c.amtS?fmt(c.amtS):'')+'</td>'
+        +'<td style="'+TDR+';font-weight:800;color:#16a34a">'+(c.amt?fmt(c.amt):'')+'</td>'
+        +'</tr>';
+    });
+    html+='<tr>'
+      +'<td colspan="3" style="'+TD+';background:#1a2f45;color:#fff;font-weight:800">계</td>'
+      +'<td style="'+TD+';background:#1a2f45;color:#fff;font-weight:800">'+T.cnt+'</td>'
+      +'<td style="'+TD+';background:#1a2f45;color:#cbd5e1">'+T.n+'</td>'
+      +'<td style="'+TD+';background:#1a2f45;color:#fbbf24;font-weight:700">'+T.s+'</td>'
+      +'<td style="'+TDR+';background:#1a2f45;color:#cbd5e1">'+fmt(T.an)+'</td>'
+      +'<td style="'+TDR+';background:#1a2f45;color:#fbbf24">'+fmt(T.as)+'</td>'
+      +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800;font-size:14px">'+fmt(T.a)+'</td>'
+      +'</tr></tbody></table>';
+    box.innerHTML=html;
+  }
+
+  /* ── 명단 관리 모달 ── */
+  function openStaffMgr(){
+    if(!_cur) return;
+    var old=document.getElementById('expMealStaffOv'); if(old) old.remove();
+    var ov=document.createElement('div');
+    ov.id='expMealStaffOv';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9600;display:flex;align-items:center;justify-content:center;font-family:inherit';
+    var work=JSON.parse(JSON.stringify(_cur.staff));
+    function draw(){
+      var rows=work.map(function(s,i){
+        return '<div style="display:flex;align-items:center;gap:5px;padding:6px 0;border-bottom:1px solid #f0f6ff">'
+          +'<span style="font-size:11px;color:#94a3b8;width:16px;text-align:center;flex-shrink:0">'+(i+1)+'</span>'
+          +'<input type="text" data-snm="'+i+'" value="'+esc(s.name)+'" placeholder="이름" style="flex:1 1 0;width:0;min-width:0;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:14px;font-weight:600;font-family:inherit;background:#f7faff;outline:none;box-sizing:border-box">'
+          +'<select data-sgr="'+i+'" style="flex:1 1 0;width:0;min-width:0;height:36px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;box-sizing:border-box">'
+          +(s.group&&GROUP_OPTS.indexOf(s.group)<0?'<option selected>'+esc(s.group)+'</option>':'')
+          +GROUP_OPTS.map(function(o){return '<option'+(s.group===o?' selected':'')+'>'+o+'</option>';}).join('')
+          +'</select>'
+          +'<select data-ssh="'+i+'" title="경비 근무조 (A=홀수일, B=짝수일)" style="width:72px;flex-shrink:0;height:36px;padding:0 4px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;box-sizing:border-box">'
+          +'<option value=""'+(!s.shift?' selected':'')+'>조없음</option>'
+          +'<option value="A"'+(s.shift==='A'?' selected':'')+'>A조(홀)</option>'
+          +'<option value="B"'+(s.shift==='B'?' selected':'')+'>B조(짝)</option>'
+          +'</select>'
+          +'<button type="button" data-sup="'+i+'" style="width:28px;height:36px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-family:inherit;flex-shrink:0;padding:0">▲</button>'
+          +'<button type="button" data-sdn="'+i+'" style="width:28px;height:36px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;cursor:pointer;font-family:inherit;flex-shrink:0;padding:0">▼</button>'
+          +'<button type="button" data-sdel="'+i+'" style="width:32px;height:36px;border:none;border-radius:8px;background:#fde8e8;color:#b52929;cursor:pointer;font-weight:700;font-family:inherit;flex-shrink:0;padding:0">🗑</button>'
+          +'</div>';
+      }).join('');
+      ov.innerHTML='<div style="background:#fff;width:94%;max-width:520px;max-height:86vh;display:flex;flex-direction:column;border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,.22);border-top:3px solid #3f7cb8">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1.5px solid #f0f6ff">'
+        +'<span style="font-size:15px;font-weight:700;color:#1a2f45">👥 중식 명단 관리 ('+_cur.ym+')</span>'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<button type="button" id="mealStaffDefault" style="background:#fffbea;color:#92400e;border:1.5px solid #fde68a;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">📋 기본 명단</button>'
+        +'<button type="button" id="mealStaffClose" style="background:none;border:none;font-size:20px;cursor:pointer;color:#7a92a8;line-height:1">✕</button>'
+        +'</div></div>'
+        +'<div style="overflow-y:auto;flex:1;padding:8px 16px">'+(rows||'<div style="text-align:center;padding:30px 0;color:#aab8c8;font-size:13px">직원이 없어요</div>')
+        +'<button type="button" id="mealStaffAdd" style="width:100%;height:36px;border:1.5px dashed #93c5fd;border-radius:8px;background:transparent;font-size:13px;font-weight:600;color:#3f7cb8;cursor:pointer;font-family:inherit;margin-top:8px">➕ 직원 추가</button>'
+        +'<div style="font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.5">💡 저장 시 새 직원(체크 0건)은 평일이 자동으로 1 채워져요 (주말·공휴일 제외, 경비 A조=홀수일·B조=짝수일)</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:8px;padding:12px 16px;border-top:1.5px solid #f0f6ff">'
+        +'<button type="button" id="mealStaffCancel" style="flex:1;height:44px;border-radius:12px;border:2px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>'
+        +'<button type="button" id="mealStaffSave" style="flex:2;height:44px;border-radius:12px;border:none;background:#3f7cb8;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">💾 저장</button>'
+        +'</div></div>';
+      function syncInputs(){
+        ov.querySelectorAll('[data-snm]').forEach(function(inp){ work[Number(inp.dataset.snm)].name=inp.value.trim(); });
+        ov.querySelectorAll('[data-sgr]').forEach(function(sel){ work[Number(sel.dataset.sgr)].group=sel.value; });
+        ov.querySelectorAll('[data-ssh]').forEach(function(sel){ work[Number(sel.dataset.ssh)].shift=sel.value; });
+      }
+      ov.querySelector('#mealStaffClose').addEventListener('click',function(){ ov.remove(); });
+      ov.querySelector('#mealStaffCancel').addEventListener('click',function(){ ov.remove(); });
+      ov.querySelector('#mealStaffDefault').addEventListener('click',function(){
+        if(!confirm('기본 명단 13명(소장·실장·경비 4·미화반장·미화 6)으로 바꿀까요?\n이름이 같은 직원의 체크 데이터는 유지돼요')) return;
+        work=JSON.parse(JSON.stringify(DEFAULT_STAFF)); draw();
+      });
+      ov.querySelector('#mealStaffAdd').addEventListener('click',function(){ syncInputs(); work.push({name:'',group:GROUP_OPTS[0],shift:''}); draw(); });
+      ov.querySelectorAll('[data-sup]').forEach(function(b){ b.addEventListener('click',function(){ syncInputs(); var i=Number(b.dataset.sup); if(i>0){ var t=work[i-1]; work[i-1]=work[i]; work[i]=t; draw(); } }); });
+      ov.querySelectorAll('[data-sdn]').forEach(function(b){ b.addEventListener('click',function(){ syncInputs(); var i=Number(b.dataset.sdn); if(i<work.length-1){ var t=work[i+1]; work[i+1]=work[i]; work[i]=t; draw(); } }); });
+      ov.querySelectorAll('[data-sdel]').forEach(function(b){ b.addEventListener('click',function(){ syncInputs(); var i=Number(b.dataset.sdel); if(!confirm('"'+(work[i].name||'(이름없음)')+'" 삭제할까요? 이번 달 체크 데이터도 함께 지워져요')) return; work.splice(i,1); draw(); }); });
+      ov.querySelector('#mealStaffSave').addEventListener('click',function(){
+        syncInputs();
+        var clean=work.filter(function(s){ return s.name; });
+        /* 기존 체크 데이터 유지 (이름 기준) */
+        var newChecks={};
+        clean.forEach(function(s){ newChecks[s.name]=(_cur.checks[s.name]||[]).slice(); });
+        _cur.staff=clean;
+        _cur.checks=newChecks;
+        /* 체크 0건인 직원 → 평일 자동 채움 (경비 홀짝 반영) */
+        _cur.staff.forEach(function(s){
+          if(!_cur.checks[s.name].length) _cur.checks[s.name]=eligibleDays(s);
+        });
+        persist(); ov.remove(); window.renderExpMeal();
+        if(typeof toast==='function') toast('명단 저장됐어요 — 새 직원은 평일 자동 채움');
+      });
+    }
+    draw();
+    ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+    document.body.appendChild(ov);
+  }
+
+  /* ── 엑셀 복사 (그리드 + 세부) ── */
+  function copyMealToExcel(){
+    try{
+      if(!_cur||!_cur.staff.length){ if(typeof toast==='function') toast('복사할 내역이 없어요'); return; }
+      var ym=_cur.ym, n=daysInMonth(ym);
+      var days=[]; for(var d=1;d<=n;d++) days.push(d);
+      var out=[];
+      out.push([ym.slice(5,7).replace(/^0/,'')+'월 중식 이용내역']);
+      out.push(['NO','성명'].concat(days.map(function(d){return WD[weekday(ym,d)];})).concat(['합계']));
+      out.push(['',''].concat(days.map(String)).concat(['']));
+      var daySum={};
+      _cur.staff.forEach(function(s,i){
+        var arr=_cur.checks[s.name]||[];
+        var row=[String(i+1), s.name];
+        days.forEach(function(d){
+          var on=arr.indexOf(d)>=0;
+          if(on) daySum[d]=(daySum[d]||0)+1;
+          row.push(on?'1':'');
+        });
+        row.push(String(arr.length));
+        out.push(row);
+      });
+      var grand=0; days.forEach(function(d){ grand+=(daySum[d]||0); });
+      out.push(['','합계'].concat(days.map(function(d){return daySum[d]?String(daySum[d]):'';})).concat([String(grand)]));
+      out.push(['','비고'].concat(days.map(function(d){
+        var tags=[];
+        if(_cur.offNames[d]) tags.push(_cur.offNames[d]);
+        if(_cur.specialDays.indexOf(d)>=0) tags.push('특식');
+        return tags.join('/');
+      })).concat(['']));
+      out.push([]);
+      /* 세부 */
+      var pn=Number(_cur.priceNormal)||0, ps=Number(_cur.priceSpecial)||0;
+      out.push([ym+' 중식 세부']);
+      out.push(['NO','구분','성명','합계','일반식','특식','일반식('+pn+'원)','특식('+ps+'원)','합계']);
+      var T={cnt:0,n:0,s:0,an:0,as:0,a:0};
+      _cur.staff.forEach(function(s,i){
+        var c=calcPerson(s.name);
+        T.cnt+=c.total; T.n+=c.normal; T.s+=c.special; T.an+=c.amtN; T.as+=c.amtS; T.a+=c.amt;
+        out.push([String(i+1), (s.group||'')+(s.shift?' '+s.shift+'조':''), s.name, String(c.total||''), String(c.normal||''), String(c.special||''),
+          c.amtN?String(c.amtN):'', c.amtS?String(c.amtS):'', c.amt?String(c.amt):'']);
+      });
+      out.push(['','','계', String(T.cnt), String(T.n), String(T.s), String(T.an), String(T.as), String(T.a)]);
+      var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
+      function done(){ if(typeof toast==='function') toast('📑 중식표가 복사됐어요 — 엑셀에 붙여넣기 하세요'); }
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(tsv).then(done).catch(function(){ fb(tsv); done(); });
+      } else { fb(tsv); done(); }
+      function fb(text){
+        var ta=document.createElement('textarea');
+        ta.value=text; ta.style.cssText='position:fixed;left:-9999px;top:0';
+        document.body.appendChild(ta); ta.select();
+        try{ document.execCommand('copy'); }catch(e){}
+        ta.remove();
+      }
+    }catch(err){
+      console.error('[중식 복사]',err);
+      if(typeof toast==='function') toast('복사 오류: '+(err.message||err));
+    }
+  }
+
+  /* ── 바인딩 ── */
+  function bindMeal(){
+    var ms=g('expMealMonthSel'); if(ms&&!ms._b){ms._b=true;ms.addEventListener('change',function(){ _cur=null; window.renderExpMeal(); });}
+    var sb=g('expMealStaffBtn'); if(sb&&!sb._b){sb._b=true;sb.addEventListener('click',openStaffMgr);}
+    var cb=g('expMealCopyBtn');  if(cb&&!cb._b){cb._b=true;cb.addEventListener('click',copyMealToExcel);}
+    var pn=g('expMealPriceN'); if(pn&&!pn._b){pn._b=true;pn.addEventListener('change',function(){ if(_cur){ _cur.priceNormal=Number(pn.value)||8000; persist(); window.renderExpMeal(); } });}
+    var ps=g('expMealPriceS'); if(ps&&!ps._b){ps._b=true;ps.addEventListener('change',function(){ if(_cur){ _cur.priceSpecial=Number(ps.value)||10000; persist(); window.renderExpMeal(); } });}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindMeal);
+  else bindMeal();
+  console.log('[expMeal] 중식이용내역 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
