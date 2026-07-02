@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1218";
+const APP_VERSION = "v44-0702-1227";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6785,7 +6785,8 @@ function openQuickEditMaterial(id){
       maker: (document.getElementById('qeMaker').value||'').trim(),
       field: document.getElementById('qeField').value||'',
       vendor: (document.getElementById('qeVendor').value||'').trim(),
-      recurring: document.getElementById('qeRecurring').value||'비주기',
+      recurring: document.getElementById('qeRecurring').value||'수시구매',
+      memo: (document.getElementById('qeMemo').value||'').trim(),
     };
     updateRecord(id, patch);
     close();
