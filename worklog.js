@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1250";
+const APP_VERSION = "v44-0702-1253";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6760,11 +6760,11 @@ function openQuickEditMaterial(id){
         <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 160px;gap:10px">
           <div>
             <label style="${LBL}">메모</label>
-            <textarea id="qeMemo" rows="2" placeholder="보관위치, 특이사항 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;resize:none"></textarea>
+            <textarea id="qeMemo" rows="2" placeholder="보관위치, 특이사항 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;resize:none">${esc(_cleanMemo)}</textarea>
           </div>
           <div>
             <label style="${LBL}">마지막 구매일</label>
-            <input type="date" id="qeLastBuy" value="${_lastStock?_lastStock.date:''}" style="width:100%;box-sizing:border-box;height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
+            <input type="date" id="qeLastBuy" value="${item.lastBuyDate||(_lastStock?_lastStock.date:'')}" style="width:100%;box-sizing:border-box;height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none">
           </div>
         </div>
         <div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px">
