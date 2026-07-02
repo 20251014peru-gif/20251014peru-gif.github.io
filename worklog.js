@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0702-1105";
+const APP_VERSION = "v44-0702-1132";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -6510,8 +6510,10 @@ function renderStockOverview(){
   }).sort((a,b)=>{
     const k=MAT_FILTER.sortKey, asc=MAT_FILTER.sortAsc?1:-1;
     let av, bv;
+    const RO=["정기구매","수시구매","계절구매","연간계획","미구매"];
     if(k==="stock"){ av=a.stock; bv=b.stock; }
     else if(k==="unitPrice"){ av=Number(a.item.unitPrice||0); bv=Number(b.item.unitPrice||0); }
+    else if(k==="recurring"){ av=RO.indexOf(a.item.recurring||"수시구매"); bv=RO.indexOf(b.item.recurring||"수시구매"); }
     else { av=(a.item[k]||"").toLowerCase(); bv=(b.item[k]||"").toLowerCase(); }
     if(av<bv) return -1*asc;
     if(av>bv) return 1*asc;
@@ -6538,20 +6540,26 @@ function renderStockOverview(){
   document.querySelectorAll('[id^="sortIcon_"]').forEach(el=>el.textContent='');
   const curIcon=document.getElementById('sortIcon_'+MAT_FILTER.sortKey);
   if(curIcon) curIcon.textContent=MAT_FILTER.sortAsc?' ▲':' ▼';
-  if(!rows.length){ body.innerHTML=`<tr><td colspan="7" class="empty">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</td></tr>`; return; }
+  if(!rows.length){ body.innerHTML=`<tr><td colspan="8" class="empty">${entries.some(e=>e.kind==="item")?"조건에 맞는 품목이 없습니다.":"➕ 품목 추가를 눌러 자주 쓰는 자재를 등록해 보세요."}</td></tr>`; return; }
   body.innerHTML=rows.map(r=>{
     const it=r.item, st=r.stock;
     const safe=Number(it.safetyStock||0);
     const lowCls = safe>0 && st<safe ? "st-low" : (st<=0 ? "st-zero" : "");
     const cleanName = (it.itemName||"").replace(/^\[.*?\]/,"").trim();
     const shopId = it.shopId||it.itemCode||"";
-    return `<tr data-id="${it.id}" class="${lowCls}" style="cursor:pointer">
+    const isRetired = (it.recurring||'') === '미구매';
+    const nameStyle = isRetired ? 'font-size:13px;text-decoration:line-through;color:#b0bec5' : 'font-size:13px';
+    const rowOpacity = isRetired ? 'opacity:0.55;' : '';
+    const recLabel = {'정기구매':'정기','수시구매':'수시','계절구매':'계절','연간계획':'연간','미구매':'미구매'}[it.recurring||''] || (it.recurring||'');
+    const recColor = {'정기구매':'#3f7cb8','수시구매':'#64748b','계절구매':'#00838f','연간계획':'#8e44ad','미구매':'#b0bec5'}[it.recurring||''] || '#94a3b8';
+    return `<tr data-id="${it.id}" class="${lowCls}" style="cursor:pointer;${rowOpacity}">
       <td style="font-size:11px;color:#94a3b8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(shopId)}</td>
       <td><span class="pill ${fieldClass(it.field)}" style="font-size:10px">${esc(it.field||"")}</span></td>
       <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px" title="${esc(it.itemName||"")}">
-        <b style="font-size:13px">${esc(cleanName)}</b>
+        <b style="${nameStyle}">${esc(cleanName)}</b>
       </td>
       <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#64748b" title="${esc(it.spec||'')}">${esc(it.spec||'')}</td>
+      <td style="font-size:10px;color:${recColor};font-weight:700;white-space:nowrap">${recLabel}</td>
       <td style="font-size:12px;color:#64748b;text-align:center">${esc(it.unit||"")}</td>
       <td class="num" style="font-size:12px">${it.unitPrice?won(it.unitPrice):""}</td>
       <td class="num"><b style="font-size:14px;color:${st<=0?'#e74c3c':safe>0&&st<safe?'#f39c12':'#1a2f45'}">${st}</b></td>
@@ -6699,6 +6707,10 @@ function openQuickEditMaterial(id){
         <div>
           <label style="${LBL}">제조원</label>
           <input type="text" id="qeMaker" value="${esc(item.maker||'')}" placeholder="예: (주)동원피앤아이" style="${INP}">
+        </div>
+        <div style="grid-column:1/-1">
+          <label style="${LBL}">메모</label>
+          <textarea id="qeMemo" rows="2" placeholder="보관위치, 특이사항 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;resize:vertical">${esc(item.memo||'')}</textarea>
         </div>
         <div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px">
           <button id="qeCancel" type="button" style="flex:1;height:44px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>
