@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1432</title>
+  <title>업무일지 v44-0703-1447</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1432</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1447</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1400,16 +1400,17 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       <div id="expV2Dashboard" style="width:100%;box-sizing:border-box;margin-bottom:16px"></div>
       <!-- 연/월 선택 바 (목록·정산표·중식·인건비 공유) -->
       <div id="expYmBar" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#fff;border:1.5px solid #dbe6f4;border-radius:14px;padding:10px 12px">
-        <select id="expYmYear" style="height:46px;min-width:112px;padding:0 8px;border:1.5px solid #3f7cb8;border-radius:12px;font-size:16px;font-weight:800;font-family:inherit;background:#eef5ff;color:#0C447C;outline:none;text-align:center;flex-shrink:0"></select>
-        <div id="expYmMonths" style="display:flex;gap:6px;flex:1;overflow-x:auto;padding-bottom:2px"></div>
+        <select id="expYmYear" style="height:46px;width:120px;min-width:120px;flex:0 0 120px;padding:0 8px;border:1.5px solid #3f7cb8;border-radius:12px;font-size:16px;font-weight:800;font-family:inherit;background:#eef5ff;color:#0C447C;outline:none;text-align:center;flex-shrink:0"></select>
+        <div id="expYmMonths" style="display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;padding-bottom:2px"></div>
       </div>
 
       <!-- 서브탭: 목록 / 정산표 -->
-      <div style="display:flex;gap:6px;margin-bottom:12px">
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
         <button type="button" id="expSubTabList" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 목록</button>
         <button type="button" id="expSubTabSettle" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🧮 정산표</button>
         <button type="button" id="expSubTabMeal" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🍚 중식</button>
         <button type="button" id="expSubTabLabor" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🧾 인건비+정기분</button>
+        <span id="expSubTabActions" style="display:flex;gap:6px;margin-left:auto;align-items:center;flex-wrap:wrap"></span>
       </div>
       <div id="expListWrap">
       <!-- 필터 1행 3열 -->
@@ -2912,7 +2913,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1432"></script>
+<script src="worklog.js?v=44-20260703t1447"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8532,7 +8533,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1432';
+    if(el) el.textContent = 'v44-0703-1447';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10237,7 +10238,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1432 로드');
+  console.log('[expV2] v44-0703-1447 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -10584,6 +10585,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       btn.style.borderColor=on?'#3f7cb8':'#dbe6f4';
     }
     paint(bl,which==='list'); paint(bs,which==='settle'); paint(bm,which==='meal'); paint(bb,which==='labor');
+    if(typeof window.syncExpActions==='function') window.syncExpActions(which);
     if(which==='settle') window.renderExpSettle();
     if(which==='meal'&&typeof window.renderExpMeal==='function') window.renderExpMeal();
     if(which==='labor'&&typeof window.renderExpLabor==='function') window.renderExpLabor();
@@ -11606,7 +11608,36 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     }
     apply();
   };
-  function boot(){ window.renderExpYmBar(); }
+  /* ── 서브탭 행에 각 탭 액션 버튼 통합 (1행 배치) ── */
+  window._expActMoved=false;
+  window.setupExpActions=function(){
+    if(window._expActMoved) return;
+    var host=g('expSubTabActions'); if(!host) return;
+    function mv(el,tab){ if(!el) return; el.dataset.acttab=tab; el.style.marginLeft='0'; host.appendChild(el); }
+    mv(g('expSettleCopyBtn'),'settle'); mv(g('expSettleCount'),'settle');
+    var pn=g('expMealPriceN'); if(pn&&pn.closest('label')) mv(pn.closest('label'),'meal');
+    var ps=g('expMealPriceS'); if(ps&&ps.closest('label')) mv(ps.closest('label'),'meal');
+    mv(g('expMealStaffBtn'),'meal'); mv(g('expMealCopyBtn'),'meal'); mv(g('expMealStatus'),'meal');
+    mv(g('expLaborAddBtn'),'labor'); mv(g('expLaborCopyBtn'),'labor'); mv(g('expLaborStatus'),'labor');
+    /* 비워진 원래 컨트롤 행 숨김 (숨긴 월 셀렉트만 남음) */
+    ['expSettleMonthSel','expMealMonthSel','expLaborMonthSel'].forEach(function(id){
+      var sel=g(id); if(sel&&sel.parentElement) sel.parentElement.style.display='none';
+    });
+    window._expActMoved=true;
+  };
+  window.syncExpActions=function(which){
+    window.setupExpActions();
+    var host=g('expSubTabActions'); if(!host) return;
+    [].forEach.call(host.children,function(el){
+      var isLabel=el.tagName==='LABEL';
+      el.style.display=(el.dataset.acttab===which)?(isLabel?'flex':''):'none';
+    });
+  };
+
+  function boot(){
+    window.renderExpYmBar();
+    window.syncExpActions('list');
+  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot);
   else boot();
   console.log('[expYmBar] 연/월 선택 바 로드');
