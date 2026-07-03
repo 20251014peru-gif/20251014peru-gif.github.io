@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0702-1901</title>
+  <title>업무일지 v44-0703-0915</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0702-1901</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-0915</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2894,7 +2894,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260702t1901"></script>
+<script src="worklog.js?v=44-20260703t0915"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8507,7 +8507,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0702-1901';
+    if(el) el.textContent = 'v44-0703-0915';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10184,7 +10184,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0702-1901 로드');
+  console.log('[expV2] v44-0703-0915 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -10811,17 +10811,26 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       ov.querySelector('#mealStaffSave').addEventListener('click',function(){
         syncInputs();
         var clean=work.filter(function(s){ return s.name; });
+        /* 기존 조(shift) 기록: 이름 기준 */
+        var oldShift={};
+        _cur.staff.forEach(function(s){ oldShift[s.name]=s.shift||''; });
         /* 기존 체크 데이터 유지 (이름 기준) */
         var newChecks={};
         clean.forEach(function(s){ newChecks[s.name]=(_cur.checks[s.name]||[]).slice(); });
         _cur.staff=clean;
         _cur.checks=newChecks;
-        /* 체크 0건인 직원 → 평일 자동 채움 (경비 홀짝 반영) */
+        /* 자동 채움: ① 체크 0건(새 직원) ② 조가 바뀐 직원(홀↔짝 재배치) */
+        var reshuffled=[];
         _cur.staff.forEach(function(s){
-          if(!_cur.checks[s.name].length) _cur.checks[s.name]=eligibleDays(s);
+          var sh=s.shift||'';
+          if(!_cur.checks[s.name].length){ _cur.checks[s.name]=eligibleDays(s); }
+          else if((s.name in oldShift) && oldShift[s.name]!==sh){
+            _cur.checks[s.name]=eligibleDays(s);
+            reshuffled.push(s.name);
+          }
         });
         persist(); ov.remove(); window.renderExpMeal();
-        if(typeof toast==='function') toast('명단 저장됐어요 — 새 직원은 평일 자동 채움');
+        if(typeof toast==='function') toast(reshuffled.length?('명단 저장 — '+reshuffled.join(', ')+' 조 변경으로 재배치됐어요'):'명단 저장됐어요 — 새 직원은 평일 자동 채움');
       });
     }
     draw();
