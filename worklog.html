@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1131</title>
+  <title>업무일지 v44-0703-1152</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1131</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1152</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2905,7 +2905,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1131"></script>
+<script src="worklog.js?v=44-20260703t1152"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8518,7 +8518,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1131';
+    if(el) el.textContent = 'v44-0703-1152';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10184,7 +10184,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1131 로드');
+  console.log('[expV2] v44-0703-1152 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -10198,18 +10198,19 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
   function isJpFn(e){ return e.expType==='전표'||e.isJeonpyo||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||''); }
   function classify(e){
-    if(e.expType==='급여') return '인건비';
-    if(isJpFn(e)) return (e.expSubType==='수도'||e.expSubType==='전기')?'수도광열':'전표';
-    if(e.expType==='세금계산서') return (e.expSubType==='공사성')?'기타정산':'월정산';
-    return '개인';
+    if(e.expType==='급여') return '기타';
+    if(isJpFn(e)) return (e.expSubType==='수도'||e.expSubType==='전기')?'수도광열비':'선납부';
+    if(e.expType==='세금계산서') return (e.expSubType&&e.expSubType!=='공사성'&&e.expSubType==='정기분')?'월정산':'기타정산';
+    return '선결재';
   }
+  /* fixedRows: 엑셀 시트와 동일한 고정 행수 (부족분 빈 행 패딩) */
   var GROUPS=[
-    {key:'개인',     label:'개인지출',         color:'#3f7cb8', bg:'#f0f6ff'},
-    {key:'전표',     label:'전표',             color:'#7c3aed', bg:'#f5f3ff'},
-    {key:'기타정산', label:'기타정산(공사성)', color:'#c2410c', bg:'#fff7ed', midTotalAfter:true},
-    {key:'월정산',   label:'월정산(정기분)',   color:'#ea580c', bg:'#fffbea'},
-    {key:'수도광열', label:'수도광열비',       color:'#0e7490', bg:'#ecfeff'},
-    {key:'인건비',   label:'인건비',           color:'#16a34a', bg:'#f0fdf4'}
+    {key:'선결재',     label:'선결재(개인지출)',   color:'#3f7cb8', bg:'#f0f6ff', fixedRows:15},
+    {key:'선납부',     label:'선납부(전표)',       color:'#7c3aed', bg:'#f5f3ff', fixedRows:6},
+    {key:'기타정산',   label:'기타정산(비정기)',   color:'#c2410c', bg:'#fff7ed', fixedRows:10, midTotalAfter:true},
+    {key:'월정산',     label:'월정산(정기)',       color:'#ea580c', bg:'#fffbea', fixedRows:10},
+    {key:'수도광열비', label:'수도광열비',         color:'#0e7490', bg:'#ecfeff', fixedRows:2},
+    {key:'기타',       label:'기타(인건비·중식)',  color:'#16a34a', bg:'#f0fdf4', fixedRows:2}
   ];
 
   function rowVals(e){
@@ -10243,7 +10244,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   function buildMap(ym){
     var all=(typeof entries!=='undefined'?entries:[]).filter(function(e){return e.kind==='expense'&&(e.date||'').startsWith(ym);});
     all.sort(function(a,b){return (a.date||'').localeCompare(b.date||'')||((a.createdAt||0)-(b.createdAt||0));});
-    var map={'개인':[],'전표':[],'기타정산':[],'월정산':[],'수도광열':[],'인건비':[]};
+    var map={'선결재':[],'선납부':[],'기타정산':[],'월정산':[],'수도광열비':[],'기타':[]};
     all.forEach(function(e){ map[classify(e)].push(e); });
     /* 📅 월정산 자동 반영 (인건비 탭 월정산 표) */
     try{
@@ -10257,7 +10258,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         var labor=window.getLaborMonthTotal(ym);
         if(labor&&labor.total>0){
           var lt=Math.round(labor.total*0.1);
-          map['인건비'].push({__virtual:true, title:'관리인건비', supplyAmt:labor.total, taxAmt:lt, amount:labor.total+lt,
+          map['기타'].push({__virtual:true, title:'관리인건비', supplyAmt:labor.total, taxAmt:lt, amount:labor.total+lt,
             memo:'도급비 산출 '+labor.count+'명'});
         }
       }
@@ -10268,12 +10269,12 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         var meal=window.getMealMonthTotal(ym);
         if(meal&&meal.total>0){
           var mt=Math.round(meal.total*0.1);
-          map['인건비'].push({__virtual:true, title:'관리비 중식대', supplyAmt:meal.total, taxAmt:mt, amount:meal.total+mt,
+          map['기타'].push({__virtual:true, title:'관리비 중식대', supplyAmt:meal.total, taxAmt:mt, amount:meal.total+mt,
             memo:'중식 '+meal.count+'건 (일반 '+meal.normal+' · 특식 '+meal.special+')'});
         }
       }
     }catch(e){ console.error('[정산표 중식]',e); }
-    var vcnt=map['인건비'].concat(map['월정산']).filter(function(x){return x.__virtual;}).length;
+    var vcnt=map['기타'].concat(map['월정산']).filter(function(x){return x.__virtual;}).length;
     return {map:map, total:all.length+vcnt};
   }
 
@@ -10328,30 +10329,32 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var uSum=0;                         /* 수도광열 금액 (제외 계산용) */
     GROUPS.forEach(function(grp){
       var arr=d.map[grp.key]||[];
-      if(arr.length){
+      var need=Math.max(arr.length, grp.fixedRows||0);
+      if(need>0){
         var s=0,t=0,a=0;
-        arr.forEach(function(e,i){
-          var v=rowVals(e);
-          s+=v.sup; t+=v.tax; a+=v.amount;
-          html+='<tr'+(e.id?' data-settleid="'+esc(e.id)+'" style="cursor:pointer"':'')+'>'
-            +(i===0?'<td rowspan="'+(arr.length+1)+'" style="'+TD+';background:'+grp.bg+';color:'+grp.color+';font-weight:800;text-align:center;vertical-align:middle;white-space:nowrap">'+esc(grp.key)+'</td>':'')
+        for(var i=0;i<need;i++){
+          var e=arr[i]||null;
+          var v=e?rowVals(e):{sup:0,tax:0,amount:0};
+          if(e){ s+=v.sup; t+=v.tax; a+=v.amount; }
+          html+='<tr'+(e&&e.id?' data-settleid="'+esc(e.id)+'" style="cursor:pointer"':'')+'>'
+            +(i===0?'<td rowspan="'+(need+1)+'" style="'+TD+';background:'+grp.bg+';color:'+grp.color+';font-weight:800;text-align:center;vertical-align:middle;white-space:nowrap">'+esc(grp.key)+'</td>':'')
             +'<td style="'+TD+';text-align:center;color:#94a3b8">'+(i+1)+'</td>'
-            +'<td style="'+TD+'">'+esc(rowTitle(e))+'</td>'
-            +'<td style="'+TDR+'">'+cell(v.sup)+'</td>'
-            +'<td style="'+TDR+';color:#94a3b8">'+cell(v.tax)+'</td>'
-            +'<td style="'+TDR+';font-weight:800">'+cell(v.amount)+'</td>'
-            +'<td style="'+TD+';font-size:12px;color:#64748b">'+esc(rowNote(e))+'</td>'
+            +'<td style="'+TD+'">'+(e?esc(rowTitle(e)):'')+'</td>'
+            +'<td style="'+TDR+'">'+(e?cell(v.sup):'')+'</td>'
+            +'<td style="'+TDR+';color:#94a3b8">'+(e?cell(v.tax):'')+'</td>'
+            +'<td style="'+TDR+';font-weight:800">'+(e?cell(v.amount):'')+'</td>'
+            +'<td style="'+TD+';font-size:12px;color:#64748b">'+(e?esc(rowNote(e)):'')+'</td>'
             +'</tr>';
-        });
+        }
         gSum+=s; gTax+=t; gAmt+=a;
-        if(grp.key==='수도광열') uSum+=s;
-        if(grp.midTotalAfter||['개인','전표','기타정산'].indexOf(grp.key)>=0){ mSum+=s; mTax+=t; mAmt+=a; }
+        if(grp.key==='수도광열비') uSum+=s;
+        if(['선결재','선납부','기타정산'].indexOf(grp.key)>=0){ mSum+=s; mTax+=t; mAmt+=a; }
         html+='<tr>'
           +'<td colspan="2" style="'+TD+';background:'+grp.bg+';text-align:center;font-weight:800;color:'+grp.color+'">소 계</td>'
           +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(s)+'</td>'
           +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+'">'+cell(t)+'</td>'
           +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(a)+'</td>'
-          +'<td style="'+TD+';background:'+grp.bg+'"></td>'
+          +'<td style="'+TD+';background:'+grp.bg+';text-align:center"><button type="button" data-gcopy="'+esc(grp.key)+'" title="'+esc(grp.key)+' 내용 행만 복사 ('+need+'행)" style="border:1.5px solid '+grp.color+';background:#fff;color:'+grp.color+';border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">📋 복사</button></td>'
           +'</tr>';
       }
       /* 🟠 중간 합계: 개인+전표+기타정산 */
@@ -10388,7 +10391,41 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         if(typeof window.openExpenseEditor==='function') window.openExpenseEditor(tr.dataset.settleid);
       });
     });
+    /* 그룹별 복사: 내용 행만 (지출내용·금액·부가세·합계, 빈 행 포함 고정 행수) */
+    box.querySelectorAll('[data-gcopy]').forEach(function(btn){
+      btn.addEventListener('click',function(ev){
+        ev.stopPropagation();
+        copyGroupRows(btn.dataset.gcopy);
+      });
+    });
   };
+
+  /* ── 그룹 내용 행만 복사 (소계·합계 제외) ── */
+  function copyGroupRows(key){
+    try{
+      if(!window._expFinUnlocked){ if(typeof toast==='function') toast('🔒 비밀번호 확인 후 복사할 수 있어요'); return; }
+      var ym=(g('expSettleMonthSel')||{}).value||kstNow().toISOString().slice(0,7);
+      var d=buildMap(ym);
+      var grp=null; GROUPS.forEach(function(x){ if(x.key===key) grp=x; });
+      if(!grp) return;
+      var arr=d.map[key]||[];
+      var need=Math.max(arr.length, grp.fixedRows||0);
+      var out=[];
+      for(var i=0;i<need;i++){
+        var e=arr[i]||null;
+        if(e){ var v=rowVals(e); out.push([rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount)]); }
+        else out.push(['','','','']);
+      }
+      var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
+      function done(){ if(typeof toast==='function') toast('📋 '+key+' '+need+'행 복사됐어요 — 엑셀 해당 구간에 붙여넣으세요'); }
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(tsv).then(done).catch(function(){ fallbackCopy(tsv); done(); });
+      } else { fallbackCopy(tsv); done(); }
+    }catch(err){
+      console.error('[그룹 복사]',err);
+      if(typeof toast==='function') toast('복사 오류: '+(err.message||err));
+    }
+  }
 
   /* ── 엑셀 복사 (탭 구분 텍스트) ── */
   function copySettleToExcel(){
@@ -10403,16 +10440,22 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var gSum=0,gTax=0,gAmt=0,mSum=0,mTax=0,mAmt=0,uSum=0;
       GROUPS.forEach(function(grp){
         var arr=d.map[grp.key]||[];
-        if(arr.length){
+        var need=Math.max(arr.length, grp.fixedRows||0);
+        if(need>0){
           var s=0,t=0,a=0;
-          arr.forEach(function(e,i){
-            var v=rowVals(e);
-            s+=v.sup; t+=v.tax; a+=v.amount;
-            out.push([i===0?grp.key:'', String(i+1), rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount), rowNote(e)]);
-          });
+          for(var i=0;i<need;i++){
+            var e=arr[i]||null;
+            if(e){
+              var v=rowVals(e);
+              s+=v.sup; t+=v.tax; a+=v.amount;
+              out.push([i===0?grp.key:'', String(i+1), rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount), rowNote(e)]);
+            } else {
+              out.push([i===0?grp.key:'', String(i+1), '', '', '', '', '']);
+            }
+          }
           gSum+=s; gTax+=t; gAmt+=a;
-          if(grp.key==='수도광열') uSum+=s;
-          if(['개인','전표','기타정산'].indexOf(grp.key)>=0){ mSum+=s; mTax+=t; mAmt+=a; }
+          if(grp.key==='수도광열비') uSum+=s;
+          if(['선결재','선납부','기타정산'].indexOf(grp.key)>=0){ mSum+=s; mTax+=t; mAmt+=a; }
           out.push(['','','소 계', raw(s), raw(t), raw(a), '']);
         }
         if(grp.midTotalAfter){
