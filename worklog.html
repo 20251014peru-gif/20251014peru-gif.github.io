@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1042</title>
+  <title>업무일지 v44-0703-1050</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1042</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1050</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1403,6 +1403,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button type="button" id="expSubTabList" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 목록</button>
         <button type="button" id="expSubTabSettle" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🧮 정산표</button>
         <button type="button" id="expSubTabMeal" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🍚 중식</button>
+        <button type="button" id="expSubTabLabor" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🧾 인건비</button>
       </div>
       <div id="expListWrap">
       <!-- 필터 1행 3열 -->
@@ -1415,7 +1416,6 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           <option value="개인지출">💸 개인지출</option>
           <option value="세금계산서">📃 세금계산서</option>
           <option value="전표">📋 전표</option>
-          <option value="급여">💼 급여</option>
         </select>
         <select id="expV2IssuedSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45;width:100%;box-sizing:border-box">
           <option value="">발급여부 전체</option>
@@ -1457,6 +1457,18 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">셀 클릭=체크 · 날짜 클릭=열 전체 · ⚡=평일 채우기(경비 A조=홀수·B조=짝수) · 비고 클릭=특식→휴무→해제 · 공휴일 자동 · 새 직원은 평일 자동 1</div>
         <div id="expMealGrid" style="overflow-x:auto;margin-bottom:20px"></div>
         <div id="expMealSummary" style="overflow-x:auto"></div>
+      </div>
+
+      <!-- 인건비 (도급비 산출) -->
+      <div id="expLaborWrap" style="display:none">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <select id="expLaborMonthSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45"></select>
+          <button type="button" id="expLaborAddBtn" style="height:38px;padding:0 14px;border-radius:10px;border:1.5px solid #3f7cb8;background:#fff;color:#3f7cb8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">➕ 인원 추가</button>
+          <button type="button" id="expLaborCopyBtn" style="height:38px;padding:0 16px;border-radius:10px;border:1.5px solid #16a34a;background:#16a34a;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📑 엑셀 복사</button>
+          <span id="expLaborStatus" style="font-size:12px;color:#aab8c8;font-weight:600;margin-left:auto"></span>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">총급여·수당·보험료 입력 → 퇴직금(합÷12)·인당단가·합계 자동 계산 · 정산표 급여 그룹에 관리인건비로 자동 반영</div>
+        <div id="expLaborArea" style="overflow-x:auto"></div>
       </div>
     </div>
   </div>
@@ -2678,7 +2690,6 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button type="button" data-etype="개인지출" class="expV2TypeBtn" style="flex:1;min-width:80px;height:40px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">💸 개인지출</button>
         <button type="button" data-etype="세금계산서" class="expV2TypeBtn" style="flex:1;min-width:80px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📃 세금계산서</button>
         <button type="button" data-etype="전표" class="expV2TypeBtn" style="flex:1;min-width:80px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 전표</button>
-        <button type="button" data-etype="급여" class="expV2TypeBtn" style="flex:1;min-width:80px;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">💼 급여</button>
       </div>
     </div>
 
@@ -2894,7 +2905,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1042"></script>
+<script src="worklog.js?v=44-20260703t1050"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8507,7 +8518,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1042';
+    if(el) el.textContent = 'v44-0703-1050';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8524,8 +8535,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   /* ── 하위 구분 정의 ── */
   var EXP_SUBTYPES = {
     '세금계산서': ['정기분','공사성'],
-    '전표': ['전기','수도','유선방송','전화','정수기','기타'],
-    '급여': ['관리인건비','중식대']
+    '전표': ['전기','수도','유선방송','전화','정수기','기타']
   };
   var EXP_TYPE_COLORS = { '개인지출':'#3f7cb8', '세금계산서':'#c2410c', '전표':'#7c3aed', '급여':'#16a34a' };
 
@@ -9029,7 +9039,6 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var list=all.filter(function(e){
       if(monthSel&&!(e.date||'').startsWith(monthSel)) return false;
       if(typeSel==='전표'){ if(!isJpFilter(e)||e.expType==='급여') return false; }
-      else if(typeSel==='급여'){ if(e.expType!=='급여') return false; }
       else if(typeSel){ if(e.expType!==typeSel||isJpFilter(e)) return false; }
       if(issuedSel==='issued'&&!e.isIssued) return false;
       if(issuedSel==='unissued'&&e.isIssued) return false;
@@ -9072,7 +9081,6 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
     /* 종류별 그룹핑 */
     function isJpFn(e){ return !!(e.isJeonpyo||e.expType==='전표'||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); }
-    var salary   = list.filter(function(e){ return e.expType==='급여'; });
     var personal = list.filter(function(e){ return e.expType!=='급여'&&!isJpFn(e)&&e.expType!=='세금계산서'; });
     var tax      = list.filter(function(e){ return e.expType!=='급여'&&!isJpFn(e)&&e.expType==='세금계산서'; });
     var jeonpyo  = list.filter(function(e){ return e.expType!=='급여'&&isJpFn(e); });
@@ -9098,7 +9106,6 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         html += makeSection(tax,'#c2410c','📃','세금계산서',tUnissued?' · <span style="color:#c2410c">미발급 '+tUnissued+'건</span>':'');
       }
       if(jeonpyo.length) html += makeSection(jeonpyo,'#7c3aed','📋','전표');
-      if(salary.length)  html += makeSection(salary,'#16a34a','💼','급여');
     } else {
       html = '<div style="'+G+'">'+list.map(makeCard).join('')+'</div>';
     }
@@ -9131,15 +9138,13 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var isJp = e.isJeonpyo || /\[전표\]/.test(e.title||'') || /\[전표\]/.test(e.memo||'');
       return !isJp;
     }
-    var salary=tm.filter(function(e){ return e.expType==='급여'; });
     var personal=tm.filter(function(e){ return e.expType!=='급여'&&!e.isJeonpyo&&e.expType!=='세금계산서'&&e.expType!=='전표'&&!(/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); });
     var tax=tm.filter(function(e){ return e.expType!=='급여'&&!e.isJeonpyo&&e.expType==='세금계산서'&&!(/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); });
     var jeonpyo=tm.filter(function(e){ return e.expType!=='급여'&&(e.isJeonpyo||e.expType==='전표'||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); });
     var pSum=personal.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
     var tSum=tax.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
     var jSum=jeonpyo.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
-    var sSum=salary.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
-    var total=pSum+tSum+jSum+sSum;
+    var total=pSum+tSum+jSum;
     var taxUnissued=tax.filter(function(e){return !e.isIssued;}).length;
     var ymLabel=ym||'전체';
     box.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;width:100%;box-sizing:border-box">'
@@ -9158,12 +9163,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       +'<div style="font-size:26px;font-weight:800;color:#7c3aed;line-height:1.1">'+fmt(jSum)+'<span style="font-size:15px">원</span></div>'
       +'<div style="font-size:13px;color:#aab8c8;margin-top:6px">'+jeonpyo.length+'건</div>'
       +'</div>'
-      +'<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:18px 20px">'
-      +'<div style="font-size:13px;font-weight:700;color:#7a92a8;margin-bottom:8px">💼 급여</div>'
-      +'<div style="font-size:26px;font-weight:800;color:#16a34a;line-height:1.1">'+fmt(sSum)+'<span style="font-size:15px">원</span></div>'
-      +'<div style="font-size:13px;color:#aab8c8;margin-top:6px">'+salary.length+'건</div>'
-      +'</div>'
-      +'<div style="background:#eef6ff;border:1.5px solid #7db4e6;border-radius:14px;padding:18px 20px">'
+            +'<div style="background:#eef6ff;border:1.5px solid #7db4e6;border-radius:14px;padding:18px 20px">'
       +'<div style="font-size:13px;font-weight:700;color:#7a92a8;margin-bottom:8px">💰 '+ymLabel+' 합계</div>'
       +'<div style="font-size:26px;font-weight:800;color:#0C447C;line-height:1.1">'+fmt(total)+'<span style="font-size:15px">원</span></div>'
       +'<div style="font-size:13px;color:#aab8c8;margin-top:6px">'+tm.length+'건</div>'
@@ -10184,7 +10184,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1042 로드');
+  console.log('[expV2] v44-0703-1050 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -10244,6 +10244,16 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     all.sort(function(a,b){return (a.date||'').localeCompare(b.date||'')||((a.createdAt||0)-(b.createdAt||0));});
     var map={'개인':[],'전표':[],'공사':[],'정기':[],'급여':[]};
     all.forEach(function(e){ map[classify(e)].push(e); });
+    /* 🧾 관리인건비 자동 반영 (인건비 탭 → 급여 그룹) */
+    try{
+      if(typeof window.getLaborMonthTotal==='function'){
+        var labor=window.getLaborMonthTotal(ym);
+        if(labor&&labor.total>0){
+          map['급여'].push({__virtual:true, title:'관리인건비', amount:labor.total, supplyAmt:labor.total, taxAmt:0,
+            memo:'도급비 산출 '+labor.count+'명'});
+        }
+      }
+    }catch(e){ console.error('[정산표 인건비]',e); }
     /* 🍚 중식대 자동 반영 (중식이용내역 → 급여 그룹) */
     try{
       if(typeof window.getMealMonthTotal==='function'){
@@ -10254,7 +10264,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         }
       }
     }catch(e){ console.error('[정산표 중식]',e); }
-    return {map:map, total:all.length+(map['급여'].some(function(x){return x.__virtual;})?1:0)};
+    return {map:map, total:all.length+map['급여'].filter(function(x){return x.__virtual;}).length};
   }
 
   window.renderExpSettle=function(){
@@ -10362,20 +10372,22 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
   /* ── 서브탭 전환 ── */
   function setSubTab(which){
-    var lw=g('expListWrap'), sw=g('expSettleWrap'), mw=g('expMealWrap');
-    var bl=g('expSubTabList'), bs=g('expSubTabSettle'), bm=g('expSubTabMeal');
+    var lw=g('expListWrap'), sw=g('expSettleWrap'), mw=g('expMealWrap'), bw=g('expLaborWrap');
+    var bl=g('expSubTabList'), bs=g('expSubTabSettle'), bm=g('expSubTabMeal'), bb=g('expSubTabLabor');
     if(lw) lw.style.display=which==='list'?'':'none';
     if(sw) sw.style.display=which==='settle'?'':'none';
     if(mw) mw.style.display=which==='meal'?'':'none';
+    if(bw) bw.style.display=which==='labor'?'':'none';
     function paint(btn,on){
       if(!btn) return;
       btn.style.background=on?'#3f7cb8':'#f7faff';
       btn.style.color=on?'#fff':'#7a92a8';
       btn.style.borderColor=on?'#3f7cb8':'#dbe6f4';
     }
-    paint(bl,which==='list'); paint(bs,which==='settle'); paint(bm,which==='meal');
+    paint(bl,which==='list'); paint(bs,which==='settle'); paint(bm,which==='meal'); paint(bb,which==='labor');
     if(which==='settle') window.renderExpSettle();
     if(which==='meal'&&typeof window.renderExpMeal==='function') window.renderExpMeal();
+    if(which==='labor'&&typeof window.renderExpLabor==='function') window.renderExpLabor();
   }
 
   /* ── 바인딩 (1회) ── */
@@ -10383,6 +10395,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var bl=g('expSubTabList');   if(bl&&!bl._b){bl._b=true;bl.addEventListener('click',function(){setSubTab('list');});}
     var bs=g('expSubTabSettle'); if(bs&&!bs._b){bs._b=true;bs.addEventListener('click',function(){setSubTab('settle');});}
     var bm=g('expSubTabMeal'); if(bm&&!bm._b){bm._b=true;bm.addEventListener('click',function(){setSubTab('meal');});}
+    var bb=g('expSubTabLabor'); if(bb&&!bb._b){bb._b=true;bb.addEventListener('click',function(){setSubTab('labor');});}
     var ms=g('expSettleMonthSel'); if(ms&&!ms._b){ms._b=true;ms.addEventListener('change',function(){window.renderExpSettle();});}
     var cp=g('expSettleCopyBtn');  if(cp&&!cp._b){cp._b=true;cp.addEventListener('click',copySettleToExcel);}
   }
@@ -10880,6 +10893,188 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindMeal);
   else bindMeal();
   console.log('[expMeal] 중식이용내역 로드');
+})();
+
+/* ===== 인건비 (도급비 산출 내역: 퇴직금·인당단가·합계 자동) ===== */
+(function(){
+  var g=function(id){return document.getElementById(id);};
+  var fmt=function(n){return Math.round(Number(n)||0).toLocaleString('ko-KR');};
+  var esc=function(s){return (s||'').toString().replace(/[&<>"]/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]);});};
+  var DEFAULT_ROWS=[
+    {pos:'시설소장', name:'안영삼', base:0, ot:0, skill:0, health:0, pension:0, employ:0},
+    {pos:'시설주임', name:'조태경', base:0, ot:0, skill:0, health:0, pension:0, employ:0}
+  ];
+  var _cur=null, _saveTimer=null;
+
+  function calcRow(r){
+    var base=Number(r.base)||0, ot=Number(r.ot)||0, skill=Number(r.skill)||0;
+    var sev=Math.round((base+ot+skill)/12);                    /* 퇴직금 = (총급여+연장+업무능력)/12 */
+    var unit=base+ot+skill+sev+(Number(r.health)||0)+(Number(r.pension)||0)+(Number(r.employ)||0);
+    return {sev:sev, unit:unit};
+  }
+  function calcTotal(rows){
+    return rows.reduce(function(s,r){ return s+calcRow(r).unit; },0);
+  }
+
+  function findRec(ym){
+    if(typeof entries==='undefined') return null;
+    return entries.find(function(e){ return e.kind==='labor_month'&&e.ym===ym; })||null;
+  }
+  function loadMonth(ym){
+    var rec=findRec(ym);
+    if(rec){ rec.rows=rec.rows||[]; _cur=rec; return; }
+    var prev=(typeof entries!=='undefined')?entries.filter(function(e){return e.kind==='labor_month'&&e.ym<ym&&e.rows&&e.rows.length;})
+      .sort(function(a,b){return (b.ym||'').localeCompare(a.ym||'');})[0]:null;
+    _cur={__virtual:true, kind:'labor_month', ym:ym, date:ym+'-01', title:ym+' 도급비 산출 내역',
+      rows: prev?JSON.parse(JSON.stringify(prev.rows)):JSON.parse(JSON.stringify(DEFAULT_ROWS))};
+  }
+  function persist(){
+    if(!_cur) return;
+    var st=g('expLaborStatus'); if(st) st.textContent='저장 중…';
+    clearTimeout(_saveTimer);
+    _saveTimer=setTimeout(function(){
+      try{
+        var payload={kind:'labor_month', ym:_cur.ym, date:_cur.ym+'-01', title:_cur.ym+' 도급비 산출 내역', rows:_cur.rows};
+        if(_cur.__virtual){
+          payload.createdAt=Date.now();
+          if(typeof addRecord==='function'){ var rec=addRecord(payload); _cur.id=rec.id; delete _cur.__virtual; }
+        } else if(_cur.id && typeof updateRecord==='function'){
+          updateRecord(_cur.id, payload);
+        }
+        var st2=g('expLaborStatus');
+        if(st2) st2.textContent='✅ 저장됨 '+kstNow().toISOString().slice(11,16);
+        if(typeof window.renderExpSettle==='function') window.renderExpSettle();
+      }catch(err){
+        console.error('[인건비 저장]',err);
+        if(typeof toast==='function') toast('인건비 저장 오류: '+(err.message||err));
+      }
+    },600);
+  }
+
+  /* 외부 노출: 정산표 연동 */
+  window.getLaborMonthTotal=function(ym){
+    var rec=findRec(ym);
+    if(!rec||!rec.rows||!rec.rows.length) return null;
+    var total=calcTotal(rec.rows);
+    return total>0?{total:total, count:rec.rows.length}:null;
+  };
+
+  function fillMonthSel(){
+    var sel=g('expLaborMonthSel'); if(!sel) return;
+    var months=[];
+    (typeof entries!=='undefined'?entries:[]).forEach(function(e){
+      if(e.kind==='labor_month'&&e.ym&&months.indexOf(e.ym)<0) months.push(e.ym);
+      if(e.kind==='expense'){ var m=(e.date||'').slice(0,7); if(m&&months.indexOf(m)<0) months.push(m); }
+    });
+    var thisYm=kstNow().toISOString().slice(0,7);
+    if(months.indexOf(thisYm)<0) months.push(thisYm);
+    months.sort().reverse();
+    var cur=sel._init?sel.value:thisYm;
+    sel._init=true;
+    sel.innerHTML=months.map(function(m){return '<option value="'+m+'"'+(m===cur?' selected':'')+'>'+m+'</option>';}).join('');
+    if(months.indexOf(cur)>=0) sel.value=cur;
+  }
+
+  window.renderExpLabor=function(){
+    var box=g('expLaborArea'); if(!box) return;
+    fillMonthSel();
+    var ym=(g('expLaborMonthSel')||{}).value||kstNow().toISOString().slice(0,7);
+    if(!_cur||_cur.ym!==ym) loadMonth(ym);
+    var TH='padding:9px 10px;font-size:12px;font-weight:800;color:#fff;background:#3f7cb8;border:1px solid #dbe6f4;white-space:nowrap';
+    var TD='padding:6px 8px;font-size:13px;color:#1a2f45;border:1px solid #e8f0fa;background:#fff;text-align:center';
+    var TDR=TD+';text-align:right;white-space:nowrap;font-weight:600';
+    var INP='width:100%;min-width:86px;height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;background:#f7faff;outline:none;text-align:right;box-sizing:border-box';
+    var INP2='width:100%;min-width:70px;height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;background:#f7faff;outline:none;box-sizing:border-box';
+    var html='<div style="font-size:14px;font-weight:800;color:#1a2f45;margin-bottom:8px">🧾 '+esc(ym)+' 서희타워 도급비 산출 내역</div>';
+    html+='<table style="border-collapse:collapse;width:100%;min-width:960px"><thead><tr>'
+      +'<th style="'+TH+'">직위</th><th style="'+TH+'">구분</th><th style="'+TH+'">총급여</th>'
+      +'<th style="'+TH+'">연장근로수당</th><th style="'+TH+'">업무능력수당</th>'
+      +'<th style="'+TH+';background:#7a92a8">퇴직금(자동)</th>'
+      +'<th style="'+TH+'">건강보험</th><th style="'+TH+'">국민연금</th><th style="'+TH+'">고용보험</th>'
+      +'<th style="'+TH+';background:#0C447C">인당단가</th><th style="'+TH+'"></th>'
+      +'</tr></thead><tbody>';
+    _cur.rows.forEach(function(r,i){
+      var c=calcRow(r);
+      html+='<tr>'
+        +'<td style="'+TD+';min-width:96px"><input type="text" data-lf="pos|'+i+'" value="'+esc(r.pos||'')+'" placeholder="직위" style="'+INP2+'"></td>'
+        +'<td style="'+TD+';min-width:86px"><input type="text" data-lf="name|'+i+'" value="'+esc(r.name||'')+'" placeholder="이름" style="'+INP2+'"></td>'
+        +'<td style="'+TD+'"><input type="number" data-lf="base|'+i+'" value="'+(r.base||'')+'" style="'+INP+'"></td>'
+        +'<td style="'+TD+'"><input type="number" data-lf="ot|'+i+'" value="'+(r.ot||'')+'" style="'+INP+'"></td>'
+        +'<td style="'+TD+'"><input type="number" data-lf="skill|'+i+'" value="'+(r.skill||'')+'" style="'+INP+'"></td>'
+        +'<td style="'+TDR+';background:#f7faff;color:#7a92a8;font-weight:700">'+(c.sev?fmt(c.sev):'')+'</td>'
+        +'<td style="'+TD+'"><input type="number" data-lf="health|'+i+'" value="'+(r.health||'')+'" style="'+INP+'"></td>'
+        +'<td style="'+TD+'"><input type="number" data-lf="pension|'+i+'" value="'+(r.pension||'')+'" style="'+INP+'"></td>'
+        +'<td style="'+TD+'"><input type="number" data-lf="employ|'+i+'" value="'+(r.employ||'')+'" style="'+INP+'"></td>'
+        +'<td style="'+TDR+';background:#eef5ff;color:#0C447C;font-weight:800">'+(c.unit?fmt(c.unit):'')+'</td>'
+        +'<td style="'+TD+'"><button type="button" data-ldel="'+i+'" style="width:32px;height:32px;border:none;border-radius:8px;background:#fde8e8;color:#b52929;cursor:pointer;font-weight:700;font-family:inherit">🗑</button></td>'
+        +'</tr>';
+    });
+    var total=calcTotal(_cur.rows);
+    html+='<tr>'
+      +'<td colspan="9" style="'+TD+';background:#1a2f45;color:#fff;font-weight:800;text-align:center;font-size:14px">합계금액</td>'
+      +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800;font-size:15px">'+(total?fmt(total):'')+'</td>'
+      +'<td style="'+TD+';background:#1a2f45"></td>'
+      +'</tr></tbody></table>';
+    box.innerHTML=html;
+
+    /* 입력 바인딩: 즉시 재계산 + 디바운스 저장 (렌더 대신 계산 셀만 갱신하지 않고 blur 시 렌더) */
+    box.querySelectorAll('[data-lf]').forEach(function(inp){
+      inp.addEventListener('input',function(){
+        var p=inp.dataset.lf.split('|'); var f=p[0], i=Number(p[1]);
+        _cur.rows[i][f]=(f==='pos'||f==='name')?inp.value:Number(inp.value)||0;
+        persist();
+      });
+      inp.addEventListener('blur',function(){ window.renderExpLabor(); });
+      inp.addEventListener('keydown',function(e){ if(e.key==='Enter') inp.blur(); });
+    });
+    box.querySelectorAll('[data-ldel]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var i=Number(btn.dataset.ldel);
+        if(!confirm('"'+(_cur.rows[i].name||'(이름없음)')+'" 행을 삭제할까요?')) return;
+        _cur.rows.splice(i,1);
+        persist(); window.renderExpLabor();
+      });
+    });
+  };
+
+  function copyLaborToExcel(){
+    try{
+      if(!_cur||!_cur.rows.length){ if(typeof toast==='function') toast('복사할 내역이 없어요'); return; }
+      var out=[];
+      out.push([_cur.ym+' 서희타워 도급비 산출 내역','','','','','','','','','']);
+      out.push(['직위','구분','총급여','연장근로수당','업무능력수당','퇴직금','건강보험','국민연금','고용보험','인당단가']);
+      _cur.rows.forEach(function(r){
+        var c=calcRow(r);
+        out.push([r.pos||'', r.name||'', String(r.base||''), String(r.ot||''), String(r.skill||''),
+          String(c.sev||''), String(r.health||''), String(r.pension||''), String(r.employ||''), String(c.unit||'')]);
+      });
+      out.push(['','','','','','','','','합계금액', String(calcTotal(_cur.rows))]);
+      var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
+      function done(){ if(typeof toast==='function') toast('📑 도급비 산출표가 복사됐어요'); }
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(tsv).then(done).catch(function(){ fb(tsv); done(); });
+      } else { fb(tsv); done(); }
+      function fb(text){
+        var ta=document.createElement('textarea');
+        ta.value=text; ta.style.cssText='position:fixed;left:-9999px;top:0';
+        document.body.appendChild(ta); ta.select();
+        try{ document.execCommand('copy'); }catch(e){}
+        ta.remove();
+      }
+    }catch(err){
+      console.error('[인건비 복사]',err);
+      if(typeof toast==='function') toast('복사 오류: '+(err.message||err));
+    }
+  }
+
+  function bindLabor(){
+    var ms=g('expLaborMonthSel'); if(ms&&!ms._b){ms._b=true;ms.addEventListener('change',function(){ _cur=null; window.renderExpLabor(); });}
+    var ab=g('expLaborAddBtn'); if(ab&&!ab._b){ab._b=true;ab.addEventListener('click',function(){ if(!_cur) return; _cur.rows.push({pos:'',name:'',base:0,ot:0,skill:0,health:0,pension:0,employ:0}); persist(); window.renderExpLabor(); });}
+    var cb=g('expLaborCopyBtn'); if(cb&&!cb._b){cb._b=true;cb.addEventListener('click',copyLaborToExcel);}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindLabor);
+  else bindLabor();
+  console.log('[expLabor] 인건비 로드');
 })();
 
 /* ─────────────────────────────────────────────────────────
