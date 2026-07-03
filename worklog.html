@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1152</title>
+  <title>업무일지 v44-0703-1226</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1152</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1226</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2905,7 +2905,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1152"></script>
+<script src="worklog.js?v=44-20260703t1226"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8518,7 +8518,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1152';
+    if(el) el.textContent = 'v44-0703-1226';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -9106,12 +9106,43 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         html += makeSection(tax,'#c2410c','📃','세금계산서',tUnissued?' · <span style="color:#c2410c">미발급 '+tUnissued+'건</span>':'');
       }
       if(jeonpyo.length) html += makeSection(jeonpyo,'#7c3aed','📋','전표');
+      /* 📅 월정산 카드 (인건비 탭 연동, 읽기전용) */
+      try{
+        var msYm=monthSel||'';
+        if(msYm && typeof window.getMonthlySettleRows==='function'){
+          var mrows=window.getMonthlySettleRows(msYm)||[];
+          if(mrows.length){
+            var mSum2=mrows.reduce(function(s,r){return s+(Number(r.amount)||0);},0);
+            html+='<div style="margin-bottom:22px">'
+              +'<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:2px solid #ea580c;margin-bottom:10px">'
+              +'<span style="font-size:14px;font-weight:800;color:#ea580c">📅 월정산 <span style="font-size:11px;color:#94a3b8;font-weight:600">(인건비 탭에서 수정)</span></span>'
+              +'<span style="font-size:13px;font-weight:800;color:#ea580c">'+fmt(mSum2)+'원 · '+mrows.length+'건</span>'
+              +'</div>'
+              +'<div style="'+G+'">'
+              +mrows.map(function(r){
+                return '<div data-gomonthly="1" style="background:#fff;border:1.5px solid #fed7aa;border-left:4px solid #ea580c;border-radius:12px;padding:12px 14px;cursor:pointer">'
+                  +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+                  +'<div style="font-size:13px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis">'+esc(r.title)+'</div>'
+                  +'<div style="font-size:15px;font-weight:800;color:#ea580c;white-space:nowrap">'+fmt(r.amount)+'원</div>'
+                  +'</div>'
+                  +'<div style="font-size:11px;color:#94a3b8;margin-top:4px">공급 '+fmt(r.supplyAmt)+' / 세 '+fmt(r.taxAmt)+(r.memo?' · '+esc(r.memo):'')+'</div>'
+                  +'</div>';
+              }).join('')
+              +'</div></div>';
+          }
+        }
+      }catch(err){ console.error('[목록 월정산]',err); }
     } else {
       html = '<div style="'+G+'">'+list.map(makeCard).join('')+'</div>';
     }
     box.innerHTML=html;
     box.querySelectorAll('[data-expid]').forEach(function(el){
       el.addEventListener('click',function(){ openExpV2(el.dataset.expid); });
+    });
+    box.querySelectorAll('[data-gomonthly]').forEach(function(el){
+      el.addEventListener('click',function(){
+        var bb=g('expSubTabLabor'); if(bb) bb.click();
+      });
     });
     box.querySelectorAll('[data-expdel]').forEach(function(btn){
       btn.addEventListener('click',function(e){
@@ -10184,7 +10215,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1152 로드');
+  console.log('[expV2] v44-0703-1226 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -10199,8 +10230,13 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   function isJpFn(e){ return e.expType==='전표'||e.isJeonpyo||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||''); }
   function classify(e){
     if(e.expType==='급여') return '기타';
-    if(isJpFn(e)) return (e.expSubType==='수도'||e.expSubType==='전기')?'수도광열비':'선납부';
-    if(e.expType==='세금계산서') return (e.expSubType&&e.expSubType!=='공사성'&&e.expSubType==='정기분')?'월정산':'기타정산';
+    var ti=(e.title||'');
+    if(isJpFn(e)){
+      /* 하위구분 없던 옛 전표도 제목으로 수도·전기 인식 */
+      if(e.expSubType==='수도'||e.expSubType==='전기'||/수도\s*요금|상하수도|수도료/.test(ti)||/전기\s*요금|전기료/.test(ti)) return '수도광열비';
+      return '선납부';
+    }
+    if(e.expType==='세금계산서') return '기타정산';   /* 월정산은 인건비 탭 표에서만 */
     return '선결재';
   }
   /* fixedRows: 엑셀 시트와 동일한 고정 행수 (부족분 빈 행 패딩) */
