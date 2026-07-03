@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-0944</title>
+  <title>업무일지 v44-0703-1042</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-0944</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1042</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2894,7 +2894,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t0944"></script>
+<script src="worklog.js?v=44-20260703t1042"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8507,7 +8507,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-0944';
+    if(el) el.textContent = 'v44-0703-1042';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10184,7 +10184,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-0944 로드');
+  console.log('[expV2] v44-0703-1042 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -10844,45 +10844,15 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       if(!_cur||!_cur.staff.length){ if(typeof toast==='function') toast('복사할 내역이 없어요'); return; }
       var ym=_cur.ym, n=daysInMonth(ym);
       var days=[]; for(var d=1;d<=n;d++) days.push(d);
+      /* 이름·요일·날짜·합계·비고 없이, 날짜 아래 체크(1) 매트릭스만 복사
+         → 엑셀 시트의 첫 직원 × 1일 셀에 붙여넣으면 그대로 들어감 */
       var out=[];
-      out.push([ym.slice(5,7).replace(/^0/,'')+'월 중식 이용내역']);
-      out.push(['NO','성명'].concat(days.map(function(d){return WD[weekday(ym,d)];})).concat(['합계']));
-      out.push(['',''].concat(days.map(String)).concat(['']));
-      var daySum={};
-      _cur.staff.forEach(function(s,i){
+      _cur.staff.forEach(function(s){
         var arr=_cur.checks[s.name]||[];
-        var row=[String(i+1), s.name];
-        days.forEach(function(d){
-          var on=arr.indexOf(d)>=0;
-          if(on) daySum[d]=(daySum[d]||0)+1;
-          row.push(on?'1':'');
-        });
-        row.push(String(arr.length));
-        out.push(row);
+        out.push(days.map(function(d){ return arr.indexOf(d)>=0?'1':''; }));
       });
-      var grand=0; days.forEach(function(d){ grand+=(daySum[d]||0); });
-      out.push(['','합계'].concat(days.map(function(d){return daySum[d]?String(daySum[d]):'';})).concat([String(grand)]));
-      out.push(['','비고'].concat(days.map(function(d){
-        var tags=[];
-        if(_cur.offNames[d]) tags.push(_cur.offNames[d]);
-        if(_cur.specialDays.indexOf(d)>=0) tags.push('특식');
-        return tags.join('/');
-      })).concat(['']));
-      out.push([]);
-      /* 세부 */
-      var pn=Number(_cur.priceNormal)||0, ps=Number(_cur.priceSpecial)||0;
-      out.push([ym+' 중식 세부']);
-      out.push(['NO','구분','성명','합계','일반식','특식','일반식('+pn+'원)','특식('+ps+'원)','합계']);
-      var T={cnt:0,n:0,s:0,an:0,as:0,a:0};
-      _cur.staff.forEach(function(s,i){
-        var c=calcPerson(s.name);
-        T.cnt+=c.total; T.n+=c.normal; T.s+=c.special; T.an+=c.amtN; T.as+=c.amtS; T.a+=c.amt;
-        out.push([String(i+1), (s.group||'')+(s.shift?' '+s.shift+'조':''), s.name, String(c.total||''), String(c.normal||''), String(c.special||''),
-          c.amtN?String(c.amtN):'', c.amtS?String(c.amtS):'', c.amt?String(c.amt):'']);
-      });
-      out.push(['','','계', String(T.cnt), String(T.n), String(T.s), String(T.an), String(T.as), String(T.a)]);
       var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
-      function done(){ if(typeof toast==='function') toast('📑 중식표가 복사됐어요 — 엑셀에 붙여넣기 하세요'); }
+      function done(){ if(typeof toast==='function') toast('📑 체크표(1 매트릭스)가 복사됐어요 — 엑셀의 첫 직원 × 1일 칸에 붙여넣으세요'); }
       if(navigator.clipboard&&navigator.clipboard.writeText){
         navigator.clipboard.writeText(tsv).then(done).catch(function(){ fb(tsv); done(); });
       } else { fb(tsv); done(); }
