@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1613</title>
+  <title>업무일지 v44-0703-1632</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1613</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1632</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2913,7 +2913,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1613"></script>
+<script src="worklog.js?v=44-20260703t1632"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8533,7 +8533,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1613';
+    if(el) el.textContent = 'v44-0703-1632';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10238,7 +10238,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1613 로드');
+  console.log('[expV2] v44-0703-1632 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -11485,21 +11485,43 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   }
 
   /* ── 엑셀 복사 ── */
-  function copyLaborToExcel(){
-    try{
-      if(!window._expFinUnlocked){ if(typeof toast==='function') toast('🔒 비밀번호 확인 후 복사할 수 있어요'); return; }
-      if(!_cur||!_cur.rows.length){ if(typeof toast==='function') toast('복사할 내역이 없어요'); return; }
-      var out=[];
-      out.push([_cur.ym+' 서희타워 도급비 산출 내역']);
-      out.push(['직위','구분','총급여','연장근로수당','주휴근로수당','휴일연장수당','업무능력수당','퇴직금','건강보험','국민연금','고용보험','인당단가']);
-      _cur.rows.forEach(function(r){
-        var c=calcRow(r);
-        out.push([r.pos||'', r.name||'', String(r.base||''), String(r.ot||''), String(r.week||''), String(r.hol||''), String(r.skill||''),
-          String(c.sev||''), String(r.health||''), String(r.pension||''), String(r.employ||''), String(c.unit||'')]);
+  /* 복사 옵션 메뉴: 퇴직금·인당단가 수식 보존을 위해 2블록 (직위·이름 미포함) */
+  function openLaborCopyMenu(anchor){
+    if(!window._expFinUnlocked){ if(typeof toast==='function') toast('🔒 비밀번호 확인 후 복사할 수 있어요'); return; }
+    if(!_cur||!_cur.rows.length){ if(typeof toast==='function') toast('복사할 내역이 없어요'); return; }
+    var old=document.getElementById('laborCopyMenu'); if(old) old.remove();
+    var menu=document.createElement('div');
+    menu.id='laborCopyMenu';
+    var r=anchor.getBoundingClientRect();
+    menu.style.cssText='position:fixed;z-index:9700;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:6px;min-width:230px;'
+      +'top:'+Math.min(r.bottom+6, window.innerHeight-130)+'px;left:'+Math.max(8, Math.min(r.left, window.innerWidth-250))+'px';
+    var BTN='display:block;width:100%;text-align:left;padding:9px 12px;border:none;background:none;border-radius:8px;font-size:13px;font-weight:600;color:#1a2f45;cursor:pointer;font-family:inherit';
+    menu.innerHTML='<div style="font-size:11px;font-weight:700;color:#94a3b8;padding:4px 12px">도급비 복사 (퇴직금·인당단가 수식 보존)</div>'
+      +'<button type="button" data-lc="pay" style="'+BTN+'">💰 급여·수당 5열 <span style="color:#94a3b8;font-size:11px">총급여~업무능력</span></button>'
+      +'<button type="button" data-lc="ins" style="'+BTN+'">🏥 보험 3열 <span style="color:#94a3b8;font-size:11px">건강~고용</span></button>';
+    menu.querySelectorAll('[data-lc]').forEach(function(b){
+      b.addEventListener('mouseenter',function(){ b.style.background='#f0f6ff'; });
+      b.addEventListener('mouseleave',function(){ b.style.background='none'; });
+      b.addEventListener('click',function(){ menu.remove(); copyLaborToExcel(b.dataset.lc); });
+    });
+    document.body.appendChild(menu);
+    setTimeout(function(){
+      document.addEventListener('click', function closer(e){
+        if(!menu.contains(e.target)){ menu.remove(); document.removeEventListener('click', closer); }
       });
-      out.push(['','','','','','','','','','','합계금액', String(calcTotal(_cur.rows))]);
-      var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
-      function done(){ if(typeof toast==='function') toast('📑 도급비 산출표가 복사됐어요'); }
+    },0);
+  }
+
+  function copyLaborToExcel(mode){
+    try{
+      var out=[];
+      _cur.rows.forEach(function(r){
+        if(mode==='ins') out.push([String(r.health||''), String(r.pension||''), String(r.employ||'')]);
+        else out.push([String(r.base||''), String(r.ot||''), String(r.week||''), String(r.hol||''), String(r.skill||'')]);
+      });
+      var tsv=out.map(function(row){ return row.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
+      var lb=mode==='ins'?'보험 3열 — 건강보험 첫 칸에 붙여넣으세요':'급여·수당 5열 — 총급여 첫 칸에 붙여넣으세요';
+      function done(){ if(typeof toast==='function') toast('📑 '+lb); }
       if(navigator.clipboard&&navigator.clipboard.writeText){
         navigator.clipboard.writeText(tsv).then(done).catch(function(){ fb(tsv); done(); });
       } else { fb(tsv); done(); }
@@ -11523,7 +11545,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       if(!_cur) return;
       openLaborModal(null,'edit');
     });}
-    var cb=g('expLaborCopyBtn'); if(cb&&!cb._b){cb._b=true;cb.addEventListener('click',copyLaborToExcel);}
+    var cb=g('expLaborCopyBtn'); if(cb&&!cb._b){cb._b=true;cb.addEventListener('click',function(ev){ ev.stopPropagation(); openLaborCopyMenu(cb); });}
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindLabor);
   else bindLabor();
