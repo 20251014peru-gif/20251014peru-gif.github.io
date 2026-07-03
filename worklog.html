@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1229</title>
+  <title>업무일지 v44-0703-1343</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1229</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1343</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2905,7 +2905,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1229"></script>
+<script src="worklog.js?v=44-20260703t1343"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8518,7 +8518,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1229';
+    if(el) el.textContent = 'v44-0703-1343';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10215,7 +10215,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1229 로드');
+  console.log('[expV2] v44-0703-1343 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -10431,13 +10431,39 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     box.querySelectorAll('[data-gcopy]').forEach(function(btn){
       btn.addEventListener('click',function(ev){
         ev.stopPropagation();
-        copyGroupRows(btn.dataset.gcopy);
+        openGroupCopyMenu(btn, btn.dataset.gcopy);
       });
     });
   };
 
+  /* ── 그룹 복사 옵션 메뉴 (병합 셀 시트 대응) ── */
+  function openGroupCopyMenu(anchor, key){
+    var old=document.getElementById('gcopyMenu'); if(old) old.remove();
+    var menu=document.createElement('div');
+    menu.id='gcopyMenu';
+    var r=anchor.getBoundingClientRect();
+    menu.style.cssText='position:fixed;z-index:9700;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:6px;min-width:190px;'
+      +'top:'+Math.min(r.bottom+6, window.innerHeight-160)+'px;left:'+Math.max(8, Math.min(r.left, window.innerWidth-210))+'px';
+    var BTN='display:block;width:100%;text-align:left;padding:9px 12px;border:none;background:none;border-radius:8px;font-size:13px;font-weight:600;color:#1a2f45;cursor:pointer;font-family:inherit';
+    menu.innerHTML='<div style="font-size:11px;font-weight:700;color:#94a3b8;padding:4px 12px">'+key+' 복사 (내용 행만)</div>'
+      +'<button type="button" data-cm="amt" style="'+BTN+'">💰 금액만 <span style="color:#94a3b8;font-size:11px">(1열 · 병합 시트용)</span></button>'
+      +'<button type="button" data-cm="3col" style="'+BTN+'">🧾 금액+부가세+합계 <span style="color:#94a3b8;font-size:11px">(3열)</span></button>'
+      +'<button type="button" data-cm="full" style="'+BTN+'">📄 전체 <span style="color:#94a3b8;font-size:11px">(내용 포함 4열)</span></button>';
+    menu.querySelectorAll('[data-cm]').forEach(function(b){
+      b.addEventListener('mouseenter',function(){ b.style.background='#f0f6ff'; });
+      b.addEventListener('mouseleave',function(){ b.style.background='none'; });
+      b.addEventListener('click',function(){ menu.remove(); copyGroupRows(key, b.dataset.cm); });
+    });
+    document.body.appendChild(menu);
+    setTimeout(function(){
+      document.addEventListener('click', function closer(e){
+        if(!menu.contains(e.target)){ menu.remove(); document.removeEventListener('click', closer); }
+      });
+    },0);
+  }
+
   /* ── 그룹 내용 행만 복사 (소계·합계 제외) ── */
-  function copyGroupRows(key){
+  function copyGroupRows(key, mode){
     try{
       if(!window._expFinUnlocked){ if(typeof toast==='function') toast('🔒 비밀번호 확인 후 복사할 수 있어요'); return; }
       var ym=(g('expSettleMonthSel')||{}).value||kstNow().toISOString().slice(0,7);
@@ -10449,11 +10475,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var out=[];
       for(var i=0;i<need;i++){
         var e=arr[i]||null;
-        if(e){ var v=rowVals(e); out.push([rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount)]); }
-        else out.push(['','','','']);
+        var v=e?rowVals(e):null;
+        if(mode==='amt')       out.push(e?[raw(v.sup)]:['']);
+        else if(mode==='3col') out.push(e?[raw(v.sup),raw(v.tax),raw(v.amount)]:['','','']);
+        else                   out.push(e?[rowTitle(e),raw(v.sup),raw(v.tax),raw(v.amount)]:['','','','']);
       }
       var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
-      function done(){ if(typeof toast==='function') toast('📋 '+key+' '+need+'행 복사됐어요 — 엑셀 해당 구간에 붙여넣으세요'); }
+      var modeLabel=mode==='amt'?'금액 1열':(mode==='3col'?'금액·부가세·합계 3열':'전체 4열');
+      function done(){ if(typeof toast==='function') toast('📋 '+key+' '+need+'행 ('+modeLabel+') 복사됐어요'); }
       if(navigator.clipboard&&navigator.clipboard.writeText){
         navigator.clipboard.writeText(tsv).then(done).catch(function(){ fallbackCopy(tsv); done(); });
       } else { fallbackCopy(tsv); done(); }
