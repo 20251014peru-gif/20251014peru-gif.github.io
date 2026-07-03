@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1632</title>
+  <title>업무일지 v44-0703-1851</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1632</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1851</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2913,7 +2913,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1632"></script>
+<script src="worklog.js?v=44-20260703t1851"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8533,7 +8533,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1632';
+    if(el) el.textContent = 'v44-0703-1851';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8735,7 +8735,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(hint){
       if(_expType==='전표'&&_expSubType==='수도'){
         hint.style.display='';
-        hint.textContent='💧 수도요금은 역산 — 합계 칸에 고지서 금액을 입력하면 금액·부가세가 자동 계산돼요';
+        hint.textContent='💧 수도요금은 면세 — 금액 칸에 고지서 금액을 입력하세요 (부가세 없음, 합계=금액)';
       } else hint.style.display='none';
     }
   }
@@ -8925,36 +8925,18 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   }
 
   function expSupplyChanged(el){
-    var s = parseFloat(el.value)||0;
-    var taxEl = document.getElementById('expV2TaxAmt');
-    // 부가세 칸에 항상 10% 자동입력 (수동으로 바꿀 수 있음)
-    if(taxEl){ taxEl.value = s ? Math.round(s*0.1) : ''; }
-    var t = parseFloat((taxEl&&taxEl.value)||0)||0;
-    var amtEl = document.getElementById('expV2Amount');
-    if(amtEl){ amtEl.value = s+t||''; amtEl._manual=true; }
-  }
-  function expTaxChanged(el){
-    el._manual = true;
-    var s = parseFloat((document.getElementById('expV2SupplyAmt')||{value:0}).value)||0;
-    var t = parseFloat(el.value)||0;
-    var amtEl = document.getElementById('expV2Amount');
-    if(amtEl){ amtEl.value = s+t||''; amtEl._manual=true; }
-  }
-
-  function expAmountChanged(el){
-    var total = parseFloat(el.value)||0;
-    var sEl = document.getElementById('expV2SupplyAmt');
+    var supply = parseFloat(el.value)||0;
     var tEl = document.getElementById('expV2TaxAmt');
-    if(total && sEl && tEl){
-      var supply = Math.round(total / 1.1);
-      var tax = total - supply;
-      sEl.value = supply;
-      tEl.value = tax;
+    var aEl = document.getElementById('expV2Amount');
+    /* 수도요금은 면세 — 부가세 0, 합계=금액 */
+    if(_expType==='전표' && _expSubType==='수도'){
+      if(tEl) tEl.value = 0;
+      if(aEl && !aEl._manual){ aEl.value = supply||''; }
     } else {
-      if(sEl) sEl.value = '';
-      if(tEl) tEl.value = '';
+      var tax = Math.round(supply * 0.1);
+      if(tEl) tEl.value = tax||'';
+      if(aEl && !aEl._manual){ aEl.value = (supply+tax)||''; }
     }
-    el._manual = true;
   }
   window.expSupplyChanged = expSupplyChanged;
   window.expTaxChanged = expTaxChanged;
@@ -10238,7 +10220,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1632 로드');
+  console.log('[expV2] v44-0703-1851 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
