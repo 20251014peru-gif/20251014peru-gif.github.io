@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1855</title>
+  <title>업무일지 v44-0703-1903</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1855</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1903</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2913,7 +2913,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1855"></script>
+<script src="worklog.js?v=44-20260703t1903"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8533,7 +8533,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1855';
+    if(el) el.textContent = 'v44-0703-1903';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8945,6 +8945,26 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var aEl = document.getElementById('expV2Amount');
     var supply = parseFloat(sEl?sEl.value:0)||0;
     if(aEl && !aEl._manual){ aEl.value = (supply+tax)||''; }
+  }
+  /* 합계 입력 → 금액·부가세 자동 역산 (수도는 면세) */
+  function expAmountChanged(el){
+    var total = parseFloat(el.value)||0;
+    var sEl = document.getElementById('expV2SupplyAmt');
+    var tEl = document.getElementById('expV2TaxAmt');
+    /* 수도요금은 면세 — 역산 안 함, 금액=합계, 부가세=0 */
+    if(_expType==='전표' && _expSubType==='수도'){
+      if(sEl) sEl.value = total||'';
+      if(tEl) tEl.value = 0;
+    } else if(total && sEl && tEl){
+      var supply = Math.round(total / 1.1);
+      var tax = total - supply;
+      sEl.value = supply;
+      tEl.value = tax;
+    } else {
+      if(sEl) sEl.value = '';
+      if(tEl) tEl.value = '';
+    }
+    el._manual = true;
   }
   window.expSupplyChanged = expSupplyChanged;
   window.expTaxChanged = expTaxChanged;
@@ -10228,7 +10248,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1855 로드');
+  console.log('[expV2] v44-0703-1903 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
