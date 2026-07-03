@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1851</title>
+  <title>업무일지 v44-0703-1855</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1851</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1855</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2913,7 +2913,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1851"></script>
+<script src="worklog.js?v=44-20260703t1855"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -3173,8 +3173,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     if(name==='main') setTimeout(()=>{ if(typeof v43Refresh==='function') v43Refresh(); }, 50);
     if(name==='expense') setTimeout(()=>{
       if(typeof window.renderExpYmBar==='function') window.renderExpYmBar();
-      renderExpV2Dashboard();
-      renderExpV2List();
+      if(typeof window.renderExpV2Dashboard==='function') window.renderExpV2Dashboard();
+      if(typeof window.renderExpV2List==='function') window.renderExpV2List();
       var ab=document.getElementById('btnAddExpenseV2');
       if(ab&&!ab._v2b){ab._v2b=true;ab.addEventListener('click',function(){window._openExpV2&&window._openExpV2(null);});}
     }, 50);
@@ -8533,7 +8533,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1851';
+    if(el) el.textContent = 'v44-0703-1855';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8937,6 +8937,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       if(tEl) tEl.value = tax||'';
       if(aEl && !aEl._manual){ aEl.value = (supply+tax)||''; }
     }
+  }
+  /* 부가세 직접 수정 시 합계 갱신 */
+  function expTaxChanged(el){
+    var tax = parseFloat(el.value)||0;
+    var sEl = document.getElementById('expV2SupplyAmt');
+    var aEl = document.getElementById('expV2Amount');
+    var supply = parseFloat(sEl?sEl.value:0)||0;
+    if(aEl && !aEl._manual){ aEl.value = (supply+tax)||''; }
   }
   window.expSupplyChanged = expSupplyChanged;
   window.expTaxChanged = expTaxChanged;
@@ -9375,7 +9383,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   window.v43Refresh=function(){
     if(origV43Refresh) origV43Refresh();
     var p=g('v43-expense');
-    if(p&&p.classList.contains('active')){ renderExpV2List(); renderExpV2Dashboard(); }
+    if(p&&p.classList.contains('active')){ if(typeof window.renderExpV2List==='function') window.renderExpV2List(); if(typeof window.renderExpV2Dashboard==='function') window.renderExpV2Dashboard(); }
   };
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind);
@@ -10220,7 +10228,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1851 로드');
+  console.log('[expV2] v44-0703-1855 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
