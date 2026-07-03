@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1113</title>
+  <title>업무일지 v44-0703-1131</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1113</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1131</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2905,7 +2905,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1113"></script>
+<script src="worklog.js?v=44-20260703t1131"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8518,7 +8518,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1113';
+    if(el) el.textContent = 'v44-0703-1131';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8534,7 +8534,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
   /* ── 하위 구분 정의 ── */
   var EXP_SUBTYPES = {
-    '세금계산서': ['정기분','공사성'],
+    '세금계산서': ['공사성'],   /* 정기분(월정산)은 인건비 탭에서 관리 */
     '전표': ['전기','수도','유선방송','전화','정수기','기타']
   };
   var EXP_TYPE_COLORS = { '개인지출':'#3f7cb8', '세금계산서':'#c2410c', '전표':'#7c3aed', '급여':'#16a34a' };
@@ -10184,7 +10184,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1113 로드');
+  console.log('[expV2] v44-0703-1131 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -10198,17 +10198,18 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
   function isJpFn(e){ return e.expType==='전표'||e.isJeonpyo||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||''); }
   function classify(e){
-    if(e.expType==='급여') return '급여';
-    if(isJpFn(e)) return '전표';
-    if(e.expType==='세금계산서') return (e.expSubType==='공사성')?'공사':'정기';
+    if(e.expType==='급여') return '인건비';
+    if(isJpFn(e)) return (e.expSubType==='수도'||e.expSubType==='전기')?'수도광열':'전표';
+    if(e.expType==='세금계산서') return (e.expSubType==='공사성')?'기타정산':'월정산';
     return '개인';
   }
   var GROUPS=[
-    {key:'개인', label:'개인지출',           color:'#3f7cb8', bg:'#f0f6ff'},
-    {key:'전표', label:'전표',               color:'#7c3aed', bg:'#f5f3ff'},
-    {key:'공사', label:'공사성 세금계산서',  color:'#c2410c', bg:'#fff7ed'},
-    {key:'정기', label:'정기분 세금계산서',  color:'#ea580c', bg:'#fffbea'},
-    {key:'급여', label:'급여',               color:'#16a34a', bg:'#f0fdf4'}
+    {key:'개인',     label:'개인지출',         color:'#3f7cb8', bg:'#f0f6ff'},
+    {key:'전표',     label:'전표',             color:'#7c3aed', bg:'#f5f3ff'},
+    {key:'기타정산', label:'기타정산(공사성)', color:'#c2410c', bg:'#fff7ed', midTotalAfter:true},
+    {key:'월정산',   label:'월정산(정기분)',   color:'#ea580c', bg:'#fffbea'},
+    {key:'수도광열', label:'수도광열비',       color:'#0e7490', bg:'#ecfeff'},
+    {key:'인건비',   label:'인건비',           color:'#16a34a', bg:'#f0fdf4'}
   ];
 
   function rowVals(e){
@@ -10242,29 +10243,38 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   function buildMap(ym){
     var all=(typeof entries!=='undefined'?entries:[]).filter(function(e){return e.kind==='expense'&&(e.date||'').startsWith(ym);});
     all.sort(function(a,b){return (a.date||'').localeCompare(b.date||'')||((a.createdAt||0)-(b.createdAt||0));});
-    var map={'개인':[],'전표':[],'공사':[],'정기':[],'급여':[]};
+    var map={'개인':[],'전표':[],'기타정산':[],'월정산':[],'수도광열':[],'인건비':[]};
     all.forEach(function(e){ map[classify(e)].push(e); });
-    /* 🧾 관리인건비 자동 반영 (인건비 탭 → 급여 그룹) */
+    /* 📅 월정산 자동 반영 (인건비 탭 월정산 표) */
+    try{
+      if(typeof window.getMonthlySettleRows==='function'){
+        (window.getMonthlySettleRows(ym)||[]).forEach(function(r){ map['월정산'].push(r); });
+      }
+    }catch(e){ console.error('[정산표 월정산]',e); }
+    /* 🧾 관리인건비 자동 반영 (인건비 탭 → 부가세 10%) */
     try{
       if(typeof window.getLaborMonthTotal==='function'){
         var labor=window.getLaborMonthTotal(ym);
         if(labor&&labor.total>0){
-          map['급여'].push({__virtual:true, title:'관리인건비', amount:labor.total, supplyAmt:labor.total, taxAmt:0,
+          var lt=Math.round(labor.total*0.1);
+          map['인건비'].push({__virtual:true, title:'관리인건비', supplyAmt:labor.total, taxAmt:lt, amount:labor.total+lt,
             memo:'도급비 산출 '+labor.count+'명'});
         }
       }
     }catch(e){ console.error('[정산표 인건비]',e); }
-    /* 🍚 중식대 자동 반영 (중식이용내역 → 급여 그룹) */
+    /* 🍚 중식대 자동 반영 (중식이용내역 → 부가세 10%) */
     try{
       if(typeof window.getMealMonthTotal==='function'){
         var meal=window.getMealMonthTotal(ym);
         if(meal&&meal.total>0){
-          map['급여'].push({__virtual:true, title:'중식대', amount:meal.total, supplyAmt:meal.total, taxAmt:0,
+          var mt=Math.round(meal.total*0.1);
+          map['인건비'].push({__virtual:true, title:'관리비 중식대', supplyAmt:meal.total, taxAmt:mt, amount:meal.total+mt,
             memo:'중식 '+meal.count+'건 (일반 '+meal.normal+' · 특식 '+meal.special+')'});
         }
       }
     }catch(e){ console.error('[정산표 중식]',e); }
-    return {map:map, total:all.length+map['급여'].filter(function(x){return x.__virtual;}).length};
+    var vcnt=map['인건비'].concat(map['월정산']).filter(function(x){return x.__virtual;}).length;
+    return {map:map, total:all.length+vcnt};
   }
 
   /* ── 관리비 정산 잠금 (정산표·인건비 공용, 새로고침 시 재잠금) ── */
@@ -10313,43 +10323,66 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       +'<th style="'+TH+'">구분</th><th style="'+TH+'">NO</th><th style="'+TH+';min-width:160px">지출내용</th>'
       +'<th style="'+TH+'">금액</th><th style="'+TH+'">부가세</th><th style="'+TH+'">합계</th><th style="'+TH+';min-width:110px">비고</th>'
       +'</tr></thead><tbody>';
-    var gSum=0,gTax=0,gAmt=0;
+    var gSum=0,gTax=0,gAmt=0;          /* 전체 누계 */
+    var mSum=0,mTax=0,mAmt=0;          /* 중간합계 누계 (개인+전표+기타정산) */
+    var uSum=0;                         /* 수도광열 금액 (제외 계산용) */
     GROUPS.forEach(function(grp){
-      var arr=d.map[grp.key];
-      if(!arr.length) return;
-      var s=0,t=0,a=0;
-      arr.forEach(function(e,i){
-        var v=rowVals(e);
-        s+=v.sup; t+=v.tax; a+=v.amount;
-        html+='<tr'+(e.id?' data-settleid="'+esc(e.id)+'" style="cursor:pointer"':'')+'>'
-          +(i===0?'<td rowspan="'+(arr.length+1)+'" style="'+TD+';background:'+grp.bg+';color:'+grp.color+';font-weight:800;text-align:center;vertical-align:middle;white-space:nowrap">'+esc(grp.key)+'</td>':'')
-          +'<td style="'+TD+';text-align:center;color:#94a3b8">'+(i+1)+'</td>'
-          +'<td style="'+TD+'">'+esc(rowTitle(e))+'</td>'
-          +'<td style="'+TDR+'">'+cell(v.sup)+'</td>'
-          +'<td style="'+TDR+';color:#94a3b8">'+cell(v.tax)+'</td>'
-          +'<td style="'+TDR+';font-weight:800">'+cell(v.amount)+'</td>'
-          +'<td style="'+TD+';font-size:12px;color:#64748b">'+esc(rowNote(e))+'</td>'
+      var arr=d.map[grp.key]||[];
+      if(arr.length){
+        var s=0,t=0,a=0;
+        arr.forEach(function(e,i){
+          var v=rowVals(e);
+          s+=v.sup; t+=v.tax; a+=v.amount;
+          html+='<tr'+(e.id?' data-settleid="'+esc(e.id)+'" style="cursor:pointer"':'')+'>'
+            +(i===0?'<td rowspan="'+(arr.length+1)+'" style="'+TD+';background:'+grp.bg+';color:'+grp.color+';font-weight:800;text-align:center;vertical-align:middle;white-space:nowrap">'+esc(grp.key)+'</td>':'')
+            +'<td style="'+TD+';text-align:center;color:#94a3b8">'+(i+1)+'</td>'
+            +'<td style="'+TD+'">'+esc(rowTitle(e))+'</td>'
+            +'<td style="'+TDR+'">'+cell(v.sup)+'</td>'
+            +'<td style="'+TDR+';color:#94a3b8">'+cell(v.tax)+'</td>'
+            +'<td style="'+TDR+';font-weight:800">'+cell(v.amount)+'</td>'
+            +'<td style="'+TD+';font-size:12px;color:#64748b">'+esc(rowNote(e))+'</td>'
+            +'</tr>';
+        });
+        gSum+=s; gTax+=t; gAmt+=a;
+        if(grp.key==='수도광열') uSum+=s;
+        if(grp.midTotalAfter||['개인','전표','기타정산'].indexOf(grp.key)>=0){ mSum+=s; mTax+=t; mAmt+=a; }
+        html+='<tr>'
+          +'<td colspan="2" style="'+TD+';background:'+grp.bg+';text-align:center;font-weight:800;color:'+grp.color+'">소 계</td>'
+          +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(s)+'</td>'
+          +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+'">'+cell(t)+'</td>'
+          +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(a)+'</td>'
+          +'<td style="'+TD+';background:'+grp.bg+'"></td>'
           +'</tr>';
-      });
-      gSum+=s; gTax+=t; gAmt+=a;
-      html+='<tr>'
-        +'<td colspan="2" style="'+TD+';background:'+grp.bg+';text-align:center;font-weight:800;color:'+grp.color+'">소 계</td>'
-        +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(s)+'</td>'
-        +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+'">'+cell(t)+'</td>'
-        +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(a)+'</td>'
-        +'<td style="'+TD+';background:'+grp.bg+'"></td>'
-        +'</tr>';
+      }
+      /* 🟠 중간 합계: 개인+전표+기타정산 */
+      if(grp.midTotalAfter){
+        html+='<tr>'
+          +'<td colspan="3" style="'+TD+';background:#fdba74;color:#7c2d12;text-align:center;font-weight:800;font-size:14px">합 계</td>'
+          +'<td style="'+TDR+';background:#fdba74;color:#7c2d12;font-weight:800">'+cell(mSum)+'</td>'
+          +'<td style="'+TDR+';background:#fdba74;color:#7c2d12">'+cell(mTax)+'</td>'
+          +'<td style="'+TDR+';background:#fdba74;color:#7c2d12;font-weight:800">'+cell(mAmt)+'</td>'
+          +'<td style="'+TD+';background:#fdba74"></td>'
+          +'</tr>';
+      }
     });
+    /* 정산 합계 + 전기·수도 제외 */
     html+='<tr>'
-      +'<td colspan="3" style="'+TD+';background:#1a2f45;color:#fff;text-align:center;font-weight:800;font-size:14px">합 계</td>'
-      +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800">'+cell(gSum)+'</td>'
+      +'<td colspan="3" style="'+TD+';background:#1a2f45;color:#fff;text-align:center;font-weight:800;font-size:14px">정산 합계</td>'
+      +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800;font-size:14px">'+cell(gSum)+'</td>'
       +'<td style="'+TDR+';background:#1a2f45;color:#cbd5e1">'+cell(gTax)+'</td>'
-      +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800;font-size:14px">'+cell(gAmt)+'</td>'
+      +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800">'+cell(gAmt)+'</td>'
       +'<td style="'+TD+';background:#1a2f45"></td>'
+      +'</tr>';
+    html+='<tr>'
+      +'<td colspan="3" style="'+TD+';background:#475569;color:#fff;text-align:center;font-weight:700">전기·수도요금 제외</td>'
+      +'<td style="'+TDR+';background:#475569;color:#fff;font-weight:800">'+cell(gSum-uSum)+'</td>'
+      +'<td style="'+TDR+';background:#475569"></td>'
+      +'<td style="'+TDR+';background:#475569"></td>'
+      +'<td style="'+TD+';background:#475569"></td>'
       +'</tr>';
     html+='</tbody></table>';
     box.innerHTML=html;
-    /* 행 클릭 → 지출 조회 팝업 */
+    /* 행 클릭 → 지출 조회 팝업 (자동 반영 행 제외) */
     box.querySelectorAll('[data-settleid]').forEach(function(tr){
       tr.addEventListener('click',function(){
         if(typeof window.openExpenseEditor==='function') window.openExpenseEditor(tr.dataset.settleid);
@@ -10365,22 +10398,29 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var d=buildMap(ym);
       if(!d.total){ if(typeof toast==='function') toast('복사할 내역이 없어요'); return; }
       var out=[];
-      out.push([ym+' 지출 정산표','','','','','','']);
+      out.push([ym+' 관리비 지출세부','','','','','','']);
       out.push(['구분','NO','지출내용','금액','부가세','합계','비고']);
-      var gSum=0,gTax=0,gAmt=0;
+      var gSum=0,gTax=0,gAmt=0,mSum=0,mTax=0,mAmt=0,uSum=0;
       GROUPS.forEach(function(grp){
-        var arr=d.map[grp.key];
-        if(!arr.length) return;
-        var s=0,t=0,a=0;
-        arr.forEach(function(e,i){
-          var v=rowVals(e);
-          s+=v.sup; t+=v.tax; a+=v.amount;
-          out.push([i===0?grp.key:'', String(i+1), rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount), rowNote(e)]);
-        });
-        gSum+=s; gTax+=t; gAmt+=a;
-        out.push(['','','소 계', raw(s), raw(t), raw(a), '']);
+        var arr=d.map[grp.key]||[];
+        if(arr.length){
+          var s=0,t=0,a=0;
+          arr.forEach(function(e,i){
+            var v=rowVals(e);
+            s+=v.sup; t+=v.tax; a+=v.amount;
+            out.push([i===0?grp.key:'', String(i+1), rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount), rowNote(e)]);
+          });
+          gSum+=s; gTax+=t; gAmt+=a;
+          if(grp.key==='수도광열') uSum+=s;
+          if(['개인','전표','기타정산'].indexOf(grp.key)>=0){ mSum+=s; mTax+=t; mAmt+=a; }
+          out.push(['','','소 계', raw(s), raw(t), raw(a), '']);
+        }
+        if(grp.midTotalAfter){
+          out.push(['','','합 계', raw(mSum), raw(mTax), raw(mAmt), '']);
+        }
       });
-      out.push(['','','합 계', raw(gSum), raw(gTax), raw(gAmt), '']);
+      out.push(['','','정산 합계', raw(gSum), raw(gTax), raw(gAmt), '']);
+      out.push(['','','전기·수도요금 제외', raw(gSum-uSum), '', '', '']);
       var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
       function done(){ if(typeof toast==='function') toast('📑 정산표가 복사됐어요 — 엑셀에 붙여넣기 하세요'); }
       if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -10943,7 +10983,21 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     {pos:'시설소장', name:'안영삼', base:0, ot:0, week:0, hol:0, skill:0, health:0, pension:0, employ:0},
     {pos:'시설주임', name:'조태경', base:0, ot:0, week:0, hol:0, skill:0, health:0, pension:0, employ:0}
   ];
+  /* 월정산 기본 항목 (정기 발생분 — 매월 금액만 갱신) */
+  var DEFAULT_MONTHLY=[
+    {name:'청소관리용품', sup:0, tax:0, note:'화장지외'},
+    {name:'커피외', sup:0, tax:0, note:''},
+    {name:'칼라복합기 임대료', sup:0, tax:0, note:''},
+    {name:'PC임대료', sup:0, tax:0, note:''},
+    {name:'소독.방역', sup:0, tax:0, note:''},
+    {name:'소방안전관리', sup:0, tax:0, note:''},
+    {name:'옥탑층정원유지관리', sup:0, tax:0, note:''},
+    {name:'카리프트 유지보수', sup:0, tax:0, note:'화물용'},
+    {name:'엘리베이터 유지보수', sup:0, tax:0, note:'인승용'},
+    {name:'은진 FM관리용역', sup:0, tax:0, note:'경비·청소인력'}
+  ];
   var _cur=null;
+  var _mEdit=false, _mDraft=null;      /* 월정산 수정 모드 */
 
   function calcRow(r){
     var base=Number(r.base)||0, ot=Number(r.ot)||0, week=Number(r.week)||0, hol=Number(r.hol)||0, skill=Number(r.skill)||0;
@@ -10959,17 +11013,23 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   }
   function loadMonth(ym){
     var rec=findRec(ym);
-    if(rec){ rec.rows=rec.rows||[]; _cur=rec; return; }
+    if(rec){
+      rec.rows=rec.rows||[];
+      rec.monthly=rec.monthly&&rec.monthly.length?rec.monthly:JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
+      _cur=rec; _mEdit=false; _mDraft=null; return;
+    }
     var prev=(typeof entries!=='undefined')?entries.filter(function(e){return e.kind==='labor_month'&&e.ym<ym&&e.rows&&e.rows.length;})
       .sort(function(a,b){return (b.ym||'').localeCompare(a.ym||'');})[0]:null;
     _cur={__virtual:true, kind:'labor_month', ym:ym, date:ym+'-01', title:ym+' 도급비 산출 내역',
-      rows: prev?JSON.parse(JSON.stringify(prev.rows)):JSON.parse(JSON.stringify(DEFAULT_ROWS))};
+      rows: prev?JSON.parse(JSON.stringify(prev.rows)):JSON.parse(JSON.stringify(DEFAULT_ROWS)),
+      monthly: (prev&&prev.monthly&&prev.monthly.length)?JSON.parse(JSON.stringify(prev.monthly)):JSON.parse(JSON.stringify(DEFAULT_MONTHLY))};
+    _mEdit=false; _mDraft=null;
   }
   /* [저장] 버튼에서만 호출 — 즉시 저장 */
   function persistNow(){
     if(!_cur) return;
     try{
-      var payload={kind:'labor_month', ym:_cur.ym, date:_cur.ym+'-01', title:_cur.ym+' 도급비 산출 내역', rows:_cur.rows};
+      var payload={kind:'labor_month', ym:_cur.ym, date:_cur.ym+'-01', title:_cur.ym+' 도급비 산출 내역', rows:_cur.rows, monthly:_cur.monthly||[]};
       if(_cur.__virtual){
         payload.createdAt=Date.now();
         if(typeof addRecord==='function'){ var rec=addRecord(payload); _cur.id=rec.id; delete _cur.__virtual; }
@@ -10986,6 +11046,16 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   }
 
   /* 외부 노출: 정산표 연동 (저장 레코드 우선, 미저장 현재 상태 폴백) */
+  /* 월정산 행 노출 (정산표) — 금액 입력된 항목만 */
+  window.getMonthlySettleRows=function(ym){
+    var rec=findRec(ym) || (_cur&&_cur.ym===ym?_cur:null);
+    var list=(rec&&rec.monthly)||[];
+    return list.filter(function(r){ return (Number(r.sup)||0)>0; }).map(function(r){
+      var sup=Number(r.sup)||0, tax=Number(r.tax)||0;
+      return {__virtual:true, title:r.name||'', supplyAmt:sup, taxAmt:tax, amount:sup+tax, memo:r.note||''};
+    });
+  };
+
   window.getLaborMonthTotal=function(ym){
     var rec=findRec(ym) || (_cur&&_cur.ym===ym?_cur:null);
     if(!rec||!rec.rows||!rec.rows.length) return null;
@@ -11053,7 +11123,111 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     box.querySelectorAll('[data-lrow]').forEach(function(tr){
       tr.addEventListener('click',function(){ openLaborModal(Number(tr.dataset.lrow),'view'); });
     });
+    renderMonthly(box);
   };
+
+  /* ── 월정산 표 (정기 발생분: 수정 버튼 → 금액 입력, 부가세 10% 자동) ── */
+  function renderMonthly(parentBox){
+    var host=document.getElementById('expLaborMonthlyArea');
+    if(!host){
+      host=document.createElement('div');
+      host.id='expLaborMonthlyArea';
+      host.style.cssText='margin-top:24px;overflow-x:auto';
+      parentBox.appendChild(host);
+    } else if(host.parentNode!==parentBox){ parentBox.appendChild(host); }
+    var list=_mEdit?_mDraft:(_cur.monthly||[]);
+    var TH='padding:9px 10px;font-size:12px;font-weight:800;color:#fff;background:#ea580c;border:1px solid #fed7aa;white-space:nowrap';
+    var TD='padding:7px 10px;font-size:13px;color:#1a2f45;border:1px solid #ffedd5;background:#fff;text-align:center';
+    var TDR=TD+';text-align:right;white-space:nowrap;font-weight:600';
+    var INP='width:100%;min-width:90px;height:34px;padding:0 8px;border:1.5px solid #fed7aa;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;background:#fffbf5;outline:none;text-align:right;box-sizing:border-box';
+    var INPL=INP.replace('text-align:right','text-align:left');
+    var btns=_mEdit
+      ? '<button type="button" id="mtAdd" style="height:34px;padding:0 12px;border-radius:9px;border:1.5px solid #ea580c;background:#fff;color:#ea580c;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 행 추가</button>'
+        +'<button type="button" id="mtCancel" style="height:34px;padding:0 12px;border-radius:9px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>'
+        +'<button type="button" id="mtSave" style="height:34px;padding:0 16px;border-radius:9px;border:none;background:#ea580c;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">💾 저장</button>'
+      : '<button type="button" id="mtEdit" style="height:34px;padding:0 16px;border-radius:9px;border:none;background:#ea580c;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">✏️ 수정</button>';
+    var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap">'
+      +'<span style="font-size:14px;font-weight:800;color:#ea580c">📅 '+esc(_cur.ym)+' 월정산 (정기 발생분) <span style="font-size:11px;color:#94a3b8;font-weight:600">— 수정 버튼으로만 변경 · 금액 입력 시 부가세 10% 자동</span></span>'
+      +'<div style="display:flex;gap:6px">'+btns+'</div></div>';
+    html+='<table style="border-collapse:collapse;width:100%;min-width:700px"><thead><tr>'
+      +'<th style="'+TH+'">NO</th><th style="'+TH+';min-width:180px">지출내용</th>'
+      +'<th style="'+TH+'">금액</th><th style="'+TH+'">부가세</th><th style="'+TH+'">합계</th><th style="'+TH+';min-width:110px">비고</th>'
+      +(_mEdit?'<th style="'+TH+'"></th>':'')
+      +'</tr></thead><tbody>';
+    var S=0,T=0;
+    list.forEach(function(r,i){
+      var sup=Number(r.sup)||0, tax=Number(r.tax)||0;
+      S+=sup; T+=tax;
+      if(_mEdit){
+        html+='<tr>'
+          +'<td style="'+TD+';color:#94a3b8">'+(i+1)+'</td>'
+          +'<td style="'+TD+'"><input type="text" data-mf="name|'+i+'" value="'+esc(r.name||'')+'" style="'+INPL+'"></td>'
+          +'<td style="'+TD+'"><input type="number" data-mf="sup|'+i+'" value="'+(sup||'')+'" style="'+INP+'"></td>'
+          +'<td style="'+TD+'"><input type="number" data-mf="tax|'+i+'" value="'+(tax||'')+'" style="'+INP+'"></td>'
+          +'<td style="'+TDR+';background:#fffbf5;color:#ea580c;font-weight:800" data-mtotal="'+i+'">'+((sup+tax)?fmt(sup+tax):'')+'</td>'
+          +'<td style="'+TD+'"><input type="text" data-mf="note|'+i+'" value="'+esc(r.note||'')+'" style="'+INPL+';min-width:80px"></td>'
+          +'<td style="'+TD+'"><button type="button" data-mdel="'+i+'" style="width:30px;height:30px;border:none;border-radius:8px;background:#fde8e8;color:#b52929;cursor:pointer;font-family:inherit">🗑</button></td>'
+          +'</tr>';
+      } else {
+        html+='<tr>'
+          +'<td style="'+TD+';color:#94a3b8">'+(i+1)+'</td>'
+          +'<td style="'+TD+';text-align:left;font-weight:600">'+esc(r.name||'')+'</td>'
+          +'<td style="'+TDR+'">'+(sup?fmt(sup):'')+'</td>'
+          +'<td style="'+TDR+';color:#94a3b8">'+(tax?fmt(tax):'')+'</td>'
+          +'<td style="'+TDR+';font-weight:800">'+((sup+tax)?fmt(sup+tax):'')+'</td>'
+          +'<td style="'+TD+';font-size:12px;color:#64748b">'+esc(r.note||'')+'</td>'
+          +'</tr>';
+      }
+    });
+    html+='<tr>'
+      +'<td colspan="2" style="'+TD+';background:#ea580c;color:#fff;font-weight:800">소 계</td>'
+      +'<td style="'+TDR+';background:#ea580c;color:#fff;font-weight:800">'+(S?fmt(S):'')+'</td>'
+      +'<td style="'+TDR+';background:#ea580c;color:#ffedd5">'+(T?fmt(T):'')+'</td>'
+      +'<td style="'+TDR+';background:#ea580c;color:#fff;font-weight:800">'+((S+T)?fmt(S+T):'')+'</td>'
+      +'<td style="'+TD+';background:#ea580c"></td>'
+      +(_mEdit?'<td style="'+TD+';background:#ea580c"></td>':'')
+      +'</tr></tbody></table>';
+    host.innerHTML=html;
+
+    if(_mEdit){
+      host.querySelectorAll('[data-mf]').forEach(function(inp){
+        inp.addEventListener('input',function(){
+          var p=inp.dataset.mf.split('|'); var f=p[0], i=Number(p[1]);
+          if(f==='name'||f==='note'){ _mDraft[i][f]=inp.value; return; }
+          _mDraft[i][f]=Number(inp.value)||0;
+          if(f==='sup'){
+            /* 금액 입력 → 부가세 10% 자동 (직접 고치면 그 값 유지) */
+            _mDraft[i].tax=Math.round((Number(inp.value)||0)*0.1);
+            var taxInp=host.querySelector('[data-mf="tax|'+i+'"]');
+            if(taxInp) taxInp.value=_mDraft[i].tax||'';
+          }
+          var tot=host.querySelector('[data-mtotal="'+i+'"]');
+          if(tot){ var v=(Number(_mDraft[i].sup)||0)+(Number(_mDraft[i].tax)||0); tot.textContent=v?fmt(v):''; }
+        });
+      });
+      host.querySelectorAll('[data-mdel]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var i=Number(btn.dataset.mdel);
+          if(!confirm('"'+(_mDraft[i].name||'(항목없음)')+'" 행을 삭제할까요?')) return;
+          _mDraft.splice(i,1); renderMonthly(parentBox);
+        });
+      });
+      var ad=host.querySelector('#mtAdd'); if(ad) ad.addEventListener('click',function(){ _mDraft.push({name:'',sup:0,tax:0,note:''}); renderMonthly(parentBox); });
+      var cc=host.querySelector('#mtCancel'); if(cc) cc.addEventListener('click',function(){ _mEdit=false; _mDraft=null; renderMonthly(parentBox); });
+      var sv=host.querySelector('#mtSave'); if(sv) sv.addEventListener('click',function(){
+        _cur.monthly=_mDraft.filter(function(r){ return r.name; });
+        _mEdit=false; _mDraft=null;
+        persistNow();
+        renderMonthly(parentBox);
+        if(typeof toast==='function') toast('💾 월정산 저장됐어요 — 정산표에 반영됩니다');
+      });
+    } else {
+      var ed=host.querySelector('#mtEdit'); if(ed) ed.addEventListener('click',function(){
+        _mDraft=JSON.parse(JSON.stringify(_cur.monthly||[]));
+        _mEdit=true; renderMonthly(parentBox);
+      });
+    }
+  }
 
   /* ── 조회/수정 모달 ── */
   function openLaborModal(idx, mode){
