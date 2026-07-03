@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1600</title>
+  <title>업무일지 v44-0703-1613</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1600</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1613</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2913,7 +2913,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1600"></script>
+<script src="worklog.js?v=44-20260703t1613"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8533,7 +8533,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1600';
+    if(el) el.textContent = 'v44-0703-1613';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10238,7 +10238,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1600 로드');
+  console.log('[expV2] v44-0703-1613 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -11065,12 +11065,21 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         var arr=_cur.checks[s.name]||[];
         out.push(days.map(function(d){ return arr.indexOf(d)>=0?'1':''; }));
       });
-      /* 마지막 행: 특식 표시만 (공휴일명 제외) */
+      /* 합계 행: 일별 인원수 (우측 총합계 열 제외 — 엑셀 17행 위치) */
       out.push(days.map(function(d){
-        return _cur.specialDays.indexOf(d)>=0?'특식':'';
+        var c=0;
+        _cur.staff.forEach(function(s){ if((_cur.checks[s.name]||[]).indexOf(d)>=0) c++; });
+        return c?String(c):'';
+      }));
+      /* 비고 행: 공휴일명+특식 (엑셀 셀이 세로 서식이면 붙여넣기 시 자동 세로 표시) */
+      out.push(days.map(function(d){
+        var tags=[];
+        if(_cur.offNames[d]) tags.push(_cur.offNames[d]);
+        if(_cur.specialDays.indexOf(d)>=0) tags.push('특식');
+        return tags.join('/');
       }));
       var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
-      function done(){ if(typeof toast==='function') toast('📑 체크표 + 특식 행이 복사됐어요 — 첫 직원 × 1일 칸에 붙여넣으세요'); }
+      function done(){ if(typeof toast==='function') toast('📑 체크표+합계+비고 행이 복사됐어요 — 첫 직원 × 1일 칸에 붙여넣으세요'); }
       if(navigator.clipboard&&navigator.clipboard.writeText){
         navigator.clipboard.writeText(tsv).then(done).catch(function(){ fb(tsv); done(); });
       } else { fb(tsv); done(); }
