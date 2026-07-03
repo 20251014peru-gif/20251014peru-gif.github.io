@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1050</title>
+  <title>업무일지 v44-0703-1055</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1050</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1055</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2905,7 +2905,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1050"></script>
+<script src="worklog.js?v=44-20260703t1055"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8518,7 +8518,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1050';
+    if(el) el.textContent = 'v44-0703-1055';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10184,7 +10184,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1050 로드');
+  console.log('[expV2] v44-0703-1055 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -10901,15 +10901,15 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   var fmt=function(n){return Math.round(Number(n)||0).toLocaleString('ko-KR');};
   var esc=function(s){return (s||'').toString().replace(/[&<>"]/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]);});};
   var DEFAULT_ROWS=[
-    {pos:'시설소장', name:'안영삼', base:0, ot:0, skill:0, health:0, pension:0, employ:0},
-    {pos:'시설주임', name:'조태경', base:0, ot:0, skill:0, health:0, pension:0, employ:0}
+    {pos:'시설소장', name:'안영삼', base:0, ot:0, week:0, hol:0, skill:0, health:0, pension:0, employ:0},
+    {pos:'시설주임', name:'조태경', base:0, ot:0, week:0, hol:0, skill:0, health:0, pension:0, employ:0}
   ];
   var _cur=null, _saveTimer=null;
 
   function calcRow(r){
-    var base=Number(r.base)||0, ot=Number(r.ot)||0, skill=Number(r.skill)||0;
-    var sev=Math.round((base+ot+skill)/12);                    /* 퇴직금 = (총급여+연장+업무능력)/12 */
-    var unit=base+ot+skill+sev+(Number(r.health)||0)+(Number(r.pension)||0)+(Number(r.employ)||0);
+    var base=Number(r.base)||0, ot=Number(r.ot)||0, week=Number(r.week)||0, hol=Number(r.hol)||0, skill=Number(r.skill)||0;
+    var sev=Math.round((base+ot+week+hol+skill)/12);           /* 퇴직금 = (총급여+연장+주휴+휴일연장+업무능력)/12 */
+    var unit=base+ot+week+hol+skill+sev+(Number(r.health)||0)+(Number(r.pension)||0)+(Number(r.employ)||0);
     return {sev:sev, unit:unit};
   }
   function calcTotal(rows){
@@ -10988,7 +10988,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var html='<div style="font-size:14px;font-weight:800;color:#1a2f45;margin-bottom:8px">🧾 '+esc(ym)+' 서희타워 도급비 산출 내역</div>';
     html+='<table style="border-collapse:collapse;width:100%;min-width:960px"><thead><tr>'
       +'<th style="'+TH+'">직위</th><th style="'+TH+'">구분</th><th style="'+TH+'">총급여</th>'
-      +'<th style="'+TH+'">연장근로수당</th><th style="'+TH+'">업무능력수당</th>'
+      +'<th style="'+TH+'">연장근로수당</th><th style="'+TH+'">주휴근로수당</th><th style="'+TH+'">휴일연장수당</th><th style="'+TH+'">업무능력수당</th>'
       +'<th style="'+TH+';background:#7a92a8">퇴직금(자동)</th>'
       +'<th style="'+TH+'">건강보험</th><th style="'+TH+'">국민연금</th><th style="'+TH+'">고용보험</th>'
       +'<th style="'+TH+';background:#0C447C">인당단가</th><th style="'+TH+'"></th>'
@@ -11000,6 +11000,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         +'<td style="'+TD+';min-width:86px"><input type="text" data-lf="name|'+i+'" value="'+esc(r.name||'')+'" placeholder="이름" style="'+INP2+'"></td>'
         +'<td style="'+TD+'"><input type="number" data-lf="base|'+i+'" value="'+(r.base||'')+'" style="'+INP+'"></td>'
         +'<td style="'+TD+'"><input type="number" data-lf="ot|'+i+'" value="'+(r.ot||'')+'" style="'+INP+'"></td>'
+        +'<td style="'+TD+'"><input type="number" data-lf="week|'+i+'" value="'+(r.week||'')+'" style="'+INP+'"></td>'
+        +'<td style="'+TD+'"><input type="number" data-lf="hol|'+i+'" value="'+(r.hol||'')+'" style="'+INP+'"></td>'
         +'<td style="'+TD+'"><input type="number" data-lf="skill|'+i+'" value="'+(r.skill||'')+'" style="'+INP+'"></td>'
         +'<td style="'+TDR+';background:#f7faff;color:#7a92a8;font-weight:700">'+(c.sev?fmt(c.sev):'')+'</td>'
         +'<td style="'+TD+'"><input type="number" data-lf="health|'+i+'" value="'+(r.health||'')+'" style="'+INP+'"></td>'
@@ -11011,7 +11013,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     });
     var total=calcTotal(_cur.rows);
     html+='<tr>'
-      +'<td colspan="9" style="'+TD+';background:#1a2f45;color:#fff;font-weight:800;text-align:center;font-size:14px">합계금액</td>'
+      +'<td colspan="11" style="'+TD+';background:#1a2f45;color:#fff;font-weight:800;text-align:center;font-size:14px">합계금액</td>'
       +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800;font-size:15px">'+(total?fmt(total):'')+'</td>'
       +'<td style="'+TD+';background:#1a2f45"></td>'
       +'</tr></tbody></table>';
@@ -11041,14 +11043,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     try{
       if(!_cur||!_cur.rows.length){ if(typeof toast==='function') toast('복사할 내역이 없어요'); return; }
       var out=[];
-      out.push([_cur.ym+' 서희타워 도급비 산출 내역','','','','','','','','','']);
-      out.push(['직위','구분','총급여','연장근로수당','업무능력수당','퇴직금','건강보험','국민연금','고용보험','인당단가']);
+      out.push([_cur.ym+' 서희타워 도급비 산출 내역','','','','','','','','','','','']);
+      out.push(['직위','구분','총급여','연장근로수당','주휴근로수당','휴일연장수당','업무능력수당','퇴직금','건강보험','국민연금','고용보험','인당단가']);
       _cur.rows.forEach(function(r){
         var c=calcRow(r);
-        out.push([r.pos||'', r.name||'', String(r.base||''), String(r.ot||''), String(r.skill||''),
+        out.push([r.pos||'', r.name||'', String(r.base||''), String(r.ot||''), String(r.week||''), String(r.hol||''), String(r.skill||''),
           String(c.sev||''), String(r.health||''), String(r.pension||''), String(r.employ||''), String(c.unit||'')]);
       });
-      out.push(['','','','','','','','','합계금액', String(calcTotal(_cur.rows))]);
+      out.push(['','','','','','','','','','','합계금액', String(calcTotal(_cur.rows))]);
       var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
       function done(){ if(typeof toast==='function') toast('📑 도급비 산출표가 복사됐어요'); }
       if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -11069,7 +11071,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
   function bindLabor(){
     var ms=g('expLaborMonthSel'); if(ms&&!ms._b){ms._b=true;ms.addEventListener('change',function(){ _cur=null; window.renderExpLabor(); });}
-    var ab=g('expLaborAddBtn'); if(ab&&!ab._b){ab._b=true;ab.addEventListener('click',function(){ if(!_cur) return; _cur.rows.push({pos:'',name:'',base:0,ot:0,skill:0,health:0,pension:0,employ:0}); persist(); window.renderExpLabor(); });}
+    var ab=g('expLaborAddBtn'); if(ab&&!ab._b){ab._b=true;ab.addEventListener('click',function(){ if(!_cur) return; _cur.rows.push({pos:'',name:'',base:0,ot:0,week:0,hol:0,skill:0,health:0,pension:0,employ:0}); persist(); window.renderExpLabor(); });}
     var cb=g('expLaborCopyBtn'); if(cb&&!cb._b){cb._b=true;cb.addEventListener('click',copyLaborToExcel);}
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindLabor);
