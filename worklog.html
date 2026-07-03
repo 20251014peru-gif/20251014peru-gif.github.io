@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0703-1343</title>
+  <title>업무일지 v44-0703-1406</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1343</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0703-1406</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2697,6 +2697,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div id="expV2SubTypeRow" style="display:none;margin-bottom:12px">
       <label id="expV2SubTypeLabel" style="font-size:11px;font-weight:700;color:#7a92a8;display:block;margin-bottom:6px">하위 구분</label>
       <div id="expV2SubTypeWrap" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      <div id="expV2SubTypeHint" style="display:none;margin-top:6px;padding:7px 10px;background:#fef3c7;border:1.5px solid #fbbf24;border-radius:9px;font-size:12px;font-weight:600;color:#92400e"></div>
     </div>
 
     <!-- 정기분 템플릿 (세금계산서-정기분 전용) -->
@@ -2905,7 +2906,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260703t1343"></script>
+<script src="worklog.js?v=44-20260703t1406"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -8518,7 +8519,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0703-1343';
+    if(el) el.textContent = 'v44-0703-1406';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8715,6 +8716,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       b.addEventListener('click',function(){ _expSubType=st; renderSubTypeChips(); renderExpTplChips(); });
       wrap.appendChild(b);
     });
+    /* 역산 안내 (수도 = 부가세 없는 고지서) */
+    var hint=g('expV2SubTypeHint');
+    if(hint){
+      if(_expType==='전표'&&_expSubType==='수도'){
+        hint.style.display='';
+        hint.textContent='💧 수도요금은 역산 — 합계 칸에 고지서 금액을 입력하면 금액·부가세가 자동 계산돼요';
+      } else hint.style.display='none';
+    }
   }
 
   /* ── 정기분 템플릿 칩 렌더 ── */
@@ -10215,7 +10224,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0703-1343 로드');
+  console.log('[expV2] v44-0703-1406 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -11097,9 +11106,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     {name:'커피외', sup:0, tax:0, note:''},
     {name:'칼라복합기 임대료', sup:0, tax:0, note:''},
     {name:'PC임대료', sup:0, tax:0, note:''},
-    {name:'소독.방역', sup:0, tax:0, note:''},
+    {name:'소독.방역', sup:0, tax:0, note:'', rev:true},
     {name:'소방안전관리', sup:0, tax:0, note:''},
-    {name:'옥탑층정원유지관리', sup:0, tax:0, note:''},
+    {name:'옥탑층정원유지관리', sup:0, tax:0, note:'', rev:true},
     {name:'카리프트 유지보수', sup:0, tax:0, note:'화물용'},
     {name:'엘리베이터 유지보수', sup:0, tax:0, note:'인승용'},
     {name:'은진 FM관리용역', sup:0, tax:0, note:'경비·청소인력'}
@@ -11124,6 +11133,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(rec){
       rec.rows=rec.rows||[];
       rec.monthly=rec.monthly&&rec.monthly.length?rec.monthly:JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
+      rec.monthly.forEach(function(r){ if(r.rev===undefined&&/소독|옥탑층정원|정원유지/.test(r.name||'')) r.rev=true; });
       _cur=rec; _mEdit=false; _mDraft=null; return;
     }
     var prev=(typeof entries!=='undefined')?entries.filter(function(e){return e.kind==='labor_month'&&e.ym<ym&&e.rows&&e.rows.length;})
@@ -11267,19 +11277,21 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var sup=Number(r.sup)||0, tax=Number(r.tax)||0;
       S+=sup; T+=tax;
       if(_mEdit){
+        var revB=r.rev?'<span style="background:#fef3c7;color:#92400e;border:1px solid #fbbf24;border-radius:5px;padding:0 6px;font-size:10px;font-weight:800;margin-left:5px">역산</span>':'';
         html+='<tr>'
           +'<td style="'+TD+';color:#94a3b8">'+(i+1)+'</td>'
-          +'<td style="'+TD+'"><input type="text" data-mf="name|'+i+'" value="'+esc(r.name||'')+'" style="'+INPL+'"></td>'
-          +'<td style="'+TD+'"><input type="number" data-mf="sup|'+i+'" value="'+(sup||'')+'" style="'+INP+'"></td>'
-          +'<td style="'+TD+'"><input type="number" data-mf="tax|'+i+'" value="'+(tax||'')+'" style="'+INP+'"></td>'
-          +'<td style="'+TDR+';background:#fffbf5;color:#ea580c;font-weight:800" data-mtotal="'+i+'">'+((sup+tax)?fmt(sup+tax):'')+'</td>'
+          +'<td style="'+TD+'"><div style="display:flex;align-items:center;gap:2px"><input type="text" data-mf="name|'+i+'" value="'+esc(r.name||'')+'" style="'+INPL+'">'+revB+'</div></td>'
+          +'<td style="'+TD+'"><input type="number" data-mf="sup|'+i+'" value="'+(sup||'')+'" style="'+INP+'"'+(r.rev?' placeholder="자동"':'')+'></td>'
+          +'<td style="'+TD+'"><input type="number" data-mf="tax|'+i+'" value="'+(tax||'')+'" style="'+INP+'"'+(r.rev?' placeholder="자동"':'')+'></td>'
+          +'<td style="'+TD+'"><input type="number" data-mf="tot|'+i+'" value="'+((sup+tax)||'')+'" title="합계 입력 시 금액·부가세 자동 역산" style="'+INP+';'+(r.rev?'border-color:#f59e0b;background:#fffbeb;':'')+'font-weight:800;color:#ea580c"'+(r.rev?' placeholder="고지서 금액"':'')+'></td>'
           +'<td style="'+TD+'"><input type="text" data-mf="note|'+i+'" value="'+esc(r.note||'')+'" style="'+INPL+';min-width:80px"></td>'
           +'<td style="'+TD+'"><button type="button" data-mdel="'+i+'" style="width:30px;height:30px;border:none;border-radius:8px;background:#fde8e8;color:#b52929;cursor:pointer;font-family:inherit">🗑</button></td>'
           +'</tr>';
       } else {
+        var revB=r.rev?'<span style="background:#fef3c7;color:#92400e;border:1px solid #fbbf24;border-radius:5px;padding:0 6px;font-size:10px;font-weight:800;margin-left:5px">역산</span>':'';
         html+='<tr>'
           +'<td style="'+TD+';color:#94a3b8">'+(i+1)+'</td>'
-          +'<td style="'+TD+';text-align:left;font-weight:600">'+esc(r.name||'')+'</td>'
+          +'<td style="'+TD+';text-align:left;font-weight:600">'+esc(r.name||'')+revB+'</td>'
           +'<td style="'+TDR+'">'+(sup?fmt(sup):'')+'</td>'
           +'<td style="'+TDR+';color:#94a3b8">'+(tax?fmt(tax):'')+'</td>'
           +'<td style="'+TDR+';font-weight:800">'+((sup+tax)?fmt(sup+tax):'')+'</td>'
@@ -11302,15 +11314,25 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         inp.addEventListener('input',function(){
           var p=inp.dataset.mf.split('|'); var f=p[0], i=Number(p[1]);
           if(f==='name'||f==='note'){ _mDraft[i][f]=inp.value; return; }
+          var supInp=host.querySelector('[data-mf="sup|'+i+'"]');
+          var taxInp=host.querySelector('[data-mf="tax|'+i+'"]');
+          var totInp=host.querySelector('[data-mf="tot|'+i+'"]');
+          if(f==='tot'){
+            /* 합계 입력 → 금액·부가세 자동 역산 (수도·소독·정원 등 고지서 금액) */
+            var total=Number(inp.value)||0;
+            _mDraft[i].sup=total?Math.round(total/1.1):0;
+            _mDraft[i].tax=total?(total-_mDraft[i].sup):0;
+            if(supInp) supInp.value=_mDraft[i].sup||'';
+            if(taxInp) taxInp.value=_mDraft[i].tax||'';
+            return;
+          }
           _mDraft[i][f]=Number(inp.value)||0;
           if(f==='sup'){
             /* 금액 입력 → 부가세 10% 자동 (직접 고치면 그 값 유지) */
             _mDraft[i].tax=Math.round((Number(inp.value)||0)*0.1);
-            var taxInp=host.querySelector('[data-mf="tax|'+i+'"]');
             if(taxInp) taxInp.value=_mDraft[i].tax||'';
           }
-          var tot=host.querySelector('[data-mtotal="'+i+'"]');
-          if(tot){ var v=(Number(_mDraft[i].sup)||0)+(Number(_mDraft[i].tax)||0); tot.textContent=v?fmt(v):''; }
+          if(totInp){ var v=(Number(_mDraft[i].sup)||0)+(Number(_mDraft[i].tax)||0); totInp.value=v||''; }
         });
       });
       host.querySelectorAll('[data-mdel]').forEach(function(btn){
