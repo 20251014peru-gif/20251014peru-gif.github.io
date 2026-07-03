@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0703-1903";
+const APP_VERSION = "v44-0703-1920";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -9776,3 +9776,479 @@ async function githubUpload(token){
     console.log('[GitHub] '+f.path+' 업로드 완료');
   }
 }
+
+
+/* ============================================================
+   v44: 임차인 카드 — 임대개별 탭 상단 (kind:"tenant")
+   계약정보 + 특약 전체 + 중요메모(태그) + 연결서류
+   저장: entries 시스템 → Firebase 자동 동기화 + 삭제복구 지원
+   ============================================================ */
+(function(){
+  var TN_FLOORS = ['B1','1F','2F','3F','4F','5F','6F','7F','8F','9F','10F','11F','12F','13F','14F','15F','16F','17F','18F','19F','20F'];
+  var TN_TAGS = ['계약','하자','민원','기타'];
+  var TN_TAG_COLOR = {'계약':'#3f7cb8','하자':'#e67e22','민원':'#e74c3c','기타':'#7a92a8'};
+  var tnSearch = '';
+  var tnFloor = 'all';
+
+  function tnList(){
+    try{ return entries.filter(function(e){ return e.kind==='tenant'; }); }catch(e){ return []; }
+  }
+  function tnFloorOrder(f){
+    if(f==='B1') return -1;
+    var n = parseInt(f); return isNaN(n) ? 999 : n;
+  }
+  function tnMoney(v){
+    var n = Number(v)||0;
+    return n===0 ? '' : n.toLocaleString('ko-KR');
+  }
+  function tnParseMoney(s){
+    return Number(String(s||'').replace(/[^0-9]/g,''))||0;
+  }
+  function tnDday(t){
+    if(!t.endDate) return null;
+    try{
+      var diff = Math.round((new Date(t.endDate+'T00:00:00Z') - new Date(todayStr()+'T00:00:00Z'))/86400000);
+      if(diff < 0)  return {label:'만료 지남 '+Math.abs(diff)+'일', bg:'#fde8e8', color:'#b52929'};
+      if(diff === 0) return {label:'오늘 만료', bg:'#fde8e8', color:'#b52929'};
+      if(diff <= 30) return {label:'D-'+diff, bg:'#fde8e8', color:'#e74c3c'};
+      if(diff <= 90) return {label:'D-'+diff, bg:'#fef5e7', color:'#e67e22'};
+      return {label:'D-'+diff, bg:'#eaf6ef', color:'#27ae60'};
+    }catch(e){ return null; }
+  }
+  function tnMatches(t, q){
+    q = (q||'').trim().toLowerCase();
+    if(!q) return true;
+    var parts = [t.floor, t.unit, t.name, t.ceo, t.phone, t.biznum, t.business, t.note];
+    if(Array.isArray(t.specials)) parts = parts.concat(t.specials);
+    if(Array.isArray(t.memos)) t.memos.forEach(function(m){ parts.push(m.text, m.tag); });
+    return parts.filter(Boolean).join(' ').toLowerCase().indexOf(q) >= 0;
+  }
+
+  /* ---- 섹션 렌더 (툴바 1회 생성 → 검색창 DOM 보존, 그리드만 재렌더) ---- */
+  function renderTenantCards(){
+    var host = document.getElementById('tenantSection');
+    if(!host) return;
+    if(!document.getElementById('tnToolbar')){
+      host.innerHTML =
+        '<div id="tnToolbar">'
+        + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
+          + '<span style="font-size:16px;font-weight:800;color:#33567d">🏠 임차인 카드</span>'
+          + '<span id="tnCount" style="font-size:12px;color:#aab8c8"></span>'
+          + '<input type="text" id="tnSearchInp" placeholder="상호·대표자·호수·특약·메모 검색" style="flex:1;min-width:170px;max-width:320px;height:34px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#fff;outline:none">'
+          + '<button id="tnAddBtn" style="height:34px;padding:0 14px;border:none;border-radius:10px;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">➕ 임차인 추가</button>'
+        + '</div>'
+        + '<div id="tnChips" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px"></div>'
+        + '</div>'
+        + '<div id="tnGrid"></div>'
+        + '<div style="padding:12px 4px 6px;font-size:14px;font-weight:800;color:#3f7cb8;border-bottom:2px solid #e8f0fa;margin:16px 0 4px">📂 서류</div>';
+      var inp = document.getElementById('tnSearchInp');
+      if(inp && !inp._bound){
+        inp._bound = true;
+        inp.addEventListener('input', function(){ tnSearch = inp.value; renderTnGrid(); });
+        inp.addEventListener('keydown', function(ev){
+          if(ev.key==='Enter'){
+            var first = document.querySelector('#tnGrid .tn-card');
+            if(first) openTenantModal(first.getAttribute('data-id'));
+          }
+        });
+      }
+      var ab = document.getElementById('tnAddBtn');
+      if(ab && !ab._bound){ ab._bound = true; ab.addEventListener('click', function(){ openTenantModal(null); }); }
+    }
+    renderTnGrid();
+  }
+
+  function tnChipStyle(active){
+    return 'padding:5px 12px;border-radius:14px;border:1.5px solid '+(active?'#3f7cb8':'#dbe6f4')+';background:'+(active?'#3f7cb8':'#fff')+';color:'+(active?'#fff':'#7a92a8')+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit';
+  }
+
+  function renderTnGrid(){
+    var grid = document.getElementById('tnGrid');
+    var chips = document.getElementById('tnChips');
+    var cnt = document.getElementById('tnCount');
+    if(!grid) return;
+    var all = tnList();
+    /* 층 칩: 등록된 층만 표시 */
+    var floors = {};
+    all.forEach(function(t){ if(t.floor) floors[t.floor]=1; });
+    var floorKeys = Object.keys(floors).sort(function(a,b){ return tnFloorOrder(a)-tnFloorOrder(b); });
+    if(tnFloor!=='all' && floorKeys.indexOf(tnFloor)<0) tnFloor='all';
+    if(chips){
+      var ch = '<button class="tn-chip" data-f="all" style="'+tnChipStyle(tnFloor==='all')+'">전체</button>';
+      floorKeys.forEach(function(f){
+        ch += '<button class="tn-chip" data-f="'+esc(f)+'" style="'+tnChipStyle(tnFloor===f)+'">'+esc(f)+'</button>';
+      });
+      chips.innerHTML = ch;
+      chips.querySelectorAll('.tn-chip').forEach(function(b){
+        b.addEventListener('click', function(){ tnFloor = b.getAttribute('data-f'); renderTnGrid(); });
+      });
+    }
+    var list = all.filter(function(t){
+      if(tnFloor!=='all' && t.floor!==tnFloor) return false;
+      return tnMatches(t, tnSearch);
+    }).sort(function(a,b){
+      return tnFloorOrder(a.floor)-tnFloorOrder(b.floor) || String(a.unit||'').localeCompare(String(b.unit||''),'ko',{numeric:true});
+    });
+    if(cnt) cnt.textContent = list.length + '명' + (all.length!==list.length ? ' / 전체 '+all.length+'명' : '');
+    if(!list.length){
+      grid.style.cssText = '';
+      grid.innerHTML = '<div style="text-align:center;padding:36px 20px;color:#aab8c8;background:#f7faff;border-radius:12px;font-size:13px">'
+        + (all.length ? '조건에 맞는 임차인이 없어요' : '🏠 <b>➕ 임차인 추가</b> 버튼으로 첫 임차인 카드를 만들어보세요')
+        + '</div>';
+      return;
+    }
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px';
+    grid.innerHTML = list.map(tnCardHtml).join('');
+    grid.querySelectorAll('.tn-card').forEach(function(card){
+      card.addEventListener('click', function(e){
+        if(e.target.closest('a')) return;
+        openTenantModal(card.getAttribute('data-id'));
+      });
+      card.addEventListener('mouseenter', function(){ card.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'; card.style.transform='translateY(-1px)'; });
+      card.addEventListener('mouseleave', function(){ card.style.boxShadow=''; card.style.transform=''; });
+    });
+  }
+
+  function tnCardHtml(t){
+    var dd = tnDday(t);
+    var money = [];
+    if(tnMoney(t.deposit)) money.push('보증금 <b>'+tnMoney(t.deposit)+'</b>');
+    if(tnMoney(t.rent)) money.push('월세 <b>'+tnMoney(t.rent)+'</b>');
+    if(tnMoney(t.mgmtFee)) money.push('관리비 <b>'+tnMoney(t.mgmtFee)+'</b>');
+    var spN = (t.specials||[]).filter(function(s){ return s&&String(s).trim(); }).length;
+    var mmN = (t.memos||[]).length;
+    var tel = String(t.phone||'').replace(/[^0-9+]/g,'');
+    return '<div class="tn-card" data-id="'+esc(String(t.id))+'" style="background:#fff;border:1.5px solid #e8f0fa;border-radius:12px;padding:12px 14px;cursor:pointer;transition:box-shadow .15s,transform .15s">'
+      + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'
+        + '<span style="background:#eef5fd;color:#3f7cb8;font-size:11px;font-weight:800;padding:3px 8px;border-radius:8px;white-space:nowrap">'+esc(String(t.floor||''))+' · '+esc(String(t.unit||''))+'</span>'
+        + '<span style="font-size:14px;font-weight:800;color:#1a2f45;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||'(상호 미입력)'))+'</span>'
+        + (dd ? '<span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:8px;background:'+dd.bg+';color:'+dd.color+';white-space:nowrap">'+dd.label+'</span>' : '')
+      + '</div>'
+      + ((t.ceo||tel) ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:4px">'+(t.ceo?'👤 '+esc(String(t.ceo)):'')+(t.ceo&&tel?' · ':'')+(tel?'<a href="tel:'+tel+'" style="color:#3f7cb8;text-decoration:none;font-weight:700">📞 '+esc(String(t.phone))+'</a>':'')+'</div>' : '')
+      + ((t.startDate||t.endDate) ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:4px">📅 '+esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?'))+'</div>' : '')
+      + (money.length ? '<div style="font-size:12px;color:#33567d;margin-bottom:4px">'+money.join(' · ')+'</div>' : '')
+      + ((spN||mmN) ? '<div style="display:flex;gap:5px;margin-top:6px">'
+          + (spN ? '<span style="font-size:11px;font-weight:700;background:#f3eefc;color:#8e44ad;padding:2px 8px;border-radius:8px">📋 특약 '+spN+'</span>' : '')
+          + (mmN ? '<span style="font-size:11px;font-weight:700;background:#fff8e6;color:#b8860b;padding:2px 8px;border-radius:8px">📝 메모 '+mmN+'</span>' : '')
+        + '</div>' : '')
+      + '</div>';
+  }
+
+  /* ---- 상세 팝업 (조회 모드 먼저 → 수정 버튼으로 편집) ---- */
+  var tnDrag = {x:0, y:0};
+  function openTenantModal(id, mode){
+    var t = id ? tnList().find(function(x){ return x.id===id; }) : null;
+    if(id && !t){ toast('임차인을 찾을 수 없어요'); return; }
+    var old = document.getElementById('tnOverlay');
+    if(old) old.remove();
+    tnDrag = {x:0, y:0};
+    var ov = document.createElement('div');
+    ov.id = 'tnOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px';
+    var sheet = document.createElement('div');
+    sheet.id = 'tnSheet';
+    sheet.style.cssText = 'background:#fff;border-radius:18px;width:100%;max-width:540px;max-height:90vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.2)';
+    ov.appendChild(sheet);
+    document.body.appendChild(ov);
+    if(!t || mode==='edit') renderTnEdit(sheet, t);
+    else renderTnView(sheet, t.id);
+    wireTnDrag(ov, sheet);
+  }
+  /* 팝업 헤더 드래그 이동 (transform translate) */
+  function wireTnDrag(ov, sheet){
+    var dragging=false, sx=0, sy=0;
+    ov.addEventListener('mousedown', function(e){
+      var h = e.target.closest('.tn-drag-handle');
+      if(!h || e.target.closest('button,a,input,select,textarea')) return;
+      dragging=true; sx=e.clientX-tnDrag.x; sy=e.clientY-tnDrag.y; e.preventDefault();
+    });
+    ov.addEventListener('mousemove', function(e){
+      if(!dragging) return;
+      tnDrag.x = e.clientX-sx; tnDrag.y = e.clientY-sy;
+      sheet.style.transform = 'translate('+tnDrag.x+'px,'+tnDrag.y+'px)';
+    });
+    ov.addEventListener('mouseup', function(){ dragging=false; });
+  }
+
+  function tnInfoRow(label, valueHtml){
+    if(!valueHtml) return '';
+    return '<div style="display:flex;gap:8px;font-size:13px;padding:4px 0"><span style="width:78px;flex-shrink:0;color:#7a92a8;font-weight:700">'+label+'</span><span style="color:#1a2f45;font-weight:600;min-width:0;word-break:break-word">'+valueHtml+'</span></div>';
+  }
+
+  /* ---- 조회 모드 ---- */
+  function renderTnView(sheet, id){
+    var t = tnList().find(function(x){ return x.id===id; });
+    if(!t){ var o0=document.getElementById('tnOverlay'); if(o0) o0.remove(); return; }
+    var tel = String(t.phone||'').replace(/[^0-9+]/g,'');
+    var dd = tnDday(t);
+    var specials = (t.specials||[]).filter(function(s){ return s&&String(s).trim(); });
+    var memos = (t.memos||[]).slice().sort(function(a,b){ return String(b.date||'').localeCompare(String(a.date||'')) || String(b.id||'').localeCompare(String(a.id||'')); });
+    var docs = [];
+    try{
+      var arr = JSON.parse(localStorage.getItem('wl_indiv_v43')||'[]');
+      docs = arr.filter(function(dc){ return dc.floor===t.floor && String(dc.unit||'')===String(t.unit||''); });
+    }catch(e){}
+    sheet.innerHTML =
+      '<div class="tn-drag-handle" style="display:flex;align-items:center;gap:6px;padding:14px 18px;border-bottom:1.5px solid #e8f0fa;cursor:move;position:sticky;top:0;background:#fff;border-radius:18px 18px 0 0;z-index:2">'
+        + '<span style="background:#eef5fd;color:#3f7cb8;font-size:12px;font-weight:800;padding:4px 9px;border-radius:8px;white-space:nowrap">'+esc(String(t.floor||''))+' · '+esc(String(t.unit||''))+'</span>'
+        + '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||''))+'</span>'
+        + '<button id="tnEditBtn" style="height:32px;padding:0 11px;border:none;border-radius:8px;background:#3f7cb8;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap">✏️ 수정</button>'
+        + '<button id="tnDelBtn" style="height:32px;padding:0 11px;border:none;border-radius:8px;background:#fde8e8;color:#b52929;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap">🗑 삭제</button>'
+        + '<button id="tnCloseBtn" style="height:32px;width:32px;border:none;border-radius:8px;background:#f0f4f9;color:#7a92a8;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;flex-shrink:0">✕</button>'
+      + '</div>'
+      + '<div style="padding:14px 18px 18px">'
+        + '<div style="font-size:13px;font-weight:800;color:#33567d;margin-bottom:4px">📄 계약정보 '+(dd?'<span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:8px;background:'+dd.bg+';color:'+dd.color+'">'+dd.label+'</span>':'')+'</div>'
+        + '<div style="background:#f7faff;border-radius:12px;padding:10px 14px;margin-bottom:14px">'
+          + tnInfoRow('대표자', t.ceo?esc(String(t.ceo)):'')
+          + tnInfoRow('연락처', tel?'<a href="tel:'+tel+'" style="color:#3f7cb8;text-decoration:none">📞 '+esc(String(t.phone))+'</a>':'')
+          + tnInfoRow('사업자번호', t.biznum?esc(String(t.biznum)):'')
+          + tnInfoRow('업종', t.business?esc(String(t.business)):'')
+          + tnInfoRow('면적', t.area?esc(String(t.area)):'')
+          + tnInfoRow('계약기간', (t.startDate||t.endDate)?esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?')):'')
+          + tnInfoRow('보증금', tnMoney(t.deposit)?tnMoney(t.deposit)+'원':'')
+          + tnInfoRow('월세', tnMoney(t.rent)?tnMoney(t.rent)+'원':'')
+          + tnInfoRow('관리비', tnMoney(t.mgmtFee)?tnMoney(t.mgmtFee)+'원':'')
+          + tnInfoRow('납부일', t.payDay?'매월 '+esc(String(t.payDay))+'일':'')
+          + tnInfoRow('비고', t.note?esc(String(t.note)):'')
+        + '</div>'
+        + '<div style="font-size:13px;font-weight:800;color:#8e44ad;margin-bottom:4px">📋 특약사항 <span style="color:#aab8c8;font-weight:600;font-size:11px">'+specials.length+'건</span></div>'
+        + (specials.length
+            ? '<div style="background:#faf7fd;border-radius:12px;padding:10px 14px;margin-bottom:14px">'+specials.map(function(s,i){ return '<div style="display:flex;gap:8px;font-size:13px;color:#1a2f45;padding:3px 0;line-height:1.55"><b style="color:#8e44ad;flex-shrink:0">'+(i+1)+'.</b><span style="min-width:0;word-break:break-word">'+esc(String(s))+'</span></div>'; }).join('')+'</div>'
+            : '<div style="font-size:12px;color:#aab8c8;padding:4px 4px 14px">등록된 특약이 없어요 — ✏️ 수정에서 추가하세요</div>')
+        + '<div style="font-size:13px;font-weight:800;color:#b8860b;margin-bottom:6px">📝 중요메모 <span style="color:#aab8c8;font-weight:600;font-size:11px">'+memos.length+'건</span></div>'
+        + '<div style="display:flex;gap:6px;margin-bottom:8px">'
+          + '<select id="tnMemoTag" style="height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;flex-shrink:0">'+TN_TAGS.map(function(g){ return '<option value="'+g+'">'+g+'</option>'; }).join('')+'</select>'
+          + '<input type="text" id="tnMemoText" placeholder="메모 입력 후 Enter 또는 ➕ 추가" style="flex:1;min-width:0;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">'
+          + '<button id="tnMemoAdd" style="height:34px;padding:0 12px;border:none;border-radius:8px;background:#b8860b;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0">➕ 추가</button>'
+        + '</div>'
+        + '<div id="tnMemoList">' + (memos.length ? memos.map(function(m){
+            var c = TN_TAG_COLOR[m.tag]||'#7a92a8';
+            return '<div style="display:flex;gap:8px;align-items:flex-start;background:#fffdf5;border:1px solid #f2ead0;border-radius:10px;padding:8px 10px;margin-bottom:6px">'
+              + '<span style="font-size:10px;font-weight:800;color:#fff;background:'+c+';padding:2px 7px;border-radius:7px;flex-shrink:0;margin-top:2px">'+esc(String(m.tag||'기타'))+'</span>'
+              + '<div style="flex:1;min-width:0"><div style="font-size:13px;color:#1a2f45;line-height:1.5;word-break:break-word">'+esc(String(m.text||''))+'</div><div style="font-size:11px;color:#aab8c8;margin-top:2px">'+esc(String(m.date||''))+'</div></div>'
+              + '<button class="tn-memo-del" data-mid="'+esc(String(m.id||''))+'" style="border:none;background:none;color:#d0d8e2;font-size:13px;cursor:pointer;padding:2px;flex-shrink:0">🗑</button>'
+            + '</div>';
+          }).join('') : '<div style="font-size:12px;color:#aab8c8;padding:4px">메모가 없어요 — 위 입력줄에서 바로 추가할 수 있어요</div>') + '</div>'
+        + '<div style="font-size:13px;font-weight:800;color:#3f7cb8;margin:14px 0 4px">📂 연결 서류 <span style="color:#aab8c8;font-weight:600;font-size:11px">'+docs.length+'건 · 임대개별 서류의 같은 층·호수 자동 연결</span></div>'
+        + (docs.length
+            ? docs.map(function(dc){
+                return '<div style="display:flex;gap:8px;align-items:center;background:#f7faff;border-radius:10px;padding:8px 10px;margin-bottom:5px">'
+                  + '<span style="font-size:11px;font-weight:700;color:#3f7cb8;background:#eef5fd;padding:2px 7px;border-radius:7px;flex-shrink:0">'+esc(String(dc.type||'서류'))+'</span>'
+                  + '<span style="flex:1;min-width:0;font-size:12px;color:#1a2f45;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(dc.fileType==='folder'?'📁':'📄')+' '+esc(String(dc.name||''))+'</span>'
+                  + (dc.path ? '<button class="tn-doc-copy" data-path="'+esc(String(dc.path))+'" style="border:1.5px solid #dbe6f4;background:#fff;color:#3f7cb8;font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;cursor:pointer;font-family:inherit;flex-shrink:0">📋 경로복사</button>' : '')
+                + '</div>';
+              }).join('')
+            : '<div style="font-size:12px;color:#aab8c8;padding:4px">같은 층·호수로 등록된 서류가 없어요 (아래 📂 서류에서 층·호수를 지정해 등록하면 자동 연결)</div>')
+      + '</div>';
+
+    document.getElementById('tnCloseBtn').addEventListener('click', function(){ var o=document.getElementById('tnOverlay'); if(o) o.remove(); });
+    document.getElementById('tnEditBtn').addEventListener('click', function(){ renderTnEdit(sheet, t); });
+    document.getElementById('tnDelBtn').addEventListener('click', function(){
+      var o=document.getElementById('tnOverlay'); if(o) o.remove();
+      deleteWithUndo(t.id, '임차인 카드');
+      renderTnGrid();
+    });
+    var addMemo = function(){
+      try{
+        var txtEl = document.getElementById('tnMemoText');
+        var txt = (txtEl.value||'').trim();
+        if(!txt){ toast('메모 내용을 입력하세요'); return; }
+        var tag = document.getElementById('tnMemoTag').value || '기타';
+        var cur = tnList().find(function(x){ return x.id===id; });
+        if(!cur) return;
+        var memos2 = Array.isArray(cur.memos) ? cur.memos.slice() : [];
+        memos2.unshift({id:'m'+Date.now()+Math.floor(Math.random()*1000), date:todayStr(), tag:tag, text:txt});
+        updateRecord(id, {memos:memos2, updatedAt:Date.now()});
+        renderTnView(sheet, id); renderTnGrid();
+        toast('📝 메모 추가됨');
+      }catch(err){ console.error('[임차인 메모]', err); toast('메모 저장 오류: '+(err.message||err)); }
+    };
+    document.getElementById('tnMemoAdd').addEventListener('click', addMemo);
+    document.getElementById('tnMemoText').addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); addMemo(); } });
+    sheet.querySelectorAll('.tn-memo-del').forEach(function(b){
+      b.addEventListener('click', function(){
+        try{
+          var cur = tnList().find(function(x){ return x.id===id; });
+          if(!cur) return;
+          var memos2 = (cur.memos||[]).filter(function(m){ return String(m.id)!==b.getAttribute('data-mid'); });
+          updateRecord(id, {memos:memos2, updatedAt:Date.now()});
+          renderTnView(sheet, id); renderTnGrid();
+          toast('메모 삭제됨');
+        }catch(err){ console.error('[임차인 메모삭제]', err); }
+      });
+    });
+    sheet.querySelectorAll('.tn-doc-copy').forEach(function(b){
+      b.addEventListener('click', function(){
+        var p = b.getAttribute('data-path')||'';
+        try{
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(p).then(function(){ toast('📋 경로 복사됨'); }).catch(function(){ tnCopyFallback(p); });
+          } else tnCopyFallback(p);
+        }catch(e){ tnCopyFallback(p); }
+      });
+    });
+  }
+  function tnCopyFallback(text){
+    try{
+      var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('📋 경로 복사됨');
+    }catch(e){ toast('복사 실패 — 경로를 길게 눌러 복사하세요'); }
+  }
+
+  /* ---- 편집 모드 (신규는 바로 편집) ---- */
+  function renderTnEdit(sheet, t){
+    var isNew = !t;
+    var d = t || {floor:'', unit:'', name:'', ceo:'', phone:'', biznum:'', business:'', area:'', startDate:'', endDate:'', deposit:0, rent:0, mgmtFee:0, payDay:'', specials:[], memos:[], note:''};
+    var INP = 'width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none';
+    var LBL = 'display:block;font-size:11px;font-weight:700;color:#33567d;margin-bottom:2px';
+    var specials = (d.specials||[]).filter(function(s){ return s&&String(s).trim(); });
+    if(!specials.length) specials = [''];
+    sheet.innerHTML =
+      '<div class="tn-drag-handle" style="display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1.5px solid #e8f0fa;cursor:move;position:sticky;top:0;background:#fff;border-radius:18px 18px 0 0;z-index:2">'
+        + '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">'+(isNew?'🏠 임차인 추가':'✏️ 임차인 수정')+'</span>'
+        + '<button id="tnEditClose" type="button" style="height:32px;width:32px;border:none;border-radius:8px;background:#f0f4f9;color:#7a92a8;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<div style="padding:14px 18px 18px">'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+          + '<div><label style="'+LBL+'">층 <span style="color:#e74c3c">*</span></label><select id="tnFloorSel" style="'+INP+';padding:0 6px">'
+            + '<option value="">층 선택</option>'
+            + TN_FLOORS.map(function(f){ return '<option value="'+f+'" '+(d.floor===f?'selected':'')+'>'+f+'</option>'; }).join('')
+          + '</select></div>'
+          + '<div><label style="'+LBL+'">호수 <span style="color:#e74c3c">*</span></label><input type="text" id="tnUnitInp" placeholder="예: 501" style="'+INP+'"></div>'
+          + '<div style="grid-column:1/-1"><label style="'+LBL+'">상호 / 임차인명 <span style="color:#e74c3c">*</span></label><input type="text" id="tnNameInp" placeholder="예: (주)OO상사" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">대표자</label><input type="text" id="tnCeoInp" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">연락처</label><input type="text" id="tnPhoneInp" placeholder="010-0000-0000" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">사업자번호</label><input type="text" id="tnBiznumInp" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">업종</label><input type="text" id="tnBizInp" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">면적</label><input type="text" id="tnAreaInp" placeholder="예: 33평 (109㎡)" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">납부일</label><input type="text" id="tnPayDayInp" placeholder="예: 25 (매월 25일)" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">계약 시작</label><input type="date" id="tnStartInp" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">계약 종료</label><input type="date" id="tnEndInp" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">보증금 (원)</label><input type="text" id="tnDepositInp" inputmode="numeric" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">월세 (원)</label><input type="text" id="tnRentInp" inputmode="numeric" style="'+INP+'"></div>'
+          + '<div style="grid-column:1/-1"><label style="'+LBL+'">관리비 (원)</label><input type="text" id="tnMgmtInp" inputmode="numeric" style="'+INP+'"></div>'
+          + '<div style="grid-column:1/-1"><label style="'+LBL+'">📋 특약사항</label><div id="tnSpecialRows"></div>'
+            + '<button id="tnSpecialAdd" type="button" style="margin-top:4px;height:30px;padding:0 12px;border:1.5px dashed #c9b8e8;border-radius:8px;background:#faf7fd;color:#8e44ad;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 특약 추가</button></div>'
+          + '<div style="grid-column:1/-1"><label style="'+LBL+'">비고</label><textarea id="tnNoteInp" rows="2" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;resize:vertical"></textarea></div>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;margin-top:14px">'
+          + '<button id="tnEditCancel" type="button" style="flex:1;height:44px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>'
+          + (isNew?'':'<button id="tnEditDel" type="button" style="flex:1;height:44px;border:2px solid #fde8e8;border-radius:12px;background:#fff;color:#e74c3c;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>')
+          + '<button id="tnEditSave" type="button" style="flex:2;height:44px;border:none;border-radius:12px;background:#3f7cb8;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">💾 저장</button>'
+        + '</div>'
+      + '</div>';
+
+    /* 값 주입 (innerHTML 속성 이스케이프 문제 방지 — DOM으로 직접) */
+    document.getElementById('tnUnitInp').value = d.unit||'';
+    document.getElementById('tnNameInp').value = d.name||'';
+    document.getElementById('tnCeoInp').value = d.ceo||'';
+    document.getElementById('tnPhoneInp').value = d.phone||'';
+    document.getElementById('tnBiznumInp').value = d.biznum||'';
+    document.getElementById('tnBizInp').value = d.business||'';
+    document.getElementById('tnAreaInp').value = d.area||'';
+    document.getElementById('tnPayDayInp').value = d.payDay||'';
+    document.getElementById('tnStartInp').value = d.startDate||'';
+    document.getElementById('tnEndInp').value = d.endDate||'';
+    document.getElementById('tnDepositInp').value = tnMoney(d.deposit);
+    document.getElementById('tnRentInp').value = tnMoney(d.rent);
+    document.getElementById('tnMgmtInp').value = tnMoney(d.mgmtFee);
+    document.getElementById('tnNoteInp').value = d.note||'';
+
+    /* 특약 동적 행 */
+    var rowsHost = document.getElementById('tnSpecialRows');
+    function addSpecialRow(val){
+      var row = document.createElement('div');
+      row.className = 'tn-sp-row';
+      row.style.cssText = 'display:flex;gap:6px;margin-bottom:5px';
+      row.innerHTML = '<input type="text" class="tn-sp-inp" placeholder="특약 내용 (예: 원상복구 조건, 관리비 포함 항목 등)" style="flex:1;min-width:0;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">'
+        + '<button type="button" class="tn-sp-del" style="width:34px;height:34px;border:1.5px solid #fde8e8;border-radius:8px;background:#fff;color:#e74c3c;font-size:13px;cursor:pointer;flex-shrink:0">✕</button>';
+      row.querySelector('.tn-sp-inp').value = val||'';
+      row.querySelector('.tn-sp-del').addEventListener('click', function(){ row.remove(); });
+      rowsHost.appendChild(row);
+    }
+    specials.forEach(addSpecialRow);
+    document.getElementById('tnSpecialAdd').addEventListener('click', function(){
+      addSpecialRow('');
+      var rows = rowsHost.querySelectorAll('.tn-sp-inp');
+      if(rows.length) rows[rows.length-1].focus();
+    });
+
+    /* 금액 자동 콤마 */
+    ['tnDepositInp','tnRentInp','tnMgmtInp'].forEach(function(iid){
+      var el = document.getElementById(iid);
+      el.addEventListener('input', function(){ var n=el.value.replace(/[^0-9]/g,''); el.value = n?Number(n).toLocaleString('ko-KR'):''; });
+    });
+
+    var closeAll = function(){ var o=document.getElementById('tnOverlay'); if(o) o.remove(); };
+    document.getElementById('tnEditClose').addEventListener('click', closeAll);
+    document.getElementById('tnEditCancel').addEventListener('click', function(){
+      if(isNew) closeAll(); else renderTnView(sheet, t.id);
+    });
+    if(!isNew){
+      document.getElementById('tnEditDel').addEventListener('click', function(){
+        closeAll(); deleteWithUndo(t.id, '임차인 카드'); renderTnGrid();
+      });
+    }
+    document.getElementById('tnEditSave').addEventListener('click', function(){
+      try{
+        var floor = document.getElementById('tnFloorSel').value;
+        var unit = document.getElementById('tnUnitInp').value.trim();
+        var name = document.getElementById('tnNameInp').value.trim();
+        if(!floor){ toast('층을 선택하세요'); return; }
+        if(!unit){ toast('호수를 입력하세요'); return; }
+        if(!name){ toast('상호/임차인명을 입력하세요'); return; }
+        var sp = [];
+        rowsHost.querySelectorAll('.tn-sp-inp').forEach(function(i2){ var v=(i2.value||'').trim(); if(v) sp.push(v); });
+        var patch = {
+          kind:'tenant', floor:floor, unit:unit, name:name,
+          ceo: document.getElementById('tnCeoInp').value.trim(),
+          phone: document.getElementById('tnPhoneInp').value.trim(),
+          biznum: document.getElementById('tnBiznumInp').value.trim(),
+          business: document.getElementById('tnBizInp').value.trim(),
+          area: document.getElementById('tnAreaInp').value.trim(),
+          payDay: document.getElementById('tnPayDayInp').value.trim(),
+          startDate: document.getElementById('tnStartInp').value,
+          endDate: document.getElementById('tnEndInp').value,
+          deposit: tnParseMoney(document.getElementById('tnDepositInp').value),
+          rent: tnParseMoney(document.getElementById('tnRentInp').value),
+          mgmtFee: tnParseMoney(document.getElementById('tnMgmtInp').value),
+          specials: sp,
+          note: document.getElementById('tnNoteInp').value.trim(),
+          updatedAt: Date.now()
+        };
+        if(isNew){
+          patch.memos = [];
+          patch.date = todayStr();
+          patch.createdAt = Date.now();
+          var rec = addRecord(patch);
+          toast('🏠 임차인 카드 저장됨');
+          renderTnGrid();
+          renderTnView(sheet, rec.id);
+        } else {
+          updateRecord(t.id, patch);
+          toast('💾 저장됨');
+          renderTnGrid();
+          renderTnView(sheet, t.id);
+        }
+      }catch(err){ console.error('[임차인 저장]', err); toast('저장 오류: '+(err.message||err)); }
+    });
+  }
+
+  /* renderAll 래핑 — 클라우드 동기화·삭제복구 후 임차인 그리드도 갱신 */
+  try{
+    if(typeof renderAll === 'function' && !renderAll._tnWrapped){
+      var _tnOrigRenderAll = renderAll;
+      renderAll = function(){
+        _tnOrigRenderAll();
+        try{ if(document.getElementById('tnGrid')) renderTnGrid(); }catch(e){}
+      };
+      renderAll._tnWrapped = true;
+      window.renderAll = renderAll;
+    }
+  }catch(e){ console.warn('[임차인] renderAll 래핑 생략:', e); }
+
+  window.renderTenantCards = renderTenantCards;
+  window.openTenantModal = openTenantModal;
+
+  /* 초기 렌더 (저장된 탭이 임대개별인 채로 열린 경우 대비) */
+  setTimeout(function(){ try{ renderTenantCards(); }catch(e){} }, 900);
+})();
