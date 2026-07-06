@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0706-1149";
+const APP_VERSION = "v44-0706-1231";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -1976,9 +1976,11 @@ function renderWorkModal(data, mode){
   const rowTitle = `
   <div style="${S.mb}">
     <label style="${S.lbl}">업무내역 *</label>
-    <input type="text" id="m-title" value="${e2(d.title||"")}" list="dl-title" autocomplete="off"
-      placeholder="무엇을 했나요?" style="${S.inp};font-size:15px;font-weight:600;border-color:#3b82f6">
-    <datalist id="dl-title">${[...new Set(entries.filter(e=>e.kind==="work"&&e.title).map(e=>e.title))].sort().map(v=>`<option value="${e2(v)}"></option>`).join("")}</datalist>
+    <div style="position:relative">
+      <input type="text" id="m-title" value="${e2(d.title||"")}" autocomplete="off"
+        placeholder="무엇을 했나요?" style="${S.inp};font-size:15px;font-weight:600;border-color:#3b82f6">
+      <div id="titleAcBox" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);background:#fff;border:1.5px solid #3b82f6;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.12);max-height:260px;overflow:auto;z-index:50"></div>
+    </div>
   </div>`;
 
   /* ── 상세내용 (1열 풀, 항상 표시) ── */
@@ -10637,4 +10639,110 @@ async function githubUpload(token){
   window.rcUpdateFabBadge = rcUpdateFabBadge;
 
   setTimeout(function(){ try{ renderRecurWidget(); rcUpdateFabBadge(); }catch(e){} }, 950);
+})();
+
+
+/* ============================================================
+   v44: 업무내역 자동완성 커스텀 드롭다운 (항목별 🗑 삭제 지원)
+   - 브라우저 datalist는 항목 삭제 불가 → 커스텀 드롭다운으로 교체
+   - 과거 업무내역(entries kind:work)에서 후보 생성
+   - 🗑 누르면 해당 문구를 숨김목록(localStorage)에 추가 → 자동완성에서만 제외
+   - 원본 업무 기록은 그대로 유지 (안전)
+   - 한글 IME 안전: 입력란 DOM 보존, 드롭다운 박스만 갱신
+   ============================================================ */
+(function(){
+  var HIDE_KEY = 'wl_title_hidden';
+
+  function loadHidden(){
+    try{ return JSON.parse(localStorage.getItem(HIDE_KEY)||'[]'); }catch(e){ return []; }
+  }
+  function saveHidden(arr){
+    try{ localStorage.setItem(HIDE_KEY, JSON.stringify(arr)); }catch(e){}
+  }
+  function addHidden(text){
+    var arr = loadHidden();
+    if(arr.indexOf(text)<0){ arr.push(text); saveHidden(arr); }
+  }
+
+  /* 후보 목록: 과거 업무내역 - 숨김목록 */
+  function titleCandidates(){
+    var hidden = loadHidden();
+    var set = {};
+    try{
+      entries.forEach(function(e){
+        if(e.kind==='work' && e.title){ set[e.title]=1; }
+      });
+    }catch(e){}
+    return Object.keys(set).filter(function(t){ return hidden.indexOf(t)<0; }).sort();
+  }
+
+  function acBox(){ return document.getElementById('titleAcBox'); }
+  function acInput(){ return document.getElementById('m-title'); }
+
+  function hideBox(){ var b=acBox(); if(b){ b.style.display='none'; b.innerHTML=''; } }
+
+  function renderBox(filter){
+    var box = acBox(); var inp = acInput();
+    if(!box || !inp) return;
+    var q = (filter||'').trim().toLowerCase();
+    var list = titleCandidates();
+    if(q){
+      list = list.filter(function(t){ return t.toLowerCase().indexOf(q)>=0; });
+    }
+    list = list.slice(0, 40);
+    if(!list.length){ hideBox(); return; }
+    box.innerHTML = list.map(function(t){
+      return '<div class="tac-item" data-val="'+esc(t)+'" style="display:flex;align-items:center;gap:8px;padding:9px 10px;cursor:pointer;border-bottom:1px solid #f0f4f9">'
+        + '<span class="tac-pick" data-val="'+esc(t)+'" style="flex:1;min-width:0;font-size:14px;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t)+'</span>'
+        + '<button type="button" class="tac-del" data-val="'+esc(t)+'" title="자동완성 목록에서 지우기" style="flex-shrink:0;width:28px;height:28px;border:1.5px solid #fde8e8;border-radius:7px;background:#fff;color:#e74c3c;font-size:13px;cursor:pointer;font-family:inherit;line-height:1">🗑</button>'
+        + '</div>';
+    }).join('');
+    box.style.display='block';
+
+    box.querySelectorAll('.tac-pick').forEach(function(el){
+      el.addEventListener('mousedown', function(ev){
+        ev.preventDefault();
+        inp.value = el.getAttribute('data-val');
+        hideBox();
+        inp.focus();
+      });
+    });
+    box.querySelectorAll('.tac-del').forEach(function(el){
+      el.addEventListener('mousedown', function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        var v = el.getAttribute('data-val');
+        if(!confirm('"'+v+'"\n이 문구를 업무내역 자동완성 목록에서 지울까요?\n(과거 업무 기록 자체는 지워지지 않아요)')) return;
+        addHidden(v);
+        renderBox(inp.value);
+        if(typeof toast==='function') toast('자동완성에서 제외됨');
+      });
+    });
+  }
+
+  /* renderWorkModal이 열릴 때마다 호출됨 — 입력란에 1회만 바인딩 */
+  function bindTitleAc(){
+    var inp = acInput();
+    if(!inp || inp._acBound) return;
+    inp._acBound = true;
+    inp.addEventListener('focus', function(){ renderBox(inp.value); });
+    inp.addEventListener('input', function(){ renderBox(inp.value); });
+    inp.addEventListener('blur', function(){ setTimeout(hideBox, 150); });
+    inp.addEventListener('keydown', function(ev){ if(ev.key==='Escape'){ hideBox(); } });
+  }
+
+  /* renderWorkModal 래핑 — 모달 렌더 후 자동 바인딩 */
+  try{
+    if(typeof renderWorkModal === 'function' && !renderWorkModal._acWrapped){
+      var _origRWM = renderWorkModal;
+      renderWorkModal = function(){
+        var r = _origRWM.apply(this, arguments);
+        setTimeout(bindTitleAc, 60);
+        return r;
+      };
+      renderWorkModal._acWrapped = true;
+      window.renderWorkModal = renderWorkModal;
+    }
+  }catch(e){ console.warn('[업무내역 자동완성] renderWorkModal 래핑 실패:', e); }
+
+  window.bindTitleAc = bindTitleAc;
 })();
