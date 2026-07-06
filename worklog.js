@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0703-1920";
+const APP_VERSION = "v44-0706-1120";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -10251,4 +10251,322 @@ async function githubUpload(token){
 
   /* 초기 렌더 (저장된 탭이 임대개별인 채로 열린 경우 대비) */
   setTimeout(function(){ try{ renderTenantCards(); }catch(e){} }, 900);
+})();
+
+
+/* ============================================================
+   v44: 월간 반복업무 체크리스트 — 메인(기록) 탭 상단
+   - 반복업무 템플릿(recurTpl): 항목명·분류·매월 기한일·금액 — 달님이 추가/수정/삭제
+   - 매월 자동 생성: 이번 달 앱 열면 템플릿→월별 완료상태(recurDone) 자동 준비
+   - 완료 체크만 (기록·전표 연결 없음)
+   - 기한 지난 미완료 = 빨강 최상단 / 기한 3일 전 = 주황
+   저장: entries 시스템 (kind:"recurTpl") → Firebase 동기화 + 삭제복구
+   완료상태: kind:"recurTpl" 레코드의 done 맵 {"2026-07": true} 에 월별 저장
+   ============================================================ */
+(function(){
+  var RC_CATS = ['전표','납부','점검','기타'];
+  var RC_CAT_BG = {'전표':'#f3eefc','납부':'#eef5fd','점검':'#eaf6ef','기타':'#f0f4f9'};
+  var RC_CAT_FG = {'전표':'#8e44ad','납부':'#3f7cb8','점검':'#27ae60','기타':'#7a92a8'};
+  var rcCollapsed = false;
+  try{ rcCollapsed = localStorage.getItem('wl_recur_collapsed')==='1'; }catch(e){}
+
+  function rcCurMonth(){ return todayStr().slice(0,7); }           // "2026-07"
+  function rcToday(){ return Number(todayStr().slice(8,10)); }      // 6
+  function rcList(){
+    try{ return entries.filter(function(e){ return e.kind==='recurTpl'; }); }catch(e){ return []; }
+  }
+  function rcSortKey(t){ return (Number(t.day)||99); }
+  function rcIsDone(t){ var m=t.done||{}; return !!m[rcCurMonth()]; }
+  function rcMoney(v){ var n=Number(v)||0; return n===0?'':n.toLocaleString('ko-KR'); }
+
+  /* ---- 위젯 렌더 (툴바 1회 생성, 리스트만 갱신) ---- */
+  function renderRecurWidget(){
+    var host = document.getElementById('recurWidget');
+    if(!host) return;
+    var all = rcList();
+    /* 등록된 반복업무가 하나도 없으면: 안내 + 추가 버튼만 */
+    if(!all.length){
+      host.innerHTML =
+        '<div style="background:#fff;border:1.5px dashed #cdddf0;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+        + '<span style="font-size:14px;font-weight:800;color:#33567d">📅 월간 반복업무</span>'
+        + '<span style="font-size:12px;color:#aab8c8;flex:1;min-width:140px">정수기 임차료·전기요금 같은 매월 반복 업무를 등록하면 매달 자동으로 체크리스트가 떠요</span>'
+        + '<button id="rcMgmtBtn0" style="height:34px;padding:0 14px;border:none;border-radius:10px;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">➕ 반복업무 추가</button>'
+        + '</div>';
+      var b0 = document.getElementById('rcMgmtBtn0');
+      if(b0) b0.addEventListener('click', function(){ openRecurManage(); });
+      return;
+    }
+    if(!document.getElementById('rcCard')){
+      host.innerHTML =
+        '<div id="rcCard" style="background:#fff;border:1.5px solid #e8f0fa;border-radius:14px;padding:12px 15px">'
+          + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px">'
+            + '<span style="font-size:15px;font-weight:800;color:#33567d">📅 <span id="rcMonthLabel"></span> 반복업무</span>'
+            + '<span id="rcProg" style="font-size:12px;color:#7a92a8;font-weight:700"></span>'
+            + '<span style="flex:1"></span>'
+            + '<button id="rcMgmtBtn" style="height:30px;padding:0 11px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;color:#3f7cb8;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">⚙️ 관리</button>'
+            + '<button id="rcToggle" style="height:30px;width:30px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer" aria-label="접기">▾</button>'
+          + '</div>'
+          + '<div id="rcBarWrap" style="height:6px;background:#eef2f7;border-radius:3px;margin-bottom:11px;overflow:hidden"><div id="rcBar" style="height:100%;width:0;background:#3f7cb8;border-radius:3px;transition:width .25s"></div></div>'
+          + '<div id="rcBody"></div>'
+        + '</div>';
+      document.getElementById('rcMgmtBtn').addEventListener('click', function(){ openRecurManage(); });
+      var tg = document.getElementById('rcToggle');
+      tg.addEventListener('click', function(){
+        rcCollapsed = !rcCollapsed;
+        try{ localStorage.setItem('wl_recur_collapsed', rcCollapsed?'1':'0'); }catch(e){}
+        renderRcBody();
+      });
+    }
+    renderRcBody();
+  }
+
+  function renderRcBody(){
+    var body = document.getElementById('rcBody');
+    var barWrap = document.getElementById('rcBarWrap');
+    var tg = document.getElementById('rcToggle');
+    if(!body) return;
+    var all = rcList();
+    var ml = document.getElementById('rcMonthLabel');
+    if(ml) ml.textContent = rcToday() ? (Number(rcCurMonth().slice(5,7))+'월') : '';
+    var doneN = all.filter(rcIsDone).length;
+    var prog = document.getElementById('rcProg');
+    if(prog) prog.textContent = doneN + ' / ' + all.length + ' 완료';
+    var bar = document.getElementById('rcBar');
+    if(bar) bar.style.width = all.length ? Math.round(doneN/all.length*100)+'%' : '0';
+
+    if(tg) tg.textContent = rcCollapsed ? '▸' : '▾';
+    if(rcCollapsed){ body.style.display='none'; if(barWrap) barWrap.style.display='none'; return; }
+    body.style.display=''; if(barWrap) barWrap.style.display='';
+
+    var today = rcToday();
+    /* 정렬: 미완료 우선 → 기한 지난 것 → 기한 임박 → 완료 */
+    var sorted = all.slice().sort(function(a,b){
+      var ad=rcIsDone(a), bd=rcIsDone(b);
+      if(ad!==bd) return ad?1:-1;
+      var ao=(rcSortKey(a)<today)?0:1, bo=(rcSortKey(b)<today)?0:1;
+      if(ao!==bo) return ao-bo;
+      return rcSortKey(a)-rcSortKey(b);
+    });
+    body.innerHTML = sorted.map(function(t){
+      var done = rcIsDone(t);
+      var day = Number(t.day)||0;
+      var over = (!done && day && day<today);
+      var soon = (!done && day && day>=today && (day-today)<=3);
+      var border = over ? '#f7c1c1' : (soon ? '#fac775' : '#e8f0fa');
+      var bg = over ? '#fcebeb' : (soon ? '#faeeda' : '#fff');
+      var money = rcMoney(t.amt);
+      var rightBadge;
+      if(done){
+        var dm = (t.doneAt&&t.doneAt[rcCurMonth()]) ? t.doneAt[rcCurMonth()] : '';
+        rightBadge = '<span style="font-size:11px;color:#aab8c8;flex-shrink:0">'+(dm?esc(dm)+' 완료':'완료')+'</span>';
+      } else if(over){
+        rightBadge = '<span style="font-size:11px;font-weight:800;color:#791f1f;background:#f7c1c1;padding:2px 8px;border-radius:7px;flex-shrink:0">'+(today-day)+'일 지남</span>';
+      } else if(day){
+        var dd = day-today;
+        rightBadge = '<span style="font-size:11px;font-weight:800;color:'+(soon?'#854f0b':'#5f5e5a')+';background:'+(soon?'#fac775':'#f0f4f9')+';padding:2px 8px;border-radius:7px;flex-shrink:0">'+(dd===0?'오늘':'D-'+dd)+'</span>';
+      } else {
+        rightBadge = '';
+      }
+      return '<div class="rc-row" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border:1.5px solid '+border+';background:'+bg+';border-radius:9px;margin-bottom:6px;'+(done?'opacity:.6':'')+'">'
+        + '<input type="checkbox" class="rc-chk" data-id="'+esc(String(t.id))+'" '+(done?'checked':'')+' style="width:19px;height:19px;flex-shrink:0;cursor:pointer">'
+        + '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:'+(RC_CAT_BG[t.cat]||RC_CAT_BG['기타'])+';color:'+(RC_CAT_FG[t.cat]||RC_CAT_FG['기타'])+';flex-shrink:0">'+esc(String(t.cat||'기타'))+'</span>'
+        + '<span style="flex:1;min-width:0;font-size:14px;color:#1a2f45;'+(done?'text-decoration:line-through;color:#7a92a8':'')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||''))+(money?' <span style="font-size:12px;color:#7a92a8">'+money+'원</span>':'')+'</span>'
+        + (day&&!done ? '<span style="font-size:11px;color:#aab8c8;flex-shrink:0">매월 '+day+'일</span>' : '')
+        + rightBadge
+        + '</div>';
+    }).join('');
+
+    body.querySelectorAll('.rc-chk').forEach(function(cb){
+      cb.addEventListener('change', function(){
+        try{
+          var id = cb.getAttribute('data-id');
+          var t = rcList().find(function(x){ return x.id===id; });
+          if(!t) return;
+          var mon = rcCurMonth();
+          var doneMap = Object.assign({}, t.done||{});
+          var atMap = Object.assign({}, t.doneAt||{});
+          if(cb.checked){ doneMap[mon]=true; atMap[mon]=todayStr().slice(5); }
+          else { delete doneMap[mon]; delete atMap[mon]; }
+          updateRecord(id, {done:doneMap, doneAt:atMap, updatedAt:Date.now()});
+          renderRcBody();
+          toast(cb.checked ? '✅ 완료 처리됨' : '완료 해제됨');
+        }catch(err){ console.error('[반복업무 체크]', err); toast('오류: '+(err.message||err)); }
+      });
+    });
+  }
+
+  /* ---- 반복업무 관리 팝업 (추가/수정/삭제) ---- */
+  var rcDrag = {x:0,y:0};
+  function openRecurManage(){
+    var old = document.getElementById('rcOverlay');
+    if(old) old.remove();
+    rcDrag = {x:0,y:0};
+    var ov = document.createElement('div');
+    ov.id='rcOverlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px';
+    var sheet=document.createElement('div');
+    sheet.id='rcSheet';
+    sheet.style.cssText='background:#fff;border-radius:18px;width:100%;max-width:540px;max-height:90vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.2)';
+    ov.appendChild(sheet);
+    document.body.appendChild(ov);
+    renderRcManageList(sheet);
+    /* 헤더 드래그 이동 */
+    var dragging=false,sx=0,sy=0;
+    ov.addEventListener('mousedown', function(e){
+      var h=e.target.closest('.rc-drag-handle');
+      if(!h||e.target.closest('button,a,input,select,textarea')) return;
+      dragging=true; sx=e.clientX-rcDrag.x; sy=e.clientY-rcDrag.y; e.preventDefault();
+    });
+    ov.addEventListener('mousemove', function(e){
+      if(!dragging) return;
+      rcDrag.x=e.clientX-sx; rcDrag.y=e.clientY-sy;
+      sheet.style.transform='translate('+rcDrag.x+'px,'+rcDrag.y+'px)';
+    });
+    ov.addEventListener('mouseup', function(){ dragging=false; });
+  }
+
+  function rcCloseModal(){ var o=document.getElementById('rcOverlay'); if(o) o.remove(); }
+
+  /* 관리 목록 화면 */
+  function renderRcManageList(sheet){
+    var all = rcList().slice().sort(function(a,b){ return rcSortKey(a)-rcSortKey(b); });
+    sheet.innerHTML =
+      '<div class="rc-drag-handle" style="display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1.5px solid #e8f0fa;cursor:move;position:sticky;top:0;background:#fff;border-radius:18px 18px 0 0;z-index:2">'
+        + '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">⚙️ 반복업무 관리</span>'
+        + '<button id="rcAddNew" type="button" style="height:32px;padding:0 12px;border:none;border-radius:8px;background:#3f7cb8;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 추가</button>'
+        + '<button id="rcClose" type="button" style="height:32px;width:32px;border:none;border-radius:8px;background:#f0f4f9;color:#7a92a8;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<div style="padding:12px 18px 18px">'
+        + '<div style="font-size:12px;color:#aab8c8;margin-bottom:10px">매월 반복되는 업무 목록입니다. 각 항목은 매달 자동으로 체크리스트에 뜹니다. 순서는 기한일 순.</div>'
+        + (all.length ? '<div id="rcMgList"></div>'
+            : '<div style="text-align:center;padding:30px 20px;color:#aab8c8;background:#f7faff;border-radius:12px;font-size:13px">아직 등록된 반복업무가 없어요<br>➕ 추가 버튼으로 첫 항목을 만들어보세요</div>')
+      + '</div>';
+    document.getElementById('rcClose').addEventListener('click', rcCloseModal);
+    document.getElementById('rcAddNew').addEventListener('click', function(){ renderRcEdit(sheet, null); });
+    var listHost = document.getElementById('rcMgList');
+    if(listHost){
+      listHost.innerHTML = all.map(function(t){
+        return '<div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border:1.5px solid #e8f0fa;border-radius:10px;margin-bottom:6px;background:#fff">'
+          + '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:'+(RC_CAT_BG[t.cat]||RC_CAT_BG['기타'])+';color:'+(RC_CAT_FG[t.cat]||RC_CAT_FG['기타'])+';flex-shrink:0">'+esc(String(t.cat||'기타'))+'</span>'
+          + '<div style="flex:1;min-width:0">'
+            + '<div style="font-size:14px;font-weight:600;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||''))+'</div>'
+            + '<div style="font-size:11px;color:#aab8c8">'+(t.day?'매월 '+esc(String(t.day))+'일':'기한 미지정')+(rcMoney(t.amt)?' · '+rcMoney(t.amt)+'원':'')+'</div>'
+          + '</div>'
+          + '<button class="rc-edit" data-id="'+esc(String(t.id))+'" type="button" style="height:30px;padding:0 11px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;color:#3f7cb8;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0">✏️ 수정</button>'
+          + '<button class="rc-del" data-id="'+esc(String(t.id))+'" type="button" style="height:30px;padding:0 11px;border:1.5px solid #fde8e8;border-radius:8px;background:#fff;color:#e74c3c;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0">🗑</button>'
+          + '</div>';
+      }).join('');
+      listHost.querySelectorAll('.rc-edit').forEach(function(b){
+        b.addEventListener('click', function(){
+          var t = rcList().find(function(x){ return x.id===b.getAttribute('data-id'); });
+          renderRcEdit(sheet, t);
+        });
+      });
+      listHost.querySelectorAll('.rc-del').forEach(function(b){
+        b.addEventListener('click', function(){
+          var id=b.getAttribute('data-id');
+          var t = rcList().find(function(x){ return x.id===id; });
+          if(!t) return;
+          if(!confirm('"'+(t.name||'')+'" 반복업무를 삭제할까요?\n(이 업무가 목록에서 완전히 제거됩니다)')) return;
+          deleteWithUndo(id, '반복업무');
+          renderRcManageList(sheet);
+          renderRecurWidget();
+        });
+      });
+    }
+  }
+
+  /* 추가/수정 화면 */
+  function renderRcEdit(sheet, t){
+    var isNew = !t;
+    var d = t || {name:'', cat:'전표', day:'', amt:0, memo:''};
+    var INP='width:100%;box-sizing:border-box;height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:14px;font-family:inherit;background:#f7faff;outline:none';
+    var LBL='display:block;font-size:12px;font-weight:700;color:#33567d;margin-bottom:3px';
+    sheet.innerHTML =
+      '<div class="rc-drag-handle" style="display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1.5px solid #e8f0fa;cursor:move;position:sticky;top:0;background:#fff;border-radius:18px 18px 0 0;z-index:2">'
+        + '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">'+(isNew?'➕ 반복업무 추가':'✏️ 반복업무 수정')+'</span>'
+        + '<button id="rcEditClose" type="button" style="height:32px;width:32px;border:none;border-radius:8px;background:#f0f4f9;color:#7a92a8;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<div style="padding:16px 18px 18px">'
+        + '<div style="margin-bottom:12px"><label style="'+LBL+'">업무명 <span style="color:#e74c3c">*</span></label><input type="text" id="rcName" placeholder="예: 정수기 임차료, 전기요금 납부, 승강기 점검 전표" style="'+INP+'"></div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
+          + '<div><label style="'+LBL+'">분류</label><select id="rcCat" style="'+INP+';padding:0 8px">'+RC_CATS.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('')+'</select></div>'
+          + '<div><label style="'+LBL+'">매월 기한일</label><input type="number" id="rcDay" min="1" max="31" placeholder="예: 25" style="'+INP+'"></div>'
+        + '</div>'
+        + '<div style="margin-bottom:12px"><label style="'+LBL+'">금액 (선택)</label><input type="text" id="rcAmt" inputmode="numeric" placeholder="예: 45,000" style="'+INP+'"></div>'
+        + '<div style="margin-bottom:4px"><label style="'+LBL+'">메모 (선택)</label><textarea id="rcMemo" rows="2" placeholder="업체·계좌·특이사항 등" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;resize:vertical"></textarea></div>'
+        + '<div style="display:flex;gap:8px;margin-top:16px">'
+          + '<button id="rcEditCancel" type="button" style="flex:1;height:46px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>'
+          + (isNew?'':'<button id="rcEditDel" type="button" style="flex:1;height:46px;border:2px solid #fde8e8;border-radius:12px;background:#fff;color:#e74c3c;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>')
+          + '<button id="rcEditSave" type="button" style="flex:2;height:46px;border:none;border-radius:12px;background:#3f7cb8;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">💾 저장</button>'
+        + '</div>'
+      + '</div>';
+    /* 값 주입 */
+    document.getElementById('rcName').value = d.name||'';
+    document.getElementById('rcCat').value = d.cat||'전표';
+    document.getElementById('rcDay').value = d.day||'';
+    document.getElementById('rcAmt').value = rcMoney(d.amt);
+    document.getElementById('rcMemo').value = d.memo||'';
+    /* 금액 자동 콤마 */
+    var amtEl = document.getElementById('rcAmt');
+    amtEl.addEventListener('input', function(){ var n=amtEl.value.replace(/[^0-9]/g,''); amtEl.value=n?Number(n).toLocaleString('ko-KR'):''; });
+
+    document.getElementById('rcEditClose').addEventListener('click', rcCloseModal);
+    document.getElementById('rcEditCancel').addEventListener('click', function(){ renderRcManageList(sheet); });
+    if(!isNew){
+      document.getElementById('rcEditDel').addEventListener('click', function(){
+        if(!confirm('"'+(t.name||'')+'" 반복업무를 삭제할까요?')) return;
+        deleteWithUndo(t.id, '반복업무');
+        renderRcManageList(sheet); renderRecurWidget();
+      });
+    }
+    document.getElementById('rcEditSave').addEventListener('click', function(){
+      try{
+        var name = document.getElementById('rcName').value.trim();
+        if(!name){ toast('업무명을 입력하세요'); return; }
+        var dayRaw = document.getElementById('rcDay').value.trim();
+        var day = dayRaw ? Math.max(1, Math.min(31, Number(dayRaw)||0)) : '';
+        var patch = {
+          kind:'recurTpl',
+          name:name,
+          cat: document.getElementById('rcCat').value||'전표',
+          day: day,
+          amt: Number(document.getElementById('rcAmt').value.replace(/[^0-9]/g,''))||0,
+          memo: document.getElementById('rcMemo').value.trim(),
+          updatedAt: Date.now()
+        };
+        if(isNew){
+          patch.done = {};
+          patch.doneAt = {};
+          patch.date = todayStr();
+          patch.createdAt = Date.now();
+          addRecord(patch);
+          toast('📅 반복업무 추가됨');
+        } else {
+          updateRecord(t.id, patch);
+          toast('💾 저장됨');
+        }
+        renderRcManageList(sheet);
+        renderRecurWidget();
+      }catch(err){ console.error('[반복업무 저장]', err); toast('저장 오류: '+(err.message||err)); }
+    });
+  }
+
+  /* renderAll 래핑 — 클라우드 동기화·삭제복구 후 위젯도 갱신 */
+  try{
+    if(typeof renderAll === 'function' && !renderAll._rcWrapped){
+      var _rcOrig = renderAll;
+      renderAll = function(){
+        _rcOrig();
+        try{ if(document.getElementById('recurWidget')) renderRecurWidget(); }catch(e){}
+      };
+      renderAll._rcWrapped = true;
+      window.renderAll = renderAll;
+    }
+  }catch(e){ console.warn('[반복업무] renderAll 래핑 생략:', e); }
+
+  window.renderRecurWidget = renderRecurWidget;
+  window.openRecurManage = openRecurManage;
+
+  setTimeout(function(){ try{ renderRecurWidget(); }catch(e){} }, 950);
 })();
