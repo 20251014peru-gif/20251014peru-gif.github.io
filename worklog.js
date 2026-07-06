@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0706-1250";
+const APP_VERSION = "v44-0706-1928";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -383,6 +383,8 @@ function logErr(where, e){
 const won = n => (Math.round(Number(n)||0)).toLocaleString("ko-KR");
 const kstNow = () => new Date(Date.now() + 9*60*60*1000);
 const todayStr = () => { const d=kstNow(); return d.toISOString().slice(0,10); };
+/* 대상월 + 제목 합성 (표시용) */
+function displayTitle(e){ if(!e) return '(제목없음)'; return (e.refMonth?(e.refMonth+'월 '):'')+(e.title||'(제목없음)'); }
 const yesterdayStr = () => { const d=kstNow(); d.setUTCDate(d.getUTCDate()-1); return d.toISOString().slice(0,10); };
 /* 3일전 — 월요일이면 지난 금요일(3일전) 반환 */
 const prev3WorkdayStr = () => {
@@ -1972,14 +1974,26 @@ function renderWorkModal(data, mode){
     </div>
   </div>`;
 
-  /* ── 업무내역 (1열 풀) ── */
+  /* ── 대상월 + 업무내역 (대상월은 월별 반복 업무용) ── */
+  const refM = d.refMonth||"";
   const rowTitle = `
   <div style="${S.mb}">
-    <label style="${S.lbl}">업무내역 *</label>
+    <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:6px">
+      <div style="flex-shrink:0">
+        <label style="${S.lbl}">대상월</label>
+        <select id="m-refMonth" style="height:44px;width:80px;padding:0 6px;border:1.5px solid #fbbf24;border-radius:10px;font-size:15px;font-weight:800;font-family:inherit;background:#fffbea;color:#92400e;outline:none;text-align:center">
+          <option value="">—</option>
+          ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>'<option value="'+m+'"'+(String(refM)===String(m)?' selected':'')+'>'+m+'월</option>').join('')}
+        </select>
+      </div>
+      <div style="flex:1;min-width:0">
+        <label style="${S.lbl}">업무내역 *</label>
     <div style="position:relative">
       <input type="text" id="m-title" value="${e2(d.title||"")}" autocomplete="off"
         placeholder="무엇을 했나요?" style="${S.inp};font-size:15px;font-weight:600;border-color:#3b82f6">
       <div id="titleAcBox" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);background:#fff;border:1.5px solid #3b82f6;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.12);max-height:260px;overflow:auto;z-index:50"></div>
+    </div>
+      </div>
     </div>
   </div>`;
 
@@ -2558,6 +2572,7 @@ function _doSaveWorkEntry(){
     floor:($("m-floor")||{}).value||"",
     field:($("m-field")||{}).value?.trim()||"",
     title,
+    refMonth:($("m-refMonth")||{}).value||"",
     detail:($("m-detail")||{}).value?.trim()||"",
     material:($("m-material")||{}).value?.trim()||"",
     qty:Number(($("m-qty")||{}).value)||0,
@@ -7982,10 +7997,10 @@ function makeSearchPreview(e){
   const lbl = KIND_LABEL[e.kind]||e.kind;
   const date = e.date || e.start || "";
   let title="", subtitle="";
-  if(e.kind==="work"){ title = e.title||"(제목없음)"; subtitle = `${e.floor||""} ${e.loc||""} · ${e.status||""}`.trim(); }
-  else if(e.kind==="schedule"){ title = e.title||"(제목없음)"; subtitle = `${e.sStatus||""} · ${e.sType||""}`; }
-  else if(e.kind==="plan"){ title = e.title||"(제목없음)"; subtitle = e.memo||""; }
-  else if(e.kind==="memo"){ title = e.title||"(제목없음)"; subtitle = (e.content||"").slice(0,60); }
+  if(e.kind==="work"){ title = displayTitle(e); subtitle = `${e.floor||""} ${e.loc||""} · ${e.status||""}`.trim(); }
+  else if(e.kind==="schedule"){ title = displayTitle(e); subtitle = `${e.sStatus||""} · ${e.sType||""}`; }
+  else if(e.kind==="plan"){ title = displayTitle(e); subtitle = e.memo||""; }
+  else if(e.kind==="memo"){ title = displayTitle(e); subtitle = (e.content||"").slice(0,60); }
   else if(e.kind==="call"){ title = e.who||e.from||"(통화)"; subtitle = `${e.time||""} ${e.dir||""} · ${(e.content||"").slice(0,40)}`; }
   else if(e.kind==="meeting"){ title = e.title||"(회의)"; subtitle = (e.content||"").slice(0,60); }
   else if(e.kind==="deliver"){ title = e.title||"(전달사항)"; subtitle = (e.content||"").slice(0,60); }
@@ -8402,7 +8417,7 @@ function renderExpenseStats(){
     return lblPrefix + `<div class="es-items">` + showList.map(e=>
       `<div class="es-item" data-id="${e.id}" title="${esc(e.date||"")} · ${esc(e.memo||"")}">
         <span class="es-i-date">${esc((e.date||"").slice(5))}</span>
-        <span class="es-i-title">${esc(e.title||"(제목없음)")}</span>
+        <span class="es-i-title">${esc(displayTitle(e))}</span>
         <span class="es-i-amt">${won(Number(e.amount)||0)}</span>
       </div>`
     ).join("") + `</div>`;
@@ -10670,7 +10685,17 @@ async function githubUpload(token){
     var set = {};
     try{
       entries.forEach(function(e){
-        if(e.kind==='work' && e.title){ set[e.title]=1; }
+        if(e.kind==='work' && e.title){
+          /* refMonth가 있으면 순수 title만, 없으면 "N월 " 접두어 제거한 것도 추가 */
+          var t=e.title;
+          set[t]=1;
+          if(e.refMonth){
+            set[t]=1; /* refMonth 있으면 title이 이미 순수 내용 */
+          } else {
+            var m=t.match(/^(\d{1,2})월\s+(.+)$/);
+            if(m) set[m[2]]=1; /* "6월 수도요금" → "수도요금" 도 후보에 */
+          }
+        }
       });
     }catch(e){}
     return Object.keys(set).filter(function(t){ return hidden.indexOf(t)<0; }).sort();
@@ -10702,7 +10727,15 @@ async function githubUpload(token){
     box.querySelectorAll('.tac-pick').forEach(function(el){
       el.addEventListener('mousedown', function(ev){
         ev.preventDefault();
-        inp.value = el.getAttribute('data-val');
+        var v = el.getAttribute('data-val');
+        var mm = v.match(/^(\d{1,2})월\s+(.+)$/);
+        if(mm){
+          inp.value = mm[2];
+          var rm = document.getElementById('m-refMonth');
+          if(rm) rm.value = mm[1];
+        } else {
+          inp.value = v;
+        }
         hideBox();
         inp.focus();
       });
