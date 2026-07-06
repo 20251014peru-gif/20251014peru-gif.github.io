@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0706-1120";
+const APP_VERSION = "v44-0706-1149";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -10373,6 +10373,7 @@ async function githubUpload(token){
         + '<span style="flex:1;min-width:0;font-size:14px;color:#1a2f45;'+(done?'text-decoration:line-through;color:#7a92a8':'')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||''))+(money?' <span style="font-size:12px;color:#7a92a8">'+money+'원</span>':'')+'</span>'
         + (day&&!done ? '<span style="font-size:11px;color:#aab8c8;flex-shrink:0">매월 '+day+'일</span>' : '')
         + rightBadge
+        + ((done && t.cat==='전표') ? '<button class="rc-slip" data-id="'+esc(String(t.id))+'" type="button" style="font-size:11px;font-weight:700;color:#0f6e56;background:#e1f5ee;border:1px solid #9fe1cb;padding:3px 9px;border-radius:7px;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap">🧾 전표 등록 →</button>' : '')
         + '</div>';
     }).join('');
 
@@ -10393,6 +10394,43 @@ async function githubUpload(token){
         }catch(err){ console.error('[반복업무 체크]', err); toast('오류: '+(err.message||err)); }
       });
     });
+
+    /* 전표 등록 버튼 → 지출 탭 전표 입력창 자동채움 */
+    body.querySelectorAll('.rc-slip').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.preventDefault(); e.stopPropagation();
+        try{
+          var t = rcList().find(function(x){ return x.id===b.getAttribute('data-id'); });
+          if(!t) return;
+          if(typeof openExpenseFromWork==='function'){
+            openExpenseFromWork({
+              workObj: {
+                date: todayStr(),
+                title: t.name || '',
+                workVendor: t.vendor || '',
+                workNote: t.memo || '',
+                cost: t.amt || 0
+              },
+              expType: '후불청구'
+            });
+            /* 금액 자동 반영 (openExpenseFromWork는 금액을 0으로 두므로 보정) */
+            setTimeout(function(){
+              try{
+                if(typeof expenseData==='object' && expenseData){
+                  if(t.amt){ expenseData.amount = t.amt; }
+                  var amtEl = document.getElementById('exp-amount');
+                  if(amtEl && t.amt){ amtEl.value = Number(t.amt).toLocaleString('ko-KR'); }
+                }
+              }catch(_e){}
+            }, 500);
+          } else {
+            toast('지출 탭 전표 기능을 찾을 수 없어요');
+          }
+        }catch(err){ console.error('[반복업무 전표연동]', err); toast('전표 연동 오류: '+(err.message||err)); }
+      });
+    });
+
+    try{ if(typeof rcUpdateFabBadge==='function') rcUpdateFabBadge(); }catch(e){}
   }
 
   /* ---- 반복업무 관리 팝업 (추가/수정/삭제) ---- */
@@ -10494,6 +10532,7 @@ async function githubUpload(token){
           + '<div><label style="'+LBL+'">매월 기한일</label><input type="number" id="rcDay" min="1" max="31" placeholder="예: 25" style="'+INP+'"></div>'
         + '</div>'
         + '<div style="margin-bottom:12px"><label style="'+LBL+'">금액 (선택)</label><input type="text" id="rcAmt" inputmode="numeric" placeholder="예: 45,000" style="'+INP+'"></div>'
+        + '<div style="margin-bottom:12px"><label style="'+LBL+'">업체명 (선택 · 전표 자동채움에 사용)</label><input type="text" id="rcVendor" placeholder="예: 코웨이, 한국전력" style="'+INP+'"></div>'
         + '<div style="margin-bottom:4px"><label style="'+LBL+'">메모 (선택)</label><textarea id="rcMemo" rows="2" placeholder="업체·계좌·특이사항 등" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dbe6f4;border-radius:9px;font-size:14px;font-family:inherit;background:#f7faff;outline:none;resize:vertical"></textarea></div>'
         + '<div style="display:flex;gap:8px;margin-top:16px">'
           + '<button id="rcEditCancel" type="button" style="flex:1;height:46px;border:2px solid #dbe6f4;border-radius:12px;background:#f7faff;color:#7a92a8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>'
@@ -10506,6 +10545,7 @@ async function githubUpload(token){
     document.getElementById('rcCat').value = d.cat||'전표';
     document.getElementById('rcDay').value = d.day||'';
     document.getElementById('rcAmt').value = rcMoney(d.amt);
+    document.getElementById('rcVendor').value = d.vendor||'';
     document.getElementById('rcMemo').value = d.memo||'';
     /* 금액 자동 콤마 */
     var amtEl = document.getElementById('rcAmt');
@@ -10532,6 +10572,7 @@ async function githubUpload(token){
           cat: document.getElementById('rcCat').value||'전표',
           day: day,
           amt: Number(document.getElementById('rcAmt').value.replace(/[^0-9]/g,''))||0,
+          vendor: document.getElementById('rcVendor').value.trim(),
           memo: document.getElementById('rcMemo').value.trim(),
           updatedAt: Date.now()
         };
@@ -10559,14 +10600,41 @@ async function githubUpload(token){
       renderAll = function(){
         _rcOrig();
         try{ if(document.getElementById('recurWidget')) renderRecurWidget(); }catch(e){}
+        try{ if(typeof rcUpdateFabBadge==='function') rcUpdateFabBadge(); }catch(e){}
       };
       renderAll._rcWrapped = true;
       window.renderAll = renderAll;
     }
   }catch(e){ console.warn('[반복업무] renderAll 래핑 생략:', e); }
 
+  /* FAB 알림 배지 — 기한 지난+임박(3일이내) 미완료 개수 */
+  function rcUpdateFabBadge(){
+    try{
+      var fab = document.getElementById('v43FabHeader');
+      if(!fab) return;
+      var today = rcToday();
+      var urgent = rcList().filter(function(t){
+        if(rcIsDone(t)) return false;
+        var day = Number(t.day)||0;
+        if(!day) return false;
+        return day < today || (day>=today && (day-today)<=3);
+      }).length;
+      var badge = fab.querySelector('.rc-fab-badge');
+      if(urgent<=0){ if(badge) badge.remove(); return; }
+      if(!badge){
+        badge = document.createElement('div');
+        badge.className = 'rc-fab-badge';
+        badge.style.cssText = 'position:absolute;bottom:-5px;left:-8px;min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;background:#e74c3c;color:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;box-shadow:0 2px 8px rgba(231,76,60,.55);border:2px solid #fff;z-index:11;pointer-events:none;line-height:1';
+        fab.appendChild(badge);
+      }
+      badge.textContent = urgent>99 ? '99+' : String(urgent);
+      badge.title = '기한 임박·지난 반복업무 '+urgent+'건';
+    }catch(e){ console.warn('[반복업무 FAB배지]', e); }
+  }
+
   window.renderRecurWidget = renderRecurWidget;
   window.openRecurManage = openRecurManage;
+  window.rcUpdateFabBadge = rcUpdateFabBadge;
 
-  setTimeout(function(){ try{ renderRecurWidget(); }catch(e){} }, 950);
+  setTimeout(function(){ try{ renderRecurWidget(); rcUpdateFabBadge(); }catch(e){} }, 950);
 })();
