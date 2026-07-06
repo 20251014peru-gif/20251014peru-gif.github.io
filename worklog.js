@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0706-1928";
+const APP_VERSION = "v44-0706-1940";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -9947,6 +9947,13 @@ async function githubUpload(token){
       + ((spN||mmN) ? '<div style="display:flex;gap:5px;margin-top:6px">'
           + (spN ? '<span style="font-size:11px;font-weight:700;background:#f3eefc;color:#8e44ad;padding:2px 8px;border-radius:8px">📋 특약 '+spN+'</span>' : '')
           + (mmN ? '<span style="font-size:11px;font-weight:700;background:#fff8e6;color:#b8860b;padding:2px 8px;border-radius:8px">📝 메모 '+mmN+'</span>' : '')
+        + '</div>' : '')
+      + (spN ? '<div style="margin-top:6px;padding:8px 10px;background:#faf7fd;border:1px solid #e8ddf5;border-radius:8px">'
+          + (t.specials||[]).filter(function(s){return s&&String(s).trim();}).map(function(s){ return '<div style="font-size:12px;color:#6b21a8;line-height:1.6">📋 '+esc(String(s).trim())+'</div>'; }).join('')
+        + '</div>' : '')
+      + (mmN ? '<div style="margin-top:6px;padding:8px 10px;background:#fffdf0;border:1px solid #fde68a;border-radius:8px">'
+          + (t.memos||[]).slice(0,3).map(function(m){ return '<div style="font-size:12px;color:#92400e;line-height:1.6">📝 '+(m.tag?'<span style="background:#fef3c7;padding:0 5px;border-radius:4px;font-weight:700;font-size:10px">'+esc(m.tag)+'</span> ':'')+ esc(String(m.text||'').substring(0,60))+(String(m.text||'').length>60?'…':'')+'</div>'; }).join('')
+          + (mmN>3 ? '<div style="font-size:11px;color:#b8860b;margin-top:2px">… 외 '+(mmN-3)+'건</div>' : '')
         + '</div>' : '')
       + '</div>';
   }
