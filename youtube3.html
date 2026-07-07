@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>유튜브 요약기 v3</title>
+<style>
+:root{
+  --green:#2d6a4f; --green-lt:#e8f2ec; --gold:#8a5a00; --gold-lt:#f5ecd9;
+  --bg:#fdfcf9; --card:#ffffff; --line:#dfe3dd; --txt:#222; --sub:#777; --warn:#c0392b;
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+  background:var(--bg); color:var(--txt); font-size:15px; line-height:1.6;}
+.wrap{max-width:900px; margin:0 auto; padding:14px 12px 90px;}
+
+header{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+header h1{font-size:19px; color:var(--green);}
+header .ver{font-size:11px; color:var(--sub);}
+header .sync{margin-left:auto; font-size:12px; padding:3px 10px; border-radius:20px;
+  background:var(--green-lt); color:var(--green); font-weight:700;}
+header .sync.off{background:#fbeaea; color:var(--warn);}
+
+.tabs{display:flex; gap:6px; margin-bottom:12px;}
+.tabs button{flex:1; min-height:46px; font-size:15px; border:1px solid var(--line);
+  background:var(--card); border-radius:10px; cursor:pointer; color:var(--sub);}
+.tabs button.on{background:var(--green); color:#fff; border-color:var(--green); font-weight:700;}
+
+.panel{display:none;} .panel.on{display:block;}
+.card{background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:14px; margin-bottom:12px;}
+
+input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10px 12px;
+  border:1px solid var(--line); border-radius:10px; background:#fff;}
+.btn{min-height:48px; padding:0 18px; font-size:15px; font-weight:700; border:none;
+  border-radius:10px; background:var(--green); color:#fff; cursor:pointer;}
+.btn:disabled{background:#a9c0b4;}
+.btn.sub{background:#fff; color:var(--green); border:1px solid var(--green);}
+.btn.gold{background:var(--gold);}
+.row{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;} .row>input{flex:1; min-width:0;}
+.status{margin-top:10px; font-size:13.5px; color:var(--sub);}
+.status.err{color:var(--warn); font-weight:700;}
+.badge{display:inline-block; background:var(--green-lt); color:var(--green);
+  font-size:12px; padding:2px 8px; border-radius:8px; margin-left:6px;}
+
+#result h2{font-size:16px; color:var(--green); margin:20px 0 8px;
+  border-left:4px solid var(--green); padding-left:10px;}
+#result table{border-collapse:collapse; width:100%; margin:10px 0; font-size:13px;}
+#result th{background:var(--green-lt); border:1px solid var(--line); padding:7px;}
+#result td{border:1px solid var(--line); padding:7px; vertical-align:top;}
+#result strong{color:var(--green);}
+
+.ch{border:1px solid var(--line); border-radius:12px; padding:13px; margin-bottom:10px; background:var(--card);}
+.ch .name{font-weight:700; font-size:16px;}
+.ch .field{margin-top:6px; font-size:13px;} .ch .field b{color:var(--green);}
+.ch ul{margin:2px 0 0 18px;}
+.ch .tools{margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;}
+.ch .tools button{min-height:42px;}
+
+.hist{display:flex; justify-content:space-between; gap:8px; padding:10px 4px;
+  border-bottom:1px solid var(--line); font-size:13.5px; align-items:center;}
+.hist a{color:var(--green); font-weight:700; text-decoration:none;}
+.hist .t{color:var(--sub); white-space:nowrap; font-size:12px;}
+
+#bugBtn{position:fixed; right:14px; bottom:14px; width:46px; height:46px; border-radius:50%;
+  border:1px solid var(--line); background:#fff; font-size:20px; cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.12); z-index:50;}
+#bugPanel{position:fixed; right:14px; bottom:68px; width:min(420px,92vw); max-height:45vh;
+  overflow:auto; background:#1e2a24; color:#cde; font-size:12px; font-family:Consolas,monospace;
+  border-radius:10px; padding:10px; display:none; z-index:50; white-space:pre-wrap;}
+
+/* 요약 결과 모달 */
+.overlay{position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; z-index:60;
+  padding:16px; overflow:auto;}
+.overlay.on{display:block;}
+.sheet{max-width:900px; margin:0 auto; background:#fff; border-radius:14px; padding:18px;}
+.sheet .close{float:right; font-size:22px; background:none; border:none; cursor:pointer; color:var(--sub);}
+
+@media (max-width:600px){ header h1{font-size:17px;} .tabs button{font-size:14px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📺 유튜브 요약기</h1>
+    <span class="ver">v3-0706 · 서버리스</span>
+    <span class="sync off" id="syncBadge">동기화 확인중</span>
+  </header>
+
+  <div class="tabs">
+    <button class="on" onclick="showTab('sum',this)">요약</button>
+    <button onclick="showTab('chn',this)">채널 관리</button>
+    <button onclick="showTab('his',this)">기록</button>
+  </div>
+
+  <!-- 요약 -->
+  <div id="tab-sum" class="panel on">
+    <div class="card">
+      <div class="row" style="margin-top:0;">
+        <input type="text" id="url" placeholder="유튜브 URL 붙여넣기"
+               onkeydown="if(event.key==='Enter')runSummary()">
+        <button class="btn" id="goBtn" onclick="runSummary()">요약</button>
+      </div>
+      <div class="status" id="sumStatus">URL을 넣으면 채널 프로필이 자동 생성됩니다. 폰·PC 어디서나 동작해요.</div>
+    </div>
+  </div>
+
+  <!-- 채널 관리 -->
+  <div id="tab-chn" class="panel">
+    <div class="card" style="font-size:13px; color:var(--sub);">
+      각 채널의 요약 프로필입니다. 수정 지시를 한 줄 적으면 AI가 프로필을 다시 씁니다.
+      <b>🔍 관통 분석</b>은 요약 2편 이상 쌓인 채널에서 전체 패턴·예측 적중률을 분석합니다.
+    </div>
+    <div id="chList"></div>
+  </div>
+
+  <!-- 기록 -->
+  <div id="tab-his" class="panel">
+    <div class="card">
+      <div class="row" style="margin-top:0;">
+        <select id="hisChannel" onchange="renderHistory()" style="max-width:46%;">
+          <option value="">전체 채널</option>
+        </select>
+        <input type="text" id="hisSearch" placeholder="제목 검색" oninput="renderHistory()">
+        <button class="btn sub" id="trashToggle" onclick="toggleTrash()">🗑 휴지통</button>
+      </div>
+      <div class="status" id="hisStatus"></div>
+    </div>
+    <div class="card" id="hisList"></div>
+  </div>
+</div>
+
+<button id="bugBtn" onclick="toggleBug()">🐞</button>
+<div id="bugPanel"></div>
+
+<!-- 요약 결과 모달 -->
+<div class="overlay" id="resultOverlay">
+  <div class="sheet">
+    <button class="close" onclick="closeResult()">✕</button>
+    <div id="resultMeta" style="font-size:13px;color:var(--sub);margin-bottom:8px;"></div>
+    <div id="result"></div>
+  </div>
+</div>
+
+<!-- Firebase (compat SDK — 다른 앱과 동일 방식) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+/* ═══════════ 설정 ═══════════ */
+const WORKER = "https://youtube-helper.20251014peru.workers.dev"; // Cloudflare Worker
+const MODEL = "claude-sonnet-4-6";
+const firebaseConfig = {
+  apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
+  authDomain: "my-system-25497.firebaseapp.com",
+  projectId: "my-system-25497",
+  storageBucket: "my-system-25497.firebasestorage.app"
+};
+
+/* ═══════════ 초기화 ═══════════ */
+let db=null;
+try{
+  firebase.initializeApp(firebaseConfig);
+  db=firebase.firestore();
+  firebase.auth().signInAnonymously().catch(e=>logBug('익명로그인: '+e.message));
+  firebase.auth().onAuthStateChanged(u=>{
+    setSync(!!u);
+  });
+}catch(e){ logBug('Firebase 초기화 실패: '+e.message); setSync(false); }
+
+function setSync(ok){
+  const b=document.getElementById('syncBadge');
+  b.textContent=ok?'☁️ 동기화됨':'⚠️ 오프라인';
+  b.className='sync'+(ok?'':' off');
+}
+
+/* ═══════════ 공통 ═══════════ */
+const CH_COL='youtube_channels', SUM_COL='youtube_summaries';
+const bugLog=[];
+function kstNow(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));}
+function kstStr(){const d=kstNow();const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
+function logBug(m){bugLog.push(`[${kstNow().toLocaleTimeString('ko-KR')}] ${m}`);
+  const p=document.getElementById('bugPanel'); if(p)p.textContent=bugLog.join('\n');}
+function toggleBug(){const p=document.getElementById('bugPanel');
+  p.style.display=p.style.display==='block'?'none':'block';}
+window.onerror=(m,s,l)=>logBug(`JS오류: ${m} (line ${l})`);
+function escapeHtml(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML;}
+function escapeJs(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function cssId(s){return String(s).replace(/[^\w가-힣]/g,'_');}
+
+function extractVideoId(url){
+  const pats=[/(?:v=|\/videos\/|embed\/|youtu\.be\/|\/v\/|\/e\/|watch\?v=|shorts\/|live\/)([0-9A-Za-z_-]{11})/,/^([0-9A-Za-z_-]{11})$/];
+  for(const p of pats){const m=url.trim().match(p); if(m)return m[1];}
+  return null;
+}
+async function callClaude(system,userText,maxTokens=8000){
+  const r=await fetch(WORKER+'/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:MODEL,max_tokens:maxTokens,system,messages:[{role:'user',content:userText}]})});
+  const d=await r.json();
+  if(!r.ok||d.error)throw new Error(d.error||('Claude '+r.status));
+  return d.text;
+}
+function parseJsonBlock(t){t=t.replace(/```json|```/g,'').trim();
+  const m=t.match(/\{[\s\S]*\}/); return JSON.parse(m?m[0]:t);}
+
+/* ═══════════ 탭 ═══════════ */
+function showTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tab-'+id).classList.add('on'); btn.classList.add('on');
+  if(id==='chn')loadChannels();
+  if(id==='his')loadHistory();
+}
+function checkPin(){
+  const saved=localStorage.getItem('shared_pin')||'102800';
+  return prompt('PIN 입력')===saved || (alert('PIN이 틀렸습니다'),false);
+}
+
+/* ═══════════ 프롬프트 ═══════════ */
+const COMMON_CORE=`
+[공통 코어 — 채널 종류와 무관하게 반드시 지킬 것]
+1. 맨 위 <30초 판단>: 핵심 1줄 + "전체 흐름 1줄"(큰 그림에서 어디를 가리키는지) + 볼 가치(상/중/하) + 액션(예/아니오/관망)
+2. 사실 / 의견(⚠️) / 예측 구분. 예측은 "언제까지 무엇이 보이면 맞고 아니면 틀림" 반증조건 명시.
+3. [나열 금지] 달님이 원하는 건 지식 나열이 아니라 "그래서 뭘 알 수 있는가". 수치·사실을 나열하는 표/목록 바로 아래 <🧭 이것들이 함께 말하는 것> 블록 필수: 지표들을 하나의 이야기(3~5문장)로 엮고, 용어는 괄호로 자연스럽게 해설, 마지막 "<strong>한마디로:</strong> ..." 1문장. 각 섹션도 "→ 결론:" 한 줄로 닫을 것.
+4. [3일 필터] 3일 뒤 무가치한 정보(당일 등락 나열 등)는 압축/제외. 분량보다 밀도.
+5. <🎭 화자 점검>(달님 시사점 앞): 화자가 이 주장으로 얻는 이익 / 불리한 정보 회피 화법 / 자기모순 3~5줄.
+6. <💡 달님 시사점>: 투자·서희타워 업무·자기계발 중 어디에 어떻게 연결되는지 구체적으로.
+7. 마지막 <📅 체크 캘린더>: 3열 표(날짜 | 확인할 것 | 그때 할 행동). 모든 기한을 오늘 기준 YYYY-MM-DD로 환산("수 주 내" 금지). 행동은 "유지 시 X / 이탈 시 Y" 양방향.
+8. [직전 요약]이 제공되면 <30초 판단> 다음 <🔁 직전 영상 대비>: 지난 예측 채점(✅맞음/❌틀림/⏳진행중) + 입장 변화(없으면 "일관됨").
+9. 출력은 순수 HTML 조각(<div class="report">…</div>)만. 마크다운·코드펜스 금지. 제목<h2>, 표<table>, 강조<strong>.`;
+
+const PROFILE_SYSTEM=`당신은 달님(건물 관리소장이자 개인 투자자, 시스템 자동화 추구)의 유튜브 요약 시스템 설계자입니다.
+새 채널 스크립트를 보고 이 채널을 어떻게 요약하는 것이 달님에게 가장 유용할지 '채널 전용 요약 프로필'을 JSON으로 작성하세요.
+달님 배경: 투자(수급+실현가능 촉매+2~3주 방향성 3요소, 테마 순환), 업무(서희타워 시설관리·임대차·법규), 성향(결론 먼저, 수치 중시, 화자 프레이밍 거름, 실전 적용 중시).
+반드시 아래 JSON만 응답:
+{"분야":"...","채널성격":"1~2문장","요약초점":["3~5개"],"출력섹션":["30초 판단","...본문 2~4개...","달님 시사점"],"달님연결점":["1~3개"]}`;
+
+const INSIGHT_SYSTEM=`당신은 달님 전용 유튜브 채널 분석가입니다. 한 채널의 요약 여러 편(최신순)을 받아 채널 전체를 관통하는 패턴을 분석하세요.
+포함 섹션(순수 HTML, <h2>제목, 마크다운 금지):
+1. <⏱ 30초 판단> 채널 신뢰도 한 줄 + 계속 볼 가치(상/중/하) + 소비법 한 줄
+2. <🎯 예측 채점표> 등장한 예측을 모아 현재까지 채점(✅/❌/⏳) + 적중 경향
+3. <🔁 반복 주장·시그니처 패턴> 늘 하는 말, 늘 쓰는 프레이밍
+4. <📈 입장 변화 타임라인> 시간순 입장 변화. 일관되면 "일관됨"과 근거
+5. <🎭 이해관계 패턴> 멤버십 유도·자기 포지션 정당화 등 반복 상업 장치
+6. <🧭 이것들이 함께 말하는 것> 전부를 하나의 이야기로: 이 채널은 어떤 존재이고 달님은 뭘 취하고 뭘 걸러야 하는가. 마지막 "<strong>한마디로:</strong> ..." 1문장.
+나열 금지, 해석·결론 중심. 요약에 있는 내용만 사용.`;
+
+/* ═══════════ 요약 실행 ═══════════ */
+async function runSummary(){
+  const url=document.getElementById('url').value.trim();
+  const st=document.getElementById('sumStatus');
+  if(!url){st.textContent='URL을 입력하세요'; st.className='status err'; return;}
+  const vid=extractVideoId(url);
+  if(!vid){st.textContent='유효한 유튜브 URL이 아닙니다'; st.className='status err'; return;}
+  const btn=document.getElementById('goBtn'); btn.disabled=true; st.className='status';
+  try{
+    st.textContent='① 자막 추출 중...';
+    const [meta,tr]=await Promise.all([
+      fetch(`${WORKER}/oembed?v=${vid}`).then(r=>r.json()),
+      fetch(`${WORKER}/transcript?v=${vid}`).then(async r=>{const d=await r.json(); if(!r.ok||d.error)throw new Error(d.error||'자막 실패'); return d;})
+    ]);
+    const title=meta.title||'(제목 없음)', channel=meta.author||'알수없는채널';
+    const transcript=tr.transcript.slice(0,30000);
+
+    // 채널 프로필 (Firebase에서 조회, 없으면 생성)
+    st.textContent='② 채널 프로필 확인 중...';
+    let profile=await loadChannelProfile(channel), newProfile=false;
+    if(!profile){
+      const ptext=await callClaude(PROFILE_SYSTEM,
+        `채널명: ${channel}\n영상 제목: ${title}\n\n스크립트 앞부분:\n${transcript.slice(0,8000)}`,2000);
+      profile=parseJsonBlock(ptext); newProfile=true;
+      await saveChannelProfile(channel,{profile,생성일:kstStr(),요약횟수:0});
+    }
+
+    // 직전 요약
+    st.textContent='③ AI 요약 중... (30초~1분)';
+    const prev=await loadPrevSummary(channel);
+    const today=kstNow().toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'});
+    const system=`당신은 달님 전용 유튜브 요약가입니다. 아래 채널 프로필에 맞춰 스크립트를 요약하세요.\n[채널 프로필]\n${JSON.stringify(profile,null,1)}\n${COMMON_CORE}\n출력 섹션 구성은 프로필의 "출력섹션" 순서를 따르세요.`;
+    let body=await callClaude(system,
+      `오늘 날짜: ${today} KST — 체크 캘린더의 모든 기한은 이 날짜 기준으로 환산할 것.\n영상 제목: ${title}\n채널: ${channel}\n`+
+      (prev?`\n[직전 요약 — ${prev.일시} 작성]\n${prev.text}\n`:'')+`\n[스크립트]\n${transcript}`,8000);
+    body=body.replace(/```html|```/g,'').trim();
+
+    // 저장
+    const now=kstStr(), id='s_'+Date.now();
+    await saveSummary({id,일시:now,채널:channel,제목:title,url,html:body,관통분석:false,휴지통:null});
+    await bumpChannelCount(channel);
+
+    // 표시
+    document.getElementById('resultMeta').innerHTML=
+      `<b>${escapeHtml(title)}</b> — ${escapeHtml(channel)}`+
+      (newProfile?` <span class="badge">새 채널 · ${escapeHtml(profile['분야']||'')}</span>`:'');
+    document.getElementById('result').innerHTML=body;
+    document.getElementById('resultOverlay').classList.add('on');
+    st.textContent='완료 — 기록 탭에 저장됨 (모든 기기 동기화)';
+    document.getElementById('url').value='';
+  }catch(e){
+    st.textContent='오류: '+e.message; st.className='status err'; logBug('요약: '+e.message);
+  }finally{btn.disabled=false;}
+}
+function closeResult(){document.getElementById('resultOverlay').classList.remove('on');}
+
+/* ═══════════ Firebase 데이터 계층 ═══════════ */
+async function loadChannelProfile(name){
+  if(!db)return null;
+  try{const doc=await db.collection(CH_COL).doc(name).get(); return doc.exists?doc.data():null;}
+  catch(e){logBug('프로필 조회: '+e.message); return null;}
+}
+async function saveChannelProfile(name,data){
+  if(!db)return;
+  try{await db.collection(CH_COL).doc(name).set(data,{merge:true});}
+  catch(e){logBug('프로필 저장: '+e.message);}
+}
+async function bumpChannelCount(name){
+  if(!db)return;
+  try{await db.collection(CH_COL).doc(name).set(
+    {요약횟수:firebase.firestore.FieldValue.increment(1),수정일:kstStr()},{merge:true});}
+  catch(e){logBug('카운트: '+e.message);}
+}
+async function saveSummary(obj){
+  if(!db)return;
+  try{await db.collection(SUM_COL).doc(obj.id).set(obj);}
+  catch(e){logBug('요약 저장: '+e.message); throw e;}
+}
+async function loadPrevSummary(channel){
+  if(!db)return null;
+  try{
+    const q=await db.collection(SUM_COL).where('채널','==',channel).get();
+    let best=null;
+    q.forEach(d=>{const x=d.data();
+      if(x.휴지통||x.관통분석)return;
+      if(!best||x.일시>best.일시)best=x;});
+    if(!best)return null;
+    const text=best.html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,6000);
+    return {일시:best.일시,text};
+  }catch(e){logBug('직전요약: '+e.message); return null;}
+}
+
+/* ═══════════ 채널 관리 ═══════════ */
+async function loadChannels(){
+  const box=document.getElementById('chList');
+  box.innerHTML='<div class="card">불러오는 중...</div>';
+  if(!db){box.innerHTML='<div class="card">오프라인 상태입니다.</div>'; return;}
+  try{
+    const q=await db.collection(CH_COL).get();
+    const chs=[]; q.forEach(d=>chs.push({name:d.id,...d.data()}));
+    if(!chs.length){box.innerHTML='<div class="card">등록된 채널이 없습니다. 요약 탭에서 URL을 넣으면 자동 등록돼요.</div>'; return;}
+    chs.sort((a,b)=>(b.요약횟수||0)-(a.요약횟수||0));
+    box.innerHTML=chs.map(c=>{
+      const p=c.profile||{}, n=c.name;
+      return `<div class="ch">
+        <div class="name">${escapeHtml(n)}
+          <span class="badge">${escapeHtml(p['분야']||'미분류')}</span>
+          <span class="badge">요약 ${c['요약횟수']||0}회</span></div>
+        <div class="field"><b>성격:</b> ${escapeHtml(p['채널성격']||'')}</div>
+        <div class="field"><b>요약 초점:</b><ul>${(p['요약초점']||[]).map(x=>'<li>'+escapeHtml(x)+'</li>').join('')}</ul></div>
+        <div class="field"><b>달님 연결점:</b><ul>${(p['달님연결점']||[]).map(x=>'<li>'+escapeHtml(x)+'</li>').join('')}</ul></div>
+        <div class="tools">
+          <input type="text" id="ins-${cssId(n)}" placeholder="수정 지시 한 줄" style="flex:1;min-width:180px;">
+          <button class="btn sub" onclick="editChannel('${escapeJs(n)}')">프로필 수정</button>
+          <button class="btn gold" id="ai-${cssId(n)}" onclick="runInsight('${escapeJs(n)}')">🔍 관통 분석</button>
+          <button class="btn sub" style="color:var(--warn);border-color:var(--warn);" onclick="delChannel('${escapeJs(n)}')">삭제</button>
+        </div></div>`;
+    }).join('');
+  }catch(e){box.innerHTML='<div class="card">채널 로딩 오류: '+e.message+'</div>'; logBug('채널로딩: '+e.message);}
+}
+async function editChannel(name){
+  if(!checkPin())return;
+  const ins=document.getElementById('ins-'+cssId(name)).value.trim();
+  if(!ins){alert('수정 지시문을 입력하세요'); return;}
+  try{
+    const cur=await loadChannelProfile(name);
+    const text=await callClaude(PROFILE_SYSTEM,
+      `기존 프로필:\n${JSON.stringify(cur.profile,null,1)}\n\n달님의 수정 지시: "${ins}"\n\n지시를 반영해 프로필 전체를 같은 JSON 형식으로 다시 작성하세요.`,2000);
+    await saveChannelProfile(name,{profile:parseJsonBlock(text),수정일:kstStr()});
+    alert('프로필이 수정되었습니다'); loadChannels();
+  }catch(e){alert('수정 실패: '+e.message); logBug('프로필수정: '+e.message);}
+}
+async function delChannel(name){
+  if(!checkPin())return;
+  if(!confirm(`'${name}' 프로필을 삭제할까요? (다음 요약 때 다시 자동 생성됩니다)`))return;
+  try{await db.collection(CH_COL).doc(name).delete(); loadChannels();}
+  catch(e){alert('삭제 실패: '+e.message);}
+}
+async function runInsight(name){
+  const btn=document.getElementById('ai-'+cssId(name));
+  btn.disabled=true; const orig=btn.textContent; btn.textContent='분석 중...(1~2분)';
+  try{
+    const q=await db.collection(SUM_COL).where('채널','==',name).get();
+    let items=[]; q.forEach(d=>{const x=d.data(); if(!x.휴지통&&!x.관통분석)items.push(x);});
+    if(items.length<2)throw new Error('관통 분석은 요약이 2편 이상 쌓여야 가능합니다');
+    items.sort((a,b)=>b.일시.localeCompare(a.일시));
+    let parts=[],total=0;
+    for(const x of items.slice(0,10)){
+      const t=x.html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,5000);
+      parts.push(`=== [${x.일시}] ${x.제목} ===\n${t}`); total+=t.length;
+      if(total>40000)break;
+    }
+    const today=kstNow().toLocaleDateString('ko-KR');
+    let body=await callClaude(INSIGHT_SYSTEM,
+      `오늘 날짜: ${today} KST\n채널명: ${name}\n분석 대상 요약 ${parts.length}편(최신순):\n\n`+parts.join('\n\n'),8000);
+    body=body.replace(/```html|```/g,'').trim();
+    const id='i_'+Date.now(), now=kstStr();
+    await saveSummary({id,일시:now,채널:name,제목:`🔍 관통 분석 — ${name} (${parts.length}편)`,url:'',html:body,관통분석:true,휴지통:null});
+    document.getElementById('resultMeta').innerHTML=`<b>🔍 관통 분석 — ${escapeHtml(name)}</b> (${parts.length}편)`;
+    document.getElementById('result').innerHTML=body;
+    document.getElementById('resultOverlay').classList.add('on');
+  }catch(e){alert('관통 분석 실패: '+e.message); logBug('관통분석: '+e.message);}
+  finally{btn.disabled=false; btn.textContent=orig;}
+}
+
+/* ═══════════ 기록 ═══════════ */
+let hisData=[], trashMode=false;
+async function loadHistory(){
+  const box=document.getElementById('hisList');
+  box.innerHTML='불러오는 중...';
+  if(!db){box.innerHTML='오프라인 상태입니다.'; return;}
+  try{
+    const q=await db.collection(SUM_COL).get();
+    let all=[]; q.forEach(d=>all.push(d.data()));
+    // 30일 경과 휴지통 자동 영구삭제
+    const now=kstNow();
+    for(const x of all){
+      if(x.휴지통){
+        const dt=new Date(x.휴지통.replace(' ','T')+':00+09:00');
+        if((now-dt)/86400000>=30){ try{await db.collection(SUM_COL).doc(x.id).delete();}catch(e){} }
+      }
+    }
+    all=all.filter(x=>{
+      if(!x.휴지통)return true;
+      const dt=new Date(x.휴지통.replace(' ','T')+':00+09:00');
+      return (now-dt)/86400000<30;
+    });
+    hisData=all.filter(x=>trashMode?x.휴지통:!x.휴지통);
+    hisData.sort((a,b)=>b.일시.localeCompare(a.일시));
+    const counts={}; hisData.forEach(x=>counts[x.채널]=(counts[x.채널]||0)+1);
+    const sel=document.getElementById('hisChannel'), cur=sel.value;
+    sel.innerHTML='<option value="">전체 채널 ('+hisData.length+')</option>'+
+      Object.keys(counts).sort().map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)} (${counts[c]})</option>`).join('');
+    sel.value=cur&&counts[cur]!==undefined?cur:'';
+    renderHistory();
+  }catch(e){box.innerHTML='기록 로딩 오류: '+e.message; logBug('기록: '+e.message);}
+}
+function renderHistory(){
+  const box=document.getElementById('hisList');
+  const ch=document.getElementById('hisChannel').value;
+  const q=document.getElementById('hisSearch').value.trim().toLowerCase();
+  let list=hisData;
+  if(ch)list=list.filter(x=>x.채널===ch);
+  if(q)list=list.filter(x=>(x.제목||'').toLowerCase().includes(q));
+  document.getElementById('hisStatus').textContent=
+    (trashMode?'휴지통 — 30일 후 자동 영구삭제 · ':'')+list.length+'건';
+  if(!list.length){box.innerHTML=trashMode?'휴지통이 비어있습니다.':'조건에 맞는 기록이 없습니다.'; return;}
+  box.innerHTML=list.map(x=>{
+    const gold=x.관통분석?'style="background:var(--gold-lt);border-radius:8px;padding-left:6px;"':'';
+    const act=trashMode
+      ?`<button class="btn sub" style="min-height:36px;" onclick="restoreEntry('${escapeJs(x.id)}')">복원</button>`
+      :`<button class="btn sub" style="min-height:36px;color:var(--warn);border-color:var(--warn);" onclick="trashEntry('${escapeJs(x.id)}')">삭제</button>`;
+    return `<div class="hist" ${gold}>
+       <div style="flex:1;cursor:pointer;" onclick="openSummary('${escapeJs(x.id)}')">
+         <a>${escapeHtml(x.제목)}</a>
+         <div style="color:var(--sub);font-size:12px;">${escapeHtml(x.채널)}${x.휴지통?' · 삭제: '+escapeHtml(x.휴지통):''}</div></div>
+       <div class="t">${escapeHtml(x.일시)}</div>${act}</div>`;
+  }).join('');
+}
+async function openSummary(id){
+  const x=hisData.find(h=>h.id===id); if(!x)return;
+  document.getElementById('resultMeta').innerHTML=`<b>${escapeHtml(x.제목)}</b> — ${escapeHtml(x.채널)} · ${escapeHtml(x.일시)}`;
+  document.getElementById('result').innerHTML=x.html;
+  document.getElementById('resultOverlay').classList.add('on');
+}
+function toggleTrash(){
+  trashMode=!trashMode;
+  document.getElementById('trashToggle').textContent=trashMode?'← 기록으로':'🗑 휴지통';
+  loadHistory();
+}
+async function trashEntry(id){
+  if(!checkPin())return;
+  try{await db.collection(SUM_COL).doc(id).update({휴지통:kstStr()}); loadHistory();}
+  catch(e){alert('삭제 실패: '+e.message);}
+}
+async function restoreEntry(id){
+  try{await db.collection(SUM_COL).doc(id).update({휴지통:null}); loadHistory();}
+  catch(e){alert('복원 실패: '+e.message);}
+}
+</script>
+</body>
+</html>
