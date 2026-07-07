@@ -83,7 +83,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 <div class="wrap">
   <header>
     <h1>📺 유튜브 요약기</h1>
-    <span class="ver">v3.3-0706 · 종목 빠른 확인</span>
+    <span class="ver">v3.4-0706 · 미니 차트</span>
     <span class="sync off" id="syncBadge">동기화 확인중</span>
   </header>
 
@@ -415,7 +415,41 @@ async function runSummary(){
 }
 function closeResult(){document.getElementById('resultOverlay').classList.remove('on');}
 
-/* ═══════════ 종목 빠른 확인 ═══════════ */
+/* 미니 차트: 종가선(굵게) + 21일선(점선) SVG */
+function miniChart(d){
+  const P=d.prices||[], M=d.ma_series||[];
+  if(P.length<2)return '';
+  const W=320,H=90,pad=6;
+  const vals=P.concat(M.filter(v=>v!=null));
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  if(hi===lo){hi+=1;lo-=1;}
+  const rng=hi-lo;
+  const x=i=>pad+(W-2*pad)*i/(P.length-1);
+  const y=v=>H-pad-(H-2*pad)*(v-lo)/rng;
+  const priceUp=P[P.length-1]>=P[0];
+  const priceColor=priceUp?'#2d6a4f':'#c0392b';
+  // 종가 선
+  let pricePath='M'+P.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' L');
+  // 21일선 (null 구간 끊기)
+  let maSegs=[], seg=[];
+  M.forEach((v,i)=>{ if(v==null){if(seg.length>1)maSegs.push(seg);seg=[];}else seg.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`);});
+  if(seg.length>1)maSegs.push(seg);
+  const maPaths=maSegs.map(s=>`<polyline points="${s.join(' ')}" fill="none" stroke="#b8860b" stroke-width="1.3" stroke-dasharray="4 3" opacity="0.85"/>`).join('');
+  // 마지막 점
+  const lx=x(P.length-1), ly=y(P[P.length-1]);
+  // 교차 지점 마커
+  let crossMark='';
+  if(d.cross){const ci=d.cross.index; const cm=d.cross.type==='돌파'?'#2d6a4f':'#c0392b';
+    crossMark=`<circle cx="${x(ci).toFixed(1)}" cy="${y(P[ci]).toFixed(1)}" r="3.5" fill="none" stroke="${cm}" stroke-width="1.5"/>`;}
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:8px;display:block;">
+    <path d="${pricePath}" fill="none" stroke="${priceColor}" stroke-width="2"/>
+    ${maPaths}${crossMark}
+    <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3" fill="${priceColor}"/>
+    <text x="${W-pad}" y="12" text-anchor="end" font-size="9" fill="#999">최근 ${P.length}일</text>
+    <text x="${pad}" y="12" font-size="9" fill="#b8860b">┈ 21일선</text>
+  </svg>`;
+}
+
 async function runTicker(){
   const t=document.getElementById('tk').value.trim();
   const box=document.getElementById('tkResult');
@@ -441,7 +475,10 @@ async function runTicker(){
           <span>${maTxt}</span>
           ${d.ma_value!=null?`<span style="color:var(--sub);">21일선 ${d.ma_value}</span>`:''}
         </div>
-        ${d.high_20!=null?`<div style="font-size:12px;color:var(--sub);margin-top:6px;">최근 20일 고가 ${d.high_20} · 저가 ${d.low_20}</div>`:''}
+        ${miniChart(d)}
+        ${d.cross?`<div style="font-size:12px;margin-top:6px;color:${d.cross.type==='돌파'?'var(--green)':'var(--warn)'};font-weight:700;">
+          ${d.cross.ago===0?'오늘':d.cross.ago+'일 전'} 21일선 ${d.cross.type} ${d.cross.type==='돌파'?'▲':'▼'}</div>`:''}
+        ${d.high_20!=null?`<div style="font-size:12px;color:var(--sub);margin-top:4px;">최근 20일 고가 ${d.high_20} · 저가 ${d.low_20}</div>`:''}
       </div>`;
   }catch(e){box.innerHTML=`<span style="color:var(--warn);">오류: ${escapeHtml(e.message)}</span>`; logBug('종목확인: '+e.message);}
   finally{btn.disabled=false;}
