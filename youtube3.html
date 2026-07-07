@@ -83,7 +83,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 <div class="wrap">
   <header>
     <h1>📺 유튜브 요약기</h1>
-    <span class="ver">v3.5-0706 · 한국종목·수급</span>
+    <span class="ver">v3.6-0706 · 수급 막대·검색개선</span>
     <span class="sync off" id="syncBadge">동기화 확인중</span>
   </header>
 
@@ -415,22 +415,46 @@ async function runSummary(){
 }
 function closeResult(){document.getElementById('resultOverlay').classList.remove('on');}
 
-/* 한국 종목 수급 표시 */
+/* 한국 종목 수급 표시 + 외국인 일별 막대 */
 function flowLine(f){
   if(!f)return '';
-  let parts=[];
+  let head=[];
   if(f.foreign_5d!=null){
     const pos=f.foreign_5d>=0;
     const streak=f.foreign_streak>=2?` <b style="color:var(--green);">${f.foreign_streak}일 연속↑</b>`:'';
-    parts.push(`외국인 <b style="color:${pos?'var(--green)':'var(--warn)'};">${pos?'+':''}${f.foreign_5d}억</b>${streak}`);
+    head.push(`외국인 <b style="color:${pos?'var(--green)':'var(--warn)'};">${pos?'+':''}${f.foreign_5d}억</b>${streak}`);
   }
   if(f.inst_5d!=null){
     const pos=f.inst_5d>=0;
-    parts.push(`기관 <b style="color:${pos?'var(--green)':'var(--warn)'};">${pos?'+':''}${f.inst_5d}억</b>`);
+    head.push(`기관 <b style="color:${pos?'var(--green)':'var(--warn)'};">${pos?'+':''}${f.inst_5d}억</b>`);
   }
-  if(!parts.length)return '';
-  return `<div style="font-size:13px;margin-top:8px;padding:6px 8px;background:var(--green-lt);border-radius:8px;">
-    💰 최근 5일 수급 — ${parts.join(' · ')}</div>`;
+  if(!head.length)return '';
+  // 외국인 일별 막대 (0 기준 위/아래)
+  let bars='';
+  const fd=f.foreign_daily, dates=f.foreign_dates;
+  if(fd&&fd.length){
+    const W=320,H=70,mid=H/2,bw=(W-2)/fd.length;
+    const maxAbs=Math.max(1,...fd.map(v=>Math.abs(v)));
+    let rects='';
+    fd.forEach((v,i)=>{
+      const h=Math.abs(v)/maxAbs*(mid-10);
+      const x=1+i*bw+bw*0.15, w=bw*0.7;
+      const y=v>=0?mid-h:mid;
+      const col=v>=0?'#2d6a4f':'#c0392b';
+      rects+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(1,h).toFixed(1)}" fill="${col}" rx="1"/>`;
+      const label=dates&&dates[i]?dates[i]:'';
+      rects+=`<text x="${(x+w/2).toFixed(1)}" y="${H-2}" text-anchor="middle" font-size="8" fill="#999">${label}</text>`;
+      rects+=`<text x="${(x+w/2).toFixed(1)}" y="${v>=0?(y-2).toFixed(1):(y+h+8).toFixed(1)}" text-anchor="middle" font-size="8" fill="${col}">${v>=0?'+':''}${v}</text>`;
+    });
+    bars=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:6px;display:block;">
+      <line x1="0" y1="${mid}" x2="${W}" y2="${mid}" stroke="#ddd" stroke-width="1"/>
+      ${rects}
+    </svg>`;
+  }
+  return `<div style="margin-top:8px;padding:8px;background:var(--green-lt);border-radius:8px;">
+    <div style="font-size:13px;">💰 최근 5일 수급 — ${head.join(' · ')}</div>
+    ${bars?`<div style="font-size:10px;color:var(--sub);margin-top:4px;">외국인 일별 (억원, 초록=매수 빨강=매도)</div>${bars}`:''}
+  </div>`;
 }
 
 /* 미니 차트: 종가선(굵게) + 21일선(점선) SVG */
@@ -468,6 +492,10 @@ function miniChart(d){
   </svg>`;
 }
 
+function pickTicker(code){
+  document.getElementById('tk').value=code;
+  runTicker();
+}
 async function runTicker(){
   const t=document.getElementById('tk').value.trim();
   const box=document.getElementById('tkResult');
@@ -476,6 +504,12 @@ async function runTicker(){
   box.innerHTML='<span style="color:var(--sub);">조회 중...</span>';
   try{
     const d=await fetch(`${SERVER}/api/ticker?t=${encodeURIComponent(t)}&ma=21&days=30`).then(r=>r.json());
+    if(d.candidates){
+      box.innerHTML=`<div style="font-size:13px;color:var(--sub);margin-bottom:6px;">여러 종목이 있어요. 선택하세요:</div>`+
+        d.candidates.map(c=>`<button class="btn sub" style="margin:3px;min-height:38px;"
+          onclick="pickTicker('${escapeJs(c.code)}')">${escapeHtml(c.name)}</button>`).join('');
+      btn.disabled=false; return;
+    }
     if(d.error){box.innerHTML=`<span style="color:var(--warn);">${escapeHtml(d.error)}</span>`; return;}
     const up=d.return_pct>=0;
     const retColor=up?'var(--green)':'var(--warn)';
