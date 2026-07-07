@@ -83,14 +83,16 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 <div class="wrap">
   <header>
     <h1>📺 유튜브 요약기</h1>
-    <span class="ver">v3-0706 · 서버리스</span>
+    <span class="ver">v3.0-0706 · 검증엔진 완성</span>
     <span class="sync off" id="syncBadge">동기화 확인중</span>
   </header>
 
   <div class="tabs">
     <button class="on" onclick="showTab('sum',this)">요약</button>
-    <button onclick="showTab('chn',this)">채널 관리</button>
+    <button onclick="showTab('chn',this)">채널</button>
     <button onclick="showTab('his',this)">기록</button>
+    <button onclick="showTab('pred',this)">예측</button>
+    <button onclick="showTab('dash',this)">📊</button>
   </div>
 
   <!-- 요약 -->
@@ -128,6 +130,42 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
     </div>
     <div class="card" id="hisList"></div>
   </div>
+
+  <!-- 예측 대장 -->
+  <div id="tab-pred" class="panel">
+    <div class="card" style="font-size:13px;color:var(--sub);">
+      유튜버들이 한 <b>검증 가능한 예측</b>이 자동으로 쌓입니다. 기한이 지난 예측은 <b>🎯 자동 채점</b>으로 실제 주가와 대조해 판정합니다.
+      <div class="row">
+        <button class="btn" style="background:#1e5aa8;" id="scoreBtn" onclick="autoScore()">🎯 기한 지난 예측 자동 채점</button>
+      </div>
+      <div class="status" id="scoreStatus"></div>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-top:0;">
+        <select id="predChannel" onchange="renderPredictions()" style="max-width:46%;">
+          <option value="">전체 채널</option>
+        </select>
+        <select id="predStatus" onchange="renderPredictions()" style="max-width:46%;">
+          <option value="">전체 상태</option>
+          <option value="대기중">⏳ 대기중</option>
+          <option value="적중">✅ 적중</option>
+          <option value="빗나감">❌ 빗나감</option>
+          <option value="판정불가">➖ 판정불가</option>
+        </select>
+      </div>
+      <div class="status" id="predStatusLine"></div>
+    </div>
+    <div class="card" id="predList"></div>
+  </div>
+
+  <!-- 📊 신뢰도 대시보드 (5단계) -->
+  <div id="tab-dash" class="panel">
+    <div class="card" style="font-size:13px;color:var(--sub);">
+      모든 채널을 <b>종합 신뢰도 순</b>으로 정렬합니다. 적중률(예측 채점) · 유도비율(프레이밍) · 예측 현황을 한눈에.
+      <div class="status" id="dashStatus"></div>
+    </div>
+    <div id="dashList"></div>
+  </div>
 </div>
 
 <button id="bugBtn" onclick="toggleBug()">🐞</button>
@@ -148,7 +186,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 /* ═══════════ 설정 ═══════════ */
-const WORKER = "https://youtube-helper.20251014peru.workers.dev"; // Cloudflare Worker
+const SERVER = "http://localhost:5055"; // 로컬 파이썬 서버 (자막+AI)
 const MODEL = "claude-sonnet-4-6";
 const firebaseConfig = {
   apiKey: "AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
@@ -175,7 +213,7 @@ function setSync(ok){
 }
 
 /* ═══════════ 공통 ═══════════ */
-const CH_COL='youtube_channels', SUM_COL='youtube_summaries';
+const CH_COL='youtube_channels', SUM_COL='youtube_summaries', PRED_COL='youtube_predictions';
 const bugLog=[];
 function kstNow(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));}
 function kstStr(){const d=kstNow();const p=n=>String(n).padStart(2,'0');
@@ -195,8 +233,8 @@ function extractVideoId(url){
   return null;
 }
 async function callClaude(system,userText,maxTokens=8000){
-  const r=await fetch(WORKER+'/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:MODEL,max_tokens:maxTokens,system,messages:[{role:'user',content:userText}]})});
+  const r=await fetch(SERVER+'/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({system,user:userText,max_tokens:maxTokens})});
   const d=await r.json();
   if(!r.ok||d.error)throw new Error(d.error||('Claude '+r.status));
   return d.text;
@@ -211,6 +249,8 @@ function showTab(id,btn){
   document.getElementById('tab-'+id).classList.add('on'); btn.classList.add('on');
   if(id==='chn')loadChannels();
   if(id==='his')loadHistory();
+  if(id==='pred')loadPredictions();
+  if(id==='dash')loadDashboard();
 }
 function checkPin(){
   const saved=localStorage.getItem('shared_pin')||'102800';
@@ -219,22 +259,50 @@ function checkPin(){
 
 /* ═══════════ 프롬프트 ═══════════ */
 const COMMON_CORE=`
-[공통 코어 — 채널 종류와 무관하게 반드시 지킬 것]
-1. 맨 위 <30초 판단>: 핵심 1줄 + "전체 흐름 1줄"(큰 그림에서 어디를 가리키는지) + 볼 가치(상/중/하) + 액션(예/아니오/관망)
-2. 사실 / 의견(⚠️) / 예측 구분. 예측은 "언제까지 무엇이 보이면 맞고 아니면 틀림" 반증조건 명시.
-3. [나열 금지] 달님이 원하는 건 지식 나열이 아니라 "그래서 뭘 알 수 있는가". 수치·사실을 나열하는 표/목록 바로 아래 <🧭 이것들이 함께 말하는 것> 블록 필수: 지표들을 하나의 이야기(3~5문장)로 엮고, 용어는 괄호로 자연스럽게 해설, 마지막 "<strong>한마디로:</strong> ..." 1문장. 각 섹션도 "→ 결론:" 한 줄로 닫을 것.
-4. [3일 필터] 3일 뒤 무가치한 정보(당일 등락 나열 등)는 압축/제외. 분량보다 밀도.
-5. <🎭 화자 점검>(달님 시사점 앞): 화자가 이 주장으로 얻는 이익 / 불리한 정보 회피 화법 / 자기모순 3~5줄.
-6. <💡 달님 시사점>: 투자·서희타워 업무·자기계발 중 어디에 어떻게 연결되는지 구체적으로.
-7. 마지막 <📅 체크 캘린더>: 3열 표(날짜 | 확인할 것 | 그때 할 행동). 모든 기한을 오늘 기준 YYYY-MM-DD로 환산("수 주 내" 금지). 행동은 "유지 시 X / 이탈 시 Y" 양방향.
-8. [직전 요약]이 제공되면 <30초 판단> 다음 <🔁 직전 영상 대비>: 지난 예측 채점(✅맞음/❌틀림/⏳진행중) + 입장 변화(없으면 "일관됨").
-9. 출력은 순수 HTML 조각(<div class="report">…</div>)만. 마크다운·코드펜스 금지. 제목<h2>, 표<table>, 강조<strong>.`;
+[출력 형식 — 보고서(브리핑) 스타일. 반드시 지킬 것]
+※ 표는 딱 두 곳에만: 맨 위 <30초 판단>과 맨 아래 <📅 체크 캘린더>. 그 사이 본문은 전부 서술형 문장으로.
+1. 맨 위 <⚡ 30초 판단>: 표로 — 핵심 1줄 / 전체 흐름 1줄(큰 그림에서 어디를 가리키는지) / 볼 가치(상·중·하) / 액션(예·아니오·관망).
+2. 본문은 <h2> 소제목 + 3~4문장 문단들로 구성(A안 브리핑 스타일). 각 소제목 아래는 "무슨 일인가 → 왜 중요한가 → 그래서 뭘 봐야 하나"를 문장으로 풀 것. 숫자·고유명사는 문장 안에 자연스럽게 녹일 것. 표로 나열하지 말 것.
+3. [나열 금지] 지식 나열이 아니라 "그래서 뭘 알 수 있는가"가 목적. 각 소제목 문단은 마지막에 "<strong>한마디로:</strong> …" 1문장으로 닫을 것.
+4. 사실 / 의견 / 예측을 문장 안에서 구분. 의견엔 "(⚠️ 화자 해석)", 예측엔 반증조건("언제까지 무엇이 보이면 맞고 아니면 틀림")을 문장으로 명시.
+5. [3일 필터] 3일 뒤 무가치한 정보(당일 등락 나열 등)는 제외/압축. 분량보다 밀도.
+6. <🎭 화자 점검>(달님 시사점 앞): 화자가 이 주장으로 얻는 이익 / 불리한 정보 회피 화법 / 자기모순 / 무의식적 프레이밍(흥미 유도인지 현실성 있는지)을 문장으로 3~5줄.
+6-1. [프레이밍 X-ray] 본문 서술 중 화자의 핵심 발언에는 문장 끝에 색 태그를 인라인으로 붙일 것:
+   · 🟢(검증가능): 수치·날짜·사실 근거가 있는 발언
+   · 🟡(해석): 근거는 있으나 화자의 주관적 해석·의견
+   · 🔴(유도): 근거 없이 흥미·불안·조급함을 자극하는 발언 ("지금 안 사면 후회", "폭등 임박", "역대급" 등)
+   태그는 남발하지 말고 판단이 갈리는 주요 발언에만. 사실 나열문까지 일일이 붙이지 말 것.
+6-2. <🔬 프레이밍 분석>(화자 점검 다음, 달님 시사점 앞): 이 영상의 🔴 유도성 발언을 2~4개 뽑아 "왜 유도인지" 한 줄씩 짚고, 맨 끝에 이 영상 발언의 대략적 구성비를 "<strong>프레이밍 구성: 🟢검증 ○% · 🟡해석 ○% · 🔴유도 ○%</strong>"로 명시(합 100). 구성비는 본문에서 판단한 발언들의 대략적 비율이며, 🔴가 높을수록 정보보다 흥미 위주 채널임을 한 줄로 평가.
+7. <💡 달님 시사점>: 투자·서희타워 업무·자기계발 중 어디에 어떻게 연결되는지 문장으로.
+8. 마지막 <📅 체크 캘린더>: 표로 — 3열(날짜 | 확인할 것 | 그때 할 행동). 기한은 오늘 기준 YYYY-MM-DD로 환산("수 주 내" 금지). 행동은 "유지 시 X / 이탈 시 Y" 양방향.
+9. [직전 요약]이 제공되면 <30초 판단> 다음 <🔁 직전 영상 대비>(문장형): 지난 예측을 이번 기준으로 채점(✅맞음/❌틀림/⏳진행중)하고 입장 변화 서술(없으면 "일관됨").
+10. 출력은 순수 HTML 조각(<div class="report">…</div>)만. 마크다운·코드펜스 금지. 제목<h2>, 강조<strong>. 본문에 <table>은 30초 판단과 체크 캘린더 외 사용 금지.
+11. 맨 마지막 줄에 기계판독용 주석 1줄을 반드시 추가(화면엔 안 보임): <!--FRAMING:{"green":○,"yellow":○,"red":○}--> (프레이밍 구성비 숫자, 합 100). 나중에 채널별 누적 통계에 사용됨.
+12. 그 다음 줄에 예측 대장용 기계판독 주석을 추가(화면엔 안 보임). 이 영상에서 화자가 한 '검증 가능한 예측'을 최대 6개까지 JSON 배열로:
+<!--PREDICTIONS:[{"대상":"종목/지표명","티커":"조회용 심볼","방향":"상승|하락|돌파|하회","기준선":"있으면 예:21일이평선/70달러, 없으면 빈문자","검증기한":"YYYY-MM-DD","반증조건":"한 줄","원문":"화자 발언 요지"}]-->
+   · 티커 규칙: 미국주식은 표준 티커(예 마이크론=MU, 엔비디아=NVDA, S&P500=^GSPC, 나스닥100=^NDX, 필라델피아반도체=^SOX). 한국주식은 종목코드+.KS(예 SK하이닉스=000660.KS, 삼성전자=005930.KS). ETF는 티커 그대로(SOXX,QQQ). 불명확하면 티커는 빈문자.
+   · 검증기한은 화자가 제시한 시점을 오늘 기준 YYYY-MM-DD로 환산. 명시 없으면 게시일+30일로 추정.
+   · 막연한 감상("좋아 보인다")은 제외. 방향·대상이 분명한 것만.
+   · 예측이 없으면 <!--PREDICTIONS:[]-->`;
 
 const PROFILE_SYSTEM=`당신은 달님(건물 관리소장이자 개인 투자자, 시스템 자동화 추구)의 유튜브 요약 시스템 설계자입니다.
 새 채널 스크립트를 보고 이 채널을 어떻게 요약하는 것이 달님에게 가장 유용할지 '채널 전용 요약 프로필'을 JSON으로 작성하세요.
 달님 배경: 투자(수급+실현가능 촉매+2~3주 방향성 3요소, 테마 순환), 업무(서희타워 시설관리·임대차·법규), 성향(결론 먼저, 수치 중시, 화자 프레이밍 거름, 실전 적용 중시).
 반드시 아래 JSON만 응답:
 {"분야":"...","채널성격":"1~2문장","요약초점":["3~5개"],"출력섹션":["30초 판단","...본문 2~4개...","달님 시사점"],"달님연결점":["1~3개"]}`;
+
+const FLOW_SYSTEM=`당신은 달님 전용 유튜브 채널 시계열 분석가입니다.
+한 채널의 요약들을 '영상 게시일 오래된 순'으로 받습니다. 이 채널이 시간에 따라 어떻게 말해왔는지 흐름(궤적)을 분석하세요.
+※ 입력은 반드시 게시일 오래된 것 → 최신 순으로 정렬되어 있습니다. 이 시간 순서를 절대적 기준으로 삼으세요.
+
+포함 섹션(순수 HTML, <h2>제목, 마크다운 금지. 표는 타임라인 1개만 허용):
+1. <📈 한눈에 보는 궤적> — 게시일 순 타임라인 표(날짜 | 그때의 핵심 입장 | 주요 예측). 오래된 것이 위, 최신이 아래.
+2. <🔀 입장은 어떻게 변해왔나> — 시간에 따라 화자의 스탠스가 어떻게 이동했는지 서술형 3~5문장. "언제부터 어떻게 바뀌었다"를 구체적 게시일과 함께. 일관되면 "○월부터 지금까지 일관되게 X를 주장" 형태로.
+3. <🔁 반복되는 단골 소재> — 이 채널이 매 영상 꺼내는 주제·프레임(예: 특정 지표, 특정 논리). 반복이 곧 이 채널의 정체성.
+4. <🎯 예측은 맞았나> — 과거 영상의 예측을 시간이 지난 지금 시점에서 채점(✅맞음/❌틀림/⏳진행중). 시간이 흐른 예측일수록 판정 가능. 적중 경향을 한 줄로.
+5. <🎭 무의식 전달 누적> — 시간에 걸쳐 이 채널의 🔴유도 화법이 늘었나 줄었나, 흥미 유도형인가 정보형인가. (제공된 누적 프레이밍 비율 활용)
+6. <🧭 이것들이 함께 말하는 것> — 전체를 하나의 이야기로: 이 채널은 시간 속에서 어떤 궤적을 그렸고, 지금 어디에 있으며, 달님은 앞으로 이 채널을 어떻게 대해야 하는가. 마지막 "<strong>한마디로:</strong> …" 1문장.
+나열 금지, 해석·결론 중심. 요약에 있는 내용만 사용. 없는 사실 지어내지 말 것.`;
 
 const INSIGHT_SYSTEM=`당신은 달님 전용 유튜브 채널 분석가입니다. 한 채널의 요약 여러 편(최신순)을 받아 채널 전체를 관통하는 패턴을 분석하세요.
 포함 섹션(순수 HTML, <h2>제목, 마크다운 금지):
@@ -256,12 +324,11 @@ async function runSummary(){
   const btn=document.getElementById('goBtn'); btn.disabled=true; st.className='status';
   try{
     st.textContent='① 자막 추출 중...';
-    const [meta,tr]=await Promise.all([
-      fetch(`${WORKER}/oembed?v=${vid}`).then(r=>r.json()),
-      fetch(`${WORKER}/transcript?v=${vid}`).then(async r=>{const d=await r.json(); if(!r.ok||d.error)throw new Error(d.error||'자막 실패'); return d;})
-    ]);
-    const title=meta.title||'(제목 없음)', channel=meta.author||'알수없는채널';
-    const transcript=tr.transcript.slice(0,30000);
+    const meta=await fetch(`${SERVER}/api/meta?url=${encodeURIComponent(url)}`)
+      .then(async r=>{const d=await r.json(); if(!r.ok||d.error)throw new Error(d.error||'자막 실패'); return d;});
+    const title=meta.title||'(제목 없음)', channel=meta.channel||'알수없는채널';
+    const publishDate=meta.publishDate||'';
+    const transcript=(meta.transcript||'').slice(0,30000);
 
     // 채널 프로필 (Firebase에서 조회, 없으면 생성)
     st.textContent='② 채널 프로필 확인 중...';
@@ -275,22 +342,34 @@ async function runSummary(){
 
     // 직전 요약
     st.textContent='③ AI 요약 중... (30초~1분)';
-    const prev=await loadPrevSummary(channel);
+    const prev=await loadPrevSummary(channel, publishDate);
     const today=kstNow().toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'});
     const system=`당신은 달님 전용 유튜브 요약가입니다. 아래 채널 프로필에 맞춰 스크립트를 요약하세요.\n[채널 프로필]\n${JSON.stringify(profile,null,1)}\n${COMMON_CORE}\n출력 섹션 구성은 프로필의 "출력섹션" 순서를 따르세요.`;
     let body=await callClaude(system,
-      `오늘 날짜: ${today} KST — 체크 캘린더의 모든 기한은 이 날짜 기준으로 환산할 것.\n영상 제목: ${title}\n채널: ${channel}\n`+
-      (prev?`\n[직전 요약 — ${prev.일시} 작성]\n${prev.text}\n`:'')+`\n[스크립트]\n${transcript}`,8000);
+      `오늘 날짜: ${today} KST — 체크 캘린더의 모든 기한은 이 날짜 기준으로 환산할 것.\n영상 게시일: ${publishDate||'미확인'}\n영상 제목: ${title}\n채널: ${channel}\n`+
+      (prev?`\n[직전 영상 요약 — 게시일 ${prev.일시}, 이 영상보다 먼저 올라온 것]\n${prev.text}\n※ 위는 이 채널에서 시간상 앞선 영상이다. <🔁 직전 영상 대비>에서 그때의 예측을 이번 영상 기준으로 채점하고 입장 변화를 볼 것.\n`:'')+`\n[스크립트]\n${transcript}`,8000);
     body=body.replace(/```html|```/g,'').trim();
+    // 프레이밍 구성비 추출 (기계판독 주석 → 별도 필드, 5단계 대시보드 대비)
+    let framing=null;
+    const fm=body.match(/<!--FRAMING:(\{[^}]*\})-->/);
+    if(fm){ try{framing=JSON.parse(fm[1]);}catch(e){} }
+    // 예측 대장 추출 (1단계)
+    let preds=[];
+    const pm=body.match(/<!--PREDICTIONS:(\[[\s\S]*?\])-->/);
+    if(pm){ try{preds=JSON.parse(pm[1]);}catch(e){logBug('예측 파싱: '+e.message);} }
+    // 화면엔 기계판독 주석 숨김 (CSS로도 숨지만 아예 제거)
+    const cleanBody=body.replace(/<!--FRAMING:[^>]*-->/g,'').replace(/<!--PREDICTIONS:[\s\S]*?-->/g,'').trim();
 
     // 저장
     const now=kstStr(), id='s_'+Date.now();
-    await saveSummary({id,일시:now,채널:channel,제목:title,url,html:body,관통분석:false,휴지통:null});
+    await saveSummary({id,일시:now,게시일:publishDate,채널:channel,제목:title,url,html:cleanBody,framing,관통분석:false,휴지통:null});
+    await savePredictions(preds, {채널:channel, 영상제목:title, 게시일:publishDate, summaryId:id});
     await bumpChannelCount(channel);
 
     // 표시
     document.getElementById('resultMeta').innerHTML=
       `<b>${escapeHtml(title)}</b> — ${escapeHtml(channel)}`+
+      (publishDate?` · 게시일 ${escapeHtml(publishDate)}`:'')+
       (newProfile?` <span class="badge">새 채널 · ${escapeHtml(profile['분야']||'')}</span>`:'');
     document.getElementById('result').innerHTML=body;
     document.getElementById('resultOverlay').classList.add('on');
@@ -324,17 +403,44 @@ async function saveSummary(obj){
   try{await db.collection(SUM_COL).doc(obj.id).set(obj);}
   catch(e){logBug('요약 저장: '+e.message); throw e;}
 }
-async function loadPrevSummary(channel){
+async function savePredictions(preds, meta){
+  if(!db||!preds||!preds.length)return;
+  try{
+    const batch=db.batch();
+    preds.forEach((p,i)=>{
+      const pid='p_'+meta.summaryId+'_'+i;
+      batch.set(db.collection(PRED_COL).doc(pid),{
+        id:pid, 채널:meta.채널, 영상제목:meta.영상제목, 게시일:meta.게시일||'', summaryId:meta.summaryId,
+        대상:p.대상||'', 티커:p.티커||'', 방향:p.방향||'', 기준선:p.기준선||'',
+        검증기한:p.검증기한||'', 반증조건:p.반증조건||'', 원문:p.원문||'',
+        상태:'대기중', 판정근거:'', 등록일:kstStr()
+      });
+    });
+    await batch.commit();
+  }catch(e){logBug('예측 저장: '+e.message);}
+}
+async function loadPrevSummary(channel, curPublish){
   if(!db)return null;
   try{
     const q=await db.collection(SUM_COL).where('채널','==',channel).get();
-    let best=null;
+    let cand=[];
     q.forEach(d=>{const x=d.data();
       if(x.휴지통||x.관통분석)return;
-      if(!best||x.일시>best.일시)best=x;});
-    if(!best)return null;
-    const text=best.html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,6000);
-    return {일시:best.일시,text};
+      cand.push(x);});
+    if(!cand.length)return null;
+    // 기준: 게시일. 현재 영상 게시일보다 '이전'인 것 중 가장 최근 것을 직전으로.
+    const key=x=>(x.게시일||x.일시||'').slice(0,10);
+    const cp=(curPublish||'').slice(0,10);
+    let pool=cand;
+    if(cp){
+      const before=cand.filter(x=>key(x)<cp);
+      pool=before.length?before:[]; // 이전 영상이 있으면 그중에서만
+    }
+    if(!pool.length)return null;
+    pool.sort((a,b)=>key(b).localeCompare(key(a))||(b.일시||'').localeCompare(a.일시||''));
+    const best=pool[0];
+    const text=best.html.replace(/<!--FRAMING:[^>]*-->/g,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,6000);
+    return {일시:best.게시일||best.일시, text};
   }catch(e){logBug('직전요약: '+e.message); return null;}
 }
 
@@ -361,6 +467,7 @@ async function loadChannels(){
           <input type="text" id="ins-${cssId(n)}" placeholder="수정 지시 한 줄" style="flex:1;min-width:180px;">
           <button class="btn sub" onclick="editChannel('${escapeJs(n)}')">프로필 수정</button>
           <button class="btn gold" id="ai-${cssId(n)}" onclick="runInsight('${escapeJs(n)}')">🔍 관통 분석</button>
+          <button class="btn" style="background:#1e5aa8;" id="flow-${cssId(n)}" onclick="runFlow('${escapeJs(n)}')">📈 흐름 분석</button>
           <button class="btn sub" style="color:var(--warn);border-color:var(--warn);" onclick="delChannel('${escapeJs(n)}')">삭제</button>
         </div></div>`;
     }).join('');
@@ -392,6 +499,12 @@ async function runInsight(name){
     let items=[]; q.forEach(d=>{const x=d.data(); if(!x.휴지통&&!x.관통분석)items.push(x);});
     if(items.length<2)throw new Error('관통 분석은 요약이 2편 이상 쌓여야 가능합니다');
     items.sort((a,b)=>b.일시.localeCompare(a.일시));
+    // 채널 누적 프레이밍 비율 (5단계 대시보드 맛보기)
+    let g=0,y=0,rd=0,fc=0;
+    items.forEach(x=>{if(x.framing){g+=x.framing.green||0;y+=x.framing.yellow||0;rd+=x.framing.red||0;fc++;}});
+    let framingLine='';
+    if(fc){const t=g+y+rd||1;
+      framingLine=`\n\n[채널 누적 프레이밍 (${fc}편 평균)] 🟢검증 ${Math.round(g/t*100)}% · 🟡해석 ${Math.round(y/t*100)}% · 🔴유도 ${Math.round(rd/t*100)}% — 이 수치를 30초 판단의 신뢰도 평가에 반영할 것.`;}
     let parts=[],total=0;
     for(const x of items.slice(0,10)){
       const t=x.html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,5000);
@@ -400,7 +513,7 @@ async function runInsight(name){
     }
     const today=kstNow().toLocaleDateString('ko-KR');
     let body=await callClaude(INSIGHT_SYSTEM,
-      `오늘 날짜: ${today} KST\n채널명: ${name}\n분석 대상 요약 ${parts.length}편(최신순):\n\n`+parts.join('\n\n'),8000);
+      `오늘 날짜: ${today} KST\n채널명: ${name}${framingLine}\n분석 대상 요약 ${parts.length}편(최신순):\n\n`+parts.join('\n\n'),8000);
     body=body.replace(/```html|```/g,'').trim();
     const id='i_'+Date.now(), now=kstStr();
     await saveSummary({id,일시:now,채널:name,제목:`🔍 관통 분석 — ${name} (${parts.length}편)`,url:'',html:body,관통분석:true,휴지통:null});
@@ -408,6 +521,41 @@ async function runInsight(name){
     document.getElementById('result').innerHTML=body;
     document.getElementById('resultOverlay').classList.add('on');
   }catch(e){alert('관통 분석 실패: '+e.message); logBug('관통분석: '+e.message);}
+  finally{btn.disabled=false; btn.textContent=orig;}
+}
+
+async function runFlow(name){
+  const btn=document.getElementById('flow-'+cssId(name));
+  btn.disabled=true; const orig=btn.textContent; btn.textContent='흐름 분석 중...(1~2분)';
+  try{
+    const q=await db.collection(SUM_COL).where('채널','==',name).get();
+    let items=[]; q.forEach(d=>{const x=d.data(); if(!x.휴지통&&!x.관통분석)items.push(x);});
+    if(items.length<2)throw new Error('흐름 분석은 요약이 2편 이상 쌓여야 가능합니다');
+    // 게시일 오래된 순 (없으면 요약일). 시간 축 정렬이 이 기능의 핵심.
+    const key=x=>(x.게시일||x.일시||'').slice(0,10);
+    items.sort((a,b)=>key(a).localeCompare(key(b))||(a.일시||'').localeCompare(b.일시||''));
+    // 누적 프레이밍
+    let g=0,y=0,rd=0,fc=0;
+    items.forEach(x=>{if(x.framing){g+=x.framing.green||0;y+=x.framing.yellow||0;rd+=x.framing.red||0;fc++;}});
+    let framingLine='';
+    if(fc){const t=g+y+rd||1;
+      framingLine=`\n[채널 누적 프레이밍 ${fc}편] 🟢검증 ${Math.round(g/t*100)}% · 🟡해석 ${Math.round(y/t*100)}% · 🔴유도 ${Math.round(rd/t*100)}%`;}
+    let parts=[],total=0;
+    for(const x of items){ // 오래된 순 그대로
+      const t=x.html.replace(/<!--FRAMING:[^>]*-->/g,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,4500);
+      parts.push(`=== [게시일 ${key(x)}] ${x.제목} ===\n${t}`); total+=t.length;
+      if(total>42000)break;
+    }
+    const today=kstNow().toLocaleDateString('ko-KR');
+    let body=await callClaude(FLOW_SYSTEM,
+      `오늘 날짜: ${today} KST\n채널명: ${name}${framingLine}\n분석 대상 ${parts.length}편 — 반드시 아래 게시일 오래된 순 그대로 시간 흐름을 읽을 것:\n\n`+parts.join('\n\n'),8000);
+    body=body.replace(/```html|```/g,'').trim();
+    const id='f_'+Date.now(), now=kstStr();
+    await saveSummary({id,일시:now,게시일:'',채널:name,제목:`📈 흐름 분석 — ${name} (${parts.length}편)`,url:'',html:body,관통분석:true,휴지통:null});
+    document.getElementById('resultMeta').innerHTML=`<b>📈 흐름 분석 — ${escapeHtml(name)}</b> (게시일순 ${parts.length}편)`;
+    document.getElementById('result').innerHTML=body;
+    document.getElementById('resultOverlay').classList.add('on');
+  }catch(e){alert('흐름 분석 실패: '+e.message); logBug('흐름분석: '+e.message);}
   finally{btn.disabled=false; btn.textContent=orig;}
 }
 
@@ -434,7 +582,12 @@ async function loadHistory(){
       return (now-dt)/86400000<30;
     });
     hisData=all.filter(x=>trashMode?x.휴지통:!x.휴지통);
-    hisData.sort((a,b)=>b.일시.localeCompare(a.일시));
+    // 정렬 기준: 영상 게시일 최신순 (게시일 없으면 요약일로 대체)
+    hisData.sort((a,b)=>{
+      const ka=(a.게시일||a.일시||'').slice(0,10), kb=(b.게시일||b.일시||'').slice(0,10);
+      if(kb!==ka)return kb.localeCompare(ka);
+      return (b.일시||'').localeCompare(a.일시||''); // 같은 날이면 요약 시각순
+    });
     const counts={}; hisData.forEach(x=>counts[x.채널]=(counts[x.채널]||0)+1);
     const sel=document.getElementById('hisChannel'), cur=sel.value;
     sel.innerHTML='<option value="">전체 채널 ('+hisData.length+')</option>'+
@@ -458,10 +611,12 @@ function renderHistory(){
     const act=trashMode
       ?`<button class="btn sub" style="min-height:36px;" onclick="restoreEntry('${escapeJs(x.id)}')">복원</button>`
       :`<button class="btn sub" style="min-height:36px;color:var(--warn);border-color:var(--warn);" onclick="trashEntry('${escapeJs(x.id)}')">삭제</button>`;
+    const fr=x.framing;
+    const frBadge=fr?` <span style="font-size:11px;">🟢${fr.green||0} 🟡${fr.yellow||0} 🔴${fr.red||0}</span>`:'';
     return `<div class="hist" ${gold}>
        <div style="flex:1;cursor:pointer;" onclick="openSummary('${escapeJs(x.id)}')">
-         <a>${escapeHtml(x.제목)}</a>
-         <div style="color:var(--sub);font-size:12px;">${escapeHtml(x.채널)}${x.휴지통?' · 삭제: '+escapeHtml(x.휴지통):''}</div></div>
+         <a>${escapeHtml(x.제목)}</a>${frBadge}
+         <div style="color:var(--sub);font-size:12px;">${escapeHtml(x.채널)}${x.게시일?' · 게시 '+escapeHtml(x.게시일):''}${x.휴지통?' · 삭제: '+escapeHtml(x.휴지통):''}</div></div>
        <div class="t">${escapeHtml(x.일시)}</div>${act}</div>`;
   }).join('');
 }
@@ -484,6 +639,182 @@ async function trashEntry(id){
 async function restoreEntry(id){
   try{await db.collection(SUM_COL).doc(id).update({휴지통:null}); loadHistory();}
   catch(e){alert('복원 실패: '+e.message);}
+}
+
+/* ═══════════ 예측 대장 (1단계) ═══════════ */
+let predData=[];
+const PRED_ICON={대기중:'⏳',적중:'✅',빗나감:'❌',판정불가:'➖'};
+async function loadPredictions(){
+  const box=document.getElementById('predList');
+  box.innerHTML='불러오는 중...';
+  if(!db){box.innerHTML='오프라인 상태입니다.'; return;}
+  try{
+    const q=await db.collection(PRED_COL).get();
+    predData=[]; q.forEach(d=>predData.push(d.data()));
+    // 검증기한 임박/경과 순: 기한 오름차순, 대기중 우선
+    predData.sort((a,b)=>(a.검증기한||'9999').localeCompare(b.검증기한||'9999'));
+    const counts={}; predData.forEach(x=>counts[x.채널]=(counts[x.채널]||0)+1);
+    const sel=document.getElementById('predChannel'), cur=sel.value;
+    sel.innerHTML='<option value="">전체 채널 ('+predData.length+')</option>'+
+      Object.keys(counts).sort().map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)} (${counts[c]})</option>`).join('');
+    sel.value=cur&&counts[cur]!==undefined?cur:'';
+    renderPredictions();
+  }catch(e){box.innerHTML='예측 로딩 오류: '+e.message; logBug('예측로딩: '+e.message);}
+}
+function renderPredictions(){
+  const box=document.getElementById('predList');
+  const ch=document.getElementById('predChannel').value;
+  const st=document.getElementById('predStatus').value;
+  const today=kstNow().toISOString().slice(0,10);
+  let list=predData;
+  if(ch)list=list.filter(x=>x.채널===ch);
+  if(st)list=list.filter(x=>(x.상태||'대기중')===st);
+  // 상태 요약
+  const tally={대기중:0,적중:0,빗나감:0,판정불가:0};
+  (ch?predData.filter(x=>x.채널===ch):predData).forEach(x=>tally[x.상태||'대기중']++);
+  const hit=tally.적중, done=tally.적중+tally.빗나감;
+  const rate=done?Math.round(hit/done*100):null;
+  document.getElementById('predStatusLine').innerHTML=
+    `⏳${tally.대기중} ✅${tally.적중} ❌${tally.빗나감} ➖${tally.판정불가}`+
+    (rate!==null?` · <b>적중률 ${rate}%</b> (판정 ${done}건 중)`:'');
+  if(!list.length){box.innerHTML='조건에 맞는 예측이 없습니다.'; return;}
+  box.innerHTML=list.map(x=>{
+    const stt=x.상태||'대기중';
+    const overdue=stt==='대기중'&&x.검증기한&&x.검증기한<today;
+    const dueColor=overdue?'color:var(--warn);font-weight:700;':'color:var(--sub);';
+    return `<div class="ch" style="padding:11px;">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
+        <div style="flex:1;">
+          <div><b>${escapeHtml(x.대상||'?')}</b>${x.티커?` <span class="badge">${escapeHtml(x.티커)}</span>`:''}
+            <span class="badge">${escapeHtml(x.방향||'')}</span></div>
+          <div style="font-size:13px;margin-top:3px;">${escapeHtml(x.원문||'')}</div>
+          <div style="font-size:12px;${dueColor}margin-top:3px;">
+            검증기한 ${escapeHtml(x.검증기한||'미정')}${overdue?' · ⚠️ 기한 경과 (채점 필요)':''}
+            ${x.기준선?' · 기준: '+escapeHtml(x.기준선):''}</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:2px;">
+            ${escapeHtml(x.채널)} · ${escapeHtml(x.게시일||'')} · 반증: ${escapeHtml(x.반증조건||'')}</div>
+          ${x.판정근거?`<div style="font-size:11px;color:var(--green);margin-top:2px;">판정근거: ${escapeHtml(x.판정근거)}</div>`:''}
+        </div>
+        <div style="text-align:center;white-space:nowrap;">
+          <div style="font-size:20px;">${PRED_ICON[stt]||'⏳'}</div>
+          <select onchange="setPredStatus('${escapeJs(x.id)}',this.value)" style="min-height:34px;font-size:12px;margin-top:4px;padding:2px 4px;">
+            <option value="대기중"${stt==='대기중'?' selected':''}>대기중</option>
+            <option value="적중"${stt==='적중'?' selected':''}>적중</option>
+            <option value="빗나감"${stt==='빗나감'?' selected':''}>빗나감</option>
+            <option value="판정불가"${stt==='판정불가'?' selected':''}>판정불가</option>
+          </select>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function setPredStatus(id,status){
+  try{await db.collection(PRED_COL).doc(id).update({상태:status,판정일:kstStr()});
+    const p=predData.find(x=>x.id===id); if(p)p.상태=status;
+    renderPredictions();
+  }catch(e){alert('상태 변경 실패: '+e.message); logBug('예측상태: '+e.message);}
+}
+async function autoScore(){
+  const btn=document.getElementById('scoreBtn'), st=document.getElementById('scoreStatus');
+  const today=kstNow().toISOString().slice(0,10);
+  // 기한 지난 대기중 예측만
+  const targets=predData.filter(x=>(x.상태||'대기중')==='대기중' && x.검증기한 && x.검증기한<=today);
+  if(!targets.length){st.textContent='채점할 예측이 없습니다 (기한 지난 대기중 예측 없음)'; return;}
+  btn.disabled=true; st.className='status'; st.textContent=`${targets.length}건 채점 중... (주가 조회, 잠시)`;
+  try{
+    const r=await fetch(SERVER+'/api/score',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({predictions:targets.map(x=>({id:x.id,티커:x.티커,방향:x.방향,게시일:x.게시일}))})});
+    const d=await r.json();
+    if(!r.ok||d.error)throw new Error(d.error||('채점 서버 '+r.status));
+    let done=0;
+    for(const res of d.results||[]){
+      await db.collection(PRED_COL).doc(res.id).update({상태:res.상태,판정근거:res.판정근거,판정일:kstStr()});
+      const p=predData.find(x=>x.id===res.id); if(p){p.상태=res.상태;p.판정근거=res.판정근거;}
+      done++;
+    }
+    st.textContent=`✅ ${done}건 채점 완료`;
+    renderPredictions();
+  }catch(e){st.textContent='채점 오류: '+e.message; st.className='status err'; logBug('자동채점: '+e.message);}
+  finally{btn.disabled=false;}
+}
+
+/* ═══════════ 📊 신뢰도 대시보드 (5단계) ═══════════ */
+async function loadDashboard(){
+  const box=document.getElementById('dashList');
+  box.innerHTML='<div class="card">집계 중...</div>';
+  if(!db){box.innerHTML='<div class="card">오프라인 상태입니다.</div>'; return;}
+  try{
+    // 3개 컬렉션 병렬 로드
+    const [chSnap,sumSnap,predSnap]=await Promise.all([
+      db.collection(CH_COL).get(),
+      db.collection(SUM_COL).get(),
+      db.collection(PRED_COL).get()
+    ]);
+    const stat={}; // 채널별 집계
+    const ensure=n=>stat[n]||(stat[n]={채널:n,분야:'',요약수:0,g:0,y:0,r:0,fc:0,적중:0,빗나감:0,판정불가:0,대기:0});
+    chSnap.forEach(d=>{const c=d.data(); const s=ensure(d.id); s.분야=(c.profile&&c.profile['분야'])||''; s.요약횟수=c.요약횟수||0;});
+    sumSnap.forEach(d=>{const x=d.data();
+      if(x.휴지통||x.관통분석)return;
+      const s=ensure(x.채널); s.요약수++;
+      if(x.framing){s.g+=x.framing.green||0;s.y+=x.framing.yellow||0;s.r+=x.framing.red||0;s.fc++;}
+    });
+    predSnap.forEach(d=>{const p=d.data(); const s=ensure(p.채널);
+      const st=p.상태||'대기중';
+      if(st==='적중')s.적중++; else if(st==='빗나감')s.빗나감++;
+      else if(st==='판정불가')s.판정불가++; else s.대기++;
+    });
+    // 종합점수 계산
+    const rows=Object.values(stat).filter(s=>s.요약수>0||s.적중+s.빗나감>0);
+    rows.forEach(s=>{
+      const done=s.적중+s.빗나감;
+      s.적중률 = done? Math.round(s.적중/done*100) : null;
+      const t=s.g+s.y+s.r||1;
+      s.유도율 = s.fc? Math.round(s.r/t*100) : null;
+      // 종합점수: 적중률(있으면) 60% + (100-유도율) 40%. 데이터 없으면 낮게.
+      const acc = s.적중률!==null? s.적중률 : 40;
+      const trust = s.유도율!==null? (100-s.유도율) : 50;
+      s.score = Math.round(acc*0.6 + trust*0.4);
+    });
+    rows.sort((a,b)=>b.score-a.score);
+    document.getElementById('dashStatus').textContent=`${rows.length}개 채널 · 종합점수 순`;
+    if(!rows.length){box.innerHTML='<div class="card">아직 데이터가 없습니다. 영상을 요약하면 쌓입니다.</div>'; return;}
+    box.innerHTML=rows.map((s,i)=>{
+      const accStr = s.적중률!==null? `${s.적중률}%` : '—';
+      const accColor = s.적중률===null?'var(--sub)': s.적중률>=60?'var(--green)': s.적중률>=45?'#b8860b':'var(--warn)';
+      const luStr = s.유도율!==null? `${s.유도율}%` : '—';
+      const luIcon = s.유도율===null?'':(s.유도율<=20?'🟢':s.유도율<=35?'🟡':'🔴');
+      const done=s.적중+s.빗나감;
+      let comment;
+      if(s.적중률===null&&s.유도율===null) comment='데이터 부족 — 더 쌓여야 판단 가능';
+      else if((s.적중률??50)>=60 && (s.유도율??50)<=20) comment='신뢰도 높음 · 정보형';
+      else if((s.유도율??0)>=35) comment='흥미 유도 강함 · 참고만';
+      else if((s.적중률??100)<45 && done>=2) comment='적중률 낮음 · 재미용';
+      else comment='보통 · 균형적';
+      const bar=s.score;
+      return `<div class="ch" style="padding:12px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="font-size:22px;font-weight:800;color:var(--sub);width:28px;text-align:center;">${i+1}</div>
+          <div style="flex:1;">
+            <div class="name">${escapeHtml(s.채널)}
+              ${s.분야?`<span class="badge">${escapeHtml(s.분야)}</span>`:''}</div>
+            <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-top:5px;">
+              <span>🎯 적중률 <b style="color:${accColor};">${accStr}</b>${done?` <span style="color:var(--sub);font-size:11px;">(${done}건)</span>`:''}</span>
+              <span>${luIcon} 유도 <b>${luStr}</b></span>
+              <span style="color:var(--sub);">📝 ${s.요약수}편 · ⏳ 예측 ${s.대기}</span>
+            </div>
+            <div style="font-size:12px;color:var(--sub);margin-top:4px;">${comment}</div>
+            <div style="height:6px;background:#eee;border-radius:3px;margin-top:6px;overflow:hidden;">
+              <div style="height:100%;width:${bar}%;background:linear-gradient(90deg,var(--warn),#b8860b,var(--green));"></div>
+            </div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:24px;font-weight:800;color:var(--green);">${s.score}</div>
+            <div style="font-size:10px;color:var(--sub);">종합</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){box.innerHTML='<div class="card">대시보드 오류: '+e.message+'</div>'; logBug('대시보드: '+e.message);}
 }
 </script>
 </body>
