@@ -83,7 +83,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 <div class="wrap">
   <header>
     <h1>📺 유튜브 요약기</h1>
-    <span class="ver">v3.6-0706 · 수급 막대·검색개선</span>
+    <span class="ver">v3.7-0706 · 봉차트·날짜축</span>
     <span class="sync off" id="syncBadge">동기화 확인중</span>
   </header>
 
@@ -458,39 +458,101 @@ function flowLine(f){
 }
 
 /* 미니 차트: 종가선(굵게) + 21일선(점선) SVG */
+let lastTickerData=null, chartMode='line';
+function setChartMode(m){
+  chartMode=m;
+  const area=document.getElementById('chartArea');
+  if(area&&lastTickerData){area.innerHTML=miniChart(lastTickerData);}
+  updateChartBtns();
+}
+function updateChartBtns(){
+  const l=document.getElementById('chartLineBtn'), c=document.getElementById('chartCandleBtn');
+  if(!l||!c)return;
+  const on='background:var(--green);color:#fff;', off='';
+  l.style.cssText='min-height:32px;padding:0 12px;font-size:12px;'+(chartMode==='line'?on:off);
+  c.style.cssText='min-height:32px;padding:0 12px;font-size:12px;'+(chartMode==='candle'?on:off);
+}
+
 function miniChart(d){
-  const P=d.prices||[], M=d.ma_series||[];
-  if(P.length<2)return '';
-  const W=320,H=90,pad=6;
+  if(chartMode==='candle') return candleChart(d);
+  return lineChart(d);
+}
+
+/* 선 차트 (40일 + 날짜축) */
+function lineChart(d){
+  const P=d.prices||[], M=d.ma_series||[], D=d.dates||[];
+  if(P.length<2)return '<div style="font-size:12px;color:var(--sub);padding:8px;">데이터 부족</div>';
+  const W=320,H=110,pad=6,botAxis=16;
   const vals=P.concat(M.filter(v=>v!=null));
   let lo=Math.min(...vals), hi=Math.max(...vals);
   if(hi===lo){hi+=1;lo-=1;}
-  const rng=hi-lo;
+  const rng=hi-lo, plotH=H-botAxis;
   const x=i=>pad+(W-2*pad)*i/(P.length-1);
-  const y=v=>H-pad-(H-2*pad)*(v-lo)/rng;
+  const y=v=>plotH-pad-(plotH-2*pad)*(v-lo)/rng;
   const priceUp=P[P.length-1]>=P[0];
   const priceColor=priceUp?'#2d6a4f':'#c0392b';
-  // 종가 선
   let pricePath='M'+P.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' L');
-  // 21일선 (null 구간 끊기)
   let maSegs=[], seg=[];
   M.forEach((v,i)=>{ if(v==null){if(seg.length>1)maSegs.push(seg);seg=[];}else seg.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`);});
   if(seg.length>1)maSegs.push(seg);
   const maPaths=maSegs.map(s=>`<polyline points="${s.join(' ')}" fill="none" stroke="#b8860b" stroke-width="1.3" stroke-dasharray="4 3" opacity="0.85"/>`).join('');
-  // 마지막 점
   const lx=x(P.length-1), ly=y(P[P.length-1]);
-  // 교차 지점 마커
   let crossMark='';
   if(d.cross){const ci=d.cross.index; const cm=d.cross.type==='돌파'?'#2d6a4f':'#c0392b';
-    crossMark=`<circle cx="${x(ci).toFixed(1)}" cy="${y(P[ci]).toFixed(1)}" r="3.5" fill="none" stroke="${cm}" stroke-width="1.5"/>`;}
+    crossMark=`<circle cx="${x(ci).toFixed(1)}" cy="${y(P[ci]).toFixed(1)}" r="3.5" fill="none" stroke="${cm}" stroke-width="1.5"/>
+      <line x1="${x(ci).toFixed(1)}" y1="${(plotH-pad).toFixed(1)}" x2="${x(ci).toFixed(1)}" y2="${y(P[ci]).toFixed(1)}" stroke="${cm}" stroke-width="0.7" stroke-dasharray="2 2" opacity="0.5"/>`;}
+  // 날짜축: 시작·1/4·중간·3/4·끝
+  let axis='';
+  const ticks=[0,Math.floor(P.length/4),Math.floor(P.length/2),Math.floor(P.length*3/4),P.length-1];
+  [...new Set(ticks)].forEach(i=>{ if(D[i])axis+=`<text x="${x(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="8" fill="#999">${D[i]}</text>`;});
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:8px;display:block;">
     <path d="${pricePath}" fill="none" stroke="${priceColor}" stroke-width="2"/>
     ${maPaths}${crossMark}
     <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3" fill="${priceColor}"/>
-    <text x="${W-pad}" y="12" text-anchor="end" font-size="9" fill="#999">최근 ${P.length}일</text>
-    <text x="${pad}" y="12" font-size="9" fill="#b8860b">┈ 21일선</text>
+    <text x="${pad}" y="10" font-size="9" fill="#b8860b">┈ 21일선</text>
+    ${axis}
   </svg>`;
 }
+
+/* 봉 차트 (30일 + 21일선) */
+function candleChart(d){
+  const O=d.ohlc||[], MA=d.ohlc_ma||[];
+  if(O.length<2)return '<div style="font-size:12px;color:var(--sub);padding:8px;">봉 데이터 부족</div>';
+  const W=320,H=120,pad=6,botAxis=16;
+  const allV=[];
+  O.forEach(k=>{allV.push(k.h,k.l);}); MA.forEach(v=>{if(v!=null)allV.push(v);});
+  let lo=Math.min(...allV), hi=Math.max(...allV);
+  if(hi===lo){hi+=1;lo-=1;}
+  const rng=hi-lo, plotH=H-botAxis;
+  const x=i=>pad+(W-2*pad)*(i+0.5)/O.length;
+  const y=v=>plotH-pad-(plotH-2*pad)*(v-lo)/rng;
+  const cw=Math.max(2,(W-2*pad)/O.length*0.6);
+  let candles='';
+  O.forEach((k,i)=>{
+    const up=k.c>=k.o;
+    const col=up?'#c0392b':'#1e5aa8'; // 한국식: 양봉 빨강, 음봉 파랑
+    const cx=x(i);
+    const yH=y(k.h), yL=y(k.l), yO=y(k.o), yC=y(k.c);
+    const top=Math.min(yO,yC), bh=Math.max(1,Math.abs(yC-yO));
+    candles+=`<line x1="${cx.toFixed(1)}" y1="${yH.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${yL.toFixed(1)}" stroke="${col}" stroke-width="1"/>
+      <rect x="${(cx-cw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${cw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}"/>`;
+  });
+  // 21일선
+  let maSeg=[];
+  MA.forEach((v,i)=>{ if(v!=null)maSeg.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`);});
+  const maLine=maSeg.length>1?`<polyline points="${maSeg.join(' ')}" fill="none" stroke="#b8860b" stroke-width="1.3" stroke-dasharray="4 3"/>`:'';
+  // 날짜축
+  let axis='';
+  const ticks=[0,Math.floor(O.length/3),Math.floor(O.length*2/3),O.length-1];
+  [...new Set(ticks)].forEach(i=>{ if(O[i])axis+=`<text x="${x(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="8" fill="#999">${O[i].d}</text>`;});
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:8px;display:block;">
+    ${candles}${maLine}
+    <text x="${pad}" y="10" font-size="9" fill="#b8860b">┈ 21일선</text>
+    <text x="${W-pad}" y="10" text-anchor="end" font-size="8" fill="#999">빨강=양봉 파랑=음봉</text>
+    ${axis}
+  </svg>`;
+}
+
 
 function pickTicker(code){
   document.getElementById('tk').value=code;
@@ -516,6 +578,7 @@ async function runTicker(){
     const maTxt = d.above_ma===null?'—'
       :(d.above_ma?`<span style="color:var(--green);font-weight:700;">▲ 21일선 위</span>`
                   :`<span style="color:var(--warn);font-weight:700;">▼ 21일선 아래</span>`);
+    lastTickerData=d; // 토글용 저장
     box.innerHTML=`
       <div style="border:1px solid var(--line);border-radius:10px;padding:12px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;">
@@ -527,12 +590,17 @@ async function runTicker(){
           <span>${maTxt}</span>
           ${d.ma_value!=null?`<span style="color:var(--sub);">21일선 ${d.ma_value}</span>`:''}
         </div>
-        ${miniChart(d)}
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <button class="btn sub" id="chartLineBtn" style="min-height:32px;padding:0 12px;font-size:12px;" onclick="setChartMode('line')">📈 선 40일</button>
+          <button class="btn sub" id="chartCandleBtn" style="min-height:32px;padding:0 12px;font-size:12px;" onclick="setChartMode('candle')">🕯 봉 30일</button>
+        </div>
+        <div id="chartArea">${miniChart(d)}</div>
         ${flowLine(d.flow)}
         ${d.cross?`<div style="font-size:12px;margin-top:6px;color:${d.cross.type==='돌파'?'var(--green)':'var(--warn)'};font-weight:700;">
-          ${d.cross.ago===0?'오늘':d.cross.ago+'일 전'} 21일선 ${d.cross.type} ${d.cross.type==='돌파'?'▲':'▼'}</div>`:''}
+          ${d.cross.date?d.cross.date+' ':''}(${d.cross.ago===0?'오늘':d.cross.ago+'일 전'}) 21일선 ${d.cross.type} ${d.cross.type==='돌파'?'▲':'▼'}</div>`:''}
         ${d.high_20!=null?`<div style="font-size:12px;color:var(--sub);margin-top:4px;">최근 20일 고가 ${d.high_20} · 저가 ${d.low_20}</div>`:''}
       </div>`;
+    updateChartBtns();
   }catch(e){box.innerHTML=`<span style="color:var(--warn);">오류: ${escapeHtml(e.message)}</span>`; logBug('종목확인: '+e.message);}
   finally{btn.disabled=false;}
 }
