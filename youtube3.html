@@ -83,7 +83,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 <div class="wrap">
   <header>
     <h1>📺 유튜브 요약기</h1>
-    <span class="ver">v3.4-0706 · 미니 차트</span>
+    <span class="ver">v3.5-0706 · 한국종목·수급</span>
     <span class="sync off" id="syncBadge">동기화 확인중</span>
   </header>
 
@@ -109,7 +109,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
     <div class="card">
       <div style="font-size:13px;color:var(--sub);margin-bottom:8px;">📈 <b>종목 빠른 확인</b> — 티커 입력 시 한 달 수익률 + 21일선 위/아래</div>
       <div class="row" style="margin-top:0;">
-        <input type="text" id="tk" placeholder="티커 (예: SOX, NVDA, 000660.KS)"
+        <input type="text" id="tk" placeholder="티커·종목명 (예: SOX, NVDA, 삼성전자, 하이닉스)"
                onkeydown="if(event.key==='Enter')runTicker()">
         <button class="btn" style="background:#1e5aa8;" id="tkBtn" onclick="runTicker()">확인</button>
       </div>
@@ -415,6 +415,24 @@ async function runSummary(){
 }
 function closeResult(){document.getElementById('resultOverlay').classList.remove('on');}
 
+/* 한국 종목 수급 표시 */
+function flowLine(f){
+  if(!f)return '';
+  let parts=[];
+  if(f.foreign_5d!=null){
+    const pos=f.foreign_5d>=0;
+    const streak=f.foreign_streak>=2?` <b style="color:var(--green);">${f.foreign_streak}일 연속↑</b>`:'';
+    parts.push(`외국인 <b style="color:${pos?'var(--green)':'var(--warn)'};">${pos?'+':''}${f.foreign_5d}억</b>${streak}`);
+  }
+  if(f.inst_5d!=null){
+    const pos=f.inst_5d>=0;
+    parts.push(`기관 <b style="color:${pos?'var(--green)':'var(--warn)'};">${pos?'+':''}${f.inst_5d}억</b>`);
+  }
+  if(!parts.length)return '';
+  return `<div style="font-size:13px;margin-top:8px;padding:6px 8px;background:var(--green-lt);border-radius:8px;">
+    💰 최근 5일 수급 — ${parts.join(' · ')}</div>`;
+}
+
 /* 미니 차트: 종가선(굵게) + 21일선(점선) SVG */
 function miniChart(d){
   const P=d.prices||[], M=d.ma_series||[];
@@ -467,7 +485,7 @@ async function runTicker(){
     box.innerHTML=`
       <div style="border:1px solid var(--line);border-radius:10px;padding:12px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;">
-          <b style="font-size:16px;">${escapeHtml(d.ticker)}</b>
+          <b style="font-size:16px;">${d.kr_name?escapeHtml(d.kr_name)+' ':''}${escapeHtml(d.ticker)}</b>
           <span style="font-size:18px;font-weight:800;">${d.current}</span>
         </div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:14px;">
@@ -476,6 +494,7 @@ async function runTicker(){
           ${d.ma_value!=null?`<span style="color:var(--sub);">21일선 ${d.ma_value}</span>`:''}
         </div>
         ${miniChart(d)}
+        ${flowLine(d.flow)}
         ${d.cross?`<div style="font-size:12px;margin-top:6px;color:${d.cross.type==='돌파'?'var(--green)':'var(--warn)'};font-weight:700;">
           ${d.cross.ago===0?'오늘':d.cross.ago+'일 전'} 21일선 ${d.cross.type} ${d.cross.type==='돌파'?'▲':'▼'}</div>`:''}
         ${d.high_20!=null?`<div style="font-size:12px;color:var(--sub);margin-top:4px;">최근 20일 고가 ${d.high_20} · 저가 ${d.low_20}</div>`:''}
