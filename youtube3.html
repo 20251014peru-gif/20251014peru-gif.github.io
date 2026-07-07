@@ -83,7 +83,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 <div class="wrap">
   <header>
     <h1>📺 유튜브 요약기</h1>
-    <span class="ver">v3.7-0706 · 봉차트·날짜축</span>
+    <span class="ver">v3.8-0706 · 수급 단위·라벨 수정</span>
     <span class="sync off" id="syncBadge">동기화 확인중</span>
   </header>
 
@@ -433,22 +433,31 @@ function flowLine(f){
   let bars='';
   const fd=f.foreign_daily, dates=f.foreign_dates;
   if(fd&&fd.length){
-    const W=320,H=70,mid=H/2,bw=(W-2)/fd.length;
+    const W=320,H=96,mid=40,botAxis=18;  // mid=막대 0선, 아래 여백에 날짜
+    const bw=(W-2)/fd.length;
     const maxAbs=Math.max(1,...fd.map(v=>Math.abs(v)));
+    const maxBar=28; // 막대 최대 길이
     let rects='';
     fd.forEach((v,i)=>{
-      const h=Math.abs(v)/maxAbs*(mid-10);
+      const h=Math.abs(v)/maxAbs*maxBar;
       const x=1+i*bw+bw*0.15, w=bw*0.7;
       const y=v>=0?mid-h:mid;
       const col=v>=0?'#2d6a4f':'#c0392b';
       rects+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(1,h).toFixed(1)}" fill="${col}" rx="1"/>`;
+      // 금액: 양수는 막대 위, 음수는 막대 아래 (막대 끝 바로 옆, 겹침 방지)
+      const ly=v>=0?(y-3):(y+h+9);
+      rects+=`<text x="${(x+w/2).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="8" fill="${col}">${v>=0?'+':''}${v}</text>`;
+    });
+    // 날짜축은 맨 아래 별도 줄 (막대·금액과 분리)
+    let axis='';
+    fd.forEach((v,i)=>{
+      const x=1+i*bw+bw*0.5;
       const label=dates&&dates[i]?dates[i]:'';
-      rects+=`<text x="${(x+w/2).toFixed(1)}" y="${H-2}" text-anchor="middle" font-size="8" fill="#999">${label}</text>`;
-      rects+=`<text x="${(x+w/2).toFixed(1)}" y="${v>=0?(y-2).toFixed(1):(y+h+8).toFixed(1)}" text-anchor="middle" font-size="8" fill="${col}">${v>=0?'+':''}${v}</text>`;
+      axis+=`<text x="${x.toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="8" fill="#999">${label}</text>`;
     });
     bars=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:6px;display:block;">
-      <line x1="0" y1="${mid}" x2="${W}" y2="${mid}" stroke="#ddd" stroke-width="1"/>
-      ${rects}
+      <line x1="0" y1="${mid}" x2="${W}" y2="${mid}" stroke="#ccc" stroke-width="1"/>
+      ${rects}${axis}
     </svg>`;
   }
   return `<div style="margin-top:8px;padding:8px;background:var(--green-lt);border-radius:8px;">
