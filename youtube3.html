@@ -83,7 +83,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 <div class="wrap">
   <header>
     <h1>📺 유튜브 요약기</h1>
-    <span class="ver">v3.8-0706 · 수급 단위·라벨 수정</span>
+    <span class="ver">v3.9-0706 · 워치리스트·삼각형</span>
     <span class="sync off" id="syncBadge">동기화 확인중</span>
   </header>
 
@@ -107,13 +107,20 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
       <div class="status" id="sumStatus">URL을 넣으면 채널 프로필이 자동 생성됩니다. 폰·PC 어디서나 동작해요.</div>
     </div>
     <div class="card">
-      <div style="font-size:13px;color:var(--sub);margin-bottom:8px;">📈 <b>종목 빠른 확인</b> — 티커 입력 시 한 달 수익률 + 21일선 위/아래</div>
+      <div style="font-size:13px;color:var(--sub);margin-bottom:8px;">📈 <b>종목 빠른 확인</b> — 티커·종목명 입력 시 수익률 + 21일선 + 수급 + 삼각형</div>
       <div class="row" style="margin-top:0;">
         <input type="text" id="tk" placeholder="티커·종목명 (예: SOX, NVDA, 삼성전자, 하이닉스)"
                onkeydown="if(event.key==='Enter')runTicker()">
         <button class="btn" style="background:#1e5aa8;" id="tkBtn" onclick="runTicker()">확인</button>
       </div>
       <div id="tkResult" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <b style="font-size:14px;">⭐ 워치리스트</b>
+        <button class="btn sub" style="min-height:34px;padding:0 12px;font-size:12px;" onclick="refreshWatch()">🔄 전체 새로고침</button>
+      </div>
+      <div id="watchList" style="font-size:13px;color:var(--sub);">로딩 중...</div>
     </div>
   </div>
 
@@ -236,6 +243,7 @@ try{
   firebase.auth().signInAnonymously().catch(e=>logBug('익명로그인: '+e.message));
   firebase.auth().onAuthStateChanged(u=>{
     setSync(!!u);
+    if(u){ try{refreshWatch();}catch(e){} }
   });
 }catch(e){ logBug('Firebase 초기화 실패: '+e.message); setSync(false); }
 
@@ -246,7 +254,7 @@ function setSync(ok){
 }
 
 /* ═══════════ 공통 ═══════════ */
-const CH_COL='youtube_channels', SUM_COL='youtube_summaries', PRED_COL='youtube_predictions';
+const CH_COL='youtube_channels', SUM_COL='youtube_summaries', PRED_COL='youtube_predictions', WATCH_COL='youtube_watchlist';
 const bugLog=[];
 function kstNow(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));}
 function kstStr(){const d=kstNow();const p=n=>String(n).padStart(2,'0');
@@ -405,7 +413,7 @@ async function runSummary(){
       `<b>${escapeHtml(title)}</b> — ${escapeHtml(channel)}`+
       (publishDate?` · 게시일 ${escapeHtml(publishDate)}`:'')+
       (newProfile?` <span class="badge">새 채널 · ${escapeHtml(profile['분야']||'')}</span>`:'');
-    document.getElementById('result').innerHTML=body;
+    document.getElementById('result').innerHTML=linkifyTickers(body);
     document.getElementById('resultOverlay').classList.add('on');
     st.textContent='완료 — 기록 탭에 저장됨 (모든 기기 동기화)';
     document.getElementById('url').value='';
@@ -565,8 +573,101 @@ function candleChart(d){
 
 function pickTicker(code){
   document.getElementById('tk').value=code;
+  showTab('sum',document.querySelector('.tabs button'));
   runTicker();
 }
+
+/* 요약 속 종목을 클릭 가능하게 — (MU), (NVDA), 000660.KS 등 */
+function linkifyTickers(html){
+  if(!html)return html;
+  return html.replace(/(>[^<]+)/g, seg=>{
+    return seg
+      .replace(/\((\^?[A-Z]{2,5})\)/g, (m,t)=>
+        `(<a onclick="closeResult();pickTicker('${t}')" style="color:#1e5aa8;cursor:pointer;text-decoration:underline dotted;">${t}</a>)`)
+      .replace(/(\d{6}\.(?:KS|KQ))/g, (m,t)=>
+        `<a onclick="closeResult();pickTicker('${t}')" style="color:#1e5aa8;cursor:pointer;text-decoration:underline dotted;">${t}</a>`);
+  });
+}
+
+/* 삼각형 진입 판정 (달님 CYGNUS: 수급+가격+거래량) */
+function triangleBadge(d){
+  const price = d.above_ma===true;
+  const supply = d.flow ? (d.flow.foreign_5d>0 || (d.flow.foreign_streak||0)>=2) : null;
+  const volume = d.vol_surge===true;
+  const items=[
+    {k:'가격', ok:price, txt:price?'21일선 위 ▲':'21일선 아래 ▼'},
+    {k:'수급', ok:supply, txt:supply===null?'미국주식(수급 N/A)':(supply?'외국인 순매수':'외국인 매도')},
+    {k:'거래량', ok:volume, txt:d.vol_ratio!=null?`평균 ${d.vol_ratio}배${volume?' 급증':''}`:'데이터 없음'},
+  ];
+  const validItems = items.filter(i=>i.ok!==null);
+  const okCount = validItems.filter(i=>i.ok).length;
+  const total = validItems.length;
+  let verdict, vColor;
+  if(okCount===total && total>=2){verdict='🟢 진입 조건 충족'; vColor='var(--green)';}
+  else if(okCount>=2){verdict='🟡 부분 충족'; vColor='#b8860b';}
+  else{verdict='🔴 조건 미달'; vColor='var(--warn)';}
+  const rows=items.map(i=>{
+    const ic = i.ok===null?'—':(i.ok?'🟢':'🔴');
+    return `<span style="display:inline-flex;align-items:center;gap:3px;margin-right:12px;">
+      ${ic} <b>${i.k}</b> <span style="color:var(--sub);font-size:12px;">${i.txt}</span></span>`;
+  }).join('');
+  return `<div style="margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;">
+    <div style="font-weight:700;color:${vColor};margin-bottom:4px;">📐 삼각형 진입: ${verdict} (${okCount}/${total})</div>
+    <div style="display:flex;flex-wrap:wrap;">${rows}</div>
+  </div>`;
+}
+
+/* ⭐ 워치리스트 */
+async function addWatch(ticker,name){
+  if(!db){alert('오프라인'); return;}
+  try{
+    const id='w_'+ticker.replace(/[^\w]/g,'_');
+    await db.collection(WATCH_COL).doc(id).set({id,ticker,name:name||'',added:kstStr()});
+    refreshWatch();
+  }catch(e){alert('추가 실패: '+e.message); logBug('워치추가: '+e.message);}
+}
+async function removeWatch(id){
+  if(!db)return;
+  try{await db.collection(WATCH_COL).doc(id).delete(); refreshWatch();}
+  catch(e){logBug('워치삭제: '+e.message);}
+}
+async function refreshWatch(){
+  const box=document.getElementById('watchList');
+  if(!box)return;
+  if(!db){box.innerHTML='오프라인'; return;}
+  box.innerHTML='로딩 중...';
+  try{
+    const snap=await db.collection(WATCH_COL).get();
+    let items=[]; snap.forEach(d=>items.push(d.data()));
+    if(!items.length){box.innerHTML='<span style="color:var(--sub);">관심 종목이 없어요. 종목 확인 후 ⭐추가를 누르세요.</span>'; return;}
+    items.sort((a,b)=>(a.added||'').localeCompare(b.added||''));
+    const results=await Promise.all(items.map(async it=>{
+      try{const d=await fetch(`${SERVER}/api/ticker?t=${encodeURIComponent(it.ticker)}&ma=21&days=30`).then(r=>r.json()); return {it,d};}
+      catch(e){return {it,d:{error:'조회실패'}};}
+    }));
+    box.innerHTML='<div style="color:var(--sub);font-size:11px;margin-bottom:6px;">🟢21일선 위 · 🔴아래 — 탭하면 상세</div>'+
+      results.map(({it,d})=>{
+      if(d.error||!d.current){
+        return `<div style="display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--line);">
+          <span>${escapeHtml(it.name||it.ticker)}</span>
+          <span style="color:var(--warn);font-size:12px;">실패
+          <button onclick="removeWatch('${escapeJs(it.id)}')" style="border:none;background:none;color:var(--sub);cursor:pointer;">✕</button></span></div>`;
+      }
+      const up=d.return_pct>=0;
+      const sig=d.above_ma===true?'🟢':(d.above_ma===false?'🔴':'⚪');
+      const name=d.kr_name||it.name||d.ticker;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line);">
+        <span style="cursor:pointer;flex:1;" onclick="pickTicker('${escapeJs(d.ticker)}')">
+          ${sig} <b>${escapeHtml(name)}</b>
+          <span style="color:var(--sub);font-size:11px;">${escapeHtml(d.ticker)}</span></span>
+        <span style="display:flex;align-items:center;gap:10px;">
+          <span style="color:${up?'var(--green)':'var(--warn)'};font-weight:700;">${up?'+':''}${d.return_pct}%</span>
+          <button onclick="removeWatch('${escapeJs(it.id)}')" style="border:none;background:none;color:var(--sub);cursor:pointer;font-size:14px;">✕</button>
+        </span></div>`;
+    }).join('');
+  }catch(e){box.innerHTML='워치 로딩 오류: '+e.message; logBug('워치로딩: '+e.message);}
+}
+
 async function runTicker(){
   const t=document.getElementById('tk').value.trim();
   const box=document.getElementById('tkResult');
@@ -592,7 +693,10 @@ async function runTicker(){
       <div style="border:1px solid var(--line);border-radius:10px;padding:12px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;">
           <b style="font-size:16px;">${d.kr_name?escapeHtml(d.kr_name)+' ':''}${escapeHtml(d.ticker)}</b>
-          <span style="font-size:18px;font-weight:800;">${d.current}</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <button class="btn sub" style="min-height:30px;padding:0 10px;font-size:12px;" onclick="addWatch('${escapeJs(d.ticker)}','${escapeJs(d.kr_name||'')}')">⭐ 추가</button>
+            <span style="font-size:18px;font-weight:800;">${d.current}</span>
+          </span>
         </div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:14px;">
           <span>최근 ${d.period_days}일: <b style="color:${retColor};">${up?'+':''}${d.return_pct}%</b></span>
@@ -604,6 +708,7 @@ async function runTicker(){
           <button class="btn sub" id="chartCandleBtn" style="min-height:32px;padding:0 12px;font-size:12px;" onclick="setChartMode('candle')">🕯 봉 30일</button>
         </div>
         <div id="chartArea">${miniChart(d)}</div>
+        ${triangleBadge(d)}
         ${flowLine(d.flow)}
         ${d.cross?`<div style="font-size:12px;margin-top:6px;color:${d.cross.type==='돌파'?'var(--green)':'var(--warn)'};font-weight:700;">
           ${d.cross.date?d.cross.date+' ':''}(${d.cross.ago===0?'오늘':d.cross.ago+'일 전'}) 21일선 ${d.cross.type} ${d.cross.type==='돌파'?'▲':'▼'}</div>`:''}
@@ -856,7 +961,7 @@ function renderHistory(){
 async function openSummary(id){
   const x=hisData.find(h=>h.id===id); if(!x)return;
   document.getElementById('resultMeta').innerHTML=`<b>${escapeHtml(x.제목)}</b> — ${escapeHtml(x.채널)} · ${escapeHtml(x.일시)}`;
-  document.getElementById('result').innerHTML=x.html;
+  document.getElementById('result').innerHTML=linkifyTickers(x.html);
   document.getElementById('resultOverlay').classList.add('on');
 }
 function toggleTrash(){
