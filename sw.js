@@ -1,9 +1,9 @@
-/* ===== 서희타워 업무일지 Service Worker v44-0708-0924 =====
+/* ===== 서희타워 업무일지 Service Worker v44-0708-0931 =====
    전략: worklog.html / worklog.js 등 앱 코어는 network-first
         (항상 최신을 가져오고, 오프라인일 때만 캐시 폴백)
    → "새로고침해도 버전이 안 바뀌는" 문제 방지
    ===== */
-var SW_VERSION = 'wl-v44-0708-0924';
+var SW_VERSION = 'wl-v44-0708-0931';
 var CACHE_NAME = 'worklog-' + SW_VERSION;
 
 /* 설치: 즉시 활성화 대기 상태로 */
