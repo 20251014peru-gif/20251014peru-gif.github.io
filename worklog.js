@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0706-1940";
+const APP_VERSION = "v44-0708-0913";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -3844,7 +3844,8 @@ function renderWork(){
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(b.dataset.del, "업무"); }));
 }
 function workCopyLine(en){
-  const head=((en.floor?en.floor+" ":"")+(en.title||"")).trim();
+  const refM = en.refMonth ? (en.refMonth+"월 ") : "";
+  const head=((en.floor?en.floor+" ":"")+refM+(en.title||"")).trim();
   const matQty = [en.material, en.qty].filter(Boolean).join(" ") || "";
   const parts=[head, en.detail, matQty, (Number(en.cost)?won(en.cost):"")].map(x=>(x||"").toString().trim()).filter(Boolean);
   return cleanCell(parts.join("_"));
