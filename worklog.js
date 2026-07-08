@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0708-0916";
+const APP_VERSION = "v44-0708-0924";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -3857,8 +3857,8 @@ function renderWork(){
 function workCopyLine(en){
   const refY = en.refYear ? (en.refYear+"년 ") : "";
   const refM = en.refMonth ? (en.refMonth+"월 ") : "";
-  const head=((en.floor?en.floor+" ":"")+refY+refM+(en.title||"")).trim();
-  const matQty = [en.material, en.qty].filter(Boolean).join(" ") || "";
+  const head=(refY+refM+(en.floor?en.floor+" ":"")+(en.title||"")).trim();
+  const matQty = [en.material, en.qty&&Number(en.qty)?en.qty+"개":""].filter(Boolean).join(" ") || "";
   const parts=[head, en.detail, matQty, (Number(en.cost)?won(en.cost):"")].map(x=>(x||"").toString().trim()).filter(Boolean);
   return cleanCell(parts.join("_"));
 }
@@ -4236,10 +4236,11 @@ $("btnDelExcel").addEventListener("click",()=>{
 function cardWork(en){
   const expBadge = en.expType&&en.expType!=="없음"
     ? `<span class="pill ${en.expType==="세금계산서"?"amount":"tech"}" style="font-size:10px">${en.expType==="세금계산서"?"📃세금":"💸품의"}</span>` : "";
+  const _matQty = [en.material, en.qty&&Number(en.qty)?en.qty+"개":""].filter(Boolean).join(" ");
   return `<div class="row-item" data-kind="work" data-id="${en.id}">
     <div class="grow">
-      <div class="t">${esc(en.title||"")} <span class="st ${statusClass(en.status)}">${esc(en.status||"")}</span> <span class="pill ${fieldClass(en.field)}">${esc(en.field||"")}</span>${expBadge}${(en.attachments&&en.attachments.length)?' 📎':''}</div>
-      <div class="m">${metaLine([en.floor,en.loc,en.detail,en.cost?won(en.cost)+"원":""])}</div>
+      <div class="t">${esc(displayTitle(en))} <span class="st ${statusClass(en.status)}">${esc(en.status||"")}</span> <span class="pill ${fieldClass(en.field)}">${esc(en.field||"")}</span>${expBadge}${(en.attachments&&en.attachments.length)?' 📎':''}</div>
+      <div class="m">${metaLine([en.floor,en.loc,en.detail,_matQty,en.cost?won(en.cost)+"원":""])}</div>
       ${thumbsRO(en.photos)}${attachMiniRO(en.attachments)}
       <div class="card-acts"><button class="mini-btn" data-edit>✏️ 수정</button><button class="mini-btn del" data-del>🗑 삭제</button></div>
     </div></div>`;
