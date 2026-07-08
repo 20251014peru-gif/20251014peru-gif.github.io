@@ -52,6 +52,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 #result th{background:var(--green-lt); border:1px solid var(--line); padding:8px; text-align:left;}
 #result td{border:1px solid var(--line); padding:8px; vertical-align:top;}
 #result strong{color:var(--green); font-weight:700;}
+#result .frame-tag{display:inline-block; margin-left:2px; font-size:13px;}
 #result ul, #result ol{margin:8px 0 14px; padding-left:4px; list-style:none;}
 #result li{margin:0 0 8px; padding:8px 12px; background:#f6f8f5;
   border-radius:8px; border-left:3px solid var(--green-lt); line-height:1.6;}
@@ -93,7 +94,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 <div class="wrap">
   <header>
     <h1>📺 유튜브 요약기</h1>
-    <span class="ver">v3.9.1-0706 · 가독성 개선</span>
+    <span class="ver">v3.9.2-0706 · 태그 줄바꿈</span>
     <span class="sync off" id="syncBadge">동기화 확인중</span>
   </header>
 
@@ -599,13 +600,19 @@ function pickTicker(code){
 /* 요약 속 종목을 클릭 가능하게 — (MU), (NVDA), 000660.KS 등 */
 function linkifyTickers(html){
   if(!html)return html;
-  return html.replace(/(>[^<]+)/g, seg=>{
+  html = html.replace(/(>[^<]+)/g, seg=>{
     return seg
       .replace(/\((\^?[A-Z]{2,5})\)/g, (m,t)=>
         `(<a onclick="closeResult();pickTicker('${t}')" style="color:#1e5aa8;cursor:pointer;text-decoration:underline dotted;">${t}</a>)`)
       .replace(/(\d{6}\.(?:KS|KQ))/g, (m,t)=>
         `<a onclick="closeResult();pickTicker('${t}')" style="color:#1e5aa8;cursor:pointer;text-decoration:underline dotted;">${t}</a>`);
   });
+  // 프레이밍 태그(🟢🟡🔴) 뒤에서 줄바꿈 — 한 발언 = 한 줄
+  // 이모지는 surrogate pair라 문자클래스 대신 전역 치환 사용
+  html = html.replace(/(\uD83D\uDFE2|\uD83D\uDFE1|\uD83D\uDD34)(\s*)/g,
+    '<span class="frame-tag">$1</span><br>');
+  html = html.replace(/<br>\s*<\/p>/g, '</p>').replace(/<br>\s*<\/li>/g, '</li>');
+  return html;
 }
 
 /* 삼각형 진입 판정 (달님 CYGNUS: 수급+가격+거래량) */
