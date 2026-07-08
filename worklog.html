@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0708-0924</title>
+  <title>업무일지 v44-0708-0931</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0708-0924</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0708-0931</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2915,7 +2915,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260708t0924"></script>
+<script src="worklog.js?v=44-20260708t0931"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -3040,7 +3040,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   function itemTitle(en){
     switch(en.kind){
-      case 'work': return en.title||'(제목없음)';
+      case 'work': {
+        var yy = en.refYear ? (String(en.refYear).slice(-2)+'년 ') : '';
+        var mm = en.refMonth ? (en.refMonth+'월 ') : '';
+        var fl = en.floor ? (en.floor+' ') : '';
+        return (yy+mm+fl+(en.title||'(제목없음)')).trim();
+      }
       case 'cleaning': return en.date ? en.date+' 청소일지' : '청소일지';
       case 'memo': return en.title||en.body||'(메모)';
       case 'call': return [en.name,en.company,en.content].filter(Boolean).join(' · ')||'(통화)';
@@ -3056,8 +3061,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   function itemSub(en){
     const parts = [];
-    if(en.floor) parts.push(en.floor);
     if(en.loc) parts.push(en.loc);
+    if(en.detail) parts.push(en.detail);
+    if(en.kind==='work' && en.material){ parts.push(en.material + (en.qty&&Number(en.qty)?' '+en.qty+'개':'')); }
     if(en.field) parts.push(en.field);
     if(en.dir) parts.push(en.dir);
     if(en.dtype) parts.push(en.dtype);
@@ -3115,12 +3121,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       groups[d].forEach(en => {
         const sub = itemSub(en);
         html += `<div class="v43-item" data-id="${esc(en.id)}" data-kind="${esc(en.kind)}" data-work-mode="${en.kind==='work'?(en.workMode||'simple'):''}" ontouchstart>
-          <div class="v43-item-icon">${KIND_ICON[en.kind]||'📄'}</div>
           <div class="v43-item-body">
             <div class="v43-item-title">${esc(itemTitle(en))}${en.photos&&en.photos.length?' 📷':''}</div>
             <div class="v43-item-meta">
-              <span class="v43-item-badge" style="${en.kind==='work'&&en.workMode==='full'?'background:#fff0e8;color:#c2410c':'background:#eaf1fb;color:#3f7cb8'}">${en.kind==='work'?(en.workMode==='full'?'💰 외주·비용':'🏢 일반업무'):(KIND_LABEL[en.kind]||en.kind)}</span>
-              ${statusBadge(en)}
+              ${(en.kind==='work'&&en.workMode!=='full') ? '' : `<span class="v43-item-badge" style="${en.kind==='work'&&en.workMode==='full'?'background:#fff0e8;color:#c2410c':'background:#eaf1fb;color:#3f7cb8'}">${en.kind==='work'?(en.workMode==='full'?'💰 외주·비용':'🏢 일반업무'):(KIND_LABEL[en.kind]||en.kind)}</span>`}
+              ${(en.kind==='work'&&en.workMode!=='full') ? '' : statusBadge(en)}
               ${sub?`<span>${esc(sub)}</span>`:''}
             </div>
           </div>
@@ -8537,7 +8542,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0708-0924';
+    if(el) el.textContent = 'v44-0708-0931';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10252,7 +10257,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0708-0924 로드');
+  console.log('[expV2] v44-0708-0931 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -12410,7 +12415,7 @@ window.makeModalDraggable = function(modal){
 </script>
   
 <script>
-/* ===== PWA Service Worker v44-0708-0924 (network-first, 자동 갱신) ===== */
+/* ===== PWA Service Worker v44-0708-0931 (network-first, 자동 갱신) ===== */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     /* 1) 기존에 설치된 낡은 SW가 옛 버전을 붙들고 있으면 캐시 전부 비우고 새 SW로 교체 */
