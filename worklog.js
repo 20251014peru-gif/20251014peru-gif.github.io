@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0708-0913";
+const APP_VERSION = "v44-0708-0916";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -384,7 +384,7 @@ const won = n => (Math.round(Number(n)||0)).toLocaleString("ko-KR");
 const kstNow = () => new Date(Date.now() + 9*60*60*1000);
 const todayStr = () => { const d=kstNow(); return d.toISOString().slice(0,10); };
 /* 대상월 + 제목 합성 (표시용) */
-function displayTitle(e){ if(!e) return '(제목없음)'; return (e.refMonth?(e.refMonth+'월 '):'')+(e.title||'(제목없음)'); }
+function displayTitle(e){ if(!e) return '(제목없음)'; var pfx=(e.refYear?(e.refYear+'년 '):'')+(e.refMonth?(e.refMonth+'월 '):''); return pfx+(e.title||'(제목없음)'); }
 const yesterdayStr = () => { const d=kstNow(); d.setUTCDate(d.getUTCDate()-1); return d.toISOString().slice(0,10); };
 /* 3일전 — 월요일이면 지난 금요일(3일전) 반환 */
 const prev3WorkdayStr = () => {
@@ -1974,11 +1974,21 @@ function renderWorkModal(data, mode){
     </div>
   </div>`;
 
-  /* ── 대상월 + 업무내역 (대상월은 월별 반복 업무용) ── */
+  /* ── 대상년도 + 대상월 + 업무내역 (월별 반복 업무용) ── */
   const refM = d.refMonth||"";
+  const refY = d.refYear||"";
+  const _curY = Number(kstNow().toISOString().slice(0,4));
+  const _years = [_curY-2, _curY-1, _curY, _curY+1];
   const rowTitle = `
   <div style="${S.mb}">
     <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:6px">
+      <div style="flex-shrink:0">
+        <label style="${S.lbl}">대상년도</label>
+        <select id="m-refYear" style="height:44px;width:88px;padding:0 6px;border:1.5px solid #fbbf24;border-radius:10px;font-size:15px;font-weight:800;font-family:inherit;background:#fffbea;color:#92400e;outline:none;text-align:center">
+          <option value="">—</option>
+          ${_years.map(y=>'<option value="'+y+'"'+(String(refY)===String(y)?' selected':'')+'>'+y+'</option>').join('')}
+        </select>
+      </div>
       <div style="flex-shrink:0">
         <label style="${S.lbl}">대상월</label>
         <select id="m-refMonth" style="height:44px;width:80px;padding:0 6px;border:1.5px solid #fbbf24;border-radius:10px;font-size:15px;font-weight:800;font-family:inherit;background:#fffbea;color:#92400e;outline:none;text-align:center">
@@ -2573,6 +2583,7 @@ function _doSaveWorkEntry(){
     field:($("m-field")||{}).value?.trim()||"",
     title,
     refMonth:($("m-refMonth")||{}).value||"",
+    refYear:($("m-refYear")||{}).value||"",
     detail:($("m-detail")||{}).value?.trim()||"",
     material:($("m-material")||{}).value?.trim()||"",
     qty:Number(($("m-qty")||{}).value)||0,
@@ -3844,8 +3855,9 @@ function renderWork(){
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(b.dataset.del, "업무"); }));
 }
 function workCopyLine(en){
+  const refY = en.refYear ? (en.refYear+"년 ") : "";
   const refM = en.refMonth ? (en.refMonth+"월 ") : "";
-  const head=((en.floor?en.floor+" ":"")+refM+(en.title||"")).trim();
+  const head=((en.floor?en.floor+" ":"")+refY+refM+(en.title||"")).trim();
   const matQty = [en.material, en.qty].filter(Boolean).join(" ") || "";
   const parts=[head, en.detail, matQty, (Number(en.cost)?won(en.cost):"")].map(x=>(x||"").toString().trim()).filter(Boolean);
   return cleanCell(parts.join("_"));
