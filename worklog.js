@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0708-0931";
+const APP_VERSION = "v44-0709-0835";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -3855,11 +3855,11 @@ function renderWork(){
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); deleteWithUndo(b.dataset.del, "업무"); }));
 }
 function workCopyLine(en){
-  const refY = en.refYear ? (en.refYear+"년 ") : "";
+  const refY = en.refYear ? (String(en.refYear).slice(-2)+"년 ") : "";
   const refM = en.refMonth ? (en.refMonth+"월 ") : "";
-  const head=(refY+refM+(en.floor?en.floor+" ":"")+(en.title||"")).trim();
+  const ymf=(refY+refM+(en.floor?en.floor:"")).trim();
   const matQty = [en.material, en.qty&&Number(en.qty)?en.qty+"개":""].filter(Boolean).join(" ") || "";
-  const parts=[head, en.detail, matQty, (Number(en.cost)?won(en.cost):"")].map(x=>(x||"").toString().trim()).filter(Boolean);
+  const parts=[ymf, (en.title||""), en.detail, matQty, (Number(en.cost)?won(en.cost):"")].map(x=>(x||"").toString().trim()).filter(Boolean);
   return cleanCell(parts.join("_"));
 }
 $("btnCopyExcel").addEventListener("click",()=>{
