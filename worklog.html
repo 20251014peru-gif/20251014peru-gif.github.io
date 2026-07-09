@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0709-1829</title>
+  <title>업무일지 v44-0709-1853</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0709-1829</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0709-1853</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1266,6 +1266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           <img src="https://www.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png" style="width:18px;height:18px;object-fit:cover;border-radius:3px"> 연동됨
         </button>
         <button class="nav-btn" onclick="window.gcalSyncAll&&window.gcalSyncAll()" style="background:#34a853;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="전체 구글캘린더 동기화">📅 전체동기화</button>
+        <button class="nav-btn" onclick="window.gtaskCleanDuplicates&&window.gtaskCleanDuplicates()" style="background:#ea8600;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 태스크 중복 정리">🧹 태스크중복정리</button>
         <button class="nav-btn" onclick="window.gcalPullAll&&window.gcalPullAll(false)" style="background:#1a73e8;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 캘린더에서 새 예정 가져오기">📥 구글←가져오기</button>
         <button class="nav-btn nav-back" id="btnBack" title="이전 화면" disabled>↶ 뒤로</button>
         <a class="nav-btn" href="staff.html" target="_blank" style="background:#6366f1;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">👥 직원</a>
@@ -2915,7 +2916,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260709t1829"></script>
+<script src="worklog.js?v=44-20260709t1853"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5393,7 +5394,19 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     })
-    .then(function(r){ return r.json(); })
+    .then(function(r){
+      // PATCH인데 404/400 → 기존 태스크가 없음(목록 변경 등). gTaskId 지우고 새로 POST (중복 방지)
+      if(method==='PATCH' && (r.status===404 || r.status===400)){
+        if(typeof updateRecord==='function' && en.id) updateRecord(en.id, {gTaskId: null});
+        en.gTaskId = null;
+        // 새로 POST 재시도
+        return fetch('https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(TASKS_LIST_ID)+'/tasks', {
+          method:'POST', headers:{ 'Authorization':'Bearer '+accessToken, 'Content-Type':'application/json' },
+          body: JSON.stringify(body)
+        }).then(function(r2){ return r2.json(); });
+      }
+      return r.json();
+    })
     .then(function(d){
       if(d.id){
         dbgG('Tasks 등록 완료: ' + d.id);
@@ -5441,6 +5454,66 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     }).then(function(){ dbgG('Tasks 삭제 완료: '+taskId); })
     .catch(function(e){ dbgG('Tasks 삭제 오류: '+e); });
   }
+
+  // ── Tasks 중복 정리: 같은 제목 태스크 중 1개만 남기고 삭제 ──
+  window.gtaskCleanDuplicates = async function(){
+    if(!accessToken){ if(typeof signIn==='function') signIn(); toast('먼저 구글 로그인 해주세요'); return; }
+    // 목록 확정
+    await new Promise(function(res){ loadTasksListId(res); });
+    toast('🔍 중복 태스크 확인 중...');
+    // 전체 태스크 가져오기 (완료 포함, 페이지네이션)
+    var all = [], pageToken = null, guard = 0;
+    try{
+      do{
+        var url = 'https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(TASKS_LIST_ID)
+          + '/tasks?maxResults=100&showCompleted=true&showHidden=true'
+          + (pageToken ? '&pageToken='+pageToken : '');
+        var r = await fetch(url, { headers:{ 'Authorization':'Bearer '+accessToken } });
+        var d = await r.json();
+        if(d.items) all = all.concat(d.items);
+        pageToken = d.nextPageToken || null;
+        guard++;
+      } while(pageToken && guard < 20);
+    }catch(e){ toast('태스크 조회 실패: '+e); return; }
+
+    // 제목 기준 그룹핑 (공백 정규화)
+    var groups = {};
+    all.forEach(function(t){
+      var key = (t.title||'').replace(/\s+/g,' ').trim();
+      if(!key) return;
+      (groups[key] = groups[key] || []).push(t);
+    });
+    // 중복 = 2개 이상인 그룹. 완료 안 된 것 우선 남기고 나머지 삭제
+    var toDelete = [];
+    Object.keys(groups).forEach(function(k){
+      var arr = groups[k];
+      if(arr.length < 2) return;
+      // 남길 것: 미완료 우선, 그 다음 updated 최신
+      arr.sort(function(a,b){
+        var ac = a.status==='completed'?1:0, bc = b.status==='completed'?1:0;
+        if(ac!==bc) return ac-bc;
+        return String(b.updated||'').localeCompare(String(a.updated||''));
+      });
+      // arr[0] 남기고 나머지 삭제
+      for(var i=1;i<arr.length;i++) toDelete.push(arr[i]);
+    });
+
+    if(!toDelete.length){ toast('✅ 중복 태스크가 없어요'); return; }
+    if(!confirm('중복 태스크 '+toDelete.length+'개를 삭제합니다.\n(같은 제목 중 1개씩만 남깁니다)\n진행할까요?')) return;
+
+    var done=0, fail=0;
+    for(var j=0;j<toDelete.length;j++){
+      try{
+        var dr = await fetch('https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(TASKS_LIST_ID)+'/tasks/'+toDelete[j].id, {
+          method:'DELETE', headers:{ 'Authorization':'Bearer '+accessToken }
+        });
+        if(dr.ok || dr.status===204) done++; else fail++;
+      }catch(e){ fail++; }
+      if(j%5===0) toast('중복 삭제 중... '+(j+1)+'/'+toDelete.length);
+      await new Promise(function(res){ setTimeout(res, 120); });
+    }
+    toast('✅ 중복 정리 완료! '+done+'개 삭제'+(fail?', '+fail+'개 실패':''));
+  };
 
   // 캘린더 + Tasks 동시 동기화 (schedule 저장 시 핵심 함수)
   function syncScheduleAll(en, onDone, silent){
@@ -8591,7 +8664,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0709-1829';
+    if(el) el.textContent = 'v44-0709-1853';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10306,7 +10379,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0709-1829 로드');
+  console.log('[expV2] v44-0709-1853 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -12464,7 +12537,7 @@ window.makeModalDraggable = function(modal){
 </script>
   
 <script>
-/* ===== PWA Service Worker v44-0709-1829 (network-first, 자동 갱신) ===== */
+/* ===== PWA Service Worker v44-0709-1853 (network-first, 자동 갱신) ===== */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     /* 1) 기존에 설치된 낡은 SW가 옛 버전을 붙들고 있으면 캐시 전부 비우고 새 SW로 교체 */
