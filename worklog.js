@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-1140";
+const APP_VERSION = "v44-0709-1147";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -9988,13 +9988,29 @@ async function githubUpload(token){
         contactLines.push((cc.name?'🧑 '+esc(String(cc.name)):'')+(cc.name&&ct?' ':'')+(ct?'<a href="tel:'+ct+'" style="color:#3f7cb8;text-decoration:none;font-weight:700">📞 '+esc(String(cc.phone))+'</a>':esc(String(cc.phone||''))));
       });
     }
-    /* 금액 3줄 분리 */
+    /* 평당가 줄 (있을 때만) */
+    var pyRow = '';
+    if(tnMoney(t.depPy)||tnMoney(t.rentPy)||tnMoney(t.mgmtPy)){
+      var pyc = [];
+      if(tnMoney(t.depPy)) pyc.push('보증금 <b style="color:#334">'+tnMoney(t.depPy)+'</b>');
+      if(tnMoney(t.rentPy)) pyc.push('월세 <b style="color:#334">'+tnMoney(t.rentPy)+'</b>');
+      if(tnMoney(t.mgmtPy)) pyc.push('관리비 <b style="color:#334">'+tnMoney(t.mgmtPy)+'</b>');
+      pyRow = '<div style="font-size:11px;color:#0f766e;background:#eefaf7;border-radius:7px;padding:5px 9px;margin:6px 0 4px;box-sizing:border-box">📐 평당가 · '+pyc.join(' / ')+'</div>';
+    }
+    /* 금액 한 줄씩 (라벨 왼쪽, 금액 오른쪽) */
     var moneyRows = '';
+    function moneyLine(lbl, val, color){
+      if(!tnMoney(val)) return '';
+      return '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 10px;background:#f4f8fd;border-radius:7px;margin-bottom:4px;box-sizing:border-box">'
+        + '<span style="font-size:11px;color:#7a92a8;font-weight:700;flex-shrink:0">'+lbl+'</span>'
+        + '<span style="font-size:14px;font-weight:800;color:'+color+';text-align:right">'+tnMoney(val)+'</span>'
+      + '</div>';
+    }
     if(tnMoney(t.deposit)||tnMoney(t.rent)||tnMoney(t.mgmtFee)){
-      moneyRows = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 4px">'
-        + '<div style="background:#f4f8fd;border-radius:8px;padding:6px 8px;text-align:center"><div style="font-size:10px;color:#93a3b5;font-weight:700;margin-bottom:1px">보증금</div><div style="font-size:13px;font-weight:800;color:#1a2f45">'+(tnMoney(t.deposit)||'-')+'</div></div>'
-        + '<div style="background:#f4f8fd;border-radius:8px;padding:6px 8px;text-align:center"><div style="font-size:10px;color:#93a3b5;font-weight:700;margin-bottom:1px">월세</div><div style="font-size:13px;font-weight:800;color:#2563a8">'+(tnMoney(t.rent)||'-')+'</div></div>'
-        + '<div style="background:#f4f8fd;border-radius:8px;padding:6px 8px;text-align:center"><div style="font-size:10px;color:#93a3b5;font-weight:700;margin-bottom:1px">관리비</div><div style="font-size:13px;font-weight:800;color:#1a2f45">'+(tnMoney(t.mgmtFee)||'-')+'</div></div>'
+      moneyRows = '<div style="margin:2px 0 4px">'
+        + moneyLine('보증금', t.deposit, '#1a2f45')
+        + moneyLine('월세', t.rent, '#2563a8')
+        + moneyLine('관리비', t.mgmtFee, '#1a2f45')
       + '</div>';
     }
     return '<div class="tn-card" data-id="'+esc(String(t.id))+'" style="background:#fff;border:1.5px solid #e8f0fa;border-radius:12px;padding:12px 14px;cursor:pointer;transition:box-shadow .15s,transform .15s">'
@@ -10007,9 +10023,11 @@ async function githubUpload(token){
         + (dd ? '<span style="font-size:15px;font-weight:900;padding:4px 12px;border-radius:9px;background:'+dd.bg+';color:'+dd.color+';white-space:nowrap">'+dd.label+'</span>' : '')
         + (t.area ? '<span style="font-size:14px;font-weight:800;color:#0f766e;background:#e6f5f2;padding:4px 11px;border-radius:9px;white-space:nowrap">📐 '+esc(String(t.area))+'</span>' : '')
       + '</div>'
+      /* 계약기간 (D-day·면적 바로 밑, 확인 편하게 강조) */
+      + ((t.startDate||t.endDate) ? '<div style="font-size:12px;font-weight:700;color:#455;background:#f4f6fa;border-radius:7px;padding:5px 9px;margin-bottom:5px;box-sizing:border-box">📅 '+esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?'))+(dd&&dd.renewed?' <span style="color:#27ae60;font-weight:800">→ 갱신 '+esc(dd.effEnd)+'</span>':'')+'</div>' : '')
       + (t.business ? '<div style="font-size:12px;color:#7a5cad;background:#f6f2fd;border-radius:7px;padding:3px 9px;margin-bottom:5px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box">🏷 '+esc(String(t.business))+'</div>' : '')
       + (contactLines.length ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:4px;line-height:1.7">'+contactLines.join('<br>')+'</div>' : '')
-      + ((t.startDate||t.endDate) ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:2px">📅 '+esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?'))+(dd&&dd.renewed?' <span style="color:#27ae60;font-weight:700">→ '+esc(dd.effEnd)+'</span>':'')+'</div>' : '')
+      + pyRow
       + moneyRows
       + ((spN||mmN) ? '<div style="display:flex;gap:5px;margin-top:6px">'
           + (spN ? '<span style="font-size:11px;font-weight:700;background:#f3eefc;color:#8e44ad;padding:2px 8px;border-radius:8px">📋 특약 '+spN+'</span>' : '')
@@ -10314,6 +10332,10 @@ async function githubUpload(token){
           + '<div><label style="'+LBL+'">보증금 (원)</label><input type="text" id="tnDepositInp" inputmode="numeric" style="'+INP+'"></div>'
           + '<div><label style="'+LBL+'">월세 (원)</label><input type="text" id="tnRentInp" inputmode="numeric" style="'+INP+'"></div>'
           + '<div style="grid-column:1/-1"><label style="'+LBL+'">관리비 (원)</label><input type="text" id="tnMgmtInp" inputmode="numeric" style="'+INP+'"></div>'
+          + '<div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#0f766e;margin-top:2px">📐 평당가 (선택 · 직접 입력)</div>'
+          + '<div><label style="'+LBL+'">보증금 평단가</label><input type="text" id="tnDepPyInp" inputmode="numeric" placeholder="평당 원" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">월세 평단가</label><input type="text" id="tnRentPyInp" inputmode="numeric" placeholder="평당 원" style="'+INP+'"></div>'
+          + '<div style="grid-column:1/-1"><label style="'+LBL+'">관리비 평단가</label><input type="text" id="tnMgmtPyInp" inputmode="numeric" placeholder="평당 원" style="'+INP+'"></div>'
           + '<div style="grid-column:1/-1"><label style="'+LBL+'">📞 담당 연락처 (여러 명 가능)</label><div id="tnContactRows"></div>'
             + '<button id="tnContactAdd" type="button" style="margin-top:4px;height:30px;padding:0 12px;border:1.5px dashed #9ec7ea;border-radius:8px;background:#f0f7fd;color:#3f7cb8;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 연락처 추가</button></div>'
           + '<div style="grid-column:1/-1"><label style="'+LBL+'">📋 특약사항</label><div id="tnSpecialRows"></div>'
@@ -10341,6 +10363,9 @@ async function githubUpload(token){
     document.getElementById('tnDepositInp').value = tnMoney(d.deposit);
     document.getElementById('tnRentInp').value = tnMoney(d.rent);
     document.getElementById('tnMgmtInp').value = tnMoney(d.mgmtFee);
+    document.getElementById('tnDepPyInp').value = tnMoney(d.depPy);
+    document.getElementById('tnRentPyInp').value = tnMoney(d.rentPy);
+    document.getElementById('tnMgmtPyInp').value = tnMoney(d.mgmtPy);
     document.getElementById('tnNoteInp').value = d.note||'';
     document.getElementById('tnAutoRenew').checked = (d.autoRenew!==false);
 
@@ -10387,7 +10412,7 @@ async function githubUpload(token){
     });
 
     /* 금액 자동 콤마 */
-    ['tnDepositInp','tnRentInp','tnMgmtInp'].forEach(function(iid){
+    ['tnDepositInp','tnRentInp','tnMgmtInp','tnDepPyInp','tnRentPyInp','tnMgmtPyInp'].forEach(function(iid){
       var el = document.getElementById(iid);
       el.addEventListener('input', function(){ var n=el.value.replace(/[^0-9]/g,''); el.value = n?Number(n).toLocaleString('ko-KR'):''; });
     });
@@ -10433,6 +10458,9 @@ async function githubUpload(token){
           deposit: tnParseMoney(document.getElementById('tnDepositInp').value),
           rent: tnParseMoney(document.getElementById('tnRentInp').value),
           mgmtFee: tnParseMoney(document.getElementById('tnMgmtInp').value),
+          depPy: tnParseMoney(document.getElementById('tnDepPyInp').value),
+          rentPy: tnParseMoney(document.getElementById('tnRentPyInp').value),
+          mgmtPy: tnParseMoney(document.getElementById('tnMgmtPyInp').value),
           specials: sp,
           note: document.getElementById('tnNoteInp').value.trim(),
           updatedAt: Date.now()
