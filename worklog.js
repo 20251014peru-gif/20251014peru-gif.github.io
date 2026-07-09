@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-1152";
+const APP_VERSION = "v44-0709-1436";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -9898,6 +9898,7 @@ async function githubUpload(token){
           + '<input type="text" id="tnSearchInp" placeholder="상호·대표자·호수·특약·메모 검색" style="flex:1;min-width:170px;max-width:320px;height:34px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#fff;outline:none">'
           + '<button id="tnAddBtn" style="height:34px;padding:0 14px;border:none;border-radius:10px;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">➕ 임차인 추가</button>'
           + '<button id="tnBulkBtn" style="height:34px;padding:0 12px;border:1.5px solid #cbb6ea;border-radius:10px;background:#f6f2fd;color:#7c3aed;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📊 임대현황 일괄등록</button>'
+          + '<button id="tnEnbiBtn" style="height:34px;padding:0 12px;border:1.5px solid #9ec7ea;border-radius:10px;background:#f0f7fd;color:#3f7cb8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">➕ 엔비홀딩스</button>'
         + '</div>'
         + '<div id="tnChips" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px"></div>'
         + '</div>'
@@ -9918,6 +9919,8 @@ async function githubUpload(token){
       if(ab && !ab._bound){ ab._bound = true; ab.addEventListener('click', function(){ openTenantModal(null); }); }
       var bb = document.getElementById('tnBulkBtn');
       if(bb && !bb._bound){ bb._bound = true; bb.addEventListener('click', function(){ tnBulkImport(); }); }
+      var eb = document.getElementById('tnEnbiBtn');
+      if(eb && !eb._bound){ eb._bound = true; eb.addEventListener('click', function(){ tnAddEnbi(); }); }
     }
     renderTnGrid();
   }
@@ -9995,29 +9998,21 @@ async function githubUpload(token){
         contactLines.push((cc.name?'🧑 '+esc(String(cc.name)):'')+(cc.name&&ct?' ':'')+(ct?'<a href="tel:'+ct+'" style="color:#3f7cb8;text-decoration:none;font-weight:700">📞 '+esc(String(cc.phone))+'</a>':esc(String(cc.phone||''))));
       });
     }
-    /* 평당가 줄 (있을 때만) */
-    var pyRow = '';
-    if(tnMoney(t.depPy)||tnMoney(t.rentPy)||tnMoney(t.mgmtPy)){
-      var pyc = [];
-      if(tnMoney(t.depPy)) pyc.push('보증금 <b style="color:#334">'+tnMoney(t.depPy)+'</b>');
-      if(tnMoney(t.rentPy)) pyc.push('월세 <b style="color:#334">'+tnMoney(t.rentPy)+'</b>');
-      if(tnMoney(t.mgmtPy)) pyc.push('관리비 <b style="color:#334">'+tnMoney(t.mgmtPy)+'</b>');
-      pyRow = '<div style="font-size:11px;color:#0f766e;background:#eefaf7;border-radius:7px;padding:5px 9px;margin:6px 0 4px;box-sizing:border-box">📐 평당가 · '+pyc.join(' / ')+'</div>';
-    }
-    /* 금액 한 줄씩 (라벨 왼쪽, 금액 오른쪽) */
+    /* 금액 한 줄씩 (라벨 왼쪽, 금액 + 평단가 오른쪽) */
     var moneyRows = '';
-    function moneyLine(lbl, val, color){
+    function moneyLine(lbl, val, py, color){
       if(!tnMoney(val)) return '';
-      return '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 10px;background:#f4f8fd;border-radius:7px;margin-bottom:4px;box-sizing:border-box">'
+      var pyTxt = tnMoney(py) ? ' <span style="font-size:10px;color:#0f766e;font-weight:700">(평단가 '+tnMoney(py)+')</span>' : '';
+      return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:4px 10px;background:#f4f8fd;border-radius:7px;margin-bottom:4px;box-sizing:border-box">'
         + '<span style="font-size:11px;color:#7a92a8;font-weight:700;flex-shrink:0">'+lbl+'</span>'
-        + '<span style="font-size:14px;font-weight:800;color:'+color+';text-align:right">'+tnMoney(val)+'</span>'
+        + '<span style="font-size:14px;font-weight:800;color:'+color+';text-align:right;min-width:0">'+tnMoney(val)+pyTxt+'</span>'
       + '</div>';
     }
     if(tnMoney(t.deposit)||tnMoney(t.rent)||tnMoney(t.mgmtFee)){
       moneyRows = '<div style="margin:2px 0 4px">'
-        + moneyLine('보증금', t.deposit, '#1a2f45')
-        + moneyLine('월세', t.rent, '#2563a8')
-        + moneyLine('관리비', t.mgmtFee, '#1a2f45')
+        + moneyLine('보증금', t.deposit, t.depPy, '#1a2f45')
+        + moneyLine('월세', t.rent, t.rentPy, '#2563a8')
+        + moneyLine('관리비', t.mgmtFee, t.mgmtPy, '#1a2f45')
       + '</div>';
     }
     return '<div class="tn-card" data-id="'+esc(String(t.id))+'" style="background:#fff;border:1.5px solid #e8f0fa;border-radius:12px;padding:12px 14px;transition:box-shadow .15s,transform .15s">'
@@ -10037,7 +10032,6 @@ async function githubUpload(token){
       + '</div>'  /* ▲ tn-card-head 끝 */
       + (t.business ? '<div style="font-size:12px;color:#7a5cad;background:#f6f2fd;border-radius:7px;padding:3px 9px;margin-bottom:5px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box">🏷 '+esc(String(t.business))+'</div>' : '')
       + (contactLines.length ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:4px;line-height:1.7">'+contactLines.join('<br>')+'</div>' : '')
-      + pyRow
       + moneyRows
       + ((spN||mmN) ? '<div style="display:flex;gap:5px;margin-top:6px">'
           + (spN ? '<span style="font-size:11px;font-weight:700;background:#f3eefc;color:#8e44ad;padding:2px 8px;border-radius:8px">📋 특약 '+spN+'</span>' : '')
@@ -10522,7 +10516,8 @@ async function githubUpload(token){
     {floor:"7F",unit:"701",name:"법무법인 지향",area:"184.7평",deposit:129304000,rent:13484560,mgmtFee:4618000},
     {floor:"8F",unit:"801",name:"법무법인 지향",area:"184.7평",deposit:129304000,rent:13484560,mgmtFee:4618000},
     {floor:"9F",unit:"901",name:"유성티엔에스",area:"184.7평",deposit:110832000,rent:13299840,mgmtFee:4618000},
-    {floor:"10F",unit:"1001",name:"앰비앤홀딩스",area:"160.7평",deposit:96422024,rent:11249236,mgmtFee:4017584},
+    {floor:"10F",unit:"1001",name:"앰비앤홀딩스",area:"160.7평",deposit:96000000,rent:11680000,mgmtFee:4000000,depPy:600000,rentPy:70000,mgmtPy:25000},
+    {floor:"10F",unit:"1001",name:"엔비홀딩스",area:"24.0평",deposit:15000000,rent:1825000,mgmtFee:625000,depPy:600000,rentPy:70000,mgmtPy:25000},
     {floor:"11F",unit:"1101",name:"서희건설",area:"114.3평",deposit:68580000,rent:8229600,mgmtFee:2857500},
     {floor:"12F",unit:"1201",name:"㈜원준",area:"108.2평",deposit:64890000,rent:7786800,mgmtFee:2703750},
     {floor:"13F",unit:"1301",name:"서희건설",area:"184.7평",deposit:110832000,rent:11662667,mgmtFee:4618000},
@@ -10566,6 +10561,29 @@ async function githubUpload(token){
     }catch(err){ console.error('[임차인 일괄등록]', err); toast('일괄등록 오류: '+(err.message||err)); }
   }
   window.tnBulkImport = tnBulkImport;
+
+  /* 엔비홀딩스 단독 추가 (중복 방지) */
+  function tnAddEnbi(){
+    try{
+      var exists = tnList().some(function(t){ return (t.name||'').indexOf('엔비홀딩스')>=0; });
+      if(exists){ toast('엔비홀딩스 카드가 이미 있어요'); return; }
+      if(!confirm('🏠 엔비홀딩스 (10F·1001) 카드를 추가할까요?\n보증금 15,000,000 / 월세 1,825,000 / 관리비 625,000')) return;
+      var now = Date.now();
+      addRecord({
+        kind:'tenant', floor:'10F', unit:'1001', name:'엔비홀딩스',
+        ceo:'', phone:'', contacts:[], biznum:'', business:'', area:'24.0평',
+        payDay:'', startDate:'', endDate:'', autoRenew:true,
+        deposit:15000000, rent:1825000, mgmtFee:625000,
+        depPy:600000, rentPy:70000, mgmtPy:25000,
+        specials:[], memos:[], contractFiles:[], note:'',
+        date:todayStr(), createdAt:now, updatedAt:now
+      });
+      if(typeof lsSave==='function') lsSave();
+      renderTnGrid();
+      toast('🏠 엔비홀딩스 카드 추가됨');
+    }catch(err){ console.error('[엔비홀딩스 추가]', err); toast('추가 오류: '+(err.message||err)); }
+  }
+  window.tnAddEnbi = tnAddEnbi;
 
   window.renderTenantCards = renderTenantCards;
   window.openTenantModal = openTenantModal;
