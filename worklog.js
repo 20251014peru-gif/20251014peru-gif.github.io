@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-0835";
+const APP_VERSION = "v44-0709-0957";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -9835,11 +9835,41 @@ async function githubUpload(token){
   function tnParseMoney(s){
     return Number(String(s||'').replace(/[^0-9]/g,''))||0;
   }
+  /* 날짜 문자열에 년수 더하기 (YYYY-MM-DD) */
+  function tnAddYears(dateStr, yrs){
+    try{
+      var p = String(dateStr).split('-');
+      var y = Number(p[0])+yrs, m = p[1], d = p[2];
+      return y+'-'+m+'-'+d;
+    }catch(e){ return dateStr; }
+  }
+  /* 자동갱신 반영한 실효 종료일 계산 — 종료일이 지났으면 1년씩 굴려서 미래 날짜로 */
+  function tnEffectiveEnd(t){
+    if(!t.endDate) return null;
+    if(t.autoRenew===false) return {end:t.endDate, renewed:0};
+    var end = t.endDate, renewed = 0, guard = 0;
+    while(guard<60){
+      var diff = Math.round((new Date(end+'T00:00:00Z') - new Date(todayStr()+'T00:00:00Z'))/86400000);
+      if(diff >= 0) break;
+      end = tnAddYears(end, 1); renewed++; guard++;
+    }
+    return {end:end, renewed:renewed};
+  }
   function tnDday(t){
     if(!t.endDate) return null;
     try{
-      var diff = Math.round((new Date(t.endDate+'T00:00:00Z') - new Date(todayStr()+'T00:00:00Z'))/86400000);
-      if(diff < 0)  return {label:'만료 지남 '+Math.abs(diff)+'일', bg:'#fde8e8', color:'#b52929'};
+      var eff = tnEffectiveEnd(t);
+      var useEnd = eff ? eff.end : t.endDate;
+      var renewed = eff ? eff.renewed : 0;
+      var diff = Math.round((new Date(useEnd+'T00:00:00Z') - new Date(todayStr()+'T00:00:00Z'))/86400000);
+      /* 자동갱신된 경우: 갱신 표시 + 다음 만료까지 D-day */
+      if(renewed>0){
+        var base;
+        if(diff <= 30) base={bg:'#fde8e8', color:'#e74c3c'};
+        else if(diff <= 90) base={bg:'#fef5e7', color:'#e67e22'};
+        else base={bg:'#eaf6ef', color:'#27ae60'};
+        return {label:'🔄 자동갱신 D-'+diff, bg:base.bg, color:base.color, renewed:renewed, effEnd:useEnd};
+      }
       if(diff === 0) return {label:'오늘 만료', bg:'#fde8e8', color:'#b52929'};
       if(diff <= 30) return {label:'D-'+diff, bg:'#fde8e8', color:'#e74c3c'};
       if(diff <= 90) return {label:'D-'+diff, bg:'#fef5e7', color:'#e67e22'};
@@ -9867,6 +9897,7 @@ async function githubUpload(token){
           + '<span id="tnCount" style="font-size:12px;color:#aab8c8"></span>'
           + '<input type="text" id="tnSearchInp" placeholder="상호·대표자·호수·특약·메모 검색" style="flex:1;min-width:170px;max-width:320px;height:34px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#fff;outline:none">'
           + '<button id="tnAddBtn" style="height:34px;padding:0 14px;border:none;border-radius:10px;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">➕ 임차인 추가</button>'
+          + '<button id="tnBulkBtn" style="height:34px;padding:0 12px;border:1.5px solid #cbb6ea;border-radius:10px;background:#f6f2fd;color:#7c3aed;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📊 임대현황 일괄등록</button>'
         + '</div>'
         + '<div id="tnChips" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px"></div>'
         + '</div>'
@@ -9885,6 +9916,8 @@ async function githubUpload(token){
       }
       var ab = document.getElementById('tnAddBtn');
       if(ab && !ab._bound){ ab._bound = true; ab.addEventListener('click', function(){ openTenantModal(null); }); }
+      var bb = document.getElementById('tnBulkBtn');
+      if(bb && !bb._bound){ bb._bound = true; bb.addEventListener('click', function(){ tnBulkImport(); }); }
     }
     renderTnGrid();
   }
@@ -9948,6 +9981,7 @@ async function githubUpload(token){
     if(tnMoney(t.mgmtFee)) money.push('관리비 <b>'+tnMoney(t.mgmtFee)+'</b>');
     var spN = (t.specials||[]).filter(function(s){ return s&&String(s).trim(); }).length;
     var mmN = (t.memos||[]).length;
+    var ctN = (t.contractFiles||[]).length;
     var tel = String(t.phone||'').replace(/[^0-9+]/g,'');
     return '<div class="tn-card" data-id="'+esc(String(t.id))+'" style="background:#fff;border:1.5px solid #e8f0fa;border-radius:12px;padding:12px 14px;cursor:pointer;transition:box-shadow .15s,transform .15s">'
       + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'
@@ -9961,6 +9995,7 @@ async function githubUpload(token){
       + ((spN||mmN) ? '<div style="display:flex;gap:5px;margin-top:6px">'
           + (spN ? '<span style="font-size:11px;font-weight:700;background:#f3eefc;color:#8e44ad;padding:2px 8px;border-radius:8px">📋 특약 '+spN+'</span>' : '')
           + (mmN ? '<span style="font-size:11px;font-weight:700;background:#fff8e6;color:#b8860b;padding:2px 8px;border-radius:8px">📝 메모 '+mmN+'</span>' : '')
+          + (ctN ? '<span style="font-size:11px;font-weight:700;background:#e6f5f2;color:#0f766e;padding:2px 8px;border-radius:8px">📎 계약서 '+ctN+'</span>' : '')
         + '</div>' : '')
       + (spN ? '<div style="margin-top:6px;padding:8px 10px;background:#faf7fd;border:1px solid #e8ddf5;border-radius:8px">'
           + (t.specials||[]).filter(function(s){return s&&String(s).trim();}).map(function(s){ return '<div style="font-size:12px;color:#6b21a8;line-height:1.6">📋 '+esc(String(s).trim())+'</div>'; }).join('')
@@ -10039,10 +10074,11 @@ async function githubUpload(token){
         + '<div style="background:#f7faff;border-radius:12px;padding:10px 14px;margin-bottom:14px">'
           + tnInfoRow('대표자', t.ceo?esc(String(t.ceo)):'')
           + tnInfoRow('연락처', tel?'<a href="tel:'+tel+'" style="color:#3f7cb8;text-decoration:none">📞 '+esc(String(t.phone))+'</a>':'')
+          + ((Array.isArray(t.contacts)&&t.contacts.length) ? t.contacts.filter(function(cc){return cc&&(cc.name||cc.phone);}).map(function(cc){ var ct=String(cc.phone||'').replace(/[^0-9+]/g,''); return tnInfoRow(esc(cc.name||'담당'), (ct?'<a href="tel:'+ct+'" style="color:#3f7cb8;text-decoration:none">📞 '+esc(String(cc.phone||''))+'</a>':esc(String(cc.phone||'')))); }).join('') : '')
           + tnInfoRow('사업자번호', t.biznum?esc(String(t.biznum)):'')
           + tnInfoRow('업종', t.business?esc(String(t.business)):'')
           + tnInfoRow('면적', t.area?esc(String(t.area)):'')
-          + tnInfoRow('계약기간', (t.startDate||t.endDate)?esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?')):'')
+          + tnInfoRow('계약기간', (t.startDate||t.endDate)?esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?'))+(dd&&dd.renewed?' <span style="color:#27ae60;font-weight:800">→ 자동갱신 '+esc(dd.effEnd)+'</span>':''):'')
           + tnInfoRow('보증금', tnMoney(t.deposit)?tnMoney(t.deposit)+'원':'')
           + tnInfoRow('월세', tnMoney(t.rent)?tnMoney(t.rent)+'원':'')
           + tnInfoRow('관리비', tnMoney(t.mgmtFee)?tnMoney(t.mgmtFee)+'원':'')
@@ -10067,6 +10103,19 @@ async function githubUpload(token){
               + '<button class="tn-memo-del" data-mid="'+esc(String(m.id||''))+'" style="border:none;background:none;color:#d0d8e2;font-size:13px;cursor:pointer;padding:2px;flex-shrink:0">🗑</button>'
             + '</div>';
           }).join('') : '<div style="font-size:12px;color:#aab8c8;padding:4px">메모가 없어요 — 위 입력줄에서 바로 추가할 수 있어요</div>') + '</div>'
+        + '<div style="font-size:13px;font-weight:800;color:#0f766e;margin:14px 0 4px">📎 계약서 <span style="color:#aab8c8;font-weight:600;font-size:11px">'+((t.contractFiles||[]).length)+'건</span></div>'
+        + '<div style="display:flex;gap:6px;margin-bottom:8px">'
+          + '<input type="text" id="tnCtName" placeholder="계약서 별칭 (예: 2024 임대차계약서)" style="flex:1;min-width:0;height:34px;padding:0 10px;border:1.5px solid #cde8e4;border-radius:8px;font-size:13px;font-family:inherit;background:#f2fbf9;outline:none">'
+          + '<input type="text" id="tnCtPath" placeholder="경로/링크" style="flex:1;min-width:0;height:34px;padding:0 10px;border:1.5px solid #cde8e4;border-radius:8px;font-size:13px;font-family:inherit;background:#f2fbf9;outline:none">'
+          + '<button id="tnCtAdd" style="height:34px;padding:0 12px;border:none;border-radius:8px;background:#0f766e;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0">➕ 추가</button>'
+        + '</div>'
+        + '<div id="tnCtList">' + ((t.contractFiles||[]).length ? (t.contractFiles||[]).map(function(cf,ci){
+            return '<div style="display:flex;gap:8px;align-items:center;background:#f2fbf9;border:1px solid #d5efe9;border-radius:10px;padding:8px 10px;margin-bottom:5px">'
+              + '<span style="flex:1;min-width:0;font-size:13px;color:#134e48;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📎 '+esc(String(cf.name||'계약서'))+(cf.path?' <span style="color:#7a92a8;font-weight:400">· '+esc(String(cf.path))+'</span>':'')+'</span>'
+              + (cf.path?'<button class="tn-ct-copy" data-path="'+esc(String(cf.path))+'" style="border:1.5px solid #cde8e4;background:#fff;color:#0f766e;font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;cursor:pointer;font-family:inherit;flex-shrink:0">📋 복사</button>':'')
+              + '<button class="tn-ct-del" data-ci="'+ci+'" style="border:none;background:none;color:#d0d8e2;font-size:13px;cursor:pointer;padding:2px;flex-shrink:0">🗑</button>'
+            + '</div>';
+          }).join('') : '<div style="font-size:12px;color:#aab8c8;padding:2px 4px 10px">첨부된 계약서가 없어요 — 위에 별칭·경로를 넣고 ➕</div>') + '</div>'
         + '<div style="font-size:13px;font-weight:800;color:#3f7cb8;margin:14px 0 4px">📂 연결 서류 <span style="color:#aab8c8;font-weight:600;font-size:11px">'+docs.length+'건 · 임대개별 서류의 같은 층·호수 자동 연결</span></div>'
         + (docs.length
             ? docs.map(function(dc){
@@ -10125,6 +10174,49 @@ async function githubUpload(token){
         }catch(e){ tnCopyFallback(p); }
       });
     });
+
+    /* 계약서 추가/삭제/복사 */
+    var ctAddBtn = document.getElementById('tnCtAdd');
+    if(ctAddBtn){
+      ctAddBtn.addEventListener('click', function(){
+        try{
+          var nm = (document.getElementById('tnCtName').value||'').trim();
+          var pa = (document.getElementById('tnCtPath').value||'').trim();
+          if(!nm && !pa){ toast('계약서 별칭 또는 경로를 입력하세요'); return; }
+          var cur = tnList().find(function(x){ return x.id===id; });
+          if(!cur) return;
+          var arr = Array.isArray(cur.contractFiles) ? cur.contractFiles.slice() : [];
+          arr.push({name:nm||'계약서', path:pa});
+          updateRecord(id, {contractFiles:arr, updatedAt:Date.now()});
+          renderTnView(sheet, id); renderTnGrid();
+          toast('📎 계약서 추가됨');
+        }catch(err){ console.error('[임차인 계약서]', err); toast('오류: '+(err.message||err)); }
+      });
+    }
+    sheet.querySelectorAll('.tn-ct-del').forEach(function(b){
+      b.addEventListener('click', function(){
+        try{
+          var cur = tnList().find(function(x){ return x.id===id; });
+          if(!cur) return;
+          var ci = Number(b.getAttribute('data-ci'));
+          var arr = (cur.contractFiles||[]).slice();
+          arr.splice(ci,1);
+          updateRecord(id, {contractFiles:arr, updatedAt:Date.now()});
+          renderTnView(sheet, id); renderTnGrid();
+          toast('계약서 삭제됨');
+        }catch(err){ console.error('[임차인 계약서삭제]', err); }
+      });
+    });
+    sheet.querySelectorAll('.tn-ct-copy').forEach(function(b){
+      b.addEventListener('click', function(){
+        var p = b.getAttribute('data-path')||'';
+        try{
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(p).then(function(){ toast('📋 경로 복사됨'); }).catch(function(){ tnCopyFallback(p); });
+          } else tnCopyFallback(p);
+        }catch(e){ tnCopyFallback(p); }
+      });
+    });
   }
   function tnCopyFallback(text){
     try{
@@ -10161,9 +10253,12 @@ async function githubUpload(token){
           + '<div><label style="'+LBL+'">납부일</label><input type="text" id="tnPayDayInp" placeholder="예: 25 (매월 25일)" style="'+INP+'"></div>'
           + '<div><label style="'+LBL+'">계약 시작</label><input type="date" id="tnStartInp" style="'+INP+'"></div>'
           + '<div><label style="'+LBL+'">계약 종료</label><input type="date" id="tnEndInp" style="'+INP+'"></div>'
+          + '<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eaf6ef;border:1.5px solid #bfe3ce;border-radius:8px"><input type="checkbox" id="tnAutoRenew" style="width:18px;height:18px;cursor:pointer"><label for="tnAutoRenew" style="font-size:12px;font-weight:700;color:#27ae60;cursor:pointer;flex:1">🔄 자동갱신 (종료일 지나면 자동으로 1년 연장 표시)</label></div>'
           + '<div><label style="'+LBL+'">보증금 (원)</label><input type="text" id="tnDepositInp" inputmode="numeric" style="'+INP+'"></div>'
           + '<div><label style="'+LBL+'">월세 (원)</label><input type="text" id="tnRentInp" inputmode="numeric" style="'+INP+'"></div>'
           + '<div style="grid-column:1/-1"><label style="'+LBL+'">관리비 (원)</label><input type="text" id="tnMgmtInp" inputmode="numeric" style="'+INP+'"></div>'
+          + '<div style="grid-column:1/-1"><label style="'+LBL+'">📞 담당 연락처 (여러 명 가능)</label><div id="tnContactRows"></div>'
+            + '<button id="tnContactAdd" type="button" style="margin-top:4px;height:30px;padding:0 12px;border:1.5px dashed #9ec7ea;border-radius:8px;background:#f0f7fd;color:#3f7cb8;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 연락처 추가</button></div>'
           + '<div style="grid-column:1/-1"><label style="'+LBL+'">📋 특약사항</label><div id="tnSpecialRows"></div>'
             + '<button id="tnSpecialAdd" type="button" style="margin-top:4px;height:30px;padding:0 12px;border:1.5px dashed #c9b8e8;border-radius:8px;background:#faf7fd;color:#8e44ad;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 특약 추가</button></div>'
           + '<div style="grid-column:1/-1"><label style="'+LBL+'">비고</label><textarea id="tnNoteInp" rows="2" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;resize:vertical"></textarea></div>'
@@ -10190,6 +10285,30 @@ async function githubUpload(token){
     document.getElementById('tnRentInp').value = tnMoney(d.rent);
     document.getElementById('tnMgmtInp').value = tnMoney(d.mgmtFee);
     document.getElementById('tnNoteInp').value = d.note||'';
+    document.getElementById('tnAutoRenew').checked = (d.autoRenew!==false);
+
+    /* 담당 연락처 동적 행 */
+    var contactHost = document.getElementById('tnContactRows');
+    function addContactRow(nm, ph){
+      var row = document.createElement('div');
+      row.className = 'tn-ct-row';
+      row.style.cssText = 'display:flex;gap:6px;margin-bottom:5px';
+      row.innerHTML = '<input type="text" class="tn-ct-name" placeholder="이름/직책" style="flex:0 0 34%;min-width:0;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">'
+        + '<input type="text" class="tn-ct-phone" placeholder="010-0000-0000" style="flex:1;min-width:0;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">'
+        + '<button type="button" class="tn-ctrow-del" style="width:34px;height:34px;border:1.5px solid #fde8e8;border-radius:8px;background:#fff;color:#e74c3c;font-size:13px;cursor:pointer;flex-shrink:0">✕</button>';
+      row.querySelector('.tn-ct-name').value = nm||'';
+      row.querySelector('.tn-ct-phone').value = ph||'';
+      row.querySelector('.tn-ctrow-del').addEventListener('click', function(){ row.remove(); });
+      contactHost.appendChild(row);
+    }
+    var initContacts = Array.isArray(d.contacts) ? d.contacts.filter(function(c){return c&&(c.name||c.phone);}) : [];
+    if(!initContacts.length) initContacts = [{name:'',phone:''}];
+    initContacts.forEach(function(c){ addContactRow(c.name, c.phone); });
+    document.getElementById('tnContactAdd').addEventListener('click', function(){
+      addContactRow('','');
+      var rows = contactHost.querySelectorAll('.tn-ct-name');
+      if(rows.length) rows[rows.length-1].focus();
+    });
 
     /* 특약 동적 행 */
     var rowsHost = document.getElementById('tnSpecialRows');
@@ -10236,16 +10355,24 @@ async function githubUpload(token){
         if(!name){ toast('상호/임차인명을 입력하세요'); return; }
         var sp = [];
         rowsHost.querySelectorAll('.tn-sp-inp').forEach(function(i2){ var v=(i2.value||'').trim(); if(v) sp.push(v); });
+        var cts = [];
+        contactHost.querySelectorAll('.tn-ct-row').forEach(function(r2){
+          var nm=(r2.querySelector('.tn-ct-name').value||'').trim();
+          var ph=(r2.querySelector('.tn-ct-phone').value||'').trim();
+          if(nm||ph) cts.push({name:nm, phone:ph});
+        });
         var patch = {
           kind:'tenant', floor:floor, unit:unit, name:name,
           ceo: document.getElementById('tnCeoInp').value.trim(),
           phone: document.getElementById('tnPhoneInp').value.trim(),
+          contacts: cts,
           biznum: document.getElementById('tnBiznumInp').value.trim(),
           business: document.getElementById('tnBizInp').value.trim(),
           area: document.getElementById('tnAreaInp').value.trim(),
           payDay: document.getElementById('tnPayDayInp').value.trim(),
           startDate: document.getElementById('tnStartInp').value,
           endDate: document.getElementById('tnEndInp').value,
+          autoRenew: document.getElementById('tnAutoRenew').checked,
           deposit: tnParseMoney(document.getElementById('tnDepositInp').value),
           rent: tnParseMoney(document.getElementById('tnRentInp').value),
           mgmtFee: tnParseMoney(document.getElementById('tnMgmtInp').value),
@@ -10253,6 +10380,8 @@ async function githubUpload(token){
           note: document.getElementById('tnNoteInp').value.trim(),
           updatedAt: Date.now()
         };
+        /* 계약서는 조회모드에서 관리되므로 편집 저장 시 기존값 보존 */
+        if(!isNew && t && Array.isArray(t.contractFiles)) patch.contractFiles = t.contractFiles;
         if(isNew){
           patch.memos = [];
           patch.date = todayStr();
@@ -10283,6 +10412,65 @@ async function githubUpload(token){
       window.renderAll = renderAll;
     }
   }catch(e){ console.warn('[임차인] renderAll 래핑 생략:', e); }
+
+  /* 서희타워 임대현황 엑셀(26.07.01 기준) — 평당단가×면적 합산 */
+  var TN_BULK_DATA = [
+    {floor:"B1",unit:"B101,B103",name:"애플이엔씨",area:"340.5평",deposit:102135000,rent:14657394,mgmtFee:8511250},
+    {floor:"B1",unit:"B102",name:"서희건설",area:"21.2평",deposit:6355117,rent:912023,mgmtFee:529593},
+    {floor:"1F",unit:"101,102",name:"서희건설 / 양재퍼스트 정형외과",area:"158.4평",deposit:400000000,rent:20999954,mgmtFee:3961000},
+    {floor:"2F",unit:"201,202",name:"아이피 웰의원",area:"84.4평",deposit:99990300,rent:6999321,mgmtFee:2109500},
+    {floor:"3F",unit:"301,302",name:"삼성생명서비스",area:"183.1평",deposit:200000000,rent:12157840,mgmtFee:4577500},
+    {floor:"4F",unit:"401",name:"콜로노비타",area:"184.7평",deposit:120068000,rent:13484560,mgmtFee:4618000},
+    {floor:"5F",unit:"501",name:"광주은행양재지점",area:"118.0평",deposit:83772332,rent:9203158,mgmtFee:2831741},
+    {floor:"5F",unit:"502",name:"세양재법무법인",area:"66.7평",deposit:40037640,rent:4003764,mgmtFee:1668235},
+    {floor:"6F",unit:"601",name:"진지노코리아",area:"184.7평",deposit:138540000,rent:13854000,mgmtFee:4618000},
+    {floor:"7F",unit:"701",name:"법무법인 지향",area:"184.7평",deposit:129304000,rent:13484560,mgmtFee:4618000},
+    {floor:"8F",unit:"801",name:"법무법인 지향",area:"184.7평",deposit:129304000,rent:13484560,mgmtFee:4618000},
+    {floor:"9F",unit:"901",name:"유성티엔에스",area:"184.7평",deposit:110832000,rent:13299840,mgmtFee:4618000},
+    {floor:"10F",unit:"1001",name:"앰비앤홀딩스",area:"160.7평",deposit:96422024,rent:11249236,mgmtFee:4017584},
+    {floor:"11F",unit:"1101",name:"서희건설",area:"114.3평",deposit:68580000,rent:8229600,mgmtFee:2857500},
+    {floor:"12F",unit:"1201",name:"㈜원준",area:"108.2평",deposit:64890000,rent:7786800,mgmtFee:2703750},
+    {floor:"13F",unit:"1301",name:"서희건설",area:"184.7평",deposit:110832000,rent:11662667,mgmtFee:4618000},
+    {floor:"14F",unit:"1401",name:"법무법인 예헌",area:"184.7평",deposit:138742140,rent:14592769,mgmtFee:4784212},
+    {floor:"15F",unit:"1501",name:"서희건설",area:"184.7평",deposit:110832000,rent:11662667,mgmtFee:4618000},
+    {floor:"16F",unit:"1601",name:"서희건설",area:"184.7평",deposit:110832000,rent:11662667,mgmtFee:4618000},
+    {floor:"17F",unit:"1701",name:"서희건설",area:"185.1평",deposit:111084000,rent:11689184,mgmtFee:4628500},
+    {floor:"18F",unit:"1801",name:"국민트랜스",area:"185.1평",deposit:111084000,rent:11689184,mgmtFee:4628500},
+    {floor:"19F",unit:"1901",name:"서희건설",area:"93.7평",deposit:56244000,rent:5918462,mgmtFee:2343500},
+    {floor:"19F",unit:"1902",name:"서희휴먼테크",area:"7.0평",deposit:4200000,rent:441959,mgmtFee:175000},
+    {floor:"19F",unit:"1903",name:"이엔비하우징",area:"7.0평",deposit:4200000,rent:441959,mgmtFee:175000},
+    {floor:"19F",unit:"1905",name:"소망이에스디",area:"",deposit:0,rent:0,mgmtFee:0},
+    {floor:"19F",unit:"1904",name:"유성티엔에스",area:"77.0평",deposit:0,rent:0,mgmtFee:0},
+    {floor:"20F",unit:"2001",name:"서희건설",area:"196.5평",deposit:117924000,rent:12408946,mgmtFee:4913500}
+  ];
+  function tnBulkImport(){
+    try{
+      var existing = tnList();
+      var msg = '📊 서희타워 임대현황 '+TN_BULK_DATA.length+'개 임차인 카드를 등록합니다.\n\n';
+      if(existing.length){ msg += '⚠️ 기존 임차인 카드 '+existing.length+'개가 모두 삭제되고 새로 생성됩니다.\n(되돌리기 가능)\n\n'; }
+      msg += '진행할까요?';
+      if(!confirm(msg)) return;
+      /* 기존 임차인 전부 삭제 (클라우드 동기화 포함) */
+      existing.forEach(function(t){ try{ deleteRecord(t.id); }catch(e){} });
+      /* 27개 생성 */
+      var now = Date.now(), added=0;
+      TN_BULK_DATA.forEach(function(row, i){
+        addRecord({
+          kind:'tenant', floor:row.floor, unit:row.unit, name:row.name,
+          ceo:'', phone:'', contacts:[], biznum:'', business:'', area:row.area||'',
+          payDay:'', startDate:'', endDate:'', autoRenew:true,
+          deposit:row.deposit||0, rent:row.rent||0, mgmtFee:row.mgmtFee||0,
+          specials:[], memos:[], contractFiles:[], note:'',
+          date:todayStr(), createdAt:now+i, updatedAt:now+i
+        });
+        added++;
+      });
+      if(typeof lsSave==='function') lsSave();
+      renderTnGrid();
+      toast('📊 '+added+'개 임차인 카드 등록 완료');
+    }catch(err){ console.error('[임차인 일괄등록]', err); toast('일괄등록 오류: '+(err.message||err)); }
+  }
+  window.tnBulkImport = tnBulkImport;
 
   window.renderTenantCards = renderTenantCards;
   window.openTenantModal = openTenantModal;
