@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-1436";
+const APP_VERSION = "v44-0709-1450";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -9903,6 +9903,7 @@ async function githubUpload(token){
         + '<div id="tnChips" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px"></div>'
         + '</div>'
         + '<div id="tnGrid"></div>'
+        + '<div id="tnSummary" style="margin-top:18px"></div>'
         + '<div style="padding:12px 4px 6px;font-size:14px;font-weight:800;color:#3f7cb8;border-bottom:2px solid #e8f0fa;margin:16px 0 4px">📂 서류</div>';
       var inp = document.getElementById('tnSearchInp');
       if(inp && !inp._bound){
@@ -9981,6 +9982,55 @@ async function githubUpload(token){
         head.addEventListener('mouseleave', function(){ head.style.opacity='1'; });
       }
     });
+    renderTnSummary(all);
+  }
+
+  /* 층별 한 줄 요약 표 (엑셀 스타일) — 전체 임차인 대상, 필터 무관 */
+  function renderTnSummary(all){
+    var host = document.getElementById('tnSummary');
+    if(!host) return;
+    if(!all || !all.length){ host.innerHTML=''; return; }
+    var sorted = all.slice().sort(function(a,b){
+      return tnFloorOrder(a.floor)-tnFloorOrder(b.floor) || String(a.unit||'').localeCompare(String(b.unit||''),'ko',{numeric:true});
+    });
+    var sumDep=0, sumRent=0, sumMgmt=0;
+    var rows = sorted.map(function(t){
+      sumDep+=Number(t.deposit)||0; sumRent+=Number(t.rent)||0; sumMgmt+=Number(t.mgmtFee)||0;
+      return '<tr style="border-bottom:1px solid #eef2f7">'
+        + '<td style="padding:6px 8px;font-weight:800;color:#3f7cb8;white-space:nowrap">'+esc(String(t.floor||''))+'</td>'
+        + '<td style="padding:6px 8px;color:#7a92a8;white-space:nowrap">'+esc(String(t.unit||''))+'</td>'
+        + '<td style="padding:6px 8px;font-weight:600;color:#1a2f45;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||''))+'</td>'
+        + '<td style="padding:6px 8px;text-align:right;color:#0f766e;white-space:nowrap">'+esc(String(t.area||''))+'</td>'
+        + '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#1a2f45;white-space:nowrap">'+(tnMoney(t.deposit)||'-')+'</td>'
+        + '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#2563a8;white-space:nowrap">'+(tnMoney(t.rent)||'-')+'</td>'
+        + '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#1a2f45;white-space:nowrap">'+(tnMoney(t.mgmtFee)||'-')+'</td>'
+      + '</tr>';
+    }).join('');
+    host.innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+        + '<span style="font-size:14px;font-weight:800;color:#33567d">📋 층별 요약</span>'
+        + '<span style="font-size:12px;color:#aab8c8">'+sorted.length+'개 · 전체 임차인</span>'
+      + '</div>'
+      + '<div style="overflow-x:auto;border:1.5px solid #e8f0fa;border-radius:12px">'
+        + '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px">'
+          + '<thead><tr style="background:#f4f8fd;border-bottom:2px solid #dbe6f4">'
+            + '<th style="padding:8px;text-align:left;color:#33567d;white-space:nowrap">층</th>'
+            + '<th style="padding:8px;text-align:left;color:#33567d;white-space:nowrap">호수</th>'
+            + '<th style="padding:8px;text-align:left;color:#33567d;white-space:nowrap">상호</th>'
+            + '<th style="padding:8px;text-align:right;color:#33567d;white-space:nowrap">면적</th>'
+            + '<th style="padding:8px;text-align:right;color:#33567d;white-space:nowrap">보증금</th>'
+            + '<th style="padding:8px;text-align:right;color:#33567d;white-space:nowrap">월세</th>'
+            + '<th style="padding:8px;text-align:right;color:#33567d;white-space:nowrap">관리비</th>'
+          + '</tr></thead>'
+          + '<tbody>'+rows+'</tbody>'
+          + '<tfoot><tr style="background:#eef5fd;border-top:2px solid #dbe6f4;font-weight:800">'
+            + '<td colspan="4" style="padding:8px;color:#33567d">합계</td>'
+            + '<td style="padding:8px;text-align:right;color:#1a2f45;white-space:nowrap">'+sumDep.toLocaleString('ko-KR')+'</td>'
+            + '<td style="padding:8px;text-align:right;color:#2563a8;white-space:nowrap">'+sumRent.toLocaleString('ko-KR')+'</td>'
+            + '<td style="padding:8px;text-align:right;color:#1a2f45;white-space:nowrap">'+sumMgmt.toLocaleString('ko-KR')+'</td>'
+          + '</tr></tfoot>'
+        + '</table>'
+      + '</div>';
   }
 
   function tnCardHtml(t){
