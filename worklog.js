@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-0957";
+const APP_VERSION = "v44-0709-1008";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -10020,7 +10020,7 @@ async function githubUpload(token){
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px';
     var sheet = document.createElement('div');
     sheet.id = 'tnSheet';
-    sheet.style.cssText = 'background:#fff;border-radius:18px;width:100%;max-width:540px;max-height:90vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.2)';
+    sheet.style.cssText = 'background:#fff;border-radius:18px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;overflow-x:hidden;box-sizing:border-box;box-shadow:0 12px 40px rgba(0,0,0,.2)';
     ov.appendChild(sheet);
     document.body.appendChild(ov);
     if(!t || mode==='edit') renderTnEdit(sheet, t);
@@ -10069,7 +10069,7 @@ async function githubUpload(token){
         + '<button id="tnDelBtn" style="height:32px;padding:0 11px;border:none;border-radius:8px;background:#fde8e8;color:#b52929;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap">🗑 삭제</button>'
         + '<button id="tnCloseBtn" style="height:32px;width:32px;border:none;border-radius:8px;background:#f0f4f9;color:#7a92a8;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;flex-shrink:0">✕</button>'
       + '</div>'
-      + '<div style="padding:14px 18px 18px">'
+      + '<div style="padding:14px 18px 18px;box-sizing:border-box;max-width:100%">'
         + '<div style="font-size:13px;font-weight:800;color:#33567d;margin-bottom:4px">📄 계약정보 '+(dd?'<span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:8px;background:'+dd.bg+';color:'+dd.color+'">'+dd.label+'</span>':'')+'</div>'
         + '<div style="background:#f7faff;border-radius:12px;padding:10px 14px;margin-bottom:14px">'
           + tnInfoRow('대표자', t.ceo?esc(String(t.ceo)):'')
@@ -10092,7 +10092,7 @@ async function githubUpload(token){
         + '<div style="font-size:13px;font-weight:800;color:#b8860b;margin-bottom:6px">📝 중요메모 <span style="color:#aab8c8;font-weight:600;font-size:11px">'+memos.length+'건</span></div>'
         + '<div style="display:flex;gap:6px;margin-bottom:8px">'
           + '<select id="tnMemoTag" style="height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;flex-shrink:0">'+TN_TAGS.map(function(g){ return '<option value="'+g+'">'+g+'</option>'; }).join('')+'</select>'
-          + '<input type="text" id="tnMemoText" placeholder="메모 입력 후 Enter 또는 ➕ 추가" style="flex:1;min-width:0;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">'
+          + '<input type="text" id="tnMemoText" placeholder="메모 입력 후 Enter 또는 ➕ 추가" style="flex:1;min-width:0;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">'
           + '<button id="tnMemoAdd" style="height:34px;padding:0 12px;border:none;border-radius:8px;background:#b8860b;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0">➕ 추가</button>'
         + '</div>'
         + '<div id="tnMemoList">' + (memos.length ? memos.map(function(m){
@@ -10104,9 +10104,9 @@ async function githubUpload(token){
             + '</div>';
           }).join('') : '<div style="font-size:12px;color:#aab8c8;padding:4px">메모가 없어요 — 위 입력줄에서 바로 추가할 수 있어요</div>') + '</div>'
         + '<div style="font-size:13px;font-weight:800;color:#0f766e;margin:14px 0 4px">📎 계약서 <span style="color:#aab8c8;font-weight:600;font-size:11px">'+((t.contractFiles||[]).length)+'건</span></div>'
-        + '<div style="display:flex;gap:6px;margin-bottom:8px">'
-          + '<input type="text" id="tnCtName" placeholder="계약서 별칭 (예: 2024 임대차계약서)" style="flex:1;min-width:0;height:34px;padding:0 10px;border:1.5px solid #cde8e4;border-radius:8px;font-size:13px;font-family:inherit;background:#f2fbf9;outline:none">'
-          + '<input type="text" id="tnCtPath" placeholder="경로/링크" style="flex:1;min-width:0;height:34px;padding:0 10px;border:1.5px solid #cde8e4;border-radius:8px;font-size:13px;font-family:inherit;background:#f2fbf9;outline:none">'
+        + '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">'
+          + '<input type="text" id="tnCtName" placeholder="계약서 별칭 (예: 2024 임대차계약서)" style="flex:1 1 160px;min-width:130px;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #cde8e4;border-radius:8px;font-size:13px;font-family:inherit;background:#f2fbf9;outline:none">'
+          + '<input type="text" id="tnCtPath" placeholder="경로/링크" style="flex:1 1 130px;min-width:110px;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #cde8e4;border-radius:8px;font-size:13px;font-family:inherit;background:#f2fbf9;outline:none">'
           + '<button id="tnCtAdd" style="height:34px;padding:0 12px;border:none;border-radius:8px;background:#0f766e;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0">➕ 추가</button>'
         + '</div>'
         + '<div id="tnCtList">' + ((t.contractFiles||[]).length ? (t.contractFiles||[]).map(function(cf,ci){
@@ -10237,7 +10237,7 @@ async function githubUpload(token){
         + '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">'+(isNew?'🏠 임차인 추가':'✏️ 임차인 수정')+'</span>'
         + '<button id="tnEditClose" type="button" style="height:32px;width:32px;border:none;border-radius:8px;background:#f0f4f9;color:#7a92a8;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">✕</button>'
       + '</div>'
-      + '<div style="padding:14px 18px 18px">'
+      + '<div style="padding:14px 18px 18px;box-sizing:border-box;max-width:100%">'
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
           + '<div><label style="'+LBL+'">층 <span style="color:#e74c3c">*</span></label><select id="tnFloorSel" style="'+INP+';padding:0 6px">'
             + '<option value="">층 선택</option>'
@@ -10670,7 +10670,7 @@ async function githubUpload(token){
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px';
     var sheet=document.createElement('div');
     sheet.id='rcSheet';
-    sheet.style.cssText='background:#fff;border-radius:18px;width:100%;max-width:540px;max-height:90vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.2)';
+    sheet.style.cssText='background:#fff;border-radius:18px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;overflow-x:hidden;box-sizing:border-box;box-shadow:0 12px 40px rgba(0,0,0,.2)';
     ov.appendChild(sheet);
     document.body.appendChild(ov);
     renderRcManageList(sheet);
