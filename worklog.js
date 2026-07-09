@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-1008";
+const APP_VERSION = "v44-0709-1014";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -10071,7 +10071,7 @@ async function githubUpload(token){
       + '</div>'
       + '<div style="padding:14px 18px 18px;box-sizing:border-box;max-width:100%">'
         + '<div style="font-size:13px;font-weight:800;color:#33567d;margin-bottom:4px">📄 계약정보 '+(dd?'<span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:8px;background:'+dd.bg+';color:'+dd.color+'">'+dd.label+'</span>':'')+'</div>'
-        + '<div style="background:#f7faff;border-radius:12px;padding:10px 14px;margin-bottom:14px">'
+        + '<div style="background:#f7faff;border-radius:12px;padding:10px 14px;margin-bottom:14px;box-sizing:border-box">'
           + tnInfoRow('대표자', t.ceo?esc(String(t.ceo)):'')
           + tnInfoRow('연락처', tel?'<a href="tel:'+tel+'" style="color:#3f7cb8;text-decoration:none">📞 '+esc(String(t.phone))+'</a>':'')
           + ((Array.isArray(t.contacts)&&t.contacts.length) ? t.contacts.filter(function(cc){return cc&&(cc.name||cc.phone);}).map(function(cc){ var ct=String(cc.phone||'').replace(/[^0-9+]/g,''); return tnInfoRow(esc(cc.name||'담당'), (ct?'<a href="tel:'+ct+'" style="color:#3f7cb8;text-decoration:none">📞 '+esc(String(cc.phone||''))+'</a>':esc(String(cc.phone||'')))); }).join('') : '')
@@ -10090,9 +10090,9 @@ async function githubUpload(token){
             ? '<div style="background:#faf7fd;border-radius:12px;padding:10px 14px;margin-bottom:14px">'+specials.map(function(s,i){ return '<div style="display:flex;gap:8px;font-size:13px;color:#1a2f45;padding:3px 0;line-height:1.55"><b style="color:#8e44ad;flex-shrink:0">'+(i+1)+'.</b><span style="min-width:0;word-break:break-word">'+esc(String(s))+'</span></div>'; }).join('')+'</div>'
             : '<div style="font-size:12px;color:#aab8c8;padding:4px 4px 14px">등록된 특약이 없어요 — ✏️ 수정에서 추가하세요</div>')
         + '<div style="font-size:13px;font-weight:800;color:#b8860b;margin-bottom:6px">📝 중요메모 <span style="color:#aab8c8;font-weight:600;font-size:11px">'+memos.length+'건</span></div>'
-        + '<div style="display:flex;gap:6px;margin-bottom:8px">'
-          + '<select id="tnMemoTag" style="height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;flex-shrink:0">'+TN_TAGS.map(function(g){ return '<option value="'+g+'">'+g+'</option>'; }).join('')+'</select>'
-          + '<input type="text" id="tnMemoText" placeholder="메모 입력 후 Enter 또는 ➕ 추가" style="flex:1;min-width:0;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">'
+        + '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;box-sizing:border-box">'
+          + '<select id="tnMemoTag" style="flex:0 0 auto;width:82px;box-sizing:border-box;height:34px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12px;font-family:inherit;background:#f7faff;outline:none;flex-shrink:0">'+TN_TAGS.map(function(g){ return '<option value="'+g+'">'+g+'</option>'; }).join('')+'</select>'
+          + '<input type="text" id="tnMemoText" placeholder="메모 입력 후 Enter 또는 ➕ 추가" style="flex:1 1 140px;min-width:120px;box-sizing:border-box;height:34px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">'
           + '<button id="tnMemoAdd" style="height:34px;padding:0 12px;border:none;border-radius:8px;background:#b8860b;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0">➕ 추가</button>'
         + '</div>'
         + '<div id="tnMemoList">' + (memos.length ? memos.map(function(m){
