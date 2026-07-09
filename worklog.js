@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-1450";
+const APP_VERSION = "v44-0709-1503";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -9999,11 +9999,11 @@ async function githubUpload(token){
       return '<tr style="border-bottom:1px solid #eef2f7">'
         + '<td style="padding:6px 8px;font-weight:800;color:#3f7cb8;white-space:nowrap">'+esc(String(t.floor||''))+'</td>'
         + '<td style="padding:6px 8px;color:#7a92a8;white-space:nowrap">'+esc(String(t.unit||''))+'</td>'
-        + '<td style="padding:6px 8px;font-weight:600;color:#1a2f45;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||''))+'</td>'
-        + '<td style="padding:6px 8px;text-align:right;color:#0f766e;white-space:nowrap">'+esc(String(t.area||''))+'</td>'
-        + '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#1a2f45;white-space:nowrap">'+(tnMoney(t.deposit)||'-')+'</td>'
-        + '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#2563a8;white-space:nowrap">'+(tnMoney(t.rent)||'-')+'</td>'
-        + '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#1a2f45;white-space:nowrap">'+(tnMoney(t.mgmtFee)||'-')+'</td>'
+        + '<td style="padding:6px 14px 6px 8px;font-weight:600;color:#1a2f45;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||''))+'</td>'
+        + '<td style="padding:6px 8px 6px 22px;text-align:right;color:#0f766e;white-space:nowrap">'+esc(String(t.area||''))+'</td>'
+        + '<td style="padding:6px 8px 6px 22px;text-align:right;font-weight:700;color:#1a2f45;white-space:nowrap">'+(tnMoney(t.deposit)||'-')+'</td>'
+        + '<td style="padding:6px 8px 6px 22px;text-align:right;font-weight:700;color:#2563a8;white-space:nowrap">'+(tnMoney(t.rent)||'-')+'</td>'
+        + '<td style="padding:6px 8px 6px 22px;text-align:right;font-weight:700;color:#1a2f45;white-space:nowrap">'+(tnMoney(t.mgmtFee)||'-')+'</td>'
       + '</tr>';
     }).join('');
     host.innerHTML =
@@ -10012,15 +10012,15 @@ async function githubUpload(token){
         + '<span style="font-size:12px;color:#aab8c8">'+sorted.length+'개 · 전체 임차인</span>'
       + '</div>'
       + '<div style="overflow-x:auto;border:1.5px solid #e8f0fa;border-radius:12px">'
-        + '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px">'
+        + '<table style="width:auto;border-collapse:collapse;font-size:13px">'
           + '<thead><tr style="background:#f4f8fd;border-bottom:2px solid #dbe6f4">'
             + '<th style="padding:8px;text-align:left;color:#33567d;white-space:nowrap">층</th>'
             + '<th style="padding:8px;text-align:left;color:#33567d;white-space:nowrap">호수</th>'
             + '<th style="padding:8px;text-align:left;color:#33567d;white-space:nowrap">상호</th>'
-            + '<th style="padding:8px;text-align:right;color:#33567d;white-space:nowrap">면적</th>'
-            + '<th style="padding:8px;text-align:right;color:#33567d;white-space:nowrap">보증금</th>'
-            + '<th style="padding:8px;text-align:right;color:#33567d;white-space:nowrap">월세</th>'
-            + '<th style="padding:8px;text-align:right;color:#33567d;white-space:nowrap">관리비</th>'
+            + '<th style="padding:8px 8px 8px 22px;text-align:right;color:#33567d;white-space:nowrap">면적</th>'
+            + '<th style="padding:8px 8px 8px 22px;text-align:right;color:#33567d;white-space:nowrap">보증금</th>'
+            + '<th style="padding:8px 8px 8px 22px;text-align:right;color:#33567d;white-space:nowrap">월세</th>'
+            + '<th style="padding:8px 8px 8px 22px;text-align:right;color:#33567d;white-space:nowrap">관리비</th>'
           + '</tr></thead>'
           + '<tbody>'+rows+'</tbody>'
           + '<tfoot><tr style="background:#eef5fd;border-top:2px solid #dbe6f4;font-weight:800">'
