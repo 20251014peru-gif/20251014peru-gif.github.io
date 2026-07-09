@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-1019";
+const APP_VERSION = "v44-0709-1140";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -9975,23 +9975,42 @@ async function githubUpload(token){
 
   function tnCardHtml(t){
     var dd = tnDday(t);
-    var money = [];
-    if(tnMoney(t.deposit)) money.push('보증금 <b>'+tnMoney(t.deposit)+'</b>');
-    if(tnMoney(t.rent)) money.push('월세 <b>'+tnMoney(t.rent)+'</b>');
-    if(tnMoney(t.mgmtFee)) money.push('관리비 <b>'+tnMoney(t.mgmtFee)+'</b>');
     var spN = (t.specials||[]).filter(function(s){ return s&&String(s).trim(); }).length;
     var mmN = (t.memos||[]).length;
     var ctN = (t.contractFiles||[]).length;
     var tel = String(t.phone||'').replace(/[^0-9+]/g,'');
+    /* 담당 연락처: 대표 전화 + contacts 배열 첫 항목 */
+    var contactLines = [];
+    if(t.ceo || tel) contactLines.push((t.ceo?'👤 '+esc(String(t.ceo)):'')+(t.ceo&&tel?' ':'')+(tel?'<a href="tel:'+tel+'" style="color:#3f7cb8;text-decoration:none;font-weight:700">📞 '+esc(String(t.phone))+'</a>':''));
+    if(Array.isArray(t.contacts)){
+      t.contacts.filter(function(cc){return cc&&(cc.name||cc.phone);}).forEach(function(cc){
+        var ct=String(cc.phone||'').replace(/[^0-9+]/g,'');
+        contactLines.push((cc.name?'🧑 '+esc(String(cc.name)):'')+(cc.name&&ct?' ':'')+(ct?'<a href="tel:'+ct+'" style="color:#3f7cb8;text-decoration:none;font-weight:700">📞 '+esc(String(cc.phone))+'</a>':esc(String(cc.phone||''))));
+      });
+    }
+    /* 금액 3줄 분리 */
+    var moneyRows = '';
+    if(tnMoney(t.deposit)||tnMoney(t.rent)||tnMoney(t.mgmtFee)){
+      moneyRows = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 4px">'
+        + '<div style="background:#f4f8fd;border-radius:8px;padding:6px 8px;text-align:center"><div style="font-size:10px;color:#93a3b5;font-weight:700;margin-bottom:1px">보증금</div><div style="font-size:13px;font-weight:800;color:#1a2f45">'+(tnMoney(t.deposit)||'-')+'</div></div>'
+        + '<div style="background:#f4f8fd;border-radius:8px;padding:6px 8px;text-align:center"><div style="font-size:10px;color:#93a3b5;font-weight:700;margin-bottom:1px">월세</div><div style="font-size:13px;font-weight:800;color:#2563a8">'+(tnMoney(t.rent)||'-')+'</div></div>'
+        + '<div style="background:#f4f8fd;border-radius:8px;padding:6px 8px;text-align:center"><div style="font-size:10px;color:#93a3b5;font-weight:700;margin-bottom:1px">관리비</div><div style="font-size:13px;font-weight:800;color:#1a2f45">'+(tnMoney(t.mgmtFee)||'-')+'</div></div>'
+      + '</div>';
+    }
     return '<div class="tn-card" data-id="'+esc(String(t.id))+'" style="background:#fff;border:1.5px solid #e8f0fa;border-radius:12px;padding:12px 14px;cursor:pointer;transition:box-shadow .15s,transform .15s">'
       + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'
         + '<span style="background:#eef5fd;color:#3f7cb8;font-size:11px;font-weight:800;padding:3px 8px;border-radius:8px;white-space:nowrap">'+esc(String(t.floor||''))+' · '+esc(String(t.unit||''))+'</span>'
-        + '<span style="font-size:14px;font-weight:800;color:#1a2f45;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||'(상호 미입력)'))+'</span>'
-        + (dd ? '<span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:8px;background:'+dd.bg+';color:'+dd.color+';white-space:nowrap">'+dd.label+'</span>' : '')
+        + '<span style="font-size:15px;font-weight:800;color:#1a2f45;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||'(상호 미입력)'))+'</span>'
       + '</div>'
-      + ((t.ceo||tel) ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:4px">'+(t.ceo?'👤 '+esc(String(t.ceo)):'')+(t.ceo&&tel?' · ':'')+(tel?'<a href="tel:'+tel+'" style="color:#3f7cb8;text-decoration:none;font-weight:700">📞 '+esc(String(t.phone))+'</a>':'')+'</div>' : '')
-      + ((t.startDate||t.endDate) ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:4px">📅 '+esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?'))+'</div>' : '')
-      + (money.length ? '<div style="font-size:12px;color:#33567d;margin-bottom:4px">'+money.join(' · ')+'</div>' : '')
+      /* D-day 크게 + 면적 크게 한 줄 */
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">'
+        + (dd ? '<span style="font-size:15px;font-weight:900;padding:4px 12px;border-radius:9px;background:'+dd.bg+';color:'+dd.color+';white-space:nowrap">'+dd.label+'</span>' : '')
+        + (t.area ? '<span style="font-size:14px;font-weight:800;color:#0f766e;background:#e6f5f2;padding:4px 11px;border-radius:9px;white-space:nowrap">📐 '+esc(String(t.area))+'</span>' : '')
+      + '</div>'
+      + (t.business ? '<div style="font-size:12px;color:#7a5cad;background:#f6f2fd;border-radius:7px;padding:3px 9px;margin-bottom:5px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box">🏷 '+esc(String(t.business))+'</div>' : '')
+      + (contactLines.length ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:4px;line-height:1.7">'+contactLines.join('<br>')+'</div>' : '')
+      + ((t.startDate||t.endDate) ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:2px">📅 '+esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?'))+(dd&&dd.renewed?' <span style="color:#27ae60;font-weight:700">→ '+esc(dd.effEnd)+'</span>':'')+'</div>' : '')
+      + moneyRows
       + ((spN||mmN) ? '<div style="display:flex;gap:5px;margin-top:6px">'
           + (spN ? '<span style="font-size:11px;font-weight:700;background:#f3eefc;color:#8e44ad;padding:2px 8px;border-radius:8px">📋 특약 '+spN+'</span>' : '')
           + (mmN ? '<span style="font-size:11px;font-weight:700;background:#fff8e6;color:#b8860b;padding:2px 8px;border-radius:8px">📝 메모 '+mmN+'</span>' : '')
