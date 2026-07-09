@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0709-1902</title>
+  <title>업무일지 v44-0709-1918</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0709-1902</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0709-1918</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2917,7 +2917,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260709t1902"></script>
+<script src="worklog.js?v=44-20260709t1918"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5516,23 +5516,18 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     toast('✅ 중복 정리 완료! '+done+'개 삭제'+(fail?', '+fail+'개 실패':''));
   };
 
-  // 캘린더 + Tasks 동시 동기화 (schedule 저장 시 핵심 함수)
+  // Tasks 전용 동기화 (캘린더에는 넣지 않음 — 태스크에만)
   function syncScheduleAll(en, onDone, silent){
-    if(en.kind !== "schedule"){ syncScheduleToGCal(en, onDone); return; }
-    var calDone=false, taskDone=false, calOk=false, taskOk=false;
-    function check(){
-      if(!calDone || !taskDone) return;
-      var ok = calOk || taskOk;
+    // schedule·work → 태스크에만. 그 외 kind는 기존대로 캘린더.
+    if(en.kind !== "schedule" && en.kind !== "work"){ syncScheduleToGCal(en, onDone); return; }
+    syncToTasks(en, function(ok){
       if(!silent){
-        if(calOk && taskOk) toast("📅 구글 캘린더 + Tasks 에 등록됐어요!");
-        else if(calOk)      toast("📅 캘린더 등록됨 (Tasks 실패)");
-        else if(taskOk)     toast("✅ Tasks 등록됨 (캘린더 실패)");
+        if(ok) toast("✅ 구글 Tasks에 등록됐어요!");
+        else   toast("Tasks 등록 실패");
       }
       if(typeof renderAll==="function") setTimeout(renderAll, 400);
       if(onDone) onDone(ok);
-    }
-    syncScheduleToGCal(en, function(ok){ calOk=ok; calDone=true; check(); });
-    syncToTasks(en,       function(ok){ taskOk=ok; taskDone=true; check(); });
+    });
   }
 
   // 전역 노출
@@ -5632,23 +5627,18 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     // 미동기화 = gcalEventId 없거나 (schedule은 gTaskId도 없는 것)
     const targets = entries.filter(e=> kinds.includes(e.kind) && e.date && (!e.gcalEventId || ((e.kind==='schedule'||e.kind==='work') && !e.gTaskId)));
     if(!targets.length){ toast('📅 미동기화 항목이 없습니다 (모두 완료됨)'); return; }
-    if(!confirm(targets.length+'건을 구글 캘린더+Tasks에 동기화할까요?\n(잠시 기다려 주세요)')) return;
+    if(!confirm(targets.length+'건을 구글에 동기화할까요?\n(예정·업무는 Tasks, 나머지는 캘린더)\n잠시 기다려 주세요')) return;
     toast('동기화 시작... 0/'+targets.length);
     let done=0, fail=0;
     for(const en of targets){
       await new Promise(resolve=>{
-        if(en.kind==='schedule'){
-          syncScheduleAll(en, function(ok){ if(ok) done++; else fail++; resolve(); }, true);
-        } else if(en.kind==='work'){
-          // 일반업무: 캘린더 + Tasks 둘 다
-          var c1=false, c2=false, okAny=false;
-          function fin(){ if(c1&&c2){ if(okAny) done++; else fail++; resolve(); } }
-          syncScheduleToGCal(en, function(ok){ if(ok) okAny=true; c1=true; fin(); });
-          syncToTasks(en, function(ok){ if(ok) okAny=true; c2=true; fin(); });
+        if(en.kind==='schedule' || en.kind==='work'){
+          // 예정·업무 → 태스크에만
+          syncToTasks(en, function(ok){ if(ok) done++; else fail++; resolve(); });
         } else {
           syncScheduleToGCal(en, function(ok){ if(ok) done++; else fail++; resolve(); });
         }
-        setTimeout(resolve, 700);
+        setTimeout(resolve, 600);
       });
       if((done+fail)%5===0) toast('동기화 중... '+(done+fail)+'/'+targets.length);
     }
@@ -5657,7 +5647,14 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   };
 
   // ── 전역 노출 ───────────────────────────────────────────
-  window.gcalSync = syncScheduleToGCal;
+  window.gcalSync = function(en, onDone){
+    // 예정·업무는 태스크에만, 나머지는 캘린더에 (색 다른 중복 방지)
+    if(en && (en.kind==='schedule' || en.kind==='work')){
+      syncToTasks(en, onDone);
+    } else {
+      syncScheduleToGCal(en, onDone);
+    }
+  };
   window.gcalSyncSchedule = syncScheduleAll;   // schedule: 캘린더+Tasks 동시
 
   // ══════════════════════════════════════════════════════
@@ -8731,7 +8728,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0709-1902';
+    if(el) el.textContent = 'v44-0709-1918';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10446,7 +10443,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0709-1902 로드');
+  console.log('[expV2] v44-0709-1918 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -12604,7 +12601,7 @@ window.makeModalDraggable = function(modal){
 </script>
   
 <script>
-/* ===== PWA Service Worker v44-0709-1902 (network-first, 자동 갱신) ===== */
+/* ===== PWA Service Worker v44-0709-1918 (network-first, 자동 갱신) ===== */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     /* 1) 기존에 설치된 낡은 SW가 옛 버전을 붙들고 있으면 캐시 전부 비우고 새 SW로 교체 */
