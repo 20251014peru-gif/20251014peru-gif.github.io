@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0709-1606</title>
+  <title>업무일지 v44-0709-1636</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0709-1606</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0709-1636</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2915,7 +2915,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260709t1606"></script>
+<script src="worklog.js?v=44-20260709t1636"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5302,37 +5302,77 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   // ══════════════════════════════════════════════════════
   var TASKS_LIST_ID = '@default'; // 기본 Tasks 목록
   var TASKS_LS = 'wl_tasks_listid';
+  // v44-0709-1615: 잘못 저장된 목록(테스트 등) 잔재 1회 초기화
+  try{ if(localStorage.getItem('wl_tasks_reset_1615')!=='1'){ localStorage.removeItem(TASKS_LS); localStorage.setItem('wl_tasks_reset_1615','1'); } }catch(e){}
 
   // Tasks 목록 ID 로드 (저장된 것 우선)
   // Tasks 기본 목록 ID 자동 조회 후 저장
   function loadTasksListId(callback){
-    try{ var v=localStorage.getItem(TASKS_LS); if(v){ TASKS_LIST_ID=v; if(callback) callback(); return; } }catch(e){}
-    // localStorage에 없으면 API로 조회
-    if(!accessToken){ if(callback) callback(); return; }
-    fetch("https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=1", {
+    // 항상 API로 목록 조회해서 "내 할일 목록"을 이름으로 정확히 찾음
+    // (첫 번째 목록이 '테스트 구글 태스크' 등으로 잡히는 문제 방지)
+    if(!accessToken){
+      // 토큰 없으면 캐시라도 사용
+      try{ var v=localStorage.getItem(TASKS_LS); if(v){ TASKS_LIST_ID=v; } }catch(e){}
+      if(callback) callback(); return;
+    }
+    fetch("https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=50", {
       headers: { "Authorization": "Bearer " + accessToken }
     }).then(function(r){ return r.json(); })
     .then(function(d){
       if(d.items && d.items.length){
-        TASKS_LIST_ID = d.items[0].id; // 첫 번째 목록(기본 "내 할 일 목록") ID 사용
+        // "내 할일 목록" / "내 할 일 목록" / "My Tasks" 이름 우선 매칭
+        var want = null;
+        var names = ['내 할일 목록','내 할 일 목록','기본 목록','My Tasks','Tasks'];
+        for(var n=0; n<names.length && !want; n++){
+          for(var i=0; i<d.items.length; i++){
+            if((d.items[i].title||'').replace(/\s/g,'') === names[n].replace(/\s/g,'')){ want = d.items[i]; break; }
+          }
+        }
+        // 이름 매칭 실패 시: '테스트'가 안 들어간 첫 목록, 그것도 없으면 첫 목록
+        if(!want){
+          for(var j=0; j<d.items.length; j++){
+            if((d.items[j].title||'').indexOf('테스트')<0){ want = d.items[j]; break; }
+          }
+        }
+        if(!want) want = d.items[0];
+        TASKS_LIST_ID = want.id;
         try{ localStorage.setItem(TASKS_LS, TASKS_LIST_ID); }catch(e){}
-        dbgG("Tasks 목록 ID 조회: " + TASKS_LIST_ID + " (" + d.items[0].title + ")");
+        dbgG("Tasks 목록 선택: " + want.title + " (" + TASKS_LIST_ID + ")");
       }
       if(callback) callback();
-    }).catch(function(){ if(callback) callback(); });
+    }).catch(function(){
+      try{ var v2=localStorage.getItem(TASKS_LS); if(v2){ TASKS_LIST_ID=v2; } }catch(e){}
+      if(callback) callback();
+    });
   }
 
   // schedule → Tasks 등록/업데이트
   function syncToTasks(en, onDone){
     if(!accessToken){ if(onDone) onDone(false); return; }
-    if(en.kind !== 'schedule'){ if(onDone) onDone(false); return; }
+    // 예정(schedule) + 일반업무(work) 둘 다 태스크로
+    if(en.kind !== 'schedule' && en.kind !== 'work'){ if(onDone) onDone(false); return; }
 
-    var title = (en.sType ? '['+en.sType+'] ' : '') + (en.title||'예정');
-    var notes = [
-      en.sStatus ? '상태: '+en.sStatus : '',
-      en.scheduleType && en.scheduleType!=='일회성' ? '반복: '+en.scheduleType : '',
-      en.memo || ''
-    ].filter(Boolean).join('\n');
+    var title, notes;
+    if(en.kind === 'work'){
+      // 일반업무: 층·제목 + 상세/자재/금액을 노트로
+      var wTitle = (typeof displayTitle==='function') ? displayTitle(en) : (en.title||'업무');
+      title = (en.floor ? en.floor+' ' : '') + wTitle;
+      var matq = [en.material, (en.qty&&Number(en.qty))?en.qty+'개':''].filter(Boolean).join(' ');
+      notes = [
+        en.field ? '분야: '+en.field : '',
+        en.status ? '상태: '+en.status : '',
+        en.detail || '',
+        matq ? '자재: '+matq : '',
+        (Number(en.cost)? '금액: '+Number(en.cost).toLocaleString('ko-KR')+'원' : '')
+      ].filter(Boolean).join('\n');
+    } else {
+      title = (en.sType ? '['+en.sType+'] ' : '') + (en.title||'예정');
+      notes = [
+        en.sStatus ? '상태: '+en.sStatus : '',
+        en.scheduleType && en.scheduleType!=='일회성' ? '반복: '+en.scheduleType : '',
+        en.memo || ''
+      ].filter(Boolean).join('\n');
+    }
 
 
     // 마감일: RFC 3339 형식 (Tasks API는 날짜만 지원 → T00:00:00.000Z)
@@ -5450,16 +5490,25 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     if(!accessToken){ signIn(); toast('먼저 구글 로그인 해주세요'); return; }
     const kinds = Object.keys(GCAL_IDS);
     // 미동기화 = gcalEventId 없거나 (schedule은 gTaskId도 없는 것)
-    const targets = entries.filter(e=> kinds.includes(e.kind) && e.date && (!e.gcalEventId || (e.kind==='schedule' && !e.gTaskId)));
+    const targets = entries.filter(e=> kinds.includes(e.kind) && e.date && (!e.gcalEventId || ((e.kind==='schedule'||e.kind==='work') && !e.gTaskId)));
     if(!targets.length){ toast('📅 미동기화 항목이 없습니다 (모두 완료됨)'); return; }
     if(!confirm(targets.length+'건을 구글 캘린더+Tasks에 동기화할까요?\n(잠시 기다려 주세요)')) return;
     toast('동기화 시작... 0/'+targets.length);
     let done=0, fail=0;
     for(const en of targets){
       await new Promise(resolve=>{
-        var fn = (en.kind==='schedule') ? function(e,cb){ syncScheduleAll(e,cb,true); } : syncScheduleToGCal;
-        fn(en, function(ok){ if(ok) done++; else fail++; resolve(); });
-        setTimeout(resolve, 500);
+        if(en.kind==='schedule'){
+          syncScheduleAll(en, function(ok){ if(ok) done++; else fail++; resolve(); }, true);
+        } else if(en.kind==='work'){
+          // 일반업무: 캘린더 + Tasks 둘 다
+          var c1=false, c2=false, okAny=false;
+          function fin(){ if(c1&&c2){ if(okAny) done++; else fail++; resolve(); } }
+          syncScheduleToGCal(en, function(ok){ if(ok) okAny=true; c1=true; fin(); });
+          syncToTasks(en, function(ok){ if(ok) okAny=true; c2=true; fin(); });
+        } else {
+          syncScheduleToGCal(en, function(ok){ if(ok) done++; else fail++; resolve(); });
+        }
+        setTimeout(resolve, 700);
       });
       if((done+fail)%5===0) toast('동기화 중... '+(done+fail)+'/'+targets.length);
     }
@@ -8542,7 +8591,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0709-1606';
+    if(el) el.textContent = 'v44-0709-1636';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10257,7 +10306,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0709-1606 로드');
+  console.log('[expV2] v44-0709-1636 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -12415,7 +12464,7 @@ window.makeModalDraggable = function(modal){
 </script>
   
 <script>
-/* ===== PWA Service Worker v44-0709-1606 (network-first, 자동 갱신) ===== */
+/* ===== PWA Service Worker v44-0709-1636 (network-first, 자동 갱신) ===== */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     /* 1) 기존에 설치된 낡은 SW가 옛 버전을 붙들고 있으면 캐시 전부 비우고 새 SW로 교체 */
