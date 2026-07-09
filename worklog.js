@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-1518";
+const APP_VERSION = "v44-0709-1606";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -9899,6 +9899,7 @@ async function githubUpload(token){
           + '<button id="tnAddBtn" style="height:34px;padding:0 14px;border:none;border-radius:10px;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">➕ 임차인 추가</button>'
           + '<button id="tnBulkBtn" style="height:34px;padding:0 12px;border:1.5px solid #cbb6ea;border-radius:10px;background:#f6f2fd;color:#7c3aed;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📊 임대현황 일괄등록</button>'
           + '<button id="tnEnbiBtn" style="height:34px;padding:0 12px;border:1.5px solid #9ec7ea;border-radius:10px;background:#f0f7fd;color:#3f7cb8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">➕ 엔비홀딩스</button>'
+          + '<button id="tnExpiryCalBtn" style="height:34px;padding:0 12px;border:1.5px solid #f5c6a0;border-radius:10px;background:#fef6ee;color:#c2540c;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📅 만료일 달력추가</button>'
         + '</div>'
         + '<div id="tnChips" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px"></div>'
         + '</div>'
@@ -9922,6 +9923,8 @@ async function githubUpload(token){
       if(bb && !bb._bound){ bb._bound = true; bb.addEventListener('click', function(){ tnBulkImport(); }); }
       var eb = document.getElementById('tnEnbiBtn');
       if(eb && !eb._bound){ eb._bound = true; eb.addEventListener('click', function(){ tnAddEnbi(); }); }
+      var xb = document.getElementById('tnExpiryCalBtn');
+      if(xb && !xb._bound){ xb._bound = true; xb.addEventListener('click', function(){ tnAddExpiryToCalendar(); }); }
     }
     renderTnGrid();
   }
@@ -10659,6 +10662,57 @@ async function githubUpload(token){
     }catch(err){ console.error('[엔비홀딩스 추가]', err); toast('추가 오류: '+(err.message||err)); }
   }
   window.tnAddEnbi = tnAddEnbi;
+
+  /* 날짜에서 N개월 빼기 (YYYY-MM-DD) */
+  function tnMinusMonths(dateStr, months){
+    try{
+      var p = String(dateStr).split('-').map(Number);
+      var d = new Date(Date.UTC(p[0], p[1]-1, p[2]));
+      d.setUTCMonth(d.getUTCMonth() - months);
+      var y=d.getUTCFullYear(), m=('0'+(d.getUTCMonth()+1)).slice(-2), dd=('0'+d.getUTCDate()).slice(-2);
+      return y+'-'+m+'-'+dd;
+    }catch(e){ return dateStr; }
+  }
+
+  /* 만료일 4개월·3개월 전 알림을 달력(schedule)에 일괄 추가 */
+  function tnAddExpiryToCalendar(){
+    try{
+      var list = tnList().filter(function(t){ return t.endDate; });
+      if(!list.length){ toast('만료일이 입력된 임차인이 없어요'); return; }
+      var msg = '📅 임차인 '+list.length+'곳의 계약 만료 알림을 달력에 추가합니다.\n\n'
+        + '각 임차인마다 만료 4개월 전 · 3개월 전 2개씩 (자동갱신 시 갱신된 만료일 기준)\n'
+        + '총 '+(list.length*2)+'개 일정이 생성됩니다.\n\n중복 추가를 막기 위해 기존 계약만료 일정은 먼저 제거됩니다. 진행할까요?';
+      if(!confirm(msg)) return;
+
+      /* 기존 자동생성 계약만료 일정 제거 (tnExpiryRef 표식 있는 것만) */
+      var olds = entries.filter(function(e){ return e.kind==='schedule' && e.tnExpiryRef; });
+      olds.forEach(function(e){ try{ deleteRecord(e.id); }catch(_e){} });
+
+      var now = Date.now(), added=0, i=0;
+      list.forEach(function(t){
+        /* 자동갱신 반영 실효 만료일 */
+        var eff = (typeof tnEffectiveEnd==='function') ? tnEffectiveEnd(t) : null;
+        var endDate = (eff && eff.end) ? eff.end : t.endDate;
+        var nm = (t.name||'').split('/')[0].trim();
+        [[4,'4개월'],[3,'3개월']].forEach(function(pair){
+          var alertDate = tnMinusMonths(endDate, pair[0]);
+          addRecord({
+            kind:'schedule',
+            date: alertDate,
+            title: '['+esc(String(t.floor||''))+' '+esc(String(t.unit||''))+'] '+nm+' 계약만료 '+pair[1]+'전 (만료 '+endDate+')',
+            sStatus:'예정', sType:'계약갱신', scheduleType:'일회성',
+            tnExpiryRef: t.id,
+            createdAt: now+i, updatedAt: now+i, date_added: todayStr()
+          });
+          added++; i++;
+        });
+      });
+      if(typeof lsSave==='function') lsSave();
+      if(typeof renderAll==='function') renderAll();
+      toast('📅 '+added+'개 계약만료 알림을 달력에 추가했어요');
+    }catch(err){ console.error('[만료 달력추가]', err); toast('오류: '+(err.message||err)); }
+  }
+  window.tnAddExpiryToCalendar = tnAddExpiryToCalendar;
 
   window.renderTenantCards = renderTenantCards;
   window.openTenantModal = openTenantModal;
