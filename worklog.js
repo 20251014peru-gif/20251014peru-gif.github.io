@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-1147";
+const APP_VERSION = "v44-0709-1152";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -9964,12 +9964,19 @@ async function githubUpload(token){
     grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px';
     grid.innerHTML = list.map(tnCardHtml).join('');
     grid.querySelectorAll('.tn-card').forEach(function(card){
-      card.addEventListener('click', function(e){
-        if(e.target.closest('a')) return;
-        openTenantModal(card.getAttribute('data-id'));
-      });
-      card.addEventListener('mouseenter', function(){ card.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'; card.style.transform='translateY(-1px)'; });
-      card.addEventListener('mouseleave', function(){ card.style.boxShadow=''; card.style.transform=''; });
+      var head = card.querySelector('.tn-card-head');
+      if(head){
+        head.addEventListener('click', function(e){
+          if(e.target.closest('a')) return;
+          openTenantModal(card.getAttribute('data-id'));
+        });
+      }
+      card.addEventListener('mouseenter', function(){ card.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'; });
+      card.addEventListener('mouseleave', function(){ card.style.boxShadow=''; });
+      if(head){
+        head.addEventListener('mouseenter', function(){ head.style.opacity='0.72'; });
+        head.addEventListener('mouseleave', function(){ head.style.opacity='1'; });
+      }
     });
   }
 
@@ -10013,7 +10020,9 @@ async function githubUpload(token){
         + moneyLine('관리비', t.mgmtFee, '#1a2f45')
       + '</div>';
     }
-    return '<div class="tn-card" data-id="'+esc(String(t.id))+'" style="background:#fff;border:1.5px solid #e8f0fa;border-radius:12px;padding:12px 14px;cursor:pointer;transition:box-shadow .15s,transform .15s">'
+    return '<div class="tn-card" data-id="'+esc(String(t.id))+'" style="background:#fff;border:1.5px solid #e8f0fa;border-radius:12px;padding:12px 14px;transition:box-shadow .15s,transform .15s">'
+      /* ▼ 여기(tn-card-head)를 클릭하면 조회모달 열림 — 나머지는 무반응 */
+      + '<div class="tn-card-head" style="cursor:pointer">'
       + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'
         + '<span style="background:#eef5fd;color:#3f7cb8;font-size:11px;font-weight:800;padding:3px 8px;border-radius:8px;white-space:nowrap">'+esc(String(t.floor||''))+' · '+esc(String(t.unit||''))+'</span>'
         + '<span style="font-size:15px;font-weight:800;color:#1a2f45;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||'(상호 미입력)'))+'</span>'
@@ -10023,8 +10032,9 @@ async function githubUpload(token){
         + (dd ? '<span style="font-size:15px;font-weight:900;padding:4px 12px;border-radius:9px;background:'+dd.bg+';color:'+dd.color+';white-space:nowrap">'+dd.label+'</span>' : '')
         + (t.area ? '<span style="font-size:14px;font-weight:800;color:#0f766e;background:#e6f5f2;padding:4px 11px;border-radius:9px;white-space:nowrap">📐 '+esc(String(t.area))+'</span>' : '')
       + '</div>'
-      /* 계약기간 (D-day·면적 바로 밑, 확인 편하게 강조) */
-      + ((t.startDate||t.endDate) ? '<div style="font-size:12px;font-weight:700;color:#455;background:#f4f6fa;border-radius:7px;padding:5px 9px;margin-bottom:5px;box-sizing:border-box">📅 '+esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?'))+(dd&&dd.renewed?' <span style="color:#27ae60;font-weight:800">→ 갱신 '+esc(dd.effEnd)+'</span>':'')+'</div>' : '')
+      /* 계약기간 — 크게, 줄 꽉차게 (클릭 영역 포함) */
+      + ((t.startDate||t.endDate) ? '<div style="display:block;width:100%;font-size:14px;font-weight:800;color:#334;background:#eef2f8;border:1.5px solid #dde5f0;border-radius:8px;padding:8px 12px;margin-bottom:7px;box-sizing:border-box;text-align:center;letter-spacing:.3px">📅 '+esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?'))+(dd&&dd.renewed?' <span style="color:#27ae60">→ 갱신 '+esc(dd.effEnd)+'</span>':'')+'</div>' : '')
+      + '</div>'  /* ▲ tn-card-head 끝 */
       + (t.business ? '<div style="font-size:12px;color:#7a5cad;background:#f6f2fd;border-radius:7px;padding:3px 9px;margin-bottom:5px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box">🏷 '+esc(String(t.business))+'</div>' : '')
       + (contactLines.length ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:4px;line-height:1.7">'+contactLines.join('<br>')+'</div>' : '')
       + pyRow
