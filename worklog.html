@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0709-1853</title>
+  <title>업무일지 v44-0709-1902</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0709-1853</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0709-1902</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1267,6 +1267,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         </button>
         <button class="nav-btn" onclick="window.gcalSyncAll&&window.gcalSyncAll()" style="background:#34a853;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="전체 구글캘린더 동기화">📅 전체동기화</button>
         <button class="nav-btn" onclick="window.gtaskCleanDuplicates&&window.gtaskCleanDuplicates()" style="background:#ea8600;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 태스크 중복 정리">🧹 태스크중복정리</button>
+        <button class="nav-btn" onclick="window.gcalCleanDuplicates&&window.gcalCleanDuplicates()" style="background:#d93025;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 캘린더 중복 정리">🧹 캘린더중복정리</button>
         <button class="nav-btn" onclick="window.gcalPullAll&&window.gcalPullAll(false)" style="background:#1a73e8;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 캘린더에서 새 예정 가져오기">📥 구글←가져오기</button>
         <button class="nav-btn nav-back" id="btnBack" title="이전 화면" disabled>↶ 뒤로</button>
         <a class="nav-btn" href="staff.html" target="_blank" style="background:#6366f1;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">👥 직원</a>
@@ -2916,7 +2917,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260709t1853"></script>
+<script src="worklog.js?v=44-20260709t1902"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5556,6 +5557,72 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     if(!en){ toast('항목을 찾을 수 없습니다'); return; }
     toast('📅 캘린더+Tasks 재동기화 중...');
     syncScheduleAll(en);
+  };
+
+  // ── 구글 캘린더 중복 정리: 같은 캘린더 내 같은 제목+날짜 이벤트 1개만 남기고 삭제 ──
+  window.gcalCleanDuplicates = async function(){
+    if(!accessToken){ if(typeof signIn==='function') signIn(); toast('먼저 구글 로그인 해주세요'); return; }
+    toast('🔍 캘린더 중복 확인 중...');
+    var now = new Date();
+    var timeMin = new Date(now); timeMin.setFullYear(timeMin.getFullYear()-2);
+    var timeMax = new Date(now); timeMax.setFullYear(timeMax.getFullYear()+2);
+    var calIds = [];
+    for(var k in GCAL_IDS){ if(calIds.indexOf(GCAL_IDS[k])<0) calIds.push(GCAL_IDS[k]); }
+
+    var toDelete = []; // {calId, eventId}
+    for(var c=0;c<calIds.length;c++){
+      var calId = calIds[c];
+      var events = [], pageToken=null, guard=0;
+      try{
+        do{
+          var url = 'https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(calId)+'/events'
+            + '?timeMin='+timeMin.toISOString()+'&timeMax='+timeMax.toISOString()
+            + '&singleEvents=true&maxResults=250&fields=items(id,summary,start,status,created),nextPageToken'
+            + (pageToken ? '&pageToken='+pageToken : '');
+          var r = await fetch(url, { headers:{ 'Authorization':'Bearer '+accessToken } });
+          var d = await r.json();
+          if(d.items) events = events.concat(d.items);
+          pageToken = d.nextPageToken || null; guard++;
+        } while(pageToken && guard<15);
+      }catch(e){ continue; }
+
+      // 그룹핑: 제목(정규화, [업무] 등 접두어 무시) + 날짜
+      var groups = {};
+      events.forEach(function(ev){
+        if(!ev.summary) return;
+        if(ev.status==='cancelled') return;
+        var t = ev.summary.replace(/^\[[^\]]*\]\s*/,'').replace(/\s+/g,' ').trim(); // 앞머리 [xxx] 제거
+        var dstr = (ev.start && (ev.start.date || ev.start.dateTime)) || '';
+        dstr = String(dstr).slice(0,10);
+        var key = t+'|'+dstr;
+        (groups[key] = groups[key] || []).push(ev);
+      });
+      Object.keys(groups).forEach(function(key){
+        var arr = groups[key];
+        if(arr.length<2) return;
+        // 남길 것: created 최신 1개 (보통 접두어 없는 새 버전), 나머지 삭제
+        arr.sort(function(a,b){ return String(b.created||'').localeCompare(String(a.created||'')); });
+        for(var i=1;i<arr.length;i++) toDelete.push({calId:calId, eventId:arr[i].id});
+      });
+    }
+
+    if(!toDelete.length){ toast('✅ 캘린더 중복이 없어요'); return; }
+    if(!confirm('캘린더 중복 이벤트 '+toDelete.length+'개를 삭제합니다.\n(같은 제목·날짜 중 1개씩만 남깁니다)\n진행할까요?')) return;
+
+    var done=0, fail=0;
+    for(var j=0;j<toDelete.length;j++){
+      try{
+        var dr = await fetch('https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(toDelete[j].calId)+'/events/'+toDelete[j].eventId, {
+          method:'DELETE', headers:{ 'Authorization':'Bearer '+accessToken }
+        });
+        if(dr.ok || dr.status===204 || dr.status===410) done++; else fail++;
+      }catch(e){ fail++; }
+      if(j%5===0) toast('캘린더 중복 삭제 중... '+(j+1)+'/'+toDelete.length);
+      await new Promise(function(res){ setTimeout(res, 130); });
+    }
+    // 삭제된 이벤트의 gcalEventId를 로컬에서도 정리 (다음 동기화 때 새로 안 만들게)
+    toast('✅ 캘린더 중복 정리 완료! '+done+'개 삭제'+(fail?', '+fail+'개 실패':''));
+    if(typeof renderAll==='function') setTimeout(renderAll, 500);
   };
 
   // ── 전체 일괄 동기화 ────────────────────────────────────
@@ -8664,7 +8731,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0709-1853';
+    if(el) el.textContent = 'v44-0709-1902';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10379,7 +10446,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0709-1853 로드');
+  console.log('[expV2] v44-0709-1902 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -12537,7 +12604,7 @@ window.makeModalDraggable = function(modal){
 </script>
   
 <script>
-/* ===== PWA Service Worker v44-0709-1853 (network-first, 자동 갱신) ===== */
+/* ===== PWA Service Worker v44-0709-1902 (network-first, 자동 갱신) ===== */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     /* 1) 기존에 설치된 낡은 SW가 옛 버전을 붙들고 있으면 캐시 전부 비우고 새 SW로 교체 */
