@@ -99,7 +99,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 <div class="wrap">
   <header>
     <h1>📺 유튜브 요약기</h1>
-    <span class="ver">v4.1-0706 · 팝업·최신성·선행지표</span>
+    <span class="ver">v4.2-0706 · 시장결과 가독성</span>
     <span class="sync off" id="syncBadge">동기화 확인중</span>
   </header>
 
@@ -1139,6 +1139,31 @@ async function autoScore(){
 
 /* ═══════════ 📊 신뢰도 대시보드 (5단계) ═══════════ */
 /* ═══════════ 🌡 시장 (탑다운 매크로+섹터) ═══════════ */
+/* 시장 답변 가독성 후처리 — 벽 텍스트를 문단으로 */
+function formatMarketText(html){
+  if(!html)return html;
+  // "---" 구분자 → 문단 나눔
+  html=html.replace(/\s*-{3,}\s*/g,'</p><p>');
+  // 📌 핀 이모지·①②③ 앞에서 줄바꿈 (한 항목=한 줄 느낌)
+  html=html.replace(/(📌|🧭)/g,'</p><p><strong>$1</strong> ');
+  html=html.replace(/\s*(①|②|③|④|⑤|⑥|⑦|⑧)\s*/g,'<br>$1 ');
+  // 신호등 태그 뒤 줄바꿈 (요약과 동일 처리)
+  html=html.replace(/(\uD83D\uDFE2|\uD83D\uDFE1|\uD83D\uDD34)(\s*)/g,'<span class="frame-tag">$1</span> ');
+  // <p> 없이 통짜면 감싸기
+  if(!/<p[ >]/.test(html) && !/<h2/.test(html)){
+    html='<p>'+html+'</p>';
+  }
+  // 맨 앞이 태그로 시작하지 않으면 <p> 열기 (--- 로 중간이 나뉜 경우)
+  if(!/^\s*<(p|h2|ul|div)/i.test(html)){
+    html='<p>'+html;
+  }
+  if(!/<\/(p|h2|ul|div)>\s*$/i.test(html)){
+    html=html+'</p>';
+  }
+  // 빈 <p></p> 정리
+  html=html.replace(/<p>\s*<\/p>/g,'').replace(/<p>(\s*<br>)+/g,'<p>');
+  return html;
+}
 const MKT_Q={
   macro:[
     {id:'fed', em:'🏦', label:'연준 동향', q:'오늘 또는 이번 주 미국 연준(FOMC·의장·이사)의 발언·회의·의사록이 있나? 금리 방향에 대한 새로운 신호가 있나?'},
@@ -1184,12 +1209,15 @@ async function mktOne(kind,qid){
 - 검색 결과가 한 달 이상 지난 것이면 "최신 아님"을 밝히고, 더 최근 자료를 다시 찾으세요.
 - 답변에 반드시 근거 자료의 날짜를 명시할 것 (예: "7월 7일 발표"). 날짜 없는 정보는 신뢰하지 말 것.
 - 오래된 낙관론을 최신인 것처럼 전하지 말 것. 최근 악화 신호가 있으면 반드시 반영.
-[답변]
-- 결론부터, 그 다음 근거. 3~4문장 이내로 간결히.
-- 이 항목이 시장에 🟢긍정/🟡주의/🔴위험 중 무엇인지 맨 앞에 신호등으로 표시.
-- 출처는 [웹·날짜] 형식. 순수 HTML(<div>), <strong> 강조, 마크다운 금지.`;
-    let body=await callClaude(system, `[질문]\n${item.q}\n\n※ 반드시 오늘(${kstNow().toLocaleDateString('ko-KR')}) 기준 최신 자료로 답할 것.`, 1500, true);
+[답변 형식 — 반드시 지킬 것]
+- 맨 앞: 이 항목이 🟢긍정/🟡주의/🔴위험 중 무엇인지 <strong>신호등 + 한 줄 결론</strong>.
+- 그 다음 근거를 <p> 문단으로 나눠 설명. 한 문단은 2~3문장. 절대 한 덩어리로 쓰지 말 것.
+- 세부 포인트가 여러 개면 <ul><li>로 나열 (①②③를 한 문단에 몰지 말 것).
+- 날짜·수치·기관명은 <strong> 강조. 출처는 [웹·날짜].
+- 순수 HTML(<p>,<ul>,<li>,<strong>), 마크다운 금지.`;
+    let body=await callClaude(system, `[질문]\n${item.q}\n\n※ 반드시 오늘(${kstNow().toLocaleDateString('ko-KR')}) 기준 최신 자료로, 문단을 나눠서 답할 것.`, 1500, true);
     body=body.replace(/```html|```/g,'').trim();
+    body=formatMarketText(body);
     document.getElementById('resultMeta').innerHTML=`${item.em} ${escapeHtml(item.label)} · 🌐 웹 검색`;
     document.getElementById('result').innerHTML=linkifyTickers(body);
     document.getElementById('resultOverlay').classList.add('on');
@@ -1210,12 +1238,14 @@ async function mktSynth(kind){
 - 각 항목 근거에 자료 날짜를 명시하세요 (예: "7월 3일 발표"). 날짜 확인 안 되면 "최신 확인 필요" 표기.
 [출력 형식 — 순수 HTML, 마크다운 금지]
 1. 맨 위 <h2>🌡 ${MKT_TITLE[kind]} 종합 판단</h2> 다음 줄에 <strong>종합 신호: 🟢안정 / 🟡주의 / 🔴위험 중 하나 + 한 줄 요약</strong>.
-2. <h2>항목별 상세</h2> 아래, 각 항목을 이렇게:
+2. <h2>항목별 상세</h2> 아래, 각 항목을 <strong>별도의 <p> 문단</strong>으로:
    <p>[신호등🟢/🟡/🔴] <strong>항목명</strong> — 핵심 사실 1~2문장 [웹·날짜]</p>
+   각 항목은 반드시 자기 <p> 안에. 여러 항목을 한 문단에 붙이지 말 것.
 3. <h2>🧭 종합 해석</h2>: 항목들을 하나의 이야기로 3~4문장. "지금 시장/섹터는 이렇고, 유튜버 낙관론과 비교하면 어떻고, 달님은 뭘 경계해야 하나". 마지막 <strong>한마디로:</strong> 1문장.
 - 각 항목 신호등은 최신 근거에 따라 냉정하게. 다 🟢로 도배하지 말 것. 최근 나빠진 게 있으면 🟡🔴로.`;
     let body=await callClaude(system, `오늘 날짜: ${kstNow().toLocaleDateString('ko-KR')} — 반드시 이 날짜 기준 최신 자료로.\n\n[조사할 항목]\n${qList}`, 4000, true);
     body=body.replace(/```html|```/g,'').trim();
+    body=formatMarketText(body);
     document.getElementById('resultMeta').innerHTML=`${MKT_TITLE[kind]} 종합 · 🌐 웹 검색 ${items.length}개 항목`;
     document.getElementById('result').innerHTML=linkifyTickers(body);
     document.getElementById('resultOverlay').classList.add('on');
