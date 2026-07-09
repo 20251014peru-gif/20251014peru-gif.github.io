@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-1014";
+const APP_VERSION = "v44-0709-1019";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -10099,7 +10099,8 @@ async function githubUpload(token){
             var c = TN_TAG_COLOR[m.tag]||'#7a92a8';
             return '<div style="display:flex;gap:8px;align-items:flex-start;background:#fffdf5;border:1px solid #f2ead0;border-radius:10px;padding:8px 10px;margin-bottom:6px">'
               + '<span style="font-size:10px;font-weight:800;color:#fff;background:'+c+';padding:2px 7px;border-radius:7px;flex-shrink:0;margin-top:2px">'+esc(String(m.tag||'기타'))+'</span>'
-              + '<div style="flex:1;min-width:0"><div style="font-size:13px;color:#1a2f45;line-height:1.5;word-break:break-word">'+esc(String(m.text||''))+'</div><div style="font-size:11px;color:#aab8c8;margin-top:2px">'+esc(String(m.date||''))+'</div></div>'
+              + '<div style="flex:1;min-width:0"><div style="font-size:13px;color:#1a2f45;line-height:1.5;word-break:break-word">'+esc(String(m.text||''))+'</div><div style="font-size:11px;color:#aab8c8;margin-top:2px">'+esc(String(m.date||''))+(m.editedAt?' <span style="color:#b8860b">(수정됨)</span>':'')+'</div></div>'
+              + '<button class="tn-memo-edit" data-mid="'+esc(String(m.id||''))+'" data-tag="'+esc(String(m.tag||'기타'))+'" style="border:none;background:none;color:#a8b4c0;font-size:13px;cursor:pointer;padding:2px;flex-shrink:0" title="수정">✏️</button>'
               + '<button class="tn-memo-del" data-mid="'+esc(String(m.id||''))+'" style="border:none;background:none;color:#d0d8e2;font-size:13px;cursor:pointer;padding:2px;flex-shrink:0">🗑</button>'
             + '</div>';
           }).join('') : '<div style="font-size:12px;color:#aab8c8;padding:4px">메모가 없어요 — 위 입력줄에서 바로 추가할 수 있어요</div>') + '</div>'
@@ -10135,6 +10136,7 @@ async function githubUpload(token){
       deleteWithUndo(t.id, '임차인 카드');
       renderTnGrid();
     });
+    var _editingMemoId = null;  /* 수정 중인 메모 id (null이면 신규 추가) */
     var addMemo = function(){
       try{
         var txtEl = document.getElementById('tnMemoText');
@@ -10144,14 +10146,50 @@ async function githubUpload(token){
         var cur = tnList().find(function(x){ return x.id===id; });
         if(!cur) return;
         var memos2 = Array.isArray(cur.memos) ? cur.memos.slice() : [];
-        memos2.unshift({id:'m'+Date.now()+Math.floor(Math.random()*1000), date:todayStr(), tag:tag, text:txt});
-        updateRecord(id, {memos:memos2, updatedAt:Date.now()});
-        renderTnView(sheet, id); renderTnGrid();
-        toast('📝 메모 추가됨');
+        if(_editingMemoId){
+          /* 기존 메모 수정 */
+          for(var i=0;i<memos2.length;i++){
+            if(String(memos2[i].id)===String(_editingMemoId)){
+              memos2[i] = {id:memos2[i].id, date:memos2[i].date||todayStr(), tag:tag, text:txt, editedAt:Date.now()};
+              break;
+            }
+          }
+          updateRecord(id, {memos:memos2, updatedAt:Date.now()});
+          _editingMemoId = null;
+          renderTnView(sheet, id); renderTnGrid();
+          toast('✏️ 메모 수정됨');
+        } else {
+          /* 신규 추가 */
+          memos2.unshift({id:'m'+Date.now()+Math.floor(Math.random()*1000), date:todayStr(), tag:tag, text:txt});
+          updateRecord(id, {memos:memos2, updatedAt:Date.now()});
+          renderTnView(sheet, id); renderTnGrid();
+          toast('📝 메모 추가됨');
+        }
       }catch(err){ console.error('[임차인 메모]', err); toast('메모 저장 오류: '+(err.message||err)); }
     };
     document.getElementById('tnMemoAdd').addEventListener('click', addMemo);
     document.getElementById('tnMemoText').addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); addMemo(); } });
+    /* 메모 수정 버튼: 입력줄에 값 로드 + 버튼 라벨 변경 */
+    sheet.querySelectorAll('.tn-memo-edit').forEach(function(b){
+      b.addEventListener('click', function(){
+        try{
+          var cur = tnList().find(function(x){ return x.id===id; });
+          if(!cur) return;
+          var mid = b.getAttribute('data-mid');
+          var m = (cur.memos||[]).find(function(x){ return String(x.id)===String(mid); });
+          if(!m) return;
+          _editingMemoId = mid;
+          document.getElementById('tnMemoTag').value = m.tag||'기타';
+          var txtEl = document.getElementById('tnMemoText');
+          txtEl.value = m.text||'';
+          txtEl.focus();
+          var addBtn = document.getElementById('tnMemoAdd');
+          addBtn.textContent = '💾 수정';
+          addBtn.style.background = '#3f7cb8';
+          txtEl.placeholder = '내용 수정 후 Enter 또는 💾 수정';
+        }catch(err){ console.error('[임차인 메모수정 로드]', err); }
+      });
+    });
     sheet.querySelectorAll('.tn-memo-del').forEach(function(b){
       b.addEventListener('click', function(){
         try{
