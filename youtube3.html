@@ -87,10 +87,17 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 
 /* 요약 결과 모달 */
 .overlay{position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; z-index:60;
-  padding:16px; overflow:auto;}
-.overlay.on{display:block;}
-.sheet{max-width:900px; margin:0 auto; background:#fff; border-radius:14px; padding:18px;}
-.sheet .close{float:right; font-size:22px; background:none; border:none; cursor:pointer; color:var(--sub);}
+  padding:16px;}
+.overlay.on{display:flex; align-items:center; justify-content:center;}
+.sheet{max-width:900px; width:100%; max-height:90vh; margin:0 auto; background:#fff;
+  border-radius:14px; display:flex; flex-direction:column; overflow:hidden;}
+.sheet .close{position:absolute; top:14px; right:18px; font-size:24px; background:none;
+  border:none; cursor:pointer; color:var(--sub); z-index:2; line-height:1;
+  width:34px; height:34px; border-radius:50%;}
+.sheet .close:hover{background:var(--green-lt);}
+.sheet-head{padding:16px 18px 10px; border-bottom:1px solid var(--line); flex-shrink:0;
+  padding-right:50px;}
+.sheet-body{padding:16px 18px; overflow-y:auto; -webkit-overflow-scrolling:touch;}
 
 @media (max-width:600px){ header h1{font-size:17px;} .tabs button{font-size:14px;} }
 </style>
@@ -99,7 +106,7 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 <div class="wrap">
   <header>
     <h1>📺 유튜브 요약기</h1>
-    <span class="ver">v4.2-0706 · 시장결과 가독성</span>
+    <span class="ver">v4.3-0706 · 모달 스크롤 수정</span>
     <span class="sync off" id="syncBadge">동기화 확인중</span>
   </header>
 
@@ -258,10 +265,14 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 
 <!-- 요약 결과 모달 -->
 <div class="overlay" id="resultOverlay">
-  <div class="sheet">
+  <div class="sheet" style="position:relative;">
     <button class="close" onclick="closeResult()">✕</button>
-    <div id="resultMeta" style="font-size:13px;color:var(--sub);margin-bottom:8px;"></div>
-    <div id="result"></div>
+    <div class="sheet-head">
+      <div id="resultMeta" style="font-size:13px;color:var(--sub);"></div>
+    </div>
+    <div class="sheet-body">
+      <div id="result"></div>
+    </div>
   </div>
 </div>
 
@@ -470,6 +481,7 @@ async function runSummary(){
       (newProfile?` <span class="badge">새 채널 · ${escapeHtml(profile['분야']||'')}</span>`:'');
     document.getElementById('result').innerHTML=linkifyTickers(body);
     document.getElementById('resultOverlay').classList.add('on');
+    const _sb=document.querySelector('#resultOverlay .sheet-body'); if(_sb)_sb.scrollTop=0;
     st.textContent='완료 — 기록 탭에 저장됨 (모든 기기 동기화)';
     document.getElementById('url').value='';
   }catch(e){
@@ -919,6 +931,7 @@ async function runInsight(name){
     document.getElementById('resultMeta').innerHTML=`<b>🔍 관통 분석 — ${escapeHtml(name)}</b> (${parts.length}편)`;
     document.getElementById('result').innerHTML=body;
     document.getElementById('resultOverlay').classList.add('on');
+    const _sb=document.querySelector('#resultOverlay .sheet-body'); if(_sb)_sb.scrollTop=0;
   }catch(e){alert('관통 분석 실패: '+e.message); logBug('관통분석: '+e.message);}
   finally{btn.disabled=false; btn.textContent=orig;}
 }
@@ -954,6 +967,7 @@ async function runFlow(name){
     document.getElementById('resultMeta').innerHTML=`<b>📈 흐름 분석 — ${escapeHtml(name)}</b> (게시일순 ${parts.length}편)`;
     document.getElementById('result').innerHTML=body;
     document.getElementById('resultOverlay').classList.add('on');
+    const _sb=document.querySelector('#resultOverlay .sheet-body'); if(_sb)_sb.scrollTop=0;
   }catch(e){alert('흐름 분석 실패: '+e.message); logBug('흐름분석: '+e.message);}
   finally{btn.disabled=false; btn.textContent=orig;}
 }
@@ -1024,6 +1038,7 @@ async function openSummary(id){
   document.getElementById('resultMeta').innerHTML=`<b>${escapeHtml(x.제목)}</b> — ${escapeHtml(x.채널)} · ${escapeHtml(x.일시)}`;
   document.getElementById('result').innerHTML=linkifyTickers(x.html);
   document.getElementById('resultOverlay').classList.add('on');
+    const _sb=document.querySelector('#resultOverlay .sheet-body'); if(_sb)_sb.scrollTop=0;
 }
 function toggleTrash(){
   trashMode=!trashMode;
@@ -1221,6 +1236,7 @@ async function mktOne(kind,qid){
     document.getElementById('resultMeta').innerHTML=`${item.em} ${escapeHtml(item.label)} · 🌐 웹 검색`;
     document.getElementById('result').innerHTML=linkifyTickers(body);
     document.getElementById('resultOverlay').classList.add('on');
+    const _sb=document.querySelector('#resultOverlay .sheet-body'); if(_sb)_sb.scrollTop=0;
     st.textContent='완료 — 결과는 팝업에서 확인';
   }catch(e){st.textContent='오류: '+e.message; st.className='status err'; logBug('시장개별: '+e.message);}
 }
@@ -1249,6 +1265,7 @@ async function mktSynth(kind){
     document.getElementById('resultMeta').innerHTML=`${MKT_TITLE[kind]} 종합 · 🌐 웹 검색 ${items.length}개 항목`;
     document.getElementById('result').innerHTML=linkifyTickers(body);
     document.getElementById('resultOverlay').classList.add('on');
+    const _sb=document.querySelector('#resultOverlay .sheet-body'); if(_sb)_sb.scrollTop=0;
     st.textContent='종합 판단 완료 — 결과는 팝업에서 확인';
   }catch(e){st.textContent='오류: '+e.message; st.className='status err'; logBug('시장종합: '+e.message);}
 }
