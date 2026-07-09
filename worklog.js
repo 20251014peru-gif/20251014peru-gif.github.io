@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0709-1503";
+const APP_VERSION = "v44-0709-1518";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -9994,22 +9994,37 @@ async function githubUpload(token){
       return tnFloorOrder(a.floor)-tnFloorOrder(b.floor) || String(a.unit||'').localeCompare(String(b.unit||''),'ko',{numeric:true});
     });
     var sumDep=0, sumRent=0, sumMgmt=0;
+    /* 금액+평단가 셀 */
+    function moneyCell(val, py, color){
+      var pyTxt = tnMoney(py) ? '<div style="font-size:10px;color:#0f766e;font-weight:600">('+tnMoney(py)+')</div>' : '';
+      return '<td style="padding:5px 8px 5px 20px;text-align:right;font-weight:700;color:'+color+';white-space:nowrap;line-height:1.35">'+(tnMoney(val)||'-')+pyTxt+'</td>';
+    }
+    function dateCell(v, extra){
+      return '<td style="padding:5px 8px 5px 16px;text-align:center;color:#7a92a8;white-space:nowrap;font-size:12px">'+(v?esc(String(v)):'-')+(extra||'')+'</td>';
+    }
     var rows = sorted.map(function(t){
       sumDep+=Number(t.deposit)||0; sumRent+=Number(t.rent)||0; sumMgmt+=Number(t.mgmtFee)||0;
+      var dd = tnDday(t);
+      var renewTxt = (dd&&dd.renewed) ? esc(dd.effEnd) : '';
       return '<tr style="border-bottom:1px solid #eef2f7">'
-        + '<td style="padding:6px 8px;font-weight:800;color:#3f7cb8;white-space:nowrap">'+esc(String(t.floor||''))+'</td>'
-        + '<td style="padding:6px 8px;color:#7a92a8;white-space:nowrap">'+esc(String(t.unit||''))+'</td>'
-        + '<td style="padding:6px 14px 6px 8px;font-weight:600;color:#1a2f45;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||''))+'</td>'
-        + '<td style="padding:6px 8px 6px 22px;text-align:right;color:#0f766e;white-space:nowrap">'+esc(String(t.area||''))+'</td>'
-        + '<td style="padding:6px 8px 6px 22px;text-align:right;font-weight:700;color:#1a2f45;white-space:nowrap">'+(tnMoney(t.deposit)||'-')+'</td>'
-        + '<td style="padding:6px 8px 6px 22px;text-align:right;font-weight:700;color:#2563a8;white-space:nowrap">'+(tnMoney(t.rent)||'-')+'</td>'
-        + '<td style="padding:6px 8px 6px 22px;text-align:right;font-weight:700;color:#1a2f45;white-space:nowrap">'+(tnMoney(t.mgmtFee)||'-')+'</td>'
+        + '<td style="padding:5px 8px;font-weight:800;color:#3f7cb8;white-space:nowrap">'+esc(String(t.floor||''))+'</td>'
+        + '<td style="padding:5px 8px;color:#7a92a8;white-space:nowrap">'+esc(String(t.unit||''))+'</td>'
+        + '<td style="padding:5px 14px 5px 8px;font-weight:600;color:#1a2f45;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||''))+'</td>'
+        + '<td style="padding:5px 8px 5px 20px;text-align:right;color:#0f766e;white-space:nowrap">'+esc(String(t.area||''))+'</td>'
+        + moneyCell(t.deposit, t.depPy, '#1a2f45')
+        + moneyCell(t.rent, t.rentPy, '#2563a8')
+        + moneyCell(t.mgmtFee, t.mgmtPy, '#1a2f45')
+        + dateCell(t.moveInDate)
+        + dateCell(t.startDate)
+        + dateCell(t.endDate)
+        + '<td style="padding:5px 8px 5px 16px;text-align:center;white-space:nowrap;font-size:12px;color:'+(renewTxt?'#27ae60':'#c5cfda')+';font-weight:'+(renewTxt?'700':'400')+'">'+(renewTxt||'-')+'</td>'
       + '</tr>';
     }).join('');
+    var thDate = 'padding:8px 8px 8px 16px;text-align:center;color:#33567d;white-space:nowrap;font-size:12px';
     host.innerHTML =
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
         + '<span style="font-size:14px;font-weight:800;color:#33567d">📋 층별 요약</span>'
-        + '<span style="font-size:12px;color:#aab8c8">'+sorted.length+'개 · 전체 임차인</span>'
+        + '<span style="font-size:12px;color:#aab8c8">'+sorted.length+'개 · 전체 임차인 · 금액 아래 ()는 평단가</span>'
       + '</div>'
       + '<div style="overflow-x:auto;border:1.5px solid #e8f0fa;border-radius:12px">'
         + '<table style="width:auto;border-collapse:collapse;font-size:13px">'
@@ -10017,17 +10032,22 @@ async function githubUpload(token){
             + '<th style="padding:8px;text-align:left;color:#33567d;white-space:nowrap">층</th>'
             + '<th style="padding:8px;text-align:left;color:#33567d;white-space:nowrap">호수</th>'
             + '<th style="padding:8px;text-align:left;color:#33567d;white-space:nowrap">상호</th>'
-            + '<th style="padding:8px 8px 8px 22px;text-align:right;color:#33567d;white-space:nowrap">면적</th>'
-            + '<th style="padding:8px 8px 8px 22px;text-align:right;color:#33567d;white-space:nowrap">보증금</th>'
-            + '<th style="padding:8px 8px 8px 22px;text-align:right;color:#33567d;white-space:nowrap">월세</th>'
-            + '<th style="padding:8px 8px 8px 22px;text-align:right;color:#33567d;white-space:nowrap">관리비</th>'
+            + '<th style="padding:8px 8px 8px 20px;text-align:right;color:#33567d;white-space:nowrap">면적</th>'
+            + '<th style="padding:8px 8px 8px 20px;text-align:right;color:#33567d;white-space:nowrap">보증금</th>'
+            + '<th style="padding:8px 8px 8px 20px;text-align:right;color:#33567d;white-space:nowrap">월세</th>'
+            + '<th style="padding:8px 8px 8px 20px;text-align:right;color:#33567d;white-space:nowrap">관리비</th>'
+            + '<th style="'+thDate+'">최초입주</th>'
+            + '<th style="'+thDate+'">계약시작</th>'
+            + '<th style="'+thDate+'">만료</th>'
+            + '<th style="'+thDate+'">갱신</th>'
           + '</tr></thead>'
           + '<tbody>'+rows+'</tbody>'
           + '<tfoot><tr style="background:#eef5fd;border-top:2px solid #dbe6f4;font-weight:800">'
             + '<td colspan="4" style="padding:8px;color:#33567d">합계</td>'
-            + '<td style="padding:8px;text-align:right;color:#1a2f45;white-space:nowrap">'+sumDep.toLocaleString('ko-KR')+'</td>'
-            + '<td style="padding:8px;text-align:right;color:#2563a8;white-space:nowrap">'+sumRent.toLocaleString('ko-KR')+'</td>'
-            + '<td style="padding:8px;text-align:right;color:#1a2f45;white-space:nowrap">'+sumMgmt.toLocaleString('ko-KR')+'</td>'
+            + '<td style="padding:8px 8px 8px 20px;text-align:right;color:#1a2f45;white-space:nowrap">'+sumDep.toLocaleString('ko-KR')+'</td>'
+            + '<td style="padding:8px 8px 8px 20px;text-align:right;color:#2563a8;white-space:nowrap">'+sumRent.toLocaleString('ko-KR')+'</td>'
+            + '<td style="padding:8px 8px 8px 20px;text-align:right;color:#1a2f45;white-space:nowrap">'+sumMgmt.toLocaleString('ko-KR')+'</td>'
+            + '<td colspan="4"></td>'
           + '</tr></tfoot>'
         + '</table>'
       + '</div>';
@@ -10078,7 +10098,8 @@ async function githubUpload(token){
         + (t.area ? '<span style="font-size:14px;font-weight:800;color:#0f766e;background:#e6f5f2;padding:4px 11px;border-radius:9px;white-space:nowrap">📐 '+esc(String(t.area))+'</span>' : '')
       + '</div>'
       /* 계약기간 — 크게, 줄 꽉차게 (클릭 영역 포함) */
-      + ((t.startDate||t.endDate) ? '<div style="display:block;width:100%;font-size:14px;font-weight:800;color:#334;background:#eef2f8;border:1.5px solid #dde5f0;border-radius:8px;padding:8px 12px;margin-bottom:7px;box-sizing:border-box;text-align:center;letter-spacing:.3px">📅 '+esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?'))+(dd&&dd.renewed?' <span style="color:#27ae60">→ 갱신 '+esc(dd.effEnd)+'</span>':'')+'</div>' : '')
+      + ((t.startDate||t.endDate) ? '<div style="display:block;width:100%;font-size:14px;font-weight:800;color:#334;background:#eef2f8;border:1.5px solid #dde5f0;border-radius:8px;padding:8px 12px;margin-bottom:'+(t.moveInDate?'4px':'7px')+';box-sizing:border-box;text-align:center;letter-spacing:.3px">📅 '+esc(String(t.startDate||'?'))+' ~ '+esc(String(t.endDate||'?'))+(dd&&dd.renewed?' <span style="color:#27ae60">→ 갱신 '+esc(dd.effEnd)+'</span>':'')+'</div>' : '')
+      + (t.moveInDate ? '<div style="font-size:12px;font-weight:700;color:#8a6d3b;background:#fef8ed;border-radius:7px;padding:4px 10px;margin-bottom:7px;box-sizing:border-box;text-align:center">🔑 최초 입주 '+esc(String(t.moveInDate))+'</div>' : '')
       + '</div>'  /* ▲ tn-card-head 끝 */
       + (t.business ? '<div style="font-size:12px;color:#7a5cad;background:#f6f2fd;border-radius:7px;padding:3px 9px;margin-bottom:5px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box">🏷 '+esc(String(t.business))+'</div>' : '')
       + (contactLines.length ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:4px;line-height:1.7">'+contactLines.join('<br>')+'</div>' : '')
@@ -10380,6 +10401,8 @@ async function githubUpload(token){
           + '<div><label style="'+LBL+'">업종</label><input type="text" id="tnBizInp" style="'+INP+'"></div>'
           + '<div><label style="'+LBL+'">면적</label><input type="text" id="tnAreaInp" placeholder="예: 33평 (109㎡)" style="'+INP+'"></div>'
           + '<div><label style="'+LBL+'">납부일</label><input type="text" id="tnPayDayInp" placeholder="예: 25 (매월 25일)" style="'+INP+'"></div>'
+          + '<div><label style="'+LBL+'">🔑 최초 입주일</label><input type="date" id="tnMoveInInp" style="'+INP+'"></div>'
+          + '<div></div>'
           + '<div><label style="'+LBL+'">계약 시작</label><input type="date" id="tnStartInp" style="'+INP+'"></div>'
           + '<div><label style="'+LBL+'">계약 종료</label><input type="date" id="tnEndInp" style="'+INP+'"></div>'
           + '<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eaf6ef;border:1.5px solid #bfe3ce;border-radius:8px"><input type="checkbox" id="tnAutoRenew" style="width:18px;height:18px;cursor:pointer"><label for="tnAutoRenew" style="font-size:12px;font-weight:700;color:#27ae60;cursor:pointer;flex:1">🔄 자동갱신 (종료일 지나면 자동으로 1년 연장 표시)</label></div>'
@@ -10412,6 +10435,7 @@ async function githubUpload(token){
     document.getElementById('tnBizInp').value = d.business||'';
     document.getElementById('tnAreaInp').value = d.area||'';
     document.getElementById('tnPayDayInp').value = d.payDay||'';
+    document.getElementById('tnMoveInInp').value = d.moveInDate||'';
     document.getElementById('tnStartInp').value = d.startDate||'';
     document.getElementById('tnEndInp').value = d.endDate||'';
     document.getElementById('tnDepositInp').value = tnMoney(d.deposit);
@@ -10506,6 +10530,7 @@ async function githubUpload(token){
           business: document.getElementById('tnBizInp').value.trim(),
           area: document.getElementById('tnAreaInp').value.trim(),
           payDay: document.getElementById('tnPayDayInp').value.trim(),
+          moveInDate: document.getElementById('tnMoveInInp').value,
           startDate: document.getElementById('tnStartInp').value,
           endDate: document.getElementById('tnEndInp').value,
           autoRenew: document.getElementById('tnAutoRenew').checked,
