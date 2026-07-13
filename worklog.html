@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0713-1054</title>
+  <title>업무일지 v44-0713-1343</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0713-1054</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0713-1343</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2924,7 +2924,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260713t1054"></script>
+<script src="worklog.js?v=44-20260713t1343"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5628,7 +5628,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   };
 
 
-  // ═══ [임시:옛캘린더정리 시작] v44-0713-1054 ═══════════════════════════
+  // ═══ [임시:옛캘린더정리 시작] v44-0713-1343 ═══════════════════════════
   // 예전에 구글 캘린더에 쌓인 예정·업무 이벤트를 일괄 삭제 (앱이 등록한 것만).
   // 이제 예정·업무는 Tasks로만 동기화되므로, 캘린더에 남은 옛 이벤트를 비운다.
   // ※ 정리 완료 후 이 블록과 버튼은 제거 예정 (일회성).
@@ -8821,7 +8821,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0713-1054';
+    if(el) el.textContent = 'v44-0713-1343';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -9665,10 +9665,12 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var w=info.workObj||{};
       var expType=info.expType||'개인비용';
       var isPersonal=expType==='개인비용';
+      var isVoucher=expType==='전표';
       _linkedWorkId=info.workId||null;
       _editId=null; _matItems=[]; _mealItems=[]; _wasteItems=[]; _selPurpose=null;
-      _expType=isPersonal?'개인지출':'세금계산서'; _expSubType=isPersonal?'':'공사성';
-      if(isPersonal) _selPurpose='자재구매';
+      if(isPersonal){ _expType='개인지출'; _expSubType=''; _selPurpose='자재구매'; }
+      else if(isVoucher){ _expType='전표'; _expSubType=''; }
+      else { _expType='세금계산서'; _expSubType='공사성'; }
       var ts=g('expV2TitleSpan'); if(ts) ts.textContent='지출 등록';
       var delBtn=g('expV2Del'); if(delBtn) delBtn.style.display='none';
       var dEl=g('expV2Date'); if(dEl) dEl.value=w.date||(kstNow().toISOString().slice(0,10));
@@ -10557,7 +10559,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0713-1054 로드');
+  console.log('[expV2] v44-0713-1343 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -12715,7 +12717,7 @@ window.makeModalDraggable = function(modal){
 </script>
   
 <script>
-/* ===== PWA Service Worker v44-0713-1054 (network-first, 자동 갱신) ===== */
+/* ===== PWA Service Worker v44-0713-1343 (network-first, 자동 갱신) ===== */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     /* 1) 기존에 설치된 낡은 SW가 옛 버전을 붙들고 있으면 캐시 전부 비우고 새 SW로 교체 */

@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0713-1054";
+const APP_VERSION = "v44-0713-1343";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -239,7 +239,7 @@ const SCHEMA={
   ],
   // 외주·비용 전용 필드
   work_full:[
-    {k:"expType",label:"지출종류",type:"select",opts:["개인비용","후불청구"]},
+    {k:"expType",label:"지출종류",type:"select",opts:["개인비용","전표","후불청구"]},
     {k:"cost",label:"금액 (원)",type:"number"},
   ],
   // 외주 토글 추가 필드
@@ -2085,7 +2085,7 @@ function renderWorkModal(data, mode){
       <div>
         <label style="${S.lbl.replace('#94a3b8',isPost?'#c2410c':'#1d4ed8')}">지출종류</label>
         <select id="m-expType" style="${S.sel};background:transparent;border-color:${isPost?"#fdba74":"#bfdbfe"}">
-          ${["개인비용","후불청구"].map(o=>`<option${expType===o?" selected":""}>${o}</option>`).join("")}
+          ${["개인비용","전표","후불청구"].map(o=>`<option${expType===o?" selected":""}>${o}</option>`).join("")}
         </select>
       </div>
       <div>
@@ -2636,7 +2636,7 @@ function _doSaveWorkEntry(){
 
   $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
   // 외주모드에서 비용 있으면 지출 모달 연동
-  if(mode==="full" && (obj.expType==="개인비용"||obj.expType==="후불청구")){
+  if(mode==="full" && (obj.expType==="개인비용"||obj.expType==="후불청구"||obj.expType==="전표")){
     const alreadyLinked = mId && typeof entries!=="undefined"
       && entries.some(e=>e.kind==="expense" && e.workId===savedId);
     if(!alreadyLinked){
@@ -2949,6 +2949,7 @@ function openEditor(kind,id){
         modal.classList.remove("exp-mode-personal","exp-mode-tax","exp-mode-none");
         if(expType==="개인비용") modal.classList.add("exp-mode-personal");
         else if(expType==="후불청구") modal.classList.add("exp-mode-tax");
+        else if(expType==="전표") modal.classList.add("exp-mode-tax");
         else modal.classList.add("exp-mode-none");
       }
       // 금액 필드 표시/숨김 + 라벨 변경
@@ -2956,7 +2957,7 @@ function openEditor(kind,id){
       if(costEl){
         const costField = costEl.closest(".field");
         if(costField){
-          const isActive = (expType==="개인비용"||expType==="후불청구");
+          const isActive = (expType==="개인비용"||expType==="후불청구"||expType==="전표");
           costField.style.display = isActive ? "" : "none";
           const lbl = costField.querySelector("label");
           if(lbl) lbl.textContent = expType==="후불청구" ? "💰 계약금액 (원)" : "💰 금액 (원)";
@@ -2966,7 +2967,7 @@ function openEditor(kind,id){
     // v44: 자재 자동계산 (개인비용 모드일 때만)
     const calcWorkCost = ()=>{
       const expType = ($("m-expType")||{}).value||"없음";
-      if(expType==="후불청구") return; // 후불은 수동 입력
+      if(expType==="후불청구"||expType==="전표") return; // 후불·전표는 수동 입력
       const qty = Number(($("m-qty")||{}).value)||0;
       const up  = Number(($("m-unitPrice")||{}).value)||0;
       const del = Number(($("m-deliveryFee")||{}).value)||0;
@@ -3699,7 +3700,7 @@ $("mSave").addEventListener("click",async ()=>{
   let _v44OpenExpenseAfter = null;
   if(mKind==="work"){
     const expType = obj.expType||"없음";
-    if(expType==="개인비용" || expType==="후불청구"){
+    if(expType==="개인비용" || expType==="후불청구" || expType==="전표"){
       // 수정 시: 이미 연결된 지출이 있으면 건너뜀 (중복 방지)
       const alreadyLinked = mId && typeof entries!=="undefined"
         && entries.some(e=>e.kind==="expense" && e.workId===savedId);
@@ -4357,7 +4358,7 @@ function renderMonthView(){
   const work={}, vac={}, other={}, sched={}, cleaning={}, expense={};
   entries.forEach(e=>{
     if(e.kind==="work"&&e.date){ (work[e.date]=work[e.date]||[]).push(e); }
-    else if(e.kind==="vacation"){ datesBetween(e.start,e.end).forEach(d=>{ (vac[d]=vac[d]||[]).push(e.name||"휴가"); }); }
+    else if(e.kind==="vacation"){ datesBetween(e.start,e.end).forEach(d=>{ (vac[d]=vac[d]||[]).push((e.name||"휴가")+(e.vtype?" "+e.vtype:"")+(e.note?" · "+e.note:"")); }); }
     else if(e.kind==="schedule"&&e.date){ (sched[e.date]=sched[e.date]||[]).push(e); }
     else if(e.kind==="cleaning"&&e.date){ (cleaning[e.date]=cleaning[e.date]||[]).push(e); }
     else if(e.kind==="expense"&&e.date){ (expense[e.date]=expense[e.date]||[]).push(e); }
@@ -4664,7 +4665,7 @@ function buildCalendarPrint(){
   const work={}, vac={}, other={};
   entries.forEach(e=>{
     if(e.kind==="work"&&e.date){ (work[e.date]=work[e.date]||[]).push(e); }
-    else if(e.kind==="vacation"){ datesBetween(e.start,e.end).forEach(d=>{ (vac[d]=vac[d]||[]).push(e.name||"휴가"); }); }
+    else if(e.kind==="vacation"){ datesBetween(e.start,e.end).forEach(d=>{ (vac[d]=vac[d]||[]).push((e.name||"휴가")+(e.vtype?" "+e.vtype:"")+(e.note?" · "+e.note:"")); }); }
     else if(["plan","memo","call","meeting","deliver"].includes(e.kind)&&e.date){ (other[e.date]=other[e.date]||[]).push(e); }
   });
   const first=new Date(calY,calM,1).getDay(), days=new Date(calY,calM+1,0).getDate();
