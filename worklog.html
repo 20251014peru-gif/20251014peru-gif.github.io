@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0713-1025</title>
+  <title>업무일지 v44-0713-1043</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0713-1025</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0713-1043</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2758,6 +2758,10 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         </div>
         <div id="expV2MatList"></div>
         <button type="button" id="expV2MatAdd" style="width:100%;height:32px;border:1.5px dashed #93c5fd;border-radius:8px;background:transparent;font-size:13px;font-weight:600;color:#3f7cb8;cursor:pointer;font-family:inherit;margin-top:4px">➕ 품목 추가</button>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;padding:7px 10px;background:#eaf2ff;border-radius:8px">
+          <label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#185FA5;cursor:pointer"><input type="checkbox" id="expV2MatUnitVat" style="width:15px;height:15px;cursor:pointer">단가 부가세 포함(10%)</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#185FA5;cursor:pointer"><input type="checkbox" id="expV2MatShipVat" style="width:15px;height:15px;cursor:pointer">택배비 부가세 포함(10%)</label>
+        </div>
         <div style="display:flex;justify-content:space-between;margin-top:8px;padding:6px 10px;background:#fff;border-radius:8px;border:1px solid #93c5fd">
           <span style="font-size:12px;font-weight:700;color:#185FA5">합계</span>
           <span id="expV2MatTotal" style="font-size:16px;font-weight:800;color:#0C447C">0원</span>
@@ -2920,7 +2924,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260713t1025"></script>
+<script src="worklog.js?v=44-20260713t1043"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5624,7 +5628,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   };
 
 
-  // ═══ [임시:옛캘린더정리 시작] v44-0713-1025 ═══════════════════════════
+  // ═══ [임시:옛캘린더정리 시작] v44-0713-1043 ═══════════════════════════
   // 예전에 구글 캘린더에 쌓인 예정·업무 이벤트를 일괄 삭제 (앱이 등록한 것만).
   // 이제 예정·업무는 Tasks로만 동기화되므로, 캘린더에 남은 옛 이벤트를 비운다.
   // ※ 정리 완료 후 이 블록과 버튼은 제거 예정 (일회성).
@@ -8817,7 +8821,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0713-1025';
+    if(el) el.textContent = 'v44-0713-1043';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -8844,6 +8848,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   function saveExpTpls(a){ try{ localStorage.setItem(EXP_TPL_LS, JSON.stringify(a)); }catch(e){} }
   var _selPurpose = null; // 단일선택: 문자열 or null
   var _matItems = [], _mealItems = [], _wasteItems = [];
+  var _matAuto=false;
 
   var PURPOSE_LS = 'wl_exp_purposes_v44';
   var DEFAULT_PURPOSES = ['자재구매','소모품','식대','폐기물 처리','기타'];
@@ -8878,18 +8883,29 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       del.textContent='🗑'; del.type='button';
       del.style.cssText='border:none;background:none;font-size:14px;cursor:pointer;padding:0';
       n.addEventListener('input',function(){ _matItems[i].name=n.value; });
-      q.addEventListener('input',function(){ _matItems[i].qty=parseFloat(q.value)||0; calcMatTotal(); });
-      p.addEventListener('input',function(){ _matItems[i].price=parseFloat(p.value)||0; calcMatTotal(); });
-      d.addEventListener('input',function(){ _matItems[i].delivery=parseFloat(d.value)||0; calcMatTotal(); });
-      (function(idx){ del.addEventListener('click',function(){ _matItems.splice(idx,1); renderMatList(); calcMatTotal(); }); })(i);
+      q.addEventListener('input',function(){ _matItems[i].qty=parseFloat(q.value)||0; _matAuto=true; calcMatTotal(); });
+      p.addEventListener('input',function(){ _matItems[i].price=parseFloat(p.value)||0; _matAuto=true; calcMatTotal(); });
+      d.addEventListener('input',function(){ _matItems[i].delivery=parseFloat(d.value)||0; _matAuto=true; calcMatTotal(); });
+      (function(idx){ del.addEventListener('click',function(){ _matItems.splice(idx,1); _matAuto=true; renderMatList(); calcMatTotal(); }); })(i);
       row.appendChild(n); row.appendChild(q); row.appendChild(p); row.appendChild(d); row.appendChild(del);
       list.appendChild(row);
     });
   }
   function calcMatTotal(){
-    var t=_matItems.reduce(function(s,it){ return s+((it.qty||0)*(it.price||0))+(it.delivery||0); },0);
+    var goods=_matItems.reduce(function(s,it){ return s+((it.qty||0)*(it.price||0)); },0);
+    var ship=_matItems.reduce(function(s,it){ return s+(it.delivery||0); },0);
+    var t=goods+ship;
     var el=g('expV2MatTotal'); if(el) el.textContent=fmt(t)+'원';
-    var a=g('expV2Amount'); if(a&&!a._manual&&t>0) a.value=t;
+    if(_matAuto && _matItems.length>0){
+      var uv=g('expV2MatUnitVat'), sv=g('expV2MatShipVat');
+      var unitInc=uv?uv.checked:false, shipInc=sv?sv.checked:false;
+      var gSup=unitInc?Math.round(goods/1.1):goods; var gVat=unitInc?(goods-gSup):0;
+      var sSup=shipInc?Math.round(ship/1.1):ship;  var sVat=shipInc?(ship-sSup):0;
+      var supply=gSup+sSup, tax=gVat+sVat, total=supply+tax;
+      var sEl=g('expV2SupplyAmt'); if(sEl) sEl.value=supply||'';
+      var tEl=g('expV2TaxAmt');    if(tEl) tEl.value=tax||'';
+      var aEl=g('expV2Amount');    if(aEl){ aEl.value=total||''; aEl._manual=false; }
+    }
   }
 
   /* ── 식대 ── */
@@ -9177,6 +9193,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(aEl){ aEl.value=en?(en.amount||0):0; aEl._manual=false; aEl.addEventListener('input',function(){ aEl._manual=true; }); }
     var sAmtEl=g('expV2SupplyAmt'); if(sAmtEl) sAmtEl.value=en?(en.supplyAmt||''):'';
     var tAmtEl=g('expV2TaxAmt');   if(tAmtEl) tAmtEl.value=en?(en.taxAmt||''):'';
+    var uvEl=g('expV2MatUnitVat'); if(uvEl) uvEl.checked = en? !!en.matUnitVat : true;
+    var svEl=g('expV2MatShipVat'); if(svEl) svEl.checked = en? !!en.matShipVat : true;
+    _matAuto = en ? false : true;
     var jpEl=g('expV2IsJeonpyo'); if(jpEl) jpEl.checked=en?!!(en.isJeonpyo):false;
     var isEl=g('expV2IsIssued');  if(isEl) isEl.checked=en?!!(en.isIssued):false;
     if(en){
@@ -9281,6 +9300,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       vendor:vendor,memo:memo,purpose:_selPurpose,purposes:_selPurpose?[_selPurpose]:[],
       isCost:isCost,isJeonpyo:isJeonpyo,isIssued:isIssued,expSubType:_expSubType||'',
       matItems:_matItems.slice(),mealItems:_mealItems.slice(),wasteItems:_wasteItems.slice(),
+      matUnitVat:(g('expV2MatUnitVat')||{}).checked||false,matShipVat:(g('expV2MatShipVat')||{}).checked||false,
       /* 🔗 scan-app 참조 */
       scanRefs:(window._expV2ScanRefs||[]).map(function(r){return {type:r.type,id:r.id};})};
     var savedId = _editId;
@@ -9620,7 +9640,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     document.querySelectorAll('.expV2TypeBtn').forEach(function(btn){
       if(!btn._b){btn._b=true;btn.addEventListener('click',function(){_expType=btn.dataset.etype;updateTypeBtns();});}
     });
-    var ma=g('expV2MatAdd');   if(ma&&!ma._b){ma._b=true;ma.addEventListener('click',function(){_matItems.push({name:'',qty:'',price:'',delivery:''});renderMatList();var r=g('expV2MatList').querySelectorAll('input[type=text]');if(r.length)r[r.length-1].focus();});}
+    var ma=g('expV2MatAdd');   if(ma&&!ma._b){ma._b=true;ma.addEventListener('click',function(){_matAuto=true;_matItems.push({name:'',qty:'',price:'',delivery:''});renderMatList();var r=g('expV2MatList').querySelectorAll('input[type=text]');if(r.length)r[r.length-1].focus();});}
+    var muv=g('expV2MatUnitVat'); if(muv&&!muv._b){muv._b=true;muv.addEventListener('change',function(){_matAuto=true;calcMatTotal();});}
+    var msv=g('expV2MatShipVat'); if(msv&&!msv._b){msv._b=true;msv.addEventListener('change',function(){_matAuto=true;calcMatTotal();});}
     var me=g('expV2MealAdd');  if(me&&!me._b){me._b=true;me.addEventListener('click',function(){_mealItems.push({menu:'',people:'',price:''});renderMealList();var r=g('expV2MealList').querySelectorAll('input[type=text]');if(r.length)r[r.length-1].focus();});}
     var wa=g('expV2WasteAdd'); if(wa&&!wa._b){wa._b=true;wa.addEventListener('click',function(){_wasteItems.push({desc:'',amount:''});renderWasteList();});}
     // 필터 이벤트
@@ -9656,6 +9678,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var aEl=g('expV2Amount'); if(aEl){aEl.value='';aEl._manual=false;}
       var sEl=g('expV2SupplyAmt'); if(sEl) sEl.value='';
       var tEl2=g('expV2TaxAmt'); if(tEl2){ tEl2.value=''; tEl2._manual=false; }
+      var uvEl2=g('expV2MatUnitVat'); if(uvEl2) uvEl2.checked=true;
+      var svEl2=g('expV2MatShipVat'); if(svEl2) svEl2.checked=true;
+      _matAuto=true;
       updateTypeBtns();
       renderChips(); updateAreas();
       renderMatList(); calcMatTotal();
@@ -10532,7 +10557,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0713-1025 로드');
+  console.log('[expV2] v44-0713-1043 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -12690,7 +12715,7 @@ window.makeModalDraggable = function(modal){
 </script>
   
 <script>
-/* ===== PWA Service Worker v44-0713-1025 (network-first, 자동 갱신) ===== */
+/* ===== PWA Service Worker v44-0713-1043 (network-first, 자동 갱신) ===== */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     /* 1) 기존에 설치된 낡은 SW가 옛 버전을 붙들고 있으면 캐시 전부 비우고 새 SW로 교체 */
