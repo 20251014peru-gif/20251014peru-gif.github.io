@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0710-1821";
+const APP_VERSION = "v44-0713-1004";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -11092,11 +11092,12 @@ async function githubUpload(token){
       if(!badge){
         badge = document.createElement('div');
         badge.className = 'rc-fab-badge';
-        badge.style.cssText = 'position:absolute;bottom:-5px;left:-8px;min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;background:#e74c3c;color:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;box-shadow:0 2px 8px rgba(231,76,60,.55);border:2px solid #fff;z-index:11;pointer-events:none;line-height:1';
+        badge.style.cssText = 'position:absolute;bottom:-5px;left:-8px;min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;background:#e74c3c;color:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;box-shadow:0 2px 8px rgba(231,76,60,.55);border:2px solid #fff;z-index:11;pointer-events:auto;cursor:pointer;line-height:1';
         fab.appendChild(badge);
+        badge.addEventListener('click', function(ev){ ev.stopPropagation(); ev.preventDefault(); try{ openRecurManage(); }catch(e){} });
       }
       badge.textContent = urgent>99 ? '99+' : String(urgent);
-      badge.title = '기한 임박·지난 반복업무 '+urgent+'건';
+      badge.title = '기한 임박·지난 반복업무 '+urgent+'건 — 클릭하면 반복업무 관리 열기';
     }catch(e){ console.warn('[반복업무 FAB배지]', e); }
   }
 
