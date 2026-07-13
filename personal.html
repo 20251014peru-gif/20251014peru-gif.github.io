@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-<title>개인일지 v20260713-1639</title>
+<title>개인일지 v20260713-1655</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -148,6 +148,9 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 .view-label{font-size:12px;font-weight:700;color:var(--ink-soft);min-width:64px;flex-shrink:0}
 .view-val{color:var(--ink);word-break:break-word}
 .view-divider{border:none;border-top:1.5px solid var(--line);margin:10px 0}
+/* 메모 팝업: 화면 중앙 창 (업무일지 스타일) */
+#memoViewOverlay,#memoEditOverlay{align-items:center!important;justify-content:center!important;padding:16px;box-sizing:border-box}
+#memoViewOverlay .view-modal,#memoEditOverlay .modal{border-radius:18px!important;max-width:560px;width:100%;max-height:85vh;box-shadow:0 12px 40px rgba(0,0,0,.28)}
 
 /* ===== 빈 상태 ===== */
 .v43-empty{text-align:center;padding:48px 20px;color:var(--ink-faint);font-size:15px}
@@ -465,7 +468,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
     <div class="head-row">
       <div class="brand">
         <h1>개인일지</h1>
-        <span class="sub">달님의 개인 기록 <b style="color:#9aa7b4" id="verBadge">v20260713-1639</b></span>
+        <span class="sub">달님의 개인 기록 <b style="color:#9aa7b4" id="verBadge">v20260713-1655</b></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow-x:auto">
         <span class="status"><span class="dot" id="fbDot"></span><span id="fbText">연결 중…</span></span>
@@ -5301,7 +5304,7 @@ console.log('[개인일지] 로드 완료');
   const el = document.getElementById('verBadge');
   if(!el) return;
   // 빌드(배포) 버전 고정 표시 — 이 값이 화면에 보이면 새 파일이 반영된 것
-  el.textContent = 'v20260713-1639';
+  el.textContent = 'v20260713-1655';
 })();
 
 /* ════════════════════════════════════════════════════════
