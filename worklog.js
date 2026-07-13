@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0713-1004";
+const APP_VERSION = "v44-0713-1009";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -10952,16 +10952,36 @@ async function githubUpload(token){
     var listHost = document.getElementById('rcMgList');
     if(listHost){
       listHost.innerHTML = all.map(function(t){
-        return '<div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border:1.5px solid #e8f0fa;border-radius:10px;margin-bottom:6px;background:#fff">'
+        var done = rcIsDone(t);
+        return '<div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border:1.5px solid #e8f0fa;border-radius:10px;margin-bottom:6px;background:#fff;'+(done?'opacity:.6':'')+'">'
+          + '<input type="checkbox" class="rc-mgchk" data-id="'+esc(String(t.id))+'" '+(done?'checked':'')+' title="이번 달 완료 체크" style="width:19px;height:19px;flex-shrink:0;cursor:pointer">'
           + '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:'+(RC_CAT_BG[t.cat]||RC_CAT_BG['기타'])+';color:'+(RC_CAT_FG[t.cat]||RC_CAT_FG['기타'])+';flex-shrink:0">'+esc(String(t.cat||'기타'))+'</span>'
           + '<div style="flex:1;min-width:0">'
-            + '<div style="font-size:14px;font-weight:600;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(t.name||''))+'</div>'
+            + '<div style="font-size:14px;font-weight:600;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(done?'text-decoration:line-through;color:#7a92a8':'')+'">'+esc(String(t.name||''))+'</div>'
             + '<div style="font-size:11px;color:#aab8c8">'+(t.day?'매월 '+esc(String(t.day))+'일':'기한 미지정')+(rcMoney(t.amt)?' · '+rcMoney(t.amt)+'원':'')+'</div>'
           + '</div>'
           + '<button class="rc-edit" data-id="'+esc(String(t.id))+'" type="button" style="height:30px;padding:0 11px;border:1.5px solid #dbe6f4;border-radius:8px;background:#f7faff;color:#3f7cb8;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0">✏️ 수정</button>'
           + '<button class="rc-del" data-id="'+esc(String(t.id))+'" type="button" style="height:30px;padding:0 11px;border:1.5px solid #fde8e8;border-radius:8px;background:#fff;color:#e74c3c;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0">🗑</button>'
           + '</div>';
       }).join('');
+      listHost.querySelectorAll('.rc-mgchk').forEach(function(cb){
+        cb.addEventListener('change', function(){
+          try{
+            var id=cb.getAttribute('data-id');
+            var t=rcList().find(function(x){ return x.id===id; });
+            if(!t) return;
+            var mon=rcCurMonth();
+            var doneMap=Object.assign({}, t.done||{});
+            var atMap=Object.assign({}, t.doneAt||{});
+            if(cb.checked){ doneMap[mon]=true; atMap[mon]=todayStr().slice(5); }
+            else { delete doneMap[mon]; delete atMap[mon]; }
+            updateRecord(id, {done:doneMap, doneAt:atMap, updatedAt:Date.now()});
+            renderRcManageList(sheet);
+            if(typeof renderRecurWidget==='function') renderRecurWidget();
+            toast(cb.checked ? '✅ 완료 처리됨' : '완료 해제됨');
+          }catch(err){ console.error('[반복업무 관리 체크]', err); toast('오류: '+(err.message||err)); }
+        });
+      });
       listHost.querySelectorAll('.rc-edit').forEach(function(b){
         b.addEventListener('click', function(){
           var t = rcList().find(function(x){ return x.id===b.getAttribute('data-id'); });
