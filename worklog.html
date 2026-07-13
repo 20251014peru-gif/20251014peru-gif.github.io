@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0709-1918</title>
+  <title>업무일지 v44-0710-1821</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0709-1918</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0710-1821</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -1268,6 +1268,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button class="nav-btn" onclick="window.gcalSyncAll&&window.gcalSyncAll()" style="background:#34a853;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="전체 구글캘린더 동기화">📅 전체동기화</button>
         <button class="nav-btn" onclick="window.gtaskCleanDuplicates&&window.gtaskCleanDuplicates()" style="background:#ea8600;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 태스크 중복 정리">🧹 태스크중복정리</button>
         <button class="nav-btn" onclick="window.gcalCleanDuplicates&&window.gcalCleanDuplicates()" style="background:#d93025;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 캘린더 중복 정리">🧹 캘린더중복정리</button>
+        <!-- 임시:옛캘린더정리 버튼 시작 (정리 완료 후 제거) -->
+        <button class="nav-btn" id="btnPurgeOldCal" onclick="window.gcalPurgeOldWorkSchedule&&window.gcalPurgeOldWorkSchedule()" style="background:#5f6368;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="예전에 캘린더에 쌓인 예정·업무 이벤트 일괄 삭제 (일회성)">🗑️ 옛예정·업무비우기</button>
+        <!-- 임시:옛캘린더정리 버튼 끝 -->
         <button class="nav-btn" onclick="window.gcalPullAll&&window.gcalPullAll(false)" style="background:#1a73e8;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 캘린더에서 새 예정 가져오기">📥 구글←가져오기</button>
         <button class="nav-btn nav-back" id="btnBack" title="이전 화면" disabled>↶ 뒤로</button>
         <a class="nav-btn" href="staff.html" target="_blank" style="background:#6366f1;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">👥 직원</a>
@@ -2917,7 +2920,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260709t1918"></script>
+<script src="worklog.js?v=44-20260710t1821"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5619,6 +5622,92 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     toast('✅ 캘린더 중복 정리 완료! '+done+'개 삭제'+(fail?', '+fail+'개 실패':''));
     if(typeof renderAll==='function') setTimeout(renderAll, 500);
   };
+
+
+  // ═══ [임시:옛캘린더정리 시작] v44-0710-1821 ═══════════════════════════
+  // 예전에 구글 캘린더에 쌓인 예정·업무 이벤트를 일괄 삭제 (앱이 등록한 것만).
+  // 이제 예정·업무는 Tasks로만 동기화되므로, 캘린더에 남은 옛 이벤트를 비운다.
+  // ※ 정리 완료 후 이 블록과 버튼은 제거 예정 (일회성).
+  window.gcalPurgeOldWorkSchedule = async function(){
+    if(!accessToken){ if(typeof signIn==='function') signIn(); toast('먼저 구글 로그인 해주세요'); return; }
+    toast('🔍 옛 예정·업무 캘린더 이벤트 확인 중...');
+    var now = new Date();
+    var timeMin = new Date(now); timeMin.setFullYear(timeMin.getFullYear()-3);
+    var timeMax = new Date(now); timeMax.setFullYear(timeMax.getFullYear()+3);
+
+    // 대상: work(개인 기본 캘린더), schedule(전용 캘린더)
+    var jobs = [
+      { calId: GCAL_IDS.work,     label: '업무 캘린더(개인)', legacy: /^\s*\[업무\]/ },
+      { calId: GCAL_IDS.schedule, label: '예정 캘린더',       legacy: null }
+    ];
+
+    var toDelete = [];   // {calId, eventId}
+    var counts = {};
+    for(var jI=0; jI<jobs.length; jI++){
+      var job = jobs[jI];
+      if(!job.calId){ continue; }
+      counts[job.label] = 0;
+      var events = [], pageToken = null, guard = 0;
+      try{
+        do{
+          var url = 'https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(job.calId)+'/events'
+            + '?timeMin='+timeMin.toISOString()+'&timeMax='+timeMax.toISOString()
+            + '&singleEvents=true&maxResults=250'
+            + '&fields=items(id,summary,status,extendedProperties),nextPageToken'
+            + (pageToken ? '&pageToken='+pageToken : '');
+          var r = await fetch(url, { headers:{ 'Authorization':'Bearer '+accessToken } });
+          var d = await r.json();
+          if(d.error){ toast('조회 실패('+job.label+'): '+(d.error.message||'')); break; }
+          if(d.items) events = events.concat(d.items);
+          pageToken = d.nextPageToken || null; guard++;
+        } while(pageToken && guard<20);
+      }catch(e){ toast('조회 오류('+job.label+'): '+e); continue; }
+
+      for(var eI=0; eI<events.length; eI++){
+        var ev = events[eI];
+        if(ev.status==='cancelled') continue;
+        var ep = (ev.extendedProperties && ev.extendedProperties.private) || {};
+        var isApp = (ep.wl_kind==='work' || ep.wl_kind==='schedule');
+        // 레거시(확장속성 없던 옛 이벤트): 개인 캘린더에서 [업무] 접두어만 추가 매칭
+        if(!isApp && job.legacy && ev.summary && job.legacy.test(ev.summary)) isApp = true;
+        if(isApp){ toDelete.push({ calId: job.calId, eventId: ev.id }); counts[job.label]++; }
+      }
+    }
+
+    if(!toDelete.length){ toast('✅ 지울 옛 예정·업무 이벤트가 없어요'); return; }
+
+    var lines = [];
+    for(var lbl in counts){ if(counts[lbl]>0) lines.push('· '+lbl+': '+counts[lbl]+'개'); }
+    var msg = '구글 캘린더에서 앱이 등록한 예정·업무 이벤트를 삭제합니다.\n\n'
+      + lines.join('\n') + '\n\n총 '+toDelete.length+'개.\n'
+      + '개인 일정(앱 표시가 없는 것)은 건드리지 않습니다.\n\n진행할까요?';
+    if(!confirm(msg)) return;
+
+    var done=0, fail=0;
+    for(var k=0; k<toDelete.length; k++){
+      try{
+        var dr = await fetch('https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(toDelete[k].calId)+'/events/'+toDelete[k].eventId, {
+          method:'DELETE', headers:{ 'Authorization':'Bearer '+accessToken }
+        });
+        if(dr.ok || dr.status===204 || dr.status===410){ done++; }
+        else if(dr.status===401){ accessToken=null; localStorage.removeItem(GCAL_LS); if(typeof updateGCalBtn==='function') updateGCalBtn('disconnected'); toast('🔑 로그인이 만료됐어요. 다시 연동 후 시도하세요',5000); break; }
+        else { fail++; }
+      }catch(e){ fail++; }
+      if(k%5===0) toast('삭제 중... '+(k+1)+'/'+toDelete.length);
+      await new Promise(function(res){ setTimeout(res, 130); });
+    }
+    // 로컬 기록의 gcalEventId 정리 → 예정·업무는 Tasks 전용이므로 캘린더 재생성 방지
+    try{
+      if(typeof entries!=='undefined' && typeof updateRecord==='function'){
+        entries.forEach(function(en){
+          if((en.kind==='work'||en.kind==='schedule') && en.gcalEventId){ updateRecord(en.id, {gcalEventId:null}); }
+        });
+      }
+    }catch(e){}
+    toast('✅ 옛 예정·업무 캘린더 정리 완료! '+done+'개 삭제'+(fail?', '+fail+'개 실패':''), 5000);
+    if(typeof renderAll==='function') setTimeout(renderAll, 500);
+  };
+  // ═══ [임시:옛캘린더정리 끝] ═══════════════════════════════════
 
   // ── 전체 일괄 동기화 ────────────────────────────────────
   window.gcalSyncAll = async function(){
@@ -8728,7 +8817,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 (function(){
   function setVer(){
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0709-1918';
+    if(el) el.textContent = 'v44-0710-1821';
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10443,7 +10532,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0709-1918 로드');
+  console.log('[expV2] v44-0710-1821 로드');
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -12601,7 +12690,7 @@ window.makeModalDraggable = function(modal){
 </script>
   
 <script>
-/* ===== PWA Service Worker v44-0709-1918 (network-first, 자동 갱신) ===== */
+/* ===== PWA Service Worker v44-0710-1821 (network-first, 자동 갱신) ===== */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     /* 1) 기존에 설치된 낡은 SW가 옛 버전을 붙들고 있으면 캐시 전부 비우고 새 SW로 교체 */
