@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-<title>개인일지 v20260623-1510</title>
+<title>개인일지 v20260713-1639</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -429,7 +429,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
     <div id="lockMsg" style="font-size:13px;color:#ff8888;min-height:18px;margin-top:10px"></div>
     <div style="margin-top:16px">
       <button id="emergencyUnlock"
-        style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.5);font-size:11px;cursor:pointer;font-family:inherit">PIN 초기화 후 입력 (102800)</button>
+        style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.5);font-size:11px;cursor:pointer;font-family:inherit">PIN을 잊으셨나요?</button>
     </div>
   </div>
 </div>
@@ -465,7 +465,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
     <div class="head-row">
       <div class="brand">
         <h1>개인일지</h1>
-        <span class="sub">달님의 개인 기록 <b style="color:#9aa7b4" id="verBadge">v20260623-1510</b></span>
+        <span class="sub">달님의 개인 기록 <b style="color:#9aa7b4" id="verBadge">v20260713-1639</b></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow-x:auto">
         <span class="status"><span class="dot" id="fbDot"></span><span id="fbText">연결 중…</span></span>
@@ -826,6 +826,50 @@ main.wrap{padding-bottom:100px;padding-top:12px}
       <button class="btn btn-primary btn-flex" id="viewEdit">✏️ 수정</button>
       <button class="btn btn-ghost" id="viewClose2">닫기</button>
       <button class="btn btn-danger" id="viewDel" style="margin-left:auto">🗑 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 메모 보기 팝업 (v20260713) ===== -->
+<div class="view-overlay" id="memoViewOverlay">
+  <div class="view-modal">
+    <h3 id="memoViewTitleBar">📝 메모 <button class="modal-close" id="memoViewClose">✕</button></h3>
+    <div id="memoViewBody"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn btn-primary btn-flex" id="memoViewEdit">✏️ 수정</button>
+      <button class="btn btn-ghost" id="memoViewCopy">📋 복사</button>
+      <button class="btn btn-danger" id="memoViewDel" style="margin-left:auto">🗑 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 메모 수정 모달 (v20260713) ===== -->
+<div class="overlay" id="memoEditOverlay">
+  <div class="modal" id="memoEditModal">
+    <style>.me-color-btn{width:26px;height:26px;border-radius:50%;border:2.5px solid transparent;cursor:pointer;padding:0;transition:all .15s}.me-color-btn.active{border-color:#555;transform:scale(1.15)}</style>
+    <h3 id="memoEditTitleBar">✏️ 메모 수정 <button class="modal-close" id="memoEditClose">✕</button></h3>
+    <div class="field">
+      <label>제목 (선택)</label>
+      <input type="text" id="memoEditTitle" placeholder="제목">
+    </div>
+    <div class="field">
+      <label>내용</label>
+      <div id="memoEditBody" contenteditable="true" style="min-height:180px;border:1.5px solid var(--blue-bd);border-radius:12px;background:#f7faff;padding:12px 14px;font-size:15px;line-height:1.6;outline:none;white-space:pre-wrap;word-break:break-word"></div>
+    </div>
+    <div class="field">
+      <label>색상</label>
+      <div class="sticky-colors" id="memoEditColors">
+        <button type="button" class="me-color-btn active" data-mecolor="yellow" style="background:#fff9c4"></button>
+        <button type="button" class="me-color-btn" data-mecolor="blue" style="background:#dbeafe"></button>
+        <button type="button" class="me-color-btn" data-mecolor="green" style="background:#dcfce7"></button>
+        <button type="button" class="me-color-btn" data-mecolor="pink" style="background:#fce7f3"></button>
+        <button type="button" class="me-color-btn" data-mecolor="orange" style="background:#ffedd5"></button>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-primary btn-flex" id="memoEditSave">💾 저장</button>
+      <button class="btn btn-ghost" id="memoEditCancel">취소</button>
+      <button class="btn btn-danger" id="memoEditDel">🗑 삭제</button>
     </div>
   </div>
 </div>
@@ -2081,7 +2125,14 @@ if(g('viewClose2')){g('viewClose2').addEventListener('click',()=>g('viewOverlay'
       </div>`).join('');
 
     grid.querySelectorAll('[data-sedit]').forEach(btn=>{
-      btn.addEventListener('click',e=>{e.stopPropagation();const card=btn.closest('.sticky-note');card.querySelector('.sn-view').style.display='none';card.querySelector('.sn-edit').style.display='block';const b=card.querySelector('.sn-edit-body');if(b){b.focus();}});
+      btn.addEventListener('click',e=>{e.stopPropagation();openMemoEdit(btn.dataset.sedit);});
+    });
+    grid.querySelectorAll('.sn-view').forEach(view=>{
+      view.addEventListener('click',e=>{
+        if(e.target.closest('button')||e.target.closest('.checklist-cb')||e.target.closest('.checklist-done-toggle')||e.target.tagName==='IMG') return;
+        const card=view.closest('.sticky-note'); if(!card) return;
+        openMemoView(card.dataset.sid);
+      });
     });
     grid.querySelectorAll('[data-scancel]').forEach(btn=>{
       btn.addEventListener('click',e=>{e.stopPropagation();const card=btn.closest('.sticky-note');card.querySelector('.sn-view').style.display='';card.querySelector('.sn-edit').style.display='none';});
@@ -2142,11 +2193,87 @@ if(g('viewClose2')){g('viewClose2').addEventListener('click',()=>g('viewOverlay'
           </div>
         </div>`).join('')+'</div>';
       listBox.querySelectorAll('[data-ldel]').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();if(!confirm('삭제?')) return;deleteEntry(btn.dataset.ldel);toast('삭제됐어요');});});
-      listBox.querySelectorAll('[data-ledit]').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();const en2=entries.find(x=>x.id===btn.dataset.ledit);/* 목록형 수정 — 카드 탭으로 전환 후 그리드 수정 모드 */if(!en2) return;setStickyView('card');setTimeout(()=>{const card=g('stickyGrid').querySelector(`[data-sid="${en2.id}"]`);if(card){card.querySelector('.sn-view').style.display='none';card.querySelector('.sn-edit').style.display='block';}},200);});});
+      listBox.querySelectorAll('[data-ledit]').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();openMemoEdit(btn.dataset.ledit);});});
+      listBox.querySelectorAll('.sticky-list-item').forEach(item=>{item.addEventListener('click',e=>{if(e.target.closest('button')) return;openMemoView(item.dataset.sid);});});
       listBox.style.display=stickyViewMode==='list'?'block':'none';
       grid.style.display=stickyViewMode==='card'?'grid':'none';
     }
   };
+
+  /* ===== 메모 보기 팝업 / 수정 모달 (v20260713) ===== */
+  let memoViewId=null, memoEditId=null, memoEditColor='yellow';
+  function openMemoView(id){
+    const en=entries.find(e=>e.id===id); if(!en) return;
+    memoViewId=id;
+    let html='';
+    html+=`<div class="view-row"><span class="view-label">날짜</span><span class="view-val">${esc(en.date||'')}</span></div>`;
+    if(en.title) html+=`<div class="view-row"><span class="view-label">제목</span><span class="view-val" style="font-weight:700">${esc(en.title)}</span></div>`;
+    html+=`<hr class="view-divider"><div style="white-space:normal;line-height:1.6;color:var(--ink);word-break:break-word">${renderMemoBody(en.body||'',false)}</div>`;
+    if(en.photos&&en.photos.length){
+      html+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">${en.photos.map(p=>`<img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:zoom-in;border:2px solid var(--blue-bd)" onclick="showImg('${p}')">`).join('')}</div>`;
+    }
+    g('memoViewBody').innerHTML=html;
+    linkifyEl(g('memoViewBody'));
+    g('memoViewOverlay').classList.add('show');
+  }
+  function closeMemoView(){g('memoViewOverlay').classList.remove('show');memoViewId=null;}
+  function openMemoEdit(id){
+    const en=entries.find(e=>e.id===id); if(!en) return;
+    memoEditId=id;
+    g('memoEditTitle').value=en.title||'';
+    g('memoEditBody').innerHTML=renderMemoBody(en.body||'',false);
+    memoEditColor=getColor(en);
+    document.querySelectorAll('#memoEditColors .me-color-btn').forEach(b=>b.classList.toggle('active',b.dataset.mecolor===memoEditColor));
+    closeMemoView();
+    g('memoEditOverlay').classList.add('show');
+    document.body.classList.add('modal-open');
+    setTimeout(()=>{const t=g('memoEditTitle');if(t)t.focus();},100);
+  }
+  function closeMemoEdit(){g('memoEditOverlay').classList.remove('show');document.body.classList.remove('modal-open');memoEditId=null;}
+  function saveMemoEdit(){
+    if(!memoEditId) return;
+    const t=(g('memoEditTitle').value||'').trim();
+    const eb=g('memoEditBody');
+    const hasC=eb.querySelector('.checklist-row');
+    const b=hasC?eb.innerHTML.trim():(eb.innerText||'').trim();
+    if(!t && !b){toast('내용을 입력해주세요');return;}
+    updateEntry(memoEditId,{title:t,body:b,stickyColor:memoEditColor});
+    toast('저장됐어요');
+    closeMemoEdit();
+    setTimeout(renderStickyGrid,300);
+  }
+  if(g('memoViewClose')) g('memoViewClose').addEventListener('click',closeMemoView);
+  if(g('memoViewEdit')) g('memoViewEdit').addEventListener('click',()=>{if(memoViewId)openMemoEdit(memoViewId);});
+  if(g('memoViewCopy')) g('memoViewCopy').addEventListener('click',()=>{const en=entries.find(x=>x.id===memoViewId);if(!en)return;const tmp=document.createElement('div');tmp.innerHTML=en.body||'';const plain=tmp.innerText||tmp.textContent||'';const txt=(en.title?en.title+String.fromCharCode(10):'')+plain;navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>toast('복사됐어요'));});
+  if(g('memoViewDel')) g('memoViewDel').addEventListener('click',()=>{if(!memoViewId||!confirm('삭제할까요?'))return;deleteEntry(memoViewId);closeMemoView();toast('삭제됐어요');setTimeout(renderStickyGrid,300);});
+  if(g('memoEditClose')) g('memoEditClose').addEventListener('click',closeMemoEdit);
+  if(g('memoEditCancel')) g('memoEditCancel').addEventListener('click',closeMemoEdit);
+  if(g('memoEditSave')) g('memoEditSave').addEventListener('click',saveMemoEdit);
+  if(g('memoEditDel')) g('memoEditDel').addEventListener('click',()=>{if(!memoEditId||!confirm('삭제할까요?'))return;deleteEntry(memoEditId);closeMemoEdit();toast('삭제됐어요');setTimeout(renderStickyGrid,300);});
+  document.querySelectorAll('#memoEditColors .me-color-btn').forEach(b=>{b.addEventListener('click',()=>{memoEditColor=b.dataset.mecolor;document.querySelectorAll('#memoEditColors .me-color-btn').forEach(x=>x.classList.toggle('active',x===b));});});
+  if(g('memoEditBody')) g('memoEditBody').addEventListener('click',e=>{const cb=e.target.closest('.checklist-cb');if(!cb)return;e.preventDefault();const row=cb.closest('.checklist-row');if(row)row.classList.toggle('done');});
+  function linkifyEl(root){
+    if(!root) return;
+    const rx=/(https?:\/\/[^\s<]+)/g;
+    const walker=document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const texts=[]; while(walker.nextNode()) texts.push(walker.currentNode);
+    texts.forEach(function(node){
+      if(node.parentNode && node.parentNode.closest && node.parentNode.closest('a')) return;
+      const s=node.nodeValue; rx.lastIndex=0;
+      if(!rx.test(s)) return; rx.lastIndex=0;
+      const frag=document.createDocumentFragment(); let last=0,m;
+      while((m=rx.exec(s))){
+        if(m.index>last) frag.appendChild(document.createTextNode(s.slice(last,m.index)));
+        const a=document.createElement('a');
+        a.href=m[0]; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=m[0];
+        a.style.cssText='color:#2563a8;text-decoration:underline;word-break:break-all';
+        frag.appendChild(a); last=m.index+m[0].length;
+      }
+      if(last<s.length) frag.appendChild(document.createTextNode(s.slice(last)));
+      node.parentNode.replaceChild(frag,node);
+    });
+  }
+  window.openMemoView=openMemoView; window.openMemoEdit=openMemoEdit;
 
   function setStickyView(mode){
     stickyViewMode=mode;localStorage.setItem('pj_sticky_view',mode);
@@ -5148,7 +5275,7 @@ window.addEventListener('error', function(e){
     localStorage.setItem(PKEY,'102800');
     pin='102800'; buf='';
     g('lockMsg').style.color='#7fffb2';
-    g('lockMsg').textContent='102800으로 초기화됨. 입력하세요.';
+    g('lockMsg').textContent='기본 PIN으로 초기화됐어요. 입력하세요.';
     renderDots();
   });
 
@@ -5173,10 +5300,8 @@ console.log('[개인일지] 로드 완료');
 (function updateVerBadge(){
   const el = document.getElementById('verBadge');
   if(!el) return;
-  const d = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  const ver = `v${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
-  el.textContent = ver;
+  // 빌드(배포) 버전 고정 표시 — 이 값이 화면에 보이면 새 파일이 반영된 것
+  el.textContent = 'v20260713-1639';
 })();
 
 /* ════════════════════════════════════════════════════════
