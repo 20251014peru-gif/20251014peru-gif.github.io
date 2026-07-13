@@ -466,8 +466,8 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <span style="font-size:11px;font-weight:800;color:var(--ink-soft);white-space:nowrap">🔍 필터:</span>
           <div style="display:flex;gap:4px;align-items:center;flex:1;min-width:120px">
-            <input type="text" id="cf-date" placeholder="날짜 (예:06-26)"
-              style="flex:1;min-width:80px;padding:5px 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;outline:none">
+            <input type="date" id="cf-date" title="날짜 선택" placeholder="날짜"
+              style="flex:1;min-width:135px;padding:5px 8px;border:1.5px solid var(--blue-bd);border-radius:7px;font-size:12px;font-family:inherit;outline:none">
             <button id="cfx-date" style="display:none;padding:2px 6px;border-radius:6px;border:none;background:#fde8e8;color:#c0392b;font-size:11px;cursor:pointer;font-weight:700">✕</button>
           </div>
           <div style="display:flex;gap:4px;align-items:center;flex:2;min-width:120px">
@@ -4352,7 +4352,7 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260713-1825';
+  $('appVer').textContent='v20260713-1844';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
