@@ -174,6 +174,7 @@ async function syncFromFirebase(){
         const cached=await idbGet(imgId);
         if(!cached && dataUrl) idbPut(imgId,dataUrl).catch(()=>{});
       }
+      delete rp.imgData;  // 캐시 완료 → 메모리/로컬 슬림 유지
     }
     if(!local){
       photos.unshift(rp);
@@ -237,8 +238,18 @@ let photos=[], cats=[], filter='all', searchQ='', curSection='normal', addTab='n
 function loadData(){
   try{ photos=JSON.parse(localStorage.getItem(LS_PHOTOS+'_'+MODE)||'[]'); }catch{ photos=[]; }
   try{ cats=JSON.parse(localStorage.getItem(LS_CATS+'_'+MODE)||JSON.stringify(DEFAULT_CATS)); }catch{ cats=[...DEFAULT_CATS]; }
+  try{ savePhotos(); }catch(e){}  // 옛 데이터에 박힌 base64 즉시 제거 → 용량 확보
 }
-const savePhotos = () => localStorage.setItem(LS_PHOTOS+'_'+MODE, JSON.stringify(photos));
+const savePhotos = () => {
+  try{
+    // imgData(base64)는 localStorage에 저장하지 않음 — 용량 초과 방지.
+    // 이미지는 IndexedDB + Firestore에 있고 화면은 stGet()로 로드함.
+    const slim = photos.map(p => { const { imgData, ...rest } = p; return rest; });
+    localStorage.setItem(LS_PHOTOS+'_'+MODE, JSON.stringify(slim));
+  }catch(e){
+    try{ dbg('savePhotos 실패(무시): '+e.message,'error'); }catch(_){}
+  }
+};
 const saveCats   = () => localStorage.setItem(LS_CATS+'_'+MODE,   JSON.stringify(cats));
 const uid  = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const today= () => new Date().toISOString().slice(0,10);
@@ -1690,7 +1701,7 @@ function burstCancel(){ burstImgs=[]; $('burstOv').style.display='none'; }
 async function init(){
   // 버전 즉시 표시 (IDB 실패해도 보임)
   if($('appTitle')) $('appTitle').textContent=MODE_LABEL;
-  if($('appVersion')) $('appVersion').textContent='v11.6';
+  if($('appVersion')) $('appVersion').textContent='v11.7';
   document.title=MODE_LABEL;
   const bar=document.createElement('div');
   bar.style.cssText=`position:fixed;top:0;left:0;right:0;height:3px;background:${MODE_COLOR};z-index:200;`;
