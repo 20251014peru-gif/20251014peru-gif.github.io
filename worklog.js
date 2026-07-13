@@ -1,5 +1,5 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0713-1013";
+const APP_VERSION = "v44-0713-1025";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -11114,14 +11114,15 @@ async function githubUpload(token){
       var fab = document.getElementById('v43FabHeader');
       if(!fab) return;
       var today = rcToday();
-      var urgent = rcList().filter(function(t){
-        if(rcIsDone(t)) return false;
+      var _pend = rcList().filter(function(t){ return !rcIsDone(t); });
+      var total = _pend.length;
+      var urgent = _pend.filter(function(t){
         var day = Number(t.day)||0;
         if(!day) return false;
         return day < today || (day>=today && (day-today)<=3);
       }).length;
       var badge = fab.querySelector('.rc-fab-badge');
-      if(urgent<=0){ if(badge) badge.remove(); return; }
+      if(total<=0){ if(badge) badge.remove(); return; }
       if(!badge){
         badge = document.createElement('div');
         badge.className = 'rc-fab-badge';
@@ -11129,8 +11130,10 @@ async function githubUpload(token){
         fab.appendChild(badge);
         badge.addEventListener('click', function(ev){ ev.stopPropagation(); ev.preventDefault(); try{ openRecurManage(); }catch(e){} });
       }
-      badge.textContent = urgent>99 ? '99+' : String(urgent);
-      badge.title = '기한 임박·지난 반복업무 '+urgent+'건 — 클릭하면 반복업무 관리 열기';
+      badge.textContent = total>99 ? '99+' : String(total);
+      if(urgent>0){ badge.style.background='#c0392b'; badge.style.boxShadow='0 2px 10px rgba(192,57,43,.7)'; }
+      else { badge.style.background='#f0a020'; badge.style.boxShadow='0 2px 8px rgba(240,160,32,.55)'; }
+      badge.title = '이번 달 미완료 '+total+'건'+(urgent>0?' (임박·지난 '+urgent+'건)':'')+' — 클릭하면 반복업무 관리 열기';
     }catch(e){ console.warn('[반복업무 FAB배지]', e); }
   }
 
