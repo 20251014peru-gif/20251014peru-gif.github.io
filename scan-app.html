@@ -1274,6 +1274,14 @@ async function initFirebase(){
 }
 
 // 🖼 base64 → Storage 업로드 → download URL 반환
+/* AI 응답에서 JSON 부분만 추출 — 앞뒤 설명/여분 텍스트 제거 (분석 실패 방지) */
+function _extractJson(s){
+  s=String(s||'').trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+  const st=s.search(/[\{\[]/); if(st<0) return s;
+  const lb=s.lastIndexOf('}'), la=s.lastIndexOf(']');
+  const en=Math.max(lb,la);
+  return (en>st) ? s.slice(st,en+1) : s.slice(st);
+}
 async function uploadPhotoToStorage(path,base64){
   if(!_fbStorage||!base64)return '';
   try{
@@ -1281,8 +1289,9 @@ async function uploadPhotoToStorage(path,base64){
     // base64 dataURL을 blob으로
     const res=await fetch(base64);
     const blob=await res.blob();
-    await ref.put(blob,{contentType:'image/jpeg'});
-    return await ref.getDownloadURL();
+    const _to=(ms,label)=>new Promise((_,rej)=>setTimeout(()=>rej(new Error(label+' 시간초과')),ms));
+    await Promise.race([ref.put(blob,{contentType:'image/jpeg'}), _to(20000,'업로드')]);
+    return await Promise.race([ref.getDownloadURL(), _to(10000,'URL')]);
   }catch(e){
     console.error('[Storage] upload failed',path,e);
     return '';
@@ -2645,7 +2654,7 @@ $('cropAiDetect').onclick=async()=>{
     if(!res.ok)throw new Error('API '+res.status);
     const j=await res.json();
     let raw=j.content[0].text.trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-    const result=JSON.parse(raw);
+    const result=JSON.parse(_extractJson(raw));
     if(!result.found){
       st.textContent='⚠️ 경계를 못 찾았어요. 수동 조정하세요.';
       setTimeout(()=>st.style.display='none',3000);return;
@@ -3712,7 +3721,7 @@ $('rcptAnalyze').onclick=async()=>{
     if(!res.ok)throw new Error('API '+res.status);
     const j=await res.json();
     let raw=j.content[0].text.trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-    const r=JSON.parse(raw);
+    const r=JSON.parse(_extractJson(raw));
     if(r.date)$('r_date').value=r.date;
     if(r.payTime)$('r_payTime').value=r.payTime;
     if(r.place)$('r_place').value=r.place;
@@ -3935,7 +3944,7 @@ $('cardAnalyze').onclick=async()=>{
     if(!res.ok)throw new Error('API '+res.status);
     const j=await res.json();
     let raw=j.content[0].text.trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-    const c=JSON.parse(raw);
+    const c=JSON.parse(_extractJson(raw));
     if(c.company)$('c_company').value=c.company;
     if(c.name)$('c_name').value=c.name;
     if(c.position)$('c_position').value=c.position;
@@ -4343,7 +4352,7 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260626-1719';
+  $('appVer').textContent='v20260713-1825';
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
