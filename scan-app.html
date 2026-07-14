@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>📷 사진 스캐너</title>
+<title>📷 사진 스캐너 v2-0714-1858</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -255,7 +255,7 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 .item-row .rrow-name{grid-column:1;height:38px;padding:0 10px;border:1.5px solid var(--blue-bd);
   border-radius:7px;font-size:14px;background:#fff;outline:none;width:100%;box-sizing:border-box;font-family:inherit}
 .item-row .rrow-name:focus{border-color:var(--blue)}
-.item-row-sub{grid-column:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:4px}
+.item-row-sub{grid-column:1;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-top:4px}
 .item-row-sub-label{font-size:10px;color:var(--ink-faint);font-weight:700;margin-bottom:2px;text-align:center}
 .item-row input{height:34px;padding:0 8px;border:1.5px solid var(--blue-bd);
   border-radius:7px;font-size:12px;background:#fff;outline:none;width:100%;box-sizing:border-box;font-family:inherit}
@@ -666,7 +666,7 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
         <button class="tool-btn" id="r_addItem" style="font-size:11px;padding:3px 10px;height:auto">➕ 추가</button>
       </div>
       <div class="items-head">
-        <span>품목명</span><span style="text-align:center">수량</span><span>단가</span><span>소계</span><span></span>
+        <span>품목명</span><span style="text-align:center">수량</span><span>단가</span><span>부가세</span><span>소계</span><span></span>
       </div>
       <div id="r_itemsList"></div>
       <div class="field" style="margin-top:10px"><label>📝 메모</label><textarea id="r_memo" rows="2"></textarea></div>
@@ -2498,7 +2498,7 @@ function openCropModal(dataUrl,callback,title){
     const ratio=Math.min(maxW/img.width,maxH/img.height,1);
     const cw=Math.round(img.width*ratio),ch=Math.round(img.height*ratio);
     _crop.scale=ratio;canvas.width=cw;canvas.height=ch;
-    const m=Math.min(cw,ch)*0.05;
+    const m=0;
     _crop.points=[{x:m,y:m},{x:cw-m,y:m},{x:cw-m,y:ch-m},{x:m,y:ch-m}];
     drawCrop();
   };
@@ -3640,6 +3640,7 @@ function receiptItemRowHtml(it,i){
     <div class="item-row-sub">
       <div><div class="item-row-sub-label">수량</div><input type="number" class="rrow-qty qty" value="${it.qty||1}"></div>
       <div><div class="item-row-sub-label">단가</div><input type="number" class="rrow-price" placeholder="0" value="${it.price||''}"></div>
+      <div><div class="item-row-sub-label">부가세</div><input type="number" class="rrow-tax" placeholder="0" value="${it.tax||''}"></div>
       <div><div class="item-row-sub-label">소계</div><input type="number" class="rrow-sub sub" placeholder="0" value="${it.subtotal||''}"></div>
     </div>
   </div>`;
@@ -3648,10 +3649,11 @@ function bindReceiptItemEvents(){
   const list=$('r_itemsList');
   list.oninput=e=>{
     const row=e.target.closest('.item-row');if(!row)return;
-    if(e.target.classList.contains('rrow-qty')||e.target.classList.contains('rrow-price')){
+    if(e.target.classList.contains('rrow-qty')||e.target.classList.contains('rrow-price')||e.target.classList.contains('rrow-tax')){
       const qty=parseFloat(row.querySelector('.rrow-qty').value)||0;
       const price=parseFloat(row.querySelector('.rrow-price').value)||0;
-      row.querySelector('.rrow-sub').value=Math.round(qty*price)||'';
+      const tax=parseFloat((row.querySelector('.rrow-tax')||{}).value)||0;
+      row.querySelector('.rrow-sub').value=Math.round(qty*price+tax)||'';
     }
   };
   list.onclick=e=>{
@@ -3662,7 +3664,7 @@ function bindReceiptItemEvents(){
 $('r_addItem').onclick=()=>{
   const list=$('r_itemsList');
   const i=list.querySelectorAll('.item-row').length;
-  list.insertAdjacentHTML('beforeend',receiptItemRowHtml({name:'',qty:1,price:'',subtotal:''},i));
+  list.insertAdjacentHTML('beforeend',receiptItemRowHtml({name:'',qty:1,price:'',tax:'',subtotal:''},i));
   bindReceiptItemEvents();
 };
 
@@ -3709,7 +3711,7 @@ $('rcptAnalyze').onclick=async()=>{
 카드번호, 카드 승인번호, 가맹점번호, 거래번호, 단말기번호
 
 【품목 배열】
-모든 품목 빠짐없이: [{"name":"품목명","qty":수량,"price":단가,"subtotal":소계}]
+모든 품목 빠짐없이: [{"name":"품목명","qty":수량,"price":단가,"tax":부가세,"subtotal":소계}] (부가세가 별도로 표기된 영수증이면 tax에 넣고 소계=단가*수량+부가세, 부가세 표기 없으면 tax:0)
 
 【응답 - 순수 JSON만】
 {"date":"YYYY-MM-DD","payTime":"HH:MM","place":"상호","phone":"02-1234-5678","addr":"주소","amount":숫자,"payMethod":"결제수단","items":[...]}
@@ -3788,6 +3790,7 @@ $('receiptSave').onclick=async()=>{
       name:name.trim(),
       qty:parseFloat((row.querySelector('.rrow-qty')||{}).value)||1,
       price:parseFloat((row.querySelector('.rrow-price')||{}).value)||0,
+      tax:parseFloat((row.querySelector('.rrow-tax')||{}).value)||0,
       subtotal:parseFloat((row.querySelector('.rrow-sub')||{}).value)||0,
     });
   });
@@ -4810,7 +4813,7 @@ bindRowActions=function(container,type){
   }
 };
 
-console.log('[사진 스캐너 v2] 로드 완료');
+console.log('[사진 스캐너 v2-0714-1858] 로드 완료');
 
 /* ======== 🐞 디버그 패널 ======== */
 (function(){
