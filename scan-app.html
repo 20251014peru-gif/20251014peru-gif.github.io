@@ -116,36 +116,46 @@ header{background:color-mix(in srgb,var(--bg) 80%,transparent);
 main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 
 /* ── 탭: iOS 세그먼티드 컨트롤 ── */
-.tabs{display:flex;gap:4px;flex-wrap:wrap;padding:12px 0 8px}
-header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:center}
-.unified-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
-  background:transparent;border-radius:0;padding:0;gap:4px}
-.unified-tabs::-webkit-scrollbar{display:none}
-.unified-tabs .tab{flex-shrink:0}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+/* 헤더 밖 — 넓은 화면에서는 헤더 아래 한 줄 */
+#mainTabs{max-width:1600px;margin:0 auto;padding:12px 20px 4px;
+  display:flex;justify-content:center;gap:6px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#mainTabs::-webkit-scrollbar{display:none}
 .tab-divider{display:none}
 
-/* 각 탭에 테두리 — 흰 바탕에 흰 버튼이라 경계가 안 보이던 문제 */
-.tab{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:5px;
-  padding:7px 13px;border-radius:11px;
-  border:1px solid var(--blue-bd);background:var(--surface);
-  font-size:13px;font-weight:500;color:var(--ink);
+/* 단추 자체를 섹션 색으로 — 테두리 2px, 선택되면 꽉 채움 */
+.tab{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:8px 14px;border-radius:12px;
+  border:2px solid var(--c);background:var(--surface);
+  font-size:13px;font-weight:600;color:var(--c);
   cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
-.tab .t-ico{font-size:15px;line-height:1}
-.tab:hover{border-color:var(--accent);color:var(--accent)}
-.tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
-.tab.active .t-lbl{color:#fff}
+.tab .t-ico{font-size:16px;line-height:1}
+.tab:hover{background:var(--ct)}
+.tab.active{background:var(--c);color:#fff}
+.tab:active{transform:scale(.96)}
 
-/* 모바일: 3×2 격자 — 가로를 줄이고 세로로 쌓아 6개가 다 보이게 */
+/* 📱 폰: 아래 고정 바 — 위쪽 공간을 안 먹는다 */
 @media (max-width:768px){
-  header{justify-content:center;padding:8px 12px}
-  header .unified-tabs{order:3;flex:1 1 100%;margin:8px 0 0;padding:0;border-top:none;
-    display:grid;grid-template-columns:repeat(3,1fr);gap:6px;overflow:visible}
-  .unified-tabs .tab{flex:none;width:100%}
-  .tab{flex-direction:column;gap:3px;padding:9px 4px 7px;font-size:11px}
-  .tab .t-ico{font-size:20px}
+  header{position:static;justify-content:center;padding:8px 12px}   /* 스크롤하면 사라짐 */
   .brand{order:1;flex:0 1 auto}
   .hdr-right{order:2;flex:0 1 auto}
-  main{padding:0 14px 100px}
+  main{padding:0 14px 96px}                                          /* 바에 안 가리게 */
+
+  #mainTabs{position:fixed;left:0;right:0;bottom:0;z-index:600;
+    display:grid;grid-template-columns:repeat(6,1fr);gap:4px;
+    max-width:none;margin:0;
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+    background:color-mix(in srgb,var(--bg) 88%,transparent);
+    -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+    border-top:.5px solid var(--blue-bd);overflow:visible}
+  .tab{flex-direction:column;gap:3px;padding:7px 2px 5px;font-size:10px;
+    border-width:2px;border-radius:11px;width:100%}
+  .tab .t-ico{font-size:19px}
+}
+@media (max-width:360px){
+  .tab{font-size:9px;padding:6px 1px 4px}
+  .tab .t-ico{font-size:17px}
 }
 
 /* ── 필터/검색 바 ── */
@@ -556,6 +566,30 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
   .hc-name{font-size:15px}
   .hero-amount{font-size:29px}
 }
+
+/* ── 섹션 색 — 이모지는 color가 안 먹으니 뒤에 색 타일을 깐다 ── */
+.sec-home  {--c:#8e8e93; --ct:rgba(142,142,147,.16)}
+.sec-receipt{--c:#007aff; --ct:rgba(0,122,255,.14)}
+.sec-card  {--c:#af52de; --ct:rgba(175,82,222,.14)}
+.sec-text  {--c:#ff9500; --ct:rgba(255,149,0,.16)}
+.sec-normal{--c:#34c759; --ct:rgba(52,199,89,.16)}
+.sec-secure{--c:#ff375f; --ct:rgba(255,55,95,.14)}
+@media (prefers-color-scheme:dark){
+  .sec-home  {--c:#98989d; --ct:rgba(152,152,157,.26)}
+  .sec-receipt{--c:#0a84ff; --ct:rgba(10,132,255,.26)}
+  .sec-card  {--c:#bf5af2; --ct:rgba(191,90,242,.24)}
+  .sec-text  {--c:#ff9f0a; --ct:rgba(255,159,10,.24)}
+  .sec-normal{--c:#30d158; --ct:rgba(48,209,88,.24)}
+  .sec-secure{--c:#ff375f; --ct:rgba(255,55,95,.26)}
+}
+
+
+/* 홈 카드: 큰 색 타일 */
+.hc-ico{display:inline-flex;align-items:center;justify-content:center;
+  width:44px;height:44px;border-radius:13px;background:var(--ct);
+  font-size:22px;line-height:1;margin-bottom:10px}
+.home-card:hover{border-color:var(--c)}
+.hc-badge{background:var(--c)}
 </style>
 </head>
 <body>
@@ -565,15 +599,6 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
   <div class="brand">
     <h1>📷 사진 스캐너</h1>
     <span class="sub" id="appVer">독립앱</span>
-  </div>
-  <!-- 통합 탭 (헤더 가운데) -->
-  <div class="tabs unified-tabs" id="mainTabs">
-    <button class="tab active" data-mode="home"><span class="t-ico">🏠</span><span class="t-lbl">홈</span></button>
-    <button class="tab" data-mode="receipt"><span class="t-ico">🧾</span><span class="t-lbl">영수증</span></button>
-    <button class="tab" data-mode="card"><span class="t-ico">💼</span><span class="t-lbl">명함</span></button>
-    <button class="tab" data-mode="text"><span class="t-ico">📝</span><span class="t-lbl">텍스트</span></button>
-    <button class="tab" data-mode="normal"><span class="t-ico">📷</span><span class="t-lbl">일반사진</span></button>
-    <button class="tab" data-mode="secure"><span class="t-ico">🔒</span><span class="t-lbl">보안</span></button>
   </div>
   <div class="hdr-right">
     <button class="hbtn" id="btnGlobalSearch" title="전체 검색">🔎<span class="hb-lbl">검색</span></button>
@@ -586,6 +611,17 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
     <button class="hbtn" id="btnDebug" title="디버그 패널" style="position:relative">🐞<span id="debugBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:900;border-radius:8px;padding:1px 4px;min-width:14px;text-align:center"></span><span class="hb-lbl">디버그</span></button>
   </div>
 </header>
+
+<!-- 섹션 탭 — 폰에서는 화면 아래 고정 바 -->
+  <div class="tabs unified-tabs" id="mainTabs">
+    <button class="tab sec-home active" data-mode="home"><span class="t-ico">🏠</span><span class="t-lbl">홈</span></button>
+    <button class="tab sec-receipt" data-mode="receipt"><span class="t-ico">🧾</span><span class="t-lbl">영수증</span></button>
+    <button class="tab sec-card" data-mode="card"><span class="t-ico">💼</span><span class="t-lbl">명함</span></button>
+    <button class="tab sec-text" data-mode="text"><span class="t-ico">📝</span><span class="t-lbl">텍스트</span></button>
+    <button class="tab sec-normal" data-mode="normal"><span class="t-ico">📷</span><span class="t-lbl">일반사진</span></button>
+    <button class="tab sec-secure" data-mode="secure"><span class="t-ico">🔒</span><span class="t-lbl">보안</span></button>
+  </div>
+
 
 <main>
   <!-- 일반/보안 갤러리 -->
@@ -1298,7 +1334,7 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-1852';
+const APP_VER='v20260715-1913';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -2004,7 +2040,7 @@ function renderHome(){
     {m:'secure', ico:'🔒',name:'보안',  n:nS,unit:'장',lock:!secureUnlocked},
   ];
   $('homeGrid').innerHTML = cards_.map(c=>`
-    <button class="home-card${c.lock?' locked':''}" data-mode="${c.m}">
+    <button class="home-card sec-${c.m}${c.lock?' locked':''}" data-mode="${c.m}">
       <span class="hc-ico">${c.ico}</span>
       <span class="hc-name">${c.name}</span>
       <span class="hc-count">${c.lock?'잠김':c.n+c.unit}</span>
