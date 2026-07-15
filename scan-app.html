@@ -265,6 +265,14 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 .add-photo-zone .ico{font-size:38px;margin-bottom:8px}
 .add-photo-zone .tt{font-size:15px;font-weight:600;color:var(--accent);margin-bottom:3px}
 .add-photo-zone .desc{font-size:12px;color:var(--ink-faint)}
+/* 사진이 붙은 뒤엔 안내가 필요 없다 — 버튼 한 줄로 접어 자리를 돌려준다.
+   (기존엔 패딩만 줄여서 아이콘·문구가 그대로 남아 폰에서 폼을 밀어냈다) */
+.add-photo-zone.compact{padding:9px;border-style:solid;border-width:1px;background:transparent}
+.add-photo-zone.compact .ico,
+.add-photo-zone.compact .tt,
+.add-photo-zone.compact .desc{display:none}
+.add-photo-zone.compact .add-btn-row{margin-top:0}
+.add-photo-zone.compact .add-btn-row label{padding:7px 14px;font-size:12px}
 .add-btn-row{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
 .add-btn-row label{padding:8px 16px;border-radius:100px;font-size:13px;font-weight:600;
   cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px;
@@ -599,6 +607,32 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 .home-card{border:2px solid var(--c)}
 .home-card:hover{background:var(--ct)}
 .hc-ico{background:var(--ct)}
+
+/* ── 홈: 다른 앱으로 이동 ── */
+#appLinks{margin-top:18px}
+.al-title{font-size:12px;font-weight:600;color:var(--ink-faint);margin-bottom:8px;padding-left:2px}
+.al-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.al-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  padding:12px 4px;border-radius:14px;text-decoration:none;font-size:12px;font-weight:600;
+  border:1.5px solid var(--alb);background:var(--alg);color:var(--alc);
+  transition:transform .12s}
+.al-btn:active{transform:scale(.96)}
+.al-btn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+/* photos-scan 이 쓰던 색 그대로 — 앱들끼리 같은 색이어야 이어져 보인다 */
+.al-personal {--alc:#1a2f45; --alg:#e8f0fa; --alb:#c8d8f0}
+.al-links    {--alc:#185FA5; --alg:#E8F3FD; --alb:#B5D4F4}
+.al-recipes  {--alc:#7c3aed; --alg:#f5f3ff; --alb:#c4b5fd}
+.al-materials{--alc:#8B4513; --alg:#FDF0E6; --alb:#D4956A}
+@media (prefers-color-scheme:dark){
+  /* 원래 색은 밝은 배경 전용이라 다크에선 안 보인다 — 글자색을 배경으로 뒤집는다 */
+  .al-personal {--alc:#a8c4e0; --alg:rgba(168,196,224,.16); --alb:rgba(168,196,224,.4)}
+  .al-links    {--alc:#6BA6E8; --alg:rgba(107,166,232,.16); --alb:rgba(107,166,232,.4)}
+  .al-recipes  {--alc:#b794f6; --alg:rgba(183,148,246,.16); --alb:rgba(183,148,246,.4)}
+  .al-materials{--alc:#D4956A; --alg:rgba(212,149,106,.16); --alb:rgba(212,149,106,.4)}
+}
+@media (max-width:400px){
+  .al-btn{font-size:11px;padding:10px 2px}
+}
 </style>
 </head>
 <body>
@@ -646,6 +680,16 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
   <!-- 🏠 홈 -->
   <div id="homeView">
     <div id="homeGrid" class="home-grid"></div>
+    <!-- 다른 앱으로 — photos-scan 이 갖고 있던 이동 링크를 이어받음 -->
+    <div id="appLinks">
+      <div class="al-title">다른 앱</div>
+      <div class="al-row">
+        <a class="al-btn al-personal" href="./personal.html">📋<span>개인일지</span></a>
+        <a class="al-btn al-links"    href="./links.html">🔗<span>링크</span></a>
+        <a class="al-btn al-recipes"  href="./links-recipes.html">✨<span>컬렉션</span></a>
+        <a class="al-btn al-materials" href="./materials.html">🔧<span>자재</span></a>
+      </div>
+    </div>
     <div id="homeSearchResults" style="display:none"></div>
   </div>
 
@@ -658,7 +702,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
         <input type="file" id="topCamInp" accept="image/*" capture="environment" style="display:none">
       </label>
       <label class="bar-btn ghost" style="cursor:pointer" onclick="event.stopPropagation()" aria-label="갤러리">🖼<span class="lbl"> 갤러리</span>
-        <input type="file" id="topGalInp" accept="image/*" style="display:none">
+        <input type="file" id="topGalInp" accept="image/*" multiple style="display:none">
       </label>
     </div>
     <div id="gallery" class="gallery"></div>
@@ -817,7 +861,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
           </label>
           <label onclick="event.stopPropagation()">
             🖼 갤러리
-            <input type="file" id="galInp" accept="image/*" style="display:none">
+            <input type="file" id="galInp" accept="image/*" multiple style="display:none">
           </label>
         </div>
       </div>
@@ -1336,7 +1380,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-2041';
+const APP_VER='v20260715-2124';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -2087,18 +2131,37 @@ $('scanSearch').addEventListener('input',()=>renderScanList());
 // 상단 카메라/갤러리 버튼 - 일반/보안 (사진 추가 모달 자동 열기 + 사진 자동 적용)
 async function topAddPhoto(files){
   if(!files||!files.length)return;
-  const f=files[0];if(!f.type.startsWith('image/'))return;
-  try{
-    const raw=await fileToDataUrl(f);
-    const compressed=await compressImg(raw,1800,0.88);
-    // 편집 모달 열기 → 저장 시 사진 추가 모달 열고 미리 채워두기
-    openEditModal(compressed,edited=>{
-      openAddModal(null);
-      // 첫 사진을 mImgs에 추가
-      mImgs=[{id:uid(),data:edited}];
+  const imgs=Array.from(files).filter(f=>f.type.startsWith('image/'));
+  if(!imgs.length)return;
+
+  /* 한 장 — 지금까지처럼 편집기 → 추가 모달 */
+  if(imgs.length===1){
+    try{
+      const raw=await fileToDataUrl(imgs[0]);
+      const compressed=await compressImg(raw,1800,0.88);
+      openEditModal(compressed,edited=>{
+        openAddModal(null);
+        mImgs=[{id:uid(),data:edited}];
+        renderPreviews();
+      });
+    }catch(e){toast('사진 로드 실패');}
+    return;
+  }
+
+  /* 여러 장 — 편집기 건너뛰고 추가 모달에 전부 담는다 (연속촬영 사진 한 번에) */
+  openAddModal(null);
+  mImgs=[];
+  toast(`📥 ${imgs.length}장 불러오는 중…`);
+  let ok=0;
+  for(const f of imgs){
+    try{
+      const raw=await fileToDataUrl(f);
+      mImgs.push({id:uid(),data:await compressImg(raw,1800,0.88)});
+      ok++;
       renderPreviews();
-    });
-  }catch(e){toast('사진 로드 실패');}
+    }catch(e){}
+  }
+  toast(ok===imgs.length?`✅ ${ok}장 추가됨`:`⚠️ ${ok}/${imgs.length}장만 추가됨`);
 }
 $('topCamInp').addEventListener('change',e=>{topAddPhoto(e.target.files);e.target.value='';});
 $('topGalInp').addEventListener('change',e=>{topAddPhoto(e.target.files);e.target.value='';});
@@ -2256,7 +2319,10 @@ function openAddModal(photo){
   }else renderPreviews();
   $('addOverlay').classList.add('show');
 }
-function closeAddModal(){$('addOverlay').classList.remove('show');mImgs=[];editingId=null;}
+function closeAddModal(){
+  $('addOverlay').classList.remove('show');mImgs=[];editingId=null;
+  $('addZone').classList.remove('compact');   /* 다음에 열 때 안내가 다시 보이게 */
+}
 $('addClose').onclick=closeAddModal;
 $('addCancel').onclick=closeAddModal;
 
@@ -2271,21 +2337,42 @@ function renderPreviews(){
   wrap.querySelectorAll('.preview-del').forEach(b=>{
     b.onclick=()=>{mImgs.splice(parseInt(b.dataset.del),1);renderPreviews();};
   });
-  $('addZone').style.padding=mImgs.length?'14px':'24px';
+  $('addZone').classList.toggle('compact', mImgs.length>0);
+  $('addZone').style.padding='';   /* 예전에 인라인으로 박아둔 값 제거 */
 }
 
 // 일반/보안 - 카메라/갤러리 → 자동 편집 모달
 async function handleNormalFile(files){
   if(!files||!files.length)return;
-  const f=files[0];if(!f.type.startsWith('image/'))return;
-  try{
-    const raw=await fileToDataUrl(f);
-    const compressed=await compressImg(raw,1800,0.88);
-    openEditModal(compressed,edited=>{
-      mImgs.push({id:uid(),data:edited});
+  const imgs=Array.from(files).filter(f=>f.type.startsWith('image/'));
+  if(!imgs.length)return;
+
+  /* 한 장이면 지금까지처럼 편집기를 띄운다 */
+  if(imgs.length===1){
+    try{
+      const raw=await fileToDataUrl(imgs[0]);
+      const compressed=await compressImg(raw,1800,0.88);
+      openEditModal(compressed,edited=>{
+        mImgs.push({id:uid(),data:edited});
+        renderPreviews();
+      });
+    }catch(e){toast('사진 로드 실패');}
+    return;
+  }
+
+  /* 여러 장이면 편집기를 건너뛰고 전부 담는다.
+     10장 고르고 편집기가 10번 뜨면 못 쓴다. 편집은 나중에 개별로 하면 된다 */
+  toast(`📥 ${imgs.length}장 불러오는 중…`);
+  let ok=0;
+  for(const f of imgs){
+    try{
+      const raw=await fileToDataUrl(f);
+      mImgs.push({id:uid(),data:await compressImg(raw,1800,0.88)});
+      ok++;
       renderPreviews();
-    });
-  }catch(e){toast('사진 로드 실패');}
+    }catch(e){}
+  }
+  toast(ok===imgs.length?`✅ ${ok}장 추가됨`:`⚠️ ${ok}/${imgs.length}장만 추가됨`);
 }
 $('camInp').addEventListener('change',e=>{handleNormalFile(e.target.files);e.target.value='';});
 $('galInp').addEventListener('change',e=>{handleNormalFile(e.target.files);e.target.value='';});
@@ -5414,6 +5501,7 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
       /* 홈 = 전체검색. 창 띄우지 않고 이 화면에 바로 그린다 */
       const has = !!v.trim();
       $('homeGrid').style.display = has ? 'none' : '';
+      $('appLinks').style.display = has ? 'none' : '';
       $('homeSearchResults').style.display = has ? '' : 'none';
       if(has) renderGlobalSearch(v);
       return;
@@ -5438,6 +5526,7 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
       /* 홈으로 돌아오면 검색어를 비우고 카드 격자를 되살린다 */
       inp.value=''; clr.style.display='none';
       $('homeGrid').style.display='';
+      $('appLinks').style.display='';
       $('homeSearchResults').style.display='none';
       return;
     }
