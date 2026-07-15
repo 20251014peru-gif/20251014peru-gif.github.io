@@ -634,6 +634,17 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 @media (max-width:400px){
   .al-btn{font-size:11px;padding:10px 2px}
 }
+
+/* ── 상세보기: 여러 장 ── */
+#detailCount{position:absolute;top:8px;right:8px;padding:3px 9px;border-radius:100px;
+  background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:none}
+#detailStrip{display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:2px;
+  scrollbar-width:none}
+#detailStrip::-webkit-scrollbar{display:none}
+#detailStrip img{width:54px;height:54px;flex:0 0 auto;object-fit:cover;border-radius:8px;
+  cursor:pointer;opacity:.5;border:2px solid transparent;transition:opacity .15s,border-color .15s}
+#detailStrip img.on{opacity:1;border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -898,7 +909,11 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       <button class="hbtn" id="detailClose">✕</button>
     </div>
     <div class="modal-body">
-      <img id="detailImg" style="width:100%;max-height:300px;object-fit:contain;background:var(--surface-2);cursor:zoom-in;border-radius:8px" alt="">
+      <div style="position:relative">
+        <img id="detailImg" style="width:100%;max-height:300px;object-fit:contain;background:var(--surface-2);cursor:zoom-in;border-radius:8px" alt="">
+        <span id="detailCount"></span>
+      </div>
+      <div id="detailStrip" style="display:none"></div>
       <div style="margin-top:14px">
         <div style="font-size:11px;color:var(--ink-faint);font-weight:700">제목</div>
         <div id="detailT" style="font-size:15px;font-weight:800;color:var(--ink);margin-top:3px"></div>
@@ -1389,7 +1404,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-2152';
+const APP_VER='v20260715-2206';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -2492,14 +2507,30 @@ async function openDetail(pid){
   $('detailCat').textContent=p.cat||'기타';
   $('detailDate').textContent=p.date||'';
   $('detailMemoBox').textContent=p.memo||'(메모 없음)';
-  if(p.imgIds&&p.imgIds[0]){
-    try{
-      const firstId=p.imgIds[0];
-      const firstUrl=(p.imgUrls||{})[firstId];
-      const data=await loadPhotoSmart(firstId,firstUrl);
-      $('detailImg').src=data||'';
-      $('detailImg').onclick=()=>showImg(data,p.title);
-    }catch(e){}
+  /* 여러 장이면 전부 불러온다 — 예전엔 imgIds[0] 만 봐서 첫 장밖에 안 보였다 */
+  const strip=$('detailStrip'), cnt=$('detailCount');
+  $('detailImg').src=''; strip.innerHTML=''; strip.style.display='none'; cnt.style.display='none';
+  const ids=p.imgIds||[];
+  if(ids.length){
+    const datas=(await Promise.all(ids.map(async id=>{
+      try{ return await loadPhotoSmart(id,(p.imgUrls||{})[id]); }catch(e){ return null; }
+    }))).filter(Boolean);
+
+    if(datas.length){
+      const show=i=>{
+        $('detailImg').src=datas[i];
+        $('detailImg').onclick=()=>showImg(datas[i],p.title);
+        cnt.textContent=`${i+1}/${datas.length}`;
+        strip.querySelectorAll('img').forEach((t,j)=>t.classList.toggle('on',j===i));
+      };
+      if(datas.length>1){
+        cnt.style.display='';
+        strip.style.display='';
+        strip.innerHTML=datas.map((d,i)=>`<img src="${d}" data-i="${i}" alt="">`).join('');
+        strip.querySelectorAll('img').forEach(t=>t.onclick=()=>show(parseInt(t.dataset.i)));
+      }
+      show(0);
+    }
   }
   $('detailEdit').onclick=()=>{$('detailOverlay').classList.remove('show');openAddModal(p);};
   $('detailOverlay').classList.add('show');
