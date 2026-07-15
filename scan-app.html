@@ -101,6 +101,16 @@ header{background:color-mix(in srgb,var(--bg) 80%,transparent);
   color:var(--accent);transition:background .15s}
 .hbtn:hover{background:var(--blue-soft)}
 .hbtn:active{background:var(--blue-lt)}
+/* 헤더 아이콘만 — 아이콘 밑에 설명. 모달 ✕ 버튼도 .hbtn 이라 범위를 좁힌다 */
+.hdr-right .hbtn{flex-direction:column;gap:1px;width:auto;min-width:46px;height:auto;
+  padding:5px 5px 4px;border-radius:12px;line-height:1}
+.hb-lbl{font-size:9px;font-weight:500;color:var(--ink-faint);letter-spacing:-.02em;white-space:nowrap}
+.hdr-right .hbtn:hover .hb-lbl{color:var(--accent)}
+@media (max-width:768px){
+  .hdr-right{gap:2px;justify-content:center}
+  .hdr-right .hbtn{min-width:42px;font-size:15px}
+  .hb-lbl{font-size:8.5px}
+}
 
 main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 
@@ -556,14 +566,14 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
     <button class="tab" data-mode="secure">🔒 보안</button>
   </div>
   <div class="hdr-right">
-    <button class="hbtn" id="btnGlobalSearch" title="전체 검색">🔎</button>
-    <button class="hbtn" id="btnFirebase" title="클라우드 동기화">☁️</button>
-    <button class="hbtn" id="btnApiKey" title="AI 키 설정">🔑</button>
-    <button class="hbtn" id="btnCatMgr" title="카테고리">📂</button>
-    <button class="hbtn" id="btnTrash" title="휴지통">🗑</button>
-    <button class="hbtn" id="btnExport" title="JSON 내보내기">⬇️</button>
-    <button class="hbtn" id="btnImport" title="JSON 불러오기">⬆️</button>
-    <button class="hbtn" id="btnDebug" title="디버그 패널" style="position:relative">🐞<span id="debugBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:900;border-radius:8px;padding:1px 4px;min-width:14px;text-align:center"></span></button>
+    <button class="hbtn" id="btnGlobalSearch" title="전체 검색">🔎<span class="hb-lbl">검색</span></button>
+    <button class="hbtn" id="btnFirebase" title="클라우드 동기화">☁️<span class="hb-lbl">동기화</span></button>
+    <button class="hbtn" id="btnApiKey" title="AI 키 설정">🔑<span class="hb-lbl">AI키</span></button>
+    <button class="hbtn" id="btnCatMgr" title="카테고리">📂<span class="hb-lbl">카테고리</span></button>
+    <button class="hbtn" id="btnTrash" title="휴지통">🗑<span class="hb-lbl">휴지통</span></button>
+    <button class="hbtn" id="btnExport" title="JSON 내보내기">⬇️<span class="hb-lbl">내보내기</span></button>
+    <button class="hbtn" id="btnImport" title="JSON 불러오기">⬆️<span class="hb-lbl">불러오기</span></button>
+    <button class="hbtn" id="btnDebug" title="디버그 패널" style="position:relative">🐞<span id="debugBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:900;border-radius:8px;padding:1px 4px;min-width:14px;text-align:center"></span><span class="hb-lbl">디버그</span></button>
   </div>
 </header>
 
@@ -1278,7 +1288,7 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-1832';
+const APP_VER='v20260715-1841';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
