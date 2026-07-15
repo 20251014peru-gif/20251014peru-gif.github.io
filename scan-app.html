@@ -165,26 +165,17 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
   background:var(--green);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
 
 /* ── 갤러리: 사진이 주인공, 촘촘한 그리드 ── */
-.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:3px;margin-top:8px}
-@media (min-width:769px){.gallery{gap:4px}}
-.photo-card{background:transparent;border:none;border-radius:0;
-  overflow:hidden;cursor:pointer;transition:transform .2s;position:relative}
-.photo-card:hover{transform:none;box-shadow:none;border:none}
-.photo-card .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--surface-2);display:block;
-  transition:transform .35s cubic-bezier(.2,.8,.2,1)}
-.photo-card:hover .thumb{transform:scale(1.04)}
-/* 제목·날짜는 사진 위 그라데이션으로 — 애플식 */
-.photo-card .info{position:absolute;left:0;right:0;bottom:0;padding:18px 8px 6px;
-  background:linear-gradient(transparent,rgba(0,0,0,.62));
-  opacity:0;transition:opacity .2s;pointer-events:none}
-.photo-card:hover .info{opacity:1}
-.photo-card .title{font-size:12px;font-weight:600;color:#fff;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px;text-shadow:0 1px 3px rgba(0,0,0,.5)}
-.photo-card .meta{font-size:10px;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* 터치 기기엔 hover가 없으니 항상 표시 */
-@media (hover:none){
-  .photo-card .info{opacity:1}
-}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:8px}
+.photo-card{background:var(--surface);border:.5px solid var(--blue-bd);border-radius:14px;
+  overflow:hidden;cursor:pointer;transition:border-color .15s;position:relative}
+.photo-card:hover{border-color:var(--accent)}
+.photo-card .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--surface-2);display:block}
+/* 정보·버튼은 사진 밖, 항상 보이게 (사진 위에 얹으면 안 보이고 클릭도 안 먹는다) */
+.photo-card .info{position:static;padding:10px 11px 11px;opacity:1;pointer-events:auto;background:none}
+.photo-card .title{font-size:13px;font-weight:600;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.photo-card .meta{font-size:11px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo-card .card-actions .row-act-btn{flex:1}
 
 .empty{padding:80px 20px;text-align:center;color:var(--ink-faint)}
 .empty .ei{font-size:52px;margin-bottom:10px;opacity:.5}
@@ -1299,7 +1290,7 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-1920';
+const APP_VER='v20260715-1757';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
