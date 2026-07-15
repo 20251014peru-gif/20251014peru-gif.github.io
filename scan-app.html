@@ -587,6 +587,8 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 #uniSearchRow input{width:100%;height:42px;padding:0 38px 0 36px;border:none;border-radius:12px;
   font-size:16px;font-family:inherit;background:var(--blue-soft);color:var(--ink);outline:none}
 #uniSearchRow input:focus{box-shadow:0 0 0 3px var(--blue-lt)}
+#uniSearchRow input::-webkit-search-cancel-button,
+#uniSearchRow input::-webkit-search-decoration{-webkit-appearance:none;display:none}
 #uniSearchClear{position:absolute;right:8px;top:50%;transform:translateY(-50%);
   width:24px;height:24px;border:none;border-radius:50%;background:rgba(120,120,128,.28);
   color:var(--ink);font-size:11px;cursor:pointer;font-family:inherit;
@@ -621,7 +623,9 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 <div id="uniSearchRow">
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
-    <input type="text" id="uniSearch" placeholder="검색" autocomplete="off">
+    <input type="search" id="uniSearch" name="q" placeholder="검색"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      data-lpignore="true" data-1p-ignore data-form-type="other" aria-label="검색">
     <button id="uniSearchClear" aria-label="지우기">✕</button>
   </div>
 </div>
@@ -1249,7 +1253,12 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">
         Claude API 키를 입력하세요. 키는 이 브라우저에만 저장됩니다.
       </div>
-      <input type="password" id="apiKeyInp" class="key-input" placeholder="sk-ant-api03-...">
+      <!-- type="password" 를 쓰면 크롬이 이 페이지를 로그인 폼으로 보고
+           다른 입력칸(검색 등)에서 저장된 비번을 들이민다. text + CSS 마스킹으로 회피 -->
+      <input type="text" id="apiKeyInp" class="key-input" placeholder="sk-ant-api03-..."
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        data-lpignore="true" data-1p-ignore data-form-type="other"
+        style="-webkit-text-security:disc;text-security:disc">
       <div id="apiKeyState" style="margin-top:10px;font-size:12px;font-weight:700"></div>
     </div>
     <div class="modal-foot">
@@ -1327,7 +1336,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-2028';
+const APP_VER='v20260715-2041';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
