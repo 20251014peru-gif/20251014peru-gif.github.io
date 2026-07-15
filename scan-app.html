@@ -512,9 +512,6 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
   background:var(--accent);border:2px solid var(--bg)}
 .q-dot.on{display:block}
 /* 검색 시트 */
-#swGen,#swScan{display:none;width:100%}
-#swGen.on,#swScan.on{display:block}
-#searchOverlay .search-wrap input{height:42px;font-size:16px}
 
 /* 좁은 화면: 글자 접고 아이콘만 → 한 줄 보장 */
 @media (max-width:480px){
@@ -590,6 +587,23 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
   font-size:22px;line-height:1;margin-bottom:10px}
 .home-card:hover{border-color:var(--c)}
 .hc-badge{background:var(--c)}
+
+/* ── 🔍 통합 검색 한 줄 ── */
+#uniSearchRow{max-width:1600px;margin:0 auto;padding:10px 20px 0}
+#uniSearchRow .search-wrap{position:relative;width:100%}
+#uniSearchRow input{width:100%;height:42px;padding:0 38px 0 36px;border:none;border-radius:12px;
+  font-size:16px;font-family:inherit;background:var(--blue-soft);color:var(--ink);outline:none}
+#uniSearchRow input:focus{box-shadow:0 0 0 3px var(--blue-lt)}
+#uniSearchClear{position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  width:24px;height:24px;border:none;border-radius:50%;background:rgba(120,120,128,.28);
+  color:var(--ink);font-size:11px;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;justify-content:center}
+@media (max-width:768px){ #uniSearchRow{padding:10px 14px 0} }
+
+/* ── 홈 카드도 아래 탭과 같은 색 테두리 ── */
+.home-card{border:2px solid var(--c)}
+.home-card:hover{background:var(--ct)}
+.hc-ico{background:var(--ct)}
 </style>
 </head>
 <body>
@@ -601,7 +615,6 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
     <span class="sub" id="appVer">독립앱</span>
   </div>
   <div class="hdr-right">
-    <button class="hbtn" id="btnGlobalSearch" title="전체 검색">🔎<span class="hb-lbl">검색</span></button>
     <button class="hbtn" id="btnFirebase" title="클라우드 동기화">☁️<span class="hb-lbl">동기화</span></button>
     <button class="hbtn" id="btnApiKey" title="AI 키 설정">🔑<span class="hb-lbl">AI키</span></button>
     <button class="hbtn" id="btnCatMgr" title="카테고리">📂<span class="hb-lbl">카테고리</span></button>
@@ -611,6 +624,15 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
     <button class="hbtn" id="btnDebug" title="디버그 패널" style="position:relative">🐞<span id="debugBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:900;border-radius:8px;padding:1px 4px;min-width:14px;text-align:center"></span><span class="hb-lbl">디버그</span></button>
   </div>
 </header>
+
+<!-- 🔍 통합 검색 — 지금 보고 있는 화면을 검색한다 -->
+<div id="uniSearchRow">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="uniSearch" placeholder="검색" autocomplete="off">
+    <button id="uniSearchClear" aria-label="지우기">✕</button>
+  </div>
+</div>
 
 <!-- 섹션 탭 — 폰에서는 화면 아래 고정 바 -->
   <div class="tabs unified-tabs" id="mainTabs">
@@ -633,7 +655,6 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 
   <div id="generalView" style="display:none">
     <div class="bar bar-compact">
-      <button class="bar-btn ghost" id="btnOpenSearchGen" aria-label="검색">🔍<span class="lbl"> 검색</span><span class="q-dot" id="qDotGen"></span></button>
       <select class="cat-select" id="catFilter">
         <option value="all">전체 카테고리</option>
       </select>
@@ -654,7 +675,6 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
   <!-- 스캔 영역 -->
   <div id="scanView">
     <div class="bar bar-compact">
-      <button class="bar-btn ghost" id="btnOpenSearchScan" aria-label="검색">🔍<span class="lbl"> 검색</span><span class="q-dot" id="qDotScan"></span></button>
       <label class="bar-btn blue" style="cursor:pointer" onclick="event.stopPropagation()" aria-label="카메라">📷<span class="lbl"> 카메라</span>
         <input type="file" id="topScanCam" accept="image/*" capture="environment" style="display:none">
       </label>
@@ -1299,30 +1319,11 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 </div>
 
 <!-- 토스트 -->
-<!-- 🔍 검색 시트 -->
-<div class="overlay" id="searchOverlay">
-  <div class="modal" style="max-width:440px">
-    <div class="modal-head">
-      <span class="modal-title">검색</span>
-      <button class="hbtn" id="searchCloseX" aria-label="닫기">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="search-wrap" id="swGen">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="searchInp" placeholder="제목·메모 검색…" autocomplete="off">
-      </div>
-      <div class="search-wrap" id="swScan">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="scanSearch" placeholder="상호·품목·메모 검색…" autocomplete="off">
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost btn-flex" id="searchClearBtn">지우기</button>
-      <button class="btn btn-blue btn-flex" id="searchDoneBtn">완료</button>
-    </div>
-  </div>
+<!-- 기존 검색 로직이 잡고 있는 입력칸 — 화면엔 안 보이고 통합 검색이 값을 넣어준다 -->
+<div style="display:none">
+  <input type="text" id="searchInp">
+  <input type="text" id="scanSearch">
 </div>
-
 
 <div class="toast" id="toast"></div>
 
@@ -1334,7 +1335,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-1913';
+const APP_VER='v20260715-1934';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -1982,6 +1983,7 @@ function selectMode(mode){
   if(mode==='secure'&&!secureUnlocked){openSecureLock();return;}
   document.querySelectorAll('#mainTabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
   $('homeView').style.display = mode==='home' ? '' : 'none';
+  setTimeout(()=>{ if(window.syncUniSearch) syncUniSearch(); },0);
   if(mode==='home'){
     curSection='home';
     $('generalView').style.display='none';
@@ -4623,18 +4625,55 @@ $('apiKeyClear').onclick=()=>{
   $('apiKeyInp').value='';refreshKeyState();toast('🗑 키 삭제됨');
 };
 
+function catUseCount(name){
+  return photos.filter(p=>!p.deletedAt && p.cat===name).length;
+}
 function renderCatList(){
-  $('catList').innerHTML=cats.map((c,i)=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--blue-soft);border-radius:9px;margin-bottom:6px">
-      <span style="font-size:13px;font-weight:600">${esc(c)}</span>
+  $('catList').innerHTML=cats.map((c,i)=>{
+    const n=catUseCount(c);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;
+      padding:8px 12px;background:var(--blue-soft);border-radius:9px;margin-bottom:6px">
+      <span style="font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c)}</span>
+      <span style="font-size:11px;color:var(--ink-faint);white-space:nowrap">${n}장</span>
+      <button class="btn btn-ghost" data-cedit="${i}" style="height:28px;padding:0 10px;font-size:11px">✏️ 수정</button>
       <button class="btn btn-red" data-cdel="${i}" style="height:28px;padding:0 10px;font-size:11px">삭제</button>
-    </div>`).join('');
+    </div>`;}).join('');
+
+  /* 이름 바꾸기 — 이 카테고리를 쓰는 사진들도 같이 바꿔야 한다 */
+  $('catList').querySelectorAll('[data-cedit]').forEach(b=>{
+    b.onclick=()=>{
+      const idx=parseInt(b.dataset.cedit);
+      const oldName=cats[idx];
+      const v=(prompt(`'${oldName}' 을(를) 무엇으로 바꿀까요?`, oldName)||'').trim();
+      if(!v || v===oldName) return;
+      if(cats.includes(v)){toast('이미 있는 이름이에요');return;}
+      let moved=0;
+      photos.forEach(p=>{ if(p.cat===oldName){ p.cat=v; p.updated=Date.now(); moved++; } });
+      cats[idx]=v;
+      saveCats(); if(moved) savePhotos();
+      if(catFilter===oldName) catFilter=v;
+      renderCatList();refreshCatSelects();renderGallery();
+      toast(moved?`✅ 이름 변경 (사진 ${moved}장도 함께)`:'✅ 이름 변경');
+    };
+  });
+
   $('catList').querySelectorAll('[data-cdel]').forEach(b=>{
     b.onclick=()=>{
       const idx=parseInt(b.dataset.cdel);
+      const name=cats[idx], n=catUseCount(name);
       if(cats.length<=1){toast('최소 1개는 남겨두세요');return;}
-      if(!confirm(`'${cats[idx]}' 삭제할까요?`))return;
-      cats.splice(idx,1);saveCats();renderCatList();refreshCatSelects();
+      /* 쓰는 사진이 있으면 그 사진들의 카테고리가 빈다 — 미리 알린다 */
+      const msg = n ? `'${name}' 삭제할까요?\n이 카테고리를 쓰는 사진 ${n}장은 '${cats.find((c,j)=>j!==idx)}' 로 옮겨집니다.`
+                    : `'${name}' 삭제할까요?`;
+      if(!confirm(msg))return;
+      if(n){
+        const fallback=cats.find((c,j)=>j!==idx);
+        photos.forEach(p=>{ if(p.cat===name){ p.cat=fallback; p.updated=Date.now(); } });
+        savePhotos();
+      }
+      if(catFilter===name) catFilter='all';
+      cats.splice(idx,1);saveCats();renderCatList();refreshCatSelects();renderGallery();
+      toast('🗑 삭제됨');
     };
   });
 }
@@ -5085,19 +5124,22 @@ function renderGlobalSearch(q){
   });
 }
 
-$('btnGlobalSearch').onclick=()=>{
+/* 헤더의 🔎 버튼은 없앴다(검색은 아래 한 줄로 통일). 전체검색은 Ctrl+K 와
+   외부앱 호출용으로 남겨둔다 — 버튼이 없으므로 $() 가 null 이라 가드가 필요 */
+function openGlobalSearch(){
   $('globalSearchInp').value='';
   renderGlobalSearch('');
   $('globalSearchOverlay').classList.add('show');
   setTimeout(()=>$('globalSearchInp').focus(),100);
-};
+}
+const _bgs=$('btnGlobalSearch'); if(_bgs) _bgs.onclick=openGlobalSearch;
 $('globalSearchClose').onclick=()=>$('globalSearchOverlay').classList.remove('show');
 $('globalSearchInp').addEventListener('input',e=>renderGlobalSearch(e.target.value));
 // Ctrl/Cmd + K 단축키
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='k'){
     e.preventDefault();
-    $('btnGlobalSearch').click();
+    openGlobalSearch();
   }
   if(e.key==='Escape'&&$('globalSearchOverlay').classList.contains('show')){
     $('globalSearchOverlay').classList.remove('show');
@@ -5354,261 +5396,33 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
   window._fitEditOverlay=fitEditOverlay;
 })();
 
-/* ═══ 🔍 검색 시트 ═══ */
+/* ═══ 🔍 통합 검색 — 화면마다 따로 있던 검색을 하나로 ═══
+   기존 검색 로직(searchInp / scanSearch 리스너)은 그대로 두고 값만 넣어준다 */
 (function(){
-  const ov=$('searchOverlay');
-  function openSearch(which){
-    const gen=which==='gen';
-    $('swGen').classList.toggle('on',gen);
-    $('swScan').classList.toggle('on',!gen);
-    ov.classList.add('show');
-    const inp=$(gen?'searchInp':'scanSearch');
-    setTimeout(()=>{inp.focus();inp.select();},60);
+  const inp=$('uniSearch'), clr=$('uniSearchClear');
+  function target(){
+    return (curSection==='scan') ? $('scanSearch')
+         : (curSection==='normal'||curSection==='secure') ? $('searchInp')
+         : null;
   }
-  function closeSearch(){ov.classList.remove('show');syncDots();}
-  function syncDots(){
-    $('qDotGen').classList.toggle('on',!!($('searchInp').value||'').trim());
-    $('qDotScan').classList.toggle('on',!!($('scanSearch').value||'').trim());
+  function route(v){
+    const t=target(); if(!t) return;
+    t.value=v;
+    t.dispatchEvent(new Event('input',{bubbles:true}));  /* 기존 렌더 로직 재사용 */
+    clr.style.display = v ? '' : 'none';
   }
-  $('btnOpenSearchGen').onclick=()=>openSearch('gen');
-  $('btnOpenSearchScan').onclick=()=>openSearch('scan');
-  $('searchCloseX').onclick=closeSearch;
-  $('searchDoneBtn').onclick=closeSearch;
-  $('searchClearBtn').onclick=()=>{
-    const inp=$('swGen').classList.contains('on')?$('searchInp'):$('scanSearch');
-    inp.value='';
-    inp.dispatchEvent(new Event('input',{bubbles:true}));
-    syncDots();inp.focus();
+  inp.addEventListener('input', e=>route(e.target.value));
+  clr.onclick=()=>{ inp.value=''; route(''); inp.focus(); };
+  clr.style.display='none';
+
+  /* 화면을 옮기면 그 화면의 현재 검색어를 보여준다 */
+  window.syncUniSearch=function(){
+    const t=target();
+    const show = !!t;                       /* 홈에서는 검색 줄을 감춘다 */
+    $('uniSearchRow').style.display = show ? '' : 'none';
+    if(t){ inp.value=t.value||''; clr.style.display = inp.value ? '' : 'none'; }
   };
-  ov.addEventListener('click',e=>{if(e.target===ov)closeSearch();});
-  document.addEventListener('keydown',e=>{
-    if(e.key==='Escape'&&ov.classList.contains('show'))closeSearch();
-    if(e.key==='Enter'&&ov.classList.contains('show'))closeSearch();
-  });
-  ['searchInp','scanSearch'].forEach(id=>$(id).addEventListener('input',syncDots));
-  syncDots();
-})();
-
-/* ═══════════════════════════════════════════════════════════
-   문서 감지기 — 찍은 사진의 자동 크롭에 사용 (runLocalCropDetect)
-   라이브 카메라 스캐너는 제거됨. 감지 로직만 남긴다.
-   node 검증: detect.test.js / detect.hard.test.js / detect.scene.test.js
-   ═══════════════════════════════════════════════════════════ */
-(function(){
-  /* 문서 감지 — 순수 JS, 의존성 0
-     입력: RGBA (ImageData.data), w, h → {found, corners:[tl,tr,br,bl], score} */
-
-  function toGray(rgba, w, h) {
-    const g = new Uint8Array(w * h);
-    for (let i = 0, p = 0; i < g.length; i++, p += 4) {
-      g[i] = (rgba[p] * 77 + rgba[p + 1] * 150 + rgba[p + 2] * 29) >> 8;
-    }
-    return g;
-  }
-
-  function otsuStats(gray) {
-    const hist = new Int32Array(256);
-    for (let i = 0; i < gray.length; i++) hist[gray[i]]++;
-    const total = gray.length;
-    let sum = 0;
-    for (let t = 0; t < 256; t++) sum += t * hist[t];
-    let sumB = 0, wB = 0, best = 0, thr = 127, bMB = 0, bMF = 0;
-    for (let t = 0; t < 256; t++) {
-      wB += hist[t];
-      if (!wB) continue;
-      const wF = total - wB;
-      if (!wF) break;
-      sumB += t * hist[t];
-      const mB = sumB / wB, mF = (sum - sumB) / wF;
-      const between = wB * wF * (mB - mF) * (mB - mF);
-      if (between > best) { best = between; thr = t; bMB = mB; bMF = mF; }
-    }
-    /* sep = 어두운쪽/밝은쪽 평균 차이. 균일한 노이즈면 0에 가깝다 */
-    return { thr, sep: bMF - bMB };
-  }
-  function otsu(gray) { return otsuStats(gray).thr; }
-
-  /* 구멍 메우기 — 종이 위 글씨/사진은 어두워서 구멍이 된다.
-     테두리에 닿은 0에서 퍼져 '바깥'을 표시 → 안 닿은 0은 내부 구멍 → 채움 */
-  function fillHoles(bin, w, h) {
-    const outside = new Uint8Array(w * h);
-    const stack = new Int32Array(w * h);
-    let sp = 0;
-    const push = (i) => { if (!bin[i] && !outside[i]) { outside[i] = 1; stack[sp++] = i; } };
-    for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
-    for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
-    while (sp > 0) {
-      const cur = stack[--sp];
-      const x = cur % w, y = (cur / w) | 0;
-      if (x > 0)     push(cur - 1);
-      if (x < w - 1) push(cur + 1);
-      if (y > 0)     push(cur - w);
-      if (y < h - 1) push(cur + w);
-    }
-    const out = new Uint8Array(w * h);
-    for (let i = 0; i < bin.length; i++) out[i] = (bin[i] || !outside[i]) ? 1 : 0;
-    return out;
-  }
-
-  function largestBlob(bin, w, h) {
-    const label = new Int32Array(w * h).fill(-1);
-    const stack = new Int32Array(w * h);
-    let bestCount = 0, bestPixels = null, id = 0;
-    for (let start = 0; start < bin.length; start++) {
-      if (!bin[start] || label[start] !== -1) continue;
-      let sp = 0, count = 0;
-      stack[sp++] = start;
-      label[start] = id;
-      const pixels = [];
-      while (sp > 0) {
-        const cur = stack[--sp];
-        pixels.push(cur);
-        count++;
-        const x = cur % w, y = (cur / w) | 0;
-        if (x > 0     && bin[cur - 1] && label[cur - 1] === -1) { label[cur - 1] = id; stack[sp++] = cur - 1; }
-        if (x < w - 1 && bin[cur + 1] && label[cur + 1] === -1) { label[cur + 1] = id; stack[sp++] = cur + 1; }
-        if (y > 0     && bin[cur - w] && label[cur - w] === -1) { label[cur - w] = id; stack[sp++] = cur - w; }
-        if (y < h - 1 && bin[cur + w] && label[cur + w] === -1) { label[cur + w] = id; stack[sp++] = cur + w; }
-      }
-      if (count > bestCount) { bestCount = count; bestPixels = pixels; }
-      id++;
-    }
-    return { count: bestCount, pixels: bestPixels };
-  }
-
-  /* 회전된 사각형도 x+y / x-y 극값이 진짜 꼭짓점을 준다 */
-  function cornersFromPixels(pixels, w) {
-    let tl = null, tr = null, br = null, bl = null;
-    let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
-    for (let i = 0; i < pixels.length; i++) {
-      const idx = pixels[i];
-      const x = idx % w, y = (idx / w) | 0;
-      const s = x + y, d = x - y;
-      if (s < minSum) { minSum = s; tl = { x, y }; }
-      if (s > maxSum) { maxSum = s; br = { x, y }; }
-      if (d > maxDiff) { maxDiff = d; tr = { x, y }; }
-      if (d < minDiff) { minDiff = d; bl = { x, y }; }
-    }
-    return [tl, tr, br, bl];
-  }
-
-  /* 덩어리가 프레임 테두리 몇 면에 닿는지 — 책상/벽 같은 배경은 여러 면에 닿는다.
-     손에 든 문서는 보통 여백이 있어 안 닿는다 */
-  function borderSides(pixels, w, h) {
-    let t=false,b=false,l=false,r=false;
-    for (let i = 0; i < pixels.length; i++) {
-      const idx = pixels[i];
-      const x = idx % w, y = (idx / w) | 0;
-      if (y === 0) t = true;
-      else if (y === h - 1) b = true;
-      if (x === 0) l = true;
-      else if (x === w - 1) r = true;
-      if (t && b && l && r) break;
-    }
-    return (t?1:0)+(b?1:0)+(l?1:0)+(r?1:0);
-  }
-
-  function polyArea(p) {
-    let a = 0;
-    for (let i = 0; i < 4; i++) {
-      const j = (i + 1) % 4;
-      a += p[i].x * p[j].y - p[j].x * p[i].y;
-    }
-    return Math.abs(a) / 2;
-  }
-  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
-
-  function validateQuad(c, w, h, blobCount, sides) {
-    const area = polyArea(c);
-    const fill = area / (w * h);
-    /* 명함을 팔 길이에서 찍으면 화면의 10% 남짓 — 하한을 너무 올리면 명함이 버려진다 */
-    if (fill < 0.045) return { ok: false, why: 'too small (' + fill.toFixed(3) + ')' };
-    if (fill > 0.92) return { ok: false, why: 'fills frame' };
-    /* 테두리 3면 이상에 닿으면서 크면 책상/벽 — 문서가 아니다 */
-    if (sides >= 3 && fill > 0.35) return { ok: false, why: 'background (touches ' + sides + ' sides)' };
-
-    const e = [dist(c[0], c[1]), dist(c[1], c[2]), dist(c[2], c[3]), dist(c[3], c[0])];
-    const minE = Math.min(e[0], e[1], e[2], e[3]);
-    const maxE = Math.max(e[0], e[1], e[2], e[3]);
-    if (minE < 12) return { ok: false, why: 'edge too short' };
-    if (maxE / minE > 6) return { ok: false, why: 'aspect extreme' };
-
-    let sign = 0;
-    for (let i = 0; i < 4; i++) {
-      const a = c[i], b = c[(i + 1) % 4], d = c[(i + 2) % 4];
-      const cr = (b.x - a.x) * (d.y - b.y) - (b.y - a.y) * (d.x - b.x);
-      if (cr === 0) continue;
-      const s = cr > 0 ? 1 : -1;
-      if (sign === 0) sign = s;
-      else if (s !== sign) return { ok: false, why: 'not convex' };
-    }
-
-    /* 구멍을 메운 뒤라 종이면 1.0에 가깝다. 손/그림자 같은 비사각형을 거른다 */
-    const solidity = blobCount / area;
-    if (solidity < 0.80) return { ok: false, why: 'not rectangular (' + solidity.toFixed(2) + ')' };
-
-    return { ok: true, fill, solidity };
-  }
-
-  function attempt(gray, w, h, thr) {
-    const bin = new Uint8Array(w * h);
-    for (let i = 0; i < gray.length; i++) bin[i] = gray[i] > thr ? 1 : 0;
-    const filled = fillHoles(bin, w, h);
-    const blob = largestBlob(filled, w, h);
-    if (!blob.pixels || blob.count < w * h * 0.035) {
-      return { found: false, reason: 'no blob', corners: null };
-    }
-    const corners = cornersFromPixels(blob.pixels, w);
-    const sides = borderSides(blob.pixels, w, h);
-    const v = validateQuad(corners, w, h, blob.count, sides);
-    if (!v.ok) return { found: false, reason: v.why, corners };
-    return { found: true, corners, score: v.solidity * v.fill, fill: v.fill, solidity: v.solidity, thr };
-  }
-
-  /* 선명도 = 라플라시안 분산. 초점이 안 맞으면 급격히 떨어진다.
-     문서 영역 안에서만 재야 배경 잡음에 안 속는다 */
-  function sharpness(gray, w, h, box) {
-    const x0=Math.max(1,box?box.x0:1), x1=Math.min(w-1,box?box.x1:w-1);
-    const y0=Math.max(1,box?box.y0:1), y1=Math.min(h-1,box?box.y1:h-1);
-    let sum=0,sum2=0,n=0;
-    for(let y=y0;y<y1;y++) for(let x=x0;x<x1;x++){
-      const i=y*w+x;
-      const lap=4*gray[i]-gray[i-1]-gray[i+1]-gray[i-w]-gray[i+w];
-      sum+=lap; sum2+=lap*lap; n++;
-    }
-    if(n<50) return 0;
-    const mean=sum/n;
-    return sum2/n-mean*mean;
-  }
-
-  /* 종이와 배경을 가르려면 최소한 이만큼은 밝기가 달라야 한다.
-     이보다 작으면 그냥 노이즈를 억지로 가른 것 — 민무늬 벽에서 오검출 방지 */
-  const MIN_SEP = 18;
-
-  function detectDocument(rgba, w, h) {
-    const gray = toGray(rgba, w, h);
-    const o1 = otsuStats(gray);
-    if (o1.sep < MIN_SEP) return { found: false, reason: 'no contrast (sep=' + o1.sep.toFixed(1) + ')', corners: null };
-    const thr1 = o1.thr;
-    const r1 = attempt(gray, w, h, thr1);
-    if (r1.found) return r1;
-
-    /* 재시도 - 흰 책상 위 흰 종이:
-       글씨/책상/종이 3봉 히스토그램이면 1차 Otsu가 "글씨 vs 나머지"로 갈라
-       책상까지 종이로 본다. 밝은 픽셀만 모아 2차 Otsu로 다시 가른다. */
-    const bright = [];
-    for (let i = 0; i < gray.length; i++) if (gray[i] > thr1) bright.push(gray[i]);
-    if (bright.length > gray.length * 0.15) {
-      const o2 = otsuStats(Uint8Array.from(bright));
-      if (o2.thr > thr1 && o2.sep >= MIN_SEP) {
-        const r2 = attempt(gray, w, h, o2.thr);
-        if (r2.found) { r2.retried = true; return r2; }
-      }
-    }
-    return r1;
-  }
-
-  window.__detectDoc = detectDocument;
+  syncUniSearch();
 })();
 
 /* 영수증 필터/정렬 이벤트 — 페이지 로드 후 1회 직접 바인딩 */
