@@ -176,7 +176,8 @@ async function syncFromFirebase(){
       }
     }
     if(!local){
-      photos.unshift(rp);
+      const {imgData:_omit, ...slim} = rp;   // base64는 IDB에만 캐시, 메모리/localStorage엔 넣지 않음
+      photos.unshift(slim);
       updated=true;
     }
   }
@@ -238,7 +239,16 @@ function loadData(){
   try{ photos=JSON.parse(localStorage.getItem(LS_PHOTOS+'_'+MODE)||'[]'); }catch{ photos=[]; }
   try{ cats=JSON.parse(localStorage.getItem(LS_CATS+'_'+MODE)||JSON.stringify(DEFAULT_CATS)); }catch{ cats=[...DEFAULT_CATS]; }
 }
-const savePhotos = () => localStorage.setItem(LS_PHOTOS+'_'+MODE, JSON.stringify(photos));
+const savePhotos = () => {
+  try{
+    // imgData(base64)는 절대 localStorage에 넣지 않는다 — 이미지는 IndexedDB(imgIds)에 있음
+    const slim = photos.map(({imgData, ...rest}) => rest);
+    localStorage.setItem(LS_PHOTOS+'_'+MODE, JSON.stringify(slim));
+  }catch(e){
+    dbg('savePhotos error: '+e.name+' '+e.message,'error');
+    toast('⚠️ 로컬 저장 공간 부족 — 브라우저 저장소를 확인하세요');
+  }
+};
 const saveCats   = () => localStorage.setItem(LS_CATS+'_'+MODE,   JSON.stringify(cats));
 const uid  = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const today= () => new Date().toISOString().slice(0,10);
@@ -639,8 +649,8 @@ async function savePhoto(){
       const p=photos.find(x=>x.id===mEditId); if(!p) return;
       for(const oid of (p.imgIds||[])) idbDel(oid).catch(()=>{});
       p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.type=type;
-      p.imgIds=ids; p.imgData=imgData;
-      const fd={...p}; delete fd.id;
+      p.imgIds=ids; delete p.imgData;
+      const fd={...p, imgData}; delete fd.id;   // imgData는 Firestore 전송용으로만 사용
       const r=await fetch(`${FS_BASE}/${FS_COL()}/${p.id}?key=${FIREBASE_KEY}`,{
         method:'PATCH', headers:{'Content-Type':'application/json'},
         body:JSON.stringify(toFS(fd))
@@ -648,9 +658,9 @@ async function savePhoto(){
       dbg(`Firestore PATCH edit: ${r.status}`);
     } else {
       const pid=uid();
-      const np={id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids,imgData};
+      const np={id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids};
       photos.unshift(np);
-      const fd={...np}; delete fd.id;
+      const fd={...np, imgData}; delete fd.id;   // imgData는 Firestore 전송용으로만 사용
       const r=await fetch(`${FS_BASE}/${FS_COL()}/${pid}?key=${FIREBASE_KEY}`,{
         method:'PATCH', headers:{'Content-Type':'application/json'},
         body:JSON.stringify(toFS(fd))
