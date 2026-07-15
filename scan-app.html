@@ -1150,7 +1150,7 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
   <div class="crop-header">
     <div style="color:#fff;font-size:14px;font-weight:700" id="cropTitle">✂️ 영역만 잘라내기</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <button class="crop-header-btn orange" id="cropAiDetect">🤖 AI 자동감지</button>
+      <button class="crop-header-btn orange" id="cropAiDetect">🤖 AI로 다시</button>
       <button class="crop-header-btn" id="cropReset">↻ 초기화</button>
       <button class="crop-header-btn" id="cropSkip">⏭ 건너뛰기</button>
       <button class="crop-header-btn" id="cropClose">✕ 닫기</button>
@@ -1290,7 +1290,7 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-1757';
+const APP_VER='v20260715-1802';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -2769,8 +2769,9 @@ function openCropModal(dataUrl,callback,title,presetCorners){
     }else{
       _crop.points=[{x:m,y:m},{x:cw-m,y:m},{x:cw-m,y:ch-m},{x:m,y:ch-m}];
       drawCrop();
-      /* 서류·명함이면 촬영 즉시 문서에 맞춰 자동 감지 */
-      if(AUTO_SCAN&&apiKey)runCropAiDetect(true);
+      /* 촬영 즉시 자동 감지 — 픽셀 기반이라 무료. 실패하면 기본 사각형 두고 수동 조정.
+         AI(🤖)는 좌표를 정확히 못 짚어서 자동으로는 더 이상 부르지 않는다 */
+      if(AUTO_SCAN) runLocalCropDetect();
     }
   };
   img.src=dataUrl;
@@ -2895,6 +2896,27 @@ $('cropReset').onclick=()=>{
   _crop.points=[{x:m,y:m},{x:cw-m,y:m},{x:cw-m,y:ch-m},{x:m,y:ch-m}];
   drawCrop();
 };
+
+/* 픽셀 기반 로컬 감지 — 무료·즉시. 성공하면 true */
+function runLocalCropDetect(){
+  if(!_crop.img || !window.__detectDoc) return false;
+  try{
+    const iw=_crop.img.width, ih=_crop.img.height;
+    const dw=320, dh=Math.max(1, Math.round(ih*320/iw));
+    const c=document.createElement('canvas'); c.width=dw; c.height=dh;
+    const cx=c.getContext('2d',{willReadFrequently:true});
+    cx.drawImage(_crop.img,0,0,dw,dh);
+    const r=window.__detectDoc(cx.getImageData(0,0,dw,dh).data,dw,dh);
+    if(!r.found) return false;
+    const k=(iw/dw)*_crop.scale;      /* 감지좌표 → 원본 → 크롭캔버스 */
+    _crop.points=r.corners.map(p=>({x:p.x*k, y:p.y*k}));
+    drawCrop();
+    const st=$('cropStatus');
+    st.textContent='✅ 문서 감지됨'; st.style.color='#7fffb2'; st.style.display='block';
+    setTimeout(()=>{st.style.display='none';st.style.color='#ffd788';},1600);
+    return true;
+  }catch(e){ return false; }
+}
 
 async function runCropAiDetect(auto){
   /* auto=true : 크롭 창이 열리자마자 자동 실행 (🤖 안 눌러도 됨).
@@ -5581,6 +5603,9 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
       openCropModal(dataUrl, cb, title, corners);
     }, 140);
   }
+
+  /* 찍은 사진 크롭에도 같은 감지기를 쓴다 (AI 추측보다 정확하고 무료) */
+  window.__detectDoc = detectDocument;
 
   $('btnLiveScan').onclick = ()=>{
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
