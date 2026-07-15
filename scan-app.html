@@ -5136,6 +5136,7 @@ console.log('[사진 스캐너 v2-0714-1858] 로드 완료');
 
 /* 영수증 필터/정렬 이벤트 — 페이지 로드 후 1회 직접 바인딩 */
 _bindReceiptTableEvents();
+
 /* ═══ 📱 iOS: 키보드가 올라와도 편집 헤더(저장 버튼)가 안 밀리게 ═══
    iOS Safari는 position:fixed를 레이아웃 뷰포트에 고정해서, 키보드가 뜨면
    페이지 전체를 밀어올린다 → 오버레이 상단(저장 버튼)이 화면 밖으로 나감.
@@ -5183,10 +5184,9 @@ _bindReceiptTableEvents();
   $('searchClearBtn').onclick=()=>{
     const inp=$('swGen').classList.contains('on')?$('searchInp'):$('scanSearch');
     inp.value='';
-    inp.dispatchEvent(new Event('input',{bubbles:true}));  // 기존 렌더 로직 재사용
+    inp.dispatchEvent(new Event('input',{bubbles:true}));
     syncDots();inp.focus();
   };
-  // 배경 탭 / ESC 로 닫기
   ov.addEventListener('click',e=>{if(e.target===ov)closeSearch();});
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'&&ov.classList.contains('show'))closeSearch();
@@ -5196,6 +5196,8 @@ _bindReceiptTableEvents();
   syncDots();
 })();
 
+/* 영수증 필터/정렬 이벤트 — 페이지 로드 후 1회 직접 바인딩 */
+_bindReceiptTableEvents();
 </script>
 </body>
 </html>
