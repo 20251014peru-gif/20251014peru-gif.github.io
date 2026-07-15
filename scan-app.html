@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
 <title>📷 사진 스캐너 v2-0714-1858</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -402,9 +402,18 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 /* ── 편집기: 항상 다크 (사진 편집 툴 관례) ── */
 #editOverlay{display:none;position:fixed;inset:0;background:#000;z-index:99996;flex-direction:column}
 #editOverlay.show{display:flex}
-#editHeader{padding:12px 18px;background:#1c1c1e;display:flex;justify-content:space-between;
-  align-items:center;color:#fff;flex-wrap:wrap;gap:8px;border-bottom:.5px solid rgba(255,255,255,.1)}
-#editHeader .ttl{font-size:15px;font-weight:600}
+/* 헤더는 절대 안 밀린다 — 저장 버튼이 여기 있음 */
+#editHeader{flex:0 0 auto;padding:12px 18px;background:#1c1c1e;display:flex;justify-content:space-between;
+  align-items:center;color:#fff;flex-wrap:nowrap;gap:8px;border-bottom:.5px solid rgba(255,255,255,.1);
+  padding-top:calc(12px + env(safe-area-inset-top))}
+#editHeader .ttl{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#editHeader>div{flex:0 0 auto}
+#editOverlay #editDone{position:sticky;right:0}
+/* 좁은 폰: 제목 숨기고 저장 버튼 자리 확보 */
+@media (max-width:420px){
+  #editHeader .ttl{display:none}
+  #editHeader{justify-content:flex-end}
+}
 .edit-toolbar{background:#1c1c1e;padding:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;
   border-top:.5px solid rgba(255,255,255,.1);border-bottom:.5px solid rgba(255,255,255,.1)}
 .edit-tool{width:38px;height:38px;border-radius:50%;border:none;
@@ -420,11 +429,13 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
   background:rgba(120,120,128,.32);color:#fff;font-size:13px;font-family:inherit;font-weight:500}
 #editCanvasWrap{flex:1;display:flex;align-items:center;justify-content:center;
   padding:14px;background:#000;overflow:hidden}
-#editTextInputRow{display:none;padding:10px 14px;background:#1c1c1e;
-  gap:8px;align-items:center;border-top:.5px solid rgba(255,255,255,.1)}
+#editTextInputRow{display:none;flex:0 0 auto;padding:10px 14px;background:#1c1c1e;
+  gap:8px;align-items:center;border-top:.5px solid rgba(255,255,255,.1);
+  padding-bottom:calc(10px + env(safe-area-inset-bottom))}
 #editTextInputRow.show{display:flex}
+/* 16px 미만이면 iOS가 포커스 때 화면을 확대해버림 → 헤더가 밖으로 밀려남 */
 #editTextInputRow input{flex:1;padding:9px 13px;border:none;
-  border-radius:100px;background:rgba(120,120,128,.32);color:#fff;font-size:15px;font-family:inherit;outline:none}
+  border-radius:100px;background:rgba(120,120,128,.32);color:#fff;font-size:16px;font-family:inherit;outline:none}
 #editTextInputRow button{padding:9px 16px;background:var(--accent);color:#fff;border:none;
   border-radius:100px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
 
@@ -461,6 +472,39 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
   *{transition:none!important;animation:none!important}
   .photo-card:hover .thumb{transform:none}
 }
+
+/* ── 검색 아이콘 버튼 + 한 줄 바 ── */
+.icon-btn{position:relative;flex:0 0 auto;width:36px;height:36px;border-radius:50%;border:none;
+  background:var(--blue-soft);color:var(--ink);font-size:15px;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;justify-content:center;transition:background .15s}
+.icon-btn:hover{background:var(--blue-lt)}
+.icon-btn:active{transform:scale(.94)}
+.q-dot{display:none;position:absolute;top:1px;right:1px;width:9px;height:9px;border-radius:50%;
+  background:var(--accent);border:2px solid var(--bg)}
+.q-dot.on{display:block}
+/* 검색 시트: 한 번에 하나만 */
+#swGen,#swScan{display:none;width:100%}
+#swGen.on,#swScan.on{display:block}
+#searchOverlay .search-wrap input{height:42px;font-size:16px}
+
+/* 모바일: 카메라·갤러리·CSV 한 줄 유지 */
+@media (max-width:560px){
+  .bar-compact{flex-wrap:nowrap;gap:6px;align-items:center}
+  .bar-compact .cat-select{flex:1 1 auto;min-width:0;width:0}
+  .bar-compact .btn-primary,.bar-compact .btn-csv{
+    flex:0 0 auto;padding:0 11px;font-size:13px;height:36px;white-space:nowrap}
+}
+@media (max-width:380px){
+  .bar-compact .btn-primary,.bar-compact .btn-csv{padding:0 9px;font-size:12px}
+}
+
+/* ── 명함 구분 배지 ── */
+.owner-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:100px;
+  font-size:11px;font-weight:600;white-space:nowrap;line-height:1.6}
+.owner-badge.ob-company,.owner-badge.ob-work{background:var(--blue-lt);color:var(--accent)}
+.owner-badge.ob-estate{background:var(--green-lt);color:var(--green)}
+.owner-badge.ob-personal{background:rgba(255,149,0,.16);color:var(--orange)}
+.owner-badge.ob-other{background:var(--blue-soft);color:var(--ink-soft)}
 </style>
 </head>
 <body>
@@ -495,11 +539,8 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 <main>
   <!-- 일반/보안 갤러리 -->
   <div id="generalView" style="display:none">
-    <div class="bar">
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="searchInp" placeholder="제목·메모 검색…">
-      </div>
+    <div class="bar bar-compact">
+      <button class="icon-btn" id="btnOpenSearchGen" aria-label="검색">🔍<span class="q-dot" id="qDotGen"></span></button>
       <select class="cat-select" id="catFilter">
         <option value="all">전체 카테고리</option>
       </select>
@@ -519,11 +560,8 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 
   <!-- 스캔 영역 -->
   <div id="scanView">
-    <div class="bar">
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="scanSearch" placeholder="검색…">
-      </div>
+    <div class="bar bar-compact">
+      <button class="icon-btn" id="btnOpenSearchScan" aria-label="검색">🔍<span class="q-dot" id="qDotScan"></span></button>
       <label class="btn-primary" style="cursor:pointer" onclick="event.stopPropagation()">📷 카메라
         <input type="file" id="topScanCam" accept="image/*" capture="environment" style="display:none">
       </label>
@@ -813,6 +851,14 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
       </div>
       <div id="cardAiProgress" class="ai-progress"></div>
       <div class="form-grid">
+        <div class="field full">
+          <label>📂 구분 *</label>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <button type="button" class="chip c-owner-btn" data-owner="업무">💼 업무용</button>
+            <button type="button" class="chip c-owner-btn" data-owner="개인">👤 개인용</button>
+          </div>
+          <input type="hidden" id="c_owner">
+        </div>
         <div class="field"><label>🏢 회사명</label><input type="text" id="c_company"></div>
         <div class="field"><label>👤 이름 *</label><input type="text" id="c_name"></div>
         <div class="field"><label>🎯 직책</label><input type="text" id="c_position"></div>
@@ -1160,6 +1206,30 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 </div>
 
 <!-- 토스트 -->
+<!-- 🔍 검색 시트 -->
+<div class="overlay" id="searchOverlay">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head">
+      <span class="modal-title">검색</span>
+      <button class="hbtn" id="searchCloseX" aria-label="닫기">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="search-wrap" id="swGen">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInp" placeholder="제목·메모 검색…" autocomplete="off">
+      </div>
+      <div class="search-wrap" id="swScan">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="scanSearch" placeholder="상호·품목·메모 검색…" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-flex" id="searchClearBtn">지우기</button>
+      <button class="btn btn-blue btn-flex" id="searchDoneBtn">완료</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- 파일 입력 (백업) -->
@@ -2148,12 +2218,36 @@ $('detailCloseBtn').onclick=()=>$('detailOverlay').classList.remove('show');
 
 // CHUNK_5 - 풀형 편집기 (fabric.js)
 let _fab=null,_fabCallback=null,_fabTool='select',_fabHistory=[],_fabCropRect=null;
+/* 원본 해상도 복원용 — 캔버스는 화면 크기라 그대로 뽑으면 사진이 뭉개진다 */
+let _fabImgObj=null,_fabImgScale=1;
+
+/* 배치된 원본 이미지가 차지하는 캔버스 영역 (letterbox 여백 제외) */
+function _fabImgRect(){
+  if(!_fabImgObj)return null;
+  return {left:_fabImgObj.left,top:_fabImgObj.top,
+          width:_fabImgObj.width*_fabImgScale,height:_fabImgObj.height*_fabImgScale};
+}
+/* 줌/팬 상태와 무관하게, 원본 픽셀로 되돌려 내보낸다 */
+function _fabExport(opt){
+  if(!_fab)return null;
+  const vpt=_fab.viewportTransform.slice();
+  _fab.setViewportTransform([1,0,0,1,0,0]);
+  try{
+    return _fab.toDataURL(Object.assign(
+      {format:'jpeg',quality:0.92,multiplier:(_fabImgScale>0?1/_fabImgScale:1)},
+      opt||{}));
+  }finally{
+    _fab.setViewportTransform(vpt);_fab.renderAll();
+  }
+}
 
 function openEditModal(dataUrl,callback){
   _fabCallback=callback;
   _fabHistory=[];
   _fabZoom=1;
+  _fabImgObj=null;_fabImgScale=1;
   $('editOverlay').classList.add('show');
+  if(window._fitEditOverlay)window._fitEditOverlay();
   $('editTextInputRow').classList.remove('show');
   if(_fab){try{_fab.dispose();}catch(e){}_fab=null;}
   // 레이아웃이 완전히 적용된 다음에 캔버스 만들기
@@ -2171,6 +2265,7 @@ function openEditModal(dataUrl,callback){
         top:(ch-img.height*scale)/2,
         selectable:false,evented:false,
       });
+      _fabImgObj=img;_fabImgScale=scale;   /* 저장 때 원본 해상도로 되돌리기 위해 기억 */
       _fab.add(img);_fab.sendToBack(img);_fab.renderAll();
       pushHistory();setEditTool('select');
     },{crossOrigin:'anonymous'});
@@ -2178,8 +2273,9 @@ function openEditModal(dataUrl,callback){
 }
 function closeEditModal(){
   $('editOverlay').classList.remove('show');
+  if(window._fitEditOverlay)window._fitEditOverlay();   /* 인라인 top/height 초기화 */
   if(_fab){try{_fab.dispose();}catch(e){}_fab=null;}
-  _fabCallback=null;
+  _fabCallback=null;_fabImgObj=null;_fabImgScale=1;
 }
 $('editClose').onclick=()=>{if(confirm('편집을 취소할까요?'))closeEditModal();};
 
@@ -2352,7 +2448,7 @@ function applyEditCrop(){
   const cw=r.getScaledWidth(),ch=r.getScaledHeight();
   const cx=r.left,cy=r.top;
   _fab.remove(_fabCropRect);_fabCropRect=null;
-  const dataUrl=_fab.toDataURL({left:cx,top:cy,width:cw,height:ch,format:'jpeg',quality:0.92});
+  const dataUrl=_fabExport({left:cx,top:cy,width:cw,height:ch,quality:0.92});
   openEditModal(dataUrl,_fabCallback);
 }
 function addRect(){
@@ -2396,7 +2492,7 @@ $('editRotL').onclick=()=>{
   const obj=_fab.getActiveObject();
   if(obj){obj.rotate((obj.angle||0)-90);_fab.renderAll();pushHistory();}
   else{
-    const dataUrl=_fab.toDataURL({format:'jpeg',quality:0.92});
+    const dataUrl=_fabExport(Object.assign({quality:0.92},_fabImgRect()||{}));
     rotateImage(dataUrl,-90).then(r=>openEditModal(r,_fabCallback));
   }
 };
@@ -2405,7 +2501,7 @@ $('editRotR').onclick=()=>{
   const obj=_fab.getActiveObject();
   if(obj){obj.rotate((obj.angle||0)+90);_fab.renderAll();pushHistory();}
   else{
-    const dataUrl=_fab.toDataURL({format:'jpeg',quality:0.92});
+    const dataUrl=_fabExport(Object.assign({quality:0.92},_fabImgRect()||{}));
     rotateImage(dataUrl,90).then(r=>openEditModal(r,_fabCallback));
   }
 };
@@ -2448,7 +2544,7 @@ $('editDone').onclick=()=>{
   if(!_fab)return;
   if(_fabCropRect){_fab.remove(_fabCropRect);_fabCropRect=null;}
   _fab.discardActiveObject();
-  const dataUrl=_fab.toDataURL({format:'jpeg',quality:0.9,multiplier:1});
+  const dataUrl=_fabExport(Object.assign({quality:0.92},_fabImgRect()||{}));
   if(_fabCallback)_fabCallback(dataUrl);
   closeEditModal();
   toast('✅ 편집 완료');
@@ -2977,12 +3073,13 @@ function _applyReceiptFilters(list){
 function _ownerBadge(owner){
   if(!owner) return '';
   const map={
-    '회사': ['#3f7cb8','#e8f0fa','🏢'],
-    '부동산': ['#16a34a','#e6f9f0','🏠'],
-    '개인': ['#d97706','#fef3c7','👤'],
+    '회사': ['company','🏢'],
+    '부동산': ['estate','🏠'],
+    '개인': ['personal','👤'],
+    '업무': ['work','💼'],
   };
-  const [color,bg,icon]=map[owner]||['#6b7280','#f3f4f6','📂'];
-  return `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:800;background:${bg};color:${color};white-space:nowrap">${icon} ${owner}</span>`;
+  const [cls,icon]=map[owner]||['other','📂'];
+  return `<span class="owner-badge ob-${cls}">${icon} ${owner}</span>`;
 }
 /* 영수증 테이블 이벤트는 DOMContentLoaded에서 바인딩 */
 
@@ -3167,16 +3264,16 @@ function _updateFilterBtnStyles(){
   const pm=_rColFilter.payMethod||'';
   document.querySelectorAll('.cf-pay-btn').forEach(b=>{
     const on=b.dataset.pay===pm;
-    b.style.background=on?'var(--blue)':'#fff';
+    b.style.background=on?'var(--blue)':'var(--white)';
     b.style.color=on?'#fff':'var(--ink-soft)';
     b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
   });
   const ow=_rColFilter.owner||'';
   document.querySelectorAll('.cf-owner-btn').forEach(b=>{
     const on=b.dataset.owner===ow;
-    b.style.background=on?'#16a34a':'#fff';
+    b.style.background=on?'var(--green)':'var(--white)';
     b.style.color=on?'#fff':'var(--ink-soft)';
-    b.style.borderColor=on?'#16a34a':'var(--blue-bd)';
+    b.style.borderColor=on?'var(--green)':'var(--blue-bd)';
   });
 }
 
@@ -3247,15 +3344,16 @@ function renderCardList(q){
   const list=cards.filter(c=>{
     if(c.deletedAt)return false;
     if(!q)return true;
-    return [c.company,c.name,c.position,c.phone,c.mobile,c.fax,c.email,c.addr,c.memo]
+    return [c.company,c.name,c.position,c.phone,c.mobile,c.fax,c.email,c.addr,c.memo,c.owner]
       .some(v=>(v||'').toLowerCase().includes(q));
   });
   if(!list.length){$('cardList').innerHTML='';$('scanEmpty').style.display='';return;}
   $('scanEmpty').style.display='none';
   const tableHtml=`<div class="scan-table"><table>
-    <thead><tr><th>회사</th><th>이름</th><th>직책</th><th>휴대폰</th><th>유선</th><th>팩스</th>
+    <thead><tr><th>구분</th><th>회사</th><th>이름</th><th>직책</th><th>휴대폰</th><th>유선</th><th>팩스</th>
     <th>이메일</th><th>주소</th><th style="text-align:right">작업</th></tr></thead>
     <tbody>${list.map(c=>`<tr data-id="${esc(c.id)}">
+      <td>${_ownerBadge(c.owner||'업무')}</td>
       <td class="truncate" style="font-weight:700">${esc(c.company||'')}</td>
       <td>${esc(c.name||'')}</td>
       <td style="font-size:12px;color:var(--ink-soft)">${esc(c.position||'')}${c.dept?' / '+esc(c.dept):''}</td>
@@ -3272,7 +3370,7 @@ function renderCardList(q){
   const cardHtml=`<div class="scan-card-list">${list.map(c=>`<div class="scan-card" data-id="${esc(c.id)}">
     <div class="top">
       <div>
-        <div class="ttl">💼 ${esc(c.name||'(이름없음)')}</div>
+        <div class="ttl">${_ownerBadge(c.owner||'업무')} ${esc(c.name||'(이름없음)')}</div>
         <div style="font-size:12px;color:var(--ink-soft);font-weight:600;margin-top:2px">${esc(c.position||'')}${c.dept?' / '+esc(c.dept):''}</div>
       </div>
       <div class="date">${esc(c.company||'')}</div>
@@ -3620,7 +3718,7 @@ function copyReceiptToClipboard(r){
   navigator.clipboard.writeText(row).then(()=>toast('📋 엑셀 복사됨'));
 }
 function copyCardToClipboard(c){
-  const row=[c.company||'',c.name||'',c.position||'',c.dept||'',c.mobile||'',
+  const row=[c.owner||'업무',c.company||'',c.name||'',c.position||'',c.dept||'',c.mobile||'',
     c.phone||'',c.fax||'',c.email||'',c.website||'',c.addr||'',c.memo||''].join('\t');
   navigator.clipboard.writeText(row).then(()=>toast('📋 엑셀 복사됨'));
 }
@@ -3640,8 +3738,8 @@ function exportScanCsv(){
     filename=`영수증_${today()}.csv`;
   }else if(curScanType==='card'){
     if(!cards.length){toast('내보낼 명함이 없어요');return;}
-    rows=[['회사명','이름','직책','부서','휴대폰','유선전화','팩스','이메일','웹사이트','주소','메모']];
-    cards.forEach(c=>rows.push([c.company||'',c.name||'',c.position||'',c.dept||'',
+    rows=[['구분','회사명','이름','직책','부서','휴대폰','유선전화','팩스','이메일','웹사이트','주소','메모']];
+    cards.forEach(c=>rows.push([c.owner||'업무',c.company||'',c.name||'',c.position||'',c.dept||'',
       c.mobile||'',c.phone||'',c.fax||'',c.email||'',c.website||'',c.addr||'',c.memo||'']));
     filename=`명함_${today()}.csv`;
   }else{
@@ -3700,7 +3798,7 @@ function openReceiptModal(receipt){
   const pm=receipt?(receipt.payMethod||''):'';
   document.querySelectorAll('.r-pay-btn').forEach(b=>{
     const on=b.dataset.pay===pm;
-    b.style.background=on?'var(--blue)':'#fff';
+    b.style.background=on?'var(--blue)':'var(--white)';
     b.style.color=on?'#fff':'var(--ink-soft)';
     b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
   });
@@ -3709,9 +3807,9 @@ function openReceiptModal(receipt){
   $('r_owner').value=ow;
   document.querySelectorAll('.r-owner-btn').forEach(b=>{
     const on=b.dataset.owner===ow;
-    b.style.background=on?'#16a34a':'#fff';
+    b.style.background=on?'var(--green)':'var(--white)';
     b.style.color=on?'#fff':'var(--ink-soft)';
-    b.style.borderColor=on?'#16a34a':'var(--blue-bd)';
+    b.style.borderColor=on?'var(--green)':'var(--blue-bd)';
   });
   showReceiptPhoto();
   renderReceiptItems(receipt?(receipt.items||[]):[]);
@@ -3842,7 +3940,7 @@ $('rcptAnalyze').onclick=async()=>{
       $('r_payMethod').value=r.payMethod;
       document.querySelectorAll('.r-pay-btn').forEach(b=>{
         const on=b.dataset.pay===r.payMethod;
-        b.style.background=on?'var(--blue)':'#fff';
+        b.style.background=on?'var(--blue)':'var(--white)';
         b.style.color=on?'#fff':'var(--ink-soft)';
         b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
       });
@@ -3868,7 +3966,7 @@ document.querySelectorAll('.r-pay-btn').forEach(btn=>{
     $('r_payMethod').value=val;
     document.querySelectorAll('.r-pay-btn').forEach(b=>{
       const on=b.dataset.pay===val;
-      b.style.background=on?'var(--blue)':'#fff';
+      b.style.background=on?'var(--blue)':'var(--white)';
       b.style.color=on?'#fff':'var(--ink-soft)';
       b.style.borderColor=on?'var(--blue)':'var(--blue-bd)';
     });
@@ -3881,9 +3979,9 @@ document.querySelectorAll('.r-owner-btn').forEach(btn=>{
     $('r_owner').value=val;
     document.querySelectorAll('.r-owner-btn').forEach(b=>{
       const on=b.dataset.owner===val;
-      b.style.background=on?'#16a34a':'#fff';
+      b.style.background=on?'var(--green)':'var(--white)';
       b.style.color=on?'#fff':'var(--ink-soft)';
-      b.style.borderColor=on?'#16a34a':'var(--blue-bd)';
+      b.style.borderColor=on?'var(--green)':'var(--blue-bd)';
     });
   });
 });
@@ -3968,6 +4066,7 @@ function openCardModal(card){
   }
   $('cardModalTitle').textContent=card?'✏️ 명함 수정':'💼 명함 추가';
   $('cardDelete').style.display=card?'':'none';
+  setCardOwner(card?(card.owner||'업무'):'업무');
   $('c_company').value=card?(card.company||''):'';
   $('c_name').value=card?(card.name||''):'';
   $('c_position').value=card?(card.position||''):'';
@@ -3983,6 +4082,15 @@ function openCardModal(card){
   $('cardAiProgress').classList.remove('show');
   $('cardOverlay').classList.add('show');
 }
+function setCardOwner(v){
+  $('c_owner').value=v||'업무';
+  document.querySelectorAll('.c-owner-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.owner===$('c_owner').value);
+  });
+}
+document.querySelectorAll('.c-owner-btn').forEach(b=>{
+  b.onclick=()=>setCardOwner(b.dataset.owner);
+});
 function closeCardModal(){$('cardOverlay').classList.remove('show');_cardEditing=null;_cardImg=null;}
 function showCardPhoto(){
   if(!_cardImg){
@@ -4110,6 +4218,7 @@ $('cardSave').onclick=async()=>{
     website:$('c_website').value.trim(),
     addr:$('c_addr').value.trim(),
     memo:$('c_memo').value.trim(),
+    owner:$('c_owner').value||'업무',
     photoId,photoUrl,updated:Date.now(),
   };
   if(_cardEditing){
@@ -5027,6 +5136,66 @@ console.log('[사진 스캐너 v2-0714-1858] 로드 완료');
 
 /* 영수증 필터/정렬 이벤트 — 페이지 로드 후 1회 직접 바인딩 */
 _bindReceiptTableEvents();
+/* ═══ 📱 iOS: 키보드가 올라와도 편집 헤더(저장 버튼)가 안 밀리게 ═══
+   iOS Safari는 position:fixed를 레이아웃 뷰포트에 고정해서, 키보드가 뜨면
+   페이지 전체를 밀어올린다 → 오버레이 상단(저장 버튼)이 화면 밖으로 나감.
+   visualViewport에 직접 붙여서 해결. */
+(function(){
+  const vv=window.visualViewport;
+  if(!vv)return;
+  function fitEditOverlay(){
+    const ov=$('editOverlay');
+    if(!ov)return;
+    if(!ov.classList.contains('show')){
+      ov.style.top='';ov.style.left='';ov.style.height='';ov.style.width='';
+      return;
+    }
+    ov.style.top=vv.offsetTop+'px';
+    ov.style.left=vv.offsetLeft+'px';
+    ov.style.width=vv.width+'px';
+    ov.style.height=vv.height+'px';
+  }
+  vv.addEventListener('resize',fitEditOverlay);
+  vv.addEventListener('scroll',fitEditOverlay);
+  window._fitEditOverlay=fitEditOverlay;
+})();
+
+/* ═══ 🔍 검색 시트 ═══ */
+(function(){
+  const ov=$('searchOverlay');
+  function openSearch(which){
+    const gen=which==='gen';
+    $('swGen').classList.toggle('on',gen);
+    $('swScan').classList.toggle('on',!gen);
+    ov.classList.add('show');
+    const inp=$(gen?'searchInp':'scanSearch');
+    setTimeout(()=>{inp.focus();inp.select();},60);
+  }
+  function closeSearch(){ov.classList.remove('show');syncDots();}
+  function syncDots(){
+    $('qDotGen').classList.toggle('on',!!($('searchInp').value||'').trim());
+    $('qDotScan').classList.toggle('on',!!($('scanSearch').value||'').trim());
+  }
+  $('btnOpenSearchGen').onclick=()=>openSearch('gen');
+  $('btnOpenSearchScan').onclick=()=>openSearch('scan');
+  $('searchCloseX').onclick=closeSearch;
+  $('searchDoneBtn').onclick=closeSearch;
+  $('searchClearBtn').onclick=()=>{
+    const inp=$('swGen').classList.contains('on')?$('searchInp'):$('scanSearch');
+    inp.value='';
+    inp.dispatchEvent(new Event('input',{bubbles:true}));  // 기존 렌더 로직 재사용
+    syncDots();inp.focus();
+  };
+  // 배경 탭 / ESC 로 닫기
+  ov.addEventListener('click',e=>{if(e.target===ov)closeSearch();});
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&ov.classList.contains('show'))closeSearch();
+    if(e.key==='Enter'&&ov.classList.contains('show'))closeSearch();
+  });
+  ['searchInp','scanSearch'].forEach(id=>$(id).addEventListener('input',syncDots));
+  syncDots();
+})();
+
 </script>
 </body>
 </html>
