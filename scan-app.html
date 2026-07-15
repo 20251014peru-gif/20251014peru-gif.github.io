@@ -110,8 +110,8 @@ header{background:color-mix(in srgb,var(--bg) 80%,transparent);
   /* min-width 를 주면 아이폰(390px)은 맞고 안드로이드(360px)는 넘쳐 두 줄이 된다.
      7등분으로 나누면 화면 폭에 상관없이 무조건 한 줄 */
   .hdr-right{flex:1 1 100%;flex-wrap:nowrap;gap:2px;justify-content:space-between}
-  .hdr-right .hbtn{flex:1 1 0;min-width:0;font-size:21px;padding:6px 1px 5px;gap:2px}
-  .hb-lbl{font-size:9.5px;font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .hdr-right .hbtn{flex:1 1 0;min-width:0;font-size:22px;padding:6px 2px 5px;gap:2px}
+  .hb-lbl{font-size:10px;font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 }
 
 main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
@@ -610,7 +610,6 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
   <div class="hdr-right">
     <button class="hbtn" id="btnFirebase" title="클라우드 동기화">☁️<span class="hb-lbl">동기화</span></button>
     <button class="hbtn" id="btnApiKey" title="AI 키 설정">🔑<span class="hb-lbl">AI키</span></button>
-    <button class="hbtn" id="btnCatMgr" title="카테고리">📂<span class="hb-lbl">카테고리</span></button>
     <button class="hbtn" id="btnTrash" title="휴지통">🗑<span class="hb-lbl">휴지통</span></button>
     <button class="hbtn" id="btnExport" title="JSON 내보내기">⬇️<span class="hb-lbl">내보내기</span></button>
     <button class="hbtn" id="btnImport" title="JSON 불러오기">⬆️<span class="hb-lbl">불러오기</span></button>
@@ -650,6 +649,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       <select class="cat-select" id="catFilter">
         <option value="all">전체 카테고리</option>
       </select>
+      <button class="bar-btn ghost" id="btnCatMgrInline" aria-label="카테고리 관리">📂<span class="lbl"> 카테고리</span></button>
       <label class="bar-btn blue" style="cursor:pointer" onclick="event.stopPropagation()" aria-label="카메라">📷<span class="lbl"> 카메라</span>
         <input type="file" id="topCamInp" accept="image/*" capture="environment" style="display:none">
       </label>
@@ -1327,7 +1327,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-1955';
+const APP_VER='v20260715-2004';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -4651,7 +4651,11 @@ function renderCatList(){
     };
   });
 }
-$('btnCatMgr').onclick=()=>{renderCatList();$('catMgrOverlay').classList.add('show');};
+function openCatMgr(){ renderCatList(); $('catMgrOverlay').classList.add('show'); }
+/* 카테고리는 일반사진/보안 에만 쓰이므로 그 화면 안에 둔다.
+   헤더의 📂 는 없앴다 — 외부앱 picker-mode 가 아직 #btnCatMgr 을 참조하므로 가드 */
+const _bcm=$('btnCatMgr'); if(_bcm) _bcm.onclick=openCatMgr;
+$('btnCatMgrInline').onclick=openCatMgr;
 $('catMgrClose').onclick=()=>$('catMgrOverlay').classList.remove('show');
 $('catMgrCloseBtn').onclick=()=>$('catMgrOverlay').classList.remove('show');
 $('catAddBtn').onclick=()=>{
