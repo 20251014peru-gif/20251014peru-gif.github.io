@@ -107,10 +107,10 @@ header{background:color-mix(in srgb,var(--bg) 80%,transparent);
 .hb-lbl{font-size:9px;font-weight:500;color:var(--ink-faint);letter-spacing:-.02em;white-space:nowrap}
 .hdr-right .hbtn:hover .hb-lbl{color:var(--accent)}
 @media (max-width:768px){
-  /* min-width 를 주면 아이폰(390px)은 맞고 안드로이드(360px)는 넘쳐 두 줄이 된다.
-     7등분으로 나누면 화면 폭에 상관없이 무조건 한 줄 */
-  .hdr-right{flex:1 1 100%;flex-wrap:nowrap;gap:2px;justify-content:space-between}
-  .hdr-right .hbtn{flex:1 1 0;min-width:0;font-size:22px;padding:6px 2px 5px;gap:2px}
+  /* 6등분 격자 — 화면 폭에 상관없이 한 줄, 정확히 균등, 가운데 정렬.
+     (고정 min-width 를 주면 아이폰은 맞고 안드로이드는 넘쳐 두 줄이 됐었다) */
+  .hdr-right{display:grid;grid-template-columns:repeat(6,1fr);width:100%;gap:2px}
+  .hdr-right .hbtn{width:100%;min-width:0;font-size:22px;padding:7px 2px 5px;gap:2px}
   .hb-lbl{font-size:10px;font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 }
 
@@ -140,7 +140,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 @media (max-width:768px){
   header{position:static;justify-content:center;padding:8px 12px}   /* 스크롤하면 사라짐 */
   .brand{order:1;flex:0 1 auto}
-  .hdr-right{order:2;flex:0 1 auto}
+  .hdr-right{order:2;flex:1 1 100%}   /* 아이콘 줄은 한 줄 통째로 — 위에서 6등분한다 */
   main{padding:0 14px 96px}                                          /* 바에 안 가리게 */
 
   #mainTabs{position:fixed;left:0;right:0;bottom:0;z-index:600;
@@ -650,7 +650,6 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       <select class="cat-select" id="catFilter">
         <option value="all">전체 카테고리</option>
       </select>
-      <button class="bar-btn ghost" id="btnCatMgrInline" aria-label="카테고리 관리">📂<span class="lbl"> 카테고리</span></button>
       <label class="bar-btn blue" style="cursor:pointer" onclick="event.stopPropagation()" aria-label="카메라">📷<span class="lbl"> 카메라</span>
         <input type="file" id="topCamInp" accept="image/*" capture="environment" style="display:none">
       </label>
@@ -1328,7 +1327,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-2016';
+const APP_VER='v20260715-2028';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -2129,11 +2128,21 @@ $('btnScanCsv').onclick=()=>exportScanCsv();
 
 // 일반/보안 검색·필터
 $('searchInp').addEventListener('input',e=>{searchQ=e.target.value.trim();renderGallery();});
-$('catFilter').addEventListener('change',e=>{catFilter=e.target.value;renderGallery();});
+$('catFilter').addEventListener('change',e=>{
+  if(e.target.value==='__manage'){
+    e.target.value = catFilter;      /* 필터 값은 건드리지 않는다 */
+    openCatMgr();
+    return;
+  }
+  catFilter=e.target.value;renderGallery();
+});
 
 function refreshCatSelects(){
   const f=$('catFilter');
-  f.innerHTML='<option value="all">전체 카테고리</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  f.innerHTML='<option value="all">전체 카테고리</option>'
+    + cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')
+    + '<option disabled>──────────</option>'
+    + '<option value="__manage">⚙️ 카테고리 추가·수정·삭제…</option>';
   f.value=cats.includes(catFilter)?catFilter:'all';
   $('fCat').innerHTML=cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
 }
@@ -4656,7 +4665,7 @@ function openCatMgr(){ renderCatList(); $('catMgrOverlay').classList.add('show')
 /* 카테고리는 일반사진/보안 에만 쓰이므로 그 화면 안에 둔다.
    헤더의 📂 는 없앴다 — 외부앱 picker-mode 가 아직 #btnCatMgr 을 참조하므로 가드 */
 const _bcm=$('btnCatMgr'); if(_bcm) _bcm.onclick=openCatMgr;
-$('btnCatMgrInline').onclick=openCatMgr;
+
 $('catMgrClose').onclick=()=>$('catMgrOverlay').classList.remove('show');
 $('catMgrCloseBtn').onclick=()=>$('catMgrOverlay').classList.remove('show');
 $('catAddBtn').onclick=()=>{
