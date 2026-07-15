@@ -502,6 +502,39 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 .owner-badge.ob-personal{background:rgba(255,149,0,.16);color:var(--orange)}
 .owner-badge.ob-other{background:var(--blue-soft);color:var(--ink-soft)}
 
+
+/* ── 🏠 홈 ── */
+#homeView{padding-top:10px}
+#homeHero{margin-bottom:14px}
+.hero-card{background:var(--surface);border:.5px solid var(--blue-bd);border-radius:18px;
+  padding:18px 20px;display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.hero-label{font-size:13px;color:var(--ink-faint);font-weight:500}
+.hero-amount{font-size:34px;font-weight:700;color:var(--ink);letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;line-height:1.15;margin-top:2px}
+.hero-sub{font-size:13px;color:var(--ink-faint);margin-top:2px}
+.hero-top{text-align:right;font-size:12px;color:var(--ink-faint);line-height:1.6}
+.hero-top b{display:block;font-size:14px;color:var(--ink);font-weight:600}
+
+.home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.home-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  background:var(--surface);border:.5px solid var(--blue-bd);border-radius:18px;
+  padding:18px 16px 16px;cursor:pointer;font-family:inherit;text-align:left;
+  transition:transform .12s,border-color .15s}
+.home-card:hover{border-color:var(--accent)}
+.home-card:active{transform:scale(.97)}
+.hc-ico{font-size:30px;line-height:1;margin-bottom:8px}
+.hc-name{font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-.02em}
+.hc-count{font-size:13px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.hc-badge{position:absolute;top:14px;right:14px;min-width:22px;height:22px;padding:0 7px;
+  border-radius:100px;background:var(--accent);color:#fff;font-size:11px;font-weight:600;
+  display:inline-flex;align-items:center;justify-content:center}
+.home-card.locked .hc-ico{opacity:.5}
+@media (max-width:420px){
+  .home-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .hc-ico{font-size:26px}
+  .hc-name{font-size:15px}
+  .hero-amount{font-size:29px}
+}
 </style>
 </head>
 <body>
@@ -514,7 +547,8 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
   </div>
   <!-- 통합 탭 (헤더 가운데) -->
   <div class="tabs unified-tabs" id="mainTabs">
-    <button class="tab active" data-mode="receipt">🧾 영수증</button>
+    <button class="tab active" data-mode="home">🏠 홈</button>
+    <button class="tab" data-mode="receipt">🧾 영수증</button>
     <button class="tab" data-mode="card">💼 명함</button>
     <button class="tab" data-mode="text">📝 텍스트</button>
     <span class="tab-divider"></span>
@@ -535,6 +569,12 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 
 <main>
   <!-- 일반/보안 갤러리 -->
+  <!-- 🏠 홈 -->
+  <div id="homeView">
+    <div id="homeHero"></div>
+    <div id="homeGrid" class="home-grid"></div>
+  </div>
+
   <div id="generalView" style="display:none">
     <div class="bar bar-compact">
       <button class="bar-btn ghost" id="btnOpenSearchGen" aria-label="검색">🔍<span class="lbl"> 검색</span><span class="q-dot" id="qDotGen"></span></button>
@@ -1238,7 +1278,7 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-1819';
+const APP_VER='v20260715-1832';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -1253,7 +1293,7 @@ let photos=[], cats=[], receipts=[], cards=[], texts=[];
 let _rSort={col:'date',dir:'desc'};
 let _rColFilter={date:'',amount:'',place:'',payMethod:'',owner:'',addr:'',items:''};
 let apiKey='';
-let curSection='scan', curScanType='receipt';
+let curSection='home', curScanType='receipt';
 let catFilter='all', searchQ='';
 let secureUnlocked=false;
 
@@ -1540,7 +1580,11 @@ async function syncPullAll(){
       remoteDocs.forEach(doc=>{
         const r=doc.data();
         const ex=map.get(r.id);
-        if(!ex||(r.updated||0)>(ex.updated||0))map.set(r.id,r);
+        if(!ex){ map.set(r.id,r); return; }
+        const rt=r.updated||0, et=ex.updated||0;
+        if(rt>et){ map.set(r.id,r); return; }
+        /* 시각이 같으면 삭제된 쪽을 택한다 — 지운 게 되살아나는 것보다 낫다 */
+        if(rt===et && r.deletedAt && !ex.deletedAt) map.set(r.id,r);
       });
       return Array.from(map.values()).sort((a,b)=>(b.updated||0)-(a.updated||0));
     }
@@ -1660,7 +1704,7 @@ $('firebaseConnect').onclick=async()=>{
     await uploadMissingPhotos();
   }
   await syncPushAll();
-  refreshCatSelects();renderScanList();renderGallery();
+  refreshCatSelects();renderScanList();renderGallery();refreshHomeIfVisible();
   toast('✅ 동기화 완료');
   $('firebaseConnect').disabled=false;
   $('firebaseConnect').textContent='🔌 연결 + 즉시 동기화';
@@ -1878,11 +1922,17 @@ window.showImg=(src,title)=>openZoomViewer(src,title);
 
 // CHUNK_3 - 섹션/갤러리/필터
 function selectMode(mode){
-  // 'receipt', 'card', 'text' → scan 섹션 + 서브 타입
-  // 'normal' → 일반사진
-  // 'secure' → 보안
+  // 'home' → 홈, 'receipt'/'card'/'text' → scan 섹션, 'normal'/'secure' → 갤러리
   if(mode==='secure'&&!secureUnlocked){openSecureLock();return;}
   document.querySelectorAll('#mainTabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  $('homeView').style.display = mode==='home' ? '' : 'none';
+  if(mode==='home'){
+    curSection='home';
+    $('generalView').style.display='none';
+    $('scanView').style.display='none';
+    renderHome();
+    return;
+  }
   if(mode==='normal'||mode==='secure'){
     curSection=mode;
     $('generalView').style.display='';
@@ -1901,10 +1951,58 @@ function selectMode(mode){
     renderScanList();
   }
 }
+/* 🏠 홈 — 각 섹션 개수와 이번 달 요약 */
+function renderHome(){
+  const alive = a => a.filter(x=>!x.deletedAt).length;
+  const nR=alive(receipts), nC=alive(cards), nT=alive(texts);
+  const nN=photos.filter(p=>!p.deletedAt&&!p.secure).length;
+  const nS=photos.filter(p=>!p.deletedAt&&p.secure).length;
+
+  /* 이번 달 영수증 */
+  const now=new Date();
+  const ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const mList=receipts.filter(r=>!r.deletedAt&&(r.date||'').startsWith(ym));
+  const total=mList.reduce((s,r)=>s+(r.amount||0),0);
+  const byPlace={};
+  mList.forEach(r=>{const k=r.place||'(이름없음)';byPlace[k]=(byPlace[k]||0)+1;});
+  const top=Object.entries(byPlace).sort((a,b)=>b[1]-a[1])[0];
+
+  $('homeHero').innerHTML = `<div class="hero-card">
+    <div>
+      <div class="hero-label">${now.getFullYear()}년 ${now.getMonth()+1}월 영수증</div>
+      <div class="hero-amount">${numFmt(total)}<span style="font-size:20px;font-weight:600">원</span></div>
+      <div class="hero-sub">${mList.length}장</div>
+    </div>
+    ${top?`<div class="hero-top">가장 많이 쓴 곳<b>${esc(top[0])}</b>${top[1]}회</div>`:''}
+  </div>`;
+
+  const cards_=[
+    {m:'receipt',ico:'🧾',name:'영수증',n:nR,unit:'장'},
+    {m:'card',   ico:'💼',name:'명함',  n:nC,unit:'장'},
+    {m:'text',   ico:'📝',name:'텍스트',n:nT,unit:'개'},
+    {m:'normal', ico:'📷',name:'일반사진',n:nN,unit:'장'},
+    {m:'secure', ico:'🔒',name:'보안',  n:nS,unit:'장',lock:!secureUnlocked},
+  ];
+  $('homeGrid').innerHTML = cards_.map(c=>`
+    <button class="home-card${c.lock?' locked':''}" data-mode="${c.m}">
+      <span class="hc-ico">${c.ico}</span>
+      <span class="hc-name">${c.name}</span>
+      <span class="hc-count">${c.lock?'잠김':c.n+c.unit}</span>
+      ${(!c.lock&&c.n)?`<span class="hc-badge">${c.n>99?'99+':c.n}</span>`:''}
+    </button>`).join('');
+  $('homeGrid').querySelectorAll('.home-card').forEach(b=>{
+    b.onclick=()=>selectMode(b.dataset.mode);
+  });
+}
+
 /* 호환용 - 기존 코드가 호출할 수도 있음 */
 function selectSection(sec){
   if(sec==='scan') selectMode(curScanType||'receipt');
   else selectMode(sec);
+}
+/* 홈이 떠 있으면 숫자를 최신으로 */
+function refreshHomeIfVisible(){
+  if(curSection==='home' && $('homeView') && $('homeView').style.display!=='none') renderHome();
 }
 document.querySelectorAll('#mainTabs .tab').forEach(b=>b.onclick=()=>selectMode(b.dataset.mode));
 
@@ -2060,7 +2158,7 @@ async function renderGallery(){
         openAddModal(p);
       }else if(btn.dataset.pact==='del'){
         if(!confirm(`'${p.title||'사진'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
-        p.deletedAt=Date.now();
+        p.deletedAt=p.updated=Date.now();
         savePhotos();renderGallery();toast('🗑 휴지통으로 이동');
       }
     };
@@ -2193,7 +2291,7 @@ $('addDelete').onclick=async()=>{
   if(!confirm('이 사진을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)'))return;
   const idx=photos.findIndex(x=>x.id===editingId);
   if(idx>=0){
-    photos[idx].deletedAt=Date.now();savePhotos();
+    photos[idx].deletedAt=photos[idx].updated=Date.now();savePhotos();
     toast('🗑 휴지통으로 이동');closeAddModal();renderGallery();
   }
 };
@@ -3482,7 +3580,7 @@ function bindRowActions(container,type){
         else if(act==='edit')openReceiptModal(r);
         else if(act==='del'){
           if(confirm(`'${r.place||'영수증'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`)){
-            r.deletedAt=Date.now();saveReceipts();renderScanList();toast('🗑 휴지통으로 이동');
+            r.deletedAt=r.updated=Date.now();saveReceipts();renderScanList();toast('🗑 휴지통으로 이동');
           }
         }
       }else if(type==='card'){
@@ -3491,7 +3589,7 @@ function bindRowActions(container,type){
         else if(act==='edit')openCardModal(c);
         else if(act==='del'){
           if(confirm(`'${c.name||'명함'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`)){
-            c.deletedAt=Date.now();saveCards();renderScanList();toast('🗑 휴지통으로 이동');
+            c.deletedAt=c.updated=Date.now();saveCards();renderScanList();toast('🗑 휴지통으로 이동');
           }
         }
       }else if(type==='text'){
@@ -3500,7 +3598,7 @@ function bindRowActions(container,type){
         else if(act==='edit')openTextModal(t);
         else if(act==='del'){
           if(confirm(`'${t.title||'텍스트'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`)){
-            t.deletedAt=Date.now();saveTexts();renderScanList();toast('🗑 휴지통으로 이동');
+            t.deletedAt=t.updated=Date.now();saveTexts();renderScanList();toast('🗑 휴지통으로 이동');
           }
         }
       }
@@ -3703,15 +3801,15 @@ if($('scanDetailDel'))$('scanDetailDel').onclick=async()=>{
   if(type==='receipt'){
     const r=receipts.find(x=>x.id===id);
     if(!r||!confirm(`'${r.place||'영수증'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
-    r.deletedAt=Date.now();saveReceipts();
+    r.deletedAt=r.updated=Date.now();saveReceipts();
   }else if(type==='card'){
     const c=cards.find(x=>x.id===id);
     if(!c||!confirm(`'${c.name||'명함'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
-    c.deletedAt=Date.now();saveCards();
+    c.deletedAt=c.updated=Date.now();saveCards();
   }else if(type==='text'){
     const t=texts.find(x=>x.id===id);
     if(!t||!confirm(`'${t.title||'메모'}'를 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
-    t.deletedAt=Date.now();saveTexts();
+    t.deletedAt=t.updated=Date.now();saveTexts();
   }
   closeScanDetail();renderScanList();toast('🗑 휴지통으로 이동');
 };
@@ -4087,7 +4185,7 @@ $('receiptDelete').onclick=()=>{
   if(!_rcptEditing)return;
   if(!confirm(`'${_rcptEditing.place||'영수증'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
   const r=receipts.find(x=>x.id===_rcptEditing.id);
-  if(r){r.deletedAt=Date.now();saveReceipts();}
+  if(r){r.deletedAt=r.updated=Date.now();saveReceipts();}
   closeReceiptModal();renderScanList();toast('🗑 휴지통으로 이동');
 };
 
@@ -4277,7 +4375,7 @@ $('cardDelete').onclick=()=>{
   if(!_cardEditing)return;
   if(!confirm(`'${_cardEditing.name||'명함'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
   const c=cards.find(x=>x.id===_cardEditing.id);
-  if(c){c.deletedAt=Date.now();saveCards();}
+  if(c){c.deletedAt=c.updated=Date.now();saveCards();}
   closeCardModal();renderScanList();toast('🗑 휴지통으로 이동');
 };
 
@@ -4443,7 +4541,7 @@ $('textDelete').onclick=()=>{
   if(!_textEditing)return;
   if(!confirm(`'${_textEditing.title||'텍스트 메모'}'를 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`))return;
   const t=texts.find(x=>x.id===_textEditing.id);
-  if(t){t.deletedAt=Date.now();saveTexts();}
+  if(t){t.deletedAt=t.updated=Date.now();saveTexts();}
   closeTextModal();renderScanList();toast('🗑 휴지통으로 이동');
 };
 
@@ -4614,10 +4712,9 @@ $('secureCancel').onclick=()=>{
   refreshCatSelects();refreshKeyState();buildPinPad();
   $('appVer').textContent=APP_VER;
   document.title='📷 사진 스캐너 '+APP_VER;   /* 탭 제목도 같이 */
-  // 스캔 탭이 기본
-  $('generalView').style.display='none';
-  $('scanView').style.display='';
-  renderScanList();
+  // 홈이 기본 — 아이콘을 눌러야 각 화면으로 들어간다
+  renderScanList();renderGallery();
+  selectMode('home');
 })();
 
 async function migrateOldPhotos(){
@@ -4760,11 +4857,12 @@ function restoreTrashItem(type,id){
   else if(type==='photo')obj=photos.find(x=>x.id===id);
   if(!obj)return;
   delete obj.deletedAt;
+  obj.updated=Date.now();   /* 복원도 병합에서 이기려면 updated 를 올려야 한다 */
   if(type==='receipt')saveReceipts();
   else if(type==='card')saveCards();
   else if(type==='text')saveTexts();
   else if(type==='photo')savePhotos();
-  renderTrashList();renderScanList();renderGallery();
+  renderTrashList();renderScanList();renderGallery();refreshHomeIfVisible();
   toast('↩ 복원됨');
 }
 
@@ -4814,7 +4912,7 @@ $('trashEmpty').onclick=async()=>{
   if(!arr.length){toast('이미 비어있어요');return;}
   if(!confirm(`휴지통 ${arr.length}개 항목을 모두 영구삭제할까요?\n복원할 수 없습니다.`))return;
   for(const it of arr)await permanentDelete(it.type,it.id);
-  renderTrashList();renderScanList();renderGallery();
+  renderTrashList();renderScanList();renderGallery();refreshHomeIfVisible();
   toast('🔥 휴지통 비움');
 };
 
