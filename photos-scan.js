@@ -98,6 +98,21 @@ function compressImg(dataUrl, maxPx=800, quality=0.75){
     img.src=dataUrl;
   });
 }
+async function stUpload(imgId, dataUrl){
+  const path = `psc_imgs/${MODE}/${imgId}.jpg`;
+  const blob = await (await fetch(dataUrl)).blob();
+  const r = await fetch(`${ST_BASE}?uploadType=media&name=${encodeURIComponent(path)}`,{
+    method:'POST', headers:{'Content-Type':'image/jpeg'}, body: blob
+  });
+  if(!r.ok){
+    const t = await r.text().catch(()=> '');
+    throw new Error(`Storage upload ${r.status} ${t.slice(0,120)}`);
+  }
+  const meta = await r.json();
+  const token = meta.downloadTokens || meta.metadata?.firebaseStorageDownloadTokens;
+  dbg(`stUpload ok: ${imgId} (${Math.round(blob.size/1024)}KB)`);
+  return `${ST_BASE}/${encodeURIComponent(path)}?alt=media${token?`&token=${token}`:''}`;
+}
 async function stDelete(imgId){
   const path=encodeURIComponent(`psc_imgs/${MODE}/${imgId}.jpg`);
   await fetch(`${ST_BASE}/${path}`,{method:'DELETE'}).catch(()=>{});
@@ -137,7 +152,11 @@ async function fsSave(photo){
       }catch(e){ dbg('stUpload error: '+e.message,'error'); }
     }
   }
-  // 메타데이터 Firestore 저장
+  // 업로드된 URL을 photo에 반영 (작은 문자열이라 localStorage에 남겨도 안전)
+  photo.imgUrls = imgUrls;
+  delete photo.imgData;   // 옛 방식 잔재 제거
+
+  // 메타데이터 Firestore 저장 — 이미지는 URL만 들어가므로 1MB 한도와 무관
   const data={...photo, imgUrls:JSON.stringify(imgUrls)};
   delete data.id;
   const r=await fetch(`${FS_BASE}/${FS_COL()}/${photo.id}?key=${FIREBASE_KEY}`,{
@@ -145,7 +164,12 @@ async function fsSave(photo){
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify(toFS(data))
   });
-  if(!r.ok){ dbg('fsSave error: '+r.status,'error'); }
+  if(!r.ok){
+    const t = await r.text().catch(()=> '');
+    dbg('fsSave error: '+r.status+' '+t.slice(0,120),'error');
+    throw new Error(`Firestore ${r.status}`);
+  }
+  dbg(`fsSave ok: ${photo.id}, ${Object.keys(imgUrls).length}장`);
 }
 async function fsDelete(photoId, imgIds){
   // 이미지 Storage 삭제
@@ -641,31 +665,23 @@ async function savePhoto(){
     // 3. 로컬 IndexedDB 저장 (압축본)
     for(let i=0;i<mImgs.length;i++) await idbPut(ids[i], compressed[i]);
 
-    // 4. Firestore에 이미지 base64 + 메타데이터 함께 저장
+    // 4. Storage에 이미지 업로드 + Firestore엔 URL만 저장 (fsSave가 처리)
     if(btnSave) btnSave.textContent='☁️ 저장 중...';
-    const imgData=JSON.stringify(Object.fromEntries(ids.map((id,i)=>[id,compressed[i]])));
 
     if(mEditId){
       const p=photos.find(x=>x.id===mEditId); if(!p) return;
-      for(const oid of (p.imgIds||[])) idbDel(oid).catch(()=>{});
+      // 교체되어 더 이상 안 쓰는 옛 이미지만 정리
+      for(const oid of (p.imgIds||[])){
+        if(!ids.includes(oid)){ idbDel(oid).catch(()=>{}); stDelete(oid).catch(()=>{}); }
+      }
       p.title=title; p.cat=cat; p.memo=memo; p.date=date; p.type=type;
-      p.imgIds=ids; delete p.imgData;
-      const fd={...p, imgData}; delete fd.id;   // imgData는 Firestore 전송용으로만 사용
-      const r=await fetch(`${FS_BASE}/${FS_COL()}/${p.id}?key=${FIREBASE_KEY}`,{
-        method:'PATCH', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(toFS(fd))
-      });
-      dbg(`Firestore PATCH edit: ${r.status}`);
+      p.imgIds=ids;
+      await fsSave(p);
     } else {
       const pid=uid();
       const np={id:pid,title,cat,memo,date,type,secure,scan,imgIds:ids};
       photos.unshift(np);
-      const fd={...np, imgData}; delete fd.id;   // imgData는 Firestore 전송용으로만 사용
-      const r=await fetch(`${FS_BASE}/${FS_COL()}/${pid}?key=${FIREBASE_KEY}`,{
-        method:'PATCH', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(toFS(fd))
-      });
-      dbg(`Firestore PATCH new: ${r.status}`);
+      await fsSave(np);
     }
 
     savePhotos();
