@@ -579,6 +579,8 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 .home-card:hover{border-color:var(--c)}
 .hc-badge{background:var(--c)}
 
+#homeSearchResults{padding-top:4px}
+
 /* ── 🔍 통합 검색 한 줄 ── */
 #uniSearchRow{max-width:1600px;margin:0 auto;padding:10px 20px 0}
 #uniSearchRow .search-wrap{position:relative;width:100%}
@@ -589,8 +591,6 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
   width:24px;height:24px;border:none;border-radius:50%;background:rgba(120,120,128,.28);
   color:var(--ink);font-size:11px;cursor:pointer;font-family:inherit;
   display:inline-flex;align-items:center;justify-content:center}
-#uniSearchRow input[readonly]{cursor:pointer}
-#uniSearchRow input[readonly]:focus{box-shadow:none}
 @media (max-width:768px){ #uniSearchRow{padding:10px 14px 0} }
 
 /* ── 홈 카드도 아래 탭과 같은 색 테두리 ── */
@@ -642,6 +642,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
   <!-- 🏠 홈 -->
   <div id="homeView">
     <div id="homeGrid" class="home-grid"></div>
+    <div id="homeSearchResults" style="display:none"></div>
   </div>
 
   <div id="generalView" style="display:none">
@@ -1327,7 +1328,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-2004';
+const APP_VER='v20260715-2016';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -5015,9 +5016,15 @@ function globalSearch(q){
   };
 }
 
+/* 전체검색 결과를 그릴 곳 — 홈에서는 화면에 바로, 창이 열려 있으면 창 안에 */
+function _gsBox(){
+  const ov=$('globalSearchOverlay');
+  return (curSection==='home' && !ov.classList.contains('show'))
+    ? $('homeSearchResults') : _gsBox();
+}
 function renderGlobalSearch(q){
   if(!q.trim()){
-    $('globalSearchResults').innerHTML=`<div style="text-align:center;color:var(--ink-faint);padding:40px 20px">
+    _gsBox().innerHTML=`<div style="text-align:center;color:var(--ink-faint);padding:40px 20px">
       <div style="font-size:36px">🔎</div>
       <div style="margin-top:8px">검색어를 입력하세요</div>
       <div style="font-size:11px;margin-top:6px">모든 영수증·명함·텍스트·사진을 한 번에 검색합니다</div>
@@ -5027,7 +5034,7 @@ function renderGlobalSearch(q){
   const r=globalSearch(q);
   const total=r.receipts.length+r.cards.length+r.texts.length+r.photos.length;
   if(!total){
-    $('globalSearchResults').innerHTML=`<div style="text-align:center;color:var(--ink-faint);padding:40px 20px">
+    _gsBox().innerHTML=`<div style="text-align:center;color:var(--ink-faint);padding:40px 20px">
       <div style="font-size:36px">😶</div>
       <div style="margin-top:8px">"${esc(q)}" 검색 결과 없음</div></div>`;
     return;
@@ -5076,10 +5083,10 @@ function renderGlobalSearch(q){
       </div>`).join('');
     if(r.photos.length>10)html+=`<div style="font-size:11px;color:var(--ink-faint);padding:4px 12px">+${r.photos.length-10}개 더 있음</div>`;
   }
-  $('globalSearchResults').innerHTML=html;
+  _gsBox().innerHTML=html;
 
   // 결과 클릭 → 해당 상세
-  $('globalSearchResults').querySelectorAll('.gs-result').forEach(el=>{
+  _gsBox().querySelectorAll('.gs-result').forEach(el=>{
     el.onmouseover=()=>{el.style.borderColor='var(--blue)';};
     el.onmouseout=()=>{el.style.borderColor='transparent';};
     el.onclick=()=>{
@@ -5384,28 +5391,38 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
          : null;
   }
   function route(v){
+    clr.style.display = v ? '' : 'none';
+    if(isHome()){
+      /* 홈 = 전체검색. 창 띄우지 않고 이 화면에 바로 그린다 */
+      const has = !!v.trim();
+      $('homeGrid').style.display = has ? 'none' : '';
+      $('homeSearchResults').style.display = has ? '' : 'none';
+      if(has) renderGlobalSearch(v);
+      return;
+    }
     const t=target(); if(!t) return;
     t.value=v;
     t.dispatchEvent(new Event('input',{bubbles:true}));  /* 기존 렌더 로직 재사용 */
-    clr.style.display = v ? '' : 'none';
   }
   inp.addEventListener('input', e=>route(e.target.value));
   clr.onclick=()=>{ inp.value=''; route(''); inp.focus(); };
   clr.style.display='none';
 
-  /* 홈에서는 이 줄이 '전체 검색' 입구가 된다 — 누르면 전체검색 창이 열린다.
-     readOnly 로 둬서 폰 키보드가 뜨지 않고 바로 창이 열리게 */
   function isHome(){ return curSection==='home'; }
-  inp.addEventListener('focus', ()=>{ if(isHome()){ inp.blur(); openGlobalSearch(); } });
-  inp.addEventListener('click',  ()=>{ if(isHome()) openGlobalSearch(); });
 
   /* 화면을 옮기면 그 화면의 현재 검색어를 보여준다 */
   window.syncUniSearch=function(){
     const home=isHome();
     $('uniSearchRow').style.display='';
-    inp.readOnly = home;
+    inp.readOnly = false;
     inp.placeholder = home ? '전체 검색 — 영수증·명함·텍스트·사진' : '검색';
-    if(home){ inp.value=''; clr.style.display='none'; return; }
+    if(home){
+      /* 홈으로 돌아오면 검색어를 비우고 카드 격자를 되살린다 */
+      inp.value=''; clr.style.display='none';
+      $('homeGrid').style.display='';
+      $('homeSearchResults').style.display='none';
+      return;
+    }
     const t=target();
     if(t){ inp.value=t.value||''; clr.style.display = inp.value ? '' : 'none'; }
   };
