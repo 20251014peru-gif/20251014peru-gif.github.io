@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>📷 사진 스캐너 v2-0714-1858</title>
+<title>📷 사진 스캐너 v20260715-1732</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -1247,6 +1247,13 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 /* ════════════════════════════════════════════════════════
    📷 사진 스캐너 v2 - 풀형 편집기 + 핀치줌 + 텍스트메모
    ════════════════════════════════════════════════════════ */
+
+/* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
+const APP_VER='v20260715-1815';
+
+/* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
+   localStorage.setItem('scanapp_autoscan','0') */
+let AUTO_SCAN = localStorage.getItem('scanapp_autoscan')!=='0';
 
 const LS_PHOTOS='scanapp_photos', LS_CATS='scanapp_cats', LS_API_KEY='scanapp_apikey',
       LS_PIN='scanapp_pin', LS_RECEIPTS='scanapp_receipts', LS_CARDS='scanapp_cards', LS_TEXTS='scanapp_texts';
@@ -2714,6 +2721,8 @@ function openCropModal(dataUrl,callback,title){
     const m=0;
     _crop.points=[{x:m,y:m},{x:cw-m,y:m},{x:cw-m,y:ch-m},{x:m,y:ch-m}];
     drawCrop();
+    /* 서류·명함이면 촬영 즉시 문서에 맞춰 자동 감지 */
+    if(AUTO_SCAN&&apiKey)runCropAiDetect(true);
   };
   img.src=dataUrl;
 }
@@ -2838,9 +2847,11 @@ $('cropReset').onclick=()=>{
   drawCrop();
 };
 
-$('cropAiDetect').onclick=async()=>{
-  if(!apiKey){toast('AI 키를 먼저 설정하세요 (🔑)');return;}
-  if(!_crop.img){toast('이미지가 없어요');return;}
+async function runCropAiDetect(auto){
+  /* auto=true : 크롭 창이 열리자마자 자동 실행 (🤖 안 눌러도 됨).
+     이때는 키가 없거나 실패해도 조용히 넘어간다 — 수동 조정은 그대로 가능 */
+  if(!apiKey){ if(!auto)toast('AI 키를 먼저 설정하세요 (🔑)'); return; }
+  if(!_crop.img){ if(!auto)toast('이미지가 없어요'); return; }
   const st=$('cropStatus');
   st.textContent='🤖 AI가 경계를 감지 중…';st.style.color='#ffd788';st.style.display='block';
   $('cropAiDetect').disabled=true;
@@ -2884,7 +2895,8 @@ $('cropAiDetect').onclick=async()=>{
     st.textContent='오류: '+e.message;
     setTimeout(()=>st.style.display='none',3000);
   }finally{$('cropAiDetect').disabled=false;}
-};
+}
+$('cropAiDetect').onclick=()=>runCropAiDetect(false);
 
 function enhanceForOCR(canvas){
   const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
@@ -4581,7 +4593,8 @@ $('secureCancel').onclick=()=>{
     autoBackupIfNeeded().catch(e=>console.error(e));
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
-  $('appVer').textContent='v20260713-1844';
+  $('appVer').textContent=APP_VER;
+  document.title='📷 사진 스캐너 '+APP_VER;   /* 탭 제목도 같이 */
   // 스캔 탭이 기본
   $('generalView').style.display='none';
   $('scanView').style.display='';
@@ -5039,7 +5052,7 @@ bindRowActions=function(container,type){
   }
 };
 
-console.log('[사진 스캐너 v2-0714-1858] 로드 완료');
+console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
 
 /* ======== 🐞 디버그 패널 ======== */
 (function(){
