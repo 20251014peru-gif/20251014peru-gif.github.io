@@ -502,34 +502,6 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 .owner-badge.ob-personal{background:rgba(255,149,0,.16);color:var(--orange)}
 .owner-badge.ob-other{background:var(--blue-soft);color:var(--ink-soft)}
 
-/* ── 📄 라이브 문서 스캐너 ── */
-#liveScanFs{display:none;position:fixed;inset:0;background:#000;z-index:99997;flex-direction:column}
-#liveScanFs.show{display:flex}
-#lsStage{flex:1;position:relative;overflow:hidden;background:#000}
-#lsVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
-#lsOverlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#lsTop{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;
-  align-items:center;gap:10px;padding:14px 16px;color:#fff;
-  padding-top:calc(14px + env(safe-area-inset-top));
-  background:linear-gradient(rgba(0,0,0,.65),transparent)}
-#lsTitle{font-size:15px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6)}
-#lsHint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;
-  background:rgba(0,0,0,.55);color:#fff;font-size:14px;font-weight:500;
-  padding:9px 18px;border-radius:100px;white-space:nowrap;pointer-events:none;
-  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transition:opacity .2s}
-#lsBottom{position:absolute;bottom:0;left:0;right:0;z-index:5;display:flex;align-items:center;
-  justify-content:space-between;padding:18px 26px;gap:16px;
-  padding-bottom:calc(20px + env(safe-area-inset-bottom));
-  background:linear-gradient(transparent,rgba(0,0,0,.65))}
-#lsShutter{width:70px;height:70px;border-radius:50%;border:4px solid rgba(255,255,255,.9);
-  background:#fff;cursor:pointer;flex:0 0 auto;transition:transform .1s}
-#lsShutter:active{transform:scale(.92)}
-#lsShutter.armed{background:var(--green);border-color:#fff}
-.ls-btn{min-width:64px;height:40px;padding:0 14px;border-radius:100px;border:none;
-  background:rgba(120,120,128,.55);color:#fff;font-size:13px;font-weight:600;cursor:pointer;
-  font-family:inherit;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
-.ls-btn.on{background:var(--accent)}
-#lsFlash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:6}
 </style>
 </head>
 <body>
@@ -593,7 +565,6 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
       <label class="bar-btn ghost" style="cursor:pointer" onclick="event.stopPropagation()" aria-label="갤러리">🖼<span class="lbl"> 갤러리</span>
         <input type="file" id="topScanGal" accept="image/*" style="display:none">
       </label>
-      <button class="bar-btn green" id="btnLiveScan" aria-label="스캔">📄<span class="lbl"> 스캔</span></button>
       <button class="bar-btn green" id="btnScanCsv" aria-label="CSV 내보내기">📥<span class="lbl"> CSV</span></button>
     </div>
     <!-- 🔧 영수증 필터 영역 (영수증 모드에서만 표시) -->
@@ -1257,25 +1228,6 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
 </div>
 
 
-<!-- 📄 라이브 문서 스캐너 -->
-<div id="liveScanFs">
-  <div id="lsStage">
-    <video id="lsVideo" playsinline muted autoplay></video>
-    <canvas id="lsOverlay"></canvas>
-    <div id="lsFlash"></div>
-    <div id="lsTop">
-      <span id="lsTitle">📄 문서 스캔</span>
-      <button class="ls-btn" id="lsClose">✕ 닫기</button>
-    </div>
-    <div id="lsHint">문서를 화면에 맞춰주세요</div>
-    <div id="lsBottom">
-      <button class="ls-btn on" id="lsAuto">자동 ON</button>
-      <button id="lsShutter" aria-label="촬영"></button>
-      <button class="ls-btn" id="lsTorch">💡</button>
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <!-- 파일 입력 (백업) -->
@@ -1286,7 +1238,7 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-1814';
+const APP_VER='v20260715-1819';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -5284,8 +5236,9 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
 })();
 
 /* ═══════════════════════════════════════════════════════════
-   📄 라이브 문서 스캐너 — 카메라를 대면 자동으로 문서를 찾아 촬영
-   감지기는 node에서 18/18 케이스 검증 완료 (detect.test.js)
+   문서 감지기 — 찍은 사진의 자동 크롭에 사용 (runLocalCropDetect)
+   라이브 카메라 스캐너는 제거됨. 감지 로직만 남긴다.
+   node 검증: detect.test.js / detect.hard.test.js / detect.scene.test.js
    ═══════════════════════════════════════════════════════════ */
 (function(){
   /* 문서 감지 — 순수 JS, 의존성 0
@@ -5501,225 +5454,7 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
     return r1;
   }
 
-  const DET_W = 240;               /* 감지 해상도 - 벤치 7.5ms */
-  const DET_INTERVAL = 110;        /* ms - 초당 약 9회 */
-  const STABLE_MS = 1500;          /* 이만큼 '가만히 + 초점맞음' 이어야 찍는다 */
-  const MOVE_TOL = 0.022;          /* 모서리 허용 이동 (프레임 폭 대비) */
-  const FOCUS_RATIO = 0.72;        /* 최근 최고 선명도의 이 비율 이상이어야 초점 OK */
-
-  let _ls = { stream:null, raf:null, timer:null, last:null, prev:null,
-              stableSince:0, bestSharp:0, held:0, ready:false,
-              auto:true, torch:false, busy:false, detCv:null, detCtx:null };
-
-  function lsHint(t){ const el=$('lsHint'); if(el&&t) el.textContent=t; }
-
-  function containRect(vw, vh, bw, bh){
-    const s = Math.min(bw/vw, bh/vh);
-    return { x:(bw-vw*s)/2, y:(bh-vh*s)/2, s };
-  }
-
-  async function openLiveScan(){
-    const v = $('lsVideo');
-    $('liveScanFs').classList.add('show');
-    $('lsTitle').textContent = curScanType==='receipt' ? '📄 영수증 스캔'
-                             : curScanType==='card'    ? '💼 명함 스캔'
-                             : '📄 문서 스캔';
-    _ls.last=null; _ls.prev=null; _ls.stableSince=0; _ls.bestSharp=0; _ls.ready=false; _ls.busy=false;
-    lsHint('카메라 준비 중…');
-    try{
-      _ls.stream = await navigator.mediaDevices.getUserMedia({
-        video:{ facingMode:{ ideal:'environment' },
-                width:{ ideal:1920 }, height:{ ideal:1080 },
-                focusMode:{ ideal:'continuous' } },
-        audio:false
-      });
-    }catch(e){
-      closeLiveScan();
-      toast('카메라를 열 수 없어요: ' + (e.name||e.message));
-      return;
-    }
-    v.srcObject = _ls.stream;
-    try{ await v.play(); }catch(e){}
-    lsHint('문서를 화면에 맞춰주세요');
-    _ls.detCv = document.createElement('canvas');
-    _ls.detCtx = _ls.detCv.getContext('2d', { willReadFrequently:true });
-    _ls.timer = setInterval(tick, DET_INTERVAL);
-    drawLoop();
-  }
-
-  function closeLiveScan(){
-    if(_ls.timer){ clearInterval(_ls.timer); _ls.timer=null; }
-    if(_ls.raf){ cancelAnimationFrame(_ls.raf); _ls.raf=null; }
-    if(_ls.stream){ _ls.stream.getTracks().forEach(t=>t.stop()); _ls.stream=null; }
-    const v=$('lsVideo'); if(v) v.srcObject=null;
-    $('liveScanFs').classList.remove('show');
-    _ls.torch=false;
-  }
-
-  function maxMove(a,b){
-    let m=0;
-    for(let i=0;i<4;i++) m=Math.max(m, Math.hypot(a[i].x-b[i].x, a[i].y-b[i].y));
-    return m;
-  }
-
-  function resetStable(msg){
-    _ls.stableSince=0; _ls.held=0; _ls.ready=false;
-    $('lsShutter').classList.remove('armed');
-    lsHint(msg);
-  }
-
-  function tick(){
-    const v = $('lsVideo');
-    if(!v || !v.videoWidth || _ls.busy) return;
-    const vw=v.videoWidth, vh=v.videoHeight;
-    const dw=DET_W, dh=Math.round(vh*DET_W/vw);
-    if(_ls.detCv.width!==dw){ _ls.detCv.width=dw; _ls.detCv.height=dh; }
-    _ls.detCtx.drawImage(v,0,0,dw,dh);
-
-    let data, r;
-    try{
-      data = _ls.detCtx.getImageData(0,0,dw,dh).data;
-      r = detectDocument(data, dw, dh);
-    }catch(e){ return; }
-
-    if(!r.found){
-      _ls.last=null; _ls.prev=null; _ls.bestSharp=0;
-      resetStable('문서를 화면에 맞춰주세요');
-      return;
-    }
-
-    const k = vw/dw;
-    _ls.last = r.corners.map(p=>({ x:p.x*k, y:p.y*k }));
-
-    /* 초점 — 문서 영역 안에서만 잰다 */
-    const xs=r.corners.map(p=>p.x), ys=r.corners.map(p=>p.y);
-    const box={ x0:Math.min.apply(null,xs), x1:Math.max.apply(null,xs),
-                y0:Math.min.apply(null,ys), y1:Math.max.apply(null,ys) };
-    const gray = toGray(data, dw, dh);
-    const sh = sharpness(gray, dw, dh, box);
-    /* 최고치는 천천히 감쇠 — 장면이 바뀌면 기준도 따라간다 */
-    _ls.bestSharp = Math.max(_ls.bestSharp*0.97, sh);
-    const focused = sh >= _ls.bestSharp*FOCUS_RATIO;
-
-    /* 흔들림 — 모서리가 거의 안 움직여야 한다 */
-    const steady = _ls.prev ? (maxMove(r.corners,_ls.prev) < dw*MOVE_TOL) : false;
-    _ls.prev = r.corners;
-
-    if(!steady){ resetStable('가만히 들어주세요…'); return; }
-    if(!focused){ resetStable('초점을 맞추는 중…'); return; }
-
-    if(!_ls.stableSince) _ls.stableSince = Date.now();
-    _ls.held = Date.now() - _ls.stableSince;
-    _ls.ready = true;
-    $('lsShutter').classList.add('armed');
-
-    if(_ls.auto){
-      const left = Math.max(0, STABLE_MS - _ls.held);
-      if(left > 0){ lsHint('인식됨 — ' + (left/1000).toFixed(1) + '초'); }
-      else { lsHint('촬영!'); capture(); }
-    }else{
-      lsHint('문서 인식됨 — 셔터를 누르세요');
-    }
-  }
-
-  function drawLoop(){
-    const v=$('lsVideo'), cv=$('lsOverlay');
-    if(!v || !cv || !$('liveScanFs').classList.contains('show')) return;
-    const box = cv.getBoundingClientRect();
-    if(cv.width!==Math.round(box.width) || cv.height!==Math.round(box.height)){
-      cv.width=Math.round(box.width); cv.height=Math.round(box.height);
-    }
-    const ctx = cv.getContext('2d');
-    ctx.clearRect(0,0,cv.width,cv.height);
-    if(_ls.last && v.videoWidth){
-      const R = containRect(v.videoWidth, v.videoHeight, cv.width, cv.height);
-      const pts = _ls.last.map(p=>({ x:R.x+p.x*R.s, y:R.y+p.y*R.s }));
-      ctx.save();
-      ctx.fillStyle='rgba(0,0,0,.45)';
-      ctx.beginPath(); ctx.rect(0,0,cv.width,cv.height);
-      ctx.moveTo(pts[0].x,pts[0].y);
-      for(let i=3;i>=0;i--) ctx.lineTo(pts[i].x,pts[i].y);
-      ctx.closePath(); ctx.fill('evenodd');
-      ctx.restore();
-      const ready = _ls.ready;
-      ctx.strokeStyle = ready ? '#34c759' : '#ffcc00';
-      ctx.lineWidth=3; ctx.lineJoin='round';
-      ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
-      for(let i=1;i<4;i++) ctx.lineTo(pts[i].x,pts[i].y);
-      ctx.closePath(); ctx.stroke();
-      ctx.fillStyle = ready ? '#34c759' : '#ffcc00';
-      pts.forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,5,0,7); ctx.fill(); });
-    }
-    /* 셔터에 진행도 표시 */
-    const sh=$('lsShutter');
-    if(sh){
-      const pct = (_ls.auto && _ls.stableSince) ? Math.min(1,_ls.held/STABLE_MS) : 0;
-      sh.style.background = pct>0
-        ? 'conic-gradient(var(--green) ' + (pct*360) + 'deg, #fff 0deg)'
-        : '';
-    }
-    _ls.raf = requestAnimationFrame(drawLoop);
-  }
-
-  function capture(){
-    if(_ls.busy) return;
-    _ls.busy = true;
-    if(_ls.timer){ clearInterval(_ls.timer); _ls.timer=null; }
-    const v=$('lsVideo');
-    const c=document.createElement('canvas');
-    c.width=v.videoWidth; c.height=v.videoHeight;
-    c.getContext('2d').drawImage(v,0,0);
-    const dataUrl=c.toDataURL('image/jpeg',0.92);
-    const corners=_ls.last;
-
-    const f=$('lsFlash');
-    f.style.transition='none'; f.style.opacity='0.9';
-    requestAnimationFrame(()=>{ f.style.transition='opacity .25s'; f.style.opacity='0'; });
-
-    setTimeout(()=>{
-      closeLiveScan();
-      const title = curScanType==='receipt' ? '✂️ 영수증만 잘라내기'
-                  : curScanType==='card'    ? '✂️ 명함만 잘라내기'
-                  : '✂️ 텍스트 영역만 잘라내기';
-      const cb = cropped => {
-        if(curScanType==='receipt'){ _rcptImg=cropped; showReceiptPhoto(); openReceiptModal(); }
-        else if(curScanType==='card'){ _cardImg=cropped; showCardPhoto(); openCardModal(); }
-        else { _textImg=cropped; showTextPhoto(); openTextModal(); }
-      };
-      openCropModal(dataUrl, cb, title, corners);
-    }, 140);
-  }
-
-  /* 찍은 사진 크롭에도 같은 감지기를 쓴다 (AI 추측보다 정확하고 무료) */
   window.__detectDoc = detectDocument;
-
-  $('btnLiveScan').onclick = ()=>{
-    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-      toast('이 브라우저는 카메라를 지원하지 않아요'); return;
-    }
-    openLiveScan();
-  };
-  $('lsClose').onclick = closeLiveScan;
-  $('lsShutter').onclick = ()=>{ if(_ls.last) capture(); else toast('문서를 먼저 맞춰주세요'); };
-  $('lsAuto').onclick = ()=>{
-    _ls.auto = !_ls.auto;
-    $('lsAuto').classList.toggle('on', _ls.auto);
-    $('lsAuto').textContent = _ls.auto ? '자동 ON' : '자동 OFF';
-    _ls.stableSince = 0; _ls.held = 0;
-  };
-  $('lsTorch').onclick = async ()=>{
-    if(!_ls.stream) return;
-    const track=_ls.stream.getVideoTracks()[0];
-    const caps=track.getCapabilities ? track.getCapabilities() : {};
-    if(!caps.torch){ toast('이 기기는 손전등을 지원하지 않아요'); return; }
-    _ls.torch = !_ls.torch;
-    try{ await track.applyConstraints({ advanced:[{ torch:_ls.torch }] });
-         $('lsTorch').classList.toggle('on', _ls.torch); }
-    catch(e){ toast('손전등 오류'); }
-  };
-  document.addEventListener('keydown', e=>{
-    if(e.key==='Escape' && $('liveScanFs').classList.contains('show')) closeLiveScan();
-  });
 })();
 
 /* 영수증 필터/정렬 이벤트 — 페이지 로드 후 1회 직접 바인딩 */
