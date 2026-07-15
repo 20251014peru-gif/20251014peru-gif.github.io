@@ -278,6 +278,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
   cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px;
   border:none;background:var(--blue-soft);color:var(--accent)}
 .add-btn-row label.primary{background:var(--accent);color:#fff}
+#burstLabel{background:var(--green-lt);color:var(--green)}
 
 .preview-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 .preview-item{position:relative;width:90px;height:90px;border-radius:10px;
@@ -863,7 +864,12 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
             🖼 갤러리
             <input type="file" id="galInp" accept="image/*" multiple style="display:none">
           </label>
+          <label id="burstLabel" onclick="event.stopPropagation()">
+            📷📷 연속촬영
+            <input type="file" id="burstInp" accept="image/*" capture="environment" style="display:none">
+          </label>
         </div>
+        <div id="burstHint" style="display:none;font-size:11px;color:var(--green);font-weight:600;margin-top:8px"></div>
       </div>
       <div id="previewList" class="preview-list"></div>
       <div class="field"><label>제목 *</label><input type="text" id="fTitle"></div>
@@ -1380,7 +1386,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-2124';
+const APP_VER='v20260715-2138';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -2322,6 +2328,7 @@ function openAddModal(photo){
 function closeAddModal(){
   $('addOverlay').classList.remove('show');mImgs=[];editingId=null;
   $('addZone').classList.remove('compact');   /* 다음에 열 때 안내가 다시 보이게 */
+  const _bh=$('burstHint'); if(_bh){_bh.style.display='none';_bh.textContent='';}
 }
 $('addClose').onclick=closeAddModal;
 $('addCancel').onclick=closeAddModal;
@@ -2339,6 +2346,24 @@ function renderPreviews(){
   });
   $('addZone').classList.toggle('compact', mImgs.length>0);
   $('addZone').style.padding='';   /* 예전에 인라인으로 박아둔 값 제거 */
+}
+
+/* 📷📷 연속촬영 — 편집기를 고리에서 뺀다.
+   폰 기본 카메라는 한 장마다 페이지로 돌아오므로 탭 1회는 불가피하다.
+   다만 change 핸들러 안에서 곧바로 다시 열면(사용자 제스처가 살아있는 동안)
+   카메라가 자동으로 재개된다. 브라우저가 막으면 그냥 버튼을 다시 누르면 된다. */
+async function handleBurstFile(files){
+  if(!files||!files.length)return;
+  const f=files[0];
+  if(!f||!f.type.startsWith('image/'))return;
+  try{
+    const raw=await fileToDataUrl(f);
+    mImgs.push({id:uid(),data:await compressImg(raw,1800,0.88)});
+    renderPreviews();
+    const h=$('burstHint');
+    h.style.display='';
+    h.textContent=`📷 ${mImgs.length}장 담김 — 카메라가 다시 안 열리면 📷📷 을 누르세요 · 그만 찍으려면 카메라에서 취소`;
+  }catch(e){ toast('사진 로드 실패'); }
 }
 
 // 일반/보안 - 카메라/갤러리 → 자동 편집 모달
@@ -2375,6 +2400,15 @@ async function handleNormalFile(files){
   toast(ok===imgs.length?`✅ ${ok}장 추가됨`:`⚠️ ${ok}/${imgs.length}장만 추가됨`);
 }
 $('camInp').addEventListener('change',e=>{handleNormalFile(e.target.files);e.target.value='';});
+$('burstInp').addEventListener('change',e=>{
+  const files=e.target.files;
+  if(files&&files.length){
+    /* 처리보다 먼저 카메라를 다시 연다 — await 를 기다리면 제스처가 만료돼 안 열린다 */
+    try{ $('burstInp').click(); }catch(err){}
+  }
+  handleBurstFile(files);
+  e.target.value='';
+});
 $('galInp').addEventListener('change',e=>{handleNormalFile(e.target.files);e.target.value='';});
 $('addZone').onclick=()=>$('camInp').click();
 
