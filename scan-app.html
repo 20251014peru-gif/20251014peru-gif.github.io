@@ -645,6 +645,19 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 #detailStrip img{width:54px;height:54px;flex:0 0 auto;object-fit:cover;border-radius:8px;
   cursor:pointer;opacity:.5;border:2px solid transparent;transition:opacity .15s,border-color .15s}
 #detailStrip img.on{opacity:1;border-color:var(--accent)}
+
+/* ── 확대 뷰어: 여러 장 넘기기 ── */
+.zoom-nav{display:none;position:absolute;top:50%;transform:translateY(-50%);z-index:11;
+  width:44px;height:64px;border:none;border-radius:12px;
+  background:rgba(120,120,128,.45);color:#fff;font-size:28px;line-height:1;cursor:pointer;
+  font-family:inherit;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.zoom-nav:active{background:rgba(120,120,128,.75)}
+#zoomPrev{left:8px} #zoomNext{right:8px}
+.zoom-nav.on{display:block}
+#zoomCount{display:none;padding:4px 11px;border-radius:100px;background:rgba(120,120,128,.5);
+  color:#fff;font-size:12px;font-weight:600;white-space:nowrap;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+#zoomCount.on{display:inline-block}
 </style>
 </head>
 <body>
@@ -1372,12 +1385,15 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
   <div id="zoomHeader">
     <div id="zoomTitle"></div>
     <div style="display:flex;gap:14px;align-items:center">
+      <span id="zoomCount"></span>
       <button class="zoom-btn" id="zoomShare" title="공유">📤</button>
       <button class="zoom-btn" id="zoomDownload" title="다운로드">⬇</button>
       <button class="zoom-btn" id="zoomClose" title="닫기">✕</button>
     </div>
   </div>
   <img id="zoomImg" src="" alt="">
+  <button class="zoom-nav" id="zoomPrev" aria-label="이전">‹</button>
+  <button class="zoom-nav" id="zoomNext" aria-label="다음">›</button>
   <div id="zoomFooter">
     <button class="zoom-btn" id="zoomRotL" title="반시계">↺</button>
     <button class="zoom-btn" id="zoomZoomOut" title="축소">−</button>
@@ -1404,7 +1420,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-2206';
+const APP_VER='v20260716-0855';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -1936,12 +1952,33 @@ $('firebaseDisconnect').onclick=()=>{
    ════════════════════════════════════════════════════════ */
 let _zoom={scale:1,x:0,y:0,rot:0,lastTouchDist:0,lastTouchX:0,lastTouchY:0,dragging:false};
 
-function openZoomViewer(src,title){
+/* list 를 주면 좌우로 넘길 수 있다. 안 주면 예전과 똑같이 한 장짜리 */
+function openZoomViewer(src,title,list,idx){
   const v=$('zoomViewer'),img=$('zoomImg');
   v.classList.add('show');
   $('zoomTitle').textContent=title||'';
+  _zoom.list = (list&&list.length>1) ? list : null;
+  _zoom.idx  = _zoom.list ? (idx||0) : 0;
+  _zoom.title = title||'';
+  const multi=!!_zoom.list;
+  $('zoomPrev').classList.toggle('on',multi);
+  $('zoomNext').classList.toggle('on',multi);
+  $('zoomCount').classList.toggle('on',multi);
+  updateZoomCount();
   img.src=src;
   img.onload=()=>fitZoom();
+}
+function updateZoomCount(){
+  if(_zoom.list) $('zoomCount').textContent=`${_zoom.idx+1}/${_zoom.list.length}`;
+}
+function zoomGo(delta){
+  if(!_zoom.list)return;
+  const n=_zoom.list.length;
+  _zoom.idx=(_zoom.idx+delta+n)%n;   /* 끝에서 처음으로 돌아간다 */
+  const img=$('zoomImg');
+  img.src=_zoom.list[_zoom.idx];
+  img.onload=()=>fitZoom();
+  updateZoomCount();
 }
 function closeZoomViewer(){$('zoomViewer').classList.remove('show');$('zoomImg').src='';}
 function applyZoomTransform(){
@@ -1954,7 +1991,7 @@ function fitZoom(){
   if(!iw||!ih)return;
   const scale=Math.min(rect.width/iw,(rect.height-120)/ih)*0.95;
   /* transform-origin:center → x,y는 0으로 (이미지가 뷰어 중앙에 위치) */
-  _zoom.scale=scale; _zoom.x=0; _zoom.y=0; _zoom.rot=0;
+  _zoom.scale=scale; _zoom.fit=scale; _zoom.x=0; _zoom.y=0; _zoom.rot=0;
   applyZoomTransform();
 }
 function zoomBy(factor){_zoom.scale=Math.max(0.1,Math.min(10,_zoom.scale*factor));applyZoomTransform();}
@@ -2023,6 +2060,9 @@ $('zoomViewer').addEventListener('touchstart',e=>{
     _zoom.lastTouchDist=Math.hypot(dx,dy);
   }else if(e.touches.length===1){
     _zoom.dragging=true;_zoom.lastTouchX=e.touches[0].clientX;_zoom.lastTouchY=e.touches[0].clientY;
+    /* 확대 안 된 상태 + 여러 장이면 팬 대신 스와이프로 넘긴다 */
+    _zoom.swipe = !!(_zoom.list && _zoom.scale <= (_zoom.fit||1)*1.05);
+    _zoom.startX=e.touches[0].clientX; _zoom.startY=e.touches[0].clientY;
   }
 },{passive:true});
 $('zoomViewer').addEventListener('touchmove',e=>{
@@ -2034,6 +2074,7 @@ $('zoomViewer').addEventListener('touchmove',e=>{
     if(_zoom.lastTouchDist)zoomBy(dist/_zoom.lastTouchDist);
     _zoom.lastTouchDist=dist;
   }else if(e.touches.length===1&&_zoom.dragging){
+    if(_zoom.swipe) return;   /* 스와이프 중 — 이미지를 끌지 않는다 */
     _zoom.x+=e.touches[0].clientX-_zoom.lastTouchX;
     _zoom.y+=e.touches[0].clientY-_zoom.lastTouchY;
     _zoom.lastTouchX=e.touches[0].clientX;_zoom.lastTouchY=e.touches[0].clientY;
@@ -2041,10 +2082,27 @@ $('zoomViewer').addEventListener('touchmove',e=>{
   }
 },{passive:false});
 $('zoomViewer').addEventListener('touchend',e=>{
-  if(e.touches.length===0){_zoom.dragging=false;_zoom.lastTouchDist=0;}
+  if(e.touches.length===0){
+    if(_zoom.swipe && e.changedTouches&&e.changedTouches[0]){
+      const dx=e.changedTouches[0].clientX-_zoom.startX;
+      const dy=e.changedTouches[0].clientY-_zoom.startY;
+      /* 가로로 충분히, 세로보다 확실히 많이 움직였을 때만 (스크롤과 헷갈리지 않게) */
+      if(Math.abs(dx)>55 && Math.abs(dx)>Math.abs(dy)*1.5) zoomGo(dx<0?1:-1);
+    }
+    _zoom.dragging=false;_zoom.lastTouchDist=0;_zoom.swipe=false;
+  }
 },{passive:true});
 
-window.showImg=(src,title)=>openZoomViewer(src,title);
+/* 화살표 + 키보드 */
+$('zoomPrev').onclick=()=>zoomGo(-1);
+$('zoomNext').onclick=()=>zoomGo(1);
+document.addEventListener('keydown',e=>{
+  if(!$('zoomViewer').classList.contains('show')||!_zoom.list)return;
+  if(e.key==='ArrowLeft'){e.preventDefault();zoomGo(-1);}
+  if(e.key==='ArrowRight'){e.preventDefault();zoomGo(1);}
+});
+
+window.showImg=(src,title,list,idx)=>openZoomViewer(src,title,list,idx);
 
 // CHUNK_3 - 섹션/갤러리/필터
 function selectMode(mode){
@@ -2371,7 +2429,7 @@ function renderPreviews(){
       <img src="${m.data}" alt="" data-idx="${i}">
       <button class="preview-del" data-del="${i}">✕</button>
     </div>`).join('');
-  wrap.querySelectorAll('img').forEach(img=>img.onclick=()=>showImg(img.src));
+  wrap.querySelectorAll('img').forEach((img,i)=>img.onclick=()=>showImg(img.src,'',mImgs.map(m=>m.data),i));
   wrap.querySelectorAll('.preview-del').forEach(b=>{
     b.onclick=()=>{mImgs.splice(parseInt(b.dataset.del),1);renderPreviews();};
   });
@@ -2519,7 +2577,7 @@ async function openDetail(pid){
     if(datas.length){
       const show=i=>{
         $('detailImg').src=datas[i];
-        $('detailImg').onclick=()=>showImg(datas[i],p.title);
+        $('detailImg').onclick=()=>showImg(datas[i],p.title,datas,i);
         cnt.textContent=`${i+1}/${datas.length}`;
         strip.querySelectorAll('img').forEach((t,j)=>t.classList.toggle('on',j===i));
       };
