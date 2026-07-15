@@ -464,38 +464,34 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
   .photo-card:hover .thumb{transform:none}
 }
 
-/* ── 검색 아이콘 버튼 + 한 줄 바 ──
-   바 안의 모든 컨트롤은 --bar-h 로 높이를 통일한다 */
-.bar-compact{--bar-h:44px}
-.icon-btn{position:relative;flex:0 0 auto;width:var(--bar-h);height:var(--bar-h);border-radius:50%;border:none;
-  background:var(--blue-soft);color:var(--ink);font-size:18px;cursor:pointer;font-family:inherit;
-  display:inline-flex;align-items:center;justify-content:center;transition:background .15s}
-.icon-btn:hover{background:var(--blue-lt)}
-.icon-btn:active{transform:scale(.94)}
-.q-dot{display:none;position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:50%;
+/* ── 상단 바: 모든 버튼 같은 크기, 무조건 한 줄 ── */
+.bar-compact{--bar-h:44px;display:flex;gap:6px;align-items:center;flex-wrap:nowrap}
+.bar-compact > *{flex:1 1 0;min-width:0}          /* 균등폭 */
+.bar-btn{position:relative;height:var(--bar-h);padding:0 6px;border:none;border-radius:100px;
+  font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:0;
+  white-space:nowrap;overflow:hidden;transition:filter .15s}
+.bar-btn:active{transform:scale(.96)}
+.bar-btn.blue{background:var(--accent);color:#fff}
+.bar-btn.green{background:var(--green);color:#fff}
+.bar-btn.ghost{background:var(--blue-soft);color:var(--ink)}
+.bar-btn:hover{filter:brightness(.94)}
+.bar-compact .cat-select{height:var(--bar-h);border-radius:100px;padding:0 10px;font-size:13px}
+.q-dot{display:none;position:absolute;top:6px;right:8px;width:9px;height:9px;border-radius:50%;
   background:var(--accent);border:2px solid var(--bg)}
 .q-dot.on{display:block}
-/* 바 안 컨트롤 높이 통일 */
-.bar-compact .btn-primary,
-.bar-compact .btn-csv,
-.bar-compact .cat-select{height:var(--bar-h)}
-.bar-compact .btn-primary,.bar-compact .btn-csv{font-size:14px;padding:0 16px}
-/* 검색 시트: 한 번에 하나만 */
+/* 검색 시트 */
 #swGen,#swScan{display:none;width:100%}
 #swGen.on,#swScan.on{display:block}
 #searchOverlay .search-wrap input{height:42px;font-size:16px}
 
-/* 모바일: 카메라·갤러리·CSV 한 줄 유지 — 높이는 --bar-h 로 계속 통일 */
-@media (max-width:560px){
-  .bar-compact{flex-wrap:nowrap;gap:6px;align-items:center}
-  .bar-compact .cat-select{flex:1 1 auto;min-width:0;width:0}
-  .bar-compact .btn-primary,.bar-compact .btn-csv{
-    flex:0 0 auto;padding:0 13px;font-size:13px;white-space:nowrap}
+/* 좁은 화면: 글자 접고 아이콘만 → 한 줄 보장 */
+@media (max-width:480px){
+  .bar-compact .lbl{display:none}
+  .bar-btn{font-size:17px;padding:0 4px}
 }
-@media (max-width:400px){
+@media (max-width:360px){
   .bar-compact{--bar-h:42px;gap:5px}
-  .bar-compact .btn-primary,.bar-compact .btn-csv{padding:0 10px;font-size:12px}
-  .icon-btn{font-size:17px}
 }
 
 /* ── 명함 구분 배지 ── */
@@ -569,14 +565,14 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
   <!-- 일반/보안 갤러리 -->
   <div id="generalView" style="display:none">
     <div class="bar bar-compact">
-      <button class="icon-btn" id="btnOpenSearchGen" aria-label="검색">🔍<span class="q-dot" id="qDotGen"></span></button>
+      <button class="bar-btn ghost" id="btnOpenSearchGen" aria-label="검색">🔍<span class="lbl"> 검색</span><span class="q-dot" id="qDotGen"></span></button>
       <select class="cat-select" id="catFilter">
         <option value="all">전체 카테고리</option>
       </select>
-      <label class="btn-primary" style="cursor:pointer" onclick="event.stopPropagation()">📷 카메라
+      <label class="bar-btn blue" style="cursor:pointer" onclick="event.stopPropagation()" aria-label="카메라">📷<span class="lbl"> 카메라</span>
         <input type="file" id="topCamInp" accept="image/*" capture="environment" style="display:none">
       </label>
-      <label class="btn-primary" style="cursor:pointer;background:var(--white);color:var(--blue);border:1.5px solid var(--blue-bd)" onclick="event.stopPropagation()">🖼 갤러리
+      <label class="bar-btn ghost" style="cursor:pointer" onclick="event.stopPropagation()" aria-label="갤러리">🖼<span class="lbl"> 갤러리</span>
         <input type="file" id="topGalInp" accept="image/*" style="display:none">
       </label>
     </div>
@@ -590,15 +586,15 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
   <!-- 스캔 영역 -->
   <div id="scanView">
     <div class="bar bar-compact">
-      <button class="icon-btn" id="btnOpenSearchScan" aria-label="검색">🔍<span class="q-dot" id="qDotScan"></span></button>
-      <label class="btn-primary" style="cursor:pointer" onclick="event.stopPropagation()">📷 카메라
+      <button class="bar-btn ghost" id="btnOpenSearchScan" aria-label="검색">🔍<span class="lbl"> 검색</span><span class="q-dot" id="qDotScan"></span></button>
+      <label class="bar-btn blue" style="cursor:pointer" onclick="event.stopPropagation()" aria-label="카메라">📷<span class="lbl"> 카메라</span>
         <input type="file" id="topScanCam" accept="image/*" capture="environment" style="display:none">
       </label>
-      <label class="btn-primary" style="cursor:pointer;background:var(--white);color:var(--blue);border:1.5px solid var(--blue-bd)" onclick="event.stopPropagation()">🖼 갤러리
+      <label class="bar-btn ghost" style="cursor:pointer" onclick="event.stopPropagation()" aria-label="갤러리">🖼<span class="lbl"> 갤러리</span>
         <input type="file" id="topScanGal" accept="image/*" style="display:none">
       </label>
-      <button class="btn-primary" id="btnLiveScan" style="background:var(--green)">📄 스캔</button>
-      <button class="btn-csv" id="btnScanCsv">📥 CSV</button>
+      <button class="bar-btn green" id="btnLiveScan" aria-label="스캔">📄<span class="lbl"> 스캔</span></button>
+      <button class="bar-btn green" id="btnScanCsv" aria-label="CSV 내보내기">📥<span class="lbl"> CSV</span></button>
     </div>
     <!-- 🔧 영수증 필터 영역 (영수증 모드에서만 표시) -->
     <div id="receiptFilters" class="receipt-filters">
@@ -1290,7 +1286,7 @@ header .unified-tabs{flex:1;min-width:0;padding:0;margin:0 8px;justify-content:c
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260715-1802';
+const APP_VER='v20260715-1814';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -5389,6 +5385,22 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
     return [tl, tr, br, bl];
   }
 
+  /* 덩어리가 프레임 테두리 몇 면에 닿는지 — 책상/벽 같은 배경은 여러 면에 닿는다.
+     손에 든 문서는 보통 여백이 있어 안 닿는다 */
+  function borderSides(pixels, w, h) {
+    let t=false,b=false,l=false,r=false;
+    for (let i = 0; i < pixels.length; i++) {
+      const idx = pixels[i];
+      const x = idx % w, y = (idx / w) | 0;
+      if (y === 0) t = true;
+      else if (y === h - 1) b = true;
+      if (x === 0) l = true;
+      else if (x === w - 1) r = true;
+      if (t && b && l && r) break;
+    }
+    return (t?1:0)+(b?1:0)+(l?1:0)+(r?1:0);
+  }
+
   function polyArea(p) {
     let a = 0;
     for (let i = 0; i < 4; i++) {
@@ -5399,11 +5411,14 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
   }
   function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
-  function validateQuad(c, w, h, blobCount) {
+  function validateQuad(c, w, h, blobCount, sides) {
     const area = polyArea(c);
     const fill = area / (w * h);
-    if (fill < 0.12) return { ok: false, why: 'too small (' + fill.toFixed(2) + ')' };
-    if (fill > 0.98) return { ok: false, why: 'fills frame' };
+    /* 명함을 팔 길이에서 찍으면 화면의 10% 남짓 — 하한을 너무 올리면 명함이 버려진다 */
+    if (fill < 0.045) return { ok: false, why: 'too small (' + fill.toFixed(3) + ')' };
+    if (fill > 0.92) return { ok: false, why: 'fills frame' };
+    /* 테두리 3면 이상에 닿으면서 크면 책상/벽 — 문서가 아니다 */
+    if (sides >= 3 && fill > 0.35) return { ok: false, why: 'background (touches ' + sides + ' sides)' };
 
     const e = [dist(c[0], c[1]), dist(c[1], c[2]), dist(c[2], c[3]), dist(c[3], c[0])];
     const minE = Math.min(e[0], e[1], e[2], e[3]);
@@ -5433,13 +5448,30 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
     for (let i = 0; i < gray.length; i++) bin[i] = gray[i] > thr ? 1 : 0;
     const filled = fillHoles(bin, w, h);
     const blob = largestBlob(filled, w, h);
-    if (!blob.pixels || blob.count < w * h * 0.10) {
+    if (!blob.pixels || blob.count < w * h * 0.035) {
       return { found: false, reason: 'no blob', corners: null };
     }
     const corners = cornersFromPixels(blob.pixels, w);
-    const v = validateQuad(corners, w, h, blob.count);
+    const sides = borderSides(blob.pixels, w, h);
+    const v = validateQuad(corners, w, h, blob.count, sides);
     if (!v.ok) return { found: false, reason: v.why, corners };
     return { found: true, corners, score: v.solidity * v.fill, fill: v.fill, solidity: v.solidity, thr };
+  }
+
+  /* 선명도 = 라플라시안 분산. 초점이 안 맞으면 급격히 떨어진다.
+     문서 영역 안에서만 재야 배경 잡음에 안 속는다 */
+  function sharpness(gray, w, h, box) {
+    const x0=Math.max(1,box?box.x0:1), x1=Math.min(w-1,box?box.x1:w-1);
+    const y0=Math.max(1,box?box.y0:1), y1=Math.min(h-1,box?box.y1:h-1);
+    let sum=0,sum2=0,n=0;
+    for(let y=y0;y<y1;y++) for(let x=x0;x<x1;x++){
+      const i=y*w+x;
+      const lap=4*gray[i]-gray[i-1]-gray[i+1]-gray[i-w]-gray[i+w];
+      sum+=lap; sum2+=lap*lap; n++;
+    }
+    if(n<50) return 0;
+    const mean=sum/n;
+    return sum2/n-mean*mean;
   }
 
   /* 종이와 배경을 가르려면 최소한 이만큼은 밝기가 달라야 한다.
@@ -5470,10 +5502,13 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
   }
 
   const DET_W = 240;               /* 감지 해상도 - 벤치 7.5ms */
-  const STABLE_NEEDED = 6;         /* 연속 감지 - 흔들릴 때 오촬영 방지 */
   const DET_INTERVAL = 110;        /* ms - 초당 약 9회 */
+  const STABLE_MS = 1500;          /* 이만큼 '가만히 + 초점맞음' 이어야 찍는다 */
+  const MOVE_TOL = 0.022;          /* 모서리 허용 이동 (프레임 폭 대비) */
+  const FOCUS_RATIO = 0.72;        /* 최근 최고 선명도의 이 비율 이상이어야 초점 OK */
 
-  let _ls = { stream:null, raf:null, timer:null, stable:0, last:null,
+  let _ls = { stream:null, raf:null, timer:null, last:null, prev:null,
+              stableSince:0, bestSharp:0, held:0, ready:false,
               auto:true, torch:false, busy:false, detCv:null, detCtx:null };
 
   function lsHint(t){ const el=$('lsHint'); if(el&&t) el.textContent=t; }
@@ -5489,11 +5524,13 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
     $('lsTitle').textContent = curScanType==='receipt' ? '📄 영수증 스캔'
                              : curScanType==='card'    ? '💼 명함 스캔'
                              : '📄 문서 스캔';
-    _ls.stable=0; _ls.last=null; _ls.busy=false;
+    _ls.last=null; _ls.prev=null; _ls.stableSince=0; _ls.bestSharp=0; _ls.ready=false; _ls.busy=false;
     lsHint('카메라 준비 중…');
     try{
       _ls.stream = await navigator.mediaDevices.getUserMedia({
-        video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1920 }, height:{ ideal:1080 } },
+        video:{ facingMode:{ ideal:'environment' },
+                width:{ ideal:1920 }, height:{ ideal:1080 },
+                focusMode:{ ideal:'continuous' } },
         audio:false
       });
     }catch(e){
@@ -5519,6 +5556,18 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
     _ls.torch=false;
   }
 
+  function maxMove(a,b){
+    let m=0;
+    for(let i=0;i<4;i++) m=Math.max(m, Math.hypot(a[i].x-b[i].x, a[i].y-b[i].y));
+    return m;
+  }
+
+  function resetStable(msg){
+    _ls.stableSince=0; _ls.held=0; _ls.ready=false;
+    $('lsShutter').classList.remove('armed');
+    lsHint(msg);
+  }
+
   function tick(){
     const v = $('lsVideo');
     if(!v || !v.videoWidth || _ls.busy) return;
@@ -5526,21 +5575,50 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
     const dw=DET_W, dh=Math.round(vh*DET_W/vw);
     if(_ls.detCv.width!==dw){ _ls.detCv.width=dw; _ls.detCv.height=dh; }
     _ls.detCtx.drawImage(v,0,0,dw,dh);
-    let r;
-    try{ r = detectDocument(_ls.detCtx.getImageData(0,0,dw,dh).data, dw, dh); }
-    catch(e){ return; }
 
-    if(r.found){
-      const k = vw/dw;
-      _ls.last = r.corners.map(p=>({ x:p.x*k, y:p.y*k }));
-      _ls.stable++;
-      if(_ls.auto && _ls.stable>=STABLE_NEEDED){ capture(); return; }
-      lsHint(_ls.auto ? '문서 인식됨 — 가만히…' : '문서 인식됨');
-      $('lsShutter').classList.add('armed');
+    let data, r;
+    try{
+      data = _ls.detCtx.getImageData(0,0,dw,dh).data;
+      r = detectDocument(data, dw, dh);
+    }catch(e){ return; }
+
+    if(!r.found){
+      _ls.last=null; _ls.prev=null; _ls.bestSharp=0;
+      resetStable('문서를 화면에 맞춰주세요');
+      return;
+    }
+
+    const k = vw/dw;
+    _ls.last = r.corners.map(p=>({ x:p.x*k, y:p.y*k }));
+
+    /* 초점 — 문서 영역 안에서만 잰다 */
+    const xs=r.corners.map(p=>p.x), ys=r.corners.map(p=>p.y);
+    const box={ x0:Math.min.apply(null,xs), x1:Math.max.apply(null,xs),
+                y0:Math.min.apply(null,ys), y1:Math.max.apply(null,ys) };
+    const gray = toGray(data, dw, dh);
+    const sh = sharpness(gray, dw, dh, box);
+    /* 최고치는 천천히 감쇠 — 장면이 바뀌면 기준도 따라간다 */
+    _ls.bestSharp = Math.max(_ls.bestSharp*0.97, sh);
+    const focused = sh >= _ls.bestSharp*FOCUS_RATIO;
+
+    /* 흔들림 — 모서리가 거의 안 움직여야 한다 */
+    const steady = _ls.prev ? (maxMove(r.corners,_ls.prev) < dw*MOVE_TOL) : false;
+    _ls.prev = r.corners;
+
+    if(!steady){ resetStable('가만히 들어주세요…'); return; }
+    if(!focused){ resetStable('초점을 맞추는 중…'); return; }
+
+    if(!_ls.stableSince) _ls.stableSince = Date.now();
+    _ls.held = Date.now() - _ls.stableSince;
+    _ls.ready = true;
+    $('lsShutter').classList.add('armed');
+
+    if(_ls.auto){
+      const left = Math.max(0, STABLE_MS - _ls.held);
+      if(left > 0){ lsHint('인식됨 — ' + (left/1000).toFixed(1) + '초'); }
+      else { lsHint('촬영!'); capture(); }
     }else{
-      _ls.stable=0; _ls.last=null;
-      $('lsShutter').classList.remove('armed');
-      lsHint('문서를 화면에 맞춰주세요');
+      lsHint('문서 인식됨 — 셔터를 누르세요');
     }
   }
 
@@ -5563,7 +5641,7 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
       for(let i=3;i>=0;i--) ctx.lineTo(pts[i].x,pts[i].y);
       ctx.closePath(); ctx.fill('evenodd');
       ctx.restore();
-      const ready = _ls.stable>=3;
+      const ready = _ls.ready;
       ctx.strokeStyle = ready ? '#34c759' : '#ffcc00';
       ctx.lineWidth=3; ctx.lineJoin='round';
       ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
@@ -5571,6 +5649,14 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
       ctx.closePath(); ctx.stroke();
       ctx.fillStyle = ready ? '#34c759' : '#ffcc00';
       pts.forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,5,0,7); ctx.fill(); });
+    }
+    /* 셔터에 진행도 표시 */
+    const sh=$('lsShutter');
+    if(sh){
+      const pct = (_ls.auto && _ls.stableSince) ? Math.min(1,_ls.held/STABLE_MS) : 0;
+      sh.style.background = pct>0
+        ? 'conic-gradient(var(--green) ' + (pct*360) + 'deg, #fff 0deg)'
+        : '';
     }
     _ls.raf = requestAnimationFrame(drawLoop);
   }
@@ -5619,7 +5705,7 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
     _ls.auto = !_ls.auto;
     $('lsAuto').classList.toggle('on', _ls.auto);
     $('lsAuto').textContent = _ls.auto ? '자동 ON' : '자동 OFF';
-    _ls.stable = 0;
+    _ls.stableSince = 0; _ls.held = 0;
   };
   $('lsTorch').onclick = async ()=>{
     if(!_ls.stream) return;
