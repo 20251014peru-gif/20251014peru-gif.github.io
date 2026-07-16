@@ -432,8 +432,12 @@
       </div>
       <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(this.files)">
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="openScanPicker()">📷 사진 스캐너에서 가져오기</button>
+        <label class="btn btn-primary" style="cursor:pointer">📷 카메라로 찍기 (자동 크롭)
+          <input type="file" id="camShot" accept="image/*" capture="environment" multiple
+            style="display:none" onchange="handleCameraShot(this.files);this.value='';">
+        </label>
       </div>
+      <div id="cropNote" style="display:none;margin-top:8px;font-size:12px;font-weight:600;color:#2563a8"></div>
       <div class="preview-images" id="previewImages"></div>
     </div>
 
@@ -2701,46 +2705,309 @@ document.getElementById('deleteDateModal').addEventListener('click', function(e)
   if (e.target === this) this.classList.remove('open');
 });
 </script>
-<!-- 📷 사진 스캐너에서 가져오기 -->
-<div id="scanPickerOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99000;
-  align-items:center;justify-content:center;padding:16px">
-  <div style="background:#fff;border-radius:16px;width:100%;max-width:900px;height:88vh;
-    display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.25)">
-    <div style="padding:12px 16px;border-bottom:1px solid #e5e7eb;display:flex;
-      justify-content:space-between;align-items:center;gap:10px">
-      <b style="font-size:15px">📷 스캐너에서 사진 고르기</b>
-      <span style="font-size:12px;color:#6b7280;flex:1">사진을 누르면 여기로 들어옵니다</span>
-      <button class="btn" onclick="closeScanPicker()" style="padding:6px 12px">✕ 닫기</button>
-    </div>
-    <iframe id="scanPickerFrame" style="flex:1;border:0;width:100%"></iframe>
-  </div>
-</div>
-
 <script>
-/* ═══ 📷 사진 스캐너 연동 ═══
-   scan-app 을 선택 모드(?mode=picker)로 띄우고, 고른 사진을 postMessage 로 받는다.
-   scan-app 이 이미지 base64 를 같이 보내주므로 Storage 를 다시 안 받아도 된다 */
-function openScanPicker(){
-  const f=document.getElementById('scanPickerFrame');
-  f.src='./scan-app.html?mode=picker&type=photo';
-  const ov=document.getElementById('scanPickerOv');
-  ov.style.display='flex';
-}
-function closeScanPicker(){
-  document.getElementById('scanPickerOv').style.display='none';
-  document.getElementById('scanPickerFrame').src='about:blank';   /* 카메라·타이머 정리 */
-}
-window.addEventListener('message', e=>{
-  const m=e.data;
-  if(!m || m.source!=='scan-app') return;
-  if(m.action!=='selected') return;
-  const imgs=(m.payload && m.payload.images) || [];
-  if(!imgs.length){ alert('그 항목에는 사진이 없습니다.'); return; }
-  imgs.forEach(b64=>uploadedImages.push({ file:null, base64:b64 }));
-  renderPreviews();
+/* ═══════════════════════════════════════════════════════════
+   📷 카메라 + 자동 크롭 (주차대장 전용)
+   사진 스캐너와 같은 감지기. node 로 18개 케이스 검증한 것.
+   ⚠️ 이 블록은 위아래와 무관하다. 근처를 통째로 잘라내는 수정 금지.
+   ═══════════════════════════════════════════════════════════ */
+(function(){
+  /* 문서 감지 — 순수 JS, 의존성 0
+     입력: RGBA (ImageData.data), w, h → {found, corners:[tl,tr,br,bl], score} */
+
+  function toGray(rgba, w, h) {
+    const g = new Uint8Array(w * h);
+    for (let i = 0, p = 0; i < g.length; i++, p += 4) {
+      g[i] = (rgba[p] * 77 + rgba[p + 1] * 150 + rgba[p + 2] * 29) >> 8;
+    }
+    return g;
+  }
+
+  function otsuStats(gray) {
+    const hist = new Int32Array(256);
+    for (let i = 0; i < gray.length; i++) hist[gray[i]]++;
+    const total = gray.length;
+    let sum = 0;
+    for (let t = 0; t < 256; t++) sum += t * hist[t];
+    let sumB = 0, wB = 0, best = 0, thr = 127, bMB = 0, bMF = 0;
+    for (let t = 0; t < 256; t++) {
+      wB += hist[t];
+      if (!wB) continue;
+      const wF = total - wB;
+      if (!wF) break;
+      sumB += t * hist[t];
+      const mB = sumB / wB, mF = (sum - sumB) / wF;
+      const between = wB * wF * (mB - mF) * (mB - mF);
+      if (between > best) { best = between; thr = t; bMB = mB; bMF = mF; }
+    }
+    /* sep = 어두운쪽/밝은쪽 평균 차이. 균일한 노이즈면 0에 가깝다 */
+    return { thr, sep: bMF - bMB };
+  }
+  function otsu(gray) { return otsuStats(gray).thr; }
+
+  /* 구멍 메우기 — 종이 위 글씨/사진은 어두워서 구멍이 된다.
+     테두리에 닿은 0에서 퍼져 '바깥'을 표시 → 안 닿은 0은 내부 구멍 → 채움 */
+  function fillHoles(bin, w, h) {
+    const outside = new Uint8Array(w * h);
+    const stack = new Int32Array(w * h);
+    let sp = 0;
+    const push = (i) => { if (!bin[i] && !outside[i]) { outside[i] = 1; stack[sp++] = i; } };
+    for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
+    for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
+    while (sp > 0) {
+      const cur = stack[--sp];
+      const x = cur % w, y = (cur / w) | 0;
+      if (x > 0)     push(cur - 1);
+      if (x < w - 1) push(cur + 1);
+      if (y > 0)     push(cur - w);
+      if (y < h - 1) push(cur + w);
+    }
+    const out = new Uint8Array(w * h);
+    for (let i = 0; i < bin.length; i++) out[i] = (bin[i] || !outside[i]) ? 1 : 0;
+    return out;
+  }
+
+  function largestBlob(bin, w, h) {
+    const label = new Int32Array(w * h).fill(-1);
+    const stack = new Int32Array(w * h);
+    let bestCount = 0, bestPixels = null, id = 0;
+    for (let start = 0; start < bin.length; start++) {
+      if (!bin[start] || label[start] !== -1) continue;
+      let sp = 0, count = 0;
+      stack[sp++] = start;
+      label[start] = id;
+      const pixels = [];
+      while (sp > 0) {
+        const cur = stack[--sp];
+        pixels.push(cur);
+        count++;
+        const x = cur % w, y = (cur / w) | 0;
+        if (x > 0     && bin[cur - 1] && label[cur - 1] === -1) { label[cur - 1] = id; stack[sp++] = cur - 1; }
+        if (x < w - 1 && bin[cur + 1] && label[cur + 1] === -1) { label[cur + 1] = id; stack[sp++] = cur + 1; }
+        if (y > 0     && bin[cur - w] && label[cur - w] === -1) { label[cur - w] = id; stack[sp++] = cur - w; }
+        if (y < h - 1 && bin[cur + w] && label[cur + w] === -1) { label[cur + w] = id; stack[sp++] = cur + w; }
+      }
+      if (count > bestCount) { bestCount = count; bestPixels = pixels; }
+      id++;
+    }
+    return { count: bestCount, pixels: bestPixels };
+  }
+
+  /* 회전된 사각형도 x+y / x-y 극값이 진짜 꼭짓점을 준다 */
+  function cornersFromPixels(pixels, w) {
+    let tl = null, tr = null, br = null, bl = null;
+    let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
+    for (let i = 0; i < pixels.length; i++) {
+      const idx = pixels[i];
+      const x = idx % w, y = (idx / w) | 0;
+      const s = x + y, d = x - y;
+      if (s < minSum) { minSum = s; tl = { x, y }; }
+      if (s > maxSum) { maxSum = s; br = { x, y }; }
+      if (d > maxDiff) { maxDiff = d; tr = { x, y }; }
+      if (d < minDiff) { minDiff = d; bl = { x, y }; }
+    }
+    return [tl, tr, br, bl];
+  }
+
+  /* 덩어리가 프레임 테두리 몇 면에 닿는지 — 책상/벽 같은 배경은 여러 면에 닿는다.
+     손에 든 문서는 보통 여백이 있어 안 닿는다 */
+  function borderSides(pixels, w, h) {
+    let t=false,b=false,l=false,r=false;
+    for (let i = 0; i < pixels.length; i++) {
+      const idx = pixels[i];
+      const x = idx % w, y = (idx / w) | 0;
+      if (y === 0) t = true;
+      else if (y === h - 1) b = true;
+      if (x === 0) l = true;
+      else if (x === w - 1) r = true;
+      if (t && b && l && r) break;
+    }
+    return (t?1:0)+(b?1:0)+(l?1:0)+(r?1:0);
+  }
+
+  function polyArea(p) {
+    let a = 0;
+    for (let i = 0; i < 4; i++) {
+      const j = (i + 1) % 4;
+      a += p[i].x * p[j].y - p[j].x * p[i].y;
+    }
+    return Math.abs(a) / 2;
+  }
+  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+  function validateQuad(c, w, h, blobCount, sides) {
+    const area = polyArea(c);
+    const fill = area / (w * h);
+    /* 명함을 팔 길이에서 찍으면 화면의 10% 남짓 — 하한을 너무 올리면 명함이 버려진다 */
+    if (fill < 0.045) return { ok: false, why: 'too small (' + fill.toFixed(3) + ')' };
+    if (fill > 0.92) return { ok: false, why: 'fills frame' };
+    /* 테두리 3면 이상에 닿으면서 크면 책상/벽 — 문서가 아니다 */
+    if (sides >= 3 && fill > 0.35) return { ok: false, why: 'background (touches ' + sides + ' sides)' };
+
+    const e = [dist(c[0], c[1]), dist(c[1], c[2]), dist(c[2], c[3]), dist(c[3], c[0])];
+    const minE = Math.min(e[0], e[1], e[2], e[3]);
+    const maxE = Math.max(e[0], e[1], e[2], e[3]);
+    if (minE < 12) return { ok: false, why: 'edge too short' };
+    if (maxE / minE > 6) return { ok: false, why: 'aspect extreme' };
+
+    let sign = 0;
+    for (let i = 0; i < 4; i++) {
+      const a = c[i], b = c[(i + 1) % 4], d = c[(i + 2) % 4];
+      const cr = (b.x - a.x) * (d.y - b.y) - (b.y - a.y) * (d.x - b.x);
+      if (cr === 0) continue;
+      const s = cr > 0 ? 1 : -1;
+      if (sign === 0) sign = s;
+      else if (s !== sign) return { ok: false, why: 'not convex' };
+    }
+
+    /* 구멍을 메운 뒤라 종이면 1.0에 가깝다. 손/그림자 같은 비사각형을 거른다 */
+    const solidity = blobCount / area;
+    if (solidity < 0.80) return { ok: false, why: 'not rectangular (' + solidity.toFixed(2) + ')' };
+
+    return { ok: true, fill, solidity };
+  }
+
+  function attempt(gray, w, h, thr) {
+    const bin = new Uint8Array(w * h);
+    for (let i = 0; i < gray.length; i++) bin[i] = gray[i] > thr ? 1 : 0;
+    const filled = fillHoles(bin, w, h);
+    const blob = largestBlob(filled, w, h);
+    if (!blob.pixels || blob.count < w * h * 0.035) {
+      return { found: false, reason: 'no blob', corners: null };
+    }
+    const corners = cornersFromPixels(blob.pixels, w);
+    const sides = borderSides(blob.pixels, w, h);
+    const v = validateQuad(corners, w, h, blob.count, sides);
+    if (!v.ok) return { found: false, reason: v.why, corners };
+    return { found: true, corners, score: v.solidity * v.fill, fill: v.fill, solidity: v.solidity, thr };
+  }
+
+  /* 선명도 = 라플라시안 분산. 초점이 안 맞으면 급격히 떨어진다.
+     문서 영역 안에서만 재야 배경 잡음에 안 속는다 */
+  function sharpness(gray, w, h, box) {
+    const x0=Math.max(1,box?box.x0:1), x1=Math.min(w-1,box?box.x1:w-1);
+    const y0=Math.max(1,box?box.y0:1), y1=Math.min(h-1,box?box.y1:h-1);
+    let sum=0,sum2=0,n=0;
+    for(let y=y0;y<y1;y++) for(let x=x0;x<x1;x++){
+      const i=y*w+x;
+      const lap=4*gray[i]-gray[i-1]-gray[i+1]-gray[i-w]-gray[i+w];
+      sum+=lap; sum2+=lap*lap; n++;
+    }
+    if(n<50) return 0;
+    const mean=sum/n;
+    return sum2/n-mean*mean;
+  }
+
+  /* 종이와 배경을 가르려면 최소한 이만큼은 밝기가 달라야 한다.
+     이보다 작으면 그냥 노이즈를 억지로 가른 것 — 민무늬 벽에서 오검출 방지 */
+  const MIN_SEP = 18;
+
+  function detectDocument(rgba, w, h) {
+    const gray = toGray(rgba, w, h);
+    const o1 = otsuStats(gray);
+    if (o1.sep < MIN_SEP) return { found: false, reason: 'no contrast (sep=' + o1.sep.toFixed(1) + ')', corners: null };
+    const thr1 = o1.thr;
+    const r1 = attempt(gray, w, h, thr1);
+    if (r1.found) return r1;
+
+    /* 재시도 - 흰 책상 위 흰 종이:
+       글씨/책상/종이 3봉 히스토그램이면 1차 Otsu가 "글씨 vs 나머지"로 갈라
+       책상까지 종이로 본다. 밝은 픽셀만 모아 2차 Otsu로 다시 가른다. */
+    const bright = [];
+    for (let i = 0; i < gray.length; i++) if (gray[i] > thr1) bright.push(gray[i]);
+    if (bright.length > gray.length * 0.15) {
+      const o2 = otsuStats(Uint8Array.from(bright));
+      if (o2.thr > thr1 && o2.sep >= MIN_SEP) {
+        const r2 = attempt(gray, w, h, o2.thr);
+        if (r2.found) { r2.retried = true; return r2; }
+      }
+    }
+    return r1;
+  }
+
+  /* 네 모서리 → 반듯한 직사각형 (원근 보정) */
+  function warp(img, pts){
+    const wT=Math.hypot(pts[1].x-pts[0].x,pts[1].y-pts[0].y);
+    const wB=Math.hypot(pts[2].x-pts[3].x,pts[2].y-pts[3].y);
+    const hL=Math.hypot(pts[3].x-pts[0].x,pts[3].y-pts[0].y);
+    const hR=Math.hypot(pts[2].x-pts[1].x,pts[2].y-pts[1].y);
+    const outW=Math.round(Math.max(wT,wB)), outH=Math.round(Math.max(hL,hR));
+    if(outW<50||outH<50) return null;
+    const tmp=document.createElement('canvas');
+    tmp.width=img.width; tmp.height=img.height;
+    tmp.getContext('2d').drawImage(img,0,0);
+    const src=tmp.getContext('2d').getImageData(0,0,tmp.width,tmp.height);
+    const out=document.createElement('canvas');
+    out.width=outW; out.height=outH;
+    const octx=out.getContext('2d');
+    const dst=octx.createImageData(outW,outH);
+    for(let y=0;y<outH;y++){
+      const v=y/outH;
+      const lx=pts[0].x+(pts[3].x-pts[0].x)*v, ly=pts[0].y+(pts[3].y-pts[0].y)*v;
+      const rx=pts[1].x+(pts[2].x-pts[1].x)*v, ry=pts[1].y+(pts[2].y-pts[1].y)*v;
+      for(let x=0;x<outW;x++){
+        const u=x/outW;
+        const sx=Math.round(lx+(rx-lx)*u), sy=Math.round(ly+(ry-ly)*u);
+        if(sx>=0&&sx<src.width&&sy>=0&&sy<src.height){
+          const si=(sy*src.width+sx)*4, di=(y*outW+x)*4;
+          dst.data[di]=src.data[si]; dst.data[di+1]=src.data[si+1];
+          dst.data[di+2]=src.data[si+2]; dst.data[di+3]=255;
+        }
+      }
+    }
+    octx.putImageData(dst,0,0);
+    return out.toDataURL('image/jpeg',0.9);
+  }
+
+  function loadImg(src){
+    return new Promise((res,rej)=>{
+      const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src;
+    });
+  }
+
+  /* 사진 한 장 → 자동 크롭 시도. 못 찾으면 원본 그대로 */
+  window.autoCropPhoto = async function(base64){
+    try{
+      const img=await loadImg(base64);
+      const DW=320, dh=Math.max(1,Math.round(img.height*DW/img.width));
+      const c=document.createElement('canvas'); c.width=DW; c.height=dh;
+      c.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0,DW,dh);
+      const data=c.getContext('2d').getImageData(0,0,DW,dh).data;
+      const r=detectDocument(data,DW,dh);
+      if(!r.found) return {img:base64, cropped:false, why:r.reason};
+      const k=img.width/DW;
+      const pts=r.corners.map(p=>({x:p.x*k, y:p.y*k}));
+      const out=warp(img,pts);
+      return out ? {img:out, cropped:true} : {img:base64, cropped:false, why:'warp fail'};
+    }catch(e){ return {img:base64, cropped:false, why:e.message}; }
+  };
+})();
+
+/* 📷 카메라로 찍기 → 자동 크롭 → 미리보기 */
+async function handleCameraShot(files){
+  if(!files||!files.length) return;
+  const list=Array.from(files).filter(f=>f.type.startsWith('image/'));
+  if(!list.length) return;
+  const zone=document.getElementById('uploadZone');
+  const oldHTML=zone.innerHTML;
+  zone.innerHTML='<div class="icon">⏳</div><h3>자동 크롭 중…</h3>';
+  let cropped=0;
+  for(const f of list){
+    const b64=await new Promise(res=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(f); });
+    const out=await autoCropPhoto(b64);
+    if(out.cropped) cropped++;
+    uploadedImages.push({ file:f, base64:out.img });
+    renderPreviews();
+  }
+  zone.innerHTML=oldHTML;
   document.getElementById('extractCard').style.display='';
-  closeScanPicker();
-});
+  const msg = cropped===list.length ? `✅ ${cropped}장 자동 크롭됨`
+            : cropped ? `⚠️ ${cropped}/${list.length}장만 크롭됨 (나머지는 원본)`
+            : '⚠️ 대장을 못 찾아 원본 그대로 (배경과 대비가 약하면 실패합니다)';
+  const st=document.getElementById('cropNote');
+  if(st){ st.textContent=msg; st.style.display=''; setTimeout(()=>st.style.display='none',4000); }
+}
 </script>
+
 </body>
 </html>
