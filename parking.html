@@ -1356,6 +1356,35 @@ function buildContextHint() {
   return hint;
 }
 
+/* AI 응답 → 행 배열.
+   예전엔 JSON.parse 한 방이라 응답 앞뒤에 설명이 한 줄만 붙어도,
+   또는 max_tokens 에 걸려 잘려도 그 사진 것을 통째로 버렸다.
+   (33건 추출됐는데 26건만 저장되던 원인) */
+function parseRowsLoose(raw) {
+  let t = String(raw || '').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+  /* 앞뒤 설명 제거 — 첫 [ 부터 마지막 ] 까지만 */
+  const a = t.indexOf('['), b = t.lastIndexOf(']');
+  if (a >= 0 && b > a) {
+    try {
+      const rows = JSON.parse(t.slice(a, b + 1));
+      if (Array.isArray(rows)) return { rows, partial: false };
+    } catch (e) { /* 잘렸을 수 있다 → 아래에서 건진다 */ }
+  }
+
+  /* 잘렸으면 온전한 { ... } 만 하나씩 건져낸다 */
+  const out = [];
+  const re = /\{[^{}]*\}/g;
+  let m;
+  while ((m = re.exec(t))) {
+    try {
+      const o = JSON.parse(m[0]);
+      if (o && typeof o === 'object' && !Array.isArray(o)) out.push(o);
+    } catch (e) {}
+  }
+  return { rows: out, partial: out.length > 0 };
+}
+
 async function runOCR() {
   const key = getApiKey();
   if (!key) { alert('Anthropic API Key를 먼저 입력해주세요.'); return; }
@@ -1423,7 +1452,7 @@ ${contextHint}
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 4096,
+          max_tokens: 8192,   /* 4096 이면 30행 넘는 대장에서 응답이 잘렸다 */
           messages: [{
             role: 'user',
             content: [
@@ -1446,15 +1475,17 @@ ${contextHint}
     // Parse and merge results - No 기준 정렬 (앞면1~20, 뒷면21~48 순서 무관)
     let allRows = [];
     let rawDisplay = '';
+    let parseWarn = [];
     for (const result of allResults) {
       rawDisplay += `=== 이미지 ${result.imageNum} ===\n${result.raw}\n\n`;
-      try {
-        let json = result.raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-        const rows = JSON.parse(json);
-        rows.forEach(r => { r._imageNum = result.imageNum; r._date = date; });
-        allRows = allRows.concat(rows);
-      } catch(e) {
-        rawDisplay += `[파싱 오류: ${e.message}]\n`;
+      const pr = parseRowsLoose(result.raw);
+      if (pr.rows.length === 0) {
+        parseWarn.push(`이미지 ${result.imageNum}: 한 건도 못 읽음`);
+        rawDisplay += `[파싱 실패 — 위 원본을 확인하세요]\n`;
+      } else {
+        if (pr.partial) parseWarn.push(`이미지 ${result.imageNum}: 응답이 잘려 ${pr.rows.length}건만 건졌습니다`);
+        pr.rows.forEach(r => { r._imageNum = result.imageNum; r._date = date; });
+        allRows = allRows.concat(pr.rows);
       }
     }
     // No 기준 오름차순 정렬 (1→48)
@@ -1465,6 +1496,11 @@ ${contextHint}
     progressFill.style.width = '100%';
     progressText.textContent = '완료!';
 
+    if (parseWarn.length) {
+      /* 조용히 넘어가면 몇 건이 사라진 줄도 모른다 */
+      alert('⚠️ 일부를 못 읽었습니다\n\n' + parseWarn.join('\n') +
+            '\n\n추출 결과 원본을 확인하고, 빠진 행은 표에서 직접 넣어주세요.');
+    }
     if (allRows.length > 0) {
       renderParsedTable(allRows, date);
     } else {
