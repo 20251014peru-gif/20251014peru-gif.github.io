@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<!-- PWA 설정 v44-0629 -->
+<!-- PWA 설정 — 버전은 worklog.js 의 APP_VERSION 한 곳뿐 -->
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#3f7cb8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v44-0713-1343</title>
+  <title>업무일지</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1258,7 +1258,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v44-0713-1343</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">…</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
@@ -2924,7 +2924,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260716t135347"></script>
+<script src="worklog.js?v=v45-20260716-140218"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5628,7 +5628,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   };
 
 
-  // ═══ [임시:옛캘린더정리 시작] v44-0713-1343 ═══════════════════════════
+  // ═══ [임시:옛캘린더정리 시작] ═══════════════════════════
   // 예전에 구글 캘린더에 쌓인 예정·업무 이벤트를 일괄 삭제 (앱이 등록한 것만).
   // 이제 예정·업무는 Tasks로만 동기화되므로, 캘린더에 남은 옛 이벤트를 비운다.
   // ※ 정리 완료 후 이 블록과 버튼은 제거 예정 (일회성).
@@ -8817,11 +8817,20 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 </script>
 
 <script>
-/* ===== 버전 배지 강제 덮어쓰기 ===== */
+/* ===== 버전 배지 강제 덮어쓰기 =====
+   예전엔 여기에 버전을 손으로 박아놔서, worklog.js 가 APP_VERSION 으로
+   배지를 칠해도 3초에 걸쳐 세 번 옛 값으로 도로 돌려놨다.
+   → 뭘 올려도 화면 버전이 안 바뀌었다. 이제 APP_VERSION 만 읽는다. */
 (function(){
+  function ver(){
+    return (typeof APP_VERSION !== 'undefined' && APP_VERSION) ? APP_VERSION : '';
+  }
   function setVer(){
+    var v = ver();
+    if(!v) return;                     /* js 가 아직이면 건드리지 않는다 */
     var el = document.getElementById('verBadge');
-    if(el) el.textContent = 'v44-0713-1343';
+    if(el) el.textContent = v;
+    document.title = '업무일지 ' + v;
   }
   setVer();
   setTimeout(setVer, 500);
@@ -10565,7 +10574,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  console.log('[expV2] v44-0713-1343 로드');
+  console.log('[expV2] 로드', (typeof APP_VERSION!=='undefined'?APP_VERSION:''));
 })();
 
 /* ===== 지출 정산표 (월별 자동 생성 + 엑셀 복사) ===== */
@@ -12723,7 +12732,8 @@ window.makeModalDraggable = function(modal){
 </script>
   
 <script>
-/* ===== PWA Service Worker v44-0713-1343 (network-first, 자동 갱신) ===== */
+/* ===== PWA Service Worker (network-first, 자동 갱신) =====
+   ⚠️ 실제 캐시 규칙은 별도 파일 /sw.js 에 있다. 버전이 안 바뀌는 것 같으면 거기도 볼 것. */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     /* 1) 기존에 설치된 낡은 SW가 옛 버전을 붙들고 있으면 캐시 전부 비우고 새 SW로 교체 */
