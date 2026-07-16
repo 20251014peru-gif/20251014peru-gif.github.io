@@ -901,6 +901,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
   <div class="modal" style="max-width:900px;width:96%;height:92vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
     <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1.5px solid var(--blue-bd);background:var(--blue-lt);flex:none">
       <span id="fileShowTitle" style="flex:1;min-width:0;font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button id="fileShowShare" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;flex:none">📤 공유</button>
       <button id="fileShowSave" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;flex:none">📥 받기</button>
       <button id="fileShowClose" class="btn btn-primary" style="padding:6px 14px;font-size:12px;flex:none">✕ 닫기</button>
     </div>
@@ -918,6 +919,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
     <div id="fileViewBody" style="font-size:14px;line-height:1.9"></div>
     <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
       <button class="btn btn-primary btn-flex" id="fileViewOpen">👁 파일 보기</button>
+      <button class="btn btn-ghost" id="fileViewShare">📤 공유</button>
       <button class="btn btn-ghost" id="fileViewEdit">✏️ 수정</button>
       <button class="btn btn-danger" id="fileViewDel">🗑 삭제</button>
     </div>
@@ -1221,7 +1223,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260716-182920';
+const APP_VER='v20260716-183348';
 document.title='개인일지 '+APP_VER;
 /* 버전을 뿌린다 — 헤더 + PIN 넣는 곳마다.
    잠금화면은 앱이 뜨자마자 보이는 곳이라 DOMContentLoaded 를 기다리면 늦을 수 있다.
@@ -3958,6 +3960,9 @@ function openFileView(id){
   if(f.upUrl){ openBtn.style.display=''; openBtn.textContent=f.locked?'🔓 파일 보기':'👁 파일 보기'; }
   else if(f.path){ openBtn.style.display=''; openBtn.textContent='📂 경로 열기'; }
   else { openBtn.style.display='none'; }
+  /* 공유는 올린 파일만 — 경로 링크는 보낼 게 없다 */
+  const shBtn=g('fileViewShare');
+  if(shBtn) shBtn.style.display=f.upUrl?'':'none';
   g('fileViewOverlay').classList.add('show');
 }
 function closeFileView(){ g('fileViewOverlay').classList.remove('show'); fileViewId=null; }
@@ -4141,6 +4146,43 @@ async function downloadPersonalFile(id){
     alert('받지 못했습니다\n\n'+(e.message||e));
   }
 }
+
+/* ── 📤 공유 ──
+   ⚠️ 공유하면 '푼' 원본이 상대 앱으로 넘어간다. 잠금이 풀린 채로.
+      일부러 보내는 것이니 당연하지만, 잠근 파일이면 알고 해야 한다. */
+async function sharePersonalFile(id){
+  const f=files.find(x=>x.id===id);
+  if(!f||!f.upUrl){ toast('올린 파일이 아닙니다'); return; }
+  if(!(navigator.share && navigator.canShare)){
+    alert('이 브라우저는 공유를 지원하지 않습니다.\n\n📥 받기 로 내려받은 뒤 보내주세요.');
+    return;
+  }
+  if(f.locked){
+    if(!confirm('🔒 잠근 파일입니다.\n\n공유하면 잠금이 풀린 원본이 상대에게 넘어갑니다.\n'
+      +'받은 사람은 PIN 없이 그냥 볼 수 있습니다.\n\n보낼까요?')) return;
+  }
+  try{
+    toast('🔓 준비 중…');
+    const buf=await _fetchDecrypted(f);
+    const name=f.upName||f.name||'file';
+    const file=new File([buf], name, {type:f.upMime||'application/octet-stream'});
+    if(!navigator.canShare({files:[file]})){
+      alert('이 기기에서는 파일 공유가 막혀 있습니다.\n\n📥 받기 로 내려받은 뒤 보내주세요.');
+      return;
+    }
+    await navigator.share({files:[file], title:f.name||name});
+  }catch(e){
+    if(e && e.name==='AbortError') return;    /* 사용자가 취소 — 조용히 */
+    console.error('[파일 공유]',e);
+    alert('공유하지 못했습니다\n\n'+(e.message||e)+'\n\n📥 받기 로 내려받은 뒤 보내보세요.');
+  }
+}
+if(g('fileShowShare')) g('fileShowShare').addEventListener('click',()=>{
+  if(_showFile) sharePersonalFile(_showFile.id);
+});
+if(g('fileViewShare')) g('fileViewShare').addEventListener('click',()=>{
+  if(fileViewId) sharePersonalFile(fileViewId);
+});
 
 if(g('fileShowClose')) g('fileShowClose').addEventListener('click',closeFileShow);
 if(g('fileShowOverlay')) g('fileShowOverlay').addEventListener('click',e=>{
