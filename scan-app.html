@@ -1420,7 +1420,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260716-141453';
+const APP_VER='v20260716-150558';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -1655,9 +1655,11 @@ function cardToContact(c){
 
 /* 업무용 명함 → 연락처. scanId 로 이미 있는 걸 찾아 덮어쓴다.
    (파킹에서 겪은 것과 같은 실수 — 새로 만들면 고칠 때마다 사본이 쌓인다) */
-async function pushCardToContacts(c){
+async function pushCardToContacts(c,opt){
   if(!_fbDb) return '';
-  if((c.owner||'업무')!=='업무') return '';   /* 개인 명함은 업체 목록을 더럽힌다 */
+  /* 자동 전송은 업무용만 — 개인 명함이 업체 목록을 더럽힌다.
+     버튼으로 직접 보낼 땐(force) 개인용도 허용한다. */
+  if(!(opt&&opt.force) && (c.owner||'업무')!=='업무') return '';
   if(c.deletedAt) return '';
   try{
     const col=_fbDb.collection(CONTACTS_COL);
@@ -1685,6 +1687,20 @@ async function pushCardToContacts(c){
     console.error('[contacts] 전송 실패',e);
     return '';
   }
+}
+
+/* 버튼으로 보낼 때 — 자동 전송과 달리 개인 명함도 확인 후 보낸다 */
+async function sendCardToContacts(c){
+  if(!_fbDb){ toast('클라우드 동기화를 먼저 설정하세요'); return; }
+  if((c.owner||'업무')!=='업무'){
+    if(!confirm(`'${c.name||'명함'}'은 개인용입니다.\n업체 연락처 앱에 넣을까요?`)) return;
+  }else if(c.contactId){
+    if(!confirm(`'${c.name||'명함'}'은 이미 연락처 앱에 있습니다.\n지금 내용으로 덮어쓸까요?`)) return;
+  }
+  toast('📤 보내는 중…');
+  const id=await pushCardToContacts(c,{force:true});
+  if(id){ renderScanList(); toast('📇 업체 연락처 앱에 저장됐어요'); }
+  else toast('보내기 실패 — 동기화 상태를 확인하세요');
 }
 
 function saveCards(){if(_safeLSSet(LS_CARDS, cards)){syncPush('cards');return true;}return false;}
@@ -3979,6 +3995,14 @@ function filteredCards(q){
   });
 }
 
+/* 연락처 앱에 들어간 명함 표시 — 많아지면 뭘 보냈는지 헷갈린다 */
+function _contactBadge(c){
+  if(!c.contactId) return '';
+  return `<span title="업체 연락처 앱에 저장됨" style="display:inline-block;margin-left:4px;`
+    +`padding:1px 6px;border-radius:6px;background:var(--green-lt,#e8f5e9);`
+    +`color:var(--green,#2e7d32);font-size:10px;font-weight:700;vertical-align:middle">📇</span>`;
+}
+
 function renderCardList(q){
   const list=filteredCards(q);
   if(!list.length){$('cardList').innerHTML='';$('scanEmpty').style.display='';return;}
@@ -3987,7 +4011,7 @@ function renderCardList(q){
     <thead><tr><th>구분</th><th>카테고리</th><th>회사</th><th>이름</th><th>직책</th><th>휴대폰</th><th>유선</th><th>팩스</th>
     <th>이메일</th><th>주소</th><th style="text-align:right">작업</th></tr></thead>
     <tbody>${list.map(c=>`<tr data-id="${esc(c.id)}">
-      <td>${_ownerBadge(c.owner||'업무')}</td>
+      <td>${_ownerBadge(c.owner||'업무')}${_contactBadge(c)}</td>
       <td style="font-size:12px;color:var(--ink-soft);white-space:nowrap">${esc(c.cat||'')}</td>
       <td class="truncate" style="font-weight:700">${esc(c.company||'')}</td>
       <td>${esc(c.name||'')}</td>
@@ -3998,7 +4022,8 @@ function renderCardList(q){
       <td class="truncate">${c.email?`<a class="link-addr" href="${mailLink(c.email)}">${esc(c.email)}</a>`:''}</td>
       <td class="truncate">${c.addr?`<a class="link-addr" href="${naverMap(c.addr)}" target="_blank">${esc(c.addr)}</a>`:''}</td>
       <td><div class="row-actions">
-        <button class="row-act-btn green" data-act="vcard" title="연락처에 추가">📇</button>
+        <button class="row-act-btn" data-act="contact" title="${c.contactId?'연락처 앱에 이미 있음 — 다시 보내기':'연락처 앱으로 보내기'}">📇</button>
+        <button class="row-act-btn green" data-act="vcard" title="폰 연락처에 추가 (.vcf)">📱</button>
         <button class="row-act-btn green" data-act="copy">📋</button>
         <button class="row-act-btn" data-act="edit">✏️</button>
         <button class="row-act-btn red" data-act="del">🗑</button>
@@ -4006,7 +4031,7 @@ function renderCardList(q){
   const cardHtml=`<div class="scan-card-list">${list.map(c=>`<div class="scan-card" data-id="${esc(c.id)}">
     <div class="top">
       <div>
-        <div class="ttl">${_ownerBadge(c.owner||'업무')} ${esc(c.name||'(이름없음)')}</div>
+        <div class="ttl">${_ownerBadge(c.owner||'업무')}${_contactBadge(c)} ${esc(c.name||'(이름없음)')}</div>
         <div style="font-size:12px;color:var(--ink-soft);font-weight:600;margin-top:2px">${esc(c.position||'')}${c.dept?' / '+esc(c.dept):''}</div>
       </div>
       <div class="date">${esc(c.company||'')}</div>
@@ -4019,7 +4044,8 @@ function renderCardList(q){
     ${c.addr?`<div class="row"><div class="label">📍 주소</div><div class="val"><a class="link-addr" href="${naverMap(c.addr)}" target="_blank">${esc(c.addr)} 🗺</a></div></div>`:''}
     ${c.memo?`<div class="row"><div class="label">📝 메모</div><div class="val" style="font-size:12px;color:var(--ink-soft)">${esc(c.memo)}</div></div>`:''}
     <div class="actions">
-      <button class="row-act-btn green" data-act="vcard">📇 연락처</button>
+      <button class="row-act-btn" data-act="contact">📇 ${c.contactId?'연락처앱 ✓':'연락처앱'}</button>
+      <button class="row-act-btn green" data-act="vcard">📱 폰 연락처</button>
       <button class="row-act-btn green" data-act="copy">📋 엑셀 복사</button>
       <button class="row-act-btn" data-act="edit">✏️ 수정</button>
       <button class="row-act-btn red" data-act="del">🗑 삭제</button>
@@ -4085,11 +4111,15 @@ function bindRowActions(container,type){
         }
       }else if(type==='card'){
         const c=cards.find(x=>x.id===id);if(!c)return;
-        if(act==='vcard')exportVCard(c);
+        if(act==='contact')sendCardToContacts(c);
+        else if(act==='vcard')exportVCard(c);
         else if(act==='copy')copyCardToClipboard(c);
         else if(act==='edit')openCardModal(c);
         else if(act==='del'){
-          if(confirm(`'${c.name||'명함'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`)){
+          /* 연락처 앱은 건드리지 않는다 — worklog 가 그 업체를 참조하고 있을 수 있어
+             말없이 지우면 업무일지가 깨진다. 대신 남는다는 걸 알린다. */
+          const alsoIn = c.contactId ? '\n\n📇 이 명함은 업체 연락처 앱에도 있습니다.\n거기엔 그대로 남습니다 (업무일지가 쓰고 있을 수 있어서요).\n연락처 앱에서 따로 지우세요.' : '';
+          if(confirm(`'${c.name||'명함'}'을 휴지통으로 보낼까요?\n(30일 후 자동 영구삭제)`+alsoIn)){
             c.deletedAt=c.updated=Date.now();saveCards();renderScanList();toast('🗑 휴지통으로 이동');
           }
         }
