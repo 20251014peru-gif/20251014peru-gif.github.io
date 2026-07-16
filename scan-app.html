@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>📷 사진 스캐너 v20260717-0658</title>
+<title>📷 사진 스캐너 v20260717-0735</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -1239,12 +1239,37 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
     <div class="modal-body" id="scanDetailBody"></div>
     <div class="modal-foot" style="flex-direction:column;gap:6px;padding:10px 14px">
       <button class="btn btn-green" id="scanDetailVcard" style="display:none;width:100%">📥 vCard</button>
+      <button class="btn" id="scanDetailSend" style="display:none;width:100%;background:#fff4e6;color:#c2410c;border:1.5px solid #fdba74;height:46px;font-size:14px;font-weight:800">📤 보내기 (차계부·프로젝트·경비…)</button>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%">
         <button class="btn" id="scanDetailDownload" style="display:none;background:var(--green-lt);color:var(--green);border:1.5px solid var(--green);height:44px;font-size:13px">📥 사진저장</button>
         <button class="btn btn-blue" id="scanDetailEdit" style="height:44px;font-size:14px;font-weight:800;grid-column:var(--edit-col,2)">✏️ 수정</button>
         <button class="btn" id="scanDetailShare" style="display:none;background:var(--surface-2);color:var(--blue);border:1.5px solid var(--blue-bd);height:44px;font-size:13px">📤 공유</button>
         <button class="btn btn-ghost" id="scanDetailCloseBtn" style="height:44px;font-size:13px;grid-column:var(--close-col,2)">✕ 닫기</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 📤 영수증 보내기 — 목적지 선택 시트 -->
+<div class="overlay" id="sendDestOverlay">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <div class="modal-title">📤 어디로 보낼까요?</div>
+      <button class="hbtn" id="sendDestClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="sendDestSummary" style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;padding:8px 10px;background:var(--blue-soft);border-radius:8px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <button type="button" class="sendDestBtn" data-dest="car" style="height:54px;font-size:14px;font-weight:800;background:#cffafe;color:#0e7490;border:1.5px solid #67e8f9;border-radius:12px;cursor:pointer">🚗 차계부</button>
+        <button type="button" class="sendDestBtn" data-dest="personal" style="height:54px;font-size:14px;font-weight:800;background:#ffedd5;color:#c2410c;border:1.5px solid #fdba74;border-radius:12px;cursor:pointer">🍜 개인일지</button>
+        <button type="button" class="sendDestBtn" data-dest="project" style="height:54px;font-size:14px;font-weight:800;background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:12px;cursor:pointer">📁 부동산 프로젝트</button>
+        <button type="button" class="sendDestBtn" data-dest="worklog" style="height:54px;font-size:14px;font-weight:800;background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd;border-radius:12px;cursor:pointer">💼 업무경비</button>
+      </div>
+      <div id="sendDestPanel" style="display:none;background:#fff;border:1.5px solid var(--blue-bd);border-radius:12px;padding:14px"></div>
+    </div>
+    <div class="modal-foot" style="gap:8px;padding:12px 14px">
+      <button class="btn btn-ghost" id="sendDestCancel" style="flex:1;height:46px">취소</button>
+      <button class="btn btn-blue" id="sendDestConfirm" style="flex:2;height:46px;font-weight:800;display:none">✅ 이대로 보내기</button>
     </div>
   </div>
 </div>
@@ -1440,7 +1465,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260717-065812';
+const APP_VER='v20260717-073500';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -4341,6 +4366,8 @@ async function openScanDetail(type,id){
 
   // vCard 버튼은 명함일 때만
   $('scanDetailVcard').style.display=(type==='card')?'':'none';
+  // 📤 보내기 버튼은 영수증일 때만
+  if($('scanDetailSend')) $('scanDetailSend').style.display=(type==='receipt')?'':'none';
 
   $('scanDetailOverlay').classList.add('show');
 }
@@ -4348,6 +4375,238 @@ async function openScanDetail(type,id){
 function closeScanDetail(){$('scanDetailOverlay').classList.remove('show');_scanDetailCtx=null;window._scanDetailImgData=null;}
 $('scanDetailClose').onclick=closeScanDetail;
 $('scanDetailCloseBtn').onclick=closeScanDetail;
+
+/* ═══════════════════════════════════════════════════════════
+   📤 영수증 → 다른 앱으로 보내기 (차계부·개인일지·부동산·업무경비)
+   어제 만든 pushCardToContacts 패턴을 목적지별로 확장.
+   모두 같은 Firebase(my-system-25497) 루트 컬렉션에 직접 기록.
+   scan-app.html 한 파일만 수정 — 받는 앱들은 각자 알아서 읽어감:
+     · 차계부/개인일지 → personal 컬렉션 (personal.js pullRecords 가 병합)
+     · 부동산 프로젝트 → realestate_projects.scanRefs 참조 추가 (원본 안 복사)
+     · 업무경비       → worklog_entries {kind:'expense'} 기록
+   ═══════════════════════════════════════════════════════════ */
+
+/* 연료 종류 추정: 상호 + 품목 최고단가로 가스/휘발유/경유 구분 */
+function _sdGuessFuel(r){
+  var unit=0;
+  if(r.items&&r.items.length) r.items.forEach(function(it){var p=Number(it.price)||0;if(p>unit)unit=p;});
+  var hay=((r.place||'')+' '+((r.items||[]).map(function(it){return it.name||'';}).join(' '))).toLowerCase();
+  var fuel='휘발유';
+  if(/lpg|가스|충전소|autogas|e1|sk가스/.test(hay)) fuel='가스';
+  else if(/경유|디젤|diesel/.test(hay)) fuel='경유';
+  else if(unit>0 && unit<1300) fuel='가스';
+  return {unit:unit, fuel:fuel};
+}
+/* 개인일지 차량목록 (같은 오리진 localStorage 공유) */
+function _sdCars(){
+  try{var s=localStorage.getItem('personal_cars_v1');
+    if(s){var a=JSON.parse(s);if(Array.isArray(a)&&a.length)return a.map(function(c){return c.name;});}
+  }catch(e){}
+  return ['쏘나타','스타렉스'];
+}
+/* 연료→차량 매핑: 가스=2번째 차, 그 외=1번째 차 */
+function _sdGuessCar(r){
+  var cars=_sdCars(), g=_sdGuessFuel(r);
+  var car=(g.fuel==='가스')?(cars[1]||cars[0]||'스타렉스'):(cars[0]||'쏘나타');
+  return {car:car, fuel:g.fuel, unit:g.unit};
+}
+/* 같은 차량 직전 주행거리 (personal 컬렉션 조회) → 구간·연비 계산용 */
+async function _sdPrevOdo(car){
+  try{
+    if(!_fbDb)return 0;
+    var snap=await _fbDb.collection('personal').get(), maxOdo=0;
+    snap.forEach(function(doc){var o=doc.data()||{};var odo=Number(o.odo)||0;
+      if(o.cat==='차계부'&&o.who===car&&odo>maxOdo)maxOdo=odo;});
+    return maxOdo;
+  }catch(e){console.error('[보내기] 직전주행 조회 실패',e);return 0;}
+}
+/* 영수증에 "어디로 보냈는지" 태그 (중복전송 표시용, 원본은 안 건드림) */
+function _sdTag(r,tag){
+  try{
+    if(!Array.isArray(r.linkedTo))r.linkedTo=[];
+    if(r.linkedTo.indexOf(tag)<0){r.linkedTo.push(tag);r.updated=Date.now();if(typeof saveReceipts==='function')saveReceipts();}
+  }catch(e){}
+}
+
+/* ── 차계부로 보내기 ── */
+async function pushReceiptToCarLog(r,opt){
+  if(!_fbDb){toast('클라우드 동기화를 먼저 설정하세요');return false;}
+  try{
+    opt=opt||{};
+    var car=opt.car||'', kind=opt.kind||'주유';
+    var odo=Number(opt.odo)||0, liters=Number(opt.liters)||0, amount=Number(r.amount)||0;
+    var trip=null, kmpl=null;
+    if(kind==='주유'&&odo>0){
+      var prev=await _sdPrevOdo(car);
+      if(prev>0&&odo>prev){trip=odo-prev;if(liters>0)kmpl=Math.round((trip/liters)*10)/10;}
+    }
+    var id='scan_car_'+r.id;
+    var rec={id:id,cat:'차계부',who:car,title:kind,
+      detail:(r.place||'')+(r.payMethod?(' / '+r.payMethod):''),
+      amount:amount,date:r.date||today(),time:r.payTime||'',
+      phone:r.phone||'',addr:r.addr||'',created:Date.now(),updated:Date.now()};
+    if(odo>0)rec.odo=odo;
+    if(liters>0)rec.liters=liters;
+    if(trip!=null)rec.trip=trip;
+    if(kmpl!=null)rec.kmpl=kmpl;
+    await _fbDb.collection('personal').doc(id).set(rec);
+    _sdTag(r,'personal:car');
+    toast('🚗 개인일지 차계부로 보냈어요'+(kmpl!=null?(' (연비 '+kmpl+'㎞/L)'):''));
+    return true;
+  }catch(err){console.error('[차계부]',err);toast('차계부 보내기 실패: '+(err.message||err));return false;}
+}
+/* ── 개인일지 카테고리로 보내기 ── */
+async function pushReceiptToPersonalCat(r,opt){
+  if(!_fbDb){toast('클라우드 동기화를 먼저 설정하세요');return false;}
+  try{
+    var cat=(opt&&opt.cat)||'맛집';
+    var id='scan_'+cat+'_'+r.id;
+    var rec={id:id,cat:cat,title:r.place||cat,
+      detail:((r.items&&r.items.length)?r.items.map(function(it){return it.name;}).filter(Boolean).join(', '):'')||(r.memo||''),
+      who:r.place||'',amount:Number(r.amount)||0,date:r.date||today(),time:r.payTime||'',
+      phone:r.phone||'',addr:r.addr||'',created:Date.now(),updated:Date.now()};
+    await _fbDb.collection('personal').doc(id).set(rec);
+    _sdTag(r,'personal:'+cat);
+    toast('📔 개인일지 ['+cat+']로 보냈어요');
+    return true;
+  }catch(err){console.error('[개인일지]',err);toast('개인일지 보내기 실패: '+(err.message||err));return false;}
+}
+/* ── 업무경비(worklog)로 보내기 ── */
+async function pushReceiptToWorklog(r,opt){
+  if(!_fbDb){toast('클라우드 동기화를 먼저 설정하세요');return false;}
+  try{
+    var expType=(opt&&opt.expType)||'개인지출';
+    var utype=(opt&&opt.utype)||'자재구매';
+    var it0=(r.items&&r.items[0])||{};
+    var payload={kind:'expense',expType:expType,date:r.date||today(),
+      title:r.place||'영수증',amount:Number(r.amount)||0,utype:utype,
+      matName:it0.name||'',spec:'',unitPrice:Number(it0.price)||0,qty:Number(it0.qty)||1,
+      deliveryFee:0,vendor:r.place||'',
+      memo:'스캔앱 영수증'+(r.payMethod?(' / '+r.payMethod):''),createdAt:Date.now()};
+    var ref=_fbDb.collection('worklog_entries').doc();
+    await ref.set(payload);
+    _sdTag(r,'worklog:'+ref.id);
+    toast('💼 업무일지 경비('+expType+')로 보냈어요');
+    return true;
+  }catch(err){console.error('[업무경비]',err);toast('업무경비 보내기 실패: '+(err.message||err));return false;}
+}
+/* ── 부동산 프로젝트로 보내기 (참조만 추가) ── */
+async function _sdLoadProjects(){
+  if(!_fbDb)return [];
+  try{
+    var snap=await _fbDb.collection('realestate_projects').get(), arr=[];
+    snap.forEach(function(doc){var d=doc.data()||{};if(d.deletedAt)return;arr.push({id:doc.id,name:d.name||'(이름없음)',status:d.status||''});});
+    return arr;
+  }catch(e){console.error('[프로젝트목록]',e);return [];}
+}
+async function pushReceiptToProject(r,opt){
+  if(!_fbDb){toast('클라우드 동기화를 먼저 설정하세요');return false;}
+  var projectId=opt&&opt.projectId;
+  if(!projectId){toast('프로젝트를 먼저 선택하세요');return false;}
+  try{
+    /* 영수증 원본이 클라우드에 있어야 프로젝트가 참조로 읽는다 — 최신본 강제 저장 */
+    if(_fbUser){var o=Object.assign({},r);delete o.photo;await fbCollection('receipts').doc(r.id).set(o);}
+    await _fbDb.collection('realestate_projects').doc(projectId).update({
+      scanRefs:firebase.firestore.FieldValue.arrayUnion({type:'receipt',id:r.id})
+    });
+    _sdTag(r,'realestate:project_'+projectId);
+    toast('📁 프로젝트에 영수증을 첨부했어요');
+    return true;
+  }catch(err){console.error('[프로젝트]',err);toast('프로젝트 보내기 실패: '+(err.message||err));return false;}
+}
+
+/* ── 목적지 선택 시트 컨트롤러 ── */
+var _sendDestState={rid:null,dest:null,projects:[]};
+function openSendDest(receiptId){
+  var r=receipts.find(function(x){return x.id===receiptId;});
+  if(!r){toast('영수증을 찾을 수 없어요');return;}
+  _sendDestState={rid:receiptId,dest:null,projects:[]};
+  $('sendDestSummary').innerHTML='🧾 <b>'+esc(r.place||'영수증')+'</b> · '+numFmt(Number(r.amount)||0)+'원 · '+esc(r.date||today())+(r.owner?(' · '+esc(r.owner)):'');
+  var p=$('sendDestPanel');p.style.display='none';p.innerHTML='';
+  $('sendDestConfirm').style.display='none';
+  document.querySelectorAll('.sendDestBtn').forEach(function(b){b.style.outline='';});
+  $('sendDestOverlay').classList.add('show');
+}
+function _closeSendDest(){$('sendDestOverlay').classList.remove('show');}
+function _sdInput(label,inner){return '<label style="font-size:12px;font-weight:700;display:block">'+label+inner+'</label>';}
+function _sdSel(id,opts){return '<select id="'+id+'" style="width:100%;height:40px;margin-top:4px;border:1.5px solid var(--blue-bd);border-radius:8px;padding:0 8px;font-family:inherit">'+opts+'</select>';}
+function _sendDestPick(dest){
+  var r=receipts.find(function(x){return x.id===_sendDestState.rid;});
+  if(!r)return;
+  _sendDestState.dest=dest;
+  document.querySelectorAll('.sendDestBtn').forEach(function(b){b.style.outline=(b.dataset.dest===dest)?'3px solid rgba(0,0,0,.18)':'';});
+  var panel=$('sendDestPanel');panel.style.display='';
+  var g=_sdGuessCar(r);
+  var litersGuess=(g.unit>0&&Number(r.amount)>0)?Math.round((Number(r.amount)/g.unit)*100)/100:'';
+  if(dest==='car'){
+    var carOpts=_sdCars().map(function(n){return '<option'+(n===g.car?' selected':'')+'>'+esc(n)+'</option>';}).join('');
+    panel.innerHTML='<div style="font-weight:800;margin-bottom:10px;color:#0e7490">🚗 차계부로 보내기</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+      +_sdInput('차량',_sdSel('sd_car',carOpts))
+      +_sdInput('구분',_sdSel('sd_kind','<option>주유</option><option>정비</option>'))
+      +_sdInput('주행거리(㎞)','<input id="sd_odo" type="number" inputmode="numeric" placeholder="예: 45200" style="width:100%;height:40px;margin-top:4px;border:1.5px solid var(--blue-bd);border-radius:8px;padding:0 8px;font-family:inherit">')
+      +_sdInput('주유량(L)','<input id="sd_liters" type="number" inputmode="decimal" value="'+litersGuess+'" placeholder="자동추정" style="width:100%;height:40px;margin-top:4px;border:1.5px solid var(--blue-bd);border-radius:8px;padding:0 8px;font-family:inherit;background:#fffbea">')
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--ink-faint);margin-top:8px">연료 자동추정: <b>'+g.fuel+'</b>'+(g.unit?(' (단가 '+numFmt(g.unit)+'원/L → 주유량 자동계산)'):'')+' · 주행거리를 넣으면 직전 기록과 비교해 연비까지 계산돼요.</div>';
+  }else if(dest==='personal'){
+    var cats=['맛집','건강','여행','구매','일상','생각','사람'];
+    panel.innerHTML='<div style="font-weight:800;margin-bottom:10px;color:#c2410c">🍜 개인일지로 보내기</div>'
+      +_sdInput('카테고리',_sdSel('sd_cat',cats.map(function(c){return '<option>'+c+'</option>';}).join('')))
+      +'<div style="font-size:11px;color:var(--ink-faint);margin-top:8px">영수증의 상호·금액·품목·주소가 개인일지 기록으로 저장됩니다.</div>';
+  }else if(dest==='project'){
+    panel.innerHTML='<div style="font-weight:800;margin-bottom:10px;color:#0369a1">📁 부동산 프로젝트에 첨부</div><div id="sd_projwrap" style="font-size:12px;color:var(--ink-faint)">프로젝트 목록 불러오는 중…</div>';
+    $('sendDestConfirm').style.display='none';
+    _sdLoadProjects().then(function(list){
+      _sendDestState.projects=list;
+      var w=$('sd_projwrap');if(!w)return;
+      if(!list.length){w.innerHTML='등록된 프로젝트가 없어요. 부동산 프로젝트 앱에서 먼저 만들어 주세요.';return;}
+      w.innerHTML=_sdInput('프로젝트 선택',_sdSel('sd_proj',list.map(function(p){return '<option value="'+esc(p.id)+'">'+esc(p.name)+(p.status?(' · '+esc(p.status)):'')+'</option>';}).join('')))
+        +'<div style="font-size:11px;color:var(--ink-faint);margin-top:8px">영수증 원본은 복사되지 않고, 프로젝트가 참조로 불러갑니다.</div>';
+      $('sendDestConfirm').style.display='';
+    });
+    return;
+  }else if(dest==='worklog'){
+    panel.innerHTML='<div style="font-weight:800;margin-bottom:10px;color:#1d4ed8">💼 업무일지 경비로 보내기</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+      +_sdInput('지출유형',_sdSel('sd_exptype','<option>개인지출</option><option>세금계산서</option><option>전표</option>'))
+      +_sdInput('품목유형',_sdSel('sd_utype','<option>자재구매</option><option>공사/용역</option><option>택배</option><option>기타</option>'))
+      +'</div><div style="font-size:11px;color:var(--ink-faint);margin-top:8px">업무일지 지출 탭에 경비 기록으로 저장됩니다.</div>';
+  }
+  $('sendDestConfirm').style.display='';
+}
+async function _sendDestConfirmDo(){
+  var r=receipts.find(function(x){return x.id===_sendDestState.rid;});
+  if(!r){toast('영수증을 찾을 수 없어요');return;}
+  var dest=_sendDestState.dest;
+  if(!dest){toast('목적지를 먼저 선택하세요');return;}
+  var btn=$('sendDestConfirm');btn.disabled=true;
+  var ok=false;
+  try{
+    if(dest==='car') ok=await pushReceiptToCarLog(r,{car:($('sd_car')||{}).value,kind:($('sd_kind')||{}).value,odo:($('sd_odo')||{}).value,liters:($('sd_liters')||{}).value});
+    else if(dest==='personal') ok=await pushReceiptToPersonalCat(r,{cat:($('sd_cat')||{}).value});
+    else if(dest==='project') ok=await pushReceiptToProject(r,{projectId:($('sd_proj')||{}).value});
+    else if(dest==='worklog') ok=await pushReceiptToWorklog(r,{expType:($('sd_exptype')||{}).value,utype:($('sd_utype')||{}).value});
+  }catch(err){console.error('[보내기]',err);toast('보내기 오류: '+(err.message||err));}
+  finally{btn.disabled=false;}
+  if(ok){_closeSendDest();if(typeof renderScanList==='function')renderScanList();}
+}
+
+/* ── 배선 (중복 바인딩 방지) ── */
+if($('scanDetailSend')&&!$('scanDetailSend')._sdBound){$('scanDetailSend')._sdBound=true;
+  $('scanDetailSend').addEventListener('click',function(){
+    if(_scanDetailCtx&&_scanDetailCtx.type==='receipt'){var id=_scanDetailCtx.id;closeScanDetail();openSendDest(id);}
+  });}
+if($('sendDestClose'))$('sendDestClose').onclick=_closeSendDest;
+if($('sendDestCancel'))$('sendDestCancel').onclick=_closeSendDest;
+if($('sendDestConfirm'))$('sendDestConfirm').onclick=_sendDestConfirmDo;
+document.querySelectorAll('.sendDestBtn').forEach(function(b){if(!b._sdBound){b._sdBound=true;b.addEventListener('click',function(){_sendDestPick(b.dataset.dest);});}});
+
+/* IIFE 여부와 무관하게 외부에서도 호출 가능하게 노출 */
+window.openSendDest=openSendDest;
+window.pushReceiptToCarLog=pushReceiptToCarLog;
+window.pushReceiptToPersonalCat=pushReceiptToPersonalCat;
+window.pushReceiptToWorklog=pushReceiptToWorklog;
+window.pushReceiptToProject=pushReceiptToProject;
 
 /* 📥 사진 다운로드 */
 $('scanDetailDownload').onclick=function(){
