@@ -3769,6 +3769,7 @@ $("mSave").addEventListener("click",async ()=>{
       name:r.data.name||'',
       title:r.data.title||'',
       docType:r.data.type||r.data.docType||'',   /* 서류 종류 — r.data.type 은 항목 종류와 이름이 겹쳐 옮겨 담는다 */
+      owner:r.data.owner||'',                    /* 업무/개인 — scan-app 이 서류에도 붙인다 */
       cat:r.data.cat||'',
       company:r.data.company||'',
       mobile:r.data.mobile||'',
