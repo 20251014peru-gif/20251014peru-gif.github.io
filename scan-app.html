@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>📷 사진 스캐너 v20260717-0821</title>
+<title>📷 사진 스캐너 v20260717-0847</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -954,7 +954,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
         font-size:13px;line-height:1.6;white-space:pre-wrap"></div>
     </div>
     <div class="modal-foot" style="flex-wrap:wrap">
-      <button class="btn" id="detailSend" style="flex:1 1 100%;background:#fff4e6;color:#c2410c;border:1.5px solid #fdba74;font-weight:800;margin-bottom:6px">📤 보내기 (프로젝트·업무)</button>
+      <button class="btn" id="detailSend" style="flex:1 1 100%;background:#fff4e6;color:#c2410c;border:1.5px solid #fdba74;font-weight:800;margin-bottom:6px">📤 업무 작업기록에 첨부</button>
       <button class="btn btn-ghost btn-flex" id="detailCloseBtn">닫기</button>
       <button class="btn btn-blue" id="detailEdit">✏️ 수정</button>
     </div>
@@ -1468,7 +1468,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260717-082100';
+const APP_VER='v20260717-084700';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -4389,9 +4389,10 @@ $('scanDetailCloseBtn').onclick=closeScanDetail;
    어제 만든 pushCardToContacts 패턴을 목적지별로 확장.
    모두 같은 Firebase(my-system-25497) 루트 컬렉션에 직접 기록.
    scan-app.html 한 파일만 수정 — 받는 앱들은 각자 알아서 읽어감:
-     · 차계부/개인일지 → personal 컬렉션 (personal.js pullRecords 가 병합)
-     · 부동산 프로젝트 → realestate_projects.scanRefs 참조 추가 (원본 안 복사)
+     · 차계부/개인일지 → personal_entries 컬렉션 (kind별, personal.html 실시간 표시)
+     · 부동산 프로젝트 → realestate_entries 비용기록 (projectId, 비용 탭에 표시)
      · 업무경비       → worklog_entries {kind:'expense'} 기록
+     · 업무 작업첨부   → worklog_entries work.scanRefs (사진·서류)
    ═══════════════════════════════════════════════════════════ */
 
 /* 연료 종류 추정: 상호 + 품목 최고단가로 가스/휘발유/경유 구분 */
@@ -4501,17 +4502,34 @@ async function pushReceiptToProject(r,opt){
   if(!_fbDb){toast('클라우드 동기화를 먼저 설정하세요');return false;}
   var projectId=opt&&opt.projectId;
   if(!projectId){toast('프로젝트를 먼저 선택하세요');return false;}
-  var itype=(opt&&opt.type)||'receipt';
-  var col=itype+'s';   /* receipt→receipts, card→cards, text→texts, photo→photos */
-  var LBL={receipt:'영수증',card:'명함',text:'서류',photo:'사진'};
   try{
-    /* 원본이 클라우드에 있어야 프로젝트가 참조로 읽는다 — 최신본 강제 저장 */
-    if(_fbUser){var o=Object.assign({},r);delete o.photo;await fbCollection(col).doc(r.id).set(o);}
-    await _fbDb.collection('realestate_projects').doc(projectId).update({
-      scanRefs:firebase.firestore.FieldValue.arrayUnion({type:itype,id:r.id})
-    });
+    /* ⚠️ 프로젝트 doc의 scanRefs 는 "정보 수정" 모달에서만 보임 → 사용자가 못 봄.
+       실제로 보이는 비용 탭에 뜨도록 realestate_entries(비용 기록)로 넣는다. */
+    var itemsTxt=(r.items&&r.items.length)?r.items.map(function(i){return i.name;}).filter(Boolean).join(', '):'';
+    var files=[];
+    if(r.photoUrl && !/^data:/.test(r.photoUrl)) files.push({url:r.photoUrl,type:'image/jpeg',name:(r.place||'영수증')+'.jpg'});
+    var entry={
+      projectId:projectId, kind:'기타비용',
+      title:r.place||'영수증', date:r.date||today(),
+      stage:null, cat:null, sub:null,
+      vendor:r.place||'',
+      amount:Number(r.amount)||null,
+      amountOrig:null, currency:null, fxRate:null,
+      pay:r.payMethod||null,
+      spec:null, unitPrice:null, qty:null, shipping:null, vat:null,
+      menus:null, menu:null, workers:null, dist:null,
+      phone:r.phone||null, addr:r.addr||null, link:null,
+      custom:null,
+      memo:'스캔앱 영수증'+(itemsTxt?(' · '+itemsTxt):''),
+      files:files,
+      scanRefs:[{type:'receipt',id:r.id}],
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    /* 스캔첨부 백참조가 열리도록 원본도 클라우드에 최신 저장 */
+    if(_fbUser){var o=Object.assign({},r);delete o.photo;await fbCollection('receipts').doc(r.id).set(o);}
+    await _fbDb.collection('realestate_entries').add(entry);
     _sdTag(r,'realestate:project_'+projectId);
-    toast('📁 프로젝트에 '+(LBL[itype]||'항목')+'을 첨부했어요');
+    toast('📁 프로젝트 비용에 영수증을 추가했어요');
     return true;
   }catch(err){console.error('[프로젝트]',err);toast('프로젝트 보내기 실패: '+(err.message||err));return false;}
 }
@@ -4575,10 +4593,10 @@ function _sdFindItem(type,id){
 }
 /* 타입별 목적지 */
 function _sdAllowedDests(type,item){
-  if(type==='card')return ['contacts','project'];      /* 명함 → 연락처·프로젝트 (업무는 연락처↔업무 연결로 자동) */
-  if(type==='text')return ['project','worklog'];       /* 서류 → 프로젝트·업무(작업첨부) */
-  if(type==='photo')return ['project','worklog'];      /* 일반사진 → 프로젝트·업무(작업첨부) */
-  return ['car','personal','project','worklog'];       /* 영수증 → 4곳 */
+  if(type==='card')return ['contacts'];                /* 명함 → 연락처 (업무는 연락처↔업무 연결로 자동) */
+  if(type==='text')return ['worklog'];                 /* 서류 → 업무 작업기록 첨부 */
+  if(type==='photo')return ['worklog'];                /* 일반사진 → 업무 작업기록 첨부 */
+  return ['car','personal','project','worklog'];       /* 영수증 → 4곳 (프로젝트=비용기록) */
 }
 /* 원터치(자주 가는 주유소) 버튼 렌더 */
 function _sdRenderQuick(type,item){
