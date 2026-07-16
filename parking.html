@@ -1029,20 +1029,11 @@ function startRealtimeSync() {
 }
 
 async function saveRecord(rec) {
-  const data = { ...rec };
-  delete data._id;
-
-  /* 기존 기록 수정이면 그 문서를 덮어쓴다.
-     예전엔 수정할 때도 아래로 내려가 새 문서를 만들어서,
-     고칠 때마다 사본이 하나씩 늘고 원본이 옛 층으로 계속 집계됐다. */
-  if (rec._id) {
-    await db.collection(COLLECTION).doc(rec._id).set(data);
-    return;
-  }
-
-  // 새 기록 — docId: date_no_timestamp (같은 날짜·No 충돌 방지)
+  // docId: date_no_timestamp 형식 (같은 날짜·No 충돌 방지)
   const ts = Date.now() + Math.random().toString(36).slice(2, 6);
   const docId = (rec.date || 'nodate') + '_' + String(rec.no).padStart(4, '0') + '_' + ts;
+  const data = { ...rec };
+  delete data._id;
   await db.collection(COLLECTION).doc(docId).set(data);
 }
 
@@ -1365,62 +1356,6 @@ function buildContextHint() {
   return hint;
 }
 
-/* AI 응답 → 행 배열.
-   예전엔 JSON.parse 한 방이라 응답 앞뒤에 설명이 한 줄만 붙어도,
-   또는 max_tokens 에 걸려 잘려도 그 사진 것을 통째로 버렸다.
-   (33건 추출됐는데 26건만 저장되던 원인) */
-function parseRowsLoose(raw) {
-  let t = String(raw || '').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-  /* 앞뒤 설명 제거 — 첫 [ 부터 마지막 ] 까지만 */
-  const a = t.indexOf('['), b = t.lastIndexOf(']');
-  if (a >= 0 && b > a) {
-    try {
-      const rows = JSON.parse(t.slice(a, b + 1));
-      if (Array.isArray(rows)) return { rows, partial: false };
-    } catch (e) { /* 잘렸을 수 있다 → 아래에서 건진다 */ }
-  }
-
-  /* 잘렸으면 온전한 { ... } 만 하나씩 건져낸다 */
-  const out = [];
-  const re = /\{[^{}]*\}/g;
-  let m;
-  while ((m = re.exec(t))) {
-    try {
-      const o = JSON.parse(m[0]);
-      if (o && typeof o === 'object' && !Array.isArray(o)) out.push(o);
-    } catch (e) {}
-  }
-  return { rows: out, partial: out.length > 0 };
-}
-
-/* AI 가 뱉은 행을 그대로 믿지 않는다.
-   프롬프트에 "빈 행 제외"라고 써도 그건 부탁일 뿐 강제가 아니다.
-   실제로 33행짜리 대장에서 39행이 나온 적이 있다. */
-function cleanRows(rows) {
-  const seen = new Set();
-  const out = [];
-  let emptyCnt = 0, dupCnt = 0;
-  for (const r of rows) {
-    const plate   = String(r.plate   || '').trim();
-    const inT     = String(r.in      || '').trim();
-    const outT    = String(r.out     || '').trim();
-    const floor   = String(r.floor   || '').trim();
-    const purpose = String(r.purpose || '').trim();
-    const park    = String(r.park    || '').trim();
-
-    /* 빈 행 — No 만 있고 알맹이가 하나도 없다 */
-    if (!plate && !inT && !outT && !floor && !purpose && !park) { emptyCnt++; continue; }
-
-    /* 같은 내용이 두 번 — 번호는 뺀다(AI 가 다르게 붙일 수 있다) */
-    const key = [plate, inT, outT, floor, purpose, park].join('|');
-    if (seen.has(key)) { dupCnt++; continue; }
-    seen.add(key);
-    out.push(r);
-  }
-  return { rows: out, emptyCnt, dupCnt };
-}
-
 async function runOCR() {
   const key = getApiKey();
   if (!key) { alert('Anthropic API Key를 먼저 입력해주세요.'); return; }
@@ -1488,7 +1423,7 @@ ${contextHint}
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 8192,   /* 4096 이면 30행 넘는 대장에서 응답이 잘렸다 */
+          max_tokens: 4096,
           messages: [{
             role: 'user',
             content: [
@@ -1511,25 +1446,17 @@ ${contextHint}
     // Parse and merge results - No 기준 정렬 (앞면1~20, 뒷면21~48 순서 무관)
     let allRows = [];
     let rawDisplay = '';
-    let parseWarn = [];
     for (const result of allResults) {
       rawDisplay += `=== 이미지 ${result.imageNum} ===\n${result.raw}\n\n`;
-      const pr = parseRowsLoose(result.raw);
-      if (pr.rows.length === 0) {
-        parseWarn.push(`이미지 ${result.imageNum}: 한 건도 못 읽음`);
-        rawDisplay += `[파싱 실패 — 위 원본을 확인하세요]\n`;
-      } else {
-        if (pr.partial) parseWarn.push(`이미지 ${result.imageNum}: 응답이 잘려 ${pr.rows.length}건만 건졌습니다`);
-        pr.rows.forEach(r => { r._imageNum = result.imageNum; r._date = date; });
-        allRows = allRows.concat(pr.rows);
+      try {
+        let json = result.raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+        const rows = JSON.parse(json);
+        rows.forEach(r => { r._imageNum = result.imageNum; r._date = date; });
+        allRows = allRows.concat(rows);
+      } catch(e) {
+        rawDisplay += `[파싱 오류: ${e.message}]\n`;
       }
     }
-    /* AI 가 만들어낸 빈 행·중복 행 제거 */
-    const cleaned = cleanRows(allRows);
-    if (cleaned.emptyCnt) parseWarn.push(`빈 행 ${cleaned.emptyCnt}건 제외`);
-    if (cleaned.dupCnt)   parseWarn.push(`중복 행 ${cleaned.dupCnt}건 제외`);
-    allRows = cleaned.rows;
-
     // No 기준 오름차순 정렬 (1→48)
     allRows.sort((a, b) => (parseInt(a.no)||999) - (parseInt(b.no)||999));
 
@@ -1538,11 +1465,6 @@ ${contextHint}
     progressFill.style.width = '100%';
     progressText.textContent = '완료!';
 
-    if (parseWarn.length) {
-      /* 조용히 넘어가면 몇 건이 사라진 줄도 모른다 */
-      alert('⚠️ 확인이 필요합니다\n\n' + parseWarn.join('\n') +
-            '\n\n표의 건수가 실제 대장과 맞는지 확인하세요.');
-    }
     if (allRows.length > 0) {
       renderParsedTable(allRows, date);
     } else {
@@ -1880,9 +1802,6 @@ function saveModal() {
   const noVal = parseInt(document.getElementById('mNo').value) ||
                 (editingIdx >= 0 ? parkingData[editingIdx].no : getNextNo());
   const rec = {
-    /* 수정 중이면 어느 문서인지 알려준다 — 없으면 saveRecord 가 새로 만든다 */
-    ...(editingIdx >= 0 && parkingData[editingIdx] && parkingData[editingIdx]._id
-        ? { _id: parkingData[editingIdx]._id } : {}),
     no: noVal, date, month,
     in: document.getElementById('mIn').value,
     out: document.getElementById('mOut').value,
@@ -2786,11 +2705,12 @@ document.getElementById('deleteDateModal').addEventListener('click', function(e)
   if (e.target === this) this.classList.remove('open');
 });
 </script>
+
 <script>
 /* ═══════════════════════════════════════════════════════════
-   📷 카메라 + 자동 크롭 (주차대장 전용)
-   사진 스캐너와 같은 감지기. node 로 18개 케이스 검증한 것.
-   ⚠️ 이 블록은 위아래와 무관하다. 근처를 통째로 잘라내는 수정 금지.
+   📷 카메라 + 자동 크롭 — 여기 아래만 추가된 부분이다.
+   위쪽 원본 코드(저장·파싱·집계)는 한 줄도 건드리지 않았다.
+   ⚠️ 근처를 통째로 잘라내는 수정 금지.
    ═══════════════════════════════════════════════════════════ */
 (function(){
   /* 문서 감지 — 순수 JS, 의존성 0
@@ -3006,7 +2926,7 @@ document.getElementById('deleteDateModal').addEventListener('click', function(e)
     return r1;
   }
 
-  /* 네 모서리 → 반듯한 직사각형 (원근 보정) */
+  /* 네 모서리 → 반듯한 직사각형 */
   function warp(img, pts){
     const wT=Math.hypot(pts[1].x-pts[0].x,pts[1].y-pts[0].y);
     const wB=Math.hypot(pts[2].x-pts[3].x,pts[2].y-pts[3].y);
@@ -3039,14 +2959,10 @@ document.getElementById('deleteDateModal').addEventListener('click', function(e)
     octx.putImageData(dst,0,0);
     return out.toDataURL('image/jpeg',0.9);
   }
-
   function loadImg(src){
-    return new Promise((res,rej)=>{
-      const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src;
-    });
+    return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; });
   }
-
-  /* 사진 한 장 → 자동 크롭 시도. 못 찾으면 원본 그대로 */
+  /* 못 찾으면 원본 그대로 — 잘못 잘려서 대장이 잘리는 것보다 낫다 */
   window.autoCropPhoto = async function(base64){
     try{
       const img=await loadImg(base64);
@@ -3055,23 +2971,22 @@ document.getElementById('deleteDateModal').addEventListener('click', function(e)
       c.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0,DW,dh);
       const data=c.getContext('2d').getImageData(0,0,DW,dh).data;
       const r=detectDocument(data,DW,dh);
-      if(!r.found) return {img:base64, cropped:false, why:r.reason};
+      if(!r.found) return {img:base64, cropped:false};
       const k=img.width/DW;
-      const pts=r.corners.map(p=>({x:p.x*k, y:p.y*k}));
-      const out=warp(img,pts);
-      return out ? {img:out, cropped:true} : {img:base64, cropped:false, why:'warp fail'};
-    }catch(e){ return {img:base64, cropped:false, why:e.message}; }
+      const out=warp(img, r.corners.map(p=>({x:p.x*k, y:p.y*k})));
+      return out ? {img:out, cropped:true} : {img:base64, cropped:false};
+    }catch(e){ return {img:base64, cropped:false}; }
   };
 })();
 
-/* 📷 카메라로 찍기 → 자동 크롭 → 미리보기 */
+/* 📷 카메라로 찍기 → 자동 크롭 → 원본의 uploadedImages 에 넣어준다.
+   그 다음은 원본 코드(renderPreviews → runOCR)가 그대로 처리한다 */
 async function handleCameraShot(files){
   if(!files||!files.length) return;
   const list=Array.from(files).filter(f=>f.type.startsWith('image/'));
   if(!list.length) return;
-  const zone=document.getElementById('uploadZone');
-  const oldHTML=zone.innerHTML;
-  zone.innerHTML='<div class="icon">⏳</div><h3>자동 크롭 중…</h3>';
+  const note=document.getElementById('cropNote');
+  if(note){ note.style.display=''; note.textContent='⏳ 자동 크롭 중…'; }
   let cropped=0;
   for(const f of list){
     const b64=await new Promise(res=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(f); });
@@ -3080,13 +2995,13 @@ async function handleCameraShot(files){
     uploadedImages.push({ file:f, base64:out.img });
     renderPreviews();
   }
-  zone.innerHTML=oldHTML;
   document.getElementById('extractCard').style.display='';
-  const msg = cropped===list.length ? `✅ ${cropped}장 자동 크롭됨`
-            : cropped ? `⚠️ ${cropped}/${list.length}장만 크롭됨 (나머지는 원본)`
-            : '⚠️ 대장을 못 찾아 원본 그대로 (배경과 대비가 약하면 실패합니다)';
-  const st=document.getElementById('cropNote');
-  if(st){ st.textContent=msg; st.style.display=''; setTimeout(()=>st.style.display='none',4000); }
+  if(note){
+    note.textContent = cropped===list.length ? `✅ ${cropped}장 자동 크롭됨`
+      : cropped ? `⚠️ ${cropped}/${list.length}장만 크롭됨 (나머지는 원본 그대로)`
+      : '⚠️ 대장을 못 찾아 원본 그대로 넣었습니다';
+    setTimeout(()=>{ note.style.display='none'; },4000);
+  }
 }
 </script>
 
