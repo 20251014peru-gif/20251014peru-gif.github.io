@@ -431,6 +431,9 @@
         <p>클릭하거나 드래그해서 이미지 파일을 올려주세요 (JPG, PNG)</p>
       </div>
       <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(this.files)">
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="openScanPicker()">📷 사진 스캐너에서 가져오기</button>
+      </div>
       <div class="preview-images" id="previewImages"></div>
     </div>
 
@@ -2696,6 +2699,47 @@ document.getElementById('addModal').addEventListener('click', function(e) {
 });
 document.getElementById('deleteDateModal').addEventListener('click', function(e) {
   if (e.target === this) this.classList.remove('open');
+});
+</script>
+<!-- 📷 사진 스캐너에서 가져오기 -->
+<div id="scanPickerOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99000;
+  align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:900px;height:88vh;
+    display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.25)">
+    <div style="padding:12px 16px;border-bottom:1px solid #e5e7eb;display:flex;
+      justify-content:space-between;align-items:center;gap:10px">
+      <b style="font-size:15px">📷 스캐너에서 사진 고르기</b>
+      <span style="font-size:12px;color:#6b7280;flex:1">사진을 누르면 여기로 들어옵니다</span>
+      <button class="btn" onclick="closeScanPicker()" style="padding:6px 12px">✕ 닫기</button>
+    </div>
+    <iframe id="scanPickerFrame" style="flex:1;border:0;width:100%"></iframe>
+  </div>
+</div>
+
+<script>
+/* ═══ 📷 사진 스캐너 연동 ═══
+   scan-app 을 선택 모드(?mode=picker)로 띄우고, 고른 사진을 postMessage 로 받는다.
+   scan-app 이 이미지 base64 를 같이 보내주므로 Storage 를 다시 안 받아도 된다 */
+function openScanPicker(){
+  const f=document.getElementById('scanPickerFrame');
+  f.src='./scan-app.html?mode=picker&type=photo';
+  const ov=document.getElementById('scanPickerOv');
+  ov.style.display='flex';
+}
+function closeScanPicker(){
+  document.getElementById('scanPickerOv').style.display='none';
+  document.getElementById('scanPickerFrame').src='about:blank';   /* 카메라·타이머 정리 */
+}
+window.addEventListener('message', e=>{
+  const m=e.data;
+  if(!m || m.source!=='scan-app') return;
+  if(m.action!=='selected') return;
+  const imgs=(m.payload && m.payload.images) || [];
+  if(!imgs.length){ alert('그 항목에는 사진이 없습니다.'); return; }
+  imgs.forEach(b64=>uploadedImages.push({ file:null, base64:b64 }));
+  renderPreviews();
+  document.getElementById('extractCard').style.display='';
+  closeScanPicker();
 });
 </script>
 </body>
