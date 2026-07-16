@@ -1029,11 +1029,20 @@ function startRealtimeSync() {
 }
 
 async function saveRecord(rec) {
-  // docId: date_no_timestamp 형식 (같은 날짜·No 충돌 방지)
-  const ts = Date.now() + Math.random().toString(36).slice(2, 6);
-  const docId = (rec.date || 'nodate') + '_' + String(rec.no).padStart(4, '0') + '_' + ts;
   const data = { ...rec };
   delete data._id;
+
+  /* 기존 기록 수정이면 그 문서를 덮어쓴다.
+     예전엔 수정할 때도 아래로 내려가 새 문서를 만들어서,
+     고칠 때마다 사본이 하나씩 늘고 원본이 옛 층으로 계속 집계됐다. */
+  if (rec._id) {
+    await db.collection(COLLECTION).doc(rec._id).set(data);
+    return;
+  }
+
+  // 새 기록 — docId: date_no_timestamp (같은 날짜·No 충돌 방지)
+  const ts = Date.now() + Math.random().toString(36).slice(2, 6);
+  const docId = (rec.date || 'nodate') + '_' + String(rec.no).padStart(4, '0') + '_' + ts;
   await db.collection(COLLECTION).doc(docId).set(data);
 }
 
@@ -1871,6 +1880,9 @@ function saveModal() {
   const noVal = parseInt(document.getElementById('mNo').value) ||
                 (editingIdx >= 0 ? parkingData[editingIdx].no : getNextNo());
   const rec = {
+    /* 수정 중이면 어느 문서인지 알려준다 — 없으면 saveRecord 가 새로 만든다 */
+    ...(editingIdx >= 0 && parkingData[editingIdx] && parkingData[editingIdx]._id
+        ? { _id: parkingData[editingIdx]._id } : {}),
     no: noVal, date, month,
     in: document.getElementById('mIn').value,
     out: document.getElementById('mOut').value,
