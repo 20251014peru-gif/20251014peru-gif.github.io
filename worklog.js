@@ -3335,11 +3335,11 @@ function openViewer(kind,id){
   let scanRefsHtml="";
   if((data.scanRefs||[]).length){
     const chips=data.scanRefs.map(r=>{
-      const icon=r.type==='receipt'?'🧾':'💼';
-      const label=r.type==='receipt'?'영수증':'명함';
-      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:#e8f0fa;color:#3f7cb8;font-size:12px;font-weight:700;cursor:pointer" data-scan-type="${r.type}" data-scan-id="${r.id}">${icon} ${label}</span>`;
+      const k=scanKindOf(r.type);
+      const t=scanRefTitle(r.type,r.data);
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:#e8f0fa;color:#3f7cb8;font-size:12px;font-weight:700;cursor:pointer;max-width:220px" title="${esc(t)}" data-scan-type="${r.type}" data-scan-id="${r.id}">${k.icon} <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t)}</span></span>`;
     }).join(' ');
-    scanRefsHtml=`<div class="vrow"><div class="vk">🔗 영수증</div><div class="vv" id="vScanRefs">${chips}</div></div>`;
+    scanRefsHtml=`<div class="vrow"><div class="vk">🔗 스캔첨부</div><div class="vv" id="vScanRefs">${chips}</div></div>`;
   }
   $("vBody").innerHTML=`<dl>${rows}${photos}${scanRefsHtml}</dl>`;
   /* 영수증 칩 클릭 → 사진 팝업 */
@@ -3375,18 +3375,42 @@ $("vDel").addEventListener("click",()=>{ if(!vId) return; $("viewOverlay").class
 $("m-cam").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 $("m-file").addEventListener("change",e=>handleFiles(e,modalPhotos,renderModalThumbs));
 
-/* 업무 모달 scan-app 연결 영수증 */
+/* 업무 모달 scan-app 연결 항목 (영수증·명함·서류·사진) */
 let _mScanRefs = [];
+
+/* scan-app 항목의 종류별 아이콘·제목·부제목을 한 곳에서 정한다.
+   목록·저장·상세보기가 전부 이걸 쓴다. */
+const SCAN_KIND = {
+  receipt:{ icon:'🧾', label:'영수증' },
+  card:   { icon:'💼', label:'명함'   },
+  text:   { icon:'📄', label:'서류'   },
+  photo:  { icon:'🖼', label:'사진'   }
+};
+function scanKindOf(t){ return SCAN_KIND[t] || { icon:'📎', label:'첨부' }; }
+function scanRefTitle(type, d){
+  d = d || {};
+  if(type==='receipt') return d.place || '영수증';
+  if(type==='card')    return d.name  || d.company || '명함';
+  if(type==='text')    return d.title || '서류';
+  if(type==='photo')   return d.title || '사진';
+  return '첨부';
+}
+function scanRefSub(type, d){
+  d = d || {};
+  if(type==='receipt') return (d.date||'') + (d.amount ? ' · '+Number(d.amount).toLocaleString()+'원' : '');
+  if(type==='card')    return (d.company||'') + (d.mobile ? ' · '+d.mobile : '');
+  if(type==='text')    return (d.docType||'') + (d.date ? (d.docType?' · ':'')+d.date : '');
+  if(type==='photo')   return (d.cat||'') + (d.date ? (d.cat?' · ':'')+d.date : '');
+  return d.date || '';
+}
 function renderMScanRefs(){
   const wrap = $("mScanRefs"); if(!wrap) return;
   if(!_mScanRefs.length){ wrap.innerHTML=''; return; }
   wrap.innerHTML = _mScanRefs.map(function(r,idx){
     const d = r.data || {};
-    const icon = r.type==='receipt'?'🧾':'💼';
-    const title = r.type==='receipt'?(d.place||'영수증'):(d.name||'명함');
-    const sub = r.type==='receipt'
-      ? ((d.date||'')+(d.amount?(' · '+(d.amount).toLocaleString()+'원'):''))
-      : ((d.company||'')+(d.mobile?(' · '+d.mobile):''));
+    const icon = scanKindOf(r.type).icon;
+    const title = scanRefTitle(r.type, d);
+    const sub = scanRefSub(r.type, d);
     const photoUrl = d.photoUrl||'';
     return '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#fff;border:1.5px solid #dbe6f4;border-radius:8px;margin-bottom:4px">'
       +(photoUrl
@@ -3406,31 +3430,66 @@ function renderMScanRefs(){
   wrap.querySelectorAll('[data-view]').forEach(b=>{
     b.addEventListener('click',()=>{
       const r=_mScanRefs[parseInt(b.dataset.view)];
-      if(r&&r.data&&r.data.photoUrl) showImg(r.data.photoUrl,r.data.place||r.data.name||'영수증');
+      if(r&&r.data&&r.data.photoUrl) showImg(r.data.photoUrl, scanRefTitle(r.type,r.data));
     });
   });
 }
 
-/* 업무 모달 scan-app picker 버튼 */
+/* 업무 모달 scan-app picker 버튼 — 종류를 고르고 연다.
+   예전엔 'receipt' 로 박혀 있어 서류·사진은 고를 방법이 아예 없었다. */
+function _onScanPicked(type,id,data){
+  _mScanRefs.push({type,id,data:data||{}});
+  renderMScanRefs();
+  toast(scanKindOf(type).icon+' '+scanRefTitle(type,data)+' 첨부됨');
+}
+function openScanPickerOfType(type){
+  if(typeof window._openScanPickerOfType==='function'){
+    window._openScanPickerOfType(type, _onScanPicked);
+  } else {
+    toast('scan-app picker를 열 수 없습니다');
+  }
+}
+function closeScanKindMenu(){
+  const m=document.getElementById('scanKindMenu');
+  if(m) m.remove();
+}
 const mScanPickBtn = $("mScanPickBtn");
 if(mScanPickBtn){
-  mScanPickBtn.addEventListener("click",()=>{
-    if(typeof openScanPicker==='function'){
-      openScanPicker('receipt', '', function(type,id,data){
-        _mScanRefs.push({type,id,data:data||{}});
-        renderMScanRefs();
+  mScanPickBtn.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    if(document.getElementById('scanKindMenu')){ closeScanKindMenu(); return; }
+    const menu=document.createElement('div');
+    menu.id='scanKindMenu';
+    menu.style.cssText='position:absolute;z-index:9999;background:#fff;border:1.5px solid #dbe6f4;'
+      +'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:6px;display:flex;'
+      +'flex-direction:column;gap:2px;min-width:150px';
+    menu.innerHTML=['text','receipt','card','photo'].map(function(t){
+      const k=scanKindOf(t);
+      return '<button type="button" data-kind="'+t+'" style="display:flex;align-items:center;gap:8px;'
+        +'padding:9px 12px;border:none;background:transparent;border-radius:7px;cursor:pointer;'
+        +'font-family:inherit;font-size:13px;font-weight:600;color:#1a2f45;text-align:left;width:100%">'
+        +'<span style="font-size:16px">'+k.icon+'</span>'+k.label+'</button>';
+    }).join('');
+    document.body.appendChild(menu);
+    const r=mScanPickBtn.getBoundingClientRect();
+    /* 버튼 위쪽에 띄운다 — 아래는 저장/취소 버튼에 가린다.
+       화면 위로 넘치면 아래로 돌린다. */
+    const top=r.top+window.scrollY-menu.offsetHeight-6;
+    menu.style.top=(top<window.scrollY+4 ? r.bottom+window.scrollY+6 : top)+'px';
+    menu.style.left=Math.max(6, Math.min(r.left+window.scrollX, window.innerWidth-menu.offsetWidth-6))+'px';
+    menu.querySelectorAll('[data-kind]').forEach(function(b){
+      b.addEventListener('mouseenter',function(){ b.style.background='#eef5ff'; });
+      b.addEventListener('mouseleave',function(){ b.style.background='transparent'; });
+      b.addEventListener('click',function(ev){
+        ev.stopPropagation();
+        const t=b.dataset.kind;
+        closeScanKindMenu();
+        openScanPickerOfType(t);
       });
-    } else {
-      // openScanPicker가 IIFE 안에 있으므로 window 통해 호출
-      if(typeof window._openScanPickerForWork==='function'){
-        window._openScanPickerForWork(function(type,id,data){
-          _mScanRefs.push({type,id,data:data||{}});
-          renderMScanRefs();
-        });
-      } else {
-        toast('scan-app picker를 열 수 없습니다');
-      }
-    }
+    });
+    setTimeout(function(){
+      document.addEventListener('click', closeScanKindMenu, { once:true });
+    },0);
   });
 }
 
@@ -3663,13 +3722,20 @@ $("mSave").addEventListener("click",async ()=>{
   }
   if(PHOTO_KINDS.includes(mKind)) obj.photos=modalPhotos.slice();
   if(ATTACH_KINDS.includes(mKind)) obj.attachments=modalAttachments.slice();
-  /* scan-app 연결 영수증 저장 — photoUrl 등 핵심 data 함께 보존 */
+  /* scan-app 연결 항목 저장 — 종류별로 화면에 쓰는 값을 다 남긴다.
+     예전엔 place/name/date/amount 만 남겨서
+     명함은 회사·연락처가, 서류는 제목이 저장 후 사라졌다. */
   if(_mScanRefs.length) obj.scanRefs=_mScanRefs.map(r=>({
     type:r.type,
     id:r.id,
     data:r.data ? {
       place:r.data.place||'',
       name:r.data.name||'',
+      title:r.data.title||'',
+      docType:r.data.type||r.data.docType||'',   /* 서류 종류 — r.data.type 은 항목 종류와 이름이 겹쳐 옮겨 담는다 */
+      cat:r.data.cat||'',
+      company:r.data.company||'',
+      mobile:r.data.mobile||'',
       date:r.data.date||'',
       amount:r.data.amount||0,
       photoUrl:r.data.photoUrl||'',
