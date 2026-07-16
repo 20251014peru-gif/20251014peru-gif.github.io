@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>📷 사진 스캐너 v20260717-0746</title>
+<title>📷 사진 스캐너 v20260717-0803</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -1466,7 +1466,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260717-074600';
+const APP_VER='v20260717-080300';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -4398,28 +4398,13 @@ function _sdGuessFuel(r){
   else if(unit>0 && unit<1300) fuel='가스';
   return {unit:unit, fuel:fuel};
 }
-/* 개인일지 차량목록 (같은 오리진 localStorage 공유) */
-function _sdCars(){
-  try{var s=localStorage.getItem('personal_cars_v1');
-    if(s){var a=JSON.parse(s);if(Array.isArray(a)&&a.length)return a.map(function(c){return c.name;});}
-  }catch(e){}
-  return ['쏘나타','스타렉스'];
-}
-/* 연료→차량 매핑: 가스=2번째 차, 그 외=1번째 차 */
+/* 개인일지(personal.html) 차량 목록 — 소나타 / 스타렉스 */
+function _sdCars(){ return ['소나타','스타렉스']; }
+/* 연료→차량 매핑: 가스→스타렉스, 그 외→소나타 */
 function _sdGuessCar(r){
   var cars=_sdCars(), g=_sdGuessFuel(r);
-  var car=(g.fuel==='가스')?(cars[1]||cars[0]||'스타렉스'):(cars[0]||'쏘나타');
+  var car=(g.fuel==='가스')?(cars[1]||cars[0]):(cars[0]);
   return {car:car, fuel:g.fuel, unit:g.unit};
-}
-/* 같은 차량 직전 주행거리 (personal 컬렉션 조회) → 구간·연비 계산용 */
-async function _sdPrevOdo(car){
-  try{
-    if(!_fbDb)return 0;
-    var snap=await _fbDb.collection('personal').get(), maxOdo=0;
-    snap.forEach(function(doc){var o=doc.data()||{};var odo=Number(o.odo)||0;
-      if(o.cat==='차계부'&&o.who===car&&odo>maxOdo)maxOdo=odo;});
-    return maxOdo;
-  }catch(e){console.error('[보내기] 직전주행 조회 실패',e);return 0;}
 }
 /* 영수증에 "어디로 보냈는지" 태그 (중복전송 표시용, 원본은 안 건드림) */
 function _sdTag(r,tag){
@@ -4429,47 +4414,51 @@ function _sdTag(r,tag){
   }catch(e){}
 }
 
-/* ── 차계부로 보내기 ── */
+/* ── 차계부로 보내기 (personal_entries, kind:'car' 실제 스키마) ── */
 async function pushReceiptToCarLog(r,opt){
   if(!_fbDb){toast('클라우드 동기화를 먼저 설정하세요');return false;}
   try{
     opt=opt||{};
-    var car=opt.car||'', kind=opt.kind||'주유';
-    var odo=Number(opt.odo)||0, liters=Number(opt.liters)||0, amount=Number(r.amount)||0;
-    var trip=null, kmpl=null;
-    if(kind==='주유'&&odo>0){
-      var prev=await _sdPrevOdo(car);
-      if(prev>0&&odo>prev){trip=odo-prev;if(liters>0)kmpl=Math.round((trip/liters)*10)/10;}
-    }
-    var id='scan_car_'+r.id;
-    var rec={id:id,cat:'차계부',who:car,title:kind,
-      detail:(r.place||'')+(r.payMethod?(' / '+r.payMethod):''),
-      amount:amount,date:r.date||today(),time:r.payTime||'',
-      phone:r.phone||'',addr:r.addr||'',created:Date.now(),updated:Date.now()};
-    if(odo>0)rec.odo=odo;
-    if(liters>0)rec.liters=liters;
-    if(trip!=null)rec.trip=trip;
-    if(kmpl!=null)rec.kmpl=kmpl;
-    await _fbDb.collection('personal').doc(id).set(rec);
+    var car=opt.car||'소나타', kind=opt.kind||'주유';
+    var mileage=Number(opt.odo)||0, liters=Number(opt.liters)||0;
+    var g=_sdGuessFuel(r);
+    var obj={kind:'car', vehicle:car, date:r.date||today(), carType:kind,
+      shop:r.place||'', shopPhone:r.phone||'', shopAddr:r.addr||'',
+      liters:liters||null, pricePerL:g.unit||null, fuelKind:(kind==='주유'?g.fuel:''),
+      amount:Number(r.amount)||0, note:r.memo||'', createdAt:Date.now()};
+    if(mileage>0) obj.mileage=mileage;
+    if(kind==='정비'&&r.items&&r.items.length) obj.repairRows=r.items.map(function(it){return {item:it.name||'',cost:Number(it.subtotal||it.price)||0,memo:''};});
+    await _fbDb.collection('personal_entries').doc('pe_scan_'+r.id).set(obj);
     _sdTag(r,'personal:car');
     _sdFuelMemSave(r.place,car,kind);   /* 자주 가는 주유소 기억 → 다음엔 원터치 */
-    toast('🚗 개인일지 차계부로 보냈어요'+(kmpl!=null?(' (연비 '+kmpl+'㎞/L)'):''));
+    toast('🚗 개인일지 차계부('+car+' '+kind+')로 보냈어요');
     return true;
   }catch(err){console.error('[차계부]',err);toast('차계부 보내기 실패: '+(err.message||err));return false;}
 }
-/* ── 개인일지 카테고리로 보내기 ── */
+/* ── 개인일지 카테고리로 보내기 (personal_entries, kind별 실제 스키마) ── */
 async function pushReceiptToPersonalCat(r,opt){
   if(!_fbDb){toast('클라우드 동기화를 먼저 설정하세요');return false;}
   try{
-    var cat=(opt&&opt.cat)||'맛집';
-    var id='scan_'+cat+'_'+r.id;
-    var rec={id:id,cat:cat,title:r.place||cat,
-      detail:((r.items&&r.items.length)?r.items.map(function(it){return it.name;}).filter(Boolean).join(', '):'')||(r.memo||''),
-      who:r.place||'',amount:Number(r.amount)||0,date:r.date||today(),time:r.payTime||'',
-      phone:r.phone||'',addr:r.addr||'',created:Date.now(),updated:Date.now()};
-    await _fbDb.collection('personal').doc(id).set(rec);
-    _sdTag(r,'personal:'+cat);
-    toast('📔 개인일지 ['+cat+']로 보냈어요');
+    var kind=(opt&&opt.kind)||'purchase';
+    var itemsText=(r.items&&r.items.length)?r.items.map(function(i){return (i.name||'')+(i.qty>1?(' x'+i.qty):'');}).filter(Boolean).join(', '):'';
+    var base={date:r.date||today(), payTime:r.payTime||'', amount:Number(r.amount)||0, note:r.memo||'', createdAt:Date.now()};
+    var obj;
+    if(kind==='restaurant'){
+      obj=Object.assign({kind:'restaurant', place:r.place||'', phone:r.phone||'', addr:r.addr||'',
+        menuRows:(r.items||[]).map(function(i){return {name:i.name||'',price:Number(i.subtotal||i.price)||0,qty:i.qty||1};}),
+        payMethod:r.payMethod||''}, base);
+    }else if(kind==='health'){
+      obj=Object.assign({kind:'health', title:r.place||'병원', hospital:r.place||'', hospitalAddr:r.addr||'', phone:r.phone||'', itemRows:r.items||[]}, base);
+    }else if(kind==='other'){
+      obj=Object.assign({kind:'other', title:r.place||'스캔 기록', place:r.place||'', phone:r.phone||'', addr:r.addr||'',
+        body:[itemsText,r.memo].filter(Boolean).join('\n\n')}, base);
+    }else{
+      obj=Object.assign({kind:'purchase', title:r.place||itemsText||'구매', place:r.place||'', phone:r.phone||'', addr:r.addr||'',
+        payMethod:r.payMethod||'', itemRows:r.items||[]}, base);
+    }
+    await _fbDb.collection('personal_entries').doc('pe_scan_'+r.id+'_'+kind).set(obj);
+    _sdTag(r,'personal:'+kind);
+    toast('📔 개인일지로 보냈어요');
     return true;
   }catch(err){console.error('[개인일지]',err);toast('개인일지 보내기 실패: '+(err.message||err));return false;}
 }
@@ -4531,13 +4520,10 @@ function _sdFindItem(type,id){
   if(type==='text')return (texts||[]).find(function(x){return x.id===id;});
   return (receipts||[]).find(function(x){return x.id===id;});
 }
-/* 개인/업무 구분(owner)에 따라 허용 목적지 결정 — 잘못 넣는 것 방지 */
+/* 목적지: 영수증은 4곳 전부, 서류는 프로젝트만 (구분 필터 없음 — 이전 방식으로 복원) */
 function _sdAllowedDests(type,item){
-  if(type==='text')return ['project'];              /* 서류 → 프로젝트 */
-  var o=(item&&item.owner)||'';
-  if(o==='개인')return ['car','personal'];           /* 개인 영수증 → 차계부·개인일지 */
-  if(o==='회사'||o==='부동산'||o==='업무')return ['worklog','project']; /* 업무 영수증 → 경비·프로젝트 */
-  return ['car','personal','project','worklog'];     /* 구분 미지정 → 전부 (안전) */
+  if(type==='text')return ['project'];
+  return ['car','personal','project','worklog'];
 }
 /* 원터치(자주 가는 주유소) 버튼 렌더 */
 function _sdRenderQuick(type,item){
@@ -4565,7 +4551,7 @@ function openSendDest(type,id){
   _sendDestState={type:type,rid:id,dest:null,projects:[]};
   var titleTxt=(type==='text')?('📄 '+(item.title||'서류')):('🧾 '+(item.place||'영수증'));
   var meta=(type==='text')?(esc(item.date||'')+(item.type?(' · '+esc(item.type)):'')):(numFmt(Number(item.amount)||0)+'원 · '+esc(item.date||today()));
-  $('sendDestSummary').innerHTML='<b>'+esc(titleTxt)+'</b> · '+meta+(item.owner?(' · <b>'+esc(item.owner)+'</b>'):' · <span style="color:#c2410c">구분 미지정 (전부 표시)</span>');
+  $('sendDestSummary').innerHTML='<b>'+esc(titleTxt)+'</b> · '+meta+(item.owner?(' · '+esc(item.owner)):'');
   var allowed=_sdAllowedDests(type,item);
   document.querySelectorAll('.sendDestBtn').forEach(function(b){
     b.style.display=(allowed.indexOf(b.dataset.dest)>=0)?'':'none';
@@ -4596,11 +4582,11 @@ function _sendDestPick(dest){
       +_sdInput('주행거리(㎞)','<input id="sd_odo" type="number" inputmode="numeric" placeholder="예: 45200" style="width:100%;height:40px;margin-top:4px;border:1.5px solid var(--blue-bd);border-radius:8px;padding:0 8px;font-family:inherit">')
       +_sdInput('주유량(L)','<input id="sd_liters" type="number" inputmode="decimal" value="'+litersGuess+'" placeholder="자동추정" style="width:100%;height:40px;margin-top:4px;border:1.5px solid var(--blue-bd);border-radius:8px;padding:0 8px;font-family:inherit;background:#fffbea">')
       +'</div>'
-      +'<div style="font-size:11px;color:var(--ink-faint);margin-top:8px">연료 자동추정: <b>'+g.fuel+'</b>'+(g.unit?(' (단가 '+numFmt(g.unit)+'원/L → 주유량 자동계산)'):'')+' · 주행거리를 넣으면 직전 기록과 비교해 연비까지 계산돼요.</div>';
+      +'<div style="font-size:11px;color:var(--ink-faint);margin-top:8px">연료 자동추정: <b>'+g.fuel+'</b> → '+esc(g.car)+(g.unit?(' · 단가 '+numFmt(g.unit)+'원/L (주유량 자동계산)'):'')+' · 주행거리는 최대주행거리 통계에 반영돼요.</div>';
   }else if(dest==='personal'){
-    var cats=['맛집','건강','여행','구매','일상','생각','사람'];
+    var pk=[{l:'🛒 구매',k:'purchase'},{l:'🍜 맛집',k:'restaurant'},{l:'🏥 건강',k:'health'},{l:'📎 기타',k:'other'}];
     panel.innerHTML='<div style="font-weight:800;margin-bottom:10px;color:#c2410c">🍜 개인일지로 보내기</div>'
-      +_sdInput('카테고리',_sdSel('sd_cat',cats.map(function(c){return '<option>'+c+'</option>';}).join('')))
+      +_sdInput('카테고리',_sdSel('sd_cat',pk.map(function(x){return '<option value="'+x.k+'">'+x.l+'</option>';}).join('')))
       +'<div style="font-size:11px;color:var(--ink-faint);margin-top:8px">영수증의 상호·금액·품목·주소가 개인일지 기록으로 저장됩니다.</div>';
   }else if(dest==='project'){
     panel.innerHTML='<div style="font-weight:800;margin-bottom:10px;color:#0369a1">📁 부동산 프로젝트에 첨부</div><div id="sd_projwrap" style="font-size:12px;color:var(--ink-faint)">프로젝트 목록 불러오는 중…</div>';
@@ -4632,7 +4618,7 @@ async function _sendDestConfirmDo(){
   var ok=false;
   try{
     if(dest==='car') ok=await pushReceiptToCarLog(r,{car:($('sd_car')||{}).value,kind:($('sd_kind')||{}).value,odo:($('sd_odo')||{}).value,liters:($('sd_liters')||{}).value});
-    else if(dest==='personal') ok=await pushReceiptToPersonalCat(r,{cat:($('sd_cat')||{}).value});
+    else if(dest==='personal') ok=await pushReceiptToPersonalCat(r,{kind:($('sd_cat')||{}).value});
     else if(dest==='project') ok=await pushReceiptToProject(r,{projectId:($('sd_proj')||{}).value,type:_sendDestState.type});
     else if(dest==='worklog') ok=await pushReceiptToWorklog(r,{expType:($('sd_exptype')||{}).value,utype:($('sd_utype')||{}).value});
   }catch(err){console.error('[보내기]',err);toast('보내기 오류: '+(err.message||err));}
