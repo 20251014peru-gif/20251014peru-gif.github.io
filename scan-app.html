@@ -872,6 +872,12 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       <div id="rCardArea"></div>
     </div>
     <div id="cardList" style="display:none"></div>
+    <!-- 서류 업무/개인 거르기 -->
+    <div id="textFilterRow" style="display:none;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="chip t-filter active" data-of="all">전체 <span id="tfAll" style="opacity:.65"></span></button>
+      <button class="chip t-filter" data-of="업무">💼 업무용 <span id="tfWork" style="opacity:.65"></span></button>
+      <button class="chip t-filter" data-of="개인">👤 개인용 <span id="tfMine" style="opacity:.65"></span></button>
+    </div>
     <div id="textList" style="display:none"></div>
     <div id="scanEmpty" class="empty" style="display:none">
       <div class="ei">🧾</div>
@@ -1107,6 +1113,13 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       </div>
       <div id="textAiProgress" class="ai-progress"></div>
       <div class="form-grid">
+        <div class="field"><label>📂 구분 *</label>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <button type="button" class="chip t-owner-btn" data-owner="업무">💼 업무용</button>
+            <button type="button" class="chip t-owner-btn" data-owner="개인">👤 개인용</button>
+          </div>
+          <input type="hidden" id="t_owner">
+        </div>
         <div class="field"><label>📅 날짜</label><input type="date" id="t_date"></div>
         <div class="field"><label>📄 종류</label>
           <select id="t_type"></select>
@@ -1427,7 +1440,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260716-155156';
+const APP_VER='v20260716-183752';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -3650,16 +3663,19 @@ function renderScanList(){
     $('receiptList').style.display='';
     $('cardList').style.display='none';
     $('textList').style.display='none';
+    $('textFilterRow').style.display='none';
   }else if(curScanType==='card'){
     renderCardList(q);
     $('receiptList').style.display='none';
     $('cardList').style.display='';
     $('textList').style.display='none';
+    $('textFilterRow').style.display='none';
   }else{
     renderTextList(q);
     $('receiptList').style.display='none';
     $('cardList').style.display='none';
     $('textList').style.display='';
+    $('textFilterRow').style.display='flex';   /* 서류 탭일 때만 */
   }
 }
 
@@ -4069,19 +4085,33 @@ function renderCardList(q){
   bindRowActions($('cardList'),'card');
 }
 
+/* 서류 업무/개인 거르기 — 옛 서류엔 owner 가 없다. 없으면 업무로 본다. */
+let _textOwnerFilter='all';
+function _tOwner(t){ return t.owner||'업무'; }
+
 function renderTextList(q){
-  const list=texts.filter(t=>{
-    if(t.deletedAt)return false;
+  const alive=texts.filter(t=>!t.deletedAt);
+  /* 개수는 검색과 무관하게 — 전체가 몇 건인지 알아야 하니까 */
+  const cAll=alive.length;
+  const cWork=alive.filter(t=>_tOwner(t)==='업무').length;
+  const cMine=alive.filter(t=>_tOwner(t)==='개인').length;
+  if($('tfAll'))  $('tfAll').textContent='('+cAll+')';
+  if($('tfWork')) $('tfWork').textContent='('+cWork+')';
+  if($('tfMine')) $('tfMine').textContent='('+cMine+')';
+
+  const list=alive.filter(t=>{
+    if(_textOwnerFilter!=='all' && _tOwner(t)!==_textOwnerFilter) return false;
     if(!q)return true;
-    return [t.title,t.text,t.memo,t.tags,t.type]
+    return [t.title,t.text,t.memo,t.tags,t.type,t.owner]
       .some(v=>(v||'').toLowerCase().includes(q));
   });
   if(!list.length){$('textList').innerHTML='';$('scanEmpty').style.display='';return;}
   $('scanEmpty').style.display='none';
   const preview=s=>(s||'').slice(0,80)+((s||'').length>80?'…':'');
   const tableHtml=`<div class="scan-table"><table>
-    <thead><tr><th>날짜</th><th>제목</th><th>종류</th><th>태그</th><th>내용 미리보기</th><th style="text-align:right">작업</th></tr></thead>
+    <thead><tr><th>구분</th><th>날짜</th><th>제목</th><th>종류</th><th>태그</th><th>내용 미리보기</th><th style="text-align:right">작업</th></tr></thead>
     <tbody>${list.map(t=>`<tr data-id="${esc(t.id)}">
+      <td style="white-space:nowrap">${_ownerBadge(_tOwner(t))}</td>
       <td>${esc(t.date||'')}</td>
       <td class="truncate" style="font-weight:700">${esc(t.title||'')}</td>
       <td><span style="font-size:11px;padding:2px 8px;background:var(--blue-lt);color:var(--blue);border-radius:6px;font-weight:700">${esc(t.type||'기타')}</span></td>
@@ -4094,7 +4124,7 @@ function renderTextList(q){
       </div></td></tr>`).join('')}</tbody></table></div>`;
   const cardHtml=`<div class="scan-card-list">${list.map(t=>`<div class="scan-card" data-id="${esc(t.id)}">
     <div class="top">
-      <div class="ttl">${esc(t.type||'📎')} ${esc(t.title||'(제목없음)')}</div>
+      <div class="ttl">${_ownerBadge(_tOwner(t))} ${esc(t.type||'📎')} ${esc(t.title||'(제목없음)')}</div>
       <div class="date">${esc(t.date||'')}</div>
     </div>
     ${t.tags?`<div class="row"><div class="label">태그</div><div class="val" style="font-size:12px;color:var(--blue);font-weight:700">${esc(t.tags)}</div></div>`:''}
@@ -4814,6 +4844,25 @@ function setCardOwner(v){
 document.querySelectorAll('.c-owner-btn').forEach(b=>{
   b.onclick=()=>setCardOwner(b.dataset.owner);
 });
+
+/* 서류도 업무/개인 — 명함과 같은 방식 */
+function setTextOwner(v){
+  $('t_owner').value=v||'업무';
+  document.querySelectorAll('.t-owner-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.owner===$('t_owner').value);
+  });
+}
+document.querySelectorAll('.t-owner-btn').forEach(b=>{
+  b.onclick=()=>setTextOwner(b.dataset.owner);
+});
+/* 서류 목록 업무/개인 거르기 */
+document.querySelectorAll('.t-filter').forEach(b=>{
+  b.onclick=()=>{
+    _textOwnerFilter=b.dataset.of;
+    document.querySelectorAll('.t-filter').forEach(x=>x.classList.toggle('active',x===b));
+    renderScanList();
+  };
+});
 function closeCardModal(){$('cardOverlay').classList.remove('show');_cardEditing=null;_cardImg=null;}
 function showCardPhoto(){
   if(!_cardImg){
@@ -5032,6 +5081,7 @@ function openTextModal(t){
   }
   $('textModalTitle').textContent=t?'✏️ 서류 수정':'📄 서류 추가';
   $('textDelete').style.display=t?'':'none';
+  setTextOwner(t?(t.owner||'업무'):'업무');
   $('t_date').value=t?(t.date||today()):today();
   refreshDocCatSelect();
   _docTypeBefore = t?(t.type||docCats[0]):docCats[0];
@@ -5157,6 +5207,7 @@ $('textSave').onclick=async()=>{
   if(_tProg)_tProg.textContent='💾 데이터 저장 중…';
   const data={
     id:_textEditing?_textEditing.id:uid(),
+    owner:$('t_owner').value||'업무',
     date:$('t_date').value||today(),
     type:($('t_type').value==='__manage'?docCats[0]:$('t_type').value)||docCats[0],
     title,
