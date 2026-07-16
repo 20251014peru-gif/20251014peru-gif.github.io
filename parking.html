@@ -824,6 +824,17 @@
     </div>
 
     <div class="card">
+      <div class="card-title">🧹 중복 기록 정리</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:10px">
+        예전 버전은 기록을 <b>수정할 때마다 사본을 하나씩</b> 만들었습니다.
+        그래서 총 건수와 층별 집계가 부풀려져 있을 수 있습니다.
+        같은 날 · 같은 차량 · 같은 입출차 시간 · 같은 층인 기록만 사본으로 봅니다.
+      </div>
+      <button class="btn btn-outline" onclick="scanDuplicates()">🔍 중복 찾기</button>
+      <div id="dupResult" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
       <div class="card-title">📊 데이터 현황</div>
       <div id="dataStats" style="font-size:14px; line-height:2;"></div>
     </div>
@@ -932,7 +943,7 @@
 <script>
 /* ⚠️ 버전은 여기 한 곳에만 있다. 빌드할 때 컴 시계에서 주입된다.
    화면·제목·콘솔이 전부 이걸 읽으므로, 이 값이 안 바뀌면 새 파일이 안 뜬 것이다. */
-const APP_VER = 'v20260716-1218';
+const APP_VER = 'v20260716-1333';
 document.title = '주차대장 ' + APP_VER;
 console.log('%c주차대장 ' + APP_VER, 'font-size:16px;font-weight:bold;color:#2563eb');
 function _paintVer() {
@@ -948,6 +959,10 @@ addEventListener('DOMContentLoaded', _paintVer);
 let parkingData = []; // [{no, date, in, out, plate, floor, purpose, park, note, floorCat, month}]
 let floorData = {};   // {date: {cat: count}}
 let editingIdx = -1;
+/* parkingData 는 동기화 스냅샷마다 통째로 새로 만들어진다.
+   수정창을 열어둔 사이 다른 기기에서 뭔가 바뀌면 위치가 밀려
+   엉뚱한 기록을 덮어쓴다 → 위치 말고 _id 를 붙든다. */
+let editingId = null;
 let uploadedImages = []; // [{file, base64}]
 
 const FLOOR_COLS = [
@@ -1045,12 +1060,22 @@ function startRealtimeSync() {
 }
 
 async function saveRecord(rec) {
-  // docId: date_no_timestamp 형식 (같은 날짜·No 충돌 방지)
+  const data = { ...rec };
+  delete data._id;   // 문서 이름이 곧 _id 다. 내용 안에 또 넣지 않는다.
+
+  /* _id 가 있으면 '수정' — 있던 문서를 그대로 덮어쓴다.
+     예전엔 이 구분이 없어 수정할 때마다 새 문서를 만들었다.
+     → 한 번 고칠 때마다 사본이 1건씩 늘고 층별 집계까지 부풀려졌다. */
+  if (rec._id) {
+    await db.collection(COLLECTION).doc(rec._id).set(data);
+    return rec._id;
+  }
+
+  // 새 기록 — docId: date_no_timestamp (같은 날짜·No 충돌 방지)
   const ts = Date.now() + Math.random().toString(36).slice(2, 6);
   const docId = (rec.date || 'nodate') + '_' + String(rec.no).padStart(4, '0') + '_' + ts;
-  const data = { ...rec };
-  delete data._id;
   await db.collection(COLLECTION).doc(docId).set(data);
+  return docId;
 }
 
 async function deleteFirebaseRecord(rec) {
@@ -1923,6 +1948,7 @@ function clearDateFilter() {
 // ============================================================
 function openAddModal() {
   editingIdx = -1;
+  editingId = null;
   document.getElementById('modalTitle').textContent = '방문차량 추가';
   document.getElementById('saveModalBtn').textContent = '추가';
   const today = new Date().toISOString().split('T')[0];
@@ -1942,6 +1968,7 @@ function openAddModal() {
 function editRecord(idx) {
   editingIdx = idx;
   const r = parkingData[idx];
+  editingId = r._id || null;   // 위치가 아니라 이 기록 자체를 붙든다
   document.getElementById('modalTitle').textContent = '방문차량 수정';
   document.getElementById('saveModalBtn').textContent = '수정';
   document.getElementById('mDate').value = r.date;
@@ -1968,8 +1995,10 @@ function closeModal() {
 function saveModal() {
   const date = document.getElementById('mDate').value;
   const month = date ? (new Date(date).getMonth() + 1) + '월' : '';
+  /* 위치가 아니라 _id 로 원본을 다시 찾는다 (스냅샷이 끼어들어도 안전) */
+  const orig = editingId ? parkingData.find(r => r._id === editingId) : null;
   const noVal = parseInt(document.getElementById('mNo').value) ||
-                (editingIdx >= 0 ? parkingData[editingIdx].no : getNextNo());
+                (orig ? orig.no : getNextNo());
   const rec = {
     no: noVal, date, month,
     in: document.getElementById('mIn').value,
@@ -1981,15 +2010,18 @@ function saveModal() {
     note: document.getElementById('mNote').value.trim(),
     floorCat: document.getElementById('mFloorCat').value
   };
+  /* 수정이면 있던 문서를 덮어쓴다 — 없으면 사본이 생긴다 */
+  if (editingId) rec._id = editingId;
 
   saveRecord(rec).then(() => {
-    setSyncStatus('ok', '저장됨');
+    setSyncStatus('ok', editingId ? '수정됨' : '저장됨');
   }).catch(e => {
     setSyncStatus('err', '저장 실패: ' + e.message);
     alert('저장 오류: ' + e.message);
   });
 
   closeModal();
+  editingId = null;
 }
 
 function deleteRecord(idx) {
@@ -2412,6 +2444,92 @@ async function doImportJSON(input) {
   };
   reader.readAsText(file);
   input.value = '';
+}
+
+/* ── 중복 정리 ──
+   버그의 흔적: 같은 날·같은 차·같은 입출차 시간·같은 층인 문서가 여럿.
+   No 는 저장할 때마다 새로 매겨졌으니 열쇠로 쓰면 안 된다.
+   차량번호가 없으면 판단할 수 없으니 건드리지 않는다. */
+function findDuplicates(data) {
+  const key = r => [
+    (r.date || '').trim(),
+    String(r.plate || '').replace(/\s/g, '').toLowerCase(),
+    (r.in || '').trim(),
+    (r.out || '').trim(),
+    String(r.floor || '').trim(),
+    (r.purpose || '').trim()
+  ].join('|');
+
+  const groups = new Map();
+  for (const r of data) {
+    if (!r.plate) continue;
+    const k = key(r);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(r);
+  }
+  const dups = [];
+  for (const [, rows] of groups) {
+    if (rows.length < 2) continue;
+    rows.sort((a, b) => (parseInt(a.no) || 0) - (parseInt(b.no) || 0));
+    dups.push({ keep: rows[0], remove: rows.slice(1) });   // No 작은 것을 남긴다
+  }
+  return dups;
+}
+
+let _dupFound = [];
+function scanDuplicates() {
+  _dupFound = findDuplicates(parkingData);
+  const box = document.getElementById('dupResult');
+  const total = _dupFound.reduce((s, g) => s + g.remove.length, 0);
+
+  if (!total) {
+    box.innerHTML = `<div style="padding:12px;background:#dcfce7;border:1px solid #16a34a;
+      border-radius:8px;color:#166534;font-size:13px">✅ 중복이 없습니다 (전체 ${parkingData.length}건)</div>`;
+    return;
+  }
+  const rows = _dupFound.map(g => `
+    <tr>
+      <td style="font-size:12px">${g.keep.date || ''}</td>
+      <td style="font-weight:600">${g.keep.plate || ''}</td>
+      <td style="font-size:12px">${g.keep.in || ''}~${g.keep.out || ''}</td>
+      <td style="font-size:12px">${g.keep.floor || ''}</td>
+      <td style="font-size:12px;color:#166534">No.${g.keep.no} 남김</td>
+      <td style="font-size:12px;color:#dc2626">${g.remove.length}건 지움 (No.${g.remove.map(r => r.no).join(', No.')})</td>
+    </tr>`).join('');
+
+  box.innerHTML = `
+    <div style="padding:12px;background:#fef3c7;border:2px solid #f59e0b;border-radius:8px;
+      color:#92400e;font-size:13px;line-height:1.7;margin-bottom:10px">
+      <b>사본 ${total}건</b>을 찾았습니다 · 전체 ${parkingData.length}건 → 정리 후 ${parkingData.length - total}건<br>
+      각 묶음에서 <b>No 가 가장 작은 것 하나만 남기고</b> 나머지를 지웁니다.
+      아래 표를 확인하고 지워주세요. <b>되돌릴 수 없으니 먼저 JSON 백업</b>을 받아두세요.
+    </div>
+    <div class="table-container"><table>
+      <thead><tr><th>날짜</th><th>차량</th><th>입출차</th><th>층</th><th>남길 것</th><th>지울 것</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <button class="btn btn-outline" onclick="exportJSON()" style="margin-top:10px">📄 먼저 JSON 백업</button>
+    <button class="btn btn-danger" onclick="removeDuplicates()" style="margin-top:10px;margin-left:8px">🗑️ 사본 ${total}건 지우기</button>`;
+}
+
+async function removeDuplicates() {
+  const total = _dupFound.reduce((s, g) => s + g.remove.length, 0);
+  if (!total) return;
+  if (!confirm(`사본 ${total}건을 영구 삭제합니다.\n되돌릴 수 없습니다.\n\nJSON 백업을 받으셨나요?`)) return;
+  if (!confirm(`정말 지울까요?\n전체 ${parkingData.length}건 → ${parkingData.length - total}건`)) return;
+
+  setSyncStatus('warn', '정리중...');
+  let done = 0, failed = 0;
+  for (const g of _dupFound) {
+    for (const r of g.remove) {
+      try { await deleteFirebaseRecord(r); done++; }
+      catch (e) { failed++; }
+    }
+  }
+  _dupFound = [];
+  setSyncStatus('ok', done + '건 정리됨');
+  alert(failed ? `${done}건 지웠습니다. ${failed}건 실패.` : `✅ 사본 ${done}건을 지웠습니다.`);
+  scanDuplicates();
 }
 
 function renderDataStats() {
