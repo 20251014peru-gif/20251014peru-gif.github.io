@@ -1,5 +1,7 @@
 /* ===== 설정 ===== */
-const APP_VERSION = "v44-0713-1343";
+/* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
+   손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
+const APP_VERSION = "v45-20260716-140218";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -3442,13 +3444,47 @@ function _onScanPicked(type,id,data){
   renderMScanRefs();
   toast(scanKindOf(type).icon+' '+scanRefTitle(type,data)+' 첨부됨');
 }
+/* ⚠️ worklog.html 의 IIFE 에도 같은 주소가 있다. 그쪽이 원본이고 이건 대비책이다.
+   scan-app 주소가 바뀌면 두 곳 다 고쳐야 한다. */
+const SCAN_APP_URL_FALLBACK = 'https://20251014peru-gif.github.io/scan-app.html';
+let _scanPickCb = null;
+
 function openScanPickerOfType(type){
+  /* 1순위 — html 쪽 창구가 있으면 그걸 쓴다 (주소가 한 곳에 있으니 이게 낫다) */
   if(typeof window._openScanPickerOfType==='function'){
     window._openScanPickerOfType(type, _onScanPicked);
-  } else {
-    toast('scan-app picker를 열 수 없습니다');
+    return;
   }
+  /* 2순위 — 옛 worklog.html 이어도 동작하게 js 가 직접 연다.
+     iframe·오버레이는 옛 html 에도 있으므로 이것만으로 충분하다.
+     (html 쪽엔 receipt 로 박힌 _openScanPickerForWork 뿐이라 서류를 못 연다) */
+  const frame = document.getElementById('scanPickerFrame');
+  const ov    = document.getElementById('scanPickerOverlay');
+  if(!frame || !ov){ toast('scan-app 선택창을 찾을 수 없습니다'); return; }
+  _scanPickCb = _onScanPicked;
+  frame.src = SCAN_APP_URL_FALLBACK + '?mode=picker&type=' + encodeURIComponent(type) + '&linkedTo=';
+  ov.style.display = 'flex';
 }
+
+function _closeScanPickerJs(){
+  const frame = document.getElementById('scanPickerFrame');
+  const ov    = document.getElementById('scanPickerOverlay');
+  if(ov) ov.style.display = 'none';
+  if(frame) frame.src = 'about:blank';
+  _scanPickCb = null;
+}
+
+/* 자체 수신기 — 2순위로 열었을 때만 동작한다.
+   1순위로 열면 _scanPickCb 가 null 이라 여기서 그냥 흘려보내고
+   html 쪽 수신기가 처리한다. 둘이 겹쳐서 두 번 들어가지 않는다. */
+window.addEventListener('message', function(e){
+  if(!e.data || e.data.source !== 'scan-app') return;
+  if(e.data.action !== 'selected' || !_scanPickCb) return;
+  const cb = _scanPickCb;
+  _scanPickCb = null;
+  try{ cb(e.data.payload.type, e.data.payload.id, e.data.payload.data); }
+  finally{ _closeScanPickerJs(); }
+});
 function closeScanKindMenu(){
   const m=document.getElementById('scanKindMenu');
   if(m) m.remove();
