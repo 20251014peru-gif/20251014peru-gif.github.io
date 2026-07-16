@@ -415,7 +415,8 @@ main.wrap{padding-bottom:100px;padding-top:12px}
   <div style="background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);border-radius:24px;padding:28px 20px 24px;width:92%;max-width:340px;text-align:center;box-sizing:border-box">
     <div style="font-size:48px;margin-bottom:12px">🔒</div>
     <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px">개인일지</div>
-    <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:20px">PIN 6자리를 입력하세요</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:4px">PIN 6자리를 입력하세요</div>
+    <div id="lockVerTag" style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:16px">…</div>
     <div id="pinDots" style="display:flex;justify-content:center;gap:12px;margin-bottom:20px"></div>
     <div id="pinPad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;box-sizing:border-box"></div>
     <div id="lockMsg" style="font-size:13px;color:#ff8888;min-height:18px;margin-top:10px"></div>
@@ -679,7 +680,23 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 <!-- ===== 파일 탭 ===== -->
 <div class="v43-panel" id="panel-file">
-  <div style="margin-top:14px">
+  <!-- 🔒 파일 탭 잠금 — 탭을 벗어났다 오면 다시 물어본다 -->
+  <div id="fileGate" style="margin-top:14px;text-align:center;padding:44px 20px;
+      background:linear-gradient(135deg,#1a2f45,#2563a8);border-radius:16px">
+    <div style="font-size:44px;margin-bottom:10px">🔒</div>
+    <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">파일 관리</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.65);margin-bottom:18px">PIN 을 넣어야 볼 수 있어요</div>
+    <input id="fileGatePin" type="text" inputmode="numeric" maxlength="6" placeholder="● ● ● ● ● ●"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      data-lpignore="true" data-1p-ignore data-form-type="other"
+      style="width:190px;height:46px;text-align:center;letter-spacing:7px;font-size:19px;
+        border:2px solid rgba(255,255,255,.3);border-radius:12px;background:rgba(255,255,255,.12);
+        color:#fff;font-family:inherit;outline:none;-webkit-text-security:disc;text-security:disc">
+    <div id="fileGateMsg" style="font-size:12px;min-height:16px;margin-top:8px;color:#ff8888"></div>
+    <button id="fileGateBtn" style="margin-top:8px;padding:10px 26px;border-radius:10px;border:none;
+      background:#fff;color:#1a2f45;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">열기</button>
+  </div>
+  <div id="fileBody" style="margin-top:14px;display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <h3 style="font-size:18px;font-weight:800;color:var(--ink);margin:0">📁 파일 관리</h3>
       <button class="btn btn-primary" id="fileAddBtn" style="padding:8px 16px;font-size:14px">➕ 추가</button>
@@ -878,6 +895,34 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 </div>
 
 <!-- ===== 파일 추가 모달 ===== -->
+<!-- 👁 파일 보기 — 내려받지 않고 화면에서만. 닫으면 흔적이 사라진다 -->
+<div class="overlay" id="fileShowOverlay">
+  <div class="modal" style="max-width:900px;width:96%;height:92vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1.5px solid var(--blue-bd);background:var(--blue-lt);flex:none">
+      <span id="fileShowTitle" style="flex:1;min-width:0;font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button id="fileShowSave" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;flex:none">📥 받기</button>
+      <button id="fileShowClose" class="btn btn-primary" style="padding:6px 14px;font-size:12px;flex:none">✕ 닫기</button>
+    </div>
+    <div id="fileShowBody" style="flex:1;min-height:0;background:#525659;display:flex;align-items:center;justify-content:center"></div>
+    <div style="flex:none;padding:7px 12px;font-size:11px;color:var(--ink-faint);background:var(--white);line-height:1.5">
+      🔒 이 화면에서만 보입니다 — 기기에 저장되지 않습니다. 닫으면 사라집니다.
+    </div>
+  </div>
+</div>
+
+<!-- 📄 파일 상세 — 카드를 누르면 뜬다 -->
+<div class="overlay" id="fileViewOverlay">
+  <div class="modal">
+    <h3 id="fileViewTitle">파일 <button class="modal-close" id="fileViewClose">✕</button></h3>
+    <div id="fileViewBody" style="font-size:14px;line-height:1.9"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-flex" id="fileViewOpen">👁 파일 보기</button>
+      <button class="btn btn-ghost" id="fileViewEdit">✏️ 수정</button>
+      <button class="btn btn-danger" id="fileViewDel">🗑 삭제</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="fileOverlay">
   <div class="modal">
     <h3 id="fileModalTitle">파일 추가 <button class="modal-close" id="fileModalClose">✕</button></h3>
@@ -1175,11 +1220,14 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260716-180804';
+const APP_VER='v20260716-181804';
 document.title='개인일지 '+APP_VER;
 addEventListener('DOMContentLoaded',()=>{
   const el=document.getElementById('verBadge');
   if(el) el.textContent=APP_VER;
+  /* 잠금화면에도 — 앱을 열자마자 버전이 보여야 새 파일인지 안다 */
+  const lv=document.getElementById('lockVerTag');
+  if(lv) lv.textContent=APP_VER;
 });
 
 /* ══════════════════════════════════════════════
@@ -1492,7 +1540,9 @@ document.querySelectorAll('.v43-tab').forEach(btn=>{
     if(btn.dataset.tab==='car') renderCar();
     if(btn.dataset.tab==='contacts') renderContacts();
     if(btn.dataset.tab==='calendar') renderCalendar();
-    if(btn.dataset.tab==='file') renderFiles();
+    /* 파일 탭을 벗어나면 다시 잠근다 */
+    if(btn.dataset.tab!=='file') _fileTabOpen=false;
+    if(btn.dataset.tab==='file') enterFileTab();
     if(btn.dataset.tab==='password') renderPasswords();
     if(btn.dataset.tab==='diag') renderDiag();
   });
@@ -3747,7 +3797,7 @@ function renderFiles(){
       <div class="file-path">${esc(f.cat?CAT_ICO[f.cat]+' '+f.cat+' · ':'')}${esc(f.path||'')}${f.memo?' · '+esc(f.memo):''}</div>
     </div>
     ${f.upUrl
-      ? `<button class="file-open-btn" data-fopen="${esc(f.id)}" style="color:var(--blue);border-color:var(--blue)">${f.locked?'🔓 열기':'📥 받기'}</button>`
+      ? `<button class="file-open-btn" data-fopen="${esc(f.id)}" style="color:var(--blue);border-color:var(--blue)">${f.locked?'🔓 보기':'👁 보기'}</button>`
       : (f.path
         ? `<button class="file-open-btn" data-fpath="${esc(f.path||'')}" data-ftype="${esc(f.fileType||'folder')}">📂 열기</button>`
         /* 주소도 경로도 없다 = 올리다 만 껍데기.
@@ -3755,7 +3805,29 @@ function renderFiles(){
            "경로가 없어요"만 뜨면 왜 그런지 알 수가 없으니 대놓고 알린다. */
         : `<button class="file-open-btn" data-fbroken="${esc(f.id)}" style="color:#c0392b;border-color:#f5b7b1">⚠️ 빈 항목</button>`)}
     <button class="file-open-btn" data-fedit="${esc(f.id)}" style="color:var(--blue);border-color:var(--blue)">✏️</button>
+    <button class="file-open-btn" data-fdel="${esc(f.id)}" style="color:#b52929;border-color:#f5b7b1">🗑</button>
   </div>`).join('');
+  /* 🗑 삭제 — 열기·수정 옆에서 바로 */
+  el.querySelectorAll('[data-fdel]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const f=files.find(x=>x.id===btn.dataset.fdel);
+      if(!f) return;
+      if(!confirm(`'${f.name||'파일'}'을 지울까요?\n${f.upUrl?'올린 파일도 같이 지워집니다.\n':''}되돌릴 수 없습니다.`)) return;
+      if(f.upId) deleteStorageFile(f);
+      fileRemove(f.id);
+      files=files.filter(x=>x.id!==f.id);
+      saveFiles();renderFiles();toast('삭제됐어요');
+    });
+  });
+  /* 카드 몸통을 누르면 상세창 — 버튼 클릭은 뺀다 */
+  el.querySelectorAll('.file-item').forEach(card=>{
+    card.style.cursor='pointer';
+    card.addEventListener('click',e=>{
+      if(e.target.closest('button')) return;
+      openFileView(card.dataset.fid);
+    });
+  });
   el.querySelectorAll('[data-fbroken]').forEach(btn=>{
     btn.addEventListener('click',e=>{e.stopPropagation();
       alert('⚠️ 이 항목엔 파일도 경로도 없습니다\n\n'
@@ -3776,6 +3848,54 @@ function renderFiles(){
   });
   el.querySelectorAll('[data-fedit]').forEach(btn=>{btn.addEventListener('click',()=>openFileModal(btn.dataset.fedit));});
 }
+/* ══════════════════════════════════════════════
+   🔒 파일 탭 자동 잠금
+   파일 탭엔 계약서 같은 게 있다. 탭을 벗어나면 다시 잠근다.
+   달력·연락처 갔다 오면 PIN 을 다시 넣어야 목록이 보인다.
+   ⚠️ 이건 '화면 가리기'다. 파일 알맹이의 진짜 보호는 🔒 암호화 쪽이다.
+   ══════════════════════════════════════════════ */
+let _fileTabOpen=false;
+
+function lockFileTab(){
+  _fileTabOpen=false;
+  const gate=g('fileGate'), body=g('fileBody');
+  if(gate) gate.style.display='';
+  if(body) body.style.display='none';
+  const inp=g('fileGatePin'); if(inp) inp.value='';
+  const msg=g('fileGateMsg'); if(msg) msg.textContent='';
+}
+function unlockFileTab(){
+  const inp=g('fileGatePin');
+  const pin=(inp&&inp.value||'').trim();
+  const msg=g('fileGateMsg');
+  if(pin!==pjPin()){
+    if(msg){ msg.textContent='PIN이 틀렸어요'; msg.style.color='#c0392b'; }
+    if(inp) inp.value='';
+    return;
+  }
+  _fileTabOpen=true;
+  const gate=g('fileGate'), body=g('fileBody');
+  if(gate) gate.style.display='none';
+  if(body) body.style.display='';
+  renderFiles();
+}
+/* 탭에 들어올 때 — 잠겨 있으면 PIN 을 묻는다 */
+function enterFileTab(){
+  if(_fileTabOpen){ renderFiles(); return; }
+  lockFileTab();
+  setTimeout(()=>{ const i=g('fileGatePin'); if(i) i.focus(); },80);
+}
+
+if(g('fileGateBtn')) g('fileGateBtn').addEventListener('click',unlockFileTab);
+if(g('fileGatePin')){
+  g('fileGatePin').addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();unlockFileTab();} });
+  /* 6자리 다 넣으면 바로 — 버튼까지 누르게 하면 번거롭다 */
+  g('fileGatePin').addEventListener('input',()=>{
+    const v=g('fileGatePin').value;
+    if(v.length>=6) unlockFileTab();
+  });
+}
+
 /* ── 📤 Storage 에 올리기 ──
    잠금을 켰으면 올리기 전에 뒤섞는다. Storage 엔 뒤섞인 것만 올라간다. */
 async function uploadPersonalFile(file, lock){
@@ -3807,30 +3927,155 @@ async function uploadPersonalFile(file, lock){
   }
 }
 
-/* ── 📥 열기 ── 잠긴 파일은 받아서 풀고 연다 */
+/* ── 📄 파일 상세창 ── */
+let fileViewId=null;
+function openFileView(id){
+  const f=files.find(x=>x.id===id);
+  if(!f) return;
+  fileViewId=id;
+  const ico=f.upUrl?(f.locked?'🔒':'📄'):(f.fileType==='file'?'📄':'📁');
+  g('fileViewTitle').innerHTML=`${ico} ${esc(f.name||'파일')} <button class="modal-close" id="fileViewClose">✕</button>`;
+  g('fileViewClose').onclick=closeFileView;
+  const row=(k,v)=>v?`<div style="display:flex;gap:8px;padding:4px 0"><span style="color:var(--ink-faint);flex:none;width:64px">${k}</span><span style="flex:1;min-width:0;word-break:break-all">${v}</span></div>`:'';
+  const size=f.upSize?(f.upSize>1048576?(f.upSize/1048576).toFixed(1)+'MB':Math.round(f.upSize/1024)+'KB'):'';
+  const CAT={개인:'👤',투자:'📈',부동산:'🏠',업무:'💼',기타:'📎'};
+  g('fileViewBody').innerHTML=
+    row('분류',(CAT[f.cat]||'')+' '+esc(f.cat||''))
+    + row('파일명',esc(f.upName||''))
+    + row('크기',size)
+    + row('경로',esc(f.path||''))
+    + row('메모',esc(f.memo||''))
+    + row('올린날',f.upAt?new Date(f.upAt).toLocaleString('ko-KR'):'')
+    + (f.locked?'<div style="margin-top:10px;padding:9px 11px;background:#fff4e5;border:1.5px solid #f0a04b;border-radius:9px;font-size:12px;color:#8a5a1a;line-height:1.6">🔒 <b>잠긴 파일입니다.</b><br>클라우드엔 뒤섞인 채로만 있습니다. 볼 때 PIN 으로 풀어 <b>화면에만</b> 띄웁니다 — 기기에 저장되지 않습니다.</div>':'')
+    + (!f.upUrl && !f.path ? '<div style="margin-top:10px;padding:9px 11px;background:#fdecea;border:1.5px solid #f5b7b1;border-radius:9px;font-size:12px;color:#922b21;line-height:1.6">⚠️ <b>빈 항목입니다.</b><br>파일도 경로도 없습니다. ✏️ 로 파일을 다시 올리거나 지워주세요.</div>':'');
+
+  const openBtn=g('fileViewOpen');
+  if(f.upUrl){ openBtn.style.display=''; openBtn.textContent=f.locked?'🔓 파일 보기':'👁 파일 보기'; }
+  else if(f.path){ openBtn.style.display=''; openBtn.textContent='📂 경로 열기'; }
+  else { openBtn.style.display='none'; }
+  g('fileViewOverlay').classList.add('show');
+}
+function closeFileView(){ g('fileViewOverlay').classList.remove('show'); fileViewId=null; }
+
+if(g('fileViewOpen')) g('fileViewOpen').addEventListener('click',()=>{
+  const f=files.find(x=>x.id===fileViewId); if(!f) return;
+  if(f.upUrl) openPersonalFile(f.id);
+  else if(f.path) window.open(toLocalUrlSafe(f.path),'_blank');
+});
+if(g('fileViewEdit')) g('fileViewEdit').addEventListener('click',()=>{
+  const id=fileViewId; closeFileView(); openFileModal(id);
+});
+if(g('fileViewDel')) g('fileViewDel').addEventListener('click',()=>{
+  const f=files.find(x=>x.id===fileViewId); if(!f) return;
+  if(!confirm(`'${f.name||'파일'}'을 지울까요?\n${f.upUrl?'올린 파일도 같이 지워집니다.\n':''}되돌릴 수 없습니다.`)) return;
+  if(f.upId) deleteStorageFile(f);
+  fileRemove(f.id);
+  files=files.filter(x=>x.id!==f.id);
+  saveFiles();renderFiles();closeFileView();toast('삭제됐어요');
+});
+if(g('fileViewOverlay')) g('fileViewOverlay').addEventListener('click',e=>{
+  if(e.target===g('fileViewOverlay')) closeFileView();
+});
+/* ── 👁 파일 보기 ──
+   ⚠️ 예전엔 열기 = 무조건 내려받기였다.
+      암호를 걸어 올려놓고 열 때마다 푼 원본을 기기에 떨궈놨다 —
+      남의 폰에서 한 번 열면 내려받기 폴더에 그대로 남는다. 암호를 건 의미가 없다.
+   → 화면에서만 보여주고, 닫으면 흔적을 지운다. 받기는 따로 물어본다. */
+let _showUrl=null, _showFile=null;
+
+function _canShowInline(mime, name){
+  const m=String(mime||'').toLowerCase();
+  const n=String(name||'').toLowerCase();
+  if(m.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/.test(n)) return 'image';
+  if(m==='application/pdf' || /\.pdf$/.test(n)) return 'pdf';
+  if(m.startsWith('text/') || /\.(txt|csv|md|json|log)$/.test(n)) return 'text';
+  return '';   /* 엑셀·한글 등은 브라우저가 못 그린다 */
+}
+
+async function _fetchDecrypted(f){
+  const res=await fetch(f.upUrl);
+  if(!res.ok) throw new Error('받기 실패 ('+res.status+')');
+  let buf=await res.arrayBuffer();
+  if(f.locked || pjIsEncrypted(buf)){
+    buf=await pjDecrypt(buf, pjPin());   /* 틀리면 여기서 확실히 막힌다 */
+  }
+  return buf;
+}
+
 async function openPersonalFile(id){
   const f=files.find(x=>x.id===id);
   if(!f||!f.upUrl){ toast('올린 파일이 아닙니다'); return; }
+  const kind=_canShowInline(f.upMime, f.upName||f.name);
+  if(!kind){
+    /* 브라우저가 못 그리는 종류 — 받는 수밖에 없다. 그럼 기기에 남는다고 미리 알린다. */
+    if(!confirm((f.upName||f.name||'이 파일')+' 은(는) 화면에서 바로 볼 수 없는 종류입니다.\n\n'
+      +'내려받아야 열 수 있는데, 그러면 푼 파일이 이 기기에 남습니다.\n'
+      +(f.locked?'(잠근 파일입니다 — 남의 기기라면 다 보고 나서 지우세요)\n\n':'\n')
+      +'받을까요?')) return;
+    return downloadPersonalFile(id);
+  }
   try{
-    toast(f.locked?'🔓 여는 중…':'📥 받는 중…');
-    const res=await fetch(f.upUrl);
-    if(!res.ok) throw new Error('받기 실패 ('+res.status+')');
-    let buf=await res.arrayBuffer();
-    if(f.locked || pjIsEncrypted(buf)){
-      buf=await pjDecrypt(buf, pjPin());   /* 틀리면 여기서 확실히 막힌다 */
+    toast(f.locked?'🔓 여는 중…':'📄 여는 중…');
+    const buf=await _fetchDecrypted(f);
+    _closeShow();                       /* 앞서 열어둔 게 있으면 먼저 지운다 */
+    _showFile=f;
+    const blob=new Blob([buf],{type:f.upMime||(kind==='pdf'?'application/pdf':'application/octet-stream')});
+    _showUrl=URL.createObjectURL(blob);
+    g('fileShowTitle').textContent=(f.locked?'🔒 ':'')+(f.upName||f.name||'파일');
+    const body=g('fileShowBody');
+    if(kind==='image'){
+      body.innerHTML='<img src="'+_showUrl+'" style="max-width:100%;max-height:100%;object-fit:contain">';
+    }else{
+      body.innerHTML='<iframe src="'+_showUrl+'" style="width:100%;height:100%;border:none;background:#fff"></iframe>';
     }
-    const blob=new Blob([buf], {type:f.upMime||'application/octet-stream'});
+    g('fileShowOverlay').classList.add('show');
+  }catch(e){
+    console.error('[파일 보기]',e);
+    alert('열지 못했습니다\n\n'+(e.message||e));
+  }
+}
+
+/* 닫으면 blob 을 바로 버린다 — 주소가 남아 있으면 그것도 새는 길이다 */
+function _closeShow(){
+  if(_showUrl){ URL.revokeObjectURL(_showUrl); _showUrl=null; }
+  const body=g('fileShowBody'); if(body) body.innerHTML='';
+  _showFile=null;
+}
+function closeFileShow(){
+  _closeShow();
+  g('fileShowOverlay').classList.remove('show');
+}
+
+/* 📥 정말 받기 — 이건 기기에 남는다 */
+async function downloadPersonalFile(id){
+  const f=files.find(x=>x.id===id);
+  if(!f||!f.upUrl) return;
+  try{
+    toast('📥 받는 중…');
+    const buf=await _fetchDecrypted(f);
+    const blob=new Blob([buf],{type:f.upMime||'application/octet-stream'});
     const u=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=u; a.download=f.upName||f.name||'file';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(u),60000);
-    toast('📥 받았습니다 — 내려받기 폴더를 확인하세요');
+    toast('📥 받았습니다 — 이 기기에 남습니다');
   }catch(e){
-    console.error('[파일 열기]',e);
-    alert('열지 못했습니다\n\n'+(e.message||e));
+    console.error('[파일 받기]',e);
+    alert('받지 못했습니다\n\n'+(e.message||e));
   }
 }
+
+if(g('fileShowClose')) g('fileShowClose').addEventListener('click',closeFileShow);
+if(g('fileShowOverlay')) g('fileShowOverlay').addEventListener('click',e=>{
+  if(e.target===g('fileShowOverlay')) closeFileShow();
+});
+if(g('fileShowSave')) g('fileShowSave').addEventListener('click',()=>{
+  const f=_showFile; if(!f) return;
+  if(!confirm('받으면 푼 파일이 이 기기에 남습니다.\n'
+    +(f.locked?'잠근 파일입니다 — 남의 기기면 다 쓰고 지우세요.\n\n':'\n')+'받을까요?')) return;
+  downloadPersonalFile(f.id);
+});
 
 async function deleteStorageFile(f){
   if(!st||!f||!f.upId) return;
