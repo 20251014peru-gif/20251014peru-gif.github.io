@@ -1341,6 +1341,8 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
         data-lpignore="true" data-1p-ignore data-form-type="other"
         style="-webkit-text-security:disc;text-security:disc">
       <div id="apiKeyState" style="margin-top:10px;font-size:12px;font-weight:700"></div>
+      <button class="btn btn-blue" id="apiKeyTest" style="width:100%;margin-top:12px">🔌 연결 시험</button>
+      <div id="apiKeyTestOut" style="margin-top:10px;font-size:12px;line-height:1.6;white-space:pre-wrap"></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost btn-flex" id="apiKeyCancel">취소</button>
@@ -1420,7 +1422,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260716-151850';
+const APP_VER='v20260716-152904';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -5176,7 +5178,67 @@ function refreshKeyState(){
   if(apiKey){el.textContent='✅ AI 키 설정됨 ('+apiKey.slice(0,12)+'…)';el.style.color='var(--green)';}
   else{el.textContent='⚠️ 키 없음 - AI 기능 사용 불가';el.style.color='var(--red)';}
 }
-$('btnApiKey').onclick=()=>{$('apiKeyInp').value=apiKey;refreshKeyState();$('apiKeyOverlay').classList.add('show');};
+/* ── 🔌 연결 시험 ──
+   "분석 실패 [API 요청] TypeError" 만으론 사진 탓인지 네트워크 탓인지 모른다.
+   사진 없이 아주 작은 요청을 보내 원인을 둘로 가른다:
+     여기서 성공 → 네트워크·키는 멀쩡. 사진(용량·형식)이 범인.
+     여기서 실패 → 사진과 무관. 사파리·차단기·릴레이·키 문제. */
+$('apiKeyTest').onclick=async()=>{
+  const out=$('apiKeyTestOut');
+  const key=$('apiKeyInp').value.trim()||apiKey;
+  if(!key){ out.style.color='var(--red)'; out.textContent='❌ 키가 비어 있습니다'; return; }
+  $('apiKeyTest').disabled=true;
+  out.style.color='var(--ink-soft)';
+  out.textContent='🔌 시험 중…';
+  const lines=[];
+  lines.push('키 길이: '+key.length+'자'+(key.startsWith('sk-ant-')?' ✅':' ⚠️ sk-ant- 로 시작해야 함'));
+  lines.push('브라우저: '+(/iPhone|iPad/.test(navigator.userAgent)?'iOS':'기타'));
+  lines.push('인터넷: '+(navigator.onLine?'연결됨':'끊김 ❌'));
+  try{
+    const t0=Date.now();
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      /* 사진 없이 글자만 — 몸통이 아주 작다 */
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:8,
+        messages:[{role:'user',content:'hi'}]})
+    });
+    lines.push('응답: HTTP '+res.status+' ('+(Date.now()-t0)+'ms)');
+    if(res.ok){
+      out.style.color='var(--green)';
+      lines.push('');
+      lines.push('✅ 서버에 잘 닿았습니다. 키도 정상입니다.');
+      lines.push('→ 그런데도 명함 분석이 실패하면 사진이 문제입니다.');
+      lines.push('   크롭해서 작게 만든 뒤 다시 해보세요.');
+    }else{
+      let d='';
+      try{ const j=await res.json(); d=(j&&j.error)?(j.error.message||j.error.type||''):''; }catch(_){}
+      out.style.color='var(--red)';
+      lines.push(d?('내용: '+d):'');
+      lines.push('');
+      if(res.status===401) lines.push('❌ 키가 잘못됐습니다. 다시 붙여넣으세요.');
+      else if(res.status===400) lines.push('❌ 요청이 거부됐습니다 (모델 이름 등).');
+      else if(res.status===429) lines.push('❌ 사용량 한도입니다. 잠시 뒤 다시.');
+      else lines.push('❌ 서버가 거부했습니다.');
+    }
+  }catch(e){
+    out.style.color='var(--red)';
+    lines.push('');
+    lines.push('❌ 서버에 아예 못 닿았습니다 ('+(e&&e.message?e.message:e)+')');
+    lines.push('');
+    lines.push('사진과 무관합니다. 아래를 순서대로 해보세요:');
+    lines.push('1. 와이파이 끄고 LTE 로 시도');
+    lines.push('2. 설정 → Safari → 확장 프로그램·콘텐츠 차단기 끄기');
+    lines.push('3. 설정 → [이름] → iCloud → 사설 릴레이 끄기');
+    lines.push('4. 설정 → 개인정보 보호 → 잠금 모드가 켜져 있는지 확인');
+    lines.push('5. 크롬 앱에서 같은 주소로 열어 다시 시험');
+  }
+  out.textContent=lines.filter(x=>x!==undefined).join('\n');
+  $('apiKeyTest').disabled=false;
+};
+
+$('btnApiKey').onclick=()=>{$('apiKeyInp').value=apiKey;refreshKeyState();$('apiKeyTestOut').textContent='';$('apiKeyOverlay').classList.add('show');};
 $('apiKeyClose').onclick=()=>$('apiKeyOverlay').classList.remove('show');
 $('apiKeyCancel').onclick=()=>$('apiKeyOverlay').classList.remove('show');
 $('apiKeySave').onclick=()=>{
