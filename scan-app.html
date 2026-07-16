@@ -1420,7 +1420,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260716-150558';
+const APP_VER='v20260716-151850';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -4843,9 +4843,33 @@ $('cardAnalyze').onclick=async()=>{
   prog.style.background='rgba(255,149,0,.14)';prog.style.borderColor='var(--orange)';prog.style.color='var(--orange)';
   prog.textContent='🤖 명함 AI 분석 중…';
   $('cardAnalyze').disabled=true;
+  let _step='시작';
   try{
-    const b64=_cardImg.split(',')[1];
+    /* 어느 단계에서 깨졌는지 남긴다 — "타입에러" 만으론 찾을 수가 없다 */
+    _step='사진 읽기';
+    if(typeof _cardImg!=='string') throw new Error('사진이 문자열이 아님 ('+typeof _cardImg+')');
+    if(!_cardImg.startsWith('data:')) throw new Error('사진이 data:URL 이 아님 ('+_cardImg.slice(0,24)+'…)');
+    const parts=_cardImg.split(',');
+    if(parts.length<2||!parts[1]) throw new Error('사진 데이터가 비었음');
+    const b64=parts[1];
     const mt=_cardImg.split(';')[0].split(':')[1]||'image/jpeg';
+
+    /* 사진이 크면 API 가 거부한다 (5MB 한도). 아이폰 사진은 특히 크다.
+       미리 재보고 크면 한 번 더 줄인다. */
+    _step='사진 크기';
+    let sendB64=b64, sendMt=mt;
+    const mb=(x)=>(x.length*0.75/1048576);
+    if(mb(sendB64)>4){
+      const smaller=await compressImg(_cardImg,1200,0.75);
+      const sp=smaller.split(',');
+      if(sp[1]&&sp[1].length<b64.length){ sendB64=sp[1]; sendMt='image/jpeg'; }
+    }
+    console.log('[명함AI] 보낼 사진',mb(sendB64).toFixed(2)+'MB',sendMt);
+    if(mb(sendB64)>5) throw new Error('사진이 너무 큽니다 ('+mb(sendB64).toFixed(1)+'MB) — 크롭해서 줄여보세요');
+
+    /* ⚠️ fetch 실패는 사파리에서 TypeError: Load failed 로 온다.
+       여기서 단계를 바꿔야 원인이 제대로 찍힌다. */
+    _step='API 요청';
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,
@@ -4853,7 +4877,7 @@ $('cardAnalyze').onclick=async()=>{
       body:JSON.stringify({
         model:'claude-sonnet-4-6',max_tokens:1500,
         messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:mt,data:b64}},
+          {type:'image',source:{type:'base64',media_type:sendMt,data:sendB64}},
           {type:'text',text:`이 명함에서 모든 정보를 추출하세요.
 
 【전화번호 구분】
@@ -4868,10 +4892,25 @@ $('cardAnalyze').onclick=async()=>{
         }]
       })
     });
-    if(!res.ok)throw new Error('API '+res.status);
+    _step='API 응답';
+    if(!res.ok){
+      let detail='';
+      try{ const ej=await res.json(); detail=ej&&ej.error?(' — '+(ej.error.message||ej.error.type||'')):''; }catch(_){}
+      throw new Error('API '+res.status+detail);
+    }
     const j=await res.json();
+    _step='응답 읽기';
+    if(!j||!Array.isArray(j.content)||!j.content.length||typeof j.content[0].text!=='string'){
+      console.error('[명함AI] 예상 밖 응답',j);
+      throw new Error('응답 형식이 예상과 다름 — 콘솔 확인');
+    }
     let raw=j.content[0].text.trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-    const c=JSON.parse(_extractJson(raw));
+    _step='JSON 해석';
+    let c;
+    try{ c=JSON.parse(_extractJson(raw)); }
+    catch(pe){ console.error('[명함AI] 해석 실패, 원문:',raw); throw new Error('AI 응답을 못 읽음 — 콘솔 확인'); }
+    if(!c||typeof c!=='object') throw new Error('AI 응답이 객체가 아님');
+    _step='칸 채우기';
     if(c.company)$('c_company').value=c.company;
     if(c.name)$('c_name').value=c.name;
     if(c.position)$('c_position').value=c.position;
@@ -4886,8 +4925,15 @@ $('cardAnalyze').onclick=async()=>{
     prog.textContent='✅ 분석 완료!';
     setTimeout(()=>prog.classList.remove('show'),2500);
   }catch(e){
+    console.error('[명함AI] 단계:',_step,e);
+    let msg=(e&&e.message)?e.message:String(e);
+    /* 사파리는 fetch 가 막히면 "Load failed", 크롬은 "Failed to fetch" — 둘 다 TypeError 다.
+       원인은 대개 네트워크·콘텐츠차단기·사설릴레이·키 문제지 코드가 아니다. */
+    if(/load failed|failed to fetch|networkerror/i.test(msg)){
+      msg='서버에 못 닿았습니다. 인터넷·광고차단기·사설 릴레이(iCloud)를 확인하세요.';
+    }
     prog.style.background='var(--red-lt)';prog.style.borderColor='var(--red)';prog.style.color='var(--red)';
-    prog.textContent='❌ 분석 실패: '+e.message;
+    prog.textContent='❌ ['+_step+'] '+msg;
   }finally{$('cardAnalyze').disabled=false;}
 };
 
