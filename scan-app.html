@@ -749,6 +749,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       <label class="bar-btn ghost" style="cursor:pointer" onclick="event.stopPropagation()" aria-label="갤러리">🖼<span class="lbl"> 갤러리</span>
         <input type="file" id="topScanGal" accept="image/*" style="display:none">
       </label>
+      <button class="bar-btn ghost" id="btnManualAdd" aria-label="직접입력">✏️<span class="lbl"> 직접입력</span></button>
       <button class="bar-btn green" id="btnScanCsv" aria-label="CSV 내보내기">📥<span class="lbl"> CSV</span></button>
     </div>
     <!-- 🔧 영수증 필터 영역 (영수증 모드에서만 표시) -->
@@ -1049,6 +1050,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
           </div>
           <input type="hidden" id="c_owner">
         </div>
+        <div class="field"><label>🏷 카테고리</label><select id="c_cat"></select></div>
         <div class="field"><label>🏢 회사명</label><input type="text" id="c_company"></div>
         <div class="field"><label>👤 이름 *</label><input type="text" id="c_name"></div>
         <div class="field"><label>🎯 직책</label><input type="text" id="c_position"></div>
@@ -1354,7 +1356,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 <div class="overlay" id="catMgrOverlay">
   <div class="modal" style="max-width:440px">
     <div class="modal-head">
-      <div class="modal-title">📂 카테고리 관리</div>
+      <div class="modal-title" id="catMgrTitle">📂 카테고리 관리</div>
       <button class="hbtn" id="catMgrClose">✕</button>
     </div>
     <div class="modal-body">
@@ -1420,7 +1422,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260716-0855';
+const APP_VER='v20260716-0908';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -1429,8 +1431,12 @@ let AUTO_SCAN = localStorage.getItem('scanapp_autoscan')!=='0';
 const LS_PHOTOS='scanapp_photos', LS_CATS='scanapp_cats', LS_API_KEY='scanapp_apikey',
       LS_PIN='scanapp_pin', LS_RECEIPTS='scanapp_receipts', LS_CARDS='scanapp_cards', LS_TEXTS='scanapp_texts';
 const DEFAULT_CATS=['영수증','계약서','명함','문서','기타'];
+/* 명함 카테고리는 사진 카테고리와 별개다 — 섞이면 사진 목록에 '거래처'가 뜬다 */
+const LS_CARD_CATS='scanapp_cardcats';
+const LS_CATS_UPD='scanapp_cats_updated';   /* 카테고리 목록을 마지막에 고친 시각 */
+const DEFAULT_CARD_CATS=['거래처','고객','협력사','기타'];
 
-let photos=[], cats=[], receipts=[], cards=[], texts=[];
+let photos=[], cats=[], cardCats=[], receipts=[], cards=[], texts=[];
 /* 영수증 테이블 정렬·필터 상태 */
 let _rSort={col:'date',dir:'desc'};
 let _rColFilter={date:'',amount:'',place:'',payMethod:'',owner:'',addr:'',items:''};
@@ -1527,6 +1533,7 @@ function loadData(){
 
   try{photos=JSON.parse(localStorage.getItem(LS_PHOTOS)||'[]');}catch{photos=[];}
   try{const c=localStorage.getItem(LS_CATS);cats=c?JSON.parse(c):[...DEFAULT_CATS];}catch{cats=[...DEFAULT_CATS];}
+  try{const c=localStorage.getItem(LS_CARD_CATS);cardCats=c?JSON.parse(c):[...DEFAULT_CARD_CATS];}catch{cardCats=[...DEFAULT_CARD_CATS];}
   try{receipts=JSON.parse(localStorage.getItem(LS_RECEIPTS)||'[]');}catch{receipts=[];}
   try{cards=JSON.parse(localStorage.getItem(LS_CARDS)||'[]');}catch{cards=[];}
   try{texts=JSON.parse(localStorage.getItem(LS_TEXTS)||'[]');}catch{texts=[];}
@@ -1590,7 +1597,19 @@ function _safeLSSet(key, arr){
   }
 }
 function savePhotos(){if(_safeLSSet(LS_PHOTOS, photos)){syncPush('photos');return true;}return false;}
-function saveCats(){try{localStorage.setItem(LS_CATS,JSON.stringify(cats));}catch(e){}}
+/* 카테고리는 문자열 배열이라 항목별 병합을 못 한다.
+   목록 전체를 문서 하나에 넣고 '마지막에 고친 쪽이 이긴다'로 간다.
+   (항목별 합집합으로 하면 한쪽에서 지운 카테고리가 다른 기기에서 되살아난다) */
+function _touchCats(){ try{localStorage.setItem(LS_CATS_UPD,String(Date.now()));}catch(e){} }
+function saveCats(){
+  try{localStorage.setItem(LS_CATS,JSON.stringify(cats));}catch(e){}
+  _touchCats(); syncPushCats();
+}
+function saveCardCats(){
+  try{localStorage.setItem(LS_CARD_CATS,JSON.stringify(cardCats));}catch(e){}
+  _touchCats(); syncPushCats();
+}
+function catsUpdatedAt(){ return parseInt(localStorage.getItem(LS_CATS_UPD)||'0',10)||0; }
 function saveReceipts(){if(_safeLSSet(LS_RECEIPTS, receipts)){syncPush('receipts');return true;}return false;}
 function saveCards(){if(_safeLSSet(LS_CARDS, cards)){syncPush('cards');return true;}return false;}
 function saveTexts(){if(_safeLSSet(LS_TEXTS, texts)){syncPush('texts');return true;}return false;}
@@ -1715,6 +1734,7 @@ async function syncPullAll(){
       fbCollection('texts').get(),
       fbCollection('photos').get(),
     ]);
+    const catsChanged = await syncPullCats();
     // 병합: 같은 id면 updated 큰 것 우선
     function merge(local,remoteDocs){
       const map=new Map();
@@ -1741,6 +1761,8 @@ async function syncPullAll(){
     _safeLSSet(LS_TEXTS, texts);
     _safeLSSet(LS_PHOTOS, photos);
     localStorage.setItem(LS_FB_LAST,String(Date.now()));
+    /* 다른 기기에서 카테고리가 바뀌었으면 드롭다운도 새로 그린다 */
+    if(catsChanged){ refreshCatSelects(); refreshCardCatSelect(); }
     setFbStatus('','green');
     return true;
   }catch(e){
@@ -1757,6 +1779,9 @@ async function syncPushAll(){
     // 사진 데이터(photo, photoId의 실제 base64)는 제외하고 메타만
     const stripPhoto=obj=>{const{photo,...rest}=obj;return rest;};  // 구버전 photo 필드만 제거
     const batch=_fbDb.batch();
+    /* 카테고리 목록도 같이 올린다 */
+    batch.set(_fbDb.collection('scanapp').doc(_fbUser).collection('meta').doc('cats'),
+              {cats, cardCats, updated:catsUpdatedAt()});
     receipts.forEach(r=>{batch.set(fbCollection('receipts').doc(r.id),stripPhoto(r));});
     cards.forEach(c=>{batch.set(fbCollection('cards').doc(c.id),stripPhoto(c));});
     texts.forEach(t=>{batch.set(fbCollection('texts').doc(t.id),stripPhoto(t));});
@@ -1773,6 +1798,37 @@ async function syncPushAll(){
 }
 
 // 데이터 저장 시 자동 푸시 (debounce 3초)
+/* 카테고리 전용 — meta/cats 문서 하나 */
+let _catsPushTimer=null;
+function syncPushCats(){
+  if(!_fbDb||!_fbUser)return;
+  clearTimeout(_catsPushTimer);
+  _catsPushTimer=setTimeout(async()=>{
+    try{
+      await _fbDb.collection('scanapp').doc(_fbUser).collection('meta').doc('cats')
+        .set({cats, cardCats, updated:catsUpdatedAt()});
+    }catch(e){ console.error('[Firebase] cats push failed',e); }
+  },600);
+}
+async function syncPullCats(){
+  if(!_fbDb||!_fbUser)return false;
+  try{
+    const doc=await _fbDb.collection('scanapp').doc(_fbUser).collection('meta').doc('cats').get();
+    if(!doc.exists)return false;
+    const d=doc.data()||{};
+    const rt=d.updated||0, lt=catsUpdatedAt();
+    if(rt<=lt) return false;              /* 내 것이 더 최신 → 그대로 */
+    if(Array.isArray(d.cats)&&d.cats.length)         cats=d.cats;
+    if(Array.isArray(d.cardCats)&&d.cardCats.length) cardCats=d.cardCats;
+    try{
+      localStorage.setItem(LS_CATS,JSON.stringify(cats));
+      localStorage.setItem(LS_CARD_CATS,JSON.stringify(cardCats));
+      localStorage.setItem(LS_CATS_UPD,String(rt));
+    }catch(e){}
+    return true;
+  }catch(e){ console.error('[Firebase] cats pull failed',e); return false; }
+}
+
 function syncPush(kind){
   if(!_fbDb||!_fbUser)return;
   clearTimeout(_fbSyncTimer);
@@ -1863,7 +1919,7 @@ async function autoBackupIfNeeded(){
     const backupData={
       app:'scan-app',version:2,
       backedUpAt:new Date().toISOString(),
-      photos,cats,receipts,cards,texts,
+      photos,cats,cardCats,receipts,cards,texts,
     };
     const blob=new Blob([JSON.stringify(backupData)],{type:'application/json'});
     const ref=_fbStorage.ref(`scanapp/${_fbUser}/backups/${today}.json`);
@@ -2289,6 +2345,22 @@ async function topScanAddPhoto(files){
     }
   }catch(e){toast('사진 로드 실패');}
 }
+/* ✏️ 직접입력 — 사진 없이 손으로 넣기.
+   세 모달 다 사진은 선택사항이라(명함은 이름만, 텍스트는 제목만 필수)
+   빈 모달만 열어주면 된다 */
+$('c_cat').addEventListener('change',e=>{
+  if(e.target.value==='__manage'){
+    e.target.value = cardCats.includes(_cardCatBefore) ? _cardCatBefore : cardCats[0];
+    openCatMgr('card');
+  }else _cardCatBefore=e.target.value;
+});
+let _cardCatBefore=cardCats[0];
+
+$('btnManualAdd').onclick=()=>{
+  if(curScanType==='receipt') openReceiptModal(null);
+  else if(curScanType==='card') openCardModal(null);
+  else openTextModal(null);
+};
 $('topScanCam').addEventListener('change',e=>{topScanAddPhoto(e.target.files);e.target.value='';});
 $('topScanGal').addEventListener('change',e=>{topScanAddPhoto(e.target.files);e.target.value='';});
 $('btnScanCsv').onclick=()=>exportScanCsv();
@@ -2304,6 +2376,14 @@ $('catFilter').addEventListener('change',e=>{
   catFilter=e.target.value;renderGallery();
 });
 
+function refreshCardCatSelect(){
+  const f=$('c_cat'); if(!f)return;
+  const cur=f.value;
+  f.innerHTML = cardCats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')
+    + '<option disabled>──────────</option>'
+    + '<option value="__manage">⚙️ 카테고리 추가·수정·삭제…</option>';
+  if(cardCats.includes(cur)) f.value=cur;
+}
 function refreshCatSelects(){
   const f=$('catFilter');
   f.innerHTML='<option value="all">전체 카테고리</option>'
@@ -3759,16 +3839,17 @@ function renderCardList(q){
   const list=cards.filter(c=>{
     if(c.deletedAt)return false;
     if(!q)return true;
-    return [c.company,c.name,c.position,c.phone,c.mobile,c.fax,c.email,c.addr,c.memo,c.owner]
+    return [c.company,c.name,c.position,c.phone,c.mobile,c.fax,c.email,c.addr,c.memo,c.owner,c.cat]
       .some(v=>(v||'').toLowerCase().includes(q));
   });
   if(!list.length){$('cardList').innerHTML='';$('scanEmpty').style.display='';return;}
   $('scanEmpty').style.display='none';
   const tableHtml=`<div class="scan-table"><table>
-    <thead><tr><th>구분</th><th>회사</th><th>이름</th><th>직책</th><th>휴대폰</th><th>유선</th><th>팩스</th>
+    <thead><tr><th>구분</th><th>카테고리</th><th>회사</th><th>이름</th><th>직책</th><th>휴대폰</th><th>유선</th><th>팩스</th>
     <th>이메일</th><th>주소</th><th style="text-align:right">작업</th></tr></thead>
     <tbody>${list.map(c=>`<tr data-id="${esc(c.id)}">
       <td>${_ownerBadge(c.owner||'업무')}</td>
+      <td style="font-size:12px;color:var(--ink-soft);white-space:nowrap">${esc(c.cat||'')}</td>
       <td class="truncate" style="font-weight:700">${esc(c.company||'')}</td>
       <td>${esc(c.name||'')}</td>
       <td style="font-size:12px;color:var(--ink-soft)">${esc(c.position||'')}${c.dept?' / '+esc(c.dept):''}</td>
@@ -3790,6 +3871,7 @@ function renderCardList(q){
       </div>
       <div class="date">${esc(c.company||'')}</div>
     </div>
+    ${c.cat?`<div class="row"><div class="label">🏷 카테고리</div><div class="val">${esc(c.cat)}</div></div>`:''}
     ${c.mobile?`<div class="row"><div class="label">📱 휴대폰</div><div class="val"><a class="link-tel" href="${telLink(c.mobile)}">${esc(c.mobile)}</a></div></div>`:''}
     ${c.phone?`<div class="row"><div class="label">🏢 유선</div><div class="val"><a class="link-tel" href="${telLink(c.phone)}">${esc(c.phone)}</a></div></div>`:''}
     ${c.fax?`<div class="row"><div class="label">📠 팩스</div><div class="val">${esc(c.fax)}</div></div>`:''}
@@ -4133,7 +4215,7 @@ function copyReceiptToClipboard(r){
   navigator.clipboard.writeText(row).then(()=>toast('📋 엑셀 복사됨'));
 }
 function copyCardToClipboard(c){
-  const row=[c.owner||'업무',c.company||'',c.name||'',c.position||'',c.dept||'',c.mobile||'',
+  const row=[c.owner||'업무',c.cat||'',c.company||'',c.name||'',c.position||'',c.dept||'',c.mobile||'',
     c.phone||'',c.fax||'',c.email||'',c.website||'',c.addr||'',c.memo||''].join('\t');
   navigator.clipboard.writeText(row).then(()=>toast('📋 엑셀 복사됨'));
 }
@@ -4153,8 +4235,8 @@ function exportScanCsv(){
     filename=`영수증_${today()}.csv`;
   }else if(curScanType==='card'){
     if(!cards.length){toast('내보낼 명함이 없어요');return;}
-    rows=[['구분','회사명','이름','직책','부서','휴대폰','유선전화','팩스','이메일','웹사이트','주소','메모']];
-    cards.forEach(c=>rows.push([c.owner||'업무',c.company||'',c.name||'',c.position||'',c.dept||'',
+    rows=[['구분','카테고리','회사명','이름','직책','부서','휴대폰','유선전화','팩스','이메일','웹사이트','주소','메모']];
+    cards.forEach(c=>rows.push([c.owner||'업무',c.cat||'',c.company||'',c.name||'',c.position||'',c.dept||'',
       c.mobile||'',c.phone||'',c.fax||'',c.email||'',c.website||'',c.addr||'',c.memo||'']));
     filename=`명함_${today()}.csv`;
   }else{
@@ -4482,6 +4564,9 @@ function openCardModal(card){
   $('cardModalTitle').textContent=card?'✏️ 명함 수정':'💼 명함 추가';
   $('cardDelete').style.display=card?'':'none';
   setCardOwner(card?(card.owner||'업무'):'업무');
+  refreshCardCatSelect();
+  _cardCatBefore = card?(card.cat||cardCats[0]):cardCats[0];
+  $('c_cat').value = cardCats.includes(_cardCatBefore) ? _cardCatBefore : cardCats[0];
   $('c_company').value=card?(card.company||''):'';
   $('c_name').value=card?(card.name||''):'';
   $('c_position').value=card?(card.position||''):'';
@@ -4634,6 +4719,7 @@ $('cardSave').onclick=async()=>{
     addr:$('c_addr').value.trim(),
     memo:$('c_memo').value.trim(),
     owner:$('c_owner').value||'업무',
+    cat:($('c_cat').value==='__manage'?cardCats[0]:$('c_cat').value)||cardCats[0],
     photoId,photoUrl,updated:Date.now(),
   };
   if(_cardEditing){
@@ -4844,16 +4930,28 @@ $('apiKeyClear').onclick=()=>{
   $('apiKeyInp').value='';refreshKeyState();toast('🗑 키 삭제됨');
 };
 
+/* 카테고리 관리창은 사진·명함이 같이 쓴다. 대상만 갈아끼운다 */
+let _catMgrFor='photo';
+function _catCtx(){
+  return _catMgrFor==='card'
+    ? { arr:cardCats, items:cards, save:saveCardCats, saveItems:saveCards,
+        title:'💼 명함 카테고리', unit:'장', refresh:()=>{refreshCardCatSelect();renderScanList();} }
+    : { arr:cats,     items:photos, save:saveCats,     saveItems:savePhotos,
+        title:'📂 사진 카테고리', unit:'장', refresh:()=>{refreshCatSelects();renderGallery();} };
+}
 function catUseCount(name){
-  return photos.filter(p=>!p.deletedAt && p.cat===name).length;
+  const c=_catCtx();
+  return c.items.filter(x=>!x.deletedAt && x.cat===name).length;
 }
 function renderCatList(){
-  $('catList').innerHTML=cats.map((c,i)=>{
+  const CTX=_catCtx();
+  $('catMgrTitle').textContent=CTX.title;
+  $('catList').innerHTML=CTX.arr.map((c,i)=>{
     const n=catUseCount(c);
     return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;
       padding:8px 12px;background:var(--blue-soft);border-radius:9px;margin-bottom:6px">
       <span style="font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c)}</span>
-      <span style="font-size:11px;color:var(--ink-faint);white-space:nowrap">${n}장</span>
+      <span style="font-size:11px;color:var(--ink-faint);white-space:nowrap">${n}${CTX.unit}</span>
       <button class="btn btn-ghost" data-cedit="${i}" style="height:28px;padding:0 10px;font-size:11px">✏️ 수정</button>
       <button class="btn btn-red" data-cdel="${i}" style="height:28px;padding:0 10px;font-size:11px">삭제</button>
     </div>`;}).join('');
@@ -4862,41 +4960,41 @@ function renderCatList(){
   $('catList').querySelectorAll('[data-cedit]').forEach(b=>{
     b.onclick=()=>{
       const idx=parseInt(b.dataset.cedit);
-      const oldName=cats[idx];
+      const oldName=CTX.arr[idx];
       const v=(prompt(`'${oldName}' 을(를) 무엇으로 바꿀까요?`, oldName)||'').trim();
       if(!v || v===oldName) return;
-      if(cats.includes(v)){toast('이미 있는 이름이에요');return;}
+      if(CTX.arr.includes(v)){toast('이미 있는 이름이에요');return;}
       let moved=0;
-      photos.forEach(p=>{ if(p.cat===oldName){ p.cat=v; p.updated=Date.now(); moved++; } });
-      cats[idx]=v;
-      saveCats(); if(moved) savePhotos();
-      if(catFilter===oldName) catFilter=v;
-      renderCatList();refreshCatSelects();renderGallery();
-      toast(moved?`✅ 이름 변경 (사진 ${moved}장도 함께)`:'✅ 이름 변경');
+      CTX.items.forEach(x=>{ if(x.cat===oldName){ x.cat=v; x.updated=Date.now(); moved++; } });
+      CTX.arr[idx]=v;
+      CTX.save(); if(moved) CTX.saveItems();
+      if(_catMgrFor==='photo' && catFilter===oldName) catFilter=v;
+      renderCatList();CTX.refresh();
+      toast(moved?`✅ 이름 변경 (${moved}${CTX.unit}도 함께)`:'✅ 이름 변경');
     };
   });
 
   $('catList').querySelectorAll('[data-cdel]').forEach(b=>{
     b.onclick=()=>{
       const idx=parseInt(b.dataset.cdel);
-      const name=cats[idx], n=catUseCount(name);
-      if(cats.length<=1){toast('최소 1개는 남겨두세요');return;}
-      /* 쓰는 사진이 있으면 그 사진들의 카테고리가 빈다 — 미리 알린다 */
-      const msg = n ? `'${name}' 삭제할까요?\n이 카테고리를 쓰는 사진 ${n}장은 '${cats.find((c,j)=>j!==idx)}' 로 옮겨집니다.`
+      const name=CTX.arr[idx], n=catUseCount(name);
+      if(CTX.arr.length<=1){toast('최소 1개는 남겨두세요');return;}
+      /* 쓰는 항목이 있으면 카테고리가 빈다 — 미리 알린다 */
+      const fallback=CTX.arr.find((c,j)=>j!==idx);
+      const msg = n ? `'${name}' 삭제할까요?\n이 카테고리를 쓰는 ${n}${CTX.unit}은 '${fallback}' 로 옮겨집니다.`
                     : `'${name}' 삭제할까요?`;
       if(!confirm(msg))return;
       if(n){
-        const fallback=cats.find((c,j)=>j!==idx);
-        photos.forEach(p=>{ if(p.cat===name){ p.cat=fallback; p.updated=Date.now(); } });
-        savePhotos();
+        CTX.items.forEach(x=>{ if(x.cat===name){ x.cat=fallback; x.updated=Date.now(); } });
+        CTX.saveItems();
       }
-      if(catFilter===name) catFilter='all';
-      cats.splice(idx,1);saveCats();renderCatList();refreshCatSelects();renderGallery();
+      if(_catMgrFor==='photo' && catFilter===name) catFilter='all';
+      CTX.arr.splice(idx,1);CTX.save();renderCatList();CTX.refresh();
       toast('🗑 삭제됨');
     };
   });
 }
-function openCatMgr(){ renderCatList(); $('catMgrOverlay').classList.add('show'); }
+function openCatMgr(kind){ _catMgrFor = kind==='card' ? 'card' : 'photo'; $('catNewInp').value=''; renderCatList(); $('catMgrOverlay').classList.add('show'); }
 /* 카테고리는 일반사진/보안 에만 쓰이므로 그 화면 안에 둔다.
    헤더의 📂 는 없앴다 — 외부앱 picker-mode 가 아직 #btnCatMgr 을 참조하므로 가드 */
 const _bcm=$('btnCatMgr'); if(_bcm) _bcm.onclick=openCatMgr;
@@ -4904,10 +5002,11 @@ const _bcm=$('btnCatMgr'); if(_bcm) _bcm.onclick=openCatMgr;
 $('catMgrClose').onclick=()=>$('catMgrOverlay').classList.remove('show');
 $('catMgrCloseBtn').onclick=()=>$('catMgrOverlay').classList.remove('show');
 $('catAddBtn').onclick=()=>{
+  const CTX=_catCtx();
   const v=$('catNewInp').value.trim();
   if(!v){toast('이름을 입력하세요');return;}
-  if(cats.includes(v)){toast('이미 있어요');return;}
-  cats.push(v);saveCats();$('catNewInp').value='';renderCatList();refreshCatSelects();
+  if(CTX.arr.includes(v)){toast('이미 있어요');return;}
+  CTX.arr.push(v);CTX.save();$('catNewInp').value='';renderCatList();CTX.refresh();
   toast('✅ 추가됨');
 };
 
@@ -4934,7 +5033,7 @@ $('btnExport').onclick=async()=>{
     }
     const blob=new Blob([JSON.stringify({
       app:'scan-app',version:2,exportedAt:new Date().toISOString(),
-      photos,cats,receipts,cards,texts,imgsMap
+      photos,cats,cardCats,receipts,cards,texts,imgsMap
     },null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');a.href=url;a.download=`scan-app-backup-${today()}.json`;a.click();
@@ -4950,6 +5049,7 @@ $('importInp').addEventListener('change',async e=>{
     const d=JSON.parse(await f.text());
     if(d.app!=='scan-app')throw new Error('잘못된 파일');
     for(const c of (d.cats||[]))if(!cats.includes(c))cats.push(c);
+    for(const c of (d.cardCats||[]))if(!cardCats.includes(c))cardCats.push(c);
     if(d.imgsMap){for(const id in d.imgsMap){try{await idbPut(id,d.imgsMap[id]);}catch(e){}}}
     for(const p of (d.photos||[])){if(photos.find(x=>x.id===p.id))p.id=uid();photos.unshift(p);}
     for(const r of (d.receipts||[])){if(receipts.find(x=>x.id===r.id))r.id=uid();receipts.unshift(r);}
