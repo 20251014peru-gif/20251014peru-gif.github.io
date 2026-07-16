@@ -1426,7 +1426,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260716-0959';
+const APP_VER='v20260716-1008';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -2520,26 +2520,18 @@ function renderPreviews(){
       <button class="preview-del" data-del="${i}">✕</button>
     </div>`).join('');
   /* 영수증과 같은 4점 크롭 — 열리면 문서를 자동으로 잡아준다 */
+  /* 영수증과 같은 크롭 창. 창 안에서 자동 감지를 시도하고,
+     못 찾으면 틀이 사진 끝에 붙은 채로 열려 직접 맞추면 된다.
+     (바로 잘라버리는 방식은 일반사진에 안 맞았다 — 문서가 아니면
+      감지기가 엉뚱한 걸 잡거나 못 찾는다) */
   wrap.querySelectorAll('[data-crop]').forEach(b=>{
-    b.onclick=async e=>{
+    b.onclick=e=>{
       e.stopPropagation();
       const i=parseInt(b.dataset.crop);
-      const openManual=()=>openCropModal(mImgs[i].data, cropped=>{
-        mImgs[i].data=cropped; renderPreviews();
-      }, '✂️ 사진 자르기');
-      if(!window.__autoCrop){ openManual(); return; }
-      b.textContent='⏳';
-      const r=await window.__autoCrop(mImgs[i].data);
-      if(r.cropped){
-        mImgs[i].data=r.img;
+      openCropModal(mImgs[i].data, cropped=>{
+        mImgs[i].data=cropped;
         renderPreviews();
-        toast('✂️ 자동으로 잘랐어요 — 다시 누르면 손으로 맞출 수 있어요');
-      }else{
-        /* 못 찾았으면 아무 일도 안 하면 답답하다 → 수동 창을 연다 */
-        b.textContent='✂';
-        toast('문서를 못 찾아 직접 맞춰주세요');
-        openManual();
-      }
+      }, '✂️ 사진 자르기');
     };
   });
   wrap.querySelectorAll('img').forEach((img,i)=>img.onclick=()=>showImg(img.src,'',mImgs.map(m=>m.data),i));
