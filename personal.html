@@ -1221,7 +1221,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260716-182140';
+const APP_VER='v20260716-182920';
 document.title='개인일지 '+APP_VER;
 /* 버전을 뿌린다 — 헤더 + PIN 넣는 곳마다.
    잠금화면은 앱이 뜨자마자 보이는 곳이라 DOMContentLoaded 를 기다리면 늦을 수 있다.
@@ -4007,6 +4007,62 @@ async function _fetchDecrypted(f){
   return buf;
 }
 
+/* ── PDF 를 직접 그린다 ──
+   ⚠️ 폰 브라우저(안드로이드 크롬·아이폰 사파리)는 iframe 안 PDF 를 안 그린다.
+      회색 아이콘과 '열기' 버튼만 보여주고, 누르면 내려받아 외부 앱으로 넘긴다.
+      → 기기에 남는다. 우리가 막으려던 바로 그 일이다.
+   PDF.js 로 canvas 에 직접 그리면 아무 데도 안 남는다.
+   무거우니(약 300KB) PDF 를 열 때만 불러온다. */
+let _pdfjsReady=null;
+function loadPdfJs(){
+  if(_pdfjsReady) return _pdfjsReady;
+  _pdfjsReady=new Promise((res,rej)=>{
+    if(window.pdfjsLib){ res(window.pdfjsLib); return; }
+    const sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.onload=()=>{
+      if(!window.pdfjsLib){ rej(new Error('PDF 그리기 도구를 못 불러왔습니다')); return; }
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc=
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      res(window.pdfjsLib);
+    };
+    sc.onerror=()=>rej(new Error('PDF 그리기 도구를 못 불러왔습니다 (인터넷·차단기 확인)'));
+    document.head.appendChild(sc);
+  });
+  return _pdfjsReady;
+}
+
+async function renderPdfInto(box, buf){
+  const lib=await loadPdfJs();
+  /* ⚠️ pdf.js 는 넘긴 배열을 가져가 비워버린다. 사본을 준다 —
+     안 그러면 '받기'를 눌렀을 때 빈 파일이 나온다. */
+  const doc=await lib.getDocument({data:buf.slice(0)}).promise;
+  box.style.cssText='flex:1;min-height:0;background:#525659;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px 0';
+  box.innerHTML='';
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:10px';
+  box.appendChild(wrap);
+  const W=Math.min(box.clientWidth-16, 1000) || 360;
+  for(let i=1;i<=doc.numPages;i++){
+    const page=await doc.getPage(i);
+    const v0=page.getViewport({scale:1});
+    /* 화면 폭에 맞추고, 고해상도 화면이면 더 촘촘히 그린다 */
+    const scale=(W/v0.width)*Math.min(window.devicePixelRatio||1, 2);
+    const vp=page.getViewport({scale});
+    const cv=document.createElement('canvas');
+    cv.width=vp.width; cv.height=vp.height;
+    cv.style.cssText='width:'+W+'px;height:auto;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.4);border-radius:2px';
+    wrap.appendChild(cv);
+    await page.render({canvasContext:cv.getContext('2d'), viewport:vp}).promise;
+    if(i===1 && doc.numPages>1){
+      const n=document.createElement('div');
+      n.style.cssText='color:rgba(255,255,255,.6);font-size:11px';
+      n.textContent='전체 '+doc.numPages+'쪽 — 아래로 넘겨보세요';
+      wrap.insertBefore(n, cv);
+    }
+  }
+}
+
 async function openPersonalFile(id){
   const f=files.find(x=>x.id===id);
   if(!f||!f.upUrl){ toast('올린 파일이 아닙니다'); return; }
@@ -4028,12 +4084,27 @@ async function openPersonalFile(id){
     _showUrl=URL.createObjectURL(blob);
     g('fileShowTitle').textContent=(f.locked?'🔒 ':'')+(f.upName||f.name||'파일');
     const body=g('fileShowBody');
+    g('fileShowOverlay').classList.add('show');
     if(kind==='image'){
+      body.style.cssText='flex:1;min-height:0;background:#525659;display:flex;align-items:center;justify-content:center';
       body.innerHTML='<img src="'+_showUrl+'" style="max-width:100%;max-height:100%;object-fit:contain">';
+    }else if(kind==='pdf'){
+      /* 폰에서 iframe 은 안 그려진다 — 직접 그린다 */
+      body.style.cssText='flex:1;min-height:0;background:#525659;display:flex;align-items:center;justify-content:center';
+      body.innerHTML='<div style="color:rgba(255,255,255,.7);font-size:13px">📄 그리는 중…</div>';
+      try{
+        await renderPdfInto(body, buf);
+      }catch(pe){
+        console.error('[PDF 그리기]',pe);
+        body.style.cssText='flex:1;min-height:0;background:#525659;display:flex;align-items:center;justify-content:center;padding:20px';
+        body.innerHTML='<div style="color:#fff;font-size:13px;line-height:1.7;text-align:center">'
+          +'❌ 화면에 못 그렸습니다<br><span style="font-size:11px;opacity:.7">'+esc(pe.message||'')+'</span><br><br>'
+          +'<span style="font-size:11px;opacity:.7">위 📥 받기 를 쓰시면 열 수 있지만,<br>푼 파일이 이 기기에 남습니다.</span></div>';
+      }
     }else{
+      body.style.cssText='flex:1;min-height:0;background:#fff';
       body.innerHTML='<iframe src="'+_showUrl+'" style="width:100%;height:100%;border:none;background:#fff"></iframe>';
     }
-    g('fileShowOverlay').classList.add('show');
   }catch(e){
     console.error('[파일 보기]',e);
     alert('열지 못했습니다\n\n'+(e.message||e));
