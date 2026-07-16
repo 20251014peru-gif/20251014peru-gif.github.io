@@ -943,7 +943,7 @@
 <script>
 /* ⚠️ 버전은 여기 한 곳에만 있다. 빌드할 때 컴 시계에서 주입된다.
    화면·제목·콘솔이 전부 이걸 읽으므로, 이 값이 안 바뀌면 새 파일이 안 뜬 것이다. */
-const APP_VER = 'v20260716-1333';
+const APP_VER = 'v20260716-133818';
 document.title = '주차대장 ' + APP_VER;
 console.log('%c주차대장 ' + APP_VER, 'font-size:16px;font-weight:bold;color:#2563eb');
 function _paintVer() {
@@ -2412,12 +2412,23 @@ function exportExcel() {
 }
 
 function exportJSON() {
+  if (!parkingData.length) { alert('저장된 기록이 없습니다.'); return; }
   const json = JSON.stringify({ version: 1, exported: new Date().toISOString(), data: parkingData }, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'parking_backup.json'; a.click();
-  URL.revokeObjectURL(url);
+  const d = new Date();
+  const stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0')
+              + '_' + String(d.getHours()).padStart(2,'0') + String(d.getMinutes()).padStart(2,'0');
+  a.href = url;
+  a.download = `parking_backup_${stamp}_${parkingData.length}건.json`;
+  document.body.appendChild(a);   /* 붙여야 동작하는 브라우저가 있다 */
+  a.click();
+  a.remove();
+  /* 클릭 직후 바로 revoke 하면 내려받기가 시작 전에 끊긴다.
+     백업이 조용히 실패하면 최악이므로 넉넉히 뒤에 정리한다. */
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  alert(`📄 백업 파일을 받았습니다\n\nparking_backup_${stamp}_${parkingData.length}건.json\n(${parkingData.length}건)\n\n내려받기 폴더를 확인하세요.`);
 }
 
 function importJSON() {
@@ -2501,22 +2512,33 @@ function scanDuplicates() {
     <div style="padding:12px;background:#fef3c7;border:2px solid #f59e0b;border-radius:8px;
       color:#92400e;font-size:13px;line-height:1.7;margin-bottom:10px">
       <b>사본 ${total}건</b>을 찾았습니다 · 전체 ${parkingData.length}건 → 정리 후 ${parkingData.length - total}건<br>
-      각 묶음에서 <b>No 가 가장 작은 것 하나만 남기고</b> 나머지를 지웁니다.
-      아래 표를 확인하고 지워주세요. <b>되돌릴 수 없으니 먼저 JSON 백업</b>을 받아두세요.
+      각 묶음에서 <b>No 가 가장 작은 것 하나만 남기고</b> 나머지를 지웁니다. 아래 표를 확인하세요.
     </div>
     <div class="table-container"><table>
       <thead><tr><th>날짜</th><th>차량</th><th>입출차</th><th>층</th><th>남길 것</th><th>지울 것</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    <button class="btn btn-outline" onclick="exportJSON()" style="margin-top:10px">📄 먼저 JSON 백업</button>
-    <button class="btn btn-danger" onclick="removeDuplicates()" style="margin-top:10px;margin-left:8px">🗑️ 사본 ${total}건 지우기</button>`;
+    <div style="margin-top:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">1단계 — 백업 파일 받기 (지우는 게 아닙니다)</div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.6;margin-bottom:8px">
+        지금 데이터 전부가 파일로 <b>저장</b>됩니다. 잘못되면 이 파일로 되돌릴 수 있습니다.
+      </div>
+      <button class="btn btn-outline" onclick="exportJSON()">📄 백업 파일 받기</button>
+    </div>
+    <div style="margin-top:10px;padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#991b1b">2단계 — 사본 지우기 (되돌릴 수 없음)</div>
+      <div style="font-size:12px;color:#991b1b;line-height:1.6;margin-bottom:8px">
+        위 표의 <b>지울 것</b> ${total}건만 지웁니다. 백업 파일은 그대로 남습니다.
+      </div>
+      <button class="btn btn-danger" onclick="removeDuplicates()">🗑️ 사본 ${total}건 지우기</button>
+    </div>`;
 }
 
 async function removeDuplicates() {
   const total = _dupFound.reduce((s, g) => s + g.remove.length, 0);
   if (!total) return;
-  if (!confirm(`사본 ${total}건을 영구 삭제합니다.\n되돌릴 수 없습니다.\n\nJSON 백업을 받으셨나요?`)) return;
-  if (!confirm(`정말 지울까요?\n전체 ${parkingData.length}건 → ${parkingData.length - total}건`)) return;
+  if (!confirm(`1단계 백업 파일을 받으셨나요?\n\n안 받으셨으면 [취소]를 누르고 먼저 받으세요.`)) return;
+  if (!confirm(`사본 ${total}건을 지웁니다. 되돌릴 수 없습니다.\n\n전체 ${parkingData.length}건 → ${parkingData.length - total}건\n\n지울까요?`)) return;
 
   setSyncStatus('warn', '정리중...');
   let done = 0, failed = 0;
