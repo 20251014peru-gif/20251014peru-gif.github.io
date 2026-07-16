@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>📷 사진 스캐너 v20260717-0735</title>
+<title>📷 사진 스캐너 v20260717-0746</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -1259,7 +1259,8 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
     </div>
     <div class="modal-body">
       <div id="sendDestSummary" style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;padding:8px 10px;background:var(--blue-soft);border-radius:8px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div id="sendDestQuick"></div>
+      <div id="sendDestBtnGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
         <button type="button" class="sendDestBtn" data-dest="car" style="height:54px;font-size:14px;font-weight:800;background:#cffafe;color:#0e7490;border:1.5px solid #67e8f9;border-radius:12px;cursor:pointer">🚗 차계부</button>
         <button type="button" class="sendDestBtn" data-dest="personal" style="height:54px;font-size:14px;font-weight:800;background:#ffedd5;color:#c2410c;border:1.5px solid #fdba74;border-radius:12px;cursor:pointer">🍜 개인일지</button>
         <button type="button" class="sendDestBtn" data-dest="project" style="height:54px;font-size:14px;font-weight:800;background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:12px;cursor:pointer">📁 부동산 프로젝트</button>
@@ -1465,7 +1466,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260717-073500';
+const APP_VER='v20260717-074600';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -4366,8 +4367,8 @@ async function openScanDetail(type,id){
 
   // vCard 버튼은 명함일 때만
   $('scanDetailVcard').style.display=(type==='card')?'':'none';
-  // 📤 보내기 버튼은 영수증일 때만
-  if($('scanDetailSend')) $('scanDetailSend').style.display=(type==='receipt')?'':'none';
+  // 📤 보내기 버튼은 영수증·서류일 때
+  if($('scanDetailSend')) $('scanDetailSend').style.display=(type==='receipt'||type==='text')?'':'none';
 
   $('scanDetailOverlay').classList.add('show');
 }
@@ -4451,6 +4452,7 @@ async function pushReceiptToCarLog(r,opt){
     if(kmpl!=null)rec.kmpl=kmpl;
     await _fbDb.collection('personal').doc(id).set(rec);
     _sdTag(r,'personal:car');
+    _sdFuelMemSave(r.place,car,kind);   /* 자주 가는 주유소 기억 → 다음엔 원터치 */
     toast('🚗 개인일지 차계부로 보냈어요'+(kmpl!=null?(' (연비 '+kmpl+'㎞/L)'):''));
     return true;
   }catch(err){console.error('[차계부]',err);toast('차계부 보내기 실패: '+(err.message||err));return false;}
@@ -4503,35 +4505,82 @@ async function pushReceiptToProject(r,opt){
   if(!_fbDb){toast('클라우드 동기화를 먼저 설정하세요');return false;}
   var projectId=opt&&opt.projectId;
   if(!projectId){toast('프로젝트를 먼저 선택하세요');return false;}
+  var itype=(opt&&opt.type)||'receipt';
+  var col=(itype==='text')?'texts':'receipts';
   try{
-    /* 영수증 원본이 클라우드에 있어야 프로젝트가 참조로 읽는다 — 최신본 강제 저장 */
-    if(_fbUser){var o=Object.assign({},r);delete o.photo;await fbCollection('receipts').doc(r.id).set(o);}
+    /* 원본이 클라우드에 있어야 프로젝트가 참조로 읽는다 — 최신본 강제 저장 */
+    if(_fbUser){var o=Object.assign({},r);delete o.photo;await fbCollection(col).doc(r.id).set(o);}
     await _fbDb.collection('realestate_projects').doc(projectId).update({
-      scanRefs:firebase.firestore.FieldValue.arrayUnion({type:'receipt',id:r.id})
+      scanRefs:firebase.firestore.FieldValue.arrayUnion({type:itype,id:r.id})
     });
     _sdTag(r,'realestate:project_'+projectId);
-    toast('📁 프로젝트에 영수증을 첨부했어요');
+    toast('📁 프로젝트에 '+(itype==='text'?'서류':'영수증')+'를 첨부했어요');
     return true;
   }catch(err){console.error('[프로젝트]',err);toast('프로젝트 보내기 실패: '+(err.message||err));return false;}
 }
 
+/* ── 자주 가는 주유소 기억 (원터치용) ── */
+function _sdFuelMemAll(){try{return JSON.parse(localStorage.getItem('sd_fuelmem_v1')||'{}');}catch(e){return {};}}
+function _sdFuelMemGet(place){if(!place)return null;var m=_sdFuelMemAll();return m[(place||'').trim()]||null;}
+function _sdFuelMemSave(place,car,kind){try{place=(place||'').trim();if(!place)return;var m=_sdFuelMemAll();m[place]={car:car,kind:kind};localStorage.setItem('sd_fuelmem_v1',JSON.stringify(m));}catch(e){}}
+
 /* ── 목적지 선택 시트 컨트롤러 ── */
-var _sendDestState={rid:null,dest:null,projects:[]};
-function openSendDest(receiptId){
-  var r=receipts.find(function(x){return x.id===receiptId;});
-  if(!r){toast('영수증을 찾을 수 없어요');return;}
-  _sendDestState={rid:receiptId,dest:null,projects:[]};
-  $('sendDestSummary').innerHTML='🧾 <b>'+esc(r.place||'영수증')+'</b> · '+numFmt(Number(r.amount)||0)+'원 · '+esc(r.date||today())+(r.owner?(' · '+esc(r.owner)):'');
+var _sendDestState={type:'receipt',rid:null,dest:null,projects:[]};
+/* 영수증/서류 항목 조회 */
+function _sdFindItem(type,id){
+  if(type==='text')return (texts||[]).find(function(x){return x.id===id;});
+  return (receipts||[]).find(function(x){return x.id===id;});
+}
+/* 개인/업무 구분(owner)에 따라 허용 목적지 결정 — 잘못 넣는 것 방지 */
+function _sdAllowedDests(type,item){
+  if(type==='text')return ['project'];              /* 서류 → 프로젝트 */
+  var o=(item&&item.owner)||'';
+  if(o==='개인')return ['car','personal'];           /* 개인 영수증 → 차계부·개인일지 */
+  if(o==='회사'||o==='부동산'||o==='업무')return ['worklog','project']; /* 업무 영수증 → 경비·프로젝트 */
+  return ['car','personal','project','worklog'];     /* 구분 미지정 → 전부 (안전) */
+}
+/* 원터치(자주 가는 주유소) 버튼 렌더 */
+function _sdRenderQuick(type,item){
+  var host=$('sendDestQuick');if(!host)return;host.innerHTML='';
+  if(type!=='receipt')return;
+  var mem=_sdFuelMemGet(item.place||'');if(!mem)return;
+  var b=document.createElement('button');
+  b.type='button';
+  b.style.cssText='width:100%;height:52px;margin-bottom:12px;border-radius:12px;border:2px solid #0e7490;background:#cffafe;color:#0e7490;font-size:14px;font-weight:800;cursor:pointer';
+  b.innerHTML='⚡ 원터치: '+esc(item.place||'')+' → '+esc(mem.car)+' '+esc(mem.kind)+' 바로 보내기';
+  b.addEventListener('click',async function(){
+    b.disabled=true;
+    var g=_sdGuessCar(item);
+    var liters=(g.unit>0&&Number(item.amount)>0)?Math.round((Number(item.amount)/g.unit)*100)/100:0;
+    var ok=await pushReceiptToCarLog(item,{car:mem.car,kind:mem.kind,odo:0,liters:liters});
+    b.disabled=false;
+    if(ok){_closeSendDest();if(typeof renderScanList==='function')renderScanList();}
+  });
+  host.appendChild(b);
+}
+function openSendDest(type,id){
+  if(id===undefined){id=type;type='receipt';}   /* 하위호환: 한 인자면 영수증 */
+  var item=_sdFindItem(type,id);
+  if(!item){toast('항목을 찾을 수 없어요');return;}
+  _sendDestState={type:type,rid:id,dest:null,projects:[]};
+  var titleTxt=(type==='text')?('📄 '+(item.title||'서류')):('🧾 '+(item.place||'영수증'));
+  var meta=(type==='text')?(esc(item.date||'')+(item.type?(' · '+esc(item.type)):'')):(numFmt(Number(item.amount)||0)+'원 · '+esc(item.date||today()));
+  $('sendDestSummary').innerHTML='<b>'+esc(titleTxt)+'</b> · '+meta+(item.owner?(' · <b>'+esc(item.owner)+'</b>'):' · <span style="color:#c2410c">구분 미지정 (전부 표시)</span>');
+  var allowed=_sdAllowedDests(type,item);
+  document.querySelectorAll('.sendDestBtn').forEach(function(b){
+    b.style.display=(allowed.indexOf(b.dataset.dest)>=0)?'':'none';
+    b.style.outline='';
+  });
+  _sdRenderQuick(type,item);
   var p=$('sendDestPanel');p.style.display='none';p.innerHTML='';
   $('sendDestConfirm').style.display='none';
-  document.querySelectorAll('.sendDestBtn').forEach(function(b){b.style.outline='';});
   $('sendDestOverlay').classList.add('show');
 }
 function _closeSendDest(){$('sendDestOverlay').classList.remove('show');}
 function _sdInput(label,inner){return '<label style="font-size:12px;font-weight:700;display:block">'+label+inner+'</label>';}
 function _sdSel(id,opts){return '<select id="'+id+'" style="width:100%;height:40px;margin-top:4px;border:1.5px solid var(--blue-bd);border-radius:8px;padding:0 8px;font-family:inherit">'+opts+'</select>';}
 function _sendDestPick(dest){
-  var r=receipts.find(function(x){return x.id===_sendDestState.rid;});
+  var r=_sdFindItem(_sendDestState.type,_sendDestState.rid);
   if(!r)return;
   _sendDestState.dest=dest;
   document.querySelectorAll('.sendDestBtn').forEach(function(b){b.style.outline=(b.dataset.dest===dest)?'3px solid rgba(0,0,0,.18)':'';});
@@ -4575,8 +4624,8 @@ function _sendDestPick(dest){
   $('sendDestConfirm').style.display='';
 }
 async function _sendDestConfirmDo(){
-  var r=receipts.find(function(x){return x.id===_sendDestState.rid;});
-  if(!r){toast('영수증을 찾을 수 없어요');return;}
+  var r=_sdFindItem(_sendDestState.type,_sendDestState.rid);
+  if(!r){toast('항목을 찾을 수 없어요');return;}
   var dest=_sendDestState.dest;
   if(!dest){toast('목적지를 먼저 선택하세요');return;}
   var btn=$('sendDestConfirm');btn.disabled=true;
@@ -4584,7 +4633,7 @@ async function _sendDestConfirmDo(){
   try{
     if(dest==='car') ok=await pushReceiptToCarLog(r,{car:($('sd_car')||{}).value,kind:($('sd_kind')||{}).value,odo:($('sd_odo')||{}).value,liters:($('sd_liters')||{}).value});
     else if(dest==='personal') ok=await pushReceiptToPersonalCat(r,{cat:($('sd_cat')||{}).value});
-    else if(dest==='project') ok=await pushReceiptToProject(r,{projectId:($('sd_proj')||{}).value});
+    else if(dest==='project') ok=await pushReceiptToProject(r,{projectId:($('sd_proj')||{}).value,type:_sendDestState.type});
     else if(dest==='worklog') ok=await pushReceiptToWorklog(r,{expType:($('sd_exptype')||{}).value,utype:($('sd_utype')||{}).value});
   }catch(err){console.error('[보내기]',err);toast('보내기 오류: '+(err.message||err));}
   finally{btn.disabled=false;}
@@ -4594,7 +4643,9 @@ async function _sendDestConfirmDo(){
 /* ── 배선 (중복 바인딩 방지) ── */
 if($('scanDetailSend')&&!$('scanDetailSend')._sdBound){$('scanDetailSend')._sdBound=true;
   $('scanDetailSend').addEventListener('click',function(){
-    if(_scanDetailCtx&&_scanDetailCtx.type==='receipt'){var id=_scanDetailCtx.id;closeScanDetail();openSendDest(id);}
+    if(_scanDetailCtx&&(_scanDetailCtx.type==='receipt'||_scanDetailCtx.type==='text')){
+      var t=_scanDetailCtx.type,id=_scanDetailCtx.id;closeScanDetail();openSendDest(t,id);
+    }
   });}
 if($('sendDestClose'))$('sendDestClose').onclick=_closeSendDest;
 if($('sendDestCancel'))$('sendDestCancel').onclick=_closeSendDest;
