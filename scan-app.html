@@ -1422,7 +1422,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260716-0908';
+const APP_VER='v20260716-0922';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -2432,6 +2432,11 @@ async function renderGallery(){
   gallery.querySelectorAll('.photo-card').forEach(card=>{
     card.onclick=e=>{
       if(e.target.closest('[data-pact]'))return;
+      if(_pickerMode){        /* 선택 모드면 상세보기 대신 부모창으로 보낸다 */
+        toast('📤 보내는 중…');
+        _pickerPayload('photo',card.dataset.pid).then(pl=>notifyParent('selected',pl));
+        return;
+      }
       openDetail(card.dataset.pid);
     };
   });
@@ -5438,7 +5443,8 @@ function renderGlobalSearch(q){
       const id=el.dataset.sid;
       // picker 모드면 부모창에 알림
       if(_pickerMode){
-        notifyParent('selected',{type,id,data:findItemById(type,id)});
+        toast('📤 보내는 중…');
+        _pickerPayload(type,id).then(pl=>notifyParent('selected',pl));
         return;
       }
       $('globalSearchOverlay').classList.remove('show');
@@ -5481,6 +5487,26 @@ document.addEventListener('keydown',e=>{
 let _pickerMode=false;        // ?mode=picker
 let _pickerType='';            // ?type=receipt|card|text|photo|all
 let _pickerLinkedTo='';        // ?linkedTo=worklog:xxx (선택 후 자동 태깅)
+
+/* 선택 모드 전송 꾸러미 — 메타만 보내면 받는 쪽이 Storage URL 을 fetch 해야 하고
+   그건 CORS 에 막힐 수 있다. 이미지 base64 를 같이 넣어 보낸다 */
+async function _pickerPayload(type,id){
+  const item=findItemById(type,id);
+  const out={type,id,data:item,images:[]};
+  if(!item) return out;
+  try{
+    if(type==='photo'){
+      for(const iid of (item.imgIds||[])){
+        const d=await loadPhotoSmart(iid,(item.imgUrls||{})[iid]);
+        if(d) out.images.push(d);
+      }
+    }else if(item.photoId||item.photoUrl){
+      const d=await loadPhotoSmart(item.photoId,item.photoUrl);
+      if(d) out.images.push(d);
+    }
+  }catch(e){ console.error('[picker] 이미지 로드 실패',e); }
+  return out;
+}
 
 function findItemById(type,id){
   if(type==='receipt')return receipts.find(x=>x.id===id);
@@ -5553,10 +5579,9 @@ window.ScanApp={
       if(_pickerType!=='all'){
         // 특정 탭으로 이동
         if(_pickerType==='receipt'||_pickerType==='card'||_pickerType==='text'){
-          selectSection('scan');
-          curScanType=_pickerType;
-          document.querySelectorAll('#scanSubTabs .tab').forEach(x=>x.classList.toggle('active',x.dataset.scan===curScanType));
-          renderScanList();
+          selectMode(_pickerType);
+        }else if(_pickerType==='photo'){
+          selectMode('normal');   /* 예전엔 photo 처리가 없어 홈에 머물렀다 */
         }
       }
       notifyParent('ready',{});
@@ -5590,7 +5615,8 @@ bindRowActions=function(container,type){
         if(_pickerLinkedTo&&item){
           window.ScanApp.linkItem(type,el.dataset.id,_pickerLinkedTo);
         }
-        notifyParent('selected',{type,id:el.dataset.id,data:item});
+        toast('📤 보내는 중…');
+        _pickerPayload(type,el.dataset.id).then(pl=>notifyParent('selected',pl));
       };
     });
   }
