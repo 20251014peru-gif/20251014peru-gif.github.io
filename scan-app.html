@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>📷 사진 스캐너 v20260717-0847</title>
+<title>📷 사진 스캐너 v20260717-0852</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -1468,7 +1468,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260717-084700';
+const APP_VER='v20260717-085200';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -4482,9 +4482,9 @@ async function pushReceiptToWorklog(r,opt){
       matName:it0.name||'',spec:'',unitPrice:Number(it0.price)||0,qty:Number(it0.qty)||1,
       deliveryFee:0,vendor:r.place||'',
       memo:'스캔앱 영수증'+(r.payMethod?(' / '+r.payMethod):''),createdAt:Date.now()};
-    var ref=_fbDb.collection('worklog_entries').doc();
-    await ref.set(payload);
-    _sdTag(r,'worklog:'+ref.id);
+    var eid='exp_scan_'+r.id;   /* 고정ID — 같은 영수증 재전송 시 덮어쓰기(중복 방지) */
+    await _fbDb.collection('worklog_entries').doc(eid).set(payload);
+    _sdTag(r,'worklog:'+eid);
     toast('💼 업무일지 경비('+expType+')로 보냈어요');
     return true;
   }catch(err){console.error('[업무경비]',err);toast('업무경비 보내기 실패: '+(err.message||err));return false;}
@@ -4527,7 +4527,9 @@ async function pushReceiptToProject(r,opt){
     };
     /* 스캔첨부 백참조가 열리도록 원본도 클라우드에 최신 저장 */
     if(_fbUser){var o=Object.assign({},r);delete o.photo;await fbCollection('receipts').doc(r.id).set(o);}
-    await _fbDb.collection('realestate_entries').add(entry);
+    /* 고정ID — 같은 영수증을 같은 프로젝트에 다시 보내면 덮어쓰기(중복 방지).
+       다른 프로젝트로 보내면 projectId가 달라 별도 기록으로 들어감 */
+    await _fbDb.collection('realestate_entries').doc('ent_scan_'+r.id+'_'+projectId).set(entry);
     _sdTag(r,'realestate:project_'+projectId);
     toast('📁 프로젝트 비용에 영수증을 추가했어요');
     return true;
