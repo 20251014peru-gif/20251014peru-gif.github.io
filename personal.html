@@ -1175,7 +1175,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260716-175601';
+const APP_VER='v20260716-180148';
 document.title='개인일지 '+APP_VER;
 addEventListener('DOMContentLoaded',()=>{
   const el=document.getElementById('appVerTag');
@@ -3677,9 +3677,62 @@ if(g('carTypeSel')){g('carTypeSel').addEventListener('change',renderCar);}
 })();
 
 /* ========== 파일 관리 ========== */
+const FILES_COL='personal_files';
 let files=[];
-function loadFiles(){try{files=JSON.parse(localStorage.getItem('pj_files')||'[]');}catch{files=[];}renderFiles();}
+let _filesUnsub=null;
+function loadFiles(){
+  /* 클라우드가 막혀 있으면 이 기기 사본이라도 보여준다 */
+  if(FB_FAIL || !db){
+    try{ files=JSON.parse(localStorage.getItem('pj_files')||'[]'); }catch(e){ files=[]; }
+    renderFiles();
+    return;
+  }
+  migrateLocalFiles();
+  if(_filesUnsub) _filesUnsub();
+  _filesUnsub=db.collection(FILES_COL).onSnapshot(snap=>{
+    files=snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    saveFiles();          /* 이 기기 사본도 갱신 — 클라우드가 끊겨도 보이게 */
+    renderFiles();
+  },err=>{
+    dbg('FILES ERR:'+err.message);
+    try{ files=JSON.parse(localStorage.getItem('pj_files')||'[]'); }catch(e){ files=[]; }
+    renderFiles();
+  });
+}
+/* localStorage 는 이제 '이 기기용 사본'일 뿐이다.
+   진짜 목록은 파이어스토어에 있어 폰·컴 어디서나 같이 보인다. */
 function saveFiles(){try{localStorage.setItem('pj_files',JSON.stringify(files));}catch{}}
+
+function fileUpsert(rec){
+  if(!rec||!rec.id||!db) return;
+  const {id,...data}=rec;
+  db.collection(FILES_COL).doc(id).set(data,{merge:true})
+    .catch(e=>{dbg('FILE SAVE ERR:'+e.message);toast('클라우드 저장 실패 — 이 기기엔 남았어요');});
+}
+function fileRemove(id){
+  if(!id||!db) return;
+  db.collection(FILES_COL).doc(id).delete().catch(e=>dbg('FILE DEL ERR:'+e.message));
+}
+
+/* 이 기기에만 있던 옛 목록을 한 번 클라우드로 올린다 */
+async function migrateLocalFiles(){
+  let local=[];
+  try{ local=JSON.parse(localStorage.getItem('pj_files')||'[]'); }catch(e){ return; }
+  if(!local.length || !db) return;
+  try{
+    const snap=await db.collection(FILES_COL).get();
+    const have=new Set(snap.docs.map(d=>d.id));
+    let n=0;
+    for(const f of local){
+      if(!f||!f.id||have.has(f.id)) continue;
+      const {id,...data}=f;
+      await db.collection(FILES_COL).doc(id).set(data,{merge:true});
+      n++;
+    }
+    if(n) dbg('파일 '+n+'건을 클라우드로 옮김');
+  }catch(e){ dbg('FILE MIGRATE ERR:'+e.message); }
+}
 function renderFiles(){
   const el=g('fileList');const cnt=g('fileCount');if(!el) return;
   const q=(g('globalSearch').value||'').trim().toLowerCase();
@@ -3813,12 +3866,19 @@ g('fileSave').addEventListener('click',async()=>{
     up=await uploadPersonalFile(picked, g('fileLockChk')&&g('fileLockChk').checked);
     if(!up) return;            /* 실패하면 저장하지 않는다 — 빈 껍데기가 남으면 안 된다 */
   }
+  let rec;
   if(fileEditId){
     const i=files.findIndex(f=>f.id===fileEditId);
-    if(i>=0) files[i]={...files[i],name,path,cat,fileType,memo,...(up||{})};
+    if(i<0){toast('원본을 찾을 수 없어요');return;}
+    rec={...files[i],name,path,cat,fileType,memo,...(up||{})};
+    files[i]=rec;
   } else {
-    files.push({id:'f_'+Date.now(),name,path,cat,fileType,memo,createdAt:Date.now()});
+    /* ⚠️ 예전엔 여기에 ...up 이 없어서, 새로 올린 파일의 주소가 통째로 사라졌다 */
+    rec={id:'f_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+         name,path,cat,fileType,memo,createdAt:Date.now(),...(up||{})};
+    files.push(rec);
   }
+  fileUpsert(rec);                 /* 파이어스토어에 → 다른 기기에서도 보인다 */
   saveFiles();renderFiles();closeFileModal();toast('저장됐어요');
 });
 }
@@ -3828,6 +3888,7 @@ g('fileDelete').addEventListener('click',()=>{
   /* 올린 파일이면 Storage 에서도 지운다 — 안 그러면 쓰레기가 쌓인다 */
   const _f=files.find(f=>f.id===fileEditId);
   if(_f&&_f.upId) deleteStorageFile(_f);
+  fileRemove(fileEditId);
   files=files.filter(f=>f.id!==fileEditId);
   saveFiles();renderFiles();closeFileModal();toast('삭제됐어요');
 });
@@ -4029,7 +4090,11 @@ g('restoreInput').addEventListener('change',e=>{
     try{
       const d=JSON.parse(ev.target.result);
       if(!confirm('복구하면 Firebase 데이터는 유지되고, 로컬(파일·비번)은 덮어씁니다. 계속할까요?')) return;
-      if(d.files){files=d.files;saveFiles();}
+      if(d.files){
+        files=d.files; saveFiles();
+        /* 복원한 목록도 클라우드로 — 안 그러면 이 기기에만 남는다 */
+        files.forEach(f=>fileUpsert(f));
+      }
       if(d.passwords){passwords=d.passwords;savePasswords();}
       toast('복구 완료!');renderFiles();renderPasswords();
     }catch(err){toast('JSON 파싱 오류: '+err.message);}
