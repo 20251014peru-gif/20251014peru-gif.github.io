@@ -693,6 +693,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
         border:2px solid rgba(255,255,255,.3);border-radius:12px;background:rgba(255,255,255,.12);
         color:#fff;font-family:inherit;outline:none;-webkit-text-security:disc;text-security:disc">
     <div id="fileGateMsg" style="font-size:12px;min-height:16px;margin-top:8px;color:#ff8888"></div>
+    <div id="fileGateVer" style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">…</div>
     <button id="fileGateBtn" style="margin-top:8px;padding:10px 26px;border-radius:10px;border:none;
       background:#fff;color:#1a2f45;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">열기</button>
   </div>
@@ -1220,15 +1221,19 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260716-181804';
+const APP_VER='v20260716-182140';
 document.title='개인일지 '+APP_VER;
-addEventListener('DOMContentLoaded',()=>{
-  const el=document.getElementById('verBadge');
-  if(el) el.textContent=APP_VER;
-  /* 잠금화면에도 — 앱을 열자마자 버전이 보여야 새 파일인지 안다 */
-  const lv=document.getElementById('lockVerTag');
-  if(lv) lv.textContent=APP_VER;
-});
+/* 버전을 뿌린다 — 헤더 + PIN 넣는 곳마다.
+   잠금화면은 앱이 뜨자마자 보이는 곳이라 DOMContentLoaded 를 기다리면 늦을 수 있다.
+   → 지금 한 번, 나중에 한 번. */
+function _paintVer(){
+  ['verBadge','lockVerTag','fileGateVer'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=APP_VER;
+  });
+}
+_paintVer();
+addEventListener('DOMContentLoaded',_paintVer);
 
 /* ══════════════════════════════════════════════
    🔒 파일 잠금 — 진짜 암호화
