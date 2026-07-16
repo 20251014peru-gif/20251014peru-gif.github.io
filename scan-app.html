@@ -1420,7 +1420,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260716-1015';
+const APP_VER='v20260716-1023';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -3191,7 +3191,7 @@ bindEditZoom();
 
 // CHUNK_6 - 크롭 모달 (영수증/명함/텍스트용)
 let _crop={img:null,canvas:null,ctx:null,scale:1,points:[],dragIdx:-1,
-  dragStart:null,edgeStartPts:null,HANDLE_R:14,callback:null,originalDataUrl:''};
+  dragStart:null,edgeStartPts:null,HANDLE_R:18,callback:null,originalDataUrl:''};
 
 function openCropModal(dataUrl,callback,title,presetCorners){
   _crop.callback=callback;_crop.originalDataUrl=dataUrl;
@@ -3249,7 +3249,9 @@ function drawCrop(){
     const mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;
     const dx=p2.x-p1.x,dy=p2.y-p1.y;
     if(Math.hypot(dx,dy)<1)continue;
-    const barLen=28,barW=10;
+    /* 변 길이에 비례해 길게 — 짧은 막대는 어디를 잡아야 할지 모호하다 */
+    const edgeLen=Math.hypot(dx,dy);
+    const barLen=Math.max(34, Math.min(edgeLen*0.42, 90)), barW=14;
     ctx.save();ctx.translate(mx,my);ctx.rotate(Math.atan2(dy,dx));
     ctx.fillStyle='#fff';ctx.strokeStyle='#27ae60';ctx.lineWidth=2.5;
     const r=barW/2;
@@ -3284,20 +3286,37 @@ function bindCropEvents(){
   function start(e){
     e.preventDefault();
     const pos=getCropPos(e);_crop.dragIdx=-1;_crop.dragStart=pos;
+
+    /* 손가락 굵기를 감안한 여유. 캔버스가 화면보다 크면(축소 표시) 그만큼 넓힌다 */
+    const rect=_crop.canvas.getBoundingClientRect();
+    const k=rect.width ? (_crop.canvas.width/rect.width) : 1;
+    const GRAB_CORNER=Math.max(34, 26*k);   /* 모서리 */
+    const GRAB_EDGE  =Math.max(26, 20*k);   /* 변에서 수직으로 이만큼 */
+
+    /* 모서리 먼저 — 모서리와 변이 겹치면 모서리가 이긴다 */
     for(let i=0;i<4;i++){
       const p=_crop.points[i];
-      const dx=p.x-pos.x,dy=p.y-pos.y;
-      if(Math.sqrt(dx*dx+dy*dy)<_crop.HANDLE_R+14){_crop.dragIdx=i;return;}
+      if(Math.hypot(p.x-pos.x, p.y-pos.y) < GRAB_CORNER){ _crop.dragIdx=i; return; }
     }
+
+    /* 변 — 한가운데만 잡히던 걸 '변 위 어디든' 으로.
+       점과 선분 사이 거리로 판정한다 */
+    let best=-1, bestD=GRAB_EDGE;
     for(let i=0;i<4;i++){
-      const p1=_crop.points[i],p2=_crop.points[(i+1)%4];
-      const mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;
-      const dx=mx-pos.x,dy=my-pos.y;
-      if(Math.sqrt(dx*dx+dy*dy)<22){
-        _crop.dragIdx=10+i;
-        _crop.edgeStartPts={p1:{x:p1.x,y:p1.y},p2:{x:p2.x,y:p2.y}};
-        return;
-      }
+      const p1=_crop.points[i], p2=_crop.points[(i+1)%4];
+      const vx=p2.x-p1.x, vy=p2.y-p1.y;
+      const len2=vx*vx+vy*vy;
+      if(len2<1) continue;
+      let t=((pos.x-p1.x)*vx + (pos.y-p1.y)*vy)/len2;
+      t=Math.max(0,Math.min(1,t));                 /* 선분 밖이면 끝점으로 */
+      const d=Math.hypot(pos.x-(p1.x+vx*t), pos.y-(p1.y+vy*t));
+      if(d<bestD){ bestD=d; best=i; }
+    }
+    if(best>=0){
+      const p1=_crop.points[best], p2=_crop.points[(best+1)%4];
+      _crop.dragIdx=10+best;
+      _crop.edgeStartPts={p1:{x:p1.x,y:p1.y},p2:{x:p2.x,y:p2.y}};
+      return;
     }
   }
   function move(e){
