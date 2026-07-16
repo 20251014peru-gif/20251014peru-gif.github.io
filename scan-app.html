@@ -1420,7 +1420,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260716-1321';
+const APP_VER='v20260716-141453';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -1617,6 +1617,76 @@ function saveDocCats(){
 }
 function catsUpdatedAt(){ return parseInt(localStorage.getItem(LS_CATS_UPD)||'0',10)||0; }
 function saveReceipts(){if(_safeLSSet(LS_RECEIPTS, receipts)){syncPush('receipts');return true;}return false;}
+/* ════════════════════════════════════════════════════════
+   📇 업체 연락처(contacts) 연동 — scan-app 이 메인이다.
+   업무용 명함을 저장하면 연락처에도 반영한다.
+
+   ⚠️ name 의 뜻이 두 앱에서 정반대다:
+        scan-app.name = 사람 이름
+        contacts.name = 업체/상호명   ← worklog 가 업체 목록으로 읽는다. 못 바꾼다.
+      그래서 company ↔ name 을 꼬아서 옮긴다.
+   ════════════════════════════════════════════════════════ */
+const CONTACTS_COL='contacts';
+
+function cardToContact(c){
+  const 업체=(c.company||'').trim();
+  const 사람=(c.name||'').trim();
+  return {
+    /* 업체명이 없으면 사람 이름이라도 넣는다 — 빈 이름은 연락처가 거부한다 */
+    name:    업체 || 사람 || '(이름없음)',
+    person:  사람,
+    title:   [c.position||'', c.dept||''].filter(Boolean).join(' / '),
+    phone:   (c.mobile||'').trim() || (c.phone||'').trim(),
+    email:   (c.email||'').trim(),
+    address: (c.addr||'').trim(),
+    memo:    c.memo||'',
+    cat:     c.cat||'기타',
+    photoUrl:c.photoUrl||'',
+    scanId:  c.id||'',            /* 원본을 가리킨다 — 다시 저장해도 사본이 안 생긴다 */
+    /* 연락처엔 없던 칸들 — 잃지 않게 같이 싣는다 */
+    dept:    c.dept||'',
+    mobile:  (c.mobile||'').trim(),
+    tel:     (c.phone||'').trim(),
+    fax:     (c.fax||'').trim(),
+    vendorType:'등록업체',
+    updatedAt:Date.now()
+  };
+}
+
+/* 업무용 명함 → 연락처. scanId 로 이미 있는 걸 찾아 덮어쓴다.
+   (파킹에서 겪은 것과 같은 실수 — 새로 만들면 고칠 때마다 사본이 쌓인다) */
+async function pushCardToContacts(c){
+  if(!_fbDb) return '';
+  if((c.owner||'업무')!=='업무') return '';   /* 개인 명함은 업체 목록을 더럽힌다 */
+  if(c.deletedAt) return '';
+  try{
+    const col=_fbDb.collection(CONTACTS_COL);
+    const payload=cardToContact(c);
+    let id=c.contactId||'';
+    if(!id){
+      const q=await col.where('scanId','==',c.id).limit(1).get();
+      if(!q.empty) id=q.docs[0].id;
+    }
+    if(id){
+      await col.doc(id).set(payload,{merge:true});   /* 연락처에서 손댄 칸은 안 지운다 */
+    }else{
+      payload.createdAt=Date.now();
+      payload.fav=false;
+      const ref=await col.add(payload);
+      id=ref.id;
+    }
+    /* 되짚어 기억해둔다 — 다음 저장 때 찾는 수고를 던다 */
+    if(c.contactId!==id){
+      c.contactId=id; c.updated=Date.now();
+      _safeLSSet(LS_CARDS,cards);
+    }
+    return id;
+  }catch(e){
+    console.error('[contacts] 전송 실패',e);
+    return '';
+  }
+}
+
 function saveCards(){if(_safeLSSet(LS_CARDS, cards)){syncPush('cards');return true;}return false;}
 function saveTexts(){if(_safeLSSet(LS_TEXTS, texts)){syncPush('texts');return true;}return false;}
 
@@ -4837,6 +4907,12 @@ $('cardSave').onclick=async()=>{
   }else cards.unshift(data);
   if(!saveCards())return;
   closeCardModal();renderScanList();toast('✅ 저장됐어요');
+  /* 업무용이면 연락처에도 — 저장을 막지 않게 뒤에서 돌린다 */
+  if((data.owner||'업무')==='업무'){
+    pushCardToContacts(data).then(id=>{
+      if(id) toast('📇 업체 연락처에도 저장됐어요');
+    });
+  }
   }finally{
     _cSaveBtn.disabled=false;_cSaveBtn.textContent='💾 저장';
     if(_cProg)_cProg.classList.remove('show');
