@@ -866,6 +866,9 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       <!-- 카드 뷰 (모바일) -->
       <div id="rCardArea"></div>
     </div>
+    <div id="cardToolbar" style="display:none;margin-bottom:10px">
+      <button class="btn btn-green" id="cardExportBtn" style="width:100%">📇 연락처로 내보내기</button>
+    </div>
     <div id="cardList" style="display:none"></div>
     <div id="textList" style="display:none"></div>
     <div id="scanEmpty" class="empty" style="display:none">
@@ -1016,6 +1019,29 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       <button class="btn btn-ghost btn-flex" id="receiptCancel">취소</button>
       <button class="btn btn-red" id="receiptDelete" style="display:none">🗑 삭제</button>
       <button class="btn btn-blue btn-flex" id="receiptSave">💾 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📇 연락처로 내보내기 -->
+<div class="overlay" id="vcardOverlay">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <div class="modal-title">📇 연락처로 내보내기</div>
+      <button class="hbtn" id="vcardClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn" id="vcardAll" style="flex:1">전체 선택</button>
+        <button class="btn" id="vcardNone" style="flex:1">전체 해제</button>
+      </div>
+      <div id="vcardPickList" style="max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:10px"></div>
+      <div style="font-size:12px;color:var(--ink-soft);margin-top:8px;line-height:1.5">
+        파일을 열면 폰이 <b>연락처에 추가</b>를 띄웁니다. 사진은 넣지 않고 정보만 들어갑니다.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-green" id="vcardGo" style="width:100%">📇 <span id="vcardGoN">0</span>건 내보내기</button>
     </div>
   </div>
 </div>
@@ -1420,7 +1446,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260716-1023';
+const APP_VER='v20260716-1314';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -3549,16 +3575,19 @@ function renderScanList(){
     $('receiptList').style.display='';
     $('cardList').style.display='none';
     $('textList').style.display='none';
+    $('cardToolbar').style.display='none';
   }else if(curScanType==='card'){
     renderCardList(q);
     $('receiptList').style.display='none';
     $('cardList').style.display='';
     $('textList').style.display='none';
+    $('cardToolbar').style.display='';
   }else{
     renderTextList(q);
     $('receiptList').style.display='none';
     $('cardList').style.display='none';
     $('textList').style.display='';
+    $('cardToolbar').style.display='none';
   }
 }
 
@@ -3899,13 +3928,18 @@ function _refreshReceiptBody(){
   bindRowActions(cardArea,'receipt');
 }
 
-function renderCardList(q){
-  const list=cards.filter(c=>{
+/* 목록과 내보내기가 같은 조건을 봐야 한다 — 한 곳에 둔다 */
+function filteredCards(q){
+  return cards.filter(c=>{
     if(c.deletedAt)return false;
     if(!q)return true;
     return [c.company,c.name,c.position,c.phone,c.mobile,c.fax,c.email,c.addr,c.memo,c.owner,c.cat]
       .some(v=>(v||'').toLowerCase().includes(q));
   });
+}
+
+function renderCardList(q){
+  const list=filteredCards(q);
   if(!list.length){$('cardList').innerHTML='';$('scanEmpty').style.display='';return;}
   $('scanEmpty').style.display='none';
   const tableHtml=`<div class="scan-table"><table>
@@ -4238,37 +4272,149 @@ if($('scanDetailDel'))$('scanDetailDel').onclick=async()=>{
 };
 
 // 📥 vCard 다운로드
-$('scanDetailVcard').onclick=()=>{
+$('scanDetailVcard').onclick=async()=>{
   if(!_scanDetailCtx||_scanDetailCtx.type!=='card')return;
   const c=cards.find(x=>x.id===_scanDetailCtx.id);
   if(!c)return;
-  const vcard=buildVCard(c);
-  const blob=new Blob([vcard],{type:'text/vcard;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`${(c.name||'card').replace(/[\\/:*?"<>|]/g,'')}.vcf`;
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('📥 vCard 다운로드됨');
+  await exportVCards([c], vcFileName([c]));
 };
+/* vCard 3.0(RFC 2426) — 값 안의  \  ;  ,  는 반드시 이스케이프.
+   안 하면 "기획팀; 전략파트" 같은 부서명이 그 자리에서 잘려
+   연락처에 엉뚱하게 들어간다. 줄바꿈은 \n 으로. */
+/* .vcf 를 폰 연락처로 넘긴다.
+   예전엔 a.click()+blob 이었는데 아이폰 사파리는 blob 의 download 를 무시한다.
+   게다가 revokeObjectURL 을 클릭 직후 바로 불러서 다운로드가 시작되기도 전에
+   주소를 없앴다 → 폰에서 아무 일도 안 일어났다.
+   지금은 Web Share 로 넘기고(연락처에 추가가 바로 뜬다), 안 되면 다운로드로 후퇴한다. */
+async function exportVCards(list, fname){
+  if(!list||!list.length){toast('내보낼 명함이 없습니다');return false;}
+  /* 마지막도 CRLF 로 끝내야 한다 — 안 그러면 마지막 카드를 흘리는 연락처 앱이 있다 */
+  const text=list.map(buildVCard).join('\r\n')+'\r\n';
+  const type='text/vcard;charset=utf-8';
+  try{
+    if(navigator.share && navigator.canShare){
+      const file=new File([text],fname,{type});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:fname});
+        toast(`📇 ${list.length}건 전달됨 — '연락처에 추가'를 누르세요`);
+        return true;
+      }
+    }
+  }catch(e){
+    if(e.name==='AbortError')return false;   /* 사용자가 취소 — 조용히 */
+    /* 공유가 막히면 아래 다운로드로 계속 진행 */
+  }
+  try{
+    const blob=new Blob([text],{type});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=fname;
+    document.body.appendChild(a);      /* 붙여야 동작하는 브라우저가 있다 */
+    a.click();
+    a.remove();
+    /* 바로 revoke 하면 다운로드가 시작 전에 끊긴다 — 넉넉히 뒤에 정리 */
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+    toast(`📥 ${list.length}건 다운로드됨 — 파일을 열면 연락처에 추가됩니다`);
+    return true;
+  }catch(e){
+    toast('내보내기 실패: '+e.message);
+    return false;
+  }
+}
+/* ── 여러 장 골라 한꺼번에 ── */
+let _vcPick=new Set();
+
+function openVCardPicker(){
+  const list=filteredCards(window._lastQ||'');
+  if(!list.length){toast('내보낼 명함이 없습니다');return;}
+  _vcPick=new Set(list.map(c=>c.id));      /* 기본 전체 선택 */
+  renderVCardPicker(list);
+  $('vcardOverlay').classList.add('show');
+}
+function renderVCardPicker(list){
+  $('vcardPickList').innerHTML=list.map(c=>{
+    const sub=[c.company,c.dept,c.position].filter(Boolean).join(' · ');
+    const tel=c.mobile||c.phone||'';
+    return `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+        border-bottom:.5px solid var(--line);cursor:pointer">
+      <input type="checkbox" class="vc-pick" data-id="${esc(c.id)}"
+        ${_vcPick.has(c.id)?'checked':''} style="width:18px;height:18px;flex:none">
+      <span style="min-width:0;flex:1">
+        <span style="font-weight:700;font-size:14px">${esc(c.name||'(이름없음)')}</span>
+        ${sub?`<span style="display:block;font-size:12px;color:var(--ink-soft)">${esc(sub)}</span>`:''}
+        ${tel?`<span style="display:block;font-size:12px;color:var(--ink-soft)">${esc(tel)}</span>`:''}
+      </span>
+    </label>`;
+  }).join('');
+  $('vcardPickList').querySelectorAll('.vc-pick').forEach(cb=>{
+    cb.onchange=()=>{ cb.checked?_vcPick.add(cb.dataset.id):_vcPick.delete(cb.dataset.id); updateVCardN(); };
+  });
+  updateVCardN();
+}
+function updateVCardN(){
+  $('vcardGoN').textContent=_vcPick.size;
+  $('vcardGo').disabled=_vcPick.size===0;
+}
+$('cardExportBtn').onclick=openVCardPicker;
+$('vcardClose').onclick=()=>$('vcardOverlay').classList.remove('show');
+$('vcardOverlay').onclick=e=>{ if(e.target===$('vcardOverlay'))$('vcardOverlay').classList.remove('show'); };
+$('vcardAll').onclick=()=>{
+  const list=filteredCards(window._lastQ||'');
+  _vcPick=new Set(list.map(c=>c.id));
+  renderVCardPicker(list);
+};
+$('vcardNone').onclick=()=>{
+  _vcPick.clear();
+  renderVCardPicker(filteredCards(window._lastQ||''));
+};
+$('vcardGo').onclick=async()=>{
+  /* 화면에 보이던 순서 그대로 내보낸다 */
+  const list=filteredCards(window._lastQ||'').filter(c=>_vcPick.has(c.id));
+  if(!list.length)return;
+  const ok=await exportVCards(list, vcFileName(list));
+  if(ok)$('vcardOverlay').classList.remove('show');
+};
+
+function vcFileName(list){
+  if(list.length===1){
+    const c=list[0];
+    return String(c.name||c.company||'card').replace(/[/\\:*?"<>|]/g,'_')+'.vcf';
+  }
+  return `명함_${list.length}건.vcf`;
+}
+
+function vcEsc(v){
+  return String(v==null?'':v)
+    .replace(/\\/g,'\\\\')
+    .replace(/;/g,'\\;')
+    .replace(/,/g,'\\,')
+    .replace(/\r\n|\r|\n/g,'\\n');
+}
 function buildVCard(c){
   const lines=['BEGIN:VCARD','VERSION:3.0'];
-  if(c.name)lines.push(`FN:${c.name}`);
-  if(c.name)lines.push(`N:${c.name};;;;`);
+  const name=c.name||c.company||'(이름없음)';
+  lines.push(`FN:${vcEsc(name)}`);
+  /* N: 성;이름;;; — 한국 이름은 통째로 성 자리에 넣는다 (구분자 ; 는 살려둔다) */
+  lines.push(`N:${vcEsc(name)};;;;`);
   if(c.company||c.dept){
-    const org=[c.company||''];
-    if(c.dept)org.push(c.dept);
+    /* ORG 는 ; 가 회사/부서 구분자다. 값 자체의 ; 는 vcEsc 가 막아준다 */
+    const org=[vcEsc(c.company||'')];
+    if(c.dept)org.push(vcEsc(c.dept));
     lines.push(`ORG:${org.join(';')}`);
   }
-  if(c.position)lines.push(`TITLE:${c.position}`);
-  if(c.mobile)lines.push(`TEL;TYPE=CELL:${c.mobile}`);
-  if(c.phone)lines.push(`TEL;TYPE=WORK,VOICE:${c.phone}`);
-  if(c.fax)lines.push(`TEL;TYPE=WORK,FAX:${c.fax}`);
-  if(c.email)lines.push(`EMAIL;TYPE=WORK:${c.email}`);
-  if(c.website)lines.push(`URL:${c.website}`);
-  if(c.addr)lines.push(`ADR;TYPE=WORK:;;${c.addr};;;;`);
-  if(c.memo)lines.push(`NOTE:${c.memo.replace(/\n/g,'\\n')}`);
+  if(c.position)lines.push(`TITLE:${vcEsc(c.position)}`);
+  if(c.mobile)lines.push(`TEL;TYPE=CELL:${vcEsc(c.mobile)}`);
+  if(c.phone)lines.push(`TEL;TYPE=WORK,VOICE:${vcEsc(c.phone)}`);
+  if(c.fax)lines.push(`TEL;TYPE=WORK,FAX:${vcEsc(c.fax)}`);
+  if(c.email)lines.push(`EMAIL;TYPE=WORK:${vcEsc(c.email)}`);
+  if(c.website)lines.push(`URL:${vcEsc(c.website)}`);
+  /* ADR 은 ;;거리;;;; 구조 — 구분자 ; 는 살리고 값만 이스케이프 */
+  if(c.addr)lines.push(`ADR;TYPE=WORK:;;${vcEsc(c.addr)};;;;`);
+  const notes=[];
+  if(c.cat)notes.push('카테고리: '+c.cat);
+  if(c.owner)notes.push('구분: '+c.owner);
+  if(c.memo)notes.push(c.memo);
+  if(notes.length)lines.push(`NOTE:${vcEsc(notes.join('\n'))}`);
   lines.push('END:VCARD');
   return lines.join('\r\n');
 }
