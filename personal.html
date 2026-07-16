@@ -499,6 +499,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
   <button class="v43-tab" data-tab="file">📁 파일</button>
   <button class="v43-tab" data-tab="password">🔐 비번</button>
   <button class="v43-tab" data-tab="ai">🤖 AI</button>
+  <button class="v43-tab" data-tab="trash">🗑 휴지통 <span id="trashCntBadge" style="font-size:10px;opacity:.75"></span></button>
   <button class="v43-tab" data-tab="diag">🔧 진단</button>
 </div>
 
@@ -531,14 +532,17 @@ main.wrap{padding-bottom:100px;padding-top:12px}
       <span class="mfc-icon">📎</span><span class="mfc-label">기타</span><span class="mfc-count" id="mfc-count-other"></span>
     </button>
   </div>
+  <!-- ➕ 기록 추가 — 오른쪽 FAB 을 없앤 자리.
+       ⚠️ date-filter-row 안에 넣었더니 flex-wrap:nowrap 이라
+          폰에서 화면 밖으로 밀려나 안 보였다 (그 줄만 이미 406px). 자기 줄을 준다. -->
+  <button class="btn btn-primary" id="mainAddBtn"
+    style="width:100%;height:46px;margin-bottom:10px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">➕ 기록 추가</button>
   <div class="date-filter-row">
     <input type="date" id="mainFrom">
     <span class="date-sep">~</span>
     <input type="date" id="mainTo">
     <button class="filter-clear-btn" id="mainDateClear">기간 해제</button>
     <span class="list-count" id="mainCount"></span>
-    <!-- 오른쪽 FAB 을 없앤 자리 — 다른 탭(차계부·연락처·파일)과 같은 모양 -->
-    <button class="btn btn-primary" id="mainAddBtn" style="margin-left:auto;padding:8px 16px;font-size:14px;white-space:nowrap">➕ 추가</button>
   </div>
   <div class="v43-list" id="mainList">
     <div class="v43-empty"><div class="ei">📋</div>데이터 불러오는 중…</div>
@@ -729,6 +733,13 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 </div>
 
 <!-- ===== 진단 탭 ===== */
+<div class="v43-panel" id="panel-trash">
+  <div style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:12px;padding:10px 12px;background:var(--blue-lt);border-radius:10px">
+    지운 기록·메모·차계부가 <b>30일 동안</b> 여기 남습니다. 그 안엔 되돌릴 수 있고, 지나면 저절로 사라집니다.
+  </div>
+  <div id="trashList"></div>
+</div>
+
 <div class="v43-panel" id="panel-diag">
   <div style="margin-top:14px">
     <div class="diag-card">
@@ -880,6 +891,21 @@ main.wrap{padding-bottom:100px;padding-top:12px}
       </select>
     </div>
     <div class="field"><label>이름 *</label><input type="text" id="fileNameInp" placeholder="예: 투자 포트폴리오"></div>
+    <!-- 📤 진짜 파일 올리기 — 아래 '경로'는 컴에 있는 파일을 가리키는 옛 방식이고,
+         이건 파일 자체를 클라우드에 올려 폰에서도 열 수 있게 한다. -->
+    <div class="field" style="background:var(--blue-lt);border-radius:10px;padding:10px 12px">
+      <label style="font-weight:700;color:var(--blue)">📤 파일 올리기 (PDF·엑셀 등)</label>
+      <input type="file" id="fileUpInp" style="width:100%;font-size:13px;margin-top:6px">
+      <label style="display:flex;align-items:center;gap:7px;margin-top:8px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="fileLockChk" style="width:17px;height:17px;accent-color:var(--blue)">
+        <span>🔒 잠그기 — 앞잠금 PIN 으로 암호화합니다</span>
+      </label>
+      <div style="font-size:11px;color:var(--ink-faint);line-height:1.55;margin-top:5px">
+        잠그면 파일 자체가 뒤섞여 올라갑니다. 주소가 새어나가도 못 엽니다.<br>
+        <b style="color:#c0392b">PIN 을 잊으면 그 파일은 영영 못 엽니다 — 복구 방법이 없습니다.</b>
+      </div>
+      <div id="fileUpState" style="font-size:12px;font-weight:700;margin-top:7px;min-height:16px"></div>
+    </div>
     <div class="field"><label>경로 *</label><input type="text" id="filePathInp" placeholder="예: C:\Users\달님\투자\portfolio.xlsx"></div>
     <div class="field">
       <label>종류</label>
@@ -1088,6 +1114,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
 /* ==================== 🚨 화면 에러 표시기 (모든 앱 기본 탑재) ==================== */
 (function setupErrorDisplay(){
@@ -1148,12 +1175,59 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260716-164650';
+const APP_VER='v20260716-175601';
 document.title='개인일지 '+APP_VER;
 addEventListener('DOMContentLoaded',()=>{
   const el=document.getElementById('appVerTag');
   if(el) el.textContent=APP_VER;
 });
+
+/* ══════════════════════════════════════════════
+   🔒 파일 잠금 — 진짜 암호화
+   Storage 의 파일 주소는 누구나 열 수 있는 공개 주소다.
+   화면에서 비번을 물어봐야 버튼만 가릴 뿐, 주소를 아는 사람은 그냥 연다.
+   → 올리기 전에 파일 자체를 뒤섞는다. 주소가 새어나가도 못 연다.
+   AES-GCM 256 + PBKDF2(20만회). 파일마다 salt·iv 를 새로 만든다.
+   ⚠️ 비번(PIN)을 잊으면 복구 방법이 없다. 그게 진짜 잠금의 대가다.
+   ══════════════════════════════════════════════ */
+const PJ_ENC_MAGIC='PJENC1';
+const PJ_ITER=200000;
+async function _deriveKey(pin,salt){
+  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(String(pin)),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:PJ_ITER,hash:'SHA-256'},
+    base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+/* [ 'PJENC1'(6) | salt(16) | iv(12) | 암호문 ] */
+async function pjEncrypt(buf,pin){
+  if(!pin) throw new Error('비번이 없습니다');
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await _deriveKey(pin,salt);
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,buf);
+  const magic=new TextEncoder().encode(PJ_ENC_MAGIC);
+  const out=new Uint8Array(magic.length+16+12+ct.byteLength);
+  out.set(magic,0); out.set(salt,magic.length); out.set(iv,magic.length+16);
+  out.set(new Uint8Array(ct),magic.length+16+12);
+  return out.buffer;
+}
+function pjIsEncrypted(buf){
+  if(!buf||buf.byteLength<6) return false;
+  return new TextDecoder().decode(new Uint8Array(buf,0,6))===PJ_ENC_MAGIC;
+}
+async function pjDecrypt(buf,pin){
+  if(!pjIsEncrypted(buf)) throw new Error('잠긴 파일이 아닙니다');
+  const m=PJ_ENC_MAGIC.length;
+  if(buf.byteLength<m+16+12+16) throw new Error('파일이 깨졌습니다');
+  const salt=new Uint8Array(buf,m,16), iv=new Uint8Array(buf,m+16,12), ct=buf.slice(m+16+12);
+  const key=await _deriveKey(pin,salt);
+  try{ return await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct); }
+  catch(e){
+    /* AES-GCM 은 비번이 틀리거나 파일이 손상되면 여기서 걸린다.
+       조용히 쓰레기를 주지 않는다 — 그게 이 방식의 핵심이다. */
+    throw new Error('비번이 틀렸거나 파일이 손상됐습니다');
+  }
+}
+function pjPin(){ try{ return localStorage.getItem('shared_pin')||'102800'; }catch(e){ return '102800'; } }
 
 /* ==================== 전역 초기화 ==================== */
 const FB_CONFIG = {
@@ -1162,7 +1236,7 @@ const FB_CONFIG = {
   projectId:"my-system-25497",
   storageBucket:"my-system-25497.firebasestorage.app"
 };
-let db;
+let db, st;   /* st = 파이어베이스 Storage — 진짜 파일이 여기 올라간다 */
 let FB_FAIL = '';   /* 초기화가 왜 실패했는지 — 화면에 알린다 */
 try {
   if(typeof firebase === 'undefined') throw new Error('Firebase 스크립트를 못 불러왔습니다 (인터넷·차단기 확인)');
@@ -1170,6 +1244,7 @@ try {
   /* 이미 만들어져 있으면 그걸 쓴다 — 두 번 만들면 터진다 */
   if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(FB_CONFIG);
   db = firebase.firestore();
+  try{ st = firebase.storage(); }catch(e){ console.warn('Storage 비활성:',e.message); }
 } catch(e) {
   FB_FAIL = (e && e.message) ? e.message : String(e);
   console.warn('Firebase 로드 실패:', FB_FAIL);
@@ -1196,6 +1271,7 @@ try {
 const COL = 'personal_entries';
 
 let entries = [];
+let allEntries = [];   /* 지운 것 포함 — 휴지통이 본다 */
 let editingId = null;
 let currentKind = null;
 let recPhotos = [];
@@ -1349,9 +1425,14 @@ function warnIfNoFirebase(){
   return true;
 }
 function loadEntries(){
-  if(warnIfNoFirebase()){ entries=[]; renderMain(); return; }
+  if(warnIfNoFirebase()){ entries=[]; allEntries=[]; renderMain(); return; }
   db.collection(COL).orderBy('date','desc').onSnapshot(snap=>{
-    entries=snap.docs.map(d=>({id:d.id,...d.data()}));
+    /* 지운 것까지 다 담아두고(allEntries), 화면엔 안 지운 것만 보여준다(entries).
+       휴지통 화면이 allEntries 를 본다. */
+    allEntries=snap.docs.map(d=>({id:d.id,...d.data()}));
+    entries=allEntries.filter(e=>!e.deletedAt);
+    renderTrash();
+    purgeOldTrash();
     dbg('entries 로드: '+entries.length+'건');
     fbStatus(true,'Firebase 연결됨');
     renderMain();renderStickyGrid();renderCar();renderCalendar();renderContacts();
@@ -1364,8 +1445,36 @@ function addEntry(obj){
 function updateEntry(id,obj){
   db.collection(COL).doc(id).update({...obj,updatedAt:Date.now()}).catch(e=>dbg('UPD ERR:'+e.message));
 }
+/* ── 🗑 휴지통 ──
+   예전엔 여기서 바로 영구삭제라 되돌릴 방법이 아예 없었다.
+   이제 표시만 하고 30일 뒤에 정말 지운다. 그 사이엔 복원할 수 있다.
+   기록·메모·차계부 삭제가 전부 이 함수 하나를 지나므로 여기만 고치면 된다. */
+const TRASH_DAYS = 30;
 function deleteEntry(id){
-  db.collection(COL).doc(id).delete().catch(e=>dbg('DEL ERR:'+e.message));
+  db.collection(COL).doc(id).update({deletedAt:Date.now()})
+    .catch(e=>dbg('DEL ERR:'+e.message));
+}
+function restoreEntry(id){
+  /* deletedAt 을 지운다 — 파이어스토어는 필드 삭제에 전용 표시가 필요하다 */
+  const FV = (window.firebase && firebase.firestore && firebase.firestore.FieldValue);
+  const patch = FV ? {deletedAt:FV.delete()} : {deletedAt:null};
+  db.collection(COL).doc(id).update(patch)
+    .then(()=>{toast('복원했어요');})
+    .catch(e=>{dbg('RESTORE ERR:'+e.message);toast('복원 실패: '+e.message);});
+}
+function purgeEntry(id){
+  db.collection(COL).doc(id).delete()
+    .then(()=>toast('영구 삭제했어요'))
+    .catch(e=>dbg('PURGE ERR:'+e.message));
+}
+/* 30일 지난 건 조용히 정리 */
+function purgeOldTrash(){
+  const limit = Date.now() - TRASH_DAYS*86400000;
+  (allEntries||[]).forEach(e=>{
+    if(e.deletedAt && e.deletedAt < limit){
+      db.collection(COL).doc(e.id).delete().catch(()=>{});
+    }
+  });
 }
 
 /* ========== Firebase CRUD ========== */
@@ -1379,6 +1488,7 @@ document.querySelectorAll('.v43-tab').forEach(btn=>{
     const panel=g('panel-'+btn.dataset.tab);
     if(panel) panel.classList.add('active');
     if(btn.dataset.tab==='memo'){setTimeout(()=>{renderStickyGrid();bindChecklist();},100);}
+    if(btn.dataset.tab==='trash'){renderTrash();}
     if(btn.dataset.tab==='car') renderCar();
     if(btn.dataset.tab==='contacts') renderContacts();
     if(btn.dataset.tab==='calendar') renderCalendar();
@@ -1398,6 +1508,49 @@ g('globalSearch')&&g('globalSearch').addEventListener('input',e=>{
   });
   renderMainList(filtered);
 });
+
+/* ── 🗑 휴지통 화면 ── */
+function renderTrash(){
+  const box=g('trashList'); const badge=g('trashCntBadge');
+  const list=(allEntries||[]).filter(e=>e.deletedAt)
+    .sort((a,b)=>(b.deletedAt||0)-(a.deletedAt||0));
+  if(badge) badge.textContent=list.length?('('+list.length+')'):'';
+  if(!box) return;
+  if(!list.length){
+    box.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--ink-faint);font-size:14px">🗑 휴지통이 비어 있어요</div>';
+    return;
+  }
+  const left=(t)=>{
+    const d=Math.ceil((t+TRASH_DAYS*86400000-Date.now())/86400000);
+    return d<=0?'곧 사라짐':(d+'일 남음');
+  };
+  box.innerHTML=list.map(e=>{
+    const icon=KIND_ICON[e.kind]||'📎';
+    const label=KIND_LABEL[e.kind]||e.kind||'';
+    const title=esc(e.title||e.place||e.shop||e.hospital||e.bookTitle||(e.body||'').slice(0,30)||'(제목 없음)');
+    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:var(--white);
+        border:1.5px solid var(--blue-bd);border-radius:12px;margin-bottom:8px">
+      <span style="font-size:20px;flex:none">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</div>
+        <div style="font-size:11px;color:var(--ink-faint);margin-top:2px">${label} · ${esc(e.date||'')} · ${left(e.deletedAt)}</div>
+      </div>
+      <button data-restore="${esc(e.id)}" style="flex:none;padding:7px 12px;border-radius:8px;border:1.5px solid var(--blue);
+        background:var(--blue-lt);color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">↩ 복원</button>
+      <button data-purge="${esc(e.id)}" style="flex:none;padding:7px 10px;border-radius:8px;border:none;
+        background:#fde8e8;color:#b52929;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-restore]').forEach(b=>{
+    b.addEventListener('click',()=>restoreEntry(b.dataset.restore));
+  });
+  box.querySelectorAll('[data-purge]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      if(!confirm('영구 삭제합니다.\n되돌릴 수 없습니다. 지울까요?')) return;
+      purgeEntry(b.dataset.purge);
+    });
+  });
+}
 
 /* ========== 카테고리 시트 ========== */
 /* 오른쪽 FAB 을 없앴다 → 기록 탭의 ➕ 추가 가 유일한 입구다.
@@ -3535,14 +3688,19 @@ function renderFiles(){
   if(!list.length){el.innerHTML='<div class="v43-empty"><div class="ei">📁</div>파일·폴더 경로를 등록해보세요!</div>';return;}
   const CAT_ICO={개인:'👤',투자:'📈',부동산:'🏠',업무:'💼',기타:'📎'};
   el.innerHTML=list.map(f=>`<div class="file-item" data-fid="${esc(f.id)}">
-    <div class="file-ico">${f.fileType==='file'?'📄':'📁'}</div>
+    <div class="file-ico">${f.upUrl?(f.locked?'🔒':'📄'):(f.fileType==='file'?'📄':'📁')}</div>
     <div class="file-body">
       <div class="file-name">${esc(f.name||'')}</div>
       <div class="file-path">${esc(f.cat?CAT_ICO[f.cat]+' '+f.cat+' · ':'')}${esc(f.path||'')}${f.memo?' · '+esc(f.memo):''}</div>
     </div>
-    <button class="file-open-btn" data-fpath="${esc(f.path||'')}" data-ftype="${esc(f.fileType||'folder')}">📂 열기</button>
+    ${f.upUrl
+      ? `<button class="file-open-btn" data-fopen="${esc(f.id)}" style="color:var(--blue);border-color:var(--blue)">${f.locked?'🔓 열기':'📥 받기'}</button>`
+      : `<button class="file-open-btn" data-fpath="${esc(f.path||'')}" data-ftype="${esc(f.fileType||'folder')}">📂 열기</button>`}
     <button class="file-open-btn" data-fedit="${esc(f.id)}" style="color:var(--blue);border-color:var(--blue)">✏️</button>
   </div>`).join('');
+  el.querySelectorAll('[data-fopen]').forEach(btn=>{
+    btn.addEventListener('click',e=>{e.stopPropagation();openPersonalFile(btn.dataset.fopen);});
+  });
   el.querySelectorAll('[data-fpath]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const path=btn.dataset.fpath;
@@ -3552,6 +3710,68 @@ function renderFiles(){
   });
   el.querySelectorAll('[data-fedit]').forEach(btn=>{btn.addEventListener('click',()=>openFileModal(btn.dataset.fedit));});
 }
+/* ── 📤 Storage 에 올리기 ──
+   잠금을 켰으면 올리기 전에 뒤섞는다. Storage 엔 뒤섞인 것만 올라간다. */
+async function uploadPersonalFile(file, lock){
+  const st_=g('fileUpState');
+  const say=(m,c)=>{ if(st_){ st_.textContent=m; st_.style.color=c||'var(--ink-soft)'; } };
+  if(!st){ say('❌ 클라우드 저장소에 연결되지 않았습니다','#c0392b'); toast('클라우드 연결 필요'); return null; }
+  const MAX=25*1024*1024;
+  if(file.size>MAX){ say('❌ 파일이 너무 큽니다 ('+(file.size/1048576).toFixed(1)+'MB · 최대 25MB)','#c0392b'); return null; }
+  try{
+    say('📖 파일 읽는 중…');
+    let buf=await file.arrayBuffer();
+    if(lock){
+      say('🔒 잠그는 중… (잠시 걸립니다)');
+      buf=await pjEncrypt(buf, pjPin());
+    }
+    say('📤 올리는 중…');
+    const id='f_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    const ref=st.ref('personal/files/'+id+(lock?'.enc':''));
+    await ref.put(new Blob([buf]), {contentType: lock?'application/octet-stream':(file.type||'application/octet-stream')});
+    const url=await ref.getDownloadURL();
+    say(lock?'✅ 잠가서 올렸습니다':'✅ 올렸습니다','#2e7d32');
+    return { fileType:'file', upId:id, upUrl:url, upName:file.name,
+             upSize:file.size, upMime:file.type||'', locked:!!lock, upAt:Date.now() };
+  }catch(e){
+    console.error('[파일 올리기]',e);
+    say('❌ 실패: '+(e.message||e),'#c0392b');
+    toast('올리기 실패: '+(e.message||e));
+    return null;
+  }
+}
+
+/* ── 📥 열기 ── 잠긴 파일은 받아서 풀고 연다 */
+async function openPersonalFile(id){
+  const f=files.find(x=>x.id===id);
+  if(!f||!f.upUrl){ toast('올린 파일이 아닙니다'); return; }
+  try{
+    toast(f.locked?'🔓 여는 중…':'📥 받는 중…');
+    const res=await fetch(f.upUrl);
+    if(!res.ok) throw new Error('받기 실패 ('+res.status+')');
+    let buf=await res.arrayBuffer();
+    if(f.locked || pjIsEncrypted(buf)){
+      buf=await pjDecrypt(buf, pjPin());   /* 틀리면 여기서 확실히 막힌다 */
+    }
+    const blob=new Blob([buf], {type:f.upMime||'application/octet-stream'});
+    const u=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=u; a.download=f.upName||f.name||'file';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),60000);
+    toast('📥 받았습니다 — 내려받기 폴더를 확인하세요');
+  }catch(e){
+    console.error('[파일 열기]',e);
+    alert('열지 못했습니다\n\n'+(e.message||e));
+  }
+}
+
+async function deleteStorageFile(f){
+  if(!st||!f||!f.upId) return;
+  try{ await st.ref('personal/files/'+f.upId+(f.locked?'.enc':'')).delete(); }
+  catch(e){ console.warn('[Storage 삭제]',e.message); }
+}
+
 function openFileModal(id){
   fileEditId=id||null;
   const f=id?files.find(x=>x.id===id):null;
@@ -3560,6 +3780,12 @@ function openFileModal(id){
   g('fileDelete').style.display=id?'':'none';
   if(f){g('fileCat').value=f.cat||'개인';g('fileNameInp').value=f.name||'';g('filePathInp').value=f.path||'';g('fileMemoInp').value=f.memo||'';const r=document.querySelector(`input[name="fileType"][value="${f.fileType||'folder'}"]`);if(r)r.checked=true;}
   else{g('fileCat').value='개인';g('fileNameInp').value='';g('filePathInp').value='';g('fileMemoInp').value='';}
+  /* 올리기 칸은 항상 비우고 연다 — 지난번 고른 파일이 남아 있으면
+     수정만 하려다 엉뚱한 걸 덮어쓴다 */
+  if(g('fileUpInp')) g('fileUpInp').value='';
+  if(g('fileLockChk')) g('fileLockChk').checked=!!(f&&f.locked);
+  if(g('fileUpState')) g('fileUpState').textContent = f&&f.upUrl
+    ? (f.locked?'🔒 잠긴 파일이 올라가 있습니다':'📎 파일이 올라가 있습니다') : '';
   g('fileOverlay').classList.add('show');
 }
 function closeFileModal(){g('fileOverlay').classList.remove('show');fileEditId=null;}
@@ -3569,16 +3795,27 @@ g('fileModalClose')&&g('fileModalClose').addEventListener('click',closeFileModal
 // 외부 클릭으로 닫히지 않음
 // g('fileOverlay').addEventListener('click',e=>{if(e.target===g('fileOverlay'))closeFileModal();});
 if(g('fileSave')){
-g('fileSave').addEventListener('click',()=>{
-  const name=(g('fileNameInp').value||'').trim();
+g('fileSave').addEventListener('click',async()=>{
+  const upEl=g('fileUpInp');
+  const picked=upEl&&upEl.files&&upEl.files[0];
+  let name=(g('fileNameInp').value||'').trim();
   const path=(g('filePathInp').value||'').trim();
-  if(!name||!path){toast('이름과 경로를 입력해주세요');return;}
+  /* 파일을 올릴 땐 경로가 필요 없다 — 파일 자체가 클라우드에 있으니까 */
+  if(picked && !name) name=picked.name;
+  if(!name){toast('이름을 입력해주세요');return;}
+  if(!picked && !path){toast('파일을 고르거나 경로를 입력해주세요');return;}
   const cat=g('fileCat').value;
   const fileType=(document.querySelector('input[name="fileType"]:checked')||{}).value||'folder';
   const memo=(g('fileMemoInp').value||'').trim();
+  /* 파일을 골랐으면 Storage 에 올린다 */
+  let up=null;
+  if(picked){
+    up=await uploadPersonalFile(picked, g('fileLockChk')&&g('fileLockChk').checked);
+    if(!up) return;            /* 실패하면 저장하지 않는다 — 빈 껍데기가 남으면 안 된다 */
+  }
   if(fileEditId){
     const i=files.findIndex(f=>f.id===fileEditId);
-    if(i>=0) files[i]={...files[i],name,path,cat,fileType,memo};
+    if(i>=0) files[i]={...files[i],name,path,cat,fileType,memo,...(up||{})};
   } else {
     files.push({id:'f_'+Date.now(),name,path,cat,fileType,memo,createdAt:Date.now()});
   }
@@ -3588,6 +3825,9 @@ g('fileSave').addEventListener('click',()=>{
 if(g('fileDelete')){
 g('fileDelete').addEventListener('click',()=>{
   if(!fileEditId||!confirm('삭제?')) return;
+  /* 올린 파일이면 Storage 에서도 지운다 — 안 그러면 쓰레기가 쌓인다 */
+  const _f=files.find(f=>f.id===fileEditId);
+  if(_f&&_f.upId) deleteStorageFile(_f);
   files=files.filter(f=>f.id!==fileEditId);
   saveFiles();renderFiles();closeFileModal();toast('삭제됐어요');
 });
