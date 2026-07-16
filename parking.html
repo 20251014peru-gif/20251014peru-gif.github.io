@@ -1385,6 +1385,33 @@ function parseRowsLoose(raw) {
   return { rows: out, partial: out.length > 0 };
 }
 
+/* AI 가 뱉은 행을 그대로 믿지 않는다.
+   프롬프트에 "빈 행 제외"라고 써도 그건 부탁일 뿐 강제가 아니다.
+   실제로 33행짜리 대장에서 39행이 나온 적이 있다. */
+function cleanRows(rows) {
+  const seen = new Set();
+  const out = [];
+  let emptyCnt = 0, dupCnt = 0;
+  for (const r of rows) {
+    const plate   = String(r.plate   || '').trim();
+    const inT     = String(r.in      || '').trim();
+    const outT    = String(r.out     || '').trim();
+    const floor   = String(r.floor   || '').trim();
+    const purpose = String(r.purpose || '').trim();
+    const park    = String(r.park    || '').trim();
+
+    /* 빈 행 — No 만 있고 알맹이가 하나도 없다 */
+    if (!plate && !inT && !outT && !floor && !purpose && !park) { emptyCnt++; continue; }
+
+    /* 같은 내용이 두 번 — 번호는 뺀다(AI 가 다르게 붙일 수 있다) */
+    const key = [plate, inT, outT, floor, purpose, park].join('|');
+    if (seen.has(key)) { dupCnt++; continue; }
+    seen.add(key);
+    out.push(r);
+  }
+  return { rows: out, emptyCnt, dupCnt };
+}
+
 async function runOCR() {
   const key = getApiKey();
   if (!key) { alert('Anthropic API Key를 먼저 입력해주세요.'); return; }
@@ -1488,6 +1515,12 @@ ${contextHint}
         allRows = allRows.concat(pr.rows);
       }
     }
+    /* AI 가 만들어낸 빈 행·중복 행 제거 */
+    const cleaned = cleanRows(allRows);
+    if (cleaned.emptyCnt) parseWarn.push(`빈 행 ${cleaned.emptyCnt}건 제외`);
+    if (cleaned.dupCnt)   parseWarn.push(`중복 행 ${cleaned.dupCnt}건 제외`);
+    allRows = cleaned.rows;
+
     // No 기준 오름차순 정렬 (1→48)
     allRows.sort((a, b) => (parseInt(a.no)||999) - (parseInt(b.no)||999));
 
@@ -1498,8 +1531,8 @@ ${contextHint}
 
     if (parseWarn.length) {
       /* 조용히 넘어가면 몇 건이 사라진 줄도 모른다 */
-      alert('⚠️ 일부를 못 읽었습니다\n\n' + parseWarn.join('\n') +
-            '\n\n추출 결과 원본을 확인하고, 빠진 행은 표에서 직접 넣어주세요.');
+      alert('⚠️ 확인이 필요합니다\n\n' + parseWarn.join('\n') +
+            '\n\n표의 건수가 실제 대장과 맞는지 확인하세요.');
     }
     if (allRows.length > 0) {
       renderParsedTable(allRows, date);
