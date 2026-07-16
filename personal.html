@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-<title>개인일지 v20260713-1655</title>
+<title>개인일지</title>   <!-- 버전은 APP_VER 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -450,8 +450,8 @@ main.wrap{padding-bottom:100px;padding-top:12px}
   <div class="wrap">
     <div class="head-row">
       <div class="brand">
-        <h1>개인일지</h1><span id="appVerTag" style="font-size:11px;opacity:.6;font-weight:400;margin-left:6px"></span>
-        <span class="sub">달님의 개인 기록 <b style="color:#9aa7b4" id="verBadge">v20260713-1655</b></span>
+        <h1>개인일지</h1>
+        <span class="sub">달님의 개인 기록 <b style="color:#9aa7b4" id="verBadge">…</b></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow-x:auto">
         <span class="status"><span class="dot" id="fbDot"></span><span id="fbText">연결 중…</span></span>
@@ -1175,10 +1175,10 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260716-180148';
+const APP_VER='v20260716-180804';
 document.title='개인일지 '+APP_VER;
 addEventListener('DOMContentLoaded',()=>{
-  const el=document.getElementById('appVerTag');
+  const el=document.getElementById('verBadge');
   if(el) el.textContent=APP_VER;
 });
 
@@ -3748,9 +3748,22 @@ function renderFiles(){
     </div>
     ${f.upUrl
       ? `<button class="file-open-btn" data-fopen="${esc(f.id)}" style="color:var(--blue);border-color:var(--blue)">${f.locked?'🔓 열기':'📥 받기'}</button>`
-      : `<button class="file-open-btn" data-fpath="${esc(f.path||'')}" data-ftype="${esc(f.fileType||'folder')}">📂 열기</button>`}
+      : (f.path
+        ? `<button class="file-open-btn" data-fpath="${esc(f.path||'')}" data-ftype="${esc(f.fileType||'folder')}">📂 열기</button>`
+        /* 주소도 경로도 없다 = 올리다 만 껍데기.
+           예전 버전이 올린 파일의 주소를 저장 못 해서 이런 게 생겼다.
+           "경로가 없어요"만 뜨면 왜 그런지 알 수가 없으니 대놓고 알린다. */
+        : `<button class="file-open-btn" data-fbroken="${esc(f.id)}" style="color:#c0392b;border-color:#f5b7b1">⚠️ 빈 항목</button>`)}
     <button class="file-open-btn" data-fedit="${esc(f.id)}" style="color:var(--blue);border-color:var(--blue)">✏️</button>
   </div>`).join('');
+  el.querySelectorAll('[data-fbroken]').forEach(btn=>{
+    btn.addEventListener('click',e=>{e.stopPropagation();
+      alert('⚠️ 이 항목엔 파일도 경로도 없습니다\n\n'
+        +'예전 버전이 파일을 올리고도 주소를 저장하지 못해 생긴 껍데기입니다.\n'
+        +'(그 버그는 v20260716-180148 에서 고쳤습니다)\n\n'
+        +'✏️ 를 눌러 파일을 다시 올리거나, 지워주세요.');
+    });
+  });
   el.querySelectorAll('[data-fopen]').forEach(btn=>{
     btn.addEventListener('click',e=>{e.stopPropagation();openPersonalFile(btn.dataset.fopen);});
   });
@@ -5809,8 +5822,11 @@ console.log('[개인일지] 로드 완료');
 (function updateVerBadge(){
   const el = document.getElementById('verBadge');
   if(!el) return;
-  // 빌드(배포) 버전 고정 표시 — 이 값이 화면에 보이면 새 파일이 반영된 것
-  el.textContent = 'v20260713-1655';
+  /* ⚠️ 예전엔 여기에 버전을 손으로 박아놨다.
+     "이 값이 보이면 새 파일이 반영된 것"이라는 주석까지 달려 있었지만,
+     정작 손으로 적은 값이라 뭘 올리든 그대로였다 — 확인용인데 확인이 안 됐다.
+     이제 APP_VER 한 곳만 읽는다. */
+  el.textContent = (typeof APP_VER!=='undefined' && APP_VER) ? APP_VER : '…';
 })();
 
 /* ════════════════════════════════════════════════════════
