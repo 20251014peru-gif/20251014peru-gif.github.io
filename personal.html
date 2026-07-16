@@ -1166,14 +1166,35 @@ const FB_CONFIG = {
   storageBucket:"my-system-25497.firebasestorage.app"
 };
 let db;
+let FB_FAIL = '';   /* 초기화가 왜 실패했는지 — 화면에 알린다 */
 try {
-  firebase.initializeApp(FB_CONFIG);
+  if(typeof firebase === 'undefined') throw new Error('Firebase 스크립트를 못 불러왔습니다 (인터넷·차단기 확인)');
+  if(!firebase.firestore) throw new Error('firestore-compat 스크립트를 못 불러왔습니다');
+  /* 이미 만들어져 있으면 그걸 쓴다 — 두 번 만들면 터진다 */
+  if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(FB_CONFIG);
   db = firebase.firestore();
 } catch(e) {
-  console.warn('Firebase 로드 실패:', e.message);
-  // Firebase 없어도 PIN 패드는 동작 - 빈 stub
-  const stub=()=>({onSnapshot:()=>{},doc:()=>({set:()=>Promise.resolve(),update:()=>Promise.resolve(),delete:()=>Promise.resolve()}),add:()=>Promise.resolve(),where:()=>({limit:()=>({get:()=>Promise.resolve({empty:true,docs:[]})})})});
-  db={collection:stub};
+  FB_FAIL = (e && e.message) ? e.message : String(e);
+  console.warn('Firebase 로드 실패:', FB_FAIL);
+  /* Firebase 없어도 PIN 패드는 동작해야 한다.
+     ⚠️ 예전 껍데기엔 orderBy 가 없어서, 실패하면 조용히 넘어가는 게 아니라
+        "db.collection(...).orderBy is not a function" 으로 터졌다.
+        진짜 이유(위 FB_FAIL)는 콘솔에만 있어 찾기가 어려웠다.
+        → 쿼리 메서드를 전부 갖추고 자기 자신을 돌려줘 체인이 끊기지 않게 한다. */
+  const q = {};
+  const chain = () => q;
+  ['orderBy','where','limit','limitToLast','startAt','startAfter','endAt','endBefore','select']
+    .forEach(m => { q[m] = chain; });
+  q.onSnapshot = (cb) => { try{ if(typeof cb==='function') cb({docs:[],empty:true,forEach:()=>{}}); }catch(_){} return ()=>{}; };
+  q.get = () => Promise.resolve({docs:[],empty:true,forEach:()=>{},size:0});
+  q.add = () => Promise.resolve({id:'local_'+Date.now()});
+  q.doc = () => ({
+    get:()=>Promise.resolve({exists:false,data:()=>({})}),
+    set:()=>Promise.resolve(), update:()=>Promise.resolve(), delete:()=>Promise.resolve(),
+    onSnapshot:()=>()=>{},
+    collection:()=>q
+  });
+  db = { collection: () => q, doc: () => q.doc() };
 }
 const COL = 'personal_entries';
 
@@ -1316,7 +1337,22 @@ function fbStatus(ok,msg){
   if(dot) dot.className='dot'+(ok?' on':'');
   if(txt) txt.textContent=msg;
 }
+/* 초기화가 실패했으면 조용히 넘기지 않고 알린다 — 예전엔 콘솔에만 있었다 */
+function warnIfNoFirebase(){
+  if(!FB_FAIL) return false;
+  fbStatus(false,'클라우드 연결 안 됨');
+  if(!window._fbWarned){
+    window._fbWarned = true;
+    setTimeout(()=>{
+      alert('⚠️ 클라우드에 연결하지 못했습니다\n\n'+FB_FAIL+
+        '\n\n이 기기에서 보기는 되지만, 저장한 것이 다른 기기로 안 넘어갑니다.\n'+
+        '인터넷·광고차단기·사설 릴레이를 확인해보세요.');
+    },400);
+  }
+  return true;
+}
 function loadEntries(){
+  if(warnIfNoFirebase()){ entries=[]; renderMain(); return; }
   db.collection(COL).orderBy('date','desc').onSnapshot(snap=>{
     entries=snap.docs.map(d=>({id:d.id,...d.data()}));
     dbg('entries 로드: '+entries.length+'건');
@@ -2852,12 +2888,20 @@ function saveManualContacts(){
   try{localStorage.setItem('pj_contacts',JSON.stringify(manualContacts));}catch{}
 }
 
+/* 전화번호를 숫자만 남겨 비교한다 (010-1234-5678 == 01012345678) */
+function _telKey(p){ return String(p||'').replace(/[^0-9]/g,''); }
+/* 가게 이름도 띄어쓰기·대소문자를 지워서 비교 */
+function _nameKey(n){ return String(n||'').trim().toLowerCase().replace(/\s+/g,''); }
+
 function getAllContacts(){
   // 기록에서 자동 수집
   const auto=[];
   entries.forEach(en=>{
-    const phone=(en.phone||'').trim();
-    const name=(en.place||en.hospital||en.title||en.shop||'').trim();
+    /* ⚠️ 차계부는 shop/shopPhone/shopAddr 에 담긴다.
+       예전엔 en.phone / en.addr 만 봐서 주유소 전화·주소를 통째로 놓쳤다.
+       → 번호가 빈칸이 되니 같은 주유소인 줄 모르고 갈 때마다 새로 쌓였다. */
+    const phone=(en.phone||en.shopPhone||'').trim();
+    const name=(en.place||en.hospital||en.shop||en.title||'').trim();
     const addr=(en.addr||en.shopAddr||'').trim();
     // 전화번호나 주소가 있을 때만 수집
     if(!phone&&!addr) return;
@@ -2866,8 +2910,10 @@ function getAllContacts(){
       id:'auto_'+en.id,
       name:name||'(이름없음)',
       phone:phone||'',
-      sido:en.sido||'',sigungu:en.sigungu||'',addr:en.addr||'',
+      /* 예전엔 addr 을 계산해놓고 en.addr 을 넣어서, 계산한 값이 버려졌다 */
+      sido:en.sido||'',sigungu:en.sigungu||'',addr:addr||'',
       memo:en.note||en.memo||'',
+      date:en.date||'',
       source:en.kind,
       sourceId:en.id,
       auto:true
@@ -2886,14 +2932,35 @@ function getAllContacts(){
       });
     }
   });
-  // 중복 전화번호 제거 (수동 우선)
-  const seen=new Set();
-  const merged=[];
+  /* ── 같은 곳을 하나로 묶는다 ──
+     같은 주유소에서 열 번 넣으면 기록은 열 개지만 연락처는 하나여야 한다.
+     번호가 있으면 번호로, 없으면 이름으로 묶는다.
+     수동으로 적은 것이 우선이고, 자동끼리는 최신 기록의 정보를 남긴다. */
+  const byKey=new Map();
+  const keyOf=(c)=>{
+    const t=_telKey(c.phone);
+    return t ? 'tel:'+t : 'name:'+_nameKey(c.name);
+  };
   [...manualContacts,...auto].forEach(c=>{
-    const key=c.phone?c.phone.replace(/[^0-9]/g,''):'__'+c.name;
-    if(!seen.has(key)){seen.add(key);merged.push(c);}
+    const k=keyOf(c);
+    if(!k || k==='name:') return;
+    const prev=byKey.get(k);
+    if(!prev){ byKey.set(k,{...c,visits:c.auto?1:0}); return; }
+    if(!prev.auto) return;              /* 수동으로 적은 건 안 건드린다 */
+    if(!c.auto){ byKey.set(k,{...c,visits:prev.visits}); return; }  /* 수동이 이긴다 */
+    /* 자동끼리 — 방문 횟수를 세고, 최신 기록이 정보를 채운다 */
+    const newer = (c.date||'') >= (prev.date||'');
+    byKey.set(k,{
+      ...(newer?c:prev),
+      /* 어느 한쪽에만 있는 값도 살린다 */
+      phone: prev.phone||c.phone||'',
+      addr:  (newer? (c.addr||prev.addr) : (prev.addr||c.addr))||'',
+      sido:  prev.sido||c.sido||'',
+      sigungu: prev.sigungu||c.sigungu||'',
+      visits: (prev.visits||1)+1
+    });
   });
-  return merged;
+  return [...byKey.values()];
 }
 
 function renderContacts(){
@@ -5723,6 +5790,28 @@ console.log('[개인일지] 로드 완료');
     return out;
   }
 
+  /* 영수증 메모에 적어둔 주행거리를 캐낸다.
+     "123456km", "주행거리 123,456", "누적 123456 km" 같은 꼴을 받는다.
+     ⚠️ 금액(80000)이나 리터(47.5)를 주행거리로 착각하면 안 되므로
+        km/주행/누적 같은 표시가 붙은 것만 가져온다. */
+  function mileageFromText(txt){
+    const t=String(txt||'');
+    if(!t) return '';
+    const pats=[
+      /(?:주행\s*거리|주행|누적|odo|계기)\s*[:：]?\s*([\d,]{3,9})/i,   /* 표시가 앞에 */
+      /([\d,]{3,9})\s*(?:km|KM|Km|키로|킬로)/,                          /* 단위가 뒤에 */
+    ];
+    for(const re of pats){
+      const m=t.match(re);
+      if(m){
+        const n=parseInt(String(m[1]).replace(/,/g,''),10);
+        /* 사람이 탈 만한 범위만 — 100km ~ 999,999km */
+        if(n>=100 && n<=999999) return String(n);
+      }
+    }
+    return '';
+  }
+
   /* 주유·정비·세차·보험 중 무엇인지 */
   function carTypeFrom(data){
     const txt = String((data&&data.place)||'') + ' ' +
@@ -5738,6 +5827,14 @@ console.log('[개인일지] 로드 완료');
     const kind = (typeof currentKind !== 'undefined') ? currentKind : null;
     if(!kind) return;
     const set = (id, v)=>{ const el = document.getElementById('rf-'+id); if(el && !el.value.trim() && v) el.value = v; };
+    /* 날짜는 비어 있든 아니든 영수증 것으로 맞춘다 (YYYY-MM-DD 일 때만) */
+    const setDate = (v)=>{
+      const el = document.getElementById('rf-date');
+      if(!el || !v) return;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;   /* 이상한 값이면 오늘을 지키는 게 낫다 */
+      el.value = v;
+      el.dispatchEvent(new Event('change'));
+    };
     /* select 는 값이 목록에 있을 때만 고른다 — 없는 값을 넣으면 빈칸이 된다 */
     const setSel = (id, v)=>{
       const el = document.getElementById('rf-'+id);
@@ -5752,8 +5849,17 @@ console.log('[개인일지] 로드 완료');
       else if(el.value.indexOf(v) === -1) el.value = el.value + ' / ' + v;
     };
 
-    /* 공통: 날짜 */
-    set('date', data.date || '');
+    /* 공통: 영수증 메모 — 예전엔 통째로 버렸다. 손으로 적어둔 게 여기 있다. */
+    if(itemType === 'receipt' && data.memo){
+      append('note', '🧾 ' + data.memo);
+      append('body', '🧾 ' + data.memo);   /* 메모 칸이 note 인 종류도, body 인 종류도 있다 */
+    }
+
+    /* 공통: 날짜 — 영수증 날짜가 진짜다.
+       ⚠️ set 은 빈 칸에만 넣는데, 모달을 열 때 날짜 칸엔 이미 '오늘'이 박혀 있다.
+          그래서 영수증 날짜가 통째로 무시되고 '넣은 날'로 저장됐다.
+          날짜만은 덮어쓴다. */
+    setDate(data.date || '');
 
     if(itemType === 'receipt'){
       if(kind === 'car'){
@@ -5777,6 +5883,11 @@ console.log('[개인일지] 로드 완료');
           const t = data.items.map(it=>`${it.name||''}${it.price?(' '+Number(it.price).toLocaleString()+'원'):''}`).filter(Boolean).join(', ');
           if(t) append('note', '🔧 ' + t);
         }
+        /* 영수증 메모에 적어둔 주행거리 — 메모·품목 어디에 있든 찾는다 */
+        const km = mileageFromText(
+          (data.memo||'') + ' ' + ((data.items||[]).map(it=>(it&&it.name)||'').join(' '))
+        );
+        if(km) set('mileage', km);
       } else if(kind === 'purchase'){
         set('title', data.place || ''); /* 품목명 — 영수증 가게로 임시 */
         set('amount', data.amount || '');
