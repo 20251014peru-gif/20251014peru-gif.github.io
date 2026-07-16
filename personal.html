@@ -367,7 +367,8 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 #imgFull{max-width:95vw;max-height:90vh;object-fit:contain;border-radius:10px}
 
 /* ===== 🐞 디버그 ===== */
-.dbg-btn{position:fixed;top:10px;right:10px;z-index:9999;background:rgba(255,80,80,.85);color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation}
+.dbg-btn{display:none;position:fixed;top:10px;right:10px;z-index:9999;background:rgba(255,80,80,.85);color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation}
+.dbg-btn.dbg-on{display:block}
 .dbg-panel{position:fixed;top:40px;right:10px;z-index:9998;background:rgba(0,0,0,.9);color:#0f0;border-radius:10px;padding:10px;width:88vw;max-width:400px;max-height:50vh;overflow:auto;font-size:11px;font-family:monospace;display:none}
 .dbg-panel.show{display:block}
 
@@ -1021,15 +1022,11 @@ main.wrap{padding-bottom:100px;padding-top:12px}
     <h3 id="ctModalTitle">연락처 추가 <button class="modal-close" id="ctModalClose">✕</button></h3>
     <div class="field-row">
       <div class="field"><label>이름/상호 *</label><input type="text" id="ct-name" placeholder="홍길동 / 을밀대"></div>
-      <div class="field"><label>분류</label>
-        <select id="ct-cat">
-          <option value="개인">👤 개인</option>
-          <option value="맛집">🍽 맛집</option>
-          <option value="병원">🏥 병원</option>
-          <option value="쇼핑">🛒 쇼핑</option>
-          <option value="정비">🚗 정비</option>
-          <option value="기타">📎 기타</option>
-        </select>
+      <div class="field"><label style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+          <span>분류</span>
+          <button type="button" id="ctCatManage" style="border:1.5px solid var(--blue-bd);background:var(--white);border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--blue);cursor:pointer">⚙ 관리</button>
+        </label>
+        <select id="ct-cat"></select>
       </div>
     </div>
     <div class="field"><label>전화번호</label>
@@ -1059,6 +1056,24 @@ main.wrap{padding-bottom:100px;padding-top:12px}
       <button class="btn btn-primary btn-flex" id="ctSave">💾 저장</button>
       <button class="btn btn-ghost" id="ctCancel">취소</button>
       <button class="btn btn-danger" id="ctDelete" style="display:none">🗑 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 🏷 연락처 분류 관리 모달 ===== -->
+<div class="overlay" id="ctCatOverlay">
+  <div class="modal" style="max-width:460px">
+    <h3>🏷 분류 관리 <button class="modal-close" id="ctCatClose">✕</button></h3>
+    <p style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">이름을 바꾸면 그 분류를 쓰던 연락처도 같이 바뀝니다.</p>
+    <div id="ctCatList" style="display:flex;flex-direction:column;gap:6px;max-height:44vh;overflow:auto;margin-bottom:12px"></div>
+    <div class="field-row" style="align-items:flex-end;gap:6px">
+      <div class="field" style="flex:0 0 68px"><label>아이콘</label><input type="text" id="ctCatNewIco" placeholder="🏷" maxlength="4" style="text-align:center"></div>
+      <div class="field" style="flex:1"><label>새 분류 이름</label><input type="text" id="ctCatNewName" placeholder="예: 학교"></div>
+      <button class="btn btn-primary" id="ctCatAdd" style="flex:0 0 auto;padding:10px 14px">➕ 추가</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-flex" id="ctCatDone">닫기</button>
+      <button class="btn btn-line" id="ctCatReset">↩ 기본값으로</button>
     </div>
   </div>
 </div>
@@ -1223,7 +1238,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260716-184539';
+const APP_VER='v20260716-1909';
 document.title='개인일지 '+APP_VER;
 /* 버전을 뿌린다 — 헤더 + PIN 넣는 곳마다.
    잠금화면은 앱이 뜨자마자 보이는 곳이라 DOMContentLoaded 를 기다리면 늦을 수 있다.
@@ -1359,6 +1374,26 @@ function toggleDbg(){
   p.classList.toggle('show');
   if(p.classList.contains('show')) document.getElementById('dbgLog').textContent=dbgLogs.join('\n');
 }
+
+/* 🐞 화면에서 감춤 — 필요할 때만 버전 배지(v20260716-…)를 5번 톡톡 치면 나온다 */
+(function(){
+  var taps=0, timer=null;
+  var badge=document.getElementById("verBadge");
+  if(!badge) return;
+  badge.style.cursor="default";
+  badge.addEventListener("click",function(){
+    taps++;
+    clearTimeout(timer);
+    timer=setTimeout(function(){taps=0;},1200);
+    if(taps>=5){
+      taps=0;
+      var b=document.getElementById("dbgToggleBtn");
+      if(b){ b.classList.add("dbg-on"); }
+      toggleDbg();
+      if(typeof toast==="function") toast("🐞 디버그 열림 — 벌레 버튼을 다시 누르면 닫혀요");
+    }
+  });
+})();
 
 /* ==================== ✨ 사진 텍스트 추출 (공통 - 자동 삽입 방식) ==================== */
 window.openTextExtract = async function(photos, targetCallback){
@@ -3127,6 +3162,7 @@ function renderContacts(){
         <div class="v43-item-title">${esc(c.name||'(이름없음)')}</div>
         <div class="v43-item-meta">
           ${srcLabel?`<span class="v43-item-badge" style="background:${srcColor}22;color:${srcColor}">${srcLabel}</span>`:''}
+          ${(!c.auto&&c.cat)?`<span class="v43-item-badge" style="background:#eef3f8;color:#4a5a6a">${esc(ctCatIco(c.cat))} ${esc(c.cat)}</span>`:''}
           ${c.phone?`<span>${esc(c.phone)}</span>`:''}
           ${locStr?`<span style="font-size:11px">${esc(locStr)}</span>`:''}
           ${c.memo?`<span style="font-size:11px;color:var(--ink-faint)">${esc(c.memo.slice(0,20))}</span>`:''}
@@ -3183,6 +3219,164 @@ function renderContacts(){
   });
 }
 
+/* ===== 🏷 연락처 분류 관리 (사용자가 직접 추가·이름변경·삭제) ===== */
+const CT_CATS_KEY='personal_ct_cats_v2';
+const CT_CATS_DEFAULT=[
+  {ico:'👤',name:'개인'},{ico:'🍽',name:'맛집'},{ico:'🏥',name:'병원'},
+  {ico:'🛒',name:'쇼핑'},{ico:'🚗',name:'정비'},{ico:'📎',name:'기타'}
+];
+function ctCatsLoad(){
+  try{
+    const s=localStorage.getItem(CT_CATS_KEY);
+    if(s){
+      const a=JSON.parse(s);
+      if(Array.isArray(a)&&a.length) return a.filter(x=>x&&x.name).map(x=>({ico:x.ico||'🏷',name:String(x.name)}));
+    }
+  }catch(e){ if(typeof logErr==='function') logErr('분류 불러오기 실패: '+e.message); }
+  return CT_CATS_DEFAULT.map(x=>({ico:x.ico,name:x.name}));
+}
+function ctCatsSave(arr){
+  try{ localStorage.setItem(CT_CATS_KEY,JSON.stringify(arr)); }
+  catch(e){ if(typeof logErr==='function') logErr('분류 저장 실패: '+e.message); }
+}
+function ctCatIco(name){
+  const f=ctCatsLoad().find(x=>x.name===name);
+  return f?f.ico:'🏷';
+}
+/* 분류가 몇 건에 쓰이는지 (직접 입력 연락처 기준) */
+function ctCatUseCount(name){
+  return (manualContacts||[]).filter(c=>(c.cat||'')===name).length;
+}
+/* select 채우기 — 저장돼 있던 값이 목록에 없으면 그 값도 살려둔다 */
+function refreshCtCatSelect(keepVal){
+  const sel=g('ct-cat'); if(!sel) return;
+  const cur=(keepVal!==undefined&&keepVal!==null)?keepVal:sel.value;
+  const arr=ctCatsLoad();
+  let html=arr.map(x=>`<option value="${esc(x.name)}">${esc(x.ico)} ${esc(x.name)}</option>`).join('');
+  if(cur && !arr.some(x=>x.name===cur)) html+=`<option value="${esc(cur)}">🏷 ${esc(cur)} (지워진 분류)</option>`;
+  sel.innerHTML=html;
+  if(cur) sel.value=cur;
+  if(!sel.value && arr.length) sel.value=arr[0].name;
+}
+function renderCtCatList(){
+  const box=g('ctCatList'); if(!box) return;
+  const arr=ctCatsLoad();
+  if(!arr.length){ box.innerHTML='<div class="v43-empty" style="padding:18px">분류가 없어요. 아래에서 추가하세요.</div>'; return; }
+  box.innerHTML=arr.map((x,i)=>{
+    const n=ctCatUseCount(x.name);
+    return `<div style="display:flex;align-items:center;gap:6px;border:1.5px solid var(--blue-bd);border-radius:10px;padding:6px 8px;background:var(--white)">
+      <input type="text" data-ctcico="${i}" value="${esc(x.ico)}" maxlength="4" style="width:44px;text-align:center;border:1px solid #e3e9ef;border-radius:8px;padding:6px 2px;font-size:15px">
+      <input type="text" data-ctcname="${i}" value="${esc(x.name)}" style="flex:1;min-width:0;border:1px solid #e3e9ef;border-radius:8px;padding:6px 8px;font-size:14px">
+      <span style="flex:0 0 auto;font-size:11px;color:var(--ink-faint);min-width:34px;text-align:right">${n?n+'건':''}</span>
+      <button type="button" data-ctcup="${i}" title="위로" style="flex:0 0 auto;width:28px;height:30px;border:1.5px solid var(--blue-bd);background:var(--white);border-radius:8px;cursor:pointer;font-size:11px">▲</button>
+      <button type="button" data-ctcdn="${i}" title="아래로" style="flex:0 0 auto;width:28px;height:30px;border:1.5px solid var(--blue-bd);background:var(--white);border-radius:8px;cursor:pointer;font-size:11px">▼</button>
+      <button type="button" data-ctcdel="${i}" title="삭제" style="flex:0 0 auto;width:30px;height:30px;border:1.5px solid #fde8e8;background:#fff5f5;color:#c0392b;border-radius:8px;cursor:pointer;font-size:13px">🗑</button>
+    </div>`;
+  }).join('');
+
+  /* 이름 바꾸기 — 쓰던 연락처도 같이 바꾼다 */
+  box.querySelectorAll('[data-ctcname]').forEach(inp=>{
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter') inp.blur(); });
+    inp.addEventListener('blur',()=>{
+      const i=+inp.dataset.ctcname, a=ctCatsLoad();
+      if(!a[i]) return;
+      const old=a[i].name, nv=(inp.value||'').trim();
+      if(!nv){ inp.value=old; toast('이름은 비울 수 없어요'); return; }
+      if(nv===old) return;
+      if(a.some((x,j)=>j!==i&&x.name===nv)){ inp.value=old; toast('이미 있는 이름이에요'); return; }
+      const used=ctCatUseCount(old);
+      a[i].name=nv; ctCatsSave(a);
+      if(used){
+        (manualContacts||[]).forEach(c=>{ if((c.cat||'')===old) c.cat=nv; });
+        saveManualContacts();
+      }
+      const sel=g('ct-cat');
+      refreshCtCatSelect(sel&&sel.value===old?nv:undefined);
+      renderCtCatList(); renderContacts();
+      toast('✅ "'+old+'" → "'+nv+'"'+(used?' ('+used+'건 같이 바뀜)':''));
+    });
+  });
+  /* 아이콘 바꾸기 */
+  box.querySelectorAll('[data-ctcico]').forEach(inp=>{
+    inp.addEventListener('blur',()=>{
+      const i=+inp.dataset.ctcico, a=ctCatsLoad();
+      if(!a[i]) return;
+      const nv=(inp.value||'').trim()||'🏷';
+      if(nv===a[i].ico) return;
+      a[i].ico=nv; ctCatsSave(a);
+      const sel=g('ct-cat'); refreshCtCatSelect(sel?sel.value:undefined);
+      renderCtCatList(); renderContacts();
+    });
+  });
+  /* 순서 바꾸기 */
+  function move(i,d){
+    const a=ctCatsLoad(); const j=i+d;
+    if(j<0||j>=a.length) return;
+    const t=a[i]; a[i]=a[j]; a[j]=t; ctCatsSave(a);
+    const sel=g('ct-cat'); refreshCtCatSelect(sel?sel.value:undefined);
+    renderCtCatList();
+  }
+  box.querySelectorAll('[data-ctcup]').forEach(b=>b.addEventListener('click',()=>move(+b.dataset.ctcup,-1)));
+  box.querySelectorAll('[data-ctcdn]').forEach(b=>b.addEventListener('click',()=>move(+b.dataset.ctcdn,1)));
+  /* 삭제 */
+  box.querySelectorAll('[data-ctcdel]').forEach(b=>b.addEventListener('click',()=>{
+    const i=+b.dataset.ctcdel, a=ctCatsLoad();
+    if(!a[i]) return;
+    const name=a[i].name, used=ctCatUseCount(name);
+    let moveTo=null;
+    if(used){
+      const others=a.filter((x,j)=>j!==i);
+      if(!others.length){ toast('마지막 분류는 지울 수 없어요'); return; }
+      const to=others.some(x=>x.name==='기타')?'기타':others[0].name;
+      if(!confirm('"'+name+'" 분류를 '+used+'건이 쓰고 있어요.\n지우면 그 '+used+'건은 "'+to+'"로 옮겨집니다.\n\n지울까요?')) return;
+      moveTo=to;
+    } else {
+      if(a.length<=1){ toast('마지막 분류는 지울 수 없어요'); return; }
+      if(!confirm('"'+name+'" 분류를 지울까요?')) return;
+    }
+    a.splice(i,1); ctCatsSave(a);
+    if(moveTo){
+      (manualContacts||[]).forEach(c=>{ if((c.cat||'')===name) c.cat=moveTo; });
+      saveManualContacts();
+    }
+    const sel=g('ct-cat');
+    refreshCtCatSelect(sel&&sel.value===name?(moveTo||a[0].name):undefined);
+    renderCtCatList(); renderContacts();
+    toast('🗑 "'+name+'" 지움'+(moveTo?' ('+used+'건 → '+moveTo+')':''));
+  }));
+}
+function ctCatAddNew(){
+  const nameEl=g('ctCatNewName'), icoEl=g('ctCatNewIco');
+  const nv=(nameEl.value||'').trim();
+  if(!nv){ toast('이름을 입력해주세요'); nameEl.focus(); return; }
+  const a=ctCatsLoad();
+  if(a.some(x=>x.name===nv)){ toast('이미 있는 이름이에요'); return; }
+  a.push({ico:(icoEl.value||'').trim()||'🏷',name:nv}); ctCatsSave(a);
+  nameEl.value=''; icoEl.value='';
+  const sel=g('ct-cat'); refreshCtCatSelect(sel?sel.value:undefined);
+  renderCtCatList();
+  toast('✅ "'+nv+'" 추가됨');
+  nameEl.focus();
+}
+function openCtCatModal(){ renderCtCatList(); g('ctCatOverlay').classList.add('show'); }
+function closeCtCatModal(){ g('ctCatOverlay').classList.remove('show'); renderContacts(); }
+if(g('ctCatManage')) g('ctCatManage').addEventListener('click',openCtCatModal);
+if(g('ctCatClose'))  g('ctCatClose').addEventListener('click',closeCtCatModal);
+if(g('ctCatDone'))   g('ctCatDone').addEventListener('click',closeCtCatModal);
+if(g('ctCatAdd'))    g('ctCatAdd').addEventListener('click',ctCatAddNew);
+if(g('ctCatNewName')) g('ctCatNewName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); ctCatAddNew(); } });
+if(g('ctCatReset')) g('ctCatReset').addEventListener('click',()=>{
+  if(!confirm('분류 목록을 처음 상태(개인·맛집·병원·쇼핑·정비·기타)로 되돌릴까요?\n연락처에 저장된 분류 값은 그대로 남습니다.')) return;
+  ctCatsSave(CT_CATS_DEFAULT.map(x=>({ico:x.ico,name:x.name})));
+  const sel=g('ct-cat'); refreshCtCatSelect(sel?sel.value:undefined);
+  renderCtCatList(); renderContacts();
+  toast('↩ 기본값으로 되돌림');
+});
+window.refreshCtCatSelect=refreshCtCatSelect;
+window.openCtCatModal=openCtCatModal;
+window.ctCatIco=ctCatIco;
+
+
 function openCtModal(id){
   ctEditId=id||null;
   const c=id?manualContacts.find(x=>x.id===id):null;
@@ -3190,7 +3384,8 @@ function openCtModal(id){
   g('ctModalClose').onclick=closeCtModal;
   g('ctDelete').style.display=id?'':'none';
   g('ct-name').value=c?c.name||'':'';
-  g('ct-cat').value=c?c.cat||'개인':'개인';
+  /* 🏷 분류 목록을 매번 새로 채운 뒤 값 지정 (관리 모달에서 바뀌었을 수 있음) */
+  refreshCtCatSelect(c?(c.cat||'개인'):'개인');
   g('ct-phone').value=c?c.phone||'':'';
   g('ct-sido').value=c?c.sido||'':'';
   g('ct-sigungu').value=c?c.sigungu||'':'';
