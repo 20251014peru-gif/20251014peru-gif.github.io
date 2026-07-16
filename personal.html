@@ -649,15 +649,8 @@ main.wrap{padding-bottom:100px;padding-top:12px}
       <span class="v43-search-icon" style="font-size:16px">🔍</span>
       <input type="text" id="ctSearch" class="v43-search" style="height:40px;font-size:13px" placeholder="이름·전화번호·상호 검색…">
     </div>
-    <!-- 출처 필터 칩 -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-      <button class="memo-filter-btn active" data-ctf="all">전체</button>
-      <button class="memo-filter-btn" data-ctf="manual">👤 직접추가</button>
-      <button class="memo-filter-btn" data-ctf="restaurant">🍽 맛집</button>
-      <button class="memo-filter-btn" data-ctf="health">🏥 건강</button>
-      <button class="memo-filter-btn" data-ctf="purchase">🛒 구매</button>
-      <button class="memo-filter-btn" data-ctf="car">🚗 차계부</button>
-    </div>
+    <!-- 필터 칩 — 분류(내가 만든 것) + 출처(자동수집). renderCtChips() 가 채운다 -->
+    <div id="ctChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
     <span id="ctCount" style="font-size:12px;color:var(--ink-faint);display:block;margin-bottom:8px"></span>
     <div id="ctList">
       <div class="v43-empty"><div class="ei">📞</div>연락처가 없어요</div>
@@ -1238,7 +1231,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260716-1909';
+const APP_VER='v20260716-1915';
 document.title='개인일지 '+APP_VER;
 /* 버전을 뿌린다 — 헤더 + PIN 넣는 곳마다.
    잠금화면은 앱이 뜨자마자 보이는 곳이라 DOMContentLoaded 를 기다리면 늦을 수 있다.
@@ -3139,12 +3132,52 @@ function getAllContacts(){
   return [...byKey.values()];
 }
 
+/* ===== 🔖 연락처 필터 칩 — 분류(내가 만든 것) + 출처(자동수집) =====
+   전에는 출처만 칩이 나와서 직접 만든 분류(예: 인테리어)로는 못 걸렀다. */
+const CT_SRC_LABEL={restaurant:'🍽 맛집',health:'🏥 건강',purchase:'🛒 구매',car:'🚗 차계부'};
+function renderCtChips(all){
+  const box=g('ctChips'); if(!box) return;
+  all=all||[];
+  /* 분류별 건수 — 직접 입력한 연락처만 cat 을 가진다 */
+  const catCnt={};
+  all.forEach(c=>{ if(!c.auto && c.cat) catCnt[c.cat]=(catCnt[c.cat]||0)+1; });
+  /* 관리 모달에서 정한 순서대로, 목록에 없는 옛 분류는 뒤로 */
+  const order=ctCatsLoad().map(x=>x.name);
+  const cats=Object.keys(catCnt).sort((a,b)=>{
+    const ia=order.indexOf(a)<0?999:order.indexOf(a);
+    const ib=order.indexOf(b)<0?999:order.indexOf(b);
+    return ia-ib || a.localeCompare(b);
+  });
+  /* 출처별 건수 — 기록에서 자동으로 딸려온 것 */
+  const srcCnt={};
+  all.forEach(c=>{ if(c.auto && c.source) srcCnt[c.source]=(srcCnt[c.source]||0)+1; });
+
+  const chip=(f,label,n)=>`<button class="memo-filter-btn${ctFilter===f?' active':''}" data-ctf="${esc(f)}">${label}${n!==undefined?' <b>'+n+'</b>':''}</button>`;
+  let h=chip('all','전체',all.length);
+  cats.forEach(n=>{ h+=chip('cat:'+n, esc(ctCatIco(n))+' '+esc(n), catCnt[n]); });
+  Object.keys(CT_SRC_LABEL).forEach(s=>{ if(srcCnt[s]) h+=chip(s, CT_SRC_LABEL[s], srcCnt[s]); });
+  /* 고른 칩이 사라졌으면(건수 0) 그 칩도 남겨둔다 — 안 그러면 왜 빈 화면인지 모른다 */
+  if(ctFilter!=='all' && h.indexOf('data-ctf="'+esc(ctFilter)+'"')<0){
+    const nm=ctFilter.indexOf('cat:')===0?ctFilter.slice(4):(CT_SRC_LABEL[ctFilter]||ctFilter);
+    h+=chip(ctFilter, esc(nm), 0);
+  }
+  box.innerHTML=h;
+  box.querySelectorAll('[data-ctf]').forEach(b=>{
+    b.addEventListener('click',()=>{ ctFilter=b.dataset.ctf; renderContacts(); });
+  });
+}
+window.renderCtChips=renderCtChips;
+
+
 function renderContacts(){
   const el=g('ctList');const cnt=g('ctCount');if(!el) return;
   const q=(g('ctSearch').value||'').trim().toLowerCase();
   let list=getAllContacts();
+  const _all=list;                 /* 필터 걸기 전 원본 — 칩 건수용 */
+  renderCtChips(_all);
   if(ctFilter!=='all'){
     if(ctFilter==='manual') list=list.filter(c=>!c.auto);
+    else if(ctFilter.indexOf('cat:')===0){ const _cn=ctFilter.slice(4); list=list.filter(c=>!c.auto&&(c.cat||'')===_cn); }
     else list=list.filter(c=>c.source===ctFilter);
   }
   if(q) list=list.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q)||(c.addr||'').toLowerCase().includes(q));
@@ -3292,6 +3325,7 @@ function renderCtCatList(){
       }
       const sel=g('ct-cat');
       refreshCtCatSelect(sel&&sel.value===old?nv:undefined);
+      if(ctFilter==='cat:'+old) ctFilter='cat:'+nv;   /* 켜둔 필터도 따라간다 */
       renderCtCatList(); renderContacts();
       toast('✅ "'+old+'" → "'+nv+'"'+(used?' ('+used+'건 같이 바뀜)':''));
     });
@@ -3341,6 +3375,7 @@ function renderCtCatList(){
     }
     const sel=g('ct-cat');
     refreshCtCatSelect(sel&&sel.value===name?(moveTo||a[0].name):undefined);
+    if(ctFilter==='cat:'+name) ctFilter=moveTo?('cat:'+moveTo):'all';
     renderCtCatList(); renderContacts();
     toast('🗑 "'+name+'" 지움'+(moveTo?' ('+used+'건 → '+moveTo+')':''));
   }));
@@ -3431,12 +3466,7 @@ g('ctDelete').addEventListener('click',()=>{
 });
 }
 if(g('ctSearch')){g('ctSearch').addEventListener('input',()=>{clearTimeout(g('ctSearch')._t);g('ctSearch')._t=setTimeout(renderContacts,200);});}
-document.querySelectorAll('[data-ctf]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('[data-ctf]').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');ctFilter=btn.dataset.ctf;renderContacts();
-  });
-});
+/* 필터 칩 클릭은 renderCtChips() 안에서 매번 새로 묶는다 (칩이 동적으로 바뀌므로) */
 
 /* ========== 독서 모달 동적 바인딩 ========== */
 function bindReadingModal(en){
