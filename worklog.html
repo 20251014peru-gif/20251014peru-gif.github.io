@@ -2525,7 +2525,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div id="mPhotoArea" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
       <label class="photo-btn">📷 촬영<input type="file" id="m-cam" accept="image/*" capture="environment" style="display:none"></label>
       <label class="photo-btn">🖼 사진 선택<input type="file" id="m-file" accept="image/*" multiple style="display:none"></label>
-      <button type="button" id="mScanPickBtn" class="photo-btn" style="background:#e8f0fa;color:#3f7cb8;border:1.5px solid #dbe6f4">🧾 스캔앱 선택</button>
+      <button type="button" id="mScanPickBtn" class="photo-btn" style="background:#e8f0fa;color:#3f7cb8;border:1.5px solid #dbe6f4">📎 스캔앱에서 가져오기</button>
       <span style="font-size:11px;color:#7a92a8">💡 끌어놓기 · Ctrl+V 붙여넣기도 됩니다</span>
     </div>
     <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
@@ -2924,7 +2924,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=44-20260713t1343"></script>
+<script src="worklog.js?v=v45-20260716t135347"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -10005,6 +10005,12 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   /* 업무 모달용 picker 노출 */
   window._openScanPickerForWork = function(onSelect){
     openScanPicker('receipt', '', onSelect);
+  };
+  /* 종류를 골라서 여는 창구 — 서류(text)·사진(photo)도 열 수 있다.
+     scan-app 쪽은 원래부터 text/photo 를 지원했는데
+     worklog 가 'receipt' 로만 열어서 쓸 수가 없었다. */
+  window._openScanPickerOfType = function(type, onSelect){
+    openScanPicker(type || 'receipt', '', onSelect);
   };
 
   /* scan-app → worklog postMessage 수신 */
