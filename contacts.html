@@ -177,10 +177,12 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
     <div class="head-row">
       <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · AI 명함인식 <b id="verBadge" style="color:#5b9bd5">…</b></span></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <!-- 홈이 맨 오른쪽 끝에 있어서 폰에선 줄바꿈돼 안 보였다 → 동기화 왼쪽 맨 앞으로 -->
+        <a class="home-link" href="index.html"
+           style="background:#3f7cb8;color:#fff;border-color:#3f7cb8;font-weight:700;flex:none">🏠 홈</a>
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="worklog.html">📋 업무일지</a>
         <a class="home-link" href="staff.html">👥 직원관리</a>
-        <a class="home-link" href="index.html">← 홈</a>
       </div>
     </div>
   </div>
@@ -325,7 +327,7 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 
 /* ===== 버전 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐. 배지·제목이 이걸 읽는다. 손으로 적지 말 것. */
-var APP_VERSION='v45-20260716-154701';
+var APP_VERSION='v45-20260716-155015';
 document.title='업체 연락처 '+APP_VERSION;
 (function(){
   var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;
