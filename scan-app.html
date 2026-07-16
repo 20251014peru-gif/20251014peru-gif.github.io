@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>📷 사진 스캐너 v20260717-0803</title>
+<title>📷 사진 스캐너 v20260717-0821</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -953,7 +953,8 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       <div id="detailMemoBox" style="margin-top:12px;padding:10px;background:var(--blue-soft);border-radius:10px;
         font-size:13px;line-height:1.6;white-space:pre-wrap"></div>
     </div>
-    <div class="modal-foot">
+    <div class="modal-foot" style="flex-wrap:wrap">
+      <button class="btn" id="detailSend" style="flex:1 1 100%;background:#fff4e6;color:#c2410c;border:1.5px solid #fdba74;font-weight:800;margin-bottom:6px">📤 보내기 (프로젝트·업무)</button>
       <button class="btn btn-ghost btn-flex" id="detailCloseBtn">닫기</button>
       <button class="btn btn-blue" id="detailEdit">✏️ 수정</button>
     </div>
@@ -1261,6 +1262,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       <div id="sendDestSummary" style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;padding:8px 10px;background:var(--blue-soft);border-radius:8px"></div>
       <div id="sendDestQuick"></div>
       <div id="sendDestBtnGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <button type="button" class="sendDestBtn" data-dest="contacts" style="height:54px;font-size:14px;font-weight:800;background:#dcfce7;color:#15803d;border:1.5px solid #86efac;border-radius:12px;cursor:pointer">📇 연락처</button>
         <button type="button" class="sendDestBtn" data-dest="car" style="height:54px;font-size:14px;font-weight:800;background:#cffafe;color:#0e7490;border:1.5px solid #67e8f9;border-radius:12px;cursor:pointer">🚗 차계부</button>
         <button type="button" class="sendDestBtn" data-dest="personal" style="height:54px;font-size:14px;font-weight:800;background:#ffedd5;color:#c2410c;border:1.5px solid #fdba74;border-radius:12px;cursor:pointer">🍜 개인일지</button>
         <button type="button" class="sendDestBtn" data-dest="project" style="height:54px;font-size:14px;font-weight:800;background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:12px;cursor:pointer">📁 부동산 프로젝트</button>
@@ -1466,7 +1468,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260717-080300';
+const APP_VER='v20260717-082100';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -2891,6 +2893,11 @@ async function openDetail(pid){
     }
   }
   $('detailEdit').onclick=()=>{$('detailOverlay').classList.remove('show');openAddModal(p);};
+  /* 📤 보내기 — 보안(비공개) 사진은 제외 */
+  if($('detailSend')){
+    $('detailSend').style.display=p.secure?'none':'';
+    $('detailSend').onclick=function(){$('detailOverlay').classList.remove('show');openSendDest('photo',p.id);};
+  }
   $('detailOverlay').classList.add('show');
 }
 $('detailClose').onclick=()=>$('detailOverlay').classList.remove('show');
@@ -4367,8 +4374,8 @@ async function openScanDetail(type,id){
 
   // vCard 버튼은 명함일 때만
   $('scanDetailVcard').style.display=(type==='card')?'':'none';
-  // 📤 보내기 버튼은 영수증·서류일 때
-  if($('scanDetailSend')) $('scanDetailSend').style.display=(type==='receipt'||type==='text')?'':'none';
+  // 📤 보내기 버튼은 영수증·서류·명함일 때
+  if($('scanDetailSend')) $('scanDetailSend').style.display=(type==='receipt'||type==='text'||type==='card')?'':'none';
 
   $('scanDetailOverlay').classList.add('show');
 }
@@ -4495,7 +4502,8 @@ async function pushReceiptToProject(r,opt){
   var projectId=opt&&opt.projectId;
   if(!projectId){toast('프로젝트를 먼저 선택하세요');return false;}
   var itype=(opt&&opt.type)||'receipt';
-  var col=(itype==='text')?'texts':'receipts';
+  var col=itype+'s';   /* receipt→receipts, card→cards, text→texts, photo→photos */
+  var LBL={receipt:'영수증',card:'명함',text:'서류',photo:'사진'};
   try{
     /* 원본이 클라우드에 있어야 프로젝트가 참조로 읽는다 — 최신본 강제 저장 */
     if(_fbUser){var o=Object.assign({},r);delete o.photo;await fbCollection(col).doc(r.id).set(o);}
@@ -4503,9 +4511,52 @@ async function pushReceiptToProject(r,opt){
       scanRefs:firebase.firestore.FieldValue.arrayUnion({type:itype,id:r.id})
     });
     _sdTag(r,'realestate:project_'+projectId);
-    toast('📁 프로젝트에 '+(itype==='text'?'서류':'영수증')+'를 첨부했어요');
+    toast('📁 프로젝트에 '+(LBL[itype]||'항목')+'을 첨부했어요');
     return true;
   }catch(err){console.error('[프로젝트]',err);toast('프로젝트 보내기 실패: '+(err.message||err));return false;}
+}
+
+/* ── 업무일지 작업기록에 첨부 (사진·서류 → worklog_entries work.scanRefs) ── */
+async function _sdLoadWorks(){
+  if(!_fbDb)return [];
+  try{
+    var snap=await _fbDb.collection('worklog_entries').get(), arr=[];
+    snap.forEach(function(doc){var d=doc.data()||{};
+      if(d.kind!=='work'||d.deletedAt)return;
+      var t=((d.refYear?d.refYear+'년 ':'')+(d.refMonth?d.refMonth+'월 ':''))+(d.title||'(제목없음)');
+      arr.push({id:doc.id,title:t,date:d.date||''});});
+    arr.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+    return arr.slice(0,40);
+  }catch(e){console.error('[작업목록]',e);return [];}
+}
+/* 일반사진의 대표 이미지 URL (Storage URL, data:URL 제외) */
+function _sdPhotoUrl(p){
+  try{
+    if(p.photoUrl&&!/^data:/.test(p.photoUrl))return p.photoUrl;
+    var u=p.imgUrls||{};
+    for(var k in u){ if(u[k]&&!/^data:/.test(u[k]))return u[k]; }
+  }catch(e){}
+  return '';
+}
+async function pushScanToWork(item,opt){
+  if(!_fbDb){toast('클라우드 동기화를 먼저 설정하세요');return false;}
+  var workId=opt&&opt.workId; if(!workId){toast('작업 기록을 먼저 선택하세요');return false;}
+  var itype=(opt&&opt.type)||'photo';
+  var col=itype+'s';
+  try{
+    if(_fbUser){var o=Object.assign({},item);delete o.photo;await fbCollection(col).doc(item.id).set(o);}
+    var data;
+    if(itype==='photo') data={title:item.title||'사진',cat:item.cat||'',date:item.date||'',photoUrl:_sdPhotoUrl(item)};
+    else if(itype==='text') data={title:item.title||'서류',docType:item.type||'',date:item.date||''};
+    else if(itype==='card') data={name:item.name||'',company:item.company||'',mobile:item.mobile||item.phone||''};
+    else data={place:item.place||'',date:item.date||'',amount:Number(item.amount)||0};
+    await _fbDb.collection('worklog_entries').doc(workId).update({
+      scanRefs:firebase.firestore.FieldValue.arrayUnion({type:itype,id:item.id,data:data})
+    });
+    _sdTag(item,'worklog:work_'+workId);
+    toast('💼 업무일지 작업기록에 첨부했어요');
+    return true;
+  }catch(err){console.error('[업무첨부]',err);toast('업무 첨부 실패: '+(err.message||err));return false;}
 }
 
 /* ── 자주 가는 주유소 기억 (원터치용) ── */
@@ -4515,15 +4566,19 @@ function _sdFuelMemSave(place,car,kind){try{place=(place||'').trim();if(!place)r
 
 /* ── 목적지 선택 시트 컨트롤러 ── */
 var _sendDestState={type:'receipt',rid:null,dest:null,projects:[]};
-/* 영수증/서류 항목 조회 */
+/* 항목 조회 (영수증·명함·서류·사진) */
 function _sdFindItem(type,id){
   if(type==='text')return (texts||[]).find(function(x){return x.id===id;});
+  if(type==='card')return (cards||[]).find(function(x){return x.id===id;});
+  if(type==='photo')return (photos||[]).find(function(x){return x.id===id;});
   return (receipts||[]).find(function(x){return x.id===id;});
 }
-/* 목적지: 영수증은 4곳 전부, 서류는 프로젝트만 (구분 필터 없음 — 이전 방식으로 복원) */
+/* 타입별 목적지 */
 function _sdAllowedDests(type,item){
-  if(type==='text')return ['project'];
-  return ['car','personal','project','worklog'];
+  if(type==='card')return ['contacts','project'];      /* 명함 → 연락처·프로젝트 (업무는 연락처↔업무 연결로 자동) */
+  if(type==='text')return ['project','worklog'];       /* 서류 → 프로젝트·업무(작업첨부) */
+  if(type==='photo')return ['project','worklog'];      /* 일반사진 → 프로젝트·업무(작업첨부) */
+  return ['car','personal','project','worklog'];       /* 영수증 → 4곳 */
 }
 /* 원터치(자주 가는 주유소) 버튼 렌더 */
 function _sdRenderQuick(type,item){
@@ -4549,8 +4604,11 @@ function openSendDest(type,id){
   var item=_sdFindItem(type,id);
   if(!item){toast('항목을 찾을 수 없어요');return;}
   _sendDestState={type:type,rid:id,dest:null,projects:[]};
-  var titleTxt=(type==='text')?('📄 '+(item.title||'서류')):('🧾 '+(item.place||'영수증'));
-  var meta=(type==='text')?(esc(item.date||'')+(item.type?(' · '+esc(item.type)):'')):(numFmt(Number(item.amount)||0)+'원 · '+esc(item.date||today()));
+  var titleTxt, meta;
+  if(type==='card'){ titleTxt='💼 '+(item.name||item.company||'명함'); meta=esc([item.company,item.mobile||item.phone].filter(Boolean).join(' · ')); }
+  else if(type==='photo'){ titleTxt='📷 '+(item.title||'사진'); meta=esc([item.date,item.cat].filter(Boolean).join(' · ')); }
+  else if(type==='text'){ titleTxt='📄 '+(item.title||'서류'); meta=esc((item.date||'')+(item.type?(' · '+item.type):'')); }
+  else { titleTxt='🧾 '+(item.place||'영수증'); meta=numFmt(Number(item.amount)||0)+'원 · '+esc(item.date||today()); }
   $('sendDestSummary').innerHTML='<b>'+esc(titleTxt)+'</b> · '+meta+(item.owner?(' · '+esc(item.owner)):'');
   var allowed=_sdAllowedDests(type,item);
   document.querySelectorAll('.sendDestBtn').forEach(function(b){
@@ -4573,7 +4631,11 @@ function _sendDestPick(dest){
   var panel=$('sendDestPanel');panel.style.display='';
   var g=_sdGuessCar(r);
   var litersGuess=(g.unit>0&&Number(r.amount)>0)?Math.round((Number(r.amount)/g.unit)*100)/100:'';
-  if(dest==='car'){
+  if(dest==='contacts'){
+    panel.innerHTML='<div style="font-weight:800;margin-bottom:10px;color:#15803d">📇 업체 연락처로 보내기</div>'
+      +'<div style="font-size:12px;color:var(--ink)">'+esc(r.name||r.company||'명함')+(r.company?(' · '+esc(r.company)):'')+'</div>'
+      +'<div style="font-size:11px;color:var(--ink-faint);margin-top:8px">명함이 업체 연락처 앱에 저장됩니다. 이미 있으면 최신 내용으로 갱신돼요.</div>';
+  }else if(dest==='car'){
     var carOpts=_sdCars().map(function(n){return '<option'+(n===g.car?' selected':'')+'>'+esc(n)+'</option>';}).join('');
     panel.innerHTML='<div style="font-weight:800;margin-bottom:10px;color:#0e7490">🚗 차계부로 보내기</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
@@ -4601,11 +4663,25 @@ function _sendDestPick(dest){
     });
     return;
   }else if(dest==='worklog'){
-    panel.innerHTML='<div style="font-weight:800;margin-bottom:10px;color:#1d4ed8">💼 업무일지 경비로 보내기</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-      +_sdInput('지출유형',_sdSel('sd_exptype','<option>개인지출</option><option>세금계산서</option><option>전표</option>'))
-      +_sdInput('품목유형',_sdSel('sd_utype','<option>자재구매</option><option>공사/용역</option><option>택배</option><option>기타</option>'))
-      +'</div><div style="font-size:11px;color:var(--ink-faint);margin-top:8px">업무일지 지출 탭에 경비 기록으로 저장됩니다.</div>';
+    if(_sendDestState.type==='receipt'){
+      panel.innerHTML='<div style="font-weight:800;margin-bottom:10px;color:#1d4ed8">💼 업무일지 경비로 보내기</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+        +_sdInput('지출유형',_sdSel('sd_exptype','<option>개인지출</option><option>세금계산서</option><option>전표</option>'))
+        +_sdInput('품목유형',_sdSel('sd_utype','<option>자재구매</option><option>공사/용역</option><option>택배</option><option>기타</option>'))
+        +'</div><div style="font-size:11px;color:var(--ink-faint);margin-top:8px">업무일지 지출 탭에 경비 기록으로 저장됩니다.</div>';
+    }else{
+      /* 사진·서류 → 작업 기록에 첨부 */
+      panel.innerHTML='<div style="font-weight:800;margin-bottom:10px;color:#1d4ed8">💼 업무일지 작업기록에 첨부</div><div id="sd_workwrap" style="font-size:12px;color:var(--ink-faint)">작업 목록 불러오는 중…</div>';
+      $('sendDestConfirm').style.display='none';
+      _sdLoadWorks().then(function(list){
+        var w=$('sd_workwrap');if(!w)return;
+        if(!list.length){w.innerHTML='작업 기록이 없어요. 업무일지에서 먼저 작업을 등록해 주세요.';return;}
+        w.innerHTML=_sdInput('작업 선택',_sdSel('sd_work',list.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.title)+(x.date?(' · '+esc(x.date)):'')+'</option>';}).join('')))
+          +'<div style="font-size:11px;color:var(--ink-faint);margin-top:8px">고른 작업 기록에 '+(_sendDestState.type==='text'?'서류':'사진')+'가 첨부됩니다.</div>';
+        $('sendDestConfirm').style.display='';
+      });
+      return;
+    }
   }
   $('sendDestConfirm').style.display='';
 }
@@ -4617,10 +4693,14 @@ async function _sendDestConfirmDo(){
   var btn=$('sendDestConfirm');btn.disabled=true;
   var ok=false;
   try{
-    if(dest==='car') ok=await pushReceiptToCarLog(r,{car:($('sd_car')||{}).value,kind:($('sd_kind')||{}).value,odo:($('sd_odo')||{}).value,liters:($('sd_liters')||{}).value});
+    if(dest==='contacts'){ var cid=await pushCardToContacts(r,{force:true}); ok=!!cid; if(ok)toast('📇 업체 연락처에 저장됐어요'); else toast('연락처 보내기 실패 — 동기화 확인'); }
+    else if(dest==='car') ok=await pushReceiptToCarLog(r,{car:($('sd_car')||{}).value,kind:($('sd_kind')||{}).value,odo:($('sd_odo')||{}).value,liters:($('sd_liters')||{}).value});
     else if(dest==='personal') ok=await pushReceiptToPersonalCat(r,{kind:($('sd_cat')||{}).value});
     else if(dest==='project') ok=await pushReceiptToProject(r,{projectId:($('sd_proj')||{}).value,type:_sendDestState.type});
-    else if(dest==='worklog') ok=await pushReceiptToWorklog(r,{expType:($('sd_exptype')||{}).value,utype:($('sd_utype')||{}).value});
+    else if(dest==='worklog'){
+      if(_sendDestState.type==='receipt') ok=await pushReceiptToWorklog(r,{expType:($('sd_exptype')||{}).value,utype:($('sd_utype')||{}).value});
+      else ok=await pushScanToWork(r,{workId:($('sd_work')||{}).value,type:_sendDestState.type});
+    }
   }catch(err){console.error('[보내기]',err);toast('보내기 오류: '+(err.message||err));}
   finally{btn.disabled=false;}
   if(ok){_closeSendDest();if(typeof renderScanList==='function')renderScanList();}
@@ -4629,7 +4709,7 @@ async function _sendDestConfirmDo(){
 /* ── 배선 (중복 바인딩 방지) ── */
 if($('scanDetailSend')&&!$('scanDetailSend')._sdBound){$('scanDetailSend')._sdBound=true;
   $('scanDetailSend').addEventListener('click',function(){
-    if(_scanDetailCtx&&(_scanDetailCtx.type==='receipt'||_scanDetailCtx.type==='text')){
+    if(_scanDetailCtx&&(_scanDetailCtx.type==='receipt'||_scanDetailCtx.type==='text'||_scanDetailCtx.type==='card')){
       var t=_scanDetailCtx.type,id=_scanDetailCtx.id;closeScanDetail();openSendDest(t,id);
     }
   });}
