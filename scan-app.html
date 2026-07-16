@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>📷 사진 스캐너 v20260715-1732</title>
+<title>📷 사진 스캐너 v20260717-0658</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -1440,7 +1440,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260716-183752';
+const APP_VER='v20260717-065812';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -1468,20 +1468,55 @@ let secureUnlocked=false;
 
 // IndexedDB
 let idb=null;
-function openIDB(){return new Promise((res,rej)=>{
-  const req=indexedDB.open('scanapp_imgs',1);
-  req.onupgradeneeded=e=>{const db=e.target.result;
-    if(!db.objectStoreNames.contains('imgs'))db.createObjectStore('imgs',{keyPath:'id'});};
-  req.onsuccess=e=>{idb=e.target.result;res(idb);};
-  req.onerror=e=>rej(e);
-});}
-const idbPut=(id,data)=>new Promise((r,j)=>{const t=idb.transaction('imgs','readwrite');
-  t.objectStore('imgs').put({id,data});t.oncomplete=r;t.onerror=j;});
-const idbGet=id=>new Promise((r,j)=>{
-  const req=idb.transaction('imgs','readonly').objectStore('imgs').get(id);
-  req.onsuccess=e=>r(e.target.result?.data||null);req.onerror=j;});
-const idbDel=id=>new Promise((r,j)=>{const t=idb.transaction('imgs','readwrite');
-  t.objectStore('imgs').delete(id);t.oncomplete=r;t.onerror=j;});
+let _idbOpening=null;
+function openIDB(){
+  /* 이미 여는 중이면 그 Promise를 재사용 (동시 호출 시 중복 open 방지) */
+  if(_idbOpening) return _idbOpening;
+  _idbOpening=new Promise((res,rej)=>{
+    const req=indexedDB.open('scanapp_imgs',1);
+    req.onupgradeneeded=e=>{const db=e.target.result;
+      if(!db.objectStoreNames.contains('imgs'))db.createObjectStore('imgs',{keyPath:'id'});};
+    req.onsuccess=e=>{
+      idb=e.target.result;
+      /* 연결이 끊기는 순간 핸들을 버린다 → 다음 호출 때 자동 재연결 */
+      idb.onversionchange=()=>{console.warn('[idb] versionchange → 연결 해제');try{idb.close();}catch(_){}idb=null;};
+      idb.onclose=()=>{console.warn('[idb] 연결이 닫힘 → 재연결 대기');idb=null;};
+      res(idb);
+    };
+    req.onerror=e=>rej(e.target.error||new Error('IndexedDB 열기 실패'));
+    req.onblocked=()=>console.warn('[idb] blocked — 다른 탭이 잡고 있음');
+  }).finally(()=>{_idbOpening=null;});
+  return _idbOpening;
+}
+/* 살아있는 연결을 보장한다. 죽었으면 폐기하고 다시 연다. */
+async function idbReady(){
+  if(idb){
+    try{ idb.transaction('imgs','readonly').abort(); return idb; }
+    catch(e){ console.warn('[idb] 죽은 연결 폐기 → 재연결',e.name); idb=null; }
+  }
+  return await openIDB();
+}
+/* 끊긴 연결이면 한 번 재연결해서 재시도한다 */
+async function _idbTry(fn){
+  try{ return await fn(await idbReady()); }
+  catch(e){
+    if(e && (e.name==='InvalidStateError'||e.name==='TransactionInactiveError')){
+      console.warn('[idb] '+e.name+' → 재연결 후 1회 재시도');
+      idb=null;
+      return await fn(await idbReady());
+    }
+    throw e;
+  }
+}
+const idbPut=(id,data)=>_idbTry(db=>new Promise((r,j)=>{
+  const t=db.transaction('imgs','readwrite');
+  t.objectStore('imgs').put({id,data});t.oncomplete=r;t.onerror=()=>j(t.error||new Error('idbPut 실패'));}));
+const idbGet=id=>_idbTry(db=>new Promise((r,j)=>{
+  const req=db.transaction('imgs','readonly').objectStore('imgs').get(id);
+  req.onsuccess=e=>r(e.target.result?.data||null);req.onerror=()=>j(req.error||new Error('idbGet 실패'));}));
+const idbDel=id=>_idbTry(db=>new Promise((r,j)=>{
+  const t=db.transaction('imgs','readwrite');
+  t.objectStore('imgs').delete(id);t.oncomplete=r;t.onerror=()=>j(t.error||new Error('idbDel 실패'));}));
 
 // 헬퍼
 const $=id=>document.getElementById(id);
@@ -4781,13 +4816,16 @@ $('receiptSave').onclick=async()=>{
     items,memo:$('r_memo').value.trim(),
     photoId,photoUrl,updated:Date.now(),
   };
-  if(_rcptEditing){
-    const idx=receipts.findIndex(r=>r.id===_rcptEditing.id);
-    if(idx>=0)receipts[idx]=data;
-    delete receipts[idx].photo;
-  }else receipts.unshift(data);
+  const _rIdx=_rcptEditing?receipts.findIndex(r=>r.id===_rcptEditing.id):-1;
+  if(_rIdx>=0){
+    receipts[_rIdx]=data;
+    delete receipts[_rIdx].photo;
+  }else receipts.unshift(data);   /* 수정 대상이 사라졌으면 신규로 살린다 */
   if(!saveReceipts())return;
   closeReceiptModal();renderScanList();toast('✅ 저장됐어요');
+  }catch(e){
+    console.error('[receiptSave]',e);
+    toast('저장 실패: '+(e.message||e));
   }finally{
     _saveBtn.disabled=false;_saveBtn.textContent='💾 저장';
     if(_saveProg)_saveProg.classList.remove('show');
@@ -5040,11 +5078,11 @@ $('cardSave').onclick=async()=>{
     cat:($('c_cat').value==='__manage'?cardCats[0]:$('c_cat').value)||cardCats[0],
     photoId,photoUrl,updated:Date.now(),
   };
-  if(_cardEditing){
-    const idx=cards.findIndex(c=>c.id===_cardEditing.id);
-    if(idx>=0)cards[idx]=data;
-    delete cards[idx].photo;
-  }else cards.unshift(data);
+  const _cIdx=_cardEditing?cards.findIndex(c=>c.id===_cardEditing.id):-1;
+  if(_cIdx>=0){
+    cards[_cIdx]=data;
+    delete cards[_cIdx].photo;
+  }else cards.unshift(data);   /* 수정 대상이 사라졌으면 신규로 살린다 */
   if(!saveCards())return;
   closeCardModal();renderScanList();toast('✅ 저장됐어요');
   /* 업무용이면 연락처에도 — 저장을 막지 않게 뒤에서 돌린다 */
@@ -5053,6 +5091,9 @@ $('cardSave').onclick=async()=>{
       if(id) toast('📇 업체 연락처에도 저장됐어요');
     });
   }
+  }catch(e){
+    console.error('[cardSave]',e);
+    toast('저장 실패: '+(e.message||e));
   }finally{
     _cSaveBtn.disabled=false;_cSaveBtn.textContent='💾 저장';
     if(_cProg)_cProg.classList.remove('show');
@@ -5216,13 +5257,16 @@ $('textSave').onclick=async()=>{
     memo:$('t_memo').value.trim(),
     photoId,photoUrl,updated:Date.now(),
   };
-  if(_textEditing){
-    const idx=texts.findIndex(x=>x.id===_textEditing.id);
-    if(idx>=0)texts[idx]=data;
-    delete texts[idx].photo;
-  }else texts.unshift(data);
+  const _tIdx=_textEditing?texts.findIndex(x=>x.id===_textEditing.id):-1;
+  if(_tIdx>=0){
+    texts[_tIdx]=data;
+    delete texts[_tIdx].photo;
+  }else texts.unshift(data);   /* 수정 대상이 사라졌으면 신규로 살린다 */
   if(!saveTexts())return;
   closeTextModal();renderScanList();toast('✅ 저장됐어요');
+  }catch(e){
+    console.error('[textSave]',e);
+    toast('저장 실패: '+(e.message||e));
   }finally{
     _tSaveBtn.disabled=false;_tSaveBtn.textContent='💾 저장';
     if(_tProg)_tProg.classList.remove('show');
