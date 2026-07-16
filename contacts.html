@@ -151,7 +151,7 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
   <div class="lock-card">
     <div class="lock-icon">📞</div>
     <div class="lock-title">업체 연락처</div>
-    <div class="lock-ver" id="lockVer">v44-0626-1345</div>
+    <div class="lock-ver" id="lockVer">…</div>
     <div class="lock-sub" id="lockSub"></div>
     <div class="pin-dots" id="pinDots" style="display:none">
       <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -175,7 +175,7 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 <header>
   <div class="wrap">
     <div class="head-row">
-      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · AI 명함인식 <b id="verBadge" style="color:#5b9bd5">v44-0626-1345</b></span></div>
+      <div class="brand"><h1>업체 연락처</h1><span class="sub">분야별 · AI 명함인식 <b id="verBadge" style="color:#5b9bd5">…</b></span></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <a class="home-link" href="worklog.html">📋 업무일지</a>
@@ -310,12 +310,16 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
 
 /* ===== 버전 ===== */
-var APP_VERSION='v44-0626-1345';
+/* ⚠️ 버전은 여기 한 곳뿐. 배지·제목이 이걸 읽는다. 손으로 적지 말 것. */
+var APP_VERSION='v45-20260716-141728';
+document.title='업체 연락처 '+APP_VERSION;
 (function(){
   var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;
+  var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;
   var lv=document.getElementById('lockVer');if(lv)lv.textContent=APP_VERSION;
 })();
 
@@ -584,15 +588,93 @@ function cardHTML(it){
   const personStr = [it.person?esc(it.person):"", it.title?esc(it.title):""].filter(Boolean).join(" "); const line2 = [personStr?("👤 "+personStr):"", tel, mail].filter(Boolean).join(" &nbsp;·&nbsp; ");
   const addr = it.address ? `<div class="m">📍 ${esc(it.address)}</div>` : "";
   const memo = it.memo ? `<div class="m">📝 ${esc(it.memo)}</div>` : "";
-  const img = it.card ? `<img class="cardimg zimg" src="${it.card}" alt="명함">` : "";
+  /* scan-app 이 사진의 메인이다 — Storage 주소(photoUrl)를 먼저 쓰고,
+     연락처가 직접 찍어 넣은 옛 base64(card)는 그대로 폴백으로 둔다. */
+  const imgSrc = it.photoUrl || it.card || "";
+  const img = imgSrc ? `<img class="cardimg zimg" src="${imgSrc}" alt="명함">` : "";
+  const fromScan = it.scanId ? `<span class="pill" style="background:#e8f5e9;color:#2e7d32">📷 스캔앱</span>` : "";
   return `<div class="row-item" data-id="${it.id}">
     <div class="grow">
-      <div class="t"><span class="star ${it.fav?"on":""}" data-star>${it.fav?"★":"☆"}</span> ${esc(it.name||"(이름없음)")} <span class="pill">${esc(it.cat||"기타")}</span></div>
+      <div class="t"><span class="star ${it.fav?"on":""}" data-star>${it.fav?"★":"☆"}</span> ${esc(it.name||"(이름없음)")} <span class="pill">${esc(it.cat||"기타")}</span> ${fromScan}</div>
       ${line2?`<div class="m">${line2}</div>`:""}
       ${addr}${memo}${img}
-      <div class="card-acts"><button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div>
+      <div class="card-acts"><button class="mini-btn" data-scan title="스캔앱 명함으로 보내기">📷 스캔앱</button><button class="mini-btn" data-edit>수정</button><button class="mini-btn del" data-del>삭제</button></div>
     </div></div>`;
 }
+/* ── 📷 scan-app 으로 보내기 ──
+   scan-app 이 사진·명함의 메인이다. 연락처에서 직접 만든 업체를
+   scan-app 명함으로 넘긴다. scanId 로 이어 두 번 보내도 사본이 안 생긴다. */
+const SCAN_USER = (function(){
+  try{ return localStorage.getItem('scanapp_fb_user') || '달님'; }catch(e){ return '달님'; }
+})();
+
+function contactToCard(t){
+  return {
+    id: t.scanId || ('c_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
+    name:    (t.person||'').trim() || (t.name||'').trim(),
+    company: (t.person ? (t.name||'') : '').trim(),
+    dept:    t.dept||'',
+    position:(t.title||'').split('/')[0].trim(),
+    mobile:  (t.mobile||'').trim() || (t.phone||'').trim(),
+    phone:   (t.tel||'').trim(),
+    fax:     (t.fax||'').trim(),
+    email:   (t.email||'').trim(),
+    website: '',
+    addr:    (t.address||'').trim(),
+    memo:    t.memo||'',
+    owner:   '업무',
+    cat:     t.cat||'',
+    photoUrl:t.photoUrl||'',
+    photoId: '',
+    contactId:t.id||'',
+    updated: Date.now()
+  };
+}
+
+/* 옛 명함 사진은 base64 로 문서 안에 들어있다.
+   scan-app 은 photoUrl 이 data: 로 시작하면 비워버리므로 그대로 보내면 사진이 사라진다.
+   → Storage 에 올려 https 주소로 바꿔 보낸다 (scan-app 과 같은 경로 규칙). */
+async function uploadCardToStorage(id, base64){
+  if(!base64 || !base64.startsWith('data:')) return '';
+  try{
+    if(typeof firebase==='undefined' || !firebase.storage) return '';
+    const ref=firebase.storage().ref('scanapp/'+SCAN_USER+'/cards/'+id+'.jpg');
+    const blob=await (await fetch(base64)).blob();
+    await ref.put(blob,{contentType:'image/jpeg'});
+    return await ref.getDownloadURL();
+  }catch(e){
+    console.warn('[storage] 올리기 실패',e);
+    return '';
+  }
+}
+
+async function sendToScanApp(id){
+  const it=items.find(x=>x.id===id);
+  if(!it){ toast('업체를 찾을 수 없습니다'); return; }
+  if(!online || !db){ toast('클라우드 연결이 필요합니다'); return; }
+  try{
+    toast('📤 보내는 중…');
+    const card=contactToCard(it);
+    /* 사진이 base64 뿐이면 Storage 로 올려서 주소를 얻는다 */
+    if(!card.photoUrl && it.card){
+      const url=await uploadCardToStorage(card.id, it.card);
+      if(url){
+        card.photoUrl=url;
+        updateRecord(id,{photoUrl:url});   /* 연락처도 이제 주소를 갖는다 */
+      }
+    }
+    await db.collection('scanapp').doc(SCAN_USER).collection('cards').doc(card.id).set(card,{merge:true});
+    const patch={};
+    if(!it.scanId) patch.scanId=card.id;
+    if(Object.keys(patch).length) updateRecord(id,patch);
+    render();
+    toast(card.photoUrl ? '📷 스캔앱 명함으로 보냈어요' : '📷 보냈어요 (사진 없음)');
+  }catch(e){
+    console.error('[scan 전송]',e);
+    toast('보내기 실패: '+e.message);
+  }
+}
+
 function render(){
   const box=$("list");
   /* 카운트 배지 업데이트 */
@@ -619,6 +701,8 @@ function render(){
   box.querySelectorAll(".row-item").forEach(el=>{
     el.addEventListener("click",e=>{ if(e.target.closest("a,button,[data-star],img")) return; openEditor(el.dataset.id); });
     el.querySelector("[data-star]").addEventListener("click",e=>{ e.stopPropagation(); const it=items.find(x=>x.id===el.dataset.id); if(it){ updateRecord(el.dataset.id,{fav:!it.fav}); render(); } });
+    const sb=el.querySelector("[data-scan]");
+    if(sb) sb.addEventListener("click",e=>{ e.stopPropagation(); sendToScanApp(el.dataset.id); });
     el.querySelector("[data-edit]").addEventListener("click",e=>{ e.stopPropagation(); openEditor(el.dataset.id); });
     el.querySelector("[data-del]").addEventListener("click",e=>{ e.stopPropagation(); if(!confirm("이 업체를 삭제할까요?")) return; deleteRecord(el.dataset.id); render(); toast("삭제되었습니다"); });
   });
@@ -691,9 +775,14 @@ $("mCancel").addEventListener("click",()=>$("overlay").classList.remove("show"))
 $("mSave").addEventListener("click",()=>{
   const name=$("c-name").value.trim(); if(!name){ toast("업체명을 입력하세요"); return; }
   const onetimeVal = $("c-onetime") && $("c-onetime").checked;
+  /* scan-app 에서 온 값(photoUrl·scanId·부서·휴대폰·팩스)은 이 화면에 칸이 없다.
+     그냥 두면 수정 한 번에 통째로 날아간다 → 원본에서 들고 와 같이 저장한다. */
+  const prev = mId ? (items.find(x=>x.id===mId)||{}) : {};
   const obj={ name, cat:$("c-cat").value, person:$("c-person").value.trim(), title:$("c-title").value.trim(), phone:$("c-phone").value.trim(),
     email:$("c-email").value.trim(), address:$("c-address").value.trim(), memo:$("c-memo").value.trim(), card:cardImg,
-    vendorType: onetimeVal ? '일회성' : '등록업체' };
+    vendorType: onetimeVal ? '일회성' : '등록업체',
+    photoUrl: prev.photoUrl||'', scanId: prev.scanId||'',
+    dept: prev.dept||'', mobile: prev.mobile||'', tel: prev.tel||'', fax: prev.fax||'' };
   if(mId) updateRecord(mId,obj); else { obj.fav=false; obj.createdAt=Date.now(); addRecord(obj); }
   render(); $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
 });
