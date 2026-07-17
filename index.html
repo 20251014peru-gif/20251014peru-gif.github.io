@@ -14,7 +14,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 /* 헤더 */
 .hdr{padding:calc(env(safe-area-inset-top) + 16px) 4px 10px;}
 .hdr-title{font-size:26px;font-weight:800;letter-spacing:-0.6px;}
-.hdr-sub{font-size:13px;color:var(--sub);margin-top:3px;font-weight:600;}
+.hdr-sub{font-size:14px;color:var(--sub);margin-top:3px;font-weight:700;}
 
 /* 오늘 + 날씨 카드 */
 .today{background:var(--card);border-radius:18px;padding:11px 13px;display:flex;align-items:stretch;gap:11px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:16px;}
@@ -33,44 +33,78 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 /* 시장 정보 */
 .mkt{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
 .mkt-tile{background:var(--card);border-radius:14px;padding:9px 5px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.045);}
-.mkt-lb{font-size:10px;color:var(--sub);font-weight:700;white-space:nowrap;}
-.mkt-v{font-size:15px;font-weight:800;margin-top:3px;letter-spacing:-0.4px;}
-.mkt-c{font-size:10px;font-weight:700;margin-top:1px;min-height:12px;}
+.mkt-lb{font-size:11px;color:var(--sub);font-weight:700;white-space:nowrap;}
+.mkt-v{font-size:17px;font-weight:800;margin-top:3px;letter-spacing:-0.4px;}
+.mkt-c{font-size:11px;font-weight:700;margin-top:2px;min-height:13px;}
 .up{color:#FF3B30;} .down{color:#007AFF;} .flat{color:#8E8E93;}
 
 /* 시설관리 알림 */
 .fac{background:linear-gradient(135deg,#FFF7ED,#FFFBEB);border:1px solid #FDE9C8;border-radius:16px;padding:13px 15px;display:flex;gap:12px;margin-bottom:22px;}
-.fac-ic{font-size:24px;flex-shrink:0;line-height:1.25;}
-.fac-title{font-size:13px;font-weight:800;color:#B45309;margin-bottom:5px;}
-.fac-tips{display:flex;flex-direction:column;gap:5px;}
-.fac-tip{font-size:12px;color:#7C4A03;line-height:1.45;}
+.fac-ic{font-size:27px;flex-shrink:0;line-height:1.25;}
+.fac-title{font-size:14.5px;font-weight:800;color:#B45309;margin-bottom:6px;}
+.fac-tips{display:flex;flex-direction:column;gap:6px;}
+.fac-tip{font-size:13px;color:#7C4A03;line-height:1.45;}
+
+/* 도구 버튼 */
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;}
+.tool-btn{background:var(--card);border:1px solid var(--sep);border-radius:14px;padding:14px;font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.045);font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;}
+.tool-btn:active{background:#F2F2F7;transform:scale(0.97);}
+
+/* 모달 공용 */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-end;justify-content:center;z-index:100;}
+.modal-ov.show{display:flex;}
+.modal{background:#fff;width:100%;max-width:420px;border-radius:22px 22px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 20px);box-shadow:0 -4px 24px rgba(0,0,0,.15);}
+@media(min-width:520px){ .modal-ov{align-items:center;} .modal{border-radius:22px;} }
+.modal-top{display:flex;justify-content:space-between;align-items:center;font-size:17px;margin-bottom:12px;}
+.mclose{font-size:16px;color:var(--sub);cursor:pointer;padding:4px 8px;}
+
+/* 계산기 */
+.calc-disp{background:#F2F2F7;border-radius:14px;padding:16px 18px;text-align:right;font-size:34px;font-weight:700;letter-spacing:-1px;margin-bottom:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
+.ck{height:60px;border:none;border-radius:16px;font-size:23px;font-weight:600;cursor:pointer;background:#EFEFF4;color:var(--ink);font-family:inherit;transition:filter .1s;}
+.ck:active{filter:brightness(0.93);}
+.ck.op{background:#FF9F0A;color:#fff;font-weight:700;}
+.ck.op.on{background:#fff;color:#FF9F0A;box-shadow:inset 0 0 0 2px #FF9F0A;}
+.ck.fn{background:#D1D1D6;color:var(--ink);}
+.ck.eq{background:#007AFF;color:#fff;}
+.ck.zero{grid-column:span 2;text-align:left;padding-left:24px;}
+
+/* 환율 계산기 */
+.fx-row{display:flex;gap:10px;align-items:center;margin-bottom:8px;}
+.fx-row input{flex:1;height:52px;border:1.5px solid var(--sep);border-radius:13px;padding:0 14px;font-size:22px;font-weight:700;font-family:inherit;color:var(--ink);outline:none;min-width:0;}
+.fx-row input:focus{border-color:var(--blue);}
+.fx-sel{width:104px;height:52px;border:1.5px solid var(--sep);border-radius:13px;padding:0 10px;font-size:16px;font-weight:700;font-family:inherit;background:#F7F7FA;color:var(--ink);}
+.fx-result{flex:1;height:52px;display:flex;align-items:center;padding:0 14px;font-size:22px;font-weight:800;background:#F2F2F7;border-radius:13px;color:var(--ink);overflow:hidden;}
+.fx-eq{text-align:center;color:var(--sub);font-size:15px;margin:2px 0;}
+.fx-swap{width:100%;margin-top:10px;height:46px;border:none;border-radius:13px;background:#EFEFF4;font-size:14px;font-weight:700;color:var(--blue);cursor:pointer;font-family:inherit;}
+.fx-note{text-align:center;font-size:12px;color:var(--sub);margin-top:10px;font-weight:600;}
 
 /* 자주 쓰는 앱 (아이폰 홈 아이콘) */
-.lbl{font-size:13px;font-weight:700;color:var(--sub);padding:2px 6px 9px;}
-.apps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 4px;margin-bottom:24px;}
-.app{display:flex;flex-direction:column;align-items:center;gap:8px;text-decoration:none;padding:2px;border-radius:20px;transition:transform .12s;}
+.lbl{font-size:15px;font-weight:800;color:#3A3A3C;padding:2px 6px 10px;letter-spacing:-0.3px;}
+.apps{display:grid;grid-template-columns:repeat(4,1fr);gap:17px 4px;margin-bottom:24px;}
+.app{display:flex;flex-direction:column;align-items:center;gap:9px;text-decoration:none;padding:2px;border-radius:20px;transition:transform .12s;}
 .app:active{transform:scale(0.90);}
-.app-ic{width:74px;height:74px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:37px;box-shadow:0 2px 7px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.035);}
+.app-ic{width:76px;height:76px;border-radius:21px;display:flex;align-items:center;justify-content:center;font-size:42px;box-shadow:0 2px 7px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.035);}
 .app-ic span{filter:none;}
-.app-t{font-size:12px;font-weight:600;color:var(--ink);text-align:center;line-height:1.2;}
+.app-t{font-size:14px;font-weight:700;color:var(--ink);text-align:center;line-height:1.2;}
 
 /* 6대축 아코디언 */
 .axis{background:var(--card);border-radius:16px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.045);}
 .axis-hdr{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none;}
 .axis-hdr:active{background:#FAFAFB;}
-.axis-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.axis-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:25px;flex-shrink:0;}
 .axis-tt{flex:1;min-width:0;}
-.axis-name{font-size:15px;font-weight:700;letter-spacing:-0.3px;}
-.axis-desc{font-size:11px;color:var(--sub);margin-top:1px;}
+.axis-name{font-size:16.5px;font-weight:700;letter-spacing:-0.3px;}
+.axis-desc{font-size:12px;color:var(--sub);margin-top:2px;}
 .axis-chevron{color:#C7C7CC;font-size:13px;transition:transform .2s;flex-shrink:0;}
 .axis.open .axis-chevron{transform:rotate(180deg);}
 .axis-body{display:none;padding:4px 8px 8px;border-top:1px solid var(--sep);}
 .axis.open .axis-body{display:block;}
 .app-item{display:flex;align-items:center;gap:12px;padding:10px;border-radius:11px;text-decoration:none;color:var(--ink);position:relative;transition:background .12s;}
 .app-item:active{background:#F2F2F7;}
-.app-em{font-size:21px;width:30px;text-align:center;flex-shrink:0;}
-.app-nm{font-size:14px;font-weight:600;line-height:1.3;}
-.app-ds{font-size:11px;color:var(--sub);margin-top:1px;line-height:1.3;}
+.app-em{font-size:24px;width:33px;text-align:center;flex-shrink:0;}
+.app-nm{font-size:15.5px;font-weight:700;line-height:1.3;}
+.app-ds{font-size:12px;color:var(--sub);margin-top:1px;line-height:1.3;}
 .app-coming{opacity:.5;pointer-events:none;}
 .app-group{padding:8px 10px 2px;}
 .app-group-label{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.3px;}
@@ -82,7 +116,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .ax5 .axis-icon{background:#FCE7F3;} .ax5 .axis-name{color:#DB2777;}
 .ax6 .axis-icon{background:#FEE2E2;} .ax6 .axis-name{color:#DC2626;}
 
-@media(max-width:360px){ .app-ic{width:66px;height:66px;font-size:33px;} .td-day{font-size:32px;} }
+@media(max-width:360px){ .app-ic{width:68px;height:68px;font-size:37px;} .app-t{font-size:13px;} .td-day{font-size:32px;} }
 </style>
 </head>
 <body>
@@ -125,6 +159,12 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
       <div class="fac-title" id="facTitle">오늘의 시설관리</div>
       <div class="fac-tips" id="facTips"><div class="fac-tip">불러오는 중…</div></div>
     </div>
+  </div>
+
+  <!-- 도구 -->
+  <div class="tools">
+    <button class="tool-btn" onclick="openCalc()">🧮 계산기</button>
+    <button class="tool-btn" onclick="openFx()">💱 환율 계산기</button>
   </div>
 
   <!-- 자주 쓰는 앱 -->
@@ -232,6 +272,59 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 
 </div>
 
+<!-- 🧮 계산기 모달 -->
+<div class="modal-ov" id="calcOv" onclick="if(event.target===this)closeCalc()">
+  <div class="modal">
+    <div class="modal-top"><b>🧮 계산기</b><span class="mclose" onclick="closeCalc()">✕</span></div>
+    <div class="calc-disp" id="calcDisp">0</div>
+    <div class="calc-grid">
+      <button class="ck fn" data-k="C">C</button>
+      <button class="ck fn" data-k="neg">±</button>
+      <button class="ck fn" data-k="pct">%</button>
+      <button class="ck op" data-k="/">÷</button>
+      <button class="ck" data-k="7">7</button>
+      <button class="ck" data-k="8">8</button>
+      <button class="ck" data-k="9">9</button>
+      <button class="ck op" data-k="*">×</button>
+      <button class="ck" data-k="4">4</button>
+      <button class="ck" data-k="5">5</button>
+      <button class="ck" data-k="6">6</button>
+      <button class="ck op" data-k="-">−</button>
+      <button class="ck" data-k="1">1</button>
+      <button class="ck" data-k="2">2</button>
+      <button class="ck" data-k="3">3</button>
+      <button class="ck op" data-k="+">+</button>
+      <button class="ck zero" data-k="0">0</button>
+      <button class="ck" data-k=".">.</button>
+      <button class="ck eq" data-k="=">=</button>
+    </div>
+  </div>
+</div>
+
+<!-- 💱 환율 계산기 모달 -->
+<div class="modal-ov" id="fxOv" onclick="if(event.target===this)closeFx()">
+  <div class="modal">
+    <div class="modal-top"><b>💱 환율 계산기</b><span class="mclose" onclick="closeFx()">✕</span></div>
+    <div class="fx-row">
+      <input type="number" id="fxAmt" inputmode="decimal" value="1" oninput="fxRecalc()">
+      <select class="fx-sel" id="fxFrom" onchange="fxRecalc()">
+        <option value="USD">🇺🇸 USD</option><option value="KRW">🇰🇷 KRW</option>
+        <option value="JPY">🇯🇵 JPY</option><option value="EUR">🇪🇺 EUR</option>
+      </select>
+    </div>
+    <div class="fx-eq">=</div>
+    <div class="fx-row">
+      <div class="fx-result" id="fxResult">–</div>
+      <select class="fx-sel" id="fxTo" onchange="fxRecalc()">
+        <option value="KRW">🇰🇷 KRW</option><option value="USD">🇺🇸 USD</option>
+        <option value="JPY">🇯🇵 JPY</option><option value="EUR">🇪🇺 EUR</option>
+      </select>
+    </div>
+    <button class="fx-swap" onclick="fxSwap()">⇅ 통화 바꾸기</button>
+    <div class="fx-note" id="fxNote">환율 불러오는 중…</div>
+  </div>
+</div>
+
 <script>
 /* 날짜 (크게) */
 (function(){
@@ -335,17 +428,24 @@ function setMkt(vid,cid,val,chg,dec){
     c.textContent=(chg>0?'▲':chg<0?'▼':'–')+' '+Math.abs(chg).toFixed(2)+'%';
   }
 }
-/* 환율 — Frankfurter (무료·키 불필요) */
-(function(){
-  function ymd(d){return d.toISOString().slice(0,10);}
-  var end=new Date(), start=new Date(end.getTime()-9*86400000);
-  fetch('https://api.frankfurter.app/'+ymd(start)+'..'+ymd(end)+'?from=USD&to=KRW')
+/* 환율 — Frankfurter (frankfurter.dev, 무료·키 불필요) — 타일 + 환율계산기 공용 */
+var FX={USD:1};   /* 1 USD 당 각 통화 단위 */
+function loadFx(){
+  fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW,JPY,EUR')
     .then(function(r){return r.json();}).then(function(d){
-      var ds=Object.keys(d.rates||{}).sort(); if(!ds.length)return;
-      var last=d.rates[ds[ds.length-1]].KRW, prev=ds.length>1?d.rates[ds[ds.length-2]].KRW:last;
-      setMkt('mUsd','mUsdC',last,(last-prev)/prev*100,0);
+      if(!d||!d.rates)return;
+      FX.KRW=d.rates.KRW; FX.JPY=d.rates.JPY; FX.EUR=d.rates.EUR;
+      var prev=new Date(); prev.setDate(prev.getDate()-4);
+      var pd=prev.toISOString().slice(0,10);
+      fetch('https://api.frankfurter.dev/v1/'+pd+'?base=USD&symbols=KRW')
+        .then(function(r){return r.json();}).then(function(p){
+          var pk=(p&&p.rates&&p.rates.KRW)||d.rates.KRW;
+          setMkt('mUsd','mUsdC',d.rates.KRW,(d.rates.KRW-pk)/pk*100,0);
+        }).catch(function(){ setMkt('mUsd','mUsdC',d.rates.KRW,0,0); });
+      if(typeof fxRecalc==='function') fxRecalc();
     }).catch(function(){});
-})();
+}
+loadFx();
 /* 지수 — Yahoo Finance (무료 프록시 2곳 순차 시도) */
 (function(){
   var PROXIES=[
@@ -368,6 +468,63 @@ function setMkt(vid,cid,val,chg,dec){
     yahoo(x[0]).then(function(o){ setMkt(x[1],x[2],o.price,o.chg,2); }).catch(function(){});
   });
 })();
+
+/* ── 🧮 계산기 ── */
+function openCalc(){ document.getElementById('calcOv').classList.add('show'); }
+function closeCalc(){ document.getElementById('calcOv').classList.remove('show'); }
+(function(){
+  var cur='0', prev=null, op=null, fresh=true;
+  var disp=document.getElementById('calcDisp');
+  function fmt(s){
+    if(s==='Error')return s;
+    var neg=s.charAt(0)==='-'; if(neg)s=s.slice(1);
+    var p=s.split('.'); p[0]=Number(p[0]).toLocaleString('en-US');
+    return (neg?'-':'')+(p.length>1?p[0]+'.'+p[1]:p[0]);
+  }
+  function show(){ disp.textContent=fmt(cur); }
+  function calc(a,b,o){ a=parseFloat(a);b=parseFloat(b);
+    return o==='+'?a+b:o==='-'?a-b:o==='*'?a*b:o==='/'?(b===0?'Error':a/b):b; }
+  function press(k){
+    if(k==='C'){ cur='0';prev=null;op=null;fresh=true; }
+    else if(k==='neg'){ cur=(parseFloat(cur)* -1).toString(); }
+    else if(k==='pct'){ cur=(parseFloat(cur)/100).toString(); }
+    else if(k==='+'||k==='-'||k==='*'||k==='/'){
+      if(op&&!fresh){ var r=calc(prev,cur,op); cur=(r==='Error'?'Error':r.toString()); prev=cur; }
+      else prev=cur;
+      op=k; fresh=true;
+      document.querySelectorAll('.ck.op').forEach(function(b){ b.classList.toggle('on',b.dataset.k===k); });
+      return;
+    }
+    else if(k==='='){
+      if(op){ var r2=calc(prev,cur,op); cur=(r2==='Error'?'Error':r2.toString()); op=null; prev=null; fresh=true; }
+    }
+    else if(k==='.'){ if(fresh){cur='0.';fresh=false;} else if(cur.indexOf('.')<0)cur+='.'; }
+    else { /* 숫자 */ if(fresh||cur==='0'){cur=k;fresh=false;} else if(cur.length<14)cur+=k; }
+    if(k!=='+'&&k!=='-'&&k!=='*'&&k!=='/') document.querySelectorAll('.ck.op').forEach(function(b){b.classList.remove('on');});
+    if(cur==='Error'){show();cur='0';prev=null;op=null;fresh=true;return;}
+    show();
+  }
+  document.querySelectorAll('#calcOv .ck').forEach(function(b){ b.addEventListener('click',function(){ press(b.dataset.k); }); });
+})();
+
+/* ── 💱 환율 계산기 ── */
+function openFx(){ document.getElementById('fxOv').classList.add('show'); fxRecalc(); }
+function closeFx(){ document.getElementById('fxOv').classList.remove('show'); }
+function fxSwap(){
+  var f=document.getElementById('fxFrom'), t=document.getElementById('fxTo');
+  var tmp=f.value; f.value=t.value; t.value=tmp; fxRecalc();
+}
+function fxRecalc(){
+  var amtEl=document.getElementById('fxAmt'); if(!amtEl)return;
+  var amt=parseFloat(amtEl.value)||0;
+  var from=document.getElementById('fxFrom').value, to=document.getElementById('fxTo').value;
+  var res=document.getElementById('fxResult'), note=document.getElementById('fxNote');
+  if(!FX[from]||!FX[to]){ res.textContent='환율 로딩 중'; note.textContent='잠시 후 다시 시도해 주세요'; return; }
+  var usd=amt/FX[from], out=usd*FX[to];
+  res.textContent=out.toLocaleString('ko-KR',{maximumFractionDigits:(to==='KRW'||to==='JPY')?0:2});
+  var one=(1/FX[from])*FX[to];
+  note.textContent='1 '+from+' = '+one.toLocaleString('ko-KR',{maximumFractionDigits:4})+' '+to;
+}
 </script>
 </body>
 </html>
