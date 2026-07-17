@@ -428,25 +428,17 @@ function setMkt(vid,cid,val,chg,dec){
     c.textContent=(chg>0?'▲':chg<0?'▼':'–')+' '+Math.abs(chg).toFixed(2)+'%';
   }
 }
-/* 환율 — Frankfurter (frankfurter.dev, 무료·키 불필요) — 타일 + 환율계산기 공용 */
-var FX={USD:1};   /* 1 USD 당 각 통화 단위 */
-function loadFx(){
+/* ── 시장 정보 (환율·지수) — Yahoo Finance 실시간 시장환율, 무료 프록시 경유 ── */
+var FX={KRW:1};   /* 통화 1단위당 원(KRW) */
+function frankfurterFallback(){   /* 야후 실패 시: ECB 기준(시장가와 1~2원 차이날 수 있음) */
   fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW,JPY,EUR')
     .then(function(r){return r.json();}).then(function(d){
       if(!d||!d.rates)return;
-      FX.KRW=d.rates.KRW; FX.JPY=d.rates.JPY; FX.EUR=d.rates.EUR;
-      var prev=new Date(); prev.setDate(prev.getDate()-4);
-      var pd=prev.toISOString().slice(0,10);
-      fetch('https://api.frankfurter.dev/v1/'+pd+'?base=USD&symbols=KRW')
-        .then(function(r){return r.json();}).then(function(p){
-          var pk=(p&&p.rates&&p.rates.KRW)||d.rates.KRW;
-          setMkt('mUsd','mUsdC',d.rates.KRW,(d.rates.KRW-pk)/pk*100,0);
-        }).catch(function(){ setMkt('mUsd','mUsdC',d.rates.KRW,0,0); });
-      if(typeof fxRecalc==='function') fxRecalc();
+      FX.USD=d.rates.KRW; FX.JPY=d.rates.KRW/d.rates.JPY; FX.EUR=d.rates.KRW/d.rates.EUR;
+      setMkt('mUsd','mUsdC',d.rates.KRW,0,1);
+      if(typeof fxRecalc==='function')fxRecalc();
     }).catch(function(){});
 }
-loadFx();
-/* 지수 — Yahoo Finance (무료 프록시 2곳 순차 시도) */
 (function(){
   var PROXIES=[
     function(u){return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u);},
@@ -457,15 +449,20 @@ loadFx();
     return fetch(PROXIES[i](u)).then(function(r){ if(!r.ok) throw 0; return r.json(); })
       .catch(function(){ return tryFetch(u,i+1); });
   }
-  function yahoo(sym){
+  function yq(sym){
     var y='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(sym)+'?range=5d&interval=1d';
     return tryFetch(y).then(function(d){
       var m=d.chart.result[0].meta;
       return {price:m.regularMarketPrice, chg:(m.regularMarketPrice-m.chartPreviousClose)/m.chartPreviousClose*100};
     });
   }
+  /* 환율 — 시장 실시간(네이버 매매기준율과 근접) */
+  yq('KRW=X').then(function(o){ FX.USD=o.price; setMkt('mUsd','mUsdC',o.price,o.chg,1); if(typeof fxRecalc==='function')fxRecalc(); }).catch(function(){ frankfurterFallback(); });
+  yq('JPYKRW=X').then(function(o){ FX.JPY=o.price; if(typeof fxRecalc==='function')fxRecalc(); }).catch(function(){});
+  yq('EURKRW=X').then(function(o){ FX.EUR=o.price; if(typeof fxRecalc==='function')fxRecalc(); }).catch(function(){});
+  /* 지수 */
   [['^KS11','mKospi','mKospiC'],['^GSPC','mSpx','mSpxC'],['^SOX','mSox','mSoxC']].forEach(function(x){
-    yahoo(x[0]).then(function(o){ setMkt(x[1],x[2],o.price,o.chg,2); }).catch(function(){});
+    yq(x[0]).then(function(o){ setMkt(x[1],x[2],o.price,o.chg,2); }).catch(function(){});
   });
 })();
 
@@ -520,10 +517,10 @@ function fxRecalc(){
   var from=document.getElementById('fxFrom').value, to=document.getElementById('fxTo').value;
   var res=document.getElementById('fxResult'), note=document.getElementById('fxNote');
   if(!FX[from]||!FX[to]){ res.textContent='환율 로딩 중'; note.textContent='잠시 후 다시 시도해 주세요'; return; }
-  var usd=amt/FX[from], out=usd*FX[to];
+  var out=amt*FX[from]/FX[to];   /* FX = 통화 1단위당 원(KRW) */
   res.textContent=out.toLocaleString('ko-KR',{maximumFractionDigits:(to==='KRW'||to==='JPY')?0:2});
-  var one=(1/FX[from])*FX[to];
-  note.textContent='1 '+from+' = '+one.toLocaleString('ko-KR',{maximumFractionDigits:4})+' '+to;
+  var one=FX[from]/FX[to];
+  note.textContent='1 '+from+' = '+one.toLocaleString('ko-KR',{maximumFractionDigits:(to==='KRW')?2:4})+' '+to;
 }
 </script>
 </body>
