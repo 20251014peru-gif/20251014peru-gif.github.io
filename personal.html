@@ -30,9 +30,9 @@ header{background:var(--white);border-bottom:1.5px solid var(--blue-bd)}
 .brand h1{font-size:18px;font-weight:800;color:var(--ink)}
 .brand .sub{font-size:11px;color:var(--ink-faint);margin-top:1px;display:block}
 .status{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:var(--ink-soft);padding:4px 8px;border:1.5px solid var(--blue-bd);border-radius:20px;background:var(--white)}
-.head-nav{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-start}
-.head-nav .nav-btn{padding:5px 8px;font-size:11.5px;border-radius:9px;gap:4px}
-.head-nav .nav-btn svg{width:13px;height:13px}
+.head-nav{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:0 0 100%;margin-top:8px}
+.head-nav .nav-btn,.head-nav .status{padding:6px 2px;font-size:11px;font-weight:700;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:3px;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;height:32px;line-height:1}
+.head-nav .nav-btn svg{width:12px;height:12px;flex-shrink:0}
 .dot{width:8px;height:8px;border-radius:50%;background:#aab8c8;display:inline-block;flex-shrink:0}
 .dot.on{background:#27ae60;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
@@ -50,8 +50,8 @@ header{background:var(--white);border-bottom:1.5px solid var(--blue-bd)}
 .v43-search:focus{background:var(--white);box-shadow:0 2px 16px rgba(63,124,184,.25)}
 
 /* ===== 탭 ===== */
-.v43-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 0 0}
-.v43-tab{flex:0 0 auto;padding:7px 13px;height:36px;box-sizing:border-box;border-radius:10px;border:2px solid var(--blue-bd);background:var(--white);font-size:13px;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit;transition:all .15s;touch-action:manipulation;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.v43-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:10px 0 0}
+.v43-tab{padding:7px 3px;height:36px;box-sizing:border-box;border-radius:10px;border:2px solid var(--blue-bd);background:var(--white);font-size:12px;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit;transition:all .15s;touch-action:manipulation;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:4px;width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .v43-tab:hover{border-color:var(--blue);color:var(--blue)}
 .v43-tab.active{background:var(--blue);border-color:var(--blue);color:var(--white)}
 
@@ -473,7 +473,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
           <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           컬렉션</a>
         <button class="nav-btn" id="aiKeyBtn">🤖 AI키</button>
-        <span class="status"><span class="dot" id="fbDot"></span><span id="fbText">연결 중…</span></span>
+        <span class="status" title="Firebase 연결 상태"><span class="dot" id="fbDot"></span><span id="fbText">연결중</span></span>
       </div>
     </div>
   </div>
@@ -1230,7 +1230,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260717-0903';
+const APP_VER='v20260717-0920';
 document.title='개인일지 '+APP_VER;
 /* 버전을 뿌린다 — 헤더 + PIN 넣는 곳마다.
    잠금화면은 앱이 뜨자마자 보이는 곳이라 DOMContentLoaded 를 기다리면 늦을 수 있다.
@@ -1490,7 +1490,7 @@ function g(id){return document.getElementById(id);}
 function fbStatus(ok,msg){
   const dot=g('fbDot'),txt=g('fbText');
   if(dot) dot.className='dot'+(ok?' on':'');
-  if(txt) txt.textContent=msg;
+  if(txt){ txt.textContent=ok?'연결':'끊김'; const chip=txt.closest('.status'); if(chip) chip.title=msg||''; }
 }
 /* 초기화가 실패했으면 조용히 넘기지 않고 알린다 — 예전엔 콘솔에만 있었다 */
 function warnIfNoFirebase(){
