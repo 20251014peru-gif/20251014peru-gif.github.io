@@ -30,6 +30,21 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .wx-hl b{color:var(--red);} .wx-hl i{color:var(--blue);font-style:normal;}
 .wx-lb{font-size:9px;color:var(--sub);margin-top:1px;}
 
+/* 시장 정보 */
+.mkt{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.mkt-tile{background:var(--card);border-radius:14px;padding:9px 5px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.045);}
+.mkt-lb{font-size:10px;color:var(--sub);font-weight:700;white-space:nowrap;}
+.mkt-v{font-size:15px;font-weight:800;margin-top:3px;letter-spacing:-0.4px;}
+.mkt-c{font-size:10px;font-weight:700;margin-top:1px;min-height:12px;}
+.up{color:#FF3B30;} .down{color:#007AFF;} .flat{color:#8E8E93;}
+
+/* 시설관리 알림 */
+.fac{background:linear-gradient(135deg,#FFF7ED,#FFFBEB);border:1px solid #FDE9C8;border-radius:16px;padding:13px 15px;display:flex;gap:12px;margin-bottom:22px;}
+.fac-ic{font-size:24px;flex-shrink:0;line-height:1.25;}
+.fac-title{font-size:13px;font-weight:800;color:#B45309;margin-bottom:5px;}
+.fac-tips{display:flex;flex-direction:column;gap:5px;}
+.fac-tip{font-size:12px;color:#7C4A03;line-height:1.45;}
+
 /* 자주 쓰는 앱 (아이폰 홈 아이콘) */
 .lbl{font-size:13px;font-weight:700;color:var(--sub);padding:2px 6px 9px;}
 .apps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 4px;margin-bottom:24px;}
@@ -92,6 +107,23 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
         <div class="wx-when">내일</div><div class="wx-ic">⏳</div>
         <div class="wx-t">–</div><div class="wx-hl">날씨</div>
       </div>
+    </div>
+  </div>
+
+  <!-- 시장 정보 -->
+  <div class="mkt">
+    <div class="mkt-tile"><div class="mkt-lb">원/달러</div><div class="mkt-v" id="mUsd">–</div><div class="mkt-c" id="mUsdC"></div></div>
+    <div class="mkt-tile"><div class="mkt-lb">코스피</div><div class="mkt-v" id="mKospi">–</div><div class="mkt-c" id="mKospiC"></div></div>
+    <div class="mkt-tile"><div class="mkt-lb">S&amp;P500</div><div class="mkt-v" id="mSpx">–</div><div class="mkt-c" id="mSpxC"></div></div>
+    <div class="mkt-tile"><div class="mkt-lb">반도체</div><div class="mkt-v" id="mSox">–</div><div class="mkt-c" id="mSoxC"></div></div>
+  </div>
+
+  <!-- 시설관리 알림 (날씨·계절 연동) -->
+  <div class="fac">
+    <div class="fac-ic" id="facIc">🛠️</div>
+    <div style="flex:1;min-width:0">
+      <div class="fac-title" id="facTitle">오늘의 시설관리</div>
+      <div class="fac-tips" id="facTips"><div class="fac-tip">불러오는 중…</div></div>
     </div>
   </div>
 
@@ -238,7 +270,7 @@ function wxFail(){
 }
 function loadWeather(lat,lon){
   var url='https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon
-    +'&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min'
+    +'&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max'
     +'&timezone=Asia%2FSeoul&forecast_days=2';
   fetch(url).then(function(r){return r.json();}).then(function(d){
     if(!d||!d.daily){wxFail();return;}
@@ -249,6 +281,8 @@ function loadWeather(lat,lon){
     var n=wmo(dy.weather_code[1]);
     setWx('wxTomorrow','내일',n[0],Math.round(dy.temperature_2m_max[1])+'°',
       Math.round(dy.temperature_2m_max[1]),Math.round(dy.temperature_2m_min[1]),n[1]);
+    renderFacility({code:cur.weather_code,tmax:dy.temperature_2m_max[0],tmin:dy.temperature_2m_min[0],
+      precip:(dy.precipitation_sum&&dy.precipitation_sum[0])||0,wind:(dy.wind_speed_10m_max&&dy.wind_speed_10m_max[0])||0});
   }).catch(function(){wxFail();});
 }
 (function(){
@@ -260,6 +294,79 @@ function loadWeather(lat,lon){
       {timeout:5000,maximumAge:3600000,enableHighAccuracy:false}
     );
   }else loadWeather(SEOUL[0],SEOUL[1]);
+})();
+
+/* ── 시설관리 알림 (날씨·계절 연동, 완전 자동) ── */
+function renderFacility(wx){
+  var month=new Date().getMonth()+1;
+  var season=(month>=3&&month<=5)?'봄':(month>=6&&month<=8)?'여름':(month>=9&&month<=11)?'가을':'겨울';
+  var tips=[], ic='🛠️';
+  if(wx){
+    var rain=[51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99];
+    var snow=[71,73,75,77,85,86];
+    if(rain.indexOf(wx.code)>=0||wx.precip>0.5){ tips.push('☔ 옥상·지하 배수구와 누수 지점 점검, 배수펌프 작동 확인'); ic='☔'; }
+    if(snow.indexOf(wx.code)>=0){ tips.push('❄️ 제설제·염화칼슘 확보, 출입·계단 결빙·미끄럼 주의'); ic='❄️'; }
+    if(wx.tmax>=33){ tips.push('🥵 냉방기·냉각탑 점검, 전력 피크·정전 대비'); if(ic==='🛠️')ic='🥵'; }
+    if(wx.tmin<=0){ tips.push('🥶 동파 주의 — 노출 배관·소화전·옥외 수도 보온'); if(ic==='🛠️')ic='🥶'; }
+    if(wx.wind>=10){ tips.push('💨 강풍 — 옥상 적치물·간판·창문 고정 상태 점검'); }
+  }
+  if(tips.length<2){
+    if(season==='봄') tips.push('🌸 해빙기 외벽·바닥 균열 점검, 냉방 가동 전 사전점검, 황사·미세먼지 필터 관리');
+    else if(season==='여름') tips.push('🌧 장마철 방수·배수·누수 집중 점검, 곰팡이·해충 관리, 냉방 부하 확인');
+    else if(season==='가을') tips.push('🍂 낙엽 배수구 막힘 주의, 난방 가동 전 보일러·배관 사전 점검');
+    else tips.push('⛄ 동파·결로 대비, 제설 장비 점검, 난방 효율·배관 보온 확인');
+  }
+  tips=tips.slice(0,3);
+  var e;
+  if((e=document.getElementById('facIc'))) e.textContent=ic;
+  if((e=document.getElementById('facTitle'))) e.textContent='오늘의 시설관리 · '+season;
+  if((e=document.getElementById('facTips'))) e.innerHTML=tips.map(function(t){return '<div class="fac-tip">'+t+'</div>';}).join('');
+}
+renderFacility(null);  /* 날씨 오기 전 계절 기본값 */
+
+/* ── 시장 정보 ── */
+function mktNum(n,d){ return Number(n).toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function setMkt(vid,cid,val,chg,dec){
+  var v=document.getElementById(vid), c=document.getElementById(cid);
+  if(v) v.textContent=mktNum(val,dec||0);
+  if(c){
+    var cls=chg>0?'up':(chg<0?'down':'flat');
+    c.className='mkt-c '+cls;
+    c.textContent=(chg>0?'▲':chg<0?'▼':'–')+' '+Math.abs(chg).toFixed(2)+'%';
+  }
+}
+/* 환율 — Frankfurter (무료·키 불필요) */
+(function(){
+  function ymd(d){return d.toISOString().slice(0,10);}
+  var end=new Date(), start=new Date(end.getTime()-9*86400000);
+  fetch('https://api.frankfurter.app/'+ymd(start)+'..'+ymd(end)+'?from=USD&to=KRW')
+    .then(function(r){return r.json();}).then(function(d){
+      var ds=Object.keys(d.rates||{}).sort(); if(!ds.length)return;
+      var last=d.rates[ds[ds.length-1]].KRW, prev=ds.length>1?d.rates[ds[ds.length-2]].KRW:last;
+      setMkt('mUsd','mUsdC',last,(last-prev)/prev*100,0);
+    }).catch(function(){});
+})();
+/* 지수 — Yahoo Finance (무료 프록시 2곳 순차 시도) */
+(function(){
+  var PROXIES=[
+    function(u){return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u);},
+    function(u){return 'https://corsproxy.io/?url='+encodeURIComponent(u);}
+  ];
+  function tryFetch(u,i){
+    i=i||0; if(i>=PROXIES.length) return Promise.reject('no proxy');
+    return fetch(PROXIES[i](u)).then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .catch(function(){ return tryFetch(u,i+1); });
+  }
+  function yahoo(sym){
+    var y='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(sym)+'?range=5d&interval=1d';
+    return tryFetch(y).then(function(d){
+      var m=d.chart.result[0].meta;
+      return {price:m.regularMarketPrice, chg:(m.regularMarketPrice-m.chartPreviousClose)/m.chartPreviousClose*100};
+    });
+  }
+  [['^KS11','mKospi','mKospiC'],['^GSPC','mSpx','mSpxC'],['^SOX','mSox','mSoxC']].forEach(function(x){
+    yahoo(x[0]).then(function(o){ setMkt(x[1],x[2],o.price,o.chg,2); }).catch(function(){});
+  });
 })();
 </script>
 </body>
