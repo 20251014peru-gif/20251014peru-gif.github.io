@@ -17,27 +17,27 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .hdr-sub{font-size:13px;color:var(--sub);margin-top:3px;font-weight:600;}
 
 /* 오늘 + 날씨 카드 */
-.today{background:var(--card);border-radius:20px;padding:16px 16px;display:flex;align-items:stretch;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:18px;}
-.today-date{flex-shrink:0;display:flex;flex-direction:column;justify-content:center;text-align:center;padding-right:14px;border-right:1px solid var(--sep);min-width:82px;}
-.td-day{font-size:46px;font-weight:800;line-height:1;letter-spacing:-1.5px;}
-.td-md{font-size:13px;color:var(--sub);margin-top:6px;font-weight:700;}
-.wx-row{display:flex;gap:10px;flex:1;}
-.wx{flex:1;background:#F7F7FA;border-radius:14px;padding:9px 6px;text-align:center;display:flex;flex-direction:column;justify-content:center;}
-.wx-when{font-size:11px;color:var(--sub);font-weight:800;}
-.wx-ic{font-size:26px;margin:3px 0 1px;line-height:1;}
-.wx-t{font-size:19px;font-weight:800;letter-spacing:-0.5px;}
-.wx-hl{font-size:11px;color:var(--sub);margin-top:2px;font-weight:700;}
+.today{background:var(--card);border-radius:18px;padding:11px 13px;display:flex;align-items:stretch;gap:11px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:16px;}
+.today-date{flex-shrink:0;display:flex;flex-direction:column;justify-content:center;text-align:center;padding-right:12px;border-right:1px solid var(--sep);min-width:66px;}
+.td-day{font-size:34px;font-weight:800;line-height:1;letter-spacing:-1.2px;}
+.td-md{font-size:11px;color:var(--sub);margin-top:4px;font-weight:700;}
+.wx-row{display:flex;gap:8px;flex:1;}
+.wx{flex:1;background:#F7F7FA;border-radius:11px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:center;}
+.wx-when{font-size:10px;color:var(--sub);font-weight:800;}
+.wx-ic{font-size:20px;margin:2px 0 0;line-height:1;}
+.wx-t{font-size:15px;font-weight:800;letter-spacing:-0.5px;}
+.wx-hl{font-size:10px;color:var(--sub);margin-top:1px;font-weight:700;}
 .wx-hl b{color:var(--red);} .wx-hl i{color:var(--blue);font-style:normal;}
-.wx-lb{font-size:10px;color:var(--sub);margin-top:1px;}
+.wx-lb{font-size:9px;color:var(--sub);margin-top:1px;}
 
 /* 자주 쓰는 앱 (아이폰 홈 아이콘) */
 .lbl{font-size:13px;font-weight:700;color:var(--sub);padding:2px 6px 9px;}
-.apps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 4px;margin-bottom:22px;}
-.app{display:flex;flex-direction:column;align-items:center;gap:7px;text-decoration:none;padding:2px;border-radius:16px;transition:transform .12s;}
+.apps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 4px;margin-bottom:24px;}
+.app{display:flex;flex-direction:column;align-items:center;gap:8px;text-decoration:none;padding:2px;border-radius:20px;transition:transform .12s;}
 .app:active{transform:scale(0.90);}
-.app-ic{width:62px;height:62px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:31px;box-shadow:0 3px 8px rgba(0,0,0,.15);}
-.app-ic span{filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.28));}
-.app-t{font-size:11px;font-weight:600;color:var(--ink);text-align:center;line-height:1.2;}
+.app-ic{width:74px;height:74px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:37px;box-shadow:0 2px 7px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.035);}
+.app-ic span{filter:none;}
+.app-t{font-size:12px;font-weight:600;color:var(--ink);text-align:center;line-height:1.2;}
 
 /* 6대축 아코디언 */
 .axis{background:var(--card);border-radius:16px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.045);}
@@ -67,7 +67,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .ax5 .axis-icon{background:#FCE7F3;} .ax5 .axis-name{color:#DB2777;}
 .ax6 .axis-icon{background:#FEE2E2;} .ax6 .axis-name{color:#DC2626;}
 
-@media(max-width:360px){ .app-ic{width:56px;height:56px;font-size:28px;} .td-day{font-size:40px;} }
+@media(max-width:360px){ .app-ic{width:66px;height:66px;font-size:33px;} .td-day{font-size:32px;} }
 </style>
 </head>
 <body>
@@ -98,14 +98,14 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
   <!-- 자주 쓰는 앱 -->
   <div class="lbl">자주 쓰는 앱</div>
   <div class="apps">
-    <a class="app" href="./scan-app.html"><div class="app-ic" style="background:linear-gradient(135deg,#A78BFA,#7C3AED)"><span>🧾</span></div><div class="app-t">영수증</div></a>
-    <a class="app" href="./personal.html"><div class="app-ic" style="background:linear-gradient(135deg,#818CF8,#4F46E5)"><span>📁</span></div><div class="app-t">개인관리</div></a>
-    <a class="app" href="./links.html"><div class="app-ic" style="background:linear-gradient(135deg,#38BDF8,#0284C7)"><span>🔗</span></div><div class="app-t">링크컬렉션</div></a>
-    <a class="app" href="./worklog.html"><div class="app-ic" style="background:linear-gradient(135deg,#60A5FA,#2563EB)"><span>📝</span></div><div class="app-t">업무일지</div></a>
-    <a class="app" href="./parking.html"><div class="app-ic" style="background:linear-gradient(135deg,#2DD4BF,#0D9488)"><span>🚗</span></div><div class="app-t">주차대장</div></a>
-    <a class="app" href="./contacts.html"><div class="app-ic" style="background:linear-gradient(135deg,#34D399,#059669)"><span>📞</span></div><div class="app-t">업체연락처</div></a>
-    <a class="app" href="./staff.html"><div class="app-ic" style="background:linear-gradient(135deg,#FBBF24,#F59E0B)"><span>👥</span></div><div class="app-t">직원관리</div></a>
-    <a class="app" href="./realestate-project.html"><div class="app-ic" style="background:linear-gradient(135deg,#4ADE80,#16A34A)"><span>🏗️</span></div><div class="app-t">프로젝트</div></a>
+    <a class="app" href="./scan-app.html"><div class="app-ic" style="background:#EDE9FE"><span>🧾</span></div><div class="app-t">영수증</div></a>
+    <a class="app" href="./personal.html"><div class="app-ic" style="background:#DBEAFE"><span>📁</span></div><div class="app-t">개인관리</div></a>
+    <a class="app" href="./links.html"><div class="app-ic" style="background:#CFFAFE"><span>🔗</span></div><div class="app-t">링크컬렉션</div></a>
+    <a class="app" href="./worklog.html"><div class="app-ic" style="background:#D1FAE5"><span>📝</span></div><div class="app-t">업무일지</div></a>
+    <a class="app" href="./parking.html"><div class="app-ic" style="background:#FEF3C7"><span>🚗</span></div><div class="app-t">주차대장</div></a>
+    <a class="app" href="./contacts.html"><div class="app-ic" style="background:#FFE9DB"><span>📞</span></div><div class="app-t">업체연락처</div></a>
+    <a class="app" href="./staff.html"><div class="app-ic" style="background:#FCE7F3"><span>👥</span></div><div class="app-t">직원관리</div></a>
+    <a class="app" href="./realestate-project.html"><div class="app-ic" style="background:#E0E7FF"><span>🏢</span></div><div class="app-t">프로젝트</div></a>
   </div>
 
   <!-- 인생 6대축 (접힌 상태로 시작) -->
