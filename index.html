@@ -46,9 +46,30 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .fac-tip{font-size:13px;color:#7C4A03;line-height:1.45;}
 
 /* 도구 버튼 */
-.tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;}
-.tool-btn{background:var(--card);border:1px solid var(--sep);border-radius:14px;padding:14px;font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.045);font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;}
-.tool-btn:active{background:#F2F2F7;transform:scale(0.97);}
+.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+.tool-btn{background:var(--card);border:1px solid var(--sep);border-radius:16px;padding:12px 3px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.045);font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--ink);}
+.tool-btn:active{background:#F2F2F7;transform:scale(0.94);}
+.tool-btn .te{font-size:26px;line-height:1;}
+.tool-btn .tl{font-size:11px;font-weight:700;text-align:center;line-height:1.2;}
+
+/* 도구 모달 공용 */
+.tm-in{width:100%;height:44px;border:1.5px solid var(--sep);border-radius:11px;padding:0 12px;font-size:15px;font-family:inherit;color:var(--ink);outline:none;margin-bottom:8px;background:#fff;}
+.tm-in:focus{border-color:var(--blue);}
+.tm-row{display:flex;gap:8px;margin-bottom:8px;}
+.tm-row .tm-in{margin-bottom:0;}
+.tm-add{height:44px;min-width:56px;border:none;border-radius:11px;background:var(--blue);color:#fff;font-size:15px;font-weight:700;padding:0 14px;font-family:inherit;cursor:pointer;flex-shrink:0;}
+.tm-sel{height:44px;border:1.5px solid var(--sep);border-radius:11px;padding:0 10px;font-size:15px;font-family:inherit;background:#F7F7FA;color:var(--ink);}
+.tm-list{max-height:48vh;overflow-y:auto;margin-top:10px;-webkit-overflow-scrolling:touch;}
+.tm-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;background:#F7F7FA;margin-bottom:7px;}
+.tm-item .x{margin-left:auto;color:#FF3B30;cursor:pointer;font-size:15px;padding:2px 6px;flex-shrink:0;}
+.tm-empty{text-align:center;color:var(--sub);font-size:13px;padding:26px 12px;line-height:1.5;}
+.tm-call{background:#34C759;color:#fff;text-decoration:none;padding:8px 12px;border-radius:10px;font-size:13px;font-weight:700;flex-shrink:0;white-space:nowrap;}
+.tm-ttl{font-weight:700;font-size:14px;}
+.tm-sub{font-size:12px;color:var(--sub);margin-top:2px;}
+.tm-dday{font-size:14px;font-weight:800;color:var(--blue);flex-shrink:0;white-space:nowrap;}
+.tm-badge{font-weight:800;font-size:12px;padding:3px 9px;border-radius:8px;flex-shrink:0;background:#E0E7FF;color:#4F46E5;}
+.tm-chk{width:24px;height:24px;flex-shrink:0;cursor:pointer;font-size:20px;}
+.tm-note{font-size:11px;color:var(--sub);margin-top:10px;text-align:center;line-height:1.5;}
 
 /* 모달 공용 */
 .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-end;justify-content:center;z-index:100;}
@@ -163,8 +184,14 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 
   <!-- 도구 -->
   <div class="tools">
-    <button class="tool-btn" onclick="openCalc()">🧮 계산기</button>
-    <button class="tool-btn" onclick="openFx()">💱 환율 계산기</button>
+    <button class="tool-btn" onclick="openCalc()"><span class="te">🧮</span><span class="tl">계산기</span></button>
+    <button class="tool-btn" onclick="openFx()"><span class="te">💱</span><span class="tl">환율</span></button>
+    <button class="tool-btn" onclick="openFloor()"><span class="te">🏢</span><span class="tl">층별메모</span></button>
+    <button class="tool-btn" onclick="openEmg()"><span class="te">🚨</span><span class="tl">긴급연락</span></button>
+    <button class="tool-btn" onclick="openSpl()"><span class="te">📸</span><span class="tl">점검사진</span></button>
+    <button class="tool-btn" onclick="openEco()"><span class="te">📅</span><span class="tl">경제일정</span></button>
+    <button class="tool-btn" onclick="openRemind()"><span class="te">⏰</span><span class="tl">리마인더</span></button>
+    <button class="tool-btn" onclick="openRepeat()"><span class="te">🔁</span><span class="tl">반복일정</span></button>
   </div>
 
   <!-- 자주 쓰는 앱 -->
@@ -325,6 +352,100 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
   </div>
 </div>
 
+<!-- 🏢 층별 메모판 -->
+<div class="modal-ov" id="floorOv" onclick="if(event.target===this)closeFloor()">
+  <div class="modal">
+    <div class="modal-top"><b>🏢 층별 메모판</b><span class="mclose" onclick="closeFloor()">✕</span></div>
+    <div class="tm-row">
+      <input class="tm-in" id="floorFl" style="max-width:88px" placeholder="층 (3F)">
+      <input class="tm-in" id="floorTx" placeholder="메모 내용">
+      <button class="tm-add" onclick="addFloor()">추가</button>
+    </div>
+    <div class="tm-list" id="floorList"></div>
+  </div>
+</div>
+
+<!-- 🚨 긴급 연락망 -->
+<div class="modal-ov" id="emgOv" onclick="if(event.target===this)closeEmg()">
+  <div class="modal">
+    <div class="modal-top"><b>🚨 긴급 연락망</b><span class="mclose" onclick="closeEmg()">✕</span></div>
+    <div class="tm-row">
+      <input class="tm-in" id="emgFd" style="max-width:96px" placeholder="분야">
+      <input class="tm-in" id="emgNm" placeholder="이름/업체">
+    </div>
+    <div class="tm-row">
+      <input class="tm-in" id="emgPh" inputmode="tel" placeholder="전화번호">
+      <button class="tm-add" onclick="addEmg()">추가</button>
+    </div>
+    <div class="tm-list" id="emgList"></div>
+  </div>
+</div>
+
+<!-- 📸 안전점검 사진 로그 -->
+<div class="modal-ov" id="splOv" onclick="if(event.target===this)closeSpl()">
+  <div class="modal">
+    <div class="modal-top"><b>📸 안전점검 사진 로그</b><span class="mclose" onclick="closeSpl()">✕</span></div>
+    <input type="file" id="splFile" accept="image/*" capture="environment" style="display:none" onchange="addSplPhoto(this)">
+    <img id="splPrev" style="display:none;width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:8px">
+    <div class="tm-row">
+      <button class="tm-add" style="background:#8E8E93" onclick="document.getElementById('splFile').click()">📷 사진</button>
+      <input class="tm-in" id="splMemo" placeholder="점검 메모 (위치·내용)">
+      <button class="tm-add" onclick="saveSpl()">저장</button>
+    </div>
+    <div class="tm-list" id="splList"></div>
+    <div class="tm-note">사진은 이 기기에만 저장돼요 · 최근 30장 유지</div>
+  </div>
+</div>
+
+<!-- 📅 경제 일정 -->
+<div class="modal-ov" id="ecoOv" onclick="if(event.target===this)closeEco()">
+  <div class="modal">
+    <div class="modal-top"><b>📅 경제 일정</b><span class="mclose" onclick="closeEco()">✕</span></div>
+    <div class="tm-row">
+      <input class="tm-in" id="ecoDt" type="date" style="max-width:150px">
+      <input class="tm-in" id="ecoTx" placeholder="일정 추가 (예: 실적발표)">
+      <button class="tm-add" onclick="addEco()">추가</button>
+    </div>
+    <div class="tm-list" id="ecoList"></div>
+    <div class="tm-note">고용보고서·옵션만기 등은 자동 계산 · 나머지는 직접 추가</div>
+  </div>
+</div>
+
+<!-- ⏰ 리마인더 -->
+<div class="modal-ov" id="remindOv" onclick="if(event.target===this)closeRemind()">
+  <div class="modal">
+    <div class="modal-top"><b>⏰ 리마인더</b><span class="mclose" onclick="closeRemind()">✕</span></div>
+    <div class="tm-row">
+      <input class="tm-in" id="rmTime" type="time" step="300" style="max-width:120px">
+      <input class="tm-in" id="rmTx" placeholder="할 일 내용">
+      <button class="tm-add" onclick="addRemind()">추가</button>
+    </div>
+    <div class="tm-list" id="remindList"></div>
+    <div class="tm-note">시간 알림은 이 페이지를 켜둔 동안만 울려요</div>
+  </div>
+</div>
+
+<!-- 🔁 반복 일정 -->
+<div class="modal-ov" id="repeatOv" onclick="if(event.target===this)closeRepeat()">
+  <div class="modal">
+    <div class="modal-top"><b>🔁 반복 일정</b><span class="mclose" onclick="closeRepeat()">✕</span></div>
+    <div class="tm-row">
+      <select class="tm-sel" id="rpType" onchange="rpToggle()">
+        <option value="daily">매일</option><option value="weekly">매주</option><option value="monthly">매월</option>
+      </select>
+      <select class="tm-sel" id="rpWd" style="display:none">
+        <option value="1">월</option><option value="2">화</option><option value="3">수</option><option value="4">목</option><option value="5">금</option><option value="6">토</option><option value="0">일</option>
+      </select>
+      <input class="tm-in" id="rpDay" type="number" min="1" max="31" placeholder="일" style="display:none;max-width:70px">
+    </div>
+    <div class="tm-row">
+      <input class="tm-in" id="rpTx" placeholder="내용 (예: 소방 점검)">
+      <button class="tm-add" onclick="addRepeat()">추가</button>
+    </div>
+    <div class="tm-list" id="repeatList"></div>
+  </div>
+</div>
+
 <script>
 /* 날짜 (크게) */
 (function(){
@@ -456,10 +577,24 @@ function frankfurterFallback(){   /* 야후 실패 시: ECB 기준(시장가와 
       return {price:m.regularMarketPrice, chg:(m.regularMarketPrice-m.chartPreviousClose)/m.chartPreviousClose*100};
     });
   }
-  /* 환율 — 시장 실시간(네이버 매매기준율과 근접) */
-  yq('KRW=X').then(function(o){ FX.USD=o.price; setMkt('mUsd','mUsdC',o.price,o.chg,1); if(typeof fxRecalc==='function')fxRecalc(); }).catch(function(){ frankfurterFallback(); });
-  yq('JPYKRW=X').then(function(o){ FX.JPY=o.price; if(typeof fxRecalc==='function')fxRecalc(); }).catch(function(){});
-  yq('EURKRW=X').then(function(o){ FX.EUR=o.price; if(typeof fxRecalc==='function')fxRecalc(); }).catch(function(){});
+  /* 환율 — 두나무(하나은행 고시 매매기준율 = 네이버와 동일). CORS·키 불필요 */
+  fetch('https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD,FRX.KRWJPY,FRX.KRWEUR')
+    .then(function(r){return r.json();}).then(function(arr){
+      if(!arr||!arr.length) throw 0;
+      arr.forEach(function(o){
+        var unit=o.currencyUnit||1, per=o.basePrice/unit;
+        FX[o.currencyCode]=per;
+        if(o.currencyCode==='USD'){
+          var scp=o.signedChangePrice||0, prevc=o.basePrice-scp;
+          setMkt('mUsd','mUsdC',o.basePrice, prevc?scp/prevc*100:0, 1);
+        }
+      });
+      if(typeof fxRecalc==='function')fxRecalc();
+    }).catch(function(){   /* 두나무 실패 → 야후 시장환율 → Frankfurter */
+      yq('KRW=X').then(function(o){ FX.USD=o.price; setMkt('mUsd','mUsdC',o.price,o.chg,1); if(typeof fxRecalc==='function')fxRecalc(); }).catch(function(){ frankfurterFallback(); });
+      yq('JPYKRW=X').then(function(o){ FX.JPY=o.price; if(typeof fxRecalc==='function')fxRecalc(); }).catch(function(){});
+      yq('EURKRW=X').then(function(o){ FX.EUR=o.price; if(typeof fxRecalc==='function')fxRecalc(); }).catch(function(){});
+    });
   /* 지수 */
   [['^KS11','mKospi','mKospiC'],['^GSPC','mSpx','mSpxC'],['^SOX','mSox','mSoxC']].forEach(function(x){
     yq(x[0]).then(function(o){ setMkt(x[1],x[2],o.price,o.chg,2); }).catch(function(){});
@@ -522,6 +657,184 @@ function fxRecalc(){
   var one=FX[from]/FX[to];
   note.textContent='1 '+from+' = '+one.toLocaleString('ko-KR',{maximumFractionDigits:(to==='KRW')?2:4})+' '+to;
 }
+
+/* ════════ 도구 공용 ════════ */
+function LS(k,def){ try{var v=JSON.parse(localStorage.getItem(k)); return v||def;}catch(e){return def;} }
+function LSset(k,v){ try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){alert('저장 공간이 부족해요');return false;} }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function fmtTs(ts){ var d=new Date(ts); return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+function ymd(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function dday(dateStr){ var t=new Date(); t.setHours(0,0,0,0); var d=new Date(dateStr+'T00:00:00'); var n=Math.round((d-t)/86400000); return n===0?'D-DAY':(n>0?'D-'+n:'지남'); }
+function _sheet(id,on){ document.getElementById(id).classList[on?'add':'remove']('show'); }
+
+/* ── 🏢 층별 메모판 ── */
+function openFloor(){ _sheet('floorOv',1); renderFloor(); }
+function closeFloor(){ _sheet('floorOv',0); }
+function addFloor(){
+  var f=document.getElementById('floorFl').value.trim(), t=document.getElementById('floorTx').value.trim();
+  if(!t){alert('메모 내용을 입력하세요');return;}
+  var a=LS('idx_floor',[]); a.unshift({id:uid(),floor:f||'기타',text:t,ts:Date.now()}); LSset('idx_floor',a);
+  document.getElementById('floorTx').value=''; renderFloor();
+}
+function delFloor(id){ LSset('idx_floor',LS('idx_floor',[]).filter(function(m){return m.id!==id;})); renderFloor(); }
+function renderFloor(){
+  var a=LS('idx_floor',[]), h=document.getElementById('floorList');
+  if(!a.length){h.innerHTML='<div class="tm-empty">아직 메모가 없어요.<br>층과 내용을 입력해 추가하세요.</div>';return;}
+  a.sort(function(x,y){return (x.floor||'').localeCompare(y.floor||'',undefined,{numeric:true})||y.ts-x.ts;});
+  h.innerHTML=a.map(function(m){return '<div class="tm-item"><span class="tm-badge">'+esc(m.floor)+'</span><div style="flex:1;min-width:0"><div class="tm-ttl" style="white-space:pre-wrap">'+esc(m.text)+'</div><div class="tm-sub">'+fmtTs(m.ts)+'</div></div><span class="x" onclick="delFloor(\''+m.id+'\')">✕</span></div>';}).join('');
+}
+
+/* ── 🚨 긴급 연락망 ── */
+function openEmg(){ _sheet('emgOv',1); renderEmg(); }
+function closeEmg(){ _sheet('emgOv',0); }
+function addEmg(){
+  var f=document.getElementById('emgFd').value.trim(), n=document.getElementById('emgNm').value.trim(), p=document.getElementById('emgPh').value.trim();
+  if(!n&&!p){alert('이름이나 전화를 입력하세요');return;}
+  var a=LS('idx_emg',[]); a.push({id:uid(),field:f,name:n,phone:p}); LSset('idx_emg',a);
+  document.getElementById('emgNm').value=''; document.getElementById('emgPh').value=''; renderEmg();
+}
+function delEmg(id){ LSset('idx_emg',LS('idx_emg',[]).filter(function(c){return c.id!==id;})); renderEmg(); }
+function renderEmg(){
+  var a=LS('idx_emg',[]), h=document.getElementById('emgList');
+  if(!a.length){h.innerHTML='<div class="tm-empty">연락처를 추가하세요<br>(분야·이름·전화)</div>';return;}
+  h.innerHTML=a.map(function(c){
+    var tel=(c.phone||'').replace(/[^0-9+]/g,'');
+    return '<div class="tm-item"><div style="flex:1;min-width:0"><div class="tm-ttl">'+esc(c.name||c.field||'-')+(c.field?' <span class="tm-badge" style="background:#FEE2E2;color:#DC2626">'+esc(c.field)+'</span>':'')+'</div><div class="tm-sub">'+esc(c.phone||'')+'</div></div>'+(tel?'<a class="tm-call" href="tel:'+tel+'">📞 전화</a>':'')+'<span class="x" onclick="delEmg(\''+c.id+'\')">✕</span></div>';
+  }).join('');
+}
+
+/* ── 📸 안전점검 사진 로그 ── */
+function openSpl(){ _sheet('splOv',1); renderSpl(); }
+function closeSpl(){ _sheet('splOv',0); }
+function addSplPhoto(input){
+  var f=input.files&&input.files[0]; if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(e){ var img=new Image(); img.onload=function(){
+    var mx=1000, sc=Math.min(1,mx/Math.max(img.width,img.height));
+    var cv=document.createElement('canvas'); cv.width=Math.round(img.width*sc); cv.height=Math.round(img.height*sc);
+    cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+    window._splPending=cv.toDataURL('image/jpeg',0.55);
+    var pv=document.getElementById('splPrev'); pv.src=window._splPending; pv.style.display='block';
+  }; img.src=e.target.result; };
+  rd.readAsDataURL(f);
+}
+function saveSpl(){
+  if(!window._splPending){alert('먼저 📷 사진을 선택하세요');return;}
+  var a=LS('idx_spl',[]); a.unshift({id:uid(),img:window._splPending,memo:document.getElementById('splMemo').value.trim(),ts:Date.now()});
+  if(a.length>30)a=a.slice(0,30);
+  if(!LSset('idx_spl',a)){alert('저장 공간 부족 — 오래된 사진을 지워주세요');return;}
+  window._splPending=null; document.getElementById('splPrev').style.display='none';
+  document.getElementById('splMemo').value=''; document.getElementById('splFile').value=''; renderSpl();
+}
+function delSpl(id){ LSset('idx_spl',LS('idx_spl',[]).filter(function(p){return p.id!==id;})); renderSpl(); }
+function splView(id){ var p=LS('idx_spl',[]).filter(function(x){return x.id===id;})[0]; if(!p)return; var w=window.open(); if(w)w.document.write('<title>'+esc(p.memo||'점검사진')+'</title><img src="'+p.img+'" style="max-width:100%">'); }
+function renderSpl(){
+  var a=LS('idx_spl',[]), h=document.getElementById('splList');
+  if(!a.length){h.innerHTML='<div class="tm-empty">점검 사진을 추가하세요</div>';return;}
+  h.innerHTML=a.map(function(p){return '<div class="tm-item"><img src="'+p.img+'" style="width:52px;height:52px;object-fit:cover;border-radius:9px;flex-shrink:0;cursor:pointer" onclick="splView(\''+p.id+'\')"><div style="flex:1;min-width:0"><div class="tm-ttl" style="white-space:pre-wrap">'+esc(p.memo||'(메모 없음)')+'</div><div class="tm-sub">'+fmtTs(p.ts)+'</div></div><span class="x" onclick="delSpl(\''+p.id+'\')">✕</span></div>';}).join('');
+}
+
+/* ── 📅 경제 일정 (자동 계산 + 직접 추가) ── */
+function nthWeekday(y,m,wd,n){ var d=new Date(y,m,1); var add=(wd-d.getDay()+7)%7; return new Date(y,m,1+add+(n-1)*7); }
+function autoEco(){
+  var t=new Date(); t.setHours(0,0,0,0); var out=[];
+  for(var i=0;i<3;i++){
+    var y=t.getFullYear(), m=t.getMonth()+i;
+    out.push({date:ymd(nthWeekday(y,m,5,1)),name:'🇺🇸 미국 고용보고서(비농업)'});
+    out.push({date:ymd(nthWeekday(y,m,4,2)),name:'🇰🇷 옵션 만기'});
+    if([2,5,8,11].indexOf(((m%12)+12)%12)>=0) out.push({date:ymd(nthWeekday(y,m,5,3)),name:'🇺🇸 선물·옵션 만기(네마녀)'});
+  }
+  return out;
+}
+function openEco(){ _sheet('ecoOv',1); renderEco(); }
+function closeEco(){ _sheet('ecoOv',0); }
+function addEco(){
+  var d=document.getElementById('ecoDt').value, t=document.getElementById('ecoTx').value.trim();
+  if(!d||!t){alert('날짜와 내용을 입력하세요');return;}
+  var a=LS('idx_eco',[]); a.push({id:uid(),date:d,name:t}); LSset('idx_eco',a);
+  document.getElementById('ecoTx').value=''; renderEco();
+}
+function delEco(id){ LSset('idx_eco',LS('idx_eco',[]).filter(function(e){return e.id!==id;})); renderEco(); }
+function renderEco(){
+  var today=ymd(new Date());
+  var custom=LS('idx_eco',[]);
+  var all=autoEco().map(function(e){return {date:e.date,name:e.name,auto:true};})
+    .concat(custom.map(function(e){return {date:e.date,name:e.name,id:e.id};}));
+  all=all.filter(function(e){return e.date>=today;}).sort(function(a,b){return a.date<b.date?-1:1;}).slice(0,24);
+  var h=document.getElementById('ecoList');
+  if(!all.length){h.innerHTML='<div class="tm-empty">예정된 일정이 없어요</div>';return;}
+  h.innerHTML=all.map(function(e){return '<div class="tm-item"><div style="flex:1;min-width:0"><div class="tm-ttl">'+esc(e.name)+'</div><div class="tm-sub">'+e.date+'</div></div><span class="tm-dday">'+dday(e.date)+'</span>'+(e.auto?'':'<span class="x" onclick="delEco(\''+e.id+'\')">✕</span>')+'</div>';}).join('');
+}
+
+/* ── ⏰ 리마인더 ── */
+function openRemind(){ _sheet('remindOv',1); renderRemind(); }
+function closeRemind(){ _sheet('remindOv',0); }
+function addRemind(){
+  var tm=document.getElementById('rmTime').value, tx=document.getElementById('rmTx').value.trim();
+  if(!tx){alert('할 일을 입력하세요');return;}
+  var a=LS('idx_remind',[]); a.push({id:uid(),text:tx,time:tm,done:false,ts:Date.now()}); LSset('idx_remind',a);
+  document.getElementById('rmTx').value='';
+  if(tm&&'Notification'in window&&Notification.permission==='default') Notification.requestPermission();
+  scheduleReminders(); renderRemind();
+}
+function toggleRemind(id){ var a=LS('idx_remind',[]); a.forEach(function(r){if(r.id===id)r.done=!r.done;}); LSset('idx_remind',a); renderRemind(); }
+function delRemind(id){ LSset('idx_remind',LS('idx_remind',[]).filter(function(r){return r.id!==id;})); renderRemind(); }
+function renderRemind(){
+  var a=LS('idx_remind',[]).sort(function(x,y){return (x.time||'99')<(y.time||'99')?-1:1;});
+  var h=document.getElementById('remindList');
+  if(!a.length){h.innerHTML='<div class="tm-empty">할 일을 추가하세요</div>';return;}
+  h.innerHTML=a.map(function(r){return '<div class="tm-item"><span class="tm-chk" onclick="toggleRemind(\''+r.id+'\')">'+(r.done?'✅':'⬜')+'</span><div style="flex:1;min-width:0"><div class="tm-ttl" style="'+(r.done?'text-decoration:line-through;color:#B0B0B5':'')+'">'+esc(r.text)+'</div>'+(r.time?'<div class="tm-sub">⏰ '+r.time+'</div>':'')+'</div><span class="x" onclick="delRemind(\''+r.id+'\')">✕</span></div>';}).join('');
+}
+var _rmTimers=[];
+function scheduleReminders(){
+  _rmTimers.forEach(clearTimeout); _rmTimers=[];
+  if(!('Notification'in window))return;
+  var now=new Date();
+  LS('idx_remind',[]).forEach(function(r){
+    if(r.done||!r.time)return;
+    var p=r.time.split(':'); var t=new Date(); t.setHours(+p[0],+p[1],0,0);
+    var ms=t-now; if(ms>0&&ms<86400000){ _rmTimers.push(setTimeout(function(){ try{ if(Notification.permission==='granted') new Notification('⏰ 리마인더',{body:r.text}); else alert('⏰ '+r.text);}catch(e){} },ms)); }
+  });
+}
+
+/* ── 🔁 반복 일정 ── */
+function rpToggle(){ var t=document.getElementById('rpType').value;
+  document.getElementById('rpWd').style.display=t==='weekly'?'':'none';
+  document.getElementById('rpDay').style.display=t==='monthly'?'':'none';
+}
+function nextRepeat(r){
+  var t=new Date(); t.setHours(0,0,0,0);
+  if(r.type==='daily') return t;
+  if(r.type==='weekly'){ var add=(r.wd-t.getDay()+7)%7; var d=new Date(t); d.setDate(t.getDate()+add); return d; }
+  var day=Math.min(r.day||1,28); var d2=new Date(t.getFullYear(),t.getMonth(),day);
+  if(d2<t) d2=new Date(t.getFullYear(),t.getMonth()+1,day); return d2;
+}
+function openRepeat(){ _sheet('repeatOv',1); rpToggle(); renderRepeat(); }
+function closeRepeat(){ _sheet('repeatOv',0); }
+function addRepeat(){
+  var tp=document.getElementById('rpType').value, tx=document.getElementById('rpTx').value.trim();
+  if(!tx){alert('내용을 입력하세요');return;}
+  var r={id:uid(),type:tp,text:tx};
+  if(tp==='weekly')r.wd=+document.getElementById('rpWd').value;
+  if(tp==='monthly')r.day=+document.getElementById('rpDay').value||1;
+  var a=LS('idx_repeat',[]); a.push(r); LSset('idx_repeat',a);
+  document.getElementById('rpTx').value=''; renderRepeat();
+}
+function delRepeat(id){ LSset('idx_repeat',LS('idx_repeat',[]).filter(function(r){return r.id!==id;})); renderRepeat(); }
+function renderRepeat(){
+  var WD=['일','월','화','수','목','금','토'];
+  var a=LS('idx_repeat',[]).map(function(r){r._n=nextRepeat(r);return r;}).sort(function(x,y){return x._n-y._n;});
+  var h=document.getElementById('repeatList');
+  if(!a.length){h.innerHTML='<div class="tm-empty">반복 일정을 추가하세요<br>(예: 매주 월요일 소방점검)</div>';return;}
+  h.innerHTML=a.map(function(r){
+    var cyc=r.type==='daily'?'매일':r.type==='weekly'?('매주 '+WD[r.wd]+'요일'):('매월 '+r.day+'일');
+    return '<div class="tm-item"><div style="flex:1;min-width:0"><div class="tm-ttl">'+esc(r.text)+'</div><div class="tm-sub">'+cyc+' · 다음 '+ymd(r._n)+'</div></div><span class="tm-dday">'+dday(ymd(r._n))+'</span><span class="x" onclick="delRepeat(\''+r.id+'\')">✕</span></div>';
+  }).join('');
+}
+
+/* 페이지 로드 시 리마인더 예약 */
+scheduleReminders();
 </script>
 </body>
 </html>
