@@ -52,7 +52,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .fac-tip{font-size:13px;color:#7C4A03;line-height:1.45;}
 
 /* 도구 버튼 */
-.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px;}
 .tool-btn{background:var(--card);border:1px solid var(--sep);border-radius:16px;padding:12px 3px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.045);font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--ink);}
 .tool-btn:active{background:#F2F2F7;transform:scale(0.94);}
 .tool-btn .te{font-size:26px;line-height:1;}
@@ -195,9 +195,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     <button class="tool-btn" onclick="openFloor()"><span class="te">🏢</span><span class="tl">층별메모</span></button>
     <button class="tool-btn" onclick="openEmg()"><span class="te">🚨</span><span class="tl">긴급연락</span></button>
     <button class="tool-btn" onclick="openSpl()"><span class="te">📸</span><span class="tl">점검사진</span></button>
-    <button class="tool-btn" onclick="openEco()"><span class="te">📅</span><span class="tl">경제일정</span></button>
-    <button class="tool-btn" onclick="openRemind()"><span class="te">⏰</span><span class="tl">리마인더</span></button>
-    <button class="tool-btn" onclick="openRepeat()"><span class="te">🔁</span><span class="tl">반복일정</span></button>
+    <button class="tool-btn" onclick="openMemo()"><span class="te">📌</span><span class="tl">급한메모</span></button>
   </div>
 
   <!-- 자주 쓰는 앱 -->
@@ -410,61 +408,29 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
       <b id="splViewMemo" style="color:#fff;font-size:14px;flex:1;min-width:0;white-space:pre-wrap"></b>
       <span style="color:#fff;font-size:20px;cursor:pointer;padding:2px 6px" onclick="closeSplView()">✕</span>
     </div>
-    <img id="splViewImg" style="width:100%;max-height:68vh;object-fit:contain;border-radius:12px;background:#000">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:10px">
-      <button onclick="splNav(-1)" style="flex:1;height:46px;border:none;border-radius:12px;background:rgba(255,255,255,.16);color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">‹ 이전</button>
+    <img id="splViewImg" style="width:100%;max-height:60vh;object-fit:contain;border-radius:12px;background:#000">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px">
+      <button onclick="splNav(-1)" style="flex:1;height:44px;border:none;border-radius:12px;background:rgba(255,255,255,.16);color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">‹ 이전</button>
       <div id="splViewIdx" style="color:#fff;font-size:13px;font-weight:700;flex-shrink:0"></div>
-      <button onclick="splNav(1)" style="flex:1;height:46px;border:none;border-radius:12px;background:rgba(255,255,255,.16);color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">다음 ›</button>
+      <button onclick="splNav(1)" style="flex:1;height:44px;border:none;border-radius:12px;background:rgba(255,255,255,.16);color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">다음 ›</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button onclick="splShare()" style="flex:1;height:48px;border:none;border-radius:12px;background:#007AFF;color:#fff;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer">📤 공유</button>
+      <button onclick="splSave()" style="flex:1;height:48px;border:none;border-radius:12px;background:#34C759;color:#fff;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer">📥 저장</button>
     </div>
   </div>
 </div>
 
-<!-- 📅 경제 일정 -->
-<div class="modal-ov" id="ecoOv" onclick="if(event.target===this)closeEco()">
+<!-- 📌 급한 메모 -->
+<div class="modal-ov" id="memoOv" onclick="if(event.target===this)closeMemo()">
   <div class="modal">
-    <div class="modal-top"><b>📅 경제 일정</b><span class="mclose" onclick="closeEco()">✕</span></div>
+    <div class="modal-top"><b>📌 급한 메모</b><span class="mclose" onclick="closeMemo()">✕</span></div>
     <div class="tm-row">
-      <input class="tm-in" id="ecoDt" type="date" style="max-width:150px">
-      <input class="tm-in" id="ecoTx" placeholder="일정 추가 (예: 실적발표)">
-      <button class="tm-add" onclick="addEco()">추가</button>
+      <input class="tm-in" id="memoTx" placeholder="급하게 적어둘 내용">
+      <button class="tm-add" onclick="addMemo()">추가</button>
     </div>
-    <div class="tm-list" id="ecoList"></div>
-    <div class="tm-note">고용보고서·옵션만기 등은 자동 계산 · 나머지는 직접 추가</div>
-  </div>
-</div>
-
-<!-- ⏰ 리마인더 -->
-<div class="modal-ov" id="remindOv" onclick="if(event.target===this)closeRemind()">
-  <div class="modal">
-    <div class="modal-top"><b>⏰ 리마인더</b><span class="mclose" onclick="closeRemind()">✕</span></div>
-    <div class="tm-row">
-      <input class="tm-in" id="rmTime" type="time" step="300" style="max-width:120px">
-      <input class="tm-in" id="rmTx" placeholder="할 일 내용">
-      <button class="tm-add" onclick="addRemind()">추가</button>
-    </div>
-    <div class="tm-list" id="remindList"></div>
-    <div class="tm-note">시간 알림은 이 페이지를 켜둔 동안만 울려요</div>
-  </div>
-</div>
-
-<!-- 🔁 반복 일정 -->
-<div class="modal-ov" id="repeatOv" onclick="if(event.target===this)closeRepeat()">
-  <div class="modal">
-    <div class="modal-top"><b>🔁 반복 일정</b><span class="mclose" onclick="closeRepeat()">✕</span></div>
-    <div class="tm-row">
-      <select class="tm-sel" id="rpType" onchange="rpToggle()">
-        <option value="daily">매일</option><option value="weekly">매주</option><option value="monthly">매월</option>
-      </select>
-      <select class="tm-sel" id="rpWd" style="display:none">
-        <option value="1">월</option><option value="2">화</option><option value="3">수</option><option value="4">목</option><option value="5">금</option><option value="6">토</option><option value="0">일</option>
-      </select>
-      <input class="tm-in" id="rpDay" type="number" min="1" max="31" placeholder="일" style="display:none;max-width:70px">
-    </div>
-    <div class="tm-row">
-      <input class="tm-in" id="rpTx" placeholder="내용 (예: 소방 점검)">
-      <button class="tm-add" onclick="addRepeat()">추가</button>
-    </div>
-    <div class="tm-list" id="repeatList"></div>
+    <div class="tm-list" id="memoList"></div>
+    <div class="tm-note">체크 안 한 메모 개수가 홈 화면 앱 배지로 떠요</div>
   </div>
 </div>
 
@@ -771,117 +737,53 @@ function renderSpl(){
   if(!a.length){h.innerHTML='<div class="tm-empty">점검 사진을 추가하세요</div>';return;}
   h.innerHTML=a.map(function(p){return '<div class="tm-item"><img src="'+p.img+'" style="width:52px;height:52px;object-fit:cover;border-radius:9px;flex-shrink:0;cursor:pointer" onclick="splView(\''+p.id+'\')"><div style="flex:1;min-width:0"><div class="tm-ttl" style="white-space:pre-wrap">'+esc(p.memo||'(메모 없음)')+'</div><div class="tm-sub">'+fmtTs(p.ts)+'</div></div><span class="x" onclick="delSpl(\''+p.id+'\')">✕</span></div>';}).join('');
 }
-
-/* ── 📅 경제 일정 (자동 계산 + 직접 추가) ── */
-function nthWeekday(y,m,wd,n){ var d=new Date(y,m,1); var add=(wd-d.getDay()+7)%7; return new Date(y,m,1+add+(n-1)*7); }
-function autoEco(){
-  var t=new Date(); t.setHours(0,0,0,0); var out=[];
-  for(var i=0;i<3;i++){
-    var y=t.getFullYear(), m=t.getMonth()+i;
-    out.push({date:ymd(nthWeekday(y,m,5,1)),name:'🇺🇸 미국 고용보고서(비농업)'});
-    out.push({date:ymd(nthWeekday(y,m,4,2)),name:'🇰🇷 옵션 만기'});
-    if([2,5,8,11].indexOf(((m%12)+12)%12)>=0) out.push({date:ymd(nthWeekday(y,m,5,3)),name:'🇺🇸 선물·옵션 만기(네마녀)'});
-  }
-  return out;
+function _splName(p){ return ('점검_'+(p.memo||'사진').replace(/[\\/:*?"<>|]/g,'_').slice(0,20)+'_'+fmtTs(p.ts).replace(/[\/: ]/g,'')+'.jpg'); }
+function _dataToBlob(d){ var b=atob(d.split(',')[1]), u=new Uint8Array(b.length); for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i); return new Blob([u],{type:'image/jpeg'}); }
+function splSave(){
+  var p=_splArr[_splCur]; if(!p)return;
+  try{ var a=document.createElement('a'); a.href=p.img; a.download=_splName(p); document.body.appendChild(a); a.click(); a.remove(); }
+  catch(e){ var w=window.open(); if(w)w.document.write('<img src="'+p.img+'">'); }
 }
-function openEco(){ _sheet('ecoOv',1); renderEco(); }
-function closeEco(){ _sheet('ecoOv',0); }
-function addEco(){
-  var d=document.getElementById('ecoDt').value, t=document.getElementById('ecoTx').value.trim();
-  if(!d||!t){alert('날짜와 내용을 입력하세요');return;}
-  var a=LS('idx_eco',[]); a.push({id:uid(),date:d,name:t}); LSset('idx_eco',a);
-  document.getElementById('ecoTx').value=''; renderEco();
-}
-function delEco(id){ LSset('idx_eco',LS('idx_eco',[]).filter(function(e){return e.id!==id;})); renderEco(); }
-function renderEco(){
-  var today=ymd(new Date());
-  var custom=LS('idx_eco',[]);
-  var all=autoEco().map(function(e){return {date:e.date,name:e.name,auto:true};})
-    .concat(custom.map(function(e){return {date:e.date,name:e.name,id:e.id};}));
-  all=all.filter(function(e){return e.date>=today;}).sort(function(a,b){return a.date<b.date?-1:1;}).slice(0,24);
-  var h=document.getElementById('ecoList');
-  if(!all.length){h.innerHTML='<div class="tm-empty">예정된 일정이 없어요</div>';return;}
-  h.innerHTML=all.map(function(e){return '<div class="tm-item"><div style="flex:1;min-width:0"><div class="tm-ttl">'+esc(e.name)+'</div><div class="tm-sub">'+e.date+'</div></div><span class="tm-dday">'+dday(e.date)+'</span>'+(e.auto?'':'<span class="x" onclick="delEco(\''+e.id+'\')">✕</span>')+'</div>';}).join('');
+function splShare(){
+  var p=_splArr[_splCur]; if(!p)return;
+  try{
+    var file=new File([_dataToBlob(p.img)],_splName(p),{type:'image/jpeg'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:'점검 사진',text:p.memo||''}).catch(function(){});
+    }else if(navigator.share){
+      navigator.share({title:'점검 사진',text:p.memo||''}).catch(function(){ splSave(); });
+    }else{ splSave(); }
+  }catch(e){ splSave(); }
 }
 
-/* ── ⏰ 리마인더 ── */
-function openRemind(){ _sheet('remindOv',1); renderRemind(); }
-function closeRemind(){ _sheet('remindOv',0); }
-function addRemind(){
-  var tm=document.getElementById('rmTime').value, tx=document.getElementById('rmTx').value.trim();
-  if(!tx){alert('할 일을 입력하세요');return;}
-  var a=LS('idx_remind',[]); a.push({id:uid(),text:tx,time:tm,done:false,ts:Date.now()}); LSset('idx_remind',a);
-  document.getElementById('rmTx').value='';
-  if(tm&&'Notification'in window&&Notification.permission==='default') Notification.requestPermission();
-  scheduleReminders(); renderRemind();
+/* ── 📌 급한 메모 ── */
+function openMemo(){ _sheet('memoOv',1); renderMemo(); }
+function closeMemo(){ _sheet('memoOv',0); }
+function addMemo(){
+  var t=document.getElementById('memoTx').value.trim();
+  if(!t){alert('메모 내용을 입력하세요');return;}
+  var a=LS('idx_memo',[]); a.unshift({id:uid(),text:t,done:false,ts:Date.now()}); LSset('idx_memo',a);
+  document.getElementById('memoTx').value=''; renderMemo();
 }
-function toggleRemind(id){ var a=LS('idx_remind',[]); a.forEach(function(r){if(r.id===id)r.done=!r.done;}); LSset('idx_remind',a); renderRemind(); }
-function delRemind(id){ LSset('idx_remind',LS('idx_remind',[]).filter(function(r){return r.id!==id;})); renderRemind(); }
-function renderRemind(){
+function toggleMemo(id){ var a=LS('idx_memo',[]); a.forEach(function(m){if(m.id===id)m.done=!m.done;}); LSset('idx_memo',a); renderMemo(); }
+function delMemo(id){ LSset('idx_memo',LS('idx_memo',[]).filter(function(m){return m.id!==id;})); renderMemo(); }
+function renderMemo(){
   if(typeof updateBadge==='function') updateBadge();
-  var a=LS('idx_remind',[]).sort(function(x,y){return (x.time||'99')<(y.time||'99')?-1:1;});
-  var h=document.getElementById('remindList');
-  if(!a.length){h.innerHTML='<div class="tm-empty">할 일을 추가하세요</div>';return;}
-  h.innerHTML=a.map(function(r){return '<div class="tm-item"><span class="tm-chk" onclick="toggleRemind(\''+r.id+'\')">'+(r.done?'✅':'⬜')+'</span><div style="flex:1;min-width:0"><div class="tm-ttl" style="'+(r.done?'text-decoration:line-through;color:#B0B0B5':'')+'">'+esc(r.text)+'</div>'+(r.time?'<div class="tm-sub">⏰ '+r.time+'</div>':'')+'</div><span class="x" onclick="delRemind(\''+r.id+'\')">✕</span></div>';}).join('');
-}
-var _rmTimers=[];
-function scheduleReminders(){
-  _rmTimers.forEach(clearTimeout); _rmTimers=[];
-  if(!('Notification'in window))return;
-  var now=new Date();
-  LS('idx_remind',[]).forEach(function(r){
-    if(r.done||!r.time)return;
-    var p=r.time.split(':'); var t=new Date(); t.setHours(+p[0],+p[1],0,0);
-    var ms=t-now; if(ms>0&&ms<86400000){ _rmTimers.push(setTimeout(function(){ try{ if(Notification.permission==='granted') new Notification('⏰ 리마인더',{body:r.text}); else alert('⏰ '+r.text);}catch(e){} },ms)); }
-  });
-}
-
-/* ── 🔁 반복 일정 ── */
-function rpToggle(){ var t=document.getElementById('rpType').value;
-  document.getElementById('rpWd').style.display=t==='weekly'?'':'none';
-  document.getElementById('rpDay').style.display=t==='monthly'?'':'none';
-}
-function nextRepeat(r){
-  var t=new Date(); t.setHours(0,0,0,0);
-  if(r.type==='daily') return t;
-  if(r.type==='weekly'){ var add=(r.wd-t.getDay()+7)%7; var d=new Date(t); d.setDate(t.getDate()+add); return d; }
-  var day=Math.min(r.day||1,28); var d2=new Date(t.getFullYear(),t.getMonth(),day);
-  if(d2<t) d2=new Date(t.getFullYear(),t.getMonth()+1,day); return d2;
-}
-function openRepeat(){ _sheet('repeatOv',1); rpToggle(); renderRepeat(); }
-function closeRepeat(){ _sheet('repeatOv',0); }
-function addRepeat(){
-  var tp=document.getElementById('rpType').value, tx=document.getElementById('rpTx').value.trim();
-  if(!tx){alert('내용을 입력하세요');return;}
-  var r={id:uid(),type:tp,text:tx};
-  if(tp==='weekly')r.wd=+document.getElementById('rpWd').value;
-  if(tp==='monthly')r.day=+document.getElementById('rpDay').value||1;
-  var a=LS('idx_repeat',[]); a.push(r); LSset('idx_repeat',a);
-  document.getElementById('rpTx').value=''; renderRepeat();
-}
-function delRepeat(id){ LSset('idx_repeat',LS('idx_repeat',[]).filter(function(r){return r.id!==id;})); renderRepeat(); }
-function renderRepeat(){
-  var WD=['일','월','화','수','목','금','토'];
-  var a=LS('idx_repeat',[]).map(function(r){r._n=nextRepeat(r);return r;}).sort(function(x,y){return x._n-y._n;});
-  var h=document.getElementById('repeatList');
-  if(!a.length){h.innerHTML='<div class="tm-empty">반복 일정을 추가하세요<br>(예: 매주 월요일 소방점검)</div>';return;}
-  h.innerHTML=a.map(function(r){
-    var cyc=r.type==='daily'?'매일':r.type==='weekly'?('매주 '+WD[r.wd]+'요일'):('매월 '+r.day+'일');
-    return '<div class="tm-item"><div style="flex:1;min-width:0"><div class="tm-ttl">'+esc(r.text)+'</div><div class="tm-sub">'+cyc+' · 다음 '+ymd(r._n)+'</div></div><span class="tm-dday">'+dday(ymd(r._n))+'</span><span class="x" onclick="delRepeat(\''+r.id+'\')">✕</span></div>';
-  }).join('');
+  var a=LS('idx_memo',[]), h=document.getElementById('memoList');
+  if(!a.length){h.innerHTML='<div class="tm-empty">급하게 적어둘 메모를 추가하세요</div>';return;}
+  h.innerHTML=a.map(function(m){return '<div class="tm-item"><span class="tm-chk" onclick="toggleMemo(\''+m.id+'\')">'+(m.done?'✅':'⬜')+'</span><div style="flex:1;min-width:0"><div class="tm-ttl" style="white-space:pre-wrap;'+(m.done?'text-decoration:line-through;color:#B0B0B5':'')+'">'+esc(m.text)+'</div><div class="tm-sub">'+fmtTs(m.ts)+'</div></div><span class="x" onclick="delMemo(\''+m.id+'\')">✕</span></div>';}).join('');
 }
 
 /* ── PWA: 홈 화면 추가 + 아이콘 배지 ── */
 function updateBadge(){
   try{
-    var cnt=LS('idx_remind',[]).filter(function(r){return !r.done;}).length;
+    var cnt=LS('idx_memo',[]).filter(function(m){return !m.done;}).length;
     if('setAppBadge'in navigator){ if(cnt>0)navigator.setAppBadge(cnt); else navigator.clearAppBadge&&navigator.clearAppBadge(); }
   }catch(e){}
 }
 if('serviceWorker'in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
 
-/* 페이지 로드 시 리마인더 예약 + 배지 갱신 */
-scheduleReminders();
+/* 페이지 로드 시 배지 갱신 */
 updateBadge();
 </script>
 </body>
