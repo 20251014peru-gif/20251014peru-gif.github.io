@@ -434,6 +434,8 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* 날짜 (크게) */
 (function(){
@@ -658,18 +660,31 @@ function ymd(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'
 function dday(dateStr){ var t=new Date(); t.setHours(0,0,0,0); var d=new Date(dateStr+'T00:00:00'); var n=Math.round((d-t)/86400000); return n===0?'D-DAY':(n>0?'D-'+n:'지남'); }
 function _sheet(id,on){ document.getElementById(id).classList[on?'add':'remove']('show'); }
 
+/* ── 클라우드 동기화 (Firebase, 어느 기기든 실시간 공유) ── */
+var _db=null, _fc={floor:[],emg:[],memo:[]};
+function DAT(k){ return _db?(_fc[k]||[]).slice():LS('idx_'+k,[]); }
+function _reRender(k){ if(k==='floor')renderFloor();else if(k==='emg')renderEmg();else if(k==='memo')renderMemo(); }
+function cWrite(col,key,id,rec){
+  if(_db){ _db.collection(col).doc(id).set(rec,{merge:true}).catch(function(e){console.warn(e);}); }
+  else { var a=LS('idx_'+key,[]),i=-1; a.forEach(function(x,j){if(x.id===id)i=j;}); if(i>=0)a[i]=Object.assign(a[i],rec); else a.unshift(Object.assign({id:id},rec)); LSset('idx_'+key,a); _reRender(key); }
+}
+function cDel(col,key,id){
+  if(_db){ _db.collection(col).doc(id).delete().catch(function(e){console.warn(e);}); }
+  else { LSset('idx_'+key,LS('idx_'+key,[]).filter(function(x){return x.id!==id;})); _reRender(key); }
+}
+
 /* ── 🏢 층별 메모판 ── */
 function openFloor(){ _sheet('floorOv',1); renderFloor(); }
 function closeFloor(){ _sheet('floorOv',0); }
 function addFloor(){
   var f=document.getElementById('floorFl').value.trim(), t=document.getElementById('floorTx').value.trim();
   if(!t){alert('메모 내용을 입력하세요');return;}
-  var a=LS('idx_floor',[]); a.unshift({id:uid(),floor:f||'기타',text:t,ts:Date.now()}); LSset('idx_floor',a);
-  document.getElementById('floorTx').value=''; renderFloor();
+  cWrite('dash_floor','floor',uid(),{floor:f||'기타',text:t,ts:Date.now()});
+  document.getElementById('floorTx').value='';
 }
-function delFloor(id){ LSset('idx_floor',LS('idx_floor',[]).filter(function(m){return m.id!==id;})); renderFloor(); }
+function delFloor(id){ cDel('dash_floor','floor',id); }
 function renderFloor(){
-  var a=LS('idx_floor',[]), h=document.getElementById('floorList');
+  var a=DAT('floor'), h=document.getElementById('floorList'); if(!h)return;
   if(!a.length){h.innerHTML='<div class="tm-empty">아직 메모가 없어요.<br>층과 내용을 입력해 추가하세요.</div>';return;}
   a.sort(function(x,y){return (x.floor||'').localeCompare(y.floor||'',undefined,{numeric:true})||y.ts-x.ts;});
   h.innerHTML=a.map(function(m){return '<div class="tm-item"><span class="tm-badge">'+esc(m.floor)+'</span><div style="flex:1;min-width:0"><div class="tm-ttl" style="white-space:pre-wrap">'+esc(m.text)+'</div><div class="tm-sub">'+fmtTs(m.ts)+'</div></div><span class="x" onclick="delFloor(\''+m.id+'\')">✕</span></div>';}).join('');
@@ -681,12 +696,12 @@ function closeEmg(){ _sheet('emgOv',0); }
 function addEmg(){
   var f=document.getElementById('emgFd').value.trim(), n=document.getElementById('emgNm').value.trim(), p=document.getElementById('emgPh').value.trim();
   if(!n&&!p){alert('이름이나 전화를 입력하세요');return;}
-  var a=LS('idx_emg',[]); a.push({id:uid(),field:f,name:n,phone:p}); LSset('idx_emg',a);
-  document.getElementById('emgNm').value=''; document.getElementById('emgPh').value=''; renderEmg();
+  cWrite('dash_emg','emg',uid(),{field:f,name:n,phone:p,ts:Date.now()});
+  document.getElementById('emgNm').value=''; document.getElementById('emgPh').value='';
 }
-function delEmg(id){ LSset('idx_emg',LS('idx_emg',[]).filter(function(c){return c.id!==id;})); renderEmg(); }
+function delEmg(id){ cDel('dash_emg','emg',id); }
 function renderEmg(){
-  var a=LS('idx_emg',[]), h=document.getElementById('emgList');
+  var a=DAT('emg').sort(function(x,y){return (x.ts||0)-(y.ts||0);}), h=document.getElementById('emgList'); if(!h)return;
   if(!a.length){h.innerHTML='<div class="tm-empty">연락처를 추가하세요<br>(분야·이름·전화)</div>';return;}
   h.innerHTML=a.map(function(c){
     var tel=(c.phone||'').replace(/[^0-9+]/g,'');
@@ -762,14 +777,14 @@ function closeMemo(){ _sheet('memoOv',0); }
 function addMemo(){
   var t=document.getElementById('memoTx').value.trim();
   if(!t){alert('메모 내용을 입력하세요');return;}
-  var a=LS('idx_memo',[]); a.unshift({id:uid(),text:t,done:false,ts:Date.now()}); LSset('idx_memo',a);
-  document.getElementById('memoTx').value=''; renderMemo();
+  cWrite('dash_memo','memo',uid(),{text:t,done:false,ts:Date.now()});
+  document.getElementById('memoTx').value='';
 }
-function toggleMemo(id){ var a=LS('idx_memo',[]); a.forEach(function(m){if(m.id===id)m.done=!m.done;}); LSset('idx_memo',a); renderMemo(); }
-function delMemo(id){ LSset('idx_memo',LS('idx_memo',[]).filter(function(m){return m.id!==id;})); renderMemo(); }
+function toggleMemo(id){ var m=DAT('memo').filter(function(x){return x.id===id;})[0]; if(m)cWrite('dash_memo','memo',id,{done:!m.done}); }
+function delMemo(id){ cDel('dash_memo','memo',id); }
 function renderMemo(){
   if(typeof updateBadge==='function') updateBadge();
-  var a=LS('idx_memo',[]), h=document.getElementById('memoList');
+  var a=DAT('memo').sort(function(x,y){return (y.ts||0)-(x.ts||0);}), h=document.getElementById('memoList'); if(!h)return;
   if(!a.length){h.innerHTML='<div class="tm-empty">급하게 적어둘 메모를 추가하세요</div>';return;}
   h.innerHTML=a.map(function(m){return '<div class="tm-item"><span class="tm-chk" onclick="toggleMemo(\''+m.id+'\')">'+(m.done?'✅':'⬜')+'</span><div style="flex:1;min-width:0"><div class="tm-ttl" style="white-space:pre-wrap;'+(m.done?'text-decoration:line-through;color:#B0B0B5':'')+'">'+esc(m.text)+'</div><div class="tm-sub">'+fmtTs(m.ts)+'</div></div><span class="x" onclick="delMemo(\''+m.id+'\')">✕</span></div>';}).join('');
 }
@@ -777,11 +792,30 @@ function renderMemo(){
 /* ── PWA: 홈 화면 추가 + 아이콘 배지 ── */
 function updateBadge(){
   try{
-    var cnt=LS('idx_memo',[]).filter(function(m){return !m.done;}).length;
+    var cnt=DAT('memo').filter(function(m){return !m.done;}).length;
     if('setAppBadge'in navigator){ if(cnt>0)navigator.setAppBadge(cnt); else navigator.clearAppBadge&&navigator.clearAppBadge(); }
   }catch(e){}
 }
 if('serviceWorker'in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
+
+/* ── Firebase 실시간 동기화 초기화 (층별메모·긴급연락·급한메모) ── */
+function _fbSub(col,key,render){
+  _db.collection(col).onSnapshot(function(snap){
+    var arr=[]; snap.forEach(function(d){ arr.push(Object.assign({id:d.id},d.data())); });
+    _fc[key]=arr; try{localStorage.setItem('idx_'+key,JSON.stringify(arr));}catch(e){}
+    render(); if(key==='memo'&&typeof updateBadge==='function')updateBadge();
+  },function(e){ console.warn('[FB '+key+']',e); });
+}
+(function initFB(){
+  try{
+    if(typeof firebase==='undefined'){ renderFloor();renderEmg();renderMemo(); return; }
+    firebase.initializeApp({apiKey:"AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",authDomain:"my-system-25497.firebaseapp.com",projectId:"my-system-25497",storageBucket:"my-system-25497.firebasestorage.app"});
+    _db=firebase.firestore();
+    _fbSub('dash_floor','floor',renderFloor);
+    _fbSub('dash_emg','emg',renderEmg);
+    _fbSub('dash_memo','memo',renderMemo);
+  }catch(e){ console.warn('[FB init]',e); _db=null; renderFloor();renderEmg();renderMemo(); }
+})();
 
 /* 페이지 로드 시 배지 갱신 */
 updateBadge();
