@@ -173,12 +173,12 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 
   <!-- 시장 정보 -->
   <div class="mkt">
-    <div class="mkt-tile"><div class="mkt-lb">원/달러</div><div class="mkt-v" id="mUsd">–</div><div class="mkt-c" id="mUsdC"></div></div>
+    <div class="mkt-tile" onclick="window.open('https://m.stock.naver.com/marketindex/exchange/FX_USDKRW','_blank')" style="cursor:pointer"><div class="mkt-lb">원/달러</div><div class="mkt-v" id="mUsd">–</div><div class="mkt-c" id="mUsdC"></div></div>
     <div class="mkt-tile"><div class="mkt-lb">코스피</div><div class="mkt-v" id="mKospi">–</div><div class="mkt-c" id="mKospiC"></div></div>
     <div class="mkt-tile"><div class="mkt-lb">S&amp;P500</div><div class="mkt-v" id="mSpx">–</div><div class="mkt-c" id="mSpxC"></div></div>
     <div class="mkt-tile"><div class="mkt-lb">반도체</div><div class="mkt-v" id="mSox">–</div><div class="mkt-c" id="mSoxC"></div></div>
   </div>
-  <div id="mktSrc" style="font-size:10px;color:var(--sub);text-align:center;margin:-4px 0 14px">환율 불러오는 중…</div>
+  <div id="mktSrc" onclick="window.open('https://m.stock.naver.com/marketindex/exchange/FX_USDKRW','_blank')" style="font-size:10px;color:var(--sub);text-align:center;margin:-4px 0 14px;cursor:pointer">환율 불러오는 중…</div>
 
   <!-- 시설관리 알림 (날씨·계절 연동) -->
   <div class="fac">
@@ -540,14 +540,16 @@ function setMkt(vid,cid,val,chg,dec){
     c.textContent=(chg>0?'▲':chg<0?'▼':'–')+' '+Math.abs(chg).toFixed(2)+'%';
   }
 }
-/* ── 시장 정보 (환율·지수) — 고시환율 다중 소스 + 타임아웃 ── */
+/* ── 시장 정보 (환율·지수) — 고시환율 다중 소스/프록시 + 타임아웃 ── */
 var FX={KRW:1}, _fxSrc='';
 (function(){
+  /* 직접 → 프록시들(각기 다른 방식). allorigins /get 은 {contents} 봉투로 감싸옴 */
   var PX=[
-    function(u){return u;},                                                          /* 직접 */
+    function(u){return u;},
     function(u){return 'https://api.codetabs.com/v1/proxy/?quest='+encodeURIComponent(u);},
-    function(u){return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u);},
-    function(u){return 'https://corsproxy.io/?url='+encodeURIComponent(u);}
+    function(u){return 'https://api.allorigins.win/get?url='+encodeURIComponent(u);},
+    function(u){return 'https://corsproxy.io/?url='+encodeURIComponent(u);},
+    function(u){return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u);}
   ];
   function fetchText(u,ms){
     return new Promise(function(res,rej){
@@ -557,9 +559,10 @@ var FX={KRW:1}, _fxSrc='';
         function(){ clearTimeout(t); rej(0); });
     });
   }
+  function parseMaybe(t){ var j=JSON.parse(t); if(j&&typeof j.contents==='string'){ return JSON.parse(j.contents); } return j; }
   function getJson(u){
     return PX.reduce(function(pr,mk){
-      return pr.catch(function(){ return fetchText(mk(u),5000).then(function(t){ return JSON.parse(t); }); });
+      return pr.catch(function(){ return fetchText(mk(u),5000).then(parseMaybe); });
     }, Promise.reject(0));
   }
   function _hm(){ var d=new Date(); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
@@ -567,13 +570,12 @@ var FX={KRW:1}, _fxSrc='';
     if(!usd||usd<500||usd>3000) throw 0;
     FX.USD=usd; if(jpy)FX.JPY=jpy; if(eur)FX.EUR=eur; _fxSrc=src;
     setMkt('mUsd','mUsdC',usd,chg||0,1);
-    var el=document.getElementById('mktSrc'); if(el) el.textContent='환율 출처: '+src+' · '+_hm();
+    var el=document.getElementById('mktSrc'); if(el) el.textContent='환율 출처: '+src+' · '+_hm()+'  (탭하면 네이버)';
     if(typeof fxRecalc==='function')fxRecalc();
     return true;
   }
   function num(s){ return parseFloat(String(s==null?'':s).replace(/,/g,'')); }
 
-  /* 1) 두나무 = 하나은행 고시(네이버와 동일). 직접(CORS 지원)부터 → 프록시 */
   function loadDunamu(){
     return getJson('https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD,FRX.KRWJPY,FRX.KRWEUR').then(function(arr){
       if(!arr||!arr.length)throw 0; var m={},u=null;
@@ -583,7 +585,6 @@ var FX={KRW:1}, _fxSrc='';
       return apply(m.USD,m.JPY,m.EUR, pv?scp/pv*100:0, '하나은행 고시');
     });
   }
-  /* 2) 네이버 마켓인덱스 */
   function loadNaver(){
     return getJson('https://api.stock.naver.com/marketindex/exchange/FX_USDKRW').then(function(d){
       var v=num(d.closePrice||d.price); if(!v||v<500)throw 0;
@@ -593,23 +594,26 @@ var FX={KRW:1}, _fxSrc='';
       return true;
     });
   }
-  /* 3) 시장환율(참고, 키·CORS OK) */
   function loadErApi(){
     return fetchText('https://open.er-api.com/v6/latest/USD',5000).then(function(t){var d=JSON.parse(t);
       if(!d||!d.rates||!d.rates.KRW)throw 0;
       return apply(d.rates.KRW, d.rates.JPY?d.rates.KRW/d.rates.JPY:null, d.rates.EUR?d.rates.KRW/d.rates.EUR:null, 0, '시장환율(참고)');
     });
   }
-  /* 4) ECB(최후 참고) */
+  function loadFawaz(){
+    return fetchText('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',5000).then(function(t){var d=JSON.parse(t);
+      var k=d&&d.usd&&d.usd.krw; if(!k)throw 0;
+      return apply(k, d.usd.jpy?k/d.usd.jpy:null, d.usd.eur?k/d.usd.eur:null, 0, '시장환율(참고)');
+    });
+  }
   function loadFrank(){
     return fetchText('https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW,JPY,EUR',5000).then(function(t){var d=JSON.parse(t);
       if(!d||!d.rates)throw 0; return apply(d.rates.KRW, d.rates.KRW/d.rates.JPY, d.rates.KRW/d.rates.EUR, 0, 'ECB(참고)');
     });
   }
-  loadDunamu().catch(loadNaver).catch(loadErApi).catch(loadFrank)
-    .catch(function(){ var el=document.getElementById('mktSrc'); if(el)el.textContent='환율을 불러오지 못했어요 (네트워크·차단 확인)'; });
+  loadDunamu().catch(loadNaver).catch(loadErApi).catch(loadFawaz).catch(loadFrank)
+    .catch(function(){ var el=document.getElementById('mktSrc'); if(el)el.textContent='환율 자동수신 실패 · 탭하면 네이버 환율'; });
 
-  /* 지수 (야후) */
   function yq(sym){ return getJson('https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(sym)+'?range=5d&interval=1d').then(function(d){var m=d.chart.result[0].meta;return {price:m.regularMarketPrice,chg:(m.regularMarketPrice-m.chartPreviousClose)/m.chartPreviousClose*100};}); }
   [['^KS11','mKospi','mKospiC'],['^GSPC','mSpx','mSpxC'],['^SOX','mSox','mSoxC']].forEach(function(x){
     yq(x[0]).then(function(o){ setMkt(x[1],x[2],o.price,o.chg,2); }).catch(function(){});
