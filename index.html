@@ -540,19 +540,26 @@ function setMkt(vid,cid,val,chg,dec){
     c.textContent=(chg>0?'▲':chg<0?'▼':'–')+' '+Math.abs(chg).toFixed(2)+'%';
   }
 }
-/* ── 시장 정보 (환율·지수) — 고시환율 다중 소스(네이버/두나무 우선) ── */
+/* ── 시장 정보 (환율·지수) — 고시환율 다중 소스 + 타임아웃 ── */
 var FX={KRW:1}, _fxSrc='';
 (function(){
-  /* 직접 → 여러 CORS 프록시 순차 시도 */
   var PX=[
-    function(u){return u;},
-    function(u){return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u);},
+    function(u){return u;},                                                          /* 직접 */
     function(u){return 'https://api.codetabs.com/v1/proxy/?quest='+encodeURIComponent(u);},
+    function(u){return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u);},
     function(u){return 'https://corsproxy.io/?url='+encodeURIComponent(u);}
   ];
+  function fetchText(u,ms){
+    return new Promise(function(res,rej){
+      var c=('AbortController'in window)?new AbortController():null;
+      var t=setTimeout(function(){ if(c)c.abort(); rej(0); }, ms||5000);
+      fetch(u, c?{signal:c.signal}:{}).then(function(r){ clearTimeout(t); if(!r.ok){rej(0);return;} r.text().then(res,function(){rej(0);}); },
+        function(){ clearTimeout(t); rej(0); });
+    });
+  }
   function getJson(u){
     return PX.reduce(function(pr,mk){
-      return pr.catch(function(){ return fetch(mk(u)).then(function(r){ if(!r.ok)throw 0; return r.text(); }).then(function(t){ return JSON.parse(t); }); });
+      return pr.catch(function(){ return fetchText(mk(u),5000).then(function(t){ return JSON.parse(t); }); });
     }, Promise.reject(0));
   }
   function _hm(){ var d=new Date(); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
@@ -566,17 +573,7 @@ var FX={KRW:1}, _fxSrc='';
   }
   function num(s){ return parseFloat(String(s==null?'':s).replace(/,/g,'')); }
 
-  /* 1) 네이버 마켓인덱스 — 네이버 화면값 그대로 */
-  function loadNaver(){
-    return getJson('https://api.stock.naver.com/marketindex/exchange/FX_USDKRW').then(function(d){
-      var v=num(d.closePrice||d.price); if(!v||v<500)throw 0;
-      apply(v,null,null,num(d.fluctuationsRatio)||0,'네이버 고시');
-      getJson('https://api.stock.naver.com/marketindex/exchange/FX_JPYKRW').then(function(j){var jv=num(j.closePrice); if(jv){FX.JPY=jv/100; if(typeof fxRecalc==='function')fxRecalc();}}).catch(function(){});
-      getJson('https://api.stock.naver.com/marketindex/exchange/FX_EURKRW').then(function(e){var ev=num(e.closePrice); if(ev){FX.EUR=ev; if(typeof fxRecalc==='function')fxRecalc();}}).catch(function(){});
-      return true;
-    });
-  }
-  /* 2) 두나무 — 하나은행 고시 매매기준율 */
+  /* 1) 두나무 = 하나은행 고시(네이버와 동일). 직접(CORS 지원)부터 → 프록시 */
   function loadDunamu(){
     return getJson('https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD,FRX.KRWJPY,FRX.KRWEUR').then(function(arr){
       if(!arr||!arr.length)throw 0; var m={},u=null;
@@ -586,21 +583,31 @@ var FX={KRW:1}, _fxSrc='';
       return apply(m.USD,m.JPY,m.EUR, pv?scp/pv*100:0, '하나은행 고시');
     });
   }
-  /* 3) 시장환율(참고, 키 불필요) */
+  /* 2) 네이버 마켓인덱스 */
+  function loadNaver(){
+    return getJson('https://api.stock.naver.com/marketindex/exchange/FX_USDKRW').then(function(d){
+      var v=num(d.closePrice||d.price); if(!v||v<500)throw 0;
+      apply(v,null,null,num(d.fluctuationsRatio)||0,'네이버 고시');
+      getJson('https://api.stock.naver.com/marketindex/exchange/FX_JPYKRW').then(function(j){var jv=num(j.closePrice); if(jv){FX.JPY=jv/100; if(typeof fxRecalc==='function')fxRecalc();}}).catch(function(){});
+      getJson('https://api.stock.naver.com/marketindex/exchange/FX_EURKRW').then(function(e){var ev=num(e.closePrice); if(ev){FX.EUR=ev; if(typeof fxRecalc==='function')fxRecalc();}}).catch(function(){});
+      return true;
+    });
+  }
+  /* 3) 시장환율(참고, 키·CORS OK) */
   function loadErApi(){
-    return fetch('https://open.er-api.com/v6/latest/USD').then(function(r){return r.json();}).then(function(d){
+    return fetchText('https://open.er-api.com/v6/latest/USD',5000).then(function(t){var d=JSON.parse(t);
       if(!d||!d.rates||!d.rates.KRW)throw 0;
       return apply(d.rates.KRW, d.rates.JPY?d.rates.KRW/d.rates.JPY:null, d.rates.EUR?d.rates.KRW/d.rates.EUR:null, 0, '시장환율(참고)');
     });
   }
   /* 4) ECB(최후 참고) */
   function loadFrank(){
-    return fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW,JPY,EUR').then(function(r){return r.json();}).then(function(d){
+    return fetchText('https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW,JPY,EUR',5000).then(function(t){var d=JSON.parse(t);
       if(!d||!d.rates)throw 0; return apply(d.rates.KRW, d.rates.KRW/d.rates.JPY, d.rates.KRW/d.rates.EUR, 0, 'ECB(참고)');
     });
   }
-  loadNaver().catch(loadDunamu).catch(loadErApi).catch(loadFrank)
-    .catch(function(){ var el=document.getElementById('mktSrc'); if(el)el.textContent='환율을 불러오지 못했어요 (네트워크 확인)'; });
+  loadDunamu().catch(loadNaver).catch(loadErApi).catch(loadFrank)
+    .catch(function(){ var el=document.getElementById('mktSrc'); if(el)el.textContent='환율을 불러오지 못했어요 (네트워크·차단 확인)'; });
 
   /* 지수 (야후) */
   function yq(sym){ return getJson('https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(sym)+'?range=5d&interval=1d').then(function(d){var m=d.chart.result[0].meta;return {price:m.regularMarketPrice,chg:(m.regularMarketPrice-m.chartPreviousClose)/m.chartPreviousClose*100};}); }
