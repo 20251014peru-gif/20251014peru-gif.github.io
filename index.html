@@ -178,7 +178,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     <div class="mkt-tile"><div class="mkt-lb">S&amp;P500</div><div class="mkt-v" id="mSpx">–</div><div class="mkt-c" id="mSpxC"></div></div>
     <div class="mkt-tile"><div class="mkt-lb">반도체</div><div class="mkt-v" id="mSox">–</div><div class="mkt-c" id="mSoxC"></div></div>
   </div>
-  <div id="mktSrc" onclick="window.open('https://m.stock.naver.com/marketindex/exchange/FX_USDKRW','_blank')" style="font-size:10px;color:var(--sub);text-align:center;margin:-4px 0 14px;cursor:pointer">환율 불러오는 중…</div>
+  <div style="font-size:10px;color:var(--sub);text-align:center;margin:-4px 0 14px"><span id="mktSrc" onclick="window.open('https://m.stock.naver.com/marketindex/exchange/FX_USDKRW','_blank')" style="cursor:pointer">환율 불러오는 중…</span><span onclick="setRelay()" style="cursor:pointer;margin-left:8px;color:var(--blue);font-weight:700">⚙ 중계서버</span></div>
 
   <!-- 시설관리 알림 (날씨·계절 연동) -->
   <div class="fac">
@@ -540,6 +540,8 @@ function setMkt(vid,cid,val,chg,dec){
     c.textContent=(chg>0?'▲':chg<0?'▼':'–')+' '+Math.abs(chg).toFixed(2)+'%';
   }
 }
+function getRelay(){ try{return (localStorage.getItem('relay_url')||'').replace(/\/+$/,'');}catch(e){return '';} }
+function setRelay(){ var cur=getRelay(); var u=prompt('중계서버 주소를 붙여넣으세요\n(예: https://myrelay.\uacc4\uc815.workers.dev)', cur); if(u==null)return; localStorage.setItem('relay_url',u.trim().replace(/\/+$/,'')); alert('\uc800\uc7a5\ub410\uc5b4\uc694. \uc0c8\ub85c\uace0\uce68\ud569\ub2c8\ub2e4.'); location.reload(); }
 /* ── 시장 정보 (환율·지수) — 고시환율 다중 소스/프록시 + 타임아웃 ── */
 var FX={KRW:1}, _fxSrc='';
 (function(){
@@ -551,6 +553,8 @@ var FX={KRW:1}, _fxSrc='';
     function(u){return 'https://corsproxy.io/?url='+encodeURIComponent(u);},
     function(u){return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u);}
   ];
+  var RELAY=getRelay();
+  if(RELAY) PX.unshift(function(u){return RELAY+'/?url='+encodeURIComponent(u);});
   function fetchText(u,ms){
     return new Promise(function(res,rej){
       var c=('AbortController'in window)?new AbortController():null;
@@ -611,7 +615,8 @@ var FX={KRW:1}, _fxSrc='';
       if(!d||!d.rates)throw 0; return apply(d.rates.KRW, d.rates.KRW/d.rates.JPY, d.rates.KRW/d.rates.EUR, 0, 'ECB(참고)');
     });
   }
-  loadDunamu().catch(loadNaver).catch(loadErApi).catch(loadFawaz).catch(loadFrank)
+  function loadRelay(){ return fetchText(RELAY+'/fx',6000).then(function(t){var d=JSON.parse(t); if(!d||!d.usd)throw 0; return apply(d.usd,d.jpy,d.eur,d.chg||0,(d.source||'중계')+' · 중계서버'); }); }
+  (RELAY?loadRelay():Promise.reject(0)).catch(loadDunamu).catch(loadNaver).catch(loadErApi).catch(loadFawaz).catch(loadFrank)
     .catch(function(){ var el=document.getElementById('mktSrc'); if(el)el.textContent='환율 자동수신 실패 · 탭하면 네이버 환율'; });
 
   function yq(sym){ return getJson('https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(sym)+'?range=5d&interval=1d').then(function(d){var m=d.chart.result[0].meta;return {price:m.regularMarketPrice,chg:(m.regularMarketPrice-m.chartPreviousClose)/m.chartPreviousClose*100};}); }
