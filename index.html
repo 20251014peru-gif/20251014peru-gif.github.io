@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="나의 시스템">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>나의 시스템</title>
+<title>나의 시스템 v20260719-0818</title>
 <style>
 :root{--bg:#F2F2F7;--card:#fff;--ink:#1C1C1E;--sub:#8E8E93;--sep:#E5E5EA;--blue:#007AFF;--red:#FF3B30;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -143,7 +143,52 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .ax5 .axis-icon{background:#FCE7F3;} .ax5 .axis-name{color:#DB2777;}
 .ax6 .axis-icon{background:#FEE2E2;} .ax6 .axis-name{color:#DC2626;}
 
-@media(max-width:360px){ .app-ic{width:68px;height:68px;font-size:37px;} .app-t{font-size:13px;} .td-day{font-size:32px;} }
+/* 기상특보 배너 */
+.wxalert{border-radius:16px;padding:12px 15px;display:flex;gap:11px;margin-bottom:14px;align-items:flex-start;}
+.wxalert .wa-ic{font-size:23px;flex-shrink:0;line-height:1.25;}
+.wxalert .wa-t{font-size:13px;font-weight:600;line-height:1.5;}
+.wa-red{background:linear-gradient(135deg,#FEF2F2,#FEE2E2);border:1px solid #FCA5A5;color:#B91C1C;}
+.wa-org{background:linear-gradient(135deg,#FFF7ED,#FFEDD5);border:1px solid #FDBA74;color:#C2410C;}
+.wa-blue{background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border:1px solid #93C5FD;color:#1D4ED8;}
+
+/* 환율 한 줄 */
+.fxline{background:var(--card);border-radius:14px;padding:11px 15px;display:flex;align-items:center;gap:9px;box-shadow:0 1px 3px rgba(0,0,0,.045);margin-bottom:18px;}
+.fxline .fl-lb{font-size:13px;color:var(--sub);font-weight:800;white-space:nowrap;}
+.fxline .fl-v{font-size:21px;font-weight:800;letter-spacing:-0.5px;}
+.fxline .fl-c{font-size:12px;font-weight:700;}
+.fxline .fl-src{font-size:10px;color:var(--sub);margin-left:auto;text-align:right;line-height:1.5;}
+.fxline .fl-gear{color:var(--blue);font-weight:800;cursor:pointer;font-size:10.5px;white-space:nowrap;}
+
+/* 접이식 패널 */
+.panel{background:var(--card);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.045);}
+.panel-hdr{display:flex;align-items:center;gap:9px;padding:15px 16px;cursor:pointer;user-select:none;font-size:16px;font-weight:800;letter-spacing:-0.3px;}
+.panel-hdr:active{background:#FAFAFB;}
+.panel-hdr .pn-sub{font-size:11.5px;color:var(--sub);font-weight:600;}
+.panel-hdr .pn-chev{margin-left:auto;color:#C7C7CC;font-size:13px;transition:transform .2s;}
+.panel.open .pn-chev{transform:rotate(180deg);}
+.panel-body{display:none;padding:4px 14px 16px;border-top:1px solid var(--sep);}
+.panel.open .panel-body{display:block;}
+
+/* 뉴스·위키 */
+.srch-row{display:flex;gap:8px;margin:12px 0 8px;}
+.srch-row input{flex:1;height:42px;border:1.5px solid var(--sep);border-radius:11px;padding:0 12px;font-size:15px;font-family:inherit;color:var(--ink);outline:none;min-width:0;}
+.srch-row input:focus{border-color:var(--blue);}
+.srch-row button{height:42px;min-width:54px;border:none;border-radius:11px;background:var(--blue);color:#fff;font-size:14px;font-weight:700;padding:0 12px;font-family:inherit;cursor:pointer;flex-shrink:0;}
+.news-item{display:block;padding:11px 4px;border-bottom:1px solid var(--sep);text-decoration:none;color:var(--ink);}
+.news-item:last-child{border-bottom:none;}
+.news-tt{font-size:14px;font-weight:600;line-height:1.4;}
+.news-mt{font-size:11px;color:var(--sub);margin-top:3px;}
+.wiki-box{margin-top:8px;padding:13px;background:#F7F7FA;border-radius:12px;font-size:13.5px;line-height:1.6;color:#3A3A3C;display:none;}
+.wiki-box.on{display:block;}
+.wiki-box b{display:block;font-size:15px;color:var(--ink);margin-bottom:5px;}
+.wiki-box a{color:var(--blue);font-weight:700;text-decoration:none;font-size:12.5px;}
+.oil-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+.oil-tile{background:#F7F7FA;border-radius:12px;padding:10px 6px;text-align:center;}
+.oil-lb{font-size:11px;color:var(--sub);font-weight:700;}
+.oil-v{font-size:16px;font-weight:800;margin-top:2px;}
+.oil-hint{font-size:11.5px;color:var(--sub);text-align:center;padding:14px 12px;line-height:1.5;}
+
+@media(max-width:360px){ .app-ic{width:68px;height:68px;font-size:37px;} .app-t{font-size:13px;} .td-day{font-size:32px;} .mkt-v{font-size:15px;} }
 </style>
 </head>
 <body>
@@ -171,32 +216,15 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     </div>
   </div>
 
-  <!-- 시장 정보 -->
-  <div class="mkt">
-    <div class="mkt-tile" onclick="window.open('https://m.stock.naver.com/marketindex/exchange/FX_USDKRW','_blank')" style="cursor:pointer"><div class="mkt-lb">원/달러</div><div class="mkt-v" id="mUsd">–</div><div class="mkt-c" id="mUsdC"></div></div>
-    <div class="mkt-tile"><div class="mkt-lb">코스피</div><div class="mkt-v" id="mKospi">–</div><div class="mkt-c" id="mKospiC"></div></div>
-    <div class="mkt-tile"><div class="mkt-lb">S&amp;P500</div><div class="mkt-v" id="mSpx">–</div><div class="mkt-c" id="mSpxC"></div></div>
-    <div class="mkt-tile"><div class="mkt-lb">반도체</div><div class="mkt-v" id="mSox">–</div><div class="mkt-c" id="mSoxC"></div></div>
-  </div>
-  <div style="font-size:10px;color:var(--sub);text-align:center;margin:-4px 0 14px"><span id="mktSrc" onclick="window.open('https://m.stock.naver.com/marketindex/exchange/FX_USDKRW','_blank')" style="cursor:pointer">환율 불러오는 중…</span><span onclick="setRelay()" style="cursor:pointer;margin-left:8px;color:var(--blue);font-weight:700">⚙ 중계서버</span></div>
+  <!-- 기상특보 (예보·미세먼지 기반, 해당 시에만) -->
+  <div class="wxalert wa-org" id="wxAlert" style="display:none"></div>
 
-  <!-- 시설관리 알림 (날씨·계절 연동) -->
-  <div class="fac">
-    <div class="fac-ic" id="facIc">🛠️</div>
-    <div style="flex:1;min-width:0">
-      <div class="fac-title" id="facTitle">오늘의 시설관리</div>
-      <div class="fac-tips" id="facTips"><div class="fac-tip">불러오는 중…</div></div>
-    </div>
-  </div>
-
-  <!-- 도구 -->
-  <div class="tools">
-    <button class="tool-btn" onclick="openCalc()"><span class="te">🧮</span><span class="tl">계산기</span></button>
-    <button class="tool-btn" onclick="openFx()"><span class="te">💱</span><span class="tl">환율</span></button>
-    <button class="tool-btn" onclick="openFloor()"><span class="te">🏢</span><span class="tl">층별메모</span></button>
-    <button class="tool-btn" onclick="openEmg()"><span class="te">🚨</span><span class="tl">긴급연락</span></button>
-    <button class="tool-btn" onclick="openSpl()"><span class="te">📸</span><span class="tl">점검사진</span></button>
-    <button class="tool-btn" onclick="openMemo()"><span class="te">📌</span><span class="tl">급한메모</span></button>
+  <!-- 환율 한 줄 -->
+  <div class="fxline">
+    <span class="fl-lb">💵 원/달러</span>
+    <span class="fl-v" id="mUsd">–</span>
+    <span class="fl-c" id="mUsdC"></span>
+    <span class="fl-src"><span id="mktSrc" onclick="window.open('https://m.stock.naver.com/marketindex/exchange/FX_USDKRW','_blank')" style="cursor:pointer">환율 불러오는 중…</span><br><span class="fl-gear" onclick="setRelay()">⚙ 중계서버 설정</span></span>
   </div>
 
   <!-- 자주 쓰는 앱 -->
@@ -210,6 +238,43 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     <a class="app" href="./contacts.html"><div class="app-ic" style="background:#FFE9DB"><span>📞</span></div><div class="app-t">업체연락처</div></a>
     <a class="app" href="./staff.html"><div class="app-ic" style="background:#FCE7F3"><span>👥</span></div><div class="app-t">직원관리</div></a>
     <a class="app" href="./realestate-project.html"><div class="app-ic" style="background:#E0E7FF"><span>🏢</span></div><div class="app-t">프로젝트</div></a>
+  </div>
+
+  <!-- 💹 금융·경제 (접힘) -->
+  <div class="panel" id="pnMkt">
+    <div class="panel-hdr" onclick="togglePanel('pnMkt')">💹 금융·경제 <span class="pn-sub">지수·원자재·코인·유가</span><span class="pn-chev">▼</span></div>
+    <div class="panel-body">
+      <div class="mkt" id="mktGrid"><div class="oil-hint" style="grid-column:1/-1">펼치면 불러옵니다…</div></div>
+      <div id="oilWrap"></div>
+    </div>
+  </div>
+
+  <!-- 📰 뉴스 · 위키 (접힘) -->
+  <div class="panel" id="pnNews">
+    <div class="panel-hdr" onclick="togglePanel('pnNews')">📰 뉴스 · 위키 <span class="pn-sub">구글뉴스·위키백과</span><span class="pn-chev">▼</span></div>
+    <div class="panel-body">
+      <div class="srch-row">
+        <input id="newsQ" placeholder="뉴스 검색 (예: 금리, 부동산)" onkeydown="if(event.key==='Enter')doNews()">
+        <button onclick="doNews()">검색</button>
+      </div>
+      <div id="newsList"><div class="oil-hint">펼치면 최신 뉴스를 불러옵니다…</div></div>
+      <div class="srch-row" style="margin-top:16px">
+        <input id="wikiQ" placeholder="위키백과 검색 (예: 승강기, 소방시설)" onkeydown="if(event.key==='Enter')doWiki()">
+        <button onclick="doWiki()">위키</button>
+      </div>
+      <div class="wiki-box" id="wikiBox"></div>
+    </div>
+  </div>
+
+  <!-- 🧰 도구 -->
+  <div class="lbl">도구</div>
+  <div class="tools">
+    <button class="tool-btn" onclick="openCalc()"><span class="te">🧮</span><span class="tl">계산기</span></button>
+    <button class="tool-btn" onclick="openFx()"><span class="te">💱</span><span class="tl">환율</span></button>
+    <button class="tool-btn" onclick="openFloor()"><span class="te">🏢</span><span class="tl">층별메모</span></button>
+    <button class="tool-btn" onclick="openEmg()"><span class="te">🚨</span><span class="tl">긴급연락</span></button>
+    <button class="tool-btn" onclick="openSpl()"><span class="te">📸</span><span class="tl">점검사진</span></button>
+    <button class="tool-btn" onclick="openMemo()"><span class="te">📌</span><span class="tl">급한메모</span></button>
   </div>
 
   <!-- 인생 6대축 (접힌 상태로 시작) -->
@@ -476,7 +541,7 @@ function wxFail(){
 function loadWeather(lat,lon){
   var url='https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon
     +'&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max'
-    +'&timezone=Asia%2FSeoul&forecast_days=2';
+    +'&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=2';
   fetch(url).then(function(r){return r.json();}).then(function(d){
     if(!d||!d.daily){wxFail();return;}
     var cur=d.current||{}, dy=d.daily;
@@ -492,42 +557,46 @@ function loadWeather(lat,lon){
 }
 (function(){
   var SEOUL=[37.566,126.978];  /* 위치 거부 시 서울 기준 */
+  function go(la,lo){ loadWeather(la,lo); loadAir(la,lo); }
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(
-      function(p){loadWeather(p.coords.latitude.toFixed(3),p.coords.longitude.toFixed(3));},
-      function(){loadWeather(SEOUL[0],SEOUL[1]);},
+      function(p){go(p.coords.latitude.toFixed(3),p.coords.longitude.toFixed(3));},
+      function(){go(SEOUL[0],SEOUL[1]);},
       {timeout:5000,maximumAge:3600000,enableHighAccuracy:false}
     );
-  }else loadWeather(SEOUL[0],SEOUL[1]);
+  }else go(SEOUL[0],SEOUL[1]);
 })();
 
-/* ── 시설관리 알림 (날씨·계절 연동, 완전 자동) ── */
+/* ── 기상특보 배너 (예보·미세먼지 기반, 해당 시에만 표시) ── */
+var _airInfo=null, _lastWx=null;
 function renderFacility(wx){
-  var month=new Date().getMonth()+1;
-  var season=(month>=3&&month<=5)?'봄':(month>=6&&month<=8)?'여름':(month>=9&&month<=11)?'가을':'겨울';
-  var tips=[], ic='🛠️';
+  var box=document.getElementById('wxAlert'); if(!box)return;
+  if(wx) _lastWx=wx; else wx=_lastWx;
+  var alerts=[], level=0;  /* 0 없음 1 파랑 2 주황 3 빨강 */
   if(wx){
     var rain=[51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99];
     var snow=[71,73,75,77,85,86];
-    if(rain.indexOf(wx.code)>=0||wx.precip>0.5){ tips.push('☔ 옥상·지하 배수구와 누수 지점 점검, 배수펌프 작동 확인'); ic='☔'; }
-    if(snow.indexOf(wx.code)>=0){ tips.push('❄️ 제설제·염화칼슘 확보, 출입·계단 결빙·미끄럼 주의'); ic='❄️'; }
-    if(wx.tmax>=33){ tips.push('🥵 냉방기·냉각탑 점검, 전력 피크·정전 대비'); if(ic==='🛠️')ic='🥵'; }
-    if(wx.tmin<=0){ tips.push('🥶 동파 주의 — 노출 배관·소화전·옥외 수도 보온'); if(ic==='🛠️')ic='🥶'; }
-    if(wx.wind>=10){ tips.push('💨 강풍 — 옥상 적치물·간판·창문 고정 상태 점검'); }
+    if(wx.tmax>=35){ alerts.push('🥵 폭염경보(최고 '+Math.round(wx.tmax)+'°) — 냉방·냉각탑 점검, 전력피크·정전 대비'); level=Math.max(level,3); }
+    else if(wx.tmax>=33){ alerts.push('🥵 폭염주의(최고 '+Math.round(wx.tmax)+'°) — 냉방기 가동상태 확인'); level=Math.max(level,2); }
+    if(wx.tmin<=-12){ alerts.push('🥶 한파(최저 '+Math.round(wx.tmin)+'°) — 노출배관·소화전·옥외수도 동파 대비'); level=Math.max(level,3); }
+    else if(wx.tmin<=0){ alerts.push('🥶 영하(최저 '+Math.round(wx.tmin)+'°) — 동파주의, 배관 보온 확인'); level=Math.max(level,1); }
+    if(wx.precip>=30||(rain.indexOf(wx.code)>=0&&wx.precip>=10)){ alerts.push('☔ 많은 비('+Math.round(wx.precip)+'mm) — 옥상·지하 배수구·배수펌프 작동 점검'); level=Math.max(level,2); }
+    if(snow.indexOf(wx.code)>=0){ alerts.push('❄️ 눈 — 제설제·염화칼슘 확보, 출입·계단 결빙 주의'); level=Math.max(level,1); }
+    if(wx.wind>=14){ alerts.push('💨 강풍('+Math.round(wx.wind)+'m/s) — 옥상 적치물·간판·창문 고정 점검'); level=Math.max(level,2); }
   }
-  if(tips.length<2){
-    if(season==='봄') tips.push('🌸 해빙기 외벽·바닥 균열 점검, 냉방 가동 전 사전점검, 황사·미세먼지 필터 관리');
-    else if(season==='여름') tips.push('🌧 장마철 방수·배수·누수 집중 점검, 곰팡이·해충 관리, 냉방 부하 확인');
-    else if(season==='가을') tips.push('🍂 낙엽 배수구 막힘 주의, 난방 가동 전 보일러·배관 사전 점검');
-    else tips.push('⛄ 동파·결로 대비, 제설 장비 점검, 난방 효율·배관 보온 확인');
+  if(_airInfo){
+    if(_airInfo.pm10>=151||_airInfo.pm25>=76){ alerts.push('😷 미세먼지 매우나쁨 — 환기 자제, 급기필터 점검'); level=Math.max(level,3); }
+    else if(_airInfo.pm10>=81||_airInfo.pm25>=36){ alerts.push('😷 미세먼지 나쁨 — 창문·환기 관리'); level=Math.max(level,2); }
   }
-  tips=tips.slice(0,3);
-  var e;
-  if((e=document.getElementById('facIc'))) e.textContent=ic;
-  if((e=document.getElementById('facTitle'))) e.textContent='오늘의 시설관리 · '+season;
-  if((e=document.getElementById('facTips'))) e.innerHTML=tips.map(function(t){return '<div class="fac-tip">'+t+'</div>';}).join('');
+  if(!alerts.length){ box.style.display='none'; return; }
+  box.className='wxalert '+(level>=3?'wa-red':level>=2?'wa-org':'wa-blue');
+  box.style.display='flex';
+  box.innerHTML='<div class="wa-ic">'+(level>=3?'⚠️':'🔔')+'</div><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:13px;margin-bottom:4px">기상특보 · 시설점검</div><div class="wa-t">'+alerts.map(function(a){return esc(a);}).join('<br>')+'</div></div>';
 }
-renderFacility(null);  /* 날씨 오기 전 계절 기본값 */
+function loadAir(lat,lon){
+  fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude='+lat+'&longitude='+lon+'&current=pm10,pm2_5&timezone=Asia%2FSeoul')
+    .then(function(r){return r.json();}).then(function(d){ if(d&&d.current){ _airInfo={pm10:d.current.pm10||0,pm25:d.current.pm2_5||0}; renderFacility(null); } }).catch(function(){});
+}
 
 /* ── 시장 정보 ── */
 function mktNum(n,d){ return Number(n).toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d}); }
@@ -619,11 +688,108 @@ var FX={KRW:1}, _fxSrc='';
   (RELAY?loadRelay():Promise.reject(0)).catch(loadDunamu).catch(loadNaver).catch(loadErApi).catch(loadFawaz).catch(loadFrank)
     .catch(function(){ var el=document.getElementById('mktSrc'); if(el)el.textContent='환율 자동수신 실패 · 탭하면 네이버 환율'; });
 
-  function yq(sym){ return getJson('https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(sym)+'?range=5d&interval=1d').then(function(d){var m=d.chart.result[0].meta;return {price:m.regularMarketPrice,chg:(m.regularMarketPrice-m.chartPreviousClose)/m.chartPreviousClose*100};}); }
-  [['^KS11','mKospi','mKospiC'],['^GSPC','mSpx','mSpxC'],['^SOX','mSox','mSoxC']].forEach(function(x){
-    yq(x[0]).then(function(o){ setMkt(x[1],x[2],o.price,o.chg,2); }).catch(function(){});
-  });
+  window.RELAY_URL=RELAY; window.pxText=fetchText; window.pxJson=getJson;
 })();
+
+/* ── 접이식 패널 (펼칠 때 1회 로드) ── */
+function togglePanel(id){
+  var el=document.getElementById(id); if(!el)return;
+  el.classList.toggle('open');
+  if(el.classList.contains('open')){
+    if(id==='pnMkt') loadMarkets();
+    if(id==='pnNews') loadNewsFirst();
+  }
+}
+
+/* ── 💹 금융·경제 ── */
+var _mktDone=false;
+var MKT_DEF=[
+  ['kospi','코스피',2],['kosdaq','코스닥',2],['spx','S&P500',2],['nasdaq','나스닥',2],
+  ['dow','다우',2],['sox','반도체',2],['gold','금($)',1],['silver','은($)',2],
+  ['wti','WTI유가',2],['us10y','미10년물',3],['vix','VIX',2],['btc','비트코인',0],['eth','이더리움',0]
+];
+function coinFmt(v){ if(v>=1e8)return (v/1e8).toFixed(2)+'억'; if(v>=1e4)return Math.round(v/1e4).toLocaleString('ko-KR')+'만'; return Number(v).toLocaleString('ko-KR'); }
+function mtile(lb,o,dec,coin){
+  var v='–', c='', cls='flat';
+  if(o&&o.p!=null){
+    v=coin?coinFmt(o.p):Number(o.p).toLocaleString('ko-KR',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+    var ch=o.c||0; cls=ch>0?'up':(ch<0?'down':'flat');
+    c=(ch>0?'▲':ch<0?'▼':'–')+' '+Math.abs(ch).toFixed(2)+'%';
+  }
+  return '<div class="mkt-tile"><div class="mkt-lb">'+lb+'</div><div class="mkt-v">'+v+'</div><div class="mkt-c '+cls+'">'+c+'</div></div>';
+}
+function renderMarkets(d){
+  d=d||{};
+  var h=MKT_DEF.map(function(x){ var coin=(x[0]==='btc'||x[0]==='eth'); return mtile(x[1],d[x[0]],x[2],coin); }).join('');
+  var g=document.getElementById('mktGrid'); if(g)g.innerHTML=h;
+  loadOil();
+}
+function loadMarkets(){
+  if(_mktDone)return; _mktDone=true;
+  var R=window.RELAY_URL;
+  var p=R?window.pxText(R+'/markets',9000).then(JSON.parse):Promise.reject(0);
+  p.then(renderMarkets).catch(function(){ _mktDone=false; loadMarketsDirect(); });
+}
+function loadMarketsDirect(){
+  if(_mktDone)return; _mktDone=true;
+  var YS={kospi:'^KS11',kosdaq:'^KQ11',spx:'^GSPC',nasdaq:'^IXIC',dow:'^DJI',sox:'^SOX',gold:'GC=F',silver:'SI=F',wti:'CL=F',us10y:'^TNX',vix:'^VIX'};
+  var acc={}, keys=Object.keys(YS), done=0;
+  function fin(){ done++; if(done>=keys.length){
+    window.pxJson('https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH').then(function(t){ (t||[]).forEach(function(o){ if(o.market==='KRW-BTC')acc.btc={p:o.trade_price,c:(o.signed_change_rate||0)*100}; if(o.market==='KRW-ETH')acc.eth={p:o.trade_price,c:(o.signed_change_rate||0)*100}; }); }).catch(function(){}).then(function(){ renderMarkets(acc); });
+  } }
+  keys.forEach(function(k){
+    window.pxJson('https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(YS[k])+'?range=5d&interval=1d')
+      .then(function(d){ var m=d.chart.result[0].meta; var pv=m.chartPreviousClose||m.previousClose; acc[k]={p:m.regularMarketPrice,c:pv?(m.regularMarketPrice-pv)/pv*100:0}; })
+      .catch(function(){}).then(fin);
+  });
+}
+
+/* ── ⛽ 유가 (오피넷) ── */
+function loadOil(){
+  var R=window.RELAY_URL, wrap=document.getElementById('oilWrap'); if(!wrap)return;
+  if(!R){ wrap.innerHTML=''; return; }
+  window.pxText(R+'/oil',8000).then(JSON.parse).then(function(d){
+    if(!d||d.need_key){ wrap.innerHTML='<div class="oil-hint">⛽ 유가는 오피넷 무료키 등록 후 표시돼요</div>'; return; }
+    if(d.error||(!d.gasoline&&!d.diesel&&!d.lpg)){ wrap.innerHTML=''; return; }
+    function ot(lb,o){ return '<div class="oil-tile"><div class="oil-lb">'+lb+'</div><div class="oil-v">'+(o&&o.p?Math.round(o.p).toLocaleString('ko-KR'):'–')+'</div></div>'; }
+    wrap.innerHTML='<div class="oil-row">'+ot('휘발유',d.gasoline)+ot('경유',d.diesel)+ot('LPG',d.lpg)+'</div><div class="oil-hint" style="padding:8px 0 0">전국 평균 · 원/L</div>';
+  }).catch(function(){ wrap.innerHTML=''; });
+}
+
+/* ── 📰 뉴스 ── */
+var _newsInit=false;
+function loadNewsFirst(){ if(_newsInit)return; _newsInit=true; doNews(); }
+function doNews(){
+  var qEl=document.getElementById('newsQ'), q=qEl?(qEl.value||'').trim():'';
+  var list=document.getElementById('newsList'); if(!list)return;
+  var R=window.RELAY_URL;
+  if(!R){ list.innerHTML='<div class="oil-hint">뉴스를 보려면 ⚙ 중계서버 설정이 필요해요</div>'; return; }
+  list.innerHTML='<div class="oil-hint">불러오는 중…</div>';
+  window.pxText(R+'/news'+(q?'?q='+encodeURIComponent(q):''),9000).then(JSON.parse).then(function(d){
+    var it=(d&&d.items)||[];
+    if(!it.length){ list.innerHTML='<div class="oil-hint">뉴스를 불러오지 못했어요.</div>'; return; }
+    list.innerHTML=it.map(function(n){
+      return '<a class="news-item" href="'+esc(n.link)+'" target="_blank" rel="noopener"><div class="news-tt">'+esc(n.title)+'</div><div class="news-mt">'+esc(n.source||'')+(n.date?' · '+_newsDate(n.date):'')+'</div></a>';
+    }).join('');
+  }).catch(function(){ list.innerHTML='<div class="oil-hint">뉴스를 불러오지 못했어요. ⚙ 중계서버를 확인해 주세요.</div>'; });
+}
+function _newsDate(s){ try{var d=new Date(s); if(isNaN(d))return ''; return (d.getMonth()+1)+'/'+d.getDate();}catch(e){return '';} }
+
+/* ── 📖 위키백과 ── */
+function doWiki(){
+  var qEl=document.getElementById('wikiQ'), q=qEl?(qEl.value||'').trim():'';
+  var box=document.getElementById('wikiBox'); if(!box)return;
+  if(!q){ box.className='wiki-box'; box.innerHTML=''; return; }
+  var R=window.RELAY_URL;
+  box.className='wiki-box on'; box.innerHTML='불러오는 중…';
+  var p=R?window.pxText(R+'/wiki?q='+encodeURIComponent(q),9000).then(JSON.parse)
+        :window.pxJson('https://ko.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(q));
+  p.then(function(d){
+    if(!d||(!d.extract&&!d.title)){ box.innerHTML='검색 결과가 없어요.'; return; }
+    var url=d.url||('https://ko.wikipedia.org/wiki/'+encodeURIComponent(d.title||q));
+    box.innerHTML='<b>'+esc(d.title||q)+'</b>'+esc(d.extract||'요약이 없습니다.')+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">위키백과에서 더 보기 ›</a>';
+  }).catch(function(){ box.innerHTML='검색 결과를 불러오지 못했어요.'; });
+}
 
 /* ── 🧮 계산기 ── */
 function openCalc(){ document.getElementById('calcOv').classList.add('show'); }
