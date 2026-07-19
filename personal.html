@@ -286,6 +286,12 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 .cal-day-sat .cal-day-num{color:var(--blue)}
 .cal-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin:0 1px}
 .cal-dot-row{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px}
+/* v20260720: 달력 점 대신 제목 일부 표시 */
+.cal-ev-row{display:flex;flex-direction:column;gap:2px;margin-top:3px;align-items:stretch}
+.cal-ev{display:block;font-size:10px;font-weight:700;line-height:1.35;color:var(--ink);padding:1px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:left}
+.cal-ev-ic{font-size:9px;margin-right:2px}
+.cal-ev-more{font-size:9px;font-weight:800;color:var(--ink-faint);padding-left:3px}
+@media(max-width:600px){.cal-ev{font-size:9px;padding:1px 3px}.cal-day{min-height:64px}}
 .day-detail{margin-top:12px;padding:14px;background:var(--white);border-radius:14px;border:1.5px solid var(--line);min-height:60px}
 
 /* ===== 비번 탭 ===== */
@@ -414,8 +420,8 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 </head>
 <body>
 
-<!-- 잠금 화면 -->
-<div id="lockScreen" style="position:fixed;inset:0;background:linear-gradient(135deg,#1a2f45 0%,#2563a8 100%);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column">
+<!-- 잠금 화면 (v20260720: 메인 PIN 제거 — 기본 숨김, 열면 바로 메인) -->
+<div id="lockScreen" style="position:fixed;inset:0;background:linear-gradient(135deg,#1a2f45 0%,#2563a8 100%);z-index:99999;display:none;align-items:center;justify-content:center;flex-direction:column">
   <div style="background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);border-radius:24px;padding:28px 20px 24px;width:92%;max-width:340px;text-align:center;box-sizing:border-box">
     <div style="font-size:48px;margin-bottom:12px">🔒</div>
     <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px">개인일지</div>
@@ -1230,7 +1236,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260717-0920';
+const APP_VER='v20260720-0507';
 document.title='개인일지 '+APP_VER;
 /* 버전을 뿌린다 — 헤더 + PIN 넣는 곳마다.
    잠금화면은 앱이 뜨자마자 보이는 곳이라 DOMContentLoaded 를 기다리면 늦을 수 있다.
@@ -1901,6 +1907,8 @@ function openRecordModal(kind,id){
 function closeRecordModal(){
   g('recordOverlay').classList.remove('show');
   editingId=null;currentKind=null;recPhotos=[];
+  /* v20260720: 저장·취소·삭제로 닫히면 작성 중 초안도 비운다 */
+  if(typeof pjClearDraft==='function') pjClearDraft();
 }
 if(g('recordCancel')){g('recordCancel').addEventListener('click',closeRecordModal);}
 // 외부 클릭으로 닫히지 않음 — 저장/취소/삭제 버튼으로만 닫힘
@@ -2199,6 +2207,8 @@ g('recordSave').addEventListener('click',()=>{
   if(window._recScanRefs && window._recScanRefs.length){
     obj.scanRefs = window._recScanRefs.map(r=>({type:r.type,id:r.id}));
   }
+  /* v20260720: 영수증성 기록이면 연락처 등록 여부 묻기 */
+  pjMaybeAskContact(kind, obj, !!editingId);
   if(editingId){
     updateEntry(editingId,obj);
     /* 양방향 링크 */
@@ -2227,6 +2237,106 @@ g('recordSave').addEventListener('click',()=>{
   closeRecordModal();
 });
 }
+
+/* ===== v20260720: 작성 중 기록 자동저장 + 새로고침 복원 =====
+   기록을 쓰다가 실수로 새로고침하면 메인으로 튕기던 문제 해결.
+   입력을 localStorage 초안에 계속 담아두고, 다시 열면 그 화면·내용을 복원한다.
+   (사진은 용량 때문에 초안에 담지 않는다 — 글 내용 위주로 복원) */
+const PJ_DRAFT_KEY='pj_record_draft';
+function pjSaveDraft(){
+  try{
+    if(!currentKind) return;
+    if(!g('recordOverlay') || !g('recordOverlay').classList.contains('show')) return;
+    const fields={};
+    g('recordFields').querySelectorAll('input,textarea,select').forEach(el=>{
+      if(el.id && el.id.indexOf('rf-')===0) fields[el.id]=el.value;
+    });
+    const rows={drug:[],menu:[],note:[]};
+    document.querySelectorAll('#recordFields .rf-drug-row').forEach(r=>rows.drug.push({
+      name:(r.querySelector('.drow-name')||{}).value||'',dose:(r.querySelector('.drow-dose')||{}).value||'',
+      freq:(r.querySelector('.drow-freq')||{}).value||'',days:(r.querySelector('.drow-days')||{}).value||'',
+      memo:(r.querySelector('.drow-memo')||{}).value||''}));
+    document.querySelectorAll('#recordFields .rf-menu-row').forEach(r=>rows.menu.push({
+      name:(r.querySelector('.mrow-name')||{}).value||'',price:(r.querySelector('.mrow-price')||{}).value||'',
+      taste:(r.querySelector('.mrow-taste')||{}).value||'',comment:(r.querySelector('.mrow-comment')||{}).value||''}));
+    document.querySelectorAll('#recordFields .rf-note-row').forEach(r=>rows.note.push({
+      page:(r.querySelector('.nrow-page')||{}).value||'',type:(r.querySelector('.nrow-type')||{}).value||'',
+      text:(r.querySelector('.nrow-text')||{}).value||''}));
+    const draft={kind:currentKind,id:editingId||null,fields,rows,
+      scanRefs:(window._recScanRefs||[]).map(r=>({type:r.type,id:r.id})),ts:Date.now()};
+    localStorage.setItem(PJ_DRAFT_KEY, JSON.stringify(draft));
+  }catch(e){ /* 용량 초과 등은 조용히 무시 */ }
+}
+function pjClearDraft(){
+  if(window._pjRestoring) return;   /* 복원 중 재빌드로 닫힐 때 초안을 지우지 않는다 */
+  try{ localStorage.removeItem(PJ_DRAFT_KEY); }catch(e){}
+}
+function pjHasDraftContent(d){
+  if(!d||!d.fields) return false;
+  const anyField=Object.keys(d.fields).some(k=> k!=='rf-date' && k!=='rf-carType' && (d.fields[k]||'').toString().trim()!=='');
+  const anyRow=d.rows && ((d.rows.drug||[]).some(x=>x.name)||(d.rows.menu||[]).some(x=>x.name)||(d.rows.note||[]).some(x=>x.text));
+  return anyField || anyRow;
+}
+function pjFillDraft(d){
+  Object.keys(d.fields||{}).forEach(id=>{ const el=g(id); if(el) el.value=d.fields[id]; });
+  const hi=g('rf-stars'), sw=g('rf-stars-wrap');
+  if(hi&&sw){ const n=parseInt(hi.value)||0; sw.querySelectorAll('.star-btn').forEach((b,i)=>b.classList.toggle('on',i<n)); }
+  if(d.rows){
+    const dr=document.querySelectorAll('#recordFields .rf-drug-row');
+    (d.rows.drug||[]).forEach((rv,i)=>{const r=dr[i];if(!r)return;
+      const set=(c,v)=>{const x=r.querySelector(c);if(x)x.value=v;};
+      set('.drow-name',rv.name);set('.drow-dose',rv.dose);set('.drow-freq',rv.freq);set('.drow-days',rv.days);set('.drow-memo',rv.memo);});
+    const mr=document.querySelectorAll('#recordFields .rf-menu-row');
+    (d.rows.menu||[]).forEach((rv,i)=>{const r=mr[i];if(!r)return;
+      const set=(c,v)=>{const x=r.querySelector(c);if(x)x.value=v;};
+      set('.mrow-name',rv.name);set('.mrow-price',rv.price);set('.mrow-taste',rv.taste);set('.mrow-comment',rv.comment);});
+    const nr=document.querySelectorAll('#recordFields .rf-note-row');
+    (d.rows.note||[]).forEach((rv,i)=>{const r=nr[i];if(!r)return;
+      const set=(c,v)=>{const x=r.querySelector(c);if(x)x.value=v;};
+      set('.nrow-page',rv.page);set('.nrow-type',rv.type);set('.nrow-text',rv.text);});
+  }
+  if(d.scanRefs && d.scanRefs.length){
+    window._recScanRefs = d.scanRefs.slice();
+    if(typeof window._renderRecScanAttached==='function') window._renderRecScanAttached();
+  }
+  if(typeof toast==='function') toast('작성 중이던 기록을 복원했어요');
+}
+function pjRestoreDraft(){
+  let d=null;
+  try{ d=JSON.parse(localStorage.getItem(PJ_DRAFT_KEY)||'null'); }catch(e){ d=null; }
+  if(!d || !d.kind) return;
+  if(d.ts && (Date.now()-d.ts) > 24*60*60*1000){ pjClearDraft(); return; }   /* 하루 지난 초안은 버림 */
+  if(!pjHasDraftContent(d)){ pjClearDraft(); return; }
+  try{
+    window._pjRestoring=true;   /* 재빌드 중 pjClearDraft 가드 */
+    if(d.kind==='car' && typeof openCarModal==='function'){
+      openCarModal(d.id||null);
+      /* 종류(주유/정비/…)가 기본과 다르면 change 로 타입별 필드를 다시 만든다 */
+      const want=(d.fields||{})['rf-carType'];
+      const sel=g('rf-carType');
+      if(want && sel && sel.value!==want){ sel.value=want; sel.dispatchEvent(new Event('change')); }
+      setTimeout(()=>{ pjFillDraft(d); setTimeout(()=>{window._pjRestoring=false;}, 1500); }, 340);
+    } else {
+      openRecordModal(d.kind, d.id||undefined);
+      const addN=(btnId,n)=>{ const b=g(btnId); if(b){ for(let i=0;i<n;i++) b.click(); } };
+      if(d.rows){
+        if((d.rows.drug||[]).length) addN('rf-drugAdd', d.rows.drug.length);
+        if((d.rows.menu||[]).length) addN('rf-menuAdd', d.rows.menu.length);
+        if((d.rows.note||[]).length) addN('rf-noteAdd', d.rows.note.length);
+      }
+      setTimeout(()=>{ pjFillDraft(d); setTimeout(()=>{window._pjRestoring=false;}, 1500); }, 260);
+    }
+  }catch(e){ console.error('[draft restore]',e); window._pjRestoring=false; }
+}
+(function bindDraftAutosave(){
+  const host=g('recordFields');
+  if(!host) return;
+  let t=null;
+  const trigger=()=>{ clearTimeout(t); t=setTimeout(pjSaveDraft, 300); };
+  host.addEventListener('input', trigger);
+  host.addEventListener('change', trigger);
+  host.addEventListener('click', e=>{ if(e.target && e.target.closest && e.target.closest('.star-btn')) trigger(); });
+})();
 
 /* ===== 사진 처리 ===== */
 async function compressImg(file){
@@ -3061,10 +3171,28 @@ function _telKey(p){ return String(p||'').replace(/[^0-9]/g,''); }
 /* 가게 이름도 띄어쓰기·대소문자를 지워서 비교 */
 function _nameKey(n){ return String(n||'').trim().toLowerCase().replace(/\s+/g,''); }
 
+/* v20260720: 영수증성 기록(맛집·건강·구매·차계부)을 '새로' 저장할 때
+   업체를 연락처에 등록할지 매번 묻는다. [취소]면 skipContact=true 로 남겨
+   위 getAllContacts 의 자동수집에서 빠진다. (수정 저장 때는 묻지 않음) */
+function pjMaybeAskContact(kind, obj, isEdit){
+  try{
+    if(isEdit) return;
+    if(['restaurant','health','purchase','car'].indexOf(kind)<0) return;
+    const name=(obj.place||obj.hospital||obj.shop||obj.title||'').trim();
+    const phone=(obj.phone||obj.shopPhone||'').trim();
+    const addr=(obj.addr||obj.shopAddr||'').trim();
+    if(!(phone||addr) || !name) return;     /* 연락처가 될 정보가 없으면 안 묻는다 */
+    const ok=confirm('이 업체를 연락처에도 등록할까요?\n\n· '+name+(phone?'   '+phone:'')+'\n\n[확인] 등록   [취소] 등록 안 함');
+    obj.skipContact = ok ? false : true;
+  }catch(e){ /* 오류 시엔 기존처럼 등록 유지 */ }
+}
+
 function getAllContacts(){
   // 기록에서 자동 수집
   const auto=[];
   entries.forEach(en=>{
+    /* v20260720: 저장할 때 '연락처 등록 안 함'을 고른 기록은 자동수집에서 제외 */
+    if(en.skipContact) return;
     /* ⚠️ 차계부는 shop/shopPhone/shopAddr 에 담긴다.
        예전엔 en.phone / en.addr 만 봐서 주유소 전화·주소를 통째로 놓쳤다.
        → 번호가 빈칸이 되니 같은 주유소인 줄 모르고 갈 때마다 새로 쌓였다. */
@@ -3748,6 +3876,8 @@ function openCarModal(id){
         insLiab:cb('insLiab'),insProp:cb('insProp'),insSelf:cb('insSelf'),insVehicle:cb('insVehicle'),insUnins:cb('insUnins'),insRoad:cb('insRoad'),
         insContact:sv2('insContact'),note:sv2('note')};
     }
+    /* v20260720: 주유소·정비소를 연락처에 등록할지 묻기 */
+    pjMaybeAskContact('car', obj, !!editingId);
     if(editingId){
       updateEntry(editingId,obj);
       /* 양방향 링크 */
@@ -3925,10 +4055,18 @@ if(g('carTypeSel')){g('carTypeSel').addEventListener('change',renderCar);}
       const dayEntries=entries.filter(e=>e.date===dateStr);
       const dow=(startDow+d-1)%7;
       const isToday=dateStr===today_str;
-      const dots=dayEntries.slice(0,5).map(e=>`<span class="cal-dot" style="background:${CAT_COLOR[e.kind]||'#aab8c8'}"></span>`).join('');
+      /* v20260720: 점 대신 제목 일부를 보여준다 */
+      const evLabel=(e)=> e.title||e.bookTitle||e.place||e.hospital||e.diagnosis||(e.kind==='memo'?'메모':'')||(KIND_LABEL[e.kind]||'기록');
+      const MAX_SHOW=3;
+      const evs=dayEntries.slice(0,MAX_SHOW).map(e=>{
+        const c=CAT_COLOR[e.kind]||'#aab8c8';
+        return `<span class="cal-ev" style="border-left:3px solid ${c};background:${c}1a" title="${esc(evLabel(e))}"><span class="cal-ev-ic">${KIND_ICON[e.kind]||''}</span>${esc(evLabel(e))}</span>`;
+      }).join('');
+      const moreN=dayEntries.length-MAX_SHOW;
+      const evMore=moreN>0?`<span class="cal-ev-more">+${moreN}</span>`:'';
       html+=`<div class="cal-day${isToday?' today':''} cal-day-${dow===0?'sun':dow===6?'sat':''}" data-date="${dateStr}">
         <span class="cal-day-num">${d}</span>
-        <div class="cal-dot-row">${dots}</div>
+        <div class="cal-ev-row">${evs}${evMore}</div>
       </div>`;
     }
     // 다음달
@@ -6447,6 +6585,18 @@ window.addEventListener('error', function(e){
 
   renderDots();
   buildPad();
+
+  /* v20260720: 메인 PIN 잠금 제거 — 앱을 열면 바로 메인으로,
+     기존 checkPin 성공 시 하던 데이터 로드를 여기서 그대로 실행한다. */
+  (function autoUnlock(){
+    try{ const ls=g('lockScreen'); if(ls) ls.style.display='none'; }catch(e){}
+    try{ loadEntries(); }catch(e){ console.error('[autoUnlock] loadEntries',e); }
+    try{ loadFiles(); }catch(e){ console.error('[autoUnlock] loadFiles',e); }
+    try{ loadPasswords(); }catch(e){ console.error('[autoUnlock] loadPasswords',e); }
+    try{ loadManualContacts(); }catch(e){ console.error('[autoUnlock] loadManualContacts',e); }
+    /* v20260720: 작성 중이던 기록이 있으면 새로고침 후 복원 */
+    setTimeout(()=>{ try{ pjRestoreDraft(); }catch(e){ console.error('[autoUnlock] restore',e); } }, 500);
+  })();
 })();
 
 console.log('[개인일지] 로드 완료');
