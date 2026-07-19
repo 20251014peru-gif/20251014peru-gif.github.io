@@ -57,6 +57,11 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .tool-btn:active{background:#F2F2F7;transform:scale(0.94);}
 .tool-btn .te{font-size:26px;line-height:1;}
 .tool-btn .tl{font-size:11px;font-weight:700;text-align:center;line-height:1.2;}
+/* 급한메모 포스트잇 아이콘 + 강조 라벨 */
+.memo-btn .tl{font-size:14px;color:#FF3B30;font-weight:800;}
+.postit{width:32px;height:32px;background:#FFE86B;border-radius:4px;box-shadow:0 2px 5px rgba(0,0,0,.2);position:relative;transform:rotate(-5deg);display:block;}
+.postit::before{content:'';position:absolute;top:0;left:0;right:0;height:9px;background:#F5C518;border-radius:4px 4px 0 0;}
+.postit::after{content:'';position:absolute;left:6px;right:6px;top:15px;height:2px;background:rgba(0,0,0,.16);box-shadow:0 5px 0 rgba(0,0,0,.12);}
 
 /* 도구 모달 공용 */
 .tm-in{width:100%;height:44px;border:1.5px solid var(--sep);border-radius:11px;padding:0 12px;font-size:15px;font-family:inherit;color:var(--ink);outline:none;margin-bottom:8px;background:#fff;}
@@ -224,14 +229,6 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
   <!-- 기상특보 (예보·미세먼지 기반, 해당 시에만) -->
   <div class="wxalert wa-org" id="wxAlert" style="display:none"></div>
 
-  <!-- 환율 한 줄 -->
-  <div class="fxline">
-    <span class="fl-lb">💵 원/달러</span>
-    <span class="fl-v" id="mUsd">–</span>
-    <span class="fl-c" id="mUsdC"></span>
-    <span class="fl-src"><span id="mktSrc" onclick="window.open('https://m.stock.naver.com/marketindex/exchange/FX_USDKRW','_blank')" style="cursor:pointer">환율 불러오는 중…</span><br><span class="fl-gear" onclick="setRelay()">⚙ 중계서버 설정</span></span>
-  </div>
-
   <!-- 자주 쓰는 앱 -->
   <div class="lbl">자주 쓰는 앱</div>
   <div class="apps">
@@ -248,7 +245,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
   <!-- 🧰 도구 (고정) -->
   <div class="lbl">도구</div>
   <div class="tools">
-    <button class="tool-btn" onclick="openMemo()"><span class="te">📌</span><span class="tl">급한메모</span></button>
+    <button class="tool-btn memo-btn" onclick="openMemo()"><span class="postit"></span><span class="tl">급한메모</span></button>
     <button class="tool-btn" onclick="openWire()"><span class="te">🔌</span><span class="tl">전선/차단기</span></button>
     <button class="tool-btn" onclick="openCalc()"><span class="te">🧮</span><span class="tl">계산기</span></button>
     <button class="tool-btn" onclick="openFx()"><span class="te">💱</span><span class="tl">환율</span></button>
@@ -257,14 +254,19 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     <button class="tool-btn" onclick="openSpl()"><span class="te">📸</span><span class="tl">점검사진</span></button>
   </div>
 
-  <!-- 💹 금융·경제 (접힘) -->
+  <!-- 환율 한 줄 (도구 밑) -->
+  <div class="fxline">
+    <span class="fl-lb">💵 원/달러</span>
+    <span class="fl-v" id="mUsd">–</span>
+    <span class="fl-c" id="mUsdC"></span>
+    <span class="fl-src"><span id="mktSrc" onclick="window.open('https://m.stock.naver.com/marketindex/exchange/FX_USDKRW','_blank')" style="cursor:pointer">환율 불러오는 중…</span><br><span class="fl-gear" onclick="setRelay()">⚙ 중계서버 설정</span></span>
+  </div>
+
+  <!-- 📊 지수·원자재·코인 (개별) -->
   <div class="panel" id="pnMkt">
-    <div class="panel-hdr" onclick="togglePanel('pnMkt')">💹 금융·경제 <span class="pn-sub">지수·원자재·코인·유가</span><span class="pn-chev">▼</span></div>
+    <div class="panel-hdr" onclick="togglePanel('pnMkt')">📊 지수 · 원자재 · 코인 <span class="pn-sub">국내종목·수급·선물</span><span class="pn-chev">▼</span></div>
     <div class="panel-body">
-      <div class="sub-tog" id="mktTog" onclick="toggleSub('mktWrap','mktTog')">📊 지수 · 원자재 · 코인 <span class="pn-chev">▼</span></div>
-      <div id="mktWrap" style="display:none">
-        <div class="mkt" id="mktGrid"><div class="oil-hint" style="grid-column:1/-1">펼치면 불러옵니다…</div></div>
-      </div>
+      <div class="mkt" id="mktGrid"><div class="oil-hint" style="grid-column:1/-1">펼치면 불러옵니다…</div></div>
 
       <div class="p-sub">📈 국내 종목 · 수급 · 선물</div>
       <div class="srch-row">
@@ -274,8 +276,14 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
       </div>
       <div id="stkBox"></div>
       <div id="futBox" class="oil-hint" style="padding:4px 0 0"></div>
+    </div>
+  </div>
 
-      <div class="p-sub">⛽ 유가 · 최저가 주유소</div>
+  <!-- ⛽ 유가 · 아파트 실거래가 (개별) -->
+  <div class="panel" id="pnLife">
+    <div class="panel-hdr" onclick="togglePanel('pnLife')">⛽ 유가 · 아파트 실거래가 <span class="pn-sub">최저가 주유소·실거래</span><span class="pn-chev">▼</span></div>
+    <div class="panel-body">
+      <div class="p-sub" style="border-top:none;padding-top:2px;margin-top:2px">⛽ 유가 · 최저가 주유소</div>
       <div id="oilWrap"></div>
       <div style="display:flex;gap:8px;margin:8px 0">
         <select class="tm-sel" id="gasArea" style="flex:1;min-width:0" onchange="loadGasSigun()">
@@ -786,6 +794,7 @@ function togglePanel(id){
   el.classList.toggle('open');
   if(el.classList.contains('open')){
     if(id==='pnMkt') loadMarkets();
+    if(id==='pnLife') loadOil();
     if(id==='pnNews') loadNewsFirst();
   }
 }
@@ -816,7 +825,6 @@ function renderMarkets(d){
   d=d||{};
   var h=MKT_DEF.map(function(x){ var coin=(x[0]==='btc'||x[0]==='eth'); return mtile(x[1],d[x[0]],x[2],coin); }).join('');
   var g=document.getElementById('mktGrid'); if(g)g.innerHTML=h;
-  loadOil();
 }
 function loadMarkets(){
   if(_mktDone)return; _mktDone=true;
