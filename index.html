@@ -119,6 +119,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .app-ic{width:76px;height:76px;border-radius:21px;display:flex;align-items:center;justify-content:center;font-size:42px;box-shadow:0 2px 7px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.035);}
 .app-ic span{filter:none;}
 .app-t{font-size:14px;font-weight:700;color:var(--ink);text-align:center;line-height:1.2;}
+.app-div{border-top:1px solid var(--sep);margin:0 6px 18px;}
 
 /* 6대축 아코디언 */
 .axis{background:var(--card);border-radius:16px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.045);}
@@ -231,18 +232,23 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 
   <!-- 자주 쓰는 앱 -->
   <div class="lbl">자주 쓰는 앱</div>
-  <div class="apps">
+  <div class="apps" style="margin-bottom:16px">
     <a class="app" href="./scan-app.html"><div class="app-ic" style="background:#EDE9FE"><span>🧾</span></div><div class="app-t">영수증</div></a>
     <a class="app" href="./scan-app.html?open=normal"><div class="app-ic" style="background:#E0F2FE"><span>📷</span></div><div class="app-t">일반사진</div></a>
     <a class="app" href="./scan-app.html?open=card"><div class="app-ic" style="background:#FEF9C3"><span>💼</span></div><div class="app-t">명함</div></a>
     <a class="app" href="./scan-app.html?open=text"><div class="app-ic" style="background:#DCFCE7"><span>📄</span></div><div class="app-t">서류</div></a>
-    <a class="app" href="./scan-app.html?open=secure"><div class="app-ic" style="background:#FFE4E6"><span>🔒</span></div><div class="app-t">보안</div></a>
-    <a class="app" href="./personal.html"><div class="app-ic" style="background:#DBEAFE"><span>📁</span></div><div class="app-t">개인관리</div></a>
-    <a class="app" href="./links.html"><div class="app-ic" style="background:#CFFAFE"><span>🔗</span></div><div class="app-t">링크컬렉션</div></a>
+  </div>
+  <div class="app-div"></div>
+  <div class="apps" style="margin-bottom:16px">
     <a class="app" href="./worklog.html"><div class="app-ic" style="background:#D1FAE5"><span>📝</span></div><div class="app-t">업무일지</div></a>
     <a class="app" href="./parking.html"><div class="app-ic" style="background:#FEF3C7"><span>🚗</span></div><div class="app-t">주차대장</div></a>
     <a class="app" href="./contacts.html"><div class="app-ic" style="background:#FFE9DB"><span>📞</span></div><div class="app-t">업체연락처</div></a>
     <a class="app" href="./staff.html"><div class="app-ic" style="background:#FCE7F3"><span>👥</span></div><div class="app-t">직원관리</div></a>
+  </div>
+  <div class="app-div"></div>
+  <div class="apps">
+    <a class="app" href="./personal.html"><div class="app-ic" style="background:#DBEAFE"><span>📁</span></div><div class="app-t">개인관리</div></a>
+    <a class="app" href="./links.html"><div class="app-ic" style="background:#CFFAFE"><span>🔗</span></div><div class="app-t">링크컬렉션</div></a>
     <a class="app" href="./realestate-project.html"><div class="app-ic" style="background:#E0E7FF"><span>🏢</span></div><div class="app-t">프로젝트</div></a>
   </div>
 
