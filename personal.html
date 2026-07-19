@@ -114,6 +114,11 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);background:var(--white)}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .field-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+/* v20260720: 비번 종류 칩 */
+#pwTypeChips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.pw-type-chip{padding:7px 13px;border:1.5px solid var(--line);border-radius:999px;background:var(--white);font-size:13px;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit;transition:all .15s;line-height:1}
+.pw-type-chip:hover{border-color:var(--c)}
+.pw-type-chip.active{border-color:var(--c);background:var(--c);color:#fff}
 .star-row{display:flex;gap:6px;padding:4px 0}
 .star-btn{font-size:24px;cursor:pointer;opacity:.3;transition:opacity .12s;background:none;border:none;padding:2px;line-height:1}
 .star-btn.on{opacity:1}
@@ -978,8 +983,10 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 <div class="overlay" id="pwOverlay">
   <div class="modal">
     <h3 id="pwModalTitle">비번 추가 <button class="modal-close" id="pwModalClose">✕</button></h3>
-    <div class="field"><label>사이트/앱 *</label><input type="text" id="pwSite" placeholder="예: 네이버, 카카오뱅크"></div>
-    <div class="field"><label>아이디 / 이메일</label><input type="text" id="pwId" placeholder="example@email.com"></div>
+    <!-- v20260720: 비번 종류 선택 칩 — 고르면 아래 입력칸이 바뀐다 -->
+    <div id="pwTypeChips"></div>
+    <!-- 종류별 입력칸(이름/아이디/카드번호 등)이 여기에 그려진다 -->
+    <div id="pwFields"></div>
     <div class="field">
       <label>비밀번호 *</label>
       <div style="position:relative">
@@ -1236,7 +1243,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260720-0507';
+const APP_VER='v20260720-0534';
 document.title='개인일지 '+APP_VER;
 /* 버전을 뿌린다 — 헤더 + PIN 넣는 곳마다.
    잠금화면은 앱이 뜨자마자 보이는 곳이라 DOMContentLoaded 를 기다리면 늦을 수 있다.
@@ -4680,6 +4687,55 @@ g('fileDelete').addEventListener('click',()=>{
 /* ========== 비밀번호 보관함 ========== */
 let passwords=[];
 let pwPhotos=[];
+
+/* ===== v20260720: 비번 종류 ===== */
+const PW_TYPES=[
+  {t:'site',    label:'사이트/앱', ico:'🌐', color:'#3f7cb8'},
+  {t:'general', label:'일반',      ico:'🔑', color:'#8e6fc4'},
+  {t:'card',    label:'카드/금융', ico:'💳', color:'#e67e22'},
+  {t:'wifi',    label:'와이파이',  ico:'📶', color:'#27ae60'},
+  {t:'etc',     label:'기타',      ico:'📌', color:'#95a5a6'}
+];
+function pwTypeInfo(t){ return PW_TYPES.find(x=>x.t===t) || PW_TYPES[0]; }
+let pwType='site';
+/* 종류별 입력칸 HTML — 비밀번호·메모·사진은 모달에 고정이라 여기선 만들지 않는다 */
+function buildPwFields(type,p){
+  p=p||{};
+  const nameLabel={site:'사이트/앱 *',general:'이름/용도 *',card:'카드사/은행 *',wifi:'네트워크명(SSID) *',etc:'이름/용도 *'};
+  const namePh   ={site:'예: 네이버, 카카오뱅크',general:'예: 현관 도어락, 금고',card:'예: 신한카드, 국민은행',wifi:'예: HOME_5G',etc:'예: 배달앱 PIN'};
+  let h=`<div class="field"><label>${nameLabel[type]||'이름 *'}</label><input type="text" id="pwSite" placeholder="${namePh[type]||''}" value="${esc(p.site||'')}"></div>`;
+  if(type==='site'){
+    h+=`<div class="field"><label>아이디 / 이메일</label><input type="text" id="pwId" placeholder="example@email.com" value="${esc(p.id_||'')}"></div>`;
+  } else if(type==='card'){
+    h+=`<div class="field"><label>카드 / 계좌번호</label><input type="text" id="pwCardNo" placeholder="0000-0000-0000-0000" value="${esc(p.cardNo||'')}"></div>`;
+    h+=`<div class="field-row">
+      <div class="field"><label>유효기간</label><input type="text" id="pwExpiry" placeholder="MM/YY" value="${esc(p.expiry||'')}"></div>
+      <div class="field"><label>CVC</label><input type="text" id="pwCvc" placeholder="뒷면 3자리" value="${esc(p.cvc||'')}"></div>
+    </div>`;
+  } else if(type==='wifi'){
+    h+=`<div class="field"><label>장소</label><input type="text" id="pwPlace" placeholder="예: 집, 사무실, 카페" value="${esc(p.place||'')}"></div>`;
+  }
+  return h;
+}
+/* 현재 입력칸 값을 그러모은다 — 종류 바꿀 때 이름 등을 잃지 않게 */
+function pwCollectFields(){
+  const gv=id=>{const el=g(id);return el?(el.value||'').trim():undefined;};
+  return {site:gv('pwSite'),id_:gv('pwId'),cardNo:gv('pwCardNo'),expiry:gv('pwExpiry'),cvc:gv('pwCvc'),place:gv('pwPlace')};
+}
+function renderPwTypeChips(){
+  const box=g('pwTypeChips'); if(!box) return;
+  box.innerHTML=PW_TYPES.map(x=>`<button type="button" class="pw-type-chip${x.t===pwType?' active':''}" data-pwt="${x.t}" style="--c:${x.color}">${x.ico} ${x.label}</button>`).join('');
+  box.querySelectorAll('[data-pwt]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      if(b.dataset.pwt===pwType) return;
+      const cur=pwCollectFields();      /* 지금까지 친 값 보존 */
+      pwType=b.dataset.pwt;
+      renderPwTypeChips();
+      g('pwFields').innerHTML=buildPwFields(pwType,cur);
+    });
+  });
+}
+
 function loadPasswords(){
   try{const raw=localStorage.getItem('pj_passwords');passwords=raw?JSON.parse(atob(raw)):[];}catch{passwords=[];}
   renderPasswords();
@@ -4700,13 +4756,21 @@ async function handlePwPhotos(files){
 function renderPasswords(){
   const el=g('pwList');if(!el) return;
   const q=(g('pwSearch').value||'').trim().toLowerCase();
-  let list=q?passwords.filter(p=>(p.site||'').toLowerCase().includes(q)||(p.id_||'').toLowerCase().includes(q)):passwords;
+  let list=q?passwords.filter(p=>[(p.site||''),(p.id_||''),(p.memo||''),(p.place||''),(p.cardNo||''),(pwTypeInfo(p.type||'site').label)].some(s=>s.toLowerCase().includes(q))):passwords;
   if(!list.length){el.innerHTML='<div class="v43-empty"><div class="ei">🔐</div>비밀번호를 추가해보세요!</div>';return;}
-  el.innerHTML=list.map(p=>`<div class="pw-item" data-pwid="${esc(p.id)}">
-    <div class="pw-icon">🔐</div>
+  el.innerHTML=list.map(p=>{
+    const ty=pwTypeInfo(p.type||'site');
+    /* 종류별로 부제(메타)에 보여줄 내용을 고른다 */
+    const bits=[];
+    if((p.type||'site')==='card'){ if(p.cardNo)bits.push(esc(p.cardNo)); if(p.expiry)bits.push(esc(p.expiry)); }
+    else if(p.type==='wifi'){ if(p.place)bits.push(esc(p.place)); }
+    else { if(p.id_)bits.push(esc(p.id_)); }
+    if(p.memo)bits.push(esc(p.memo));
+    return `<div class="pw-item" data-pwid="${esc(p.id)}" style="border-left:4px solid ${ty.color}">
+    <div class="pw-icon">${ty.ico}</div>
     <div class="pw-body">
-      <div class="pw-title">${esc(p.site||'')}</div>
-      <div class="pw-meta">${esc(p.id_||'')}${p.memo?' · '+esc(p.memo):''}</div>
+      <div class="pw-title">${esc(p.site||'')} <span style="font-size:11px;font-weight:700;color:${ty.color};background:${ty.color}1a;padding:1px 7px;border-radius:6px;margin-left:4px;vertical-align:middle">${ty.label}</span></div>
+      <div class="pw-meta">${bits.join(' · ')}</div>
       <div class="pw-val" id="pv-${esc(p.id)}">${esc(p.val||'')}</div>
       ${p.photos&&p.photos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${p.photos.map(ph=>`<img src="${ph}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:1.5px solid var(--line);cursor:pointer" onclick="showImg('${ph}')">`).join('')}</div>`:''}
     </div>
@@ -4714,7 +4778,7 @@ function renderPasswords(){
       <button class="pw-reveal" data-pvid="${esc(p.id)}">👁 보기</button>
       <button class="pw-reveal" data-pedit="${esc(p.id)}" style="color:var(--blue);border-color:var(--blue)">✏️</button>
     </div>
-  </div>`).join('');
+  </div>`;}).join('');
   el.querySelectorAll('[data-pvid]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const pv=g('pv-'+btn.dataset.pvid);
@@ -4729,8 +4793,10 @@ function openPwModal(id){
   g('pwModalTitle').innerHTML=`${id?'비번 수정':'비번 추가'} <button class="modal-close" id="pwModalClose">✕</button>`;
   g('pwModalClose').onclick=closePwModal;
   g('pwDelete').style.display=id?'':'none';
-  g('pwSite').value=p?p.site||'':'';
-  g('pwId').value=p?p.id_||'':'';
+  /* v20260720: 종류 칩 + 종류별 입력칸 */
+  pwType=(p&&p.type)||'site';
+  renderPwTypeChips();
+  g('pwFields').innerHTML=buildPwFields(pwType,p||{});
   g('pwVal').value=p?p.val||'':'';
   g('pwVal').type='password';
   g('pwToggleShow').textContent='👁';
@@ -4738,7 +4804,7 @@ function openPwModal(id){
   if(p&&p.photos) pwPhotos=[...p.photos];
   renderPwThumbs();
   g('pwOverlay').classList.add('show');
-  setTimeout(()=>g('pwSite').focus(),100);
+  setTimeout(()=>{const f=g('pwSite');if(f)f.focus();},100);
 }
 function closePwModal(){g('pwOverlay').classList.remove('show');pwEditId=null;pwPhotos=[];}
 if(g('pwAddBtn')){g('pwAddBtn').addEventListener('click',()=>openPwModal(null));}
@@ -4764,9 +4830,16 @@ document.addEventListener('paste',async e=>{
 });
 if(g('pwSave')){
 g('pwSave').addEventListener('click',()=>{
-  const site=(g('pwSite').value||'').trim();const val=(g('pwVal').value||'').trim();
-  if(!site||!val){toast('사이트와 비밀번호를 입력해주세요');return;}
-  const obj={id:pwEditId||('pw_'+Date.now()),site,id_:(g('pwId').value||'').trim(),val,memo:(g('pwMemo').value||'').trim(),photos:[...pwPhotos]};
+  const gv=id=>{const el=g(id);return el?(el.value||'').trim():'';};
+  const site=gv('pwSite');const val=gv('pwVal');
+  if(!site||!val){
+    const nameWord={site:'사이트',general:'이름',card:'카드사/은행',wifi:'네트워크명',etc:'이름'}[pwType]||'이름';
+    toast(nameWord+'과 비밀번호를 입력해주세요');return;
+  }
+  /* v20260720: 종류(type)와 종류별 필드까지 저장 */
+  const obj={id:pwEditId||('pw_'+Date.now()),type:pwType,site,val,
+    id_:gv('pwId'),cardNo:gv('pwCardNo'),expiry:gv('pwExpiry'),cvc:gv('pwCvc'),place:gv('pwPlace'),
+    memo:gv('pwMemo'),photos:[...pwPhotos]};
   if(pwEditId){const i=passwords.findIndex(p=>p.id===pwEditId);if(i>=0)passwords[i]=obj;}
   else passwords.push(obj);
   savePasswords();renderPasswords();closePwModal();toast('저장됐어요');
