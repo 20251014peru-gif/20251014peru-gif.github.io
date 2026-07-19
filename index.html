@@ -188,6 +188,10 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .oil-v{font-size:16px;font-weight:800;margin-top:2px;}
 .oil-hint{font-size:11.5px;color:var(--sub);text-align:center;padding:14px 12px;line-height:1.5;}
 .p-sub{font-size:13.5px;font-weight:800;color:#3A3A3C;margin:16px 0 8px;padding-top:14px;border-top:1px solid var(--sep);letter-spacing:-0.2px;}
+.sub-tog{display:flex;align-items:center;font-size:13.5px;font-weight:800;color:#3A3A3C;margin:14px 0 8px;padding-top:14px;border-top:1px solid var(--sep);cursor:pointer;user-select:none;letter-spacing:-0.2px;}
+.sub-tog:first-child{margin-top:4px;padding-top:4px;border-top:none;}
+.sub-tog .pn-chev{margin-left:auto;color:#C7C7CC;font-size:12px;transition:transform .2s;}
+.sub-tog.open .pn-chev{transform:rotate(180deg);}
 
 @media(max-width:360px){ .app-ic{width:68px;height:68px;font-size:37px;} .app-t{font-size:13px;} .td-day{font-size:32px;} .mkt-v{font-size:15px;} }
 </style>
@@ -245,8 +249,10 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
   <div class="panel" id="pnMkt">
     <div class="panel-hdr" onclick="togglePanel('pnMkt')">💹 금융·경제 <span class="pn-sub">지수·원자재·코인·유가</span><span class="pn-chev">▼</span></div>
     <div class="panel-body">
-      <div class="mkt" id="mktGrid"><div class="oil-hint" style="grid-column:1/-1">펼치면 불러옵니다…</div></div>
-      <div id="oilWrap"></div>
+      <div class="sub-tog" id="mktTog" onclick="toggleSub('mktWrap','mktTog')">📊 지수 · 원자재 · 코인 <span class="pn-chev">▼</span></div>
+      <div id="mktWrap" style="display:none">
+        <div class="mkt" id="mktGrid"><div class="oil-hint" style="grid-column:1/-1">펼치면 불러옵니다…</div></div>
+      </div>
 
       <div class="p-sub">📈 국내 종목 · 수급 · 선물</div>
       <div class="srch-row">
@@ -257,8 +263,9 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
       <div id="stkBox"></div>
       <div id="futBox" class="oil-hint" style="padding:4px 0 0"></div>
 
-      <div class="p-sub">⛽ 최저가 주유소</div>
-      <div style="display:flex;gap:8px;margin-bottom:8px">
+      <div class="p-sub">⛽ 유가 · 최저가 주유소</div>
+      <div id="oilWrap"></div>
+      <div style="display:flex;gap:8px;margin:8px 0">
         <select class="tm-sel" id="gasArea" style="flex:1;min-width:0" onchange="loadGasSigun()">
           <option value="01">서울</option><option value="02">경기</option><option value="15">인천</option>
           <option value="10">부산</option><option value="14">대구</option><option value="17">대전</option>
@@ -268,19 +275,23 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
           <option value="09">경남</option><option value="11">제주</option>
         </select>
         <select class="tm-sel" id="gasSigun" style="flex:1;min-width:0"><option value="">시/군/구 전체</option></select>
+        <select class="tm-sel" id="gasProd" style="width:88px;flex-shrink:0"><option value="B027">휘발유</option><option value="D047">경유</option><option value="K015">LPG</option></select>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
-        <select class="tm-sel" id="gasProd" style="flex:1;min-width:0"><option value="B027">휘발유</option><option value="D047">경유</option><option value="K015">LPG</option></select>
-        <button class="tm-add" onclick="doGas()" style="flex:1">조회</button>
+        <button class="tm-add" onclick="doGasNear()" style="flex:1.3;background:#34C759">📍 내 주변</button>
+        <button class="tm-add" onclick="doGas()" style="flex:1">지역조회</button>
         <button class="tm-add" onclick="clearGas()" style="flex:1;background:#8E8E93">지우기</button>
       </div>
       <div id="gasBox"></div>
 
       <div class="p-sub">🏢 아파트 실거래가</div>
-      <div class="srch-row">
-        <input id="aptLawd" placeholder="법정동코드 5자리 (예: 11680 강남구)" onkeydown="if(event.key==='Enter')doApt()">
-        <button onclick="doApt()">조회</button>
-        <button onclick="clearApt()" style="background:#8E8E93">지우기</button>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select class="tm-sel" id="aptSido" style="flex:1;min-width:0" onchange="loadAptSigun()"></select>
+        <select class="tm-sel" id="aptSigun" style="flex:1.4;min-width:0"><option value="">시/군/구 선택</option></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="tm-add" onclick="doApt()" style="flex:1">조회</button>
+        <button class="tm-add" onclick="clearApt()" style="flex:1;background:#8E8E93">지우기</button>
       </div>
       <div id="aptBox"></div>
     </div>
@@ -782,6 +793,11 @@ function togglePanel(id){
     if(id==='pnNews') loadNewsFirst();
   }
 }
+function toggleSub(wrapId,togId){
+  var w=document.getElementById(wrapId), t=document.getElementById(togId); if(!w)return;
+  var open=(w.style.display==='none'); w.style.display=open?'block':'none';
+  if(t)t.classList.toggle('open',open);
+}
 
 /* ── 💹 금융·경제 ── */
 var _mktDone=false;
@@ -887,12 +903,53 @@ function doGas(){
   }).catch(function(){ box.innerHTML='<div class="oil-hint">불러오지 못했어요</div>'; });
 }
 
+/* ── 📍 내 주변 주유소 (GPS→KATEC 변환 후 오피넷 aroundAll) ── */
+function wgs84ToKatec(lat,lon){
+  var d2r=Math.PI/180;
+  var a=6378137.0, f=1/298.257223563, e2=f*(2-f);
+  var phi=lat*d2r, lam=lon*d2r;
+  var N=a/Math.sqrt(1-e2*Math.pow(Math.sin(phi),2));
+  var X=N*Math.cos(phi)*Math.cos(lam), Y=N*Math.cos(phi)*Math.sin(lam), Z=N*(1-e2)*Math.sin(phi);
+  var dx=-115.80,dy=474.99,dz=674.11, rx=1.16/3600*d2r,ry=-2.31/3600*d2r,rz=-1.63/3600*d2r, s=6.43e-6, fct=1+s;
+  var xt=X-dx,yt=Y-dy,zt=Z-dz;
+  var Xb=(xt+rz*yt-ry*zt)/fct, Yb=(-rz*xt+yt+rx*zt)/fct, Zb=(ry*xt-rx*yt+zt)/fct;
+  var ab=6377397.155, fb=1/299.1528128, bb=ab*(1-fb);
+  var e2b=(ab*ab-bb*bb)/(ab*ab), ep2=(ab*ab-bb*bb)/(bb*bb);
+  var p=Math.sqrt(Xb*Xb+Yb*Yb), th=Math.atan2(Zb*ab,p*bb);
+  var phib=Math.atan2(Zb+ep2*bb*Math.pow(Math.sin(th),3), p-e2b*ab*Math.pow(Math.cos(th),3));
+  var lamb=Math.atan2(Yb,Xb);
+  var k0=0.9999, lon0=128*d2r, lat0=38*d2r, x0=400000, y0=600000, ee=e2b, ep=ep2;
+  function M(ph){ return ab*((1-ee/4-3*ee*ee/64-5*ee*ee*ee/256)*ph-(3*ee/8+3*ee*ee/32+45*ee*ee*ee/1024)*Math.sin(2*ph)+(15*ee*ee/256+45*ee*ee*ee/1024)*Math.sin(4*ph)-(35*ee*ee*ee/3072)*Math.sin(6*ph)); }
+  var Nn=ab/Math.sqrt(1-ee*Math.pow(Math.sin(phib),2));
+  var T=Math.pow(Math.tan(phib),2), C=ep*Math.pow(Math.cos(phib),2), A=(lamb-lon0)*Math.cos(phib);
+  var x=x0+k0*Nn*(A+(1-T+C)*Math.pow(A,3)/6+(5-18*T+T*T+72*C-58*ep)*Math.pow(A,5)/120);
+  var y=y0+k0*(M(phib)-M(lat0)+Nn*Math.tan(phib)*(A*A/2+(5-T+9*C+4*C*C)*Math.pow(A,4)/24+(61-58*T+T*T+600*C-330*ep)*Math.pow(A,6)/720));
+  return {x:Math.round(x), y:Math.round(y)};
+}
+function doGasNear(){
+  var box=document.getElementById('gasBox'); if(!box)return; var R=window.RELAY_URL;
+  if(!R){ box.innerHTML='<div class="oil-hint">⚙ 중계서버 설정이 필요해요</div>'; return; }
+  if(!navigator.geolocation){ box.innerHTML='<div class="oil-hint">이 기기는 위치를 지원하지 않아요</div>'; return; }
+  var prod=document.getElementById('gasProd').value;
+  box.innerHTML='<div class="oil-hint">📍 내 위치 확인 중…</div>';
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var k=wgs84ToKatec(pos.coords.latitude,pos.coords.longitude);
+    box.innerHTML='<div class="oil-hint">주변 주유소 찾는 중…</div>';
+    window.pxText(R+'/gasaround?x='+k.x+'&y='+k.y+'&prod='+prod+'&r=5000&sort=2',9000).then(JSON.parse).then(function(d){
+      if(d&&d.need_key){ box.innerHTML='<div class="oil-hint">오피넷 키 설정이 필요해요</div>'; return; }
+      var it=(d&&d.items)||[]; if(!it.length){ box.innerHTML='<div class="oil-hint">반경 5km 내 주유소를 찾지 못했어요</div>'; return; }
+      box.innerHTML=it.map(function(s){ var km=(s.dist/1000).toFixed(1);
+        return '<div class="news-item"><div class="news-tt">'+esc(s.name)+' <b style="color:#007AFF">'+Number(s.price).toLocaleString('ko-KR')+'원</b></div><div class="news-mt">📍 '+km+'km</div></div>'; }).join('');
+    }).catch(function(){ box.innerHTML='<div class="oil-hint">불러오지 못했어요</div>'; });
+  }, function(){ box.innerHTML='<div class="oil-hint">위치 권한을 허용해 주세요</div>'; }, {timeout:8000,maximumAge:600000,enableHighAccuracy:false});
+}
+
 /* ── 🏢 아파트 실거래가 ── */
 function doApt(){
   var box=document.getElementById('aptBox'); if(!box)return; var R=window.RELAY_URL;
   if(!R){ box.innerHTML='<div class="oil-hint">⚙ 중계서버 설정이 필요해요</div>'; return; }
-  var lawd=(document.getElementById('aptLawd').value||'').trim();
-  if(!/^\d{5}$/.test(lawd)){ box.innerHTML='<div class="oil-hint">법정동코드 5자리를 입력하세요 (예: 11680)</div>'; return; }
+  var lawd=document.getElementById('aptSigun').value;
+  if(!/^\d{5}$/.test(lawd)){ box.innerHTML='<div class="oil-hint">시/도와 시/군/구를 선택하세요</div>'; return; }
   var nd=new Date(); var ymd=nd.getFullYear()+('0'+(nd.getMonth()+1)).slice(-2);
   box.innerHTML='<div class="oil-hint">불러오는 중…</div>';
   window.pxText(R+'/apt?lawd='+lawd+'&ymd='+ymd,12000).then(JSON.parse).then(function(d){
@@ -905,7 +962,29 @@ function doApt(){
     }).join('');
   }).catch(function(){ box.innerHTML='<div class="oil-hint">불러오지 못했어요</div>'; });
 }
-function clearApt(){ var q=document.getElementById('aptLawd'); if(q)q.value=''; var b=document.getElementById('aptBox'); if(b)b.innerHTML=''; }
+function clearApt(){ var s=document.getElementById('aptSigun'); if(s)s.selectedIndex=0; var b=document.getElementById('aptBox'); if(b)b.innerHTML=''; }
+/* 법정동 시군구 코드 (실거래가 LAWD_CD 앞 5자리) */
+var APT_LAWD={
+'서울':[['종로구','11110'],['중구','11140'],['용산구','11170'],['성동구','11200'],['광진구','11215'],['동대문구','11230'],['중랑구','11260'],['성북구','11290'],['강북구','11305'],['도봉구','11320'],['노원구','11350'],['은평구','11380'],['서대문구','11410'],['마포구','11440'],['양천구','11470'],['강서구','11500'],['구로구','11530'],['금천구','11545'],['영등포구','11560'],['동작구','11590'],['관악구','11620'],['서초구','11650'],['강남구','11680'],['송파구','11710'],['강동구','11740']],
+'경기':[['수원장안구','41111'],['수원권선구','41113'],['수원팔달구','41115'],['수원영통구','41117'],['성남수정구','41131'],['성남중원구','41133'],['성남분당구','41135'],['의정부시','41150'],['안양만안구','41171'],['안양동안구','41173'],['부천시','41190'],['광명시','41210'],['평택시','41220'],['동두천시','41250'],['안산상록구','41271'],['안산단원구','41273'],['고양덕양구','41281'],['고양일산동구','41285'],['고양일산서구','41287'],['과천시','41290'],['구리시','41310'],['남양주시','41360'],['오산시','41370'],['시흥시','41390'],['군포시','41410'],['의왕시','41430'],['하남시','41450'],['용인처인구','41461'],['용인기흥구','41463'],['용인수지구','41465'],['파주시','41480'],['이천시','41500'],['안성시','41550'],['김포시','41570'],['화성시','41590'],['광주시','41610'],['양주시','41630'],['포천시','41650'],['여주시','41670'],['가평군','41820'],['양평군','41830']],
+'인천':[['중구','28110'],['동구','28140'],['미추홀구','28177'],['연수구','28185'],['남동구','28200'],['부평구','28237'],['계양구','28245'],['서구','28260'],['강화군','28710'],['옹진군','28720']],
+'부산':[['중구','26110'],['서구','26140'],['동구','26170'],['영도구','26200'],['부산진구','26230'],['동래구','26260'],['남구','26290'],['북구','26320'],['해운대구','26350'],['사하구','26380'],['금정구','26410'],['강서구','26440'],['연제구','26470'],['수영구','26500'],['사상구','26530'],['기장군','26710']],
+'대구':[['중구','27110'],['동구','27140'],['서구','27170'],['남구','27200'],['북구','27230'],['수성구','27260'],['달서구','27290'],['달성군','27710']],
+'대전':[['동구','30110'],['중구','30140'],['서구','30170'],['유성구','30200'],['대덕구','30230']],
+'광주':[['동구','29110'],['서구','29140'],['남구','29155'],['북구','29170'],['광산구','29200']],
+'울산':[['중구','31110'],['남구','31140'],['동구','31170'],['북구','31200'],['울주군','31710']],
+'세종':[['세종시','36110']],
+'강원':[['춘천시','51110'],['원주시','51130'],['강릉시','51150'],['동해시','51170'],['속초시','51210']],
+'충북':[['청주상당구','43111'],['청주서원구','43112'],['청주흥덕구','43113'],['청주청원구','43114'],['충주시','43130'],['제천시','43150']],
+'충남':[['천안동남구','44131'],['천안서북구','44133'],['공주시','44150'],['아산시','44200'],['서산시','44210'],['당진시','44270']],
+'전북':[['전주완산구','45111'],['전주덕진구','45113'],['군산시','45130'],['익산시','45140'],['정읍시','45180']],
+'전남':[['목포시','46110'],['여수시','46130'],['순천시','46150'],['나주시','46170'],['광양시','46230']],
+'경북':[['포항남구','47111'],['포항북구','47113'],['경주시','47130'],['구미시','47190'],['경산시','47290']],
+'경남':[['창원의창구','48121'],['창원성산구','48123'],['창원마산합포구','48125'],['창원마산회원구','48127'],['창원진해구','48129'],['진주시','48170'],['김해시','48250'],['양산시','48330']],
+'제주':[['제주시','50110'],['서귀포시','50130']]
+};
+function initAptSido(){ var s=document.getElementById('aptSido'); if(!s)return; s.innerHTML=Object.keys(APT_LAWD).map(function(k){return '<option value="'+k+'">'+k+'</option>';}).join(''); loadAptSigun(); }
+function loadAptSigun(){ var sido=document.getElementById('aptSido').value, sel=document.getElementById('aptSigun'); if(!sel)return; var arr=APT_LAWD[sido]||[]; sel.innerHTML='<option value="">시/군/구 선택</option>'+arr.map(function(a){return '<option value="'+a[1]+'">'+esc(a[0])+'</option>';}).join(''); }
 
 /* ── 📰 뉴스 ── */
 var _newsInit=false;
@@ -1209,8 +1288,9 @@ function _fbSub(col,key,render){
   }catch(e){ console.warn('[FB init]',e); _db=null; renderFloor();renderEmg();renderMemo(); }
 })();
 
-/* 페이지 로드 시 배지 갱신 */
+/* 페이지 로드 시 배지 갱신 + 실거래가 지역목록 */
 updateBadge();
+initAptSido();
 </script>
 </body>
 </html>
