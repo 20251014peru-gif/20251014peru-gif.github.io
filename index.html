@@ -245,6 +245,18 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     <a class="app" href="./realestate-project.html"><div class="app-ic" style="background:#E0E7FF"><span>🏢</span></div><div class="app-t">프로젝트</div></a>
   </div>
 
+  <!-- 🧰 도구 (고정) -->
+  <div class="lbl">도구</div>
+  <div class="tools">
+    <button class="tool-btn" onclick="openMemo()"><span class="te">📌</span><span class="tl">급한메모</span></button>
+    <button class="tool-btn" onclick="openWire()"><span class="te">🔌</span><span class="tl">전선/차단기</span></button>
+    <button class="tool-btn" onclick="openCalc()"><span class="te">🧮</span><span class="tl">계산기</span></button>
+    <button class="tool-btn" onclick="openFx()"><span class="te">💱</span><span class="tl">환율</span></button>
+    <button class="tool-btn" onclick="openFloor()"><span class="te">🏢</span><span class="tl">층별메모</span></button>
+    <button class="tool-btn" onclick="openEmg()"><span class="te">🚨</span><span class="tl">긴급연락</span></button>
+    <button class="tool-btn" onclick="openSpl()"><span class="te">📸</span><span class="tl">점검사진</span></button>
+  </div>
+
   <!-- 💹 금융·경제 (접힘) -->
   <div class="panel" id="pnMkt">
     <div class="panel-hdr" onclick="togglePanel('pnMkt')">💹 금융·경제 <span class="pn-sub">지수·원자재·코인·유가</span><span class="pn-chev">▼</span></div>
@@ -316,22 +328,6 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
         <button onclick="clearWiki()" style="background:#8E8E93">지우기</button>
       </div>
       <div class="wiki-box" id="wikiBox"></div>
-    </div>
-  </div>
-
-  <!-- 🧰 도구 (접힘) -->
-  <div class="panel" id="pnTools">
-    <div class="panel-hdr" onclick="togglePanel('pnTools')">🧰 도구 <span class="pn-sub">계산기·환율·메모·점검</span><span class="pn-chev">▼</span></div>
-    <div class="panel-body">
-      <div class="tools" style="margin-bottom:2px">
-        <button class="tool-btn" onclick="openCalc()"><span class="te">🧮</span><span class="tl">계산기</span></button>
-        <button class="tool-btn" onclick="openFx()"><span class="te">💱</span><span class="tl">환율</span></button>
-        <button class="tool-btn" onclick="openFloor()"><span class="te">🏢</span><span class="tl">층별메모</span></button>
-        <button class="tool-btn" onclick="openEmg()"><span class="te">🚨</span><span class="tl">긴급연락</span></button>
-        <button class="tool-btn" onclick="openSpl()"><span class="te">📸</span><span class="tl">점검사진</span></button>
-        <button class="tool-btn" onclick="openMemo()"><span class="te">📌</span><span class="tl">급한메모</span></button>
-        <button class="tool-btn" onclick="openWire()"><span class="te">🔌</span><span class="tl">전선/차단기</span></button>
-      </div>
     </div>
   </div>
 
