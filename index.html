@@ -252,13 +252,14 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
       <div class="srch-row">
         <input id="stkQ" placeholder="종목명·코드 (예: 삼성전자, 005930)" onkeydown="if(event.key==='Enter')doStock()">
         <button onclick="doStock()">조회</button>
+        <button onclick="clearStock()" style="background:#8E8E93">지우기</button>
       </div>
       <div id="stkBox"></div>
       <div id="futBox" class="oil-hint" style="padding:4px 0 0"></div>
 
       <div class="p-sub">⛽ 최저가 주유소</div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
-        <select class="tm-sel" id="gasArea" style="flex:1;min-width:0">
+        <select class="tm-sel" id="gasArea" style="flex:1;min-width:0" onchange="loadGasSigun()">
           <option value="01">서울</option><option value="02">경기</option><option value="15">인천</option>
           <option value="10">부산</option><option value="14">대구</option><option value="17">대전</option>
           <option value="16">광주</option><option value="18">울산</option><option value="19">세종</option>
@@ -266,8 +267,12 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
           <option value="06">전북</option><option value="07">전남</option><option value="08">경북</option>
           <option value="09">경남</option><option value="11">제주</option>
         </select>
+        <select class="tm-sel" id="gasSigun" style="flex:1;min-width:0"><option value="">시/군/구 전체</option></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
         <select class="tm-sel" id="gasProd" style="flex:1;min-width:0"><option value="B027">휘발유</option><option value="D047">경유</option><option value="K015">LPG</option></select>
-        <button class="tm-add" onclick="doGas()">조회</button>
+        <button class="tm-add" onclick="doGas()" style="flex:1">조회</button>
+        <button class="tm-add" onclick="clearGas()" style="flex:1;background:#8E8E93">지우기</button>
       </div>
       <div id="gasBox"></div>
 
@@ -275,6 +280,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
       <div class="srch-row">
         <input id="aptLawd" placeholder="법정동코드 5자리 (예: 11680 강남구)" onkeydown="if(event.key==='Enter')doApt()">
         <button onclick="doApt()">조회</button>
+        <button onclick="clearApt()" style="background:#8E8E93">지우기</button>
       </div>
       <div id="aptBox"></div>
     </div>
@@ -571,6 +577,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#3A3A3C;white-space:nowrap"><input type="checkbox" id="wCont" checked onchange="wireCalc()" style="width:18px;height:18px">연속부하(1.25배)</label>
     </div>
     <div id="wireOut" style="background:#F2F2F7;border-radius:14px;padding:14px;font-size:14px;line-height:1.7;color:var(--ink);min-height:60px">값을 입력하세요.</div>
+    <button onclick="clearWire()" style="width:100%;margin-top:10px;height:42px;border:none;border-radius:11px;background:#EFEFF4;color:var(--sub);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">지우기</button>
     <div class="tm-note" style="color:#B45309;line-height:1.6">⚠️ 동선·600V 비닐절연·기중(노출)배선 기준의 <b>참고값</b>입니다 (예: 30A→4㎟, 40A→6㎟, 50A→10㎟). <b>전선관 다수배선·고온·장거리</b>에서는 한 단계 굵게 하고, 실제 시공은 KEC/내선규정에 따라 <b>전기기술자 검토</b>가 필요합니다.</div>
   </div>
 </div>
@@ -848,6 +855,7 @@ function doStock(){
     loadFutures();
   }).catch(function(){ box.innerHTML='<div class="oil-hint">조회 실패 · 잠시 후 다시 시도해 주세요</div>'; });
 }
+function clearStock(){ var q=document.getElementById('stkQ'); if(q)q.value=''; var b=document.getElementById('stkBox'); if(b)b.innerHTML=''; var f=document.getElementById('futBox'); if(f)f.textContent=''; }
 function loadFutures(){
   var box=document.getElementById('futBox'); if(!box)return; var R=window.RELAY_URL; if(!R)return;
   window.pxText(R+'/futures',8000).then(JSON.parse).then(function(d){
@@ -858,10 +866,19 @@ function loadFutures(){
 }
 
 /* ── ⛽ 최저가 주유소 ── */
+function loadGasSigun(){
+  var sido=document.getElementById('gasArea').value, sel=document.getElementById('gasSigun'); if(!sel)return;
+  sel.innerHTML='<option value="">시/군/구 전체</option>';
+  var R=window.RELAY_URL; if(!R)return;
+  window.pxText(R+'/gasarea?sido='+sido,8000).then(JSON.parse).then(function(d){
+    ((d&&d.items)||[]).forEach(function(s){ var o=document.createElement('option'); o.value=s.code; o.textContent=s.name; sel.appendChild(o); });
+  }).catch(function(){});
+}
+function clearGas(){ var b=document.getElementById('gasBox'); if(b)b.innerHTML=''; }
 function doGas(){
   var box=document.getElementById('gasBox'); if(!box)return; var R=window.RELAY_URL;
   if(!R){ box.innerHTML='<div class="oil-hint">⚙ 중계서버 설정이 필요해요</div>'; return; }
-  var area=document.getElementById('gasArea').value, prod=document.getElementById('gasProd').value;
+  var area=document.getElementById('gasSigun').value||document.getElementById('gasArea').value, prod=document.getElementById('gasProd').value;
   box.innerHTML='<div class="oil-hint">불러오는 중…</div>';
   window.pxText(R+'/gas?area='+area+'&prod='+prod,9000).then(JSON.parse).then(function(d){
     if(d&&d.need_key){ box.innerHTML='<div class="oil-hint">오피넷 키 설정이 필요해요</div>'; return; }
@@ -876,8 +893,9 @@ function doApt(){
   if(!R){ box.innerHTML='<div class="oil-hint">⚙ 중계서버 설정이 필요해요</div>'; return; }
   var lawd=(document.getElementById('aptLawd').value||'').trim();
   if(!/^\d{5}$/.test(lawd)){ box.innerHTML='<div class="oil-hint">법정동코드 5자리를 입력하세요 (예: 11680)</div>'; return; }
+  var nd=new Date(); var ymd=nd.getFullYear()+('0'+(nd.getMonth()+1)).slice(-2);
   box.innerHTML='<div class="oil-hint">불러오는 중…</div>';
-  window.pxText(R+'/apt?lawd='+lawd,12000).then(JSON.parse).then(function(d){
+  window.pxText(R+'/apt?lawd='+lawd+'&ymd='+ymd,12000).then(JSON.parse).then(function(d){
     if(d&&d.need_key){ box.innerHTML='<div class="oil-hint">실거래가는 data.go.kr 무료키 등록 후 표시돼요</div>'; return; }
     if(d&&d.error){ box.innerHTML='<div class="oil-hint">'+esc(d.error)+'</div>'; return; }
     var it=(d&&d.items)||[]; if(!it.length){ box.innerHTML='<div class="oil-hint">해당 지역 최근 실거래 내역이 없어요</div>'; return; }
@@ -887,6 +905,7 @@ function doApt(){
     }).join('');
   }).catch(function(){ box.innerHTML='<div class="oil-hint">불러오지 못했어요</div>'; });
 }
+function clearApt(){ var q=document.getElementById('aptLawd'); if(q)q.value=''; var b=document.getElementById('aptBox'); if(b)b.innerHTML=''; }
 
 /* ── 📰 뉴스 ── */
 var _newsInit=false;
@@ -989,6 +1008,7 @@ var WIRE_AMP=[[1.5,19],[2.5,27],[4,37],[6,48],[10,66],[16,88],[25,117],[35,144],
 var WIRE_BRK=[15,20,30,40,50,60,75,100,125,150,175,200,225,250,300,350,400,500,600,700,800];
 function openWire(){ document.getElementById('wireOv').classList.add('show'); wireCalc(); }
 function closeWire(){ document.getElementById('wireOv').classList.remove('show'); }
+function clearWire(){ document.getElementById('wVal').value=''; document.getElementById('wLen').value=''; document.getElementById('wireOut').innerHTML='값을 입력하세요.'; }
 function _stdBrk(i){ for(var k=0;k<WIRE_BRK.length;k++) if(WIRE_BRK[k]>=i) return WIRE_BRK[k]; return WIRE_BRK[WIRE_BRK.length-1]; }
 function _cableFor(a){ for(var k=0;k<WIRE_AMP.length;k++) if(WIRE_AMP[k][1]>=a) return WIRE_AMP[k]; return WIRE_AMP[WIRE_AMP.length-1]; }
 function wireCalc(){
