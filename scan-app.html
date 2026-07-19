@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>📷 사진 스캐너 v20260717-0852</title>
+<title>📷 사진 스캐너 v20260719-1035</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -1468,7 +1468,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260717-085200';
+const APP_VER='v20260719-103500';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -6447,6 +6447,9 @@ window.ScanApp={
       notifyParent('ready',{});
     },300);
   }
+  // 대시보드 등에서 특정 탭으로 바로 열기 (?open=card|text|normal|secure|receipt)
+  const openTab=params.get('open');
+  if(openTab && mode!=='picker'){ setTimeout(function(){ try{ selectMode(openTab); }catch(e){} }, 350); }
   // 부모창 메시지 수신 (외부 검색 등)
   window.addEventListener('message',e=>{
     if(!e.data||e.data.target!=='scan-app')return;
