@@ -187,6 +187,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .oil-lb{font-size:11px;color:var(--sub);font-weight:700;}
 .oil-v{font-size:16px;font-weight:800;margin-top:2px;}
 .oil-hint{font-size:11.5px;color:var(--sub);text-align:center;padding:14px 12px;line-height:1.5;}
+.p-sub{font-size:13.5px;font-weight:800;color:#3A3A3C;margin:16px 0 8px;padding-top:14px;border-top:1px solid var(--sep);letter-spacing:-0.2px;}
 
 @media(max-width:360px){ .app-ic{width:68px;height:68px;font-size:37px;} .app-t{font-size:13px;} .td-day{font-size:32px;} .mkt-v{font-size:15px;} }
 </style>
@@ -246,6 +247,36 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     <div class="panel-body">
       <div class="mkt" id="mktGrid"><div class="oil-hint" style="grid-column:1/-1">펼치면 불러옵니다…</div></div>
       <div id="oilWrap"></div>
+
+      <div class="p-sub">📈 국내 종목 · 수급 · 선물</div>
+      <div class="srch-row">
+        <input id="stkQ" placeholder="종목명·코드 (예: 삼성전자, 005930)" onkeydown="if(event.key==='Enter')doStock()">
+        <button onclick="doStock()">조회</button>
+      </div>
+      <div id="stkBox"></div>
+      <div id="futBox" class="oil-hint" style="padding:4px 0 0"></div>
+
+      <div class="p-sub">⛽ 최저가 주유소</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select class="tm-sel" id="gasArea" style="flex:1;min-width:0">
+          <option value="01">서울</option><option value="02">경기</option><option value="15">인천</option>
+          <option value="10">부산</option><option value="14">대구</option><option value="17">대전</option>
+          <option value="16">광주</option><option value="18">울산</option><option value="19">세종</option>
+          <option value="03">강원</option><option value="04">충북</option><option value="05">충남</option>
+          <option value="06">전북</option><option value="07">전남</option><option value="08">경북</option>
+          <option value="09">경남</option><option value="11">제주</option>
+        </select>
+        <select class="tm-sel" id="gasProd" style="flex:1;min-width:0"><option value="B027">휘발유</option><option value="D047">경유</option><option value="K015">LPG</option></select>
+        <button class="tm-add" onclick="doGas()">조회</button>
+      </div>
+      <div id="gasBox"></div>
+
+      <div class="p-sub">🏢 아파트 실거래가</div>
+      <div class="srch-row">
+        <input id="aptLawd" placeholder="법정동코드 5자리 (예: 11680 강남구)" onkeydown="if(event.key==='Enter')doApt()">
+        <button onclick="doApt()">조회</button>
+      </div>
+      <div id="aptBox"></div>
     </div>
   </div>
 
@@ -271,15 +302,20 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     </div>
   </div>
 
-  <!-- 🧰 도구 -->
-  <div class="lbl">도구</div>
-  <div class="tools">
-    <button class="tool-btn" onclick="openCalc()"><span class="te">🧮</span><span class="tl">계산기</span></button>
-    <button class="tool-btn" onclick="openFx()"><span class="te">💱</span><span class="tl">환율</span></button>
-    <button class="tool-btn" onclick="openFloor()"><span class="te">🏢</span><span class="tl">층별메모</span></button>
-    <button class="tool-btn" onclick="openEmg()"><span class="te">🚨</span><span class="tl">긴급연락</span></button>
-    <button class="tool-btn" onclick="openSpl()"><span class="te">📸</span><span class="tl">점검사진</span></button>
-    <button class="tool-btn" onclick="openMemo()"><span class="te">📌</span><span class="tl">급한메모</span></button>
+  <!-- 🧰 도구 (접힘) -->
+  <div class="panel" id="pnTools">
+    <div class="panel-hdr" onclick="togglePanel('pnTools')">🧰 도구 <span class="pn-sub">계산기·환율·메모·점검</span><span class="pn-chev">▼</span></div>
+    <div class="panel-body">
+      <div class="tools" style="margin-bottom:2px">
+        <button class="tool-btn" onclick="openCalc()"><span class="te">🧮</span><span class="tl">계산기</span></button>
+        <button class="tool-btn" onclick="openFx()"><span class="te">💱</span><span class="tl">환율</span></button>
+        <button class="tool-btn" onclick="openFloor()"><span class="te">🏢</span><span class="tl">층별메모</span></button>
+        <button class="tool-btn" onclick="openEmg()"><span class="te">🚨</span><span class="tl">긴급연락</span></button>
+        <button class="tool-btn" onclick="openSpl()"><span class="te">📸</span><span class="tl">점검사진</span></button>
+        <button class="tool-btn" onclick="openMemo()"><span class="te">📌</span><span class="tl">급한메모</span></button>
+        <button class="tool-btn" onclick="openWire()"><span class="te">🔌</span><span class="tl">전선/차단기</span></button>
+      </div>
+    </div>
   </div>
 
   <!-- 인생 6대축 (접힌 상태로 시작) -->
@@ -502,6 +538,40 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     </div>
     <div class="tm-list" id="memoList"></div>
     <div class="tm-note">체크 안 한 메모 개수가 홈 화면 앱 배지로 떠요</div>
+  </div>
+</div>
+
+<!-- 🔌 전선/차단기 계산기 -->
+<div class="modal-ov" id="wireOv" onclick="if(event.target===this)closeWire()">
+  <div class="modal">
+    <div class="modal-top"><b>🔌 전선 굵기 · 차단기 계산</b><span class="mclose" onclick="closeWire()">✕</span></div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <select class="tm-sel" id="wMode" style="flex:1" onchange="wireCalc()">
+        <option value="kW">전력(kW) 입력</option>
+        <option value="A">전류(A) 직접입력</option>
+      </select>
+      <input class="tm-in" id="wVal" type="number" inputmode="decimal" style="flex:1;margin-bottom:0" placeholder="값" oninput="wireCalc()">
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <select class="tm-sel" id="wPhase" style="flex:1" onchange="wireCalc()">
+        <option value="1">단상 220V</option>
+        <option value="1b" data-v="110">단상 110V</option>
+        <option value="3" selected>삼상 380V</option>
+        <option value="3b" data-v="220">삼상 220V</option>
+      </select>
+      <select class="tm-sel" id="wPf" style="flex:1" onchange="wireCalc()">
+        <option value="1">역률 1.0 (전열·조명)</option>
+        <option value="0.9">역률 0.9</option>
+        <option value="0.85">역률 0.85 (모터)</option>
+        <option value="0.8">역률 0.8 (모터)</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+      <input class="tm-in" id="wLen" type="number" inputmode="decimal" style="flex:1;margin-bottom:0" placeholder="배선 길이(m) · 선택" oninput="wireCalc()">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#3A3A3C;white-space:nowrap"><input type="checkbox" id="wCont" checked onchange="wireCalc()" style="width:18px;height:18px">연속부하(1.25배)</label>
+    </div>
+    <div id="wireOut" style="background:#F2F2F7;border-radius:14px;padding:14px;font-size:14px;line-height:1.7;color:var(--ink);min-height:60px">값을 입력하세요.</div>
+    <div class="tm-note" style="color:#B45309;line-height:1.6">⚠️ 동선·PVC절연·관내배선(3본 이하) 기준의 <b>참고값</b>입니다. 실제 시공은 배선방식·주위온도·병렬·전압강하·KEC/내선규정에 따라 달라지며, 반드시 <b>전기기술자 검토</b>가 필요합니다.</div>
   </div>
 </div>
 
@@ -761,6 +831,63 @@ function loadOil(){
   }).catch(function(){ wrap.innerHTML=''; });
 }
 
+/* ── 📈 국내 종목 · 수급 ── */
+function doStock(){
+  var q=(document.getElementById('stkQ').value||'').trim(), box=document.getElementById('stkBox'); if(!box)return;
+  var R=window.RELAY_URL; if(!R){ box.innerHTML='<div class="oil-hint">⚙ 중계서버 설정이 필요해요</div>'; return; }
+  if(!q){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="oil-hint">불러오는 중…</div>';
+  window.pxText(R+'/stock?q='+encodeURIComponent(q),9000).then(JSON.parse).then(function(d){
+    if(!d||d.error||d.price==null){ box.innerHTML='<div class="oil-hint">'+esc((d&&d.error)||'조회 실패')+'</div>'; return; }
+    var chg=d.chg||0, cls=chg>0?'up':chg<0?'down':'flat', arw=chg>0?'▲':chg<0?'▼':'–';
+    function sg(v){ if(v==null)return '–'; return (v>0?'+':'')+Number(v).toLocaleString('ko-KR'); }
+    var sup=(d.foreign!=null||d.organ!=null)
+      ? '<div class="news-mt" style="margin-top:6px">수급'+(d.dealDate?(' '+esc(d.dealDate)):'')+' · 외국인 <b class="'+(d.foreign>0?'up':d.foreign<0?'down':'')+'">'+sg(d.foreign)+'</b> · 기관 <b class="'+(d.organ>0?'up':d.organ<0?'down':'')+'">'+sg(d.organ)+'</b> · 개인 '+sg(d.indiv)+' (주)</div>'
+      : '<div class="news-mt" style="margin-top:6px;color:#B0B0B5">수급 데이터 없음</div>';
+    box.innerHTML='<div style="padding:10px 2px"><div style="font-size:15px;font-weight:800">'+esc(d.name||d.code)+' <span style="font-size:12px;color:var(--sub)">'+esc(d.code)+'</span></div><div style="font-size:20px;font-weight:800;margin-top:2px">'+Number(d.price).toLocaleString('ko-KR')+'원 <span class="'+cls+'" style="font-size:13px">'+arw+' '+Math.abs(chg).toFixed(2)+'%</span></div>'+sup+'</div>';
+    loadFutures();
+  }).catch(function(){ box.innerHTML='<div class="oil-hint">조회 실패 · 잠시 후 다시 시도해 주세요</div>'; });
+}
+function loadFutures(){
+  var box=document.getElementById('futBox'); if(!box)return; var R=window.RELAY_URL; if(!R)return;
+  window.pxText(R+'/futures',8000).then(JSON.parse).then(function(d){
+    if(!d||d.note||d.value==null){ box.textContent=''; return; }
+    var chg=d.chg||0, cls=chg>0?'up':chg<0?'down':'flat';
+    box.innerHTML='선물 '+esc(d.name||'코스피200')+' <b>'+Number(d.value).toLocaleString('ko-KR')+'</b> <span class="'+cls+'">'+(chg>0?'▲':chg<0?'▼':'–')+Math.abs(chg).toFixed(2)+'%</span>';
+  }).catch(function(){ box.textContent=''; });
+}
+
+/* ── ⛽ 최저가 주유소 ── */
+function doGas(){
+  var box=document.getElementById('gasBox'); if(!box)return; var R=window.RELAY_URL;
+  if(!R){ box.innerHTML='<div class="oil-hint">⚙ 중계서버 설정이 필요해요</div>'; return; }
+  var area=document.getElementById('gasArea').value, prod=document.getElementById('gasProd').value;
+  box.innerHTML='<div class="oil-hint">불러오는 중…</div>';
+  window.pxText(R+'/gas?area='+area+'&prod='+prod,9000).then(JSON.parse).then(function(d){
+    if(d&&d.need_key){ box.innerHTML='<div class="oil-hint">오피넷 키 설정이 필요해요</div>'; return; }
+    var it=(d&&d.items)||[]; if(!it.length){ box.innerHTML='<div class="oil-hint">주유소 정보를 불러오지 못했어요</div>'; return; }
+    box.innerHTML=it.map(function(s){ return '<div class="news-item"><div class="news-tt">'+esc(s.name)+' <b style="color:#007AFF">'+Number(s.price).toLocaleString('ko-KR')+'원</b></div><div class="news-mt">'+esc(s.addr||'')+'</div></div>'; }).join('');
+  }).catch(function(){ box.innerHTML='<div class="oil-hint">불러오지 못했어요</div>'; });
+}
+
+/* ── 🏢 아파트 실거래가 ── */
+function doApt(){
+  var box=document.getElementById('aptBox'); if(!box)return; var R=window.RELAY_URL;
+  if(!R){ box.innerHTML='<div class="oil-hint">⚙ 중계서버 설정이 필요해요</div>'; return; }
+  var lawd=(document.getElementById('aptLawd').value||'').trim();
+  if(!/^\d{5}$/.test(lawd)){ box.innerHTML='<div class="oil-hint">법정동코드 5자리를 입력하세요 (예: 11680)</div>'; return; }
+  box.innerHTML='<div class="oil-hint">불러오는 중…</div>';
+  window.pxText(R+'/apt?lawd='+lawd,12000).then(JSON.parse).then(function(d){
+    if(d&&d.need_key){ box.innerHTML='<div class="oil-hint">실거래가는 data.go.kr 무료키 등록 후 표시돼요</div>'; return; }
+    if(d&&d.error){ box.innerHTML='<div class="oil-hint">'+esc(d.error)+'</div>'; return; }
+    var it=(d&&d.items)||[]; if(!it.length){ box.innerHTML='<div class="oil-hint">해당 지역 최근 실거래 내역이 없어요</div>'; return; }
+    box.innerHTML=it.slice(0,20).map(function(a){
+      var man=a.amount?(a.amount>=10000?((a.amount/10000).toFixed(1)+'억'):(a.amount+'만원')):'–';
+      return '<div class="news-item"><div class="news-tt">'+esc(a.apt||'')+' <b style="color:#007AFF">'+man+'</b></div><div class="news-mt">전용 '+esc(a.area||'')+'㎡ · '+esc(a.floor||'')+'층 · '+esc(a.m||'')+'/'+esc(a.d||'')+'</div></div>';
+    }).join('');
+  }).catch(function(){ box.innerHTML='<div class="oil-hint">불러오지 못했어요</div>'; });
+}
+
 /* ── 📰 뉴스 ── */
 var _newsInit=false;
 function loadNewsFirst(){ if(_newsInit)return; _newsInit=true; reloadNews(); }
@@ -855,6 +982,44 @@ function fxRecalc(){
   res.textContent=out.toLocaleString('ko-KR',{maximumFractionDigits:(to==='KRW'||to==='JPY')?0:2});
   var one=FX[from]/FX[to];
   note.textContent='1 '+from+' = '+one.toLocaleString('ko-KR',{maximumFractionDigits:(to==='KRW')?2:4})+' '+to+(_fxSrc?(' · 출처 '+_fxSrc):'');
+}
+
+/* ── 🔌 전선 굵기 · 차단기 계산 ── */
+var WIRE_AMP=[[1.5,15],[2.5,21],[4,28],[6,36],[10,50],[16,66],[25,89],[35,110],[50,134],[70,171],[95,207],[120,239],[150,275],[185,314],[240,369],[300,424]];
+var WIRE_BRK=[15,20,30,40,50,60,75,100,125,150,175,200,225,250,300,350,400,500,600,700,800];
+function openWire(){ document.getElementById('wireOv').classList.add('show'); wireCalc(); }
+function closeWire(){ document.getElementById('wireOv').classList.remove('show'); }
+function _stdBrk(i){ for(var k=0;k<WIRE_BRK.length;k++) if(WIRE_BRK[k]>=i) return WIRE_BRK[k]; return WIRE_BRK[WIRE_BRK.length-1]; }
+function _cableFor(a){ for(var k=0;k<WIRE_AMP.length;k++) if(WIRE_AMP[k][1]>=a) return WIRE_AMP[k]; return WIRE_AMP[WIRE_AMP.length-1]; }
+function wireCalc(){
+  var out=document.getElementById('wireOut'); if(!out)return;
+  var mode=document.getElementById('wMode').value;
+  var val=parseFloat(document.getElementById('wVal').value)||0;
+  var psel=document.getElementById('wPhase').value;
+  var pf=parseFloat(document.getElementById('wPf').value)||1;
+  var L=parseFloat(document.getElementById('wLen').value)||0;
+  var cont=document.getElementById('wCont').checked;
+  var three=(psel.charAt(0)==='3');
+  var V=(psel==='1')?220:(psel==='1b')?110:(psel==='3')?380:220;
+  if(val<=0){ out.innerHTML='값을 입력하세요.'; return; }
+  var I = (mode==='A') ? val : (three ? val*1000/(Math.sqrt(3)*V*pf) : val*1000/(V*pf));
+  var Idesign=I*(cont?1.25:1);
+  var brk=_stdBrk(Idesign);
+  var cab=_cableFor(brk);
+  var html='<div style="font-size:13px;color:var(--sub);margin-bottom:6px">'+(three?'삼상':'단상')+' '+V+'V'+(mode==='kW'?(' · '+val+'kW · 역률 '+pf):'')+(cont?' · 연속부하':'')+'</div>';
+  html+='<div>• 부하전류 <b>'+I.toFixed(1)+'A</b>'+(cont?(' → 설계 '+Idesign.toFixed(1)+'A'):'')+'</div>';
+  html+='<div>• 권장 차단기 <b style="color:#DC2626">'+brk+'A</b></div>';
+  html+='<div>• 권장 전선 <b style="color:#007AFF">'+cab[0]+'㎟</b> <span style="color:var(--sub);font-size:12px">(허용 '+cab[1]+'A)</span></div>';
+  if(L>0){
+    var K=three?30.8:35.6;
+    var need=K*L*I/(1000*(0.03*V));
+    var dc=null; for(var k=0;k<WIRE_AMP.length;k++){ if(WIRE_AMP[k][0]>=need){dc=WIRE_AMP[k][0];break;} }
+    var Afin=Math.max(cab[0], dc||cab[0]);
+    var ep=K*L*I/(1000*Afin)/V*100;
+    html+='<div style="margin-top:6px;padding-top:6px;border-top:1px solid #E5E5EA">• 배선 '+L+'m 전압강하 기준 → 최소 <b>'+(dc||cab[0])+'㎟</b></div>';
+    html+='<div>• <b>최종 권장 전선 '+Afin+'㎟</b> <span style="color:var(--sub);font-size:12px">(강하 약 '+ep.toFixed(2)+'%)</span></div>';
+  }
+  out.innerHTML=html;
 }
 
 /* ════════ 도구 공용 ════════ */
