@@ -1020,7 +1020,8 @@ function _newsLoad(q){
     var it=(d&&d.items)||[];
     if(!it.length){ list.innerHTML='<div class="oil-hint">뉴스를 불러오지 못했어요. 잠시 후 🔄 최신뉴스로 다시 시도해 주세요.</div>'; return; }
     var note=(d&&d.note)?'<div class="oil-hint" style="padding:4px 0 10px;color:#C2410C">ℹ️ '+esc(d.note)+'</div>':'';
-    list.innerHTML=note+it.map(function(n){
+    var src=(d&&d.source)?'<div class="oil-hint" style="padding:2px 0 8px;text-align:left">📰 출처: '+esc(d.source)+'</div>':'';
+    list.innerHTML=note+src+it.map(function(n){
       return '<a class="news-item" href="'+esc(n.link)+'" target="_blank" rel="noopener"><div class="news-tt">'+esc(n.title)+'</div><div class="news-mt">'+esc(n.source||'')+(n.date?' · '+_newsDate(n.date):'')+'</div></a>';
     }).join('');
   }).catch(function(){ list.innerHTML='<div class="oil-hint">뉴스를 불러오지 못했어요. 잠시 후 🔄 최신뉴스로 다시 시도해 주세요.</div>'; });
