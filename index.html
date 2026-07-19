@@ -571,7 +571,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#3A3A3C;white-space:nowrap"><input type="checkbox" id="wCont" checked onchange="wireCalc()" style="width:18px;height:18px">연속부하(1.25배)</label>
     </div>
     <div id="wireOut" style="background:#F2F2F7;border-radius:14px;padding:14px;font-size:14px;line-height:1.7;color:var(--ink);min-height:60px">값을 입력하세요.</div>
-    <div class="tm-note" style="color:#B45309;line-height:1.6">⚠️ 동선·PVC절연·관내배선(3본 이하) 기준의 <b>참고값</b>입니다. 실제 시공은 배선방식·주위온도·병렬·전압강하·KEC/내선규정에 따라 달라지며, 반드시 <b>전기기술자 검토</b>가 필요합니다.</div>
+    <div class="tm-note" style="color:#B45309;line-height:1.6">⚠️ 동선·600V 비닐절연·기중(노출)배선 기준의 <b>참고값</b>입니다 (예: 30A→4㎟, 40A→6㎟, 50A→10㎟). <b>전선관 다수배선·고온·장거리</b>에서는 한 단계 굵게 하고, 실제 시공은 KEC/내선규정에 따라 <b>전기기술자 검토</b>가 필요합니다.</div>
   </div>
 </div>
 
@@ -985,7 +985,7 @@ function fxRecalc(){
 }
 
 /* ── 🔌 전선 굵기 · 차단기 계산 ── */
-var WIRE_AMP=[[1.5,15],[2.5,21],[4,28],[6,36],[10,50],[16,66],[25,89],[35,110],[50,134],[70,171],[95,207],[120,239],[150,275],[185,314],[240,369],[300,424]];
+var WIRE_AMP=[[1.5,19],[2.5,27],[4,37],[6,48],[10,66],[16,88],[25,117],[35,144],[50,175],[70,222],[95,269],[120,312],[150,360],[185,410],[240,480],[300,550]];
 var WIRE_BRK=[15,20,30,40,50,60,75,100,125,150,175,200,225,250,300,350,400,500,600,700,800];
 function openWire(){ document.getElementById('wireOv').classList.add('show'); wireCalc(); }
 function closeWire(){ document.getElementById('wireOv').classList.remove('show'); }
