@@ -895,7 +895,9 @@ function doGas(){
   window.pxText(R+'/gas?area='+area+'&prod='+prod,9000).then(JSON.parse).then(function(d){
     if(d&&d.need_key){ box.innerHTML='<div class="oil-hint">오피넷 키 설정이 필요해요</div>'; return; }
     var it=(d&&d.items)||[]; if(!it.length){ box.innerHTML='<div class="oil-hint">주유소 정보를 불러오지 못했어요</div>'; return; }
-    box.innerHTML=it.map(function(s){ return '<div class="news-item"><div class="news-tt">'+esc(s.name)+' <b style="color:#007AFF">'+Number(s.price).toLocaleString('ko-KR')+'원</b></div><div class="news-mt">'+esc(s.addr||'')+'</div></div>'; }).join('');
+    it=it.filter(function(s){return s.price>0;}).sort(function(a,b){return a.price-b.price;});
+    box.innerHTML=it.map(function(s,i){ var q=encodeURIComponent((s.name+' '+(s.addr||'')).trim());
+      return '<a class="news-item" href="https://map.naver.com/p/search/'+q+'" target="_blank" rel="noopener"><div class="news-tt">'+(i+1)+'. '+esc(s.name)+' <b style="color:#007AFF">'+Number(s.price).toLocaleString('ko-KR')+'원</b></div><div class="news-mt">'+esc(s.addr||'')+' · 📍 네이버 지도</div></a>'; }).join('');
   }).catch(function(){ box.innerHTML='<div class="oil-hint">불러오지 못했어요</div>'; });
 }
 
@@ -934,8 +936,9 @@ function doGasNear(){
     window.pxText(R+'/gasaround?x='+k.x+'&y='+k.y+'&prod='+prod+'&r=5000&sort=2',9000).then(JSON.parse).then(function(d){
       if(d&&d.need_key){ box.innerHTML='<div class="oil-hint">오피넷 키 설정이 필요해요</div>'; return; }
       var it=(d&&d.items)||[]; if(!it.length){ box.innerHTML='<div class="oil-hint">반경 5km 내 주유소를 찾지 못했어요</div>'; return; }
-      box.innerHTML=it.map(function(s){ var km=(s.dist/1000).toFixed(1);
-        return '<div class="news-item"><div class="news-tt">'+esc(s.name)+' <b style="color:#007AFF">'+Number(s.price).toLocaleString('ko-KR')+'원</b></div><div class="news-mt">📍 '+km+'km</div></div>'; }).join('');
+      it=it.filter(function(s){return s.price>0;}).sort(function(a,b){return a.price-b.price;});
+      box.innerHTML=it.map(function(s,i){ var km=(s.dist/1000).toFixed(1); var q=encodeURIComponent(s.name);
+        return '<a class="news-item" href="https://map.naver.com/p/search/'+q+'" target="_blank" rel="noopener"><div class="news-tt">'+(i+1)+'. '+esc(s.name)+' <b style="color:#007AFF">'+Number(s.price).toLocaleString('ko-KR')+'원</b></div><div class="news-mt">📍 '+km+'km · 네이버 지도</div></a>'; }).join('');
     }).catch(function(){ box.innerHTML='<div class="oil-hint">불러오지 못했어요</div>'; });
   }, function(){ box.innerHTML='<div class="oil-hint">위치 권한을 허용해 주세요</div>'; }, {timeout:8000,maximumAge:600000,enableHighAccuracy:false});
 }
