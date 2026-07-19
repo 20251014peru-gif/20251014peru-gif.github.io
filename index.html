@@ -256,7 +256,10 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
       <div class="srch-row">
         <input id="newsQ" placeholder="뉴스 검색 (예: 금리, 부동산)" onkeydown="if(event.key==='Enter')doNews()">
         <button onclick="doNews()">검색</button>
-        <button onclick="clearNews()" style="background:#8E8E93">지우기</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button onclick="reloadNews()" style="flex:1;height:38px;border:none;border-radius:10px;background:#EFEFF4;color:var(--blue);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🔄 최신뉴스</button>
+        <button onclick="clearNews()" style="flex:1;height:38px;border:none;border-radius:10px;background:#EFEFF4;color:var(--sub);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">지우기</button>
       </div>
       <div id="newsList"><div class="oil-hint">펼치면 최신 뉴스를 불러옵니다…</div></div>
       <div class="srch-row" style="margin-top:16px">
@@ -760,23 +763,24 @@ function loadOil(){
 
 /* ── 📰 뉴스 ── */
 var _newsInit=false;
-function loadNewsFirst(){ if(_newsInit)return; _newsInit=true; doNews(); }
-function doNews(){
-  var qEl=document.getElementById('newsQ'), q=qEl?(qEl.value||'').trim():'';
+function loadNewsFirst(){ if(_newsInit)return; _newsInit=true; reloadNews(); }
+function _newsLoad(q){
   var list=document.getElementById('newsList'); if(!list)return;
   var R=window.RELAY_URL;
   if(!R){ list.innerHTML='<div class="oil-hint">뉴스를 보려면 ⚙ 중계서버 설정이 필요해요</div>'; return; }
   list.innerHTML='<div class="oil-hint">불러오는 중…</div>';
-  window.pxText(R+'/news'+(q?'?q='+encodeURIComponent(q):''),9000).then(JSON.parse).then(function(d){
+  window.pxText(R+'/news'+(q?'?q='+encodeURIComponent(q):''),15000).then(JSON.parse).then(function(d){
     var it=(d&&d.items)||[];
-    if(!it.length){ list.innerHTML='<div class="oil-hint">뉴스를 불러오지 못했어요.</div>'; return; }
+    if(!it.length){ list.innerHTML='<div class="oil-hint">뉴스를 불러오지 못했어요. 잠시 후 🔄 최신뉴스로 다시 시도해 주세요.</div>'; return; }
     var note=(d&&d.note)?'<div class="oil-hint" style="padding:4px 0 10px;color:#C2410C">ℹ️ '+esc(d.note)+'</div>':'';
     list.innerHTML=note+it.map(function(n){
       return '<a class="news-item" href="'+esc(n.link)+'" target="_blank" rel="noopener"><div class="news-tt">'+esc(n.title)+'</div><div class="news-mt">'+esc(n.source||'')+(n.date?' · '+_newsDate(n.date):'')+'</div></a>';
     }).join('');
-  }).catch(function(){ list.innerHTML='<div class="oil-hint">뉴스를 불러오지 못했어요. ⚙ 중계서버를 확인해 주세요.</div>'; });
+  }).catch(function(){ list.innerHTML='<div class="oil-hint">뉴스를 불러오지 못했어요. 잠시 후 🔄 최신뉴스로 다시 시도해 주세요.</div>'; });
 }
-function clearNews(){ var q=document.getElementById('newsQ'); if(q)q.value=''; doNews(); }
+function doNews(){ var qEl=document.getElementById('newsQ'), q=qEl?(qEl.value||'').trim():''; if(!q){ reloadNews(); return; } _newsLoad(q); }
+function reloadNews(){ var qEl=document.getElementById('newsQ'); if(qEl)qEl.value=''; _newsLoad(''); }
+function clearNews(){ var qEl=document.getElementById('newsQ'); if(qEl)qEl.value=''; var list=document.getElementById('newsList'); if(list)list.innerHTML='<div class="oil-hint">목록을 지웠어요. 🔄 최신뉴스를 누르면 다시 불러와요.</div>'; }
 function _newsDate(s){ try{var d=new Date(s); if(isNaN(d))return ''; return (d.getMonth()+1)+'/'+d.getDate();}catch(e){return '';} }
 
 /* ── 📖 위키백과 ── */
