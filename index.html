@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="나의 시스템">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>나의 시스템 v20260720-1811</title>
+<title>나의 시스템 v20260720-1827</title>
 <style>
 :root{--bg:#F2F2F7;--card:#fff;--ink:#1C1C1E;--sub:#8E8E93;--sep:#E5E5EA;--blue:#007AFF;--red:#FF3B30;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -822,35 +822,56 @@ var MKT_DEF=[
   ['wti','WTI유가',2],['us10y','미10년물',3],['vix','VIX',2],['btc','비트코인',0],['eth','이더리움',0]
 ];
 function coinFmt(v){ if(v>=1e8)return (v/1e8).toFixed(2)+'억'; if(v>=1e4)return Math.round(v/1e4).toLocaleString('ko-KR')+'만'; return Number(v).toLocaleString('ko-KR'); }
-function mtile(lb,o,dec,coin){
+/* 각 지수 → 네이버 정확한 값 페이지 (탭하면 바로 확인). 검색 페이지라 링크가 깨지지 않고 항상 정확값 표시 */
+function _nv(q){ return 'https://search.naver.com/search.naver?query='+encodeURIComponent(q); }
+var MKT_URL={
+  kospi:_nv('코스피'), kosdaq:_nv('코스닥'), spx:_nv('S&P500 지수'), nasdaq:_nv('나스닥 지수'),
+  dow:_nv('다우존스 지수'), sox:_nv('필라델피아 반도체지수'), gold:_nv('국제 금 시세'), silver:_nv('국제 은 시세'),
+  wti:_nv('WTI 유가'), us10y:_nv('미국 국채 10년 금리'), vix:_nv('VIX 지수'), btc:_nv('비트코인 시세'), eth:_nv('이더리움 시세')
+};
+function mtile(lb,o,dec,coin,url){
   var v='–', c='', cls='flat';
   if(o&&o.p!=null){
     v=coin?coinFmt(o.p):Number(o.p).toLocaleString('ko-KR',{minimumFractionDigits:dec,maximumFractionDigits:dec});
     var ch=o.c||0; cls=ch>0?'up':(ch<0?'down':'flat');
     c=(ch>0?'▲':ch<0?'▼':'–')+' '+Math.abs(ch).toFixed(2)+'%';
   }
-  return '<div class="mkt-tile"><div class="mkt-lb">'+lb+'</div><div class="mkt-v">'+v+'</div><div class="mkt-c '+cls+'">'+c+'</div></div>';
+  var clk = url ? ' data-mkturl="'+url+'" style="cursor:pointer"' : '';
+  return '<div class="mkt-tile"'+clk+'><div class="mkt-lb">'+lb+' <span style="font-size:9px;color:#8E8E93">🔎</span></div><div class="mkt-v">'+v+'</div><div class="mkt-c '+cls+'">'+c+'</div></div>';
 }
 function renderMarkets(d){
   d=d||{};
-  var h=MKT_DEF.map(function(x){ var coin=(x[0]==='btc'||x[0]==='eth'); return mtile(x[1],d[x[0]],x[2],coin); }).join('');
-  var g=document.getElementById('mktGrid'); if(g)g.innerHTML=h;
+  var h=MKT_DEF.map(function(x){ var coin=(x[0]==='btc'||x[0]==='eth'); return mtile(x[1],d[x[0]],x[2],coin,MKT_URL[x[0]]); }).join('');
+  var g=document.getElementById('mktGrid');
+  if(g){
+    g.innerHTML=h;
+    /* 탭하면 네이버 정확값 새 창 */
+    Array.prototype.forEach.call(g.querySelectorAll('[data-mkturl]'), function(t){ t.addEventListener('click', function(){ window.open(t.getAttribute('data-mkturl'),'_blank'); }); });
+    var hint=document.getElementById('mktHint');
+    if(!hint){ hint=document.createElement('div'); hint.id='mktHint'; hint.className='oil-hint'; hint.style.cssText='grid-column:1/-1;padding:8px 2px 0;font-size:11px'; g.appendChild(hint); }
+    hint.textContent='🔎 지수를 탭하면 네이버에서 정확한 실시간 값을 확인할 수 있어요';
+  }
 }
 function loadMarkets(){
   if(_mktDone)return; _mktDone=true;
-  var R=window.RELAY_URL;
-  var p=R?window.pxText(R+'/markets',9000).then(JSON.parse):Promise.reject(0);
-  p.then(renderMarkets).catch(function(){ _mktDone=false; loadMarketsDirect(); });
+  /* v20260720: 등락률이 틀리던 문제 수정 — 야후를 직접 쓰되 range=1d 로 전일종가를 정확히.
+     (중계서버·range=5d 는 5일 전 종가로 계산돼서 -12% 처럼 이상하게 나왔음) */
+  loadMarketsDirect();
 }
 function loadMarketsDirect(){
-  if(_mktDone)return; _mktDone=true;
   var YS={kospi:'^KS11',kosdaq:'^KQ11',spx:'^GSPC',nasdaq:'^IXIC',dow:'^DJI',sox:'^SOX',gold:'GC=F',silver:'SI=F',wti:'CL=F',us10y:'^TNX',vix:'^VIX'};
   var acc={}, keys=Object.keys(YS), done=0;
+  function finish(){
+    /* 야후가 전부 실패했을 때만 중계서버로 폴백(그마저 없으면 빈칸이라도 탭하면 네이버) */
+    if(!Object.keys(acc).length && window.RELAY_URL){
+      window.pxText(window.RELAY_URL+'/markets',9000).then(JSON.parse).then(renderMarkets).catch(function(){ renderMarkets(acc); });
+    } else { renderMarkets(acc); }
+  }
   function fin(){ done++; if(done>=keys.length){
-    window.pxJson('https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH').then(function(t){ (t||[]).forEach(function(o){ if(o.market==='KRW-BTC')acc.btc={p:o.trade_price,c:(o.signed_change_rate||0)*100}; if(o.market==='KRW-ETH')acc.eth={p:o.trade_price,c:(o.signed_change_rate||0)*100}; }); }).catch(function(){}).then(function(){ renderMarkets(acc); });
+    window.pxJson('https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH').then(function(t){ (t||[]).forEach(function(o){ if(o.market==='KRW-BTC')acc.btc={p:o.trade_price,c:(o.signed_change_rate||0)*100}; if(o.market==='KRW-ETH')acc.eth={p:o.trade_price,c:(o.signed_change_rate||0)*100}; }); }).catch(function(){}).then(finish);
   } }
   keys.forEach(function(k){
-    window.pxJson('https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(YS[k])+'?range=5d&interval=1d')
+    window.pxJson('https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(YS[k])+'?range=1d&interval=1d')
       .then(function(d){ var m=d.chart.result[0].meta; var pv=m.chartPreviousClose||m.previousClose; acc[k]={p:m.regularMarketPrice,c:pv?(m.regularMarketPrice-pv)/pv*100:0}; })
       .catch(function(){}).then(fin);
   });
