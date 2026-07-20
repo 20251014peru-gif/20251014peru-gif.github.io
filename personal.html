@@ -1244,7 +1244,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260720-1747';
+const APP_VER='v20260720-1753';
 document.title='개인일지 '+APP_VER;
 /* 버전을 뿌린다 — 헤더 + PIN 넣는 곳마다.
    잠금화면은 앱이 뜨자마자 보이는 곳이라 DOMContentLoaded 를 기다리면 늦을 수 있다.
@@ -7303,7 +7303,7 @@ console.log('[개인일지] 로드 완료');
   }
 })();
 </script>
-<!-- 공유메모 (인라인) v20260720-1747 -->
+<!-- 공유메모 (인라인) v20260720-1753 -->
 <script>
 /* =========================================================================
    공유메모 (shared-memo.js)  v20260720f — 업무일지 메모 탭과 동일 기능 · 인라인
@@ -7538,9 +7538,12 @@ console.log('[개인일지] 로드 완료');
   }
   function pasteImg(e, cb){
     var cd=e.clipboardData||window.clipboardData; if(!cd || !cd.items) return;
-    for(var i=0;i<cd.items.length;i++){ var it=cd.items[i];
-      if(it.type && it.type.indexOf('image/')===0){ e.preventDefault(); var blob=it.getAsFile(); if(blob){ compress(blob,1400,0.72).then(cb).catch(function(){}); } return; }
-    }
+    var blobs=[];
+    for(var i=0;i<cd.items.length;i++){ var it=cd.items[i]; if(it.type && it.type.indexOf('image/')===0){ var b=it.getAsFile(); if(b) blobs.push(b); } }
+    if(!blobs.length) return;
+    e.preventDefault();
+    /* 클립보드에 여러 장이 있으면 전부 추가 */
+    (function next(k){ if(k>=blobs.length) return; compress(blobs[k],1400,0.72).then(function(u){ cb(u); next(k+1); }).catch(function(){ next(k+1); }); })(0);
   }
 
   /* ---------- 목록 ---------- */
