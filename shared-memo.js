@@ -169,10 +169,10 @@
 
     var wrap=document.createElement('div');
     wrap.innerHTML = [
-      '<button id="sm-fab" title="급한 메모 (Ctrl+Shift+M)">⚡<span class="sm-fab-badge" id="sm-badge" style="display:none">0</span></button>',
+      '<button id="sm-fab" title="공유메모 (Ctrl+Shift+M)">⚡<span class="sm-fab-badge" id="sm-badge" style="display:none">0</span></button>',
       '<div class="sm-ov" id="sm-panelOv">',
       '  <div id="sm-panel">',
-      '    <div class="sm-head"><b>⚡ 급한 메모<span class="sm-cnt" id="sm-headcnt"></span></b><button class="sm-x" id="sm-panelClose">✕</button></div>',
+      '    <div class="sm-head"><b>⚡ 공유메모<span class="sm-cnt" id="sm-headcnt"></span></b><button class="sm-x" id="sm-panelClose">✕</button></div>',
       '    <button class="sm-newbtn" id="sm-new">✏️ 새 메모</button>',
       '    <div class="sm-list" id="sm-list"></div>',
       '    <div class="sm-foot">어느 앱(나의 시스템·업무일지·개인일지)에서든 같은 메모가 실시간으로 보여요</div>',
@@ -180,7 +180,7 @@
       '</div>',
       '<div class="sm-ov" id="sm-detailOv">',
       '  <div class="sm-detail">',
-      '    <div class="sm-dtop"><b>📌 메모</b><button class="sm-x" id="sm-detailClose">✕</button></div>',
+      '    <div class="sm-dtop"><b>📌 공유메모</b><button class="sm-x" id="sm-detailClose">✕</button></div>',
       '    <div class="sm-dbody"><div class="sm-dtext" id="sm-detailText"></div><div class="sm-dtime" id="sm-detailTime"></div></div>',
       '    <div class="sm-dbtns">',
       '      <button class="sm-btn sm-copy" id="sm-copy">📋 복사</button>',
