@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="나의 시스템">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>나의 시스템 v20260720-1753</title>
+<title>나의 시스템 v20260720-1811</title>
 <style>
 :root{--bg:#F2F2F7;--card:#fff;--ink:#1C1C1E;--sub:#8E8E93;--sep:#E5E5EA;--blue:#007AFF;--red:#FF3B30;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -1325,7 +1325,7 @@ function _fbSub(col,key,render){
 updateBadge();
 initAptSido();
 </script>
-<!-- 공유메모 (인라인) v20260720-1753 -->
+<!-- 공유메모 (인라인) v20260720-1811 -->
 <script>
 /* =========================================================================
    공유메모 (shared-memo.js)  v20260720f — 업무일지 메모 탭과 동일 기능 · 인라인
@@ -1349,6 +1349,7 @@ initAptSido();
   catch(e){ console.warn('[공유메모] Firebase 초기화 실패 — 로컬 저장', e); }
 
   var memos=[], query='', detailId=null;
+  var filterMode='all', viewMode='card';   /* all|todo|done, card|list */
   var editId=null, editPhotos=[], editTodos=[], eColor='yellow';
   var qColor='yellow', qPhotos=[];
 
@@ -1416,10 +1417,19 @@ initAptSido();
       '.sm-qthumbs{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}',
       '.sm-qthumbs img{width:40px;height:40px;object-fit:cover;border-radius:7px;border:1px solid #ddd}',
       '.sm-search{width:100%;box-sizing:border-box;border:1.5px solid #dbe6f4;border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;background:#f5faff;outline:none;margin-bottom:8px}',
-      '.sm-cnt{font-size:12px;color:#9aa7b4;margin-bottom:8px;font-weight:700}',
+      '.sm-filters{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}',
+      '.sm-fchip{border:1.5px solid #dbe6f4;background:#fff;border-radius:9px;padding:6px 12px;font-size:13px;font-weight:800;color:#5a6b7b;cursor:pointer;font-family:inherit}',
+      '.sm-fchip.on{background:#3f7cb8;border-color:#3f7cb8;color:#fff}',
+      '.sm-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}',
+      '.sm-views{display:flex;gap:4px}',
+      '.sm-vbtn{width:34px;height:34px;border-radius:9px;border:1.5px solid #dbe6f4;background:#fff;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;padding:0;color:#5a6b7b}',
+      '.sm-vbtn.on{border-color:#3f7cb8;color:#3f7cb8;background:#eef5fc}',
+      '.sm-cnt{font-size:12px;color:#9aa7b4;font-weight:700}',
       '.sm-list{display:grid;grid-template-columns:1fr;gap:8px;max-height:520px;overflow-y:auto}',
       '@media(min-width:560px){.sm-list{grid-template-columns:1fr 1fr}}',
       '@media(min-width:1000px){.sm-list{grid-template-columns:1fr 1fr 1fr}}',
+      '.sm-list.list{grid-template-columns:1fr!important}',
+      '.sm-list.list .sm-cthumb{max-height:80px;width:80px;float:right;margin-left:8px}',
       '.sm-card{border:1.5px solid #e8ecf1;border-left:5px solid #f39c12;border-radius:12px;padding:10px 12px;background:#fff;min-width:0;display:flex;flex-direction:column;gap:4px;position:relative}',
       '.sm-card .sm-t{font-size:14px;font-weight:800;color:#1f2f3f;word-break:break-word;cursor:pointer;padding-right:74px}',
       '.sm-card .sm-t.empty{color:#b3bcc6;font-weight:600}',
@@ -1518,11 +1528,17 @@ initAptSido();
       '    </div>',
       '  </div>',
       '  <input class="sm-search" id="smSearch" placeholder="🔍 메모 검색…">',
-      '  <div class="sm-cnt" id="smCnt"></div>',
+      '  <div class="sm-filters" id="smFilters"></div>',
+      '  <div class="sm-toolbar"><span class="sm-cnt" id="smCnt"></span><div class="sm-views" id="smViews">',
+      '    <button type="button" class="sm-vbtn" id="smViewCard" title="카드 보기">▦</button>',
+      '    <button type="button" class="sm-vbtn" id="smViewList" title="목록 보기">☰</button>',
+      '  </div></div>',
       '  <div class="sm-list" id="smList"></div>',
       '</div>'
     ].join('');
-    renderQColors(); renderQThumbs();
+    renderQColors(); renderQThumbs(); renderFilters(); renderViews();
+    $('smViewCard').addEventListener('click', function(){ viewMode='card'; renderViews(); renderList(); });
+    $('smViewList').addEventListener('click', function(){ viewMode='list'; renderViews(); renderList(); });
     $('smQSave').addEventListener('click', quickSave);
     $('smQTodo').addEventListener('click', function(){ openEdit(null); editTodos=[{text:'',done:false}]; renderTodosEdit(); });
     $('smQBody').addEventListener('keydown', function(e){ if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); quickSave(); } });
@@ -1568,13 +1584,38 @@ initAptSido();
     (function next(k){ if(k>=blobs.length) return; compress(blobs[k],1400,0.72).then(function(u){ cb(u); next(k+1); }).catch(function(){ next(k+1); }); })(0);
   }
 
+  /* ---------- 필터/보기 UI ---------- */
+  var FILTERS=[['all','전체'],['todo','☐ 미완료'],['done','✅ 완료']];
+  function renderFilters(){
+    var box=$('smFilters'); if(!box) return;
+    box.innerHTML=FILTERS.map(function(f){ return '<button type="button" class="sm-fchip'+(f[0]===filterMode?' on':'')+'" data-f="'+f[0]+'">'+f[1]+'</button>'; }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('[data-f]'), function(b){ b.addEventListener('click', function(){ filterMode=b.getAttribute('data-f'); renderFilters(); renderList(); }); });
+  }
+  function renderViews(){
+    var c=$('smViewCard'), l=$('smViewList');
+    if(c) c.className='sm-vbtn'+(viewMode==='card'?' on':'');
+    if(l) l.className='sm-vbtn'+(viewMode==='list'?' on':'');
+  }
+
   /* ---------- 목록 ---------- */
+  function matchFilter(m){
+    if(filterMode==='all') return true;
+    var todos=normTodos(m.todos);
+    if(!todos.length) return false;            /* 완료/미완료는 체크리스트 있는 메모만 */
+    var allDone=todos.every(function(t){ return t.done; });
+    return filterMode==='done' ? allDone : !allDone;
+  }
   function filtered(){
-    if(!query) return memos;
-    return memos.filter(function(m){ var tx=((m.title||'')+' '+(m.body||'')+' '+(m.todos||[]).map(function(t){return t.text;}).join(' ')).toLowerCase(); return tx.indexOf(query)>=0; });
+    return memos.filter(function(m){
+      if(!matchFilter(m)) return false;
+      if(!query) return true;
+      var tx=((m.title||'')+' '+(m.body||'')+' '+(m.todos||[]).map(function(t){return t.text;}).join(' ')).toLowerCase();
+      return tx.indexOf(query)>=0;
+    });
   }
   function renderList(){
     var listEl=$('smList'); if(!listEl) return;
+    listEl.className='sm-list'+(viewMode==='list'?' list':'');
     var arr=filtered();
     var cnt=$('smCnt'); if(cnt) cnt.textContent=arr.length+'개';
     if(!arr.length){ listEl.innerHTML='<div class="sm-empty">'+(query?'검색 결과가 없어요':'아직 메모가 없어요. 위에서 적어보세요.')+'</div>'; return; }
