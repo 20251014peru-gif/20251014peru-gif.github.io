@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="나의 시스템">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>나의 시스템 v20260720-1418</title>
+<title>나의 시스템 v20260720-1434</title>
 <style>
 :root{--bg:#F2F2F7;--card:#fff;--ink:#1C1C1E;--sub:#8E8E93;--sep:#E5E5EA;--blue:#007AFF;--red:#FF3B30;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -1322,7 +1322,7 @@ function _fbSub(col,key,render){
 updateBadge();
 initAptSido();
 </script>
-<!-- 공유메모 (인라인: 별도 파일 불필요) v20260720-1418 -->
+<!-- 공유메모 (인라인: 별도 파일 불필요) v20260720-1434 -->
 <script>
 /* =========================================================================
    공유메모 (shared-memo.js)  v20260720c — 업무일지 "메모" 폼 방식 통합판
@@ -1331,14 +1331,21 @@ initAptSido();
    - 형태: 업무일지 정식 "메모"와 동일 — 제목·내용·사진, 카드 목록.
      카드를 누르면 보기 팝업(복사·수정·삭제). 삭제는 팝업 안에서만.
    - 급한메모(한 칸 스크래치패드) 아님. 제대로 된 메모 폼.
-   - 저장: Firebase 'shared_memos' 컬렉션(실시간). 실패 시 localStorage.
+   - ★ 업무일지 메모 탭과 '완전 통일': 업무일지가 쓰는 worklog_entries(kind='memo')를
+     그대로 읽고 쓴다. 업무일지 메모 탭에 써도, 여기 공유메모에 써도 세 앱이 같이 본다.
+     업무일지에 이미 쌓인 메모도 자동으로 세 앱에 나타난다. (업무일지 코드는 미수정)
    - 여는 법: 각 앱 기존 메모 버튼 / 우측 작은 버튼 / Ctrl+Shift+M / SharedMemo.open()
    ========================================================================= */
 (function(){
   if(window.__SHARED_MEMO__){ return; }
   window.__SHARED_MEMO__=true;
 
-  var COL='shared_memos';
+  /* ★ 업무일지와 '완전 통일': 업무일지가 쓰는 바로 그 저장소를 그대로 쓴다.
+     worklog_entries 컬렉션의 kind:'memo' 문서 = 업무일지 메모 탭과 동일한 데이터.
+     → 업무일지 메모 탭에 써도, 공유메모에 써도 세 앱이 같이 본다.
+     ⚠ 문서에 'id' 필드를 절대 넣지 않는다(업무일지가 문서ID를 id로 쓰므로 충돌). */
+  var COL='worklog_entries';
+  var KIND='memo';
   var FB={ apiKey:"AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY", authDomain:"my-system-25497.firebaseapp.com", projectId:"my-system-25497", storageBucket:"my-system-25497.firebasestorage.app" };
   var LSK='shared_memos_cache';
 
@@ -1368,18 +1375,32 @@ initAptSido();
   /* ---------- 저장/구독 ---------- */
   function saveLocal(){ try{ localStorage.setItem(LSK, JSON.stringify(memos)); }catch(e){} }
   function loadLocal(){ try{ memos=JSON.parse(localStorage.getItem(LSK)||'[]'); }catch(e){ memos=[]; } }
-  function sortM(){ memos.sort(function(a,b){ return (b.ts||0)-(a.ts||0); }); }
+  function stamp(m){ return m.createdAt || m.ts || 0; }
+  function sortM(){ memos.sort(function(a,b){ return stamp(b)-stamp(a) || String(b.date||'').localeCompare(String(a.date||'')); }); }
   function subscribe(){
     if(db){
-      db.collection(COL).onSnapshot(function(snap){
-        memos=[]; snap.forEach(function(d){ memos.push(Object.assign({id:d.id}, d.data())); });
+      /* 업무일지 메모(kind='memo')만 구독 — 전체 컬렉션을 다 읽지 않게 where 로 좁힌다 */
+      db.collection(COL).where('kind','==',KIND).onSnapshot(function(snap){
+        memos=[]; snap.forEach(function(d){ var o=Object.assign({}, d.data()); o.id=d.id; if(!o.deletedAt) memos.push(o); });
         sortM(); saveLocal(); renderList(); refreshDetail();
       }, function(e){ console.warn('[공유메모] 구독 오류', e); loadLocal(); sortM(); renderList(); });
     } else { loadLocal(); sortM(); renderList(); }
   }
-  function put(id, rec){
-    if(db){ db.collection(COL).doc(id).set(rec,{merge:true}).catch(function(e){ console.warn(e); toast('저장 오류'); }); }
-    else { var i=-1; memos.forEach(function(x,j){ if(x.id===id)i=j; }); if(i>=0) memos[i]=Object.assign(memos[i],rec); else memos.unshift(Object.assign({id:id},rec)); sortM(); saveLocal(); renderList(); }
+  /* 신규 저장: 업무일지 메모와 동일한 문서 모양으로. id 필드는 넣지 않는다(문서ID가 곧 id). */
+  function addNew(fields){
+    if(db){
+      var ref=db.collection(COL).doc();      /* 자동 문서ID (업무일지 genId 와 동일 방식) */
+      var rec=Object.assign({ kind:KIND, createdAt:Date.now() }, fields);
+      ref.set(rec).catch(function(e){ console.warn(e); toast('저장 오류'); });
+    } else {
+      var rec2=Object.assign({ id:uid(), kind:KIND, createdAt:Date.now() }, fields);
+      memos.unshift(rec2); sortM(); saveLocal(); renderList();
+    }
+  }
+  /* 수정 저장: 해당 문서만 병합 업데이트 (id 필드는 저장 안 함) */
+  function update(id, fields){
+    if(db){ db.collection(COL).doc(id).set(Object.assign({kind:KIND, updatedAt:Date.now()}, fields), {merge:true}).catch(function(e){ console.warn(e); toast('저장 오류'); }); }
+    else { var i=-1; memos.forEach(function(x,j){ if(x.id===id)i=j; }); if(i>=0){ memos[i]=Object.assign(memos[i], fields, {updatedAt:Date.now()}); saveLocal(); renderList(); } }
   }
   function del(id){
     if(db){ db.collection(COL).doc(id).delete().catch(function(e){ console.warn(e); toast('삭제 오류'); }); }
@@ -1446,7 +1467,7 @@ initAptSido();
       '  <div class="sm-top"><b>📝 공유메모<span id="smCnt" style="font-size:12px;color:#f39c12;margin-left:6px"></span></b><button class="sm-x" id="smListClose">✕</button></div>',
       '  <button class="sm-add" id="smAdd">✏️ 메모 추가</button>',
       '  <div class="sm-list" id="smList"></div>',
-      '  <div class="sm-foot">나의 시스템·업무일지·개인일지 어디서나 같은 메모가 실시간으로 보여요</div>',
+      '  <div class="sm-foot">업무일지 메모 탭과 같은 메모예요 · 세 앱 어디서나 실시간 공유</div>',
       '</div></div>',
       '<div class="sm-ov" id="smViewOv"><div class="sm-sheet">',
       '  <div class="sm-top"><b>📄 메모 보기</b><button class="sm-x" id="smViewClose">✕</button></div>',
@@ -1531,9 +1552,9 @@ initAptSido();
     var body=($('smFBody').value||'').trim();
     var date=$('smFDate').value||today();
     if(!title && !body && !editPhotos.length){ toast('제목이나 내용을 입력하세요'); return; }
-    var m=get(editId);
-    var rec={ title:title, body:body, date:date, photos:editPhotos.slice(), ts:(m?(m.ts||Date.now()):Date.now()), updatedAt:Date.now() };
-    put(editId, rec);
+    var fields={ title:title, body:body, date:date, photos:editPhotos.slice() };
+    if(get(editId)) update(editId, fields);   /* 기존 메모 수정 */
+    else addNew(fields);                        /* 새 메모 = 업무일지 메모 탭에도 바로 생김 */
     closeEdit();
     toast('저장됐어요');
   }
