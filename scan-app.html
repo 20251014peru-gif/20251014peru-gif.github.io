@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>📷 사진 스캐너 v20260719-1035</title>
+<title>📷 사진 스캐너 v20260720-2249</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -1468,7 +1468,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260719-103500';
+const APP_VER='v20260720-224900';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -2014,26 +2014,41 @@ async function syncPullCats(){
   }catch(e){ console.error('[Firebase] cats pull failed',e); return false; }
 }
 
+let _fbPending=new Set();
 function syncPush(kind){
   if(!_fbDb||!_fbUser)return;
+  _fbPending.add(kind);
   clearTimeout(_fbSyncTimer);
-  _fbSyncTimer=setTimeout(async()=>{
-    if(_fbSyncing)return;
-    _fbSyncing=true;setFbStatus('','orange');
-    try{
-      const collMap={receipts,cards,texts,photos};
-      const arr=collMap[kind];
-      if(!arr)return;
-      const batch=_fbDb.batch();
-      const stripPhoto=obj=>{const{photo,...rest}=obj;return rest;};
-      arr.forEach(x=>{batch.set(fbCollection(kind).doc(x.id),stripPhoto(x));});
-      await batch.commit();
-      localStorage.setItem(LS_FB_LAST,String(Date.now()));
-      setFbStatus('','green');
-    }catch(e){console.error('[Firebase] auto push failed',e);setFbStatus('','red');}
-    finally{_fbSyncing=false;}
-  },3000);
+  _fbSyncTimer=setTimeout(()=>_flushPush(),3000);
 }
+async function _flushPush(){
+  if(!_fbDb||!_fbUser||!_fbPending.size)return;
+  if(_fbSyncing)return;                  /* 진행 중이면 pending 유지 → 다음 기회에 전송 */
+  clearTimeout(_fbSyncTimer);
+  const kinds=[..._fbPending];_fbPending.clear();
+  _fbSyncing=true;setFbStatus('','orange');
+  try{
+    const collMap={receipts,cards,texts,photos};
+    const batch=_fbDb.batch();
+    const stripPhoto=obj=>{const{photo,...rest}=obj;return rest;};
+    let any=false;
+    for(const kind of kinds){
+      const arr=collMap[kind];if(!arr)continue;
+      arr.forEach(x=>{batch.set(fbCollection(kind).doc(x.id),stripPhoto(x));});
+      any=true;
+    }
+    if(any){await batch.commit();localStorage.setItem(LS_FB_LAST,String(Date.now()));}
+    setFbStatus('','green');
+  }catch(e){
+    console.error('[Firebase] auto push failed',e);
+    kinds.forEach(k=>_fbPending.add(k));   /* 실패분은 다시 대기열로 */
+    setFbStatus('','red');
+  }
+  finally{_fbSyncing=false;}
+}
+/* 📱 앱을 벗어나면 3초 안 기다리고 즉시 전송 (모바일에서 타이머가 죽는 것 방지) */
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')_flushPush();});
+window.addEventListener('pagehide',()=>_flushPush());
 
 // 모달 핸들러
 $('btnFirebase').onclick=()=>{
@@ -5188,15 +5203,13 @@ $('receiptSave').onclick=async()=>{
   try{
   let photoId='';
   let photoUrl='';
+  const _imgForUpload=_rcptImg;   /* 백그라운드 업로드용 참조 (closeReceiptModal이 _rcptImg를 비우므로) */
   if(_rcptImg){
     photoId=(_rcptEditing&&_rcptEditing.photoId)||('r_'+uid());
     try{await idbPut(photoId,_rcptImg);}catch(e){toast('사진 저장 실패: '+e.message);return;}
-    if(_saveProg)_saveProg.textContent='☁️ 클라우드에 업로드 중…';
-    if(_fbStorage){
-      const url=await uploadPhotoToStorage(`receipts/${photoId}.jpg`,_rcptImg);
-      if(url)photoUrl=url;
-    }
-    if(!photoUrl&&_rcptEditing&&_rcptEditing.photoUrl)photoUrl=_rcptEditing.photoUrl;
+    /* ☁️ 클라우드 업로드는 저장 완료 후 백그라운드로 — 업로드 중 페이지가 죽어도 데이터는 이미 안전.
+       수정 모드면 기존 URL을 일단 유지하고, 업로드 성공 시 갱신한다 */
+    if(_rcptEditing&&_rcptEditing.photoUrl)photoUrl=_rcptEditing.photoUrl;
   }
   if(_saveProg)_saveProg.textContent='💾 데이터 저장 중…';
   const data={
@@ -5219,6 +5232,15 @@ $('receiptSave').onclick=async()=>{
   }else receipts.unshift(data);   /* 수정 대상이 사라졌으면 신규로 살린다 */
   if(!saveReceipts())return;
   closeReceiptModal();renderScanList();toast('✅ 저장됐어요');
+  /* ☁️ 사진 클라우드 업로드 — 백그라운드. 실패하면 photoUrl이 비어 있으니
+     uploadMissingPhotos()가 다음 동기화 때 자동 재시도한다 */
+  if(photoId&&_fbStorage&&_imgForUpload){
+    uploadPhotoToStorage(`receipts/${photoId}.jpg`,_imgForUpload).then(url=>{
+      if(!url)return;
+      const rec=receipts.find(x=>x.id===data.id);
+      if(rec&&rec.photoUrl!==url){rec.photoUrl=url;saveReceipts();}
+    }).catch(()=>{});
+  }
   }catch(e){
     console.error('[receiptSave]',e);
     toast('저장 실패: '+(e.message||e));
@@ -5989,6 +6011,13 @@ $('secureCancel').onclick=()=>{
     await syncPullAll();
     // 자동 백업 (비동기, await 안 함 - 백그라운드)
     autoBackupIfNeeded().catch(e=>console.error(e));
+    // ☁️ 업로드 못 한 사진 자동 재시도 (백그라운드) — 저장 시 업로드 실패분 복구
+    if(_fbStorage){
+      uploadMissingPhotos().then(()=>{
+        _safeLSSet(LS_RECEIPTS,receipts);_safeLSSet(LS_CARDS,cards);
+        _safeLSSet(LS_TEXTS,texts);_safeLSSet(LS_PHOTOS,photos);
+      }).catch(()=>{});
+    }
   }
   refreshCatSelects();refreshKeyState();buildPinPad();
   $('appVer').textContent='🔄 '+APP_VER;   /* 🔄 = 눌러서 새로고침 */
