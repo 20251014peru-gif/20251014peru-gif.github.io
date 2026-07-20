@@ -563,6 +563,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 <!-- ===== 메모 탭 ===== -->
 <div class="v43-panel active" id="panel-memo">
+  <div id="sharedMemoHost"></div>
   <!-- 입력창 -->
   <div class="sticky-input-wrap" id="stickyWrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -1243,7 +1244,7 @@ main.wrap{padding-bottom:100px;padding-top:12px}
 
 /* ⚠️ 버전은 여기 한 곳뿐. 제목이 이걸 읽는다. 손으로 적지 말 것.
    이게 없어서 새 파일을 받았는지 확인할 방법이 없었다. */
-const APP_VER='v20260720-1434';
+const APP_VER='v20260720-1654';
 document.title='개인일지 '+APP_VER;
 /* 버전을 뿌린다 — 헤더 + PIN 넣는 곳마다.
    잠금화면은 앱이 뜨자마자 보이는 곳이라 DOMContentLoaded 를 기다리면 늦을 수 있다.
@@ -7302,29 +7303,22 @@ console.log('[개인일지] 로드 완료');
   }
 })();
 </script>
-<!-- 공유메모 (인라인: 별도 파일 불필요) v20260720-1434 -->
+<!-- 공유메모 (인라인) v20260720-1654 -->
 <script>
 /* =========================================================================
-   공유메모 (shared-memo.js)  v20260720c — 업무일지 "메모" 폼 방식 통합판
-   - 나의 시스템(index.html)·업무일지(worklog.html)·개인일지(personal.html)
-     세 앱이 이 코드를 똑같이 넣어, 하나의 공유 메모판을 실시간으로 함께 본다.
-   - 형태: 업무일지 정식 "메모"와 동일 — 제목·내용·사진, 카드 목록.
-     카드를 누르면 보기 팝업(복사·수정·삭제). 삭제는 팝업 안에서만.
-   - 급한메모(한 칸 스크래치패드) 아님. 제대로 된 메모 폼.
-   - ★ 업무일지 메모 탭과 '완전 통일': 업무일지가 쓰는 worklog_entries(kind='memo')를
-     그대로 읽고 쓴다. 업무일지 메모 탭에 써도, 여기 공유메모에 써도 세 앱이 같이 본다.
-     업무일지에 이미 쌓인 메모도 자동으로 세 앱에 나타난다. (업무일지 코드는 미수정)
-   - 여는 법: 각 앱 기존 메모 버튼 / 우측 작은 버튼 / Ctrl+Shift+M / SharedMemo.open()
+   공유메모 (shared-memo.js)  v20260720d — 인라인 임베드판 (팝업 없음)
+   - 업무일지 메모 탭과 '완전 통일': worklog_entries(kind='memo')를 그대로 읽고 쓴다.
+     업무일지 메모 탭에 써도, 여기 공유메모에 써도 세 앱이 같이 본다.
+   - 팝업창을 없앴다. 페이지 안 <div id="sharedMemoHost"></div> 자리에
+     목록이 '바로' 인라인으로 표시된다. (추가/보기/수정만 모달)
+   - 업무일지에는 넣지 않는다 (원래 메모 탭이 이미 이 저장소라서).
+     개인일지·나의 시스템에만 넣고, 각자 화면 안에 목록이 뜬다.
    ========================================================================= */
 (function(){
   if(window.__SHARED_MEMO__){ return; }
   window.__SHARED_MEMO__=true;
 
-  /* ★ 업무일지와 '완전 통일': 업무일지가 쓰는 바로 그 저장소를 그대로 쓴다.
-     worklog_entries 컬렉션의 kind:'memo' 문서 = 업무일지 메모 탭과 동일한 데이터.
-     → 업무일지 메모 탭에 써도, 공유메모에 써도 세 앱이 같이 본다.
-     ⚠ 문서에 'id' 필드를 절대 넣지 않는다(업무일지가 문서ID를 id로 쓰므로 충돌). */
-  var COL='worklog_entries';
+  var COL='worklog_entries';   /* 업무일지와 동일 저장소 */
   var KIND='memo';
   var FB={ apiKey:"AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY", authDomain:"my-system-25497.firebaseapp.com", projectId:"my-system-25497", storageBucket:"my-system-25497.firebasestorage.app" };
   var LSK='shared_memos_cache';
@@ -7338,16 +7332,12 @@ console.log('[개인일지] 로드 완료');
   }catch(e){ console.warn('[공유메모] Firebase 초기화 실패 — 로컬 저장', e); }
 
   var memos=[];
-  var editId=null;     /* 편집 중 메모 id (신규면 임시) */
-  var editPhotos=[];   /* 편집 중 사진 배열 */
-  var detailId=null;
+  var editId=null, editPhotos=[], detailId=null;
 
-  /* ---------- 유틸 ---------- */
   function $(id){ return document.getElementById(id); }
   function uid(){ return 'sm_'+Date.now()+'_'+Math.floor(Math.random()*99999); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function today(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
-  function fmtDate(s){ return s||''; }
   function get(id){ for(var i=0;i<memos.length;i++){ if(memos[i].id===id) return memos[i]; } return null; }
   function toast(msg){ var t=$('sm-toast'); if(!t){ t=document.createElement('div'); t.id='sm-toast'; document.body.appendChild(t); } t.textContent=msg; t.className='sm-show'; clearTimeout(t._t); t._t=setTimeout(function(){ t.className=''; },1800); }
   function compress(file,max,q){ return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(e){ var img=new Image(); img.onload=function(){ var w=img.width,h=img.height,s=Math.min(1,max/Math.max(w,h)); var cv=document.createElement('canvas'); cv.width=Math.round(w*s); cv.height=Math.round(h*s); cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height); res(cv.toDataURL('image/jpeg',q||0.72)); }; img.onerror=rej; img.src=e.target.result; }; r.onerror=rej; r.readAsDataURL(file); }); }
@@ -7359,25 +7349,16 @@ console.log('[개인일지] 로드 완료');
   function sortM(){ memos.sort(function(a,b){ return stamp(b)-stamp(a) || String(b.date||'').localeCompare(String(a.date||'')); }); }
   function subscribe(){
     if(db){
-      /* 업무일지 메모(kind='memo')만 구독 — 전체 컬렉션을 다 읽지 않게 where 로 좁힌다 */
       db.collection(COL).where('kind','==',KIND).onSnapshot(function(snap){
         memos=[]; snap.forEach(function(d){ var o=Object.assign({}, d.data()); o.id=d.id; if(!o.deletedAt) memos.push(o); });
         sortM(); saveLocal(); renderList(); refreshDetail();
       }, function(e){ console.warn('[공유메모] 구독 오류', e); loadLocal(); sortM(); renderList(); });
     } else { loadLocal(); sortM(); renderList(); }
   }
-  /* 신규 저장: 업무일지 메모와 동일한 문서 모양으로. id 필드는 넣지 않는다(문서ID가 곧 id). */
   function addNew(fields){
-    if(db){
-      var ref=db.collection(COL).doc();      /* 자동 문서ID (업무일지 genId 와 동일 방식) */
-      var rec=Object.assign({ kind:KIND, createdAt:Date.now() }, fields);
-      ref.set(rec).catch(function(e){ console.warn(e); toast('저장 오류'); });
-    } else {
-      var rec2=Object.assign({ id:uid(), kind:KIND, createdAt:Date.now() }, fields);
-      memos.unshift(rec2); sortM(); saveLocal(); renderList();
-    }
+    if(db){ var ref=db.collection(COL).doc(); ref.set(Object.assign({kind:KIND, createdAt:Date.now()}, fields)).catch(function(e){ console.warn(e); toast('저장 오류'); }); }
+    else { memos.unshift(Object.assign({id:uid(), kind:KIND, createdAt:Date.now()}, fields)); sortM(); saveLocal(); renderList(); }
   }
-  /* 수정 저장: 해당 문서만 병합 업데이트 (id 필드는 저장 안 함) */
   function update(id, fields){
     if(db){ db.collection(COL).doc(id).set(Object.assign({kind:KIND, updatedAt:Date.now()}, fields), {merge:true}).catch(function(e){ console.warn(e); toast('저장 오류'); }); }
     else { var i=-1; memos.forEach(function(x,j){ if(x.id===id)i=j; }); if(i>=0){ memos[i]=Object.assign(memos[i], fields, {updatedAt:Date.now()}); saveLocal(); renderList(); } }
@@ -7387,32 +7368,36 @@ console.log('[개인일지] 로드 완료');
     else { memos=memos.filter(function(x){ return x.id!==id; }); saveLocal(); renderList(); }
   }
 
-  /* ---------- DOM ---------- */
+  /* ---------- 스타일 + 모달 ---------- */
   function buildDOM(){
     var style=document.createElement('style');
     style.textContent=[
+      /* 인라인 목록 */
+      '.sm-embed{border:1.5px solid #f0e2bf;border-radius:14px;background:#fffdf6;padding:12px;margin:0 0 8px}',
+      '.sm-ehead{display:flex;align-items:center;gap:8px;margin-bottom:10px}',
+      '.sm-ehead b{font-size:15px;color:#1a2f45;flex:1}',
+      '.sm-ehead .cnt{font-size:12px;color:#f39c12;font-weight:700;margin-left:5px}',
+      '.sm-eadd{border:none;border-radius:10px;background:linear-gradient(135deg,#f5b301,#f39c12);color:#fff;font-size:13px;font-weight:800;padding:8px 14px;cursor:pointer;font-family:inherit}',
+      '.sm-list{display:grid;grid-template-columns:1fr;gap:8px;max-height:440px;overflow-y:auto}',
+      '@media(min-width:560px){.sm-list{grid-template-columns:1fr 1fr}}',
+      '.sm-card{border:1.5px solid #e8ecf1;border-left:4px solid #f39c12;border-radius:12px;padding:10px 12px;cursor:pointer;background:#fff;transition:box-shadow .12s;min-width:0;display:flex;gap:10px}',
+      '.sm-card:hover{box-shadow:0 3px 12px rgba(0,0,0,.09)}',
+      '.sm-card .sm-th{width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid #eee}',
+      '.sm-card .sm-cb{flex:1;min-width:0}',
+      '.sm-card .sm-t{font-size:14px;font-weight:800;color:#1f2f3f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.sm-card .sm-t.empty{color:#b3bcc6;font-weight:600}',
+      '.sm-card .sm-p{font-size:12.5px;color:#5a6b7b;line-height:1.4;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}',
+      '.sm-card .sm-d{font-size:11px;color:#9aa7b4;margin-top:5px}',
+      '.sm-empty{grid-column:1/-1;text-align:center;color:#aab4c0;font-size:13.5px;padding:22px 10px}',
+      /* 모달 공통 */
       '.sm-ov{position:fixed;inset:0;z-index:99010;background:rgba(20,30,45,.42);display:none;align-items:flex-end;justify-content:center}',
       '.sm-ov.show{display:flex}',
       '@media(min-width:640px){.sm-ov{align-items:center}}',
-      '.sm-sheet{background:#fff;width:100%;max-width:640px;max-height:88vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 30px rgba(0,0,0,.2)}',
+      '.sm-sheet{background:#fff;width:100%;max-width:600px;max-height:88vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 30px rgba(0,0,0,.2)}',
       '@media(min-width:640px){.sm-sheet{border-radius:18px}}',
       '.sm-top{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1.5px solid #eef1f4;background:#fffdf5;flex-shrink:0}',
       '.sm-top b{font-size:16px;color:#1a2f45;flex:1}',
       '.sm-x{border:none;background:none;font-size:20px;cursor:pointer;color:#8a97a4;line-height:1;padding:2px 4px}',
-      '.sm-add{margin:12px 16px 4px;height:44px;border:none;border-radius:12px;background:linear-gradient(135deg,#f5b301,#f39c12);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}',
-      '.sm-list{flex:1;overflow-y:auto;padding:8px 16px 16px;display:grid;grid-template-columns:1fr;gap:8px}',
-      '@media(min-width:560px){.sm-list{grid-template-columns:1fr 1fr}}',
-      '.sm-card{border:1.5px solid #e8ecf1;border-left:4px solid #f39c12;border-radius:12px;padding:11px 13px;cursor:pointer;background:#fff;transition:box-shadow .12s;min-width:0;display:flex;gap:10px}',
-      '.sm-card:hover{box-shadow:0 3px 12px rgba(0,0,0,.09)}',
-      '.sm-card .sm-th{width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid #eee}',
-      '.sm-card .sm-cb{flex:1;min-width:0}',
-      '.sm-card .sm-t{font-size:14.5px;font-weight:800;color:#1f2f3f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      '.sm-card .sm-t.empty{color:#b3bcc6;font-weight:600}',
-      '.sm-card .sm-p{font-size:12.5px;color:#5a6b7b;line-height:1.4;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}',
-      '.sm-card .sm-d{font-size:11px;color:#9aa7b4;margin-top:5px}',
-      '.sm-empty{grid-column:1/-1;text-align:center;color:#aab4c0;font-size:14px;padding:34px 10px}',
-      '.sm-foot{font-size:11px;color:#9aa7b4;text-align:center;padding:8px 10px;border-top:1px solid #f0f2f5}',
-      /* 보기 / 편집 */
       '.sm-body{flex:1;overflow-y:auto;padding:16px}',
       '.sm-vt{font-size:18px;font-weight:800;color:#1a2f45;word-break:break-word}',
       '.sm-vd{font-size:12px;color:#9aa7b4;margin:4px 0 12px}',
@@ -7433,7 +7418,6 @@ console.log('[개인일지] 로드 완료');
       '.sm-thumb-wrap{position:relative;display:inline-block}',
       '.sm-thumb-wrap img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #e6e6e6}',
       '.sm-thumb-wrap .rm{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;background:#e74c3c;color:#fff;font-size:13px;line-height:1;cursor:pointer}',
-      '#smOpenBtn{position:fixed;right:14px;bottom:16px;z-index:98000;height:44px;padding:0 16px;border:none;border-radius:22px;background:linear-gradient(135deg,#f5b301,#f39c12);color:#fff;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 5px 16px rgba(0,0,0,.22);font-family:inherit;display:none}',
       '#smZoom{position:fixed;inset:0;z-index:99030;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center}',
       '#smZoom.show{display:flex}','#smZoom img{max-width:94%;max-height:94%;border-radius:10px}',
       '#sm-toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%) translateY(16px);z-index:99050;background:#243447;color:#fff;padding:10px 18px;border-radius:22px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:all .2s;max-width:90%}',
@@ -7443,12 +7427,6 @@ console.log('[개인일지] 로드 완료');
 
     var wrap=document.createElement('div');
     wrap.innerHTML=[
-      '<div class="sm-ov" id="smListOv"><div class="sm-sheet">',
-      '  <div class="sm-top"><b>📝 공유메모<span id="smCnt" style="font-size:12px;color:#f39c12;margin-left:6px"></span></b><button class="sm-x" id="smListClose">✕</button></div>',
-      '  <button class="sm-add" id="smAdd">✏️ 메모 추가</button>',
-      '  <div class="sm-list" id="smList"></div>',
-      '  <div class="sm-foot">업무일지 메모 탭과 같은 메모예요 · 세 앱 어디서나 실시간 공유</div>',
-      '</div></div>',
       '<div class="sm-ov" id="smViewOv"><div class="sm-sheet">',
       '  <div class="sm-top"><b>📄 메모 보기</b><button class="sm-x" id="smViewClose">✕</button></div>',
       '  <div class="sm-body"><div class="sm-vt" id="smVTitle"></div><div class="sm-vd" id="smVDate"></div><div class="sm-vbody" id="smVBody"></div><div class="sm-photos" id="smVPhotos"></div></div>',
@@ -7464,35 +7442,41 @@ console.log('[개인일지] 로드 완료');
       '  </div>',
       '  <div class="sm-btns"><button class="sm-btn primary" id="smSave">💾 저장</button><button class="sm-btn" id="smCancel">취소</button></div>',
       '</div></div>',
-      '<button id="smOpenBtn">📝 공유메모</button>',
       '<div id="smZoom"><img id="smZoomImg" src=""></div>'
     ].join('');
     document.body.appendChild(wrap);
   }
 
+  /* ---------- 인라인 마운트 ---------- */
+  function mount(){
+    var host=$('sharedMemoHost'); if(!host) return false;
+    host.innerHTML='<div class="sm-embed"><div class="sm-ehead"><b>📝 공유메모<span class="cnt" id="smCnt"></span></b><button class="sm-eadd" id="smAdd">✏️ 메모 추가</button></div><div class="sm-list" id="smList"></div></div>';
+    $('smAdd').addEventListener('click', function(){ openEdit(null); });
+    return true;
+  }
+
   /* ---------- 목록 ---------- */
-  function preview(m){ var b=(m.body||'').trim(); return b; }
   function renderList(){
-    var host=$('smList'); if(!host) return;
-    var cnt=$('smCnt'); if(cnt) cnt.textContent=memos.length?(memos.length+'개'):'';
-    if(!memos.length){ host.innerHTML='<div class="sm-empty">아직 메모가 없어요.<br>“✏️ 메모 추가”로 적어보세요.</div>'; return; }
-    host.innerHTML=memos.map(function(m){
+    var listEl=$('smList'); if(!listEl) return;
+    var cnt=$('smCnt'); if(cnt) cnt.textContent=memos.length?(' '+memos.length+'개'):'';
+    if(!memos.length){ listEl.innerHTML='<div class="sm-empty">아직 메모가 없어요. “✏️ 메모 추가”로 적어보세요.<br>업무일지 메모 탭과 같이 공유됩니다.</div>'; return; }
+    listEl.innerHTML=memos.map(function(m){
       var th=(m.photos&&m.photos.length)?('<img class="sm-th" src="'+esc(m.photos[0])+'">'):'';
       var title=(m.title||'').trim();
-      var meta=[fmtDate(m.date)]; if(m.photos&&m.photos.length) meta.push('📷'+m.photos.length);
+      var meta=[m.date||'']; if(m.photos&&m.photos.length) meta.push('📷'+m.photos.length);
       return '<div class="sm-card" data-id="'+esc(m.id)+'">'+th+'<div class="sm-cb">'
         +'<div class="sm-t'+(title?'':' empty')+'">'+(title?esc(title):'(제목 없음)')+'</div>'
-        +'<div class="sm-p">'+esc(preview(m))+'</div>'
+        +'<div class="sm-p">'+esc((m.body||'').trim())+'</div>'
         +'<div class="sm-d">'+meta.join(' · ')+'</div></div></div>';
     }).join('');
-    Array.prototype.forEach.call(host.querySelectorAll('.sm-card'), function(c){ c.addEventListener('click', function(){ openView(c.getAttribute('data-id')); }); });
+    Array.prototype.forEach.call(listEl.querySelectorAll('.sm-card'), function(c){ c.addEventListener('click', function(){ openView(c.getAttribute('data-id')); }); });
   }
 
   /* ---------- 보기 ---------- */
   function openView(id){
     var m=get(id); if(!m) return; detailId=id;
     $('smVTitle').textContent=(m.title||'(제목 없음)');
-    $('smVDate').textContent=(m.date||'')+(m.ts?('  ·  '+new Date(m.ts).toLocaleTimeString('ko-KR').slice(0,8)):'');
+    $('smVDate').textContent=(m.date||'');
     $('smVBody').textContent=(m.body||'');
     var ph=$('smVPhotos'); ph.innerHTML=(m.photos||[]).map(function(p){ return '<img src="'+esc(p)+'">'; }).join('');
     Array.prototype.forEach.call(ph.querySelectorAll('img'), function(im){ im.onclick=function(){ $('smZoomImg').src=im.src; $('smZoom').classList.add('show'); }; });
@@ -7533,67 +7517,47 @@ console.log('[개인일지] 로드 완료');
     var date=$('smFDate').value||today();
     if(!title && !body && !editPhotos.length){ toast('제목이나 내용을 입력하세요'); return; }
     var fields={ title:title, body:body, date:date, photos:editPhotos.slice() };
-    if(get(editId)) update(editId, fields);   /* 기존 메모 수정 */
-    else addNew(fields);                        /* 새 메모 = 업무일지 메모 탭에도 바로 생김 */
+    if(get(editId)) update(editId, fields); else addNew(fields);
     closeEdit();
     toast('저장됐어요');
   }
 
-  /* ---------- 열기/닫기 (목록) ---------- */
-  function open(){ $('smListOv').classList.add('show'); renderList(); }
-  function close(){ $('smListOv').classList.remove('show'); }
-  window.SharedMemo={ open:open, close:close, add:function(){ open(); openEdit(null); } };
+  /* ---------- 공개 API ---------- */
+  function open(){ var h=$('sharedMemoHost'); if(h){ h.scrollIntoView({behavior:'smooth', block:'start'}); } }
+  window.SharedMemo={ open:open, add:function(){ openEdit(null); } };
   window.openMemo=open;
-
-  /* ---------- 여는 버튼 연결 ---------- */
-  function wireOpeners(){
-    document.addEventListener('click', function(e){
-      var t=e.target.closest && e.target.closest('#btnQuickMemo,#qmBtn,[data-sharedmemo]');
-      if(t){ e.stopImmediatePropagation(); e.preventDefault(); open(); }
-    }, true);
-    document.addEventListener('keydown', function(e){
-      if((e.ctrlKey||e.metaKey) && e.shiftKey && (e.key==='M'||e.key==='m')){ e.preventDefault(); if($('smListOv').classList.contains('show')) close(); else open(); }
-      if(e.key==='Escape'){ if($('smEditOv').classList.contains('show')) closeEdit(); else if($('smViewOv').classList.contains('show')) closeView(); else if($('smListOv').classList.contains('show')) close(); }
-    });
-    setTimeout(function(){
-      var has=document.getElementById('btnQuickMemo')||document.getElementById('qmBtn')||document.querySelector('[onclick*="SharedMemo"],[onclick*="openMemo"],[data-sharedmemo]');
-      if(!has){ var b=$('smOpenBtn'); if(b){ b.style.display='block'; b.addEventListener('click', open); } }
-    }, 1500);
-  }
-  function hideOldUI(){
-    var css=document.createElement('style');
-    css.textContent='#memoOv{display:none!important} #quickMemoSide{display:none!important}';
-    document.head.appendChild(css);
-  }
 
   /* ---------- 이벤트 ---------- */
   function wire(){
-    $('smListClose').addEventListener('click', close);
-    $('smListOv').addEventListener('click', function(e){ if(e.target===$('smListOv')) close(); });
-    $('smAdd').addEventListener('click', function(){ openEdit(null); });
-
     $('smViewClose').addEventListener('click', closeView);
     $('smViewOv').addEventListener('click', function(e){ if(e.target===$('smViewOv')) closeView(); });
     $('smCopy').addEventListener('click', function(){
       var m=get(detailId); if(!m) return;
       var txt=((m.title||'')+'\n'+(m.body||'')).trim();
-      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){ toast('📋 복사됐어요'); }).catch(function(){ fallbackCopy(txt); }); }
-      else fallbackCopy(txt);
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){ toast('📋 복사됐어요'); }).catch(function(){ fallbackCopy(txt); }); } else fallbackCopy(txt);
     });
     $('smEdit').addEventListener('click', function(){ if(detailId){ var id=detailId; closeView(); openEdit(id); } });
     $('smDel').addEventListener('click', function(){ if(!detailId) return; if(!confirm('이 메모를 삭제할까요? (되돌릴 수 없음)')) return; del(detailId); closeView(); toast('삭제됐어요'); });
-
     $('smEditClose').addEventListener('click', closeEdit);
     $('smCancel').addEventListener('click', closeEdit);
     $('smSave').addEventListener('click', saveEdit);
     $('smFPhoto').addEventListener('change', function(e){ addPhotos(e.target.files); e.target.value=''; });
-
     $('smZoom').addEventListener('click', function(){ $('smZoom').classList.remove('show'); });
+    document.addEventListener('keydown', function(e){
+      if(e.key==='Escape'){ if($('smEditOv').classList.contains('show')) closeEdit(); else if($('smViewOv').classList.contains('show')) closeView(); }
+    });
   }
   function fallbackCopy(txt){ try{ var ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('📋 복사됐어요'); }catch(e){ toast('복사 실패'); } }
 
   /* ---------- 시작 ---------- */
-  function init(){ buildDOM(); hideOldUI(); wire(); wireOpeners(); subscribe(); }
+  function init(){
+    buildDOM(); wire();
+    if(!mount()){
+      /* host가 아직 없으면(탭이 늦게 그려지는 경우) 잠깐 뒤 재시도 */
+      var tries=0; var iv=setInterval(function(){ tries++; if(mount()||tries>20){ clearInterval(iv); renderList(); } }, 300);
+    }
+    subscribe();
+  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
