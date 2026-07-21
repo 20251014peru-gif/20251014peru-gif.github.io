@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>📷 사진 스캐너 v20260720-2249</title>
+<title>📷 사진 스캐너 v20260722-0850</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
@@ -678,7 +678,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
   </div>
   <div class="hdr-right">
     <a class="hbtn" id="btnHome" href="index.html" title="홈으로">🏠<span class="hb-lbl">홈</span></a>
-    <button class="hbtn" id="btnFirebase" title="클라우드 동기화">☁️<span class="hb-lbl">동기화</span></button>
+    <button class="hbtn" id="btnFirebase" title="클라우드 동기화" style="position:relative">☁️<span id="fbDot" style="display:none;position:absolute;top:3px;right:5px;width:10px;height:10px;border-radius:50%;background:var(--green);border:2px solid var(--bg);box-shadow:0 0 0 1px rgba(0,0,0,.12)"></span><span class="hb-lbl" id="fbLbl">동기화</span></button>
     <button class="hbtn" id="btnApiKey" title="AI 키 설정">🔑<span class="hb-lbl">AI키</span></button>
     <button class="hbtn" id="btnTrash" title="휴지통">🗑<span class="hb-lbl">휴지통</span></button>
     <button class="hbtn" id="btnExport" title="JSON 내보내기">⬇️<span class="hb-lbl">내보내기</span></button>
@@ -686,6 +686,11 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
     <button class="hbtn" id="btnDebug" title="디버그 패널" style="position:relative">🐞<span id="debugBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:900;border-radius:8px;padding:1px 4px;min-width:14px;text-align:center"></span><span class="hb-lbl">디버그</span></button>
   </div>
 </header>
+
+<!-- ⚠️ 저장 지속성 경고 배너 (v20260722) — 저장이 사라지는 환경일 때만 뜬다 -->
+<div id="storageWarn" style="display:none;margin:0 auto;max-width:1600px;
+  padding:12px 16px;background:#fff3cd;border:2px solid #ff9500;
+  border-radius:0 0 14px 14px;color:#7a4b00;font-size:13px;line-height:1.55;font-weight:600"></div>
 
 <!-- 🔍 통합 검색 — 지금 보고 있는 화면을 검색한다 -->
 <div id="uniSearchRow">
@@ -1468,7 +1473,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260720-224900';
+const APP_VER='v20260722-085000';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -1802,6 +1807,17 @@ function saveTexts(){if(_safeLSSet(LS_TEXTS, texts)){syncPush('texts');return tr
    ════════════════════════════════════════════════════════ */
 const LS_FB_CONFIG='scanapp_fb_config';
 const LS_FB_USER='scanapp_fb_user';
+/* 🔗 영구 자동 연결 (v20260722) — worklog 와 같은 Firebase(my-system-25497).
+   localStorage 가 비어도(폰이 저장소를 지워도) 이 값으로 매번 자동 연결 →
+   클라우드에서 자료를 도로 불러온다 = "무조건 저장"의 핵심.
+   (이 값은 공개 웹페이지 worklog.js 에 그대로 들어있는 값이라 코드에 박아도 안전) */
+const EMBEDDED_FB_CONFIG={
+  apiKey:"AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",
+  authDomain:"my-system-25497.firebaseapp.com",
+  projectId:"my-system-25497",
+  storageBucket:"my-system-25497.firebasestorage.app"
+};
+const EMBEDDED_FB_USER="달님";
 const LS_FB_LAST='scanapp_fb_last';
 const LS_LAST_AUTO_BACKUP='scanapp_last_auto_backup';
 const AUTO_BACKUP_INTERVAL_MS=24*60*60*1000;
@@ -1810,17 +1826,27 @@ const BACKUP_RETENTION_MS=30*24*60*60*1000;
 let _fbApp=null,_fbDb=null,_fbStorage=null,_fbUser='',_fbConfig=null;
 let _fbSyncTimer=null,_fbSyncing=false;
 
+/* ☁️ 이모지는 color 가 안 먹는다(자체 색으로 렌더) → 상태 점(fbDot)+글자색으로 표시 */
 function setFbStatus(text,color){
-  const ico=$('btnFirebase');
-  if(color==='green'){ico.style.color='var(--green)';ico.title='동기화됨';}
-  else if(color==='orange'){ico.style.color='var(--orange)';ico.title='동기화 중…';}
-  else if(color==='red'){ico.style.color='var(--red)';ico.title='연결 실패';}
-  else{ico.style.color='';ico.title='클라우드 동기화 (미설정)';}
+  const ico=$('btnFirebase'), dot=$('fbDot'), lbl=$('fbLbl');
+  const apply=(bg,ttl,show,lblTxt,lblCol)=>{
+    if(dot){ dot.style.display=show?'':'none'; if(bg) dot.style.background=bg; }
+    if(ico) ico.title=ttl;
+    if(lbl){ if(lblTxt!=null) lbl.textContent=lblTxt; lbl.style.color=lblCol||''; }
+  };
+  if(color==='green')      apply('var(--green)', '동기화됨 ✅', true,  '연결됨', 'var(--green)');
+  else if(color==='orange')apply('var(--orange)','동기화 중…',  true,  '동기화중','var(--orange)');
+  else if(color==='red')   apply('var(--red)',   '연결 실패',   true,  '연결실패','var(--red)');
+  else                     apply('',             '클라우드 동기화 (미설정)', false, '동기화', '');
 }
 
 async function initFirebase(){
-  const cfgStr=localStorage.getItem(LS_FB_CONFIG);
-  const user=localStorage.getItem(LS_FB_USER)||'';
+  let cfgStr=localStorage.getItem(LS_FB_CONFIG);
+  let user=localStorage.getItem(LS_FB_USER)||'';
+  /* 🔗 저장된 설정이 없으면(처음이거나 폰이 저장소를 지웠으면) 내장 설정으로 자동 연결.
+     기존에 직접 연결해 둔 값이 있으면 그건 존중한다(사용자 ID 등 안 덮어씀). */
+  if(!cfgStr){ cfgStr=JSON.stringify(EMBEDDED_FB_CONFIG); try{localStorage.setItem(LS_FB_CONFIG,cfgStr);}catch(e){} }
+  if(!user){ user=EMBEDDED_FB_USER; try{localStorage.setItem(LS_FB_USER,user);}catch(e){} }
   if(!cfgStr||!user)return false;
   try{
     _fbConfig=JSON.parse(cfgStr);
@@ -5998,6 +6024,126 @@ $('secureCancel').onclick=()=>{
 };
 
 // 초기화
+/* ═══════════════════════════════════════════════════════════
+   🛡 저장 지속성 보호 (v20260722) — "저장했는데 폰에서 사라진다" 근본 대응
+   원인: 홈화면 아이콘/인앱 브라우저에서 안드로이드가 저장소를 '임시'로 보고
+        공간이 부족하거나 창을 닫으면 통째로 비운다. (클라우드 꺼져 있으면 유실)
+   대책:
+     ① navigator.storage.persist() 로 '영구 저장' 요청 → 안드로이드 삭제 방지
+     ② 하트비트로 '지워졌는지' 감지 → 지워졌으면 빨간 경고
+     ③ 인앱(카톡 등) 브라우저면 Chrome 으로 열라고 안내 + 주소 복사
+     ④ 클라우드 꺼져 있으면 켜라고 안내 (다른 기기·PC 백업)
+   ═══════════════════════════════════════════════════════════ */
+const LS_HEARTBEAT='scanapp_heartbeat', IDB_HEARTBEAT='__heartbeat__';
+let _storageDurable=false;
+
+async function requestPersistentStorage(){
+  try{
+    if(navigator.storage && navigator.storage.persist){
+      let ok=false;
+      try{ ok=await navigator.storage.persisted(); }catch(e){}
+      if(!ok){ try{ ok=await navigator.storage.persist(); }catch(e){} }
+      _storageDurable=ok;
+      console.log('[저장] 영구저장 '+(ok?'허용됨 ✅':'미허용 ⚠️'));
+      return ok;
+    }
+  }catch(e){ console.warn('[저장] persist 요청 실패',e); }
+  return false;
+}
+
+/* 한국에서 흔한 인앱 브라우저 + 안드로이드 WebView 표식 감지 */
+function _detectInAppBrowser(){
+  const ua=(navigator.userAgent||'');
+  const pats=[['KAKAOTALK','카카오톡'],['NAVER(','네이버'],['NAVER ','네이버'],
+    ['Instagram','인스타그램'],['FBAN','페이스북'],['FBAV','페이스북'],
+    ['Line/','라인'],['DaumApps','다음'],['band','밴드'],
+    ['everytimeApp','에브리타임'],['; wv)','앱']];
+  for(const p of pats){ if(ua.indexOf(p[0])>=0) return p[1]; }
+  return '';
+}
+
+function _showStorageWarn(html,color){
+  const el=$('storageWarn'); if(!el) return;
+  el.innerHTML=html;
+  el.style.display='';
+  if(color==='red'){ el.style.background='#fdecea'; el.style.borderColor='#ff3b30'; el.style.color='#8a1c12'; }
+  else { el.style.background='#fff3cd'; el.style.borderColor='#ff9500'; el.style.color='#7a4b00'; }
+}
+
+function _bindStorageWarnBtns(){
+  const b=$('storageCopyUrl');
+  if(b) b.onclick=()=>{
+    const u=location.href.split('?')[0];
+    try{ navigator.clipboard.writeText(u); toast('🔗 주소 복사됨 — Chrome 주소창에 붙여넣어 여세요'); }
+    catch(e){ toast('복사 실패 — 주소를 길게 눌러 복사하세요'); }
+  };
+  const c=$('storageOpenCloud');
+  if(c) c.onclick=()=>{ const fb=$('btnFirebase'); if(fb) fb.click(); };
+}
+
+/* 하트비트: 지난번에 이 앱을 쓴 흔적(IDB)이 있는데 localStorage가 비었으면 = 지워진 것 */
+async function _storageHeartbeat(){
+  let lsSeen=null, idbSeen=null;
+  try{ lsSeen=localStorage.getItem(LS_HEARTBEAT); }catch(e){}
+  try{ idbSeen=await idbGet(IDB_HEARTBEAT); }catch(e){}
+  const now=String(Date.now());
+  try{ localStorage.setItem(LS_HEARTBEAT,now); }catch(e){}
+  try{ await idbPut(IDB_HEARTBEAT,now); }catch(e){}
+  return { wiped: !!(idbSeen && !lsSeen) };
+}
+
+async function guardStorageDurability(){
+  const persisted=await requestPersistentStorage();
+  const inApp=_detectInAppBrowser();
+  let hb={wiped:false};
+  try{ hb=await _storageHeartbeat(); }catch(e){}
+  const cloudOn=!!_fbDb;
+
+  /* localStorage 자체가 막혀 있는지 즉시 검사 (시크릿 모드 등) */
+  let lsBlocked=false;
+  try{ localStorage.setItem('__probe__','1'); if(localStorage.getItem('__probe__')!=='1') lsBlocked=true; localStorage.removeItem('__probe__'); }
+  catch(e){ lsBlocked=true; }
+
+  /* ☁️ 클라우드가 연결돼 있으면 자료는 클라우드에 안전 → 겁주는 경고는 안 띄운다.
+     인앱 브라우저일 때만 "크롬 권장"을 가볍게 안내 */
+  if(cloudOn){
+    if(inApp){
+      _showStorageWarn('ℹ️ 지금 '+inApp+' 안의 브라우저로 열려 있어요. 대부분 괜찮지만, '
+        +'더 안정적으로 쓰려면 <b>Chrome</b> 으로 여는 걸 권장해요.<br>'
+        +'<button id="storageCopyUrl" style="margin-top:8px;padding:7px 14px;border:none;border-radius:10px;background:#ff9500;color:#fff;font-weight:700;font-size:12px;cursor:pointer">🔗 주소 복사</button>','warn');
+      _bindStorageWarnBtns();
+    }
+    return;
+  }
+
+  /* 이하 — 클라우드 자동연결이 실패한 예외 상황(네트워크 등)에서만 강한 경고 */
+  if(lsBlocked){
+    _showStorageWarn('🚫 <b>이 브라우저는 저장을 막고 있습니다.</b><br>'
+      +'시크릿(비공개) 모드이거나 저장이 꺼져 있어요. 일반 Chrome 창에서 열어주세요.','red');
+    return;
+  }
+  if(inApp){
+    _showStorageWarn('⚠️ <b>지금 '+inApp+' 안의 브라우저로 열려 있어요.</b><br>'
+      +'이런 화면은 닫으면 저장이 사라집니다. 오른쪽 위 <b>⋮ → 다른 브라우저(Chrome)로 열기</b>를 눌러 여세요.<br>'
+      +'<button id="storageCopyUrl" style="margin-top:8px;padding:7px 14px;border:none;border-radius:10px;background:#ff3b30;color:#fff;font-weight:700;font-size:12px;cursor:pointer">🔗 주소 복사</button>','red');
+    _bindStorageWarnBtns();
+    return;
+  }
+  if(hb.wiped){
+    _showStorageWarn('⚠️ <b>저장이 유지되지 않는 환경입니다.</b> 지난번 저장한 내용이 사라졌어요.<br>'
+      +'가장 안전한 방법: <b>☁️ 클라우드 동기화</b>를 켜세요. Chrome 으로 열면 더 안전합니다.<br>'
+      +'<button id="storageOpenCloud" style="margin-top:8px;padding:7px 14px;border:none;border-radius:10px;background:#ff3b30;color:#fff;font-weight:700;font-size:12px;cursor:pointer">☁️ 클라우드 동기화 켜기</button>','red');
+    _bindStorageWarnBtns();
+    return;
+  }
+  if(!persisted){   /* 여기 도달 = 클라우드 미연결 상태 */
+    _showStorageWarn('💡 <b>저장이 아직 "임시" 상태예요.</b> 안드로이드가 공간이 부족하면 지울 수 있어요.<br>'
+      +'가장 안전한 방법: <b>☁️ 동기화</b>를 눌러 클라우드 저장을 켜세요. (다른 폰·PC 에서도 열려요)<br>'
+      +'<button id="storageOpenCloud" style="margin-top:8px;padding:7px 14px;border:none;border-radius:10px;background:#ff9500;color:#fff;font-weight:700;font-size:12px;cursor:pointer">☁️ 클라우드 동기화 켜기</button>','warn');
+    _bindStorageWarnBtns();
+  }
+}
+
 (async function init(){
   loadData();
   try{await openIDB();}catch(e){console.error(e);}
@@ -6019,6 +6165,8 @@ $('secureCancel').onclick=()=>{
       }).catch(()=>{});
     }
   }
+  /* 🛡 저장 지속성 보호 — 영구저장 요청 + 저장 유실 감지/안내 (실패해도 앱은 계속) */
+  try{ await guardStorageDurability(); }catch(e){ console.warn('[저장보호]',e); }
   refreshCatSelects();refreshKeyState();buildPinPad();
   $('appVer').textContent='🔄 '+APP_VER;   /* 🔄 = 눌러서 새로고침 */
   document.title='📷 사진 스캐너 '+APP_VER;   /* 탭 제목도 같이 */
