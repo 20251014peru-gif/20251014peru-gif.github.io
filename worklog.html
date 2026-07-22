@@ -1261,7 +1261,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">…</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <span id="status" class="status"><span class="dot"></span><span id="statusText">연결 중…</span></span>
+        <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
+        <a class="nav-btn" href="contacts.html" target="_blank" style="background:#0891b2;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">📋 연락처</a>
+        <a class="nav-btn" href="staff.html" target="_blank" style="background:#6366f1;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">👥 직원</a>
+        <button class="nav-btn" id="btnQuickJournal" style="background:#f59e0b;color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer" title="자주 쓰는 일지 빠른 진입">📓 일지</button>
+        <button class="nav-btn nav-back" id="btnBack" title="이전 화면" disabled>↶ 뒤로</button>
+        <span id="status" class="status" style="margin-left:auto"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <button class="nav-btn" id="btnGCal" title="구글 캘린더 연동" style="background:#fff;border:1.5px solid #dbe6f4;color:#444;display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
           <img src="https://www.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png" style="width:18px;height:18px;object-fit:cover;border-radius:3px"> 연동됨
         </button>
@@ -1272,11 +1277,6 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button class="nav-btn" id="btnPurgeOldCal" onclick="window.gcalPurgeOldWorkSchedule&&window.gcalPurgeOldWorkSchedule()" style="background:#5f6368;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="예전에 캘린더에 쌓인 예정·업무 이벤트 일괄 삭제 (일회성)">🗑️ 옛예정·업무비우기</button>
         <!-- 임시:옛캘린더정리 버튼 끝 -->
         <button class="nav-btn" onclick="window.gcalPullAll&&window.gcalPullAll(false)" style="background:#1a73e8;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 캘린더에서 새 예정 가져오기">📥 구글←가져오기</button>
-        <button class="nav-btn nav-back" id="btnBack" title="이전 화면" disabled>↶ 뒤로</button>
-        <a class="nav-btn" href="staff.html" target="_blank" style="background:#6366f1;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">👥 직원</a>
-        <a class="nav-btn" href="contacts.html" target="_blank" style="background:#0891b2;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">📋 연락처</a>
-        <button class="nav-btn" id="btnQuickJournal" style="background:#f59e0b;color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer" title="자주 쓰는 일지 빠른 진입">📓 일지</button>
-        <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
       </div>
     </div>
 
@@ -4289,7 +4289,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         e.stopPropagation();
         const en=(typeof entries!=='undefined')&&entries.find(x=>x.id===btn.dataset.scopy);
         if(!en) return;
-        const txt=[en.title,en.body].filter(Boolean).join('\n');
+        const txt=(en.body||'');
         navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>{ if(typeof toast==='function') toast('복사됐어요'); });
       });
     });
@@ -4334,7 +4334,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           btn.addEventListener('click',()=>{
             const en=(typeof entries!=='undefined')&&entries.find(x=>x.id===btn.dataset.scopy2);
             if(!en) return;
-            const txt=[en.title,en.body].filter(Boolean).join('\n');
+            const txt=(en.body||'');
             navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>{ if(typeof toast==='function') toast('복사됐어요'); });
           });
         });
@@ -8395,7 +8395,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         e.stopPropagation();
         var en = entries.find(function(x) { return x.id === btn.dataset.scopy; });
         if (!en) return;
-        var txt = [en.title, bodyPreview(en.body)].filter(Boolean).join('\n');
+        var txt = (bodyPreview(en.body)||'');
         if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function() {
           if (typeof toast === 'function') toast('복사됐어요');
         });
@@ -8494,7 +8494,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
             e.stopPropagation();
             var en = entries.find(function(x) { return x.id === btn.dataset.scopy2; });
             if (!en) return;
-            var txt = [en.title, bodyPreview(en.body)].filter(Boolean).join('\n');
+            var txt = (bodyPreview(en.body)||'');
             if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function() {
               if (typeof toast === 'function') toast('복사됐어요');
             });
