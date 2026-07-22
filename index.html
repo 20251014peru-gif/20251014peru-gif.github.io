@@ -1669,7 +1669,7 @@ initAptSido();
   }
   function doCopy(id){
     var m=get(id); if(!m) return;
-    var parts=[]; if(m.title) parts.push(m.title); if(m.body) parts.push(m.body);
+    var parts=[]; if(m.body) parts.push(m.body);
     (m.todos||[]).forEach(function(t){ parts.push((t.done?'☑ ':'☐ ')+(t.text||'')); });
     var txt=parts.join('\n').trim();
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){ toast('📋 복사됐어요'); }).catch(function(){ fallbackCopy(txt); }); } else fallbackCopy(txt);
