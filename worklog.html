@@ -1463,11 +1463,14 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           <label style="font-size:12px;font-weight:700;color:#7a92a8;display:flex;align-items:center;gap:4px">특식
             <input type="number" id="expMealPriceS" min="0" step="500" style="width:76px;height:36px;padding:0 8px;border:1.5px solid #fbbf24;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;background:#fffbea;outline:none;text-align:right">
           </label>
+          <label style="font-size:12px;font-weight:700;color:#c2410c;display:flex;align-items:center;gap:4px">복날특식
+            <input type="number" id="expMealPriceB" min="0" step="500" style="width:76px;height:36px;padding:0 8px;border:1.5px solid #fb923c;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;background:#fff7ed;outline:none;text-align:right">
+          </label>
           <button type="button" id="expMealStaffBtn" style="height:38px;padding:0 14px;border-radius:10px;border:1.5px solid #3f7cb8;background:#fff;color:#3f7cb8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">👥 명단 관리</button>
           <button type="button" id="expMealCopyBtn" style="height:38px;padding:0 16px;border-radius:10px;border:1.5px solid #16a34a;background:#16a34a;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📑 엑셀 복사</button>
           <span id="expMealStatus" style="font-size:12px;color:#aab8c8;font-weight:600;margin-left:auto"></span>
         </div>
-        <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">셀 클릭=체크 · 날짜 클릭=열 전체 · ⚡=평일 채우기(경비 A조=홀수·B조=짝수) · 비고 클릭=특식→휴무→해제 · 공휴일 자동 · 새 직원은 평일 자동 1</div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">셀 클릭=체크 · 날짜 클릭=열 전체 · ⚡=평일 채우기(경비 A조=홀수·B조=짝수) · 비고 클릭=특식→복날특식→휴무→해제 · 공휴일 자동 · 새 직원은 평일 자동 1</div>
         <div id="expMealGrid" style="overflow-x:auto;margin-bottom:20px"></div>
         <div id="expMealSummary" style="overflow-x:auto"></div>
       </div>
@@ -2924,7 +2927,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260803-182548"></script>
+<script src="worklog.js?v=v45-20260804-041203"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -10667,7 +10670,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         if(meal&&meal.total>0){
           var mt=Math.round(meal.total*0.1);
           map['기타'].push({__virtual:true, title:'관리비 중식대', supplyAmt:meal.total, taxAmt:mt, amount:meal.total+mt,
-            memo:'중식 '+meal.count+'건 (일반 '+meal.normal+' · 특식 '+meal.special+')'});
+            memo:'중식 '+meal.count+'건 (일반 '+meal.normal+' · 특식 '+meal.special+((meal.boknal||0)>0?' · 복날특식 '+meal.boknal:'')+')'});
         }
       }
     }catch(e){ console.error('[정산표 중식]',e); }
@@ -11029,9 +11032,11 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       /* 필드 보정 */
       rec.staff=rec.staff||[]; rec.checks=rec.checks||{};
       rec.specialDays=rec.specialDays||[]; rec.offDays=rec.offDays||[];
+      rec.boknalDays=rec.boknalDays||[];
       rec.offNames=rec.offNames||{};
       if(!rec.priceNormal) rec.priceNormal=8000;
       if(!rec.priceSpecial) rec.priceSpecial=10000;
+      if(!rec.priceBoknal) rec.priceBoknal=15000;
       _cur=rec; return;
     }
     var auto=autoOffDays(ym);
@@ -11039,8 +11044,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(!prev.length) prev=JSON.parse(JSON.stringify(DEFAULT_STAFF));
     var prevRec=(typeof entries!=='undefined')?entries.filter(function(e){return e.kind==='meal_month'&&e.ym<ym;}).sort(function(a,b){return (b.ym||'').localeCompare(a.ym||'');})[0]:null;
     _cur={__virtual:true, kind:'meal_month', ym:ym, date:ym+'-01', title:ym+' 중식이용내역',
-      staff:prev, checks:{}, specialDays:[], offDays:auto.days, offNames:auto.names,
-      priceNormal:prevRec&&prevRec.priceNormal||8000, priceSpecial:prevRec&&prevRec.priceSpecial||10000};
+      staff:prev, checks:{}, specialDays:[], boknalDays:[], offDays:auto.days, offNames:auto.names,
+      priceNormal:prevRec&&prevRec.priceNormal||8000, priceSpecial:prevRec&&prevRec.priceSpecial||10000,
+      priceBoknal:prevRec&&prevRec.priceBoknal||15000};
     /* 새 달 생성 시 전원 평일 자동 채움 (경비는 홀짝 조 반영) */
     _cur.staff.forEach(function(s){ _cur.checks[s.name]=eligibleDays(s); });
   }
@@ -11051,9 +11057,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     _saveTimer=setTimeout(function(){
       try{
         var payload={kind:'meal_month', ym:_cur.ym, date:_cur.ym+'-01', title:_cur.ym+' 중식이용내역',
-          staff:_cur.staff, checks:_cur.checks, specialDays:_cur.specialDays,
+          staff:_cur.staff, checks:_cur.checks, specialDays:_cur.specialDays, boknalDays:_cur.boknalDays||[],
           offDays:_cur.offDays, offNames:_cur.offNames,
-          priceNormal:Number(_cur.priceNormal)||8000, priceSpecial:Number(_cur.priceSpecial)||10000};
+          priceNormal:Number(_cur.priceNormal)||8000, priceSpecial:Number(_cur.priceSpecial)||10000,
+          priceBoknal:Number(_cur.priceBoknal)||15000};
         if(_cur.__virtual){
           payload.createdAt=Date.now();
           if(typeof addRecord==='function'){ var rec=addRecord(payload); _cur.id=rec.id; delete _cur.__virtual; }
@@ -11073,27 +11080,30 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   /* ── 통계 (외부 노출: 정산표 연동) ── */
   function calcPerson(name){
     var arr=(_cur.checks[name]||[]);
-    var sp=_cur.specialDays||[];
-    var special=arr.filter(function(d){ return sp.indexOf(d)>=0; }).length;
+    var sp=_cur.specialDays||[], bk=_cur.boknalDays||[];
+    var boknal=arr.filter(function(d){ return bk.indexOf(d)>=0; }).length;
+    var special=arr.filter(function(d){ return bk.indexOf(d)<0 && sp.indexOf(d)>=0; }).length;
     var total=arr.length;
-    var normal=total-special;
-    return {total:total, normal:normal, special:special,
-      amtN:normal*(Number(_cur.priceNormal)||0), amtS:special*(Number(_cur.priceSpecial)||0),
-      amt:normal*(Number(_cur.priceNormal)||0)+special*(Number(_cur.priceSpecial)||0)};
+    var normal=total-special-boknal;
+    var pn=Number(_cur.priceNormal)||0, ps=Number(_cur.priceSpecial)||0, pb=Number(_cur.priceBoknal)||0;
+    return {total:total, normal:normal, special:special, boknal:boknal,
+      amtN:normal*pn, amtS:special*ps, amtB:boknal*pb,
+      amt:normal*pn+special*ps+boknal*pb};
   }
   window.getMealMonthTotal=function(ym){
     var rec=findMealRec(ym);
     if(!rec||!rec.staff||!rec.staff.length) return null;
-    var pn=Number(rec.priceNormal)||8000, ps=Number(rec.priceSpecial)||10000;
-    var sp=rec.specialDays||[], checks=rec.checks||{};
-    var cnt=0, special=0;
+    var pn=Number(rec.priceNormal)||8000, ps=Number(rec.priceSpecial)||10000, pb=Number(rec.priceBoknal)||15000;
+    var sp=rec.specialDays||[], bk=rec.boknalDays||[], checks=rec.checks||{};
+    var cnt=0, special=0, boknal=0;
     rec.staff.forEach(function(s){
       var arr=checks[s.name]||[];
       cnt+=arr.length;
-      special+=arr.filter(function(d){ return sp.indexOf(d)>=0; }).length;
+      boknal+=arr.filter(function(d){ return bk.indexOf(d)>=0; }).length;
+      special+=arr.filter(function(d){ return bk.indexOf(d)<0 && sp.indexOf(d)>=0; }).length;
     });
-    var normal=cnt-special;
-    return {count:cnt, normal:normal, special:special, total:normal*pn+special*ps};
+    var normal=cnt-special-boknal;
+    return {count:cnt, normal:normal, special:special, boknal:boknal, total:normal*pn+special*ps+boknal*pb};
   };
 
   /* ── 월 셀렉트 ── */
@@ -11121,9 +11131,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(!_cur||_cur.ym!==ym) loadMonth(ym);
     var pn=g('expMealPriceN'); if(pn&&document.activeElement!==pn) pn.value=_cur.priceNormal;
     var ps=g('expMealPriceS'); if(ps&&document.activeElement!==ps) ps.value=_cur.priceSpecial;
+    var pb=g('expMealPriceB'); if(pb&&document.activeElement!==pb) pb.value=_cur.priceBoknal;
     var scrollLeft=box.scrollLeft||0;
     var n=daysInMonth(ym);
-    var sp=_cur.specialDays, off=_cur.offDays;
+    var sp=_cur.specialDays, bk=_cur.boknalDays||[], off=_cur.offDays;
     var days=[]; for(var d=1;d<=n;d++) days.push(d);
 
     function colBg(d){
@@ -11131,6 +11142,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       if(off.indexOf(d)>=0) return '#fde8d8';           /* 공휴일/휴무 */
       if(w===0) return '#fde8e8';                        /* 일 */
       if(w===6) return '#e8f0fa';                        /* 토 */
+      if(bk.indexOf(d)>=0) return '#fdba74';             /* 복날특식 */
       if(sp.indexOf(d)>=0) return '#fef08a';             /* 특식 */
       return '#fff';
     }
@@ -11174,7 +11186,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         +' <button type="button" data-fillrow="'+esc(s.name)+'" title="평일 전체 채우기/비우기 (경비는 홀짝 조 반영)" style="border:none;background:none;cursor:pointer;font-size:11px;padding:0 2px">⚡</button></th>';
       days.forEach(function(d){
         var on=arr.indexOf(d)>=0;
-        html+='<td data-cell="'+esc(s.name)+'|'+d+'" style="'+TD+';cursor:pointer;background:'+(on?(sp.indexOf(d)>=0?'#fde047':'#dbeafe'):colBg(d))+';font-weight:700;color:#1e3a8a">'+(on?'1':'')+'</td>';
+        html+='<td data-cell="'+esc(s.name)+'|'+d+'" style="'+TD+';cursor:pointer;background:'+(on?(bk.indexOf(d)>=0?'#fb923c':(sp.indexOf(d)>=0?'#fde047':'#dbeafe')):colBg(d))+';font-weight:700;color:#1e3a8a">'+(on?'1':'')+'</td>';
       });
       html+='<td style="'+TD+';font-weight:800;color:#0C447C;background:#f0f6ff">'+(arr.length||'')+'</td></tr>';
     });
@@ -11188,16 +11200,17 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       html+='<td style="'+TD+';background:#eef5ff;font-weight:800;color:#0C447C">'+(c||'')+'</td>';
     });
     html+='<td style="'+TD+';background:#0C447C;color:#fff;font-weight:800">'+grand+'</td></tr>';
-    /* 비고 행 (클릭: 없음→특식→휴무→없음 · 공휴일 이름/특식 표시) */
-    html+='<tr><th style="'+NAME+';color:#94a3b8" title="비고 칸 클릭: 특식 → 휴무 → 해제 순환">비고</th>';
+    /* 비고 행 (클릭: 없음→특식→복날특식→휴무→없음 · 공휴일 이름/특식/복날특식 표시) */
+    html+='<tr><th style="'+NAME+';color:#94a3b8" title="비고 칸 클릭: 특식 → 복날특식 → 휴무 → 해제 순환">비고</th>';
     days.forEach(function(d){
-      var isSp=sp.indexOf(d)>=0, isOff=off.indexOf(d)>=0;
-      var txt=isOff?(_cur.offNames[d]||'휴무'):(isSp?'특식':'');
-      var color=isSp&&!isOff?'#b45309':'#c2410c';
-      html+='<td data-bigo="'+d+'" style="'+TD+';cursor:pointer;background:'+(isSp&&!isOff?'#fbbf24':colBg(d))+'" title="클릭: 특식/휴무 지정">'
+      var isBk=bk.indexOf(d)>=0, isSp=sp.indexOf(d)>=0, isOff=off.indexOf(d)>=0;
+      var txt=isOff?(_cur.offNames[d]||'휴무'):(isBk?'복날특식':(isSp?'특식':''));
+      var color=isOff?'#c2410c':(isBk?'#7c2d12':(isSp?'#b45309':'#c2410c'));
+      var bg=isOff?colBg(d):(isBk?'#fb923c':(isSp?'#fbbf24':colBg(d)));
+      html+='<td data-bigo="'+d+'" style="'+TD+';cursor:pointer;background:'+bg+'" title="클릭: 특식/복날특식/휴무 지정">'
         +'<div style="writing-mode:vertical-rl;font-size:9px;font-weight:700;color:'+color+';margin:2px auto;max-height:56px;overflow:hidden">'+esc(txt)+'</div></td>';
     });
-    html+='<td style="'+TD+';font-size:10px;color:#b45309;font-weight:700">특'+sp.length+'</td></tr>';
+    html+='<td style="'+TD+';font-size:10px;color:#b45309;font-weight:700">특'+sp.length+(bk.length?' 복'+bk.length:'')+'</td></tr>';
     html+='</table>';
     box.innerHTML=html;
     box.scrollLeft=scrollLeft;
@@ -11227,18 +11240,26 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         persist(); window.renderExpMeal();
       });
     });
-    /* 비고 순환: 없음 → 특식 → 휴무 → 없음 */
+    /* 비고 순환: 없음 → 특식 → 복날특식 → 휴무 → 없음 */
     box.querySelectorAll('[data-bigo]').forEach(function(td){
       td.addEventListener('click',function(){
         var d=Number(td.dataset.bigo);
-        var iSp=_cur.specialDays.indexOf(d), iOff=_cur.offDays.indexOf(d);
-        if(iSp<0&&iOff<0){
+        if(!_cur.boknalDays) _cur.boknalDays=[];
+        var iSp=_cur.specialDays.indexOf(d), iBk=_cur.boknalDays.indexOf(d), iOff=_cur.offDays.indexOf(d);
+        if(iSp<0&&iBk<0&&iOff<0){
+          /* 없음 → 특식 */
           _cur.specialDays.push(d); _cur.specialDays.sort(function(a,b){return a-b;});
         } else if(iSp>=0){
+          /* 특식 → 복날특식 */
           _cur.specialDays.splice(iSp,1);
+          _cur.boknalDays.push(d); _cur.boknalDays.sort(function(a,b){return a-b;});
+        } else if(iBk>=0){
+          /* 복날특식 → 휴무 */
+          _cur.boknalDays.splice(iBk,1);
           if(iOff<0){ _cur.offDays.push(d); _cur.offDays.sort(function(a,b){return a-b;}); }
           if(!_cur.offNames[d]) _cur.offNames[d]=KR_HOLIDAYS[dstr(_cur.ym,d)]||'휴무';
         } else {
+          /* 휴무 → 없음 */
           _cur.offDays.splice(iOff,1); delete _cur.offNames[d];
         }
         persist(); window.renderExpMeal();
@@ -11268,17 +11289,19 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var TH='padding:8px 10px;font-size:12px;font-weight:800;color:#fff;background:#16a34a;border:1px solid #dbe6f4;white-space:nowrap';
     var TD='padding:7px 10px;font-size:13px;color:#1a2f45;border:1px solid #e8f0fa;background:#fff;text-align:center';
     var TDR=TD+';text-align:right;font-weight:600;white-space:nowrap';
-    var pn=Number(_cur.priceNormal)||0, ps=Number(_cur.priceSpecial)||0;
-    var html='<div style="font-size:14px;font-weight:800;color:#16a34a;margin-bottom:8px">🍚 '+esc(ym)+' 중식 세부 (일반식 '+fmt(pn)+'원 · 특식 '+fmt(ps)+'원)</div>';
-    html+='<table style="border-collapse:collapse;width:100%;min-width:620px"><thead><tr>'
+    var pn=Number(_cur.priceNormal)||0, ps=Number(_cur.priceSpecial)||0, pb=Number(_cur.priceBoknal)||0;
+    var TDB=TD+';color:#c2410c;font-weight:700';
+    var TDRB=TDR+';color:#c2410c';
+    var html='<div style="font-size:14px;font-weight:800;color:#16a34a;margin-bottom:8px">🍚 '+esc(ym)+' 중식 세부 (일반식 '+fmt(pn)+'원 · 특식 '+fmt(ps)+'원 · 복날특식 '+fmt(pb)+'원)</div>';
+    html+='<table style="border-collapse:collapse;width:100%;min-width:720px"><thead><tr>'
       +'<th style="'+TH+'">NO</th><th style="'+TH+'">구분</th><th style="'+TH+'">성명</th><th style="'+TH+'">합계(건)</th>'
-      +'<th style="'+TH+'">일반식</th><th style="'+TH+'">특식</th>'
-      +'<th style="'+TH+'">일반식 금액</th><th style="'+TH+'">특식 금액</th><th style="'+TH+'">합계</th>'
+      +'<th style="'+TH+'">일반식</th><th style="'+TH+'">특식</th><th style="'+TH+';background:#c2410c">복날특식</th>'
+      +'<th style="'+TH+'">일반식 금액</th><th style="'+TH+'">특식 금액</th><th style="'+TH+';background:#c2410c">복날특식 금액</th><th style="'+TH+'">합계</th>'
       +'</tr></thead><tbody>';
-    var T={cnt:0,n:0,s:0,an:0,as:0,a:0};
+    var T={cnt:0,n:0,s:0,b:0,an:0,as:0,ab:0,a:0};
     _cur.staff.forEach(function(s,i){
       var c=calcPerson(s.name);
-      T.cnt+=c.total; T.n+=c.normal; T.s+=c.special; T.an+=c.amtN; T.as+=c.amtS; T.a+=c.amt;
+      T.cnt+=c.total; T.n+=c.normal; T.s+=c.special; T.b+=c.boknal; T.an+=c.amtN; T.as+=c.amtS; T.ab+=c.amtB; T.a+=c.amt;
       html+='<tr>'
         +'<td style="'+TD+';color:#94a3b8">'+(i+1)+'</td>'
         +'<td style="'+TD+'">'+esc(s.group||'')+(s.shift?' '+s.shift+'조':'')+'</td>'
@@ -11286,8 +11309,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         +'<td style="'+TD+';font-weight:800;color:#0C447C">'+(c.total||'')+'</td>'
         +'<td style="'+TD+'">'+(c.normal||'')+'</td>'
         +'<td style="'+TD+';color:#b45309;font-weight:700">'+(c.special||'')+'</td>'
+        +'<td style="'+TDB+'">'+(c.boknal||'')+'</td>'
         +'<td style="'+TDR+'">'+(c.amtN?fmt(c.amtN):'')+'</td>'
         +'<td style="'+TDR+';color:#b45309">'+(c.amtS?fmt(c.amtS):'')+'</td>'
+        +'<td style="'+TDRB+'">'+(c.amtB?fmt(c.amtB):'')+'</td>'
         +'<td style="'+TDR+';font-weight:800;color:#16a34a">'+(c.amt?fmt(c.amt):'')+'</td>'
         +'</tr>';
     });
@@ -11296,8 +11321,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       +'<td style="'+TD+';background:#1a2f45;color:#fff;font-weight:800">'+T.cnt+'</td>'
       +'<td style="'+TD+';background:#1a2f45;color:#cbd5e1">'+T.n+'</td>'
       +'<td style="'+TD+';background:#1a2f45;color:#fbbf24;font-weight:700">'+T.s+'</td>'
+      +'<td style="'+TD+';background:#1a2f45;color:#fdba74;font-weight:700">'+(T.b||'')+'</td>'
       +'<td style="'+TDR+';background:#1a2f45;color:#cbd5e1">'+fmt(T.an)+'</td>'
       +'<td style="'+TDR+';background:#1a2f45;color:#fbbf24">'+fmt(T.as)+'</td>'
+      +'<td style="'+TDR+';background:#1a2f45;color:#fdba74">'+(T.ab?fmt(T.ab):'')+'</td>'
       +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800;font-size:14px">'+fmt(T.a)+'</td>'
       +'</tr></tbody></table>';
     box.innerHTML=html;
@@ -11414,6 +11441,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         var tags=[];
         if(_cur.offNames[d]) tags.push(_cur.offNames[d]);
         if(_cur.specialDays.indexOf(d)>=0) tags.push('특식');
+        if((_cur.boknalDays||[]).indexOf(d)>=0) tags.push('복날특식');
         return tags.join('/');
       }));
       var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
@@ -11441,6 +11469,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var cb=g('expMealCopyBtn');  if(cb&&!cb._b){cb._b=true;cb.addEventListener('click',copyMealToExcel);}
     var pn=g('expMealPriceN'); if(pn&&!pn._b){pn._b=true;pn.addEventListener('change',function(){ if(_cur){ _cur.priceNormal=Number(pn.value)||8000; persist(); window.renderExpMeal(); } });}
     var ps=g('expMealPriceS'); if(ps&&!ps._b){ps._b=true;ps.addEventListener('change',function(){ if(_cur){ _cur.priceSpecial=Number(ps.value)||10000; persist(); window.renderExpMeal(); } });}
+    var pb=g('expMealPriceB'); if(pb&&!pb._b){pb._b=true;pb.addEventListener('change',function(){ if(_cur){ _cur.priceBoknal=Number(pb.value)||15000; persist(); window.renderExpMeal(); } });}
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindMeal);
   else bindMeal();
@@ -11994,6 +12023,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     mv(g('expSettleCopyBtn'),'settle'); mv(g('expSettleCount'),'settle');
     var pn=g('expMealPriceN'); if(pn&&pn.closest('label')) mv(pn.closest('label'),'meal');
     var ps=g('expMealPriceS'); if(ps&&ps.closest('label')) mv(ps.closest('label'),'meal');
+    var pb=g('expMealPriceB'); if(pb&&pb.closest('label')) mv(pb.closest('label'),'meal');
     mv(g('expMealStaffBtn'),'meal'); mv(g('expMealCopyBtn'),'meal'); mv(g('expMealStatus'),'meal');
     mv(g('expLaborAddBtn'),'labor'); mv(g('expLaborCopyBtn'),'labor'); mv(g('expLaborStatus'),'labor');
     /* 비워진 원래 컨트롤 행 숨김 (숨긴 월 셀렉트만 남음) */

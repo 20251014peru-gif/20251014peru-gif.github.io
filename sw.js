@@ -3,7 +3,7 @@
    ⚠️ 배포할 때마다 아래 SW_VERSION 문자열만 새 버전으로 바꾸면
       브라우저가 새 SW를 설치하고 옛 캐시를 전부 지운 뒤 1회 자동 새로고침한다.
    ⚠️ 같은 출처(github.io)만 처리하고 Firebase·구글 등 외부 요청은 건드리지 않는다. */
-const SW_VERSION = 'v45-20260803-182548';
+const SW_VERSION = 'v45-20260804-041203';
 const CACHE_NAME = 'worklog-' + SW_VERSION;
 
 /* 설치: 즉시 대기 해제 (waiting 단계 건너뜀) */
