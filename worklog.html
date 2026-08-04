@@ -2927,7 +2927,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260804-041203"></script>
+<script src="worklog.js?v=v45-20260804-132536"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -11487,14 +11487,15 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     {k:'week',   label:'주휴근로수당'},
     {k:'hol',    label:'휴일연장수당'},
     {k:'skill',  label:'업무능력수당'},
+    {k:'fitness',label:'체력단련비'},          /* 퇴직금 산정 포함 · 상시 수당 */
     {k:'retro',  label:'비정기분 소급급여'},   /* 퇴직금에 미포함 · 인당단가에만 가산 */
     {k:'health', label:'건강보험'},
     {k:'pension',label:'국민연금'},
     {k:'employ', label:'고용보험'}
   ];
   var DEFAULT_ROWS=[
-    {pos:'시설소장', name:'안영삼', base:0, ot:0, week:0, hol:0, skill:0, retro:0, health:0, pension:0, employ:0},
-    {pos:'시설주임', name:'조태경', base:0, ot:0, week:0, hol:0, skill:0, retro:0, health:0, pension:0, employ:0}
+    {pos:'시설소장', name:'안영삼', base:0, ot:0, week:0, hol:0, skill:0, fitness:0, retro:0, health:0, pension:0, employ:0},
+    {pos:'시설주임', name:'조태경', base:0, ot:0, week:0, hol:0, skill:0, fitness:0, retro:0, health:0, pension:0, employ:0}
   ];
   /* 월정산 기본 항목 (정기 발생분 — 매월 금액만 갱신) */
   var DEFAULT_MONTHLY=[
@@ -11514,9 +11515,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
   function calcRow(r){
     var base=Number(r.base)||0, ot=Number(r.ot)||0, week=Number(r.week)||0, hol=Number(r.hol)||0, skill=Number(r.skill)||0;
+    var fit=Number(r.fitness)||0;  /* 체력단련비 — 퇴직금 산정 포함 (상시 수당) */
     var retro=Number(r.retro)||0;  /* 비정기분 소급급여 — 퇴직금 산정 제외 */
-    var sev=Math.round((base+ot+week+hol+skill)/12);  /* 퇴직금 = (총급여+연장+주휴+휴일연장+업무능력)/12, 소급급여 미포함 */
-    var unit=base+ot+week+hol+skill+sev+retro+(Number(r.health)||0)+(Number(r.pension)||0)+(Number(r.employ)||0);
+    var sev=Math.round((base+ot+week+hol+skill+fit)/12);  /* 퇴직금 = (총급여+연장+주휴+휴일연장+업무능력+체력단련비)/12, 소급급여 미포함 */
+    var unit=base+ot+week+hol+skill+fit+sev+retro+(Number(r.health)||0)+(Number(r.pension)||0)+(Number(r.employ)||0);
     return {sev:sev, unit:unit};
   }
   function calcTotal(rows){ return rows.reduce(function(s,r){ return s+calcRow(r).unit; },0); }
@@ -11608,6 +11610,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     html+='<table style="border-collapse:collapse;width:100%;min-width:1020px"><thead><tr>'
       +'<th style="'+TH+'">직위</th><th style="'+TH+'">구분</th><th style="'+TH+'">총급여</th>'
       +'<th style="'+TH+'">연장근로수당</th><th style="'+TH+'">주휴근로수당</th><th style="'+TH+'">휴일연장수당</th><th style="'+TH+'">업무능력수당</th>'
+      +'<th style="'+TH+';background:#0e7490">체력단련비</th>'
       +'<th style="'+TH+';background:#7a92a8">퇴직금</th>'
       +'<th style="'+TH+';background:#c2410c">비정기분<br>소급급여</th>'
       +'<th style="'+TH+'">건강보험</th><th style="'+TH+'">국민연금</th><th style="'+TH+'">고용보험</th>'
@@ -11623,6 +11626,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         +'<td style="'+TDR+'">'+(r.week?fmt(r.week):'')+'</td>'
         +'<td style="'+TDR+'">'+(r.hol?fmt(r.hol):'')+'</td>'
         +'<td style="'+TDR+'">'+(r.skill?fmt(r.skill):'')+'</td>'
+        +'<td style="'+TDR+';background:#ecfeff;color:#0e7490;font-weight:700">'+(r.fitness?fmt(r.fitness):'')+'</td>'
         +'<td style="'+TDR+';background:#f7faff;color:#7a92a8;font-weight:700">'+(c.sev?fmt(c.sev):'')+'</td>'
         +'<td style="'+TDR+';background:#fff7ed;color:#c2410c;font-weight:700">'+(r.retro?fmt(r.retro):'')+'</td>'
         +'<td style="'+TDR+'">'+(r.health?fmt(r.health):'')+'</td>'
@@ -11633,7 +11637,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     });
     var total=calcTotal(_cur.rows);
     html+='<tr>'
-      +'<td colspan="12" style="'+TD+';background:#1a2f45;color:#fff;font-weight:800;font-size:14px">합계금액</td>'
+      +'<td colspan="13" style="'+TD+';background:#1a2f45;color:#fff;font-weight:800;font-size:14px">합계금액</td>'
       +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800;font-size:15px">'+(total?fmt(total):'')+'</td>'
       +'</tr></tbody></table>';
     box.innerHTML=html;
