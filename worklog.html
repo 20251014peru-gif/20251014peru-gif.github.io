@@ -2927,7 +2927,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260804-132536"></script>
+<script src="worklog.js?v=v45-20260805-111921"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -11037,6 +11037,16 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       if(!rec.priceNormal) rec.priceNormal=8000;
       if(!rec.priceSpecial) rec.priceSpecial=10000;
       if(!rec.priceBoknal) rec.priceBoknal=15000;
+      /* 정식 공휴일은 항상 휴무로 보정 (기존 레코드에도 이름 반영) */
+      var _n=daysInMonth(ym);
+      for(var _d=1;_d<=_n;_d++){
+        var _nm=KR_HOLIDAYS[dstr(ym,_d)];
+        if(_nm){
+          if(rec.offDays.indexOf(_d)<0) rec.offDays.push(_d);
+          if(!rec.offNames[_d]||rec.offNames[_d]==='휴무') rec.offNames[_d]=_nm;
+        }
+      }
+      rec.offDays.sort(function(a,b){return a-b;});
       _cur=rec; return;
     }
     var auto=autoOffDays(ym);
@@ -11079,8 +11089,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
   /* ── 통계 (외부 노출: 정산표 연동) ── */
   function calcPerson(name){
-    var arr=(_cur.checks[name]||[]);
-    var sp=_cur.specialDays||[], bk=_cur.boknalDays||[];
+    var raw=(_cur.checks[name]||[]);
+    var sp=_cur.specialDays||[], bk=_cur.boknalDays||[], off=_cur.offDays||[];
+    var arr=raw.filter(function(d){ return off.indexOf(d)<0; });   /* 휴무일 제외 (식사 없음) */
     var boknal=arr.filter(function(d){ return bk.indexOf(d)>=0; }).length;
     var special=arr.filter(function(d){ return bk.indexOf(d)<0 && sp.indexOf(d)>=0; }).length;
     var total=arr.length;
@@ -11094,10 +11105,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var rec=findMealRec(ym);
     if(!rec||!rec.staff||!rec.staff.length) return null;
     var pn=Number(rec.priceNormal)||8000, ps=Number(rec.priceSpecial)||10000, pb=Number(rec.priceBoknal)||15000;
-    var sp=rec.specialDays||[], bk=rec.boknalDays||[], checks=rec.checks||{};
+    var sp=rec.specialDays||[], bk=rec.boknalDays||[], off=rec.offDays||[], checks=rec.checks||{};
     var cnt=0, special=0, boknal=0;
     rec.staff.forEach(function(s){
-      var arr=checks[s.name]||[];
+      var arr=(checks[s.name]||[]).filter(function(d){ return off.indexOf(d)<0; });   /* 휴무일 제외 */
       cnt+=arr.length;
       boknal+=arr.filter(function(d){ return bk.indexOf(d)>=0; }).length;
       special+=arr.filter(function(d){ return bk.indexOf(d)<0 && sp.indexOf(d)>=0; }).length;
@@ -11185,17 +11196,19 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         +shiftBadge
         +' <button type="button" data-fillrow="'+esc(s.name)+'" title="평일 전체 채우기/비우기 (경비는 홀짝 조 반영)" style="border:none;background:none;cursor:pointer;font-size:11px;padding:0 2px">⚡</button></th>';
       days.forEach(function(d){
-        var on=arr.indexOf(d)>=0;
-        html+='<td data-cell="'+esc(s.name)+'|'+d+'" style="'+TD+';cursor:pointer;background:'+(on?(bk.indexOf(d)>=0?'#fb923c':(sp.indexOf(d)>=0?'#fde047':'#dbeafe')):colBg(d))+';font-weight:700;color:#1e3a8a">'+(on?'1':'')+'</td>';
+        var isOffD=off.indexOf(d)>=0;
+        var on=arr.indexOf(d)>=0 && !isOffD;   /* 휴무일은 체크로 표시하지 않음 */
+        html+='<td data-cell="'+esc(s.name)+'|'+d+'" style="'+TD+';cursor:'+(isOffD?'default':'pointer')+';background:'+(on?(bk.indexOf(d)>=0?'#fb923c':(sp.indexOf(d)>=0?'#fde047':'#dbeafe')):colBg(d))+';font-weight:700;color:#1e3a8a">'+(on?'1':'')+'</td>';
       });
-      html+='<td style="'+TD+';font-weight:800;color:#0C447C;background:#f0f6ff">'+(arr.length||'')+'</td></tr>';
+      var rowCnt=arr.filter(function(d){ return off.indexOf(d)<0; }).length;   /* 휴무일 제외 */
+      html+='<td style="'+TD+';font-weight:800;color:#0C447C;background:#f0f6ff">'+(rowCnt||'')+'</td></tr>';
     });
     /* 일별 합계 행 */
     html+='<tr><th style="'+NAME+';background:#eef5ff;color:#0C447C">합계</th>';
     var grand=0;
     days.forEach(function(d){
       var c=0;
-      _cur.staff.forEach(function(s){ if((_cur.checks[s.name]||[]).indexOf(d)>=0) c++; });
+      if(off.indexOf(d)<0){ _cur.staff.forEach(function(s){ if((_cur.checks[s.name]||[]).indexOf(d)>=0) c++; }); }
       grand+=c;
       html+='<td style="'+TD+';background:#eef5ff;font-weight:800;color:#0C447C">'+(c||'')+'</td>';
     });
@@ -11205,8 +11218,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     days.forEach(function(d){
       var isBk=bk.indexOf(d)>=0, isSp=sp.indexOf(d)>=0, isOff=off.indexOf(d)>=0;
       var txt=isOff?(_cur.offNames[d]||'휴무'):(isBk?'복날특식':(isSp?'특식':''));
-      var color=isOff?'#c2410c':(isBk?'#7c2d12':(isSp?'#b45309':'#c2410c'));
-      var bg=isOff?colBg(d):(isBk?'#fb923c':(isSp?'#fbbf24':colBg(d)));
+      var color=isOff?'#b45309':(isBk?'#7c2d12':(isSp?'#b45309':'#c2410c'));
+      /* 비고행 빈칸은 흰색 — 주말/휴일 색 배어나옴 제거. 휴무=살구/복날=주황/특식=노랑만 */
+      var bg=isOff?'#fde8d8':(isBk?'#fb923c':(isSp?'#fbbf24':'#fff'));
       html+='<td data-bigo="'+d+'" style="'+TD+';cursor:pointer;background:'+bg+'" title="클릭: 특식/복날특식/휴무 지정">'
         +'<div style="writing-mode:vertical-rl;font-size:9px;font-weight:700;color:'+color+';margin:2px auto;max-height:56px;overflow:hidden">'+esc(txt)+'</div></td>';
     });
@@ -11219,6 +11233,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     box.querySelectorAll('[data-cell]').forEach(function(td){
       td.addEventListener('click',function(){
         var p=td.dataset.cell.split('|'); var name=p[0], d=Number(p[1]);
+        if((_cur.offDays||[]).indexOf(d)>=0){ if(typeof toast==='function') toast('🚫 휴무일에는 체크할 수 없어요'); return; }
         var arr=_cur.checks[name]=(_cur.checks[name]||[]);
         var i=arr.indexOf(d);
         if(i>=0) arr.splice(i,1); else arr.push(d);
@@ -11230,6 +11245,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     box.querySelectorAll('[data-daycol]').forEach(function(th){
       th.addEventListener('click',function(){
         var d=Number(th.dataset.daycol);
+        if((_cur.offDays||[]).indexOf(d)>=0){ if(typeof toast==='function') toast('🚫 휴무일에는 체크할 수 없어요'); return; }
         var anyUn=_cur.staff.some(function(s){ return (_cur.checks[s.name]||[]).indexOf(d)<0; });
         _cur.staff.forEach(function(s){
           var arr=_cur.checks[s.name]=(_cur.checks[s.name]||[]);
@@ -11254,10 +11270,11 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
           _cur.specialDays.splice(iSp,1);
           _cur.boknalDays.push(d); _cur.boknalDays.sort(function(a,b){return a-b;});
         } else if(iBk>=0){
-          /* 복날특식 → 휴무 */
+          /* 복날특식 → 휴무 : 그날 체크 전부 제거 (식사 없음) */
           _cur.boknalDays.splice(iBk,1);
           if(iOff<0){ _cur.offDays.push(d); _cur.offDays.sort(function(a,b){return a-b;}); }
           if(!_cur.offNames[d]) _cur.offNames[d]=KR_HOLIDAYS[dstr(_cur.ym,d)]||'휴무';
+          _cur.staff.forEach(function(s){ var a=_cur.checks[s.name]; if(a){ var k=a.indexOf(d); if(k>=0) a.splice(k,1); } });
         } else {
           /* 휴무 → 없음 */
           _cur.offDays.splice(iOff,1); delete _cur.offNames[d];
