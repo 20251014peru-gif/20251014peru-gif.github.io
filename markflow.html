@@ -2262,7 +2262,7 @@ table.ProseMirror-selectednode {
 <div id="app">
   <div class="topbar">
     <button class="tb" id="btn-side" title="문서 목록"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button>
-    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver">v1.1</span></div>
+    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver">v1.2</span></div>
     <button class="tb" id="btn-new" title="새 문서"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg><span class="lbl">새 문서</span></button>
     <div class="grow"></div>
     <button class="tb" id="btn-ai" title="AI 보정 설정"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.6L18 9l-4.4 1.4L12 15l-1.6-4.6L6 9l4.4-1.4L12 3z"/><path d="M19 14l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z"/></svg><span class="lbl">AI</span></button>
@@ -38852,11 +38852,17 @@ table.ProseMirror-selectednode {
   // 이동 단위: 최상위 블록 + 최상위 목록 항목(li)
   var hoverUnit=null, plusIdx=-1;
   function isEmptyBlockEl(el){ return el.tagName==="P" && el.textContent.replace(/​/g,"").trim()===""; }
+  // 진짜 빈 문단(세그먼트로 저장 안 됨) vs ZWSP만 있는 문단(segmentBlocks가 세그먼트로 유지함) 구분
+  function isTrulyEmptyEl(el){ return el.tagName==="P" && el.textContent.trim()===""; }
   function movableUnits(){
-    // blockIdx = 실제 저장(마크다운 세그먼트) 순번. 빈 문단은 세그먼트가 없으므로 건너뛰고 카운트에서 제외.
+    // blockIdx = 실제 저장(마크다운 세그먼트) 순번. segmentBlocks와 카운트를 반드시 일치시킨다.
     var p=pmEl(); if(!p) return []; var out=[]; var kids=p.children; var seg=0;
     for(var i=0;i<kids.length;i++){ var el=kids[i];
-      if(isEmptyBlockEl(el)) continue;
+      if(isEmptyBlockEl(el)){
+        // 이동 단위로는 노출하지 않음. 단, ZWSP만 든 문단은 segmentBlocks가 세그먼트로 유지하므로 카운트는 올려서 정렬을 맞춘다.
+        if(!isTrulyEmptyEl(el)) seg++;
+        continue;
+      }
       if(el.tagName==="UL"||el.tagName==="OL"){ var any=false;
         for(var j=0;j<el.children.length;j++){ var li=el.children[j]; if(li.tagName==="LI"){ out.push({el:li,type:"li",blockIdx:seg,liIdx:j,listEl:el}); any=true; } }
         if(!any) out.push({el:el,type:"block",blockIdx:seg});
@@ -38893,7 +38899,16 @@ table.ProseMirror-selectednode {
   function caretToBlock(idx){ var p=pmEl(); if(!p) return; var el=p.children[idx]; if(!el){ editor.focus(); return; } try{ var range=document.createRange(); range.selectNodeContents(el); range.collapse(false); var sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range); }catch(e){} editor.focus(); }
   function commitDoc(cur){ loading=true; editor.setMarkdown(joinBlocks(cur),false); loading=false; var d=current(); d.content=editor.getMarkdown(); d.updated=Date.now(); if(window.__mfResetFold) window.__mfResetFold(); updateCounts(d.content); renderDocs(); scheduleSave(); }
   function insertBlockAfter(idx, md){ var cur=segmentBlocks(editor.getMarkdown()); if(idx<0||idx>=cur.length) idx=cur.length-1; cur.splice(idx+1,0,md); commitDoc(cur); setTimeout(function(){ caretToBlock(idx+1); },40); }
-  function deleteBlock(idx){ var cur=segmentBlocks(editor.getMarkdown()); if(idx<0||idx>=cur.length) return; cur.splice(idx,1); if(!cur.length) cur=["​"]; commitDoc(cur); }
+  // 안전장치: DOM↔세그먼트 인덱스가 어긋나도 대상 블록의 텍스트로 실제 위치를 다시 찾는다.
+  function normTxt(s){ return (s||"").replace(/​/g,"").replace(/[#>*_`~\[\]\(\)!|]/g,"").replace(/^[\s\-\d\.]+/,"").replace(/\s+/g,"").trim(); }
+  function resolveBlockIdx(cur, idx, anchor){
+    var a=normTxt(anchor); if(!a||a.length<3) return idx;
+    if(idx>=0&&idx<cur.length){ var here=normTxt(cur[idx]); if(here===a||here.indexOf(a)===0||a.indexOf(here)===0) return idx; }
+    for(var i=0;i<cur.length;i++){ if(normTxt(cur[i])===a) return i; }
+    for(var j=0;j<cur.length;j++){ var s=normTxt(cur[j]); if(s.length>=3&&(s.indexOf(a)===0||a.indexOf(s)===0)) return j; }
+    return idx;
+  }
+  function deleteBlock(idx, anchor){ var cur=segmentBlocks(editor.getMarkdown()); idx=resolveBlockIdx(cur,idx,anchor); if(idx<0||idx>=cur.length) return; cur.splice(idx,1); if(!cur.length) cur=["​"]; commitDoc(cur); }
   // 목록 항목(li) 조작: 해당 목록 블록의 줄을 편집
   function listItemMarker(line){ var m=line.match(/^(\s*)([-*+]\s\[[ xX]\]\s|[-*+]\s|\d+\.\s)/); if(!m) return "- "; var pre=m[1], mk=m[2]; if(/^\d+\./.test(mk)) return pre+"1. "; if(/\[[ xX]\]/.test(mk)) return pre+mk.replace(/\[[xX]\]/,"[ ]"); return pre+mk; }
   function insertLiAfter(blockIdx, liIdx){ var cur=segmentBlocks(editor.getMarkdown()); if(blockIdx<0||blockIdx>=cur.length) return; var lines=cur[blockIdx].split("\n"); var ref=lines[liIdx]||lines[lines.length-1]||"- "; lines.splice(liIdx+1,0,listItemMarker(ref)); cur[blockIdx]=lines.join("\n"); commitDoc(cur); }
@@ -38923,9 +38938,9 @@ table.ProseMirror-selectednode {
       var lr=dragUnit.listEl.getBoundingClientRect(); l=Math.max(6,lr.left-wr.left)+"px"; rgt=Math.max(6,wr.right-lr.right)+"px";
       dropTarget=insAt;
     } else {
-      // 빈 문단 제외한 세그먼트 블록 기준으로 드롭 위치(세그먼트 순번) 계산
+      // 세그먼트 순번 계산 — movableUnits와 동일 규칙(진짜 빈 문단은 제외, ZWSP 문단은 카운트).
       var sb=[]; var p2=pmEl(); var seg=0; var kk=p2?p2.children:[];
-      for(var m2=0;m2<kk.length;m2++){ if(isEmptyBlockEl(kk[m2])) continue; sb.push({el:kk[m2],seg:seg}); seg++; }
+      for(var m2=0;m2<kk.length;m2++){ if(isEmptyBlockEl(kk[m2])){ if(!isTrulyEmptyEl(kk[m2])) seg++; continue; } sb.push({el:kk[m2],seg:seg}); seg++; }
       var insSeg=sb.length;
       for(var k=0;k<sb.length;k++){ var rb=sb[k].el.getBoundingClientRect(); if(rb.height===0) continue; if(e.clientY<rb.top+rb.height/2){ insSeg=sb[k].seg; break; } }
       if(insSeg<sb.length) top=sb[insSeg].el.getBoundingClientRect().top-wr.top; else top=sb.length?sb[sb.length-1].el.getBoundingClientRect().bottom-wr.top:0;
@@ -38938,7 +38953,7 @@ table.ProseMirror-selectednode {
     document.body.classList.remove("mf-dragging"); if(dropLine) dropLine.style.display="none";
     var was=dragging; dragging=false;
     if(was&&!dragMoved){ openUnitMenu(dragUnit); }
-    else if(was&&dragUnit&&dropTarget>=0){ if(dragUnit.type==="li") moveLi(dragUnit.blockIdx, dragUnit.liIdx, dropTarget); else moveBlock(dragUnit.blockIdx, dropTarget); }
+    else if(was&&dragUnit&&dropTarget>=0){ if(dragUnit.type==="li") moveLi(dragUnit.blockIdx, dragUnit.liIdx, dropTarget); else moveBlock(dragUnit.blockIdx, dropTarget, dragUnit.el?dragUnit.el.textContent:""); }
     dragUnit=null; dropTarget=-1; dragEl=null; dragPid=null;
   }
   var blockMenu=null;
@@ -38952,10 +38967,10 @@ table.ProseMirror-selectednode {
       {lb:"삭제",ic:"🗑",fn:function(){ deleteLi(u.blockIdx,u.liIdx); }},
       {lb:"위로 이동",ic:"↑",fn:function(){ moveLi(u.blockIdx,u.liIdx,u.liIdx-1); }},
       {lb:"아래로 이동",ic:"↓",fn:function(){ moveLi(u.blockIdx,u.liIdx,u.liIdx+2); }}
-    ]; } else { acts=[
-      {lb:"삭제",ic:"🗑",fn:function(){ deleteBlock(u.blockIdx); }},
-      {lb:"위로 이동",ic:"↑",fn:function(){ moveBlock(u.blockIdx,u.blockIdx-1); }},
-      {lb:"아래로 이동",ic:"↓",fn:function(){ moveBlock(u.blockIdx,u.blockIdx+2); }}
+    ]; } else { var anc=u.el?u.el.textContent:""; acts=[
+      {lb:"삭제",ic:"🗑",fn:function(){ deleteBlock(u.blockIdx,anc); }},
+      {lb:"위로 이동",ic:"↑",fn:function(){ moveBlock(u.blockIdx,u.blockIdx-1,anc); }},
+      {lb:"아래로 이동",ic:"↓",fn:function(){ moveBlock(u.blockIdx,u.blockIdx+2,anc); }}
     ]; }
     acts.forEach(function(a,i){ var row=document.createElement("div"); row.className="slash-item"+(i===0?" active":"");
       row.innerHTML='<span class="slash-ic">'+a.ic+'</span><div class="slash-tx"><div class="slash-lb">'+a.lb+'</div></div>';
@@ -38966,8 +38981,8 @@ table.ProseMirror-selectednode {
     blockMenu.style.left=x+"px"; blockMenu.style.top=y+"px";
     setTimeout(function(){ document.addEventListener("mousedown",closeBlockOutside); },0);
   }
-  function moveBlock(from, insAt){
-    var cur=segmentBlocks(editor.getMarkdown()); if(from<0||from>=cur.length) return;
+  function moveBlock(from, insAt, anchor){
+    var cur=segmentBlocks(editor.getMarkdown()); var rf=resolveBlockIdx(cur,from,anchor); if(rf!==from){ insAt+= (rf-from); from=rf; } if(from<0||from>=cur.length) return;
     var item=cur[from]; cur.splice(from,1); var target=insAt>from?insAt-1:insAt; if(target<0)target=0; if(target>cur.length)target=cur.length;
     if(target===from){ return; }
     cur.splice(target,0,item);
