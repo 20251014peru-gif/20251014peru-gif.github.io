@@ -2309,8 +2309,9 @@ table.ProseMirror-selectednode {
   .mf-imgbar button{font-size:12.5px;border:0;background:transparent;color:var(--text-soft);border-radius:6px;padding:7px 10px;cursor:pointer;font-family:var(--sans);white-space:nowrap;}
   .mf-imgbar button:hover{background:var(--accent-soft);color:var(--accent);}
   @media(max-width:760px){ .mf-imgbar button{padding:10px 12px;font-size:14px;} }
-  /* 이미지 드래그 크기 핸들 */
-  .mf-imghandle{position:fixed;z-index:211;width:18px;height:18px;background:var(--accent);border:2px solid #fff;border-radius:4px;cursor:nwse-resize;box-shadow:0 1px 4px rgba(0,0,0,.35);touch-action:none;}
+  /* 이미지 드래그 크기 핸들(가로/세로/모서리) */
+  .mf-imghandle{position:fixed;z-index:211;width:16px;height:16px;background:var(--accent);border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35);touch-action:none;}
+  .mf-imghandle.w{cursor:ew-resize;} .mf-imghandle.h{cursor:ns-resize;} .mf-imghandle.c{cursor:nwse-resize;border-radius:4px;}
   /* 표 크기 선택 그리드 */
   .mf-tblpick{position:fixed;z-index:212;background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:10px 12px;}
   .mf-tblpick .tp-lab{font-size:12.5px;font-weight:700;color:var(--text);padding:0 2px 8px;text-align:center;}
@@ -2382,7 +2383,7 @@ table.ProseMirror-selectednode {
   <div class="topbar">
     <button class="tb" id="btn-side" title="문서 목록"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button>
     <a class="tb" id="btn-home" href="./index.html" title="나의 시스템 홈"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg></a>
-    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v2.0</span></div>
+    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v2.1</span></div>
     <button class="tb" id="btn-refresh" title="최신 버전으로 새로고침 (캐시 무시)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
     <button class="tb" id="btn-new" title="새 문서"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg><span class="lbl">새 문서</span></button>
     <div class="grow"></div>
@@ -38993,35 +38994,43 @@ table.ProseMirror-selectednode {
   }
   function scheduleFold(){ if(foldRaf) cancelAnimationFrame(foldRaf); foldRaf=requestAnimationFrame(function(){ computeFold(); styleColumns(); styleCallouts(); applyImageSizes(); repositionCarets(); if(sideTab==="toc") renderOutline(); }); }
   // 이미지 크기: 코드(⟪wNN⟫)를 alt에 저장 → 매 렌더 시 폭 적용(마크다운엔 alt만 남으므로 유지됨)
+  // 크기 코드: 폭 w(%)·높이 h(px)를 alt에 저장 → 매 렌더 시 적용(마크다운엔 alt만 남으므로 유지)
+  function parseImgAlt(alt){ alt=alt||""; var wm=alt.match(/⟪[^⟫]*w(\d+)[^⟫]*⟫/); var hm=alt.match(/⟪[^⟫]*h(\d+)[^⟫]*⟫/); return {w:wm?parseInt(wm[1],10):null, h:hm?parseInt(hm[1],10):null}; }
+  function imgCode(w,h){ var a=[]; if(w!=null&&w!==100) a.push("w"+w); if(h!=null) a.push("h"+h); return a.length?"⟪"+a.join(" ")+"⟫":""; }
   function applyImageSizes(){
     var view=null; try{ view=editor.wwEditor.view; }catch(e){} if(!view) return;
     var tr=view.state.tr, changed=false;
     view.state.doc.descendants(function(node,pos){
       if(node.type&&node.type.name==="image"){
-        var alt=node.attrs.altText||""; var m=alt.match(/⟪w(\d+)⟫/); var want=m?(m[1]+"%"):null;
-        var cur=(node.attrs.htmlAttrs&&node.attrs.htmlAttrs.width)||null;
-        if(want!==cur){ var attrs=Object.assign({},node.attrs); var ha=Object.assign({},attrs.htmlAttrs||{}); if(want){ ha.width=want; } else { delete ha.width; } attrs.htmlAttrs=ha; tr.setNodeMarkup(pos,null,attrs); changed=true; }
+        var s=parseImgAlt(node.attrs.altText||""); var wantW=(s.w!=null&&s.w!==100)?(s.w+"%"):null; var wantH=(s.h!=null)?(""+s.h):null;
+        var ha=node.attrs.htmlAttrs||{}; var curW=ha.width||null, curH=ha.height||null;
+        if(wantW!==curW||wantH!==curH){ var attrs=Object.assign({},node.attrs); var nha=Object.assign({},ha); if(wantW) nha.width=wantW; else delete nha.width; if(wantH) nha.height=wantH; else delete nha.height; attrs.htmlAttrs=nha; tr.setNodeMarkup(pos,null,attrs); changed=true; }
       }
     });
     if(changed){ tr.setMeta("addToHistory",false); view.dispatch(tr); }
   }
-  // 이미지 클릭 → 크기 조절 바 + 드래그 핸들
-  var imgBar=null, imgBarPos=-1, imgBarIdx=-1, imgHandle=null, imgResizing=false;
-  function closeImgBar(){ if(imgHandle){ imgHandle.remove(); imgHandle=null; } if(imgBar){ imgBar.remove(); imgBar=null; imgBarPos=-1; imgBarIdx=-1; document.removeEventListener("mousedown",closeImgBarOutside); } }
-  function closeImgBarOutside(e){ if(imgResizing) return; if(imgBar&&!imgBar.contains(e.target)&&!(e.target&&e.target.tagName==="IMG")&&e.target!==imgHandle) closeImgBar(); }
+  // 이미지 클릭 → 크기 조절 바 + 드래그 핸들(가로/세로/모서리)
+  var imgBar=null, imgBarPos=-1, imgBarIdx=-1, imgHW=null, imgHH=null, imgHC=null, imgResizing=false;
+  function removeHandles(){ [imgHW,imgHH,imgHC].forEach(function(h){ if(h) h.remove(); }); imgHW=imgHH=imgHC=null; }
+  function closeImgBar(){ removeHandles(); if(imgBar){ imgBar.remove(); imgBar=null; imgBarPos=-1; imgBarIdx=-1; document.removeEventListener("mousedown",closeImgBarOutside); } }
+  function closeImgBarOutside(e){ if(imgResizing) return; if(imgBar&&!imgBar.contains(e.target)&&!(e.target&&e.target.tagName==="IMG")&&e.target!==imgHW&&e.target!==imgHH&&e.target!==imgHC) closeImgBar(); }
   function imageNodePositions(){ var a=[]; var v=null; try{v=editor.wwEditor.view;}catch(e){} if(!v) return a; v.state.doc.descendants(function(n,pos){ if(n.type&&n.type.name==="image") a.push(pos); }); return a; }
-  function setImageSize(pct){
+  function curImgAlt(){ var v=null; try{v=editor.wwEditor.view;}catch(e){} if(!v||imgBarPos<0) return {w:null,h:null}; var node=v.state.doc.nodeAt(imgBarPos); return node?parseImgAlt(node.attrs.altText||""):{w:null,h:null}; }
+  function setImageDims(w, h){
     var v=null; try{v=editor.wwEditor.view;}catch(e){} if(!v||imgBarPos<0) return; var node=v.state.doc.nodeAt(imgBarPos); if(!node||node.type.name!=="image") return;
-    var alt=(node.attrs.altText||"").replace(/\s*⟪w\d+⟫/g,"").replace(/\s+$/,"");
-    if(pct&&pct!==100){ alt=(alt?alt+" ":"")+"⟪w"+pct+"⟫"; }
-    var attrs=Object.assign({},node.attrs); attrs.altText=alt; var ha=Object.assign({},attrs.htmlAttrs||{}); if(pct&&pct!==100){ ha.width=pct+"%"; } else { delete ha.width; } attrs.htmlAttrs=ha;
+    var base=(node.attrs.altText||"").replace(/\s*⟪[^⟫]*⟫/g,"").replace(/\s+$/,""); var code=imgCode(w,h); var alt=code?(base?base+" ":"")+code:base;
+    var ha=Object.assign({},node.attrs.htmlAttrs||{}); delete ha.width; delete ha.height; if(w!=null&&w!==100) ha.width=w+"%"; if(h!=null) ha.height=""+h;
+    var attrs=Object.assign({},node.attrs); attrs.altText=alt; attrs.htmlAttrs=ha;
     var tr=v.state.tr.setNodeMarkup(imgBarPos,null,attrs); v.dispatch(tr); afterImgEdit();
     setTimeout(function(){ repositionImgBar(); },30);
   }
+  function setImageSize(pct){ setImageDims(pct, null); } // 프리셋: 비율 유지(높이 해제)
   function afterImgEdit(){ var d=current(); d.content=editor.getMarkdown(); d.updated=Date.now(); updateCounts(d.content); scheduleSave(); }
   function curImgEl(){ var imgs=pmEl()?pmEl().querySelectorAll("img"):[]; return imgs[imgBarIdx]||null; }
   function repositionImgBar(){ if(!imgBar) return; var el=curImgEl(); if(!el){ closeImgBar(); return; } var r=el.getBoundingClientRect(); var bw=imgBar.offsetWidth||220; var x=Math.min(Math.max(8,r.left), window.innerWidth-bw-8); var y=r.top-imgBar.offsetHeight-8; if(y<8) y=r.bottom+8; imgBar.style.left=x+"px"; imgBar.style.top=y+"px";
-    if(imgHandle){ imgHandle.style.left=(r.right-9)+"px"; imgHandle.style.top=(r.bottom-9)+"px"; } }
+    if(imgHW){ imgHW.style.left=(r.right-8)+"px"; imgHW.style.top=(r.top+r.height/2-8)+"px"; }
+    if(imgHH){ imgHH.style.left=(r.left+r.width/2-8)+"px"; imgHH.style.top=(r.bottom-8)+"px"; }
+    if(imgHC){ imgHC.style.left=(r.right-8)+"px"; imgHC.style.top=(r.bottom-8)+"px"; } }
   function openImgBar(imgEl){
     closeImgBar(); closeTblBar(); if(viewMode) return;
     var imgs=Array.prototype.slice.call(pmEl().querySelectorAll("img")); imgBarIdx=imgs.indexOf(imgEl); var poss=imageNodePositions();
@@ -39030,37 +39039,44 @@ table.ProseMirror-selectednode {
     var lab=document.createElement("span"); lab.className="mf-imgbar-lb"; lab.textContent="크기"; imgBar.appendChild(lab);
     [["작게",30],["중간",50],["크게",75],["원본",100]].forEach(function(o){ var bt=document.createElement("button"); bt.type="button"; bt.textContent=o[0]; bt.addEventListener("mousedown",function(ev){ ev.preventDefault(); setImageSize(o[1]); }); imgBar.appendChild(bt); });
     document.body.appendChild(imgBar);
-    // 드래그 핸들(오른쪽 아래 모서리)
-    imgHandle=document.createElement("div"); imgHandle.className="mf-imghandle"; imgHandle.title="드래그해서 크기 조절";
-    imgHandle.addEventListener("pointerdown", startImgResize);
-    document.body.appendChild(imgHandle);
+    imgHW=document.createElement("div"); imgHW.className="mf-imghandle w"; imgHW.title="가로 크기 조절"; imgHW.addEventListener("pointerdown",function(e){ startImgResize(e,"w"); });
+    imgHH=document.createElement("div"); imgHH.className="mf-imghandle h"; imgHH.title="세로 크기 조절"; imgHH.addEventListener("pointerdown",function(e){ startImgResize(e,"h"); });
+    imgHC=document.createElement("div"); imgHC.className="mf-imghandle c"; imgHC.title="가로·세로 조절"; imgHC.addEventListener("pointerdown",function(e){ startImgResize(e,"wh"); });
+    document.body.appendChild(imgHW); document.body.appendChild(imgHH); document.body.appendChild(imgHC);
     repositionImgBar();
     setTimeout(function(){ document.addEventListener("mousedown",closeImgBarOutside); },0);
   }
-  var imgRS={sx:0,startW:0,contW:0,pid:null};
-  function startImgResize(e){
+  var imgRS={sx:0,sy:0,startW:0,startH:0,contW:0,dir:"wh",pid:null,handle:null,moved:false,lastW:null,lastH:null};
+  function startImgResize(e,dir){
     var el=curImgEl(); if(!el){ return; } e.preventDefault(); e.stopPropagation(); imgResizing=true;
-    var r=el.getBoundingClientRect(); imgRS.sx=e.clientX; imgRS.startW=r.width;
-    var cont=el.parentElement? el.parentElement.clientWidth : (pmEl()?pmEl().clientWidth:r.width); imgRS.contW=cont||r.width;
-    imgRS.pid=e.pointerId; try{ imgHandle.setPointerCapture(imgRS.pid); }catch(_){}
-    imgHandle.addEventListener("pointermove", onImgResizeMove);
-    imgHandle.addEventListener("pointerup", onImgResizeUp);
-    imgHandle.addEventListener("pointercancel", onImgResizeUp);
+    var r=el.getBoundingClientRect();
+    imgRS.sx=e.clientX; imgRS.sy=e.clientY; imgRS.startW=r.width; imgRS.startH=r.height; imgRS.dir=dir; imgRS.moved=false; imgRS.lastW=null; imgRS.lastH=null;
+    imgRS.contW=(el.parentElement?el.parentElement.clientWidth:0)||(pmEl()?pmEl().clientWidth:r.width)||r.width;
+    imgRS.handle=e.currentTarget; imgRS.pid=e.pointerId; try{ imgRS.handle.setPointerCapture(imgRS.pid); }catch(_){}
+    imgRS.handle.addEventListener("pointermove", onImgResizeMove);
+    imgRS.handle.addEventListener("pointerup", onImgResizeUp);
+    imgRS.handle.addEventListener("pointercancel", onImgResizeUp);
     document.body.classList.add("mf-dragging");
   }
   function onImgResizeMove(e){
-    if(!imgResizing) return; e.preventDefault(); var el=curImgEl(); if(!el) return;
-    var newW=imgRS.startW+(e.clientX-imgRS.sx); var pct=Math.round(newW/imgRS.contW*100); if(pct<10)pct=10; if(pct>100)pct=100;
-    el.style.width=pct+"%"; el.style.maxWidth="100%";
-    if(imgBar){ var lb=imgBar.querySelector(".mf-imgbar-lb"); if(lb) lb.textContent=pct+"%"; }
-    var r=el.getBoundingClientRect(); if(imgHandle){ imgHandle.style.left=(r.right-9)+"px"; imgHandle.style.top=(r.bottom-9)+"px"; }
+    if(!imgResizing) return; e.preventDefault(); var el=curImgEl(); if(!el) return; imgRS.moved=true;
+    // 드래그하는 축만 바꾸고 다른 축은 시작값으로 고정 → 가로·세로 따로 조절
+    var wPct=Math.round(imgRS.startW/imgRS.contW*100); if(wPct<10)wPct=10; if(wPct>100)wPct=100;
+    var hPx=Math.round(imgRS.startH); if(hPx<24)hPx=24;
+    if(imgRS.dir.indexOf("w")>=0){ var nw=imgRS.startW+(e.clientX-imgRS.sx); wPct=Math.round(nw/imgRS.contW*100); if(wPct<10)wPct=10; if(wPct>100)wPct=100; }
+    if(imgRS.dir.indexOf("h")>=0){ hPx=Math.round(imgRS.startH+(e.clientY-imgRS.sy)); if(hPx<24)hPx=24; if(hPx>3000)hPx=3000; }
+    el.style.width=wPct+"%"; el.style.maxWidth="100%"; el.style.height=hPx+"px";
+    imgRS.lastW=wPct; imgRS.lastH=hPx;
+    if(imgBar){ var lb=imgBar.querySelector(".mf-imgbar-lb"); if(lb) lb.textContent=wPct+"% × "+hPx+"px"; }
+    var r=el.getBoundingClientRect();
+    if(imgHW){ imgHW.style.left=(r.right-8)+"px"; imgHW.style.top=(r.top+r.height/2-8)+"px"; }
+    if(imgHH){ imgHH.style.left=(r.left+r.width/2-8)+"px"; imgHH.style.top=(r.bottom-8)+"px"; }
+    if(imgHC){ imgHC.style.left=(r.right-8)+"px"; imgHC.style.top=(r.bottom-8)+"px"; }
   }
   function onImgResizeUp(e){
     if(!imgResizing) return; imgResizing=false; document.body.classList.remove("mf-dragging");
-    try{ imgHandle.releasePointerCapture(imgRS.pid); }catch(_){}
-    imgHandle.removeEventListener("pointermove", onImgResizeMove); imgHandle.removeEventListener("pointerup", onImgResizeUp); imgHandle.removeEventListener("pointercancel", onImgResizeUp);
-    var el=curImgEl(); var pct=100; if(el){ var r=el.getBoundingClientRect(); pct=Math.round(r.width/imgRS.contW*100); if(pct<10)pct=10; if(pct>100)pct=100; }
-    setImageSize(pct);
+    if(imgRS.handle){ try{ imgRS.handle.releasePointerCapture(imgRS.pid); }catch(_){} imgRS.handle.removeEventListener("pointermove", onImgResizeMove); imgRS.handle.removeEventListener("pointerup", onImgResizeUp); imgRS.handle.removeEventListener("pointercancel", onImgResizeUp); }
+    if(imgRS.moved && imgRS.lastW!=null){ setImageDims(imgRS.lastW, imgRS.lastH); }
   }
   window.__mfResetFold=function(){ foldSet.clear(); scheduleFold(); };
   function initFold(){
