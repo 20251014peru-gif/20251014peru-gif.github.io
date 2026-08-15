@@ -2094,14 +2094,15 @@ table.ProseMirror-selectednode {
   }
   *{box-sizing:border-box;}
   html,body{height:100%;margin:0;}
-  body{font-family:var(--sans);background:var(--bg-soft);color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden;}
-  #app{height:100vh;display:flex;flex-direction:column;}
+  body{font-family:var(--sans);background:var(--bg-soft);color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden;overscroll-behavior:none;}
+  /* 안드로이드 등에서 100vh가 주소창 영역까지 포함해 상단 도구막대가 밀려 올라가는 문제 → 동적 뷰포트 높이(dvh) 사용 */
+  #app{height:100vh;height:100dvh;display:flex;flex-direction:column;}
 
   .topbar{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg-elev);border-bottom:1px solid var(--border);z-index:30;}
   .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;letter-spacing:-.2px;}
   .brand .dot{width:11px;height:11px;border-radius:3px;background:linear-gradient(135deg,var(--accent),#7db1ff);box-shadow:0 0 0 3px var(--accent-soft);}
   .brand .ver{font-size:10.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:20px;padding:2px 7px;margin-left:2px;letter-spacing:0;}
-  .tb{appearance:none;border:1px solid transparent;background:transparent;color:var(--text-soft);border-radius:8px;cursor:pointer;height:34px;min-width:34px;padding:0 10px;font-size:13px;font-family:var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+  .tb{appearance:none;border:1px solid transparent;background:transparent;color:var(--text-soft);border-radius:8px;cursor:pointer;height:34px;min-width:34px;padding:0 10px;font-size:13px;font-family:var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;}
   .tb:hover{background:var(--bg-soft);color:var(--text);}
   .tb.on{background:var(--accent-soft);color:var(--accent);}
   .tb .lbl{font-size:13px;}
@@ -2110,6 +2111,12 @@ table.ProseMirror-selectednode {
   .menu-wrap{position:relative;}
   .menu{position:absolute;top:40px;right:0;background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:6px;min-width:180px;z-index:50;}
   .menu button{width:100%;text-align:left;justify-content:flex-start;padding:9px 11px;border-radius:7px;height:auto;}
+  .ai-menu-hint{font-size:11px;color:var(--text-faint);padding:6px 11px 4px;line-height:1.4;}
+  .ai-menu-sep{height:1px;background:var(--border);margin:4px 6px;}
+  .mf-aipill{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:300;background:var(--accent);color:#fff;font-size:13px;font-weight:600;padding:9px 16px;border-radius:20px;box-shadow:var(--shadow);display:none;align-items:center;gap:8px;}
+  .mf-aipill .sp{width:13px;height:13px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:mfspin .7s linear infinite;}
+  @keyframes mfspin{to{transform:rotate(360deg);}}
+  .mf-toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:300;background:var(--text);color:var(--bg);font-size:13px;font-weight:600;padding:9px 16px;border-radius:20px;box-shadow:var(--shadow);}
 
   .body{flex:1;display:flex;min-height:0;}
   .sidebar{width:250px;flex:0 0 250px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
@@ -2191,7 +2198,7 @@ table.ProseMirror-selectednode {
 
   /* TUI 톤을 MarkFlow에 맞춤 */
   .toastui-editor-defaultUI{border:0!important;}
-  .toastui-editor-toolbar{border-bottom:1px solid var(--border)!important;}
+  .toastui-editor-toolbar{border-bottom:1px solid var(--border)!important;position:sticky;top:0;z-index:20;background:var(--bg-elev);}
   .toastui-editor-main .toastui-editor-ww-container{background:var(--bg);}
   .toastui-editor-contents{font-family:var(--sans);font-size:16px;}
   .toastui-editor-contents h1,.toastui-editor-contents h2{border-bottom:1px solid var(--border);}
@@ -2274,10 +2281,22 @@ table.ProseMirror-selectednode {
 <div id="app">
   <div class="topbar">
     <button class="tb" id="btn-side" title="문서 목록"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button>
-    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver">v1.3</span></div>
+    <a class="tb" id="btn-home" href="./index.html" title="나의 시스템 홈"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg></a>
+    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver">v1.4</span></div>
     <button class="tb" id="btn-new" title="새 문서"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg><span class="lbl">새 문서</span></button>
     <div class="grow"></div>
-    <button class="tb" id="btn-ai" title="AI 보정 설정"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.6L18 9l-4.4 1.4L12 15l-1.6-4.6L6 9l4.4-1.4L12 3z"/><path d="M19 14l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z"/></svg><span class="lbl">AI</span></button>
+    <div class="menu-wrap">
+      <button class="tb" id="btn-ai" title="AI 보정"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.6L18 9l-4.4 1.4L12 15l-1.6-4.6L6 9l4.4-1.4L12 3z"/><path d="M19 14l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z"/></svg><span class="lbl">AI</span></button>
+      <div class="menu" id="ai-menu" style="display:none">
+        <div class="ai-menu-hint">커서를 둔 문단(또는 선택한 글)에 적용돼요</div>
+        <button class="tb" data-ai="polish">✨ 문장 다듬기</button>
+        <button class="tb" data-ai="summary">📝 요약하기</button>
+        <button class="tb" data-ai="fix">✔️ 맞춤법 교정</button>
+        <button class="tb" data-ai="continue">➡️ 이어서 쓰기</button>
+        <div class="ai-menu-sep"></div>
+        <button class="tb" data-ai="settings">⚙️ API 키 설정</button>
+      </div>
+    </div>
     <button class="tb" id="btn-sync" title="동기화 (GitHub)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10a6 6 0 0 0-11.3-2M6 14a6 6 0 0 0 11.3 2"/><path d="M6.7 3.5V8H11M17.3 20.5V16H13"/></svg><span class="lbl" id="sync-lbl">동기화</span></button>
     <button class="tb" id="btn-theme" title="테마"></button>
     <div class="menu-wrap">
@@ -2324,6 +2343,7 @@ table.ProseMirror-selectednode {
   <button class="ai-act" data-ai="custom">✏️ 지시</button>
   <span class="ai-busy" id="ai-busy" style="display:none">AI 작업 중…</span>
 </div>
+<div class="mf-aipill" id="ai-pill"><span class="sp"></span><span id="ai-pill-tx">AI 작업 중…</span></div>
 
 <div class="modal-back" id="ai-modal" style="display:none">
   <div class="modal">
@@ -39225,9 +39245,64 @@ table.ProseMirror-selectednode {
     }).catch(function(e){ aiRunning=false; aiBusy.textContent="오류: "+(e&&e.message?e.message.slice(0,70):"실패"); setTimeout(hideAiBar,2800); });
   }
   [].forEach.call(document.querySelectorAll("#ai-bar .ai-act"),function(b){ b.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); runAi(b.getAttribute("data-ai")); }); });
-  document.addEventListener("selectionchange",function(){ if(aiT) clearTimeout(aiT); aiT=setTimeout(updateAiBar,220); });
-  document.addEventListener("scroll",function(){ if(aiBar&&aiBar.style.display!=="none"&&!aiRunning) updateAiBar(); },true);
-  document.getElementById("btn-ai").addEventListener("click",function(){ document.getElementById("ai-key").value=AIK.key?"••••••••••":""; var sm=document.getElementById("ai-model"); if(sm) sm.value=AIK.model; setAiState(AIK.key?"ok":"off"); aiModal.style.display="flex"; });
+  // 데스크톱: 글자를 드래그하면 뜨는 선택바. 터치기기(폰)에서는 OS 메뉴와 겹치므로 끔 → 대신 상단 AI 버튼 사용.
+  var isCoarse=false; try{ isCoarse=window.matchMedia("(pointer:coarse)").matches; }catch(e){}
+  if(!isCoarse){
+    document.addEventListener("selectionchange",function(){ if(aiT) clearTimeout(aiT); aiT=setTimeout(updateAiBar,220); });
+    document.addEventListener("scroll",function(){ if(aiBar&&aiBar.style.display!=="none"&&!aiRunning) updateAiBar(); },true);
+  }
+
+  // ---- 상단 AI 버튼: 커서를 둔 문단(또는 선택 영역)에 바로 적용 (폰에서도 동작) ----
+  function openAiSettings(){ document.getElementById("ai-key").value=AIK.key?"••••••••••":""; var sm=document.getElementById("ai-model"); if(sm) sm.value=AIK.model; setAiState(AIK.key?"ok":"off"); aiModal.style.display="flex"; }
+  var aiMenu=document.getElementById("ai-menu");
+  function closeAiMenu(){ if(aiMenu){ aiMenu.style.display="none"; document.removeEventListener("mousedown",aiMenuOutside); } }
+  function aiMenuOutside(e){ var w=document.getElementById("btn-ai").parentElement; if(w&&!w.contains(e.target)) closeAiMenu(); }
+  document.getElementById("btn-ai").addEventListener("click",function(e){ e.stopPropagation(); if(aiMenu.style.display==="none"||!aiMenu.style.display){ aiMenu.style.display="block"; setTimeout(function(){ document.addEventListener("mousedown",aiMenuOutside); },0); } else closeAiMenu(); });
+  [].forEach.call(aiMenu.querySelectorAll("button[data-ai]"),function(b){ b.addEventListener("click",function(e){ e.stopPropagation(); var k=b.getAttribute("data-ai"); closeAiMenu(); if(k==="settings"){ openAiSettings(); } else aiRunBlock(k); }); });
+  var aiPill=document.getElementById("ai-pill"), aiPillTx=document.getElementById("ai-pill-tx");
+  function showPill(t){ if(aiPill){ aiPillTx.textContent=t||"AI 작업 중…"; aiPill.style.display="flex"; } }
+  function hidePill(){ if(aiPill) aiPill.style.display="none"; }
+  var toastT=null;
+  function mfToast(msg){ var t=document.createElement("div"); t.className="mf-toast"; t.textContent=msg; document.body.appendChild(t); if(toastT) clearTimeout(toastT); toastT=setTimeout(function(){ t.remove(); },2200); }
+  function currentBlockCtx(){
+    var view=wwView(); if(!view) return null; var st=view.state; var sel=st.selection;
+    var $f=sel.$from; if($f.depth<1) return null;
+    var ci=$f.index(0); var doc=st.doc; if(ci<0||ci>=doc.childCount) return null;
+    var node=doc.child(ci); var el=pmEl()?pmEl().children[ci]:null;
+    var selText= sel.empty? "" : doc.textBetween(sel.from, sel.to, "\n");
+    return {ci:ci, node:node, el:el, selText:selText};
+  }
+  function replaceBlockNode(ci, out){
+    var view=wwView(); if(!view) return; var doc=view.state.doc; if(ci<0||ci>=doc.childCount) return;
+    var from=pmChildFrom(doc,ci); var node=doc.child(ci); var to=from+node.nodeSize;
+    var clean=(out||"").replace(/\s*\n+\s*/g," ").trim(); var schema=view.state.schema; var nn=null;
+    try{ if(node.isTextblock){ nn=node.type.create(node.attrs, clean?schema.text(clean):null); } }catch(e){ nn=null; }
+    if(!nn){ nn=schema.nodes.paragraph.create(null, clean?schema.text(clean):null); }
+    var tr=view.state.tr.replaceWith(from,to,nn); view.dispatch(tr); afterDomEdit();
+  }
+  function appendParaAfter(ci, out){
+    var view=wwView(); if(!view) return; var doc=view.state.doc; if(ci<0||ci>=doc.childCount) return;
+    var to=pmChildFrom(doc,ci)+doc.child(ci).nodeSize; var schema=view.state.schema;
+    var parts=(out||"").split(/\n{1,}/).map(function(s){return s.trim();}).filter(Boolean); if(!parts.length) return;
+    var nodes=parts.map(function(s){ return schema.nodes.paragraph.create(null, schema.text(s)); });
+    var tr=view.state.tr.insert(to, nodes); view.dispatch(tr); afterDomEdit();
+  }
+  function aiRunBlock(kind){
+    if(!AIK.key){ openAiSettings(); return; }
+    if(aiRunning){ return; }
+    var ctx=currentBlockCtx(); if(!ctx){ mfToast("먼저 문단을 눌러 커서를 두거나 글을 선택하세요"); return; }
+    var text=(ctx.selText||(ctx.node&&ctx.node.textContent)||"").trim();
+    if(!text){ mfToast("이 문단에 내용이 없어요"); return; }
+    var c=AI_PROMPTS[kind]; if(!c) return;
+    aiRunning=true; showPill(c.busy);
+    aiComplete(c.sys,text,c.tok).then(function(out){ out=(out||"").trim(); aiRunning=false; hidePill();
+      if(!out){ mfToast("결과가 비어 있어요"); return; }
+      if(ctx.selText){ editor.replaceSelection(kind==="continue"? text+"\n\n"+out : out); }
+      else if(kind==="continue"){ appendParaAfter(ctx.ci, out); }
+      else { replaceBlockNode(ctx.ci, out); }
+      editor.focus();
+    }).catch(function(e){ aiRunning=false; hidePill(); mfToast("AI 오류: "+(e&&e.message?e.message.slice(0,50):"실패")); });
+  }
   document.getElementById("ai-close").addEventListener("click",function(){ aiModal.style.display="none"; });
   aiModal.addEventListener("mousedown",function(e){ if(e.target===aiModal) aiModal.style.display="none"; });
   document.getElementById("ai-save").addEventListener("click",function(){ var v=document.getElementById("ai-key").value; if(v.indexOf("•")<0&&v.trim()){ AIK.key=v.trim(); sset("markflow_ai_key",AIK.key); } AIK.model=document.getElementById("ai-model").value; sset("markflow_ai_model",AIK.model); setAiState(AIK.key?"ok":"off"); aiModal.style.display="none"; });
