@@ -2087,6 +2087,15 @@ table.ProseMirror-selectednode {
     --accent:#2f6feb; --accent-soft:#ddeafe;
     --shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.10);
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",Roboto,Helvetica,Arial,sans-serif;
+    --co-yellow-bg:#fef9e7; --co-yellow-bd:#f2c94c;
+    --co-amber-bg:#fff2e8; --co-amber-bd:#f2994a;
+    --co-green-bg:#e9faf0; --co-green-bd:#3ec27a;
+    --co-blue-bg:#eaf2fe; --co-blue-bd:#4a90e2;
+    --co-red-bg:#fdecec; --co-red-bd:#eb5757;
+    --co-purple-bg:#f4edfd; --co-purple-bd:#9b6ee0;
+    --co-pink-bg:#fdecf5; --co-pink-bd:#e979bd;
+    --co-teal-bg:#e6faf7; --co-teal-bd:#2bb3a3;
+    --co-gray-bg:#f1f3f5; --co-gray-bd:#98a4b0;
   }
   [data-theme="dark"]{
     --bg:#0f1115; --bg-soft:#161a21; --bg-elev:#1a1f27; --panel:#14181e;
@@ -2094,6 +2103,15 @@ table.ProseMirror-selectednode {
     --text:#e6edf3; --text-soft:#adbac7; --text-faint:#768390;
     --accent:#5b93ff; --accent-soft:#17335e;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.5);
+    --co-yellow-bg:#38321c; --co-yellow-bd:#8a7736;
+    --co-amber-bg:#3a2c1e; --co-amber-bd:#9c6f3c;
+    --co-green-bg:#16301f; --co-green-bd:#3a7d54;
+    --co-blue-bg:#172a3f; --co-blue-bd:#3f6fa0;
+    --co-red-bg:#3a1f1f; --co-red-bd:#a04c4c;
+    --co-purple-bg:#2a2140; --co-purple-bd:#7359a0;
+    --co-pink-bg:#3a2030; --co-pink-bd:#a05a83;
+    --co-teal-bg:#153230; --co-teal-bd:#2f8478;
+    --co-gray-bg:#22272e; --co-gray-bd:#5a6673;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;margin:0;}
@@ -2265,6 +2283,8 @@ table.ProseMirror-selectednode {
     .sb-backdrop.show{display:block;position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:39;}
     /* ⋯(더보기) 드롭다운이 화면 밖으로 나가지 않고 여러 줄로 접히도록 */
     .toastui-editor-dropdown-toolbar{left:6px!important;right:6px!important;width:auto!important;max-width:calc(100vw - 12px)!important;height:auto!important;flex-wrap:wrap!important;background:var(--bg-elev)!important;border:1px solid var(--border)!important;box-shadow:var(--shadow)!important;border-radius:10px!important;padding:5px!important;z-index:60!important;}
+    /* 이미지·표 삽입 팝업을 화면 가운데로 */
+    .toastui-editor-popup{position:fixed!important;left:50%!important;right:auto!important;top:70px!important;bottom:auto!important;transform:translateX(-50%)!important;margin:0!important;width:min(340px, calc(100vw - 24px))!important;max-width:calc(100vw - 24px)!important;z-index:215!important;}
   }
 
   /* slash menu */
@@ -2282,6 +2302,13 @@ table.ProseMirror-selectednode {
   .bchip{font-size:12.5px;border:1px solid var(--border);background:var(--bg-soft);color:var(--text);border-radius:7px;padding:6px 9px;cursor:pointer;font-family:var(--sans);}
   .bchip:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
   .bmenu-sep{height:1px;background:var(--border);margin:4px 6px;}
+  /* 이미지 크기 조절 바 */
+  .toastui-editor-ww-container img{cursor:pointer;max-width:100%;}
+  .mf-imgbar{position:fixed;z-index:210;display:flex;align-items:center;gap:2px;background:var(--bg-elev);border:1px solid var(--border);border-radius:9px;box-shadow:var(--shadow);padding:4px;}
+  .mf-imgbar-lb{font-size:11px;color:var(--text-faint);font-weight:700;padding:0 6px;}
+  .mf-imgbar button{font-size:12.5px;border:0;background:transparent;color:var(--text-soft);border-radius:6px;padding:7px 10px;cursor:pointer;font-family:var(--sans);white-space:nowrap;}
+  .mf-imgbar button:hover{background:var(--accent-soft);color:var(--accent);}
+  @media(max-width:760px){ .mf-imgbar button{padding:10px 12px;font-size:14px;} }
   @media(max-width:760px){
     .slash.sheet{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;max-width:100%;border-radius:18px 18px 0 0;padding:8px 10px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -10px 34px rgba(0,0,0,.28);animation:mfsheet .2s ease;max-height:80vh;}
     .slash.sheet .slash-item{padding:14px 12px;}
@@ -2343,7 +2370,7 @@ table.ProseMirror-selectednode {
   <div class="topbar">
     <button class="tb" id="btn-side" title="문서 목록"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button>
     <a class="tb" id="btn-home" href="./index.html" title="나의 시스템 홈"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg></a>
-    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v1.8</span></div>
+    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v1.9</span></div>
     <button class="tb" id="btn-refresh" title="최신 버전으로 새로고침 (캐시 무시)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
     <button class="tb" id="btn-new" title="새 문서"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg><span class="lbl">새 문서</span></button>
     <div class="grow"></div>
@@ -38931,19 +38958,62 @@ table.ProseMirror-selectednode {
   }
   // 콜아웃: 이모지로 시작하는 인용문만 상자 스타일 (위치기반)
   var coStyleEl=null;
-  var CALLOUT_EMOJI=["💡","ℹ️","ℹ","⚠️","⚠","✅","📌","📝","❗","❕","🔔","🚨","💬","⭐","🔥","✨","📢","❓","🎯","👉","📖","🧠","✔️"];
+  // 이모지 → 파스텔 색상. 색동그라미(🟡🟢…)는 색 지정용 마커.
+  var CALLOUT_COLOR={"💡":"yellow","⭐":"yellow","✨":"yellow","⚠️":"amber","⚠":"amber","🔥":"amber","📢":"amber","🚨":"red","❗":"red","❕":"red","📌":"red","✅":"green","✔️":"green","❓":"blue","ℹ️":"blue","ℹ":"blue","💬":"blue","🔔":"blue","📖":"purple","🎯":"purple","🧠":"purple","🔖":"pink","👉":"teal","📝":"gray","🟡":"yellow","🟠":"amber","🔴":"red","🟢":"green","🔵":"blue","🟣":"purple","🩷":"pink","💗":"pink","⚪":"gray","🟤":"gray","🩵":"teal"};
+  var CALLOUT_EMOJI=[];
+  for(var _e in CALLOUT_COLOR){ if(CALLOUT_COLOR.hasOwnProperty(_e)) CALLOUT_EMOJI.push(_e); }
   function ensureCoStyle(){ if(coStyleEl&&document.head.contains(coStyleEl)) return coStyleEl; coStyleEl=document.createElement("style"); coStyleEl.id="mf-callout-style"; document.head.appendChild(coStyleEl); return coStyleEl; }
-  function isCallout(bq){ var t=(bq.textContent||"").replace(/​/g,""); t=t.replace(/^\s+/,""); for(var i=0;i<CALLOUT_EMOJI.length;i++){ if(t.indexOf(CALLOUT_EMOJI[i])===0) return true; } return false; }
+  function calloutColorOf(bq){ var t=(bq.textContent||"").replace(/​/g,"").replace(/^\s+/,""); for(var i=0;i<CALLOUT_EMOJI.length;i++){ if(t.indexOf(CALLOUT_EMOJI[i])===0) return CALLOUT_COLOR[CALLOUT_EMOJI[i]]; } return null; }
+  function isCallout(bq){ return calloutColorOf(bq)!==null; }
   function styleCallouts(){
     var p=pmEl(); if(!p) return; var kids=Array.prototype.slice.call(p.children); var sel=[];
     var S=".toastui-editor-ww-container .ProseMirror>:nth-child(";
-    for(var i=0;i<kids.length;i++){ if(kids[i].tagName==="BLOCKQUOTE"&&isCallout(kids[i])){ var k=i+1;
-      sel.push(S+k+"){border-left:4px solid var(--accent)!important;background:var(--bg-soft)!important;border-radius:8px!important;padding:8px 14px!important;color:var(--text)!important}");
+    for(var i=0;i<kids.length;i++){ if(kids[i].tagName==="BLOCKQUOTE"){ var col=calloutColorOf(kids[i]); if(col){ var k=i+1;
+      sel.push(S+k+"){border-left:4px solid var(--co-"+col+"-bd)!important;background:var(--co-"+col+"-bg)!important;border-radius:8px!important;padding:8px 14px!important;color:var(--text)!important}");
       sel.push(S+k+") p{color:var(--text)!important}");
-    } }
+    } } }
     ensureCoStyle().textContent=sel.join("\n");
   }
-  function scheduleFold(){ if(foldRaf) cancelAnimationFrame(foldRaf); foldRaf=requestAnimationFrame(function(){ computeFold(); styleColumns(); styleCallouts(); repositionCarets(); if(sideTab==="toc") renderOutline(); }); }
+  function scheduleFold(){ if(foldRaf) cancelAnimationFrame(foldRaf); foldRaf=requestAnimationFrame(function(){ computeFold(); styleColumns(); styleCallouts(); applyImageSizes(); repositionCarets(); if(sideTab==="toc") renderOutline(); }); }
+  // 이미지 크기: 코드(⟪wNN⟫)를 alt에 저장 → 매 렌더 시 폭 적용(마크다운엔 alt만 남으므로 유지됨)
+  function applyImageSizes(){
+    var view=null; try{ view=editor.wwEditor.view; }catch(e){} if(!view) return;
+    var tr=view.state.tr, changed=false;
+    view.state.doc.descendants(function(node,pos){
+      if(node.type&&node.type.name==="image"){
+        var alt=node.attrs.altText||""; var m=alt.match(/⟪w(\d+)⟫/); var want=m?(m[1]+"%"):null;
+        var cur=(node.attrs.htmlAttrs&&node.attrs.htmlAttrs.width)||null;
+        if(want!==cur){ var attrs=Object.assign({},node.attrs); var ha=Object.assign({},attrs.htmlAttrs||{}); if(want){ ha.width=want; } else { delete ha.width; } attrs.htmlAttrs=ha; tr.setNodeMarkup(pos,null,attrs); changed=true; }
+      }
+    });
+    if(changed){ tr.setMeta("addToHistory",false); view.dispatch(tr); }
+  }
+  // 이미지 클릭 → 크기 조절 바
+  var imgBar=null, imgBarPos=-1, imgBarIdx=-1;
+  function closeImgBar(){ if(imgBar){ imgBar.remove(); imgBar=null; imgBarPos=-1; imgBarIdx=-1; document.removeEventListener("mousedown",closeImgBarOutside); } }
+  function closeImgBarOutside(e){ if(imgBar&&!imgBar.contains(e.target)&&!(e.target&&e.target.tagName==="IMG")) closeImgBar(); }
+  function imageNodePositions(){ var a=[]; var v=null; try{v=editor.wwEditor.view;}catch(e){} if(!v) return a; v.state.doc.descendants(function(n,pos){ if(n.type&&n.type.name==="image") a.push(pos); }); return a; }
+  function setImageSize(pct){
+    var v=null; try{v=editor.wwEditor.view;}catch(e){} if(!v||imgBarPos<0) return; var node=v.state.doc.nodeAt(imgBarPos); if(!node||node.type.name!=="image") return;
+    var alt=(node.attrs.altText||"").replace(/\s*⟪w\d+⟫/g,"").replace(/\s+$/,"");
+    if(pct&&pct!==100){ alt=(alt?alt+" ":"")+"⟪w"+pct+"⟫"; }
+    var attrs=Object.assign({},node.attrs); attrs.altText=alt; var ha=Object.assign({},attrs.htmlAttrs||{}); if(pct&&pct!==100){ ha.width=pct+"%"; } else { delete ha.width; } attrs.htmlAttrs=ha;
+    var tr=v.state.tr.setNodeMarkup(imgBarPos,null,attrs); v.dispatch(tr); afterImgEdit();
+    setTimeout(function(){ repositionImgBar(); },30);
+  }
+  function afterImgEdit(){ var d=current(); d.content=editor.getMarkdown(); d.updated=Date.now(); updateCounts(d.content); scheduleSave(); }
+  function repositionImgBar(){ if(!imgBar) return; var imgs=pmEl()?pmEl().querySelectorAll("img"):[]; var el=imgs[imgBarIdx]; if(!el){ closeImgBar(); return; } var r=el.getBoundingClientRect(); var bw=imgBar.offsetWidth||220; var x=Math.min(Math.max(8,r.left), window.innerWidth-bw-8); var y=r.top-imgBar.offsetHeight-8; if(y<8) y=r.bottom+8; imgBar.style.left=x+"px"; imgBar.style.top=y+"px"; }
+  function openImgBar(imgEl){
+    closeImgBar(); if(viewMode) return;
+    var imgs=Array.prototype.slice.call(pmEl().querySelectorAll("img")); imgBarIdx=imgs.indexOf(imgEl); var poss=imageNodePositions();
+    imgBarPos=(imgBarIdx>=0&&imgBarIdx<poss.length)?poss[imgBarIdx]:-1; if(imgBarPos<0) return;
+    imgBar=document.createElement("div"); imgBar.className="mf-imgbar";
+    var lab=document.createElement("span"); lab.className="mf-imgbar-lb"; lab.textContent="크기"; imgBar.appendChild(lab);
+    [["작게",30],["중간",50],["크게",75],["원본",100]].forEach(function(o){ var bt=document.createElement("button"); bt.type="button"; bt.textContent=o[0]; bt.addEventListener("mousedown",function(ev){ ev.preventDefault(); setImageSize(o[1]); }); imgBar.appendChild(bt); });
+    document.body.appendChild(imgBar);
+    repositionImgBar();
+    setTimeout(function(){ document.addEventListener("mousedown",closeImgBarOutside); },0);
+  }
   window.__mfResetFold=function(){ foldSet.clear(); scheduleFold(); };
   function initFold(){
     var p=pmEl(); if(!p){ setTimeout(initFold,200); return; }
@@ -39146,6 +39216,12 @@ table.ProseMirror-selectednode {
       b.innerHTML='<span class="pick-ic">'+pr.ic+'</span><span class="pick-lb">'+pr.lb+'<small>'+pr.desc+'</small></span>';
       b.addEventListener("mousedown",function(ev){ ev.preventDefault(); closeEmojiPop(); onPick(pr.body); });
       emojiPop.appendChild(b); });
+    var csep=document.createElement("div"); csep.className="pick-sep"; csep.textContent="색깔만 (파스텔)"; emojiPop.appendChild(csep);
+    var cgrid=document.createElement("div"); cgrid.className="pick-icons";
+    [["🟡","노랑"],["🟠","주황"],["🟢","초록"],["🔵","파랑"],["🔴","빨강"],["🟣","보라"],["🩷","분홍"],["⚪","회색"]].forEach(function(o){ var b=document.createElement("button"); b.type="button"; b.textContent=o[0]; b.title=o[1];
+      b.addEventListener("mousedown",function(ev){ ev.preventDefault(); closeEmojiPop(); onPick(o[0]+" 내용을 적어요"); });
+      cgrid.appendChild(b); });
+    emojiPop.appendChild(cgrid);
     var sep=document.createElement("div"); sep.className="pick-sep"; sep.textContent="기타 아이콘"; emojiPop.appendChild(sep);
     var grid=document.createElement("div"); grid.className="pick-icons";
     CALLOUT_ICONS.forEach(function(em){ var b=document.createElement("button"); b.type="button"; b.textContent=em;
@@ -39295,7 +39371,8 @@ table.ProseMirror-selectednode {
     wrap.addEventListener("mouseleave",function(){ if(!hoverHold&&!dragging&&hEl) hEl.style.display="none"; });
     wrap.addEventListener("scroll",function(){ if(hoverUnit&&!dragging) positionHandleForUnit(hoverUnit); },true);
     // 폰(터치): 문단을 탭하면 그 블록의 손잡이를 표시 → 손잡이로 메뉴 접근 가능
-    wrap.addEventListener("click",function(e){ if(dragging||viewMode) return; if(hEl&&(e.target.closest&&e.target.closest(".mf-handle"))) return; var u=unitAtY(e.clientY); if(u) positionHandleForUnit(u); });
+    wrap.addEventListener("click",function(e){ if(dragging||viewMode) return; if(e.target&&e.target.tagName==="IMG"){ e.stopPropagation(); openImgBar(e.target); return; } if(hEl&&(e.target.closest&&e.target.closest(".mf-handle"))) return; var u=unitAtY(e.clientY); if(u) positionHandleForUnit(u); });
+    wrap.addEventListener("scroll",function(){ if(imgBar) repositionImgBar(); },true);
   }
   initHandles();
 
