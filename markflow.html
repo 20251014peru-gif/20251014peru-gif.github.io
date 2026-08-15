@@ -2309,6 +2309,18 @@ table.ProseMirror-selectednode {
   .mf-imgbar button{font-size:12.5px;border:0;background:transparent;color:var(--text-soft);border-radius:6px;padding:7px 10px;cursor:pointer;font-family:var(--sans);white-space:nowrap;}
   .mf-imgbar button:hover{background:var(--accent-soft);color:var(--accent);}
   @media(max-width:760px){ .mf-imgbar button{padding:10px 12px;font-size:14px;} }
+  /* 이미지 드래그 크기 핸들 */
+  .mf-imghandle{position:fixed;z-index:211;width:18px;height:18px;background:var(--accent);border:2px solid #fff;border-radius:4px;cursor:nwse-resize;box-shadow:0 1px 4px rgba(0,0,0,.35);touch-action:none;}
+  /* 표 크기 선택 그리드 */
+  .mf-tblpick{position:fixed;z-index:212;background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:10px 12px;}
+  .mf-tblpick .tp-lab{font-size:12.5px;font-weight:700;color:var(--text);padding:0 2px 8px;text-align:center;}
+  .mf-tblpick .tp-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;}
+  .mf-tblpick .tp-cell{width:20px;height:20px;border:1px solid var(--border-strong);border-radius:3px;background:var(--bg-soft);cursor:pointer;}
+  .mf-tblpick .tp-cell.on{background:var(--accent-soft);border-color:var(--accent);}
+  @media(max-width:760px){
+    .mf-tblpick.sheet{left:50%!important;top:auto!important;bottom:calc(20px + env(safe-area-inset-bottom))!important;transform:translateX(-50%);padding:14px;}
+    .mf-tblpick.sheet .tp-cell{width:30px;height:30px;}
+  }
   @media(max-width:760px){
     .slash.sheet{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;max-width:100%;border-radius:18px 18px 0 0;padding:8px 10px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -10px 34px rgba(0,0,0,.28);animation:mfsheet .2s ease;max-height:80vh;}
     .slash.sheet .slash-item{padding:14px 12px;}
@@ -2370,7 +2382,7 @@ table.ProseMirror-selectednode {
   <div class="topbar">
     <button class="tb" id="btn-side" title="문서 목록"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button>
     <a class="tb" id="btn-home" href="./index.html" title="나의 시스템 홈"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg></a>
-    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v1.9</span></div>
+    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v2.0</span></div>
     <button class="tb" id="btn-refresh" title="최신 버전으로 새로고침 (캐시 무시)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
     <button class="tb" id="btn-new" title="새 문서"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg><span class="lbl">새 문서</span></button>
     <div class="grow"></div>
@@ -38811,7 +38823,7 @@ table.ProseMirror-selectednode {
     {k:"task",lb:"체크리스트",ht:"할 일",ic:"☑",md:"- [ ] 할 일",run:function(){editor.exec("taskList");}},
     {k:"quote",lb:"인용",ht:"인용문",ic:"❝",md:"> 인용문",run:function(){editor.exec("blockQuote");}},
     {k:"callout",lb:"콜아웃 / 표시",ht:"질문·중요·메모 등 →",ic:"💡",pick:"callout",md:"> 💡 강조할 내용을 적어요",run:function(){editor.exec("blockQuote");}},
-    {k:"table",lb:"표",ht:"3 x 3 표",ic:"⊞",md:"| 열1 | 열2 | 열3 |\n| --- | --- | --- |\n| 값 | 값 | 값 |\n| 값 | 값 | 값 |\n\n​",run:function(){editor.exec("addTable",{rowCount:3,columnCount:3});}},
+    {k:"table",lb:"표",ht:"크기 선택 →",ic:"⊞",pick:"table",md:"| 열1 | 열2 | 열3 |\n| --- | --- | --- |\n| 값 | 값 | 값 |\n| 값 | 값 | 값 |\n\n​",run:function(){editor.exec("addTable",{rowCount:3,columnCount:3});}},
     {k:"hr",lb:"구분선",ht:"———",ic:"—",md:"---",run:function(){editor.exec("hr");}}
   ];
   function colTable(n){ var head="|"+Array(n+1).join(" ​ |"); var sep="|"+Array(n+1).join(" --- |"); var body="|"+Array(n+1).join(" 내용 |"); return head+"\n"+sep+"\n"+body+"\n\n​"; }
@@ -38874,6 +38886,11 @@ table.ProseMirror-selectednode {
     if(it.pick==="callout"){
       var cr=info?info.rect:null; var rect=cr||{left:window.innerWidth/2-120,bottom:120,top:100};
       setTimeout(function(){ openCalloutPickerAt(rect, function(body){ editor.exec("blockQuote"); editor.insertText(body); editor.focus(); }); },0);
+      return;
+    }
+    if(it.pick==="table"){
+      var cr2=info?info.rect:null; var rect2=cr2||{left:window.innerWidth/2-120,bottom:120,top:100};
+      setTimeout(function(){ openTablePicker(rect2, function(r,c){ editor.focus(); editor.exec("addTable",{rowCount:r,columnCount:c}); }); },0);
       return;
     }
     setTimeout(function(){ try{ it.run(); }catch(e){} editor.focus(); },0);
@@ -38988,10 +39005,10 @@ table.ProseMirror-selectednode {
     });
     if(changed){ tr.setMeta("addToHistory",false); view.dispatch(tr); }
   }
-  // 이미지 클릭 → 크기 조절 바
-  var imgBar=null, imgBarPos=-1, imgBarIdx=-1;
-  function closeImgBar(){ if(imgBar){ imgBar.remove(); imgBar=null; imgBarPos=-1; imgBarIdx=-1; document.removeEventListener("mousedown",closeImgBarOutside); } }
-  function closeImgBarOutside(e){ if(imgBar&&!imgBar.contains(e.target)&&!(e.target&&e.target.tagName==="IMG")) closeImgBar(); }
+  // 이미지 클릭 → 크기 조절 바 + 드래그 핸들
+  var imgBar=null, imgBarPos=-1, imgBarIdx=-1, imgHandle=null, imgResizing=false;
+  function closeImgBar(){ if(imgHandle){ imgHandle.remove(); imgHandle=null; } if(imgBar){ imgBar.remove(); imgBar=null; imgBarPos=-1; imgBarIdx=-1; document.removeEventListener("mousedown",closeImgBarOutside); } }
+  function closeImgBarOutside(e){ if(imgResizing) return; if(imgBar&&!imgBar.contains(e.target)&&!(e.target&&e.target.tagName==="IMG")&&e.target!==imgHandle) closeImgBar(); }
   function imageNodePositions(){ var a=[]; var v=null; try{v=editor.wwEditor.view;}catch(e){} if(!v) return a; v.state.doc.descendants(function(n,pos){ if(n.type&&n.type.name==="image") a.push(pos); }); return a; }
   function setImageSize(pct){
     var v=null; try{v=editor.wwEditor.view;}catch(e){} if(!v||imgBarPos<0) return; var node=v.state.doc.nodeAt(imgBarPos); if(!node||node.type.name!=="image") return;
@@ -39002,17 +39019,48 @@ table.ProseMirror-selectednode {
     setTimeout(function(){ repositionImgBar(); },30);
   }
   function afterImgEdit(){ var d=current(); d.content=editor.getMarkdown(); d.updated=Date.now(); updateCounts(d.content); scheduleSave(); }
-  function repositionImgBar(){ if(!imgBar) return; var imgs=pmEl()?pmEl().querySelectorAll("img"):[]; var el=imgs[imgBarIdx]; if(!el){ closeImgBar(); return; } var r=el.getBoundingClientRect(); var bw=imgBar.offsetWidth||220; var x=Math.min(Math.max(8,r.left), window.innerWidth-bw-8); var y=r.top-imgBar.offsetHeight-8; if(y<8) y=r.bottom+8; imgBar.style.left=x+"px"; imgBar.style.top=y+"px"; }
+  function curImgEl(){ var imgs=pmEl()?pmEl().querySelectorAll("img"):[]; return imgs[imgBarIdx]||null; }
+  function repositionImgBar(){ if(!imgBar) return; var el=curImgEl(); if(!el){ closeImgBar(); return; } var r=el.getBoundingClientRect(); var bw=imgBar.offsetWidth||220; var x=Math.min(Math.max(8,r.left), window.innerWidth-bw-8); var y=r.top-imgBar.offsetHeight-8; if(y<8) y=r.bottom+8; imgBar.style.left=x+"px"; imgBar.style.top=y+"px";
+    if(imgHandle){ imgHandle.style.left=(r.right-9)+"px"; imgHandle.style.top=(r.bottom-9)+"px"; } }
   function openImgBar(imgEl){
-    closeImgBar(); if(viewMode) return;
+    closeImgBar(); closeTblBar(); if(viewMode) return;
     var imgs=Array.prototype.slice.call(pmEl().querySelectorAll("img")); imgBarIdx=imgs.indexOf(imgEl); var poss=imageNodePositions();
     imgBarPos=(imgBarIdx>=0&&imgBarIdx<poss.length)?poss[imgBarIdx]:-1; if(imgBarPos<0) return;
     imgBar=document.createElement("div"); imgBar.className="mf-imgbar";
     var lab=document.createElement("span"); lab.className="mf-imgbar-lb"; lab.textContent="크기"; imgBar.appendChild(lab);
     [["작게",30],["중간",50],["크게",75],["원본",100]].forEach(function(o){ var bt=document.createElement("button"); bt.type="button"; bt.textContent=o[0]; bt.addEventListener("mousedown",function(ev){ ev.preventDefault(); setImageSize(o[1]); }); imgBar.appendChild(bt); });
     document.body.appendChild(imgBar);
+    // 드래그 핸들(오른쪽 아래 모서리)
+    imgHandle=document.createElement("div"); imgHandle.className="mf-imghandle"; imgHandle.title="드래그해서 크기 조절";
+    imgHandle.addEventListener("pointerdown", startImgResize);
+    document.body.appendChild(imgHandle);
     repositionImgBar();
     setTimeout(function(){ document.addEventListener("mousedown",closeImgBarOutside); },0);
+  }
+  var imgRS={sx:0,startW:0,contW:0,pid:null};
+  function startImgResize(e){
+    var el=curImgEl(); if(!el){ return; } e.preventDefault(); e.stopPropagation(); imgResizing=true;
+    var r=el.getBoundingClientRect(); imgRS.sx=e.clientX; imgRS.startW=r.width;
+    var cont=el.parentElement? el.parentElement.clientWidth : (pmEl()?pmEl().clientWidth:r.width); imgRS.contW=cont||r.width;
+    imgRS.pid=e.pointerId; try{ imgHandle.setPointerCapture(imgRS.pid); }catch(_){}
+    imgHandle.addEventListener("pointermove", onImgResizeMove);
+    imgHandle.addEventListener("pointerup", onImgResizeUp);
+    imgHandle.addEventListener("pointercancel", onImgResizeUp);
+    document.body.classList.add("mf-dragging");
+  }
+  function onImgResizeMove(e){
+    if(!imgResizing) return; e.preventDefault(); var el=curImgEl(); if(!el) return;
+    var newW=imgRS.startW+(e.clientX-imgRS.sx); var pct=Math.round(newW/imgRS.contW*100); if(pct<10)pct=10; if(pct>100)pct=100;
+    el.style.width=pct+"%"; el.style.maxWidth="100%";
+    if(imgBar){ var lb=imgBar.querySelector(".mf-imgbar-lb"); if(lb) lb.textContent=pct+"%"; }
+    var r=el.getBoundingClientRect(); if(imgHandle){ imgHandle.style.left=(r.right-9)+"px"; imgHandle.style.top=(r.bottom-9)+"px"; }
+  }
+  function onImgResizeUp(e){
+    if(!imgResizing) return; imgResizing=false; document.body.classList.remove("mf-dragging");
+    try{ imgHandle.releasePointerCapture(imgRS.pid); }catch(_){}
+    imgHandle.removeEventListener("pointermove", onImgResizeMove); imgHandle.removeEventListener("pointerup", onImgResizeUp); imgHandle.removeEventListener("pointercancel", onImgResizeUp);
+    var el=curImgEl(); var pct=100; if(el){ var r=el.getBoundingClientRect(); pct=Math.round(r.width/imgRS.contW*100); if(pct<10)pct=10; if(pct>100)pct=100; }
+    setImageSize(pct);
   }
   window.__mfResetFold=function(){ foldSet.clear(); scheduleFold(); };
   function initFold(){
@@ -39181,6 +39229,7 @@ table.ProseMirror-selectednode {
       row.innerHTML='<span class="slash-ic">'+it.ic+'</span><div class="slash-tx"><div class="slash-lb">'+it.lb+'</div><div class="slash-ht">'+it.ht+'</div></div>';
       row.addEventListener("mousedown",function(ev){ ev.preventDefault(); var tgt=plusUnit;
         if(it.pick==="callout"){ closePlusMenu(); openCalloutPicker(tgt); }
+        else if(it.pick==="table"){ closePlusMenu(); openTablePicker(hEl?hEl.getBoundingClientRect():null, function(r,c){ insertBlockAfterUnit(tgt, tableMd(r,c)); }); }
         else { insertBlockAfterUnit(tgt, it.md); closePlusMenu(); }
       });
       plusMenu.appendChild(row); });
@@ -39251,6 +39300,55 @@ table.ProseMirror-selectednode {
     document.body.appendChild(inlinePop);
     if(!mobile){ var x=Math.min(rect.left, window.innerWidth-262); var y=rect.bottom+6; if(y>window.innerHeight-260) y=Math.max(8,rect.top-6-250); inlinePop.style.left=Math.max(8,x)+"px"; inlinePop.style.top=y+"px"; }
     setTimeout(function(){ document.addEventListener("mousedown",closeInlineOutside); },0);
+  }
+  // ---- 표 크기 선택 ----
+  function tableMd(rows, cols){ rows=Math.max(2,rows); cols=Math.max(1,cols);
+    function rowStr(){ var s="|"; for(var i=0;i<cols;i++) s+="  |"; return s; }
+    var lines=[rowStr(), "|"+Array(cols+1).join(" --- |")];
+    for(var r=0;r<rows-1;r++) lines.push(rowStr());
+    return lines.join("\n")+"\n\n​";
+  }
+  var tblPop=null;
+  function closeTblPop(){ if(tblPop){ tblPop.remove(); tblPop=null; document.removeEventListener("mousedown",closeTblOutside); } }
+  function closeTblOutside(e){ if(tblPop&&!tblPop.contains(e.target)) closeTblPop(); }
+  function openTablePicker(rect, onPick){
+    closeTblPop(); var mobile=window.innerWidth<=760; var MAXR=8, MAXC=8;
+    tblPop=document.createElement("div"); tblPop.className="mf-tblpick"+(mobile?" sheet":"");
+    var lab=document.createElement("div"); lab.className="tp-lab"; lab.textContent="표 크기 선택"; tblPop.appendChild(lab);
+    var grid=document.createElement("div"); grid.className="tp-grid";
+    var cells=[];
+    function hi(hr,hc){ for(var i=0;i<cells.length;i++){ var cc=cells[i]; cc.el.classList.toggle("on", cc.r<=hr&&cc.c<=hc); } lab.textContent=(hr+1)+" 행 × "+(hc+1)+" 열"; }
+    for(var r=0;r<MAXR;r++){ for(var c=0;c<MAXC;c++){ (function(r,c){ var cell=document.createElement("div"); cell.className="tp-cell";
+      cell.addEventListener("mouseenter",function(){ hi(r,c); });
+      cell.addEventListener("mousedown",function(ev){ ev.preventDefault(); closeTblPop(); onPick(r+1, c+1); });
+      cells.push({el:cell,r:r,c:c}); grid.appendChild(cell); })(r,c); } }
+    tblPop.appendChild(grid);
+    document.body.appendChild(tblPop);
+    if(!mobile&&rect){ var x=Math.min(rect.left, window.innerWidth-230); var y=rect.bottom+6; if(y>window.innerHeight-270) y=Math.max(8,rect.top-6-260); tblPop.style.left=Math.max(8,x)+"px"; tblPop.style.top=y+"px"; }
+    setTimeout(function(){ document.addEventListener("mousedown",closeTblOutside); },0);
+  }
+  // ---- 표 행/열 추가·삭제 바 ----
+  var tblBar=null, tblBarEl=null;
+  function closeTblBar(){ if(tblBar){ tblBar.remove(); tblBar=null; tblBarEl=null; document.removeEventListener("mousedown",closeTblBarOutside); } }
+  function closeTblBarOutside(e){ if(tblBar&&!tblBar.contains(e.target)&&!(e.target&&e.target.closest&&e.target.closest("table"))) closeTblBar(); }
+  function repositionTblBar(){ if(!tblBar||!tblBarEl||!document.body.contains(tblBarEl)){ closeTblBar(); return; } var r=tblBarEl.getBoundingClientRect(); var bw=tblBar.offsetWidth||300; var x=Math.min(Math.max(8,r.left), window.innerWidth-bw-8); var y=r.top-tblBar.offsetHeight-8; if(y<8) y=r.bottom+8; tblBar.style.left=x+"px"; tblBar.style.top=y+"px"; }
+  function openTblBar(tableEl){
+    closeTblBar(); closeImgBar(); if(viewMode) return; tblBarEl=tableEl;
+    tblBar=document.createElement("div"); tblBar.className="mf-imgbar mf-tblbar";
+    var lb=document.createElement("span"); lb.className="mf-imgbar-lb"; lb.textContent="표"; tblBar.appendChild(lb);
+    var acts=[["행＋","addRowToDown"],["행－","removeRow"],["열＋","addColumnToRight"],["열－","removeColumn"],["표삭제","__delTable"]];
+    acts.forEach(function(o){ var bt=document.createElement("button"); bt.type="button"; bt.textContent=o[0];
+      bt.addEventListener("mousedown",function(ev){ ev.preventDefault(); if(o[1]==="__delTable"){ delTableAt(tblBarEl); return; } try{ editor.exec(o[1]); }catch(e){} afterImgEdit(); setTimeout(repositionTblBar,30); });
+      tblBar.appendChild(bt); });
+    document.body.appendChild(tblBar); repositionTblBar();
+    setTimeout(function(){ document.addEventListener("mousedown",closeTblBarOutside); },0);
+  }
+  function delTableAt(tableEl){
+    var v=null; try{v=editor.wwEditor.view;}catch(e){} if(!v||!tableEl){ closeTblBar(); return; }
+    try{ var pos=v.posAtDOM(tableEl,0); var $p=v.state.doc.resolve(pos); var d=$p.depth; var tpos=null,tnode=null;
+      for(var k=d;k>=0;k--){ var n=$p.node(k); if(n.type.name==="table"){ tpos=$p.before(k); tnode=n; break; } }
+      if(tpos!=null){ var tr=v.state.tr.delete(tpos, tpos+tnode.nodeSize); v.dispatch(tr); afterImgEdit(); } }catch(e){}
+    closeTblBar();
   }
   function caretToBlock(idx){ var p=pmEl(); if(!p) return; var el=p.children[idx]; if(!el){ editor.focus(); return; } try{ var range=document.createRange(); range.selectNodeContents(el); range.collapse(false); var sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range); }catch(e){} editor.focus(); }
   function commitDoc(cur){ loading=true; editor.setMarkdown(joinBlocks(cur),false); loading=false; var d=current(); d.content=editor.getMarkdown(); d.updated=Date.now(); if(window.__mfResetFold) window.__mfResetFold(); updateCounts(d.content); renderDocs(); scheduleSave(); }
@@ -39371,8 +39469,8 @@ table.ProseMirror-selectednode {
     wrap.addEventListener("mouseleave",function(){ if(!hoverHold&&!dragging&&hEl) hEl.style.display="none"; });
     wrap.addEventListener("scroll",function(){ if(hoverUnit&&!dragging) positionHandleForUnit(hoverUnit); },true);
     // 폰(터치): 문단을 탭하면 그 블록의 손잡이를 표시 → 손잡이로 메뉴 접근 가능
-    wrap.addEventListener("click",function(e){ if(dragging||viewMode) return; if(e.target&&e.target.tagName==="IMG"){ e.stopPropagation(); openImgBar(e.target); return; } if(hEl&&(e.target.closest&&e.target.closest(".mf-handle"))) return; var u=unitAtY(e.clientY); if(u) positionHandleForUnit(u); });
-    wrap.addEventListener("scroll",function(){ if(imgBar) repositionImgBar(); },true);
+    wrap.addEventListener("click",function(e){ if(dragging||viewMode) return; if(e.target&&e.target.tagName==="IMG"){ e.stopPropagation(); openImgBar(e.target); return; } var tbl=e.target&&e.target.closest&&e.target.closest("table"); if(tbl&&wrap.contains(tbl)){ openTblBar(tbl); } else if(tblBar){ closeTblBar(); } if(hEl&&(e.target.closest&&e.target.closest(".mf-handle"))) return; var u=unitAtY(e.clientY); if(u) positionHandleForUnit(u); });
+    wrap.addEventListener("scroll",function(){ if(imgBar) repositionImgBar(); if(tblBar) repositionTblBar(); },true);
   }
   initHandles();
 
