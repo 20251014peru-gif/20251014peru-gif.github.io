@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="light">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, interactive-widget=resizes-content" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
@@ -2215,7 +2215,7 @@ table.ProseMirror-selectednode {
 
   /* TUI 톤을 MarkFlow에 맞춤 */
   .toastui-editor-defaultUI{border:0!important;}
-  .toastui-editor-toolbar{border-bottom:1px solid var(--border)!important;position:sticky;top:0;z-index:20;background:var(--bg-elev);}
+  .toastui-editor-toolbar{border-bottom:1px solid var(--border)!important;position:sticky;top:0;z-index:24;background:var(--bg-elev);}
   .mf-tbtn{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--text-soft);border-radius:6px;cursor:pointer;padding:0;}
   .mf-tbtn:hover{background:var(--bg-soft);color:var(--text);}
   .mf-tbtn svg{width:19px;height:19px;}
@@ -2263,6 +2263,8 @@ table.ProseMirror-selectednode {
     .topbar{gap:1px;padding:7px 5px;}
     .tb{min-width:30px;padding:0 5px;}
     .sb-backdrop.show{display:block;position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:39;}
+    /* ⋯(더보기) 드롭다운이 화면 밖으로 나가지 않고 여러 줄로 접히도록 */
+    .toastui-editor-dropdown-toolbar{left:6px!important;right:6px!important;width:auto!important;max-width:calc(100vw - 12px)!important;height:auto!important;flex-wrap:wrap!important;background:var(--bg-elev)!important;border:1px solid var(--border)!important;box-shadow:var(--shadow)!important;border-radius:10px!important;padding:5px!important;z-index:60!important;}
   }
 
   /* slash menu */
@@ -2274,6 +2276,18 @@ table.ProseMirror-selectednode {
   .slash-lb{font-size:13px;font-weight:600;color:var(--text);}
   .slash-ht{font-size:11px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .slash-empty{padding:10px;color:var(--text-faint);font-size:12.5px;text-align:center;}
+  /* 블록 유형 바꾸기 칩 */
+  .bmenu-cap{font-size:11px;font-weight:700;color:var(--text-faint);padding:6px 8px 4px;}
+  .bmenu-chips{display:flex;flex-wrap:wrap;gap:4px;padding:0 6px 4px;}
+  .bchip{font-size:12.5px;border:1px solid var(--border);background:var(--bg-soft);color:var(--text);border-radius:7px;padding:6px 9px;cursor:pointer;font-family:var(--sans);}
+  .bchip:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+  .bmenu-sep{height:1px;background:var(--border);margin:4px 6px;}
+  @media(max-width:760px){
+    .slash.sheet{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;max-width:100%;border-radius:18px 18px 0 0;padding:8px 10px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -10px 34px rgba(0,0,0,.28);animation:mfsheet .2s ease;max-height:80vh;}
+    .slash.sheet .slash-item{padding:14px 12px;}
+    .bchip{font-size:14px;padding:10px 13px;}
+    .bmenu-cap{font-size:12.5px;padding:8px 10px 4px;}
+  }
 
   /* 콜아웃 아이콘 선택 */
   .mf-emoji{position:fixed;z-index:210;background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:8px;width:252px;max-height:72vh;overflow-y:auto;}
@@ -2329,7 +2343,7 @@ table.ProseMirror-selectednode {
   <div class="topbar">
     <button class="tb" id="btn-side" title="문서 목록"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button>
     <a class="tb" id="btn-home" href="./index.html" title="나의 시스템 홈"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg></a>
-    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v1.7</span></div>
+    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v1.8</span></div>
     <button class="tb" id="btn-refresh" title="최신 버전으로 새로고침 (캐시 무시)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
     <button class="tb" id="btn-new" title="새 문서"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg><span class="lbl">새 문서</span></button>
     <div class="grow"></div>
@@ -38505,6 +38519,8 @@ table.ProseMirror-selectednode {
   function mkToolBtn(cls,title,svg,cmd){ var el=document.createElement("button"); el.type="button"; el.className="mf-tbtn "+cls; el.title=title; el.setAttribute("aria-label",title); el.innerHTML=svg; el.addEventListener("click",function(e){ e.preventDefault(); try{ editor.exec(cmd); editor.focus(); }catch(_){} }); return el; }
   var undoBtn=mkToolBtn("undo","실행 취소 (되돌리기)",'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>',"undo");
   var redoBtn=mkToolBtn("redo","다시 실행",'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h1"/></svg>',"redo");
+  var emojiBtn=document.createElement("button"); emojiBtn.type="button"; emojiBtn.className="mf-tbtn emoji"; emojiBtn.title="아이콘 삽입 (본문 중간)"; emojiBtn.setAttribute("aria-label","아이콘 삽입"); emojiBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14a4 4 0 0 0 7 0"/><line x1="9" y1="9.5" x2="9" y2="9.5"/><line x1="15" y1="9.5" x2="15" y2="9.5"/></svg>';
+  emojiBtn.addEventListener("click",function(e){ e.preventDefault(); openInlineEmoji(emojiBtn.getBoundingClientRect()); });
   var editor = new Editor({
     el: document.getElementById("editor"),
     height: "100%",
@@ -38515,7 +38531,7 @@ table.ProseMirror-selectednode {
     initialValue: current().content,
     autofocus: false,
     toolbarItems: [
-      [{name:"undo",tooltip:"실행 취소",el:undoBtn},{name:"redo",tooltip:"다시 실행",el:redoBtn}],
+      [{name:"undo",tooltip:"실행 취소",el:undoBtn},{name:"redo",tooltip:"다시 실행",el:redoBtn},{name:"emoji",tooltip:"아이콘 삽입",el:emojiBtn}],
       ["heading","bold","italic","strike"],
       ["hr","quote"],
       ["ul","ol","task","indent","outdent"],
@@ -39029,6 +39045,30 @@ table.ProseMirror-selectednode {
     // 위로: target 자리 앞에 삽입. 아래로: target 다음 자리에 삽입.
     pmMoveBlock(u, dir<0? targetDom : targetDom+1);
   }
+  // ---- 블록 유형 바꾸기 ----
+  function caretInUnit(u){
+    var view=wwView(); if(!view) return false; var doc=view.state.doc; var ci=u.domIdx; if(ci==null||ci<0||ci>=doc.childCount) return false;
+    var pos=pmChildFrom(doc,ci)+1;
+    try{ var TS=view.state.selection.constructor; var tr=view.state.tr.setSelection(TS.near(doc.resolve(pos))); view.dispatch(tr); }catch(e){ return false; }
+    return true;
+  }
+  function convertToParagraph(u){
+    var view=wwView(); if(!view) return; var doc=view.state.doc; var ci=u.domIdx; if(ci<0||ci>=doc.childCount) return;
+    var from=pmChildFrom(doc,ci); var node=doc.child(ci); var to=from+node.nodeSize; var schema=view.state.schema;
+    var content = node.isTextblock ? node.content : ((node.textContent)? schema.text(node.textContent) : null);
+    var para; try{ para=schema.nodes.paragraph.create(null, content); }catch(e){ try{ para=schema.nodes.paragraph.create(null, node.textContent?schema.text(node.textContent):null); }catch(_){ return; } }
+    var tr=view.state.tr.replaceWith(from,to,para); view.dispatch(tr); afterDomEdit();
+  }
+  function convertUnit(u, type){
+    if(type==="p"){ convertToParagraph(u); return; }
+    if(!caretInUnit(u)) return; try{ editor.focus(); }catch(e){}
+    var map={h1:["heading",{level:1}],h2:["heading",{level:2}],h3:["heading",{level:3}],ul:["bulletList"],ol:["orderedList"],task:["taskList"],quote:["blockQuote"]};
+    var c=map[type]; if(!c) return;
+    try{ editor.exec(c[0], c[1]); }catch(e){}
+    afterDomEdit();
+  }
+  var BLOCK_TYPES=[{t:"p",lb:"본문"},{t:"h1",lb:"제목1"},{t:"h2",lb:"제목2"},{t:"h3",lb:"제목3"},{t:"ul",lb:"• 목록"},{t:"ol",lb:"1. 목록"},{t:"task",lb:"☑ 체크"},{t:"quote",lb:"❝ 인용"}];
+  var LI_TYPES=[{t:"ul",lb:"• 글머리"},{t:"ol",lb:"1. 번호"},{t:"task",lb:"☑ 체크"}];
   function pmListNode(u){ var view=wwView(); if(!view) return null; var doc=view.state.doc; var ci=u.domIdx; if(ci<0||ci>=doc.childCount) return null; return {view:view,doc:doc,ci:ci,node:doc.child(ci),base:pmChildFrom(doc,ci)+1}; }
   function liFromTo(info, j){ var off=0; for(var k=0;k<j&&k<info.node.childCount;k++) off+=info.node.child(k).nodeSize; var from=info.base+off; return {from:from,to:from+info.node.child(j).nodeSize,node:info.node.child(j)}; }
   function pmDeleteLi(u){
@@ -39117,6 +39157,25 @@ table.ProseMirror-selectednode {
     setTimeout(function(){ document.addEventListener("mousedown",closeEmojiOutside); },0);
   }
   function openCalloutPicker(tgt){ if(!hEl) return; openCalloutPickerAt(hEl.getBoundingClientRect(), function(body){ insertBlockAfterUnit(tgt, "> "+body); }); }
+  // 본문 중간(커서 위치)에 아이콘 삽입
+  var INLINE_EMOJIS=["⭐","✅","❌","❓","❗","💡","📌","🔖","🔥","✨","⚠️","👍","👎","✔️","➡️","⬅️","🔺","🔻","🟢","🔴","🔵","🟡","🟣","⚫","😀","😅","😉","😢","😡","🤔","🙏","🎯","📖","📝","🧠","💬","🚀","🎉","❤️","👀","💯","🕒"];
+  var inlinePop=null;
+  function closeInlinePop(){ if(inlinePop){ inlinePop.remove(); inlinePop=null; document.removeEventListener("mousedown",closeInlineOutside); } }
+  function closeInlineOutside(e){ if(inlinePop&&!inlinePop.contains(e.target)) closeInlinePop(); }
+  function openInlineEmoji(rect){
+    closeInlinePop();
+    var mobile=window.innerWidth<=760;
+    inlinePop=document.createElement("div"); inlinePop.className="mf-emoji"+(mobile?" sheet":"");
+    inlinePop.innerHTML='<div class="pick-grip"></div><div class="cap">아이콘 삽입 — 커서 위치에 넣어요</div>';
+    var grid=document.createElement("div"); grid.className="pick-icons";
+    INLINE_EMOJIS.forEach(function(em){ var b=document.createElement("button"); b.type="button"; b.textContent=em;
+      b.addEventListener("mousedown",function(ev){ ev.preventDefault(); closeInlinePop(); try{ editor.focus(); editor.insertText(em); }catch(e){} });
+      grid.appendChild(b); });
+    inlinePop.appendChild(grid);
+    document.body.appendChild(inlinePop);
+    if(!mobile){ var x=Math.min(rect.left, window.innerWidth-262); var y=rect.bottom+6; if(y>window.innerHeight-260) y=Math.max(8,rect.top-6-250); inlinePop.style.left=Math.max(8,x)+"px"; inlinePop.style.top=y+"px"; }
+    setTimeout(function(){ document.addEventListener("mousedown",closeInlineOutside); },0);
+  }
   function caretToBlock(idx){ var p=pmEl(); if(!p) return; var el=p.children[idx]; if(!el){ editor.focus(); return; } try{ var range=document.createRange(); range.selectNodeContents(el); range.collapse(false); var sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range); }catch(e){} editor.focus(); }
   function commitDoc(cur){ loading=true; editor.setMarkdown(joinBlocks(cur),false); loading=false; var d=current(); d.content=editor.getMarkdown(); d.updated=Date.now(); if(window.__mfResetFold) window.__mfResetFold(); updateCounts(d.content); renderDocs(); scheduleSave(); }
   function insertBlockAfterUnit(u, md){
@@ -39186,27 +39245,37 @@ table.ProseMirror-selectednode {
   function closeBlockOutside(e){ if(blockMenu&&!blockMenu.contains(e.target)) closeBlockMenu(); }
   function openUnitMenu(u){
     closeBlockMenu(); if(!u||!hEl) return; var rect=hEl.getBoundingClientRect();
-    blockMenu=document.createElement("div"); blockMenu.className="slash"; blockMenu.style.width="170px";
-    var acts;
-    if(u.type==="li"){ acts=[
+    blockMenu=document.createElement("div"); blockMenu.className="slash bmenu"; blockMenu.style.width="210px";
+    var acts, types=null;
+    if(u.type==="li"){ types={title:"목록 종류 바꾸기", list:LI_TYPES}; acts=[
       {lb:"삭제",ic:"🗑",fn:function(){ pmDeleteLi(u); }},
       {lb:"위로 이동",ic:"↑",fn:function(){ pmMoveLiTo(u,u.liNodeIdx-1); }},
       {lb:"아래로 이동",ic:"↓",fn:function(){ pmMoveLiTo(u,u.liNodeIdx+2); }}
     ]; } else if(u.empty){ acts=[
       {lb:"여기에 블록 추가",ic:"＋",fn:function(){ openPlusMenu(u); }},
       {lb:"빈 줄 삭제",ic:"🗑",fn:function(){ pmDeleteBlock(u); }}
-    ]; } else { acts=[
+    ]; } else { types={title:"유형 바꾸기", list:BLOCK_TYPES}; acts=[
       {lb:"삭제",ic:"🗑",fn:function(){ pmDeleteBlock(u); }},
       {lb:"위로 이동",ic:"↑",fn:function(){ pmMoveBlockDir(u,-1); }},
       {lb:"아래로 이동",ic:"↓",fn:function(){ pmMoveBlockDir(u,1); }}
     ]; }
-    acts.forEach(function(a,i){ var row=document.createElement("div"); row.className="slash-item"+(i===0?" active":"");
+    if(types){
+      var cap=document.createElement("div"); cap.className="bmenu-cap"; cap.textContent=types.title; blockMenu.appendChild(cap);
+      var chips=document.createElement("div"); chips.className="bmenu-chips";
+      types.list.forEach(function(tp){ var c=document.createElement("button"); c.type="button"; c.className="bchip"; c.textContent=tp.lb;
+        c.addEventListener("mousedown",function(ev){ ev.preventDefault(); closeBlockMenu(); convertUnit(u, tp.t); });
+        chips.appendChild(c); });
+      blockMenu.appendChild(chips);
+      var sep=document.createElement("div"); sep.className="bmenu-sep"; blockMenu.appendChild(sep);
+    }
+    acts.forEach(function(a,i){ var row=document.createElement("div"); row.className="slash-item";
       row.innerHTML='<span class="slash-ic">'+a.ic+'</span><div class="slash-tx"><div class="slash-lb">'+a.lb+'</div></div>';
       row.addEventListener("mousedown",function(ev){ ev.preventDefault(); closeBlockMenu(); a.fn(); });
       blockMenu.appendChild(row); });
     document.body.appendChild(blockMenu);
-    var x=Math.min(rect.left, window.innerWidth-182); var y=rect.bottom+4; if(y>window.innerHeight-160) y=Math.max(8,rect.top-6-150);
-    blockMenu.style.left=x+"px"; blockMenu.style.top=y+"px";
+    var mobile=window.innerWidth<=760;
+    if(mobile){ blockMenu.classList.add("sheet"); }
+    else { var x=Math.min(rect.left, window.innerWidth-222); var mh=blockMenu.offsetHeight||260; var y=rect.bottom+4; if(y>window.innerHeight-mh-10) y=Math.max(8,rect.top-6-mh); blockMenu.style.left=x+"px"; blockMenu.style.top=y+"px"; }
     setTimeout(function(){ document.addEventListener("mousedown",closeBlockOutside); },0);
   }
   function moveBlock(from, insAt, anchor){
@@ -39225,6 +39294,8 @@ table.ProseMirror-selectednode {
     wrap.addEventListener("mousemove",onEditorMove);
     wrap.addEventListener("mouseleave",function(){ if(!hoverHold&&!dragging&&hEl) hEl.style.display="none"; });
     wrap.addEventListener("scroll",function(){ if(hoverUnit&&!dragging) positionHandleForUnit(hoverUnit); },true);
+    // 폰(터치): 문단을 탭하면 그 블록의 손잡이를 표시 → 손잡이로 메뉴 접근 가능
+    wrap.addEventListener("click",function(e){ if(dragging||viewMode) return; if(hEl&&(e.target.closest&&e.target.closest(".mf-handle"))) return; var u=unitAtY(e.clientY); if(u) positionHandleForUnit(u); });
   }
   initHandles();
 
