@@ -2219,6 +2219,10 @@ table.ProseMirror-selectednode {
   .doc .dd{opacity:0;flex:0 0 auto;border:0;background:transparent;color:var(--text-faint);cursor:pointer;border-radius:6px;padding:3px;display:flex;}
   .doc:hover .dd{opacity:1;} .doc .dd:hover{background:var(--border);color:#d33;}
   .doc .rn{font-size:13.5px;font-weight:600;width:100%;border:1px solid var(--accent);border-radius:5px;padding:3px 5px;font-family:var(--sans);background:var(--bg);color:var(--text);}
+  .folder-head .frn{flex:1;min-width:0;font-size:12.5px;font-weight:700;border:1px solid var(--accent);border-radius:5px;padding:3px 5px;font-family:var(--sans);background:var(--bg);color:var(--text);}
+  /* 터치 기기(휴대폰)에는 hover가 없어 메뉴 버튼이 안 보이던 문제 → 항상 표시 */
+  @media(hover:none){ .folder-head .fmenu{opacity:.9;} .doc .dd{opacity:.85;} }
+  @media(max-width:760px){ .folder-head .fmenu{opacity:.9;padding:5px 7px;} .doc .dd{opacity:.85;padding:6px;} }
 
   .editor-wrap{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);position:relative;}
   /* 왼쪽 거터(핸들/접기 화살표 자리) */
@@ -2229,6 +2233,9 @@ table.ProseMirror-selectednode {
   .status .sf{color:var(--text-soft);font-weight:500;}
   .status .sd{width:7px;height:7px;border-radius:50%;background:#3fb950;display:inline-block;margin-right:6px;}
   .status .sd.saving{background:#e3a008;}
+  .status .ver-foot{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:20px;padding:2px 9px;cursor:pointer;}
+  .status .ver-foot:hover{filter:brightness(.96);}
+  .status .sd.failed{background:#e5484d;}
   input[type=file]{display:none;}
 
   /* TUI 톤을 MarkFlow에 맞춤 */
@@ -2469,7 +2476,7 @@ table.ProseMirror-selectednode {
   <div class="topbar">
     <button class="tb" id="btn-side" title="문서 목록"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button>
     <a class="tb" id="btn-home" href="./index.html" title="나의 시스템 홈"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg></a>
-    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v2.6</span></div>
+    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span></div>
     <button class="tb" id="btn-refresh" title="최신 버전으로 새로고침 (캐시 무시)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
     <button class="tb" id="btn-new" title="새 문서"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg><span class="lbl">새 문서</span></button>
     <div class="grow"></div>
@@ -2525,6 +2532,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v2.7</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38711,7 +38719,7 @@ table.ProseMirror-selectednode {
   emojiBtn.addEventListener("click",function(e){ e.preventDefault(); openInlineEmoji(emojiBtn.getBoundingClientRect()); });
   var hlBtn=document.createElement("button"); hlBtn.type="button"; hlBtn.className="mf-tbtn hl"; hlBtn.title="형광펜 (선택한 글 색칠)"; hlBtn.setAttribute("aria-label","형광펜"); hlBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3.5l5 5-9 9-5 1 1-5z"/><path d="M13 6l5 5"/><path d="M4 21h16"/></svg>';
   hlBtn.addEventListener("click",function(e){ e.preventDefault(); openHlPicker(hlBtn.getBoundingClientRect()); });
-  var photosBtn=document.createElement("button"); photosBtn.type="button"; photosBtn.className="mf-tbtn photos"; photosBtn.title="사진 여러 장 넣기"; photosBtn.setAttribute("aria-label","사진 여러 장"); photosBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="14" height="12" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/><path d="M3 15l3.5-3 3 2.5L14 10l3 4"/></svg>';
+  var photosBtn=document.createElement("button"); photosBtn.type="button"; photosBtn.className="mf-tbtn photos"; photosBtn.title="사진 넣기 (한 장·여러 장)"; photosBtn.setAttribute("aria-label","사진 넣기"); photosBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="14" height="12" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/><path d="M3 15l3.5-3 3 2.5L14 10l3 4"/></svg>';
   photosBtn.addEventListener("click",function(e){ e.preventDefault(); pickMultiplePhotos(); });
   var editor = new Editor({
     el: document.getElementById("editor"),
@@ -38724,12 +38732,11 @@ table.ProseMirror-selectednode {
     autofocus: false,
     toolbarItems: [
       [{name:"undo",tooltip:"실행 취소",el:undoBtn},{name:"redo",tooltip:"다시 실행",el:redoBtn}],
-      [{name:"hl",tooltip:"형광펜",el:hlBtn},{name:"emoji",tooltip:"아이콘 삽입",el:emojiBtn},{name:"photos",tooltip:"사진 여러 장",el:photosBtn}],
       ["heading","bold","italic","strike"],
-      ["hr","quote"],
-      ["ul","ol","task","indent","outdent"],
-      ["table","link","image"],
-      ["code","codeblock"]
+      [{name:"hl",tooltip:"형광펜",el:hlBtn},{name:"emoji",tooltip:"아이콘 삽입",el:emojiBtn}],
+      ["ul","ol","task"],
+      ["quote","hr"],
+      ["table","link",{name:"photos",tooltip:"사진 넣기 (한 장·여러 장)",el:photosBtn}]
     ]
   });
 
@@ -38807,9 +38814,24 @@ table.ProseMirror-selectednode {
     group("",un,true);
   }
   /* 폴더 조작 */
-  function newFolder(){ var name=prompt("새 폴더 이름"); if(name==null) return; name=name.trim(); if(!name) return; if(state.folders.indexOf(name)<0) state.folders.push(name); renderDocs(); scheduleSave(); }
-  function renameFolder(f){ var name=prompt("폴더 이름 변경",f); if(name==null) return; name=name.trim(); if(!name||name===f) return; var i=state.folders.indexOf(f); if(i>=0) state.folders[i]=name; state.docs.forEach(function(d){ if(d.folder===f) d.folder=name; }); var c=state.collapsed.indexOf(f); if(c>=0) state.collapsed[c]=name; renderDocs(); scheduleSave(); }
-  function deleteFolder(f){ if(!confirm('"'+f+'" 폴더를 삭제할까요?\n(안의 문서는 미분류로 이동합니다)')) return; state.folders=state.folders.filter(function(x){return x!==f;}); state.docs.forEach(function(d){ if(d.folder===f) d.folder=""; }); renderDocs(); scheduleSave(); }
+  function newFolder(){ var base="새 폴더", name=base, n=2; while(state.folders.indexOf(name)>=0){ name=base+" "+n; n++; } state.folders.push(name); var c=state.collapsed.indexOf(name); if(c>=0) state.collapsed.splice(c,1); renderDocs(); scheduleSave(); startFolderRename(name); }
+  function doRenameFolder(f, name){ name=(name||"").trim(); if(!name||name===f){ renderDocs(); return; } if(state.folders.indexOf(name)>=0){ if(typeof mfToast==="function") mfToast("같은 이름의 폴더가 이미 있어요"); renderDocs(); return; } var i=state.folders.indexOf(f); if(i>=0) state.folders[i]=name; state.docs.forEach(function(d){ if(d.folder===f) d.folder=name; }); var c=state.collapsed.indexOf(f); if(c>=0) state.collapsed[c]=name; renderDocs(); scheduleSave(); }
+  // 휴대폰에서도 확실히 되도록 폴더 이름 변경을 인라인 입력으로(프롬프트 미사용)
+  function startFolderRename(name){
+    var head=null; var heads=document.querySelectorAll(".folder-head"); for(var i=0;i<heads.length;i++){ var fn=heads[i].querySelector(".fname"); if(fn && fn.textContent===name){ head=heads[i]; break; } }
+    if(!head){ return; }
+    var fname=head.querySelector(".fname"); if(!fname) return;
+    var inp=document.createElement("input"); inp.className="frn"; inp.value=name; inp.setAttribute("autocomplete","off"); inp.setAttribute("spellcheck","false"); inp.setAttribute("name","mf-frn");
+    fname.replaceWith(inp); inp.focus(); try{ inp.select(); }catch(e){}
+    var done=false;
+    function commit(){ if(done) return; done=true; doRenameFolder(name, inp.value); }
+    inp.addEventListener("click",function(e){ e.stopPropagation(); });
+    inp.addEventListener("mousedown",function(e){ e.stopPropagation(); });
+    inp.addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); commit(); } else if(e.key==="Escape"){ e.preventDefault(); done=true; renderDocs(); } });
+    inp.addEventListener("blur",commit);
+  }
+  function renameFolder(f){ startFolderRename(f); }
+  function deleteFolder(f){ var hasDocs=state.docs.some(function(d){return d.folder===f;}); if(hasDocs && !confirm('"'+f+'" 폴더를 삭제할까요?\n(안의 문서는 미분류로 이동합니다)')) return; state.folders=state.folders.filter(function(x){return x!==f;}); state.docs.forEach(function(d){ if(d.folder===f) d.folder=""; }); renderDocs(); scheduleSave(); }
   function toggleFolder(f){ var i=state.collapsed.indexOf(f); if(i>=0) state.collapsed.splice(i,1); else state.collapsed.push(f); renderDocs(); scheduleSave(); }
   function moveDocToFolder(id,f){ var d=state.docs.find(function(x){return x.id===id;}); if(d){ d.folder=f; d.updated=Date.now(); } renderDocs(); scheduleSave(); }
   /* 팝업 메뉴 */
