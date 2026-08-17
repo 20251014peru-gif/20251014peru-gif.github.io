@@ -2469,7 +2469,7 @@ table.ProseMirror-selectednode {
   <div class="topbar">
     <button class="tb" id="btn-side" title="문서 목록"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button>
     <a class="tb" id="btn-home" href="./index.html" title="나의 시스템 홈"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg></a>
-    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v2.5</span></div>
+    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span><span class="ver" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v2.6</span></div>
     <button class="tb" id="btn-refresh" title="최신 버전으로 새로고침 (캐시 무시)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
     <button class="tb" id="btn-new" title="새 문서"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg><span class="lbl">새 문서</span></button>
     <div class="grow"></div>
@@ -38593,6 +38593,18 @@ table.ProseMirror-selectednode {
   var SKEY = "markflow_wysiwyg_v1";
   function sget(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
   function sset(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+  // ---- 대용량 저장(IndexedDB) : 사진 여러 장이 localStorage(약 5MB) 한도를 넘겨 저장이 통째로 실패하던 문제 해결 ----
+  var idbAvailable=(function(){ try{ return !!window.indexedDB; }catch(e){ return false; } })();
+  var _idb=null;
+  function idbDB(){ if(_idb) return Promise.resolve(_idb); return new Promise(function(res,rej){ try{ var rq=indexedDB.open("markflow_db",1); rq.onupgradeneeded=function(){ var db=rq.result; if(!db.objectStoreNames.contains("kv")) db.createObjectStore("kv"); }; rq.onsuccess=function(){ _idb=rq.result; res(_idb); }; rq.onerror=function(){ rej(rq.error); }; }catch(e){ rej(e); } }); }
+  function idbSet(v){ return idbDB().then(function(db){ return new Promise(function(res,rej){ try{ var tx=db.transaction("kv","readwrite"); tx.objectStore("kv").put(v,"state"); tx.oncomplete=function(){ res(true); }; tx.onerror=function(){ rej(tx.error); }; tx.onabort=function(){ rej(tx.error); }; }catch(e){ rej(e); } }); }); }
+  function idbGet(){ return idbDB().then(function(db){ return new Promise(function(res,rej){ try{ var tx=db.transaction("kv","readonly"); var rq=tx.objectStore("kv").get("state"); rq.onsuccess=function(){ res(rq.result||null); }; rq.onerror=function(){ rej(rq.error); }; }catch(e){ rej(e); } }); }); }
+  // localStorage에는 사진 데이터를 뺀 '가벼운 사본'만 저장 → 문서 목록·본문 글자는 절대 사라지지 않음(사진은 IndexedDB에 별도 보관)
+  var IMG_PH="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+  function stripImages(md){ return (md||"").replace(/(!\[[^\]]*\]\()data:[^)\s]+(\))/g, "$1"+IMG_PH+"$2"); }
+  function slimState(){ var s={docs:[],currentId:state.currentId,theme:state.theme,folders:state.folders,collapsed:state.collapsed,savedAt:state.savedAt,numHeadings:state.numHeadings,seedCleared:state.seedCleared};
+    s.docs=state.docs.map(function(d){ var c={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) c[k]=d[k]; } c.content=stripImages(d.content||""); return c; });
+    return s; }
   function uid(){ return "d"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
   function docTitle(md){
     var lines=(md||"").split("\n");
@@ -38609,9 +38621,13 @@ table.ProseMirror-selectednode {
   // ---- state ----
   var state = { docs:null, currentId:null, theme:"light", folders:null, collapsed:[], savedAt:0 };
   function migrate(){
-    if(!state.folders||!state.folders.length) state.folders=["업무","아이디어","일상"];
+    if(!Array.isArray(state.folders)) state.folders=[];
     if(!Array.isArray(state.collapsed)) state.collapsed=[];
     state.docs.forEach(function(d){ if(typeof d.folder!=="string") d.folder=""; });
+    // 기본 폴더(업무·아이디어·일상)는 한 번만 자동 정리: 문서가 없는 것만 제거(사용자가 직접 만든 동명 폴더는 보존)
+    if(!state.seedCleared){ state.seedCleared=true; var defs=["업무","아이디어","일상"];
+      state.folders=state.folders.filter(function(f){ if(defs.indexOf(f)>=0){ return state.docs.some(function(d){return d.folder===f;}); } return true; });
+    }
   }
   (function load(){
     var raw=sget(SKEY);
@@ -38623,14 +38639,25 @@ table.ProseMirror-selectednode {
   function current(){ return state.docs.find(function(d){return d.id===state.currentId;})||state.docs[0]; }
 
   var saveTimer=null, loading=false, saveErrShown=false;
+  function persistNow(){
+    state.savedAt=Date.now();
+    // 1) 가벼운 사본(사진 제외)을 localStorage에 → 목록·본문은 항상 안전
+    sset(SKEY, JSON.stringify(slimState()));
+    // 2) 사진 포함 전체를 IndexedDB에 (대용량)
+    var full=JSON.stringify(state);
+    if(idbAvailable){
+      idbSet(full).then(function(){ setSaveState(true); saveErrShown=false; if(window.__mfSyncPush) window.__mfSyncPush(); })
+        .catch(function(){ var ok=sset(SKEY, full); if(ok){ setSaveState(true); if(window.__mfSyncPush) window.__mfSyncPush(); } else { setSaveState(true,true); showSaveError(); } });
+    } else {
+      var ok=sset(SKEY, full);
+      if(ok){ setSaveState(true); saveErrShown=false; if(window.__mfSyncPush) window.__mfSyncPush(); }
+      else { setSaveState(true,true); showSaveError(); }
+    }
+  }
   function scheduleSave(){
     setSaveState(false);
     if(saveTimer) clearTimeout(saveTimer);
-    saveTimer=setTimeout(function(){ state.savedAt=Date.now();
-      var ok=sset(SKEY, JSON.stringify(state));
-      if(ok){ setSaveState(true); saveErrShown=false; if(window.__mfSyncPush) window.__mfSyncPush(); }
-      else { setSaveState(true,true); showSaveError(); }
-    }, 450);
+    saveTimer=setTimeout(persistNow, 450);
   }
   function setSaveState(saved, failed){
     var dot=document.getElementById("save-dot"), tx=document.getElementById("save-text");
@@ -38641,10 +38668,28 @@ table.ProseMirror-selectednode {
   function showSaveError(){
     if(saveErrShown) return; saveErrShown=true;
     var t=document.createElement("div"); t.className="mf-toast err";
-    t.innerHTML='<b>저장 공간이 가득 찼어요.</b><br>사진이 많아 이 브라우저 저장 한도를 넘었습니다. 최근 사진 몇 장을 지우거나, 오른쪽 위 <b>동기화</b>로 GitHub에 백업하세요. 지금 새로고침하면 저장 안 된 사진이 사라질 수 있어요.';
+    t.innerHTML='<b>사진 저장 공간이 부족해요.</b><br>문서 목록과 글자는 안전하게 저장됐지만, 이 기기 저장 공간이 부족해 최근 사진 일부가 저장되지 않았을 수 있어요. 기기 저장 공간을 확보하거나, 오른쪽 위 <b>동기화</b>로 GitHub에 백업하세요.';
     var x=document.createElement("button"); x.type="button"; x.className="mf-toast-x"; x.textContent="확인"; x.addEventListener("click",function(){ t.remove(); });
     t.appendChild(x); document.body.appendChild(t);
     setTimeout(function(){ if(t.parentNode) t.remove(); }, 12000);
+  }
+  // 부팅: localStorage(가벼운 사본)로 즉시 표시 후, IndexedDB(사진 포함 전체)가 있으면 교체 하이드레이션
+  var idbHydrated=false;
+  function hydrateFromIdb(){
+    if(!idbAvailable) return;
+    idbGet().then(function(full){ if(!full) return; var d; try{ d=JSON.parse(full); }catch(e){ return; }
+      if(!d||!Array.isArray(d.docs)||!d.docs.length) return;
+      if((d.savedAt||0) < (state.savedAt||0)) return; // 로컬 사본이 더 최신이면 유지
+      state.docs=d.docs; state.currentId=d.currentId||state.currentId; state.theme=d.theme||state.theme;
+      state.folders=Array.isArray(d.folders)?d.folders:state.folders; state.collapsed=Array.isArray(d.collapsed)?d.collapsed:state.collapsed;
+      state.savedAt=d.savedAt||state.savedAt; if(typeof d.numHeadings!=="undefined") state.numHeadings=d.numHeadings; if(d.seedCleared) state.seedCleared=true;
+      migrate();
+      if(!state.docs.some(function(x){return x.id===state.currentId;})) state.currentId=state.docs[0].id;
+      idbHydrated=true;
+      loading=true; try{ editor.setMarkdown(current().content||"", false); }catch(e){} loading=false;
+      if(typeof clearUndoHistory==="function"){ try{ clearUndoHistory(); }catch(e){} }
+      applyTheme(); if(typeof applyNumHeadings==="function") applyNumHeadings(); renderDocs(); updateCounts(current().content||""); if(window.__mfResetFold) window.__mfResetFold();
+    }).catch(function(){});
   }
 
   // ---- theme ----
@@ -39900,7 +39945,7 @@ table.ProseMirror-selectednode {
     if(!remote||!Array.isArray(remote.docs)||!remote.docs.length) return false;
     state.docs=remote.docs; state.folders=remote.folders||state.folders; state.collapsed=remote.collapsed||[]; state.theme=remote.theme||state.theme; state.currentId=remote.currentId||state.currentId; state.savedAt=remote.savedAt||Date.now();
     migrate(); if(!state.docs.some(function(x){return x.id===state.currentId;})) state.currentId=state.docs[0].id;
-    sset(SKEY,JSON.stringify(state));
+    sset(SKEY, JSON.stringify(slimState())); if(idbAvailable){ idbSet(JSON.stringify(state)).catch(function(){}); }
     loading=true; editor.setMarkdown(current().content,false); loading=false;
     applyTheme(); renderDocs(); updateCounts(current().content); if(window.__mfResetFold) window.__mfResetFold();
     return true;
@@ -40063,6 +40108,7 @@ table.ProseMirror-selectednode {
   // init
   applyTheme(); applyNumHeadings(); renderDocs(); updateCounts(current().content);
   if(window.innerWidth<=760) toggleSidebar(false);
+  hydrateFromIdb();
 })();
 </script>
 </body>
