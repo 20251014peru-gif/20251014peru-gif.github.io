@@ -2359,8 +2359,16 @@ table.ProseMirror-selectednode {
   .mf-video.ratio iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
   .mf-video video{width:100%;max-width:720px;max-height:70vh;border-radius:12px;background:#000;display:block;box-shadow:0 2px 12px rgba(0,0,0,.18);}
   .mf-video-link{display:inline-block;color:var(--accent);font-weight:600;word-break:break-all;padding:8px 0;}
-  .mf-vidinput{width:360px;}
-  .mf-vidinput .vid-cap{font-size:12px;color:var(--text-faint);font-weight:700;padding:2px 4px 8px;line-height:1.4;}
+  .mf-vidinput{width:380px;}
+  .mf-vidinput .vid-cap{font-size:12px;color:var(--text-faint);font-weight:700;padding:2px 4px 6px;line-height:1.4;}
+  .mf-vidinput .vid-pick{display:block;width:100%;border:1px solid var(--border-strong);background:var(--bg-soft);color:var(--text);border-radius:10px;padding:12px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
+  .mf-vidinput .vid-pick:hover{background:var(--border);}
+  .mf-vidinput .vid-pick.od{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .mf-vidinput .vid-pick.od:hover{filter:brightness(.95);}
+  .mf-vidinput .vid-or{text-align:center;font-size:11.5px;color:var(--text-faint);margin:10px 0 6px;}
+  .mf-vidinput .vid-idlink{text-align:center;font-size:11.5px;color:var(--accent);cursor:pointer;padding:6px 0 2px;text-decoration:underline;}
+  .mf-video-load{display:flex;align-items:center;justify-content:center;min-height:120px;background:var(--bg-soft);border:1px dashed var(--border-strong);border-radius:12px;color:var(--text-faint);font-size:13px;padding:16px;text-align:center;}
+  .mf-video-load.missing{color:#c47b00;}
   /* 이미지 액션 바(설명·회전·확대) */
   .mf-imgact{position:fixed;z-index:211;display:flex;gap:2px;background:rgba(20,22,26,.86);border-radius:9px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,.4);}
   .mf-imgact .mf-iabtn{border:0;background:transparent;color:#fff;font-family:var(--sans);font-size:12px;font-weight:700;padding:5px 9px;border-radius:6px;cursor:pointer;line-height:1;white-space:nowrap;}
@@ -2563,7 +2571,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.0</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.1</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38608,6 +38616,13 @@ table.ProseMirror-selectednode {
 <script>
 (function(){
   "use strict";
+  // OneDrive 로그인 팝업 응답: 팝업으로 열린 이 페이지가 code를 받으면 부모창에 전달하고 닫음
+  try{ if(window.opener && /[?&]state=mfod\b/.test(location.search)){
+    var _qs=location.search; var _c=(_qs.match(/[?&]code=([^&]+)/)||[])[1]; var _e=(_qs.match(/[?&]error=([^&]+)/)||[])[1];
+    window.opener.postMessage({mfod:true, code:_c?decodeURIComponent(_c):"", error:_e?decodeURIComponent(_e):""}, location.origin);
+    document.write("<p style='font:15px sans-serif;padding:24px;color:#333'>OneDrive 연결 처리 중… 이 창은 자동으로 닫힙니다.</p>");
+    window.close(); return;
+  } }catch(_e){}
   var Editor = toastui.Editor;
 
   var DEFAULT = [
@@ -38635,9 +38650,14 @@ table.ProseMirror-selectednode {
   // ---- 대용량 저장(IndexedDB) : 사진 여러 장이 localStorage(약 5MB) 한도를 넘겨 저장이 통째로 실패하던 문제 해결 ----
   var idbAvailable=(function(){ try{ return !!window.indexedDB; }catch(e){ return false; } })();
   var _idb=null;
-  function idbDB(){ if(_idb) return Promise.resolve(_idb); return new Promise(function(res,rej){ try{ var rq=indexedDB.open("markflow_db",1); rq.onupgradeneeded=function(){ var db=rq.result; if(!db.objectStoreNames.contains("kv")) db.createObjectStore("kv"); }; rq.onsuccess=function(){ _idb=rq.result; res(_idb); }; rq.onerror=function(){ rej(rq.error); }; }catch(e){ rej(e); } }); }
+  function idbDB(){ if(_idb) return Promise.resolve(_idb); return new Promise(function(res,rej){ try{ var rq=indexedDB.open("markflow_db",2); rq.onupgradeneeded=function(){ var db=rq.result; if(!db.objectStoreNames.contains("kv")) db.createObjectStore("kv"); if(!db.objectStoreNames.contains("media")) db.createObjectStore("media"); }; rq.onsuccess=function(){ _idb=rq.result; res(_idb); }; rq.onerror=function(){ rej(rq.error); }; }catch(e){ rej(e); } }); }
   function idbSet(v){ return idbDB().then(function(db){ return new Promise(function(res,rej){ try{ var tx=db.transaction("kv","readwrite"); tx.objectStore("kv").put(v,"state"); tx.oncomplete=function(){ res(true); }; tx.onerror=function(){ rej(tx.error); }; tx.onabort=function(){ rej(tx.error); }; }catch(e){ rej(e); } }); }); }
   function idbGet(){ return idbDB().then(function(db){ return new Promise(function(res,rej){ try{ var tx=db.transaction("kv","readonly"); var rq=tx.objectStore("kv").get("state"); rq.onsuccess=function(){ res(rq.result||null); }; rq.onerror=function(){ rej(rq.error); }; }catch(e){ rej(e); } }); }); }
+  // 미디어(휴대폰 영상 원본 Blob) 저장소 — 본문 state와 분리 저장(용량 커도 안전)
+  function idbPutMedia(id, blob){ return idbDB().then(function(db){ return new Promise(function(res,rej){ try{ var tx=db.transaction("media","readwrite"); tx.objectStore("media").put(blob,id); tx.oncomplete=function(){ res(true); }; tx.onerror=function(){ rej(tx.error); }; tx.onabort=function(){ rej(tx.error); }; }catch(e){ rej(e); } }); }); }
+  function idbGetMedia(id){ return idbDB().then(function(db){ return new Promise(function(res,rej){ try{ var tx=db.transaction("media","readonly"); var rq=tx.objectStore("media").get(id); rq.onsuccess=function(){ res(rq.result||null); }; rq.onerror=function(){ rej(rq.error); }; }catch(e){ rej(e); } }); }); }
+  function idbDelMedia(id){ return idbDB().then(function(db){ return new Promise(function(res){ try{ var tx=db.transaction("media","readwrite"); tx.objectStore("media").delete(id); tx.oncomplete=function(){ res(true); }; tx.onerror=function(){ res(false); }; }catch(e){ res(false); } }); }); }
+  function idbAllMediaKeys(){ return idbDB().then(function(db){ return new Promise(function(res){ try{ var tx=db.transaction("media","readonly"); var rq=tx.objectStore("media").getAllKeys(); rq.onsuccess=function(){ res(rq.result||[]); }; rq.onerror=function(){ res([]); }; }catch(e){ res([]); } }); }); }
   // localStorage에는 사진 데이터를 뺀 '가벼운 사본'만 저장 → 문서 목록·본문 글자는 절대 사라지지 않음(사진은 IndexedDB에 별도 보관)
   var IMG_PH="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
   function stripImages(md){ return (md||"").replace(/(!\[[^\]]*\]\()data:[^)\s]+(\))/g, "$1"+IMG_PH+"$2"); }
@@ -39152,7 +39172,7 @@ table.ProseMirror-selectednode {
       setTimeout(function(){ openTablePicker(rect2, function(r,c){ editor.focus(); editor.exec("addTable",{rowCount:r,columnCount:c}); }); },0);
       return;
     }
-    if(it.pick==="video"){ setTimeout(function(){ openVideoInput(insertVideoMarker); },0); return; }
+    if(it.pick==="video"){ setTimeout(function(){ openVideoInput(function(m){ insertParaMarker(m); }); },0); return; }
     setTimeout(function(){ try{ it.run(); }catch(e){} editor.focus(); },0);
   }
   function initSlash(){
@@ -39496,10 +39516,16 @@ table.ProseMirror-selectednode {
         state.doc.descendants(function(node,pos){
           if(node.type&&node.type.name==="image"){ var cap=imageCaption(node.attrs.altText); if(cap){ (function(ipos,capText){
             decos.push(window.PM.Decoration.widget(ipos+node.nodeSize, function(){ var d=document.createElement("span"); d.className="mf-figcap"; d.textContent=capText; d.title="눌러서 설명 편집"; d.addEventListener("mousedown",function(e){ if(viewMode) return; e.preventDefault(); e.stopPropagation(); openCapEditor(ipos); }); return d; }, {side:1, ignoreSelection:true, key:"cap:"+ipos+":"+capText})); })(pos,cap); } }
-          if(node.isTextblock){ var vt=node.textContent; var vm=vt.match(/^⟦vid ([^⟧]+)⟧$/); if(vm){ (function(vpos,enc,len){
-            var base=vpos+1;
-            decos.push(window.PM.Decoration.inline(base, base+len, {class:"mf-vidmark"}));
-            decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ return buildVideoEmbed(decVid(enc)); }, {side:1, ignoreSelection:true, key:"vid:"+enc})); })(pos, vm[1], vt.length); } }
+          if(node.isTextblock){ var vt=node.textContent;
+            var vm=vt.match(/^⟦vid ([^⟧]+)⟧$/); if(vm){ (function(vpos,enc,len){
+              var base=vpos+1;
+              decos.push(window.PM.Decoration.inline(base, base+len, {class:"mf-vidmark"}));
+              decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ return buildVideoEmbed(decVid(enc)); }, {side:1, ignoreSelection:true, key:"vid:"+enc})); })(pos, vm[1], vt.length); }
+            var fm=vt.match(/^⟦vidfile:([A-Za-z0-9]+)⟧$/); if(fm){ (function(vpos,id,len){
+              var base2=vpos+1;
+              decos.push(window.PM.Decoration.inline(base2, base2+len, {class:"mf-vidmark"}));
+              decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ return buildLocalVideo(id); }, {side:1, ignoreSelection:true, key:"vidfile:"+id})); })(pos, fm[1], vt.length); }
+          }
         });
         hlScan(state.doc, function(n, of, ot, cf, ct){
           decos.push(window.PM.Decoration.inline(of, ot, {class:"mf-hlmark"}));
@@ -39674,7 +39700,7 @@ table.ProseMirror-selectednode {
       row.addEventListener("mousedown",function(ev){ ev.preventDefault(); var tgt=plusUnit;
         if(it.pick==="callout"){ closePlusMenu(); openCalloutPicker(tgt); }
         else if(it.pick==="table"){ closePlusMenu(); openTablePicker(hEl?hEl.getBoundingClientRect():null, function(r,c){ insertBlockAfterUnit(tgt, tableMd(r,c)); }); }
-        else if(it.pick==="video"){ closePlusMenu(); openVideoInput(function(u){ insertBlockAfterUnit(tgt, makeVidMarker(u)); }); }
+        else if(it.pick==="video"){ closePlusMenu(); openVideoInput(function(m){ insertBlockAfterUnit(tgt, m); }); }
         else { insertBlockAfterUnit(tgt, it.md); closePlusMenu(); }
       });
       plusMenu.appendChild(row); });
@@ -39701,7 +39727,7 @@ table.ProseMirror-selectednode {
       row.addEventListener("mousedown",function(ev){ ev.preventDefault(); var r=rect; closeTbMore();
         if(it.pick==="callout"){ restore(); setTimeout(function(){ openCalloutPickerAt(r, function(body){ editor.exec("blockQuote"); editor.insertText(body); editor.focus(); }); },0); return; }
         if(it.pick==="table"){ restore(); setTimeout(function(){ openTablePicker(r, function(rr,cc){ editor.focus(); editor.exec("addTable",{rowCount:rr,columnCount:cc}); }); },0); return; }
-        if(it.pick==="video"){ restore(); setTimeout(function(){ openVideoInput(insertVideoMarker); },0); return; }
+        if(it.pick==="video"){ restore(); setTimeout(function(){ openVideoInput(function(m){ insertParaMarker(m); }); },0); return; }
         setTimeout(function(){ restore(); try{ it.run(); }catch(e){} editor.focus(); },0);
       });
       tbMoreMenu.appendChild(row); });
@@ -39811,6 +39837,7 @@ table.ProseMirror-selectednode {
     var vim=url.match(/vimeo\.com\/(?:video\/)?(\d+)/); if(vim) return {type:"iframe", src:"https://player.vimeo.com/video/"+vim[1]};
     var gd=url.match(/drive\.google\.com\/file\/d\/([^/]+)/); if(gd) return {type:"iframe", src:"https://drive.google.com/file/d/"+gd[1]+"/preview"};
     var gd2=url.match(/drive\.google\.com\/open\?id=([^&]+)/); if(gd2) return {type:"iframe", src:"https://drive.google.com/file/d/"+gd2[1]+"/preview"};
+    if(/onedrive\.live\.com\/embed|1drv\.ms|onedrive\.live\.com|sharepoint\.com/.test(url)) return {type:"iframe", src:url};
     if(/\.(mp4|webm|ogg|ogv|mov|m4v)(\?.*)?$/i.test(url)) return {type:"video", src:url};
     return {type:"link", src:url};
   }
@@ -39822,31 +39849,158 @@ table.ProseMirror-selectednode {
     else { var a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener noreferrer"; a.className="mf-video-link"; a.textContent="▶ 동영상 열기 — "+url; wrap.appendChild(a); }
     return wrap;
   }
-  function insertVideoMarker(url){ var mk=makeVidMarker(url); if(!mk) return;
-    var v=wwView_(); if(!v){ return; } var schema=v.state.schema; var pType=schema.nodes.paragraph; if(!pType) return;
-    var para; try{ para=pType.create(null, schema.text(mk)); }catch(e){ return; }
+  function insertParaMarker(text){
+    if(!text) return; var v=wwView_(); if(!v){ return; } var schema=v.state.schema; var pType=schema.nodes.paragraph; if(!pType) return;
+    var para; try{ para=pType.create(null, schema.text(text)); }catch(e){ return; }
     var insertPos; try{ var $f=v.state.selection.$from; insertPos=$f.depth>=1?$f.after(1):v.state.doc.content.size; }catch(e){ insertPos=v.state.doc.content.size; }
     try{ var tr=v.state.tr.insert(insertPos, para); v.dispatch(tr); }catch(e){ return; }
     afterHlEdit(); scheduleFold(); if(window.__mfResetFold) window.__mfResetFold();
   }
+  function insertVideoMarker(url){ insertParaMarker(makeVidMarker(url)); }
+  // 휴대폰/PC 영상 파일을 이 기기(IndexedDB)에 저장하고 문서엔 참조 마커만 넣음
+  var vidBlobUrls={};
+  function newVidId(){ return "v"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+  function addLocalVideo(file, insertFn){
+    if(!file) return; if(!idbAvailable){ if(typeof mfToast==="function") mfToast("이 브라우저에선 기기 저장이 안 돼요. 링크로 넣어 주세요."); return; }
+    var id=newVidId();
+    if(typeof mfToast==="function") mfToast("영상을 저장하는 중…");
+    idbPutMedia(id, file).then(function(){
+      try{ vidBlobUrls[id]=URL.createObjectURL(file); }catch(e){}
+      (insertFn||function(m){ insertParaMarker(m); })("⟦vidfile:"+id+"⟧");
+      if(typeof mfToast==="function") mfToast("영상을 이 기기에 저장했어요 (다른 기기 동기화는 안 돼요)");
+    }).catch(function(){ if(typeof mfToast==="function") mfToast("영상 저장 실패 — 기기 저장공간이 부족할 수 있어요"); });
+  }
+  function pickLocalVideo(insertFn){
+    var inp=document.createElement("input"); inp.type="file"; inp.accept="video/*"; inp.style.display="none"; document.body.appendChild(inp);
+    inp.addEventListener("change",function(){ var f=(inp.files&&inp.files[0])||null; inp.remove(); if(f) addLocalVideo(f, insertFn); });
+    inp.click();
+  }
+  function buildLocalVideo(id){
+    var wrap=document.createElement("div"); wrap.className="mf-video"; wrap.setAttribute("contenteditable","false");
+    function showVideo(url){ var vd=document.createElement("video"); vd.src=url; vd.controls=true; vd.setAttribute("playsinline",""); vd.preload="metadata"; wrap.innerHTML=""; wrap.appendChild(vd); }
+    if(vidBlobUrls[id]){ showVideo(vidBlobUrls[id]); return wrap; }
+    var ph=document.createElement("div"); ph.className="mf-video-load"; ph.textContent="영상 불러오는 중…"; wrap.appendChild(ph);
+    idbGetMedia(id).then(function(blob){ if(!blob){ ph.className="mf-video-load missing"; ph.textContent="📵 이 영상은 원래 넣은 기기에만 저장돼 있어요 (동기화 안 됨)"; return; } var url; try{ url=URL.createObjectURL(blob); }catch(e){ ph.textContent="영상을 불러오지 못했어요."; return; } vidBlobUrls[id]=url; showVideo(url); }).catch(function(){ ph.textContent="영상을 불러오지 못했어요."; });
+    return wrap;
+  }
+  // 문서에서 더 이상 참조되지 않는 영상 파일 정리(저장공간 회수)
+  function cleanupOrphanMedia(){
+    if(!idbAvailable) return; if(!state||!Array.isArray(state.docs)||!state.docs.length) return;
+    var used={}; state.docs.forEach(function(d){ var re=/⟦vidfile:([A-Za-z0-9]+)⟧/g, m; while((m=re.exec(d.content||""))){ used[m[1]]=1; } });
+    idbAllMediaKeys().then(function(keys){ keys.forEach(function(k){ if(!used[k]) idbDelMedia(k); }); }).catch(function(){});
+  }
+  // ---- OneDrive 자동 업로드 (선택한 영상을 내 OneDrive에 올리고 재생 링크만 저장) ----
+  var OD_SCOPE="Files.ReadWrite offline_access";
+  var OD={ clientId: sget("markflow_od_client")||"", token:"", exp:0, rt: sget("markflow_od_rt")||"" };
+  function odConnected(){ return !!(OD.clientId && (OD.rt || OD.token)); }
+  function odRedirect(){ return location.origin+location.pathname; }
+  function odB64url(buf){ var b=btoa(String.fromCharCode.apply(null,new Uint8Array(buf))); return b.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+  function odRand(n){ var a=new Uint8Array(n); (window.crypto||{}).getRandomValues&&window.crypto.getRandomValues(a); var s=''; for(var i=0;i<a.length;i++){ s+=('0'+(a[i]||1).toString(16)).slice(-2); } return s.slice(0,n); }
+  function odChallenge(v){ try{ return window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(v)).then(odB64url); }catch(e){ return Promise.reject(e); } }
+  function odSetClientId(){ var c=prompt("OneDrive 앱(클라이언트) ID를 붙여넣으세요.\n(Azure 앱 등록에서 발급 — 설정 안내 참고)", OD.clientId||""); if(c==null) return false; OD.clientId=c.trim(); sset("markflow_od_client",OD.clientId); return !!OD.clientId; }
+  function odConnect(cb){
+    if(!OD.clientId){ if(!odSetClientId()) return; }
+    var verifier=odRand(64);
+    odChallenge(verifier).then(function(challenge){
+      var p="client_id="+encodeURIComponent(OD.clientId)+"&response_type=code&redirect_uri="+encodeURIComponent(odRedirect())+"&scope="+encodeURIComponent(OD_SCOPE)+"&code_challenge="+challenge+"&code_challenge_method=S256&response_mode=query&prompt=select_account&state=mfod";
+      var url="https://login.microsoftonline.com/common/oauth2/v2.0/authorize?"+p;
+      var pop=window.open(url,"odlogin","width=520,height=680");
+      function onMsg(ev){ if(ev.origin!==location.origin) return; var d=ev.data; if(!d||!d.mfod) return; window.removeEventListener("message",onMsg);
+        if(d.error){ if(typeof mfToast==="function") mfToast("OneDrive 연결 취소/오류: "+d.error); return; }
+        odExchange(d.code, verifier, cb);
+      }
+      window.addEventListener("message",onMsg);
+    }).catch(function(){ if(typeof mfToast==="function") mfToast("보안(crypto) 미지원 브라우저예요"); });
+  }
+  function odTokenReq(body){ return fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:body}).then(function(r){ return r.json(); }); }
+  function odExchange(code, verifier, cb){
+    odTokenReq("client_id="+encodeURIComponent(OD.clientId)+"&grant_type=authorization_code&code="+encodeURIComponent(code||"")+"&redirect_uri="+encodeURIComponent(odRedirect())+"&code_verifier="+encodeURIComponent(verifier)+"&scope="+encodeURIComponent(OD_SCOPE))
+      .then(function(j){ if(j.access_token){ OD.token=j.access_token; OD.exp=Date.now()+((j.expires_in||3600)-90)*1000; if(j.refresh_token){ OD.rt=j.refresh_token; sset("markflow_od_rt",OD.rt); } if(typeof mfToast==="function") mfToast("OneDrive 연결됐어요 ✅"); if(cb) cb(); } else { if(typeof mfToast==="function") mfToast("연결 실패: "+(j.error_description||j.error||"")); } })
+      .catch(function(){ if(typeof mfToast==="function") mfToast("연결 실패(네트워크)"); });
+  }
+  function odEnsure(){
+    if(OD.token && Date.now()<OD.exp) return Promise.resolve(OD.token);
+    if(!OD.rt || !OD.clientId) return Promise.reject(new Error("not-connected"));
+    return odTokenReq("client_id="+encodeURIComponent(OD.clientId)+"&grant_type=refresh_token&refresh_token="+encodeURIComponent(OD.rt)+"&scope="+encodeURIComponent(OD_SCOPE)).then(function(j){ if(j.access_token){ OD.token=j.access_token; OD.exp=Date.now()+((j.expires_in||3600)-90)*1000; if(j.refresh_token){ OD.rt=j.refresh_token; sset("markflow_od_rt",OD.rt); } return OD.token; } throw new Error(j.error||"refresh-failed"); });
+  }
+  function odUpload(file, onProg){
+    return odEnsure().then(function(tok){
+      var name=(file.name||("video-"+(new Date()).getTime()+".mp4")).replace(/[#%?*:|"<>\\/]/g,"_");
+      var api="https://graph.microsoft.com/v1.0/me/drive/root:/MarkFlow%20Videos/"+encodeURIComponent(name)+":/createUploadSession";
+      return fetch(api,{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json"},body:JSON.stringify({item:{"@microsoft.graph.conflictBehavior":"rename"}})}).then(function(r){ return r.json(); }).then(function(sess){
+        if(!sess.uploadUrl) throw new Error("업로드 세션 실패"+(sess.error?(": "+(sess.error.message||"")):""));
+        return odPutChunks(sess.uploadUrl, file, onProg);
+      });
+    });
+  }
+  function odPutChunks(uploadUrl, file, onProg){
+    var CH=5*1024*1024, size=file.size;
+    return new Promise(function(resolve,reject){
+      function put(start){
+        var end=Math.min(start+CH, size); var chunk=file.slice(start,end);
+        fetch(uploadUrl,{method:"PUT",headers:{"content-range":"bytes "+start+"-"+(end-1)+"/"+size},body:chunk}).then(function(r){
+          if(r.status===202){ if(onProg) onProg(end/size); put(end); }
+          else if(r.status===200||r.status===201){ if(onProg) onProg(1); r.json().then(resolve).catch(function(){ resolve({}); }); }
+          else { r.text().then(function(t){ reject(new Error("업로드 "+r.status+" "+(t||"").slice(0,80))); }); }
+        }).catch(reject);
+      }
+      put(0);
+    });
+  }
+  function odCreateEmbed(itemId){
+    return odEnsure().then(function(tok){ return fetch("https://graph.microsoft.com/v1.0/me/drive/items/"+itemId+"/createLink",{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json"},body:JSON.stringify({type:"embed",scope:"anonymous"})}).then(function(r){ return r.json(); }).then(function(j){ if(j.link&&j.link.webUrl) return j.link.webUrl; throw new Error("공유링크 생성 실패"); }); });
+  }
+  function uploadVideoToOneDrive(file, insertMarker){
+    if(typeof mfToast==="function") mfToast("OneDrive 업로드 준비 중…");
+    odUpload(file, function(p){ if(typeof mfToast==="function") mfToast("OneDrive 업로드 중… "+Math.round(p*100)+"%"); })
+      .then(function(item){ return odCreateEmbed(item.id); })
+      .then(function(embedUrl){ var mk=makeVidMarker(embedUrl); if(mk) insertMarker(mk); if(typeof mfToast==="function") mfToast("업로드 완료 — 노트에 넣었어요 ✅"); })
+      .catch(function(e){ if(typeof mfToast==="function") mfToast("업로드 실패: "+(e&&e.message?e.message.slice(0,70):"오류")); });
+  }
+  function pickAndUploadOneDrive(insertMarker){
+    var inp=document.createElement("input"); inp.type="file"; inp.accept="video/*"; inp.style.display="none"; document.body.appendChild(inp);
+    inp.addEventListener("change",function(){ var f=(inp.files&&inp.files[0])||null; inp.remove(); if(f) uploadVideoToOneDrive(f, insertMarker); });
+    inp.click();
+  }
   var vidInputBox=null;
   function closeVidInput(){ if(vidInputBox){ vidInputBox.remove(); vidInputBox=null; document.removeEventListener("mousedown",vidInputOutside); } }
   function vidInputOutside(e){ if(vidInputBox&&!vidInputBox.contains(e.target)) closeVidInput(); }
-  function openVideoInput(onSubmit){
+  // insertMarker(markerString) — 커서 위치 또는 특정 블록 뒤에 마커를 넣는 콜백
+  function openVideoInput(insertMarker){
+    if(typeof insertMarker!=="function") insertMarker=function(m){ insertParaMarker(m); };
     closeVidInput(); var mobile=window.innerWidth<=760;
     vidInputBox=document.createElement("div"); vidInputBox.className="mf-capedit mf-vidinput"+(mobile?" sheet":"");
     if(mobile){ var g=document.createElement("div"); g.className="cap-grip"; vidInputBox.appendChild(g); }
-    var cap=document.createElement("div"); cap.className="vid-cap"; cap.textContent="동영상 링크 붙여넣기 (유튜브·구글드라이브·Vimeo·mp4)"; vidInputBox.appendChild(cap);
+    // 1) OneDrive 자동 업로드(주 용도) — 모든 기기 재생
+    if(odConnected()){
+      var cap0=document.createElement("div"); cap0.className="vid-cap"; cap0.textContent="휴대폰 영상 올리기 → 내 OneDrive에 자동 업로드 (모든 기기 재생)"; vidInputBox.appendChild(cap0);
+      var odBtn=document.createElement("button"); odBtn.type="button"; odBtn.className="vid-pick od"; odBtn.textContent="📱 영상 선택 → OneDrive 업로드";
+      odBtn.addEventListener("mousedown",function(e){ e.preventDefault(); closeVidInput(); pickAndUploadOneDrive(insertMarker); });
+      vidInputBox.appendChild(odBtn);
+    } else {
+      var cap0b=document.createElement("div"); cap0b.className="vid-cap"; cap0b.textContent="휴대폰 영상을 모든 기기에서 보려면 OneDrive 연결(최초 1회 설정)"; vidInputBox.appendChild(cap0b);
+      var odConn=document.createElement("button"); odConn.type="button"; odConn.className="vid-pick od"; odConn.textContent="☁️ OneDrive 연결하기";
+      odConn.addEventListener("mousedown",function(e){ e.preventDefault(); odConnect(function(){ openVideoInput(insertMarker); }); });
+      vidInputBox.appendChild(odConn);
+      var odId=document.createElement("div"); odId.className="vid-idlink"; odId.textContent=OD.clientId?"앱 ID 다시 입력":"앱 ID 입력(설정 안내 참고)";
+      odId.addEventListener("mousedown",function(e){ e.preventDefault(); if(odSetClientId()){ closeVidInput(); openVideoInput(insertMarker); } });
+      vidInputBox.appendChild(odId);
+    }
+    var orsep0=document.createElement("div"); orsep0.className="vid-or"; orsep0.textContent="또는 이 기기에만 저장"; vidInputBox.appendChild(orsep0);
+    var pick=document.createElement("button"); pick.type="button"; pick.className="vid-pick"; pick.textContent="📥 이 기기에 저장 (동기화 안 됨)";
+    pick.addEventListener("mousedown",function(e){ e.preventDefault(); closeVidInput(); pickLocalVideo(insertMarker); });
+    vidInputBox.appendChild(pick);
+    var orsep=document.createElement("div"); orsep.className="vid-or"; orsep.textContent="또는 링크로 넣기"; vidInputBox.appendChild(orsep);
     var row=document.createElement("div"); row.className="cap-row";
-    var inp=document.createElement("input"); inp.type="url"; inp.className="cap-inp"; inp.placeholder="https://..."; inp.setAttribute("autocomplete","off"); inp.setAttribute("autocorrect","off"); inp.setAttribute("spellcheck","false"); inp.setAttribute("name","mf-vid-x");
+    var inp=document.createElement("input"); inp.type="url"; inp.className="cap-inp"; inp.placeholder="유튜브·구글드라이브·Vimeo·mp4 주소"; inp.setAttribute("autocomplete","off"); inp.setAttribute("autocorrect","off"); inp.setAttribute("spellcheck","false"); inp.setAttribute("name","mf-vid-x");
     var btn=document.createElement("button"); btn.type="button"; btn.className="cap-save"; btn.textContent="넣기";
     row.appendChild(inp); row.appendChild(btn); vidInputBox.appendChild(row);
     document.body.appendChild(vidInputBox);
-    function submit(){ var u=inp.value.trim(); closeVidInput(); if(u){ try{ (onSubmit||insertVideoMarker)(u); }catch(e){} } }
+    function submit(){ var u=inp.value.trim(); closeVidInput(); if(u){ var mk=makeVidMarker(u); if(mk){ try{ insertMarker(mk); }catch(e){} } } }
     btn.addEventListener("mousedown",function(e){ e.preventDefault(); submit(); });
     inp.addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); submit(); } else if(e.key==="Escape"){ e.preventDefault(); closeVidInput(); } });
     if(!mobile){ vidInputBox.style.left="50%"; vidInputBox.style.top="90px"; vidInputBox.style.transform="translateX(-50%)"; }
-    setTimeout(function(){ document.addEventListener("mousedown",vidInputOutside); try{ inp.focus(); }catch(e){} },20);
+    setTimeout(function(){ document.addEventListener("mousedown",vidInputOutside); },20);
   }
   // ---- 사진 축소·압축(저장 용량 절감) ----
   // 원본 그대로면 base64가 커서 localStorage 한도를 넘어 저장이 실패함 → 삽입 시 자동 축소
@@ -40264,6 +40418,7 @@ table.ProseMirror-selectednode {
   applyTheme(); applyNumHeadings(); renderDocs(); updateCounts(current().content);
   if(window.innerWidth<=760) toggleSidebar(false);
   hydrateFromIdb();
+  setTimeout(function(){ try{ cleanupOrphanMedia(); }catch(e){} }, 4000);
 })();
 </script>
 </body>
