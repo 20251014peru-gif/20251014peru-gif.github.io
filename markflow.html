@@ -2119,11 +2119,11 @@ table.ProseMirror-selectednode {
   /* 안드로이드 등에서 100vh가 주소창 영역까지 포함해 상단 도구막대가 밀려 올라가는 문제 → 동적 뷰포트 높이(dvh) 사용 */
   #app{height:100vh;height:100dvh;display:flex;flex-direction:column;}
 
-  .topbar{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg-elev);border-bottom:1px solid var(--border);z-index:30;}
+  .topbar{display:flex;align-items:center;gap:6px;padding:0 12px;height:50px;box-sizing:border-box;background:var(--bg-elev);border-bottom:1px solid var(--border);z-index:30;}
   .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;letter-spacing:-.2px;}
   .brand .dot{width:11px;height:11px;border-radius:3px;background:linear-gradient(135deg,var(--accent),#7db1ff);box-shadow:0 0 0 3px var(--accent-soft);}
   .brand .ver{font-size:10.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:20px;padding:2px 7px;margin-left:2px;letter-spacing:0;}
-  .tb{appearance:none;border:1px solid transparent;background:transparent;color:var(--text-soft);border-radius:8px;cursor:pointer;height:34px;min-width:34px;padding:0 10px;font-size:13px;font-family:var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;}
+  .tb{appearance:none;-webkit-appearance:none;box-sizing:border-box;flex:0 0 auto;border:1px solid transparent;background:transparent;color:var(--text-soft);border-radius:8px;cursor:pointer;height:36px;min-width:36px;padding:0 10px;font-size:13px;font-family:var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;line-height:1;vertical-align:middle;}
   .tb:hover{background:var(--bg-soft);color:var(--text);}
   .tb.on{background:var(--accent-soft);color:var(--accent);}
   .tb .lbl{font-size:13px;}
@@ -2240,10 +2240,12 @@ table.ProseMirror-selectednode {
 
   /* TUI 톤을 MarkFlow에 맞춤 */
   .toastui-editor-defaultUI{border:0!important;}
-  .toastui-editor-toolbar{border-bottom:1px solid var(--border)!important;position:sticky;top:0;z-index:24;background:var(--bg-elev);}
-  .mf-tbtn{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--text-soft);border-radius:6px;cursor:pointer;padding:0;}
+  /* 상단바(50px)와 같은 높이로 두 줄 통일 */
+  .toastui-editor-toolbar{border-bottom:1px solid var(--border)!important;position:sticky;top:0;z-index:24;background:var(--bg-elev);min-height:50px!important;display:flex!important;align-items:center!important;box-sizing:border-box;}
+  .toastui-editor-defaultUI-toolbar{align-items:center!important;}
+  .mf-tbtn{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--text-soft);border-radius:8px;cursor:pointer;padding:0;box-sizing:border-box;}
   .mf-tbtn:hover{background:var(--bg-soft);color:var(--text);}
-  .mf-tbtn svg{width:19px;height:19px;}
+  .mf-tbtn svg{width:18px;height:18px;}
   /* 토스트 기본 넘침(⋯) 토글은 사용 안 함(모든 버튼을 인라인 표시) → 숨김. 우리 블록 메뉴는 .mf-tbtn.more */
   .toastui-editor-toolbar-icons.more{display:none!important;}
   .toastui-editor-dropdown-toolbar{display:flex!important;position:static!important;box-shadow:none!important;border:0!important;background:transparent!important;padding:0!important;height:auto!important;min-height:0!important;}
@@ -2300,10 +2302,9 @@ table.ProseMirror-selectednode {
   .sb-backdrop{display:none;}
   @media(max-width:760px){
     .sidebar{position:absolute;z-index:40;height:100%;box-shadow:var(--shadow);}
-    .brand .bn{display:none;}
     .tb .lbl{display:none;}
-    .topbar{gap:1px;padding:7px 5px;}
-    .tb{min-width:30px;padding:0 5px;}
+    .topbar{gap:2px;padding:0 6px;height:50px;}
+    .tb{min-width:34px;height:36px;padding:0 6px;}
     .sb-backdrop.show{display:block;position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:39;}
     /* ⋯(더보기) 드롭다운이 화면 밖으로 나가지 않고 여러 줄로 접히도록 */
     .toastui-editor-dropdown-toolbar{left:6px!important;right:6px!important;width:auto!important;max-width:calc(100vw - 12px)!important;height:auto!important;flex-wrap:wrap!important;background:var(--bg-elev)!important;border:1px solid var(--border)!important;box-shadow:var(--shadow)!important;border-radius:10px!important;padding:5px!important;z-index:60!important;}
@@ -2350,6 +2351,16 @@ table.ProseMirror-selectednode {
   /* 이미지 설명(디스크립션) → 사진 아래 캡션 */
   .mf-figcap{display:block;font-size:12.5px;color:var(--text-faint);text-align:center;margin:3px 0 8px;line-height:1.45;font-style:italic;cursor:text;}
   .mf-figcap:hover{color:var(--text-soft);text-decoration:underline dotted;}
+  /* 동영상 임베드 */
+  .mf-vidmark{font-size:0!important;line-height:0!important;}
+  .mf-video{display:block;margin:6px 0 14px;max-width:100%;}
+  .mf-video.ratio{position:relative;width:100%;max-width:720px;padding-top:56.25%;background:#000;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.18);}
+  .mf-video.ratio{padding-top:min(56.25%, 405px);}
+  .mf-video.ratio iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .mf-video video{width:100%;max-width:720px;max-height:70vh;border-radius:12px;background:#000;display:block;box-shadow:0 2px 12px rgba(0,0,0,.18);}
+  .mf-video-link{display:inline-block;color:var(--accent);font-weight:600;word-break:break-all;padding:8px 0;}
+  .mf-vidinput{width:360px;}
+  .mf-vidinput .vid-cap{font-size:12px;color:var(--text-faint);font-weight:700;padding:2px 4px 8px;line-height:1.4;}
   /* 이미지 액션 바(설명·회전·확대) */
   .mf-imgact{position:fixed;z-index:211;display:flex;gap:2px;background:rgba(20,22,26,.86);border-radius:9px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,.4);}
   .mf-imgact .mf-iabtn{border:0;background:transparent;color:#fff;font-family:var(--sans);font-size:12px;font-weight:700;padding:5px 9px;border-radius:6px;cursor:pointer;line-height:1;white-space:nowrap;}
@@ -2500,7 +2511,6 @@ table.ProseMirror-selectednode {
     <button class="tb" id="btn-undo" title="실행 취소 (뒤로)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg></button>
     <button class="tb" id="btn-redo" title="다시 실행 (앞으로)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h1"/></svg></button>
     <div class="grow"></div>
-    <div class="brand"><span class="dot"></span><span class="bn">MarkFlow</span></div>
     <button class="tb" id="btn-view" title="보기 모드 (읽기 전용)"><svg class="icon icon-view" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg><svg class="icon icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
     <div class="menu-wrap">
       <button class="tb" id="btn-ai" title="AI 보정"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.6L18 9l-4.4 1.4L12 15l-1.6-4.6L6 9l4.4-1.4L12 3z"/><path d="M19 14l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z"/></svg><span class="lbl">AI</span></button>
@@ -2553,7 +2563,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v2.9</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.0</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38637,9 +38647,10 @@ table.ProseMirror-selectednode {
   function uid(){ return "d"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
   function docTitle(md){
     var lines=(md||"").split("\n");
-    for(var i=0;i<lines.length;i++){ var t=lines[i].replace(/^#{1,6}\s+/,"").trim(); t=t.replace(/⟦[1-5]/g,"").replace(/⟧/g,""); if(t) return t.replace(/[*_`~#>\[\]]/g,"").slice(0,60); }
+    for(var i=0;i<lines.length;i++){ if(/^⟦vid [^⟧]+⟧$/.test(lines[i].trim())) continue; var t=lines[i].replace(/^#{1,6}\s+/,"").trim(); t=t.replace(/⟦[1-5]/g,"").replace(/⟧/g,""); if(t) return t.replace(/[*_`~#>\[\]]/g,"").slice(0,60); }
     return "무제";
   }
+  function decodeVidMarkers(md){ return (md||"").replace(/⟦vid ([^⟧]+)⟧/g, function(_,e){ var u=(function(){ try{ return decodeURIComponent(escape(atob(e))); }catch(x){ return ""; } })(); return u?("[▶ 동영상]("+u+")"):_; }); }
   function countWords(t){
     var s=(t||"").trim(); if(!s) return 0;
     var cjk=(s.match(/[가-힣一-鿿぀-ヿ]/g)||[]).length;
@@ -38737,13 +38748,13 @@ table.ProseMirror-selectednode {
   var undoBtn=mkToolBtn("undo","실행 취소 (되돌리기)",'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>',"undo");
   var redoBtn=mkToolBtn("redo","다시 실행",'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h1"/></svg>',"redo");
   var emojiBtn=document.createElement("button"); emojiBtn.type="button"; emojiBtn.className="mf-tbtn emoji"; emojiBtn.title="아이콘 삽입 (본문 중간)"; emojiBtn.setAttribute("aria-label","아이콘 삽입"); emojiBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14a4 4 0 0 0 7 0"/><line x1="9" y1="9.5" x2="9" y2="9.5"/><line x1="15" y1="9.5" x2="15" y2="9.5"/></svg>';
-  emojiBtn.addEventListener("click",function(e){ e.preventDefault(); openInlineEmoji(emojiBtn.getBoundingClientRect()); });
+  emojiBtn.addEventListener("click",function(e){ e.preventDefault(); if(inlinePop){ closeInlinePop(); return; } openInlineEmoji(emojiBtn.getBoundingClientRect()); });
   var hlBtn=document.createElement("button"); hlBtn.type="button"; hlBtn.className="mf-tbtn hl"; hlBtn.title="형광펜 (선택한 글 색칠)"; hlBtn.setAttribute("aria-label","형광펜"); hlBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3.5l5 5-9 9-5 1 1-5z"/><path d="M13 6l5 5"/><path d="M4 21h16"/></svg>';
-  hlBtn.addEventListener("click",function(e){ e.preventDefault(); openHlPicker(hlBtn.getBoundingClientRect()); });
+  hlBtn.addEventListener("click",function(e){ e.preventDefault(); if(hlPop){ closeHlPop(); return; } openHlPicker(hlBtn.getBoundingClientRect()); });
   var photosBtn=document.createElement("button"); photosBtn.type="button"; photosBtn.className="mf-tbtn photos"; photosBtn.title="사진 넣기 (한 장·여러 장)"; photosBtn.setAttribute("aria-label","사진 넣기"); photosBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="14" height="12" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/><path d="M3 15l3.5-3 3 2.5L14 10l3 4"/></svg>';
   photosBtn.addEventListener("click",function(e){ e.preventDefault(); pickMultiplePhotos(); });
   var moreBtn=document.createElement("button"); moreBtn.type="button"; moreBtn.className="mf-tbtn more"; moreBtn.title="블록 추가 (제목·목록·인용·표·구분선)"; moreBtn.setAttribute("aria-label","블록 추가"); moreBtn.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
-  moreBtn.addEventListener("click",function(e){ e.preventDefault(); openTbMore(moreBtn.getBoundingClientRect(), moreBtn); });
+  moreBtn.addEventListener("click",function(e){ e.preventDefault(); if(tbMoreMenu){ closeTbMore(); return; } openTbMore(moreBtn.getBoundingClientRect(), moreBtn); });
   var editor = new Editor({
     el: document.getElementById("editor"),
     height: "100%",
@@ -38984,7 +38995,7 @@ table.ProseMirror-selectednode {
 
   // ---- export/files ----
   function download(content,name,mime){ var b=new Blob([content],{type:mime}); var u=URL.createObjectURL(b); var a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(function(){URL.revokeObjectURL(u);},1000); }
-  function exportMd(){ var md=editor.getMarkdown(); download(md, docTitle(md)+".md","text/markdown;charset=utf-8"); }
+  function exportMd(){ var md=decodeVidMarkers(editor.getMarkdown()); download(md, docTitle(editor.getMarkdown())+".md","text/markdown;charset=utf-8"); }
   function exportHtml(){
     var body=editor.getHTML(); var title=docTitle(editor.getMarkdown());
     var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+title.replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];})+'</title>'
@@ -39070,6 +39081,7 @@ table.ProseMirror-selectednode {
     {k:"quote",lb:"인용",ht:"인용문",ic:"❝",md:"> 인용문",run:function(){editor.exec("blockQuote");}},
     {k:"callout",lb:"콜아웃 / 표시",ht:"질문·중요·메모 등 →",ic:"💡",pick:"callout",md:"> 💡 강조할 내용을 적어요",run:function(){editor.exec("blockQuote");}},
     {k:"table",lb:"표",ht:"크기 선택 →",ic:"⊞",pick:"table",md:"| 열1 | 열2 | 열3 |\n| --- | --- | --- |\n| 값 | 값 | 값 |\n| 값 | 값 | 값 |\n\n​",run:function(){editor.exec("addTable",{rowCount:3,columnCount:3});}},
+    {k:"video",lb:"동영상",ht:"유튜브·드라이브·링크 →",ic:"▶",pick:"video",md:"",run:function(){}},
     {k:"hr",lb:"구분선",ht:"———",ic:"—",md:"---",run:function(){editor.exec("hr");}},
     {k:"dots",lb:"장식 구분선",ht:"· · ·",ic:"⁘",md:"·   ·   ·",run:function(){editor.insertText("·   ·   ·");}}
   ];
@@ -39140,6 +39152,7 @@ table.ProseMirror-selectednode {
       setTimeout(function(){ openTablePicker(rect2, function(r,c){ editor.focus(); editor.exec("addTable",{rowCount:r,columnCount:c}); }); },0);
       return;
     }
+    if(it.pick==="video"){ setTimeout(function(){ openVideoInput(insertVideoMarker); },0); return; }
     setTimeout(function(){ try{ it.run(); }catch(e){} editor.focus(); },0);
   }
   function initSlash(){
@@ -39483,6 +39496,10 @@ table.ProseMirror-selectednode {
         state.doc.descendants(function(node,pos){
           if(node.type&&node.type.name==="image"){ var cap=imageCaption(node.attrs.altText); if(cap){ (function(ipos,capText){
             decos.push(window.PM.Decoration.widget(ipos+node.nodeSize, function(){ var d=document.createElement("span"); d.className="mf-figcap"; d.textContent=capText; d.title="눌러서 설명 편집"; d.addEventListener("mousedown",function(e){ if(viewMode) return; e.preventDefault(); e.stopPropagation(); openCapEditor(ipos); }); return d; }, {side:1, ignoreSelection:true, key:"cap:"+ipos+":"+capText})); })(pos,cap); } }
+          if(node.isTextblock){ var vt=node.textContent; var vm=vt.match(/^⟦vid ([^⟧]+)⟧$/); if(vm){ (function(vpos,enc,len){
+            var base=vpos+1;
+            decos.push(window.PM.Decoration.inline(base, base+len, {class:"mf-vidmark"}));
+            decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ return buildVideoEmbed(decVid(enc)); }, {side:1, ignoreSelection:true, key:"vid:"+enc})); })(pos, vm[1], vt.length); } }
         });
         hlScan(state.doc, function(n, of, ot, cf, ct){
           decos.push(window.PM.Decoration.inline(of, ot, {class:"mf-hlmark"}));
@@ -39657,6 +39674,7 @@ table.ProseMirror-selectednode {
       row.addEventListener("mousedown",function(ev){ ev.preventDefault(); var tgt=plusUnit;
         if(it.pick==="callout"){ closePlusMenu(); openCalloutPicker(tgt); }
         else if(it.pick==="table"){ closePlusMenu(); openTablePicker(hEl?hEl.getBoundingClientRect():null, function(r,c){ insertBlockAfterUnit(tgt, tableMd(r,c)); }); }
+        else if(it.pick==="video"){ closePlusMenu(); openVideoInput(function(u){ insertBlockAfterUnit(tgt, makeVidMarker(u)); }); }
         else { insertBlockAfterUnit(tgt, it.md); closePlusMenu(); }
       });
       plusMenu.appendChild(row); });
@@ -39683,6 +39701,7 @@ table.ProseMirror-selectednode {
       row.addEventListener("mousedown",function(ev){ ev.preventDefault(); var r=rect; closeTbMore();
         if(it.pick==="callout"){ restore(); setTimeout(function(){ openCalloutPickerAt(r, function(body){ editor.exec("blockQuote"); editor.insertText(body); editor.focus(); }); },0); return; }
         if(it.pick==="table"){ restore(); setTimeout(function(){ openTablePicker(r, function(rr,cc){ editor.focus(); editor.exec("addTable",{rowCount:rr,columnCount:cc}); }); },0); return; }
+        if(it.pick==="video"){ restore(); setTimeout(function(){ openVideoInput(insertVideoMarker); },0); return; }
         setTimeout(function(){ restore(); try{ it.run(); }catch(e){} editor.focus(); },0);
       });
       tbMoreMenu.appendChild(row); });
@@ -39736,7 +39755,7 @@ table.ProseMirror-selectednode {
   var INLINE_EMOJIS=["⭐","✅","❌","❓","❗","💡","📌","🔖","🔥","✨","⚠️","👍","👎","✔️","➡️","⬅️","🔺","🔻","🟢","🔴","🔵","🟡","🟣","⚫","😀","😅","😉","😢","😡","🤔","🙏","🎯","📖","📝","🧠","💬","🚀","🎉","❤️","👀","💯","🕒"];
   var inlinePop=null;
   function closeInlinePop(){ if(inlinePop){ inlinePop.remove(); inlinePop=null; document.removeEventListener("mousedown",closeInlineOutside); } }
-  function closeInlineOutside(e){ if(inlinePop&&!inlinePop.contains(e.target)) closeInlinePop(); }
+  function closeInlineOutside(e){ if(inlinePop&&!inlinePop.contains(e.target)&&!(emojiBtn&&emojiBtn.contains&&emojiBtn.contains(e.target))) closeInlinePop(); }
   function openInlineEmoji(rect){
     closeInlinePop();
     var mobile=window.innerWidth<=760;
@@ -39765,7 +39784,7 @@ table.ProseMirror-selectednode {
   function mfToastHl(msg){ if(typeof mfToast==="function"){ mfToast(msg); } }
   var hlPop=null;
   function closeHlPop(){ if(hlPop){ hlPop.remove(); hlPop=null; document.removeEventListener("mousedown",closeHlOutside); } }
-  function closeHlOutside(e){ if(hlPop&&!hlPop.contains(e.target)) closeHlPop(); }
+  function closeHlOutside(e){ if(hlPop&&!hlPop.contains(e.target)&&!(hlBtn&&hlBtn.contains&&hlBtn.contains(e.target))) closeHlPop(); }
   function openHlPicker(rect){
     closeHlPop(); var mobile=window.innerWidth<=760;
     hlPop=document.createElement("div"); hlPop.className="mf-hlpick"+(mobile?" sheet":"");
@@ -39781,6 +39800,53 @@ table.ProseMirror-selectednode {
     document.body.appendChild(hlPop);
     if(!mobile&&rect){ var x=Math.min(rect.left, window.innerWidth-220); var y=rect.bottom+6; if(y>window.innerHeight-140) y=Math.max(8,rect.top-6-130); hlPop.style.left=Math.max(8,x)+"px"; hlPop.style.top=y+"px"; }
     setTimeout(function(){ document.addEventListener("mousedown",closeHlOutside); },0);
+  }
+  // ---- 동영상 링크 임베드 ----
+  function encVid(u){ try{ return btoa(unescape(encodeURIComponent(u))); }catch(e){ return ""; } }
+  function decVid(s){ try{ return decodeURIComponent(escape(atob(s))); }catch(e){ return ""; } }
+  function makeVidMarker(u){ var e=encVid((u||"").trim()); return e?"⟦vid "+e+"⟧":""; }
+  function videoEmbedInfo(url){ url=(url||"").trim();
+    var yt=url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+    if(yt) return {type:"iframe", src:"https://www.youtube.com/embed/"+yt[1]};
+    var vim=url.match(/vimeo\.com\/(?:video\/)?(\d+)/); if(vim) return {type:"iframe", src:"https://player.vimeo.com/video/"+vim[1]};
+    var gd=url.match(/drive\.google\.com\/file\/d\/([^/]+)/); if(gd) return {type:"iframe", src:"https://drive.google.com/file/d/"+gd[1]+"/preview"};
+    var gd2=url.match(/drive\.google\.com\/open\?id=([^&]+)/); if(gd2) return {type:"iframe", src:"https://drive.google.com/file/d/"+gd2[1]+"/preview"};
+    if(/\.(mp4|webm|ogg|ogv|mov|m4v)(\?.*)?$/i.test(url)) return {type:"video", src:url};
+    return {type:"link", src:url};
+  }
+  function buildVideoEmbed(url){
+    var wrap=document.createElement("div"); wrap.className="mf-video"; wrap.setAttribute("contenteditable","false");
+    var info=videoEmbedInfo(url);
+    if(info.type==="iframe"){ wrap.classList.add("ratio"); var f=document.createElement("iframe"); f.src=info.src; f.setAttribute("allow","accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"); f.setAttribute("allowfullscreen",""); f.setAttribute("referrerpolicy","strict-origin-when-cross-origin"); f.loading="lazy"; wrap.appendChild(f); }
+    else if(info.type==="video"){ var vd=document.createElement("video"); vd.src=info.src; vd.controls=true; vd.setAttribute("playsinline",""); vd.preload="metadata"; wrap.appendChild(vd); }
+    else { var a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener noreferrer"; a.className="mf-video-link"; a.textContent="▶ 동영상 열기 — "+url; wrap.appendChild(a); }
+    return wrap;
+  }
+  function insertVideoMarker(url){ var mk=makeVidMarker(url); if(!mk) return;
+    var v=wwView_(); if(!v){ return; } var schema=v.state.schema; var pType=schema.nodes.paragraph; if(!pType) return;
+    var para; try{ para=pType.create(null, schema.text(mk)); }catch(e){ return; }
+    var insertPos; try{ var $f=v.state.selection.$from; insertPos=$f.depth>=1?$f.after(1):v.state.doc.content.size; }catch(e){ insertPos=v.state.doc.content.size; }
+    try{ var tr=v.state.tr.insert(insertPos, para); v.dispatch(tr); }catch(e){ return; }
+    afterHlEdit(); scheduleFold(); if(window.__mfResetFold) window.__mfResetFold();
+  }
+  var vidInputBox=null;
+  function closeVidInput(){ if(vidInputBox){ vidInputBox.remove(); vidInputBox=null; document.removeEventListener("mousedown",vidInputOutside); } }
+  function vidInputOutside(e){ if(vidInputBox&&!vidInputBox.contains(e.target)) closeVidInput(); }
+  function openVideoInput(onSubmit){
+    closeVidInput(); var mobile=window.innerWidth<=760;
+    vidInputBox=document.createElement("div"); vidInputBox.className="mf-capedit mf-vidinput"+(mobile?" sheet":"");
+    if(mobile){ var g=document.createElement("div"); g.className="cap-grip"; vidInputBox.appendChild(g); }
+    var cap=document.createElement("div"); cap.className="vid-cap"; cap.textContent="동영상 링크 붙여넣기 (유튜브·구글드라이브·Vimeo·mp4)"; vidInputBox.appendChild(cap);
+    var row=document.createElement("div"); row.className="cap-row";
+    var inp=document.createElement("input"); inp.type="url"; inp.className="cap-inp"; inp.placeholder="https://..."; inp.setAttribute("autocomplete","off"); inp.setAttribute("autocorrect","off"); inp.setAttribute("spellcheck","false"); inp.setAttribute("name","mf-vid-x");
+    var btn=document.createElement("button"); btn.type="button"; btn.className="cap-save"; btn.textContent="넣기";
+    row.appendChild(inp); row.appendChild(btn); vidInputBox.appendChild(row);
+    document.body.appendChild(vidInputBox);
+    function submit(){ var u=inp.value.trim(); closeVidInput(); if(u){ try{ (onSubmit||insertVideoMarker)(u); }catch(e){} } }
+    btn.addEventListener("mousedown",function(e){ e.preventDefault(); submit(); });
+    inp.addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); submit(); } else if(e.key==="Escape"){ e.preventDefault(); closeVidInput(); } });
+    if(!mobile){ vidInputBox.style.left="50%"; vidInputBox.style.top="90px"; vidInputBox.style.transform="translateX(-50%)"; }
+    setTimeout(function(){ document.addEventListener("mousedown",vidInputOutside); try{ inp.focus(); }catch(e){} },20);
   }
   // ---- 사진 축소·압축(저장 용량 절감) ----
   // 원본 그대로면 base64가 커서 localStorage 한도를 넘어 저장이 실패함 → 삽입 시 자동 축소
