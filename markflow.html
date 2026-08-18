@@ -2571,7 +2571,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.4</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.5</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -39926,14 +39926,21 @@ table.ProseMirror-selectednode {
     });
   }
   function gdShare(id){ return gdEnsure().then(function(tok){ return fetch("https://www.googleapis.com/drive/v3/files/"+id+"/permissions",{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json"},body:JSON.stringify({role:"reader",type:"anyone"})}).then(function(){ return id; }); }); }
+  // 업로드 동안 화면이 저절로 꺼지지 않게(잠자기 방지) — 폰을 내려놔도 업로드가 끝까지 진행되게
+  var wakeLock=null, wakeWanted=false;
+  function acquireWake(){ wakeWanted=true; try{ if(navigator.wakeLock && navigator.wakeLock.request && document.visibilityState==="visible"){ navigator.wakeLock.request("screen").then(function(w){ wakeLock=w; try{ w.addEventListener("release",function(){ wakeLock=null; }); }catch(e){} }).catch(function(){}); } }catch(e){} }
+  function releaseWake(){ wakeWanted=false; try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
+  document.addEventListener("visibilitychange",function(){ if(wakeWanted && document.visibilityState==="visible" && !wakeLock){ acquireWake(); } });
   function uploadVideoToDrive(file, insertMarker){
     var mb=file&&file.size?(Math.round(file.size/1048576)+"MB"):"";
     if(typeof mfToast==="function") mfToast("구글 드라이브 업로드 준비 중…"+(mb?" ("+mb+")":""));
+    acquireWake();
     var lastPc=-1;
-    gdUpload(file, function(p){ var pc=Math.round(p*100); if(pc!==lastPc){ lastPc=pc; if(typeof mfToast==="function") mfToast("구글 드라이브 업로드 중… "+pc+"%"+(mb?" ("+mb+")":"")); } })
+    gdUpload(file, function(p){ var pc=Math.round(p*100); if(pc!==lastPc){ lastPc=pc; if(typeof mfToast==="function") mfToast("구글 드라이브 업로드 중… "+pc+"% — 다 될 때까지 화면 켜두면 돼요"); } })
       .then(function(item){ return gdShare(item.id); })
       .then(function(id){ var url="https://drive.google.com/file/d/"+id+"/view"; var mk=makeVidMarker(url); if(mk) insertMarker(mk); if(typeof mfToast==="function") mfToast("업로드 완료 — 노트에 넣었어요 ✅"); })
-      .catch(function(e){ if(typeof mfToast==="function") mfToast("업로드 실패: "+(e&&e.message?e.message.slice(0,70):"오류")); });
+      .catch(function(e){ if(typeof mfToast==="function") mfToast("업로드 실패: "+(e&&e.message?e.message.slice(0,70):"오류")); })
+      .then(function(){ releaseWake(); }, function(){ releaseWake(); });
   }
   function pickAndUploadDrive(insertMarker){
     var inp=document.createElement("input"); inp.type="file"; inp.accept="video/*"; inp.style.display="none"; document.body.appendChild(inp);
