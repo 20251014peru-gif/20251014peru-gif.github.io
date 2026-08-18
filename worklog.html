@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921-cal0818-1545"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0818-1600"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -6419,17 +6419,30 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   // ── v45-0818: 앱 → 구글 자동 등록 (저장하면 알아서 올라감) ──
   // v45에는 저장 훅이 없어서 "전체동기화"를 눌러야만 올라갔음. 그 경로를 복원.
   var GCAL_META_KEYS = ['gcalEventId','gTaskId','_gcalSrc','_fromGcal','updatedAt'];
+  // v45-0818: 중복 등록 방지 — 디바운스(같은 항목 여러 번 요청 시 마지막 1회) + 전송중 락
+  var _pushTimers  = {};   // id → timer
+  var _pushLocked  = {};   // id → 전송 진행중
   function _gcalPushLater(id){
-    setTimeout(function(){
+    if(!id) return;
+    if(_pushTimers[id]) clearTimeout(_pushTimers[id]);   // 이전 예약 취소 (POST 2번 방지)
+    _pushTimers[id] = setTimeout(function(){
+      delete _pushTimers[id];
       try{
         if(!accessToken) return;
         if(typeof entries === 'undefined') return;
+        if(_pushLocked[id]){ dbgG('push 중복 차단: ' + id); return; }
         var en = entries.find(function(x){ return x.id === id; });
         if(!en || !en.date) return;
         if(!GCAL_IDS[en.kind]) return;
-        syncScheduleToGCal(en);
-      }catch(e){ dbgG('push 오류: ' + e); }
-    }, 700);
+        _pushLocked[id] = true;
+        syncScheduleToGCal(en, function(){
+          setTimeout(function(){ delete _pushLocked[id]; }, 1500);
+        });
+      }catch(e){
+        delete _pushLocked[id];
+        dbgG('push 오류: ' + e);
+      }
+    }, 900);
   }
   function hookSaveForGcal(){
     if(typeof window.addRecord === 'function' && !window.addRecord._gcalHooked){
@@ -13330,7 +13343,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0818-1545';
+  var TAG = ' +cal0818-1600';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
