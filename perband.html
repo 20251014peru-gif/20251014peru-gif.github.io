@@ -152,9 +152,14 @@ details{margin-top:6px;} summary{cursor:pointer;font-size:13px;font-weight:800;c
   </div>
   <div class="row r3">
     <div class="fld"><label>컨센 성장률(연%)</label><input id="gc" type="number" step="any" value="25" inputmode="decimal"></div>
-    <div class="fld"><label>보유기간(년)</label><input id="yrs" type="number" step="any" value="3" inputmode="decimal"></div>
+    <div class="fld"><label>보유기간</label>
+      <div style="display:flex;gap:6px">
+        <input id="yrs" type="number" step="any" value="3" inputmode="decimal" style="flex:1;min-width:0">
+        <select id="unit" style="width:78px;flex:none;padding-right:26px"><option value="y">년</option><option value="m">개월</option></select>
+      </div></div>
     <div class="fld"><label>요구수익률(연%)</label><input id="req" type="number" step="any" value="10" inputmode="decimal"></div>
   </div>
+  <div id="horizonNote"></div>
   <div class="btns">
     <button class="b-main" id="bCalc">계산</button>
     <button class="b-sub" id="bSave">기록에 추가</button>
@@ -203,7 +208,7 @@ details{margin-top:6px;} summary{cursor:pointer;font-size:13px;font-weight:800;c
     <div class="tile"><div class="k">여유 폭</div><div class="v" id="rGap">–</div><div class="d" id="rGapD">–</div></div>
   </div>
   <div class="tiles" style="margin-top:8px;grid-template-columns:1fr 1fr">
-    <div class="tile"><div class="k">컨센 실현 시 기대 연수익률</div><div class="v" id="rExp">–</div><div class="d" id="rExpD">–</div></div>
+    <div class="tile"><div class="k" id="expK">컨센 실현 시 기대 연수익률</div><div class="v" id="rExp">–</div><div class="d" id="rExpD">–</div></div>
     <div class="tile"><div class="k">컨센 실현 시 목표주가</div><div class="v" id="rPx">–</div><div class="d" id="rPxD">–</div></div>
   </div>
 </div>
@@ -266,7 +271,7 @@ var $=function(i){return document.getElementById(i)};
 var COL='perband_records';
 var FB={apiKey:"AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY",authDomain:"my-system-25497.firebaseapp.com",projectId:"my-system-25497",storageBucket:"my-system-25497.firebasestorage.app"};
 var LSK='perband_cache', LSP='perband_presets', LSI='perband_inputs';
-var IN=['basis','tkr','cur','dt','px','eps','pLow','pMed','pHigh','pSec','rev','gc','yrs','req'];
+var IN=['basis','tkr','cur','dt','px','eps','pLow','pMed','pHigh','pSec','rev','gc','yrs','unit','req'];
 var REV={up:'상향▲',flat:'보합―',down:'하향▼'};
 var rows=[], presets={}, last=null, db=null;
 
@@ -327,13 +332,16 @@ function pct(v,d){d=d===undefined?1:d;return(v>=0?'+':'')+v.toFixed(d)+'%'}
 function ud(v){return v>=0?'up':'down'}
 function toast(m){var t=$('toast');t.textContent=m;t.className='toast on';clearTimeout(t._t);t._t=setTimeout(function(){t.className='toast'},1900)}
 function err(m){$('errBox').innerHTML=m?'<div class="card"><div class="note n-bad"><b>입력 오류</b><br>'+esc(m)+'</div></div>':'';return !m}
+function hLabel(r){return (r.unit==='m'? (r.hv+'개월') : (r.hv+'년'))}
 function bLabel(b){return{ng_fwd:'NG·FWD',gaap_ttm:'GAAP·TTM',ng_ttm:'NG·TTM',gaap_fwd:'GAAP·FWD'}[b]||b}
 
 /* ── 계산 ── */
 function calc(){
-  var px=n('px'),eps=n('eps'),pl=n('pLow'),pm=n('pMed'),ph=n('pHigh'),gc=n('gc'),N=n('yrs'),rq=n('req');
+  var px=n('px'),eps=n('eps'),pl=n('pLow'),pm=n('pMed'),ph=n('pHigh'),gc=n('gc'),rq=n('req');
+  var hv=n('yrs'), unit=$('unit').value, N=(unit==='m'? hv/12 : hv);
   var ps=parseFloat($('pSec').value); if(isNaN(ps))ps=null;
   if([px,eps,pl,pm,ph,gc,N,rq].some(function(v){return isNaN(v)}))return err('빈 칸이 있습니다.');
+  if(N>0&&N<1/12)return err('보유기간이 1개월 미만입니다. 이 방식은 최소 3개월 이상에서만 의미가 있습니다.');
   if(px<=0)return err('주가는 0보다 커야 합니다.');
   if(eps<=0)return err('EPS가 0 이하입니다. 적자 기업에는 PER 방식을 쓸 수 없습니다 — PBR이나 PSR을 쓰세요.');
   if(!(pl>0&&pm>0&&ph>0))return err('PER 값은 모두 0보다 커야 합니다. 적자 분기의 0.00은 빼고 계산하세요.');
@@ -349,7 +357,8 @@ function calc(){
   last={tkr:($('tkr').value.trim()||'—'),cur:$('cur').value,basis:$('basis').value,
     dt:$('dt').value||today(),px:px,eps:eps,per:per,pos:pos,pl:pl,pm:pm,ph:ph,ps:ps,
     tl:tl,tm:tm,th:th,ul:(tl-px)/px*100,um:(tm-px)/px*100,uh:(th-px)/px*100,
-    need:need,gc:gc,gap:gc-need,exp:exp,pxN:pxN,N:N,req:rq,rev:$('rev').value};
+    need:need,gc:gc,gap:gc-need,exp:exp,pxN:pxN,N:N,hv:hv,unit:unit,
+    cum:(pxN/px-1)*100,req:rq,rev:$('rev').value};
   last.vd=verdict(last);
   draw(last); saveIn();
   return true;
@@ -401,14 +410,23 @@ function draw(r){
     : '<b>손절 기준 후보: '+money(r.tl,r.cur)+' ('+pct(r.ul,1)+')</b> — 여기까지는 "멀티플 수축"으로 설명됩니다. 이 아래로 뚫으면 시장이 <b>EPS 전망 자체를 불신</b>한다는 뜻이므로 매수 논리를 처음부터 재점검해야 합니다.';
 
   $('rNeed').textContent=pct(r.need,1);
-  $('rNeedD').textContent=r.need<0?('EPS가 연 '+Math.abs(r.need).toFixed(1)+'% 줄어도 목표 달성'):(r.N+'년 · 연 '+r.req+'% 목표');
+  $('rNeedD').textContent=r.need<0?('EPS가 연 '+Math.abs(r.need).toFixed(1)+'% 줄어도 목표 달성'):(hLabel(r)+' · 연 '+r.req+'% 목표');
   $('rCons').textContent=pct(r.gc,1);
   $('rGap').textContent=pct(r.gap,1); $('rGap').className='v '+ud(r.gap);
   $('rGapD').textContent=r.gap>=0?'컨센이 요구치 초과':'컨센이 요구치 미달';
-  $('rExp').textContent=pct(r.exp,1); $('rExp').className='v '+ud(r.exp);
-  $('rExpD').textContent='요구 '+r.req+'% 대비 '+pct(r.exp-r.req,1);
+  if(r.N<1){
+    $('expK').textContent='컨센 실현 시 '+hLabel(r)+' 수익률';
+    $('rExp').textContent=pct(r.cum,1);
+    $('rExpD').textContent='연환산 '+pct(r.exp,1)+' · 기간이 짧아 연환산은 과장됩니다';
+  } else {
+    $('expK').textContent='컨센 실현 시 기대 연수익률';
+    $('rExp').textContent=pct(r.exp,1);
+    $('rExpD').textContent='요구 '+r.req+'% 대비 '+pct(r.exp-r.req,1);
+  }
+  $('rExp').className='v '+ud(r.N<1?r.cum:r.exp);
   $('rPx').textContent=money(r.pxN,r.cur);
-  $('rPxD').textContent=r.N+'년 후 · 누적 '+pct((r.pxN/r.px-1)*100,0);
+  $('rPxD').textContent=hLabel(r)+' 후 · 누적 '+pct(r.cum,1);
+  horizonNote(r);
 
   var v=VD[r.vd];
   $('vDot').style.background=v[0];
@@ -419,6 +437,16 @@ function draw(r){
     extra='<div class="note n-bad"><b>③번과 ④번이 충돌합니다 — 이게 핵심입니다.</b><br>③번은 "컨센서스 '+pct(r.gc,1)+'가 실현된다"는 <b>전제</b> 위에서 '+pct(r.gap,1)+' 여유가 있다고 말합니다. 그런데 ④번은 <b>그 컨센서스가 지금 내려가는 중</b>이라고 경고합니다. 전제가 무너지는 중이므로 <b>③번 숫자를 근거로 진입하지 마세요.</b> 리비전이 상향 전환한 뒤 ③번을 다시 보는 게 순서입니다.</div>';
   }
   $('vNote').innerHTML='<div class="note '+v[3]+'">'+v[4]+'</div>'+extra;
+}
+
+function horizonNote(r){
+  var el=$('horizonNote'), M=r.N*12;
+  if(M>=12){ el.innerHTML=''; return; }
+  if(M>=3){
+    el.innerHTML='<div class="note n-warn"><b>'+hLabel(r)+' 설정 — 해석에 주의하세요.</b> 이 계산은 <b>'+hLabel(r)+' 안에 PER이 5년 중앙값('+r.pm.toFixed(1)+'배)까지 회귀한다</b>고 가정합니다. 실제로 멀티플이 그렇게 빨리 되돌아올 이유는 없습니다. 기간이 짧을수록 결과가 <b>실적이 아니라 이 회귀 가정</b>에 좌우됩니다. 6~12개월이 이 방식의 적정 구간입니다.</div>';
+  } else {
+    el.innerHTML='<div class="note n-bad"><b>'+hLabel(r)+'는 이 도구의 적용 범위 밖입니다.</b> 3개월 미만에서 주가를 움직이는 건 밸류에이션이 아니라 <b>수급·이벤트·모멘텀</b>입니다. PER 밴드로는 2~3주 방향성을 맞출 수 없습니다. 단기 매매는 거래대금·이동평균선·수급 지표로 판단하시고, 이 도구는 <b>"지금 이 종목을 들고 있어도 되는가"</b>를 6~12개월 기준으로 점검하는 용도로 쓰세요.</div>';
+  }
 }
 
 /* ── 저장/동기화 ── */
@@ -546,12 +574,12 @@ $('preset').onchange=function(){
 function dl(nme,txt,mime){var b=new Blob([txt],{type:mime}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nme;a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
 $('bCsv').onclick=function(){
   if(!rows.length){toast('먼저 기록을 추가하세요');return}
-  var H=['종목','통화','기준','조회일','주가','EPS','PER','밴드위치%','PER최저','PER중앙','PER최고','섹터중앙','보수','기본','강세','보수%','기본%','강세%','필요성장률%','컨센성장률%','여유폭%','기대연수익%','리비전','판정'];
+  var H=['종목','통화','기준','조회일','주가','EPS','PER','밴드위치%','PER최저','PER중앙','PER최고','섹터중앙','보수','기본','강세','보수%','기본%','강세%','보유기간','필요성장률%','컨센성장률%','여유폭%','기대연수익%','누적수익%','리비전','판정'];
   var L=[H.join(',')];
   rows.slice().sort(function(a,b){return String(a.dt).localeCompare(String(b.dt))}).forEach(function(r){
     L.push([r.tkr,r.cur,bLabel(r.basis),r.dt,r.px,r.eps,r.per.toFixed(2),r.pos.toFixed(0),
       r.pl,r.pm,r.ph,(r.ps==null?'':r.ps),r.tl.toFixed(2),r.tm.toFixed(2),r.th.toFixed(2),
-      r.ul.toFixed(1),r.um.toFixed(1),r.uh.toFixed(1),r.need.toFixed(1),r.gc.toFixed(1),r.gap.toFixed(1),r.exp.toFixed(1),
+      r.ul.toFixed(1),r.um.toFixed(1),r.uh.toFixed(1),hLabel(r),r.need.toFixed(1),r.gc.toFixed(1),r.gap.toFixed(1),r.exp.toFixed(1),(r.cum==null?'':r.cum.toFixed(1)),
       REV[r.rev],r.vd].join(','));
   });
   dl('perband_'+today()+'.csv','﻿'+L.join('\n'),'text/csv;charset=utf-8');
