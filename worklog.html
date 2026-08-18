@@ -1277,6 +1277,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button class="nav-btn" id="btnPurgeOldCal" onclick="window.gcalPurgeOldWorkSchedule&&window.gcalPurgeOldWorkSchedule()" style="background:#5f6368;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="예전에 캘린더에 쌓인 예정·업무 이벤트 일괄 삭제 (일회성)">🗑️ 옛예정·업무비우기</button>
         <!-- 임시:옛캘린더정리 버튼 끝 -->
         <button class="nav-btn" onclick="window.gcalPullAll&&window.gcalPullAll(false)" style="background:#1a73e8;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 캘린더에서 새 예정 가져오기">📥 구글←가져오기</button>
+        <button class="nav-btn" id="btnGcalPullCfg" style="background:#e8f0fe;color:#1a73e8;border:1.5px solid #1a73e8;border-radius:10px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer" title="가져올 캘린더 선택">⚙</button>
       </div>
     </div>
 
@@ -2927,7 +2928,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0818-1435"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5285,15 +5286,23 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   }
 
   // 날짜 도우미
+  // 날짜 도우미 (v45-0818 수정: KST에서 하루 밀리던 버그 — UTC 고정 연산으로 교체)
   function addDay(dateStr, n){
-    var d = new Date(dateStr + 'T00:00:00');
-    d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0,10);
+    if(!dateStr) return dateStr;
+    var p = String(dateStr).slice(0,10).split('-');
+    if(p.length !== 3) return dateStr;
+    var d = new Date(Date.UTC(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10)));
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.getUTCFullYear() + '-'
+         + String(d.getUTCMonth()+1).padStart(2,'0') + '-'
+         + String(d.getUTCDate()).padStart(2,'0');
   }
   function addHour(timeStr, n){
-    var parts = timeStr.split(':');
-    var h = parseInt(parts[0]) + n;
-    return (h < 24 ? h : 23).toString().padStart(2,'0') + ':' + (parts[1]||'00');
+    var parts = String(timeStr||'00:00').split(':');
+    var h = (parseInt(parts[0],10)||0) + n;
+    var m = parts[1] || '00';
+    if(h > 23){ h = 23; m = '59'; }   // 자정 넘김 → 시작=종료 방지
+    return String(h).padStart(2,'0') + ':' + m;
   }
 
   // ── 구글 캘린더에서 삭제 ───────────────────────────────
@@ -5761,9 +5770,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   var PULL_LS = 'wl_gcal_pull_ts';
 
   // 구글 캘린더에서 업무예정 캘린더 항목 가져오기
-  function pullFromGCal(silent){
+  function pullFromGCal(silent, _calId, _label){
     if(!accessToken) return;
-    var calId = GCAL_IDS.schedule;
+    var calId = _calId || GCAL_IDS.schedule;
     if(!calId) return;
 
     // 오늘부터 1년 전 ~ 2년 후 범위
@@ -5775,7 +5784,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       + encodeURIComponent(calId) + '/events'
       + '?timeMin=' + from.toISOString()
       + '&timeMax=' + to.toISOString()
-      + '&singleEvents=true'   // 반복이벤트 각각 펼치지 않음 (원본만)
+      + '&singleEvents=false'   // 반복이벤트는 원본만 (펼치면 수십 건 중복 생성됨)
       + '&maxResults=500'
       + '&fields=items(id,summary,description,start,end,recurrence,reminders,status,updated,extendedProperties)';
 
@@ -5877,10 +5886,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       // 결과 저장
       localStorage.setItem(PULL_LS, String(Date.now()));
 
-      if(!silent){
-        var msg = added || updated
-          ? '📅 구글→업무일지: '+added+'건 추가'+(updated?', '+updated+'건 업데이트':'')
-          : '📅 새 항목 없음 (이미 동기화됨)';
+      if(!silent && (added || updated)){
+        var msg = '📅 ' + (_label||'캘린더') + ' → 업무일지: ' + added + '건 추가'
+                + (updated ? ', '+updated+'건 업데이트' : '');
         if(typeof toast==='function') toast(msg, 3000);
       }
 
@@ -5895,6 +5903,80 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       if(!silent && typeof toast==='function') toast('구글 캘린더 가져오기 오류: '+e.message, 4000);
     });
   }
+
+  // ══════════════════════════════════════════════════════
+  // ── v45-0818: 여러 캘린더에서 가져오기 (삼성 캘린더 대응) ──
+  // ══════════════════════════════════════════════════════
+  var PULLCAL_LS = 'wl_gcal_pull_cals';
+  var GCAL_LABEL = {
+    work:'기본(업무)', schedule:'예정', deliver:'전달', expense:'지출',
+    call:'통화', vacation:'휴가', memo:'메모'
+  };
+  function getPullCalKeys(){
+    try{
+      var a = JSON.parse(localStorage.getItem(PULLCAL_LS)||'null');
+      if(Array.isArray(a)) return a.filter(function(k){ return GCAL_IDS[k]; });
+    }catch(e){}
+    return ['schedule','work'];   // 기본값: 예정 + 기본(업무)
+  }
+  function setPullCalKeys(arr){
+    try{ localStorage.setItem(PULLCAL_LS, JSON.stringify(arr)); }catch(e){}
+  }
+  function pullFromAllCals(silent){
+    if(!accessToken){ if(!silent) signIn(); return; }
+    var keys = getPullCalKeys();
+    if(!keys.length){
+      if(!silent && typeof toast==='function') toast('가져올 캘린더가 없어요 — ⚙ 버튼에서 선택해주세요', 4000);
+      return;
+    }
+    dbgG('pull 대상 캘린더: ' + keys.join(', '));
+    if(!silent && typeof toast==='function')
+      toast('📥 ' + keys.length + '개 캘린더에서 가져오는 중…', 2500);
+    keys.forEach(function(k, i){
+      setTimeout(function(){
+        pullFromGCal(silent, GCAL_IDS[k], GCAL_LABEL[k]||k);
+      }, i * 900);
+    });
+  }
+  window.gcalPullCals = pullFromAllCals;
+
+  // ── ⚙ 가져올 캘린더 선택 모달 ──
+  window.gcalPullSettings = function(){
+    var cur = getPullCalKeys();
+    var ov = document.getElementById('gcalPullCfgOv');
+    if(ov) ov.remove();
+    ov = document.createElement('div');
+    ov.id = 'gcalPullCfgOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+    var rows = Object.keys(GCAL_IDS).map(function(k){
+      var on = cur.indexOf(k) >= 0;
+      return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f7faff;border:1.5px solid '
+        + (on?'#1a73e8':'#e8f0fa')
+        + ';border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">'
+        + '<input type="checkbox" class="gpc-chk" data-k="' + k + '" ' + (on?'checked':'')
+        + ' style="width:17px;height:17px;accent-color:#1a73e8;cursor:pointer">'
+        + '<span>' + (GCAL_LABEL[k]||k) + '</span></label>';
+    }).join('');
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:400px;padding:20px;max-height:90vh;overflow:auto">'
+      + '<h3 style="margin:0 0 6px;font-size:17px;font-weight:800;color:#1a73e8">📥 가져올 캘린더 선택</h3>'
+      + '<div style="font-size:12px;color:#7a92a8;margin-bottom:14px;line-height:1.55">삼성 캘린더에서 일정을 저장할 때 고르는 캘린더를 켜두세요.<br>보통 <b>기본(업무)</b>과 <b>예정</b>이면 충분합니다.</div>'
+      + '<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px">' + rows + '</div>'
+      + '<div style="display:flex;gap:8px">'
+      + '<button id="gpcCancel" style="flex:1;height:44px;background:#f7faff;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">닫기</button>'
+      + '<button id="gpcSave" style="flex:2;height:44px;background:#1a73e8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">저장하고 가져오기</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    document.getElementById('gpcCancel').addEventListener('click', function(){ ov.remove(); });
+    document.getElementById('gpcSave').addEventListener('click', function(){
+      var sel = [];
+      ov.querySelectorAll('.gpc-chk').forEach(function(c){ if(c.checked) sel.push(c.getAttribute('data-k')); });
+      setPullCalKeys(sel);
+      ov.remove();
+      pullFromAllCals(false);
+    });
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  };
+
 
   // 접속 시 자동 pull (로그인 상태면)
   function autoPull(){
@@ -6061,7 +6143,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // 캘린더 + Tasks 동시 pull
   function pullAll(silent){
-    pullFromGCal(silent);
+    pullFromAllCals(silent);
     setTimeout(function(){ pullFromTasks(silent); }, 800);
   }
 
@@ -6120,6 +6202,15 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         signIn();
       }
     });
+    // v45-0818: ⚙ 가져올 캘린더 선택 버튼
+    var cfgBtn = document.getElementById('btnGcalPullCfg');
+    if(cfgBtn && !cfgBtn._bound){
+      cfgBtn._bound = true;
+      cfgBtn.addEventListener('click', function(){
+        if(window.gcalPullSettings) window.gcalPullSettings();
+      });
+    }
+    dbgG('버튼 바인딩 완료');
   }
 
   setTimeout(initGApi, 800);
@@ -12818,6 +12909,19 @@ if('serviceWorker' in navigator){
     });
   });
 }
+</script>
+<script>
+/* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
+(function(){
+  var TAG = ' +cal0818-1435';
+  function stamp(){
+    var el = document.getElementById('verBadge');
+    if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
+      el.textContent = el.textContent + TAG;
+    }
+  }
+  [600, 1500, 3000, 5000].forEach(function(t){ setTimeout(stamp, t); });
+})();
 </script>
 </body>
 </html>
