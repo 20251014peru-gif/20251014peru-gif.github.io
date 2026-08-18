@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921-cal0818-1530"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0818-1545"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5202,9 +5202,13 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
     // 시작/종료
     var eventStart, eventEnd;
-    if(en.kind==='schedule' && en.startTime){
-      eventStart = { dateTime: startDate+'T'+en.startTime+':00', timeZone:'Asia/Seoul' };
-      var endTime = en.endTime || addHour(en.startTime, 1);
+    // v45-0818: 업무도 시간 지정 (직접 입력값 우선, 없으면 자동 배정)
+    var _cfgWT = getWorkTimeCfg();
+    var _st = en.startTime || (en.kind === 'work' ? autoWorkTime(en) : '');
+    if((en.kind === 'schedule' || en.kind === 'work') && _st){
+      eventStart = { dateTime: startDate+'T'+_st+':00', timeZone:'Asia/Seoul' };
+      var endTime = en.endTime || addMin(_st, en.kind === 'work' ? _cfgWT.dur : 60);
+      if(endTime <= _st) endTime = addMin(_st, 30);
       eventEnd   = { dateTime: startDate+'T'+endTime+':00', timeZone:'Asia/Seoul' };
     } else if(en.kind==='vacation' && en.end && en.end !== en.start){
       eventStart = { date: startDate };
@@ -5291,6 +5295,43 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
          + String(d.getUTCMonth()+1).padStart(2,'0') + '-'
          + String(d.getUTCDate()).padStart(2,'0');
   }
+  // ── v45-0818: 업무 처리시간 (캘린더에서 종일 줄줄이 붙는 것 방지) ──
+  var WORKTIME_LS = 'wl_gcal_worktime';
+  function getWorkTimeCfg(){
+    try{
+      var c = JSON.parse(localStorage.getItem(WORKTIME_LS)||'null');
+      if(c && typeof c === 'object') return {
+        auto:  c.auto !== false,
+        start: c.start || '09:00',
+        gap:   parseInt(c.gap,10)  || 30,
+        dur:   parseInt(c.dur,10)  || 30
+      };
+    }catch(e){}
+    return { auto:true, start:'09:00', gap:30, dur:30 };
+  }
+  function setWorkTimeCfg(c){ try{ localStorage.setItem(WORKTIME_LS, JSON.stringify(c)); }catch(e){} }
+  function addMin(timeStr, n){
+    var pt = String(timeStr||'00:00').split(':');
+    var t = (parseInt(pt[0],10)||0) * 60 + (parseInt(pt[1],10)||0) + (parseInt(n,10)||0);
+    if(t > 23*60+59) t = 23*60+59;
+    if(t < 0) t = 0;
+    return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
+  }
+  // 시간을 안 넣은 업무 → 같은 날 등록 순서대로 자동 배정
+  function autoWorkTime(en){
+    var cfg = getWorkTimeCfg();
+    if(!cfg.auto) return '';
+    if(typeof entries === 'undefined' || !en || !en.date) return '';
+    var same = entries.filter(function(e){ return e.kind === 'work' && e.date === en.date; });
+    same.sort(function(a,b){
+      return (a.createdAt||0) - (b.createdAt||0) || String(a.id).localeCompare(String(b.id));
+    });
+    var idx = 0;
+    for(var i=0;i<same.length;i++){ if(same[i].id === en.id){ idx = i; break; } }
+    return addMin(cfg.start, idx * cfg.gap);
+  }
+
+
   function addHour(timeStr, n){
     var parts = String(timeStr||'00:00').split(':');
     var h = (parseInt(parts[0],10)||0) + n;
@@ -5824,9 +5865,29 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         }
 
         // 이미 gcalEventId로 연결된 항목 있는지 확인
+        // v45-0818: kind 조건 제거 — 앱이 올린 '업무'도 매칭돼야 중복 복제를 막는다
         var existing = typeof entries!=='undefined' && entries.find(function(e){
-          return e.kind==='schedule' && e.gcalEventId===it.id;
+          return e.gcalEventId === it.id;
         });
+
+        // v45-0818 2차 안전망: gcalEventId가 끊겼어도 같은 날짜+같은 제목이면 중복으로 보고 건너뜀
+        if(!existing && typeof entries!=='undefined'){
+          var _norm = function(s){ return String(s||'').replace(/\s+/g,'').trim(); };
+          var gT = _norm(title);
+          var dup = entries.find(function(e){
+            if(e.date !== date) return false;
+            if(e.kind !== 'schedule' && e.kind !== 'work') return false;
+            var a = _norm((e.floor||'') + (e.title||''));
+            var b = _norm(e.title||'');
+            return (a && a === gT) || (b && b === gT) || (b.length > 4 && gT.indexOf(b) >= 0);
+          });
+          if(dup){ skipped++; return; }
+        }
+
+        if(existing && existing.kind !== 'schedule'){
+          // 업무 등은 업무일지가 원본 — 구글에서 되돌려 받지 않음
+          skipped++; return;
+        }
 
         if(existing){
           // 구글에서 수정된 경우 업데이트
@@ -5915,34 +5976,72 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   // ══════════════════════════════════════════════════════
   // ── v45-0818: 여러 캘린더에서 가져오기 (삼성 캘린더 대응) ──
   // ══════════════════════════════════════════════════════
-  var PULLCAL_LS = 'wl_gcal_pull_cals';
+  var PULLCAL_LS = 'wl_gcal_pull_cals';   // 캘린더 ID 배열
+  var CALLIST_LS = 'wl_gcal_callist';     // 계정 캘린더 목록 캐시
+  // v45-0818: 삼성 캘린더에서 개인 일정을 넣는 전용 캘린더
+  var PERSONAL_CAL_ID = '687d321bde526c5397254c1ed9bf4e1e6856e04564af92cc0592061541152d3a@group.calendar.google.com';
   var GCAL_LABEL = {
     work:'기본(업무)', schedule:'예정', deliver:'전달', expense:'지출',
     call:'통화', vacation:'휴가', memo:'메모'
   };
-  function getPullCalKeys(){
+  function loadCalList(){
+    try{ var a = JSON.parse(localStorage.getItem(CALLIST_LS)||'null'); if(Array.isArray(a)) return a; }catch(e){}
+    return [];
+  }
+  function saveCalList(arr){ try{ localStorage.setItem(CALLIST_LS, JSON.stringify(arr)); }catch(e){} }
+
+  // 구글 계정의 캘린더 목록 조회 (새로 만든 개인 캘린더도 자동으로 잡힘)
+  function fetchCalList(cb){
+    if(!accessToken){ if(cb) cb(loadCalList()); return; }
+    fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=250&fields=items(id,summary,primary,accessRole)', {
+      headers: { 'Authorization': 'Bearer ' + accessToken }
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.items){ if(cb) cb(loadCalList()); return; }
+      var arr = d.items.filter(function(it){
+        return it.accessRole === 'owner' || it.accessRole === 'writer';
+      }).map(function(it){
+        return { id: it.id, summary: it.summary || it.id, primary: !!it.primary };
+      });
+      saveCalList(arr);
+      dbgG('캘린더 목록 ' + arr.length + '개 로드');
+      if(cb) cb(arr);
+    })
+    .catch(function(e){ dbgG('캘린더 목록 오류: ' + e); if(cb) cb(loadCalList()); });
+  }
+  function calLabelById(id){
+    for(var k in GCAL_IDS){ if(GCAL_IDS[k] === id) return GCAL_LABEL[k] || k; }
+    var list = loadCalList();
+    for(var i=0;i<list.length;i++){ if(list[i].id === id) return list[i].summary || id; }
+    return id;
+  }
+  function calKeyById(id){
+    for(var k in GCAL_IDS){ if(GCAL_IDS[k] === id) return k; }
+    return id;   // 개인 캘린더는 ID 자체를 출처 키로 사용
+  }
+  function getPullCalIds(){
     try{
       var a = JSON.parse(localStorage.getItem(PULLCAL_LS)||'null');
-      if(Array.isArray(a)) return a.filter(function(k){ return GCAL_IDS[k]; });
+      if(Array.isArray(a)) return a.map(function(v){ return GCAL_IDS[v] || v; }).filter(Boolean);
     }catch(e){}
-    return ['schedule','work'];   // 기본값: 예정 + 기본(업무)
+    return [PERSONAL_CAL_ID, GCAL_IDS.schedule];   // 기본값: 개인일정 + 예정
   }
-  function setPullCalKeys(arr){
-    try{ localStorage.setItem(PULLCAL_LS, JSON.stringify(arr)); }catch(e){}
-  }
+  function setPullCalIds(arr){ try{ localStorage.setItem(PULLCAL_LS, JSON.stringify(arr)); }catch(e){} }
+
   function pullFromAllCals(silent){
     if(!accessToken){ if(!silent) signIn(); return; }
-    var keys = getPullCalKeys();
-    if(!keys.length){
+    var ids = getPullCalIds();
+    if(!ids.length){
       if(!silent && typeof toast==='function') toast('가져올 캘린더가 없어요 — ⚙ 버튼에서 선택해주세요', 4000);
       return;
     }
-    dbgG('pull 대상 캘린더: ' + keys.join(', '));
+    dbgG('pull 대상: ' + ids.map(calLabelById).join(', '));
     if(!silent && typeof toast==='function')
-      toast('📥 ' + keys.length + '개 캘린더에서 가져오는 중…', 2500);
-    keys.forEach(function(k, i){
+      toast('📥 ' + ids.length + '개 캘린더에서 가져오는 중…', 2500);
+    ids.forEach(function(cid, i){
       setTimeout(function(){
-        pullFromGCal(silent, GCAL_IDS[k], GCAL_LABEL[k]||k, k);
+        pullFromGCal(silent, cid, calLabelById(cid), calKeyById(cid));
       }, i * 900);
     });
   }
@@ -5950,25 +6049,35 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // ── ⚙ 가져올 캘린더 선택 모달 ──
   window.gcalPullSettings = function(){
-    var cur = getPullCalKeys();
     var ov = document.getElementById('gcalPullCfgOv');
     if(ov) ov.remove();
     ov = document.createElement('div');
     ov.id = 'gcalPullCfgOv';
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
-    var rows = Object.keys(GCAL_IDS).map(function(k){
-      var on = cur.indexOf(k) >= 0;
-      return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f7faff;border:1.5px solid '
-        + (on?'#1a73e8':'#e8f0fa')
-        + ';border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45">'
-        + '<input type="checkbox" class="gpc-chk" data-k="' + k + '" ' + (on?'checked':'')
-        + ' style="width:17px;height:17px;accent-color:#1a73e8;cursor:pointer">'
-        + '<span>' + (GCAL_LABEL[k]||k) + '</span></label>';
-    }).join('');
-    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:400px;padding:20px;max-height:90vh;overflow:auto">'
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:430px;padding:20px;max-height:90vh;overflow:auto">'
       + '<h3 style="margin:0 0 6px;font-size:17px;font-weight:800;color:#1a73e8">📥 가져올 캘린더 선택</h3>'
-      + '<div style="font-size:12px;color:#7a92a8;margin-bottom:14px;line-height:1.55">삼성 캘린더에서 일정을 저장할 때 고르는 캘린더를 켜두세요.<br>보통 <b>기본(업무)</b>과 <b>예정</b>이면 충분합니다.</div>'
-      + '<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px">' + rows + '</div>'
+      + '<div style="font-size:12px;color:#7a92a8;margin-bottom:14px;line-height:1.55">삼성 캘린더에서 일정을 저장할 때 고르는 캘린더를 켜두세요.<br>구글 계정에 캘린더를 새로 만들면 여기에 자동으로 나타납니다.</div>'
+      + '<div id="gpcBody" style="margin-bottom:14px"><div style="padding:24px;text-align:center;color:#aab8c8;font-size:13px">캘린더 목록 불러오는 중…</div></div>'
+      + (function(){
+          var w = getWorkTimeCfg();
+          return '<div style="border-top:1.5px solid #f0f6ff;margin:4px 0 12px;padding-top:12px">'
+            + '<div style="font-size:12px;font-weight:800;color:#7a92a8;margin-bottom:8px">⏰ 업무 처리시간</div>'
+            + '<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#1a2f45;cursor:pointer;margin-bottom:8px">'
+            + '<input type="checkbox" id="gpcWtAuto" ' + (w.auto?'checked':'')
+            + ' style="width:16px;height:16px;accent-color:#1a73e8;cursor:pointer">'
+            + '시간을 안 넣은 업무는 자동으로 시간 배정</label>'
+            + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+            + '<span style="font-size:11px;color:#7a92a8">시작</span>'
+            + '<input type="time" id="gpcWtStart" step="300" value="' + w.start + '" style="width:104px;height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">'
+            + '<span style="font-size:11px;color:#7a92a8">간격</span>'
+            + '<input type="number" id="gpcWtGap" min="5" max="180" step="5" value="' + w.gap + '" style="width:62px;height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">'
+            + '<span style="font-size:11px;color:#7a92a8">분, 길이</span>'
+            + '<input type="number" id="gpcWtDur" min="5" max="480" step="5" value="' + w.dur + '" style="width:62px;height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">'
+            + '<span style="font-size:11px;color:#7a92a8">분</span>'
+            + '</div>'
+            + '<div style="font-size:11px;color:#aab8c8;margin-top:6px;line-height:1.5">같은 날 업무를 등록 순서대로 시작시각부터 간격만큼 벌려 배치합니다. 업무 모달의 <b>처리 시간</b>을 직접 넣으면 그 값이 우선합니다.</div>'
+            + '</div>';
+        })()
       + '<div style="border-top:1.5px solid #f0f6ff;margin:4px 0 12px;padding-top:12px">'
       + '<div style="font-size:12px;font-weight:800;color:#7a92a8;margin-bottom:8px">🛠 정리 도구 <span style="font-weight:600">(평소엔 쓸 일 없어요)</span></div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:6px">'
@@ -5982,25 +6091,74 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       + '<button id="gpcSave" style="flex:2;height:44px;background:#1a73e8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">저장하고 가져오기</button>'
       + '</div></div>';
     document.body.appendChild(ov);
-    // v45-0818: 정리 도구 버튼
-    var _tool = function(id, fn, msg){
+
+    function renderList(list){
+      var cur = getPullCalIds();
+      var appIds = {};
+      for(var k in GCAL_IDS) appIds[GCAL_IDS[k]] = true;
+      var mine = list.filter(function(c){ return !appIds[c.id]; });
+      var app  = list.filter(function(c){ return appIds[c.id]; });
+      function row(c, isApp){
+        var on = cur.indexOf(c.id) >= 0;
+        return '<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:'
+          + (isApp ? '#f7faff' : '#fffdf5')
+          + ';border:1.5px solid ' + (on ? '#1a73e8' : '#e8f0fa')
+          + ';border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;color:#1a2f45;margin-bottom:6px">'
+          + '<input type="checkbox" class="gpc-chk" data-id="' + c.id + '" ' + (on?'checked':'')
+          + ' style="width:17px;height:17px;accent-color:#1a73e8;cursor:pointer;flex-shrink:0">'
+          + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (c.summary||c.id) + '</span>'
+          + (c.primary ? '<span style="font-size:10px;color:#7a92a8;flex-shrink:0">기본</span>' : '')
+          + '</label>';
+      }
+      var h = '';
+      if(mine.length){
+        h += '<div style="font-size:12px;font-weight:800;color:#c2410c;margin:2px 0 6px">👤 내 캘린더 (개인용 — 여기에 넣으세요)</div>';
+        h += mine.map(function(c){ return row(c, false); }).join('');
+      }
+      h += '<div style="font-size:12px;font-weight:800;color:#7a92a8;margin:12px 0 6px">🏢 업무일지 전용 <span style="font-weight:600">(앱이 내보내는 곳 — 보통 끔)</span></div>';
+      h += app.map(function(c){ return row(c, true); }).join('');
+      if(!mine.length){
+        h += '<div style="margin-top:10px;padding:10px 12px;background:#fff7ed;border:1.5px solid #fdba74;border-radius:10px;font-size:11.5px;color:#9a3412;line-height:1.55">'
+          + '💡 개인 캘린더가 없네요. 구글 캘린더에서 <b>새 캘린더</b>를 하나 만들고(예: “내 일정”) 삼성 캘린더에서 그걸 골라 저장하시면, 업무 기록과 안 섞입니다.</div>';
+      }
+      document.getElementById('gpcBody').innerHTML = h;
+    }
+
+    renderList(loadCalList());
+    fetchCalList(function(list){ if(list && list.length) renderList(list); });
+
+    var _tool = function(id, fn){
       var b = document.getElementById(id);
       if(!b) return;
       b.addEventListener('click', function(){
         ov.remove();
         if(typeof fn === 'function') fn();
-        else if(typeof toast === 'function') toast(msg || '기능을 찾을 수 없어요');
+        else if(typeof toast === 'function') toast('기능을 찾을 수 없어요');
       });
     };
     _tool('gpcSyncAll', window.gcalSyncAll);
     _tool('gpcCalDup',  window.gcalCleanDuplicates);
     _tool('gpcTaskDup', window.gtaskCleanDuplicates);
     _tool('gpcPurge',   window.gcalPurgeOldWorkSchedule);
+
     document.getElementById('gpcCancel').addEventListener('click', function(){ ov.remove(); });
     document.getElementById('gpcSave').addEventListener('click', function(){
+      // v45-0818: 업무 시간 자동배정 설정 저장
+      try{
+        var _a = document.getElementById('gpcWtAuto');
+        var _s = document.getElementById('gpcWtStart');
+        var _g = document.getElementById('gpcWtGap');
+        var _d = document.getElementById('gpcWtDur');
+        if(_a) setWorkTimeCfg({
+          auto:  _a.checked,
+          start: (_s && _s.value) || '09:00',
+          gap:   parseInt(_g && _g.value, 10) || 30,
+          dur:   parseInt(_d && _d.value, 10) || 30
+        });
+      }catch(e){}
       var sel = [];
-      ov.querySelectorAll('.gpc-chk').forEach(function(c){ if(c.checked) sel.push(c.getAttribute('data-k')); });
-      setPullCalKeys(sel);
+      ov.querySelectorAll('.gpc-chk').forEach(function(c){ if(c.checked) sel.push(c.getAttribute('data-id')); });
+      setPullCalIds(sel);
       ov.remove();
       pullFromAllCals(false);
     });
@@ -6277,6 +6435,16 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     if(typeof window.addRecord === 'function' && !window.addRecord._gcalHooked){
       var origAdd = window.addRecord;
       window.addRecord = function(obj){
+        try{
+          // v45-0818: 업무 모달이 열려 있으면 처리시간을 함께 저장
+          if(obj && obj.kind === 'work' && !obj._fromGcal){
+            var _t = readWorkTimeInputs();
+            if(_t && (_t.startTime || _t.endTime)){
+              obj.startTime = _t.startTime;
+              obj.endTime   = _t.endTime;
+            }
+          }
+        }catch(e){ dbgG('시간 주입(add) 오류: ' + e); }
         var r = origAdd.apply(this, arguments);
         try{
           // 구글에서 가져온 항목은 되돌려 보내지 않음 (핑퐁 방지)
@@ -6292,6 +6460,16 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     if(typeof window.updateRecord === 'function' && !window.updateRecord._gcalHooked){
       var origUpd = window.updateRecord;
       window.updateRecord = function(id, patch){
+        try{
+          // v45-0818: 업무 모달이 열려 있으면 처리시간을 함께 저장
+          if(patch && !patch._fromGcal && typeof entries !== 'undefined'){
+            var _en = entries.find(function(x){ return x.id === id; });
+            if(_en && _en.kind === 'work'){
+              var _t = readWorkTimeInputs();
+              if(_t){ patch.startTime = _t.startTime; patch.endTime = _t.endTime; }
+            }
+          }
+        }catch(e){ dbgG('시간 주입(update) 오류: ' + e); }
         var r = origUpd.apply(this, arguments);
         try{
           if(!accessToken || !patch) return r;
@@ -6311,6 +6489,73 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   }
   [500, 1500, 3000, 6000].forEach(function(t){ setTimeout(hookSaveForGcal, t); });
   window.gcalHookNow = hookSaveForGcal;
+
+  // ── v45-0818: 업무 모달에 '처리 시간' 입력칸 주입 ──
+  // worklog.js의 SCHEMA에는 시간 필드가 없어서 DOM에 직접 끼워넣고 저장 훅에서 값을 실어보낸다.
+  var _curEditKind = '', _curEditId = null;
+  function isWorkModal(){
+    var mf = document.getElementById('mFields');
+    if(!mf) return false;
+    return !!(mf.querySelector('#m-floor') && mf.querySelector('#m-field') && mf.querySelector('#m-title'));
+  }
+  function injectWorkTimeFields(){
+    try{
+      if(!isWorkModal()) return;
+      var mf = document.getElementById('mFields');
+      if(mf.querySelector('#m-workStart')) return;      // 이미 주입됨
+      var dateEl = document.getElementById('m-date');
+      if(!dateEl) return;
+      var host = (dateEl.closest && dateEl.closest('.field')) || dateEl.parentElement;
+      if(!host || !host.parentNode) return;
+      var wrap = document.createElement('div');
+      wrap.className = host.className || 'field';
+      wrap.id = 'm-workTimeWrap';
+      wrap.innerHTML =
+        '<label>처리 시간 <span style="font-weight:500;color:#9aa7b4">(비워두면 자동 배정)</span></label>'
+        + '<div style="display:flex;gap:6px;align-items:center">'
+        + '<input type="time" id="m-workStart" step="300" style="flex:1;min-width:0">'
+        + '<span style="color:#9aa7b4;flex-shrink:0">~</span>'
+        + '<input type="time" id="m-workEnd" step="300" style="flex:1;min-width:0">'
+        + '</div>';
+      host.parentNode.insertBefore(wrap, host.nextSibling);
+      // 수정 모드면 기존 값 채우기
+      if(_curEditId && typeof entries !== 'undefined'){
+        var en = entries.find(function(x){ return x.id === _curEditId; });
+        if(en){
+          if(en.startTime) wrap.querySelector('#m-workStart').value = en.startTime;
+          if(en.endTime)   wrap.querySelector('#m-workEnd').value   = en.endTime;
+        }
+      }
+    }catch(e){ dbgG('시간칸 주입 오류: ' + e); }
+  }
+  function readWorkTimeInputs(){
+    var ovl = document.getElementById('overlay');
+    if(!ovl || !ovl.classList.contains('show')) return null;
+    var ws = document.getElementById('m-workStart');
+    var we = document.getElementById('m-workEnd');
+    if(!ws) return null;
+    return { startTime: ws.value || '', endTime: (we && we.value) || '' };
+  }
+  function hookOpenEditorForTime(){
+    if(typeof window.openEditor === 'function' && !window.openEditor._wtHooked){
+      var o = window.openEditor;
+      window.openEditor = function(kind, id){
+        _curEditKind = kind || '';
+        _curEditId   = id || null;
+        var r = o.apply(this, arguments);
+        [60, 250, 600].forEach(function(t){ setTimeout(injectWorkTimeFields, t); });
+        return r;
+      };
+      window.openEditor._wtHooked = true;
+      dbgG('openEditor 훅 설치 (처리시간)');
+    }
+  }
+  [600, 1600, 3200, 6000].forEach(function(t){ setTimeout(hookOpenEditorForTime, t); });
+  // 모달이 다른 경로로 열려도 잡히도록 보조 감시
+  setInterval(function(){
+    var ovl = document.getElementById('overlay');
+    if(ovl && ovl.classList.contains('show')) injectWorkTimeFields();
+  }, 1200);
 
   // 1) 앱 시작 3초 후
   setTimeout(function(){ autoPullSoft('앱시작'); }, 3000);
@@ -13085,7 +13330,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0818-1530';
+  var TAG = ' +cal0818-1545';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
