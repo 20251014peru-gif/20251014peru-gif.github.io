@@ -2571,7 +2571,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.1</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.2</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38616,13 +38616,6 @@ table.ProseMirror-selectednode {
 <script>
 (function(){
   "use strict";
-  // OneDrive 로그인 팝업 응답: 팝업으로 열린 이 페이지가 code를 받으면 부모창에 전달하고 닫음
-  try{ if(window.opener && /[?&]state=mfod\b/.test(location.search)){
-    var _qs=location.search; var _c=(_qs.match(/[?&]code=([^&]+)/)||[])[1]; var _e=(_qs.match(/[?&]error=([^&]+)/)||[])[1];
-    window.opener.postMessage({mfod:true, code:_c?decodeURIComponent(_c):"", error:_e?decodeURIComponent(_e):""}, location.origin);
-    document.write("<p style='font:15px sans-serif;padding:24px;color:#333'>OneDrive 연결 처리 중… 이 창은 자동으로 닫힙니다.</p>");
-    window.close(); return;
-  } }catch(_e){}
   var Editor = toastui.Editor;
 
   var DEFAULT = [
@@ -39889,57 +39882,40 @@ table.ProseMirror-selectednode {
     var used={}; state.docs.forEach(function(d){ var re=/⟦vidfile:([A-Za-z0-9]+)⟧/g, m; while((m=re.exec(d.content||""))){ used[m[1]]=1; } });
     idbAllMediaKeys().then(function(keys){ keys.forEach(function(k){ if(!used[k]) idbDelMedia(k); }); }).catch(function(){});
   }
-  // ---- OneDrive 자동 업로드 (선택한 영상을 내 OneDrive에 올리고 재생 링크만 저장) ----
-  var OD_SCOPE="Files.ReadWrite offline_access";
-  var OD={ clientId: sget("markflow_od_client")||"", token:"", exp:0, rt: sget("markflow_od_rt")||"" };
-  function odConnected(){ return !!(OD.clientId && (OD.rt || OD.token)); }
-  function odRedirect(){ return location.origin+location.pathname; }
-  function odB64url(buf){ var b=btoa(String.fromCharCode.apply(null,new Uint8Array(buf))); return b.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
-  function odRand(n){ var a=new Uint8Array(n); (window.crypto||{}).getRandomValues&&window.crypto.getRandomValues(a); var s=''; for(var i=0;i<a.length;i++){ s+=('0'+(a[i]||1).toString(16)).slice(-2); } return s.slice(0,n); }
-  function odChallenge(v){ try{ return window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(v)).then(odB64url); }catch(e){ return Promise.reject(e); } }
-  function odSetClientId(){ var c=prompt("OneDrive 앱(클라이언트) ID를 붙여넣으세요.\n(Azure 앱 등록에서 발급 — 설정 안내 참고)", OD.clientId||""); if(c==null) return false; OD.clientId=c.trim(); sset("markflow_od_client",OD.clientId); return !!OD.clientId; }
-  function odConnect(cb){
-    if(!OD.clientId){ if(!odSetClientId()) return; }
-    var verifier=odRand(64);
-    odChallenge(verifier).then(function(challenge){
-      var p="client_id="+encodeURIComponent(OD.clientId)+"&response_type=code&redirect_uri="+encodeURIComponent(odRedirect())+"&scope="+encodeURIComponent(OD_SCOPE)+"&code_challenge="+challenge+"&code_challenge_method=S256&response_mode=query&prompt=select_account&state=mfod";
-      var url="https://login.microsoftonline.com/common/oauth2/v2.0/authorize?"+p;
-      var pop=window.open(url,"odlogin","width=520,height=680");
-      function onMsg(ev){ if(ev.origin!==location.origin) return; var d=ev.data; if(!d||!d.mfod) return; window.removeEventListener("message",onMsg);
-        if(d.error){ if(typeof mfToast==="function") mfToast("OneDrive 연결 취소/오류: "+d.error); return; }
-        odExchange(d.code, verifier, cb);
-      }
-      window.addEventListener("message",onMsg);
-    }).catch(function(){ if(typeof mfToast==="function") mfToast("보안(crypto) 미지원 브라우저예요"); });
-  }
-  function odTokenReq(body){ return fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:body}).then(function(r){ return r.json(); }); }
-  function odExchange(code, verifier, cb){
-    odTokenReq("client_id="+encodeURIComponent(OD.clientId)+"&grant_type=authorization_code&code="+encodeURIComponent(code||"")+"&redirect_uri="+encodeURIComponent(odRedirect())+"&code_verifier="+encodeURIComponent(verifier)+"&scope="+encodeURIComponent(OD_SCOPE))
-      .then(function(j){ if(j.access_token){ OD.token=j.access_token; OD.exp=Date.now()+((j.expires_in||3600)-90)*1000; if(j.refresh_token){ OD.rt=j.refresh_token; sset("markflow_od_rt",OD.rt); } if(typeof mfToast==="function") mfToast("OneDrive 연결됐어요 ✅"); if(cb) cb(); } else { if(typeof mfToast==="function") mfToast("연결 실패: "+(j.error_description||j.error||"")); } })
-      .catch(function(){ if(typeof mfToast==="function") mfToast("연결 실패(네트워크)"); });
-  }
-  function odEnsure(){
-    if(OD.token && Date.now()<OD.exp) return Promise.resolve(OD.token);
-    if(!OD.rt || !OD.clientId) return Promise.reject(new Error("not-connected"));
-    return odTokenReq("client_id="+encodeURIComponent(OD.clientId)+"&grant_type=refresh_token&refresh_token="+encodeURIComponent(OD.rt)+"&scope="+encodeURIComponent(OD_SCOPE)).then(function(j){ if(j.access_token){ OD.token=j.access_token; OD.exp=Date.now()+((j.expires_in||3600)-90)*1000; if(j.refresh_token){ OD.rt=j.refresh_token; sset("markflow_od_rt",OD.rt); } return OD.token; } throw new Error(j.error||"refresh-failed"); });
-  }
-  function odUpload(file, onProg){
-    return odEnsure().then(function(tok){
-      var name=(file.name||("video-"+(new Date()).getTime()+".mp4")).replace(/[#%?*:|"<>\\/]/g,"_");
-      var api="https://graph.microsoft.com/v1.0/me/drive/root:/MarkFlow%20Videos/"+encodeURIComponent(name)+":/createUploadSession";
-      return fetch(api,{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json"},body:JSON.stringify({item:{"@microsoft.graph.conflictBehavior":"rename"}})}).then(function(r){ return r.json(); }).then(function(sess){
-        if(!sess.uploadUrl) throw new Error("업로드 세션 실패"+(sess.error?(": "+(sess.error.message||"")):""));
-        return odPutChunks(sess.uploadUrl, file, onProg);
+  // ---- Google 드라이브 자동 업로드 (선택한 영상을 내 드라이브에 올리고 재생 링크만 저장) ----
+  var GD_SCOPE="https://www.googleapis.com/auth/drive.file";
+  var GD={ clientId: sget("markflow_gd_client")||"", token:"", exp:0, tc:null };
+  function gdConnected(){ return !!(GD.clientId && sget("markflow_gd_ok")==="1"); }
+  function gdLoadGis(cb){ try{ if(window.google&&window.google.accounts&&window.google.accounts.oauth2){ cb(); return; } }catch(e){}
+    var s=document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.async=true; s.defer=true;
+    s.onload=function(){ cb(); }; s.onerror=function(){ if(typeof mfToast==="function") mfToast("구글 로그인 스크립트를 못 불러왔어요(인터넷 확인)"); }; document.head.appendChild(s); }
+  function gdSetClientId(){ var c=prompt("Google 클라이언트 ID를 붙여넣으세요.\n(Google Cloud OAuth 클라이언트 — 설정 안내 참고)", GD.clientId||""); if(c==null) return false; GD.clientId=c.trim(); sset("markflow_gd_client",GD.clientId); return !!GD.clientId; }
+  function gdRequestToken(interactive){
+    return new Promise(function(res,rej){
+      gdLoadGis(function(){
+        try{
+          if(!GD.tc){ GD.tc=window.google.accounts.oauth2.initTokenClient({ client_id:GD.clientId, scope:GD_SCOPE, callback:function(){} }); }
+          GD.tc.callback=function(resp){ if(resp&&resp.access_token){ GD.token=resp.access_token; GD.exp=Date.now()+((resp.expires_in||3600)-90)*1000; sset("markflow_gd_ok","1"); res(GD.token); } else { rej(new Error(resp&&resp.error?resp.error:"no-token")); } };
+          GD.tc.requestAccessToken({ prompt: interactive?"consent":"" });
+        }catch(e){ rej(e); }
       });
     });
   }
-  function odPutChunks(uploadUrl, file, onProg){
-    var CH=5*1024*1024, size=file.size;
+  function gdEnsure(){ if(GD.token && Date.now()<GD.exp) return Promise.resolve(GD.token); return gdRequestToken(false).catch(function(){ return gdRequestToken(true); }); }
+  function gdConnect(cb){ if(!GD.clientId){ if(!gdSetClientId()) return; } gdRequestToken(true).then(function(){ if(typeof mfToast==="function") mfToast("구글 드라이브 연결됐어요 ✅"); if(cb) cb(); }).catch(function(e){ if(typeof mfToast==="function") mfToast("연결 실패: "+(e&&e.message?e.message.slice(0,50):"")); }); }
+  function gdUpload(file, onProg){
+    return gdEnsure().then(function(tok){
+      var meta={ name:(file.name||("video-"+(new Date()).getTime()+".mp4")), mimeType:(file.type||"video/mp4") };
+      return fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id",{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json; charset=UTF-8","X-Upload-Content-Type":(file.type||"video/mp4"),"X-Upload-Content-Length":String(file.size)},body:JSON.stringify(meta)}).then(function(r){ var loc=r.headers.get("location"); if(!loc){ return r.text().then(function(t){ throw new Error("세션 실패 "+r.status+" "+(t||"").slice(0,60)); }); } return gdPutChunks(loc, file, onProg); });
+    });
+  }
+  function gdPutChunks(sessionUrl, file, onProg){
+    var CH=8*1024*1024, size=file.size;
     return new Promise(function(resolve,reject){
       function put(start){
         var end=Math.min(start+CH, size); var chunk=file.slice(start,end);
-        fetch(uploadUrl,{method:"PUT",headers:{"content-range":"bytes "+start+"-"+(end-1)+"/"+size},body:chunk}).then(function(r){
-          if(r.status===202){ if(onProg) onProg(end/size); put(end); }
+        fetch(sessionUrl,{method:"PUT",headers:{"Content-Range":"bytes "+start+"-"+(end-1)+"/"+size},body:chunk}).then(function(r){
+          if(r.status===308){ if(onProg) onProg(end/size); put(end); }
           else if(r.status===200||r.status===201){ if(onProg) onProg(1); r.json().then(resolve).catch(function(){ resolve({}); }); }
           else { r.text().then(function(t){ reject(new Error("업로드 "+r.status+" "+(t||"").slice(0,80))); }); }
         }).catch(reject);
@@ -39947,19 +39923,17 @@ table.ProseMirror-selectednode {
       put(0);
     });
   }
-  function odCreateEmbed(itemId){
-    return odEnsure().then(function(tok){ return fetch("https://graph.microsoft.com/v1.0/me/drive/items/"+itemId+"/createLink",{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json"},body:JSON.stringify({type:"embed",scope:"anonymous"})}).then(function(r){ return r.json(); }).then(function(j){ if(j.link&&j.link.webUrl) return j.link.webUrl; throw new Error("공유링크 생성 실패"); }); });
-  }
-  function uploadVideoToOneDrive(file, insertMarker){
-    if(typeof mfToast==="function") mfToast("OneDrive 업로드 준비 중…");
-    odUpload(file, function(p){ if(typeof mfToast==="function") mfToast("OneDrive 업로드 중… "+Math.round(p*100)+"%"); })
-      .then(function(item){ return odCreateEmbed(item.id); })
-      .then(function(embedUrl){ var mk=makeVidMarker(embedUrl); if(mk) insertMarker(mk); if(typeof mfToast==="function") mfToast("업로드 완료 — 노트에 넣었어요 ✅"); })
+  function gdShare(id){ return gdEnsure().then(function(tok){ return fetch("https://www.googleapis.com/drive/v3/files/"+id+"/permissions",{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json"},body:JSON.stringify({role:"reader",type:"anyone"})}).then(function(){ return id; }); }); }
+  function uploadVideoToDrive(file, insertMarker){
+    if(typeof mfToast==="function") mfToast("구글 드라이브 업로드 준비 중…");
+    gdUpload(file, function(p){ if(typeof mfToast==="function") mfToast("구글 드라이브 업로드 중… "+Math.round(p*100)+"%"); })
+      .then(function(item){ return gdShare(item.id); })
+      .then(function(id){ var url="https://drive.google.com/file/d/"+id+"/view"; var mk=makeVidMarker(url); if(mk) insertMarker(mk); if(typeof mfToast==="function") mfToast("업로드 완료 — 노트에 넣었어요 ✅"); })
       .catch(function(e){ if(typeof mfToast==="function") mfToast("업로드 실패: "+(e&&e.message?e.message.slice(0,70):"오류")); });
   }
-  function pickAndUploadOneDrive(insertMarker){
+  function pickAndUploadDrive(insertMarker){
     var inp=document.createElement("input"); inp.type="file"; inp.accept="video/*"; inp.style.display="none"; document.body.appendChild(inp);
-    inp.addEventListener("change",function(){ var f=(inp.files&&inp.files[0])||null; inp.remove(); if(f) uploadVideoToOneDrive(f, insertMarker); });
+    inp.addEventListener("change",function(){ var f=(inp.files&&inp.files[0])||null; inp.remove(); if(f) uploadVideoToDrive(f, insertMarker); });
     inp.click();
   }
   var vidInputBox=null;
@@ -39971,20 +39945,20 @@ table.ProseMirror-selectednode {
     closeVidInput(); var mobile=window.innerWidth<=760;
     vidInputBox=document.createElement("div"); vidInputBox.className="mf-capedit mf-vidinput"+(mobile?" sheet":"");
     if(mobile){ var g=document.createElement("div"); g.className="cap-grip"; vidInputBox.appendChild(g); }
-    // 1) OneDrive 자동 업로드(주 용도) — 모든 기기 재생
-    if(odConnected()){
-      var cap0=document.createElement("div"); cap0.className="vid-cap"; cap0.textContent="휴대폰 영상 올리기 → 내 OneDrive에 자동 업로드 (모든 기기 재생)"; vidInputBox.appendChild(cap0);
-      var odBtn=document.createElement("button"); odBtn.type="button"; odBtn.className="vid-pick od"; odBtn.textContent="📱 영상 선택 → OneDrive 업로드";
-      odBtn.addEventListener("mousedown",function(e){ e.preventDefault(); closeVidInput(); pickAndUploadOneDrive(insertMarker); });
-      vidInputBox.appendChild(odBtn);
+    // 1) 구글 드라이브 자동 업로드(주 용도) — 모든 기기 재생
+    if(gdConnected()){
+      var cap0=document.createElement("div"); cap0.className="vid-cap"; cap0.textContent="휴대폰 영상 올리기 → 내 구글 드라이브에 자동 업로드 (모든 기기 재생)"; vidInputBox.appendChild(cap0);
+      var gdBtn=document.createElement("button"); gdBtn.type="button"; gdBtn.className="vid-pick od"; gdBtn.textContent="📱 영상 선택 → 구글 드라이브 업로드";
+      gdBtn.addEventListener("mousedown",function(e){ e.preventDefault(); closeVidInput(); pickAndUploadDrive(insertMarker); });
+      vidInputBox.appendChild(gdBtn);
     } else {
-      var cap0b=document.createElement("div"); cap0b.className="vid-cap"; cap0b.textContent="휴대폰 영상을 모든 기기에서 보려면 OneDrive 연결(최초 1회 설정)"; vidInputBox.appendChild(cap0b);
-      var odConn=document.createElement("button"); odConn.type="button"; odConn.className="vid-pick od"; odConn.textContent="☁️ OneDrive 연결하기";
-      odConn.addEventListener("mousedown",function(e){ e.preventDefault(); odConnect(function(){ openVideoInput(insertMarker); }); });
-      vidInputBox.appendChild(odConn);
-      var odId=document.createElement("div"); odId.className="vid-idlink"; odId.textContent=OD.clientId?"앱 ID 다시 입력":"앱 ID 입력(설정 안내 참고)";
-      odId.addEventListener("mousedown",function(e){ e.preventDefault(); if(odSetClientId()){ closeVidInput(); openVideoInput(insertMarker); } });
-      vidInputBox.appendChild(odId);
+      var cap0b=document.createElement("div"); cap0b.className="vid-cap"; cap0b.textContent="휴대폰 영상을 모든 기기에서 보려면 구글 드라이브 연결(최초 1회 설정)"; vidInputBox.appendChild(cap0b);
+      var gdConnBtn=document.createElement("button"); gdConnBtn.type="button"; gdConnBtn.className="vid-pick od"; gdConnBtn.textContent="☁️ 구글 드라이브 연결하기";
+      gdConnBtn.addEventListener("mousedown",function(e){ e.preventDefault(); gdConnect(function(){ openVideoInput(insertMarker); }); });
+      vidInputBox.appendChild(gdConnBtn);
+      var gdId=document.createElement("div"); gdId.className="vid-idlink"; gdId.textContent=GD.clientId?"앱 ID 다시 입력":"앱 ID 입력(설정 안내 참고)";
+      gdId.addEventListener("mousedown",function(e){ e.preventDefault(); if(gdSetClientId()){ closeVidInput(); openVideoInput(insertMarker); } });
+      vidInputBox.appendChild(gdId);
     }
     var orsep0=document.createElement("div"); orsep0.className="vid-or"; orsep0.textContent="또는 이 기기에만 저장"; vidInputBox.appendChild(orsep0);
     var pick=document.createElement("button"); pick.type="button"; pick.className="vid-pick"; pick.textContent="📥 이 기기에 저장 (동기화 안 됨)";
