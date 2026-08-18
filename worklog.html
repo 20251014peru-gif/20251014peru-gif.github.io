@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921-cal0818-1512"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0818-1530"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5531,12 +5531,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // Tasks 전용 동기화 (캘린더에는 넣지 않음 — 태스크에만)
   function syncScheduleAll(en, onDone, silent){
-    // schedule·work → 태스크에만. 그 외 kind는 기존대로 캘린더.
-    if(en.kind !== "schedule" && en.kind !== "work"){ syncScheduleToGCal(en, onDone); return; }
-    syncToTasks(en, function(ok){
+    // v45-0818: 종류 구분 없이 전부 구글 캘린더로 (삼성 캘린더 표시 목적)
+    syncScheduleToGCal(en, function(ok){
       if(!silent){
-        if(ok) toast("✅ 구글 Tasks에 등록됐어요!");
-        else   toast("Tasks 등록 실패");
+        if(ok) toast("📅 구글 캘린더에 등록됐어요!");
+        else   toast("캘린더 등록 실패");
       }
       if(typeof renderAll==="function") setTimeout(renderAll, 400);
       if(onDone) onDone(ok);
@@ -5724,19 +5723,14 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     if(!accessToken){ signIn(); toast('먼저 구글 로그인 해주세요'); return; }
     const kinds = Object.keys(GCAL_IDS);
     // 미동기화 = gcalEventId 없거나 (schedule은 gTaskId도 없는 것)
-    const targets = entries.filter(e=> kinds.includes(e.kind) && e.date && (!e.gcalEventId || ((e.kind==='schedule'||e.kind==='work') && !e.gTaskId)));
+    const targets = entries.filter(e=> kinds.includes(e.kind) && e.date && !e.gcalEventId);
     if(!targets.length){ toast('📅 미동기화 항목이 없습니다 (모두 완료됨)'); return; }
-    if(!confirm(targets.length+'건을 구글에 동기화할까요?\n(예정·업무는 Tasks, 나머지는 캘린더)\n잠시 기다려 주세요')) return;
+    if(!confirm(targets.length+'건을 구글 캘린더에 동기화할까요?\n잠시 기다려 주세요')) return;
     toast('동기화 시작... 0/'+targets.length);
     let done=0, fail=0;
     for(const en of targets){
       await new Promise(resolve=>{
-        if(en.kind==='schedule' || en.kind==='work'){
-          // 예정·업무 → 태스크에만
-          syncToTasks(en, function(ok){ if(ok) done++; else fail++; resolve(); });
-        } else {
-          syncScheduleToGCal(en, function(ok){ if(ok) done++; else fail++; resolve(); });
-        }
+        syncScheduleToGCal(en, function(ok){ if(ok) done++; else fail++; resolve(); });
         setTimeout(resolve, 600);
       });
       if((done+fail)%5===0) toast('동기화 중... '+(done+fail)+'/'+targets.length);
@@ -5747,12 +5741,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // ── 전역 노출 ───────────────────────────────────────────
   window.gcalSync = function(en, onDone){
-    // 예정·업무는 태스크에만, 나머지는 캘린더에 (색 다른 중복 방지)
-    if(en && (en.kind==='schedule' || en.kind==='work')){
-      syncToTasks(en, onDone);
-    } else {
-      syncScheduleToGCal(en, onDone);
-    }
+    // v45-0818: 업무·예정도 캘린더로 (삼성 캘린더에서 보이게 하기 위함)
+    // Tasks 내보내기는 중단 — 단, Tasks → 앱 가져오기(pullFromTasks)는 계속 동작
+    syncScheduleToGCal(en, onDone);
   };
   window.gcalSyncSchedule = syncScheduleAll;   // schedule: 캘린더+Tasks 동시
 
@@ -5849,6 +5840,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
                 field: _tag.field || (existing.field||''),
                 memo: memo, scheduleType: scheduleType,
                 alertBefore: alertBefore, alertMethod: alertMethod,
+                _fromGcal: true,   // v45-0818: 자동 push 훅이 되돌려 보내지 않도록
                 updatedAt: Date.now()
               });
               updated++;
@@ -6265,6 +6257,60 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     autoPull();
   }
   window.gcalAutoPullNow = function(){ _lastAutoTry = 0; autoPull(true); };
+
+  // ── v45-0818: 앱 → 구글 자동 등록 (저장하면 알아서 올라감) ──
+  // v45에는 저장 훅이 없어서 "전체동기화"를 눌러야만 올라갔음. 그 경로를 복원.
+  var GCAL_META_KEYS = ['gcalEventId','gTaskId','_gcalSrc','_fromGcal','updatedAt'];
+  function _gcalPushLater(id){
+    setTimeout(function(){
+      try{
+        if(!accessToken) return;
+        if(typeof entries === 'undefined') return;
+        var en = entries.find(function(x){ return x.id === id; });
+        if(!en || !en.date) return;
+        if(!GCAL_IDS[en.kind]) return;
+        syncScheduleToGCal(en);
+      }catch(e){ dbgG('push 오류: ' + e); }
+    }, 700);
+  }
+  function hookSaveForGcal(){
+    if(typeof window.addRecord === 'function' && !window.addRecord._gcalHooked){
+      var origAdd = window.addRecord;
+      window.addRecord = function(obj){
+        var r = origAdd.apply(this, arguments);
+        try{
+          // 구글에서 가져온 항목은 되돌려 보내지 않음 (핑퐁 방지)
+          if(accessToken && obj && !obj._fromGcal && obj.date && GCAL_IDS[obj.kind] && r && r.id){
+            _gcalPushLater(r.id);
+          }
+        }catch(e){ dbgG('add훅 오류: ' + e); }
+        return r;
+      };
+      window.addRecord._gcalHooked = true;
+      dbgG('addRecord 훅 설치');
+    }
+    if(typeof window.updateRecord === 'function' && !window.updateRecord._gcalHooked){
+      var origUpd = window.updateRecord;
+      window.updateRecord = function(id, patch){
+        var r = origUpd.apply(this, arguments);
+        try{
+          if(!accessToken || !patch) return r;
+          // 구글에서 온 수정이면 되돌려 보내지 않음
+          if(patch._fromGcal) return r;
+          // gcalEventId 저장 같은 메타 전용 갱신이면 무시 (무한루프 차단 — v44의 그 버그)
+          var keys = Object.keys(patch);
+          var onlyMeta = keys.length > 0 && keys.every(function(k){ return GCAL_META_KEYS.indexOf(k) >= 0; });
+          if(onlyMeta) return r;
+          _gcalPushLater(id);
+        }catch(e){ dbgG('update훅 오류: ' + e); }
+        return r;
+      };
+      window.updateRecord._gcalHooked = true;
+      dbgG('updateRecord 훅 설치');
+    }
+  }
+  [500, 1500, 3000, 6000].forEach(function(t){ setTimeout(hookSaveForGcal, t); });
+  window.gcalHookNow = hookSaveForGcal;
 
   // 1) 앱 시작 3초 후
   setTimeout(function(){ autoPullSoft('앱시작'); }, 3000);
@@ -13039,7 +13085,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0818-1512';
+  var TAG = ' +cal0818-1530';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
