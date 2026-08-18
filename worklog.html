@@ -1270,14 +1270,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button class="nav-btn" id="btnGCal" title="구글 캘린더 연동" style="background:#fff;border:1.5px solid #dbe6f4;color:#444;display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
           <img src="https://www.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png" style="width:18px;height:18px;object-fit:cover;border-radius:3px"> 연동됨
         </button>
-        <button class="nav-btn" onclick="window.gcalSyncAll&&window.gcalSyncAll()" style="background:#34a853;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="전체 구글캘린더 동기화">📅 전체동기화</button>
-        <button class="nav-btn" onclick="window.gtaskCleanDuplicates&&window.gtaskCleanDuplicates()" style="background:#ea8600;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 태스크 중복 정리">🧹 태스크중복정리</button>
-        <button class="nav-btn" onclick="window.gcalCleanDuplicates&&window.gcalCleanDuplicates()" style="background:#d93025;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 캘린더 중복 정리">🧹 캘린더중복정리</button>
-        <!-- 임시:옛캘린더정리 버튼 시작 (정리 완료 후 제거) -->
-        <button class="nav-btn" id="btnPurgeOldCal" onclick="window.gcalPurgeOldWorkSchedule&&window.gcalPurgeOldWorkSchedule()" style="background:#5f6368;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="예전에 캘린더에 쌓인 예정·업무 이벤트 일괄 삭제 (일회성)">🗑️ 옛예정·업무비우기</button>
-        <!-- 임시:옛캘린더정리 버튼 끝 -->
-        <button class="nav-btn" onclick="window.gcalPullAll&&window.gcalPullAll(false)" style="background:#1a73e8;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="구글 캘린더에서 새 예정 가져오기">📥 구글←가져오기</button>
-        <button class="nav-btn" id="btnGcalPullCfg" style="background:#e8f0fe;color:#1a73e8;border:1.5px solid #1a73e8;border-radius:10px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer" title="가져올 캘린더 선택">⚙</button>
+        <button class="nav-btn" id="btnGcalPull" onclick="window.gcalPullAll&&window.gcalPullAll(false)" style="background:#1a73e8;color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer" title="지금 바로 구글/삼성 캘린더에서 가져오기 (평소엔 자동으로 됩니다)">📥 지금 가져오기</button>
+        <button class="nav-btn" id="btnGcalPullCfg" style="background:#e8f0fe;color:#1a73e8;border:1.5px solid #1a73e8;border-radius:10px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer" title="캘린더 설정 · 정리 도구">⚙</button>
       </div>
     </div>
 
@@ -2928,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921-cal0818-1435"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0818-1512"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5770,7 +5764,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   var PULL_LS = 'wl_gcal_pull_ts';
 
   // 구글 캘린더에서 업무예정 캘린더 항목 가져오기
-  function pullFromGCal(silent, _calId, _label){
+  function pullFromGCal(silent, _calId, _label, _srcKey){
     if(!accessToken) return;
     var calId = _calId || GCAL_IDS.schedule;
     if(!calId) return;
@@ -5818,6 +5812,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         // 제목/메모 파싱
         var title = it.summary || '(제목없음)';
         var memo  = it.description || '';
+        var _tag  = parseTitleTag(title);   // v45-0818: [전기] 같은 말머리 자동 분류
 
         // 반복 유형 파싱
         var scheduleType = '일회성';
@@ -5849,7 +5844,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           if(gUpdated > wlUpdated + 5000){ // 5초 이상 차이날 때만
             if(typeof updateRecord==='function'){
               updateRecord(existing.id, {
-                title: title, date: date, startTime: startTime,
+                title: _tag.title || title, date: date, startTime: startTime,
+                sType: _tag.sType || (existing.sType||''),
+                field: _tag.field || (existing.field||''),
                 memo: memo, scheduleType: scheduleType,
                 alertBefore: alertBefore, alertMethod: alertMethod,
                 updatedAt: Date.now()
@@ -5864,35 +5861,54 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           if(typeof addRecord==='function'){
             addRecord({
               kind: 'schedule',
-              title: title,
+              title: _tag.title || title,
               date: date,
               startTime: startTime,
               sStatus: '예정',
-              sType: '',
+              sType: _tag.sType || '',
+              field: _tag.field || '',
               scheduleType: scheduleType,
               memo: memo,
               alertBefore: alertBefore,
               alertMethod: alertMethod,
-              gcalEventId: it.id,  // 구글 ID 연결
+              gcalEventId: it.id,        // 구글 ID 연결
+              _gcalSrc: _srcKey || 'schedule',   // 어느 캘린더에서 왔는지
               createdAt: Date.now(),
               updatedAt: Date.now(),
-              _fromGcal: true  // 구글에서 가져온 것 표시
+              _fromGcal: true            // 구글에서 가져온 것 표시
             });
             added++;
           }
         }
       });
 
+      // ── v45-0818: 삭제 동기화 ──
+      var _aliveIds = {};
+      items.forEach(function(it){ _aliveIds[it.id] = 1; });
+      var removed = syncDeletions(
+        _aliveIds,
+        _srcKey || 'schedule',
+        from.toISOString().slice(0,10),
+        to.toISOString().slice(0,10),
+        silent,
+        _label || '캘린더'
+      );
+
       // 결과 저장
       localStorage.setItem(PULL_LS, String(Date.now()));
 
-      if(!silent && (added || updated)){
-        var msg = '📅 ' + (_label||'캘린더') + ' → 업무일지: ' + added + '건 추가'
-                + (updated ? ', '+updated+'건 업데이트' : '');
-        if(typeof toast==='function') toast(msg, 3000);
+      if(!silent && (added || updated || removed)){
+        var msg = '📅 ' + (_label||'캘린더') + ' → 업무일지: '
+                + (added   ? added+'건 추가 '   : '')
+                + (updated ? updated+'건 수정 ' : '')
+                + (removed ? removed+'건 삭제'  : '');
+        if(typeof toast==='function') toast(msg.trim(), 3000);
+      }
+      if(silent && removed && typeof toast==='function'){
+        toast('🗑 ' + (_label||'캘린더') + '에서 지운 일정 ' + removed + '건을 업무일지에서도 정리했어요', 3500);
       }
 
-      if((added||updated) && typeof renderAll==='function'){
+      if((added||updated||removed) && typeof renderAll==='function'){
         setTimeout(renderAll, 300);
       }
 
@@ -5934,7 +5950,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       toast('📥 ' + keys.length + '개 캘린더에서 가져오는 중…', 2500);
     keys.forEach(function(k, i){
       setTimeout(function(){
-        pullFromGCal(silent, GCAL_IDS[k], GCAL_LABEL[k]||k);
+        pullFromGCal(silent, GCAL_IDS[k], GCAL_LABEL[k]||k, k);
       }, i * 900);
     });
   }
@@ -5961,11 +5977,33 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       + '<h3 style="margin:0 0 6px;font-size:17px;font-weight:800;color:#1a73e8">📥 가져올 캘린더 선택</h3>'
       + '<div style="font-size:12px;color:#7a92a8;margin-bottom:14px;line-height:1.55">삼성 캘린더에서 일정을 저장할 때 고르는 캘린더를 켜두세요.<br>보통 <b>기본(업무)</b>과 <b>예정</b>이면 충분합니다.</div>'
       + '<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px">' + rows + '</div>'
+      + '<div style="border-top:1.5px solid #f0f6ff;margin:4px 0 12px;padding-top:12px">'
+      + '<div style="font-size:12px;font-weight:800;color:#7a92a8;margin-bottom:8px">🛠 정리 도구 <span style="font-weight:600">(평소엔 쓸 일 없어요)</span></div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:6px">'
+      + '<button id="gpcSyncAll" style="flex:1;min-width:108px;height:36px;background:#34a853;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📅 전체동기화</button>'
+      + '<button id="gpcCalDup" style="flex:1;min-width:108px;height:36px;background:#d93025;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 캘린더중복</button>'
+      + '<button id="gpcTaskDup" style="flex:1;min-width:108px;height:36px;background:#ea8600;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 태스크중복</button>'
+      + '<button id="gpcPurge" style="flex:1;min-width:108px;height:36px;background:#5f6368;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑️ 옛예정비우기</button>'
+      + '</div></div>'
       + '<div style="display:flex;gap:8px">'
       + '<button id="gpcCancel" style="flex:1;height:44px;background:#f7faff;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">닫기</button>'
       + '<button id="gpcSave" style="flex:2;height:44px;background:#1a73e8;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">저장하고 가져오기</button>'
       + '</div></div>';
     document.body.appendChild(ov);
+    // v45-0818: 정리 도구 버튼
+    var _tool = function(id, fn, msg){
+      var b = document.getElementById(id);
+      if(!b) return;
+      b.addEventListener('click', function(){
+        ov.remove();
+        if(typeof fn === 'function') fn();
+        else if(typeof toast === 'function') toast(msg || '기능을 찾을 수 없어요');
+      });
+    };
+    _tool('gpcSyncAll', window.gcalSyncAll);
+    _tool('gpcCalDup',  window.gcalCleanDuplicates);
+    _tool('gpcTaskDup', window.gtaskCleanDuplicates);
+    _tool('gpcPurge',   window.gcalPurgeOldWorkSchedule);
     document.getElementById('gpcCancel').addEventListener('click', function(){ ov.remove(); });
     document.getElementById('gpcSave').addEventListener('click', function(){
       var sel = [];
@@ -5977,16 +6015,77 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
   };
 
+  // ── v45-0818: 제목 말머리 [전기] 자동 분류 ──
+  var GCAL_FIELD_TAGS = ['전기','소방','기계','영선','승강기','청소','위생','통신','건축','조경','주차','보안'];
+  function parseTitleTag(rawTitle){
+    var out = { title: rawTitle||'', sType:'', field:'' };
+    var m = /^\s*[\[\(【]\s*([^\]\)】]{1,14})\s*[\]\)】]\s*/.exec(rawTitle||'');
+    if(!m) return out;
+    var tag = (m[1]||'').trim();
+    if(!tag) return out;
+    var rest = (rawTitle||'').slice(m[0].length).trim();
+    if(!rest) return out;              // 말머리만 있으면 건드리지 않음
+    out.sType = tag;
+    out.title = rest;
+    if(GCAL_FIELD_TAGS.indexOf(tag) >= 0) out.field = tag;
+    return out;
+  }
+
+  // ── v45-0818: 삭제 동기화 (구글/삼성에서 지운 일정 → 앱에서도 제거) ──
+  function syncDeletions(aliveIds, srcKey, fromDate, toDate, silent, label){
+    try{
+      if(typeof entries === 'undefined') return 0;
+      var gone = entries.filter(function(e){
+        if(e.kind !== 'schedule') return false;
+        if(!e.gcalEventId) return false;
+        if(!e._fromGcal) return false;                          // 구글에서 가져온 것만
+        if((e._gcalSrc || 'schedule') !== srcKey) return false;  // 이 캘린더 소속만
+        var d0 = (e.date||'').slice(0,10);
+        if(!d0 || d0 < fromDate || d0 > toDate) return false;    // 조회범위 밖 보호
+        return !aliveIds[e.gcalEventId];
+      });
+      if(!gone.length) return 0;
+
+      // 안전장치: 한꺼번에 많이 사라지면 자동 삭제하지 않음
+      if(gone.length > 5){
+        dbgG('삭제 후보 ' + gone.length + '건 — 안전장치 발동');
+        if(silent){
+          if(typeof toast === 'function')
+            toast('⚠️ ' + label + '에서 ' + gone.length + '건이 사라졌어요. 실수 방지를 위해 자동 삭제하지 않았습니다 — 📥 가져오기를 눌러 확인해주세요', 7000);
+          return 0;
+        }
+        if(!confirm(label + ' 캘린더에서 ' + gone.length + '건이 사라졌습니다.\n업무일지에서도 삭제할까요?\n\n' +
+                    gone.slice(0,10).map(function(e){ return '· ' + (e.date||'') + ' ' + (e.title||''); }).join('\n') +
+                    (gone.length>10 ? '\n… 외 ' + (gone.length-10) + '건' : ''))) return 0;
+      }
+
+      var n = 0;
+      gone.forEach(function(e){
+        try{
+          if(typeof deleteRecord === 'function') deleteRecord(e.id);
+          else if(typeof deleteWithUndo === 'function') deleteWithUndo(e.id, '예정');
+          else return;
+          n++;
+          dbgG('삭제 동기화: ' + (e.date||'') + ' ' + (e.title||''));
+        }catch(err){ dbgG('삭제 실패: ' + err); }
+      });
+      return n;
+    }catch(err){
+      dbgG('syncDeletions 오류: ' + err);
+      return 0;
+    }
+  }
+
+
 
   // 접속 시 자동 pull (로그인 상태면)
-  function autoPull(){
+  function autoPull(force){
     if(!accessToken) return;
     var last = parseInt(localStorage.getItem(PULL_LS)||'0');
     var now  = Date.now();
-    // 마지막 pull로부터 5분 이상 지났을 때만
-    if(now - last < 5 * 60 * 1000) return;
+    if(!force && now - last < 2 * 60 * 1000) return;   // 2분 쓰로틀
     dbgG('자동 pull 시작...');
-    pullAll(true); // 캘린더+Tasks 동시 pull (silent)
+    pullAll(true);
   }
 
   // 전역 노출
@@ -6153,10 +6252,37 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // 로그인 완료 후 자동 pull
   var _origCallback = null;
-  setTimeout(function(){
-    // 로그인 상태면 접속 시 자동 pull
-    if(accessToken) autoPull();
-  }, 3000);
+  // ── v45-0818: 자동 동기화 엔진 ──────────────────────────
+  // 앱 켤 때 / 탭 복귀 / 창 포커스 / 주기(3분) / 달력·기록 탭 진입 시 자동 pull
+  var AUTO_MIN_GAP = 90 * 1000;   // 최소 간격 90초 (연타 방지)
+  var _lastAutoTry = 0;
+  function autoPullSoft(why){
+    if(!accessToken) return;
+    var now = Date.now();
+    if(now - _lastAutoTry < AUTO_MIN_GAP) return;
+    _lastAutoTry = now;
+    dbgG('자동 동기화 트리거: ' + why);
+    autoPull();
+  }
+  window.gcalAutoPullNow = function(){ _lastAutoTry = 0; autoPull(true); };
+
+  // 1) 앱 시작 3초 후
+  setTimeout(function(){ autoPullSoft('앱시작'); }, 3000);
+  // 2) 탭 복귀 (삼성 캘린더에 넣고 돌아오는 경우)
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') autoPullSoft('탭복귀');
+  });
+  // 3) 창 포커스
+  window.addEventListener('focus', function(){ autoPullSoft('창포커스'); });
+  // 4) 열어둔 채 방치 대비 — 3분마다
+  setInterval(function(){ autoPullSoft('주기'); }, 3 * 60 * 1000);
+  // 5) 달력 / 기록 탭 진입 시
+  document.addEventListener('click', function(e){
+    var t = e.target && e.target.closest && e.target.closest('.v43-tab');
+    if(!t) return;
+    var k = t.getAttribute('data-v43tab');
+    if(k === 'calendar' || k === 'main') setTimeout(function(){ autoPullSoft('탭진입:'+k); }, 200);
+  }, true);
 
   window.gcalDelete = deleteFromGCal;
   window.gcalSignIn = signIn;
@@ -12913,7 +13039,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0818-1435';
+  var TAG = ' +cal0818-1512';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
