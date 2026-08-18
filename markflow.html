@@ -2151,7 +2151,7 @@ table.ProseMirror-selectednode {
   .mf-aipill{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:300;background:var(--accent);color:#fff;font-size:13px;font-weight:600;padding:9px 16px;border-radius:20px;box-shadow:var(--shadow);display:none;align-items:center;gap:8px;}
   .mf-aipill .sp{width:13px;height:13px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:mfspin .7s linear infinite;}
   @keyframes mfspin{to{transform:rotate(360deg);}}
-  .mf-toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:300;background:var(--text);color:var(--bg);font-size:13px;font-weight:600;padding:9px 16px;border-radius:20px;box-shadow:var(--shadow);}
+  .mf-toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));top:auto;transform:translateX(-50%);z-index:430;background:rgba(28,30,36,.95);color:#fff;font-size:13.5px;font-weight:600;padding:11px 18px;border-radius:22px;box-shadow:0 6px 24px rgba(0,0,0,.35);max-width:min(360px,88vw);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:mffade .15s ease;}
 
   .body{flex:1;display:flex;min-height:0;}
   .sidebar{width:250px;flex:0 0 250px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
@@ -2393,8 +2393,8 @@ table.ProseMirror-selectednode {
   @media(max-width:760px){ .mf-zoom-btn{min-width:38px;height:44px;font-size:14px;padding:0 9px;} .mf-zoom-bar{gap:4px;padding:6px;} }
   /* 저장 실패 경고 토스트 */
   .save-dot.failed{background:#e5484d!important;}
-  .mf-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:420;max-width:min(440px,92vw);background:var(--bg-elev);border:1px solid #e5484d;border-left:5px solid #e5484d;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);padding:14px 16px;font-size:13.5px;line-height:1.55;color:var(--text);}
-  .mf-toast .mf-toast-x{display:block;margin:10px 0 0 auto;border:0;background:var(--accent);color:#fff;border-radius:8px;padding:8px 16px;font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer;}
+  .mf-savetoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:420;max-width:min(440px,92vw);background:var(--bg-elev);border:1px solid #e5484d;border-left:5px solid #e5484d;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);padding:14px 16px;font-size:13.5px;line-height:1.55;color:var(--text);}
+  .mf-savetoast .mf-toast-x{display:block;margin:10px 0 0 auto;border:0;background:var(--accent);color:#fff;border-radius:8px;padding:8px 16px;font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer;}
   /* 캡션 편집 버튼 · 입력창 */
   .mf-capedit{position:fixed;z-index:213;background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:10px;width:290px;max-width:calc(100vw - 16px);}
   .mf-capedit .cap-row{display:flex;gap:8px;align-items:center;}
@@ -2571,7 +2571,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.2</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.4</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38720,7 +38720,7 @@ table.ProseMirror-selectednode {
   }
   function showSaveError(){
     if(saveErrShown) return; saveErrShown=true;
-    var t=document.createElement("div"); t.className="mf-toast err";
+    var t=document.createElement("div"); t.className="mf-savetoast";
     t.innerHTML='<b>사진 저장 공간이 부족해요.</b><br>문서 목록과 글자는 안전하게 저장됐지만, 이 기기 저장 공간이 부족해 최근 사진 일부가 저장되지 않았을 수 있어요. 기기 저장 공간을 확보하거나, 오른쪽 위 <b>동기화</b>로 GitHub에 백업하세요.';
     var x=document.createElement("button"); x.type="button"; x.className="mf-toast-x"; x.textContent="확인"; x.addEventListener("click",function(){ t.remove(); });
     t.appendChild(x); document.body.appendChild(t);
@@ -39906,27 +39906,31 @@ table.ProseMirror-selectednode {
   function gdUpload(file, onProg){
     return gdEnsure().then(function(tok){
       var meta={ name:(file.name||("video-"+(new Date()).getTime()+".mp4")), mimeType:(file.type||"video/mp4") };
-      return fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id",{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json; charset=UTF-8","X-Upload-Content-Type":(file.type||"video/mp4"),"X-Upload-Content-Length":String(file.size)},body:JSON.stringify(meta)}).then(function(r){ var loc=r.headers.get("location"); if(!loc){ return r.text().then(function(t){ throw new Error("세션 실패 "+r.status+" "+(t||"").slice(0,60)); }); } return gdPutChunks(loc, file, onProg); });
+      return fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id",{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json; charset=UTF-8","X-Upload-Content-Type":(file.type||"video/mp4"),"X-Upload-Content-Length":String(file.size)},body:JSON.stringify(meta)}).then(function(r){ var loc=r.headers.get("location"); if(!loc){ return r.text().then(function(t){ throw new Error("세션 실패 "+r.status+" "+(t||"").slice(0,60)); }); } return gdPutFile(loc, file, onProg); });
     });
   }
-  function gdPutChunks(sessionUrl, file, onProg){
-    var CH=8*1024*1024, size=file.size;
+  // 파일 전체를 한 번에 스트리밍 업로드(조각 사이 대기 없음 → 연결 최대 속도) + 실시간 진행률
+  function gdPutFile(sessionUrl, file, onProg){
     return new Promise(function(resolve,reject){
-      function put(start){
-        var end=Math.min(start+CH, size); var chunk=file.slice(start,end);
-        fetch(sessionUrl,{method:"PUT",headers:{"Content-Range":"bytes "+start+"-"+(end-1)+"/"+size},body:chunk}).then(function(r){
-          if(r.status===308){ if(onProg) onProg(end/size); put(end); }
-          else if(r.status===200||r.status===201){ if(onProg) onProg(1); r.json().then(resolve).catch(function(){ resolve({}); }); }
-          else { r.text().then(function(t){ reject(new Error("업로드 "+r.status+" "+(t||"").slice(0,80))); }); }
-        }).catch(reject);
-      }
-      put(0);
+      try{
+        var size=file.size||0; if(size<=0){ reject(new Error("빈 파일")); return; }
+        var xhr=new XMLHttpRequest();
+        xhr.open("PUT", sessionUrl, true);
+        xhr.setRequestHeader("Content-Range","bytes 0-"+(size-1)+"/"+size);
+        if(xhr.upload){ xhr.upload.onprogress=function(e){ if(e.lengthComputable && onProg) onProg(e.loaded/e.total); }; }
+        xhr.onload=function(){ if(xhr.status===200||xhr.status===201){ var j={}; try{ j=JSON.parse(xhr.responseText); }catch(_){}; if(onProg) onProg(1); resolve(j); } else if(xhr.status===308){ reject(new Error("업로드가 끊겼어요 — 다시 시도해 주세요")); } else { reject(new Error("업로드 "+xhr.status+" "+((xhr.responseText||"").slice(0,80)))); } };
+        xhr.onerror=function(){ reject(new Error("업로드 네트워크 오류")); };
+        xhr.ontimeout=function(){ reject(new Error("업로드 시간 초과")); };
+        xhr.send(file);
+      }catch(e){ reject(e); }
     });
   }
   function gdShare(id){ return gdEnsure().then(function(tok){ return fetch("https://www.googleapis.com/drive/v3/files/"+id+"/permissions",{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json"},body:JSON.stringify({role:"reader",type:"anyone"})}).then(function(){ return id; }); }); }
   function uploadVideoToDrive(file, insertMarker){
-    if(typeof mfToast==="function") mfToast("구글 드라이브 업로드 준비 중…");
-    gdUpload(file, function(p){ if(typeof mfToast==="function") mfToast("구글 드라이브 업로드 중… "+Math.round(p*100)+"%"); })
+    var mb=file&&file.size?(Math.round(file.size/1048576)+"MB"):"";
+    if(typeof mfToast==="function") mfToast("구글 드라이브 업로드 준비 중…"+(mb?" ("+mb+")":""));
+    var lastPc=-1;
+    gdUpload(file, function(p){ var pc=Math.round(p*100); if(pc!==lastPc){ lastPc=pc; if(typeof mfToast==="function") mfToast("구글 드라이브 업로드 중… "+pc+"%"+(mb?" ("+mb+")":"")); } })
       .then(function(item){ return gdShare(item.id); })
       .then(function(id){ var url="https://drive.google.com/file/d/"+id+"/view"; var mk=makeVidMarker(url); if(mk) insertMarker(mk); if(typeof mfToast==="function") mfToast("업로드 완료 — 노트에 넣었어요 ✅"); })
       .catch(function(e){ if(typeof mfToast==="function") mfToast("업로드 실패: "+(e&&e.message?e.message.slice(0,70):"오류")); });
@@ -40342,7 +40346,8 @@ table.ProseMirror-selectednode {
   function showPill(t){ if(aiPill){ aiPillTx.textContent=t||"AI 작업 중…"; aiPill.style.display="flex"; } }
   function hidePill(){ if(aiPill) aiPill.style.display="none"; }
   var toastT=null;
-  function mfToast(msg){ var t=document.createElement("div"); t.className="mf-toast"; t.textContent=msg; document.body.appendChild(t); if(toastT) clearTimeout(toastT); toastT=setTimeout(function(){ t.remove(); },2200); }
+  var toastEl=null;
+  function mfToast(msg){ if(!toastEl||!document.body.contains(toastEl)){ toastEl=document.createElement("div"); toastEl.className="mf-toast"; document.body.appendChild(toastEl); } toastEl.textContent=msg; if(toastT) clearTimeout(toastT); toastT=setTimeout(function(){ if(toastEl){ toastEl.remove(); toastEl=null; } },2400); }
   function currentBlockCtx(){
     var view=wwView(); if(!view) return null; var st=view.state; var sel=st.selection;
     var $f=sel.$from; if($f.depth<1) return null;
