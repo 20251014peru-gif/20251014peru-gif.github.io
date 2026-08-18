@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921-cal0818-1600"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0818-1640"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5142,12 +5142,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // ── 핵심: 단건 동기화 ──────────────────────────────────
   function syncScheduleToGCal(en, onDone){
-    if(!accessToken){ signIn(); return; }
+    if(!accessToken){ signIn(); if(onDone) onDone(false); return; }
     var calId = GCAL_IDS[en.kind];
-    if(!calId) return;
+    if(!calId){ if(onDone) onDone(false); return; }
 
     var startDate = en.date || en.start || '';
-    if(!startDate) return;
+    if(!startDate){ if(onDone) onDone(false); return; }
 
     // 종류별 제목/설명
     var summary = '', description = '';
@@ -5265,6 +5265,16 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         if(typeof renderAll==='function') setTimeout(renderAll, 300);
       } else {
         var errMsg = (d.error && d.error.message) ? d.error.message : JSON.stringify(d.error||d);
+        // v45-0818: 구글에서 이미 지워진 이벤트에 PUT하면 404/410 → 연결 끊고 새로 등록
+        if(d.error && (d.error.code === 404 || d.error.code === 410) && gcalId){
+          dbgG('구글에 없는 이벤트 → 재등록: ' + gcalId);
+          if(typeof updateRecord === 'function' && en.id) updateRecord(en.id, { gcalEventId: null });
+          var _en2 = {};
+          for(var _k in en) _en2[_k] = en[_k];
+          _en2.gcalEventId = null;
+          setTimeout(function(){ syncScheduleToGCal(_en2, onDone); }, 500);
+          return;
+        }
         dbgG('등록 실패: ' + errMsg);
         if(typeof toast==='function') toast('❌ 캘린더 등록 실패: ' + errMsg, 4000);
         if(d.error && d.error.code===401){
@@ -5760,13 +5770,16 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   // ═══ [임시:옛캘린더정리 끝] ═══════════════════════════════════
 
   // ── 전체 일괄 동기화 ────────────────────────────────────
-  window.gcalSyncAll = async function(){
+  window.gcalSyncAll = async function(force){
     if(!accessToken){ signIn(); toast('먼저 구글 로그인 해주세요'); return; }
     const kinds = Object.keys(GCAL_IDS);
-    // 미동기화 = gcalEventId 없거나 (schedule은 gTaskId도 없는 것)
-    const targets = entries.filter(e=> kinds.includes(e.kind) && e.date && !e.gcalEventId);
+    // 기본: 아직 안 올라간 것만 / force: 이미 올라간 것도 다시 확인 (구글에서 지워진 것 복구)
+    const targets = entries.filter(e=> kinds.includes(e.kind) && e.date && (force || !e.gcalEventId));
     if(!targets.length){ toast('📅 미동기화 항목이 없습니다 (모두 완료됨)'); return; }
-    if(!confirm(targets.length+'건을 구글 캘린더에 동기화할까요?\n잠시 기다려 주세요')) return;
+    if(!confirm(targets.length + '건을 구글 캘린더에 '
+        + (force ? '다시 확인' : '동기화') + '할까요?\n'
+        + (force ? '구글에서 지워진 항목은 새로 등록됩니다.\n' : '')
+        + '건수가 많으면 몇 분 걸릴 수 있어요.')) return;
     toast('동기화 시작... 0/'+targets.length);
     let done=0, fail=0;
     for(const en of targets){
@@ -6085,6 +6098,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       + '<button id="gpcCalDup" style="flex:1;min-width:108px;height:36px;background:#d93025;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 캘린더중복</button>'
       + '<button id="gpcTaskDup" style="flex:1;min-width:108px;height:36px;background:#ea8600;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 태스크중복</button>'
       + '<button id="gpcPurge" style="flex:1;min-width:108px;height:36px;background:#5f6368;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑️ 옛예정비우기</button>'
+      + '<button id="gpcResync" style="flex:1;min-width:108px;height:36px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔁 전체 재확인</button>'
       + '</div></div>'
       + '<div style="display:flex;gap:8px">'
       + '<button id="gpcCancel" style="flex:1;height:44px;background:#f7faff;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">닫기</button>'
@@ -6140,6 +6154,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     _tool('gpcCalDup',  window.gcalCleanDuplicates);
     _tool('gpcTaskDup', window.gtaskCleanDuplicates);
     _tool('gpcPurge',   window.gcalPurgeOldWorkSchedule);
+    _tool('gpcResync', function(){ if(window.gcalSyncAll) window.gcalSyncAll(true); });
 
     document.getElementById('gpcCancel').addEventListener('click', function(){ ov.remove(); });
     document.getElementById('gpcSave').addEventListener('click', function(){
@@ -6435,7 +6450,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         if(!en || !en.date) return;
         if(!GCAL_IDS[en.kind]) return;
         _pushLocked[id] = true;
+        var _lockT = setTimeout(function(){ delete _pushLocked[id]; }, 15000);   // 안전장치
         syncScheduleToGCal(en, function(){
+          clearTimeout(_lockT);
           setTimeout(function(){ delete _pushLocked[id]; }, 1500);
         });
       }catch(e){
@@ -13343,7 +13360,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0818-1600';
+  var TAG = ' +cal0818-1640';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
