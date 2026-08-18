@@ -105,7 +105,10 @@ details{margin-top:6px;} summary{cursor:pointer;font-size:13px;font-weight:800;c
     <div class="hdr-title">📐 PER 밴드 트래커</div>
     <div class="hdr-sub">EPS × 멀티플 · 4주 자동 채점</div>
   </div>
-  <a class="back" href="./index.html">← 나의 시스템</a>
+  <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+    <a class="back" href="./index.html">← 나의 시스템</a>
+    <a class="back" href="./studynote.html">📖 공부 노트</a>
+  </div>
 </div>
 <div class="syncbar"><i class="syncdot" id="sdot"></i><span id="stxt">연결 중…</span></div>
 
@@ -211,6 +214,7 @@ details{margin-top:6px;} summary{cursor:pointer;font-size:13px;font-weight:800;c
     <div class="tile"><div class="k" id="expK">컨센 실현 시 기대 연수익률</div><div class="v" id="rExp">–</div><div class="d" id="rExpD">–</div></div>
     <div class="tile"><div class="k">컨센 실현 시 목표주가</div><div class="v" id="rPx">–</div><div class="d" id="rPxD">–</div></div>
   </div>
+  <div id="sens"></div>
 </div>
 
 <div class="card" id="c4" hidden>
@@ -426,7 +430,7 @@ function draw(r){
   $('rExp').className='v '+ud(r.N<1?r.cum:r.exp);
   $('rPx').textContent=money(r.pxN,r.cur);
   $('rPxD').textContent=hLabel(r)+' 후 · 누적 '+pct(r.cum,1);
-  horizonNote(r);
+  horizonNote(r); sens(r);
 
   var v=VD[r.vd];
   $('vDot').style.background=v[0];
@@ -437,6 +441,41 @@ function draw(r){
     extra='<div class="note n-bad"><b>③번과 ④번이 충돌합니다 — 이게 핵심입니다.</b><br>③번은 "컨센서스 '+pct(r.gc,1)+'가 실현된다"는 <b>전제</b> 위에서 '+pct(r.gap,1)+' 여유가 있다고 말합니다. 그런데 ④번은 <b>그 컨센서스가 지금 내려가는 중</b>이라고 경고합니다. 전제가 무너지는 중이므로 <b>③번 숫자를 근거로 진입하지 마세요.</b> 리비전이 상향 전환한 뒤 ③번을 다시 보는 게 순서입니다.</div>';
   }
   $('vNote').innerHTML='<div class="note '+v[3]+'">'+v[4]+'</div>'+extra;
+}
+
+/* 멀티플 시나리오 — "예측이 아니라 가정"임을 드러내는 표 */
+function sens(r){
+  var epsN=r.eps*Math.pow(1+r.gc/100,r.N);
+  var be=r.px/epsN;                         /* 본전 PER */
+  var cur=r.per;
+  var items=[
+    {k:'밴드 최저까지 수축', v:r.pl},
+    {k:'5년 중앙값까지 회귀 <b>← ③번이 쓰는 가정</b>', v:r.pm},
+    {k:'<b>본전 PER</b>', v:be, be:1},
+    {k:'현재 멀티플 그대로 유지', v:cur, now:1},
+    {k:'밴드 최고까지 확장', v:r.ph}
+  ].filter(function(x){return isFinite(x.v)&&x.v>0})
+   .sort(function(x,y){return x.v-y.v});
+
+  var h='<div class="note n-ok" style="margin-top:13px"><b>⚠️ ③번은 예측이 아닙니다.</b> '
+   +'"'+hLabel(r)+' 안에 PER이 '+r.pm.toFixed(1)+'배로 돌아온다면"이라는 <b>가정</b>을 넣은 계산입니다. '
+   +'멀티플이 얼마로 끝나느냐에 따라 결과가 이렇게 달라집니다 — EPS는 모든 줄에서 동일합니다.</div>';
+  h+='<div class="tw" style="margin-top:9px"><table><thead><tr><th>'+hLabel(r)+' 뒤 시나리오</th><th>끝날 때 PER</th><th>주가</th><th>수익률</th></tr></thead><tbody>';
+  items.forEach(function(x){
+    var pz=epsN*x.v, rt=(pz/r.px-1)*100;
+    var st=x.be?' style="background:#F7F7FA"':'';
+    h+='<tr'+st+'><td>'+x.k+'</td><td>'+x.v.toFixed(2)+'배</td><td>'+money(pz,r.cur)+'</td>'
+      +'<td class="'+ud(rt)+'">'+(Math.abs(rt)<0.05?'0.0%':pct(rt,1))+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  var room=(1-be/cur)*100;
+  h+='<div class="note '+(room>0?'n-warn':'n-bad')+'">'
+   +'<b>본전 PER '+be.toFixed(2)+'배.</b> 현재 '+cur.toFixed(2)+'배에서 '
+   +(room>0
+      ? '멀티플이 <b>'+room.toFixed(1)+'%까지 수축해도 손실이 없습니다.</b> 그보다 더 빠지면 손실 구간입니다.'
+      : '이미 본전 PER 아래입니다 — 멀티플이 <b>'+Math.abs(room).toFixed(1)+'% 확장돼야</b> 본전입니다.')
+   +' 이 숫자가 ③번의 −숫자보다 실전에서 훨씬 중요합니다.</div>';
+  $('sens').innerHTML=h;
 }
 
 function horizonNote(r){
