@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921-cal0818-1745"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0818-1830"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5362,6 +5362,45 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     }).catch(function(e){ dbgG('삭제 오류: '+e); });
   }
 
+  // ── v45-0818: 삭제 기록(되살아남 방지) ──
+  var DELETED_LS = 'wl_gcal_deleted';
+  var DELETED_KEEP_DAYS = 60;
+  function loadDeletedMap(){
+    try{
+      var m = JSON.parse(localStorage.getItem(DELETED_LS)||'null');
+      if(m && typeof m === 'object') return m;
+    }catch(e){}
+    return {};
+  }
+  function rememberDeleted(gid){
+    if(!gid) return;
+    try{
+      var m = loadDeletedMap();
+      m[gid] = Date.now();
+      // 오래된 기록 정리
+      var cut = Date.now() - DELETED_KEEP_DAYS * 24 * 3600 * 1000;
+      for(var k in m){ if(m[k] < cut) delete m[k]; }
+      localStorage.setItem(DELETED_LS, JSON.stringify(m));
+    }catch(e){}
+  }
+  function isDeletedGid(gid){
+    if(!gid) return false;
+    var m = loadDeletedMap();
+    return !!m[gid];
+  }
+  window.gcalForgetDeleted = function(){
+    try{ localStorage.removeItem(DELETED_LS); if(typeof toast==='function') toast('삭제 기록을 비웠어요'); }catch(e){}
+  };
+  // 항목이 어느 구글 캘린더에 속하는지
+  function calIdForEntry(en){
+    if(!en) return '';
+    var src = en._gcalSrc || '';
+    if(src && GCAL_IDS[src]) return GCAL_IDS[src];      // 'schedule' 같은 키
+    if(src && src.indexOf('@') > 0) return src;          // 캘린더 ID 그대로
+    return GCAL_IDS[en.kind] || '';
+  }
+
+
   // ── 단건 재동기화 (카드 ⚠캘 버튼용) ────────────────────
   // ══════════════════════════════════════════════════════
   // ── 구글 Tasks 연동 (v44-0629) ─────────────────────────
@@ -5848,6 +5887,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         // wl_id가 있으면 업무일지에서 만든 것 → 스킵 (중복 방지)
         var wlId = it.extendedProperties && it.extendedProperties.private && it.extendedProperties.private.wl_id;
         if(wlId) { skipped++; return; }
+
+        // v45-0818: 앱에서 지운 항목은 다시 가져오지 않음
+        if(isDeletedGid(it.id)) { skipped++; return; }
 
         // 날짜 파싱
         var date = (it.start && (it.start.date || (it.start.dateTime||'').slice(0,10))) || '';
@@ -6562,6 +6604,31 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   }
   [500, 1500, 3000, 6000].forEach(function(t){ setTimeout(hookSaveForGcal, t); });
   window.gcalHookNow = hookSaveForGcal;
+
+  // ── v45-0818: 앱에서 지운 일정이 되살아나지 않게 ──
+  // 앱에서만 지우면 구글에는 남아 있어서 다음 가져오기 때 다시 추가됨. 그 고리를 끊는다.
+  function hookDeleteForGcal(){
+    if(typeof window.deleteRecord === 'function' && !window.deleteRecord._gcalHooked){
+      var origDel = window.deleteRecord;
+      window.deleteRecord = function(id){
+        try{
+          if(typeof entries !== 'undefined'){
+            var en = entries.find(function(x){ return x.id === id; });
+            if(en && en.gcalEventId){
+              rememberDeleted(en.gcalEventId);            // 되살아남 방지 (구글 삭제 실패해도 안전)
+              var calId = calIdForEntry(en);
+              if(calId && accessToken) deleteFromGCal(en.gcalEventId, calId);
+              dbgG('삭제 동기화(앱→구글): ' + (en.title||'') );
+            }
+          }
+        }catch(e){ dbgG('삭제훅 오류: ' + e); }
+        return origDel.apply(this, arguments);
+      };
+      window.deleteRecord._gcalHooked = true;
+      dbgG('deleteRecord 훅 설치');
+    }
+  }
+  [500, 1500, 3000, 6000].forEach(function(t){ setTimeout(hookDeleteForGcal, t); });
 
   // ── v45-0818: 업무 모달에 '처리 시간' 입력칸 주입 ──
   // worklog.js의 SCHEMA에는 시간 필드가 없어서 DOM에 직접 끼워넣고 저장 훅에서 값을 실어보낸다.
@@ -13403,7 +13470,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0818-1745';
+  var TAG = ' +cal0818-1830';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
