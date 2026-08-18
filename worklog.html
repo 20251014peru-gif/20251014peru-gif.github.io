@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921-cal0818-1640"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0818-1745"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5909,7 +5909,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           if(gUpdated > wlUpdated + 5000){ // 5초 이상 차이날 때만
             if(typeof updateRecord==='function'){
               updateRecord(existing.id, {
-                title: _tag.title || title, date: date, startTime: startTime,
+                title: phoneMark(_tag.title || title), date: date, startTime: startTime,
                 sType: _tag.sType || (existing.sType||''),
                 field: _tag.field || (existing.field||''),
                 memo: memo, scheduleType: scheduleType,
@@ -5927,7 +5927,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           if(typeof addRecord==='function'){
             addRecord({
               kind: 'schedule',
-              title: _tag.title || title,
+              title: phoneMark(_tag.title || title),
               date: date,
               startTime: startTime,
               sStatus: '예정',
@@ -5944,6 +5944,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
               _fromGcal: true            // 구글에서 가져온 것 표시
             });
             added++;
+            markPhoneOnGoogle(calId, it.id, title);   // 삼성 캘린더에도 📱 보이게
           }
         }
       });
@@ -6079,6 +6080,10 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
             + '<input type="checkbox" id="gpcWtAuto" ' + (w.auto?'checked':'')
             + ' style="width:16px;height:16px;accent-color:#1a73e8;cursor:pointer">'
             + '시간을 안 넣은 업무는 자동으로 시간 배정</label>'
+            + '<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#1a2f45;cursor:pointer;margin-bottom:8px">'
+            + '<input type="checkbox" id="gpcPhoneMark" ' + (isPhoneMarkOn()?'checked':'')
+            + ' style="width:16px;height:16px;accent-color:#8e44ad;cursor:pointer">'
+            + '📱 폰에서 넣은 일정은 제목 앞에 📱 표시</label>'
             + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
             + '<span style="font-size:11px;color:#7a92a8">시작</span>'
             + '<input type="time" id="gpcWtStart" step="300" value="' + w.start + '" style="width:104px;height:32px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">'
@@ -6164,6 +6169,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         var _s = document.getElementById('gpcWtStart');
         var _g = document.getElementById('gpcWtGap');
         var _d = document.getElementById('gpcWtDur');
+        var _pm = document.getElementById('gpcPhoneMark');
+        if(_pm) setPhoneMarkOn(_pm.checked);
         if(_a) setWorkTimeCfg({
           auto:  _a.checked,
           start: (_s && _s.value) || '09:00',
@@ -6179,6 +6186,42 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     });
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
   };
+
+  // ── v45-0818: 폰(삼성 캘린더)에서 넣은 일정 표시 ──
+  var PHONEMARK_LS = 'wl_gcal_phonemark';
+  var PHONE_ICON   = '📱';
+  function isPhoneMarkOn(){
+    try{ return localStorage.getItem(PHONEMARK_LS) !== 'off'; }catch(e){ return true; }
+  }
+  function setPhoneMarkOn(on){
+    try{ localStorage.setItem(PHONEMARK_LS, on ? 'on' : 'off'); }catch(e){}
+  }
+  // 업무일지에 저장할 제목 앞에 📱
+  function phoneMark(t){
+    var s = String(t || '');
+    if(!isPhoneMarkOn()) return s;
+    if(s.indexOf(PHONE_ICON) >= 0) return s;      // 이미 붙어 있으면 그대로
+    return PHONE_ICON + ' ' + s;
+  }
+  // 구글 이벤트 제목에도 📱 부착 → 삼성 캘린더에서도 구분됨
+  function markPhoneOnGoogle(calId, eventId, rawSummary){
+    try{
+      if(!isPhoneMarkOn()) return;
+      if(!accessToken || !calId || !eventId) return;
+      var s = String(rawSummary || '');
+      if(s.indexOf(PHONE_ICON) >= 0) return;      // 이미 붙어 있음 → 무한 반복 차단
+      fetch('https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calId)
+            + '/events/' + eventId, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summary: PHONE_ICON + ' ' + s })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if(d.id) dbgG('폰 표시 부착: ' + s); })
+      .catch(function(e){ dbgG('폰 표시 오류: ' + e); });
+    }catch(e){ dbgG('markPhoneOnGoogle 오류: ' + e); }
+  }
+
 
   // ── v45-0818: 제목 말머리 [전기] 자동 분류 ──
   var GCAL_FIELD_TAGS = ['전기','소방','기계','영선','승강기','청소','위생','통신','건축','조경','주차','보안'];
@@ -6453,13 +6496,13 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         var _lockT = setTimeout(function(){ delete _pushLocked[id]; }, 15000);   // 안전장치
         syncScheduleToGCal(en, function(){
           clearTimeout(_lockT);
-          setTimeout(function(){ delete _pushLocked[id]; }, 1500);
+          setTimeout(function(){ delete _pushLocked[id]; }, 3000);
         });
       }catch(e){
         delete _pushLocked[id];
         dbgG('push 오류: ' + e);
       }
-    }, 900);
+    }, 2500);   // v45-0818: 900ms로는 중복이 뚫려서 2.5초로 확대
   }
   function hookSaveForGcal(){
     if(typeof window.addRecord === 'function' && !window.addRecord._gcalHooked){
@@ -13360,7 +13403,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0818-1640';
+  var TAG = ' +cal0818-1745';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
