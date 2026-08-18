@@ -2353,11 +2353,16 @@ table.ProseMirror-selectednode {
   .mf-figcap:hover{color:var(--text-soft);text-decoration:underline dotted;}
   /* 동영상 임베드 */
   .mf-vidmark{font-size:0!important;line-height:0!important;}
-  .mf-video{display:block;margin:6px 0 14px;max-width:100%;}
-  .mf-video.ratio{position:relative;width:100%;max-width:720px;padding-top:56.25%;background:#000;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.18);}
-  .mf-video.ratio{padding-top:min(56.25%, 405px);}
-  .mf-video.ratio iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .mf-video{display:block;margin:6px 0 14px;max-width:720px;}
+  .mf-video-frame.ratio{position:relative;width:100%;max-width:720px;padding-top:min(56.25%, 405px);background:#000;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.18);}
+  .mf-video-frame.ratio iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
   .mf-video video{width:100%;max-width:720px;max-height:70vh;border-radius:12px;background:#000;display:block;box-shadow:0 2px 12px rgba(0,0,0,.18);}
+  /* 영상 도구막대(삭제·아래 추가) */
+  .mf-vidtools{display:flex;gap:6px;justify-content:flex-end;margin:0 0 6px;}
+  .mf-vidtool{border:1px solid var(--border);background:var(--bg-soft);color:var(--text-soft);font-family:var(--sans);font-size:12px;font-weight:700;padding:5px 11px;border-radius:8px;cursor:pointer;line-height:1;}
+  .mf-vidtool:hover{background:var(--border);color:var(--text);}
+  .mf-vidtool.del{color:#d9534f;} .mf-vidtool.del:hover{background:#e5484d;color:#fff;border-color:#e5484d;}
+  body.view-mode .mf-vidtools{display:none;}
   .mf-video-link{display:inline-block;color:var(--accent);font-weight:600;word-break:break-all;padding:8px 0;}
   .mf-vidinput{width:380px;}
   .mf-vidinput .vid-cap{font-size:12px;color:var(--text-faint);font-weight:700;padding:2px 4px 6px;line-height:1.4;}
@@ -2571,7 +2576,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.5</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.6</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38584,7 +38589,7 @@ table.ProseMirror-selectednode {
 
   // tui-entry.js
   window.toastui = { Editor: ToastUIEditor };
-  window.PM = { Plugin, PluginKey, Decoration, DecorationSet, NodeSelection };
+  window.PM = { Plugin, PluginKey, Decoration, DecorationSet, NodeSelection, TextSelection };
 })();
 /*! Bundled license information:
 
@@ -39510,14 +39515,14 @@ table.ProseMirror-selectednode {
           if(node.type&&node.type.name==="image"){ var cap=imageCaption(node.attrs.altText); if(cap){ (function(ipos,capText){
             decos.push(window.PM.Decoration.widget(ipos+node.nodeSize, function(){ var d=document.createElement("span"); d.className="mf-figcap"; d.textContent=capText; d.title="눌러서 설명 편집"; d.addEventListener("mousedown",function(e){ if(viewMode) return; e.preventDefault(); e.stopPropagation(); openCapEditor(ipos); }); return d; }, {side:1, ignoreSelection:true, key:"cap:"+ipos+":"+capText})); })(pos,cap); } }
           if(node.isTextblock){ var vt=node.textContent;
-            var vm=vt.match(/^⟦vid ([^⟧]+)⟧$/); if(vm){ (function(vpos,enc,len){
+            var vm=vt.match(/^⟦vid ([^⟧]+)⟧$/); if(vm){ (function(vpos,enc,len,mk){
               var base=vpos+1;
               decos.push(window.PM.Decoration.inline(base, base+len, {class:"mf-vidmark"}));
-              decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ return buildVideoEmbed(decVid(enc)); }, {side:1, ignoreSelection:true, key:"vid:"+enc})); })(pos, vm[1], vt.length); }
-            var fm=vt.match(/^⟦vidfile:([A-Za-z0-9]+)⟧$/); if(fm){ (function(vpos,id,len){
+              decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ var el=buildVideoEmbed(decVid(enc)); el.setAttribute("data-vidmarker", mk); return el; }, {side:1, ignoreSelection:true, key:"vid:"+enc})); })(pos, vm[1], vt.length, vt); }
+            var fm=vt.match(/^⟦vidfile:([A-Za-z0-9]+)⟧$/); if(fm){ (function(vpos,id,len,mk){
               var base2=vpos+1;
               decos.push(window.PM.Decoration.inline(base2, base2+len, {class:"mf-vidmark"}));
-              decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ return buildLocalVideo(id); }, {side:1, ignoreSelection:true, key:"vidfile:"+id})); })(pos, fm[1], vt.length); }
+              decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ var el=buildLocalVideo(id); el.setAttribute("data-vidmarker", mk); return el; }, {side:1, ignoreSelection:true, key:"vidfile:"+id})); })(pos, fm[1], vt.length, vt); }
           }
         });
         hlScan(state.doc, function(n, of, ot, cf, ct){
@@ -39834,14 +39839,26 @@ table.ProseMirror-selectednode {
     if(/\.(mp4|webm|ogg|ogv|mov|m4v)(\?.*)?$/i.test(url)) return {type:"video", src:url};
     return {type:"link", src:url};
   }
+  // 영상 위 작은 도구막대(삭제 · 아래에 추가) — iframe이 클릭을 먹어서 오버레이 대신 위에 항상 표시
+  function makeVidTools(wrap){
+    var bar=document.createElement("div"); bar.className="mf-vidtools"; bar.setAttribute("contenteditable","false");
+    function mk(txt,title,fn,cls){ var b=document.createElement("button"); b.type="button"; b.className="mf-vidtool"+(cls?" "+cls:""); b.textContent=txt; b.title=title; b.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); var m=wrap.getAttribute("data-vidmarker"); if(m) fn(m); }); return b; }
+    bar.appendChild(mk("＋ 아래 추가","영상 아래에 새 줄 추가", addAfterVideoByMarker, ""));
+    bar.appendChild(mk("🗑 삭제","이 영상 삭제", deleteVideoByMarker, "del"));
+    return bar;
+  }
   function buildVideoEmbed(url){
     var wrap=document.createElement("div"); wrap.className="mf-video"; wrap.setAttribute("contenteditable","false");
+    wrap.appendChild(makeVidTools(wrap));
     var info=videoEmbedInfo(url);
-    if(info.type==="iframe"){ wrap.classList.add("ratio"); var f=document.createElement("iframe"); f.src=info.src; f.setAttribute("allow","accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"); f.setAttribute("allowfullscreen",""); f.setAttribute("referrerpolicy","strict-origin-when-cross-origin"); f.loading="lazy"; wrap.appendChild(f); }
+    if(info.type==="iframe"){ var fr=document.createElement("div"); fr.className="mf-video-frame ratio"; var f=document.createElement("iframe"); f.src=info.src; f.setAttribute("allow","accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"); f.setAttribute("allowfullscreen",""); f.setAttribute("referrerpolicy","strict-origin-when-cross-origin"); f.loading="lazy"; fr.appendChild(f); wrap.appendChild(fr); }
     else if(info.type==="video"){ var vd=document.createElement("video"); vd.src=info.src; vd.controls=true; vd.setAttribute("playsinline",""); vd.preload="metadata"; wrap.appendChild(vd); }
     else { var a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener noreferrer"; a.className="mf-video-link"; a.textContent="▶ 동영상 열기 — "+url; wrap.appendChild(a); }
     return wrap;
   }
+  function vidNodePos(marker){ var v=wwView_(); if(!v) return -1; var hit=-1; v.state.doc.descendants(function(node,pos){ if(hit>=0) return false; if(node.isTextblock && node.textContent===marker){ hit=pos; return false; } }); return hit; }
+  function deleteVideoByMarker(marker){ var v=wwView_(); if(!v) return; var pos=vidNodePos(marker); if(pos<0) return; var node=v.state.doc.nodeAt(pos); if(!node) return; try{ v.dispatch(v.state.tr.delete(pos, pos+node.nodeSize)); }catch(e){ return; } afterHlEdit(); scheduleFold(); if(window.__mfResetFold) window.__mfResetFold(); if(typeof mfToast==="function") mfToast("영상을 지웠어요 (되돌리기: Ctrl/⌘+Z)"); }
+  function addAfterVideoByMarker(marker){ var v=wwView_(); if(!v) return; var pos=vidNodePos(marker); if(pos<0) return; var node=v.state.doc.nodeAt(pos); if(!node) return; var after=pos+node.nodeSize; var pType=v.state.schema.nodes.paragraph; var para; try{ para=pType.create(); }catch(e){ return; } var tr=v.state.tr.insert(after, para); try{ if(window.PM&&window.PM.TextSelection){ tr.setSelection(window.PM.TextSelection.create(tr.doc, after+1)); } }catch(e){} try{ v.dispatch(tr); }catch(e){ return; } try{ editor.focus(); }catch(e){} afterHlEdit(); scheduleFold(); if(window.__mfResetFold) window.__mfResetFold(); }
   function insertParaMarker(text){
     if(!text) return; var v=wwView_(); if(!v){ return; } var schema=v.state.schema; var pType=schema.nodes.paragraph; if(!pType) return;
     var para; try{ para=pType.create(null, schema.text(text)); }catch(e){ return; }
@@ -39870,7 +39887,9 @@ table.ProseMirror-selectednode {
   }
   function buildLocalVideo(id){
     var wrap=document.createElement("div"); wrap.className="mf-video"; wrap.setAttribute("contenteditable","false");
-    function showVideo(url){ var vd=document.createElement("video"); vd.src=url; vd.controls=true; vd.setAttribute("playsinline",""); vd.preload="metadata"; wrap.innerHTML=""; wrap.appendChild(vd); }
+    var tools=makeVidTools(wrap);
+    function showVideo(url){ var vd=document.createElement("video"); vd.src=url; vd.controls=true; vd.setAttribute("playsinline",""); vd.preload="metadata"; wrap.innerHTML=""; wrap.appendChild(tools); wrap.appendChild(vd); }
+    wrap.appendChild(tools);
     if(vidBlobUrls[id]){ showVideo(vidBlobUrls[id]); return wrap; }
     var ph=document.createElement("div"); ph.className="mf-video-load"; ph.textContent="영상 불러오는 중…"; wrap.appendChild(ph);
     idbGetMedia(id).then(function(blob){ if(!blob){ ph.className="mf-video-load missing"; ph.textContent="📵 이 영상은 원래 넣은 기기에만 저장돼 있어요 (동기화 안 됨)"; return; } var url; try{ url=URL.createObjectURL(blob); }catch(e){ ph.textContent="영상을 불러오지 못했어요."; return; } vidBlobUrls[id]=url; showVideo(url); }).catch(function(){ ph.textContent="영상을 불러오지 못했어요."; });
