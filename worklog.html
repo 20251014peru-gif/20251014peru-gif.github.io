@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921-cal0818-1830"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0818-1910"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -6638,6 +6638,16 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     if(!mf) return false;
     return !!(mf.querySelector('#m-floor') && mf.querySelector('#m-field') && mf.querySelector('#m-title'));
   }
+  // 현재 시각을 5분 단위로 (KST)
+  function nowHM5(){
+    var d = (typeof kstNow === 'function') ? kstNow() : new Date(Date.now() + 9*3600*1000);
+    var s = d.toISOString().slice(11,16);            // KST "HH:MM"
+    var pp = s.split(':');
+    var h = parseInt(pp[0],10) || 0;
+    var m = Math.round((parseInt(pp[1],10)||0) / 5) * 5;
+    if(m >= 60){ m = 0; h = (h + 1) % 24; }
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
   function injectWorkTimeFields(){
     try{
       if(!isWorkModal()) return;
@@ -6647,23 +6657,87 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       if(!dateEl) return;
       var host = (dateEl.closest && dateEl.closest('.field')) || dateEl.parentElement;
       if(!host || !host.parentNode) return;
+
+      var BTN = 'height:32px;padding:0 11px;border:1.5px solid #dbe6f4;border-radius:9px;'
+              + 'background:#f7faff;color:#3f7cb8;font-size:13px;font-weight:700;'
+              + 'font-family:inherit;cursor:pointer;white-space:nowrap;touch-action:manipulation';
       var wrap = document.createElement('div');
       wrap.className = host.className || 'field';
       wrap.id = 'm-workTimeWrap';
       wrap.innerHTML =
-        '<label>처리 시간 <span style="font-weight:500;color:#9aa7b4">(비워두면 자동 배정)</span></label>'
-        + '<div style="display:flex;gap:6px;align-items:center">'
-        + '<input type="time" id="m-workStart" step="300" style="flex:1;min-width:0">'
-        + '<span style="color:#9aa7b4;flex-shrink:0">~</span>'
-        + '<input type="time" id="m-workEnd" step="300" style="flex:1;min-width:0">'
+          '<label>처리 시간 <span style="font-weight:500;color:#9aa7b4">(비워두면 자동 배정 · 5분 단위)</span></label>'
+        + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+        +   '<input type="time" id="m-workStart" step="300" style="flex:1;min-width:104px;height:38px">'
+        +   '<span style="color:#9aa7b4;flex-shrink:0">~</span>'
+        +   '<input type="time" id="m-workEnd" step="300" style="flex:1;min-width:104px;height:38px">'
+        + '</div>'
+        + '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:7px">'
+        +   '<button type="button" id="m-wtNow" style="' + BTN + ';background:#3f7cb8;color:#fff;border-color:#3f7cb8">🕐 지금</button>'
+        +   '<span style="font-size:11px;color:#9aa7b4;margin-left:2px">소요</span>'
+        +   '<button type="button" class="m-wtDur" data-dur="10"  style="' + BTN + '">10분</button>'
+        +   '<button type="button" class="m-wtDur" data-dur="30"  style="' + BTN + '">30분</button>'
+        +   '<button type="button" class="m-wtDur" data-dur="60"  style="' + BTN + '">1시간</button>'
+        +   '<button type="button" class="m-wtDur" data-dur="120" style="' + BTN + '">2시간</button>'
+        +   '<button type="button" class="m-wtDur" data-dur="240" style="' + BTN + '">4시간</button>'
+        +   '<button type="button" id="m-wtClear" style="' + BTN + ';color:#b52929;border-color:#f5b5b5;background:#fdecec;margin-left:auto">지우기</button>'
+        + '</div>'
+        + '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:5px">'
+        +   '<span style="font-size:11px;color:#9aa7b4">시작</span>'
+        +   '<button type="button" class="m-wtQuick" data-t="08:00" style="' + BTN + '">08:00</button>'
+        +   '<button type="button" class="m-wtQuick" data-t="09:00" style="' + BTN + '">09:00</button>'
+        +   '<button type="button" class="m-wtQuick" data-t="10:00" style="' + BTN + '">10:00</button>'
+        +   '<button type="button" class="m-wtQuick" data-t="13:00" style="' + BTN + '">13:00</button>'
+        +   '<button type="button" class="m-wtQuick" data-t="14:00" style="' + BTN + '">14:00</button>'
+        +   '<button type="button" class="m-wtQuick" data-t="16:00" style="' + BTN + '">16:00</button>'
         + '</div>';
       host.parentNode.insertBefore(wrap, host.nextSibling);
+
+      var sEl = wrap.querySelector('#m-workStart');
+      var eEl = wrap.querySelector('#m-workEnd');
+
+      // 🕐 지금 → 시작=현재(5분), 종료=+30분
+      wrap.querySelector('#m-wtNow').addEventListener('click', function(){
+        sEl.value = nowHM5();
+        eEl.value = addMin(sEl.value, 30);
+      });
+      // 지우기 → 자동 배정으로 되돌림
+      wrap.querySelector('#m-wtClear').addEventListener('click', function(){
+        sEl.value = ''; eEl.value = '';
+      });
+      // 소요 칩 → 시작 기준으로 종료 계산 (시작이 비면 현재 시각으로 채움)
+      wrap.querySelectorAll('.m-wtDur').forEach(function(b){
+        b.addEventListener('click', function(){
+          if(!sEl.value) sEl.value = nowHM5();
+          eEl.value = addMin(sEl.value, parseInt(b.getAttribute('data-dur'), 10) || 30);
+        });
+      });
+      // 시작 시각 칩
+      wrap.querySelectorAll('.m-wtQuick').forEach(function(b){
+        b.addEventListener('click', function(){
+          var t = b.getAttribute('data-t');
+          var keep = (sEl.value && eEl.value)
+            ? (function(){
+                var a = sEl.value.split(':'), c = eEl.value.split(':');
+                return (parseInt(c[0],10)*60 + parseInt(c[1],10)) - (parseInt(a[0],10)*60 + parseInt(a[1],10));
+              })()
+            : 30;
+          if(keep <= 0) keep = 30;
+          sEl.value = t;
+          eEl.value = addMin(t, keep);
+        });
+      });
+      // 시작을 직접 바꾸면 종료가 비었거나 더 이르면 +30분
+      sEl.addEventListener('change', function(){
+        if(!sEl.value) return;
+        if(!eEl.value || eEl.value <= sEl.value) eEl.value = addMin(sEl.value, 30);
+      });
+
       // 수정 모드면 기존 값 채우기
       if(_curEditId && typeof entries !== 'undefined'){
         var en = entries.find(function(x){ return x.id === _curEditId; });
         if(en){
-          if(en.startTime) wrap.querySelector('#m-workStart').value = en.startTime;
-          if(en.endTime)   wrap.querySelector('#m-workEnd').value   = en.endTime;
+          if(en.startTime) sEl.value = en.startTime;
+          if(en.endTime)   eEl.value = en.endTime;
         }
       }
     }catch(e){ dbgG('시간칸 주입 오류: ' + e); }
@@ -13470,7 +13544,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0818-1830';
+  var TAG = ' +cal0818-1910';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
