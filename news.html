@@ -231,7 +231,7 @@
     <div class="searchbar">
       <input id="q" placeholder="키워드로 뉴스 검색 (예: 엔비디아)" />
       <button onclick="runSearch()">검색</button>
-      <button onclick="liveSearch()" style="border:none;background:var(--foreign);color:#fff;border-radius:12px;padding:0 13px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap">🌐 웹에서 즉시</button>
+      <button onclick="liveSearch()" style="border:none;background:var(--foreign);color:#fff;border-radius:12px;padding:0 13px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap">🤖 AI로 뉴스검색</button>
     </div>
     <button class="sumbtn" onclick="openSummary()">📝 통합 요약</button>
       <button class="sumbtn" id="refreshBtn" onclick="loadData(true)" style="background:var(--good)">🔄 새로고침</button>
@@ -579,33 +579,27 @@ var liveItems=[]; var liveMode=false;
 function liveSearch(){
   var q=document.getElementById("q").value.trim();
   if(!q){ toast("검색어를 입력하세요"); return; }
-  setStatus("🟡 웹에서 '"+q+"' 가져오는 중…");
-  // CORS 우회용 공개 프록시로 구글뉴스 RSS 호출 (개인용)
-  var rss="https://news.google.com/rss/search?q="+encodeURIComponent(q)+"&hl=ko&gl=KR&ceid=KR:ko";
-  var prox="https://api.allorigins.win/raw?url="+encodeURIComponent(rss);
-  fetch(prox).then(function(r){return r.text();}).then(function(xml){
-    var doc=new DOMParser().parseFromString(xml,"text/xml");
-    var items=Array.prototype.slice.call(doc.querySelectorAll("item")).slice(0,25);
-    if(!items.length){ setStatus("🟠 결과 없음"); toast("결과가 없어요"); return; }
-    liveItems=items.map(function(it,i){
-      var title=(it.querySelector("title")||{}).textContent||"";
-      var link=(it.querySelector("link")||{}).textContent||"";
-      var pub=(it.querySelector("pubDate")||{}).textContent||"";
-      var src=""; var srcEl=it.getElementsByTagName("source")[0]; if(srcEl)src=srcEl.textContent;
-      return { id:"live"+i, date:pub, src:"google", origin:src, kw:q, trans:false,
-        title:title.replace(/ - [^-]*$/,""), orig_title:title, summary:(src?src+" · ":"")+"웹 즉시검색 결과 (본문·요약은 정식 수집 시 생성)",
-        body:"", sig:"gray", reason:"", dupes:1, url:link, breaking:false };
+  if(!AI_KEY){ toast("먼저 🤖 탭 ⚙️에서 AI 키를 넣어주세요"); openDrawer(); setTimeout(openKey,300); return; }
+  setStatus("🟡 AI가 '"+q+"' 뉴스 검색 중… (10~20초)");
+  var sys="당신은 뉴스 리서치 도우미입니다. web_search로 한국어 최신 뉴스를 찾아, 아래 JSON 배열만 출력하세요. 다른 말·마크다운·설명 금지. 최대 12건. 각 원소는 {\"title\":기사제목, \"summary\":한줄요약(35자 내외), \"source\":언론사, \"url\":기사원문URL, \"sig\":\"red|orange|gray\"(투자 중요도), \"date\":\"YYYY-MM-DD\"}. 반드시 순수 JSON 배열([...])만.";
+  var msgs=[{role:"user",content:"'"+q+"' 관련 최신 뉴스를 검색해서 JSON 배열로만 줘. 투자·경제 관점 위주."}];
+  callClaude(msgs, sys, function(txt,err){
+    if(err){ setStatus("🟠 AI 검색 실패"); toast("AI 검색 실패: "+err); return; }
+    var arr=null;
+    try{ var s=txt.indexOf("["), e=txt.lastIndexOf("]"); arr=JSON.parse(txt.slice(s,e+1)); }catch(ex){ arr=null; }
+    if(!arr||!arr.length){ setStatus("🟠 결과 파싱 실패"); toast("결과를 못 읽었어요. 다시 시도해보세요"); return; }
+    liveItems=arr.map(function(o,i){
+      return { id:"live"+i, date:(o.date||""), src:"google", origin:(o.source||"웹"), kw:q, trans:false,
+        title:(o.title||""), orig_title:(o.title||""),
+        summary:(o.summary||"")+(o.source?" · "+o.source:""),
+        body:"", sig:(o.sig||"gray"), reason:"AI 웹검색 결과", dupes:1, url:(o.url||"#"), breaking:false };
     });
     liveMode=true; search=""; view="all"; filterKw=null; dateFilter="all";
     var ds=document.getElementById("dateSel"); if(ds)ds.value="all";
-    setStatus("🟢 웹에서 "+liveItems.length+"건 ('"+q+"')");
-    renderRows();
-    document.getElementById("emptyBox").scrollIntoView({behavior:"smooth",block:"nearest"});
-  }).catch(function(e){
-    setStatus("🟠 즉시검색 실패");
-    toast("가져오기 실패 — 잠시 후 다시 시도");
+    setStatus("🟢 AI 검색 "+liveItems.length+"건 ('"+q+"')"); renderRows();
   });
 }
+
 function exitLive(){ liveMode=false; liveItems=[]; loadData(false); }
 
 var BASE_SYS="당신은 달님의 개인 뉴스 리서치 도우미입니다. 한국어로, 투자·경제·정치 맥락 위주로 핵심만 간결하게 답하세요. 최신 사실이 필요하면 web_search로 뉴스를 찾아 요약하고, 필요하면 출처를 짧게 덧붙이세요.";
