@@ -12,25 +12,20 @@
     --accent:#3D5AFE; --up:#E5484D; --down:#2F7DE1; --flat:#9AA1AD;
     --urgent:#F03E3E; --notable:#F08C00; --good:#128A3E; --foreign:#7A5AF8;
     --shadow:0 1px 2px rgba(20,22,27,.04), 0 6px 20px rgba(20,22,27,.06);
-    --tabbar-h:60px; --ai-w:380px;
+    --tabbar-h:60px;
     font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--bg);color:var(--ink);letter-spacing:-.01em}
   body{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
-  header{position:sticky;top:0;z-index:20;background:rgba(244,245,247,.85);
-    backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);
-    padding:calc(env(safe-area-inset-top) + 12px) 20px 10px;border-bottom:1px solid var(--line)}
+  header{position:sticky;top:0;z-index:20;background:rgba(244,245,247,.85);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);padding:calc(env(safe-area-inset-top) + 12px) 20px 10px;border-bottom:1px solid var(--line)}
   .brand{display:flex;align-items:center;justify-content:space-between}
   .brand h1{font-size:20px;font-weight:800;margin:0;letter-spacing:-.03em;display:flex;align-items:center;gap:7px}
   .radar-dot{width:8px;height:8px;border-radius:50%;background:var(--urgent);animation:pulse 2.4s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(240,62,62,.45)}70%{box-shadow:0 0 0 8px rgba(240,62,62,0)}100%{box-shadow:0 0 0 0 rgba(240,62,62,0)}}
   .hmeta{font-size:12px;color:var(--ink-3);font-weight:500}
   .hmeta .live{color:var(--up);font-weight:700}
-
-  .layout{display:flex;gap:16px;padding:14px 20px 8px;align-items:flex-start}
-  .newscol{flex:1;min-width:0}
-
+  main{padding:14px 20px 8px}
   .board{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:12px 14px 8px;margin-bottom:12px}
   .board .cap{font-size:11.5px;font-weight:800;color:var(--ink-2);letter-spacing:.02em;margin:0 2px 10px;display:flex;justify-content:space-between}
   .board .cap .hint{color:var(--ink-3);font-weight:600}
@@ -47,13 +42,10 @@
   .arrow{font-weight:800}
   .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)}
   .tcard.on .up,.tcard.on .down,.tcard.on .flat{color:#fff}
-
   .surge{display:flex;align-items:center;gap:8px;overflow-x:auto;margin-bottom:14px;padding:0 2px}
   .surge .lab{font-size:11.5px;font-weight:800;color:var(--up);white-space:nowrap;display:flex;align-items:center;gap:4px}
   .schip{flex:0 0 auto;background:#FFF1F1;color:var(--up);border:1px solid #FBD7D7;border-radius:999px;padding:6px 11px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
-  .schip .pct{font-size:11px;font-weight:800}
-  .schip .plus{opacity:.6;font-weight:800}
-
+  .schip .pct{font-size:11px;font-weight:800} .schip .plus{opacity:.6;font-weight:800}
   .controls{display:flex;gap:8px;align-items:center;margin-bottom:10px;padding:0 2px;flex-wrap:wrap}
   .searchbar{flex:1;min-width:220px;display:flex;gap:7px}
   .searchbar input{flex:1;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 13px;font-size:14px;font-family:inherit;box-shadow:var(--shadow);outline:none}
@@ -63,12 +55,30 @@
   .seg{display:flex;background:var(--line-2);border-radius:11px;padding:3px;gap:2px}
   .seg button{border:none;background:none;padding:8px 12px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--ink-2);cursor:pointer;white-space:nowrap}
   .seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-
+  /* 관심 키워드 관리 */
+  .kwmgr{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;margin-bottom:12px}
+  .kwmgr .cap{font-size:12px;font-weight:800;color:var(--ink-2);margin-bottom:9px;display:flex;justify-content:space-between}
+  .kwmgr .cap .mini{font-weight:700;color:var(--ink-3)}
+  .kwlist{display:flex;flex-wrap:wrap;gap:7px}
+  .kwitem{display:inline-flex;align-items:center;gap:6px;background:var(--line-2);border-radius:999px;padding:6px 6px 6px 12px;font-size:13px;font-weight:700}
+  .kwitem .nm{cursor:pointer}
+  .kwitem .del{border:none;background:#E7E9EE;color:var(--ink-2);width:19px;height:19px;border-radius:50%;font-size:12px;cursor:pointer;line-height:1}
+  .kwadd{display:flex;gap:7px;margin-top:10px}
+  .kwadd input{flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:14px;font-family:inherit;outline:none}
+  .kwadd input:focus{border-color:var(--accent)}
+  .kwadd button{border:none;background:var(--accent);color:#fff;border-radius:10px;padding:0 15px;font-size:13.5px;font-weight:800;cursor:pointer}
   .filters{display:flex;gap:7px;overflow-x:auto;padding:0 2px 12px}
   .fchip{flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;white-space:nowrap}
   .fchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .fchip .n{opacity:.5;font-weight:700;margin-left:3px}
-
+  /* 스크랩 선택삭제 툴바 */
+  .selbar{display:none;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:9px 12px;margin-bottom:10px}
+  .selbar.on{display:flex}
+  .selbar .cnt{font-size:13px;font-weight:800}
+  .selbar .sp{flex:1}
+  .selbar button{border:none;border-radius:10px;padding:8px 13px;font-size:12.5px;font-weight:800;cursor:pointer}
+  .selbar .del{background:var(--urgent);color:#fff}
+  .selbar .clr{background:var(--line-2);color:var(--ink-2)}
   .tablewrap{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow-x:auto}
   table{width:100%;min-width:1000px;border-collapse:collapse;font-size:13px;table-layout:fixed}
   thead th{position:sticky;top:0;background:#F7F8FA;color:var(--ink-3);font-size:10.5px;font-weight:800;letter-spacing:.03em;text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);white-space:nowrap;z-index:2}
@@ -77,9 +87,10 @@
   tbody tr:hover{background:#F1F4FF}
   tbody tr.read{opacity:.42}
   tbody tr.read .title{font-weight:500}
-  col.c-dot{width:30px} col.c-date{width:54px} col.c-src{width:54px} col.c-kw{width:88px}
-  col.c-title{width:30%} col.c-sum{width:32%} col.c-sig{width:42px} col.c-link{width:74px} col.c-star{width:36px}
+  col.c-chk{width:34px} col.c-dot{width:28px} col.c-date{width:54px} col.c-src{width:54px} col.c-kw{width:86px}
+  col.c-title{width:29%} col.c-sum{width:31%} col.c-note{width:44px} col.c-sig{width:40px} col.c-link{width:70px} col.c-star{width:34px}
   .cell-center{text-align:center}
+  .chk{width:17px;height:17px;cursor:pointer}
   .rdot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
   tr.read .rdot{background:transparent;border:1.5px solid var(--line)}
   .c-date-td{color:var(--ink-3);font-weight:600;font-size:11.5px}
@@ -93,71 +104,51 @@
   .trans{font-size:9.5px;font-weight:800;color:#fff;background:var(--foreign);padding:1px 5px;border-radius:5px;margin-right:5px;vertical-align:1px}
   .dupe{font-size:10.5px;font-weight:700;color:var(--ink-3);background:var(--line-2);padding:1px 6px;border-radius:6px;margin-left:6px}
   .summary{color:var(--ink-2);font-size:12.5px}
+  .notepill{font-size:10.5px;font-weight:800;color:var(--accent);background:#EEF1FF;padding:1px 6px;border-radius:6px}
   .sigdot{font-size:13px}
   .rowact{display:inline-flex;gap:8px;align-items:center;justify-content:center}
   .link{color:var(--accent);text-decoration:none;font-weight:700;font-size:11px}
-  .askbtn{cursor:pointer;font-size:14px;line-height:1;filter:grayscale(.2)}
+  .askbtn{cursor:pointer;font-size:14px;line-height:1}
   .star{cursor:pointer;font-size:16px;color:var(--ink-3);line-height:1}
   .star.on{color:#F5A623}
   .empty{text-align:center;color:var(--ink-3);font-size:14px;padding:42px 20px;line-height:1.7}
-
-  /* AI 패널 */
-  .aicol{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
-  .ai-head{padding:14px 16px 10px;border-bottom:1px solid var(--line)}
-  .ai-head h2{margin:0;font-size:15px;font-weight:800;display:flex;align-items:center;gap:6px}
-  .ai-head p{margin:3px 0 0;font-size:11.5px;color:var(--ink-3)}
-  .ai-quick{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 4px}
+  /* 용어집 */
+  .gloss{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+  .gcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px 14px;position:relative}
+  .gcard .term{font-size:14px;font-weight:800}
+  .gcard .def{font-size:12.5px;color:var(--ink-2);line-height:1.55;margin-top:4px}
+  .gcard .date{font-size:10.5px;color:var(--ink-3);margin-top:6px}
+  .gcard .gdel{position:absolute;top:8px;right:8px;border:none;background:var(--line-2);color:var(--ink-2);width:22px;height:22px;border-radius:50%;font-size:12px;cursor:pointer}
+  /* FAB / 탭바 */
+  .fab{position:fixed;right:22px;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 14px);width:52px;height:52px;border-radius:17px;background:var(--surface);color:var(--accent);border:1px solid var(--line);font-size:22px;box-shadow:var(--shadow);cursor:pointer;z-index:30;display:grid;place-items:center;line-height:1}
+  .fab.ai{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 76px);background:var(--accent);color:#fff;border:none;box-shadow:0 8px 22px rgba(61,90,254,.4)}
+  .tabbar{position:fixed;bottom:0;left:0;right:0;z-index:40;height:calc(var(--tabbar-h) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:rgba(255,255,255,.92);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);border-top:1px solid var(--line);display:flex}
+  .tabbar button{flex:1;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;font-weight:600;color:var(--ink-3);cursor:pointer;padding-top:7px;position:relative}
+  .tabbar button .ic{font-size:19px;line-height:1}
+  .tabbar button.on{color:var(--accent)}
+  .tabbar button .tb{position:absolute;top:4px;left:50%;transform:translateX(6px);min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--urgent);color:#fff;font-size:9.5px;font-weight:800;display:grid;place-items:center}
+  /* AI 슬라이드 드로어 */
+  .drawer-bg{position:fixed;inset:0;background:rgba(20,22,27,.35);z-index:44;display:none}
+  .drawer-bg.on{display:block}
+  .aidrawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:var(--surface);z-index:45;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1);box-shadow:-10px 0 40px rgba(0,0,0,.15)}
+  .aidrawer.on{transform:none}
+  .adh{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .adh h2{margin:0;font-size:15px;font-weight:800;display:flex;align-items:center;gap:6px}
+  .adh .x{border:none;background:var(--line-2);width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer;color:var(--ink-2)}
+  .aq{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 4px}
   .qchip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--accent);cursor:pointer}
-  .ai-msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:120px}
+  .msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
   .msg{max-width:92%;font-size:13px;line-height:1.6;border-radius:14px;padding:10px 12px;white-space:pre-wrap;word-break:break-word}
   .msg.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
   .msg.ai{align-self:flex-start;background:var(--zebra);border:1px solid var(--line);border-bottom-left-radius:4px}
-  .msg.ai a{color:var(--accent)}
-  .msg.sys{align-self:center;font-size:11px;color:var(--ink-3);background:none;padding:4px}
+  .msg.sys{align-self:center;font-size:11px;color:var(--ink-3);background:none;padding:4px;text-align:center}
   .typing{align-self:flex-start;color:var(--ink-3);font-size:12px;padding:6px 10px}
-  .ctx{margin:0 14px;padding:7px 10px;background:#EEF1FF;border:1px solid #D9E0FF;border-radius:10px;font-size:11.5px;color:var(--accent);font-weight:600;display:none;align-items:center;justify-content:space-between}
-  .ctx.on{display:flex}
-  .ctx .x{cursor:pointer;font-weight:800;opacity:.6}
-  .ai-input{display:flex;gap:7px;padding:10px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
-  .ai-input input{flex:1;border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;font-family:inherit;outline:none}
-  .ai-input input:focus{border-color:var(--accent)}
-  .ai-input button{border:none;background:var(--accent);color:#fff;border-radius:12px;width:44px;font-size:16px;font-weight:800;cursor:pointer}
-  .aiclose{display:none}
-
-  .fab{position:fixed;right:22px;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 14px);width:52px;height:52px;border-radius:17px;background:var(--surface);color:var(--accent);border:1px solid var(--line);font-size:22px;box-shadow:var(--shadow);cursor:pointer;z-index:30;display:grid;place-items:center;line-height:1}
-  .fab.ai{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 76px);background:var(--accent);color:#fff;border:none;box-shadow:0 8px 22px rgba(61,90,254,.4)}
-
-  .tabbar{position:fixed;bottom:0;left:0;right:0;z-index:40;height:calc(var(--tabbar-h) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:rgba(255,255,255,.9);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);border-top:1px solid var(--line);display:flex}
-  .tabbar button{flex:1;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:var(--ink-3);cursor:pointer;padding-top:7px;position:relative}
-  .tabbar button .ic{font-size:20px;line-height:1}
-  .tabbar button.on{color:var(--accent)}
-  .tabbar button .tb{position:absolute;top:4px;left:50%;transform:translateX(6px);min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--urgent);color:#fff;font-size:9.5px;font-weight:800;display:grid;place-items:center}
-
-  .sheet-bg{position:fixed;inset:0;background:rgba(20,22,27,.4);z-index:50;display:none;align-items:center;justify-content:center;padding:20px}
-  .sheet-bg.on{display:flex}
-  .sheet{background:var(--surface);width:100%;max-width:640px;border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:80vh;overflow:auto}
-  .sheet h3{margin:0 0 4px;font-size:18px;font-weight:800;display:flex;align-items:center;gap:7px}
-  .sheet .psub{margin:0 0 16px;font-size:12.5px;color:var(--ink-2)}
-  .sheet .row{display:flex;gap:8px}
-  .sheet input{flex:1;border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:16px;font-family:inherit;outline:none}
-  .sheet .go{border:none;background:var(--accent);color:#fff;border-radius:12px;padding:0 18px;font-size:15px;font-weight:800;cursor:pointer}
-  .sumbox{background:var(--zebra);border:1px solid var(--line);border-radius:12px;padding:16px 18px;font-size:14px;line-height:1.75;color:var(--ink)}
-  .sumbox b{color:var(--accent)} .sumbox ul{margin:10px 0 0;padding-left:18px} .sumbox li{margin-bottom:6px}
-  .close{margin-top:16px;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;color:var(--ink-2)}
-
-  /* 데스크톱: AI 사이드바 고정 */
-  @media(min-width:1024px){
-    .aicol{position:sticky;top:76px;width:var(--ai-w);flex:0 0 var(--ai-w);height:calc(100vh - 96px)}
-    .fab.ai{display:none}
-  }
-  /* 모바일/태블릿: AI 패널을 바텀시트로 */
-  @media(max-width:1023px){
-    .aicol{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:45;height:80vh;border-radius:18px 18px 0 0;transform:translateY(110%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
-    .aicol.open{transform:none}
-    .aiclose{display:block;position:absolute;top:12px;right:14px;border:none;background:var(--line-2);border-radius:50%;width:30px;height:30px;font-size:15px;cursor:pointer;color:var(--ink-2);z-index:2}
-  }
-  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-
+  .ain{display:flex;gap:7px;padding:10px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+  .ain input{flex:1;border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;font-family:inherit;outline:none}
+  .ain input:focus{border-color:var(--accent)}
+  .ain button{border:none;background:var(--accent);color:#fff;border-radius:12px;width:44px;font-size:16px;font-weight:800;cursor:pointer}
+  .ctx{margin:8px 14px 0;padding:7px 10px;background:#EEF1FF;border:1px solid #D9E0FF;border-radius:10px;font-size:11.5px;color:var(--accent);font-weight:600;display:none;align-items:center;justify-content:space-between}
+  .ctx.on{display:flex} .ctx .x2{cursor:pointer;font-weight:800;opacity:.6}
   /* 읽기 모드 */
   .reader-bg{position:fixed;inset:0;background:rgba(20,22,27,.5);z-index:60;display:none}
   .reader-bg.on{display:block}
@@ -168,7 +159,9 @@
   .r-head .rt{flex:1;min-width:0}
   .r-head .rt h2{margin:0;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .r-head .rt .rm{font-size:11.5px;color:var(--ink-3);margin-top:2px}
-  .r-orig{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:700;color:var(--accent);cursor:pointer;white-space:nowrap;text-decoration:none}
+  .r-actions{display:flex;gap:7px;flex-shrink:0}
+  .r-btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 11px;font-size:12px;font-weight:800;color:var(--accent);cursor:pointer;white-space:nowrap}
+  .r-btn.save{background:var(--accent);color:#fff;border-color:var(--accent)}
   .rtoggle{display:none;background:var(--line-2);border-radius:10px;padding:3px;gap:2px}
   .rtoggle button{border:none;background:none;padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:700;color:var(--ink-2);cursor:pointer}
   .rtoggle button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
@@ -183,18 +176,27 @@
   .r-ai{width:400px;flex-shrink:0;border-left:1px solid var(--line);display:flex;flex-direction:column;background:var(--zebra)}
   .r-ai .rah{padding:12px 16px;border-bottom:1px solid var(--line);font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px;background:var(--surface)}
   .r-ai .raq{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 4px}
-  .r-ai .msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:80px}
+  .r-ai .rmsgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:80px}
   .r-ai .rin{display:flex;gap:7px;padding:10px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--surface)}
   .r-ai .rin input{flex:1;border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;font-family:inherit;outline:none}
   .r-ai .rin input:focus{border-color:var(--accent)}
   .r-ai .rin button{border:none;background:var(--accent);color:#fff;border-radius:12px;width:44px;font-size:16px;font-weight:800;cursor:pointer}
-  @media(max-width:1023px){
-    .rtoggle{display:flex}
-    .r-ai{width:100%;border-left:none}
-    .reader:not(.show-ai) .r-ai{display:none}
-    .reader.show-ai .article{display:none}
-  }
-
+  @media(max-width:1023px){.rtoggle{display:flex} .r-ai{width:100%;border-left:none} .reader:not(.show-ai) .r-ai{display:none} .reader.show-ai .article{display:none} .r-actions .r-btn.orig{display:none}}
+  /* 시트 */
+  .sheet-bg{position:fixed;inset:0;background:rgba(20,22,27,.4);z-index:70;display:none;align-items:center;justify-content:center;padding:20px}
+  .sheet-bg.on{display:flex}
+  .sheet{background:var(--surface);width:100%;max-width:560px;border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:80vh;overflow:auto}
+  .sheet h3{margin:0 0 4px;font-size:18px;font-weight:800}
+  .sheet .psub{margin:0 0 16px;font-size:12.5px;color:var(--ink-2)}
+  .sheet label{display:block;font-size:12px;font-weight:800;color:var(--ink-2);margin:10px 0 5px}
+  .sheet input,.sheet textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;outline:none}
+  .sheet textarea{min-height:90px;resize:vertical;line-height:1.6}
+  .sheet input:focus,.sheet textarea:focus{border-color:var(--accent)}
+  .sheet .go{margin-top:16px;width:100%;border:none;background:var(--accent);color:#fff;border-radius:12px;padding:13px;font-size:15px;font-weight:800;cursor:pointer}
+  .sheet .close{margin-top:8px;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;color:var(--ink-2)}
+  .toast{position:fixed;left:50%;bottom:calc(var(--tabbar-h) + 24px);transform:translateX(-50%);background:var(--ink);color:#fff;font-size:13px;font-weight:700;padding:11px 18px;border-radius:12px;z-index:90;opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.on{opacity:1}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -204,85 +206,95 @@
     <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건</div>
   </div>
 </header>
+<main>
+  <div class="board" id="boardWrap">
+    <div class="cap"><span>📊 관심 키워드 뉴스량 · 최근 7일 (어제 대비)</span><span class="hint">탭하면 아래 표가 걸러져요</span></div>
+    <div class="trend-row" id="trendRow"></div>
+  </div>
+  <div class="surge" id="surge"></div>
 
-<div class="layout">
-  <div class="newscol">
-    <div class="board">
-      <div class="cap"><span>📊 관심 키워드 뉴스량 · 최근 7일 (어제 대비)</span><span class="hint">탭하면 아래 표가 걸러져요</span></div>
-      <div class="trend-row" id="trendRow"></div>
-    </div>
-    <div class="surge" id="surge"></div>
-    <div class="controls">
-      <div class="searchbar">
-        <input id="q" placeholder="키워드로 뉴스 검색 (예: 엔비디아)" />
-        <button onclick="runSearch()">검색</button>
-      </div>
-      <button class="sumbtn" onclick="openSummary()">📝 통합 요약</button>
-      <div class="seg">
-        <button class="on" data-sort="new" onclick="setSort('new')">최신</button>
-        <button data-sort="imp" onclick="setSort('imp')">중요</button>
-      </div>
-    </div>
-    <div class="filters" id="filters"></div>
-    <div class="tablewrap">
-      <table>
-        <colgroup>
-          <col class="c-dot"><col class="c-date"><col class="c-src"><col class="c-kw">
-          <col class="c-title"><col class="c-sum"><col class="c-sig"><col class="c-link"><col class="c-star">
-        </colgroup>
-        <thead>
-          <tr><th></th><th>시간</th><th>출처</th><th>키워드</th><th>뉴스 제목</th><th>한 줄 요약</th><th class="cell-center">신호</th><th class="cell-center">원문·AI</th><th class="cell-center">⭐</th></tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
-    <div id="emptyBox"></div>
+  <!-- 관심 키워드 관리 (관심 탭에서만) -->
+  <div class="kwmgr" id="kwmgr" style="display:none">
+    <div class="cap"><span>⭐ 관심 키워드 관리</span><span class="mini">칩 = 클릭 수정 · ✕ 삭제</span></div>
+    <div class="kwlist" id="kwlist"></div>
+    <div class="kwadd"><input id="kwAdd" placeholder="키워드 추가 (예: 반도체, 금리)" /><button onclick="addKeyword()">추가</button></div>
   </div>
 
-  <!-- AI 리서치 패널 -->
-  <aside class="aicol" id="aicol">
-    <button class="aiclose" onclick="closeAI()">✕</button>
-    <div class="ai-head">
-      <h2>🤖 AI 리서치</h2>
-      <p>뉴스 보면서 바로 물어보세요 · 최신 뉴스 검색까지</p>
-    </div>
-    <div class="ai-quick">
-      <span class="qchip" onclick="quick('쉽게 설명해줘')">🧩 쉽게 설명</span>
-      <span class="qchip" onclick="quick('관련 최신 뉴스 더 찾아줘')">🔎 관련 뉴스 더</span>
-      <span class="qchip" onclick="quick('이게 왜 중요해? 투자 관점에서')">💹 왜 중요?</span>
-      <span class="qchip" onclick="quick('이 단어 뜻이 뭐야')">📖 단어 뜻</span>
-    </div>
-    <div class="ctx" id="ctx"><span id="ctxText"></span><span class="x" onclick="clearCtx()">✕</span></div>
-    <div class="ai-msgs" id="aimsgs">
-      <div class="msg sys">궁금한 걸 입력하거나, 뉴스 줄의 🤖를 눌러 그 기사에 대해 물어보세요.</div>
-    </div>
-    <div class="ai-input">
-      <input id="aiInput" placeholder="예: 이 뉴스 배경 설명해줘" />
-      <button onclick="send()">↑</button>
-    </div>
-  </aside>
-</div>
+  <!-- 스크랩 선택삭제 툴바 (스크랩 탭에서만) -->
+  <div class="selbar" id="selbar">
+    <span class="cnt" id="selCnt">0개 선택</span><span class="sp"></span>
+    <button class="clr" onclick="selClear()">선택 해제</button>
+    <button class="del" onclick="selDelete()">선택 삭제</button>
+  </div>
 
-<button class="fab ai" onclick="openAI()" aria-label="AI 리서치 열기">🤖</button>
-<button class="fab" onclick="openAdd()" aria-label="관심 키워드 추가">＋</button>
+  <div class="controls" id="controls">
+    <div class="searchbar">
+      <input id="q" placeholder="키워드로 뉴스 검색 (예: 엔비디아)" />
+      <button onclick="runSearch()">검색</button>
+    </div>
+    <button class="sumbtn" onclick="openSummary()">📝 통합 요약</button>
+    <div class="seg">
+      <button class="on" data-sort="new" onclick="setSort('new')">최신</button>
+      <button data-sort="imp" onclick="setSort('imp')">중요</button>
+    </div>
+  </div>
+  <div class="filters" id="filters"></div>
+
+  <!-- 뉴스 표 -->
+  <div class="tablewrap" id="tablewrap">
+    <table>
+      <colgroup>
+        <col class="c-chk" id="colChk" style="display:none"><col class="c-dot"><col class="c-date"><col class="c-src"><col class="c-kw">
+        <col class="c-title"><col class="c-sum"><col class="c-note"><col class="c-sig"><col class="c-link"><col class="c-star">
+      </colgroup>
+      <thead><tr id="theadRow">
+        <th class="thChk" style="display:none"></th><th></th><th>시간</th><th>출처</th><th>키워드</th>
+        <th>뉴스 제목</th><th>한 줄 요약</th><th class="cell-center">메모</th><th class="cell-center">신호</th><th class="cell-center">원문·AI</th><th class="cell-center">⭐</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <!-- 용어집 -->
+  <div id="glossView" style="display:none"><div class="gloss" id="glossList"></div><div id="glossEmpty"></div></div>
+  <div id="emptyBox"></div>
+</main>
+
+<button class="fab ai" onclick="openDrawer()" aria-label="AI 리서치">🤖</button>
 
 <nav class="tabbar">
   <button class="on" data-view="all" onclick="setView('all')"><span class="ic">🗂️</span>전체</button>
   <button data-view="keyword" onclick="setView('keyword')"><span class="ic">⭐</span>관심</button>
   <button data-view="breaking" onclick="setView('breaking')"><span class="ic">⚡</span>속보<span class="tb">3</span></button>
   <button data-view="scrap" onclick="setView('scrap')"><span class="ic">🔖</span>스크랩</button>
+  <button data-view="gloss" onclick="setView('gloss')"><span class="ic">📖</span>용어집</button>
 </nav>
 
+<!-- AI 드로어 -->
+<div class="drawer-bg" id="drawerBg" onclick="closeDrawer()"></div>
+<aside class="aidrawer" id="aidrawer">
+  <div class="adh"><h2>🤖 AI 리서치</h2><button class="x" onclick="closeDrawer()">✕</button></div>
+  <div class="aq">
+    <span class="qchip" onclick="dQuick('오늘 주요 경제 뉴스 요약해줘')">📰 오늘 요약</span>
+    <span class="qchip" onclick="dQuick('이 단어 쉽게 설명: ')">📖 단어 뜻</span>
+    <span class="qchip" onclick="dQuick('관련 최신 뉴스 더 찾아줘')">🔎 뉴스 더</span>
+  </div>
+  <div class="ctx" id="ctx"><span id="ctxText"></span><span class="x2" onclick="clearCtx()">✕</span></div>
+  <div class="msgs" id="dmsgs"><div class="msg sys">궁금한 걸 입력하세요. 뉴스 줄의 🤖를 누르면 그 기사 기준으로 물어봐요.</div></div>
+  <div class="ain"><input id="dInput" placeholder="예: 이 이슈 배경 설명" /><button onclick="dSend()">↑</button></div>
+</aside>
+
+<!-- 읽기 모드 -->
 <div class="reader-bg" id="readerBg" onclick="closeReader()"></div>
 <div class="reader" id="reader">
   <div class="r-head">
     <button class="rx" onclick="closeReader()">✕</button>
     <div class="rt"><h2 id="rTitle"></h2><div class="rm" id="rMeta"></div></div>
-    <div class="rtoggle">
-      <button class="on" id="rtArticle" onclick="readerPane('article')">📄 기사</button>
-      <button id="rtAI" onclick="readerPane('ai')">🤖 AI</button>
+    <div class="rtoggle"><button class="on" id="rtArticle" onclick="readerPane('article')">📄 기사</button><button id="rtAI" onclick="readerPane('ai')">🤖 AI</button></div>
+    <div class="r-actions">
+      <button class="r-btn save" onclick="saveResearch()">💾 리서치 저장</button>
+      <button class="r-btn orig" onclick="return false">원문 ↗</button>
     </div>
-    <a class="r-orig" id="rOrig" href="#" target="_blank" rel="noopener">원문 새 탭 ↗</a>
   </div>
   <div class="rbody">
     <div class="article">
@@ -290,7 +302,7 @@
       <div class="ameta" id="aMeta"></div>
       <div class="asum" id="aSum"></div>
       <div class="abody" id="aBody"></div>
-      <div class="note">※ 이 본문은 수집 시 추출·저장한 리더뷰예요. 원문 전체는 위 ‘원문 새 탭’으로 확인하세요.</div>
+      <div class="note">※ 이 본문은 수집 시 추출·저장한 리더뷰예요. 원문 전체는 위 ‘원문’ 버튼으로.</div>
     </div>
     <div class="r-ai">
       <div class="rah">🤖 이 기사에 대해 물어보기</div>
@@ -298,156 +310,156 @@
         <span class="qchip" onclick="rQuick('핵심만 3줄로 요약해줘')">📝 3줄 요약</span>
         <span class="qchip" onclick="rQuick('배경을 쉽게 설명해줘')">🧩 쉽게 설명</span>
         <span class="qchip" onclick="rQuick('투자 관점에서 왜 중요해?')">💹 왜 중요?</span>
-        <span class="qchip" onclick="rQuick('이 기사에서 어려운 단어를 풀어줘')">📖 어려운 단어</span>
-        <span class="qchip" onclick="rQuick('이 이슈 관련 최신 뉴스를 더 찾아줘')">🔎 관련 뉴스 더</span>
+        <span class="qchip" onclick="openGlossSave()">📖 용어 저장</span>
+        <span class="qchip" onclick="rQuick('이 이슈 관련 최신 뉴스를 더 찾아줘')">🔎 뉴스 더</span>
       </div>
-      <div class="msgs" id="rMsgs"></div>
+      <div class="rmsgs" id="rMsgs"></div>
       <div class="rin"><input id="rInput" placeholder="이 기사에 대해 질문하기" /><button onclick="rSend()">↑</button></div>
     </div>
   </div>
 </div>
 
+<!-- 통합요약 시트 -->
+<div class="sheet-bg" id="sumBg" onclick="if(event.target===this)closeSheet('sumBg')">
+  <div class="sheet"><h3>📝 통합 요약</h3><p class="psub" id="sumSub"></p><div id="sumBox" style="background:var(--zebra);border:1px solid var(--line);border-radius:12px;padding:16px 18px;font-size:14px;line-height:1.75"></div><button class="close" onclick="closeSheet('sumBg')">닫기</button></div>
+</div>
+<!-- 키워드 수정 시트 -->
+<div class="sheet-bg" id="editBg" onclick="if(event.target===this)closeSheet('editBg')">
+  <div class="sheet"><h3>키워드 수정</h3><label>키워드</label><input id="editKw" /><button class="go" onclick="applyEditKw()">저장</button><button class="close" onclick="closeSheet('editBg')">취소</button></div>
+</div>
+<!-- 용어 저장 시트 -->
+<div class="sheet-bg" id="glossBg" onclick="if(event.target===this)closeSheet('glossBg')">
+  <div class="sheet"><h3>📖 용어집에 저장</h3><p class="psub">어려운 단어와 뜻을 저장해두면 용어집 탭에 쌓여요.</p><label>용어</label><input id="gTerm" placeholder="예: HBM4" /><label>설명</label><textarea id="gDef" placeholder="쉬운 설명 (AI 답변을 붙여넣어도 돼요)"></textarea><button class="go" onclick="saveGloss()">저장</button><button class="close" onclick="closeSheet('glossBg')">취소</button></div>
+</div>
 
-<div class="sheet-bg" id="addBg" onclick="if(event.target===this)closeAdd()">
-  <div class="sheet">
-    <h3>관심 키워드 추가</h3>
-    <p class="psub">이 키워드가 뜨면 위 추세 보드에 올리고, 중요하면 알림을 보내요.</p>
-    <div class="row"><input id="newKw" placeholder="예: 반도체, 금리, 재건축" /><button class="go" onclick="addKeyword()">추가</button></div>
-  </div>
-</div>
-<div class="sheet-bg" id="sumBg" onclick="if(event.target===this)closeSummary()">
-  <div class="sheet">
-    <h3>📝 통합 요약 <span style="font-size:11px;font-weight:700;color:#fff;background:var(--accent);padding:2px 7px;border-radius:6px">Claude</span></h3>
-    <p class="psub" id="sumSub"></p>
-    <div class="sumbox" id="sumBox"></div>
-    <button class="close" onclick="closeSummary()">닫기</button>
-  </div>
-</div>
+<div class="toast" id="toast"></div>
 
 <script>
-var keywords = ["반도체","금리","엔비디아","코스피","재건축"];
-var trends = {
-  "반도체":{n:32,d:"up",bars:[4,6,5,9,12,18,24]}, "금리":{n:18,d:"up",bars:[6,7,5,8,9,12,14]},
-  "엔비디아":{n:9,d:"flat",bars:[8,7,9,8,9,8,9]}, "코스피":{n:14,d:"down",bars:[20,18,17,16,15,14,10]},
-  "재건축":{n:7,d:"down",bars:[15,13,12,10,9,8,6]}
-};
+/* ── 저장 (localStorage, 실패해도 메모리로 동작) ── */
+function lsGet(k,d){ try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;} }
+function lsSet(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
+function toast(t){ var el=document.getElementById("toast"); el.textContent=t; el.classList.add("on"); setTimeout(function(){el.classList.remove("on");},1600); }
+
+var keywords = lsGet("nr_keywords", ["반도체","금리","엔비디아","코스피","재건축"]);
+var readIds  = lsGet("nr_read", []);
+var scraps   = lsGet("nr_scrap", []);      /* [{n:{...}, notes:[{q,a}], at}] */
+var glossary = lsGet("nr_gloss", []);      /* [{term,def,at}] */
+
+var trends = { "반도체":{n:32,d:"up",bars:[4,6,5,9,12,18,24]}, "금리":{n:18,d:"up",bars:[6,7,5,8,9,12,14]}, "엔비디아":{n:9,d:"flat",bars:[8,7,9,8,9,8,9]}, "코스피":{n:14,d:"down",bars:[20,18,17,16,15,14,10]}, "재건축":{n:7,d:"down",bars:[15,13,12,10,9,8,6]} };
 var surging = [ {k:"HBM4",pct:"+180%"}, {k:"환율",pct:"+95%"}, {k:"전력설비",pct:"+70%"}, {k:"CPI",pct:"+64%"} ];
 var NEWS = [
-  {id:1,date:"09:48",src:"naver",kw:"반도체",sig:"red",dupes:6,breaking:false,read:false,scrap:false,trans:false,title:"삼성전자, HBM4 양산 조기 진입…엔비디아 공급 임박",summary:"차기 GPU 공급 겨냥해 양산 앞당김. 하반기 실적 반등 핵심 변수.",body:"삼성전자가 차세대 고대역폭메모리 HBM4의 양산 시점을 당초 계획보다 앞당기는 방안을 검토 중이다. 업계에 따르면 엔비디아의 차기 GPU 아키텍처 공급 일정에 맞추기 위한 조치로 풀이된다.\n\n삼성은 앞선 HBM3E 경쟁에서 SK하이닉스에 주도권을 내줬다는 평가를 받아왔다. 이번 HBM4 조기 진입이 성공하면 하반기 실적 반등과 함께 메모리 경쟁 구도가 재편될 수 있다는 관측이 나온다. 다만 수율 확보가 관건이라는 신중론도 있다."},
-  {id:2,date:"09:12",src:"google",kw:"금리",sig:"red",dupes:4,breaking:false,read:false,scrap:false,trans:false,title:"한은, 기준금리 인하 시사…예상보다 빠른 속도",summary:"부동산·증시 자금 흐름에 직접 영향. 채권 금리 즉각 반응.",body:"한국은행이 다음 금융통화위원회에서 기준금리 인하 가능성을 시사했다. 시장이 예상하던 것보다 이른 시점이어서 채권 금리가 즉각 하락 반응을 보였다.\n\n금리 인하는 부동산과 증시로의 자금 흐름에 직접적인 영향을 준다. 다만 원·달러 환율이 높은 수준을 유지하고 있어 인하 폭과 속도에는 제약이 따를 수 있다는 분석이다."},
-  {id:3,date:"08:55",src:"foreign",kw:"엔비디아",sig:"red",dupes:8,breaking:true,read:false,scrap:false,trans:true,origin:"Reuters",title:"엔비디아, 中 수출 규제 완화 협의…신형 칩 공급 재개 검토",summary:"美 상무부와 조율 중. 성사 시 데이터센터 수요 추가 확대.",body:"엔비디아가 미국 상무부와 중국 수출 규제 완화를 두고 협의를 진행 중인 것으로 전해졌다. 협의가 성사되면 그동안 막혀 있던 신형 AI 칩의 중국 공급이 재개될 수 있다.\n\n이 경우 데이터센터 수요가 추가로 확대되며 엔비디아 매출에 긍정적으로 작용할 전망이다. 국내 소부장 업체들도 간접 수혜가 예상된다. 다만 규제 완화 여부는 정치적 변수에 크게 좌우된다."},
-  {id:4,date:"08:30",src:"google",kw:"재건축",sig:"orange",dupes:3,breaking:false,read:false,scrap:false,trans:false,title:"서울 주요 재건축 단지 안전진단 규제 완화 검토",summary:"강남권 노후 단지 중심 사업 속도 빨라질 전망.",body:"국토교통부가 재건축 안전진단 기준을 완화하는 방안을 검토하고 있다. 노후 단지의 사업 진행 문턱을 낮춰 공급을 늘리겠다는 취지다.\n\n강남권 주요 노후 단지를 중심으로 사업 속도가 빨라질 수 있다는 기대가 나온다. 반면 집값 자극 우려로 신중해야 한다는 반론도 있다."},
-  {id:5,date:"08:05",src:"foreign",kw:"CPI",sig:"orange",dupes:5,breaking:true,read:false,scrap:false,trans:true,origin:"Bloomberg",title:"美 8월 CPI 예상 상회…9월 금리 인하 기대 후퇴",summary:"근원물가 끈적. 연준 인하 시점 지연 가능성.",body:"미국의 8월 소비자물가지수(CPI)가 시장 예상치를 웃돌았다. 특히 변동성이 큰 항목을 제외한 근원물가가 여전히 끈적한 흐름을 보였다.\n\n이에 따라 연방준비제도의 9월 금리 인하 기대가 후퇴했다. 시장에서는 인하 시점이 뒤로 밀릴 수 있다는 전망에 무게가 실렸다."},
-  {id:6,date:"07:40",src:"naver",kw:"엔비디아",sig:"orange",dupes:2,breaking:false,read:true,scrap:true,trans:false,title:"엔비디아, 신형 AI 칩 발표…데이터센터 수요 재확인",summary:"AI 투자 사이클 지속. 국내 소부장 수혜주 관심.",body:"엔비디아가 신형 AI 가속 칩을 공개하며 데이터센터 수요가 견조하다는 점을 재확인했다. AI 투자 사이클이 지속되고 있다는 신호로 해석된다.\n\n국내 반도체 소재·부품·장비 업체들이 수혜주로 거론된다."},
-  {id:7,date:"07:18",src:"naver",kw:"반도체",sig:"gray",dupes:1,breaking:true,read:false,scrap:false,trans:false,title:"정부, 반도체 특별법 처리 속도전 예고",summary:"세제·인프라 지원 담아 국회 처리 서두르기로.",body:"정부가 반도체 산업 지원을 담은 특별법 처리에 속도를 내겠다고 밝혔다. 세제 혜택과 인프라 지원 등이 포함될 전망이다.\n\n국회 처리 일정과 재원 마련이 관건으로 꼽힌다."},
-  {id:8,date:"어제",src:"naver",kw:"코스피",sig:"gray",dupes:3,breaking:false,read:true,scrap:false,trans:false,title:"코스피, 외국인 순매수에 2,900선 회복 시도",summary:"반도체·금융주 유입. 거래대금 낮아 방향성 제한.",body:"코스피가 외국인 순매수에 힘입어 2,900선 회복을 시도했다. 반도체와 금융주로 매수세가 유입됐다.\n\n다만 거래대금이 평소보다 낮아 방향성은 제한적이라는 평가다."},
-  {id:9,date:"어제",src:"google",kw:"반도체",sig:"gray",dupes:2,breaking:false,read:false,scrap:false,trans:false,title:"글로벌 파운드리 가동률 상승…업황 저점 통과 신호",summary:"주요 업체 가동률 개선. 저점 통과 분석 확산.",body:"글로벌 주요 파운드리 업체들의 가동률이 상승하고 있다. 반도체 업황이 저점을 지나고 있다는 분석이 확산된다.\n\n수요 회복이 실적으로 이어질지 주목된다."},
-  {id:10,date:"어제",src:"foreign",kw:"금리",sig:"gray",dupes:1,breaking:false,read:true,scrap:true,trans:true,origin:"WSJ",title:"美 국채 금리 하락…인하 기대 선반영",summary:"장기물 중심 하락. 위험자산 선호 소폭 회복.",body:"미국 국채 금리가 하락했다. 금리 인하 기대가 선반영되며 장기물 중심으로 내렸다.\n\n위험자산 선호가 소폭 회복되는 모습이다."}
+  {id:1,date:"09:48",src:"naver",kw:"반도체",sig:"red",dupes:6,breaking:false,trans:false,title:"삼성전자, HBM4 양산 조기 진입…엔비디아 공급 임박",summary:"차기 GPU 공급 겨냥해 양산 앞당김. 하반기 실적 반등 핵심 변수.",body:"삼성전자가 차세대 고대역폭메모리 HBM4의 양산 시점을 앞당기는 방안을 검토 중이다. 엔비디아 차기 GPU 공급 일정에 맞추기 위한 조치로 풀이된다.\n\n삼성은 앞선 HBM3E 경쟁에서 주도권을 내줬다는 평가를 받아왔다. 이번 조기 진입이 성공하면 하반기 실적 반등과 메모리 경쟁 구도 재편이 가능하다는 관측이다."},
+  {id:2,date:"09:12",src:"google",kw:"금리",sig:"red",dupes:4,breaking:false,trans:false,title:"한은, 기준금리 인하 시사…예상보다 빠른 속도",summary:"부동산·증시 자금 흐름에 직접 영향. 채권 금리 즉각 반응.",body:"한국은행이 다음 금통위에서 기준금리 인하 가능성을 시사했다. 시장 예상보다 이른 시점이어서 채권 금리가 즉각 하락했다.\n\n다만 환율이 높은 수준이라 인하 폭과 속도에는 제약이 따를 수 있다."},
+  {id:3,date:"08:55",src:"foreign",kw:"엔비디아",sig:"red",dupes:8,breaking:true,trans:true,origin:"Reuters",title:"엔비디아, 中 수출 규제 완화 협의…신형 칩 공급 재개 검토",summary:"美 상무부와 조율 중. 성사 시 데이터센터 수요 추가 확대.",body:"엔비디아가 미국 상무부와 중국 수출 규제 완화를 협의 중인 것으로 전해졌다. 성사되면 신형 AI 칩의 중국 공급이 재개될 수 있다.\n\n국내 소부장 업체도 간접 수혜가 예상되나, 규제 완화는 정치 변수에 크게 좌우된다."},
+  {id:4,date:"08:30",src:"google",kw:"재건축",sig:"orange",dupes:3,breaking:false,trans:false,title:"서울 주요 재건축 단지 안전진단 규제 완화 검토",summary:"강남권 노후 단지 중심 사업 속도 빨라질 전망.",body:"국토부가 재건축 안전진단 기준 완화를 검토하고 있다. 노후 단지 사업 문턱을 낮춰 공급을 늘리려는 취지다.\n\n다만 집값 자극 우려로 신중론도 있다."},
+  {id:5,date:"08:05",src:"foreign",kw:"CPI",sig:"orange",dupes:5,breaking:true,trans:true,origin:"Bloomberg",title:"美 8월 CPI 예상 상회…9월 금리 인하 기대 후퇴",summary:"근원물가 끈적. 연준 인하 시점 지연 가능성.",body:"미국 8월 소비자물가가 예상을 웃돌았다. 근원물가가 끈적한 흐름을 보이며 9월 인하 기대가 후퇴했다."},
+  {id:6,date:"07:40",src:"naver",kw:"엔비디아",sig:"orange",dupes:2,breaking:false,trans:false,title:"엔비디아, 신형 AI 칩 발표…데이터센터 수요 재확인",summary:"AI 투자 사이클 지속. 국내 소부장 수혜주 관심.",body:"엔비디아가 신형 AI 가속 칩을 공개하며 데이터센터 수요가 견조함을 재확인했다. 국내 소부장 수혜주에 관심이 쏠린다."},
+  {id:7,date:"07:18",src:"naver",kw:"반도체",sig:"gray",dupes:1,breaking:true,trans:false,title:"정부, 반도체 특별법 처리 속도전 예고",summary:"세제·인프라 지원 담아 국회 처리 서두르기로.",body:"정부가 반도체 특별법 처리에 속도를 내겠다고 밝혔다. 세제 혜택과 인프라 지원이 포함될 전망이다."},
+  {id:8,date:"어제",src:"naver",kw:"코스피",sig:"gray",dupes:3,breaking:false,trans:false,title:"코스피, 외국인 순매수에 2,900선 회복 시도",summary:"반도체·금융주 유입. 거래대금 낮아 방향성 제한.",body:"코스피가 외국인 순매수에 힘입어 반등했다. 다만 거래대금이 낮아 방향성은 제한적이다."},
+  {id:9,date:"어제",src:"google",kw:"반도체",sig:"gray",dupes:2,breaking:false,trans:false,title:"글로벌 파운드리 가동률 상승…업황 저점 통과 신호",summary:"주요 업체 가동률 개선. 저점 통과 분석 확산.",body:"글로벌 파운드리 가동률이 오르며 반도체 업황이 저점을 지났다는 분석이 확산된다."},
+  {id:10,date:"어제",src:"foreign",kw:"금리",sig:"gray",dupes:1,breaking:false,trans:true,origin:"WSJ",title:"美 국채 금리 하락…인하 기대 선반영",summary:"장기물 중심 하락. 위험자산 선호 소폭 회복.",body:"미국 국채 금리가 인하 기대 선반영으로 하락했다. 위험자산 선호가 소폭 회복됐다."}
 ];
-var view="all", sort="new", filterKw=null, search="";
+var view="all", sort="new", filterKw=null, search="", selMode=false, selected={};
 
+function isRead(id){ return readIds.indexOf(id)>=0; }
+function isScrap(id){ return scraps.some(function(s){return s.n.id===id;}); }
+function scrapOf(id){ return scraps.filter(function(s){return s.n.id===id;})[0]; }
+
+/* ── 렌더 ── */
 function trendMark(d){ return d==="up"?'<span class="arrow up">↑늘어남</span>':d==="down"?'<span class="arrow down">↓줄어듦</span>':'<span class="arrow flat">→쏘쏘</span>'; }
-function barsHTML(t){ var mx=Math.max.apply(null,t.bars)||1; return '<div class="bars">'+t.bars.map(function(v,i){ var h=Math.max(3,Math.round(v/mx*22)); var hot=(i>=t.bars.length-2 && t.d==="up")?'hot':''; return '<i class="'+hot+'" style="height:'+h+'px"></i>'; }).join("")+'</div>'; }
+function barsHTML(t){ var mx=Math.max.apply(null,t.bars)||1; return '<div class="bars">'+t.bars.map(function(v,i){ var h=Math.max(3,Math.round(v/mx*22)); var hot=(i>=t.bars.length-2&&t.d==="up")?'hot':''; return '<i class="'+hot+'" style="height:'+h+'px"></i>'; }).join("")+'</div>'; }
 function renderTrend(){ document.getElementById("trendRow").innerHTML = keywords.map(function(k){ var t=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; return '<div class="tcard '+(filterKw===k?'on':'')+'" onclick="pickKw(\''+k+'\')"><div class="k"><span>'+k+'</span><span class="v">'+t.n+'건</span></div><div class="v">'+trendMark(t.d)+'</div>'+barsHTML(t)+'</div>'; }).join(""); }
 function renderSurge(){ document.getElementById("surge").innerHTML='<span class="lab">🔥 급상승</span>'+surging.map(function(s){return '<span class="schip" onclick="addSurge(\''+s.k+'\')">'+s.k+'<span class="pct">'+s.pct+'</span><span class="plus">＋</span></span>';}).join(""); }
 function renderFilters(){ var base=[{k:null,label:"전체"}].concat(keywords.map(function(k){return {k:k,label:k};})); document.getElementById("filters").innerHTML=base.map(function(f){ var cnt=f.k?NEWS.filter(function(n){return n.kw===f.k;}).length:NEWS.length; return '<span class="fchip '+(filterKw===f.k?'on':'')+'" onclick="pickKw('+(f.k?"'"+f.k+"'":'null')+')">'+f.label+'<span class="n">'+cnt+'</span></span>';}).join(""); }
-function currentRows(){ var list=NEWS.slice(); if(view==="breaking")list=list.filter(function(n){return n.breaking;}); if(view==="scrap")list=list.filter(function(n){return n.scrap;}); if(view==="keyword")list=list.filter(function(n){return keywords.indexOf(n.kw)>=0;}); if(filterKw)list=list.filter(function(n){return n.kw===filterKw;}); if(search)list=list.filter(function(n){return n.title.indexOf(search)>=0||n.kw.indexOf(search)>=0;}); if(sort==="imp"){var rank={red:0,orange:1,gray:2};list.sort(function(a,b){return rank[a.sig]-rank[b.sig];});} return list; }
+function renderKwMgr(){ document.getElementById("kwlist").innerHTML = keywords.map(function(k){ return '<span class="kwitem"><span class="nm" onclick="editKw(\''+k+'\')">'+k+'</span><button class="del" onclick="delKeyword(\''+k+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">아직 키워드가 없어요. 아래에서 추가하세요.</span>'; }
+
+function currentRows(){
+  if(view==="scrap") return scraps.map(function(s){return s.n;});
+  var list=NEWS.slice();
+  if(view==="breaking") list=list.filter(function(n){return n.breaking;});
+  if(view==="keyword") list=list.filter(function(n){return keywords.indexOf(n.kw)>=0;});
+  if(filterKw) list=list.filter(function(n){return n.kw===filterKw;});
+  if(search) list=list.filter(function(n){return n.title.indexOf(search)>=0||n.kw.indexOf(search)>=0;});
+  if(sort==="imp"){ var rank={red:0,orange:1,gray:2}; list.sort(function(a,b){return rank[a.sig]-rank[b.sig];}); }
+  return list;
+}
 function sigDot(s){ return s==="red"?'🔴':s==="orange"?'🟠':'<span style="opacity:.25">⚪</span>'; }
 function srcBadge(n){ if(n.src==="naver")return '<span class="srcbadge naver">N</span>'; if(n.src==="google")return '<span class="srcbadge google">G</span>'; return '<span class="srcbadge foreign" title="'+(n.origin||'외신')+'">외신</span>'; }
-function renderRows(){ var list=currentRows(); document.getElementById("rows").innerHTML=list.map(function(n){ return '<tr class="'+(n.read?'read':'')+'"><td class="cell-center" onclick="toggleRead('+n.id+')"><span class="rdot"></span></td><td class="c-date-td" onclick="toggleRead('+n.id+')">'+n.date+'</td><td>'+srcBadge(n)+'</td><td><span class="kwtag"># '+n.kw+'</span></td><td><span class="title" onclick="openNews('+n.id+')">'+(n.trans?'<span class="trans">번역</span>':'')+n.title+'</span>'+(n.dupes>1?'<span class="dupe">+'+(n.dupes-1)+'</span>':'')+'</td><td class="summary">'+n.summary+'</td><td class="cell-center"><span class="sigdot">'+sigDot(n.sig)+'</span></td><td class="cell-center"><span class="rowact"><a class="link" href="#" onclick="return false">열기</a><span class="askbtn" title="AI에게 이 뉴스 물어보기" onclick="askNews('+n.id+')">🤖</span></span></td><td class="cell-center"><span class="star '+(n.scrap?'on':'')+'" onclick="toggleScrap('+n.id+')">'+(n.scrap?'★':'☆')+'</span></td></tr>'; }).join(""); document.getElementById("emptyBox").innerHTML=list.length?"":'<div class="empty">여기 표시할 뉴스가 없어요.<br>다른 키워드나 탭을 눌러보세요.</div>'; }
-function renderAll(){ renderTrend(); renderSurge(); renderFilters(); renderRows(); }
+function renderRows(){
+  var list=currentRows();
+  document.getElementById("rows").innerHTML=list.map(function(n){
+    var sc=scrapOf(n.id); var noteN=sc&&sc.notes?sc.notes.length:0;
+    var chkCell = selMode? '<td class="cell-center"><input type="checkbox" class="chk" '+(selected[n.id]?'checked':'')+' onclick="toggleSel('+n.id+')"></td>' : '';
+    return '<tr class="'+(isRead(n.id)?'read':'')+'">'+chkCell+
+      '<td class="cell-center" onclick="toggleRead('+n.id+')"><span class="rdot"></span></td>'+
+      '<td class="c-date-td" onclick="toggleRead('+n.id+')">'+n.date+'</td>'+
+      '<td>'+srcBadge(n)+'</td>'+
+      '<td><span class="kwtag"># '+n.kw+'</span></td>'+
+      '<td><span class="title" onclick="openReader('+n.id+')">'+(n.trans?'<span class="trans">번역</span>':'')+n.title+'</span>'+(n.dupes>1?'<span class="dupe">+'+(n.dupes-1)+'</span>':'')+'</td>'+
+      '<td class="summary">'+n.summary+'</td>'+
+      '<td class="cell-center">'+(noteN?'<span class="notepill">💬'+noteN+'</span>':'')+'</td>'+
+      '<td class="cell-center"><span class="sigdot">'+sigDot(n.sig)+'</span></td>'+
+      '<td class="cell-center"><span class="rowact"><a class="link" href="#" onclick="return false">열기</a><span class="askbtn" title="AI에게 질문" onclick="askNews('+n.id+')">🤖</span></span></td>'+
+      '<td class="cell-center"><span class="star '+(isScrap(n.id)?'on':'')+'" onclick="toggleScrap('+n.id+')">'+(isScrap(n.id)?'★':'☆')+'</span></td>'+
+    '</tr>';
+  }).join("");
+  document.getElementById("emptyBox").innerHTML = list.length?"":'<div class="empty">'+(view==="scrap"?'스크랩한 뉴스가 없어요.<br>표에서 ☆를 눌러 저장하세요.':'표시할 뉴스가 없어요.')+'</div>';
+}
+function renderGloss(){
+  var host=document.getElementById("glossList");
+  host.innerHTML = glossary.map(function(g,i){ return '<div class="gcard"><button class="gdel" onclick="delGloss('+i+')">✕</button><div class="term">'+g.term+'</div><div class="def">'+g.def+'</div><div class="date">'+(g.at||'')+'</div></div>'; }).join("");
+  document.getElementById("glossEmpty").innerHTML = glossary.length?"":'<div class="empty">저장된 용어가 없어요.<br>기사 읽을 때 🤖 패널의 “📖 용어 저장”으로 담아보세요.</div>';
+}
+function renderAll(){ renderTrend(); renderSurge(); renderFilters(); renderKwMgr(); renderRows(); renderGloss(); }
 
-function setView(v){ view=v; filterKw=null; var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view===v); renderAll(); window.scrollTo({top:0,behavior:"smooth"}); }
+/* ── 뷰 전환 ── */
+function setView(v){
+  view=v; filterKw=null; if(v!=="scrap"){selMode=false;selected={};}
+  var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view===v);
+  var gloss=(v==="gloss");
+  document.getElementById("glossView").style.display = gloss?"block":"none";
+  document.getElementById("tablewrap").style.display = gloss?"none":"block";
+  document.getElementById("boardWrap").style.display = gloss?"none":"block";
+  document.getElementById("surge").style.display = gloss?"none":"flex";
+  document.getElementById("controls").style.display = gloss?"none":"flex";
+  document.getElementById("filters").style.display = gloss?"none":"flex";
+  document.getElementById("kwmgr").style.display = (v==="keyword")?"block":"none";
+  document.getElementById("selbar").classList.toggle("on", v==="scrap");
+  if(v==="scrap"){ selMode=true; } setSelUI();
+  toggleChkCol();
+  renderAll(); window.scrollTo({top:0,behavior:"smooth"});
+}
+function toggleChkCol(){ var show=selMode; document.getElementById("colChk").style.display=show?"":"none"; document.querySelector(".thChk").style.display=show?"":"none"; }
 function setSort(s){ sort=s; var b=document.querySelectorAll(".seg button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.sort===s); renderRows(); }
 function pickKw(k){ filterKw=filterKw===k?null:k; renderTrend(); renderFilters(); renderRows(); }
-function toggleRead(id){ var n=NEWS.find(function(x){return x.id===id;}); n.read=!n.read; renderRows(); }
-function openNews(id){ openReader(id); }
+function toggleRead(id){ var i=readIds.indexOf(id); if(i>=0)readIds.splice(i,1); else readIds.push(id); lsSet("nr_read",readIds); renderRows(); }
+function runSearch(){ search=document.getElementById("q").value.trim(); view="all"; filterKw=null; var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view==="all"); setView("all"); document.getElementById("q").value=search; }
+function addSurge(k){ if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]={n:0,d:"up",bars:[1,2,3,5,8,13,20]}; lsSet("nr_keywords",keywords);} filterKw=k; renderAll(); }
 
-/* ── 읽기 모드 + 기사 전용 AI ── */
-var curArticle=null, readerHistory=[];
-function articleSys(n){ return BASE_SYS+"\n\n[사용자가 지금 읽는 기사] 이 기사 내용을 근거로 답하세요. 본문에 없는 최신 사실이 필요하면 web_search를 쓰세요.\n제목: "+n.title+"\n출처: "+(n.origin||n.src)+" ("+n.date+")\n요약: "+n.summary+"\n본문:\n"+(n.body||n.summary); }
-function openReader(id){
-  var n=NEWS.find(function(x){return x.id===id;}); if(!n)return;
-  curArticle=n; n.read=true; renderRows();
-  var srcName = n.src==="naver"?"네이버":n.src==="google"?"구글":(n.origin||"외신");
-  document.getElementById("rTitle").textContent=n.title;
-  document.getElementById("rMeta").textContent=srcName+" · "+n.date+" · #"+n.kw;
-  document.getElementById("aTitle").innerHTML=(n.trans?'<span class="trans">번역</span> ':'')+n.title;
-  document.getElementById("aMeta").innerHTML='<span class="srcbadge '+n.src+'">'+(n.src==="naver"?"N":n.src==="google"?"G":"외신")+'</span> '+srcName+' · '+n.date+' · <span class="kwtag"># '+n.kw+'</span>';
-  document.getElementById("aSum").innerHTML='<b>한 줄 요약</b> · '+n.summary;
-  document.getElementById("aBody").textContent=n.body||n.summary;
-  document.getElementById("rOrig").href="#"; /* 실제: n.url */
-  readerHistory=[];
-  document.getElementById("rMsgs").innerHTML='<div class="msg sys">이 기사 본문을 제가 읽었어요. 궁금한 걸 물어보세요.</div>';
-  document.getElementById("reader").classList.remove("show-ai");
-  document.querySelector(".rtoggle #rtArticle").classList.add("on");
-  document.querySelector(".rtoggle #rtAI").classList.remove("on");
-  document.getElementById("readerBg").classList.add("on");
-  document.getElementById("reader").classList.add("on");
-}
-function closeReader(){ document.getElementById("reader").classList.remove("on"); document.getElementById("readerBg").classList.remove("on"); }
-function readerPane(p){ var r=document.getElementById("reader"); if(p==="ai"){ r.classList.add("show-ai"); document.getElementById("rtAI").classList.add("on"); document.getElementById("rtArticle").classList.remove("on"); setTimeout(function(){document.getElementById("rInput").focus();},100);} else { r.classList.remove("show-ai"); document.getElementById("rtArticle").classList.add("on"); document.getElementById("rtAI").classList.remove("on"); } }
-function rPush(role,text){ var m=document.createElement("div"); m.className="msg "+role; m.innerHTML=text; document.getElementById("rMsgs").appendChild(m); var b=document.getElementById("rMsgs"); b.scrollTop=b.scrollHeight; return m; }
-function rQuick(q){ document.getElementById("rInput").value=q; rSend(); }
-function rSend(){
-  var inp=document.getElementById("rInput"); var t=inp.value.trim(); if(!t||!curArticle)return; inp.value="";
-  rPush("me",esc(t)); readerHistory.push({role:"user",content:t});
-  var typing=rPush("typing","생각 중…");
-  callClaude(readerHistory, articleSys(curArticle), function(ans,err){
-    typing.remove();
-    if(err){ rPush("ai","⚠️ 지금은 AI 응답을 못 불러왔어요. ("+err+") 실제 배포 환경에선 정상 작동해요."); return; }
-    readerHistory.push({role:"assistant",content:ans});
-    rPush("ai", esc(ans).replace(/\n/g,"<br>"));
-  });
-}
-function toggleScrap(id){ var n=NEWS.find(function(x){return x.id===id;}); n.scrap=!n.scrap; renderRows(); }
-function runSearch(){ search=document.getElementById("q").value.trim(); view="all"; filterKw=null; var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view==="all"); renderAll(); }
-function addSurge(k){ if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]={n:0,d:"up",bars:[1,2,3,5,8,13,20]}; } filterKw=k; renderAll(); }
-function openAdd(){ document.getElementById("addBg").classList.add("on"); setTimeout(function(){document.getElementById("newKw").focus();},150); }
-function closeAdd(){ document.getElementById("addBg").classList.remove("on"); document.getElementById("newKw").value=""; }
-function addKeyword(){ var v=document.getElementById("newKw").value.trim(); if(!v)return; v.split(/[,\s]+/).filter(Boolean).forEach(function(k){ if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]={n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; }}); closeAdd(); setView("keyword"); }
-function openSummary(){ var list=currentRows(); document.getElementById("sumSub").textContent="지금 보고 있는 "+list.length+"건을 Claude가 하나로 묶어 요약합니다."; document.getElementById("sumBox").innerHTML='오늘 핵심은 <b>금리·반도체 두 축</b>입니다.<ul><li>미국 8월 CPI가 예상을 웃돌며 <b>연준 인하 시점이 뒤로</b> 밀릴 조짐 — 환율 1,400원 재돌파와 맞물림.</li><li>반면 한은은 <b>인하를 시사</b> — 국내외 금리 방향이 엇갈리는 구간.</li><li>반도체는 <b>HBM4 조기 양산 + 엔비디아 수출 규제 완화 협의</b>로 수요 모멘텀 재확인.</li><li>재건축 규제 완화 검토는 부동산 쪽 별도 관찰 포인트.</li></ul>'; document.getElementById("sumBg").classList.add("on"); }
-function closeSummary(){ document.getElementById("sumBg").classList.remove("on"); }
+/* ── 관심 키워드 추가/삭제/수정 ── */
+function addKeyword(){ var v=document.getElementById("kwAdd").value.trim(); if(!v)return; v.split(/[,\s]+/).filter(Boolean).forEach(function(k){ if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; }}); document.getElementById("kwAdd").value=""; lsSet("nr_keywords",keywords); renderAll(); toast("키워드 추가됨"); }
+function delKeyword(k){ keywords=keywords.filter(function(x){return x!==k;}); if(filterKw===k)filterKw=null; lsSet("nr_keywords",keywords); renderAll(); toast("삭제됨"); }
+var editingKw=null;
+function editKw(k){ editingKw=k; document.getElementById("editKw").value=k; document.getElementById("editBg").classList.add("on"); setTimeout(function(){document.getElementById("editKw").focus();},120); }
+function applyEditKw(){ var nv=document.getElementById("editKw").value.trim(); if(!nv){closeSheet("editBg");return;} var idx=keywords.indexOf(editingKw); if(idx>=0){ keywords[idx]=nv; if(trends[editingKw]){trends[nv]=trends[editingKw];} if(filterKw===editingKw)filterKw=nv; } lsSet("nr_keywords",keywords); closeSheet("editBg"); renderAll(); toast("수정됨"); }
 
-/* ── AI 리서치 (실제 Claude 호출) ── */
-var aiHistory = [];
-var aiCtx = null;
-function openAI(){ document.getElementById("aicol").classList.add("open"); setTimeout(function(){document.getElementById("aiInput").focus();},200); }
-function closeAI(){ document.getElementById("aicol").classList.remove("open"); }
-function setCtx(n){ aiCtx=n; var c=document.getElementById("ctx"); c.classList.add("on"); document.getElementById("ctxText").textContent="📎 "+n.title; }
-function clearCtx(){ aiCtx=null; document.getElementById("ctx").classList.remove("on"); }
-function askNews(id){ openReader(id); if(window.innerWidth<1024) readerPane("ai"); else document.getElementById("rInput").focus(); }
-function quick(q){ document.getElementById("aiInput").value=q; send(); }
-function pushMsg(role,text){ var m=document.createElement("div"); m.className="msg "+role; m.innerHTML=text; document.getElementById("aimsgs").appendChild(m); var box=document.getElementById("aimsgs"); box.scrollTop=box.scrollHeight; return m; }
-function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+/* ── 스크랩 ── */
+function toggleScrap(id){ if(isScrap(id)){ scraps=scraps.filter(function(s){return s.n.id!==id;}); } else { var n=NEWS.find(function(x){return x.id===id;}); scraps.push({n:JSON.parse(JSON.stringify(n)), notes:[], at:new Date().toISOString().slice(0,10)}); } lsSet("nr_scrap",scraps); renderRows(); }
+function toggleSel(id){ selected[id]=!selected[id]; if(!selected[id])delete selected[id]; setSelUI(); }
+function setSelUI(){ var c=Object.keys(selected).length; document.getElementById("selCnt").textContent=c+"개 선택"; }
+function selClear(){ selected={}; setSelUI(); renderRows(); }
+function selDelete(){ var ids=Object.keys(selected).map(Number); if(!ids.length){toast("선택된 항목이 없어요");return;} scraps=scraps.filter(function(s){return ids.indexOf(s.n.id)<0;}); selected={}; lsSet("nr_scrap",scraps); setSelUI(); renderRows(); toast("삭제됨"); }
 
-function send(){
-  var inp=document.getElementById("aiInput"); var text=inp.value.trim(); if(!text) return; inp.value="";
-  var shown=text; var toModel=text;
-  if(aiCtx){ shown='<span style="opacity:.7;font-size:11px">[관련 뉴스] '+esc(aiCtx.title)+'</span>\n'+esc(text);
-    toModel='다음 뉴스와 관련한 질문이야.\n제목: '+aiCtx.title+'\n요약: '+aiCtx.summary+'\n출처: '+(aiCtx.origin||aiCtx.src)+'\n\n질문: '+text; }
-  else { shown=esc(text); }
-  pushMsg("me",shown);
-  aiHistory.push({role:"user",content:toModel});
-  var typing=pushMsg("typing","생각 중…");
-  callClaude(aiHistory, BASE_SYS, function(answer,err){
-    typing.remove();
-    if(err){ pushMsg("ai","⚠️ 지금은 AI 응답을 불러오지 못했어요. ("+err+")\n실제 배포 환경에서는 정상 작동해요."); return; }
-    aiHistory.push({role:"assistant",content:answer});
-    pushMsg("ai", esc(answer).replace(/\n/g,"<br>"));
-  });
-}
-var BASE_SYS="당신은 달님의 개인 뉴스 리서치 도우미입니다. 한국어로, 투자·경제·정치 맥락 위주로 핵심만 간결하게 답하세요. 최신 사실이 필요하면 web_search로 뉴스를 찾아 요약하고, 필요하면 출처(언론사/날짜)를 짧게 덧붙이세요.";
+/* ── 통합요약 ── */
+function openSummary(){ var list=currentRows(); document.getElementById("sumSub").textContent="지금 보고 있는 "+list.length+"건을 Claude가 하나로 묶어 요약합니다."; document.getElementById("sumBox").innerHTML='오늘 핵심은 <b>금리·반도체 두 축</b>입니다.<br>· 美 CPI 상회로 <b>연준 인하 지연</b> 조짐(+환율 1,400원).<br>· 한은은 <b>인하 시사</b> — 국내외 방향 엇갈림.<br>· 반도체는 <b>HBM4 조기 양산 + 엔비디아 규제 완화 협의</b>로 수요 재확인.'; document.getElementById("sumBg").classList.add("on"); }
+function closeSheet(id){ document.getElementById(id).classList.remove("on"); }
+
+/* ── AI (읽기모드 · 드로어 공용 호출) ── */
+var BASE_SYS="당신은 달님의 개인 뉴스 리서치 도우미입니다. 한국어로, 투자·경제·정치 맥락 위주로 핵심만 간결하게 답하세요. 최신 사실이 필요하면 web_search로 뉴스를 찾아 요약하고, 필요하면 출처를 짧게 덧붙이세요.";
 function callClaude(history, systemText, cb){
   try{
-    fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:"claude-sonnet-4-6", max_tokens:1000,
-        system:systemText||BASE_SYS,
-        tools:[{type:"web_search_20250305",name:"web_search"}],
-        messages:history
-      })
+    fetch("https://api.anthropic.com/v1/messages",{ method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1000, system:systemText||BASE_SYS, tools:[{type:"web_search_20250305",name:"web_search"}], messages:history })
     }).then(function(r){return r.json();}).then(function(data){
       if(!data||!data.content){ cb(null,"응답 형식 오류"); return; }
       var text=data.content.filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join("\n").trim();
@@ -455,10 +467,66 @@ function callClaude(history, systemText, cb){
     }).catch(function(e){ cb(null,String(e.message||e)); });
   }catch(e){ cb(null,String(e.message||e)); }
 }
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* 드로어(전역) */
+var dHistory=[], dCtx=null;
+function openDrawer(){ document.getElementById("drawerBg").classList.add("on"); document.getElementById("aidrawer").classList.add("on"); setTimeout(function(){document.getElementById("dInput").focus();},200); }
+function closeDrawer(){ document.getElementById("drawerBg").classList.remove("on"); document.getElementById("aidrawer").classList.remove("on"); }
+function setDCtx(n){ dCtx=n; var c=document.getElementById("ctx"); c.classList.add("on"); document.getElementById("ctxText").textContent="📎 "+n.title; }
+function clearCtx(){ dCtx=null; document.getElementById("ctx").classList.remove("on"); }
+function askNews(id){ var n=NEWS.find(function(x){return x.id===id;})||scrapOf(id).n; openReader(n.id); if(window.innerWidth<1024) readerPane("ai"); else document.getElementById("rInput").focus(); }
+function dQuick(q){ document.getElementById("dInput").value=q; if(q.slice(-2)===": ")document.getElementById("dInput").focus(); else dSend(); }
+function dPush(role,t){ var m=document.createElement("div"); m.className="msg "+role; m.innerHTML=t; document.getElementById("dmsgs").appendChild(m); var b=document.getElementById("dmsgs"); b.scrollTop=b.scrollHeight; return m; }
+function dSend(){ var inp=document.getElementById("dInput"); var t=inp.value.trim(); if(!t)return; inp.value=""; var toModel=t; if(dCtx){ toModel="관련 뉴스: "+dCtx.title+"\n"+dCtx.summary+"\n\n질문: "+t; } dPush("me",esc(t)); dHistory.push({role:"user",content:toModel}); var tp=dPush("typing","생각 중…"); callClaude(dHistory,BASE_SYS,function(a,e){ tp.remove(); if(e){dPush("ai","⚠️ 응답 실패 ("+e+") — 실제 배포 환경에선 정상 작동해요.");return;} dHistory.push({role:"assistant",content:a}); dPush("ai",esc(a).replace(/\n/g,"<br>")); }); }
+
+/* 읽기모드 */
+var curArticle=null, readerHistory=[];
+function articleSys(n){ return BASE_SYS+"\n\n[읽는 기사] 이 내용을 근거로 답하세요.\n제목: "+n.title+"\n출처: "+(n.origin||n.src)+" ("+n.date+")\n요약: "+n.summary+"\n본문:\n"+(n.body||n.summary); }
+function openReader(id){
+  var n=NEWS.find(function(x){return x.id===id;}); if(!n){var s=scrapOf(id); if(s)n=s.n;} if(!n)return;
+  curArticle=n; if(!isRead(id)){readIds.push(id);lsSet("nr_read",readIds);} renderRows();
+  var srcName=n.src==="naver"?"네이버":n.src==="google"?"구글":(n.origin||"외신");
+  document.getElementById("rTitle").textContent=n.title;
+  document.getElementById("rMeta").textContent=srcName+" · "+n.date+" · #"+n.kw;
+  document.getElementById("aTitle").innerHTML=(n.trans?'<span class="trans">번역</span> ':'')+n.title;
+  document.getElementById("aMeta").innerHTML='<span class="srcbadge '+n.src+'">'+(n.src==="naver"?"N":n.src==="google"?"G":"외신")+'</span> '+srcName+' · '+n.date+' · <span class="kwtag"># '+n.kw+'</span>';
+  document.getElementById("aSum").innerHTML='<b>한 줄 요약</b> · '+n.summary;
+  document.getElementById("aBody").textContent=n.body||n.summary;
+  readerHistory=[];
+  var ms=document.getElementById("rMsgs"); ms.innerHTML='<div class="msg sys">이 기사 본문을 제가 읽었어요. 궁금한 걸 물어보세요.</div>';
+  var sc=scrapOf(id);  /* 저장된 리서치 있으면 복원 */
+  if(sc&&sc.notes&&sc.notes.length){ sc.notes.forEach(function(nt){ var mm=document.createElement("div"); mm.className="msg me"; mm.innerHTML=esc(nt.q); ms.appendChild(mm); var aa=document.createElement("div"); aa.className="msg ai"; aa.innerHTML=esc(nt.a).replace(/\n/g,"<br>"); ms.appendChild(aa); readerHistory.push({role:"user",content:nt.q},{role:"assistant",content:nt.a}); }); }
+  document.getElementById("reader").classList.remove("show-ai");
+  document.getElementById("rtArticle").classList.add("on"); document.getElementById("rtAI").classList.remove("on");
+  document.getElementById("readerBg").classList.add("on"); document.getElementById("reader").classList.add("on");
+}
+function closeReader(){ document.getElementById("reader").classList.remove("on"); document.getElementById("readerBg").classList.remove("on"); }
+function readerPane(p){ var r=document.getElementById("reader"); if(p==="ai"){ r.classList.add("show-ai"); document.getElementById("rtAI").classList.add("on"); document.getElementById("rtArticle").classList.remove("on"); setTimeout(function(){document.getElementById("rInput").focus();},100);} else { r.classList.remove("show-ai"); document.getElementById("rtArticle").classList.add("on"); document.getElementById("rtAI").classList.remove("on"); } }
+function rPush(role,t){ var m=document.createElement("div"); m.className="msg "+role; m.innerHTML=t; document.getElementById("rMsgs").appendChild(m); var b=document.getElementById("rMsgs"); b.scrollTop=b.scrollHeight; return m; }
+function rQuick(q){ document.getElementById("rInput").value=q; rSend(); }
+var lastAI="";
+function rSend(){ var inp=document.getElementById("rInput"); var t=inp.value.trim(); if(!t||!curArticle)return; inp.value=""; rPush("me",esc(t)); readerHistory.push({role:"user",content:t}); var tp=rPush("typing","생각 중…"); callClaude(readerHistory,articleSys(curArticle),function(a,e){ tp.remove(); if(e){rPush("ai","⚠️ 응답 실패 ("+e+") — 실제 배포 환경에선 정상 작동해요.");return;} lastAI=a; readerHistory.push({role:"assistant",content:a}); rPush("ai",esc(a).replace(/\n/g,"<br>")); }); }
+
+/* 리서치(AI로 알아본 것) 저장 = 스크랩에 원문+대화 함께 저장 */
+function saveResearch(){
+  if(!curArticle)return;
+  var notes=[];
+  for(var i=0;i+1<readerHistory.length;i+=2){ if(readerHistory[i].role==="user"&&readerHistory[i+1].role==="assistant") notes.push({q:readerHistory[i].content,a:readerHistory[i+1].content}); }
+  var ex=scrapOf(curArticle.id);
+  if(ex){ ex.notes=notes; } else { scraps.push({n:JSON.parse(JSON.stringify(curArticle)), notes:notes, at:new Date().toISOString().slice(0,10)}); }
+  lsSet("nr_scrap",scraps); renderRows(); toast("원문 + 리서치 저장됨 (스크랩)");
+}
+
+/* 용어집 */
+function openGlossSave(){ document.getElementById("gTerm").value=""; document.getElementById("gDef").value=lastAI||""; document.getElementById("glossBg").classList.add("on"); setTimeout(function(){document.getElementById("gTerm").focus();},120); }
+function saveGloss(){ var term=document.getElementById("gTerm").value.trim(); var def=document.getElementById("gDef").value.trim(); if(!term){toast("용어를 입력하세요");return;} var ex=glossary.filter(function(g){return g.term===term;})[0]; if(ex){ex.def=def;} else {glossary.unshift({term:term,def:def,at:new Date().toISOString().slice(0,10)});} lsSet("nr_gloss",glossary); closeSheet("glossBg"); renderGloss(); toast("용어집에 저장됨"); }
+function delGloss(i){ glossary.splice(i,1); lsSet("nr_gloss",glossary); renderGloss(); }
 
 document.getElementById("q").addEventListener("keydown",function(e){if(e.key==="Enter")runSearch();});
-document.getElementById("newKw").addEventListener("keydown",function(e){if(e.key==="Enter")addKeyword();});
-document.getElementById("aiInput").addEventListener("keydown",function(e){if(e.key==="Enter")send();});
+document.getElementById("kwAdd").addEventListener("keydown",function(e){if(e.key==="Enter")addKeyword();});
+document.getElementById("editKw").addEventListener("keydown",function(e){if(e.key==="Enter")applyEditKw();});
+document.getElementById("dInput").addEventListener("keydown",function(e){if(e.key==="Enter")dSend();});
 document.getElementById("rInput").addEventListener("keydown",function(e){if(e.key==="Enter")rSend();});
 renderAll();
 </script>
