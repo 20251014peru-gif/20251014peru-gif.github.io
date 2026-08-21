@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v1.8</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v1.9</span></div>
   </div>
 </header>
 <main>
@@ -239,6 +239,7 @@
     <button class="sumbtn" onclick="openSummary()">📝 통합 요약</button>
       <button class="sumbtn" id="refreshBtn" onclick="loadData(true)" style="background:var(--good)">🔄 새로고침</button>
       <button class="sumbtn" onclick="runCollect()" style="background:var(--urgent)">🚀 지금 수집</button>
+      <button class="sumbtn" onclick="openGh()" title="수집/토큰 설정" style="background:var(--ink-2);padding:11px 12px">⚙️</button>
       <select id="dateSel" onchange="onDate(this.value)" style="border:1px solid var(--line);border-radius:12px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;background:var(--surface)"></select>
       <span id="loadStat" style="font-size:11.5px;color:var(--ink-3);font-weight:700"></span>
     <div class="seg">
@@ -640,7 +641,7 @@ function saveGh(){
   closeSheet("ghBg"); toast("GitHub 설정 저장됨");
 }
 function runCollect(){
-  if(!GH_TOKEN || !GH_REPO){ toast("먼저 ⚙️에서 GitHub 토큰을 넣어주세요"); openGh(); return; }
+  if(!GH_TOKEN){ toast("GitHub 토큰을 먼저 넣어주세요"); openGh(); return; } if(!GH_REPO){ GH_REPO="20251014peru-gif/20251014peru-gif.github.io"; }
   setStatus("🟡 수집 요청 보내는 중…");
   var url="https://api.github.com/repos/"+GH_REPO+"/actions/workflows/"+encodeURIComponent(GH_WF)+"/dispatches";
   fetch(url,{ method:"POST",
