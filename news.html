@@ -209,24 +209,28 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.7</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.0</span></div>
   </div>
 </header>
 <main>
   <div class="board" id="boardWrap">
-    <div style="display:flex;gap:6px;margin-bottom:10px"><button id="bmKw" class="fchip on" onclick="setBoard('kw')" style="cursor:pointer">📌 관심 키워드</button><button id="bmStock" class="fchip" onclick="setBoard('stock')" style="cursor:pointer">📈 주요 종목</button><button id="bmSearch" class="fchip" onclick="setBoard('search')" style="cursor:pointer">🔍 검색 관심</button><button class="fchip" onclick="toggleKwMgr()" style="cursor:pointer" title="관심 키워드·종목 추가/삭제/수정">⚙️ 관리</button><span style="flex:1"></span><span class="hint" style="font-size:11px;color:var(--ink-3);font-weight:600;align-self:center">7일·어제 대비 · 탭하면 표 걸러짐</span></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px"><button id="bmKw" class="fchip on" onclick="setBoard('kw')" style="cursor:pointer;font-size:14px"><span style="font-size:17px">📰</span> 이슈·테마</button><button id="bmStock" class="fchip" onclick="setBoard('stock')" style="cursor:pointer;font-size:14px"><span style="font-size:17px">💹</span> 내 종목</button><button id="bmSearch" class="fchip" onclick="setBoard('search')" style="cursor:pointer;font-size:14px"><span style="font-size:17px">🔥</span> 대중 관심</button><button class="fchip" onclick="toggleKwMgr()" style="cursor:pointer" title="관심 키워드·종목 추가/삭제/수정">⚙️ 관리</button><span style="flex:1"></span><span class="hint" style="font-size:11px;color:var(--ink-3);font-weight:600;align-self:center">7일·어제 대비 · 탭하면 표 걸러짐</span></div>
     <div class="trend-row" id="trendRow"></div>
   </div>
   <div class="surge" id="surge"></div>
 
   <!-- 관심 키워드 관리 (관심 탭에서만) -->
   <div class="kwmgr" id="kwmgr" style="display:none">
-    <div class="cap"><span>⭐ 관심 키워드 관리</span><span class="mini">칩 = 클릭 수정 · ✕ 삭제</span></div>
+    <div class="cap"><span>📰 이슈·테마 관리</span><span class="mini">칩 = 클릭 수정 · ✕ 삭제</span></div>
     <div class="kwlist" id="kwlist"></div>
     <div class="kwadd"><input id="kwAdd" placeholder="키워드 추가 (예: 반도체, 금리)" /><button onclick="addKeyword()">추가</button></div>
-    <div class="cap" style="margin-top:16px"><span>📈 주요 종목 관리</span><span class="mini">보드 '주요 종목' 탭에 표시</span></div>
+    <div class="cap" style="margin-top:16px"><span>💹 내 종목 관리</span><span class="mini">보드 '주요 종목' 탭에 표시</span></div>
     <div class="kwlist" id="stockList"></div>
     <div class="kwadd"><input id="stockAdd" placeholder="종목 추가 (예: 삼성전자, 엔비디아, 테슬라)" /><button onclick="addStock()">추가</button></div>
+    <div class="cap" style="margin-top:16px"><span>🔥 대중 관심 관리</span><span class="mini">네이버 검색량 추적 · 순위 자동</span></div>
+    <div class="kwlist" id="popList"></div>
+    <div class="kwadd"><input id="popAdd" placeholder="키워드 추가 (예: 비트코인, 원전, 로봇)" /><button onclick="addPop()">추가</button></div>
+    <div style="margin-top:8px;font-size:11px;color:var(--ink-3);line-height:1.5">※ 여기 목록은 다음 수집 때 검색량을 추적해요. 최대 20개 권장(데이터랩 한도).<br><button onclick="exportPop()" style="margin-top:6px;padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--card);cursor:pointer;font-size:11px">📋 datalab_terms.json 내용 복사</button> → GitHub의 datalab_terms.json에 붙여넣으면 collector가 이 목록을 씀</div>
   </div>
 
   <!-- 스크랩 선택삭제 툴바 (스크랩 탭에서만) -->
@@ -401,7 +405,7 @@ function toast(t){ var el=document.getElementById("toast"); el.textContent=t; el
 
 var glossStar = lsGet("nr_gloss_star",{}); var boardMode="kw";
 var stocks = lsGet("nr_stocks", ["삼성전자","SK하이닉스","엔비디아","테슬라","에코프로","LG에너지솔루션","현대차","애플","팔란티어","카카오"]); var glossView_filter="all";
-var keywords = lsGet("nr_keywords", ["금리","연준","환율","CPI","관세","한국은행","HBM","AI반도체","온디바이스AI","2차전지","전고체","전력설비","코스피","코스닥","나스닥","외국인수급","실적발표","자사주","공매도","유상증자"]);
+var keywords = lsGet("nr_keywords", ["금리","연준","환율","CPI","관세","한국은행","HBM","AI반도체","온디바이스AI","2차전지","전고체","전력설비","코스피","코스닥","나스닥","외국인수급"]);
 var readIds  = lsGet("nr_read", []);
 var scraps   = lsGet("nr_scrap", []);      /* [{n:{...}, notes:[{q,a}], at}] */
 var glossary = lsGet("nr_gloss", []);      /* [{term,def,at}] */
@@ -421,7 +425,7 @@ var SAMPLE = [
   {id:10,date:"어제",src:"foreign",kw:"금리",sig:"gray",dupes:1,breaking:false,trans:true,origin:"WSJ",title:"美 국채 금리 하락…인하 기대 선반영",summary:"장기물 중심 하락. 위험자산 선호 소폭 회복.",body:"미국 국채 금리가 인하 기대 선반영으로 하락했다. 위험자산 선호가 소폭 회복됐다."}
 ];
 var NEWS = SAMPLE.slice();
-var collectedGloss=[]; var dates=[]; var dateFilter="all"; var trendsData={};
+var collectedGloss=[]; var dates=[]; var dateFilter="all"; var trendsData={}; var trendsMeta={}; var popTerms = lsGet("nr_pop", ["HBM","반도체","SK하이닉스","삼성전자","엔비디아","AI","전력설비","원전","조선","방산","로봇","2차전지","전기차","코스피","코스닥","환율","금리","비트코인","테슬라","양자컴퓨터"]);
 var view="all", sort="new", filterKw=null, search="", selMode=false, selected={};
 
 function isRead(id){ return readIds.indexOf(id)>=0; }
@@ -471,18 +475,19 @@ function renderBoard(){ if(boardMode==="stock") renderStocks(); else if(boardMod
 function renderSearchTrend(){
   var host=document.getElementById("trendRow");
   var names=Object.keys(trendsData);
-  if(!names.length){ host.innerHTML='<div style="font-size:12.5px;color:var(--ink-3);padding:8px;line-height:1.6">검색 관심(네이버 데이터랩) 데이터가 아직 없어요.<br>collector가 trends.json을 만들면(다음 자동수집) 여기 추세가 채워져요.</div>'; return; }
-  // 종목/키워드 리스트 순서 우선, 없으면 데이터 순서
-  var order=stocks.concat(keywords).filter(function(x){return trendsData[x];});
-  names.forEach(function(n){ if(order.indexOf(n)<0)order.push(n); });
-  host.innerHTML = order.map(function(s){
+  if(!names.length){ host.innerHTML='<div style="font-size:12.5px;color:var(--ink-3);padding:8px;line-height:1.6">대중 관심(네이버 검색량) 데이터가 아직 없어요.<br>collector가 trends.json을 만들면(다음 자동수집) 여기 추세가 채워져요.</div>'; return; }
+  // 검색량 순위(order) 우선 사용 → 인기순 정렬
+  var order = (trendsMeta && trendsMeta.order && trendsMeta.order.length) ? trendsMeta.order.slice() : names;
+  order = order.filter(function(x){return trendsData[x];});
+  host.innerHTML = order.map(function(s, idx){
     var t=trendsData[s]; if(!t||!t.ratios||!t.ratios.length) return "";
     var r=t.ratios.slice(-7); while(r.length<7)r.unshift(0);
     var today=r[r.length-1], yst=r[r.length-2]||0;
     var d= today>yst?"up":(today<yst?"down":"flat");
     var mx=Math.max.apply(null,r.concat([1]));
     var bars='<div class="bars">'+r.map(function(v,i){ var hh=Math.max(3,Math.round((v||0)/mx*22)); var hot=(i>=5&&d==="up")?"hot":""; return '<i class="'+hot+'" style="height:'+hh+'px"></i>'; }).join("")+'</div>';
-    return '<div class="tcard '+(filterKw===s?"on":"")+'" onclick="pickKw(\''+s+'\')"><div class="k"><span>'+s+'</span><span class="v">'+Math.round(today)+'</span></div><div class="v">'+trendMark(d)+'</div>'+bars+'</div>';
+    var rankBadge='<span style="display:inline-block;min-width:18px;height:18px;line-height:18px;text-align:center;border-radius:5px;background:'+(idx<3?"var(--urgent)":"var(--ink-4)")+';color:#fff;font-size:11px;font-weight:800;margin-right:6px">'+(idx+1)+'</span>';
+    return '<div class="tcard '+(filterKw===s?"on":"")+'" onclick="pickKw(\''+s+'\')"><div class="k"><span>'+rankBadge+s+'</span><span class="v">'+Math.round(today)+'</span></div><div class="v">'+trendMark(d)+'</div>'+bars+'</div>';
   }).join("");
 }
 
@@ -501,8 +506,16 @@ function renderTrend(){ var _kws=keywords.filter(function(k){ return NEWS.filter
   document.getElementById("trendRow").innerHTML = _kws.map(function(k){ var t=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; var cnt=NEWS.filter(function(x){return x.kw===k;}).length; t={n:cnt,d:t.d,bars:t.bars}; return '<div class="tcard '+(filterKw===k?'on':'')+'" onclick="pickKw(\''+k+'\')"><div class="k"><span>'+k+'</span><span class="v">'+t.n+'건</span></div><div class="v">'+trendMark(t.d)+'</div>'+barsHTML(t)+'</div>'; }).join(""); }
 function renderSurge(){ document.getElementById("surge").innerHTML='<span class="lab">🔥 급상승</span>'+surging.map(function(s){return '<span class="schip" onclick="addSurge(\''+s.k+'\')">'+s.k+'<span class="pct">'+s.pct+'</span><span class="plus">＋</span></span>';}).join(""); }
 function renderFilters(){ var base=[{k:null,label:"전체"}].concat(keywords.map(function(k){return {k:k,label:k};})); document.getElementById("filters").innerHTML=base.map(function(f){ var cnt=f.k?NEWS.filter(function(n){return n.kw===f.k;}).length:NEWS.length; return '<span class="fchip '+(filterKw===f.k?'on':'')+'" onclick="pickKw('+(f.k?"'"+f.k+"'":'null')+')">'+f.label+'<span class="n">'+cnt+'</span></span>';}).join(""); }
+
+function renderPopMgr(){ var el=document.getElementById("popList"); if(!el)return; el.innerHTML = popTerms.map(function(k){ return '<span class="kwitem"><span class="nm" onclick="editPop(\''+k+'\')">'+k+'</span><button class="del" onclick="delPop(\''+k+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">키워드를 추가하세요.</span>'; }
+function addPop(){ var v=document.getElementById("popAdd").value.trim(); if(!v)return; v.split(/[,\n]+/).map(function(x){return x.trim();}).filter(Boolean).forEach(function(k){ if(popTerms.indexOf(k)<0)popTerms.push(k); }); document.getElementById("popAdd").value=""; lsSet("nr_pop",popTerms); renderPopMgr(); toast("대중 관심 추가됨 (다음 수집부터 추적)"); }
+function delPop(k){ popTerms=popTerms.filter(function(x){return x!==k;}); lsSet("nr_pop",popTerms); renderPopMgr(); toast("삭제됨"); }
+var editingPop=null;
+function editPop(k){ editingPop=k; document.getElementById("editKw").value=k; var eb=document.getElementById("editBg"); eb.dataset.mode="pop"; eb.classList.add("on"); setTimeout(function(){document.getElementById("editKw").focus();},120); }
+function exportPop(){ var txt=JSON.stringify(popTerms); if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(function(){ toast("복사됨! GitHub datalab_terms.json에 붙여넣으세요"); }); } else { prompt("복사하세요:", txt); } }
+
 function renderStockMgr(){ var sl=document.getElementById("stockList"); if(!sl)return; sl.innerHTML = stocks.map(function(s){ return '<span class="kwitem"><span class="nm" onclick="editStock(\''+s+'\')">'+s+'</span><button class="del" onclick="delStock(\''+s+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">종목을 추가하세요.</span>'; }
-function renderKwMgr(){ renderStockMgr(); document.getElementById("kwlist").innerHTML = keywords.map(function(k){ return '<span class="kwitem"><span class="nm" onclick="editKw(\''+k+'\')">'+k+'</span><button class="del" onclick="delKeyword(\''+k+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">아직 키워드가 없어요. 아래에서 추가하세요.</span>'; }
+function renderKwMgr(){ renderStockMgr(); renderPopMgr(); document.getElementById("kwlist").innerHTML = keywords.map(function(k){ return '<span class="kwitem"><span class="nm" onclick="editKw(\''+k+'\')">'+k+'</span><button class="del" onclick="delKeyword(\''+k+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">아직 키워드가 없어요. 아래에서 추가하세요.</span>'; }
 
 function updateNextRun(){
   try{
@@ -666,7 +679,7 @@ function editStock(s){ editingStock=s; document.getElementById("editKw").value=s
 var editingKw=null;
 function editKw(k){ editingKw=k; document.getElementById("editKw").value=k; document.getElementById("editBg").dataset.mode=""; document.getElementById("editBg").classList.add("on"); setTimeout(function(){document.getElementById("editKw").focus();},120); }
 function applyEditKw(){ var nv=document.getElementById("editKw").value.trim(); if(!nv){closeSheet("editBg");return;}
-  var eb=document.getElementById("editBg"); if(eb.dataset.mode==="stock"){ var si=stocks.indexOf(editingStock); if(si>=0){ stocks[si]=nv; if(filterKw===editingStock)filterKw=nv; } lsSet("nr_stocks",stocks); eb.dataset.mode=""; closeSheet("editBg"); renderStockMgr(); renderBoard(); toast("수정됨"); return; }
+  var eb=document.getElementById("editBg"); if(eb.dataset.mode==="pop"){ var pi=popTerms.indexOf(editingPop); if(pi>=0){ popTerms[pi]=nv; } lsSet("nr_pop",popTerms); eb.dataset.mode=""; closeSheet("editBg"); renderPopMgr(); toast("수정됨"); return; } if(eb.dataset.mode==="stock"){ var si=stocks.indexOf(editingStock); if(si>=0){ stocks[si]=nv; if(filterKw===editingStock)filterKw=nv; } lsSet("nr_stocks",stocks); eb.dataset.mode=""; closeSheet("editBg"); renderStockMgr(); renderBoard(); toast("수정됨"); return; }
   var idx=keywords.indexOf(editingKw); if(idx>=0){ keywords[idx]=nv; if(trends[editingKw]){trends[nv]=trends[editingKw];} if(filterKw===editingKw)filterKw=nv; } lsSet("nr_keywords",keywords); closeSheet("editBg"); renderAll(); toast("수정됨"); }
 
 /* ── 스크랩 ── */
@@ -808,7 +821,7 @@ function loadData(manual){
     fetch("trends.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
   ]).then(function(res){
     var nj=res[0], gj=res[1], tj=res[2];
-    if(tj&&tj.data){ trendsData=tj.data; }
+    if(tj&&tj.data){ trendsData=tj.data; trendsMeta={order:tj.order||[], updated:tj.updated||""}; }
     if(nj&&nj.length){ NEWS=normalizeNews(nj); NEWS.forEach(function(x,ix){x._idx=ix;}); buildDates(); dateFilter="all"; }
     else { NEWS=SAMPLE.slice(); buildDates(); dateFilter="all"; setStatus("🟠 news.json 없음 — 예시 표시"); }
     if(gj){ var hid=lsGet("nr_gloss_hide",[]); collectedGloss=Object.keys(gj).filter(function(k){return hid.indexOf(k)<0;}).map(function(k){return {term:k,def:(gj[k].def||gj[k]),at:(gj[k].first_seen||"")};}); }
