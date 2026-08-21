@@ -1,6 +1,12 @@
 <!doctype html>
 <html lang="ko">
 <head>
+<link rel="manifest" href="./manifest.json"/>
+<meta name="theme-color" content="#0F172A"/>
+<link rel="apple-touch-icon" href="./icon-192.svg"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="뉴스레이더"/>
+
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>뉴스레이더</title>
@@ -203,7 +209,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.3</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.4</span></div>
   </div>
 </header>
 <main>
@@ -426,11 +432,32 @@ function scrapOf(id){ return scraps.filter(function(s){return s.n.id===id;})[0];
 
 /* 주요 종목: 뉴스 건수 기반 7일 추세 */
 function last7keys(){ var out=[]; var t=new Date(); for(var i=6;i>=0;i--){ var d=new Date(t.getTime()-i*86400000); out.push(d.toISOString().slice(0,10)); } return out; }
+var STOCK_ALIAS = {
+  "삼성전자":["Samsung","삼성","005930"],
+  "SK하이닉스":["SK Hynix","Hynix","하이닉스","000660"],
+  "엔비디아":["NVIDIA","Nvidia","NVDA"],
+  "테슬라":["Tesla","TSLA"],
+  "에코프로":["Ecopro"],
+  "LG에너지솔루션":["LG Energy","LGES","엘지에너지솔루션"],
+  "현대차":["Hyundai","현대자동차","005380"],
+  "애플":["Apple","AAPL"],
+  "팔란티어":["Palantir","PLTR"],
+  "카카오":["Kakao","035720"]
+};
+function stockTerms(name){
+  var arr=[name];
+  // 사용자가 "엔비디아 NVIDIA"처럼 공백 병기했으면 분리
+  name.split(/\s+/).forEach(function(w){ if(w && arr.indexOf(w)<0) arr.push(w); });
+  var al=STOCK_ALIAS[name]||[]; al.forEach(function(a){ if(arr.indexOf(a)<0) arr.push(a); });
+  return arr;
+}
 function stockCounts(name){
   var keys=last7keys(); var map={}; keys.forEach(function(k){map[k]=0;});
+  var terms=stockTerms(name).map(function(t){return t.toLowerCase();});
   NEWS.forEach(function(n){
-    var hay=(n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.orig_title||"")+" "+(n.kw||"");
-    if(hay.indexOf(name)>=0){ var dk=dayKey(n.date); if(dk in map) map[dk]++; }
+    var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.orig_title||"")+" "+(n.kw||"")).toLowerCase();
+    var hit=terms.some(function(t){return t && hay.indexOf(t)>=0;});
+    if(hit){ var dk=dayKey(n.date); if(dk in map) map[dk]++; }
   });
   var bars=keys.map(function(k){return map[k];});
   var today=bars[6], yst=bars[5];
@@ -476,6 +503,15 @@ function renderFilters(){ var base=[{k:null,label:"전체"}].concat(keywords.map
 function renderStockMgr(){ var sl=document.getElementById("stockList"); if(!sl)return; sl.innerHTML = stocks.map(function(s){ return '<span class="kwitem"><span class="nm" onclick="editStock(\''+s+'\')">'+s+'</span><button class="del" onclick="delStock(\''+s+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">종목을 추가하세요.</span>'; }
 function renderKwMgr(){ renderStockMgr(); document.getElementById("kwlist").innerHTML = keywords.map(function(k){ return '<span class="kwitem"><span class="nm" onclick="editKw(\''+k+'\')">'+k+'</span><button class="del" onclick="delKeyword(\''+k+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">아직 키워드가 없어요. 아래에서 추가하세요.</span>'; }
 
+function updateHeaderStat(){
+  try{
+    var today=kstToday();
+    var todayCnt=NEWS.filter(function(n){return dayKey(n.date)===today;}).length;
+    var brk=NEWS.filter(isBreaking).length;
+    var el=document.getElementById("hdrStat");
+    if(el) el.textContent = "오늘 "+todayCnt+"건" + (brk>0? " · 속보 "+brk+"건":"");
+  }catch(e){}
+}
 function updateBreakingBadge(){ try{ var c=NEWS.filter(isBreaking).length; var el=document.querySelector('[data-view="breaking"] .tb'); if(el){ if(c>0){el.textContent=c>99?"99+":c; el.style.display="grid";} else {el.style.display="none";} } }catch(e){} }
 function isBreaking(n){ var t=(n.orig_title||"")+(n.title||""); return n.breaking===true || /\[속보\]|\[긴급\]|\[단독\]|속보:|긴급:/.test(t); }
 function currentRows(){
@@ -576,7 +612,7 @@ function delGlossTerm(term){
   renderGloss();
 }
 
-function renderAll(){ renderBoard(); updateBreakingBadge(); renderSurge(); renderFilters(); renderKwMgr(); renderRows(); renderGloss(); }
+function renderAll(){ renderBoard(); updateBreakingBadge(); updateHeaderStat(); renderSurge(); renderFilters(); renderKwMgr(); renderRows(); renderGloss(); }
 
 /* ── 뷰 전환 ── */
 function setView(v){
