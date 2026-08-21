@@ -122,12 +122,10 @@ def fetch_datalab(terms, days=14):
     end = _dt.date.today()
     start = end - _dt.timedelta(days=days)
     # 데이터랩은 그룹 최대 5개 → 5개씩 끊어서 호출
+    # HUB 방식만 사용(뉴스 검색과 동일 인증). 구형 폴백은 헷갈리는 401을 유발해 제거.
     urls = [
         ("https://naverapihub.apigw.ntruss.com/search-trend/v1/search",
          {"X-NCP-APIGW-API-KEY-ID": NAVER_ID, "X-NCP-APIGW-API-KEY": NAVER_SECRET,
-          "Content-Type": "application/json"}),
-        ("https://openapi.naver.com/v1/datalab/search",
-         {"X-Naver-Client-Id": NAVER_ID, "X-Naver-Client-Secret": NAVER_SECRET,
           "Content-Type": "application/json"}),
     ]
     out = {}
@@ -158,8 +156,10 @@ def fetch_datalab(terms, days=14):
             except Exception as e:
                 last = (url, "예외", str(e))
         if not ok:
-            print("  ! 데이터랩 실패:", chunk, "| 상태:", last[1], "| 응답:", last[2])
-            print("    (HUB 콘솔에서 '검색어 트렌드/Search Trend' API가 선택됐는지 확인하세요)")
+            print("  ! 데이터랩 실패:", chunk, "| 상태:", last[1])
+            print("    응답:", last[2])
+            print("    >> 해결: console.ncloud.com → NAVER API HUB → Application [수정] → '검색어 트렌드(Search Trend)' 체크")
+            print("    (뉴스 검색은 되는데 트렌드만 401/429면, 이 API 선택이 누락된 것입니다)")
     return out
 
 def load_keywords() -> list:
