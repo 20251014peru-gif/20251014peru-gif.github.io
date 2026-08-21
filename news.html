@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v1.7</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v1.8</span></div>
   </div>
 </header>
 <main>
@@ -238,6 +238,7 @@
     </div>
     <button class="sumbtn" onclick="openSummary()">📝 통합 요약</button>
       <button class="sumbtn" id="refreshBtn" onclick="loadData(true)" style="background:var(--good)">🔄 새로고침</button>
+      <button class="sumbtn" onclick="runCollect()" style="background:var(--urgent)">🚀 지금 수집</button>
       <select id="dateSel" onchange="onDate(this.value)" style="border:1px solid var(--line);border-radius:12px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;background:var(--surface)"></select>
       <span id="loadStat" style="font-size:11.5px;color:var(--ink-3);font-weight:700"></span>
     <div class="seg">
@@ -367,6 +368,20 @@
   </div>
   <p class="psub" style="margin-top:12px;font-size:11px">키 발급: console.anthropic.com → Settings → API Keys. 사용량만큼 소액 과금(개인 리서치는 월 몇백~몇천원).</p>
   <button class="close" onclick="closeSheet('keyBg')">닫기</button></div>
+</div>
+
+<!-- GitHub 수집 실행 설정 -->
+<div class="sheet-bg" id="ghBg" onclick="if(event.target===this)closeSheet('ghBg')">
+  <div class="sheet"><h3>🚀 지금 수집 설정</h3><p class="psub">사이트에서 버튼으로 뉴스 수집(GitHub Actions)을 바로 실행해요. 토큰은 <b>이 브라우저에만</b> 저장돼요. (개인용)</p>
+  <label>GitHub 토큰 (ghp_... 또는 github_pat_...)</label>
+  <input id="ghToken" type="password" placeholder="ghp_..." autocomplete="off" />
+  <label>레포 (owner/repo)</label>
+  <input id="ghRepo" placeholder="20251014peru-gif/20251014peru-gif.github.io" />
+  <label>워크플로 파일명</label>
+  <input id="ghWf" placeholder="news.yml" />
+  <button class="go" onclick="saveGh()">저장</button>
+  <p class="psub" style="margin-top:12px;font-size:11px">토큰 만들기: GitHub → Settings → Developer settings → Personal access tokens → Fine-grained → 이 레포 선택 → 권한 Actions: Read and write. 자세한 안내는 Claude에게 요청하세요.</p>
+  <button class="close" onclick="closeSheet('ghBg')">닫기</button></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -609,6 +624,36 @@ function buildDates(){ var set={}; NEWS.forEach(function(n){ set[dayKey(n.date)]
 function renderDateSel(){ var sel=document.getElementById("dateSel"); if(!sel)return; var opts='<option value="all">전체</option>'; dates.forEach(function(dk){ var d=new Date(dk); var lab=isNaN(d)?dk:(fmtDate(dk)+" ("+dk.slice(5)+")"); opts+='<option value="'+dk+'">'+lab+'</option>'; }); sel.innerHTML=opts; sel.value=dateFilter; }
 function onDate(v){ dateFilter=v; renderRows(); }
 
+
+/* ── GitHub Actions 원격 실행: collector를 지금 돌림 ── */
+function openGh(){
+  document.getElementById("ghToken").value=GH_TOKEN||"";
+  document.getElementById("ghRepo").value=GH_REPO||"";
+  document.getElementById("ghWf").value=GH_WF||"news.yml";
+  document.getElementById("ghBg").classList.add("on");
+}
+function saveGh(){
+  GH_TOKEN=document.getElementById("ghToken").value.trim();
+  GH_REPO=document.getElementById("ghRepo").value.trim();
+  GH_WF=document.getElementById("ghWf").value.trim()||"news.yml";
+  lsSet("nr_gh_token",GH_TOKEN); lsSet("nr_gh_repo",GH_REPO); lsSet("nr_gh_wf",GH_WF);
+  closeSheet("ghBg"); toast("GitHub 설정 저장됨");
+}
+function runCollect(){
+  if(!GH_TOKEN || !GH_REPO){ toast("먼저 ⚙️에서 GitHub 토큰을 넣어주세요"); openGh(); return; }
+  setStatus("🟡 수집 요청 보내는 중…");
+  var url="https://api.github.com/repos/"+GH_REPO+"/actions/workflows/"+encodeURIComponent(GH_WF)+"/dispatches";
+  fetch(url,{ method:"POST",
+    headers:{ "Accept":"application/vnd.github+json", "Authorization":"Bearer "+GH_TOKEN, "X-GitHub-Api-Version":"2022-11-28" },
+    body:JSON.stringify({ ref:"main" })
+  }).then(function(r){
+    if(r.status===204){ setStatus("🟢 수집 시작됨! 약 12분 뒤 🔄 하세요"); toast("수집 시작 — 12분 뒤 새로고침"); }
+    else if(r.status===404){ setStatus("🟠 실패: 레포/워크플로 확인"); toast("404: 레포명 또는 news.yml 이름 확인"); }
+    else if(r.status===401||r.status===403){ setStatus("🟠 실패: 토큰 권한"); toast("토큰 권한(actions:write) 확인"); }
+    else { r.text().then(function(t){ setStatus("🟠 실패("+r.status+")"); toast("실패: "+r.status); }); }
+  }).catch(function(e){ setStatus("🟠 요청 실패"); toast("네트워크 오류"); });
+}
+
 /* ── 데이터 로드 (news.json / glossary.json) ── */
 function setStatus(s){ var el=document.getElementById("loadStat"); if(el) el.textContent=s; }
 function loadData(manual){
@@ -725,7 +770,8 @@ function exitLive(){ liveMode=false; liveItems=[]; loadData(false); }
 
 var BASE_SYS="당신은 달님의 개인 뉴스 리서치 도우미입니다. 한국어로, 투자·경제·정치 맥락 위주로 핵심만 간결하게 답하세요. 최신 사실이 필요하면 web_search로 뉴스를 찾아 요약하고, 필요하면 출처를 짧게 덧붙이세요.";
 var AI_KEY = lsGet("nr_aikey","");
-var NAVER_ID = lsGet("nr_naver_id",""); var NAVER_SECRET = lsGet("nr_naver_secret","");
+var NAVER_ID = lsGet("nr_naver_id",""); var NAVER_SECRET2 = lsGet("nr_naver_secret","");
+var GH_TOKEN = lsGet("nr_gh_token",""); var GH_REPO = lsGet("nr_gh_repo","20251014peru-gif/20251014peru-gif.github.io"); var GH_WF = lsGet("nr_gh_wf","news.yml"); var NAVER_SECRET = lsGet("nr_naver_secret","");
 function openKey(){ document.getElementById("keyInput").value=AI_KEY||""; document.getElementById("keyBg").classList.add("on"); setTimeout(function(){document.getElementById("keyInput").focus();},120); }
 function saveKey(){ AI_KEY=document.getElementById("keyInput").value.trim(); lsSet("nr_aikey",AI_KEY); closeSheet("keyBg"); toast(AI_KEY?"AI 키 저장됨 — 이제 질문해보세요":"키 비움"); }
 function clearKey(){ AI_KEY=""; lsSet("nr_aikey",""); document.getElementById("keyInput").value=""; toast("키 삭제됨"); }
