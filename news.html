@@ -209,12 +209,12 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.5</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.6</span></div>
   </div>
 </header>
 <main>
   <div class="board" id="boardWrap">
-    <div style="display:flex;gap:6px;margin-bottom:10px"><button id="bmKw" class="fchip on" onclick="setBoard('kw')" style="cursor:pointer">📌 관심 키워드</button><button id="bmStock" class="fchip" onclick="setBoard('stock')" style="cursor:pointer">📈 주요 종목</button><button id="bmSearch" class="fchip" onclick="setBoard('search')" style="cursor:pointer">🔍 검색 관심</button><span style="flex:1"></span><span class="hint" style="font-size:11px;color:var(--ink-3);font-weight:600;align-self:center">7일·어제 대비 · 탭하면 표 걸러짐</span></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px"><button id="bmKw" class="fchip on" onclick="setBoard('kw')" style="cursor:pointer">📌 관심 키워드</button><button id="bmStock" class="fchip" onclick="setBoard('stock')" style="cursor:pointer">📈 주요 종목</button><button id="bmSearch" class="fchip" onclick="setBoard('search')" style="cursor:pointer">🔍 검색 관심</button><button class="fchip" onclick="toggleKwMgr()" style="cursor:pointer" title="관심 키워드·종목 추가/삭제/수정">⚙️ 관리</button><span style="flex:1"></span><span class="hint" style="font-size:11px;color:var(--ink-3);font-weight:600;align-self:center">7일·어제 대비 · 탭하면 표 걸러짐</span></div>
     <div class="trend-row" id="trendRow"></div>
   </div>
   <div class="surge" id="surge"></div>
@@ -464,6 +464,7 @@ function stockCounts(name){
   var dd = today>yst?"up":(today<yst?"down":"flat");
   return { n:bars.reduce(function(a,b){return a+b;},0), today:today, d:dd, bars:bars };
 }
+function toggleKwMgr(){ var el=document.getElementById("kwmgr"); if(!el)return; var show=el.style.display==="none"; el.style.display=show?"block":"none"; if(show){ renderKwMgr(); el.scrollIntoView({behavior:"smooth",block:"nearest"}); } }
 function setBoard(m){ boardMode=m; document.getElementById("bmKw").classList.toggle("on",m==="kw"); document.getElementById("bmStock").classList.toggle("on",m==="stock"); var bs=document.getElementById("bmSearch"); if(bs)bs.classList.toggle("on",m==="search"); renderBoard(); }
 function renderBoard(){ if(boardMode==="stock") renderStocks(); else if(boardMode==="search") renderSearchTrend(); else renderTrend(); }
 
