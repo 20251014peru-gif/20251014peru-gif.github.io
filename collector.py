@@ -38,6 +38,8 @@ NAVER_SECRET  = os.getenv("NAVER_SECRET", "")
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 CLAUDE_MODEL  = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")   # 달님 표준. 필요시 최신 모델로 교체 가능
+NTFY_TOPIC    = os.getenv("NTFY_TOPIC", "")   # ntfy 채널명(폰 알림). 비면 알림 건너뜀
+NTFY_SERVER   = os.getenv("NTFY_SERVER", "https://ntfy.sh")
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 
 # 관심 키워드 (사이트의 '관심 키워드'와 연동될 값. 우선 파일에서 읽고, 없으면 기본값)
@@ -52,7 +54,17 @@ DEFAULT_KEYWORDS = CORE_KEYWORDS
 # 급상승(트렌드) 키워드를 매 실행마다 자동으로 몇 개 섞을지
 TREND_ADD_COUNT = 5
 # 트렌드에서 제외할 잡음(연예·스포츠 등 투자 무관 흔한 단어)
-TREND_STOP = ["드라마","야구","축구","날씨","로또","연예","아이돌","예능","영화","웹툰","게임"]
+TREND_STOP = ["드라마","야구","축구","날씨","로또","연예","아이돌","예능","영화","웹툰","게임",
+              "ai","mu","트럼프","날씨","경기","콘서트","티켓","시즌","방송","출연","배우","가수",
+              "월드컵","올림픽","드라이브","맛집","여행","레시피","건강","다이어트"]
+# 트렌드 키워드 최소 조건(투자 무관 잡음 컷)
+import re as _re
+def _trend_ok(t):
+    t=(t or "").strip()
+    if len(t)<2: return False
+    if _re.fullmatch(r"[a-zA-Z]{1,3}", t): return False  # mu, ai 등 짧은 영문
+    if any(s==t or s in t for s in TREND_STOP): return False
+    return True
 
 # 키워드당 가져올 개수
 NAVER_PER_KW   = 8
@@ -89,7 +101,7 @@ def fetch_trending(limit=5):
             t = strip_tags(getattr(e, "title", "")).strip()
             if not t:
                 continue
-            if any(s in t for s in TREND_STOP):
+            if not _trend_ok(t):
                 continue
             if t not in out:
                 out.append(t)
@@ -381,6 +393,21 @@ def load_glossary():
     except Exception:
         return {}
 
+def ntfy_push(title, message, url="", tags="", priority="default"):
+    """ntfy로 폰 푸시. NTFY_TOPIC 없으면 조용히 건너뜀."""
+    if not NTFY_TOPIC:
+        return False
+    try:
+        h = {"Title": title.encode("utf-8"), "Priority": priority}
+        if tags: h["Tags"] = tags
+        if url:  h["Click"] = url
+        r = requests.post(f"{NTFY_SERVER}/{NTFY_TOPIC}",
+                          data=message.encode("utf-8"), headers=h, timeout=10)
+        return r.status_code < 300
+    except Exception as e:
+        print("  ! ntfy 푸시 실패:", e)
+        return False
+
 def save_glossary(gl):
     with open("glossary.json", "w", encoding="utf-8") as f:
         json.dump(gl, f, ensure_ascii=False, indent=2)
@@ -457,10 +484,11 @@ def main():
         existing = []
     seen = set(x.get("url") for x in existing if x.get("url"))
     added = 0
+    new_added = []
     for n in out_news:
         if n.get("url") and n["url"] in seen:
             continue
-        existing.append(n); seen.add(n.get("url")); added += 1
+        existing.append(n); seen.add(n.get("url")); added += 1; new_added.append(n)
     # id 재부여
     for i, x in enumerate(existing, 1):
         x["id"] = i
@@ -495,6 +523,25 @@ def main():
     reds = sum(1 for n in existing if n["sig"] == "red")
     print(f"\n완료 · 새로 {added}건 추가 · 오늘 누적 {len(existing)}건 (중요 {reds}건) · 용어집 {len(glossary)}개")
     print(f"→ news.json / {arch_path} / glossary.json 저장됨")
+
+    # ── 폰 푸시(ntfy) ──
+    if NTFY_TOPIC and new_added:
+        # (1) 🔴 중요/속보: 개별 푸시 (한 회차 최대 5건, 도배 방지)
+        reds_new = [n for n in new_added if n.get("sig") == "red"]
+        for n in reds_new[:5]:
+            body = n.get("summary") or n.get("title","")
+            ntfy_push("🔴 속보 · " + (n.get("kw") or "뉴스레이더"),
+                      n.get("title","") + "\n" + body,
+                      url=n.get("url",""), tags="rotating_light", priority="high")
+        # (2) 이번 회차 새 뉴스 요약 1건
+        titles = [("🔴 " if n.get("sig")=="red" else "· ") + n.get("title","") for n in new_added[:6]]
+        summary = "\n".join(titles)
+        more = ("\n…외 %d건" % (len(new_added)-6)) if len(new_added) > 6 else ""
+        ntfy_push(f"📰 새 뉴스 {len(new_added)}건 (중요 {len(reds_new)})",
+                  summary + more, tags="newspaper", priority="default")
+        print(f"→ ntfy 푸시 전송: 속보 {min(len(reds_new),5)}건 + 요약 1건 (채널 {NTFY_TOPIC})")
+    elif not NTFY_TOPIC:
+        print("  · ntfy 푸시 건너뜀 (NTFY_TOPIC 미설정)")
 
 
 if __name__ == "__main__":
