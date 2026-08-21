@@ -26,6 +26,6 @@ jobs:
         run: |
           git config user.name "news-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add news.json glossary.json archive/ || true
+          git add news.json glossary.json trends.json archive/ || true
           git commit -m "auto: news update $(date -u +%Y-%m-%dT%H:%MZ)" || echo "변경 없음"
           git push || echo "push 스킵"
