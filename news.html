@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v2.9</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.0</span></div>
   </div>
 </header>
 <main>
@@ -497,10 +497,14 @@ function currentRows(){
   return list;
 }
 function _tval(n){
-  // collected_at(수집시각) 우선, 없으면 date, 파싱 실패시 id로 대체(id 큰=나중 수집)
-  var t=Date.parse(n.collected_at||"")||Date.parse(n.date||"");
-  if(!isNaN(t)&&t) return t;
-  return (n.id||0)*1000;
+  // 발행일(date) 우선 → 수집시각(collected_at) → 파싱 실패시 배열 원순서(_idx)
+  var t=Date.parse(n.date||"");
+  if(isNaN(t)||!t) t=Date.parse((n.collected_at||"").replace(" ","T"));
+  if(!isNaN(t)&&t){
+    // 같은 날 뉴스끼리는 배열 순서(앞=최신)로 미세 보정
+    return t + (100000 - (n._idx||0));
+  }
+  return 100000 - (n._idx||0);
 }
 function sigDot(s){ return s==="red"?'🔴':s==="orange"?'🟠':'<span style="opacity:.25">⚪</span>'; }
 function srcBadge(n){ if(n.src==="naver")return '<span class="srcbadge naver">N</span>'; if(n.src==="google")return '<span class="srcbadge google">G</span>'; return '<span class="srcbadge foreign" title="'+(n.origin||'외신')+'">외신</span>'; }
@@ -714,7 +718,7 @@ function loadData(manual){
   ]).then(function(res){
     var nj=res[0], gj=res[1], tj=res[2];
     if(tj&&tj.data){ trendsData=tj.data; }
-    if(nj&&nj.length){ NEWS=normalizeNews(nj); buildDates(); dateFilter="all"; }
+    if(nj&&nj.length){ NEWS=normalizeNews(nj); NEWS.forEach(function(x,ix){x._idx=ix;}); buildDates(); dateFilter="all"; }
     else { NEWS=SAMPLE.slice(); buildDates(); dateFilter="all"; setStatus("🟠 news.json 없음 — 예시 표시"); }
     if(gj){ var hid=lsGet("nr_gloss_hide",[]); collectedGloss=Object.keys(gj).filter(function(k){return hid.indexOf(k)<0;}).map(function(k){return {term:k,def:(gj[k].def||gj[k]),at:(gj[k].first_seen||"")};}); }
     if(nj&&nj.length){
