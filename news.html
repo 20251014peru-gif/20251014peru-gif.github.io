@@ -295,7 +295,7 @@
     <div class="rtoggle"><button class="on" id="rtArticle" onclick="readerPane('article')">📄 기사</button><button id="rtAI" onclick="readerPane('ai')">🤖 AI</button></div>
     <div class="r-actions">
       <button class="r-btn save" onclick="saveResearch()">💾 리서치 저장</button>
-      <button class="r-btn orig" onclick="return false">원문 ↗</button>
+      <a class="r-btn orig" id="rOrig" href="#" target="_blank" rel="noopener">원문 ↗</a>
     </div>
   </div>
   <div class="rbody">
@@ -383,7 +383,7 @@ function currentRows(){
   if(view==="breaking") list=list.filter(function(n){return n.breaking;});
   if(view==="keyword") list=list.filter(function(n){return keywords.indexOf(n.kw)>=0;});
   if(filterKw) list=list.filter(function(n){return n.kw===filterKw;});
-  if(search) list=list.filter(function(n){return n.title.indexOf(search)>=0||n.kw.indexOf(search)>=0;});
+  if(search){ var terms=search.toLowerCase().split(/\s+/).filter(Boolean); list=list.filter(function(n){ var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.kw||"")+" "+(n.orig_title||"")).toLowerCase(); return terms.every(function(t){return hay.indexOf(t)>=0;}); }); }
   if(dateFilter&&dateFilter!=="all") list=list.filter(function(n){return dayKey(n.date)===dateFilter;});
   if(sort==="imp"){ var rank={red:0,orange:1,gray:2}; list.sort(function(a,b){return rank[a.sig]-rank[b.sig];}); }
   return list;
@@ -404,7 +404,7 @@ function renderRows(){
       '<td class="summary">'+n.summary+'</td>'+
       '<td class="cell-center">'+(noteN?'<span class="notepill">💬'+noteN+'</span>':'')+'</td>'+
       '<td class="cell-center"><span class="sigdot">'+sigDot(n.sig)+'</span></td>'+
-      '<td class="cell-center"><span class="rowact"><a class="link" href="#" onclick="return false">열기</a><span class="askbtn" title="AI에게 질문" onclick="askNews('+n.id+')">🤖</span></span></td>'+
+      '<td class="cell-center"><span class="rowact"><a class="link" href="'+(n.url||'#')+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">원문↗</a><span class="askbtn" title="AI에게 질문" onclick="askNews('+n.id+')">🤖</span></span></td>'+
       '<td class="cell-center"><span class="star '+(isScrap(n.id)?'on':'')+'" onclick="toggleScrap('+n.id+')">'+(isScrap(n.id)?'★':'☆')+'</span></td>'+
     '</tr>';
   }).join("");
@@ -463,6 +463,17 @@ function closeSheet(id){ document.getElementById(id).classList.remove("on"); }
 
 /* ── AI (읽기모드 · 드로어 공용 호출) ── */
 
+
+/* 외신 오분류 보정: 한국어 제목인데 foreign이면 국내로 재분류 */
+function hasKorean(s){ return /[가-힣]/.test(s||""); }
+function normalizeNews(arr){
+  arr.forEach(function(n){
+    var t=(n.orig_title||n.title||"");
+    if(n.src==="foreign" && hasKorean(t)){ n.src="google"; n.trans=false; n.origin=""; if(n.orig_title){ n.title=n.orig_title; } }
+  });
+  return arr;
+}
+
 /* ── 날짜 유틸 ── */
 function dayKey(s){ var d=new Date(s); if(isNaN(d)) return (s||"").slice(0,10); return d.toISOString().slice(0,10); }
 function fmtDate(s){ if(!s) return ""; var d=new Date(s); if(isNaN(d)) return (s||"").slice(0,10); var t=new Date(); var y=new Date(t.getTime()-86400000); if(d.toDateString()===t.toDateString())return "오늘"; if(d.toDateString()===y.toDateString())return "어제"; return (d.getMonth()+1)+"/"+d.getDate(); }
@@ -481,7 +492,7 @@ function loadData(manual){
     fetch("glossary.json"+bust).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
   ]).then(function(res){
     var nj=res[0], gj=res[1];
-    if(nj&&nj.length){ NEWS=nj; buildDates(); dateFilter=(dates[0]||"all"); }
+    if(nj&&nj.length){ NEWS=normalizeNews(nj); buildDates(); dateFilter=(dates[0]||"all"); }
     else { NEWS=SAMPLE.slice(); buildDates(); dateFilter="all"; setStatus("🟠 news.json 없음 — 예시 표시"); }
     if(gj){ collectedGloss=Object.keys(gj).map(function(k){return {term:k,def:(gj[k].def||gj[k]),at:(gj[k].first_seen||"")};}); }
     if(nj&&nj.length){ var when=(nj[0]&&nj[0].collected_at)?nj[0].collected_at:""; setStatus("🟢 갱신됨 "+when); }
@@ -521,12 +532,13 @@ function articleSys(n){ return BASE_SYS+"\n\n[읽는 기사] 이 내용을 근�
 function openReader(id){
   var n=NEWS.find(function(x){return x.id===id;}); if(!n){var s=scrapOf(id); if(s)n=s.n;} if(!n)return;
   curArticle=n; if(!isRead(id)){readIds.push(id);lsSet("nr_read",readIds);} renderRows();
+  var ro=document.getElementById("rOrig"); if(ro){ ro.href=n.url||"#"; ro.style.display=n.url?"":"none"; }
   var srcName=n.src==="naver"?"네이버":n.src==="google"?"구글":(n.origin||"외신");
   document.getElementById("rTitle").textContent=n.title;
   document.getElementById("rMeta").textContent=srcName+" · "+n.date+" · #"+n.kw;
   document.getElementById("aTitle").innerHTML=(n.trans?'<span class="trans">번역</span> ':'')+n.title;
   document.getElementById("aMeta").innerHTML='<span class="srcbadge '+n.src+'">'+(n.src==="naver"?"N":n.src==="google"?"G":"외신")+'</span> '+srcName+' · '+n.date+' · <span class="kwtag"># '+n.kw+'</span>';
-  document.getElementById("aSum").innerHTML='<b>한 줄 요약</b> · '+n.summary;
+  document.getElementById("aSum").innerHTML='<b>한 줄 요약</b> · '+n.summary+(n.url?' &nbsp;<a href="'+n.url+'" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800;white-space:nowrap">🔗 기사 원문 열기 ↗</a>':'');
   document.getElementById("aBody").textContent=n.body||n.summary;
   readerHistory=[];
   var ms=document.getElementById("rMsgs"); ms.innerHTML='<div class="msg sys">이 기사 본문을 제가 읽었어요. 궁금한 걸 물어보세요.</div>';
