@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.2</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.3</span></div>
   </div>
 </header>
 <main>
@@ -497,14 +497,16 @@ function currentRows(){
   return list;
 }
 function _tval(n){
-  // 발행일(date) 우선 → 수집시각(collected_at) → 파싱 실패시 배열 원순서(_idx)
-  var t=Date.parse(n.date||"");
-  if(isNaN(t)||!t) t=Date.parse((n.collected_at||"").replace(" ","T"));
-  if(!isNaN(t)&&t){
-    // 같은 날 뉴스끼리는 배열 순서(앞=최신)로 미세 보정
-    return t + (100000 - (n._idx||0));
-  }
-  return 100000 - (n._idx||0);
+  // 실제 시각 우선순위: 발행시각(시:분 있을 때) > 수집시각(collected_at) > 발행일 > 배열순
+  var t=NaN;
+  // 1) date에 시:분이 실제로 있으면 그걸 사용
+  if(/\d{1,2}:\d{2}/.test(n.date||"")){ t=Date.parse(n.date); }
+  // 2) 아니면 수집시각(항상 시:분 있음)
+  if(isNaN(t)||!t){ t=Date.parse((n.collected_at||"").replace(" ","T")); }
+  // 3) 그래도 없으면 발행일(날짜만)
+  if(isNaN(t)||!t){ t=Date.parse(n.date||""); }
+  if(!isNaN(t)&&t){ return t*1000 + (9999-(n._idx||0)); }
+  return 9999-(n._idx||0);
 }
 function sigDot(s){ return s==="red"?'🔴':s==="orange"?'🟠':'<span style="opacity:.25">⚪</span>'; }
 function srcBadge(n){ if(n.src==="naver")return '<span class="srcbadge naver">N</span>'; if(n.src==="google")return '<span class="srcbadge google">G</span>'; return '<span class="srcbadge foreign" title="'+(n.origin||'외신')+'">외신</span>'; }
