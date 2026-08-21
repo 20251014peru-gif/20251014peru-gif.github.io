@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.3 (2026-08-21)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드)&#10;· 용어집 관리(검색·정렬·별표·중복합치기)&#10;· AI 키 in-app 설정&#10;· AI로 뉴스검색(웹 즉시)&#10;· 외신 오분류 보정">v1.3</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v1.7</span></div>
   </div>
 </header>
 <main>
@@ -453,7 +453,8 @@ function renderStocks(){
 
 function trendMark(d){ return d==="up"?'<span class="arrow up">↑늘어남</span>':d==="down"?'<span class="arrow down">↓줄어듦</span>':'<span class="arrow flat">→쏘쏘</span>'; }
 function barsHTML(t){ var mx=Math.max.apply(null,t.bars)||1; return '<div class="bars">'+t.bars.map(function(v,i){ var h=Math.max(3,Math.round(v/mx*22)); var hot=(i>=t.bars.length-2&&t.d==="up")?'hot':''; return '<i class="'+hot+'" style="height:'+h+'px"></i>'; }).join("")+'</div>'; }
-function renderTrend(){ document.getElementById("trendRow").innerHTML = keywords.map(function(k){ var t=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; t={n:NEWS.filter(function(x){return x.kw===k;}).length,d:t.d,bars:t.bars}; return '<div class="tcard '+(filterKw===k?'on':'')+'" onclick="pickKw(\''+k+'\')"><div class="k"><span>'+k+'</span><span class="v">'+t.n+'건</span></div><div class="v">'+trendMark(t.d)+'</div>'+barsHTML(t)+'</div>'; }).join(""); }
+function renderTrend(){ var _kws=keywords.filter(function(k){ return NEWS.filter(function(x){return x.kw===k;}).length>0; }); if(!_kws.length)_kws=keywords;
+  document.getElementById("trendRow").innerHTML = _kws.map(function(k){ var t=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; var cnt=NEWS.filter(function(x){return x.kw===k;}).length; t={n:cnt,d:t.d,bars:t.bars}; return '<div class="tcard '+(filterKw===k?'on':'')+'" onclick="pickKw(\''+k+'\')"><div class="k"><span>'+k+'</span><span class="v">'+t.n+'건</span></div><div class="v">'+trendMark(t.d)+'</div>'+barsHTML(t)+'</div>'; }).join(""); }
 function renderSurge(){ document.getElementById("surge").innerHTML='<span class="lab">🔥 급상승</span>'+surging.map(function(s){return '<span class="schip" onclick="addSurge(\''+s.k+'\')">'+s.k+'<span class="pct">'+s.pct+'</span><span class="plus">＋</span></span>';}).join(""); }
 function renderFilters(){ var base=[{k:null,label:"전체"}].concat(keywords.map(function(k){return {k:k,label:k};})); document.getElementById("filters").innerHTML=base.map(function(f){ var cnt=f.k?NEWS.filter(function(n){return n.kw===f.k;}).length:NEWS.length; return '<span class="fchip '+(filterKw===f.k?'on':'')+'" onclick="pickKw('+(f.k?"'"+f.k+"'":'null')+')">'+f.label+'<span class="n">'+cnt+'</span></span>';}).join(""); }
 function renderStockMgr(){ var sl=document.getElementById("stockList"); if(!sl)return; sl.innerHTML = stocks.map(function(s){ return '<span class="kwitem"><span class="nm" onclick="editStock(\''+s+'\')">'+s+'</span><button class="del" onclick="delStock(\''+s+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">종목을 추가하세요.</span>'; }
@@ -621,7 +622,7 @@ function loadData(manual){
   ]).then(function(res){
     var nj=res[0], gj=res[1], tj=res[2];
     if(tj&&tj.data){ trendsData=tj.data; }
-    if(nj&&nj.length){ NEWS=normalizeNews(nj); buildDates(); dateFilter=(dates[0]||"all"); }
+    if(nj&&nj.length){ NEWS=normalizeNews(nj); buildDates(); dateFilter="all"; }
     else { NEWS=SAMPLE.slice(); buildDates(); dateFilter="all"; setStatus("🟠 news.json 없음 — 예시 표시"); }
     if(gj){ var hid=lsGet("nr_gloss_hide",[]); collectedGloss=Object.keys(gj).filter(function(k){return hid.indexOf(k)<0;}).map(function(k){return {term:k,def:(gj[k].def||gj[k]),at:(gj[k].first_seen||"")};}); }
     if(nj&&nj.length){ var when=(nj[0]&&nj[0].collected_at)?nj[0].collected_at:""; setStatus("🟢 갱신됨 "+when); }
