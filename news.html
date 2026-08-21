@@ -259,7 +259,25 @@
   </div>
 
   <!-- 용어집 -->
-  <div id="glossView" style="display:none"><div class="gloss" id="glossList"></div><div id="glossEmpty"></div></div>
+  <div id="glossView" style="display:none">
+    <div class="board" style="padding:12px 14px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="glossSearch" placeholder="🔍 용어 검색 (뜻도 같이 검색)" oninput="renderGloss()" style="flex:1;min-width:200px;border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;font-family:inherit;outline:none" />
+        <select id="glossSort" onchange="renderGloss()" style="border:1px solid var(--line);border-radius:12px;padding:11px;font-family:inherit;font-size:13px;font-weight:700;background:var(--surface)">
+          <option value="new">최신순</option>
+          <option value="name">가나다순</option>
+          <option value="star">⭐ 중요먼저</option>
+        </select>
+        <div class="seg" style="flex:0 0 auto">
+          <button class="on" data-gf="all" onclick="glossFilter('all')">전체</button>
+          <button data-gf="mine" onclick="glossFilter('mine')">내 저장</button>
+          <button data-gf="star" onclick="glossFilter('star')">⭐</button>
+        </div>
+      </div>
+      <div id="glossCount" style="font-size:11.5px;color:var(--ink-3);font-weight:700;margin-top:8px"></div>
+    </div>
+    <div class="gloss" id="glossList"></div><div id="glossEmpty"></div>
+  </div>
   <div id="emptyBox"></div>
 </main>
 
@@ -355,6 +373,7 @@ function lsGet(k,d){ try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;
 function lsSet(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
 function toast(t){ var el=document.getElementById("toast"); el.textContent=t; el.classList.add("on"); setTimeout(function(){el.classList.remove("on");},1600); }
 
+var glossStar = lsGet("nr_gloss_star",{}); var glossView_filter="all";
 var keywords = lsGet("nr_keywords", ["반도체","금리","엔비디아","코스피","재건축"]);
 var readIds  = lsGet("nr_read", []);
 var scraps   = lsGet("nr_scrap", []);      /* [{n:{...}, notes:[{q,a}], at}] */
@@ -423,13 +442,51 @@ function renderRows(){
   }).join("");
   document.getElementById("emptyBox").innerHTML = list.length?"":'<div class="empty">'+(view==="scrap"?'스크랩한 뉴스가 없어요.<br>표에서 ☆를 눌러 저장하세요.':'표시할 뉴스가 없어요.')+'</div>';
 }
+function gKey(g){ return g.term; }
+function glossFilter(f){ glossView_filter=f; var b=document.querySelectorAll('[data-gf]'); for(var i=0;i<b.length;i++)b[i].classList.toggle('on',b[i].dataset.gf===f); renderGloss(); }
+function toggleGlossStar(term){ if(glossStar[term])delete glossStar[term]; else glossStar[term]=1; lsSet("nr_gloss_star",glossStar); renderGloss(); }
 function renderGloss(){
   var host=document.getElementById("glossList");
-  var mine = glossary.map(function(g,i){ return '<div class="gcard"><button class="gdel" onclick="delGloss('+i+')">✕</button><div class="term">'+g.term+'</div><div class="def">'+g.def+'</div><div class="date">'+(g.at||'')+' · 내 저장</div></div>'; }).join("");
-  var col = collectedGloss.map(function(g){ return '<div class="gcard"><div class="term">'+g.term+'</div><div class="def">'+g.def+'</div><div class="date">'+(g.at||'')+' · 수집</div></div>'; }).join("");
-  host.innerHTML = mine + col;
-  document.getElementById("glossEmpty").innerHTML = (glossary.length+collectedGloss.length)?"":'<div class="empty">저장된 용어가 없어요.<br>기사 읽을 때 🤖 패널의 “📖 용어 저장”으로 담아보세요.</div>';
+  // 합치기: 내 저장 + 수집, 같은 term은 하나로(내 저장 우선)
+  var map={};
+  collectedGloss.forEach(function(g){ map[g.term]={term:g.term,def:g.def,at:g.at,mine:false}; });
+  glossary.forEach(function(g){ map[g.term]={term:g.term,def:g.def,at:g.at,mine:true}; });
+  var arr=Object.keys(map).map(function(k){ var g=map[k]; g.star=!!glossStar[g.term]; return g; });
+  // 필터
+  var f=glossView_filter;
+  if(f==="mine") arr=arr.filter(function(g){return g.mine;});
+  if(f==="star") arr=arr.filter(function(g){return g.star;});
+  // 검색
+  var q=(document.getElementById("glossSearch")?document.getElementById("glossSearch").value.trim().toLowerCase():"");
+  if(q) arr=arr.filter(function(g){ return (g.term+" "+(g.def||"")).toLowerCase().indexOf(q)>=0; });
+  // 정렬
+  var sort=(document.getElementById("glossSort")?document.getElementById("glossSort").value:"new");
+  if(sort==="name") arr.sort(function(a,b){return a.term.localeCompare(b.term,"ko");});
+  else if(sort==="star") arr.sort(function(a,b){return (b.star?1:0)-(a.star?1:0);});
+  else arr.sort(function(a,b){return (b.at||"").localeCompare(a.at||"");});
+  var cnt=document.getElementById("glossCount"); if(cnt) cnt.textContent="총 "+arr.length+"개"+(q?" (검색됨)":"");
+  host.innerHTML = arr.map(function(g){
+    return '<div class="gcard">'
+      + '<button class="gdel" onclick="delGlossTerm(\''+g.term.replace(/'/g,"\\'")+'\')" title="삭제">✕</button>'
+      + '<div class="term"><span onclick="toggleGlossStar(\''+g.term.replace(/'/g,"\\'")+'\')" style="cursor:pointer;margin-right:5px">'+(g.star?'⭐':'☆')+'</span>'+g.term+'</div>'
+      + '<div class="def">'+(g.def||'')+'</div>'
+      + '<div class="date">'+(g.at||'')+(g.mine?' · 내 저장':' · 수집')+'</div>'
+      + '</div>';
+  }).join("");
+  document.getElementById("glossEmpty").innerHTML = arr.length?"":'<div class="empty">'+(q?'검색 결과가 없어요.':'저장된 용어가 없어요.')+'</div>';
 }
+function delGlossTerm(term){
+  // 내 저장이면 목록에서 제거, 수집 용어면 별표만 해제(수집 원본은 파일이라 화면에서만 숨김 위해 hide 저장)
+  var before=glossary.length;
+  glossary=glossary.filter(function(g){return g.term!==term;});
+  if(glossary.length===before){ // 수집 용어 → 숨김 목록에 추가
+    var hid=lsGet("nr_gloss_hide",[]); if(hid.indexOf(term)<0)hid.push(term); lsSet("nr_gloss_hide",hid);
+    collectedGloss=collectedGloss.filter(function(g){return g.term!==term;});
+  } else { lsSet("nr_gloss",glossary); }
+  if(glossStar[term]){delete glossStar[term];lsSet("nr_gloss_star",glossStar);}
+  renderGloss();
+}
+
 function renderAll(){ renderTrend(); renderSurge(); renderFilters(); renderKwMgr(); renderRows(); renderGloss(); }
 
 /* ── 뷰 전환 ── */
@@ -507,7 +564,7 @@ function loadData(manual){
     var nj=res[0], gj=res[1];
     if(nj&&nj.length){ NEWS=normalizeNews(nj); buildDates(); dateFilter=(dates[0]||"all"); }
     else { NEWS=SAMPLE.slice(); buildDates(); dateFilter="all"; setStatus("🟠 news.json 없음 — 예시 표시"); }
-    if(gj){ collectedGloss=Object.keys(gj).map(function(k){return {term:k,def:(gj[k].def||gj[k]),at:(gj[k].first_seen||"")};}); }
+    if(gj){ var hid=lsGet("nr_gloss_hide",[]); collectedGloss=Object.keys(gj).filter(function(k){return hid.indexOf(k)<0;}).map(function(k){return {term:k,def:(gj[k].def||gj[k]),at:(gj[k].first_seen||"")};}); }
     if(nj&&nj.length){ var when=(nj[0]&&nj[0].collected_at)?nj[0].collected_at:""; setStatus("🟢 갱신됨 "+when); }
     renderDateSel(); renderAll();
     if(btn){btn.disabled=false;btn.textContent="🔄 새로고침";}
