@@ -584,20 +584,24 @@ def main():
     if NTFY_TOPIC and new_added:
         reds_new = [n for n in new_added if n.get("sig") == "red"]
         # (1) 진짜 속보만 개별 푸시: 제목에 속보/긴급 표시가 있는 red만 (도배 방지)
-        BREAKING = ("속보", "긴급", "[속보]", "[단독]")
-        breaking_new = [n for n in reds_new
-                        if any(b in (n.get("orig_title","")+n.get("title","")) for b in BREAKING)]
+        import re as _re2
+        _pat = _re2.compile(r"\[속보\]|\[긴급\]|\[단독\]|속보:|긴급:")
+        breaking_new = [n for n in new_added
+                        if n.get("breaking") or _pat.search((n.get("orig_title","")+n.get("title","")))]
         for n in breaking_new[:5]:
             body = n.get("summary") or n.get("title","")
             ntfy_push("🚨 속보 · " + (n.get("kw") or "뉴스레이더"),
                       n.get("title","") + "\n" + body,
                       url=n.get("url",""), tags="rotating_light", priority="high")
-        # (2) 회차 요약 1건(속보 아니어도 새 뉴스 있으면 한 번) — 조용한 알림
+        # (2) 수집 완료 알림: 새 뉴스 있을 때만, 매 회차 1건 (확실히 도착)
+        hhmm = now.strftime("%H:%M")
         titles = [("🔴 " if n.get("sig")=="red" else "· ") + n.get("title","") for n in new_added[:6]]
         more = ("\n…외 %d건" % (len(new_added)-6)) if len(new_added) > 6 else ""
-        ntfy_push(f"📰 새 뉴스 {len(new_added)}건 (중요 {len(reds_new)})",
-                  "\n".join(titles) + more, tags="newspaper", priority="low")
-        print(f"→ ntfy 푸시: 속보 {min(len(breaking_new),5)}건 + 요약 1건 (채널 {NTFY_TOPIC})")
+        title = f"✅ 수집 완료 {hhmm} · 새 뉴스 {len(new_added)}건"
+        if reds_new:
+            title += f" (🔴 중요 {len(reds_new)})"
+        ntfy_push(title, "\n".join(titles) + more, tags="white_check_mark", priority="default")
+        print(f"→ ntfy 푸시: 속보 {min(len(breaking_new),5)}건 + 완료알림 1건 (채널 {NTFY_TOPIC})")
     elif not NTFY_TOPIC:
         print("  · ntfy 푸시 건너뜀 (NTFY_TOPIC 미설정)")
 
