@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v2.6</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v2.7</span></div>
   </div>
 </header>
 <main>
@@ -487,8 +487,20 @@ function currentRows(){
   if(filterKw){ list=list.filter(function(n){ if(n.kw===filterKw) return true; var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.orig_title||"")); return hay.indexOf(filterKw)>=0; }); }
   if(search){ var terms=search.toLowerCase().split(/\s+/).filter(Boolean); list=list.filter(function(n){ var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.kw||"")+" "+(n.orig_title||"")).toLowerCase(); return terms.every(function(t){return hay.indexOf(t)>=0;}); }); }
   if(dateFilter&&dateFilter!=="all"&&!search) list=list.filter(function(n){return dayKey(n.date)===dateFilter;});
-  if(sort==="imp"){ var rank={red:0,orange:1,gray:2}; list.sort(function(a,b){return rank[a.sig]-rank[b.sig];}); }
+  if(sort==="imp"){
+    var rank={red:0,orange:1,gray:2};
+    list.sort(function(a,b){ var d=rank[a.sig]-rank[b.sig]; if(d!==0)return d; return _tval(b)-_tval(a); });
+  } else {
+    // 최신순: 시간 내림차순(새 뉴스가 위로)
+    list.sort(function(a,b){ return _tval(b)-_tval(a); });
+  }
   return list;
+}
+function _tval(n){
+  // collected_at(수집시각) 우선, 없으면 date, 파싱 실패시 id로 대체(id 큰=나중 수집)
+  var t=Date.parse(n.collected_at||"")||Date.parse(n.date||"");
+  if(!isNaN(t)&&t) return t;
+  return (n.id||0)*1000;
 }
 function sigDot(s){ return s==="red"?'🔴':s==="orange"?'🟠':'<span style="opacity:.25">⚪</span>'; }
 function srcBadge(n){ if(n.src==="naver")return '<span class="srcbadge naver">N</span>'; if(n.src==="google")return '<span class="srcbadge google">G</span>'; return '<span class="srcbadge foreign" title="'+(n.origin||'외신')+'">외신</span>'; }
