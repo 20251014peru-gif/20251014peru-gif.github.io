@@ -244,23 +244,14 @@ def fetch_google_rss(keyword: str, lang="ko", region="KR", foreign=False) -> lis
 
 
 def extract_body(url: str) -> str:
-    """원문 페이지에서 본문 전체 추출 (전문 추출)."""
+    """원문 페이지에서 본문 추출. requests 타임아웃(8초)만 사용 → 무한대기 방지."""
     if not url:
         return ""
     try:
-        downloaded = trafilatura.fetch_url(url)
-        if downloaded:
-            body = trafilatura.extract(
-                downloaded, include_comments=False, include_tables=False, favor_recall=True
-            )
-            if body and len(body) >= MIN_BODY_LEN:
-                return body.strip()
-    except Exception:
-        pass
-    # 폴백: 간단 요청
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=12)
-        body = trafilatura.extract(r.text or "")
+        r = requests.get(url, headers=HEADERS, timeout=8)
+        body = trafilatura.extract(
+            r.text or "", include_comments=False, include_tables=False, favor_recall=True
+        )
         if body and len(body) >= MIN_BODY_LEN:
             return body.strip()
     except Exception:
@@ -416,6 +407,48 @@ def save_glossary(gl):
 # ──────────────────────────────────────────────────────────────
 # 메인
 # ──────────────────────────────────────────────────────────────
+def claude_enrich_batch(items, keywords, size=8):
+    """여러 기사를 묶어서 한 번에 처리 → 호출 수 대폭 감소. 실패 시 개별 폴백."""
+    results = [None]*len(items)
+    if not ANTHROPIC_KEY:
+        for i,it in enumerate(items): results[i]=claude_enrich(it,keywords)
+        return results
+    kwline = ", ".join(keywords)
+    for s in range(0, len(items), size):
+        chunk = items[s:s+size]
+        lines=[]
+        for j,it in enumerate(chunk):
+            body=(it.get("body") or it.get("raw_summary") or "")[:1500]
+            lines.append(f'#{j} 제목:{it["title"]}\n출처:{it.get("origin") or it["src"]}\n본문:{body}')
+        prompt=("아래 여러 기사를 각각 처리해 JSON 배열로만 답해. 설명·코드펜스 금지.\n"
+                f"관심 키워드: {kwline}\n\n"+"\n\n".join(lines)+"\n\n"
+                '각 원소: {"i":번호,"title_ko":"","summary":"35자요약","importance":"red|orange|gray","reason":"","matched_kw":"","glossary":[{"term":"","def":""}]}\n'
+                "importance: 관심 키워드에 정확히 걸리거나 시장 영향 크면 red, 주목 orange, 일반 gray.\n"
+                "glossary: 전문용어(반도체·금융·산업 약어/규격)만 최대2개, 일반어 금지. 없으면 [].\n"
+                "반드시 JSON 배열([ 로 시작 ] 로 끝)만.")
+        payload={"model":CLAUDE_MODEL,"max_tokens":3000,"system":ENRICH_SYS,
+                 "messages":[{"role":"user","content":prompt}]}
+        h={"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"}
+        parsed=None
+        try:
+            r=requests.post(ANTHROPIC_URL,headers=h,json=payload,timeout=60)
+            r.raise_for_status()
+            text="".join(b.get("text","") for b in r.json().get("content",[]) if b.get("type")=="text")
+            m=re.search(r"\[.*\]",text,re.S)
+            if m:
+                arr=json.loads(m.group(0))
+                parsed={int(o.get("i",k)):o for k,o in enumerate(arr)}
+        except Exception as e:
+            print("  ! 묶음 처리 실패, 개별 폴백:", e)
+        for j,it in enumerate(chunk):
+            if parsed and j in parsed:
+                results[s+j]=parsed[j]
+            else:
+                results[s+j]=claude_enrich(it,keywords)  # 폴백
+        print(f"  [AI] {min(s+size,len(items))}/{len(items)} 처리")
+    return results
+
+
 def main():
     core = load_keywords()
     trending = fetch_trending(TREND_ADD_COUNT)
@@ -438,15 +471,28 @@ def main():
 
     print(f"수집 원본 {len(raw)}건 → 중복 제거 중")
     items = dedupe(raw)
+    if len(items) > 120:
+        items = items[:120]  # 폭주 방지 상한
     print(f"고유 뉴스 {len(items)}건 → 본문 추출 + AI 처리")
 
     glossary = load_glossary()
     now = dt.datetime.now()
     out_news = []
 
+    # 본문 추출: 병렬(타임아웃 8초) → 느린 URL이 전체를 막지 않음
+    from concurrent.futures import ThreadPoolExecutor
+    print(f"본문 추출(병렬) {len(items)}건…")
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        bodies = list(ex.map(lambda it: extract_body(it["url"]), items))
+    for it, b in zip(items, bodies):
+        it["body"] = b
+
+    # AI: 8건씩 묶음 처리 → 호출 수 1/8, 훨씬 빠름
+    print(f"AI 처리(묶음) {len(items)}건…")
+    infos = claude_enrich_batch(items, keywords, size=8)
+
     for i, it in enumerate(items, 1):
-        it["body"] = extract_body(it["url"])
-        info = claude_enrich(it, keywords)
+        info = infos[i-1] or {}
 
         for g in info.get("glossary", []):
             term = (g.get("term") or "").strip()
@@ -471,7 +517,6 @@ def main():
             "read": False, "scrap": False, "breaking": "속보" in it["title"],
             "collected_at": now.strftime("%Y-%m-%d %H:%M"),
         })
-        print(f"  [{i}/{len(items)}] {round(i/len(items)*100):3d}% {out_news[-1]['sig']:6} {out_news[-1]['title'][:34]}")
 
     # ── 날짜별 저장 + 중복(같은 url) skip ──
     today = now.strftime("%Y-%m-%d")
