@@ -209,7 +209,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.2</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.3</span></div>
   </div>
 </header>
 <main>
@@ -329,7 +329,7 @@
     <div class="rt"><h2 id="rTitle"></h2><div class="rm" id="rMeta"></div></div>
     <div class="rtoggle"><button class="on" id="rtArticle" onclick="readerPane('article')">📄 기사</button><button id="rtAI" onclick="readerPane('ai')">🤖 AI</button></div>
     <div class="r-actions">
-      <button class="r-btn save" onclick="saveResearch()">💾 리서치 저장</button>
+      <button class="r-btn save" onclick="saveResearch()">💾 지금 저장</button>
       <a class="r-btn orig" id="rOrig" href="#" target="_blank" rel="noopener">원문 ↗</a>
     </div>
   </div>
@@ -342,7 +342,7 @@
       <div class="note">※ 이 본문은 수집 시 추출·저장한 리더뷰예요. 원문 전체는 위 ‘원문’ 버튼으로.</div>
     </div>
     <div class="r-ai">
-      <div class="rah">🤖 이 기사에 대해 물어보기</div>
+      <div class="rah">🤖 이 기사에 대해 물어보기 <span id="autoSaveBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s;margin-left:6px">💾</span></div>
       <div class="raq">
         <span class="qchip" onclick="rQuick('핵심만 3줄로 요약해줘')">📝 3줄 요약</span>
         <span class="qchip" onclick="rQuick('배경을 쉽게 설명해줘')">🧩 쉽게 설명</span>
@@ -1019,10 +1019,34 @@ function openReader(id){
 }
 function closeReader(){ document.getElementById("reader").classList.remove("on"); document.getElementById("readerBg").classList.remove("on"); }
 function readerPane(p){ var r=document.getElementById("reader"); if(p==="ai"){ r.classList.add("show-ai"); document.getElementById("rtAI").classList.add("on"); document.getElementById("rtArticle").classList.remove("on"); setTimeout(function(){document.getElementById("rInput").focus();},100);} else { r.classList.remove("show-ai"); document.getElementById("rtArticle").classList.add("on"); document.getElementById("rtAI").classList.remove("on"); } }
-function rPush(role,t){ var m=document.createElement("div"); m.className="msg "+role; m.innerHTML=t; document.getElementById("rMsgs").appendChild(m); var b=document.getElementById("rMsgs"); b.scrollTop=b.scrollHeight; return m; }
+function rPush(role,t){ var m=document.createElement("div"); m.className="msg "+role; m.innerHTML=t; document.getElementById("rMsgs").appendChild(m); var b=document.getElementById("rMsgs");
+  if(role==="me"){ m._isQ=true; setTimeout(function(){ b.scrollTop=m.offsetTop-8; },30); }
+  else if(role==="typing"){ b.scrollTop=b.scrollHeight; }
+  else { // ai 답변: 방금 질문이 맨 위에 보이도록
+    var qs=b.querySelectorAll(".msg.me"); var lastQ=qs[qs.length-1];
+    if(lastQ){ setTimeout(function(){ b.scrollTop=lastQ.offsetTop-8; },30); }
+  }
+  return m; }
 function rQuick(q){ document.getElementById("rInput").value=q; rSend(); }
 var lastAI="";
-function rSend(){ var inp=document.getElementById("rInput"); var t=inp.value.trim(); if(!t||!curArticle)return; inp.value=""; rPush("me",esc(t)); readerHistory.push({role:"user",content:t}); var tp=rPush("typing","생각 중…"); callClaude(readerHistory,articleSys(curArticle),function(a,e){ tp.remove(); if(e){rPush("ai","⚠️ 응답 실패 ("+e+") — 실제 배포 환경에선 정상 작동해요.");return;} lastAI=a; readerHistory.push({role:"assistant",content:a}); rPush("ai",esc(a).replace(/\n/g,"<br>")); }); }
+
+function autoSaveQA(q,a){
+  if(!curArticle) return;
+  try{
+    // 이 기사의 스크랩을 찾거나 새로 만들고, Q&A를 notes에 누적
+    var ex=scrapOf(curArticle.id);
+    if(!ex){ ex={n:JSON.parse(JSON.stringify(curArticle)), notes:[], at:new Date().toISOString().slice(0,10)}; scraps.push(ex); }
+    if(!ex.notes)ex.notes=[];
+    var dup=ex.notes.some(function(x){return x.q===q;});
+    if(!dup) ex.notes.push({q:q,a:a});
+    lsSet("nr_scrap",scraps);
+    renderRows(); // 스크랩 별표 반영
+    var badge=document.getElementById("autoSaveBadge");
+    if(badge){ badge.textContent="💾 자동 저장됨"; badge.style.opacity="1"; setTimeout(function(){badge.style.opacity="0";},1500); }
+  }catch(e){}
+}
+
+function rSend(){ var inp=document.getElementById("rInput"); var t=inp.value.trim(); if(!t||!curArticle)return; inp.value=""; rPush("me",esc(t)); readerHistory.push({role:"user",content:t}); var tp=rPush("typing","생각 중…"); callClaude(readerHistory,articleSys(curArticle),function(a,e){ tp.remove(); if(e){rPush("ai","⚠️ 응답 실패 ("+e+") — 실제 배포 환경에선 정상 작동해요.");return;} lastAI=a; readerHistory.push({role:"assistant",content:a}); rPush("ai",esc(a).replace(/\n/g,"<br>")); autoSaveQA(t,a); }); }
 
 /* 리서치(AI로 알아본 것) 저장 = 스크랩에 원문+대화 함께 저장 */
 function saveResearch(){
