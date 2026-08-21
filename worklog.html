@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921-cal0818-2055"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0818-2110"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -6668,12 +6668,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       if(!host || !host.parentNode) return;
 
       // 칩 스타일 (작고 촘촘하게)
-      var C  = 'height:30px;min-width:34px;padding:0 9px;border:1.5px solid #dbe6f4;border-radius:8px;'
-             + 'background:#f7faff;color:#3f7cb8;font-size:13px;font-weight:700;'
-             + 'font-family:inherit;cursor:pointer;white-space:nowrap;touch-action:manipulation';
-      var CH = 'height:30px;width:36px;padding:0;border:1.5px solid #dbe6f4;border-radius:8px;'
-             + 'background:#f7faff;color:#3f7cb8;font-size:13px;font-weight:700;'
-             + 'font-family:inherit;cursor:pointer;touch-action:manipulation';
+      var C  = 'height:28px;padding:0 7px;border:1.5px solid #dbe6f4;border-radius:7px;'
+             + 'background:#f7faff;color:#3f7cb8;font-size:12px;font-weight:700;'
+             + 'font-family:inherit;cursor:pointer;white-space:nowrap;touch-action:manipulation'
+      var CH = 'height:28px;width:33px;padding:0;border:1.5px solid #dbe6f4;border-radius:7px;'
+             + 'background:#f7faff;color:#3f7cb8;font-size:12.5px;font-weight:700;'
+             + 'font-family:inherit;cursor:pointer;touch-action:manipulation'
 
       var durs = [[30,'30분'],[60,'1시간'],[90,'1시간반'],[120,'2시간'],[180,'3시간'],[240,'4시간']];
       var durHtml = durs.map(function(d){
@@ -6702,14 +6702,14 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         +   '<button type="button" id="m-wtNow" style="' + C + ';background:#3f7cb8;color:#fff;border-color:#3f7cb8;height:38px">🕐 지금</button>'
         +   '<button type="button" id="m-wtClear" style="' + C + ';color:#b52929;border-color:#f5b5b5;background:#fdecec;height:38px">지우기</button>'
         + '</div>'
-        + '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:8px">'
-        +   '<span style="font-size:12px;color:#7a92a8;width:32px;flex:0 0 auto">소요</span>'
+        + '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:8px">'
+        +   '<span style="font-size:11.5px;color:#7a92a8;width:28px;flex:0 0 auto">소요</span>'
         +   durHtml
-        +   '<span style="width:1px;height:20px;background:#dbe6f4;margin:0 3px;flex:0 0 auto"></span>'
+        +   '<span style="width:1px;height:18px;background:#dbe6f4;margin:0 2px;flex:0 0 auto"></span>'
         +   addHtml
         + '</div>'
-        + '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:6px">'
-        +   '<span style="font-size:12px;color:#7a92a8;width:32px;flex:0 0 auto">시작</span>'
+        + '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:6px">'
+        +   '<span style="font-size:11.5px;color:#7a92a8;width:28px;flex:0 0 auto">시작</span>'
         +   hourHtml
         +   '<span style="font-size:11px;color:#aab8c8;margin-left:2px">시</span>'
         + '</div>';
@@ -13591,7 +13591,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0818-2055';
+  var TAG = ' +cal0818-2110';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
