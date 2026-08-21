@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v2.7</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v2.8</span></div>
   </div>
 </header>
 <main>
@@ -289,7 +289,7 @@
 
 <nav class="tabbar">
   <button class="on" data-view="all" onclick="setView('all')"><span class="ic">🗂️</span>전체</button>
-  <button data-view="keyword" onclick="setView('keyword')"><span class="ic">⭐</span>관심</button>
+  <button data-view="read" onclick="setView('read')"><span class="ic">📖</span>읽음</button>
   <button data-view="breaking" onclick="setView('breaking')"><span class="ic">⚡</span>속보<span class="tb">3</span></button>
   <button data-view="scrap" onclick="setView('scrap')"><span class="ic">🔖</span>스크랩</button>
   <button data-view="gloss" onclick="setView('gloss')"><span class="ic">📖</span>용어집</button>
@@ -483,7 +483,7 @@ function currentRows(){
   if(view==="scrap") return scraps.map(function(s){return s.n;});
   var list=NEWS.slice();
   if(view==="breaking") list=list.filter(isBreaking);
-  if(view==="keyword") list=list.filter(function(n){return keywords.indexOf(n.kw)>=0;});
+  if(view==="read") list=list.filter(function(n){return isRead(n.id);});
   if(filterKw){ list=list.filter(function(n){ if(n.kw===filterKw) return true; var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.orig_title||"")); return hay.indexOf(filterKw)>=0; }); }
   if(search){ var terms=search.toLowerCase().split(/\s+/).filter(Boolean); list=list.filter(function(n){ var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.kw||"")+" "+(n.orig_title||"")).toLowerCase(); return terms.every(function(t){return hay.indexOf(t)>=0;}); }); }
   if(dateFilter&&dateFilter!=="all"&&!search) list=list.filter(function(n){return dayKey(n.date)===dateFilter;});
@@ -506,6 +506,7 @@ function sigDot(s){ return s==="red"?'🔴':s==="orange"?'🟠':'<span style="op
 function srcBadge(n){ if(n.src==="naver")return '<span class="srcbadge naver">N</span>'; if(n.src==="google")return '<span class="srcbadge google">G</span>'; return '<span class="srcbadge foreign" title="'+(n.origin||'외신')+'">외신</span>'; }
 function renderRows(){
   var list=currentRows();
+  if(view==="read" && list.length===0){ document.getElementById("rows").innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--ink-3);padding:40px 0;font-size:13px">아직 읽은 뉴스가 없어요.<br>뉴스 제목을 눌러 읽으면 여기 모여요.</td></tr>'; return; }
   document.getElementById("rows").innerHTML=list.map(function(n){
     var sc=scrapOf(n.id); var noteN=sc&&sc.notes?sc.notes.length:0;
     var chkCell = selMode? '<td class="cell-center"><input type="checkbox" class="chk" '+(selected[n.id]?'checked':'')+' onclick="toggleSel('+n.id+')"></td>' : '';
