@@ -41,7 +41,18 @@ CLAUDE_MODEL  = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")   # 달님 표준
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 
 # 관심 키워드 (사이트의 '관심 키워드'와 연동될 값. 우선 파일에서 읽고, 없으면 기본값)
-DEFAULT_KEYWORDS = ["반도체", "금리", "엔비디아", "코스피", "재건축"]
+# 항상 수집하는 핵심 고정 키워드 (달님 관심축: 반도체AI·2차전지·국내미국지수·거시)
+CORE_KEYWORDS = [
+    "반도체", "HBM", "엔비디아", "AI 반도체", "SK하이닉스", "삼성전자",
+    "2차전지", "전기차", "코스피", "코스닥", "나스닥",
+    "환율", "금리", "연준", "외국인 수급", "실적 발표",
+]
+DEFAULT_KEYWORDS = CORE_KEYWORDS
+
+# 급상승(트렌드) 키워드를 매 실행마다 자동으로 몇 개 섞을지
+TREND_ADD_COUNT = 5
+# 트렌드에서 제외할 잡음(연예·스포츠 등 투자 무관 흔한 단어)
+TREND_STOP = ["드라마","야구","축구","날씨","로또","연예","아이돌","예능","영화","웹툰","게임"]
 
 # 키워드당 가져올 개수
 NAVER_PER_KW   = 8
@@ -67,6 +78,27 @@ def norm_title(t: str) -> str:
     t = re.sub(r"\[[^\]]*\]", " ", t)          # [속보] 등 제거
     t = re.sub(r"[^0-9a-z가-힣]+", " ", t)
     return re.sub(r"\s+", " ", t).strip()
+
+def fetch_trending(limit=5):
+    """구글 트렌드 대한민국 실시간 급상승 검색어를 가져와 투자 무관 잡음은 걸러 반환."""
+    url = "https://trends.google.com/trending/rss?geo=KR"
+    try:
+        d = feedparser.parse(url)
+        out = []
+        for e in d.entries:
+            t = strip_tags(getattr(e, "title", "")).strip()
+            if not t:
+                continue
+            if any(s in t for s in TREND_STOP):
+                continue
+            if t not in out:
+                out.append(t)
+            if len(out) >= limit:
+                break
+        return out
+    except Exception as ex:
+        print("  ! 트렌드 수집 실패:", ex)
+        return []
 
 def load_keywords() -> list:
     try:
@@ -279,8 +311,16 @@ def save_glossary(gl):
 # 메인
 # ──────────────────────────────────────────────────────────────
 def main():
-    keywords = load_keywords()
-    print("관심 키워드:", keywords)
+    core = load_keywords()
+    trending = fetch_trending(TREND_ADD_COUNT)
+    # 핵심 고정 + 급상승 자동 추가 (중복 제거, 순서 유지)
+    keywords = list(dict.fromkeys(core + trending))
+    print("핵심 키워드:", core)
+    if trending:
+        print("🔥 급상승 자동 추가:", trending)
+    else:
+        print("(급상승 키워드 없음 — 핵심만 수집)")
+    print("이번 수집 키워드:", keywords)
 
     raw = []
     for kw in keywords:
