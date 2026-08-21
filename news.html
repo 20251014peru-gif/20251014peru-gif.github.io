@@ -275,14 +275,14 @@
 <!-- AI 드로어 -->
 <div class="drawer-bg" id="drawerBg" onclick="closeDrawer()"></div>
 <aside class="aidrawer" id="aidrawer">
-  <div class="adh"><h2>🤖 AI 리서치</h2><button class="x" onclick="closeDrawer()">✕</button></div>
+  <div class="adh"><h2>🤖 AI 리서치</h2><div style="display:flex;gap:8px;align-items:center"><button class="x" title="AI 키 설정" onclick="openKey()">⚙️</button><button class="x" onclick="closeDrawer()">✕</button></div></div>
   <div class="aq">
     <span class="qchip" onclick="dQuick('오늘 주요 경제 뉴스 요약해줘')">📰 오늘 요약</span>
     <span class="qchip" onclick="dQuick('이 단어 쉽게 설명: ')">📖 단어 뜻</span>
     <span class="qchip" onclick="dQuick('관련 최신 뉴스 더 찾아줘')">🔎 뉴스 더</span>
   </div>
   <div class="ctx" id="ctx"><span id="ctxText"></span><span class="x2" onclick="clearCtx()">✕</span></div>
-  <div class="msgs" id="dmsgs"><div class="msg sys">궁금한 걸 입력하세요. 뉴스 줄의 🤖를 누르면 그 기사 기준으로 물어봐요.</div></div>
+  <div class="msgs" id="dmsgs"><div class="msg sys">궁금한 걸 입력하세요. 뉴스 줄의 🤖를 누르면 그 기사 기준으로 물어봐요.<br>처음이면 우측 상단 ⚙️에서 <b>AI 키</b>를 한 번 넣어주세요.</div></div>
   <div class="ain"><input id="dInput" placeholder="예: 이 이슈 배경 설명" /><button onclick="dSend()">↑</button></div>
 </aside>
 
@@ -332,6 +332,19 @@
 <!-- 용어 저장 시트 -->
 <div class="sheet-bg" id="glossBg" onclick="if(event.target===this)closeSheet('glossBg')">
   <div class="sheet"><h3>📖 용어집에 저장</h3><p class="psub">어려운 단어와 뜻을 저장해두면 용어집 탭에 쌓여요.</p><label>용어</label><input id="gTerm" placeholder="예: HBM4" /><label>설명</label><textarea id="gDef" placeholder="쉬운 설명 (AI 답변을 붙여넣어도 돼요)"></textarea><button class="go" onclick="saveGloss()">저장</button><button class="close" onclick="closeSheet('glossBg')">취소</button></div>
+</div>
+
+<!-- AI 키 설정 시트 -->
+<div class="sheet-bg" id="keyBg" onclick="if(event.target===this)closeSheet('keyBg')">
+  <div class="sheet"><h3>🤖 AI 키 설정</h3><p class="psub">내 Claude API 키를 넣으면 사이트 안 AI가 바로 작동해요. 키는 <b>이 브라우저에만</b> 저장되고 GitHub·외부로 안 나가요. (개인용 전용)</p>
+  <label>Claude API 키 (sk-ant-...)</label>
+  <input id="keyInput" type="password" placeholder="sk-ant-..." autocomplete="off" />
+  <div style="display:flex;gap:8px;margin-top:6px">
+    <button class="go" style="flex:1" onclick="saveKey()">저장하고 사용</button>
+    <button class="close" style="flex:0 0 auto;margin-top:0;padding:13px 16px" onclick="clearKey()">키 삭제</button>
+  </div>
+  <p class="psub" style="margin-top:12px;font-size:11px">키 발급: console.anthropic.com → Settings → API Keys. 사용량만큼 소액 과금(개인 리서치는 월 몇백~몇천원).</p>
+  <button class="close" onclick="closeSheet('keyBg')">닫기</button></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -502,11 +515,18 @@ function loadData(manual){
 }
 
 var BASE_SYS="당신은 달님의 개인 뉴스 리서치 도우미입니다. 한국어로, 투자·경제·정치 맥락 위주로 핵심만 간결하게 답하세요. 최신 사실이 필요하면 web_search로 뉴스를 찾아 요약하고, 필요하면 출처를 짧게 덧붙이세요.";
+var AI_KEY = lsGet("nr_aikey","");
+function openKey(){ document.getElementById("keyInput").value=AI_KEY||""; document.getElementById("keyBg").classList.add("on"); setTimeout(function(){document.getElementById("keyInput").focus();},120); }
+function saveKey(){ AI_KEY=document.getElementById("keyInput").value.trim(); lsSet("nr_aikey",AI_KEY); closeSheet("keyBg"); toast(AI_KEY?"AI 키 저장됨 — 이제 질문해보세요":"키 비움"); }
+function clearKey(){ AI_KEY=""; lsSet("nr_aikey",""); document.getElementById("keyInput").value=""; toast("키 삭제됨"); }
 function callClaude(history, systemText, cb){
+  if(!AI_KEY){ cb(null,"AI 키가 없어요. 우측 하단 🤖 탭 옆 ⚙️(또는 AI 설정)에서 키를 넣어주세요."); return; }
   try{
-    fetch("https://api.anthropic.com/v1/messages",{ method:"POST", headers:{"Content-Type":"application/json"},
+    fetch("https://api.anthropic.com/v1/messages",{ method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":AI_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
       body:JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1000, system:systemText||BASE_SYS, tools:[{type:"web_search_20250305",name:"web_search"}], messages:history })
     }).then(function(r){return r.json();}).then(function(data){
+      if(data&&data.error){ cb(null,(data.error.message||"API 오류")); return; }
       if(!data||!data.content){ cb(null,"응답 형식 오류"); return; }
       var text=data.content.filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join("\n").trim();
       cb(text||"(빈 응답)",null);
