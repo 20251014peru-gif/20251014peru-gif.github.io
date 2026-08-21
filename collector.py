@@ -252,7 +252,13 @@ def enrich_prompt(item, keywords):
         "관심 키워드에 정확히 걸리거나 시장에 큰 영향이면 red.\n"
         "4) reason: 그 중요도로 판단한 이유 한 줄.\n"
         "5) matched_kw: 이 기사와 가장 맞는 관심 키워드 하나(없으면 가장 근접한 것).\n"
-        "6) glossary: 기사에 나온 어려운 용어를 최대 3개. 각 {term, def(1줄 쉬운 설명)}. 없으면 빈 배열.\n"
+        "6) glossary: 기사에 나온 '전문 용어'만 최대 3개 (없으면 빈 배열). 각 {term, def(1줄 쉬운 설명)}.\n"
+   "   [포함] 반도체·IT·에너지·2차전지 등 산업 기술용어, 금융·경제·투자 전문용어, 제품/규격/기관 약어"
+   " (예: HBM, 파운드리, CXL, 온디바이스AH, 폼팩터, EUV, 전고체, ESS, 스왑, 베이시스, 컨센서스, 듀레이션, CAPEX, MLCC).\n"
+   "   [제외] 일반 명사·시사 단어·행위/상태어는 절대 넣지 마 "
+   "(단독으로 쓰인 일반어 예: 단독, 동맹, 세수, 압박, 회동, 급등, 기대, 실적, 목표 등은 제외).\n"
+   "   단, 여러 단어로 된 산업·정책 고유표현은 포함 (예: 반도체 클러스터, 전략 개발 계약, 미래대응기금, 소부장, 온디바이스 AI).\n"
+   "   판단 기준: '그 분야를 모르면 사전을 찾아야 하는 용어'만. 일반 뉴스 단어면 넣지 마.\n"
         '반드시 이 형태의 JSON만:\n'
         '{"title_ko":"","summary":"","importance":"gray","reason":"","matched_kw":"","glossary":[{"term":"","def":""}]}'
     )
@@ -293,6 +299,30 @@ def claude_enrich(item, keywords):
 
 
 # ──────────────────────────────────────────────────────────────
+
+# 용어집 품질 필터: 일반어/시사어는 버리고 전문용어만 통과
+GLOSS_BLOCK = set("""
+단독 동맹 세수 압박 회동 급등 급락 기대 협력 논의 추진 전략 개발 계약 실적 목표 확대 축소
+반등 하락 상승 강세 약세 전망 성장 투자 지원 정책 규제 발표 예정 계획 검토 우려 호재 악재
+현안 이슈 관련 최대 최고 최저 신설 조성 유치 수혜 부담 완화 강화 도입 시행 결정 방침 입장
+""".split())
+
+def is_specialized(term: str) -> bool:
+    t = (term or "").strip()
+    if not t:
+        return False
+    if t in GLOSS_BLOCK:
+        return False
+    # 한 글자/두 글자 한글 일반어는 대개 전문용어 아님 (약어 영문은 허용)
+    if re.fullmatch(r"[가-힣]{1,2}", t):
+        return False
+    # 순수 숫자/조사 섞인 잡토큰 제외
+    if re.fullmatch(r"[0-9%\s]+", t):
+        return False
+    # 통과: 영문/숫자 포함 약어(HBM, EUV, CXL), 또는 3글자 이상 한글 전문어
+    return True
+
+
 # 용어집 누적 병합
 # ──────────────────────────────────────────────────────────────
 def load_glossary():
@@ -344,7 +374,7 @@ def main():
 
         for g in info.get("glossary", []):
             term = (g.get("term") or "").strip()
-            if term and term not in glossary:
+            if term and is_specialized(term) and term not in glossary:
                 glossary[term] = {"def": g.get("def", ""), "first_seen": now.strftime("%Y-%m-%d")}
 
         out_news.append({
