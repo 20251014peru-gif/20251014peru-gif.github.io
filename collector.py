@@ -385,14 +385,15 @@ def load_glossary():
     except Exception:
         return {}
 
-def ntfy_push(title, message, url="", tags="", priority="default"):
-    """ntfy로 폰 푸시. NTFY_TOPIC 없으면 조용히 건너뜀."""
+def ntfy_push(title, message, url="", tags="", priority="default", actions=""):
+    """ntfy로 폰 푸시. NTFY_TOPIC 없으면 조용히 건너뜀. actions=알림 버튼(선택)."""
     if not NTFY_TOPIC:
         return False
     try:
         h = {"Title": title.encode("utf-8"), "Priority": priority}
         if tags: h["Tags"] = tags
-        if url:  h["Click"] = url
+        if url:  h["Click"] = url            # 알림 본문 탭 = 이 URL
+        if actions: h["Actions"] = actions   # 추가 버튼(예: 뉴스레이더에서 보기)
         r = requests.post(f"{NTFY_SERVER}/{NTFY_TOPIC}",
                           data=message.encode("utf-8"), headers=h, timeout=10)
         return r.status_code < 300
@@ -602,9 +603,16 @@ def main():
                         if n.get("breaking") or _pat.search((n.get("orig_title","")+n.get("title","")))]
         for n in breaking_new[:5]:
             body = n.get("summary") or n.get("title","")
+            art_url = n.get("url","")
+            # 알림 버튼: [원문 기사] [뉴스레이더]
+            acts = []
+            if art_url:
+                acts.append("view, 원문 기사, %s" % art_url)
+            acts.append("view, 뉴스레이더, %s" % SITE_URL)
             ntfy_push("🚨 속보 · " + (n.get("kw") or "뉴스레이더"),
                       n.get("title","") + "\n" + body,
-                      url=n.get("url",""), tags="rotating_light", priority="high")
+                      url=art_url or SITE_URL, tags="rotating_light", priority="high",
+                      actions="; ".join(acts))
         # (2) 수집 완료 알림: 새 뉴스 있을 때만, 매 회차 1건 (확실히 도착)
         hhmm = now.strftime("%H:%M")
         titles = [("🔴 " if n.get("sig")=="red" else "· ") + n.get("title","") for n in new_added[:6]]
