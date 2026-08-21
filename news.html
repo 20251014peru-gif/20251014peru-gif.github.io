@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건</div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3)">v1.0</span></div>
   </div>
 </header>
 <main>
@@ -260,14 +260,13 @@
   <div id="emptyBox"></div>
 </main>
 
-<button class="fab ai" onclick="openDrawer()" aria-label="AI 리서치">🤖</button>
-
 <nav class="tabbar">
   <button class="on" data-view="all" onclick="setView('all')"><span class="ic">🗂️</span>전체</button>
   <button data-view="keyword" onclick="setView('keyword')"><span class="ic">⭐</span>관심</button>
   <button data-view="breaking" onclick="setView('breaking')"><span class="ic">⚡</span>속보<span class="tb">3</span></button>
   <button data-view="scrap" onclick="setView('scrap')"><span class="ic">🔖</span>스크랩</button>
   <button data-view="gloss" onclick="setView('gloss')"><span class="ic">📖</span>용어집</button>
+  <button id="aiTabBtn" onclick="openDrawer()"><span class="ic">🤖</span>AI</button>
 </nav>
 
 <!-- AI 드로어 -->
