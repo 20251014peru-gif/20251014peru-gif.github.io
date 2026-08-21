@@ -209,7 +209,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.0</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.1</span></div>
   </div>
 </header>
 <main>
@@ -221,6 +221,7 @@
 
   <!-- 관심 키워드 관리 (관심 탭에서만) -->
   <div class="kwmgr" id="kwmgr" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button onclick="resetLists()" style="padding:6px 12px;border:1px solid var(--line);border-radius:7px;background:var(--card);cursor:pointer;font-size:11.5px;color:var(--notable)">↺ 추천 구성으로 초기화</button></div>
     <div class="cap"><span>📰 이슈·테마 관리</span><span class="mini">칩 = 클릭 수정 · ✕ 삭제</span></div>
     <div class="kwlist" id="kwlist"></div>
     <div class="kwadd"><input id="kwAdd" placeholder="키워드 추가 (예: 반도체, 금리)" /><button onclick="addKeyword()">추가</button></div>
@@ -506,6 +507,17 @@ function renderTrend(){ var _kws=keywords.filter(function(k){ return NEWS.filter
   document.getElementById("trendRow").innerHTML = _kws.map(function(k){ var t=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; var cnt=NEWS.filter(function(x){return x.kw===k;}).length; t={n:cnt,d:t.d,bars:t.bars}; return '<div class="tcard '+(filterKw===k?'on':'')+'" onclick="pickKw(\''+k+'\')"><div class="k"><span>'+k+'</span><span class="v">'+t.n+'건</span></div><div class="v">'+trendMark(t.d)+'</div>'+barsHTML(t)+'</div>'; }).join(""); }
 function renderSurge(){ document.getElementById("surge").innerHTML='<span class="lab">🔥 급상승</span>'+surging.map(function(s){return '<span class="schip" onclick="addSurge(\''+s.k+'\')">'+s.k+'<span class="pct">'+s.pct+'</span><span class="plus">＋</span></span>';}).join(""); }
 function renderFilters(){ var base=[{k:null,label:"전체"}].concat(keywords.map(function(k){return {k:k,label:k};})); document.getElementById("filters").innerHTML=base.map(function(f){ var cnt=f.k?NEWS.filter(function(n){return n.kw===f.k;}).length:NEWS.length; return '<span class="fchip '+(filterKw===f.k?'on':'')+'" onclick="pickKw('+(f.k?"'"+f.k+"'":'null')+')">'+f.label+'<span class="n">'+cnt+'</span></span>';}).join(""); }
+
+
+function resetLists(){
+  if(!confirm("이슈·테마 / 내 종목 / 대중 관심을 추천 구성으로 되돌릴까요?\n(지금 목록은 사라져요)")) return;
+  keywords = ["금리","연준","환율","CPI","관세","한국은행","HBM","AI반도체","온디바이스AI","2차전지","전고체","전력설비","코스피","코스닥","나스닥","외국인수급"];
+  stocks = ["삼성전자","SK하이닉스","엔비디아","테슬라","에코프로","LG에너지솔루션","현대차","애플","팔란티어","카카오"];
+  popTerms = ["HBM","반도체","SK하이닉스","삼성전자","엔비디아","AI","전력설비","원전","조선","방산","로봇","2차전지","전기차","코스피","코스닥","환율","금리","비트코인","테슬라","양자컴퓨터"];
+  lsSet("nr_keywords",keywords); lsSet("nr_stocks",stocks); lsSet("nr_pop",popTerms);
+  filterKw=null; renderAll(); renderKwMgr();
+  toast("추천 구성으로 초기화됐어요");
+}
 
 function renderPopMgr(){ var el=document.getElementById("popList"); if(!el)return; el.innerHTML = popTerms.map(function(k){ return '<span class="kwitem"><span class="nm" onclick="editPop(\''+k+'\')">'+k+'</span><button class="del" onclick="delPop(\''+k+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">키워드를 추가하세요.</span>'; }
 function addPop(){ var v=document.getElementById("popAdd").value.trim(); if(!v)return; v.split(/[,\n]+/).map(function(x){return x.trim();}).filter(Boolean).forEach(function(k){ if(popTerms.indexOf(k)<0)popTerms.push(k); }); document.getElementById("popAdd").value=""; lsSet("nr_pop",popTerms); renderPopMgr(); toast("대중 관심 추가됨 (다음 수집부터 추적)"); }
