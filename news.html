@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v2.8</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v2.9</span></div>
   </div>
 </header>
 <main>
@@ -718,9 +718,10 @@ function loadData(manual){
     else { NEWS=SAMPLE.slice(); buildDates(); dateFilter="all"; setStatus("🟠 news.json 없음 — 예시 표시"); }
     if(gj){ var hid=lsGet("nr_gloss_hide",[]); collectedGloss=Object.keys(gj).filter(function(k){return hid.indexOf(k)<0;}).map(function(k){return {term:k,def:(gj[k].def||gj[k]),at:(gj[k].first_seen||"")};}); }
     if(nj&&nj.length){
-      var when=(nj[0]&&nj[0].collected_at)?nj[0].collected_at:"";
+      var when="";
+      try{ var ts=nj.map(function(x){return x&&x.collected_at?x.collected_at:"";}).filter(Boolean).sort(); when=ts.length?ts[ts.length-1]:""; }catch(e){}
       var nowk=new Date(Date.now()+9*3600000).toISOString().slice(11,16); // 한국시각 HH:MM
-      setStatus("🟢 최신 뉴스 "+when+" · "+nowk+" 불러옴");
+      setStatus("🟢 최신 수집 "+(when||"-")+" · "+nowk+" 불러옴");
     }
     renderDateSel(); renderAll();
     if(btn){btn.disabled=false;btn.textContent="🔄 새로고침";}
