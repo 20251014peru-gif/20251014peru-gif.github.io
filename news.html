@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.1</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.2</span></div>
   </div>
 </header>
 <main>
@@ -516,7 +516,7 @@ function renderRows(){
     var chkCell = selMode? '<td class="cell-center"><input type="checkbox" class="chk" '+(selected[n.id]?'checked':'')+' onclick="toggleSel('+n.id+')"></td>' : '';
     return '<tr class="'+(isRead(n.id)?'read':'')+'">'+chkCell+
       '<td class="cell-center" onclick="toggleRead('+n.id+')"><span class="rdot"></span></td>'+
-      '<td class="c-date-td" onclick="toggleRead('+n.id+')" title="'+(n.date||'')+'">'+fmtDate(n.date)+'</td>'+
+      '<td class="c-date-td" onclick="toggleRead('+n.id+')" title="'+(n.date||'')+'">'+fmtDate(n.date, n)+'</td>'+
       '<td>'+srcBadge(n)+'</td>'+
       '<td><span class="kwtag"># '+n.kw+'</span></td>'+
       '<td><span class="title" onclick="openReader('+n.id+')">'+(n.trans?'<span class="trans">번역</span>':'')+n.title+'</span>'+(n.dupes>1?'<span class="dupe">+'+(n.dupes-1)+'</span>':'')+'</td>'+
@@ -657,7 +657,25 @@ function normalizeNews(arr){
 /* ── 날짜 유틸 ── */
 function dayKey(s){ var d=new Date(s); if(isNaN(d)) return (s||"").slice(0,10); return new Date(d.getTime()+9*3600000).toISOString().slice(0,10); }
 function kstToday(){ return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
-function fmtDate(s){ if(!s) return ""; var dk=dayKey(s); if(!/^\d{4}-/.test(dk)) return dk; var today=kstToday(); var y=new Date(Date.now()+9*3600000-86400000).toISOString().slice(0,10); if(dk===today)return "오늘"; if(dk===y)return "어제"; var p=dk.split("-"); return (+p[1])+"/"+(+p[2]); }
+function _hhmm(dt){ if(isNaN(dt))return ""; var k=new Date(dt+0); return String(k.getHours()).padStart(2,"0")+":"+String(k.getMinutes()).padStart(2,"0"); }
+function fmtDate(s, n){
+  if(!s && !(n&&n.collected_at)) return "";
+  // 날짜 라벨(오늘/어제/M/D)
+  var dk=dayKey(s||(n&&n.collected_at)||"");
+  var lab;
+  if(!/^\d{4}-/.test(dk)) lab=dk;
+  else { var today=kstToday(); var y=new Date(Date.now()+9*3600000-86400000).toISOString().slice(0,10);
+    if(dk===today)lab="오늘"; else if(dk===y)lab="어제"; else { var p=dk.split("-"); lab=(+p[1])+"/"+(+p[2]); } }
+  // 시간: 발행시각(date)에 시간이 있으면 사용, 없으면 수집시각(collected_at)
+  var pubT=Date.parse(s||"");
+  var hh="";
+  if(!isNaN(pubT) && /\d{1,2}:\d{2}/.test(s||"")){ // date 문자열에 시:분이 실제로 있을 때만
+    var kd=new Date(pubT+9*3600000); hh=String(kd.getUTCHours()).padStart(2,"0")+":"+String(kd.getUTCMinutes()).padStart(2,"0");
+  } else if(n && n.collected_at){
+    var m=(n.collected_at.match(/(\d{1,2}):(\d{2})/)); if(m) hh=m[1].padStart(2,"0")+":"+m[2];
+  }
+  return hh ? (lab+" "+hh) : lab;
+}
 function buildDates(){ var set={}; NEWS.forEach(function(n){ set[dayKey(n.date)]=true; }); dates=Object.keys(set).sort().reverse(); }
 function renderDateSel(){ var sel=document.getElementById("dateSel"); if(!sel)return; var opts='<option value="all">전체</option>'; dates.forEach(function(dk){ var d=new Date(dk); var lab=isNaN(d)?dk:(fmtDate(dk)+" ("+dk.slice(5)+")"); opts+='<option value="'+dk+'">'+lab+'</option>'; }); sel.innerHTML=opts; sel.value=dateFilter; }
 function onDate(v){ dateFilter=v; renderRows(); }
