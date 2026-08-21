@@ -445,7 +445,7 @@ def claude_enrich_batch(items, keywords, size=8):
                 results[s+j]=parsed[j]
             else:
                 results[s+j]=claude_enrich(it,keywords)  # 폴백
-        print(f"  [AI] {min(s+size,len(items))}/{len(items)} 처리")
+        _dn=min(s+size,len(items)); print(f"[2/2] AI 처리 {_dn}/{len(items)} ({round(_dn/len(items)*100)}%) · 남은 {len(items)-_dn}건", flush=True)
     return results
 
 
@@ -476,19 +476,30 @@ def main():
     print(f"고유 뉴스 {len(items)}건 → 본문 추출 + AI 처리")
 
     glossary = load_glossary()
-    now = dt.datetime.now()
+    now = dt.datetime.utcnow() + dt.timedelta(hours=9)  # KST 고정(Actions는 UTC)
     out_news = []
 
     # 본문 추출: 병렬(타임아웃 8초) → 느린 URL이 전체를 막지 않음
     from concurrent.futures import ThreadPoolExecutor
-    print(f"본문 추출(병렬) {len(items)}건…")
+    total = len(items)
+    print(f"[1/2] 본문 추출(병렬) 0/{total} …", flush=True)
+    bodies = [""]*total
+    done = 0
     with ThreadPoolExecutor(max_workers=8) as ex:
-        bodies = list(ex.map(lambda it: extract_body(it["url"]), items))
+        futs = {ex.submit(extract_body, it["url"]): idx for idx, it in enumerate(items)}
+        from concurrent.futures import as_completed
+        for fut in as_completed(futs):
+            idx = futs[fut]
+            try: bodies[idx] = fut.result()
+            except Exception: bodies[idx] = ""
+            done += 1
+            if done % 10 == 0 or done == total:
+                print(f"[1/2] 본문 추출 {done}/{total} ({round(done/total*100)}%)", flush=True)
     for it, b in zip(items, bodies):
         it["body"] = b
 
     # AI: 8건씩 묶음 처리 → 호출 수 1/8, 훨씬 빠름
-    print(f"AI 처리(묶음) {len(items)}건…")
+    print(f"[2/2] AI 처리(묶음) 시작 · 총 {len(items)}건", flush=True)
     infos = claude_enrich_batch(items, keywords, size=8)
 
     for i, it in enumerate(items, 1):
@@ -571,20 +582,22 @@ def main():
 
     # ── 폰 푸시(ntfy) ──
     if NTFY_TOPIC and new_added:
-        # (1) 🔴 중요/속보: 개별 푸시 (한 회차 최대 5건, 도배 방지)
         reds_new = [n for n in new_added if n.get("sig") == "red"]
-        for n in reds_new[:5]:
+        # (1) 진짜 속보만 개별 푸시: 제목에 속보/긴급 표시가 있는 red만 (도배 방지)
+        BREAKING = ("속보", "긴급", "[속보]", "[단독]")
+        breaking_new = [n for n in reds_new
+                        if any(b in (n.get("orig_title","")+n.get("title","")) for b in BREAKING)]
+        for n in breaking_new[:5]:
             body = n.get("summary") or n.get("title","")
-            ntfy_push("🔴 속보 · " + (n.get("kw") or "뉴스레이더"),
+            ntfy_push("🚨 속보 · " + (n.get("kw") or "뉴스레이더"),
                       n.get("title","") + "\n" + body,
                       url=n.get("url",""), tags="rotating_light", priority="high")
-        # (2) 이번 회차 새 뉴스 요약 1건
+        # (2) 회차 요약 1건(속보 아니어도 새 뉴스 있으면 한 번) — 조용한 알림
         titles = [("🔴 " if n.get("sig")=="red" else "· ") + n.get("title","") for n in new_added[:6]]
-        summary = "\n".join(titles)
         more = ("\n…외 %d건" % (len(new_added)-6)) if len(new_added) > 6 else ""
         ntfy_push(f"📰 새 뉴스 {len(new_added)}건 (중요 {len(reds_new)})",
-                  summary + more, tags="newspaper", priority="default")
-        print(f"→ ntfy 푸시 전송: 속보 {min(len(reds_new),5)}건 + 요약 1건 (채널 {NTFY_TOPIC})")
+                  "\n".join(titles) + more, tags="newspaper", priority="low")
+        print(f"→ ntfy 푸시: 속보 {min(len(breaking_new),5)}건 + 요약 1건 (채널 {NTFY_TOPIC})")
     elif not NTFY_TOPIC:
         print("  · ntfy 푸시 건너뜀 (NTFY_TOPIC 미설정)")
 
