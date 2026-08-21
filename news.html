@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3)">v1.0</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.3 (2026-08-21)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드)&#10;· 용어집 관리(검색·정렬·별표·중복합치기)&#10;· AI 키 in-app 설정&#10;· AI로 뉴스검색(웹 즉시)&#10;· 외신 오분류 보정">v1.3</span></div>
   </div>
 </header>
 <main>
@@ -614,32 +614,60 @@ function aiRankLive(items,q){
     renderRows();
   });
 }
+function proxify(url){ return [
+  "https://api.allorigins.win/raw?url="+encodeURIComponent(url),
+  "https://corsproxy.io/?url="+encodeURIComponent(url),
+  "https://api.codetabs.com/v1/proxy/?quest="+url
+]; }
+function fetchVia(url){ // 프록시들을 순서대로 시도해 첫 성공 텍스트 반환
+  var ps=proxify(url);
+  return new Promise(function(res,rej){
+    (function go(i){
+      if(i>=ps.length){ rej(); return; }
+      fetch(ps[i]).then(function(r){ if(!r.ok)throw 0; return r.text(); }).then(res).catch(function(){ go(i+1); });
+    })(0);
+  });
+}
+function naverToItems(jsonText,q){
+  try{
+    var d=JSON.parse(jsonText); var arr=(d.items||[]);
+    return arr.slice(0,15).map(function(it,i){
+      function strip(s){ return (s||"").replace(/<[^>]+>/g,""); }
+      return { id:"livn"+i, date:it.pubDate||"", src:"naver", origin:"", kw:q, trans:false,
+        title:strip(it.title), orig_title:strip(it.title),
+        summary:strip(it.description), body:"", sig:"gray", reason:"", dupes:1,
+        url:it.originallink||it.link||"#", breaking:false };
+    });
+  }catch(e){ return []; }
+}
 function liveSearch(){
   var q=document.getElementById("q").value.trim();
   if(!q){ toast("검색어를 입력하세요"); return; }
   setStatus("🟡 웹에서 '"+q+"' 뉴스 가져오는 중…");
-  var rss="https://news.google.com/rss/search?q="+encodeURIComponent(q)+"%20when:7d&hl=ko&gl=KR&ceid=KR:ko";
-  var proxies=[
-    "https://api.allorigins.win/raw?url="+encodeURIComponent(rss),
-    "https://corsproxy.io/?url="+encodeURIComponent(rss),
-    "https://api.codetabs.com/v1/proxy/?quest="+rss
-  ];
-  function tryAt(i){
-    if(i>=proxies.length){ setStatus("🟠 가져오기 실패"); toast("네트워크 문제 — 잠시 후 다시"); return; }
-    fetch(proxies[i]).then(function(r){ if(!r.ok)throw 0; return r.text(); }).then(function(xml){
-      var items=rssToItems(xml,q);
-      if(!items.length) throw 0;
-      showLive(items,q);         // 먼저 제목·링크 즉시 표시
-      aiRankLive(items,q);       // 그다음 AI가 요약·중요도 채움(있으면)
-    }).catch(function(){ tryAt(i+1); });
+  var gUrl="https://news.google.com/rss/search?q="+encodeURIComponent(q)+"%20when:7d&hl=ko&gl=KR&ceid=KR:ko";
+  var jobs=[ fetchVia(gUrl).then(function(x){return rssToItems(x,q);}).catch(function(){return [];}) ];
+  // 네이버 키가 사이트에 저장돼 있으면 네이버도 (선택)
+  if(NAVER_ID && NAVER_SECRET){
+    var nUrl="https://naverapihub.apigw.ntruss.com/search/v1/news?query="+encodeURIComponent(q)+"&display=15&sort=date";
+    // 네이버는 헤더 인증이 필요 → 프록시로는 헤더 못 실어 대개 실패. 그래도 시도.
+    jobs.push(fetchVia(nUrl).then(function(x){return naverToItems(x,q);}).catch(function(){return [];}));
   }
-  tryAt(0);
+  Promise.all(jobs).then(function(res){
+    var all=[]; res.forEach(function(a){ all=all.concat(a); });
+    // url 기준 중복 제거
+    var seen={}, merged=[];
+    all.forEach(function(n){ var k=n.url||n.title; if(!seen[k]){ seen[k]=1; n.id="live"+merged.length; merged.push(n); } });
+    if(!merged.length){ setStatus("🟠 가져오기 실패"); toast("네트워크 문제 — 잠시 후 다시"); return; }
+    showLive(merged,q);
+    aiRankLive(merged,q);
+  });
 }
 
 function exitLive(){ liveMode=false; liveItems=[]; loadData(false); }
 
 var BASE_SYS="당신은 달님의 개인 뉴스 리서치 도우미입니다. 한국어로, 투자·경제·정치 맥락 위주로 핵심만 간결하게 답하세요. 최신 사실이 필요하면 web_search로 뉴스를 찾아 요약하고, 필요하면 출처를 짧게 덧붙이세요.";
 var AI_KEY = lsGet("nr_aikey","");
+var NAVER_ID = lsGet("nr_naver_id",""); var NAVER_SECRET = lsGet("nr_naver_secret","");
 function openKey(){ document.getElementById("keyInput").value=AI_KEY||""; document.getElementById("keyBg").classList.add("on"); setTimeout(function(){document.getElementById("keyInput").focus();},120); }
 function saveKey(){ AI_KEY=document.getElementById("keyInput").value.trim(); lsSet("nr_aikey",AI_KEY); closeSheet("keyBg"); toast(AI_KEY?"AI 키 저장됨 — 이제 질문해보세요":"키 비움"); }
 function clearKey(){ AI_KEY=""; lsSet("nr_aikey",""); document.getElementById("keyInput").value=""; toast("키 삭제됨"); }
@@ -674,7 +702,10 @@ function dSend(){ var inp=document.getElementById("dInput"); var t=inp.value.tri
 var curArticle=null, readerHistory=[];
 function articleSys(n){ return BASE_SYS+"\n\n[읽는 기사] 이 내용을 근거로 답하세요.\n제목: "+n.title+"\n출처: "+(n.origin||n.src)+" ("+n.date+")\n요약: "+n.summary+"\n본문:\n"+(n.body||n.summary); }
 function openReader(id){
-  var n=NEWS.find(function(x){return x.id===id;}); if(!n){var s=scrapOf(id); if(s)n=s.n;} if(!n)return;
+  var n=NEWS.find(function(x){return x.id===id;}); if(!n){var s=scrapOf(id); if(s)n=s.n;}
+  if(!n && liveMode){ n=liveItems.find(function(x){return x.id===id;}); }
+  if(!n)return;
+  if(liveMode && (!n.body || n.body.length<50)){ if(n.url && n.url!=="#"){ window.open(n.url,"_blank","noopener"); } return; }
   curArticle=n; if(!isRead(id)){readIds.push(id);lsSet("nr_read",readIds);} renderRows();
   var ro=document.getElementById("rOrig"); if(ro){ ro.href=n.url||"#"; ro.style.display=n.url?"":"none"; }
   var srcName=n.src==="naver"?"네이버":n.src==="google"?"구글":(n.origin||"외신");
