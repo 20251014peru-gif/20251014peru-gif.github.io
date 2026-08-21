@@ -209,7 +209,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.4</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v3.5</span></div>
   </div>
 </header>
 <main>
@@ -503,6 +503,23 @@ function renderFilters(){ var base=[{k:null,label:"전체"}].concat(keywords.map
 function renderStockMgr(){ var sl=document.getElementById("stockList"); if(!sl)return; sl.innerHTML = stocks.map(function(s){ return '<span class="kwitem"><span class="nm" onclick="editStock(\''+s+'\')">'+s+'</span><button class="del" onclick="delStock(\''+s+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">종목을 추가하세요.</span>'; }
 function renderKwMgr(){ renderStockMgr(); document.getElementById("kwlist").innerHTML = keywords.map(function(k){ return '<span class="kwitem"><span class="nm" onclick="editKw(\''+k+'\')">'+k+'</span><button class="del" onclick="delKeyword(\''+k+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">아직 키워드가 없어요. 아래에서 추가하세요.</span>'; }
 
+function updateNextRun(){
+  try{
+    // 자동수집: 매시 5분(UTC) 시작 + 약 12분 소요 → 완료는 매시 약 17분(UTC)=매시 약 17분+9h
+    // 사용자에게는 '다음 수집 시작'을 KST로: 다음 정시의 5분(UTC)
+    var now=new Date();
+    // 현재 UTC 분
+    var utcMin=now.getUTCMinutes();
+    var next=new Date(now.getTime());
+    if(utcMin<5){ next.setUTCMinutes(5,0,0); }
+    else { next.setUTCHours(now.getUTCHours()+1,5,0,0); }
+    // KST 표시
+    var k=new Date(next.getTime()+9*3600000);
+    var hh=String(k.getUTCHours()).padStart(2,"0"), mm=String(k.getUTCMinutes()).padStart(2,"0");
+    var el=document.getElementById("nextRun");
+    if(el) el.textContent="● 다음 수집 "+hh+":"+mm;
+  }catch(e){}
+}
 function updateHeaderStat(){
   try{
     var today=kstToday();
@@ -612,7 +629,7 @@ function delGlossTerm(term){
   renderGloss();
 }
 
-function renderAll(){ renderBoard(); updateBreakingBadge(); updateHeaderStat(); renderSurge(); renderFilters(); renderKwMgr(); renderRows(); renderGloss(); }
+function renderAll(){ renderBoard(); updateBreakingBadge(); updateHeaderStat(); updateNextRun(); renderSurge(); renderFilters(); renderKwMgr(); renderRows(); renderGloss(); }
 
 /* ── 뷰 전환 ── */
 function setView(v){
@@ -895,7 +912,8 @@ function liveSearch(){
   });
 }
 
-function exitLive(){ liveMode=false; liveItems=[]; loadData(false); }
+function exitLive(){ liveMode=false; liveItems=[]; loadData(false);
+setInterval(updateNextRun, 60000); }
 
 var BASE_SYS="당신은 달님의 개인 뉴스 리서치 도우미입니다. 한국어로, 투자·경제·정치 맥락 위주로 핵심만 간결하게 답하세요. 최신 사실이 필요하면 web_search로 뉴스를 찾아 요약하고, 필요하면 출처를 짧게 덧붙이세요.";
 var AI_KEY = lsGet("nr_aikey","");
