@@ -209,7 +209,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.3</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.4</span></div>
   </div>
 </header>
 <main>
@@ -412,7 +412,7 @@ var scraps   = lsGet("nr_scrap", []);      /* [{n:{...}, notes:[{q,a}], at}] */
 var glossary = lsGet("nr_gloss", []);      /* [{term,def,at}] */
 
 var trends = { "반도체":{n:32,d:"up",bars:[4,6,5,9,12,18,24]}, "금리":{n:18,d:"up",bars:[6,7,5,8,9,12,14]}, "엔비디아":{n:9,d:"flat",bars:[8,7,9,8,9,8,9]}, "코스피":{n:14,d:"down",bars:[20,18,17,16,15,14,10]}, "재건축":{n:7,d:"down",bars:[15,13,12,10,9,8,6]} };
-var surging = [ {k:"HBM4",pct:"+180%"}, {k:"환율",pct:"+95%"}, {k:"전력설비",pct:"+70%"}, {k:"CPI",pct:"+64%"} ];
+var surging = [];
 var SAMPLE = [
   {id:1,date:"09:48",src:"naver",kw:"반도체",sig:"red",dupes:6,breaking:false,trans:false,title:"삼성전자, HBM4 양산 조기 진입…엔비디아 공급 임박",summary:"차기 GPU 공급 겨냥해 양산 앞당김. 하반기 실적 반등 핵심 변수.",body:"삼성전자가 차세대 고대역폭메모리 HBM4의 양산 시점을 앞당기는 방안을 검토 중이다. 엔비디아 차기 GPU 공급 일정에 맞추기 위한 조치로 풀이된다.\n\n삼성은 앞선 HBM3E 경쟁에서 주도권을 내줬다는 평가를 받아왔다. 이번 조기 진입이 성공하면 하반기 실적 반등과 메모리 경쟁 구도 재편이 가능하다는 관측이다."},
   {id:2,date:"09:12",src:"google",kw:"금리",sig:"red",dupes:4,breaking:false,trans:false,title:"한은, 기준금리 인하 시사…예상보다 빠른 속도",summary:"부동산·증시 자금 흐름에 직접 영향. 채권 금리 즉각 반응.",body:"한국은행이 다음 금통위에서 기준금리 인하 가능성을 시사했다. 시장 예상보다 이른 시점이어서 채권 금리가 즉각 하락했다.\n\n다만 환율이 높은 수준이라 인하 폭과 속도에는 제약이 따를 수 있다."},
@@ -518,7 +518,40 @@ function trendMark(d){ return d==="up"?'<span class="arrow up">↑늘어남</spa
 function barsHTML(t){ var mx=Math.max.apply(null,t.bars)||1; return '<div class="bars">'+t.bars.map(function(v,i){ var h=Math.max(3,Math.round(v/mx*22)); var hot=(i>=t.bars.length-2&&t.d==="up")?'hot':''; return '<i class="'+hot+'" style="height:'+h+'px"></i>'; }).join("")+'</div>'; }
 function renderTrend(){ var _kws=keywords.filter(function(k){ return NEWS.filter(function(x){return x.kw===k;}).length>0; }); if(!_kws.length)_kws=keywords;
   document.getElementById("trendRow").innerHTML = _kws.map(function(k){ var t=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; var cnt=NEWS.filter(function(x){return x.kw===k;}).length; t={n:cnt,d:t.d,bars:t.bars}; return '<div class="tcard '+(filterKw===k?'on':'')+'" onclick="pickKw(\''+k+'\')"><div class="k"><span>'+k+'</span><span class="v">'+t.n+'건</span></div><div class="v">'+trendMark(t.d)+'</div>'+barsHTML(t)+'</div>'; }).join(""); }
-function renderSurge(){ document.getElementById("surge").innerHTML='<span class="lab">🔥 급상승</span>'+surging.map(function(s){return '<span class="schip" onclick="addSurge(\''+s.k+'\')">'+s.k+'<span class="pct">'+s.pct+'</span><span class="plus">＋</span></span>';}).join(""); }
+
+function _countOn(term, dateKey){
+  var tl=term.toLowerCase();
+  return NEWS.filter(function(n){
+    if(dayKey(n.date)!==dateKey) return false;
+    var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.orig_title||"")+" "+(n.kw||"")).toLowerCase();
+    return hay.indexOf(tl)>=0;
+  }).length;
+}
+function computeSurge(){
+  var today=kstToday();
+  var y=new Date(Date.now()+9*3600000-86400000).toISOString().slice(0,10);
+  var terms={}; keywords.forEach(function(k){terms[k]=1;}); stocks.forEach(function(s){terms[s]=1;});
+  var arr=[];
+  Object.keys(terms).forEach(function(t){
+    var tc=_countOn(t,today), yc=_countOn(t,y);
+    if(tc<3) return;                       // 오늘 최소 3건 이상만(잡음 컷)
+    var pct;
+    if(yc===0){ pct = tc>=5 ? 999 : 0; }   // 어제 0 → 오늘 많으면 신규 급등
+    else { pct = Math.round((tc-yc)/yc*100); }
+    if(pct>=30){ arr.push({k:t, tc:tc, yc:yc, pct:pct}); }  // 30%+ 증가만
+  });
+  arr.sort(function(a,b){ return b.pct-a.pct || b.tc-a.tc; });
+  surging = arr.slice(0,6).map(function(x){
+    return { k:x.k, pct: x.pct>=999 ? "NEW" : "+"+x.pct+"%" };
+  });
+}
+
+function renderSurge(){
+  computeSurge();
+  var host=document.getElementById("surge");
+  if(!surging.length){ host.innerHTML='<span class="lab">🔥 급상승</span><span style="font-size:11.5px;color:var(--ink-3)">아직 급증 키워드 없음 (수집 쌓이면 표시)</span>'; return; }
+  host.innerHTML='<span class="lab">🔥 급상승</span>'+surging.map(function(s){return '<span class="schip" onclick="pickKw(\''+s.k+'\')" title="오늘 뉴스 급증">'+s.k+'<span class="pct">'+s.pct+'</span></span>';}).join("");
+}
 function renderFilters(){ var base=[{k:null,label:"전체"}].concat(keywords.map(function(k){return {k:k,label:k};})); document.getElementById("filters").innerHTML=base.map(function(f){ var cnt=f.k?NEWS.filter(function(n){return n.kw===f.k;}).length:NEWS.length; return '<span class="fchip '+(filterKw===f.k?'on':'')+'" onclick="pickKw('+(f.k?"'"+f.k+"'":'null')+')">'+f.label+'<span class="n">'+cnt+'</span></span>';}).join(""); }
 
 
