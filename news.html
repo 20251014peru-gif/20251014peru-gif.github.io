@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v2.3</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v2.6</span></div>
   </div>
 </header>
 <main>
@@ -664,19 +664,23 @@ function runCollect(){
   }).catch(function(){ setStatus("🟠 요청 실패"); toast("네트워크 오류"); stopPoll(); });
 }
 function startPoll(){
-  var runsUrl="https://api.github.com/repos/"+GH_REPO+"/actions/workflows/"+encodeURIComponent(GH_WF)+"/runs?per_page=1";
+  var runsUrl="https://api.github.com/repos/"+GH_REPO+"/actions/workflows/"+encodeURIComponent(GH_WF)+"/runs?event=workflow_dispatch&per_page=5";
   _pollTimer=setInterval(function(){
     var el=Date.now()-_pollStart;
+    if(el>10*60000){ stopPoll(); setStatus("⚪ 상태 확인 종료 — 🔄로 새로고침 하세요"); return; }
     fetch(runsUrl,{ headers:_ghHeaders() }).then(function(r){return r.json();}).then(function(d){
-      var run=(d.workflow_runs||[])[0];
-      if(!run){ setStatus("🟡 수집 중… "+_fmtElapsed(el)); return; }
+      var runs=(d.workflow_runs||[]);
+      // 내가 버튼 누른 시각 이후 생성된 dispatch 실행만 (10초 여유)
+      var mine=runs.filter(function(r){ return new Date(r.created_at).getTime() >= (_pollStart-10000); });
+      var run = mine.length ? mine[0] : null;
+      if(!run){ setStatus("🟡 수집 시작 대기 중… "+_fmtElapsed(el)); return; }
       var st=run.status, cc=run.conclusion;
       if(st==="completed"){
         stopPoll();
-        if(cc==="success"){ setStatus("✅ 수집 완료! 새 뉴스 불러오는 중…"); toast("수집 완료!"); setTimeout(function(){ loadData(true); }, 4000); }
+        if(cc==="success"){ setStatus("✅ 수집 완료! 새 뉴스 불러오는 중…"); toast("수집 완료!"); setTimeout(function(){ loadData(true); }, 3000); }
+        else if(cc==="cancelled"){ setStatus("⚪ 수집 취소됨"); }
         else { setStatus("🟠 수집 실패("+(cc||"?")+") — Actions 로그 확인"); toast("수집 실패: "+cc); }
       } else {
-        // queued / in_progress
         var phase = st==="queued" ? "대기 중" : "수집 중";
         setStatus("🟡 "+phase+"… "+_fmtElapsed(el)+" 경과 (보통 2~4분)");
       }
@@ -689,18 +693,22 @@ function setStatus(s){ var el=document.getElementById("loadStat"); if(el) el.tex
 function loadData(manual){
   var btn=document.getElementById("refreshBtn"); if(btn){btn.disabled=true;btn.textContent="⏳ 불러오는 중…";}
   setStatus("🟡 불러오는 중…");
-  var bust = manual? ("?t="+Date.now()) : "";
+  var bust = "?t="+Date.now();  // 항상 최신 강제(캐시 우회)
   Promise.all([
-    fetch("news.json"+bust).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-    fetch("glossary.json"+bust).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-    fetch("trends.json"+bust).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+    fetch("news.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+    fetch("glossary.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+    fetch("trends.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
   ]).then(function(res){
     var nj=res[0], gj=res[1], tj=res[2];
     if(tj&&tj.data){ trendsData=tj.data; }
     if(nj&&nj.length){ NEWS=normalizeNews(nj); buildDates(); dateFilter="all"; }
     else { NEWS=SAMPLE.slice(); buildDates(); dateFilter="all"; setStatus("🟠 news.json 없음 — 예시 표시"); }
     if(gj){ var hid=lsGet("nr_gloss_hide",[]); collectedGloss=Object.keys(gj).filter(function(k){return hid.indexOf(k)<0;}).map(function(k){return {term:k,def:(gj[k].def||gj[k]),at:(gj[k].first_seen||"")};}); }
-    if(nj&&nj.length){ var when=(nj[0]&&nj[0].collected_at)?nj[0].collected_at:""; setStatus("🟢 갱신됨 "+when); }
+    if(nj&&nj.length){
+      var when=(nj[0]&&nj[0].collected_at)?nj[0].collected_at:"";
+      var nowk=new Date(Date.now()+9*3600000).toISOString().slice(11,16); // 한국시각 HH:MM
+      setStatus("🟢 최신 뉴스 "+when+" · "+nowk+" 불러옴");
+    }
     renderDateSel(); renderAll();
     if(btn){btn.disabled=false;btn.textContent="🔄 새로고침";}
   });
