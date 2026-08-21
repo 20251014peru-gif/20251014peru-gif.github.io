@@ -473,8 +473,8 @@ def main():
 
     print(f"수집 원본 {len(raw)}건 → 중복 제거 중")
     items = dedupe(raw)
-    if len(items) > 120:
-        items = items[:120]  # 폭주 방지 상한
+    if len(items) > 250:
+        items = items[:250]  # 폭주 방지 상한(속도는 병렬+묶음으로 커버)
     print(f"고유 뉴스 {len(items)}건 → 본문 추출 + AI 처리")
 
     glossary = load_glossary()
