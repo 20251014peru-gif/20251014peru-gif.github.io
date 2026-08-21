@@ -209,7 +209,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.6</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.7</span></div>
   </div>
 </header>
 <main>
@@ -962,14 +962,24 @@ function loadData(manual){
   var btn=document.getElementById("refreshBtn"); if(btn){btn.disabled=true;btn.textContent="⏳ 불러오는 중…";}
   setStatus("🟡 불러오는 중…");
   var bust = "?t="+Date.now();  // 항상 최신 강제(캐시 우회)
-  Promise.all([
+  // 최근 4일치 archive 경로 (오늘 포함) — 어제·그제 뉴스도 함께 보기
+  var days=[]; for(var i=0;i<4;i++){ var d=new Date(Date.now()+9*3600000-i*86400000); days.push(d.toISOString().slice(0,10)); }
+  var fetches=[
     fetch("news.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
     fetch("glossary.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
     fetch("trends.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
-  ]).then(function(res){
+  ];
+  // archive 파일들도 병렬로(없으면 무시)
+  days.forEach(function(dk){ fetches.push( fetch("archive/"+dk+".json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}) ); });
+  Promise.all(fetches).then(function(res){
     var nj=res[0], gj=res[1], tj=res[2];
+    var archs=res.slice(3); // archive 배열들
     if(tj&&tj.data){ trendsData=tj.data; trendsMeta={order:tj.order||[], updated:tj.updated||""}; }
-    if(nj&&nj.length){ NEWS=normalizeNews(nj); NEWS.forEach(function(x,ix){x._idx=ix;}); buildDates(); dateFilter="all"; }
+    // news.json + archive 병합 (url 중복 제거)
+    var merged=[]; var seen={};
+    function addAll(arr){ if(!arr||!arr.length)return; arr.forEach(function(n){ var k=n.url||(n.title+"|"+n.date); if(k&&!seen[k]){ seen[k]=1; merged.push(n); } }); }
+    addAll(nj); archs.forEach(addAll);
+    if(merged.length){ NEWS=normalizeNews(merged); NEWS.forEach(function(x,ix){x._idx=ix;}); buildDates(); dateFilter="all"; }
     else { NEWS=SAMPLE.slice(); buildDates(); dateFilter="all"; setStatus("🟠 news.json 없음 — 예시 표시"); }
     if(gj){ var hid=lsGet("nr_gloss_hide",[]); collectedGloss=Object.keys(gj).filter(function(k){return hid.indexOf(k)<0;}).map(function(k){return {term:k,def:(gj[k].def||gj[k]),at:(gj[k].first_seen||"")};}); }
     if(nj&&nj.length){
