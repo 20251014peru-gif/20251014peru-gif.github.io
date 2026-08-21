@@ -576,24 +576,43 @@ function loadData(manual){
 
 /* ── 웹에서 즉시 검색: 구글 뉴스 RSS를 바로 긁어와 표에 임시로 붙임 ── */
 var liveItems=[]; var liveMode=false;
+function extractJsonArray(txt){
+  if(!txt) return null;
+  // 1) 코드펜스 제거
+  var t=txt.replace(/```json/gi,"").replace(/```/g,"");
+  // 2) 첫 [ 부터 마지막 ] 까지
+  var s=t.indexOf("["), e=t.lastIndexOf("]");
+  if(s<0||e<0||e<s) return null;
+  var frag=t.slice(s,e+1);
+  try{ return JSON.parse(frag); }catch(ex){}
+  // 3) 흔한 오류 보정: 후행 쉼표 제거
+  try{ return JSON.parse(frag.replace(/,\s*([\]}])/g,"$1")); }catch(ex){}
+  // 4) 객체 단위로 하나씩 긁기
+  try{
+    var objs=frag.match(/\{[^{}]*\}/g)||[];
+    var arr=objs.map(function(o){ try{return JSON.parse(o.replace(/,\s*}/,"}"));}catch(e){return null;} }).filter(Boolean);
+    return arr.length?arr:null;
+  }catch(ex){}
+  return null;
+}
 function liveSearch(){
   var q=document.getElementById("q").value.trim();
   if(!q){ toast("검색어를 입력하세요"); return; }
   if(!AI_KEY){ toast("먼저 🤖 탭 ⚙️에서 AI 키를 넣어주세요"); openDrawer(); setTimeout(openKey,300); return; }
-  setStatus("🟡 AI가 '"+q+"' 뉴스 검색 중… (10~20초)");
-  var sys="당신은 뉴스 리서치 도우미입니다. web_search로 한국어 최신 뉴스를 찾아, 아래 JSON 배열만 출력하세요. 다른 말·마크다운·설명 금지. 최대 12건. 각 원소는 {\"title\":기사제목, \"summary\":한줄요약(35자 내외), \"source\":언론사, \"url\":기사원문URL, \"sig\":\"red|orange|gray\"(투자 중요도), \"date\":\"YYYY-MM-DD\"}. 반드시 순수 JSON 배열([...])만.";
-  var msgs=[{role:"user",content:"'"+q+"' 관련 최신 뉴스를 검색해서 JSON 배열로만 줘. 투자·경제 관점 위주."}];
+  setStatus("🟡 AI가 '"+q+"' 뉴스 검색 중… (10~25초)");
+  var sys="당신은 한국어 뉴스 리서치 봇입니다. 먼저 web_search로 최신 뉴스를 찾은 뒤, 결과를 오직 JSON 배열 하나로만 출력합니다. 규칙: (1)답변 전체가 [ 로 시작해 ] 로 끝나야 함 (2)배열 앞뒤에 어떤 인사말·설명·마크다운·코드펜스도 절대 넣지 않음 (3)최대 12개 (4)각 원소 형식은 {\"title\":\"제목\",\"summary\":\"한줄요약\",\"source\":\"언론사\",\"url\":\"원문URL\",\"sig\":\"red|orange|gray\",\"date\":\"YYYY-MM-DD\"} (5)url은 실제 기사 링크. 투자·경제 관점의 최신순으로.";
+  var msgs=[{role:"user",content:"검색어: "+q+"\n이 검색어의 최신 뉴스를 web_search로 찾아 위 규칙대로 JSON 배열만 출력해."}];
   callClaude(msgs, sys, function(txt,err){
     if(err){ setStatus("🟠 AI 검색 실패"); toast("AI 검색 실패: "+err); return; }
-    var arr=null;
-    try{ var s=txt.indexOf("["), e=txt.lastIndexOf("]"); arr=JSON.parse(txt.slice(s,e+1)); }catch(ex){ arr=null; }
-    if(!arr||!arr.length){ setStatus("🟠 결과 파싱 실패"); toast("결과를 못 읽었어요. 다시 시도해보세요"); return; }
-    liveItems=arr.map(function(o,i){
+    var arr=extractJsonArray(txt);
+    if(!arr||!arr.length){ setStatus("🟠 다시 시도해주세요"); toast("형식을 못 읽었어요 — 한 번 더 눌러주세요"); return; }
+    liveItems=arr.filter(function(o){return o&&(o.title);}).map(function(o,i){
       return { id:"live"+i, date:(o.date||""), src:"google", origin:(o.source||"웹"), kw:q, trans:false,
-        title:(o.title||""), orig_title:(o.title||""),
-        summary:(o.summary||"")+(o.source?" · "+o.source:""),
-        body:"", sig:(o.sig||"gray"), reason:"AI 웹검색 결과", dupes:1, url:(o.url||"#"), breaking:false };
+        title:String(o.title||""), orig_title:String(o.title||""),
+        summary:String(o.summary||"")+(o.source?" · "+o.source:""),
+        body:"", sig:(o.sig||"gray"), reason:"AI 웹검색", dupes:1, url:(o.url||"#"), breaking:false };
     });
+    if(!liveItems.length){ setStatus("🟠 결과 없음"); toast("결과가 없어요"); return; }
     liveMode=true; search=""; view="all"; filterKw=null; dateFilter="all";
     var ds=document.getElementById("dateSel"); if(ds)ds.value="all";
     setStatus("🟢 AI 검색 "+liveItems.length+"건 ('"+q+"')"); renderRows();
