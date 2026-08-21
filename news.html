@@ -231,6 +231,7 @@
     <div class="searchbar">
       <input id="q" placeholder="키워드로 뉴스 검색 (예: 엔비디아)" />
       <button onclick="runSearch()">검색</button>
+      <button onclick="liveSearch()" style="border:none;background:var(--foreign);color:#fff;border-radius:12px;padding:0 13px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap">🌐 웹에서 즉시</button>
     </div>
     <button class="sumbtn" onclick="openSummary()">📝 통합 요약</button>
       <button class="sumbtn" id="refreshBtn" onclick="loadData(true)" style="background:var(--good)">🔄 새로고침</button>
@@ -410,13 +411,14 @@ function renderFilters(){ var base=[{k:null,label:"전체"}].concat(keywords.map
 function renderKwMgr(){ document.getElementById("kwlist").innerHTML = keywords.map(function(k){ return '<span class="kwitem"><span class="nm" onclick="editKw(\''+k+'\')">'+k+'</span><button class="del" onclick="delKeyword(\''+k+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">아직 키워드가 없어요. 아래에서 추가하세요.</span>'; }
 
 function currentRows(){
+  if(liveMode) return liveItems;
   if(view==="scrap") return scraps.map(function(s){return s.n;});
   var list=NEWS.slice();
   if(view==="breaking") list=list.filter(function(n){return n.breaking;});
   if(view==="keyword") list=list.filter(function(n){return keywords.indexOf(n.kw)>=0;});
   if(filterKw) list=list.filter(function(n){return n.kw===filterKw;});
   if(search){ var terms=search.toLowerCase().split(/\s+/).filter(Boolean); list=list.filter(function(n){ var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.kw||"")+" "+(n.orig_title||"")).toLowerCase(); return terms.every(function(t){return hay.indexOf(t)>=0;}); }); }
-  if(dateFilter&&dateFilter!=="all") list=list.filter(function(n){return dayKey(n.date)===dateFilter;});
+  if(dateFilter&&dateFilter!=="all"&&!search) list=list.filter(function(n){return dayKey(n.date)===dateFilter;});
   if(sort==="imp"){ var rank={red:0,orange:1,gray:2}; list.sort(function(a,b){return rank[a.sig]-rank[b.sig];}); }
   return list;
 }
@@ -491,7 +493,7 @@ function renderAll(){ renderTrend(); renderSurge(); renderFilters(); renderKwMgr
 
 /* ── 뷰 전환 ── */
 function setView(v){
-  view=v; filterKw=null; if(v!=="scrap"){selMode=false;selected={};}
+  liveMode=false; view=v; filterKw=null; if(v!=="scrap"){selMode=false;selected={};}
   var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view===v);
   var gloss=(v==="gloss");
   document.getElementById("glossView").style.display = gloss?"block":"none";
@@ -510,7 +512,7 @@ function toggleChkCol(){ var show=selMode; document.getElementById("colChk").sty
 function setSort(s){ sort=s; var b=document.querySelectorAll(".seg button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.sort===s); renderRows(); }
 function pickKw(k){ filterKw=filterKw===k?null:k; renderTrend(); renderFilters(); renderRows(); }
 function toggleRead(id){ var i=readIds.indexOf(id); if(i>=0)readIds.splice(i,1); else readIds.push(id); lsSet("nr_read",readIds); renderRows(); }
-function runSearch(){ search=document.getElementById("q").value.trim(); view="all"; filterKw=null; var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view==="all"); setView("all"); document.getElementById("q").value=search; }
+function runSearch(){ liveMode=false; search=document.getElementById("q").value.trim(); view="all"; filterKw=null; dateFilter="all"; var ds=document.getElementById("dateSel"); if(ds)ds.value="all"; var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view==="all"); setView("all"); document.getElementById("q").value=search; }
 function addSurge(k){ if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]={n:0,d:"up",bars:[1,2,3,5,8,13,20]}; lsSet("nr_keywords",keywords);} filterKw=k; renderAll(); }
 
 /* ── 관심 키워드 추가/삭제/수정 ── */
@@ -570,6 +572,41 @@ function loadData(manual){
     if(btn){btn.disabled=false;btn.textContent="🔄 새로고침";}
   });
 }
+
+
+/* ── 웹에서 즉시 검색: 구글 뉴스 RSS를 바로 긁어와 표에 임시로 붙임 ── */
+var liveItems=[]; var liveMode=false;
+function liveSearch(){
+  var q=document.getElementById("q").value.trim();
+  if(!q){ toast("검색어를 입력하세요"); return; }
+  setStatus("🟡 웹에서 '"+q+"' 가져오는 중…");
+  // CORS 우회용 공개 프록시로 구글뉴스 RSS 호출 (개인용)
+  var rss="https://news.google.com/rss/search?q="+encodeURIComponent(q)+"&hl=ko&gl=KR&ceid=KR:ko";
+  var prox="https://api.allorigins.win/raw?url="+encodeURIComponent(rss);
+  fetch(prox).then(function(r){return r.text();}).then(function(xml){
+    var doc=new DOMParser().parseFromString(xml,"text/xml");
+    var items=Array.prototype.slice.call(doc.querySelectorAll("item")).slice(0,25);
+    if(!items.length){ setStatus("🟠 결과 없음"); toast("결과가 없어요"); return; }
+    liveItems=items.map(function(it,i){
+      var title=(it.querySelector("title")||{}).textContent||"";
+      var link=(it.querySelector("link")||{}).textContent||"";
+      var pub=(it.querySelector("pubDate")||{}).textContent||"";
+      var src=""; var srcEl=it.getElementsByTagName("source")[0]; if(srcEl)src=srcEl.textContent;
+      return { id:"live"+i, date:pub, src:"google", origin:src, kw:q, trans:false,
+        title:title.replace(/ - [^-]*$/,""), orig_title:title, summary:(src?src+" · ":"")+"웹 즉시검색 결과 (본문·요약은 정식 수집 시 생성)",
+        body:"", sig:"gray", reason:"", dupes:1, url:link, breaking:false };
+    });
+    liveMode=true; search=""; view="all"; filterKw=null; dateFilter="all";
+    var ds=document.getElementById("dateSel"); if(ds)ds.value="all";
+    setStatus("🟢 웹에서 "+liveItems.length+"건 ('"+q+"')");
+    renderRows();
+    document.getElementById("emptyBox").scrollIntoView({behavior:"smooth",block:"nearest"});
+  }).catch(function(e){
+    setStatus("🟠 즉시검색 실패");
+    toast("가져오기 실패 — 잠시 후 다시 시도");
+  });
+}
+function exitLive(){ liveMode=false; liveItems=[]; loadData(false); }
 
 var BASE_SYS="당신은 달님의 개인 뉴스 리서치 도우미입니다. 한국어로, 투자·경제·정치 맥락 위주로 핵심만 간결하게 답하세요. 최신 사실이 필요하면 web_search로 뉴스를 찾아 요약하고, 필요하면 출처를 짧게 덧붙이세요.";
 var AI_KEY = lsGet("nr_aikey","");
