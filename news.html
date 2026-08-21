@@ -203,7 +203,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v1.9</span></div>
+    <div class="hmeta"><span class="live">● LIVE</span> · 속보까지 42분 · 오늘 128건 · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v2.0</span></div>
   </div>
 </header>
 <main>
@@ -619,8 +619,9 @@ function normalizeNews(arr){
 }
 
 /* ── 날짜 유틸 ── */
-function dayKey(s){ var d=new Date(s); if(isNaN(d)) return (s||"").slice(0,10); return d.toISOString().slice(0,10); }
-function fmtDate(s){ if(!s) return ""; var d=new Date(s); if(isNaN(d)) return (s||"").slice(0,10); var t=new Date(); var y=new Date(t.getTime()-86400000); if(d.toDateString()===t.toDateString())return "오늘"; if(d.toDateString()===y.toDateString())return "어제"; return (d.getMonth()+1)+"/"+d.getDate(); }
+function dayKey(s){ var d=new Date(s); if(isNaN(d)) return (s||"").slice(0,10); return new Date(d.getTime()+9*3600000).toISOString().slice(0,10); }
+function kstToday(){ return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
+function fmtDate(s){ if(!s) return ""; var dk=dayKey(s); if(!/^\d{4}-/.test(dk)) return dk; var today=kstToday(); var y=new Date(Date.now()+9*3600000-86400000).toISOString().slice(0,10); if(dk===today)return "오늘"; if(dk===y)return "어제"; var p=dk.split("-"); return (+p[1])+"/"+(+p[2]); }
 function buildDates(){ var set={}; NEWS.forEach(function(n){ set[dayKey(n.date)]=true; }); dates=Object.keys(set).sort().reverse(); }
 function renderDateSel(){ var sel=document.getElementById("dateSel"); if(!sel)return; var opts='<option value="all">전체</option>'; dates.forEach(function(dk){ var d=new Date(dk); var lab=isNaN(d)?dk:(fmtDate(dk)+" ("+dk.slice(5)+")"); opts+='<option value="'+dk+'">'+lab+'</option>'; }); sel.innerHTML=opts; sel.value=dateFilter; }
 function onDate(v){ dateFilter=v; renderRows(); }
