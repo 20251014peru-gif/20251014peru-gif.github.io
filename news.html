@@ -209,7 +209,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.4</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.5</span></div>
   </div>
 </header>
 <main>
@@ -251,6 +251,7 @@
       <button class="sumbtn" id="refreshBtn" onclick="loadData(true)" style="background:var(--good)">🔄 새로고침</button>
       <button class="sumbtn" onclick="runCollect()" style="background:var(--urgent)">🚀 지금 수집</button>
       <button class="sumbtn" onclick="openGh()" title="수집/토큰 설정" style="background:var(--ink-2);padding:11px 12px">⚙️</button>
+      <button class="sumbtn" onclick="syncNow()" title="지금 동기화 (모든 기기 같게)" style="background:#0EA5E9;padding:11px 12px">☁️</button>
       <select id="dateSel" onchange="onDate(this.value)" style="border:1px solid var(--line);border-radius:12px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;background:var(--surface)"></select>
       <span id="loadStat" style="font-size:11.5px;color:var(--ink-3);font-weight:700"></span>
     <div class="seg">
@@ -402,6 +403,60 @@
 /* ── 저장 (localStorage, 실패해도 메모리로 동작) ── */
 function lsGet(k,d){ try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;} }
 function lsSet(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
+
+/* GitHub 자동 동기화: 어느 기기에서든 같은 데이터 */
+var SYNC_FILE="userdata.json"; var _syncTimer=null; var _syncSha=null; var _syncBusy=false;
+function syncPayload(){
+  return { v:1, ts:Date.now(),
+    scraps:scraps, read:lsGet("nr_read",[]),
+    keywords:keywords, stocks:stocks, popTerms:popTerms,
+    glossStar:lsGet("nr_gloss_star",{}), glossHide:lsGet("nr_gloss_hide",{}),
+    myGloss:lsGet("nr_gloss_my",[]) };
+}
+function applyPayload(d){
+  try{
+    if(d.scraps){ scraps=d.scraps; lsSet("nr_scrap",scraps); }
+    if(d.read){ lsSet("nr_read",d.read); }
+    if(d.keywords){ keywords=d.keywords; lsSet("nr_keywords",keywords); }
+    if(d.stocks){ stocks=d.stocks; lsSet("nr_stocks",stocks); syncSoon(); }
+    if(d.popTerms){ popTerms=d.popTerms; lsSet("nr_pop",popTerms); syncSoon(); }
+    if(d.glossStar){ lsSet("nr_gloss_star",d.glossStar); }
+    if(d.glossHide){ lsSet("nr_gloss_hide",d.glossHide); }
+    if(d.myGloss){ lsSet("nr_gloss_my",d.myGloss); }
+    renderAll(); if(typeof renderKwMgr==="function") renderKwMgr();
+  }catch(e){}
+}
+function syncPull(cb){
+  if(!GH_TOKEN||!GH_REPO){ if(cb)cb(false); return; }
+  var url="https://api.github.com/repos/"+GH_REPO+"/contents/"+SYNC_FILE;
+  fetch(url,{headers:_ghHeaders(),cache:"no-store"}).then(function(r){
+    if(r.status===404){ _syncSha=null; if(cb)cb(false); return null; }
+    return r.json();
+  }).then(function(j){
+    if(!j){ if(cb)cb(false); return; }
+    _syncSha=j.sha;
+    try{ var d=JSON.parse(decodeURIComponent(escape(atob((j.content||"").replace(/\n/g,""))))); applyPayload(d); if(cb)cb(true,d); }
+    catch(e){ if(cb)cb(false); }
+  }).catch(function(){ if(cb)cb(false); });
+}
+function syncPush(){
+  if(!GH_TOKEN||!GH_REPO){ toast("동기화하려면 GitHub 토큰 필요 (⚙️)"); return; }
+  if(_syncBusy) return; _syncBusy=true;
+  var badge=document.getElementById("syncBadge"); if(badge){badge.textContent="⏳ 동기화 중";badge.style.opacity="1";}
+  var body=JSON.stringify(syncPayload(),null,2);
+  var content=btoa(unescape(encodeURIComponent(body)));
+  var url="https://api.github.com/repos/"+GH_REPO+"/contents/"+SYNC_FILE;
+  var payload={message:"sync userdata",content:content};
+  if(_syncSha) payload.sha=_syncSha;
+  fetch(url,{method:"PUT",headers:_ghHeaders(),body:JSON.stringify(payload)}).then(function(r){return r.json();}).then(function(j){
+    _syncBusy=false;
+    if(j&&j.content){ _syncSha=j.content.sha; if(badge){badge.textContent="\u2705 \uc800\uc7a5\ub428";setTimeout(function(){badge.style.opacity="0";},1500);} }
+    else { if(badge){badge.textContent="\ud83d\udfe0 \uc2e4\ud328";} }
+  }).catch(function(){ _syncBusy=false; if(badge){badge.textContent="\ud83d\udfe0 \uc2e4\ud328";} });
+}
+function syncSoon(){ if(_syncTimer)clearTimeout(_syncTimer); _syncTimer=setTimeout(syncPush, 2500); }
+function syncNow(){ if(!GH_TOKEN){ toast("먼저 ⚙️에서 GitHub 토큰을 넣어주세요"); openGh(); return; } toast("동기화 중…"); syncPull(function(ok){ syncPush(); toast(ok?"불러오고 저장했어요":"저장했어요"); }); }
+
 function toast(t){ var el=document.getElementById("toast"); el.textContent=t; el.classList.add("on"); setTimeout(function(){el.classList.remove("on");},1600); }
 
 var glossStar = lsGet("nr_gloss_star",{}); var boardMode="kw"; var groupFilter=null;
@@ -437,6 +492,31 @@ function scrapOf(id){ return scraps.filter(function(s){return s.n.id===id;})[0];
 
 /* 주요 종목: 뉴스 건수 기반 7일 추세 */
 function last7keys(){ var out=[]; var t=new Date(); for(var i=6;i>=0;i--){ var d=new Date(t.getTime()-i*86400000); out.push(d.toISOString().slice(0,10)); } return out; }
+var KW_ALIAS = {
+  "연준":["Fed","FOMC","연방준비","파월","연준의장"],
+  "금리":["기준금리","금리인하","금리인상","정책금리"],
+  "환율":["원달러","달러환율","원화","달러강세","달러약세"],
+  "CPI":["소비자물가","물가지수","물가상승"],
+  "관세":["무역장벽","트럼프관세","상호관세","보편관세"],
+  "한국은행":["한은","기준금리","이창용"],
+  "HBM":["고대역폭","고대역폭메모리","HBM3","HBM4"],
+  "AI반도체":["AI칩","AI가속기","GPU","신경망처리"],
+  "온디바이스AI":["온디바이스","기기내AI","엣지AI"],
+  "2차전지":["배터리","이차전지","양극재","음극재"],
+  "전고체":["전고체배터리","고체전해질"],
+  "전력설비":["전력기기","변압기","전선","송전","전력망"],
+  "코스피":["KOSPI","유가증권"],
+  "코스닥":["KOSDAQ"],
+  "나스닥":["NASDAQ","나스닥지수"],
+  "외국인수급":["외국인","외인","외국인순매수","외국인매도"]
+};
+function kwTerms(k){
+  var arr=[k];
+  var al=KW_ALIAS[k]||[]; al.forEach(function(a){ if(arr.indexOf(a)<0)arr.push(a); });
+  // 공백 병기도 분리
+  k.split(/\s+/).forEach(function(w){ if(w&&arr.indexOf(w)<0)arr.push(w); });
+  return arr;
+}
 var STOCK_ALIAS = {
   "삼성전자":["Samsung","삼성","005930"],
   "SK하이닉스":["SK Hynix","Hynix","하이닉스","000660"],
@@ -517,7 +597,8 @@ function renderStocks(){
 function trendMark(d){ return d==="up"?'<span class="arrow up">↑늘어남</span>':d==="down"?'<span class="arrow down">↓줄어듦</span>':'<span class="arrow flat">→쏘쏘</span>'; }
 function barsHTML(t){ var mx=Math.max.apply(null,t.bars)||1; return '<div class="bars">'+t.bars.map(function(v,i){ var h=Math.max(3,Math.round(v/mx*22)); var hot=(i>=t.bars.length-2&&t.d==="up")?'hot':''; return '<i class="'+hot+'" style="height:'+h+'px"></i>'; }).join("")+'</div>'; }
 function renderTrend(){ var _kws=keywords.filter(function(k){ return NEWS.filter(function(x){return x.kw===k;}).length>0; }); if(!_kws.length)_kws=keywords;
-  document.getElementById("trendRow").innerHTML = _kws.map(function(k){ var t=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; var cnt=NEWS.filter(function(x){return x.kw===k;}).length; t={n:cnt,d:t.d,bars:t.bars}; return '<div class="tcard '+(filterKw===k?'on':'')+'" onclick="pickKw(\''+k+'\')"><div class="k"><span>'+k+'</span><span class="v">'+t.n+'건</span></div><div class="v">'+trendMark(t.d)+'</div>'+barsHTML(t)+'</div>'; }).join(""); }
+  document.getElementById("trendRow").innerHTML = _kws.map(function(k){ var t=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; var _kt=(typeof KW_ALIAS!=="undefined"&&KW_ALIAS[k])?kwTerms(k).map(function(t){return t.toLowerCase();}):[k.toLowerCase()];
+      var cnt=NEWS.filter(function(x){ if(x.kw===k)return true; var hay=((x.title||"")+" "+(x.summary||"")+" "+(x.orig_title||"")+" "+(x.kw||"")).toLowerCase(); return _kt.some(function(t){return t&&hay.indexOf(t)>=0;}); }).length; t={n:cnt,d:t.d,bars:t.bars}; return '<div class="tcard '+(filterKw===k?'on':'')+'" onclick="pickKw(\''+k+'\')"><div class="k"><span>'+k+'</span><span class="v">'+t.n+'건</span></div><div class="v">'+trendMark(t.d)+'</div>'+barsHTML(t)+'</div>'; }).join(""); }
 
 function _countOn(term, dateKey){
   var tl=term.toLowerCase();
@@ -560,14 +641,14 @@ function resetLists(){
   keywords = ["금리","연준","환율","CPI","관세","한국은행","HBM","AI반도체","온디바이스AI","2차전지","전고체","전력설비","코스피","코스닥","나스닥","외국인수급"];
   stocks = ["삼성전자","SK하이닉스","엔비디아","테슬라","에코프로","LG에너지솔루션","현대차","애플","팔란티어","카카오"];
   popTerms = ["HBM","반도체","SK하이닉스","삼성전자","엔비디아","AI","전력설비","원전","조선","방산","로봇","2차전지","전기차","코스피","코스닥","환율","금리","비트코인","테슬라","양자컴퓨터"];
-  lsSet("nr_keywords",keywords); lsSet("nr_stocks",stocks); lsSet("nr_pop",popTerms);
+  lsSet("nr_keywords",keywords); lsSet("nr_stocks",stocks); syncSoon(); lsSet("nr_pop",popTerms); syncSoon();
   filterKw=null; renderAll(); renderKwMgr();
   toast("추천 구성으로 초기화됐어요");
 }
 
 function renderPopMgr(){ var el=document.getElementById("popList"); if(!el)return; el.innerHTML = popTerms.map(function(k){ return '<span class="kwitem"><span class="nm" onclick="editPop(\''+k+'\')">'+k+'</span><button class="del" onclick="delPop(\''+k+'\')">✕</button></span>'; }).join("") || '<span style="font-size:12.5px;color:var(--ink-3)">키워드를 추가하세요.</span>'; }
-function addPop(){ var v=document.getElementById("popAdd").value.trim(); if(!v)return; v.split(/[,\n]+/).map(function(x){return x.trim();}).filter(Boolean).forEach(function(k){ if(popTerms.indexOf(k)<0)popTerms.push(k); }); document.getElementById("popAdd").value=""; lsSet("nr_pop",popTerms); renderPopMgr(); toast("대중 관심 추가됨 (다음 수집부터 추적)"); }
-function delPop(k){ popTerms=popTerms.filter(function(x){return x!==k;}); lsSet("nr_pop",popTerms); renderPopMgr(); toast("삭제됨"); }
+function addPop(){ var v=document.getElementById("popAdd").value.trim(); if(!v)return; v.split(/[,\n]+/).map(function(x){return x.trim();}).filter(Boolean).forEach(function(k){ if(popTerms.indexOf(k)<0)popTerms.push(k); }); document.getElementById("popAdd").value=""; lsSet("nr_pop",popTerms); syncSoon(); renderPopMgr(); toast("대중 관심 추가됨 (다음 수집부터 추적)"); }
+function delPop(k){ popTerms=popTerms.filter(function(x){return x!==k;}); lsSet("nr_pop",popTerms); syncSoon(); renderPopMgr(); toast("삭제됨"); }
 var editingPop=null;
 function editPop(k){ editingPop=k; document.getElementById("editKw").value=k; var eb=document.getElementById("editBg"); eb.dataset.mode="pop"; eb.classList.add("on"); setTimeout(function(){document.getElementById("editKw").focus();},120); }
 function exportPop(){ var txt=JSON.stringify(popTerms); if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(function(){ toast("복사됨! GitHub datalab_terms.json에 붙여넣으세요"); }); } else { prompt("복사하세요:", txt); } }
@@ -609,10 +690,13 @@ function currentRows(){
   var list=NEWS.slice();
   if(view==="breaking") list=list.filter(isBreaking);
   if(view==="read") list=list.filter(function(n){return isRead(n.id);});
-  if(filterKw){ list=list.filter(function(n){ if(n.kw===filterKw) return true; var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.orig_title||"")); return hay.indexOf(filterKw)>=0; }); }
+  if(filterKw){ var fterms=(typeof KW_ALIAS!=="undefined"&&KW_ALIAS[filterKw])?kwTerms(filterKw):[filterKw]; var fl=fterms.map(function(t){return t.toLowerCase();}); list=list.filter(function(n){ if(n.kw===filterKw) return true; var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.orig_title||"")).toLowerCase(); return fl.some(function(t){return t&&hay.indexOf(t)>=0;}); }); }
   else if(groupFilter && groupFilter.length){ list=list.filter(function(n){
     var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.orig_title||"")+" "+(n.kw||"")).toLowerCase();
-    return groupFilter.some(function(g){ return g && hay.indexOf(g.toLowerCase())>=0; });
+    return groupFilter.some(function(g){
+      var terms = (typeof KW_ALIAS!=="undefined" && KW_ALIAS[g]) ? kwTerms(g) : [g];
+      return terms.some(function(t){ return t && hay.indexOf(t.toLowerCase())>=0; });
+    });
   }); }
   if(search){ var terms=search.toLowerCase().split(/\s+/).filter(Boolean); list=list.filter(function(n){ var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.kw||"")+" "+(n.orig_title||"")).toLowerCase(); return terms.every(function(t){return hay.indexOf(t)>=0;}); }); }
   if(dateFilter&&dateFilter!=="all"&&!search) list=list.filter(function(n){return dayKey(n.date)===dateFilter;});
@@ -732,20 +816,20 @@ function runSearch(){ liveMode=false; search=document.getElementById("q").value.
 function addSurge(k){ if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]={n:0,d:"up",bars:[1,2,3,5,8,13,20]}; lsSet("nr_keywords",keywords);} filterKw=k; renderAll(); }
 
 /* ── 관심 키워드 추가/삭제/수정 ── */
-function addKeyword(){ var v=document.getElementById("kwAdd").value.trim(); if(!v)return; v.split(/[,\s]+/).filter(Boolean).forEach(function(k){ if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; }}); document.getElementById("kwAdd").value=""; lsSet("nr_keywords",keywords); renderAll(); toast("키워드 추가됨"); }
-function delKeyword(k){ keywords=keywords.filter(function(x){return x!==k;}); if(filterKw===k)filterKw=null; lsSet("nr_keywords",keywords); renderAll(); toast("삭제됨"); }
+function addKeyword(){ var v=document.getElementById("kwAdd").value.trim(); if(!v)return; v.split(/[,\s]+/).filter(Boolean).forEach(function(k){ if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; }}); document.getElementById("kwAdd").value=""; lsSet("nr_keywords",keywords); renderAll(); syncSoon(); toast("키워드 추가됨"); }
+function delKeyword(k){ keywords=keywords.filter(function(x){return x!==k;}); if(filterKw===k)filterKw=null; lsSet("nr_keywords",keywords); renderAll(); syncSoon(); toast("삭제됨"); }
 var editingStock=null;
-function addStock(){ var v=document.getElementById("stockAdd").value.trim(); if(!v)return; v.split(/[,\n]+/).map(function(x){return x.trim();}).filter(Boolean).forEach(function(s){ if(stocks.indexOf(s)<0)stocks.push(s); }); document.getElementById("stockAdd").value=""; lsSet("nr_stocks",stocks); renderStockMgr(); renderBoard(); toast("종목 추가됨"); }
-function delStock(s){ stocks=stocks.filter(function(x){return x!==s;}); if(filterKw===s)filterKw=null; lsSet("nr_stocks",stocks); renderStockMgr(); renderBoard(); toast("삭제됨"); }
+function addStock(){ var v=document.getElementById("stockAdd").value.trim(); if(!v)return; v.split(/[,\n]+/).map(function(x){return x.trim();}).filter(Boolean).forEach(function(s){ if(stocks.indexOf(s)<0)stocks.push(s); }); document.getElementById("stockAdd").value=""; lsSet("nr_stocks",stocks); syncSoon(); renderStockMgr(); renderBoard(); toast("종목 추가됨"); }
+function delStock(s){ stocks=stocks.filter(function(x){return x!==s;}); if(filterKw===s)filterKw=null; lsSet("nr_stocks",stocks); syncSoon(); renderStockMgr(); renderBoard(); toast("삭제됨"); }
 function editStock(s){ editingStock=s; document.getElementById("editKw").value=s; var eb=document.getElementById("editBg"); eb.dataset.mode="stock"; eb.classList.add("on"); setTimeout(function(){document.getElementById("editKw").focus();},120); }
 var editingKw=null;
 function editKw(k){ editingKw=k; document.getElementById("editKw").value=k; document.getElementById("editBg").dataset.mode=""; document.getElementById("editBg").classList.add("on"); setTimeout(function(){document.getElementById("editKw").focus();},120); }
 function applyEditKw(){ var nv=document.getElementById("editKw").value.trim(); if(!nv){closeSheet("editBg");return;}
-  var eb=document.getElementById("editBg"); if(eb.dataset.mode==="pop"){ var pi=popTerms.indexOf(editingPop); if(pi>=0){ popTerms[pi]=nv; } lsSet("nr_pop",popTerms); eb.dataset.mode=""; closeSheet("editBg"); renderPopMgr(); toast("수정됨"); return; } if(eb.dataset.mode==="stock"){ var si=stocks.indexOf(editingStock); if(si>=0){ stocks[si]=nv; if(filterKw===editingStock)filterKw=nv; } lsSet("nr_stocks",stocks); eb.dataset.mode=""; closeSheet("editBg"); renderStockMgr(); renderBoard(); toast("수정됨"); return; }
+  var eb=document.getElementById("editBg"); if(eb.dataset.mode==="pop"){ var pi=popTerms.indexOf(editingPop); if(pi>=0){ popTerms[pi]=nv; } lsSet("nr_pop",popTerms); syncSoon(); eb.dataset.mode=""; closeSheet("editBg"); renderPopMgr(); toast("수정됨"); return; } if(eb.dataset.mode==="stock"){ var si=stocks.indexOf(editingStock); if(si>=0){ stocks[si]=nv; if(filterKw===editingStock)filterKw=nv; } lsSet("nr_stocks",stocks); syncSoon(); eb.dataset.mode=""; closeSheet("editBg"); renderStockMgr(); renderBoard(); toast("수정됨"); return; }
   var idx=keywords.indexOf(editingKw); if(idx>=0){ keywords[idx]=nv; if(trends[editingKw]){trends[nv]=trends[editingKw];} if(filterKw===editingKw)filterKw=nv; } lsSet("nr_keywords",keywords); closeSheet("editBg"); renderAll(); toast("수정됨"); }
 
 /* ── 스크랩 ── */
-function toggleScrap(id){ if(isScrap(id)){ scraps=scraps.filter(function(s){return s.n.id!==id;}); } else { var n=NEWS.find(function(x){return x.id===id;}); scraps.push({n:JSON.parse(JSON.stringify(n)), notes:[], at:new Date().toISOString().slice(0,10)}); } lsSet("nr_scrap",scraps); renderRows(); }
+function toggleScrap(id){ if(isScrap(id)){ scraps=scraps.filter(function(s){return s.n.id!==id;}); } else { var n=NEWS.find(function(x){return x.id===id;}); scraps.push({n:JSON.parse(JSON.stringify(n)), notes:[], at:new Date().toISOString().slice(0,10)}); } lsSet("nr_scrap",scraps); renderRows(); syncSoon(); }
 function toggleSel(id){ selected[id]=!selected[id]; if(!selected[id])delete selected[id]; setSelUI(); }
 function setSelUI(){ var c=Object.keys(selected).length; document.getElementById("selCnt").textContent=c+"개 선택"; }
 function selClear(){ selected={}; setSelUI(); renderRows(); }
@@ -989,7 +1073,8 @@ function liveSearch(){
 }
 
 function exitLive(){ liveMode=false; liveItems=[]; loadData(false);
-setInterval(updateNextRun, 60000); }
+setInterval(updateNextRun, 60000);
+setTimeout(function(){ if(GH_TOKEN&&GH_REPO) syncPull(); }, 1500); }
 
 var BASE_SYS="당신은 달님의 개인 뉴스 리서치 도우미입니다. 한국어로, 투자·경제·정치 맥락 위주로 핵심만 간결하게 답하세요. 최신 사실이 필요하면 web_search로 뉴스를 찾아 요약하고, 필요하면 출처를 짧게 덧붙이세요.";
 var AI_KEY = lsGet("nr_aikey","");
