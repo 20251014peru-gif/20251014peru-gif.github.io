@@ -209,7 +209,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.1</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.2</span></div>
   </div>
 </header>
 <main>
@@ -404,7 +404,7 @@ function lsGet(k,d){ try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;
 function lsSet(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
 function toast(t){ var el=document.getElementById("toast"); el.textContent=t; el.classList.add("on"); setTimeout(function(){el.classList.remove("on");},1600); }
 
-var glossStar = lsGet("nr_gloss_star",{}); var boardMode="kw";
+var glossStar = lsGet("nr_gloss_star",{}); var boardMode="kw"; var groupFilter=null;
 var stocks = lsGet("nr_stocks", ["삼성전자","SK하이닉스","엔비디아","테슬라","에코프로","LG에너지솔루션","현대차","애플","팔란티어","카카오"]); var glossView_filter="all";
 var keywords = lsGet("nr_keywords", ["금리","연준","환율","CPI","관세","한국은행","HBM","AI반도체","온디바이스AI","2차전지","전고체","전력설비","코스피","코스닥","나스닥","외국인수급"]);
 var readIds  = lsGet("nr_read", []);
@@ -470,7 +470,20 @@ function stockCounts(name){
   return { n:bars.reduce(function(a,b){return a+b;},0), today:today, d:dd, bars:bars };
 }
 function toggleKwMgr(){ var el=document.getElementById("kwmgr"); if(!el)return; var show=el.style.display==="none"; el.style.display=show?"block":"none"; if(show){ renderKwMgr(); el.scrollIntoView({behavior:"smooth",block:"nearest"}); } }
-function setBoard(m){ boardMode=m; document.getElementById("bmKw").classList.toggle("on",m==="kw"); document.getElementById("bmStock").classList.toggle("on",m==="stock"); var bs=document.getElementById("bmSearch"); if(bs)bs.classList.toggle("on",m==="search"); renderBoard(); }
+function setBoard(m){
+  boardMode=m;
+  document.getElementById("bmKw").classList.toggle("on",m==="kw");
+  document.getElementById("bmStock").classList.toggle("on",m==="stock");
+  var bs=document.getElementById("bmSearch"); if(bs)bs.classList.toggle("on",m==="search");
+  // 탭 전환 시: 그 그룹 전체를 표에 필터 (개별 카드 선택은 해제)
+  filterKw=null;
+  groupFilter = (m==="kw") ? keywords.slice()
+              : (m==="stock") ? stocks.slice()
+              : (m==="search") ? (popTerms&&popTerms.length?popTerms.slice():Object.keys(trendsData))
+              : null;
+  renderBoard(); renderFilters(); renderRows();
+  if(groupFilter){ var nm=(m==="kw"?"이슈·테마":m==="stock"?"내 종목":"대중 관심"); var cnt=currentRows().length; setStatus("🟢 "+nm+" 뉴스 "+cnt+"건 (상단 '전체'로 해제)"); }
+}
 function renderBoard(){ if(boardMode==="stock") renderStocks(); else if(boardMode==="search") renderSearchTrend(); else renderTrend(); }
 
 function renderSearchTrend(){
@@ -564,6 +577,10 @@ function currentRows(){
   if(view==="breaking") list=list.filter(isBreaking);
   if(view==="read") list=list.filter(function(n){return isRead(n.id);});
   if(filterKw){ list=list.filter(function(n){ if(n.kw===filterKw) return true; var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.orig_title||"")); return hay.indexOf(filterKw)>=0; }); }
+  else if(groupFilter && groupFilter.length){ list=list.filter(function(n){
+    var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.orig_title||"")+" "+(n.kw||"")).toLowerCase();
+    return groupFilter.some(function(g){ return g && hay.indexOf(g.toLowerCase())>=0; });
+  }); }
   if(search){ var terms=search.toLowerCase().split(/\s+/).filter(Boolean); list=list.filter(function(n){ var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.body||"")+" "+(n.kw||"")+" "+(n.orig_title||"")).toLowerCase(); return terms.every(function(t){return hay.indexOf(t)>=0;}); }); }
   if(dateFilter&&dateFilter!=="all"&&!search) list=list.filter(function(n){return dayKey(n.date)===dateFilter;});
   if(sort==="imp"){
@@ -658,7 +675,7 @@ function delGlossTerm(term){
 function renderAll(){ renderBoard(); updateBreakingBadge(); updateHeaderStat(); updateNextRun(); renderSurge(); renderFilters(); renderKwMgr(); renderRows(); renderGloss(); }
 
 /* ── 뷰 전환 ── */
-function setView(v){
+function setView(v){ groupFilter=null;
   liveMode=false; view=v; filterKw=null; if(v!=="scrap"){selMode=false;selected={};}
   var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view===v);
   var gloss=(v==="gloss");
@@ -676,7 +693,7 @@ function setView(v){
 }
 function toggleChkCol(){ var show=selMode; document.getElementById("colChk").style.display=show?"":"none"; document.querySelector(".thChk").style.display=show?"":"none"; }
 function setSort(s){ sort=s; var b=document.querySelectorAll(".seg button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.sort===s); renderRows(); }
-function pickKw(k){ filterKw=filterKw===k?null:k; renderTrend(); renderFilters(); renderRows(); }
+function pickKw(k){ filterKw=filterKw===k?null:k; if(filterKw)groupFilter=null; renderBoard(); renderFilters(); renderRows(); }
 function toggleRead(id){ var i=readIds.indexOf(id); if(i>=0)readIds.splice(i,1); else readIds.push(id); lsSet("nr_read",readIds); renderRows(); }
 function runSearch(){ liveMode=false; search=document.getElementById("q").value.trim(); view="all"; filterKw=null; dateFilter="all"; var ds=document.getElementById("dateSel"); if(ds)ds.value="all"; var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view==="all"); setView("all"); document.getElementById("q").value=search; }
 function addSurge(k){ if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]={n:0,d:"up",bars:[1,2,3,5,8,13,20]}; lsSet("nr_keywords",keywords);} filterKw=k; renderAll(); }
