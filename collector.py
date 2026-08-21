@@ -40,6 +40,7 @@ ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL  = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")   # 달님 표준. 필요시 최신 모델로 교체 가능
 NTFY_TOPIC    = os.getenv("NTFY_TOPIC", "")   # ntfy 채널명(폰 알림). 비면 알림 건너뜀
 NTFY_SERVER   = os.getenv("NTFY_SERVER", "https://ntfy.sh")
+SITE_URL      = os.getenv("SITE_URL", "https://20251014peru-gif.github.io/news.html")  # 알림 누르면 열릴 사이트
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 
 # 관심 키워드 (사이트의 '관심 키워드'와 연동될 값. 우선 파일에서 읽고, 없으면 기본값)
@@ -600,7 +601,7 @@ def main():
         title = f"✅ 수집 완료 {hhmm} · 새 뉴스 {len(new_added)}건"
         if reds_new:
             title += f" (🔴 중요 {len(reds_new)})"
-        ntfy_push(title, "\n".join(titles) + more, tags="white_check_mark", priority="default")
+        ntfy_push(title, "\n".join(titles) + more, url=SITE_URL, tags="white_check_mark", priority="default")
         print(f"→ ntfy 푸시: 속보 {min(len(breaking_new),5)}건 + 완료알림 1건 (채널 {NTFY_TOPIC})")
     elif not NTFY_TOPIC:
         print("  · ntfy 푸시 건너뜀 (NTFY_TOPIC 미설정)")
