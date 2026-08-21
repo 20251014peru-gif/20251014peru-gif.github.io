@@ -1,15 +1,14 @@
 {
-  "name": "나의 시스템",
-  "short_name": "나의시스템",
-  "description": "서희타워 통합 관리 · 인생 6대축",
-  "start_url": "./index.html",
+  "name": "뉴스레이더",
+  "short_name": "뉴스레이더",
+  "description": "개인 투자 뉴스 대시보드",
+  "start_url": "./news.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#F2F2F7",
-  "theme_color": "#F2F2F7",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "./icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "./icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
