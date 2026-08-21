@@ -100,6 +100,55 @@ def fetch_trending(limit=5):
         print("  ! 트렌드 수집 실패:", ex)
         return []
 
+def fetch_datalab(terms, days=14):
+    """네이버 데이터랩 검색어 트렌드(일자별 상대지수 0~100)를 종목별로 조회해 dict 반환.
+    terms: ["삼성전자","SK하이닉스",...]  →  {term: {"dates":[...], "ratios":[...]}}"""
+    if not (NAVER_ID and NAVER_SECRET) or not terms:
+        return {}
+    import datetime as _dt
+    end = _dt.date.today()
+    start = end - _dt.timedelta(days=days)
+    # 데이터랩은 그룹 최대 5개 → 5개씩 끊어서 호출
+    urls = [
+        ("https://naverapihub.apigw.ntruss.com/search-trend/v1/search",
+         {"X-NCP-APIGW-API-KEY-ID": NAVER_ID, "X-NCP-APIGW-API-KEY": NAVER_SECRET,
+          "Content-Type": "application/json"}),
+        ("https://openapi.naver.com/v1/datalab/search",
+         {"X-Naver-Client-Id": NAVER_ID, "X-Naver-Client-Secret": NAVER_SECRET,
+          "Content-Type": "application/json"}),
+    ]
+    out = {}
+    for i in range(0, len(terms), 5):
+        chunk = terms[i:i+5]
+        body = {
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+            "timeUnit": "date",
+            "keywordGroups": [{"groupName": t, "keywords": [t]} for t in chunk],
+        }
+        ok = False
+        for url, h in urls:
+            try:
+                r = requests.post(url, headers=h, data=json.dumps(body, ensure_ascii=False).encode("utf-8"), timeout=12)
+                if r.status_code == 200:
+                    for res in r.json().get("results", []):
+                        name = res.get("title", "")
+                        data = res.get("data", [])
+                        out[name] = {
+                            "dates": [d.get("period") for d in data],
+                            "ratios": [d.get("ratio") for d in data],
+                        }
+                    ok = True
+                    break
+                else:
+                    last = (url, r.status_code, r.text[:160])
+            except Exception as e:
+                last = (url, "예외", str(e))
+        if not ok:
+            print("  ! 데이터랩 실패:", chunk, "| 상태:", last[1], "| 응답:", last[2])
+            print("    (HUB 콘솔에서 '검색어 트렌드/Search Trend' API가 선택됐는지 확인하세요)")
+    return out
+
 def load_keywords() -> list:
     try:
         with open("keywords.json", "r", encoding="utf-8") as f:
@@ -421,6 +470,26 @@ def main():
     # 메인(news.json) = 오늘 것 전체
     with open("news.json", "w", encoding="utf-8") as f:
         json.dump(existing, f, ensure_ascii=False, indent=2)
+    # ── 네이버 데이터랩: 종목 검색어 트렌드 → trends.json ──
+    try:
+        trend_terms = list(core)
+        try:
+            with open("stocks.json","r",encoding="utf-8") as f:
+                sj=json.load(f)
+                if isinstance(sj,list):
+                    for s in sj:
+                        if s not in trend_terms: trend_terms.append(s)
+        except Exception:
+            pass
+        trend_terms = trend_terms[:20]  # 데이터랩 쿼터 배려
+        dl = fetch_datalab(trend_terms, days=14)
+        if dl:
+            with open("trends.json", "w", encoding="utf-8") as f:
+                json.dump({"updated": now.strftime("%Y-%m-%d %H:%M"), "data": dl}, f, ensure_ascii=False, indent=2)
+            print(f"→ trends.json 저장됨 (검색어 트렌드 {len(dl)}개)")
+    except Exception as e:
+        print("  ! trends.json 저장 건너뜀:", e)
+
     save_glossary(glossary)
 
     reds = sum(1 for n in existing if n["sig"] == "red")
