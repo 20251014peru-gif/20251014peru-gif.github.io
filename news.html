@@ -209,7 +209,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.7</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.8</span></div>
   </div>
 </header>
 <main>
@@ -297,6 +297,7 @@
     <div class="gloss" id="glossList"></div><div id="glossEmpty"></div>
   </div>
   <div id="emptyBox"></div>
+  <div id="moreBox"></div>
 </main>
 
 <nav class="tabbar">
@@ -459,7 +460,7 @@ function syncNow(){ if(!GH_TOKEN){ toast("먼저 ⚙️에서 GitHub 토큰을 �
 
 function toast(t){ var el=document.getElementById("toast"); el.textContent=t; el.classList.add("on"); setTimeout(function(){el.classList.remove("on");},1600); }
 
-var glossStar = lsGet("nr_gloss_star",{}); var boardMode="kw"; var groupFilter=null;
+var glossStar = lsGet("nr_gloss_star",{}); var boardMode="kw"; var groupFilter=null; var rowLimit=300;
 var stocks = lsGet("nr_stocks", ["삼성전자","SK하이닉스","엔비디아","테슬라","에코프로","LG에너지솔루션","현대차","애플","팔란티어","카카오"]); var glossView_filter="all";
 var keywords = lsGet("nr_keywords", ["금리","연준","환율","CPI","관세","한국은행","HBM","AI반도체","온디바이스AI","2차전지","전고체","전력설비","코스피","코스닥","나스닥","외국인수급"]);
 var readIds  = lsGet("nr_read", []);
@@ -724,8 +725,9 @@ function _tval(n){
 function sigDot(s){ return s==="red"?'🔴':s==="orange"?'🟠':'<span style="opacity:.25">⚪</span>'; }
 function srcBadge(n){ if(n.src==="naver")return '<span class="srcbadge naver">N</span>'; if(n.src==="google")return '<span class="srcbadge google">G</span>'; return '<span class="srcbadge foreign" title="'+(n.origin||'외신')+'">외신</span>'; }
 function renderRows(){
-  var list=currentRows();
-  if(view==="read" && list.length===0){ document.getElementById("rows").innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--ink-3);padding:40px 0;font-size:13px">아직 읽은 뉴스가 없어요.<br>뉴스 제목을 눌러 읽으면 여기 모여요.</td></tr>'; return; }
+  var listFull=currentRows();
+  if(view==="read" && listFull.length===0){ document.getElementById("rows").innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--ink-3);padding:40px 0;font-size:13px">아직 읽은 뉴스가 없어요.<br>뉴스 제목을 눌러 읽으면 여기 모여요.</td></tr>'; return; }
+  var list=listFull.slice(0,rowLimit);  // 성능: 최대 rowLimit건만 렌더
   document.getElementById("rows").innerHTML=list.map(function(n){
     var sc=scrapOf(n.id); var noteN=sc&&sc.notes?sc.notes.length:0;
     var chkCell = selMode? '<td class="cell-center"><input type="checkbox" class="chk" '+(selected[n.id]?'checked':'')+' onclick="toggleSel('+n.id+')"></td>' : '';
@@ -742,7 +744,12 @@ function renderRows(){
       '<td class="cell-center"><span class="star '+(isScrap(n.id)?'on':'')+'" onclick="toggleScrap('+n.id+')">'+(isScrap(n.id)?'★':'☆')+'</span></td>'+
     '</tr>';
   }).join("");
-  document.getElementById("emptyBox").innerHTML = list.length?"":'<div class="empty">'+(view==="scrap"?'스크랩한 뉴스가 없어요.<br>표에서 ☆를 눌러 저장하세요.':'표시할 뉴스가 없어요.')+'</div>';
+  document.getElementById("emptyBox").innerHTML = listFull.length?"":'<div class="empty">'+(view==="scrap"?'스크랩한 뉴스가 없어요.<br>표에서 ☆를 눌러 저장하세요.':'표시할 뉴스가 없어요.')+'</div>';
+  var moreBox=document.getElementById("moreBox");
+  if(moreBox){
+    if(listFull.length>list.length){ moreBox.innerHTML='<button onclick="rowLimit+=300;renderRows();" style="margin:14px auto;display:block;padding:10px 20px;border:1px solid var(--line);border-radius:9px;background:var(--card);cursor:pointer;font-size:13px;font-weight:700">＋ 더 보기 ('+(listFull.length-list.length)+'건 더 · 총 '+listFull.length+'건)</button>'; }
+    else moreBox.innerHTML="";
+  }
 }
 function gKey(g){ return g.term; }
 function glossFilter(f){ glossView_filter=f; var b=document.querySelectorAll('[data-gf]'); for(var i=0;i<b.length;i++)b[i].classList.toggle('on',b[i].dataset.gf===f); renderGloss(); }
@@ -792,7 +799,7 @@ function delGlossTerm(term){
 function renderAll(){ renderBoard(); updateBreakingBadge(); updateHeaderStat(); updateNextRun(); renderSurge(); renderFilters(); renderKwMgr(); renderRows(); renderGloss(); }
 
 /* ── 뷰 전환 ── */
-function setView(v){ groupFilter=null;
+function setView(v){ groupFilter=null; rowLimit=300;
   liveMode=false; view=v; filterKw=null; if(v!=="scrap"){selMode=false;selected={};}
   var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view===v);
   var gloss=(v==="gloss");
@@ -810,9 +817,9 @@ function setView(v){ groupFilter=null;
 }
 function toggleChkCol(){ var show=selMode; document.getElementById("colChk").style.display=show?"":"none"; document.querySelector(".thChk").style.display=show?"":"none"; }
 function setSort(s){ sort=s; var b=document.querySelectorAll(".seg button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.sort===s); renderRows(); }
-function pickKw(k){ filterKw=filterKw===k?null:k; if(filterKw)groupFilter=null; renderBoard(); renderFilters(); renderRows(); }
+function pickKw(k){ rowLimit=300; filterKw=filterKw===k?null:k; if(filterKw)groupFilter=null; renderBoard(); renderFilters(); renderRows(); }
 function toggleRead(id){ var i=readIds.indexOf(id); if(i>=0)readIds.splice(i,1); else readIds.push(id); lsSet("nr_read",readIds); renderRows(); }
-function runSearch(){ liveMode=false; search=document.getElementById("q").value.trim(); view="all"; filterKw=null; dateFilter="all"; var ds=document.getElementById("dateSel"); if(ds)ds.value="all"; var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view==="all"); setView("all"); document.getElementById("q").value=search; }
+function runSearch(){ rowLimit=300; liveMode=false; search=document.getElementById("q").value.trim(); view="all"; filterKw=null; dateFilter="all"; var ds=document.getElementById("dateSel"); if(ds)ds.value="all"; var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view==="all"); setView("all"); document.getElementById("q").value=search; }
 function addSurge(k){ if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]={n:0,d:"up",bars:[1,2,3,5,8,13,20]}; lsSet("nr_keywords",keywords);} filterKw=k; renderAll(); }
 
 /* ── 관심 키워드 추가/삭제/수정 ── */
@@ -963,7 +970,7 @@ function loadData(manual){
   setStatus("🟡 불러오는 중…");
   var bust = "?t="+Date.now();  // 항상 최신 강제(캐시 우회)
   // 최근 4일치 archive 경로 (오늘 포함) — 어제·그제 뉴스도 함께 보기
-  var days=[]; for(var i=0;i<4;i++){ var d=new Date(Date.now()+9*3600000-i*86400000); days.push(d.toISOString().slice(0,10)); }
+  var days=[]; for(var i=0;i<14;i++){ var d=new Date(Date.now()+9*3600000-i*86400000); days.push(d.toISOString().slice(0,10)); }
   var fetches=[
     fetch("news.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
     fetch("glossary.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
