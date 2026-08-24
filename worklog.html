@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921-cal0818-2110"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0818-2310"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -6684,6 +6684,18 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         var extra = a[0] < 0 ? ';color:#b52929;border-color:#f5b5b5;background:#fdecec' : '';
         return '<button type="button" class="m-wtAdd" data-add="' + a[0] + '" style="' + C + extra + '">' + a[1] + '</button>';
       }).join('');
+      var SS = 'height:38px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:8px;'
+             + 'font-size:15px;font-weight:700;font-family:inherit;background:#f7faff;'
+             + 'color:#1a2f45;cursor:pointer;flex:0 0 auto';
+      var hOpt = '<option value="">--</option>', mOpt = '<option value="">--</option>';
+      for(var _h = 0; _h < 24; _h++){
+        var _hs = String(_h).padStart(2,'0');
+        hOpt += '<option value="' + _hs + '">' + _hs + '</option>';
+      }
+      for(var _m = 0; _m < 60; _m += 5){
+        var _ms = String(_m).padStart(2,'0');
+        mOpt += '<option value="' + _ms + '">' + _ms + '</option>';
+      }
       var hourHtml = '';
       for(var h = 8; h <= 18; h++){
         hourHtml += '<button type="button" class="m-wtQuick" data-h="' + h + '" style="' + CH + '">' + h + '</button>';
@@ -6696,9 +6708,15 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       wrap.innerHTML =
           '<label>처리 시간 <span style="font-weight:500;color:#9aa7b4">(비워두면 자동 배정)</span></label>'
         + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-        +   '<input type="time" id="m-workStart" step="300" style="width:118px;height:38px;flex:0 0 auto">'
-        +   '<span style="color:#9aa7b4">~</span>'
-        +   '<input type="time" id="m-workEnd" step="300" style="width:118px;height:38px;flex:0 0 auto">'
+        +   '<select id="m-wsH" style="' + SS + '">' + hOpt + '</select>'
+        +   '<span style="color:#9aa7b4;font-weight:800">:</span>'
+        +   '<select id="m-wsM" style="' + SS + '">' + mOpt + '</select>'
+        +   '<input type="hidden" id="m-workStart">'
+        +   '<span style="color:#9aa7b4;margin:0 4px">~</span>'
+        +   '<select id="m-weH" style="' + SS + '">' + hOpt + '</select>'
+        +   '<span style="color:#9aa7b4;font-weight:800">:</span>'
+        +   '<select id="m-weM" style="' + SS + '">' + mOpt + '</select>'
+        +   '<input type="hidden" id="m-workEnd">'
         +   '<button type="button" id="m-wtNow" style="' + C + ';background:#3f7cb8;color:#fff;border-color:#3f7cb8;height:38px">🕐 지금</button>'
         +   '<button type="button" id="m-wtClear" style="' + C + ';color:#b52929;border-color:#f5b5b5;background:#fdecec;height:38px">지우기</button>'
         + '</div>'
@@ -6717,6 +6735,19 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
       var sEl = wrap.querySelector('#m-workStart');
       var eEl = wrap.querySelector('#m-workEnd');
+      // 드롭다운을 고치면 실제 값(hidden)에 반영
+      ['#m-wsH','#m-wsM','#m-weH','#m-weM'].forEach(function(sel){
+        var el = wrap.querySelector(sel);
+        if(!el) return;
+        el.addEventListener('change', function(){
+          var sh = wrap.querySelector('#m-wsH').value, sm = wrap.querySelector('#m-wsM').value;
+          var eh = wrap.querySelector('#m-weH').value, em = wrap.querySelector('#m-weM').value;
+          sEl.value = (sh && sm) ? (sh + ':' + sm) : '';
+          eEl.value = (eh && em) ? (eh + ':' + em) : '';
+          if(sEl.value && (!eEl.value || eEl.value <= sEl.value)) eEl.value = addMin(sEl.value, 30);
+          refresh();
+        });
+      });
       function gap(){
         if(!sEl.value || !eEl.value) return 30;
         var a = sEl.value.split(':'), c = eEl.value.split(':');
@@ -6731,7 +6762,25 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           b.style.borderColor = hit ? '#3f7cb8' : '#dbe6f4';
         });
       }
+      function syncSel(){
+        [[sEl, wrap.querySelector('#m-wsH'), wrap.querySelector('#m-wsM')],
+         [eEl, wrap.querySelector('#m-weH'), wrap.querySelector('#m-weM')]].forEach(function(g){
+          var el = g[0], hh = g[1], mm = g[2];
+          if(!hh || !mm) return;
+          if(!el.value){ hh.value = ''; mm.value = ''; return; }
+          var pp = el.value.split(':');
+          hh.value = pp[0];
+          // 5분 배수가 아닌 기존 값도 그대로 보이게 옵션 추가
+          if(!mm.querySelector('option[value="' + pp[1] + '"]')){
+            var o = document.createElement('option');
+            o.value = pp[1]; o.textContent = pp[1];
+            mm.appendChild(o);
+          }
+          mm.value = pp[1];
+        });
+      }
       function refresh(){
+        syncSel();
         var g = (sEl.value && eEl.value) ? gap() : -1;
         mark('.m-wtDur',   function(b){ return parseInt(b.getAttribute('data-dur'),10) === g; });
         mark('.m-wtQuick', function(b){ return sEl.value === (String(b.getAttribute('data-h')).padStart(2,'0') + ':00'); });
@@ -13589,9 +13638,375 @@ if('serviceWorker' in navigator){
 }
 </script>
 <script>
+/* ===== v45-0818: 자재 선택창에서 새 자재 직접 등록 (여러 개 한 번에) ===== */
+(function(){
+  var g = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s||'').replace(/[&<>"]/g,function(m){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[m]; }); };
+
+  // 자재 마스터가 어떤 kind로 저장되는지 실제 데이터에서 탐지
+  function detectItemKind(){
+    try{
+      if(typeof entries === 'undefined') return 'item';
+      var cnt = {}, best = '', max = 0;
+      entries.forEach(function(e){
+        if(e && e.kind && (e.itemName || e.spec)) cnt[e.kind] = (cnt[e.kind]||0) + 1;
+      });
+      for(var k in cnt){ if(cnt[k] > max){ max = cnt[k]; best = k; } }
+      return best || 'item';
+    }catch(e){ return 'item'; }
+  }
+
+  // 화면에 열려 있는 자재 검색창 찾기
+  function findMatSearchInput(){
+    var list = document.querySelectorAll('input[placeholder*="초성"]');
+    for(var i = 0; i < list.length; i++){
+      var inp = list[i];
+      if(inp.offsetParent === null) continue;                 // 안 보이면 제외
+      var ph = inp.getAttribute('placeholder') || '';
+      if(ph.indexOf('자재') >= 0) return inp;                  // "자재명 또는 초성 검색"
+      var box = inp.closest('div');
+      for(var d = 0; d < 4 && box; d++){
+        if((box.textContent||'').indexOf('자재 선택') >= 0) return inp;
+        box = box.parentElement;
+      }
+    }
+    return null;
+  }
+
+  var BTN = 'width:100%;height:38px;margin-top:8px;border:1.5px dashed #8e44ad;border-radius:10px;'
+          + 'background:#faf5ff;color:#8e44ad;font-size:13px;font-weight:700;'
+          + 'font-family:inherit;cursor:pointer;touch-action:manipulation';
+
+  function injectBtn(){
+    try{
+      var inp = findMatSearchInput();
+      if(!inp) return;
+      var host = inp.parentElement;
+      if(!host) return;
+      var btn = host.querySelector('#wlNewMatBtn');
+      if(!btn){
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'wlNewMatBtn';
+        btn.style.cssText = BTN;
+        host.appendChild(btn);
+        btn.addEventListener('click', function(){ openNewMatForm(inp); });
+      }
+      var q = (inp.value || '').trim();
+      btn.textContent = q ? ('➕ "' + q + '" 새 자재로 등록') : '➕ 목록에 없는 자재 등록';
+      if(!inp._wlBound){
+        inp._wlBound = true;
+        inp.addEventListener('input', function(){
+          var v = (inp.value || '').trim();
+          btn.textContent = v ? ('➕ "' + v + '" 새 자재로 등록') : '➕ 목록에 없는 자재 등록';
+        });
+      }
+    }catch(e){}
+  }
+
+  function openNewMatForm(srcInput){
+    var pre = (srcInput && srcInput.value || '').trim();
+    var ov = g('wlNewMatOv');
+    if(ov) ov.remove();
+    ov = document.createElement('div');
+    ov.id = 'wlNewMatOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10050;'
+                     + 'display:flex;align-items:center;justify-content:center;padding:18px;font-family:inherit';
+    ov.innerHTML =
+        '<div style="background:#fff;border-radius:16px;width:100%;max-width:560px;padding:20px;max-height:90vh;overflow:auto">'
+      +   '<h3 style="margin:0 0 4px;font-size:17px;font-weight:800;color:#8e44ad">📦 새 자재 등록</h3>'
+      +   '<div style="font-size:12px;color:#7a92a8;margin-bottom:14px;line-height:1.5">'
+      +     '목록에 없는 자재를 자재 목록에 추가합니다. 수량·단가는 나중에 자재 탭에서 채우시면 됩니다.</div>'
+      +   '<div style="display:grid;grid-template-columns:1fr 1fr 74px 30px;gap:5px;margin-bottom:5px">'
+      +     '<div style="font-size:11px;font-weight:700;color:#7a92a8">자재명 *</div>'
+      +     '<div style="font-size:11px;font-weight:700;color:#7a92a8">규격</div>'
+      +     '<div style="font-size:11px;font-weight:700;color:#7a92a8">단위</div><div></div>'
+      +   '</div>'
+      +   '<div id="wlNewMatRows"></div>'
+      +   '<button type="button" id="wlNewMatAdd" style="width:100%;height:34px;margin-top:6px;'
+      +     'border:1.5px dashed #c9b6e0;border-radius:9px;background:transparent;color:#8e44ad;'
+      +     'font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">➕ 자재 한 줄 더</button>'
+      +   '<div style="display:flex;gap:8px;margin-top:16px">'
+      +     '<button type="button" id="wlNewMatCancel" style="flex:1;height:44px;background:#f7faff;'
+      +       'border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;color:#7a92a8;'
+      +       'cursor:pointer;font-family:inherit">취소</button>'
+      +     '<button type="button" id="wlNewMatSave" style="flex:2;height:44px;background:#8e44ad;'
+      +       'color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;'
+      +       'cursor:pointer;font-family:inherit">💾 자재 목록에 등록</button>'
+      +   '</div>'
+      + '</div>';
+    document.body.appendChild(ov);
+
+    var rows = g('wlNewMatRows');
+    var IN = 'height:36px;padding:0 9px;border:1.5px solid #dbe6f4;border-radius:8px;'
+           + 'font-size:13.5px;font-family:inherit;background:#f7faff;outline:none;'
+           + 'width:100%;box-sizing:border-box';
+    function addRow(name){
+      var r = document.createElement('div');
+      r.className = 'wl-nm-row';
+      r.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 74px 30px;gap:5px;margin-bottom:5px';
+      r.innerHTML =
+          '<input type="text" class="nm-name" value="' + esc(name||'') + '" placeholder="예: 무초산실란트" style="' + IN + '">'
+        + '<input type="text" class="nm-spec" placeholder="예: 270mL / 유리용" style="' + IN + '">'
+        + '<input type="text" class="nm-unit" value="EA" style="' + IN + ';text-align:center">'
+        + '<button type="button" class="nm-del" style="border:none;background:none;font-size:15px;'
+        +   'cursor:pointer;color:#b52929">🗑</button>';
+      rows.appendChild(r);
+      r.querySelector('.nm-del').addEventListener('click', function(){
+        if(rows.querySelectorAll('.wl-nm-row').length > 1) r.remove();
+        else r.querySelector('.nm-name').value = '';
+      });
+      return r;
+    }
+    var first = addRow(pre);
+    setTimeout(function(){
+      var f = first.querySelector(pre ? '.nm-spec' : '.nm-name');
+      if(f) f.focus();
+    }, 80);
+
+    g('wlNewMatAdd').addEventListener('click', function(){
+      var r = addRow('');
+      var n = r.querySelector('.nm-name'); if(n) n.focus();
+    });
+    g('wlNewMatCancel').addEventListener('click', function(){ ov.remove(); });
+    ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+
+    g('wlNewMatSave').addEventListener('click', function(){
+      var kind = detectItemKind();
+      var made = [], dup = [];
+      var existing = {};
+      try{
+        if(typeof entries !== 'undefined'){
+          entries.forEach(function(e){
+            if(e && e.itemName) existing[String(e.itemName).replace(/\s+/g,'')] = 1;
+          });
+        }
+      }catch(e){}
+
+      rows.querySelectorAll('.wl-nm-row').forEach(function(r){
+        var nm = (r.querySelector('.nm-name').value || '').trim();
+        if(!nm) return;
+        var sp = (r.querySelector('.nm-spec').value || '').trim();
+        var un = (r.querySelector('.nm-unit').value || '').trim() || 'EA';
+        if(existing[nm.replace(/\s+/g,'')]){ dup.push(nm); return; }
+        try{
+          if(typeof addRecord === 'function'){
+            addRecord({ kind: kind, itemName: nm, spec: sp, unit: un,
+                        date: '', createdAt: Date.now(), _manualItem: true });
+            existing[nm.replace(/\s+/g,'')] = 1;
+            made.push(nm);
+          }
+        }catch(err){ console.error('[자재등록]', err); }
+      });
+
+      if(!made.length && !dup.length){
+        if(typeof toast === 'function') toast('자재명을 입력해주세요');
+        return;
+      }
+      ov.remove();
+      var msg = made.length ? ('📦 ' + made.length + '개 자재를 목록에 등록했어요') : '';
+      if(dup.length) msg += (msg ? ' / ' : '') + '이미 있는 자재 ' + dup.length + '개는 건너뜀';
+      if(typeof toast === 'function') toast(msg, 3500);
+
+      // 검색창에 첫 자재명을 넣어 바로 고를 수 있게
+      if(srcInput && made.length){
+        setTimeout(function(){
+          srcInput.value = made[0];
+          srcInput.dispatchEvent(new Event('input', {bubbles:true}));
+          srcInput.focus();
+        }, 400);
+      }
+      if(typeof renderAll === 'function') setTimeout(renderAll, 500);
+    });
+  }
+
+  setInterval(injectBtn, 600);
+  console.log('[newMaterial] 자재 직접등록 로드');
+})();
+
+</script>
+<script>
+/* ===== v45-0818: 업무 1건에 자재 여러 개 기록 ===== */
+(function(){
+  var g = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s||'').replace(/[&<>"]/g,function(m){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[m]; }); };
+
+  var _editId = null, _editKind = '';
+
+  function isWorkModal(){
+    var mf = g('mFields');
+    if(!mf) return false;
+    if(_editKind && _editKind !== 'work') return false;
+    var t = g('mTitle'), tx = (t && t.textContent) || '';
+    if(/사고|통화|회의|전달|휴가|메모|지출|예정|청소/.test(tx)) return false;
+    return !!(mf.querySelector('#m-material') && mf.querySelector('#m-title'));
+  }
+
+  // 등록된 자재명 목록 (자동완성용)
+  function matNames(){
+    try{
+      if(typeof entries === 'undefined') return [];
+      var seen = {}, out = [];
+      entries.forEach(function(e){
+        var n = e && e.itemName;
+        if(n && !seen[n]){ seen[n] = 1; out.push(n); }
+      });
+      return out.sort();
+    }catch(e){ return []; }
+  }
+
+  var IN = 'height:36px;padding:0 9px;border:1.5px solid #dbe6f4;border-radius:8px;'
+         + 'font-size:13.5px;font-family:inherit;background:#fff;outline:none;'
+         + 'width:100%;box-sizing:border-box';
+
+  function addRow(host, name, qty){
+    var r = document.createElement('div');
+    r.className = 'wl-mm-row';
+    r.style.cssText = 'display:grid;grid-template-columns:1fr 68px 30px;gap:5px;margin-bottom:5px';
+    r.innerHTML =
+        '<input type="text" class="mm-name" list="wlMatDL" value="' + esc(name||'') + '" placeholder="자재명 (목록에서 자동완성)" style="' + IN + '">'
+      + '<input type="number" class="mm-qty" min="0" step="1" value="' + (qty || 1) + '" style="' + IN + ';text-align:center">'
+      + '<button type="button" class="mm-del" style="border:none;background:none;font-size:15px;cursor:pointer;color:#b52929">🗑</button>';
+    host.appendChild(r);
+    r.querySelector('.mm-del').addEventListener('click', function(){ r.remove(); });
+    return r;
+  }
+
+  function inject(){
+    try{
+      if(!isWorkModal()) return;
+      var mf = g('mFields');
+      if(mf.querySelector('#wlMultiMat')) return;               // 이미 주입됨
+      var matEl = g('m-material');
+      if(!matEl) return;
+      var host = (matEl.closest && matEl.closest('.field')) || matEl.parentElement;
+      if(!host || !host.parentNode) return;
+
+      var box = document.createElement('div');
+      box.id = 'wlMultiMat';
+      box.className = host.className || 'field';
+      box.style.gridColumn = '1 / -1';
+      box.innerHTML =
+          '<label>➕ 자재 추가 <span style="font-weight:500;color:#9aa7b4">(위 자재 외에 더 쓴 자재)</span></label>'
+        + '<datalist id="wlMatDL"></datalist>'
+        + '<div style="display:grid;grid-template-columns:1fr 68px 30px;gap:5px;margin-bottom:4px">'
+        +   '<div style="font-size:11px;font-weight:700;color:#7a92a8">자재명</div>'
+        +   '<div style="font-size:11px;font-weight:700;color:#7a92a8;text-align:center">수량</div><div></div>'
+        + '</div>'
+        + '<div id="wlMatRows"></div>'
+        + '<button type="button" id="wlMatAddRow" style="width:100%;height:34px;margin-top:4px;'
+        +   'border:1.5px dashed #93c5fd;border-radius:9px;background:transparent;color:#3f7cb8;'
+        +   'font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">➕ 자재 한 줄 더</button>';
+      host.parentNode.insertBefore(box, host.nextSibling);
+
+      // 자동완성 목록 채우기
+      var dl = box.querySelector('#wlMatDL');
+      matNames().forEach(function(n){
+        var o = document.createElement('option'); o.value = n; dl.appendChild(o);
+      });
+
+      var rows = box.querySelector('#wlMatRows');
+      box.querySelector('#wlMatAddRow').addEventListener('click', function(){
+        var r = addRow(rows, '', 1);
+        var n = r.querySelector('.mm-name'); if(n) n.focus();
+      });
+
+      // 수정 모드면 저장된 추가 자재 복원
+      if(_editId && typeof entries !== 'undefined'){
+        var en = entries.find(function(x){ return x.id === _editId; });
+        if(en && Array.isArray(en.materials) && en.materials.length > 1){
+          en.materials.slice(1).forEach(function(m){ addRow(rows, m.name, m.qty); });
+        }
+      }
+    }catch(e){ console.error('[multiMat] 주입 오류', e); }
+  }
+
+  // 화면에 열려 있을 때만 값을 읽음
+  function readRows(){
+    var ovl = g('overlay');
+    if(!ovl || !ovl.classList.contains('show')) return null;
+    var box = g('wlMultiMat');
+    if(!box) return null;
+    var out = [];
+    box.querySelectorAll('.wl-mm-row').forEach(function(r){
+      var n = (r.querySelector('.mm-name').value || '').trim();
+      if(!n) return;
+      var q = parseFloat(r.querySelector('.mm-qty').value) || 1;
+      out.push({ name: n, qty: q });
+    });
+    return out;
+  }
+
+  // "실란트(2), 코킹건" 형태로 합침 — 목록·카드에 그대로 보이게
+  function joinMat(list){
+    return list.map(function(m){
+      return m.qty && Number(m.qty) !== 1 ? (m.name + '(' + m.qty + ')') : m.name;
+    }).join(', ');
+  }
+
+  function applyTo(obj){
+    try{
+      var extra = readRows();
+      if(extra === null) return;                       // 모달이 닫혀 있으면 손대지 않음
+      var firstName = (g('m-material') && g('m-material').value || '').trim();
+      var firstQty  = parseFloat(g('m-qty') && g('m-qty').value) || 1;
+      var all = [];
+      if(firstName) all.push({ name: firstName, qty: firstQty });
+      all = all.concat(extra);
+      if(!all.length) return;
+      obj.materials = all;
+      if(all.length > 1) obj.material = joinMat(all);   // 여러 개면 합쳐서 표시
+    }catch(e){ console.error('[multiMat] 저장 오류', e); }
+  }
+
+  function hook(){
+    if(typeof window.openEditor === 'function' && !window.openEditor._mmHooked){
+      var oe = window.openEditor;
+      window.openEditor = function(kind, id){
+        _editKind = kind || ''; _editId = id || null;
+        var r = oe.apply(this, arguments);
+        [80, 300, 700].forEach(function(t){ setTimeout(inject, t); });
+        return r;
+      };
+      window.openEditor._mmHooked = true;
+    }
+    if(typeof window.addRecord === 'function' && !window.addRecord._mmHooked){
+      var oa = window.addRecord;
+      window.addRecord = function(obj){
+        if(obj && obj.kind === 'work' && !obj._fromGcal) applyTo(obj);
+        return oa.apply(this, arguments);
+      };
+      window.addRecord._mmHooked = true;
+    }
+    if(typeof window.updateRecord === 'function' && !window.updateRecord._mmHooked){
+      var ou = window.updateRecord;
+      window.updateRecord = function(id, patch){
+        try{
+          if(patch && !patch._fromGcal && typeof entries !== 'undefined'){
+            var en = entries.find(function(x){ return x.id === id; });
+            if(en && en.kind === 'work') applyTo(patch);
+          }
+        }catch(e){}
+        return ou.apply(this, arguments);
+      };
+      window.updateRecord._mmHooked = true;
+    }
+  }
+  [500, 1500, 3000, 6000].forEach(function(t){ setTimeout(hook, t); });
+  setInterval(function(){
+    var ovl = g('overlay');
+    if(ovl && ovl.classList.contains('show')) inject();
+  }, 900);
+  console.log('[multiMat] 자재 여러 개 기록 로드');
+})();
+
+</script>
+<script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0818-2110';
+  var TAG = ' +cal0818-2310';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
