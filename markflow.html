@@ -2226,7 +2226,8 @@ table.ProseMirror-selectednode {
 
   .editor-wrap{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);position:relative;}
   /* 왼쪽 거터(핸들/접기 화살표 자리) */
-  .toastui-editor-ww-container .ProseMirror{padding-left:74px!important;padding-right:24px;}
+  .toastui-editor-ww-container .ProseMirror{padding-left:100px!important;padding-right:20px;}
+  @media(max-width:760px){ .toastui-editor-ww-container .ProseMirror{padding-left:94px!important;padding-right:12px;} }
   #editor{flex:1;min-height:0;}
 
   .status{display:flex;align-items:center;gap:16px;padding:6px 14px;background:var(--bg-elev);border-top:1px solid var(--border);font-size:12px;color:var(--text-faint);user-select:none;}
@@ -2246,6 +2247,9 @@ table.ProseMirror-selectednode {
   .mf-tbtn{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--text-soft);border-radius:8px;cursor:pointer;padding:0;box-sizing:border-box;}
   .mf-tbtn:hover{background:var(--bg-soft);color:var(--text);}
   .mf-tbtn svg{width:18px;height:18px;}
+  /* 아웃라인(들여쓰기·내어쓰기)·모두접기 — 자주 쓰는 기능이라 눈에 띄게 */
+  .mf-tbtn.indent,.mf-tbtn.outdent{color:var(--accent);}
+  .mf-tbtn.indent:hover,.mf-tbtn.outdent:hover,.mf-tbtn.foldall:hover,.mf-tbtn.bullet:hover{background:var(--accent-soft);color:var(--accent);}
   /* 토스트 기본 넘침(⋯) 토글은 사용 안 함(모든 버튼을 인라인 표시) → 숨김. 우리 블록 메뉴는 .mf-tbtn.more */
   .toastui-editor-toolbar-icons.more{display:none!important;}
   .toastui-editor-dropdown-toolbar{display:flex!important;position:static!important;box-shadow:none!important;border:0!important;background:transparent!important;padding:0!important;height:auto!important;min-height:0!important;}
@@ -2492,15 +2496,17 @@ table.ProseMirror-selectednode {
   }
 
   /* 제목 접기 오버레이 */
-  .mf-fold-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:40;}
-  .mf-lifold-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:40;}
-  .mf-caret.li{width:18px;height:20px;}
-  .mf-caret.li svg{width:12px;height:12px;}
-  .mf-caret{position:absolute;width:20px;height:24px;display:flex;align-items:center;justify-content:center;color:var(--text-faint);opacity:.55;cursor:pointer;pointer-events:auto;border-radius:5px;background:transparent;transition:opacity .15s,background .15s;}
-  .mf-caret:hover{opacity:.95;background:var(--bg-soft);}
-  .mf-caret.folded{opacity:.85;}
-  .mf-caret svg{width:15px;height:15px;transition:transform .18s;}
+  /* 접기/펴기 화살표는 왼쪽 고정 '접기 레일'에 두어 핸들과 겹치지 않게 함 */
+  .mf-fold-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:45;}
+  .mf-lifold-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:45;}
+  .mf-caret{position:absolute;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--text-soft);opacity:.9;cursor:pointer;pointer-events:auto;border-radius:6px;background:transparent;transition:opacity .15s,background .15s,color .15s;}
+  .mf-caret:hover{opacity:1;background:var(--accent-soft);color:var(--accent);}
+  .mf-caret.folded{opacity:1;color:var(--accent);background:var(--accent-soft);}
+  .mf-caret svg{width:16px;height:16px;transition:transform .18s;}
   .mf-caret.exp svg{transform:rotate(90deg);}
+  .mf-caret.li{width:24px;height:24px;}
+  .mf-caret.li svg{width:14px;height:14px;}
+  @media(max-width:760px){ .mf-caret{width:30px;height:30px;} .mf-caret svg{width:18px;height:18px;} .mf-caret.li{width:28px;height:28px;} .mf-caret.li svg{width:16px;height:16px;} }
 
   /* 노션식 블록 핸들(+ / 드래그) */
   .mf-handle-layer{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:20;}
@@ -2513,7 +2519,7 @@ table.ProseMirror-selectednode {
   .mf-hbtn.drag:active,.mf-hbtn.drag.grabbing{cursor:grabbing;background:var(--accent-soft);color:var(--accent);}
   .mf-hbtn svg{width:21px;height:21px;pointer-events:none;}
   .mf-dot{width:20px;height:20px;color:var(--text-soft);}
-  @media(max-width:760px){ .mf-hbtn{width:32px;height:32px;} .mf-hbtn svg{width:23px;height:23px;} .mf-dot{width:22px;height:22px;} }
+  @media(max-width:760px){ .mf-hbtn{width:24px;height:30px;} .mf-hbtn svg{width:21px;height:21px;} .mf-dot{width:20px;height:20px;} }
   .mf-drop{position:absolute;height:3px;background:var(--accent);border-radius:3px;left:0;right:0;display:none;pointer-events:none;z-index:42;box-shadow:0 0 0 1px var(--bg);}
   body.mf-dragging{cursor:grabbing;user-select:none;}
 
@@ -2587,7 +2593,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.7</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38789,6 +38795,15 @@ table.ProseMirror-selectednode {
   photosBtn.addEventListener("click",function(e){ e.preventDefault(); pickMultiplePhotos(); });
   var moreBtn=document.createElement("button"); moreBtn.type="button"; moreBtn.className="mf-tbtn more"; moreBtn.title="블록 추가 (제목·목록·인용·표·구분선)"; moreBtn.setAttribute("aria-label","블록 추가"); moreBtn.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
   moreBtn.addEventListener("click",function(e){ e.preventDefault(); if(tbMoreMenu){ closeTbMore(); return; } openTbMore(moreBtn.getBoundingClientRect(), moreBtn); });
+  // 아웃라인(들여쓰기·내어쓰기·모두접기/펼치기) — 항상 보이는 버튼
+  var bulletBtn=document.createElement("button"); bulletBtn.type="button"; bulletBtn.className="mf-tbtn bullet"; bulletBtn.title="글머리 목록 (이 줄을 • 목록으로)"; bulletBtn.setAttribute("aria-label","글머리 목록"); bulletBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.5" cy="7" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="17" r="1.4" fill="currentColor" stroke="none"/><line x1="9" y1="7" x2="20" y2="7"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="17" x2="20" y2="17"/></svg>';
+  bulletBtn.addEventListener("click",function(e){ e.preventDefault(); var i=curTopIdx(); if(i<0){ if(typeof mfToast==="function") mfToast("먼저 줄을 눌러 커서를 두세요"); return; } convertUnit({domIdx:i}, isListLine(i)?"p":"ul"); });
+  var outdentBtn=document.createElement("button"); outdentBtn.type="button"; outdentBtn.className="mf-tbtn outdent"; outdentBtn.title="내어쓰기 (한 단계 밖으로) · Shift+Tab"; outdentBtn.setAttribute("aria-label","내어쓰기"); outdentBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="20" y1="6" x2="9" y2="6"/><line x1="20" y1="12" x2="12" y2="12"/><line x1="20" y1="18" x2="9" y2="18"/><path d="M7 9l-3 3 3 3"/></svg>';
+  outdentBtn.addEventListener("click",function(e){ e.preventDefault(); outdentCur(); });
+  var indentBtn=document.createElement("button"); indentBtn.type="button"; indentBtn.className="mf-tbtn indent"; indentBtn.title="들여쓰기 (한 단계 안으로) · Tab"; indentBtn.setAttribute("aria-label","들여쓰기"); indentBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="15" y2="6"/><line x1="4" y1="12" x2="12" y2="12"/><line x1="4" y1="18" x2="15" y2="18"/><path d="M17 9l3 3-3 3"/></svg>';
+  indentBtn.addEventListener("click",function(e){ e.preventDefault(); indentCur(); });
+  var foldAllBtn=document.createElement("button"); foldAllBtn.type="button"; foldAllBtn.className="mf-tbtn foldall"; foldAllBtn.title="모두 접기 / 모두 펼치기"; foldAllBtn.setAttribute("aria-label","모두 접기·펼치기"); foldAllBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4l4 4 4-4"/><path d="M8 20l4-4 4 4"/><line x1="4" y1="12" x2="20" y2="12"/></svg>';
+  var foldAllState=false; foldAllBtn.addEventListener("click",function(e){ e.preventDefault(); foldAllState=!foldAllState; foldAll(!foldAllState); });
   var editor = new Editor({
     el: document.getElementById("editor"),
     height: "100%",
@@ -38802,7 +38817,8 @@ table.ProseMirror-selectednode {
       ["bold","italic","strike"],
       [{name:"hl",tooltip:"형광펜",el:hlBtn},{name:"emoji",tooltip:"아이콘 삽입",el:emojiBtn}],
       ["link",{name:"photos",tooltip:"사진 넣기 (한 장·여러 장)",el:photosBtn}],
-      [{name:"more",tooltip:"블록 추가 (제목·목록·표 등)",el:moreBtn}]
+      [{name:"more",tooltip:"블록 추가 (제목·목록·표 등)",el:moreBtn}],
+      [{name:"bullet",tooltip:"글머리 목록",el:bulletBtn},{name:"outdent",tooltip:"내어쓰기 (밖으로)",el:outdentBtn},{name:"indent",tooltip:"들여쓰기 (안으로)",el:indentBtn},{name:"foldall",tooltip:"모두 접기·펼치기",el:foldAllBtn}]
     ]
   });
 
@@ -39217,6 +39233,7 @@ table.ProseMirror-selectednode {
   // ---- 제목 접기(외부 스타일시트로 숨김; PM 노드는 직접 건드리지 않음) ----
   var foldSet=new Set(); var foldLayer=null; var foldStyleEl=null; var foldRaf=null; var foldMO=null;
   var liFoldSet=new Set(); var liFoldLayer=null;
+  var FOLD_RAIL_X=6; // 왼쪽 고정 '접기 레일' x좌표 (핸들과 분리)
   function pmEl(){ return document.querySelector(".toastui-editor-ww-container .ProseMirror"); }
   function isHd(el){ return el&&/^H[1-6]$/.test(el.tagName); }
   function hdLevel(el){ return +el.tagName.substring(1); }
@@ -39246,10 +39263,10 @@ table.ProseMirror-selectednode {
     for(var k=layer.children.length-1;k>=heads.length;k--) layer.children[k].remove();
     heads.forEach(function(h,k){
       var c=layer.children[k]; var hr=h.el.getBoundingClientRect();
-      var top=hr.top-wr.top; var left=hr.left-wr.left-24;
+      var top=hr.top-wr.top;
       var visible= hr.height>0 && top>=clipTop-2 && top<=wr.height-8;
       c.style.display=visible?"flex":"none";
-      c.style.top=(top+(hr.height-24)/2)+"px"; c.style.left=Math.max(2,left)+"px";
+      c.style.top=(top+2)+"px"; c.style.left=FOLD_RAIL_X+"px";
       var folded=foldSet.has(h.idx);
       c.classList.toggle("exp",!folded); c.classList.toggle("folded",folded);
       c.onclick=(function(hidx){ return function(e){ e.stopPropagation(); if(foldSet.has(hidx)) foldSet.delete(hidx); else foldSet.add(hidx); scheduleFold(); }; })(h.idx);
@@ -39300,10 +39317,10 @@ table.ProseMirror-selectednode {
     for(var k=layer.children.length-1;k>=items.length;k--) layer.children[k].remove();
     items.forEach(function(it,k){
       var c=layer.children[k]; var lr=it.li.getBoundingClientRect();
-      var top=lr.top-wr.top; var left=lr.left-wr.left-20;
+      var top=lr.top-wr.top;
       var visible= lr.height>0 && top>=clipTop-2 && top<=wr.height-8;
       c.style.display=visible?"flex":"none";
-      c.style.top=(top+2)+"px"; c.style.left=Math.max(2,left)+"px";
+      c.style.top=(top+1)+"px"; c.style.left=FOLD_RAIL_X+"px";
       c.classList.toggle("exp",!it.folded); c.classList.toggle("folded",it.folded);
       c.onclick=(function(key){ return function(e){ e.stopPropagation(); if(liFoldSet.has(key)) liFoldSet.delete(key); else liFoldSet.add(key); scheduleFold(); }; })(it.key);
     });
@@ -39734,6 +39751,54 @@ table.ProseMirror-selectednode {
     try{ editor.exec(c[0], c[1]); }catch(e){}
     afterDomEdit();
   }
+  // ---- 들여쓰기 / 내어쓰기 (Tab처럼) — 접기·펼치기와 함께 쓰는 아웃라인 기능 ----
+  function curTopIdx(){ try{ return wwView().state.selection.$from.index(0); }catch(e){ return -1; } }
+  function lineTypeName(idx){ try{ var doc=wwView().state.doc; if(idx<0||idx>=doc.childCount) return ""; return doc.child(idx).type.name; }catch(e){ return ""; } }
+  function isListLine(idx){ var n=lineTypeName(idx); return n==="bulletList"||n==="orderedList"||n==="taskList"; }
+  // 이전 형제 목록과 병합(인접한 같은 종류의 목록을 하나로 이어붙임) → 그래야 한 단계 들여쓰기 가능
+  function joinWithPrevList(idx){
+    var view=wwView(); if(!view) return false; var doc=view.state.doc; if(idx<=0||idx>=doc.childCount) return false;
+    var cur=doc.child(idx), prev=doc.child(idx-1);
+    var listNames={bulletList:1,orderedList:1,taskList:1};
+    if(!listNames[cur.type.name]||!listNames[prev.type.name]) return false;
+    var pos=pmChildFrom(doc,idx); // 두 목록의 경계
+    try{ var tr=view.state.tr.join(pos); view.dispatch(tr); return true; }catch(e){ return false; }
+  }
+  // 들여쓰기: 목록이면 현재 커서 위치 항목을 한 단계 안으로.
+  // 본문/제목이면 먼저 글머리(•)로 바꾸고, 위가 목록이면 병합해서 그 아래로 들여씀.
+  function indentCur(){
+    var idx=curTopIdx(); if(idx<0){ if(typeof mfToast==="function") mfToast("먼저 들여쓸 줄을 눌러 커서를 두세요"); return; }
+    if(isListLine(idx)){ try{ editor.exec("indent"); editor.focus(); }catch(e){} afterDomEdit(); return; }
+    // 본문/제목 → 글머리로 변환
+    convertUnit({domIdx:idx}, "ul");
+    setTimeout(function(){
+      var merged=joinWithPrevList(idx);
+      setTimeout(function(){
+        try{
+          // 병합됐으면 이전 목록에 붙었으니 커서를 그 항목에 두고 한 단계 들여쓰기
+          var view=wwView(); if(view && merged){ // 방금 붙인 마지막 항목으로 커서 이동 후 indent
+            editor.exec("indent");
+          }
+          editor.focus();
+        }catch(e){}
+        afterDomEdit();
+        if(typeof mfToast==="function") mfToast(merged?"윗 항목 아래로 들여썼어요 · ← 로 되돌리기":"글머리 목록으로 바꿨어요 · 윗줄도 목록이면 한 번 더 눌러 들여쓰기");
+      }, 40);
+    }, 45);
+  }
+  function outdentCur(){
+    var idx=curTopIdx(); if(idx<0){ if(typeof mfToast==="function") mfToast("먼저 줄을 눌러 커서를 두세요"); return; }
+    try{ editor.exec("outdent"); editor.focus(); }catch(e){} afterDomEdit();
+  }
+  function foldAll(open){
+    var p=pmEl(); if(!p) return;
+    if(open){ foldSet.clear(); liFoldSet.clear(); scheduleFold(); if(typeof mfToast==="function") mfToast("모두 펼쳤어요"); return; }
+    // 모두 접기: 접을 수 있는 모든 제목/목록 항목을 접기
+    var kids=Array.prototype.slice.call(p.children); var ord=-1;
+    for(var i=0;i<kids.length;i++){ if(isHd(kids[i])){ ord++; if(foldableHeading(kids,i)) foldSet.add(ord); } }
+    Array.prototype.slice.call(p.querySelectorAll("li")).forEach(function(li){ if(nestedListOf(li)) liFoldSet.add(liKey(li)); });
+    scheduleFold(); if(typeof mfToast==="function") mfToast("모두 접었어요 · 화살표나 '모두 펼치기'로 다시 볼 수 있어요");
+  }
   var BLOCK_TYPES=[{t:"p",lb:"본문"},{t:"h1",lb:"제목1"},{t:"h2",lb:"제목2"},{t:"h3",lb:"제목3"},{t:"ul",lb:"• 목록"},{t:"ol",lb:"1. 목록"},{t:"task",lb:"☑ 체크"},{t:"quote",lb:"❝ 인용"}];
   var LI_TYPES=[{t:"ul",lb:"• 글머리"},{t:"ol",lb:"1. 번호"},{t:"task",lb:"☑ 체크"}];
   function pmListNode(u){ var view=wwView(); if(!view) return null; var doc=view.state.doc; var ci=u.domIdx; if(ci<0||ci>=doc.childCount) return null; return {view:view,doc:doc,ci:ci,node:doc.child(ci),base:pmChildFrom(doc,ci)+1}; }
@@ -39768,7 +39833,7 @@ table.ProseMirror-selectednode {
     var top=r.top-wr.top;
     var wwc=document.querySelector(".toastui-editor-ww-container"); var clipTop=wwc?wwc.getBoundingClientRect().top-wr.top:0;
     if(r.height===0||top<clipTop-2||top>wr.height-10){ hEl.style.display="none"; return; }
-    hEl.style.display="flex"; hEl.style.top=(top+1)+"px"; hEl.style.left=Math.max(2,(refLeft-wr.left)-70)+"px"; hoverUnit=u;
+    hEl.style.display="flex"; hEl.style.top=(top+1)+"px"; hEl.style.left=Math.max(40,(refLeft-wr.left)-56)+"px"; hoverUnit=u;
   }
   function onEditorMove(e){ if(dragging||viewMode) return; var u=unitAtY(e.clientY); if(u) positionHandleForUnit(u); else if(!hoverHold&&hEl) hEl.style.display="none"; }
   function openPlusMenu(u){
@@ -39806,10 +39871,6 @@ table.ProseMirror-selectednode {
     var chips=document.createElement("div"); chips.className="bmenu-chips";
     BLOCK_TYPES.forEach(function(tp){ var c=document.createElement("button"); c.type="button"; c.className="bchip"; c.textContent=tp.lb;
       c.addEventListener("mousedown",function(ev){ ev.preventDefault(); closeTbMore(); if(curIdx<0){ if(typeof mfToast==="function") mfToast("먼저 바꿀 줄을 눌러 커서를 두세요"); return; } convertUnit({type:"block",domIdx:curIdx}, tp.t); });
-      chips.appendChild(c); });
-    // 들여쓰기 / 내어쓰기 (목록 항목을 Tab처럼 안/밖으로) — 접기·펼치기와 함께 씀
-    [["indent","→ 들여쓰기"],["outdent","← 내어쓰기"]].forEach(function(o){ var c=document.createElement("button"); c.type="button"; c.className="bchip indent"; c.textContent=o[1];
-      c.addEventListener("mousedown",function(ev){ ev.preventDefault(); closeTbMore(); focusCur(); setTimeout(function(){ try{ editor.exec(o[0]); }catch(e){} try{ editor.focus(); }catch(e){} afterDomEdit(); },0); });
       chips.appendChild(c); });
     tbMoreMenu.appendChild(chips);
     var sep=document.createElement("div"); sep.className="bmenu-sep"; tbMoreMenu.appendChild(sep);
