@@ -1,7 +1,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v45-20260824-1556";
+const APP_VERSION = "v45-20260824-1653";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -4654,7 +4654,7 @@ function renderMonthView(){
       });
     }
     if(hasContent) cls.push("has");
-    html+=`<div class="${cls.join(" ")}" data-d="${ds}"><span class="dnum">${d}</span>${inner}</div>`;
+    html+=`<div class="${cls.join(" ")}" data-d="${ds}"><span class="dnum" data-dow="${dow[wd]}">${d}</span>${inner}</div>`;
   }
   $("calGrid").innerHTML=html;
   $("calGrid").querySelectorAll("[data-d]").forEach(el=>{
