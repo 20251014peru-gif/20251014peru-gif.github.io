@@ -1015,7 +1015,7 @@ function loadData(manual){
   setStatus("🟡 불러오는 중…");
   var bust = "?t="+Date.now();  // 항상 최신 강제(캐시 우회)
   // 최근 4일치 archive 경로 (오늘 포함) — 어제·그제 뉴스도 함께 보기
-  var days=[]; for(var i=0;i<14;i++){ var d=new Date(Date.now()+9*3600000-i*86400000); days.push(d.toISOString().slice(0,10)); }
+  var days=[]; for(var i=0;i<4;i++){ var d=new Date(Date.now()+9*3600000-i*86400000); days.push(d.toISOString().slice(0,10)); }
   var fetches=[
     fetch("news.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
     fetch("glossary.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
