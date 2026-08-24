@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260824-1315-cal0824-1315"></script>
+<script src="worklog.js?v=v45-20260824-1412-cal0824-1412"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -13957,12 +13957,21 @@ if('serviceWorker' in navigator){
 (function(){
   var OUT_LS   = 'wl_gcal_outbox';
   var SCAN_LS  = 'wl_gcal_backfill_ts';
+  var MIG_LS   = 'wl_gcal_ob_v2';   // 잘못 쌓인 대기함 1회 정리용
   var GRACE_MS = 20000;      // 저장 직후 기본 전송이 성공할 시간을 준다
   var BATCH    = 4;          // 한 번에 보낼 건수
   var GAP_MS   = 900;        // 건당 간격 (구글 속도제한 회피)
-  var BACKFILL_DAYS = 90;    // 과거 며칠치까지 훑을지
+  var BACKFILL_DAYS = 7;     // 수동 훑기 기본 범위 (자동 훑기는 하지 않는다)
 
   function log(m){ try{ if(typeof dbg==='function') dbg('[대기함] '+m); }catch(e){} }
+  // v45-0824b: 예전 버전이 과거 90일치를 통째로 담아 수백 건이 쌓였다 → 1회 비우고 새로 시작
+  try{
+    if(!localStorage.getItem(MIG_LS)){
+      localStorage.removeItem(OUT_LS);
+      localStorage.removeItem(SCAN_LS);
+      localStorage.setItem(MIG_LS, '1');
+    }
+  }catch(e){}
   function load(){ try{ var a=JSON.parse(localStorage.getItem(OUT_LS)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
   function save(a){ try{ localStorage.setItem(OUT_LS, JSON.stringify(a.slice(0,500))); }catch(e){} }
 
@@ -14004,28 +14013,23 @@ if('serviceWorker' in navigator){
       if(window.__gcalAuthNeeded || !(window.gcalHasToken && window.gcalHasToken())){
         if(typeof window.gcalSignIn==='function'){ window.gcalSignIn(); return; }   // 사용자 클릭 = 팝업 허용됨
       }
-      backfill(true);
       drain(true);
-      if(typeof toast==='function') toast('📤 밀린 항목을 다시 보내는 중…');
+      if(typeof toast==='function') toast('📤 못 보낸 항목을 다시 보내는 중…');
     });
     host.parentNode.insertBefore(b, host.nextSibling);
     return b;
   }
+  /* v45-0824b: '미전송 N' 숫자 배지는 표시하지 않는다.
+     gcalEventId 를 기억 못 하는 옛 기록까지 세어서 414건 같은 잘못된 숫자가 떴다.
+     대기함은 뒤에서 조용히 재시도만 하고, 화면에는 '구글 로그인이 끊겼을 때'만 알린다. */
   function paint(){
     var b = badge(); if(!b) return;
-    var n = load().length;
     var needAuth = !!window.__gcalAuthNeeded || !(window.gcalHasToken && window.gcalHasToken());
-    if(!n && !needAuth){ b.style.display='none'; return; }
+    if(!needAuth){ b.style.display='none'; return; }
     b.style.display = 'inline-block';
-    if(needAuth){
-      b.textContent = '🔑 구글 다시 로그인' + (n ? ' (' + n + ')' : '');
-      b.style.borderColor = '#e08a8a'; b.style.background = '#fdecec'; b.style.color = '#a13030';
-      b.title = '구글 로그인이 끊겨서 캘린더로 못 보내고 있어요. 눌러서 다시 로그인하세요.';
-    } else {
-      b.textContent = '📤 미전송 ' + n;
-      b.style.borderColor = '#f0b429'; b.style.background = '#fff8e6'; b.style.color = '#9a6700';
-      b.title = '구글 캘린더로 아직 못 보낸 항목입니다. 눌러서 지금 보내기.';
-    }
+    b.textContent = '🔑 구글 다시 로그인';
+    b.style.borderColor = '#e08a8a'; b.style.background = '#fdecec'; b.style.color = '#a13030';
+    b.title = '구글 로그인이 끊겨서 캘린더로 못 보내고 있어요. 눌러서 다시 로그인하세요.';
   }
 
   /* ── 저장 훅 — 무슨 일이 있어도 대기함에는 적힌다 ── */
@@ -14072,18 +14076,16 @@ if('serviceWorker' in navigator){
   }
   [500,1500,3000,6000,10000].forEach(function(t){ setTimeout(hook, t); });
 
-  /* ── 과거에 못 올라간 것 훑어서 대기함에 담기 ── */
-  function backfill(force){
+  /* ── 밀린 것 훑기 — 자동으로는 절대 안 돈다. 콘솔에서 wlOutbox.scan(일수) 로만 실행 ──
+     예전 버전은 앱 켤 때마다 90일치를 쓸어담아 수백 건이 대기열에 쌓였다.
+     한꺼번에 수백 건을 구글로 보내면 안드로이드 증분 동기화가 깨져서 삼성 캘린더가 멈춘다. */
+  function backfill(days){
     try{
       if(typeof entries === 'undefined' || !entries.length) return 0;
-      if(!force){
-        var last = parseInt(localStorage.getItem(SCAN_LS)||'0',10);
-        if(Date.now() - last < 6*3600*1000) return 0;      // 6시간에 한 번이면 충분
-      }
-      localStorage.setItem(SCAN_LS, String(Date.now()));
+      var d = parseInt(days,10) || BACKFILL_DAYS;
       var kinds = syncKinds();
       if(!kinds.length) return 0;
-      var lim = new Date(Date.now() - BACKFILL_DAYS*86400000).toISOString().slice(0,10);
+      var lim = new Date(Date.now() - d*86400000).toISOString().slice(0,10);
       var q = load(), have = {};
       q.forEach(function(x){ have[x.id]=1; });
       var added = 0;
@@ -14096,7 +14098,7 @@ if('serviceWorker' in navigator){
         q.push({ id:e.id, ts:0, put:0, n:0 });             // ts:0 → 유예시간 없이 바로 대상
         have[e.id]=1; added++;
       });
-      if(added){ save(q); paint(); log('밀린 항목 ' + added + '건 담음'); }
+      if(added){ save(q); paint(); log('밀린 항목 ' + added + '건 담음 (최근 ' + d + '일)'); }
       return added;
     }catch(e){ log('훑기 오류: '+e); return 0; }
   }
@@ -14136,7 +14138,7 @@ if('serviceWorker' in navigator){
   }
 
   /* ── 언제 돌릴지 ── */
-  setTimeout(function(){ backfill(false); paint(); }, 6000);
+  setTimeout(function(){ paint(); }, 6000);
   setTimeout(function(){ drain(false); }, 12000);
   setInterval(function(){ drain(false); }, 45000);
   setInterval(paint, 4000);
@@ -14144,15 +14146,22 @@ if('serviceWorker' in navigator){
   window.addEventListener('focus', function(){ paint(); drain(false); });
 
   /* ── 진단용 ── */
-  window.wlOutbox = { list:load, count:function(){ return load().length; }, drain:function(){ drain(true); },
-                      scan:function(){ return backfill(true); }, clear:function(){ save([]); paint(); } };
+  window.wlOutbox = {
+    list : load,
+    count: function(){ return load().length; },
+    drain: function(){ drain(true); },
+    // 밀린 것 담기 — 기본 최근 7일. wlOutbox.scan(30) 처럼 늘릴 수 있지만
+    // 한 번에 수백 건을 보내면 삼성 캘린더 동기화가 멈추니 나눠서 하세요.
+    scan : function(days){ var n = backfill(days); if(typeof toast==='function') toast('밀린 항목 ' + n + '건 담음'); return n; },
+    clear: function(){ save([]); paint(); if(typeof toast==='function') toast('대기함을 비웠습니다'); }
+  };
   console.log('[대기함] 구글 캘린더 전송 대기함 로드');
 })();
 </script>
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0824-1315';
+  var TAG = ' +cal0824-1412';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
