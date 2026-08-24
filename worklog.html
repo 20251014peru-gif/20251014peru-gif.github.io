@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260824-1535-cal0824-1535"></script>
+<script src="worklog.js?v=v45-20260824-1556-cal0824-1556"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5065,15 +5065,30 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   var GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks';
 
   // 종류별 캘린더 ID 매핑
+  // v45-0824f: 캘린더 9개 → 3개로 통합 (폰에서 켜고 끌 것이 줄어 사고가 줄어든다)
+  //   서희타워_업무 ← 업무 · 통화 · 지출 · 메모     (제목 앞 [통화] [지출] [메모] 로 구분)
+  //   서희타워_예정 ← 예정 · 전달 · 휴가            (앞으로 챙길 것)
+  //   개인일정      ← 삼성폰에서 넣는 개인 일정      (가져오기 전용)
+  var CAL_WORK = '20251014peru@gmail.com';
+  var CAL_PLAN = '13fd7bc2a6a168b133d6099bb203cf74ac531cd35d8df8f512d8e2cc42aea3f8@group.calendar.google.com';
   var GCAL_IDS = {
-    work:     '20251014peru@gmail.com',
-    schedule: '13fd7bc2a6a168b133d6099bb203cf74ac531cd35d8df8f512d8e2cc42aea3f8@group.calendar.google.com',
+    work:     CAL_WORK,
+    call:     CAL_WORK,
+    expense:  CAL_WORK,
+    memo:     CAL_WORK,
+    schedule: CAL_PLAN,
+    deliver:  CAL_PLAN,
+    vacation: CAL_PLAN,
+  };
+  // 예전에 쓰던 종류별 캘린더 — 이사(移越)와 삭제 때만 참조한다
+  var GCAL_OLD_IDS = {
     deliver:  '93d1c2405a1ad12075b0cdfdad696c1666bf218789757813b3bb98597b4a574f@group.calendar.google.com',
     expense:  '8cde12aede6c5bb8590fceffaee07f29c82cbda83a6e3e4f941c89dc961a3880@group.calendar.google.com',
     call:     '55b77cab30c5e75c12ca3fa783904acd05e4b4a6b56c4f153f4341f0b963c495@group.calendar.google.com',
     vacation: '2e2c34c11ddffe738d69fc5436383900af25c16a00e794878d06625f4d94707f@group.calendar.google.com',
     memo:     'family07802825348481193196@group.calendar.google.com',
   };
+  var MOVE_KINDS = ['call','expense','memo','deliver','vacation'];
   var GCAL_LS = 'wl_gcal_token';
   var tokenClient = null;
   var accessToken = null;
@@ -5468,6 +5483,78 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // ── Tasks 중복 정리: 같은 제목 태스크 중 1개만 남기고 삭제 ──
 
+
+
+  // ── v45-0824f: 캘린더 3개로 합치기 (통화·지출·메모·전달·휴가 → 업무/예정으로 이사) ──
+  window.gcalMergeCalendars = async function(){
+    if(!accessToken){ if(typeof toast==='function') toast('먼저 구글 로그인 해주세요'); return; }
+    if(typeof entries === 'undefined'){ if(typeof toast==='function') toast('데이터를 아직 못 읽었어요'); return; }
+
+    var targets = entries.filter(function(e){
+      return e && e.gcalEventId && MOVE_KINDS.indexOf(e.kind) >= 0 && !e._calMoved;
+    });
+    var LABEL = { call:'통화', expense:'지출', memo:'메모', deliver:'전달', vacation:'휴가' };
+    var cnt = {};
+    targets.forEach(function(e){ cnt[e.kind] = (cnt[e.kind]||0) + 1; });
+    var lines = Object.keys(cnt).map(function(k){ return '  · ' + (LABEL[k]||k) + ' ' + cnt[k] + '건'; }).join('\n');
+
+    if(!targets.length){
+      alert('옮길 항목이 없습니다.\n이미 정리됐거나, 아직 구글에 올라간 것이 없습니다.');
+      return;
+    }
+    if(!confirm('캘린더를 3개로 합칩니다.\n\n' + lines + '\n\n총 ' + targets.length + '건을\n'
+      + '  통화·지출·메모 → 서희타워_업무\n'
+      + '  전달·휴가       → 서희타워_예정\n으로 옮깁니다.\n\n'
+      + '옛 캘린더에서 지우고 새 캘린더에 다시 만듭니다.\n'
+      + '천천히 진행되며 ' + Math.ceil(targets.length * 1.2 / 60) + '분쯤 걸립니다. 탭을 켜두세요.')) return;
+
+    var ov = document.createElement('div');
+    ov.id = 'gmcOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12070;display:flex;align-items:center;justify-content:center;font-family:inherit';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;padding:22px 24px;min-width:280px;text-align:center">'
+      + '<div style="font-size:15px;font-weight:800;color:#1a2f45;margin-bottom:10px">🏠 캘린더 합치는 중</div>'
+      + '<div id="gmcMsg" style="font-size:13px;color:#7a92a8;line-height:1.6">준비 중…</div></div>';
+    document.body.appendChild(ov);
+    function say(t){ var m = document.getElementById('gmcMsg'); if(m) m.innerHTML = t; }
+
+    var ok = 0, fail = 0, lastErr = '';
+    for(var i = 0; i < targets.length; i++){
+      var en = targets[i];
+      var oldCal = GCAL_OLD_IDS[en.kind];
+      var evId   = en.gcalEventId;
+      say('옮기는 중… <b>' + (i+1) + ' / ' + targets.length + '</b>'
+        + (fail ? '<br><span style="color:#b52929">실패 ' + fail + '건</span>' : '')
+        + '<br><span style="font-size:11.5px;color:#aab8c8">' + esc(String(en.title || en.name || '').slice(0,24)) + '</span>');
+      try{
+        // 1) 옛 캘린더에서 삭제
+        if(oldCal){
+          var dr = await fetch('https://www.googleapis.com/calendar/v3/calendars/'
+                   + encodeURIComponent(oldCal) + '/events/' + evId,
+                   { method:'DELETE', headers:{ 'Authorization':'Bearer ' + accessToken } });
+          if(!(dr.ok || dr.status === 204 || dr.status === 404 || dr.status === 410)){
+            var jb = ''; try{ var jj = await dr.json(); jb = (jj.error && jj.error.message) || ''; }catch(e0){}
+            lastErr = 'HTTP ' + dr.status + (jb ? ' · ' + jb : '');
+            fail++; continue;                      // 지우지 못하면 새로 만들지 않는다 (중복 방지)
+          }
+        }
+        // 2) 연결을 끊고 새 캘린더로 다시 올리도록 대기함에 넣는다
+        updateRecord(en.id, { gcalEventId: null, _calMoved: 1, updatedAt: Date.now() });
+        en.gcalEventId = null;
+        await new Promise(function(res){
+          syncScheduleToGCal(en, function(good){ if(good) ok++; else fail++; res(); });
+          setTimeout(res, 8000);                   // 응답이 없어도 다음으로
+        });
+      }catch(e){
+        lastErr = String(e && e.message || e); fail++;
+      }
+      await new Promise(function(res){ setTimeout(res, 250); });   // 속도제한 회피
+    }
+    ov.remove();
+    if(typeof renderAll === 'function') setTimeout(renderAll, 400);
+    alert('🏠 캘린더 합치기 끝\n\n옮긴 것 ' + ok + '건 / 실패 ' + fail + '건'
+      + (fail ? ('\n사유: ' + (lastErr || '알 수 없음') + '\n\n다시 눌러 남은 것만 재시도할 수 있습니다.') : '')
+      + '\n\n이제 구글 캘린더 앱에서 통화·지출·메모·전달·휴가 캘린더는 꺼두셔도 됩니다.');
+  };
 
   // ── v45-0824d: 구글 할 일을 완료로 바꿔서 같이 완료돼 버린 '예정' 되돌리기 ──
   window.gtaskUndoComplete = function(){
@@ -6206,6 +6293,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       + '<button id="gpcFixMisc" style="flex:1;min-width:150px;height:36px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📤 휴가·메모·전달 다시 올리기</button>'
       + '<button id="gpcTaskMgr" style="flex:1;min-width:140px;height:36px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 남은 구글 할 일 정리</button>'
       + '<button id="gpcUndoDone" style="flex:1;min-width:170px;height:36px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔧 잘못 완료된 예정 되돌리기</button>'
+      + '<button id="gpcMerge" style="flex:1;min-width:160px;height:36px;background:#7c2d12;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🏠 캘린더 3개로 합치기</button>'
       + '</div></div>'
       + '<div style="display:flex;gap:8px">'
       + '<button id="gpcCancel" style="flex:1;height:44px;background:#f7faff;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">닫기</button>'
@@ -6217,6 +6305,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       var cur = getPullCalIds();
       var appIds = {};
       for(var k in GCAL_IDS) appIds[GCAL_IDS[k]] = true;
+      for(var k2 in GCAL_OLD_IDS) appIds[GCAL_OLD_IDS[k2]] = true;   // v45-0824f: 옛 캘린더도 앱 것으로 분류
       var mine = list.filter(function(c){ return !appIds[c.id]; });
       var app  = list.filter(function(c){ return appIds[c.id]; });
       function row(c, isApp){
@@ -6261,6 +6350,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     _tool('gpcCalDup',  window.gcalCleanDuplicates);
     _tool('gpcTaskMgr', window.gtaskManager);
     _tool('gpcUndoDone', window.gtaskUndoComplete);
+    _tool('gpcMerge',    window.gcalMergeCalendars);
     _tool('gpcPurge',   window.gcalPurgeOldWorkSchedule);
     _tool('gpcResync', function(){ if(window.gcalSyncAll) window.gcalSyncAll(true); });
     // 휴가·메모·전달·통화·지출만 (업무는 건수가 많아 제외 — 한꺼번에 보내면 삼성 동기화가 멈춘다)
@@ -6545,6 +6635,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
               rememberDeleted(en.gcalEventId);            // 되살아남 방지 (구글 삭제 실패해도 안전)
               var calId = calIdForEntry(en);
               if(calId && accessToken) deleteFromGCal(en.gcalEventId, calId);
+              // v45-0824f: 아직 안 옮긴 기록은 옛 캘린더에 있을 수 있다 → 그쪽도 지운다
+              var oldId = GCAL_OLD_IDS[en.kind];
+              if(oldId && oldId !== calId && accessToken) deleteFromGCal(en.gcalEventId, oldId);
               dbgG('삭제 동기화(앱→구글): ' + (en.title||'') );
             }
           }
@@ -14081,7 +14174,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0824-1535';
+  var TAG = ' +cal0824-1556';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
@@ -14092,4 +14185,4 @@ if('serviceWorker' in navigator){
 })();
 </script>
 </body>
-</html>
+</html>ㅍ
