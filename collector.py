@@ -343,16 +343,37 @@ def load_glossary():
         return {}
 
 def ntfy_push(title, message, url="", tags="", priority="default", actions=""):
-    """ntfy로 폰 푸시. NTFY_TOPIC 없으면 조용히 건너뜀. actions=알림 버튼(선택)."""
+    """ntfy로 폰 푸시. NTFY_TOPIC 없으면 조용히 건너뜀.
+    ※ 제목·버튼을 HTTP 헤더가 아니라 JSON 본문(UTF-8)으로 전송 → 한글 제목/버튼도 정상(latin-1 오류 해결)."""
     if not NTFY_TOPIC:
         return False
+    # ntfy JSON은 우선순위를 정수(1~5)로 받음
+    pmap = {"max": 5, "urgent": 5, "high": 4, "default": 3, "low": 2, "min": 1}
+    payload = {
+        "topic": NTFY_TOPIC,
+        "title": title,
+        "message": message,
+        "priority": pmap.get(str(priority).lower(), 3),
+    }
+    if tags:
+        payload["tags"] = [t.strip() for t in str(tags).split(",") if t.strip()]
+    if url:
+        payload["click"] = url                     # 알림 본문 탭 = 이 URL
+    if actions:                                    # "view, 라벨, URL; view, 라벨2, URL2" → JSON 배열
+        acts = []
+        for part in str(actions).split(";"):
+            bits = [b.strip() for b in part.split(",", 2)]
+            if len(bits) >= 3 and bits[2]:
+                acts.append({"action": bits[0], "label": bits[1], "url": bits[2]})
+        if acts:
+            payload["actions"] = acts
     try:
-        h = {"Title": title.encode("utf-8"), "Priority": priority}
-        if tags: h["Tags"] = tags
-        if url:  h["Click"] = url            # 알림 본문 탭 = 이 URL
-        if actions: h["Actions"] = actions   # 추가 버튼(예: 뉴스레이더에서 보기)
-        r = requests.post(f"{NTFY_SERVER}/{NTFY_TOPIC}",
-                          data=message.encode("utf-8"), headers=h, timeout=10)
+        r = requests.post(
+            NTFY_SERVER,                            # JSON 발행은 토픽 없는 루트 URL로 POST
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers={"Content-Type": "application/json; charset=utf-8"},
+            timeout=10,
+        )
         return r.status_code < 300
     except Exception as e:
         print("  ! ntfy 푸시 실패:", e)
