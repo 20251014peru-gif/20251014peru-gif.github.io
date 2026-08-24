@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260824-1422-cal0824-1422"></script>
+<script src="worklog.js?v=v45-20260824-1439-cal0824-1439"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5607,6 +5607,89 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   }
 
   // ── Tasks 중복 정리: 같은 제목 태스크 중 1개만 남기고 삭제 ──
+
+  // ── v45-0824c: 구글 할 일(Tasks) 조회·삭제 ──
+  // 삼성 캘린더에 뜨는 ⊘ 항목 중 캘린더 이벤트가 아닌 것은 전부 여기에 있다.
+  window.gtaskManager = async function(){
+    if(!accessToken){ if(typeof toast==='function') toast('먼저 구글 로그인 해주세요'); return; }
+    var old = document.getElementById('gtmOv'); if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'gtmOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12050;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:460px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
+      + '<div style="padding:16px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">'
+      +   '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">📋 구글 할 일 (Tasks)</span>'
+      +   '<button id="gtmClose" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<div id="gtmBody" style="flex:1;overflow:auto;padding:12px 18px"><div style="padding:24px;text-align:center;color:#aab8c8;font-size:13px">불러오는 중…</div></div>'
+      + '<div style="padding:10px 18px 16px;border-top:1px solid #f1f5f9;display:flex;gap:8px">'
+      +   '<button id="gtmDelAll" style="flex:1;height:42px;border:none;border-radius:10px;background:#b52929;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🗑 전부 삭제</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    document.getElementById('gtmClose').addEventListener('click', function(){ ov.remove(); });
+
+    var all = [];
+    try{
+      var lr = await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=30',
+                { headers:{ 'Authorization':'Bearer '+accessToken } });
+      var ld = await lr.json();
+      var lists = ld.items || [];
+      for(var i=0;i<lists.length;i++){
+        var tr = await fetch('https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(lists[i].id)
+                 +'/tasks?showCompleted=true&showHidden=true&maxResults=200&fields=items(id,title,notes,due,status)',
+                 { headers:{ 'Authorization':'Bearer '+accessToken } });
+        var td = await tr.json();
+        (td.items||[]).forEach(function(t){ t._listId = lists[i].id; t._listName = lists[i].title; all.push(t); });
+      }
+    }catch(e){ dbgG('Tasks 조회 오류: '+e); }
+
+    var body = document.getElementById('gtmBody');
+    function draw(){
+      if(!all.length){
+        body.innerHTML = '<div style="padding:24px;text-align:center;color:#aab8c8;font-size:13px">구글 할 일이 없습니다 — 삼성 캘린더에 뭔가 남아 있다면 폰을 한 번 동기화해 보세요</div>';
+        return;
+      }
+      body.innerHTML = '<div style="font-size:12px;color:#7a92a8;margin-bottom:8px">총 <b>' + all.length + '</b>건 — 여기 있는 항목이 삼성 캘린더에 ⊘ 로 뜹니다</div>'
+        + all.map(function(t,i){
+            return '<div class="gtm-row" data-i="' + i + '" style="display:flex;align-items:flex-start;gap:8px;padding:9px 10px;border:1.5px solid #eef4fb;border-radius:9px;margin-bottom:5px">'
+              + '<div style="flex:1;min-width:0">'
+              +   '<div style="font-size:13.5px;font-weight:700;color:#1a2f45;word-break:break-all">' + esc(t.title||'(제목없음)') + '</div>'
+              +   '<div style="font-size:11px;color:#9aa7b4;margin-top:2px">' + esc(t._listName||'') + (t.due?' · '+String(t.due).slice(0,10):'') + (t.status==='completed'?' · 완료':'') + '</div>'
+              + '</div>'
+              + '<button class="gtm-del" data-i="' + i + '" style="border:none;background:#fdecec;color:#b52929;border-radius:8px;width:32px;height:32px;font-size:14px;cursor:pointer;flex:0 0 auto">🗑</button>'
+              + '</div>';
+          }).join('');
+      body.querySelectorAll('.gtm-del').forEach(function(b){
+        b.addEventListener('click', async function(){
+          var t = all[Number(b.getAttribute('data-i'))];
+          if(!t) return;
+          b.textContent = '…';
+          await del(t);
+          all = all.filter(function(x){ return x !== t; });
+          draw();
+        });
+      });
+    }
+    async function del(t){
+      try{
+        await fetch('https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(t._listId)+'/tasks/'+t.id,
+          { method:'DELETE', headers:{ 'Authorization':'Bearer '+accessToken } });
+        dbgG('할 일 삭제: ' + (t.title||''));
+      }catch(e){ dbgG('할 일 삭제 오류: '+e); }
+    }
+    document.getElementById('gtmDelAll').addEventListener('click', async function(){
+      if(!all.length) return;
+      if(!confirm('구글 할 일 ' + all.length + '건을 전부 삭제할까요?\n삼성 캘린더의 ⊘ 항목이 사라집니다.\n(캘린더 일정은 건드리지 않습니다)')) return;
+      var btn = this; btn.textContent = '삭제 중…'; btn.disabled = true;
+      for(var i=0;i<all.length;i++){ await del(all[i]); }
+      all = [];
+      draw();
+      btn.textContent = '🗑 전부 삭제'; btn.disabled = false;
+      if(typeof toast==='function') toast('✅ 구글 할 일을 모두 지웠습니다. 폰에서 동기화하면 사라집니다');
+    });
+    draw();
+  };
+
   window.gtaskCleanDuplicates = async function(){
     if(!accessToken){ if(typeof signIn==='function') signIn(); toast('먼저 구글 로그인 해주세요'); return; }
     // 목록 확정
@@ -6198,6 +6281,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       + '<button id="gpcPurge" style="flex:1;min-width:108px;height:36px;background:#5f6368;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑️ 옛예정비우기</button>'
       + '<button id="gpcResync" style="flex:1;min-width:108px;height:36px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔁 전체 재확인</button>'
       + '<button id="gpcFixMisc" style="flex:1;min-width:150px;height:36px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📤 휴가·메모·전달 다시 올리기</button>'
+      + '<button id="gpcTaskMgr" style="flex:1;min-width:140px;height:36px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📋 구글 할 일 보기·삭제</button>'
       + '</div></div>'
       + '<div style="display:flex;gap:8px">'
       + '<button id="gpcCancel" style="flex:1;height:44px;background:#f7faff;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">닫기</button>'
@@ -6252,6 +6336,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     _tool('gpcSyncAll', window.gcalSyncAll);
     _tool('gpcCalDup',  window.gcalCleanDuplicates);
     _tool('gpcTaskDup', window.gtaskCleanDuplicates);
+    _tool('gpcTaskMgr', window.gtaskManager);
     _tool('gpcPurge',   window.gcalPurgeOldWorkSchedule);
     _tool('gpcResync', function(){ if(window.gcalSyncAll) window.gcalSyncAll(true); });
     // 휴가·메모·전달·통화·지출만 (업무는 건수가 많아 제외 — 한꺼번에 보내면 삼성 동기화가 멈춘다)
@@ -14176,7 +14261,23 @@ if('serviceWorker' in navigator){
   }
 
   /* ── 언제 돌릴지 ── */
-  setTimeout(function(){ paint(); }, 6000);
+  /* v45-0824c: 휴가·전달·통화·지출은 필드명을 잘못 읽어 구글에 내용이 안 올라갔다.
+     업무(수백 건)는 건드리지 않고, 이 4종만 최근 60일치 한 번 다시 올려 바로잡는다. 딱 1회. */
+  var FIXDESC_LS = 'wl_gcal_fixdesc_v1';
+  function fixDescOnce(){
+    try{
+      if(localStorage.getItem(FIXDESC_LS)) return;
+      if(typeof entries === 'undefined' || !entries.length) return;   // 데이터 로드 전이면 다음 기회에
+      localStorage.setItem(FIXDESC_LS, '1');
+      var n = backfill(60, 'vacation,deliver,call,expense', true);
+      if(n){
+        log('내용 보정 대상 ' + n + '건');
+        if(typeof toast==='function') toast('📤 휴가·전달 ' + n + '건을 구글에 올리는 중… (몇 분 걸려요)');
+      }
+    }catch(e){ log('내용 보정 오류: '+e); }
+  }
+  setTimeout(function(){ paint(); fixDescOnce(); }, 8000);
+  setTimeout(fixDescOnce, 20000);   // 첫 시도 때 데이터가 아직 안 왔을 경우 대비
   setTimeout(function(){ drain(false); }, 12000);
   setInterval(function(){ drain(false); }, 45000);
   setInterval(paint, 4000);
@@ -14201,7 +14302,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0824-1422';
+  var TAG = ' +cal0824-1439';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
