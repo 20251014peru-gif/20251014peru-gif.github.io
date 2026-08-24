@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260824-1701-cal0824-1701"></script>
+<script src="worklog.js?v=v45-20260824-1711-cal0824-1711"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -14420,7 +14420,7 @@ if('serviceWorker' in navigator){
     b.id = 'wlCalTop';
     b.type = 'button';
     b.innerHTML = '↑<span style="font-size:10px;font-weight:700;display:block;margin-top:-3px">맨위</span>';
-    b.style.cssText = 'position:fixed;left:14px;bottom:20px;z-index:9500;width:52px;height:52px;'
+    b.style.cssText = 'position:fixed;right:16px;bottom:20px;z-index:9500;width:52px;height:52px;'
       + 'border-radius:50%;border:none;background:#1a2f45;color:#fff;font-size:19px;font-weight:800;'
       + 'font-family:inherit;cursor:pointer;box-shadow:0 6px 18px rgba(20,40,70,.32);display:none;'
       + 'line-height:1.05;padding:0;opacity:0;transition:opacity .18s';
@@ -14430,8 +14430,38 @@ if('serviceWorker' in navigator){
     document.body.appendChild(b);
     return b;
   }
+  // 오른쪽 아래 FAB 과 겹치면 그만큼 위로 피한다
+  // 오른쪽 FAB(기록추가·일지)은 위아래로 끌 수 있다.
+  // 기본 자리(오른쪽 아래)에서 겹치면 겹치는 FAB 위로 밀어 올린다.
+  function dodgeFab(b){
+    try{
+      var vh = window.innerHeight, vw = window.innerWidth;
+      var W = 52, H = 52, RIGHT = 16;
+      var rects = [];
+      ['v43FabHeader','v43FabDiary','v43Fab','fab'].forEach(function(id){
+        var el = document.getElementById(id);
+        if(!el) return;
+        var r = el.getBoundingClientRect();
+        if(r.width > 0 && r.height > 0) rects.push(r);   // fixed 요소는 offsetParent 가 null 이라 크기로 판정
+      });
+      var bottom = 20;
+      for(var pass = 0; pass < 4; pass++){
+        var top = vh - bottom - H, left = vw - RIGHT - W, right = vw - RIGHT;
+        var hitTop = null;
+        rects.forEach(function(r){
+          var over = !(right < r.left - 8 || left > r.right + 8 || (vh - bottom) < r.top - 8 || top > r.bottom + 8);
+          if(over && (hitTop === null || r.top < hitTop)) hitTop = r.top;
+        });
+        if(hitTop === null) break;
+        bottom = Math.round(vh - hitTop + 12);
+      }
+      if(bottom > vh - 120) bottom = 20;                 // 너무 위로 가면 그냥 기본 자리
+      b.style.bottom = bottom + 'px';
+    }catch(e){}
+  }
   function paintTop(){
     var b = topBtn();
+    dodgeFab(b);
     var y = window.pageYOffset || document.documentElement.scrollTop || 0;
     var show = isMobile() && gridVisible() && y > 260;
     if(show){ b.style.display = 'block'; setTimeout(function(){ b.style.opacity = '1'; }, 10); }
@@ -14461,7 +14491,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0824-1701';
+  var TAG = ' +cal0824-1711';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
