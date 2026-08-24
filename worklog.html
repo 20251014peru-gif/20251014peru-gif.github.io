@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260824-1556-cal0824-1556"></script>
+<script src="worklog.js?v=v45-20260824-1653-cal0824-1653"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -6286,11 +6286,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       + '<div style="border-top:1.5px solid #f0f6ff;margin:4px 0 12px;padding-top:12px">'
       + '<div style="font-size:12px;font-weight:800;color:#7a92a8;margin-bottom:8px">🛠 정리 도구 <span style="font-weight:600">(평소엔 쓸 일 없어요)</span></div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:6px">'
-      + '<button id="gpcSyncAll" style="flex:1;min-width:108px;height:36px;background:#34a853;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📅 전체동기화</button>'
       + '<button id="gpcCalDup" style="flex:1;min-width:108px;height:36px;background:#d93025;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 캘린더중복</button>'
       + '<button id="gpcPurge" style="flex:1;min-width:108px;height:36px;background:#5f6368;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑️ 옛예정비우기</button>'
-      + '<button id="gpcResync" style="flex:1;min-width:108px;height:36px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔁 전체 재확인</button>'
-      + '<button id="gpcFixMisc" style="flex:1;min-width:150px;height:36px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📤 휴가·메모·전달 다시 올리기</button>'
       + '<button id="gpcTaskMgr" style="flex:1;min-width:140px;height:36px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 남은 구글 할 일 정리</button>'
       + '<button id="gpcUndoDone" style="flex:1;min-width:170px;height:36px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔧 잘못 완료된 예정 되돌리기</button>'
       + '<button id="gpcMerge" style="flex:1;min-width:160px;height:36px;background:#7c2d12;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🏠 캘린더 3개로 합치기</button>'
@@ -6306,6 +6303,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       var appIds = {};
       for(var k in GCAL_IDS) appIds[GCAL_IDS[k]] = true;
       for(var k2 in GCAL_OLD_IDS) appIds[GCAL_OLD_IDS[k2]] = true;   // v45-0824f: 옛 캘린더도 앱 것으로 분류
+      // v45-0824g: 통합으로 은퇴한 캘린더는 목록에서 숨긴다 (지저분함 해소)
+      var retired = {};
+      for(var k3 in GCAL_OLD_IDS) retired[GCAL_OLD_IDS[k3]] = true;
+      var inUse = {};
+      for(var k4 in GCAL_IDS) inUse[GCAL_IDS[k4]] = true;
+      list = list.filter(function(c){ return !(retired[c.id] && !inUse[c.id]); });
       var mine = list.filter(function(c){ return !appIds[c.id]; });
       var app  = list.filter(function(c){ return appIds[c.id]; });
       function row(c, isApp){
@@ -6346,19 +6349,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         else if(typeof toast === 'function') toast('기능을 찾을 수 없어요');
       });
     };
-    _tool('gpcSyncAll', window.gcalSyncAll);
     _tool('gpcCalDup',  window.gcalCleanDuplicates);
     _tool('gpcTaskMgr', window.gtaskManager);
     _tool('gpcUndoDone', window.gtaskUndoComplete);
     _tool('gpcMerge',    window.gcalMergeCalendars);
     _tool('gpcPurge',   window.gcalPurgeOldWorkSchedule);
-    _tool('gpcResync', function(){ if(window.gcalSyncAll) window.gcalSyncAll(true); });
-    // 휴가·메모·전달·통화·지출만 (업무는 건수가 많아 제외 — 한꺼번에 보내면 삼성 동기화가 멈춘다)
-    _tool('gpcFixMisc', function(){
-      if(!window.wlOutbox){ toast('대기함이 아직 준비 안 됐어요'); return; }
-      var n = window.wlOutbox.redo(120, 'vacation,memo,deliver,call,expense');
-      toast(n ? ('📤 ' + n + '건을 다시 올립니다 (몇 분 걸려요)') : '다시 올릴 항목이 없습니다');
-    });
 
     document.getElementById('gpcCancel').addEventListener('click', function(){ ov.remove(); });
     document.getElementById('gpcSave').addEventListener('click', function(){
@@ -14171,10 +14166,152 @@ if('serviceWorker' in navigator){
   console.log('[대기함] 구글 캘린더 전송 대기함 로드');
 })();
 </script>
+<style id="wlMobileFix">
+/* ===== v45-0824g: 휴대폰·태블릿에서 달력이 안 보이던 문제 =====
+   7칸 격자를 좁은 화면에 그대로 그리니 칸 하나가 50px 남짓이 되어
+   한글이 한 글자씩 세로로 쪼개져 읽을 수 없었다.
+   좁은 화면에서는 격자를 버리고 '날짜별 목록'으로 바꾼다. */
+
+@media (max-width: 900px){
+
+  /* ── 월 달력: 격자 → 목록 ── */
+  #calGrid{
+    display:block !important;
+    gap:0 !important;
+    border:0 !important;
+    background:transparent !important;
+    overflow:visible !important;
+  }
+  #calGrid .cal-dow{ display:none !important; }          /* 요일 머리글은 각 줄에 붙는다 */
+  #calGrid .cal-cell.empty-cell{ display:none !important; }
+  #calGrid .cal-cell:not(.has):not(.today){ display:none !important; }   /* 내용 없는 날은 감춤 */
+
+  #calGrid .cal-cell{
+    display:block !important;
+    width:auto !important;
+    min-width:0 !important;
+    max-width:none !important;
+    min-height:0 !important;
+    height:auto !important;
+    margin:0 0 8px !important;
+    padding:11px 13px !important;
+    border:1.5px solid #e6eef8 !important;
+    border-radius:12px !important;
+    background:#fff !important;
+    overflow:visible !important;
+    white-space:normal !important;
+    box-shadow:0 1px 3px rgba(20,50,80,.05) !important;
+  }
+  #calGrid .cal-cell.today{
+    border-color:#1a73e8 !important;
+    background:#f5f9ff !important;
+  }
+  #calGrid .cal-cell.sun .dnum{ color:#d93025 !important; }
+
+  /* 날짜 머리 — "6일 목요일" 로 크게 */
+  #calGrid .cal-cell .dnum{
+    display:block !important;
+    position:static !important;
+    float:none !important;
+    font-size:15px !important;
+    font-weight:800 !important;
+    color:#1a2f45 !important;
+    margin:0 0 7px 0 !important;
+    padding:0 0 6px 0 !important;
+    border-bottom:1px solid #f0f5fb !important;
+    width:auto !important;
+    height:auto !important;
+    line-height:1.3 !important;
+  }
+  #calGrid .cal-cell .dnum::after{
+    content:'일 ' attr(data-dow) '요일';
+    font-size:12px;
+    font-weight:700;
+    color:#9aa7b4;
+    margin-left:3px;
+  }
+  #calGrid .cal-cell.today .dnum::before{
+    content:'오늘 · ';
+    color:#1a73e8;
+    font-size:12px;
+  }
+
+  /* 항목들 — 줄바꿈 허용, 말줄임 해제 */
+  #calGrid .cgrp{ margin:0 0 8px 0 !important; }
+  #calGrid .cgrp:last-child{ margin-bottom:0 !important; }
+  #calGrid .cgrp-h{
+    font-size:12px !important;
+    font-weight:800 !important;
+    margin:0 0 4px 0 !important;
+    white-space:normal !important;
+  }
+  #calGrid .wtitle,
+  #calGrid .otitle,
+  #calGrid .vac{
+    display:flex !important;
+    align-items:flex-start !important;
+    gap:6px !important;
+    font-size:13.5px !important;
+    line-height:1.55 !important;
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    word-break:break-word !important;
+    padding:3px 0 !important;
+    max-width:none !important;
+  }
+  #calGrid .wtitle .wt,
+  #calGrid .otitle{
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    flex:1 1 auto !important;
+    min-width:0 !important;
+  }
+  #calGrid .wtitle .d{
+    flex:0 0 auto !important;
+    margin-top:6px !important;
+  }
+  #calGrid .vac{
+    background:#fff8e6 !important;
+    border-radius:7px !important;
+    padding:6px 9px !important;
+  }
+
+  /* ── 청소 달력도 같은 방식 ── */
+  #cleanCalGrid{ display:block !important; }
+  #cleanCalGrid .cal-dow, #cleanCalGrid .clean-cal-dow{ display:none !important; }
+  #cleanCalGrid > div{
+    width:auto !important; min-width:0 !important; min-height:0 !important;
+    white-space:normal !important; overflow:visible !important;
+  }
+
+  /* ── 연간 계획표는 목록으로 못 바꾸니 가로 스크롤 ── */
+  #calYearGrid{
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  /* ── 넓은 표는 가로 스크롤 ── */
+  .tbl-wrap, .table-wrap, .doc-table-wrap{ overflow-x:auto !important; -webkit-overflow-scrolling:touch; }
+
+  /* ── FAB에 가려지지 않게 아래 여백 ── */
+  #calGrid{ padding-bottom:96px !important; }
+
+  /* ── 달력 상단 조작부 줄바꿈 ── */
+  .cal-top, .cal-head, .cal-controls{ flex-wrap:wrap !important; row-gap:8px !important; }
+}
+
+/* 아주 좁은 화면 — 글자만 살짝 더 작게 */
+@media (max-width: 420px){
+  #calGrid .cal-cell{ padding:10px 11px !important; }
+  #calGrid .wtitle, #calGrid .otitle, #calGrid .vac{ font-size:13px !important; }
+}
+</style>
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0824-1556';
+  var TAG = ' +cal0824-1653';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
@@ -14185,4 +14322,4 @@ if('serviceWorker' in navigator){
 })();
 </script>
 </body>
-</html>ㅍ
+</html>
