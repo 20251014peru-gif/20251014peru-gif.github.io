@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260824-1653-cal0824-1653"></script>
+<script src="worklog.js?v=v45-20260824-1701-cal0824-1701"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -14309,9 +14309,159 @@ if('serviceWorker' in navigator){
 }
 </style>
 <script>
+/* ===== v45-0824h: 휴대폰 달력 — 날짜 바로가기 + 맨 위로 =====
+   달력이 목록형이라 20일·30일을 보려면 한참 내려야 한다.
+   위에 날짜 칩을 붙여 한 번에 뛰고, 아래에 '맨 위로' 버튼을 띄운다. */
+(function(){
+  var NARROW = 900;
+  function isMobile(){ return window.innerWidth <= NARROW; }
+  function grid(){ return document.getElementById('calGrid'); }
+  function gridVisible(){
+    var g = grid();
+    return !!(g && g.offsetParent !== null && g.style.display !== 'none' && g.children.length);
+  }
+
+  /* ── 위쪽 날짜 바로가기 줄 ── */
+  function navEl(){
+    var n = document.getElementById('wlCalNav');
+    if(n) return n;
+    var g = grid();
+    if(!g || !g.parentNode) return null;
+    n = document.createElement('div');
+    n.id = 'wlCalNav';
+    n.style.cssText = 'position:sticky;top:0;z-index:40;background:rgba(244,248,253,.96);'
+      + 'backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);'
+      + 'padding:8px 0 9px;margin:0 0 8px;border-bottom:1.5px solid #e3edf9;display:none';
+    n.innerHTML =
+        '<div style="display:flex;gap:6px;align-items:center;margin-bottom:7px">'
+      +   '<input type="date" id="wlCalJump" style="flex:1;min-width:0;height:36px;padding:0 9px;'
+      +     'border:1.5px solid #cfe0f2;border-radius:9px;font-size:13.5px;font-family:inherit;background:#fff;color:#1a2f45">'
+      +   '<button type="button" id="wlCalToday" style="flex:0 0 auto;height:36px;padding:0 13px;border:none;'
+      +     'border-radius:9px;background:#1a73e8;color:#fff;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer">오늘</button>'
+      + '</div>'
+      + '<div id="wlCalChips" style="display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;'
+      +   '-webkit-overflow-scrolling:touch;scrollbar-width:none"></div>';
+    g.parentNode.insertBefore(n, g);
+    n.querySelector('#wlCalChips').style.setProperty('scrollbar-width','none');
+    var jump = n.querySelector('#wlCalJump');
+    jump.addEventListener('change', function(){ goDate(jump.value); });
+    n.querySelector('#wlCalToday').addEventListener('click', function(){
+      var t = (typeof todayStr === 'function') ? todayStr() : new Date().toISOString().slice(0,10);
+      goDate(t);
+    });
+    return n;
+  }
+
+  /* 그 날짜 카드로 이동 — 없으면 그 다음으로 가까운 날 */
+  function goDate(ds){
+    if(!ds) return;
+    var g = grid(); if(!g) return;
+    var cells = [].slice.call(g.querySelectorAll('.cal-cell[data-d]'))
+                  .filter(function(c){ return c.offsetParent !== null; });
+    if(!cells.length) return;
+    var hit = null;
+    for(var i=0;i<cells.length;i++){
+      var d = cells[i].getAttribute('data-d');
+      if(d === ds){ hit = cells[i]; break; }
+      if(!hit && d > ds){ hit = cells[i]; }        // 그 날이 비었으면 다음 기록으로
+    }
+    if(!hit) hit = cells[cells.length-1];
+    var nav = document.getElementById('wlCalNav');
+    var off = (nav ? nav.offsetHeight : 0) + 10;
+    var y = hit.getBoundingClientRect().top + (window.pageYOffset || document.documentElement.scrollTop) - off;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    // 잠깐 강조
+    var prev = hit.style.boxShadow;
+    hit.style.transition = 'box-shadow .25s';
+    hit.style.boxShadow = '0 0 0 3px rgba(26,115,232,.35)';
+    setTimeout(function(){ hit.style.boxShadow = prev || ''; }, 1400);
+  }
+
+  /* 기록이 있는 날만 칩으로 */
+  function paintChips(){
+    var n = navEl(); if(!n) return;
+    var g = grid();
+    var cells = [].slice.call(g.querySelectorAll('.cal-cell[data-d]'))
+                  .filter(function(c){ return c.offsetParent !== null; });
+    var box = n.querySelector('#wlCalChips');
+    var sig = cells.map(function(c){ return c.getAttribute('data-d'); }).join(',');
+    if(box.getAttribute('data-sig') === sig) return;      // 바뀐 게 없으면 다시 안 그림
+    box.setAttribute('data-sig', sig);
+    var today = (typeof todayStr === 'function') ? todayStr() : '';
+    box.innerHTML = cells.map(function(c){
+      var ds = c.getAttribute('data-d');
+      var day = parseInt(ds.slice(8,10), 10);
+      var cnt = c.querySelectorAll('.wtitle, .otitle, .vac').length;
+      var isToday = (ds === today);
+      return '<button type="button" class="wl-cchip" data-go="' + ds + '" style="flex:0 0 auto;height:31px;'
+        + 'padding:0 10px;border-radius:9px;font-size:12.5px;font-weight:800;font-family:inherit;cursor:pointer;'
+        + 'border:1.5px solid ' + (isToday ? '#1a73e8' : '#dbe6f4') + ';'
+        + 'background:' + (isToday ? '#1a73e8' : '#fff') + ';'
+        + 'color:' + (isToday ? '#fff' : '#3f7cb8') + '">'
+        + day + '일' + (cnt ? '<span style="font-weight:600;opacity:.75"> ' + cnt + '</span>' : '')
+        + '</button>';
+    }).join('');
+    box.querySelectorAll('.wl-cchip').forEach(function(b){
+      b.addEventListener('click', function(){ goDate(b.getAttribute('data-go')); });
+    });
+    var jump = n.querySelector('#wlCalJump');
+    if(cells.length && !jump.value) jump.value = cells[0].getAttribute('data-d');
+    if(cells.length){
+      jump.min = cells[0].getAttribute('data-d');
+      jump.max = cells[cells.length-1].getAttribute('data-d');
+    }
+  }
+
+  /* ── 맨 위로 버튼 ── */
+  function topBtn(){
+    var b = document.getElementById('wlCalTop');
+    if(b) return b;
+    b = document.createElement('button');
+    b.id = 'wlCalTop';
+    b.type = 'button';
+    b.innerHTML = '↑<span style="font-size:10px;font-weight:700;display:block;margin-top:-3px">맨위</span>';
+    b.style.cssText = 'position:fixed;left:14px;bottom:20px;z-index:9500;width:52px;height:52px;'
+      + 'border-radius:50%;border:none;background:#1a2f45;color:#fff;font-size:19px;font-weight:800;'
+      + 'font-family:inherit;cursor:pointer;box-shadow:0 6px 18px rgba(20,40,70,.32);display:none;'
+      + 'line-height:1.05;padding:0;opacity:0;transition:opacity .18s';
+    b.addEventListener('click', function(){
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    document.body.appendChild(b);
+    return b;
+  }
+  function paintTop(){
+    var b = topBtn();
+    var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+    var show = isMobile() && gridVisible() && y > 260;
+    if(show){ b.style.display = 'block'; setTimeout(function(){ b.style.opacity = '1'; }, 10); }
+    else { b.style.opacity = '0'; setTimeout(function(){ if(b.style.opacity === '0') b.style.display = 'none'; }, 200); }
+  }
+
+  function refresh(){
+    var n = document.getElementById('wlCalNav');
+    if(!isMobile() || !gridVisible()){
+      if(n) n.style.display = 'none';
+      paintTop();
+      return;
+    }
+    n = navEl(); if(!n) return;
+    n.style.display = 'block';
+    paintChips();
+    paintTop();
+  }
+
+  window.addEventListener('scroll', paintTop, { passive: true });
+  window.addEventListener('resize', refresh);
+  setInterval(refresh, 900);
+  setTimeout(refresh, 1200);
+  console.log('[달력] 날짜 바로가기 · 맨 위로 로드');
+})();
+</script>
+<script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0824-1653';
+  var TAG = ' +cal0824-1701';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
