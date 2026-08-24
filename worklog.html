@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260824-1412-cal0824-1412"></script>
+<script src="worklog.js?v=v45-20260824-1422-cal0824-1422"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5185,23 +5185,44 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         break;
       case 'call':
         summary = '[통화] ' + (en.name||'') + (en.company?' ('+en.company+')':'');
-        description = en.content||'';
+        description = [
+          en.dir  ? '구분: ' + en.dir  : '',
+          en.time ? '시간: ' + en.time : '',
+          [en.company, en.name, en.role].filter(Boolean).join(' / '),
+          en.phone ? '전화: ' + en.phone : '',
+          en.callField ? '분야: ' + en.callField : '',
+          en.content || ''
+        ].filter(Boolean).join('\n');
         break;
       case 'deliver':
-        summary = '[전달] ' + (en.title||en.content||'전달');
-        description = en.memo||'';
+        // v45-0824b: 내용 필드는 memo 가 아니라 content 다 (그래서 내용이 비어 있었다)
+        var _dTxt   = String(en.content || en.memo || '').trim();
+        var _dTitle = String(en.title || '').trim() || _dTxt.split('\n')[0].slice(0, 40);
+        summary = '[전달] ' + (_dTitle || '전달');
+        description = [ en.dtype ? '구분: ' + en.dtype : '', _dTxt ].filter(Boolean).join('\n');
         break;
       case 'vacation':
-        summary = '[휴가] ' + (en.name||'') + ' ' + (en.vtype||'휴가');
-        description = en.memo||'';
+        // v45-0824b: 메모 필드는 memo 가 아니라 note 다
+        summary = '[휴가] ' + [en.name, en.vtype||'휴가'].filter(Boolean).join(' ');
+        description = [
+          en.vtype ? '종류: ' + en.vtype : '',
+          (en.start||'') + (en.end && en.end !== en.start ? ' ~ ' + en.end : ''),
+          en.note || ''
+        ].filter(Boolean).join('\n');
         break;
       case 'expense':
         summary = '[지출] ' + (en.title||'지출');
-        description = (en.amount?Number(en.amount).toLocaleString()+'원':'') + (en.vendor?' · '+en.vendor:'');
+        description = [
+          en.expType ? '종류: ' + en.expType : '',
+          en.amount  ? '금액: ' + Number(en.amount).toLocaleString('ko-KR') + '원' : '',
+          en.memo || ''
+        ].filter(Boolean).join('\n');
         break;
       case 'memo':
-        summary = '[메모] ' + (en.title||en.body||'메모');
-        description = en.body||'';
+        var _mTxt   = String(en.body || '').trim();
+        var _mTitle = String(en.title || '').trim() || _mTxt.split('\n')[0].slice(0, 40);
+        summary = '[메모] ' + (_mTitle || '메모');
+        description = _mTxt;
         break;
       default:
         summary = en.title||en.kind;
@@ -5839,7 +5860,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     if(!accessToken){ signIn(); toast('먼저 구글 로그인 해주세요'); return; }
     const kinds = Object.keys(GCAL_IDS);
     // 기본: 아직 안 올라간 것만 / force: 이미 올라간 것도 다시 확인 (구글에서 지워진 것 복구)
-    const targets = entries.filter(e=> kinds.includes(e.kind) && e.date && (force || !e.gcalEventId));
+    const targets = entries.filter(e=> kinds.includes(e.kind) && entryDate(e) && (force || !e.gcalEventId));
     if(!targets.length){ toast('📅 미동기화 항목이 없습니다 (모두 완료됨)'); return; }
     if(!confirm(targets.length + '건을 구글 캘린더에 '
         + (force ? '다시 확인' : '동기화') + '할까요?\n'
@@ -6176,6 +6197,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       + '<button id="gpcTaskDup" style="flex:1;min-width:108px;height:36px;background:#ea8600;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 태스크중복</button>'
       + '<button id="gpcPurge" style="flex:1;min-width:108px;height:36px;background:#5f6368;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑️ 옛예정비우기</button>'
       + '<button id="gpcResync" style="flex:1;min-width:108px;height:36px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔁 전체 재확인</button>'
+      + '<button id="gpcFixMisc" style="flex:1;min-width:150px;height:36px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📤 휴가·메모·전달 다시 올리기</button>'
       + '</div></div>'
       + '<div style="display:flex;gap:8px">'
       + '<button id="gpcCancel" style="flex:1;height:44px;background:#f7faff;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">닫기</button>'
@@ -6232,6 +6254,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     _tool('gpcTaskDup', window.gtaskCleanDuplicates);
     _tool('gpcPurge',   window.gcalPurgeOldWorkSchedule);
     _tool('gpcResync', function(){ if(window.gcalSyncAll) window.gcalSyncAll(true); });
+    // 휴가·메모·전달·통화·지출만 (업무는 건수가 많아 제외 — 한꺼번에 보내면 삼성 동기화가 멈춘다)
+    _tool('gpcFixMisc', function(){
+      if(!window.wlOutbox){ toast('대기함이 아직 준비 안 됐어요'); return; }
+      var n = window.wlOutbox.redo(120, 'vacation,memo,deliver,call,expense');
+      toast(n ? ('📤 ' + n + '건을 다시 올립니다 (몇 분 걸려요)') : '다시 올릴 항목이 없습니다');
+    });
 
     document.getElementById('gpcCancel').addEventListener('click', function(){ ov.remove(); });
     document.getElementById('gpcSave').addEventListener('click', function(){
@@ -6552,6 +6580,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   // v45-0818: 중복 등록 방지 — 디바운스(같은 항목 여러 번 요청 시 마지막 1회) + 전송중 락
   var _pushTimers  = {};   // id → timer
   var _pushLocked  = {};   // id → 전송 진행중
+  // v45-0824b: 휴가는 date 없이 start/end 만 쓴다 → 날짜 판정을 공용 함수로
+  function entryDate(e){ return (e && (e.date || e.start)) || ''; }
+  window.wlEntryDate = entryDate;
   function _gcalPushLater(id){
     if(!id) return;
     if(_pushTimers[id]) clearTimeout(_pushTimers[id]);   // 이전 예약 취소 (POST 2번 방지)
@@ -6562,7 +6593,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         if(typeof entries === 'undefined') return;
         if(_pushLocked[id]){ dbgG('push 중복 차단: ' + id); return; }
         var en = entries.find(function(x){ return x.id === id; });
-        if(!en || !en.date) return;
+        if(!en || !entryDate(en)) return;
         if(!GCAL_IDS[en.kind]) return;
         _pushLocked[id] = true;
         var _lockT = setTimeout(function(){ delete _pushLocked[id]; }, 15000);   // 안전장치
@@ -6593,7 +6624,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         var r = origAdd.apply(this, arguments);
         try{
           // 구글에서 가져온 항목은 되돌려 보내지 않음 (핑퐁 방지)
-          if(accessToken && obj && !obj._fromGcal && obj.date && GCAL_IDS[obj.kind] && r && r.id){
+          if(accessToken && obj && !obj._fromGcal && entryDate(obj) && GCAL_IDS[obj.kind] && r && r.id){
             _gcalPushLater(r.id);
           }
         }catch(e){ dbgG('add훅 오류: ' + e); }
@@ -13996,6 +14027,8 @@ if('serviceWorker' in navigator){
   function entryOf(id){
     try{ return (typeof entries!=='undefined') ? entries.find(function(x){ return x.id===id; }) : null; }catch(e){ return null; }
   }
+  // 휴가는 date 없이 start 만 있다
+  function eDate(e){ return (e && (e.date || e.start)) || ''; }
 
   /* ── 화면 표시 ── */
   function badge(){
@@ -14039,7 +14072,7 @@ if('serviceWorker' in navigator){
       window.addRecord = function(obj){
         var r = oa.apply(this, arguments);
         try{
-          if(obj && !obj._fromGcal && obj.date && r && r.id && syncKinds().indexOf(obj.kind)>=0) enqueue(r.id, false);
+          if(obj && !obj._fromGcal && eDate(obj) && r && r.id && syncKinds().indexOf(obj.kind)>=0) enqueue(r.id, false);
         }catch(e){ log('add 훅 오류: '+e); }
         return r;
       };
@@ -14057,7 +14090,7 @@ if('serviceWorker' in navigator){
             var onlyMeta = keys.length>0 && keys.every(function(k){ return meta.indexOf(k)>=0; });
             if(!onlyMeta){
               var en = entryOf(id);
-              if(en && en.date && syncKinds().indexOf(en.kind)>=0) enqueue(id, true);   // 수정은 PUT 이라 다시 보내도 안전
+              if(en && eDate(en) && syncKinds().indexOf(en.kind)>=0) enqueue(id, true);   // 수정은 PUT 이라 다시 보내도 안전
             } else if(keys.indexOf('gcalEventId')>=0 && patch.gcalEventId){
               dequeue(id);                                                              // 전송 성공 → 대기함에서 뺀다
             }
@@ -14079,23 +14112,28 @@ if('serviceWorker' in navigator){
   /* ── 밀린 것 훑기 — 자동으로는 절대 안 돈다. 콘솔에서 wlOutbox.scan(일수) 로만 실행 ──
      예전 버전은 앱 켤 때마다 90일치를 쓸어담아 수백 건이 대기열에 쌓였다.
      한꺼번에 수백 건을 구글로 보내면 안드로이드 증분 동기화가 깨져서 삼성 캘린더가 멈춘다. */
-  function backfill(days){
+  function backfill(days, onlyKinds, redo){
     try{
       if(typeof entries === 'undefined' || !entries.length) return 0;
       var d = parseInt(days,10) || BACKFILL_DAYS;
       var kinds = syncKinds();
       if(!kinds.length) return 0;
+      if(onlyKinds){
+        var want = String(onlyKinds).split(',').map(function(x){ return x.trim(); }).filter(Boolean);
+        kinds = kinds.filter(function(k){ return want.indexOf(k) >= 0; });
+        if(!kinds.length) return 0;
+      }
       var lim = new Date(Date.now() - d*86400000).toISOString().slice(0,10);
       var q = load(), have = {};
       q.forEach(function(x){ have[x.id]=1; });
       var added = 0;
       entries.forEach(function(e){
-        if(!e || !e.id || !e.date) return;
+        if(!e || !e.id || !eDate(e)) return;
         if(kinds.indexOf(e.kind) < 0) return;
-        if(e.gcalEventId) return;                          // 이미 올라간 것
-        if(String(e.date).slice(0,10) < lim) return;       // 너무 오래된 것은 건너뜀
+        if(e.gcalEventId && !redo) return;                     // 이미 올라간 것
+        if(String(eDate(e)).slice(0,10) < lim) return;         // 너무 오래된 것은 건너뜀
         if(have[e.id]) return;
-        q.push({ id:e.id, ts:0, put:0, n:0 });             // ts:0 → 유예시간 없이 바로 대상
+        q.push({ id:e.id, ts:0, put:0, n:0, re: redo?1:0 });   // ts:0 → 유예시간 없이 바로 대상
         have[e.id]=1; added++;
       });
       if(added){ save(q); paint(); log('밀린 항목 ' + added + '건 담음 (최근 ' + d + '일)'); }
@@ -14120,8 +14158,8 @@ if('serviceWorker' in navigator){
       if(i >= todo.length){ running = false; paint(); return; }
       var item = todo[i++];
       var en = entryOf(item.id);
-      if(!en || !en.date){ dequeue(item.id); return setTimeout(step, 40); }
-      if(en.gcalEventId && !item.put){ dequeue(item.id); return setTimeout(step, 40); }  // 이미 올라감
+      if(!en || !eDate(en)){ dequeue(item.id); return setTimeout(step, 40); }
+      if(en.gcalEventId && !item.put && !item.re){ dequeue(item.id); return setTimeout(step, 40); }  // 이미 올라감
       try{
         window.gcalSync(en, function(ok){
           if(ok){ dequeue(item.id); }
@@ -14152,7 +14190,9 @@ if('serviceWorker' in navigator){
     drain: function(){ drain(true); },
     // 밀린 것 담기 — 기본 최근 7일. wlOutbox.scan(30) 처럼 늘릴 수 있지만
     // 한 번에 수백 건을 보내면 삼성 캘린더 동기화가 멈추니 나눠서 하세요.
-    scan : function(days){ var n = backfill(days); if(typeof toast==='function') toast('밀린 항목 ' + n + '건 담음'); return n; },
+    scan : function(days, kinds){ var n = backfill(days, kinds, false); if(typeof toast==='function') toast('밀린 항목 ' + n + '건 담음'); return n; },
+    // 이미 올라간 것도 다시 보내 내용을 고친다 (제목만 나오고 내용이 비던 것 보정)
+    redo : function(days, kinds){ var n = backfill(days, kinds, true); drain(true); if(typeof toast==='function') toast('다시 보낼 ' + n + '건 담음'); return n; },
     clear: function(){ save([]); paint(); if(typeof toast==='function') toast('대기함을 비웠습니다'); }
   };
   console.log('[대기함] 구글 캘린더 전송 대기함 로드');
@@ -14161,7 +14201,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0824-1412';
+  var TAG = ' +cal0824-1422';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
