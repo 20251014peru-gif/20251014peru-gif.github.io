@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260824-1439-cal0824-1439"></script>
+<script src="worklog.js?v=v45-20260824-1451-cal0824-1451"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5635,11 +5635,19 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       var ld = await lr.json();
       var lists = ld.items || [];
       for(var i=0;i<lists.length;i++){
-        var tr = await fetch('https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(lists[i].id)
-                 +'/tasks?showCompleted=true&showHidden=true&maxResults=200&fields=items(id,title,notes,due,status)',
-                 { headers:{ 'Authorization':'Bearer '+accessToken } });
-        var td = await tr.json();
-        (td.items||[]).forEach(function(t){ t._listId = lists[i].id; t._listName = lists[i].title; all.push(t); });
+        var pageTok = '', guard = 0;
+        do{
+          var url = 'https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(lists[i].id)
+                  + '/tasks?showCompleted=true&showHidden=true&maxResults=100'
+                  + '&fields=nextPageToken,items(id,title,notes,due,status)'
+                  + (pageTok ? '&pageToken='+encodeURIComponent(pageTok) : '');
+          var tr = await fetch(url, { headers:{ 'Authorization':'Bearer '+accessToken } });
+          var td = await tr.json();
+          (function(L){ (td.items||[]).forEach(function(t){ t._listId = L.id; t._listName = L.title; all.push(t); }); })(lists[i]);
+          pageTok = td.nextPageToken || '';
+          var bd = document.getElementById('gtmBody');
+          if(bd) bd.innerHTML = '<div style="padding:24px;text-align:center;color:#7a92a8;font-size:13px">불러오는 중… ' + all.length + '건</div>';
+        } while(pageTok && ++guard < 60);
       }
     }catch(e){ dbgG('Tasks 조회 오류: '+e); }
 
@@ -5649,7 +5657,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         body.innerHTML = '<div style="padding:24px;text-align:center;color:#aab8c8;font-size:13px">구글 할 일이 없습니다 — 삼성 캘린더에 뭔가 남아 있다면 폰을 한 번 동기화해 보세요</div>';
         return;
       }
-      body.innerHTML = '<div style="font-size:12px;color:#7a92a8;margin-bottom:8px">총 <b>' + all.length + '</b>건 — 여기 있는 항목이 삼성 캘린더에 ⊘ 로 뜹니다</div>'
+      body.innerHTML = '<div style="font-size:12px;color:#7a92a8;margin-bottom:8px">총 <b>' + all.length + '</b>건 — 삼성 캘린더의 “대기 중인 할일”이 이것입니다. 캘린더 일정과는 별개라 지워도 일정은 그대로입니다.</div>'
         + all.map(function(t,i){
             return '<div class="gtm-row" data-i="' + i + '" style="display:flex;align-items:flex-start;gap:8px;padding:9px 10px;border:1.5px solid #eef4fb;border-radius:9px;margin-bottom:5px">'
               + '<div style="flex:1;min-width:0">'
@@ -5679,13 +5687,23 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     }
     document.getElementById('gtmDelAll').addEventListener('click', async function(){
       if(!all.length) return;
-      if(!confirm('구글 할 일 ' + all.length + '건을 전부 삭제할까요?\n삼성 캘린더의 ⊘ 항목이 사라집니다.\n(캘린더 일정은 건드리지 않습니다)')) return;
-      var btn = this; btn.textContent = '삭제 중…'; btn.disabled = true;
-      for(var i=0;i<all.length;i++){ await del(all[i]); }
+      var total = all.length;
+      if(!confirm('구글 할 일 ' + total + '건을 전부 삭제할까요?\n삼성 캘린더의 “대기 중인 할일” 표시가 사라집니다.\n(캘린더 일정은 건드리지 않습니다)')) return;
+      var btn = this; btn.disabled = true;
+      var doneN = 0;
+      for(var i=0;i<all.length;i+=6){                      // 6건씩 병렬 — 414건도 1~2분
+        var chunk = all.slice(i, i+6);
+        await Promise.all(chunk.map(function(t){ return del(t); }));
+        doneN += chunk.length;
+        btn.textContent = '삭제 중… ' + doneN + '/' + total;
+        var bd2 = document.getElementById('gtmBody');
+        if(bd2) bd2.innerHTML = '<div style="padding:24px;text-align:center;color:#7a92a8;font-size:13px">'
+          + '삭제 중… <b>' + doneN + ' / ' + total + '</b><br><span style="font-size:11.5px;color:#aab8c8">창을 닫지 마세요</span></div>';
+      }
       all = [];
       draw();
       btn.textContent = '🗑 전부 삭제'; btn.disabled = false;
-      if(typeof toast==='function') toast('✅ 구글 할 일을 모두 지웠습니다. 폰에서 동기화하면 사라집니다');
+      if(typeof toast==='function') toast('✅ 구글 할 일 ' + total + '건을 지웠습니다. 폰에서 동기화하면 사라집니다', 5000);
     });
     draw();
   };
@@ -14302,7 +14320,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0824-1439';
+  var TAG = ' +cal0824-1451';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
