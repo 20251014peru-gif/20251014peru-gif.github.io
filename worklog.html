@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260824-1451-cal0824-1451"></script>
+<script src="worklog.js?v=v45-20260824-1535-cal0824-1535"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5457,156 +5457,84 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   // v44-0709-1615: 잘못 저장된 목록(테스트 등) 잔재 1회 초기화
   try{ if(localStorage.getItem('wl_tasks_reset_1615')!=='1'){ localStorage.removeItem(TASKS_LS); localStorage.setItem('wl_tasks_reset_1615','1'); } }catch(e){}
 
-  // Tasks 목록 ID 로드 (저장된 것 우선)
-  // Tasks 기본 목록 ID 자동 조회 후 저장
-  function loadTasksListId(callback){
-    // 항상 API로 목록 조회해서 "내 할일 목록"을 이름으로 정확히 찾음
-    // (첫 번째 목록이 '테스트 구글 태스크' 등으로 잡히는 문제 방지)
-    if(!accessToken){
-      // 토큰 없으면 캐시라도 사용
-      try{ var v=localStorage.getItem(TASKS_LS); if(v){ TASKS_LIST_ID=v; } }catch(e){}
-      if(callback) callback(); return;
-    }
-    fetch("https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=50", {
-      headers: { "Authorization": "Bearer " + accessToken }
-    }).then(function(r){ return r.json(); })
-    .then(function(d){
-      if(d.items && d.items.length){
-        // "내 할일 목록" / "내 할 일 목록" / "My Tasks" 이름 우선 매칭
-        var want = null;
-        var names = ['내 할일 목록','내 할 일 목록','기본 목록','My Tasks','Tasks'];
-        for(var n=0; n<names.length && !want; n++){
-          for(var i=0; i<d.items.length; i++){
-            if((d.items[i].title||'').replace(/\s/g,'') === names[n].replace(/\s/g,'')){ want = d.items[i]; break; }
-          }
-        }
-        // 이름 매칭 실패 시: '테스트'가 안 들어간 첫 목록, 그것도 없으면 첫 목록
-        if(!want){
-          for(var j=0; j<d.items.length; j++){
-            if((d.items[j].title||'').indexOf('테스트')<0){ want = d.items[j]; break; }
-          }
-        }
-        if(!want) want = d.items[0];
-        TASKS_LIST_ID = want.id;
-        try{ localStorage.setItem(TASKS_LS, TASKS_LIST_ID); }catch(e){}
-        dbgG("Tasks 목록 선택: " + want.title + " (" + TASKS_LIST_ID + ")");
-      }
-      if(callback) callback();
-    }).catch(function(){
-      try{ var v2=localStorage.getItem(TASKS_LS); if(v2){ TASKS_LIST_ID=v2; } }catch(e){}
-      if(callback) callback();
-    });
-  }
+  function loadTasksListId(cb){ if(cb) cb('@default'); }   // v45-0824e: Tasks 미사용
 
-  // schedule → Tasks 등록/업데이트
-  function syncToTasks(en, onDone){
-    if(!accessToken){ if(onDone) onDone(false); return; }
-    // 예정(schedule) + 일반업무(work) 둘 다 태스크로
-    if(en.kind !== 'schedule' && en.kind !== 'work'){ if(onDone) onDone(false); return; }
+  // v45-0824e: Tasks 내보내기 제거 (호출부 없음, 안전을 위해 빈 함수만 남김)
+  function syncToTasks(en, onDone){ if(onDone) onDone(false); }
 
-    var title, notes;
-    if(en.kind === 'work'){
-      // 일반업무: 층·제목 + 상세/자재/금액을 노트로
-      var wTitle = (typeof displayTitle==='function') ? displayTitle(en) : (en.title||'업무');
-      title = (en.floor ? en.floor+' ' : '') + wTitle;
-      var matq = (typeof matDisplay==='function') ? matDisplay(en) : [en.material, (en.qty&&Number(en.qty))?en.qty+'개':''].filter(Boolean).join(' ');
-      notes = [
-        en.field ? '분야: '+en.field : '',
-        en.status ? '상태: '+en.status : '',
-        en.detail || '',
-        matq ? '자재: '+matq : '',
-        (Number(en.cost)? '금액: '+Number(en.cost).toLocaleString('ko-KR')+'원' : '')
-      ].filter(Boolean).join('\n');
-    } else {
-      title = (en.sType ? '['+en.sType+'] ' : '') + (en.title||'예정');
-      notes = [
-        en.sStatus ? '상태: '+en.sStatus : '',
-        en.scheduleType && en.scheduleType!=='일회성' ? '반복: '+en.scheduleType : '',
-        en.memo || ''
-      ].filter(Boolean).join('\n');
-    }
-
-
-    // 마감일: RFC 3339 형식 (Tasks API는 날짜만 지원 → T00:00:00.000Z)
-    var due = en.date ? en.date + 'T00:00:00.000Z' : undefined;
-
-    var body = { title: title };
-    if(notes) body.notes = notes;
-    if(due)   body.due   = due;
-
-    var taskId = en.gTaskId;
-    var url = taskId
-      ? 'https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(TASKS_LIST_ID) + '/tasks/' + taskId
-      : 'https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(TASKS_LIST_ID) + '/tasks';
-    var method = taskId ? 'PATCH' : 'POST';
-
-    fetch(url, {
-      method: method,
-      headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    })
-    .then(function(r){
-      // PATCH인데 404/400 → 기존 태스크가 없음(목록 변경 등). gTaskId 지우고 새로 POST (중복 방지)
-      if(method==='PATCH' && (r.status===404 || r.status===400)){
-        if(typeof updateRecord==='function' && en.id) updateRecord(en.id, {gTaskId: null});
-        en.gTaskId = null;
-        // 새로 POST 재시도
-        return fetch('https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(TASKS_LIST_ID)+'/tasks', {
-          method:'POST', headers:{ 'Authorization':'Bearer '+accessToken, 'Content-Type':'application/json' },
-          body: JSON.stringify(body)
-        }).then(function(r2){ return r2.json(); });
-      }
-      return r.json();
-    })
-    .then(function(d){
-      if(d.id){
-        dbgG('Tasks 등록 완료: ' + d.id);
-        if(typeof updateRecord==='function' && en.id){
-          updateRecord(en.id, {gTaskId: d.id});
-        }
-        if(onDone) onDone(true, d.id);
-      } else {
-        var msg = (d.error&&d.error.message) ? d.error.message : JSON.stringify(d.error||d);
-        dbgG('Tasks 등록 실패: ' + msg);
-        if(d.error && d.error.code===401){
-          accessToken=null; localStorage.removeItem(GCAL_LS);
-          updateGCalBtn('disconnected');
-          toast('🔑 구글 로그인이 만료됐어요. G캘린더 버튼을 다시 눌러주세요', 5000);
-        }
-        if(onDone) onDone(false);
-      }
-    })
-    .catch(function(e){
-      dbgG('Tasks fetch 오류: '+e);
-      if(onDone) onDone(false);
-    });
-  }
-
-  // Tasks 완료 처리 (sStatus="완료" 시 자동 호출)
-  function completeTask(taskId, complete){
-    if(!accessToken || !taskId) return;
-    var body = { status: complete ? 'completed' : 'needsAction' };
-    if(!complete) body.completed = null;
-    fetch('https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(TASKS_LIST_ID) + '/tasks/' + taskId, {
-      method: 'PATCH',
-      headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    }).then(function(r){ return r.json(); })
-    .then(function(d){ dbgG('Tasks 완료처리: '+(d.status||d.error&&d.error.message)); })
-    .catch(function(e){ dbgG('Tasks 완료 오류: '+e); });
-  }
-
-  // Tasks 삭제
-  function deleteFromTasks(taskId){
-    if(!accessToken || !taskId) return;
-    fetch('https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(TASKS_LIST_ID) + '/tasks/' + taskId, {
-      method: 'DELETE',
-      headers: { 'Authorization': 'Bearer ' + accessToken }
-    }).then(function(){ dbgG('Tasks 삭제 완료: '+taskId); })
-    .catch(function(e){ dbgG('Tasks 삭제 오류: '+e); });
-  }
+  // v45-0824e: Tasks 완료·삭제 연동 제거
+  function completeTask(){}
+  function deleteFromTasks(){}
 
   // ── Tasks 중복 정리: 같은 제목 태스크 중 1개만 남기고 삭제 ──
+
+
+  // ── v45-0824d: 구글 할 일을 완료로 바꿔서 같이 완료돼 버린 '예정' 되돌리기 ──
+  window.gtaskUndoComplete = function(){
+    if(typeof entries === 'undefined'){ if(typeof toast==='function') toast('데이터를 아직 못 읽었어요'); return; }
+    var DAY = 86400000;
+    var cand = entries.filter(function(e){
+      return e && e.kind === 'schedule' && e.sStatus === '완료' && e.gTaskId
+             && (Date.now() - (e.updatedAt || 0)) < 3 * DAY;      // 최근 3일 안에 바뀐 것만
+    });
+    var today = (function(){
+      var d = (typeof kstNow === 'function') ? kstNow() : new Date(Date.now() + 9*3600*1000);
+      return d.toISOString().slice(0,10);
+    })();
+    cand.sort(function(a,b){ return String(a.date||'') < String(b.date||'') ? 1 : -1; });   // 앞날짜가 위로
+
+    var old = document.getElementById('gucOv'); if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'gucOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12060;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit';
+    var rows = cand.map(function(e,i){
+      var future = String(e.date||'') >= today;
+      return '<label style="display:flex;align-items:flex-start;gap:9px;padding:9px 10px;border:1.5px solid '
+        + (future ? '#bfdbfe' : '#eef4fb') + ';border-radius:9px;margin-bottom:5px;cursor:pointer;background:'
+        + (future ? '#f6faff' : '#fff') + '">'
+        + '<input type="checkbox" class="guc-chk" data-id="' + e.id + '" checked style="width:17px;height:17px;margin-top:2px;accent-color:#1a73e8;flex:0 0 auto">'
+        + '<div style="flex:1;min-width:0">'
+        +   '<div style="font-size:13.5px;font-weight:700;color:#1a2f45;word-break:break-all">' + esc(e.title||'(제목없음)') + '</div>'
+        +   '<div style="font-size:11px;color:' + (future ? '#1d4ed8' : '#9aa7b4') + ';margin-top:2px">'
+        +     esc(e.date||'') + (future ? ' · 앞으로 올 일정' : ' · 지난 일정') + '</div>'
+        + '</div></label>';
+    }).join('');
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:470px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
+      + '<div style="padding:16px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">'
+      +   '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">🔧 잘못 완료된 예정 되돌리기</span>'
+      +   '<button id="gucClose" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<div style="flex:1;overflow:auto;padding:12px 18px">'
+      +   (cand.length
+          ? '<div style="font-size:12px;color:#7a92a8;margin-bottom:10px;line-height:1.55">구글 할 일을 완료로 바꾸면서 같이 <b>완료</b>가 된 예정 <b>' + cand.length + '</b>건입니다.<br>체크한 것을 <b>예정</b>으로 되돌립니다. 진짜로 끝낸 것은 체크를 풀어주세요.</div>'
+          : '<div style="padding:24px;text-align:center;color:#aab8c8;font-size:13px">되돌릴 항목이 없습니다</div>')
+      +   rows
+      + '</div>'
+      + '<div style="padding:10px 18px 16px;border-top:1px solid #f1f5f9">'
+      +   '<div style="font-size:11.5px;color:#9aa7b4;margin-bottom:10px;line-height:1.5">구글 할 일 연동은 완전히 제거됐습니다 — 다시 이런 일은 없습니다.</div>'
+      +   '<div style="display:flex;gap:8px">'
+      +     '<button id="gucNone" style="padding:0 14px;height:42px;border:1.5px solid #e2e8f0;border-radius:10px;background:#fff;color:#94a3b8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">전체 해제</button>'
+      +     '<button id="gucGo" style="flex:1;height:42px;border:none;border-radius:10px;background:#1a73e8;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">↩ 예정으로 되돌리기</button>'
+      +   '</div>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    document.getElementById('gucClose').addEventListener('click', function(){ ov.remove(); });
+    document.getElementById('gucNone').addEventListener('click', function(){
+      ov.querySelectorAll('.guc-chk').forEach(function(c){ c.checked = false; });
+    });
+    document.getElementById('gucGo').addEventListener('click', function(){
+      var ids = [];
+      ov.querySelectorAll('.guc-chk').forEach(function(c){ if(c.checked) ids.push(c.getAttribute('data-id')); });
+      if(!ids.length){ if(typeof toast==='function') toast('되돌릴 항목을 골라주세요'); return; }
+      var n = 0;
+      ids.forEach(function(id){
+        try{ updateRecord(id, { sStatus: '예정', updatedAt: Date.now() }); n++; }catch(e){}
+      });
+      ov.remove();
+      if(typeof renderAll === 'function') setTimeout(renderAll, 200);
+      if(typeof toast === 'function') toast('↩ ' + n + '건을 예정으로 되돌렸습니다', 4000);
+    });
+  };
 
   // ── v45-0824c: 구글 할 일(Tasks) 조회·삭제 ──
   // 삼성 캘린더에 뜨는 ⊘ 항목 중 캘린더 이벤트가 아닌 것은 전부 여기에 있다.
@@ -5672,99 +5600,78 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           var t = all[Number(b.getAttribute('data-i'))];
           if(!t) return;
           b.textContent = '…';
-          await del(t);
-          all = all.filter(function(x){ return x !== t; });
-          draw();
+          var ok = await del(t);
+          if(ok){ all = all.filter(function(x){ return x !== t; }); draw(); }
+          else { b.textContent = '⚠'; if(typeof toast==='function') toast('삭제 실패: ' + lastErr, 5000); }
         });
       });
     }
-    async function del(t){
+    var lastErr = '';
+    // fetch 는 401/403/429 여도 예외를 안 던진다 → 반드시 상태를 확인해야 한다
+    async function del(t, tryN){
+      tryN = tryN || 1;
       try{
-        await fetch('https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(t._listId)+'/tasks/'+t.id,
+        var r = await fetch('https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(t._listId)+'/tasks/'+t.id,
           { method:'DELETE', headers:{ 'Authorization':'Bearer '+accessToken } });
-        dbgG('할 일 삭제: ' + (t.title||''));
-      }catch(e){ dbgG('할 일 삭제 오류: '+e); }
+        if(r.ok || r.status === 204 || r.status === 404){        // 404 = 이미 없음 → 성공 취급
+          dbgG('할 일 삭제: ' + (t.title||''));
+          return true;
+        }
+        if((r.status === 429 || r.status >= 500) && tryN < 4){   // 속도제한·일시오류 → 기다렸다 재시도
+          await new Promise(function(res){ setTimeout(res, 800 * tryN); });
+          return del(t, tryN + 1);
+        }
+        var body = '';
+        try{ var j = await r.json(); body = (j.error && j.error.message) || ''; }catch(e2){}
+        lastErr = 'HTTP ' + r.status + (body ? ' · ' + body : '');
+        dbgG('할 일 삭제 실패(' + r.status + '): ' + (t.title||'') + ' ' + body);
+        return false;
+      }catch(e){
+        if(tryN < 3){
+          await new Promise(function(res){ setTimeout(res, 700 * tryN); });
+          return del(t, tryN + 1);
+        }
+        lastErr = String(e && e.message || e);
+        dbgG('할 일 삭제 오류: '+e);
+        return false;
+      }
     }
     document.getElementById('gtmDelAll').addEventListener('click', async function(){
       if(!all.length) return;
       var total = all.length;
       if(!confirm('구글 할 일 ' + total + '건을 전부 삭제할까요?\n삼성 캘린더의 “대기 중인 할일” 표시가 사라집니다.\n(캘린더 일정은 건드리지 않습니다)')) return;
       var btn = this; btn.disabled = true;
-      var doneN = 0;
-      for(var i=0;i<all.length;i+=6){                      // 6건씩 병렬 — 414건도 1~2분
-        var chunk = all.slice(i, i+6);
-        await Promise.all(chunk.map(function(t){ return del(t); }));
-        doneN += chunk.length;
-        btn.textContent = '삭제 중… ' + doneN + '/' + total;
+      lastErr = '';
+      var okN = 0, failN = 0, left = [];
+      for(var i=0;i<all.length;i+=3){                      // 3건씩 병렬 (속도제한 회피)
+        var chunk = all.slice(i, i+3);
+        var res = await Promise.all(chunk.map(function(t){ return del(t); }));
+        for(var k=0;k<chunk.length;k++){
+          if(res[k]) okN++; else { failN++; left.push(chunk[k]); }
+        }
+        btn.textContent = '삭제 중… ' + (okN+failN) + '/' + total;
         var bd2 = document.getElementById('gtmBody');
         if(bd2) bd2.innerHTML = '<div style="padding:24px;text-align:center;color:#7a92a8;font-size:13px">'
-          + '삭제 중… <b>' + doneN + ' / ' + total + '</b><br><span style="font-size:11.5px;color:#aab8c8">창을 닫지 마세요</span></div>';
+          + '삭제 중… <b>' + (okN+failN) + ' / ' + total + '</b>'
+          + (failN ? '<br><span style="color:#b52929;font-size:12px">실패 ' + failN + '건</span>' : '')
+          + '<br><span style="font-size:11.5px;color:#aab8c8">창을 닫지 마세요</span></div>';
+        if(failN >= 5 && okN === 0){                        // 처음부터 계속 실패 → 즉시 중단하고 사유 표시
+          break;
+        }
+        await new Promise(function(res2){ setTimeout(res2, 120); });
       }
-      all = [];
+      all = left;
       draw();
       btn.textContent = '🗑 전부 삭제'; btn.disabled = false;
-      if(typeof toast==='function') toast('✅ 구글 할 일 ' + total + '건을 지웠습니다. 폰에서 동기화하면 사라집니다', 5000);
+      if(failN){
+        var msg = '지운 것 ' + okN + '건 / 실패 ' + failN + '건\n\n사유: ' + (lastErr || '알 수 없음')
+                + '\n\n권한 문제(403)면 G캘린더 버튼을 눌러 연동을 껐다가 다시 켜서 할 일 권한을 허용해 주세요.';
+        alert(msg);
+      } else {
+        if(typeof toast==='function') toast('✅ 구글 할 일 ' + okN + '건을 지웠습니다. 폰에서 동기화하면 사라집니다', 5000);
+      }
     });
     draw();
-  };
-
-  window.gtaskCleanDuplicates = async function(){
-    if(!accessToken){ if(typeof signIn==='function') signIn(); toast('먼저 구글 로그인 해주세요'); return; }
-    // 목록 확정
-    await new Promise(function(res){ loadTasksListId(res); });
-    toast('🔍 중복 태스크 확인 중...');
-    // 전체 태스크 가져오기 (완료 포함, 페이지네이션)
-    var all = [], pageToken = null, guard = 0;
-    try{
-      do{
-        var url = 'https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(TASKS_LIST_ID)
-          + '/tasks?maxResults=100&showCompleted=true&showHidden=true'
-          + (pageToken ? '&pageToken='+pageToken : '');
-        var r = await fetch(url, { headers:{ 'Authorization':'Bearer '+accessToken } });
-        var d = await r.json();
-        if(d.items) all = all.concat(d.items);
-        pageToken = d.nextPageToken || null;
-        guard++;
-      } while(pageToken && guard < 20);
-    }catch(e){ toast('태스크 조회 실패: '+e); return; }
-
-    // 제목 기준 그룹핑 (공백 정규화)
-    var groups = {};
-    all.forEach(function(t){
-      var key = (t.title||'').replace(/\s+/g,' ').trim();
-      if(!key) return;
-      (groups[key] = groups[key] || []).push(t);
-    });
-    // 중복 = 2개 이상인 그룹. 완료 안 된 것 우선 남기고 나머지 삭제
-    var toDelete = [];
-    Object.keys(groups).forEach(function(k){
-      var arr = groups[k];
-      if(arr.length < 2) return;
-      // 남길 것: 미완료 우선, 그 다음 updated 최신
-      arr.sort(function(a,b){
-        var ac = a.status==='completed'?1:0, bc = b.status==='completed'?1:0;
-        if(ac!==bc) return ac-bc;
-        return String(b.updated||'').localeCompare(String(a.updated||''));
-      });
-      // arr[0] 남기고 나머지 삭제
-      for(var i=1;i<arr.length;i++) toDelete.push(arr[i]);
-    });
-
-    if(!toDelete.length){ toast('✅ 중복 태스크가 없어요'); return; }
-    if(!confirm('중복 태스크 '+toDelete.length+'개를 삭제합니다.\n(같은 제목 중 1개씩만 남깁니다)\n진행할까요?')) return;
-
-    var done=0, fail=0;
-    for(var j=0;j<toDelete.length;j++){
-      try{
-        var dr = await fetch('https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(TASKS_LIST_ID)+'/tasks/'+toDelete[j].id, {
-          method:'DELETE', headers:{ 'Authorization':'Bearer '+accessToken }
-        });
-        if(dr.ok || dr.status===204) done++; else fail++;
-      }catch(e){ fail++; }
-      if(j%5===0) toast('중복 삭제 중... '+(j+1)+'/'+toDelete.length);
-      await new Promise(function(res){ setTimeout(res, 120); });
-    }
-    toast('✅ 중복 정리 완료! '+done+'개 삭제'+(fail?', '+fail+'개 실패':''));
   };
 
   // Tasks 전용 동기화 (캘린더에는 넣지 않음 — 태스크에만)
@@ -5793,7 +5700,6 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     syncScheduleAll(en);
   };
 
-  loadTasksListId();
 
   window.gcalResyncOne = function(entryId){
     if(!accessToken){ signIn(); return; }
@@ -6295,11 +6201,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       + '<div style="display:flex;flex-wrap:wrap;gap:6px">'
       + '<button id="gpcSyncAll" style="flex:1;min-width:108px;height:36px;background:#34a853;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📅 전체동기화</button>'
       + '<button id="gpcCalDup" style="flex:1;min-width:108px;height:36px;background:#d93025;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 캘린더중복</button>'
-      + '<button id="gpcTaskDup" style="flex:1;min-width:108px;height:36px;background:#ea8600;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 태스크중복</button>'
       + '<button id="gpcPurge" style="flex:1;min-width:108px;height:36px;background:#5f6368;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑️ 옛예정비우기</button>'
       + '<button id="gpcResync" style="flex:1;min-width:108px;height:36px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔁 전체 재확인</button>'
       + '<button id="gpcFixMisc" style="flex:1;min-width:150px;height:36px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📤 휴가·메모·전달 다시 올리기</button>'
-      + '<button id="gpcTaskMgr" style="flex:1;min-width:140px;height:36px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📋 구글 할 일 보기·삭제</button>'
+      + '<button id="gpcTaskMgr" style="flex:1;min-width:140px;height:36px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 남은 구글 할 일 정리</button>'
+      + '<button id="gpcUndoDone" style="flex:1;min-width:170px;height:36px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔧 잘못 완료된 예정 되돌리기</button>'
       + '</div></div>'
       + '<div style="display:flex;gap:8px">'
       + '<button id="gpcCancel" style="flex:1;height:44px;background:#f7faff;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">닫기</button>'
@@ -6353,8 +6259,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     };
     _tool('gpcSyncAll', window.gcalSyncAll);
     _tool('gpcCalDup',  window.gcalCleanDuplicates);
-    _tool('gpcTaskDup', window.gtaskCleanDuplicates);
     _tool('gpcTaskMgr', window.gtaskManager);
+    _tool('gpcUndoDone', window.gtaskUndoComplete);
     _tool('gpcPurge',   window.gcalPurgeOldWorkSchedule);
     _tool('gpcResync', function(){ if(window.gcalSyncAll) window.gcalSyncAll(true); });
     // 휴가·메모·전달·통화·지출만 (업무는 건수가 많아 제외 — 한꺼번에 보내면 삼성 동기화가 멈춘다)
@@ -6504,157 +6410,14 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 
   // ── 구글 Tasks → 업무일지 역방향 동기화 (v44-0629) ────
   // ── 구글 Tasks → 업무일지 역방향 동기화 (v44-0629 개선) ─
-  function pullFromTasks(silent){
-    if(!accessToken) return;
-
-    // 1단계: 모든 Tasks 목록 가져오기
-    fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=20', {
-      headers: { 'Authorization': 'Bearer ' + accessToken }
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(!d.items || !d.items.length){
-        dbgG('Tasks 목록 없음');
-        return;
-      }
-      dbgG('Tasks 목록 수: ' + d.items.length + ' → ' + d.items.map(function(x){return x.title;}).join(', '));
-
-      // 2단계: 모든 목록에서 항목 병렬로 가져오기
-      var promises = d.items.map(function(list){
-        var url = 'https://tasks.googleapis.com/tasks/v1/lists/'
-          + encodeURIComponent(list.id) + '/tasks'
-          + '?showCompleted=true&showHidden=true&maxResults=200'
-          + '&fields=items(id,title,notes,due,status,updated,selfLink)';
-        return fetch(url, { headers: { 'Authorization': 'Bearer ' + accessToken } })
-          .then(function(r){ return r.json(); })
-          .then(function(td){ return (td.items||[]).map(function(it){ it._listId=list.id; it._listName=list.title; return it; }); })
-          .catch(function(){ return []; });
-      });
-
-      return Promise.all(promises).then(function(results){
-        // 모든 목록의 항목 합치기
-        var allItems = [];
-        results.forEach(function(arr){ allItems = allItems.concat(arr); });
-        dbgG('Tasks 전체 항목 수: ' + allItems.length);
-        processTaskItems(allItems, silent);
-      });
-    })
-    .catch(function(e){
-      dbgG('Tasks 목록 fetch 오류: '+e);
-      // 폴백: @default 목록만
-      var url = 'https://tasks.googleapis.com/tasks/v1/lists/@default/tasks'
-        + '?showCompleted=true&showHidden=true&maxResults=200'
-        + '&fields=items(id,title,notes,due,status,updated)';
-      fetch(url, { headers: { 'Authorization': 'Bearer ' + accessToken } })
-        .then(function(r){ return r.json(); })
-        .then(function(d){ processTaskItems(d.items||[], silent); })
-        .catch(function(e2){ dbgG('Tasks 폴백 오류: '+e2); });
-    });
-  }
-
-  function processTaskItems(items, silent){
-    var added=0, updated=0, skipped=0;
-
-    items.forEach(function(it){
-      if(!it.title || !it.title.trim()){ skipped++; return; }
-
-      // 날짜 파싱 (UTC → KST 보정: +9시간)
-      var date = '';
-      if(it.due){
-        // "2026-06-26T00:00:00.000Z" → KST는 +9h이므로 날짜가 같음
-        // UTC 00:00 = KST 09:00 이므로 날짜 동일
-        date = it.due.slice(0,10);
-      }
-
-      // 업무일지에서 Tasks로 보낸 항목 감지 (notes에 "상태:" 포함)
-      // → gTaskId로 이미 연결된 것만 업데이트, 아니면 스킵
-      var isFromWorklog = it.notes && (
-        it.notes.includes('상태:') ||
-        it.notes.includes('반복:') ||
-        it.notes.startsWith('상태')
-      );
-
-      // gTaskId로 연결된 기존 항목 확인
-      var existingByTaskId = typeof entries!=='undefined' && entries.find(function(e){
-        return e.kind==='schedule' && e.gTaskId===it.id;
-      });
-
-      if(existingByTaskId){
-        // 구글 Tasks에서 수정된 경우 업데이트
-        var gUpdated  = new Date(it.updated||0).getTime();
-        var wlUpdated = existingByTaskId.updatedAt || existingByTaskId.createdAt || 0;
-        if(gUpdated > wlUpdated + 5000){
-          if(typeof updateRecord==='function'){
-            var sStatus = it.status==='completed' ? '완료' : '예정';
-            updateRecord(existingByTaskId.id, {
-              title: it.title,
-              date: date || existingByTaskId.date,
-              memo: isFromWorklog ? existingByTaskId.memo : (it.notes||''),
-              sStatus: sStatus,
-              updatedAt: Date.now()
-            });
-            updated++;
-          }
-        } else { skipped++; }
-        return;
-      }
-
-      // 업무일지에서 만든 항목이면 스킵 (중복 방지)
-      if(isFromWorklog){ skipped++; return; }
-
-      // 제목으로 중복 체크
-      var existingByTitle = typeof entries!=='undefined' && entries.find(function(e){
-        return e.kind==='schedule' && e.title===it.title && (!date || e.date===date);
-      });
-      if(existingByTitle){
-        // gTaskId 연결만 업데이트
-        if(!existingByTitle.gTaskId && typeof updateRecord==='function'){
-          updateRecord(existingByTitle.id, { gTaskId: it.id, updatedAt: Date.now() });
-        }
-        skipped++; return;
-      }
-
-      // 새 항목 추가
-      if(typeof addRecord==='function'){
-        var today = (function(){
-          var d=new Date(); var m=d.getMonth()+1; var dd=d.getDate();
-          return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(dd<10?'0':'')+dd;
-        })();
-        var sStatus2 = it.status==='completed' ? '완료' : '예정';
-        addRecord({
-          kind: 'schedule',
-          title: it.title,
-          date: date || today,
-          sStatus: sStatus2,
-          sType: '',
-          scheduleType: '일회성',
-          memo: it.notes || '',
-          gTaskId: it.id,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          _fromTasks: true,
-          _tasksList: it._listName || ''
-        });
-        added++;
-      }
-    });
-
-    localStorage.setItem(PULL_LS, String(Date.now()));
-
-    if(!silent){
-      var msg = added || updated
-        ? '✅ Tasks→업무일지: '+added+'건 추가'+(updated?', '+updated+'건 업데이트':'')
-        : '✅ Tasks 새 항목 없음';
-      if(typeof toast==='function') toast(msg, 3000);
-    }
-    if((added||updated) && typeof renderAll==='function') setTimeout(renderAll, 300);
-    dbgG('Tasks pull 완료: 추가='+added+', 업데이트='+updated+', 스킵='+skipped);
-  }
+  // v45-0824e: 구글 할 일(Tasks) 가져오기 제거
+  //  - 할 일을 완료로 바꾸면 앱의 '예정'까지 완료로 덮어쓰는 사고가 있었다
+  //  - 이제 구글은 앱 ↔ 삼성 캘린더 사이의 징검다리로만 쓴다
+  function pullFromTasks(){ dbgG('Tasks 가져오기는 사용하지 않습니다'); }
 
   // 캘린더 + Tasks 동시 pull
   function pullAll(silent){
-    pullFromAllCals(silent);
-    setTimeout(function(){ pullFromTasks(silent); }, 800);
+    pullFromAllCals(silent);          // v45-0824e: 캘린더만 가져온다
   }
 
   window.gcalPullTasks = pullFromTasks;
@@ -7164,9 +6927,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         saveToken(resp);
         updateGCalBtn('connected');
         if(typeof toast==='function') toast('✅ 구글 캘린더 연동됐어요! 이제 예정·업무 저장 시 자동 등록됩니다.');
-        loadTasksListId(function(){
-          setTimeout(function(){ pullAll(false); }, 500);
-        }); // Tasks 목록 ID 조회 후 pull
+        setTimeout(function(){ pullAll(false); }, 500);
         dbgG('로그인 완료');
       }
     });
@@ -14320,7 +14081,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0824-1451';
+  var TAG = ' +cal0824-1535';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
