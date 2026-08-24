@@ -1,7 +1,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v45-20260805-111921";
+const APP_VERSION = "v45-20260824-1305";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -1669,54 +1669,129 @@ function makeMaterialSearchUI(inputId, listId, onSelect){
   }, 50);
 }
 /* ── 업무 모달 탭 렌더러 ── */
-/* ── 자재 선택 팝업 ── */
+/* ── v45-0824: 자재 여러 개(최대 3종류) 공용 헬퍼 ── */
+const MAT_MAX = 3;
+function matOne(m){
+  if(!m || !m.name) return '';
+  return String(m.name) + (m.spec ? ' ' + m.spec : '') + ' × ' + (Number(m.qty)||1);
+}
+function matsText(list){
+  return (list||[]).map(matOne).filter(Boolean).join(' _ ');
+}
+/* 목록·카드·캘린더에서 자재를 한 줄로 보여줄 때 항상 이걸 쓴다 */
+function matDisplay(en){
+  if(en && Array.isArray(en.materials) && en.materials.length) return matsText(en.materials);
+  if(en && en.material) return String(en.material) + (Number(en.qty) ? ' × ' + Number(en.qty) : '');
+  return '';
+}
+/* 저장된 기록 → 편집용 배열 (옛 기록은 material/qty 한 건으로 변환) */
+function matsFromEntry(d){
+  if(d && Array.isArray(d.materials) && d.materials.length) return d.materials.slice(0, MAT_MAX);
+  if(d && d.material) return [{ name:String(d.material), spec:'', qty:Number(d.qty)||1, itemId:'' }];
+  return [];
+}
+function readMats(){
+  try{
+    const el = document.getElementById('m-materials');
+    if(!el || !el.value) return [];
+    const a = JSON.parse(el.value);
+    return Array.isArray(a) ? a.slice(0, MAT_MAX) : [];
+  }catch(e){ return []; }
+}
+/* 배열 → 숨김 입력 3개 + 접힌 줄 라벨까지 한 번에 반영 */
+function writeMats(list){
+  list = (list||[]).slice(0, MAT_MAX);
+  const el = document.getElementById('m-materials');     if(el) el.value = JSON.stringify(list);
+  const mEl = document.getElementById('m-material');     if(mEl) mEl.value = list.length ? (list[0].name||'') : '';
+  const qEl = document.getElementById('m-qty');          if(qEl) qEl.value = list.length ? (Number(list[0].qty)||1) : '';
+  const iEl = document.getElementById('m-mat-item-id');  if(iEl) iEl.value = list.length ? (list[0].itemId||'') : '';
+  const lbl = document.getElementById('wMatLabel');
+  if(lbl) lbl.innerHTML = list.length
+    ? ('📦 자재: <b>' + esc(matsText(list)) + '</b>')
+    : '📦 자재 사용 내역';
+}
+
+/* ── 자재 선택 팝업 (여러 개 담기) ── */
 function openMatPickerPopup(){
   const old = document.getElementById('matPickerOv'); if(old) old.remove();
   const ov = document.createElement('div');
   ov.id = 'matPickerOv';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:12000;display:flex;align-items:center;justify-content:center;padding:16px';
 
-  const curMat = ($('m-material')||{}).value||'';
-  const curQty = ($('m-qty')||{}).value||'1';  /* 기본값 1 */
+  let bag = readMats();
 
   ov.innerHTML = `
-    <div style="background:#fff;border-radius:16px;width:100%;max-width:440px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.22)">
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:440px;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.22)">
       <div style="padding:16px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px">
         <span style="font-size:18px">📦</span>
-        <span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">자재 선택</span>
+        <span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">자재 선택 <span style="font-size:11px;font-weight:600;color:#94a3b8">(최대 ${MAT_MAX}종류)</span></span>
         <button id="matPopClose" type="button" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer;padding:4px">✕</button>
       </div>
-      <div style="padding:14px 18px 0;position:relative">
-        <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">자재명 검색</div>
-        <input type="text" id="matPopSearch" value="${esc(curMat)}" placeholder="자재명 또는 초성 검색…" autocomplete="off"
-          style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:1.5px solid #3b82f6;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45">
-        <div id="matPopList" style="position:absolute;left:18px;right:18px;top:84px;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:100;max-height:220px;overflow:auto;display:none"></div>
-      </div>
-      <div style="padding:10px 18px 14px;display:flex;align-items:flex-end;gap:10px">
-        <div style="flex:1">
-          <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">선택된 자재</div>
-          <div id="matPopSelected" style="min-height:38px;padding:8px 12px;background:#f8fafc;border-radius:8px;font-size:13px;font-weight:600;color:#1a2f45;border:1.5px solid #e2e8f0;line-height:1.4">${curMat||'<span style="color:#94a3b8;font-weight:400">없음</span>'}</div>
+      <div style="overflow:auto">
+        <div style="padding:14px 18px 0;position:relative">
+          <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">자재명 검색</div>
+          <input type="text" id="matPopSearch" value="" placeholder="자재명 또는 초성 검색…" autocomplete="off"
+            style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:1.5px solid #3b82f6;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45">
+          <div id="matPopList" style="position:absolute;left:18px;right:18px;top:84px;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:100;max-height:220px;overflow:auto;display:none"></div>
         </div>
-        <div style="width:88px">
-          <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">수량</div>
-          <input type="number" id="matPopQty" value="${esc(curQty)}" min="0" placeholder="0"
-            style="width:100%;box-sizing:border-box;height:38px;padding:0 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:15px;font-weight:700;font-family:inherit;background:#fff;outline:none;text-align:right">
+        <div style="padding:10px 18px 6px;display:flex;align-items:flex-end;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">선택된 자재</div>
+            <div id="matPopSelected" style="min-height:38px;padding:8px 12px;background:#f8fafc;border-radius:8px;font-size:13px;font-weight:600;color:#1a2f45;border:1.5px solid #e2e8f0;line-height:1.4"><span style="color:#94a3b8;font-weight:400">없음</span></div>
+          </div>
+          <div style="width:88px;flex:0 0 auto">
+            <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">수량</div>
+            <input type="number" id="matPopQty" value="1" min="0" placeholder="0"
+              style="width:100%;box-sizing:border-box;height:38px;padding:0 10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:15px;font-weight:700;font-family:inherit;background:#fff;outline:none;text-align:right">
+          </div>
+        </div>
+        <div style="padding:0 18px 10px">
+          <button id="matPopAdd" type="button"
+            style="width:100%;height:40px;border:1.5px dashed #93c5fd;border-radius:10px;background:#f8fbff;color:#2563a8;font-size:13.5px;font-weight:800;font-family:inherit;cursor:pointer">➕ 담고 계속 고르기</button>
+        </div>
+        <div style="padding:0 18px 12px">
+          <div id="matPopBagTitle" style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:6px">담은 자재</div>
+          <div id="matPopBag" style="display:flex;flex-wrap:wrap;gap:6px"></div>
         </div>
       </div>
-      <div style="padding:4px 18px 16px;display:flex;gap:8px;border-top:1px solid #f1f5f9">
-        <button id="matPopClear" type="button" style="padding:0 14px;height:44px;border:1.5px solid #e2e8f0;border-radius:10px;background:#fff;color:#94a3b8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">지우기</button>
+      <div style="padding:10px 18px 16px;display:flex;gap:8px;border-top:1px solid #f1f5f9">
+        <button id="matPopClear" type="button" style="padding:0 14px;height:44px;border:1.5px solid #e2e8f0;border-radius:10px;background:#fff;color:#94a3b8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">전체 지우기</button>
         <button id="matPopOk" type="button" style="flex:1;height:44px;border:none;border-radius:10px;background:#2563a8;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">✓ 확인</button>
       </div>
     </div>`;
 
   document.body.appendChild(ov);
 
-  let _pickedId = ($('m-mat-item-id')||{}).value||'';
-  let _pickedName = curMat;
+  let _pickedId = '', _pickedName = '', _pickedSpec = '';
 
   const searchEl = document.getElementById('matPopSearch');
   const listEl   = document.getElementById('matPopList');
   const selEl    = document.getElementById('matPopSelected');
+  const qtyEl    = document.getElementById('matPopQty');
+  const bagEl    = document.getElementById('matPopBag');
+  const addBtn   = document.getElementById('matPopAdd');
+
+  function renderBag(){
+    document.getElementById('matPopBagTitle').innerHTML =
+      '담은 자재 <span style="color:#2563a8">' + bag.length + ' / ' + MAT_MAX + '</span>';
+    if(!bag.length){
+      bagEl.innerHTML = '<div style="font-size:12px;color:#c3d1de">아직 담은 자재가 없습니다</div>';
+    } else {
+      bagEl.innerHTML = bag.map((m,i)=>`
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#eef6ff;border:1.5px solid #bfdbfe;border-radius:999px;padding:5px 6px 5px 11px;font-size:12.5px;font-weight:700;color:#1a2f45;max-width:100%">
+          <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(matOne(m))}</span>
+          <button type="button" class="mpp-rm" data-i="${i}" style="border:none;background:#dbeafe;color:#1d4ed8;border-radius:50%;width:19px;height:19px;line-height:1;font-size:12px;font-weight:800;cursor:pointer;flex:0 0 auto;padding:0">✕</button>
+        </span>`).join('');
+      bagEl.querySelectorAll('.mpp-rm').forEach(b=>{
+        b.addEventListener('click',()=>{ bag.splice(Number(b.dataset.i),1); renderBag(); });
+      });
+    }
+    const full = bag.length >= MAT_MAX;
+    addBtn.disabled = full;
+    addBtn.style.opacity = full ? '.45' : '1';
+    addBtn.style.cursor  = full ? 'not-allowed' : 'pointer';
+    addBtn.textContent   = full ? '자재는 최대 ' + MAT_MAX + '종류까지' : '➕ 담고 계속 고르기';
+  }
 
   function renderList(q){
     q = (q||'').trim();
@@ -1756,50 +1831,66 @@ function openMatPickerPopup(){
         el.addEventListener('mousedown',e=>{
           e.preventDefault();
           const it=filtered[i];
-          _pickedId=it.id; _pickedName=it.name;
+          _pickedId=it.id; _pickedName=it.name; _pickedSpec=it.spec||'';
           searchEl.value=it.name;
           selEl.innerHTML=`<b>${esc(it.name)}</b>${it.spec?`<br><span style="font-size:11px;color:#94a3b8">${esc(it.spec)}</span>`:''}`;
           listEl.style.display='none';
-          document.getElementById('matPopQty').focus();
-          document.getElementById('matPopQty').select();
+          qtyEl.focus(); qtyEl.select();
         });
       });
     }
     listEl.style.display='block';
   }
 
-  renderList('');
-  setTimeout(()=>{ searchEl.focus(); searchEl.select(); },80);
+  function clearPick(){
+    _pickedId=''; _pickedName=''; _pickedSpec='';
+    searchEl.value='';
+    qtyEl.value='1';
+    selEl.innerHTML='<span style="color:#94a3b8;font-weight:400">없음</span>';
+  }
 
-  searchEl.addEventListener('input',()=>{ _pickedId=''; _pickedName=searchEl.value; renderList(searchEl.value); });
-  searchEl.addEventListener('focus',()=>renderList(searchEl.value));
-  searchEl.addEventListener('blur',()=>setTimeout(()=>{ listEl.style.display='none'; },200));
+  /* 지금 고른 것을 담는다 — 목록에 없는 이름도 그대로 담긴다 */
+  function addToBag(){
+    const name=(_pickedName||searchEl.value).trim();
+    if(!name){ if(typeof toast==='function') toast('자재를 먼저 고르거나 입력하세요'); searchEl.focus(); return false; }
+    if(bag.length>=MAT_MAX){ if(typeof toast==='function') toast('자재는 최대 '+MAT_MAX+'종류까지 담을 수 있어요'); return false; }
+    bag.push({ name:name, spec:_pickedSpec||'', qty:Number(qtyEl.value)||1, itemId:_pickedId||'' });
+    renderBag();
+    clearPick();
+    renderList('');
+    searchEl.focus();
+    return true;
+  }
 
   function doConfirm(){
     const name=(_pickedName||searchEl.value).trim();
-    const qty=Number(document.getElementById('matPopQty').value)||0;
-    const mInp=$('m-material'); if(mInp) mInp.value=name;
-    const qInp=$('m-qty');      if(qInp) qInp.value=qty||'';
-    const idInp=$('m-mat-item-id'); if(idInp) idInp.value=_pickedId||'';
-    const lbl=document.getElementById('wMatLabel');
-    if(lbl) lbl.innerHTML = name&&qty
-      ? `📦 자재: <b>${esc(name)}</b> × ${qty}`
-      : `📦 자재 사용 내역`;
+    if(name && bag.length<MAT_MAX){
+      bag.push({ name:name, spec:_pickedSpec||'', qty:Number(qtyEl.value)||1, itemId:_pickedId||'' });
+    }
+    writeMats(bag);
     ov.remove();
   }
 
+  renderBag();
+  renderList('');
+  setTimeout(()=>{ searchEl.focus(); },80);
+
+  searchEl.addEventListener('input',()=>{ _pickedId=''; _pickedSpec=''; _pickedName=searchEl.value; renderList(searchEl.value); });
+  searchEl.addEventListener('focus',()=>renderList(searchEl.value));
+  searchEl.addEventListener('blur',()=>setTimeout(()=>{ listEl.style.display='none'; },200));
+  searchEl.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); qtyEl.focus(); qtyEl.select(); } });
+
+  addBtn.addEventListener('click', addToBag);
+  qtyEl.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addToBag(); } });
+
   document.getElementById('matPopOk').addEventListener('click', doConfirm);
   document.getElementById('matPopClear').addEventListener('click',()=>{
-    const mInp=$('m-material'); if(mInp) mInp.value='';
-    const qInp=$('m-qty');      if(qInp) qInp.value='';
-    const idInp=$('m-mat-item-id'); if(idInp) idInp.value='';
-    const lbl=document.getElementById('wMatLabel');
-    if(lbl) lbl.innerHTML='📦 자재 사용 내역';
+    bag = [];
+    writeMats([]);
     ov.remove();
   });
   document.getElementById('matPopClose').addEventListener('click',()=>ov.remove());
   /* 배경 클릭 닫기 비활성화 */
-  document.getElementById('matPopQty').addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();doConfirm();} });
 }
 
 let _workMode = "simple";
@@ -2060,8 +2151,9 @@ function renderWorkModal(data, mode){
   </div>`;
 
   /* ── 자재 사용 내역 — 클릭 시 팝업 ── */
-  const matLabel = d.material && d.qty
-    ? `📦 자재: <b>${e2(d.material)}</b> × ${e2(String(d.qty))}`
+  const _mats0 = matsFromEntry(d);
+  const matLabel = _mats0.length
+    ? `📦 자재: <b>${e2(matsText(_mats0))}</b>`
     : `📦 자재 사용 내역`;
   const matSection = `
   <div id="wMatRow" style="border:1.5px solid #f1f5f9;border-radius:10px;overflow:hidden;${S.mb}">
@@ -2072,7 +2164,8 @@ function renderWorkModal(data, mode){
     </button>
     <input type="hidden" id="m-material" value="${e2(d.material||"")}">
     <input type="hidden" id="m-qty" value="${e2(d.qty||"")}">
-    <input type="hidden" id="m-mat-item-id" value="">
+    <input type="hidden" id="m-mat-item-id" value="${e2(_mats0.length?(_mats0[0].itemId||""):"")}">
+    <input type="hidden" id="m-materials" value="${e2(JSON.stringify(_mats0))}">
   </div>`;
 
   /* ════════════════ 모드별 추가 필드 ════════════════ */
@@ -2589,6 +2682,7 @@ function _doSaveWorkEntry(){
     detail:($("m-detail")||{}).value?.trim()||"",
     material:($("m-material")||{}).value?.trim()||"",
     qty:Number(($("m-qty")||{}).value)||0,
+    materials: readMats(),
     expType: mode==="full"?(($("m-expType")||{}).value||"개인비용"):"없음",
     cost: mode==="full"?(Number(($("m-cost")||{}).value)||0):0,
     workVendor:($("m-workVendor")||{}).value?.trim()||"",
@@ -2610,30 +2704,32 @@ function _doSaveWorkEntry(){
   calcWorkTotal(obj); applyExpLinks(savedId);
 
   // 자재 출고 자동 기록 (신규 업무에서 자재명+수량 있을 때)
-  if(!mId && obj.material && obj.qty>0){
-    const matName = obj.material.trim();
-    const matInpEl = $("m-material");
-    const savedItemId = ($("m-mat-item-id")||{}).value||'';
-    // itemId 직접 지정 → 없으면 이름으로 검색
-    const matchItem = savedItemId
-      ? entries.find(e=>e.id===savedItemId && e.kind==="item")
-      : entries.find(e=>e.kind==="item" && (e.itemName||"").replace(/^\[.*?\]/,"").trim()===matName);
-    const stockRec = {
-      kind:"stock",
-      stockType:"출고",
-      date: obj.date,
-      itemId: matchItem ? matchItem.id : null,
-      itemName: matchItem ? matchItem.itemName : matName,
-      qty: obj.qty,
-      unitPrice: matchItem ? (Number(matchItem.unitPrice)||0) : 0,
-      amount: matchItem ? (Number(matchItem.unitPrice)||0)*obj.qty : 0,
-      useTarget: `업무: ${obj.title}`,
-      memo: `업무 자동출고 (${obj.date})`,
-      workId: savedId,
-      createdAt: Date.now(),
-    };
-    addRecord(stockRec);
-    toast(`📦 "${matName}" ${obj.qty}개 출고 기록됐어요`);
+  if(!mId && Array.isArray(obj.materials) && obj.materials.length){
+    const _done = [];
+    obj.materials.forEach(m=>{
+      const matName = String(m.name||"").trim();
+      const mQty = Number(m.qty)||0;
+      if(!matName || mQty<=0) return;
+      const matchItem = m.itemId
+        ? entries.find(e=>e.id===m.itemId && e.kind==="item")
+        : entries.find(e=>e.kind==="item" && (e.itemName||"").replace(/^\[.*?\]/,"").trim()===matName);
+      addRecord({
+        kind:"stock",
+        stockType:"출고",
+        date: obj.date,
+        itemId: matchItem ? matchItem.id : null,
+        itemName: matchItem ? matchItem.itemName : matName,
+        qty: mQty,
+        unitPrice: matchItem ? (Number(matchItem.unitPrice)||0) : 0,
+        amount: matchItem ? (Number(matchItem.unitPrice)||0)*mQty : 0,
+        useTarget: `업무: ${obj.title}`,
+        memo: `업무 자동출고 (${obj.date})`,
+        workId: savedId,
+        createdAt: Date.now(),
+      });
+      _done.push(matName + " " + mQty + "개");
+    });
+    if(_done.length) toast(`📦 ${_done.join(", ")} 출고 기록됐어요`);
   }
 
   $("overlay").classList.remove("show"); toast(mId?"수정되었습니다":"저장되었습니다");
@@ -3962,7 +4058,7 @@ function workCopyLine(en){
   const refY = en.refYear ? (String(en.refYear).slice(-2)+"년 ") : "";
   const refM = en.refMonth ? (en.refMonth+"월 ") : "";
   const ymf=(refY+refM+(en.floor?en.floor:"")).trim();
-  const matQty = [en.material, en.qty&&Number(en.qty)?en.qty+"개":""].filter(Boolean).join(" ") || "";
+  const matQty = matDisplay(en);
   const parts=[ymf, (en.title||""), en.detail, matQty, (Number(en.cost)?won(en.cost):"")].map(x=>(x||"").toString().trim()).filter(Boolean);
   return cleanCell(parts.join("_"));
 }
@@ -4340,7 +4436,7 @@ $("btnDelExcel").addEventListener("click",()=>{
 function cardWork(en){
   const expBadge = en.expType&&en.expType!=="없음"
     ? `<span class="pill ${en.expType==="세금계산서"?"amount":"tech"}" style="font-size:10px">${en.expType==="세금계산서"?"📃세금":"💸품의"}</span>` : "";
-  const _matQty = [en.material, en.qty&&Number(en.qty)?en.qty+"개":""].filter(Boolean).join(" ");
+  const _matQty = matDisplay(en);
   return `<div class="row-item" data-kind="work" data-id="${en.id}">
     <div class="grow">
       <div class="t">${esc(displayTitle(en))} <span class="st ${statusClass(en.status)}">${esc(en.status||"")}</span> <span class="pill ${fieldClass(en.field)}">${esc(en.field||"")}</span>${expBadge}${(en.attachments&&en.attachments.length)?' 📎':''}</div>
@@ -4738,7 +4834,7 @@ function buildReport(day){
   const _dayObj=new Date(day),_wn=['일','월','화','수','목','금','토'];
   let h=`<div style="display:flex;align-items:center;gap:16px;margin-bottom:6px"><span style="font-size:48px;font-weight:900;color:#1a2f45;line-height:1">${_dayObj.getDate()}</span><span style="font-size:22px;font-weight:800;color:#1a2f45">${_dayObj.getMonth()+1}월 ${_dayObj.getDate()}일 (${_wn[_dayObj.getDay()]}) 업무일지 보고서</span></div><hr style="border:none;border-top:2px solid #1a2f45;margin:6px 0 12px">`;
   const sec=(title,items,cls)=> items.length?`<div class="rsec ${cls}"><h2>${title} (${items.length}건)</h2>`+items.join("")+`</div>`:"";
-  h+=sec("업무", w.map(en=>`<div class="it"><b>[${esc(en.status||"")}]</b> ${esc(en.floor||"")} ${esc(en.loc||"")} ${esc(en.title||"")}${en.detail?" — "+esc(en.detail):""}${en.field?" ["+esc(en.field)+"]":""}${en.material?" / 자재: "+esc(en.material):""}${Number(en.cost)?" / "+won(en.cost)+"원":""}${en.improve?"<br>↳ 개선: "+esc(en.improve):""}</div>`), "work");
+  h+=sec("업무", w.map(en=>`<div class="it"><b>[${esc(en.status||"")}]</b> ${esc(en.floor||"")} ${esc(en.loc||"")} ${esc(en.title||"")}${en.detail?" — "+esc(en.detail):""}${en.field?" ["+esc(en.field)+"]":""}${matDisplay(en)?" / 자재: "+esc(matDisplay(en)):""}${Number(en.cost)?" / "+won(en.cost)+"원":""}${en.improve?"<br>↳ 개선: "+esc(en.improve):""}</div>`), "work");
   h+=sec("휴가", v.map(x=>`<div class="it">🌴 ${esc(x.name||"")} (${esc(x.vtype||"")}) ${x.end&&x.end!==x.start?esc(x.start)+" ~ "+esc(x.end):esc(x.start||"")}${x.note?" — "+esc(x.note):""}</div>`), "vac");
   h+=sec("오늘계획", p.map(x=>`<div class="it">${x.done?"☑":"☐"} ${esc(x.text||"")}</div>`), "plan");
   h+=sec("통화", c.map(x=>`<div class="it">[${esc(x.dir||"")}] ${esc(x.time||"")} ${esc(x.name||"")} ${esc(x.phone||"")} — ${esc(x.content||"")}${x.followup?" / 조치: "+esc(x.followup):""}${x.done?" (완료)":""}</div>`), "call");
@@ -9290,11 +9386,16 @@ function v43CopyWorkExcel(){
     const floor = (e.floor||'').trim();
     const title = (e.title||'').trim();
     const detail = (e.detail||'').trim().replace(/[\t\n]/g,' ');
-    const matParts = [];
-    if(e.material) matParts.push(String(e.material).trim());
-    if(e.matSpec) matParts.push(String(e.matSpec).trim());
-    if(Number(e.qty)>0) matParts.push(e.qty+'개');
-    const material = matParts.join('_').replace(/[\t\n]/g,' ');
+    let material;
+    if(Array.isArray(e.materials) && e.materials.length){
+      material = matsText(e.materials).replace(/[\t\n]/g,' ');
+    } else {
+      const matParts = [];
+      if(e.material) matParts.push(String(e.material).trim());
+      if(e.matSpec) matParts.push(String(e.matSpec).trim());
+      if(Number(e.qty)>0) matParts.push(e.qty+'개');
+      material = matParts.join('_').replace(/[\t\n]/g,' ');
+    }
     // 지출종류가 개인비용/후불청구이면 금액 추가
     const expType = e.expType||'없음';
     const costPart = (expType==='개인비용'||expType==='후불청구') && Number(e.cost)>0
