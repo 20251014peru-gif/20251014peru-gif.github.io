@@ -202,6 +202,46 @@
   .sheet .close{margin-top:8px;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;color:var(--ink-2)}
   .toast{position:fixed;left:50%;bottom:calc(var(--tabbar-h) + 24px);transform:translateX(-50%);background:var(--ink);color:#fff;font-size:13px;font-weight:700;padding:11px 18px;border-radius:12px;z-index:90;opacity:0;transition:opacity .25s;pointer-events:none}
   .toast.on{opacity:1}
+  /* ── 모바일 최적화 (2026-08 개편: 자동요약 제거·화면 정리) ── */
+  .boardtabs{display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap}
+  .actbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .miniai{border:1px solid var(--line);background:var(--surface);color:var(--accent);border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+  .miniai:hover{background:#EEF1FF;border-color:var(--accent)}
+  .miniai:disabled{opacity:.55;cursor:default}
+  @media(max-width:760px){
+    .controls{flex-direction:column;align-items:stretch;gap:8px}
+    .searchbar{flex:none;width:100%}
+    .searchbar input{min-width:0}
+    .actbar{width:100%;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+    .actbar::-webkit-scrollbar{display:none}
+    .actbar>*{flex:0 0 auto}
+    .controls .seg{width:100%;justify-content:center}
+  }
+  @media(max-width:640px){
+    .boardtabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .boardtabs::-webkit-scrollbar{display:none}
+    .boardtabs>button{flex:0 0 auto}
+    .boardtabs .hint,.boardtabs .sp{display:none}
+  }
+  /* 표: 좁은 화면일수록 촘촘하게 → 가로화면에서 더 많이 보이게 */
+  @media(max-width:900px){
+    table{min-width:720px}
+    thead th,tbody td{padding:9px 6px}
+    col.c-title{width:34%} col.c-sum{width:22%} col.c-kw{width:72px}
+  }
+  /* 폰 가로(landscape): 상단 여백 압축 → 표가 화면에 더 들어오게 */
+  @media(orientation:landscape) and (max-height:520px){
+    header{padding:calc(env(safe-area-inset-top) + 6px) 16px 6px}
+    main{padding:8px 14px 6px}
+    .board,.kwmgr{padding:8px 12px 6px;margin-bottom:8px}
+    .surge{margin-bottom:8px} .controls{margin-bottom:8px}
+  }
+  /* 읽기창 뒤로가기: ✕ 대신 명확한 '‹ 목록' */
+  .r-head .rx{color:var(--accent);font-size:24px;font-weight:800}
+  @media(max-width:1023px){
+    .r-head .rx{width:auto;min-width:34px;padding:0 13px;border-radius:11px}
+    .r-head .rx::after{content:"목록";font-size:13px;font-weight:800;margin-left:3px;vertical-align:2px}
+  }
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -214,7 +254,7 @@
 </header>
 <main>
   <div class="board" id="boardWrap">
-    <div style="display:flex;gap:6px;margin-bottom:10px"><button id="bmKw" class="fchip on" onclick="setBoard('kw')" style="cursor:pointer;font-size:14px"><span style="font-size:17px">📰</span> 이슈·테마</button><button id="bmStock" class="fchip" onclick="setBoard('stock')" style="cursor:pointer;font-size:14px"><span style="font-size:17px">💹</span> 내 종목</button><button id="bmSearch" class="fchip" onclick="setBoard('search')" style="cursor:pointer;font-size:14px"><span style="font-size:17px">🔥</span> 대중 관심</button><button class="fchip" onclick="toggleKwMgr()" style="cursor:pointer" title="관심 키워드·종목 추가/삭제/수정">⚙️ 관리</button><span style="flex:1"></span><span class="hint" style="font-size:11px;color:var(--ink-3);font-weight:600;align-self:center">7일·어제 대비 · 탭하면 표 걸러짐</span></div>
+    <div class="boardtabs"><button id="bmKw" class="fchip on" onclick="setBoard('kw')" style="cursor:pointer;font-size:14px"><span style="font-size:17px">📰</span> 이슈·테마</button><button id="bmStock" class="fchip" onclick="setBoard('stock')" style="cursor:pointer;font-size:14px"><span style="font-size:17px">💹</span> 내 종목</button><button id="bmSearch" class="fchip" onclick="setBoard('search')" style="cursor:pointer;font-size:14px"><span style="font-size:17px">🔥</span> 대중 관심</button><button class="fchip" onclick="toggleKwMgr()" style="cursor:pointer" title="관심 키워드·종목 추가/삭제/수정">⚙️ 관리</button><span class="sp" style="flex:1"></span><span class="hint" style="font-size:11px;color:var(--ink-3);font-weight:600;align-self:center">7일·어제 대비 · 탭하면 표 걸러짐</span></div>
     <div class="trend-row" id="trendRow"></div>
   </div>
   <div class="surge" id="surge"></div>
@@ -247,6 +287,7 @@
       <button onclick="runSearch()">검색</button>
       <button onclick="liveSearch()" style="border:none;background:var(--foreign);color:#fff;border-radius:12px;padding:0 13px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap">🤖 AI로 뉴스검색</button>
     </div>
+    <div class="actbar">
     <button class="sumbtn" onclick="openSummary()">📝 통합 요약</button>
       <button class="sumbtn" id="refreshBtn" onclick="loadData(true)" style="background:var(--good)">🔄 새로고침</button>
       <button class="sumbtn" onclick="runCollect()" style="background:var(--urgent)">🚀 지금 수집</button>
@@ -254,6 +295,7 @@
       <button class="sumbtn" onclick="syncNow()" title="지금 동기화 (모든 기기 같게)" style="background:#0EA5E9;padding:11px 12px">☁️</button>
       <select id="dateSel" onchange="onDate(this.value)" style="border:1px solid var(--line);border-radius:12px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;background:var(--surface)"></select>
       <span id="loadStat" style="font-size:11.5px;color:var(--ink-3);font-weight:700"></span>
+    </div>
     <div class="seg">
       <button class="on" data-sort="new" onclick="setSort('new')">최신</button>
       <button data-sort="imp" onclick="setSort('imp')">중요</button>
@@ -327,7 +369,7 @@
 <div class="reader-bg" id="readerBg" onclick="closeReader()"></div>
 <div class="reader" id="reader">
   <div class="r-head">
-    <button class="rx" onclick="closeReader()">✕</button>
+    <button class="rx" onclick="closeReader()" aria-label="뒤로">‹</button>
     <div class="rt"><h2 id="rTitle"></h2><div class="rm" id="rMeta"></div></div>
     <div class="rtoggle"><button class="on" id="rtArticle" onclick="readerPane('article')">📄 기사</button><button id="rtAI" onclick="readerPane('ai')">🤖 AI</button></div>
     <div class="r-actions">
@@ -347,6 +389,7 @@
       <div class="rah">🤖 이 기사에 대해 물어보기 <span id="autoSaveBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s;margin-left:6px">💾</span></div>
       <div class="raq">
         <span class="qchip" onclick="rQuick('핵심만 3줄로 요약해줘')">📝 3줄 요약</span>
+        <span class="qchip" onclick="rQuick('이 기사 제목과 핵심 내용을 자연스러운 한국어로 번역해줘')">🌐 번역</span>
         <span class="qchip" onclick="rQuick('배경을 쉽게 설명해줘')">🧩 쉽게 설명</span>
         <span class="qchip" onclick="rQuick('투자 관점에서 왜 중요해?')">💹 왜 중요?</span>
         <span class="qchip" onclick="openGlossSave()">📖 용어 저장</span>
@@ -482,6 +525,7 @@ var SAMPLE = [
   {id:10,date:"어제",src:"foreign",kw:"금리",sig:"gray",dupes:1,breaking:false,trans:true,origin:"WSJ",title:"美 국채 금리 하락…인하 기대 선반영",summary:"장기물 중심 하락. 위험자산 선호 소폭 회복.",body:"미국 국채 금리가 인하 기대 선반영으로 하락했다. 위험자산 선호가 소폭 회복됐다."}
 ];
 var NEWS = SAMPLE.slice();
+var manSum = lsGet("nr_mansum", {});   // 사용자가 수동 생성한 한 줄 요약 {url: summary} — 새로고침해도 유지
 var collectedGloss=[]; var dates=[]; var dateFilter="all"; var trendsData={}; var trendsMeta={}; var popTerms = lsGet("nr_pop", ["HBM","반도체","SK하이닉스","삼성전자","엔비디아","AI","전력설비","원전","조선","방산","로봇","2차전지","전기차","코스피","코스닥","환율","금리","비트코인","테슬라","양자컴퓨터"]);
 var view="all", sort="new", filterKw=null, search="", selMode=false, selected={};
 
@@ -737,7 +781,7 @@ function renderRows(){
       '<td>'+srcBadge(n)+'</td>'+
       '<td><span class="kwtag"># '+n.kw+'</span></td>'+
       '<td><span class="title" onclick="openReader('+n.id+')">'+(n.trans?'<span class="trans">번역</span>':'')+n.title+'</span>'+(n.dupes>1?'<span class="dupe">+'+(n.dupes-1)+'</span>':'')+'</td>'+
-      '<td class="summary">'+n.summary+'</td>'+
+      '<td class="summary">'+(n.summary? n.summary : '<button class="miniai" onclick="rowSummarize('+n.id+',event)">📝 요약</button>')+'</td>'+
       '<td class="cell-center">'+(noteN?'<span class="notepill">💬'+noteN+'</span>':'')+'</td>'+
       '<td class="cell-center"><span class="sigdot">'+sigDot(n.sig)+'</span></td>'+
       '<td class="cell-center"><span class="rowact"><a class="link" href="'+(n.url||'#')+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">원문↗</a><span class="askbtn" title="AI에게 질문" onclick="askNews('+n.id+')">🤖</span></span></td>'+
@@ -872,6 +916,7 @@ function normalizeNews(arr){
   arr.forEach(function(n){
     var t=(n.orig_title||n.title||"");
     if(n.src==="foreign" && hasKorean(t)){ n.src="google"; n.trans=false; n.origin=""; if(n.orig_title){ n.title=n.orig_title; } }
+    if(!n.summary && n.url && manSum[n.url]) n.summary=manSum[n.url];   // 수동 요약 복원
   });
   return arr;
 }
@@ -1117,6 +1162,29 @@ function callClaude(history, systemText, cb){
 }
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
+/* 수동 한 줄 요약 (자동요약 제거 → 필요한 기사만 버튼으로) */
+function rowSummarize(id, ev){
+  if(ev){ ev.stopPropagation(); }
+  var n=NEWS.find(function(x){return x.id===id;}); if(!n){ var s=scrapOf(id); if(s)n=s.n; }
+  if(!n)return;
+  if(!AI_KEY){ toast("먼저 AI 키를 넣어주세요 (하단 🤖 탭 → ⚙️)"); openKey(); return; }
+  var btn=(ev&&ev.target&&ev.target.classList&&ev.target.classList.contains("miniai"))?ev.target:null;
+  if(btn){ btn.textContent="요약 중…"; btn.disabled=true; }
+  var body=(n.body||n.title||"").slice(0,4000);
+  var sys="다음 기사를 한국어 한 줄(35자 내외)로 요약해. 요약문 한 줄만 출력하고 따옴표·머리말·설명은 넣지 마.";
+  callClaude([{role:"user",content:"[제목] "+n.title+"\n[본문]\n"+body}], sys, function(txt,err){
+    if(err){ if(btn){ btn.textContent="📝 요약"; btn.disabled=false; } toast("요약 실패: "+err); return; }
+    var sm=(txt||"").trim().replace(/^["'“”\s]+|["'“”\s]+$/g,"").split("\n")[0];
+    n.summary=sm; if(n.url){ manSum[n.url]=sm; lsSet("nr_mansum",manSum); }
+    renderRows();
+    if(curArticle && curArticle.id===id){
+      var el=document.getElementById("aSum");
+      if(el){ el.innerHTML='<b>한 줄 요약</b> · '+sm+(n.url?' &nbsp;<a href="'+n.url+'" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800;white-space:nowrap">🔗 기사 원문 열기 ↗</a>':''); }
+    }
+    toast("요약 완료");
+  });
+}
+
 /* 드로어(전역) */
 var dHistory=[], dCtx=null;
 function openDrawer(){ document.getElementById("drawerBg").classList.add("on"); document.getElementById("aidrawer").classList.add("on"); setTimeout(function(){document.getElementById("dInput").focus();},200); }
@@ -1143,7 +1211,8 @@ function openReader(id){
   document.getElementById("rMeta").textContent=srcName+" · "+n.date+" · #"+n.kw;
   document.getElementById("aTitle").innerHTML=(n.trans?'<span class="trans">번역</span> ':'')+n.title;
   document.getElementById("aMeta").innerHTML='<span class="srcbadge '+n.src+'">'+(n.src==="naver"?"N":n.src==="google"?"G":"외신")+'</span> '+srcName+' · '+n.date+' · <span class="kwtag"># '+n.kw+'</span>';
-  document.getElementById("aSum").innerHTML='<b>한 줄 요약</b> · '+n.summary+(n.url?' &nbsp;<a href="'+n.url+'" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800;white-space:nowrap">🔗 기사 원문 열기 ↗</a>':'');
+  var _sum = n.summary ? n.summary : '<button class="miniai" onclick="rowSummarize('+n.id+',event)">📝 요약 생성</button>';
+  document.getElementById("aSum").innerHTML='<b>한 줄 요약</b> · '+_sum+(n.url?' &nbsp;<a href="'+n.url+'" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800;white-space:nowrap">🔗 기사 원문 열기 ↗</a>':'');
   document.getElementById("aBody").textContent=n.body||n.summary;
   readerHistory=[];
   var ms=document.getElementById("rMsgs"); ms.innerHTML='<div class="msg sys">이 기사 본문을 제가 읽었어요. 궁금한 걸 물어보세요.</div>';
