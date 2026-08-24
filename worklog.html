@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260824-1305-cal0824-1305"></script>
+<script src="worklog.js?v=v45-20260824-1315-cal0824-1315"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5141,8 +5141,29 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   }
 
   // ── 핵심: 단건 동기화 ──────────────────────────────────
+  // v45-0824: 전송 기록 (진단용, 최근 60건)
+  var GLOG_LS = 'wl_gcal_log';
+  function gcalLog(kind, en, msg){
+    try{
+      var a = JSON.parse(localStorage.getItem(GLOG_LS)||'[]');
+      a.unshift({ t:Date.now(), k:kind, id:(en&&en.id)||'', ti:(en&&(en.title||en.name))||'', m:String(msg||'').slice(0,180) });
+      localStorage.setItem(GLOG_LS, JSON.stringify(a.slice(0,60)));
+    }catch(e){}
+  }
+  window.gcalLogList = function(){ try{ return JSON.parse(localStorage.getItem(GLOG_LS)||'[]'); }catch(e){ return []; } };
+
+  // v45-0824: 예외가 나면 조용히 죽던 문제 → 무조건 onDone(false) 로 알린다
   function syncScheduleToGCal(en, onDone){
-    if(!accessToken){ signIn(); if(onDone) onDone(false); return; }
+    try{ return _syncGCalRaw(en, onDone); }
+    catch(e){
+      dbgG('동기화 예외: ' + (e && e.message || e));
+      gcalLog('예외', en, e && e.message || e);
+      if(onDone) onDone(false);
+    }
+  }
+  function _syncGCalRaw(en, onDone){
+    // 타이머 안에서 signIn() 을 부르면 팝업이 차단돼서 아무 일도 안 일어난다 → 표시만 하고 종료
+    if(!accessToken){ window.__gcalAuthNeeded = true; gcalLog('무토큰', en, '구글 로그인 필요'); if(onDone) onDone(false); return; }
     var calId = GCAL_IDS[en.kind];
     if(!calId){ if(onDone) onDone(false); return; }
 
@@ -5257,6 +5278,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     .then(function(d){
       if(d.id){
         dbgG('등록 완료: ' + d.id);
+        gcalLog('성공', en, d.id);
         if(typeof updateRecord==='function' && en.id){
           updateRecord(en.id, {gcalEventId: d.id});
         }
@@ -5277,9 +5299,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           return;
         }
         dbgG('등록 실패: ' + errMsg);
+        gcalLog('실패', en, errMsg);
         if(typeof toast==='function') toast('❌ 캘린더 등록 실패: ' + errMsg, 4000);
         if(d.error && d.error.code===401){
           // 토큰 만료 → 재로그인
+          window.__gcalAuthNeeded = true;
           accessToken=null; localStorage.removeItem(GCAL_LS);
           updateGCalBtn('disconnected');
           if(typeof toast==='function') toast('🔑 구글 로그인이 만료됐어요. G캘린더 버튼을 다시 눌러주세요', 5000);
@@ -5289,6 +5313,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     })
     .catch(function(e){
       dbgG('fetch 오류: '+e);
+      gcalLog('통신오류', en, e && e.message || e);
       if(typeof toast==='function') toast('❌ 캘린더 연결 오류: ' + e.message, 4000);
       if(onDone) onDone(false);
     });
@@ -5840,6 +5865,10 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     syncScheduleToGCal(en, onDone);
   };
   window.gcalSyncSchedule = syncScheduleAll;   // schedule: 캘린더+Tasks 동시
+  // v45-0824: 대기함(outbox)에서 쓰는 전역
+  window.gcalSignIn   = function(){ window.__gcalAuthNeeded = false; signIn(); };
+  window.gcalHasToken = function(){ return !!accessToken; };
+  window.gcalKinds    = function(){ return Object.keys(GCAL_IDS); };
 
   // ══════════════════════════════════════════════════════
   // ── 구글 캘린더 → 업무일지 역방향 동기화 (v44-0629) ───
@@ -13922,9 +13951,208 @@ if('serviceWorker' in navigator){
 </script>
 <!-- v45-0824: 자재 여러 개 입력은 worklog.js 의 자재 선택 팝업으로 이전됨 (구 wlMultiMat 블록 제거) -->
 <script>
+/* ===== v45-0824: 구글 캘린더 전송 대기함(outbox) =====
+   지금까지는 저장할 때 한 번 보내보고 실패하면 그걸로 끝이었다(=조용히 유실).
+   이제 보낼 것을 대기함에 적어두고, 성공할 때까지 계속 다시 보낸다. 남은 건수는 화면에 뜬다. */
+(function(){
+  var OUT_LS   = 'wl_gcal_outbox';
+  var SCAN_LS  = 'wl_gcal_backfill_ts';
+  var GRACE_MS = 20000;      // 저장 직후 기본 전송이 성공할 시간을 준다
+  var BATCH    = 4;          // 한 번에 보낼 건수
+  var GAP_MS   = 900;        // 건당 간격 (구글 속도제한 회피)
+  var BACKFILL_DAYS = 90;    // 과거 며칠치까지 훑을지
+
+  function log(m){ try{ if(typeof dbg==='function') dbg('[대기함] '+m); }catch(e){} }
+  function load(){ try{ var a=JSON.parse(localStorage.getItem(OUT_LS)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function save(a){ try{ localStorage.setItem(OUT_LS, JSON.stringify(a.slice(0,500))); }catch(e){} }
+
+  function enqueue(id, needPut){
+    if(!id) return;
+    var a = load();
+    for(var i=0;i<a.length;i++){
+      if(a[i].id === id){ if(needPut) a[i].put = 1; a[i].ts = Date.now(); save(a); return; }
+    }
+    a.push({ id:id, ts:Date.now(), put:needPut?1:0, n:0 });
+    save(a);
+    paint();
+  }
+  function dequeue(id){
+    var a = load().filter(function(x){ return x.id !== id; });
+    save(a); paint();
+  }
+
+  function syncKinds(){
+    try{ return (typeof window.gcalKinds==='function') ? window.gcalKinds() : []; }catch(e){ return []; }
+  }
+  function entryOf(id){
+    try{ return (typeof entries!=='undefined') ? entries.find(function(x){ return x.id===id; }) : null; }catch(e){ return null; }
+  }
+
+  /* ── 화면 표시 ── */
+  function badge(){
+    var b = document.getElementById('wlOutBadge');
+    if(b) return b;
+    var host = document.getElementById('btnGCal');
+    if(!host || !host.parentNode) return null;
+    b = document.createElement('button');
+    b.id = 'wlOutBadge';
+    b.type = 'button';
+    b.style.cssText = 'display:none;margin-left:6px;height:32px;padding:0 11px;border-radius:9px;'
+      + 'border:1.5px solid #f0b429;background:#fff8e6;color:#9a6700;font-size:12px;font-weight:800;'
+      + 'font-family:inherit;cursor:pointer;white-space:nowrap;vertical-align:middle';
+    b.addEventListener('click', function(){
+      if(window.__gcalAuthNeeded || !(window.gcalHasToken && window.gcalHasToken())){
+        if(typeof window.gcalSignIn==='function'){ window.gcalSignIn(); return; }   // 사용자 클릭 = 팝업 허용됨
+      }
+      backfill(true);
+      drain(true);
+      if(typeof toast==='function') toast('📤 밀린 항목을 다시 보내는 중…');
+    });
+    host.parentNode.insertBefore(b, host.nextSibling);
+    return b;
+  }
+  function paint(){
+    var b = badge(); if(!b) return;
+    var n = load().length;
+    var needAuth = !!window.__gcalAuthNeeded || !(window.gcalHasToken && window.gcalHasToken());
+    if(!n && !needAuth){ b.style.display='none'; return; }
+    b.style.display = 'inline-block';
+    if(needAuth){
+      b.textContent = '🔑 구글 다시 로그인' + (n ? ' (' + n + ')' : '');
+      b.style.borderColor = '#e08a8a'; b.style.background = '#fdecec'; b.style.color = '#a13030';
+      b.title = '구글 로그인이 끊겨서 캘린더로 못 보내고 있어요. 눌러서 다시 로그인하세요.';
+    } else {
+      b.textContent = '📤 미전송 ' + n;
+      b.style.borderColor = '#f0b429'; b.style.background = '#fff8e6'; b.style.color = '#9a6700';
+      b.title = '구글 캘린더로 아직 못 보낸 항목입니다. 눌러서 지금 보내기.';
+    }
+  }
+
+  /* ── 저장 훅 — 무슨 일이 있어도 대기함에는 적힌다 ── */
+  function hook(){
+    if(typeof window.addRecord === 'function' && !window.addRecord._obHooked){
+      var oa = window.addRecord;
+      window.addRecord = function(obj){
+        var r = oa.apply(this, arguments);
+        try{
+          if(obj && !obj._fromGcal && obj.date && r && r.id && syncKinds().indexOf(obj.kind)>=0) enqueue(r.id, false);
+        }catch(e){ log('add 훅 오류: '+e); }
+        return r;
+      };
+      window.addRecord._obHooked = true;
+      log('addRecord 훅 설치');
+    }
+    if(typeof window.updateRecord === 'function' && !window.updateRecord._obHooked){
+      var ou = window.updateRecord;
+      window.updateRecord = function(id, patch){
+        var r = ou.apply(this, arguments);
+        try{
+          if(patch && !patch._fromGcal){
+            var keys = Object.keys(patch);
+            var meta = ['gcalEventId','gTaskId','_gcalSrc','_fromGcal','updatedAt'];
+            var onlyMeta = keys.length>0 && keys.every(function(k){ return meta.indexOf(k)>=0; });
+            if(!onlyMeta){
+              var en = entryOf(id);
+              if(en && en.date && syncKinds().indexOf(en.kind)>=0) enqueue(id, true);   // 수정은 PUT 이라 다시 보내도 안전
+            } else if(keys.indexOf('gcalEventId')>=0 && patch.gcalEventId){
+              dequeue(id);                                                              // 전송 성공 → 대기함에서 뺀다
+            }
+          }
+        }catch(e){ log('update 훅 오류: '+e); }
+        return r;
+      };
+      window.updateRecord._obHooked = true;
+      log('updateRecord 훅 설치');
+    }
+    if(typeof window.deleteRecord === 'function' && !window.deleteRecord._obHooked){
+      var od = window.deleteRecord;
+      window.deleteRecord = function(id){ try{ dequeue(id); }catch(e){} return od.apply(this, arguments); };
+      window.deleteRecord._obHooked = true;
+    }
+  }
+  [500,1500,3000,6000,10000].forEach(function(t){ setTimeout(hook, t); });
+
+  /* ── 과거에 못 올라간 것 훑어서 대기함에 담기 ── */
+  function backfill(force){
+    try{
+      if(typeof entries === 'undefined' || !entries.length) return 0;
+      if(!force){
+        var last = parseInt(localStorage.getItem(SCAN_LS)||'0',10);
+        if(Date.now() - last < 6*3600*1000) return 0;      // 6시간에 한 번이면 충분
+      }
+      localStorage.setItem(SCAN_LS, String(Date.now()));
+      var kinds = syncKinds();
+      if(!kinds.length) return 0;
+      var lim = new Date(Date.now() - BACKFILL_DAYS*86400000).toISOString().slice(0,10);
+      var q = load(), have = {};
+      q.forEach(function(x){ have[x.id]=1; });
+      var added = 0;
+      entries.forEach(function(e){
+        if(!e || !e.id || !e.date) return;
+        if(kinds.indexOf(e.kind) < 0) return;
+        if(e.gcalEventId) return;                          // 이미 올라간 것
+        if(String(e.date).slice(0,10) < lim) return;       // 너무 오래된 것은 건너뜀
+        if(have[e.id]) return;
+        q.push({ id:e.id, ts:0, put:0, n:0 });             // ts:0 → 유예시간 없이 바로 대상
+        have[e.id]=1; added++;
+      });
+      if(added){ save(q); paint(); log('밀린 항목 ' + added + '건 담음'); }
+      return added;
+    }catch(e){ log('훑기 오류: '+e); return 0; }
+  }
+
+  /* ── 실제 전송 ── */
+  var running = false;
+  function drain(force){
+    if(running) return;
+    if(typeof window.gcalSync !== 'function') return;
+    if(!(window.gcalHasToken && window.gcalHasToken())){ paint(); return; }
+    var q = load();
+    if(!q.length){ paint(); return; }
+    var now = Date.now();
+    var todo = q.filter(function(x){ return force || (now - x.ts) > GRACE_MS; }).slice(0, BATCH);
+    if(!todo.length) return;
+    running = true;
+    var i = 0;
+    (function step(){
+      if(i >= todo.length){ running = false; paint(); return; }
+      var item = todo[i++];
+      var en = entryOf(item.id);
+      if(!en || !en.date){ dequeue(item.id); return setTimeout(step, 40); }
+      if(en.gcalEventId && !item.put){ dequeue(item.id); return setTimeout(step, 40); }  // 이미 올라감
+      try{
+        window.gcalSync(en, function(ok){
+          if(ok){ dequeue(item.id); }
+          else {
+            var a = load();
+            for(var k=0;k<a.length;k++) if(a[k].id===item.id){ a[k].n = (a[k].n||0)+1; a[k].ts = Date.now(); }
+            save(a); paint();
+          }
+          setTimeout(step, GAP_MS);
+        });
+      }catch(e){ log('전송 오류: '+e); setTimeout(step, GAP_MS); }
+    })();
+    setTimeout(function(){ running = false; }, 30000);                     // 안전장치
+  }
+
+  /* ── 언제 돌릴지 ── */
+  setTimeout(function(){ backfill(false); paint(); }, 6000);
+  setTimeout(function(){ drain(false); }, 12000);
+  setInterval(function(){ drain(false); }, 45000);
+  setInterval(paint, 4000);
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ paint(); drain(false); } });
+  window.addEventListener('focus', function(){ paint(); drain(false); });
+
+  /* ── 진단용 ── */
+  window.wlOutbox = { list:load, count:function(){ return load().length; }, drain:function(){ drain(true); },
+                      scan:function(){ return backfill(true); }, clear:function(){ save([]); paint(); } };
+  console.log('[대기함] 구글 캘린더 전송 대기함 로드');
+})();
+</script>
+<script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0824-1305';
+  var TAG = ' +cal0824-1315';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
