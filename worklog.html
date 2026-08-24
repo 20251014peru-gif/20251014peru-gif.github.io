@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260805-111921-cal0818-2310"></script>
+<script src="worklog.js?v=v45-20260805-111921-cal0824-1240"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -6657,6 +6657,135 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     if(m >= 60){ m = 0; h = (h + 1) % 24; }
     return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
   }
+  // ── v45-0824: 시계형(clock) 시간 선택 팝업 — 화면을 거의 차지하지 않는다 ──
+  var _clkH = 9, _clkM = 0, _clkMode = 'h', _clkCb = null, _clkBuilt = false;
+
+  function clkPlace(host, items, radius, size, fs, cur, on){
+    items.forEach(function(it){
+      var ang = (it.a - 90) * Math.PI / 180;
+      var hit = (it.v === cur);
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = it.t;
+      b.style.cssText = 'position:absolute;padding:0;border:0;border-radius:50%;cursor:pointer;'
+        + 'font-family:inherit;font-weight:800;touch-action:manipulation;line-height:1;'
+        + 'width:' + size + 'px;height:' + size + 'px;font-size:' + fs + 'px;'
+        + 'background:' + (hit ? '#3f7cb8' : 'transparent') + ';'
+        + 'color:' + (hit ? '#fff' : '#1a2f45') + ';'
+        + 'left:' + (117 + radius * Math.cos(ang) - size / 2) + 'px;'
+        + 'top:'  + (117 + radius * Math.sin(ang) - size / 2) + 'px';
+      b.addEventListener('click', function(ev){ ev.preventDefault(); on(it.v); });
+      host.appendChild(b);
+    });
+  }
+
+  function clkPaintNum(){
+    var hv = document.getElementById('wlClkHv');
+    var mv = document.getElementById('wlClkMv');
+    if(hv){
+      hv.textContent = String(_clkH).padStart(2, '0');
+      hv.style.background = (_clkMode === 'h') ? '#e3eefb' : 'transparent';
+    }
+    if(mv){
+      mv.textContent = String(_clkM).padStart(2, '0');
+      mv.style.background = (_clkMode === 'm') ? '#e3eefb' : 'transparent';
+    }
+  }
+
+  function clkRender(){
+    var face = document.getElementById('wlClkFace');
+    var hint = document.getElementById('wlClkHint');
+    if(!face) return;
+    face.innerHTML = '';
+    var i, items;
+    if(_clkMode === 'h'){
+      items = [];
+      for(i = 1; i <= 12; i++) items.push({ a: i * 30, v: i, t: String(i) });
+      clkPlace(face, items, 96, 40, 17, _clkH, function(v){ _clkH = v; _clkMode = 'm'; clkRender(); });
+      items = [];
+      for(i = 13; i <= 24; i++){
+        items.push({ a: (i - 12) * 30, v: (i === 24 ? 0 : i), t: (i === 24 ? '00' : String(i)) });
+      }
+      clkPlace(face, items, 58, 33, 13, _clkH, function(v){ _clkH = v; _clkMode = 'm'; clkRender(); });
+      if(hint) hint.textContent = '시(時)를 누르세요 · 바깥 1~12 / 안쪽 13~24';
+    } else {
+      items = [];
+      for(i = 0; i < 60; i += 5) items.push({ a: i * 6, v: i, t: String(i).padStart(2, '0') });
+      clkPlace(face, items, 96, 40, 15, _clkM, function(v){ _clkM = v; clkPaintNum(); clkCommit(); });
+      if(hint) hint.textContent = '분(分)을 누르면 바로 적용됩니다 · 5분 단위';
+    }
+    clkPaintNum();
+  }
+
+  function clkClose(){
+    var o = document.getElementById('wlClkOverlay');
+    if(o) o.style.display = 'none';
+    _clkCb = null;
+  }
+
+  function clkCommit(){
+    var v = String(_clkH).padStart(2, '0') + ':' + String(_clkM).padStart(2, '0');
+    var cb = _clkCb;
+    clkClose();
+    if(cb) cb(v);
+  }
+
+  function clkBuild(){
+    if(_clkBuilt) return;
+    _clkBuilt = true;
+    var BTN = 'flex:1;height:40px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;'
+            + 'color:#3f7cb8;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer';
+    var d = document.createElement('div');
+    d.id = 'wlClkOverlay';
+    d.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;display:none;'
+      + 'background:rgba(15,30,45,.42);align-items:center;justify-content:center;padding:10px';
+    d.innerHTML = [
+      '<div id="wlClkBox" style="background:#fff;border-radius:16px;padding:13px 13px 11px;',
+      'width:266px;max-width:94vw;box-shadow:0 14px 44px rgba(0,0,0,.3);font-family:inherit">',
+      '<div id="wlClkTitle" style="text-align:center;font-size:12.5px;color:#7a92a8;font-weight:800">시작 시각</div>',
+      '<div style="text-align:center;font-size:32px;font-weight:800;color:#1a2f45;margin:3px 0 8px;letter-spacing:1px">',
+      '<span id="wlClkHv" style="cursor:pointer;padding:1px 6px;border-radius:7px">09</span>',
+      '<span style="color:#9aa7b4">:</span>',
+      '<span id="wlClkMv" style="cursor:pointer;padding:1px 6px;border-radius:7px">00</span>',
+      '</div>',
+      '<div id="wlClkFace" style="position:relative;width:234px;height:234px;margin:0 auto;',
+      'border-radius:50%;background:#f1f7fd"></div>',
+      '<div id="wlClkHint" style="text-align:center;font-size:11.5px;color:#9aa7b4;margin-top:7px">시(時)를 누르세요</div>',
+      '<div style="display:flex;gap:7px;margin-top:9px">',
+      '<button type="button" id="wlClkX" style="', BTN, '">닫기</button>',
+      '<button type="button" id="wlClkOk" style="', BTN, ';background:#3f7cb8;border-color:#3f7cb8;color:#fff">확인</button>',
+      '</div></div>'
+    ].join('');
+    document.body.appendChild(d);
+
+    d.addEventListener('click', function(ev){ if(ev.target === d) clkClose(); });
+    var x = document.getElementById('wlClkX');
+    var ok = document.getElementById('wlClkOk');
+    if(x)  x.addEventListener('click', function(){ clkClose(); });
+    if(ok) ok.addEventListener('click', function(){ clkCommit(); });
+    var hv = document.getElementById('wlClkHv');
+    var mv = document.getElementById('wlClkMv');
+    if(hv) hv.addEventListener('click', function(){ _clkMode = 'h'; clkRender(); });
+    if(mv) mv.addEventListener('click', function(){ _clkMode = 'm'; clkRender(); });
+  }
+
+  // title: 팝업 상단 문구 / init: "HH:MM" 또는 빈값 / cb: 선택된 "HH:MM"을 받는다
+  function clkOpen(title, init, cb){
+    clkBuild();
+    var base = (init && /^\d{1,2}:\d{2}$/.test(init)) ? init : nowHM5();
+    var pp = base.split(':');
+    _clkH = parseInt(pp[0], 10) || 0;
+    _clkM = Math.round((parseInt(pp[1], 10) || 0) / 5) * 5;
+    if(_clkM >= 60){ _clkM = 0; _clkH = (_clkH + 1) % 24; }
+    _clkMode = 'h';
+    _clkCb = cb;
+    var t = document.getElementById('wlClkTitle');
+    if(t) t.textContent = title || '시각 선택';
+    var o = document.getElementById('wlClkOverlay');
+    if(o) o.style.display = 'flex';
+    clkRender();
+  }
+
   function injectWorkTimeFields(){
     try{
       if(!isWorkModal()) return;
@@ -6668,12 +6797,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       if(!host || !host.parentNode) return;
 
       // 칩 스타일 (작고 촘촘하게)
-      var C  = 'height:28px;padding:0 7px;border:1.5px solid #dbe6f4;border-radius:7px;'
+      var C  = 'height:28px;padding:0 8px;border:1.5px solid #dbe6f4;border-radius:7px;'
              + 'background:#f7faff;color:#3f7cb8;font-size:12px;font-weight:700;'
              + 'font-family:inherit;cursor:pointer;white-space:nowrap;touch-action:manipulation'
-      var CH = 'height:28px;width:33px;padding:0;border:1.5px solid #dbe6f4;border-radius:7px;'
-             + 'background:#f7faff;color:#3f7cb8;font-size:12.5px;font-weight:700;'
-             + 'font-family:inherit;cursor:pointer;touch-action:manipulation'
 
       var durs = [[30,'30분'],[60,'1시간'],[90,'1시간반'],[120,'2시간'],[180,'3시간'],[240,'4시간']];
       var durHtml = durs.map(function(d){
@@ -6684,70 +6810,50 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         var extra = a[0] < 0 ? ';color:#b52929;border-color:#f5b5b5;background:#fdecec' : '';
         return '<button type="button" class="m-wtAdd" data-add="' + a[0] + '" style="' + C + extra + '">' + a[1] + '</button>';
       }).join('');
-      var SS = 'height:38px;padding:0 6px;border:1.5px solid #dbe6f4;border-radius:8px;'
-             + 'font-size:15px;font-weight:700;font-family:inherit;background:#f7faff;'
-             + 'color:#1a2f45;cursor:pointer;flex:0 0 auto';
-      var hOpt = '<option value="">--</option>', mOpt = '<option value="">--</option>';
-      for(var _h = 0; _h < 24; _h++){
-        var _hs = String(_h).padStart(2,'0');
-        hOpt += '<option value="' + _hs + '">' + _hs + '</option>';
-      }
-      for(var _m = 0; _m < 60; _m += 5){
-        var _ms = String(_m).padStart(2,'0');
-        mOpt += '<option value="' + _ms + '">' + _ms + '</option>';
-      }
-      var hourHtml = '';
-      for(var h = 8; h <= 18; h++){
-        hourHtml += '<button type="button" class="m-wtQuick" data-h="' + h + '" style="' + CH + '">' + h + '</button>';
-      }
+
+      // 시간 표시 버튼 (누르면 시계 팝업)
+      var TB = 'height:40px;padding:0 8px;border:1.5px solid #cfe0f2;border-radius:10px;'
+             + 'background:#fff;color:#1a2f45;font-size:17px;font-weight:800;font-family:inherit;'
+             + 'cursor:pointer;letter-spacing:.5px;touch-action:manipulation'
 
       var wrap = document.createElement('div');
       wrap.className = host.className || 'field';
       wrap.id = 'm-workTimeWrap';
-      wrap.style.gridColumn = '1 / -1';                  // 모달 전체 너비 차지 (칩이 세로로 쌓이지 않게)
+      wrap.style.gridColumn = '1 / -1';                  // 모달 전체 너비 (칩이 세로로 쌓이지 않게)
       wrap.innerHTML =
           '<label>처리 시간 <span style="font-weight:500;color:#9aa7b4">(비워두면 자동 배정)</span></label>'
         + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-        +   '<select id="m-wsH" style="' + SS + '">' + hOpt + '</select>'
-        +   '<span style="color:#9aa7b4;font-weight:800">:</span>'
-        +   '<select id="m-wsM" style="' + SS + '">' + mOpt + '</select>'
-        +   '<input type="hidden" id="m-workStart">'
-        +   '<span style="color:#9aa7b4;margin:0 4px">~</span>'
-        +   '<select id="m-weH" style="' + SS + '">' + hOpt + '</select>'
-        +   '<span style="color:#9aa7b4;font-weight:800">:</span>'
-        +   '<select id="m-weM" style="' + SS + '">' + mOpt + '</select>'
-        +   '<input type="hidden" id="m-workEnd">'
-        +   '<button type="button" id="m-wtNow" style="' + C + ';background:#3f7cb8;color:#fff;border-color:#3f7cb8;height:38px">🕐 지금</button>'
-        +   '<button type="button" id="m-wtClear" style="' + C + ';color:#b52929;border-color:#f5b5b5;background:#fdecec;height:38px">지우기</button>'
+        +   '<button type="button" id="m-wtStartBtn" style="' + TB + '">--:--</button>'
+        +   '<input type="hidden" id="m-workStart" value="">'
+        +   '<span style="color:#9aa7b4;font-weight:800">~</span>'
+        +   '<button type="button" id="m-wtEndBtn" style="' + TB + '">--:--</button>'
+        +   '<input type="hidden" id="m-workEnd" value="">'
+        +   '<button type="button" id="m-wtNow" style="' + C + ';height:40px;background:#3f7cb8;color:#fff;border-color:#3f7cb8">🕐 지금</button>'
+        +   '<button type="button" id="m-wtClear" style="' + C + ';height:40px;color:#b52929;border-color:#f5b5b5;background:#fdecec">지우기</button>'
         + '</div>'
-        + '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:8px">'
-        +   '<span style="font-size:11.5px;color:#7a92a8;width:28px;flex:0 0 auto">소요</span>'
+        + '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:7px">'
+        +   '<span style="font-size:11.5px;color:#7a92a8;flex:0 0 auto">소요</span>'
         +   durHtml
         +   '<span style="width:1px;height:18px;background:#dbe6f4;margin:0 2px;flex:0 0 auto"></span>'
         +   addHtml
-        + '</div>'
-        + '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:6px">'
-        +   '<span style="font-size:11.5px;color:#7a92a8;width:28px;flex:0 0 auto">시작</span>'
-        +   hourHtml
-        +   '<span style="font-size:11px;color:#aab8c8;margin-left:2px">시</span>'
         + '</div>';
       host.parentNode.insertBefore(wrap, host.nextSibling);
 
       var sEl = wrap.querySelector('#m-workStart');
       var eEl = wrap.querySelector('#m-workEnd');
-      // 드롭다운을 고치면 실제 값(hidden)에 반영
-      ['#m-wsH','#m-wsM','#m-weH','#m-weM'].forEach(function(sel){
-        var el = wrap.querySelector(sel);
-        if(!el) return;
-        el.addEventListener('change', function(){
-          var sh = wrap.querySelector('#m-wsH').value, sm = wrap.querySelector('#m-wsM').value;
-          var eh = wrap.querySelector('#m-weH').value, em = wrap.querySelector('#m-weM').value;
-          sEl.value = (sh && sm) ? (sh + ':' + sm) : '';
-          eEl.value = (eh && em) ? (eh + ':' + em) : '';
-          if(sEl.value && (!eEl.value || eEl.value <= sEl.value)) eEl.value = addMin(sEl.value, 30);
-          refresh();
-        });
+      var sBtn = wrap.querySelector('#m-wtStartBtn');
+      var eBtn = wrap.querySelector('#m-wtEndBtn');
+      // 모달 CSS가 버튼을 100% 로 늘리는 것 차단 (프로젝트 알려진 CSS 충돌 패턴)
+      [sBtn, eBtn].forEach(function(b){
+        b.style.setProperty('width', '86px', 'important');
+        b.style.setProperty('flex', '0 0 auto', 'important');
+        b.style.setProperty('display', 'inline-block', 'important');
       });
+      [wrap.querySelector('#m-wtNow'), wrap.querySelector('#m-wtClear')].forEach(function(b){
+        b.style.setProperty('width', 'auto', 'important');
+        b.style.setProperty('flex', '0 0 auto', 'important');
+      });
+
       function gap(){
         if(!sEl.value || !eEl.value) return 30;
         var a = sEl.value.split(':'), c = eEl.value.split(':');
@@ -6762,30 +6868,31 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           b.style.borderColor = hit ? '#3f7cb8' : '#dbe6f4';
         });
       }
-      function syncSel(){
-        [[sEl, wrap.querySelector('#m-wsH'), wrap.querySelector('#m-wsM')],
-         [eEl, wrap.querySelector('#m-weH'), wrap.querySelector('#m-weM')]].forEach(function(g){
-          var el = g[0], hh = g[1], mm = g[2];
-          if(!hh || !mm) return;
-          if(!el.value){ hh.value = ''; mm.value = ''; return; }
-          var pp = el.value.split(':');
-          hh.value = pp[0];
-          // 5분 배수가 아닌 기존 값도 그대로 보이게 옵션 추가
-          if(!mm.querySelector('option[value="' + pp[1] + '"]')){
-            var o = document.createElement('option');
-            o.value = pp[1]; o.textContent = pp[1];
-            mm.appendChild(o);
-          }
-          mm.value = pp[1];
-        });
-      }
       function refresh(){
-        syncSel();
+        sBtn.textContent = sEl.value || '--:--';
+        eBtn.textContent = eEl.value || '--:--';
+        sBtn.style.color = sEl.value ? '#1a2f45' : '#b9c7d6';
+        eBtn.style.color = eEl.value ? '#1a2f45' : '#b9c7d6';
         var g = (sEl.value && eEl.value) ? gap() : -1;
-        mark('.m-wtDur',   function(b){ return parseInt(b.getAttribute('data-dur'),10) === g; });
-        mark('.m-wtQuick', function(b){ return sEl.value === (String(b.getAttribute('data-h')).padStart(2,'0') + ':00'); });
+        mark('.m-wtDur', function(b){ return parseInt(b.getAttribute('data-dur'),10) === g; });
       }
 
+      sBtn.addEventListener('click', function(){
+        clkOpen('시작 시각', sEl.value, function(v){
+          var keep = (sEl.value && eEl.value) ? gap() : 30;
+          sEl.value = v;
+          if(!eEl.value || eEl.value <= sEl.value) eEl.value = addMin(v, keep);
+          refresh();
+        });
+      });
+      eBtn.addEventListener('click', function(){
+        clkOpen('종료 시각', eEl.value || (sEl.value ? addMin(sEl.value, 30) : ''), function(v){
+          eEl.value = v;
+          if(!sEl.value) sEl.value = addMin(v, -30);
+          if(eEl.value <= sEl.value) eEl.value = addMin(sEl.value, 5);
+          refresh();
+        });
+      });
       wrap.querySelector('#m-wtNow').addEventListener('click', function(){
         sEl.value = nowHM5();
         eEl.value = addMin(sEl.value, 30);
@@ -6812,20 +6919,6 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           refresh();
         });
       });
-      wrap.querySelectorAll('.m-wtQuick').forEach(function(b){
-        b.addEventListener('click', function(){
-          var keep = gap();
-          sEl.value = String(b.getAttribute('data-h')).padStart(2,'0') + ':00';
-          eEl.value = addMin(sEl.value, keep);
-          refresh();
-        });
-      });
-      sEl.addEventListener('change', function(){
-        if(!sEl.value) return;
-        if(!eEl.value || eEl.value <= sEl.value) eEl.value = addMin(sEl.value, 30);
-        refresh();
-      });
-      eEl.addEventListener('change', refresh);
 
       // 수정 모드면 기존 값 채우기
       if(_curEditId && typeof entries !== 'undefined'){
@@ -14006,7 +14099,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0818-2310';
+  var TAG = ' +cal0824-1240';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
