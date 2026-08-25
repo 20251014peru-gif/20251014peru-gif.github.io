@@ -6,6 +6,12 @@
     - No 누적 완전 수정: OCR 원본 No 완전 무시, 전체 최대값+1만 사용
     - 목록 정렬: No 오름차순 (날짜 무관)
     - getNextNo 파라미터 제거 (date 불필요)
+  v2.8 변경내역 (전기차 집계):
+    - 기록에 ev(true/false) 한 칸 추가. 없으면 false 로 본다 → 옛 기록 그대로 살아있다.
+    - 목록에서 차량번호 옆 ⚡ 를 눌러 바로 켜고 끈다 (수정창 안 열어도 됨)
+    - 수동추가/수정 창, OCR 미리보기에 전기차 체크칸
+    - 일별·층별 탭: 그날 전기차 몇 대인지 배지 + 기간 합계
+    - 엑셀 내보내기에 전기차 열 추가
 -->
 <html lang="ko">
 <head>
@@ -548,6 +554,37 @@
       <div id="dayVehicleList" style="margin-top:12px;"></div>
     </div>
 
+    <!-- ⚡ 전기차 일별 집계 -->
+    <div class="card">
+      <div class="card-title">⚡ 전기차 일별 대수
+        <span style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:8px;">하루에 전기차가 몇 대 들어왔는지</span>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <div class="date-select">
+          <label>시작:</label>
+          <input type="date" id="evStart" onchange="renderEvDaily()">
+          <label>종료:</label>
+          <input type="date" id="evEnd" onchange="renderEvDaily()">
+        </div>
+        <button class="btn btn-outline" onclick="setEvRangeMonth()">이번달</button>
+        <button class="btn btn-outline" onclick="setEvRangeDays(7)">최근 7일</button>
+        <button class="btn btn-success" onclick="exportEvExcel()">📥 Excel</button>
+      </div>
+      <div id="evSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;"></div>
+      <div class="table-container" style="max-height:45vh;overflow:auto;">
+        <table id="evDailyTable">
+          <thead><tr>
+            <th style="width:110px">날짜</th>
+            <th style="width:70px">요일</th>
+            <th style="background:#059669;width:90px">⚡ 전기차</th>
+            <th style="width:90px">전체 방문</th>
+            <th style="width:80px">비율</th>
+          </tr></thead>
+          <tbody id="evDailyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- 층별 선택 → 일자별 방문 현황 -->
     <div class="card">
       <div class="card-title">🏢 층별 선택 → 일자별 방문 현황</div>
@@ -914,6 +951,13 @@
         </select>
       </div>
     </div>
+    <div style="margin-top:4px;padding:10px 12px;background:#ecfdf5;border:2px solid #6ee7b7;border-radius:10px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:700;color:#065f46;">
+        <input type="checkbox" id="mEv" style="width:20px;height:20px;cursor:pointer;">
+        ⚡ 전기차
+        <span style="font-size:12px;font-weight:400;color:#047857;">— 체크하면 일별 전기차 대수에 잡힙니다</span>
+      </label>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal()">취소</button>
       <button class="btn btn-primary" onclick="saveModal()" id="saveModalBtn">저장</button>
@@ -943,7 +987,7 @@
 <script>
 /* ⚠️ 버전은 여기 한 곳에만 있다. 빌드할 때 컴 시계에서 주입된다.
    화면·제목·콘솔이 전부 이걸 읽으므로, 이 값이 안 바뀌면 새 파일이 안 뜬 것이다. */
-const APP_VER = 'v20260716-133818';
+const APP_VER = 'v20260825-094708';
 document.title = '주차대장 ' + APP_VER;
 console.log('%c주차대장 ' + APP_VER, 'font-size:16px;font-weight:bold;color:#2563eb');
 function _paintVer() {
@@ -952,6 +996,16 @@ function _paintVer() {
 }
 _paintVer();
 addEventListener('DOMContentLoaded', _paintVer);
+
+/* 오늘 날짜 — 컴/폰의 시계 그대로 쓴다.
+   예전엔 toISOString() 을 썼는데 그건 세계표준시라서,
+   한국에서 새벽 0시~오전 9시 사이에 열면 '어제'가 기본값으로 찍혔다. */
+function todayStr(d) {
+  const t = d ? new Date(d) : new Date();
+  return t.getFullYear() + '-' +
+         String(t.getMonth() + 1).padStart(2, '0') + '-' +
+         String(t.getDate()).padStart(2, '0');
+}
 
 // ============================================================
 // DATA STORE
@@ -989,7 +1043,7 @@ let unsubscribe = null; // realtime listener
 // INIT
 // ============================================================
 window.onload = () => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   document.getElementById('inputDate').value = today;
   showDayOfWeek();
 
@@ -1051,6 +1105,10 @@ function startRealtimeSync() {
       recalcFloor(true);
       renderList();
       renderDataStats();
+      /* 층 탭을 열어둔 채 다른 기기에서 입력이 들어와도 숫자가 따라 움직이게 */
+      if (document.getElementById('tab-floor')?.classList.contains('active')) {
+        renderDayView(); renderEvDaily();
+      }
       setSyncStatus('ok', '동기화됨 · ' + new Date().toLocaleTimeString('ko-KR'));
       document.getElementById('totalRecords').textContent = '총 ' + parkingData.length + '건';
       document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('ko-KR');
@@ -1191,12 +1249,12 @@ function switchTab(id) {
 }
 
 function initFloorTab() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   if (!document.getElementById('dayViewDate').value)
     document.getElementById('dayViewDate').value = today;
   if (!document.getElementById('rangeStart').value) {
     const m = new Date(); m.setDate(1);
-    document.getElementById('rangeStart').value = m.toISOString().split('T')[0];
+    document.getElementById('rangeStart').value = todayStr(m);
     document.getElementById('rangeEnd').value = today;
   }
   // 층 선택 드롭다운 채우기
@@ -1212,10 +1270,18 @@ function initFloorTab() {
   const fp = document.getElementById('floorPickStart');
   if (fp && !fp.value) {
     const m2 = new Date(); m2.setDate(1);
-    document.getElementById('floorPickStart').value = m2.toISOString().split('T')[0];
+    document.getElementById('floorPickStart').value = todayStr(m2);
     document.getElementById('floorPickEnd').value = today;
   }
+  // ⚡ 전기차 집계 기본 기간 = 이번달
+  const es = document.getElementById('evStart');
+  if (es && !es.value) {
+    const m3 = new Date(); m3.setDate(1);
+    es.value = todayStr(m3);
+    document.getElementById('evEnd').value = today;
+  }
   renderDayView();
+  renderEvDaily();
   renderFloorTable();
 }
 
@@ -1236,9 +1302,9 @@ function showDayOfWeek() {
 
 // 층 선택 → 일자별 방문 현황
 function setFloorPickMonth() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   const m = new Date(); m.setDate(1);
-  document.getElementById('floorPickStart').value = m.toISOString().split('T')[0];
+  document.getElementById('floorPickStart').value = todayStr(m);
   document.getElementById('floorPickEnd').value = today;
   renderFloorByDate();
 }
@@ -1717,7 +1783,8 @@ function renderParsedTable(rows, date) {
   const container = document.getElementById('parsedTableContainer');
   let html = `<table><thead><tr>
     <th>No</th><th>날짜(자동)</th><th>입차</th><th>출차</th><th>차량번호</th>
-    <th>방문층</th><th>방문목적</th><th>배정층</th><th>비고</th><th>층분류</th>
+    <th>방문층</th><th>방문목적</th><th>배정층</th><th>비고</th>
+    <th style="background:#059669">⚡전기</th><th>층분류</th>
   </tr></thead><tbody>`;
 
   rows.forEach((r, i) => {
@@ -1734,6 +1801,7 @@ function renderParsedTable(rows, date) {
       <td><input type="text" value="${r.purpose||''}" onchange="parsedRows[${i}].purpose=this.value;updateRowCat(${i})" style="width:75px"></td>
       <td><input type="text" value="${r.park||''}" onchange="parsedRows[${i}].park=this.value" style="width:45px"></td>
       <td><input type="text" value="${r.note||''}" onchange="parsedRows[${i}].note=this.value" style="width:65px"></td>
+      <td><input type="checkbox" ${r.ev ? 'checked' : ''} onchange="parsedRows[${i}].ev=this.checked" style="width:18px;height:18px;cursor:pointer"></td>
       <td id="cat-${i}"><span class="tag" style="${catColor}">${cat}</span></td>
     </tr>`;
   });
@@ -1798,7 +1866,8 @@ async function confirmAddToList() {
         purpose: r.purpose || '',
         park: r.park || '',
         note: r.note || '',
-        floorCat: cat
+        floorCat: cat,
+        ev: !!r.ev
       });
     }
     setSyncStatus('ok', window.parsedRows.length + '건 저장됨');
@@ -1899,6 +1968,7 @@ function renderList() {
     const safeFloorCat = r => r.floorCat || '';
     statsDiv.innerHTML = `
       <div class="stat-card"><div class="stat-val">${filtered.length}</div><div class="stat-label">총 방문차량</div></div>
+      <div class="stat-card" style="border:2px solid #6ee7b7"><div class="stat-val" style="color:#059669">${filtered.filter(r=>r.ev).length}</div><div class="stat-label">⚡ 전기차</div></div>
       <div class="stat-card"><div class="stat-val">${[...new Set(filtered.map(r=>r.date))].length}</div><div class="stat-label">집계 일수</div></div>
       <div class="stat-card"><div class="stat-val">${filtered.filter(r=>safeFloorCat(r)==='1층').length}</div><div class="stat-label">병원(1층)</div></div>
       <div class="stat-card"><div class="stat-val">${filtered.filter(r=>safeFloorCat(r)==='왕삼돈').length}</div><div class="stat-label">왕삼돈(B1)</div></div>
@@ -1920,7 +1990,7 @@ function renderList() {
       <td class="row-no">${r.no}</td>
       <td>${r.in}</td>
       <td>${r.out}</td>
-      <td style="font-weight:600">${r.plate}</td>
+      <td style="font-weight:600">${r.plate} ${evBtn(actualIdx, r.ev)}</td>
       <td>${r.floor}</td>
       <td>${r.purpose}</td>
       <td>${r.park}</td>
@@ -1937,6 +2007,30 @@ function renderList() {
   document.getElementById('totalRecords').textContent = '총 ' + parkingData.length + '건';
 }
 
+/* ⚡ 목록에서 바로 켜고 끄는 전기차 표시.
+   수정창을 열었다 닫는 게 아니라 한 번 누르면 끝이다. */
+function evBtn(idx, on) {
+  return `<span onclick="toggleEv(${idx})" title="전기차 표시 켜기/끄기"
+    style="cursor:pointer;user-select:none;font-size:14px;${on ? '' : 'opacity:.18;filter:grayscale(1)'}">⚡</span>`;
+}
+
+async function toggleEv(idx) {
+  const rec = parkingData[idx];
+  if (!rec || !rec._id) return;
+  const next = !rec.ev;
+  rec.ev = next;                    // 화면 먼저 바꿔서 손가락이 기다리지 않게
+  renderList(); renderDayView(); renderEvDaily();
+  try {
+    await db.collection(COLLECTION).doc(rec._id).update({ ev: next });
+    setSyncStatus('ok', next ? '⚡ 전기차로 표시됨' : '전기차 표시 해제됨');
+  } catch (e) {
+    rec.ev = !next;                 // 실패하면 화면도 되돌린다 — 거짓 숫자를 남기지 않는다
+    renderList(); renderDayView(); renderEvDaily();
+    setSyncStatus('err', '전기차 표시 실패: ' + e.message);
+    alert('전기차 표시 저장 실패: ' + e.message);
+  }
+}
+
 function clearDateFilter() {
   document.getElementById('listDateFilter').value = '';
   document.getElementById('listMonthFilter').value = 'all';
@@ -1951,7 +2045,7 @@ function openAddModal() {
   editingId = null;
   document.getElementById('modalTitle').textContent = '방문차량 추가';
   document.getElementById('saveModalBtn').textContent = '추가';
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   document.getElementById('mDate').value = today;
   document.getElementById('mNo').value = '';
   document.getElementById('mIn').value = '';
@@ -1962,6 +2056,7 @@ function openAddModal() {
   document.getElementById('mPark').value = '';
   document.getElementById('mNote').value = '';
   document.getElementById('mFloorCat').value = '기타';
+  document.getElementById('mEv').checked = false;
   document.getElementById('addModal').classList.add('open');
 }
 
@@ -1980,6 +2075,7 @@ function editRecord(idx) {
   document.getElementById('mPurpose').value = r.purpose;
   document.getElementById('mPark').value = r.park;
   document.getElementById('mNote').value = r.note || '';
+  document.getElementById('mEv').checked = !!r.ev;
   const cat = r.floorCat || getFloorCat(r.floor, r.purpose);
   const sel = document.getElementById('mFloorCat');
   for (let i = 0; i < sel.options.length; i++) {
@@ -2008,7 +2104,8 @@ function saveModal() {
     purpose: document.getElementById('mPurpose').value.trim(),
     park: document.getElementById('mPark').value.trim(),
     note: document.getElementById('mNote').value.trim(),
-    floorCat: document.getElementById('mFloorCat').value
+    floorCat: document.getElementById('mFloorCat').value,
+    ev: document.getElementById('mEv').checked   // 전기차 여부 (없던 기록은 false 로 읽힌다)
   };
   /* 수정이면 있던 문서를 덮어쓴다 — 없으면 사본이 생긴다 */
   if (editingId) rec._id = editingId;
@@ -2054,7 +2151,7 @@ function recalcFloor(silent) {
 
 // ─── 당일 층별 현황 ────────────────────────────────────────
 function setDayViewToday() {
-  document.getElementById('dayViewDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('dayViewDate').value = todayStr();
   renderDayView();
 }
 
@@ -2080,8 +2177,13 @@ function renderDayView() {
     return;
   }
 
-  // 전체 합계 배지 먼저
+  const evCount = rows.filter(r => r.ev).length;
+
+  // 전체 합계 배지 먼저, 그 옆에 전기차
   let badges = `<div class="day-badge highlight"><div class="dv-cnt">${rows.length}</div><div class="dv-lbl">전체</div></div>`;
+  badges += `<div class="day-badge" style="background:#ecfdf5;border-color:#6ee7b7">
+      <div class="dv-cnt" style="color:#059669">${evCount}</div>
+      <div class="dv-lbl">⚡ 전기차</div></div>`;
   // 층별 배지 (값 있는 것만)
   FLOOR_COLS.forEach(c => {
     if (dayCats[c]) {
@@ -2097,6 +2199,7 @@ function renderDayView() {
   FLOOR_COLS.forEach(c => {
     if (dayCats[c]) thHtml += `<th style="background:#334155;min-width:52px">${c}</th>`;
   });
+  thHtml += '<th style="background:#059669;min-width:60px">⚡전기차</th>';
   thHtml += '<th style="background:#dc2626;min-width:52px">합계</th></tr>';
   thead.innerHTML = thHtml;
 
@@ -2104,18 +2207,20 @@ function renderDayView() {
   FLOOR_COLS.forEach(c => {
     if (dayCats[c]) tdHtml += `<td class="has-val">${dayCats[c]}</td>`;
   });
+  tdHtml += `<td style="font-weight:800;background:#ecfdf5;color:#059669">${evCount}</td>`;
   tdHtml += `<td style="font-weight:800;background:#1e3a5f;color:white">${rows.length}</td></tr>`;
   tbody.innerHTML = tdHtml;
 
   // ── 당일 차량 목록 ──
   const listDiv = document.getElementById('dayVehicleList');
-  let listHtml = `<div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">📋 ${date} 방문차량 목록 (${rows.length}대)</div>`;
+  let listHtml = `<div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">📋 ${date} 방문차량 목록 (${rows.length}대 · ⚡전기차 ${evCount}대)</div>`;
   rows.forEach((r, i) => {
     const cat = r.floorCat || getFloorCat(r.floor, r.purpose);
-    listHtml += `<div class="dvl-row">
+    const gIdx = parkingData.indexOf(r);
+    listHtml += `<div class="dvl-row"${r.ev ? ' style="background:#ecfdf5;border-color:#6ee7b7"' : ''}>
       <div class="dvl-no">${i+1}</div>
       <div class="dvl-time">${r.in||'-'} → ${r.out||'-'}</div>
-      <div class="dvl-plate">${r.plate}</div>
+      <div class="dvl-plate">${r.plate} ${evBtn(gIdx, r.ev)}</div>
       <div class="dvl-floor">${r.floor}층</div>
       <div class="dvl-purpose">${r.purpose||''}</div>
       <div class="dvl-cat"><span class="tag" style="${getCatColor(cat)}">${cat}</span></div>
@@ -2134,13 +2239,122 @@ function getCatTextColor(cat) {
   return '#166534';
 }
 
+// ─── ⚡ 전기차 일별 집계 ───────────────────────────────────
+const WD = ['일','월','화','수','목','금','토'];
+
+function setEvRangeMonth() {
+  const m = new Date(); m.setDate(1);
+  document.getElementById('evStart').value = todayStr(m);
+  document.getElementById('evEnd').value = todayStr();
+  renderEvDaily();
+}
+
+function setEvRangeDays(n) {
+  const from = new Date(); from.setDate(from.getDate() - (n - 1));
+  document.getElementById('evStart').value = todayStr(from);
+  document.getElementById('evEnd').value = todayStr();
+  renderEvDaily();
+}
+
+/* 날짜별로 { 전기차, 전체 } 를 센다.
+   ev 가 없는 옛 기록은 그냥 전기차가 아닌 걸로 본다 — 기존 숫자는 손대지 않는다. */
+function evDailyRows() {
+  const start = document.getElementById('evStart')?.value || '';
+  const end   = document.getElementById('evEnd')?.value   || '';
+  const byDate = {};
+  parkingData.forEach(r => {
+    if (!r.date) return;
+    if (start && r.date < start) return;
+    if (end   && r.date > end)   return;
+    if (!byDate[r.date]) byDate[r.date] = { ev: 0, all: 0 };
+    byDate[r.date].all++;
+    if (r.ev) byDate[r.date].ev++;
+  });
+  return Object.keys(byDate).sort().map(d => ({ date: d, ...byDate[d] }));
+}
+
+function renderEvDaily() {
+  const body = document.getElementById('evDailyBody');
+  const sum  = document.getElementById('evSummary');
+  if (!body || !sum) return;
+
+  const rows = evDailyRows();
+  if (rows.length === 0) {
+    body.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted)">해당 기간 데이터가 없습니다</td></tr>';
+    sum.innerHTML = '';
+    return;
+  }
+
+  const totEv  = rows.reduce((a, r) => a + r.ev, 0);
+  const totAll = rows.reduce((a, r) => a + r.all, 0);
+  const days   = rows.length;
+  const avg    = Math.round(totEv / days * 10) / 10;
+  const peak   = rows.reduce((a, r) => r.ev > a.ev ? r : a, rows[0]);
+
+  sum.innerHTML = `
+    <div class="stat-card" style="border:2px solid #6ee7b7;min-width:130px">
+      <div class="stat-val" style="color:#059669">${totEv}</div><div class="stat-label">기간 전기차 합계</div></div>
+    <div class="stat-card" style="min-width:130px">
+      <div class="stat-val">${avg}</div><div class="stat-label">하루 평균 (${days}일)</div></div>
+    <div class="stat-card" style="min-width:130px">
+      <div class="stat-val">${totAll ? Math.round(totEv / totAll * 1000) / 10 : 0}%</div><div class="stat-label">전체 방문 중 비율</div></div>
+    <div class="stat-card" style="min-width:150px">
+      <div class="stat-val" style="font-size:18px">${peak.ev}대</div>
+      <div class="stat-label">가장 많던 날 · ${peak.date.slice(5)}</div></div>
+  `;
+
+  const maxEv = Math.max(1, ...rows.map(r => r.ev));
+  body.innerHTML = rows.map(r => {
+    const w = Math.round(r.ev / maxEv * 100);
+    const wd = WD[new Date(r.date + 'T00:00:00').getDay()];
+    return `<tr>
+      <td style="font-weight:600">${r.date}</td>
+      <td style="color:${wd === '일' ? '#dc2626' : wd === '토' ? '#2563eb' : 'var(--text-muted)'}">${wd}</td>
+      <td style="padding:4px 8px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-weight:800;color:${r.ev ? '#059669' : '#cbd5e1'};min-width:20px">${r.ev}</span>
+          <span style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+            <span style="display:block;height:8px;width:${w}%;background:#10b981;border-radius:4px"></span>
+          </span>
+        </div>
+      </td>
+      <td style="color:var(--text-muted)">${r.all}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${r.all ? Math.round(r.ev / r.all * 100) : 0}%</td>
+    </tr>`;
+  }).join('') + `<tr class="total-row"><td colspan="2" style="background:#1e3a5f;color:#fff;font-weight:700">합계</td>
+      <td style="background:#059669;color:#fff;font-weight:800">${totEv}</td>
+      <td style="background:#1e3a5f;color:#fff;font-weight:700">${totAll}</td>
+      <td style="background:#1e3a5f;color:#fff">${totAll ? Math.round(totEv / totAll * 1000) / 10 : 0}%</td></tr>`;
+}
+
+function exportEvExcel() {
+  const rows = evDailyRows();
+  if (!rows.length) { alert('내보낼 데이터가 없습니다.'); return; }
+  const data = [['날짜', '요일', '전기차', '전체 방문', '비율(%)']];
+  rows.forEach(r => data.push([
+    r.date, WD[new Date(r.date + 'T00:00:00').getDay()], r.ev, r.all,
+    r.all ? Math.round(r.ev / r.all * 1000) / 10 : 0
+  ]));
+  const totEv = rows.reduce((a, r) => a + r.ev, 0);
+  const totAll = rows.reduce((a, r) => a + r.all, 0);
+  data.push(['합계', '', totEv, totAll, totAll ? Math.round(totEv / totAll * 1000) / 10 : 0]);
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{ wch: 12 }, { wch: 6 }, { wch: 9 }, { wch: 10 }, { wch: 9 }];
+  XLSX.utils.book_append_sheet(wb, ws, '전기차일별');
+  const s = document.getElementById('evStart').value || '전체';
+  const e = document.getElementById('evEnd').value || todayStr();
+  XLSX.writeFile(wb, `서희타워_전기차일별_${s}_${e}.xlsx`);
+}
+
 // ─── 기간별 층별 집계 ─────────────────────────────────────
 function setRangeByMonth(val) {
   if (!val) return;
   const y = new Date().getFullYear();
   if (val === 'all') {
     document.getElementById('rangeStart').value = '2026-01-01';
-    document.getElementById('rangeEnd').value = new Date().toISOString().split('T')[0];
+    document.getElementById('rangeEnd').value = todayStr();
   } else {
     const m = parseInt(val);
     document.getElementById('rangeStart').value = `${y}-${String(m).padStart(2,'0')}-01`;
@@ -2311,13 +2525,13 @@ function exportFloorExcel() {
   const wRows = parkingData
     .filter(r => (!start || r.date >= start) && (!end || r.date <= end))
     .sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.no - b.no);
-  const ws3Data = [['No','날짜','입차','출차','차량번호','방문층','방문목적','배정층','층분류','비고']];
-  wRows.forEach(r => ws3Data.push([r.no, r.date, r.in, r.out, r.plate, r.floor, r.purpose, r.park, r.floorCat||getFloorCat(r.floor,r.purpose), r.note||'']));
+  const ws3Data = [['No','날짜','입차','출차','차량번호','전기차','방문층','방문목적','배정층','층분류','비고']];
+  wRows.forEach(r => ws3Data.push([r.no, r.date, r.in, r.out, r.plate, r.ev?'⚡':'', r.floor, r.purpose, r.park, r.floorCat||getFloorCat(r.floor,r.purpose), r.note||'']));
   const ws3 = XLSX.utils.aoa_to_sheet(ws3Data);
-  ws3['!cols'] = [{wch:5},{wch:12},{wch:8},{wch:8},{wch:10},{wch:6},{wch:10},{wch:6},{wch:14},{wch:12}];
+  ws3['!cols'] = [{wch:5},{wch:12},{wch:8},{wch:8},{wch:10},{wch:7},{wch:6},{wch:10},{wch:6},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb, ws3, '방문차량상세');
 
-  const label = start && end ? `${start}_${end}` : new Date().toISOString().split('T')[0];
+  const label = start && end ? `${start}_${end}` : todayStr();
   XLSX.writeFile(wb, `서희타워_층별집계_${label}.xlsx`);
 }
 
@@ -2375,8 +2589,8 @@ function exportExcel() {
   // Monthly sheets
   Object.entries(months).forEach(([month, rows]) => {
     rows.sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.no - b.no);
-    const wsData = [['No','입차','출차','차량번호','층','방문목적','배정층','비고','날짜']];
-    rows.forEach(r => wsData.push([r.no, r.in, r.out, r.plate, r.floor, r.purpose, r.park, r.note||'', r.date]));
+    const wsData = [['No','입차','출차','차량번호','전기차','층','방문목적','배정층','비고','날짜']];
+    rows.forEach(r => wsData.push([r.no, r.in, r.out, r.plate, r.ev?'⚡':'', r.floor, r.purpose, r.park, r.note||'', r.date]));
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     XLSX.utils.book_append_sheet(wb, ws, month);
   });
@@ -2405,6 +2619,27 @@ function exportExcel() {
 
   const wsFloor = XLSX.utils.aoa_to_sheet(floorRows);
   XLSX.utils.book_append_sheet(wb, wsFloor, '일별층별');
+
+  // ⚡ 전기차 일별 시트 (전체 기간 — 화면 기간 필터와 무관하게 전부 담는다)
+  const evByDate = {};
+  parkingData.forEach(r => {
+    if (!r.date) return;
+    if (!evByDate[r.date]) evByDate[r.date] = { ev: 0, all: 0 };
+    evByDate[r.date].all++;
+    if (r.ev) evByDate[r.date].ev++;
+  });
+  const evRows = [['날짜', '요일', '전기차', '전체 방문', '비율(%)']];
+  let evTot = 0, allTot = 0;
+  Object.keys(evByDate).sort().forEach(d => {
+    const v = evByDate[d];
+    evTot += v.ev; allTot += v.all;
+    evRows.push([d, WD[new Date(d + 'T00:00:00').getDay()], v.ev, v.all,
+                 v.all ? Math.round(v.ev / v.all * 1000) / 10 : 0]);
+  });
+  evRows.push(['합계', '', evTot, allTot, allTot ? Math.round(evTot / allTot * 1000) / 10 : 0]);
+  const wsEv = XLSX.utils.aoa_to_sheet(evRows);
+  wsEv['!cols'] = [{ wch: 12 }, { wch: 6 }, { wch: 9 }, { wch: 10 }, { wch: 9 }];
+  XLSX.utils.book_append_sheet(wb, wsEv, '전기차일별');
 
   const now = new Date();
   const fname = `서희타워_방문객주차대장_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
