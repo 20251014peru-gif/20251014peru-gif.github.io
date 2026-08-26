@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v46-0826-1645</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v46-0826-1810</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1383,7 +1383,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-1645</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-1810</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3055,7 +3055,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v46-20260826-1645"></script>
+<script src="worklog.js?v=v46-20260826-1810"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5268,14 +5268,81 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   }
 
   // ── 토큰 저장/복구 ─────────────────────────────────────
+  var _renewTimer = null;
+  var _renewTries = 0;
+
   function saveToken(resp){
+    var exp = Date.now() + (resp.expires_in||3600)*1000;
     try{
       localStorage.setItem(GCAL_LS, JSON.stringify({
         access_token: resp.access_token,
-        expires_at: Date.now() + (resp.expires_in||3600)*1000
+        expires_at: exp
       }));
+      localStorage.setItem('wl_gcal_ok', '1');   // 한 번이라도 연동에 성공한 적 있음
     }catch(e){}
+    scheduleRenew(exp);
   }
+
+  /* v46: 만료 5분 전에 조용히 새 토큰 받기 — 로그인 창 안 뜨게 */
+  function scheduleRenew(expiresAt){
+    if(_renewTimer) clearTimeout(_renewTimer);
+    var ms = (expiresAt - Date.now()) - 5*60*1000;
+    if(ms < 15000) ms = 15000;
+    if(ms > 60*60*1000) ms = 60*60*1000;
+    _renewTimer = setTimeout(function(){ silentRenew('만료 임박'); }, ms);
+    dbgG('다음 자동 갱신까지 ' + Math.round(ms/60000) + '분');
+  }
+
+  /* ── (A) 중계서버 방식 — 설정돼 있으면 영구 로그인 ── */
+  function relayCfg(){
+    try{
+      var url = localStorage.getItem('wl_relay_url') || '';
+      var key = localStorage.getItem('wl_gauth_key') || '';
+      if(!url || !key) return null;
+      return { url: url.replace(/\/+$/, ''), key: key };
+    }catch(e){ return null; }
+  }
+  window.wlRelayCfg = relayCfg;
+
+  /* 중계서버에서 새 access_token 받아오기 (창 안 뜸 · 만료 없음) */
+  function relayToken(cb){
+    var c = relayCfg();
+    if(!c){ if(cb) cb(false); return; }
+    fetch(c.url + '/gauth/token?k=' + encodeURIComponent(c.key), { cache:'no-store' })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(!d || !d.access_token){ dbgG('중계서버 토큰 실패'); if(cb) cb(false); return; }
+        accessToken = d.access_token;
+        window.__gcalAuthNeeded = false;
+        _renewTries = 0;
+        saveToken({ access_token: d.access_token, expires_in: d.expires_in || 3600 });
+        updateGCalBtn('connected');
+        dbgG('중계서버로 토큰 갱신 완료');
+        if(cb) cb(true);
+      })
+      .catch(function(e){ dbgG('중계서버 오류: ' + e); if(cb) cb(false); });
+  }
+  window.wlRelayToken = relayToken;
+
+  /* 사용자 클릭 없이 토큰만 새로 받는다 (동의 이력이 있으면 창이 안 뜬다) */
+  function silentRenew(why){
+    try{
+      /* 중계서버가 설정돼 있으면 그쪽이 1순위 — 영구 유지 */
+      if(relayCfg()){
+        relayToken(function(ok){ if(!ok) gisRenew(why); });
+        return;
+      }
+      gisRenew(why);
+    }catch(e){ dbgG('자동 갱신 실패: ' + e); }
+  }
+  function gisRenew(why){
+    if(!tokenClient){ setTimeout(function(){ gisRenew(why); }, 2000); return; }
+    if(!localStorage.getItem('wl_gcal_ok')) return;   // 한 번도 연동한 적 없으면 건드리지 않음
+    dbgG('토큰 자동 갱신 시도 (' + (why||'') + ')');
+    _renewTries++;
+    tokenClient.requestAccessToken({ prompt: '' });
+  }
+  window.wlGcalSilentRenew = silentRenew;
 
   function loadToken(){
     try{
@@ -5286,8 +5353,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         dbgG('저장된 토큰 복구됨 (만료: ' + new Date(t.expires_at).toLocaleTimeString() + ')');
         return true;
       } else if(t) {
-        dbgG('저장된 토큰 만료됨 → 재로그인 필요');
+        dbgG('저장된 토큰 만료됨 → 조용히 갱신 시도');
         localStorage.removeItem(GCAL_LS);
+      }
+      /* 예전에 연동에 성공했거나 중계서버가 있으면 새 토큰만 조용히 받는다 */
+      if(localStorage.getItem('wl_gcal_ok') || relayCfg()){
+        setTimeout(function(){ silentRenew('앱 시작'); }, 1200);
       }
     }catch(e){}
     return false;
@@ -5342,7 +5413,10 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       return;
     }
     // 타이머 안에서 signIn() 을 부르면 팝업이 차단돼서 아무 일도 안 일어난다 → 표시만 하고 종료
-    if(!accessToken){ window.__gcalAuthNeeded = true; gcalLog('무토큰', en, '구글 로그인 필요'); if(onDone) onDone(false); return; }
+    if(!accessToken){
+      if(typeof window.wlGcalSilentRenew==='function') window.wlGcalSilentRenew('무토큰');
+      else window.__gcalAuthNeeded = true;
+      gcalLog('무토큰', en, '토큰 갱신 중 — 대기함에 보관'); if(onDone) onDone(false); return; }
     var calId = GCAL_IDS[en.kind];
     if(!calId){ if(onDone) onDone(false); return; }
 
@@ -5502,6 +5576,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         gcalLog('실패', en, errMsg);
         if(typeof toast==='function') toast('❌ 캘린더 등록 실패: ' + errMsg, 4000);
         if(d.error && d.error.code===401){
+          if(typeof window.wlGcalSilentRenew==='function') window.wlGcalSilentRenew('401');
           // 토큰 만료 → 재로그인
           window.__gcalAuthNeeded = true;
           accessToken=null; localStorage.removeItem(GCAL_LS);
@@ -6094,7 +6169,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           method:'DELETE', headers:{ 'Authorization':'Bearer '+accessToken }
         });
         if(dr.ok || dr.status===204 || dr.status===410){ done++; }
-        else if(dr.status===401){ accessToken=null; localStorage.removeItem(GCAL_LS); if(typeof updateGCalBtn==='function') updateGCalBtn('disconnected'); toast('🔑 로그인이 만료됐어요. 다시 연동 후 시도하세요',5000); break; }
+        else if(dr.status===401){ accessToken=null; localStorage.removeItem(GCAL_LS); if(typeof window.wlGcalSilentRenew==='function') window.wlGcalSilentRenew('401'); toast('🔑 로그인 갱신 중… 잠시 후 다시 시도해주세요',4000); break; }
         else { fail++; }
       }catch(e){ fail++; }
       if(k%5===0) toast('삭제 중... '+(k+1)+'/'+toDelete.length);
@@ -6184,6 +6259,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     .then(function(d){
       if(!d.items){ 
         if(d.error && d.error.code===401){
+          if(typeof window.wlGcalSilentRenew==='function') window.wlGcalSilentRenew('401');
           accessToken=null; localStorage.removeItem(GCAL_LS);
           updateGCalBtn('disconnected');
           toast('🔑 구글 로그인 만료 — G캘린더 버튼을 다시 눌러주세요', 5000);
@@ -7178,13 +7254,22 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       client_id: GCAL_CLIENT_ID,
       scope: GCAL_SCOPE,
       callback: function(resp){
-        if(resp.error){ dbgG('로그인 오류: '+resp.error); toast('구글 로그인 실패: '+resp.error); return; }
+        if(resp.error){
+          dbgG('로그인 오류: '+resp.error);
+          /* 조용한 갱신이 막혔을 때만 사용자에게 알린다 */
+          window.__gcalAuthNeeded = true;
+          if(_renewTries === 0 && typeof toast==='function') toast('구글 로그인 실패: '+resp.error);
+          return;
+        }
+        var wasSilent = (_renewTries > 0);
+        _renewTries = 0;
         accessToken = resp.access_token;
+        window.__gcalAuthNeeded = false;
         saveToken(resp);
         updateGCalBtn('connected');
-        if(typeof toast==='function') toast('✅ 구글 캘린더 연동됐어요! 이제 예정·업무 저장 시 자동 등록됩니다.');
-        setTimeout(function(){ pullAll(false); }, 500);
-        dbgG('로그인 완료');
+        if(!wasSilent && typeof toast==='function') toast('✅ 구글 캘린더 연동됐어요! 이제 예정·업무 저장 시 자동 등록됩니다.');
+        if(!wasSilent) setTimeout(function(){ pullAll(false); }, 500);
+        dbgG(wasSilent ? '토큰 자동 갱신 완료' : '로그인 완료');
       }
     });
     gcalReady = true;
@@ -16955,6 +17040,108 @@ if('serviceWorker' in navigator){
     }
   }
   [600, 1500, 3000, 5000].forEach(function(t){ setTimeout(stamp, t); });
+})();
+</script>
+<script>
+/* ===== v46-0826: 구글 무한 로그인 설정 (중계서버 refresh token) ===== */
+(function(){
+  function $id(x){ return document.getElementById(x); }
+
+  window.wlGauthSetup = function(){
+    var cur = localStorage.getItem('wl_relay_url') || 'https://hwan.20251014peru.workers.dev';
+    var key = localStorage.getItem('wl_gauth_key') || '';
+    var old = $id('wlGauthOv'); if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'wlGauthOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12500;display:flex;'
+      + 'align-items:center;justify-content:center;padding:14px;font-family:inherit';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:18px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+      +   '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">🔗 구글 무한 로그인</span>'
+      +   '<button id="wlGaClose" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<div style="font-size:12.5px;color:#5b7794;line-height:1.6;background:#f2f7fd;border-radius:10px;padding:11px;margin-bottom:12px">'
+      +   '중계서버에 <b>재발급 열쇠</b>를 맡겨두면 1시간마다 끊기지 않고 계속 연동됩니다.<br>'
+      +   '아래 [연결하기]를 누르면 구글 동의 창이 한 번 뜨고, 그 뒤로는 다시 안 뜹니다.'
+      + '</div>'
+      + '<label style="font-size:12px;font-weight:700;color:#5b7794">중계서버 주소</label>'
+      + '<input id="wlGaUrl" type="text" value="' + cur.replace(/"/g,'&quot;') + '" '
+      +   'style="width:100%;box-sizing:border-box;height:38px;padding:0 10px;margin:4px 0 10px;'
+      +   'border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">'
+      + '<label style="font-size:12px;font-weight:700;color:#5b7794">내 열쇠 이름 (아무거나 · 예: seohee)</label>'
+      + '<input id="wlGaKey" type="text" value="' + key.replace(/"/g,'&quot;') + '" placeholder="seohee" '
+      +   'style="width:100%;box-sizing:border-box;height:38px;padding:0 10px;margin:4px 0 12px;'
+      +   'border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">'
+      + '<div id="wlGaState" style="font-size:12.5px;font-weight:700;color:#7a92a8;margin-bottom:10px"></div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +   '<button id="wlGaLink" style="flex:1;min-width:130px;height:38px;border:none;border-radius:9px;background:#2563a8;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🔗 연결하기</button>'
+      +   '<button id="wlGaTest" style="flex:1;min-width:110px;height:38px;border:1.5px solid #dbe6f4;border-radius:9px;background:#fff;color:#3f7cb8;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🔍 확인</button>'
+      +   '<button id="wlGaOff" style="height:38px;padding:0 14px;border:1.5px solid #f0c2c2;border-radius:9px;background:#fdecec;color:#a13030;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">해제</button>'
+      + '</div>'
+      + '</div>';
+    document.body.appendChild(ov);
+
+    function save(){
+      var u = ($id('wlGaUrl').value || '').trim().replace(/\/+$/, '');
+      var k = ($id('wlGaKey').value || '').trim();
+      if(!u || !k){ alert('주소와 열쇠 이름을 모두 넣어주세요'); return null; }
+      localStorage.setItem('wl_relay_url', u);
+      localStorage.setItem('wl_gauth_key', k);
+      return { url:u, key:k };
+    }
+    function st(msg, ok){
+      var e = $id('wlGaState'); if(!e) return;
+      e.textContent = msg;
+      e.style.color = (ok === true) ? '#1a7a4a' : (ok === false ? '#a13030' : '#7a92a8');
+    }
+
+    $id('wlGaClose').addEventListener('click', function(){ ov.remove(); });
+    $id('wlGaLink').addEventListener('click', function(){
+      var c = save(); if(!c) return;
+      st('구글 동의 창을 여는 중…');
+      window.open(c.url + '/gauth/start?k=' + encodeURIComponent(c.key), 'wlgauth', 'width=520,height=680');
+    });
+    $id('wlGaTest').addEventListener('click', function(){
+      var c = save(); if(!c) return;
+      st('확인 중…');
+      fetch(c.url + '/gauth/token?k=' + encodeURIComponent(c.key), { cache:'no-store' })
+        .then(function(r){ return r.json().catch(function(){ return null; }); })
+        .then(function(d){
+          if(d && d.access_token){
+            st('✅ 연결됨 — 이제 로그인 창이 안 뜹니다', true);
+            if(typeof window.wlRelayToken === 'function') window.wlRelayToken();
+          } else {
+            st('❌ ' + ((d && d.error) || '아직 연결 안 됨 — [연결하기]를 먼저 누르세요'), false);
+          }
+        })
+        .catch(function(e){ st('❌ 중계서버에 못 닿음: ' + e, false); });
+    });
+    $id('wlGaOff').addEventListener('click', function(){
+      localStorage.removeItem('wl_gauth_key');
+      st('해제됐어요 (1시간마다 자동 갱신 방식으로 돌아감)');
+    });
+
+    if(key) st('설정돼 있음 — [🔍 확인] 을 눌러 상태를 보세요');
+  };
+
+  /* 헤더 구글 버튼 오른쪽에 작은 톱니 추가 */
+  setInterval(function(){
+    try{
+      var host = document.getElementById('btnGCal');
+      if(!host || !host.parentNode) return;
+      if(document.getElementById('wlGaBtn')) return;
+      var b = document.createElement('button');
+      b.id = 'wlGaBtn'; b.type = 'button';
+      b.textContent = '🔗';
+      b.title = '구글 무한 로그인 설정 (중계서버)';
+      b.style.cssText = 'margin-left:5px;width:32px;height:32px;border:1.5px solid #dbe6f4;'
+        + 'border-radius:9px;background:#fff;font-size:14px;cursor:pointer;font-family:inherit;vertical-align:middle';
+      b.addEventListener('click', function(){ window.wlGauthSetup(); });
+      host.parentNode.insertBefore(b, host.nextSibling);
+    }catch(e){}
+  }, 1200);
+
+  console.log('[구글무한로그인] 설정 UI 로드');
 })();
 </script>
 </body>
