@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v46-0826-1425</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v46-0826-1520</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -832,6 +832,7 @@
   align-items: center;
   justify-content: center;
   font-size: 9px;
+}
 .sticky-note-body .checklist-row.done .checklist-cb {
   background: #3f7cb8;
   border-color: #3f7cb8;
@@ -1240,7 +1241,35 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   border:2px solid #fff;
 }
 .fab-grip-badge:active{cursor:grabbing;transform:scale(1.15);}
+
+/* ===== v46-0826: 오른쪽 FAB 은 볼 때 방해되지 않게 =====
+   평소엔 흐리게, 마우스를 올리거나 누르면 또렷하게. 크기·위치·기능은 그대로. */
+#v43FabHeader, #v43FabDiary{
+  opacity:.28 !important;
+  transition:opacity .2s ease, width .2s, box-shadow .2s !important;
+}
+#v43FabHeader:hover, #v43FabDiary:hover,
+#v43FabHeader:focus-visible, #v43FabDiary:focus-visible,
+#v43FabHeader:active, #v43FabDiary:active,
+#v43FabHeader.dragging{ opacity:1 !important; }
+#v43FabHeader .fab-grip-badge{ opacity:.9; }
+/* 손가락으로 만지면 잠깐 또렷해진다 (폰·태블릿) */
+body.fab-awake #v43FabHeader, body.fab-awake #v43FabDiary{ opacity:1 !important; }
 </style>
+<script>
+/* FAB: 터치하면 2.5초 동안 또렷하게 */
+(function(){
+  function wake(){
+    document.body.classList.add('fab-awake');
+    clearTimeout(window.__fabWake);
+    window.__fabWake=setTimeout(function(){ document.body.classList.remove('fab-awake'); },2500);
+  }
+  ['v43FabHeader','v43FabDiary'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.addEventListener('pointerdown',wake,{passive:true});
+  });
+})();
+</script>
 <script>
 /* 📍 추가 버튼 드래그 v4 - 원래 UI 유지 + 그립 배지만 추가 */
 (function(){
@@ -3034,7 +3063,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v46-20260826-1425"></script>
+<script src="worklog.js?v=v46-20260826-1520"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
