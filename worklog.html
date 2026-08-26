@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!-- ══════════════════════════════════════════════════════════════
+     ★ 이 파일은  worklog.html  입니다 (화면)
+     ★ GitHub 에서 반드시 worklog.html 에만 붙여넣으세요.
+     ══════════════════════════════════════════════════════════════ -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
@@ -14,7 +18,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v50-0826-2244</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v50-0826-2300</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1388,7 +1392,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v50-0826-2244</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v50-0826-2300</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3067,7 +3071,38 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v50-20260826-2244"></script>
+<script src="worklog.js?v=v50-20260826-2300"></script>
+<script>
+/* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
+   (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
+(function(){
+  setTimeout(function(){
+    if(typeof APP_VERSION !== 'undefined') return;      /* 정상 */
+    var d=document.createElement('div');
+    d.style.cssText='position:fixed;inset:0;z-index:99999;background:#fff;padding:34px 26px;'
+      + 'font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;overflow:auto';
+    d.innerHTML =
+      '<div style="max-width:640px;margin:0 auto">'
+      + '<div style="font-size:46px">\u26a0\ufe0f</div>'
+      + '<h2 style="font-size:21px;color:#b52929;margin:10px 0 14px">worklog.js 를 못 읽었어요</h2>'
+      + '<p style="font-size:15px;line-height:1.8;color:#1a2f45">'
+      +   '화면에 필요한 파일 두 개 중 <b>worklog.js</b> 가 없거나 잘못 올라갔습니다.</p>'
+      + '<div style="background:#f0f6ff;border:1.5px solid #bcd2ea;border-radius:12px;padding:16px 18px;'
+      +   'font-size:14.5px;line-height:1.9;color:#1a2f45;margin:16px 0">'
+      +   '<b>이렇게 고치세요</b><br>'
+      +   '1. GitHub 에서 <b>worklog.html</b> 을 열어 <u>첫 줄이 <code>&lt;!DOCTYPE html&gt;</code></u> 인지 확인<br>'
+      +   '2. <b>worklog.js</b> 를 열어 <u>첫 줄이 <code>/*</code> 로 시작</u> 하는지 확인<br>'
+      +   '3. 서로 바뀌어 있으면 각각 올바른 파일 내용으로 다시 붙여넣기<br>'
+      +   '4. <b>Ctrl+Shift+R</b> 로 강제 새로고침'
+      + '</div>'
+      + '<p style="font-size:13.5px;color:#7a92a8;line-height:1.7">'
+      +   '\ud83d\udca1 두 파일 맨 윗줄에 <b>\u2605 이 파일은 ~ 입니다</b> 라고 적혀 있어요. 그걸로 확인하시면 빠릅니다.<br>'
+      +   '\uc800\uc7a5\ub41c \uae30\ub85d\uc740 \uc548\uc804\ud569\ub2c8\ub2e4 \u2014 \ud074\ub77c\uc6b0\ub4dc\uc5d0 \uadf8\ub300\ub85c \uc788\uc2b5\ub2c8\ub2e4.</p>'
+      + '</div>';
+    document.body.appendChild(d);
+  }, 3000);
+})();
+</script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
