@@ -31,3 +31,10 @@ jobs:
           git add stocks.json 2>/dev/null || true
           git commit -m "auto: news update $(date -u +%Y-%m-%dT%H:%MZ)" || echo "변경 없음"
           git push || echo "push 스킵"
+
+                - name: 실패하면 폰으로 알림
+        if: failure()
+        run: |
+          curl -s -d "달님알림봇 ${{ github.event.inputs.job || '정기실행' }} 실패
+          로그: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            https://ntfy.sh/달님만아는채널이름
