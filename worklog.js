@@ -1,7 +1,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v46-0826-2230";
+const APP_VERSION = "v46-0826-2300";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -870,7 +870,41 @@ function genId(){ return online ? db.collection(COL).doc().id : "L"+Date.now()+M
 function syncSet(id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.collection(COL).doc(id).set(payload).catch(e=>{ logErr("저장 동기화", e); toast("클라우드 동기화 지연 — 이 기기에는 저장됨"); }); }
 function addRecord(data){ const id=genId(); const rec={...data,id}; entries.push(rec); if(online) syncSet(id,rec); lsSave(); return rec; }
 function updateRecord(id,patch){ const i=entries.findIndex(x=>x.id===id); if(i<0) return; entries[i]={...entries[i],...patch}; if(online) syncSet(id,entries[i]); lsSave(); }
-function deleteRecord(id){ entries=entries.filter(x=>x.id!==id); if(online) db.collection(COL).doc(id).delete().catch(e=>logErr("삭제 동기화", e)); lsSave(); }
+/* ═══ v46: 지운 항목이 되살아나는 것 방지 ═══
+   원인 — loadAll() 이 "폰 저장소엔 있는데 클라우드엔 없는 것"을 잃어버린 것으로 보고
+   클라우드에 다시 올렸다. PC에서 지워도 폰을 열면 폰이 되살려 놓는 구조였다.
+   해결 — 지운 id 를 기억해 두고, 그 항목은 다시 올리지도 읽지도 않는다.
+   이 기억은 wl_ 로 시작해서 클라우드 백업으로 다른 기기에도 전파된다. */
+const DEL_IDS_LS = "wl_deleted_ids";
+const DEL_KEEP_DAYS = 120;
+function loadDelIds(){
+  try{ const m = JSON.parse(localStorage.getItem(DEL_IDS_LS) || "{}"); return (m && typeof m === "object") ? m : {}; }
+  catch(e){ return {}; }
+}
+function rememberDelId(id){
+  if(!id) return;
+  try{
+    const m = loadDelIds();
+    m[id] = Date.now();
+    const cut = Date.now() - DEL_KEEP_DAYS*24*3600*1000;
+    for(const k in m){ if(m[k] < cut) delete m[k]; }
+    localStorage.setItem(DEL_IDS_LS, JSON.stringify(m));
+  }catch(e){}
+}
+function forgetDelId(id){
+  if(!id) return;
+  try{ const m = loadDelIds(); delete m[id]; localStorage.setItem(DEL_IDS_LS, JSON.stringify(m)); }catch(e){}
+}
+function isDelId(id){ return !!loadDelIds()[id]; }
+window.wlDeletedIds = { list: loadDelIds, forget: forgetDelId,
+  clear: function(){ try{ localStorage.removeItem(DEL_IDS_LS); if(typeof toast==="function") toast("삭제 기록을 비웠어요"); }catch(e){} } };
+
+function deleteRecord(id){
+  rememberDelId(id);
+  entries=entries.filter(x=>x.id!==id);
+  if(online) db.collection(COL).doc(id).delete().catch(e=>logErr("삭제 동기화", e));
+  lsSave();
+}
 const TEMP_BK="wl_tempbackup";
 /* tempbackup — 24시간 만료 적용 */
 function saveTempBackup(){
@@ -894,6 +928,7 @@ function saveTempBackup(){
 })();
 function restoreRecord(rec){
   if(!rec) return;
+  forgetDelId(rec.id);                       /* v46: 되살리기로 지운 기록 취소 */
   const i=entries.findIndex(x=>x.id===rec.id);
   if(i<0) entries.push(rec); else entries[i]=rec;
   if(online){ const {id,...p}=rec; db.collection(COL).doc(rec.id).set(p).catch(e=>logErr("복구 동기화", e)); }
@@ -914,9 +949,17 @@ async function loadAll(){
   if(online){
     try{
       const s=await db.collection(COL).get();
-      const fb=s.docs.map(d=>({id:d.id,...d.data()}));
+      const all=s.docs.map(d=>({id:d.id,...d.data()}));
+      /* v46: 지운 항목이 클라우드에 되살아나 있으면 조용히 청소 */
+      const zombie=all.filter(x=>isDelId(x.id));
+      const fb=all.filter(x=>!isDelId(x.id));
+      if(zombie.length){
+        console.log("[worklog] 되살아난 항목 "+zombie.length+"건 정리");
+        zombie.forEach(x=>{ db.collection(COL).doc(x.id).delete().catch(()=>{}); });
+      }
       const ids=new Set(fb.map(x=>x.id));
-      const extra=lsLoad().filter(x=>!ids.has(x.id));
+      /* v46: 지운 것은 다시 올리지 않는다 */
+      const extra=lsLoad().filter(x=>!ids.has(x.id) && !isDelId(x.id));
       entries=[...fb,...extra];
       extra.forEach(x=>{ const {id,...p}=x; db.collection(COL).doc(id).set(p).catch(()=>{}); });
     }catch(e){ entries=lsLoad(); }
