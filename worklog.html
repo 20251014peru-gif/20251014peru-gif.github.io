@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260824-1711-cal0824-1711"></script>
+<script src="worklog.js?v=v45-20260826-0918-cal0826-0918"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -14489,9 +14489,237 @@ if('serviceWorker' in navigator){
 })();
 </script>
 <script>
+/* ===== v45-0824i: 파일링크(점검일지·운영실무·서류폴더…) 클라우드 백업 =====
+   이 목록들은 여태 '이 브라우저의 localStorage'에만 있었다.
+   브라우저 데이터가 지워지면 그대로 사라진다 — 실제로 그렇게 사라졌다.
+   이제 바뀔 때마다 파이어베이스에 자동 백업하고, 비어 있으면 자동 복원한다. */
+(function(){
+  var CLOUD_COL = 'wl_doclinks';
+  var CLOUD_DOC = 'all';
+  var LAST_LS   = 'wl_doclinks_backup_ts';
+
+  function dbg(m){ try{ if(typeof dbg2==='function') dbg2(m); }catch(e){} console.log('[파일백업] '+m); }
+
+  /* 백업 대상 키 목록 (기본 5탭 + 사용자가 만든 탭 + 탭 설정) */
+  function keyMap(){
+    var m = {
+      insp:   'wl_insp_v43',
+      docs:   'wl_docs_v43',
+      common: 'wl_common_v43',
+      indiv:  'wl_indiv_v43',
+      etc:    'wl_etc_v44'
+    };
+    try{
+      var tabs = JSON.parse(localStorage.getItem('wl_folder_tabs_v1')||'[]');
+      tabs.forEach(function(t){ if(t && t.id && t.id.indexOf('custom_')===0) m[t.id] = 'wl_'+t.id+'_v43'; });
+    }catch(e){}
+    return m;
+  }
+  var EXTRA_KEYS = ['wl_folder_tabs_v1','wl_insp_v43_months','wl_insp_v43_years'];
+
+  function snapshot(){
+    var m = keyMap(), out = { _keys:{}, _extra:{} };
+    for(var tab in m){
+      var arr = [];
+      try{ arr = JSON.parse(localStorage.getItem(m[tab])||'[]'); }catch(e){ arr = []; }
+      out._keys[tab] = { ls:m[tab], items: Array.isArray(arr) ? arr : [] };
+    }
+    EXTRA_KEYS.forEach(function(k){
+      var v = null;
+      try{ v = localStorage.getItem(k); }catch(e){}
+      if(v) out._extra[k] = v;
+    });
+    return out;
+  }
+  function countOf(snap){
+    var n = 0;
+    if(!snap || !snap._keys) return 0;
+    for(var t in snap._keys) n += (snap._keys[t].items || []).length;
+    return n;
+  }
+  function perTab(snap){
+    var o = {};
+    if(snap && snap._keys) for(var t in snap._keys) o[t] = (snap._keys[t].items||[]).length;
+    return o;
+  }
+
+  function ready(){ return (typeof db !== 'undefined') && db && (typeof online === 'undefined' || online !== false); }
+
+  /* ── 올리기 ── */
+  var pushT = null, lastSig = '';
+  function pushCloud(force, cb){
+    if(!ready()){ if(cb) cb(false,'클라우드 연결 안 됨'); return; }
+    var snap = snapshot();
+    var cnt = countOf(snap);
+    if(!cnt && !force){ if(cb) cb(false,'올릴 내용이 없음'); return; }   // 빈 상태를 덮어쓰지 않는다
+    var payload = { data: JSON.stringify(snap), count: cnt, updatedAt: Date.now(),
+                    ua: (navigator.userAgent||'').slice(0,120) };
+    db.collection(CLOUD_COL).doc(CLOUD_DOC).set(payload)
+      .then(function(){
+        try{ localStorage.setItem(LAST_LS, String(Date.now())); }catch(e){}
+        dbg('백업 완료 ' + cnt + '건');
+        if(cb) cb(true, cnt);
+      })
+      .catch(function(e){ dbg('백업 실패: ' + e); if(cb) cb(false, String(e && e.message || e)); });
+  }
+  function pushLater(){
+    if(pushT) clearTimeout(pushT);
+    pushT = setTimeout(function(){ pushT = null; pushCloud(false); }, 4000);
+  }
+
+  /* ── 내려받기 ── */
+  function fetchCloud(cb){
+    if(!ready()){ cb(null, '클라우드 연결 안 됨'); return; }
+    db.collection(CLOUD_COL).doc(CLOUD_DOC).get()
+      .then(function(d){
+        if(!d.exists){ cb(null, '백업이 없습니다'); return; }
+        var v = d.data() || {};
+        var snap = null;
+        try{ snap = JSON.parse(v.data||'null'); }catch(e){}
+        cb(snap ? { snap:snap, count:v.count||countOf(snap), updatedAt:v.updatedAt||0 } : null, '백업이 손상됨');
+      })
+      .catch(function(e){ cb(null, String(e && e.message || e)); });
+  }
+
+  function applySnap(snap){
+    if(!snap || !snap._keys) return 0;
+    var n = 0;
+    for(var tab in snap._keys){
+      var rec = snap._keys[tab];
+      if(!rec || !rec.ls) continue;
+      try{ localStorage.setItem(rec.ls, JSON.stringify(rec.items||[])); n += (rec.items||[]).length; }catch(e){}
+    }
+    if(snap._extra) for(var k in snap._extra){ try{ localStorage.setItem(k, snap._extra[k]); }catch(e){} }
+    // 탭 화면 다시 그리기
+    ['insp','docs','common','indiv','etc'].forEach(function(t){
+      try{ if(typeof window['_docTabRender_'+t] === 'function') window['_docTabRender_'+t](); }catch(e){}
+    });
+    return n;
+  }
+
+  /* ── 시작할 때: 비어 있으면 자동 복원 ── */
+  var restoreTried = false;
+  function autoRestore(){
+    if(restoreTried) return;
+    if(!ready()) return;
+    restoreTried = true;
+    var local = countOf(snapshot());
+    fetchCloud(function(res, err){
+      if(!res){ dbg('복원 확인: ' + (err||'없음')); return; }
+      if(local > 0){
+        dbg('이 기기에 ' + local + '건 있음 → 복원 안 함 (백업만 유지)');
+        return;
+      }
+      if(!res.count){ dbg('클라우드도 비어 있음'); return; }
+      var n = applySnap(res.snap);
+      dbg('자동 복원 ' + n + '건');
+      if(typeof toast === 'function') toast('☁ 파일링크 ' + n + '건을 클라우드에서 되살렸어요', 5000);
+    });
+  }
+
+  /* ── 바뀌면 자동 백업 ── */
+  function watch(){
+    if(!ready()) return;
+    var snap = snapshot();
+    var cnt = countOf(snap);
+    var sig = cnt + '|' + JSON.stringify(perTab(snap));
+    if(!lastSig){ lastSig = sig; if(cnt) pushLater(); return; }
+    if(sig !== lastSig){
+      lastSig = sig;
+      if(cnt) pushLater();                       // 빈 상태로는 절대 안 올린다
+      else dbg('목록이 비었음 — 백업을 덮어쓰지 않음');
+    }
+  }
+
+  /* ── 백업/복원 창 ── */
+  window.wlDocBackupUI = function(){
+    var old = document.getElementById('wlDbOv'); if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'wlDbOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12080;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:430px;max-height:88vh;overflow:auto;padding:18px 20px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+      +   '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">☁ 파일링크 백업 · 복원</span>'
+      +   '<button id="wlDbClose" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<div id="wlDbBody" style="font-size:13px;color:#1a2f45;line-height:1.7">확인 중…</div>'
+      + '<div style="display:flex;gap:8px;margin-top:14px">'
+      +   '<button id="wlDbPull" style="flex:1;height:44px;border:1.5px solid #cfe0f2;border-radius:10px;background:#fff;color:#1a73e8;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">⬇ 클라우드에서 복원</button>'
+      +   '<button id="wlDbPush" style="flex:1;height:44px;border:none;border-radius:10px;background:#1a73e8;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">☁ 지금 백업</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    document.getElementById('wlDbClose').addEventListener('click', function(){ ov.remove(); });
+
+    var LABEL = { insp:'📋 점검일지', docs:'📁 운영실무', common:'🏢 임대공용', indiv:'🚪 임대개별', etc:'🗂 서류폴더' };
+    function line(o){
+      var s = '';
+      for(var t in o) s += '<div style="display:flex;justify-content:space-between"><span>' + (LABEL[t]||t) + '</span><b>' + o[t] + '건</b></div>';
+      return s || '<div style="color:#9aa7b4">없음</div>';
+    }
+    function draw(cloud, err){
+      var mine = snapshot();
+      var when = cloud && cloud.updatedAt ? new Date(cloud.updatedAt).toLocaleString('ko-KR') : '-';
+      document.getElementById('wlDbBody').innerHTML =
+          '<div style="padding:10px 12px;background:#f7faff;border:1.5px solid #e3edf9;border-radius:10px;margin-bottom:9px">'
+        +   '<div style="font-weight:800;margin-bottom:5px">이 기기 — 총 ' + countOf(mine) + '건</div>' + line(perTab(mine))
+        + '</div>'
+        + '<div style="padding:10px 12px;background:#fffdf5;border:1.5px solid #ffe2a8;border-radius:10px">'
+        +   '<div style="font-weight:800;margin-bottom:5px">클라우드 — ' + (cloud ? ('총 ' + cloud.count + '건') : ('없음' + (err ? ' (' + err + ')' : ''))) + '</div>'
+        +   (cloud ? line(perTab(cloud.snap)) + '<div style="margin-top:6px;font-size:11.5px;color:#9a6700">마지막 백업: ' + when + '</div>' : '')
+        + '</div>';
+    }
+    draw(null, '확인 중');
+    fetchCloud(function(res, err){ draw(res, err); ov._cloud = res; });
+
+    document.getElementById('wlDbPush').addEventListener('click', function(){
+      var mine = snapshot(), c = countOf(mine);
+      if(!c && !confirm('이 기기 목록이 비어 있습니다.\n빈 상태로 백업하면 클라우드 백업도 사라집니다.\n정말 진행할까요?')) return;
+      var btn = this; btn.textContent = '올리는 중…'; btn.disabled = true;
+      pushCloud(true, function(ok, info){
+        btn.textContent = '☁ 지금 백업'; btn.disabled = false;
+        if(ok){ if(typeof toast==='function') toast('☁ ' + info + '건 백업 완료'); fetchCloud(function(r,e){ draw(r,e); }); }
+        else alert('백업 실패\n' + info);
+      });
+    });
+    document.getElementById('wlDbPull').addEventListener('click', function(){
+      fetchCloud(function(res, err){
+        if(!res){ alert('복원할 백업이 없습니다\n' + (err||'')); return; }
+        var mine = countOf(snapshot());
+        if(!confirm('클라우드 백업 ' + res.count + '건으로 되돌립니다.\n'
+          + '이 기기의 현재 ' + mine + '건은 덮어씁니다.\n계속할까요?')) return;
+        var n = applySnap(res.snap);
+        lastSig = '';
+        if(typeof toast==='function') toast('⬇ ' + n + '건 복원 완료', 4000);
+        draw(res, null);
+      });
+    });
+  };
+
+  /* 일지 빠른 진입 창에 버튼 끼워넣기 */
+  setInterval(function(){
+    var mng = document.getElementById('qjManageBtn');
+    if(mng && !document.getElementById('qjBackupBtn')){
+      var b = document.createElement('button');
+      b.id = 'qjBackupBtn';
+      b.type = 'button';
+      b.textContent = '☁ 백업';
+      b.style.cssText = 'border:1.5px solid #ffe2a8;background:#fffdf5;color:#9a6700;border-radius:8px;'
+        + 'padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ window.wlDocBackupUI(); });
+      mng.parentNode.insertBefore(b, mng);
+    }
+  }, 900);
+
+  setTimeout(autoRestore, 4000);
+  setTimeout(autoRestore, 10000);
+  setInterval(watch, 6000);
+  console.log('[파일백업] 파일링크 클라우드 백업 로드');
+})();
+</script>
+<script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0824-1711';
+  var TAG = ' +cal0826-0918';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
