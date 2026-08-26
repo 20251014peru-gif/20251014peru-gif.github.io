@@ -1,7 +1,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v46-0826-1425";
+const APP_VERSION = "v46-0826-1520";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -338,36 +338,36 @@ const SCHEMA={
   // v44: 사고 처리 내역
   progress:[
     {k:"status",label:"진행상태",type:"select",opts:["견적중","발주완료","진행중","완료"],req:true},
-    {k:"floor",label:"층",type:"floor"},
-    {k:"location",label:"상세 위치",type:"text",full:true},
     {k:"title",label:"업무 제목",type:"text",full:true,req:true},
+    {k:"owner",label:"담당자 / 업체",type:"text"},
+    {k:"ownerPhone",label:"담당자 연락처",type:"text"},
+    {k:"estCost",label:"초기 견적비 (원)",type:"number"},
+    {k:"finalCost",label:"최종 금액 (원)",type:"number"},
     {k:"detail",label:"상세 내용",type:"textarea",full:true},
-    {k:"estCost",label:"예상비용 (원)",type:"number"},
-    {k:"finalCost",label:"확정비용 (원)",type:"number"},
     {k:"memo",label:"비고",type:"textarea",full:true},
-    // v44: steps=[{date,action,field,vendor,vendorPhone}]는 데이터 배열로 저장 (사고탭과 동일 패턴)
+    // v46: 처리단계(steps)는 상세 내용 바로 아래에 삽입됨. steps=[{date,action,detail}]
   ],
   accident:[
+    {k:"status",label:"처리 상태",type:"select",opts:["⏳ 접수","🔍 조사중","⚙ 처리중","✅ 완료","📋 종결"],req:true},
+    {k:"accType",label:"사고 종류",type:"select",opts:["누수","화재","미끄러짐","추락","차량파손","도난","폭행/시비","엘리베이터","주차장","승강기","감전","기타"],req:true},
     {k:"date",label:"발생 날짜",type:"date",req:true},
     {k:"time",label:"발생 시각",type:"time"},
-    {k:"accType",label:"사고 종류",type:"select",opts:["누수","화재","미끄러짐","추락","차량파손","도난","폭행/시비","엘리베이터","주차장","승강기","감전","기타"],req:true},
-    {k:"status",label:"처리 상태",type:"select",opts:["⏳ 접수","🔍 조사중","⚙ 처리중","✅ 완료","📋 종결"],req:true},
+    {k:"title",label:"사고 제목",type:"text",full:true,req:true},
     {k:"floor",label:"발생 층",type:"floor"},
-    {k:"location",label:"상세 위치",type:"text",full:true},
+    {k:"location",label:"상세 위치",type:"text"},
     {k:"field",label:"분야",type:"field"},
     {k:"partyName",label:"당사자 이름",type:"text"},
     {k:"partyType",label:"당사자 유형",type:"select",opts:["임차인","방문객","직원","외부인","불명"]},
     {k:"partyPhone",label:"당사자 연락처",type:"text"},
-    {k:"title",label:"사고 제목",type:"text",full:true,req:true},
-    {k:"detail",label:"사고 경위 (상세)",type:"textarea",full:true},
-    {k:"emergency",label:"응급조치 내용",type:"textarea",full:true},
-    {k:"reported",label:"신고 여부",type:"select",opts:["없음","경찰 112","소방 119","구급차","보험사","본사 보고","기타"]},
     {k:"repairCost",label:"수리비 (원)",type:"number"},
     {k:"compensation",label:"배상금 (원)",type:"number"},
     {k:"insurance",label:"보험금 (원)",type:"number"},
+    {k:"detail",label:"사고 경위 (상세)",type:"textarea",full:true},
+    // v46: 처리단계(steps)는 사고 경위 바로 아래에 삽입됨
+    {k:"emergency",label:"응급조치 내용",type:"textarea",full:true},
+    {k:"reported",label:"신고 여부",type:"select",opts:["없음","경찰 112","소방 119","구급차","보험사","본사 보고","기타"]},
     {k:"followUp",label:"후속 조치 / 재발 방지책",type:"textarea",full:true},
     {k:"memo",label:"비고",type:"textarea",full:true},
-    // v44: vendors=[{name,phone,memo}], history=[{date,time,by,action,status,memo}]는 데이터 배열로 저장
   ],
 };
 
@@ -3191,13 +3191,13 @@ function renderAccidentSteps(steps){
   area.style.cssText = "grid-column:1/-1;margin-top:8px;padding:14px;background:#fff8e1;border:2px solid #ffd54f;border-radius:12px";
   area.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <label style="font-weight:800;font-size:14px;color:#7c5e1a;margin:0">📋 처리 단계 (시간순)</label>
-      <button type="button" id="btnAddAccStep" style="background:#f59e0b;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 단계 추가</button>
+      <label style="font-weight:800;font-size:14px;color:#7c5e1a;margin:0">📋 처리 기록 (시간순)</label>
+      <button type="button" id="btnAddAccStep" style="background:#f59e0b;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer">➕ 내용 추가</button>
     </div>
     <div id="accStepsList" style="display:flex;flex-direction:column;gap:8px"></div>
-    <div id="accStepsEmpty" style="display:none;text-align:center;padding:20px;color:#aab8c8;font-size:13px">아직 처리 단계가 없어요 — "➕ 단계 추가" 버튼을 누르세요</div>
+    <div id="accStepsEmpty" style="display:none;text-align:center;padding:18px;color:#aab8c8;font-size:13px">처리한 내용을 날짜별로 쌓아두세요 — "➕ 내용 추가"</div>
   `;
-  grid.appendChild(area);
+  wlPutStepsAfter(area, "detail");
   // 단계 추가 버튼
   document.getElementById("btnAddAccStep").addEventListener("click", ()=>{
     _accidentSteps.push({
@@ -3208,6 +3208,15 @@ function renderAccidentSteps(steps){
       memo: ""
     });
     redrawAccStepList();
+    setTimeout(()=>{
+      const box = document.querySelectorAll("#accStepsList .acc-step-card");
+      const last = box[box.length-1];
+      if(last){
+        last.scrollIntoView({block:"nearest"});
+        const t = last.querySelector('[data-k="action"]');
+        if(t) t.focus();
+      }
+    }, 40);
   });
   redrawAccStepList();
 }
@@ -3224,19 +3233,17 @@ function redrawAccStepList(){
   if(empty) empty.style.display = "none";
   list.innerHTML = _accidentSteps.map((s,i)=>`
     <div class="acc-step-card" data-idx="${i}" style="background:#fff;border:1.5px solid #ffd54f;border-radius:10px;padding:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <span style="background:#f59e0b;color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:12px">${i+1}단계</span>
-        <button type="button" class="acc-step-del" data-idx="${i}" style="background:#fde8e8;color:#b52929;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+        <span style="background:#f59e0b;color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:12px">${i+1}</span>
+        <input type="date" class="acc-step-input" data-idx="${i}" data-k="date" value="${esc(s.date||'')}" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;width:150px;flex:0 0 auto">
+        <input type="text" class="acc-step-input" data-idx="${i}" data-k="action" value="${esc(s.action||'')}" placeholder="제목 (예: 누수 확인, 보험사 접수, 시공 완료)" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;flex:1;min-width:120px">
+        <button type="button" class="acc-step-del" data-idx="${i}" title="삭제" style="background:#fde8e8;color:#b52929;border:none;border-radius:7px;width:32px;height:32px;font-size:13px;font-family:inherit;cursor:pointer;flex:0 0 auto">🗑</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:6px">
-        <input type="date" class="acc-step-input" data-idx="${i}" data-k="date" value="${esc(s.date||'')}" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
-        <input type="text" class="acc-step-input" data-idx="${i}" data-k="action" value="${esc(s.action||'')}" placeholder="📝 조치 내용 (예: 누수 확인, 보험사 접수, 시공 완료)" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
+      <textarea class="acc-step-input" data-idx="${i}" data-k="memo" rows="2" placeholder="자세한 사항 — 통화 내용, 금액, 다음 할 일 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;line-height:1.5;resize:vertical;margin-bottom:6px">${esc(s.memo||'')}</textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input type="text" class="acc-step-input" data-idx="${i}" data-k="vendor" value="${esc(s.vendor||'')}" placeholder="🏢 처리 업체 (예: 삼성화재)" style="height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12.5px;font-family:inherit;background:#f7faff">
+        <input type="text" class="acc-step-input" data-idx="${i}" data-k="vendorPhone" value="${esc(s.vendorPhone||'')}" placeholder="📞 연락처" style="height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:12.5px;font-family:inherit;background:#f7faff">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
-        <input type="text" class="acc-step-input" data-idx="${i}" data-k="vendor" value="${esc(s.vendor||'')}" placeholder="🏢 업체명 (예: 삼성화재, 한국방수)" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
-        <input type="text" class="acc-step-input" data-idx="${i}" data-k="vendorPhone" value="${esc(s.vendorPhone||'')}" placeholder="📞 연락처" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
-      </div>
-      <input type="text" class="acc-step-input" data-idx="${i}" data-k="memo" value="${esc(s.memo||'')}" placeholder="💬 비고 (예: 견적 80만원, 사고번호 ACC-2026, 야간 출동)" style="width:100%;box-sizing:border-box;height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
     </div>
   `).join("");
   // 입력 변경 이벤트
@@ -3251,7 +3258,7 @@ function redrawAccStepList(){
   list.querySelectorAll(".acc-step-del").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const idx = Number(btn.dataset.idx);
-      if(confirm(`${idx+1}단계를 삭제할까요?`)){
+      if(confirm(`${idx+1}번 기록을 삭제할까요?`)){
         _accidentSteps.splice(idx, 1);
         redrawAccStepList();
       }
@@ -3259,8 +3266,18 @@ function redrawAccStepList(){
   });
 }
 
-/* ===== v44: 진행업무 처리단계 (사고탭과 동일 패턴, 분야/업체/연락처 포함) ===== */
+/* ===== v46: 진행업무 처리단계 — 상세 내용 바로 아래에 쌓인다 ===== */
 var _progressSteps = [];
+
+/* 처리단계 영역을 특정 필드 바로 아래에 끼워 넣기 */
+function wlPutStepsAfter(area, key){
+  const grid = $("mFields");
+  if(!grid) return;
+  const anchor = document.getElementById("m-" + key);
+  const box = anchor ? anchor.closest(".field") : null;
+  if(box && box.parentNode === grid) box.after(area);
+  else grid.appendChild(area);
+}
 
 function renderProgressSteps(steps){
   _progressSteps = (steps && Array.isArray(steps)) ? steps.slice() : [];
@@ -3273,23 +3290,26 @@ function renderProgressSteps(steps){
   area.className = "field full";
   area.style.cssText = "grid-column:1/-1;margin-top:8px;padding:14px;background:#eef6ff;border:2px solid #90c2f0;border-radius:12px";
   area.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <label style="font-weight:800;font-size:14px;color:#1a4a8a;margin:0">📋 처리 단계 (시간순)</label>
-      <button type="button" id="btnAddProgStep" style="background:#3f7cb8;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">➕ 단계 추가</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+      <label style="font-weight:800;font-size:14px;color:#1a4a8a;margin:0">📋 진행 기록 (시간순)</label>
+      <button type="button" id="btnAddProgStep" style="background:#3f7cb8;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer">➕ 내용 추가</button>
     </div>
     <div id="progStepsList" style="display:flex;flex-direction:column;gap:8px"></div>
-    <div id="progStepsEmpty" style="display:none;text-align:center;padding:20px;color:#aab8c8;font-size:13px">아직 처리 단계가 없어요 — "➕ 단계 추가" 버튼을 누르세요</div>
+    <div id="progStepsEmpty" style="display:none;text-align:center;padding:18px;color:#aab8c8;font-size:13px">진행된 내용을 날짜별로 쌓아두세요 — "➕ 내용 추가"</div>
   `;
-  grid.appendChild(area);
+  wlPutStepsAfter(area, "detail");
   document.getElementById("btnAddProgStep").addEventListener("click", ()=>{
-    _progressSteps.push({
-      date: todayStr(),
-      action: "",
-      field: "",
-      vendor: "",
-      vendorPhone: ""
-    });
+    _progressSteps.push({ date: todayStr(), action: "", detail: "" });
     redrawProgStepList();
+    setTimeout(()=>{
+      const box = document.querySelectorAll("#progStepsList .prog-step-card");
+      const last = box[box.length-1];
+      if(last){
+        last.scrollIntoView({block:"nearest"});
+        const t = last.querySelector('[data-k="action"]');
+        if(t) t.focus();
+      }
+    }, 40);
   });
   redrawProgStepList();
 }
@@ -3304,27 +3324,19 @@ function redrawProgStepList(){
     return;
   }
   if(empty) empty.style.display = "none";
+  const IST = "height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff";
   list.innerHTML = _progressSteps.map((s,i)=>`
-    <div class="prog-step-card" data-idx="${i}" style="background:#fff;border:1.5px solid #90c2f0;border-radius:10px;padding:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <span style="background:#3f7cb8;color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:12px">${i+1}단계</span>
-        <button type="button" class="prog-step-del" data-idx="${i}" style="background:#fde8e8;color:#b52929;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">🗑 삭제</button>
+    <div class="prog-step-card" data-idx="${i}" style="background:#fff;border:1.5px solid #90c2f0;border-radius:10px;padding:11px 12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+        <span style="background:#3f7cb8;color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:12px">${i+1}</span>
+        <input type="date" class="prog-step-input" data-idx="${i}" data-k="date" value="${esc(s.date||'')}" style="${IST};width:150px;flex:0 0 auto">
+        <input type="text" class="prog-step-input" data-idx="${i}" data-k="action" value="${esc(s.action||'')}" placeholder="제목 (예: 견적 접수, 자재 입고, 시공 완료)" style="${IST};flex:1;min-width:120px">
+        <button type="button" class="prog-step-del" data-idx="${i}" title="삭제" style="background:#fde8e8;color:#b52929;border:none;border-radius:7px;width:32px;height:32px;font-size:13px;font-family:inherit;cursor:pointer;flex:0 0 auto">🗑</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:6px">
-        <input type="date" class="prog-step-input" data-idx="${i}" data-k="date" value="${esc(s.date||'')}" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
-        <input type="text" class="prog-step-input" data-idx="${i}" data-k="action" value="${esc(s.action||'')}" placeholder="📝 진행 내용 (예: 견적 접수, 자재 입고, 시공 완료)" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
-      </div>
-      <div style="position:relative;margin-bottom:6px">
-        <input type="text" class="prog-step-input prog-step-field" data-idx="${i}" data-k="field" id="progStepField${i}" value="${esc(s.field||'')}" placeholder="🏷 분야 검색 (초성 가능, 예: ㅈㄱ → 전기)" autocomplete="off" style="width:100%;box-sizing:border-box;height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
-        <div id="progStepField${i}-list" style="display:none;position:absolute;top:40px;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:500;max-height:200px;overflow:auto"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <input type="text" class="prog-step-input" data-idx="${i}" data-k="vendor" value="${esc(s.vendor||'')}" placeholder="🏢 업체명" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
-        <input type="text" class="prog-step-input" data-idx="${i}" data-k="vendorPhone" value="${esc(s.vendorPhone||'')}" placeholder="📞 연락처" style="height:38px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff">
-      </div>
+      <textarea class="prog-step-input" data-idx="${i}" data-k="detail" rows="2" placeholder="자세한 사항 — 통화 내용, 금액, 다음 할 일 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;line-height:1.5;resize:vertical">${esc(s.detail||s.memo||'')}</textarea>
+      ${(s.field||s.vendor||s.vendorPhone)?`<div style="font-size:11.5px;color:#7a92a8;margin-top:5px">${[s.field&&('🏷 '+s.field),s.vendor&&('🏢 '+s.vendor),s.vendorPhone&&('📞 '+s.vendorPhone)].filter(Boolean).map(esc).join(' · ')}</div>`:''}
     </div>
   `).join("");
-
   list.querySelectorAll(".prog-step-input").forEach(inp=>{
     inp.addEventListener("input", ()=>{
       const idx = Number(inp.dataset.idx);
@@ -3335,19 +3347,11 @@ function redrawProgStepList(){
   list.querySelectorAll(".prog-step-del").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const idx = Number(btn.dataset.idx);
-      if(confirm(`${idx+1}단계를 삭제할까요?`)){
+      if(confirm(`${idx+1}번 기록을 삭제할까요?`)){
         _progressSteps.splice(idx, 1);
         redrawProgStepList();
       }
     });
-  });
-  /* 단계별 분야 입력에 초성검색 자동완성 연결 */
-  _progressSteps.forEach((s,i)=>{
-    if(typeof makeFieldSearchUI === 'function'){
-      makeFieldSearchUI(`progStepField${i}`, `progStepField${i}-list`, (val)=>{
-        if(_progressSteps[i]) _progressSteps[i].field = val;
-      });
-    }
   });
 }
 
@@ -3411,17 +3415,18 @@ function openViewer(kind,id){
     if(kind==="deliver") rows+=vrow("전달완료",data.done?"완료":"미완료");
   }
   // v44: 진행업무 처리단계 — 조회창에서도 시간순으로 보여줌
-  if(kind==="progress" && (data.steps||[]).length){
+  if((kind==="progress"||kind==="accident") && (data.steps||[]).length){
     const stepsHtml = data.steps.map((s,i)=>`
-      <div style="background:#eef6ff;border:1.5px solid #90c2f0;border-radius:8px;padding:10px 12px;margin-bottom:6px">
+      <div style="background:${kind==="accident"?"#fff8e1":"#eef6ff"};border:1.5px solid ${kind==="accident"?"#ffd54f":"#90c2f0"};border-radius:8px;padding:10px 12px;margin-bottom:6px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="background:#3f7cb8;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px">${i+1}단계</span>
+          <span style="background:${kind==="accident"?"#f59e0b":"#3f7cb8"};color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px">${i+1}</span>
           <span style="font-size:12px;color:#7a92a8">${esc(s.date||'')}</span>
         </div>
-        <div style="font-size:13px;color:#1a2f45">${esc(s.action||'')}</div>
+        <div style="font-size:13px;font-weight:700;color:#1a2f45">${esc(s.action||'')}</div>
+        ${(s.detail||s.memo)?`<div style="font-size:12.5px;color:#33567d;margin-top:4px;line-height:1.55;white-space:pre-wrap">${esc(s.detail||s.memo)}</div>`:''}
         ${(s.field||s.vendor||s.vendorPhone)?`<div style="font-size:12px;color:#7a92a8;margin-top:3px">${[s.field&&('🏷 '+s.field),s.vendor&&('🏢 '+s.vendor),s.vendorPhone&&('📞 '+s.vendorPhone)].filter(Boolean).map(esc).join(' · ')}</div>`:''}
       </div>`).join('');
-    rows+=`<div class="vrow"><div class="vk">📋 처리단계</div><div class="vv">${stepsHtml}</div></div>`;
+    rows+=`<div class="vrow"><div class="vk">📋 ${kind==="accident"?"처리 기록":"진행 기록"}</div><div class="vv">${stepsHtml}</div></div>`;
   }
   // v15: 첨부파일 표시
   if((data.attachments||[]).length){
@@ -3886,7 +3891,7 @@ $("mSave").addEventListener("click",async ()=>{
   }
   // v44: 진행업무면 처리 단계 함께 저장 (분야/업체/연락처 포함)
   if(mKind==="progress"){
-    obj.steps = (typeof _progressSteps!=="undefined" && Array.isArray(_progressSteps)) ? _progressSteps.filter(s=>s.action||s.field||s.vendor) : [];
+    obj.steps = (typeof _progressSteps!=="undefined" && Array.isArray(_progressSteps)) ? _progressSteps.filter(s=>s.action||s.detail||s.field||s.vendor) : [];
   }
   let savedId=mId;
   if(mId) updateRecord(mId,obj); else { obj.createdAt=Date.now(); if(mKind==="plan") obj.done=false; if(mKind==="filelink"||mKind==="site") obj.starred=false; const nr=addRecord(obj); savedId=nr?nr.id:obj.id; }
@@ -8351,7 +8356,13 @@ function renderAccidents(){
   if(ACCIDENT_FILTER.from) arr = arr.filter(a=>(a.date||"")>=ACCIDENT_FILTER.from);
   if(ACCIDENT_FILTER.to) arr = arr.filter(a=>(a.date||"")<=ACCIDENT_FILTER.to);
   // 최신순 정렬
-  arr.sort((a,b)=>(b.date||"").localeCompare(a.date||"") || (b.time||"").localeCompare(a.time||""));
+  /* v46: 처리 중인 사고는 위, 완료·종결은 아래 */
+  const ARANK = {"⏳ 접수":0, "🔍 조사중":1, "⚙ 처리중":2, "✅ 완료":9, "📋 종결":9};
+  arr.sort((a,b)=>{
+    const ra = (ARANK[a.status]!==undefined?ARANK[a.status]:3), rb = (ARANK[b.status]!==undefined?ARANK[b.status]:3);
+    if(ra !== rb) return ra - rb;
+    return (b.date||"").localeCompare(a.date||"") || (b.time||"").localeCompare(a.time||"");
+  });
   // 카운트 표시
   const cnt = document.getElementById("accidentCount");
   if(cnt) cnt.textContent = `${arr.length}건`;
@@ -8366,12 +8377,24 @@ function renderAccidents(){
   }
   /* v44-fix: 다열 그리드 적용 */
   list.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px';
+  let _ag = null;
+  const isDone = x => (x.status==="✅ 완료" || x.status==="📋 종결");
+  const agrpHead = (a)=>{
+    const g = isDone(a) ? "완료·종결" : "처리 중인 사고";
+    if(g === _ag) return "";
+    _ag = g;
+    const n = arr.filter(x=>(isDone(x)?"완료·종결":"처리 중인 사고")===g).length;
+    const col = isDone(a) ? "#9ab0c4" : "#c2410c";
+    return `<div style="grid-column:1/-1;display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;color:${col};padding:10px 3px 3px;border-bottom:1.5px solid #e8f0fa;margin-top:2px">${isDone(a)?"✅":"🚨"} ${g} <span style="font-weight:700;color:#a7b6c6;font-size:11.5px">${n}</span></div>`;
+  };
   list.innerHTML = arr.map(a=>{
+    const _h = agrpHead(a);
     const c = ACCIDENT_STATUS_COLOR[a.status] || ACCIDENT_STATUS_COLOR["⏳ 접수"];
     const icon = ACCIDENT_TYPE_ICON[a.accType] || "📌";
     const totalCost = (Number(a.repairCost)||0)+(Number(a.compensation)||0)+(Number(a.insurance)||0);
-    return `<div class="acc-card" data-acc-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .12s">
-      <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
+    return _h + `<div class="acc-card" data-acc-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .12s;position:relative">
+      <button type="button" class="acc-card-del" data-acc-del="${a.id}" title="삭제" style="position:absolute;top:10px;right:10px;width:26px;height:26px;border:none;background:#fde8e8;color:#b52929;border-radius:6px;font-size:13px;cursor:pointer;z-index:2">🗑</button>
+      <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding-right:32px">
         <div style="flex:1;min-width:200px">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
             <span style="font-size:20px">${icon}</span>
@@ -8387,8 +8410,9 @@ function renderAccidents(){
           </div>
           ${a.detail?`<div style="font-size:12.5px;color:#33567d;margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(a.detail)}</div>`:''}
           ${a.steps&&a.steps.length?`<div style="margin-top:8px;padding:8px 10px;background:#fff8e1;border:1px solid #ffd54f;border-radius:8px">
-            <div style="font-size:11px;color:#7c5e1a;font-weight:700;margin-bottom:4px">📋 처리 단계 ${a.steps.length}건 · 최근: ${esc((a.steps[a.steps.length-1].date||''))}</div>
-            <div style="font-size:12px;color:#1a2f45">▶ ${esc(a.steps[a.steps.length-1].action||'(내용 없음)')}${a.steps[a.steps.length-1].vendor?` · 🏢 ${esc(a.steps[a.steps.length-1].vendor)}`:''}</div>
+            <div style="font-size:11px;color:#7c5e1a;font-weight:700;margin-bottom:4px">📋 처리 기록 ${a.steps.length}건 · 최근: ${esc((a.steps[a.steps.length-1].date||''))}</div>
+            <div style="font-size:12px;color:#1a2f45;font-weight:700">▶ ${esc(a.steps[a.steps.length-1].action||'(내용 없음)')}${a.steps[a.steps.length-1].vendor?` · 🏢 ${esc(a.steps[a.steps.length-1].vendor)}`:''}</div>
+            ${a.steps[a.steps.length-1].memo?`<div style="font-size:11.5px;color:#33567d;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(a.steps[a.steps.length-1].memo)}</div>`:''}
           </div>`:''}
           ${a.photos&&a.photos.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
             ${a.photos.slice(0,4).map(p=>`<img src="${esc(p)}" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #e8f0fa">`).join('')}
@@ -8402,7 +8426,16 @@ function renderAccidents(){
   list.querySelectorAll(".acc-card").forEach(card=>{
     card.addEventListener("mouseenter", ()=>card.style.boxShadow="0 4px 16px rgba(0,0,0,.08)");
     card.addEventListener("mouseleave", ()=>card.style.boxShadow="");
-    card.addEventListener("click", ()=>openEditor("accident", card.dataset.accId));
+    card.addEventListener("click", (e)=>{
+      if(e.target.closest("[data-acc-del]")) return;
+      openViewer("accident", card.dataset.accId);
+    });
+  });
+  list.querySelectorAll("[data-acc-del]").forEach(btn=>{
+    btn.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      deleteWithUndo(btn.dataset.accDel, "사고");
+    });
   });
 }
 
@@ -8486,7 +8519,17 @@ function renderProgressTasks(){
     const lastDate = (a.steps&&a.steps.length) ? a.steps[a.steps.length-1].date : a.createdAt&&new Date(a.createdAt).toISOString().slice(0,10);
     return (lastDate||"")<=PROGRESS_FILTER.to;
   });
-  arr.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  /* v46: 살아있는 건 위로, 완료는 아래로 */
+  const PRANK = {"진행중":0, "견적중":1, "발주완료":2, "완료":9};
+  const prank = a => (PRANK[a.status] !== undefined ? PRANK[a.status] : 3);
+  arr.sort((a,b)=>{
+    const ra = prank(a), rb = prank(b);
+    if(ra !== rb) return ra - rb;
+    const la = (a.steps&&a.steps.length) ? (a.steps[a.steps.length-1].date||"") : "";
+    const lb = (b.steps&&b.steps.length) ? (b.steps[b.steps.length-1].date||"") : "";
+    if(la !== lb) return lb.localeCompare(la);
+    return (b.createdAt||0)-(a.createdAt||0);
+  });
   const cnt = document.getElementById("progressCount");
   if(cnt) cnt.textContent = `${arr.length}건`;
   if(!arr.length){
@@ -8499,11 +8542,22 @@ function renderProgressTasks(){
     return;
   }
   list.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px';
+  let _pg = null;
+  const grpHead = (a)=>{
+    const g = (a.status==="완료") ? "완료" : "진행 중인 업무";
+    if(g === _pg) return "";
+    _pg = g;
+    const n = arr.filter(x=>((x.status==="완료")?"완료":"진행 중인 업무")===g).length;
+    const col = (g==="완료") ? "#9ab0c4" : "#2563a8";
+    return `<div style="grid-column:1/-1;display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;color:${col};padding:10px 3px 3px;border-bottom:1.5px solid #e8f0fa;margin-top:2px">${g==="완료"?"✅":"🔵"} ${g} <span style="font-weight:700;color:#a7b6c6;font-size:11.5px">${n}</span></div>`;
+  };
   list.innerHTML = arr.map(a=>{
+    const _h = grpHead(a);
     const c = PROGRESS_STATUS_COLOR[a.status] || PROGRESS_STATUS_COLOR["견적중"];
     const lastStep = (a.steps&&a.steps.length) ? a.steps[a.steps.length-1] : null;
     const totalCost = Number(a.finalCost)||Number(a.estCost)||0;
-    return `<div class="prog-card" data-prog-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .12s;position:relative">
+    const costLabel = Number(a.finalCost) ? '최종' : (Number(a.estCost) ? '견적' : '');
+    return _h + `<div class="prog-card" data-prog-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .12s;position:relative">
       <button type="button" class="prog-card-del" data-prog-del="${a.id}" title="삭제" style="position:absolute;top:10px;right:10px;width:26px;height:26px;border:none;background:#fde8e8;color:#b52929;border-radius:6px;font-size:13px;cursor:pointer;z-index:2">🗑</button>
       <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding-right:32px">
         <div style="flex:1;min-width:200px">
@@ -8512,18 +8566,20 @@ function renderProgressTasks(){
             ${a.floor?`<span style="font-size:11px;color:#7a92a8">${esc(a.floor)}</span>`:''}
           </div>
           <div style="font-size:15px;font-weight:700;color:#1a2f45;margin-bottom:4px">${esc(a.title||'(제목 없음)')}</div>
-          ${a.location?`<div style="font-size:12px;color:#7a92a8">📍 ${esc(a.location)}</div>`:''}
+          ${(a.owner||a.ownerPhone)?`<div style="font-size:12px;color:#7a92a8">👤 ${esc(a.owner||'')}${a.ownerPhone?' · '+esc(a.ownerPhone):''}</div>`:''}
+          ${a.location?`<div style="font-size:11.5px;color:#9ab0c4">📍 ${esc(a.location)}</div>`:''}
           ${a.detail?`<div style="font-size:12.5px;color:#33567d;margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(a.detail)}</div>`:''}
           ${a.steps&&a.steps.length?`<div style="margin-top:8px;padding:8px 10px;background:#eef6ff;border:1px solid #90c2f0;border-radius:8px">
-            <div style="font-size:11px;color:#1a4a8a;font-weight:700;margin-bottom:4px">📋 처리 단계 ${a.steps.length}건 · 최근: ${esc(lastStep.date||'')}</div>
-            <div style="font-size:12px;color:#1a2f45">▶ ${esc(lastStep.action||'(내용 없음)')}${lastStep.field?` · 🏷 ${esc(lastStep.field)}`:''}${lastStep.vendor?` · 🏢 ${esc(lastStep.vendor)}`:''}</div>
+            <div style="font-size:11px;color:#1a4a8a;font-weight:700;margin-bottom:4px">📋 진행 기록 ${a.steps.length}건 · 최근: ${esc(lastStep.date||'')}</div>
+            <div style="font-size:12px;color:#1a2f45;font-weight:700">▶ ${esc(lastStep.action||'(내용 없음)')}</div>
+            ${(lastStep.detail||lastStep.memo)?`<div style="font-size:11.5px;color:#33567d;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(lastStep.detail||lastStep.memo)}</div>`:''}
           </div>`:''}
           ${a.photos&&a.photos.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
             ${a.photos.slice(0,4).map(p=>`<img src="${esc(p)}" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #e8f0fa">`).join('')}
             ${a.photos.length>4?`<div style="width:54px;height:54px;background:#f0f6ff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#3f7cb8">+${a.photos.length-4}</div>`:''}
           </div>`:''}
         </div>
-        ${totalCost>0?`<div style="text-align:right;font-size:14px;font-weight:800;color:#3f7cb8;white-space:nowrap">💰 ${won(totalCost)}</div>`:''}
+        ${totalCost>0?`<div style="text-align:right;white-space:nowrap"><div style="font-size:10.5px;color:#9ab0c4;font-weight:700">${costLabel}</div><div style="font-size:14px;font-weight:800;color:${Number(a.finalCost)?'#1a7a4a':'#3f7cb8'}">💰 ${won(totalCost)}</div></div>`:''}
       </div>
     </div>`;
   }).join("");
