@@ -6,7 +6,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v53-0827-0124";
+const APP_VERSION = "v61-0827-0801";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -405,7 +405,7 @@ const prev3WorkdayStr = () => {
 const nowTime = () => { const d=kstNow(); return d.toISOString().slice(11,16); };
 const clockStr = ts => { if(!ts) return ""; const d=new Date(ts); const k=new Date(d.getTime()+9*60*60*1000); return k.toISOString().slice(11,16); };
 const $ = id => document.getElementById(id);
-const esc = s => (s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 function toast(msg){ const t=$("toast"); t.innerHTML=esc(msg); t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
 function toastAction(msg, btnLabel, onClick, ms){
   const t=$("toast"); t.innerHTML=`<span>${esc(msg)}</span> <button id="toastBtn" style="margin-left:10px;background:rgba(255,255,255,.25);color:#fff;border:none;border-radius:8px;padding:4px 12px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer">${esc(btnLabel)}</button>`;
