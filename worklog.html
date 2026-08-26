@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v46-0826-1955</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v46-0826-2230</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1388,7 +1388,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-1955</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-2230</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3060,7 +3060,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v46-20260826-1955"></script>
+<script src="worklog.js?v=v46-20260826-2230"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -17368,6 +17368,602 @@ if('serviceWorker' in navigator){
   }, 1300);
 
   console.log('[재전송] 📤 버튼 로드');
+})();
+</script>
+<style id="wlLockCss">
+/* v46: 🔒 비밀 항목 가리기 */
+.wl-blur{
+  filter: blur(5.5px) !important;
+  -webkit-filter: blur(5.5px) !important;
+  user-select: none !important; -webkit-user-select: none !important;
+  cursor: pointer !important;
+  transition: filter .12s;
+}
+.wl-blur *{ user-select:none !important; -webkit-user-select:none !important; }
+.wl-blur:hover{ filter: blur(4px) !important; -webkit-filter: blur(4px) !important; }
+#wlLockBar{
+  position:fixed; right:14px; bottom:14px; z-index:12900;
+  display:none; align-items:center; gap:8px;
+  background:#1a2f45; color:#fff; border-radius:12px; padding:9px 13px;
+  font-family:inherit; font-size:12.5px; font-weight:700;
+  box-shadow:0 6px 20px rgba(0,0,0,.25);
+}
+#wlLockBar button{
+  border:none; border-radius:8px; padding:6px 11px; cursor:pointer;
+  font-family:inherit; font-size:12px; font-weight:800;
+  background:#f4b942; color:#3a2a00;
+}
+</style>
+<script>
+/* ===== v46-0826: 🔒 비밀 메모 — PIN 넣어야 보이게 ===== */
+(function(){
+  var LOCK  = '\uD83D\uDD12';         /* 🔒 */
+  var OPEN_MS = 5 * 60 * 1000;          /* 풀린 상태 유지 시간 */
+  var openedAt = 0;
+
+  /* 이 안쪽은 가리지 않는다 — 입력·편집 중인 곳 */
+  var SKIP = '#wlSlotRow, #mFields, #overlay, .sn-edit, #stickyV44EditOv, '
+           + '#wlPinOv, #wlLockBar, input, textarea, select, [contenteditable="true"]';
+
+  function unlocked(){ return openedAt && (Date.now() - openedAt < OPEN_MS); }
+  window.wlSecretUnlocked = unlocked;
+
+  function pinOf(){
+    try{ return localStorage.getItem('shared_pin') || '102800'; }catch(e){ return '102800'; }
+  }
+
+  /* 🔒 가 들어있는 가장 작은 요소들을 찾는다 */
+  function targets(){
+    var out = [];
+    try{
+      var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+      var n;
+      while((n = w.nextNode())){
+        if(!n.nodeValue || n.nodeValue.indexOf(LOCK) < 0) continue;
+        var el = n.parentElement;
+        if(!el) continue;
+        if(el.closest && el.closest(SKIP)) continue;
+        /* 너무 큰 덩어리는 위험 — 자식이 많으면 건너뜀 */
+        if(el.children && el.children.length > 6) continue;
+        out.push(el);
+      }
+    }catch(e){}
+    return out;
+  }
+
+  /* 이 메모가 비밀인가 (제목의 🔒 또는 secret 필드) */
+  function isSecretId(id){
+    try{
+      if(typeof entries === 'undefined') return false;
+      var e = entries.find(function(x){ return x && x.id === id; });
+      if(!e) return false;
+      if(e.secret) return true;
+      return String(e.title || '').indexOf(LOCK) >= 0;
+    }catch(e){ return false; }
+  }
+
+  function apply(){
+    var on = !unlocked();
+    if(!on){
+      document.querySelectorAll('.wl-blur').forEach(function(el){ el.classList.remove('wl-blur'); });
+      bar(1);
+      return;
+    }
+    var hit = 0;
+    function mark(el){
+      if(!el) return;
+      if(el.closest && el.closest(SKIP)) return;
+      if(!el.classList.contains('wl-blur')) el.classList.add('wl-blur');
+      hit++;
+    }
+
+    /* ① 🔒 글자가 들어간 요소 */
+    targets().forEach(function(el){
+      mark(el);
+      /* 제목만 가리면 소용없다 — 같은 카드의 본문도 함께 */
+      var card = el.closest && el.closest('.sticky-note');
+      if(card){ mark(card.querySelector('.sticky-note-body')); }
+      var li = el.closest && el.closest('.sticky-list-item');
+      if(li){ mark(li.querySelector('.sticky-list-content')); }
+      var vr = el.closest && el.closest('.vrow');
+      if(vr){ mark(vr.querySelector('.vv')); }
+    });
+
+    /* ② 제목에 🔒 가 없어도 secret 표시된 메모 */
+    document.querySelectorAll('.sticky-note[data-sid]').forEach(function(card){
+      if(!isSecretId(card.dataset.sid)) return;
+      mark(card.querySelector('.sticky-note-title'));
+      mark(card.querySelector('.sticky-note-body'));
+    });
+    document.querySelectorAll('.sticky-list-item[data-sid]').forEach(function(li){
+      if(!isSecretId(li.dataset.sid)) return;
+      mark(li.querySelector('.sticky-list-title'));
+      mark(li.querySelector('.sticky-list-content'));
+    });
+
+    /* 잠긴 카드의 📋 복사 버튼은 잘 보이게 */
+    document.querySelectorAll('.sticky-note[data-sid]').forEach(function(card){
+      var cb = card.querySelector('[data-scopy]');
+      if(!cb) return;
+      var locked = !!card.querySelector('.wl-blur');
+      if(locked && !cb._wlHi){
+        cb._wlHi = 1;
+        cb.title = '\uD83D\uDCCB 복사 — 잠겨 있어도 복사됩니다';
+        cb.style.background = '#fff';
+        cb.style.border = '1.5px solid #f4b942';
+        cb.style.borderRadius = '7px';
+        cb.style.opacity = '1';
+      }
+    });
+
+    bar(hit);
+  }
+
+  /* 하단 상태 표시 */
+  function bar(n){
+    var b = document.getElementById('wlLockBar');
+    if(!b){
+      b = document.createElement('div');
+      b.id = 'wlLockBar';
+      b.innerHTML = '<span id="wlLockTxt"></span><button id="wlLockAct"></button>';
+      document.body.appendChild(b);
+      b.addEventListener('click', function(e){
+        if(e.target.id === 'wlLockAct'){
+          if(unlocked()){ openedAt = 0; apply(); if(typeof toast==='function') toast('\uD83D\uDD12 다시 잠갔어요'); }
+          else askPin();
+        }
+      });
+    }
+    if(!n && !unlocked()){ b.style.display = 'none'; return; }
+    b.style.display = 'flex';
+    var t = document.getElementById('wlLockTxt');
+    var a = document.getElementById('wlLockAct');
+    if(unlocked()){
+      var left = Math.max(0, Math.ceil((OPEN_MS - (Date.now()-openedAt))/60000));
+      t.textContent = '\uD83D\uDD13 비밀 항목 보이는 중 · ' + left + '분 남음';
+      a.textContent = '다시 잠그기';
+      b.style.background = '#8a5a00';
+    } else {
+      t.textContent = '\uD83D\uDD12 비밀 항목이 가려져 있어요';
+      a.textContent = '보기';
+      b.style.background = '#1a2f45';
+    }
+  }
+
+  /* 가려진 항목의 실제 값 꺼내기 (복사용) */
+  function textOf(el){
+    try{
+      var host = el.closest && (el.closest('.sticky-note[data-sid]') || el.closest('.sticky-list-item[data-sid]'));
+      if(host && typeof entries !== 'undefined'){
+        var e = entries.find(function(x){ return x && x.id === host.dataset.sid; });
+        if(e){
+          var body = String(e.body || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+          return (String(e.title || '').replace(/\uD83D\uDD12\s*/, '') + (body ? ('\n' + body) : '')).trim();
+        }
+      }
+    }catch(e){}
+    return String((el && el.innerText) || '').replace(/\uD83D\uDD12\s*/, '').trim();
+  }
+  function doCopy(txt, done){
+    if(!txt){ if(done) done(false); return; }
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(function(){ if(done) done(true); })
+          .catch(function(){ if(done) done(false); });
+        return;
+      }
+    }catch(e){}
+    try{
+      var ta = document.createElement('textarea');
+      ta.value = txt; ta.style.cssText = 'position:fixed;left:-9999px';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+      if(done) done(true);
+    }catch(e){ if(done) done(false); }
+  }
+
+  /* PIN 입력창 */
+  function askPin(copyText){
+    var old = document.getElementById('wlPinOv'); if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'wlPinOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:13100;display:flex;'
+      + 'align-items:center;justify-content:center;padding:14px;font-family:inherit';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:320px;padding:20px;text-align:center">'
+      + '<div style="font-size:34px;margin-bottom:6px">\uD83D\uDD12</div>'
+      + '<div style="font-size:15px;font-weight:800;color:#1a2f45;margin-bottom:4px">비밀 항목 보기</div>'
+      + '<div style="font-size:12px;color:#7a92a8;margin-bottom:14px">PIN 을 넣으면 5분간 보입니다</div>'
+      + '<input id="wlPinIn" type="password" inputmode="numeric" autocomplete="off" maxlength="12" '
+      +   'style="width:100%;box-sizing:border-box;height:46px;text-align:center;letter-spacing:8px;'
+      +   'font-size:20px;font-family:inherit;border:1.5px solid #dbe6f4;border-radius:10px;background:#f7faff;outline:none">'
+      + '<div id="wlPinMsg" style="font-size:12.5px;font-weight:700;color:#a13030;min-height:18px;margin-top:8px"></div>'
+      + '<div style="display:flex;gap:7px;margin-top:8px">'
+      +   '<button id="wlPinCancel" style="flex:1;height:42px;border:1.5px solid #dbe6f4;border-radius:10px;'
+      +     'background:#fff;color:#7a92a8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">취소</button>'
+      +   '<button id="wlPinOk" style="flex:1;height:42px;border:none;border-radius:10px;background:#2563a8;'
+      +     'color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">확인</button>'
+      + '</div>'
+      + (copyText ? ('<button id="wlPinCopy" style="width:100%;height:40px;margin-top:7px;border:1.5px solid #cfe0f2;'
+      +   'border-radius:10px;background:#f7faff;color:#3f7cb8;font-size:13px;font-weight:800;cursor:pointer;'
+      +   'font-family:inherit">\uD83D\uDCCB 안 보고 값만 복사하기</button>'
+      +   '<div style="font-size:11px;color:#9aa7b4;margin-top:5px">화면에 띄우지 않고 붙여넣기만 하실 때</div>') : '')
+      + '</div>';
+    document.body.appendChild(ov);
+    var inp = document.getElementById('wlPinIn');
+    setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 60);
+
+    function ok(){
+      if((inp.value || '') === pinOf()){
+        openedAt = Date.now();
+        ov.remove();
+        apply();
+        if(typeof toast === 'function') toast('\uD83D\uDD13 5분간 보입니다');
+      } else {
+        document.getElementById('wlPinMsg').textContent = 'PIN 이 다릅니다';
+        inp.value = ''; inp.focus();
+      }
+    }
+    document.getElementById('wlPinOk').addEventListener('click', ok);
+    document.getElementById('wlPinCancel').addEventListener('click', function(){ ov.remove(); });
+    inp.addEventListener('keydown', function(e){ if(e.key === 'Enter') ok(); });
+    var cp = document.getElementById('wlPinCopy');
+    if(cp) cp.addEventListener('click', function(){
+      doCopy(copyText, function(okc){
+        var m = document.getElementById('wlPinMsg');
+        m.style.color = okc ? '#1a7a4a' : '#a13030';
+        m.textContent = okc ? '\uD83D\uDCCB 복사됐어요 — 붙여넣기 하세요' : '복사 실패';
+        if(okc) setTimeout(function(){ ov.remove(); }, 900);
+      });
+    });
+  }
+  window.wlAskPin = askPin;
+
+  /* 가려진 곳을 누르면 PIN 창 */
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+    /* 복사·수정·삭제 같은 버튼은 그대로 통과 */
+    if(t.closest('button, a, [data-scopy], [data-scopy2], [data-sedit], [data-sedit2], [data-sdel], [data-sdel2], [data-sre]')) return;
+    var el = t.closest('.wl-blur');
+    if(!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+    askPin(textOf(el));
+  }, true);
+
+  /* 새로고침·탭 숨김 → 다시 잠금 */
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'hidden'){ openedAt = 0; }
+  });
+
+  setInterval(apply, 700);
+  setTimeout(apply, 1500);
+  console.log('[비밀가리기] 🔒 항목 PIN 잠금 로드');
+})();
+</script>
+<script>
+/* ===== v46-0826: 진행업무 상태 이름 정리 (진행중 → 공사중) 1회 ===== */
+(function(){
+  var FLAG = 'wl_prog_status_v46';
+  function run(){
+    try{
+      if(localStorage.getItem(FLAG)) return true;
+      if(typeof entries === 'undefined' || !entries.length) return false;
+      var n = 0;
+      entries.forEach(function(e){
+        if(e && e.kind === 'progress' && e.status === '진행중'){
+          e.status = '공사중';
+          try{ if(typeof updateRecord === 'function') updateRecord(e.id, { status: '공사중' }); }catch(x){}
+          n++;
+        }
+      });
+      localStorage.setItem(FLAG, '1');
+      if(n){
+        console.log('[상태정리] 진행중 → 공사중 ' + n + '건');
+        if(typeof toast === 'function') toast('진행업무 상태 이름을 정리했어요 (진행중 → 공사중 ' + n + '건)', 5000);
+        if(typeof renderProgressTasks === 'function') setTimeout(renderProgressTasks, 300);
+      }
+      return true;
+    }catch(e){ return false; }
+  }
+  var t = setInterval(function(){ if(run()) clearInterval(t); }, 1500);
+  setTimeout(function(){ clearInterval(t); }, 60000);
+})();
+</script>
+<script>
+/* ===== v46-0826: 사고·진행업무 개별 보고서 출력 (A4 1~2장) ===== */
+(function(){
+  function esc(x){
+    return String(x == null ? '' : x).replace(/[&<>"]/g, function(m){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m];
+    });
+  }
+  function nl(x){ return esc(x).replace(/\r?\n/g, '<br>'); }
+  function won(n){
+    var v = Number(n) || 0;
+    return v ? v.toLocaleString('ko-KR') + '원' : '';
+  }
+  function today(){
+    try{ if(typeof todayStr === 'function') return todayStr(); }catch(e){}
+    return new Date(Date.now() + 9*3600000).toISOString().slice(0,10);
+  }
+  function stepsAsc(arr){
+    return (arr||[]).slice().sort(function(a,b){
+      return String((a&&a.date)||'').localeCompare(String((b&&b.date)||''));
+    });
+  }
+  function pdate(e){
+    if(e.date) return String(e.date).slice(0,10);
+    var a = stepsAsc(e.steps);
+    if(a.length && a[0].date) return String(a[0].date).slice(0,10);
+    return e.createdAt ? new Date(e.createdAt).toISOString().slice(0,10) : '';
+  }
+
+  /* ── 인쇄 CSS — 공간 알뜰히, 결재란 없음 ── */
+  function css(){
+    return '@page{size:A4;margin:12mm 11mm 13mm}'
+    + '*{box-sizing:border-box}'
+    + 'body{font-family:"Pretendard","Malgun Gothic",-apple-system,system-ui,sans-serif;margin:0;'
+    +   'color:#16283a;background:#fff;font-size:10pt;line-height:1.45;'
+    +   '-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    + '.doc{max-width:190mm;margin:0 auto;padding:4mm 1mm}'
+    /* 표제 */
+    + '.hd{border-top:3px solid #1a3a5c;border-bottom:1px solid #1a3a5c;padding:8px 0 7px;margin-bottom:7px}'
+    + '.hd .org{font-size:9pt;color:#5a6f85;letter-spacing:.4px}'
+    + '.hd h1{font-size:17pt;font-weight:800;margin:2px 0 3px;letter-spacing:-.6px;color:#12293f;line-height:1.25}'
+    + '.hd .mt{display:flex;flex-wrap:wrap;gap:5px 14px;font-size:9pt;color:#5a6f85}'
+    + '.hd .mt b{color:#16283a;font-weight:700}'
+    + '.badge{display:inline-block;border:1px solid #1a3a5c;border-radius:3px;padding:1px 7px;'
+    +   'font-size:9pt;font-weight:800;color:#12293f;background:#eef4fa}'
+    /* 구역 제목 */
+    + 'h2{font-size:10.5pt;font-weight:800;color:#12293f;margin:9px 0 4px;padding-left:6px;'
+    +   'border-left:3px solid #1a3a5c;letter-spacing:-.3px}'
+    /* 정보 격자 — 2·3·4열 자동 */
+    + '.grid{display:grid;gap:0;border:1px solid #c3d2e2;border-radius:3px;overflow:hidden;margin-bottom:4px}'
+    + '.g2{grid-template-columns:26mm 1fr 26mm 1fr}'
+    + '.g3{grid-template-columns:22mm 1fr 22mm 1fr 22mm 1fr}'
+    + '.k{background:#eef4fa;border-right:1px solid #dbe6f2;border-bottom:1px solid #dbe6f2;'
+    +   'padding:3.5px 7px;font-size:9pt;font-weight:700;color:#33495f;display:flex;align-items:center}'
+    + '.v{border-right:1px solid #dbe6f2;border-bottom:1px solid #dbe6f2;padding:3.5px 8px;'
+    +   'font-size:9.5pt;color:#16283a;word-break:break-word;display:flex;align-items:center}'
+    + '.v.full{grid-column:2/-1}'
+    + '.v.wide{grid-column:2/-1}'
+    /* 본문 상자 */
+    + '.box{border:1px solid #c3d2e2;border-radius:3px;padding:6px 9px;font-size:9.5pt;'
+    +   'line-height:1.55;white-space:pre-wrap;word-break:break-word;margin-bottom:4px;min-height:11mm}'
+    /* 기록 표 */
+    + 'table{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:4px}'
+    + 'th{background:#eef4fa;border:1px solid #c3d2e2;padding:3.5px 6px;font-weight:800;color:#33495f;'
+    +   'font-size:8.8pt;white-space:nowrap}'
+    + 'td{border:1px solid #dbe6f2;padding:3.5px 7px;vertical-align:top;word-break:break-word}'
+    + 'td.c{text-align:center;white-space:nowrap;color:#5a6f85}'
+    + 'tr{break-inside:avoid}'
+    + '.t-no{width:9mm}.t-dt{width:22mm}.t-tt{width:46mm}.t-who{width:38mm}'
+    /* 사진 */
+    + '.ph{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm}'
+    + '.ph.n1{grid-template-columns:repeat(2,1fr)}'
+    + '.ph.n2{grid-template-columns:repeat(2,1fr)}'
+    + '.ph.n3{grid-template-columns:repeat(3,1fr)}'
+    + '.ph figure{margin:0;break-inside:avoid}'
+    + '.ph img{width:100%;height:38mm;object-fit:cover;border:1px solid #c3d2e2;border-radius:3px;display:block}'
+    + '.ph.n1 img,.ph.n2 img{height:52mm}'
+    + '.ph figcaption{font-size:8pt;color:#5a6f85;text-align:center;margin-top:1.5px}'
+    /* 꼬리말 */
+    + '.ft{margin-top:8px;padding-top:5px;border-top:1px solid #c3d2e2;display:flex;'
+    +   'justify-content:space-between;font-size:8.5pt;color:#7a8ea3}'
+    + '@media print{.noprint{display:none!important}}';
+  }
+
+  /* 짧은 항목들을 2·3열로 알뜰히 */
+  function gridRows(pairs, cols){
+    var live = pairs.filter(function(x){ return x[1] !== '' && x[1] != null; });
+    if(!live.length) return '';
+    var per = cols === 3 ? 3 : 2;
+    var h = '<div class="grid ' + (per === 3 ? 'g3' : 'g2') + '">';
+    for(var i = 0; i < live.length; i++){
+      var wide = live[i][2] === 'wide';
+      h += '<div class="k">' + esc(live[i][0]) + '</div>';
+      h += '<div class="v' + (wide ? ' wide' : '') + '">' + live[i][1] + '</div>';
+      if(wide){ /* 줄 전체 차지 */ }
+    }
+    /* 마지막 줄 빈칸 채우기 */
+    var used = 0;
+    live.forEach(function(x){ used += (x[2] === 'wide') ? per : 1; });
+    var rest = (per - (used % per)) % per;
+    for(var j = 0; j < rest; j++) h += '<div class="k"></div><div class="v"></div>';
+    return h + '</div>';
+  }
+
+  function photoBlock(photos, title){
+    var ps = (photos || []).slice(0, 8);
+    if(!ps.length) return '';
+    var cls = ps.length <= 1 ? 'n1' : (ps.length === 2 ? 'n2' : (ps.length === 3 ? 'n3' : ''));
+    return '<h2>' + esc(title) + ' <span style="font-weight:600;color:#7a8ea3;font-size:9pt">'
+      + ps.length + '장</span></h2>'
+      + '<div class="ph ' + cls + '">'
+      + ps.map(function(u, i){
+          return '<figure><img src="' + esc(u) + '"><figcaption>사진 ' + (i+1) + '</figcaption></figure>';
+        }).join('')
+      + '</div>';
+  }
+
+  function stepTable(steps, isAcc){
+    var a = stepsAsc(steps);
+    if(!a.length) return '';
+    return '<h2>' + (isAcc ? '처리 경과' : '진행 경과')
+      + ' <span style="font-weight:600;color:#7a8ea3;font-size:9pt">' + a.length + '건</span></h2>'
+      + '<table><thead><tr>'
+      +   '<th class="t-no">단계</th><th class="t-dt">일자</th><th class="t-tt">내용</th>'
+      +   '<th>세부 사항</th><th class="t-who">업체 · 담당자</th>'
+      + '</tr></thead><tbody>'
+      + a.map(function(st, i){
+          var who = [st.vendor, st.owner, st.vendorPhone].filter(Boolean).join(' · ');
+          return '<tr>'
+            + '<td class="c">' + (i+1) + '</td>'
+            + '<td class="c">' + esc(st.date || '') + '</td>'
+            + '<td><b>' + esc(st.action || '') + '</b></td>'
+            + '<td>' + nl(st.detail || st.memo || '') + '</td>'
+            + '<td>' + esc(who) + '</td>'
+            + '</tr>';
+        }).join('')
+      + '</tbody></table>';
+  }
+
+  /* ── 진행업무 보고서 ── */
+  function progHTML(e){
+    var cost = [];
+    if(Number(e.estCost))   cost.push(['초기 견적비', won(e.estCost)]);
+    if(Number(e.finalCost)) cost.push(['최종 금액', won(e.finalCost)]);
+    if(Number(e.estCost) && Number(e.finalCost)){
+      var d = Number(e.finalCost) - Number(e.estCost);
+      cost.push(['증감', (d > 0 ? '+' : '') + won(Math.abs(d)).replace('원','') + '원']);
+    }
+    var info = [
+      ['등록일', esc(pdate(e))],
+      ['진행상태', '<b>' + esc(e.status || '') + '</b>'],
+      ['담당 업체', esc(e.owner || '')],
+      ['담당자 · 연락처', esc(e.ownerPhone || '')]
+    ].concat(cost);
+    if(e.floor)    info.push(['층', esc(e.floor)]);
+    if(e.location) info.push(['위치', esc(e.location)]);
+
+    return '<div class="doc">'
+      + '<div class="hd"><div class="org">서희타워 시설관리 · 한일자산관리앤투자</div>'
+      +   '<h1>' + esc(e.title || '(제목 없음)') + '</h1>'
+      +   '<div class="mt"><span class="badge">진행업무 보고서</span>'
+      +     '<span>등록일 <b>' + esc(pdate(e)) + '</b></span>'
+      +     '<span>진행상태 <b>' + esc(e.status || '') + '</b></span>'
+      +     '<span>작성일 <b>' + esc(today()) + '</b></span></div></div>'
+      + gridRows(info, 3)
+      + (e.detail ? ('<h2>상세 내용</h2><div class="box">' + nl(e.detail) + '</div>') : '')
+      + stepTable(e.steps, false)
+      + (e.memo ? ('<h2>비고</h2><div class="box">' + nl(e.memo) + '</div>') : '')
+      + photoBlock(e.photos, '첨부 사진')
+      + '<div class="ft"><span>서희타워 시설관리소</span><span>출력 ' + esc(today()) + '</span></div>'
+      + '</div>';
+  }
+
+  /* ── 사고 처리 보고서 ── */
+  function accHTML(e){
+    var info = [
+      ['발생일시', esc((e.date || '') + (e.time ? (' ' + e.time) : ''))],
+      ['사고 종류', '<b>' + esc(e.accType || '') + '</b>'],
+      ['처리 상태', '<b>' + esc(e.status || '') + '</b>'],
+      ['발생 층', esc(e.floor || '')],
+      ['상세 위치', esc(e.location || '')],
+      ['분야', esc(e.field || '')]
+    ];
+    var party = [
+      ['당사자', esc(e.partyName || '')],
+      ['유형', esc(e.partyType || '')],
+      ['연락처', esc(e.partyPhone || '')]
+    ];
+    var money = [];
+    if(Number(e.repairCost))    money.push(['수리비', won(e.repairCost)]);
+    if(Number(e.compensation))  money.push(['배상금', won(e.compensation)]);
+    if(Number(e.insurance))     money.push(['보험금', won(e.insurance)]);
+    var tot = (Number(e.repairCost)||0) + (Number(e.compensation)||0) + (Number(e.insurance)||0);
+    if(tot) money.push(['합계', '<b>' + won(tot) + '</b>']);
+    if(e.reported) money.push(['신고', esc(e.reported)]);
+
+    return '<div class="doc">'
+      + '<div class="hd"><div class="org">서희타워 시설관리 · 한일자산관리앤투자</div>'
+      +   '<h1>' + esc(e.title || '(제목 없음)') + '</h1>'
+      +   '<div class="mt"><span class="badge">사고 처리 보고서</span>'
+      +     '<span>발생 <b>' + esc((e.date||'') + (e.time ? (' ' + e.time) : '')) + '</b></span>'
+      +     '<span>종류 <b>' + esc(e.accType || '') + '</b></span>'
+      +     '<span>상태 <b>' + esc(e.status || '') + '</b></span>'
+      +     '<span>작성일 <b>' + esc(today()) + '</b></span></div></div>'
+      + gridRows(info, 3)
+      + (party.filter(function(x){ return x[1]; }).length ? ('<h2>당사자</h2>' + gridRows(party, 3)) : '')
+      + (money.length ? ('<h2>비용</h2>' + gridRows(money, 3)) : '')
+      + (e.detail ? ('<h2>사고 경위</h2><div class="box">' + nl(e.detail) + '</div>') : '')
+      + (e.emergency ? ('<h2>응급 조치</h2><div class="box">' + nl(e.emergency) + '</div>') : '')
+      + stepTable(e.steps, true)
+      + (e.followUp ? ('<h2>후속 조치 · 재발 방지</h2><div class="box">' + nl(e.followUp) + '</div>') : '')
+      + (e.memo ? ('<h2>비고</h2><div class="box">' + nl(e.memo) + '</div>') : '')
+      + photoBlock(e.photos, '현장 사진')
+      + '<div class="ft"><span>서희타워 시설관리소</span><span>출력 ' + esc(today()) + '</span></div>'
+      + '</div>';
+  }
+
+  /* ── 창 열기 ── */
+  window.wlDocReport = function(kind, id){
+    if(typeof entries === 'undefined'){ alert('데이터를 아직 못 읽었어요'); return; }
+    var e = entries.find(function(x){ return x && x.id === id; });
+    if(!e){ alert('항목을 찾지 못했어요'); return; }
+    var isAcc = (kind === 'accident');
+    var title = (isAcc ? '사고 처리 보고서' : '진행업무 보고서') + ' — ' + (e.title || '');
+
+    var old = document.getElementById('wlDrOv'); if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'wlDrOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12700;display:flex;'
+      + 'align-items:center;justify-content:center;padding:12px;font-family:inherit';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:900px;height:92vh;'
+      +   'display:flex;flex-direction:column;overflow:hidden">'
+      + '<div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +   '<span style="font-size:15px;font-weight:800;color:#1a2f45">'
+      +     (isAcc ? '🚨 사고 처리 보고서' : '📋 진행업무 보고서') + '</span>'
+      +   '<div style="flex:1"></div>'
+      +   '<button id="wlDrPrint" style="height:34px;padding:0 14px;border:none;border-radius:9px;background:#1a73e8;'
+      +     'color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🖨 인쇄 · PDF</button>'
+      +   '<button id="wlDrClose" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<iframe id="wlDrFrame" style="flex:1 1 auto;width:100%;min-height:0;border:0;background:#eceff3"></iframe>'
+      + '</div>';
+    document.body.appendChild(ov);
+    document.getElementById('wlDrClose').addEventListener('click', function(){ ov.remove(); });
+
+    var f = document.getElementById('wlDrFrame');
+    var d = f.contentDocument || f.contentWindow.document;
+    d.open();
+    d.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>' + esc(title) + '</title>'
+      + '<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">'
+      + '<style>' + css() + '</style></head><body>'
+      + (isAcc ? accHTML(e) : progHTML(e))
+      + '</body></html>');
+    d.close();
+
+    document.getElementById('wlDrPrint').addEventListener('click', function(){
+      try{ f.contentWindow.focus(); f.contentWindow.print(); }
+      catch(err){ alert('인쇄 창을 열지 못했습니다: ' + (err && err.message || err)); }
+    });
+  };
+
+  /* ── 상세보기 창에 [보고서] 버튼 붙이기 ── */
+  var curKind = '', curId = '';
+  function hook(){
+    if(typeof window.openViewer !== 'function' || window.openViewer._wlDr) return;
+    var orig = window.openViewer;
+    window.openViewer = function(kind, id){
+      curKind = kind; curId = id;
+      return orig.apply(this, arguments);
+    };
+    window.openViewer._wlDr = true;
+  }
+  setInterval(function(){
+    hook();
+    try{
+      var ov = document.getElementById('viewOverlay');
+      if(!ov || !ov.classList.contains('show')) return;
+      var row = ov.querySelector('.btn-row');
+      if(!row) return;
+      var has = (curKind === 'accident' || curKind === 'progress');
+      var b = document.getElementById('wlDrBtn');
+      if(!has){ if(b) b.remove(); return; }
+      if(b) return;
+      b = document.createElement('button');
+      b.id = 'wlDrBtn';
+      b.className = 'btn';
+      b.textContent = '🖨 보고서';
+      b.style.cssText = 'background:#eef4fa;color:#1a4a8a;border:1.5px solid #cfe0f2;font-weight:800';
+      b.addEventListener('click', function(){ window.wlDocReport(curKind, curId); });
+      row.insertBefore(b, row.firstChild);
+    }catch(e){}
+  }, 700);
+
+  console.log('[보고서] 사고·진행업무 개별 출력 로드');
 })();
 </script>
 </body>
