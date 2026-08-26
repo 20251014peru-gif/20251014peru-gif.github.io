@@ -18,7 +18,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v50-0826-2300</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v51-0827-0057</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1392,7 +1392,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v50-0826-2300</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v51-0827-0057</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3071,7 +3071,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v50-20260826-2300"></script>
+<script src="worklog.js?v=v51-20260827-0057"></script>
 <script>
 /* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
    (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
@@ -18988,6 +18988,22 @@ select.lf-in{ padding-right:8px }
 .lf-tvwrap{ overflow-x:auto; max-height:none }
 .lf-grp{ background:#eef5fd !important; font-weight:900; color:#33567d; font-size:11.5px }
 
+/* 조건 칩 */
+.lf-rule{ display:inline-flex; align-items:center; gap:5px; height:29px; padding:0 6px 0 11px;
+  border:1.5px solid #d8ccf5; border-radius:15px; background:#f6f2ff; color:#4c2f8a;
+  font-size:12px; font-weight:700 }
+.lf-rule b{ font-weight:900 }
+.lf-rule button{ width:19px; height:19px; border:none; border-radius:50%; background:#e5dbfa;
+  color:#6b4bb0; font-size:10px; cursor:pointer; padding:0; line-height:1; font-family:inherit }
+.lf-rule button:hover{ background:#7c3aed; color:#fff }
+
+/* 관계 칩 */
+.lf-relchip{ display:inline-block; max-width:150px; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; vertical-align:middle; padding:2px 8px; margin:1px 3px 1px 0;
+  border-radius:7px; background:#eef5fd; color:#2563a8; font-size:11.5px; font-weight:800;
+  cursor:pointer; border:1px solid #d6e5f7 }
+.lf-relchip:hover{ background:#2563a8; color:#fff }
+
 /* 셀 바로 고치기 */
 .lf-tv td.ce{ cursor:text }
 .lf-tv td.ce:hover{ box-shadow:inset 0 0 0 1.5px #bcd2ea; border-radius:5px; background:#f7fbff }
@@ -19475,7 +19491,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     calc:   { i:'∑',  w:'110px', right:1, ro:1 },
     rows:   { i:'☰',  w:'150px', ro:1 },
     tag:    { i:'🏷', w:'150px', ro:1 },
-    att:    { i:'📎', w:'58px',  center:1, ro:1 }
+    att:    { i:'📎', w:'58px',  center:1, ro:1 },
+    rel:    { i:'🔗', w:'170px' },                    /* 관계 — 다른 기록·연락처와 연결 */
+    formula:{ i:'\u2211', w:'120px', right:1, ro:1 } /* 수식 — 다른 칸으로 계산 */
   };
   function tinfo(t){ return T[t] || T.text; }
 
@@ -19484,11 +19502,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     { id:'_date',   name:'날짜',   type:'date',  base:1 },
     { id:'_cat',    name:'분류',   type:'tag',   base:1 },
     { id:'_title',  name:'내용',   type:'text',  base:1, w:'auto' },
+    { id:'_sub',    name:'관련처', type:'text',  base:1 },   /* 업체·상대·장소 */
     { id:'_amount', name:'금액',   type:'num',   base:1 },
     { id:'_memo',   name:'메모',   type:'area',  base:1 },
     { id:'_att',    name:'첨부',   type:'att',   base:1 }
   ];
-  var DEF_COLS = ['_date','_cat','_title','_amount','_att'];
+  var DEF_COLS = ['_date','_cat','_title','_sub','_amount','_att'];
 
   /* ── 내 속성 저장소 ── */
   function customAll(){ var o=lsGet(LS_PROPS,null); return (o&&typeof o==='object')?o:{}; }
@@ -19514,6 +19533,131 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var a=customOf(pt);
     a.forEach(function(x){ if(x.id===id){ for(var k in patch) x[k]=patch[k]; } });
     customSave(pt,a);
+  }
+
+
+  /* ══════════════════════════════════════════════════════════
+     🔢 숫자 칸 — 글자 못 넣고, 세 자리마다 쉼표
+     ══════════════════════════════════════════════════════════ */
+  function numFmt(v){
+    if(v===''||v==null) return '';
+    var s=String(v).replace(/[^0-9.\-]/g,'');
+    if(s===''||s==='-') return s;
+    var neg = s.charAt(0)==='-';
+    s = s.replace(/-/g,'');
+    var p = s.split('.');
+    var i = p[0].replace(/^0+(?=\d)/,'');
+    i = i.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (neg?'-':'') + i + (p.length>1 ? '.'+p[1].slice(0,4) : '');
+  }
+  function numRaw(v){ return String(v==null?'':v).replace(/,/g,''); }
+  /* 숫자칸에 쉼표를 살아있게 붙인다 */
+  function bindNum(el){
+    if(!el || el._numBound) return; el._numBound=true;
+    el.setAttribute('inputmode','decimal');
+    el.addEventListener('keydown', function(e){
+      if(e.ctrlKey||e.metaKey||e.altKey) return;
+      if(e.key.length>1) return;                                  /* 방향키·백스페이스 등 */
+      if(/[0-9]/.test(e.key)) return;
+      if(e.key==='.' && el.value.indexOf('.')<0) return;
+      if(e.key==='-' && el.selectionStart===0 && el.value.indexOf('-')<0) return;
+      e.preventDefault();                                          /* 글자는 아예 막는다 */
+    });
+    el.addEventListener('input', function(){
+      var pos = el.selectionStart, before = el.value.length;
+      el.value = numFmt(el.value);
+      var after = el.value.length;
+      try{ el.setSelectionRange(Math.max(0,pos + (after-before)), Math.max(0,pos + (after-before))); }catch(e){}
+    });
+    el.addEventListener('paste', function(e){
+      e.preventDefault();
+      var t=(e.clipboardData||window.clipboardData).getData('text')||'';
+      el.value = numFmt(t); el.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+    if(el.value) el.value = numFmt(el.value);
+  }
+  function bindNumsIn(root){
+    if(!root) return;
+    root.querySelectorAll('[data-num="1"]').forEach(bindNum);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     🔎 연산자 표 — 타입 하나당 쓸 수 있는 조건
+     ══════════════════════════════════════════════════════════ */
+  var OPS = {
+    '포함':     function(v,x){ return String(v==null?'':v).toLowerCase().indexOf(String(x||'').toLowerCase())>=0; },
+    '미포함':   function(v,x){ return String(v==null?'':v).toLowerCase().indexOf(String(x||'').toLowerCase())<0; },
+    '같음':     function(v,x){ return String(v==null?'':v)===String(x==null?'':x); },
+    '아님':     function(v,x){ return String(v==null?'':v)!==String(x==null?'':x); },
+    '비어있음': function(v){ return v===''||v==null||(Array.isArray(v)&&!v.length); },
+    '있음':     function(v){ return !(v===''||v==null||(Array.isArray(v)&&!v.length)); },
+    '=':        function(v,x){ return num(v)===num(x); },
+    '>':        function(v,x){ return num(v)>num(x); },
+    '<':        function(v,x){ return num(v)<num(x); },
+    '이상':     function(v,x){ return num(v)>=num(x); },
+    '이하':     function(v,x){ return num(v)<=num(x); },
+    '이전':     function(v,x){ return String(v||'') && String(v)<String(x||''); },
+    '이후':     function(v,x){ return String(v||'') && String(v)>String(x||''); },
+    '체크됨':   function(v){ return v===true||v==='true'; },
+    '안됨':     function(v){ return !(v===true||v==='true'); }
+  };
+  var TYPE_OPS = {
+    text:   ['포함','미포함','같음','비어있음','있음'],
+    area:   ['포함','미포함','비어있음','있음'],
+    num:    ['=','>','<','이상','이하','비어있음','있음'],
+    rate:   ['=','>','<','이상','이하'],
+    formula:['=','>','<','이상','이하'],
+    date:   ['같음','이전','이후','비어있음','있음'],
+    time:   ['같음','이전','이후','비어있음'],
+    sel:    ['같음','아님','비어있음','있음'],
+    check:  ['체크됨','안됨'],
+    tel:    ['포함','비어있음','있음'],
+    map:    ['포함','비어있음','있음'],
+    link:   ['포함','비어있음','있음'],
+    star:   ['=','이상','이하','비어있음'],
+    tag:    ['같음','아님'],
+    att:    ['=','>','비어있음','있음'],
+    rel:    ['포함','비어있음','있음'],
+    rows:   ['비어있음','있음']
+  };
+  function opsOf(t){ return TYPE_OPS[t] || TYPE_OPS.text; }
+  function opNeedsVal(op){ return ['비어있음','있음','체크됨','안됨'].indexOf(op)<0; }
+
+  /* ══════════════════════════════════════════════════════════
+     ∑ 수식 — {속성이름} 으로 다른 칸을 가져다 계산
+        예)  {단가} * {개수}        {최종 금액} - {초기 견적비}
+             DAYS({도착일}, {출발일})
+     ══════════════════════════════════════════════════════════ */
+  function formulaCalc(e, expr, pt){
+    if(!expr) return '';
+    try{
+      var list = propsOf(pt);
+      var src = String(expr);
+      /* {이름} → 값으로 치환 */
+      src = src.replace(/\{([^}]+)\}/g, function(_, nm){
+        nm = nm.trim();
+        var hit = null;
+        list.forEach(function(p){ if(!hit && (p.name===nm || p.id===nm)) hit=p; });
+        if(!hit) return '0';
+        if(hit.type==='formula') return '0';                 /* 수식끼리 물리는 것 방지 */
+        var v = pget(e, hit.id);
+        if(hit.type==='date'||hit.type==='time') return '"'+String(v||'')+'"';
+        var n = num(v);
+        return isNaN(n)? '0' : String(n);
+      });
+      /* 날짜 차이 */
+      src = src.replace(/DAYS\(\s*("(?:[^"]*)")\s*,\s*("(?:[^"]*)")\s*\)/g, function(_,a,b){
+        var d1=Date.parse(a.slice(1,-1)+'T00:00:00'), d2=Date.parse(b.slice(1,-1)+'T00:00:00');
+        if(isNaN(d1)||isNaN(d2)) return '0';
+        return String(Math.round((d1-d2)/86400000));
+      });
+      /* 허용된 글자만 — 안전장치 */
+      if(!/^[\s0-9+\-*/().,]*$/.test(src)) return '';
+      if(!src.trim()) return '';
+      var r = Function('"use strict";return ('+src+')')();
+      if(typeof r!=='number' || !isFinite(r)) return '';
+      return Math.round(r*10000)/10000;
+    }catch(err){ return ''; }
   }
 
   /* ── 어떤 종류의 속성 목록 ── */
@@ -19548,6 +19692,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(pid==='_date')   return e.date||'';
     if(pid==='_title')  return e.title||e.who||'';
     if(pid==='_memo')   return e.detail||e.memo||'';
+    if(pid==='_sub')    return e.who||e.where||e.place||'';
     if(pid==='_amount') return money(e);
     if(pid==='_cat')    return e.ptype||'';
     if(pid==='_att')    return esr(e.photos).length + esr(e.scanRefs).length;
@@ -19558,6 +19703,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(pid==='_date')   return {date:v};
     if(pid==='_title')  return {title:v};
     if(pid==='_memo')   return {detail:v};
+    if(pid==='_sub'){
+      if(e.who!==undefined && e.who!=='')     return {who:v};
+      if(e.where!==undefined && e.where!=='') return {where:v};
+      if(e.place!==undefined && e.place!=='') return {place:v};
+      return (e.ptype==='car') ? {place:v} : {who:v};
+    }
     if(pid==='_amount') return {amount:(v===''?'':num(v))};
     if(pid.slice(0,2)==='f:'){ var o={}; o[pid.slice(2)]=v; return o; }
     var pr={}; for(var k in (e.props||{})) pr[k]=e.props[k];
@@ -19569,25 +19720,52 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       || (e.ptype==='buy' && esr(e.items).filter(function(r){return num(r.price)>0;}).length>=2));
   }
 
+  /* ── 관계(rel) 대상 ── */
+  function relTargets(p){
+    var t=(p&&p.target)||'pcontact';
+    if(t==='pcontact') return contacts().map(function(c){
+      return {id:c.id, label:(c.name||'')+(c.person?(' · '+c.person):''), kind:'pcontact'}; });
+    return ent().filter(function(x){
+      return x.kind==='personal' && (t==='personal' || x.ptype===t); })
+      .map(function(x){ return {id:x.id, label:(x.date||'')+' '+(x.title||''), kind:'personal'}; });
+  }
+  function relLabel(id){
+    var r=ent().filter(function(x){ return x.id===id; })[0];
+    if(!r) return '(없어진 항목)';
+    return r.kind==='pcontact' ? (r.name||'(이름없음)') : (r.title||r.who||'(제목없음)');
+  }
+  function relArr(v){ return Array.isArray(v)? v : (v? [v] : []); }
+
   /* ── 셀 그리기 ── */
   function cellHTML(e, p){
     var v = pget(e, p.id), t = p.type;
     if(p.id==='_cat')   return tagOf(e);
     if(p.id==='_att')   return v ? '<span style="color:#8ba0b6;font-size:11.5px">📎'+v+'</span>' : '';
     if(p.id==='_title'){
-      var sub=subOf(e);
+      /* 노션처럼 — 제목 칸에는 제목만. 나머지는 각자 칸으로 */
       return '<div class="tt">'+esc(v||'(제목없음)')
-        + (e.rating? ' <span style="color:#f4b942">'+stars(e.rating)+'</span>':'')+'</div>'
-        + (sub? '<div class="sub">'+esc(sub)+'</div>':'');
+        + (e.rating? ' <span style="color:#f4b942">'+stars(e.rating)+'</span>':'')+'</div>';
     }
     if(p.id==='_amount'){
       var lk=amountLocked(e);
-      return '<span style="color:'+(v?'#0f7a4a':'#c8d4e0')+'">'+(v? won(v)+'원':'—')
+      return '<span style="color:'+(v?'#0f7a4a':'#c8d4e0')+'">'+(v? numFmt(v)+'원':'—')
         + (lk? ' <span style="font-size:10px;color:#c8d4e0" title="항목 합계로 자동 계산돼요">∑</span>':'') + '</span>';
     }
     if(t==='check')  return v ? '☑' : '<span style="color:#c8d4e0">☐</span>';
+    if(t==='formula'){
+      var fv=formulaCalc(e, p.expr, e.ptype);
+      return fv===''? '<span style="color:#c8d4e0">—</span>'
+        : '<span style="color:#7c3aed;font-weight:800">'+numFmt(fv)+(p.unit?(' '+esc(p.unit)):'')+'</span>';
+    }
+    if(t==='rel'){
+      var ids=relArr(v);
+      if(!ids.length) return '';
+      return ids.slice(0,3).map(function(id){
+        return '<span class="lf-relchip" data-relgo="'+esc(id)+'">'+esc(relLabel(id))+'</span>'; }).join('')
+        + (ids.length>3? '<span style="color:#8ba0b6;font-size:11px"> +'+(ids.length-3)+'</span>':'');
+    }
     if(t==='num'||t==='rate') return v===''||v==null ? '<span style="color:#c8d4e0">—</span>'
-      : '<span style="color:#1a2f45">'+won(num(v))+'</span>';
+      : '<span style="color:#1a2f45">'+numFmt(v)+'</span>';
     if(t==='star')   return v ? '<span style="color:#f4b942">'+stars(v)+'</span>' : '';
     if(t==='tel')    return v ? '<a href="tel:'+esc(String(v).replace(/[^0-9+]/g,''))
       +'" onclick="event.stopPropagation()" style="color:#2563a8;font-weight:700">'+esc(v)+'</a>' : '';
@@ -19681,10 +19859,132 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     document.getElementById('lfPMgr').addEventListener('click', function(){ cl(); propMgr(pt); });
   }
 
+
+  /* ══════ 조건 추가 창 ══════ */
+  function ruleAdd(pt){
+    var all = propsOf(pt).filter(function(p){ return p.type!=='rows'; });
+    var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9750';
+    ov.innerHTML='<div class="lf-mod" style="max-width:560px">'
+      + '<div class="lf-mh"><b>＋ 조건 추가</b>'
+      +   '<button type="button" id="lfRX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
+      + '<div class="lf-mf" style="grid-template-columns:1fr">'
+      +   '<div class="lf-f"><label>어느 칸을</label><select id="lfRP">'
+      +     all.map(function(p){ return '<option value="'+esc(p.id)+'">'+tinfo(p.type).i+' '+esc(p.name)+'</option>'; }).join('')
+      +   '</select></div>'
+      +   '<div class="lf-f"><label>조건</label><select id="lfRO"></select></div>'
+      +   '<div class="lf-f" id="lfRVW"><label>값</label><span id="lfRVBox"></span></div>'
+      + '</div>'
+      + '<div class="lf-mbtn"><div style="flex:1"></div>'
+      +   '<button type="button" id="lfRC" style="height:44px;padding:0 18px;border:1.5px solid #dbe6f4;border-radius:10px;background:#fff;color:#7a92a8;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">취소</button>'
+      +   '<button type="button" id="lfROk" style="height:44px;padding:0 24px;border:none;border-radius:10px;background:#7c3aed;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">＋ 걸기</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    function cl(){ ov.remove(); }
+    document.getElementById('lfRX').addEventListener('click', cl);
+    document.getElementById('lfRC').addEventListener('click', cl);
+    ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
+
+    var PS=document.getElementById('lfRP'), OS=document.getElementById('lfRO');
+    function curProp(){ return propById(pt, PS.value); }
+    function fillOps(){
+      var p=curProp(); if(!p) return;
+      OS.innerHTML = opsOf(p.type).map(function(o){ return '<option>'+esc(o)+'</option>'; }).join('');
+      fillVal();
+    }
+    function fillVal(){
+      var p=curProp(), box=document.getElementById('lfRVBox'), w=document.getElementById('lfRVW');
+      if(!p||!box) return;
+      if(!opNeedsVal(OS.value)){ w.style.display='none'; box.innerHTML=''; return; }
+      w.style.display='';
+      if(p.type==='sel'){
+        var o=p.opts||p.o||[''];
+        box.innerHTML='<select id="lfRV">'+o.map(function(x){
+          return '<option value="'+esc(x)+'">'+esc(x||'—')+'</option>'; }).join('')+'</select>';
+      } else if(p.type==='date'){
+        box.innerHTML='<input type="date" id="lfRV">';
+      } else if(p.type==='num'||p.type==='rate'||p.type==='star'||p.type==='formula'||p.type==='att'){
+        box.innerHTML='<input type="text" id="lfRV" data-num="1" placeholder="숫자만">';
+        setTimeout(function(){ bindNum(document.getElementById('lfRV')); },0);
+      } else if(p.type==='rel'){
+        var tg=relTargets(p);
+        box.innerHTML='<select id="lfRV">'+tg.map(function(t){
+          return '<option value="'+esc(t.id)+'">'+esc(t.label)+'</option>'; }).join('')+'</select>';
+      } else {
+        box.innerHTML='<input type="text" id="lfRV" placeholder="찾을 말">';
+      }
+    }
+    PS.addEventListener('change', fillOps);
+    OS.addEventListener('change', fillVal);
+    fillOps();
+    document.getElementById('lfROk').addEventListener('click', function(){
+      var p=curProp(); if(!p) return;
+      var vEl=document.getElementById('lfRV');
+      var val = vEl ? (vEl.getAttribute('data-num')==='1' ? numRaw(vEl.value) : vEl.value) : '';
+      if(opNeedsVal(OS.value) && String(val).trim()===''){ alert('값을 넣어주세요'); return; }
+      (flt.rules=flt.rules||[]).push({ pid:p.id, op:OS.value, val:val });
+      lsSet(LS_FLT, flt);
+      cl(); safeRender();
+    });
+  }
+
+  /* ══════ 보기 저장 · 관리 ══════ */
+  function viewSaveNow(pt){
+    var nm=prompt('이 보기의 이름을 지어주세요\n(예: 올해 5만원 이상 구매)');
+    if(nm===null) return; nm=nm.trim(); if(!nm) return;
+    var vs=viewsOf(pt);
+    var v={ id:'v'+Date.now(), name:nm, scope:pt||'',
+            cols:colsOf(pt).slice(), srt:{k:srt.k,d:srt.d},
+            flt:JSON.parse(JSON.stringify(flt)) };
+    vs.push(v); viewsSave(pt, vs);
+    curView=v.id; lsSet('wl_life_curview', curView);
+    if(typeof toast==='function') toast('👁 "'+nm+'" 보기를 저장했어요');
+    safeRender();
+  }
+  function viewMgr(pt){
+    var vs=viewsOf(pt);
+    var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9750';
+    ov.innerHTML='<div class="lf-mod" style="max-width:600px">'
+      + '<div class="lf-mh"><b>⋯ 저장된 보기 관리</b>'
+      +   '<button type="button" id="lfVX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
+      + '<table class="lf-tbl"><tr><th>이름</th><th style="width:170px">조건</th><th style="width:150px"></th></tr>'
+      + (vs.length? vs.map(function(v){
+          var n=(v.flt&&v.flt.rules?v.flt.rules.length:0);
+          var per=[]; if(v.flt&&(v.flt.from||v.flt.to)) per.push('기간');
+          if(v.flt&&v.flt.money) per.push('금액만'); if(n) per.push('조건 '+n+'개');
+          return '<tr><td><b>'+esc(v.name)+'</b></td>'
+            + '<td style="color:#8ba0b6;font-size:12px">'+(per.join(' · ')||'없음')+'</td>'
+            + '<td class="r"><button type="button" class="lf-fx" data-vren="'+esc(v.id)+'">✏️ 이름</button> '
+            + '<button type="button" class="lf-fx" data-vdel="'+esc(v.id)+'" style="color:#b52929">🗑</button></td></tr>'; }).join('')
+        : '<tr><td colspan="3" style="text-align:center;color:#a8b8c8;padding:26px">저장된 보기가 없어요</td></tr>')
+      + '</table>'
+      + '<div class="lf-mbtn"><div style="flex:1"></div>'
+      +   '<button type="button" id="lfVC" style="height:42px;padding:0 20px;border:1.5px solid #dbe6f4;border-radius:10px;background:#fff;color:#7a92a8;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">닫기</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    function cl(){ ov.remove(); }
+    document.getElementById('lfVX').addEventListener('click', cl);
+    document.getElementById('lfVC').addEventListener('click', function(){ cl(); safeRender(); });
+    ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
+    ov.querySelectorAll('[data-vren]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var id=b.getAttribute('data-vren'), a=viewsOf(pt);
+        var hit=a.filter(function(x){return x.id===id;})[0];
+        var nm=prompt('새 이름', hit?hit.name:''); if(nm===null) return; nm=nm.trim(); if(!nm) return;
+        a.forEach(function(x){ if(x.id===id) x.name=nm; }); viewsSave(pt,a); cl(); viewMgr(pt); }); });
+    ov.querySelectorAll('[data-vdel]').forEach(function(b){
+      b.addEventListener('click', function(){
+        if(!confirm('이 보기를 지울까요?\n기록은 안 지워집니다.')) return;
+        var id=b.getAttribute('data-vdel');
+        viewsSave(pt, viewsOf(pt).filter(function(x){ return x.id!==id; }));
+        if(curView===id){ curView=''; lsSet('wl_life_curview',''); }
+        cl(); viewMgr(pt); }); });
+  }
+
   /* ══════ 속성 추가 ══════ */
   function propAdd(pt, after){
     var TYPES=[['text','글자'],['area','긴 글'],['num','숫자'],['date','날짜'],['time','시간'],
-               ['sel','선택'],['check','체크'],['tel','전화번호'],['map','주소'],['star','별점'],['link','링크']];
+               ['sel','선택'],['check','체크'],['tel','전화번호'],['map','주소'],['star','별점'],['link','링크'],
+               ['rel','관계 — 다른 기록 연결'],['formula','수식 — 자동 계산']];
     var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9800';
     ov.innerHTML='<div class="lf-mod" style="max-width:520px">'
       + '<div class="lf-mh"><b>＋ 속성 추가</b>'
@@ -19696,6 +19996,20 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +   '</select></div>'
       +   '<div class="lf-f" id="lfPOptWrap" style="display:none"><label>고를 값 (쉼표로 구분)</label>'
       +     '<input type="text" id="lfPOpts" placeholder="계약중, 만료, 해지"></div>'
+      +   '<div class="lf-f" id="lfPRelWrap" style="display:none"><label>무엇과 연결할까요</label>'
+      +     '<select id="lfPRel"><option value="pcontact">📞 개인 연락처</option>'
+      +     '<option value="personal">🏠 개인 기록 전체</option>'
+      +     Object.keys(CAT).map(function(k){ return '<option value="'+k+'">'+CAT[k].i+' '+CAT[k].n+'</option>'; }).join('')
+      +     '<option value="car">🚗 차계부</option></select></div>'
+      +   '<div class="lf-f" id="lfPFxWrap" style="display:none"><label>계산식</label>'
+      +     '<input type="text" id="lfPFx" placeholder="{단가} * {개수}">'
+      +     '<div style="font-size:11.5px;color:#8ba0b6;line-height:1.6;margin-top:4px">'
+      +       '중괄호 안에 <b>칸 이름</b>을 그대로 쓰세요.<br>'
+      +       '· <code>{단가} * {개수}</code><br>'
+      +       '· <code>{최종 금액} - {초기 견적비}</code><br>'
+      +       '· <code>DAYS({도착일}, {출발일})</code> — 며칠 차이</div></div>'
+      +   '<div class="lf-f" id="lfPUnitWrap" style="display:none"><label>단위 (선택)</label>'
+      +     '<input type="text" id="lfPUnit" placeholder="원 / 일 / 개"></div>'
       +   '<div class="lf-f"><label>어디에 붙일까요</label><select id="lfPScope">'
       +     '<option value="_all">모든 개인 기록에</option>'
       +     (pt? '<option value="'+esc(pt)+'" selected>'+esc((CAT[pt]&&CAT[pt].n)||'차계부')+' 에만</option>':'')
@@ -19714,8 +20028,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     document.getElementById('lfAC').addEventListener('click', cl);
     ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
     var ts=document.getElementById('lfPType');
-    ts.addEventListener('change', function(){
-      document.getElementById('lfPOptWrap').style.display = (ts.value==='sel') ? '' : 'none'; });
+    function syncType(){
+      document.getElementById('lfPOptWrap').style.display  = (ts.value==='sel')     ? '' : 'none';
+      document.getElementById('lfPRelWrap').style.display  = (ts.value==='rel')     ? '' : 'none';
+      document.getElementById('lfPFxWrap').style.display   = (ts.value==='formula') ? '' : 'none';
+      document.getElementById('lfPUnitWrap').style.display = (ts.value==='formula'||ts.value==='num') ? '' : 'none';
+    }
+    ts.addEventListener('change', syncType); syncType();
     document.getElementById('lfAOk').addEventListener('click', function(){
       var nm=(document.getElementById('lfPName').value||'').trim();
       if(!nm){ alert('이름을 넣어주세요'); return; }
@@ -19728,6 +20047,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         if(!p.o.length) p.o=[''];
         else p.o.unshift('');
       }
+      if(ty==='rel') p.target = document.getElementById('lfPRel').value;
+      if(ty==='formula'){
+        p.expr = (document.getElementById('lfPFx').value||'').trim();
+        if(!p.expr){ alert('계산식을 넣어주세요\n예) {단가} * {개수}'); return; }
+      }
+      var uv=(document.getElementById('lfPUnit')||{}).value;
+      if(uv && uv.trim()) p.unit = uv.trim();
       customAdd(sc, p);
       /* 새로 만든 것은 바로 목록에도 보이게 */
       var a=colsOf(sc==='_all'?pt:sc); if(a.indexOf(p.id)<0){ a.push(p.id); colsSave(sc==='_all'?pt:sc, a); }
@@ -19809,14 +20135,25 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(t==='check') return '<input type="checkbox" class="lf-ie" style="width:18px;height:18px"'+(v?' checked':'')+'>';
     if(t==='star')  return '<select class="lf-ie">'+[0,1,2,3,4,5].map(function(n){
         return '<option value="'+n+'"'+(num(v)===n?' selected':'')+'>'+(n?stars(n):'—')+'</option>'; }).join('')+'</select>';
-    var ty = (t==='num'||t==='rate')?'number':(t==='date'?'date':(t==='time'?'time':(t==='tel'?'tel':'text')));
+    if(t==='num'||t==='rate')
+      return '<input type="text" class="lf-ie" data-num="1" value="'+esc(numFmt(v))+'">';
+    if(t==='rel'){
+      var ids=relArr(v), tg=relTargets(p);
+      return '<select class="lf-ie"><option value="">—</option>'
+        + tg.map(function(o){ return '<option value="'+esc(o.id)+'"'+(ids.indexOf(o.id)>=0?' selected':'')
+            +'>'+esc(o.label)+'</option>'; }).join('') + '</select>';
+    }
+    if(t==='formula') return '<span style="color:#8ba0b6;font-size:12px">수식 칸은 자동 계산돼요</span>';
+    var ty = (t==='date'?'date':(t==='time'?'time':(t==='tel'?'tel':'text')));
     return '<input type="'+ty+'" class="lf-ie" value="'+esc(v==null?'':v)+'"'+(t==='time'?' step="300"':'')+'>';
   }
   function editCommit(pt, id, pid, el){
     var p=propById(pt,pid); if(!p) return;
     var v;
+    if(p.type==='formula') return;                       /* 자동 계산 — 못 고침 */
     if(p.type==='check') v = el.checked;
-    else if(p.type==='num'||p.type==='rate'||p.type==='star') v = (el.value===''?'':num(el.value));
+    else if(p.type==='num'||p.type==='rate'||p.type==='star') v = (numRaw(el.value)===''?'':num(numRaw(el.value)));
+    else if(p.type==='rel') v = el.value ? [el.value] : [];
     else v = el.value;
     var rec = ent().filter(function(x){ return x.id===id; })[0];
     if(!rec) return;
@@ -19834,7 +20171,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   var srt = (function(){ var v=lsGet(LS_SORT,null);
     return (v&&v.k)? v : {k:'date', d:-1}; })();
   var flt = (function(){ var v=lsGet(LS_FLT,null);
-    return (v&&typeof v==='object')? v : {from:'', to:'', money:false, min:''}; })();
+    v = (v&&typeof v==='object')? v : {from:'', to:'', money:false, min:''};
+    if(!Array.isArray(v.rules)) v.rules=[];
+    return v; })();
   /* 입력칸에 커서가 있는 채로 다시 그리면 blur 중에 DOM 이 사라져 오류가 난다.
      커서를 먼저 빼고, 다음 차례에 그린다. */
   function safeRender(){
@@ -19849,8 +20188,15 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     lsSet(LS_SORT,srt); safeRender();
   }
   function fltSet(p){ for(var k in p) flt[k]=p[k]; lsSet(LS_FLT,flt); safeRender(); }
-  function fltOn(){ return !!(flt.from||flt.to||flt.money||num(flt.min)); }
+  function fltOn(){ return !!(flt.from||flt.to||flt.money||num(flt.min)||(flt.rules&&flt.rules.length)); }
+  function ruleCheck(e, r, pt){
+    var p = propById(pt, r.pid); if(!p) return true;
+    var v = (p.type==='formula') ? formulaCalc(e, p.expr, e.ptype) : pget(e, r.pid);
+    var f = OPS[r.op]; if(!f) return true;
+    return !!f(v, r.val);
+  }
   function applyFlt(a){
+    var pt = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
     return a.filter(function(e){
       var d=String(e.date||'');
       if(flt.from && d < flt.from) return false;
@@ -19858,6 +20204,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var m=money(e);
       if(flt.money && !m) return false;
       if(num(flt.min) && m < num(flt.min)) return false;
+      var rs=flt.rules||[];
+      for(var i=0;i<rs.length;i++){ if(!ruleCheck(e, rs[i], pt)) return false; }
       return true;
     });
   }
@@ -19888,9 +20236,51 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     });
   }
 
+  /* ── 저장된 보기(뷰) ── */
+  var LS_VIEWS='wl_life_views';
+  function viewsAll(){ var o=lsGet(LS_VIEWS,null); return (o&&typeof o==='object')?o:{}; }
+  function viewsOf(pt){ var a=viewsAll()[pt||'_all']; return Array.isArray(a)?a:[]; }
+  function viewsSave(pt, arr){ var o=viewsAll(); o[pt||'_all']=arr; lsSet(LS_VIEWS,o); }
+  function viewApply(v){
+    if(v.cols) colsSave(v.scope||'', v.cols);
+    if(v.srt){ srt={k:v.srt.k, d:v.srt.d}; lsSet(LS_SORT,srt); }
+    if(v.flt){ flt=JSON.parse(JSON.stringify(v.flt)); if(!Array.isArray(flt.rules)) flt.rules=[]; lsSet(LS_FLT,flt); }
+    curView = v.id; lsSet('wl_life_curview', curView);
+    safeRender();
+  }
+  var curView = lsGet('wl_life_curview', '') || '';
+  function viewChips(pt){
+    var vs=viewsOf(pt);
+    var h='<div class="lf-chips" style="margin-bottom:8px">';
+    h+='<div class="lf-chip'+(curView?'':' on')+'"'+(curView?'':' style="background:#2563a8"')+' data-vgo="">📄 기본</div>';
+    vs.forEach(function(v){
+      var on=(curView===v.id);
+      h+='<div class="lf-chip'+(on?' on':'')+'"'+(on?' style="background:#7c3aed"':'')+' data-vgo="'+esc(v.id)+'">'
+        + '👁 '+esc(v.name)+'</div>';
+    });
+    h+='<div class="lf-chip" data-vsave="1" style="border-style:dashed">💾 지금 보기 저장</div>';
+    if(vs.length) h+='<div class="lf-chip" data-vmgr="1" style="border-style:dashed">⋯ 보기 관리</div>';
+    return h+'</div>';
+  }
+
+  /* ── 조건(규칙) 줄 ── */
+  function ruleBar(pt){
+    var rs=flt.rules||[];
+    if(!rs.length) return '';
+    var h='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">';
+    rs.forEach(function(r,i){
+      var p=propById(pt,r.pid);
+      h+='<span class="lf-rule">'+tinfo(p?p.type:'text').i+' <b>'+esc(p?p.name:r.pid)+'</b> '
+        + esc(r.op) + (opNeedsVal(r.op)? ' <b>'+esc(r.val)+'</b>':'')
+        + '<button type="button" data-rdrop="'+i+'">✕</button></span>';
+    });
+    h+='<button type="button" class="lf-fx" data-rclr="1">조건 모두 지우기</button>';
+    return h+'</div>';
+  }
+
   function fltBar(n, tot){
-    var mopts=''; /* 빠른 기간 */
-    return '<div class="lf-fb">'
+    var pt0 = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
+    return viewChips(pt0) + ruleBar(pt0) + '<div class="lf-fb">'
       + '<span class="lb">기간</span>'
       + '<input type="date" id="lfF1" value="'+esc(flt.from||'')+'" title="시작일">'
       + '<span style="color:#c8d4e0">~</span>'
@@ -19903,6 +20293,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       + '<label class="lf-ck"><input type="checkbox" id="lfFm"'+(flt.money?' checked':'')+'> 금액 있는 것만</label>'
       + '<span class="lb">최소</span>'
       + '<input type="number" id="lfFmin" value="'+esc(flt.min||'')+'" placeholder="0" style="width:96px" title="이 금액 이상만">'
+      + '<button type="button" class="lf-fx" id="lfRuleAdd" style="border-style:dashed;color:#7c3aed">＋ 조건 추가</button>'
       + (fltOn()? '<button type="button" class="lf-fx" id="lfFclr">✕ 필터 해제</button>':'')
       + '<span class="lf-cnt">'+won(n)+'건'+(n!==tot? ' / 전체 '+won(tot)+'건':'')+'</span>'
       + '</div>';
@@ -20318,11 +20709,26 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         + '<button type="button" class="lf-radd" data-lradd="'+f.k+'">＋ 추가</button>'
         + (f.sum? '<div class="lf-rtot" id="lftot-'+f.k+'"></div>':'') + '</div>';
     }
+    else if(f.t==='rel'){
+      var rp={target:f.target||f.tg||'pcontact'};
+      var rids=(Array.isArray(val)?val:(val?[val]:[]));
+      var tgs=relTargets(rp);
+      inner = '<select id="'+id+'"><option value="">— 없음 —</option>'
+        + tgs.map(function(o){ return '<option value="'+esc(o.id)+'"'+(rids.indexOf(o.id)>=0?' selected':'')
+            +'>'+esc(o.label)+'</option>'; }).join('') + '</select>';
+    }
+    else if(f.t==='formula'){
+      inner = '<input type="text" id="'+id+'" readonly value="" data-fx="'+esc(f.expr||'')+'"'
+        + (f.unit? ' data-unit="'+esc(f.unit)+'"':'')
+        + ' style="background:#f6f2ff;color:#7c3aed;font-weight:800">';
+    }
     else {
-      var ty = f.t==='num'?'number':(f.t==='date'?'date':(f.t==='time'?'time':'text'));
+      var isNum = (f.t==='num'||f.t==='number');
+      var ty = isNum?'text':(f.t==='date'?'date':(f.t==='time'?'time':'text'));
       var ph = f.p||'';
-      if(f.last && v._lastodo) ph = '직전 '+won(v._lastodo)+'km';
-      inner = '<input type="'+ty+'" id="'+id+'" value="'+esc(val)+'" placeholder="'+esc(ph)+'"'
+      if(f.last && v._lastodo) ph = '직전 '+numFmt(v._lastodo)+'km';
+      inner = '<input type="'+ty+'" id="'+id+'" value="'+esc(isNum?numFmt(val):val)+'" placeholder="'+esc(ph)+'"'
+        + (isNum?' data-num="1" inputmode="decimal"':'')
         + (f.t==='time'?' step="300"':'') + (f.link?' data-llink="'+f.link+'"':'') + '>';
     }
     return '<div class="lf-f'+w+'"><label>'+esc(f.l)+(f.req?' <i>*</i>':'')+'</label>'+inner+'</div>';
@@ -20338,10 +20744,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         var v = r[c.k]==null?'':String(r[c.k]);
         if(c.sel) return '<select data-rk="'+c.k+'" style="flex:0 0 '+(c.w||'110px')+'">'
           + c.sel.map(function(o){ return '<option'+(v===o?' selected':'')+'>'+esc(o)+'</option>'; }).join('') + '</select>';
-        return '<input type="'+(c.n?'number':'text')+'" data-rk="'+c.k+'" value="'+esc(v)+'" placeholder="'+esc(c.p||'')+'"'
+        return '<input type="text" data-rk="'+c.k+'"'+(c.n?' data-num="1" inputmode="decimal"':'')
+          + ' value="'+esc(c.n?numFmt(v):v)+'" placeholder="'+esc(c.p||'')+'"'
           + (c.w?' style="flex:0 0 '+c.w+'"':'') + '>';
       }).join('') + '<button type="button" class="lf-rx" data-rdel="'+i+'">✕</button></div>';
     }).join('');
+    bindNumsIn(host);
     rowsTotal(f);
     if(f.k==='items' && document.getElementById('lf-cur')) calcBuy();
   }
@@ -20351,7 +20759,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var out=[];
     host.querySelectorAll('.lf-row').forEach(function(row){
       var o={};
-      row.querySelectorAll('[data-rk]').forEach(function(el){ o[el.getAttribute('data-rk')]=el.value; });
+      row.querySelectorAll('[data-rk]').forEach(function(el){
+        o[el.getAttribute('data-rk')] = (el.getAttribute('data-num')==='1') ? numRaw(el.value) : el.value; });
       out.push(o);
     });
     ROWS[f.k]=out;
@@ -20371,9 +20780,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var el=document.getElementById('lftot-'+f.k); if(!el) return;
     var t=0, host=document.getElementById('lfrow-'+f.k);
     if(host) host.querySelectorAll('.lf-row').forEach(function(row){
-      var i=row.querySelector('[data-rk="'+f.sum+'"]'); if(i) t+=num(i.value); });
-    el.textContent = t? '합계 '+won(t)+'원' : '';
-    if(f.to){ var tg=document.getElementById('lf-'+f.to); if(tg && t && !tg._touched) tg.value=t; }
+      var i=row.querySelector('[data-rk="'+f.sum+'"]'); if(i) t+=num(numRaw(i.value)); });
+    el.textContent = t? '합계 '+numFmt(t)+'원' : '';
+    if(f.to){ var tg=document.getElementById('lf-'+f.to); if(tg && t && !tg._touched) tg.value=numFmt(t); }
   }
 
   /* ── 통화 기호 ── */
@@ -20384,16 +20793,17 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   function calcBuy(){
     var C=document.getElementById('lf-cur'); if(!C) return;
     var cur=C.value||'원', foreign=(cur!=='원');
-    var unit=num((document.getElementById('lf-unit')||{}).value),
-        qty =num((document.getElementById('lf-qty')||{}).value)||1,
-        ship=num((document.getElementById('lf-ship')||{}).value),
+    var gv=function(id){ var e=document.getElementById(id); return e? numRaw(e.value) : ''; };
+    var unit=num(gv('lf-unit')),
+        qty =num(gv('lf-qty'))||1,
+        ship=num(gv('lf-ship')),
         inc =((document.getElementById('lf-shipinc')||{}).value||'').indexOf('포함')>=0,
-        rate=num((document.getElementById('lf-rate')||{}).value);
+        rate=num(gv('lf-rate'));
     /* 품목 목록이 2건 이상이면 장바구니로 보고 그 합계를 쓴다 */
     var rowsT=0, rowsN=0, hostI=document.getElementById('lfrow-items');
     if(hostI) hostI.querySelectorAll('.lf-row').forEach(function(r){
       var pe=r.querySelector('[data-rk="price"]'), qe=r.querySelector('[data-rk="qty"]');
-      var pv=num(pe&&pe.value), qv=num(qe&&qe.value)||1;
+      var pv=num(pe&&numRaw(pe.value)), qv=num(qe&&numRaw(qe.value))||1;
       if(pv>0){ rowsT+=pv*qv; rowsN++; } });
     var base = (rowsN>=2) ? rowsT : unit*qty;
     var sub = base + (inc?0:ship);
@@ -20401,9 +20811,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var out=document.getElementById('lf-amount');
     if(out){
       out.value = foreign
-        ? ((rate? won(krw)+'\uc6d0' : '\ud658\uc728\uc744 \ub123\uc73c\uc138\uc694')
+        ? ((rate? numFmt(krw)+'\uc6d0' : '\ud658\uc728\uc744 \ub123\uc73c\uc138\uc694')
            + '   ('+(CURSYM[cur]||'')+ (Math.round(sub*100)/100).toLocaleString('en-US') +')')
-        : (sub? won(krw)+'\uc6d0' : '');
+        : (sub? numFmt(krw)+'\uc6d0' : '');
       out.dataset.krw = krw;
       var lb2=out.closest('.lf-f'); lb2=lb2&&lb2.querySelector('label');
       if(lb2) lb2.textContent = '\ud569\uacc4 (\uc6d0)' + (rowsN>=2? '  \u00b7 \ud488\ubaa9 \ubaa9\ub85d '+rowsN+'\uac74 \uae30\uc900':'');
@@ -20430,19 +20840,43 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       .catch(function(e){ if(N){ N.textContent='\u26a0\ufe0f \uc790\ub3d9 \uc2e4\ud328 \u2014 \uc9c1\uc811 \ub123\uc5b4\uc8fc\uc138\uc694 ('+e.message+')'; N.style.color='#dc2626'; } });
   }
 
+  var MODPT='';                      /* 지금 열려 있는 모달의 종류 */
+  /* 모달 안 수식 칸 — 입력할 때마다 다시 계산 */
+  function fxCalc(){
+    var box=document.getElementById('lfFields'); if(!box) return;
+    var fx=box.querySelectorAll('[data-fx]'); if(!fx.length) return;
+    /* 지금 화면의 값으로 임시 기록을 만들어 계산 */
+    var tmp={}, pr={};
+    box.querySelectorAll('[id^="lf-"]').forEach(function(el){
+      var k=el.id.slice(3); if(!k) return;
+      var val = (el.type==='checkbox') ? el.checked
+              : (el.getAttribute('data-num')==='1' ? numRaw(el.value) : el.value);
+      if(k.slice(0,3)==='P__') pr[k.slice(3)]=val; else tmp[k]=val;
+    });
+    tmp.props=pr;
+    tmp.ptype = MODPT;
+    tmp.date=tmp.date||''; tmp.title=tmp.title||''; tmp.detail=tmp.detail||'';
+    if(tmp.amount==null) tmp.amount='';
+    fx.forEach(function(el){
+      var r=formulaCalc(tmp, el.getAttribute('data-fx'), MODPT);
+      el.value = (r===''? '—' : (numFmt(r) + (el.getAttribute('data-unit')? (' '+el.getAttribute('data-unit')):'')));
+    });
+  }
+
   /* 자동 계산 — 주유 3칸 / 독서 진행률 / 구매 합계 */
   function autoCalc(){
+    try{ fxCalc(); }catch(e){}
     if(document.getElementById('lf-cur')) calcBuy();
     var A=document.getElementById('lf-amount'), L=document.getElementById('lf-liter'), U=document.getElementById('lf-unit');
-    if(A&&L&&U){
-      var a=num(A.value), l=num(L.value), u=num(U.value);
-      if(a&&l&&!u) U.value=Math.round(a/l);
-      else if(l&&u&&!a) A.value=Math.round(l*u);
-      else if(a&&u&&!l) L.value=Math.round(a/u*100)/100;
+    if(A&&L&&U && !document.getElementById('lf-cur')){
+      var a=num(numRaw(A.value)), l=num(numRaw(L.value)), u=num(numRaw(U.value));
+      if(a&&l&&!u) U.value=numFmt(Math.round(a/l));
+      else if(l&&u&&!a) A.value=numFmt(Math.round(l*u));
+      else if(a&&u&&!l) L.value=numFmt(Math.round(a/u*100)/100);
     }
     var P=document.getElementById('lf-prog'), T=document.getElementById('lf-totalpg'), R=document.getElementById('lf-readpg');
-    if(P&&T&&R){ var t=num(T.value), r=num(R.value);
-      P.value = t? (Math.min(100,Math.round(r/t*100))+'%  ('+won(r)+' / '+won(t)+'쪽)') : ''; }
+    if(P&&T&&R){ var t=num(numRaw(T.value)), r=num(numRaw(R.value));
+      P.value = t? (Math.min(100,Math.round(r/t*100))+'%  ('+numFmt(r)+' / '+numFmt(t)+'쪽)') : ''; }
   }
 
   /* 사진 압축 */
@@ -20556,9 +20990,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     set('lf-title', o.title||''); set('lf-brand', o.brand||''); set('lf-where', o.where||'');
     if(o.cur){ var C=document.getElementById('lf-cur');
       if(C && ['원','달러','엔','유로'].indexOf(o.cur)>=0 && C.value==='원') C.value=o.cur; }
-    if(num(o.unit)) set('lf-unit', num(o.unit));
-    if(num(o.qty))  set('lf-qty',  num(o.qty));
-    if(num(o.ship)) set('lf-ship', num(o.ship));
+    if(num(o.unit)) set('lf-unit', numFmt(num(o.unit)));
+    if(num(o.qty))  set('lf-qty',  numFmt(num(o.qty)));
+    if(num(o.ship)) set('lf-ship', numFmt(num(o.ship)));
     set('lf-detail', o.detail||'');
     var its=Array.isArray(o.items)?o.items:[];
     if(its.length){
@@ -20790,6 +21224,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }
     var d = isCar ? {i:'🚗', n:'차계부', c:'#0891b2'} : (CAT[pt]||CAT.etc);
 
+    MODPT = pt;
     PHOTOS = esr(v.photos);
     SCANREFS = esr(v.scanRefs);
     ROWS = {};
@@ -20835,8 +21270,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     /* 내가 만든 속성을 서식 뒤에 붙인다 (공통 + 이 종류 전용) */
     function myProps(){
       return customOf('_all').concat(customOf(pt)).filter(function(p){ return !p.archived; })
-        .map(function(p){ return { k:'@'+p.id, l:p.name, t:(p.type==='num'?'number':p.type),
-                                   o:p.o||p.opts, w:(p.type==='area'?'full':''), my:1, pid:p.id }; });
+        .map(function(p){ return { k:'P__'+p.id, l:p.name, t:(p.type==='num'?'number':p.type),
+                                   o:p.o||p.opts, target:p.target, expr:p.expr, unit:p.unit,
+                                   w:((p.type==='area'||p.type==='formula')?'full':''), my:1, pid:p.id }; });
     }
     function build(){
       var base = isCar ? carFields(v.ctype||'주유') : (CAT[pt]||CAT.etc).f;
@@ -20852,7 +21288,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         propAdd(pt, function(){ build(); });
       });
       FIELDS.forEach(function(f){ if(f.t==='rows'){ ROWS[f.k]=esr(v[f.k]); rowsRender(f); } });
-      autoCalc(); drawPhotos(); scanBox();
+      bindNumsIn(document.getElementById('lfFields'));
+      autoCalc(); drawPhotos(); scanBox(); fxCalc();
       var st=document.getElementById('lf-star');
       if(st) st.querySelectorAll('[data-st]').forEach(function(sp){
         sp.addEventListener('click', function(){
@@ -20873,8 +21310,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         if(f.t==='rows'){ rowsCollect(f); o[f.k]=rowsClean(ROWS[f.k]); return; }
         if(f.t==='calc') return;
         var el=document.getElementById('lf-'+f.k); if(!el) return;
-        var val = (f.t==='num'||f.t==='number'||f.t==='rate') ? (el.value===''?'':num(el.value))
-                : (f.t==='check' ? !!el.checked : el.value);
+        if(f.t==='formula') return;                               /* 자동 계산 — 저장 안 함 */
+        var val = (f.t==='num'||f.t==='number'||f.t==='rate')
+                    ? (numRaw(el.value)===''?'':num(numRaw(el.value)))
+                : (f.t==='check' ? !!el.checked
+                : (f.t==='rel'   ? (el.value? [el.value] : [])
+                : el.value));
         if(f.my){ pr[f.pid]=val; o[f.k]=val; return; }   /* 내 속성은 props 로 */
         o[f.k] = val;
       });
@@ -20895,6 +21336,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     /* ── 이벤트 위임 ── */
     ov.addEventListener('input', function(e){
       var t=e.target;
+      try{ fxCalc(); }catch(x){}
       if(t.hasAttribute && t.hasAttribute('data-llink')) autoCalc();
       if(t.id==='lf-totalpg'||t.id==='lf-readpg') autoCalc();
       if(t.hasAttribute && t.hasAttribute('data-rk')){
@@ -20972,11 +21414,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var miss = FIELDS.filter(function(f){ return f.req && !String(o[f.k]||'').trim(); });
       if(miss.length){ alert(miss[0].l+' 은(는) 꼭 넣어주세요'); 
         var me=document.getElementById('lf-'+miss[0].k); if(me) me.focus(); return; }
-      Object.keys(o).forEach(function(k){ if(k.charAt(0)==='@') delete o[k]; });
+      Object.keys(o).forEach(function(k){ if(k.slice(0,3)==='P__') delete o[k]; });
       o.kind='personal'; o.ptype=pt; o.photos=PHOTOS.slice();
       o.scanRefs = SCANREFS.map(function(r){ return {type:r.type, id:r.id, data:r.data}; });
       var ac=document.getElementById('lf-amount');
       if(ac && ac.readOnly && ac.dataset && ac.dataset.krw) o.amount = num(ac.dataset.krw);
+      if(o.amount==='' || o.amount==null){ var ae=document.getElementById('lf-amount');
+        if(ae && !ae.readOnly && numRaw(ae.value)!=='') o.amount = num(numRaw(ae.value)); }
       if(pt==='todo'){ var dc=document.getElementById('lf-done'); o.done = dc? dc.checked : false; }
       if(!o.title){ o.title = o.who || o.place || o.name || (isCar? (o.ctype||'차계부') : d.n); }
       try{
@@ -21830,7 +22274,43 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var fmin=document.getElementById('lfFmin');
     if(fmin) fmin.addEventListener('change', function(){ fltSet({min:fmin.value}); });
     var fc=document.getElementById('lfFclr');
-    if(fc) fc.addEventListener('click', function(){ fltSet({from:'',to:'',money:false,min:''}); });
+    if(fc) fc.addEventListener('click', function(){ flt.rules=[]; fltSet({from:'',to:'',money:false,min:''}); });
+    var ptF = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
+    var ra=document.getElementById('lfRuleAdd');
+    if(ra) ra.addEventListener('click', function(){ ruleAdd(ptF); });
+    host.querySelectorAll('[data-rdrop]').forEach(function(b){
+      b.addEventListener('click', function(){
+        flt.rules.splice(parseInt(b.getAttribute('data-rdrop'),10),1);
+        lsSet(LS_FLT,flt); safeRender(); }); });
+    var rc=host.querySelector('[data-rclr]');
+    if(rc) rc.addEventListener('click', function(){ flt.rules=[]; lsSet(LS_FLT,flt); safeRender(); });
+    /* 저장된 보기 */
+    host.querySelectorAll('[data-vgo]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var id=b.getAttribute('data-vgo');
+        if(!id){
+          curView=''; lsSet('wl_life_curview','');
+          colsSave(ptF, DEF_COLS.slice());
+          srt={k:'date', d:-1}; lsSet(LS_SORT, srt);
+          flt={from:'', to:'', money:false, min:'', rules:[]}; lsSet(LS_FLT, flt);
+          safeRender(); return;
+        }
+        var v=viewsOf(ptF).filter(function(x){ return x.id===id; })[0];
+        if(v) viewApply(v); }); });
+    var vs2=host.querySelector('[data-vsave]');
+    if(vs2) vs2.addEventListener('click', function(){ viewSaveNow(ptF); });
+    var vm=host.querySelector('[data-vmgr]');
+    if(vm) vm.addEventListener('click', function(){ viewMgr(ptF); });
+    /* 관계 칩 클릭 → 그 기록 열기 */
+    host.querySelectorAll('[data-relgo]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var id=b.getAttribute('data-relgo');
+        var r=ent().filter(function(x){ return x.id===id; })[0];
+        if(!r) return;
+        if(r.kind==='pcontact') openCt(id); else openRec(r.ptype||'etc', id); }); });
+    /* 숫자칸 쉼표 */
+    bindNumsIn(host);
     var fq=document.getElementById('lfFq');
     if(fq) fq.addEventListener('change', function(){
       var v=fq.value; if(!v) return;
@@ -21904,6 +22384,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var ie=host.querySelector('.lf-ie');
     if(ie && EDIT){
       var eid=EDIT.id, epid=EDIT.pid;
+      if(ie.getAttribute && ie.getAttribute('data-num')==='1') bindNum(ie);
       try{ ie.focus(); if(ie.select) ie.select(); }catch(e){}
       var done=false;
       var fin=function(save){
