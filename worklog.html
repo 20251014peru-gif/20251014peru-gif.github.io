@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v48-0826-2140</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v49-0826-2209</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1388,7 +1388,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v48-0826-2140</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v49-0826-2209</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -1419,6 +1419,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <!-- 1행: 주요탭 + ⚙️폴더탭관리 -->
     <div class="v43-tabs" id="v43Tabs">
       <button class="v43-tab active" data-v43tab="main">📋 기록</button>
+      <button class="v43-tab" data-v43tab="life">🏠 개인</button>
       <button class="v43-tab" data-v43tab="expense">💰 지출</button>
       <button class="v43-tab" data-v43tab="memo">📝 메모</button>
       <button class="v43-tab" data-v43tab="calendar">📅 달력</button>
@@ -1428,7 +1429,6 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       <button class="v43-tab" data-v43tab="password">🔐 비번</button>
       <button class="v43-tab" data-v43tab="diag">🔧 진단</button>
       <button class="v43-tab" data-v43tab="ai">🤖 AI</button>
-      <button class="v43-tab" data-v43tab="life">🏠 개인</button>
       <button id="tabMgrBtn" class="v43-tab" style="background:#f7faff;color:#3f7cb8">⚙️ 폴더탭관리</button>
     </div>
     <!-- 2행: 폴더/파일 관리탭 + 일지추가 버튼 (탭 바로 옆에 붙음, flex:1 없음) -->
@@ -3067,7 +3067,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v48-20260826-2140"></script>
+<script src="worklog.js?v=v49-20260826-2209"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -3319,7 +3319,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       try{ if(typeof window.renderExpSettle==='function') window.renderExpSettle(); }catch(e){}
       try{ if(typeof window.renderExpLabor==='function') window.renderExpLabor(); }catch(e){}
     }
-    const v43tabs=['main','expense','memo','calendar','filelink','docs','common','indiv','etc','accident','progress','material','password','diag','ai','life'];
+    const v43tabs=['main','life','expense','memo','calendar','filelink','docs','common','indiv','etc','accident','progress','material','password','diag','ai'];
     if(!v43tabs.includes(name) && name.indexOf('custom_')!==0) name='main';
     document.querySelectorAll('.v43-tab').forEach(b => b.classList.toggle('active', b.dataset.v43tab===name));
     document.querySelectorAll('.v43-panel').forEach(p => p.classList.remove('active'));
@@ -3708,6 +3708,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     ];
     var DEFAULTS1 = [
       {id:'main',     label:'📋 기록'},
+      {id:'life',     label:'🏠 개인'},
       {id:'expense',  label:'💰 지출'},
       {id:'memo',     label:'📝 메모'},
       {id:'calendar', label:'📅 달력'},
@@ -3717,10 +3718,29 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       {id:'password', label:'🔐 비번'},
       {id:'diag',     label:'🔧 진단'},
       {id:'ai',       label:'🤖 AI'},
-      {id:'life',     label:'🏠 개인'},
     ];
     var FIXED2 = ['filelink','docs','common','indiv','etc'];
-    var FIXED1 = ['main','expense','memo','calendar','accident','progress','material','password','diag','ai','life'];
+    var FIXED1 = ['main','life','expense','memo','calendar','accident','progress','material','password','diag','ai'];
+
+    /* v48: 개인 탭을 기록 바로 뒤로 한 번 옮긴다 */
+    (function fixLifeOrder(){
+      try{
+        if(localStorage.getItem('wl_life_order_v48')) return;
+        ['wl_main_tabs_v1'].forEach(function(k){
+          var raw=localStorage.getItem(k); if(!raw) return;
+          var a=JSON.parse(raw); if(!Array.isArray(a)) return;
+          var idx=-1, li=-1;
+          a.forEach(function(x,i){ var id=(x&&x.id)||x; if(id==='main') idx=i; if(id==='life') li=i; });
+          if(idx<0) return;
+          var it;
+          if(li<0) it={id:'life', label:'🏠 개인'};
+          else { if(li===idx+1) return; it=a.splice(li,1)[0]; if(li<idx) idx--; }
+          a.splice(idx+1, 0, it);
+          localStorage.setItem(k, JSON.stringify(a));
+        });
+        localStorage.setItem('wl_life_order_v48','1');
+      }catch(e){}
+    })();
 
     function load(key, defaults){
       try{ var s=localStorage.getItem(key); if(s) return JSON.parse(s); }catch(e){}
@@ -18865,6 +18885,34 @@ select.lf-in{ padding-right:8px }
 .lf-ct .acts button{ height:30px; padding:0 11px; border:1.5px solid #dbe6f4; border-radius:8px;
   background:#fff; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit; color:#5b7794 }
 
+/* 표(노션) 보기 */
+.lf-tv{ width:100%; border-collapse:separate; border-spacing:0; background:#fff;
+  border:1.5px solid #e8f0fa; border-radius:12px; overflow:hidden; font-size:13px }
+.lf-tv th{ background:#f4f8fd; font-size:11.5px; font-weight:900; color:#5b7794;
+  padding:9px 11px; text-align:left; white-space:nowrap; border-bottom:1.5px solid #e3ecf6;
+  position:sticky; top:0; z-index:2 }
+.lf-tv td{ padding:9px 11px; border-bottom:1px solid #f2f7fc; color:#1a2f45; vertical-align:middle }
+.lf-tv tr:last-child td{ border-bottom:none }
+.lf-tv tbody tr{ cursor:pointer }
+.lf-tv tbody tr:hover td{ background:#f7fbff }
+.lf-tv td.r{ text-align:right; font-weight:800; white-space:nowrap }
+.lf-tv td.c{ text-align:center }
+.lf-tv .tt{ font-weight:800; max-width:340px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.lf-tv .sub{ font-size:11.5px; color:#8ba0b6; max-width:320px; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap }
+.lf-tv .dt{ color:#7a92a8; white-space:nowrap; font-size:12.5px }
+.lf-tv .xd{ width:30px; height:26px; border:none; border-radius:6px; background:#fdeaea;
+  color:#c0392b; font-size:11px; cursor:pointer; padding:0 }
+.lf-tvwrap{ overflow-x:auto; max-height:none }
+.lf-grp{ background:#eef5fd !important; font-weight:900; color:#33567d; font-size:11.5px }
+
+/* 보기 전환 */
+.lf-vw{ display:inline-flex; border:1.5px solid #dbe6f4; border-radius:9px; overflow:hidden; height:40px }
+.lf-vw button{ height:100%; padding:0 13px; border:none; background:#fff; color:#7a92a8;
+  font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit; white-space:nowrap }
+.lf-vw button.on{ background:#2563a8; color:#fff }
+.lf-sp{ flex:1 1 auto; min-width:0 }
+
 /* 결산 */
 .lf-tbl{ width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden;
   border:1.5px solid #e8f0fa }
@@ -19248,8 +19296,73 @@ select.lf-in{ padding-right:8px }
   function sBox(k,v,n){ return '<div class="lf-s"><div class="k">'+k+'</div><div class="v">'+v+'</div>'
     + (n?'<div class="n">'+n+'</div>':'') + '</div>'; }
 
+  /* ── 보기 방식: 카드 / 표(노션) ── */
+  var LS_VIEW='wl_life_view';
+  var vw = (function(){ var v=lsGet(LS_VIEW,null); return (v==='table'||v==='card')?v:'card'; })();
+  function vwSet(v){ vw=v; lsSet(LS_VIEW,v); render(); }
+  function vwBtns(){
+    return '<div class="lf-vw">'
+      + '<button type="button" data-vw="card"'+(vw==='card'?' class="on"':'')+'>▦ 카드</button>'
+      + '<button type="button" data-vw="table"'+(vw==='table'?' class="on"':'')+'>☰ 목록</button>'
+      + '</div>';
+  }
+
+  /* 한 줄 요약 — 표에서 두 번째 줄에 쓰는 짧은 설명 */
+  function subOf(e){
+    var p=[];
+    if(e.ptype==='car'){ if(e.place) p.push(e.place); if(e.liter) p.push(num(e.liter)+'L'); }
+    else { if(e.who) p.push(e.who); if(e.where) p.push(e.where); if(e.place) p.push(e.place); }
+    var d=e.detail||e.memo||'';
+    if(d) p.push(String(d).replace(/\s+/g,' ').slice(0,60));
+    return p.join(' · ');
+  }
+  function tagOf(e){
+    if(e.ptype==='car'){ var c=carColor(e.car);
+      return '<span class="lf-tag" style="background:'+c+'1f;color:'+c+'">🚗 '+esc(e.car||'차계부')+'</span>'
+        + (e.ctype? ' <span class="lf-tag" style="background:#f1f5f9;color:#475569">'+esc(e.ctype)+'</span>':''); }
+    if(e.ptype==='todo'){
+      var dd=dday(e.date);
+      if(e.done) return '<span class="lf-tag" style="background:#d1fae5;color:#065f46">완료</span>';
+      if(dd===null) return '';
+      if(dd<0)  return '<span class="lf-tag" style="background:#fee2e2;color:#991b1b">'+(-dd)+'일 지남</span>';
+      if(dd===0)return '<span class="lf-tag" style="background:#fef3c7;color:#92400e">오늘</span>';
+      return '<span class="lf-tag" style="background:#dbeafe;color:#1e40af">D-'+dd+'</span>';
+    }
+    var d2=CAT[e.ptype]||CAT.etc;
+    return '<span class="lf-tag" style="background:'+d2.c+'1f;color:'+d2.c+'">'+d2.i+' '+d2.n+'</span>';
+  }
+
+  function tableHTML(arr, emptyIcon, emptyMsg){
+    if(!arr.length) return '<div class="lf-grid"><div class="lf-empty"><div class="ei">'+emptyIcon+'</div>'+emptyMsg+'</div></div>';
+    var h='<div class="lf-tvwrap"><table class="lf-tv"><thead><tr>'
+      + '<th style="width:96px">날짜</th><th style="width:150px">분류</th><th>내용</th>'
+      + '<th style="width:110px;text-align:right">금액</th><th style="width:66px">첨부</th><th style="width:42px"></th>'
+      + '</tr></thead><tbody>';
+    var last='';
+    arr.forEach(function(e){
+      var m=String(e.date||'').slice(0,7);
+      if(m!==last){ last=m;
+        h+='<tr class="lf-grp"><td colspan="6" style="padding:5px 11px">'
+          + (m? m.replace('-','년 ')+'월':'날짜 없음') + '</td></tr>'; }
+      var mo=money(e), sub=subOf(e);
+      var nA=esr(e.photos).length + esr(e.scanRefs).length;
+      h+='<tr data-lid="'+esc(e.id)+'"'+(e.done?' style="opacity:.55"':'')+'>'
+        + '<td class="dt">'+esc(e.date||'')+'</td>'
+        + '<td>'+tagOf(e)+'</td>'
+        + '<td><div class="tt">'+esc(e.title||e.who||'(제목없음)')
+        +   (e.rating? ' <span style="color:#f4b942">'+stars(e.rating)+'</span>':'')+'</div>'
+        +   (sub? '<div class="sub">'+esc(sub)+'</div>':'') + '</td>'
+        + '<td class="r" style="color:'+(mo?'#0f7a4a':'#c8d4e0')+'">'+(mo? won(mo)+'원':'—')+'</td>'
+        + '<td class="c" style="color:#8ba0b6;font-size:11.5px">'+(nA? '📎 '+nA : '')+'</td>'
+        + '<td class="c"><button type="button" class="xd" data-ldel="'+esc(e.id)+'" title="삭제">🗑</button></td>'
+        + '</tr>';
+    });
+    return h+'</tbody></table></div>';
+  }
+
   /* 날짜 그룹 붙여서 그리기 */
   function gridHTML(arr, emptyIcon, emptyMsg){
+    if(vw==='table') return tableHTML(arr, emptyIcon, emptyMsg);
     if(!arr.length) return '<div class="lf-grid"><div class="lf-empty"><div class="ei">'+emptyIcon+'</div>'+emptyMsg+'</div></div>';
     var h='<div class="lf-grid">', last='';
     arr.forEach(function(e){
@@ -19295,10 +19408,31 @@ select.lf-in{ padding-right:8px }
     return sum
       + '<div class="lf-chips">'+chips+'</div>'
       + '<div class="lf-bar">'
+      +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="width:260px;max-width:100%">'
+      +   vwBtns()
+      +   '<div class="lf-sp"></div>'
       +   '<button type="button" id="lfAdd" class="lf-add">➕ 기록 추가</button>'
-      +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="flex:1;min-width:150px">'
       + '</div>'
+      + oldBanner()
       + gridHTML(list, (CAT[curCat]||{i:'🏠'}).i, (curQ?'검색 결과가 없어요':'아직 기록이 없어요<div style="font-size:12px;margin-top:6px">➕ 를 눌러 시작하세요</div>'));
+  }
+
+  /* 예전 개인일지에서 아직 안 가져왔으면 안내 */
+  var LS_OLDBN='wl_life_oldbanner';
+  function oldBanner(){
+    try{ if(localStorage.getItem(LS_OLDBN)==='off') return ''; }catch(e){}
+    if(ent().some(function(e){ return e.fromOld; })) return '';
+    return '<div id="lfOldBn" style="background:#f3f0ff;border:1.5px solid #d8ccf5;border-radius:12px;'
+      + 'padding:12px 15px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+      + '<div style="flex:1;min-width:220px;font-size:13px;color:#4c2f8a;line-height:1.6">'
+      +   '<b>📥 예전 개인일지 기록이 아직 안 넘어왔나요?</b><br>'
+      +   '<span style="font-size:12.5px;color:#6b5aa0">쓰시던 개인일지 앱의 기록·연락처를 한 번에 가져올 수 있어요. '
+      +   '예전 앱 기록은 그대로 남습니다.</span></div>'
+      + '<button type="button" id="lfOldGo" style="height:38px;padding:0 16px;border:none;border-radius:9px;'
+      +   'background:#7c3aed;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">가져오기</button>'
+      + '<button type="button" id="lfOldNo" style="height:38px;padding:0 12px;border:1.5px solid #d8ccf5;border-radius:9px;'
+      +   'background:#fff;color:#8b7ab8;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">숨기기</button>'
+      + '</div>';
   }
 
   /* ══════ ② 차계부 탭 ══════ */
@@ -19373,10 +19507,12 @@ select.lf-in{ padding-right:8px }
 
     return '<div class="lf-chips">'+chips+'</div>' + sum + abox
       + '<div class="lf-bar">'
-      +   '<button type="button" id="lfAddCar" class="lf-add">➕ 차계부 추가</button>'
+      +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="width:200px;max-width:100%">'
       +   '<select id="lfMonth" class="lf-in">'+mopt+'</select>'
       +   '<select id="lfCtype" class="lf-in">'+copt+'</select>'
-      +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="flex:1;min-width:130px">'
+      +   vwBtns()
+      +   '<div class="lf-sp"></div>'
+      +   '<button type="button" id="lfAddCar" class="lf-add">➕ 차계부 추가</button>'
       + '</div>'
       + gridHTML(list, '🚗', curCar? ('"'+esc(curCar)+'" 기록이 없어요'):'차량을 먼저 등록하세요');
   }
@@ -19433,8 +19569,9 @@ select.lf-in{ padding-right:8px }
 
     return sum + '<div class="lf-chips">'+chips+'</div>'
       + '<div class="lf-bar">'
+      +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 이름·번호·주소" value="'+esc(curQ)+'" style="width:260px;max-width:100%">'
+      +   '<div class="lf-sp"></div>'
       +   '<button type="button" id="lfAddCt" class="lf-add">➕ 연락처 추가</button>'
-      +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 이름·번호·주소 검색" value="'+esc(curQ)+'" style="flex:1;min-width:150px">'
       + '</div>' + cards;
   }
 
@@ -20244,6 +20381,261 @@ select.lf-in{ padding-right:8px }
   }
 
 
+
+  /* ══════════════════════════════════════════════════════════
+     📥 예전 개인일지(personal / personal_contacts) 가져오기
+     같은 파이어베이스 프로젝트 안에 있으므로 그대로 읽어온다.
+     기록은 새 서식으로 옮기고, 이미 있는 것은 건드리지 않는다.
+     ══════════════════════════════════════════════════════════ */
+  var OLD_REC='personal', OLD_CT='personal_contacts', OLD_PH='personal_photos';
+  var CATMAP={ '건강':'health','구매':'buy','기타':'etc','독서':'book','맛집':'food',
+               '사람':'person','생각':'think','여행':'trip','일상':'daily','차계부':'car',
+               '통화':'person','가족':'person','약속':'person','아이디어':'think' };
+
+  function n_(v){ var x=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isNaN(x)?'':x; }
+  function t_(v){ return String(v==null?'':v).trim(); }
+
+  /* 예전 항목행 → 새 항목행 */
+  function mapItems(pt, ctype, items){
+    var a=Array.isArray(items)?items:[];
+    if(!a.length) return null;
+    if(pt==='book' || pt==='think')
+      return { key:(pt==='book'?'quotes':'items'),
+               rows:a.map(function(it){ return { name:t_(it.quote||it.name), note:t_(it.thought) }; })
+                     .filter(function(r){ return r.name||r.note; }) };
+    if(pt==='daily')
+      return { key:'thanks',
+               rows:a.map(function(it){ return { name:t_(it.quote||it.thought||it.name) }; })
+                     .filter(function(r){ return r.name; }) };
+    if(pt==='food')
+      return { key:'menus',
+               rows:a.map(function(it){ return { name:t_(it.name), price:n_(it.price), score:'맛평가',
+                        note:(it.people? (it.people+'명'):'') }; })
+                     .filter(function(r){ return r.name||r.price; }) };
+    if(pt==='health')
+      return { key:'costs',
+               rows:a.map(function(it){ return { name:[t_(it.type),t_(it.name)].filter(Boolean).join(' '), price:n_(it.price) }; })
+                     .filter(function(r){ return r.name||r.price; }) };
+    if(pt==='trip')
+      return { key:'costs',
+               rows:a.map(function(it){ return { name:t_(it.name), price:n_(it.price), note:'' }; })
+                     .filter(function(r){ return r.name||r.price; }) };
+    if(pt==='car' && ctype!=='주유')
+      return { key:'parts',
+               rows:a.map(function(it){ return { name:t_(it.name), price:n_(it.price) }; })
+                     .filter(function(r){ return r.name||r.price; }) };
+    if(pt==='buy')
+      return { key:'items',
+               rows:a.map(function(it){ return { name:t_(it.name), qty:'', price:n_(it.price), note:'' }; })
+                     .filter(function(r){ return r.name||r.price; }) };
+    return { key:'items',
+             rows:a.map(function(it){ return { name:t_(it.name), note:t_(it.thought) }; })
+                   .filter(function(r){ return r.name||r.note; }) };
+  }
+
+  /* 예전 기록 1건 → 새 기록 1건 */
+  function mapRec(o){
+    var pt = CATMAP[t_(o.cat)] || 'etc';
+    var r = { kind:'personal', ptype:pt, oldId:String(o.id||''), fromOld:1,
+              date: t_(o.date) || today(),
+              title: t_(o.title), detail: t_(o.detail),
+              createdAt: o.created ? Date.parse(o.created)||Date.now() : Date.now() };
+
+    if(pt==='car'){
+      /* 예전: who=차량, title=구분(주유/정비/보험/기타), addr=주유소·정비소 */
+      r.car   = t_(o.who) || (cars()[0]||{}).n || '';
+      r.ctype = t_(o.title) || '기타';
+      if(['주유','정비','보험','세차','검사','기타'].indexOf(r.ctype)<0) r.ctype='기타';
+      r.place = t_(o.addr);
+      r.title = (r.ctype==='주유' ? (r.place||'주유') : (t_(o.detail).split('\n')[0].slice(0,40) || r.ctype));
+      if(o.odo)      r.odo   = n_(o.odo);
+      if(o.liters)   r.liter = n_(o.liters);
+      if(o.fuelunit) r.unit  = n_(o.fuelunit);
+      if(o.amount)   r.amount= n_(o.amount);
+      if(o.pay)      r.pay   = t_(o.pay);
+      /* 차 이름이 목록에 없으면 자동 추가 */
+      if(r.car){ var cl=cars();
+        if(!cl.some(function(c){ return c.n===r.car; })){
+          cl.push({n:r.car, c:CARPOOL[cl.length % CARPOOL.length]}); carsSave(cl); } }
+    } else {
+      if(o.who)   r.who   = t_(o.who);
+      if(o.addr)  r.addr  = t_(o.addr);
+      if(o.place) r.place = t_(o.place);
+      if(o.amount) r.amount = n_(o.amount);
+    }
+    if(o.phone)  r.phone  = t_(o.phone);
+    if(o.stars)  r.rating = n_(o.stars);
+    if(o.subtype)r.ptype2 = t_(o.subtype)==='약속' ? '만남' : t_(o.subtype);
+    if(o.time2)  r.time   = t_(o.time2);
+    if(o.prep)   r.prep   = t_(o.prep);
+    if(o.insur)  r.insur  = t_(o.insur)==='청구예정'?'청구 예정':(t_(o.insur)==='청구완료'?'청구 완료':t_(o.insur));
+    if(o.booktype)r.btype = t_(o.booktype).indexOf('전자')>=0 ? '📱 전자책' : '📕 종이책';
+    if(o.totalpg)r.totalpg= n_(o.totalpg);
+    if(o.readpg) r.readpg = n_(o.readpg);
+    if(o.link)   r.link   = t_(o.link);
+    if(o.cur)    r.cur    = t_(o.cur);
+    if(o.unit)   r.unit   = n_(o.unit);
+    if(o.qty)    r.qty    = n_(o.qty);
+    if(o.ship)   r.ship   = n_(o.ship);
+    if(o.shipinc)r.shipinc= (t_(o.shipinc)==='포함' ? '단가에 이미 포함' : '합계에 더하기');
+    if(o.rate)   r.rate   = n_(o.rate);
+    if(o.pay && pt!=='car') r.pay = t_(o.pay);
+    if(o.mood)   r.mood   = t_(o.mood);
+    if(o.weather)r.weather= t_(o.weather);
+    if(o.tomorrow)r.tomorrow=t_(o.tomorrow);
+    if(pt==='daily' && !r.title) r.title = t_(o.detail).split('\n')[0].slice(0,40) || '일상';
+
+    var mi = mapItems(pt, r.ctype, o.items);
+    if(mi && mi.rows.length) r[mi.key]=mi.rows;
+
+    if(Array.isArray(o.photoIds) && o.photoIds.length) r.oldPhotoIds=o.photoIds.slice();
+    if(!r.title) r.title = t_(o.detail).split('\n')[0].slice(0,40) || (CAT[pt]||CAT.etc).n;
+    return r;
+  }
+
+  function mapCt(o){
+    return { kind:'pcontact', fromOld:1, oldId:String(o.id||''),
+      name: t_(o.name)||'(이름없음)', cat: t_(o.cat)||'기타',
+      phone: t_(o.phone), person: t_(o.person), addr: t_(o.addr),
+      memo: t_(o.memo), date: today(), title: t_(o.name)||'(이름없음)',
+      createdAt: Date.now() };
+  }
+
+  /* 진행상황 창 */
+  function impPop(){
+    var ov=document.createElement('div'); ov.className='lf-ov'; ov.id='lfImpOv';
+    ov.innerHTML='<div class="lf-mod" style="max-width:620px">'
+      + '<div class="lf-mh"><b>📥 예전 개인일지 가져오기</b>'
+      +   '<button type="button" id="lfIX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
+      + '<div id="lfImpBody" style="font-size:13px;color:#33567d;line-height:1.75"></div>'
+      + '<div class="lf-mbtn"><div style="flex:1"></div>'
+      +   '<button type="button" id="lfIGo" style="height:44px;padding:0 24px;border:none;border-radius:10px;background:#2563a8;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">🔍 찾아보기</button>'
+      +   '<button type="button" id="lfIC" style="height:44px;padding:0 18px;border:1.5px solid #dbe6f4;border-radius:10px;background:#fff;color:#7a92a8;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">닫기</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    function cl(){ ov.remove(); }
+    document.getElementById('lfIX').addEventListener('click', cl);
+    document.getElementById('lfIC').addEventListener('click', cl);
+    function say(h){ var e=document.getElementById('lfImpBody'); if(e) e.innerHTML=h; }
+    say('예전에 쓰시던 <b>개인일지 앱</b>의 기록을 여기로 가져옵니다.<br>'
+      + '같은 구글 계정 안에 있어서 바로 읽어올 수 있어요.<br><br>'
+      + '· 이미 여기 있는 것은 <b>건드리지 않습니다</b><br>'
+      + '· 예전 앱의 기록도 <b>그대로 남습니다</b> (복사만 해옵니다)<br>'
+      + '· 차계부·맛집·구매 같은 서식에 맞춰 옮깁니다<br><br>'
+      + '<b>[🔍 찾아보기]</b> 를 누르면 몇 건이 있는지 먼저 알려드립니다.');
+
+    var FOUND=null;
+    document.getElementById('lfIGo').addEventListener('click', function(){
+      var btn=document.getElementById('lfIGo');
+      if(FOUND){ doImport(FOUND, say, btn, cl); return; }
+      btn.disabled=true; btn.textContent='🔍 찾는 중…';
+      scanOld().then(function(f){
+        FOUND=f; btn.disabled=false;
+        if(!f.rec.length && !f.ct.length){
+          say('예전 개인일지에서 <b>기록을 찾지 못했습니다.</b><br><br>'
+            + '· 이미 다 가져왔거나<br>· 예전 앱이 다른 계정을 쓰고 있을 수 있어요.<br><br>'
+            + '<span style="color:#8ba0b6;font-size:12px">확인한 곳: <code>personal</code> · <code>personal_contacts</code></span>');
+          btn.style.display='none'; return;
+        }
+        var lines=[];
+        var byCat={};
+        f.rec.forEach(function(o){ var c=t_(o.cat)||'기타'; byCat[c]=(byCat[c]||0)+1; });
+        Object.keys(byCat).sort(function(a,b){ return byCat[b]-byCat[a]; }).forEach(function(c){
+          lines.push('· '+esc(c)+' <b>'+byCat[c]+'건</b>'); });
+        say('찾았습니다!<br><br>'
+          + '<div style="background:#f0f9f4;border:1.5px solid #b7e4c7;border-radius:10px;padding:12px 15px">'
+          +   '<b style="font-size:15px">기록 '+f.rec.length+'건 · 연락처 '+f.ct.length+'건</b><br>'
+          +   '<div style="font-size:12.5px;color:#166534;margin-top:6px;columns:2">'+lines.join('<br>')+'</div>'
+          + '</div><br>'
+          + (f.skip? '<span style="color:#8ba0b6">이미 가져온 '+f.skip+'건은 건너뜁니다.</span><br><br>':'')
+          + '<b>[📥 가져오기]</b> 를 누르면 시작합니다.');
+        btn.textContent='📥 가져오기';
+      }).catch(function(e){
+        btn.disabled=false; btn.textContent='🔍 다시 찾기';
+        say('<span style="color:#c0392b">⚠️ 읽지 못했습니다 — '+esc(e.message||e)+'</span><br><br>'
+          + '· 인터넷 연결을 확인해 주세요<br>'
+          + '· 파이어베이스 규칙이 <code>personal</code> 을 막고 있을 수 있어요');
+      });
+    });
+  }
+
+  function scanOld(){
+    if(!(typeof online!=='undefined' && online && typeof db!=='undefined' && db))
+      return Promise.reject(new Error('지금 오프라인이에요'));
+    var haveOld={}; ent().forEach(function(e){ if(e.oldId) haveOld[e.kind+':'+e.oldId]=1; });
+    return Promise.all([
+      db.collection(OLD_REC).get().catch(function(){ return {docs:[]}; }),
+      db.collection(OLD_CT).get().catch(function(){ return {docs:[]}; })
+    ]).then(function(r){
+      var skip=0;
+      var rec=r[0].docs.map(function(d){ var o=d.data()||{}; o.id=o.id||d.id; return o; })
+        .filter(function(o){ if(o.deletedAt) return false;
+          if(haveOld['personal:'+o.id]){ skip++; return false; } return true; });
+      var ct=r[1].docs.map(function(d){ var o=d.data()||{}; o.id=o.id||d.id; return o; })
+        .filter(function(o){ if(haveOld['pcontact:'+o.id]){ skip++; return false; } return true; });
+      return { rec:rec, ct:ct, skip:skip };
+    });
+  }
+
+  /* 사진까지 같이 가져온다 (있으면) */
+  function fetchOldPhotos(ids){
+    if(!ids || !ids.length) return Promise.resolve([]);
+    return Promise.all(ids.slice(0,8).map(function(pid){
+      return db.collection(OLD_PH).doc(String(pid)).get()
+        .then(function(d){ var v=d.exists?d.data():null; return (v&&v.data)?v.data:null; })
+        .catch(function(){ return null; });
+    })).then(function(a){ return a.filter(Boolean); });
+  }
+
+  function doImport(F, say, btn, close){
+    btn.disabled=true;
+    var total=F.rec.length+F.ct.length, done=0, okR=0, okC=0, ph=0;
+    function tick(){ done++;
+      say('<b>가져오는 중… '+done+' / '+total+'</b>'
+        + '<div style="height:9px;background:#e8f0fa;border-radius:5px;margin-top:9px;overflow:hidden">'
+        + '<div style="height:100%;width:'+Math.round(done/total*100)+'%;background:#2563a8"></div></div>'
+        + '<div style="font-size:12px;color:#8ba0b6;margin-top:7px">기록 '+okR+'건 · 연락처 '+okC+'건 · 사진 '+ph+'장</div>'); }
+    tick(); done=0;
+
+    var i=0;
+    function nextRec(){
+      if(i>=F.rec.length) return doCt();
+      var o=F.rec[i++];
+      var r;
+      try{ r=mapRec(o); }catch(e){ tick(); return nextRec(); }
+      var pids=r.oldPhotoIds; delete r.oldPhotoIds;
+      var go=function(photos){
+        if(photos && photos.length){ r.photos=photos; ph+=photos.length; }
+        try{ pAdd(r); okR++; }catch(e){}
+        tick();
+        setTimeout(nextRec, 0);
+      };
+      if(pids && pids.length) fetchOldPhotos(pids).then(go).catch(function(){ go(null); });
+      else go(null);
+    }
+    var j=0;
+    function doCt(){
+      if(j>=F.ct.length) return finish();
+      var o=F.ct[j++];
+      try{ pAdd(mapCt(o)); okC++; }catch(e){}
+      tick();
+      setTimeout(doCt, 0);
+    }
+    function finish(){
+      say('<div style="background:#f0f9f4;border:1.5px solid #b7e4c7;border-radius:10px;padding:14px 16px">'
+        + '<b style="font-size:15px;color:#166534">✅ 다 가져왔습니다</b><br><br>'
+        + '· 기록 <b>'+okR+'건</b><br>· 연락처 <b>'+okC+'건</b><br>· 사진 <b>'+ph+'장</b>'
+        + '</div><br>'
+        + '<span style="font-size:12.5px;color:#8ba0b6">예전 앱의 기록은 그대로 남아 있습니다.<br>'
+        + '옮겨온 것들은 서식이 조금 달라졌을 수 있으니, 중요한 건 한 번씩 열어서 확인해 주세요.</span>');
+      btn.style.display='none';
+      if(typeof toast==='function') toast('📥 '+(okR+okC)+'건 가져왔어요');
+      setTimeout(function(){ render(); }, 400);
+    }
+    nextRec();
+  }
+  window.wlLifeImportOld = impPop;
+
   /* ══════ ⑤ 안전 탭 — 휴지통 · 스냅샷 · 내보내기 ══════ */
   var safeSrc='personal', SNAPS=[], snapsLoaded=false, snapsBusy=false;
   var cloudInfo={ online:false, col:'personal_entries', project:'my-system-25497' };
@@ -20327,7 +20719,8 @@ select.lf-in{ padding-right:8px }
       + '<div class="lf-bar">'
       +   '<button type="button" id="lfExpAll" class="lf-add" style="background:#0f7a4a">⬇ 전체 내려받기</button>'
       +   '<button type="button" id="lfExpP" class="lf-add" style="background:#3f7cb8">⬇ 개인일지만</button>'
-      +   '<button type="button" id="lfImpP" class="lf-radd" style="height:40px">⬆ 개인일지 가져오기</button>'
+      +   '<button type="button" id="lfImpOld" class="lf-add" style="height:40px;background:#7c3aed">📥 예전 개인일지 가져오기</button>'
+      +   '<button type="button" id="lfImpP" class="lf-radd" style="height:40px">⬆ 파일에서 가져오기</button>'
       +   '<button type="button" id="lfSnapNow" class="lf-radd" style="height:40px">📸 지금 스냅샷</button>'
       +   '<input type="file" id="lfImpF" accept="application/json,.json" style="display:none">'
       + '</div>'
@@ -20533,6 +20926,7 @@ select.lf-in{ padding-right:8px }
         }
       });
     });
+    var io=document.getElementById('lfImpOld'); if(io) io.addEventListener('click', impPop);
     var ea=document.getElementById('lfExpAll'); if(ea) ea.addEventListener('click', function(){ P_().exportAll(); });
     var ep=document.getElementById('lfExpP');   if(ep) ep.addEventListener('click', function(){ P_().exportPersonal(); });
     var sn=document.getElementById('lfSnapNow');
@@ -20729,12 +21123,19 @@ select.lf-in{ padding-right:8px }
     });
 
     /* 추가 버튼 */
+    var ob=document.getElementById('lfOldGo'); if(ob) ob.addEventListener('click', impPop);
+    var on2=document.getElementById('lfOldNo');
+    if(on2) on2.addEventListener('click', function(){
+      try{ localStorage.setItem(LS_OLDBN,'off'); }catch(e){}
+      var el=document.getElementById('lfOldBn'); if(el) el.remove(); });
     var a1=document.getElementById('lfAdd');    if(a1) a1.addEventListener('click', function(){
       if(curCat!=='전체' && CAT[curCat]) openRec(curCat); else openCatSheet(); });
     var a2=document.getElementById('lfAddCar'); if(a2) a2.addEventListener('click', function(){ openRec('car'); });
     var a3=document.getElementById('lfAddCt');  if(a3) a3.addEventListener('click', function(){ openCt(); });
 
     /* 필터 */
+    host.querySelectorAll('[data-vw]').forEach(function(b){
+      b.addEventListener('click', function(){ vwSet(b.getAttribute('data-vw')); }); });
     var mo=document.getElementById('lfMonth'); if(mo) mo.addEventListener('change', function(){ curMonth=mo.value; render(); });
     var ct=document.getElementById('lfCtype'); if(ct) ct.addEventListener('change', function(){ curCtype=ct.value; render(); });
     var yr=document.getElementById('lfYear');  if(yr) yr.addEventListener('change', function(){ curMonth=yr.value+'-01'; render(); });
