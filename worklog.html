@@ -18,7 +18,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v52-0827-0117</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v53-0827-0124</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1392,7 +1392,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v52-0827-0117</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v53-0827-0124</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3071,7 +3071,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v52-20260827-0117"></script>
+<script src="worklog.js?v=v53-20260827-0124"></script>
 <script>
 /* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
    (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
@@ -19078,6 +19078,13 @@ select.lf-in{ padding-right:8px }
   background:#fff; color:#5b7794; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit }
 .td-quick button:hover{ border-color:#2563a8; color:#2563a8 }
 
+/* ＋ 새 줄 */
+.lf-tv tr.lf-newrow td{ padding:0; border-bottom:1px solid #f2f7fc; cursor:pointer;
+  color:#8ba0b6; font-size:12.5px; font-weight:800; padding:8px 11px; user-select:none }
+.lf-tv tr.lf-newrow:hover td{ background:#f0f6ff; color:#2563a8 }
+.lf-tv tr.lf-newrow.big td{ padding:11px; color:#2563a8; background:#f9fcff; font-size:13px }
+.lf-tv tr.lf-newrow.big:hover td{ background:#eaf3ff }
+
 /* 조건 칩 */
 .lf-rule{ display:inline-flex; align-items:center; gap:5px; height:29px; padding:0 6px 0 11px;
   border:1.5px solid #d8ccf5; border-radius:15px; background:#f6f2ff; color:#4c2f8a;
@@ -20743,6 +20750,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   function applyFlt(a){
     var pt = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
     return a.filter(function(e){
+      if(EDIT && EDIT.id===e.id) return true;      /* 지금 쓰는 줄은 안 감춘다 */
       var d=String(e.date||'');
       if(flt.from && d < flt.from) return false;
       if(flt.to   && d > flt.to)   return false;
@@ -21006,13 +21014,65 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     return h+'</div>';
   }
 
+  /* ── 목록 안에서 바로 새 줄 만들기 ── */
+  function newRow(pt, preset){
+    var o = { kind:'personal', ptype:(pt||'etc'), date: today(), title:'', createdAt: Date.now() };
+    if(pt==='car'){ o.car = curCar || (cars()[0]||{}).n || ''; o.ctype = curCtype || '주유'; }
+    /* 기간 필터가 걸려 있으면 그 안의 날짜로 */
+    if(flt.from && o.date < flt.from) o.date = flt.from;
+    if(flt.to   && o.date > flt.to)   o.date = flt.to;
+    /* 지금 걸린 조건 중 '같음' 은 미리 채워준다 */
+    (flt.rules||[]).forEach(function(r){
+      if(r.op!=='같음' && r.op!=='체크됨') return;
+      var pp=propById(pt, r.pid); if(!pp || pp.base && pp.id==='_cat') return;
+      var pv = (r.op==='체크됨') ? true : r.val;
+      var patch = ppatch(o, r.pid, pv);
+      for(var k in patch){ if(k==='props'){ o.props=Object.assign({}, o.props||{}, patch.props); } else o[k]=patch[k]; }
+    });
+    /* 묶은 그룹 값도 미리 채움 */
+    if(preset && preset.pid && preset.val!=null && preset.pid!=='_cat' && preset.pid!=='_month'){
+      var pp2=propById(pt, preset.pid);
+      if(pp2 && ['formula','rollup','att','tag'].indexOf(pp2.type)<0){
+        var v2 = (pp2.type==='check') ? (String(preset.val).indexOf('☑')>=0) : preset.val;
+        var pt2 = ppatch(o, preset.pid, v2);
+        for(var k2 in pt2){ if(k2==='props'){ o.props=Object.assign({}, o.props||{}, pt2.props); } else o[k2]=pt2[k2]; }
+      }
+    }
+    var rec = pAdd(o);
+    if(!rec){ alert('추가하지 못했어요'); return; }
+    EDIT = { id: rec.id, pid: '_title' };
+    if(typeof toast==='function') toast('새 줄이 생겼어요 — 바로 쓰세요');
+    setTimeout(render, 0);
+  }
+  /* 전체 보기일 땐 종류부터 고른다 */
+  function newRowAsk(preset){
+    var pt = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
+    if(pt) { newRow(pt, preset); return; }
+    var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9700';
+    ov.innerHTML='<div class="lf-mod" style="max-width:600px">'
+      + '<div class="lf-mh"><b>어떤 기록을 추가할까요?</b>'
+      +   '<button type="button" id="lfNX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
+      + '<div class="lf-cats">' + Object.keys(CAT).map(function(k){
+          return '<button type="button" class="lf-cb" data-nk="'+k+'"><span class="i">'+CAT[k].i+'</span><span class="l">'+CAT[k].n+'</span></button>'; }).join('')
+      + '<button type="button" class="lf-cb" data-nk="car"><span class="i">🚗</span><span class="l">차계부</span></button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    function cl(){ ov.remove(); }
+    document.getElementById('lfNX').addEventListener('click', cl);
+    ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
+    ov.querySelectorAll('[data-nk]').forEach(function(b){
+      b.addEventListener('click', function(){ var k=b.getAttribute('data-nk'); cl(); newRow(k, preset); }); });
+  }
+
   function tableHTML(arr, emptyIcon, emptyMsg){
     var pt = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
     var tot=arr.length;
     arr = applySrt(applyFlt(arr));
     var bar = fltBar(arr.length, tot);
     if(!arr.length) return bar + '<div class="lf-grid"><div class="lf-empty"><div class="ei">'+emptyIcon+'</div>'
-      + (fltOn()? '필터에 걸리는 기록이 없어요<div style="font-size:12px;margin-top:6px">✕ 필터 해제를 눌러보세요</div>' : emptyMsg)+'</div></div>';
+      + (fltOn()? '필터에 걸리는 기록이 없어요<div style="font-size:12px;margin-top:6px">✕ 필터 해제를 눌러보세요</div>' : emptyMsg)
+      + '<div style="margin-top:14px"><button type="button" class="lf-add" data-newrow="1" style="height:38px">＋ 여기서 바로 추가</button></div>'
+      + '</div></div>';
 
     /* 칸 순서는 [⚙ → 칸 순서] 에서 정한 그대로 쓴다 */
     var sel = colsOf(pt);
@@ -21047,7 +21107,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     arr.forEach(function(e){
       if(grouped){
         var m=grpKey(e, pt);
-        if(m!==last || first){ last=m; first=false;
+        if(m!==last || first){
+          if(!first && last!==null){
+            h+='<tr class="lf-newrow"><td colspan="'+nCol+'" data-newrow="1"'
+              + ' data-ngpid="'+esc(grp||'')+'" data-ngval="'+esc(String(last))+'">＋ 새 줄</td></tr>';
+          }
+          last=m; first=false;
           var gs=0, gn=0;
           arr.forEach(function(x){ if(grpKey(x,pt)===m){ gs+=money(x); gn++; } });
           var lft = Math.max(1, (iAmt>=0? iAmt : nCol-1));
@@ -21075,6 +21140,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         + '<button type="button" class="xd" data-ldel="'+esc(e.id)+'" title="삭제">🗑</button></td>';
       h+='</tr>';
     });
+    /* 마지막 그룹 뒤에도 ＋ 줄 */
+    if(grouped && last!==null){
+      h+='<tr class="lf-newrow"><td colspan="'+nCol+'" data-newrow="1"'
+        + ' data-ngpid="'+esc(grp||'')+'" data-ngval="'+esc(String(last))+'">＋ 새 줄</td></tr>';
+    }
+    h+='<tr class="lf-newrow big"><td colspan="'+nCol+'" data-newrow="1">＋ 새 줄 추가</td></tr>';
     if(sumAll){
       var lft2 = Math.max(1, (iAmt>=0? iAmt : nCol-1));
       h+='<tr class="lf-sum2"><td colspan="'+lft2+'">합계 · '+won(arr.length)+'건</td>'
@@ -23230,6 +23301,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         else if(ev.key==='Escape'){ ev.preventDefault(); fin(false); }
       });
     }
+    /* 목록 안 ＋ 새 줄 */
+    host.querySelectorAll('[data-newrow]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var gp=b.getAttribute('data-ngpid'), gv=b.getAttribute('data-ngval');
+        newRowAsk((gp!==null && gp!=='') ? {pid:gp, val:gv} : null);
+      });
+    });
     var cb=document.getElementById('lfColBtn');
     if(cb) cb.addEventListener('click', function(ev){ ev.stopPropagation(); colPicker(ptNow); });
     host.querySelectorAll('[data-lctdel]').forEach(function(b){
