@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v46-0826-1810</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v46-0826-1900</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1082,6 +1082,11 @@
   max-width: 1600px !important;
   width: 100% !important;
 }
+/* v46: 상세보기 기록 목록 — worklog.css 의 white-space:pre-wrap 무력화 */
+#vBody .wl-steps, #vBody .wl-steps *{ white-space: normal !important; }
+#vBody .wl-steps .wl-pre{ white-space: pre-wrap !important; }
+#vBody .wl-steps > div{ margin:0 !important; }
+
 /* v46: 진행업무·사고 목록 — 화면 꽉 채우는 카드 그리드 (열 수 고정) */
 main.wrap{ max-width:1600px !important; width:100% !important; margin-left:auto !important; margin-right:auto !important; }
 .wl-cardgrid{
@@ -1383,7 +1388,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-1810</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-1900</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3055,7 +3060,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v46-20260826-1810"></script>
+<script src="worklog.js?v=v46-20260826-1900"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -14941,9 +14946,77 @@ if('serviceWorker' in navigator){
         log('자동 복원 ' + r.n + '개 키: ' + r.list.join(', '));
         if(typeof toast === 'function') toast('☁ 없어진 설정·목록 ' + r.n + '개를 클라우드에서 되살렸어요', 6000);
       }
+      checkLost(res.data);                        // v46: 줄어든 목록이 있으면 크게 알림
       pushLater();
     });
   }
+
+  /* ── v46: 목록이 갑자기 비었을 때 크게 알리고 한 번에 되살리기 ── */
+  var DOC_KEYS = {
+    'wl_insp_v43':'📋 점검일지', 'wl_docs_v43':'📁 운영실무', 'wl_common_v43':'🏢 임대공용',
+    'wl_indiv_v43':'🚪 임대개별', 'wl_etc_v44':'🗂 서류폴더', 'wl_work_vendors':'🏭 업체 목록'
+  };
+  function cntOf(v){
+    if(!v) return 0;
+    try{ var a = JSON.parse(v); return Array.isArray(a) ? a.length : (a ? 1 : 0); }catch(e){ return 0; }
+  }
+  function checkLost(cloud){
+    try{
+      var lost = [];
+      Object.keys(DOC_KEYS).forEach(function(k){
+        var cn = cntOf(cloud[k]);
+        var lo = null; try{ lo = localStorage.getItem(k); }catch(e){}
+        var ln = cntOf(lo);
+        if(cn > 0 && ln < cn) lost.push({ k:k, name:DOC_KEYS[k], cloud:cn, local:ln });
+      });
+      if(!lost.length) return;
+      showLostBanner(lost, cloud);
+    }catch(e){ log('점검 오류: ' + e); }
+  }
+  function showLostBanner(lost, cloud){
+    var old = document.getElementById('wlLostBar'); if(old) old.remove();
+    var bar = document.createElement('div');
+    bar.id = 'wlLostBar';
+    bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:13000;background:#fff4e5;'
+      + 'border-top:2px solid #f0b429;padding:12px 14px;font-family:inherit;box-shadow:0 -4px 18px rgba(0,0,0,.12)';
+    bar.innerHTML = '<div style="max-width:1000px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+      + '<div style="flex:1;min-width:220px">'
+      +   '<div style="font-size:13.5px;font-weight:800;color:#9a6700;margin-bottom:3px">⚠️ 목록이 줄었어요 — 클라우드에 더 있습니다</div>'
+      +   '<div style="font-size:12.5px;color:#7a5a20;line-height:1.6">'
+      +     lost.map(function(x){ return x.name + ' <b>' + x.local + '건</b> → 클라우드 <b>' + x.cloud + '건</b>'; }).join(' · ')
+      +   '</div>'
+      + '</div>'
+      + '<button id="wlLostFix" style="height:40px;padding:0 18px;border:none;border-radius:10px;background:#1a73e8;'
+      +   'color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">☁ 되살리기</button>'
+      + '<button id="wlLostSkip" style="height:40px;padding:0 14px;border:1.5px solid #e0cfa0;border-radius:10px;'
+      +   'background:#fff;color:#9a6700;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">나중에</button>'
+      + '</div>';
+    document.body.appendChild(bar);
+    document.getElementById('wlLostSkip').addEventListener('click', function(){ bar.remove(); });
+    document.getElementById('wlLostFix').addEventListener('click', function(){
+      var n = 0;
+      lost.forEach(function(x){
+        try{ localStorage.setItem(x.k, cloud[x.k]); n++; }catch(e){}
+      });
+      redrawTabs();
+      bar.remove();
+      if(typeof toast === 'function') toast('☁ ' + n + '개 목록을 되살렸어요', 5000);
+      setTimeout(function(){ location.reload(); }, 900);
+    });
+  }
+  window.wlCheckLost = function(){
+    fetchCloud(function(res, err){
+      if(!res){ alert('클라우드를 못 읽었어요: ' + (err||'')); return; }
+      var found = [];
+      Object.keys(DOC_KEYS).forEach(function(k){
+        var cn = cntOf(res.data[k]);
+        var lo = null; try{ lo = localStorage.getItem(k); }catch(e){}
+        found.push(DOC_KEYS[k] + ' — 이 기기 ' + cntOf(lo) + '건 / 클라우드 ' + cn + '건');
+      });
+      checkLost(res.data);
+      alert('📋 목록 점검 결과\n\n' + found.join('\n'));
+    });
+  };
 
   /* ── 바뀌면 자동 백업 ── */
   function watch(){
@@ -15047,9 +15120,16 @@ if('serviceWorker' in navigator){
       + '<div style="display:flex;gap:7px;margin-top:7px">'
       +   '<button id="wlDbExp" style="flex:1;height:38px;border:1.5px solid #dbe6f4;border-radius:10px;background:#f7faff;color:#3f7cb8;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">⬇ 파일로 저장</button>'
       +   '<button id="wlDbImp" style="flex:1;height:38px;border:1.5px solid #dbe6f4;border-radius:10px;background:#f7faff;color:#3f7cb8;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">⬆ 파일에서 가져오기</button>'
+      + '</div>'
+      + '<button id="wlDbChk" style="width:100%;height:40px;margin-top:7px;border:1.5px solid #f0b429;border-radius:10px;background:#fff8e6;color:#9a6700;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🩺 목록 점검 — 클라우드와 건수 비교</button>'
       + '</div></div>';
     document.body.appendChild(ov);
     document.getElementById('wlDbClose').addEventListener('click', function(){ ov.remove(); });
+    var chkBtn = document.getElementById('wlDbChk');
+    if(chkBtn) chkBtn.addEventListener('click', function(){
+      ov.remove();
+      if(typeof window.wlCheckLost === 'function') window.wlCheckLost();
+    });
 
     var NAME = {
       'wl_insp_v43':'📋 점검일지', 'wl_docs_v43':'📁 운영실무', 'wl_common_v43':'🏢 임대공용',
@@ -15163,7 +15243,10 @@ if('serviceWorker' in navigator){
       b.id = 'qjBackupBtn'; b.type = 'button'; b.textContent = '☁ 백업';
       b.style.cssText = 'border:1.5px solid #ffe2a8;background:#fffdf5;color:#9a6700;border-radius:8px;'
         + 'padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit';
-      b.addEventListener('click', function(){ window.wlDocBackupUI(); });
+      b.addEventListener('click', function(e){
+        if(e.shiftKey && typeof window.wlCheckLost === 'function'){ window.wlCheckLost(); return; }
+        window.wlDocBackupUI();
+      });
       mng.parentNode.insertBefore(b, mng);
     }
   }, 900);

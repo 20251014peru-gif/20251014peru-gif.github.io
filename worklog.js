@@ -1,7 +1,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v46-0826-1810";
+const APP_VERSION = "v46-0826-1900";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -3505,13 +3505,13 @@ function openViewer(kind,id){
       h += '<span style="flex:0 0 auto;font-size:12px;font-weight:700;color:#7a92a8;white-space:nowrap;margin-top:3px;line-height:1.3">'+esc((st.date||'').slice(2))+'</span>';
       h += '<div style="flex:1;min-width:0;white-space:normal">';
       h += '<div style="font-size:13px;font-weight:700;color:#1a2f45;line-height:1.45">'+esc(st.action||'')+(pos===0?'<span style="font-size:10px;font-weight:800;color:'+bd+'"> · 최근</span>':'')+'</div>';
-      if(st.detail||st.memo) h += '<div style="font-size:12.5px;color:#41627f;line-height:1.5;white-space:pre-wrap">'+esc(st.detail||st.memo)+'</div>';
+      if(st.detail||st.memo) h += '<div class="wl-pre" style="font-size:12.5px;color:#41627f;line-height:1.5">'+esc(st.detail||st.memo)+'</div>';
       if(who.length) h += '<div style="font-size:11.5px;color:#8ea3b8;line-height:1.4">'+who.map(esc).join(' · ')+'</div>';
       h += '</div></div>';
       return h;
     }).join('');
     rows+='<div class="vrow"><div class="vk" style="white-space:nowrap">📋 '+(isAcc?'처리 기록':'진행 기록')+' <span style="font-weight:700;color:#a7b6c6;font-size:11px">'+data.steps.length+'건</span></div>'
-        + '<div class="vv" style="white-space:normal;line-height:1.4;padding-top:2px">'+stepsHtml+'</div></div>';
+        + '<div class="vv wl-steps" style="white-space:normal;line-height:1.4;padding-top:2px">'+stepsHtml+'</div></div>';
   }
   // v15: 첨부파일 표시
   if((data.attachments||[]).length){
