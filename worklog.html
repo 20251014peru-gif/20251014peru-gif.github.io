@@ -428,7 +428,9 @@
   padding: 14px;
   box-shadow: 0 3px 14px rgba(0,0,0,.1);
   border: 1.5px solid #f0e060;
+  max-width: 560px;          /* v45-0826: 가로로 너무 길어지지 않게 */
 }
+@media(max-width:760px){ .sticky-input-wrap { max-width: none; } }
 .sticky-input {
   width: 100%; box-sizing: border-box;
   min-height: 90px; border: none; background: transparent;
@@ -499,8 +501,17 @@
 /* 포스트잇 그리드 */
 .sticky-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(5, 1fr);   /* v45-0826: 가로 5열 고정 */
   gap: 12px;
+  align-items: start;
+}
+@media(max-width:1280px){ .sticky-grid { grid-template-columns: repeat(4, 1fr); } }
+@media(max-width:1000px){ .sticky-grid { grid-template-columns: repeat(3, 1fr); } }
+@media(max-width:760px){  .sticky-grid { grid-template-columns: repeat(2, 1fr); } }
+.sn-tag{
+  display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:-.2px;
+  background:rgba(255,255,255,.62); border:1px solid rgba(0,0,0,.07);
+  border-radius:6px; padding:1px 6px; margin-bottom:5px; color:#5a5030;
 }
 .sticky-note {
   border-radius: 14px;
@@ -1552,11 +1563,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           data-placeholder="빠르게 메모하세요… Ctrl+V로 사진 붙여넣기, Ctrl+Enter로 저장"></div>
         <div class="sticky-input-row">
           <div class="sticky-colors">
-            <button class="sc-btn active" data-color="yellow" style="background:#fff9c4" title="노랑"></button>
-            <button class="sc-btn" data-color="blue" style="background:#dbeafe" title="파랑"></button>
-            <button class="sc-btn" data-color="green" style="background:#dcfce7" title="초록"></button>
-            <button class="sc-btn" data-color="pink" style="background:#fce7f3" title="핑크"></button>
-            <button class="sc-btn" data-color="orange" style="background:#ffedd5" title="주황"></button>
+            <button class="sc-btn active" data-color="yellow" style="background:#fff9c4" title="🔑 계정·비번"></button>
+            <button class="sc-btn" data-color="blue" style="background:#dbeafe" title="🛠 설정·요청"></button>
+            <button class="sc-btn" data-color="green" style="background:#dcfce7" title="📚 자료·참고"></button>
+            <button class="sc-btn" data-color="pink" style="background:#fce7f3" title="🏠 개인"></button>
+            <button class="sc-btn" data-color="orange" style="background:#ffedd5" title="🗒 임시"></button>
+            <span id="scLabel" style="font-size:12px;font-weight:800;color:#8a7a2a;margin-left:8px">🔑 계정·비번</span>
           </div>
         </div>
         <div class="sticky-input-row" style="margin-top:6px">
@@ -1585,6 +1597,14 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button type="button" class="memo-filter-btn active" data-mfilter="all">📋 메모</button>
         <button type="button" class="memo-filter-btn" data-mfilter="done">✅ 완료</button>
         <button type="button" class="memo-filter-btn" data-mfilter="todo">☐ 미완료</button>
+        <span style="width:1px;height:22px;background:#dbe6f4;align-self:center;margin:0 2px"></span>
+        <button type="button" class="memo-filter-btn" data-mfilter="c:yellow" style="border-color:#f0e060">🔑 계정·비번</button>
+        <button type="button" class="memo-filter-btn" data-mfilter="c:blue"   style="border-color:#93c5fd">🛠 설정·요청</button>
+        <button type="button" class="memo-filter-btn" data-mfilter="c:green"  style="border-color:#86efac">📚 자료·참고</button>
+        <button type="button" class="memo-filter-btn" data-mfilter="c:pink"   style="border-color:#f9a8d4">🏠 개인</button>
+        <button type="button" class="memo-filter-btn" data-mfilter="c:orange" style="border-color:#fdba74">🗒 임시</button>
+        <span style="flex:1"></span>
+        <button type="button" id="memoAutoTag" style="height:32px;padding:0 11px;border:1.5px solid #cfe0f2;border-radius:9px;background:#f7faff;color:#3f7cb8;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🎨 자동 분류</button>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <span id="stickyCount" style="font-size:12px;color:#aab8c8"></span>
@@ -2922,7 +2942,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260826-1056-cal0826-1056"></script>
+<script src="worklog.js?v=v45-20260826-1126-cal0826-1126"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -4188,6 +4208,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       const q = stickySearch.trim().toLowerCase();
       list = list.filter(e=>(e.title||'').toLowerCase().includes(q)||(e.body||'').toLowerCase().includes(q));
     }
+    // v45-0826: 색=태그 필터
+    if(String(memoFilter).indexOf('c:') === 0){
+      const want = memoFilter.slice(2);
+      list = list.filter(e=>getColor(e) === want);
+    }
     // 필터 적용: 완료/미완료
     if(memoFilter === 'done' || memoFilter === 'todo'){
       list = list.filter(e=>{
@@ -4206,7 +4231,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     const cnt = document.getElementById('stickyCount');
     if(cnt) cnt.textContent = list.length+'개';
     if(!list.length){
-      const emptyMsg = memoFilter==='done' ? '완료한 항목이 없어요'
+      const emptyMsg = String(memoFilter).indexOf('c:')===0 ? '이 분류의 메모가 없어요'
+                     : memoFilter==='done' ? '완료한 항목이 없어요'
                      : memoFilter==='todo' ? '할 일이 없어요 🎉'
                      : (stickySearch ? '검색 결과가 없어요' : '메모를 추가해보세요!');
       grid.innerHTML = `<div class="v43-empty" style="grid-column:1/-1"><div class="ei">📝</div>${emptyMsg}</div>`;
@@ -4216,6 +4242,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       <div class="sticky-note ${getColor(en)}" data-sid="${esc(en.id)}">
         <!-- 읽기 모드 -->
         <div class="sn-view" data-snview="${esc(en.id)}">
+          <div class="sn-tag">${window.WL_TAG_LABEL?window.WL_TAG_LABEL(getColor(en)):''}</div>
           ${en.title?`<div class="sticky-note-title">${esc(en.title)}</div>`:''}
           <div class="sticky-note-body">${renderMemoBody(en.body||'', {splitDone:true})}</div>
           ${en.photos&&en.photos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${en.photos.slice(0,3).map(p=>`<img src="${p}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:2px solid rgba(255,255,255,.8)">`).join('')}${en.photos.length>3?`<span style="font-size:11px;color:#999;align-self:center">+${en.photos.length-3}</span>`:''}</div>`:''}
@@ -4368,6 +4395,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     btn.addEventListener('click', ()=>{
       activeStickyColor = btn.dataset.color;
       document.querySelectorAll('.sc-btn').forEach(b=>b.classList.toggle('active', b.dataset.color===activeStickyColor));
+      const scl = document.getElementById('scLabel');
+      if(scl && window.WL_TAG_LABEL){ scl.textContent = window.WL_TAG_LABEL(activeStickyColor); }
       // 입력창 배경 변경
       const wrap = document.getElementById('stickyInputWrap');
       if(wrap){
@@ -14960,9 +14989,11 @@ if('serviceWorker' in navigator){
       if(!document.getElementById('stkLockBtn')){
         var b = document.createElement('button');
         b.id = 'stkLockBtn'; b.type = 'button';
-        b.className = row.className;
+        b.style.cssText = 'flex:0 0 auto;width:34px;height:32px;margin-left:6px;padding:0;'
+          + 'border:1.5px solid #dbe6f4;border-radius:8px;background:#fff;font-size:15px;'
+          + 'line-height:1;cursor:pointer;font-family:inherit';
         b.title = '이 메모를 비밀로 — 구글 캘린더로 안 보냅니다';
-        b.textContent = '🔒';
+        b.textContent = '🔓';
         b.addEventListener('click', function(){
           var v = String(titleEl.value || '');
           titleEl.value = (v.indexOf(LOCK) === 0) ? v.replace(/^🔒\s*/, '') : (LOCK + ' ' + v);
@@ -14974,9 +15005,11 @@ if('serviceWorker' in navigator){
       if(!document.getElementById('stkScanBtn')){
         var c = document.createElement('button');
         c.id = 'stkScanBtn'; c.type = 'button';
-        c.className = row.className;
+        c.style.cssText = 'flex:0 0 auto;height:32px;margin-left:6px;padding:0 9px;'
+          + 'border:1.5px solid #dbe6f4;border-radius:8px;background:#fff;font-size:12px;'
+          + 'font-weight:700;color:#3f7cb8;line-height:1;cursor:pointer;font-family:inherit;white-space:nowrap';
         c.title = '비밀번호·토큰이 든 메모를 찾아 잠급니다';
-        c.textContent = '🔍🔒';
+        c.textContent = '🔒 점검';
         c.addEventListener('click', function(){ window.wlLockScan(); });
         var anchor = document.getElementById('stkLockBtn') || row;
         anchor.parentNode.insertBefore(c, anchor.nextSibling);
@@ -14995,6 +15028,41 @@ if('serviceWorker' in navigator){
     b.textContent = on ? '🔒' : '🔓';
     b.title = on ? '비밀 메모 — 구글로 안 나감 (눌러서 해제)' : '이 메모를 비밀로 표시';
   }
+
+  /* 메모 카드 편집 모드에 [🔒] 버튼 — 기존 메모도 잠글 수 있게 */
+  setInterval(function(){
+    try{
+      document.querySelectorAll('.sn-edit').forEach(function(box){
+        if(box.style.display === 'none') return;
+        if(box.querySelector('.sn-lock')) return;
+        var t = box.querySelector('.sn-edit-title');
+        var bar = box.querySelector('.sn-card-btns');
+        if(!t || !bar) return;
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'sn-lock';
+        b.style.cssText = 'height:26px;padding:0 8px;margin-right:auto;margin-left:6px;'
+          + 'border:1.5px solid #f5b5b5;border-radius:7px;background:#fdecec;color:#b52929;'
+          + 'font-size:12px;font-weight:700;cursor:pointer;font-family:inherit';
+        function paint(){
+          var on = String(t.value||'').indexOf(LOCK) === 0;
+          b.textContent = on ? '🔒 비밀' : '🔓 잠그기';
+          b.style.background = on ? '#b52929' : '#fdecec';
+          b.style.color = on ? '#fff' : '#b52929';
+          b.style.borderColor = on ? '#b52929' : '#f5b5b5';
+        }
+        b.addEventListener('click', function(ev){
+          ev.stopPropagation();
+          var v = String(t.value || '');
+          t.value = (v.indexOf(LOCK) === 0) ? v.replace(/^🔒\s*/, '') : (LOCK + ' ' + v);
+          paint();
+        });
+        t.addEventListener('input', paint);
+        bar.insertBefore(b, bar.firstChild ? bar.firstChild.nextSibling : null);
+        paint();
+      });
+    }catch(e){}
+  }, 700);
 
   /* 위험한 메모 찾아서 한 번에 잠그기 */
   window.wlLockScan = function(){
@@ -15443,6 +15511,31 @@ if('serviceWorker' in navigator){
     + '@media screen{body{background:#eceff3;padding:14px 0}.doc{background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.12);padding:10mm}}';
   };
 
+  /* 층 정렬 — 옥탑 → 20층…1층 → 지하1층…지하6층 → 전층 → 기타 */
+  function floorRank(f){
+    var s = String(f||'').trim();
+    if(!s || s === '기타') return 99999;
+    if(/전층|전체/.test(s)) return 99998;
+    if(/옥탑|옥상|R층/i.test(s)) return -10;
+    var b = s.match(/지하\s*(\d+)/);
+    if(b) return 10000 + parseInt(b[1], 10);
+    var u = s.match(/(\d+)\s*층/);
+    if(u) return 1000 - parseInt(u[1], 10);
+    return 50000;
+  }
+
+  /* 진행업무 — date 필드가 없고 steps[] 안에 날짜가 있다 */
+  function progDate(e){
+    try{
+      if(Array.isArray(e.steps) && e.steps.length){
+        var ds = e.steps.map(function(s){ return s && s.date; }).filter(Boolean).sort();
+        if(ds.length) return ds[ds.length-1];
+      }
+      if(e.createdAt) return new Date(e.createdAt + 9*3600000).toISOString().slice(0,10);
+    }catch(err){}
+    return '';
+  }
+
   window.wlReportHTML = function(r){
     var c = r.cur, p = r.prv;
     var ymTxt = r.ym.slice(0,4) + '년 ' + parseInt(r.ym.slice(5,7),10) + '월';
@@ -15451,11 +15544,10 @@ if('serviceWorker' in navigator){
     function dowOf(ds){
       var q = String(ds).slice(0,10).split('-');
       if(q.length !== 3) return '';
-      var d = new Date(Date.UTC(+q[0], +q[1]-1, +q[2]));
-      return DOW[d.getUTCDay()];
+      return DOW[new Date(Date.UTC(+q[0], +q[1]-1, +q[2])).getUTCDay()];
     }
 
-    /* 1. 총괄 */
+    /* ── 1. 총괄 ── */
     var kpi = [
       ['업무 처리',  c.work.length,     p.work.length],
       ['일상 청소',  c.lead.length,     p.lead.length],
@@ -15463,36 +15555,58 @@ if('serviceWorker' in navigator){
       ['전달 사항',  c.deliver.length,  p.deliver.length],
       ['사고 접수',  c.accident.length, p.accident.length],
       ['미완료',     r.open.length,     0]
-    ];
+    ].filter(function(x){ return x[1] || x[2]; });          // 당월·전월 모두 0이면 카드도 뺀다
     var kpiHtml = '<div class="kpi">' + kpi.map(function(x){
       return '<div><div class="t">' + x[0] + '</div><div class="v">' + x[1] + '</div>'
         + '<div class="c">전월 ' + x[2] + ' ' + diffTag(x[1], x[2]) + '</div></div>';
     }).join('') + '</div>';
 
     var sumRows = [
-      ['업무 처리 건수',  c.work.length,     p.work.length,     diffTag(c.work.length, p.work.length)],
-      ['일상 청소 건수',  c.lead.length,     p.lead.length,     diffTag(c.lead.length, p.lead.length)],
-      ['통화 응대',       c.call.length,     p.call.length,     diffTag(c.call.length, p.call.length)],
-      ['전달 · 지시',     c.deliver.length,  p.deliver.length,  diffTag(c.deliver.length, p.deliver.length)],
-      ['사고 접수',       c.accident.length, p.accident.length, diffTag(c.accident.length, p.accident.length)],
-      ['미완료 · 이월',   r.open.length,     '-',               '']
-    ];
+      ['업무 처리 건수',  c.work.length,     p.work.length],
+      ['일상 청소 건수',  c.lead.length,     p.lead.length],
+      ['통화 응대',       c.call.length,     p.call.length],
+      ['전달 · 지시',     c.deliver.length,  p.deliver.length],
+      ['사고 접수',       c.accident.length, p.accident.length]
+    ].filter(function(x){ return x[1] || x[2]; })
+     .map(function(x){ return [ x[0], x[1], x[2], diffTag(x[1], x[2]) ]; });
+    if(r.open.length) sumRows.push(['미완료 · 이월', r.open.length, '-', '']);
 
-    /* 자재 */
+    /* ── 층별 ── */
+    var floorRows = r.byFloor.slice().sort(function(a,b){ return floorRank(a.k) - floorRank(b.k); })
+      .map(function(x){ return [esc2(x.k), x.n]; });
+
+    /* ── 자재 ── */
     var matRows = r.mats.map(function(m, i){
-      return [ (i+1), esc2(m.name) + (m.spec ? ' <span class="sp">' + esc2(m.spec) + '</span>' : ''),
-               m.qty, m.cnt ];
+      return [ (i+1), esc2(m.name) + (m.spec ? ' <span class="sp">' + esc2(m.spec) + '</span>' : ''), m.qty, m.cnt ];
     });
     var nameSum = {};
     r.mats.forEach(function(m){ nameSum[m.name] = (nameSum[m.name]||0) + m.qty; });
+    var nameRows = Object.keys(nameSum).sort(function(a,b){ return nameSum[b]-nameSum[a]; })
+      .map(function(k){ return [esc2(k), nameSum[k]]; });
 
-    /* 사고 */
+    /* ── 진행 업무 (kind=progress) ── */
+    var progAll = (typeof entries !== 'undefined')
+      ? entries.filter(function(e){ return e && e.kind === 'progress'; }) : [];
+    var prog = progAll.filter(function(e){
+      var d = progDate(e);
+      return (String(d).slice(0,7) === r.ym) || (e.status && e.status !== '완료');
+    }).sort(function(a,b){ return String(progDate(b)).localeCompare(String(progDate(a))); });
+    var progRows = prog.map(function(e){
+      var steps = Array.isArray(e.steps) ? e.steps.length : 0;
+      return [ '<span class="tag">' + esc2(e.status||'') + '</span>',
+               esc2(e.floor||''),
+               esc2(e.title||'') + (e.detail ? ' <span style="color:#7d8fa1">· ' + esc2(String(e.detail).slice(0,44)) + '</span>' : ''),
+               '<span class="nw">' + esc2(progDate(e)) + '</span>',
+               steps ? (steps + '회') : '-' ];
+    });
+
+    /* ── 사고 ── */
     var accRows = c.accident.map(function(e){
       return [ '<span class="nw">' + esc2(String(eDate(e)).slice(5)) + '</span>', esc2(e.accType||''),
                esc2((e.floor||'') + ' ' + (e.title||'')), esc2(e.status||''), esc2(e.partyName||'') ];
     });
 
-    /* 미완료 / 익월 */
+    /* ── 미완료 / 익월 ── */
     var openRows = r.open.map(function(e){
       return [ '<span class="nw">' + esc2(String(eDate(e)).slice(5)) + '</span>',
                esc2((e.floor||'') + ' ' + (e.title||'')), '<span class="tag">' + esc2(e.status||'') + '</span>' ];
@@ -15502,7 +15616,7 @@ if('serviceWorker' in navigator){
                esc2(e.title||''), esc2(e.scheduleType||'일회성') ];
     });
 
-    /* 근태 · 전달 */
+    /* ── 근태 · 전달 ── */
     var vacRows = c.vacation.map(function(e){
       var per = String(e.start||'').slice(5) + (e.end && e.end !== e.start ? ' ~ ' + String(e.end).slice(5) : '');
       return [ esc2(e.name||''), esc2(e.vtype||'휴가'), '<span class="nw">' + esc2(per) + '</span>', esc2(e.note||'') ];
@@ -15513,12 +15627,9 @@ if('serviceWorker' in navigator){
                esc2(e.dtype||''), esc2(body.slice(0,120)) ];
     });
 
-    /* 붙임 — 날짜별 2단 목록 (100건 넘어도 2~3장) */
+    /* ── 붙임 목록 ── */
     var byDay = {};
-    c.work.forEach(function(e){
-      var d = String(eDate(e)).slice(0,10);
-      (byDay[d] = byDay[d] || []).push(e);
-    });
+    c.work.forEach(function(e){ var d = String(eDate(e)).slice(0,10); (byDay[d] = byDay[d] || []).push(e); });
     var days = Object.keys(byDay).sort();
     var no = 0;
     var listHtml = days.map(function(d){
@@ -15529,6 +15640,33 @@ if('serviceWorker' in navigator){
         return '<div class="witem"><b>' + no + '.</b> ' + esc2(t) + '</div>';
       }).join('');
       return '<div class="wgrp">' + head + items + '</div>';
+    }).join('');
+
+    /* ── 내용 있는 장만 번호를 매겨 조립 ── */
+    var secs = [];
+    function add(title, has, body){ if(has) secs.push({ t:title, b:body }); }
+
+    add('총괄 요약', sumRows.length || kpi.length,
+        kpiHtml + T(['구 분', esc2(ymTxt), '전월', '증감'], sumRows, ['34%','22%','22%','22%']));
+    add('층별 업무 현황', floorRows.length, chips(floorRows, 6));
+    add('자재 사용 내역', matRows.length,
+        '<h3>자재명 합계</h3>' + chips(nameRows, 5)
+        + '<h3>규격별 사용량</h3>' + T(['No','자재 (규격)','수량','사용 건수'], matRows, ['6%','58%','18%','18%']));
+    add('진행 업무 현황', progRows.length,
+        T(['상태','층','업무 내용','최근 진행','진행 횟수'], progRows, ['12%','11%','50%','15%','12%']));
+    add('사고 발생 현황', accRows.length,
+        T(['일자','종류','내용','처리상태','당사자'], accRows, ['10%','14%','44%','16%','16%']));
+    add('미완료 · 익월 이월 사항', openRows.length || nextRows.length,
+        (openRows.length ? '<h3>미완료 업무 (' + r.open.length + '건)</h3>'
+            + T(['일자','내용','상태'], openRows, ['11%','73%','16%']) : '')
+        + (nextRows.length ? '<h3>' + esc2(r.nextYm.slice(0,4) + '년 ' + parseInt(r.nextYm.slice(5,7),10) + '월')
+            + ' 예정 (' + r.nextSched.length + '건)</h3>'
+            + T(['일자','예정 내용','반복'], nextRows, ['12%','66%','22%']) : ''));
+    add('근태 현황', vacRows.length, T(['성명','종류','기간','비고'], vacRows, ['16%','16%','22%','46%']));
+    add('전달 · 지시 사항', delRows.length, T(['일자','구분','내용'], delRows, ['11%','15%','74%']));
+
+    var bodyHtml = secs.map(function(s, i){
+      return '<h2>' + (i+1) + '. ' + esc2(s.t) + '</h2>' + s.b;
     }).join('');
 
     return ''
@@ -15542,42 +15680,10 @@ if('serviceWorker' in navigator){
     +     '<span>작성일 <b>' + esc2(today) + '</b></span>'
     +   '</div>'
     + '</div>'
-
-    + '<h2>1. 총괄 요약</h2>'
-    + kpiHtml
-    + T(['구 분', esc2(ymTxt), '전월', '증감'],
-        sumRows.map(function(x){ return [ x[0], x[1], x[2], x[3] ]; }),
-        ['34%','22%','22%','22%'])
-
-    + '<h2>2. 층별 업무 현황</h2>'
-    + chips(r.byFloor.map(function(x){ return [esc2(x.k), x.n]; }), 6)
-
-    + '<h2>3. 자재 사용 내역</h2>'
-    + '<h3>자재명 합계</h3>'
-    + chips(Object.keys(nameSum).sort(function(a,b){ return nameSum[b]-nameSum[a]; })
-        .map(function(k){ return [esc2(k), nameSum[k]]; }), 5)
-    + '<h3>규격별 사용량</h3>'
-    + T(['No','자재 (규격)','수량','사용 건수'], matRows, ['6%','58%','18%','18%'])
-
-    + '<h2>4. 사고 발생 현황</h2>'
-    + (c.accident.length ? T(['일자','종류','내용','처리상태','당사자'], accRows, ['10%','14%','44%','16%','16%'])
-                         : '<p class="none">당월 접수된 사고 없음</p>')
-
-    + '<h2>5. 미완료 · 익월 이월 사항</h2>'
-    + '<h3>미완료 업무 (' + r.open.length + '건)</h3>'
-    + T(['일자','내용','상태'], openRows, ['11%','73%','16%'])
-    + '<h3>' + esc2(r.nextYm.slice(0,4) + '년 ' + parseInt(r.nextYm.slice(5,7),10) + '월') + ' 예정 (' + r.nextSched.length + '건)</h3>'
-    + T(['일자','예정 내용','반복'], nextRows, ['12%','66%','22%'])
-
-    + '<h2>6. 근태 현황</h2>'
-    + T(['성명','종류','기간','비고'], vacRows, ['16%','16%','22%','46%'])
-
-    + '<h2>7. 전달 · 지시 사항</h2>'
-    + T(['일자','구분','내용'], delRows, ['11%','15%','74%'])
-
-    + '<h2 class="pb">붙임. 업무 내역 (' + c.work.length + '건)</h2>'
-    + (c.work.length ? '<div class="wlist">' + listHtml + '</div>' : '<p class="none">해당 사항 없음</p>')
-
+    + bodyHtml
+    + (c.work.length
+        ? '<h2 class="pb">붙임. 업무 내역 (' + c.work.length + '건)</h2><div class="wlist">' + listHtml + '</div>'
+        : '')
     + '<div class="foot"><span>서희타워 시설관리소 · ' + esc2(ymTxt) + ' 업무 월간보고서</span>'
     +   '<span>출력 ' + esc2(today) + '</span></div>'
     + '</div>';
@@ -15770,9 +15876,170 @@ if('serviceWorker' in navigator){
 })();
 </script>
 <script>
+/* ===== v45-0826: 메모 색 = 분류 태그 =====
+   실제 메모를 보니 대부분이 (1) API키·토큰·비번 (2) 앱 설정·요청
+   (3) 참고 자료·도서 (4) 개인 (5) 임시 다섯 갈래였다.
+   색 5개를 그 다섯 갈래에 붙여 쓰고, 기존 메모는 내용으로 자동 분류한다. */
+(function(){
+  var TAGS = [
+    { c:'yellow', e:'🔑', n:'계정·비번', secret:true, bg:'#fff9c4',
+      pat:[/github_pat_|ghp_|sk-[A-Za-z0-9]|AIza[A-Za-z0-9]/i,
+           /client\s*(id|secret)/i, /api\s*[-_ ]?key|apikey/i, /토큰|token/i,
+           /앱\s*키|앱키|키값|인증키|시크릿|secret/i,
+           /비번|비밀번호|패스워드|password|pw\b/i, /계정|아이디|로그인/i, /api/i, /dart|앱키|appkey/i] },
+    { c:'blue', e:'🛠', n:'설정·요청', bg:'#dbeafe',
+      pat:[/안\s*돼|안됨|안나와|오류|버그|에러|고쳐|수정|개선|바꿔|추가해/i,
+           /버튼|화면|기능|설정|앱\b|프로그램|시스템|금지|해제/i] },
+    { c:'green', e:'📚', n:'자료·참고', bg:'#dcfce7',
+      pat:[/도서|책\b|목록|참고|자료|링크|출처|요약|분석|정리|리스트|강의|기사/i] },
+    { c:'pink', e:'🏠', n:'개인', bg:'#fce7f3',
+      pat:[/캠핑|여행|가족|아내|아이|집\b|생일|병원|약속|취미|주말|개인/i] },
+    { c:'orange', e:'🗒', n:'임시', bg:'#ffedd5',
+      pat:[/^테스트|테스트$|임시|샘플|test|메모테스트/i] }
+  ];
+  var MAP = {};
+  TAGS.forEach(function(t){ MAP[t.c] = t; });
+
+  window.WL_TAGS = TAGS;
+  window.WL_TAG_LABEL = function(color){
+    var t = MAP[color] || MAP.yellow;
+    return t.e + ' ' + t.n;
+  };
+
+  /* 내용으로 분류 — 점수제 (여러 패턴이 맞을수록 확신) */
+  window.wlGuessTag = function(en){
+    var txt = [en && en.title, en && en.body].filter(Boolean).join('\n')
+              .replace(/<[^>]+>/g, ' ');
+    var best = null, bestScore = 0;
+    TAGS.forEach(function(t){
+      var sc = 0;
+      t.pat.forEach(function(p){ if(p.test(txt)) sc++; });
+      if(t.c === 'yellow' && sc) sc += 1;                 // 비밀은 놓치면 위험하니 가중치
+      if(sc > bestScore){ bestScore = sc; best = t; }
+    });
+    return best ? { tag: best, score: bestScore } : null;
+  };
+
+  /* 자동 분류 창 */
+  window.wlAutoTagUI = function(){
+    if(typeof entries === 'undefined'){ alert('데이터를 아직 못 읽었어요'); return; }
+    var memos = entries.filter(function(e){ return e && e.kind === 'memo'; });
+    if(!memos.length){ alert('메모가 없습니다'); return; }
+
+    var plan = [];
+    memos.forEach(function(e){
+      var g = window.wlGuessTag(e);
+      if(!g) return;
+      var cur = e.stickyColor || 'yellow';
+      var needLock = !!(g.tag.secret && String(e.title||'').indexOf('🔒') !== 0);
+      plan.push({ id:e.id, title:(e.title || String(e.body||'').replace(/<[^>]+>/g,' ')).slice(0,26),
+                  from:cur, to:g.tag.c, score:g.score,
+                  changed:(cur !== g.tag.c), lock:needLock });
+    });
+    var changed = plan.filter(function(x){ return x.changed || x.lock; });
+
+    var old = document.getElementById('wlTagOv'); if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'wlTagOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12100;display:flex;'
+      + 'align-items:center;justify-content:center;padding:14px;font-family:inherit';
+    var byTag = {};
+    plan.forEach(function(x){ byTag[x.to] = (byTag[x.to]||0) + 1; });
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
+      + '<div style="padding:16px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">'
+      +   '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">🎨 메모 자동 분류</span>'
+      +   '<button id="wlTagClose" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<div style="padding:12px 18px 0">'
+      +   '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">'
+      +     TAGS.map(function(t){
+              return '<span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid rgba(0,0,0,.08);'
+                + 'background:' + t.bg + ';border-radius:8px;padding:4px 9px;font-size:12.5px;font-weight:700;color:#4a4230">'
+                + t.e + ' ' + t.n + ' <b>' + (byTag[t.c]||0) + '</b></span>';
+            }).join('')
+      +   '</div>'
+      +   '<div style="font-size:12.5px;color:#7a92a8;line-height:1.6;margin-bottom:8px">'
+      +     '메모 <b>' + memos.length + '건</b> 중 <b style="color:#1a73e8">' + changed.length + '건</b>을 정리합니다.'
+      +     (byTag.yellow ? '<br>🔑 계정·비번으로 잡힌 것은 <b>구글 캘린더로 안 나가게</b> 같이 잠급니다.' : '')
+      +   '</div>'
+      + '</div>'
+      + '<div id="wlTagList" style="flex:1;overflow:auto;padding:0 18px 4px"></div>'
+      + '<div style="padding:10px 18px 16px;display:flex;gap:8px;border-top:1px solid #f1f5f9">'
+      +   '<button id="wlTagCancel" style="flex:1;height:42px;border:1.5px solid #dbe6f4;border-radius:10px;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">닫기</button>'
+      +   '<button id="wlTagGo" style="flex:2;height:42px;border:none;border-radius:10px;background:#1a73e8;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">✓ 체크한 것 적용</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    document.getElementById('wlTagClose').addEventListener('click', function(){ ov.remove(); });
+    document.getElementById('wlTagCancel').addEventListener('click', function(){ ov.remove(); });
+
+    var listEl = document.getElementById('wlTagList');
+    listEl.innerHTML = changed.length
+      ? changed.map(function(x){
+          var f = MAP[x.from] || MAP.yellow, t = MAP[x.to];
+          return '<label style="display:flex;align-items:center;gap:8px;padding:7px 9px;border:1.5px solid #eef4fb;'
+            + 'border-radius:9px;margin-bottom:5px;cursor:pointer">'
+            + '<input type="checkbox" class="wl-tag-chk" data-id="' + x.id + '" data-to="' + x.to + '" checked '
+            + 'style="width:16px;height:16px;accent-color:#1a73e8;flex:0 0 auto">'
+            + '<span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:#1a2f45;overflow:hidden;'
+            + 'text-overflow:ellipsis;white-space:nowrap">' + esc(x.title) + '</span>'
+            + (x.changed
+                ? ('<span style="flex:0 0 auto;font-size:11.5px;color:#9aa7b4">' + f.e + '</span>'
+                   + '<span style="flex:0 0 auto;color:#c3d1de">→</span>')
+                : '')
+            + '<span style="flex:0 0 auto;font-size:11.5px;font-weight:800;background:' + t.bg
+            + ';border-radius:6px;padding:2px 7px;color:#4a4230">' + t.e + ' ' + t.n + '</span>'
+            + (x.lock ? '<span style="flex:0 0 auto;font-size:11.5px;font-weight:800;background:#fdecec;'
+                        + 'border-radius:6px;padding:2px 7px;color:#b52929">🔒 잠금</span>' : '')
+            + '</label>';
+        }).join('')
+      : '<div style="padding:26px;text-align:center;color:#aab8c8;font-size:13px">바뀔 메모가 없습니다 — 이미 잘 분류돼 있어요</div>';
+
+    document.getElementById('wlTagGo').addEventListener('click', function(){
+      var chks = [].slice.call(listEl.querySelectorAll('.wl-tag-chk')).filter(function(c){ return c.checked; });
+      if(!chks.length){ alert('적용할 항목을 골라주세요'); return; }
+      var n = 0, locked = 0;
+      chks.forEach(function(c){
+        var id = c.getAttribute('data-id'), to = c.getAttribute('data-to');
+        var patch = { stickyColor: to };
+        if(MAP[to] && MAP[to].secret){
+          patch.secret = true;
+          var en = entries.find(function(x){ return x.id === id; });
+          var ti = String((en && en.title) || '');
+          if(ti.indexOf('🔒') !== 0) patch.title = ('🔒 ' + ti).trim();
+          locked++;
+        }
+        try{ updateRecord(id, patch); n++; }catch(e){}
+      });
+      ov.remove();
+      if(typeof renderStickyGrid === 'function') setTimeout(renderStickyGrid, 200);
+      if(typeof renderAll === 'function') setTimeout(renderAll, 300);
+      alert('🎨 ' + n + '건 분류 완료' + (locked ? ('\n🔑 계정·비번 ' + locked + '건은 함께 잠갔습니다.') : ''));
+      if(locked && typeof window.wlPurgeSecrets === 'function'
+         && window.gcalHasToken && window.gcalHasToken()){
+        setTimeout(function(){ window.wlPurgeSecrets(); }, 700);
+      }
+    });
+  };
+
+  /* 버튼 연결 + 색 라벨 초기화 */
+  setInterval(function(){
+    var b = document.getElementById('memoAutoTag');
+    if(b && !b._bound){ b._bound = true; b.addEventListener('click', function(){ window.wlAutoTagUI(); }); }
+    var scl = document.getElementById('scLabel');
+    if(scl && !scl._init){
+      scl._init = true;
+      var on = document.querySelector('.sc-btn.active');
+      scl.textContent = window.WL_TAG_LABEL(on ? on.dataset.color : 'yellow');
+    }
+  }, 900);
+
+  console.log('[메모태그] 색=분류 태그 로드');
+})();
+</script>
+<script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0826-1056';
+  var TAG = ' +cal0826-1126';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
