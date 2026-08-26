@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260826-0918-cal0826-0918"></script>
+<script src="worklog.js?v=v45-20260826-1017-cal0826-1017"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -5177,6 +5177,17 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     }
   }
   function _syncGCalRaw(en, onDone){
+    // v45-0826: 비밀번호·토큰이 든 항목은 구글 캘린더로 내보내지 않는다
+    if(typeof window.wlIsSecret === 'function' && window.wlIsSecret(en)){
+      gcalLog('비밀제외', en, '구글 전송 안 함');
+      if(en.gcalEventId && accessToken){          // 예전에 올라간 게 있으면 지운다
+        var _c = calIdForEntry(en);
+        if(_c) deleteFromGCal(en.gcalEventId, _c);
+        if(typeof updateRecord === 'function' && en.id) updateRecord(en.id, { gcalEventId: null });
+      }
+      if(onDone) onDone(false);
+      return;
+    }
     // 타이머 안에서 signIn() 을 부르면 팝업이 차단돼서 아무 일도 안 일어난다 → 표시만 하고 종료
     if(!accessToken){ window.__gcalAuthNeeded = true; gcalLog('무토큰', en, '구글 로그인 필요'); if(onDone) onDone(false); return; }
     var calId = GCAL_IDS[en.kind];
@@ -5983,6 +5994,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   // v45-0824: 대기함(outbox)에서 쓰는 전역
   window.gcalSignIn   = function(){ window.__gcalAuthNeeded = false; signIn(); };
   window.gcalHasToken = function(){ return !!accessToken; };
+  window.wlGcalToken  = function(){ return accessToken; };
+  window.wlCalIdFor   = function(en){ return calIdForEntry(en); };
   window.gcalKinds    = function(){ return Object.keys(GCAL_IDS); };
 
   // ══════════════════════════════════════════════════════
@@ -6291,6 +6304,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       + '<button id="gpcTaskMgr" style="flex:1;min-width:140px;height:36px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧹 남은 구글 할 일 정리</button>'
       + '<button id="gpcUndoDone" style="flex:1;min-width:170px;height:36px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔧 잘못 완료된 예정 되돌리기</button>'
       + '<button id="gpcMerge" style="flex:1;min-width:160px;height:36px;background:#7c2d12;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🏠 캘린더 3개로 합치기</button>'
+      + '<button id="gpcSecret" style="flex:1;min-width:180px;height:36px;background:#b52929;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔒 구글에 올라간 비밀 항목 지우기</button>'
       + '</div></div>'
       + '<div style="display:flex;gap:8px">'
       + '<button id="gpcCancel" style="flex:1;height:44px;background:#f7faff;border:2px solid #dbe6f4;border-radius:10px;font-size:14px;font-weight:700;color:#7a92a8;cursor:pointer;font-family:inherit">닫기</button>'
@@ -6353,6 +6367,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     _tool('gpcTaskMgr', window.gtaskManager);
     _tool('gpcUndoDone', window.gtaskUndoComplete);
     _tool('gpcMerge',    window.gcalMergeCalendars);
+    _tool('gpcSecret',   window.wlPurgeSecrets);
     _tool('gpcPurge',   window.gcalPurgeOldWorkSchedule);
 
     document.getElementById('gpcCancel').addEventListener('click', function(){ ov.remove(); });
@@ -14024,7 +14039,8 @@ if('serviceWorker' in navigator){
       window.addRecord = function(obj){
         var r = oa.apply(this, arguments);
         try{
-          if(obj && !obj._fromGcal && eDate(obj) && r && r.id && syncKinds().indexOf(obj.kind)>=0) enqueue(r.id, false);
+          if(obj && !obj._fromGcal && eDate(obj) && r && r.id && syncKinds().indexOf(obj.kind)>=0
+             && !(typeof window.wlIsSecret==='function' && window.wlIsSecret(obj))) enqueue(r.id, false);
         }catch(e){ log('add 훅 오류: '+e); }
         return r;
       };
@@ -14042,7 +14058,8 @@ if('serviceWorker' in navigator){
             var onlyMeta = keys.length>0 && keys.every(function(k){ return meta.indexOf(k)>=0; });
             if(!onlyMeta){
               var en = entryOf(id);
-              if(en && eDate(en) && syncKinds().indexOf(en.kind)>=0) enqueue(id, true);   // 수정은 PUT 이라 다시 보내도 안전
+              if(en && eDate(en) && syncKinds().indexOf(en.kind)>=0
+                 && !(typeof window.wlIsSecret==='function' && window.wlIsSecret(en))) enqueue(id, true);
             } else if(keys.indexOf('gcalEventId')>=0 && patch.gcalEventId){
               dequeue(id);                                                              // 전송 성공 → 대기함에서 뺀다
             }
@@ -14489,210 +14506,364 @@ if('serviceWorker' in navigator){
 })();
 </script>
 <script>
-/* ===== v45-0824i: 파일링크(점검일지·운영실무·서류폴더…) 클라우드 백업 =====
-   이 목록들은 여태 '이 브라우저의 localStorage'에만 있었다.
-   브라우저 데이터가 지워지면 그대로 사라진다 — 실제로 그렇게 사라졌다.
-   이제 바뀔 때마다 파이어베이스에 자동 백업하고, 비어 있으면 자동 복원한다. */
+/* ===== v45-0826: 앱 데이터 통째 클라우드 백업 =====
+   브라우저 "쿠키 및 기타 사이트 데이터"를 지우면 이 앱이 브라우저에 저장해 둔 것이
+   전부 사라진다 — 파일링크, 분류 목록, 업체 목록, 화면 설정까지.
+   (업무 기록은 파이어베이스에 있어 무사하다.)
+   이제 브라우저에 저장되는 것을 통째로 파이어베이스에 자동 백업하고,
+   앱을 켰을 때 없어진 항목만 골라 자동으로 되살린다. */
 (function(){
-  var CLOUD_COL = 'wl_doclinks';
-  var CLOUD_DOC = 'all';
-  var LAST_LS   = 'wl_doclinks_backup_ts';
+  var CLOUD_COL = 'wl_backup';       // 키 하나당 문서 하나 (1MB 문서 한도 회피)
+  var INDEX_DOC = '_index';
+  var TS_LS     = 'wl_backup_ts';
 
-  function dbg(m){ try{ if(typeof dbg2==='function') dbg2(m); }catch(e){} console.log('[파일백업] '+m); }
-
-  /* 백업 대상 키 목록 (기본 5탭 + 사용자가 만든 탭 + 탭 설정) */
-  function keyMap(){
-    var m = {
-      insp:   'wl_insp_v43',
-      docs:   'wl_docs_v43',
-      common: 'wl_common_v43',
-      indiv:  'wl_indiv_v43',
-      etc:    'wl_etc_v44'
-    };
-    try{
-      var tabs = JSON.parse(localStorage.getItem('wl_folder_tabs_v1')||'[]');
-      tabs.forEach(function(t){ if(t && t.id && t.id.indexOf('custom_')===0) m[t.id] = 'wl_'+t.id+'_v43'; });
-    }catch(e){}
-    return m;
+  /* 백업하지 않는 것 — 비밀정보와 임시 데이터 */
+  var SKIP_EXACT = {
+    'wl_gcal_token':1,        // 구글 로그인 토큰 (비밀·어차피 만료)
+    '_ghToken':1,             // 깃허브 토큰 (비밀)
+    'wl_ai_key':1, 'ai_key':1, 'wl_apikey':1,
+    'wl_backup_ts':1, 'wl_doclinks_backup_ts':1,
+    'wl_gcal_outbox':1, 'wl_gcal_log':1, 'wl_gcal_deleted':1,
+    'wl_gcal_pull_ts':1, 'wl_gcal_backfill_ts':1, 'wl_gcal_fixdesc_v1':1,
+    'wl_gcal_ob_v2':1, 'wl_tasks_reset_1615':1, 'wl_tasks_listid':1, 'wl_test':1
+  };
+  function skipKey(k){
+    if(!k) return true;
+    if(SKIP_EXACT[k]) return true;
+    if(/token|apikey|api_key|secret|passwd|password/i.test(k)) return true;   // 비밀은 안 올린다
+    return false;
   }
-  var EXTRA_KEYS = ['wl_folder_tabs_v1','wl_insp_v43_months','wl_insp_v43_years'];
+  /* 이 앱이 쓰는 키만 (다른 사이트 흔적은 건드리지 않음) */
+  function isAppKey(k){
+    return /^(wl_|v43_|sticky_view|shared_pin|_itemMemoMigrated)/.test(k);
+  }
+  function docId(k){ return k.replace(/[^A-Za-z0-9_\-]/g, '_').slice(0, 120); }
 
-  function snapshot(){
-    var m = keyMap(), out = { _keys:{}, _extra:{} };
-    for(var tab in m){
-      var arr = [];
-      try{ arr = JSON.parse(localStorage.getItem(m[tab])||'[]'); }catch(e){ arr = []; }
-      out._keys[tab] = { ls:m[tab], items: Array.isArray(arr) ? arr : [] };
+  function log(m){ try{ console.log('[백업] ' + m); }catch(e){} }
+  function ready(){ return (typeof db !== 'undefined') && db && (typeof online === 'undefined' || online !== false); }
+
+  function localKeys(){
+    var out = [];
+    for(var i = 0; i < localStorage.length; i++){
+      var k = localStorage.key(i);
+      if(!k || skipKey(k) || !isAppKey(k)) continue;
+      out.push(k);
     }
-    EXTRA_KEYS.forEach(function(k){
+    return out.sort();
+  }
+  function sizeOf(v){ return v ? v.length : 0; }
+  function hashOf(v){                                   // 짧은 지문 (바뀐 것만 올리려고)
+    var h = 5381, s = v || '';
+    for(var i = 0; i < s.length; i++){ h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; }
+    return s.length + ':' + h.toString(36);
+  }
+  function localSnap(){
+    var o = {};
+    localKeys().forEach(function(k){
       var v = null;
       try{ v = localStorage.getItem(k); }catch(e){}
-      if(v) out._extra[k] = v;
+      if(v !== null) o[k] = v;
     });
-    return out;
-  }
-  function countOf(snap){
-    var n = 0;
-    if(!snap || !snap._keys) return 0;
-    for(var t in snap._keys) n += (snap._keys[t].items || []).length;
-    return n;
-  }
-  function perTab(snap){
-    var o = {};
-    if(snap && snap._keys) for(var t in snap._keys) o[t] = (snap._keys[t].items||[]).length;
     return o;
   }
 
-  function ready(){ return (typeof db !== 'undefined') && db && (typeof online === 'undefined' || online !== false); }
-
-  /* ── 올리기 ── */
-  var pushT = null, lastSig = '';
+  /* ── 올리기 (바뀐 키만) ── */
+  var upT = null, sentHash = {};
   function pushCloud(force, cb){
-    if(!ready()){ if(cb) cb(false,'클라우드 연결 안 됨'); return; }
-    var snap = snapshot();
-    var cnt = countOf(snap);
-    if(!cnt && !force){ if(cb) cb(false,'올릴 내용이 없음'); return; }   // 빈 상태를 덮어쓰지 않는다
-    var payload = { data: JSON.stringify(snap), count: cnt, updatedAt: Date.now(),
-                    ua: (navigator.userAgent||'').slice(0,120) };
-    db.collection(CLOUD_COL).doc(CLOUD_DOC).set(payload)
-      .then(function(){
-        try{ localStorage.setItem(LAST_LS, String(Date.now())); }catch(e){}
-        dbg('백업 완료 ' + cnt + '건');
-        if(cb) cb(true, cnt);
-      })
-      .catch(function(e){ dbg('백업 실패: ' + e); if(cb) cb(false, String(e && e.message || e)); });
+    if(!ready()){ if(cb) cb(false, '클라우드 연결 안 됨'); return; }
+    var snap = localSnap();
+    var keys = Object.keys(snap);
+    if(!keys.length){ if(cb) cb(false, '올릴 내용이 없음'); return; }
+    var todo = keys.filter(function(k){
+      return force || sentHash[k] !== hashOf(snap[k]);
+    });
+    if(!todo.length){ if(cb) cb(true, 0); return; }
+    var done = 0, failN = 0, lastErr = '';
+    var chain = Promise.resolve();
+    todo.forEach(function(k){
+      chain = chain.then(function(){
+        var v = snap[k];
+        if(sizeOf(v) > 900000){ failN++; lastErr = k + ' 가 너무 큼'; return; }
+        return db.collection(CLOUD_COL).doc(docId(k)).set({ k:k, v:v, n:sizeOf(v), t:Date.now() })
+          .then(function(){ sentHash[k] = hashOf(v); done++; })
+          .catch(function(e){ failN++; lastErr = String(e && e.message || e); });
+      });
+    });
+    chain.then(function(){
+      return db.collection(CLOUD_COL).doc(INDEX_DOC)
+        .set({ keys: keys, t: Date.now(), ua: (navigator.userAgent||'').slice(0,120) })
+        .catch(function(){});
+    }).then(function(){
+      try{ localStorage.setItem(TS_LS, String(Date.now())); }catch(e){}
+      log('백업 ' + done + '개 키' + (failN ? (' / 실패 ' + failN) : ''));
+      if(cb) cb(failN === 0, failN ? lastErr : done);
+    });
   }
   function pushLater(){
-    if(pushT) clearTimeout(pushT);
-    pushT = setTimeout(function(){ pushT = null; pushCloud(false); }, 4000);
+    if(upT) clearTimeout(upT);
+    upT = setTimeout(function(){ upT = null; pushCloud(false); }, 5000);
   }
 
   /* ── 내려받기 ── */
   function fetchCloud(cb){
     if(!ready()){ cb(null, '클라우드 연결 안 됨'); return; }
-    db.collection(CLOUD_COL).doc(CLOUD_DOC).get()
-      .then(function(d){
-        if(!d.exists){ cb(null, '백업이 없습니다'); return; }
-        var v = d.data() || {};
-        var snap = null;
-        try{ snap = JSON.parse(v.data||'null'); }catch(e){}
-        cb(snap ? { snap:snap, count:v.count||countOf(snap), updatedAt:v.updatedAt||0 } : null, '백업이 손상됨');
+    db.collection(CLOUD_COL).get()
+      .then(function(snap){
+        var out = {}, t = 0;
+        snap.forEach(function(d){
+          var v = d.data() || {};
+          if(d.id === INDEX_DOC){ t = v.t || 0; return; }
+          if(v.k) out[v.k] = v.v;
+        });
+        cb({ data: out, t: t });
       })
       .catch(function(e){ cb(null, String(e && e.message || e)); });
   }
 
-  function applySnap(snap){
-    if(!snap || !snap._keys) return 0;
-    var n = 0;
-    for(var tab in snap._keys){
-      var rec = snap._keys[tab];
-      if(!rec || !rec.ls) continue;
-      try{ localStorage.setItem(rec.ls, JSON.stringify(rec.items||[])); n += (rec.items||[]).length; }catch(e){}
+  function applyKeys(data, onlyMissing){
+    var n = 0, list = [];
+    for(var k in data){
+      if(skipKey(k)) continue;
+      var cur = null;
+      try{ cur = localStorage.getItem(k); }catch(e){}
+      if(onlyMissing && cur !== null && cur !== '' && cur !== '[]') continue;
+      try{ localStorage.setItem(k, data[k]); n++; list.push(k); }catch(e){}
     }
-    if(snap._extra) for(var k in snap._extra){ try{ localStorage.setItem(k, snap._extra[k]); }catch(e){} }
-    // 탭 화면 다시 그리기
+    if(n) redrawTabs();
+    return { n:n, list:list };
+  }
+  function redrawTabs(){
     ['insp','docs','common','indiv','etc'].forEach(function(t){
       try{ if(typeof window['_docTabRender_'+t] === 'function') window['_docTabRender_'+t](); }catch(e){}
     });
-    return n;
+    try{ if(typeof renderAll === 'function') setTimeout(renderAll, 300); }catch(e){}
   }
 
-  /* ── 시작할 때: 비어 있으면 자동 복원 ── */
-  var restoreTried = false;
+  /* ── 시작할 때: 없어진 것만 자동 복원 ── */
+  var tried = false;
   function autoRestore(){
-    if(restoreTried) return;
-    if(!ready()) return;
-    restoreTried = true;
-    var local = countOf(snapshot());
+    if(tried || !ready()) return;
+    tried = true;
     fetchCloud(function(res, err){
-      if(!res){ dbg('복원 확인: ' + (err||'없음')); return; }
-      if(local > 0){
-        dbg('이 기기에 ' + local + '건 있음 → 복원 안 함 (백업만 유지)');
-        return;
+      if(!res){ log('복원 확인: ' + (err || '없음')); return; }
+      var r = applyKeys(res.data, true);          // 로컬에 없는 키만
+      Object.keys(res.data).forEach(function(k){ sentHash[k] = hashOf(res.data[k]); });
+      if(r.n){
+        log('자동 복원 ' + r.n + '개 키: ' + r.list.join(', '));
+        if(typeof toast === 'function') toast('☁ 없어진 설정·목록 ' + r.n + '개를 클라우드에서 되살렸어요', 6000);
       }
-      if(!res.count){ dbg('클라우드도 비어 있음'); return; }
-      var n = applySnap(res.snap);
-      dbg('자동 복원 ' + n + '건');
-      if(typeof toast === 'function') toast('☁ 파일링크 ' + n + '건을 클라우드에서 되살렸어요', 5000);
+      pushLater();
     });
   }
 
   /* ── 바뀌면 자동 백업 ── */
   function watch(){
     if(!ready()) return;
-    var snap = snapshot();
-    var cnt = countOf(snap);
-    var sig = cnt + '|' + JSON.stringify(perTab(snap));
-    if(!lastSig){ lastSig = sig; if(cnt) pushLater(); return; }
-    if(sig !== lastSig){
-      lastSig = sig;
-      if(cnt) pushLater();                       // 빈 상태로는 절대 안 올린다
-      else dbg('목록이 비었음 — 백업을 덮어쓰지 않음');
-    }
+    var snap = localSnap(), changed = 0;
+    for(var k in snap){ if(sentHash[k] !== hashOf(snap[k])) changed++; }
+    if(changed) pushLater();
   }
 
-  /* ── 백업/복원 창 ── */
+  /* ── 파일로 내보내기 / 가져오기 (클라우드와 별개인 두 번째 안전망) ── */
+  window.wlExportBackup = function(){
+    var snap = localSnap();
+    var body = JSON.stringify({ app:'worklog', ver:(typeof APP_VERSION!=='undefined'?APP_VERSION:''),
+                                at:new Date().toISOString(), data:snap }, null, 1);
+    var d = (typeof todayStr === 'function') ? todayStr() : new Date().toISOString().slice(0,10);
+    var blob = new Blob([body], { type:'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '업무일지_백업_' + d + '.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    if(typeof toast === 'function') toast('⬇ 백업 파일을 저장했습니다', 4000);
+  };
+  window.wlImportBackup = function(){
+    var inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.json,application/json';
+    inp.addEventListener('change', function(){
+      var f = inp.files && inp.files[0]; if(!f) return;
+      var fr = new FileReader();
+      fr.onload = function(){
+        var obj = null;
+        try{ obj = JSON.parse(fr.result); }catch(e){}
+        if(!obj || !obj.data){ alert('백업 파일이 아닙니다'); return; }
+        var cnt = Object.keys(obj.data).length;
+        if(!confirm('백업 파일에서 ' + cnt + '개 항목을 가져옵니다.\n같은 이름의 현재 값은 덮어씁니다.\n계속할까요?')) return;
+        var r = applyKeys(obj.data, false);
+        sentHash = {};
+        if(typeof toast === 'function') toast('⬆ ' + r.n + '개 항목을 가져왔습니다', 5000);
+        pushCloud(true);
+      };
+      fr.readAsText(f);
+    });
+    inp.click();
+  };
+
+  /* ── 저장소에 남아 있는 다른 목록 찾기 ── */
+  function looksLikeLinks(arr){
+    if(!Array.isArray(arr) || !arr.length) return false;
+    var n = 0;
+    arr.slice(0, 12).forEach(function(x){ if(x && typeof x === 'object' && (x.name || x.path || x.type)) n++; });
+    return n >= Math.min(2, arr.length);
+  }
+  function docKeyMap(){
+    var m = { insp:'wl_insp_v43', docs:'wl_docs_v43', common:'wl_common_v43', indiv:'wl_indiv_v43', etc:'wl_etc_v44' };
+    try{
+      var tabs = JSON.parse(localStorage.getItem('wl_folder_tabs_v1')||'[]');
+      tabs.forEach(function(t){ if(t && t.id && t.id.indexOf('custom_')===0) m[t.id] = 'wl_'+t.id+'_v43'; });
+    }catch(e){}
+    return m;
+  }
+  window.wlScanLostLinks = function(){
+    var found = [], active = {}, m = docKeyMap();
+    for(var t in m) active[m[t]] = 1;
+    for(var i = 0; i < localStorage.length; i++){
+      var k = localStorage.key(i);
+      if(!k) continue;
+      var raw = '';
+      try{ raw = localStorage.getItem(k) || ''; }catch(e){ continue; }
+      if(raw.length < 20 || raw.charAt(0) !== '[') continue;
+      var arr = null;
+      try{ arr = JSON.parse(raw); }catch(e){ continue; }
+      if(!looksLikeLinks(arr)) continue;
+      found.push({ key:k, n:arr.length, active:!!active[k],
+                   sample:(arr[0] && (arr[0].name || arr[0].path) || '').toString().slice(0,34) });
+    }
+    found.sort(function(a,b){ return b.n - a.n; });
+    return found;
+  };
+
+  /* ── 백업 창 ── */
   window.wlDocBackupUI = function(){
     var old = document.getElementById('wlDbOv'); if(old) old.remove();
     var ov = document.createElement('div');
     ov.id = 'wlDbOv';
-    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12080;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit';
-    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:430px;max-height:88vh;overflow:auto;padding:18px 20px">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
-      +   '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">☁ 파일링크 백업 · 복원</span>'
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12080;display:flex;'
+      + 'align-items:center;justify-content:center;padding:14px;font-family:inherit';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:440px;max-height:90vh;overflow:auto;padding:18px 20px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      +   '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">☁ 앱 데이터 백업 · 복원</span>'
       +   '<button id="wlDbClose" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer">✕</button>'
       + '</div>'
+      + '<div style="font-size:11.5px;color:#9aa7b4;line-height:1.6;margin-bottom:11px">'
+      +   '파일링크·분류·업체목록·화면설정처럼 <b>이 브라우저에만</b> 있던 것들을 클라우드에 보관합니다.<br>'
+      +   '업무 기록은 원래 클라우드에 있어 이 백업과 무관하게 안전합니다.</div>'
       + '<div id="wlDbBody" style="font-size:13px;color:#1a2f45;line-height:1.7">확인 중…</div>'
-      + '<div style="display:flex;gap:8px;margin-top:14px">'
-      +   '<button id="wlDbPull" style="flex:1;height:44px;border:1.5px solid #cfe0f2;border-radius:10px;background:#fff;color:#1a73e8;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">⬇ 클라우드에서 복원</button>'
-      +   '<button id="wlDbPush" style="flex:1;height:44px;border:none;border-radius:10px;background:#1a73e8;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">☁ 지금 백업</button>'
+      + '<div id="wlDbLost" style="margin-top:11px"></div>'
+      + '<div style="display:flex;gap:7px;margin-top:13px">'
+      +   '<button id="wlDbPull" style="flex:1;height:42px;border:1.5px solid #cfe0f2;border-radius:10px;background:#fff;color:#1a73e8;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">⬇ 클라우드에서 복원</button>'
+      +   '<button id="wlDbPush" style="flex:1;height:42px;border:none;border-radius:10px;background:#1a73e8;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">☁ 지금 백업</button>'
+      + '</div>'
+      + '<div style="display:flex;gap:7px;margin-top:7px">'
+      +   '<button id="wlDbExp" style="flex:1;height:38px;border:1.5px solid #dbe6f4;border-radius:10px;background:#f7faff;color:#3f7cb8;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">⬇ 파일로 저장</button>'
+      +   '<button id="wlDbImp" style="flex:1;height:38px;border:1.5px solid #dbe6f4;border-radius:10px;background:#f7faff;color:#3f7cb8;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">⬆ 파일에서 가져오기</button>'
       + '</div></div>';
     document.body.appendChild(ov);
     document.getElementById('wlDbClose').addEventListener('click', function(){ ov.remove(); });
 
-    var LABEL = { insp:'📋 점검일지', docs:'📁 운영실무', common:'🏢 임대공용', indiv:'🚪 임대개별', etc:'🗂 서류폴더' };
-    function line(o){
-      var s = '';
-      for(var t in o) s += '<div style="display:flex;justify-content:space-between"><span>' + (LABEL[t]||t) + '</span><b>' + o[t] + '건</b></div>';
-      return s || '<div style="color:#9aa7b4">없음</div>';
+    var NAME = {
+      'wl_insp_v43':'📋 점검일지', 'wl_docs_v43':'📁 운영실무', 'wl_common_v43':'🏢 임대공용',
+      'wl_indiv_v43':'🚪 임대개별', 'wl_etc_v44':'🗂 서류폴더', 'wl_folder_tabs_v1':'🗂 폴더탭 설정',
+      'wl_work_vendors':'🏭 업체 목록', 'wl_expense_templates_v1':'💸 지출 서식',
+      'wl_exp_purposes_v44':'💸 지출 용도', 'wl_exp_fields':'💸 지출 분야',
+      'wl_gcal_pull_cals':'📅 가져올 캘린더', 'wl_gcal_worktime':'⏰ 업무 처리시간'
+    };
+    function rows(obj){
+      var ks = Object.keys(obj).sort(function(a,b){ return (obj[b]||'').length - (obj[a]||'').length; });
+      if(!ks.length) return '<div style="color:#9aa7b4">없음</div>';
+      return ks.slice(0, 14).map(function(k){
+        var v = obj[k] || '', cnt = '';
+        if(v.charAt(0) === '['){ try{ cnt = JSON.parse(v).length + '건'; }catch(e){} }
+        if(!cnt) cnt = Math.round(v.length/1024*10)/10 + 'KB';
+        return '<div style="display:flex;justify-content:space-between;gap:8px">'
+          + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(NAME[k] || k) + '</span><b>' + cnt + '</b></div>';
+      }).join('') + (ks.length > 14 ? '<div style="color:#9aa7b4;font-size:11.5px">외 ' + (ks.length-14) + '개</div>' : '');
     }
     function draw(cloud, err){
-      var mine = snapshot();
-      var when = cloud && cloud.updatedAt ? new Date(cloud.updatedAt).toLocaleString('ko-KR') : '-';
+      var mine = localSnap();
+      var when = cloud && cloud.t ? new Date(cloud.t).toLocaleString('ko-KR') : '-';
       document.getElementById('wlDbBody').innerHTML =
-          '<div style="padding:10px 12px;background:#f7faff;border:1.5px solid #e3edf9;border-radius:10px;margin-bottom:9px">'
-        +   '<div style="font-weight:800;margin-bottom:5px">이 기기 — 총 ' + countOf(mine) + '건</div>' + line(perTab(mine))
+          '<div style="padding:10px 12px;background:#f7faff;border:1.5px solid #e3edf9;border-radius:10px;margin-bottom:8px">'
+        +   '<div style="font-weight:800;margin-bottom:5px">이 기기 — 항목 ' + Object.keys(mine).length + '개</div>' + rows(mine)
         + '</div>'
         + '<div style="padding:10px 12px;background:#fffdf5;border:1.5px solid #ffe2a8;border-radius:10px">'
-        +   '<div style="font-weight:800;margin-bottom:5px">클라우드 — ' + (cloud ? ('총 ' + cloud.count + '건') : ('없음' + (err ? ' (' + err + ')' : ''))) + '</div>'
-        +   (cloud ? line(perTab(cloud.snap)) + '<div style="margin-top:6px;font-size:11.5px;color:#9a6700">마지막 백업: ' + when + '</div>' : '')
+        +   '<div style="font-weight:800;margin-bottom:5px">클라우드 — '
+        +   (cloud ? ('항목 ' + Object.keys(cloud.data).length + '개') : ('없음' + (err ? ' (' + esc(err) + ')' : ''))) + '</div>'
+        +   (cloud ? rows(cloud.data) + '<div style="margin-top:6px;font-size:11.5px;color:#9a6700">마지막 백업: ' + when + '</div>' : '')
         + '</div>';
     }
     draw(null, '확인 중');
-    fetchCloud(function(res, err){ draw(res, err); ov._cloud = res; });
+    fetchCloud(function(res, err){ ov._cloud = res; draw(res, err); });
+    drawLost();
+
+    function drawLost(){
+      var box = document.getElementById('wlDbLost');
+      var list = window.wlScanLostLinks().filter(function(f){ return !f.active; });
+      if(!list.length){ box.innerHTML = ''; return; }
+      var TABS = { insp:'📋 점검일지', docs:'📁 운영실무', common:'🏢 임대공용', indiv:'🚪 임대개별', etc:'🗂 서류폴더' };
+      var opts = Object.keys(TABS).map(function(t){ return '<option value="' + t + '">' + TABS[t] + '</option>'; }).join('');
+      box.innerHTML = '<div style="padding:10px 12px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px">'
+        + '<div style="font-weight:800;color:#065f46;margin-bottom:7px">🔎 저장소에서 찾은 다른 목록 ' + list.length + '개</div>'
+        + list.map(function(f){
+            return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">'
+              + '<div style="flex:1;min-width:120px"><div style="font-size:12.5px;font-weight:700">' + esc(f.key) + ' · ' + f.n + '건</div>'
+              + '<div style="font-size:11px;color:#7a92a8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(f.sample) + '</div></div>'
+              + '<select class="wl-lost-to" data-k="' + esc(f.key) + '" style="height:30px;border:1.5px solid #bbf7d0;border-radius:7px;font-size:12px;font-family:inherit;background:#fff">' + opts + '</select>'
+              + '<button class="wl-lost-go" data-k="' + esc(f.key) + '" style="height:30px;padding:0 10px;border:none;border-radius:7px;background:#059669;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">가져오기</button>'
+              + '</div>';
+          }).join('') + '</div>';
+      box.querySelectorAll('.wl-lost-go').forEach(function(b){
+        b.addEventListener('click', function(){
+          var k = b.getAttribute('data-k');
+          var sel = box.querySelector('.wl-lost-to[data-k="' + k + '"]');
+          var tab = sel ? sel.value : 'docs';
+          var src = [];
+          try{ src = JSON.parse(localStorage.getItem(k) || '[]'); }catch(e){}
+          if(!src.length){ alert('가져올 항목이 없습니다'); return; }
+          var destLS = docKeyMap()[tab];
+          var cur = [];
+          try{ cur = JSON.parse(localStorage.getItem(destLS) || '[]'); }catch(e){}
+          if(!confirm('"' + k + '" 의 ' + src.length + '건을 ' + sel.options[sel.selectedIndex].text + ' 로 가져올까요?')) return;
+          var have = {}, add = 0;
+          cur.forEach(function(x){ have[(x && (x.path || x.name) || '')] = 1; });
+          src.forEach(function(x){
+            var sig = (x && (x.path || x.name) || '');
+            if(!sig || have[sig]) return;
+            have[sig] = 1;
+            var copy = {}; for(var p in x) copy[p] = x[p];
+            copy.id = tab + '_' + Date.now() + '_' + Math.floor(Math.random()*99999) + '_' + add;
+            cur.push(copy); add++;
+          });
+          try{ localStorage.setItem(destLS, JSON.stringify(cur)); }catch(e){ alert('저장 실패: ' + e); return; }
+          redrawTabs();
+          if(typeof toast === 'function') toast('✅ ' + add + '건 가져왔습니다', 4000);
+          draw(ov._cloud, null); drawLost();
+          pushCloud(false);
+        });
+      });
+    }
 
     document.getElementById('wlDbPush').addEventListener('click', function(){
-      var mine = snapshot(), c = countOf(mine);
-      if(!c && !confirm('이 기기 목록이 비어 있습니다.\n빈 상태로 백업하면 클라우드 백업도 사라집니다.\n정말 진행할까요?')) return;
       var btn = this; btn.textContent = '올리는 중…'; btn.disabled = true;
       pushCloud(true, function(ok, info){
         btn.textContent = '☁ 지금 백업'; btn.disabled = false;
-        if(ok){ if(typeof toast==='function') toast('☁ ' + info + '건 백업 완료'); fetchCloud(function(r,e){ draw(r,e); }); }
+        if(ok){ if(typeof toast === 'function') toast('☁ 백업 완료'); fetchCloud(function(r,e){ ov._cloud=r; draw(r,e); }); }
         else alert('백업 실패\n' + info);
       });
     });
     document.getElementById('wlDbPull').addEventListener('click', function(){
       fetchCloud(function(res, err){
-        if(!res){ alert('복원할 백업이 없습니다\n' + (err||'')); return; }
-        var mine = countOf(snapshot());
-        if(!confirm('클라우드 백업 ' + res.count + '건으로 되돌립니다.\n'
-          + '이 기기의 현재 ' + mine + '건은 덮어씁니다.\n계속할까요?')) return;
-        var n = applySnap(res.snap);
-        lastSig = '';
-        if(typeof toast==='function') toast('⬇ ' + n + '건 복원 완료', 4000);
+        if(!res || !Object.keys(res.data).length){ alert('복원할 백업이 없습니다\n' + (err||'')); return; }
+        if(!confirm('클라우드 백업 ' + Object.keys(res.data).length + '개 항목으로 되돌립니다.\n이 기기의 같은 항목은 덮어씁니다.\n계속할까요?')) return;
+        var r = applyKeys(res.data, false);
+        sentHash = {};
+        if(typeof toast === 'function') toast('⬇ ' + r.n + '개 항목 복원 완료', 5000);
         draw(res, null);
       });
     });
+    document.getElementById('wlDbExp').addEventListener('click', function(){ window.wlExportBackup(); });
+    document.getElementById('wlDbImp').addEventListener('click', function(){ window.wlImportBackup(); });
   };
 
   /* 일지 빠른 진입 창에 버튼 끼워넣기 */
@@ -14700,9 +14871,7 @@ if('serviceWorker' in navigator){
     var mng = document.getElementById('qjManageBtn');
     if(mng && !document.getElementById('qjBackupBtn')){
       var b = document.createElement('button');
-      b.id = 'qjBackupBtn';
-      b.type = 'button';
-      b.textContent = '☁ 백업';
+      b.id = 'qjBackupBtn'; b.type = 'button'; b.textContent = '☁ 백업';
       b.style.cssText = 'border:1.5px solid #ffe2a8;background:#fffdf5;color:#9a6700;border-radius:8px;'
         + 'padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit';
       b.addEventListener('click', function(){ window.wlDocBackupUI(); });
@@ -14711,15 +14880,841 @@ if('serviceWorker' in navigator){
   }, 900);
 
   setTimeout(autoRestore, 4000);
-  setTimeout(autoRestore, 10000);
-  setInterval(watch, 6000);
-  console.log('[파일백업] 파일링크 클라우드 백업 로드');
+  setTimeout(autoRestore, 11000);
+  setInterval(watch, 8000);
+  console.log('[백업] 앱 데이터 클라우드 백업 로드');
+})();
+</script>
+<script>
+/* ===== v45-0826: ① 비밀 메모  ② 업무 기록 백업  ③ 월간 보고서 ===== */
+(function(){
+
+  /* ══════════════════════════════════════════════
+     ① 비밀 메모 — 앱에서는 어디서든 보이되 구글 캘린더로는 안 나간다
+     ══════════════════════════════════════════════ */
+  var LOCK = '🔒';
+  /* 실수로 그냥 적어도 잡아내는 위험 패턴 */
+  var RISKY = [
+    /github_pat_[A-Za-z0-9_]{20,}/i, /ghp_[A-Za-z0-9]{20,}/i,
+    /sk-[A-Za-z0-9\-_]{20,}/i, /AIza[A-Za-z0-9\-_]{20,}/,
+    /client\s*secret/i, /api\s*[-_ ]?key/i, /access[-_ ]?token/i,
+    /비밀번호/, /비번/, /패스워드/i, /password/i
+  ];
+  function textOf(en){
+    if(!en) return '';
+    return [en.title, en.body, en.memo, en.note, en.content, en.detail]
+      .filter(Boolean).join('\n');
+  }
+  function isRisky(en){
+    var t = textOf(en);
+    for(var i = 0; i < RISKY.length; i++){ if(RISKY[i].test(t)) return true; }
+    return false;
+  }
+  /* 비밀로 볼 것인가 — 명시적 🔒 또는 위험 패턴 자동 감지 */
+  window.wlIsSecret = function(en){
+    if(!en) return false;
+    if(en.secret === true) return true;
+    if(String(en.title||'').indexOf(LOCK) >= 0) return true;
+    if(String(en.body||'').indexOf(LOCK) === 0) return true;
+    return isRisky(en);
+  };
+
+  /* 구글에 이미 올라간 비밀 항목 찾아 지우기 */
+  window.wlPurgeSecrets = async function(){
+    if(typeof entries === 'undefined'){ alert('데이터를 아직 못 읽었어요'); return; }
+    if(!(window.gcalHasToken && window.gcalHasToken())){ alert('먼저 구글 로그인 해주세요'); return; }
+    var targets = entries.filter(function(e){ return e && e.gcalEventId && window.wlIsSecret(e); });
+    if(!targets.length){ alert('구글에 올라간 비밀 항목이 없습니다.'); return; }
+    var names = targets.slice(0, 8).map(function(e){ return '· ' + String(e.title || e.body || '').slice(0, 28); }).join('\n');
+    if(!confirm('구글 캘린더에서 지울 비밀 항목 ' + targets.length + '건\n\n' + names
+      + (targets.length > 8 ? '\n…외 ' + (targets.length-8) + '건' : '')
+      + '\n\n앱 기록은 그대로 남고 구글에서만 지웁니다.\n계속할까요?')) return;
+    var ok = 0, fail = 0;
+    for(var i = 0; i < targets.length; i++){
+      var en = targets[i];
+      var cal = (typeof window.wlCalIdFor === 'function') ? window.wlCalIdFor(en) : '';
+      if(!cal){ fail++; continue; }
+      try{
+        var r = await fetch('https://www.googleapis.com/calendar/v3/calendars/'
+              + encodeURIComponent(cal) + '/events/' + en.gcalEventId,
+              { method:'DELETE', headers:{ 'Authorization':'Bearer ' + window.wlGcalToken() } });
+        if(r.ok || r.status === 204 || r.status === 404 || r.status === 410){
+          updateRecord(en.id, { gcalEventId: null, secret: true });
+          ok++;
+        } else fail++;
+      }catch(e){ fail++; }
+      await new Promise(function(res){ setTimeout(res, 180); });
+    }
+    if(typeof renderAll === 'function') setTimeout(renderAll, 300);
+    alert('🔒 정리 끝\n\n지운 것 ' + ok + '건' + (fail ? ' / 실패 ' + fail + '건' : '')
+      + '\n\n앞으로 이 항목들은 구글로 나가지 않습니다.');
+  };
+
+  /* 메모 모달에 [🔒 비밀] 토글 버튼 붙이기 */
+  setInterval(function(){
+    try{
+      var ovl = document.getElementById('overlay');
+      if(!ovl || !ovl.classList.contains('show')) return;
+      var body = document.getElementById('m-body');
+      if(!body) return;                                  // 메모 모달일 때만
+      if(document.getElementById('wlSecretBtn')) return;
+      var host = (body.closest && body.closest('.field')) || body.parentElement;
+      if(!host) return;
+      var bar = document.createElement('div');
+      bar.style.cssText = 'margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap';
+      bar.innerHTML = '<button type="button" id="wlSecretBtn" style="height:32px;padding:0 12px;'
+        + 'border:1.5px solid #f5b5b5;border-radius:9px;background:#fdecec;color:#b52929;'
+        + 'font-size:12.5px;font-weight:800;font-family:inherit;cursor:pointer">🔒 비밀로 표시</button>'
+        + '<span id="wlSecretHint" style="font-size:11.5px;color:#9aa7b4">비밀번호·토큰은 구글 캘린더로 안 보냅니다</span>';
+      host.appendChild(bar);
+      var titleEl = document.getElementById('m-title');
+      function paint(){
+        var on = titleEl && String(titleEl.value||'').indexOf(LOCK) === 0;
+        var b = document.getElementById('wlSecretBtn');
+        b.textContent = on ? '🔒 비밀 (해제하려면 클릭)' : '🔒 비밀로 표시';
+        b.style.background = on ? '#b52929' : '#fdecec';
+        b.style.color = on ? '#fff' : '#b52929';
+      }
+      document.getElementById('wlSecretBtn').addEventListener('click', function(){
+        if(!titleEl) return;
+        var v = String(titleEl.value || '');
+        titleEl.value = (v.indexOf(LOCK) === 0) ? v.replace(/^🔒\s*/, '') : (LOCK + ' ' + v);
+        paint();
+      });
+      paint();
+    }catch(e){}
+  }, 900);
+
+  /* ══════════════════════════════════════════════
+     ② 업무 기록 백업 — 파이어베이스 한 곳뿐인 위험 해소
+     ══════════════════════════════════════════════ */
+  var SNAP_COL = 'wl_snapshots';
+  var SNAP_TS  = 'wl_snap_ts';
+  var CHUNK    = 250;                       // 문서 하나에 250건씩 (1MB 한도 여유)
+  var WEEK     = 7 * 86400000;
+
+  function snapReady(){ return (typeof db !== 'undefined') && db && (typeof entries !== 'undefined') && entries.length; }
+  function snapId(){
+    var d = (typeof kstNow === 'function') ? kstNow() : new Date(Date.now() + 9*3600*1000);
+    return d.toISOString().slice(0,10).replace(/-/g,'');
+  }
+
+  window.wlSnapshotNow = async function(silent){
+    if(!snapReady()){ if(!silent) alert('아직 데이터를 못 읽었어요'); return false; }
+    var id = snapId(), all = entries.slice();
+    var parts = Math.ceil(all.length / CHUNK);
+    try{
+      for(var i = 0; i < parts; i++){
+        await db.collection(SNAP_COL).doc(id + '_p' + i)
+          .set({ id:id, part:i, parts:parts, n:all.length,
+                 rows: JSON.stringify(all.slice(i*CHUNK, (i+1)*CHUNK)), t: Date.now() });
+      }
+      await db.collection(SNAP_COL).doc(id + '_meta')
+        .set({ id:id, parts:parts, n:all.length, t:Date.now(),
+               ua:(navigator.userAgent||'').slice(0,100) });
+      try{ localStorage.setItem(SNAP_TS, String(Date.now())); }catch(e){}
+      if(!silent && typeof toast === 'function') toast('💾 기록 ' + all.length + '건 백업 완료', 4000);
+      console.log('[스냅샷] ' + id + ' · ' + all.length + '건 · ' + parts + '조각');
+      return true;
+    }catch(e){
+      if(!silent) alert('백업 실패\n' + (e && e.message || e));
+      return false;
+    }
+  };
+
+  window.wlSnapshotList = async function(){
+    if(typeof db === 'undefined' || !db) return [];
+    var out = [];
+    try{
+      var s = await db.collection(SNAP_COL).get();
+      s.forEach(function(d){
+        if(d.id.slice(-5) !== '_meta') return;
+        var v = d.data() || {};
+        out.push({ id:v.id, n:v.n||0, parts:v.parts||1, t:v.t||0 });
+      });
+    }catch(e){}
+    out.sort(function(a,b){ return (b.t||0) - (a.t||0); });
+    return out;
+  };
+
+  window.wlSnapshotLoad = async function(id){
+    var meta = null;
+    try{ var m = await db.collection(SNAP_COL).doc(id + '_meta').get(); meta = m.exists ? m.data() : null; }catch(e){}
+    if(!meta) return null;
+    var rows = [];
+    for(var i = 0; i < (meta.parts||1); i++){
+      try{
+        var d = await db.collection(SNAP_COL).doc(id + '_p' + i).get();
+        if(d.exists){ rows = rows.concat(JSON.parse((d.data()||{}).rows || '[]')); }
+      }catch(e){}
+    }
+    return { id:id, n:meta.n||rows.length, t:meta.t||0, rows:rows };
+  };
+
+  /* 파일로 저장 / 파일에서 되살리기 */
+  window.wlExportEntries = function(){
+    if(typeof entries === 'undefined'){ alert('데이터를 아직 못 읽었어요'); return; }
+    var d = (typeof todayStr === 'function') ? todayStr() : new Date().toISOString().slice(0,10);
+    var blob = new Blob([JSON.stringify({ app:'worklog-entries', at:new Date().toISOString(),
+                                          n:entries.length, rows:entries }, null, 1)],
+                        { type:'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '업무기록_전체_' + d + '.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    if(typeof toast === 'function') toast('⬇ 기록 ' + entries.length + '건을 파일로 저장했습니다', 4000);
+  };
+
+  /* 없어진 기록만 되살리기 (기존 것은 절대 안 건드림) */
+  window.wlRestoreMissing = function(rows){
+    if(!Array.isArray(rows) || !rows.length) return 0;
+    var have = {};
+    entries.forEach(function(e){ if(e && e.id) have[e.id] = 1; });
+    var add = 0;
+    rows.forEach(function(r){
+      if(!r || !r.id || have[r.id]) return;
+      var copy = {}; for(var k in r) copy[k] = r[k];
+      copy._restored = Date.now();
+      try{ entries.push(copy); if(typeof syncSet === 'function') syncSet(copy.id, copy); add++; }catch(e){}
+    });
+    if(add){
+      try{ if(typeof lsSave === 'function') lsSave(); }catch(e){}
+      if(typeof renderAll === 'function') setTimeout(renderAll, 300);
+    }
+    return add;
+  };
+
+  /* 주 1회 자동 스냅샷 */
+  setTimeout(function(){
+    try{
+      var last = parseInt(localStorage.getItem(SNAP_TS)||'0', 10);
+      if(Date.now() - last > WEEK) window.wlSnapshotNow(true);
+    }catch(e){}
+  }, 20000);
+
+})();
+
+/* ══════════════════════════════════════════════
+   ③ 월간 보고서 — 자재 사용량 집계 포함 · 인쇄 가능
+   ══════════════════════════════════════════════ */
+(function(){
+  function esc2(x){ return String(x==null?'':x).replace(/[&<>"]/g, function(m){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[m]; }); }
+  function won(n){ return (Number(n)||0).toLocaleString('ko-KR'); }
+  function ymNow(){
+    var d = (typeof kstNow === 'function') ? kstNow() : new Date(Date.now() + 9*3600*1000);
+    return d.toISOString().slice(0,7);
+  }
+  function eDate(e){ return (e && (e.date || e.start)) || ''; }
+
+  /* 자재 마스터로 "형광등 T5 28W" 같은 옛 표기를 이름+규격으로 갈라낸다 */
+  var _mCache = null, _mAt = 0;
+  function masterList(){
+    if(_mCache && Date.now() - _mAt < 60000) return _mCache;
+    var out = [];
+    try{
+      if(typeof entries !== 'undefined') entries.forEach(function(e){
+        if(e && e.kind === 'item' && e.itemName){
+          out.push({ name: String(e.itemName).replace(/^\[.*?\]/,'').trim(), spec: String(e.spec||'').trim() });
+        }
+      });
+    }catch(e){}
+    out.sort(function(a,b){ return b.name.length - a.name.length; });   // 긴 이름부터
+    _mCache = out; _mAt = Date.now();
+    return out;
+  }
+  function splitByMaster(raw){
+    var t = String(raw||'').trim();
+    if(!t) return { name:'', spec:'' };
+    var ms = masterList();
+    for(var i = 0; i < ms.length; i++){
+      var nm = ms[i].name;
+      if(!nm) continue;
+      if(t === nm) return { name:nm, spec:'' };
+      if(t.indexOf(nm) === 0){
+        var rest = t.slice(nm.length).trim();
+        if(!rest) return { name:nm, spec:'' };
+        if(ms[i].spec && (rest === ms[i].spec || ms[i].spec.indexOf(rest) === 0 || rest.indexOf(ms[i].spec) === 0)){
+          return { name:nm, spec:ms[i].spec };
+        }
+        return { name:nm, spec:rest };
+      }
+    }
+    return { name:t, spec:'' };
+  }
+
+  /* 자재 한 줄 문자열도 해석한다 — "형광등 T5 28W × 4 _ 안정기 × 1" */
+  function parseMatText(txt){
+    var out = [];
+    String(txt||'').split(/\s+_\s+|,\s*/).forEach(function(seg){
+      seg = seg.trim(); if(!seg) return;
+      var m = seg.match(/^(.*?)\s*[×xX]\s*(\d+(?:\.\d+)?)$/);
+      var name = m ? m[1].trim() : seg;
+      var qty  = m ? Number(m[2]) : 1;
+      var m2 = name.match(/^(.*?)\((\d+(?:\.\d+)?)\)$/);       // "실란트(2)" 형태
+      if(m2){ name = m2[1].trim(); qty = Number(m2[2]); }
+      if(!name) return;
+      var sp = splitByMaster(name);
+      out.push({ name:sp.name, spec:sp.spec, qty:qty });
+    });
+    return out;
+  }
+  function matsOf(e){
+    if(e && Array.isArray(e.materials) && e.materials.length) return e.materials;
+    if(e && e.material){
+      var t = String(e.material);
+      if(/\s_\s|,/.test(t)) return parseMatText(t);
+      var sp1 = splitByMaster(t);
+      return [{ name:sp1.name, spec:sp1.spec, qty:Number(e.qty)||1 }];
+    }
+    return [];
+  }
+  window.wlMatAgg = function(list){
+    var map = {};
+    (list||[]).forEach(function(e){
+      matsOf(e).forEach(function(m){
+        if(!m || !m.name) return;
+        var name = String(m.name).trim(), spec = String(m.spec||'').trim();
+        var k = name + '|' + spec;
+        if(!map[k]) map[k] = { name:name, spec:spec, qty:0, cnt:0 };
+        map[k].qty += Number(m.qty) || 1;
+        map[k].cnt += 1;
+      });
+    });
+    return Object.keys(map).map(function(k){ return map[k]; })
+      .sort(function(a,b){ return b.qty - a.qty || (a.name < b.name ? -1 : 1); });
+  };
+
+  function countBy(list, fn){
+    var m = {};
+    list.forEach(function(e){ var k = (fn(e) || '기타').toString().trim() || '기타'; m[k] = (m[k]||0) + 1; });
+    return Object.keys(m).map(function(k){ return { k:k, n:m[k] }; }).sort(function(a,b){ return b.n - a.n; });
+  }
+
+  /* ── 월간 보고서 데이터 ── */
+  function prevYm(ym){
+    var y = parseInt(ym.slice(0,4),10), m = parseInt(ym.slice(5,7),10) - 1;
+    if(m < 1){ m = 12; y--; }
+    return y + '-' + String(m).padStart(2,'0');
+  }
+  function nextYm(ym){
+    var y = parseInt(ym.slice(0,4),10), m = parseInt(ym.slice(5,7),10) + 1;
+    if(m > 12){ m = 1; y++; }
+    return y + '-' + String(m).padStart(2,'0');
+  }
+  function inYm(e, ym){ return String(eDate(e)).slice(0,7) === ym; }
+
+  function slice(ym){
+    var all = (typeof entries !== 'undefined') ? entries : [];
+    var m = all.filter(function(e){ return e && inYm(e, ym); });
+    var workAll = m.filter(function(e){ return e.kind === 'work'; });
+    var lead = workAll.filter(function(e){ return (e.field||'') === '청소반장일일업무'; });
+    var work = workAll.filter(function(e){ return (e.field||'') !== '청소반장일일업무'; });
+    var stockOut = m.filter(function(e){ return e.kind === 'stock' && e.stockType === '출고'; });
+    return {
+      ym: ym, all: m, workAll: workAll, work: work, lead: lead,
+      sched: m.filter(function(e){ return e.kind === 'schedule'; }),
+      call:  m.filter(function(e){ return e.kind === 'call'; }),
+      deliver: m.filter(function(e){ return e.kind === 'deliver'; }),
+      vacation: m.filter(function(e){ return e.kind === 'vacation'; }),
+      accident: m.filter(function(e){ return e.kind === 'accident'; }),
+      expense: m.filter(function(e){ return e.kind === 'expense'; }),
+      stockOut: stockOut,
+      matCost: stockOut.reduce(function(s,e){ return s + (Number(e.amount)||0); }, 0),
+      expTotal: m.filter(function(e){ return e.kind==='expense'; })
+                 .reduce(function(s,e){ return s + (Number(e.amount)||0); }, 0),
+      workCost: workAll.reduce(function(s,e){ return s + (Number(e.cost)||0); }, 0)
+    };
+  }
+
+  window.wlBuildReport = function(ym){
+    if(typeof entries === 'undefined') return null;
+    var cur = slice(ym), prv = slice(prevYm(ym));
+    var nx  = nextYm(ym);
+    var all = entries;
+
+    /* 정기점검 이행 — 분야에 '점검'이 든 업무 */
+    var insp = cur.workAll.filter(function(e){ return /점검/.test(e.field||''); });
+    var inspBy = {};
+    insp.forEach(function(e){
+      var k = e.field || '점검';
+      if(!inspBy[k]) inspBy[k] = { k:k, n:0, done:0 };
+      inspBy[k].n++;
+      if((e.status||'') === '완료') inspBy[k].done++;
+    });
+
+    /* 미완료·이월 */
+    var open = cur.workAll.filter(function(e){ return (e.status||'') !== '완료'; });
+    var nextSched = all.filter(function(e){ return e && e.kind==='schedule' && String(eDate(e)).slice(0,7) === nx; });
+
+    /* 자재 — 수량은 기록에서, 금액은 출고 전표에서 */
+    var mats = window.wlMatAgg(cur.workAll);
+    var costByItem = {};
+    cur.stockOut.forEach(function(e){
+      var n = String(e.itemName||'').replace(/^\[.*?\]/,'').trim();
+      if(!n) return;
+      costByItem[n] = (costByItem[n]||0) + (Number(e.amount)||0);
+    });
+
+    var expByType = {}, expByTypePrev = {};
+    cur.expense.forEach(function(e){ var t=e.expType||'기타'; expByType[t]=(expByType[t]||0)+(Number(e.amount)||0); });
+    prv.expense.forEach(function(e){ var t=e.expType||'기타'; expByTypePrev[t]=(expByTypePrev[t]||0)+(Number(e.amount)||0); });
+
+    return {
+      ym: ym, prevYm: prevYm(ym), nextYm: nx,
+      cur: cur, prv: prv,
+      byField: countBy(cur.work, function(e){ return e.field; }),
+      byFieldPrev: countBy(prv.work, function(e){ return e.field; }),
+      byFloor: countBy(cur.work, function(e){ return e.floor; }),
+      byStatus: countBy(cur.workAll, function(e){ return e.status; }),
+      insp: Object.keys(inspBy).map(function(k){ return inspBy[k]; }).sort(function(a,b){ return b.n-a.n; }),
+      open: open, nextSched: nextSched,
+      inspPrev: prv.workAll.filter(function(e){ return /점검/.test(e.field||''); }).length,
+      mats: mats, costByItem: costByItem,
+      expByType: expByType, expByTypePrev: expByTypePrev,
+      totalCost: cur.expTotal + cur.matCost,
+      totalCostPrev: prv.expTotal + prv.matCost
+    };
+  };
+
+  /* ── 보고서 HTML (A4 인쇄용) ── */
+  function diffTag(cur, prev){
+    var d = (Number(cur)||0) - (Number(prev)||0);
+    if(!d) return '<span class="d0">－</span>';
+    return d > 0 ? '<span class="dup">▲' + Math.abs(d) + '</span>'
+                 : '<span class="ddn">▼' + Math.abs(d) + '</span>';
+  }
+  function moneyDiff(cur, prev){
+    var d = (Number(cur)||0) - (Number(prev)||0);
+    if(!d) return '<span class="d0">－</span>';
+    return d > 0 ? '<span class="dup">▲' + won(Math.abs(d)) + '</span>'
+                 : '<span class="ddn">▼' + won(Math.abs(d)) + '</span>';
+  }
+  function T(head, rows, widths){
+    if(!rows.length) return '<p class="none">해당 사항 없음</p>';
+    var cols = widths ? '<colgroup>' + widths.map(function(w){ return '<col style="width:' + w + '">'; }).join('') + '</colgroup>' : '';
+    return '<table>' + cols + '<thead><tr>'
+      + head.map(function(h){ return '<th>' + esc2(h) + '</th>'; }).join('')
+      + '</tr></thead><tbody>'
+      + rows.map(function(r){
+          return '<tr>' + r.map(function(c){
+            var num = (typeof c === 'number');
+            var numish = num || (typeof c === 'string' && /^[\d,]+(원|%|건)?$/.test(c.trim()));
+            return '<td' + (numish ? ' class="n"' : '') + '>' + (c == null ? '' : (num ? won(c) : c)) + '</td>';
+          }).join('') + '</tr>';
+        }).join('')
+      + '</tbody></table>';
+  }
+
+  window.wlReportCSS = function(){
+    return '@page{size:A4;margin:14mm 13mm 15mm}'
+    + '*{box-sizing:border-box}'
+    + 'body{font-family:"Pretendard","Malgun Gothic",-apple-system,system-ui,sans-serif;'
+    +   'margin:0;color:#16283a;background:#fff;font-size:10.5pt;line-height:1.5;'
+    +   '-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    + '.doc{max-width:190mm;margin:0 auto;padding:6mm 2mm}'
+    /* 표제부 */
+    + '.head{border-top:3px solid #1a3a5c;border-bottom:1px solid #1a3a5c;padding:10px 0 8px;margin-bottom:6px}'
+    + '.head .org{font-size:9.5pt;color:#5a6f85;letter-spacing:.5px}'
+    + '.head h1{font-size:19pt;font-weight:800;margin:3px 0 4px;letter-spacing:-.5px;color:#12293f}'
+    + '.head .meta{display:flex;flex-wrap:wrap;gap:14px;font-size:9.5pt;color:#5a6f85}'
+    + '.head .meta b{color:#16283a;font-weight:700}'
+    /* 결재란 */
+    + '.sign{float:right;width:auto;border-collapse:collapse;margin:-2px 0 8px 10px;font-size:8.5pt}'
+    + '.sign td,.sign th{border:1px solid #93a8bd;text-align:center;padding:2px 6px}'
+    + '.sign th{background:#eef3f9;font-weight:700;color:#3c536b;width:19mm}'
+    + '.sign td{height:15mm;width:19mm}'
+    /* 섹션 */
+    + 'h2{font-size:12pt;font-weight:800;color:#12293f;margin:16px 0 6px;padding:4px 0 4px 9px;'
+    +   'border-left:4px solid #1a3a5c;background:#f4f7fb;page-break-after:avoid}'
+    + 'h3{font-size:10pt;font-weight:700;color:#3c536b;margin:10px 0 4px}'
+    /* 지표 카드 */
+    + '.kpi{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 4px}'
+    + '.kpi div{flex:1;min-width:78px;border:1px solid #c8d6e5;border-radius:4px;padding:6px 8px;background:#fbfdff}'
+    + '.kpi .t{font-size:8.5pt;color:#5a6f85;font-weight:700}'
+    + '.kpi .v{font-size:15pt;font-weight:800;color:#12293f;line-height:1.2}'
+    + '.kpi .c{font-size:8pt}'
+    /* 표 */
+    + 'table{width:100%;border-collapse:collapse;font-size:9.5pt;margin:3px 0 2px}'
+    + 'th,td{border:1px solid #b9c9dc;padding:3.5px 7px;vertical-align:middle}'
+    + 'th{background:#eef3f9;font-weight:700;color:#33495f;text-align:center;font-size:9pt}'
+    + 'td.n{text-align:right;font-variant-numeric:tabular-nums}'
+    + 'tbody tr:nth-child(even) td{background:#fafcfe}'
+    + 'tr.sum td{background:#eef3f9;font-weight:800}'
+    + '.two{display:flex;gap:9px;flex-wrap:wrap}.two>div{flex:1;min-width:78mm}'
+    + '.none{color:#8fa2b5;font-size:9.5pt;margin:4px 0 8px;padding:5px 8px;background:#f7f9fc;border:1px dashed #cfdae6;border-radius:4px}'
+    + '.dup{color:#c0392b;font-weight:700}.ddn{color:#1f6fb2;font-weight:700}.d0{color:#a9b7c5}'
+    + '.sp{color:#2c5f8f;font-weight:700}.nw{white-space:nowrap}'
+    + '.tag{display:inline-block;border:1px solid #c8d6e5;border-radius:3px;padding:0 4px;font-size:8.5pt;color:#3c536b;background:#f4f7fb}'
+    + '.foot{margin-top:14px;padding-top:6px;border-top:1px solid #c8d6e5;font-size:8.5pt;color:#7d8fa1;display:flex;justify-content:space-between}'
+    + '.pb{page-break-before:always}'
+    + 'table,tr,td,th{page-break-inside:avoid}'
+    + '@media screen{body{background:#eceff3;padding:14px 0}.doc{background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.12);padding:10mm}}';
+  };
+
+  window.wlReportHTML = function(r){
+    var c = r.cur, p = r.prv;
+    var ymTxt = r.ym.slice(0,4) + '년 ' + parseInt(r.ym.slice(5,7),10) + '월';
+    var today = (typeof todayStr === 'function') ? todayStr() : '';
+
+    /* Ⅰ 총괄 */
+    var kpi = [
+      ['업무 처리',  c.work.length,  p.work.length],
+      ['일상 청소',  c.lead.length,  p.lead.length],
+      ['정기 점검',  r.insp.reduce(function(s,x){return s+x.n;},0), r.inspPrev],
+      ['통화 응대',  c.call.length,  p.call.length],
+      ['전달 사항',  c.deliver.length, p.deliver.length],
+      ['사고 접수',  c.accident.length, p.accident.length]
+    ];
+    var kpiHtml = '<div class="kpi">' + kpi.map(function(x){
+      return '<div><div class="t">' + x[0] + '</div><div class="v">' + x[1] + '</div>'
+        + '<div class="c">전월 ' + x[2] + ' ' + diffTag(x[1], x[2]) + '</div></div>';
+    }).join('') + '</div>';
+
+    var sumRows = [
+      ['업무 처리 건수', c.work.length, p.work.length, diffTag(c.work.length, p.work.length)],
+      ['일상 청소 건수', c.lead.length, p.lead.length, diffTag(c.lead.length, p.lead.length)],
+      ['미완료 · 이월',  r.open.length, '-', ''],
+      ['지출 집행액',    won(c.expTotal) + '원', won(p.expTotal) + '원', moneyDiff(c.expTotal, p.expTotal)],
+      ['자재 사용액',    won(c.matCost) + '원',  won(p.matCost) + '원',  moneyDiff(c.matCost, p.matCost)],
+      ['합계',           won(r.totalCost) + '원', won(r.totalCostPrev) + '원', moneyDiff(r.totalCost, r.totalCostPrev)]
+    ];
+
+    /* Ⅱ 분야별 (전월 대비) */
+    var prevMap = {};
+    r.byFieldPrev.forEach(function(x){ prevMap[x.k] = x.n; });
+    var fieldRows = r.byField.map(function(x){
+      return [ esc2(x.k), x.n, (prevMap[x.k]||0), diffTag(x.n, prevMap[x.k]||0) ];
+    });
+
+    /* Ⅲ 정기점검 이행률 */
+    var inspRows = r.insp.map(function(x){
+      var pct = x.n ? Math.round(x.done / x.n * 100) : 0;
+      return [ esc2(x.k), x.n, x.done, pct + '%' ];
+    });
+
+    /* Ⅳ 자재 */
+    var matRows = r.mats.map(function(m, i){
+      var money = r.costByItem[m.name];
+      return [ (i+1), esc2(m.name) + (m.spec ? ' <span class="sp">' + esc2(m.spec) + '</span>' : ''),
+               m.qty, m.cnt, money ? (won(money) + '원') : '-' ];
+    });
+    var nameSum = {};
+    r.mats.forEach(function(m){ nameSum[m.name] = (nameSum[m.name]||0) + m.qty; });
+
+    /* Ⅴ 비용 */
+    var expRows = Object.keys(r.expByType).map(function(k){
+      return [ esc2(k), won(r.expByType[k]) + '원', won(r.expByTypePrev[k]||0) + '원',
+               moneyDiff(r.expByType[k], r.expByTypePrev[k]||0) ];
+    });
+
+    /* Ⅵ 사고 */
+    var accRows = c.accident.map(function(e){
+      return [ esc2(String(eDate(e)).slice(5)), esc2(e.accType||''), esc2((e.floor||'') + ' ' + (e.title||'')),
+               esc2(e.status||''), esc2(e.partyName||'') ];
+    });
+
+    /* Ⅶ 미완료·이월 / 다음달 예정 */
+    var openRows = r.open.slice(0,40).map(function(e){
+      return [ esc2(String(eDate(e)).slice(5)), esc2((e.floor||'') + ' ' + (e.title||'')),
+               esc2(e.field||''), '<span class="tag">' + esc2(e.status||'') + '</span>' ];
+    });
+    var nextRows = r.nextSched.slice(0,30).map(function(e){
+      return [ esc2(String(eDate(e)).slice(5)), esc2(e.title||''), esc2(e.scheduleType||'일회성') ];
+    });
+
+    /* Ⅷ 근태 */
+    var vacRows = c.vacation.map(function(e){
+      var per = String(e.start||'').slice(5) + (e.end && e.end !== e.start ? ' ~ ' + String(e.end).slice(5) : '');
+      return [ esc2(e.name||''), esc2(e.vtype||'휴가'), esc2(per), esc2(e.note||'') ];
+    });
+
+    /* Ⅸ 전달 */
+    var delRows = c.deliver.map(function(e){
+      var body = String(e.content||e.memo||'').replace(/\n+/g,' / ');
+      return [ esc2(String(eDate(e)).slice(5)), esc2(e.dtype||''), esc2(body.slice(0,110)) ];
+    });
+
+    /* 붙임 — 업무 상세 */
+    var detRows = c.work.slice().sort(function(a,b){ return String(eDate(a)).localeCompare(String(eDate(b))); })
+      .map(function(e, i){
+        var mm = (typeof matDisplay === 'function') ? matDisplay(e) : (e.material||'');
+        return [ (i+1), '<span class="nw">' + esc2(String(eDate(e)).slice(5)) + '</span>',
+                 '<span class="nw">' + esc2(e.floor||'') + '</span>',
+                 esc2(e.title||'') + (e.detail ? ' <span style="color:#7d8fa1">· ' + esc2(String(e.detail).slice(0,50)) + '</span>' : ''),
+                 esc2(e.field||''), esc2(mm.slice(0,40)), esc2(e.status||'') ];
+      });
+
+    return ''
+    + '<div class="doc">'
+    + '<table class="sign"><tr><th rowspan="2">결<br>재</th><th>담당</th><th>검토</th><th>승인</th></tr>'
+    +   '<tr><td></td><td></td><td></td></tr></table>'
+    + '<div class="head">'
+    +   '<div class="org">한일자산관리앤투자 · 서희타워 시설관리소</div>'
+    +   '<h1>' + esc2(ymTxt) + ' 시설관리 업무 월간보고서</h1>'
+    +   '<div class="meta">'
+    +     '<span>보고기간 <b>' + esc2(r.ym) + '-01 ~ ' + esc2(r.ym) + '-말</b></span>'
+    +     '<span>작성자 <b>시설관리소장</b></span>'
+    +     '<span>작성일 <b>' + esc2(today) + '</b></span>'
+    +     '<span>문서번호 <b>SH-' + esc2(r.ym.replace('-','')) + '-01</b></span>'
+    +   '</div>'
+    + '</div>'
+    + '<div style="clear:both"></div>'
+
+    + '<h2>Ⅰ. 총괄 요약</h2>'
+    + kpiHtml
+    + T(['구 분', esc2(ymTxt), '전월', '증감'],
+        sumRows.map(function(x, i){ return [ (i===5?'<b>'+x[0]+'</b>':x[0]), x[1], x[2], x[3] ]; }),
+        ['32%','24%','24%','20%'])
+
+    + '<h2>Ⅱ. 업무 실적</h2>'
+    + '<div class="two"><div><h3>분야별 (전월 대비)</h3>'
+    +   T(['분야','당월','전월','증감'], fieldRows, ['40%','20%','20%','20%'])
+    + '</div><div><h3>처리 상태</h3>'
+    +   T(['상태','건수'], r.byStatus.map(function(x){ return [esc2(x.k), x.n]; }), ['60%','40%'])
+    +   '<h3>층별 상위</h3>'
+    +   T(['층','건수'], r.byFloor.slice(0,8).map(function(x){ return [esc2(x.k), x.n]; }), ['60%','40%'])
+    + '</div></div>'
+
+    + '<h2>Ⅲ. 정기점검 이행 현황</h2>'
+    + T(['점검 구분','대상','완료','이행률'], inspRows, ['46%','18%','18%','18%'])
+
+    + '<h2>Ⅳ. 자재 사용 내역</h2>'
+    + '<div class="two"><div><h3>규격별 사용량</h3>'
+    +   T(['No','자재 (규격)','수량','건수','사용액'], matRows, ['7%','38%','12%','12%','31%'])
+    + '</div><div><h3>자재명 합계</h3>'
+    +   T(['자재명','총 수량'],
+        Object.keys(nameSum).sort(function(a,b){ return nameSum[b]-nameSum[a]; })
+          .map(function(k){ return [esc2(k), nameSum[k]]; }), ['60%','40%'])
+    +   '<h3>자재 사용액</h3>'
+    +   '<table><tbody><tr class="sum"><td>당월 자재 사용액</td><td class="n">' + won(c.matCost) + '원</td></tr>'
+    +   '<tr><td>전월</td><td class="n">' + won(p.matCost) + '원</td></tr></tbody></table>'
+    + '</div></div>'
+
+    + '<h2>Ⅴ. 비용 집행</h2>'
+    + T(['지출 종류','당월','전월','증감'], expRows, ['34%','24%','24%','18%'])
+    + '<table><tbody>'
+    +   '<tr><td>지출 소계</td><td class="n">' + won(c.expTotal) + '원</td></tr>'
+    +   '<tr><td>자재 사용액</td><td class="n">' + won(c.matCost) + '원</td></tr>'
+    +   '<tr class="sum"><td>총 계</td><td class="n">' + won(r.totalCost) + '원</td></tr>'
+    + '</tbody></table>'
+
+    + (c.accident.length
+        ? '<h2>Ⅵ. 사고 발생 현황</h2>' + T(['일자','종류','내용','처리상태','당사자'], accRows, ['10%','14%','44%','16%','16%'])
+        : '<h2>Ⅵ. 사고 발생 현황</h2><p class="none">당월 접수된 사고 없음</p>')
+
+    + '<h2>Ⅶ. 미완료 · 익월 이월 사항</h2>'
+    + '<h3>미완료 업무 (' + r.open.length + '건)</h3>'
+    + T(['일자','내용','분야','상태'], openRows, ['10%','56%','18%','16%'])
+    + '<h3>' + esc2(r.nextYm.slice(0,4) + '년 ' + parseInt(r.nextYm.slice(5,7),10) + '월') + ' 예정 (' + r.nextSched.length + '건)</h3>'
+    + T(['일자','예정 내용','반복'], nextRows, ['12%','66%','22%'])
+
+    + '<h2>Ⅷ. 근태 현황</h2>'
+    + T(['성명','종류','기간','비고'], vacRows, ['16%','16%','22%','46%'])
+
+    + '<h2>Ⅸ. 전달 · 지시 사항</h2>'
+    + T(['일자','구분','내용'], delRows, ['10%','14%','76%'])
+
+    + '<h2 class="pb">붙임. 업무 상세 내역 (' + c.work.length + '건)</h2>'
+    + T(['No','일자','층','업무 내용','분야','사용 자재','상태'], detRows,
+        ['5%','9%','10%','36%','11%','19%','10%'])
+
+    + '<div class="foot"><span>서희타워 시설관리소 · ' + esc2(ymTxt) + ' 업무 월간보고서</span>'
+    +   '<span>출력 ' + esc2(today) + '</span></div>'
+    + '</div>';
+  };
+
+  window.wlOpenReport = function(){
+    var old = document.getElementById('wlRepOv'); if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'wlRepOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12090;display:flex;'
+      + 'align-items:center;justify-content:center;padding:14px;font-family:inherit';
+    var months = {};
+    if(typeof entries !== 'undefined') entries.forEach(function(e){
+      var d = eDate(e); if(d) months[String(d).slice(0,7)] = 1;
+    });
+    var list = Object.keys(months).sort().reverse().slice(0, 36);
+    if(!list.length) list = [ymNow()];
+    var defYm = (list.indexOf(ymNow()) >= 0) ? ymNow() : list[0];   // 기본은 이번 달
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:960px;height:92vh;max-height:92vh;display:flex;flex-direction:column;overflow:hidden">'
+      + '<div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +   '<span style="font-size:16px;font-weight:800;color:#1a2f45">📊 월간 보고서</span>'
+      +   '<select id="wlRepYm" style="height:34px;padding:0 10px;border:1.5px solid #cfe0f2;border-radius:9px;font-size:13.5px;font-weight:700;font-family:inherit;background:#fff">'
+      +     list.map(function(m){ return '<option value="' + m + '"' + (m===defYm?' selected':'') + '>'
+      +       m.slice(0,4) + '년 ' + parseInt(m.slice(5,7),10) + '월</option>'; }).join('')
+      +   '</select>'
+      +   '<div style="flex:1"></div>'
+      +   '<button id="wlRepPrint" style="height:34px;padding:0 13px;border:none;border-radius:9px;background:#1a73e8;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🖨 인쇄 · PDF</button>'
+      +   '<button id="wlRepCsv" style="height:34px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:9px;background:#f7faff;color:#3f7cb8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ 자재 CSV</button>'
+      +   '<button id="wlRepClose" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<iframe id="wlRepFrame" style="flex:1 1 auto;width:100%;height:100%;min-height:0;border:0;background:#eceff3"></iframe>'
+      + '</div>';
+    document.body.appendChild(ov);
+    document.getElementById('wlRepClose').addEventListener('click', function(){ ov.remove(); });
+
+    function draw(){
+      var ym = document.getElementById('wlRepYm').value;
+      var rep = window.wlBuildReport(ym);
+      ov._rep = rep;
+      // iframe 안에서 그린다 — 보고서 전용 CSS가 앱 화면을 건드리지 않게
+      var f = document.getElementById('wlRepFrame');
+      var d = f.contentDocument || f.contentWindow.document;
+      d.open();
+      d.write('<!doctype html><html lang="ko"><head><meta charset="utf-8">'
+        + '<title>서희타워 ' + ym + ' 업무 월간보고서</title>'
+        + '<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">'
+        + '<style>' + window.wlReportCSS() + '</style></head><body>'
+        + window.wlReportHTML(rep) + '</body></html>');
+      d.close();
+    }
+    document.getElementById('wlRepYm').addEventListener('change', draw);
+    document.getElementById('wlRepPrint').addEventListener('click', function(){
+      var f = document.getElementById('wlRepFrame');
+      try{ f.contentWindow.focus(); f.contentWindow.print(); }
+      catch(e){ alert('인쇄 창을 열지 못했습니다: ' + (e && e.message || e)); }
+    });
+    document.getElementById('wlRepCsv').addEventListener('click', function(){
+      var rep = ov._rep; if(!rep) return;
+      var lines = ['자재명,규격,사용수량,사용건수'];
+      rep.mats.forEach(function(m){
+        lines.push('"' + m.name.replace(/"/g,'""') + '","' + m.spec.replace(/"/g,'""') + '",' + m.qty + ',' + m.cnt);
+      });
+      var blob = new Blob(['﻿' + lines.join('\r\n')], { type:'text/csv;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '자재사용량_' + rep.ym + '.csv';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    });
+    draw();
+  };
+
+  /* ── 기록 백업 창 ── */
+  window.wlEntryBackupUI = async function(){
+    var old = document.getElementById('wlEbOv'); if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'wlEbOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12085;display:flex;'
+      + 'align-items:center;justify-content:center;padding:14px;font-family:inherit';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:440px;max-height:90vh;overflow:auto;padding:18px 20px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      +   '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">💾 업무 기록 백업</span>'
+      +   '<button id="wlEbClose" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<div style="font-size:11.5px;color:#9aa7b4;line-height:1.6;margin-bottom:11px">'
+      +   '기록 전체를 통째로 떠서 보관합니다. 실수로 지웠을 때 <b>없어진 것만 골라</b> 되살릴 수 있습니다.<br>주 1회 자동으로도 뜹니다.</div>'
+      + '<div id="wlEbBody" style="font-size:13px;line-height:1.7">불러오는 중…</div>'
+      + '<div style="display:flex;gap:7px;margin-top:13px">'
+      +   '<button id="wlEbSnap" style="flex:1;height:42px;border:none;border-radius:10px;background:#1a73e8;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">💾 지금 백업</button>'
+      +   '<button id="wlEbExp" style="flex:1;height:42px;border:1.5px solid #dbe6f4;border-radius:10px;background:#f7faff;color:#3f7cb8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ 파일로 저장</button>'
+      + '</div>'
+      + '<button id="wlEbImp" style="width:100%;height:38px;margin-top:7px;border:1.5px solid #dbe6f4;border-radius:10px;background:#f7faff;color:#3f7cb8;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">⬆ 파일에서 없어진 기록 되살리기</button>'
+      + '</div>';
+    document.body.appendChild(ov);
+    document.getElementById('wlEbClose').addEventListener('click', function(){ ov.remove(); });
+
+    async function draw(){
+      var body = document.getElementById('wlEbBody');
+      var now = (typeof entries !== 'undefined') ? entries.length : 0;
+      var snaps = await window.wlSnapshotList();
+      body.innerHTML = '<div style="padding:10px 12px;background:#f7faff;border:1.5px solid #e3edf9;border-radius:10px;margin-bottom:9px">'
+        + '<b>지금 기록</b> — ' + now + '건</div>'
+        + (snaps.length
+          ? '<div style="font-weight:800;margin-bottom:6px">보관된 백업 ' + snaps.length + '개</div>'
+            + snaps.slice(0, 8).map(function(s){
+                return '<div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border:1.5px solid #eef4fb;border-radius:9px;margin-bottom:5px">'
+                  + '<div style="flex:1"><b>' + s.id.slice(0,4) + '-' + s.id.slice(4,6) + '-' + s.id.slice(6,8) + '</b>'
+                  + ' <span style="color:#7a92a8;font-size:12px">' + s.n + '건</span></div>'
+                  + '<button class="wl-eb-restore" data-id="' + s.id + '" style="height:30px;padding:0 11px;border:none;border-radius:8px;background:#0f766e;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">↩ 없어진 것 되살리기</button>'
+                  + '</div>';
+              }).join('')
+          : '<div style="color:#9aa7b4">아직 백업이 없습니다 — 아래 <b>지금 백업</b>을 눌러주세요</div>');
+      body.querySelectorAll('.wl-eb-restore').forEach(function(b){
+        b.addEventListener('click', async function(){
+          b.textContent = '불러오는 중…'; b.disabled = true;
+          var snap = await window.wlSnapshotLoad(b.getAttribute('data-id'));
+          b.textContent = '↩ 없어진 것 되살리기'; b.disabled = false;
+          if(!snap){ alert('백업을 못 읽었습니다'); return; }
+          var have = {}; entries.forEach(function(e){ if(e&&e.id) have[e.id] = 1; });
+          var miss = snap.rows.filter(function(r){ return r && r.id && !have[r.id]; });
+          if(!miss.length){ alert('없어진 기록이 없습니다. 되살릴 것이 없어요.'); return; }
+          if(!confirm('백업(' + snap.n + '건) 중 지금 없는 기록 ' + miss.length + '건을 되살립니다.\n'
+            + '현재 기록은 하나도 건드리지 않습니다.\n계속할까요?')) return;
+          var n = window.wlRestoreMissing(snap.rows);
+          if(typeof toast === 'function') toast('↩ ' + n + '건을 되살렸습니다', 5000);
+          draw();
+        });
+      });
+    }
+    document.getElementById('wlEbSnap').addEventListener('click', async function(){
+      var b = this; b.textContent = '백업 중…'; b.disabled = true;
+      await window.wlSnapshotNow(false);
+      b.textContent = '💾 지금 백업'; b.disabled = false;
+      draw();
+    });
+    document.getElementById('wlEbExp').addEventListener('click', function(){ window.wlExportEntries(); });
+    document.getElementById('wlEbImp').addEventListener('click', function(){
+      var inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = '.json,application/json';
+      inp.addEventListener('change', function(){
+        var f = inp.files && inp.files[0]; if(!f) return;
+        var fr = new FileReader();
+        fr.onload = function(){
+          var obj = null;
+          try{ obj = JSON.parse(fr.result); }catch(e){}
+          var rows = obj && (obj.rows || obj.entries);
+          if(!Array.isArray(rows)){ alert('기록 백업 파일이 아닙니다'); return; }
+          var have = {}; entries.forEach(function(e){ if(e&&e.id) have[e.id]=1; });
+          var miss = rows.filter(function(r){ return r && r.id && !have[r.id]; });
+          if(!miss.length){ alert('없어진 기록이 없습니다'); return; }
+          if(!confirm('파일에서 없어진 기록 ' + miss.length + '건을 되살립니다.\n계속할까요?')) return;
+          var n = window.wlRestoreMissing(rows);
+          if(typeof toast === 'function') toast('↩ ' + n + '건을 되살렸습니다', 5000);
+          draw();
+        };
+        fr.readAsText(f);
+      });
+      inp.click();
+    });
+    draw();
+  };
+
+  /* ── 헤더에 버튼 두 개 붙이기 ── */
+  setInterval(function(){
+    var host = document.getElementById('btnQuickJournal');
+    if(!host || !host.parentNode) return;
+    if(!document.getElementById('btnMonthReport')){
+      var b = document.createElement('button');
+      b.id = 'btnMonthReport'; b.className = host.className; b.type = 'button';
+      b.textContent = '📊 월보고';
+      b.style.cssText = 'background:#0f766e;color:#fff;border:none;border-radius:10px;padding:6px 12px;'
+        + 'font-size:13px;font-weight:700;cursor:pointer;margin-left:4px';
+      b.addEventListener('click', function(){ window.wlOpenReport(); });
+      host.parentNode.insertBefore(b, host.nextSibling);
+    }
+    if(!document.getElementById('btnEntryBackup')){
+      var c = document.createElement('button');
+      c.id = 'btnEntryBackup'; c.type = 'button';
+      c.textContent = '💾 백업';
+      c.title = '업무 기록 백업 · 되살리기';
+      c.style.cssText = 'background:#475569;color:#fff;border:none;border-radius:10px;padding:6px 12px;'
+        + 'font-size:13px;font-weight:700;cursor:pointer;margin-left:4px';
+      c.addEventListener('click', function(){ window.wlEntryBackupUI(); });
+      var anchor = document.getElementById('btnMonthReport') || host;
+      anchor.parentNode.insertBefore(c, anchor.nextSibling);
+    }
+  }, 1000);
+
+  console.log('[보고서] 월간 보고서 · 기록 백업 로드');
 })();
 </script>
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0826-0918';
+  var TAG = ' +cal0826-1017';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
