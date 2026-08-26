@@ -1,7 +1,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v46-0826-1615";
+const APP_VERSION = "v46-0826-1645";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -339,10 +339,10 @@ const SCHEMA={
   progress:[
     {k:"status",label:"진행상태",type:"select",opts:["견적중","발주완료","진행중","완료"],req:true},
     {k:"title",label:"업무 제목",type:"text",full:true,req:true},
-    {k:"owner",label:"담당자 / 업체",type:"text"},
-    {k:"ownerPhone",label:"담당자 연락처",type:"text"},
-    {k:"estCost",label:"초기 견적비 (원)",type:"number"},
-    {k:"finalCost",label:"최종 금액 (원)",type:"number"},
+    {k:"owner",label:"담당 업체",type:"text",span:2,nl:true},
+    {k:"ownerPhone",label:"담당자 · 연락처",type:"text",span:2},
+    {k:"estCost",label:"초기 견적비 (원)",type:"number",span:2,nl:true},
+    {k:"finalCost",label:"최종 금액 (원)",type:"number",span:2},
     {k:"detail",label:"상세 내용",type:"textarea",full:true},
     {k:"memo",label:"비고",type:"textarea",full:true},
     // v46: 처리단계(steps)는 상세 내용 바로 아래에 삽입됨. steps=[{date,action,detail}]
@@ -353,13 +353,13 @@ const SCHEMA={
     {k:"date",label:"발생 날짜",type:"date",req:true},
     {k:"time",label:"발생 시각",type:"time"},
     {k:"title",label:"사고 제목",type:"text",full:true,req:true},
-    {k:"floor",label:"발생 층",type:"floor"},
+    {k:"floor",label:"발생 층",type:"floor",nl:true},
     {k:"location",label:"상세 위치",type:"text"},
     {k:"field",label:"분야",type:"field"},
-    {k:"partyName",label:"당사자 이름",type:"text"},
+    {k:"partyName",label:"당사자 이름",type:"text",nl:true},
     {k:"partyType",label:"당사자 유형",type:"select",opts:["임차인","방문객","직원","외부인","불명"]},
     {k:"partyPhone",label:"당사자 연락처",type:"text"},
-    {k:"repairCost",label:"수리비 (원)",type:"number"},
+    {k:"repairCost",label:"수리비 (원)",type:"number",nl:true},
     {k:"compensation",label:"배상금 (원)",type:"number"},
     {k:"insurance",label:"보험금 (원)",type:"number"},
     {k:"detail",label:"사고 경위 (상세)",type:"textarea",full:true},
@@ -1397,7 +1397,7 @@ if(f.type==="timepick"){
   const req=f.req?' <span class="req">*</span>':'';
   // 업무 모달의 cost 필드는 기본 숨김 (expType 변경 시 표시)
   const initHide = (f.k==="cost" && mKind==="work") ? 'display:none;' : '';
-  return `<div class="field ${f.full?"full":""}" style="${initHide}"><label>${f.label}${req}</label>${inner}</div>`;
+  return `<div class="field ${f.full?"full":""}" data-k="${f.k}" style="${initHide}"><label>${f.label}${req}</label>${inner}</div>`;
 }
 /* v44: 자재명 검색 가능한 UI (자재 탭의 item과 연동, 초성검색 지원) */
 /* v44: 새 자재 빠르게 추가하는 미니 모달 */
@@ -2797,7 +2797,8 @@ function openEditor(kind,id){
   /* 여러 필드가 있는 모달은 인라인으로도 그리드 강제 (CSS 충돌 방지) */
   const GRID_KINDS = ['call', 'accident', 'progress', 'item', 'stock', 'meeting', 'deliver', 'vacation', 'schedule'];
   if(GRID_KINDS.includes(kind)){
-    mf.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px';
+    const COLS = (kind === 'progress') ? 4 : 3;
+    mf.style.cssText = 'display:grid;grid-template-columns:repeat('+COLS+',1fr);gap:9px 10px';
   } else {
     mf.style.cssText = 'display:block';
   }
@@ -2807,6 +2808,14 @@ function openEditor(kind,id){
     mf.querySelectorAll('.field').forEach(f=>{
       f.style.margin = '0';
       if(f.classList.contains('full')) f.style.gridColumn = '1 / -1';
+    });
+    /* v46: 스키마의 span / nl 로 한 줄 묶음 만들기 */
+    sc.forEach(fd=>{
+      if(!fd || (!fd.span && !fd.nl)) return;
+      const el = mf.querySelector('.field[data-k="'+fd.k+'"]');
+      if(!el || el.classList.contains('full')) return;
+      if(fd.span) el.style.gridColumn = (fd.nl ? ('1 / span '+fd.span) : ('span '+fd.span));
+      else el.style.gridColumnStart = '1';
     });
   }
   sc.forEach(f=>{ 
@@ -3240,15 +3249,15 @@ function redrawAccStepList(){
   list.innerHTML = view.map((o,pos)=>{
     const s = o.s, i = o.idx;
     return `
-    <div class="acc-step-card" data-idx="${i}" style="background:#fff;border:1.5px solid ${pos===0?'#f59e0b':'#ffd54f'};border-radius:10px;padding:11px 12px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap">
+    <div class="acc-step-card" data-idx="${i}" style="background:#fff;border:1.5px solid ${pos===0?'#f59e0b':'#ffd54f'};border-radius:10px;padding:9px 10px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;flex-wrap:wrap">
         <span style="background:${pos===0?'#c2740b':'#f59e0b'};color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:12px">${o.no}</span>
         ${pos===0?`<span style="background:#fff3cd;color:#7c5e1a;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:8px">최근</span>`:''}
         <input type="date" class="acc-step-input" data-idx="${i}" data-k="date" value="${esc(s.date||'')}" style="${IST};width:150px;flex:0 0 auto">
         <input type="text" class="acc-step-input" data-idx="${i}" data-k="action" value="${esc(s.action||'')}" placeholder="제목 (예: 누수 확인, 보험사 접수, 시공 완료)" style="${IST};flex:1;min-width:120px">
         <button type="button" class="acc-step-del" data-idx="${i}" title="삭제" style="background:#fde8e8;color:#b52929;border:none;border-radius:7px;width:32px;height:32px;font-size:13px;font-family:inherit;cursor:pointer;flex:0 0 auto">🗑</button>
       </div>
-      <textarea class="acc-step-input" data-idx="${i}" data-k="memo" rows="2" placeholder="자세한 사항 — 통화 내용, 금액, 다음 할 일 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;line-height:1.5;resize:vertical;margin-bottom:6px">${esc(s.memo||'')}</textarea>
+      <textarea class="acc-step-input wl-grow" data-idx="${i}" data-k="memo" rows="1" placeholder="자세한 사항 (선택)" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;line-height:1.5;resize:none;overflow:hidden;min-height:34px;margin-bottom:6px">${esc(s.memo||'')}</textarea>
       <div style="display:grid;grid-template-columns:1.2fr 1fr 1.1fr;gap:6px">
         <input type="text" class="acc-step-input" data-idx="${i}" data-k="vendor" value="${esc(s.vendor||'')}" placeholder="🏢 업체" style="${SST}">
         <input type="text" class="acc-step-input" data-idx="${i}" data-k="owner" value="${esc(s.owner||'')}" placeholder="👤 담당자" style="${SST}">
@@ -3256,6 +3265,7 @@ function redrawAccStepList(){
       </div>
     </div>`;
   }).join("");
+  wlAutoGrow(list);
   list.querySelectorAll(".acc-step-input").forEach(inp=>{
     inp.addEventListener("input", ()=>{
       const idx = Number(inp.dataset.idx);
@@ -3292,6 +3302,14 @@ function wlStepsNewestFirst(arr){
   return asc.map((s,i)=>({ s:s, no:i+1 })).reverse();
 }
 /* 가장 최근 단계 */
+/* 내용만큼 늘어나는 입력칸 */
+function wlAutoGrow(root){
+  (root||document).querySelectorAll('textarea.wl-grow').forEach(t=>{
+    const fit = ()=>{ t.style.height='auto'; t.style.height=Math.max(34, t.scrollHeight+2)+'px'; };
+    if(!t._grow){ t._grow=true; t.addEventListener('input', fit); }
+    fit();
+  });
+}
 function wlLastStep(arr){
   const asc = wlSortStepsAsc(arr);
   return asc.length ? asc[asc.length-1] : null;
@@ -3364,15 +3382,15 @@ function redrawProgStepList(){
   list.innerHTML = view.map((o,pos)=>{
     const s = o.s, i = o.idx;
     return `
-    <div class="prog-step-card" data-idx="${i}" style="background:#fff;border:1.5px solid ${pos===0?'#3f7cb8':'#90c2f0'};border-radius:10px;padding:11px 12px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap">
+    <div class="prog-step-card" data-idx="${i}" style="background:#fff;border:1.5px solid ${pos===0?'#3f7cb8':'#90c2f0'};border-radius:10px;padding:9px 10px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;flex-wrap:wrap">
         <span style="background:${pos===0?'#1a4a8a':'#3f7cb8'};color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:12px">${o.no}</span>
         ${pos===0?`<span style="background:#dbeafe;color:#1a4a8a;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:8px">최근</span>`:''}
         <input type="date" class="prog-step-input" data-idx="${i}" data-k="date" value="${esc(s.date||'')}" style="${IST};width:150px;flex:0 0 auto">
         <input type="text" class="prog-step-input" data-idx="${i}" data-k="action" value="${esc(s.action||'')}" placeholder="제목 (예: 견적 접수, 자재 입고, 시공 완료)" style="${IST};flex:1;min-width:120px">
         <button type="button" class="prog-step-del" data-idx="${i}" title="삭제" style="background:#fde8e8;color:#b52929;border:none;border-radius:7px;width:32px;height:32px;font-size:13px;font-family:inherit;cursor:pointer;flex:0 0 auto">🗑</button>
       </div>
-      <textarea class="prog-step-input" data-idx="${i}" data-k="detail" rows="2" placeholder="자세한 사항 — 통화 내용, 금액, 다음 할 일 등" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;line-height:1.5;resize:vertical;margin-bottom:6px">${esc(s.detail||s.memo||'')}</textarea>
+      <textarea class="prog-step-input wl-grow" data-idx="${i}" data-k="detail" rows="1" placeholder="자세한 사항 (선택)" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;line-height:1.5;resize:none;overflow:hidden;min-height:34px;margin-bottom:6px">${esc(s.detail||s.memo||'')}</textarea>
       <div style="display:grid;grid-template-columns:1.2fr 1fr 1.1fr;gap:6px">
         <input type="text" class="prog-step-input" data-idx="${i}" data-k="vendor" value="${esc(s.vendor||'')}" placeholder="🏢 업체" style="${SST}">
         <input type="text" class="prog-step-input" data-idx="${i}" data-k="owner" value="${esc(s.owner||'')}" placeholder="👤 담당자" style="${SST}">
@@ -3381,6 +3399,7 @@ function redrawProgStepList(){
       ${s.field?`<div style="font-size:11.5px;color:#7a92a8;margin-top:5px">🏷 ${esc(s.field)}</div>`:''}
     </div>`;
   }).join("");
+  wlAutoGrow(list);
   list.querySelectorAll(".prog-step-input").forEach(inp=>{
     inp.addEventListener("input", ()=>{
       const idx = Number(inp.dataset.idx);
@@ -3464,26 +3483,23 @@ function openViewer(kind,id){
   // v44: 진행업무 처리단계 — 조회창에서도 시간순으로 보여줌
   if((kind==="progress"||kind==="accident") && (data.steps||[]).length){
     const isAcc = (kind==="accident");
-    const bg = isAcc ? "#fff8e1" : "#eef6ff";
-    const br = isAcc ? "#ffd54f" : "#90c2f0";
-    const bd = isAcc ? "#f59e0b" : "#3f7cb8";
+    const bd = isAcc ? "#c2740b" : "#2563a8";
     const stepsHtml = wlStepsNewestFirst(data.steps).map((o,pos)=>{
       const s = o.s;
       const who = [ s.vendor&&('🏢 '+s.vendor), s.owner&&('👤 '+s.owner),
                     s.vendorPhone&&('📞 '+s.vendorPhone), s.field&&('🏷 '+s.field) ].filter(Boolean);
       return `
-      <div style="background:${bg};border:1.5px solid ${pos===0?bd:br};border-radius:8px;padding:10px 12px;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap">
-          <span style="background:${bd};color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px">${o.no}</span>
-          <span style="font-size:12.5px;font-weight:700;color:#33567d">${esc(s.date||'')}</span>
-          ${pos===0?`<span style="background:#fff;border:1px solid ${bd};color:${bd};font-size:10px;font-weight:800;padding:1px 7px;border-radius:8px">최근</span>`:''}
+      <div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #eef4fa">
+        <span style="flex:0 0 auto;background:${pos===0?bd:'#c3d4e6'};color:#fff;font-size:10px;font-weight:800;min-width:19px;height:19px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;margin-top:1px">${o.no}</span>
+        <span style="flex:0 0 auto;font-size:12px;font-weight:700;color:#7a92a8;white-space:nowrap;margin-top:2px">${esc((s.date||'').slice(2))}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#1a2f45;line-height:1.45">${esc(s.action||'')}${pos===0?` <span style="font-size:10px;font-weight:800;color:${bd}">· 최근</span>`:''}</div>
+          ${(s.detail||s.memo)?`<div style="font-size:12.5px;color:#41627f;line-height:1.5;white-space:pre-wrap;margin-top:1px">${esc(s.detail||s.memo)}</div>`:''}
+          ${who.length?`<div style="font-size:11.5px;color:#8ea3b8;margin-top:1px">${who.map(esc).join(' · ')}</div>`:''}
         </div>
-        <div style="font-size:13.5px;font-weight:700;color:#1a2f45">${esc(s.action||'')}</div>
-        ${(s.detail||s.memo)?`<div style="font-size:12.5px;color:#33567d;margin-top:4px;line-height:1.55;white-space:pre-wrap">${esc(s.detail||s.memo)}</div>`:''}
-        ${who.length?`<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#7a92a8;margin-top:6px">${who.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:''}
       </div>`;
     }).join('');
-    rows+=`<div class="vrow"><div class="vk">📋 ${isAcc?"처리 기록":"진행 기록"} <span style="font-weight:700;color:#a7b6c6;font-size:11.5px">${data.steps.length}건 · 최신순</span></div><div class="vv">${stepsHtml}</div></div>`;
+    rows+=`<div class="vrow"><div class="vk" style="white-space:nowrap">📋 ${isAcc?"처리 기록":"진행 기록"} <span style="font-weight:700;color:#a7b6c6;font-size:11px">${data.steps.length}건</span></div><div class="vv" style="padding-top:2px">${stepsHtml}</div></div>`;
   }
   // v15: 첨부파일 표시
   if((data.attachments||[]).length){
