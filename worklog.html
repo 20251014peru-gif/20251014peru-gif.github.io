@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v46-0826-1520</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v46-0826-1615</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -832,6 +832,12 @@
   align-items: center;
   justify-content: center;
   font-size: 9px;
+  font-weight: 800;
+  color: transparent;
+  flex-shrink: 0;
+  user-select: none;
+  margin-top: 3px;
+}
 .sticky-note-body .checklist-row.done .checklist-cb {
   background: #3f7cb8;
   border-color: #3f7cb8;
@@ -1076,6 +1082,21 @@
   max-width: 1600px !important;
   width: 100% !important;
 }
+/* v46: 진행업무·사고 목록 — 화면 꽉 채우는 카드 그리드 (열 수 고정) */
+main.wrap{ max-width:1600px !important; width:100% !important; margin-left:auto !important; margin-right:auto !important; }
+.wl-cardgrid{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:10px !important;
+  width:100% !important;
+  align-items:start;
+}
+@media (min-width:600px){  .wl-cardgrid{ grid-template-columns:repeat(2,minmax(0,1fr)) !important; } }
+@media (min-width:900px){  .wl-cardgrid{ grid-template-columns:repeat(3,minmax(0,1fr)) !important; } }
+@media (min-width:1400px){ .wl-cardgrid{ grid-template-columns:repeat(4,minmax(0,1fr)) !important; } }
+.wl-cardgrid > .prog-card, .wl-cardgrid > .acc-card{ min-width:0; }
+.wl-cardgrid .prog-card > div, .wl-cardgrid .acc-card > div{ min-width:0; }
+.wl-cardgrid .prog-card div[style*="min-width:200px"], .wl-cardgrid .acc-card div[style*="min-width:200px"]{ min-width:0 !important; }
 @media (min-width: 900px) {
   #v43List {
     display: grid;
@@ -1362,7 +1383,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-1520</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-1615</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3034,7 +3055,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v46-20260826-1520"></script>
+<script src="worklog.js?v=v46-20260826-1615"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
