@@ -1,7 +1,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v46-0826-1955";
+const APP_VERSION = "v46-0826-2230";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -337,7 +337,8 @@ const SCHEMA={
   ],
   // v44: 사고 처리 내역
   progress:[
-    {k:"status",label:"진행상태",type:"select",opts:["견적중","발주완료","진행중","완료"],req:true},
+    {k:"date",label:"등록일",type:"date",req:true},
+    {k:"status",label:"진행상태",type:"select",opts:["검토중","견적중","품의중","발주완료","공사중","완료","보류"],req:true},
     {k:"title",label:"업무 제목",type:"text",full:true,req:true},
     {k:"owner",label:"담당 업체",type:"text",span:2,nl:true},
     {k:"ownerPhone",label:"담당자 · 연락처",type:"text",span:2},
@@ -1276,7 +1277,7 @@ function defaults(kind){
   if(kind==="stock") return {date:t, stockType:"입고", qty:1, unitPrice:0, amount:0};
   if(kind==="expense") return {date:t, expType:"개인지출", amount:0};
   if(kind==="accident") return {date:t, time:nowTime(), accType:"누수", status:"⏳ 접수", partyType:"임차인", reported:"없음"};
-  if(kind==="progress") return {status:"견적중"};
+  if(kind==="progress") return {status:"검토중", date:t};
   return {date:t};
 }
 function fieldHTML(f){
@@ -8479,17 +8480,17 @@ function renderAccidents(){
     const icon = ACCIDENT_TYPE_ICON[a.accType] || "📌";
     const _ls = (a.steps&&a.steps.length) ? wlLastStep(a.steps) : null;
     const totalCost = (Number(a.repairCost)||0)+(Number(a.compensation)||0)+(Number(a.insurance)||0);
-    return _h + `<div class="acc-card" data-acc-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .12s;position:relative">
+    return _h + `<div class="acc-card" data-acc-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:5px solid ${c.border};border-radius:12px;padding:12px 14px;cursor:pointer;transition:box-shadow .12s;position:relative">
       <button type="button" class="acc-card-del" data-acc-del="${a.id}" title="삭제" style="position:absolute;top:10px;right:10px;width:26px;height:26px;border:none;background:#fde8e8;color:#b52929;border-radius:6px;font-size:13px;cursor:pointer;z-index:2">🗑</button>
       <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding-right:32px">
         <div style="flex:1;min-width:200px">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-            <span style="font-size:20px">${icon}</span>
-            <span style="font-size:11px;font-weight:700;background:${c.bg};color:${c.fg};padding:3px 8px;border-radius:6px">${esc(a.status||'⏳ 접수')}</span>
-            <span style="font-size:11px;font-weight:700;background:#f0f6ff;color:#3f7cb8;padding:3px 8px;border-radius:6px">${esc(a.accType||'기타')}</span>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+            <span style="font-size:19px">${icon}</span>
+            <span style="font-size:11.5px;font-weight:800;background:${c.bg};color:${c.fg};padding:3px 9px;border-radius:7px;border:1px solid ${c.border}">${esc(a.status||'⏳ 접수')}</span>
+            <span style="font-size:11.5px;font-weight:800;background:#f0f6ff;color:#3f7cb8;padding:3px 9px;border-radius:7px;border:1px solid #cfe0f2">${esc(a.accType||'기타')}</span>
             ${a.partyType?`<span style="font-size:11px;color:#7a92a8">${esc(a.partyType)}</span>`:''}
           </div>
-          <div style="font-size:15px;font-weight:700;color:#1a2f45;margin-bottom:4px">${esc(a.title||'(제목 없음)')}</div>
+          <div style="font-size:17.5px;font-weight:800;color:#0f2438;line-height:1.32;letter-spacing:-.3px;margin-bottom:4px;word-break:keep-all">${esc(a.title||'(제목 없음)')}</div>
           <div style="font-size:12px;color:#7a92a8;display:flex;gap:12px;flex-wrap:wrap">
             <span>📅 ${esc(a.date||'')} ${esc(a.time||'')}</span>
             ${a.floor?`<span>🏢 ${esc(a.floor)}${a.location?' · '+esc(a.location):''}</span>`:(a.location?`<span>📍 ${esc(a.location)}</span>`:'')}
@@ -8529,13 +8530,33 @@ function renderAccidents(){
 
 /* ===== v44: 진행업무 — 시간순 처리단계가 쌓이는 업무 (사고탭과 동일 패턴) ===== */
 const PROGRESS_FILTER = { status:"전체", from:"", to:"" };
-var PROGRESS_STATUS = ["견적중","발주완료","진행중","완료"];
+/* v46: 실제 업무 흐름대로 세분화 — 검토 → 견적 → 품의 → 발주 → 공사 → 완료 */
+var PROGRESS_FLOW = ["검토중","견적중","품의중","발주완료","공사중","완료"];
+var PROGRESS_STATUS = ["검토중","견적중","품의중","발주완료","공사중","완료","보류"];
 var PROGRESS_STATUS_COLOR = {
+  "검토중":   {bg:"#ede9fe", fg:"#5b21b6", border:"#8b5cf6"},
   "견적중":   {bg:"#fef3c7", fg:"#92400e", border:"#f59e0b"},
+  "품의중":   {bg:"#ffedd5", fg:"#9a3412", border:"#f97316"},
   "발주완료": {bg:"#dbeafe", fg:"#1e40af", border:"#3b82f6"},
-  "진행중":   {bg:"#fce7f3", fg:"#9f1239", border:"#ec4899"},
+  "공사중":   {bg:"#fce7f3", fg:"#9f1239", border:"#ec4899"},
   "완료":     {bg:"#d1fae5", fg:"#065f46", border:"#10b981"},
+  "보류":     {bg:"#f1f5f9", fg:"#64748b", border:"#94a3b8"},
+  "진행중":   {bg:"#fce7f3", fg:"#9f1239", border:"#ec4899"},   /* 옛 이름 호환 */
 };
+/* 단계 막대 — 지금 어디까지 왔는지 한눈에 */
+function progStepBar(status){
+  var i = PROGRESS_FLOW.indexOf(status === "진행중" ? "공사중" : status);
+  if(status === "보류") return '<div style="display:flex;gap:3px;margin:6px 0 2px">'
+    + PROGRESS_FLOW.map(function(){ return '<span style="flex:1;height:4px;border-radius:3px;background:#e2e8f0"></span>'; }).join('')
+    + '</div>';
+  if(i < 0) return "";
+  var done = PROGRESS_STATUS_COLOR[status] || PROGRESS_STATUS_COLOR["견적중"];
+  return '<div style="display:flex;gap:3px;margin:6px 0 2px" title="' + esc(status) + ' (' + (i+1) + '/' + PROGRESS_FLOW.length + '단계)">'
+    + PROGRESS_FLOW.map(function(_, k){
+        return '<span style="flex:1;height:4px;border-radius:3px;background:' + (k <= i ? done.border : '#e6edf5') + '"></span>';
+      }).join('')
+    + '</div>';
+}
 
 function setupProgressTab(){
   renderProgressStatusChips();
@@ -8599,23 +8620,29 @@ function renderProgressTasks(){
   if(!list) return;
   let arr = entries.filter(e=>e.kind==="progress");
   if(PROGRESS_FILTER.status !== "전체") arr = arr.filter(a=>a.status===PROGRESS_FILTER.status);
-  if(PROGRESS_FILTER.from) arr = arr.filter(a=>{
-    const lastDate = (a.steps&&a.steps.length) ? a.steps[a.steps.length-1].date : a.createdAt&&new Date(a.createdAt).toISOString().slice(0,10);
-    return (lastDate||"")>=PROGRESS_FILTER.from;
-  });
-  if(PROGRESS_FILTER.to) arr = arr.filter(a=>{
-    const lastDate = (a.steps&&a.steps.length) ? a.steps[a.steps.length-1].date : a.createdAt&&new Date(a.createdAt).toISOString().slice(0,10);
-    return (lastDate||"")<=PROGRESS_FILTER.to;
-  });
+  const _pd = (x)=>{
+    if(x.date) return String(x.date).slice(0,10);
+    const ls = (x.steps&&x.steps.length) ? wlLastStep(x.steps) : null;
+    if(ls && ls.date) return String(ls.date).slice(0,10);
+    return x.createdAt ? new Date(x.createdAt).toISOString().slice(0,10) : "";
+  };
+  if(PROGRESS_FILTER.from) arr = arr.filter(a=>_pd(a) >= PROGRESS_FILTER.from);
+  if(PROGRESS_FILTER.to)   arr = arr.filter(a=>_pd(a) <= PROGRESS_FILTER.to);
   /* v46: 살아있는 건 위로, 완료는 아래로 */
-  const PRANK = {"진행중":0, "견적중":1, "발주완료":2, "완료":9};
-  const prank = a => (PRANK[a.status] !== undefined ? PRANK[a.status] : 3);
+  const PRANK = {"검토중":0, "견적중":1, "품의중":2, "발주완료":3, "공사중":4, "진행중":4, "보류":8, "완료":9};
+  const prank = a => (PRANK[a.status] !== undefined ? PRANK[a.status] : 5);
+  /* v46: 등록일 기준 최신순 (없으면 마지막 진행기록 → 생성일) */
+  const pdate = (x)=>{
+    if(x.date) return String(x.date).slice(0,10);
+    const ls = (x.steps&&x.steps.length) ? wlLastStep(x.steps) : null;
+    if(ls && ls.date) return String(ls.date).slice(0,10);
+    return x.createdAt ? new Date(x.createdAt).toISOString().slice(0,10) : "";
+  };
   arr.sort((a,b)=>{
     const ra = prank(a), rb = prank(b);
     if(ra !== rb) return ra - rb;
-    const la = (a.steps&&a.steps.length) ? (a.steps[a.steps.length-1].date||"") : "";
-    const lb = (b.steps&&b.steps.length) ? (b.steps[b.steps.length-1].date||"") : "";
-    if(la !== lb) return lb.localeCompare(la);
+    const da = pdate(a), db2 = pdate(b);
+    if(da !== db2) return db2.localeCompare(da);
     return (b.createdAt||0)-(a.createdAt||0);
   });
   const cnt = document.getElementById("progressCount");
@@ -8632,13 +8659,15 @@ function renderProgressTasks(){
   list.className = 'wl-cardgrid';
   list.style.cssText = '';
   let _pg = null;
+  const gname = (x)=> x.status==="완료" ? "완료" : (x.status==="보류" ? "보류" : "진행 중인 업무");
+  const gicon = { "진행 중인 업무":"🔵", "보류":"⏸", "완료":"✅" };
+  const gcol  = { "진행 중인 업무":"#2563a8", "보류":"#64748b", "완료":"#9ab0c4" };
   const grpHead = (a)=>{
-    const g = (a.status==="완료") ? "완료" : "진행 중인 업무";
+    const g = gname(a);
     if(g === _pg) return "";
     _pg = g;
-    const n = arr.filter(x=>((x.status==="완료")?"완료":"진행 중인 업무")===g).length;
-    const col = (g==="완료") ? "#9ab0c4" : "#2563a8";
-    return `<div style="grid-column:1/-1;display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;color:${col};padding:10px 3px 3px;border-bottom:1.5px solid #e8f0fa;margin-top:2px">${g==="완료"?"✅":"🔵"} ${g} <span style="font-weight:700;color:#a7b6c6;font-size:11.5px">${n}</span></div>`;
+    const n = arr.filter(x=>gname(x)===g).length;
+    return `<div style="grid-column:1/-1;display:flex;align-items:center;gap:7px;font-size:13px;font-weight:800;color:${gcol[g]};padding:12px 3px 4px;border-bottom:2px solid #e8f0fa;margin-top:4px">${gicon[g]} ${g} <span style="font-weight:700;color:#a7b6c6;font-size:12px">${n}</span></div>`;
   };
   list.innerHTML = arr.map(a=>{
     const _h = grpHead(a);
@@ -8646,15 +8675,17 @@ function renderProgressTasks(){
     const lastStep = (a.steps&&a.steps.length) ? wlLastStep(a.steps) : null;
     const totalCost = Number(a.finalCost)||Number(a.estCost)||0;
     const costLabel = Number(a.finalCost) ? '최종' : (Number(a.estCost) ? '견적' : '');
-    return _h + `<div class="prog-card" data-prog-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid ${c.border};border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .12s;position:relative">
+    return _h + `<div class="prog-card" data-prog-id="${a.id}" style="background:#fff;border:1.5px solid #e8f0fa;border-left:5px solid ${c.border};border-radius:12px;padding:12px 14px;cursor:pointer;transition:box-shadow .12s;position:relative">
       <button type="button" class="prog-card-del" data-prog-del="${a.id}" title="삭제" style="position:absolute;top:10px;right:10px;width:26px;height:26px;border:none;background:#fde8e8;color:#b52929;border-radius:6px;font-size:13px;cursor:pointer;z-index:2">🗑</button>
       <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding-right:32px">
         <div style="flex:1;min-width:200px">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-            <span style="font-size:11px;font-weight:700;background:${c.bg};color:${c.fg};padding:3px 8px;border-radius:6px">${esc(a.status||'견적중')}</span>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+            <span style="font-size:11.5px;font-weight:800;background:${c.bg};color:${c.fg};padding:3px 9px;border-radius:7px;border:1px solid ${c.border}">${esc(a.status||'검토중')}</span>
             ${a.floor?`<span style="font-size:11px;color:#7a92a8">${esc(a.floor)}</span>`:''}
           </div>
-          <div style="font-size:15px;font-weight:700;color:#1a2f45;margin-bottom:4px">${esc(a.title||'(제목 없음)')}</div>
+          <div style="font-size:17.5px;font-weight:800;color:#0f2438;line-height:1.32;letter-spacing:-.3px;margin-bottom:3px;word-break:keep-all">${esc(a.title||'(제목 없음)')}</div>
+          <div style="font-size:11.5px;color:#7a92a8;margin-bottom:2px">📅 ${esc(a.date || (a.createdAt?new Date(a.createdAt).toISOString().slice(0,10):''))}</div>
+          ${progStepBar(a.status)}
           ${(a.owner||a.ownerPhone)?`<div style="font-size:12px;color:#7a92a8">👤 ${esc(a.owner||'')}${a.ownerPhone?' · '+esc(a.ownerPhone):''}</div>`:''}
           ${a.location?`<div style="font-size:11.5px;color:#9ab0c4">📍 ${esc(a.location)}</div>`:''}
           ${a.detail?`<div style="font-size:12.5px;color:#33567d;margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(a.detail)}</div>`:''}
