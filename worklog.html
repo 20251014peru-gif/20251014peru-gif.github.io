@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v46-0826-1250</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v46-0826-1425</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -422,6 +422,80 @@
 .memo-view-active circle { fill:#fff !important; }
 
 /* ===== 포스트잇 메모 ===== */
+/* v46: 메모 작성칸 도구모음 */
+.wl-tb-btn{
+  touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+  display:inline-flex; align-items:center; justify-content:center;
+  height:29px; min-width:29px; padding:0 7px; gap:3px;
+  border:1.5px solid rgba(0,0,0,.13); border-radius:9px;
+  background:rgba(255,255,255,.72); cursor:pointer;
+  font-family:inherit; font-size:13px; font-weight:700; color:#4a5a68;
+  line-height:1; transition:all .13s;
+}
+.wl-tb-btn:hover{ background:#fff; border-color:rgba(0,0,0,.28); }
+.wl-tb-btn:active{ transform:scale(.94); }
+.wl-tb-btn.on{ background:#3f7cb8; border-color:#3f7cb8; color:#fff; }
+.wl-tb-btn svg{ display:block; }
+.wl-tb-sep{ width:1px; height:18px; background:rgba(0,0,0,.12); margin:0 2px; }
+.wl-tb-menu{
+  position:absolute; z-index:9500; background:#fff; border-radius:12px;
+  box-shadow:0 8px 26px rgba(0,0,0,.18); border:1px solid #e8f0fa;
+  padding:5px; min-width:168px;
+}
+.wl-tb-menu button{
+  touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+  display:flex; align-items:center; gap:8px; width:100%;
+  border:none; background:none; cursor:pointer; font-family:inherit;
+  font-size:13.5px; font-weight:600; color:#2a3b4d;
+  padding:9px 10px; border-radius:8px; text-align:left;
+}
+.wl-tb-menu button:hover{ background:#f2f7fd; }
+/* v46: 메모 작성칸 3개 — 높이 통일 + 정돈 */
+#wlSlotRow{ align-items:stretch !important; }
+#wlSlotRow > *{ min-height:214px; }
+#wlSlotRow #stickyInputWrap{
+  display:flex; flex-direction:column; padding:11px 13px 11px;
+  border-radius:16px; box-shadow:0 3px 14px rgba(0,0,0,.08);
+}
+#wlSlotRow #stickyInput{
+  flex:1 1 auto; min-height:0 !important; overflow-y:auto;
+  font-size:13.5px !important; line-height:1.55; margin-top:2px;
+}
+#wlSlotRow #stickyTitle{ flex:0 0 auto !important; font-size:14px !important; margin-bottom:0 !important; padding:3px 0 !important; }
+#wlSlotRow #stickyInput:empty:before{ font-size:13.5px; }
+#wlSlotRow .sticky-input-row{ margin-top:6px; gap:5px; }
+#wlSlotRow #wlToolbar{ margin-top:0; }
+#wlSlotRow .sticky-input-row:last-child{ margin-top:auto; padding-top:6px; }
+#wlSlotRow .sticky-colors{ gap:4px; align-items:center; }
+#wlSlotRow .sc-btn{
+  width:18px; height:18px; border:1.5px solid rgba(0,0,0,.14);
+  transition:none;
+}
+#wlSlotRow .sc-btn.active{
+  border:2.5px solid rgba(0,0,0,.55); transform:none;
+}
+#wlSlotRow #scLabel{ margin-left:3px !important; font-size:11px !important; }
+#wlSlotRow .sticky-photo-btn{ width:30px; height:30px; border-radius:9px; font-size:14px; }
+#wlSlotRow .sticky-save-btn{ height:29px; padding:0 13px; font-size:12.5px; border-radius:9px; }
+#wlSlotRow .wl-slot{ min-height:214px; }
+#wlSlotRow .wl-slot-b{
+  flex:1 1 auto !important; min-height:0 !important; overflow-y:auto;
+  font-size:13.5px !important; line-height:1.55; padding:2px 0;
+  outline:none; white-space:pre-wrap; word-break:break-word; color:#333;
+}
+#wlSlotRow .wl-slot-b:empty:before{
+  content: attr(data-placeholder); color:#b3adad; font-size:13.5px; pointer-events:none;
+}
+#wlSlotRow .wl-slot-b img{ max-width:110px; border-radius:8px; margin:2px 4px; }
+#wlSlotRow .wl-slot-tb{ margin:1px 0 2px; }
+#wlSlotRow .wl-toolbar{ gap:4px; }
+@media (max-width: 760px){
+  .wl-tb-btn{ height:34px; min-width:34px; font-size:14px; }
+  .wl-tb-menu button{ padding:12px 12px; font-size:14.5px; }
+  #wlSlotRow > *{ min-height:204px; }
+  #wlSlotRow .wl-slot{ min-height:204px; }
+  #wlSlotRow .wl-slot-b{ min-height:64px !important; }
+}
 .sticky-input-wrap {
   background: #fff9c4;
   border-radius: 16px;
@@ -668,33 +742,34 @@
 .sticky-input .checklist-row {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 4px 0;
-  min-height: 28px;
+  gap: 6px;
+  padding: 2px 0;
+  min-height: 22px;
   user-select: none;
-  transition: padding-left .2s ease, transform .15s ease, background .15s ease;
+  transition: padding-left .15s ease, background .15s ease;
 }
-.sticky-input .checklist-row[data-indent="1"] {
-  padding-left: 28px;
-}
+.sticky-input .checklist-row[data-indent="1"] { padding-left: 20px; }
+.sticky-input .checklist-row[data-indent="2"] { padding-left: 40px; }
+.sticky-input .checklist-row[data-indent="3"] { padding-left: 60px; }
 .sticky-input .checklist-cb {
-  flex: 0 0 24px;
-  width: 24px;
-  height: 24px;
-  border: 2px solid #999;
-  border-radius: 5px;
+  box-sizing: border-box;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  border: 1.6px solid #9aa7b4;
+  border-radius: 4px;
   background: #fff;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
   color: transparent;
   flex-shrink: 0;
   user-select: none;
   transition: all .15s;
-  margin-top: 1px;
+  margin-top: 3px;
 }
 .sticky-input .checklist-cb:hover {
   border-color: #3f7cb8;
@@ -709,10 +784,10 @@
 .sticky-input .checklist-row.done .checklist-cb::before { content: "✓"; }
 .sticky-input .checklist-text {
   flex: 1;
-  min-height: 24px;
+  min-height: 18px;
   outline: none;
   line-height: 1.5;
-  padding: 2px 4px;
+  padding: 0 2px;
   word-break: break-word;
 }
 .sticky-input .checklist-text:empty::before {
@@ -745,24 +820,18 @@
   padding-left: 22px;
 }
 .sticky-note-body .checklist-cb {
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
-  border: 1.5px solid #888;
-  border-radius: 4px;
+  box-sizing: border-box;
+  flex: 0 0 12px;
+  width: 12px;
+  height: 12px;
+  border: 1.4px solid #9aa7b4;
+  border-radius: 3.5px;
   background: #fff;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  color: transparent;
-  flex-shrink: 0;
-  user-select: none;
-  margin-top: 1px;
-  transition: all .12s;
-}
+  font-size: 9px;
 .sticky-note-body .checklist-row.done .checklist-cb {
   background: #3f7cb8;
   border-color: #3f7cb8;
@@ -791,22 +860,23 @@
   padding-left: 24px;
 }
 .sn-edit-body .checklist-cb {
-  flex: 0 0 20px;
-  width: 20px;
-  height: 20px;
-  border: 1.5px solid #888;
+  box-sizing: border-box;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  border: 1.6px solid #9aa7b4;
   border-radius: 4px;
   background: #fff;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
   color: transparent;
   flex-shrink: 0;
   user-select: none;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 .sn-edit-body .checklist-row.done .checklist-cb {
   background: #3f7cb8;
@@ -1292,7 +1362,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-1250</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-1425</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -1579,11 +1649,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       <!-- 입력창 -->
       <div class="sticky-input-wrap" id="stickyInputWrap">
         <!-- 사진 미리보기 -->
-        <input type="text" id="stickyTitle" placeholder="제목" class="sticky-title-inp" style="width:100%;box-sizing:border-box;margin-bottom:8px;border:none;border-bottom:1.5px solid rgba(0,0,0,.12);background:transparent;font-size:15px;font-weight:700;font-family:inherit;outline:none;padding:4px 0;color:#222">
+        <input type="text" id="stickyTitle" placeholder="🗒 임시 제목" class="sticky-title-inp" style="width:100%;box-sizing:border-box;margin-bottom:8px;border:none;border-bottom:1.5px solid rgba(0,0,0,.12);background:transparent;font-size:15px;font-weight:700;font-family:inherit;outline:none;padding:4px 0;color:#222">
         <div id="stickyPhotoPreview" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
         <!-- contenteditable 입력창 (사진 붙여넣기 지원) -->
         <div id="stickyInput" class="sticky-input" contenteditable="true"
-          data-placeholder="빠르게 메모하세요… Ctrl+V로 사진 붙여넣기, Ctrl+Enter로 저장"></div>
+          data-placeholder="빠르게 메모…  Ctrl+V 사진 · Ctrl+Enter 저장"></div>
         <div class="sticky-input-row">
           <div class="sticky-colors">
             <button class="sc-btn active" data-color="orange" style="background:#ffedd5" title="🗒 임시"></button>
@@ -2964,7 +3034,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v46-20260826-1250"></script>
+<script src="worklog.js?v=v46-20260826-1425"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -15073,9 +15143,8 @@ if('serviceWorker' in navigator){
       if(!document.getElementById('stkLockBtn')){
         var b = document.createElement('button');
         b.id = 'stkLockBtn'; b.type = 'button';
-        b.style.cssText = 'flex:0 0 auto;width:34px;height:32px;margin-left:6px;padding:0;'
-          + 'border:1.5px solid #dbe6f4;border-radius:8px;background:#fff;font-size:15px;'
-          + 'line-height:1;cursor:pointer;font-family:inherit';
+        b.className = 'wl-tb-btn';
+        b.style.cssText = 'font-size:14px';
         b.title = '이 메모를 비밀로 — 구글 캘린더로 안 보냅니다';
         b.textContent = '🔓';
         b.addEventListener('click', function(){
@@ -15083,7 +15152,9 @@ if('serviceWorker' in navigator){
           titleEl.value = (v.indexOf(LOCK) === 0) ? v.replace(/^🔒\s*/, '') : (LOCK + ' ' + v);
           paintLock();
         });
-        row.parentNode.insertBefore(b, row.nextSibling);
+        var tb = document.getElementById('wlToolbar');
+        if(tb) tb.appendChild(b);
+        else row.parentNode.insertBefore(b, row.nextSibling);
         titleEl.addEventListener('input', paintLock);
       }
       paintLock();
@@ -15097,6 +15168,7 @@ if('serviceWorker' in navigator){
     b.style.background = on ? '#b52929' : '';
     b.style.color = on ? '#fff' : '';
     b.style.borderColor = on ? '#b52929' : '';
+    b.style.fontSize = '14px';
     b.textContent = on ? '🔒' : '🔓';
     b.title = on ? '비밀 메모 — 구글로 안 나감 (눌러서 해제)' : '이 메모를 비밀로 표시';
   }
@@ -16138,7 +16210,7 @@ if('serviceWorker' in navigator){
 
     var row = document.createElement('div');
     row.id = 'wlSlotRow';
-    row.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:start;margin-bottom:12px';
+    row.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch;margin-bottom:12px';
     wrap.parentNode.insertBefore(row, wrap);
     row.appendChild(wrap);
     wrap.style.margin = '0';
@@ -16150,6 +16222,8 @@ if('serviceWorker' in navigator){
 
     for(var i = 2; i <= SLOTDEF.length; i++) row.appendChild(makeSlot(i));
 
+    tidySlot1(wrap);
+
     function resize(){
       var w = window.innerWidth;
       row.style.gridTemplateColumns = 'repeat(' + (w <= 760 ? 1 : (w <= 1100 ? 2 : 3)) + ',1fr)';
@@ -16158,6 +16232,401 @@ if('serviceWorker' in navigator){
     resize();
   }
 
+  /* ═════ 공용 편집 도구 (세 칸 모두 같은 방식 · PC/아이폰/안드로이드 동일) ═════ */
+  var IND = '   ';      /* 들여쓰기 한 칸 = 공백 3 */
+  var BUL = '• ';                  /* 글머리 기호 */
+  var LOCKM = '🔒';
+
+  /* --- 선택 위치 도우미 --- */
+  function selIn(edEl){
+    var s = window.getSelection();
+    return !!(edEl && s && s.rangeCount && edEl.contains(s.anchorNode));
+  }
+  function focusEd(edEl){
+    if(!edEl) return;
+    if(!selIn(edEl)){
+      edEl.focus();
+      try{
+        var r = document.createRange();
+        r.selectNodeContents(edEl); r.collapse(false);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      }catch(e){}
+    }
+  }
+  function rowAt(edEl){
+    if(!edEl) return null;
+    var s = window.getSelection();
+    if(!s || !s.rangeCount) return null;
+    var n = s.anchorNode;
+    var el = (n && n.nodeType === 1) ? n : (n && n.parentElement);
+    while(el && el !== edEl){
+      if(el.classList && el.classList.contains('checklist-row')) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+  function toLineStart(){
+    var s = window.getSelection();
+    if(!s || !s.modify) return null;
+    s.collapseToStart();
+    s.modify('move', 'backward', 'lineboundary');
+    return s;
+  }
+  function peek(s, n){
+    for(var i = 0; i < n; i++) s.modify('extend', 'forward', 'character');
+    return s.toString();
+  }
+  function fire(edEl){ try{ edEl.dispatchEvent(new Event('input', { bubbles:true })); }catch(e){} }
+
+  /* --- 글머리 기호 --- */
+  function tbBullet(edEl){
+    if(!edEl) return;
+    focusEd(edEl);
+    if(rowAt(edEl)) return;                       /* 체크목록 줄에는 안 넣음 */
+    var s = toLineStart();
+    if(!s){ document.execCommand('insertText', false, BUL); fire(edEl); return; }
+    var t = peek(s, 2);
+    if(t === BUL) document.execCommand('delete');
+    else { s.collapseToStart(); document.execCommand('insertText', false, BUL); }
+    fire(edEl);
+  }
+
+  /* --- 들여쓰기 / 내어쓰기 --- */
+  function tbIndent(edEl, dir){
+    if(!edEl) return;
+    focusEd(edEl);
+    var row = rowAt(edEl);
+    if(row){
+      var lv = parseInt(row.dataset.indent || '0', 10) || 0;
+      lv = Math.max(0, Math.min(3, lv + dir));
+      if(lv) row.dataset.indent = String(lv); else row.removeAttribute('data-indent');
+      fire(edEl);
+      return;
+    }
+    var s = toLineStart();
+    if(!s){ if(dir > 0) document.execCommand('insertText', false, IND); fire(edEl); return; }
+    if(dir > 0){
+      s.collapseToStart();
+      document.execCommand('insertText', false, IND);
+    } else {
+      var t = peek(s, 3);
+      if(t === IND) document.execCommand('delete');
+      else s.collapseToStart();
+    }
+    fire(edEl);
+  }
+
+  /* --- 체크목록 --- */
+  function mkRow(text, done, indent){
+    var row = document.createElement('div');
+    row.className = 'checklist-row' + (done ? ' done' : '');
+    row.contentEditable = 'false';
+    if(indent) row.dataset.indent = String(indent);
+    var safe = (text || '').replace(/[&<>"]/g, function(m){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m];
+    });
+    row.innerHTML = '<span class="checklist-cb" contenteditable="false"></span>'
+                  + '<span class="checklist-text" contenteditable="true">' + safe + '</span>';
+    return row;
+  }
+  function caretIn(el){
+    setTimeout(function(){
+      try{
+        el.focus();
+        var r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      }catch(e){}
+    }, 0);
+  }
+  function tbTodo(edEl){
+    if(!edEl) return;
+    focusEd(edEl);
+    var row = rowAt(edEl);
+    if(row){                                   /* 이미 체크줄 → 보통 글로 되돌리기 */
+      var txt = (row.querySelector('.checklist-text') || {}).innerText || '';
+      var d = document.createElement('div');
+      d.textContent = txt || '';
+      if(!txt) d.innerHTML = '<br>';
+      row.replaceWith(d);
+      caretIn(d);
+      fire(edEl);
+      return;
+    }
+    var nr = mkRow('', false, 0);
+    var s = window.getSelection();
+    var placed = false;
+    if(s && s.rangeCount && edEl.contains(s.anchorNode)){
+      var blk = s.getRangeAt(0).startContainer;
+      while(blk && blk.parentElement !== edEl) blk = blk.parentElement;
+      if(blk && blk !== edEl){ blk.after(nr); placed = true; }
+    }
+    if(!placed) edEl.appendChild(nr);
+    caretIn(nr.querySelector('.checklist-text'));
+    fire(edEl);
+  }
+
+  /* 편집기에 체크목록 동작 붙이기 (1번 칸은 기존 코드가 이미 처리) */
+  function bindEditor(edEl, legacy){
+    if(!edEl || edEl._wlBound) return;
+    edEl._wlBound = true;
+
+    /* Tab / Shift+Tab — 세 칸 공통 */
+    edEl.addEventListener('keydown', function(ev){
+      if(ev.key === 'Tab'){ ev.preventDefault(); tbIndent(edEl, ev.shiftKey ? -1 : 1); }
+    });
+    if(legacy) return;
+
+    /* 체크박스 켜기/끄기 */
+    edEl.addEventListener('click', function(ev){
+      var cb = ev.target.closest && ev.target.closest('.checklist-cb');
+      if(!cb) return;
+      ev.preventDefault();
+      var r = cb.closest('.checklist-row');
+      if(r){ r.classList.toggle('done'); fire(edEl); }
+    });
+
+    edEl.addEventListener('keydown', function(ev){
+      var r = rowAt(edEl);
+      if(!r) return;
+      var tEl = r.querySelector('.checklist-text');
+      var txt = tEl ? (tEl.innerText || '').trim() : '';
+
+      if(ev.key === 'Enter' && !ev.ctrlKey && !ev.metaKey){
+        ev.preventDefault();
+        if(!txt){                               /* 빈 줄에서 Enter → 목록 빠져나가기 */
+          var d = document.createElement('div');
+          d.innerHTML = '<br>';
+          r.replaceWith(d);
+          caretIn(d);
+        } else {
+          var nr = mkRow('', false, parseInt(r.dataset.indent || '0', 10) || 0);
+          r.after(nr);
+          caretIn(nr.querySelector('.checklist-text'));
+        }
+        fire(edEl);
+        return;
+      }
+      if(ev.key === 'Backspace' && !txt){
+        ev.preventDefault();
+        var prev = r.previousElementSibling;
+        r.remove();
+        if(prev){
+          var pt = prev.querySelector ? prev.querySelector('.checklist-text') : null;
+          caretIn(pt || prev);
+        } else edEl.focus();
+        fire(edEl);
+      }
+    });
+  }
+
+  /* --- 사진 --- */
+  function shrink(file){
+    return new Promise(function(res, rej){
+      var r = new FileReader();
+      r.onload = function(e){
+        var img = new Image();
+        img.onload = function(){
+          var w = img.width, h = img.height, M = 1100;
+          if(w > h){ if(w > M){ h = Math.round(h * M / w); w = M; } }
+          else { if(h > M){ w = Math.round(w * M / h); h = M; } }
+          var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+          cv.getContext('2d').drawImage(img, 0, 0, w, h);
+          res(cv.toDataURL('image/jpeg', 0.7));
+        };
+        img.onerror = rej; img.src = e.target.result;
+      };
+      r.onerror = rej; r.readAsDataURL(file);
+    });
+  }
+  function putImg(edEl, url){
+    focusEd(edEl);
+    var img = document.createElement('img');
+    img.src = url;
+    img.style.cssText = 'max-width:120px;border-radius:8px;margin:2px 4px';
+    var s = window.getSelection();
+    if(s && s.rangeCount && edEl.contains(s.anchorNode)){
+      var r = s.getRangeAt(0); r.collapse(false);
+      r.insertNode(img); r.setStartAfter(img); r.collapse(true);
+      s.removeAllRanges(); s.addRange(r);
+    } else edEl.appendChild(img);
+    fire(edEl);
+  }
+  function takeFiles(edEl, files){
+    var arr = [].slice.call(files || []);
+    (function next(i){
+      if(i >= arr.length) return;
+      var f = arr[i];
+      if(!f || !/^image\//.test(f.type || '')) return next(i + 1);
+      shrink(f).then(function(u){ putImg(edEl, u); next(i + 1); })
+               .catch(function(){ next(i + 1); });
+    })(0);
+  }
+
+  /* 사진 선택 메뉴 (화면 기준 고정 — 폰에서 스크롤해도 제자리) */
+  function photoMenu(anchor, camEl, fileEl){
+    var old = document.getElementById('wlPhotoMenu');
+    if(old){ old.remove(); if(old._for === anchor) return; }
+    var m = document.createElement('div');
+    m.id = 'wlPhotoMenu'; m.className = 'wl-tb-menu'; m._for = anchor;
+    m.style.position = 'fixed';
+    m.innerHTML =
+        '<button type="button" data-pm="file">🖼️<span>사진 폴더에서 고르기</span></button>'
+      + '<button type="button" data-pm="cam">📸<span>지금 카메라로 찍기</span></button>';
+    document.body.appendChild(m);
+    var r = anchor.getBoundingClientRect();
+    var mw = m.offsetWidth, mh = m.offsetHeight;
+    var left = Math.max(8, Math.min(window.innerWidth - mw - 8, r.left));
+    var top  = (r.bottom + 6 + mh > window.innerHeight) ? Math.max(8, r.top - mh - 6) : (r.bottom + 6);
+    m.style.left = left + 'px';
+    m.style.top  = top + 'px';
+    m.querySelectorAll('[data-pm]').forEach(function(bt){
+      bt.addEventListener('click', function(){
+        var inp = (bt.dataset.pm === 'cam') ? camEl : fileEl;
+        m.remove();
+        if(inp) inp.click();
+      });
+    });
+    setTimeout(function(){
+      function close(ev){
+        if(m.contains(ev.target) || anchor.contains(ev.target)) return;
+        m.remove();
+        document.removeEventListener('click', close);
+        document.removeEventListener('touchstart', close);
+      }
+      document.addEventListener('click', close);
+      document.addEventListener('touchstart', close);
+    }, 20);
+  }
+
+  /* --- 도구모음 만들기 (세 칸 공용) --- */
+  var SVG_TODO = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+    + ' stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
+    + '<polyline points="3 7 5 9 9 5"/><polyline points="3 17 5 19 9 15"/>'
+    + '<line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="17" x2="21" y2="17"/></svg>';
+  var SVG_BUL = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+    + ' stroke-width="2.4" stroke-linecap="round"><circle cx="4.5" cy="7" r="1.6" fill="currentColor" stroke="none"/>'
+    + '<circle cx="4.5" cy="17" r="1.6" fill="currentColor" stroke="none"/>'
+    + '<line x1="9" y1="7" x2="21" y2="7"/><line x1="9" y1="17" x2="21" y2="17"/></svg>';
+  var SVG_IN = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+    + ' stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
+    + '<line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/>'
+    + '<line x1="10" y1="18" x2="21" y2="18"/><polyline points="3 9 6 12 3 15"/></svg>';
+  var SVG_OUT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+    + ' stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
+    + '<line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/>'
+    + '<line x1="10" y1="18" x2="21" y2="18"/><polyline points="6 9 3 12 6 15"/></svg>';
+
+  function tbBtn(html, title, fn){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'wl-tb-btn'; b.title = title;
+    b.innerHTML = html;
+    /* 폰·PC 모두 커서를 뺏지 않게 */
+    b.addEventListener('pointerdown', function(e){ e.preventDefault(); });
+    b.addEventListener('mousedown',   function(e){ e.preventDefault(); });
+    b.addEventListener('touchstart',  function(e){ e.preventDefault(); }, { passive:false });
+    b.addEventListener('click', function(e){ e.preventDefault(); fn(b); });
+    return b;
+  }
+
+  /* opts: { todoBtn, camEl, fileEl, titleEl } */
+  function buildToolbar(edEl, opts){
+    opts = opts || {};
+    var tb = document.createElement('div');
+    tb.className = 'wl-toolbar';
+    tb.style.cssText = 'display:flex;align-items:center;gap:4px;flex-wrap:wrap';
+
+    var camEl = opts.camEl, fileEl = opts.fileEl;
+    tb.appendChild(tbBtn('📷<span style="font-size:11.5px">사진</span>',
+      '사진 넣기 — 폴더에서 고르거나 카메라로 찍기',
+      function(b){ photoMenu(b, camEl, fileEl); }));
+
+    var sep = document.createElement('span'); sep.className = 'wl-tb-sep'; tb.appendChild(sep);
+
+    if(opts.todoBtn){                        /* 1번 칸: 기존 버튼 재활용 */
+      var ob = opts.todoBtn;
+      ob.className = 'wl-tb-btn';
+      ob.title = '목록 체크 (할 일)';
+      ob.innerHTML = SVG_TODO;
+      ob.addEventListener('pointerdown', function(e){ e.preventDefault(); });
+      ob.addEventListener('touchstart',  function(e){ e.preventDefault(); }, { passive:false });
+      tb.appendChild(ob);
+    } else {
+      tb.appendChild(tbBtn(SVG_TODO, '목록 체크 (할 일)', function(){ tbTodo(edEl); }));
+    }
+    tb.appendChild(tbBtn(SVG_BUL, '글머리 기호 (•)',  function(){ tbBullet(edEl); }));
+    tb.appendChild(tbBtn(SVG_IN,  '들여쓰기 (Tab)',    function(){ tbIndent(edEl, 1); }));
+    tb.appendChild(tbBtn(SVG_OUT, '내어쓰기 (Shift+Tab)', function(){ tbIndent(edEl, -1); }));
+
+    /* 비밀 잠금 — 2·3번 칸에도 동일하게 */
+    if(opts.titleEl && !opts.todoBtn){
+      var lk = tbBtn('🔓', '이 메모를 비밀로 — 구글 캘린더로 안 보냅니다', function(b){
+        var v = String(opts.titleEl.value || '');
+        opts.titleEl.value = (v.indexOf(LOCKM) === 0) ? v.replace(/^🔒\s*/, '') : (LOCKM + ' ' + v);
+        paintLk(b, opts.titleEl);
+      });
+      lk.style.fontSize = '14px';
+      lk.classList.add('wl-lk');
+      tb.appendChild(lk);
+      opts.titleEl.addEventListener('input', function(){ paintLk(lk, opts.titleEl); });
+      paintLk(lk, opts.titleEl);
+    }
+    return tb;
+  }
+  function paintLk(b, t){
+    var on = String(t.value || '').indexOf(LOCKM) === 0;
+    b.style.background  = on ? '#b52929' : '';
+    b.style.color       = on ? '#fff' : '';
+    b.style.borderColor = on ? '#b52929' : '';
+    b.textContent = on ? LOCKM : '🔓';
+    b.style.fontSize = '14px';
+  }
+
+  /* 1번 칸을 2·3번 칸과 같은 모양으로 정리 + 도구모음 교체 */
+  function tidySlot1(wrap){
+    if(!wrap || wrap._v46tidy) return;
+    var rows = wrap.querySelectorAll('.sticky-input-row');
+    if(rows.length < 2) return;
+    wrap._v46tidy = true;
+    var colorRow = rows[0], btnRow = rows[1];
+    var saveBtn  = btnRow.querySelector('.sticky-save-btn');
+    var todoBtn  = document.getElementById('stickyTodoBtn');
+    var titleEl  = document.getElementById('stickyTitle');
+    var edEl     = document.getElementById('stickyInput');
+
+    btnRow.querySelectorAll('label.sticky-photo-btn').forEach(function(l){
+      l.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none';
+    });
+    btnRow.querySelectorAll('span').forEach(function(s){
+      if((s.textContent || '').indexOf('붙여넣기') >= 0) s.style.display = 'none';
+    });
+
+    var tb = buildToolbar(edEl, {
+      todoBtn: todoBtn,
+      camEl:  document.getElementById('stickyCam'),
+      fileEl: document.getElementById('stickyFile')
+    });
+    tb.id = 'wlToolbar';
+    btnRow.insertBefore(tb, btnRow.firstChild);
+    btnRow.style.marginTop = '6px';
+    btnRow.style.marginBottom = '2px';
+    if(titleEl && titleEl.parentNode === wrap) wrap.insertBefore(btnRow, titleEl.nextSibling);
+
+    if(saveBtn){
+      var sp = document.createElement('span'); sp.style.flex = '1';
+      colorRow.appendChild(sp); colorRow.appendChild(saveBtn);
+    }
+    if(!wrap.querySelector('.wl-slot-dr')){
+      var dr = document.createElement('span');
+      dr.className = 'wl-slot-dr';
+      dr.style.cssText = 'font-size:10.5px;color:#9aa7b4;margin-right:6px';
+      colorRow.insertBefore(dr, saveBtn || null);
+    }
+    colorRow.style.marginTop = 'auto';
+
+    bindEditor(edEl, true);        /* 1번 칸은 기존 체크목록 코드 사용 → Tab 만 추가 */
+  }
+
+  /* ═════ 2·3번 칸 ═════ */
   function makeSlot(idx){
     var box = document.createElement('div');
     box.className = 'wl-slot';
@@ -16165,21 +16634,25 @@ if('serviceWorker' in navigator){
     box.dataset.color = DEF;
     box.dataset.idx = idx;
     box.style.cssText = 'background:' + CMAP[DEF].bg + ';border:1.5px solid ' + CMAP[DEF].br + ';border-radius:16px;'
-      + 'padding:11px;box-shadow:0 3px 14px rgba(0,0,0,.08);display:flex;flex-direction:column;gap:7px';
+      + 'padding:11px;box-shadow:0 3px 14px rgba(0,0,0,.08);display:flex;flex-direction:column;gap:6px';
+
     box.innerHTML =
         '<input type="text" class="wl-slot-t" placeholder="' + CMAP[DEF].e + ' ' + CMAP[DEF].n + ' 제목" '
       +   'style="width:100%;box-sizing:border-box;border:none;border-bottom:1.5px solid rgba(0,0,0,.12);'
       +   'background:transparent;font-size:14px;font-weight:700;font-family:inherit;outline:none;padding:3px 0;color:#222">'
-      + '<textarea class="wl-slot-b" placeholder="빠르게 메모…  Ctrl+Enter 저장" '
-      +   'style="width:100%;box-sizing:border-box;min-height:78px;resize:vertical;border:none;background:transparent;'
-      +   'font-size:13.5px;font-family:inherit;color:#333;outline:none;line-height:1.55"></textarea>'
-      + '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'
+      + '<div class="wl-slot-tb"></div>'
+      + '<div class="wl-slot-b sticky-input" contenteditable="true" '
+      +   'data-placeholder="빠르게 메모…  Ctrl+Enter 저장"></div>'
+      + '<input type="file" class="wl-slot-cam" accept="image/*" capture="environment" style="display:none">'
+      + '<input type="file" class="wl-slot-file" accept="image/*" multiple style="display:none">'
+      + '<div class="wl-slot-row" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:auto;padding-top:6px">'
       +   COLORS.map(function(x){
             return '<button type="button" class="wl-slot-c" data-c="' + x.c + '" title="' + x.e + ' ' + x.n + '" '
               + 'style="width:18px;height:18px;border-radius:50%;cursor:pointer;padding:0;background:' + x.bg + ';'
               + 'border:' + (x.c === DEF ? '2.5px solid rgba(0,0,0,.55)' : '1.5px solid rgba(0,0,0,.14)') + '"></button>';
           }).join('')
-      +   '<span class="wl-slot-lb" style="font-size:11px;font-weight:800;color:#5a5030;margin-left:3px">' + CMAP[DEF].e + ' ' + CMAP[DEF].n + '</span>'
+      +   '<span class="wl-slot-lb" style="font-size:11px;font-weight:800;color:#5a5030;margin-left:3px">'
+      +     CMAP[DEF].e + ' ' + CMAP[DEF].n + '</span>'
       +   '<span style="flex:1"></span>'
       +   '<span class="wl-slot-dr" style="font-size:10.5px;color:#9aa7b4"></span>'
       +   '<button type="button" class="wl-slot-s" style="height:29px;padding:0 13px;border:none;border-radius:9px;'
@@ -16190,6 +16663,27 @@ if('serviceWorker' in navigator){
     var bEl = box.querySelector('.wl-slot-b');
     var lb  = box.querySelector('.wl-slot-lb');
     var dr  = box.querySelector('.wl-slot-dr');
+    var cam = box.querySelector('.wl-slot-cam');
+    var fil = box.querySelector('.wl-slot-file');
+
+    /* 도구모음 — 1번 칸과 완전히 같은 기능 */
+    box.querySelector('.wl-slot-tb').appendChild(
+      buildToolbar(bEl, { camEl:cam, fileEl:fil, titleEl:tEl }));
+    bindEditor(bEl, false);
+
+    cam.addEventListener('change', function(e){ takeFiles(bEl, e.target.files); e.target.value = ''; });
+    fil.addEventListener('change', function(e){ takeFiles(bEl, e.target.files); e.target.value = ''; });
+
+    /* 붙여넣기로 사진 */
+    bEl.addEventListener('paste', function(e){
+      var items = (e.clipboardData && e.clipboardData.items) ? [].slice.call(e.clipboardData.items) : [];
+      var im = items.filter(function(i){ return /^image\//.test(i.type || ''); })[0];
+      if(im){
+        e.preventDefault();
+        var f = im.getAsFile();
+        if(f) shrink(f).then(function(u){ putImg(bEl, u); });
+      }
+    });
 
     function paint(c){
       var x = CMAP[c] || CMAP[DEF] || CMAP.orange;
@@ -16205,11 +16699,14 @@ if('serviceWorker' in navigator){
       b.addEventListener('click', function(){ paint(b.dataset.c); saveDraft(); });
     });
 
-    /* -- 임시저장: 새로고침해도 남게 -- */
+    /* --- 초안 유지 --- */
     function saveDraft(){
       try{
-        var d = { t: tEl.value || '', b: bEl.value || '', c: box.dataset.color };
-        if(!d.t && !d.b){ localStorage.removeItem(DKEY + idx); dr.textContent = ''; return; }
+        var plain = (bEl.innerText || '').trim();
+        var d = { t: tEl.value || '', h: bEl.innerHTML || '', c: box.dataset.color };
+        if(!d.t && !plain && (d.h || '').indexOf('<img') < 0){
+          localStorage.removeItem(DKEY + idx); dr.textContent = ''; return;
+        }
         localStorage.setItem(DKEY + idx, JSON.stringify(d));
         dr.textContent = '✎ 임시저장됨';
       }catch(e){}
@@ -16219,9 +16716,11 @@ if('serviceWorker' in navigator){
         var raw = localStorage.getItem(DKEY + idx);
         if(!raw) return;
         var d = JSON.parse(raw);
-        tEl.value = d.t || ''; bEl.value = d.b || '';
+        tEl.value = d.t || '';
+        bEl.innerHTML = d.h || (d.b ? String(d.b).replace(/[&<>]/g, function(m){
+          return { '&':'&amp;','<':'&lt;','>':'&gt;' }[m]; }).replace(/\n/g, '<br>') : '');
         paint(d.c || DEF);
-        if(d.t || d.b) dr.textContent = '✎ 임시저장됨';
+        if(tEl.value || (bEl.innerText || '').trim()) dr.textContent = '✎ 임시저장됨';
       }catch(e){}
     }
     var dt;
@@ -16231,29 +16730,38 @@ if('serviceWorker' in navigator){
     loadDraft();
 
     function save(){
-      var body = (bEl.value || '').trim();
-      if(!body){ if(typeof toast === 'function') toast('내용을 입력해주세요'); bEl.focus(); return; }
+      var hasCk = !!bEl.querySelector('.checklist-row');
+      var body  = hasCk ? bEl.innerHTML.trim() : (bEl.innerText || '').trim();
+      var photos = [].slice.call(bEl.querySelectorAll('img')).map(function(i){ return i.src; });
+      if(!body && !photos.length){
+        if(typeof toast === 'function') toast('내용을 입력해주세요');
+        bEl.focus(); return;
+      }
       var title = (tEl.value || '').trim();
       var color = box.dataset.color;
-      var secret = (color === 'yellow') ||
+      var secret = (color === 'yellow') || (title.indexOf(LOCKM) === 0) ||
         (typeof window.wlIsSecret === 'function' && window.wlIsSecret({ title:title, body:body }));
-      if(secret && title.indexOf('🔒') !== 0) title = ('🔒 ' + title).trim();
+      if(secret && title.indexOf(LOCKM) !== 0) title = (LOCKM + ' ' + title).trim();
       var d = (typeof todayStr === 'function') ? todayStr()
             : new Date(Date.now() + 9*3600000).toISOString().slice(0,10);
       try{
-        addRecord({ kind:'memo', date:d, title:title, body:body, photos:[],
+        addRecord({ kind:'memo', date:d, title:title, body:body, photos:photos,
                     stickyColor:color, secret:!!secret, recheck:false, createdAt:Date.now() });
       }catch(e){ alert('저장 실패: ' + e); return; }
-      tEl.value = ''; bEl.value = '';
+      tEl.value = ''; bEl.innerHTML = '';
       try{ localStorage.removeItem(DKEY + idx); }catch(e){}
       dr.textContent = '';
       paint(DEF);
+      var lk = box.querySelector('.wl-lk'); if(lk) paintLk(lk, tEl);
       if(typeof toast === 'function') toast('메모가 저장됐어요');
       if(typeof renderStickyGrid === 'function') setTimeout(renderStickyGrid, 180);
       if(typeof v43Refresh === 'function') setTimeout(v43Refresh, 220);
     }
     box.querySelector('.wl-slot-s').addEventListener('click', save);
     bEl.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); save(); }
+    });
+    tEl.addEventListener('keydown', function(e){
       if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); save(); }
     });
     return box;
