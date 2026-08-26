@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260826-1047-cal0826-1047"></script>
+<script src="worklog.js?v=v45-20260826-1056-cal0826-1056"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -15379,6 +15379,15 @@ if('serviceWorker' in navigator){
       + '</tbody></table>';
   }
 
+  /* 라벨+숫자 쌍을 여러 열로 촘촘하게 — 세로로 길어지는 표 대체 */
+  function chips(rows, cols){
+    if(!rows.length) return '<p class="none">해당 사항 없음</p>';
+    return '<div class="chips" style="grid-template-columns:repeat(' + (cols||6) + ',1fr)">'
+      + rows.map(function(r){
+          return '<div><span>' + r[0] + '</span><b>' + r[1] + '</b></div>';
+        }).join('') + '</div>';
+  }
+
   window.wlReportCSS = function(){
     return '@page{size:A4;margin:14mm 13mm 15mm}'
     + '*{box-sizing:border-box}'
@@ -15393,6 +15402,12 @@ if('serviceWorker' in navigator){
     + '.head .meta{display:flex;flex-wrap:wrap;gap:14px;font-size:9.5pt;color:#5a6f85}'
     + '.head .meta b{color:#16283a;font-weight:700}'
     /* 결재란 */
+    + '.chips{display:grid;gap:3px;margin:3px 0 4px}'
+    + '.chips>div{display:flex;justify-content:space-between;align-items:baseline;gap:5px;'
+    +   'border:1px solid #b9c9dc;border-radius:3px;padding:2.5px 7px;font-size:9pt;background:#fbfdff;'
+    +   'break-inside:avoid}'
+    + '.chips>div span{color:#33495f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+    + '.chips>div b{color:#12293f;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}'
     + '.wlist{column-count:2;column-gap:9mm;margin-top:4px}'
     + '.wgrp{break-inside:avoid;page-break-inside:avoid;margin-bottom:7px}'
     + '.wday{font-size:9.5pt;font-weight:800;color:#12293f;border-bottom:1px solid #b9c9dc;'
@@ -15535,16 +15550,14 @@ if('serviceWorker' in navigator){
         ['34%','22%','22%','22%'])
 
     + '<h2>2. 층별 업무 현황</h2>'
-    + T(['층', '건수'], r.byFloor.map(function(x){ return [esc2(x.k), x.n]; }), ['70%','30%'])
+    + chips(r.byFloor.map(function(x){ return [esc2(x.k), x.n]; }), 6)
 
     + '<h2>3. 자재 사용 내역</h2>'
-    + '<div class="two"><div><h3>규격별 사용량</h3>'
-    +   T(['No','자재 (규격)','수량','건수'], matRows, ['9%','53%','19%','19%'])
-    + '</div><div><h3>자재명 합계</h3>'
-    +   T(['자재명','총 수량'],
-        Object.keys(nameSum).sort(function(a,b){ return nameSum[b]-nameSum[a]; })
-          .map(function(k){ return [esc2(k), nameSum[k]]; }), ['65%','35%'])
-    + '</div></div>'
+    + '<h3>자재명 합계</h3>'
+    + chips(Object.keys(nameSum).sort(function(a,b){ return nameSum[b]-nameSum[a]; })
+        .map(function(k){ return [esc2(k), nameSum[k]]; }), 5)
+    + '<h3>규격별 사용량</h3>'
+    + T(['No','자재 (규격)','수량','사용 건수'], matRows, ['6%','58%','18%','18%'])
 
     + '<h2>4. 사고 발생 현황</h2>'
     + (c.accident.length ? T(['일자','종류','내용','처리상태','당사자'], accRows, ['10%','14%','44%','16%','16%'])
@@ -15759,7 +15772,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0826-1047';
+  var TAG = ' +cal0826-1056';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
