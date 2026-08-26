@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v49-0826-2209</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v49-0826-2228</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1388,7 +1388,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v49-0826-2209</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v49-0826-2228</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3067,7 +3067,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v49-20260826-2209"></script>
+<script src="worklog.js?v=v49-20260826-2228"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -17411,16 +17411,20 @@ if('serviceWorker' in navigator){
 .wl-blur *{ user-select:none !important; -webkit-user-select:none !important; }
 .wl-blur:hover{ filter: blur(4px) !important; -webkit-filter: blur(4px) !important; }
 #wlLockBar{
-  position:fixed; right:14px; bottom:14px; z-index:12900;
-  display:none; align-items:center; gap:8px;
-  background:#1a2f45; color:#fff; border-radius:12px; padding:9px 13px;
-  font-family:inherit; font-size:12.5px; font-weight:700;
-  box-shadow:0 6px 20px rgba(0,0,0,.25);
+  display:none; align-items:center; gap:7px; vertical-align:middle; margin-left:10px;
+  background:#1a2f45; color:#fff; border-radius:10px; padding:0 10px;
+  height:34px; box-sizing:border-box;
+  font-family:inherit; font-size:12px; font-weight:700; white-space:nowrap;
+  box-shadow:0 2px 8px rgba(26,47,69,.22);
 }
 #wlLockBar button{
-  border:none; border-radius:8px; padding:6px 11px; cursor:pointer;
-  font-family:inherit; font-size:12px; font-weight:800;
-  background:#f4b942; color:#3a2a00;
+  border:none; border-radius:7px; padding:5px 10px; cursor:pointer;
+  font-family:inherit; font-size:11.5px; font-weight:800;
+  background:#f4b942; color:#3a2a00; line-height:1;
+}
+@media (max-width:600px){
+  #wlLockBar{ font-size:11px; padding:0 8px; height:32px; gap:5px }
+  #wlLockBar button{ padding:4px 8px; font-size:11px }
 }
 </style>
 <script>
@@ -17528,14 +17532,33 @@ if('serviceWorker' in navigator){
     bar(hit);
   }
 
-  /* 하단 상태 표시 */
+  /* 폴더탭관리 버튼 바로 뒤(같은 줄)에 붙인다 — 화면 아래를 가리지 않게 */
+  function place(b){
+    try{
+      var mg = null;
+      var btns = document.querySelectorAll('#v43Tabs .v43-tab, #v43Tabs button, .v43-tabs .v43-tab');
+      for(var i=0;i<btns.length;i++){ if(/폴더탭관리/.test(btns[i].textContent||'')){ mg=btns[i]; break; } }
+      if(mg && mg.parentNode){
+        if(b.parentNode!==mg.parentNode || b.previousElementSibling!==mg)
+          mg.parentNode.insertBefore(b, mg.nextSibling);
+        return true;
+      }
+      var row = document.getElementById('v43Tabs') || document.querySelector('.v43-tabs');
+      if(row){ if(b.parentNode!==row) row.appendChild(b); return true; }
+    }catch(e){}
+    if(!b.parentNode) document.body.appendChild(b);
+    return false;
+  }
+
+  /* 상태 표시 */
   function bar(n){
     var b = document.getElementById('wlLockBar');
     if(!b){
       b = document.createElement('div');
       b.id = 'wlLockBar';
       b.innerHTML = '<span id="wlLockTxt"></span><button id="wlLockAct"></button>';
-      document.body.appendChild(b);
+      b.addEventListener('click', function(){}, false);
+      place(b);
       b.addEventListener('click', function(e){
         if(e.target.id === 'wlLockAct'){
           if(unlocked()){ openedAt = 0; apply(); if(typeof toast==='function') toast('\uD83D\uDD12 다시 잠갔어요'); }
@@ -17543,8 +17566,9 @@ if('serviceWorker' in navigator){
         }
       });
     }
+    place(b);                                   /* 탭 줄이 다시 그려져도 제자리로 */
     if(!n && !unlocked()){ b.style.display = 'none'; return; }
-    b.style.display = 'flex';
+    b.style.display = 'inline-flex';
     var t = document.getElementById('wlLockTxt');
     var a = document.getElementById('wlLockAct');
     if(unlocked()){
@@ -18906,6 +18930,29 @@ select.lf-in{ padding-right:8px }
 .lf-tvwrap{ overflow-x:auto; max-height:none }
 .lf-grp{ background:#eef5fd !important; font-weight:900; color:#33567d; font-size:11.5px }
 
+/* 정렬 가능한 헤더 */
+.lf-tv th.s{ cursor:pointer; user-select:none }
+.lf-tv th.s:hover{ background:#e8f1fb; color:#2563a8 }
+.lf-tv th .ar{ font-size:9.5px; margin-left:3px; color:#2563a8 }
+.lf-tv th.s.on{ color:#2563a8; background:#e8f1fb }
+
+/* 목록 필터바 */
+.lf-fb{ display:flex; gap:7px; flex-wrap:wrap; align-items:center;
+  background:#f7fafd; border:1.5px solid #e8f0fa; border-radius:11px;
+  padding:8px 11px; margin-bottom:9px }
+.lf-fb .lb{ font-size:11.5px; font-weight:800; color:#8ba0b6; margin-right:1px }
+.lf-fb select, .lf-fb input{ height:32px; padding:0 9px; border:1.5px solid #dbe6f4;
+  border-radius:8px; font-size:12.5px; font-family:inherit; background:#fff; color:#1a2f45; outline:none }
+.lf-fb select:focus, .lf-fb input:focus{ border-color:#2563a8 }
+.lf-ck{ display:inline-flex; align-items:center; gap:5px; font-size:12.5px;
+  font-weight:700; color:#5b7794; cursor:pointer; user-select:none }
+.lf-ck input{ width:15px; height:15px; padding:0 }
+.lf-fx{ height:32px; padding:0 11px; border:1.5px solid #dbe6f4; border-radius:8px;
+  background:#fff; color:#7a92a8; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit }
+.lf-fx:hover{ border-color:#2563a8; color:#2563a8 }
+.lf-cnt{ font-size:12px; font-weight:800; color:#5b7794; margin-left:auto; white-space:nowrap }
+.lf-sum2 td{ background:#eef5fd; font-weight:900; color:#33567d; padding:9px 11px; font-size:12.5px }
+
 /* 보기 전환 */
 .lf-vw{ display:inline-flex; border:1.5px solid #dbe6f4; border-radius:9px; overflow:hidden; height:40px }
 .lf-vw button{ height:100%; padding:0 13px; border:none; background:#fff; color:#7a92a8;
@@ -19299,7 +19346,7 @@ select.lf-in{ padding-right:8px }
   /* ── 보기 방식: 카드 / 표(노션) ── */
   var LS_VIEW='wl_life_view';
   var vw = (function(){ var v=lsGet(LS_VIEW,null); return (v==='table'||v==='card')?v:'card'; })();
-  function vwSet(v){ vw=v; lsSet(LS_VIEW,v); render(); }
+  function vwSet(v){ vw=v; lsSet(LS_VIEW,v); safeRender(); }
   function vwBtns(){
     return '<div class="lf-vw">'
       + '<button type="button" data-vw="card"'+(vw==='card'?' class="on"':'')+'>▦ 카드</button>'
@@ -19332,18 +19379,111 @@ select.lf-in{ padding-right:8px }
     return '<span class="lf-tag" style="background:'+d2.c+'1f;color:'+d2.c+'">'+d2.i+' '+d2.n+'</span>';
   }
 
+  /* ── 목록 정렬·필터 상태 ── */
+  var LS_SORT='wl_life_sort', LS_FLT='wl_life_flt';
+  var srt = (function(){ var v=lsGet(LS_SORT,null);
+    return (v&&v.k)? v : {k:'date', d:-1}; })();
+  var flt = (function(){ var v=lsGet(LS_FLT,null);
+    return (v&&typeof v==='object')? v : {from:'', to:'', money:false, min:''}; })();
+  /* 입력칸에 커서가 있는 채로 다시 그리면 blur 중에 DOM 이 사라져 오류가 난다.
+     커서를 먼저 빼고, 다음 차례에 그린다. */
+  function safeRender(){
+    try{ var a=document.activeElement;
+      var h=document.getElementById('lifeHost');
+      if(a && h && h.contains(a) && typeof a.blur==='function') a.blur();
+    }catch(e){}
+    setTimeout(render, 0);
+  }
+  function srtSet(k){
+    if(srt.k===k) srt.d = -srt.d; else { srt.k=k; srt.d = (k==='title')?1:-1; }
+    lsSet(LS_SORT,srt); safeRender();
+  }
+  function fltSet(p){ for(var k in p) flt[k]=p[k]; lsSet(LS_FLT,flt); safeRender(); }
+  function fltOn(){ return !!(flt.from||flt.to||flt.money||num(flt.min)); }
+  function applyFlt(a){
+    return a.filter(function(e){
+      var d=String(e.date||'');
+      if(flt.from && d < flt.from) return false;
+      if(flt.to   && d > flt.to)   return false;
+      var m=money(e);
+      if(flt.money && !m) return false;
+      if(num(flt.min) && m < num(flt.min)) return false;
+      return true;
+    });
+  }
+  function applySrt(a){
+    var k=srt.k, d=srt.d;
+    return a.slice().sort(function(x,y){
+      var vx, vy;
+      if(k==='amount'){ vx=money(x); vy=money(y); }
+      else if(k==='title'){ vx=String(x.title||x.who||''); vy=String(y.title||y.who||'');
+        return d * vx.localeCompare(vy,'ko'); }
+      else if(k==='cat'){ vx=(x.ptype==='car'?('car:'+(x.car||'')):(x.ptype||'')); vy=(y.ptype==='car'?('car:'+(y.car||'')):(y.ptype||''));
+        return d * vx.localeCompare(vy,'ko'); }
+      else { vx=String(x.date||''); vy=String(y.date||'');
+        if(vx===vy) return (y.createdAt||0)-(x.createdAt||0);
+        return d * (vx<vy?-1:1); }
+      if(vx===vy) return String(y.date||'').localeCompare(String(x.date||''));
+      return d * (vx-vy);
+    });
+  }
+
+  function fltBar(n, tot){
+    var mopts=''; /* 빠른 기간 */
+    return '<div class="lf-fb">'
+      + '<span class="lb">기간</span>'
+      + '<input type="date" id="lfF1" value="'+esc(flt.from||'')+'" title="시작일">'
+      + '<span style="color:#c8d4e0">~</span>'
+      + '<input type="date" id="lfF2" value="'+esc(flt.to||'')+'" title="종료일">'
+      + '<select id="lfFq" style="width:104px"><option value="">빠른 선택</option>'
+      +   '<option value="m">이번 달</option><option value="pm">지난 달</option>'
+      +   '<option value="y">올해</option><option value="3m">최근 3개월</option>'
+      +   '<option value="12m">최근 1년</option></select>'
+      + '<span style="width:1px;height:22px;background:#dbe6f4"></span>'
+      + '<label class="lf-ck"><input type="checkbox" id="lfFm"'+(flt.money?' checked':'')+'> 금액 있는 것만</label>'
+      + '<span class="lb">최소</span>'
+      + '<input type="number" id="lfFmin" value="'+esc(flt.min||'')+'" placeholder="0" style="width:96px" title="이 금액 이상만">'
+      + (fltOn()? '<button type="button" class="lf-fx" id="lfFclr">✕ 필터 해제</button>':'')
+      + '<span class="lf-cnt">'+won(n)+'건'+(n!==tot? ' / 전체 '+won(tot)+'건':'')+'</span>'
+      + '</div>';
+  }
+
+  function th(k, label, w, right){
+    var on = srt.k===k;
+    return '<th class="s'+(on?' on':'')+'"'+(w?' style="width:'+w+(right?';text-align:right':'')+'"':(right?' style="text-align:right"':''))
+      + ' data-srt="'+k+'">'+label+(on? '<span class="ar">'+(srt.d>0?'▲':'▼')+'</span>':'')+'</th>';
+  }
+
   function tableHTML(arr, emptyIcon, emptyMsg){
-    if(!arr.length) return '<div class="lf-grid"><div class="lf-empty"><div class="ei">'+emptyIcon+'</div>'+emptyMsg+'</div></div>';
-    var h='<div class="lf-tvwrap"><table class="lf-tv"><thead><tr>'
-      + '<th style="width:96px">날짜</th><th style="width:150px">분류</th><th>내용</th>'
-      + '<th style="width:110px;text-align:right">금액</th><th style="width:66px">첨부</th><th style="width:42px"></th>'
+    var tot=arr.length;
+    arr = applySrt(applyFlt(arr));
+    var bar = fltBar(arr.length, tot);
+    if(!arr.length) return bar + '<div class="lf-grid"><div class="lf-empty"><div class="ei">'+emptyIcon+'</div>'
+      + (fltOn()? '필터에 걸리는 기록이 없어요<div style="font-size:12px;margin-top:6px">✕ 필터 해제를 눌러보세요</div>' : emptyMsg)+'</div></div>';
+
+    var sumAll=0; arr.forEach(function(e){ sumAll+=money(e); });
+    var grouped = (srt.k==='date');
+
+    var h=bar+'<div class="lf-tvwrap"><table class="lf-tv"><thead><tr>'
+      + th('date','📅 날짜','96px')
+      + th('cat','🏷 분류','150px')
+      + th('title','📄 내용')
+      + th('amount','💰 금액','112px',1)
+      + '<th style="width:60px">📎</th><th style="width:42px"></th>'
       + '</tr></thead><tbody>';
     var last='';
     arr.forEach(function(e){
-      var m=String(e.date||'').slice(0,7);
-      if(m!==last){ last=m;
-        h+='<tr class="lf-grp"><td colspan="6" style="padding:5px 11px">'
-          + (m? m.replace('-','년 ')+'월':'날짜 없음') + '</td></tr>'; }
+      if(grouped){
+        var m=String(e.date||'').slice(0,7);
+        if(m!==last){ last=m;
+          var gs=0, gn=0;
+          arr.forEach(function(x){ if(String(x.date||'').slice(0,7)===m){ gs+=money(x); gn++; } });
+          h+='<tr class="lf-grp"><td colspan="4" style="padding:5px 11px">'
+            + (m? m.replace('-','년 ')+'월':'날짜 없음')
+            + ' <span style="font-weight:700;color:#7a92a8">'+gn+'건</span></td>'
+            + '<td colspan="2" style="padding:5px 11px;text-align:right;color:'+(gs?'#0f7a4a':'#a8b8c8')+'">'
+            + (gs? won(gs)+'원':'') + '</td></tr>'; }
+      }
       var mo=money(e), sub=subOf(e);
       var nA=esr(e.photos).length + esr(e.scanRefs).length;
       h+='<tr data-lid="'+esc(e.id)+'"'+(e.done?' style="opacity:.55"':'')+'>'
@@ -19353,10 +19493,12 @@ select.lf-in{ padding-right:8px }
         +   (e.rating? ' <span style="color:#f4b942">'+stars(e.rating)+'</span>':'')+'</div>'
         +   (sub? '<div class="sub">'+esc(sub)+'</div>':'') + '</td>'
         + '<td class="r" style="color:'+(mo?'#0f7a4a':'#c8d4e0')+'">'+(mo? won(mo)+'원':'—')+'</td>'
-        + '<td class="c" style="color:#8ba0b6;font-size:11.5px">'+(nA? '📎 '+nA : '')+'</td>'
+        + '<td class="c" style="color:#8ba0b6;font-size:11.5px">'+(nA? '📎'+nA : '')+'</td>'
         + '<td class="c"><button type="button" class="xd" data-ldel="'+esc(e.id)+'" title="삭제">🗑</button></td>'
         + '</tr>';
     });
+    if(sumAll) h+='<tr class="lf-sum2"><td colspan="3">합계 · '+won(arr.length)+'건</td>'
+      + '<td class="r" style="color:#0f7a4a">'+won(sumAll)+'원</td><td colspan="2"></td></tr>';
     return h+'</tbody></table></div>';
   }
 
@@ -19841,18 +19983,32 @@ select.lf-in{ padding-right:8px }
 
   /* 쇼핑몰 페이지 본문 가져오기 — 브라우저는 CORS 때문에 직접 못 읽는다.
      텍스트 추출 중계(r.jina.ai)를 쓰고, 막히면 붙여넣기로 넘어간다. */
+  /* 막힘·오류 페이지인지 가려낸다 — 이걸 AI 에 넘기면 엉뚱한 값이 들어온다 */
+  var BLOCK_RE = /(403\s*forbidden|access\s*denied|접근\s*(?:이\s*)?(?:불가|거부|제한)|권한이\s*없|잘못된\s*접근|error\s*40[0-9]|502\s*bad\s*gateway|서비스\s*점검|잠시\s*후\s*다시|비정상적인\s*접근|자동화된?\s*(?:요청|접근)|are you (?:a )?human|captcha|robot check|cloudflare|請稍候|just a moment)/i;
+  function looksBlocked(t){
+    var s=String(t||'');
+    if(s.length<400) return true;                          /* 내용이 거의 없다 */
+    var head=s.slice(0,1500);
+    if(BLOCK_RE.test(head)) return true;
+    /* 한글·상품스러운 단서가 하나도 없으면 의심 */
+    if(!/[0-9]{3,}/.test(s)) return true;
+    return false;
+  }
   function fetchPage(url){
     var tries=[
       'https://r.jina.ai/'+url,
       'https://api.allorigins.win/raw?url='+encodeURIComponent(url)
     ];
-    var i=0;
+    var i=0, lastWhy='';
     function next(){
-      if(i>=tries.length) return Promise.reject(new Error('페이지를 못 읽었어요'));
+      if(i>=tries.length) return Promise.reject(new Error(lastWhy||'페이지를 못 읽었어요'));
       var u=tries[i++];
       return fetch(u).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
-        .then(function(t){ if(!t || t.length<80) throw new Error('내용 없음'); return t; })
-        .catch(function(){ return next(); });
+        .then(function(t){
+          if(looksBlocked(t)) throw new Error('쇼핑몰이 자동 읽기를 막았어요');
+          return t;
+        })
+        .catch(function(e){ lastWhy=e.message||''; return next(); });
     }
     return next();
   }
@@ -19862,12 +20018,16 @@ select.lf-in{ padding-right:8px }
     if(!key) return Promise.reject(new Error('AI 키가 없어요 — 🤖 AI 탭에서 API 키를 먼저 저장하세요'));
     var body=String(text||'').slice(0, 24000);
     var sys='너는 쇼핑몰 상품 페이지를 읽고 구매 기록을 만드는 도우미다. '
-      + '아래 페이지 내용에서 정보를 뽑아 JSON 만 출력해라. 설명·마크다운·코드펜스 금지.\n'
-      + '형식:\n'
+      + '아래 내용에서 정보를 뽑아 JSON 만 출력해라. 설명·마크다운·코드펜스 금지.\n'
+      + '★ 가장 중요한 규칙 ★\n'
+      + '· 내용이 오류·차단·로그인·로봇확인 페이지이거나 상품 정보가 없으면 '
+      + '  반드시 {"error":"이유"} 만 출력해라. 다른 칸은 절대 넣지 마라.\n'
+      + '· 확인되지 않은 값은 절대 지어내지 마라. 모르면 빈 문자열 "" 또는 0.\n'
+      + '· 오류 설명을 title 이나 detail 에 적지 마라.\n\n'
+      + '정상일 때 형식:\n'
       + '{"title":"대표 품목명","brand":"브랜드","where":"쇼핑몰 이름","cur":"원|달러|엔|유로",'
       + '"unit":숫자(단가, 통화기호·쉼표 없이),"qty":숫자,"ship":숫자(배송비, 모르면 0),'
       + '"items":[{"name":"품목명","qty":숫자,"price":숫자,"note":"옵션"}],"detail":"한 줄 요약"}\n'
-      + '· 값을 모르면 빈 문자열 "" 또는 0 을 넣어라. 절대 지어내지 마라.\n'
       + '· 장바구니·주문내역처럼 여러 품목이면 items 에 모두 넣고 title 은 "OO 외 N건" 으로.\n'
       + '· 상품이 하나면 items 에도 그 하나를 넣어라.\n'
       + '· 가격은 할인 적용된 최종 판매가를 써라.';
@@ -19891,6 +20051,14 @@ select.lf-in{ padding-right:8px }
 
   /* 결과를 빈 칸에만 채운다 (기존 입력 덮어쓰기 금지) */
   function applyAI(o){
+    if(!o || typeof o!=='object') throw new Error('AI 응답을 못 읽었어요');
+    if(o.error) throw new Error(String(o.error).slice(0,80));
+    /* 품목명도 값도 없으면 실패로 본다 — 빈 껍데기를 채우지 않는다 */
+    var hasAny = String(o.title||'').trim() || num(o.unit) || (Array.isArray(o.items)&&o.items.length);
+    if(!hasAny) throw new Error('상품 정보를 찾지 못했어요');
+    /* 오류 문구가 섞여 들어온 경우 버린다 */
+    if(BLOCK_RE.test(String(o.title||'')+' '+String(o.detail||'')))
+      throw new Error('쇼핑몰이 자동 읽기를 막았어요');
     var set=function(id,v){ var e=document.getElementById(id);
       if(e && v!=='' && v!=null && !String(e.value||'').trim()) e.value=v; };
     set('lf-title', o.title||''); set('lf-brand', o.brand||''); set('lf-where', o.where||'');
@@ -19928,7 +20096,7 @@ select.lf-in{ padding-right:8px }
       .then(function(txt){ say('🤖 AI 가 정리하는 중…'); return aiParse(txt, url); })
       .then(function(o){ applyAI(o); say('✅ 자동으로 채웠어요 — 틀린 곳은 고쳐주세요','#16a34a'); })
       .catch(function(e){
-        say('⚠️ '+e.message+' — 페이지 내용을 붙여넣어 주세요','#dc2626');
+        say('⚠️ '+e.message+' — 아무것도 넣지 않았어요. 페이지 내용을 붙여넣어 주세요','#dc2626');
         pasteFallback(url);
       });
   }
@@ -19963,7 +20131,7 @@ select.lf-in{ padding-right:8px }
         .then(function(o){ applyAI(o); cl();
           var nt=document.getElementById('lfAiNote');
           if(nt){ nt.textContent='✅ 붙여넣은 내용으로 채웠어요 — 틀린 곳은 고쳐주세요'; nt.style.color='#16a34a'; } })
-        .catch(function(e){ n.textContent='⚠️ '+e.message; n.style.color='#dc2626'; });
+        .catch(function(e){ n.textContent='⚠️ '+e.message+' — 아무것도 넣지 않았어요'; n.style.color='#dc2626'; });
     });
     setTimeout(function(){ var b=document.getElementById('lfPasteBox'); if(b) b.focus(); }, 100);
   }
@@ -21136,9 +21304,36 @@ select.lf-in{ padding-right:8px }
     /* 필터 */
     host.querySelectorAll('[data-vw]').forEach(function(b){
       b.addEventListener('click', function(){ vwSet(b.getAttribute('data-vw')); }); });
-    var mo=document.getElementById('lfMonth'); if(mo) mo.addEventListener('change', function(){ curMonth=mo.value; render(); });
-    var ct=document.getElementById('lfCtype'); if(ct) ct.addEventListener('change', function(){ curCtype=ct.value; render(); });
-    var yr=document.getElementById('lfYear');  if(yr) yr.addEventListener('change', function(){ curMonth=yr.value+'-01'; render(); });
+    /* 목록 정렬 헤더 */
+    host.querySelectorAll('[data-srt]').forEach(function(t){
+      t.addEventListener('click', function(){ srtSet(t.getAttribute('data-srt')); }); });
+    /* 목록 필터 */
+    var f1=document.getElementById('lfF1'), f2=document.getElementById('lfF2');
+    if(f1) f1.addEventListener('change', function(){ fltSet({from:f1.value}); });
+    if(f2) f2.addEventListener('change', function(){ fltSet({to:f2.value}); });
+    var fm=document.getElementById('lfFm');
+    if(fm) fm.addEventListener('change', function(){ fltSet({money:fm.checked}); });
+    var fmin=document.getElementById('lfFmin');
+    if(fmin) fmin.addEventListener('change', function(){ fltSet({min:fmin.value}); });
+    var fc=document.getElementById('lfFclr');
+    if(fc) fc.addEventListener('click', function(){ fltSet({from:'',to:'',money:false,min:''}); });
+    var fq=document.getElementById('lfFq');
+    if(fq) fq.addEventListener('change', function(){
+      var v=fq.value; if(!v) return;
+      var t=today(), y=+t.slice(0,4), m=+t.slice(5,7);
+      function ym(yy,mm){ while(mm<1){ mm+=12; yy--; } while(mm>12){ mm-=12; yy++; }
+        return yy+'-'+String(mm).padStart(2,'0'); }
+      function last(yy,mm){ return new Date(yy, mm, 0).getDate(); }
+      if(v==='m')      fltSet({from:ym(y,m)+'-01', to:ym(y,m)+'-'+last(y,m)});
+      else if(v==='pm'){ var p=ym(y,m-1); var py=+p.slice(0,4), pm=+p.slice(5,7);
+                         fltSet({from:p+'-01', to:p+'-'+last(py,pm)}); }
+      else if(v==='y') fltSet({from:y+'-01-01', to:y+'-12-31'});
+      else if(v==='3m')fltSet({from:ym(y,m-2)+'-01', to:ym(y,m)+'-'+last(y,m)});
+      else if(v==='12m')fltSet({from:ym(y,m-11)+'-01', to:ym(y,m)+'-'+last(y,m)});
+    });
+    var mo=document.getElementById('lfMonth'); if(mo) mo.addEventListener('change', function(){ curMonth=mo.value; safeRender(); });
+    var ct=document.getElementById('lfCtype'); if(ct) ct.addEventListener('change', function(){ curCtype=ct.value; safeRender(); });
+    var yr=document.getElementById('lfYear');  if(yr) yr.addEventListener('change', function(){ curMonth=yr.value+'-01'; safeRender(); });
 
     /* 검색 — 한글 IME 보호: 입력창 DOM 유지, 결과만 다시 그림 */
     var q=document.getElementById('lfQ');
