@@ -428,9 +428,7 @@
   padding: 14px;
   box-shadow: 0 3px 14px rgba(0,0,0,.1);
   border: 1.5px solid #f0e060;
-  max-width: 560px;          /* v45-0826: 가로로 너무 길어지지 않게 */
 }
-@media(max-width:760px){ .sticky-input-wrap { max-width: none; } }
 .sticky-input {
   width: 100%; box-sizing: border-box;
   min-height: 90px; border: none; background: transparent;
@@ -501,13 +499,14 @@
 /* 포스트잇 그리드 */
 .sticky-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);   /* v45-0826: 가로 5열 고정 */
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
   align-items: start;
 }
-@media(max-width:1280px){ .sticky-grid { grid-template-columns: repeat(4, 1fr); } }
-@media(max-width:1000px){ .sticky-grid { grid-template-columns: repeat(3, 1fr); } }
-@media(max-width:760px){  .sticky-grid { grid-template-columns: repeat(2, 1fr); } }
+.sticky-note.editing{ height:auto; overflow:visible; }
+.sticky-note .sn-view{ display:flex; flex-direction:column; height:100%; min-height:0; }
+.sticky-note .sticky-note-body{ flex:1 1 auto; min-height:0; overflow:hidden; }
+.sticky-note .sn-card-btns{ margin-top:auto; }
 .sn-tag{
   display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:-.2px;
   background:rgba(255,255,255,.62); border:1px solid rgba(0,0,0,.07);
@@ -516,7 +515,9 @@
 .sticky-note {
   border-radius: 14px;
   padding: 14px 13px 12px;
-  min-height: 120px;
+  height: 205px;                 /* v45-0826: 카드 높이 통일 */
+  display: flex; flex-direction: column;
+  overflow: hidden;
   cursor: pointer;
   position: relative;
   box-shadow: 0 3px 10px rgba(0,0,0,.1), 2px 4px 0 rgba(0,0,0,.05);
@@ -2942,7 +2943,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260826-1126-cal0826-1126"></script>
+<script src="worklog.js?v=v45-20260826-1137-cal0826-1137"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -4275,6 +4276,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         e.stopPropagation();
         const id=btn.dataset.sedit;
         const card=btn.closest('.sticky-note');
+        card.classList.add('editing');
         card.querySelector('.sn-view').style.display='none';
         card.querySelector('.sn-edit').style.display='';
         const bodyEl=card.querySelector('.sn-edit-body');
@@ -4286,6 +4288,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       btn.addEventListener('click', e=>{
         e.stopPropagation();
         const card=btn.closest('.sticky-note');
+        card.classList.remove('editing');
         card.querySelector('.sn-view').style.display='';
         card.querySelector('.sn-edit').style.display='none';
       });
@@ -4303,7 +4306,10 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           ? editBody.innerHTML.trim()
           : (editBody.innerText||'').trim();
         if(!b){ if(typeof toast==='function') toast('내용을 입력해주세요'); return; }
-        if(typeof updateRecord==='function') updateRecord(id,{title:t.trim(),body:b});
+        const pick = card.querySelector('.sn-edit-color.on');
+        const patch = {title:t.trim(), body:b};
+        if(pick && pick.dataset.c) patch.stickyColor = pick.dataset.c;
+        if(typeof updateRecord==='function') updateRecord(id,patch);
         if(typeof toast==='function') toast('저장됐어요');
         setTimeout(renderStickyGrid,200);
       });
@@ -16037,9 +16043,157 @@ if('serviceWorker' in navigator){
 })();
 </script>
 <script>
+/* ===== v45-0826: 메모 작성판 5칸 + 카드 수정 시 색 변경 ===== */
+(function(){
+  var COLORS = [
+    { c:'yellow', bg:'#fff9c4', br:'#f0e060', e:'🔑', n:'계정·비번' },
+    { c:'blue',   bg:'#dbeafe', br:'#93c5fd', e:'🛠', n:'설정·요청' },
+    { c:'green',  bg:'#dcfce7', br:'#86efac', e:'📚', n:'자료·참고' },
+    { c:'pink',   bg:'#fce7f3', br:'#f9a8d4', e:'🏠', n:'개인' },
+    { c:'orange', bg:'#ffedd5', br:'#fdba74', e:'🗒', n:'임시' }
+  ];
+  var CMAP = {};
+  COLORS.forEach(function(x){ CMAP[x.c] = x; });
+
+  /* ── ① 작성판을 5칸으로 ── */
+  function buildSlots(){
+    var wrap = document.getElementById('stickyInputWrap');
+    if(!wrap || !wrap.parentNode) return;
+    if(document.getElementById('wlSlotRow')) return;
+
+    var row = document.createElement('div');
+    row.id = 'wlSlotRow';
+    row.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:start;margin-bottom:12px';
+    wrap.parentNode.insertBefore(row, wrap);
+    row.appendChild(wrap);                       // 1번 칸 = 원래 작성창 (사진·체크리스트 그대로)
+    wrap.style.margin = '0';
+
+    for(var i = 2; i <= 5; i++) row.appendChild(makeSlot(i));
+
+    function resize(){
+      var w = window.innerWidth;
+      row.style.gridTemplateColumns = 'repeat(' + (w <= 760 ? 1 : (w <= 1100 ? 2 : (w <= 1500 ? 3 : 5))) + ',1fr)';
+    }
+    window.addEventListener('resize', resize);
+    resize();
+  }
+
+  function makeSlot(idx){
+    var box = document.createElement('div');
+    box.className = 'wl-slot';
+    box.dataset.color = 'yellow';
+    box.style.cssText = 'background:#fff9c4;border:1.5px solid #f0e060;border-radius:16px;'
+      + 'padding:11px;box-shadow:0 3px 14px rgba(0,0,0,.08);display:flex;flex-direction:column;gap:7px';
+    box.innerHTML =
+        '<input type="text" class="wl-slot-t" placeholder="제목 ' + idx + '" '
+      +   'style="width:100%;box-sizing:border-box;border:none;border-bottom:1.5px solid rgba(0,0,0,.12);'
+      +   'background:transparent;font-size:14px;font-weight:700;font-family:inherit;outline:none;padding:3px 0;color:#222">'
+      + '<textarea class="wl-slot-b" placeholder="빠르게 메모…  Ctrl+Enter 저장" '
+      +   'style="width:100%;box-sizing:border-box;min-height:78px;resize:vertical;border:none;background:transparent;'
+      +   'font-size:13.5px;font-family:inherit;color:#333;outline:none;line-height:1.55"></textarea>'
+      + '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'
+      +   COLORS.map(function(x){
+            return '<button type="button" class="wl-slot-c" data-c="' + x.c + '" title="' + x.e + ' ' + x.n + '" '
+              + 'style="width:17px;height:17px;border-radius:50%;cursor:pointer;padding:0;background:' + x.bg + ';'
+              + 'border:' + (x.c === 'yellow' ? '2.5px solid #7a6a20' : '1.5px solid rgba(0,0,0,.14)') + '"></button>';
+          }).join('')
+      +   '<span class="wl-slot-lb" style="font-size:11px;font-weight:800;color:#8a7a2a;margin-left:3px">🔑 계정·비번</span>'
+      +   '<span style="flex:1"></span>'
+      +   '<button type="button" class="wl-slot-s" style="height:29px;padding:0 13px;border:none;border-radius:9px;'
+      +     'background:#2563a8;color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">저장</button>'
+      + '</div>';
+
+    var tEl = box.querySelector('.wl-slot-t');
+    var bEl = box.querySelector('.wl-slot-b');
+    var lb  = box.querySelector('.wl-slot-lb');
+
+    box.querySelectorAll('.wl-slot-c').forEach(function(b){
+      b.addEventListener('click', function(){
+        var c = b.dataset.c, x = CMAP[c];
+        box.dataset.color = c;
+        box.style.background = x.bg;
+        box.style.borderColor = x.br;
+        lb.textContent = x.e + ' ' + x.n;
+        box.querySelectorAll('.wl-slot-c').forEach(function(o){
+          o.style.border = (o.dataset.c === c) ? '2.5px solid rgba(0,0,0,.55)' : '1.5px solid rgba(0,0,0,.14)';
+        });
+      });
+    });
+
+    function save(){
+      var body = (bEl.value || '').trim();
+      if(!body){ if(typeof toast === 'function') toast('내용을 입력해주세요'); bEl.focus(); return; }
+      var title = (tEl.value || '').trim();
+      var color = box.dataset.color;
+      // 계정·비번 칸에 넣으면 자동으로 잠근다
+      var secret = (color === 'yellow') ||
+        (typeof window.wlIsSecret === 'function' && window.wlIsSecret({ title:title, body:body }));
+      if(secret && title.indexOf('🔒') !== 0) title = ('🔒 ' + title).trim();
+      var d = (typeof todayStr === 'function') ? todayStr()
+            : new Date(Date.now() + 9*3600000).toISOString().slice(0,10);
+      try{
+        addRecord({ kind:'memo', date:d, title:title, body:body, photos:[],
+                    stickyColor:color, secret:!!secret, createdAt:Date.now() });
+      }catch(e){ alert('저장 실패: ' + e); return; }
+      tEl.value = ''; bEl.value = '';
+      if(typeof toast === 'function') toast('메모가 저장됐어요');
+      if(typeof renderStickyGrid === 'function') setTimeout(renderStickyGrid, 180);
+      if(typeof v43Refresh === 'function') setTimeout(v43Refresh, 220);
+    }
+    box.querySelector('.wl-slot-s').addEventListener('click', save);
+    bEl.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); save(); }
+    });
+    return box;
+  }
+
+  /* ── ② 카드 수정 모드에 색 고르기 ── */
+  function injectEditColors(){
+    document.querySelectorAll('.sn-edit').forEach(function(box){
+      if(box.style.display === 'none') return;
+      if(box.querySelector('.sn-edit-colors')) return;
+      var card = box.closest('.sticky-note');
+      var bodyEl = box.querySelector('.sn-edit-body');
+      if(!card || !bodyEl) return;
+      var cur = 'yellow';
+      COLORS.forEach(function(x){ if(card.classList.contains(x.c)) cur = x.c; });
+
+      var bar = document.createElement('div');
+      bar.className = 'sn-edit-colors';
+      bar.style.cssText = 'display:flex;align-items:center;gap:5px;margin-top:7px;flex-wrap:wrap';
+      bar.innerHTML = COLORS.map(function(x){
+        return '<button type="button" class="sn-edit-color' + (x.c === cur ? ' on' : '') + '" data-c="' + x.c + '" '
+          + 'title="' + x.e + ' ' + x.n + '" style="width:19px;height:19px;border-radius:50%;cursor:pointer;padding:0;'
+          + 'background:' + x.bg + ';border:' + (x.c === cur ? '2.5px solid rgba(0,0,0,.55)' : '1.5px solid rgba(0,0,0,.16)') + '"></button>';
+      }).join('') + '<span class="sn-edit-clb" style="font-size:11px;font-weight:800;color:#5a5030;margin-left:3px">'
+          + CMAP[cur].e + ' ' + CMAP[cur].n + '</span>';
+      bodyEl.parentNode.insertBefore(bar, bodyEl.nextSibling);
+
+      bar.querySelectorAll('.sn-edit-color').forEach(function(b){
+        b.addEventListener('click', function(ev){
+          ev.stopPropagation();
+          var c = b.dataset.c;
+          bar.querySelectorAll('.sn-edit-color').forEach(function(o){
+            var on = (o.dataset.c === c);
+            o.classList.toggle('on', on);
+            o.style.border = on ? '2.5px solid rgba(0,0,0,.55)' : '1.5px solid rgba(0,0,0,.16)';
+          });
+          bar.querySelector('.sn-edit-clb').textContent = CMAP[c].e + ' ' + CMAP[c].n;
+          COLORS.forEach(function(x){ card.classList.remove(x.c); });
+          card.classList.add(c);
+        });
+      });
+    });
+  }
+
+  setInterval(function(){ buildSlots(); injectEditColors(); }, 800);
+  console.log('[메모칸] 작성판 5칸 · 수정 색변경 로드');
+})();
+</script>
+<script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0826-1126';
+  var TAG = ' +cal0826-1137';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
