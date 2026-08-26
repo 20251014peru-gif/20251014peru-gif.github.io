@@ -14,7 +14,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v46-0826-1900</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v46-0826-1955</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1388,7 +1388,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-1900</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v46-0826-1955</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3060,7 +3060,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v46-20260826-1900"></script>
+<script src="worklog.js?v=v46-20260826-1955"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -17225,6 +17225,149 @@ if('serviceWorker' in navigator){
   }, 1200);
 
   console.log('[구글무한로그인] 설정 UI 로드');
+})();
+</script>
+<script>
+/* ===== v46-0826: 📤 구글로 안 간 항목 다시 보내기 (버튼) ===== */
+(function(){
+  function $i(x){ return document.getElementById(x); }
+  var SYNC_KINDS = ['work','plan','call','vacation','deliver','memo','meeting','schedule','expense','accident','progress'];
+
+  function eDate(e){ return (e && (e.date || e.start)) || ''; }
+  function kindsNow(){
+    try{ if(typeof window.gcalSyncKinds === 'function') return window.gcalSyncKinds(); }catch(e){}
+    return SYNC_KINDS;
+  }
+  /* 최근 N일 중 아직 구글에 안 올라간 것 세기 */
+  function countMissing(days){
+    if(typeof entries === 'undefined') return { total:0, list:[] };
+    var lim = new Date(Date.now() - days*86400000).toISOString().slice(0,10);
+    var kinds = kindsNow();
+    var out = [];
+    entries.forEach(function(e){
+      if(!e || !e.id || !eDate(e)) return;
+      if(kinds.indexOf(e.kind) < 0) return;
+      if(String(eDate(e)).slice(0,10) < lim) return;
+      if(e.gcalEventId) return;                                   // 이미 올라감
+      if(typeof window.wlIsSecret === 'function' && window.wlIsSecret(e)) return;  // 비밀은 안 보냄
+      out.push(e);
+    });
+    return { total: out.length, list: out };
+  }
+  function obCount(){
+    try{ return (window.wlOutbox && window.wlOutbox.count) ? window.wlOutbox.count() : 0; }catch(e){ return 0; }
+  }
+
+  window.wlResendUI = function(){
+    var old = $i('wlRsOv'); if(old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'wlRsOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:12600;display:flex;'
+      + 'align-items:center;justify-content:center;padding:14px;font-family:inherit';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:460px;max-height:88vh;overflow-y:auto;padding:18px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+      +   '<span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">📤 구글 캘린더로 다시 보내기</span>'
+      +   '<button id="wlRsClose" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<div id="wlRsInfo" style="font-size:13px;color:#33567d;line-height:1.7;background:#f2f7fd;border-radius:10px;padding:11px;margin-bottom:12px">확인 중…</div>'
+      + '<div style="font-size:12px;font-weight:700;color:#5b7794;margin-bottom:6px">얼마나 거슬러 올라갈까요?</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'
+      +   [['2','어제·오늘'],['3','최근 3일'],['7','최근 7일'],['30','최근 30일']].map(function(x){
+            return '<button type="button" class="wl-rs-d" data-d="' + x[0] + '" style="flex:1;min-width:88px;height:38px;'
+              + 'border:1.5px solid #dbe6f4;border-radius:9px;background:#fff;color:#3f7cb8;font-size:13px;'
+              + 'font-weight:800;cursor:pointer;font-family:inherit">' + x[1] + '</button>';
+          }).join('')
+      + '</div>'
+      + '<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#5b7794;margin-bottom:13px;cursor:pointer">'
+      +   '<input type="checkbox" id="wlRsRedo" style="width:16px;height:16px"> 이미 올라간 것도 <b>내용 고쳐서</b> 다시 보내기'
+      + '</label>'
+      + '<div id="wlRsState" style="font-size:12.5px;font-weight:700;color:#7a92a8;min-height:20px;margin-bottom:10px"></div>'
+      + '<button id="wlRsGo" style="width:100%;height:44px;border:none;border-radius:10px;background:#2563a8;color:#fff;'
+      +   'font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">📤 지금 보내기</button>'
+      + '<div style="font-size:11.5px;color:#9aa7b4;line-height:1.6;margin-top:10px">'
+      +   '🔒 표시된 비밀 메모는 보내지 않습니다.<br>'
+      +   '한 번에 수백 건을 보내면 삼성 캘린더 동기화가 멈출 수 있어 30일보다 길게는 두지 않았습니다.'
+      + '</div>'
+      + '</div>';
+    document.body.appendChild(ov);
+
+    var days = 2;
+    function paintDays(){
+      ov.querySelectorAll('.wl-rs-d').forEach(function(b){
+        var on = (String(days) === b.dataset.d);
+        b.style.background = on ? '#2563a8' : '#fff';
+        b.style.color = on ? '#fff' : '#3f7cb8';
+        b.style.borderColor = on ? '#2563a8' : '#dbe6f4';
+      });
+      var m = countMissing(days);
+      $i('wlRsInfo').innerHTML = '아직 구글에 안 올라간 항목 <b style="color:#c2410c;font-size:15px">' + m.total + '건</b>'
+        + ' <span style="color:#9aa7b4">(최근 ' + days + '일)</span>'
+        + (obCount() ? ('<br>대기함에 담긴 것 <b>' + obCount() + '건</b>') : '')
+        + (m.total ? ('<div style="font-size:11.5px;color:#7a92a8;margin-top:5px">'
+            + m.list.slice(0,4).map(function(e){ return '· ' + (eDate(e)||'') + ' ' + String(e.title||e.text||'').slice(0,20); }).join('<br>')
+            + (m.total>4 ? ('<br>· 외 ' + (m.total-4) + '건') : '') + '</div>') : '');
+    }
+    ov.querySelectorAll('.wl-rs-d').forEach(function(b){
+      b.addEventListener('click', function(){ days = parseInt(b.dataset.d,10); paintDays(); });
+    });
+    $i('wlRsClose').addEventListener('click', function(){ ov.remove(); });
+
+    $i('wlRsGo').addEventListener('click', function(){
+      var st = $i('wlRsState');
+      if(!(window.gcalHasToken && window.gcalHasToken())){
+        st.style.color = '#a13030';
+        st.textContent = '구글 로그인이 끊겨 있어요 — 갱신 중… 잠시 후 다시 눌러주세요';
+        if(typeof window.wlGcalSilentRenew === 'function') window.wlGcalSilentRenew('재전송');
+        return;
+      }
+      if(!window.wlOutbox){ st.textContent = '대기함 기능을 못 찾았어요'; return; }
+      var redo = $i('wlRsRedo').checked;
+      var n = 0;
+      try{
+        n = redo ? window.wlOutbox.redo(days) : window.wlOutbox.scan(days);
+      }catch(e){ st.style.color = '#a13030'; st.textContent = '오류: ' + e; return; }
+      try{ window.wlOutbox.drain(); }catch(e){}
+      st.style.color = '#1a7a4a';
+      st.textContent = '📤 ' + n + '건을 보내는 중… (몇 분 걸릴 수 있어요)';
+
+      var tries = 0;
+      var t = setInterval(function(){
+        tries++;
+        var left = obCount();
+        if(left === 0){
+          clearInterval(t);
+          st.style.color = '#1a7a4a';
+          st.textContent = '✅ 전송 완료 — 구글 캘린더를 새로고침해 보세요';
+          paintDays();
+          return;
+        }
+        st.textContent = '📤 보내는 중… 남은 ' + left + '건';
+        try{ window.wlOutbox.drain(); }catch(e){}
+        if(tries > 60){ clearInterval(t); st.style.color='#9a6700'; st.textContent = '남은 ' + left + '건은 뒤에서 계속 보냅니다'; }
+      }, 3000);
+    });
+
+    paintDays();
+  };
+
+  /* 헤더에 📤 버튼 추가 */
+  setInterval(function(){
+    try{
+      var host = document.getElementById('wlGaBtn') || document.getElementById('btnGCal');
+      if(!host || !host.parentNode) return;
+      if(document.getElementById('wlRsBtn')) return;
+      var b = document.createElement('button');
+      b.id = 'wlRsBtn'; b.type = 'button';
+      b.textContent = '📤';
+      b.title = '구글 캘린더로 안 간 항목 다시 보내기';
+      b.style.cssText = 'margin-left:5px;width:32px;height:32px;border:1.5px solid #dbe6f4;'
+        + 'border-radius:9px;background:#fff;font-size:14px;cursor:pointer;font-family:inherit;vertical-align:middle';
+      b.addEventListener('click', function(){ window.wlResendUI(); });
+      host.parentNode.insertBefore(b, host.nextSibling);
+    }catch(e){}
+  }, 1300);
+
+  console.log('[재전송] 📤 버튼 로드');
 })();
 </script>
 </body>
