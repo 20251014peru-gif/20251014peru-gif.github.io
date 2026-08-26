@@ -2922,7 +2922,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v45-20260826-1017-cal0826-1017"></script>
+<script src="worklog.js?v=v45-20260826-1047-cal0826-1047"></script>
 
 <script>
 /* ===== v43 통합 UI 컨트롤러 ===== */
@@ -14950,7 +14950,79 @@ if('serviceWorker' in navigator){
       + '\n\n앞으로 이 항목들은 구글로 나가지 않습니다.');
   };
 
-  /* 메모 모달에 [🔒 비밀] 토글 버튼 붙이기 */
+  /* 메모 탭(스티커 메모) 입력창에 [🔒 비밀] 버튼 + [🔒 점검] 붙이기 */
+  setInterval(function(){
+    try{
+      var row = document.getElementById('stickyTodoBtn');
+      if(!row || !row.parentNode) return;
+      var titleEl = document.getElementById('stickyTitle');
+      if(!titleEl) return;
+      if(!document.getElementById('stkLockBtn')){
+        var b = document.createElement('button');
+        b.id = 'stkLockBtn'; b.type = 'button';
+        b.className = row.className;
+        b.title = '이 메모를 비밀로 — 구글 캘린더로 안 보냅니다';
+        b.textContent = '🔒';
+        b.addEventListener('click', function(){
+          var v = String(titleEl.value || '');
+          titleEl.value = (v.indexOf(LOCK) === 0) ? v.replace(/^🔒\s*/, '') : (LOCK + ' ' + v);
+          paintLock();
+        });
+        row.parentNode.insertBefore(b, row.nextSibling);
+        titleEl.addEventListener('input', paintLock);
+      }
+      if(!document.getElementById('stkScanBtn')){
+        var c = document.createElement('button');
+        c.id = 'stkScanBtn'; c.type = 'button';
+        c.className = row.className;
+        c.title = '비밀번호·토큰이 든 메모를 찾아 잠급니다';
+        c.textContent = '🔍🔒';
+        c.addEventListener('click', function(){ window.wlLockScan(); });
+        var anchor = document.getElementById('stkLockBtn') || row;
+        anchor.parentNode.insertBefore(c, anchor.nextSibling);
+      }
+      paintLock();
+    }catch(e){}
+  }, 900);
+  function paintLock(){
+    var t = document.getElementById('stickyTitle');
+    var b = document.getElementById('stkLockBtn');
+    if(!t || !b) return;
+    var on = String(t.value||'').indexOf(LOCK) === 0;
+    b.style.background = on ? '#b52929' : '';
+    b.style.color = on ? '#fff' : '';
+    b.style.borderColor = on ? '#b52929' : '';
+    b.textContent = on ? '🔒' : '🔓';
+    b.title = on ? '비밀 메모 — 구글로 안 나감 (눌러서 해제)' : '이 메모를 비밀로 표시';
+  }
+
+  /* 위험한 메모 찾아서 한 번에 잠그기 */
+  window.wlLockScan = function(){
+    if(typeof entries === 'undefined'){ alert('데이터를 아직 못 읽었어요'); return; }
+    var risky = entries.filter(function(e){
+      return e && e.kind === 'memo' && window.wlIsSecret(e)
+             && String(e.title||'').indexOf(LOCK) !== 0;
+    });
+    if(!risky.length){ alert('🔒 잠글 메모가 없습니다.\n\n비밀번호·토큰이 든 메모는 이미 모두 잠겨 있습니다.'); return; }
+    var names = risky.slice(0, 12).map(function(e){ return '· ' + String(e.title || e.body || '').slice(0,30); }).join('\n');
+    if(!confirm('비밀번호·토큰이 들어 있는 메모 ' + risky.length + '건을 찾았습니다.\n\n' + names
+      + (risky.length > 12 ? '\n…외 ' + (risky.length-12) + '건' : '')
+      + '\n\n제목 앞에 🔒 를 붙이고 구글 캘린더에서 빼겠습니다.\n(메모 내용은 그대로 남습니다)')) return;
+    var n = 0;
+    risky.forEach(function(e){
+      try{
+        updateRecord(e.id, { title: LOCK + ' ' + String(e.title||'').trim(), secret: true });
+        n++;
+      }catch(err){}
+    });
+    if(typeof renderAll === 'function') setTimeout(renderAll, 300);
+    alert('🔒 ' + n + '건을 잠갔습니다.\n\n구글 캘린더에 이미 올라간 것은\n⚙ → "구글에 올라간 비밀 항목 지우기" 로 정리하세요.');
+    if(typeof window.wlPurgeSecrets === 'function' && window.gcalHasToken && window.gcalHasToken()){
+      setTimeout(function(){ window.wlPurgeSecrets(); }, 600);
+    }
+  };
+
+  /* 업무·기타 모달에도 [🔒 비밀] 토글 붙이기 */
   setInterval(function(){
     try{
       var ovl = document.getElementById('overlay');
@@ -15321,10 +15393,13 @@ if('serviceWorker' in navigator){
     + '.head .meta{display:flex;flex-wrap:wrap;gap:14px;font-size:9.5pt;color:#5a6f85}'
     + '.head .meta b{color:#16283a;font-weight:700}'
     /* 결재란 */
-    + '.sign{float:right;width:auto;border-collapse:collapse;margin:-2px 0 8px 10px;font-size:8.5pt}'
-    + '.sign td,.sign th{border:1px solid #93a8bd;text-align:center;padding:2px 6px}'
-    + '.sign th{background:#eef3f9;font-weight:700;color:#3c536b;width:19mm}'
-    + '.sign td{height:15mm;width:19mm}'
+    + '.wlist{column-count:2;column-gap:9mm;margin-top:4px}'
+    + '.wgrp{break-inside:avoid;page-break-inside:avoid;margin-bottom:7px}'
+    + '.wday{font-size:9.5pt;font-weight:800;color:#12293f;border-bottom:1px solid #b9c9dc;'
+    +   'padding-bottom:1px;margin-bottom:2px;display:flex;justify-content:space-between}'
+    + '.wday span{font-weight:600;color:#7d8fa1;font-size:8.5pt}'
+    + '.witem{font-size:9.5pt;line-height:1.45;padding:1px 0 1px 13px;text-indent:-13px;break-inside:avoid}'
+    + '.witem b{color:#2c5f8f;font-weight:700;margin-right:2px}'
     /* 섹션 */
     + 'h2{font-size:12pt;font-weight:800;color:#12293f;margin:16px 0 6px;padding:4px 0 4px 9px;'
     +   'border-left:4px solid #1a3a5c;background:#f4f7fb;page-break-after:avoid}'
@@ -15357,15 +15432,22 @@ if('serviceWorker' in navigator){
     var c = r.cur, p = r.prv;
     var ymTxt = r.ym.slice(0,4) + '년 ' + parseInt(r.ym.slice(5,7),10) + '월';
     var today = (typeof todayStr === 'function') ? todayStr() : '';
+    var DOW = ['일','월','화','수','목','금','토'];
+    function dowOf(ds){
+      var q = String(ds).slice(0,10).split('-');
+      if(q.length !== 3) return '';
+      var d = new Date(Date.UTC(+q[0], +q[1]-1, +q[2]));
+      return DOW[d.getUTCDay()];
+    }
 
-    /* Ⅰ 총괄 */
+    /* 1. 총괄 */
     var kpi = [
-      ['업무 처리',  c.work.length,  p.work.length],
-      ['일상 청소',  c.lead.length,  p.lead.length],
-      ['정기 점검',  r.insp.reduce(function(s,x){return s+x.n;},0), r.inspPrev],
-      ['통화 응대',  c.call.length,  p.call.length],
-      ['전달 사항',  c.deliver.length, p.deliver.length],
-      ['사고 접수',  c.accident.length, p.accident.length]
+      ['업무 처리',  c.work.length,     p.work.length],
+      ['일상 청소',  c.lead.length,     p.lead.length],
+      ['통화 응대',  c.call.length,     p.call.length],
+      ['전달 사항',  c.deliver.length,  p.deliver.length],
+      ['사고 접수',  c.accident.length, p.accident.length],
+      ['미완료',     r.open.length,     0]
     ];
     var kpiHtml = '<div class="kpi">' + kpi.map(function(x){
       return '<div><div class="t">' + x[0] + '</div><div class="v">' + x[1] + '</div>'
@@ -15373,83 +15455,69 @@ if('serviceWorker' in navigator){
     }).join('') + '</div>';
 
     var sumRows = [
-      ['업무 처리 건수', c.work.length, p.work.length, diffTag(c.work.length, p.work.length)],
-      ['일상 청소 건수', c.lead.length, p.lead.length, diffTag(c.lead.length, p.lead.length)],
-      ['미완료 · 이월',  r.open.length, '-', ''],
-      ['지출 집행액',    won(c.expTotal) + '원', won(p.expTotal) + '원', moneyDiff(c.expTotal, p.expTotal)],
-      ['자재 사용액',    won(c.matCost) + '원',  won(p.matCost) + '원',  moneyDiff(c.matCost, p.matCost)],
-      ['합계',           won(r.totalCost) + '원', won(r.totalCostPrev) + '원', moneyDiff(r.totalCost, r.totalCostPrev)]
+      ['업무 처리 건수',  c.work.length,     p.work.length,     diffTag(c.work.length, p.work.length)],
+      ['일상 청소 건수',  c.lead.length,     p.lead.length,     diffTag(c.lead.length, p.lead.length)],
+      ['통화 응대',       c.call.length,     p.call.length,     diffTag(c.call.length, p.call.length)],
+      ['전달 · 지시',     c.deliver.length,  p.deliver.length,  diffTag(c.deliver.length, p.deliver.length)],
+      ['사고 접수',       c.accident.length, p.accident.length, diffTag(c.accident.length, p.accident.length)],
+      ['미완료 · 이월',   r.open.length,     '-',               '']
     ];
 
-    /* Ⅱ 분야별 (전월 대비) */
-    var prevMap = {};
-    r.byFieldPrev.forEach(function(x){ prevMap[x.k] = x.n; });
-    var fieldRows = r.byField.map(function(x){
-      return [ esc2(x.k), x.n, (prevMap[x.k]||0), diffTag(x.n, prevMap[x.k]||0) ];
-    });
-
-    /* Ⅲ 정기점검 이행률 */
-    var inspRows = r.insp.map(function(x){
-      var pct = x.n ? Math.round(x.done / x.n * 100) : 0;
-      return [ esc2(x.k), x.n, x.done, pct + '%' ];
-    });
-
-    /* Ⅳ 자재 */
+    /* 자재 */
     var matRows = r.mats.map(function(m, i){
-      var money = r.costByItem[m.name];
       return [ (i+1), esc2(m.name) + (m.spec ? ' <span class="sp">' + esc2(m.spec) + '</span>' : ''),
-               m.qty, m.cnt, money ? (won(money) + '원') : '-' ];
+               m.qty, m.cnt ];
     });
     var nameSum = {};
     r.mats.forEach(function(m){ nameSum[m.name] = (nameSum[m.name]||0) + m.qty; });
 
-    /* Ⅴ 비용 */
-    var expRows = Object.keys(r.expByType).map(function(k){
-      return [ esc2(k), won(r.expByType[k]) + '원', won(r.expByTypePrev[k]||0) + '원',
-               moneyDiff(r.expByType[k], r.expByTypePrev[k]||0) ];
-    });
-
-    /* Ⅵ 사고 */
+    /* 사고 */
     var accRows = c.accident.map(function(e){
-      return [ esc2(String(eDate(e)).slice(5)), esc2(e.accType||''), esc2((e.floor||'') + ' ' + (e.title||'')),
-               esc2(e.status||''), esc2(e.partyName||'') ];
+      return [ '<span class="nw">' + esc2(String(eDate(e)).slice(5)) + '</span>', esc2(e.accType||''),
+               esc2((e.floor||'') + ' ' + (e.title||'')), esc2(e.status||''), esc2(e.partyName||'') ];
     });
 
-    /* Ⅶ 미완료·이월 / 다음달 예정 */
-    var openRows = r.open.slice(0,40).map(function(e){
-      return [ esc2(String(eDate(e)).slice(5)), esc2((e.floor||'') + ' ' + (e.title||'')),
-               esc2(e.field||''), '<span class="tag">' + esc2(e.status||'') + '</span>' ];
+    /* 미완료 / 익월 */
+    var openRows = r.open.map(function(e){
+      return [ '<span class="nw">' + esc2(String(eDate(e)).slice(5)) + '</span>',
+               esc2((e.floor||'') + ' ' + (e.title||'')), '<span class="tag">' + esc2(e.status||'') + '</span>' ];
     });
-    var nextRows = r.nextSched.slice(0,30).map(function(e){
-      return [ esc2(String(eDate(e)).slice(5)), esc2(e.title||''), esc2(e.scheduleType||'일회성') ];
+    var nextRows = r.nextSched.slice(0,40).map(function(e){
+      return [ '<span class="nw">' + esc2(String(eDate(e)).slice(5)) + '</span>',
+               esc2(e.title||''), esc2(e.scheduleType||'일회성') ];
     });
 
-    /* Ⅷ 근태 */
+    /* 근태 · 전달 */
     var vacRows = c.vacation.map(function(e){
       var per = String(e.start||'').slice(5) + (e.end && e.end !== e.start ? ' ~ ' + String(e.end).slice(5) : '');
-      return [ esc2(e.name||''), esc2(e.vtype||'휴가'), esc2(per), esc2(e.note||'') ];
+      return [ esc2(e.name||''), esc2(e.vtype||'휴가'), '<span class="nw">' + esc2(per) + '</span>', esc2(e.note||'') ];
     });
-
-    /* Ⅸ 전달 */
     var delRows = c.deliver.map(function(e){
       var body = String(e.content||e.memo||'').replace(/\n+/g,' / ');
-      return [ esc2(String(eDate(e)).slice(5)), esc2(e.dtype||''), esc2(body.slice(0,110)) ];
+      return [ '<span class="nw">' + esc2(String(eDate(e)).slice(5)) + '</span>',
+               esc2(e.dtype||''), esc2(body.slice(0,120)) ];
     });
 
-    /* 붙임 — 업무 상세 */
-    var detRows = c.work.slice().sort(function(a,b){ return String(eDate(a)).localeCompare(String(eDate(b))); })
-      .map(function(e, i){
-        var mm = (typeof matDisplay === 'function') ? matDisplay(e) : (e.material||'');
-        return [ (i+1), '<span class="nw">' + esc2(String(eDate(e)).slice(5)) + '</span>',
-                 '<span class="nw">' + esc2(e.floor||'') + '</span>',
-                 esc2(e.title||'') + (e.detail ? ' <span style="color:#7d8fa1">· ' + esc2(String(e.detail).slice(0,50)) + '</span>' : ''),
-                 esc2(e.field||''), esc2(mm.slice(0,40)), esc2(e.status||'') ];
-      });
+    /* 붙임 — 날짜별 2단 목록 (100건 넘어도 2~3장) */
+    var byDay = {};
+    c.work.forEach(function(e){
+      var d = String(eDate(e)).slice(0,10);
+      (byDay[d] = byDay[d] || []).push(e);
+    });
+    var days = Object.keys(byDay).sort();
+    var no = 0;
+    var listHtml = days.map(function(d){
+      var head = '<div class="wday">' + esc2(d.slice(5)) + ' (' + dowOf(d) + ') <span>' + byDay[d].length + '건</span></div>';
+      var items = byDay[d].map(function(e){
+        no++;
+        var t = ((e.floor ? e.floor + ' ' : '') + (e.title||'')).trim();
+        return '<div class="witem"><b>' + no + '.</b> ' + esc2(t) + '</div>';
+      }).join('');
+      return '<div class="wgrp">' + head + items + '</div>';
+    }).join('');
 
     return ''
     + '<div class="doc">'
-    + '<table class="sign"><tr><th rowspan="2">결<br>재</th><th>담당</th><th>검토</th><th>승인</th></tr>'
-    +   '<tr><td></td><td></td><td></td></tr></table>'
     + '<div class="head">'
     +   '<div class="org">한일자산관리앤투자 · 서희타워 시설관리소</div>'
     +   '<h1>' + esc2(ymTxt) + ' 시설관리 업무 월간보고서</h1>'
@@ -15457,68 +15525,45 @@ if('serviceWorker' in navigator){
     +     '<span>보고기간 <b>' + esc2(r.ym) + '-01 ~ ' + esc2(r.ym) + '-말</b></span>'
     +     '<span>작성자 <b>시설관리소장</b></span>'
     +     '<span>작성일 <b>' + esc2(today) + '</b></span>'
-    +     '<span>문서번호 <b>SH-' + esc2(r.ym.replace('-','')) + '-01</b></span>'
     +   '</div>'
     + '</div>'
-    + '<div style="clear:both"></div>'
 
-    + '<h2>Ⅰ. 총괄 요약</h2>'
+    + '<h2>1. 총괄 요약</h2>'
     + kpiHtml
     + T(['구 분', esc2(ymTxt), '전월', '증감'],
-        sumRows.map(function(x, i){ return [ (i===5?'<b>'+x[0]+'</b>':x[0]), x[1], x[2], x[3] ]; }),
-        ['32%','24%','24%','20%'])
+        sumRows.map(function(x){ return [ x[0], x[1], x[2], x[3] ]; }),
+        ['34%','22%','22%','22%'])
 
-    + '<h2>Ⅱ. 업무 실적</h2>'
-    + '<div class="two"><div><h3>분야별 (전월 대비)</h3>'
-    +   T(['분야','당월','전월','증감'], fieldRows, ['40%','20%','20%','20%'])
-    + '</div><div><h3>처리 상태</h3>'
-    +   T(['상태','건수'], r.byStatus.map(function(x){ return [esc2(x.k), x.n]; }), ['60%','40%'])
-    +   '<h3>층별 상위</h3>'
-    +   T(['층','건수'], r.byFloor.slice(0,8).map(function(x){ return [esc2(x.k), x.n]; }), ['60%','40%'])
-    + '</div></div>'
+    + '<h2>2. 층별 업무 현황</h2>'
+    + T(['층', '건수'], r.byFloor.map(function(x){ return [esc2(x.k), x.n]; }), ['70%','30%'])
 
-    + '<h2>Ⅲ. 정기점검 이행 현황</h2>'
-    + T(['점검 구분','대상','완료','이행률'], inspRows, ['46%','18%','18%','18%'])
-
-    + '<h2>Ⅳ. 자재 사용 내역</h2>'
+    + '<h2>3. 자재 사용 내역</h2>'
     + '<div class="two"><div><h3>규격별 사용량</h3>'
-    +   T(['No','자재 (규격)','수량','건수','사용액'], matRows, ['7%','38%','12%','12%','31%'])
+    +   T(['No','자재 (규격)','수량','건수'], matRows, ['9%','53%','19%','19%'])
     + '</div><div><h3>자재명 합계</h3>'
     +   T(['자재명','총 수량'],
         Object.keys(nameSum).sort(function(a,b){ return nameSum[b]-nameSum[a]; })
-          .map(function(k){ return [esc2(k), nameSum[k]]; }), ['60%','40%'])
-    +   '<h3>자재 사용액</h3>'
-    +   '<table><tbody><tr class="sum"><td>당월 자재 사용액</td><td class="n">' + won(c.matCost) + '원</td></tr>'
-    +   '<tr><td>전월</td><td class="n">' + won(p.matCost) + '원</td></tr></tbody></table>'
+          .map(function(k){ return [esc2(k), nameSum[k]]; }), ['65%','35%'])
     + '</div></div>'
 
-    + '<h2>Ⅴ. 비용 집행</h2>'
-    + T(['지출 종류','당월','전월','증감'], expRows, ['34%','24%','24%','18%'])
-    + '<table><tbody>'
-    +   '<tr><td>지출 소계</td><td class="n">' + won(c.expTotal) + '원</td></tr>'
-    +   '<tr><td>자재 사용액</td><td class="n">' + won(c.matCost) + '원</td></tr>'
-    +   '<tr class="sum"><td>총 계</td><td class="n">' + won(r.totalCost) + '원</td></tr>'
-    + '</tbody></table>'
+    + '<h2>4. 사고 발생 현황</h2>'
+    + (c.accident.length ? T(['일자','종류','내용','처리상태','당사자'], accRows, ['10%','14%','44%','16%','16%'])
+                         : '<p class="none">당월 접수된 사고 없음</p>')
 
-    + (c.accident.length
-        ? '<h2>Ⅵ. 사고 발생 현황</h2>' + T(['일자','종류','내용','처리상태','당사자'], accRows, ['10%','14%','44%','16%','16%'])
-        : '<h2>Ⅵ. 사고 발생 현황</h2><p class="none">당월 접수된 사고 없음</p>')
-
-    + '<h2>Ⅶ. 미완료 · 익월 이월 사항</h2>'
+    + '<h2>5. 미완료 · 익월 이월 사항</h2>'
     + '<h3>미완료 업무 (' + r.open.length + '건)</h3>'
-    + T(['일자','내용','분야','상태'], openRows, ['10%','56%','18%','16%'])
+    + T(['일자','내용','상태'], openRows, ['11%','73%','16%'])
     + '<h3>' + esc2(r.nextYm.slice(0,4) + '년 ' + parseInt(r.nextYm.slice(5,7),10) + '월') + ' 예정 (' + r.nextSched.length + '건)</h3>'
     + T(['일자','예정 내용','반복'], nextRows, ['12%','66%','22%'])
 
-    + '<h2>Ⅷ. 근태 현황</h2>'
+    + '<h2>6. 근태 현황</h2>'
     + T(['성명','종류','기간','비고'], vacRows, ['16%','16%','22%','46%'])
 
-    + '<h2>Ⅸ. 전달 · 지시 사항</h2>'
-    + T(['일자','구분','내용'], delRows, ['10%','14%','76%'])
+    + '<h2>7. 전달 · 지시 사항</h2>'
+    + T(['일자','구분','내용'], delRows, ['11%','15%','74%'])
 
-    + '<h2 class="pb">붙임. 업무 상세 내역 (' + c.work.length + '건)</h2>'
-    + T(['No','일자','층','업무 내용','분야','사용 자재','상태'], detRows,
-        ['5%','9%','10%','36%','11%','19%','10%'])
+    + '<h2 class="pb">붙임. 업무 내역 (' + c.work.length + '건)</h2>'
+    + (c.work.length ? '<div class="wlist">' + listHtml + '</div>' : '<p class="none">해당 사항 없음</p>')
 
     + '<div class="foot"><span>서희타워 시설관리소 · ' + esc2(ymTxt) + ' 업무 월간보고서</span>'
     +   '<span>출력 ' + esc2(today) + '</span></div>'
@@ -15714,7 +15759,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ===== v45 캘린더 패치 표식 (worklog.js 미변경 → HTML에서 표시만 덧붙임) ===== */
 (function(){
-  var TAG = ' +cal0826-1017';
+  var TAG = ' +cal0826-1047';
   function stamp(){
     var el = document.getElementById('verBadge');
     if(el && el.textContent && el.textContent.indexOf('+cal') < 0 && el.textContent.indexOf('…') < 0){
