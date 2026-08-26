@@ -18,7 +18,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v51-0827-0057</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v52-0827-0117</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1392,7 +1392,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v51-0827-0057</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v52-0827-0117</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3071,7 +3071,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v51-20260827-0057"></script>
+<script src="worklog.js?v=v52-20260827-0117"></script>
 <script>
 /* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
    (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
@@ -18988,6 +18988,96 @@ select.lf-in{ padding-right:8px }
 .lf-tvwrap{ overflow-x:auto; max-height:none }
 .lf-grp{ background:#eef5fd !important; font-weight:900; color:#33567d; font-size:11.5px }
 
+/* ── 🗂 보드(칸반) ── */
+.lf-board{ display:flex; gap:12px; overflow-x:auto; padding-bottom:10px; align-items:flex-start }
+.lf-bcol{ flex:0 0 268px; background:#f4f8fd; border:1.5px solid #e8f0fa; border-radius:12px; padding:9px }
+.lf-bcol.over{ border-color:#2563a8; background:#eaf3ff }
+.lf-bhead{ display:flex; align-items:center; gap:6px; padding:3px 5px 9px; font-size:12.5px; color:#33567d }
+.lf-bhead .dot{ width:9px; height:9px; border-radius:50%; flex:0 0 9px }
+.lf-bhead b{ font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.lf-bhead .n{ background:#dbe6f4; color:#5b7794; border-radius:9px; padding:1px 7px; font-size:11px; font-weight:800 }
+.lf-bhead .s{ margin-left:auto; font-size:11.5px; font-weight:900; color:#0f7a4a; white-space:nowrap }
+.lf-blist{ display:flex; flex-direction:column; gap:7px; min-height:56px }
+.lf-bcard{ background:#fff; border:1.5px solid #e8f0fa; border-radius:10px; padding:9px 11px; cursor:grab }
+.lf-bcard:hover{ border-color:#bcd2ea; box-shadow:0 2px 8px rgba(63,124,184,.12) }
+.lf-bcard.drag{ opacity:.4 }
+.lf-bcard .t{ font-size:13.5px; font-weight:800; color:#1a2f45; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.lf-bcard .m{ font-size:11.5px; color:#8ba0b6; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.lf-bcard .a{ font-size:12.5px; font-weight:900; color:#0f7a4a; margin-top:4px }
+.lf-bempty{ text-align:center; color:#c8d4e0; font-size:12px; padding:16px 0 }
+
+/* ── 📅 달력 ── */
+.lf-calhead{ display:flex; align-items:center; gap:8px; margin-bottom:10px }
+.lf-calhead b{ font-size:16px; font-weight:900; color:#1a2f45; min-width:110px; text-align:center }
+.lf-calhead button{ width:34px; height:34px; border:1.5px solid #dbe6f4; border-radius:9px; background:#fff;
+  color:#5b7794; font-size:18px; font-weight:800; cursor:pointer; font-family:inherit; line-height:1 }
+.lf-calhead button:hover{ border-color:#2563a8; color:#2563a8 }
+.lf-calhead .lf-fx{ width:auto; height:32px; font-size:12px }
+.lf-cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px }
+.lf-cdow{ text-align:center; font-size:11.5px; font-weight:900; color:#8ba0b6; padding:4px 0 }
+.lf-cday{ min-height:96px; background:#fff; border:1.5px solid #e8f0fa; border-radius:9px; padding:5px;
+  cursor:pointer; overflow:hidden }
+.lf-cday:hover{ border-color:#bcd2ea; background:#f9fcff }
+.lf-cday.off{ background:transparent; border:none; cursor:default }
+.lf-cday.today{ border-color:#2563a8; background:#f0f6ff }
+.lf-cday .dn{ font-size:11.5px; font-weight:800; color:#5b7794; margin-bottom:3px }
+.lf-cday .ev{ font-size:11px; padding:2px 5px; margin-bottom:2px; border-left:3px solid #94a3b8;
+  background:#f4f8fd; border-radius:4px; color:#1a2f45; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; cursor:pointer }
+.lf-cday .ev:hover{ background:#dbe6f4 }
+.lf-cday .more{ font-size:10.5px; color:#8ba0b6; padding-left:4px }
+@media (max-width:700px){ .lf-cday{ min-height:66px } .lf-cday .ev{ font-size:10px } }
+
+/* ── 🏷 다중 선택 ── */
+.lf-multi{ display:flex; gap:5px; flex-wrap:wrap; align-items:center; min-height:32px; outline:none }
+.lf-multi-f{ min-height:40px; padding:5px 0 }
+.lf-mt{ padding:3px 10px; border:1.5px solid #e3ecf6; border-radius:14px; background:#fff;
+  color:#8ba0b6; font-size:12px; font-weight:800; cursor:pointer; user-select:none }
+.lf-mt:hover{ border-color:#2563a8 }
+.lf-mt.on{ border-color:transparent }
+
+/* ── 🎨 색상 고르기 ── */
+.lf-colors{ display:flex; gap:6px; flex-wrap:wrap }
+.lf-colors button{ height:34px; padding:0 13px; border:2px solid transparent; border-radius:9px;
+  font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit }
+.lf-colors button.on{ border-color:#1a2f45 }
+
+/* ── ↕ 칸 순서 ── */
+.lf-ord{ display:flex; flex-direction:column; gap:5px; max-height:210px; overflow-y:auto }
+.lf-ordi{ display:flex; align-items:center; gap:7px; padding:7px 10px; border:1.5px solid #e8f0fa;
+  border-radius:9px; background:#fff; font-size:13px; font-weight:700; color:#33567d; cursor:grab }
+.lf-ordi.drag{ opacity:.4 }
+.lf-ordi.over{ border-color:#2563a8; background:#f0f6ff }
+.lf-ordi .gg{ color:#c8d4e0; cursor:grab }
+.lf-ordi button{ width:26px; height:24px; border:1.5px solid #e8f0fa; border-radius:6px; background:#fff;
+  color:#8ba0b6; font-size:10px; cursor:pointer; font-family:inherit; padding:0 }
+.lf-ordi button:hover{ border-color:#2563a8; color:#2563a8 }
+
+/* ── 🕐 시계 다이얼 ── */
+.td-mod{ text-align:center }
+.td-head{ display:flex; align-items:center; justify-content:center; gap:5px; margin-bottom:14px; flex-wrap:wrap }
+.td-hm{ width:74px; height:58px; border:2px solid #e8f0fa; border-radius:12px; background:#f7fafd;
+  color:#7a92a8; font-size:32px; font-weight:900; cursor:pointer; font-family:inherit; line-height:1 }
+.td-hm.on{ background:#eef5fd; border-color:#2563a8; color:#2563a8 }
+.td-colon{ font-size:30px; font-weight:900; color:#1a2f45; margin:0 1px }
+.td-ap{ display:flex; flex-direction:column; gap:3px; margin-left:8px }
+.td-ap button{ width:52px; height:27px; border:1.5px solid #e8f0fa; background:#fff; color:#8ba0b6;
+  font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit; border-radius:8px }
+.td-ap button.on{ background:#2563a8; border-color:#2563a8; color:#fff }
+.td-face{ width:260px; max-width:100%; margin:0 auto; touch-action:none; user-select:none }
+.td-face svg{ width:100%; height:auto; display:block; cursor:pointer }
+.td-bg{ fill:#f2f7fc }
+.td-hand{ stroke:#2563a8; stroke-width:2.5 }
+.td-pin{ fill:#2563a8 }
+.td-knob{ fill:#2563a8; opacity:.92 }
+.td-n{ font-size:17px; font-weight:800; fill:#5b7794; text-anchor:middle;
+  font-family:inherit; pointer-events:none }
+.td-n.sel{ fill:#fff }
+.td-quick{ display:flex; gap:5px; justify-content:center; flex-wrap:wrap; margin-top:12px }
+.td-quick button{ height:29px; padding:0 11px; border:1.5px solid #dbe6f4; border-radius:15px;
+  background:#fff; color:#5b7794; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit }
+.td-quick button:hover{ border-color:#2563a8; color:#2563a8 }
+
 /* 조건 칩 */
 .lf-rule{ display:inline-flex; align-items:center; gap:5px; height:29px; padding:0 6px 0 11px;
   border:1.5px solid #d8ccf5; border-radius:15px; background:#f6f2ff; color:#4c2f8a;
@@ -19414,7 +19504,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(pics.length) ph = '<div class="lf-ph">' + pics.slice(0,4).map(function(u){
       return '<img src="'+esc(u)+'">'; }).join('') + '</div>';
 
-    return '<div class="lf-card" data-lid="'+esc(e.id)+'" style="border-left-color:'+col+(e.done?';opacity:.58':'')+'">'
+    var chC = colorHit(e, e.ptype);
+    return '<div class="lf-card" data-lid="'+esc(e.id)+'" style="border-left-color:'+col
+      + (e.done?';opacity:.58':'') + (chC? (';background:'+colorOf(chC.color).bg+'66'):'') + '">'
       + '<button class="lf-del" data-ldel="'+esc(e.id)+'" title="삭제">🗑</button>'
       + '<div class="lf-t">'+esc(ttl)+'</div>'
       + '<div class="lf-m"><span style="font-weight:700">📅 '+esc(e.date||'')+'</span>'+tags+'</div>'
@@ -19429,12 +19521,15 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
   /* ── 보기 방식: 카드 / 표(노션) ── */
   var LS_VIEW='wl_life_view';
-  var vw = (function(){ var v=lsGet(LS_VIEW,null); return (v==='table'||v==='card')?v:'card'; })();
+  var VWS=['card','table','board','cal'];
+  var vw = (function(){ var v=lsGet(LS_VIEW,null); return (VWS.indexOf(v)>=0)?v:'card'; })();
   function vwSet(v){ vw=v; lsSet(LS_VIEW,v); safeRender(); }
   function vwBtns(){
     return '<div class="lf-vw">'
       + '<button type="button" data-vw="card"'+(vw==='card'?' class="on"':'')+'>▦ 카드</button>'
       + '<button type="button" data-vw="table"'+(vw==='table'?' class="on"':'')+'>☰ 목록</button>'
+      + '<button type="button" data-vw="board"'+(vw==='board'?' class="on"':'')+'>🗂 보드</button>'
+      + '<button type="button" data-vw="cal"'+(vw==='cal'?' class="on"':'')+'>📅 달력</button>'
       + '</div>';
   }
 
@@ -19493,7 +19588,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     tag:    { i:'🏷', w:'150px', ro:1 },
     att:    { i:'📎', w:'58px',  center:1, ro:1 },
     rel:    { i:'🔗', w:'170px' },                    /* 관계 — 다른 기록·연락처와 연결 */
-    formula:{ i:'\u2211', w:'120px', right:1, ro:1 } /* 수식 — 다른 칸으로 계산 */
+    formula:{ i:'\u2211', w:'120px', right:1, ro:1 },/* 수식 — 다른 칸으로 계산 */
+    multi:  { i:'🏷', w:'180px' },                    /* 다중 선택 — 태그 여러 개 */
+    rollup: { i:'\u03a3', w:'120px', right:1, ro:1 } /* 롤업 — 연결된 것들 합계 */
   };
   function tinfo(t){ return T[t] || T.text; }
 
@@ -19535,6 +19632,161 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     customSave(pt,a);
   }
 
+
+
+  /* ══════════════════════════════════════════════════════════
+     🕐 시계 다이얼 — 바늘을 돌려서 시간을 맞춘다
+     ══════════════════════════════════════════════════════════ */
+  function tdPad(n){ return (n<10?'0':'')+n; }
+  function tdParse(v){
+    var m=String(v||'').match(/^(\d{1,2}):(\d{2})/);
+    if(!m) return {h:9, mi:0};
+    return { h:Math.min(23,parseInt(m[1],10)||0), mi:Math.min(59,parseInt(m[2],10)||0) };
+  }
+  function openTimeDial(initial, onPick){
+    var st = tdParse(initial);
+    var H = st.h, MI = Math.round(st.mi/5)*5; if(MI>=60){ MI=0; H=(H+1)%24; }
+    var mode = 'h';                                   /* h → m */
+    var R = 108, CX = 130, CY = 130;
+
+    var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9900';
+    ov.innerHTML='<div class="lf-mod td-mod" style="max-width:330px;padding:18px 18px 20px">'
+      + '<div class="td-head">'
+      +   '<button type="button" class="td-hm" id="tdH"></button>'
+      +   '<span class="td-colon">:</span>'
+      +   '<button type="button" class="td-hm" id="tdM"></button>'
+      +   '<div class="td-ap"><button type="button" id="tdAM">오전</button>'
+      +     '<button type="button" id="tdPM">오후</button></div>'
+      + '</div>'
+      + '<div class="td-face" id="tdFace">'
+      +   '<svg viewBox="0 0 260 260" id="tdSvg">'
+      +     '<circle cx="130" cy="130" r="122" class="td-bg"/>'
+      +     '<line x1="130" y1="130" x2="130" y2="30" class="td-hand" id="tdHand"/>'
+      +     '<circle cx="130" cy="130" r="5" class="td-pin"/>'
+      +     '<circle cx="130" cy="30" r="19" class="td-knob" id="tdKnob"/>'
+      +     '<g id="tdNums"></g>'
+      +   '</svg>'
+      + '</div>'
+      + '<div class="td-quick" id="tdQuick"></div>'
+      + '<div class="lf-mbtn" style="margin-top:14px">'
+      +   '<button type="button" id="tdNow" class="lf-radd" style="height:42px">지금</button>'
+      +   '<div style="flex:1"></div>'
+      +   '<button type="button" id="tdC" style="height:42px;padding:0 16px;border:1.5px solid #dbe6f4;border-radius:10px;background:#fff;color:#7a92a8;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">취소</button>'
+      +   '<button type="button" id="tdOk" style="height:42px;padding:0 22px;border:none;border-radius:10px;background:#2563a8;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">확인</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    function cl(){ ov.remove(); }
+
+    var svg=document.getElementById('tdSvg'), hand=document.getElementById('tdHand'),
+        knob=document.getElementById('tdKnob'), nums=document.getElementById('tdNums');
+
+    function paint(){
+      var hb=document.getElementById('tdH'), mb=document.getElementById('tdM');
+      hb.textContent=tdPad(H); mb.textContent=tdPad(MI);
+      hb.className='td-hm'+(mode==='h'?' on':''); mb.className='td-hm'+(mode==='m'?' on':'');
+      document.getElementById('tdAM').className = H<12 ? 'on':'';
+      document.getElementById('tdPM').className = H>=12? 'on':'';
+
+      /* 숫자판 */
+      var h='';
+      if(mode==='h'){
+        for(var i=0;i<12;i++){
+          var lbl = (H<12) ? (i===0?12:i) : (i===0?12:i)+12;
+          if(H>=12 && lbl===24) lbl=12;
+          var real = (H<12) ? i : (i===0?12:i+12);
+          if(H>=12 && i===0) real=12;
+          var a=(i*30-90)*Math.PI/180;
+          var x=CX+Math.cos(a)*R, y=CY+Math.sin(a)*R;
+          h+='<text x="'+x.toFixed(1)+'" y="'+(y+5).toFixed(1)+'" class="td-n'+(real===H?' sel':'')+'">'
+            + (H<12 ? (i===0?12:i) : (i===0?12:i)) + '</text>';
+        }
+      } else {
+        for(var j=0;j<12;j++){
+          var mv=j*5, a2=(j*30-90)*Math.PI/180;
+          var x2=CX+Math.cos(a2)*R, y2=CY+Math.sin(a2)*R;
+          h+='<text x="'+x2.toFixed(1)+'" y="'+(y2+5).toFixed(1)+'" class="td-n'+(mv===MI?' sel':'')+'">'
+            + tdPad(mv) + '</text>';
+        }
+      }
+      nums.innerHTML=h;
+
+      /* 바늘 */
+      var deg = (mode==='h') ? ((H%12)*30) : (MI*6);
+      var ra=(deg-90)*Math.PI/180;
+      var ex=CX+Math.cos(ra)*R, ey=CY+Math.sin(ra)*R;
+      hand.setAttribute('x2', ex.toFixed(1)); hand.setAttribute('y2', ey.toFixed(1));
+      knob.setAttribute('cx', ex.toFixed(1)); knob.setAttribute('cy', ey.toFixed(1));
+    }
+
+    function fromPoint(clientX, clientY){
+      var r=svg.getBoundingClientRect();
+      var x=(clientX-r.left)/r.width*260 - CX;
+      var y=(clientY-r.top)/r.height*260 - CY;
+      var deg=Math.atan2(y,x)*180/Math.PI + 90;
+      while(deg<0) deg+=360; while(deg>=360) deg-=360;
+      if(mode==='h'){
+        var idx=Math.round(deg/30)%12;                 /* 0~11 */
+        var pm = H>=12;
+        H = pm ? (idx===0?12:idx+12) : idx;
+        if(pm && idx===0) H=12;
+        if(!pm && idx===0) H=0;
+      } else {
+        MI = (Math.round(deg/30)%12)*5;                /* 5분 단위 */
+      }
+      paint();
+    }
+    var dragging=false;
+    function down(e){ dragging=true; var t=e.touches?e.touches[0]:e; fromPoint(t.clientX,t.clientY); e.preventDefault(); }
+    function move(e){ if(!dragging) return; var t=e.touches?e.touches[0]:e; fromPoint(t.clientX,t.clientY); e.preventDefault(); }
+    function up(){ if(!dragging) return; dragging=false;
+      if(mode==='h'){ mode='m'; paint(); } }
+    svg.addEventListener('mousedown',down); svg.addEventListener('touchstart',down,{passive:false});
+    window.addEventListener('mousemove',move); svg.addEventListener('touchmove',move,{passive:false});
+    window.addEventListener('mouseup',up);     svg.addEventListener('touchend',up);
+
+    document.getElementById('tdH').addEventListener('click', function(){ mode='h'; paint(); });
+    document.getElementById('tdM').addEventListener('click', function(){ mode='m'; paint(); });
+    document.getElementById('tdAM').addEventListener('click', function(){ if(H>=12) H-=12; paint(); });
+    document.getElementById('tdPM').addEventListener('click', function(){ if(H<12) H+=12; paint(); });
+    document.getElementById('tdNow').addEventListener('click', function(){
+      var d = (typeof kstNow==='function') ? kstNow() : new Date(Date.now()+9*3600000);
+      H=d.getHours(); MI=Math.round(d.getMinutes()/5)*5; if(MI>=60){MI=0;H=(H+1)%24;} paint(); });
+
+    /* 자주 쓰는 시간 */
+    var QK=['09:00','12:00','13:00','18:00','20:00'];
+    document.getElementById('tdQuick').innerHTML = QK.map(function(q){
+      return '<button type="button" data-tq="'+q+'">'+q+'</button>'; }).join('');
+    ov.querySelectorAll('[data-tq]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var t=tdParse(b.getAttribute('data-tq')); H=t.h; MI=t.mi; paint(); }); });
+
+    document.getElementById('tdC').addEventListener('click', cl);
+    ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
+    document.getElementById('tdOk').addEventListener('click', function(){
+      var val = tdPad(H)+':'+tdPad(MI);
+      cl(); if(onPick) onPick(val);
+    });
+    paint();
+  }
+  window.wlTimeDial = openTimeDial;
+
+  /* 시간칸을 다이얼로 연결 */
+  function bindDial(root){
+    if(!root) return;
+    root.querySelectorAll('[data-tdial]').forEach(function(el){
+      if(el._dialBound) return; el._dialBound=true;
+      var open=function(){
+        var tgt=document.getElementById(el.getAttribute('data-tdial'));
+        if(!tgt) return;
+        openTimeDial(tgt.value, function(v){
+          tgt.value=v;
+          tgt.dispatchEvent(new Event('input',{bubbles:true}));
+          tgt.dispatchEvent(new Event('change',{bubbles:true}));
+        });
+      };
+      el.addEventListener('click', open);
+    });
+  }
 
   /* ══════════════════════════════════════════════════════════
      🔢 숫자 칸 — 글자 못 넣고, 세 자리마다 쉼표
@@ -19618,6 +19870,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     tag:    ['같음','아님'],
     att:    ['=','>','비어있음','있음'],
     rel:    ['포함','비어있음','있음'],
+    multi:  ['포함','미포함','비어있음','있음'],
+    rollup: ['=','>','<','이상','이하'],
     rows:   ['비어있음','있음']
   };
   function opsOf(t){ return TYPE_OPS[t] || TYPE_OPS.text; }
@@ -19658,6 +19912,65 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       if(typeof r!=='number' || !isFinite(r)) return '';
       return Math.round(r*10000)/10000;
     }catch(err){ return ''; }
+  }
+
+  /* ══════ Σ 롤업 — 연결된 기록들을 모아 계산 ══════
+     p = { relPid: 관계칸id, tgtPid: 그쪽 칸id, agg:'sum|count|avg|max|min', dir:'fwd|rev' } */
+  function rollupCalc(e, p, pt){
+    try{
+      var agg=p.agg||'sum', rows=[];
+      if((p.dir||'fwd')==='rev'){
+        /* 나를 가리키는 기록들 */
+        rows = ent().filter(function(x){
+          if(x.kind!=='personal') return false;
+          var v=(x.props||{})[p.relPid];
+          return relArr(v).indexOf(e.id)>=0;
+        });
+      } else {
+        var ids = relArr(pget(e, p.relPid));
+        rows = ids.map(function(id){ return ent().filter(function(x){ return x.id===id; })[0]; }).filter(Boolean);
+      }
+      if(agg==='count') return rows.length;
+      if(!rows.length) return '';
+      var tp = p.tgtPid || '_amount';
+      var vals = rows.map(function(r){
+        var q = propById(r.ptype||'', tp);
+        if(q && q.type==='formula') return num(formulaCalc(r, q.expr, r.ptype));
+        return num(pget(r, tp));
+      }).filter(function(n){ return !isNaN(n); });
+      if(!vals.length) return '';
+      if(agg==='sum') return vals.reduce(function(a,b){return a+b;},0);
+      if(agg==='avg') return Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length*100)/100;
+      if(agg==='max') return Math.max.apply(null, vals);
+      if(agg==='min') return Math.min.apply(null, vals);
+      return '';
+    }catch(err){ return ''; }
+  }
+
+  /* ══════ 🎨 색상 규칙 — 조건에 맞으면 색을 입힌다 ══════ */
+  var LS_RULESC='wl_life_colors';
+  var COLORS = [
+    {k:'red',    n:'빨강', bg:'#fee2e2', fg:'#991b1b'},
+    {k:'orange', n:'주황', bg:'#ffedd5', fg:'#9a3412'},
+    {k:'yellow', n:'노랑', bg:'#fef3c7', fg:'#92400e'},
+    {k:'green',  n:'초록', bg:'#dcfce7', fg:'#166534'},
+    {k:'blue',   n:'파랑', bg:'#dbeafe', fg:'#1e40af'},
+    {k:'purple', n:'보라', bg:'#ede9fe', fg:'#5b21b6'},
+    {k:'pink',   n:'분홍', bg:'#fce7f3', fg:'#9d174d'},
+    {k:'gray',   n:'회색', bg:'#f1f5f9', fg:'#475569'}
+  ];
+  function colorOf(k){ for(var i=0;i<COLORS.length;i++) if(COLORS[i].k===k) return COLORS[i]; return COLORS[7]; }
+  function colorRulesAll(){ var o=lsGet(LS_RULESC,null); return (o&&typeof o==='object')?o:{}; }
+  function colorRules(pt){ var a=colorRulesAll()[pt||'_all']; return Array.isArray(a)?a:[]; }
+  function colorRulesSave(pt, a){ var o=colorRulesAll(); o[pt||'_all']=a; lsSet(LS_RULESC,o); }
+  /* 이 기록에 맞는 규칙 찾기 */
+  function colorHit(e, pt){
+    var rs = colorRules('_all').concat(pt? colorRules(pt) : []);
+    for(var i=0;i<rs.length;i++){
+      var r=rs[i];
+      try{ if(ruleCheck(e, r, pt)) return r; }catch(x){}
+    }
+    return null;
   }
 
   /* ── 어떤 종류의 속성 목록 ── */
@@ -19757,6 +20070,19 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       return fv===''? '<span style="color:#c8d4e0">—</span>'
         : '<span style="color:#7c3aed;font-weight:800">'+numFmt(fv)+(p.unit?(' '+esc(p.unit)):'')+'</span>';
     }
+    if(t==='multi'){
+      var ms=Array.isArray(v)?v:(v?String(v).split(','):[]);
+      if(!ms.length) return '';
+      return ms.slice(0,4).map(function(x){
+        var c=colorOf((p.colors||{})[x]||'gray');
+        return '<span class="lf-tag" style="background:'+c.bg+';color:'+c.fg+';margin-right:3px">'+esc(x)+'</span>'; }).join('')
+        + (ms.length>4? '<span style="color:#8ba0b6;font-size:11px">+'+(ms.length-4)+'</span>':'');
+    }
+    if(t==='rollup'){
+      var rv=rollupCalc(e, p, e.ptype);
+      return rv===''? '<span style="color:#c8d4e0">—</span>'
+        : '<span style="color:#0891b2;font-weight:800">'+numFmt(rv)+(p.unit?(' '+esc(p.unit)):'')+'</span>';
+    }
     if(t==='rel'){
       var ids=relArr(v);
       if(!ids.length) return '';
@@ -19828,6 +20154,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       + block('공통', grp('base'))
       + block('이 종류의 항목', grp('field'), pt?('· '+((CAT[pt]&&CAT[pt].n)||'차계부')):'')
       + block('내가 만든 항목', grp('custom'))
+      + colOrderHTML(pt)
       + '<div class="lf-mbtn">'
       +   '<button type="button" id="lfPAdd" class="lf-radd" style="height:42px">＋ 속성 추가</button>'
       +   '<button type="button" id="lfPMgr" class="lf-radd" style="height:42px">⋯ 내 속성 관리</button>'
@@ -19845,7 +20172,15 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         e.preventDefault();
         var pid=l.getAttribute('data-cpid'), a=colsOf(pt), i=a.indexOf(pid);
         if(i>=0){ if(a.length<=1){ alert('칸이 하나는 있어야 해요'); return; } a.splice(i,1); }
-        else a.push(pid);
+        else {
+          /* 공통 칸이면 원래 자리 근처에 끼워넣는다 */
+          var bo={}; BASE.forEach(function(x,k){ bo[x.id]=k; });
+          if(bo[pid]!=null){
+            var at=a.length;
+            for(var k2=0;k2<a.length;k2++){ if(bo[a[k2]]!=null && bo[a[k2]]>bo[pid]){ at=k2; break; } }
+            a.splice(at,0,pid);
+          } else a.push(pid);
+        }
         colsSave(pt,a);
         var on=a.indexOf(pid)>=0;
         l.querySelector('input').checked=on;
@@ -19855,10 +20190,163 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     });
     document.getElementById('lfCReset').addEventListener('click', function(){
       colsSave(pt, DEF_COLS); cl(); safeRender(); });
+    bindColOrder(ov, pt);
     document.getElementById('lfPAdd').addEventListener('click', function(){ cl(); propAdd(pt); });
     document.getElementById('lfPMgr').addEventListener('click', function(){ cl(); propMgr(pt); });
   }
 
+
+
+  /* ══════ 🎨 색상 규칙 창 ══════ */
+  function colorMgr(pt){
+    var scope = pt || '_all';
+    function rows(){
+      var a=colorRules(scope);
+      if(!a.length) return '<tr><td colspan="3" style="text-align:center;color:#a8b8c8;padding:24px">'
+        + '아직 규칙이 없어요<div style="font-size:12px;margin-top:6px">＋ 로 만들어보세요</div></td></tr>';
+      return a.map(function(r,i){
+        var p=propById(pt,r.pid), c=colorOf(r.color);
+        return '<tr><td><span class="lf-tag" style="background:'+c.bg+';color:'+c.fg+'">'+esc(c.n)+'</span></td>'
+          + '<td>'+tinfo(p?p.type:'text').i+' <b>'+esc(p?p.name:r.pid)+'</b> '+esc(r.op)
+          + (opNeedsVal(r.op)? ' <b>'+esc(r.val)+'</b>':'')+'</td>'
+          + '<td class="r"><button type="button" class="lf-fx" data-cup="'+i+'">▲</button> '
+          + '<button type="button" class="lf-fx" data-cdn="'+i+'">▼</button> '
+          + '<button type="button" class="lf-fx" data-cdel="'+i+'" style="color:#b52929">🗑</button></td></tr>'; }).join('');
+    }
+    var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9760';
+    ov.innerHTML='<div class="lf-mod" style="max-width:660px">'
+      + '<div class="lf-mh"><b>🎨 색상 규칙</b>'
+      +   '<button type="button" id="lfCoX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
+      + '<div style="font-size:12.5px;color:#7a92a8;line-height:1.6">'
+      +   '조건에 맞는 줄에 색이 칠해집니다. <b>위에 있는 규칙이 먼저</b> 적용돼요.</div>'
+      + '<table class="lf-tbl" style="margin-top:10px"><tr><th style="width:80px">색</th><th>조건</th><th style="width:150px"></th></tr>'
+      +   rows() + '</table>'
+      + '<div class="lf-mbtn">'
+      +   '<button type="button" id="lfCoAdd" class="lf-radd" style="height:42px">＋ 규칙 추가</button>'
+      +   '<div style="flex:1"></div>'
+      +   '<button type="button" id="lfCoC" style="height:42px;padding:0 20px;border:1.5px solid #dbe6f4;border-radius:10px;background:#fff;color:#7a92a8;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">닫기</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    function cl(){ ov.remove(); }
+    function again(){ cl(); colorMgr(pt); }
+    document.getElementById('lfCoX').addEventListener('click', cl);
+    document.getElementById('lfCoC').addEventListener('click', function(){ cl(); safeRender(); });
+    ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
+    ov.querySelectorAll('[data-cdel]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var a=colorRules(scope); a.splice(+b.getAttribute('data-cdel'),1); colorRulesSave(scope,a); again(); }); });
+    ov.querySelectorAll('[data-cup]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var i=+b.getAttribute('data-cup'); if(i<=0) return;
+        var a=colorRules(scope); var t=a[i-1]; a[i-1]=a[i]; a[i]=t; colorRulesSave(scope,a); again(); }); });
+    ov.querySelectorAll('[data-cdn]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var i=+b.getAttribute('data-cdn'); var a=colorRules(scope);
+        if(i>=a.length-1) return; var t=a[i+1]; a[i+1]=a[i]; a[i]=t; colorRulesSave(scope,a); again(); }); });
+    document.getElementById('lfCoAdd').addEventListener('click', function(){
+      cl(); colorAdd(pt, function(){ colorMgr(pt); }); });
+  }
+
+  function colorAdd(pt, after){
+    var all = propsOf(pt).filter(function(p){ return p.type!=='rows'; });
+    var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9800';
+    ov.innerHTML='<div class="lf-mod" style="max-width:560px">'
+      + '<div class="lf-mh"><b>＋ 색상 규칙 추가</b>'
+      +   '<button type="button" id="lfCaX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
+      + '<div class="lf-mf" style="grid-template-columns:1fr">'
+      +   '<div class="lf-f"><label>어느 칸이</label><select id="lfCaP">'
+      +     all.map(function(p){ return '<option value="'+esc(p.id)+'">'+tinfo(p.type).i+' '+esc(p.name)+'</option>'; }).join('')
+      +   '</select></div>'
+      +   '<div class="lf-f"><label>조건</label><select id="lfCaO"></select></div>'
+      +   '<div class="lf-f" id="lfCaVW"><label>값</label><span id="lfCaVBox"></span></div>'
+      +   '<div class="lf-f"><label>그러면 이 색으로</label><div class="lf-colors" id="lfCaC">'
+      +     COLORS.map(function(c,i){ return '<button type="button" data-col="'+c.k+'"'+(i===0?' class="on"':'')
+            +' style="background:'+c.bg+';color:'+c.fg+'">'+c.n+'</button>'; }).join('')
+      +   '</div></div>'
+      + '</div>'
+      + '<div class="lf-mbtn"><div style="flex:1"></div>'
+      +   '<button type="button" id="lfCaC2" style="height:44px;padding:0 18px;border:1.5px solid #dbe6f4;border-radius:10px;background:#fff;color:#7a92a8;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">취소</button>'
+      +   '<button type="button" id="lfCaOk" style="height:44px;padding:0 22px;border:none;border-radius:10px;background:#2563a8;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">＋ 만들기</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    function cl(){ ov.remove(); }
+    document.getElementById('lfCaX').addEventListener('click', cl);
+    document.getElementById('lfCaC2').addEventListener('click', cl);
+    ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
+    var PS=document.getElementById('lfCaP'), OS=document.getElementById('lfCaO'), pick='red';
+    ov.querySelectorAll('[data-col]').forEach(function(b){
+      b.addEventListener('click', function(){
+        pick=b.getAttribute('data-col');
+        ov.querySelectorAll('[data-col]').forEach(function(x){ x.className=''; });
+        b.className='on'; }); });
+    function curP(){ return propById(pt, PS.value); }
+    function fillO(){ var p=curP(); if(!p) return;
+      OS.innerHTML=opsOf(p.type).map(function(o){ return '<option>'+esc(o)+'</option>'; }).join(''); fillV(); }
+    function fillV(){
+      var p=curP(), box=document.getElementById('lfCaVBox'), w=document.getElementById('lfCaVW');
+      if(!p) return;
+      if(!opNeedsVal(OS.value)){ w.style.display='none'; box.innerHTML=''; return; }
+      w.style.display='';
+      if(p.type==='sel'||p.type==='multi'){
+        var o=p.opts||p.o||[''];
+        box.innerHTML='<select id="lfCaV">'+o.map(function(x){ return '<option value="'+esc(x)+'">'+esc(x||'—')+'</option>'; }).join('')+'</select>';
+      } else if(p.type==='date'){ box.innerHTML='<input type="date" id="lfCaV">'; }
+      else if(['num','rate','star','formula','rollup','att'].indexOf(p.type)>=0){
+        box.innerHTML='<input type="text" id="lfCaV" data-num="1" placeholder="숫자만">';
+        setTimeout(function(){ bindNum(document.getElementById('lfCaV')); },0);
+      } else { box.innerHTML='<input type="text" id="lfCaV" placeholder="찾을 말">'; }
+    }
+    PS.addEventListener('change', fillO); OS.addEventListener('change', fillV); fillO();
+    document.getElementById('lfCaOk').addEventListener('click', function(){
+      var p=curP(); if(!p) return;
+      var vEl=document.getElementById('lfCaV');
+      var val = vEl ? (vEl.getAttribute('data-num')==='1'? numRaw(vEl.value) : vEl.value) : '';
+      if(opNeedsVal(OS.value) && String(val).trim()===''){ alert('값을 넣어주세요'); return; }
+      var scope = pt || '_all';
+      var a=colorRules(scope); a.push({pid:p.id, op:OS.value, val:val, color:pick});
+      colorRulesSave(scope, a);
+      cl(); if(after) after(); else safeRender();
+    });
+  }
+
+  /* ══════ ↕ 칸 순서 바꾸기 ══════ */
+  function colOrderHTML(pt){
+    var cur2=colsOf(pt);
+    return '<div style="margin-top:14px"><div style="font-size:11.5px;font-weight:900;color:#8ba0b6;margin-bottom:6px">'
+      + '↕ 보이는 칸 순서 <span style="font-weight:600;color:#c8d4e0">끌어서 옮기거나 ▲▼ 로</span></div>'
+      + '<div id="lfColOrd" class="lf-ord">'
+      + cur2.map(function(id,i){
+          var p=propById(pt,id); if(!p) return '';
+          return '<div class="lf-ordi" draggable="true" data-oid="'+esc(id)+'" data-oi="'+i+'">'
+            + '<span class="gg">⋮⋮</span>'+tinfo(p.type).i+' '+esc(p.name)
+            + '<span style="flex:1"></span>'
+            + '<button type="button" data-oup="'+i+'">▲</button>'
+            + '<button type="button" data-odn="'+i+'">▼</button></div>'; }).join('')
+      + '</div></div>';
+  }
+  function bindColOrder(ov, pt){
+    function mv(from,to){
+      var a=colsOf(pt); if(to<0||to>=a.length) return;
+      var it=a.splice(from,1)[0]; a.splice(to,0,it); colsSave(pt,a);
+      ov.remove(); colPicker(pt);
+    }
+    ov.querySelectorAll('[data-oup]').forEach(function(b){
+      b.addEventListener('click', function(){ mv(+b.getAttribute('data-oup'), +b.getAttribute('data-oup')-1); }); });
+    ov.querySelectorAll('[data-odn]').forEach(function(b){
+      b.addEventListener('click', function(){ mv(+b.getAttribute('data-odn'), +b.getAttribute('data-odn')+1); }); });
+    var dragI=-1;
+    ov.querySelectorAll('.lf-ordi').forEach(function(el){
+      el.addEventListener('dragstart', function(){ dragI=+el.getAttribute('data-oi'); el.classList.add('drag'); });
+      el.addEventListener('dragend',   function(){ el.classList.remove('drag'); });
+      el.addEventListener('dragover',  function(e){ e.preventDefault(); el.classList.add('over'); });
+      el.addEventListener('dragleave', function(){ el.classList.remove('over'); });
+      el.addEventListener('drop', function(e){
+        e.preventDefault(); el.classList.remove('over');
+        var to=+el.getAttribute('data-oi');
+        if(dragI>=0 && dragI!==to) mv(dragI, to);
+      });
+    });
+  }
 
   /* ══════ 조건 추가 창 ══════ */
   function ruleAdd(pt){
@@ -19984,7 +20472,16 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   function propAdd(pt, after){
     var TYPES=[['text','글자'],['area','긴 글'],['num','숫자'],['date','날짜'],['time','시간'],
                ['sel','선택'],['check','체크'],['tel','전화번호'],['map','주소'],['star','별점'],['link','링크'],
-               ['rel','관계 — 다른 기록 연결'],['formula','수식 — 자동 계산']];
+               ['multi','다중 선택 — 태그 여러 개'],
+               ['rel','관계 — 다른 기록 연결'],['formula','수식 — 자동 계산'],
+               ['rollup','롤업 — 연결된 것들 합계']];
+    var RU_REL = propsOf(pt).filter(function(x){ return x.type==='rel'; })
+      .map(function(x){ return '<option value="'+esc(x.id)+'">🔗 '+esc(x.name)+'</option>'; }).join('');
+    if(!RU_REL) RU_REL='<option value="">(관계 속성이 없어요)</option>';
+    var RU_TGT = propsOf(pt).filter(function(x){
+        return ['num','rate','formula'].indexOf(x.type)>=0 || x.id==='_amount'; })
+      .map(function(x){ return '<option value="'+esc(x.id)+'">'+tinfo(x.type).i+' '+esc(x.name)+'</option>'; }).join('');
+    if(!RU_TGT) RU_TGT='<option value="_amount">🔢 금액</option>';
     var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9800';
     ov.innerHTML='<div class="lf-mod" style="max-width:520px">'
       + '<div class="lf-mh"><b>＋ 속성 추가</b>'
@@ -20008,6 +20505,18 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +       '· <code>{단가} * {개수}</code><br>'
       +       '· <code>{최종 금액} - {초기 견적비}</code><br>'
       +       '· <code>DAYS({도착일}, {출발일})</code> — 며칠 차이</div></div>'
+      +   '<div class="lf-f" id="lfPRuWrap" style="display:none">'
+      +     '<label>어느 관계 칸을 따라갈까요</label>'
+      +     '<select id="lfPRuRel">' + RU_REL + '</select>'
+      +     '<label style="margin-top:8px">그쪽의 어느 칸을</label>'
+      +     '<select id="lfPRuTgt">' + RU_TGT + '</select>'
+      +     '<label style="margin-top:8px">어떻게</label>'
+      +     '<select id="lfPRuAgg"><option value="sum">합계</option><option value="count">개수</option>'
+      +       '<option value="avg">평균</option><option value="max">가장 큰 값</option><option value="min">가장 작은 값</option></select>'
+      +     '<label style="margin-top:8px">방향</label>'
+      +     '<select id="lfPRuDir"><option value="fwd">내가 연결한 것들</option>'
+      +       '<option value="rev">나를 연결한 것들</option></select>'
+      +   '</div>'
       +   '<div class="lf-f" id="lfPUnitWrap" style="display:none"><label>단위 (선택)</label>'
       +     '<input type="text" id="lfPUnit" placeholder="원 / 일 / 개"></div>'
       +   '<div class="lf-f"><label>어디에 붙일까요</label><select id="lfPScope">'
@@ -20029,10 +20538,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
     var ts=document.getElementById('lfPType');
     function syncType(){
-      document.getElementById('lfPOptWrap').style.display  = (ts.value==='sel')     ? '' : 'none';
+      document.getElementById('lfPOptWrap').style.display  = (ts.value==='sel'||ts.value==='multi') ? '' : 'none';
+      document.getElementById('lfPRuWrap').style.display   = (ts.value==='rollup')  ? '' : 'none';
       document.getElementById('lfPRelWrap').style.display  = (ts.value==='rel')     ? '' : 'none';
       document.getElementById('lfPFxWrap').style.display   = (ts.value==='formula') ? '' : 'none';
-      document.getElementById('lfPUnitWrap').style.display = (ts.value==='formula'||ts.value==='num') ? '' : 'none';
+      document.getElementById('lfPUnitWrap').style.display =
+        (ts.value==='formula'||ts.value==='num'||ts.value==='rollup') ? '' : 'none';
     }
     ts.addEventListener('change', syncType); syncType();
     document.getElementById('lfAOk').addEventListener('click', function(){
@@ -20041,6 +20552,21 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var ty=ts.value, sc=document.getElementById('lfPScope').value;
       var p={ id:'c'+Date.now()+Math.floor(Math.random()*1000), name:nm, type:ty,
               order:Date.now(), archived:false };
+      if(ty==='multi'){
+        p.o=(document.getElementById('lfPOpts').value||'').split(',')
+          .map(function(x){ return x.trim(); }).filter(Boolean);
+        if(!p.o.length){ alert('고를 값을 쉼표로 넣어주세요\n예) 현장용, 소모품, 급함'); return; }
+        p.colors={}; var CK=['blue','green','orange','purple','pink','yellow','red','gray'];
+        p.o.forEach(function(x,i){ p.colors[x]=CK[i%CK.length]; });
+      }
+      if(ty==='rollup'){
+        var rr=document.getElementById('lfPRuRel');
+        if(!rr || !rr.value){ alert('먼저 🔗 관계 속성을 하나 만들어 주세요'); return; }
+        p.relPid = rr.value;
+        p.tgtPid = document.getElementById('lfPRuTgt').value;
+        p.agg    = document.getElementById('lfPRuAgg').value;
+        p.dir    = document.getElementById('lfPRuDir').value;
+      }
       if(ty==='sel'){
         p.o=(document.getElementById('lfPOpts').value||'').split(',')
           .map(function(x){ return x.trim(); }).filter(Boolean);
@@ -20137,6 +20663,15 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         return '<option value="'+n+'"'+(num(v)===n?' selected':'')+'>'+(n?stars(n):'—')+'</option>'; }).join('')+'</select>';
     if(t==='num'||t==='rate')
       return '<input type="text" class="lf-ie" data-num="1" value="'+esc(numFmt(v))+'">';
+    if(t==='multi'){
+      var opt=p.opts||p.o||[], sel=Array.isArray(v)?v:(v?String(v).split(','):[]);
+      return '<div class="lf-multi" tabindex="0">' + opt.map(function(x){
+        var on=sel.indexOf(x)>=0, c=colorOf((p.colors||{})[x]||'gray');
+        return '<span class="lf-mt'+(on?' on':'')+'" data-mv="'+esc(x)+'"'
+          + (on?' style="background:'+c.bg+';color:'+c.fg+';border-color:'+c.fg+'44"':'')+'>'+esc(x)+'</span>'; }).join('')
+        + '<input type="hidden" class="lf-ie" value="'+esc(sel.join(','))+'"></div>';
+    }
+    if(t==='rollup') return '<span style="color:#8ba0b6;font-size:12px">연결된 것들로 자동 계산돼요</span>';
     if(t==='rel'){
       var ids=relArr(v), tg=relTargets(p);
       return '<select class="lf-ie"><option value="">—</option>'
@@ -20144,13 +20679,23 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
             +'>'+esc(o.label)+'</option>'; }).join('') + '</select>';
     }
     if(t==='formula') return '<span style="color:#8ba0b6;font-size:12px">수식 칸은 자동 계산돼요</span>';
-    var ty = (t==='date'?'date':(t==='time'?'time':(t==='tel'?'tel':'text')));
+    if(t==='time') return '<input type="text" class="lf-ie" readonly value="'+esc(v==null?'':v)
+      + '" data-tdial="lfIeTime" id="lfIeTime" style="cursor:pointer">';
+    var ty = (t==='date'?'date':(t==='tel'?'tel':'text'));
     return '<input type="'+ty+'" class="lf-ie" value="'+esc(v==null?'':v)+'"'+(t==='time'?' step="300"':'')+'>';
   }
   function editCommit(pt, id, pid, el){
     var p=propById(pt,pid); if(!p) return;
     var v;
-    if(p.type==='formula') return;                       /* 자동 계산 — 못 고침 */
+    if(p.type==='formula'||p.type==='rollup') return;    /* 자동 계산 — 못 고침 */
+    if(p.type==='multi'){
+      var raw=String(el.value||'');
+      var arr=raw? raw.split(',').filter(Boolean) : [];
+      var rec0 = ent().filter(function(x){ return x.id===id; })[0];
+      if(rec0) pUpd(id, ppatch(rec0, pid, arr));
+      if(typeof toast==='function') toast('고쳤어요');
+      return;
+    }
     if(p.type==='check') v = el.checked;
     else if(p.type==='num'||p.type==='rate'||p.type==='star') v = (numRaw(el.value)===''?'':num(numRaw(el.value)));
     else if(p.type==='rel') v = el.value ? [el.value] : [];
@@ -20294,6 +20839,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       + '<span class="lb">최소</span>'
       + '<input type="number" id="lfFmin" value="'+esc(flt.min||'')+'" placeholder="0" style="width:96px" title="이 금액 이상만">'
       + '<button type="button" class="lf-fx" id="lfRuleAdd" style="border-style:dashed;color:#7c3aed">＋ 조건 추가</button>'
+      + (vw==='table' ? grpOptions(pt0) : '')
+      + '<button type="button" class="lf-fx" id="lfColorBtn" style="border-style:dashed">🎨 색상 규칙</button>'
       + (fltOn()? '<button type="button" class="lf-fx" id="lfFclr">✕ 필터 해제</button>':'')
       + '<span class="lf-cnt">'+won(n)+'건'+(n!==tot? ' / 전체 '+won(tot)+'건':'')+'</span>'
       + '</div>';
@@ -20305,6 +20852,160 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       + ' data-srt="'+k+'">'+label+(on? '<span class="ar">'+(srt.d>0?'▲':'▼')+'</span>':'')+'</th>';
   }
 
+
+  /* ══════════════════════════════════════════════════════════
+     📊 그룹 묶기 — 아무 칸으로나 묶고 소계
+     ══════════════════════════════════════════════════════════ */
+  var LS_GRP='wl_life_grp';
+  var grp = lsGet(LS_GRP,'') || '';
+  function grpSet(v){ grp=v; lsSet(LS_GRP,v); safeRender(); }
+  function grpKey(e, pt){
+    if(!grp) return String(e.date||'').slice(0,7);
+    if(grp==='_month') return String(e.date||'').slice(0,7);
+    var p=propById(pt, grp); if(!p) return '';
+    var v = p.type==='formula' ? formulaCalc(e,p.expr,e.ptype)
+          : p.type==='rollup'  ? rollupCalc(e,p,e.ptype) : pget(e,grp);
+    if(Array.isArray(v)) return v.length? String(v[0]) : '';
+    if(p.type==='check') return v? '☑ 체크됨' : '☐ 안 됨';
+    if(p.id==='_cat') return (e.ptype==='car') ? '🚗 차계부' : ((CAT[e.ptype]||CAT.etc).i+' '+(CAT[e.ptype]||CAT.etc).n);
+    return String(v==null?'':v);
+  }
+  function grpLabel(k){
+    if((!grp||grp==='_month')) return k? k.replace('-','년 ')+'월' : '날짜 없음';
+    return k===''? '(비어있음)' : k;
+  }
+  function grpOptions(pt){
+    var ok=['date','sel','check','tag','text','tel','num','multi','rel'];
+    var a=propsOf(pt).filter(function(p){ return ok.indexOf(p.type)>=0 && p.id!=='_title'; });
+    return '<select id="lfGrp" class="lf-in" style="height:32px;font-size:12.5px" title="묶어서 보기">'
+      + '<option value="">📅 월별로 묶기</option>'
+      + a.map(function(p){ return '<option value="'+esc(p.id)+'"'+(grp===p.id?' selected':'')
+          +'>'+tinfo(p.type).i+' '+esc(p.name)+' 로 묶기</option>'; }).join('')
+      + '</select>';
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     🗂 보드(칸반) 보기
+     ══════════════════════════════════════════════════════════ */
+  var LS_BRD='wl_life_board';
+  var brdPid = lsGet(LS_BRD,'') || '';
+  function brdCandidates(pt){
+    return propsOf(pt).filter(function(p){
+      return p.type==='sel' || p.type==='check' || p.id==='_cat'; });
+  }
+  function brdCols(pt, arr){
+    if(brdPid==='_cat' || !brdPid){
+      var seen={}, out=[];
+      arr.forEach(function(e){ var k=(e.ptype==='car')?'car':(e.ptype||'etc'); if(!seen[k]){ seen[k]=1; out.push(k); } });
+      return out.map(function(k){
+        var d = k==='car'? {i:'🚗',n:'차계부',c:'#0891b2'} : (CAT[k]||CAT.etc);
+        return {v:k, label:d.i+' '+d.n, color:d.c}; });
+    }
+    var p=propById(pt, brdPid);
+    var opts = p ? (p.opts||p.o||[]) : [];
+    if(p && p.type==='check') opts=['☑ 체크됨','☐ 안 됨'];
+    if(!opts.length){
+      var s2={}, o2=[];
+      arr.forEach(function(e){ var v=String(pget(e,brdPid)||''); if(!s2[v]){ s2[v]=1; o2.push(v); } });
+      opts=o2;
+    }
+    return opts.map(function(o){ return {v:o, label:(o||'(비어있음)'), color:'#94a3b8'}; });
+  }
+  function brdValOf(e, pt){
+    if(brdPid==='_cat' || !brdPid) return (e.ptype==='car')?'car':(e.ptype||'etc');
+    var p=propById(pt, brdPid);
+    if(p && p.type==='check') return pget(e,brdPid)? '☑ 체크됨':'☐ 안 됨';
+    return String(pget(e,brdPid)||'');
+  }
+  function boardHTML(arr, pt){
+    var cands=brdCandidates(pt);
+    if(!brdPid) brdPid = (cands.filter(function(c){return c.type==='sel';})[0]||{}).id || '_cat';
+    var tot=arr.length;
+    arr = applySrt(applyFlt(arr));
+    var bar = fltBar(arr.length, tot);
+    var cols = brdCols(pt, arr);
+    var h = bar
+      + '<div class="lf-bar" style="margin-bottom:10px">'
+      +   '<span class="lb" style="font-size:11.5px;font-weight:800;color:#8ba0b6">세로줄 기준</span>'
+      +   '<select id="lfBrd" class="lf-in" style="height:32px;font-size:12.5px">'
+      +     cands.map(function(c){ return '<option value="'+esc(c.id)+'"'+(brdPid===c.id?' selected':'')
+            +'>'+tinfo(c.type).i+' '+esc(c.name)+'</option>'; }).join('')
+      +   '</select>'
+      +   '<span style="font-size:12px;color:#a8b8c8">카드를 끌어서 옮기면 값이 바뀝니다</span>'
+      + '</div>'
+      + '<div class="lf-board">';
+    cols.forEach(function(c){
+      var mine = arr.filter(function(e){ return brdValOf(e,pt)===c.v; });
+      var sum=0; mine.forEach(function(e){ sum+=money(e); });
+      h+='<div class="lf-bcol" data-bcol="'+esc(c.v)+'">'
+        + '<div class="lf-bhead"><span class="dot" style="background:'+c.color+'"></span>'
+        +   '<b>'+esc(c.label)+'</b><span class="n">'+mine.length+'</span>'
+        +   (sum? '<span class="s">'+numFmt(sum)+'원</span>':'') + '</div>'
+        + '<div class="lf-blist">'
+        + mine.map(function(e){
+            var ch=colorHit(e,pt);
+            return '<div class="lf-bcard" draggable="true" data-bid="'+esc(e.id)+'"'
+              + (ch? ' style="background:'+colorOf(ch.color).bg+'"':'') + '>'
+              + '<div class="t">'+esc(e.title||e.who||'(제목없음)')+'</div>'
+              + '<div class="m">'+esc(e.date||'')+(subOf(e)? ' · '+esc(subOf(e).slice(0,26)):'')+'</div>'
+              + (money(e)? '<div class="a">'+numFmt(money(e))+'원</div>':'')
+              + '</div>'; }).join('')
+        + (mine.length? '' : '<div class="lf-bempty">비어 있음</div>')
+        + '</div></div>';
+    });
+    return h+'</div>';
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     📅 달력 보기
+     ══════════════════════════════════════════════════════════ */
+  var LS_CALM='wl_life_calm';
+  var calYM = lsGet(LS_CALM,'') || today().slice(0,7);
+  function calShift(n){
+    var y=+calYM.slice(0,4), m=+calYM.slice(5,7)+n;
+    while(m<1){ m+=12; y--; } while(m>12){ m-=12; y++; }
+    calYM = y+'-'+String(m).padStart(2,'0'); lsSet(LS_CALM, calYM); safeRender();
+  }
+  function calHTML(arr, pt){
+    var tot=arr.length;
+    arr = applyFlt(arr);
+    var bar = fltBar(arr.length, tot);
+    var y=+calYM.slice(0,4), m=+calYM.slice(5,7);
+    var first=new Date(y, m-1, 1), start=first.getDay();
+    var days=new Date(y, m, 0).getDate();
+    var byDay={};
+    arr.forEach(function(e){ var d=String(e.date||''); if(d.slice(0,7)===calYM){ var k=+d.slice(8,10); (byDay[k]=byDay[k]||[]).push(e); } });
+    var mSum=0; arr.forEach(function(e){ if(String(e.date||'').slice(0,7)===calYM) mSum+=money(e); });
+
+    var h = bar
+      + '<div class="lf-calhead">'
+      +   '<button type="button" id="lfCalPrev">‹</button>'
+      +   '<b>'+y+'년 '+m+'월</b>'
+      +   '<button type="button" id="lfCalNext">›</button>'
+      +   '<button type="button" id="lfCalNow" class="lf-fx" style="margin-left:8px">이번 달</button>'
+      +   (mSum? '<span style="margin-left:auto;font-size:13px;font-weight:900;color:#0f7a4a">'+numFmt(mSum)+'원</span>':'')
+      + '</div>'
+      + '<div class="lf-cal">';
+    ['일','월','화','수','목','금','토'].forEach(function(d,i){
+      h+='<div class="lf-cdow"'+(i===0?' style="color:#dc2626"':(i===6?' style="color:#2563a8"':''))+'>'+d+'</div>'; });
+    for(var i=0;i<start;i++) h+='<div class="lf-cday off"></div>';
+    for(var d=1;d<=days;d++){
+      var list=byDay[d]||[];
+      var isT = (calYM+'-'+String(d).padStart(2,'0'))===today();
+      h+='<div class="lf-cday'+(isT?' today':'')+'" data-cday="'+d+'">'
+        + '<div class="dn">'+d+'</div>'
+        + list.slice(0,4).map(function(e){
+            var dd = e.ptype==='car' ? {c:carColor(e.car)} : (CAT[e.ptype]||CAT.etc);
+            var ch=colorHit(e,pt);
+            return '<div class="ev" data-cid="'+esc(e.id)+'" style="border-left-color:'+dd.c
+              + (ch? ';background:'+colorOf(ch.color).bg:'') + '" title="'+esc(e.title||'')+'">'
+              + esc((e.title||e.who||'').slice(0,14)) + '</div>'; }).join('')
+        + (list.length>4? '<div class="more">+'+(list.length-4)+'건</div>':'')
+        + '</div>';
+    }
+    return h+'</div>';
+  }
+
   function tableHTML(arr, emptyIcon, emptyMsg){
     var pt = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
     var tot=arr.length;
@@ -20313,22 +21014,15 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(!arr.length) return bar + '<div class="lf-grid"><div class="lf-empty"><div class="ei">'+emptyIcon+'</div>'
       + (fltOn()? '필터에 걸리는 기록이 없어요<div style="font-size:12px;margin-top:6px">✕ 필터 해제를 눌러보세요</div>' : emptyMsg)+'</div></div>';
 
+    /* 칸 순서는 [⚙ → 칸 순서] 에서 정한 그대로 쓴다 */
     var sel = colsOf(pt);
     var cols = sel.map(function(id){ return propById(pt,id); }).filter(Boolean);
-    /* 공통 칸(날짜·분류·내용·금액·메모·첨부)은 늘 정해진 순서로 앞에 */
-    var bo={}; BASE.forEach(function(p,i){ bo[p.id]=i; });
-    cols.sort(function(a,b2){
-      var ab=(bo[a.id]!=null), bb=(bo[b2.id]!=null);
-      if(ab&&bb) return bo[a.id]-bo[b2.id];
-      if(ab) return -1; if(bb) return 1;
-      return sel.indexOf(a.id)-sel.indexOf(b2.id);
-    });
     if(!cols.length) cols = BASE.filter(function(p){ return DEF_COLS.indexOf(p.id)>=0; });
     var iAmt = -1; cols.forEach(function(p,i){ if(p.id==='_amount') iAmt=i; });
     var nCol = cols.length + 1;
 
     var sumAll=0; arr.forEach(function(e){ sumAll+=money(e); });
-    var grouped = (srt.k==='date');
+    var grouped = (srt.k==='date') || !!grp;
 
     var h=bar+'<div class="lf-tvwrap"><table class="lf-tv"><thead><tr>';
     cols.forEach(function(p){
@@ -20342,21 +21036,30 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     h+='<th style="width:66px;text-align:center"><button type="button" id="lfColBtn" class="lf-fx" style="height:26px;padding:0 8px" title="보일 칸 고르기">⚙</button></th>';
     h+='</tr></thead><tbody>';
 
-    var last='';
+    var last=null, first=true;
+    /* 그룹 칸이 지정됐으면 그 값으로 다시 정렬해 묶는다 */
+    if(grp && grp!=='_month'){
+      arr = arr.slice().sort(function(x,y){
+        var a1=grpKey(x,pt), b1=grpKey(y,pt);
+        if(a1===b1) return 0; return a1<b1?-1:1; });
+      grouped = true;
+    }
     arr.forEach(function(e){
       if(grouped){
-        var m=String(e.date||'').slice(0,7);
-        if(m!==last){ last=m;
+        var m=grpKey(e, pt);
+        if(m!==last || first){ last=m; first=false;
           var gs=0, gn=0;
-          arr.forEach(function(x){ if(String(x.date||'').slice(0,7)===m){ gs+=money(x); gn++; } });
+          arr.forEach(function(x){ if(grpKey(x,pt)===m){ gs+=money(x); gn++; } });
           var lft = Math.max(1, (iAmt>=0? iAmt : nCol-1));
           h+='<tr class="lf-grp"><td colspan="'+lft+'" style="padding:5px 11px">'
-            + (m? m.replace('-','년 ')+'월':'날짜 없음')
+            + esc(grpLabel(m))
             + ' <span style="font-weight:700;color:#7a92a8">'+gn+'건</span></td>'
             + '<td colspan="'+(nCol-lft)+'" style="padding:5px 11px;text-align:right;color:'+(gs?'#0f7a4a':'#a8b8c8')+'">'
-            + (gs? won(gs)+'원':'') + '</td></tr>'; }
+            + (gs? numFmt(gs)+'원':'') + '</td></tr>'; }
       }
-      h+='<tr data-rid="'+esc(e.id)+'"'+(e.done?' style="opacity:.55"':'')+'>';
+      var ch = colorHit(e, pt);
+      var rowSty = (e.done?'opacity:.55;':'') + (ch? ('background:'+colorOf(ch.color).bg+'99;'):'');
+      h+='<tr data-rid="'+esc(e.id)+'"'+(rowSty?' style="'+rowSty+'"':'')+'>';
       cols.forEach(function(p){
         var ti=tinfo(p.type);
         var ro = ti.ro || (p.id==='_amount' && amountLocked(e));
@@ -20375,7 +21078,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(sumAll){
       var lft2 = Math.max(1, (iAmt>=0? iAmt : nCol-1));
       h+='<tr class="lf-sum2"><td colspan="'+lft2+'">합계 · '+won(arr.length)+'건</td>'
-       + '<td class="r" style="color:#0f7a4a">'+won(sumAll)+'원</td>'
+       + '<td class="r" style="color:#0f7a4a">'+numFmt(sumAll)+'원</td>'
        + (nCol-lft2-1>0? '<td colspan="'+(nCol-lft2-1)+'"></td>':'') + '</tr>';
     }
     return h+'</tbody></table></div>';
@@ -20383,7 +21086,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
   /* 날짜 그룹 붙여서 그리기 */
   function gridHTML(arr, emptyIcon, emptyMsg){
+    var ptG = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
     if(vw==='table') return tableHTML(arr, emptyIcon, emptyMsg);
+    if(vw==='board') return boardHTML(arr, ptG);
+    if(vw==='cal')   return calHTML(arr, ptG);
     if(!arr.length) return '<div class="lf-grid"><div class="lf-empty"><div class="ei">'+emptyIcon+'</div>'+emptyMsg+'</div></div>';
     var h='<div class="lf-grid">', last='';
     arr.forEach(function(e){
@@ -20708,6 +21414,24 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         + '<div id="lfrow-'+f.k+'"></div>'
         + '<button type="button" class="lf-radd" data-lradd="'+f.k+'">＋ 추가</button>'
         + (f.sum? '<div class="lf-rtot" id="lftot-'+f.k+'"></div>':'') + '</div>';
+    }
+    else if(f.t==='multi'){
+      var mo=f.o||[], msel=Array.isArray(val)?val:(val?String(val).split(','):[]);
+      inner = '<div class="lf-multi lf-multi-f" id="'+id+'-box" data-for="'+id+'">'
+        + mo.map(function(x){
+            var on=msel.indexOf(x)>=0, c=colorOf((f.colors||{})[x]||'gray');
+            return '<span class="lf-mt'+(on?' on':'')+'" data-mv="'+esc(x)+'"'
+              + (on?' style="background:'+c.bg+';color:'+c.fg+'"':'')+'>'+esc(x)+'</span>'; }).join('')
+        + '</div><input type="hidden" id="'+id+'" value="'+esc(msel.join(','))+'">';
+    }
+    else if(f.t==='rollup'){
+      inner = '<input type="text" id="'+id+'" readonly value="" data-ru="1"'
+        + ' style="background:#ecfeff;color:#0891b2;font-weight:800">';
+    }
+    else if(f.t==='time'){
+      inner = '<div class="lf-with"><input type="text" id="'+id+'" readonly value="'+esc(val)+'"'
+        + ' placeholder="시간 선택" data-tdial="'+id+'" style="cursor:pointer;background:#f9fcff">'
+        + '<button type="button" class="lf-ib" style="background:#6366f1" data-tdial="'+id+'" title="시계로 맞추기">🕐</button></div>';
     }
     else if(f.t==='rel'){
       var rp={target:f.target||f.tg||'pcontact'};
@@ -21272,6 +21996,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       return customOf('_all').concat(customOf(pt)).filter(function(p){ return !p.archived; })
         .map(function(p){ return { k:'P__'+p.id, l:p.name, t:(p.type==='num'?'number':p.type),
                                    o:p.o||p.opts, target:p.target, expr:p.expr, unit:p.unit,
+                                   colors:p.colors, relPid:p.relPid, tgtPid:p.tgtPid, agg:p.agg, dir:p.dir,
                                    w:((p.type==='area'||p.type==='formula')?'full':''), my:1, pid:p.id }; });
     }
     function build(){
@@ -21289,6 +22014,21 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       });
       FIELDS.forEach(function(f){ if(f.t==='rows'){ ROWS[f.k]=esr(v[f.k]); rowsRender(f); } });
       bindNumsIn(document.getElementById('lfFields'));
+      bindDial(document.getElementById('lfFields'));
+      document.getElementById('lfFields').querySelectorAll('.lf-multi-f').forEach(function(mb){
+        var hid=document.getElementById(mb.getAttribute('data-for'));
+        mb.querySelectorAll('[data-mv]').forEach(function(t){
+          t.addEventListener('click', function(){
+            var arr=(hid.value||'').split(',').filter(Boolean);
+            var v3=t.getAttribute('data-mv'), i3=arr.indexOf(v3);
+            if(i3>=0){ arr.splice(i3,1); t.classList.remove('on'); t.removeAttribute('style'); }
+            else { arr.push(v3); t.classList.add('on'); }
+            hid.value=arr.join(',');
+            if(i3<0){ var cc=colorOf(((FIELDS.filter(function(f){return f.k===mb.getAttribute('data-for').slice(3);})[0]||{}).colors||{})[v3]||'gray');
+              t.style.background=cc.bg; t.style.color=cc.fg; }
+          });
+        });
+      });
       autoCalc(); drawPhotos(); scanBox(); fxCalc();
       var st=document.getElementById('lf-star');
       if(st) st.querySelectorAll('[data-st]').forEach(function(sp){
@@ -21310,7 +22050,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         if(f.t==='rows'){ rowsCollect(f); o[f.k]=rowsClean(ROWS[f.k]); return; }
         if(f.t==='calc') return;
         var el=document.getElementById('lf-'+f.k); if(!el) return;
-        if(f.t==='formula') return;                               /* 자동 계산 — 저장 안 함 */
+        if(f.t==='formula'||f.t==='rollup') return;               /* 자동 계산 — 저장 안 함 */
+        if(f.t==='multi'){
+          var mv2=(el.value||'').split(',').filter(Boolean);
+          if(f.my){ pr[f.pid]=mv2; o[f.k]=mv2; } else o[f.k]=mv2;
+          return;
+        }
         var val = (f.t==='num'||f.t==='number'||f.t==='rate')
                     ? (numRaw(el.value)===''?'':num(numRaw(el.value)))
                 : (f.t==='check' ? !!el.checked
@@ -21489,7 +22234,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   }
 
   /* ── 카테고리 선택 시트 ── */
-  function openCatSheet(){
+  function openCatSheet(preDate){
     var ov=document.createElement('div'); ov.className='lf-ov';
     ov.innerHTML='<div class="lf-mod" style="max-width:640px">'
       + '<div class="lf-mh"><b>무엇을 기록할까요?</b>'
@@ -21503,7 +22248,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     document.getElementById('lfX').addEventListener('click', close);
     ov.addEventListener('mousedown', function(e){ if(e.target===ov) close(); });
     ov.querySelectorAll('[data-lcat]').forEach(function(b){
-      b.addEventListener('click', function(){ var k=b.getAttribute('data-lcat'); close(); openRec(k); }); });
+      b.addEventListener('click', function(){ var k=b.getAttribute('data-lcat'); close();
+        openRec(k, null, preDate? {date:preDate} : null); }); });
   }
 
 
@@ -22282,6 +23028,56 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       b.addEventListener('click', function(){
         flt.rules.splice(parseInt(b.getAttribute('data-rdrop'),10),1);
         lsSet(LS_FLT,flt); safeRender(); }); });
+    var gs2=document.getElementById('lfGrp');
+    if(gs2) gs2.addEventListener('change', function(){ grpSet(gs2.value); });
+    var cbn=document.getElementById('lfColorBtn');
+    if(cbn) cbn.addEventListener('click', function(){ colorMgr(ptF); });
+    /* 보드 */
+    var bsel=document.getElementById('lfBrd');
+    if(bsel) bsel.addEventListener('change', function(){ brdPid=bsel.value; lsSet(LS_BRD,brdPid); safeRender(); });
+    var dragId=null;
+    host.querySelectorAll('.lf-bcard').forEach(function(c){
+      c.addEventListener('dragstart', function(){ dragId=c.getAttribute('data-bid'); c.classList.add('drag'); });
+      c.addEventListener('dragend',   function(){ c.classList.remove('drag'); });
+      c.addEventListener('click', function(){
+        var r=ent().filter(function(x){ return x.id===c.getAttribute('data-bid'); })[0];
+        if(r) openRec(r.ptype||'etc', r.id); });
+    });
+    host.querySelectorAll('.lf-bcol').forEach(function(col){
+      col.addEventListener('dragover', function(e){ e.preventDefault(); col.classList.add('over'); });
+      col.addEventListener('dragleave', function(){ col.classList.remove('over'); });
+      col.addEventListener('drop', function(e){
+        e.preventDefault(); col.classList.remove('over');
+        if(!dragId) return;
+        var val=col.getAttribute('data-bcol');
+        var rec=ent().filter(function(x){ return x.id===dragId; })[0];
+        if(!rec){ dragId=null; return; }
+        if(!brdPid || brdPid==='_cat'){
+          if(typeof toast==='function') toast('분류는 창을 열어 바꿔주세요'); dragId=null; return; }
+        var pp=propById(ptF, brdPid);
+        var nv = (pp && pp.type==='check') ? (val.indexOf('☑')>=0) : val;
+        pUpd(dragId, ppatch(rec, brdPid, nv));
+        dragId=null;
+        if(typeof toast==='function') toast('옮겼어요');
+        safeRender();
+      });
+    });
+    /* 달력 */
+    var cp=document.getElementById('lfCalPrev'); if(cp) cp.addEventListener('click', function(){ calShift(-1); });
+    var cn=document.getElementById('lfCalNext'); if(cn) cn.addEventListener('click', function(){ calShift(1); });
+    var cw=document.getElementById('lfCalNow');
+    if(cw) cw.addEventListener('click', function(){ calYM=today().slice(0,7); lsSet(LS_CALM,calYM); safeRender(); });
+    host.querySelectorAll('[data-cid]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var r=ent().filter(function(x){ return x.id===b.getAttribute('data-cid'); })[0];
+        if(r) openRec(r.ptype||'etc', r.id); }); });
+    host.querySelectorAll('[data-cday]').forEach(function(d){
+      d.addEventListener('click', function(ev){
+        if(ev.target.closest('[data-cid]')) return;
+        var dd=calYM+'-'+String(d.getAttribute('data-cday')).padStart(2,'0');
+        if(curCat!=='전체' && CAT[curCat]) openRec(curCat, null, {date:dd});
+        else openCatSheet(dd); }); });
     var rc=host.querySelector('[data-rclr]');
     if(rc) rc.addEventListener('click', function(){ flt.rules=[]; lsSet(LS_FLT,flt); safeRender(); });
     /* 저장된 보기 */
@@ -22384,9 +23180,44 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var ie=host.querySelector('.lf-ie');
     if(ie && EDIT){
       var eid=EDIT.id, epid=EDIT.pid;
-      if(ie.getAttribute && ie.getAttribute('data-num')==='1') bindNum(ie);
-      try{ ie.focus(); if(ie.select) ie.select(); }catch(e){}
       var done=false;
+      if(ie.getAttribute && ie.getAttribute('data-num')==='1') bindNum(ie);
+      var mw = host.querySelector('.lf-multi');
+      if(mw){
+        mw.querySelectorAll('[data-mv]').forEach(function(t){
+          t.addEventListener('mousedown', function(e){ e.preventDefault(); });
+          t.addEventListener('click', function(e){
+            e.stopPropagation();
+            var hid=mw.querySelector('.lf-ie');
+            var arr=(hid.value||'').split(',').filter(Boolean);
+            var v2=t.getAttribute('data-mv'), i2=arr.indexOf(v2);
+            if(i2>=0) arr.splice(i2,1); else arr.push(v2);
+            hid.value=arr.join(',');
+            t.classList.toggle('on', i2<0);
+            if(i2<0){ var pp=propById(ptNow, epid);
+              var cc=colorOf(((pp&&pp.colors)||{})[v2]||'gray');
+              t.style.background=cc.bg; t.style.color=cc.fg; }
+            else t.removeAttribute('style');
+            /* 누를 때마다 바로 저장 — 숨은 칸이라 blur 가 안 온다 */
+            try{ editCommit(ptNow, eid, epid, hid); }catch(x){}
+          });
+        });
+        /* 바깥을 누르면 편집 끝 */
+        setTimeout(function(){
+          var off=function(ev){
+            if(mw.contains(ev.target)) return;
+            document.removeEventListener('mousedown', off, true);
+            EDIT=null; setTimeout(render,0);
+          };
+          document.addEventListener('mousedown', off, true);
+        }, 50);
+        done=true;                       /* blur 로 다시 저장하지 않게 */
+      }
+      if(ie.getAttribute && ie.getAttribute('data-tdial')){
+        bindDial(ie.parentNode||host);
+        setTimeout(function(){ try{ ie.click(); }catch(x){} }, 60);
+      }
+      try{ if(ie.type!=='hidden'){ ie.focus(); if(ie.select) ie.select(); } }catch(e){}
       var fin=function(save){
         if(done) return; done=true;
         if(save) try{ editCommit(ptNow, eid, epid, ie); }catch(e){ alert('저장 실패: '+e); }
