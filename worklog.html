@@ -18,7 +18,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v62-0827-0949</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v64-0827-1107</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1395,7 +1395,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v62-0827-0949</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v64-0827-1107</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3080,7 +3080,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v62-20260827-0949"></script>
+<script src="worklog.js?v=v64-20260827-1107"></script>
 <script>
 /* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
    (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
@@ -19201,24 +19201,33 @@ select.lf-in{ padding-right:8px }
 .pg-top button.del{ color:#b52929; border-color:#f0d5d5 }
 .pg-nav{ display:flex; align-items:center; gap:5px; font-size:12.5px; color:#8ba0b6; font-weight:700 }
 .pg-nav button{ width:32px; padding:0 }
-.pg-body{ max-width:820px; margin:0 auto; padding:26px 20px 90px }
+/* 속성이 많을 때 3열까지 들어가도록 넓힌다 —
+   속성 칸만 넓게 쓰고, 글을 읽는 부분(제목·본문 등)은 원래 폭 그대로 */
+.pg-body{ max-width:1180px; margin:0 auto; padding:26px 20px 90px }
+.pg-body > *{ max-width:860px }
+.pg-body > .pg-props{ max-width:none }
+.pg-title{ display:block }
 .pg-badge{ display:inline-block; padding:3px 11px; border-radius:9px; font-size:12.5px;
   font-weight:800; margin-bottom:10px }
 .pg-title{ width:100%; border:none; outline:none; resize:none; overflow:hidden;
   font-family:inherit; font-size:33px; font-weight:900; color:#1a2f45; line-height:1.28;
   padding:0; background:transparent }
 .pg-title::placeholder{ color:#d5dee8 }
-.pg-props{ margin-top:18px; display:flex; flex-direction:column; gap:2px }
-.pg-prow{ display:flex; gap:10px; align-items:flex-start; padding:4px 0 }
-.pg-pk{ flex:0 0 148px; font-size:13px; font-weight:700; color:#8ba0b6; padding:7px 8px;
+/* 속성이 많아도 스크롤이 길어지지 않게 — 폭에 따라 2~3열 */
+.pg-props{ margin-top:18px; display:grid; gap:2px 22px;
+  grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)) }
+.pg-prow{ display:flex; gap:10px; align-items:flex-start; padding:4px 0; min-width:0 }
+.pg-prow.wide{ grid-column:1 / -1 }
+.pg-pk{ flex:0 0 128px; font-size:13px; font-weight:700; color:#8ba0b6; padding:7px 8px;
   border-radius:7px; overflow:hidden; text-overflow:ellipsis }
+.pg-prow.wide .pg-pk{ flex:0 0 128px }
 .pg-pv{ flex:1; min-width:0 }
 .pg-val{ min-height:34px; padding:7px 10px; border-radius:7px; cursor:text; font-size:14px;
   color:#1a2f45; border:1.5px solid transparent }
 .pg-val:hover{ background:#f4f8fd; border-color:#e8f0fa }
 .pg-val:empty:before{ content:'비어 있음'; color:#c8d4e0 }
 .pg-ro{ display:inline-block; padding:7px 10px; font-size:14px; color:#5b7794 }
-.pg-addp{ margin-top:8px; align-self:flex-start; height:34px; padding:0 13px; border:1.5px dashed #dbe6f4;
+.pg-addp{ grid-column:1 / -1; justify-self:start; margin-top:8px; align-self:flex-start; height:34px; padding:0 13px; border:1.5px dashed #dbe6f4;
   border-radius:9px; background:#fff; color:#8ba0b6; font-size:12.5px; font-weight:800;
   cursor:pointer; font-family:inherit }
 .pg-addp:hover{ border-color:#2563a8; color:#2563a8 }
@@ -19245,6 +19254,7 @@ select.lf-in{ padding-right:8px }
 @media (max-width:640px){
   .pg-body{ padding:18px 14px 80px }
   .pg-title{ font-size:26px }
+  .pg-props{ grid-template-columns:1fr }
   .pg-prow{ flex-direction:column; gap:0 }
   .pg-pk{ flex:none; padding:4px 2px; font-size:12px }
   .pg-top{ padding:9px 12px; gap:6px; flex-wrap:wrap }
@@ -19277,7 +19287,7 @@ select.lf-in{ padding-right:8px }
 .pg-note{ font-size:11.5px; color:#a8b8c8; margin-top:6px; min-height:16px }
 
 /* ── 속성 접기 ── */
-.pg-more{ align-self:flex-start; margin-top:4px; height:30px; padding:0 11px; border:none;
+.pg-more{ grid-column:1 / -1; justify-self:start; align-self:flex-start; margin-top:4px; height:30px; padding:0 11px; border:none;
   border-radius:8px; background:transparent; color:#8ba0b6; font-size:12.5px; font-weight:800;
   cursor:pointer; font-family:inherit }
 .pg-more:hover{ background:#f4f8fd; color:#2563a8 }
@@ -22264,7 +22274,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       } else {
         body='<div class="pg-val" data-ppid="'+esc(p.id)+'">'+cellHTML(rec,p)+'</div>';
       }
-      return '<div class="pg-prow"><div class="pg-pk">'+ti.i+' '+esc(p.name)+'</div>'
+      /* 긴 글·표·연결 같은 것은 한 줄 통째로 쓴다 */
+      var wide = (['area','rows','rel','multi','att','map','link'].indexOf(p.type)>=0);
+      return '<div class="pg-prow'+(wide?' wide':'')+'"><div class="pg-pk">'+ti.i+' '+esc(p.name)+'</div>'
         + '<div class="pg-pv">'+body+'</div></div>';
     }
 
@@ -22337,7 +22349,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       return v!=='' && v!=null;
     }
     var shown = props.filter(hasVal), hidden = props.filter(function(p){ return !hasVal(p); });
-    var openAll = lsGet('wl_life_pgopen','')===pt;
+    /* 종류마다 따로 기억한다 — 사고에서 펼쳤다고 업무까지 펼쳐지면 안 된다 */
+    var pgKey = dsk(pt);
+    var openAll = (function(){
+      var o=lsGet('wl_life_pgopen2',null);
+      if(o && typeof o==='object') return !!o[pgKey];
+      return lsGet('wl_life_pgopen','')===pt;      /* 예전 방식 이어받기 */
+    })();
     var pics = esr(rec.photos).concat(esr(rec.scanRefs).map(function(r){ return (r.data&&r.data.photoUrl)||''; }).filter(Boolean));
 
     ov.innerHTML =
@@ -22504,10 +22522,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
     /* 버튼 */
     function close(){
+      /* 입력 중이던 값을 먼저 확정하고 닫는다 */
+      try{ var a=document.activeElement; if(a && a.blur) a.blur(); }catch(e){}
       var o=document.getElementById('lfPageOv'); if(o) o.remove();
       document.removeEventListener('keydown', esc2);
       try{ if(/^#lp=/.test(location.hash||'')) history.pushState({}, '', location.pathname+location.search); }catch(e){}
-      setTimeout(render, 0);
+      /* 아무것도 안 쓴 새 기록이면 남기지 않는다 */
+      setTimeout(function(){ try{ draftDrop(); }catch(e){} render(); }, 60);
     }
     function esc2(e){ if(e.key==='Escape' && !document.querySelector('.lf-ov')) close(); }
     document.addEventListener('keydown', esc2);
@@ -22521,6 +22542,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var o=document.getElementById('lfPageOv'); if(o) o.remove();
       document.removeEventListener('keydown', esc2);
       try{ if(/^#lp=/.test(location.hash||'')) history.pushState({}, '', location.pathname+location.search); }catch(e){}
+      if(!isPersonal()){
+        /* 업무일지는 원래 쓰던 입력창을 그대로 연다 */
+        try{
+          if(typeof window.openEditor==='function'){ window.openEditor(DS.kind, id); return; }
+        }catch(e){ console.error('[전체 서식]', e); }
+      }
+      try{ DRAFT=null; }catch(e){}
       openRec(pt, id);
     });
     document.getElementById('pgDel').addEventListener('click', function(){
@@ -22539,7 +22567,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var box=document.getElementById('pgHidden');
       var nowOpen = box.style.display!=='none';
       box.style.display = nowOpen ? 'none' : 'contents';
-      lsSet('wl_life_pgopen', nowOpen ? '' : pt);
+      var mo=lsGet('wl_life_pgopen2',null); if(!mo || typeof mo!=='object') mo={};
+      if(nowOpen) delete mo[pgKey]; else mo[pgKey]=1;
+      lsSet('wl_life_pgopen2', mo);
       more.textContent = nowOpen ? ('▸ 빈 항목 '+hidden.length+'개 더 보기')
                                  : ('▾ 빈 항목 '+hidden.length+'개 접기');
     });
@@ -22589,6 +22619,22 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     setTimeout(function(){ pgAutoGrow(document.getElementById('pgTitle')); }, 30);
   }
   window.wlLifePage = openPage;
+  /* 어느 화면에 있든 그 기록의 페이지를 연다 (모달의 [📄 페이지로] 용) */
+  window.wlGoPage = function(id){
+    try{
+      var r = anyRec(id);
+      if(!r){ alert('기록을 못 찾았어요'); return; }
+      var want = (r.kind==='personal'||r.kind==='pcontact') ? 'personal' : r.kind;
+      var cur2 = DS ? (DS.key==='personal' ? 'personal' : DS.kind) : '';
+      if(want!==cur2){
+        if(typeof window.wlOpenData==='function') window.wlOpenData(want);
+        setTimeout(function(){ try{ openPage(id); }catch(e){ console.error('[페이지로]',e); } }, 320);
+      } else {
+        try{ if(typeof window.v43ActivateTab==='function') window.v43ActivateTab(isPersonal()?'life':'data'); }catch(e){}
+        setTimeout(function(){ try{ openPage(id); }catch(e){ console.error('[페이지로]',e); } }, 120);
+      }
+    }catch(e){ console.error('[페이지로]', e); }
+  };
 
   /* 주소로 페이지 열기 */
   function pageFromHash(){
@@ -22888,6 +22934,51 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         cl(); tplPick(pt); }); });
   }
 
+  /* ══════════════════════════════════════════════════════════
+     🧹 아무것도 안 쓴 기록은 남기지 않는다
+        · [＋ 기록 추가] 로 만든 빈 껍데기를 '임시(DRAFT)' 로 표시
+        · 페이지를 닫을 때 여전히 비어 있으면 조용히 지운다
+     ══════════════════════════════════════════════════════════ */
+  var DRAFT = null;
+  var EMPTY_SKIP = { _cat:1, _date:1, _att:1 };
+  function isBlank(rec){
+    if(!rec) return false;
+    if(String(rec.body||'').replace(/<[^>]*>/g,'').trim()) return false;
+    if(esr(rec.photos).length || esr(rec.scanRefs).length) return false;
+    var pt = DS.ptypeOf(rec) || '';
+    var ps;
+    try{ ps = propsOf(pt); }catch(e){ return false; }
+    for(var i=0;i<ps.length;i++){
+      var p=ps[i];
+      if(EMPTY_SKIP[p.id]) continue;
+      if(['formula','rollup'].indexOf(p.type)>=0) continue;
+      var v;
+      try{ v = pget(rec, p.id); }catch(e){ continue; }
+      if(v==null || v===false) continue;
+      if(Array.isArray(v)){ if(v.length) return false; continue; }
+      if(typeof v==='number'){ if(v!==0) return false; continue; }
+      if(String(v).trim()!=='') return false;
+    }
+    /* 표(반복 항목)도 확인 */
+    var rowKeys=['costs','menus','parts','items','steps'];
+    for(var k=0;k<rowKeys.length;k++) if(esr(rec[rowKeys[k]]).length) return false;
+    return true;
+  }
+  /* 임시 기록이 아직 비어 있으면 지운다 */
+  function draftDrop(){
+    if(!DRAFT) return false;
+    var id=DRAFT;
+    var rec=ent().filter(function(x){ return x.id===id; })[0];
+    if(!rec){ DRAFT=null; return false; }
+    if(!isBlank(rec)) { DRAFT=null; return false; }
+    DRAFT=null;
+    try{ pDel(id); }catch(e){ return false; }
+    if(typeof toast==='function') toast('아무것도 안 써서 저장하지 않았어요');
+    return true;
+  }
+  window.wlDraftDrop = draftDrop;
+  window.wlDraftId   = function(){ return DRAFT; };
+
   /* ── 목록 안에서 바로 새 줄 만들기 ── */
   function newRow(pt, preset, asPage){
     var o = DS.newRec(pt||'etc');
@@ -22928,6 +23019,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       srt={k:'date', d:-1}; lsSet(LS_SORT, srt);
     }
     if(asPage){
+      DRAFT = rec.id;                       /* 아무것도 안 쓰고 닫으면 지운다 */
       if(typeof toast==='function') toast('새 기록을 만들었어요 — 바로 채워 보세요');
       setTimeout(function(){ render(); setTimeout(function(){ openPage(rec.id); }, 120); }, 0);
       return;
@@ -23203,7 +23295,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
     /* 업무일지 데이터셋은 개인 전용 요약·분류칩·안내띠를 안 쓴다 */
     var showP = isPersonal();
-    return (showP ? sum : '')
+    return blankBar() + (showP ? sum : '')
       + (showP ? ('<div class="lf-chips">'+chips+'</div>') : '')
       + '<div class="lf-bar">'
       +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="width:260px;max-width:100%">'
@@ -25060,6 +25152,24 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     return h;
   }
 
+  /* 예전에 빈 채로 저장된 기록이 있으면 한 번에 정리할 수 있게 */
+  function blankList(){
+    var out=[];
+    try{ ent().filter(DS.mine).forEach(function(e){ if(isBlank(e)) out.push(e.id); }); }catch(err){}
+    return out;
+  }
+  function blankBar(){
+    var n=0; try{ n=blankList().length; }catch(e){}
+    if(!n) return '';
+    return '<div id="lfBlankBar" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;'
+      + 'background:#fffbea;border:1.5px solid #f3e3b3;border-radius:11px;padding:9px 13px;margin-bottom:10px">'
+      + '<b style="font-size:13px;color:#8a6d1f">🧹 아무것도 안 적힌 기록이 '+n+'건 있어요</b>'
+      + '<span style="font-size:11.5px;color:#b59a5c;flex:1;min-width:120px">실수로 만들어진 빈 껍데기예요 · 지워도 다른 기록은 그대로예요</span>'
+      + '<button type="button" id="lfBlankGo" class="lf-fx" style="border-color:#e0c98a;color:#8a6d1f">한 번에 정리</button>'
+      + '<button type="button" id="lfBlankNo" class="lf-fx">나중에</button>'
+      + '</div>';
+  }
+
   function renderDS(host){
     var cnt = 0; try{ cnt = ent().filter(DS.mine).length; }catch(e){}
     host.innerHTML =
@@ -25076,6 +25186,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     bindRender(host);
     var g = host.querySelector('#dsGoLife');
     if(g) g.addEventListener('click', function(){ window.wlOpenData('personal'); });
+
     host.querySelectorAll('[data-dsk]').forEach(function(b){
       b.addEventListener('click', function(){ window.wlOpenData(b.getAttribute('data-dsk')); });
     });
@@ -25212,6 +25323,22 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       });
     });
     /* 달력 */
+    /* 🧹 빈 기록 정리 — 개인일지·데이터 화면 공통 */
+    var bg = host.querySelector('#lfBlankGo');
+    if(bg) bg.addEventListener('click', function(){
+      var a=blankList();
+      if(!a.length){ var el0=document.getElementById('lfBlankBar'); if(el0) el0.remove(); return; }
+      if(!confirm('아무것도 안 적힌 기록 '+a.length+'건을 지울까요?\n휴지통에서 되살릴 수 있어요.')) return;
+      a.forEach(function(id){ try{ pDel(id); }catch(e){} });
+      if(typeof toast==='function') toast('🧹 '+a.length+'건을 정리했어요');
+      /* 지우는 데 잠깐 걸릴 수 있어 두 번 그린다 */
+      setTimeout(render, 300);
+      setTimeout(render, 1100);
+    });
+    var bn = host.querySelector('#lfBlankNo');
+    if(bn) bn.addEventListener('click', function(){
+      var el=document.getElementById('lfBlankBar'); if(el) el.remove(); });
+
     /* ① 머리줄 끌어서 칸 순서 바꾸기 */
     (function(){
       var ptD = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
@@ -26133,6 +26260,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   }
 
   function build(){
+    try{ pageBtn(); }catch(e){}
     var kind = window._mKind;
     var mf = document.getElementById('mFields');
     if(!mf || KINDS.indexOf(kind)<0){ var old=document.getElementById('mxWrap'); if(old) old.remove(); return; }
@@ -26154,6 +26282,38 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
             + '</div>'; }).join('')
       + '</div>';
     mf.parentNode.insertBefore(box, mf.nextSibling);
+  }
+
+  /* 📄 페이지로 — 모달에서 노션식 페이지로 바로 넘어간다 */
+  function pageBtn(){
+    var kind = window._mKind, id = window._mId;
+    var row = document.getElementById('mBtnRow');
+    var old = document.getElementById('mxPage'); if(old) old.remove();
+    if(!row || !id || KINDS.indexOf(kind)<0) return;
+    var b=document.createElement('button');
+    b.type='button'; b.id='mxPage'; b.className='btn btn-ghost';
+    b.textContent='📄 페이지로';
+    b.title='속성·본문·사진을 한 장으로 보는 화면';
+    b.style.cssText='border-color:#c4b5fd;color:#7c3aed;font-weight:800';
+    b.addEventListener('click', function(){
+      var rid=window._mId;
+      var ov=document.getElementById('overlay');
+      try{ var sv=document.getElementById('mSave'); if(sv) sv.click(); }catch(e){}  /* 쓰던 내용 먼저 저장 */
+      /* 저장이 끝나 창이 닫히면 그때 넘어간다 (맞춤법 검사 등으로 늦어질 수 있다) */
+      var n=0;
+      (function wait(){
+        var open = ov && ov.classList.contains('show');
+        if(!open || n++ > 40){
+          try{ if(open && ov) ov.classList.remove('show'); }catch(e){}
+          try{ if(window.wlGoPage) window.wlGoPage(rid); }catch(e){ console.error('[페이지로]', e); }
+          return;
+        }
+        setTimeout(wait, 120);
+      })();
+    });
+    var cancel=document.getElementById('mCancel');
+    if(cancel && cancel.parentNode) cancel.parentNode.insertBefore(b, cancel);
+    else row.appendChild(b);
   }
 
   function collect(){
@@ -26201,7 +26361,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(!ov || !mf) { setTimeout(watch, 800); return; }
     new MutationObserver(function(){
       if(ov.classList.contains('show')) setTimeout(build, 60);
-      else { var o=document.getElementById('mxWrap'); if(o) o.remove(); }
+      else {
+        var o=document.getElementById('mxWrap'); if(o) o.remove();
+        var pb=document.getElementById('mxPage'); if(pb) pb.remove();
+        /* [＋ 기록 추가] 로 만든 빈 껍데기가 남았으면 지운다 */
+        setTimeout(function(){ try{ if(window.wlDraftDrop) window.wlDraftDrop(); }catch(e){} }, 120);
+      }
     }).observe(ov, {attributes:true, attributeFilter:['class']});
     new MutationObserver(function(){
       if(ov.classList.contains('show')) setTimeout(build, 30);
