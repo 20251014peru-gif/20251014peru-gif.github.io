@@ -6,7 +6,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v61-0827-0801";
+const APP_VERSION = "v62-0827-0949";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -2800,6 +2800,8 @@ function openEditor(kind,id){
   // v16: 비밀번호는 별도 에디터로
   if(kind==="password"){ pwOpenEditor(id); return; }
   mKind=kind; mId=id||null;
+  /* 데이터 화면(내 속성)에서 읽을 수 있게 밖으로도 알려둔다 */
+  try{ window._mKind=kind; window._mId=id||null; }catch(e){}
   const data = id ? (entries.find(x=>x.id===id)||{}) : defaults(kind);
   // v19: filelink 기존 항목에 ptype 없으면 경로로 추정해서 채움 (수정 시 자동 보정)
   if(kind==="filelink" && id && !data.ptype){
