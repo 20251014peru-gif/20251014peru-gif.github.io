@@ -18,7 +18,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v65-0827-1212</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v67-0827-1323</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1395,7 +1395,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v65-0827-1212</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v67-0827-1323</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3080,7 +3080,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v65-20260827-1212"></script>
+<script src="worklog.js?v=v67-20260827-1323"></script>
 <script>
 /* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
    (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
@@ -5363,6 +5363,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       }));
       localStorage.setItem('wl_gcal_ok', '1');   // 한 번이라도 연동에 성공한 적 있음
     }catch(e){}
+    try{ if(window.wlGcalRenewOk) window.wlGcalRenewOk(); }catch(e){}   /* 실패 셈 되돌리기 */
     scheduleRenew(exp);
   }
 
@@ -5418,13 +5419,24 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       gisRenew(why);
     }catch(e){ dbgG('자동 갱신 실패: ' + e); }
   }
+  /* 갱신이 몰려 로그인 창이 반복해서 뜨는 것을 막는다 */
+  var _renewAt = 0, _renewFail = 0;
   function gisRenew(why){
     if(!tokenClient){ setTimeout(function(){ gisRenew(why); }, 2000); return; }
     if(!localStorage.getItem('wl_gcal_ok')) return;   // 한 번도 연동한 적 없으면 건드리지 않음
+    var now = Date.now();
+    if(now - _renewAt < 60000){ dbgG('갱신 건너뜀 (1분 안에 이미 시도: ' + (why||'') + ')'); return; }
+    if(_renewFail >= 3){
+      dbgG('갱신 3번 실패 — 자동 시도 중단. [🔑 구글 다시 로그인] 을 눌러 주세요');
+      try{ updateGCalBtn('need'); }catch(e){}
+      return;
+    }
+    _renewAt = now; _renewTries++; _renewFail++;
     dbgG('토큰 자동 갱신 시도 (' + (why||'') + ')');
-    _renewTries++;
     tokenClient.requestAccessToken({ prompt: '' });
   }
+  /* 성공하면 실패 셈을 되돌린다 */
+  window.wlGcalRenewOk = function(){ _renewFail = 0; };
   window.wlGcalSilentRenew = silentRenew;
 
   function loadToken(){
@@ -17539,27 +17551,25 @@ if('serviceWorker' in navigator){
       hit++;
     }
 
-    /* ① 🔒 글자가 들어간 요소 */
+    /* ① 🔒 글자가 들어간 요소 — 제목은 보이게 두고 내용만 가린다
+          (제목까지 가리면 무슨 메모인지 몰라서 찾을 수가 없다) */
     targets().forEach(function(el){
-      mark(el);
-      /* 제목만 가리면 소용없다 — 같은 카드의 본문도 함께 */
       var card = el.closest && el.closest('.sticky-note');
-      if(card){ mark(card.querySelector('.sticky-note-body')); }
-      var li = el.closest && el.closest('.sticky-list-item');
-      if(li){ mark(li.querySelector('.sticky-list-content')); }
-      var vr = el.closest && el.closest('.vrow');
-      if(vr){ mark(vr.querySelector('.vv')); }
+      var li   = el.closest && el.closest('.sticky-list-item');
+      var vr   = el.closest && el.closest('.vrow');
+      if(card){ mark(card.querySelector('.sticky-note-body')); return; }
+      if(li){   mark(li.querySelector('.sticky-list-content')); return; }
+      if(vr){   mark(vr.querySelector('.vv')); return; }
+      mark(el);                                   /* 카드가 아니면 그 자리를 가린다 */
     });
 
-    /* ② 제목에 🔒 가 없어도 secret 표시된 메모 */
+    /* ② 제목에 🔒 가 없어도 secret 표시된 메모 — 내용만 */
     document.querySelectorAll('.sticky-note[data-sid]').forEach(function(card){
       if(!isSecretId(card.dataset.sid)) return;
-      mark(card.querySelector('.sticky-note-title'));
       mark(card.querySelector('.sticky-note-body'));
     });
     document.querySelectorAll('.sticky-list-item[data-sid]').forEach(function(li){
       if(!isSecretId(li.dataset.sid)) return;
-      mark(li.querySelector('.sticky-list-title'));
       mark(li.querySelector('.sticky-list-content'));
     });
 
@@ -19071,6 +19081,23 @@ select.lf-in{ padding-right:8px }
 .lf-tv th.thover{ box-shadow:inset 3px 0 0 #2563a8 }
 .lf-tv th.thover-r{ box-shadow:inset -3px 0 0 #2563a8 }
 
+/* ≣ 리스트 보기 — 날짜+제목만 촘촘히 */
+.lf-lsgrid{ display:grid; gap:0 }
+.lf-lsi{ display:flex; align-items:center; gap:8px; padding:8px 12px; min-width:0;
+  border-bottom:1px solid #f2f7fc; border-right:1px solid #f2f7fc; cursor:pointer; font-size:13px }
+.lf-lsi:hover{ background:#f4f8fd }
+.lf-lsi .d{ flex:0 0 auto; font-size:11.5px; font-weight:800; color:#8ba0b6; font-variant-numeric:tabular-nums }
+.lf-lsi .t{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-weight:700; color:#1a2f45 }
+.lf-lsi .m{ flex:0 0 auto; font-size:11px; opacity:.7 }
+.lf-lsi .x{ flex:0 0 auto; border:none; background:none; cursor:pointer; font-size:12px;
+  color:#e2b4b4; padding:0 2px; opacity:0; transition:opacity .12s }
+.lf-lsi:hover .x{ opacity:1 }
+.lf-lsi .x:hover{ color:#b52929 }
+.lf-lsadd{ padding:10px 13px; color:#7c3aed; font-weight:800; font-size:13px; cursor:pointer }
+.lf-lsadd:hover{ background:#f8fbff }
+@media (max-width:640px){ .lf-lsgrid{ grid-template-columns:1fr !important } }
+
 /* ≣ 리스트 보기 — 칸이 고르게 */
 /* overflow:hidden 을 두면 머리줄 붙박이가 안 먹는다 — 모서리는 자식에게 준다 */
 .lf-ls{ border:1.5px solid #e8f0fa; border-radius:12px; background:#fff }
@@ -19874,8 +19901,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       {k:'workContact', label:'담당자',       type:'text'},
       {k:'workRole',    label:'직책',         type:'text'},
       {k:'workPhone',   label:'전화',         type:'tel'},
-      {k:'refYear',     label:'대상년도',     type:'text'},
-      {k:'refMonth',    label:'대상월',       type:'text'},
+      {k:'startTime',   label:'시작 시각',    type:'time'},
+      {k:'endTime',     label:'끝난 시각',    type:'time'},
+      {k:'refYear',     label:'대상년도',     type:'select'},
+      {k:'refMonth',    label:'대상월',       type:'select'},
       {k:'workMemo',    label:'업체 메모',    type:'textarea', full:true}
     ],
     expense: [
@@ -19916,9 +19945,51 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     return 'text';
   }
   /* select 후보값 — SCHEMA 에 opts 가 없으면 실제 데이터에서 모은다 */
+  /* 층 순서 — 위에서 아래로 (앱의 FLOORS 와 같은 차례) */
+  function floorSort(a, b){
+    var i=FLOOR_ORDER.indexOf(String(a||'')), j=FLOOR_ORDER.indexOf(String(b||''));
+    if(i<0 && j<0) return String(a)<String(b)? -1 : 1;
+    if(i<0) return 1;
+    if(j<0) return -1;
+    return i-j;
+  }
   function workOpts(kind, k, given){
+    /* 앱이 이미 갖고 있는 목록을 그대로 쓴다 — 차례가 뒤죽박죽이면 안 된다 */
+    try{
+      if(k==='floor'){
+        var fl = (typeof FLOORS!=='undefined' ? FLOORS : []).filter(Boolean).slice();
+        var extra=[];
+        (entries||[]).forEach(function(e){
+          var v=e && e[k]; if(!v) return; v=String(v);
+          if(fl.indexOf(v)<0 && extra.indexOf(v)<0) extra.push(v);
+        });
+        return [''].concat(fl.concat(extra).sort(floorSort));
+      }
+      if(k==='status' && kind==='work' && typeof STATUSES!=='undefined' && STATUSES.length)
+        return [''].concat(STATUSES.slice());
+      if(k==='dir' && typeof CALLDIR!=='undefined' && CALLDIR.length)
+        return [''].concat(CALLDIR.slice());
+      if(k==='vtype' && typeof VTYPES!=='undefined' && VTYPES.length)
+        return [''].concat(VTYPES.slice());
+      if(k==='field' && typeof FIELDS!=='undefined' && FIELDS.length){
+        var fd = FIELDS.filter(Boolean).slice();
+        (entries||[]).forEach(function(e){
+          if(e && e.kind===kind && e[k] && fd.indexOf(String(e[k]))<0) fd.push(String(e[k]));
+        });
+        return [''].concat(fd);
+      }
+      if(k==='refYear'){            /* 입력창과 같은 차례 */
+        var y = Number(String(today()).slice(0,4)) || 2026, ys=[];
+        for(var d=-2; d<=1; d++) ys.push(String(y+d));
+        return [''].concat(ys);
+      }
+      if(k==='refMonth'){
+        var ms=[]; for(var m=1; m<=12; m++) ms.push(String(m));
+        return [''].concat(ms);
+      }
+    }catch(e){}
     if(Array.isArray(given) && given.length) return [''].concat(given);
-    var seen={}, out=[''];
+    var seen={}, out=[];
     try{
       entries.forEach(function(e){
         if(e.kind!==kind) return;
@@ -19926,7 +19997,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         v=String(v); if(seen[v]) return; seen[v]=1; out.push(v);
       });
     }catch(e){}
-    return out.length>1 ? out.slice(0,40) : [''];
+    /* 모은 값도 보기 좋게 — 숫자면 숫자순, 아니면 가나다순 */
+    out.sort(function(a,b){
+      var na=parseFloat(a), nb=parseFloat(b);
+      if(!isNaN(na) && !isNaN(nb) && String(na)===a && String(nb)===b) return na-nb;
+      return a.localeCompare(b, 'ko');
+    });
+    return out.length ? [''].concat(out.slice(0,60)) : [''];
   }
 
   /* 업무 기록의 어느 칸이 기본 칸(날짜·내용·관련처·금액·메모)인지 */
@@ -20232,6 +20309,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
     document.getElementById('tdC').addEventListener('click', cl);
     ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
+    /* Esc 로도 닫히게 — 안 그러면 갇힌다 */
+    (function(){
+      function onEsc(ev){ if(ev.key==='Escape'){ ev.stopPropagation(); cl(); } }
+      document.addEventListener('keydown', onEsc, true);
+      var _cl0 = cl;
+      cl = function(){ document.removeEventListener('keydown', onEsc, true); _cl0(); };
+    })();
     document.getElementById('tdOk').addEventListener('click', function(){
       var val = tdPad(H)+':'+tdPad(MI);
       cl(); if(onPick) onPick(val);
@@ -23096,18 +23180,19 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
      ≣ 리스트 보기 — 표와 같은 칸을 쓰되 폭을 고르게 나눈다
         · 가로 스크롤 없음 · 좁으면 두 줄로 접힘
      ══════════════════════════════════════════════════════════ */
-  function lsCols(pt){
-    var sel = colsOf(pt);
-    var cols = sel.map(function(id){ return propById(pt,id); }).filter(Boolean);
-    if(!cols.length) cols = BASE.filter(function(p){ return DEF_COLS.indexOf(p.id)>=0; });
-    /* 리스트는 좁으니 앞에서 6칸까지만 */
-    return cols.slice(0,6);
+  /* 리스트는 '날짜 + 제목' 만 — 대신 여러 칸으로 촘촘히 */
+  var LS_LSCOL='wl_life_lscol';
+  function lsColN(){
+    var n = +lsGet(LS_LSCOL, 0);
+    if(n>=1 && n<=6) return n;
+    var w = (typeof window!=='undefined' ? window.innerWidth : 1200);
+    if(w>=1500) return 5;
+    if(w>=1200) return 4;
+    if(w>=900)  return 3;
+    if(w>=620)  return 2;
+    return 1;
   }
-  function lsGrid(cols){
-    return cols.map(function(p){
-      return (p.id==='_title') ? '2.2fr' : 'minmax(0,1fr)';
-    }).join(' ') + ' 74px';
-  }
+  function lsColSet(n){ lsSet(LS_LSCOL, n); safeRender(); }
   function listHTML(arr, emptyIcon, emptyMsg){
     var pt = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
     var tot=arr.length;
@@ -23118,9 +23203,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       + '<div style="margin-top:14px"><button type="button" class="lf-add" data-newrow="1" style="height:38px">＋ 여기서 바로 추가</button></div>'
       + '</div></div>';
 
-    var cols = lsCols(pt);
-    var gt   = lsGrid(cols);
     PGLIST = arr.map(function(e){ return e.id; });
+    var N = lsColN();
 
     var grouped = (srt.k==='date') || !!grp;
     if(grp && grp!=='_month'){
@@ -23130,51 +23214,52 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       grouped = true;
     }
 
-    var h = bar + '<div class="lf-ls">'
-      + '<div class="lf-lshd" style="grid-template-columns:'+gt+'">'
-      + cols.map(function(p){
-          var ti=tinfo(p.type);
-          var srtKey = p.id==='_date'?'date' : p.id==='_amount'?'amount' : p.id==='_title'?'title' : p.id==='_cat'?'cat' : ('p:'+p.id);
-          var on=(srt.k===srtKey);
-          return '<div class="lf-lsc'+(ti.right?' r':'')+'" data-srt="'+esc(srtKey)+'" style="cursor:pointer">'
-            + ti.i+' '+esc(p.name)+(on? ' '+(srt.d>0?'▲':'▼'):'')+'</div>'; }).join('')
-      + '<div class="lf-lsc r"><button type="button" id="lfColBtn" class="lf-fx" style="height:24px;padding:0 7px" title="보일 칸 고르기">⚙</button></div>'
-      + '</div>';
+    var h = bar
+      + '<div class="lf-bldbar">'
+      +   '<span style="font-size:13px;font-weight:900;color:#1a2f45">≣ 리스트</span>'
+      +   '<span style="font-size:11.5px;color:#a8b8c8">날짜와 제목만 — 한눈에 훑기</span>'
+      +   '<span class="lb" style="font-size:11.5px;font-weight:800;color:#8ba0b6;margin-left:auto">칸 수</span>'
+      +   '<div class="lf-vw" id="lfLsN">'
+      +     [1,2,3,4,5,6].map(function(n){
+            return '<button type="button" data-lsn="'+n+'"'+(n===N?' class="on"':'')+'>'+n+'</button>'; }).join('')
+      +   '</div>'
+      + '</div>'
+      + '<div class="lf-ls">';
 
-    var last=null, first=true;
-    arr.forEach(function(e){
-      if(grouped){
+    function chunk(list){
+      var out='';
+      list.forEach(function(e){
+        var ch=colorHit(e,pt);
+        var d = String(pget(e,'_date')||'');
+        out += '<div class="lf-lsi" data-lsid="'+esc(e.id)+'"'+(ch?' style="background:'+colorOf(ch.color).bg+'"':'')+'>'
+          + '<span class="d">'+esc(d.slice(5) || '—')+'</span>'
+          + '<span class="t">'+esc(pget(e,'_title')||'(제목없음)')+'</span>'
+          + (e.body? '<span class="m" title="본문이 있어요">📝</span>':'')
+          + (esr(e.photos).length? '<span class="m" title="사진">📷</span>':'')
+          + '<button type="button" class="x" data-ldel="'+esc(e.id)+'" title="삭제">🗑</button>'
+          + '</div>';
+      });
+      return '<div class="lf-lsgrid" style="grid-template-columns:repeat('+N+',minmax(0,1fr))">'+out+'</div>';
+    }
+
+    if(grouped){
+      var buckets=[], seen={};
+      arr.forEach(function(e){
         var m=grpKey(e, pt);
-        if(m!==last || first){
-          last=m; first=false;
-          var gs=0, gn=0;
-          arr.forEach(function(x){ if(grpKey(x,pt)===m){ gn++; gs+=money(x); } });
-          h += '<div class="lf-lsg"><span>'+esc(grpLabel(m))+'</span>'
-             + '<span style="color:#8ba0b6;font-weight:800">'+gn+'건</span>'
-             + (gs? '<span class="s">'+numFmt(gs)+'원</span>':'') + '</div>';
-        }
-      }
-      var ch=colorHit(e,pt);
-      h += '<div class="lf-lsr" data-lsid="'+esc(e.id)+'" style="grid-template-columns:'+gt+''
-        + (ch? ';background:'+colorOf(ch.color).bg:'')+'">'
-        + cols.map(function(p){
-            var ti=tinfo(p.type);
-            var inner;
-            if(p.id==='_title'){
-              /* 오른쪽에 📄 단추가 따로 있으니 제목 안에는 안 넣는다 */
-              inner = '<span>'+esc(pget(e,'_title')||'(제목없음)')+'</span>'
-                + (e.rating? ' <span style="color:#f4b942">'+stars(e.rating)+'</span>':'')
-                + (e.body? ' <span class="pg-mark" title="본문이 있어요">📝</span>':'');
-            } else inner = cellHTML(e,p);
-            return '<div class="lf-lsc'+(p.id==='_title'?' t':'')+(ti.right?' r':'')+'" data-k="'+esc(p.name)+'">'
-              + inner + '</div>'; }).join('')
-        + '<div class="lf-lsc r lf-lsx">'
-        +   '<button type="button" class="lf-fx" data-lpage="'+esc(e.id)+'" style="height:24px;padding:0 6px" title="페이지로 열기">📄</button>'
-        +   '<button type="button" class="lf-fx" data-ldel="'+esc(e.id)+'" style="height:24px;padding:0 6px;color:#b52929" title="삭제">🗑</button>'
-        + '</div>'
-        + '</div>';
-    });
-    h += '<div class="lf-lsr" style="grid-template-columns:1fr;color:#7c3aed;font-weight:800;cursor:pointer" data-newrow="1">＋ 새 줄 추가</div>';
+        if(!seen[m]){ seen[m]={k:m, list:[]}; buckets.push(seen[m]); }
+        seen[m].list.push(e);
+      });
+      buckets.forEach(function(b2){
+        var gs=0; b2.list.forEach(function(x){ gs+=money(x); });
+        h += '<div class="lf-lsg"><span>'+esc(grpLabel(b2.k))+'</span>'
+           + '<span style="color:#8ba0b6;font-weight:800">'+b2.list.length+'건</span>'
+           + (gs? '<span class="s">'+numFmt(gs)+'원</span>':'') + '</div>'
+           + chunk(b2.list);
+      });
+    } else {
+      h += chunk(arr);
+    }
+    h += '<div class="lf-lsadd" data-newrow="1">＋ 새 줄 추가</div>';
     return h + '</div>';
   }
 
@@ -25416,16 +25501,16 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       });
     })();
 
-    /* ≣ 리스트 보기 — 줄 클릭·정렬 */
-    host.querySelectorAll('.lf-lsr[data-lsid]').forEach(function(rw){
+    /* ≣ 리스트 보기 — 줄 클릭·칸 수 */
+    host.querySelectorAll('.lf-lsi[data-lsid]').forEach(function(rw){
       rw.addEventListener('click', function(ev){
-        if(ev.target.closest('[data-lpage],[data-ldel],a,button')) return;
-        PGLIST = [].map.call(host.querySelectorAll('.lf-lsr[data-lsid]'), function(x){ return x.getAttribute('data-lsid'); });
+        if(ev.target.closest('[data-ldel]')) return;
+        PGLIST = [].map.call(host.querySelectorAll('.lf-lsi[data-lsid]'), function(x){ return x.getAttribute('data-lsid'); });
         openPage(rw.getAttribute('data-lsid'));
       });
     });
-    host.querySelectorAll('.lf-lshd [data-srt]').forEach(function(c){
-      c.addEventListener('click', function(){ srtSet(c.getAttribute('data-srt')); });
+    host.querySelectorAll('[data-lsn]').forEach(function(b){
+      b.addEventListener('click', function(){ lsColSet(+b.getAttribute('data-lsn')); });
     });
 
     /* ⏱ 타임라인 달 이동 */
@@ -26464,6 +26549,157 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   }
   setTimeout(watch, 2500);
   window.wlModalExtra = build;
+})();
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   💾 저장 공간 구하기 — localStorage 가 꽉 차서 생기는 오류 막기
+     증상: QuotaExceededError → 파이어스토어 INTERNAL ASSERTION FAILED
+     원인: 기록 1200건에 사진(base64)·본문이 통째로 localStorage 에 들어감
+     해결: 무거운 것(사진·첨부·본문)은 IndexedDB 로 옮기고
+           localStorage 에는 가벼운 본체만 둔다
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+  var HEAVY = ['photos','attachments','scanRefs','body','materials','steps','costs'];
+  var BIG   = 1200;                      /* 이 크기 넘으면 무겁다고 본다 */
+  var DB='wl-heavy', ST='rec', _db=null, _ready=false;
+
+  function open(cb){
+    if(_db){ cb(_db); return; }
+    try{
+      var rq=indexedDB.open(DB,1);
+      rq.onupgradeneeded=function(){ try{ rq.result.createObjectStore(ST); }catch(e){} };
+      rq.onsuccess=function(){ _db=rq.result; _ready=true; cb(_db); };
+      rq.onerror=function(){ cb(null); };
+    }catch(e){ cb(null); }
+  }
+  function put(map){
+    open(function(db){
+      if(!db) return;
+      try{
+        var tx=db.transaction(ST,'readwrite'), st=tx.objectStore(ST);
+        Object.keys(map).forEach(function(id){ try{ st.put(map[id], id); }catch(e){} });
+      }catch(e){}
+    });
+  }
+  function getAll(cb){
+    open(function(db){
+      if(!db){ cb(null); return; }
+      try{
+        var out={}, tx=db.transaction(ST,'readonly'), st=tx.objectStore(ST);
+        var rq=st.openCursor();
+        rq.onsuccess=function(){
+          var c=rq.result;
+          if(c){ out[c.key]=c.value; c.continue(); }
+          else cb(out);
+        };
+        rq.onerror=function(){ cb(null); };
+      }catch(e){ cb(null); }
+    });
+  }
+
+  function bigVal(v){
+    if(v==null) return false;
+    if(typeof v==='string') return v.length>BIG;
+    if(typeof v==='object'){ try{ return JSON.stringify(v).length>BIG; }catch(e){ return false; } }
+    return false;
+  }
+  /* 기록 하나를 가벼운 본체 + 무거운 덩어리로 나눈다 */
+  function split(e){
+    var light={}, heavy=null;
+    for(var k in e){
+      if(!Object.prototype.hasOwnProperty.call(e,k)) continue;
+      if(k==='_sx'||k==='_sxn') continue;                 /* 검색 색인은 저장 안 함 */
+      if(HEAVY.indexOf(k)>=0 && bigVal(e[k])){ (heavy=heavy||{})[k]=e[k]; continue; }
+      light[k]=e[k];
+    }
+    if(heavy) light._hv=1;
+    return {light:light, heavy:heavy};
+  }
+
+  function lsKey(){ try{ return 'wl_'+COL; }catch(e){ return 'wl_worklog_entries'; } }
+
+  function saveLight(){
+    var map={}, light=[];
+    try{
+      (entries||[]).forEach(function(e){
+        var s=split(e);
+        light.push(s.light);
+        if(s.heavy) map[e.id]=s.heavy;
+      });
+    }catch(e){ return false; }
+    try{
+      localStorage.setItem(lsKey(), JSON.stringify(light));
+    }catch(e){
+      /* 그래도 넘치면 오래된 것부터 잘라 낸다 */
+      try{
+        var cut=light.slice().sort(function(a,b){
+          return String(b.date||b.createdAt||'').localeCompare(String(a.date||a.createdAt||''));
+        }).slice(0, 600);
+        localStorage.setItem(lsKey(), JSON.stringify(cut));
+        if(typeof toast==='function') toast('💾 이 기기에는 최근 600건만 담았어요 (클라우드엔 전부 있습니다)');
+      }catch(e2){
+        console.error('[저장공간]', e2);
+        return false;
+      }
+    }
+    if(Object.keys(map).length) put(map);
+    return true;
+  }
+
+  /* worklog.js 의 lsSave 를 갈아끼운다 (전역 함수라 안쪽 호출도 같이 바뀐다) */
+  if(typeof window.lsSave==='function'){
+    window.lsSave = function(){ try{ saveLight(); }catch(e){ console.error('[저장공간]', e); } };
+  }
+
+  /* 켤 때: 무거운 덩어리를 되돌려 붙인다 (오프라인에서도 사진이 보이게) */
+  function rehydrate(){
+    getAll(function(m){
+      if(!m) return;
+      var n=0;
+      try{
+        (entries||[]).forEach(function(e){
+          if(!e || !e._hv) return;
+          var h=m[e.id]; if(!h) return;
+          for(var k in h){ if(e[k]==null || e[k]==='' || (Array.isArray(e[k]) && !e[k].length)) { e[k]=h[k]; n++; } }
+        });
+      }catch(e){}
+      if(n){ try{ if(typeof renderAll==='function') renderAll(); }catch(e){} }
+    });
+  }
+
+  /* 지금 이미 꽉 차 있으면 바로 비워 준다 */
+  function relief(){
+    var total=0;
+    try{ for(var k in localStorage){ if(localStorage.hasOwnProperty(k)) total+=(localStorage.getItem(k)||'').length; } }catch(e){}
+    var mb = total/1048576;
+    if(mb < 3.2) return false;
+    /* 다시 만들 수 있는 캐시부터 */
+    ['wl_tempbackup','psc_photos_personal','wl_snap_cache','wl_life_snap'].forEach(function(k){
+      try{ localStorage.removeItem(k); }catch(e){}
+    });
+    try{ saveLight(); }catch(e){}
+    try{ if(window.wlP && window.wlP.save) window.wlP.save(); }catch(e){}
+    console.warn('[저장공간] 정리 전 '+mb.toFixed(1)+'MB');
+    return true;
+  }
+
+  window.wlStoreRelief = relief;
+  window.wlStoreInfo = function(){
+    var t=0, big=[];
+    try{ for(var k in localStorage){ if(!localStorage.hasOwnProperty(k)) continue;
+      var n=(localStorage.getItem(k)||'').length; t+=n;
+      if(n>50000) big.push(k+' '+Math.round(n/1024)+'KB'); } }catch(e){}
+    return { totalKB: Math.round(t/1024), big: big.sort() };
+  };
+
+  setTimeout(function(){
+    try{
+      var freed = relief();
+      if(freed && typeof toast==='function') toast('💾 저장 공간을 정리했어요 — 사진은 그대로 있습니다');
+    }catch(e){}
+    setTimeout(rehydrate, 1500);
+  }, 4000);
 })();
 </script>
 </body>
