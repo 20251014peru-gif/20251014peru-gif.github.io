@@ -18,7 +18,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v64-0827-1107</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v65-0827-1212</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1395,7 +1395,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v64-0827-1107</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v65-0827-1212</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3080,7 +3080,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v64-20260827-1107"></script>
+<script src="worklog.js?v=v65-20260827-1212"></script>
 <script>
 /* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
    (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
@@ -19865,6 +19865,28 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     site:     {i:'🌐', n:'사이트',   c:'#64748b'}
   };
   /* SCHEMA 안의 보조 서식까지 합쳐 온전한 속성 목록을 만든다 */
+  /* SCHEMA 에는 없지만 입력창(모달)이 실제로 쓰는 칸들 —
+     페이지와 입력창의 항목을 똑같이 맞추기 위해 여기에 적어 둔다 */
+  var WORK_EXTRA = {
+    work: [
+      {k:'workVendor',  label:'업체',         type:'text'},
+      {k:'spec',        label:'규격 · 사양',   type:'text'},
+      {k:'workContact', label:'담당자',       type:'text'},
+      {k:'workRole',    label:'직책',         type:'text'},
+      {k:'workPhone',   label:'전화',         type:'tel'},
+      {k:'refYear',     label:'대상년도',     type:'text'},
+      {k:'refMonth',    label:'대상월',       type:'text'},
+      {k:'workMemo',    label:'업체 메모',    type:'textarea', full:true}
+    ],
+    expense: [
+      {k:'spec',        label:'규격 · 사양',   type:'text'},
+      {k:'taxStatus',   label:'세금계산서',   type:'select', opts:['','발행','미발행','발행예정']}
+    ],
+    item: [
+      {k:'lastBuy',     label:'마지막 구매일', type:'date'}
+    ]
+  };
+
   function workFields(kind){
     var out=[], seen={};
     function push(arr){
@@ -19878,6 +19900,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       push(SCHEMA[kind]);
       ['_simple_more','_full','_full_more','_more'].forEach(function(sfx){
         if(SCHEMA[kind+sfx]) push(SCHEMA[kind+sfx]); });
+      push(WORK_EXTRA[kind]);
     }catch(e){}
     return out;
   }
@@ -19908,7 +19931,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
   /* 업무 기록의 어느 칸이 기본 칸(날짜·내용·관련처·금액·메모)인지 */
   var BMAP = {
-    work:     {_date:['date'], _title:['title'], _sub:['owner','vendor','material'], _amount:['cost'],       _memo:['detail']},
+    work:     {_date:['date'], _title:['title'], _sub:['workVendor','owner','vendor'], _amount:['cost'], _memo:['detail']},
     expense:  {_date:['date'], _title:['title'], _sub:['vendor','payee'],            _amount:['amount'],     _memo:['memo']},
     accident: {_date:['date'], _title:['title'], _sub:['partyName','location'],      _amount:['repairCost','compensation'], _memo:['detail']},
     progress: {_date:['date'], _title:['title'], _sub:['owner'],                     _amount:['finalCost','estCost'],       _memo:['detail','memo']},
@@ -19922,6 +19945,17 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     stock:    {_date:['date'], _title:['itemId'], _sub:['vendor'],                   _amount:['amount'],     _memo:['memo']},
     plan:     {_date:['date'], _title:['text'], _sub:[],                             _amount:[],             _memo:[]},
     site:     {_date:[],       _title:['name'], _sub:['category'],                   _amount:[],             _memo:['memo']}
+  };
+
+  /* 새로 만들 때 기본으로 넣어 둘 값 — 입력창에서 만든 것과 모양을 맞춘다 */
+  var WORK_DEFAULT = {
+    work:     { workMode:'simple', status:'완료', expType:'없음', cost:0, qty:0, materials:[] },
+    expense:  { expType:'개인지출' },
+    accident: { status:'⏳ 접수' },
+    progress: { status:'검토중' },
+    stock:    { stockType:'입고', qty:1 },
+    schedule: { scheduleType:'일회성' },
+    call:     { dir:'수신' }
   };
 
   function dsWork(kind){
@@ -19943,7 +19977,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
              try{ if(typeof renderAll==='function') setTimeout(renderAll,80); }catch(e){}
              return null; },
       del:  function(id){ try{ deleteRecord(id); if(typeof renderAll==='function') setTimeout(renderAll,80); }catch(e){} },
-      newRec: function(){ return { kind:kind }; },
+      newRec: function(){ return Object.assign({ kind:kind }, WORK_DEFAULT[kind]||{}); },
       fieldsOf: function(){ return fields; }
     };
   }
@@ -26226,6 +26260,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
                'accident','progress','item','stock','plan','site'];
   var SKIP = {formula:1, rollup:1, att:1, rel:1};
 
+  /* 페이지에는 있는데 입력창에는 없던 붙박이 칸 —
+     여기 값은 props 가 아니라 기록에 바로 들어간다 (페이지와 같은 자리) */
+  var BUILTIN = {
+    work:    [{k:'spec', name:'규격 · 사양', type:'text', ph:'예: 32W 주광색 / 25A'}],
+    expense: [{k:'spec', name:'규격 · 사양', type:'text'}]
+  };
+
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
     return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
   function props(kind){
@@ -26263,24 +26304,41 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     try{ pageBtn(); }catch(e){}
     var kind = window._mKind;
     var mf = document.getElementById('mFields');
-    if(!mf || KINDS.indexOf(kind)<0){ var old=document.getElementById('mxWrap'); if(old) old.remove(); return; }
+    var old = document.getElementById('mxWrap'); if(old) old.remove();
+    if(!mf || KINDS.indexOf(kind)<0) return;
     var ps = props(kind);
-    var old2 = document.getElementById('mxWrap'); if(old2) old2.remove();
-    if(!ps.length) return;
+    var bi = BUILTIN[kind] || [];
+    if(!ps.length && !bi.length) return;
     var rec = curRec() || {};
     var pv  = rec.props || {};
     var box = document.createElement('div');
     box.id='mxWrap';
     box.style.cssText='margin-top:12px;border-top:1.5px dashed #dbe6f4;padding-top:11px';
-    box.innerHTML = '<div style="font-size:12px;font-weight:900;color:#7c3aed;margin-bottom:8px">'
-      + '🧩 내가 만든 항목 <span style="font-weight:700;color:#a8b8c8">· 데이터 화면과 같은 항목이에요</span></div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px 10px">'
-      + ps.map(function(p){
-          return '<div'+(p.type==='area'?' style="grid-column:1 / -1"':'')+'>'
-            + '<label style="display:block;font-size:11.5px;font-weight:800;color:#7a92a8;margin-bottom:3px">'+esc(p.name)+'</label>'
-            + inputFor(p, pv[p.id]==null?'':pv[p.id])
-            + '</div>'; }).join('')
-      + '</div>';
+    var h='';
+    if(bi.length){
+      h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px 10px;margin-bottom:'
+        + (ps.length?'12px':'0')+'">'
+        + bi.map(function(f){
+            return '<div'+(f.type==='area'?' style="grid-column:1 / -1"':'')+'>'
+              + '<label style="display:block;font-size:11.5px;font-weight:800;color:#7a92a8;margin-bottom:3px">'+esc(f.name)+'</label>'
+              + '<input type="text" data-mk="'+esc(f.k)+'" value="'+esc(rec[f.k]==null?'':rec[f.k])+'"'
+              + (f.ph? ' placeholder="'+esc(f.ph)+'"':'')
+              + ' style="width:100%;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:9px;font-family:inherit;font-size:13px">'
+              + '</div>'; }).join('')
+        + '</div>';
+    }
+    if(ps.length){
+      h += '<div style="font-size:12px;font-weight:900;color:#7c3aed;margin-bottom:8px">'
+        + '🧩 내가 만든 항목 <span style="font-weight:700;color:#a8b8c8">· 데이터 화면과 같은 항목이에요</span></div>'
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px 10px">'
+        + ps.map(function(p){
+            return '<div'+(p.type==='area'?' style="grid-column:1 / -1"':'')+'>'
+              + '<label style="display:block;font-size:11.5px;font-weight:800;color:#7a92a8;margin-bottom:3px">'+esc(p.name)+'</label>'
+              + inputFor(p, pv[p.id]==null?'':pv[p.id])
+              + '</div>'; }).join('')
+        + '</div>';
+    }
+    box.innerHTML = h;
     mf.parentNode.insertBefore(box, mf.nextSibling);
   }
 
@@ -26326,6 +26384,15 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     });
     return out;
   }
+  /* 붙박이 칸(규격 등) — 기록에 바로 들어간다 */
+  function collectBase(){
+    var out=null;
+    document.querySelectorAll('#mxWrap [data-mk]').forEach(function(el){
+      var k=el.getAttribute('data-mk');
+      (out=out||{})[k] = el.value;
+    });
+    return out;
+  }
 
   /* 저장 흐름을 건드리지 않고, 만들어진 뒤에 값만 얹는다 */
   var _add = window.addRecord, _upd = window.updateRecord;
@@ -26334,10 +26401,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var rec=_add(data);
       try{
         if(rec && document.getElementById('mxWrap')){
-          var ex=collect();
-          if(ex) _upd(rec.id, { props: Object.assign({}, rec.props||{}, ex) });
+          var ex=collect(), bx=collectBase(), patch={};
+          if(ex) patch.props = Object.assign({}, rec.props||{}, ex);
+          if(bx) Object.assign(patch, bx);
+          if(Object.keys(patch).length) _upd(rec.id, patch);
         }
       }catch(e){ console.error('[내 속성 저장]', e); }
+      try{ setTimeout(function(){ autoSpec(rec && rec.id); }, 0); }catch(e){}
       return rec;
     };
   }
@@ -26346,13 +26416,33 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var r=_upd(id, patch);
       try{
         if(id && id===window._mId && document.getElementById('mxWrap') && !(patch&&patch.props)){
-          var ex=collect();
+          var ex=collect(), bx=collectBase();
           var cur=(entries||[]).filter(function(x){return x.id===id;})[0];
-          if(ex && cur) _upd(id, { props: Object.assign({}, cur.props||{}, ex) });
+          var pt2={};
+          if(ex && cur) pt2.props = Object.assign({}, cur.props||{}, ex);
+          if(bx) Object.assign(pt2, bx);
+          if(cur && Object.keys(pt2).length) _upd(id, pt2);
+          try{ setTimeout(function(){ autoSpec(id); }, 0); }catch(e){}
         }
       }catch(e){ console.error('[내 속성 저장]', e); }
       return r;
     };
+  }
+
+  /* 자재를 골랐는데 규격이 비어 있으면 품목대장에서 가져온다 */
+  function autoSpec(idOrRec){
+    var id = (idOrRec && idOrRec.id) ? idOrRec.id : idOrRec;
+    if(!id) return;
+    /* 방금 저장된 최신 상태로 다시 읽는다 — 직접 적은 규격을 덮어쓰지 않게 */
+    var rec = (entries||[]).filter(function(x){ return x.id===id; })[0];
+    if(!rec || rec.kind!=='work') return;
+    if(String(rec.spec||'').trim()) return;
+    var mats = Array.isArray(rec.materials) ? rec.materials : [];
+    var iid = mats.length ? mats[0].itemId : '';
+    if(!iid) return;
+    var it = (entries||[]).filter(function(x){ return x.id===iid && x.kind==='item'; })[0];
+    if(!it || !String(it.spec||'').trim()) return;
+    try{ _upd(rec.id, { spec: it.spec }); }catch(e){}
   }
 
   /* 모달이 열리거나 내용이 바뀌면 다시 붙인다 */
