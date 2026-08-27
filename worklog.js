@@ -6,7 +6,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v64-0827-1107";
+const APP_VERSION = "v67-0827-1323";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -235,13 +235,13 @@ const SCHEMA={
     {k:"status",label:"완료 상태",type:"status"},
     {k:"floor",label:"해당층",type:"floor"},
     {k:"field",label:"분야",type:"field"},
-    {k:"title",label:"업무내역",type:"text",full:true,req:true},
+    {k:"title",label:"제목",type:"text",full:true,req:true},
     // 아래는 JS에서 workMode에 따라 동적 렌더
   ],
   // 일반업무 토글 추가 필드
   work_simple_more:[
     {k:"detail",label:"상세내용",type:"textarea",full:true},
-    {k:"material",label:"자재명·규격",type:"text"},
+    {k:"material",label:"자재명",type:"text"},
     {k:"qty",label:"수량",type:"number"},
   ],
   // 외주·비용 전용 필드
@@ -1781,7 +1781,7 @@ function openMatPickerPopup(){
           <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">자재명 검색</div>
           <input type="text" id="matPopSearch" value="" placeholder="자재명 또는 초성 검색…" autocomplete="off"
             style="width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:1.5px solid #3b82f6;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:#1a2f45">
-          <div id="matPopList" style="position:absolute;left:18px;right:18px;top:84px;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:100;max-height:220px;overflow:auto;display:none"></div>
+          <div id="matPopList" style="margin-top:8px;background:#fff;border:1.5px solid #dbe6f4;border-radius:10px;max-height:210px;overflow:auto"></div>
         </div>
         <div style="padding:10px 18px 6px;display:flex;align-items:flex-end;gap:10px">
           <div style="flex:1;min-width:0">
@@ -1862,10 +1862,20 @@ function openMatPickerPopup(){
       }
     }
     filtered=filtered.slice(0,60);
+    /* 목록에 없는 이름도 그대로 담을 수 있게 — 늘 맨 위에 보여준다 */
+    const exact = q && filtered.some(it=>it.name===q);
+    const newRow = (q && !exact)
+      ? `<div class="mpp-new" style="padding:10px 14px;cursor:pointer;border-bottom:1.5px solid #e8f0fa;display:flex;align-items:center;gap:8px;background:#f6f2ff">
+           <span style="background:#7c3aed;color:#fff;font-size:10px;padding:1px 6px;border-radius:5px;font-weight:700;flex-shrink:0">새로</span>
+           <div style="font-size:13px;font-weight:800;color:#5b21b6;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+             "${esc(q)}" 목록에 없는 자재로 담기</div>
+         </div>`
+      : `<div style="padding:9px 14px;border-bottom:1.5px solid #f1f5f9;font-size:11.5px;color:#a8b8c8">
+           이름을 치면 <b style="color:#7c3aed">목록에 없는 자재</b>로도 담을 수 있어요</div>`;
     if(!filtered.length){
-      listEl.innerHTML=`<div style="padding:12px 14px;text-align:center;color:#94a3b8;font-size:13px">결과 없음 — 그대로 직접 입력하세요</div>`;
+      listEl.innerHTML=newRow+`<div style="padding:12px 14px;text-align:center;color:#94a3b8;font-size:13px">등록된 자재 중에는 없어요</div>`;
     } else {
-      listEl.innerHTML=filtered.map((it,i)=>`
+      listEl.innerHTML=newRow+filtered.map((it,i)=>`
         <div class="mpp-item" data-idx="${i}"
           style="padding:9px 14px;cursor:pointer;border-bottom:1px solid #f8fafc;display:flex;align-items:center;gap:8px">
           <span style="background:#0369a1;color:#fff;font-size:10px;padding:1px 6px;border-radius:5px;font-weight:700;flex-shrink:0">자재</span>
@@ -1874,6 +1884,7 @@ function openMatPickerPopup(){
             ${it.spec?`<div style="font-size:11px;color:#94a3b8">${esc(it.spec.slice(0,40))}${it.unit?' ['+esc(it.unit)+']':''}</div>`:''}
           </div>
         </div>`).join('');
+      bindNew();
       listEl.querySelectorAll('.mpp-item').forEach((el,i)=>{
         el.addEventListener('mouseenter',()=>el.style.background='#f0f6ff');
         el.addEventListener('mouseleave',()=>el.style.background='');
@@ -1883,12 +1894,21 @@ function openMatPickerPopup(){
           _pickedId=it.id; _pickedName=it.name; _pickedSpec=it.spec||'';
           searchEl.value=it.name;
           selEl.innerHTML=`<b>${esc(it.name)}</b>${it.spec?`<br><span style="font-size:11px;color:#94a3b8">${esc(it.spec)}</span>`:''}`;
-          listEl.style.display='none';
           qtyEl.focus(); qtyEl.select();
         });
       });
     }
-    listEl.style.display='block';
+    if(!filtered.length) bindNew();
+    function bindNew(){
+      const nb=listEl.querySelector('.mpp-new');
+      if(!nb) return;
+      nb.addEventListener('mousedown',e=>{
+        e.preventDefault();
+        _pickedId=''; _pickedName=q; _pickedSpec='';
+        selEl.innerHTML=`<b>${esc(q)}</b><br><span style="font-size:11px;color:#7c3aed">목록에 없는 자재 — 그대로 담깁니다</span>`;
+        qtyEl.focus(); qtyEl.select();
+      });
+    }
   }
 
   function clearPick(){
@@ -1926,7 +1946,7 @@ function openMatPickerPopup(){
 
   searchEl.addEventListener('input',()=>{ _pickedId=''; _pickedSpec=''; _pickedName=searchEl.value; renderList(searchEl.value); });
   searchEl.addEventListener('focus',()=>renderList(searchEl.value));
-  searchEl.addEventListener('blur',()=>setTimeout(()=>{ listEl.style.display='none'; },200));
+  /* 목록은 늘 펼쳐 둔다 — 한 번 눌러야 나오면 불편하다 */
   searchEl.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); qtyEl.focus(); qtyEl.select(); } });
 
   addBtn.addEventListener('click', addToBag);
@@ -2139,7 +2159,7 @@ function renderWorkModal(data, mode){
         </select>
       </div>
       <div style="flex:1;min-width:0">
-        <label style="${S.lbl}">업무내역 *</label>
+        <label style="${S.lbl}">제목 *</label>
     <div style="position:relative">
       <input type="text" id="m-title" value="${e2(d.title||"")}" autocomplete="off"
         placeholder="무엇을 했나요?" style="${S.inp};font-size:15px;font-weight:600;border-color:#3b82f6">
@@ -2588,7 +2608,7 @@ function openTpContactForm(phoneInpRef, defaultType){
 async function saveWorkEntry(){
   const title = ($("m-title")||{}).value?.trim();
   const detail = ($("m-detail")||{}).value?.trim();
-  if(!title){ toast("업무내역을 입력하세요"); return; }
+  if(!title){ toast("제목을 입력하세요"); return; }
 
   // AI 키 없으면 바로 저장
   const apiKey = (typeof aiGetKey==="function") ? aiGetKey() : "";
@@ -2596,7 +2616,7 @@ async function saveWorkEntry(){
 
   // 검사할 텍스트 수집
   const checkTexts = [];
-  if(title)  checkTexts.push({field:"업무내역", text:title});
+  if(title)  checkTexts.push({field:"제목", text:title});
   if(detail) checkTexts.push({field:"상세내용", text:detail});
   if(!checkTexts.length){ _doSaveWorkEntry(); return; }
 
@@ -2705,7 +2725,7 @@ function showSpellCorrectPopup(items, onSave, kind){
         if(el) el.value=el.value.replace(it.original, it.corrected);
       } else {
         // 업무 모달 fallback
-        if(it.field==="업무내역"){ const el=$("m-title"); if(el) el.value=el.value.replace(it.original,it.corrected); }
+        if(it.field==="업무내역"||it.field==="제목"){ const el=$("m-title"); if(el) el.value=el.value.replace(it.original,it.corrected); }
         if(it.field==="상세내용"){ const el=$("m-detail"); if(el) el.value=el.value.replace(it.original,it.corrected); }
       }
     });
@@ -2718,7 +2738,7 @@ function showSpellCorrectPopup(items, onSave, kind){
 function _doSaveWorkEntry(){
   const mode = _workMode;
   const title=($("m-title")||{}).value?.trim();
-  if(!title){ toast("업무내역을 입력하세요"); return; }
+  if(!title){ toast("제목을 입력하세요"); return; }
   const obj={
     kind:"work", workMode:mode,
     date:($("m-date")||{}).value||todayStr(),
@@ -4311,7 +4331,7 @@ function handleRestore(e){
   reader.readAsText(file);
 }
 const CSV_COLS={
-  work:[["date","날짜"],["status","상태"],["floor","해당층"],["loc","위치"],["title","업무내역"],["detail","세부내용"],["field","분야"],["material","자재"],["qty","수량"],["cost","비용"],["improve","개선사항"]],
+  work:[["date","날짜"],["status","상태"],["floor","해당층"],["loc","위치"],["title","제목"],["detail","세부내용"],["field","분야"],["material","자재"],["qty","수량"],["cost","비용"],["improve","개선사항"]],
   plan:[["date","날짜"],["text","할일"],["done","완료"]],
   memo:[["date","날짜"],["title","제목"],["body","내용"]],
   call:[["date","날짜"],["time","시간"],["dir","구분"],["name","상대"],["phone","전화번호"],["content","통화내용"],["followup","조치"],["done","완료"]],
