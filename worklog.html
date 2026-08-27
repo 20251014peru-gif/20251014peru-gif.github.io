@@ -145,7 +145,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v69-0827-1507</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v71-0827-1547</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1522,7 +1522,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v69-0827-1507</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v71-0827-1547</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3207,7 +3207,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=69-20260827t1507"></script>
+<script src="worklog.js?v=71-20260827t1547"></script>
 <script>
 /* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
    (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
@@ -19050,6 +19050,53 @@ select.lf-in{ padding-right:8px }
 .lf-dgrp span{ display:inline-block; font-size:11.5px; font-weight:900; color:#5b7794;
   padding:3px 10px; background:#eef5fd; border-radius:8px; letter-spacing:.3px }
 
+/* 칸 이름에 붙는 ▾ 거르개 */
+.lf-tv th .thf{ display:inline-block; margin-left:4px; width:17px; height:17px; line-height:15px;
+  text-align:center; border:1px solid #cfe0f2; border-radius:5px; background:#fff; color:#7a92a8;
+  font-size:9px; font-weight:900; cursor:pointer; vertical-align:middle; padding:0 }
+.lf-tv th .thf:hover{ background:#e8f0fb; color:#2563a8; border-color:#9fc3e8 }
+.lf-tv th .thf.on{ background:#2563a8; border-color:#2563a8; color:#fff }
+.lf-tv th.fon{ background:#e8f2fd }
+
+.lf-cfp{ position:fixed; z-index:2147482000; background:#fff; border:1.5px solid #cfe0f2;
+  border-radius:12px; box-shadow:0 14px 40px rgba(26,47,69,.20); width:272px; max-width:94vw;
+  font-family:inherit; overflow:hidden }
+.lf-cfp .hd{ display:flex; align-items:center; gap:6px; padding:10px 12px 8px;
+  font-size:12.5px; font-weight:900; color:#1a2f45; border-bottom:1px solid #eef4fb }
+.lf-cfp .hd .x{ margin-left:auto; border:none; background:none; font-size:17px; color:#a8b8c8; cursor:pointer; line-height:1 }
+.lf-cfp .bd{ padding:9px 11px; max-height:280px; overflow:auto }
+.lf-cfp .q{ width:100%; height:32px; padding:0 9px; border:1.5px solid #dbe6f4; border-radius:8px;
+  font-size:12.5px; font-family:inherit; margin-bottom:7px; outline:none; box-sizing:border-box }
+.lf-cfp .it{ display:flex; align-items:center; gap:7px; padding:5px 4px; border-radius:7px;
+  font-size:13px; color:#33567d; cursor:pointer }
+.lf-cfp .it:hover{ background:#f4f9ff }
+.lf-cfp .it input{ width:15px; height:15px; flex:0 0 auto }
+.lf-cfp .it .nm{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.lf-cfp .it .n{ font-size:11px; font-weight:800; color:#a8b8c8 }
+.lf-cfp .ch{ display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px }
+.lf-cfp .ch button{ height:27px; padding:0 9px; border:1.5px solid #dbe6f4; border-radius:8px;
+  background:#f7faff; color:#3f7cb8; font-size:11.5px; font-weight:800; cursor:pointer; font-family:inherit }
+.lf-cfp .ch button.on{ background:#2563a8; border-color:#2563a8; color:#fff }
+.lf-cfp .dt{ display:flex; align-items:center; gap:5px; margin-bottom:8px }
+.lf-cfp .dt input{ flex:1; min-width:0; height:31px; padding:0 7px; border:1.5px solid #dbe6f4;
+  border-radius:8px; font-size:12px; font-family:inherit; outline:none }
+.lf-cfp .ft{ display:flex; gap:6px; padding:9px 11px; border-top:1px solid #eef4fb; background:#fafcff }
+.lf-cfp .ft button{ flex:1; height:34px; border-radius:9px; font-size:12.5px; font-weight:800;
+  cursor:pointer; font-family:inherit; border:1.5px solid #dbe6f4; background:#fff; color:#7a92a8 }
+.lf-cfp .ft button.go{ background:#2563a8; border-color:#2563a8; color:#fff }
+
+/* 걸려 있는 거르개 요약 띠 */
+.lf-fchips{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:0 0 9px }
+.lf-fchips .fc{ display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 6px 0 10px;
+  border:1.5px solid #bcd2ea; border-radius:9px; background:#eaf2fd; color:#2563a8;
+  font-size:12px; font-weight:800 }
+.lf-fchips .fc b{ font-weight:900 }
+.lf-fchips .fc button{ border:none; background:none; color:#7fa3cc; font-size:14px;
+  cursor:pointer; line-height:1; padding:0 2px }
+.lf-fchips .fc button:hover{ color:#c0392b }
+.lf-fchips .all{ height:28px; padding:0 10px; border:1.5px dashed #f0c9c9; border-radius:9px;
+  background:#fff; color:#b52929; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit }
+
 /* 구분 머리줄 — 종류·상태별로 카드를 갈라 준다 */
 .lf-ghd{ grid-column:1/-1; display:flex; align-items:center; gap:9px; flex-wrap:wrap;
   margin:16px 0 3px; padding:0 2px 7px; border-bottom:2px solid var(--gc,#cbd5e1) }
@@ -19965,9 +20012,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       if(e.repeat && e.repeat!=='없음') tags+='<span class="lf-tag" style="background:#ede9fe;color:#5b21b6">🔁 '+esc(e.repeat)+'</span>';
       note = e.detail||'';
     } else {
-      ttl = e.title || e.who || d.n;
+      /* 제목 — 종류마다 제목이 담기는 칸이 다르다 (오늘계획은 text, 통화는 content …) */
+      ttl = e.title || e.who || '';
+      if(!ttl && !isPersonal()){ try{ ttl = String(pget(e,'_title')||''); }catch(_t){} }
+      if(!ttl) ttl = d.n;
       tags = '<span class="lf-tag" style="background:'+col+'1f;color:'+col+'">'+d.i+' '+d.n+'</span>';
       tags += statTag(e, pty);                         /* 상태·구분을 한눈에 */
+      if(pty==='plan' && Number(e.carryN)>0 && statVal(e,'plan')!=='완료')
+        tags += '<span class="lf-tag" style="background:#fef3c7;color:#92400e">⏭ '+Number(e.carryN)+'일째</span>';
       var vd = (typeof vendorOf==='function') ? vendorOf(e) : '';
       if(vd) tags += '<span class="lf-tag" style="background:#eaf1fb;color:#2563a8">'+esc(String(vd).slice(0,14))+'</span>';
       if(e.floor) tags += '<span class="lf-tag" style="background:#f1f5f9;color:#475569">'+esc(e.floor)+'</span>';
@@ -20082,6 +20134,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     ],
     stock: [
       {k:'itemName',    label:'품목명 (자동)',  type:'text'}
+    ],
+    plan: [
+      {k:'status',      label:'상태',          type:'select', opts:['미완료','보류','완료']},
+      {k:'planFrom',    label:'처음 적은 날',   type:'date'}
     ]
   };
 
@@ -20090,7 +20146,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     function push(arr){
       (arr||[]).forEach(function(f){
         if(!f || !f.k || seen[f.k]) return; seen[f.k]=1;
-        out.push({ k:f.k, l:f.label||f.k, t:wfType(f), o:f.opts,
+        var lb = f.label||f.k;
+        if(f.type==='alertbefore') lb += ' (분 전)';
+        out.push({ k:f.k, l:lb, t:wfType(f), o:f.opts,
                    w:(f.full?'full':''), p:f.ph });
       });
     }
@@ -20108,9 +20166,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(t==='textarea') return 'area';
     if(t==='select'||t==='status'||t==='field'||t==='floor'||t==='dir'||t==='vtype') return 'sel';
     if(t==='date') return 'date';
-    if(t==='time') return 'time';
+    if(t==='time'||t==='timepick') return 'time';       /* 🕐 시계로 고르기 */
+    if(t==='alertbefore') return 'num';                  /* 몇 분 전 */
     if(t==='tel'||t==='phone') return 'tel';
     if(t==='checkbox'||t==='check') return 'check';
+    /* 이름으로도 알아본다 — 새 칸이 생겨도 알맞은 입력이 저절로 뜬다 */
+    var nm = String(f.k||'') + ' ' + String(f.label||'');
+    if(/시각|시간|Time/i.test(nm) && !/시간대|기간/.test(nm)) return 'time';
+    if(/날짜|일자|Date/i.test(nm)) return 'date';
     return 'text';
   }
   /* select 후보값 — SCHEMA 에 opts 가 없으면 실제 데이터에서 모은다 */
@@ -20211,7 +20274,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     progress: { status:'검토중' },
     stock:    { stockType:'입고', qty:1 },
     schedule: { scheduleType:'일회성' },
-    call:     { dir:'수신' }
+    call:     { dir:'수신' },
+    plan:     { status:'미완료', done:false }
   };
 
   function dsWork(kind){
@@ -20292,7 +20356,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     deliver:  { k:'dtype', order:[], color:{} },
     schedule: { k:'scheduleType', order:['일회성','매일','매주','매월','매년'], color:{} },
     item:     { k:'field',  order:[], color:{} },
-    site:     { k:'category', order:[], color:{} }
+    site:     { k:'category', order:[], color:{} },
+    plan:     { k:'status', order:['미완료','보류','완료'],
+      color:{'미완료':'#ea580c','보류':'#94a3b8','완료':'#0f7a4a'} }
   };
   /* 종류 이름이 안 넘어와도(전체 보기 등) 지금 보고 있는 데이터셋으로 알아낸다 */
   function statKind(kind){
@@ -20304,6 +20370,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   function statVal(e, kind){
     var si=statInfo(kind); if(!si) return '';
     kind=statKind(kind);
+    if(kind==='plan'){
+      var ps=String(e.status||'');
+      if(['미완료','보류','완료'].indexOf(ps)<0) return e.done? '완료':'미완료';
+      return ps;
+    }
     var v=e && e[si.k];
     return (v==null)? '' : String(v);
   }
@@ -20819,7 +20890,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         if(f.s || !f.k) return;
         if(seen[f.k]) return; seen[f.k]=1;
         if(!bmp && (f.k==='date'||f.k==='title'||f.k==='detail'||f.k==='amount')) return;  /* 공통과 겹침 */
-        out.push({ id:'f:'+f.k, name:f.l, type:(f.t==='number'?'num':(f.t||'text')),
+        var ty = (f.t==='number'?'num':(f.t||'text'));
+        /* 이름이 시간·날짜면 알맞은 입력으로 — 개인일지 칸도 함께 */
+        if(ty==='text'){
+          var nm2 = String(f.k||'')+' '+String(f.l||'');
+          if(/시각|시간|Time/i.test(nm2) && !/시간대|기간/.test(nm2)) ty='time';
+          else if(/날짜|일자|Date/i.test(nm2)) ty='date';
+        }
+        out.push({ id:'f:'+f.k, name:f.l, type:ty,
                    opts:f.o, k:f.k, from:'기본' });
       });
     }
@@ -21983,7 +22061,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     lsSet(LS_SORT,srt); safeRender();
   }
   function fltSet(p){ for(var k in p) flt[k]=p[k]; lsSet(LS_FLT,flt); safeRender(); }
-  function fltOn(){ return !!(flt.from||flt.to||flt.money||num(flt.min)||(flt.rules&&flt.rules.length)); }
+  function fltOn(){
+    var pt = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
+    return !!(flt.from||flt.to||flt.money||num(flt.min)||(flt.rules&&flt.rules.length)
+              || colfCount(pt));
+  }
   function ruleCheck(e, r, pt){
     var p = propById(pt, r.pid); if(!p) return true;
     var v = (p.type==='formula') ? formulaCalc(e, p.expr, e.ptype) : pget(e, r.pid);
@@ -21992,6 +22074,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   }
   function applyFlt(a){
     var pt = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
+    a = applyColF(a, pt);                       /* 칸 이름에서 건 거르개 */
     return a.filter(function(e){
       if(EDIT && EDIT.id===e.id) return true;      /* 지금 쓰는 줄은 안 감춘다 */
       var d=String(e.date||'');
@@ -22031,6 +22114,296 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       return d * (vx-vy);
     });
   }
+
+  /* ══════════════════════════════════════════════════════════
+     🔽 칸 거르개 — 목록의 칸 이름에서 바로 거른다
+        · 날짜 칸  → [오늘][어제][2일전][3일전][이번주][이번달][지난달] + 직접 기간
+        · 숫자 칸  → 최소 ~ 최대
+        · 그 밖    → 값 목록에서 골라 담기 (건수까지 보여 준다)
+        종류마다 따로 기억한다 — 업무에서 건 것이 지출에 따라붙지 않게.
+     ══════════════════════════════════════════════════════════ */
+  var LS_COLF='wl_life_colf';
+  function colfAll(){ var o=lsGet(LS_COLF,null); return (o&&typeof o==='object')?o:{}; }
+  function colfOf(pt){ var o=colfAll()[dsk(pt)]; return (o&&typeof o==='object')?o:{}; }
+  function colfSave(pt, m){
+    var o=colfAll();
+    if(!m || !Object.keys(m).length) delete o[dsk(pt)]; else o[dsk(pt)]=m;
+    lsSet(LS_COLF,o);
+  }
+  function colfSet(pt, pid, v){
+    var m=colfOf(pt);
+    if(!v) delete m[pid]; else m[pid]=v;
+    colfSave(pt,m); safeRender();
+  }
+  function colfClear(pt){ colfSave(pt,null); safeRender(); }
+  if(!window._lfCfBound){
+    window._lfCfBound = true;
+    document.addEventListener('mousedown', function(){ colfClose(); });
+    document.addEventListener('keydown', function(ev){
+      if(ev.key==='Escape' && document.getElementById('lfCfPop')){ ev.stopPropagation(); colfClose(); } }, true);
+    window.addEventListener('resize', function(){ colfClose(); });
+  }
+  function colfCount(pt){ return Object.keys(colfOf(pt)).length; }
+
+  /* 값 하나를 거르개가 읽는 글자로 */
+  function colfVal(e, p, pt){
+    var v = (p.type==='formula') ? formulaCalc(e,p.expr,e.ptype)
+          : (p.type==='rollup')  ? rollupCalc(e,p,e.ptype)
+          : pget(e, p.id);
+    if(Array.isArray(v)) return v.map(function(x){ return String(x); });
+    if(p.type==='check') return v? '☑ 예' : '☐ 아니오';
+    if(p.id==='_cat'){
+      var d=(cats()[e.ptype]||catEtc());
+      return (e.ptype==='car') ? '🚗 차계부' : (d.i+' '+d.n);
+    }
+    return v==null? '' : String(v);
+  }
+  function colfKind(p){
+    if(p.id==='_date' || p.type==='date') return 'date';
+    if(p.type==='num' || p.type==='rate' || p.type==='formula' || p.id==='_amount') return 'num';
+    return 'pick';
+  }
+  /* 날짜 빠른 고르기 → 실제 기간 */
+  function colfRange(q){
+    var t=today();
+    function shift(n){ var d=new Date(t+'T00:00:00'); d.setDate(d.getDate()+n);
+      return d.toISOString().slice(0,10); }
+    if(q==='d0')  return {from:t, to:t};
+    if(q==='d1')  return {from:shift(-1), to:shift(-1)};
+    if(q==='d2')  return {from:shift(-2), to:shift(-2)};
+    if(q==='d3')  return {from:shift(-3), to:shift(-3)};
+    if(q==='d7')  return {from:shift(-6), to:t};
+    if(q==='m')   return {from:t.slice(0,7)+'-01', to:t};
+    if(q==='pm'){
+      var y=+t.slice(0,4), mo=+t.slice(5,7)-1;
+      if(mo===0){ y--; mo=12; }
+      var mm=String(mo).padStart(2,'0');
+      var last=new Date(Date.UTC(mo===12?y:y, mo, 0)).getUTCDate();
+      return {from:y+'-'+mm+'-01', to:y+'-'+mm+'-'+String(last).padStart(2,'0')};
+    }
+    if(q==='y')   return {from:t.slice(0,4)+'-01-01', to:t};
+    return null;
+  }
+  var COLF_QUICK = [['d0','오늘'],['d1','어제'],['d2','2일전'],['d3','3일전'],
+                    ['d7','이번 주'],['m','이번 달'],['pm','지난 달'],['y','올해']];
+
+  /* 거르개를 실제로 적용한다 — 모든 보기(카드·목록·리스트·보드…)에 함께 걸린다 */
+  function applyColF(a, pt, skipPid){
+    var m=colfOf(pt);
+    var keys=Object.keys(m).filter(function(k){ return k!==skipPid; });
+    if(!keys.length) return a;
+    return a.filter(function(e){
+      if(EDIT && EDIT.id===e.id) return true;         /* 지금 쓰는 줄은 안 감춘다 */
+      for(var i=0;i<keys.length;i++){
+        var pid=keys[i], f=m[pid], p=propById(pt,pid);
+        if(!p || !f) continue;
+        var k=colfKind(p);
+        if(k==='date'){
+          var d=String(colfVal(e,p,pt)||'').slice(0,10);
+          if(f.from && (!d || d<f.from)) return false;
+          if(f.to   && (!d || d>f.to))   return false;
+        } else if(k==='num'){
+          var n=num(colfVal(e,p,pt));
+          if(f.min!=='' && f.min!=null && n<num(f.min)) return false;
+          if(f.max!=='' && f.max!=null && n>num(f.max)) return false;
+        } else {
+          var vs=colfVal(e,p,pt);
+          if(!Array.isArray(vs)) vs=[vs];
+          var want=f.vals||[];
+          if(!want.length) continue;
+          var hitAny=false;
+          for(var j=0;j<vs.length;j++){ if(want.indexOf(String(vs[j]))>=0){ hitAny=true; break; } }
+          if(!hitAny) return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  /* 걸려 있는 거르개를 한눈에 — 어느 보기에서든 보인다 */
+  function colfLabel(p, f){
+    var k=colfKind(p);
+    if(k==='date'){
+      if(f.q){ var lb=''; COLF_QUICK.forEach(function(x){ if(x[0]===f.q) lb=x[1]; }); if(lb) return lb; }
+      return (f.from||'처음') + ' ~ ' + (f.to||'끝');
+    }
+    if(k==='num') return (f.min===''||f.min==null?'':numFmt(f.min)) + ' ~ '
+                       + (f.max===''||f.max==null?'':numFmt(f.max));
+    var v=f.vals||[];
+    return v.length<=2 ? v.join(', ') : (v[0]+' 외 '+(v.length-1)+'개');
+  }
+  function colfChips(pt){
+    var m=colfOf(pt), keys=Object.keys(m);
+    if(!keys.length) return '';
+    var h='<div class="lf-fchips">';
+    keys.forEach(function(pid){
+      var p=propById(pt,pid); if(!p) return;
+      h += '<span class="fc">'+tinfo(p.type).i+' <b>'+esc(p.name)+'</b> '
+         + esc(colfLabel(p, m[pid]))
+         + '<button type="button" data-cfdrop="'+esc(pid)+'" title="이 거르개 풀기">✕</button></span>';
+    });
+    h += '<button type="button" class="all" data-cfall="1">✕ 거르개 전부 풀기</button></div>';
+    return h;
+  }
+
+  /* 어떤 칸으로 거를지 먼저 고르는 작은 차림표 (카드·리스트·보드용) */
+  function colfPick(pt, anchor){
+    colfClose();
+    var ps = propsOf(pt).filter(function(p){
+      return ['att','rows','rel'].indexOf(p.type)<0 && p.id!=='_title'; });
+    var m = colfOf(pt);
+    var pop=document.createElement('div');
+    pop.className='lf-cfp'; pop.id='lfCfPop';
+    pop.innerHTML = '<div class="hd">🔽 어느 칸으로 거를까요'
+      + '<button type="button" class="x" data-cfx="1">✕</button></div>'
+      + '<div class="bd">' + ps.map(function(p){
+          return '<label class="it" data-pick="'+esc(p.id)+'">'
+            + '<span style="width:16px;text-align:center">'+tinfo(p.type).i+'</span>'
+            + '<span class="nm">'+esc(p.name)+'</span>'
+            + (m[p.id]? '<span class="n" style="color:#2563a8">거르는 중</span>':'')
+            + '</label>'; }).join('') + '</div>';
+    document.body.appendChild(pop);
+    var r=anchor.getBoundingClientRect(), w=pop.offsetWidth||272, hh=pop.offsetHeight||300;
+    pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth-w-8))+'px';
+    pop.style.top  = (r.bottom+6+hh > window.innerHeight)
+      ? Math.max(8, window.innerHeight-hh-8)+'px' : (r.bottom+6)+'px';
+    pop.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
+    pop.querySelector('[data-cfx]').addEventListener('click', colfClose);
+    pop.querySelectorAll('[data-pick]').forEach(function(el){
+      el.addEventListener('click', function(){ colfOpen(el.getAttribute('data-pick'), pt, anchor); });
+    });
+  }
+
+  /* ── 팝업 ── */
+  function colfClose(){ var o=document.getElementById('lfCfPop'); if(o) o.remove(); }
+  function colfOpen(pid, pt, anchor){
+    colfClose();
+    var p=propById(pt,pid); if(!p) return;
+    var cur0 = colfOf(pt)[pid] || {};
+    var k = colfKind(p);
+    var pop=document.createElement('div');
+    pop.className='lf-cfp'; pop.id='lfCfPop';
+
+    var body='';
+    if(k==='date'){
+      body = '<div class="ch">'
+        + COLF_QUICK.map(function(q){
+            return '<button type="button" data-q="'+q[0]+'"'+(cur0.q===q[0]?' class="on"':'')+'>'+q[1]+'</button>'; }).join('')
+        + '</div>'
+        + '<div class="dt"><input type="date" id="cfF1" value="'+esc(cur0.from||'')+'">'
+        + '<span style="color:#c8d4e0">~</span>'
+        + '<input type="date" id="cfF2" value="'+esc(cur0.to||'')+'"></div>';
+    } else if(k==='num'){
+      body = '<div class="dt"><input type="number" id="cfN1" placeholder="최소" value="'+esc(cur0.min==null?'':cur0.min)+'">'
+        + '<span style="color:#c8d4e0">~</span>'
+        + '<input type="number" id="cfN2" placeholder="최대" value="'+esc(cur0.max==null?'':cur0.max)+'"></div>';
+    } else {
+      /* 지금 목록에 실제로 있는 값만 모은다 (건수까지) */
+      var base = applyColF(baseList(pt), pt, pid);
+      var cnt={}, order=[];
+      base.forEach(function(e){
+        var vs=colfVal(e,p,pt); if(!Array.isArray(vs)) vs=[vs];
+        vs.forEach(function(v){ v=String(v==null?'':v);
+          if(!(v in cnt)){ cnt[v]=0; order.push(v); } cnt[v]++; });
+      });
+      var ord=(p.opts||p.o||null);
+      order.sort(function(a,b){
+        if(ord){ var ia=ord.indexOf(a), ib=ord.indexOf(b);
+          if(ia<0) ia=900; if(ib<0) ib=900; if(ia!==ib) return ia-ib; }
+        if(a==='') return 1; if(b==='') return -1;
+        var na=parseFloat(a), nb=parseFloat(b);
+        if(!isNaN(na)&&!isNaN(nb)&&String(na)===a&&String(nb)===b) return nb-na;
+        return String(a).localeCompare(String(b),'ko');
+      });
+      var sel=cur0.vals||[];
+      body = '<input type="text" class="q" id="cfQ" placeholder="🔍 값 찾기">'
+        + '<div class="ch"><button type="button" id="cfAll">전체 고르기</button>'
+        + '<button type="button" id="cfNone">모두 풀기</button>'
+        + '<span style="margin-left:auto;font-size:11px;color:#a8b8c8;align-self:center">'+order.length+'가지</span></div>'
+        + '<div id="cfList">'
+        + (order.length? order.map(function(v){
+            return '<label class="it" data-v="'+esc(v)+'"><input type="checkbox"'+(sel.indexOf(v)>=0?' checked':'')+'>'
+              + '<span class="nm">'+esc(v===''?'(비어있음)':v)+'</span>'
+              + '<span class="n">'+cnt[v]+'</span></label>'; }).join('')
+           : '<div style="padding:10px;color:#a8b8c8;font-size:12.5px">고를 값이 없어요</div>')
+        + '</div>';
+    }
+
+    pop.innerHTML = '<div class="hd">'+tinfo(p.type).i+' '+esc(p.name)+' 거르기'
+      + '<button type="button" class="x" data-cfx="1">✕</button></div>'
+      + '<div class="bd">'+body+'</div>'
+      + '<div class="ft"><button type="button" data-cfoff="1">거르개 풀기</button>'
+      + '<button type="button" class="go" data-cfgo="1">적용</button></div>';
+    document.body.appendChild(pop);
+
+    /* 자리 잡기 */
+    var r = anchor.getBoundingClientRect();
+    var w = pop.offsetWidth || 272, hh = pop.offsetHeight || 300;
+    pop.style.left = Math.max(8, Math.min(r.left-8, window.innerWidth-w-8))+'px';
+    pop.style.top  = (r.bottom+6+hh > window.innerHeight)
+      ? Math.max(8, r.top-hh-6)+'px' : (r.bottom+6)+'px';
+
+    /* 배선 */
+    pop.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
+    pop.querySelector('[data-cfx]').addEventListener('click', colfClose);
+    pop.querySelector('[data-cfoff]').addEventListener('click', function(){
+      colfClose(); colfSet(pt, pid, null); });
+
+    if(k==='date'){
+      pop.querySelectorAll('[data-q]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var q=b.getAttribute('data-q');
+          var on=b.classList.contains('on');
+          pop.querySelectorAll('[data-q]').forEach(function(x){ x.classList.remove('on'); });
+          if(on){ document.getElementById('cfF1').value=''; document.getElementById('cfF2').value=''; return; }
+          b.classList.add('on');
+          var rg=colfRange(q)||{from:'',to:''};
+          document.getElementById('cfF1').value=rg.from;
+          document.getElementById('cfF2').value=rg.to;
+        });
+      });
+    }
+    var ca=pop.querySelector('#cfAll'), cn=pop.querySelector('#cfNone');
+    function setAll(v){
+      pop.querySelectorAll('#cfList .it').forEach(function(it){
+        if(it.style.display==='none') return;          /* 찾기로 걸러진 건 그대로 */
+        it.querySelector('input').checked=v; });
+    }
+    if(ca) ca.addEventListener('click', function(){ setAll(true); });
+    if(cn) cn.addEventListener('click', function(){ setAll(false); });
+    var q0=pop.querySelector('#cfQ');
+    if(q0) q0.addEventListener('input', function(){
+      var t=q0.value.trim();
+      pop.querySelectorAll('#cfList .it').forEach(function(it){
+        it.style.display = (!t || it.getAttribute('data-v').indexOf(t)>=0) ? '' : 'none'; });
+    });
+
+    pop.querySelector('[data-cfgo]').addEventListener('click', function(){
+      var v=null;
+      if(k==='date'){
+        var f1=document.getElementById('cfF1').value, f2=document.getElementById('cfF2').value;
+        var qs=(pop.querySelector('[data-q].on')||{}).getAttribute
+             ? pop.querySelector('[data-q].on').getAttribute('data-q') : '';
+        if(f1||f2) v={from:f1,to:f2,q:qs||''};
+      } else if(k==='num'){
+        var n1=document.getElementById('cfN1').value, n2=document.getElementById('cfN2').value;
+        if(n1!==''||n2!=='') v={min:n1===''?null:n1, max:n2===''?null:n2};
+      } else {
+        var picked=[];
+        pop.querySelectorAll('#cfList .it').forEach(function(it){
+          if(it.querySelector('input').checked) picked.push(it.getAttribute('data-v')); });
+        if(picked.length) v={vals:picked};
+      }
+      colfClose(); colfSet(pt, pid, v);
+    });
+    if(q0) setTimeout(function(){ try{ q0.focus(); }catch(e){} }, 40);
+  }
+
+  /* 거르개 걸기 전 원본 목록 — 팝업의 값·건수를 여기서 센다 */
+  function baseList(pt){
+    try{ return recs(pt || null); }catch(e){ return []; }
+  }
+
 
   /* ── 저장된 보기(뷰) ── */
   var LS_VIEWS='wl_life_views';
@@ -22078,19 +22451,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
   function fltBar(n, tot){
     var pt0 = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
-    return viewChips(pt0) + ruleBar(pt0) + '<div class="lf-fb">'
-      + '<span class="lb">기간</span>'
-      + '<input type="date" id="lfF1" value="'+esc(flt.from||'')+'" title="시작일">'
-      + '<span style="color:#c8d4e0">~</span>'
-      + '<input type="date" id="lfF2" value="'+esc(flt.to||'')+'" title="종료일">'
-      + '<select id="lfFq" style="width:104px"><option value="">빠른 선택</option>'
-      +   '<option value="m">이번 달</option><option value="pm">지난 달</option>'
-      +   '<option value="y">올해</option><option value="3m">최근 3개월</option>'
-      +   '<option value="12m">최근 1년</option></select>'
-      + '<span style="width:1px;height:22px;background:#dbe6f4"></span>'
+    return viewChips(pt0) + colfChips(pt0) + ruleBar(pt0) + '<div class="lf-fb">'
+      + '<button type="button" class="lf-fx" id="lfColF" style="border-color:#bcd2ea;color:#2563a8;font-weight:800">🔽 칸 거르기</button>'
+      + (vw==='table'? '<span class="lb" style="color:#9aa7b4">칸 이름의 ▾ 로도 됩니다</span>':'')
       + '<label class="lf-ck"><input type="checkbox" id="lfFm"'+(flt.money?' checked':'')+'> 금액 있는 것만</label>'
-      + '<span class="lb">최소</span>'
-      + '<input type="number" id="lfFmin" value="'+esc(flt.min||'')+'" placeholder="0" style="width:96px" title="이 금액 이상만">'
       + '<button type="button" class="lf-fx" id="lfRuleAdd" style="border-style:dashed;color:#7c3aed">＋ 조건 추가</button>'
       + ((vw==='table'||vw==='list'||vw==='card') ? grpOptions(pt0) : '')
       + ((vw==='table')
@@ -23587,6 +23951,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(egT!=='_month' && grouped) arr = grpSort(arr, pt, egT);
     PGLIST = arr.map(function(e){ return e.id; });        /* ◀ ▶ 이동용 */
 
+    var CF = colfOf(pt);
     var h=bar+'<div class="lf-tvwrap"><table class="lf-tv{{FRZ}}" style="min-width:{{MINW}}px"><thead><tr>';
     cols.forEach(function(p){
       var ti=tinfo(p.type);
@@ -23594,11 +23959,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var on = (srt.k===srtKey);
       var wpx = CW[p.id] || defW(p);
       TOTW += wpx;
-      h+='<th class="s'+(on?' on':'')+'" data-srt="'+esc(srtKey)+'"'
+      var fon = !!CF[p.id];
+      h+='<th class="s'+(on?' on':'')+(fon?' fon':'')+'" data-srt="'+esc(srtKey)+'"'
         + ' draggable="true" data-thid="'+esc(p.id)+'" title="⋮⋮ 끌면 자리 이동 · 오른쪽 끝을 끌면 폭 조절 (두 번 누르면 원래대로)"'
         + ' style="width:'+wpx+'px'+(ti.right?';text-align:right':(ti.center?';text-align:center':''))+'">'
         + '<span class="thg">⋮⋮</span>'
         + ti.i+' '+esc(p.name)+(on? '<span class="ar">'+(srt.d>0?'▲':'▼')+'</span>':'')
+        + '<button type="button" class="thf'+(fon?' on':'')+'" data-colf="'+esc(p.id)+'"'
+        +   ' title="'+(fon? '거르는 중 — 눌러서 고치기':'이 칸으로 거르기')+'">▾</button>'
         + '<span class="thrs" data-thrs="'+esc(p.id)+'"></span></th>';
     });
     h+='<th style="width:66px;text-align:center"><button type="button" id="lfColBtn" class="lf-fx" style="height:26px;padding:0 8px" title="보일 칸 고르기">⚙</button></th>';
@@ -25753,17 +26121,32 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       b.addEventListener('click', function(){ vwSet(b.getAttribute('data-vw')); }); });
     /* 목록 정렬 헤더 */
     host.querySelectorAll('[data-srt]').forEach(function(t){
-      t.addEventListener('click', function(){ srtSet(t.getAttribute('data-srt')); }); });
+      t.addEventListener('click', function(ev){
+        if(ev.target.closest('[data-colf],[data-thrs]')) return;   /* ▾·폭조절은 정렬 아님 */
+        srtSet(t.getAttribute('data-srt')); }); });
+    /* ▾ 칸 거르개 */
+    var ptCF = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
+    host.querySelectorAll('[data-colf]').forEach(function(b){
+      b.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
+      b.addEventListener('click', function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        colfOpen(b.getAttribute('data-colf'), ptCF, b);
+      });
+    });
+    host.querySelectorAll('[data-cfdrop]').forEach(function(b){
+      b.addEventListener('click', function(){ colfSet(ptCF, b.getAttribute('data-cfdrop'), null); }); });
+    host.querySelectorAll('[data-cfall]').forEach(function(b){
+      b.addEventListener('click', function(){ colfClear(ptCF); }); });
+    var cfb=document.getElementById('lfColF');
+    if(cfb) cfb.addEventListener('click', function(ev){ ev.stopPropagation(); colfPick(ptCF, cfb); });
     /* 목록 필터 */
-    var f1=document.getElementById('lfF1'), f2=document.getElementById('lfF2');
-    if(f1) f1.addEventListener('change', function(){ fltSet({from:f1.value}); });
-    if(f2) f2.addEventListener('change', function(){ fltSet({to:f2.value}); });
     var fm=document.getElementById('lfFm');
     if(fm) fm.addEventListener('change', function(){ fltSet({money:fm.checked}); });
-    var fmin=document.getElementById('lfFmin');
-    if(fmin) fmin.addEventListener('change', function(){ fltSet({min:fmin.value}); });
     var fc=document.getElementById('lfFclr');
-    if(fc) fc.addEventListener('click', function(){ flt.rules=[]; fltSet({from:'',to:'',money:false,min:''}); });
+    if(fc) fc.addEventListener('click', function(){
+      var pt0=(cur==='car')?'car':(curCat!=='전체'?curCat:'');
+      colfSave(pt0,null);
+      flt.rules=[]; fltSet({from:'',to:'',money:false,min:''}); });
     var ptF = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
     var ra=document.getElementById('lfRuleAdd');
     if(ra) ra.addEventListener('click', function(){ ruleAdd(ptF); });
@@ -27401,6 +27784,140 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
   window.wlVendorFields = VEND;      /* 대조표·점검용 */
   window.wlVacBox = function(){ return box; };
+})();
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ✅ 오늘계획 — 완료 / 미완료 / 보류
+     · 세 가지 상태를 쓰고, 예전 done 값과 서로 맞춰 둔다
+     · 못 끝낸 것(미완료·보류)은 다음 날 자동으로 오늘로 넘어온다
+       — 새로 만드는 게 아니라 그 기록을 그대로 옮긴다 (중복 없음)
+       — 처음 적은 날은 planFrom 에 남고, 며칠째인지 carryN 에 센다
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+  var ST = ['미완료','보류','완료'];
+  var LS_DAY = 'wl_plan_carry_day';
+  var MAXBACK = 60;                       /* 이보다 오래된 것은 건드리지 않는다 */
+
+  function kst(){ try{ return kstNow(); }catch(e){ return new Date(Date.now()+9*3600*1000); } }
+  function todayS(){ return kst().toISOString().slice(0,10); }
+  function shiftS(base, n){
+    var d=new Date(base+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n);
+    return d.toISOString().slice(0,10);
+  }
+  function statusOf(p){
+    var s=String(p.status||'');
+    if(ST.indexOf(s)>=0) return s;
+    return p.done ? '완료' : '미완료';        /* 예전 기록 보정 */
+  }
+
+  /* ① 상태 ↔ done 을 서로 맞춘다 — 기록 탭의 체크표시가 그대로 살아 있게 */
+  var _upd = window.updateRecord;
+  if(typeof _upd==='function' && !_upd._planSync){
+    window.updateRecord = function(id, patch){
+      try{
+        if(patch && typeof patch==='object'){
+          var rec=(entries||[]).filter(function(x){ return x.id===id; })[0];
+          if(rec && rec.kind==='plan'){
+            if('status' in patch && ST.indexOf(String(patch.status))>=0){
+              patch.done = (patch.status==='완료');        /* 상태가 임자 */
+            } else if('done' in patch && !('status' in patch)){
+              /* 체크만 눌렀을 때 — 보류였다면 보류로 되돌아가게 */
+              patch.status = patch.done ? '완료'
+                : (String(rec.status)==='보류' ? '보류' : '미완료');
+            }
+          }
+        }
+      }catch(e){}
+      return _upd.apply(this, arguments);
+    };
+    window.updateRecord._planSync = 1;
+  }
+  var _add = window.addRecord;
+  if(typeof _add==='function' && !_add._planSync){
+    window.addRecord = function(data){
+      try{
+        if(data && data.kind==='plan'){
+          if(ST.indexOf(String(data.status||''))<0) data.status = data.done ? '완료' : '미완료';
+          data.done = (data.status === '완료');        /* 상태가 임자 — done 은 따라간다 */
+          if(!data.planFrom) data.planFrom = data.date || todayS();
+        }
+      }catch(e){}
+      return _add.apply(this, arguments);
+    };
+    window.addRecord._planSync = 1;
+  }
+
+  /* ② 예전 기록에 상태 채워 넣기 (한 번만) */
+  function backfill(){
+    var n=0;
+    try{
+      (entries||[]).forEach(function(p){
+        if(!p || p.kind!=='plan') return;
+        var patch={};
+        if(ST.indexOf(String(p.status||''))<0) patch.status = p.done ? '완료' : '미완료';
+        if(!p.planFrom) patch.planFrom = p.date || '';
+        if(Object.keys(patch).length){ Object.assign(p, patch); n++; }
+      });
+      if(n){ try{ if(typeof lsSave==='function') lsSave(); }catch(e){} }
+    }catch(e){ console.error('[오늘계획]', e); }
+    return n;
+  }
+
+  /* ③ 못 끝낸 계획을 오늘로 옮긴다 */
+  function carry(force){
+    try{
+      var t = todayS();
+      if(!force){
+        var last = null;
+        try{ last = localStorage.getItem(LS_DAY); }catch(e){}
+        if(last === t) return 0;                       /* 오늘은 이미 했다 */
+      }
+      var floor = shiftS(t, -MAXBACK);
+      var moved = [];
+      (entries||[]).forEach(function(p){
+        if(!p || p.kind!=='plan') return;
+        var d = String(p.date||'');
+        if(!d || d >= t) return;                       /* 오늘 것·앞날 것은 그대로 */
+        if(d < floor) return;                          /* 너무 오래된 것은 손대지 않는다 */
+        if(statusOf(p)==='완료') return;               /* 끝난 것은 그 날에 남는다 */
+        moved.push(p);
+      });
+      try{ localStorage.setItem(LS_DAY, t); }catch(e){}
+      if(!moved.length) return 0;
+
+      moved.forEach(function(p){
+        var from = p.planFrom || p.date;
+        var n = 0;
+        try{
+          var a=new Date(from+'T00:00:00Z'), b=new Date(t+'T00:00:00Z');
+          n = Math.max(1, Math.round((b-a)/86400000));
+        }catch(e){ n = (Number(p.carryN)||0)+1; }
+        var patch = { date: t, planFrom: from, carryN: n };
+        try{ window.updateRecord(p.id, patch); }
+        catch(e){ Object.assign(p, patch); }
+      });
+      try{ if(typeof lsSave==='function') lsSave(); }catch(e){}
+      try{ if(typeof renderAll==='function') renderAll(); }catch(e){}
+      try{ if(typeof window.wlLifeRender==='function') window.wlLifeRender(); }catch(e){}
+      try{ if(typeof toast==='function')
+        toast('⏭ 못 끝낸 계획 ' + moved.length + '건을 오늘로 옮겼어요', 4000); }catch(e){}
+      return moved.length;
+    }catch(e){ console.error('[오늘계획 이월]', e); return 0; }
+  }
+
+  /* ④ 켤 때 한 번 + 날짜가 바뀌면 다시 */
+  function run(){
+    if(typeof entries==='undefined' || !Array.isArray(entries)) return;
+    backfill(); carry(false);
+  }
+  [4500, 9000].forEach(function(ms){ setTimeout(run, ms); });
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState==='visible') setTimeout(run, 400); });
+  setInterval(run, 10*60*1000);                        /* 열어 둔 채 자정을 넘겨도 */
+
+  window.wlPlanCarry = function(){ return carry(true); };
+  window.wlPlanStatus = statusOf;
 })();
 </script>
 </body>
