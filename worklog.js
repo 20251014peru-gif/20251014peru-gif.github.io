@@ -6,7 +6,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v69-0827-1507";
+const APP_VERSION = "v71-0827-1547";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -254,7 +254,9 @@ const SCHEMA={
     {k:"detail",label:"상세내용",type:"textarea",full:true},
     {k:"estimateMemo",label:"견적 메모",type:"textarea",full:true},
   ],
-  plan:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"text",label:"할 일",type:"text",full:true,req:true} ],
+  plan:[ {k:"date",label:"날짜",type:"date",req:true},
+         {k:"status",label:"상태",type:"select",opts:["미완료","보류","완료"]},
+         {k:"text",label:"할 일",type:"text",full:true,req:true} ],
   memo:[ {k:"date",label:"날짜",type:"date",req:true}, {k:"title",label:"제목(선택)",type:"text",full:true}, {k:"body",label:"내용",type:"textarea",full:true,req:true} ],
   call:[
     {k:"date",label:"날짜",type:"date",req:true}, {k:"time",label:"시간",type:"time"},
