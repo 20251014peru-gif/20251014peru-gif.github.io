@@ -145,7 +145,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v68-0827-1418</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v69-0827-1507</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1522,7 +1522,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v68-0827-1418</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v69-0827-1507</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3207,7 +3207,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=68-20260827t1418"></script>
+<script src="worklog.js?v=69-20260827t1507"></script>
 <script>
 /* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
    (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
@@ -19050,6 +19050,17 @@ select.lf-in{ padding-right:8px }
 .lf-dgrp span{ display:inline-block; font-size:11.5px; font-weight:900; color:#5b7794;
   padding:3px 10px; background:#eef5fd; border-radius:8px; letter-spacing:.3px }
 
+/* 구분 머리줄 — 종류·상태별로 카드를 갈라 준다 */
+.lf-ghd{ grid-column:1/-1; display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  margin:16px 0 3px; padding:0 2px 7px; border-bottom:2px solid var(--gc,#cbd5e1) }
+.lf-ghd:first-child{ margin-top:2px }
+.lf-ghd .gi{ font-size:15px; line-height:1 }
+.lf-ghd .gn{ font-size:14px; font-weight:900; color:var(--gc,#33567d); letter-spacing:-.2px }
+.lf-ghd .gsp{ flex:1 }
+.lf-ghd .gs{ font-size:13px; font-weight:900; color:var(--gc,#33567d) }
+.lf-ghd .gc{ font-size:12px; font-weight:800; color:#9aa7b4 }
+@media (max-width:600px){ .lf-ghd{ margin:12px 0 2px } .lf-ghd .gn{ font-size:13px } }
+
 /* ── 모달 ── */
 .lf-ov{ position:fixed; inset:0; background:rgba(12,26,42,.45); z-index:9600;
   display:flex; align-items:center; justify-content:center; padding:14px }
@@ -19956,6 +19967,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     } else {
       ttl = e.title || e.who || d.n;
       tags = '<span class="lf-tag" style="background:'+col+'1f;color:'+col+'">'+d.i+' '+d.n+'</span>';
+      tags += statTag(e, pty);                         /* 상태·구분을 한눈에 */
+      var vd = (typeof vendorOf==='function') ? vendorOf(e) : '';
+      if(vd) tags += '<span class="lf-tag" style="background:#eaf1fb;color:#2563a8">'+esc(String(vd).slice(0,14))+'</span>';
+      if(e.floor) tags += '<span class="lf-tag" style="background:#f1f5f9;color:#475569">'+esc(e.floor)+'</span>';
       if(e.ptype2) tags += '<span class="lf-tag" style="background:#f1f5f9;color:#475569">'+esc(e.ptype2)+'</span>';
       if(e.rating) tags += '<span style="color:#f4b942;font-weight:800">'+stars(e.rating)+'</span>';
       if(pty==='book' && num(e.totalpg)) tags += '<span class="lf-tag" style="background:#ede9fe;color:#5b21b6">'
@@ -19978,6 +19993,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       return '<img src="'+esc(u)+'">'; }).join('') + '</div>';
 
     var chC = colorHit(e, pty);
+    /* 구분 기준이 상태라면 카드 테두리도 그 색으로 — 눈으로 바로 갈린다 */
+    try{
+      var sv0 = statVal(e, pty);
+      if(sv0 && effGrp(pty)==='_stat') col = statColor(sv0, pty);
+    }catch(_e){}
     return '<div class="lf-card" data-lid="'+esc(e.id)+'" style="border-left-color:'+col
       + (e.done?';opacity:.58':'') + (chC? (';background:'+colorOf(chC.color).bg+'66'):'') + '">'
       + '<button class="lf-del" data-ldel="'+esc(e.id)+'" title="삭제">🗑</button>'
@@ -20049,11 +20069,19 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       {k:'workMemo',    label:'업체 메모',    type:'textarea', full:true}
     ],
     expense: [
-      {k:'spec',        label:'규격 · 사양',   type:'text'},
-      {k:'taxStatus',   label:'세금계산서',   type:'select', opts:['','발행','미발행','발행예정']}
+      {k:'vendor',      label:'업체',          type:'text'},
+      {k:'purpose',     label:'용도',          type:'select'},
+      {k:'expSubType',  label:'하위 구분',      type:'select'},
+      {k:'supplyAmt',   label:'공급가액 (원)',  type:'number'},
+      {k:'taxAmt',      label:'부가세 (원)',    type:'number'},
+      {k:'isIssued',    label:'계산서 발행',    type:'checkbox'},
+      {k:'isJeonpyo',   label:'전표',          type:'checkbox'}
     ],
     item: [
-      {k:'lastBuy',     label:'마지막 구매일', type:'date'}
+      {k:'lastBuyDate', label:'마지막 구매일 (자동)', type:'date'}
+    ],
+    stock: [
+      {k:'itemName',    label:'품목명 (자동)',  type:'text'}
     ]
   };
 
@@ -20119,6 +20147,16 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         });
         return [''].concat(fd);
       }
+      if(k==='purpose'){            /* 지출 용도 — 관리 화면에서 정한 목록 */
+        try{
+          var pu=JSON.parse(localStorage.getItem('wl_exp_purposes_v44')||'null');
+          if(Array.isArray(pu) && pu.length) return [''].concat(pu);
+        }catch(e){}
+      }
+      if(k==='expSubType' && kind==='expense')
+        return ['','공사성','전기','수도','유선방송','전화','정수기','기타'];
+      if(k==='expType' && kind==='expense')
+        return ['','개인지출','세금계산서','전표','급여'];
       if(k==='refYear'){            /* 입력창과 같은 차례 */
         var y = Number(String(today()).slice(0,4)) || 2026, ys=[];
         for(var d=-2; d<=1; d++) ys.push(String(y+d));
@@ -20228,6 +20266,70 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(d) p.push(String(d).replace(/\s+/g,' ').slice(0,60));
     return p.join(' · ');
   }
+  /* ── 상태 — 종류마다 정해진 「차례」와 「색」이 있다 ──────────────
+     가나다순으로 늘어놓으면 검토중 다음에 견적중이 아니라 공사중이 온다.
+     그래서 진짜 일 순서를 여기에 적어 둔다. */
+  var STAT = {
+    progress: { k:'status',
+      order:['검토중','견적중','품의중','발주완료','공사중','완료','보류'],
+      color:{'검토중':'#64748b','견적중':'#0891b2','품의중':'#7c3aed','발주완료':'#2563a8',
+             '공사중':'#ea580c','완료':'#0f7a4a','보류':'#94a3b8'} },
+    work:     { k:'status',
+      order:['미완료','진행중','완료'],
+      color:{'미완료':'#dc2626','진행중':'#ea580c','완료':'#0f7a4a'} },
+    accident: { k:'status',
+      order:['⏳ 접수','🔍 조사중','⚙ 처리중','✅ 완료','📋 종결'],
+      color:{'⏳ 접수':'#dc2626','🔍 조사중':'#ea580c','⚙ 처리중':'#2563a8',
+             '✅ 완료':'#0f7a4a','📋 종결':'#64748b'} },
+    expense:  { k:'expType',
+      order:['개인지출','세금계산서','전표','급여'],
+      color:{'개인지출':'#3f7cb8','세금계산서':'#c2410c','전표':'#7c3aed','급여':'#16a34a'} },
+    stock:    { k:'stockType', order:['입고','출고'],
+      color:{'입고':'#0f7a4a','출고':'#c2410c'} },
+    call:     { k:'dir', order:['수신','발신','부재중'],
+      color:{'수신':'#0891b2','발신':'#2563a8','부재중':'#dc2626'} },
+    vacation: { k:'vtype', order:[], color:{} },
+    deliver:  { k:'dtype', order:[], color:{} },
+    schedule: { k:'scheduleType', order:['일회성','매일','매주','매월','매년'], color:{} },
+    item:     { k:'field',  order:[], color:{} },
+    site:     { k:'category', order:[], color:{} }
+  };
+  /* 종류 이름이 안 넘어와도(전체 보기 등) 지금 보고 있는 데이터셋으로 알아낸다 */
+  function statKind(kind){
+    if(kind && STAT[kind]) return kind;
+    try{ if(DS && DS.kind && STAT[DS.kind]) return DS.kind; }catch(e){}
+    return kind;
+  }
+  function statInfo(kind){ return STAT[statKind(kind)] || null; }
+  function statVal(e, kind){
+    var si=statInfo(kind); if(!si) return '';
+    kind=statKind(kind);
+    var v=e && e[si.k];
+    return (v==null)? '' : String(v);
+  }
+  function statRank(v, kind){
+    var si=statInfo(kind); if(!si) return 0;
+    kind=statKind(kind);
+    var i=si.order.indexOf(String(v||''));
+    return i<0 ? 900 : i;
+  }
+  function statColor(v, kind){
+    var si=statInfo(kind); if(!si) return '#64748b';
+    kind=statKind(kind);
+    if(si.color && si.color[v]) return si.color[v];
+    /* 정해 둔 색이 없으면 글자로 고르게 뽑는다 — 매번 같은 색이 나온다 */
+    var PAL=['#2563a8','#0891b2','#7c3aed','#ea580c','#0f7a4a','#c2410c','#4f46e5','#b45309'];
+    var n=0, str=String(v||'');
+    for(var i=0;i<str.length;i++) n=(n*31+str.charCodeAt(i))>>>0;
+    return PAL[n % PAL.length];
+  }
+  function statTag(e, kind){
+    var v=statVal(e, kind); if(!v) return '';
+    var c=statColor(v, kind);
+    return '<span class="lf-tag" style="background:'+c+'1f;color:'+c+';border:1px solid '+c+'33">'
+         + esc(v) + '</span>';
+  }
+
   function tagOf(e){
     var pty2=DS.ptypeOf(e);
     if(isPersonal() && pty2==='car'){ var c=carColor(e.car);
@@ -21990,7 +22092,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       + '<span class="lb">최소</span>'
       + '<input type="number" id="lfFmin" value="'+esc(flt.min||'')+'" placeholder="0" style="width:96px" title="이 금액 이상만">'
       + '<button type="button" class="lf-fx" id="lfRuleAdd" style="border-style:dashed;color:#7c3aed">＋ 조건 추가</button>'
-      + ((vw==='table'||vw==='list') ? grpOptions(pt0) : '')
+      + ((vw==='table'||vw==='list'||vw==='card') ? grpOptions(pt0) : '')
       + ((vw==='table')
          ? ('<label class="lf-ck" title="옆으로 밀어도 첫 칸과 칸 이름이 붙어 있게"><input type="checkbox" id="lfFrz"'+(frzOn()?' checked':'')+'> 틀고정</label>'
             + '<button type="button" class="lf-fx" id="lfColwR" title="끌어서 바꾼 칸 폭을 처음으로">↔ 폭 초기화</button>')
@@ -22015,26 +22117,56 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   var LS_GRP='wl_life_grp';
   var grp = lsGet(LS_GRP,'') || '';
   function grpSet(v){ grp=v; lsSet(LS_GRP,v); safeRender(); }
+  /* 지금 실제로 쓰이는 구분 기준 — 고른 게 없으면 종류에 맞게 알아서 */
+  function effGrp(pt){ return grp || (statInfo(pt) ? '_stat' : '_month'); }
   function grpKey(e, pt){
-    if(!grp) return String(e.date||'').slice(0,7);
-    if(grp==='_month') return String(e.date||'').slice(0,7);
-    var p=propById(pt, grp); if(!p) return '';
+    var g=effGrp(pt);
+    if(g==='_month') return String(e.date||'').slice(0,7);
+    if(g==='_stat')  return statVal(e, pt);
+    var p=propById(pt, g); if(!p) return '';
     var v = p.type==='formula' ? formulaCalc(e,p.expr,e.ptype)
-          : p.type==='rollup'  ? rollupCalc(e,p,e.ptype) : pget(e,grp);
+          : p.type==='rollup'  ? rollupCalc(e,p,e.ptype) : pget(e,g);
     if(Array.isArray(v)) return v.length? String(v[0]) : '';
     if(p.type==='check') return v? '☑ 체크됨' : '☐ 안 됨';
     if(p.id==='_cat') return (e.ptype==='car') ? '🚗 차계부' : ((cats()[e.ptype]||catEtc()).i+' '+(cats()[e.ptype]||catEtc()).n);
     return String(v==null?'':v);
   }
-  function grpLabel(k){
-    if((!grp||grp==='_month')) return k? k.replace('-','년 ')+'월' : '날짜 없음';
+  function grpLabel(k, pt){
+    var g=effGrp(pt);
+    if(g==='_month') return k? k.replace('-','년 ')+'월' : '날짜 없음';
+    if(g==='_stat')  return k===''? '구분 없음' : k;
     return k===''? '(비어있음)' : k;
+  }
+  /* 구분 차례대로 줄 세우기 — 상태는 일 순서, 월은 최근 것부터 */
+  function grpRank(k, pt, g){
+    if(g==='_stat') return statRank(k, pt);
+    if(g==='_month') return 0;
+    var p=propById(pt, g), ord=(p && (p.opts||p.o)) || null;
+    if(ord){ var i=ord.indexOf(k); return i<0?900:i; }
+    return 0;
+  }
+  function grpSort(arr, pt, g){
+    return arr.slice().sort(function(x,y){
+      var a=grpKey(x,pt), b=grpKey(y,pt);
+      if(a===b) return 0;
+      if(g==='_month') return String(b).localeCompare(String(a));
+      var ra=grpRank(a,pt,g), rb=grpRank(b,pt,g);
+      if(ra!==rb) return ra-rb;
+      if(a==='') return 1; if(b==='') return -1;
+      return String(a).localeCompare(String(b),'ko');
+    });
   }
   function grpOptions(pt){
     var ok=['date','sel','check','tag','text','tel','num','multi','rel'];
     var a=propsOf(pt).filter(function(p){ return ok.indexOf(p.type)>=0 && p.id!=='_title'; });
-    return '<select id="lfGrp" class="lf-in" style="height:32px;font-size:12.5px" title="묶어서 보기">'
-      + '<option value="">📅 월별로 묶기</option>'
+    var si=statInfo(pt);
+    var siName = si ? (({status:'상태',expType:'종류',stockType:'입고/출고',dir:'통화 구분',
+                         vtype:'휴가 종류',dtype:'전달 종류',scheduleType:'반복',
+                         field:'분야',category:'분류'})[si.k] || '상태') : '';
+    return '<select id="lfGrp" class="lf-in" style="height:32px;font-size:12.5px" title="어떤 기준으로 갈라서 볼지">'
+      + '<option value=""'+(grp===''?' selected':'')+'>'
+        + (si? ('\u2728 '+siName+'별로 묶기 (기본)') : '\uD83D\uDCC5 월별로 묶기 (기본)') + '</option>'
+      + '<option value="_month"'+(grp==='_month'?' selected':'')+'>\uD83D\uDCC5 월별로 묶기</option>'
       + a.map(function(p){ return '<option value="'+esc(p.id)+'"'+(grp===p.id?' selected':'')
           +'>'+tinfo(p.type).i+' '+esc(p.name)+' 로 묶기</option>'; }).join('')
       + '</select>';
@@ -22824,6 +22956,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       if(!isPersonal()){
         /* 업무일지는 원래 쓰던 입력창을 그대로 연다 */
         try{
+          /* 지출은 전용 입력창(업체·유형·단가·수량)이 따로 있다 */
+          if(DS.kind==='expense' && typeof window.openExpenseEditor==='function'){
+            window.openExpenseEditor(id); return; }
           if(typeof window.openEditor==='function'){ window.openEditor(DS.kind, id); return; }
         }catch(e){ console.error('[전체 서식]', e); }
       }
@@ -23367,12 +23502,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     PGLIST = arr.map(function(e){ return e.id; });
     var N = lsColN();
 
+    var eg = effGrp(pt);
     var grouped = (srt.k==='date') || !!grp;
-    if(grp && grp!=='_month'){
-      arr = arr.slice().sort(function(x,y){
-        var a1=grpKey(x,pt), b1=grpKey(y,pt);
-        if(a1===b1) return 0; return a1<b1?-1:1; });
-      grouped = true;
+    if(eg!=='_month' && grouped){
+      arr = grpSort(arr, pt, eg);
     }
 
     var h = bar
@@ -23412,7 +23545,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       });
       buckets.forEach(function(b2){
         var gs=0; b2.list.forEach(function(x){ gs+=money(x); });
-        h += '<div class="lf-lsg"><span>'+esc(grpLabel(b2.k))+'</span>'
+        h += '<div class="lf-lsg"><span>'+esc(grpLabel(b2.k, pt))+'</span>'
            + '<span style="color:#8ba0b6;font-weight:800">'+b2.list.length+'건</span>'
            + (gs? '<span class="s">'+numFmt(gs)+'원</span>':'') + '</div>'
            + chunk(b2.list);
@@ -23449,8 +23582,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }
 
     var sumAll=0; arr.forEach(function(e){ sumAll+=money(e); });
-    PGLIST = arr.map(function(e){ return e.id; });        /* ◀ ▶ 이동용 */
+    var egT = effGrp(pt);
     var grouped = (srt.k==='date') || !!grp;
+    if(egT!=='_month' && grouped) arr = grpSort(arr, pt, egT);
+    PGLIST = arr.map(function(e){ return e.id; });        /* ◀ ▶ 이동용 */
 
     var h=bar+'<div class="lf-tvwrap"><table class="lf-tv{{FRZ}}" style="min-width:{{MINW}}px"><thead><tr>';
     cols.forEach(function(p){
@@ -23491,7 +23626,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
           arr.forEach(function(x){ if(grpKey(x,pt)===m){ gs+=money(x); gn++; } });
           var lft = Math.max(1, (iAmt>=0? iAmt : nCol-1));
           h+='<tr class="lf-grp"><td colspan="'+lft+'" style="padding:5px 11px">'
-            + esc(grpLabel(m))
+            + esc(grpLabel(m, pt))
             + ' <span style="font-weight:700;color:#7a92a8">'+gn+'건</span></td>'
             + '<td colspan="'+(nCol-lft)+'" style="padding:5px 11px;text-align:right;color:'+(gs?'#0f7a4a':'#a8b8c8')+'">'
             + (gs? numFmt(gs)+'원':'') + '</td></tr>'; }
@@ -23541,13 +23676,72 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(vw==='gal')   return galleryHTML(arr, ptG);
     return cardsHTML(arr, emptyIcon, emptyMsg);
   }
+  /* ── 카드 보기의 「구분 기준」 ──────────────────────────────
+     사용자가 고른 게 있으면 그것, 없으면 그 종류에 가장 자연스러운 것.
+     · 업무·진행업무·사고 → 상태   · 지출 → 종류   · 입출고 → 입고/출고
+     · 그 밖에는 월별 */
+  function cardGrp(pt){ return effGrp(pt); }
+  function cardKey(e, pt, g){ return grpKey(e, pt); }
+  function cardHead(k, pt, g, list){
+    var sum=0, n=list.length;
+    list.forEach(function(x){ sum += money(x); });
+    var name, icon, col;
+    if(g==='_stat'){
+      name = k || '구분 없음';
+      col  = k ? statColor(k, pt) : '#94a3b8';
+      icon = k ? '' : '·';
+      /* 아이콘이 앞에 붙은 상태(⏳ 접수)는 그 이모지를 그대로 쓴다 */
+      var mm = /^([\u2000-\u3300\u2190-\u21FF\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]+)\s*(.*)$/.exec(name||'');
+      if(mm && mm[1]){ icon = mm[1]; name = mm[2] || name; }
+      else if(!icon) icon = '\u25CF';
+    } else if(g==='_month'){
+      name = k ? (k.replace('-','년 ')+'월') : '날짜 없음';
+      icon = '\uD83D\uDCC5'; col = '#5b7794';
+    } else {
+      name = grpLabel(k, pt) || '(비어있음)';
+      var p0 = propById(pt, g);
+      icon = p0 ? tinfo(p0.type).i : '\uD83C\uDFF7';
+      col  = '#5b7794';
+    }
+    return '<div class="lf-ghd" style="--gc:'+col+'">'
+      + '<span class="gi">'+icon+'</span>'
+      + '<span class="gn">'+esc(name)+'</span>'
+      + '<span class="gsp"></span>'
+      + (sum? '<span class="gs">'+numFmt(sum)+'원</span>':'')
+      + '<span class="gc">'+n+'건</span>'
+      + '</div>';
+  }
   function cardsHTML(arr, emptyIcon, emptyMsg){
-    if(!arr.length) return '<div class="lf-grid"><div class="lf-empty"><div class="ei">'+emptyIcon+'</div>'+emptyMsg+'</div></div>';
-    var h='<div class="lf-grid">', last='';
+    var pt = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
+    var tot0=arr.length;
+    arr = applySrt(applyFlt(arr));
+    var bar = fltBar(arr.length, tot0);
+    if(!arr.length) return bar + '<div class="lf-grid"><div class="lf-empty"><div class="ei">'+emptyIcon+'</div>'
+      + (fltOn()? '조건에 걸리는 기록이 없어요' : emptyMsg) + '</div></div>';
+    PGLIST = arr.map(function(e){ return e.id; });
+    var g  = cardGrp(pt);
+
+    /* 구분별로 담는다 */
+    var buckets=[], seen={};
     arr.forEach(function(e){
-      var m=String(e.date||'').slice(0,7);
-      if(m!==last){ last=m; h+='<div class="lf-dgrp"><span>'+(m? m.replace('-','년 ')+'월':'날짜 없음')+'</span></div>'; }
-      h+=card(e);
+      var k = cardKey(e, pt, g);
+      if(!seen[k]){ seen[k]={k:k, list:[]}; buckets.push(seen[k]); }
+      seen[k].list.push(e);
+    });
+
+    /* 구분의 차례 — 상태는 일 순서대로, 월은 최근 것부터 */
+    buckets.sort(function(a,b){
+      if(g==='_month') return String(b.k).localeCompare(String(a.k));
+      var ra=grpRank(a.k,pt,g), rb=grpRank(b.k,pt,g);
+      if(ra!==rb) return ra-rb;
+      if(a.k==='') return 1; if(b.k==='') return -1;
+      return String(a.k).localeCompare(String(b.k),'ko');
+    });
+
+    var h=bar + '<div class="lf-grid">';
+    buckets.forEach(function(b2){
+      h += cardHead(b2.k, pt, g, b2.list);
+      b2.list.forEach(function(e){ h += card(e); });
     });
     return h+'</div>';
   }
@@ -26066,6 +26260,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }catch(e){ console.error('[데이터셋 되돌리기]', e); }
   };
   window.wlLifeRender = render;
+  window.wlWorkFields = workFields;      /* 대조표·점검용 */
+  window.wlWorkKinds  = WORK_KINDS;
   window.wlLifeOpen   = openRec;
   window.wlLifeOpenCt = openCt;
 
@@ -26939,6 +27135,272 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }catch(e){}
     setTimeout(rehydrate, 1500);
   }, 4000);
+})();
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   📇 관련처 자동완성 — 연락처와 이어 붙인다
+     · 업체·거래처·담당업체 칸을 누르면 연락처가 바로 뜬다
+     · 고르면 담당자·직책·전화가 빈 칸에 알아서 채워진다
+     · 없는 업체는 그 자리에서 연락처에 등록할 수 있다
+     · 입력창(모달)·지출창·페이지·표 어디서든 똑같이 동작한다
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+  /* 어느 칸이 「관련처」인가 — 고르면 같이 채울 칸까지 적어 둔다 */
+  var VEND = {
+    work:     { workVendor:{person:'workContact', title:'workRole', phone:'workPhone', memo:'workMemo'} },
+    expense:  { vendor:{} },
+    progress: { owner:{phone:'ownerPhone'} },
+    item:     { vendor:{}, maker:{} },
+    stock:    { vendor:{} },
+    call:     { company:{person:'name', title:'role', phone:'phone'} },
+    accident: { partyName:{phone:'partyPhone'} }
+  };
+  /* 종류를 몰라도 이름만으로 관련처인 게 확실한 칸 */
+  var ANY = { workVendor:1, vendor:1, owner:1, maker:1, company:1, payee:1 };
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+  function CC(){ try{ return (contactsCache||[]).filter(function(c){ return c && c.name; }); }catch(e){ return []; } }
+
+  /* ── 떠 있는 목록 상자 (모달 위에도 떠야 하므로 body 에 붙인다) ── */
+  var box=null, curInp=null, curMap=null, actIdx=-1;
+  function ensure(){
+    if(box) return box;
+    box=document.createElement('div');
+    box.id='vacBox';
+    box.style.cssText='position:fixed;z-index:2147483000;display:none;background:#fff;'
+      + 'border:1.5px solid #cfe0f2;border-radius:12px;box-shadow:0 12px 34px rgba(26,47,69,.18);'
+      + 'max-height:290px;overflow:auto;font-family:inherit;-webkit-overflow-scrolling:touch';
+    document.body.appendChild(box);
+    box.addEventListener('mousedown', function(e){ e.preventDefault(); });   /* blur 로 닫히지 않게 */
+    return box;
+  }
+  function hide(){ if(box){ box.style.display='none'; } curInp=null; actIdx=-1; }
+  function place(){
+    if(!box || !curInp) return;
+    var r=curInp.getBoundingClientRect();
+    var w=Math.max(240, Math.min(r.width, window.innerWidth-16));
+    box.style.width = w+'px';
+    box.style.left  = Math.max(8, Math.min(r.left, window.innerWidth-w-8))+'px';
+    var below = window.innerHeight - r.bottom;
+    if(below < 190 && r.top > below){
+      box.style.top='auto'; box.style.bottom=(window.innerHeight-r.top+4)+'px';
+      box.style.maxHeight=Math.min(290, r.top-16)+'px';
+    } else {
+      box.style.bottom='auto'; box.style.top=(r.bottom+4)+'px';
+      box.style.maxHeight=Math.min(290, below-16)+'px';
+    }
+  }
+
+  /* ── 다른 칸 채우기 — 빈 칸만 (이미 적어 둔 것은 지킨다) ── */
+  function fill(map, c){
+    if(!map) return;
+    var scope = (curInp && curInp.closest)
+      ? (curInp.closest('#overlay, #expenseOverlay, .lf-page') || document) : document;
+    Object.keys(map).forEach(function(src){
+      var key=map[src], v=c[src];
+      if(!v) return;
+      var el = scope.querySelector('#m-'+key) || scope.querySelector('#exp-'+key)
+            || document.getElementById('m-'+key);
+      if(!el) return;
+      if(el.value && String(el.value).trim()) return;
+      el.value = v;
+      try{ el.dispatchEvent(new Event('input',{bubbles:true}));
+           el.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
+      el.style.background='#fffbea';                       /* 자동으로 채운 칸 표시 */
+    });
+  }
+
+  function pick(c){
+    if(!curInp || !c) return;
+    var map=curMap, inp=curInp;
+    inp.value = c.name;
+    try{ inp.dispatchEvent(new Event('input',{bubbles:true}));
+         inp.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
+    fill(map, c);
+    hide();
+    try{ inp.focus(); }catch(e){}
+    try{
+      if(typeof toast==='function' && (c.person||c.phone))
+        toast('📇 ' + c.name + (c.person?' · '+c.person:'') + (c.phone?' · '+c.phone:''));
+    }catch(e){}
+  }
+
+  function newContact(name){
+    hide();
+    try{
+      if(typeof openTpContactForm==='function'){
+        openTpContactForm(null, '등록업체');
+        setTimeout(function(){
+          var n=document.getElementById('tpCfName');
+          if(n){ n.value=name||''; n.dispatchEvent(new Event('input',{bubbles:true})); }
+          var ph=document.getElementById('tpCfPhone'); if(ph) ph.focus();
+        }, 120);
+        return;
+      }
+    }catch(e){ console.error('[관련처]', e); }
+    if(typeof toast==='function') toast('연락처 화면에서 등록해 주세요');
+  }
+
+  var _tried=0;                       /* 빈 캐시 다시 불러오기는 딱 한 번만 (되풀이 금지) */
+  function render(q){
+    var b=ensure(), all=CC();
+    if(!all.length){
+      b.innerHTML='<div style="padding:12px 14px;color:#aab8c8;font-size:13px">'
+        + (_tried? '연락처가 아직 없어요' : '연락처를 불러오는 중…') + '</div>';
+      b.style.display='block'; place();
+      if(!_tried){
+        _tried=1;
+        try{
+          if(typeof loadContactsCache==='function')
+            loadContactsCache().then(function(){
+              if(curInp && CC().length) render(curInp.value);
+            }).catch(function(){});
+        }catch(e){}
+      }
+      return;
+    }
+    _tried=0;
+    q=String(q||'').trim();
+    var qn=q.replace(/[^0-9]/g,'');
+    var hit = q ? all.filter(function(c){
+      return (c.name||'').indexOf(q)>=0 || (c.person||'').indexOf(q)>=0
+          || (c.cat||'').indexOf(q)>=0  || (c.title||'').indexOf(q)>=0
+          || (qn && (c.phone||'').replace(/[^0-9]/g,'').indexOf(qn)>=0);
+    }) : all.slice();
+    /* 즐겨찾기 → 등록업체 → 일회성 차례 */
+    hit.sort(function(a,b2){
+      var fa=a.fav?0:1, fb=b2.fav?0:1; if(fa!==fb) return fa-fb;
+      var oa=(a.vendorType==='일회성')?1:0, ob=(b2.vendorType==='일회성')?1:0;
+      if(oa!==ob) return oa-ob;
+      return String(a.name).localeCompare(String(b2.name),'ko');
+    });
+    var top = hit.slice(0, 40);
+    var h = top.map(function(c,i){
+      var one = c.vendorType==='일회성';
+      var sub = [c.cat, c.person, c.title, c.phone].filter(Boolean).join(' · ');
+      return '<div class="vac-i" data-i="'+all.indexOf(c)+'"'
+        + ' style="padding:9px 13px;cursor:pointer;border-bottom:1px solid #f2f7fd'+(one?';opacity:.7':'')+'">'
+        + '<div style="font-size:14px;font-weight:800;color:#1a2f45">'+esc(c.name)
+        + (c.fav?' <span style="color:#f4b942">★</span>':'')
+        + (one?' <span style="font-size:10px;font-weight:700;background:#f1f5f9;color:#94a3b8;border-radius:6px;padding:1px 6px">🕐 일회성</span>':'')
+        + '</div>'
+        + (sub? '<div style="font-size:11.5px;color:#9aa7b4;margin-top:1px">'+esc(sub)+'</div>':'')
+        + '</div>';
+    }).join('');
+    if(!top.length) h = '<div style="padding:11px 13px;color:#aab8c8;font-size:13px">찾는 업체가 없어요</div>';
+    if(q) h += '<div class="vac-new" style="padding:11px 13px;cursor:pointer;background:#f7faff;'
+             + 'color:#2563a8;font-size:13px;font-weight:800;border-top:1.5px solid #e8f0fa">'
+             + '＋ 「'+esc(q)+'」 연락처에 새로 등록</div>';
+    if(hit.length>40) h += '<div style="padding:7px 13px;font-size:11px;color:#aab8c8">…'
+             + (hit.length-40) + '개 더 — 조금 더 적어서 좁혀 보세요</div>';
+    b.innerHTML=h;
+    b.style.display='block'; actIdx=-1; place();
+
+    b.querySelectorAll('.vac-i').forEach(function(el){
+      el.addEventListener('mouseenter', function(){ el.style.background='#f0f6ff'; });
+      el.addEventListener('mouseleave', function(){ el.style.background=''; });
+      el.addEventListener('click', function(){
+        var c=all[parseInt(el.getAttribute('data-i'),10)]; if(c) pick(c); });
+      el.addEventListener('touchend', function(ev){
+        ev.preventDefault();
+        var c=all[parseInt(el.getAttribute('data-i'),10)]; if(c) pick(c); });
+    });
+    var nb=b.querySelector('.vac-new');
+    if(nb){
+      nb.addEventListener('click', function(){ newContact(q); });
+      nb.addEventListener('touchend', function(ev){ ev.preventDefault(); newContact(q); });
+    }
+  }
+
+  function active(){ return box? [].slice.call(box.querySelectorAll('.vac-i')) : []; }
+  function markAct(){
+    active().forEach(function(el,i){ el.style.background = (i===actIdx)?'#e8f0fb':''; });
+    var el=active()[actIdx];
+    if(el && el.scrollIntoView) try{ el.scrollIntoView({block:'nearest'}); }catch(e){}
+  }
+
+  /* ── 이 입력칸이 관련처 칸인가? 맞으면 함께 채울 지도를 돌려준다 ── */
+  function mapOf(inp){
+    if(!inp || inp.tagName!=='INPUT') return null;
+    var t=(inp.type||'text').toLowerCase();
+    if(t!=='text' && t!=='search') return null;
+    if(inp.getAttribute('data-vac')==='off') return null;
+
+    /* ① 입력창(모달) — id="m-업체키" */
+    if(inp.id && inp.id.indexOf('m-')===0){
+      var k=inp.id.slice(2);
+      if(document.getElementById(inp.id+'-list')) return null;   /* 이미 붙은 검색창은 안 건드린다 */
+      var kind=window._mKind;
+      if(kind && VEND[kind] && VEND[kind][k]) return VEND[kind][k];
+      if(ANY[k]) return {};
+      return null;
+    }
+    /* ② 지출 창 (옛 창·새 창 둘 다) */
+    if(inp.id==='exp-vendor' || inp.id==='expV2Vendor') return {};
+
+    /* ③ 페이지·표에서 그 자리 고치기 (.lf-ie) */
+    if(inp.classList && inp.classList.contains('lf-ie')){
+      var host = inp.closest('[data-ppid]') || inp.closest('[data-pid]');
+      if(!host) return null;
+      var pid = host.getAttribute('data-ppid') || host.getAttribute('data-pid') || '';
+      var key = (pid.indexOf('f:')===0) ? pid.slice(2) : '';
+      var kd = null;
+      try{ kd = String((window.wlDSCur && window.wlDSCur()) || '').replace('work:',''); }catch(e){}
+      if(!key && pid==='_sub' && kd && VEND[kd]) key = Object.keys(VEND[kd])[0];
+      if(!key) return null;
+      if(kd && VEND[kd] && VEND[kd][key]) return VEND[kd][key];
+      if(ANY[key]) return {};
+      return null;
+    }
+    return null;
+  }
+
+  /* ── 배선 ── */
+  document.addEventListener('focusin', function(e){
+    var m=mapOf(e.target);
+    if(!m){ if(curInp && curInp!==e.target) hide(); return; }
+    curInp=e.target; curMap=m;
+    render(curInp.value);
+  }, true);
+
+  document.addEventListener('input', function(e){
+    if(e.target!==curInp) return;
+    render(curInp.value);
+  }, true);
+
+  document.addEventListener('keydown', function(e){
+    if(!curInp || e.target!==curInp || !box || box.style.display==='none') return;
+    var items=active();
+    if(e.key==='ArrowDown'){ e.preventDefault(); if(items.length){ actIdx=(actIdx+1)%items.length; markAct(); } }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); if(items.length){ actIdx=(actIdx-1+items.length)%items.length; markAct(); } }
+    else if(e.key==='Enter'){
+      if(actIdx>=0 && items[actIdx]){ e.preventDefault(); e.stopPropagation(); items[actIdx].click(); }
+      else hide();
+    }
+    else if(e.key==='Escape'){ e.stopPropagation(); hide(); }
+  }, true);
+
+  document.addEventListener('focusout', function(e){
+    if(e.target!==curInp) return;
+    setTimeout(function(){
+      var a=document.activeElement;
+      if(box && a && box.contains(a)) return;
+      hide();
+    }, 160);
+  }, true);
+
+  window.addEventListener('scroll', function(){ if(curInp) place(); }, true);
+  window.addEventListener('resize', function(){ if(curInp) place(); });
+
+  var st=document.createElement('style');
+  st.textContent = '#vacBox::-webkit-scrollbar{width:8px}'
+                 + '#vacBox::-webkit-scrollbar-thumb{background:#dbe6f4;border-radius:8px}';
+  document.head.appendChild(st);
+
+  window.wlVendorFields = VEND;      /* 대조표·점검용 */
+  window.wlVacBox = function(){ return box; };
 })();
 </script>
 </body>
