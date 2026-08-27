@@ -18,7 +18,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v61-0827-0801</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v62-0827-0949</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1395,7 +1395,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v61-0827-0801</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v62-0827-0949</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3080,7 +3080,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=v61-20260827-0801"></script>
+<script src="worklog.js?v=v62-20260827-0949"></script>
 <script>
 /* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
    (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
@@ -19062,6 +19062,42 @@ select.lf-in{ padding-right:8px }
 .lf-gc .m{ font-size:11px; color:#8ba0b6; margin-top:3px; display:flex; gap:6px; flex-wrap:wrap; align-items:center }
 .lf-gc .n{ background:#eef4fb; border-radius:7px; padding:1px 6px; font-size:10.5px; font-weight:800; color:#5b7794 }
 
+
+/* 머리줄 끌어서 칸 옮기기 */
+.lf-tv th{ position:relative }
+.lf-tv th .thg{ color:#c8d4e0; font-size:10px; letter-spacing:-2px; margin-right:4px; cursor:grab; opacity:0; transition:opacity .12s }
+.lf-tv th:hover .thg{ opacity:1 }
+.lf-tv th.thdrag{ opacity:.4 }
+.lf-tv th.thover{ box-shadow:inset 3px 0 0 #2563a8 }
+.lf-tv th.thover-r{ box-shadow:inset -3px 0 0 #2563a8 }
+
+/* ≣ 리스트 보기 — 칸이 고르게 */
+/* overflow:hidden 을 두면 머리줄 붙박이가 안 먹는다 — 모서리는 자식에게 준다 */
+.lf-ls{ border:1.5px solid #e8f0fa; border-radius:12px; background:#fff }
+.lf-ls > :first-child{ border-radius:11px 11px 0 0 }
+.lf-ls > :last-child{ border-radius:0 0 11px 11px }
+.lf-lshd, .lf-lsr{ display:grid; gap:10px; align-items:center; padding:9px 13px }
+.lf-lshd{ background:#f4f8fd; border-bottom:1.5px solid #e3ecf6; font-size:11.5px; font-weight:900; color:#5b7794;
+  position:sticky; top:0; z-index:2 }
+.lf-lsr{ border-bottom:1px solid #f2f7fc; cursor:pointer; font-size:13px }
+.lf-lsr:last-child{ border-bottom:none }
+.lf-lsr:hover{ background:#f8fbff }
+.lf-lsc{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.lf-lsc.t{ font-weight:800; color:#1a2f45 }
+.lf-lsc.r{ text-align:right }
+.lf-lsg{ background:#eef5fd; font-weight:900; color:#33567d; font-size:11.5px; padding:6px 13px;
+  display:flex; gap:8px; align-items:center; border-bottom:1px solid #e3ecf6 }
+.lf-lsg .s{ margin-left:auto; color:#0f7a4a }
+.lf-lsx{ display:flex; gap:5px; justify-content:flex-end }
+@media (max-width:900px){
+  .lf-lshd{ display:none }
+  .lf-lsr{ grid-template-columns:1fr 1fr !important; gap:4px 10px; padding:10px 13px }
+  .lf-lsc{ white-space:normal }
+  .lf-lsc.t{ grid-column:1 / -1; font-size:14px }
+  .lf-lsc::before{ content:attr(data-k) ' '; color:#a8b8c8; font-size:11px; font-weight:800 }
+  .lf-lsc.t::before{ content:'' }
+}
+
 .lf-board{ display:flex; gap:12px; overflow-x:auto; padding-bottom:10px; align-items:flex-start }
 .lf-bcol{ flex:0 0 268px; background:#f4f8fd; border:1.5px solid #e8f0fa; border-radius:12px; padding:9px }
 .lf-bcol.over{ border-color:#2563a8; background:#eaf3ff }
@@ -19904,7 +19940,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   DS_PERSONAL.cats = CAT_P;
   DS = DS_PERSONAL;
 
-  var VWS=['card','table','board','cal','floor','time','gal'];
+  var VWS=['card','table','list','board','cal','floor','time','gal'];
   var vw = (function(){ var v=lsGet(LS_VIEW,null); return (VWS.indexOf(v)>=0)?v:'card'; })();
   function vwSet(v){ vw=v; lsSet(LS_VIEW,v); safeRender(); }
   function vwBtns(){
@@ -19912,6 +19948,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     return '<div class="lf-vw">'
       + '<button type="button" data-vw="card"'+(vw==='card'?' class="on"':'')+'>▦ 카드</button>'
       + '<button type="button" data-vw="table"'+(vw==='table'?' class="on"':'')+'>☰ 목록</button>'
+      + '<button type="button" data-vw="list"'+(vw==='list'?' class="on"':'')+'>≣ 리스트</button>'
       + '<button type="button" data-vw="board"'+(vw==='board'?' class="on"':'')+'>▥ 보드</button>'
       + '<button type="button" data-vw="cal"'+(vw==='cal'?' class="on"':'')+'>📅 달력</button>'
       + (hasFloors(ptV)? '<button type="button" data-vw="floor"'+(vw==='floor'?' class="on"':'')+'>🏢 층별</button>':'')
@@ -21293,8 +21330,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +   '<div class="lf-f" id="lfPUnitWrap" style="display:none"><label>단위 (선택)</label>'
       +     '<input type="text" id="lfPUnit" placeholder="원 / 일 / 개"></div>'
       +   '<div class="lf-f"><label>어디에 붙일까요</label><select id="lfPScope">'
-      +     '<option value="_all">모든 개인 기록에</option>'
-      +     (pt? '<option value="'+esc(pt)+'" selected>'+esc((cats()[pt]&&cats()[pt].n)||'차계부')+' 에만</option>':'')
+      +     (isPersonal()
+          ? ('<option value="_all">모든 개인 기록에</option>'
+             + (pt? '<option value="'+esc(pt)+'" selected>'+esc((cats()[pt]&&cats()[pt].n)||'차계부')+' 에만</option>':''))
+          : ('<option value="_all">'+esc(DS.icon+' '+DS.name)+' 전체에</option>'))
       +   '</select></div>'
       + '</div>'
       + '<div style="font-size:12px;color:#8ba0b6;margin-top:9px;line-height:1.6">'
@@ -21666,7 +21705,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       + '<span class="lb">최소</span>'
       + '<input type="number" id="lfFmin" value="'+esc(flt.min||'')+'" placeholder="0" style="width:96px" title="이 금액 이상만">'
       + '<button type="button" class="lf-fx" id="lfRuleAdd" style="border-style:dashed;color:#7c3aed">＋ 조건 추가</button>'
-      + (vw==='table' ? grpOptions(pt0) : '')
+      + ((vw==='table'||vw==='list') ? grpOptions(pt0) : '')
       + '<button type="button" class="lf-fx" id="lfColorBtn" style="border-style:dashed">🎨 색상 규칙</button>'
       + '<label class="lf-ck"><input type="checkbox" id="lfSubShow"'+(showSub()?' checked':'')+'> 하위 항목도</label>'
       + (fltOn()? '<button type="button" class="lf-fx" id="lfFclr">✕ 필터 해제</button>':'')
@@ -22779,6 +22818,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(tpl.body) o.body = tpl.body;
     var rec = pAdd(o);
     if(!rec){ alert('추가하지 못했어요'); return; }
+    if(!(srt.k==='date' && srt.d<0)){ srt={k:'date', d:-1}; lsSet(LS_SORT, srt); }
     if(typeof toast==='function') toast('📑 "'+tpl.name+'" 으로 새 기록을 만들었어요');
     setTimeout(function(){ render(); setTimeout(function(){ openPage(rec.id); }, 120); }, 0);
   }
@@ -22849,7 +22889,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   }
 
   /* ── 목록 안에서 바로 새 줄 만들기 ── */
-  function newRow(pt, preset){
+  function newRow(pt, preset, asPage){
     var o = DS.newRec(pt||'etc');
     if(isPersonal()){
       o.date = o.date || today(); if(o.title==null) o.title='';
@@ -22883,9 +22923,27 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }
     var rec = pAdd(o);
     if(!rec){ alert('추가하지 못했어요'); return; }
+    /* 방금 만든 것이 눈에 보이게 — 최근 날짜가 맨 위로 오도록 정렬을 돌려놓는다 */
+    if(!(srt.k==='date' && srt.d<0)){
+      srt={k:'date', d:-1}; lsSet(LS_SORT, srt);
+    }
+    if(asPage){
+      if(typeof toast==='function') toast('새 기록을 만들었어요 — 바로 채워 보세요');
+      setTimeout(function(){ render(); setTimeout(function(){ openPage(rec.id); }, 120); }, 0);
+      return;
+    }
     EDIT = { id: rec.id, pid: '_title' };
     if(typeof toast==='function') toast('새 줄이 생겼어요 — 바로 쓰세요');
-    setTimeout(render, 0);
+    setTimeout(function(){
+      render();
+      setTimeout(function(){
+        try{
+          var el=document.getElementById(HOST_ID);
+          var tr=el && (el.querySelector('tr[data-rid="'+rec.id+'"]') || el.querySelector('[data-lsid="'+rec.id+'"]'));
+          if(tr) tr.scrollIntoView({block:'center'});
+        }catch(e){}
+      }, 60);
+    }, 0);
   }
   /* 전체 보기일 땐 종류부터 고른다 */
   function newRowAsk(preset){
@@ -22906,6 +22964,92 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
     ov.querySelectorAll('[data-nk]').forEach(function(b){
       b.addEventListener('click', function(){ var k=b.getAttribute('data-nk'); cl(); newRow(k, preset); }); });
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     ≣ 리스트 보기 — 표와 같은 칸을 쓰되 폭을 고르게 나눈다
+        · 가로 스크롤 없음 · 좁으면 두 줄로 접힘
+     ══════════════════════════════════════════════════════════ */
+  function lsCols(pt){
+    var sel = colsOf(pt);
+    var cols = sel.map(function(id){ return propById(pt,id); }).filter(Boolean);
+    if(!cols.length) cols = BASE.filter(function(p){ return DEF_COLS.indexOf(p.id)>=0; });
+    /* 리스트는 좁으니 앞에서 6칸까지만 */
+    return cols.slice(0,6);
+  }
+  function lsGrid(cols){
+    return cols.map(function(p){
+      return (p.id==='_title') ? '2.2fr' : 'minmax(0,1fr)';
+    }).join(' ') + ' 74px';
+  }
+  function listHTML(arr, emptyIcon, emptyMsg){
+    var pt = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
+    var tot=arr.length;
+    arr = applySrt(applyFlt(arr));
+    var bar = fltBar(arr.length, tot);
+    if(!arr.length) return bar + '<div class="lf-grid"><div class="lf-empty"><div class="ei">'+emptyIcon+'</div>'
+      + (fltOn()? '조건에 걸리는 기록이 없어요' : emptyMsg)
+      + '<div style="margin-top:14px"><button type="button" class="lf-add" data-newrow="1" style="height:38px">＋ 여기서 바로 추가</button></div>'
+      + '</div></div>';
+
+    var cols = lsCols(pt);
+    var gt   = lsGrid(cols);
+    PGLIST = arr.map(function(e){ return e.id; });
+
+    var grouped = (srt.k==='date') || !!grp;
+    if(grp && grp!=='_month'){
+      arr = arr.slice().sort(function(x,y){
+        var a1=grpKey(x,pt), b1=grpKey(y,pt);
+        if(a1===b1) return 0; return a1<b1?-1:1; });
+      grouped = true;
+    }
+
+    var h = bar + '<div class="lf-ls">'
+      + '<div class="lf-lshd" style="grid-template-columns:'+gt+'">'
+      + cols.map(function(p){
+          var ti=tinfo(p.type);
+          var srtKey = p.id==='_date'?'date' : p.id==='_amount'?'amount' : p.id==='_title'?'title' : p.id==='_cat'?'cat' : ('p:'+p.id);
+          var on=(srt.k===srtKey);
+          return '<div class="lf-lsc'+(ti.right?' r':'')+'" data-srt="'+esc(srtKey)+'" style="cursor:pointer">'
+            + ti.i+' '+esc(p.name)+(on? ' '+(srt.d>0?'▲':'▼'):'')+'</div>'; }).join('')
+      + '<div class="lf-lsc r"><button type="button" id="lfColBtn" class="lf-fx" style="height:24px;padding:0 7px" title="보일 칸 고르기">⚙</button></div>'
+      + '</div>';
+
+    var last=null, first=true;
+    arr.forEach(function(e){
+      if(grouped){
+        var m=grpKey(e, pt);
+        if(m!==last || first){
+          last=m; first=false;
+          var gs=0, gn=0;
+          arr.forEach(function(x){ if(grpKey(x,pt)===m){ gn++; gs+=money(x); } });
+          h += '<div class="lf-lsg"><span>'+esc(grpLabel(m))+'</span>'
+             + '<span style="color:#8ba0b6;font-weight:800">'+gn+'건</span>'
+             + (gs? '<span class="s">'+numFmt(gs)+'원</span>':'') + '</div>';
+        }
+      }
+      var ch=colorHit(e,pt);
+      h += '<div class="lf-lsr" data-lsid="'+esc(e.id)+'" style="grid-template-columns:'+gt+''
+        + (ch? ';background:'+colorOf(ch.color).bg:'')+'">'
+        + cols.map(function(p){
+            var ti=tinfo(p.type);
+            var inner;
+            if(p.id==='_title'){
+              /* 오른쪽에 📄 단추가 따로 있으니 제목 안에는 안 넣는다 */
+              inner = '<span>'+esc(pget(e,'_title')||'(제목없음)')+'</span>'
+                + (e.rating? ' <span style="color:#f4b942">'+stars(e.rating)+'</span>':'')
+                + (e.body? ' <span class="pg-mark" title="본문이 있어요">📝</span>':'');
+            } else inner = cellHTML(e,p);
+            return '<div class="lf-lsc'+(p.id==='_title'?' t':'')+(ti.right?' r':'')+'" data-k="'+esc(p.name)+'">'
+              + inner + '</div>'; }).join('')
+        + '<div class="lf-lsc r lf-lsx">'
+        +   '<button type="button" class="lf-fx" data-lpage="'+esc(e.id)+'" style="height:24px;padding:0 6px" title="페이지로 열기">📄</button>'
+        +   '<button type="button" class="lf-fx" data-ldel="'+esc(e.id)+'" style="height:24px;padding:0 6px;color:#b52929" title="삭제">🗑</button>'
+        + '</div>'
+        + '</div>';
+    });
+    h += '<div class="lf-lsr" style="grid-template-columns:1fr;color:#7c3aed;font-weight:800;cursor:pointer" data-newrow="1">＋ 새 줄 추가</div>';
+    return h + '</div>';
   }
 
   function tableHTML(arr, emptyIcon, emptyMsg){
@@ -22935,7 +23079,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var srtKey = p.id==='_date'?'date' : p.id==='_amount'?'amount' : p.id==='_title'?'title' : p.id==='_cat'?'cat' : ('p:'+p.id);
       var on = (srt.k===srtKey);
       h+='<th class="s'+(on?' on':'')+'" data-srt="'+esc(srtKey)+'"'
+        + ' draggable="true" data-thid="'+esc(p.id)+'" title="끌어서 칸 순서를 바꿀 수 있어요"'
         + ' style="width:'+(p.id==='_title'?'auto':(p.w||ti.w))+(ti.right?';text-align:right':(ti.center?';text-align:center':''))+'">'
+        + '<span class="thg">⋮⋮</span>'
         + ti.i+' '+esc(p.name)+(on? '<span class="ar">'+(srt.d>0?'▲':'▼')+'</span>':'')+'</th>';
     });
     h+='<th style="width:66px;text-align:center"><button type="button" id="lfColBtn" class="lf-fx" style="height:26px;padding:0 8px" title="보일 칸 고르기">⚙</button></th>';
@@ -23004,6 +23150,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   function gridHTML(arr, emptyIcon, emptyMsg){
     var ptG = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
     if(vw==='table') return tableHTML(arr, emptyIcon, emptyMsg);
+    if(vw==='list')  return listHTML(arr, emptyIcon, emptyMsg);
     if(vw==='board') return boardHTML(arr, ptG);
     if(vw==='cal')   return calHTML(arr, ptG);
     if(vw==='floor') return hasFloors(ptG) ? floorHTML(arr, ptG) : cardsHTML(arr, emptyIcon, emptyMsg);
@@ -24997,7 +25144,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       try{ localStorage.setItem(LS_OLDBN,'off'); }catch(e){}
       var el=document.getElementById('lfOldBn'); if(el) el.remove(); });
     var a1=document.getElementById('lfAdd');    if(a1) a1.addEventListener('click', function(){
-      if(!isPersonal()){ newRow(DS.kind); return; }
+      if(!isPersonal()){ newRow(DS.kind, null, true); return; }
       if(curCat!=='전체' && cats()[curCat]) openRec(curCat); else openCatSheet(); });
     var tb=document.getElementById('lfTpl');  if(tb) tb.addEventListener('click', function(){
       tplPick((cur==='car')?'car':(curCat!=='전체'?curCat:'')); });
@@ -25065,6 +25212,61 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       });
     });
     /* 달력 */
+    /* ① 머리줄 끌어서 칸 순서 바꾸기 */
+    (function(){
+      var ptD = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
+      var ths = host.querySelectorAll('.lf-tv th[data-thid]');
+      if(!ths.length) return;
+      var srcId = null;
+      function clr(){ ths.forEach(function(x){ x.classList.remove('thdrag','thover','thover-r'); }); }
+      ths.forEach(function(th){
+        th.addEventListener('dragstart', function(ev){
+          srcId = th.getAttribute('data-thid');
+          th.classList.add('thdrag');
+          try{ ev.dataTransfer.effectAllowed='move'; ev.dataTransfer.setData('text/plain', srcId); }catch(e){}
+        });
+        th.addEventListener('dragend', clr);
+        th.addEventListener('dragover', function(ev){
+          if(!srcId || th.getAttribute('data-thid')===srcId) return;
+          ev.preventDefault();
+          try{ ev.dataTransfer.dropEffect='move'; }catch(e){}
+          var r=th.getBoundingClientRect();
+          var right = (ev.clientX - r.left) > r.width/2;
+          th.classList.toggle('thover', !right);
+          th.classList.toggle('thover-r', right);
+        });
+        th.addEventListener('dragleave', function(){ th.classList.remove('thover','thover-r'); });
+        th.addEventListener('drop', function(ev){
+          ev.preventDefault(); ev.stopPropagation();
+          var dstId = th.getAttribute('data-thid');
+          if(!srcId || dstId===srcId){ clr(); return; }
+          var r=th.getBoundingClientRect();
+          var right = (ev.clientX - r.left) > r.width/2;
+          var a = colsOf(ptD).slice();
+          var from = a.indexOf(srcId); if(from<0){ clr(); return; }
+          a.splice(from,1);
+          var to = a.indexOf(dstId); if(to<0) to = a.length-1;
+          a.splice(right? to+1 : to, 0, srcId);
+          colsSave(ptD, a);
+          srcId=null; clr();
+          if(typeof toast==='function') toast('칸 순서를 바꿨어요');
+          safeRender();
+        });
+      });
+    })();
+
+    /* ≣ 리스트 보기 — 줄 클릭·정렬 */
+    host.querySelectorAll('.lf-lsr[data-lsid]').forEach(function(rw){
+      rw.addEventListener('click', function(ev){
+        if(ev.target.closest('[data-lpage],[data-ldel],a,button')) return;
+        PGLIST = [].map.call(host.querySelectorAll('.lf-lsr[data-lsid]'), function(x){ return x.getAttribute('data-lsid'); });
+        openPage(rw.getAttribute('data-lsid'));
+      });
+    });
+    host.querySelectorAll('.lf-lshd [data-srt]').forEach(function(c){
+      c.addEventListener('click', function(){ srtSet(c.getAttribute('data-srt')); });
+    });
+
     /* ⏱ 타임라인 달 이동 */
     var tp=document.getElementById('lfTlPrev'); if(tp) tp.addEventListener('click', function(){ tlShift(-1); });
     var tn=document.getElementById('lfTlNext'); if(tn) tn.addEventListener('click', function(){ tlShift(1); });
@@ -25884,6 +26086,129 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   window.wlDbgAdd = function(m){ add('·', m); };
   window.toggleDbg = function(){ open(); };
   add('·', '앱을 열었어요');
+})();
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   🧩 추가·수정 모달에도 「내가 만든 항목」 을 붙인다
+     · 데이터 화면(페이지)에서 만든 속성이 기존 입력창에도 그대로 나오게
+     · worklog.js 는 건드리지 않고, 저장 뒤에 값만 얹는다
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+  var KINDS = ['work','expense','memo','call','schedule','deliver','vacation','meeting',
+               'accident','progress','item','stock','plan','site'];
+  var SKIP = {formula:1, rollup:1, att:1, rel:1};
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+  function props(kind){
+    try{
+      var o=JSON.parse(localStorage.getItem('wl_life_props')||'{}');
+      var a=o['work:'+kind+':_all'];
+      return Array.isArray(a) ? a.filter(function(x){ return x && !x.archived && !SKIP[x.type]; }) : [];
+    }catch(e){ return []; }
+  }
+  function curRec(){
+    try{ return (entries||[]).filter(function(x){ return x.id===window._mId; })[0] || null; }catch(e){ return null; }
+  }
+
+  function inputFor(p, v){
+    var id='mx-'+p.id;
+    if(p.type==='area')
+      return '<textarea id="'+id+'" data-mx="'+esc(p.id)+'" rows="2" style="width:100%;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:9px;font-family:inherit;font-size:13px">'+esc(v)+'</textarea>';
+    if(p.type==='sel' || p.type==='multi'){
+      var o=(p.o||p.opts||[]);
+      return '<select id="'+id+'" data-mx="'+esc(p.id)+'" style="width:100%;height:36px;border:1.5px solid #dbe6f4;border-radius:9px;font-family:inherit;font-size:13px">'
+        + '<option value="">—</option>'
+        + o.map(function(x){ return '<option value="'+esc(x)+'"'+(String(v)===String(x)?' selected':'')+'>'+esc(x)+'</option>'; }).join('')
+        + '</select>';
+    }
+    if(p.type==='check')
+      return '<label style="display:flex;align-items:center;gap:7px;height:36px;font-size:13px;color:#33567d">'
+        + '<input type="checkbox" id="'+id+'" data-mx="'+esc(p.id)+'"'+(v?' checked':'')+'> 예</label>';
+    var t = (p.type==='date')?'date' : (p.type==='time')?'time' : (p.type==='tel')?'tel' : (p.type==='num'||p.type==='star'||p.type==='rate')?'text':'text';
+    return '<input type="'+t+'" id="'+id+'" data-mx="'+esc(p.id)+'" value="'+esc(v)+'"'
+      + (p.type==='time'?' step="300"':'')
+      + ' style="width:100%;height:36px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:9px;font-family:inherit;font-size:13px">';
+  }
+
+  function build(){
+    var kind = window._mKind;
+    var mf = document.getElementById('mFields');
+    if(!mf || KINDS.indexOf(kind)<0){ var old=document.getElementById('mxWrap'); if(old) old.remove(); return; }
+    var ps = props(kind);
+    var old2 = document.getElementById('mxWrap'); if(old2) old2.remove();
+    if(!ps.length) return;
+    var rec = curRec() || {};
+    var pv  = rec.props || {};
+    var box = document.createElement('div');
+    box.id='mxWrap';
+    box.style.cssText='margin-top:12px;border-top:1.5px dashed #dbe6f4;padding-top:11px';
+    box.innerHTML = '<div style="font-size:12px;font-weight:900;color:#7c3aed;margin-bottom:8px">'
+      + '🧩 내가 만든 항목 <span style="font-weight:700;color:#a8b8c8">· 데이터 화면과 같은 항목이에요</span></div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px 10px">'
+      + ps.map(function(p){
+          return '<div'+(p.type==='area'?' style="grid-column:1 / -1"':'')+'>'
+            + '<label style="display:block;font-size:11.5px;font-weight:800;color:#7a92a8;margin-bottom:3px">'+esc(p.name)+'</label>'
+            + inputFor(p, pv[p.id]==null?'':pv[p.id])
+            + '</div>'; }).join('')
+      + '</div>';
+    mf.parentNode.insertBefore(box, mf.nextSibling);
+  }
+
+  function collect(){
+    var out=null;
+    document.querySelectorAll('#mxWrap [data-mx]').forEach(function(el){
+      var pid=el.getAttribute('data-mx');
+      var v = (el.type==='checkbox') ? el.checked : el.value;
+      if(v==='' || v==null || v===false) return;
+      (out=out||{})[pid]=v;
+    });
+    return out;
+  }
+
+  /* 저장 흐름을 건드리지 않고, 만들어진 뒤에 값만 얹는다 */
+  var _add = window.addRecord, _upd = window.updateRecord;
+  if(typeof _add==='function'){
+    window.addRecord = function(data){
+      var rec=_add(data);
+      try{
+        if(rec && document.getElementById('mxWrap')){
+          var ex=collect();
+          if(ex) _upd(rec.id, { props: Object.assign({}, rec.props||{}, ex) });
+        }
+      }catch(e){ console.error('[내 속성 저장]', e); }
+      return rec;
+    };
+  }
+  if(typeof _upd==='function'){
+    window.updateRecord = function(id, patch){
+      var r=_upd(id, patch);
+      try{
+        if(id && id===window._mId && document.getElementById('mxWrap') && !(patch&&patch.props)){
+          var ex=collect();
+          var cur=(entries||[]).filter(function(x){return x.id===id;})[0];
+          if(ex && cur) _upd(id, { props: Object.assign({}, cur.props||{}, ex) });
+        }
+      }catch(e){ console.error('[내 속성 저장]', e); }
+      return r;
+    };
+  }
+
+  /* 모달이 열리거나 내용이 바뀌면 다시 붙인다 */
+  function watch(){
+    var ov=document.getElementById('overlay'), mf=document.getElementById('mFields');
+    if(!ov || !mf) { setTimeout(watch, 800); return; }
+    new MutationObserver(function(){
+      if(ov.classList.contains('show')) setTimeout(build, 60);
+      else { var o=document.getElementById('mxWrap'); if(o) o.remove(); }
+    }).observe(ov, {attributes:true, attributeFilter:['class']});
+    new MutationObserver(function(){
+      if(ov.classList.contains('show')) setTimeout(build, 30);
+    }).observe(mf, {childList:true});
+  }
+  setTimeout(watch, 2500);
+  window.wlModalExtra = build;
 })();
 </script>
 </body>
