@@ -145,7 +145,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v72-0827-1614</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지 v73-0827-1648</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -1522,7 +1522,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <div class="head-row">
       <div class="brand">
         <h1>업무일지</h1>
-        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v72-0827-1614</b></span>
+        <span class="sub">서희타워 시설관리 <b style="color:#9aa7b4" id="verBadge">v73-0827-1648</b></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
@@ -3207,7 +3207,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=72-20260827t1614"></script>
+<script src="worklog.js?v=73-20260827t1648"></script>
 <script>
 /* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
    (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
@@ -20492,13 +20492,27 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   var BASE = [
     { id:'_date',   name:'날짜',   type:'date',  base:1 },
     { id:'_cat',    name:'분류',   type:'tag',   base:1 },
-    { id:'_title',  name:'내용',   type:'text',  base:1, w:'auto' },
+    { id:'_title',  name:'제목',   type:'text',  base:1, w:'auto' },
     { id:'_sub',    name:'관련처', type:'text',  base:1 },   /* 업체·상대·장소 */
     { id:'_amount', name:'금액',   type:'num',   base:1 },
-    { id:'_memo',   name:'메모',   type:'area',  base:1 },
+    { id:'_memo',   name:'내용',   type:'area',  base:1 },
     { id:'_att',    name:'첨부',   type:'att',   base:1 }
   ];
   var DEF_COLS = ['_date','_cat','_title','_sub','_amount','_att'];
+
+  /* ── 칸 이름 바꾸기 — 공통 칸·종류 기본칸도 내 말로 고쳐 쓴다 ──
+     종류마다 따로 기억한다 (업무의 '내용' 과 지출의 '내역' 을 따로 둘 수 있게) */
+  var LS_PNAME='wl_life_pname';
+  function pnameAll(){ var o=lsGet(LS_PNAME,null); return (o&&typeof o==='object')?o:{}; }
+  function pnameOf(pt){ var o=pnameAll()[dsk(pt)]; return (o&&typeof o==='object')?o:{}; }
+  function pnameSet(pt, pid, nm){
+    var all=pnameAll(), m=all[dsk(pt)]||{};
+    nm=String(nm==null?'':nm).trim();
+    if(nm) m[pid]=nm; else delete m[pid];
+    if(Object.keys(m).length) all[dsk(pt)]=m; else delete all[dsk(pt)];
+    lsSet(LS_PNAME, all);
+  }
+  function pnameReset(pt){ var all=pnameAll(); delete all[dsk(pt)]; lsSet(LS_PNAME, all); }
 
   /* ── 내 속성 저장소 ── */
   function customAll(){ var o=lsGet(LS_PROPS,null); return (o&&typeof o==='object')?o:{}; }
@@ -20939,6 +20953,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     customOf(null).concat(pt?customOf(pt):[]).forEach(function(p){
       if(p.archived) return; out.push(p);
     });
+    /* 내가 바꿔 놓은 이름이 있으면 그것으로 */
+    try{
+      var nmm = pnameOf(pt);
+      if(Object.keys(nmm).length) out = out.map(function(p){
+        return nmm[p.id] ? Object.assign({}, p, {name:nmm[p.id], _renamed:1}) : p; });
+    }catch(e){}
     return out;
   }
   function propById(pt, id){
@@ -21224,11 +21244,16 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px">'
         + arr.map(function(p){
             var on=cur.indexOf(p.id)>=0;
-            return '<label class="lf-ck" data-cpid="'+esc(p.id)+'" style="padding:7px 10px;border:1.5px solid '
+            return '<label class="lf-ck cpit" data-cpid="'+esc(p.id)+'" style="position:relative;padding:7px 30px 7px 10px;border:1.5px solid '
               + (on?'#bcd2ea':'#e8f0fa')+';border-radius:9px;background:'+(on?'#f0f6ff':'#fff')+'">'
               + '<input type="checkbox"'+(on?' checked':'')+'> '
-              + '<span style="color:#8ba0b6">'+tinfo(p.type).i+'</span> '+esc(p.name)
-              + (p.from==='기본'?'':'') + '</label>';
+              + '<span style="color:#8ba0b6">'+tinfo(p.type).i+'</span> '
+              + '<span class="cpnm" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'
+              +   (p._renamed? ';color:#7c3aed':'')+'">'+esc(p.name)+'</span>'
+              + '<button type="button" class="cpren" data-cpren="'+esc(p.id)+'" title="이름 바꾸기"'
+              +   ' style="position:absolute;right:5px;top:50%;transform:translateY(-50%);border:none;background:none;'
+              +   'font-size:12px;color:#b9c7d6;cursor:pointer;padding:3px 4px;line-height:1">✏️</button>'
+              + '</label>';
           }).join('') + '</div></div>';
     }
     var ov=document.createElement('div'); ov.className='lf-ov';
@@ -21237,6 +21262,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +   '<button type="button" id="lfCX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
       + '<div style="font-size:12.5px;color:#7a92a8;line-height:1.6">'
       +   '체크한 것만 목록에 칸으로 나옵니다. 칸을 눌러 <b>그 자리에서 바로 고칠</b> 수 있어요.'
+      +   '<br>항목 오른쪽 <b>✏️</b> 를 누르면 <b>이름을 내 말로 바꿀</b> 수 있습니다 — 공통·기본 항목도 됩니다.'
       +   (pt? '' : '<br><span style="color:#a8b8c8">지금은 <b>전체</b> 보기라 공통 항목만 고를 수 있어요. 위에서 종류를 하나 고르면 그 종류의 항목도 나옵니다.</span>')
       + '</div>'
       + block('공통', grp('base'))
@@ -21248,6 +21274,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +   '<button type="button" id="lfPMgr" class="lf-radd" style="height:42px">⋯ 내 속성 관리</button>'
       +   (isPersonal()? '' : '<button type="button" id="lfPRec" class="lf-radd" style="height:42px;border-color:#c4b5fd;color:#7c3aed">📌 자주 쓰는 연결</button>')
       +   '<div style="flex:1"></div>'
+      +   (Object.keys(pnameOf(pt)).length
+             ? '<button type="button" id="lfNReset" class="lf-radd" style="height:42px;border-color:#e2d5f8;color:#7c3aed">이름 되돌리기</button>' : '')
       +   '<button type="button" id="lfCReset" class="lf-radd" style="height:42px">기본값으로</button>'
       +   '<button type="button" id="lfCOk" style="height:42px;padding:0 24px;border:none;border-radius:10px;background:#2563a8;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">확인</button>'
       + '</div></div>';
@@ -21279,6 +21307,51 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     });
     document.getElementById('lfCReset').addEventListener('click', function(){
       colsSave(pt, defCols(pt)); cl(); safeRender(); });
+    var nrb=document.getElementById('lfNReset');
+    if(nrb) nrb.addEventListener('click', function(){
+      if(!confirm('바꿔 둔 칸 이름을 모두 원래대로 되돌릴까요?')) return;
+      pnameReset(pt); cl(); safeRender(); setTimeout(function(){ colPicker(pt); }, 60); });
+
+    /* ✏️ 이름 바꾸기 — 그 자리에서 */
+    ov.querySelectorAll('[data-cpren]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        var pid=b.getAttribute('data-cpren');
+        var lab=b.closest('.cpit'), nm=lab.querySelector('.cpnm');
+        if(!nm || lab.querySelector('.cprin')) return;
+        var was=nm.textContent;
+        var inp=document.createElement('input');
+        inp.type='text'; inp.className='cprin'; inp.value=was;
+        inp.style.cssText='flex:1;min-width:0;height:24px;padding:0 6px;border:1.5px solid #2563a8;'
+          + 'border-radius:6px;font-size:12.5px;font-family:inherit;outline:none';
+        inp.addEventListener('click', function(e2){ e2.preventDefault(); e2.stopPropagation(); });
+        inp.addEventListener('mousedown', function(e2){ e2.stopPropagation(); });
+        nm.style.display='none';
+        nm.parentNode.insertBefore(inp, nm);
+        inp.focus(); inp.select();
+        var done=false;
+        function fin(save){
+          if(done) return; done=true;
+          if(save){
+            var v=inp.value.trim();
+            pnameSet(pt, pid, v);
+            nm.textContent = v || (function(){
+              /* 빈 값이면 원래 이름으로 되돌린다 */
+              var q=propsOf(pt).filter(function(x){ return x.id===pid; })[0];
+              return q? q.name : was; })();
+            nm.style.color = v? '#7c3aed' : '';
+            try{ safeRender(); }catch(e){}
+          }
+          inp.remove(); nm.style.display='';
+        }
+        inp.addEventListener('keydown', function(e2){
+          e2.stopPropagation();
+          if(e2.key==='Enter'){ e2.preventDefault(); fin(true); }
+          else if(e2.key==='Escape'){ e2.preventDefault(); fin(false); }
+        });
+        inp.addEventListener('blur', function(){ fin(true); });
+      });
+    });
     bindColOrder(ov, pt);
     document.getElementById('lfPAdd').addEventListener('click', function(){ cl(); propAdd(pt); });
     document.getElementById('lfPMgr').addEventListener('click', function(){ cl(); propMgr(pt); });
