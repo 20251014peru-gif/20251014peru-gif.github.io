@@ -6,7 +6,7 @@
 /* ===== 설정 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
    손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v67-0827-1323";
+const APP_VERSION = "v68-0827-1418";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -696,9 +696,28 @@ function dayOffset(n){ const d=kstNow(); d.setUTCDate(d.getUTCDate()-n); return 
 function weekRange(){ const d=kstNow(); const dow=(d.getUTCDay()+6)%7; const mon=new Date(d); mon.setUTCDate(d.getUTCDate()-dow); const sun=new Date(mon); sun.setUTCDate(mon.getUTCDate()+6); return [mon.toISOString().slice(0,10), sun.toISOString().slice(0,10)]; }
 function inDateRange(d,from,to){ d=d||""; return (!from||d>=from)&&(!to||d<=to); }
 
-/* ===== 사진 ===== */
+/* ===== 사진 =====
+   화질 설정 — 계량기 숫자·명판 글씨가 확대해서 읽혀야 하므로 기본을 올렸다.
+   파이어스토어 한 건이 1MB 라 총량은 900KB 로 묶는다. */
 const MAX_TOTAL=900000;
-function compressImage(file, maxDim=1100, quality=0.62){
+const PHOTO_Q = {
+  low:  { dim:1200, q:0.70, n:'표준 (많이 담기)' },
+  mid:  { dim:1700, q:0.80, n:'선명 (권장)' },
+  high: { dim:2400, q:0.88, n:'최고 (글씨까지)' }
+};
+function photoQ(){
+  var k='mid';
+  try{ k = localStorage.getItem('wl_photo_q') || 'mid'; }catch(e){}
+  return PHOTO_Q[k] || PHOTO_Q.mid;
+}
+function photoQSet(k){ try{ localStorage.setItem('wl_photo_q', k); }catch(e){} }
+function compressImage(file, maxDim, quality){
+  var _pq = photoQ();
+  if(maxDim==null) maxDim = _pq.dim;
+  if(quality==null) quality = _pq.q;
+  return _compressImage(file, maxDim, quality);
+}
+function _compressImage(file, maxDim=1700, quality=0.80){
   return new Promise((resolve,reject)=>{ const reader=new FileReader();
     reader.onload=e=>{ const img=new Image(); img.onload=()=>{ let w=img.width,h=img.height;
       if(w>h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } } else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
@@ -1039,7 +1058,10 @@ async function init(){
   try{
     if(typeof firebase==="undefined") throw new Error("sdk");
     firebase.initializeApp(firebaseConfig); db=firebase.firestore();
-    try{ await db.enablePersistence({synchronizeTabs:true}); }catch(_){}
+    /* synchronizeTabs 는 탭끼리 알리려고 localStorage 를 쓴다.
+       저장소가 꽉 차면 QuotaExceeded → FIRESTORE INTERNAL ASSERTION FAILED 로 번진다.
+       IndexedDB 만 쓰도록 끈다 (여러 탭을 동시에 안 여니 문제 없음). */
+    try{ await db.enablePersistence(); }catch(_){ }
     await Promise.race([ db.collection(COL).limit(1).get(), new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),6000)) ]);
     online=true; setStatus(true);
   }catch(e){ online=false; setStatus(false); logErr("초기 연결", e); }
@@ -7823,7 +7845,7 @@ function renderCleaningPhoto(){
 async function handleCleaningPhoto(e){
   const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
   try{
-    cleaningPhoto=await compressImage(f, 1400, 0.7);
+    cleaningPhoto=await compressImage(f);
     renderCleaningPhoto();
     $("cln-aiBtn").disabled=false;
   }catch(err){ toast("사진 처리 실패"); }
@@ -8075,7 +8097,7 @@ function wireQuickMemo(){
         const blob = it.getAsFile();
         if(!blob) continue;
         try{
-          const dataUrl = await compressImage(blob, 1400, 0.75);
+          const dataUrl = await compressImage(blob);
           insertImageAtCursor(dataUrl);
           $("qmStatus").textContent = "📷 사진이 본문에 들어갔어요";
           scheduleQmSave();
@@ -8193,7 +8215,7 @@ async function handleQmPhoto(e){
   e.target.value = "";
   for(const f of files){
     try{
-      const dataUrl = await compressImage(f, 1400, 0.75);
+      const dataUrl = await compressImage(f);
       insertImageAtCursor(dataUrl);
     }catch(err){ console.warn("사진 처리 실패", err); }
   }
@@ -9111,7 +9133,7 @@ function renderExpensePhoto(){
 }
 async function handleExpensePhoto(e){
   const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
-  try{ expensePhoto = await compressImage(f, 1400, 0.7); renderExpensePhoto(); }
+  try{ expensePhoto = await compressImage(f); renderExpensePhoto(); }
   catch(err){ toast("사진 처리 실패"); }
 }
 
