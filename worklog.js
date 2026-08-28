@@ -9,7 +9,7 @@
    평소에는 손대지 않아도 된다. 화면 배지·제목이 전부 이걸 읽는다. */
 const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION)
                   ? window.APP_VERSION
-                  : "v80-0828-1600";
+                  : "v82-0828-1443";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -4130,7 +4130,7 @@ $("mDelete").addEventListener("click",()=>{
   $("overlay").classList.remove("show");
   deleteWithUndo(mId, KIND_LABEL[mKind]||"항목");
 });
-document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>openEditor(b.dataset.add,null)));
+document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>{ if(window.wlAddNew) window.wlAddNew(b.dataset.add); else openEditor(b.dataset.add,null); }));
 
 /* ===== 검색 ===== */
 const Q={work:"",plan:"",memo:"",call:"",vacation:"",meeting:"",deliver:""};
@@ -6509,8 +6509,8 @@ function wireMaterialTab(){
     $("matLowToggle").classList.toggle("active",MAT_FILTER.lowOnly);
     renderMaterial();
   });
-  $("btnAddItem").addEventListener("click",()=>openEditor("item",null));
-  $("btnAddStock").addEventListener("click",()=>openEditor("stock",null));
+  $("btnAddItem").addEventListener("click",()=>{ if(window.wlAddNew) window.wlAddNew("item"); else openEditor("item",null); });
+  $("btnAddStock").addEventListener("click",()=>{ if(window.wlAddNew) window.wlAddNew("stock"); else openEditor("stock",null); });
   $("btnMatExcel").addEventListener("click",matExcelCopy);
   $("btnGitUpload").addEventListener("click", async ()=>{
     let tok = localStorage.getItem('_ghToken')||'';
@@ -8470,7 +8470,7 @@ function setupAccidentTab(){
   const addBtn = document.getElementById("btnAddAccident");
   if(addBtn && !addBtn._wired){
     addBtn._wired = true;
-    addBtn.addEventListener("click", ()=>openEditor("accident", null));
+    addBtn.addEventListener("click", ()=>{ if(window.wlAddNew) window.wlAddNew("accident"); else openEditor("accident", null); });
   }
   // 종류 필터
   const typeSel = document.getElementById("accidentTypeFilter");
@@ -8660,7 +8660,7 @@ function setupProgressTab(){
   const addBtn = document.getElementById("btnAddProgress");
   if(addBtn && !addBtn._wired){
     addBtn._wired = true;
-    addBtn.addEventListener("click", ()=>openEditor("progress", null));
+    addBtn.addEventListener("click", ()=>{ if(window.wlAddNew) window.wlAddNew("progress"); else openEditor("progress", null); });
   }
   const fromEl = document.getElementById("progressDateFrom");
   const toEl = document.getElementById("progressDateTo");
@@ -12161,4 +12161,64 @@ async function githubUpload(token){
   setTimeout(bind, 1500);
 
   window.wlOpenAsPage = setUsesPage;
+
+  /* ══════════════════════════════════════════════════════════
+     ＋ 새로 만들기도 같은 페이지 화면으로   (v82)
+     · '창(모달)' 을 고르면 페이지가 90% 크기 창으로 뜬다 — 디자인 통일
+     · 속성을 추가·정렬·숨김한 것이 새로 만들기에도 그대로 반영된다
+     · 날짜·업체를 미리 채워 주는 자리(달력 ＋, 통화→업무)는
+       예전 입력창을 그대로 쓴다. 채워 넣을 칸이 페이지엔 없기 때문.
+     ══════════════════════════════════════════════════════════ */
+  var LSN = 'wl_new_style';                       /* modal | page | old */
+  function newStyle(){
+    try{ var v=localStorage.getItem(LSN); return (v==='page'||v==='old') ? v : 'modal'; }
+    catch(e){ return 'modal'; }
+  }
+  function setNewStyle(v){
+    try{ localStorage.setItem(LSN, v); }catch(e){}
+    paintNew();
+    if(typeof toast==='function') toast(
+      v==='modal' ? '🗔 ＋ 를 누르면 페이지가 창으로 열립니다'
+    : v==='page'  ? '📄 ＋ 를 누르면 전체 페이지로 열립니다'
+                  : '🗒 ＋ 를 누르면 예전 입력창이 열립니다');
+  }
+  function oldAdd(kind){
+    try{
+      if(kind==='expense' && typeof openExpenseEditor==='function'){ openExpenseEditor(null); return; }
+      if(typeof openEditor==='function') openEditor(kind, null);
+    }catch(e){ console.error('[새로 만들기]', e); }
+  }
+  /* ＋ 버튼은 전부 이걸 부른다 */
+  window.wlAddNew = function(kind){
+    try{
+      var st = newStyle();
+      if(st==='old' || !KINDS[kind] || typeof window.wlNewPage!=='function'){ oldAdd(kind); return; }
+      window.wlNewPage(kind, st==='modal');
+    }catch(e){ console.warn('[새로 만들기] 페이지 실패 — 예전 창으로', e); oldAdd(kind); }
+  };
+
+  function paintNew(){
+    var st=newStyle();
+    var m={ nsModal:'modal', nsPage:'page', nsOld:'old' };
+    for(var k in m){
+      var el=document.getElementById(k); if(!el) continue;
+      el.className = 'btn btn-sm ' + (st===m[k] ? 'btn-primary' : 'btn-ghost');
+      el.style.minHeight='44px';
+    }
+    var n=document.getElementById('nsNow');
+    if(n) n.textContent = '지금: ' + (st==='modal'?'창(모달)으로 열림':st==='page'?'전체 페이지로 열림':'예전 입력창으로 열림');
+  }
+  function bindNew(){
+    var m={ nsModal:'modal', nsPage:'page', nsOld:'old' };
+    for(var k in m){
+      (function(id, val){
+        var el=document.getElementById(id);
+        if(el && !el._bound){ el._bound=1; el.addEventListener('click', function(){ setNewStyle(val); }); }
+      })(k, m[k]);
+    }
+    paintNew();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindNew);
+  else bindNew();
+  setTimeout(bindNew, 1500);
 })();
