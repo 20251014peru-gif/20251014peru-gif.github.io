@@ -9,7 +9,7 @@
    평소에는 손대지 않아도 된다. 화면 배지·제목이 전부 이걸 읽는다. */
 const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION)
                   ? window.APP_VERSION
-                  : "v85-0828-1525";
+                  : "v86-0828-1538";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -12399,6 +12399,7 @@ async function githubUpload(token){
   };
 
   window.wlOpenAsPage = setUsesPage;
+  window.wlOpenStyle  = openStyle;   /* 페이지 쪽이 창/전체를 스스로 판단하도록 */
 
   /* ══════════════════════════════════════════════════════════
      ＋ 새로 만들기도 같은 페이지 화면으로   (v82)
