@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v77-0828-1330";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v78-0828-1420";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3237,7 +3237,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=77-20260828t1330"></script>
+<script src="worklog.js?v=78-20260828t1420"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -19491,8 +19491,22 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
   grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)) }
 .pg-prow{ display:flex; gap:10px; align-items:flex-start; padding:4px 0; min-width:0 }
 .pg-prow.wide{ grid-column:1 / -1 }
-.pg-pk{ flex:0 0 128px; font-size:13px; font-weight:700; color:#8ba0b6; padding:7px 8px;
-  border-radius:7px; overflow:hidden; text-overflow:ellipsis }
+.pg-pk{ flex:0 0 148px; font-size:13px; font-weight:700; color:#8ba0b6; padding:7px 4px 7px 0;
+  border-radius:7px; display:flex; align-items:center; gap:4px; min-width:0 }
+.pg-pnm{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.pg-drag{ flex:0 0 auto; cursor:grab; color:#cbd8e4; font-size:13px; letter-spacing:-3px;
+  padding:0 3px; user-select:none; touch-action:none; line-height:1 }
+.pg-drag:active{ cursor:grabbing; color:#3f7cb8 }
+.pg-pdel{ flex:0 0 auto; border:none; background:none; color:#d3dde7; font-size:12px;
+  cursor:pointer; padding:3px 4px; border-radius:6px; line-height:1; font-family:inherit }
+.pg-pdel:hover{ color:#b52929; background:#fdeceb }
+.pg-prow.pg-dragging{ opacity:.45; background:#eef5fd; border-radius:9px }
+.pg-prow.pg-over{ box-shadow:0 -2px 0 #3f7cb8 inset }
+.pg-sechd{ display:flex; align-items:center; gap:6px; margin-top:16px;
+  border-top:1.5px solid #e8f0fa; padding-top:11px }
+.pg-sect{ flex:1; min-width:0; font-size:13.5px; font-weight:900; color:#33567d }
+.pg-text img{ cursor:pointer }
+.pg-text img.pgsel{ outline:3px solid #3f7cb8; outline-offset:2px }
 .pg-prow.wide .pg-pk{ flex:0 0 128px }
 .pg-pv{ flex:1; min-width:0 }
 .pg-val{ min-height:34px; padding:7px 10px; border-radius:7px; cursor:text; font-size:14px;
@@ -20509,6 +20523,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
      지우기는 archived:true → 되살리기가 체크 하나.
      ══════════════════════════════════════════════════════════ */
   var LS_PROPS='wl_life_props', LS_COLS='wl_life_cols';
+  /* 페이지에서 끌어 옮긴 속성 순서 · 숨긴 속성 (종류별로 따로 기억) */
+  var LS_PORD='wl_life_pord', LS_PHIDE='wl_life_phide';
 
   /* ── 타입 한 표가 모달·목록·필터를 전부 먹여살린다 ── */
   var T = {
@@ -20573,6 +20589,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var o=customAll(); o[dsk(pt)]=arr; o._at=Date.now(); lsSet(LS_PROPS,o);
     schemaPush(o);
   }
+  /* ── 속성 순서 (페이지에서 끌어 옮긴 결과) ── */
+  function pordOf(pt){ var o=lsGet(LS_PORD,null)||{}; var a=o[dsk(pt)]; return Array.isArray(a)?a.slice():[]; }
+  function pordSave(pt, ids){ var o=lsGet(LS_PORD,null)||{}; o[dsk(pt)]=ids; lsSet(LS_PORD,o); }
+  /* ── 페이지에서 숨긴 속성 (기본 칸은 지울 수 없으니 숨김으로) ── */
+  function phideOf(pt){ var o=lsGet(LS_PHIDE,null)||{}; var a=o[dsk(pt)]; return Array.isArray(a)?a.slice():[]; }
+  function phideSave(pt, ids){ var o=lsGet(LS_PHIDE,null)||{}; o[dsk(pt)]=ids; lsSet(LS_PHIDE,o); }
   /* 속성 정의(스키마)는 기록과 같이 클라우드에 둔다 → 폰에서도 같은 칸이 보인다 */
   function schemaPush(o){
     try{ if(window.wlP && window.wlP.schemaSave) window.wlP.schemaSave(o); }catch(e){}
@@ -21009,6 +21031,16 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var nmm = pnameOf(pt);
       if(Object.keys(nmm).length) out = out.map(function(p){
         return nmm[p.id] ? Object.assign({}, p, {name:nmm[p.id], _renamed:1}) : p; });
+    }catch(e){}
+    /* 페이지에서 끌어 옮긴 순서가 있으면 그대로 따른다 (없으면 지금까지 순서 그대로) */
+    try{
+      var ord = pordOf(pt);
+      if(ord.length){
+        var pos={}; ord.forEach(function(pid,i){ pos[pid]=i; });
+        out = out.map(function(p,i){ return {p:p, r:(pos[p.id]==null ? 1000000+i : pos[p.id])}; })
+                 .sort(function(a,b){ return a.r-b.r; })
+                 .map(function(x){ return x.p; });
+      }
     }catch(e){}
     return out;
   }
@@ -23188,7 +23220,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     {c:'todo',        i:'☑ 체크',          t:'체크박스 목록'},
     {sep:1},
     {c:'hr',          i:'—',               t:'구분선'},
-    {c:'pic',         i:'🖼',              t:'사진 넣기'},
+    {c:'pic',         i:'📷',              t:'사진 넣기'},
     {sep:1},
     {c:'removeFormat',i:'✕',               t:'서식 지우기'}
   ];
@@ -23260,6 +23292,38 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       li.setAttribute('data-c', li.getAttribute('data-c')==='1' ? '0':'1');
       save(ed.innerHTML);
     });
+    /* ── 본문 사진 — 눌러서 고르고 🗑 로 지운다 ── */
+    function pgImgBarOff(){ var b=document.getElementById('pgImgBar'); if(b) b.remove(); }
+    function pgImgClear(){ [].forEach.call(ed.querySelectorAll('img.pgsel'), function(x){ x.classList.remove('pgsel'); }); pgImgBarOff(); }
+    ed.addEventListener('click', function(e){
+      var t=e.target;
+      pgImgClear();
+      if(!t || t.tagName!=='IMG') return;
+      t.classList.add('pgsel');
+      var r=t.getBoundingClientRect();
+      var b=document.createElement('button');
+      b.type='button'; b.id='pgImgBar';
+      b.textContent='🗑 이 사진 지우기';
+      b.style.cssText='position:fixed;z-index:99999;background:#b52929;color:#fff;border:none;'
+        + 'border-radius:10px;padding:10px 15px;font-size:13.5px;font-weight:800;cursor:pointer;'
+        + 'font-family:inherit;box-shadow:0 5px 18px rgba(0,0,0,.28);min-height:44px';
+      b.style.left = Math.max(8, Math.min(window.innerWidth-170, r.left+10)) + 'px';
+      b.style.top  = Math.max(8, r.top+10) + 'px';
+      b.addEventListener('click', function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        t.remove(); pgImgBarOff(); save(ed.innerHTML);
+      });
+      document.body.appendChild(b);
+    });
+    /* 고른 사진은 Delete·Backspace 로도 지운다 */
+    ed.addEventListener('keydown', function(e){
+      if(e.key!=='Delete' && e.key!=='Backspace') return;
+      var s=ed.querySelector('img.pgsel'); if(!s) return;
+      e.preventDefault(); s.remove(); pgImgBarOff(); save(ed.innerHTML);
+    });
+    ed.addEventListener('blur', function(){ setTimeout(pgImgBarOff, 250); });
+    window.addEventListener('scroll', pgImgBarOff, true);
+
     /* 붙여넣기 — 서식 없는 글자 + 사진 */
     ed.addEventListener('paste', function(e){
       var dt=e.clipboardData; if(!dt) return;
@@ -23317,8 +23381,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     /* 속성 줄 하나 */
     function propRow(p){
       /* 값 없이 표시만 하는 속성 — 한 줄 전체를 제목/안내로 쓴다 */
-      if(p.type==='head') return '<div class="pg-sec" style="grid-column:1 / -1;margin-top:16px">'+esc(p.name)+'</div>';
-      if(p.type==='desc') return '<div style="grid-column:1 / -1;font-size:12.5px;color:#7a92a8;line-height:1.65;margin:2px 0 8px">'+esc(p.name)+'</div>';
+      if(p.type==='head') return '<div class="pg-prow wide pg-sechd" data-ppid="'+esc(p.id)+'">'
+        + '<span class="pg-drag" title="끌어서 옮기기">⋮⋮</span>'
+        + '<span class="pg-sect">'+esc(p.name)+'</span>'
+        + '<button type="button" class="pg-pdel" data-ppdel="'+esc(p.id)+'" title="이 속성 빼기">✕</button></div>';
+      if(p.type==='desc') return '<div class="pg-prow wide pg-sechd" data-ppid="'+esc(p.id)+'" style="border-top:none;margin-top:0;padding-top:0">'
+        + '<span class="pg-drag" title="끌어서 옮기기">⋮⋮</span>'
+        + '<span class="pg-sect" style="font-weight:600;color:#7a92a8;font-size:12.5px;line-height:1.6">'+esc(p.name)+'</span>'
+        + '<button type="button" class="pg-pdel" data-ppdel="'+esc(p.id)+'" title="이 속성 빼기">✕</button></div>';
       var v = pget(rec, p.id);
       var ti = tinfo(p.type);
       var ro = (ti.ro && p.type!=='rows') || (p.id==='_amount' && amountLocked(rec));
@@ -23344,7 +23414,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       }
       /* 긴 글·표·연결 같은 것은 한 줄 통째로 쓴다 */
       var wide = (['area','rows','rel','multi','att','map','link'].indexOf(p.type)>=0);
-      return '<div class="pg-prow'+(wide?' wide':'')+'"><div class="pg-pk">'+ti.i+' '+esc(p.name)+'</div>'
+      return '<div class="pg-prow'+(wide?' wide':'')+'" data-ppid="'+esc(p.id)+'">'
+        + '<div class="pg-pk">'
+        +   '<span class="pg-drag" title="끌어서 옮기기">⋮⋮</span>'
+        +   '<span class="pg-pnm">'+ti.i+' '+esc(p.name)+'</span>'
+        +   '<button type="button" class="pg-pdel" data-ppdel="'+esc(p.id)+'" title="이 속성 빼기">✕</button>'
+        + '</div>'
         + '<div class="pg-pv">'+body+'</div></div>';
     }
 
@@ -23405,8 +23480,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         + '</div>';
     }
 
+    var _phd = phideOf(pt);
     var props = propsOf(pt).filter(function(p){
-      return p.id!=='_title' && p.id!=='_att' && p.id!=='_cat'; });
+      return p.id!=='_title' && p.id!=='_att' && p.id!=='_cat' && _phd.indexOf(p.id)<0; });
     /* 값이 있는 것 먼저, 빈 것은 접어둔다 */
     function hasVal(p){
       if(p.type==='formula') return formulaCalc(rec,p.expr,pt)!=='';
@@ -23453,6 +23529,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
                 + (openAll? '▾ 빈 항목 '+hidden.length+'개 접기' : '▸ 빈 항목 '+hidden.length+'개 더 보기') + '</button>'
               : '')
       +     '<button type="button" id="pgAddProp" class="pg-addp">＋ 속성 추가</button>'
+      +     (_phd.length ? '<button type="button" id="pgUnhide" class="pg-addp" style="margin-left:6px">👁 숨긴 항목 '+_phd.length+'개 되살리기</button>' : '')
       +   '</div>'
       +   subHTML(rec)
       +   '<div class="pg-div"></div>'
@@ -23632,6 +23709,66 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(nx) nx.addEventListener('click', function(){ if(idx>=0 && idx<PGLIST.length-1) openPage(PGLIST[idx+1]); });
     document.getElementById('pgAddProp').addEventListener('click', function(){
       propAdd(pt, function(){ openPage(id); }); });
+    var unh=document.getElementById('pgUnhide');
+    if(unh) unh.addEventListener('click', function(){ phideSave(pt, []); openPage(id); });
+
+    /* ── 속성 줄 끌어서 순서 바꾸기 (마우스·손가락 둘 다) ── */
+    (function(){
+      var host = ov.querySelector('.pg-props'); if(!host) return;
+      function saveOrder(){
+        var ids = [].map.call(host.querySelectorAll('[data-ppid]'), function(x){
+          return x.getAttribute('data-ppid'); });
+        if(ids.length) pordSave(pt, ids);
+      }
+      [].forEach.call(host.querySelectorAll('.pg-drag'), function(hd){
+        hd.addEventListener('pointerdown', function(e){
+          var row = hd.parentNode;
+          while(row && !(row.classList && row.classList.contains('pg-prow'))) row = row.parentNode;
+          if(!row) return;
+          e.preventDefault();
+          row.classList.add('pg-dragging');
+          try{ hd.setPointerCapture(e.pointerId); }catch(err){}
+          function move(ev){
+            var el = document.elementFromPoint(ev.clientX, ev.clientY);
+            var tgt = el;
+            while(tgt && !(tgt.classList && tgt.classList.contains('pg-prow'))) tgt = tgt.parentNode;
+            if(!tgt || tgt===row || tgt.parentNode!==row.parentNode) return;
+            var r = tgt.getBoundingClientRect();
+            var before = (ev.clientY < r.top + r.height/2);
+            tgt.parentNode.insertBefore(row, before ? tgt : tgt.nextSibling);
+          }
+          function up(){
+            try{ hd.releasePointerCapture(e.pointerId); }catch(err){}
+            hd.removeEventListener('pointermove', move);
+            hd.removeEventListener('pointerup', up);
+            hd.removeEventListener('pointercancel', up);
+            row.classList.remove('pg-dragging');
+            saveOrder();
+          }
+          hd.addEventListener('pointermove', move);
+          hd.addEventListener('pointerup', up);
+          hd.addEventListener('pointercancel', up);
+        });
+      });
+      /* ── 속성 빼기 ── */
+      [].forEach.call(host.querySelectorAll('[data-ppdel]'), function(b){
+        b.addEventListener('click', function(e){
+          e.preventDefault(); e.stopPropagation();
+          var pid = b.getAttribute('data-ppdel');
+          var p = propById(pt, pid); if(!p) return;
+          var inAll = (customOf(null)||[]).some(function(x){ return x.id===pid; });
+          var inPt  = pt ? (customOf(pt)||[]).some(function(x){ return x.id===pid; }) : false;
+          if(inAll || inPt){
+            if(!confirm('「'+p.name+'」 속성을 뺄까요?\n\n넣어둔 값은 그대로 남고, ⋯ 내 속성 관리에서 되살릴 수 있습니다.')) return;
+            customPatch(inAll ? null : pt, pid, {archived:true});
+          } else {
+            if(!confirm('「'+p.name+'」 은 기본 칸이라 지울 수 없어요.\n\n이 화면에서 숨길까요? (아래 [👁 숨긴 항목 되살리기] 로 다시 보입니다)')) return;
+            var hd2 = phideOf(pt); if(hd2.indexOf(pid)<0) hd2.push(pid); phideSave(pt, hd2);
+          }
+          openPage(id);
+        });
+      });
+    })();
 
     /* 속성 접기 */
     var more=document.getElementById('pgMore');
