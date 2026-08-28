@@ -197,6 +197,7 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
         <button class="btn btn-ghost btn-sm" id="btnView">📋 한 줄 보기</button>
         <button class="btn btn-ghost btn-sm" id="btnExcel">📋 엑셀 복사</button>
         <button class="btn btn-ghost btn-sm" id="btnBackup">⬇ 백업</button>
+        <button class="btn btn-ghost btn-sm" id="btnSelfCheck">🩺 점검</button>
         <button class="btn btn-ghost btn-sm" id="btnSettings">⚙ OCR 설정</button>
       </div>
     </div>
@@ -327,7 +328,7 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 
 /* ===== 버전 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐. 배지·제목이 이걸 읽는다. 손으로 적지 말 것. */
-var APP_VERSION='v45-20260716-155015';
+var APP_VERSION='v46-0828-1226';
 document.title='업체 연락처 '+APP_VERSION;
 (function(){
   var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;
@@ -466,7 +467,18 @@ $("imgOverlay").addEventListener("click",()=>$("imgOverlay").classList.remove("s
 
 /* ===== 저장소 (즉시 반영 + 클라우드/로컬 동시 저장) ===== */
 function lsLoad(){ try{ return JSON.parse(localStorage.getItem("ct_"+COL)||"[]"); }catch(e){ return []; } }
-function lsSave(){ try{ localStorage.setItem("ct_"+COL, JSON.stringify(items)); }catch(e){} }
+/* 기기 안 임시 보관(캐시)에는 명함 사진(card)을 넣지 않는다.
+   사진을 통째로 넣으면 저장 공간(같은 주소의 모든 앱이 나눠 쓰는 5~10MB)이 금방 차서
+   저장이 조용히 실패한다. 사진 원본은 클라우드(Firestore)에 그대로 있으므로
+   인터넷이 되는 동안에는 지금과 똑같이 보인다. */
+function lsSave(){
+  try{
+    var slim = items.map(function(r){
+      var o = {}; for (var k in r){ if (k !== 'card') o[k] = r[k]; } return o;
+    });
+    localStorage.setItem("ct_"+COL, JSON.stringify(slim));
+  }catch(e){ console.warn('[저장] 기기 보관 실패 — 공간 부족일 수 있습니다', e); }
+}
 function genId(){ return online ? db.collection(COL).doc().id : "L"+Date.now()+Math.floor(Math.random()*100000); }
 function syncSet(id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.collection(COL).doc(id).set(payload).catch(()=>toast("클라우드 동기화 지연 — 이 기기에는 저장됨")); }
 function addRecord(data){ const id=genId(); const rec={...data,id}; items.push(rec); if(online) syncSet(id,rec); lsSave(); return rec; }
@@ -1191,5 +1203,229 @@ if(document.readyState==="complete"||document.readyState==="interactive"){
   window.addEventListener("load",init);
 }
 </script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   🩺 점검 · 명함 사진 이관   (v46-0828-1230)
+   · 저장 공간이 꽉 차는 원인(옛 명함 base64)을 보여주고, 안전하게 옮긴다.
+   · localStorage 는 같은 주소의 모든 앱이 함께 쓴다 — 그래서 남의 키도 보여준다.
+   · 이관은 2단계. ① Storage 로 올려 주소 확보 → ② 주소가 진짜 열리는 것만 원본 삭제
+   ══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var busy = false, stop = false;
+
+  function E(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function KB(b){ return b>=1048576 ? (Math.round(b/104857.6)/10+'MB') : (Math.round(b/1024)+'KB'); }
+  function say(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+  function ITEMS(){ try{ return items || []; }catch(e){ return []; } }
+
+  /* ── 측정 ─────────────────────────────────────────────────────────── */
+  function scan(){
+    var r = { keys:[], total:0, mine:0, other:0 };
+    try{
+      for (var k in localStorage){
+        if (!Object.prototype.hasOwnProperty.call(localStorage,k)) continue;
+        var raw = String(localStorage[k]);
+        var b = (k.length + raw.length) * 2;
+        var mine = (k.indexOf('ct_')===0 || k==='scanapp_fb_user');
+        r.total += b; if (mine) r.mine += b; else r.other += b;
+        r.keys.push({ k:k, b:b, mine:mine });
+      }
+    }catch(e){}
+    r.keys.sort(function(a,c){ return c.b-a.b; });
+
+    var its = ITEMS();
+    r.n = its.length;
+    r.withCard = 0; r.cardBytes = 0; r.withUrl = 0; r.todo = 0; r.clearable = 0;
+    for (var i=0;i<its.length;i++){
+      var it = its[i];
+      var hasCard = !!(it.card && String(it.card).indexOf('data:')===0);
+      var hasUrl  = !!(it.photoUrl && String(it.photoUrl).indexOf('http')===0);
+      if (hasCard){ r.withCard++; r.cardBytes += String(it.card).length*2; }
+      if (hasUrl) r.withUrl++;
+      if (hasCard && !hasUrl) r.todo++;
+      if (hasCard && hasUrl)  r.clearable++;
+    }
+    return r;
+  }
+
+  /* ── 화면 ─────────────────────────────────────────────────────────── */
+  function open(){
+    var ov = document.getElementById('ctChkOv');
+    if (!ov){
+      ov = document.createElement('div');
+      ov.id = 'ctChkOv';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(15,24,23,.45);'
+        + 'display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto';
+      ov.addEventListener('click', function(ev){ if (ev.target===ov && !busy) ov.remove(); });
+      document.body.appendChild(ov);
+    }
+    ov.innerHTML = '<div id="ctChkBox" style="background:#fff;border-radius:14px;max-width:640px;width:100%;'
+      + 'box-shadow:0 12px 40px rgba(15,24,23,.28);overflow:hidden;font-size:14px;color:#243b53"></div>';
+    draw();
+  }
+
+  function draw(){
+    var box = document.getElementById('ctChkBox'); if (!box) return;
+    var r = scan();
+    var over = r.total >= 3.5*1048576;
+
+    var h = '<div style="padding:14px 18px;background:#f6faf9;border-bottom:1px solid #e6edf3;display:flex;align-items:center;gap:10px">'
+          + '<b style="font-size:17px">🩺 점검 · 명함 사진 이관</b>'
+          + '<span style="font-size:12.5px;color:#829ab1">' + E(typeof APP_VERSION!=='undefined'?APP_VERSION:'') + '</span>'
+          + '<button id="ctChkX" style="margin-left:auto;border:1px solid #dbe4ea;background:#fff;border-radius:8px;'
+          + 'min-width:44px;min-height:38px;cursor:pointer;font-size:15px">✕</button></div>'
+          + '<div style="padding:16px 18px">';
+
+    /* 저장 공간 */
+    h += '<div style="border:1.5px solid ' + (over?'#c08a19':'#2f7d6e') + ';background:' + (over?'#fdf4e3':'#e9f6ef')
+       + ';border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:15px;font-weight:700;color:'
+       + (over?'#8a6209':'#20614f') + '">저장 공간 ' + KB(r.total)
+       + '<span style="font-weight:400;font-size:12.5px;margin-left:8px">연락처 ' + KB(r.mine)
+       + ' + 다른 앱 ' + KB(r.other) + ' · 키 ' + r.keys.length + '개</span></div>';
+
+    h += '<div style="border:1px solid #e6edf3;border-radius:10px;overflow:hidden;margin-bottom:14px">';
+    var top = r.keys.slice(0,8);
+    for (var i=0;i<top.length;i++){
+      var t = top[i];
+      h += '<div style="display:flex;gap:8px;align-items:center;padding:7px 12px;' + (i?'border-top:1px solid #f1f5f9;':'') + '">'
+        + '<span style="flex:0 0 auto;font-size:11.5px;border-radius:5px;padding:1px 6px;border:1px solid '
+        + (t.mine?'#2f7d6e;color:#20614f;background:#e9f6ef':'#c08a19;color:#8a6209;background:#fdf4e3') + '">'
+        + (t.mine?'연락처':'다른 앱') + '</span>'
+        + '<span style="flex:1;min-width:0;font-size:13px;word-break:break-all">' + E(t.k) + '</span>'
+        + '<b style="font-size:13px;color:' + (t.b>=512000?'#a02c22':'#486581') + '">' + KB(t.b) + '</b></div>';
+    }
+    h += '</div>';
+
+    /* 명함 현황 */
+    h += '<div style="font-size:14px;font-weight:700;margin-bottom:6px">📇 명함 사진 현황</div>'
+      + '<div style="border:1px solid #e6edf3;border-radius:10px;padding:11px 14px;margin-bottom:12px;line-height:2;font-size:13.5px">'
+      + '연락처 <b>' + r.n + '건</b><br>'
+      + '옛 방식(문서 안에 사진 통째로) <b style="color:' + (r.withCard?'#a02c22':'#20614f') + '">' + r.withCard + '건</b> · 약 ' + KB(r.cardBytes) + '<br>'
+      + '새 방식(사진 주소만 저장) <b style="color:#20614f">' + r.withUrl + '건</b></div>';
+
+    /* 이관 */
+    h += '<div style="font-size:14px;font-weight:700;margin-bottom:6px">📦 사진 옮기기</div>';
+
+    h += '<div style="border:1px solid #e6edf3;border-radius:10px;padding:12px 14px;margin-bottom:8px">'
+      + '<div style="font-weight:700;margin-bottom:3px">1단계 — 사진을 클라우드 저장소로 올리기</div>'
+      + '<div style="color:#627d98;font-size:13px;margin-bottom:8px">사진은 그대로 두고 <b>주소만 새로 얻습니다.</b> 지우는 것이 없어 안전합니다. '
+      + '남은 대상 <b>' + r.todo + '건</b></div>'
+      + '<button id="ctMig1" ' + (r.todo?'':'disabled') + ' style="min-height:44px;padding:0 16px;border-radius:9px;border:0;cursor:'
+      + (r.todo?'pointer':'default') + ';font-size:14px;font-weight:700;color:#fff;background:' + (r.todo?'#2f7d6e':'#b8c4cc') + '">'
+      + (r.todo? ('▶ ' + r.todo + '건 올리기') : '✔ 올릴 것이 없습니다') + '</button></div>';
+
+    var can2 = (r.todo===0 && r.clearable>0);
+    h += '<div style="border:1px solid #e6edf3;border-radius:10px;padding:12px 14px">'
+      + '<div style="font-weight:700;margin-bottom:3px">2단계 — 옮겨진 사진의 원본 지우기</div>'
+      + '<div style="color:#627d98;font-size:13px;margin-bottom:8px">주소가 <b>실제로 열리는지 한 장씩 확인한 뒤에만</b> 원본을 지웁니다. '
+      + '시작 전에 백업 파일이 자동으로 내려받아집니다. 대상 <b>' + r.clearable + '건</b>'
+      + (r.todo? '<br><span style="color:#8a6209">1단계를 먼저 끝내야 합니다</span>':'') + '</div>'
+      + '<button id="ctMig2" ' + (can2?'':'disabled') + ' style="min-height:44px;padding:0 16px;border-radius:9px;border:0;cursor:'
+      + (can2?'pointer':'default') + ';font-size:14px;font-weight:700;color:#fff;background:' + (can2?'#a02c22':'#b8c4cc') + '">'
+      + (can2? ('🗑 ' + r.clearable + '건 원본 지우기') : '대기') + '</button></div>';
+
+    h += '<div id="ctProg" style="margin-top:12px"></div></div>';
+    box.innerHTML = h;
+
+    var x = document.getElementById('ctChkX');
+    if (x) x.addEventListener('click', function(){ if (busy){ stop = true; say('중단합니다…'); return; } var o=document.getElementById('ctChkOv'); if(o) o.remove(); });
+    var m1 = document.getElementById('ctMig1'); if (m1 && r.todo) m1.addEventListener('click', run1);
+    var m2 = document.getElementById('ctMig2'); if (m2 && can2) m2.addEventListener('click', run2);
+  }
+
+  function prog(msg, done, total, tone){
+    var p = document.getElementById('ctProg'); if (!p) return;
+    var pct = total ? Math.round(done/total*100) : 0;
+    p.innerHTML = '<div style="border:1.5px solid ' + (tone||'#2f7d6e') + ';border-radius:10px;padding:11px 14px;font-size:13.5px">'
+      + E(msg) + (total? ('<div style="height:8px;background:#eef3f2;border-radius:5px;margin-top:8px;overflow:hidden">'
+      + '<div style="height:100%;width:' + pct + '%;background:' + (tone||'#2f7d6e') + '"></div></div>'
+      + '<div style="margin-top:4px;color:#627d98">' + done + ' / ' + total + '건 (' + pct + '%)</div>') : '') + '</div>';
+  }
+
+  /* ── 1단계: Storage 로 올리기 (지우는 것 없음) ──────────────────────── */
+  async function run1(){
+    if (busy) return;
+    if (typeof uploadCardToStorage !== 'function'){ say('이 화면에서는 올리기를 쓸 수 없습니다'); return; }
+    var its = ITEMS().filter(function(it){
+      return it.card && String(it.card).indexOf('data:')===0 && !(it.photoUrl && String(it.photoUrl).indexOf('http')===0);
+    });
+    if (!its.length) return;
+    busy = true; stop = false;
+    var ok=0, fail=0;
+    for (var i=0;i<its.length;i++){
+      if (stop) break;
+      var it = its[i];
+      prog('올리는 중 — ' + (it.name||'(이름없음)'), i, its.length);
+      try{
+        var url = await uploadCardToStorage(it.scanId || it.id, it.card);
+        if (url){ updateRecord(it.id, { photoUrl:url }); ok++; }
+        else fail++;
+      }catch(e){ fail++; console.warn('[이관1]', it.id, e); }
+      await new Promise(function(res){ setTimeout(res, 60); });
+    }
+    busy = false;
+    prog((stop?'중단했습니다. ':'') + '완료 — 성공 ' + ok + '건' + (fail?(' · 실패 ' + fail + '건'):''), its.length, its.length, fail?'#c08a19':'#2f7d6e');
+    try{ if (typeof render==='function') render(); }catch(e){}
+    setTimeout(draw, 900);
+  }
+
+  /* ── 2단계: 주소가 진짜 열리는 것만 원본 삭제 ───────────────────────── */
+  function urlAlive(u){
+    return new Promise(function(res){
+      var im = new Image(); var done=false;
+      im.onload  = function(){ if(!done){ done=true; res(true); } };
+      im.onerror = function(){ if(!done){ done=true; res(false); } };
+      setTimeout(function(){ if(!done){ done=true; res(false); } }, 8000);
+      im.src = u;
+    });
+  }
+
+  async function run2(){
+    if (busy) return;
+    var its = ITEMS().filter(function(it){
+      return it.card && String(it.card).indexOf('data:')===0 && it.photoUrl && String(it.photoUrl).indexOf('http')===0;
+    });
+    if (!its.length) return;
+
+    try{ var bk=document.getElementById('btnBackup'); if(bk){ bk.click(); } }catch(e){}
+    await new Promise(function(res){ setTimeout(res, 900); });
+
+    if (!window.confirm('백업 파일을 먼저 내려받았습니다.\n\n' + its.length + '건의 명함 원본(문서 안 사진)을 지웁니다.\n'
+        + '사진 주소가 실제로 열리는 것만 지우므로 화면에서는 그대로 보입니다.\n\n계속할까요?')) return;
+
+    busy = true; stop = false;
+    var ok=0, skip=0;
+    for (var i=0;i<its.length;i++){
+      if (stop) break;
+      var it = its[i];
+      prog('확인 후 정리 중 — ' + (it.name||'(이름없음)'), i, its.length, '#a02c22');
+      var alive = await urlAlive(it.photoUrl);
+      if (alive){ try{ updateRecord(it.id, { card:'' }); ok++; }catch(e){ skip++; } }
+      else skip++;
+      await new Promise(function(res){ setTimeout(res, 40); });
+    }
+    busy = false;
+    prog((stop?'중단했습니다. ':'') + '완료 — 정리 ' + ok + '건' + (skip?(' · 주소가 안 열려 건너뜀 ' + skip + '건'):''),
+         its.length, its.length, skip?'#c08a19':'#2f7d6e');
+    try{ if (typeof render==='function') render(); }catch(e){}
+    setTimeout(draw, 900);
+  }
+
+  /* ── 버튼 연결 ────────────────────────────────────────────────────── */
+  function bind(){
+    var b = document.getElementById('btnSelfCheck');
+    if (b && !b._bound){ b._bound = true; b.addEventListener('click', open); }
+  }
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+  setTimeout(bind, 1200);
+
+  window.ctSelfCheck = open;
+})();
+</script>
+
 </body>
 </html>
