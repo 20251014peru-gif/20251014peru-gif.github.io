@@ -9,7 +9,7 @@
    평소에는 손대지 않아도 된다. 화면 배지·제목이 전부 이걸 읽는다. */
 const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION)
                   ? window.APP_VERSION
-                  : "v82-0828-1443";
+                  : "v83-0828-1458";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -12221,4 +12221,260 @@ async function githubUpload(token){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindNew);
   else bindNew();
   setTimeout(bindNew, 1500);
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   📋 사고 · 진행업무 — 업무 기록에서 가져오기   (v83-0828-1458)
+   · 사고/진행업무를 쓸 때 [📋 업무에서 가져오기] 로 기존 업무 기록을 골라
+     날짜·제목·층·분야·업체·연락처·금액·상세를 한 번에 채운다.
+   · ⚠ 빈 칸만 채운다 — 이미 쓴 내용은 절대 덮어쓰지 않는다.
+   · 고른 업무의 id 를 workRef 에 남겨 나중에 되짚을 수 있게 한다.
+   · 예전 입력창과 노션식 페이지 양쪽에서 같은 고르기 창을 쓴다.
+   ══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var KIND_OK = { accident:1, progress:1 };
+  var _link = null;          /* 이번 입력창에서 고른 업무 id */
+  var _linkKind = '';
+
+  function esc2(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function won(n){ n=Number(n)||0; return n? n.toLocaleString('ko-KR') : ''; }
+  function workList(){
+    try{
+      return (entries||[]).filter(function(e){ return e && e.kind==='work'; })
+        .slice().sort(function(a,b){ return String(b.date||'').localeCompare(String(a.date||'')); });
+    }catch(e){ console.warn('[가져오기] 업무 목록을 못 읽었어요', e); return []; }
+  }
+  function vendorOf(w){ return w.workVendor || w.vendor || ''; }
+  function phoneOf(w){
+    var a = [w.workContact, w.workPhone].filter(Boolean).join(' ');
+    return a.trim();
+  }
+  function detailOf(w){
+    return [w.detail, w.workMemo, w.memo].filter(function(x){ return String(x||'').trim(); })
+      .join('\n').trim();
+  }
+
+  /* 업무 1건 → 사고/진행업무의 칸 값으로 옮겨 담는다 */
+  window.wlWorkToFields = function(w, kind){
+    if(!w) return {};
+    var d = detailOf(w);
+    var cost = Number(w.cost)||0;
+    if(kind==='progress') return {
+      date: w.date||'', title: w.title||'',
+      owner: vendorOf(w), ownerPhone: phoneOf(w),
+      estCost: cost, detail: d
+    };
+    /* accident */
+    return {
+      date: w.date||'', title: w.title||'',
+      floor: w.floor||'', field: w.field||'',
+      repairCost: cost, detail: d
+    };
+  };
+
+  /* ── 업무 고르기 창 ──────────────────────────────────────
+     onPick(업무기록) 을 부른다. 취소하면 아무 것도 안 부른다.
+     ⚠ 한글 IME — 검색칸은 절대 다시 만들지 않고 결과 영역만 다시 그린다 */
+  window.wlPickWork = function(onPick){
+    var all = workList();
+    var ov = document.createElement('div');
+    ov.className = 'lf-ov';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(12,26,42,.45);z-index:10050;'
+      + 'display:flex;align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto';
+    ov.innerHTML =
+      '<div style="background:#fff;border-radius:16px;width:min(94vw,880px);max-height:88vh;'
+      + 'display:flex;flex-direction:column;box-shadow:0 18px 60px rgba(20,40,64,.3);padding:18px 18px 14px">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+      +   '<b style="font-size:16px;color:#1a2f45">📋 업무 기록에서 가져오기</b>'
+      +   '<button type="button" id="iwX" style="border:none;background:none;font-size:21px;'
+      +     'color:#94a3b8;cursor:pointer;min-height:44px;min-width:44px">✕</button>'
+      + '</div>'
+      + '<input type="text" id="iwQ" placeholder="제목 · 업체 · 분야 · 층으로 검색"'
+      +   ' autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 13px;font-size:14px;'
+      +   'border:1.5px solid #dbe6f4;border-radius:10px;font-family:inherit;min-height:44px">'
+      + '<div id="iwHint" style="font-size:12.5px;color:#7a92a8;margin:8px 2px 6px">'
+      +   '빈 칸만 채웁니다 — 이미 쓴 내용은 그대로 둡니다.</div>'
+      + '<div id="iwList" style="overflow:auto;flex:1;min-height:120px"></div>'
+      + '</div>';
+    document.body.appendChild(ov);
+
+    function close(){ try{ ov.remove(); }catch(e){} document.removeEventListener('keydown', onEsc); }
+    function onEsc(e){ if(e.key==='Escape') close(); }
+    document.addEventListener('keydown', onEsc);
+    ov.addEventListener('mousedown', function(e){ if(e.target===ov) close(); });
+    var xb = ov.querySelector('#iwX'); if(xb) xb.addEventListener('click', close);
+
+    var listEl = ov.querySelector('#iwList');
+    var qEl    = ov.querySelector('#iwQ');
+
+    function draw(){
+      var q = String(qEl.value||'').trim().toLowerCase();
+      var rows = all;
+      if(q) rows = all.filter(function(w){
+        return [w.title, vendorOf(w), w.field, w.floor, w.detail, w.workMemo]
+          .join(' ').toLowerCase().indexOf(q) >= 0;
+      });
+      var show = rows.slice(0, 200);
+      if(!show.length){
+        listEl.innerHTML = '<div style="padding:26px 8px;text-align:center;color:#a8b8c8;font-size:13.5px">'
+          + (all.length ? '찾는 업무가 없어요' : '업무 기록이 아직 없어요') + '</div>';
+        return;
+      }
+      listEl.innerHTML = show.map(function(w){
+        var v = vendorOf(w), c = won(w.cost);
+        return '<div data-iwid="'+esc2(w.id)+'" style="border:1.5px solid #eaf1f9;border-radius:11px;'
+          + 'padding:10px 12px;margin-bottom:7px;cursor:pointer;min-height:44px">'
+          + '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
+          +   (w.floor? '<span style="background:#eef5fd;color:#2b5f96;border-radius:6px;padding:1px 7px;'
+                      + 'font-size:11.5px;font-weight:800">'+esc2(w.floor)+'</span>' : '')
+          +   '<b style="font-size:14px;color:#1a2f45">'+esc2(w.title||'(제목 없음)')+'</b>'
+          + '</div>'
+          + '<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:5px;font-size:12px;color:#7a92a8">'
+          +   '<span>'+esc2(w.date||'')+'</span>'
+          +   (w.field? '<span>· '+esc2(w.field)+'</span>':'')
+          +   (v? '<span style="color:#2b5f96;font-weight:700">· '+esc2(v)+'</span>':'')
+          +   (c? '<span style="color:#b45309;font-weight:700">· '+c+'원</span>':'')
+          + '</div></div>';
+      }).join('')
+      + (rows.length>200 ? '<div style="text-align:center;color:#a8b8c8;font-size:12px;padding:6px">'
+         + '…앞 200건만 보여요. 검색으로 좁혀 주세요</div>' : '');
+
+      [].forEach.call(listEl.querySelectorAll('[data-iwid]'), function(row){
+        row.addEventListener('click', function(){
+          var id = row.getAttribute('data-iwid');
+          var w = all.filter(function(x){ return x.id===id; })[0];
+          if(!w) return;
+          close();
+          try{ onPick(w); }catch(e){ console.error('[가져오기]', e); }
+        });
+        row.addEventListener('mouseenter', function(){ row.style.background='#f6faff'; row.style.borderColor='#cfe0f3'; });
+        row.addEventListener('mouseleave', function(){ row.style.background=''; row.style.borderColor='#eaf1f9'; });
+      });
+    }
+    qEl.addEventListener('input', draw);      /* 검색칸 DOM 은 그대로 두고 목록만 다시 그린다 */
+    draw();
+    setTimeout(function(){ try{ qEl.focus(); }catch(e){} }, 60);
+  };
+
+  /* ── 예전 입력창(모달)에 단추 붙이기 ───────────────────── */
+  function fillModal(w, kind, isNew){
+    var patch = window.wlWorkToFields(w, kind);
+    /* 새로 쓰는 중이면 '오늘' 로 미리 찍혀 있는 날짜는 빈 칸으로 본다 —
+       사용자가 고른 값이 아니라 기본값이기 때문 */
+    var td = ''; try{ td = todayStr(); }catch(e){}
+    var filled = [], skipped = [];
+    var sc = (typeof SCHEMA!=='undefined' && SCHEMA[kind]) ? SCHEMA[kind] : [];
+    sc.forEach(function(f){
+      if(!(f.k in patch)) return;
+      var el = document.getElementById('m-'+f.k); if(!el) return;
+      var cur = String(el.value==null?'':el.value).trim();
+      var isEmpty = (cur==='' || cur==='0');
+      if(!isEmpty && isNew && f.type==='date' && td && cur===td) isEmpty = true;
+      var val = patch[f.k];
+      if(val===''||val==null||val===0) return;
+      if(!isEmpty){ skipped.push(f.label.replace(/\s*\*$/,'')); return; }
+      el.value = val;
+      el.style.background = '#fffbea';                 /* 자동입력 = 노란 배경 */
+      try{ el.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){}
+      try{ el.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
+      filled.push(f.label.replace(/\s*\*$/,''));
+    });
+    _link = w.id; _linkKind = kind;
+    paintChip(kind, w);
+    if(typeof toast==='function'){
+      toast(filled.length
+        ? ('가져왔어요 — ' + filled.join(' · ') + (skipped.length? (' / 이미 쓴 칸 '+skipped.length+'개는 그대로 뒀어요') : ''))
+        : '채울 빈 칸이 없었어요 — 연결만 해뒀습니다');
+    }
+  }
+
+  function paintChip(kind, w){
+    var host = document.getElementById('mFields'); if(!host) return;
+    var old = document.getElementById('iwChip'); if(old) old.remove();
+    if(!w) return;
+    var chip = document.createElement('div');
+    chip.id = 'iwChip';
+    chip.style.cssText = 'grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;'
+      + 'background:#eef7ff;border:1.5px solid #cfe3f7;border-radius:10px;padding:8px 11px;margin-bottom:9px;'
+      + 'font-size:12.5px;color:#2b5f96';
+    chip.innerHTML = '<b>🔗 연결된 업무</b><span>'+esc2(w.date||'')+' · '+esc2(w.title||'')+'</span>'
+      + '<button type="button" id="iwUnlink" style="margin-left:auto;border:none;background:none;'
+      + 'color:#7a92a8;cursor:pointer;font-size:12.5px;font-family:inherit;min-height:32px">연결 끊기</button>';
+    var btn = document.getElementById('iwBtnRow');
+    if(btn && btn.parentNode) btn.parentNode.insertBefore(chip, btn.nextSibling);
+    else host.insertBefore(chip, host.firstChild);
+    var ub = document.getElementById('iwUnlink');
+    if(ub) ub.addEventListener('click', function(){ _link=null; _linkKind=''; chip.remove(); });
+  }
+
+  function mIdNow(){ try{ return mId || null; }catch(e){ return null; } }
+
+  function addModalButton(kind, data){
+    var host = document.getElementById('mFields'); if(!host) return;
+    var old = document.getElementById('iwBtnRow'); if(old) old.remove();
+    var row = document.createElement('div');
+    row.id = 'iwBtnRow';
+    row.style.cssText = 'grid-column:1/-1;margin-bottom:10px';
+    row.innerHTML = '<button type="button" id="iwBtn" style="width:100%;min-height:46px;'
+      + 'border:1.5px dashed #b9d3ee;background:#f6fbff;color:#2b5f96;border-radius:11px;'
+      + 'font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">'
+      + '📋 업무 기록에서 가져오기</button>';
+    host.insertBefore(row, host.firstChild);
+    var b = document.getElementById('iwBtn');
+    if(b) b.addEventListener('click', function(){
+      window.wlPickWork(function(w){ fillModal(w, kind, !mIdNow()); });
+    });
+    /* 이미 연결돼 있던 기록이면 칩을 보여준다 */
+    if(data && data.workRef){
+      var w = null;
+      try{ w = (entries||[]).filter(function(x){ return x.id===data.workRef; })[0]; }catch(e){}
+      if(w){ _link = w.id; _linkKind = kind; paintChip(kind, w); }
+    }
+  }
+
+  /* openEditor 를 감싼다 — 원래 함수는 그대로 살려둔다 */
+  try{
+    if(typeof openEditor === 'function' && !openEditor._impWrapped){
+      var _origEd = openEditor;
+      openEditor = function(kind, id){
+        _link = null; _linkKind = '';
+        var r = _origEd.apply(this, arguments);
+        try{
+          if(KIND_OK[kind]){
+            var data = id ? ((entries||[]).filter(function(x){ return x.id===id; })[0]||{}) : {};
+            addModalButton(kind, data);
+          }
+        }catch(e){ console.warn('[가져오기] 단추를 못 붙였어요', e); }
+        return r;
+      };
+      openEditor._impWrapped = true;
+      window.openEditor = openEditor;
+    }
+  }catch(e){ console.warn('[가져오기] openEditor 감싸기 실패', e); }
+
+  /* 저장할 때 workRef 를 함께 남긴다 (원래 저장 코드는 안 건드린다) */
+  function stamp(obj){
+    try{
+      if(!obj || !KIND_OK[obj.kind]) return;
+      if(_link && _linkKind===obj.kind){ obj.workRef = _link; obj.workRefKind = 'work'; }
+    }catch(e){}
+  }
+  try{
+    if(typeof addRecord === 'function' && !addRecord._impWrapped){
+      var _oAdd = addRecord;
+      addRecord = function(data){ stamp(data); return _oAdd.apply(this, arguments); };
+      addRecord._impWrapped = true; window.addRecord = addRecord;
+    }
+    if(typeof updateRecord === 'function' && !updateRecord._impWrapped){
+      var _oUpd = updateRecord;
+      updateRecord = function(id, patch){
+        try{ if(patch && KIND_OK[patch.kind]) stamp(patch); }catch(e){}
+        return _oUpd.apply(this, arguments);
+      };
+      updateRecord._impWrapped = true; window.updateRecord = updateRecord;
+    }
+  }catch(e){ console.warn('[가져오기] 저장 감싸기 실패', e); }
 })();
