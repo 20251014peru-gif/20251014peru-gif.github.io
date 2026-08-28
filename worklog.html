@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v90-0828-1605";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v91-0828-1625";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3266,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=90-20260828t1605"></script>
+<script src="worklog.js?v=91-20260828t1625"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -18516,6 +18516,7 @@ if('serviceWorker' in navigator){
     add(!!c.lastAt, '마지막 성공', c.lastAt ? new Date(c.lastAt).toLocaleString('ko-KR') : '한 번도 없음');
     add(!c.lastErr, '마지막 오류', c.lastErr || '없음');
     add(!_drvWhy, '방금 실패한 이유', _drvWhy || '없음');
+    add(!_drvApiErr, '구글이 준 응답', _drvApiErr || '없음');
     /* 팝업이 열리는지 실제로 해본다 — 사용자가 누른 직후에만 정확하다 */
     var pop = null;
     try{ pop = window.open('', '_blank', 'width=1,height=1,left=-2000,top=-2000'); }catch(e){}
@@ -18523,14 +18524,49 @@ if('serviceWorker' in navigator){
     else add(false, '팝업 열기', '차단됐어요 — 주소창 오른쪽 🚫 를 눌러 허용해 주세요');
     return out;
   }
+  /* ⚠️ v91 — 403 을 '권한 만료' 로 뭉개지 않는다.
+     401 = 토큰 만료(다시 로그인해야 함)
+     403 = 로그인은 됐는데 구글이 거절 — Drive API 가 꺼져 있거나 권한 범위 문제.
+     예전에는 403 에서도 토큰을 지워버려서 '다시 로그인 → 또 403' 이 무한 반복됐다.
+     구글이 준 사유를 그대로 읽어 보여준다. */
+  var _drvApiErr = '';
+  function drvApiErr(){ return _drvApiErr; }
   function dfetch(url, opt){
     opt=opt||{}; opt.headers=opt.headers||{};
     opt.headers['Authorization']='Bearer '+drvToken;
     return fetch(url, opt).then(function(r){
-      if(r.status===401||r.status===403){ drvToken=null; try{ localStorage.removeItem(LS_DRV); }catch(e){}
-        throw new Error('구글 드라이브 권한이 만료됐어요 — 다시 연결해주세요'); }
-      if(!r.ok) return r.text().then(function(t){ throw new Error('드라이브 오류 '+r.status+' '+t.slice(0,120)); });
-      return r.json();
+      if(r.ok) return r.json();
+      return r.text().then(function(t){
+        var reason='', msg='';
+        try{
+          var j=JSON.parse(t);
+          var e0=(j.error && j.error.errors && j.error.errors[0]) || {};
+          reason = e0.reason || (j.error && j.error.status) || '';
+          msg    = (j.error && j.error.message) || '';
+        }catch(e){ msg = String(t||'').slice(0,200); }
+        _drvApiErr = r.status + ' ' + (reason||'') + (msg ? (' · ' + msg.slice(0,220)) : '');
+        try{ var c0=drvCfg(); c0.lastErr=_drvApiErr; c0.lastTryAt=Date.now(); drvSave(c0); }catch(e){}
+
+        if(r.status===401){
+          drvToken=null; try{ localStorage.removeItem(LS_DRV); }catch(e){}
+          throw new Error('구글 로그인이 만료됐어요 — 다시 연결해주세요');
+        }
+        if(r.status===403){
+          /* 토큰은 살려 둔다 — 지우면 다시 로그인해도 똑같이 403 이 나서 헛수고가 된다 */
+          if(/accessNotConfigured|SERVICE_DISABLED|has not been used in project/i.test(reason+' '+msg))
+            throw new Error('구글 클라우드 프로젝트에서 「Google Drive API」 가 꺼져 있어요.\n'
+              + '구글 클라우드 콘솔 → API 및 서비스 → 라이브러리 → Google Drive API → 사용 설정');
+          if(/insufficientPermissions|insufficientScope|ACCESS_TOKEN_SCOPE/i.test(reason+' '+msg))
+            throw new Error('이 로그인에 드라이브 권한이 빠져 있어요 — 구글 창에서 드라이브 항목까지 체크하고 [계속] 을 눌러주세요');
+          if(/storageQuotaExceeded/i.test(reason+' '+msg))
+            throw new Error('구글 드라이브 용량이 가득 찼어요 — 드라이브를 비우고 다시 시도해주세요');
+          if(/rateLimitExceeded|userRateLimitExceeded/i.test(reason+' '+msg))
+            throw new Error('요청이 너무 잦아요 — 1분 뒤에 다시 눌러주세요');
+          throw new Error('구글이 거절했어요 (403 ' + (reason||'사유 없음') + ')'
+            + (msg ? ('\n' + msg.slice(0,200)) : ''));
+        }
+        throw new Error('드라이브 오류 ' + r.status + ' ' + (msg||t).slice(0,160));
+      });
     });
   }
   function drvFolder(){
@@ -18651,7 +18687,7 @@ if('serviceWorker' in navigator){
   window.wlDrive = {
     cfg:drvCfg, save:drvSave, auth:drvAuth, upload:drvUpload,
     list:drvList, get:drvGet, del:drvDel, off:drvOff, auto:drvAuto,
-    stale:drvStale, noteTry:drvNoteTry, why:drvWhy, diag:drvDiag,
+    stale:drvStale, noteTry:drvNoteTry, why:drvWhy, diag:drvDiag, apiErr:drvApiErr,
     connected: function(){ return drvLoadToken(); }
   };
 
