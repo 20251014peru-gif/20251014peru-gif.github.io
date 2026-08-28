@@ -9,7 +9,7 @@
    평소에는 손대지 않아도 된다. 화면 배지·제목이 전부 이걸 읽는다. */
 const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION)
                   ? window.APP_VERSION
-                  : "v75-0828-1144";
+                  : "v76-0828-1215";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -11799,16 +11799,57 @@ async function githubUpload(token){
       m.btnHeight = Math.round(fb.getBoundingClientRect().height) || 0;
     } else { m.btnRadius = -1; m.btnHeight = -1; }
 
-    /* localStorage 사용량 */
-    var bytes = 0, keys = 0;
+    /* localStorage 사용량 + 키별 상세
+       ※ 이 저장소는 같은 주소(20251014peru-gif.github.io)의 모든 앱이 함께 씁니다.
+          그래서 다른 앱이 쓴 키까지 여기 용량에 잡힙니다. */
+    var bytes = 0, keys = 0, mineB = 0, otherB = 0, list = [];
+    function isMine(k){
+      return /^wl_/.test(k) || /^v43_/.test(k) ||
+             k === 'shared_pin' || k === 'sticky_view' || k === '_ghToken' ||
+             /^_itemMemo/.test(k);
+    }
     try {
       for (var k in localStorage){
         if (!Object.prototype.hasOwnProperty.call(localStorage, k)) continue;
-        keys++; bytes += (k.length + String(localStorage[k]).length) * 2;
+        var raw = String(localStorage[k]);
+        var b = (k.length + raw.length) * 2;
+        keys++; bytes += b;
+        var mine = isMine(k);
+        if (mine) mineB += b; else otherB += b;
+        var cnt = null;
+        if (raw.charAt(0) === '[') { try { var arr = JSON.parse(raw); if (arr && arr.length !== undefined) cnt = arr.length; } catch(e){} }
+        list.push({ k:k, kb:Math.round(b/1024), mine:mine, n:cnt });
       }
     } catch(e){}
-    m.lsKeys = keys;
-    m.lsMB = Math.round(bytes / 1048576 * 100) / 100;
+    list.sort(function(a,b2){ return b2.kb - a.kb; });
+    m.lsKeys  = keys;
+    m.lsMB    = Math.round(bytes / 1048576 * 100) / 100;
+    m.lsMineMB  = Math.round(mineB / 1048576 * 100) / 100;
+    m.lsOtherMB = Math.round(otherB / 1048576 * 100) / 100;
+    m.lsList  = list;
+
+    /* 제일 큰 키 안에서 어느 항목이 용량을 먹는지 */
+    m.lsTopField = null;
+    try {
+      var top = list[0];
+      if (top && top.kb > 300){
+        var arr2 = JSON.parse(localStorage.getItem(top.k) || 'null');
+        if (arr2 && arr2.length && typeof arr2[0] === 'object'){
+          var f = {};
+          for (var z = 0; z < arr2.length; z++){
+            for (var key2 in arr2[z]){
+              if (!Object.prototype.hasOwnProperty.call(arr2[z], key2)) continue;
+              var v2 = arr2[z][key2];
+              f[key2] = (f[key2] || 0) + (typeof v2 === 'string' ? v2.length : JSON.stringify(v2 || '').length) * 2;
+            }
+          }
+          var fl = [];
+          for (var fk in f) fl.push({ f:fk, kb:Math.round(f[fk]/1024) });
+          fl.sort(function(a,b3){ return b3.kb - a.kb; });
+          m.lsTopField = { key:top.k, n:arr2.length, fields:fl.slice(0,6) };
+        }
+      }
+    } catch(e){}
 
     /* 데이터 건수 */
     var ents = safe(function(){ return entries; }, null) || safe(function(){ return window.entries; }, null) || [];
@@ -11885,8 +11926,12 @@ async function githubUpload(token){
         '한 줄씩 나온다면 CSS가 죽은 것입니다 — 중괄호 짝을 확인하세요');
 
     /* 6. 필터 버튼 스타일 */
-    row('필터 버튼 모양', m.btnRadius < 0 ? 'none' : (m.btnRadius >= 6 ? 'ok' : 'fail'),
-        m.btnRadius < 0 ? '버튼 없음(다른 탭)' : ('모서리 ' + m.btnRadius + 'px · 높이 ' + m.btnHeight + 'px'),
+    var btnState = (m.btnRadius < 0 || m.btnHeight <= 0) ? 'none'
+                 : (m.btnRadius >= 6 ? 'ok' : 'fail');
+    row('필터 버튼 모양', btnState,
+        m.btnRadius < 0  ? '버튼 없음(다른 탭)'
+      : m.btnHeight <= 0 ? '지금 화면에 안 보여서 판정 보류 (기록 탭에서 다시 눌러보세요)'
+      : ('모서리 ' + m.btnRadius + 'px · 높이 ' + m.btnHeight + 'px'),
         '모서리가 0px 이면 기본 브라우저 버튼으로 돌아간 것 — CSS가 죽었습니다');
 
     /* 7. 필수 함수 */
@@ -11896,8 +11941,9 @@ async function githubUpload(token){
 
     /* 8. 저장 공간 */
     var lsSt = m.lsMB >= 4.5 ? 'fail' : (m.lsMB >= 3.5 ? 'warn' : 'ok');
-    row('저장 공간', lsSt, m.lsMB + 'MB / 약 5MB · 키 ' + m.lsKeys + '개',
-        '가득 차면 저장이 실패하고 파이어스토어 오류로 이어집니다 — 사진·백업을 정리하세요');
+    row('저장 공간', lsSt,
+        m.lsMB + 'MB (업무일지 ' + m.lsMineMB + ' + 다른 앱 ' + m.lsOtherMB + ') · 키 ' + m.lsKeys + '개',
+        '이 저장소는 같은 주소의 모든 앱이 함께 씁니다. 아래 상세에서 큰 것부터 정리하세요');
 
     /* 9. 데이터 건수 */
     if (base && base.entCount){
@@ -11972,6 +12018,42 @@ async function githubUpload(token){
               '</div>';
     }
     html += '</div>';
+
+    /* 저장 공간 상세 — 주의/확인일 때만 자동으로 펼친다 */
+    var lsBad = (m.lsMB >= 3.5);
+    if (lsBad && m.lsList && m.lsList.length){
+      html += '<div style="margin-top:12px;border:1.5px solid #c08a19;border-radius:10px;overflow:hidden">' +
+              '<div style="background:#fdf4e3;color:#8a6209;font-size:14px;font-weight:700;padding:9px 12px">' +
+              '📦 저장 공간 상세 — 큰 것부터</div>';
+      var shown = m.lsList.slice(0, 12);
+      for (var s = 0; s < shown.length; s++){
+        var it2 = shown[s];
+        var who = it2.mine
+          ? '<span style="color:#20614f;background:#e9f6ef;border:1px solid #2f7d6e;border-radius:5px;padding:1px 6px;font-size:11.5px">업무일지</span>'
+          : '<span style="color:#8a6209;background:#fdf4e3;border:1px solid #c08a19;border-radius:5px;padding:1px 6px;font-size:11.5px">다른 앱</span>';
+        html += '<div style="display:flex;gap:8px;align-items:center;padding:8px 12px;background:#fff;' +
+                (s ? 'border-top:1px solid #f1f5f9;' : '') + '">' +
+                  '<span style="flex:0 0 auto">' + who + '</span>' +
+                  '<span style="flex:1;min-width:0;font-size:13px;color:#243b53;word-break:break-all">' + esc2(it2.k) +
+                    (it2.n !== null ? ' <span style="color:#829ab1">(' + it2.n + '건)</span>' : '') + '</span>' +
+                  '<b style="flex:0 0 auto;font-size:13.5px;color:' + (it2.kb >= 500 ? '#a02c22' : '#486581') + '">' +
+                    (it2.kb >= 1024 ? (Math.round(it2.kb/102.4)/10 + 'MB') : (it2.kb + 'KB')) + '</b>' +
+                '</div>';
+      }
+      if (m.lsTopField){
+        html += '<div style="padding:9px 12px;background:#fbfcfd;border-top:1px solid #e6edf3;font-size:12.5px;color:#486581">' +
+                '가장 큰 <b>' + esc2(m.lsTopField.key) + '</b> (' + m.lsTopField.n + '건) 안에서 용량을 먹는 항목 &nbsp;';
+        for (var g = 0; g < m.lsTopField.fields.length; g++){
+          html += '<span style="display:inline-block;background:#f1f5f9;border-radius:6px;padding:2px 8px;margin:0 4px 4px 0">' +
+                  esc2(m.lsTopField.fields[g].f) + ' <b>' + m.lsTopField.fields[g].kb + 'KB</b></span>';
+        }
+        html += '</div>';
+      }
+      html += '<div style="padding:9px 12px;background:#fffdf7;border-top:1px solid #f1e6cc;font-size:12.5px;color:#8a6209;line-height:1.8">' +
+              '이 저장소는 <b>같은 주소를 쓰는 모든 앱이 함께 씁니다.</b> 「다른 앱」 표시가 붙은 키는 업무일지가 만든 것이 아니므로, ' +
+              '그 앱에서 정리하거나 <b>클라우드에 원본이 있는 캐시인지 먼저 확인한 뒤</b> 지우세요.</div>';
+      html += '</div>';
+    }
 
     /* 종류별 건수 */
     var ks = Object.keys(m.kinds).sort(function(a, b){ return m.kinds[b] - m.kinds[a]; });
