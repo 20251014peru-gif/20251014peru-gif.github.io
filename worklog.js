@@ -4,9 +4,12 @@
    ★ worklog.html 에 붙이면 화면이 글자로 도배됩니다.
    ══════════════════════════════════════════════════════════════ */
 /* ===== 설정 ===== */
-/* ⚠️ 버전은 여기 한 곳뿐이다. 화면 배지·제목이 전부 이걸 읽는다.
-   손으로 적지 말 것 — 빌드할 때 컴 시계에서 주입한다. */
-const APP_VERSION = "v73-0827-1648";
+/* ⚠️ 버전의 원본은 worklog.html <head> 의  window.APP_VERSION  한 곳뿐이다.
+   아래 따옴표 안의 값은 HTML 이 옛 버전일 때만 쓰이는 비상용이라
+   평소에는 손대지 않아도 된다. 화면 배지·제목이 전부 이걸 읽는다. */
+const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION)
+                  ? window.APP_VERSION
+                  : "v74-0828-1113";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }

@@ -134,7 +134,7 @@
 </script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<!-- PWA 설정 — 버전은 worklog.js 의 APP_VERSION 한 곳뿐 -->
+<!-- PWA 설정 — 버전은 아래 <head> 의 window.APP_VERSION 한 곳뿐 -->
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#3f7cb8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -145,12 +145,34 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>업무일지 v73-0827-1648</title>   <!-- 버전은 APP_VERSION 이 붙인다 -->
+  <title>업무일지</title>   <!-- 버전은 아래 APP_VERSION 이 붙인다 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-<link rel="stylesheet" id="main-css" href="worklog.css?v=43-20260617t1781675790">
+<!-- ══════════════════════════════════════════════════════════════════
+     ★ 버전은 여기 한 곳뿐이다.  아래 APP_VERSION 한 줄만 고치면
+       · 브라우저 탭 제목
+       · worklog.css 주소 (?v=...)   ← 이게 없으면 CSS 를 고쳐도 반영이 안 된다
+       가 전부 따라 바뀐다.  worklog.js 는 이 값을 그대로 읽어 쓴다.
+     ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
+     ══════════════════════════════════════════════════════════════════ -->
+<script>
+  window.APP_VERSION = "v74-0828-1113";      /* ★ 여기 한 줄만 고친다 ★ */
+  (function(){
+    try{
+      document.title = "업무일지 " + window.APP_VERSION;
+      var l = document.createElement("link");
+      l.rel  = "stylesheet";
+      l.id   = "main-css";
+      l.href = "worklog.css?v=" + encodeURIComponent(String(window.APP_VERSION).replace(/^v/,""));
+      document.head.appendChild(l);
+    }catch(e){
+      /* 만약을 대비한 비상 경로 — 스크립트가 막혀도 CSS 는 반드시 뜬다 */
+      document.write('<link rel="stylesheet" id="main-css" href="worklog.css">');
+    }
+  })();
+</script>
 <style>
 
 /* ===== 반응형 카드 그리드 (메모·공통) ===== */
@@ -3207,7 +3229,24 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=73-20260827t1648"></script>
+<script src="worklog.js?v=74-20260828t1113"></script>
+<script>
+/* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
+   (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
+(function(){
+  try{
+    var tag = document.querySelector('script[src*="worklog.js?v="]');
+    if(!tag) return;
+    var tagVer = (tag.getAttribute("src").split("?v=")[1]||"").split("t")[0];   // 74
+    var appVer = (window.APP_VERSION||"").replace(/^v/,"").split("-")[0];       // 74
+    if(tagVer && appVer && tagVer !== appVer){
+      console.warn("[버전 경고] worklog.js 의 ?v=" + tagVer +
+                   " 가 APP_VERSION " + window.APP_VERSION + " 과 다릅니다. " +
+                   "worklog.html 의 <script src=\"worklog.js?v=...\"> 도 함께 올려주세요.");
+    }
+  }catch(e){}
+})();
+</script>
 <script>
 /* ═══ worklog.js 가 제대로 안 올라갔을 때 알려준다 ═══
    (파일을 잘못 올리면 화면이 깨져서 원인을 알 수 없으니) */
