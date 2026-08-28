@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v78-0828-1420";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v80-0828-1600";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -2547,6 +2547,14 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         </div>
         <div id="diagErrors" style="margin-top:12px"></div>
 
+        <div class="sec-head">📄 기록을 누르면</div>
+        <div style="font-size:12.5px;color:#7a92a8;margin-bottom:6px">목록에서 기록을 눌렀을 때 어떤 화면으로 열지 정합니다.</div>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn btn-sm" id="opAsPage" style="min-height:44px">📄 페이지로 (노션식)</button>
+          <button class="btn btn-sm" id="opAsModal" style="min-height:44px">🗔 예전 입력창으로</button>
+          <span id="opNow" style="font-size:12.5px;color:#7a92a8;align-self:center;margin-left:6px"></span>
+        </div>
+
         <div class="sec-head">✅ 자가 점검 <span id="scStamp" style="font-size:12px;color:#94a3b8;font-weight:400;margin-left:4px"></span></div>
         <div style="font-size:12.5px;color:#7a92a8;margin-bottom:6px">파일을 올린 직후 눌러보세요. 화면이 깨졌는지·데이터가 멀쩡한지 한 번에 확인합니다.</div>
         <div class="btn-row" style="margin-top:0">
@@ -3237,7 +3245,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=78-20260828t1420"></script>
+<script src="worklog.js?v=80-20260828t1600"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -19395,10 +19403,11 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
   color:#5b7794; font-size:18px; font-weight:800; cursor:pointer; font-family:inherit; line-height:1 }
 .lf-calhead button:hover{ border-color:#2563a8; color:#2563a8 }
 .lf-calhead .lf-fx{ width:auto; height:32px; font-size:12px }
-.lf-cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px }
+.lf-cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px;
+  grid-auto-rows:minmax(96px,auto); align-items:stretch }
 .lf-cdow{ text-align:center; font-size:11.5px; font-weight:900; color:#8ba0b6; padding:4px 0 }
 .lf-cday{ min-height:96px; background:#fff; border:1.5px solid #e8f0fa; border-radius:9px; padding:5px;
-  cursor:pointer; overflow:hidden }
+  cursor:pointer; display:flex; flex-direction:column }
 .lf-cday:hover{ border-color:#bcd2ea; background:#f9fcff }
 .lf-cday.off{ background:transparent; border:none; cursor:default }
 .lf-cday.today{ border-color:#2563a8; background:#f0f6ff }
@@ -19407,8 +19416,11 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
   background:#f4f8fd; border-radius:4px; color:#1a2f45; overflow:hidden; text-overflow:ellipsis;
   white-space:nowrap; cursor:pointer }
 .lf-cday .ev:hover{ background:#dbe6f4 }
-.lf-cday .more{ font-size:10.5px; color:#8ba0b6; padding-left:4px }
-@media (max-width:700px){ .lf-cday{ min-height:66px } .lf-cday .ev{ font-size:10px } }
+.lf-cday .more{ margin-top:auto; font-size:10.5px; color:#a8b8c8; padding:2px 4px 0; text-align:right }
+@media (max-width:700px){
+  .lf-cday{ min-height:66px } .lf-cday .ev{ font-size:10px; padding:1px 4px; margin-bottom:1px }
+  .lf-cal{ grid-auto-rows:minmax(66px,auto) }
+}
 
 /* ── 🏷 다중 선택 ── */
 .lf-multi{ display:flex; gap:5px; flex-wrap:wrap; align-items:center; min-height:32px; outline:none }
@@ -19530,6 +19542,17 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
 .pg-pics img{ width:110px; height:110px; object-fit:cover; border-radius:10px;
   border:1.5px solid #e8f0fa; cursor:zoom-in }
 .pg-none{ font-size:12.5px; color:#c8d4e0 }
+.pg-extra{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:8px }
+.pg-extra input{ height:40px; padding:0 10px; border:1.5px solid #dbe6f4; border-radius:9px;
+  font-family:inherit; font-size:13.5px; color:#1a2f45; background:#fff; min-width:0 }
+.pg-extra input:focus{ outline:none; border-color:#3f7cb8 }
+.pg-xb{ height:40px; min-width:56px; padding:0 13px; border:1.5px solid #dbe6f4; border-radius:9px;
+  background:#fff; color:#5b7794; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit }
+.pg-xb:hover{ border-color:#3f7cb8; color:#3f7cb8 }
+.pg-xb.on{ background:#3f7cb8; border-color:#3f7cb8; color:#fff }
+.pg-sub .x{ flex:0 0 auto; width:34px; height:34px; border:none; background:none; color:#c8d4e0;
+  font-size:14px; cursor:pointer; border-radius:8px; line-height:1; font-family:inherit }
+.pg-sub .x:hover{ color:#b52929; background:#fdeceb }
 .pg-rows{ width:100%; border-collapse:separate; border-spacing:0 4px }
 .pg-rows input, .pg-rows select{ width:100%; box-sizing:border-box; height:34px; padding:0 9px;
   border:1.5px solid #e8f0fa; border-radius:8px; font-size:13px; font-family:inherit;
@@ -23176,13 +23199,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var isT = (calYM+'-'+String(d).padStart(2,'0'))===today();
       h+='<div class="lf-cday'+(isT?' today':'')+'" data-cday="'+d+'">'
         + '<div class="dn">'+d+'</div>'
-        + list.slice(0,4).map(function(e){
+        + list.map(function(e){
             var dd = e.ptype==='car' ? {c:carColor(e.car)} : (cats()[e.ptype]||catEtc());
             var ch=colorHit(e,pt);
             return '<div class="ev" data-cid="'+esc(e.id)+'" style="border-left-color:'+dd.c
               + (ch? ';background:'+colorOf(ch.color).bg:'') + '" title="'+esc(e.title||'')+'">'
-              + esc(String(pget(e,'_title')||'').slice(0,14)) + '</div>'; }).join('')
-        + (list.length>4? '<div class="more">+'+(list.length-4)+'건</div>':'')
+              + esc(String(pget(e,'_title')||'')) + '</div>'; }).join('')
+        + (list.length>1? '<div class="more">'+list.length+'건</div>':'')
         + '</div>';
     }
     return h+'</div>';
@@ -23481,6 +23504,56 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }
 
     var _phd = phideOf(pt);
+    /* ── 📦 자재 · 📎 파일·폴더 · ⏱ 소요 — 예전 입력창에만 있던 것들 ── */
+    function extrasHTML(r){
+      var h2='';
+      var tps = (typeof props!=='undefined' ? props : []).filter(function(p){ return p.type==='time'; });
+      if(tps.length>=2){
+        h2 += '<div class="pg-div"></div>'
+          + '<div class="pg-sec">⏱ 소요 시간 <span>누르면 「'+esc(tps[1].name)+'」 이 저절로 채워집니다</span></div>'
+          + '<div class="pg-extra">'
+          + [[30,'30분'],[60,'1시간'],[90,'1시간반'],[120,'2시간'],[180,'3시간'],[240,'4시간']].map(function(x){
+              return '<button type="button" class="pg-xb" data-dur="'+x[0]+'">'+x[1]+'</button>'; }).join('')
+          + '<button type="button" class="pg-xb" data-duradd="10">+10분</button>'
+          + '<button type="button" class="pg-xb" data-duradd="-10">−10분</button>'
+          + '</div>';
+      }
+      var mats = esr(r.materials);
+      h2 += '<div class="pg-div"></div>'
+        + '<div class="pg-sec">📦 자재 사용 내역 <span>이 기록에 쓴 자재</span></div>'
+        + '<div class="pg-subs">'
+        + (mats.length ? mats.map(function(m,i){
+            return '<div class="pg-sub"><span class="tt">'+esc(m.name||'')
+              + (m.spec? ' <span style="color:#8ba0b6;font-weight:600">'+esc(m.spec)+'</span>':'')
+              + ' <span style="color:#3f7cb8">× '+(Number(m.qty)||1)+'</span></span>'
+              + '<button type="button" class="x" data-matdel="'+i+'" title="빼기">✕</button></div>'; }).join('')
+           : '<div class="pg-none">아직 없어요 — 아래에서 추가하세요</div>')
+        + '</div>'
+        + '<div class="pg-extra">'
+        +   '<input type="text" id="pgMatN" placeholder="자재명" style="flex:2;min-width:120px">'
+        +   '<input type="text" id="pgMatS" placeholder="규격 (선택)" style="flex:1.3;min-width:90px">'
+        +   '<input type="number" id="pgMatQ" placeholder="수량" value="1" min="0" style="flex:0 0 82px">'
+        +   '<button type="button" id="pgMatAdd" class="pg-xb on">추가</button>'
+        + '</div>';
+      var atts = esr(r.attachments);
+      h2 += '<div class="pg-div"></div>'
+        + '<div class="pg-sec">📎 파일 · 폴더 링크 <span>내 컴퓨터 경로를 적어두는 곳</span></div>'
+        + '<div class="pg-subs">'
+        + (atts.length ? atts.map(function(a,i){
+            return '<div class="pg-sub"><span class="tt">'+esc(a.label||'(별칭 없음)')
+              + ' <span style="color:#8ba0b6;font-weight:600;font-size:12.5px">'+esc(a.path||'')+'</span></span>'
+              + '<button type="button" class="x" data-attcopy="'+i+'" title="경로 복사">📋</button>'
+              + '<button type="button" class="x" data-attdel="'+i+'" title="빼기">✕</button></div>'; }).join('')
+           : '<div class="pg-none">아직 없어요</div>')
+        + '</div>'
+        + '<div class="pg-extra">'
+        +   '<input type="text" id="pgAttL" placeholder="별칭 (예: 품의서 원본)" style="flex:1.2;min-width:110px">'
+        +   '<input type="text" id="pgAttP" placeholder="C:\\경로\\파일명.확장자" style="flex:2;min-width:150px">'
+        +   '<button type="button" id="pgAttAdd" class="pg-xb on">추가</button>'
+        + '</div>';
+      return h2;
+    }
+
     var props = propsOf(pt).filter(function(p){
       return p.id!=='_title' && p.id!=='_att' && p.id!=='_cat' && _phd.indexOf(p.id)<0; });
     /* 값이 있는 것 먼저, 빈 것은 접어둔다 */
@@ -23532,6 +23605,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +     (_phd.length ? '<button type="button" id="pgUnhide" class="pg-addp" style="margin-left:6px">👁 숨긴 항목 '+_phd.length+'개 되살리기</button>' : '')
       +   '</div>'
       +   subHTML(rec)
+      +   extrasHTML(rec)
       +   '<div class="pg-div"></div>'
       +   '<div class="pg-sec">📝 본문 <span>글자를 고르고 서식을 누르세요 · 사진은 끌어다 놓으면 됩니다</span></div>'
       +   pgToolbarHTML()
@@ -23802,6 +23876,72 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         pUpd(kid, {done: !k.done}); openPage(id); }); });
     ov.querySelectorAll('[data-subgo]').forEach(function(b){
       b.addEventListener('click', function(){ openPage(b.getAttribute('data-subgo')); }); });
+
+    /* ── ⏱ 소요 · 📦 자재 · 📎 파일링크 ── */
+    (function(){
+      function m2s(m){ m=((m%1440)+1440)%1440;
+        return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+      function s2m(s){ var p=String(s||'').split(':'); if(p.length<2) return null;
+        var a=parseInt(p[0],10), b=parseInt(p[1],10);
+        return (isNaN(a)||isNaN(b)) ? null : a*60+b; }
+      var tps = props.filter(function(p){ return p.type==='time'; });
+      function setEnd(mins, add){
+        if(tps.length<2) return;
+        var s = s2m(pget(rec, tps[0].id));
+        if(s===null){ toast2('먼저 「'+tps[0].name+'」 을 넣어주세요'); return; }
+        var cur = s2m(pget(rec, tps[1].id));
+        var nv = add ? ((cur===null? s : cur) + mins) : (s + mins);
+        if(nv < s) nv = s;
+        pUpd(id, ppatch(rec, tps[1].id, m2s(nv)));
+        openPage(id);
+      }
+      ov.querySelectorAll('[data-dur]').forEach(function(b){
+        b.addEventListener('click', function(){ setEnd(parseInt(b.getAttribute('data-dur'),10), false); }); });
+      ov.querySelectorAll('[data-duradd]').forEach(function(b){
+        b.addEventListener('click', function(){ setEnd(parseInt(b.getAttribute('data-duradd'),10), true); }); });
+
+      /* 자재 */
+      var mAdd=document.getElementById('pgMatAdd');
+      if(mAdd) mAdd.addEventListener('click', function(){
+        var nm=(document.getElementById('pgMatN').value||'').trim();
+        if(!nm){ toast2('자재명을 넣어주세요'); return; }
+        var arr=esr(rec.materials).slice();
+        arr.push({ name:nm,
+                   spec:(document.getElementById('pgMatS').value||'').trim(),
+                   qty: Number(document.getElementById('pgMatQ').value)||1 });
+        pUpd(id, {materials:arr}); openPage(id);
+      });
+      ov.querySelectorAll('[data-matdel]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var i=+b.getAttribute('data-matdel');
+          var arr=esr(rec.materials).slice(); arr.splice(i,1);
+          pUpd(id, {materials:arr}); openPage(id); }); });
+
+      /* 파일·폴더 링크 */
+      var aAdd=document.getElementById('pgAttAdd');
+      if(aAdd) aAdd.addEventListener('click', function(){
+        var pth=(document.getElementById('pgAttP').value||'').trim();
+        if(!pth){ toast2('경로를 넣어주세요'); return; }
+        var arr=esr(rec.attachments).slice();
+        arr.push({ label:(document.getElementById('pgAttL').value||'').trim(), path:pth });
+        pUpd(id, {attachments:arr}); openPage(id);
+      });
+      ov.querySelectorAll('[data-attdel]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var i=+b.getAttribute('data-attdel');
+          var arr=esr(rec.attachments).slice(); arr.splice(i,1);
+          pUpd(id, {attachments:arr}); openPage(id); }); });
+      ov.querySelectorAll('[data-attcopy]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var a=esr(rec.attachments)[+b.getAttribute('data-attcopy')]||{};
+          try{
+            if(navigator.clipboard && navigator.clipboard.writeText)
+              navigator.clipboard.writeText(a.path||'').then(function(){ toast2('📋 경로를 복사했어요'); })
+                .catch(function(){ prompt('경로 복사', a.path||''); });
+            else prompt('경로 복사', a.path||'');
+          }catch(e){ prompt('경로 복사', a.path||''); }
+        }); });
+    })();
     ov.querySelectorAll('[data-subdel]').forEach(function(b){
       b.addEventListener('click', function(){
         if(!confirm('이 하위 항목을 지울까요?')) return;
@@ -27607,9 +27747,27 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
   function props(kind){
     try{
+      var key = 'work:'+kind+':_all';
       var o=JSON.parse(localStorage.getItem('wl_life_props')||'{}');
-      var a=o['work:'+kind+':_all'];
-      return Array.isArray(a) ? a.filter(function(x){ return x && !x.archived && !SKIP[x.type]; }) : [];
+      var a=o[key];
+      if(!Array.isArray(a)) return [];
+      /* 페이지 화면에서 숨긴 속성은 입력창에서도 숨긴다 */
+      var hid=[]; try{ var ho=JSON.parse(localStorage.getItem('wl_life_phide')||'{}');
+        if(Array.isArray(ho[key])) hid=ho[key]; }catch(e2){}
+      var out = a.filter(function(x){
+        return x && !x.archived && !SKIP[x.type] && hid.indexOf(x.id)<0; });
+      /* 페이지 화면에서 끌어 옮긴 순서를 그대로 따른다 */
+      try{
+        var po=JSON.parse(localStorage.getItem('wl_life_pord')||'{}');
+        var ord=po[key];
+        if(Array.isArray(ord) && ord.length){
+          var pos={}; ord.forEach(function(pid,i){ pos[pid]=i; });
+          out = out.map(function(p,i){ return {p:p, r:(pos[p.id]==null? 1000000+i : pos[p.id])}; })
+                   .sort(function(x,y){ return x.r-y.r; })
+                   .map(function(z){ return z.p; });
+        }
+      }catch(e3){}
+      return out;
     }catch(e){ return []; }
   }
   function curRec(){
