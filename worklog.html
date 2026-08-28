@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v85-0828-1525";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v86-0828-1538";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3255,7 +3255,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=85-20260828t1525"></script>
+<script src="worklog.js?v=86-20260828t1538"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -23442,7 +23442,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
      ══════════════════════════════════════════════════════════ */
   var PGLIST = [];        /* ◀ ▶ 이동용 — 지금 목록 순서 */
   var PGEDIT = false;     /* 속성 정리 모드 — 켜야만 ⋮⋮ · ✕ 가 나온다 */
-  var PGASMOD = false;    /* true 면 페이지를 창(모달)으로 띄운다 — 새로 만들기용 */
+  var PGASMOD = false;    /* true 면 페이지를 창(모달)으로 띄운다 */
+  var PGASMOD_PEND = null;/* 입구에서 정해 준 값 — 새로 열 때 딱 한 번 쓴다 */
+  /* 진단 탭 「기록을 누르면」 설정을 그대로 따른다.
+     worklog.js 가 옛 파일이라 wlOpenStyle 이 없으면 예전대로 전체 페이지 */
+  function pgWantModal(){
+    try{ return !!(window.wlOpenStyle && window.wlOpenStyle()==='modal'); }
+    catch(e){ return true; }
+  }
   /* 창 모드일 때만 오른쪽 떠다니는 단추를 잠시 감춘다.
      인라인 display:flex !important 라 CSS 로는 못 이겨서 여기서 처리한다.
      ⚠ innerHTML 은 절대 건드리지 않는다 (버튼 기능이 깨진다) */
@@ -23485,9 +23492,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
     var ov = document.getElementById('lfPageOv');
     if(!ov){
+      /* 새로 여는 것 → 입구에서 정해 준 값, 없으면 설정을 따른다.
+         이미 떠 있으면(다시 그리기) 지금 모드를 그대로 지킨다 */
+      PGASMOD = (PGASMOD_PEND==null) ? pgWantModal() : PGASMOD_PEND;
       ov=document.createElement('div'); ov.id='lfPageOv'; ov.className='lf-page-ov';
       document.body.appendChild(ov);
     }
+    PGASMOD_PEND = null;
     /* 다시 그릴 때마다 창/전체 모드를 유지한다 */
     ov.className = 'lf-page-ov' + (PGASMOD ? ' as-modal' : '');
     pgFab(PGASMOD); pgLock(true);
@@ -24253,7 +24264,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   /* 어느 화면에 있든 그 기록의 페이지를 연다 (모달의 [📄 페이지로] 용) */
   window.wlGoPage = function(id, asModal){
     try{
-      PGASMOD = !!asModal;
+      PGASMOD_PEND = (asModal===undefined || asModal===null) ? null : !!asModal;
       var r = anyRec(id);
       if(!r){ alert('기록을 못 찾았어요'); return; }
       var want = (r.kind==='personal'||r.kind==='pcontact') ? 'personal' : r.kind;
@@ -24272,10 +24283,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
      아무것도 안 쓰고 닫으면 draftDrop() 이 조용히 지운다. */
   window.wlNewPage = function(kind, asModal){
     try{
-      PGASMOD = (asModal !== false);
+      PGASMOD_PEND = (asModal !== false);
       var want = (kind==='personal'||kind==='pcontact') ? 'personal' : (kind||'work');
       var cur2 = DS ? (DS.key==='personal' ? 'personal' : DS.kind) : '';
-      function go(){ try{ newRowAsk(null, true); }catch(e){ console.error('[새 기록]', e); PGASMOD=false; } }
+      function go(){ try{ newRowAsk(null, true); }catch(e){ console.error('[새 기록]', e); PGASMOD_PEND=null; } }
       if(want!==cur2){
         if(typeof window.wlOpenData==='function') window.wlOpenData(want);
         setTimeout(go, 340);
@@ -24283,10 +24294,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         try{ if(typeof window.v43ActivateTab==='function') window.v43ActivateTab(isPersonal()?'life':'data'); }catch(e){}
         setTimeout(go, 120);
       }
-    }catch(e){ console.error('[새 기록]', e); PGASMOD=false; }
+    }catch(e){ console.error('[새 기록]', e); PGASMOD_PEND=null; }
   };
   /* 보기는 전체 화면으로 — wlGoPage 가 창 모드를 물려받지 않게 */
-  window.wlPageModal = function(on){ PGASMOD = !!on; };
+  window.wlPageModal = function(on){ PGASMOD_PEND = !!on; };
 
   /* 주소로 페이지 열기 */
   function pageFromHash(){
