@@ -9,7 +9,7 @@
    평소에는 손대지 않아도 된다. 화면 배지·제목이 전부 이걸 읽는다. */
 const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION)
                   ? window.APP_VERSION
-                  : "v83-0828-1458";
+                  : "v84-0828-1515";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -12115,13 +12115,25 @@ async function githubUpload(token){
   var KINDS = { work:1, expense:1, memo:1, call:1, schedule:1, deliver:1, vacation:1,
                 meeting:1, accident:1, progress:1, item:1, stock:1, plan:1, site:1 };
 
-  function usesPage(){
-    try{ var v=localStorage.getItem(LS); return (v===null) ? true : (v==='1'); }catch(e){ return true; }
+  /* modal(기본) | page | old  — 예전 값 '1'/'0' 도 그대로 읽는다 */
+  function openStyle(){
+    try{
+      var v=localStorage.getItem(LS);
+      if(v==='0' || v==='old')  return 'old';
+      if(v==='page')            return 'page';
+      if(v==='modal')           return 'modal';
+      return 'modal';                      /* 처음이거나 예전 '1' → 창(모달) */
+    }catch(e){ return 'modal'; }
   }
-  function setUsesPage(on){
-    try{ localStorage.setItem(LS, on?'1':'0'); }catch(e){}
+  function usesPage(){ return openStyle()!=='old'; }
+  function setUsesPage(v){
+    var s = (v===true) ? 'modal' : (v===false ? 'old' : String(v||'modal'));
+    try{ localStorage.setItem(LS, s); }catch(e){}
     paint();
-    if(typeof toast==='function') toast(on ? '📄 이제 기록을 누르면 페이지로 열립니다' : '🗔 예전 입력창으로 열립니다');
+    if(typeof toast==='function') toast(
+      s==='modal' ? '🗔 기록을 누르면 창으로 열립니다'
+    : s==='page'  ? '📄 기록을 누르면 전체 페이지로 열립니다'
+                  : '🗒 기록을 누르면 예전 입력창이 열립니다');
   }
 
   /* ── openViewer 를 감싼다 (원래 함수는 그대로 살려둔다) ── */
@@ -12131,7 +12143,7 @@ async function githubUpload(token){
       openViewer = function(kind, id){
         try{
           if(usesPage() && KINDS[kind] && id && typeof window.wlGoPage === 'function'){
-            window.wlGoPage(id);
+            window.wlGoPage(id, openStyle()==='modal');
             return;
           }
         }catch(e){ console.warn('[페이지 열기] 실패 — 예전 창으로', e); }
@@ -12143,22 +12155,106 @@ async function githubUpload(token){
   }catch(e){ console.warn('[페이지 열기] 감싸기 실패', e); }
 
   /* ── 진단 탭 버튼 ── */
+  var OPMAP = { opAsWin:'modal', opAsPage:'page', opAsModal:'old' };
   function paint(){
-    var on = usesPage();
-    var a=document.getElementById('opAsPage'), b=document.getElementById('opAsModal'), n=document.getElementById('opNow');
-    if(a){ a.className = 'btn btn-sm ' + (on?'btn-primary':'btn-ghost'); a.style.minHeight='44px'; }
-    if(b){ b.className = 'btn btn-sm ' + (on?'btn-ghost':'btn-primary'); b.style.minHeight='44px'; }
-    if(n) n.textContent = on ? '지금: 페이지로 열림' : '지금: 예전 입력창으로 열림';
+    var s = openStyle();
+    for(var k in OPMAP){
+      var el=document.getElementById(k); if(!el) continue;
+      el.className = 'btn btn-sm ' + (s===OPMAP[k] ? 'btn-primary' : 'btn-ghost');
+      el.style.minHeight='44px';
+    }
+    var n=document.getElementById('opNow');
+    if(n) n.textContent = '지금: ' + (s==='modal' ? '창(모달)으로 열림'
+                                    : s==='page' ? '전체 페이지로 열림' : '예전 입력창으로 열림');
   }
   function bind(){
-    var a=document.getElementById('opAsPage'), b=document.getElementById('opAsModal');
-    if(a && !a._bound){ a._bound=1; a.addEventListener('click', function(){ setUsesPage(true); }); }
-    if(b && !b._bound){ b._bound=1; b.addEventListener('click', function(){ setUsesPage(false); }); }
+    for(var k in OPMAP){
+      (function(id, val){
+        var el=document.getElementById(id);
+        if(el && !el._bound){ el._bound=1; el.addEventListener('click', function(){ setUsesPage(val); }); }
+      })(k, OPMAP[k]);
+    }
     paint();
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();
   setTimeout(bind, 1500);
+
+  /* ── 📦 저장된 자재에서 하나 고르기 (페이지용) ──
+     고르면 {name, spec, unit, price, qty} 를 돌려준다.
+     ⚠ 한글 IME — 검색칸은 다시 만들지 않고 결과 영역만 다시 그린다 */
+  window.wlPickItem = function(onPick, prefill){
+    var items = [];
+    try{ items = (entries||[]).filter(function(e){ return e && e.kind==='item' && e.itemName; }); }
+    catch(e){ console.warn('[자재 고르기] 목록을 못 읽었어요', e); }
+    function ES(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    var ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(12,26,42,.45);z-index:10050;'
+      + 'display:flex;align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto';
+    ov.innerHTML =
+      '<div style="background:#fff;border-radius:16px;width:min(94vw,600px);max-height:88vh;'
+      + 'display:flex;flex-direction:column;box-shadow:0 18px 60px rgba(20,40,64,.3);padding:18px">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+      +   '<b style="font-size:16px;color:#1a2f45">📦 저장된 자재에서 고르기</b>'
+      +   '<button type="button" id="ipX" style="border:none;background:none;font-size:21px;'
+      +     'color:#94a3b8;cursor:pointer;min-height:44px;min-width:44px">✕</button></div>'
+      + '<input type="text" id="ipQ" placeholder="자재명 · 규격 · 제조원으로 검색" autocomplete="off"'
+      +   ' style="width:100%;box-sizing:border-box;padding:11px 13px;font-size:14px;'
+      +   'border:1.5px solid #dbe6f4;border-radius:10px;font-family:inherit;min-height:44px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin:10px 2px 8px">'
+      +   '<span style="font-size:12.5px;color:#7a92a8;font-weight:800">수량</span>'
+      +   '<input type="number" id="ipQty" value="1" min="1" style="width:88px;box-sizing:border-box;'
+      +     'padding:8px 10px;font-size:14px;border:1.5px solid #dbe6f4;border-radius:9px;font-family:inherit">'
+      +   '<span style="font-size:12px;color:#a8b8c8">고르면 규격도 함께 채워집니다</span></div>'
+      + '<div id="ipList" style="overflow:auto;flex:1;min-height:120px"></div></div>';
+    document.body.appendChild(ov);
+    function close(){ try{ ov.remove(); }catch(e){} document.removeEventListener('keydown', onEsc); }
+    function onEsc(e){ if(e.key==='Escape') close(); }
+    document.addEventListener('keydown', onEsc);
+    ov.addEventListener('mousedown', function(e){ if(e.target===ov) close(); });
+    var xb=ov.querySelector('#ipX'); if(xb) xb.addEventListener('click', close);
+    var qEl=ov.querySelector('#ipQ'), listEl=ov.querySelector('#ipList'), qtyEl=ov.querySelector('#ipQty');
+    if(prefill) qEl.value = prefill;
+    function draw(){
+      var q=String(qEl.value||'').trim().toLowerCase();
+      var rows = q ? items.filter(function(it){
+        return [it.itemName, it.spec, it.maker, it.vendor, it.unit].join(' ').toLowerCase().indexOf(q)>=0;
+      }) : items;
+      var show = rows.slice(0,200);
+      if(!show.length){
+        listEl.innerHTML='<div style="padding:26px 8px;text-align:center;color:#a8b8c8;font-size:13.5px">'
+          + (items.length? '찾는 자재가 없어요' : '자재 탭에 등록된 자재가 없어요') + '</div>';
+        return;
+      }
+      listEl.innerHTML = show.map(function(it){
+        return '<div data-ipid="'+ES(it.id)+'" style="border:1.5px solid #eaf1f9;border-radius:11px;'
+          + 'padding:10px 12px;margin-bottom:7px;cursor:pointer;min-height:44px">'
+          + '<b style="font-size:14px;color:#1a2f45">'+ES(it.itemName)+'</b>'
+          + '<div style="margin-top:4px;font-size:12px;color:#7a92a8">'
+          +   (it.spec? ES(it.spec) : '규격 없음')
+          +   (it.unit? ' · '+ES(it.unit) : '')
+          +   (Number(it.unitPrice)? ' · '+Number(it.unitPrice).toLocaleString('ko-KR')+'원' : '')
+          + '</div></div>';
+      }).join('');
+      [].forEach.call(listEl.querySelectorAll('[data-ipid]'), function(row){
+        row.addEventListener('click', function(){
+          var it = items.filter(function(x){ return x.id===row.getAttribute('data-ipid'); })[0];
+          if(!it) return;
+          var qty = Number(qtyEl.value)||1;
+          close();
+          try{ onPick({ id:it.id, name:(it.itemName||''), spec:(it.spec||''),
+                        unit:(it.unit||''), price:Number(it.unitPrice)||0, qty:qty }); }
+          catch(e){ console.error('[자재 고르기]', e); }
+        });
+        row.addEventListener('mouseenter', function(){ row.style.background='#f6faff'; row.style.borderColor='#cfe0f3'; });
+        row.addEventListener('mouseleave', function(){ row.style.background=''; row.style.borderColor='#eaf1f9'; });
+      });
+    }
+    qEl.addEventListener('input', draw);
+    draw();
+    setTimeout(function(){ try{ qEl.focus(); }catch(e){} }, 60);
+  };
 
   window.wlOpenAsPage = setUsesPage;
 
