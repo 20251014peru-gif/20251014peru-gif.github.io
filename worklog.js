@@ -9,7 +9,7 @@
    평소에는 손대지 않아도 된다. 화면 배지·제목이 전부 이걸 읽는다. */
 const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION)
                   ? window.APP_VERSION
-                  : "v74-0828-1113";
+                  : "v75-0828-1144";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -11745,4 +11745,276 @@ async function githubUpload(token){
   }catch(e){ console.warn('[업무내역 자동완성] renderWorkModal 래핑 실패:', e); }
 
   window.bindTitleAc = bindTitleAc;
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   ✅ 자가 점검  (v75-0828-1144)
+   · 파일을 올린 직후 "안 깨졌는지"를 버튼 한 번으로 확인한다.
+   · 기준선(정상 상태)은 localStorage 'wl_selfcheck_base' 에 저장한다.
+     버전이 올라가 숫자가 달라지면 [정상으로 기록]을 눌러 새 기준을 잡는다.
+   · 진단 탭 안에서만 동작하고, 새 script / style 블록을 만들지 않는다.
+   ══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var BASE_KEY = 'wl_selfcheck_base';
+
+  /* ── 값 읽기 도우미 (전역 let 변수는 반드시 try 로 감싼다) ───────────── */
+  function safe(fn, dflt){ try{ var v=fn(); return (v===undefined||v===null)?dflt:v; }catch(e){ return dflt; } }
+  function esc2(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function stamp(){ var d=safe(function(){ return kstNow(); }, new Date(Date.now()+9*36e5));
+    return d.toISOString().slice(0,16).replace('T',' '); }
+
+  /* ── 현재 상태 측정 ──────────────────────────────────────────────── */
+  function measure(){
+    var m = {};
+
+    m.appVer = safe(function(){ return window.APP_VERSION || ''; }, '');
+
+    var tag = document.querySelector('script[src*="worklog.js?v="]');
+    m.jsTag = tag ? (tag.getAttribute('src').split('?v=')[1] || '') : '';
+
+    var link = document.getElementById('main-css');
+    m.cssHref = link ? (link.getAttribute('href') || '') : '';
+
+    m.sheets = 0; m.rules = 0; m.blocked = 0;
+    for (var i = 0; i < document.styleSheets.length; i++){
+      m.sheets++;
+      try { m.rules += document.styleSheets[i].cssRules.length; }
+      catch(e){ m.blocked++; }                       /* 외부 CDN 은 셀 수 없음 */
+    }
+
+    var list = document.getElementById('v43List');
+    if (list){
+      var cs = getComputedStyle(list);
+      m.listDisplay = cs.display;
+      m.listCols = (cs.gridTemplateColumns || '').split(' ').filter(Boolean).length;
+    } else { m.listDisplay = '없음'; m.listCols = 0; }
+
+    var fb = document.querySelector('.btn-action');
+    if (fb){
+      var fs = getComputedStyle(fb);
+      m.btnRadius = parseInt(fs.borderRadius, 10) || 0;
+      m.btnHeight = Math.round(fb.getBoundingClientRect().height) || 0;
+    } else { m.btnRadius = -1; m.btnHeight = -1; }
+
+    /* localStorage 사용량 */
+    var bytes = 0, keys = 0;
+    try {
+      for (var k in localStorage){
+        if (!Object.prototype.hasOwnProperty.call(localStorage, k)) continue;
+        keys++; bytes += (k.length + String(localStorage[k]).length) * 2;
+      }
+    } catch(e){}
+    m.lsKeys = keys;
+    m.lsMB = Math.round(bytes / 1048576 * 100) / 100;
+
+    /* 데이터 건수 */
+    var ents = safe(function(){ return entries; }, null) || safe(function(){ return window.entries; }, null) || [];
+    m.entCount = ents.length;
+    var kinds = {};
+    for (var n = 0; n < ents.length; n++){
+      var kd = ents[n] && ents[n].kind ? ents[n].kind : 'work';
+      kinds[kd] = (kinds[kd] || 0) + 1;
+    }
+    m.kinds = kinds;
+    m.kindCount = Object.keys(kinds).length;
+
+    /* 필수 함수 */
+    var need = {
+      renderAll:       function(){ return typeof renderAll; },
+      renderWorkModal: function(){ return typeof renderWorkModal; },
+      toast:           function(){ return typeof toast; },
+      kstNow:          function(){ return typeof kstNow; },
+      esc:             function(){ return typeof esc; },
+      won:             function(){ return typeof won; },
+      todayStr:        function(){ return typeof todayStr; }
+    };
+    m.missing = [];
+    for (var nm in need){
+      var t = 'undefined';
+      try { t = need[nm](); } catch(e){ t = 'undefined'; }
+      if (t !== 'function' && typeof window[nm] !== 'function') m.missing.push(nm);
+    }
+
+    m.errCount = safe(function(){ return errorLog.length; }, 0);
+    m.fbReady  = safe(function(){ return (typeof firebase !== 'undefined' && !!firebase.apps.length); }, false);
+
+    return m;
+  }
+
+  /* ── 판정 ────────────────────────────────────────────────────────── */
+  function judge(m, base){
+    var R = [];
+    function row(name, state, value, hint){ R.push({name:name, state:state, value:value, hint:hint||''}); }
+
+    /* 1. 버전 일치 */
+    var appNum = String(m.appVer).replace(/^v/, '').split('-')[0];
+    var tagNum = String(m.jsTag).split('t')[0].split('-')[0];
+    row('버전 일치',
+        (appNum && tagNum && appNum === tagNum) ? 'ok' : 'fail',
+        'HTML ' + (m.appVer || '?') + '  /  worklog.js ?v=' + (m.jsTag || '없음'),
+        'worklog.html 의 &lt;script src="worklog.js?v=…"&gt; 번호를 APP_VERSION 과 맞추세요');
+
+    /* 2. CSS 캐시 주소 */
+    var cssOk = m.cssHref.indexOf(appNum) >= 0;
+    row('CSS 캐시 주소', cssOk ? 'ok' : 'fail', m.cssHref || '링크 없음',
+        'CSS 주소에 현재 버전이 안 들어갔습니다. 옛 디자인이 그대로 보일 수 있어요');
+
+    /* 3. 스타일시트 로드 */
+    row('스타일시트', m.sheets >= 6 ? 'ok' : 'warn',
+        m.sheets + '개 로드 (외부 ' + m.blocked + '개는 셀 수 없음)',
+        '평소보다 적으면 CSS 파일이 안 올라갔을 수 있습니다');
+
+    /* 4. CSS 규칙 수 — 기준선 대비 */
+    if (base && base.rules){
+      var diff = m.rules - base.rules;
+      var st = (Math.abs(diff) <= 3) ? 'ok' : (diff < -20 ? 'fail' : 'warn');
+      row('CSS 규칙 수', st,
+          m.rules + '개 (기준 ' + base.rules + '개, ' + (diff >= 0 ? '+' : '') + diff + ')',
+          diff < 0 ? '규칙이 줄었습니다 — style 블록의 중괄호 { } 짝이 맞는지 확인하세요' : 'CSS를 늘렸다면 정상입니다. [정상으로 기록]을 눌러 기준을 갱신하세요');
+    } else {
+      row('CSS 규칙 수', 'none', m.rules + '개', '아직 기준이 없습니다 — [정상으로 기록]을 한 번 눌러두세요');
+    }
+
+    /* 5. 기록 목록 그리드 */
+    var gOk = (m.listDisplay === 'grid' && m.listCols >= 2);
+    row('기록 목록 배치', m.listDisplay === '없음' ? 'none' : (gOk ? 'ok' : 'fail'),
+        m.listDisplay + ' · ' + m.listCols + '열',
+        '한 줄씩 나온다면 CSS가 죽은 것입니다 — 중괄호 짝을 확인하세요');
+
+    /* 6. 필터 버튼 스타일 */
+    row('필터 버튼 모양', m.btnRadius < 0 ? 'none' : (m.btnRadius >= 6 ? 'ok' : 'fail'),
+        m.btnRadius < 0 ? '버튼 없음(다른 탭)' : ('모서리 ' + m.btnRadius + 'px · 높이 ' + m.btnHeight + 'px'),
+        '모서리가 0px 이면 기본 브라우저 버튼으로 돌아간 것 — CSS가 죽었습니다');
+
+    /* 7. 필수 함수 */
+    row('필수 기능', m.missing.length === 0 ? 'ok' : 'fail',
+        m.missing.length === 0 ? '7개 모두 정상' : ('없음: ' + m.missing.join(', ')),
+        'worklog.js 가 안 올라갔거나 문법 오류로 멈춘 상태입니다');
+
+    /* 8. 저장 공간 */
+    var lsSt = m.lsMB >= 4.5 ? 'fail' : (m.lsMB >= 3.5 ? 'warn' : 'ok');
+    row('저장 공간', lsSt, m.lsMB + 'MB / 약 5MB · 키 ' + m.lsKeys + '개',
+        '가득 차면 저장이 실패하고 파이어스토어 오류로 이어집니다 — 사진·백업을 정리하세요');
+
+    /* 9. 데이터 건수 */
+    if (base && base.entCount){
+      var d2 = m.entCount - base.entCount;
+      var eSt = (d2 < -10) ? 'fail' : 'ok';
+      row('데이터 건수', eSt, m.entCount + '건 (기준 ' + base.entCount + '건, ' + (d2 >= 0 ? '+' : '') + d2 + ')',
+          '크게 줄었다면 동기화 사고일 수 있습니다 — 되돌리기 전에 백업부터 받으세요');
+    } else {
+      row('데이터 건수', m.entCount > 0 ? 'ok' : 'warn', m.entCount + '건 · 종류 ' + m.kindCount + '가지',
+          '0건이면 아직 안 불러왔거나 연결이 끊긴 상태입니다');
+    }
+
+    /* 10. 파이어베이스 */
+    row('클라우드 연결', m.fbReady ? 'ok' : 'warn', m.fbReady ? '연결됨' : '아직 연결 안 됨',
+        '인터넷이 끊겼거나 초기화 전일 수 있습니다');
+
+    /* 11. 오류 기록 */
+    row('오류 기록', m.errCount === 0 ? 'ok' : (m.errCount >= 5 ? 'fail' : 'warn'),
+        m.errCount + '건',
+        '위 [오류기록 지우기] 로 비운 뒤 다시 눌러보면 새로 생기는 오류만 볼 수 있습니다');
+
+    return R;
+  }
+
+  /* ── 그리기 ──────────────────────────────────────────────────────── */
+  var STYLE = {
+    ok:   { bg:'#e9f6ef', bd:'#2f7d6e', fg:'#20614f', tx:'통과' },
+    warn: { bg:'#fdf4e3', bd:'#c08a19', fg:'#8a6209', tx:'주의' },
+    fail: { bg:'#fdeceb', bd:'#c0392b', fg:'#a02c22', tx:'확인' },
+    none: { bg:'#f1f5f9', bd:'#94a3b8', fg:'#64748b', tx:'—'   }
+  };
+
+  function render(){
+    var host = document.getElementById('scResult');
+    if (!host) return;
+    var base = null;
+    try { base = JSON.parse(localStorage.getItem(BASE_KEY) || 'null'); } catch(e){}
+
+    var m = measure();
+    var rows = judge(m, base);
+
+    var nFail = 0, nWarn = 0;
+    for (var i = 0; i < rows.length; i++){
+      if (rows[i].state === 'fail') nFail++;
+      else if (rows[i].state === 'warn') nWarn++;
+    }
+
+    var head = nFail ? { bg:'#fdeceb', bd:'#c0392b', fg:'#a02c22', msg:'확인이 필요한 항목이 ' + nFail + '개 있습니다' }
+             : nWarn ? { bg:'#fdf4e3', bd:'#c08a19', fg:'#8a6209', msg:'주의 항목이 ' + nWarn + '개 있습니다' }
+                     : { bg:'#e9f6ef', bd:'#2f7d6e', fg:'#20614f', msg:'모든 항목 정상입니다' };
+
+    var html = '<div style="border:1.5px solid ' + head.bd + ';background:' + head.bg +
+               ';border-radius:10px;padding:12px 14px;margin-bottom:10px;color:' + head.fg +
+               ';font-size:15px;font-weight:700">' + esc2(head.msg) +
+               '<span style="font-weight:400;font-size:12.5px;margin-left:8px;opacity:.8">' +
+               esc2(m.appVer) + ' · ' + esc2(stamp()) + '</span></div>';
+
+    html += '<div style="border:1.5px solid #e6edf3;border-radius:10px;overflow:hidden">';
+    for (var r = 0; r < rows.length; r++){
+      var it = rows[r], st = STYLE[it.state] || STYLE.none;
+      var showHint = (it.state === 'fail' || it.state === 'warn' || it.state === 'none');
+      html += '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;' +
+              (r ? 'border-top:1px solid #f1f5f9;' : '') + 'background:#fff">' +
+                '<span style="flex:0 0 auto;min-width:44px;text-align:center;font-size:12px;font-weight:700;' +
+                  'padding:3px 8px;border-radius:6px;border:1px solid ' + st.bd + ';background:' + st.bg + ';color:' + st.fg + '">' +
+                  st.tx + '</span>' +
+                '<div style="flex:1;min-width:0">' +
+                  '<div style="font-size:14px;font-weight:700;color:#243b53">' + esc2(it.name) + '</div>' +
+                  '<div style="font-size:13px;color:#486581;word-break:break-all">' + esc2(it.value) + '</div>' +
+                  (showHint && it.hint ? '<div style="font-size:12.5px;color:' + st.fg + ';margin-top:3px">→ ' + it.hint + '</div>' : '') +
+                '</div>' +
+              '</div>';
+    }
+    html += '</div>';
+
+    /* 종류별 건수 */
+    var ks = Object.keys(m.kinds).sort(function(a, b){ return m.kinds[b] - m.kinds[a]; });
+    if (ks.length){
+      html += '<div style="margin-top:10px;font-size:12.5px;color:#627d98;line-height:1.9">종류별 건수 &nbsp;';
+      for (var q = 0; q < ks.length; q++){
+        html += '<span style="display:inline-block;background:#f1f5f9;border-radius:6px;padding:2px 8px;margin:0 4px 4px 0">' +
+                esc2(ks[q]) + ' <b style="color:#243b53">' + m.kinds[ks[q]] + '</b></span>';
+      }
+      html += '</div>';
+    }
+
+    host.innerHTML = html;
+    var sp = document.getElementById('scStamp');
+    if (sp) sp.textContent = '마지막 점검 ' + stamp();
+    return { m:m, fail:nFail, warn:nWarn };
+  }
+
+  function saveBase(){
+    var m = measure();
+    try {
+      localStorage.setItem(BASE_KEY, JSON.stringify({
+        ver: m.appVer, rules: m.rules, sheets: m.sheets,
+        entCount: m.entCount, at: stamp()
+      }));
+      if (typeof toast === 'function') toast('현재 상태를 정상 기준으로 기록했습니다');
+    } catch(e){
+      if (typeof toast === 'function') toast('기준 기록 실패: ' + (e.message || e));
+    }
+    render();
+  }
+
+  /* ── 버튼 연결 (중복 바인딩 방지) ──────────────────────────────────── */
+  function bind(){
+    var b1 = document.getElementById('scRun');
+    if (b1 && !b1._bound){ b1._bound = true; b1.addEventListener('click', function(){ render(); }); }
+    var b2 = document.getElementById('scBase');
+    if (b2 && !b2._bound){ b2._bound = true; b2.addEventListener('click', saveBase); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+  setTimeout(bind, 1500);
+
+  window.wlSelfCheck = render;
+  window.wlSelfCheckBase = saveBase;
 })();
