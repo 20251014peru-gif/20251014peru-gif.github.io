@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v87-0828-1545";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v89-0828-1557";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -2572,6 +2572,17 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           <button class="btn btn-ghost btn-sm" id="scBase" style="min-height:44px">📌 지금 상태를 정상으로 기록</button>
         </div>
         <div id="scResult" style="margin-top:10px"></div>
+
+        <div class="sec-head">☁️ 구글 드라이브 자동 백업</div>
+        <div style="font-size:12.5px;color:#7a92a8;margin-bottom:6px">파이어베이스에 문제가 생겨도 이 파일로 되살릴 수 있습니다. 구글 권한은 한 번씩 끊기므로, 아래가 빨간색이면 눌러서 다시 연결하세요.</div>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn btn-primary btn-sm" id="diagDrvConn" style="background:#0f7a4a;min-height:44px">☁️ 지금 연결하고 백업</button>
+          <button class="btn btn-ghost btn-sm" id="diagDrvWhy" style="min-height:44px">🔍 왜 안 되는지 확인</button>
+          <button class="btn btn-ghost btn-sm" id="diagDrvGo" style="min-height:44px">🛟 안전 탭에서 설정 열기</button>
+          <span id="diagDrvNow" style="font-size:12.5px;font-weight:700;color:#7a92a8;align-self:center;margin-left:6px"></span>
+        </div>
+        <div id="diagDrvBox" style="margin-top:10px"></div>
+
         <div class="sec-head">백업 / 복구</div>
         <div class="btn-row" style="margin-top:0">
           <button class="btn btn-primary btn-sm" id="diagBackup">⬇ 전체 백업 (JSON)</button>
@@ -3255,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=87-20260828t1545"></script>
+<script src="worklog.js?v=89-20260828t1557"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -18417,35 +18428,100 @@ if('serviceWorker' in navigator){
     if(t && t.access_token && t.expires_at>Date.now()+60000){ drvToken=t.access_token; return true; }
     drvToken=null; return false;
   }
+  /* ── 왜 실패했는지 남긴다 (v89) ──
+     예전에는 어떤 이유든 '권한을 못 받았어요' 한 문장이라 원인을 알 수 없었다. */
+  var _drvWhy = '';
+  function drvWhy(){ return _drvWhy; }
+  var GIS_MSG = {
+    popup_failed_to_open : '팝업이 차단됐어요 — 주소창 오른쪽 🚫 를 눌러 이 사이트 팝업을 허용해 주세요',
+    popup_closed         : '구글 창을 닫으셨어요 — 다시 눌러서 계정을 고르고 [허용] 을 눌러 주세요',
+    unknown              : '구글이 이유를 알려주지 않았어요'
+  };
   function drvInit(){
     if(drvClient) return true;
     try{
-      if(!(window.google && google.accounts && google.accounts.oauth2)) return false;
+      if(!(window.google && google.accounts && google.accounts.oauth2)){
+        _drvWhy = '구글 로그인 라이브러리가 아직 안 실렸어요 (accounts.google.com 이 막혔거나 인터넷이 느림)';
+        return false;
+      }
       drvClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID, scope: DRV_SCOPE,
         callback: function(r){
           if(r && r.access_token){
-            drvToken=r.access_token;
+            drvToken=r.access_token; _drvWhy='';
             ls(LS_DRV, { access_token:r.access_token, expires_at: Date.now()+((r.expires_in||3600)*1000) });
             if(_drvWait){ var f=_drvWait; _drvWait=null; f(true); }
-          } else if(_drvWait){ var g=_drvWait; _drvWait=null; g(false); }
+          } else {
+            _drvWhy = (r && r.error)
+              ? ('구글이 거절했어요 — ' + r.error + (r.error_description ? (' · ' + r.error_description) : ''))
+              : '구글이 권한을 안 줬어요 (사유 없음)';
+            if(_drvWait){ var g=_drvWait; _drvWait=null; g(false); }
+          }
         },
-        error_callback: function(){ if(_drvWait){ var f2=_drvWait; _drvWait=null; f2(false); } }
+        error_callback: function(err){
+          var t = (err && err.type) || 'unknown';
+          _drvWhy = GIS_MSG[t] || ('구글 오류 — ' + t + ((err && err.message) ? (' · ' + err.message) : ''));
+          if(_drvWait){ var f2=_drvWait; _drvWait=null; f2(false); }
+        }
       });
       return true;
-    }catch(e){ console.warn('[드라이브] 초기화 실패', e); return false; }
+    }catch(e){
+      _drvWhy = '구글 로그인 준비 실패 — ' + (e && e.message ? e.message : e);
+      console.warn('[드라이브] 초기화 실패', e); return false;
+    }
   }
   var _drvWait=null;
   /* silent=true 면 창을 띄우지 않는다 (자동 백업용) */
   function drvAuth(silent){
+    _drvWhy = '';
     if(drvLoadToken()) return Promise.resolve(true);
     if(!drvInit()) return Promise.resolve(false);
     return new Promise(function(res){
       _drvWait=res;
       try{ drvClient.requestAccessToken({ prompt: silent?'':'consent' }); }
-      catch(e){ _drvWait=null; res(false); }
-      setTimeout(function(){ if(_drvWait){ _drvWait=null; res(false); } }, silent?8000:120000);
+      catch(e){
+        _drvWhy = '구글 창을 못 열었어요 — ' + (e && e.message ? e.message : e);
+        _drvWait=null; res(false); return;
+      }
+      setTimeout(function(){
+        if(_drvWait){
+          _drvWhy = _drvWhy || (silent
+            ? '조용히 갱신하려 했지만 구글이 응답하지 않았어요 (로그인이 끊긴 상태)'
+            : '구글 창에서 아무 응답이 없었어요 (2분 초과) — 창이 열렸는지 확인해 주세요');
+          _drvWait=null; res(false);
+        }
+      }, silent?8000:120000);
     });
+  }
+
+  /* ── 🔍 드라이브가 왜 안 되는지 한 번에 본다 (v89) ── */
+  function drvDiag(){
+    var out = [];
+    function add(ok, name, val){ out.push({ ok:ok, name:name, val:String(val==null?'':val) }); }
+    var gis = !!(window.google && window.google.accounts && window.google.accounts.oauth2);
+    add(gis, '구글 로그인 라이브러리', gis ? '실림' : '안 실림 — accounts.google.com 이 막혔을 수 있어요');
+    var org = '';
+    try{ org = location.origin; }catch(e){}
+    var https = /^https:/.test(org) || /^http:\/\/localhost/.test(org);
+    add(https, '지금 주소', org + (https ? '' : '  ← https 가 아니면 구글 로그인이 안 됩니다'));
+    add(true, '구글 앱 ID', String(CLIENT_ID).slice(0,20) + '…');
+    add(true, '요청 권한', DRV_SCOPE);
+    var t = null; try{ t = lg(LS_DRV,null); }catch(e){}
+    if(t && t.access_token){
+      var left = Math.round((t.expires_at - Date.now())/60000);
+      add(left>0, '저장된 권한', left>0 ? ('남은 시간 약 '+left+'분') : ('만료됨 ('+Math.abs(left)+'분 전)'));
+    } else add(false, '저장된 권한', '없음 — 다시 연결해야 합니다');
+    var c = drvCfg();
+    add(!!c.on, '자동 백업 설정', c.on ? ('켜짐 · '+(c.every==='weekly'?'주 1회':'매일 1회')) : '꺼짐');
+    add(!!c.lastAt, '마지막 성공', c.lastAt ? new Date(c.lastAt).toLocaleString('ko-KR') : '한 번도 없음');
+    add(!c.lastErr, '마지막 오류', c.lastErr || '없음');
+    add(!_drvWhy, '방금 실패한 이유', _drvWhy || '없음');
+    /* 팝업이 열리는지 실제로 해본다 — 사용자가 누른 직후에만 정확하다 */
+    var pop = null;
+    try{ pop = window.open('', '_blank', 'width=1,height=1,left=-2000,top=-2000'); }catch(e){}
+    if(pop){ try{ pop.close(); }catch(e){} add(true, '팝업 열기', '됩니다'); }
+    else add(false, '팝업 열기', '차단됐어요 — 주소창 오른쪽 🚫 를 눌러 허용해 주세요');
+    return out;
   }
   function dfetch(url, opt){
     opt=opt||{}; opt.headers=opt.headers||{};
@@ -18575,7 +18651,7 @@ if('serviceWorker' in navigator){
   window.wlDrive = {
     cfg:drvCfg, save:drvSave, auth:drvAuth, upload:drvUpload,
     list:drvList, get:drvGet, del:drvDel, off:drvOff, auto:drvAuto,
-    stale:drvStale, noteTry:drvNoteTry,
+    stale:drvStale, noteTry:drvNoteTry, why:drvWhy, diag:drvDiag,
     connected: function(){ return drvLoadToken(); }
   };
 
@@ -26486,6 +26562,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       + sBox('스냅샷', won(SNAPS.length)+'개', '하루 1회 자동 · 최근 14개')
       + '</div>'
 
+      + drvHTML()          /* ← 맨 위로 올림 (v88) — 아래에 묻혀 있어 못 찾으셨다 */
+
       + '<div style="background:#eef5fd;border:1.5px solid #bcd2ea;border-radius:12px;padding:13px 16px;margin-bottom:12px;font-size:12.5px;color:#1a2f45;line-height:1.7">'
       +   '<div style="font-size:13.5px;font-weight:900;margin-bottom:7px">☁️ 개인일지는 어디에 저장되나요?</div>'
       +   '<table style="width:100%;border-collapse:collapse;font-size:12.5px">'
@@ -26526,7 +26604,6 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +   '<input type="file" id="lfImpF" accept="application/json,.json" style="display:none">'
       + '</div>'
 
-      + drvHTML()
       + '<div style="font-size:13.5px;font-weight:900;color:#33567d;margin:16px 0 8px">🗑 휴지통 '
       +   '<span style="font-size:11.5px;font-weight:700;color:#0f7a4a">☁️ 클라우드 보관 — 폰에서 지운 것도 여기서 되살립니다</span></div>'
       + '<div class="lf-chips">'
