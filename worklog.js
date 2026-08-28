@@ -9,7 +9,7 @@
    평소에는 손대지 않아도 된다. 화면 배지·제목이 전부 이걸 읽는다. */
 const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION)
                   ? window.APP_VERSION
-                  : "v77-0828-1330";
+                  : "v78-0828-1420";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
