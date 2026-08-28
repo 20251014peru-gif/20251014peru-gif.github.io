@@ -9,7 +9,7 @@
    평소에는 손대지 않아도 된다. 화면 배지·제목이 전부 이걸 읽는다. */
 const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION)
                   ? window.APP_VERSION
-                  : "v86-0828-1538";
+                  : "v87-0828-1545";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -12718,4 +12718,106 @@ async function githubUpload(token){
       updateRecord._impWrapped = true; window.updateRecord = updateRecord;
     }
   }catch(e){ console.warn('[가져오기] 저장 감싸기 실패', e); }
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   ☁️ 드라이브 백업이 멈추면 화면으로 알린다   (v87-0828-1545)
+   · 2026-08-24 캘린더 사고와 같은 꼴 — 한 번 쏘고 끝이면 실패가 안 보인다.
+   · 백업이 주기의 2배를 넘도록 안 올라가면 머리말에 빨간 단추를 띄운다.
+   · 단추는 '사용자 클릭' 이라 구글 팝업이 차단되지 않는다 (타이머 안에서 부르면 막힌다).
+   ══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var ID = 'wlDrvBadge';
+
+  function badge(){
+    var b = document.getElementById(ID);
+    if(b) return b;
+    var host = document.getElementById('btnGCal');
+    if(!host || !host.parentNode) return null;
+    b = document.createElement('button');
+    b.id = ID; b.type = 'button';
+    b.style.cssText = 'display:none;margin-left:6px;height:32px;padding:0 11px;border-radius:9px;'
+      + 'border:1.5px solid #e08a8a;background:#fdecec;color:#a13030;font-size:12px;font-weight:800;'
+      + 'font-family:inherit;cursor:pointer;white-space:nowrap;vertical-align:middle';
+    b.addEventListener('click', function(){
+      var D = window.wlDrive;
+      if(!D){ alert('백업 기능을 못 불러왔어요 — worklog.html 을 올렸는지 확인해 주세요'); return; }
+      b.disabled = true; b.textContent = '☁️ 연결하는 중…';
+      /* 사용자가 직접 누른 것이므로 창을 띄워도 막히지 않는다 */
+      D.auth(false).then(function(ok){
+        if(!ok){
+          b.disabled = false; paint();
+          alert('권한을 못 받았어요.\n\n팝업 차단을 풀고 다시 눌러 주세요.');
+          return;
+        }
+        b.textContent = '☁️ 백업하는 중…';
+        return D.upload().then(function(f){
+          try{ D.noteTry && D.noteTry(''); }catch(e){}
+          b.disabled = false; paint();
+          if(typeof toast==='function') toast('☁️ 드라이브에 백업했어요 — ' + (f && f.name ? f.name : ''));
+        });
+      }).catch(function(e){
+        b.disabled = false; paint();
+        console.warn('[드라이브 배지]', e);
+        alert('백업하지 못했어요: ' + (e && e.message ? e.message : e));
+      });
+    });
+    host.parentNode.insertBefore(b, host.nextSibling);
+    return b;
+  }
+
+  function paint(){
+    try{
+      var b = badge(); if(!b) return;
+      var D = window.wlDrive;
+      var st = (D && D.stale) ? D.stale() : null;
+      if(!st){ b.style.display = 'none'; return; }
+      b.style.display = 'inline-block';
+      b.textContent = '🔑 드라이브 백업 끊김'
+        + (st.days >= 0 ? (' (' + st.days + '일)') : '');
+      b.title = '자동 백업이 멈춰 있어요'
+        + (st.err ? ('\n사유: ' + st.err) : '')
+        + '\n눌러서 다시 연결하고 지금 백업합니다.';
+    }catch(e){ console.warn('[드라이브 배지] 그리기 실패', e); }
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(paint, 2500); });
+  else setTimeout(paint, 2500);
+  setInterval(paint, 5*60*1000);          /* 5분마다 다시 본다 */
+  window.addEventListener('focus', paint);
+  window.wlDrvBadge = paint;
+
+  /* ── 자가 점검에 「드라이브 백업」 항목을 얹는다 ── */
+  try{
+    if(typeof window.wlSelfCheck === 'function' && !window.wlSelfCheck._drvHooked){
+      var _orig = window.wlSelfCheck;
+      window.wlSelfCheck = function(){
+        var r = _orig.apply(this, arguments);
+        try{
+          var D = window.wlDrive;
+          var box = document.getElementById('scBody') || document.getElementById('scResult');
+          if(D && box){
+            var c = D.cfg(), st = D.stale();
+            var last = c.lastAt
+              ? new Date(c.lastAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
+              : '아직 없음';
+            var txt = !c.on ? '⚪ 자동 백업이 꺼져 있습니다'
+                    : st   ? ('🔴 백업이 멈춰 있어요 — 마지막 ' + last + (st.err ? (' · ' + st.err) : ''))
+                           : ('🟢 정상 — 마지막 백업 ' + last);
+            var d = document.createElement('div');
+            d.style.cssText = 'margin-top:10px;padding:9px 12px;border-radius:9px;font-size:13px;'
+              + 'font-weight:700;background:' + (!c.on ? '#f4f7fa' : st ? '#fdecec' : '#effaf4')
+              + ';color:' + (!c.on ? '#7a92a8' : st ? '#a13030' : '#0f7a4a');
+            d.textContent = '☁️ 드라이브 백업 — ' + txt;
+            box.appendChild(d);
+          }
+        }catch(e){ console.warn('[자가 점검] 드라이브 항목 실패', e); }
+        paint();
+        return r;
+      };
+      window.wlSelfCheck._drvHooked = true;
+    }
+  }catch(e){ console.warn('[자가 점검] 드라이브 항목 붙이기 실패', e); }
 })();
