@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v76-0828-1215";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v77-0828-1330";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3237,7 +3237,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=76-20260828t1215"></script>
+<script src="worklog.js?v=77-20260828t1330"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -20531,9 +20531,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     rel:    { i:'🔗', w:'170px' },                    /* 관계 — 다른 기록·연락처와 연결 */
     formula:{ i:'\u2211', w:'120px', right:1, ro:1 },/* 수식 — 다른 칸으로 계산 */
     multi:  { i:'🏷', w:'180px' },                    /* 다중 선택 — 태그 여러 개 */
-    rollup: { i:'\u03a3', w:'120px', right:1, ro:1 } /* 롤업 — 연결된 것들 합계 */
+    rollup: { i:'\u03a3', w:'120px', right:1, ro:1 },/* 롤업 — 연결된 것들 합계 */
+    head:   { i:'📋', w:'0', ro:1, disp:1 },          /* 구분 제목 — 값 없이 표시만 */
+    desc:   { i:'💬', w:'0', ro:1, disp:1 }           /* 설명 문구 — 값 없이 표시만 */
   };
   function tinfo(t){ return T[t] || T.text; }
+  /* 값 없이 화면에 표시만 하는 속성(구분 제목·설명) — 필터·열·정렬에서 뺀다 */
+  function isDisp(t){ return !!(T[t] && T[t].disp); }
 
   /* ── 공통 속성 ── */
   var BASE = [
@@ -21578,7 +21582,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   }
 
   function colorAdd(pt, after){
-    var all = propsOf(pt).filter(function(p){ return p.type!=='rows'; });
+    var all = propsOf(pt).filter(function(p){ return p.type!=='rows' && !isDisp(p.type); });
     var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9800';
     ov.innerHTML='<div class="lf-mod" style="max-width:560px">'
       + '<div class="lf-mh"><b>＋ 색상 규칙 추가</b>'
@@ -21680,7 +21684,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
   /* ══════ 조건 추가 창 ══════ */
   function ruleAdd(pt){
-    var all = propsOf(pt).filter(function(p){ return p.type!=='rows'; });
+    var all = propsOf(pt).filter(function(p){ return p.type!=='rows' && !isDisp(p.type); });
     var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9750';
     ov.innerHTML='<div class="lf-mod" style="max-width:560px">'
       + '<div class="lf-mh"><b>＋ 조건 추가</b>'
@@ -21870,7 +21874,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
                ['sel','선택'],['check','체크'],['tel','전화번호'],['map','주소'],['star','별점'],['link','링크'],
                ['multi','다중 선택 — 태그 여러 개'],
                ['rel','관계 — 다른 기록 연결'],['formula','수식 — 자동 계산'],
-               ['rollup','롤업 — 연결된 것들 합계']];
+               ['rollup','롤업 — 연결된 것들 합계'],
+               ['head','구분 제목 — 값 없이 제목만 (예: 계약 정보)'],
+               ['desc','설명 문구 — 값 없이 안내만']];
     var RU_REL = propsOf(pt).filter(function(x){ return x.type==='rel'; })
       .map(function(x){ return '<option value="'+esc(x.id)+'">🔗 '+esc(x.name)+'</option>'; }).join('');
     if(!RU_REL) RU_REL='<option value="">(관계 속성이 없어요)</option>';
@@ -22072,18 +22078,114 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     setTimeout(function(){ var n=document.getElementById('lfPName'); if(n) n.focus(); },120);
   }
 
-  /* ══════ 내 속성 관리 (이름변경 · 삭제 · 되살리기) ══════ */
+  /* ══════ 내 속성 관리 (이름 · 선택지 · 순서 · 삭제 · 되살리기) ══════ */
+
+  /* 이 값을 실제로 쓰고 있는 기록이 몇 건인지 — 지우기 전에 알려주려고 센다 */
+  function countPropVal(pid, val){
+    var n=0;
+    try{
+      var arr = (typeof entries!=='undefined' && entries) ? entries : (window.entries||[]);
+      for(var i=0;i<arr.length;i++){
+        var pv=(arr[i]&&arr[i].props)||{}, v=pv[pid];
+        if(Array.isArray(v)){ if(v.indexOf(val)>=0) n++; }
+        else if(v!=null && v!=='' && String(v)===String(val)) n++;
+      }
+    }catch(e){}
+    return n;
+  }
+
+  /* 속성 순서 바꾸기 — 저장된 배열 순서를 그대로 옮긴다 */
+  function propMove(scope, id, dir){
+    var a=customOf(scope), i=-1;
+    for(var k=0;k<a.length;k++) if(a[k].id===id){ i=k; break; }
+    if(i<0) return false;
+    var j=i+dir; if(j<0||j>=a.length) return false;
+    var t=a[i]; a[i]=a[j]; a[j]=t;
+    customSave(scope,a); return true;
+  }
+
+  /* 선택 · 다중 선택의 「고를 값」 편집 */
+  function propOpts(scope, id, back){
+    var p=(customOf(scope)||[]).filter(function(x){return x.id===id;})[0];
+    if(!p) return;
+    var list=(p.o||p.opts||[]).slice();
+
+    var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9850';
+    function cl(){ ov.remove(); }
+    function draw(){
+      ov.innerHTML='<div class="lf-mod" style="max-width:520px">'
+        + '<div class="lf-mh"><b>🏷 고를 값 — '+esc(p.name)+'</b>'
+        +   '<button type="button" id="lfOX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
+        + '<div style="font-size:12.5px;color:#7a92a8;line-height:1.6;margin-bottom:8px">'
+        +   '값을 고치면 <b>이미 그 값을 쓰던 기록도 함께 바뀝니다.</b> 지울 때는 몇 건이 쓰는지 먼저 알려드려요.</div>'
+        + '<div style="max-height:46vh;overflow:auto">'
+        + (list.length
+            ? list.map(function(v,i){
+                var used=countPropVal(id, v);
+                return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'
+                  + '<input type="text" data-ov="'+i+'" value="'+esc(v)+'" style="flex:1;height:40px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:9px;font-family:inherit;font-size:13.5px">'
+                  + '<span style="flex:0 0 auto;font-size:11.5px;color:'+(used?'#0f7a4a':'#a8b8c8')+';min-width:44px;text-align:right">'+(used?used+'건':'—')+'</span>'
+                  + '<button type="button" data-oup="'+i+'" title="위로" style="width:36px;height:40px;border:1.5px solid #dbe6f4;border-radius:9px;background:#fff;cursor:pointer;font-size:13px">▲</button>'
+                  + '<button type="button" data-odn="'+i+'" title="아래로" style="width:36px;height:40px;border:1.5px solid #dbe6f4;border-radius:9px;background:#fff;cursor:pointer;font-size:13px">▼</button>'
+                  + '<button type="button" data-odel="'+i+'" title="지우기" style="width:40px;height:40px;border:1.5px solid #fbdcd8;border-radius:9px;background:#fff;color:#b52929;cursor:pointer;font-size:13px">🗑</button>'
+                  + '</div>'; }).join('')
+            : '<div style="text-align:center;color:#a8b8c8;padding:26px">아직 고를 값이 없어요</div>')
+        + '</div>'
+        + '<div class="lf-mbtn">'
+        +   '<button type="button" id="lfOAdd" class="lf-radd" style="height:42px">＋ 값 추가</button>'
+        +   '<div style="flex:1"></div>'
+        +   '<button type="button" id="lfOC" style="height:42px;padding:0 18px;border:1.5px solid #dbe6f4;border-radius:10px;background:#fff;color:#7a92a8;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">취소</button>'
+        +   '<button type="button" id="lfOS" style="height:42px;padding:0 22px;border:none;border-radius:10px;background:#3f7cb8;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-left:8px">저장</button>'
+        + '</div></div>';
+
+      function sync(){ ov.querySelectorAll('[data-ov]').forEach(function(el){ list[+el.getAttribute('data-ov')]=el.value; }); }
+      ov.querySelector('#lfOX').addEventListener('click', cl);
+      ov.querySelector('#lfOC').addEventListener('click', cl);
+      ov.querySelector('#lfOAdd').addEventListener('click', function(){ sync(); list.push(''); draw(); });
+      ov.querySelectorAll('[data-oup]').forEach(function(b){ b.addEventListener('click', function(){
+        sync(); var i=+b.getAttribute('data-oup'); if(i<=0) return;
+        var t=list[i-1]; list[i-1]=list[i]; list[i]=t; draw(); }); });
+      ov.querySelectorAll('[data-odn]').forEach(function(b){ b.addEventListener('click', function(){
+        sync(); var i=+b.getAttribute('data-odn'); if(i>=list.length-1) return;
+        var t=list[i+1]; list[i+1]=list[i]; list[i]=t; draw(); }); });
+      ov.querySelectorAll('[data-odel]').forEach(function(b){ b.addEventListener('click', function(){
+        sync(); var i=+b.getAttribute('data-odel'); var v=list[i]; var used=countPropVal(id, v);
+        if(used && !confirm('「'+v+'」 을(를) 목록에서 뺍니다.\n\n이 값을 쓰는 기록이 '+used+'건 있습니다.\n기록의 값은 그대로 남지만 목록에서는 더 고를 수 없게 됩니다.\n\n계속할까요?')) return;
+        list.splice(i,1); draw(); }); });
+      ov.querySelector('#lfOS').addEventListener('click', function(){
+        sync();
+        var out=[], seen={};
+        for(var i=0;i<list.length;i++){
+          var v=String(list[i]||'').trim();
+          if(!v || seen[v]) continue;
+          seen[v]=1; out.push(v);
+        }
+        customPatch(scope, id, {o:out, opts:out});
+        cl(); if(back) back();
+      });
+    }
+    draw();
+    document.body.appendChild(ov);
+    ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
+  }
+
   function propMgr(pt){
     function rows(scope, label){
-      var a=customAll()[scope]||[];
+      var a=customOf(scope)||[];
       if(!a.length) return '';
       return '<div style="font-size:11.5px;font-weight:900;color:#8ba0b6;margin:12px 0 6px">'+label+'</div>'
-        + '<table class="lf-tbl"><tr><th>이름</th><th style="width:96px">종류</th><th style="width:170px"></th></tr>'
-        + a.map(function(p){
+        + '<table class="lf-tbl"><tr><th>이름</th><th style="width:92px">종류</th><th style="width:78px">순서</th><th style="width:190px"></th></tr>'
+        + a.map(function(p,i){
+            var canOpt = (p.type==='sel'||p.type==='multi');
             return '<tr'+(p.archived?' style="opacity:.5"':'')+'>'
               + '<td>'+tinfo(p.type).i+' '+esc(p.name)+(p.archived?' <span style="color:#b52929;font-size:11px">(지움)</span>':'')+'</td>'
-              + '<td style="color:#8ba0b6">'+esc(p.type)+'</td>'
-              + '<td class="r">'
+              + '<td style="color:#8ba0b6">'+esc(tname(p.type))+'</td>'
+              + '<td class="r" style="white-space:nowrap">'
+              +   (i>0 ? '<button type="button" class="lf-fx" data-pup="'+esc(scope)+'|'+esc(p.id)+'" title="위로">▲</button>' : '<span style="display:inline-block;width:26px"></span>')
+              +   (i<a.length-1 ? '<button type="button" class="lf-fx" data-pdn="'+esc(scope)+'|'+esc(p.id)+'" title="아래로">▼</button>' : '')
+              + '</td>'
+              + '<td class="r" style="white-space:nowrap">'
+              +   (canOpt ? '<button type="button" class="lf-fx" data-popt="'+esc(scope)+'|'+esc(p.id)+'" style="color:#7c3aed">🏷 값</button> ' : '')
               +   '<button type="button" class="lf-fx" data-pren="'+esc(scope)+'|'+esc(p.id)+'">✏️ 이름</button> '
               +   (p.archived
                     ? '<button type="button" class="lf-fx" data-pres="'+esc(scope)+'|'+esc(p.id)+'" style="color:#0f7a4a">↩ 되살리기</button>'
@@ -22091,13 +22193,21 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
               + '</td></tr>'; }).join('')
         + '</table>';
     }
+    function tname(t){
+      var M={text:'글자',area:'긴 글',num:'숫자',date:'날짜',time:'시간',sel:'선택',check:'체크',
+             tel:'전화번호',map:'주소',star:'별점',link:'링크',multi:'다중 선택',rel:'관계',
+             formula:'수식',rollup:'롤업',head:'구분 제목',desc:'설명 문구'};
+      return M[t]||t;
+    }
     var body = rows('_all','모든 기록에 붙은 속성') + (pt? rows(pt, ((cats()[pt]&&cats()[pt].n)||'차계부')+' 전용 속성'):'');
     if(!body) body='<div style="text-align:center;color:#a8b8c8;padding:34px">아직 만든 속성이 없어요<div style="font-size:12px;margin-top:6px">＋ 속성 추가 로 만들어보세요</div></div>';
     var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9800';
-    ov.innerHTML='<div class="lf-mod" style="max-width:660px">'
+    ov.innerHTML='<div class="lf-mod" style="max-width:760px">'
       + '<div class="lf-mh"><b>⋯ 내 속성 관리</b>'
       +   '<button type="button" id="lfMX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
       + '<div style="font-size:12.5px;color:#7a92a8;line-height:1.6">'
+      +   '<b>▲▼</b> 로 순서를 바꾸면 데이터 화면과 입력창에 같은 순서로 나옵니다 · '
+      +   '<b>🏷 값</b> 은 선택 속성의 고를 값을 고칩니다 · '
       +   '지워도 <b>값은 남아 있습니다</b> — 되살리면 그대로 다시 보여요.</div>'
       + '<div style="max-height:52vh;overflow:auto">'+body+'</div>'
       + '<div class="lf-mbtn">'
@@ -22107,26 +22217,36 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       + '</div></div>';
     document.body.appendChild(ov);
     function cl(){ ov.remove(); }
+    function again(){ cl(); propMgr(pt); }
     document.getElementById('lfMX').addEventListener('click', cl);
     document.getElementById('lfMC').addEventListener('click', function(){ cl(); safeRender(); });
     ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
     document.getElementById('lfMAdd').addEventListener('click', function(){ cl(); propAdd(pt); });
     function sp(v){ var i=v.indexOf('|'); return [v.slice(0,i), v.slice(i+1)]; }
+    ov.querySelectorAll('[data-pup]').forEach(function(b){
+      b.addEventListener('click', function(){ var x=sp(b.getAttribute('data-pup'));
+        if(propMove(x[0], x[1], -1)) again(); }); });
+    ov.querySelectorAll('[data-pdn]').forEach(function(b){
+      b.addEventListener('click', function(){ var x=sp(b.getAttribute('data-pdn'));
+        if(propMove(x[0], x[1], 1)) again(); }); });
+    ov.querySelectorAll('[data-popt]').forEach(function(b){
+      b.addEventListener('click', function(){ var x=sp(b.getAttribute('data-popt'));
+        cl(); propOpts(x[0], x[1], function(){ propMgr(pt); }); }); });
     ov.querySelectorAll('[data-pren]').forEach(function(b){
       b.addEventListener('click', function(){
         var x=sp(b.getAttribute('data-pren'));
-        var old=(customAll()[x[0]]||[]).filter(function(p){return p.id===x[1];})[0];
+        var old=(customOf(x[0])||[]).filter(function(p){return p.id===x[1];})[0];
         var nm=prompt('새 이름', old?old.name:''); if(nm===null) return; nm=nm.trim(); if(!nm) return;
-        customPatch(x[0], x[1], {name:nm}); cl(); propMgr(pt); }); });
+        customPatch(x[0], x[1], {name:nm}); again(); }); });
     ov.querySelectorAll('[data-pdel]').forEach(function(b){
       b.addEventListener('click', function(){
         var x=sp(b.getAttribute('data-pdel'));
         if(!confirm('이 속성을 목록에서 뺄까요?\n넣어둔 값은 그대로 남고, 되살리면 다시 보입니다.')) return;
-        customPatch(x[0], x[1], {archived:true}); cl(); propMgr(pt); }); });
+        customPatch(x[0], x[1], {archived:true}); again(); }); });
     ov.querySelectorAll('[data-pres]').forEach(function(b){
       b.addEventListener('click', function(){
         var x=sp(b.getAttribute('data-pres'));
-        customPatch(x[0], x[1], {archived:false}); cl(); propMgr(pt); }); });
+        customPatch(x[0], x[1], {archived:false}); again(); }); });
   }
 
   /* ══════ 표에서 바로 고치기 ══════ */
@@ -23196,6 +23316,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
     /* 속성 줄 하나 */
     function propRow(p){
+      /* 값 없이 표시만 하는 속성 — 한 줄 전체를 제목/안내로 쓴다 */
+      if(p.type==='head') return '<div class="pg-sec" style="grid-column:1 / -1;margin-top:16px">'+esc(p.name)+'</div>';
+      if(p.type==='desc') return '<div style="grid-column:1 / -1;font-size:12.5px;color:#7a92a8;line-height:1.65;margin:2px 0 8px">'+esc(p.name)+'</div>';
       var v = pget(rec, p.id);
       var ti = tinfo(p.type);
       var ro = (ti.ro && p.type!=='rows') || (p.id==='_amount' && amountLocked(rec));
@@ -23293,7 +23416,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       if(p.type==='check') return !!v;
       return v!=='' && v!=null;
     }
-    var shown = props.filter(hasVal), hidden = props.filter(function(p){ return !hasVal(p); });
+    var shown  = props.filter(function(p){ return isDisp(p.type) || hasVal(p); });
+    var hidden = props.filter(function(p){ return !isDisp(p.type) && !hasVal(p); });
     /* 종류마다 따로 기억한다 — 사고에서 펼쳤다고 업무까지 펼쳐지면 안 된다 */
     var pgKey = dsk(pt);
     var openAll = (function(){
@@ -27357,6 +27481,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
   function inputFor(p, v){
     var id='mx-'+p.id;
+    if(p.type==='head' || p.type==='desc') return '';   /* 값 없이 표시만 하는 속성 */
     if(p.type==='area')
       return '<textarea id="'+id+'" data-mx="'+esc(p.id)+'" rows="2" style="width:100%;padding:8px 10px;border:1.5px solid #dbe6f4;border-radius:9px;font-family:inherit;font-size:13px">'+esc(v)+'</textarea>';
     if(p.type==='sel' || p.type==='multi'){
@@ -27407,6 +27532,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         + '🧩 내가 만든 항목 <span style="font-weight:700;color:#a8b8c8">· 데이터 화면과 같은 항목이에요</span></div>'
         + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px 10px">'
         + ps.map(function(p){
+            /* 값 없이 표시만 하는 속성 — 한 줄 전체를 제목 / 안내 문구로 */
+            if(p.type==='head')
+              return '<div style="grid-column:1 / -1;margin:8px 0 2px;font-size:13px;font-weight:900;color:#33567d;'
+                   + 'border-top:1.5px solid #e8f0fa;padding-top:9px">'+esc(p.name)+'</div>';
+            if(p.type==='desc')
+              return '<div style="grid-column:1 / -1;font-size:12.5px;color:#7a92a8;line-height:1.65;margin:-2px 0 4px">'
+                   + esc(p.name)+'</div>';
             return '<div'+(p.type==='area'?' style="grid-column:1 / -1"':'')+'>'
               + '<label style="display:block;font-size:11.5px;font-weight:800;color:#7a92a8;margin-bottom:3px">'+esc(p.name)+'</label>'
               + inputFor(p, pv[p.id]==null?'':pv[p.id])
