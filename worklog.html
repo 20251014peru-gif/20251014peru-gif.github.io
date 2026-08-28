@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v82-0828-1443";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v83-0828-1458";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3254,7 +3254,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=82-20260828t1443"></script>
+<script src="worklog.js?v=83-20260828t1458"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -23556,6 +23556,19 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     /* ── 📦 자재 · 📎 파일·폴더 · ⏱ 소요 — 예전 입력창에만 있던 것들 ── */
     function extrasHTML(r){
       var h2='';
+      /* 🔗 업무에서 가져온 기록이면 원본으로 가는 칩을 보여준다 */
+      if(r && r.workRef){
+        var lw = null;
+        try{ lw = (entries||[]).filter(function(x){ return x.id===r.workRef; })[0]; }catch(e){}
+        h2 += '<div class="pg-div"></div>'
+          + '<div class="pg-sec">🔗 연결된 업무</div>'
+          + '<div class="pg-extra">'
+          + (lw ? '<span class="lf-relchip" data-relgo="'+esc(lw.id)+'">'
+                  + esc((lw.date||'') + ' · ' + (lw.title||'(제목 없음)')) + '</span>'
+                : '<span class="pg-none">원본 업무를 못 찾았어요 (지워졌을 수 있어요)</span>')
+          + '<button type="button" class="pg-xb" data-unlink="1">연결 끊기</button>'
+          + '</div>';
+      }
       var tps = (typeof props!=='undefined' ? props : []).filter(function(p){ return p.type==='time'; });
       if(tps.length>=2){
         h2 += '<div class="pg-div"></div>'
@@ -23637,6 +23650,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +   '<div style="flex:1"></div>'
       +   '<button type="button" id="pgTplSave" title="이 기록 모양을 템플릿으로 저장">📑 템플릿으로</button>'
       +   (isPersonal()? '' : (vendorOf(rec)? '<button type="button" id="pgVend" title="이 업체의 모든 기록 보기">📇 '+esc(String(vendorOf(rec)).slice(0,10))+'</button>':''))
+      +   ((!isPersonal() && (pt==='accident'||pt==='progress'))
+            ? '<button type="button" id="pgImpW" title="업무 기록에서 날짜·제목·업체 등을 가져옵니다">📋 업무에서 가져오기</button>' : '')
       +   '<button type="button" id="pgPEdit"'+(PGEDIT?' class="on"':'')+' title="속성 순서 바꾸기 / 빼기">'+(PGEDIT?'✓ 정리 끝':'⚙ 속성 정리')+'</button>'
       +   '<button type="button" id="pgForm" title="원래 입력 창으로">✏️ 전체 서식</button>'
       +   '<button type="button" id="pgDel" class="del" title="삭제">🗑</button>'
@@ -23782,6 +23797,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         var patch={}; patch[key]=a; save(patch); openPage(id);
       });
     });
+    ov.querySelectorAll('[data-unlink]').forEach(function(b){
+      b.addEventListener('click', function(){
+        if(!confirm('연결된 업무를 끊을까요?\n\n가져온 내용은 그대로 남습니다.')) return;
+        save({ workRef:'', workRefKind:'' }); openPage(id);
+      });
+    });
     ov.querySelectorAll('[data-pradd]').forEach(function(b){
       b.addEventListener('click', function(){
         var key=b.getAttribute('data-pradd');
@@ -23843,6 +23864,41 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(unh) unh.addEventListener('click', function(){ phideSave(pt, []); openPage(id); });
 
     /* ── 속성 줄 끌어서 순서 바꾸기 (마우스·손가락 둘 다) ── */
+    /* 📋 업무 기록에서 가져오기 — 빈 칸만 채우고 linkedTo 를 남긴다 */
+    (function(){
+      var ib = document.getElementById('pgImpW'); if(!ib) return;
+      ib.addEventListener('click', function(){
+        if(typeof window.wlPickWork !== 'function'){
+          alert('가져오기 기능을 못 불러왔어요 — worklog.js 를 올렸는지 확인해 주세요'); return;
+        }
+        window.wlPickWork(function(w){
+          try{
+            var src = window.wlWorkToFields(w, pt) || {};
+            var patch = {}, filled = [], skipped = [];
+            Object.keys(src).forEach(function(k){
+              var val = src[k];
+              if(val===''||val==null||val===0) return;
+              var cur = rec[k];
+              var empty = (cur==null || cur==='' || cur===0);
+              /* 새로 만든 기록이면 '오늘' 기본 날짜는 빈 칸으로 본다 */
+              if(!empty && k==='date'){
+                try{ if(window.wlDraftId && window.wlDraftId()===id && cur===today()) empty = true; }catch(e2){}
+              }
+              if(!empty){ skipped.push(k); return; }
+              patch[k] = val; filled.push(k);
+            });
+            patch.workRef = w.id; patch.workRefKind = 'work';
+            save(patch);
+            if(typeof toast==='function') toast(filled.length
+              ? ('가져왔어요 — ' + filled.length + '개 칸을 채웠습니다'
+                 + (skipped.length? (' / 이미 쓴 '+skipped.length+'개는 그대로') : ''))
+              : '채울 빈 칸이 없었어요 — 연결만 해뒀습니다');
+            openPage(id);
+          }catch(e){ console.error('[업무 가져오기]', e); alert('가져오지 못했어요: '+(e.message||e)); }
+        });
+      });
+    })();
+
     (function(){
       var pe = document.getElementById('pgPEdit');
       if(pe) pe.addEventListener('click', function(){ PGEDIT = !PGEDIT; openPage(id); });
