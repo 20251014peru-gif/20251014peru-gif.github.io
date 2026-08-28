@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v80-0828-1600";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v82-0828-1443";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -2555,6 +2555,15 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           <span id="opNow" style="font-size:12.5px;color:#7a92a8;align-self:center;margin-left:6px"></span>
         </div>
 
+        <div class="sec-head">＋ 새로 만들 때</div>
+        <div style="font-size:12.5px;color:#7a92a8;margin-bottom:6px">＋ 로 기록을 새로 만들 때 어떤 화면으로 쓸지 정합니다. 창·페이지는 같은 화면이라, 속성을 더하거나 순서를 바꾸면 여기에도 그대로 반영됩니다.</div>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn btn-sm" id="nsModal" style="min-height:44px">🗔 창(모달)으로</button>
+          <button class="btn btn-sm" id="nsPage" style="min-height:44px">📄 전체 페이지로</button>
+          <button class="btn btn-sm" id="nsOld" style="min-height:44px">🗒 예전 입력창으로</button>
+          <span id="nsNow" style="font-size:12.5px;color:#7a92a8;align-self:center;margin-left:6px"></span>
+        </div>
+
         <div class="sec-head">✅ 자가 점검 <span id="scStamp" style="font-size:12px;color:#94a3b8;font-weight:400;margin-left:4px"></span></div>
         <div style="font-size:12.5px;color:#7a92a8;margin-bottom:6px">파일을 올린 직후 눌러보세요. 화면이 깨졌는지·데이터가 멀쩡한지 한 번에 확인합니다.</div>
         <div class="btn-row" style="margin-top:0">
@@ -3245,7 +3254,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=80-20260828t1600"></script>
+<script src="worklog.js?v=82-20260828t1443"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -3802,7 +3811,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       catOverlay && catOverlay.classList.remove('show');
       dbg('add kind: '+kind);
       setTimeout(() => {
-        if(kind==='expense' && typeof openExpenseEditor==='function'){
+        if(typeof window.wlAddNew==='function'){
+          window.wlAddNew(kind);
+        } else if(kind==='expense' && typeof openExpenseEditor==='function'){
           openExpenseEditor(null);
         } else if(typeof openEditor==='function'){
           openEditor(kind, null);
@@ -19473,6 +19484,17 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
 .td-quick button:hover{ border-color:#2563a8; color:#2563a8 }
 
 /* ── 📄 페이지 보기 ── */
+/* 페이지를 창(모달)으로 띄우는 모드 — 같은 코드, 같은 디자인 */
+.lf-page-ov.as-modal{ background:rgba(24,40,58,.34); padding:24px 16px;
+  display:flex; align-items:flex-start; justify-content:center; overflow:auto }
+.lf-page-ov.as-modal > .lf-page{ background:#fff; width:100%; max-width:1180px;
+  min-height:0; max-height:calc(100vh - 48px); overflow-y:auto; border-radius:16px;
+  box-shadow:0 18px 60px rgba(20,40,64,.28); margin:0 }
+.lf-page-ov.as-modal .pg-top{ position:sticky; top:0; border-radius:16px 16px 0 0 }
+@media (max-width:640px){
+  .lf-page-ov.as-modal{ padding:0 }
+  .lf-page-ov.as-modal > .lf-page{ max-width:none; max-height:100vh; border-radius:0 }
+}
 .lf-page-ov{ position:fixed; inset:0; z-index:9500; background:#fff; overflow-y:auto;
   font-family:inherit; -webkit-overflow-scrolling:touch }
 .lf-page{ min-height:100% }
@@ -19506,12 +19528,12 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
 .pg-pk{ flex:0 0 148px; font-size:13px; font-weight:700; color:#8ba0b6; padding:7px 4px 7px 0;
   border-radius:7px; display:flex; align-items:center; gap:4px; min-width:0 }
 .pg-pnm{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-.pg-drag{ flex:0 0 auto; cursor:grab; color:#cbd8e4; font-size:13px; letter-spacing:-3px;
+.pg-drag{ display:none; flex:0 0 auto; cursor:grab; color:#7ba0c4; font-size:15px; letter-spacing:-3px;
   padding:0 3px; user-select:none; touch-action:none; line-height:1 }
 .pg-drag:active{ cursor:grabbing; color:#3f7cb8 }
-.pg-pdel{ flex:0 0 auto; border:none; background:none; color:#d3dde7; font-size:12px;
+.pg-pdel{ display:none; flex:0 0 auto; border:none; background:#fdeceb; color:#c0392b; font-size:12px;
   cursor:pointer; padding:3px 4px; border-radius:6px; line-height:1; font-family:inherit }
-.pg-pdel:hover{ color:#b52929; background:#fdeceb }
+.pg-pdel:hover{ color:#fff; background:#c0392b }
 .pg-prow.pg-dragging{ opacity:.45; background:#eef5fd; border-radius:9px }
 .pg-prow.pg-over{ box-shadow:0 -2px 0 #3f7cb8 inset }
 .pg-sechd{ display:flex; align-items:center; gap:6px; margin-top:16px;
@@ -19520,6 +19542,13 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
 .pg-text img{ cursor:pointer }
 .pg-text img.pgsel{ outline:3px solid #3f7cb8; outline-offset:2px }
 .pg-prow.wide .pg-pk{ flex:0 0 128px }
+/* 속성 정리 모드일 때만 ⋮⋮ 와 ✕ 가 나온다 — 평소에는 눌릴 수 없다 */
+.pg-props.pg-edit .pg-drag{ display:inline-block }
+.pg-props.pg-edit .pg-pdel{ display:inline-block; padding:4px 7px }
+.pg-props.pg-edit .pg-prow{ background:#f6faff; border-radius:9px; padding:4px 6px }
+.pg-props.pg-edit .pg-pk{ flex:0 0 186px }
+.pg-props.pg-edit .pg-prow.wide .pg-pk{ flex:0 0 166px }
+#pgPEdit.on{ background:#3f7cb8; color:#fff; border-color:#3f7cb8 }
 .pg-pv{ flex:1; min-width:0 }
 .pg-val{ min-height:34px; padding:7px 10px; border-radius:7px; cursor:text; font-size:14px;
   color:#1a2f45; border:1.5px solid transparent }
@@ -20614,7 +20643,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   }
   /* ── 속성 순서 (페이지에서 끌어 옮긴 결과) ── */
   function pordOf(pt){ var o=lsGet(LS_PORD,null)||{}; var a=o[dsk(pt)]; return Array.isArray(a)?a.slice():[]; }
-  function pordSave(pt, ids){ var o=lsGet(LS_PORD,null)||{}; o[dsk(pt)]=ids; lsSet(LS_PORD,o); }
+  function pordSave(pt, ids){ var o=lsGet(LS_PORD,null)||{}; var seen={}, cl=[];
+    (ids||[]).forEach(function(x){ if(x && !seen[x]){ seen[x]=1; cl.push(x); } });  /* v81 — 중복 제거 */
+    o[dsk(pt)]=cl; lsSet(LS_PORD,o); }
   /* ── 페이지에서 숨긴 속성 (기본 칸은 지울 수 없으니 숨김으로) ── */
   function phideOf(pt){ var o=lsGet(LS_PHIDE,null)||{}; var a=o[dsk(pt)]; return Array.isArray(a)?a.slice():[]; }
   function phideSave(pt, ids){ var o=lsGet(LS_PHIDE,null)||{}; o[dsk(pt)]=ids; lsSet(LS_PHIDE,o); }
@@ -23381,6 +23412,21 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         · 아래: 본문 — 자유롭게 길게 쓰는 곳
      ══════════════════════════════════════════════════════════ */
   var PGLIST = [];        /* ◀ ▶ 이동용 — 지금 목록 순서 */
+  var PGEDIT = false;     /* 속성 정리 모드 — 켜야만 ⋮⋮ · ✕ 가 나온다 */
+  var PGASMOD = false;    /* true 면 페이지를 창(모달)으로 띄운다 — 새로 만들기용 */
+  /* 창 모드일 때만 오른쪽 떠다니는 단추를 잠시 감춘다.
+     인라인 display:flex !important 라 CSS 로는 못 이겨서 여기서 처리한다.
+     ⚠ innerHTML 은 절대 건드리지 않는다 (버튼 기능이 깨진다) */
+  function pgFab(hide){
+    try{
+      ['v43FabHeader','v43FabDiary'].forEach(function(fid){
+        var f=document.getElementById(fid); if(!f) return;
+        if(hide){ if(f._pgD==null) f._pgD = f.style.display || 'flex';
+                  f.style.setProperty('display','none','important'); }
+        else if(f._pgD!=null){ f.style.setProperty('display', f._pgD, 'important'); f._pgD=null; }
+      });
+    }catch(e){ console.warn('[FAB 감추기]', e); }
+  }
 
   function pgAutoGrow(el){
     if(!el) return;
@@ -23399,16 +23445,19 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       ov=document.createElement('div'); ov.id='lfPageOv'; ov.className='lf-page-ov';
       document.body.appendChild(ov);
     }
+    /* 다시 그릴 때마다 창/전체 모드를 유지한다 */
+    ov.className = 'lf-page-ov' + (PGASMOD ? ' as-modal' : '');
+    pgFab(PGASMOD);
     var idx = PGLIST.indexOf(id);
 
     /* 속성 줄 하나 */
     function propRow(p){
       /* 값 없이 표시만 하는 속성 — 한 줄 전체를 제목/안내로 쓴다 */
-      if(p.type==='head') return '<div class="pg-prow wide pg-sechd" data-ppid="'+esc(p.id)+'">'
+      if(p.type==='head') return '<div class="pg-prow wide pg-sechd" data-prow="'+esc(p.id)+'">'
         + '<span class="pg-drag" title="끌어서 옮기기">⋮⋮</span>'
         + '<span class="pg-sect">'+esc(p.name)+'</span>'
         + '<button type="button" class="pg-pdel" data-ppdel="'+esc(p.id)+'" title="이 속성 빼기">✕</button></div>';
-      if(p.type==='desc') return '<div class="pg-prow wide pg-sechd" data-ppid="'+esc(p.id)+'" style="border-top:none;margin-top:0;padding-top:0">'
+      if(p.type==='desc') return '<div class="pg-prow wide pg-sechd" data-prow="'+esc(p.id)+'" style="border-top:none;margin-top:0;padding-top:0">'
         + '<span class="pg-drag" title="끌어서 옮기기">⋮⋮</span>'
         + '<span class="pg-sect" style="font-weight:600;color:#7a92a8;font-size:12.5px;line-height:1.6">'+esc(p.name)+'</span>'
         + '<button type="button" class="pg-pdel" data-ppdel="'+esc(p.id)+'" title="이 속성 빼기">✕</button></div>';
@@ -23437,7 +23486,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       }
       /* 긴 글·표·연결 같은 것은 한 줄 통째로 쓴다 */
       var wide = (['area','rows','rel','multi','att','map','link'].indexOf(p.type)>=0);
-      return '<div class="pg-prow'+(wide?' wide':'')+'" data-ppid="'+esc(p.id)+'">'
+      return '<div class="pg-prow'+(wide?' wide':'')+'" data-prow="'+esc(p.id)+'">'
         + '<div class="pg-pk">'
         +   '<span class="pg-drag" title="끌어서 옮기기">⋮⋮</span>'
         +   '<span class="pg-pnm">'+ti.i+' '+esc(p.name)+'</span>'
@@ -23588,6 +23637,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +   '<div style="flex:1"></div>'
       +   '<button type="button" id="pgTplSave" title="이 기록 모양을 템플릿으로 저장">📑 템플릿으로</button>'
       +   (isPersonal()? '' : (vendorOf(rec)? '<button type="button" id="pgVend" title="이 업체의 모든 기록 보기">📇 '+esc(String(vendorOf(rec)).slice(0,10))+'</button>':''))
+      +   '<button type="button" id="pgPEdit"'+(PGEDIT?' class="on"':'')+' title="속성 순서 바꾸기 / 빼기">'+(PGEDIT?'✓ 정리 끝':'⚙ 속성 정리')+'</button>'
       +   '<button type="button" id="pgForm" title="원래 입력 창으로">✏️ 전체 서식</button>'
       +   '<button type="button" id="pgDel" class="del" title="삭제">🗑</button>'
       +   '<button type="button" id="pgX" title="닫기">✕</button>'
@@ -23595,7 +23645,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       + '<div class="pg-body">'
       +   '<div class="pg-badge" style="background:'+d.c+'1f;color:'+d.c+'">'+d.i+' '+esc(d.n)+'</div>'
       +   '<textarea id="pgTitle" class="pg-title" rows="1" placeholder="제목 없음">'+esc(rec.title||'')+'</textarea>'
-      +   '<div class="pg-props">' + shown.map(propRow).join('')
+      +   '<div class="pg-props'+(PGEDIT?' pg-edit':'')+'">' + shown.map(propRow).join('')
       +     (hidden.length
               ? '<div id="pgHidden" style="display:'+(openAll?'contents':'none')+'">' + hidden.map(propRow).join('') + '</div>'
                 + '<button type="button" id="pgMore" class="pg-more">'
@@ -23745,6 +23795,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       /* 입력 중이던 값을 먼저 확정하고 닫는다 */
       try{ var a=document.activeElement; if(a && a.blur) a.blur(); }catch(e){}
       var o=document.getElementById('lfPageOv'); if(o) o.remove();
+      PGASMOD = false; pgFab(false);
       document.removeEventListener('keydown', esc2);
       try{ if(/^#lp=/.test(location.hash||'')) history.pushState({}, '', location.pathname+location.search); }catch(e){}
       /* 아무것도 안 쓴 새 기록이면 남기지 않는다 */
@@ -23754,12 +23805,17 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     document.addEventListener('keydown', esc2);
     document.getElementById('pgX').addEventListener('click', close);
     document.getElementById('pgBack').addEventListener('click', close);
+    if(PGASMOD){
+      ov.addEventListener('mousedown', function(e){ if(e.target===ov) close(); });
+      var bk=document.getElementById('pgBack'); if(bk) bk.textContent='✕ 닫기';
+    }
     var pts=document.getElementById('pgTplSave');
     if(pts) pts.addEventListener('click', function(){ tplFromRec(pt, rec); });
     var pvd=document.getElementById('pgVend');
     if(pvd) pvd.addEventListener('click', function(){ vendorHub(vendorOf(rec)); });
     document.getElementById('pgForm').addEventListener('click', function(){
       var o=document.getElementById('lfPageOv'); if(o) o.remove();
+      PGASMOD = false; pgFab(false);
       document.removeEventListener('keydown', esc2);
       try{ if(/^#lp=/.test(location.hash||'')) history.pushState({}, '', location.pathname+location.search); }catch(e){}
       if(!isPersonal()){
@@ -23788,14 +23844,20 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
     /* ── 속성 줄 끌어서 순서 바꾸기 (마우스·손가락 둘 다) ── */
     (function(){
+      var pe = document.getElementById('pgPEdit');
+      if(pe) pe.addEventListener('click', function(){ PGEDIT = !PGEDIT; openPage(id); });
+    })();
+
+    (function(){
       var host = ov.querySelector('.pg-props'); if(!host) return;
       function saveOrder(){
-        var ids = [].map.call(host.querySelectorAll('[data-ppid]'), function(x){
-          return x.getAttribute('data-ppid'); });
+        var ids = [].map.call(host.querySelectorAll('[data-prow]'), function(x){
+          return x.getAttribute('data-prow'); });
         if(ids.length) pordSave(pt, ids);
       }
       [].forEach.call(host.querySelectorAll('.pg-drag'), function(hd){
         hd.addEventListener('pointerdown', function(e){
+          if(!PGEDIT) return;
           var row = hd.parentNode;
           while(row && !(row.classList && row.classList.contains('pg-prow'))) row = row.parentNode;
           if(!row) return;
@@ -23828,6 +23890,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       [].forEach.call(host.querySelectorAll('[data-ppdel]'), function(b){
         b.addEventListener('click', function(e){
           e.preventDefault(); e.stopPropagation();
+          if(!PGEDIT) return;
           var pid = b.getAttribute('data-ppdel');
           var p = propById(pt, pid); if(!p) return;
           var inAll = (customOf(null)||[]).some(function(x){ return x.id===pid; });
@@ -23971,6 +24034,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   /* 어느 화면에 있든 그 기록의 페이지를 연다 (모달의 [📄 페이지로] 용) */
   window.wlGoPage = function(id){
     try{
+      PGASMOD = false;
       var r = anyRec(id);
       if(!r){ alert('기록을 못 찾았어요'); return; }
       var want = (r.kind==='personal'||r.kind==='pcontact') ? 'personal' : r.kind;
@@ -23984,6 +24048,26 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       }
     }catch(e){ console.error('[페이지로]', e); }
   };
+
+  /* ＋ 새로 만들기 — 빈 기록을 만들고 곧바로 페이지(창)로 연다.
+     아무것도 안 쓰고 닫으면 draftDrop() 이 조용히 지운다. */
+  window.wlNewPage = function(kind, asModal){
+    try{
+      PGASMOD = (asModal !== false);
+      var want = (kind==='personal'||kind==='pcontact') ? 'personal' : (kind||'work');
+      var cur2 = DS ? (DS.key==='personal' ? 'personal' : DS.kind) : '';
+      function go(){ try{ newRowAsk(null, true); }catch(e){ console.error('[새 기록]', e); PGASMOD=false; } }
+      if(want!==cur2){
+        if(typeof window.wlOpenData==='function') window.wlOpenData(want);
+        setTimeout(go, 340);
+      } else {
+        try{ if(typeof window.v43ActivateTab==='function') window.v43ActivateTab(isPersonal()?'life':'data'); }catch(e){}
+        setTimeout(go, 120);
+      }
+    }catch(e){ console.error('[새 기록]', e); PGASMOD=false; }
+  };
+  /* 보기는 전체 화면으로 — wlGoPage 가 창 모드를 물려받지 않게 */
+  window.wlPageModal = function(on){ PGASMOD = !!on; };
 
   /* 주소로 페이지 열기 */
   function pageFromHash(){
@@ -24387,10 +24471,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }, 0);
   }
   /* 전체 보기일 땐 종류부터 고른다 */
-  function newRowAsk(preset){
+  function newRowAsk(preset, asPage){
     var pt = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
-    if(!isPersonal()) { newRow(DS.kind, preset); return; }
-    if(pt) { newRow(pt, preset); return; }
+    if(!isPersonal()) { newRow(DS.kind, preset, asPage); return; }
+    if(pt) { newRow(pt, preset, asPage); return; }
     var ov=document.createElement('div'); ov.className='lf-ov'; ov.style.zIndex='9700';
     ov.innerHTML='<div class="lf-mod" style="max-width:600px">'
       + '<div class="lf-mh"><b>어떤 기록을 추가할까요?</b>'
@@ -24404,7 +24488,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     document.getElementById('lfNX').addEventListener('click', cl);
     ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
     ov.querySelectorAll('[data-nk]').forEach(function(b){
-      b.addEventListener('click', function(){ var k=b.getAttribute('data-nk'); cl(); newRow(k, preset); }); });
+      b.addEventListener('click', function(){ var k=b.getAttribute('data-nk'); cl(); newRow(k, preset, asPage); }); });
   }
 
   /* ══════════════════════════════════════════════════════════
