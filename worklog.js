@@ -9,7 +9,7 @@
    평소에는 손대지 않아도 된다. 화면 배지·제목이 전부 이걸 읽는다. */
 const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION)
                   ? window.APP_VERSION
-                  : "v78-0828-1420";
+                  : "v80-0828-1600";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -12099,4 +12099,66 @@ async function githubUpload(token){
 
   window.wlSelfCheck = render;
   window.wlSelfCheckBase = saveBase;
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   📄 기록을 누르면 페이지로 열기   (v80-0828-1600)
+   · 목록 클릭 → 예전 입력창 대신 노션식 페이지가 열린다.
+   · 페이지 안 [✏️ 전체 서식] 을 누르면 예전 입력창도 그대로 쓸 수 있다.
+   · 진단 탭 「기록을 누르면」 에서 언제든 되돌릴 수 있다 (localStorage wl_open_as_page)
+   ══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var LS = 'wl_open_as_page';
+  /* 페이지가 감당하는 종류만 — 나머지는 예전 창 그대로 */
+  var KINDS = { work:1, expense:1, memo:1, call:1, schedule:1, deliver:1, vacation:1,
+                meeting:1, accident:1, progress:1, item:1, stock:1, plan:1, site:1 };
+
+  function usesPage(){
+    try{ var v=localStorage.getItem(LS); return (v===null) ? true : (v==='1'); }catch(e){ return true; }
+  }
+  function setUsesPage(on){
+    try{ localStorage.setItem(LS, on?'1':'0'); }catch(e){}
+    paint();
+    if(typeof toast==='function') toast(on ? '📄 이제 기록을 누르면 페이지로 열립니다' : '🗔 예전 입력창으로 열립니다');
+  }
+
+  /* ── openViewer 를 감싼다 (원래 함수는 그대로 살려둔다) ── */
+  try{
+    if(typeof openViewer === 'function' && !openViewer._pgWrapped){
+      var _origViewer = openViewer;
+      openViewer = function(kind, id){
+        try{
+          if(usesPage() && KINDS[kind] && id && typeof window.wlGoPage === 'function'){
+            window.wlGoPage(id);
+            return;
+          }
+        }catch(e){ console.warn('[페이지 열기] 실패 — 예전 창으로', e); }
+        return _origViewer.apply(this, arguments);
+      };
+      openViewer._pgWrapped = true;
+      window.openViewer = openViewer;
+    }
+  }catch(e){ console.warn('[페이지 열기] 감싸기 실패', e); }
+
+  /* ── 진단 탭 버튼 ── */
+  function paint(){
+    var on = usesPage();
+    var a=document.getElementById('opAsPage'), b=document.getElementById('opAsModal'), n=document.getElementById('opNow');
+    if(a){ a.className = 'btn btn-sm ' + (on?'btn-primary':'btn-ghost'); a.style.minHeight='44px'; }
+    if(b){ b.className = 'btn btn-sm ' + (on?'btn-ghost':'btn-primary'); b.style.minHeight='44px'; }
+    if(n) n.textContent = on ? '지금: 페이지로 열림' : '지금: 예전 입력창으로 열림';
+  }
+  function bind(){
+    var a=document.getElementById('opAsPage'), b=document.getElementById('opAsModal');
+    if(a && !a._bound){ a._bound=1; a.addEventListener('click', function(){ setUsesPage(true); }); }
+    if(b && !b._bound){ b._bound=1; b.addEventListener('click', function(){ setUsesPage(false); }); }
+    paint();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+  setTimeout(bind, 1500);
+
+  window.wlOpenAsPage = setUsesPage;
 })();
