@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v83-0828-1458";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v84-0828-1515";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -2550,8 +2550,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <div class="sec-head">📄 기록을 누르면</div>
         <div style="font-size:12.5px;color:#7a92a8;margin-bottom:6px">목록에서 기록을 눌렀을 때 어떤 화면으로 열지 정합니다.</div>
         <div class="btn-row" style="margin-top:0">
-          <button class="btn btn-sm" id="opAsPage" style="min-height:44px">📄 페이지로 (노션식)</button>
-          <button class="btn btn-sm" id="opAsModal" style="min-height:44px">🗔 예전 입력창으로</button>
+          <button class="btn btn-sm" id="opAsWin" style="min-height:44px">🗔 창(모달)으로</button>
+          <button class="btn btn-sm" id="opAsPage" style="min-height:44px">📄 전체 페이지로</button>
+          <button class="btn btn-sm" id="opAsModal" style="min-height:44px">🗒 예전 입력창으로</button>
           <span id="opNow" style="font-size:12.5px;color:#7a92a8;align-self:center;margin-left:6px"></span>
         </div>
 
@@ -3254,7 +3255,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=83-20260828t1458"></script>
+<script src="worklog.js?v=84-20260828t1515"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -19550,9 +19551,10 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
 .pg-props.pg-edit .pg-prow.wide .pg-pk{ flex:0 0 166px }
 #pgPEdit.on{ background:#3f7cb8; color:#fff; border-color:#3f7cb8 }
 .pg-pv{ flex:1; min-width:0 }
-.pg-val{ min-height:34px; padding:7px 10px; border-radius:7px; cursor:text; font-size:14px;
-  color:#1a2f45; border:1.5px solid transparent }
-.pg-val:hover{ background:#f4f8fd; border-color:#e8f0fa }
+.pg-val{ min-height:34px; padding:7px 10px; border-radius:8px; cursor:text; font-size:14px;
+  color:#1a2f45; background:#fff; border:1.5px solid #e3ecf7 }
+.pg-val:hover{ background:#fff; border-color:#a9cbee }
+.pg-val.auto{ background:#fffbea; border-color:#f0e0b0 }
 .pg-val:empty:before{ content:'비어 있음'; color:#c8d4e0 }
 .pg-ro{ display:inline-block; padding:7px 10px; font-size:14px; color:#5b7794 }
 .pg-addp{ grid-column:1 / -1; justify-self:start; margin-top:8px; align-self:flex-start; height:34px; padding:0 13px; border:1.5px dashed #dbe6f4;
@@ -19626,6 +19628,8 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
 .pg-note{ font-size:11.5px; color:#a8b8c8; margin-top:6px; min-height:16px }
 
 /* ── 속성 접기 ── */
+.pg-foot{ grid-column:1 / -1; display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px }
+.pg-foot .pg-more, .pg-foot .pg-addp{ grid-column:auto; margin-top:0 }
 .pg-more{ grid-column:1 / -1; justify-self:start; align-self:flex-start; margin-top:4px; height:30px; padding:0 11px; border:none;
   border-radius:8px; background:transparent; color:#8ba0b6; font-size:12.5px; font-weight:800;
   cursor:pointer; font-family:inherit }
@@ -21080,6 +21084,17 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     customOf(null).concat(pt?customOf(pt):[]).forEach(function(p){
       if(p.archived) return; out.push(p);
     });
+    /* '관련처' 는 종류마다 부르는 말이 다르다 — 기본 이름을 알맞게 바꾼다 */
+    try{
+      if(!isPersonal()){
+        var SUBN = { work:'업체', expense:'업체', item:'업체', stock:'거래처',
+                     progress:'담당 업체', accident:'당사자', call:'상대',
+                     deliver:'대상', meeting:'참석자', schedule:'관련처', memo:'관련처' };
+        var sn = SUBN[DS.kind];
+        if(sn) out = out.map(function(p){
+          return (p.id==='_sub' && p.name==='관련처') ? Object.assign({}, p, {name:sn}) : p; });
+      }
+    }catch(e){ console.warn('[관련처 이름]', e); }
     /* 내가 바꿔 놓은 이름이 있으면 그것으로 */
     try{
       var nmm = pnameOf(pt);
@@ -21087,6 +21102,20 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         return nmm[p.id] ? Object.assign({}, p, {name:nmm[p.id], _renamed:1}) : p; });
     }catch(e){}
     /* 페이지에서 끌어 옮긴 순서가 있으면 그대로 따른다 (없으면 지금까지 순서 그대로) */
+    /* 시각 칸은 날짜 바로 뒤에 두는 게 읽기 편하다.
+       단, 직접 순서를 정해 둔 적이 있으면 그쪽을 존중한다 */
+    try{
+      if(!pordOf(pt).length){
+        var tms = out.filter(function(p){ return p.type==='time'; });
+        if(tms.length){
+          var rest = out.filter(function(p){ return p.type!=='time'; });
+          var di = -1;
+          for(var q=0;q<rest.length;q++){ if(rest[q].id==='_date' || rest[q].type==='date'){ di=q; break; } }
+          out = (di<0) ? tms.concat(rest)
+                       : rest.slice(0,di+1).concat(tms, rest.slice(di+1));
+        }
+      }
+    }catch(e){ console.warn('[시각 칸 위로]', e); }
     try{
       var ord = pordOf(pt);
       if(ord.length){
@@ -23417,6 +23446,20 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   /* 창 모드일 때만 오른쪽 떠다니는 단추를 잠시 감춘다.
      인라인 display:flex !important 라 CSS 로는 못 이겨서 여기서 처리한다.
      ⚠ innerHTML 은 절대 건드리지 않는다 (버튼 기능이 깨진다) */
+  /* 페이지가 떠 있는 동안 뒤쪽 본문 스크롤을 잠근다 —
+     안 잠그면 스크롤바가 두 개 생기고 머리말 고정이 어긋나 보인다 */
+  function pgLock(on){
+    try{
+      var b=document.body, e=document.documentElement;
+      if(on){
+        if(b._pgOv==null){ b._pgOv = b.style.overflow||''; e._pgOv = e.style.overflow||''; }
+        b.style.overflow='hidden'; e.style.overflow='hidden';
+      }else if(b._pgOv!=null){
+        b.style.overflow=b._pgOv; e.style.overflow=e._pgOv||'';
+        b._pgOv=null; e._pgOv=null;
+      }
+    }catch(err){ console.warn('[페이지 스크롤 잠금]', err); }
+  }
   function pgFab(hide){
     try{
       ['v43FabHeader','v43FabDiary'].forEach(function(fid){
@@ -23447,7 +23490,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }
     /* 다시 그릴 때마다 창/전체 모드를 유지한다 */
     ov.className = 'lf-page-ov' + (PGASMOD ? ' as-modal' : '');
-    pgFab(PGASMOD);
+    pgFab(PGASMOD); pgLock(true);
     var idx = PGLIST.indexOf(id);
 
     /* 속성 줄 하나 */
@@ -23663,11 +23706,16 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +   '<div class="pg-props'+(PGEDIT?' pg-edit':'')+'">' + shown.map(propRow).join('')
       +     (hidden.length
               ? '<div id="pgHidden" style="display:'+(openAll?'contents':'none')+'">' + hidden.map(propRow).join('') + '</div>'
-                + '<button type="button" id="pgMore" class="pg-more">'
-                + (openAll? '▾ 빈 항목 '+hidden.length+'개 접기' : '▸ 빈 항목 '+hidden.length+'개 더 보기') + '</button>'
               : '')
-      +     '<button type="button" id="pgAddProp" class="pg-addp">＋ 속성 추가</button>'
-      +     (_phd.length ? '<button type="button" id="pgUnhide" class="pg-addp" style="margin-left:6px">👁 숨긴 항목 '+_phd.length+'개 되살리기</button>' : '')
+      +     '<div class="pg-foot">'
+      +       (hidden.length
+                ? '<button type="button" id="pgMore" class="pg-more">'
+                  + (openAll? '▾ 빈 항목 '+hidden.length+'개 접기' : '▸ 빈 항목 '+hidden.length+'개 더 보기') + '</button>'
+                : '')
+      +       '<button type="button" id="pgAddProp" class="pg-addp">＋ 속성 추가</button>'
+      +       (_phd.length ? '<button type="button" id="pgUnhide" class="pg-addp">👁 숨긴 항목 '+_phd.length+'개 되살리기</button>' : '')
+      +       (PGEDIT ? '<button type="button" id="pgTimeUp" class="pg-addp">⏱ 시각 칸을 날짜 뒤로</button>' : '')
+      +     '</div>'
       +   '</div>'
       +   subHTML(rec)
       +   extrasHTML(rec)
@@ -23688,6 +23736,22 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
     /* ── 저장 ── */
     function save(patch){ pUpd(id, patch); rec = ent().filter(function(x){ return x.id===id; })[0] || rec; }
+
+    /* 📇 연락처에서 업체를 고르면 담당자·직책·전화를 여기로 넣어 준다 (빈 칸만) */
+    window.wlPagePatch = function(obj){
+      try{
+        var cur = ent().filter(function(x){ return x.id===id; })[0] || rec;
+        var pc = {}, n = 0;
+        Object.keys(obj||{}).forEach(function(k){
+          var v = cur[k];
+          if(v==null || String(v).trim()===''){ pc[k]=obj[k]; n++; }
+        });
+        if(!n) return;
+        save(pc);
+        if(typeof toast==='function') toast('📇 ' + n + '개 칸을 자동으로 채웠어요');
+        openPage(id);
+      }catch(e){ console.error('[페이지 자동채움]', e); }
+    };
 
     /* 제목 */
     var T=document.getElementById('pgTitle');
@@ -23736,6 +23800,22 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       box.addEventListener('click', function(ev){
         if(ev.target.closest('a, button, input, select, textarea')) return;
         var pid=box.getAttribute('data-ppid'), p=propById(pt,pid); if(!p) return;
+        /* 📦 자재명은 자재 탭에 저장된 자재에서 고르게 한다 — 규격·수량이 함께 채워진다 */
+        if((pid==='f:material' || pid==='f:itemName') && typeof window.wlPickItem==='function'){
+          ev.preventDefault(); ev.stopPropagation();
+          window.wlPickItem(function(r){
+            try{
+              var patch = {};
+              patch[p.k || pid.slice(2)] = r.name;
+              if(propById(pt,'f:spec')) patch.spec = r.spec;
+              if(propById(pt,'f:qty'))  patch.qty  = r.qty;
+              save(patch);
+              if(typeof toast==='function') toast('📦 '+r.name+(r.spec?(' · '+r.spec):'')+' · '+r.qty+'개');
+              openPage(id);
+            }catch(e){ console.error('[자재 고르기]', e); alert('자재를 못 넣었어요: '+(e.message||e)); }
+          }, pget(rec, pid) || '');
+          return;
+        }
         box.innerHTML = editorHTML(p, pget(rec,pid));
         var el=box.querySelector('.lf-ie'); if(!el) return;
         if(el.getAttribute('data-num')==='1') bindNum(el);
@@ -23816,7 +23896,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       /* 입력 중이던 값을 먼저 확정하고 닫는다 */
       try{ var a=document.activeElement; if(a && a.blur) a.blur(); }catch(e){}
       var o=document.getElementById('lfPageOv'); if(o) o.remove();
-      PGASMOD = false; pgFab(false);
+      PGASMOD = false; pgFab(false); pgLock(false); window.wlPagePatch = null;
       document.removeEventListener('keydown', esc2);
       try{ if(/^#lp=/.test(location.hash||'')) history.pushState({}, '', location.pathname+location.search); }catch(e){}
       /* 아무것도 안 쓴 새 기록이면 남기지 않는다 */
@@ -23836,7 +23916,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(pvd) pvd.addEventListener('click', function(){ vendorHub(vendorOf(rec)); });
     document.getElementById('pgForm').addEventListener('click', function(){
       var o=document.getElementById('lfPageOv'); if(o) o.remove();
-      PGASMOD = false; pgFab(false);
+      PGASMOD = false; pgFab(false); pgLock(false); window.wlPagePatch = null;
       document.removeEventListener('keydown', esc2);
       try{ if(/^#lp=/.test(location.hash||'')) history.pushState({}, '', location.pathname+location.search); }catch(e){}
       if(!isPersonal()){
@@ -23896,6 +23976,25 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
             openPage(id);
           }catch(e){ console.error('[업무 가져오기]', e); alert('가져오지 못했어요: '+(e.message||e)); }
         });
+      });
+    })();
+
+    /* ⏱ 시각 칸을 날짜 바로 뒤로 — 이미 순서를 정해 둔 종류를 위한 한 번 누르기 */
+    (function(){
+      var tu = document.getElementById('pgTimeUp'); if(!tu) return;
+      tu.addEventListener('click', function(){
+        try{
+          var ps = props.slice();
+          var tms = ps.filter(function(x){ return x.type==='time'; });
+          if(!tms.length){ if(typeof toast==='function') toast('시각 칸이 없어요'); return; }
+          var rest = ps.filter(function(x){ return x.type!=='time'; });
+          var di=-1;
+          for(var q=0;q<rest.length;q++){ if(rest[q].id==='_date' || rest[q].type==='date'){ di=q; break; } }
+          var nx = (di<0) ? tms.concat(rest) : rest.slice(0,di+1).concat(tms, rest.slice(di+1));
+          pordSave(pt, nx.map(function(x){ return x.id; }));
+          if(typeof toast==='function') toast('⏱ 시각 칸을 날짜 뒤로 옮겼어요');
+          openPage(id);
+        }catch(e){ console.error('[시각 칸 옮기기]', e); }
       });
     })();
 
@@ -24088,9 +24187,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   }
   window.wlLifePage = openPage;
   /* 어느 화면에 있든 그 기록의 페이지를 연다 (모달의 [📄 페이지로] 용) */
-  window.wlGoPage = function(id){
+  window.wlGoPage = function(id, asModal){
     try{
-      PGASMOD = false;
+      PGASMOD = !!asModal;
       var r = anyRec(id);
       if(!r){ alert('기록을 못 찾았어요'); return; }
       var want = (r.kind==='personal'||r.kind==='pcontact') ? 'personal' : r.kind;
@@ -28327,6 +28426,18 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   /* ── 다른 칸 채우기 — 빈 칸만 (이미 적어 둔 것은 지킨다) ── */
   function fill(map, c){
     if(!map) return;
+    /* 페이지·창에는 m-xxx 입력칸이 없다 — 기록에 바로 적어 준다 */
+    try{
+      if(curInp && curInp.closest && curInp.closest('.lf-page')
+         && typeof window.wlPagePatch === 'function'){
+        var o={}, n=0;
+        Object.keys(map).forEach(function(src){ if(c[src]){ o[map[src]]=c[src]; n++; } });
+        if(n) setTimeout(function(){
+          try{ window.wlPagePatch(o); }catch(e){ console.warn('[관련처] 페이지 채우기 실패', e); }
+        }, 300);   /* 방금 고른 업체명이 먼저 저장되도록 잠깐 기다린다 */
+        return;
+      }
+    }catch(e){ console.warn('[관련처] 페이지 판단 실패', e); }
     var scope = (curInp && curInp.closest)
       ? (curInp.closest('#overlay, #expenseOverlay, .lf-page') || document) : document;
     Object.keys(map).forEach(function(src){
