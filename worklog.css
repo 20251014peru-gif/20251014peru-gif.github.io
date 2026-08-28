@@ -794,3 +794,20 @@ tr.wk-checked td{background:#e8f3fd !important}
 [data-exptab="tax"]:not(.active){border-color:#c2410c;color:#c2410c}
 /* 업무연동 표시 */
 #expTable tbody tr:hover{filter:brightness(.97)}
+
+/* ── 입력창(모달) 제목·단추 줄 고정 (v85) ──
+   내용이 길어져도 제목과 [저장]이 늘 보이게 한다.
+   .modal 이 overflow:auto 라서 그 안에서 sticky 가 동작한다.
+   padding:22px 를 덮어야 하므로 음수 margin 으로 좌우를 채운다 */
+#overlay .modal > h3#mTitle{
+  position:sticky; top:0; z-index:6;
+  margin:-22px -22px 14px; padding:16px 22px 12px;
+  background:var(--card); border-bottom:1.5px solid #eef3f9;
+  border-radius:20px 20px 0 0;
+}
+#overlay .modal > #mBtnRow{
+  position:sticky; bottom:0; z-index:6;
+  margin:14px -22px -22px; padding:12px 22px 16px;
+  background:var(--card); border-top:1.5px solid #eef3f9;
+  border-radius:0 0 20px 20px;
+}

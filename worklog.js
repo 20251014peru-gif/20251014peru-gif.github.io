@@ -9,7 +9,7 @@
    평소에는 손대지 않아도 된다. 화면 배지·제목이 전부 이걸 읽는다. */
 const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION)
                   ? window.APP_VERSION
-                  : "v84-0828-1515";
+                  : "v85-0828-1525";
 
 /* ── 휴지통 스텁 (함수 정의 누락 방지) ── */
 function renderTrash(){ /* 미구현 */ }
@@ -1746,7 +1746,7 @@ function makeMaterialSearchUI(inputId, listId, onSelect){
 }
 /* ── 업무 모달 탭 렌더러 ── */
 /* ── v45-0824: 자재 여러 개(최대 3종류) 공용 헬퍼 ── */
-const MAT_MAX = 3;
+const MAT_MAX = 5;   /* v85: 3 → 5 (페이지·입력창 같은 값이어야 조용히 잘리지 않는다) */
 function matOne(m){
   if(!m || !m.name) return '';
   return String(m.name) + (m.spec ? ' ' + m.spec : '') + ' × ' + (Number(m.qty)||1);
@@ -12152,6 +12152,24 @@ async function githubUpload(token){
       openViewer._pgWrapped = true;
       window.openViewer = openViewer;
     }
+    /* 목록의 [수정]·달력의 바로수정도 같은 화면으로 보낸다.
+       페이지 안 [✏️ 전체 서식] 은 일부러 예전 창을 부르므로 그때만 비켜준다. */
+    if(typeof openEditor === 'function' && !openEditor._pgWrapped){
+      var _origEd = openEditor;
+      openEditor = function(kind, id){
+        var force = !!window._wlForceOld;
+        window._wlForceOld = false;
+        try{
+          if(!force && id && KINDS[kind] && usesPage() && typeof window.wlGoPage === 'function'){
+            window.wlGoPage(id, openStyle()==='modal');
+            return;
+          }
+        }catch(e){ console.warn('[페이지 열기] 수정 경로 실패 — 예전 창으로', e); }
+        return _origEd.apply(this, arguments);
+      };
+      openEditor._pgWrapped = true;
+      window.openEditor = openEditor;
+    }
   }catch(e){ console.warn('[페이지 열기] 감싸기 실패', e); }
 
   /* ── 진단 탭 버튼 ── */
@@ -12253,6 +12271,130 @@ async function githubUpload(token){
     }
     qEl.addEventListener('input', draw);
     draw();
+    setTimeout(function(){ try{ qEl.focus(); }catch(e){} }, 60);
+  };
+
+  /* ── 📦 저장된 자재에서 여러 개 담기 (페이지용) ──
+     onDone([{id,name,spec,unit,price,qty}, …]) 을 부른다. 취소하면 안 부른다. */
+  window.wlPickMats = function(onDone, initial){
+    var MAX = (typeof MAT_MAX==='number') ? MAT_MAX : 5;
+    var items = [];
+    try{ items = (entries||[]).filter(function(e){ return e && e.kind==='item' && e.itemName; }); }
+    catch(e){ console.warn('[자재 담기] 목록을 못 읽었어요', e); }
+    var bag = (Array.isArray(initial)? initial : []).slice(0, MAX).map(function(m){
+      return { id:m.id||'', name:m.name||'', spec:m.spec||'', unit:m.unit||'',
+               price:Number(m.price)||0, qty:Number(m.qty)||1 };
+    });
+    function ES(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function won(n){ n=Number(n)||0; return n.toLocaleString('ko-KR'); }
+    function sum(){ return bag.reduce(function(a,m){ return a + (Number(m.price)||0)*(Number(m.qty)||1); }, 0); }
+
+    var ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(12,26,42,.45);z-index:10050;'
+      + 'display:flex;align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto';
+    ov.innerHTML =
+      '<div style="background:#fff;border-radius:16px;width:min(94vw,640px);max-height:88vh;'
+      + 'display:flex;flex-direction:column;box-shadow:0 18px 60px rgba(20,40,64,.3);padding:18px">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+      +   '<b style="font-size:16px;color:#1a2f45">📦 자재 담기</b>'
+      +   '<button type="button" id="mpX" style="border:none;background:none;font-size:21px;'
+      +     'color:#94a3b8;cursor:pointer;min-height:44px;min-width:44px">✕</button></div>'
+      + '<div id="mpBag" style="margin-bottom:10px"></div>'
+      + '<input type="text" id="mpQ" placeholder="자재명 · 규격 · 제조원으로 검색" autocomplete="off"'
+      +   ' style="width:100%;box-sizing:border-box;padding:11px 13px;font-size:14px;'
+      +   'border:1.5px solid #dbe6f4;border-radius:10px;font-family:inherit;min-height:44px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin:10px 2px 8px">'
+      +   '<span style="font-size:12.5px;color:#7a92a8;font-weight:800">담을 수량</span>'
+      +   '<input type="number" id="mpQty" value="1" min="1" style="width:88px;box-sizing:border-box;'
+      +     'padding:8px 10px;font-size:14px;border:1.5px solid #dbe6f4;border-radius:9px;font-family:inherit">'
+      +   '<span style="font-size:12px;color:#a8b8c8">자재를 누르면 위에 담깁니다 (최대 '+MAX+'종)</span></div>'
+      + '<div id="mpList" style="overflow:auto;flex:1;min-height:110px"></div>'
+      + '<div style="display:flex;gap:8px;margin-top:12px;border-top:1.5px solid #f1f5f9;padding-top:12px">'
+      +   '<button type="button" id="mpClear" style="padding:0 14px;height:46px;border:1.5px solid #e2e8f0;'
+      +     'border-radius:10px;background:#fff;color:#94a3b8;font-size:13px;font-weight:800;'
+      +     'font-family:inherit;cursor:pointer">전체 비우기</button>'
+      +   '<button type="button" id="mpOk" style="flex:1;height:46px;border:none;border-radius:10px;'
+      +     'background:#2563a8;color:#fff;font-size:14.5px;font-weight:800;font-family:inherit;'
+      +     'cursor:pointer">✓ 확인</button></div></div>';
+    document.body.appendChild(ov);
+    function close(){ try{ ov.remove(); }catch(e){} document.removeEventListener('keydown', onEsc); }
+    function onEsc(e){ if(e.key==='Escape') close(); }
+    document.addEventListener('keydown', onEsc);
+    ov.addEventListener('mousedown', function(e){ if(e.target===ov) close(); });
+    ov.querySelector('#mpX').addEventListener('click', close);
+
+    var qEl=ov.querySelector('#mpQ'), listEl=ov.querySelector('#mpList'),
+        bagEl=ov.querySelector('#mpBag'), qtyEl=ov.querySelector('#mpQty');
+
+    function drawBag(){
+      if(!bag.length){
+        bagEl.innerHTML='<div style="font-size:12.5px;color:#c3d1de;padding:8px 2px">'
+          + '아직 담은 자재가 없어요</div>';
+        return;
+      }
+      var s=sum();
+      bagEl.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px">'
+        + bag.map(function(m,i){
+            return '<span style="display:inline-flex;align-items:center;gap:6px;background:#eef6ff;'
+              + 'border:1.5px solid #bfdbfe;border-radius:999px;padding:5px 6px 5px 11px;'
+              + 'font-size:12.5px;font-weight:700;color:#1a2f45;max-width:100%">'
+              + '<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+              +   ES(m.name)+(m.spec?(' '+ES(m.spec)):'')+' × '+m.qty+'</span>'
+              + '<button type="button" data-mprm="'+i+'" style="border:none;background:#dbeafe;'
+              +   'color:#1d4ed8;border-radius:50%;width:20px;height:20px;line-height:1;font-size:12px;'
+              +   'font-weight:800;cursor:pointer;flex:0 0 auto;padding:0">✕</button></span>';
+          }).join('')
+        + '</div>'
+        + (s>0 ? '<div style="margin-top:8px;font-size:13px;font-weight:800;color:#b45309">'
+                 + '합계 '+won(s)+'원 <span style="font-weight:600;color:#a8b8c8">'
+                 + '(단가가 등록된 자재만)</span></div>' : '');
+      [].forEach.call(bagEl.querySelectorAll('[data-mprm]'), function(b2){
+        b2.addEventListener('click', function(){
+          bag.splice(Number(b2.getAttribute('data-mprm')),1); drawBag(); drawList(); });
+      });
+    }
+    function drawList(){
+      var q=String(qEl.value||'').trim().toLowerCase();
+      var rows = q ? items.filter(function(it){
+        return [it.itemName,it.spec,it.maker,it.vendor,it.unit].join(' ').toLowerCase().indexOf(q)>=0;
+      }) : items;
+      var show=rows.slice(0,200), full = bag.length>=MAX;
+      if(!show.length){
+        listEl.innerHTML='<div style="padding:24px 8px;text-align:center;color:#a8b8c8;font-size:13.5px">'
+          + (items.length? '찾는 자재가 없어요' : '자재 탭에 등록된 자재가 없어요')+'</div>';
+        return;
+      }
+      listEl.innerHTML = show.map(function(it){
+        return '<div data-mpid="'+ES(it.id)+'" style="border:1.5px solid #eaf1f9;border-radius:11px;'
+          + 'padding:10px 12px;margin-bottom:7px;min-height:44px;'
+          + (full?'opacity:.4;cursor:not-allowed':'cursor:pointer')+'">'
+          + '<b style="font-size:14px;color:#1a2f45">'+ES(it.itemName)+'</b>'
+          + '<div style="margin-top:4px;font-size:12px;color:#7a92a8">'
+          +   (it.spec? ES(it.spec):'규격 없음') + (it.unit? ' · '+ES(it.unit):'')
+          +   (Number(it.unitPrice)? ' · '+won(it.unitPrice)+'원' : ' · 단가 없음')
+          + '</div></div>';
+      }).join('')
+      + (full ? '<div style="text-align:center;color:#b45309;font-size:12.5px;font-weight:800;padding:8px">'
+                + '자재는 최대 '+MAX+'종까지 담을 수 있어요</div>' : '');
+      [].forEach.call(listEl.querySelectorAll('[data-mpid]'), function(row){
+        row.addEventListener('click', function(){
+          if(bag.length>=MAX) return;
+          var it=items.filter(function(x){ return x.id===row.getAttribute('data-mpid'); })[0];
+          if(!it) return;
+          bag.push({ id:it.id, name:(it.itemName||''), spec:(it.spec||''), unit:(it.unit||''),
+                     price:Number(it.unitPrice)||0, qty:Number(qtyEl.value)||1 });
+          drawBag(); drawList();
+        });
+      });
+    }
+    ov.querySelector('#mpClear').addEventListener('click', function(){ bag=[]; drawBag(); drawList(); });
+    ov.querySelector('#mpOk').addEventListener('click', function(){
+      close();
+      try{ onDone(bag.slice()); }catch(e){ console.error('[자재 담기]', e); }
+    });
+    qEl.addEventListener('input', drawList);
+    drawBag(); drawList();
     setTimeout(function(){ try{ qEl.focus(); }catch(e){} }, 60);
   };
 
@@ -12539,7 +12681,9 @@ async function githubUpload(token){
         _link = null; _linkKind = '';
         var r = _origEd.apply(this, arguments);
         try{
-          if(KIND_OK[kind]){
+          var ovEl = document.getElementById('overlay');
+          var shown = !!(ovEl && ovEl.classList && ovEl.classList.contains('show'));
+          if(KIND_OK[kind] && shown){
             var data = id ? ((entries||[]).filter(function(x){ return x.id===id; })[0]||{}) : {};
             addModalButton(kind, data);
           }

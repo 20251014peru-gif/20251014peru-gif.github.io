@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v84-0828-1515";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v85-0828-1525";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3255,7 +3255,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=84-20260828t1515"></script>
+<script src="worklog.js?v=85-20260828t1525"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -23597,6 +23597,23 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
     var _phd = phideOf(pt);
     /* ── 📦 자재 · 📎 파일·폴더 · ⏱ 소요 — 예전 입력창에만 있던 것들 ── */
+    /* 자재 합계 = Σ 단가 × 수량 (단가가 등록된 자재만) */
+    function matSum(arr){
+      try{ return (arr||[]).reduce(function(a,m){
+        return a + (Number(m && m.price)||0) * (Number(m && m.qty)||1); }, 0); }
+      catch(e){ return 0; }
+    }
+    /* 금액 칸이 비어 있을 때만 자재 합계를 넣는다. force 면 덮어쓴다 */
+    function amountPatch(sum2, force){
+      try{
+        if(!(sum2>0)) return null;
+        if(amountLocked(rec)) return null;          /* 아래 항목 합계로 자동 계산되는 기록은 건드리지 않는다 */
+        if(!propById(pt,'_amount')) return null;
+        var cur = Number(pget(rec,'_amount'))||0;
+        if(cur && !force) return null;
+        return ppatch(rec, '_amount', sum2);
+      }catch(e){ console.warn('[금액 자동]', e); return null; }
+    }
     function extrasHTML(r){
       var h2='';
       /* 🔗 업무에서 가져온 기록이면 원본으로 가는 칩을 보여준다 */
@@ -23624,21 +23641,29 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
           + '</div>';
       }
       var mats = esr(r.materials);
+      var mSum = matSum(mats);
       h2 += '<div class="pg-div"></div>'
         + '<div class="pg-sec">📦 자재 사용 내역 <span>이 기록에 쓴 자재</span></div>'
         + '<div class="pg-subs">'
         + (mats.length ? mats.map(function(m,i){
+            var line = (Number(m.price)||0) * (Number(m.qty)||1);
             return '<div class="pg-sub"><span class="tt">'+esc(m.name||'')
               + (m.spec? ' <span style="color:#8ba0b6;font-weight:600">'+esc(m.spec)+'</span>':'')
-              + ' <span style="color:#3f7cb8">× '+(Number(m.qty)||1)+'</span></span>'
+              + ' <span style="color:#3f7cb8">× '+(Number(m.qty)||1)+'</span>'
+              + (line? ' <span style="color:#b45309;font-weight:700">'+numFmt(line)+'원</span>':'')
+              + '</span>'
               + '<button type="button" class="x" data-matdel="'+i+'" title="빼기">✕</button></div>'; }).join('')
            : '<div class="pg-none">아직 없어요 — 아래에서 추가하세요</div>')
         + '</div>'
+        + (mSum>0 ? '<div class="pg-extra" style="align-items:center">'
+            + '<span style="font-size:13.5px;font-weight:800;color:#b45309">자재 합계 '+numFmt(mSum)+'원</span>'
+            + '<button type="button" id="pgMatSum" class="pg-xb">💰 금액 칸에 넣기</button></div>' : '')
         + '<div class="pg-extra">'
-        +   '<input type="text" id="pgMatN" placeholder="자재명" style="flex:2;min-width:120px">'
+        +   '<button type="button" id="pgMatPick" class="pg-xb on">📦 자재에서 고르기</button>'
+        +   '<input type="text" id="pgMatN" placeholder="자재명 (직접 입력)" style="flex:2;min-width:120px">'
         +   '<input type="text" id="pgMatS" placeholder="규격 (선택)" style="flex:1.3;min-width:90px">'
         +   '<input type="number" id="pgMatQ" placeholder="수량" value="1" min="0" style="flex:0 0 82px">'
-        +   '<button type="button" id="pgMatAdd" class="pg-xb on">추가</button>'
+        +   '<button type="button" id="pgMatAdd" class="pg-xb">추가</button>'
         + '</div>';
       var atts = esr(r.attachments);
       h2 += '<div class="pg-div"></div>'
@@ -23805,12 +23830,16 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
           ev.preventDefault(); ev.stopPropagation();
           window.wlPickItem(function(r){
             try{
-              var patch = {};
+                var patch = {};
               patch[p.k || pid.slice(2)] = r.name;
               if(propById(pt,'f:spec')) patch.spec = r.spec;
               if(propById(pt,'f:qty'))  patch.qty  = r.qty;
+              var s1 = (Number(r.price)||0) * (Number(r.qty)||1);
+              var ap1 = amountPatch(s1, false);
+              if(ap1) for(var k1 in ap1){ patch[k1] = ap1[k1]; }
               save(patch);
-              if(typeof toast==='function') toast('📦 '+r.name+(r.spec?(' · '+r.spec):'')+' · '+r.qty+'개');
+              if(typeof toast==='function') toast('📦 '+r.name+(r.spec?(' · '+r.spec):'')+' · '+r.qty+'개'
+                + (ap1? (' · 금액 '+numFmt(s1)+'원') : ''));
               openPage(id);
             }catch(e){ console.error('[자재 고르기]', e); alert('자재를 못 넣었어요: '+(e.message||e)); }
           }, pget(rec, pid) || '');
@@ -23915,6 +23944,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var pvd=document.getElementById('pgVend');
     if(pvd) pvd.addEventListener('click', function(){ vendorHub(vendorOf(rec)); });
     document.getElementById('pgForm').addEventListener('click', function(){
+      window._wlForceOld = true;        /* 이번 한 번은 일부러 예전 입력창을 연다 */
       var o=document.getElementById('lfPageOv'); if(o) o.remove();
       PGASMOD = false; pgFab(false); pgLock(false); window.wlPagePatch = null;
       document.removeEventListener('keydown', esc2);
@@ -24117,6 +24147,40 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         b.addEventListener('click', function(){ setEnd(parseInt(b.getAttribute('data-dur'),10), false); }); });
       ov.querySelectorAll('[data-duradd]').forEach(function(b){
         b.addEventListener('click', function(){ setEnd(parseInt(b.getAttribute('data-duradd'),10), true); }); });
+
+      /* 자재 — 저장된 자재에서 여러 개 담기 */
+      var mPick=document.getElementById('pgMatPick');
+      if(mPick) mPick.addEventListener('click', function(){
+        if(typeof window.wlPickMats!=='function'){
+          alert('자재 고르기를 못 불러왔어요 — worklog.js 를 올렸는지 확인해 주세요'); return;
+        }
+        window.wlPickMats(function(list){
+          try{
+            var patch = { materials: list };
+            var s = matSum(list);
+            var ap = amountPatch(s, false);
+            if(ap) for(var k in ap){ patch[k] = ap[k]; }
+            pUpd(id, patch);
+            rec = ent().filter(function(x){ return x.id===id; })[0] || rec;
+            if(typeof toast==='function') toast(
+              list.length ? ('📦 자재 '+list.length+'종'
+                             + (s>0? (' · 합계 '+numFmt(s)+'원'+(ap?' → 금액 칸에 넣었어요':'')) : ''))
+                          : '자재를 모두 비웠어요');
+            openPage(id);
+          }catch(e){ console.error('[자재 담기]', e); alert('자재를 못 넣었어요: '+(e.message||e)); }
+        }, esr(rec.materials));
+      });
+      /* 자재 합계를 금액 칸에 넣기 (이미 적힌 금액도 덮어쓴다 — 사용자가 직접 누른 경우) */
+      var mSumB=document.getElementById('pgMatSum');
+      if(mSumB) mSumB.addEventListener('click', function(){
+        var s = matSum(esr(rec.materials));
+        if(amountLocked(rec)){ toast2('이 기록의 금액은 아래 항목 합계로 자동 계산돼요'); return; }
+        var ap = amountPatch(s, true);
+        if(!ap){ toast2('넣을 금액이 없어요 — 자재에 단가가 있어야 합니다'); return; }
+        save(ap);
+        if(typeof toast==='function') toast('💰 금액 '+numFmt(s)+'원을 넣었어요');
+        openPage(id);
+      });
 
       /* 자재 */
       var mAdd=document.getElementById('pgMatAdd');
@@ -28485,6 +28549,44 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(typeof toast==='function') toast('연락처 화면에서 등록해 주세요');
   }
 
+  /* ── 📋 업체별 최근 거래 — 목록에 같이 띄워 중복 발주를 막는다 ──
+     entries 를 한 번만 훑어 이름별로 모으고, 30초 동안 그대로 쓴다 */
+  var _rcIdx=null, _rcAt=0;
+  var VKEYS = ['workVendor','vendor','owner','maker','company','partyName'];
+  function recIdx(){
+    var now = Date.now();
+    if(_rcIdx && (now-_rcAt) < 30000) return _rcIdx;
+    var m = {};
+    try{
+      (entries||[]).forEach(function(e){
+        if(!e) return;
+        var seen = {};
+        VKEYS.forEach(function(k){
+          var v = e[k]; if(!v) return;
+          v = String(v).trim(); if(!v || seen[v]) return; seen[v]=1;
+          (m[v] || (m[v]=[])).push(e);
+        });
+      });
+      Object.keys(m).forEach(function(k){
+        m[k].sort(function(a2,b2){ return String(b2.date||'').localeCompare(String(a2.date||'')); });
+      });
+    }catch(e){ console.warn('[최근 거래] 색인 실패', e); }
+    _rcIdx = m; _rcAt = now;
+    return m;
+  }
+  function recentLine(name){
+    try{
+      var arr = recIdx()[String(name||'').trim()];
+      if(!arr || !arr.length) return '';
+      var top = arr.slice(0,3).map(function(e){
+        var d = String(e.date||'').slice(5).replace('-','/');
+        var t = String(e.title || e.itemName || e.content || '(제목 없음)').slice(0,14);
+        return (d? d+' ':'') + t;
+      }).join(' · ');
+      return '📋 최근 ' + top + (arr.length>3 ? (' 외 '+(arr.length-3)+'건') : '');
+    }catch(e){ return ''; }
+  }
+
   var _tried=0;                       /* 빈 캐시 다시 불러오기는 딱 한 번만 (되풀이 금지) */
   function render(q){
     var b=ensure(), all=CC();
@@ -28529,6 +28631,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         + (one?' <span style="font-size:10px;font-weight:700;background:#f1f5f9;color:#94a3b8;border-radius:6px;padding:1px 6px">🕐 일회성</span>':'')
         + '</div>'
         + (sub? '<div style="font-size:11.5px;color:#9aa7b4;margin-top:1px">'+esc(sub)+'</div>':'')
+        + (function(){ var rl=recentLine(c.name); return rl
+            ? '<div style="font-size:11px;color:#2b7a5e;background:#effaf4;border-radius:6px;'
+              + 'padding:2px 7px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;'
+              + 'white-space:nowrap">'+esc(rl)+'</div>' : ''; })()
         + '</div>';
     }).join('');
     if(!top.length) h = '<div style="padding:11px 13px;color:#aab8c8;font-size:13px">찾는 업체가 없어요</div>';
