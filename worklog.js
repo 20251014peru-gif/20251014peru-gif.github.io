@@ -14455,7 +14455,12 @@ async function githubUpload(token){
             단, 내용이 들어 있는 영역은 절대 감추지 않는다 (데이터가 안 보이면 안 된다) */
       var ovr = FORCE[def.key];
       if(ovr === true)  show = true;
-      if(ovr === false && !filled) show = false;
+      /* ★ v122 근본 수정 — 달님 : 「하위 항목·파일 링크가 안 눌러져」
+            원인 : 지출종류 모드가 「이 영역은 접어라」고 지시하면,
+                   사람이 ＋ 단추로 펼쳐도 그 지시가 이겨서 **도로 접혔다.**
+                   그래서 단추가 아예 안 먹는 것처럼 보였다.
+            규칙 : 사람이 직접 펼친 것은 어떤 지시보다 세다. */
+      if(ovr === false && !filled && !forced) show = false;
 
       wrap.forEach(function(el){
         if(!el.style) return;
@@ -15721,7 +15726,7 @@ async function githubUpload(token){
   var LS_ON   = 'wl_expmode_on';
   var LS_AUTO = 'wl_expmode_auto';       /* 지출 화면 자동 열기 */
   var LS_MODE = 'wl_modes';              /* 달님이 고친 모드표 */
-  var MVER = 3, LS_MVER = 'wl_modes_ver';
+  var MVER = 4, LS_MVER = 'wl_modes_ver';
 
   /* v116 응용② — 어느 칸이 「모드 스위치」인지 종류마다 다르다 */
   var SWITCH = {
@@ -15758,12 +15763,14 @@ async function githubUpload(token){
       },
       expense: {
         '개인지출': { secs:{ mat:true,  pics:true,  att:false, sub:false, time:false },
-                      props:['_sub','_amount','f:purpose'], hint:'영수증 사진을 남겨 두세요' },
+                      props:['_sub','f:purpose','f:supplyAmt','f:taxAmt','_amount'],
+                      hint:'영수증 사진을 남겨 두세요 · 합계를 넣으면 공급가액·부가세가 나뉩니다' },
         '세금계산서':{ secs:{ mat:false, pics:false, att:true,  sub:false, time:false },
                       props:['_sub','_amount','f:isIssued','f:supplyAmt','f:taxAmt'],
                       hint:'발행 여부와 공급가액·부가세를 확인하세요' },
         '전표':     { secs:{ mat:false, pics:true,  att:false, sub:false, time:false },
-                      props:['_sub','_amount','f:isJeonpyo'], hint:'전표는 사진으로 남겨 두세요' },
+                      props:['_sub','f:expSubType','f:purpose','_amount'],
+                      hint:'전표 구분(전기·수도…)과 용도를 고르세요' },
         '급여':     { secs:{ mat:false, pics:false, att:true,  sub:false, time:false },
                       props:['_amount'], hint:'급여 명세는 파일 링크로 걸어 두세요' }
       },
@@ -15848,6 +15855,13 @@ async function githubUpload(token){
     var need = {};
     if(m) (m.props || []).forEach(function(k){ need[k] = 1; });
 
+    /* v122 — 「안 쓰는 칸 감추기」는 기본으로 끈다.
+          v121에서 켰더니 지출 화면에서 공급가액·부가세처럼 **있어야 할 칸까지 사라졌다.**
+          달님 : 「있어야 할 게 없잖아. 화면은 아까 걸로 되돌려」
+          쓰고 싶으면 진단 탭 「👁 안 쓰는 칸 감추기」 를 켠다. */
+    var HIDE_ON = false;
+    try{ HIDE_ON = localStorage.getItem('wl_modehide_on') === '1'; }catch(e){}
+
     /* 이 모드에서 쓸 수도 있고 안 쓸 수도 있는 칸들 */
     var SWAY = ['f:purpose','f:expSubType','f:supplyAmt','f:taxAmt','f:isIssued',
                 'f:material','f:spec','f:qty','f:estimateMemo'];
@@ -15857,6 +15871,10 @@ async function githubUpload(token){
       try{
         var r = page.querySelector('[data-prow="' + k + '"]');
         if(!r || r._gHid) return;
+        if(!HIDE_ON){                       /* 꺼져 있으면 감추지 않고 되돌려만 놓는다 */
+          if(r._modeHid){ r.style.display = ''; r._modeHid = 0; }
+          return;
+        }
         /* 화면 글자가 아니라 **기록의 값**으로 본다 —
               체크박스(발급 완료)나 0 을 화면 글자로 읽으면 잘못 판단한다 (v121) */
         var raw = rec[k.slice(2)];
@@ -16092,6 +16110,20 @@ async function githubUpload(token){
     a.addEventListener('click', function(){ setAuto(!isAuto()); paintA(); });
     paintA(); row.appendChild(a);
 
+    if(!document.getElementById('emHide')){
+      var h2 = document.createElement('button'); h2.id='emHide'; h2.style.minHeight='44px';
+      function paintH(){
+        var on = false; try{ on = localStorage.getItem('wl_modehide_on') === '1'; }catch(e){}
+        h2.textContent = on ? '👁 안 쓰는 칸 감춤' : '👁 칸 전부 보임';
+        h2.className = 'btn btn-sm ' + (on?'btn-primary':'btn-ghost'); h2.style.minHeight='44px';
+      }
+      h2.addEventListener('click', function(){
+        var on = false; try{ on = localStorage.getItem('wl_modehide_on') === '1'; }catch(e){}
+        try{ localStorage.setItem('wl_modehide_on', on ? '0' : '1'); }catch(e){}
+        paintH(); apply();
+      });
+      paintH(); row.appendChild(h2);
+    }
     if(!document.getElementById('emMgr')){
       var m2 = document.createElement('button');
       m2.id = 'emMgr'; m2.className = 'btn btn-ghost btn-sm'; m2.style.minHeight = '44px';

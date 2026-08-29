@@ -1031,3 +1031,13 @@ tr.wk-checked td{background:#e8f3fd !important}
   cursor:pointer; font-family:inherit; white-space:nowrap;
 }
 .pg-matadd:hover{ background:#efe6ff }
+
+/* ── v122 : 「내용」처럼 한 줄을 통째로 쓰는 칸의 입력 상자를
+      위아래 다른 칸과 같은 자리에서 시작하게 맞춘다.
+      («.pg-prow.wide .pg-pk» 만 148px → 128px 로 좁아 20px 어긋나 있었다) ── */
+.pg-prow.wide .pg-pk{ flex:0 0 148px !important }
+.pg-props.pg-edit .pg-prow.wide .pg-pk{ flex:0 0 186px !important }
+@media (max-width:600px){
+  .pg-prow.wide .pg-pk{ flex:none !important }
+  .pg-props.pg-edit .pg-prow.wide .pg-pk{ flex:none !important }
+}
