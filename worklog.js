@@ -14139,6 +14139,7 @@ async function githubUpload(token){
         var el = els[j], row = rowOf(el);
         if(act === 'show'){
           if(row && row._gHid) continue;                 /* 묶어보기가 접어 둔 줄은 건드리지 않는다 (v112) */
+          if(row && row._userHid) continue;              /* ✋ 사람이 숨긴 칸도 건드리지 않는다 (v123) */
           if(row && row.style && row.style.display === 'none'){ row.style.display = ''; row._ruleShown = 1; }
           if(row) row._ruleKeep = 1;                     /* 빈 칸 접기가 다시 숨기지 않게 */
         }else if(act === 'hide'){
@@ -14448,8 +14449,11 @@ async function githubUpload(token){
       var wrap = blockOf(h);
       var filled = false;
       try{ filled = !!def.has(wrap); }catch(e){ filled = true; }
-      var forced = h._secForce || isOpened(def.key);
+      /* v123 — 사람이 정한 것은 wlUser 에 남는다. 자동 규칙은 이걸 못 이긴다 */
+      var mine   = (window.wlUser ? window.wlUser.get('sec', def.key) : undefined);
+      var forced = (mine === 1) || h._secForce || isOpened(def.key);
       var show   = !isOn() || filled || forced;
+      if(mine === 0 && !filled) show = false;          /* 사람이 접었으면 접힌 채로 */
       /* v115 — 지출종류가 「이 기록에 무엇을 넣을지」 정한다.
             wlSecForce({mat:true, pics:false}) 처럼 밖에서 지시할 수 있게.
             단, 내용이 들어 있는 영역은 절대 감추지 않는다 (데이터가 안 보이면 안 된다) */
@@ -14481,7 +14485,8 @@ async function githubUpload(token){
         var k = b.getAttribute('data-secadd');
         var hit = chips.filter(function(c){ return c.key === k; })[0];
         if(hit && hit.head){ hit.head._secForce = 1; markOpen(k); }
-        run();
+        try{ if(window.wlUser) window.wlUser.set('sec', k, 1); }catch(e){}   /* ✋ 사람이 폈다 */
+        if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); else run();
         setTimeout(function(){
           try{
             if(k === 'body'){ var t = document.getElementById('pgBodyTx'); if(t) t.focus(); }
@@ -14804,7 +14809,10 @@ async function githubUpload(token){
               「(업체 없음)」 이라고 적어 준다. */
       var anyVal = hVal || parts.length;
       var gid = g.id || '';
-      var wantOpen = (OPEN[gid] === undefined) ? !!g.openDefault : !!OPEN[gid];
+      /* v123 — 사람이 정한 것 > 이 화면에서 누른 것 > 처음 값 */
+      var uOpen = (window.wlUser ? window.wlUser.get('grp', gid) : undefined);
+      var wantOpen = (uOpen !== undefined) ? !!uOpen
+                   : ((OPEN[gid] === undefined) ? !!g.openDefault : !!OPEN[gid]);
       if(anyVal && !wantOpen){
         var line = document.createElement('div');
         line.className = 'pg-prow wide pg-grow';
@@ -14826,7 +14834,9 @@ async function githubUpload(token){
         rows.forEach(function(r){ r.el.style.display = 'none'; r.el._gHid = 1; });
 
         function openIt(){
-          OPEN[gid] = 1; redraw();
+          OPEN[gid] = 1;
+          try{ if(window.wlUser) window.wlUser.set('grp', gid, 1); }catch(e){}   /* ✋ 사람이 폈다 */
+          redraw();
           setTimeout(function(){
             try{ var r2 = rowOf(document.querySelector('.lf-page .pg-props'), g.head);
                  if(r2) r2.scrollIntoView({block:'center'}); }catch(e){}
@@ -14864,7 +14874,9 @@ async function githubUpload(token){
       putAfter(tail, prev);
 
       bar.querySelector('.pg-gfold').addEventListener('click', function(){
-        OPEN[gid] = 0; redraw();                     /* 값이 없어도 접힌다 (v116) */
+        OPEN[gid] = 0;
+        try{ if(window.wlUser) window.wlUser.set('grp', gid, 0); }catch(e){}     /* ✋ 사람이 접었다 */
+        redraw();                                    /* 값이 없어도 접힌다 (v116) */
       });
     });
   }
@@ -15879,6 +15891,8 @@ async function githubUpload(token){
               체크박스(발급 완료)나 0 을 화면 글자로 읽으면 잘못 판단한다 (v121) */
         var raw = rec[k.slice(2)];
         var filled = (raw === true) || (raw != null && raw !== '' && raw !== 0 && raw !== '0' && raw !== false);
+        /* v123 — 사람이 숨긴 칸은 자동이 다시 띄우지 않는다 */
+        if(window.wlUser && window.wlUser.get('fld', k) === 0){ r.style.display = 'none'; return; }
         if(need[k] || filled){ r.style.display = ''; r._ruleKeep = 1; r._modeHid = 0; }
         else { r.style.display = 'none'; r._modeHid = 1; }
       }catch(e){}
@@ -15888,6 +15902,7 @@ async function githubUpload(token){
     if(m){
       m.props.forEach(function(k){
         try{
+          if(window.wlUser && window.wlUser.get('fld', k) === 0) return;   /* ✋ 사람이 숨긴 칸 */
           var r2 = page.querySelector('[data-prow="' + k + '"]');
           if(r2 && !r2._gHid){ r2.style.display = ''; r2._ruleKeep = 1; }
         }catch(e){}
@@ -16729,4 +16744,339 @@ async function githubUpload(token){
     off:  function(){ setOn(0); return '지출 기록을 따로 만들지 않습니다'; }
   };
   console.log('[지출연결] v119 준비됨 — 업무에서 적으면 지출 기록이 뒤에서 함께 만들어집니다');
+})();
+
+
+/* ============================================================
+   ✋ 사람이 한 것이 먼저다 (wlUser)  v123-0830-0040
+
+   ── 왜 만들었나 ────────────────────────────────────────
+   2026-08-30 사고 : ＋하위 항목을 눌러 펼쳐도 0.4초 뒤 모드가 도로 접었다.
+   단추가 아예 안 먹는 것처럼 보였다.
+   원인은 「자동 규칙이 사람 손보다 셌던 것」이고, 이 구조가 남아 있으면
+   접기·묶기·칸 감추기 어디서든 같은 사고가 또 난다.
+
+   그래서 규칙을 코드 한 곳에 못박는다 :
+
+       ▶ 사람이 직접 한 것은 기록해 둔다.
+       ▶ 자동 규칙은 그 기록을 절대 못 이긴다.
+
+   ── 무엇을 기억하나 ────────────────────────────────────
+     sec:본문      아래 영역을 폈나 접었나
+     grp:g1        묶음을 폈나 접었나
+     fld:f:qty     칸을 숨겼나 보이게 했나
+   종류(업무·지출·사고…)마다 따로 기억한다.
+   지우기 : 진단 탭 「✋ 내가 정한 것 지우기」  또는  wlUser.clear()
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS  = 'wl_userchoice';
+  var MAX = 24;                      /* 종류 수 — 넉넉하다 */
+
+  function all(){
+    try{ var o = JSON.parse(localStorage.getItem(LS) || '{}'); return (o && typeof o==='object') ? o : {}; }
+    catch(e){ console.warn('[사람먼저] 읽기 실패', e); return {}; }
+  }
+  function put(o){
+    try{
+      var ks = Object.keys(o);
+      while(ks.length > MAX){ delete o[ks[0]]; ks = Object.keys(o); }
+      localStorage.setItem(LS, JSON.stringify(o));
+    }catch(e){ console.warn('[사람먼저] 저장 실패', e); }
+  }
+
+  /* 지금 보고 있는 기록의 종류 */
+  function kindNow(){
+    try{
+      var m = String(location.hash||'').match(/^#lp=([^&]+)/);
+      if(!m) return '';
+      var id = decodeURIComponent(m[1]);
+      var r = (entries||[]).filter(function(x){ return x && x.id === id; })[0];
+      return r ? String(r.kind || '') : '';
+    }catch(e){ return ''; }
+  }
+
+  var API = {
+    /* 사람이 한 것을 적는다.  v : 1 = 폈다/보이게, 0 = 접었다/숨겼다, null = 잊어라 */
+    set: function(what, key, v, kind){
+      var k = kind || kindNow(); if(!k) return;
+      var o = all(); var bag = o[k] || (o[k] = {});
+      var id = what + ':' + key;
+      if(v === null || v === undefined) delete bag[id];
+      else bag[id] = v ? 1 : 0;
+      put(o);
+    },
+    /* 사람이 정한 값. 정한 적 없으면 undefined */
+    get: function(what, key, kind){
+      var k = kind || kindNow(); if(!k) return undefined;
+      var bag = all()[k]; if(!bag) return undefined;
+      var v = bag[what + ':' + key];
+      return (v === 1 || v === 0) ? v : undefined;
+    },
+    /* 자동 규칙이 부르는 문 — 사람이 정했으면 그 값, 아니면 자동값 */
+    decide: function(what, key, autoValue, kind){
+      var v = API.get(what, key, kind);
+      return (v === undefined) ? autoValue : !!v;
+    },
+    clear: function(kind){
+      var o = all();
+      if(kind){ delete o[kind]; } else { o = {}; }
+      put(o);
+      try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e){}
+      return kind ? (kind + ' 에서 내가 정한 것을 지웠습니다') : '내가 정한 것을 모두 지웠습니다';
+    },
+    list: function(){
+      var o = all(), rows = [];
+      Object.keys(o).forEach(function(k){
+        Object.keys(o[k]).forEach(function(id){
+          var p = id.split(':');
+          rows.push({ 종류:k, 무엇:({sec:'아래 영역', grp:'묶음', fld:'칸'})[p[0]] || p[0],
+                      이름:p.slice(1).join(':'), 내가정한것: o[k][id] ? '폈다/보이게' : '접었다/숨겼다' });
+        });
+      });
+      console.table(rows);
+      return rows.length + '개';
+    },
+    kind: kindNow
+  };
+  window.wlUser = API;
+
+  /* 진단 탭 — 지우기 */
+  function panel(){
+    var host = document.getElementById('sfPanel');
+    if(!host || document.getElementById('uwBtn')) return;
+    var row = host.querySelector('.btn-row'); if(!row) return;
+    var b = document.createElement('button');
+    b.id = 'uwBtn'; b.className = 'btn btn-ghost btn-sm'; b.style.minHeight = '44px';
+    b.textContent = '✋ 내가 정한 것 지우기';
+    b.title = '접어 둔 것 · 숨긴 칸을 처음 상태로 되돌립니다';
+    b.addEventListener('click', function(){
+      if(!confirm('접어 둔 것과 숨긴 칸을 처음 상태로 되돌릴까요?\n\n(기록 내용은 그대로입니다)')) return;
+      API.clear();
+      if(typeof toast === 'function') toast('✋ 처음 상태로 되돌렸어요');
+    });
+    row.appendChild(b);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
+  else panel();
+  setTimeout(panel, 3000);
+
+  console.log('[사람먼저] v123 준비됨 — 사람이 한 것을 자동 규칙이 못 이깁니다 (wlUser.list())');
+})();
+
+
+/* ============================================================
+   👁 칸 하나만 숨기기 (wlEye)  v123-0830-0040
+
+   달님 아이디어 : 「켜고 끄는 대신, 칸마다 👁 을 눌러 그 칸만 숨기게 하면 훨씬 안전」
+
+   ▸ 속성 줄에 마우스를 올리면 이름표 오른쪽에 작은 👁 이 나타난다
+   ▸ 누르면 그 칸이 이 종류에서 숨는다 — 「사람이 정한 것」으로 적히므로
+     어떤 자동 규칙도 다시 띄우지 않는다
+   ▸ 되돌리기 : 아래 「👁 내가 숨긴 칸 N개」 를 누른다
+   ▸ 값이 들어 있는 칸을 숨기려 하면 한 번 물어본다 (데이터를 못 보게 되니까)
+   ============================================================ */
+(function(){
+  'use strict';
+
+  function U(){ return window.wlUser; }
+
+  function labelOf(row){
+    try{ return ((row.querySelector('.pg-pnm')||{}).textContent||'').trim().replace(/^\S+\s/,''); }
+    catch(e){ return ''; }
+  }
+  function valOf(row){
+    try{
+      var ie = row.querySelector('.lf-ie');
+      if(ie) return String(ie.value == null ? '' : ie.value).trim();
+      var t = ((row.querySelector('.pg-pv')||{}).textContent||'').trim();
+      return (t === '비어 있음' || t === '—') ? '' : t;
+    }catch(e){ return ''; }
+  }
+
+  function paint(){
+    var u = U(); if(!u) return;
+    var page = document.querySelector('.lf-page'); if(!page) return;
+    var props = page.querySelector('.pg-props'); if(!props) return;
+
+    var hidden = [];
+    [].forEach.call(props.querySelectorAll('[data-prow]'), function(row){
+      var key = row.getAttribute('data-prow');
+      if(!key || key === '_date') return;                 /* 날짜는 못 숨긴다 */
+
+      /* 사람이 숨긴 칸이면 감춘다 — 자동 규칙보다 세다 */
+      if(u.get('fld', key) === 0){
+        if(row.style.display !== 'none'){ row.style.display = 'none'; }
+        row._userHid = 1;
+        hidden.push(labelOf(row) || key);
+        return;
+      }
+      if(row._userHid){ row.style.display = ''; row._userHid = 0; }
+
+      /* 👁 단추 — 이름표 안에 겹쳐 놓아 칸 너비를 건드리지 않는다 (v118 규칙) */
+      var pk = row.querySelector('.pg-pk'); if(!pk) return;
+      if(pk.querySelector('.pg-eye')) return;
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'pg-eye';
+      b.textContent = '👁';
+      b.title = '이 칸을 숨깁니다 (되돌릴 수 있어요)';
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation(); ev.preventDefault();
+        var nm = labelOf(row) || key;
+        if(valOf(row) && !confirm('「' + nm + '」 에는 값이 들어 있습니다.\n\n숨기면 화면에서 안 보입니다. (내용은 지워지지 않습니다)\n숨길까요?')) return;
+        u.set('fld', key, 0);
+        if(typeof toast === 'function') toast('👁 ' + nm + ' 을(를) 숨겼어요 — 아래에서 되돌릴 수 있어요');
+        try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e){}
+      });
+      pk.appendChild(b);
+    });
+
+    /* 되돌리기 단추 */
+    var foot = props.querySelector('.pg-foot');
+    var old  = props.querySelector('#pgEyeBack');
+    if(!hidden.length){ if(old) old.remove(); return; }
+    if(!foot) return;
+    if(!old){
+      old = document.createElement('button');
+      old.type = 'button'; old.id = 'pgEyeBack'; old.className = 'pg-addp';
+      old.addEventListener('click', function(){
+        var u2 = U(); if(!u2) return;
+        var kind = u2.kind();
+        var o = null;
+        try{ o = JSON.parse(localStorage.getItem('wl_userchoice')||'{}')[kind] || {}; }catch(e){ o = {}; }
+        Object.keys(o).forEach(function(id){ if(id.slice(0,4) === 'fld:') u2.set('fld', id.slice(4), null); });
+        if(typeof toast === 'function') toast('👁 숨긴 칸을 모두 되살렸어요');
+        try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e){}
+      });
+      foot.appendChild(old);
+    }
+    old.textContent = '👁 내가 숨긴 칸 ' + hidden.length + '개 되살리기';
+    old.title = hidden.join(' · ');
+  }
+
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:50, n:'칸 숨기기', f:paint });
+  console.log('[칸 숨기기] v123 준비됨 — 속성 줄에 마우스를 올리면 👁 이 나옵니다');
+})();
+
+
+/* ============================================================
+   📐 화면이 어긋나지 않았나 (wlLayoutCheck)  v123-0830-0040
+
+   같은 종류의 사고가 세 번 났다 —
+     · 단추를 값 칸 **옆**에 붙여 「후/불/청/구」로 쪼개짐 (2회)
+     · 한 줄 통째로 쓰는 칸의 이름표만 20px 좁아 입력 상자가 어긋남 (1회)
+
+   눈으로 보고 찾기엔 너무 미세하다. 그래서 자로 재는 도구를 만든다.
+   쓰는 법 : 기록을 하나 열고 → 진단 탭 [📐 화면 점검] 또는 wlLayoutCheck()
+   ============================================================ */
+(function(){
+  'use strict';
+
+  function run(){
+    var page = document.querySelector('.lf-page');
+    if(!page){ var m0='기록을 하나 열고 다시 눌러주세요'; console.log(m0); return m0; }
+    var props = page.querySelector('.pg-props');
+    if(!props){ var m1='속성판을 못 찾았어요'; console.log(m1); return m1; }
+
+    var bad = [];
+    var L = [];
+    function add(s){ L.push(s); }
+
+    /* ① 이름표 폭이 다 같은가 */
+    var widths = {}, rows = [].slice.call(props.querySelectorAll('.pg-prow'));
+    rows.forEach(function(r){
+      var pk = r.querySelector('.pg-pk'); if(!pk) return;
+      var w = getComputedStyle(pk).flexBasis;
+      (widths[w] = widths[w] || []).push(r.getAttribute('data-prow') || '(이름없음)');
+    });
+    var keys = Object.keys(widths);
+    add('① 이름표 폭 : ' + keys.map(function(k){ return k + ' ' + widths[k].length + '칸'; }).join(' / '));
+    if(keys.length > 1){
+      bad.push('이름표 폭이 ' + keys.length + '가지 — 입력 상자가 어긋나 보입니다');
+      keys.forEach(function(k){
+        if(widths[k].length <= 3) add('     ⚠ ' + k + ' : ' + widths[k].join(', '));
+      });
+    }else add('     ✅ 모두 같습니다');
+
+    /* ② 값 칸이 눌리지 않았나 — 속성 줄의 칸은 「이름표 + 값」 둘이어야 한다 */
+    var squeezed = [];
+    rows.forEach(function(r){
+      if(r.classList.contains('pg-grow') || r.classList.contains('pg-sechd')) return;
+      var kids = [].filter.call(r.children, function(c){ return getComputedStyle(c).display !== 'none'; });
+      if(kids.length > 2) squeezed.push((r.getAttribute('data-prow')||'?') + '(' + kids.length + '칸)');
+    });
+    add('② 값 칸이 눌린 줄 : ' + (squeezed.length ? squeezed.join(', ') : '없음 ✅'));
+    if(squeezed.length) bad.push('속성 줄에 칸이 더 붙어 값 상자가 눌렸습니다 — 덧붙임은 값 칸 **안쪽**에 넣어야 합니다');
+
+    /* ③ 덧붙인 단추가 값 칸 안에 있나 */
+    var outs = [];
+    [].forEach.call(page.querySelectorAll('.pg-addon'), function(el){
+      var host = el.parentNode;
+      if(!host || !(host.classList.contains('pg-pv') || host.classList.contains('pg-gv')))
+        outs.push(el.id || el.className);
+    });
+    add('③ 덧붙임 : ' + page.querySelectorAll('.pg-addon').length + '개 · 자리 잘못 '
+        + (outs.length ? outs.join(', ') : '없음 ✅'));
+    if(outs.length) bad.push('덧붙인 단추가 값 칸 밖에 있습니다: ' + outs.join(', '));
+
+    /* ④ 가로로 넘치지 않았나 */
+    var over = [];
+    rows.forEach(function(r){
+      if(r.scrollWidth > r.clientWidth + 2) over.push(r.getAttribute('data-prow')||'?');
+    });
+    add('④ 가로로 넘친 줄 : ' + (over.length ? over.join(', ') : '없음 ✅'));
+    if(over.length) bad.push('줄이 가로로 넘칩니다: ' + over.join(', '));
+
+    /* ⑤ 글자가 세로로 쪼개졌나 — 값 상자가 지나치게 좁은 것 */
+    var thin = [];
+    rows.forEach(function(r){
+      var pv = r.querySelector('.pg-pv'); if(!pv) return;
+      var w = pv.getBoundingClientRect().width;
+      if(w > 0 && w < 90) thin.push((r.getAttribute('data-prow')||'?') + ' ' + Math.round(w) + 'px');
+    });
+    add('⑤ 값 상자가 너무 좁은 줄 : ' + (thin.length ? thin.join(', ') : '없음 ✅'));
+    if(thin.length) bad.push('값 상자가 90px 미만 — 글자가 세로로 쪼개질 수 있습니다: ' + thin.join(', '));
+
+    var head = bad.length ? ('⚠ 어긋난 곳 ' + bad.length + '군데') : '✅ 화면이 반듯합니다';
+    var txt  = '📐 화면 점검\n\n' + L.join('\n') + '\n\n' + head
+             + (bad.length ? ('\n' + bad.map(function(x,i){ return (i+1)+'. '+x; }).join('\n')) : '');
+    console.log('%c📐 화면 점검', 'color:#2563a8;font-size:14px;font-weight:800');
+    console.log(txt);
+    try{
+      var box = document.getElementById('scResult');
+      if(box){
+        var pre = document.createElement('pre');
+        pre.style.cssText = 'margin-top:10px;padding:11px 13px;border-radius:10px;background:#f7faff;'
+          + 'border:1px solid #dbe6f4;font-size:12px;line-height:1.65;white-space:pre-wrap;'
+          + 'font-family:ui-monospace,Menlo,Consolas,monospace;color:#3d5875';
+        pre.textContent = txt;
+        box.appendChild(pre);
+      }
+    }catch(e){}
+    return head;
+  }
+
+  window.wlLayoutCheck = run;
+
+  function panel(){
+    var host = document.getElementById('sfPanel');
+    if(!host || document.getElementById('lcBtn')) return;
+    var row = host.querySelector('.btn-row'); if(!row) return;
+    var b = document.createElement('button');
+    b.id = 'lcBtn'; b.className = 'btn btn-ghost btn-sm'; b.style.minHeight = '44px';
+    b.textContent = '📐 화면 점검';
+    b.title = '이름표 폭 · 눌린 값 칸 · 덧붙임 자리 · 넘침을 자로 잽니다';
+    b.addEventListener('click', function(){
+      try{ var box=document.getElementById('scResult'); if(box) box.innerHTML=''; }catch(e){}
+      var r = run();
+      if(typeof toast === 'function') toast(String(r));
+    });
+    row.appendChild(b);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
+  else panel();
+  setTimeout(panel, 3200);
+
+  console.log('[화면 점검] v123 준비됨 — 진단 탭 [📐 화면 점검] 또는 wlLayoutCheck()');
 })();

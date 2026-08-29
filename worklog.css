@@ -1041,3 +1041,19 @@ tr.wk-checked td{background:#e8f3fd !important}
   .pg-prow.wide .pg-pk{ flex:none !important }
   .pg-props.pg-edit .pg-prow.wide .pg-pk{ flex:none !important }
 }
+
+/* ── v123 : 👁 칸 숨기기 단추 ──
+      이름표 안에 **겹쳐** 놓는다 (absolute) — 칸 너비를 건드리지 않는다.
+      v118 규칙 「덧붙임이 줄의 칸을 늘리면 안 된다」 를 지키기 위해서다. */
+.pg-pk{ position:relative }
+.pg-eye{
+  position:absolute; right:0; top:4px;
+  width:26px; height:26px; line-height:1; padding:0;
+  border:none; background:transparent; cursor:pointer;
+  font-size:12.5px; opacity:0; transition:opacity .12s;
+}
+.pg-prow:hover .pg-eye,
+.pg-eye:focus{ opacity:.55 }
+.pg-eye:hover{ opacity:1 }
+.pg-props.pg-edit .pg-eye{ opacity:.55 }
+@media (max-width:600px){ .pg-eye{ opacity:.4; position:static; width:auto; height:auto; margin-left:6px } }
