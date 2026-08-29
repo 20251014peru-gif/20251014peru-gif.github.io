@@ -15812,37 +15812,49 @@ async function githubUpload(token){
       if(row){ row.style.display = ''; row._ruleKeep = 1; }
     }catch(e){}
 
-    var ex = linkedExp(rid);
-    /* v124 — 달님 : 「연결된 지출 보기는 비용 하단에 넣어」
-          비용 묶음 발치 → 없으면 지출종류 값 칸 안 */
+    /* ★ v128 — 달님 : 「연결된 지출 보기가 아니라 지출 목록에 등록이 되어야지.
+          두 군데 저장이 되는 거야. 지출에는 업체·자재가 없다 보니
+          지출에서 보니 사라진 것처럼 보인 거고, 업무에는 없었던 거야」
+
+       맞는 지적이다. 창을 하나로 만든 마당에 **다른 기록으로 건너뛰게** 만든 것이
+       화면이 통째로 바뀐 것처럼 보이게 했다. 업무 기록은 멀쩡히 저장돼 있었다.
+       → 이제 단추가 아니라 **등록 상태 표시**다. 눌러도 화면이 안 바뀐다.
+         정말 지출 기록을 보고 싶을 때만 옆의 작은 [보기] 를 누른다 (한 번 물어본다). */
     window.wlAddOn(['[data-gfoot="gc"]', '[data-prow="f:expType"] .pg-pv'], 'explink',
       function(){
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'pg-explink';
-        b.addEventListener('click', function(ev){
-          ev.stopPropagation();
-          var cur = linkedExp(rid);
-          if(cur){
+        var d = document.createElement('div');
+        d.className = 'pg-explink';
+        return d;
+      },
+      function(d){
+        var cur = linkedExp(rid);
+        if(cur){
+          var won = (Number(cur.amount) || 0).toLocaleString('ko-KR');
+          d.innerHTML = '<span class="pg-el-ok">\uD83E\uDDFE 지출 목록에 등록됨</span>'
+                      + '<span class="pg-el-amt">' + won + '원</span>'
+                      + '<button type="button" class="pg-el-go">보기</button>';
+          d.title = '이 업무를 고치면 지출 목록도 함께 갱신됩니다';
+          var go = d.querySelector('.pg-el-go');
+          if(go) go.addEventListener('click', function(ev){
+            ev.stopPropagation();
+            if(!confirm('지출 기록 화면으로 갑니다.\n\n지출 기록에는 업체·자재 칸이 없어\n화면이 달라 보입니다. 갈까요?')) return;
             try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(cur.id); }
             catch(e){ console.warn('[지출 잇기] 이동 실패', e); }
-            return;
-          }
-          var r2 = recOf(rid); if(!r2) return;
-          make(r2, String(r2.expType || '개인비용'));
-        });
-        return b;
-      },
-      function(b){
-        var cur = linkedExp(rid);
-        b.textContent = cur ? '💸 연결된 지출 보기' : '💸 지출 기록 만들기';
-        b.title = cur ? '이 업무에 연결된 지출 기록으로 갑니다'
-                      : '업체 · 내역 · 분야 · 자재를 그대로 옮겨 지출 기록을 만듭니다';
+          });
+        }else{
+          d.innerHTML = '<span class="pg-el-no">\uD83E\uDDFE 지출 목록에 아직 없음</span>'
+                      + '<button type="button" class="pg-el-add">지금 등록</button>';
+          d.title = '합계를 넣으면 저절로 등록됩니다';
+          var add = d.querySelector('.pg-el-add');
+          if(add) add.addEventListener('click', function(ev){
+            ev.stopPropagation();
+            try{
+              if(window.wlExpSync && window.wlExpSync.now) window.wlExpSync.now();
+              else { var r2 = recOf(rid); if(r2) make(r2, String(r2.expType || '개인비용')); }
+            }catch(e){ console.warn('[지출 잇기] 등록 실패', e); }
+          });
+        }
       });
-    /* 처음 만들 때도 글자를 채운다 */
-    var b0 = page.querySelector('#ao-explink');
-    if(b0 && !b0.textContent){
-      b0.textContent = ex ? '💸 연결된 지출 보기' : '💸 지출 기록 만들기';
-    }
   }
 
   /* v118 — 파수꾼·감시를 각자 돌리지 않는다 */
@@ -17228,4 +17240,135 @@ async function githubUpload(token){
   setTimeout(panel, 3200);
 
   console.log('[화면 점검] v123 준비됨 — 진단 탭 [📐 화면 점검] 또는 wlLayoutCheck()');
+})();
+
+
+/* ============================================================
+   🔎 고르는 칸에 초성 검색 (wlSelSearch)  v128-0830-0310
+
+   달님 : 「분야 초성검색 해줘」
+
+   분야·용도·전표 구분처럼 「고르는 칸」은 목록이 길어질수록 찾기 힘들다.
+   ▸ 칸을 누르면 검색창이 함께 뜬다
+   ▸ ㅈㄱ 만 쳐도 「전기」가 걸린다 (앱에 이미 있는 getChosung 을 그대로 쓴다)
+   ▸ 고르면 원래 select 에 값이 들어가고 저장까지 그대로 이어진다
+   ▸ ⚠ 한글 IME — 검색창을 다시 만들지 않는다. 목록만 다시 그린다 (자모 분리 방지)
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var MIN_OPTS = 3;          /* 고를 것이 이만큼 넘으면 검색창을 붙인다 */
+
+  function cho(s){
+    try{ if(typeof getChosung === 'function') return getChosung(String(s||'')); }catch(e){}
+    return String(s||'');
+  }
+  function hit(opt, q){
+    var o = String(opt||''), s = String(q||'').trim();
+    if(!s) return true;
+    if(o.toLowerCase().indexOf(s.toLowerCase()) >= 0) return true;
+    try{ if(cho(o).indexOf(s) >= 0) return true; }catch(e){}
+    return false;
+  }
+  function ES(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function attach(sel){
+    if(!sel || sel._ssBound) return;
+    var opts = [].map.call(sel.options, function(o){ return o.value; }).filter(function(v){ return v !== ''; });
+    if(opts.length < MIN_OPTS) return;
+    sel._ssBound = 1;
+
+    var box = document.createElement('div');
+    box.className = 'ss-wrap';
+    box.innerHTML =
+        '<input type="text" class="ss-q" placeholder="검색 (초성 가능 · 예: ㅈㄱ → 전기)" autocomplete="off">'
+      + '<div class="ss-list"></div>';
+    /* select 바로 위에 놓는다 — 줄의 칸 수를 늘리지 않도록 값 칸 안쪽 */
+    if(sel.parentNode) sel.parentNode.insertBefore(box, sel);
+
+    var q    = box.querySelector('.ss-q');
+    var list = box.querySelector('.ss-list');
+    var ime  = false;
+
+    function draw(){
+      var s = q.value;
+      var found = opts.filter(function(o){ return hit(o, s); });
+      if(!found.length){
+        list.innerHTML = '<div class="ss-none">찾는 것이 없어요 — 그냥 아래에서 고르세요</div>';
+        return;
+      }
+      list.innerHTML = found.slice(0, 40).map(function(o, i){
+        return '<button type="button" class="ss-it' + (i===0 && s ? ' on':'') + '" data-ssv="' + ES(o) + '">'
+             + ES(o) + '</button>';
+      }).join('');
+    }
+    function pick(v){
+      try{
+        sel.value = v;
+        sel.dispatchEvent(new Event('input',  {bubbles:true}));
+        sel.dispatchEvent(new Event('change', {bubbles:true}));
+      }catch(e){ console.warn('[고르기 검색] 넣기 실패', e); }
+    }
+
+    q.addEventListener('compositionstart', function(){ ime = true; });
+    q.addEventListener('compositionend',   function(){ ime = false; draw(); });
+    q.addEventListener('input', function(){ if(!ime) draw(); });      /* 검색창은 그대로 두고 목록만 다시 그린다 */
+    q.addEventListener('keydown', function(ev){
+      if(ev.key === 'Enter'){
+        ev.preventDefault();
+        var f = list.querySelector('.ss-it');
+        if(f) pick(f.getAttribute('data-ssv'));
+      }else if(ev.key === 'Escape'){ q.value = ''; draw(); }
+    });
+    /* 목록은 mousedown 으로 — click 이면 blur 가 먼저 나 창이 닫힌다 */
+    list.addEventListener('mousedown', function(ev){
+      var b = ev.target.closest && ev.target.closest('[data-ssv]');
+      if(!b) return;
+      ev.preventDefault(); ev.stopPropagation();
+      pick(b.getAttribute('data-ssv'));
+    });
+
+    draw();
+    setTimeout(function(){ try{ q.focus(); }catch(e){} }, 30);
+  }
+
+  /* 고르는 칸이 어떤 길로 열리든 붙게 — 화면에 select 가 나타나면 바로 잡는다 (v128) */
+  try{
+    var mo = new MutationObserver(function(m){
+      for(var i=0;i<m.length;i++){
+        var add = m[i].addedNodes; if(!add) continue;
+        for(var j=0;j<add.length;j++){
+          var n = add[j];
+          if(!n || n.nodeType !== 1) continue;
+          if(n.tagName === 'SELECT' && n.classList && n.classList.contains('lf-ie')) attach(n);
+          else if(n.querySelectorAll){
+            [].forEach.call(n.querySelectorAll('select.lf-ie'), attach);
+          }
+        }
+      }
+    });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[고르기 검색] 감시 시작 실패', e); }
+
+  /* 고르는 칸이 열릴 때마다 붙인다 */
+  document.addEventListener('focusin', function(ev){
+    var t = ev.target;
+    if(t && t.tagName === 'SELECT' && t.classList && t.classList.contains('lf-ie')) attach(t);
+  }, true);
+  document.addEventListener('click', function(ev){
+    try{
+      var box = ev.target.closest && ev.target.closest('[data-ppid]');
+      if(!box) return;
+      setTimeout(function(){
+        var s = box.querySelector('select.lf-ie');
+        if(s) attach(s);
+      }, 60);
+    }catch(e){}
+  }, true);
+
+  window.wlSelSearch = {
+    min: function(n){ if(typeof n === 'number') MIN_OPTS = n; return '고를 것이 ' + MIN_OPTS + '개 넘으면 검색창을 붙입니다'; }
+  };
+  console.log('[고르기 검색] v128 준비됨 — 분야·용도 같은 칸에 초성 검색 (ㅈㄱ → 전기)');
 })();
