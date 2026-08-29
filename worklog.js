@@ -14591,7 +14591,7 @@ async function githubUpload(token){
 
   var LS_ON  = 'wl_group_on';
   var LS_GRP = 'wl_groups';
-  var VER    = 7;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
+  var VER    = 8;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
   var LS_VER = 'wl_groups_ver';
 
   /* ── 2026-08-29 14종 전수 실측 결과로 만든 묶음 ──
@@ -14611,7 +14611,13 @@ async function githubUpload(token){
       /* v124 — 달님 : 「자재도 자재 제목 넣어줘 별도로 구분되게」 */
       { id:'gt', on:1, base:1, icon:'📦', name:'자재 — 무엇을 썼나', head:'f:material',
         keys:['f:spec','f:qty'], openDefault:1 },
-      { id:'g1', on:1, base:1, icon:'🏢', name:'업체 — 누구와', head:'_sub',
+      /* ★ v126 — 달님 : 「개인비용 입력하고 접기 하니까 자재·업체·시각 입력 창이 사라졌어」
+            원인 : 대표 값이 있으면 **저절로 접히는** 것이 기본이었다.
+                   업체·시각처럼 값이 이미 있는 덩어리는 열자마자 접혀 있어서
+                   「입력칸이 사라진 것」으로 보였다.
+            → 기본은 **펼침**. 접는 것은 사람이 [접기] 를 누를 때만.
+              (사람이 접은 것은 그대로 기억된다 — v123 규칙) */
+      { id:'g1', on:1, base:1, icon:'🏢', name:'업체 — 누구와', head:'_sub', openDefault:1,
         keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',   /* 업무 */
               'f:callContact','f:role','f:phone',                        /* 통화 */
               'f:ownerPhone',                                            /* 진행업무 */
@@ -14619,8 +14625,8 @@ async function githubUpload(token){
       /* v118 — 자재 속성 칸(자재명·규격·수량)은 더 이상 묶지 않는다.
             진짜 자재는 「자재 사용 내역」이고, 그것은 위쪽 📦 줄이 보여준다.
             비어 있을 때 「(자재명 없음) · 0」 같은 줄이 나와서 오히려 헷갈렸다. */
-      { id:'g3', on:1, base:1, icon:'🕐', name:'시각 한 덩어리', head:'f:startTime',
-        keys:['f:endTime'], even:1, sep:' ~ ' },   /* 시작·끝은 대등하므로 굵기를 같게 */
+      { id:'g3', on:1, base:1, icon:'🕐', name:'시각 — 언제부터 언제까지', head:'f:startTime',
+        keys:['f:endTime'], even:1, sep:' ~ ', openDefault:1 },   /* 시작·끝은 대등하므로 굵기를 같게 */
       /* 🧾 세금계산서 칸들은 일부러 묶지 않는다 —
             「세금계산서를 고르면 발행여부가 나온다」는 연결 규칙이 보여줘야 하는데,
             묶어버리면 접혀서 안 보인다. (2026-08-29 실측으로 확인) */
@@ -14630,8 +14636,20 @@ async function githubUpload(token){
   }
 
   /* v117 — 접고 편 상태는 줄(DOM)이 아니라 묶음 이름으로 기억한다.
-        화면을 다시 그리면 줄이 새로 만들어져서 예전에는 매번 되돌아갔다. */
+        화면을 다시 그리면 줄이 새로 만들어져서 예전에는 매번 되돌아갔다.
+
+     ★ v127 — 달님 : 「연결된 지출 보기만 누르면 창이 다 접혀서 없는 걸로 보여」
+        원인 : 이 기억이 **종류를 가리지 않았다.**
+               업무에서 💰 비용을 접으면 그 기억이 지출 화면까지 따라갔고,
+               지출 화면에는 덩어리가 그것 하나뿐이라 통째로 접힌 것처럼 보였다.
+               (보이는 칸 23개 → 4개)
+        → 종류마다 따로 기억한다. 업무에서 접은 것은 업무에서만. */
   var OPEN = {};
+  function okey(gid){
+    var k = '';
+    try{ k = (window.wlUser && window.wlUser.kind) ? (window.wlUser.kind() || '') : ''; }catch(e){}
+    return (k || '_') + '|' + gid;
+  }
   function isOn(){ try{ return localStorage.getItem(LS_ON) !== '0'; }catch(e){ return true; } }
   function setOn(v){ try{ localStorage.setItem(LS_ON, v ? '1':'0'); }catch(e){ console.warn('[묶어보기] 설정 저장 실패', e); } }
 
@@ -14671,11 +14689,23 @@ async function githubUpload(token){
     if(!row) return '';
     try{
       var ie = row.querySelector('.lf-ie');
-      if(ie) return String(ie.value == null ? '' : ie.value).trim();
+      if(ie){
+        if(ie.type === 'checkbox') return ie.checked ? '✔' : '';
+        return String(ie.value == null ? '' : ie.value).trim();
+      }
       var v = row.querySelector('.pg-pv');
       if(!v) return '';
-      var t = (v.textContent || '').trim();
-      if(!t || t === '비어 있음' || t === '—') return '';
+      /* ★ v126 — 값 칸 안에는 덧붙인 안내·단추(.pg-addon)도 들어 있다.
+            그대로 읽으면 접힌 요약에 「합계만 넣어도 공급가액·부가세가…」 같은
+            안내 문구가 섞여 들어간다. (달님 스크린샷) → 값만 골라 읽는다. */
+      var t = '';
+      [].forEach.call(v.childNodes, function(n){
+        if(n.nodeType === 1 && n.classList && n.classList.contains('pg-addon')) return;
+        t += (n.textContent || '');
+      });
+      t = t.replace(/\s+/g, ' ').trim();
+      if(!t || t === '비어 있음' || t === '—' || t === '☐') return '';
+      if(t === '☑') return '✔';
       return t;
     }catch(e){ return ''; }
   }
@@ -14812,8 +14842,9 @@ async function githubUpload(token){
       var gid = g.id || '';
       /* v123 — 사람이 정한 것 > 이 화면에서 누른 것 > 처음 값 */
       var uOpen = (window.wlUser ? window.wlUser.get('grp', gid) : undefined);
+      var ok = okey(gid);
       var wantOpen = (uOpen !== undefined) ? !!uOpen
-                   : ((OPEN[gid] === undefined) ? !!g.openDefault : !!OPEN[gid]);
+                   : ((OPEN[ok] === undefined) ? !!g.openDefault : !!OPEN[ok]);
       if(anyVal && !wantOpen){
         var line = document.createElement('div');
         line.className = 'pg-prow wide pg-grow';
@@ -14847,7 +14878,7 @@ async function githubUpload(token){
         lastTail = pv0;
 
         function openIt(){
-          OPEN[gid] = 1;
+          OPEN[okey(gid)] = 1;
           try{ if(window.wlUser) window.wlUser.set('grp', gid, 1); }catch(e){}   /* ✋ 사람이 폈다 */
           redraw();
           setTimeout(function(){
@@ -14902,7 +14933,7 @@ async function githubUpload(token){
       lastTail = tail;
 
       bar.querySelector('.pg-gfold').addEventListener('click', function(){
-        OPEN[gid] = 0;
+        OPEN[okey(gid)] = 0;
         try{ if(window.wlUser) window.wlUser.set('grp', gid, 0); }catch(e){}     /* ✋ 사람이 접었다 */
         redraw();                                    /* 값이 없어도 접힌다 (v116) */
       });
