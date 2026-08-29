@@ -13031,7 +13031,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v94-0829-1120
+   ✨ 입력칸 3종 세트 (wlSmartField)  v95-0829-1218
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13321,9 +13321,11 @@ async function githubUpload(token){
   }
 
   /* 건드리지 않을 칸 — 이미 다른 자동완성이 붙었거나, 검색창이거나, 짧은 이름칸이 아닌 것 */
-  var SKIP_ID = ['m-title','m-loc','m-field','m-material','m-name','m-contact',
+  var SKIP_ID = ['m-field','m-material','m-name','m-contact',
                  'tpSearchInp','vpSearch','tpCfName','q','v43Search','searchInp',
                  'newMatName','newMatVendor','wlSfBox'];
+  /* 흡수 대상 — 옛 자동완성을 끄고 이 엔진으로 통일한다 (제목·위치) */
+  var TAKEOVER = ['m-title','m-loc'];
   function shouldSkip(inp){
     if(!inp || inp._sfDone) return true;
     var t = (inp.getAttribute('type') || 'text').toLowerCase();
@@ -13332,17 +13334,53 @@ async function githubUpload(token){
     if(!id) return true;                                       /* id 없는 칸은 건너뜀 */
     if(SKIP_ID.indexOf(id) >= 0) return true;
     if(/search|검색/i.test(id)) return true;
-    if(inp.getAttribute('list')) return true;                  /* datalist 붙은 칸 */
-    if(document.getElementById(id + '-list')) return true;     /* 기존 커스텀 목록 */
+    if(TAKEOVER.indexOf(id) < 0){                              /* 흡수 대상은 아래 검사를 건너뛴다 */
+      if(inp.getAttribute('list')) return true;                /* datalist 붙은 칸 */
+      if(document.getElementById(id + '-list')) return true;   /* 기존 커스텀 목록 */
+    }
     if(inp._callACwired || inp._tacWired || inp._fsWired) return true;
     if(inp.readOnly || inp.disabled) return true;
     if(inp.closest && inp.closest('#wlSfBox')) return true;
     return false;
   }
 
+  /* 옛 자동완성 끄기 — 박스를 없애면 옛 코드는 `if(!box) return` 으로 조용히 빠진다 */
+  function takeover(inp){
+    var id = inp.id;
+    if(TAKEOVER.indexOf(id) < 0) return;
+    try{
+      var l = inp.getAttribute('list');
+      if(l){
+        inp.removeAttribute('list');
+        var dl = document.getElementById(l);
+        if(dl && dl.parentNode) dl.parentNode.removeChild(dl);   /* datalist 제거 */
+      }
+      if(id === 'm-title'){
+        var b = document.getElementById('titleAcBox');
+        if(b && b.parentNode) b.parentNode.removeChild(b);       /* 옛 커스텀 드롭다운 제거 */
+        inp._acBound = true;                                     /* 다시 붙지 않게 */
+        migrateOldHidden();                                      /* 지웠던 문구를 이어받는다 */
+      }
+    }catch(e){ console.warn('[입력도우미] 옛 자동완성 끄기 실패 (' + id + ')', e); }
+  }
+
+  /* 옛 숨김 목록(wl_title_hidden)을 새 숨김 목록으로 한 번만 옮긴다 */
+  var _migrated = false;
+  function migrateOldHidden(){
+    if(_migrated) return;
+    _migrated = true;
+    try{
+      var old = JSON.parse(localStorage.getItem('wl_title_hidden') || '[]');
+      if(!Array.isArray(old) || !old.length) return;
+      for(var i = 0; i < old.length; i++) hideVal('title', old[i]);
+      console.log('[입력도우미] 예전에 뺀 제목 ' + old.length + '건을 이어받았습니다');
+    }catch(e){ console.warn('[입력도우미] 옛 숨김 목록 이어받기 실패', e); }
+  }
+
   function attach(inp){
     if(shouldSkip(inp)) return;
     inp._sfDone = true;
+    takeover(inp);
     inp.setAttribute('autocomplete', 'off');
 
     var composing = false;
