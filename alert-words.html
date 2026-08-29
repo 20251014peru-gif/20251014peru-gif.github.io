@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>알림 단어</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --bg:#f6f8fc; --card:#ffffff; --ink:#1f2937; --muted:#6b7684; --faint:#9aa3af;
+    --line:#e5e9f0; --line2:#d6dce6;
+    --primary:#5b7cfa; --primary-ink:#3b57c9; --primary-soft:#e8edff;
+    --hot:#ff6b5e; --hot-ink:#c0392b; --hot-soft:#ffe6e2;
+    --pick:#3fb8a0; --pick-ink:#1f7d6b; --pick-soft:#dff5f0;
+    --off:#8b93a3; --off-ink:#5b6572; --off-soft:#eceff4;
+    --ok:#2e9e63; --ok-soft:#e2f5ea;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:16px; line-height:1.6;
+  }
+  .wrap{max-width:720px; margin:0 auto; padding:14px 14px 90px}
+
+  /* 잠금 */
+  #lock{position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column;
+        align-items:center; justify-content:center; gap:16px; z-index:50; padding:20px}
+  #lock h1{font-size:22px; margin:0}
+  #lock p{margin:0; color:var(--muted); font-size:15px}
+  #pin{font-size:24px; text-align:center; letter-spacing:8px; width:200px; padding:12px;
+       border:2px solid var(--line2); border-radius:12px; background:var(--card)}
+
+  /* 헤더 */
+  header{display:flex; align-items:center; gap:10px; padding:6px 2px 14px}
+  header h1{font-size:21px; margin:0; font-weight:700}
+  .ver{font-size:12px; color:var(--faint); margin-left:2px}
+  .spacer{flex:1}
+  .icon-btn{
+    width:46px; height:46px; border-radius:12px; border:1px solid var(--line);
+    background:var(--card); font-size:21px; cursor:pointer; display:flex;
+    align-items:center; justify-content:center;
+  }
+  .icon-btn:active{background:var(--primary-soft)}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+        padding:14px; margin-bottom:12px}
+
+  /* 설정 */
+  label.f{display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; font-weight:500}
+  label.f:first-child{margin-top:0}
+  input[type=text],input[type=password],textarea{
+    width:100%; padding:12px 13px; font-size:16px; font-family:inherit;
+    border:1px solid var(--line2); border-radius:10px; background:#fbfcfe; color:var(--ink);
+  }
+  input:focus,textarea:focus{outline:2px solid var(--primary); outline-offset:1px; background:#fff}
+  .hint{font-size:13px; color:var(--muted); margin:6px 0 0; line-height:1.55}
+
+  /* 버튼 줄 */
+  .bar{display:flex; gap:8px; margin-bottom:12px}
+  button.act{
+    flex:1; min-height:48px; border-radius:12px; border:1px solid var(--line2);
+    background:var(--card); color:var(--ink); font-size:16px; font-weight:500;
+    font-family:inherit; cursor:pointer;
+  }
+  button.act.on{background:var(--primary); border-color:var(--primary); color:#fff}
+  button.act:active{transform:scale(.985)}
+  button.act[disabled]{opacity:.5}
+  #msg{min-height:22px; font-size:14px; margin:-4px 0 10px; padding:0 3px; color:var(--muted)}
+  #msg.good{color:var(--ok)} #msg.bad{color:var(--hot-ink)}
+
+  /* 단어 그룹 */
+  .grp{margin-bottom:12px; border-radius:var(--radius); border:1px solid var(--line); background:var(--card); overflow:hidden}
+  .grp > .head{display:flex; align-items:center; gap:9px; padding:13px 14px; cursor:pointer; user-select:none}
+  .grp > .head .t{font-weight:700; font-size:16px}
+  .grp > .head .d{font-size:13px; color:var(--muted); font-weight:400}
+  .cnt{margin-left:auto; font-size:13px; color:var(--muted); display:flex; align-items:center; gap:8px}
+  .chev{transition:transform .18s; font-size:13px; color:var(--faint)}
+  .grp.open .chev{transform:rotate(90deg)}
+  .grp > .body{display:none; padding:0 14px 14px}
+  .grp.open > .body{display:block}
+
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px}
+  .chip{
+    display:inline-flex; align-items:center; gap:7px; min-height:38px; padding:0 6px 0 13px;
+    border-radius:19px; font-size:15px; font-weight:500;
+  }
+  .chip .x{
+    width:26px; height:26px; border-radius:50%; border:0; background:rgba(0,0,0,.07);
+    font-size:15px; line-height:1; cursor:pointer; color:inherit; font-family:inherit;
+  }
+  .chip .x:active{background:rgba(0,0,0,.16)}
+  .g-watch .chip{background:var(--hot-soft); color:var(--hot-ink)}
+  .g-only  .chip{background:var(--pick-soft); color:var(--pick-ink)}
+  .g-mute  .chip{background:var(--off-soft); color:var(--off-ink)}
+  .empty{color:var(--faint); font-size:14px; margin:0 0 10px}
+  .add{display:flex; gap:8px}
+  .add input{flex:1}
+  .add button{
+    min-width:64px; min-height:48px; border-radius:10px; border:0; color:#fff;
+    font-size:16px; font-weight:500; font-family:inherit; cursor:pointer;
+  }
+  .g-watch .add button{background:var(--hot)}
+  .g-only  .add button{background:var(--pick)}
+  .g-mute  .add button{background:var(--off)}
+
+  /* 시험 */
+  #tryout textarea{min-height:76px; resize:vertical}
+  .verdict{margin-top:10px; border-radius:12px; padding:12px 13px; font-size:15px; display:none}
+  .verdict.show{display:block}
+  .verdict b{display:block; font-size:17px; margin-bottom:3px}
+  .verdict .why{font-size:13.5px; opacity:.85}
+  .v-send{background:var(--ok-soft); color:#1c6b45}
+  .v-hot{background:var(--hot-soft); color:var(--hot-ink)}
+  .v-skip{background:var(--off-soft); color:var(--off-ink)}
+
+  h2.sec{font-size:15px; margin:0 0 10px; font-weight:700}
+
+  /* 에러 */
+  #err{position:fixed; left:0; right:0; bottom:0; background:#2a1416; color:#ffd9d4;
+       font-size:13px; padding:11px 14px; display:none; z-index:60; max-height:44vh; overflow:auto}
+  #err b{color:#ff9a8d}
+  #err button{float:right; background:none; border:1px solid #5c3a3a; color:#ffd9d4;
+              border-radius:8px; padding:4px 10px; cursor:pointer; font-family:inherit}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+
+<div id="lock">
+  <h1>🔔 알림 단어</h1>
+  <p>PIN을 입력하세요</p>
+  <input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+  <p id="pinmsg" style="color:var(--hot-ink)"></p>
+</div>
+
+<div class="wrap" id="app" hidden>
+
+  <header>
+    <h1>🔔 알림 단어</h1>
+    <span class="ver" id="ver"></span>
+    <span class="spacer"></span>
+    <button class="icon-btn" id="btnSet" title="설정">⚙️</button>
+  </header>
+
+  <div class="card" id="setPanel" hidden>
+    <label class="f">깃허브 토큰</label>
+    <input id="tok" type="password" placeholder="ghp_... 또는 github_pat_..." autocomplete="off">
+    <p class="hint">이 브라우저에만 저장됩니다. <b>Fine-grained 토큰</b>으로 만들고 저장소는 <b>dalnim-alerts 하나만</b>, 권한은 <b>Contents: Read and write</b> 만 주세요.</p>
+    <label class="f">저장소</label>
+    <input id="repo" type="text" placeholder="20251014peru-gif/dalnim-alerts">
+    <label class="f">파일 경로</label>
+    <input id="path" type="text" placeholder="alert_words.json">
+    <label class="f">브랜치</label>
+    <input id="branch" type="text" placeholder="main">
+  </div>
+
+  <div class="bar">
+    <button class="act" id="btnLoad">불러오기</button>
+    <button class="act on" id="btnSave">저장</button>
+  </div>
+  <div id="msg"></div>
+
+  <div class="grp g-watch open" data-key="watch">
+    <div class="head">
+      <span class="t">🔔 긴급 단어</span>
+      <span class="d">있으면 세게 울림</span>
+      <span class="cnt"><span class="n">0</span><span class="chev">›</span></span>
+    </div>
+    <div class="body">
+      <div class="chips"></div>
+      <p class="empty">아직 없습니다</p>
+      <div class="add">
+        <input type="text" placeholder="예) 누수" enterkeyhint="done">
+        <button type="button">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grp g-only" data-key="only">
+    <div class="head">
+      <span class="t">🎯 이것만 받기</span>
+      <span class="d">비우면 전부 받음</span>
+      <span class="cnt"><span class="n">0</span><span class="chev">›</span></span>
+    </div>
+    <div class="body">
+      <div class="chips"></div>
+      <p class="empty">비어 있음 — 모든 알림이 옵니다</p>
+      <div class="add">
+        <input type="text" placeholder="예) [마감]" enterkeyhint="done">
+        <button type="button">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grp g-mute" data-key="mute">
+    <div class="head">
+      <span class="t">🔕 안 받기</span>
+      <span class="d">카톡 기록엔 남음</span>
+      <span class="cnt"><span class="n">0</span><span class="chev">›</span></span>
+    </div>
+    <div class="body">
+      <div class="chips"></div>
+      <p class="empty">아직 없습니다</p>
+      <div class="add">
+        <input type="text" placeholder="예) [유튜브]" enterkeyhint="done">
+        <button type="button">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="tryout">
+    <h2 class="sec">🧪 시험해보기</h2>
+    <textarea id="sample">[마감] 오늘 마감 3건
+- 3층 누수 확인
+- 302호 임차인 계약</textarea>
+    <div class="verdict" id="verdict"></div>
+    <p class="hint">첫 줄이 제목입니다. <b>누수</b>처럼 쓰면 어디에 있든 걸리고, <b>[마감]</b>처럼 대괄호를 씌우면 말머리일 때만 걸립니다.</p>
+  </div>
+
+</div>
+
+<div id="err"><button onclick="document.getElementById('err').style.display='none'">닫기</button><span id="errbody"></span></div>
+
+<script>
+(function(){
+  "use strict";
+  var VER = "v 20260829-2055";
+  var PIN = "102800";
+  var DEF = { repo:"20251014peru-gif/dalnim-alerts", path:"alert_words.json", branch:"main" };
+  var KEYS = ["watch","only","mute"];
+
+  /* ---------- 에러 오버레이 ---------- */
+  function boom(what, e){
+    try{
+      var box=document.getElementById("err"), body=document.getElementById("errbody");
+      body.innerHTML = "<b>🐞 "+what+"</b><br>"+String(e && (e.stack||e.message||e)).replace(/</g,"&lt;");
+      box.style.display="block";
+    }catch(_){}
+  }
+  window.onerror=function(m,s,l,c,e){ boom("오류", e||m+" ("+l+":"+c+")"); };
+  window.addEventListener("unhandledrejection", function(ev){ boom("처리 안 된 오류", ev.reason); });
+
+  function ls(k,v){
+    try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){}
+    return null;
+  }
+  function kstNow(){
+    var d=new Date(Date.now()+9*3600*1000);
+    var p=function(n){return String(n).padStart(2,"0")};
+    return d.getUTCFullYear()+"-"+p(d.getUTCMonth()+1)+"-"+p(d.getUTCDate())+" "+p(d.getUTCHours())+":"+p(d.getUTCMinutes());
+  }
+
+  /* ---------- 잠금 ---------- */
+  var lock=document.getElementById("lock"), app=document.getElementById("app");
+  function unlock(){ lock.style.display="none"; app.hidden=false; start(); }
+  if(ls("shared_pin")===PIN){ unlock(); }
+  document.getElementById("pin").addEventListener("input", function(){
+    if(this.value.length<PIN.length) return;
+    if(this.value===PIN){ ls("shared_pin",PIN); unlock(); }
+    else { document.getElementById("pinmsg").textContent="PIN이 다릅니다"; this.value=""; }
+  });
+
+  /* ---------- 상태 ---------- */
+  var words={watch:[],only:[],mute:[]};
+  var raw=null;   // 파일 원본(설명 줄을 지우지 않으려고 통째로 보관)
+  var sha=null;
+  var $=function(s,r){ return (r||document).querySelector(s) };
+  var $$=function(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)) };
+
+  function say(t, kind){
+    var m=$("#msg"); m.textContent=t||""; m.className=kind||"";
+  }
+  function cfg(){
+    return {
+      tok: $("#tok").value.trim(),
+      repo: $("#repo").value.trim() || DEF.repo,
+      path: $("#path").value.trim() || DEF.path,
+      branch: $("#branch").value.trim() || DEF.branch
+    };
+  }
+
+  /* ---------- 그리기 ---------- */
+  function render(){
+    KEYS.forEach(function(key){
+      var grp=$('.grp[data-key="'+key+'"]');
+      var box=$(".chips",grp), list=words[key]||[];
+      box.innerHTML="";
+      list.forEach(function(w,i){
+        var c=document.createElement("span"); c.className="chip";
+        var t=document.createElement("span"); t.textContent=w; c.appendChild(t);
+        var x=document.createElement("button"); x.className="x"; x.type="button";
+        x.textContent="×"; x.setAttribute("aria-label", w+" 지우기");
+        x.addEventListener("click", function(){ words[key].splice(i,1); render(); test(); });
+        c.appendChild(x); box.appendChild(c);
+      });
+      $(".empty",grp).hidden = list.length>0;
+      $(".n",grp).textContent = list.length;
+      if(list.length>0) grp.classList.add("open");
+    });
+    test();
+  }
+
+  function addWord(key, input){
+    var v=(input.value||"").trim();
+    if(!v) return;
+    v.split(",").forEach(function(one){
+      one=one.trim();
+      if(one && words[key].indexOf(one)<0) words[key].push(one);
+    });
+    input.value=""; render();
+  }
+
+  /* ---------- 판정 (ntfy.py 와 같은 규칙) ---------- */
+  var RULES={ "브리핑":3, "일정":4, "마감":4, "유튜브":2 };
+  function split(text){
+    text=(text||"").trim();
+    var lines=text.split("\n");
+    var title=(lines[0]||"").trim();
+    var kind="";
+    if(title.charAt(0)==="["){
+      var e=title.indexOf("]");
+      if(e>0) kind=title.slice(1,e).trim();
+    }
+    return {title:title, kind:kind, whole:text};
+  }
+  function hits(list, whole, kind){
+    var out=[];
+    (list||[]).forEach(function(w){
+      if(w.charAt(0)==="[" && w.charAt(w.length-1)==="]"){
+        if(kind && kind===w.slice(1,-1).trim()) out.push(w);
+      } else if(whole.indexOf(w)>=0) out.push(w);
+    });
+    return out;
+  }
+  function decide(text){
+    var s=split(text);
+    var m=hits(words.mute, s.whole, s.kind);
+    if(m.length) return {go:false, why:"안 받기 단어 «"+m[0]+"» 때문에 폰으로 안 옵니다", p:0};
+    if(words.only.length && !hits(words.only, s.whole, s.kind).length)
+      return {go:false, why:"‘이것만 받기’ 단어가 하나도 없어서 안 옵니다", p:0};
+    var w=hits(words.watch, s.whole, s.kind);
+    if(w.length) return {go:true, hot:true, why:"긴급 단어 «"+w[0]+"» 가 있습니다", p:5};
+    var p=RULES[s.kind]||3;
+    return {go:true, hot:false, why:"말머리 "+(s.kind?"["+s.kind+"]":"없음")+" 기본값", p:p};
+  }
+  var PTXT={5:"방해금지 뚫고 세게 울림",4:"진동 강하게",3:"보통 알림",2:"소리 없이 목록에만"};
+  function test(){
+    var v=$("#verdict"), r=decide($("#sample").value);
+    v.className="verdict show "+(!r.go?"v-skip":(r.hot?"v-hot":"v-send"));
+    v.innerHTML = "<b>"+(!r.go ? "폰 알림 안 옴" : (r.hot?"🔔 긴급 (5)":"알림 옴 ("+r.p+")"))+"</b>"
+      + "<span class='why'>"+r.why+(r.go?" · "+PTXT[r.p]:"")+"</span>";
+  }
+
+  /* ---------- 깃허브 ---------- */
+  function b64enc(str){
+    var bytes=new TextEncoder().encode(str), bin="";
+    for(var i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function b64dec(b64){
+    var bin=atob((b64||"").replace(/\s/g,""));
+    var bytes=new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    return new TextDecoder("utf-8").decode(bytes);
+  }
+  function api(c){ return "https://api.github.com/repos/"+c.repo+"/contents/"+c.path; }
+  function head(c){
+    return { "Authorization":"Bearer "+c.tok, "Accept":"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28" };
+  }
+
+  function load(){
+    var c=cfg();
+    if(!c.tok){ say("먼저 ⚙️ 에서 깃허브 토큰을 넣어주세요","bad"); return; }
+    say("불러오는 중…");
+    fetch(api(c)+"?ref="+encodeURIComponent(c.branch), {headers:head(c)})
+      .then(function(r){
+        if(r.status===404) throw new Error("파일이 없습니다 — 저장소에 "+c.path+" 를 먼저 올리거나, 여기서 바로 [저장]을 누르면 새로 만듭니다");
+        if(r.status===401||r.status===403) throw new Error("토큰이 거부됐습니다 — 권한(Contents: Read and write)과 저장소 지정을 확인하세요");
+        if(!r.ok) throw new Error("불러오기 실패 ("+r.status+")");
+        return r.json();
+      })
+      .then(function(j){
+        sha=j.sha;
+        var obj=JSON.parse(b64dec(j.content));
+        raw=obj;
+        KEYS.forEach(function(k){ words[k]=Array.isArray(obj[k])?obj[k].slice():[]; });
+        render();
+        say("불러왔습니다 · "+kstNow(),"good");
+      })
+      .catch(function(e){ say(e.message,"bad"); });
+  }
+
+  function save(){
+    var c=cfg();
+    if(!c.tok){ say("먼저 ⚙️ 에서 깃허브 토큰을 넣어주세요","bad"); return; }
+    var obj = raw || {
+      "_설명":"알림 단어 목록. 이 화면에서 고치거나 깃허브 웹에서 직접 고칠 수 있습니다.",
+      "only":[], "watch":[], "mute":[]
+    };
+    KEYS.forEach(function(k){ obj[k]=words[k]; });
+    var body={
+      message:"알림 단어 수정 "+kstNow(),
+      content:b64enc(JSON.stringify(obj,null,2)+"\n"),
+      branch:c.branch
+    };
+    if(sha) body.sha=sha;
+    say("저장하는 중…");
+    fetch(api(c), {method:"PUT", headers:head(c), body:JSON.stringify(body)})
+      .then(function(r){
+        if(r.status===409||r.status===422) throw new Error("다른 곳에서 파일이 바뀌었습니다 — [불러오기]를 먼저 누르고 다시 저장하세요");
+        if(r.status===401||r.status===403) throw new Error("토큰이 거부됐습니다 — 권한을 확인하세요");
+        if(!r.ok) throw new Error("저장 실패 ("+r.status+")");
+        return r.json();
+      })
+      .then(function(j){
+        sha=j.content && j.content.sha; raw=obj;
+        say("저장했습니다 · "+kstNow()+" · 다음 알림부터 적용","good");
+      })
+      .catch(function(e){ say(e.message,"bad"); });
+  }
+
+  /* ---------- 시작 ---------- */
+  function start(){
+    $("#ver").textContent=VER;
+    $("#tok").value = ls("gh_token")||"";
+    $("#repo").value = ls("aw_repo")||DEF.repo;
+    $("#path").value = ls("aw_path")||DEF.path;
+    $("#branch").value = ls("aw_branch")||DEF.branch;
+
+    $("#btnSet").addEventListener("click", function(){
+      var p=$("#setPanel"); p.hidden=!p.hidden;
+    });
+    [["#tok","gh_token"],["#repo","aw_repo"],["#path","aw_path"],["#branch","aw_branch"]]
+      .forEach(function(pair){
+        $(pair[0]).addEventListener("change", function(){ ls(pair[1], this.value.trim()); });
+      });
+
+    $$(".grp").forEach(function(grp){
+      var key=grp.getAttribute("data-key");
+      $(".head",grp).addEventListener("click", function(){ grp.classList.toggle("open"); });
+      var input=$(".add input",grp);
+      $(".add button",grp).addEventListener("click", function(){ addWord(key,input); });
+      input.addEventListener("keydown", function(e){
+        if(e.key==="Enter"){ e.preventDefault(); addWord(key,input); }
+      });
+    });
+
+    $("#btnLoad").addEventListener("click", load);
+    $("#btnSave").addEventListener("click", save);
+    $("#sample").addEventListener("input", test);
+
+    render();
+    if($("#tok").value) load(); else { $("#setPanel").hidden=false; say("⚙️ 에서 깃허브 토큰을 넣고 [불러오기]를 누르세요"); }
+  }
+})();
+</script>
+</body>
+</html>
