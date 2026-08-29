@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v92-0828-1650";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v93-0829-0837";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3266,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=92-20260828t1650"></script>
+<script src="worklog.js?v=93-20260829t0837"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -5613,22 +5613,40 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   }
   window.wlRelayToken = relayToken;
 
-  /* 사용자 클릭 없이 토큰만 새로 받는다 (동의 이력이 있으면 창이 안 뜬다) */
-  function silentRenew(why){
+  /* 토큰만 새로 받는다.
+     ⚠️ byUser=true (사용자가 직접 누름) 일 때만 구글 창을 연다.
+        GIS 는 prompt:'' 라도 팝업을 띄우므로 자동 경로에서는 브라우저가 막는다. */
+  function silentRenew(why, byUser){
     try{
       /* 중계서버가 설정돼 있으면 그쪽이 1순위 — 영구 유지 */
       if(relayCfg()){
-        relayToken(function(ok){ if(!ok) gisRenew(why); });
+        relayToken(function(ok){ if(!ok) gisRenew(why, byUser); });
         return;
       }
-      gisRenew(why);
+      gisRenew(why, byUser);
     }catch(e){ dbgG('자동 갱신 실패: ' + e); }
   }
   /* 갱신이 몰려 로그인 창이 반복해서 뜨는 것을 막는다 */
   var _renewAt = 0, _renewFail = 0;
-  function gisRenew(why){
-    if(!tokenClient){ setTimeout(function(){ gisRenew(why); }, 2000); return; }
+  var _gisWait = 0;
+  function gisRenew(why, byUser){
     if(!localStorage.getItem('wl_gcal_ok')) return;   // 한 번도 연동한 적 없으면 건드리지 않음
+    /* ⚠️ v93 — 사용자가 직접 누른 게 아니면 구글 창을 열지 않는다.
+       GIS 는 prompt:'' 라도 팝업을 띄우기 때문에, 타이머·앱시작에서 부르면
+       브라우저가 막고 콘솔에 [GSI_LOGGER] Failed to open popup window 만 쌓인다.
+       (2026-08-24 캘린더 사고의 재발 — 그때는 signIn() 을 뺐는데 갱신 쪽에 남아 있었다)
+       → 표시만 하고 끝낸다. 사용자가 [🔑 구글 다시 로그인] 을 누르면 그때 연다. */
+    if(!byUser){
+      window.__gcalAuthNeeded = true;
+      dbgG('자동 갱신은 창이 필요해 건너뜀 (' + (why||'') + ') — [🔑 구글 다시 로그인] 을 눌러 주세요');
+      try{ updateGCalBtn('need'); }catch(e){}
+      return;
+    }
+    if(!tokenClient){
+      if(_gisWait++ >= 10){ dbgG('구글 로그인 라이브러리를 못 불러왔어요 (20초 대기 후 중단)'); return; }
+      setTimeout(function(){ gisRenew(why, byUser); }, 2000); return;
+    }
+    _gisWait = 0;
     var now = Date.now();
     if(now - _renewAt < 60000){ dbgG('갱신 건너뜀 (1분 안에 이미 시도: ' + (why||'') + ')'); return; }
     if(_renewFail >= 3){
@@ -6520,7 +6538,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   };
   window.gcalSyncSchedule = syncScheduleAll;   // schedule: 캘린더+Tasks 동시
   // v45-0824: 대기함(outbox)에서 쓰는 전역
-  window.gcalSignIn   = function(){ window.__gcalAuthNeeded = false; signIn(); };
+  window.gcalSignIn   = function(){ window.__gcalAuthNeeded = false; signIn(); };   /* 사용자 클릭 → 팝업 허용 */
+  window.wlGcalRenewByUser = function(why){ try{ silentRenew(why||'사용자', true); }catch(e){ console.warn('[캘린더]', e); } };
   window.gcalHasToken = function(){ return !!accessToken; };
   window.wlGcalToken  = function(){ return accessToken; };
   window.wlCalIdFor   = function(en){ return calIdForEntry(en); };
@@ -18475,6 +18494,12 @@ if('serviceWorker' in navigator){
   function drvAuth(silent){
     _drvWhy = '';
     if(drvLoadToken()) return Promise.resolve(true);
+    /* v93 — 자동 백업은 창을 열지 않는다. 브라우저가 어차피 막는다(위 캘린더와 같은 이유).
+       토큰이 살아 있으면 조용히 올라가고, 없으면 배지로 알린 뒤 사용자가 누를 때 연다. */
+    if(silent){
+      _drvWhy = '자동 갱신은 구글 창이 필요해서 건너뛰었어요 — 화면 위 [🔑 드라이브 백업 끊김] 을 눌러 주세요';
+      return Promise.resolve(false);
+    }
     if(!drvInit()) return Promise.resolve(false);
     return new Promise(function(res){
       _drvWait=res;
