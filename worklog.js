@@ -15714,7 +15714,7 @@ async function githubUpload(token){
   var LS_ON   = 'wl_expmode_on';
   var LS_AUTO = 'wl_expmode_auto';       /* 지출 화면 자동 열기 */
   var LS_MODE = 'wl_modes';              /* 달님이 고친 모드표 */
-  var MVER = 2, LS_MVER = 'wl_modes_ver';
+  var MVER = 3, LS_MVER = 'wl_modes_ver';
 
   /* v116 응용② — 어느 칸이 「모드 스위치」인지 종류마다 다르다 */
   var SWITCH = {
@@ -15733,13 +15733,21 @@ async function githubUpload(token){
         /* v118 달님 설계 — 「자재로 고르면 자재에서 고르기 창이 뜨고,
               밑에 늘 붙어 있던 자재 입력 화면은 없앤다. 금액도 저절로.」 */
         '자재':     { secs:{ mat:false, pics:false, att:false, sub:false, time:false },
-                      props:['_amount'], pick:'mats', hint:'＋ 로 골라 담으면 합계가 저절로 들어갑니다' },
+                      props:['_amount'], pick:'mats',
+                      hint:'＋ 로 골라 담으면 합계가 저절로 들어갑니다 (지출 기록은 안 만듭니다)' },
+        /* v119 — 지출 등록 창을 안 열고 여기서 끝낸다.
+              합계를 넣으면 공급가액·부가세가 거꾸로 계산된다. */
         '개인비용': { secs:{ mat:false, pics:true,  att:false, sub:false, time:false },
-                      props:['_sub','_amount'], pick:'mats', hint:'＋ 로 자재를 담고 영수증 사진을 남기세요' },
+                      props:['_sub','f:purpose','f:supplyAmt','f:taxAmt','_amount'],
+                      pick:'mats', exp:'개인지출',
+                      hint:'합계만 넣어도 공급가액·부가세가 저절로 나뉩니다 · 영수증은 📎 스캔앱' },
         '전표':     { secs:{ mat:false, pics:true,  att:false, sub:false, time:false },
-                      props:['_sub','_amount'], hint:'전표는 사진으로 남겨 두는 것이 안전합니다' },
+                      props:['_sub','f:expSubType','f:purpose','_amount'], exp:'전표',
+                      hint:'전표 구분(전기·수도…)과 용도를 고르세요' },
         '후불청구': { secs:{ mat:false, pics:false, att:true,  sub:false, time:false },
-                      props:['_sub','_amount','f:estimateMemo'], hint:'견적서·계약서는 파일 링크에 걸어 두세요' }
+                      props:['_sub','f:expSubType','f:purpose','f:supplyAmt','f:taxAmt','_amount',
+                             'f:isIssued','f:estimateMemo'], exp:'세금계산서',
+                      hint:'합계를 넣으면 공급가액·부가세가 나뉩니다 · 발급을 마치면 「발급 완료」를 켜세요' }
       },
       expense: {
         '개인지출': { secs:{ mat:true,  pics:true,  att:false, sub:false, time:false },
@@ -15792,7 +15800,9 @@ async function githubUpload(token){
 
   function isOn(){ try{ return localStorage.getItem(LS_ON) !== '0'; }catch(e){ return true; } }
   function setOn(v){ try{ localStorage.setItem(LS_ON, v?'1':'0'); }catch(e){ console.warn('[지출모드] 저장 실패', e); } }
-  function isAuto(){ try{ return localStorage.getItem(LS_AUTO) !== '0'; }catch(e){ return true; } }
+  /* v119 — 이제 업무 기록 안에서 지출을 다 적으므로 창을 따로 열지 않는다.
+        예전 방식이 필요하면 진단 탭에서 켤 수 있다. */
+  function isAuto(){ try{ return localStorage.getItem(LS_AUTO) === '1'; }catch(e){ return false; } }
   function setAuto(v){ try{ localStorage.setItem(LS_AUTO, v?'1':'0'); }catch(e){ console.warn('[지출모드] 저장 실패', e); } }
 
   function ridNow(){
@@ -16038,7 +16048,7 @@ async function githubUpload(token){
 
     var a = document.createElement('button'); a.id='emAuto'; a.style.minHeight='44px';
     function paintA(){
-      a.textContent = isAuto() ? '💸 지출 화면 자동 열림' : '💸 지출 화면 손으로';
+      a.textContent = isAuto() ? '💸 옛 지출 창 자동 열림' : '💸 옛 지출 창 안 열림';
       a.className = 'btn btn-sm ' + (isAuto()?'btn-primary':'btn-ghost'); a.style.minHeight='44px';
     }
     a.addEventListener('click', function(){ setAuto(!isAuto()); paintA(); });
@@ -16055,6 +16065,16 @@ async function githubUpload(token){
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
   else panel();
   setTimeout(panel, 2400);
+
+  /* v119 — 그 모드에서 꼭 필요한 칸 목록. openPage 가 「늘 보이는 칸」으로 쓴다.
+        (비어 있다고 「빈 항목」 뒤로 밀리면 합계와 따로 놀아 보기 나쁘다) */
+  window.wlModeProps = function(kind, val){
+    try{
+      var m = modeFor(kind, String(val==null?'':val).trim());
+      return (m && Array.isArray(m.props)) ? m.props.slice() : [];
+    }catch(e){ return []; }
+  };
+  window.wlModeSwitch = function(kind){ try{ return switchOf(kind); }catch(e){ return ''; } };
 
   window.wlExpMode = {
     on:   function(){ setOn(1); apply(); return '지출종류가 화면을 정합니다'; },
@@ -16371,4 +16391,272 @@ async function githubUpload(token){
                       return Q.length + '개'; }
   };
   console.log('[그리기] v118 준비됨 — 덧붙임은 값 칸 안쪽에, 차례는 한 곳에서 (wlPaint.list())');
+})();
+
+
+/* ============================================================
+   🧾 업무 안에서 지출 끝내기 (wlExpSync)  v119-0829-2320
+
+   달님 : 「지출 등록도 따로 열지 말고 등록 모달에서 만드는 걸로 해.
+           개인 지출이면 사용 내역·용도 고를 수 있게, 공급가액·부가세·합계 나오게,
+           합계금액을 넣으면 역계산도 되게. 세금계산서도 용도·발급 완료까지.
+           전표는 전표 구분·용도. 이제 지출등록 모달 따로 안 나오게.」
+
+   ── 하는 일 두 가지 ────────────────────────────────────
+   ① 세 금액 칸을 서로 맞춘다
+        합계를 넣으면      → 공급가액 = 합계 ÷ 1.1 (반올림) · 부가세 = 합계 − 공급가액
+        공급가액을 넣으면  → 부가세 = 공급가액 × 10% · 합계 = 둘의 합
+        부가세를 고치면    → 합계 = 공급가액 + 부가세
+        (사람이 방금 고친 칸은 절대 안 건드린다)
+
+   ② 지출 기록을 뒤에서 만들고 갱신한다
+        ⚠ 지출 탭·월보고·정산은 **지출 기록(kind:'expense')** 을 세어서 만든다.
+          업무 기록에만 적으면 그 숫자가 통째로 어긋난다.
+          그래서 화면은 하나만 쓰되, 저장은 두 곳에 남긴다.
+        · workId 로 이어 두고, 같은 업무엔 언제나 한 건만 만든다
+        · 업무에서 지운 값은 지출에서도 지운다
+        · 지출 기록을 사람이 직접 고쳤으면(직접수정 표시) 덮어쓰지 않는다
+
+   되돌리기 : 진단 탭 「🧾 지출 자동 연결」 을 끄면 예전처럼 창으로 만든다
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS_ON = 'wl_expsync_on';
+  /* 업무 지출종류 → 지출 기록의 정산종류 */
+  var MAP = { '개인비용':'개인지출', '전표':'전표', '후불청구':'세금계산서' };
+
+  function isOn(){ try{ return localStorage.getItem(LS_ON) !== '0'; }catch(e){ return true; } }
+  function setOn(v){ try{ localStorage.setItem(LS_ON, v?'1':'0'); }catch(e){ console.warn('[지출연결] 저장 실패', e); } }
+
+  function ridNow(){
+    try{ var m = String(location.hash||'').match(/^#lp=([^&]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+    catch(e){ return ''; }
+  }
+  function recOf(id){
+    try{ return (entries||[]).filter(function(x){ return x && x.id === id; })[0] || null; }
+    catch(e){ return null; }
+  }
+  function linkedExp(rid){
+    try{ return (entries||[]).filter(function(e){ return e && e.kind==='expense' && e.workId===rid; })[0] || null; }
+    catch(e){ return null; }
+  }
+  function n(v){ var x = Number(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isFinite(x) ? x : 0; }
+
+  /* ── ① 공급가액 · 부가세 · 합계 맞추기 ────────────────── */
+  function balance(rid, edited){
+    var r = recOf(rid); if(!r) return null;
+    var sup = n(r.supplyAmt), tax = n(r.taxAmt), tot = n(r.cost);
+    var p = {};
+
+    if(edited === 'cost'){
+      if(tot > 0){
+        var s2 = Math.round(tot / 1.1);
+        var t2 = tot - s2;
+        if(s2 !== sup) p.supplyAmt = s2;
+        if(t2 !== tax) p.taxAmt = t2;
+      }else{                                   /* 합계를 지우면 나머지도 비운다 */
+        if(sup) p.supplyAmt = '';
+        if(tax) p.taxAmt = '';
+      }
+    }else if(edited === 'supplyAmt'){
+      if(sup > 0){
+        var t3 = Math.round(sup * 0.1);
+        var c3 = sup + t3;
+        if(t3 !== tax) p.taxAmt = t3;
+        if(c3 !== tot) p.cost = c3;
+      }
+    }else if(edited === 'taxAmt'){
+      var c4 = sup + tax;
+      if(sup > 0 && c4 !== tot) p.cost = c4;
+    }
+    return Object.keys(p).length ? p : null;
+  }
+
+  /* ── ② 지출 기록 만들고 갱신하기 ──────────────────────── */
+  /* ★ v120 — 달님 질문 : 「원래 지출 부분 개인·전표·후불청구는 지출에 다 들어가게
+        되어 있어. 이거 꼬인 거 아니지?」  → 직접 확인해 보니 꼬일 수 있었다.
+
+        · worklog.js 에 이런 주석이 있다 :
+            「v44: syncWorkExpense 비활성화 — 자동 생성/삭제는 더 이상 하지 않음.
+              사용자가 직접 통제」
+          즉 예전에 자동 생성을 **일부러 껐던** 것이다.
+        · 옛 방식(지출 창에서 직접 작성)으로 만든 지출에도 workId 가 붙는다.
+        · 내 코드가 그것을 「내가 만든 것」으로 알고 **덮어쓸 수 있었다.**
+          지출 창에서 넣은 자재 명세·택배비 같은 것이 날아갈 수 있다.
+
+        그래서 규칙을 하나로 못박는다 :
+            ▶ 내가 만든 지출(autoFromWork 표시가 있는 것)만 내가 고친다.
+            ▶ 표시가 없는 지출은 읽기만 하고 **절대 손대지 않는다.**
+        (기본지침 「저장·수정·삭제 3원칙」 — 남이 넣은 값을 잃지 않는다) */
+  function isMine(e){ return !!(e && e.autoFromWork === true); }
+
+  function expPatch(r){
+    var et = MAP[String(r.expType||'').trim()];
+    if(!et) return null;
+    var memo = [ (r.floor||''), (r.field? '['+r.field+']' : '') ].filter(Boolean).join(' ');
+    return {
+      kind:      'expense',
+      workId:    r.id,
+      date:      r.date || '',
+      expType:   et,
+      expSubType:r.expSubType || '',
+      title:     r.title || '',
+      vendor:    r.workVendor || '',
+      field:     r.field || '',
+      purpose:   r.purpose || '',
+      supplyAmt: n(r.supplyAmt) || '',
+      taxAmt:    n(r.taxAmt) || '',
+      amount:    n(r.cost) || 0,
+      isIssued:  !!r.isIssued,
+      isJeonpyo: et === '전표',
+      autoFromWork: true,                 /* ★ 내가 만든 것이라는 표시 */
+      memo:      memo,
+      photos:    Array.isArray(r.photos) ? r.photos : [],
+      scanRefs:  Array.isArray(r.scanRefs) ? r.scanRefs : [],
+      linkedTo:  r.id
+    };
+  }
+  function same(a, b){
+    for(var k in b){
+      if(k === 'photos' || k === 'scanRefs'){
+        if(JSON.stringify(a[k]||[]) !== JSON.stringify(b[k]||[])) return false;
+        continue;
+      }
+      if(String(a[k] == null ? '' : a[k]) !== String(b[k] == null ? '' : b[k])) return false;
+    }
+    return true;
+  }
+
+  function sync(rid, quiet){
+    if(!isOn()) return '';
+    var r = recOf(rid);
+    if(!r || r.kind !== 'work') return '';
+    var want = expPatch(r);
+    var cur  = linkedExp(rid);
+
+    if(!want){                                        /* 지출종류를 없앴다 → 딸린 지출은 그대로 둔다 */
+      if(cur && !quiet && typeof toast === 'function')
+        toast('지출종류를 비웠어요 — 이미 만든 지출 기록은 그대로 둡니다 (지출 탭에서 지우세요)');
+      return '';
+    }
+    if(!cur){
+      if(!(n(r.cost) > 0) && !r.title) return '';     /* 아직 적을 게 없다 */
+      try{
+        var made = addRecord(want);
+        if(!quiet && typeof toast === 'function') toast('🧾 지출 기록을 만들었어요 — 지출 탭에도 올라갑니다');
+        return made ? made.id : '';
+      }catch(e){ console.error('[지출연결] 만들기 실패', e); return ''; }
+    }
+    /* ★ 내가 만든 것이 아니면 읽기만 한다 — 지출 창에서 직접 넣은 값을 지키기 위해 */
+    if(!isMine(cur)){
+      if(!quiet && typeof toast === 'function')
+        toast('이 업무엔 직접 만든 지출 기록이 있어요 — 그쪽 값은 건드리지 않습니다');
+      return cur.id;
+    }
+    if(same(cur, want)) return cur.id;
+    try{
+      updateRecord(cur.id, want);
+      if(!quiet && typeof toast === 'function') toast('🧾 지출 기록도 함께 고쳤어요');
+    }catch(e){ console.error('[지출연결] 갱신 실패', e); }
+    return cur.id;
+  }
+
+  /* ── 값이 바뀌면 : 금액 맞추기 → 지출 반영 ────────────── */
+  var WATCH = { '_amount':'cost', 'f:supplyAmt':'supplyAmt', 'f:taxAmt':'taxAmt' };
+  var ALSO  = { 'f:expType':1, 'f:expSubType':1, 'f:purpose':1, 'f:isIssued':1,
+                '_sub':1, '_date':1, 'f:field':1, 'f:floor':1 };
+  var timer = null;
+
+  function afterEdit(prow){
+    var rid = ridNow(); if(!rid) return;
+    clearTimeout(timer);
+    timer = setTimeout(function(){
+      try{
+        var edited = WATCH[prow] || '';
+        var p = edited ? balance(rid, edited) : null;
+        if(p){
+          updateRecord(rid, p);
+          setTimeout(function(){
+            try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
+          }, 120);
+        }
+        sync(rid, false);
+      }catch(e){ console.warn('[지출연결] 반영 실패', e); }
+    }, 420);                                  /* 편집이 저장된 뒤에 돈다 */
+  }
+
+  document.addEventListener('change', function(ev){
+    var t = ev.target;
+    if(!t || !t.classList || !t.classList.contains('lf-ie')) return;
+    try{
+      var row = t.closest('[data-prow]'); if(!row) return;
+      var k = row.getAttribute('data-prow');
+      if(WATCH[k] || ALSO[k]) afterEdit(k);
+    }catch(e){}
+  }, true);
+  /* 제목·내용은 blur 로 저장되므로 따로 본다 */
+  document.addEventListener('blur', function(ev){
+    var t = ev.target;
+    if(t && t.id === 'pgTitle') afterEdit('');
+  }, true);
+
+  /* 화면을 그릴 때마다 조용히 한 번 맞춘다 (자재 합계가 바뀐 경우 등) */
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:45, n:'지출 자동 연결', f:function(){
+    try{
+      var rid = ridNow(); if(!rid) return;
+      var r = recOf(rid); if(!r || r.kind !== 'work') return;
+      if(!MAP[String(r.expType||'').trim()]) return;
+      sync(rid, true);
+    }catch(e){ console.warn('[지출연결] 살피기 실패', e); }
+  }});
+
+  /* ── 진단 탭 스위치 ── */
+  function panel(){
+    var host = document.getElementById('sfPanel');
+    if(!host || document.getElementById('esBtn')) return;
+    var row = host.querySelector('.btn-row'); if(!row) return;
+    var b = document.createElement('button'); b.id='esBtn'; b.style.minHeight='44px';
+    function paint(){
+      b.textContent = isOn() ? '🧾 지출 자동 연결 켜짐' : '🧾 지출 자동 연결 꺼짐';
+      b.className = 'btn btn-sm ' + (isOn()?'btn-primary':'btn-ghost'); b.style.minHeight='44px';
+    }
+    b.addEventListener('click', function(){ setOn(!isOn()); paint(); });
+    paint(); row.appendChild(b);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
+  else panel();
+  setTimeout(panel, 2800);
+
+  window.wlExpSync = {
+    /* 🔎 업무에 딸린 지출이 「자동」인지 「직접」인지 전부 보여준다 (덮어쓰기 걱정 확인용) */
+    check: function(){
+      var out = [];
+      try{
+        (entries||[]).forEach(function(e){
+          if(!e || e.kind !== 'expense' || !e.workId) return;
+          var w = recOf(e.workId);
+          out.push({
+            업무: w ? (w.date + ' ' + (w.title||'(제목없음)')).slice(0,28) : '(업무 없음)',
+            지출종류: e.expType || '',
+            금액: n(e.amount),
+            만든이: isMine(e) ? '🤖 자동' : '✋ 직접(안 건드림)',
+            내역: (e.title||'').slice(0,20)
+          });
+        });
+      }catch(err){ console.warn('[지출연결] 점검 실패', err); }
+      console.table(out);
+      var mine = out.filter(function(x){ return x.만든이.indexOf('자동')>=0; }).length;
+      return out.length + '건 (자동 ' + mine + ' · 직접 ' + (out.length-mine) + ')';
+    },
+    now:  function(){ var r = ridNow(); return r ? (sync(r, false) || '만들 것이 없습니다') : '기록을 먼저 여세요'; },
+    show: function(){
+      var r = ridNow(), e = r ? linkedExp(r) : null;
+      if(!e) return '이 업무에 연결된 지출 기록이 없습니다';
+      console.table([e]); return e.id;
+    },
+    on:   function(){ setOn(1); return '업무에서 적으면 지출 기록이 함께 만들어집니다'; },
+    off:  function(){ setOn(0); return '지출 기록을 따로 만들지 않습니다'; }
+  };
+  console.log('[지출연결] v119 준비됨 — 업무에서 적으면 지출 기록이 뒤에서 함께 만들어집니다');
 })();
