@@ -14772,18 +14772,25 @@ async function githubUpload(token){
       used[g.head] = 1;
       rows.forEach(function(r){ used[r.k] = 1; });
 
-      /* ── ① 대표 값이 있고, 사람이 펼쳐두지 않았으면 → 한 줄로 접는다 ── */
-      if(hVal && !hRow._gOpen){
+      /* ── ① 접혀 있으면 한 줄로 ──
+            v116 — 달님 : 「접고 펴기는 항상 있어야 하는데 나오다 안 나오다 그래」
+            예전에는 대표 값(업체 이름)이 있어야만 접혔다. 업체가 비어 있으면
+            접기 단추가 아무 일도 안 해서 「안 된다」로 보였다.
+            → 값이 하나라도 있으면 접을 수 있다. 대표 값이 비어 있으면
+              「(업체 없음)」 이라고 적어 준다. */
+      var anyVal = hVal || parts.length;
+      if(anyVal && !hRow._gOpen){
         var line = document.createElement('div');
         line.className = 'pg-prow wide pg-grow';
         line.setAttribute('data-gid', g.id || '');    /* v113 — 어떤 묶음인지 (↩ 단추가 찾아 쓴다) */
         var sep = g.sep || ' · ';
+        var hTxt = hVal || ('(' + (labelOf(hRow) || '대표 값') + ' 없음)');
         line.innerHTML =
             '<div class="pg-gk">' + (g.icon || '🔗') + '</div>'
           + '<div class="pg-gv">'
           +   (g.even                                    /* 대등한 묶음 — 굵기를 같게 */
-                ? ES([hVal].concat(parts).join(sep))
-                : '<b>' + ES(hVal) + '</b>'
+                ? ES([hVal].concat(parts).filter(Boolean).join(sep))
+                : (hVal ? '<b>' + ES(hVal) + '</b>' : '<span class="pg-gnone">' + ES(hTxt) + '</span>')
                   + (parts.length ? '<span class="pg-gsep">' + ES(sep) + '</span>' + ES(parts.join(' · ')) : ''))
           + '</div>'
           + '<button type="button" class="pg-gb" title="펼쳐서 고치기">펼치기</button>';
@@ -14828,11 +14835,7 @@ async function githubUpload(token){
       putAfter(tail, prev);
 
       bar.querySelector('.pg-gfold').addEventListener('click', function(){
-        if(!hVal){                                   /* 값이 없으면 접을 게 없다 → 알려준다 */
-          if(typeof toast === 'function') toast((labelOf(hRow)||'대표 값') + ' 을 넣으면 한 줄로 접혀요');
-          return;
-        }
-        hRow._gOpen = 0; run();
+        hRow._gOpen = 0; run();                      /* 값이 없어도 접힌다 (v116) */
       });
     });
   }
@@ -15408,14 +15411,24 @@ async function githubUpload(token){
         지하1층 전기 「승강기 홀 등기구 교체」 — B1 승강기 홀 3등 점멸.
         사용 자재는 형광등(20W) 3개, 안정기(220V) 1개.
   */
+  /* 대상년도·대상월이 있으면 문장 맨 앞에 — 「2026년 8월 …」 (v116) */
+  function whenOf(page){
+    var y = vOf(page, 'f:refYear'), m = vOf(page, 'f:refMonth');
+    y = y.replace(/[^0-9]/g, ''); m = m.replace(/[^0-9]/g, '');
+    if(y && m) return y + '년 ' + Number(m) + '월';
+    if(y) return y + '년';
+    if(m) return Number(m) + '월';
+    return '';
+  }
   function oneLine(){
     var page = document.querySelector('.lf-page'); if(!page) return '';
+    var when  = whenOf(page);
     var floor = vOf(page, 'f:floor');
     var field = vOf(page, 'f:field');
     var ttl   = titleOf(page);
     var memo  = vOf(page, '_memo');
 
-    var where = [floor, field].filter(Boolean).join(' ');
+    var where = [when, floor, field].filter(Boolean).join(' ');
     var head  = '';
     if(where && ttl)      head = where + ' 「' + ttl + '」';
     else if(ttl)          head = '「' + ttl + '」';
@@ -15505,8 +15518,9 @@ async function githubUpload(token){
       var bid  = 'pgAutoUndo_' + g.gid;
       var old  = page.querySelector('#' + bid);
       if(!mine.length && !hasHead){ if(old) old.remove(); return; }
-      var label = '↩ ' + (g.name || '') + ' 지우기'
-                + (mine.length ? ' (' + (mine.length + (hasHead?1:0)) + '칸)' : '');
+      /* v116 — 「언제는 4칸 언제는 5칸」 이라 헷갈린다는 지적.
+            숫자는 그때그때 남아 있는 값에 따라 달라지므로 밖으로 내지 않는다. */
+      var label = '↩ ' + (g.name || '') + ' 지우기';
       if(old){ old.textContent = label; return; }
       var host = hostFor(page, g); if(!host) return;
       var b = document.createElement('button');
@@ -15722,24 +15736,80 @@ async function githubUpload(token){
 
   var LS_ON   = 'wl_expmode_on';
   var LS_AUTO = 'wl_expmode_auto';       /* 지출 화면 자동 열기 */
+  var LS_MODE = 'wl_modes';              /* 달님이 고친 모드표 */
+  var MVER = 2, LS_MVER = 'wl_modes_ver';
 
-  /* 모드별로 무엇을 보여줄지 — 영역(sec) 과 속성 칸(prow) */
-  var MODE = {
-    '자재':     { secs:{ mat:true,  pics:false, att:false, sub:false, time:false },
-                  props:['_amount'],
-                  hint:'자재 사용 내역에 담으면 합계가 저절로 계산됩니다' },
-    '개인비용': { secs:{ mat:true,  pics:true,  att:false, sub:false, time:false },
-                  props:['_sub','_amount'],
-                  hint:'영수증 사진을 함께 남겨 두세요' },
-    '전표':     { secs:{ mat:false, pics:true,  att:false, sub:false, time:false },
-                  props:['_sub','_amount'],
-                  hint:'전표는 사진으로 남겨 두는 것이 안전합니다' },
-    '후불청구': { secs:{ mat:false, pics:false, att:true,  sub:false, time:false },
-                  props:['_sub','_amount','f:estimateMemo'],
-                  hint:'견적서·계약서는 파일 링크에 걸어 두세요' }
+  /* v116 응용② — 어느 칸이 「모드 스위치」인지 종류마다 다르다 */
+  var SWITCH = {
+    work:     'f:expType',    /* 지출종류 */
+    expense:  'f:expType',    /* 종류 */
+    accident: 'f:accType',    /* 사고 종류 */
+    stock:    'f:stockType',  /* 입출고 구분 */
+    vacation: 'f:vtype'       /* 휴가 종류 */
   };
+
+  /* 모드표 — 종류 > 고른 값 > {영역, 칸, 안내}
+     영역 이름 : sub(하위항목) time(소요시간) mat(자재내역) att(파일링크) body(본문) pics(사진) */
+  function baseModes(){
+    return {
+      work: {
+        '자재':     { secs:{ mat:true,  pics:false, att:false, sub:false, time:false },
+                      props:['_amount'], hint:'자재 사용 내역에 담으면 합계가 저절로 계산됩니다' },
+        '개인비용': { secs:{ mat:true,  pics:true,  att:false, sub:false, time:false },
+                      props:['_sub','_amount'], hint:'영수증 사진을 함께 남겨 두세요' },
+        '전표':     { secs:{ mat:false, pics:true,  att:false, sub:false, time:false },
+                      props:['_sub','_amount'], hint:'전표는 사진으로 남겨 두는 것이 안전합니다' },
+        '후불청구': { secs:{ mat:false, pics:false, att:true,  sub:false, time:false },
+                      props:['_sub','_amount','f:estimateMemo'], hint:'견적서·계약서는 파일 링크에 걸어 두세요' }
+      },
+      expense: {
+        '개인지출': { secs:{ mat:true,  pics:true,  att:false, sub:false, time:false },
+                      props:['_sub','_amount','f:purpose'], hint:'영수증 사진을 남겨 두세요' },
+        '세금계산서':{ secs:{ mat:false, pics:false, att:true,  sub:false, time:false },
+                      props:['_sub','_amount','f:isIssued','f:supplyAmt','f:taxAmt'],
+                      hint:'발행 여부와 공급가액·부가세를 확인하세요' },
+        '전표':     { secs:{ mat:false, pics:true,  att:false, sub:false, time:false },
+                      props:['_sub','_amount','f:isJeonpyo'], hint:'전표는 사진으로 남겨 두세요' },
+        '급여':     { secs:{ mat:false, pics:false, att:true,  sub:false, time:false },
+                      props:['_amount'], hint:'급여 명세는 파일 링크로 걸어 두세요' }
+      },
+      accident: {
+        'default':  { secs:{ pics:true, att:true, body:true, mat:false, sub:false, time:false },
+                      props:['_sub','f:partyType','f:partyPhone','f:followUp'],
+                      hint:'현장 사진과 후속 조치를 꼭 남겨 두세요' }
+      },
+      stock: {
+        '입고':     { secs:{ mat:false, pics:true, att:true, sub:false, time:false },
+                      props:['_sub','f:qty','f:unitPrice','f:docNo'], hint:'전표·계산서 번호를 적어 두세요' },
+        '출고':     { secs:{ mat:false, pics:false, att:false, sub:false, time:false },
+                      props:['f:qty','f:useTarget'], hint:'어디에 썼는지(사용처)를 적어 두세요' }
+      }
+    };
+  }
+  function loadModes(){
+    try{
+      if(String(localStorage.getItem(LS_MVER)) !== String(MVER)){
+        localStorage.removeItem(LS_MODE); localStorage.setItem(LS_MVER, String(MVER));
+        return baseModes();
+      }
+      var raw = localStorage.getItem(LS_MODE);
+      if(!raw) return baseModes();
+      var o = JSON.parse(raw);
+      return (o && typeof o === 'object') ? o : baseModes();
+    }catch(e){ console.warn('[지출모드] 읽기 실패', e); return baseModes(); }
+  }
+  function saveModes(o){
+    try{ localStorage.setItem(LS_MODE, JSON.stringify(o)); localStorage.setItem(LS_MVER, String(MVER)); }
+    catch(e){ console.warn('[지출모드] 저장 실패', e); }
+  }
+
   var EXPENSE = { '개인비용':1, '전표':1, '후불청구':1 };   /* 지출 기록이 따라붙는 종류 */
   var NONE_SECS = { mat:false, pics:false, att:false, sub:false, time:false };
+  function modeFor(kind, val){
+    var mm = loadModes()[kind]; if(!mm) return null;
+    return mm[val] || mm['default'] || null;
+  }
+  function switchOf(kind){ return SWITCH[kind] || ''; }
 
   function isOn(){ try{ return localStorage.getItem(LS_ON) !== '0'; }catch(e){ return true; } }
   function setOn(v){ try{ localStorage.setItem(LS_ON, v?'1':'0'); }catch(e){ console.warn('[지출모드] 저장 실패', e); } }
@@ -15763,10 +15833,12 @@ async function githubUpload(token){
     if(!isOn()) return;
     var page = document.querySelector('.lf-page'); if(!page) return;
     var rid = ridNow(); if(!rid) return;
-    var rec = recOf(rid); if(!rec || rec.kind !== 'work') return;
+    var rec = recOf(rid); if(!rec) return;
 
-    var et = String(rec.expType || '').trim();
-    var m  = MODE[et] || null;
+    var sw = switchOf(rec.kind);
+    if(!sw) return;
+    var et = String(rec[sw.slice(2)] || '').trim();
+    var m  = modeFor(rec.kind, et);
 
     /* ① 아래 영역 — 필요한 것만 */
     try{
@@ -15785,7 +15857,7 @@ async function githubUpload(token){
 
     /* ③ 안내 한 줄 */
     try{
-      var row = page.querySelector('[data-prow="f:expType"]');
+      var row = page.querySelector('[data-prow="' + sw + '"]');
       var pv  = row && row.querySelector('.pg-pv');
       var old = page.querySelector('#pgModeHint');
       if(!m || !pv){ if(old) old.remove(); }
@@ -15793,7 +15865,9 @@ async function githubUpload(token){
         if(!old){
           old = document.createElement('div');
           old.id = 'pgModeHint'; old.className = 'pg-modehint';
-          pv.parentNode.insertBefore(old, pv.nextSibling);
+          /* v116 — 줄(.pg-prow)은 flex 라서 형제로 넣으면 값 상자가 눌려 좁아진다.
+                (달님 스크린샷 : 「자/재」 가 세로로 쪼개짐) → 값칸 **안쪽 아래**에 넣는다 */
+          pv.appendChild(old);
         }
         old.textContent = '· ' + m.hint;
       }
@@ -15805,6 +15879,8 @@ async function githubUpload(token){
     var rid = ridNow(); if(!rid) return;
     setTimeout(apply, 250);                       /* 저장이 끝난 뒤 화면을 맞춘다 */
 
+    var rec0 = recOf(rid);
+    if(!rec0 || rec0.kind !== 'work') return;     /* 지출 화면 자동 열기는 업무에서만 */
     if(!isAuto() || !EXPENSE[newVal]) return;
     setTimeout(function(){
       try{
@@ -15822,7 +15898,9 @@ async function githubUpload(token){
     if(!t || t.tagName !== 'SELECT' || !t.classList || !t.classList.contains('lf-ie')) return;
     try{
       var row = t.closest('[data-prow]');
-      if(!row || row.getAttribute('data-prow') !== 'f:expType') return;
+      if(!row) return;
+      var rec1 = recOf(ridNow());
+      if(!rec1 || row.getAttribute('data-prow') !== switchOf(rec1.kind)) return;
       onPick(String(t.value || '').trim());
     }catch(e){ console.warn('[지출모드] 고르기 감지 실패', e); }
   }, true);
@@ -15835,6 +15913,97 @@ async function githubUpload(token){
       else if(!pr){ seen = null; }
     }catch(e){ console.warn('[지출모드] 파수꾼 실패', e); }
   }, 400);
+
+  /* ── 응용① 모드를 달님이 직접 고치는 창 ────────────────
+        「어떤 값을 고르면 · 어느 영역이 열리고 · 어떤 칸이 나오는지」를
+        표로 보여 주고 체크로 바꾼다. 새 모드를 만들 수도 있다. */
+  var SECN = { sub:'🧷 하위 항목', time:'⏱ 소요 시간', mat:'📦 자재 내역',
+               att:'📎 파일 링크', body:'📝 본문', pics:'📷 사진' };
+
+  function ES2(x){ return String(x==null?'':x).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function openMgr(){
+    var all = loadModes();
+    var kinds = Object.keys(all);
+    var cur = (function(){ var r = recOf(ridNow()); return (r && all[r.kind]) ? r.kind : kinds[0]; })();
+
+    var ov = document.createElement('div');
+    ov.className = 'rl-ov';
+    function draw(){
+      var mm = all[cur] || {};
+      ov.innerHTML =
+          '<div class="rl-mod">'
+        +   '<div class="rl-head"><b>🎛 모드 고치기</b>'
+        +     '<button type="button" id="mmX" class="rl-x">✕</button></div>'
+        +   '<div class="rl-note">「어떤 값을 고르면 아래 어느 영역이 열리는지」를 정합니다. '
+        +     '내용이 들어 있는 영역은 어떤 모드에서도 감추지 않습니다.</div>'
+        +   '<div class="mm-tabs">'
+        +     kinds.map(function(k){
+              return '<button type="button" class="mm-tab' + (k===cur?' on':'') + '" data-mk="' + ES2(k) + '">'
+                   + ES2(k) + ' <span>' + ES2(switchOf(k) || '-') + '</span></button>'; }).join('')
+        +   '</div>'
+        +   '<div class="rl-list">'
+        +     Object.keys(mm).map(function(v){
+              var m = mm[v];
+              return '<div class="mm-row">'
+                + '<div class="mm-name"><b>' + ES2(v) + '</b>'
+                +   '<button type="button" class="mm-del" data-mdel="' + ES2(v) + '" title="이 모드 빼기">✕</button></div>'
+                + '<div class="mm-secs">'
+                +   Object.keys(SECN).map(function(sk){
+                      var on = !!(m.secs && m.secs[sk]);
+                      return '<button type="button" class="mm-s' + (on?' on':'') + '" data-ms="' + ES2(v) + '|' + sk + '">'
+                           + SECN[sk] + '</button>'; }).join('')
+                + '</div>'
+                + '<input class="mm-hint" data-mh="' + ES2(v) + '" value="' + ES2(m.hint||'') + '" placeholder="안내 한 줄 (선택)">'
+                + '</div>'; }).join('')
+        +   '</div>'
+        +   '<div class="rl-add"><b>＋ 새 모드</b>'
+        +     '<input id="mmNew" placeholder="고를 값 이름 (예: 청소, 점검)">'
+        +     '<button type="button" id="mmAdd">넣기</button></div>'
+        +   '<div class="rl-foot"><button type="button" id="mmReset">처음으로 되돌리기</button>'
+        +     '<span class="rl-hint">' + ES2(cur) + ' 의 스위치 칸 : ' + ES2(switchOf(cur)||'없음') + '</span></div>'
+        + '</div>';
+
+      ov.querySelectorAll('[data-mk]').forEach(function(b){
+        b.addEventListener('click', function(){ cur = b.getAttribute('data-mk'); draw(); }); });
+      ov.querySelectorAll('[data-ms]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var pr = b.getAttribute('data-ms').split('|');
+          var m = all[cur][pr[0]]; if(!m) return;
+          m.secs = m.secs || {};
+          m.secs[pr[1]] = !m.secs[pr[1]];
+          saveModes(all); draw(); apply();
+        }); });
+      ov.querySelectorAll('[data-mh]').forEach(function(i){
+        i.addEventListener('change', function(){
+          var m = all[cur][i.getAttribute('data-mh')]; if(!m) return;
+          m.hint = i.value; saveModes(all); apply();
+        }); });
+      ov.querySelectorAll('[data-mdel]').forEach(function(b){
+        b.addEventListener('click', function(){
+          delete all[cur][b.getAttribute('data-mdel')]; saveModes(all); draw(); apply();
+        }); });
+      var addB = ov.querySelector('#mmAdd');
+      if(addB) addB.addEventListener('click', function(){
+        var v = (ov.querySelector('#mmNew').value || '').trim();
+        if(!v){ alert('고를 값 이름을 적어 주세요'); return; }
+        all[cur] = all[cur] || {};
+        all[cur][v] = { secs:{ mat:false, pics:false, att:false, sub:false, time:false }, props:[], hint:'' };
+        saveModes(all); draw(); apply();
+      });
+      var rs = ov.querySelector('#mmReset');
+      if(rs) rs.addEventListener('click', function(){
+        try{ localStorage.removeItem(LS_MODE); localStorage.removeItem(LS_MVER); }catch(e){}
+        all = loadModes(); draw(); apply();
+      });
+      var xb = ov.querySelector('#mmX');
+      if(xb) xb.addEventListener('click', function(){ ov.remove(); apply(); });
+    }
+    draw();
+    document.body.appendChild(ov);
+    ov.addEventListener('mousedown', function(e){ if(e.target === ov){ ov.remove(); apply(); } });
+  }
 
   /* ── 진단 탭 스위치 ── */
   function panel(){
@@ -15856,6 +16025,14 @@ async function githubUpload(token){
     }
     a.addEventListener('click', function(){ setAuto(!isAuto()); paintA(); });
     paintA(); row.appendChild(a);
+
+    if(!document.getElementById('emMgr')){
+      var m2 = document.createElement('button');
+      m2.id = 'emMgr'; m2.className = 'btn btn-ghost btn-sm'; m2.style.minHeight = '44px';
+      m2.textContent = '⚙ 모드 고치기';
+      m2.addEventListener('click', openMgr);
+      row.appendChild(m2);
+    }
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
   else panel();
@@ -15866,9 +16043,21 @@ async function githubUpload(token){
     off:  function(){ setOn(0); try{ window.wlSecForce(null); }catch(e){} return '늘 다 보여줍니다'; },
     auto: function(v){ setAuto(v !== false); return isAuto() ? '지출 화면이 저절로 열립니다' : '손으로 엽니다'; },
     run:  function(){ apply(); return '다시 맞췄습니다'; },
-    modes:function(){ console.table(Object.keys(MODE).map(function(k){
-            return { 종류:k, 영역:Object.keys(MODE[k].secs).filter(function(x){return MODE[k].secs[x];}).join(','),
-                     칸:MODE[k].props.join(',') }; })); return Object.keys(MODE).length + '가지'; }
+    modes:function(){
+      var all = loadModes(), rows = [];
+      Object.keys(all).forEach(function(k){
+        Object.keys(all[k]).forEach(function(v){
+          var m = all[k][v];
+          rows.push({ 종류:k, 스위치:switchOf(k), 고른값:v,
+                      영역:Object.keys(m.secs||{}).filter(function(x){ return m.secs[x]; }).join(','),
+                      칸:(m.props||[]).join(','), 안내:m.hint||'' });
+        });
+      });
+      console.table(rows); return rows.length + '가지';
+    },
+    open: function(){ openMgr(); return '모드 고치기 창'; },
+    reset:function(){ try{ localStorage.removeItem(LS_MODE); localStorage.removeItem(LS_MVER); }catch(e){}
+                      apply(); return '처음 모드로 되돌렸습니다'; }
   };
   console.log('[지출모드] v115 준비됨 — 지출종류가 아래 영역·칸을 정합니다 (wlExpMode.modes())');
 })();
@@ -15977,7 +16166,58 @@ async function githubUpload(token){
     return d.ghosts.length ? ('👻 숨은 값 ' + d.ghosts.length + '군데') : '✅ 숨은 값 없음';
   }
 
+  /* 응용③ — 찾은 👻 숨은 값을 한 번에 정리한다.
+        화면에 보이는 값은 그대로 두고, 뒤에 숨어 있던 값만 비운다.
+        (다른 기본칸이 쓰는 칸은 애초에 지도에 안 잡히므로 안전하다) */
+  function sweep(){
+    var d = build();
+    if(d.err){ if(typeof toast === 'function') toast(d.err); return d.err; }
+    if(!d.ghosts.length){ if(typeof toast === 'function') toast('✅ 숨은 값이 없습니다'); return '없음'; }
+
+    var rid = ridNow(), rec = recOf(rid);
+    var bm = bmapOf(rec.kind) || {};
+    var used = {};
+    for(var ok in bm){ (bm[ok]||[]).forEach(function(k){ used[k] = (used[k]||0) + 1; }); }
+
+    var patch = {}, names = [];
+    Object.keys(bm).forEach(function(pid){
+      var keys = bm[pid] || [];
+      var shownK = null;
+      for(var i=0;i<keys.length;i++){
+        var v = rec[keys[i]];
+        if(v != null && String(v) !== ''){ shownK = keys[i]; break; }
+      }
+      if(!shownK) return;
+      for(var j=0;j<keys.length;j++){
+        var k = keys[j];
+        if(k === shownK) continue;
+        if(used[k] > 1) continue;                       /* 다른 기본칸도 쓰는 칸은 안 건드린다 */
+        var cv = rec[k];
+        if(cv == null || String(cv) === '') continue;
+        patch[k] = '';
+        names.push(k + '=' + String(cv).slice(0,20));
+      }
+    });
+    if(!Object.keys(patch).length){
+      if(typeof toast === 'function') toast('정리할 숨은 값이 없습니다 (다른 칸이 함께 쓰는 값은 그대로 둡니다)');
+      return '없음';
+    }
+    if(!confirm('숨어 있던 값 ' + names.length + '개를 비웁니다.\n\n'
+              + names.join('\n') + '\n\n화면에 보이는 값은 그대로 둡니다. 계속할까요?')) return '취소';
+    try{
+      if(typeof updateRecord === 'function') updateRecord(rid, patch);
+      if(typeof toast === 'function') toast('🧹 숨은 값 ' + names.length + '개를 정리했어요');
+      setTimeout(function(){ try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){} }, 150);
+      return '정리 ' + names.length + '개';
+    }catch(e){
+      console.error('[칸 지도] 정리 실패', e);
+      if(typeof toast === 'function') toast('정리하지 못했어요: ' + (e.message||e));
+      return '실패';
+    }
+  }
+
   window.wlFieldMap = run;
+  window.wlFieldSweep = sweep;
 
   function panel(){
     var host = document.getElementById('sfPanel');
@@ -15992,6 +16232,15 @@ async function githubUpload(token){
       if(typeof toast === 'function') toast(String(r));
     });
     row.appendChild(b);
+
+    if(!document.getElementById('fsBtn')){
+      var c = document.createElement('button');
+      c.id='fsBtn'; c.className='btn btn-ghost btn-sm'; c.style.minHeight='44px';
+      c.textContent = '🧹 숨은 값 정리';
+      c.title = '지도에서 찾은 👻 숨은 값만 비웁니다 (보이는 값은 그대로)';
+      c.addEventListener('click', function(){ sweep(); });
+      row.appendChild(c);
+    }
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
   else panel();
