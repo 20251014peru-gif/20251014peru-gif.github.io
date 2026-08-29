@@ -27,7 +27,11 @@
     "#nrpop .x{margin-top:16px;width:100%;min-height:46px;border:0;border-radius:12px;",
     "background:#3b57c9;color:#fff;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer}",
     "tbody td.summary .sumline{display:block;overflow:hidden;text-overflow:ellipsis;",
-    "white-space:nowrap;cursor:pointer}","tbody tr.read{opacity:1!important}","tbody tr.read .rdot{background:transparent!important;position:relative}","tbody tr.read .rdot::after{content:'✓';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:13px;line-height:1;font-weight:700;color:#9aa3af}"
+    "white-space:nowrap;cursor:pointer}",
+    "tbody tr.read{opacity:1!important}",
+    "tbody tr.read .rdot{background:transparent!important;position:relative}",
+    "tbody tr.read .rdot::after{content:'\u2713';position:absolute;left:50%;top:50%;",
+    "transform:translate(-50%,-50%);font-size:13px;line-height:1;font-weight:700;color:#9aa3af}"
   ].join("");
   var st = document.createElement("style");
   st.id = "nrPatchCss";
@@ -70,9 +74,16 @@
 
   /* ---------- 도우미 ---------- */
   function byId(id) {
-    if (!window.NEWS || !NEWS.length) return null;
-    for (var i = 0; i < NEWS.length; i++) {
-      if (NEWS[i].id === id) return NEWS[i];
+    if (window.NEWS && NEWS.length) {
+      for (var i = 0; i < NEWS.length; i++) {
+        if (NEWS[i].id === id) return NEWS[i];
+      }
+    }
+    /* 오래된 스크랩은 NEWS 목록에서 빠지므로 스크랩 보관함도 뒤진다 */
+    if (window.scraps && scraps.length) {
+      for (var j = 0; j < scraps.length; j++) {
+        if (scraps[j] && scraps[j].n && scraps[j].n.id === id) return scraps[j].n;
+      }
     }
     return null;
   }
