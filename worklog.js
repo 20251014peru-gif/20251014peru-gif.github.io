@@ -13347,6 +13347,15 @@ async function githubUpload(token){
       filled.push(k);
     }
     if(filled.length){
+      /* v113 — 자재에서 저절로 따라 들어온 칸을 적어 둔다 (↩ 로 되돌릴 수 있게) */
+      try{
+        var _m = String(location.hash||'').match(/^#lp=([^&]+)/);
+        if(_m && typeof window.wlAutoMark === 'function'){
+          var _am = {};
+          filled.forEach(function(k){ var t2 = fieldFor(inp, k); if(t2) _am[k] = t2.value; });
+          window.wlAutoMark(decodeURIComponent(_m[1]), _am);
+        }
+      }catch(e){ console.warn('[자재 자동채움] 기록 실패', e); }
       var el = badgeOf(inp, true);
       if(el){
         var bits = [];
@@ -14710,6 +14719,7 @@ async function githubUpload(token){
       if(hVal && !hRow._gOpen){
         var line = document.createElement('div');
         line.className = 'pg-prow wide pg-grow';
+        line.setAttribute('data-gid', g.id || '');    /* v113 — 어떤 묶음인지 (↩ 단추가 찾아 쓴다) */
         var sep = g.sep || ' · ';
         line.innerHTML =
             '<div class="pg-gk">' + (g.icon || '🔗') + '</div>'
@@ -14737,6 +14747,7 @@ async function githubUpload(token){
       /* ── ② 펼친 상태 / 대표 값이 빈 상태 → 새 줄에서 시작하는 한 덩어리로 ── */
       var bar = document.createElement('div');
       bar.className = 'pg-ghead';
+      bar.setAttribute('data-gid', g.id || '');
       bar.innerHTML =
           '<span class="pg-gi">' + (g.icon || '🔗') + '</span>'
         + '<b>' + ES(g.name || '묶음') + '</b>'
@@ -15243,9 +15254,9 @@ async function githubUpload(token){
     return out;
   }
 
-  function undo(rid){
+  function undo(rid, only){
     var hit = stillAuto(rid);
-    var ks = Object.keys(hit);
+    var ks = Object.keys(hit).filter(function(k){ return !only || only.indexOf(k) >= 0; });
     if(!ks.length){
       if(typeof toast === 'function') toast('되돌릴 자동 입력이 없어요 (손으로 고친 값은 지키고 있어요)');
       return;
@@ -15254,7 +15265,10 @@ async function githubUpload(token){
     ks.forEach(function(k){ patch[k] = ''; });
     try{
       if(typeof updateRecord === 'function') updateRecord(rid, patch);
-      var o = all(); delete o[rid]; put(o);
+      var o = all(), m2 = o[rid] || {};
+      ks.forEach(function(k){ delete m2[k]; });          /* 지운 것만 기억에서 뺀다 */
+      if(Object.keys(m2).length) o[rid] = m2; else delete o[rid];
+      put(o);
       if(typeof toast === 'function') toast('↩ 자동으로 넣었던 ' + ks.length + '칸을 지웠어요');
       setTimeout(function(){
         try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid, undefined); }catch(e){}
@@ -15265,8 +15279,69 @@ async function githubUpload(token){
     }
   }
 
-  /* ── 속성 → 본문 글 만들기 ── */
-  function textOf(){
+  /* ── 속성 → 본문 글 만들기 ──────────────────────────
+        달님이 정한 차례 :  층 - 분야 - 제목 - 내용 - 자재명 - 사양 - 갯수
+        비어 있는 것은 건너뛰고, 있는 것만 이어 붙여 **한 줄**로 만든다.
+        (보고서·카톡에 그대로 붙여 넣을 수 있게) */
+  var SEP = ' - ';
+
+  /* 화면에서 그 칸의 값을 읽는다 (고치는 중이면 입력칸, 아니면 보이는 글자) */
+  function vOf(page, id){
+    try{
+      var r = page.querySelector('[data-prow="' + id + '"]'); if(!r) return '';
+      var ie = r.querySelector('.lf-ie');
+      var v  = ie ? String(ie.value == null ? '' : ie.value).trim()
+                  : ((r.querySelector('.pg-pv')||{}).textContent || '').trim();
+      if(!v || v === '비어 있음' || v === '—') return '';
+      return v.replace(/\s+/g, ' ');
+    }catch(e){ return ''; }
+  }
+  function titleOf(page){
+    try{
+      var t = document.getElementById('pgTitle');
+      return t ? String(t.value || '').trim().replace(/\s+/g,' ') : '';
+    }catch(e){ return ''; }
+  }
+  /* 자재 : 자재명 - 사양 - 갯수 (여러 개면 / 로 잇는다) */
+  function matsOf(page){
+    var out = [];
+    try{
+      var rid = ridNow(), rec = recOf(rid);
+      var arr = (rec && Array.isArray(rec.materials)) ? rec.materials : [];
+      arr.forEach(function(m){
+        if(!m) return;
+        var bits = [ String(m.name||'').trim(), String(m.spec||'').trim() ].filter(Boolean);
+        var q = Number(m.qty) || 0;
+        if(q) bits.push(q + '개');
+        if(bits.length) out.push(bits.join(SEP));
+      });
+    }catch(e){ console.warn('[속성 정리] 자재 읽기 실패', e); }
+    /* 자재 내역이 비어 있으면 속성 칸(자재명·사양·수량)이라도 쓴다 */
+    if(!out.length){
+      var b2 = [ vOf(page,'f:material'), vOf(page,'f:spec') ].filter(Boolean);
+      var q2 = vOf(page,'f:qty');
+      if(q2 && q2 !== '0') b2.push(q2 + '개');
+      if(b2.length) out.push(b2.join(SEP));
+    }
+    return out;
+  }
+
+  /* 한 줄 — 달님이 정한 차례 */
+  function oneLine(){
+    var page = document.querySelector('.lf-page'); if(!page) return '';
+    var parts = [
+      vOf(page, 'f:floor'),          /* 층 */
+      vOf(page, 'f:field'),          /* 분야 */
+      titleOf(page),                 /* 제목 */
+      vOf(page, '_memo')             /* 내용 */
+    ].filter(Boolean);
+    var m = matsOf(page);
+    if(m.length) parts.push(m.join(' / '));
+    return parts.join(SEP);
+  }
+
+  /* 자세히 — 채워진 칸을 전부 줄줄이 (예전 방식, 콘솔·단추 길게 누르기용) */
+  function fullText(){
     var page = document.querySelector('.lf-page'); if(!page) return '';
     var rows = page.querySelectorAll('.pg-props [data-prow]');
     var SKIP = { '_title':1, '_memo':1, '_att':1 };
@@ -15278,26 +15353,17 @@ async function githubUpload(token){
       var ie = r.querySelector('.lf-ie');
       var v  = ie ? String(ie.value == null ? '' : ie.value).trim()
                   : ((r.querySelector('.pg-pv')||{}).textContent || '').trim();
-      if(!v || v === '비어 있음' || v === '—' || v === '0') return;
-      if(!nm) return;
+      if(!v || v === '비어 있음' || v === '—' || v === '0' || !nm) return;
       lines.push('· ' + nm + ' : ' + v);
     });
-    /* 자재 내역도 함께 */
-    try{
-      var mats = [].map.call(page.querySelectorAll('.pg-sub .tt'), function(x){
-        return '· ' + (x.textContent||'').trim().replace(/\s+/g,' '); });
-      if(mats.length) lines = lines.concat(['', '[자재]'], mats);
-    }catch(e){}
     return lines.join('\n');
   }
 
-  function toBody(){
+  function putBody(txt, note){
     var B = document.getElementById('pgBodyTx');
     if(!B){ if(typeof toast === 'function') toast('본문을 먼저 펼쳐 주세요'); return; }
-    var txt = textOf();
     if(!txt){ if(typeof toast === 'function') toast('본문에 넣을 만한 값이 아직 없어요'); return; }
-    var head = '[정리] ' + new Date().toLocaleDateString('ko-KR');
-    var add  = (head + '\n' + txt).split('\n').map(function(l){
+    var add = txt.split('\n').map(function(l){
       return '<div>' + l.replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }) + '</div>';
     }).join('');
     var cur = (B.innerHTML || '').replace(/^(<br>|<div><br><\/div>)$/, '');
@@ -15306,45 +15372,70 @@ async function githubUpload(token){
     /* blur 로만 저장하면 코드로 고친 것은 저장이 안 된다 → 저장을 직접 부른다 */
     if(typeof window.wlBodySave === 'function'){ window.wlBodySave(B.innerHTML); }
     else { try{ B.focus(); B.blur(); }catch(e){} }
-    if(typeof toast === 'function') toast('📝 속성을 정리해 본문에 넣었어요 — 자유롭게 고치세요');
+    if(typeof toast === 'function') toast('📝 ' + (note || '본문에 넣었어요') + ' — 자유롭게 고치세요');
+  }
+  function toBody(){ putBody(oneLine(), '한 줄로 정리했어요'); }
+  function toBodyFull(){ putBody(fullText(), '칸을 전부 적었어요'); }
+
+  /* ── 단추 놓기 ──────────────────────────────────────
+        업체 묶음(g1)·자재 묶음(g2) 각각에 ↩ 를 붙인다.
+        자기 묶음에 딸린 칸만 지운다 — 남의 칸은 안 건드린다. */
+  var UNDO_G = [
+    { gid:'g1', head:'_sub', icon:'🏢',
+      keys:['workContact','workRole','workPhone','workMemo',
+            'callContact','role','phone','ownerPhone','partyType','partyPhone',
+            'person','companyMemo'] },
+    { gid:'g2', head:'f:material', icon:'📦',
+      keys:['spec','qty','unit','unitPrice','maker','itemCode','vendor','cost','amount'] }
+  ];
+
+  function hostFor(page, g){
+    return page.querySelector('[data-gid="' + g.gid + '"] .pg-gv')
+        || page.querySelector('[data-prow="' + g.head + '"] .pg-pv')
+        || null;
   }
 
-  /* ── 단추 놓기 ── */
   function paint(){
     var page = document.querySelector('.lf-page'); if(!page) return;
     var rid = ridNow(); if(!rid) return;
+    var auto = stillAuto(rid);
 
-    /* ① 업체 줄 (또는 접혀 있으면 묶음 줄) 에 ↩ */
-    var n = Object.keys(stillAuto(rid)).length;
-    /* 접혀 있으면 묶음 줄에, 펼쳐져 있으면 업체 줄에 붙인다 */
-    var host = page.querySelector('.pg-grow .pg-gv')
-            || page.querySelector('[data-prow="_sub"] .pg-pv')
-            || null;
-    var old = page.querySelector('#pgAutoUndo');
-    if(!n){ if(old) old.remove(); }
-    else if(!old && host){
+    UNDO_G.forEach(function(g){
+      var mine = g.keys.filter(function(k){ return auto[k] != null; });
+      var bid  = 'pgAutoUndo_' + g.gid;
+      var old  = page.querySelector('#' + bid);
+      if(!mine.length){ if(old) old.remove(); return; }
+      var label = '↩ 자동입력 ' + mine.length + '칸 지우기';
+      if(old){ old.textContent = label; return; }
+      var host = hostFor(page, g); if(!host) return;
       var b = document.createElement('button');
-      b.type = 'button'; b.id = 'pgAutoUndo'; b.className = 'pg-undo';
-      b.textContent = '↩ 자동입력 ' + n + '칸 지우기';
-      b.title = '업체를 골라 저절로 들어간 칸만 지웁니다 (손으로 고친 값은 그대로 둡니다)';
-      b.addEventListener('click', function(ev){ ev.stopPropagation(); undo(rid); });
+      b.type = 'button'; b.id = bid; b.className = 'pg-undo';
+      b.textContent = label;
+      b.title = g.icon + ' 을(를) 골라 저절로 들어간 칸만 지웁니다 (손으로 고친 값은 그대로 둡니다)';
+      b.addEventListener('click', function(ev){ ev.stopPropagation(); undo(rid, g.keys); });
       host.parentNode.insertBefore(b, host.nextSibling);
-    }else if(old){
-      old.textContent = '↩ 자동입력 ' + n + '칸 지우기';
-    }
+    });
 
-    /* ② 본문 옆에 [📝 속성 정리해서 넣기] */
+    /* 본문 옆 단추 두 개 — 한 줄 / 자세히 */
     var B = document.getElementById('pgBodyTx');
     if(B && !page.querySelector('#pgSumBody')){
-      var bar = B.parentNode;
-      var s = document.createElement('button');
-      s.type = 'button'; s.id = 'pgSumBody'; s.className = 'pg-xb';
-      s.style.margin = '8px 0 0';
-      s.textContent = '📝 속성 정리해서 넣기';
-      s.title = '지금 채워진 칸들을 문장으로 만들어 본문에 넣습니다';
-      s.addEventListener('click', toBody);
-      bar.insertBefore(s, B.nextSibling);
+      var wrap = document.createElement('div');
+      wrap.id = 'pgSumWrap'; wrap.className = 'pg-extra'; wrap.style.marginTop = '8px';
+      wrap.innerHTML =
+          '<button type="button" id="pgSumBody" class="pg-xb on" title="층 - 분야 - 제목 - 내용 - 자재명 - 사양 - 갯수 차례로 한 줄">'
+        +   '📝 한 줄로 정리해 넣기</button>'
+        + '<button type="button" id="pgSumFull" class="pg-xb" title="채워진 칸을 전부 줄줄이 적습니다">'
+        +   '📋 칸 전부 적기</button>'
+        + '<span id="pgSumPrev" class="pg-sumprev"></span>';
+      B.parentNode.insertBefore(wrap, B.nextSibling);
+      wrap.querySelector('#pgSumBody').addEventListener('click', toBody);
+      wrap.querySelector('#pgSumFull').addEventListener('click', toBodyFull);
     }
+    /* 미리보기 — 무엇이 들어갈지 눌러 보기 전에 보여준다 */
+    try{
+      var pv = page.querySelector('#pgSumPrev');
+      if(pv){ var one = oneLine(); pv.textContent = one ? ('→ ' + one.slice(0,90) + (one.length>90?'…':'')) : ''; }
+    }catch(e){}
   }
 
   var t = null;
@@ -15376,8 +15467,10 @@ async function githubUpload(token){
   window.wlAutoUndo = {
     show: function(){ var r = ridNow(); console.table(stillAuto(r)); return r || '기록을 먼저 여세요'; },
     undo: function(){ var r = ridNow(); if(r) undo(r); return r ? '되돌렸습니다' : '기록을 먼저 여세요'; },
+    line: function(){ return oneLine() || '(넣을 값이 없어요)'; },
     toBody: toBody,
+    toBodyFull: toBodyFull,
     forget: function(){ try{ localStorage.removeItem(LS); }catch(e){} return '자동입력 기록을 지웠습니다'; }
   };
-  console.log('[자동채움] v113 준비됨 — 업체 줄 [↩] · 본문 [📝 속성 정리해서 넣기]');
+  console.log('[자동채움] v113 준비됨 — 업체·자재 줄 [↩] · 본문 [📝 한 줄로 정리해 넣기]');
 })();
