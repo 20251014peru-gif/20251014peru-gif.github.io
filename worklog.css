@@ -811,3 +811,28 @@ tr.wk-checked td{background:#e8f3fd !important}
   background:var(--card); border-top:1.5px solid #eef3f9;
   border-radius:0 0 20px 20px;
 }
+
+/* ── 속성 종류 바꾸기 버튼 (v102) — 속성 정리 모드에서만 보인다 ── */
+.pg-ptype{ display:none; flex:0 0 auto; border:1px solid #dbe6f4; background:#f7faff;
+  color:#5b7fa6; font-size:12px; border-radius:7px; padding:3px 7px; cursor:pointer;
+  font-family:inherit; line-height:1; margin-left:4px }
+.pg-ptype:hover{ background:#e8f1fb; border-color:#9dc0e4 }
+.pg-props.pg-edit .pg-ptype{ display:inline-block }
+.ptw{ position:fixed; inset:0; background:rgba(0,0,0,.42); z-index:9950;
+  display:flex; align-items:center; justify-content:center; font-family:inherit }
+.ptw-box{ background:#fff; border-radius:16px; padding:18px; width:min(94vw,430px);
+  max-height:88vh; overflow:auto; box-shadow:0 18px 48px rgba(26,47,69,.28) }
+.ptw-h{ font-size:15px; font-weight:800; color:#1a2f45; margin-bottom:4px }
+.ptw-s{ font-size:12.5px; color:#7a92a8; margin-bottom:12px; line-height:1.6 }
+.ptw-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:7px }
+.ptw-t{ height:46px; border:1.5px solid #dbe6f4; border-radius:11px; background:#f7faff;
+  color:#3d5875; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit }
+.ptw-t:hover{ background:#e8f1fb; border-color:#9dc0e4 }
+.ptw-t.on{ background:#2563a8; border-color:#2563a8; color:#fff }
+.ptw-warn{ margin-top:12px; padding:10px 12px; border-radius:10px; background:#fdecec;
+  border:1px solid #f6c9c9; color:#a13030; font-size:12.5px; line-height:1.65 }
+.ptw-ok{ margin-top:12px; padding:10px 12px; border-radius:10px; background:#effaf4;
+  border:1px solid #c6ecd9; color:#0f7a4a; font-size:12.5px; line-height:1.65 }
+.ptw-btns{ display:flex; gap:8px; margin-top:14px }
+.ptw-btns button{ height:44px; border-radius:11px; font-size:13.5px; font-weight:800;
+  cursor:pointer; font-family:inherit; border:none }

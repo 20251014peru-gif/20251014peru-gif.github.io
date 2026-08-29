@@ -13041,7 +13041,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v101-0829-1450
+   ✨ 입력칸 3종 세트 (wlSmartField)  v102-0829-1530
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13070,7 +13070,7 @@ async function githubUpload(token){
 
   /* ── 설정 ─────────────────────────────────────────── */
   function cfg(){
-    var d = { ac:1, link:1, fold:0, idsave:1 };
+    var d = { ac:1, link:1, fold:0, idsave:1, quick:1 };
     try{
       var o = JSON.parse(localStorage.getItem(LS_ON) || 'null');
       if(o && typeof o === 'object'){ for(var k in d) if(k in o) d[k] = o[k] ? 1 : 0; }
@@ -13597,6 +13597,71 @@ async function githubUpload(token){
     }else if(bar){ bar.remove(); }
   }
 
+  /* ── 날짜·시각 칸 빠른 버튼 (v102) ─────────────────────
+     옛 입력창에만 있던 [어제][3일전][지금][+30분] 을 노션식에도 붙인다 */
+  function ymd(d){
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0')
+         + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function dayShift(n){
+    var k = (typeof kstNow === 'function') ? kstNow() : new Date();
+    var p = ymd(k).split('-');
+    var d = new Date(Date.UTC(+p[0], +p[1]-1, +p[2]));   /* 날짜 셈은 UTC 로 (하루 밀림 방지) */
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0')
+         + '-' + String(d.getUTCDate()).padStart(2,'0');
+  }
+  function hhmm(mins){
+    var k = (typeof kstNow === 'function') ? kstNow() : new Date();
+    var t = k.getHours()*60 + k.getMinutes() + (mins || 0);
+    t = ((t % 1440) + 1440) % 1440;
+    t = Math.round(t/5)*5; if(t >= 1440) t -= 1440;      /* 5분 단위 (달님 표준) */
+    return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
+  }
+  function setVal(inp, v){
+    inp.value = v;
+    try{ inp.dispatchEvent(new Event('input',  {bubbles:true})); }catch(e){}
+    try{ inp.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
+  }
+  function quickChips(inp){
+    if(!cfg().quick) return;
+    if(inp._sfChip) return;
+    var ty = (inp.getAttribute('type') || '').toLowerCase();
+    var isDate = (ty === 'date');
+    var isTime = (ty === 'time') || !!inp.getAttribute('data-tdial')
+              || /time|시각|시간/i.test(inp.id || '') || /time/i.test(keyOf(inp) || '');
+    if(!isDate && !isTime) return;
+    inp._sfChip = true;
+
+    var bar = document.createElement('div');
+    bar.className = 'sf-chips';
+    bar.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap;margin-top:5px';
+    var items = isDate
+      ? [['오늘',0],['어제',-1],['2일전',-2],['3일전',-3]]
+      : [['🕐 지금',0],['+30분',30],['−30분',-30],['지우기',null]];
+    items.forEach(function(it){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = it[0];
+      b.style.cssText = 'height:30px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:9px;'
+        + 'background:#f7faff;color:#5b7fa6;font-size:12px;font-weight:700;'
+        + 'cursor:pointer;font-family:inherit;line-height:1';
+      b.addEventListener('mousedown', function(ev){
+        ev.preventDefault();
+        try{
+          if(isDate) setVal(inp, dayShift(it[1]));
+          else if(it[1] === null) setVal(inp, '');
+          else setVal(inp, hhmm(it[1]));
+        }catch(e){ console.warn('[빠른버튼] 넣기 실패', e); }
+      });
+      bar.appendChild(b);
+    });
+    try{
+      var box = inp.parentNode;
+      if(box) box.appendChild(bar);
+    }catch(e){ console.warn('[빠른버튼] 붙이기 실패', e); }
+  }
+
   /* ── 화면에 나타나는 칸을 자동으로 잡는다 ──────────── */
   var scanT = null;
   function scanNow(){
@@ -13631,6 +13696,7 @@ async function githubUpload(token){
     if(!el) return;
     var tag = (el.tagName || '').toLowerCase();
     if(tag !== 'input' && tag !== 'textarea') return;
+    try{ quickChips(el); }catch(e){ console.warn('[빠른버튼] 실패', e); }
     if(el._sfDone) return;
     try{
       attach(el);
@@ -13665,13 +13731,14 @@ async function githubUpload(token){
       + '<button class="btn btn-sm" id="sfLink" style="min-height:44px">🔗 연락처 정보 표시</button>'
       + '<button class="btn btn-sm" id="sfFold" style="min-height:44px">📁 빈 칸 접기</button>'
       + '<button class="btn btn-sm" id="sfIdsave" style="min-height:44px">🆔 업체 아이디 남기기</button>'
+      + '<button class="btn btn-sm" id="sfQuick" style="min-height:44px">⏱ 날짜·시각 빠른버튼</button>'
       + '<button class="btn btn-ghost btn-sm" id="sfUnhide" style="min-height:44px">👁 뺀 값 되살리기</button>'
       + '</div><div id="sfNow" style="font-size:12.5px;color:#7a92a8;margin-top:6px"></div>';
 
     host.insertBefore(head, anchor.parentNode.nextSibling);
     host.insertBefore(wrap, head.nextSibling);
 
-    [['sfAc','ac'],['sfLink','link'],['sfFold','fold'],['sfIdsave','idsave']].forEach(function(p){
+    [['sfAc','ac'],['sfLink','link'],['sfFold','fold'],['sfIdsave','idsave'],['sfQuick','quick']].forEach(function(p){
       var el = document.getElementById(p[0]);
       if(el && !el._bound){
         el._bound = 1;
@@ -13697,7 +13764,7 @@ async function githubUpload(token){
   }
   function paintPanel(){
     var c = cfg();
-    [['sfAc','ac'],['sfLink','link'],['sfFold','fold'],['sfIdsave','idsave']].forEach(function(p){
+    [['sfAc','ac'],['sfLink','link'],['sfFold','fold'],['sfIdsave','idsave'],['sfQuick','quick']].forEach(function(p){
       var el = document.getElementById(p[0]); if(!el) return;
       el.className = 'btn btn-sm ' + (c[p[1]] ? 'btn-primary' : 'btn-ghost');
       el.style.minHeight = '44px';

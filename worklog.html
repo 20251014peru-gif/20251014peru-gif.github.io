@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v101-0829-1450";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v102-0829-1530";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3266,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=101-20260829t1450"></script>
+<script src="worklog.js?v=102-20260829t1530"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -23717,6 +23717,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         + '<div class="pg-pk">'
         +   '<span class="pg-drag" title="끌어서 옮기기">⋮⋮</span>'
         +   '<span class="pg-pnm">'+ti.i+' '+esc(p.name)+'</span>'
+        +   (p.id.slice(0,2)==='f:' || p.base
+              ? ''
+              : '<button type="button" class="pg-ptype" data-pptype="'+esc(p.id)+'" title="종류 바꾸기">'+ti.i+'</button>')
         +   '<button type="button" class="pg-pdel" data-ppdel="'+esc(p.id)+'" title="이 속성 빼기">✕</button>'
         + '</div>'
         + '<div class="pg-pv">'+body+'</div></div>';
@@ -24215,6 +24218,110 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     (function(){
       var pe = document.getElementById('pgPEdit');
       if(pe) pe.addEventListener('click', function(){ PGEDIT = !PGEDIT; openPage(id); });
+    })();
+
+    /* ── 속성 종류 바꾸기 (v102) — 내가 만든 속성만, 사라질 값을 먼저 알려준다 ── */
+    (function(){
+      var host0 = ov.querySelector('.pg-props'); if(!host0) return;
+      var TYPES = [
+        {t:'text', n:'🔤 글자'},  {t:'area', n:'📝 여러 줄'}, {t:'num',  n:'🔢 숫자'},
+        {t:'date', n:'📅 날짜'},  {t:'time', n:'🕐 시각'},    {t:'sel',  n:'🏷 선택'},
+        {t:'multi',n:'🏷 여러 선택'}, {t:'check',n:'☑ 체크'}, {t:'star', n:'⭐ 별점'},
+        {t:'tel',  n:'📞 전화'},  {t:'link', n:'🔗 주소'},    {t:'map',  n:'📍 지도'}
+      ];
+      /* 값이 새 종류로 옮겨갈 수 있나 — 못 옮기는 값을 세어 돌려준다 */
+      function checkLoss(pid, nt){
+        var bad = [], seen = 0;
+        try{
+          ent().forEach(function(e){
+            var v = pget(e, pid);
+            if(v == null || v === '' ) return;
+            seen++;
+            var sv = String(v).trim();
+            var ok = true;
+            if(nt === 'num' || nt === 'star' || nt === 'rate'){
+              ok = /^-?[0-9,]+(\.[0-9]+)?$/.test(sv);
+            }else if(nt === 'date'){
+              ok = /^\d{4}-\d{2}-\d{2}/.test(sv);
+            }else if(nt === 'time'){
+              ok = /^\d{1,2}:\d{2}/.test(sv);
+            }else if(nt === 'check'){
+              ok = true;
+            }
+            if(!ok && bad.length < 12) bad.push(sv);
+            else if(!ok) bad.push(null);
+          });
+        }catch(err){ console.warn('[종류 바꾸기] 값 검사 실패', err); }
+        return { total: seen, bad: bad.filter(function(x){ return x !== null; }), badN: bad.length };
+      }
+      function openTypeWin(pid){
+        var p = propById(pt, pid); if(!p){ alert('속성을 찾지 못했어요'); return; }
+        var cur = p.type || 'text';
+        var pick = cur;
+        var ov2 = document.createElement('div'); ov2.className = 'ptw';
+        function draw(){
+          var chk = (pick === cur) ? null : checkLoss(pid, pick);
+          var msg = '';
+          if(chk){
+            if(chk.badN > 0){
+              msg = '<div class="ptw-warn"><b>⚠ ' + chk.badN + '건이 비워집니다</b><br>'
+                  + '이 값들은 새 종류로 옮길 수 없어요:<br>'
+                  + chk.bad.slice(0,8).map(function(x){ return '· ' + esc(x); }).join('<br>')
+                  + (chk.badN > 8 ? '<br>· … 외 ' + (chk.badN - 8) + '건' : '')
+                  + '<br><br>바꾸기 전에 <b>백업</b>을 받아 두세요.</div>';
+            }else{
+              msg = '<div class="ptw-ok">✅ 값 ' + chk.total + '건이 모두 그대로 옮겨집니다</div>';
+            }
+          }
+          ov2.innerHTML = '<div class="ptw-box">'
+            + '<div class="ptw-h">「' + esc(p.name) + '」 종류 바꾸기</div>'
+            + '<div class="ptw-s">지금은 <b>' + esc((TYPES.filter(function(x){return x.t===cur;})[0]||{n:cur}).n) + '</b> 입니다. '
+            + '바꿀 종류를 고르면 사라질 값을 먼저 알려드려요.</div>'
+            + '<div class="ptw-grid">' + TYPES.map(function(x){
+                return '<button type="button" class="ptw-t' + (x.t===pick?' on':'') + '" data-pt="' + x.t + '">' + x.n + '</button>';
+              }).join('') + '</div>'
+            + msg
+            + '<div class="ptw-btns">'
+            +   '<button type="button" id="ptwC" style="flex:1;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8">취소</button>'
+            +   '<button type="button" id="ptwOK" style="flex:2;background:' + (pick===cur?'#cbd5e1':'#2563a8') + ';color:#fff"'
+            +     (pick===cur?' disabled':'') + '>바꾸기</button>'
+            + '</div></div>';
+          [].forEach.call(ov2.querySelectorAll('[data-pt]'), function(btn){
+            btn.addEventListener('click', function(){ pick = btn.getAttribute('data-pt'); draw(); });
+          });
+          ov2.querySelector('#ptwC').addEventListener('click', function(){ ov2.remove(); });
+          var ok = ov2.querySelector('#ptwOK');
+          if(ok) ok.addEventListener('click', function(){
+            var chk2 = checkLoss(pid, pick);
+            if(chk2.badN > 0 && !confirm(chk2.badN + '건이 비워집니다. 정말 바꿀까요?\n\n되돌리려면 백업에서 복구해야 합니다.')) return;
+            try{
+              var arr = customOf(pt).slice();
+              var hit = false;
+              for(var i = 0; i < arr.length; i++){
+                if(arr[i] && arr[i].id === pid){ arr[i] = Object.assign({}, arr[i], {type: pick}); hit = true; break; }
+              }
+              if(!hit){ alert('내가 만든 속성만 종류를 바꿀 수 있어요'); return; }
+              customSave(pt, arr);
+              ov2.remove();
+              if(typeof toast === 'function') toast('종류를 바꿨습니다 — ' + p.name);
+              openPage(id);
+            }catch(err){
+              console.error('[종류 바꾸기]', err);
+              alert('바꾸지 못했어요: ' + (err.message || err));
+            }
+          });
+        }
+        draw();
+        ov2.addEventListener('mousedown', function(e){ if(e.target === ov2) ov2.remove(); });
+        document.body.appendChild(ov2);
+      }
+      [].forEach.call(host0.querySelectorAll('[data-pptype]'), function(btn){
+        btn.addEventListener('click', function(ev){
+          ev.preventDefault(); ev.stopPropagation();
+          if(!PGEDIT) return;
+          openTypeWin(btn.getAttribute('data-pptype'));
+        });
+      });
     })();
 
     (function(){
