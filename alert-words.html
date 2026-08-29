@@ -263,7 +263,6 @@
   /* ---------- 잠금 ---------- */
   var lock=document.getElementById("lock"), app=document.getElementById("app");
   function unlock(){ lock.style.display="none"; app.hidden=false; start(); }
-  if(ls("shared_pin")===PIN){ unlock(); }
   document.getElementById("pin").addEventListener("input", function(){
     if(this.value.length<PIN.length) return;
     if(this.value===PIN){ ls("shared_pin",PIN); unlock(); }
@@ -460,6 +459,7 @@
     render();
     if($("#tok").value) load(); else { $("#setPanel").hidden=false; say("⚙️ 에서 깃허브 토큰을 넣고 [불러오기]를 누르세요"); }
   }
+  if(ls("shared_pin")===PIN){ unlock(); }
 })();
 </script>
 </body>
