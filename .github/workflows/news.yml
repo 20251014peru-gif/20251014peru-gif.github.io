@@ -1,40 +1,50 @@
 name: News Radar Collector
+
 on:
   schedule:
-    - cron: '5 * * * *'      # 매시 5분마다 (UTC). 1시간 간격 자동 수집
-  workflow_dispatch: {}       # GitHub에서 'Run workflow' 버튼으로 수동 실행
+    - cron: '5 * * * *'        # 매시 5분 (UTC) — 1시간 간격 자동 수집
+  workflow_dispatch:           # Actions 탭에서 수동 실행 / 사이트 '지금수집' 버튼
+
 permissions:
-  contents: write             # news.json 커밋 권한
+  contents: write              # news.json 등 커밋 권한
+
 jobs:
   collect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: 패키지 설치
         run: pip install -r requirements.txt
+
       - name: 수집 실행
         env:
-          # ANTHROPIC_API_KEY 제거됨 — 수집기는 AI를 호출하지 않습니다(자동수집 = 무료)
           NAVER_ID: ${{ secrets.NAVER_ID }}
           NAVER_SECRET: ${{ secrets.NAVER_SECRET }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: python collector.py
+
       - name: 변경분 커밋
         run: |
           git config user.name "news-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add -A news.json glossary.json archive/ 2>/dev/null || true
-          git add trends.json 2>/dev/null || true
-          git add stocks.json 2>/dev/null || true
+          git add news.json glossary.json || true
+          git add trends.json || true
+          git add stocks.json || true
+          git add archive/ || true
           git commit -m "auto: news update $(date -u +%Y-%m-%dT%H:%MZ)" || echo "변경 없음"
+          git pull --rebase --autostash || true
           git push || echo "push 스킵"
 
-                - name: 실패하면 폰으로 알림
+      - name: 실패하면 폰으로 알림
         if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
-          curl -s -d "달님알림봇 ${{ github.event.inputs.job || '정기실행' }} 실패
-          로그: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            https://ntfy.sh/달님만아는채널이름
+          curl -s -H "Title: 뉴스레이더 수집 실패" -H "Priority: 4" -H "Tags: warning" \
+               -d "로그: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+               "https://ntfy.sh/${NTFY_TOPIC}"

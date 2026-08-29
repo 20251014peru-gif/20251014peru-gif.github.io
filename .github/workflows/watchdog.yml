@@ -1,0 +1,41 @@
+name: News Radar Watchdog
+
+# news.yml 이 통째로 죽어도(문법오류·비활성화 등) 이 워크플로는 따로 돌면서
+# "news.json 이 N시간째 그대로면" 폰으로 알려준다.
+# 감시 장치를 감시 대상 밖에 두는 것이 핵심 — 예전엔 실패알림이 죽은 job 안에 있어서 침묵했다.
+
+on:
+  schedule:
+    - cron: '20 */3 * * *'     # 3시간마다 (UTC) 점검
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0       # 커밋 이력이 있어야 마지막 갱신 시각을 알 수 있음
+
+      - name: 마지막 수집 시각 확인
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          STALE_HOURS: '3'     # 몇 시간 이상 멈추면 알릴지
+        run: |
+          LAST=$(git log -1 --format=%ct -- news.json || echo 0)
+          NOW=$(date -u +%s)
+          if [ "$LAST" = "0" ]; then
+            HOURS=999
+          else
+            HOURS=$(( (NOW - LAST) / 3600 ))
+          fi
+          echo "news.json 마지막 갱신: ${HOURS}시간 전"
+          if [ "$HOURS" -ge "$STALE_HOURS" ]; then
+            curl -s -H "Title: 뉴스레이더 멈춤" -H "Priority: 5" -H "Tags: rotating_light" \
+                 -d "news.json 이 ${HOURS}시간째 갱신 안 됨. Actions 탭 확인 필요." \
+                 -H "Click: ${{ github.server_url }}/${{ github.repository }}/actions" \
+                 "https://ntfy.sh/${NTFY_TOPIC}"
+            echo "::warning::수집이 ${HOURS}시간째 멈춰 있음"
+          else
+            echo "정상"
+          fi
