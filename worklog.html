@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v103-0829-1600";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v104-0829-1720";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3266,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=103-20260829t1600"></script>
+<script src="worklog.js?v=104-20260829t1720"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -21219,6 +21219,38 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
 
   /* ── 어떤 종류의 속성 목록 ── */
+  /* ── 기본 칸 종류 바꾸기 (v104) ─────────────────────────
+     기본 칸의 종류는 코드에서 오므로, 바꾼 값을 따로 적어두고 읽을 때 덮어씌운다.
+     계산·정렬에 쓰이는 칸은 바꾸면 계산이 깨지므로 잠가 둔다. */
+  var LS_FTYPE = 'wl_ftype';
+  /* 바꾸면 안 되는 칸 — 금액 계산 · 달력 · 정렬 · 소요시간이 이 칸을 쓴다 */
+  var FTYPE_LOCK = {
+    date:1, amount:1, qty:1, unitPrice:1, cost:1, price:1,
+    startTime:1, endTime:1, start:1, end:1,
+    supplyAmt:1, taxAmt:1, estCost:1, finalCost:1, repairCost:1
+  };
+  function ftypeLocked(pid){
+    if(pid.slice(0,2) !== 'f:') return true;          /* 공통칸(_date·_title…)은 잠금 */
+    return !!FTYPE_LOCK[pid.slice(2)];
+  }
+  function ftypeAll(){
+    try{ var o = JSON.parse(localStorage.getItem(LS_FTYPE) || '{}'); return (o && typeof o === 'object') ? o : {}; }
+    catch(e){ console.warn('[칸 종류] 읽기 실패', e); return {}; }
+  }
+  function ftypeOf(pt, pid){ var m = ftypeAll()[dsk(pt)]; return (m && m[pid]) || ''; }
+  function ftypeSet(pt, pid, ty){
+    try{
+      var o = ftypeAll(); var k = dsk(pt);
+      if(!o[k]) o[k] = {};
+      if(ty) o[k][pid] = ty; else delete o[k][pid];
+      localStorage.setItem(LS_FTYPE, JSON.stringify(o));
+    }catch(e){ console.warn('[칸 종류] 저장 실패', e); }
+  }
+  window.wlFieldTypeReset = function(){
+    try{ localStorage.removeItem(LS_FTYPE); }catch(e){}
+    return '기본 칸 종류를 원래대로 되돌렸습니다 — 화면을 새로고침하세요';
+  };
+
   function propsOf(pt){
     var out, def = null, bmp = null;
     if(isPersonal()){
@@ -21249,6 +21281,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
           if(/시각|시간|Time/i.test(nm2) && !/시간대|기간/.test(nm2)) ty='time';
           else if(/날짜|일자|Date/i.test(nm2)) ty='date';
         }
+        var _ov = ftypeOf(pt, 'f:'+f.k);          /* 달님이 바꾼 종류가 있으면 그것으로 */
+        if(_ov) ty = _ov;
         out.push({ id:'f:'+f.k, name:f.l, type:ty,
                    opts:f.o, k:f.k, from:'기본' });
       });
@@ -23717,9 +23751,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         + '<div class="pg-pk">'
         +   '<span class="pg-drag" title="끌어서 옮기기">⋮⋮</span>'
         +   '<span class="pg-pnm">'+ti.i+' '+esc(p.name)+'</span>'
-        +   (p.id.slice(0,2)==='f:' || p.base
+        +   (ftypeLocked(p.id) && p.id.slice(0,2)==='f:'
               ? ''
-              : '<button type="button" class="pg-ptype" data-pptype="'+esc(p.id)+'" title="종류 바꾸기">'+ti.i+'</button>')
+              : (p.base && p.id.slice(0,2)!=='f:'
+                  ? ''
+                  : '<button type="button" class="pg-ptype" data-pptype="'+esc(p.id)+'" title="종류 바꾸기">'+ti.i+'</button>'))
         +   '<button type="button" class="pg-pdel" data-ppdel="'+esc(p.id)+'" title="이 속성 빼기">✕</button>'
         + '</div>'
         + '<div class="pg-pv">'+body+'</div></div>';
@@ -23903,6 +23939,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +     '<button type="button" id="pgNext"'+(idx<0||idx>=PGLIST.length-1?' disabled':'')+' title="다음">▶</button>'
       +   '</div>'
       +   '<div style="flex:1"></div>'
+      +   (isPersonal() ? '' : '<button type="button" id="pgScan" title="스캔앱에서 영수증·서류를 가져옵니다">📎 스캔앱</button>')
       +   '<button type="button" id="pgTplSave" title="이 기록 모양을 템플릿으로 저장">📑 템플릿으로</button>'
       +   (isPersonal()? '' : (vendorOf(rec)? '<button type="button" id="pgVend" title="이 업체의 모든 기록 보기">📇 '+esc(String(vendorOf(rec)).slice(0,10))+'</button>':''))
       +   ((!isPersonal() && (pt==='accident'||pt==='progress'))
@@ -24218,6 +24255,22 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     (function(){
       var pe = document.getElementById('pgPEdit');
       if(pe) pe.addEventListener('click', function(){ PGEDIT = !PGEDIT; openPage(id); });
+      /* 📎 스캔앱에서 가져오기 (v104) — 옛 입력창에만 있던 것을 여기에도 */
+      var sc = ov.querySelector('#pgScan');
+      if(sc && !sc._bound){
+        sc._bound = 1;
+        sc.addEventListener('click', function(){
+          try{
+            window._wlScanTargetId = id;            /* 어느 기록에 붙일지 알려둔다 */
+            if(typeof openScanPickerOfType === 'function'){ openScanPickerOfType('doc'); }
+            else if(typeof window._openScanPickerOfType === 'function'){ window._openScanPickerOfType('doc'); }
+            else { alert('스캔앱 창구를 찾지 못했어요'); }
+          }catch(e){
+            console.error('[스캔앱]', e);
+            alert('스캔앱을 열지 못했어요: ' + (e.message || e));
+          }
+        });
+      }
     })();
 
     /* ── 속성 종류 바꾸기 (v102) — 내가 만든 속성만, 사라질 값을 먼저 알려준다 ── */
@@ -24276,7 +24329,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
           ov2.innerHTML = '<div class="ptw-box">'
             + '<div class="ptw-h">「' + esc(p.name) + '」 종류 바꾸기</div>'
             + '<div class="ptw-s">지금은 <b>' + esc((TYPES.filter(function(x){return x.t===cur;})[0]||{n:cur}).n) + '</b> 입니다. '
-            + '바꿀 종류를 고르면 사라질 값을 먼저 알려드려요.</div>'
+            + '바꿀 종류를 고르면 사라질 값을 먼저 알려드려요.'
+            + (pid.slice(0,2)==='f:'
+                ? '<br><b style="color:#b45309">이 칸은 앱이 원래 갖고 있던 칸입니다.</b> '
+                  + '바꾼 뒤 이상하면 콘솔에 <code>wlFieldTypeReset()</code> 로 되돌릴 수 있어요.'
+                : '')
+            + '</div>'
             + '<div class="ptw-grid">' + TYPES.map(function(x){
                 return '<button type="button" class="ptw-t' + (x.t===pick?' on':'') + '" data-pt="' + x.t + '">' + x.n + '</button>';
               }).join('') + '</div>'
@@ -24295,13 +24353,18 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
             var chk2 = checkLoss(pid, pick);
             if(chk2.badN > 0 && !confirm(chk2.badN + '건이 비워집니다. 정말 바꿀까요?\n\n되돌리려면 백업에서 복구해야 합니다.')) return;
             try{
-              var arr = customOf(pt).slice();
-              var hit = false;
-              for(var i = 0; i < arr.length; i++){
-                if(arr[i] && arr[i].id === pid){ arr[i] = Object.assign({}, arr[i], {type: pick}); hit = true; break; }
+              if(pid.slice(0,2) === 'f:'){          /* 기본 칸 — 재정의로 저장 */
+                if(ftypeLocked(pid)){ alert('이 칸은 계산·달력에 쓰여서 종류를 바꿀 수 없어요'); return; }
+                ftypeSet(pt, pid, pick);
+              }else{                                 /* 내가 만든 속성 */
+                var arr = customOf(pt).slice();
+                var hit = false;
+                for(var i = 0; i < arr.length; i++){
+                  if(arr[i] && arr[i].id === pid){ arr[i] = Object.assign({}, arr[i], {type: pick}); hit = true; break; }
+                }
+                if(!hit){ alert('속성을 찾지 못했어요'); return; }
+                customSave(pt, arr);
               }
-              if(!hit){ alert('내가 만든 속성만 종류를 바꿀 수 있어요'); return; }
-              customSave(pt, arr);
               ov2.remove();
               if(typeof toast === 'function') toast('종류를 바꿨습니다 — ' + p.name);
               openPage(id);
