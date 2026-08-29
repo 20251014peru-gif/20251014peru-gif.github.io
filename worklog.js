@@ -13058,7 +13058,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v110-0829-2230
+   ✨ 입력칸 3종 세트 (wlSmartField)  v111-0829-2330
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -14714,4 +14714,185 @@ async function githubUpload(token){
     reset:function(){ try{ localStorage.removeItem(LS_GRP); }catch(e){} run(); return '처음 묶음으로'; }
   };
   console.log('[묶어보기] 준비됨 — 진단 탭 「🧩 연관 묶어보기」');
+})();
+
+
+/* ============================================================
+   🩺 종합 점검 (wlCheckAll)  v111-0829-2330
+   기본지침 제0원칙 ④ — 「같은 걸 두 번 틀리면 진단 도구부터 만든다」
+
+   「안 먹는다」 는 말만으로는 원인을 알 수 없다.
+   무엇이 켜져 있고, 무엇을 못 읽고 있고, 어느 칸이 없는지를
+   한 번에 보여준다. 스크린샷 한 장이면 원인이 나온다.
+
+   쓰는 법 :  콘솔에 wlCheckAll()   또는  진단 탭 [🩺 종합 점검]
+   ============================================================ */
+(function(){
+  'use strict';
+
+  function g(id){ try{ return document.getElementById(id); }catch(e){ return null; } }
+  function num(v){ return (v == null) ? '?' : v; }
+  function yn(v){ return v ? '✅' : '❌'; }
+
+  function verOf(){
+    try{ return window.APP_VERSION || (document.title.match(/v[\d.]+-\d+-\d+/) || ['?'])[0]; }
+    catch(e){ return '?'; }
+  }
+  function onlineOf(){
+    try{ if(typeof online !== 'undefined') return !!online; }catch(e){}
+    try{ return navigator.onLine; }catch(e){ return null; }
+  }
+  function cntOf(name){
+    try{ var v = window[name]; if(Array.isArray(v)) return v.length; }catch(e){}
+    try{ return eval(name).length; }catch(e){ return null; }
+  }
+
+  /* 지금 열린 화면에 그 칸이 실제로 있나 */
+  function fieldExists(key){
+    if(!key) return false;
+    if(g('m-' + key)) return true;
+    try{
+      return !!document.querySelector('[data-prow="f:' + key + '"],[data-ppid="f:' + key + '"],[data-pid="f:' + key + '"]');
+    }catch(e){ return false; }
+  }
+
+  function run(){
+    var L = [];
+    function add(s){ L.push(s); }
+    function head(s){ L.push(''); L.push('── ' + s + ' ' + '─'.repeat(Math.max(2, 40 - s.length))); }
+
+    head('지금 상태');
+    var on = onlineOf();
+    add('버전        : ' + verOf());
+    add('연결        : ' + (on === null ? '알 수 없음' : (on ? '🟢 온라인' : '🔴 오프라인 — 클라우드를 못 읽습니다')));
+    var ents = cntOf('entries'), cts = cntOf('contactsCache');
+    add('기록        : ' + num(ents) + '건');
+    add('연락처      : ' + num(cts) + '건' + ((cts === 0) ? '  ⚠ 0건이면 업체 연결이 안 됩니다' : ''));
+    if(cts === 0 && on === false) add('              → 오프라인이라 연락처를 못 읽은 것입니다. 인터넷을 연결하고 새로고침하세요.');
+    if(cts === 0 && on !== false) add('              → 콘솔에 loadContactsCache() 를 한 번 실행해 보세요.');
+
+    head('기능이 살아 있나');
+    var mods = [
+      ['입력 도우미', 'wlSmartField'], ['연결 규칙', 'wlRules'],
+      ['묶어보기', 'wlGroup'], ['빈 영역 접기', 'wlSecs'],
+      ['시계 창', 'wlTimeDial'], ['칸 종류 되돌리기', 'wlFieldTypeReset']
+    ];
+    mods.forEach(function(m){
+      var t = '';
+      try{ t = typeof window[m[1]]; }catch(e){ t = 'undefined'; }
+      add((m[0] + '            ').slice(0, 13) + ': ' + (t === 'undefined' ? '❌ 없음 (파일이 옛 것일 수 있어요)' : '✅ ' + t));
+    });
+
+    head('켜짐 / 꺼짐');
+    try{
+      var c = window.wlSmartField ? window.wlSmartField.cfg() : null;
+      if(c) add('자동완성    : ' + yn(c.ac) + '   연락처 표시 ' + yn(c.link) + '   빈 칸 접기 ' + yn(c.fold)
+              + '   업체 아이디 ' + yn(c.idsave) + '   빠른버튼 ' + yn(c.quick));
+    }catch(e){ add('자동완성    : 확인 실패 — ' + e.message); }
+    try{ add('연결 규칙   : ' + (localStorage.getItem('wl_rules_on') === '0' ? '꺼짐' : '켜짐')); }catch(e){}
+    try{ add('묶어보기    : ' + (localStorage.getItem('wl_group_on') === '0' ? '꺼짐' : '켜짐')); }catch(e){}
+    try{ add('빈 영역 접기: ' + (localStorage.getItem('wl_secs_on') === '0' ? '꺼짐' : '켜짐')); }catch(e){}
+
+    head('연결 규칙이 지금 화면에 맞나');
+    try{
+      var raw = localStorage.getItem('wl_rules');
+      var mine = !!raw;
+      var rules = [];
+      try{ rules = JSON.parse(raw || 'null') || []; }catch(e){ rules = []; }
+      if(!mine){
+        add('저장된 규칙 : 없음 (처음 규칙을 씁니다) ✅');
+        add('              — 옛 규칙이 남아 있지 않아 정상입니다');
+      }else{
+        add('저장된 규칙 : ' + rules.length + '개  ⚠ 내가 손댄 규칙이 있습니다');
+        var old = rules.filter(function(r){
+          return r && r.when && ['company','person','role','phone','receipt','taxInvoice','companyMemo','material']
+            .indexOf(r.when.k) >= 0 && String(r.id||'').charAt(0) === 'b';
+        });
+        if(old.length) add('              ⚠ 옛 이름을 쓰는 기본 규칙 ' + old.length + '개 — wlRules.reset() 을 실행하세요');
+      }
+      var use = {};
+      (window.wlRules ? [] : []).forEach(function(){});
+      var list = [];
+      try{ list = (raw ? rules : null) || []; }catch(e){}
+      if(!list.length && window.wlRules){
+        /* 저장된 게 없으면 기본 규칙을 못 읽으므로 화면에서 자주 쓰는 칸만 확인 */
+        list = [];
+      }
+      var keys = ['workVendor','workContact','workRole','workPhone','workMemo',
+                  'material','spec','qty','expType','cost','company','name','role','phone',
+                  'owner','ownerPhone','partyName','startTime','endTime','isIssued','purpose'];
+      var found = keys.filter(fieldExists);
+      add('지금 화면에 있는 칸 : ' + (found.length ? found.join(', ') : '(없음 — 기록을 열고 다시 눌러주세요)'));
+    }catch(e){ add('규칙 확인 실패 — ' + e.message); }
+
+    head('지금 열린 화면');
+    var page = document.querySelector('.lf-page .pg-body');
+    var modal = g('mFields');
+    add('노션식 페이지 : ' + (page ? '✅ 열림' : '닫힘'));
+    add('옛 입력창     : ' + (modal && modal.innerHTML ? '✅ 열림' : '닫힘'));
+    if(page){
+      var rows = page.querySelectorAll('[data-prow]');
+      add('속성 줄       : ' + rows.length + '개');
+      var sample = [];
+      for(var i = 0; i < rows.length && sample.length < 5; i++){
+        sample.push(rows[i].getAttribute('data-prow'));
+      }
+      add('이름표 모양   : ' + (sample.join(' , ') || '(없음)'));
+      add('묶음 줄       : ' + page.querySelectorAll('.pg-grow').length + '개');
+      add('접힌 영역 단추: ' + (g('pgSecBar') ? g('pgSecBar').querySelectorAll('button').length : 0) + '개');
+    }
+    try{
+      var st = (typeof window.wlOpenStyle === 'function') ? window.wlOpenStyle() : '?';
+      add('기록을 누르면 : ' + st + (st === 'old' ? '  ⚠ 예전 입력창이라 새 기능이 안 보입니다' : ''));
+    }catch(e){}
+
+    head('무엇을 하면 되나');
+    var todo = [];
+    if(on === false) todo.push('인터넷을 연결하고 새로고침 (연락처·클라우드가 이때 살아납니다)');
+    if(cts === 0) todo.push('연락처가 0건입니다 — 연결 후 새로고침');
+    try{ if(localStorage.getItem('wl_rules')) todo.push('wlRules.reset() 으로 규칙을 새것으로'); }catch(e){}
+    try{ if(typeof window.wlGroup === 'undefined') todo.push('파일이 옛 것입니다 — 최신 worklog.js 를 올리세요'); }catch(e){}
+    try{ if(typeof window.wlOpenStyle === 'function' && window.wlOpenStyle() === 'old')
+           todo.push('진단 탭 「기록을 누르면」 을 창 또는 페이지로 바꾸세요'); }catch(e){}
+    if(!todo.length) todo.push('막는 것이 없습니다 — 기록을 하나 열고 다시 점검해 보세요');
+    todo.forEach(function(t, i){ add((i+1) + '. ' + t); });
+
+    var txt = L.join('\n');
+    console.log('%c🩺 종합 점검', 'color:#2563a8;font-size:14px;font-weight:800');
+    console.log(txt);
+    try{
+      var box = g('scResult');
+      if(box){
+        var d = document.createElement('pre');
+        d.style.cssText = 'margin-top:10px;padding:11px 13px;border-radius:10px;background:#f7faff;'
+          + 'border:1px solid #dbe6f4;font-size:12px;line-height:1.65;white-space:pre-wrap;'
+          + 'font-family:ui-monospace,Menlo,Consolas,monospace;color:#3d5875';
+        d.textContent = txt;
+        box.appendChild(d);
+      }
+    }catch(e){}
+    return '점검 끝 — 위 내용을 그대로 보여주시면 원인을 찾을 수 있어요';
+  }
+
+  window.wlCheckAll = run;
+
+  function panel(){
+    var host = g('sfPanel');
+    if(!host || g('caBtn')) return;
+    var row = host.querySelector('.btn-row'); if(!row) return;
+    var b = document.createElement('button');
+    b.id = 'caBtn'; b.className = 'btn btn-primary btn-sm'; b.style.minHeight = '44px';
+    b.textContent = '🩺 종합 점검';
+    b.addEventListener('click', function(){
+      try{ var box = g('scResult'); if(box) box.innerHTML = ''; }catch(e){}
+      run();
+      if(typeof toast === 'function') toast('점검 결과를 아래에 적었습니다');
+    });
+    row.appendChild(b);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
+  else panel();
+  setTimeout(panel, 2400);
+
+  console.log('[종합 점검] 준비됨 — 콘솔에 wlCheckAll() 또는 진단 탭 [🩺 종합 점검]');
 })();
