@@ -14583,13 +14583,18 @@ async function githubUpload(token){
 
   var LS_ON  = 'wl_group_on';
   var LS_GRP = 'wl_groups';
-  var VER    = 3;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
+  var VER    = 4;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
   var LS_VER = 'wl_groups_ver';
 
   /* ── 2026-08-29 14종 전수 실측 결과로 만든 묶음 ──
         이름은 data-prow 값 그대로 쓴다 (_sub · f:workContact …) */
   function baseGroups(){
     return [
+      /* v117 — 달님 : 「이쪽 목록의 이름을 만들어줘」
+            날짜·대상년월·층·분야·상태 = 「언제 · 어디서 · 무엇」 한 덩어리.
+            평소에는 펼쳐 두고, 접으면 한 줄로 요약된다. */
+      { id:'g0', on:1, base:1, icon:'📌', name:'기본 — 언제 · 어디서 · 무엇', head:'_date',
+        keys:['f:refYear','f:refMonth','f:floor','f:field','f:status'], openDefault:1 },
       { id:'g1', on:1, base:1, icon:'🏢', name:'업체 한 덩어리', head:'_sub',
         keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',   /* 업무 */
               'f:callContact','f:role','f:phone',                        /* 통화 */
@@ -14608,6 +14613,9 @@ async function githubUpload(token){
     ];
   }
 
+  /* v117 — 접고 편 상태는 줄(DOM)이 아니라 묶음 이름으로 기억한다.
+        화면을 다시 그리면 줄이 새로 만들어져서 예전에는 매번 되돌아갔다. */
+  var OPEN = {};
   function isOn(){ try{ return localStorage.getItem(LS_ON) !== '0'; }catch(e){ return true; } }
   function setOn(v){ try{ localStorage.setItem(LS_ON, v ? '1':'0'); }catch(e){ console.warn('[묶어보기] 설정 저장 실패', e); } }
 
@@ -14733,8 +14741,10 @@ async function githubUpload(token){
     /* 자재 사용 내역이 있으면 — 내역을 한 줄로 보여주고 겹치는 속성 칸은 감춘다 */
     var mats = matsOfRec();
     if(mats.length){
-      var mHead = rowOf(props, 'f:material');
-      var anchor = mHead || rowOf(props, 'f:spec') || rowOf(props, 'f:qty');
+      /* v117 — 달님 : 「자재 사용내역은 시각 한 덩어리 위쪽으로」
+            예전에는 자재명 칸 자리에 붙어서 견적 메모 밑까지 내려가 있었다. */
+      var anchor = rowOf(props, 'f:startTime') || rowOf(props, '_sub')
+                || rowOf(props, 'f:material') || rowOf(props, 'f:spec') || rowOf(props, 'f:qty');
       if(anchor){
         var mLine = document.createElement('div');
         mLine.className = 'pg-prow wide pg-grow';
@@ -14779,7 +14789,9 @@ async function githubUpload(token){
             → 값이 하나라도 있으면 접을 수 있다. 대표 값이 비어 있으면
               「(업체 없음)」 이라고 적어 준다. */
       var anyVal = hVal || parts.length;
-      if(anyVal && !hRow._gOpen){
+      var gid = g.id || '';
+      var wantOpen = (OPEN[gid] === undefined) ? !!g.openDefault : !!OPEN[gid];
+      if(anyVal && !wantOpen){
         var line = document.createElement('div');
         line.className = 'pg-prow wide pg-grow';
         line.setAttribute('data-gid', g.id || '');    /* v113 — 어떤 묶음인지 (↩ 단추가 찾아 쓴다) */
@@ -14800,8 +14812,11 @@ async function githubUpload(token){
         rows.forEach(function(r){ r.el.style.display = 'none'; r.el._gHid = 1; });
 
         function openIt(){
-          hRow._gOpen = 1; run();
-          setTimeout(function(){ try{ hRow.scrollIntoView({block:'center'}); }catch(e){} }, 60);
+          OPEN[gid] = 1; run();
+          setTimeout(function(){
+            try{ var r2 = rowOf(document.querySelector('.lf-page .pg-props'), g.head);
+                 if(r2) r2.scrollIntoView({block:'center'}); }catch(e){}
+          }, 80);
         }
         line.querySelector('.pg-gb').addEventListener('click', openIt);
         line.querySelector('.pg-gv').addEventListener('click', openIt);
@@ -14815,7 +14830,7 @@ async function githubUpload(token){
       bar.innerHTML =
           '<span class="pg-gi">' + (g.icon || '🔗') + '</span>'
         + '<b>' + ES(g.name || '묶음') + '</b>'
-        + (hVal ? '' : '<span class="pg-ghint">' + ES(labelOf(hRow) || '대표 값') + '을 먼저 넣으면 한 줄로 접힙니다</span>')
+        + (hVal || g.openDefault ? '' : '<span class="pg-ghint">' + ES(labelOf(hRow) || '대표 값') + '을 먼저 넣으면 한 줄로 접힙니다</span>')
         + '<button type="button" class="pg-gfold">접기</button>';
       if(!putBefore(bar, hRow)) return;
 
@@ -14835,7 +14850,7 @@ async function githubUpload(token){
       putAfter(tail, prev);
 
       bar.querySelector('.pg-gfold').addEventListener('click', function(){
-        hRow._gOpen = 0; run();                      /* 값이 없어도 접힌다 (v116) */
+        OPEN[gid] = 0; run();                        /* 값이 없어도 접힌다 (v116) */
       });
     });
   }

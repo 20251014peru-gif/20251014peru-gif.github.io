@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v116-0829-2110";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v117-0829-2150";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3266,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=116-20260829t2110"></script>
+<script src="worklog.js?v=117-20260829t2150"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -24080,8 +24080,15 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       return h2;
     }
 
+    /* ★ v117 — 「언제·어디서·무엇」 앞자리 칸은 비어 있어도 늘 보인다.
+          예전에는 값이 있는 칸이 먼저 오고 빈 칸은 뒤로 밀려서,
+          「해당층·분야를 날짜 옆으로」가 아무리 고쳐도 안 됐다. (달님 신고 4회)
+          숨김 목록에 들어 있어도 되살린다 — 기본 칸이라 감춰 두면 안 된다. */
+    var ALWAYS = { '_date':1, 'f:refYear':1, 'f:refMonth':1, 'f:floor':1, 'f:field':1, 'f:status':1 };
     var props = propsOf(pt).filter(function(p){
-      return p.id!=='_title' && p.id!=='_att' && p.id!=='_cat' && _phd.indexOf(p.id)<0; });
+      if(p.id==='_title' || p.id==='_att' || p.id==='_cat') return false;
+      if(ALWAYS[p.id]) return true;                      /* 앞자리 칸은 숨기지 않는다 */
+      return _phd.indexOf(p.id)<0; });
     /* 값이 있는 것 먼저, 빈 것은 접어둔다 */
     function hasVal(p){
       if(p.type==='formula') return formulaCalc(rec,p.expr,pt)!=='';
@@ -24091,8 +24098,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       if(p.type==='check') return !!v;
       return v!=='' && v!=null;
     }
-    var shown  = props.filter(function(p){ return isDisp(p.type) || hasVal(p); });
-    var hidden = props.filter(function(p){ return !isDisp(p.type) && !hasVal(p); });
+    var shown  = props.filter(function(p){ return ALWAYS[p.id] || isDisp(p.type) || hasVal(p); });
+    var hidden = props.filter(function(p){ return !ALWAYS[p.id] && !isDisp(p.type) && !hasVal(p); });
     /* 종류마다 따로 기억한다 — 사고에서 펼쳤다고 업무까지 펼쳐지면 안 된다 */
     var pgKey = dsk(pt);
     var openAll = (function(){
@@ -29083,17 +29090,27 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     inp.value = c.name;
     try{ inp.dispatchEvent(new Event('input',{bubbles:true}));
          inp.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
-    /* ★ v116 — 노션식 화면에서 업체명이 사라지던 원인.
-          fill() → wlPagePatch() → openPage() 로 화면을 다시 그리는데,
-          그때 업체 입력칸은 아직 저장 전(blur 전)이라 통째로 없어졌다.
-          그래서 담당자·직책·전화만 들어가고 **업체 이름만 빈 칸**이 됐다.
-          → 딸린 칸을 채우기 전에 업체명부터 확실히 저장한다. */
-    try{
-      if(inp.closest && inp.closest('.lf-page') && typeof inp._dialDone === 'function'){
-        inp._dialDone();
-      }
-    }catch(e){ console.warn('[관련처] 업체명 먼저 저장 실패', e); }
-    fill(map, c);
+    /* ★ v117 — 노션식 화면에서 두 가지가 번갈아 깨졌다.
+          v115 : 업체명이 저장되기 전에 화면이 다시 그려져 **업체 이름만** 사라짐
+          v116 : 먼저 저장했더니 입력칸이 없어져 `closest('.lf-page')` 가 실패,
+                 이번엔 **딸린 값(담당자·직책·전화)** 이 안 들어감
+          → 「페이지인지」를 미리 판단해 두고 → 업체명 저장 → 딸린 값을 직접 넣는다. */
+    var _isPage = false;
+    try{ _isPage = !!(inp.closest && inp.closest('.lf-page')); }catch(e){}
+    if(_isPage){
+      try{ if(typeof inp._dialDone === 'function') inp._dialDone(); }
+      catch(e){ console.warn('[관련처] 업체명 저장 실패', e); }
+      var _o = {}, _n = 0;
+      Object.keys(map || {}).forEach(function(src){ if(c[src]){ _o[map[src]] = c[src]; _n++; } });
+      if(_n) setTimeout(function(){
+        try{
+          if(typeof window.wlPagePatch === 'function') window.wlPagePatch(_o);
+          else console.warn('[관련처] 페이지 채우기 통로가 없어요');
+        }catch(e){ console.warn('[관련처] 페이지 채우기 실패', e); }
+      }, 260);
+    }else{
+      fill(map, c);
+    }
     hide();
     try{ inp.focus(); }catch(e){}
     try{
