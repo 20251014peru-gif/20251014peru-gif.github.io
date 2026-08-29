@@ -13058,7 +13058,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v104-0829-1720
+   ✨ 입력칸 3종 세트 (wlSmartField)  v105-0829-1810
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13647,9 +13647,9 @@ async function githubUpload(token){
     try{ if(inp.closest && inp.closest('#overlay')) { inp._sfChip = true; return; } }catch(e){}
     var ty = (inp.getAttribute('type') || '').toLowerCase();
     var isDate = (ty === 'date');
-    var isTime = (ty === 'time') || !!inp.getAttribute('data-tdial')
-              || /time|시각|시간/i.test(inp.id || '') || /time/i.test(keyOf(inp) || '');
-    if(!isDate && !isTime) return;
+    /* v105: 시각 칸 칩은 없앴다 — 시계 창 안에 ± 와 분 단위·소요시간이 들어갔다 */
+    if(!isDate) return;
+    var isTime = false;
     inp._sfChip = true;
 
     var bar = document.createElement('div');
