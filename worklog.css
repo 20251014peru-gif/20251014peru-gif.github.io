@@ -963,3 +963,13 @@ tr.wk-checked td{background:#e8f3fd !important}
   .pg-ghead{ margin:10px 0 3px; padding:6px 10px }
   .pg-ghead .pg-ghint{ display:none }
 }
+
+/* ↩ 자동입력 되돌리기 단추 (v113) */
+.pg-undo{
+  flex:0 0 auto; height:28px; padding:0 10px; margin-left:8px;
+  border:1.5px solid #f0c98c; border-radius:8px; background:#fffbea;
+  color:#b45309; font-size:12px; font-weight:800; cursor:pointer;
+  font-family:inherit; white-space:nowrap;
+}
+.pg-undo:hover{ background:#fff3d6 }
+#pgSumBody{ display:inline-flex; align-items:center }

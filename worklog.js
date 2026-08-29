@@ -14351,7 +14351,13 @@ async function githubUpload(token){
     { key:'time', label:'소요 시간', icon:'⏱',  re:/소요\s*시간/,        has:function(){ return false; } },
     { key:'mat',  label:'자재 내역', icon:'📦', re:/자재\s*사용/,         has:function(w){ return cnt(w,'.pg-matrow, [data-matdel]'); } },
     { key:'att',  label:'파일 링크', icon:'📎', re:/파일\s*[·ㆍ]\s*폴더/, has:function(w){ return cnt(w,'.pg-attrow, [data-attdel]'); } },
+    /* ★ v113 — 페이지(전체 화면)로 볼 때는 본문을 늘 펼쳐 둔다.
+          노션이 본문을 항상 보여 주는 이유와 같다 : 속성은 「미리 정한 질문의 답」이고,
+          본문은 「아직 칸이 없는 것 전부」다. 닫아 두면 적을 곳이 없어져
+          사람이 제목·비고에 욱여넣게 되고, 나중에 어떤 칸이 필요한지도 안 보인다.
+          좁은 창에서만 접는다. */
     { key:'body', label:'본문',      icon:'📝', re:/본문/,               has:function(){ var t=document.getElementById('pgBodyTx');
+                                                                                          if(isFullPage()) return true;
                                                                                           return !!(t && (t.textContent||'').trim().length); } },
     { key:'pics', label:'사진',      icon:'📷', re:/사진/,               has:function(w){ return cnt(w,'img'); } }
   ];
@@ -14362,6 +14368,13 @@ async function githubUpload(token){
 
   function isOn(){ try{ return localStorage.getItem(LS_ON) !== '0'; }catch(e){ return true; } }
   function setOn(v){ try{ localStorage.setItem(LS_ON, v ? '1' : '0'); }catch(e){ console.warn('[빈 영역] 설정 저장 실패', e); } }
+  /* 지금 전체 페이지로 보고 있나 (창이면 .as-modal 이 붙는다) */
+  function isFullPage(){
+    try{
+      var ov = document.getElementById('lfPageOv');
+      return !!(ov && !/as-modal/.test(ov.className));
+    }catch(e){ return false; }
+  }
   function pageId(){
     try{ var m = String(location.hash||'').match(/^#lp=([^&]+)/); return m ? decodeURIComponent(m[1]) : ''; }
     catch(e){ return ''; }
@@ -14563,7 +14576,7 @@ async function githubUpload(token){
       { id:'g2', on:1, base:1, icon:'📦', name:'자재 한 덩어리', head:'f:material',
         keys:['f:spec','f:qty'] },
       { id:'g3', on:1, base:1, icon:'🕐', name:'시각 한 덩어리', head:'f:startTime',
-        keys:['f:endTime'] },
+        keys:['f:endTime'], even:1, sep:' ~ ' },   /* 시작·끝은 대등하므로 굵기를 같게 */
       /* 🧾 세금계산서 칸들은 일부러 묶지 않는다 —
             「세금계산서를 고르면 발행여부가 나온다」는 연결 규칙이 보여줘야 하는데,
             묶어버리면 접혀서 안 보인다. (2026-08-29 실측으로 확인) */
@@ -14697,10 +14710,14 @@ async function githubUpload(token){
       if(hVal && !hRow._gOpen){
         var line = document.createElement('div');
         line.className = 'pg-prow wide pg-grow';
+        var sep = g.sep || ' · ';
         line.innerHTML =
             '<div class="pg-gk">' + (g.icon || '🔗') + '</div>'
-          + '<div class="pg-gv"><b>' + ES(hVal) + '</b>'
-          +   (parts.length ? '<span class="pg-gsep"> · </span>' + ES(parts.join(' · ')) : '')
+          + '<div class="pg-gv">'
+          +   (g.even                                    /* 대등한 묶음 — 굵기를 같게 */
+                ? ES([hVal].concat(parts).join(sep))
+                : '<b>' + ES(hVal) + '</b>'
+                  + (parts.length ? '<span class="pg-gsep">' + ES(sep) + '</span>' + ES(parts.join(' · ')) : ''))
           + '</div>'
           + '<button type="button" class="pg-gb" title="펼쳐서 고치기">펼치기</button>';
         if(!putBefore(line, hRow)) return;
@@ -15159,4 +15176,208 @@ async function githubUpload(token){
     return '지금: ' + styleNow() + "  —  바꾸려면 wlPageStyle('page') 또는 wlPageStyle('modal')";
   };
   console.log('[보기 모양] v112 준비됨 — 기록 머리줄의 [📄 페이지로] / [🗔 창으로]');
+})();
+
+
+/* ============================================================
+   ↩📝 자동입력 되돌리기 + 속성을 본문으로 (wlAutoUndo)  v113-0829-2359
+
+   달님 두 가지 요청
+     ① 「업체를 누르면 자동으로 들어가잖아. 다시 누르면 그 내용들 지워지게」
+     ② 「내용에 내가 셀에 입력했던 걸 정리해서 넣으면 되겠네」
+
+   ① 되돌리기
+      자동으로 채운 칸이 무엇이었는지 기록해 둔다.
+      그 뒤 업체 줄에 [↩] 단추가 뜨고, 누르면 **자동으로 들어간 것만** 지운다.
+      손으로 고친 칸은 값이 달라져 있으므로 건드리지 않는다.
+      (기본지침 「저장·수정·삭제 3원칙」 — 지울 것과 지키지 말 것을 구분한다)
+
+   ② 속성 → 본문
+      본문 옆 [📝 속성 정리해서 넣기] 를 누르면
+      채워진 속성만 골라 문장으로 만들어 본문에 넣는다.
+      한 번 넣은 뒤에는 사람이 자유롭게 고쳐 쓴다 (덮어쓰지 않는다).
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS = 'wl_autofill';
+  var MAX = 40;
+
+  function all(){
+    try{ var o = JSON.parse(localStorage.getItem(LS) || '{}'); return (o && typeof o==='object') ? o : {}; }
+    catch(e){ console.warn('[자동채움] 읽기 실패', e); return {}; }
+  }
+  function put(o){
+    try{
+      var ks = Object.keys(o);
+      while(ks.length > MAX){ delete o[ks[0]]; ks = Object.keys(o); }
+      localStorage.setItem(LS, JSON.stringify(o));
+    }catch(e){ console.warn('[자동채움] 저장 실패', e); }
+  }
+
+  /* 페이지 자동채움이 부른다 — 무엇을 넣었는지 적어 둔다 */
+  window.wlAutoMark = function(rid, patch){
+    if(!rid || !patch) return;
+    var o = all();
+    var m = o[rid] || {};
+    Object.keys(patch).forEach(function(k){ if(patch[k] != null && patch[k] !== '') m[k] = patch[k]; });
+    o[rid] = m; put(o);
+  };
+
+  function ridNow(){
+    try{ var m = String(location.hash||'').match(/^#lp=([^&]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+    catch(e){ return ''; }
+  }
+  function recOf(rid){
+    try{ return (entries||[]).filter(function(x){ return x && x.id === rid; })[0] || null; }
+    catch(e){ return null; }
+  }
+
+  /* 아직 「자동으로 들어간 그대로」인 칸만 고른다 */
+  function stillAuto(rid){
+    var m = (all()[rid] || {}), rec = recOf(rid), out = {};
+    if(!rec) return out;
+    Object.keys(m).forEach(function(k){
+      if(String(rec[k] == null ? '' : rec[k]) === String(m[k])) out[k] = m[k];
+    });
+    return out;
+  }
+
+  function undo(rid){
+    var hit = stillAuto(rid);
+    var ks = Object.keys(hit);
+    if(!ks.length){
+      if(typeof toast === 'function') toast('되돌릴 자동 입력이 없어요 (손으로 고친 값은 지키고 있어요)');
+      return;
+    }
+    var patch = {};
+    ks.forEach(function(k){ patch[k] = ''; });
+    try{
+      if(typeof updateRecord === 'function') updateRecord(rid, patch);
+      var o = all(); delete o[rid]; put(o);
+      if(typeof toast === 'function') toast('↩ 자동으로 넣었던 ' + ks.length + '칸을 지웠어요');
+      setTimeout(function(){
+        try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid, undefined); }catch(e){}
+      }, 150);
+    }catch(e){
+      console.error('[자동채움] 되돌리기 실패', e);
+      if(typeof toast === 'function') toast('되돌리지 못했어요: ' + (e.message || e));
+    }
+  }
+
+  /* ── 속성 → 본문 글 만들기 ── */
+  function textOf(){
+    var page = document.querySelector('.lf-page'); if(!page) return '';
+    var rows = page.querySelectorAll('.pg-props [data-prow]');
+    var SKIP = { '_title':1, '_memo':1, '_att':1 };
+    var lines = [];
+    [].forEach.call(rows, function(r){
+      var id = r.getAttribute('data-prow');
+      if(SKIP[id]) return;
+      var nm = ((r.querySelector('.pg-pnm')||{}).textContent || '').trim().replace(/^\S+\s/, '');
+      var ie = r.querySelector('.lf-ie');
+      var v  = ie ? String(ie.value == null ? '' : ie.value).trim()
+                  : ((r.querySelector('.pg-pv')||{}).textContent || '').trim();
+      if(!v || v === '비어 있음' || v === '—' || v === '0') return;
+      if(!nm) return;
+      lines.push('· ' + nm + ' : ' + v);
+    });
+    /* 자재 내역도 함께 */
+    try{
+      var mats = [].map.call(page.querySelectorAll('.pg-sub .tt'), function(x){
+        return '· ' + (x.textContent||'').trim().replace(/\s+/g,' '); });
+      if(mats.length) lines = lines.concat(['', '[자재]'], mats);
+    }catch(e){}
+    return lines.join('\n');
+  }
+
+  function toBody(){
+    var B = document.getElementById('pgBodyTx');
+    if(!B){ if(typeof toast === 'function') toast('본문을 먼저 펼쳐 주세요'); return; }
+    var txt = textOf();
+    if(!txt){ if(typeof toast === 'function') toast('본문에 넣을 만한 값이 아직 없어요'); return; }
+    var head = '[정리] ' + new Date().toLocaleDateString('ko-KR');
+    var add  = (head + '\n' + txt).split('\n').map(function(l){
+      return '<div>' + l.replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }) + '</div>';
+    }).join('');
+    var cur = (B.innerHTML || '').replace(/^(<br>|<div><br><\/div>)$/, '');
+    B.innerHTML = cur ? (cur + '<div><br></div>' + add) : add;
+    try{ B.dispatchEvent(new Event('input', {bubbles:true})); }catch(e){}
+    /* blur 로만 저장하면 코드로 고친 것은 저장이 안 된다 → 저장을 직접 부른다 */
+    if(typeof window.wlBodySave === 'function'){ window.wlBodySave(B.innerHTML); }
+    else { try{ B.focus(); B.blur(); }catch(e){} }
+    if(typeof toast === 'function') toast('📝 속성을 정리해 본문에 넣었어요 — 자유롭게 고치세요');
+  }
+
+  /* ── 단추 놓기 ── */
+  function paint(){
+    var page = document.querySelector('.lf-page'); if(!page) return;
+    var rid = ridNow(); if(!rid) return;
+
+    /* ① 업체 줄 (또는 접혀 있으면 묶음 줄) 에 ↩ */
+    var n = Object.keys(stillAuto(rid)).length;
+    /* 접혀 있으면 묶음 줄에, 펼쳐져 있으면 업체 줄에 붙인다 */
+    var host = page.querySelector('.pg-grow .pg-gv')
+            || page.querySelector('[data-prow="_sub"] .pg-pv')
+            || null;
+    var old = page.querySelector('#pgAutoUndo');
+    if(!n){ if(old) old.remove(); }
+    else if(!old && host){
+      var b = document.createElement('button');
+      b.type = 'button'; b.id = 'pgAutoUndo'; b.className = 'pg-undo';
+      b.textContent = '↩ 자동입력 ' + n + '칸 지우기';
+      b.title = '업체를 골라 저절로 들어간 칸만 지웁니다 (손으로 고친 값은 그대로 둡니다)';
+      b.addEventListener('click', function(ev){ ev.stopPropagation(); undo(rid); });
+      host.parentNode.insertBefore(b, host.nextSibling);
+    }else if(old){
+      old.textContent = '↩ 자동입력 ' + n + '칸 지우기';
+    }
+
+    /* ② 본문 옆에 [📝 속성 정리해서 넣기] */
+    var B = document.getElementById('pgBodyTx');
+    if(B && !page.querySelector('#pgSumBody')){
+      var bar = B.parentNode;
+      var s = document.createElement('button');
+      s.type = 'button'; s.id = 'pgSumBody'; s.className = 'pg-xb';
+      s.style.margin = '8px 0 0';
+      s.textContent = '📝 속성 정리해서 넣기';
+      s.title = '지금 채워진 칸들을 문장으로 만들어 본문에 넣습니다';
+      s.addEventListener('click', toBody);
+      bar.insertBefore(s, B.nextSibling);
+    }
+  }
+
+  var t = null;
+  function later(){ clearTimeout(t); t = setTimeout(paint, 200); }
+  try{
+    var mo = new MutationObserver(function(m){
+      for(var i = 0; i < m.length; i++){
+        if(m[i].addedNodes && m[i].addedNodes.length){
+          var mine = false;
+          for(var j = 0; j < m[i].addedNodes.length; j++){
+            var x = m[i].addedNodes[j];
+            if(x.id === 'pgAutoUndo' || x.id === 'pgSumBody') mine = true;
+          }
+          if(!mine){ later(); return; }
+        }
+      }
+    });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[자동채움] 감시 시작 실패', e); }
+  var seen = null;
+  setInterval(function(){
+    try{
+      var pr = document.querySelector('.lf-page .pg-props');
+      if(pr && pr !== seen){ seen = pr; paint(); }
+      else if(!pr) seen = null;
+    }catch(e){ console.warn('[자동채움] 파수꾼 실패', e); }
+  }, 400);
+
+  window.wlAutoUndo = {
+    show: function(){ var r = ridNow(); console.table(stillAuto(r)); return r || '기록을 먼저 여세요'; },
+    undo: function(){ var r = ridNow(); if(r) undo(r); return r ? '되돌렸습니다' : '기록을 먼저 여세요'; },
+    toBody: toBody,
+    forget: function(){ try{ localStorage.removeItem(LS); }catch(e){} return '자동입력 기록을 지웠습니다'; }
+  };
+  console.log('[자동채움] v113 준비됨 — 업체 줄 [↩] · 본문 [📝 속성 정리해서 넣기]');
 })();
