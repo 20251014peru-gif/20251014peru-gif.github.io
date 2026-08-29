@@ -13058,7 +13058,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v109-0829-2130
+   ✨ 입력칸 3종 세트 (wlSmartField)  v110-0829-2230
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -14461,4 +14461,257 @@ async function githubUpload(token){
     forget: function(){ try{ localStorage.removeItem(LS_OPEN); }catch(e){} run(); return '펼침 기억을 지웠습니다'; }
   };
   console.log('[빈 영역] 준비됨 — 비어 있는 아래쪽 영역을 접고 단추로 꺼내 씁니다');
+})();
+
+
+/* ============================================================
+   🧩 연관 속성 한 줄 묶기 (wlGroup)  v110-0829-2230
+   기본지침 제3원칙 — 「화면에 보이는 게 전부 정보」
+
+   업체·담당자·직책·전화·메모가 다섯 줄을 차지한다.
+   사실 이건 「한 업체에 대한 한 덩어리」다.
+   그래서 한 줄로 접어서 보여주고, 누르면 펼쳐 고칠 수 있게 한다.
+
+     🏢 (주)은진 · 조홍석 상무 · 010-6265-4001            [펼치기]
+
+   ▸ 묶음은 데이터로 정의한다 — 새 묶음을 만들 수 있다 (제4원칙)
+   ▸ 값이 하나도 없으면 묶지 않는다 (원래대로 보인다)
+   ▸ 되돌리기 : 진단 탭 「🧩 연관 묶어보기」 를 끈다
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS_ON  = 'wl_group_on';
+  var LS_GRP = 'wl_groups';
+
+  /* 2026-08-29 실측한 진짜 칸 이름 (제0원칙) */
+  function baseGroups(){
+    return [
+      { id:'g1', on:1, base:1, name:'업무 — 업체 한 덩어리', icon:'🏢',
+        head:'workVendor', keys:['workContact','workRole','workPhone','workMemo'] },
+      { id:'g2', on:1, base:1, name:'통화 — 업체 한 덩어리', icon:'📞',
+        head:'company', keys:['name','role','phone'] },
+      { id:'g3', on:1, base:1, name:'진행업무 — 담당 업체', icon:'🏢',
+        head:'owner', keys:['ownerPhone'] },
+      { id:'g4', on:1, base:1, name:'사고 — 당사자', icon:'👤',
+        head:'partyName', keys:['partyType','partyPhone'] },
+      { id:'g5', on:1, base:1, name:'업무 — 자재 한 덩어리', icon:'📦',
+        head:'material', keys:['spec','qty'] },
+      { id:'g6', on:1, base:1, name:'업무 — 시각 한 덩어리', icon:'🕐',
+        head:'startTime', keys:['endTime'] }
+    ];
+  }
+
+  function isOn(){ try{ return localStorage.getItem(LS_ON) !== '0'; }catch(e){ return true; } }
+  function setOn(v){ try{ localStorage.setItem(LS_ON, v ? '1':'0'); }catch(e){ console.warn('[묶어보기] 설정 저장 실패', e); } }
+  function load(){
+    try{
+      var raw = localStorage.getItem(LS_GRP);
+      if(!raw) return baseGroups();
+      var a = JSON.parse(raw);
+      return Array.isArray(a) ? a : baseGroups();
+    }catch(e){ console.warn('[묶어보기] 읽기 실패', e); return baseGroups(); }
+  }
+  function save(a){ try{ localStorage.setItem(LS_GRP, JSON.stringify(a)); }catch(e){ console.warn('[묶어보기] 저장 실패', e); } }
+
+  function ES(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* 속성 줄 찾기 — 노션식 페이지는 data-prow 에 f:칸이름 이 들어 있다 */
+  function rowOf(body, key){
+    try{
+      return body.querySelector('[data-prow="f:' + key + '"]')
+          || body.querySelector('[data-ppid="f:' + key + '"]')
+          || null;
+    }catch(e){ return null; }
+  }
+  /* 그 줄에 지금 들어 있는 값 (편집 중이면 입력칸, 아니면 보기 글자) */
+  function valOfRow(row){
+    if(!row) return '';
+    try{
+      var ie = row.querySelector('.lf-ie');
+      if(ie) return String(ie.value == null ? '' : ie.value).trim();
+      var v = row.querySelector('.pg-pv');
+      if(!v) return '';
+      var t = (v.textContent || '').trim();
+      if(!t || t === '비어 있음' || t === '—') return '';
+      return t;
+    }catch(e){ return ''; }
+  }
+
+  function run(){
+    var body = document.querySelector('.lf-page .pg-body');
+    if(!body) return;
+    var props = body.querySelector('.pg-props');
+    if(!props) return;
+
+    /* 정리 모드에서는 원래대로 — 순서를 끌어 옮겨야 하니까 */
+    var editing = props.classList && props.classList.contains('pg-edit');
+
+    /* 이전에 만든 요약 줄은 지우고 다시 만든다 */
+    [].forEach.call(props.querySelectorAll('.pg-grow'), function(x){ x.remove(); });
+    [].forEach.call(props.querySelectorAll('[data-prow]'), function(r){
+      if(r._gHid){ r.style.display = ''; r._gHid = 0; }
+    });
+    if(!isOn() || editing) return;
+
+    var groups = load();
+    groups.forEach(function(g){
+      if(!g || !g.on) return;
+      var hRow = rowOf(props, g.head);
+      if(!hRow) return;
+      var hVal = valOfRow(hRow);
+      if(!hVal) return;                                  /* 대표 값이 없으면 안 묶는다 */
+      if(hRow._gOpen) return;                            /* 사람이 펼쳐둔 묶음은 그대로 */
+
+      var parts = [], rows = [];
+      (g.keys || []).forEach(function(k){
+        var r = rowOf(props, k); if(!r) return;
+        var v = valOfRow(r);
+        rows.push(r);
+        if(v) parts.push(v);
+      });
+      if(!rows.length) return;
+
+      var line = document.createElement('div');
+      line.className = 'pg-prow wide pg-grow';
+      line.innerHTML =
+        '<div class="pg-gk">' + (g.icon || '🔗') + '</div>'
+        + '<div class="pg-gv"><b>' + ES(hVal) + '</b>'
+        + (parts.length ? '<span class="pg-gsep"> · </span>' + ES(parts.join(' · ')) : '')
+        + '</div>'
+        + '<button type="button" class="pg-gb" title="펼쳐서 고치기">펼치기</button>';
+
+      hRow.parentNode.insertBefore(line, hRow);
+      rows.forEach(function(r){ if(r.style.display !== 'none'){ r.style.display = 'none'; r._gHid = 1; } });
+
+      line.querySelector('.pg-gb').addEventListener('click', function(){
+        hRow._gOpen = 1;
+        run();
+        setTimeout(function(){ try{ hRow.scrollIntoView({block:'center'}); }catch(e){} }, 60);
+      });
+      line.querySelector('.pg-gv').addEventListener('click', function(){
+        hRow._gOpen = 1; run();
+      });
+    });
+  }
+
+  var t = null;
+  function later(){ clearTimeout(t); t = setTimeout(run, 180); }
+  try{
+    var mo = new MutationObserver(function(m){
+      for(var i = 0; i < m.length; i++){
+        if(m[i].addedNodes && m[i].addedNodes.length){
+          for(var j = 0; j < m[i].addedNodes.length; j++){
+            var n = m[i].addedNodes[j];
+            if(n.classList && n.classList.contains('pg-grow')) return;   /* 내가 만든 것엔 반응 안 함 */
+          }
+          later(); return;
+        }
+      }
+    });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[묶어보기] 감시 시작 실패', e); }
+  setTimeout(run, 1400);
+
+  /* ── 묶음 만드는 화면 ── */
+  function openMgr(){
+    var ov = document.createElement('div'); ov.className = 'ptw';
+    function draw(){
+      var gs = load();
+      ov.innerHTML = '<div class="ptw-box" style="width:min(96vw,560px)">'
+        + '<div class="ptw-h">🧩 연관 묶어보기</div>'
+        + '<div class="ptw-s">여러 줄에 흩어진 것을 <b>한 줄로 접어</b> 보여줍니다. '
+        + '「펼치기」를 누르면 원래대로 나와서 고칠 수 있어요.</div>'
+        + '<div class="rl-list">' + gs.map(function(g, i){
+            return '<div class="rl-row'+(g.on?'':' off')+'">'
+              + '<button type="button" class="rl-tg" data-gon="'+i+'">'+(g.on?'✔':'○')+'</button>'
+              + '<div class="rl-nm">' + (g.icon||'') + ' ' + ES(g.name||'')
+              +   '<div class="rl-sub">' + ES(g.head) + ' 아래에 ' + ES((g.keys||[]).join(', ')) + ' 를 접음</div>'
+              + '</div>'
+              + (g.base ? '<span class="rl-base">기본</span>'
+                        : '<button type="button" class="rl-del" data-gdel="'+i+'">🗑</button>')
+              + '</div>';
+          }).join('') + '</div>'
+        + '<div class="rl-new"><div class="rl-nh">＋ 새 묶음</div>'
+        +   '<div class="rl-nr">'
+        +     '<input type="text" id="gH" placeholder="대표 칸 (예: workVendor)" data-vac="off">'
+        +     '<input type="text" id="gK" placeholder="접을 칸 (쉼표로 여러 개)" data-vac="off">'
+        +     '<button type="button" id="gAdd">추가</button>'
+        +   '</div></div>'
+        + '<div class="ptw-btns">'
+        +   '<button type="button" id="gReset" style="flex:1;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8">처음으로</button>'
+        +   '<button type="button" id="gClose" style="flex:2;background:#2563a8;color:#fff">닫기</button>'
+        + '</div></div>';
+      ov.querySelectorAll('[data-gon]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var a = load(), i = +b.getAttribute('data-gon');
+          a[i].on = a[i].on ? 0 : 1; save(a); draw();
+        });
+      });
+      ov.querySelectorAll('[data-gdel]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var a = load(), i = +b.getAttribute('data-gdel');
+          if(!confirm('「' + (a[i].name||'') + '」 묶음을 지울까요?')) return;
+          a.splice(i,1); save(a); draw();
+        });
+      });
+      ov.querySelector('#gAdd').addEventListener('click', function(){
+        var h = (ov.querySelector('#gH').value || '').trim();
+        var k = (ov.querySelector('#gK').value || '').trim();
+        if(!h || !k){ alert('대표 칸과 접을 칸을 적어주세요'); return; }
+        var a = load();
+        a.push({ id:'u_'+Date.now().toString(36), on:1, icon:'🔗', name:h + ' 묶음',
+                 head:h, keys:k.split(',').map(function(x){return x.trim();}).filter(Boolean) });
+        save(a); draw();
+        if(typeof toast === 'function') toast('묶음을 추가했어요');
+      });
+      ov.querySelector('#gReset').addEventListener('click', function(){
+        if(!confirm('내가 만든 묶음이 사라지고 처음으로 돌아갑니다. 계속할까요?')) return;
+        try{ localStorage.removeItem(LS_GRP); }catch(e){}
+        draw();
+      });
+      ov.querySelector('#gClose').addEventListener('click', function(){ ov.remove(); run(); });
+    }
+    draw();
+    ov.addEventListener('mousedown', function(e){ if(e.target === ov){ ov.remove(); run(); } });
+    document.body.appendChild(ov);
+  }
+
+  function panel(){
+    var host = document.getElementById('sfPanel');
+    if(!host || document.getElementById('grpBtn')) return;
+    var row = host.querySelector('.btn-row'); if(!row) return;
+    var b = document.createElement('button');
+    b.id = 'grpBtn'; b.style.minHeight = '44px';
+    function paint(){
+      b.textContent = isOn() ? '🧩 연관 묶어보기' : '🧩 묶기 꺼짐';
+      b.className = 'btn btn-sm ' + (isOn() ? 'btn-primary' : 'btn-ghost');
+      b.style.minHeight = '44px';
+    }
+    b.addEventListener('click', function(ev){
+      if(ev.shiftKey){ setOn(!isOn()); paint(); run(); return; }
+      openMgr();
+    });
+    b.title = '누르면 묶음 관리 · Shift+누르면 켜기/끄기';
+    paint(); row.appendChild(b);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
+  else panel();
+  setTimeout(panel, 2200);
+
+  window.wlGroup = {
+    list: function(){ console.table(load().map(function(g){
+            return { 켜짐:g.on?'✔':'', 이름:g.name, 대표:g.head, 접는칸:(g.keys||[]).join(',') }; }));
+            return load().length + '개'; },
+    open: openMgr,
+    on:   function(){ setOn(1); run(); return '묶어서 보여줍니다'; },
+    off:  function(){ setOn(0); run(); return '전부 펼쳐서 보여줍니다'; },
+    run:  function(){ run(); return '다시 그렸습니다'; },
+    reset:function(){ try{ localStorage.removeItem(LS_GRP); }catch(e){} run(); return '처음 묶음으로'; }
+  };
+  console.log('[묶어보기] 준비됨 — 진단 탭 「🧩 연관 묶어보기」');
 })();
