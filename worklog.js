@@ -2932,6 +2932,14 @@ function openEditor(kind,id){
   }
 
   const sc=SCHEMA[kind];
+  /* v97: SCHEMA 에 없는 종류(청소일지·비밀번호)는 전용 화면을 쓴다 — 조용히 깨지지 않게 */
+  if(!sc){
+    console.warn('[모달] SCHEMA 에 없는 종류입니다: ' + kind + ' — 전용 화면을 쓰세요');
+    if(kind === 'cleaning' && typeof openCleaningEditor === 'function'){ openCleaningEditor(id); return; }
+    if(kind === 'password' && typeof pwOpenEditor === 'function'){ pwOpenEditor(id); return; }
+    if(typeof toast === 'function') toast('이 종류(' + kind + ')는 이 창으로 열 수 없어요');
+    return;
+  }
   const mf = $("mFields");
   mf.className = "grid kind-" + kind; /* kind별 그리드 적용 */
   /* 여러 필드가 있는 모달은 인라인으로도 그리드 강제 (CSS 충돌 방지) */
@@ -13033,7 +13041,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v96-0829-1240
+   ✨ 입력칸 3종 세트 (wlSmartField)  v97-0829-1305
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13052,7 +13060,10 @@ async function githubUpload(token){
   var LS_HIDE   = 'wl_sugg_hidden';  /* 🗑 로 뺀 값  {키:[값…]}    */
   var MAXLEN    = 30;                /* 후보 글자수 상한          */
   var MAXSHOW   = 8;                 /* 한 번에 보여줄 개수        */
-  var MINCOUNT  = 2;                 /* 2번 이상 쓰인 값만         */
+  var MINCOUNT  = 1;                 /* 기본: 한 번만 쓴 것도 후보 */
+  /* 값이 몰리는 「목록성」 칸만 2번 이상으로 — 제목·내역은 한 번짜리도 쓸모가 있다 */
+  var MIN_BY_KEY = { company:2, vendor:2, workVendor:2, material:2, unit:2, floor:2, field:2 };
+  function minOf(key){ return MIN_BY_KEY[key] || MINCOUNT; }
 
   /* ── 설정 ─────────────────────────────────────────── */
   function cfg(){
@@ -13149,10 +13160,11 @@ async function githubUpload(token){
   function candFor(key){
     var m = buildCache()[key] || {};
     var hid = hiddenOf(key);
+    var need = minOf(key);
     var arr = [];
     for(var v in m){
       if(hid.indexOf(v) >= 0) continue;
-      if(m[v] < MINCOUNT) continue;
+      if(m[v] < need) continue;
       arr.push({ v: v, n: m[v] });
     }
     arr.sort(function(a, b){ return b.n - a.n || a.v.localeCompare(b.v); });
@@ -13329,7 +13341,7 @@ async function githubUpload(token){
   }
 
   /* 건드리지 않을 칸 — 이미 다른 자동완성이 붙었거나, 검색창이거나, 짧은 이름칸이 아닌 것 */
-  var SKIP_ID = ['m-field','m-material','m-name','m-contact',
+  var SKIP_ID = ['m-field','m-material','m-contact',
                  'tpSearchInp','vpSearch','tpCfName','q','v43Search','searchInp',
                  'newMatName','newMatVendor','wlSfBox'];
   /* 흡수 대상 — 옛 자동완성을 끄고 이 엔진으로 통일한다 (제목·위치) */
@@ -13347,6 +13359,12 @@ async function githubUpload(token){
     var id = inp.id || '';
     if(!id) return true;                                       /* id 없는 칸은 건너뜀 */
     if(SKIP_ID.indexOf(id) >= 0) return true;
+    /* 이름 칸은 통화 모달에만 전용 자동완성이 있다 — 그때만 비켜준다 */
+    if(id === 'm-name'){
+      var mk = '';
+      try{ mk = window._mKind || ''; }catch(e){ mk = ''; }
+      if(mk === 'call' || inp._callACwired) return true;
+    }
     if(/search|검색/i.test(id)) return true;
     if(TAKEOVER.indexOf(id) < 0){                              /* 흡수 대상은 아래 검사를 건너뛴다 */
       if(inp.getAttribute('list')) return true;                /* datalist 붙은 칸 */
@@ -13644,7 +13662,7 @@ async function githubUpload(token){
     info: function(){
       var m = buildCache(), out = [];
       for(var k in m){
-        var n = 0; for(var v in m[k]) if(m[k][v] >= MINCOUNT) n++;
+        var n = 0; for(var v in m[k]) if(m[k][v] >= minOf(k)) n++;
         if(n) out.push({ 칸:k, 후보수:n });
       }
       out.sort(function(a,b){ return b.후보수 - a.후보수; });
