@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v106-0829-1900";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v107-0829-1950";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3266,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=106-20260829t1900"></script>
+<script src="worklog.js?v=107-20260829t1950"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -20871,8 +20871,6 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +     '<g id="tdNums"></g>'
       +   '</svg>'
       + '</div>'
-      + '<div class="td-step" id="tdStep"></div>'
-      + '<div class="td-quick" id="tdQuick"></div>'
       + '<div class="td-dur" id="tdDur"></div>'
       + '<div class="lf-mbtn" style="margin-top:14px">'
       +   '<button type="button" id="tdNow" class="lf-radd" style="height:42px">지금</button>'
@@ -20972,46 +20970,47 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var t = (H*60 + MI + DUR) % 1440;
       return tdPad(Math.floor(t/60)) + ':' + tdPad(t%60);
     }
-    function drawStep(){
-      var el = document.getElementById('tdStep'); if(!el) return;
-      el.innerHTML =
-        '<div class="td-srow">'
-        + '<button type="button" class="td-pm" data-tdm="-1">−</button>'
-        + [5,10,15,30].map(function(n){
-            return '<button type="button" class="td-unit'+(n===STEP?' on':'')+'" data-tdu="'+n+'">'+n+'분</button>';
-          }).join('')
-        + '<button type="button" class="td-pm" data-tdm="1">＋</button>'
-        + '</div>';
-      el.querySelectorAll('[data-tdu]').forEach(function(b){
-        b.addEventListener('click', function(){ STEP = +b.getAttribute('data-tdu'); drawStep(); });
-      });
-      el.querySelectorAll('[data-tdm]').forEach(function(b){
-        b.addEventListener('click', function(){ shift(STEP * (+b.getAttribute('data-tdm'))); });
-      });
+    function durLabel(m){
+      if(!m) return '안 넣음';
+      var h = Math.floor(m/60), mm = m%60;
+      return (h ? h + '시간' : '') + (mm ? (h?' ':'') + mm + '분' : '');
     }
     function drawDur(){
       var el = document.getElementById('tdDur'); if(!el) return;
       var DL = [['안 넣음',0],['30분',30],['1시간',60],['1시간반',90],['2시간',120],['3시간',180],['4시간',240]];
-      el.innerHTML = '<div class="td-dlbl">끝난 시각도 함께 넣기'
-        + (DUR ? ' <b>→ ' + endOf() + '</b>' : '') + '</div>'
-        + DL.map(function(d){
-            return '<button type="button" class="td-d'+(d[1]===DUR?' on':'')+'" data-tdd="'+d[1]+'">'+d[0]+'</button>';
-          }).join('');
+      el.innerHTML =
+        '<div class="td-dlbl">얼마나 걸렸나요? <span class="td-dhint">끝난 시각이 저절로 채워집니다</span></div>'
+        + '<div class="td-drow">'
+        +   DL.map(function(d){
+              return '<button type="button" class="td-d'+(d[1]===DUR?' on':'')+'" data-tdd="'+d[1]+'">'+d[0]+'</button>';
+            }).join('')
+        + '</div>'
+        + '<div class="td-srow">'
+        +   '<button type="button" class="td-pm" data-tdm="-1" title="소요 시간 줄이기">−</button>'
+        +   [5,10,15,30].map(function(n){
+              return '<button type="button" class="td-unit'+(n===STEP?' on':'')+'" data-tdu="'+n+'">'+n+'분</button>';
+            }).join('')
+        +   '<button type="button" class="td-pm" data-tdm="1" title="소요 시간 늘리기">＋</button>'
+        + '</div>'
+        + '<div class="td-res">' + (DUR
+            ? '<b>' + durLabel(DUR) + '</b> 걸림 · 끝난 시각 <b>' + endOf() + '</b>'
+            : '끝난 시각은 넣지 않습니다') + '</div>';
       el.querySelectorAll('[data-tdd]').forEach(function(b){
         b.addEventListener('click', function(){ DUR = +b.getAttribute('data-tdd'); drawDur(); });
       });
+      el.querySelectorAll('[data-tdu]').forEach(function(b){
+        b.addEventListener('click', function(){ STEP = +b.getAttribute('data-tdu'); drawDur(); });
+      });
+      el.querySelectorAll('[data-tdm]').forEach(function(b){
+        b.addEventListener('click', function(){
+          DUR = Math.max(0, Math.min(24*60-5, DUR + STEP * (+b.getAttribute('data-tdm'))));
+          drawDur();
+        });
+      });
     }
-    drawStep(); drawDur();
+    drawDur();
     var _paint0 = paint;
     paint = function(){ _paint0(); try{ drawDur(); }catch(e){} };
-
-    /* 자주 쓰는 시간 */
-    var QK=['09:00','12:00','13:00','18:00','20:00'];
-    document.getElementById('tdQuick').innerHTML = QK.map(function(q){
-      return '<button type="button" data-tq="'+q+'">'+q+'</button>'; }).join('');
-    ov.querySelectorAll('[data-tq]').forEach(function(b){
-      b.addEventListener('click', function(){
-        var t=tdParse(b.getAttribute('data-tq')); H=t.h; MI=t.mi; paint(); }); });
 
     document.getElementById('tdC').addEventListener('click', cl);
     ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });
