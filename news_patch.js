@@ -27,7 +27,7 @@
     "#nrpop .x{margin-top:16px;width:100%;min-height:46px;border:0;border-radius:12px;",
     "background:#3b57c9;color:#fff;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer}",
     "tbody td.summary .sumline{display:block;overflow:hidden;text-overflow:ellipsis;",
-    "white-space:nowrap;cursor:pointer}"
+    "white-space:nowrap;cursor:pointer}","tbody tr.read{opacity:1!important}","tbody tr.read .rdot{background:transparent!important;position:relative}","tbody tr.read .rdot::after{content:'✓';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:13px;line-height:1;font-weight:700;color:#9aa3af}"
   ].join("");
   var st = document.createElement("style");
   st.id = "nrPatchCss";
@@ -94,7 +94,7 @@
       return;
     }
 
-    if (window.scrapOf && !scrapOf(n)) {
+    if (window.scrapOf && !scrapOf(n.id)) {
       say("⭐ 스크랩한 기사만 요약합니다");
       return;
     }
