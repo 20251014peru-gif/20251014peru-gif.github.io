@@ -14357,7 +14357,10 @@ async function githubUpload(token){
   /* 2026-08-29 실측한 실제 제목들 */
   var SECS = [
     { key:'sub',  label:'하위 항목', icon:'🧷', re:/하위\s*항목/,        has:function(w){ return cnt(w,'.pg-subrow, .pg-sub li, [data-subid]'); } },
-    { key:'time', label:'소요 시간', icon:'⏱',  re:/소요\s*시간/,        has:function(){ return false; } },
+    /* v121 — 달님 : 「시간 추가는 없어도 돼」 → 늘 접어 두고 단추도 안 만든다.
+          (시작·끝난 시각은 위 「🕐 시각 한 덩어리」에서 시계로 넣는다) */
+    { key:'time', label:'소요 시간', icon:'⏱',  re:/소요\s*시간/,        chip:false,
+      has:function(){ return false; } },
     { key:'mat',  label:'자재 내역', icon:'📦', re:/자재\s*사용/,         has:function(w){ return cnt(w,'.pg-matrow, [data-matdel]'); } },
     { key:'att',  label:'파일 링크', icon:'📎', re:/파일\s*[·ㆍ]\s*폴더/, has:function(w){ return cnt(w,'.pg-attrow, [data-attdel]'); } },
     /* ★ v113 — 페이지(전체 화면)로 볼 때는 본문을 늘 펼쳐 둔다.
@@ -14460,7 +14463,7 @@ async function githubUpload(token){
         else { if(el.style.display !== 'none'){ el._secPrev = el.style.display; el.style.display = 'none'; el._secHid = 1; } }
       });
 
-      if(!show) chips.push({ key:def.key, label:def.label, icon:def.icon, head:h });
+      if(!show && def.chip !== false) chips.push({ key:def.key, label:def.label, icon:def.icon, head:h });
     });
 
     if(!chips.length){ bar.innerHTML = ''; bar.style.display = 'none'; return; }
@@ -14578,7 +14581,7 @@ async function githubUpload(token){
 
   var LS_ON  = 'wl_group_on';
   var LS_GRP = 'wl_groups';
-  var VER    = 5;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
+  var VER    = 6;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
   var LS_VER = 'wl_groups_ver';
 
   /* ── 2026-08-29 14종 전수 실측 결과로 만든 묶음 ──
@@ -14590,12 +14593,16 @@ async function githubUpload(token){
             평소에는 펼쳐 두고, 접으면 한 줄로 요약된다. */
       { id:'g0', on:1, base:1, icon:'📌', name:'기본 — 언제 · 어디서 · 무엇', head:'_date',
         keys:['f:refYear','f:refMonth','f:floor','f:field','f:status'], openDefault:1 },
-      { id:'g1', on:1, base:1, icon:'🏢', name:'업체 한 덩어리', head:'_sub',
+      /* v121 — 달님 : 「업체랑 자재가 한 덩어리로 나와. 구분하고 그룹 지어줘」
+            용도·구분은 돈 이야기지 업체 이야기가 아니다 → 💰 비용 묶음으로 옮겼다. */
+      { id:'gc', on:1, base:1, icon:'💰', name:'비용 — 얼마를 어떻게', head:'f:expType',
+        keys:['f:expSubType','f:purpose','f:supplyAmt','f:taxAmt','_amount','f:isIssued'],
+        openDefault:1 },
+      { id:'g1', on:1, base:1, icon:'🏢', name:'업체 — 누구와', head:'_sub',
         keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',   /* 업무 */
               'f:callContact','f:role','f:phone',                        /* 통화 */
               'f:ownerPhone',                                            /* 진행업무 */
-              'f:partyType','f:partyPhone',                              /* 사고 */
-              'f:purpose','f:expSubType'] },                             /* 지출 */
+              'f:partyType','f:partyPhone'] },                           /* 사고 */
       /* v118 — 자재 속성 칸(자재명·규격·수량)은 더 이상 묶지 않는다.
             진짜 자재는 「자재 사용 내역」이고, 그것은 위쪽 📦 줄이 보여준다.
             비어 있을 때 「(자재명 없음) · 0」 같은 줄이 나와서 오히려 헷갈렸다. */
@@ -15834,12 +15841,37 @@ async function githubUpload(token){
       if(typeof window.wlSecForce === 'function') window.wlSecForce(m ? m.secs : NONE_SECS);
     }catch(e){ console.warn('[지출모드] 영역 지시 실패', e); }
 
-    /* ② 속성 칸 — 그 모드에 꼭 필요한 것은 비어 있어도 보여준다 */
+    /* ② 속성 칸 — 그 모드에 필요한 것은 비어 있어도 보이고,
+          필요 없는 것은 **비어 있을 때만** 감춘다.
+          (v121 달님 : 「나와야 할 건 나오고 안 나와도 될 건 안 나오게」)
+          ⚠ 값이 들어 있는 칸은 어떤 모드에서도 감추지 않는다 — 데이터가 안 보이면 안 된다 */
+    var need = {};
+    if(m) (m.props || []).forEach(function(k){ need[k] = 1; });
+
+    /* 이 모드에서 쓸 수도 있고 안 쓸 수도 있는 칸들 */
+    var SWAY = ['f:purpose','f:expSubType','f:supplyAmt','f:taxAmt','f:isIssued',
+                'f:material','f:spec','f:qty','f:estimateMemo'];
+    if(m && m.pick === 'mats'){ need['f:material'] = 1; need['f:spec'] = 1; need['f:qty'] = 1; }
+
+    SWAY.forEach(function(k){
+      try{
+        var r = page.querySelector('[data-prow="' + k + '"]');
+        if(!r || r._gHid) return;
+        /* 화면 글자가 아니라 **기록의 값**으로 본다 —
+              체크박스(발급 완료)나 0 을 화면 글자로 읽으면 잘못 판단한다 (v121) */
+        var raw = rec[k.slice(2)];
+        var filled = (raw === true) || (raw != null && raw !== '' && raw !== 0 && raw !== '0' && raw !== false);
+        if(need[k] || filled){ r.style.display = ''; r._ruleKeep = 1; r._modeHid = 0; }
+        else { r.style.display = 'none'; r._modeHid = 1; }
+      }catch(e){}
+    });
+
+    /* 모드가 꼭 필요하다고 한 나머지 칸도 보이게 */
     if(m){
       m.props.forEach(function(k){
         try{
-          var r = page.querySelector('[data-prow="' + k + '"]');
-          if(r && !r._gHid){ r.style.display = ''; r._ruleKeep = 1; }
+          var r2 = page.querySelector('[data-prow="' + k + '"]');
+          if(r2 && !r2._gHid){ r2.style.display = ''; r2._ruleKeep = 1; }
         }catch(e){}
       });
     }
@@ -15904,7 +15936,13 @@ async function githubUpload(token){
   /* ── 사람이 지출종류를 직접 바꿨을 때 ── */
   function onPick(newVal){
     var rid = ridNow(); if(!rid) return;
-    setTimeout(apply, 250);                       /* 저장이 끝난 뒤 화면을 맞춘다 */
+    /* v121 — 모드가 바뀌면 필요한 칸이 달라진다. 화면을 다시 그려야
+          새로 필요해진 칸이 「비용 묶음」 안 제자리로 들어간다.
+          (다시 안 그리면 「빈 항목」 쪽에 남아 묶음 밖에 떠 있다) */
+    setTimeout(function(){
+      try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
+    }, 300);
+    setTimeout(apply, 700);
 
     var rec0 = recOf(rid);
     if(!rec0 || rec0.kind !== 'work') return;     /* 지출 화면 자동 열기는 업무에서만 */
