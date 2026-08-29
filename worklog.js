@@ -14802,15 +14802,11 @@ async function githubUpload(token){
     var used = {};
     var lastTail = null;      /* v125 — 묶음을 「정한 차례대로」 위에서부터 쌓기 위한 표시 */
 
-    /* 자재 사용 내역이 있으면 겹치는 속성 칸(자재명·규격·수량)은 쓰지 않는다 */
+    /* v131 【근본 수정】 자재 사용 내역이 있어도 「📦 자재」 묶음은 그대로 만든다.
+          예전에는 겹친다는 이유로 used 에 넣어 묶음 자체를 죽였는데,
+          그러면 자재 요약 줄이 갈 곳을 잃고 「🕐 시각」 묶음 앞으로 밀려났다
+          (달님 : 「한줄 정리가 시간 쪽으로 입력이 돼」). */
     var mats = matsOfRec();
-    if(mats.length){
-      ['f:material','f:spec','f:qty'].forEach(function(k){
-        var r = rowOf(props, k);
-        if(r && r.style.display !== 'none'){ r.style.display = 'none'; r._gHid = 1; }
-        used[k] = 1;
-      });
-    }
 
     load().forEach(function(g){
       if(!g || !g.on) return;
@@ -14949,13 +14945,17 @@ async function githubUpload(token){
           '<div class="pg-gk">📦</div>'
         + '<div class="pg-gv">' + ES(mats.map(matLine).join('  /  ')) + '</div>'
         + '<span class="pg-gcnt">자재 ' + mats.length + '건</span>';
-      var band = props.querySelector('[data-gid="gt"].pg-ghead')
-              || props.querySelector('[data-gid="gt"].pg-grow');
-      if(band) putAfter(mLine, band);
-      else {
-        var anc = rowOf(props, 'f:startTime') || rowOf(props, '_sub') || rowOf(props, 'f:material');
-        if(anc) putBefore(mLine, anc);
-      }
+      /* v131 — 자재 묶음 발치가 제자리다. 없으면 밴드 바로 밑,
+            그것도 없으면 자재명 줄 앞. 그 어디도 없으면 아예 그리지 않는다.
+            (예전엔 「시각」 줄 앞으로 보냈다 — 엉뚱한 묶음에 붙는 원인이었다) */
+      var foot2 = props.querySelector('[data-gfoot="gt"]');
+      var band  = props.querySelector('[data-gid="gt"].pg-ghead')
+               || props.querySelector('[data-gid="gt"].pg-grow');
+      var mrow  = rowOf(props, 'f:material');
+      if(foot2)      putBefore(mLine, foot2);
+      else if(band)  putAfter(mLine, band);
+      else if(mrow)  putBefore(mLine, mrow);
+      else           mLine = null;
     }
   }
 
@@ -15784,12 +15784,20 @@ async function githubUpload(token){
   }
 
   function make(rec, expType){
-    if(typeof window.openExpenseFromWork !== 'function'){
-      if(typeof toast === 'function') toast('지출 화면을 못 찾았어요 — 새로고침해 보세요');
-      return;
-    }
+    /* v131 【근본 수정】 옛 지출 창을 열지 않는다 — 열면 지출에만 저장되고
+          업무 기록에는 안 남았다. 지금 화면(업무)은 이미 저장돼 있으므로
+          지출 기록만 뒤에서 만들면 두 곳에 다 남는다. */
     try{
-      window.openExpenseFromWork({ workObj: rec, workId: rec.id, expType: expType, isEdit: true });
+      if(window.wlExpSync && typeof window.wlExpSync.now === 'function'){
+        var r = window.wlExpSync.now();
+        if(typeof toast === 'function') toast('🧾 지출 목록에 등록했어요 — 업무 기록도 그대로 있습니다');
+        return r;
+      }
+      if(typeof window.openExpenseFromWork === 'function'){
+        window.openExpenseFromWork({ workObj: rec, workId: rec.id, expType: expType, isEdit: true });
+        return;
+      }
+      if(typeof toast === 'function') toast('지출 연결을 못 불러왔어요 — worklog.js 를 올렸는지 확인해 주세요');
     }catch(e){
       console.error('[지출 잇기] 실패', e);
       if(typeof toast === 'function') toast('지출 기록을 못 만들었어요: ' + (e.message || e));
@@ -16145,15 +16153,22 @@ async function githubUpload(token){
       setTimeout(openMats, 420);
       return;
     }
-    if(!isAuto() || !EXPENSE[newVal]) return;
+    if(!EXPENSE[newVal]) return;
+    /* v131 【근본 수정】 옛 지출 창을 열지 않는다.
+          옛 창에서 저장하면 지출 기록만 생기고 업무 기록에는 아무것도 안 남았다
+          (달님 : 「지출 쪽만 저장이 되고 업무 쪽에는 저장이 안돼」).
+          화면을 하나로 합쳤으므로, 업무는 이 화면이 저장하고
+          지출 기록은 wlExpSync 가 뒤에서 만든다 → 두 곳에 남는다. */
     setTimeout(function(){
       try{
         var rec = recOf(rid); if(!rec) return;
         if(String(rec.expType||'') !== newVal) return;      /* 그새 바뀌었으면 그만둔다 */
-        if(linkedExp(rid)) return;                          /* 이미 지출이 있으면 안 연다 */
-        if(typeof window.openExpenseFromWork !== 'function') return;
-        window.openExpenseFromWork({ workObj: rec, workId: rid, expType: newVal, isEdit: true });
-      }catch(e){ console.warn('[지출모드] 지출 화면 열기 실패', e); }
+        if(isAuto() && typeof window.openExpenseFromWork === 'function' && !linkedExp(rid)){
+          window.openExpenseFromWork({ workObj: rec, workId: rid, expType: newVal, isEdit: true });
+          return;                                           /* 진단 탭에서 일부러 켠 경우만 */
+        }
+        if(window.wlExpSync && typeof window.wlExpSync.now === 'function') window.wlExpSync.now();
+      }catch(e){ console.warn('[지출모드] 지출 기록 만들기 실패', e); }
     }, 600);
   }
 
@@ -17269,10 +17284,14 @@ async function githubUpload(token){
      lab   : 단추에 쓸 글자 (값은 그대로 저장된다)
      ──────────────────────────────────────────────── */
   var PLAN = {
-    'f:refYear' : { chips:'all', search:false, lab:function(v){ return v + '년'; } },
-    'f:refMonth': { chips:'all', search:false, lab:function(v){ return v + '월'; } },
-    'f:floor'   : { chips:'all', search:false },
-    'f:field'   : { chips:'top', search:true,  cnt:'field' }
+    'f:refYear'   : { chips:'all', search:false, lab:function(v){ return v + '년'; } },
+    'f:refMonth'  : { chips:'all', search:false, lab:function(v){ return v + '월'; } },
+    'f:floor'     : { chips:'all', search:false },
+    'f:field'     : { chips:'top', search:true,  cnt:'field' },
+    'f:status'    : { chips:'all', search:false },   /* 완료 상태 */
+    'f:expType'   : { chips:'all', search:false },   /* 지출종류 */
+    'f:expSubType': { chips:'all', search:false },   /* 세금계산서·전표 구분 */
+    'f:purpose'   : { chips:'all', search:false }    /* 용도 */
   };
 
   function cho(s){
@@ -17498,4 +17517,403 @@ async function githubUpload(token){
   };
   window.wlSelSearch = window.wlPick;   /* 예전 이름도 그대로 */
   console.log('[고르기] v129 준비됨 — 대상년·월·층은 단추, 분야는 자주 쓰는 ' + TOP_N + '개 단추 + 초성 검색');
+})();
+
+
+/* ============================================================
+   🔗 탭 하나로 · 링크 보내기 (wlOneTab)  v130-0830-0830
+
+   달님 : 「(가)로 해줘 — 위 줄 탭을 누르면 데이터 탭으로 가게.
+           그리고 카톡 링크로 보내기도 만들어줘」
+
+   ① 위 줄의 지출·메모·사고·진행업무·자재 탭을 누르면
+      데이터 탭의 같은 종류로 바로 간다 → 같은 기록이 두 화면으로
+      보이던 헷갈림이 없어진다.
+      ⚠ 되돌리기 : 진단 탭 「🗂 탭 하나로」 에서 언제든 끈다.
+   ② 기록 페이지 위쪽 [🔗 링크] — 그 기록 하나로 바로 열리는 주소를
+      만들어 카톡·문자로 보낸다. 폰에서는 공유창(카톡 포함)이 뜨고,
+      컴퓨터에서는 주소가 복사된다.
+      ※ 새 열쇠(API 키)를 코드에 넣지 않는다 — 브라우저가 이미 가진
+        공유 기능(navigator.share)만 쓴다.
+   ============================================================ */
+(function(){
+  'use strict';
+
+  /* ─────────────── ① 탭 하나로 ─────────────── */
+  var LS = 'wl_tab_one';
+  /* 위 줄 탭 → 데이터 탭의 어느 종류로 보낼까 */
+  var MAP = {
+    expense : 'expense',
+    memo    : 'memo',
+    accident: 'accident',
+    progress: 'progress',
+    material: 'item'
+  };
+  var NAME = { expense:'지출', memo:'메모', accident:'사고', progress:'진행업무', material:'자재' };
+
+  function isOn(){
+    try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; }   /* 기본 켬 */
+  }
+  function setOn(v){
+    try{ localStorage.setItem(LS, v ? '1' : '0'); }catch(e){}
+    paint();
+    if(typeof toast === 'function') toast(v
+      ? '🗂 지출·메모·사고·진행업무·자재 탭이 데이터 탭으로 모입니다'
+      : '🗂 탭이 예전처럼 따로 열립니다');
+  }
+
+  /* 탭 누름을 가로챈다 — 원래 손잡이(핸들러)보다 먼저 잡아야 하므로 캡처 단계 */
+  document.addEventListener('click', function(ev){
+    try{
+      if(!isOn()) return;
+      var b = ev.target.closest && ev.target.closest('.v43-tab[data-v43tab]');
+      if(!b) return;
+      var t = b.getAttribute('data-v43tab');
+      var kind = MAP[t];
+      if(!kind) return;
+      if(typeof window.wlOpenData !== 'function') return;   /* 없으면 예전대로 */
+      ev.preventDefault(); ev.stopPropagation();
+      window.wlOpenData(kind);
+    }catch(e){ console.warn('[탭 하나로] 넘기기 실패 — 예전대로', e); }
+  }, true);
+
+  /* 진단 탭에 켜고 끄는 자리를 만든다 (HTML 은 건드리지 않는다) */
+  function panel(){
+    var anchor = document.getElementById('nsNow');
+    if(!anchor) return;
+    var host = anchor.parentNode && anchor.parentNode.parentNode;
+    if(!host || document.getElementById('tabOneRow')) return;
+
+    var h = document.createElement('div');
+    h.className = 'sec-head'; h.textContent = '🗂 탭 하나로';
+    var d = document.createElement('div');
+    d.style.cssText = 'font-size:12.5px;color:#7a92a8;margin-bottom:6px';
+    d.textContent = '켜면 위쪽의 ' + Object.keys(MAP).map(function(k){ return NAME[k]; }).join(' · ')
+                  + ' 탭을 눌렀을 때 데이터 탭의 같은 종류로 갑니다. '
+                  + '같은 기록이 두 가지 화면으로 보이는 헷갈림이 없어집니다.';
+    var row = document.createElement('div');
+    row.className = 'btn-row'; row.id = 'tabOneRow'; row.style.marginTop = '0';
+    row.innerHTML = '<button class="btn btn-sm" id="tabOneOn"  style="min-height:44px">🗂 데이터 탭으로 모으기</button>'
+                  + '<button class="btn btn-sm" id="tabOneOff" style="min-height:44px">🗒 예전처럼 따로</button>'
+                  + '<span id="tabOneNow" style="font-size:12.5px;color:#7a92a8;align-self:center;margin-left:6px"></span>';
+
+    var after = anchor.parentNode;              /* ＋ 새로 만들 때 줄 바로 다음에 */
+    host.insertBefore(h,   after.nextSibling);
+    host.insertBefore(d,   h.nextSibling);
+    host.insertBefore(row, d.nextSibling);
+
+    document.getElementById('tabOneOn').addEventListener('click',  function(){ setOn(true);  });
+    document.getElementById('tabOneOff').addEventListener('click', function(){ setOn(false); });
+    paint();
+  }
+  function paint(){
+    var on = isOn();
+    var a = document.getElementById('tabOneOn'), b2 = document.getElementById('tabOneOff');
+    if(a)  a.className  = 'btn btn-sm ' + (on  ? 'btn-primary' : 'btn-ghost');
+    if(b2) b2.className = 'btn btn-sm ' + (!on ? 'btn-primary' : 'btn-ghost');
+    var n = document.getElementById('tabOneNow');
+    if(n) n.textContent = '지금: ' + (on ? '데이터 탭으로 모읍니다' : '탭마다 따로 열립니다');
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
+  else panel();
+  setTimeout(panel, 1600);
+  setTimeout(panel, 4000);
+
+  /* ─────────────── ② 링크 보내기 ─────────────── */
+
+  function curId(){
+    try{
+      var m = String(location.hash || '').match(/^#lp=([^&]+)/);
+      return m ? decodeURIComponent(m[1]) : '';
+    }catch(e){ return ''; }
+  }
+  function curTitle(){
+    try{
+      var t = document.getElementById('pgTitle');
+      var s = t ? String(t.value || '').trim() : '';
+      return s || '업무일지 기록';
+    }catch(e){ return '업무일지 기록'; }
+  }
+  function linkOf(){
+    var id = curId(); if(!id) return '';
+    try{
+      /* 파일을 직접 열어 본 경우(file://)엔 남에게 보낼 수 없다 */
+      if(location.protocol === 'file:') return '';
+      return location.origin + location.pathname + (location.hash || ('#lp=' + id));
+    }catch(e){ return ''; }
+  }
+
+  function copy(text){
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        return navigator.clipboard.writeText(text);
+      }
+    }catch(e){ console.warn('[링크] 새 방식 복사 실패 — 예전 방식으로', e); }
+    return new Promise(function(ok, no){
+      try{
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+        document.body.appendChild(ta); ta.select();
+        var done = document.execCommand('copy');
+        document.body.removeChild(ta);
+        done ? ok() : no(new Error('복사가 막혀 있어요'));
+      }catch(e){ no(e); }
+    });
+  }
+
+  function share(){
+    var url = linkOf();
+    if(!url){
+      alert('이 화면에서는 링크를 만들 수 없어요.\n\n인터넷 주소(github.io)로 연 다음\n기록 하나를 열고 다시 눌러 주세요.');
+      return;
+    }
+    var title = curTitle();
+    var text  = '📋 ' + title;
+    /* 폰 — 공유창이 뜨고 거기에 카톡이 있다 */
+    try{
+      if(navigator.share){
+        navigator.share({ title:title, text:text, url:url })
+          .catch(function(e){
+            if(e && e.name === 'AbortError') return;    /* 사용자가 그만둠 — 조용히 */
+            console.warn('[링크] 공유 실패 — 복사로', e);
+            copy(url).then(function(){ if(typeof toast==='function') toast('🔗 주소를 복사했어요'); })
+                     .catch(function(){ prompt('아래 주소를 복사해서 보내세요', url); });
+          });
+        return;
+      }
+    }catch(e){ console.warn('[링크] 공유 기능 없음 — 복사로', e); }
+    /* 컴퓨터 — 복사해 준다 */
+    copy(text + '\n' + url)
+      .then(function(){ if(typeof toast==='function') toast('🔗 카톡에 붙여넣을 주소를 복사했어요'); })
+      .catch(function(){ prompt('아래 주소를 복사해서 카톡에 붙여넣으세요', url); });
+  }
+
+  /* 페이지 위쪽 단추줄에 [🔗 링크] 를 넣는다 — 페이지가 다시 그려져도 붙는다 */
+  function addBtn(){
+    try{
+      var top = document.querySelector('.lf-page .pg-top');
+      if(!top || top.querySelector('#pgShare')) return;
+      if(!curId()) return;
+      var b = document.createElement('button');
+      b.type = 'button'; b.id = 'pgShare';
+      b.title = '이 기록으로 바로 열리는 주소를 만들어 카톡·문자로 보냅니다';
+      b.textContent = '🔗 링크';
+      b.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); share(); });
+      var del = top.querySelector('#pgDel');
+      if(del) top.insertBefore(b, del); else top.appendChild(b);
+    }catch(e){ console.warn('[링크] 단추 붙이기 실패', e); }
+  }
+  try{
+    var mo = new MutationObserver(function(){ addBtn(); });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[링크] 감시 실패', e); }
+  setInterval(addBtn, 1200);
+
+  window.wlOneTab = {
+    on:   function(){ setOn(true);  return '데이터 탭으로 모읍니다'; },
+    off:  function(){ setOn(false); return '탭마다 따로 열립니다'; },
+    link: function(){ return linkOf() || '(기록을 연 다음, 인터넷 주소로 열었을 때만 만들 수 있어요)'; }
+  };
+  console.log('[탭 하나로] v130 준비됨 — ' + (isOn()?'켜짐':'꺼짐') + ' / 페이지에 [🔗 링크] 단추');
+})();
+
+
+/* ============================================================
+   📦 자재 담기 · 🔗 관련 업무 (wlMatBox)  v131-0830-0910
+
+   달님 :
+     「자재 넣는게 처음엔 정상인데 한줄 내역이 안나와.
+       자재 추가시 한줄 정리가 시간 쪽으로 입력이 돼.
+       업체 입력 하는것처럼 해주고 맨 마지막에 +버튼 넣어서 추가 추가.
+       지출쪽 모달에 관련업무 열기로 해야 이게 정상이야」
+
+   ① 「📦 자재 — 무엇을 썼나」 묶음 발치에 담긴 자재를 한 줄씩 보여준다.
+      · 줄마다 ✕ 로 빼기 · 합계는 저절로 합계 칸에 들어간다
+      · 맨 끝 [＋ 자재 추가] → 업체 고르듯 고르기 창 → 목록에 이어 붙인다
+   ② 화면 아래 큰 「자재 사용 내역」 상자는 접어 둔다 (같은 일을 두 곳에서
+      하면 어느 쪽이 진짜인지 헷갈린다).  되살리기 : wlMatBox.old()
+   ③ 지출 기록에는 [🔗 관련 업무 열기] — 업무↔지출을 오갈 수 있게.
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var HIDE_OLD = 'wl_matbox_old';     /* '1' 이면 아래 큰 상자를 그대로 둔다 */
+
+  function ES(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function won(n2){ n2 = Number(n2)||0; return n2 ? n2.toLocaleString('ko-KR') : ''; }
+  function ridNow(){
+    try{ var m = String(location.hash||'').match(/^#lp=([^&]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+    catch(e){ return ''; }
+  }
+  function recOf(id){
+    try{ return (entries||[]).filter(function(x){ return x && x.id === id; })[0] || null; }
+    catch(e){ return null; }
+  }
+  function matsOf(r){ return (r && Array.isArray(r.materials)) ? r.materials.filter(Boolean) : []; }
+  function sumOf(arr){
+    return arr.reduce(function(a,m){ return a + (Number(m.price)||0) * (Number(m.qty)||1); }, 0);
+  }
+  function keepOld(){ try{ return localStorage.getItem(HIDE_OLD) === '1'; }catch(e){ return false; } }
+
+  /* 목록을 통째로 저장한다 — 합계도 함께 (금액 칸을 사람이 잠갔으면 건드리지 않는다) */
+  function save(rid, arr){
+    try{
+      var patch = { materials: arr };
+      var s = sumOf(arr);
+      if(s > 0) patch.cost = s;
+      else if(!arr.length) patch.cost = 0;
+      if(typeof updateRecord === 'function') updateRecord(rid, patch);
+      setTimeout(function(){
+        try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
+      }, 140);
+    }catch(e){
+      console.error('[자재 담기] 저장 실패', e);
+      if(typeof toast === 'function') toast('자재를 못 저장했어요: ' + (e.message || e));
+    }
+  }
+
+  /* ＋ 자재 추가 — 업체 고르듯 창을 열고, 고른 것을 목록에 「이어 붙인다」 */
+  function addOne(){
+    var rid = ridNow(); if(!rid) return;
+    var rec = recOf(rid); if(!rec) return;
+    var cur = matsOf(rec);
+
+    /* 여러 개를 한 번에 고르는 창이 있으면 그걸 쓴다 (이미 담긴 것을 넘겨 이어 담기) */
+    if(typeof window.wlPickMats === 'function'){
+      window.wlPickMats(function(list){
+        var arr = Array.isArray(list) ? list : [];
+        save(rid, arr);
+        if(typeof toast === 'function') toast(arr.length ? ('📦 자재 ' + arr.length + '종') : '자재를 모두 비웠어요');
+      }, cur.slice());
+      return;
+    }
+    /* 하나씩 고르는 창밖에 없으면 그걸로 이어 붙인다 */
+    if(typeof window.wlPickItem === 'function'){
+      window.wlPickItem(function(r){
+        if(!r) return;
+        var arr = cur.slice();
+        arr.push({ name:(r.name||''), spec:(r.spec||''), unit:(r.unit||''),
+                   qty:Number(r.qty)||1, price:Number(r.price)||0 });
+        save(rid, arr);
+      }, '');
+      return;
+    }
+    if(typeof toast === 'function') toast('자재 고르기를 못 불러왔어요 — worklog.js 를 올렸는지 확인해 주세요');
+  }
+
+  function drop(i){
+    var rid = ridNow(); if(!rid) return;
+    var rec = recOf(rid); if(!rec) return;
+    var arr = matsOf(rec).slice();
+    if(i < 0 || i >= arr.length) return;
+    arr.splice(i, 1);
+    save(rid, arr);
+  }
+
+  /* ── 자재 묶음 발치에 목록과 ＋ 단추 ── */
+  function paintMats(){
+    var rid = ridNow();
+    var rec = rid ? recOf(rid) : null;
+    var page = document.querySelector('.lf-page');
+    if(!page || !rec){ window.wlAddOn(['#__none'], 'matbox', function(){ return null; }); return; }
+
+    var mats = matsOf(rec);
+    window.wlAddOn(['[data-gfoot="gt"]', '[data-prow="f:material"] .pg-pv'], 'matbox',
+      function(){ var d = document.createElement('div'); d.className = 'pg-matbox'; return d; },
+      function(d){
+        var h = '';
+        if(mats.length){
+          h += '<div class="mb-list">' + mats.map(function(m, i){
+            var bits = [ES(m.name||''), ES(m.spec||'')].filter(Boolean).join(' <span class="mb-sp">·</span> ');
+            var q = Number(m.qty)||1, pr = (Number(m.price)||0) * q;
+            return '<div class="mb-it">'
+                 + '<span class="mb-n">' + (i+1) + '</span>'
+                 + '<span class="mb-t">' + bits + '</span>'
+                 + '<span class="mb-q">' + q + '개</span>'
+                 + (pr ? '<span class="mb-p">' + won(pr) + '원</span>' : '')
+                 + '<button type="button" class="mb-x" data-mbx="' + i + '" title="빼기">✕</button>'
+                 + '</div>';
+          }).join('') + '</div>';
+          var s = sumOf(mats);
+          if(s > 0) h += '<div class="mb-sum">자재 합계 <b>' + won(s) + '원</b>'
+                       + ' <span>합계 칸에 저절로 들어갑니다</span></div>';
+        }
+        h += '<button type="button" class="mb-add">＋ 자재 추가</button>';
+        if(d.innerHTML !== h) d.innerHTML = h;
+
+        var ab = d.querySelector('.mb-add');
+        if(ab && !ab._b){ ab._b = 1; ab.addEventListener('click', function(ev){
+          ev.preventDefault(); ev.stopPropagation(); addOne(); }); }
+        if(!d._bx){
+          d._bx = 1;
+          d.addEventListener('click', function(ev){
+            var x = ev.target.closest && ev.target.closest('[data-mbx]');
+            if(!x) return;
+            ev.preventDefault(); ev.stopPropagation();
+            drop(Number(x.getAttribute('data-mbx')));
+          });
+        }
+      });
+
+    /* 화면 아래 큰 「자재 사용 내역」 상자는 접어 둔다 — 같은 일을 두 곳에서 하지 않게 */
+    try{
+      var old = page.querySelector('#pgMatPick');
+      var sec = old && old.closest ? old.closest('.pg-secbox, .pg-sec-wrap, div') : null;
+      [].forEach.call(page.querySelectorAll('.pg-sec'), function(t){
+        if(String(t.textContent||'').indexOf('자재 사용 내역') < 0) return;
+        var on = keepOld();
+        t.style.display = on ? '' : 'none';
+        var n2 = t.nextElementSibling, guard = 0;
+        while(n2 && guard++ < 6){
+          if(n2.classList && n2.classList.contains('pg-sec')) break;
+          n2.style.display = on ? '' : 'none';
+          n2 = n2.nextElementSibling;
+        }
+      });
+    }catch(e){ console.warn('[자재 담기] 아래 상자 접기 실패', e); }
+  }
+
+  /* ── 지출 기록에 [🔗 관련 업무 열기] ── */
+  function paintWorkLink(){
+    var rid = ridNow();
+    var rec = rid ? recOf(rid) : null;
+    if(!rec || rec.kind !== 'expense' || !rec.workId){
+      window.wlAddOn(['#__none'], 'worklink', function(){ return null; });
+      return;
+    }
+    var w = recOf(rec.workId);
+    window.wlAddOn(['[data-gfoot="g0"]', '[data-prow="_date"] .pg-pv'], 'worklink',
+      function(){ var d = document.createElement('div'); d.className = 'pg-worklink'; return d; },
+      function(d){
+        var t = w ? ((w.date||'') + ' ' + (w.title||'(제목없음)')).trim().slice(0, 26) : '(업무를 못 찾음)';
+        var h = '<span class="wl-lb">🔗 이 지출은 업무 기록에서 만들어졌습니다</span>'
+              + '<button type="button" class="wl-go"' + (w?'':' disabled') + '>' + ES(t) + ' 열기</button>';
+        if(d.innerHTML !== h) d.innerHTML = h;
+        var b = d.querySelector('.wl-go');
+        if(b && !b._b){
+          b._b = 1;
+          b.addEventListener('click', function(ev){
+            ev.preventDefault(); ev.stopPropagation();
+            try{ if(w && typeof window.wlGoPage === 'function') window.wlGoPage(w.id); }
+            catch(e){ console.warn('[관련 업무] 열기 실패', e); }
+          });
+        }
+      });
+  }
+
+  function run(){ paintMats(); paintWorkLink(); }
+
+  /* 그리는 차례에 끼워 넣는다 — 각자 파수꾼을 돌리면 서로 지운다 (v118 규칙) */
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:46, n:'자재 담기·관련 업무', f:run });
+
+  window.wlMatBox = {
+    old:  function(v){ try{ localStorage.setItem(HIDE_OLD, (v===false)?'0':'1'); }catch(e){}
+                       if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                       return keepOld() ? '아래 큰 자재 상자를 다시 보여줍니다' : '아래 큰 자재 상자를 접습니다'; },
+    add:  addOne,
+    list: function(){ var r = recOf(ridNow()); return r ? matsOf(r) : []; }
+  };
+  console.log('[자재 담기] v131 준비됨 — 자재 묶음 발치에 목록과 ＋ 추가 / 지출에 🔗 관련 업무');
 })();
