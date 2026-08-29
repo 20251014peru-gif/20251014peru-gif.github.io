@@ -10054,10 +10054,12 @@ function searchContacts(q){
   const ql = q.toLowerCase();
   const results = [];
   // 업체 연락처
+  const _cho = (typeof isChosungOnly==='function') && isChosungOnly(q);
+  const _hitCho = (t)=>{ try{ return _cho && typeof getChosung==='function' && getChosung(t||"").includes(q); }catch(e){ return false; } };
   contactsCache.forEach(c=>{
     const nm = (c.name||"").toLowerCase();
     const ps = (c.person||"").toLowerCase();
-    if(nm.includes(ql)||ps.includes(ql)){
+    if(nm.includes(ql)||ps.includes(ql)||_hitCho(c.name)||_hitCho(c.person)){
       const ct = c.contractType||'';
       results.push({
         label: c.name+(c.person?" / "+c.person:"")+(ct?" ["+ct+"]":"")+(c.cat?" ["+c.cat+"]":""),
@@ -10070,7 +10072,7 @@ function searchContacts(q){
   });
   // 직원 명단 (이름 매칭 + 실제 전화번호)
   STAFF_LIST.forEach(s=>{
-    if(s.name.includes(q) && !results.find(r=>r.name===s.name)){
+    if((s.name.includes(q)||_hitCho(s.name)) && !results.find(r=>r.name===s.name)){
       results.push({label: s.name+" ["+s.role+"]", phone:s.phone, name:s.name});
     }
   });
@@ -13031,7 +13033,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v95-0829-1218
+   ✨ 입력칸 3종 세트 (wlSmartField)  v96-0829-1240
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13054,7 +13056,7 @@ async function githubUpload(token){
 
   /* ── 설정 ─────────────────────────────────────────── */
   function cfg(){
-    var d = { ac:1, link:1, fold:0 };
+    var d = { ac:1, link:1, fold:0, idsave:1 };
     try{
       var o = JSON.parse(localStorage.getItem(LS_ON) || 'null');
       if(o && typeof o === 'object'){ for(var k in d) if(k in o) d[k] = o[k] ? 1 : 0; }
@@ -13317,7 +13319,13 @@ async function githubUpload(token){
   /* ── 입력칸 하나에 붙이기 ──────────────────────────── */
   function keyOf(inp){
     var id = inp.id || '';
-    return id.replace(/^m-/, '').replace(/^exp-?/, '').replace(/-(new|list|sel)$/, '');
+    id = id.replace(/^m-/, '')
+           .replace(/^expV2/, '')      /* 지출창: expV2Vendor → Vendor */
+           .replace(/^exp-?/, '')
+           .replace(/-(new|list|sel)$/, '')
+           .replace(/Input$/, '');     /* expV2TitleInput → Title */
+    if(!id) return '';
+    return id.charAt(0).toLowerCase() + id.slice(1);   /* Vendor → vendor */
   }
 
   /* 건드리지 않을 칸 — 이미 다른 자동완성이 붙었거나, 검색창이거나, 짧은 이름칸이 아닌 것 */
@@ -13328,8 +13336,14 @@ async function githubUpload(token){
   var TAKEOVER = ['m-title','m-loc'];
   function shouldSkip(inp){
     if(!inp || inp._sfDone) return true;
-    var t = (inp.getAttribute('type') || 'text').toLowerCase();
-    if(['text','search',''].indexOf(t) < 0) return true;      /* 날짜·시간·숫자·전화 제외 */
+    var tag = (inp.tagName || '').toLowerCase();
+    if(tag === 'textarea'){
+      /* 긴 글 칸도 붙이되, 줄바꿈이 들어간 순간부터는 목록을 안 띄운다 */
+      if((inp.value || '').indexOf('\n') >= 0) return true;
+    }else{
+      var t = (inp.getAttribute('type') || 'text').toLowerCase();
+      if(['text','search',''].indexOf(t) < 0) return true;    /* 날짜·시간·숫자·전화 제외 */
+    }
     var id = inp.id || '';
     if(!id) return true;                                       /* id 없는 칸은 건너뜀 */
     if(SKIP_ID.indexOf(id) >= 0) return true;
@@ -13389,6 +13403,7 @@ async function githubUpload(token){
     inp.addEventListener('input', function(){
       if(!cfg().ac) return;
       if(composing) return;                 /* 조합 중에는 건드리지 않는다 (자모 분리 방지) */
+      if((inp.value || '').indexOf('\n') >= 0){ closeBox(); return; }   /* 여러 줄이면 글쓰기 중 */
       render(inp);
     });
     inp.addEventListener('focus', function(){ if(cfg().ac) render(inp); });
@@ -13471,7 +13486,7 @@ async function githubUpload(token){
   var scanT = null;
   function scanNow(){
     try{
-      document.querySelectorAll('input').forEach(attach);
+      document.querySelectorAll('input, textarea').forEach(attach);
       ['mFields','mxWrap','expV2Overlay'].forEach(function(id){
         var r = document.getElementById(id);
         if(r) foldEmpty(r);
@@ -13518,13 +13533,14 @@ async function githubUpload(token){
       + '<button class="btn btn-sm" id="sfAc"   style="min-height:44px">🔤 자동완성·초성검색</button>'
       + '<button class="btn btn-sm" id="sfLink" style="min-height:44px">🔗 연락처 정보 표시</button>'
       + '<button class="btn btn-sm" id="sfFold" style="min-height:44px">📁 빈 칸 접기</button>'
+      + '<button class="btn btn-sm" id="sfIdsave" style="min-height:44px">🆔 업체 아이디 남기기</button>'
       + '<button class="btn btn-ghost btn-sm" id="sfUnhide" style="min-height:44px">👁 뺀 값 되살리기</button>'
       + '</div><div id="sfNow" style="font-size:12.5px;color:#7a92a8;margin-top:6px"></div>';
 
     host.insertBefore(head, anchor.parentNode.nextSibling);
     host.insertBefore(wrap, head.nextSibling);
 
-    [['sfAc','ac'],['sfLink','link'],['sfFold','fold']].forEach(function(p){
+    [['sfAc','ac'],['sfLink','link'],['sfFold','fold'],['sfIdsave','idsave']].forEach(function(p){
       var el = document.getElementById(p[0]);
       if(el && !el._bound){
         el._bound = 1;
@@ -13550,7 +13566,7 @@ async function githubUpload(token){
   }
   function paintPanel(){
     var c = cfg();
-    [['sfAc','ac'],['sfLink','link'],['sfFold','fold']].forEach(function(p){
+    [['sfAc','ac'],['sfLink','link'],['sfFold','fold'],['sfIdsave','idsave']].forEach(function(p){
       var el = document.getElementById(p[0]); if(!el) return;
       el.className = 'btn btn-sm ' + (c[p[1]] ? 'btn-primary' : 'btn-ghost');
       el.style.minHeight = '44px';
@@ -13566,12 +13582,58 @@ async function githubUpload(token){
     n.textContent = '지금: ' + (c.ac ? '자동완성 켜짐' : '자동완성 꺼짐')
       + ' · ' + (c.link ? '연락처 표시 켜짐' : '연락처 표시 꺼짐')
       + ' · ' + (c.fold ? '빈 칸 접기 켜짐' : '빈 칸 접기 꺼짐')
+      + ' · ' + (c.idsave ? '업체 아이디 남김' : '업체 아이디 안 남김')
       + '  |  후보 ' + vals + '개 / 칸 ' + keys + '종' + (hid ? ' · 뺀 값 ' + hid + '개' : '');
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
   else panel();
   setTimeout(panel, 1500);
   setTimeout(scanNow, 800);
+
+  /* ── ④ 저장할 때 업체 「아이디」와 사본을 같이 남긴다 ────────
+     제1원칙 — 이름이 아니라 아이디로 가리킨다.
+     · 기존 칸은 하나도 안 건드리고 칸 3개(companyId·companySnap·companyAt)만 더한다
+     · 옛 기록은 그대로 — 새로 저장하는 것부터 붙는다
+     · 진단 탭 「🆔 업체 아이디 남기기」로 끌 수 있다 */
+  var LINK_SAVE_KEYS = ['company','vendor','workVendor'];
+  function stampLink(rec){
+    if(!rec || typeof rec !== 'object') return rec;
+    if(!cfg().idsave) return rec;
+    try{
+      for(var i = 0; i < LINK_SAVE_KEYS.length; i++){
+        var k = LINK_SAVE_KEYS[i];
+        var v = rec[k];
+        if(typeof v !== 'string' || !v.trim()) continue;
+        var c = findContact(v);
+        if(!c || !c.id) continue;
+        if(rec[k + 'Id'] === c.id) continue;          /* 이미 같은 것 */
+        rec[k + 'Id']   = c.id;                        /* ★ 연결 */
+        rec[k + 'Snap'] = {                            /* 그때의 사본 — 연결이 끊겼을 때만 쓴다 */
+          name:    c.name    || '',
+          phone:   c.phone   || '',
+          company: c.company || '',
+          role:    c.role    || c.position || '',
+          cat:     c.cat     || ''
+        };
+        rec[k + 'At'] = kstNow().toISOString().slice(0, 10);
+      }
+    }catch(e){ console.warn('[입력도우미] 업체 아이디 남기기 실패', e); }
+    return rec;
+  }
+  try{
+    if(typeof addRecord === 'function' && !addRecord._sfWrapped){
+      var _origAdd = addRecord;
+      addRecord = function(data){ return _origAdd.call(this, stampLink(data)); };
+      addRecord._sfWrapped = true;
+      window.addRecord = addRecord;
+    }
+    if(typeof updateRecord === 'function' && !updateRecord._sfWrapped){
+      var _origUpd = updateRecord;
+      updateRecord = function(id, patch){ return _origUpd.call(this, id, stampLink(patch)); };
+      updateRecord._sfWrapped = true;
+      window.updateRecord = updateRecord;
+    }
+  }catch(e){ console.warn('[입력도우미] 저장 감싸기 실패', e); }
 
   /* ── 콘솔 도구 ─────────────────────────────────────── */
   window.wlSmartField = {
@@ -13592,7 +13654,20 @@ async function githubUpload(token){
     cand:    function(key){ console.table(candFor(key).slice(0,20)); },
     chosung: chosung,
     rescan:  function(){ _cacheAt = 0; scanNow(); return '다시 훑었습니다'; },
-    unhide:  function(){ unhideAll(); _cacheAt = 0; return '뺀 값을 모두 되살렸습니다'; }
+    unhide:  function(){ unhideAll(); _cacheAt = 0; return '뺀 값을 모두 되살렸습니다'; },
+    ids:     function(){          /* 업체 아이디가 실제로 붙었는지 확인 */
+      var n = 0, out = [];
+      try{
+        (entries || []).forEach(function(e){
+          if(!e) return;
+          LINK_SAVE_KEYS.forEach(function(k){
+            if(e[k + 'Id']){ n++; if(out.length < 15) out.push({ 기록:(e.title||e[k]||e.id), 칸:k, 아이디:e[k+'Id'], 남긴날:e[k+'At']||'' }); }
+          });
+        });
+      }catch(e){ console.warn(e); }
+      console.table(out);
+      return '업체 아이디가 붙은 기록 ' + n + '건';
+    }
   };
 
   console.log('[입력도우미] 준비됨 — 진단 탭 「✨ 입력 도우미」에서 켜고 끌 수 있어요');
