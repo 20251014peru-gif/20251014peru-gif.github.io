@@ -229,6 +229,8 @@
 <script>
 (function(){
   "use strict";
+  const $  = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   var VER = "v 20260829-2055";
   var PIN = "102800";
   var DEF = { repo:"20251014peru-gif/dalnim-alerts", path:"alert_words.json", branch:"main" };
