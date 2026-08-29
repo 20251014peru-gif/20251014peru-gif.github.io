@@ -13041,7 +13041,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v100-0829-1420
+   ✨ 입력칸 3종 세트 (wlSmartField)  v101-0829-1450
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13402,8 +13402,12 @@ async function githubUpload(token){
   }
 
   /* ── 입력칸 하나에 붙이기 ──────────────────────────── */
+  /* 화면 전용 id → 실제 데이터 칸 (페이지 제목칸은 pgTitle 이지만 데이터는 title 이다) */
+  var ID_ALIAS = { pgTitle:'title', pgSubIn:'title', pgBody:'detail', pgDetail:'detail',
+                   lfIeTime:'', wlTitle:'title' };
   function keyOf(inp){
     var id = inp.id || '';
+    if(id && ID_ALIAS.hasOwnProperty(id)) return ID_ALIAS[id];
     if(!id){
       /* 노션식 화면(데이터·페이지)의 편집칸은 id 가 없다 — 조상의 이름표로 찾는다 */
       try{
