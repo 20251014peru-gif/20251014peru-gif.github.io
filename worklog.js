@@ -13041,7 +13041,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v98-0829-1330
+   ✨ 입력칸 3종 세트 (wlSmartField)  v100-0829-1420
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13058,7 +13058,10 @@ async function githubUpload(token){
 
   var LS_ON     = 'wl_sf_on';        /* 스위치      {ac,link,fold} */
   var LS_HIDE   = 'wl_sugg_hidden';  /* 🗑 로 뺀 값  {키:[값…]}    */
-  var MAXLEN    = 30;                /* 후보 글자수 상한          */
+  var MAXLEN    = 30;                /* 후보 글자수 상한 (기본)   */
+  /* 문장이 들어가는 칸은 더 길게 — 제목·내용은 30자를 쉽게 넘는다 */
+  var MAX_BY_KEY = { title:80, detail:120, body:120, memo:120, note:80, dtl:120, content:120 };
+  function maxOf(key){ return MAX_BY_KEY[key] || MAXLEN; }
   var MAXSHOW   = 8;                 /* 한 번에 보여줄 개수        */
   var MINCOUNT  = 1;                 /* 기본: 한 번만 쓴 것도 후보 */
   /* 값이 몰리는 「목록성」 칸만 2번 이상으로 — 제목·내역은 한 번짜리도 쓸모가 있다 */
@@ -13096,9 +13099,9 @@ async function githubUpload(token){
     if(/^[ㄱ-ㅎ]+$/.test(t)) return chosung(s).indexOf(t) >= 0;
     return s.toLowerCase().indexOf(t.toLowerCase()) >= 0;
   }
-  function canSuggest(v){
+  function canSuggest(v, key){
     var s = String(v == null ? '' : v).trim();
-    return s.length > 0 && s.length <= MAXLEN && s.indexOf('\n') < 0;
+    return s.length > 0 && s.length <= maxOf(key) && s.indexOf('\n') < 0;
   }
   function normKey(s){
     return String(s == null ? '' : s)
@@ -13147,7 +13150,7 @@ async function githubUpload(token){
           if(k === 'id' || k === 'kind' || k === 'createdAt' || k === 'updatedAt') continue;
           var v = e[k];
           if(typeof v !== 'string') continue;
-          if(!canSuggest(v)) continue;
+          if(!canSuggest(v, k)) continue;
           var t = v.trim();
           if(!map[k]) map[k] = {};
           map[k][t] = (map[k][t] || 0) + 1;
@@ -13159,6 +13162,16 @@ async function githubUpload(token){
   }
   function candFor(key){
     var m = buildCache()[key] || {};
+    if(isItemKey(key)){                       /* 자재는 자재 탭 품목을 후보에 더한다 */
+      try{
+        var list = (typeof entries !== 'undefined' && entries) ? entries : [];
+        m = JSON.parse(JSON.stringify(m));
+        for(var i = 0; i < list.length; i++){
+          var e = list[i];
+          if(e && e.kind === 'item' && e.itemName) m[String(e.itemName).trim()] = (m[String(e.itemName).trim()] || 0) + 2;
+        }
+      }catch(err){ console.warn('[입력도우미] 자재 후보 더하기 실패', err); }
+    }
     var hid = hiddenOf(key);
     var need = minOf(key);
     var arr = [];
@@ -13270,6 +13283,65 @@ async function githubUpload(token){
     else if(old) old.remove();
   }
 
+  /* ── 자재를 고르면 규격·단위·단가가 따라 채워진다 ──────
+     업체(관련처) 자동채움과 같은 방식. 빈 칸만 채우고 이미 쓴 값은 안 건드린다 */
+  var ITEM_KEYS = ['material','itemName','item'];
+  function isItemKey(key){ return ITEM_KEYS.indexOf(key) >= 0; }
+  function findItem(name){
+    var n = normKey(name); if(!n) return null;
+    try{
+      var list = (typeof entries !== 'undefined' && entries) ? entries : [];
+      for(var i = 0; i < list.length; i++){
+        var e = list[i];
+        if(!e || e.kind !== 'item') continue;
+        if(normKey(e.itemName) === n) return e;
+      }
+    }catch(err){ console.warn('[입력도우미] 자재를 못 찾았어요', err); }
+    return null;
+  }
+  /* 같은 화면에서 그 항목의 입력칸을 찾는다 — 모달(m-키) · 노션식(data-ppid/pid) 둘 다 */
+  function fieldFor(fromInp, key){
+    var el = document.getElementById('m-' + key);
+    if(el) return el;
+    try{
+      var root = fromInp.closest('#mFields, #expV2Overlay, .pg-body, tr, form, .modal') || document;
+      var host = root.querySelector('[data-ppid="f:' + key + '"],[data-pid="f:' + key + '"]');
+      if(host){ var ie = host.querySelector('.lf-ie'); if(ie) return ie; }
+    }catch(e){}
+    return null;
+  }
+  function fillFromItem(inp, name){
+    if(!cfg().link) return;
+    var it = findItem(name); if(!it) return;
+    var MAP = { spec:'spec', unit:'unit', unitPrice:'unitPrice', maker:'maker', vendor:'vendor', itemCode:'itemCode' };
+    var filled = [];
+    for(var k in MAP){
+      var v = it[MAP[k]];
+      if(v == null || v === '') continue;
+      var t = fieldFor(inp, k);
+      if(!t) continue;
+      if((t.value || '').trim()) continue;              /* 이미 쓴 값은 안 건드린다 */
+      t.value = v;
+      t.style.background = '#fffbea';                    /* 자동 채운 칸은 노란 배경 (달님 표준) */
+      try{ t.dispatchEvent(new Event('input',  {bubbles:true})); }catch(e){}
+      try{ t.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
+      filled.push(k);
+    }
+    if(filled.length){
+      var el = badgeOf(inp, true);
+      if(el){
+        var bits = [];
+        if(it.spec)      bits.push('📐 ' + ES(it.spec));
+        if(it.unit)      bits.push('📦 ' + ES(it.unit));
+        if(it.unitPrice) bits.push('💰 ' + ES(Number(it.unitPrice).toLocaleString()) + '원');
+        if(it.vendor)    bits.push('🏢 ' + ES(it.vendor));
+        el.innerHTML = '<span style="flex:1;min-width:0">' + (bits.join(' · ') || '자재 정보 채움') + '</span>';
+        el.style.display = 'flex';
+      }
+      if(typeof toast === 'function') toast('자재 정보를 채웠습니다 (' + filled.length + '칸)');
+    }
+  }
+
   /* ── 목록 그리기 ───────────────────────────────────── */
   function render(inp){
     var key = keyOf(inp);
@@ -13312,6 +13384,7 @@ async function githubUpload(token){
         inp.value = row.getAttribute('data-sfv');
         closeBox();
         syncBadge(inp);
+        if(isItemKey(keyOf(inp))) fillFromItem(inp, inp.value);
         try{ inp.dispatchEvent(new Event('input',  {bubbles:true})); }catch(e){}
         try{ inp.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
       });
@@ -13334,10 +13407,11 @@ async function githubUpload(token){
     if(!id){
       /* 노션식 화면(데이터·페이지)의 편집칸은 id 가 없다 — 조상의 이름표로 찾는다 */
       try{
-        var host = inp.closest && inp.closest('[data-ppid],[data-k],[data-key],[data-col]');
+        var host = inp.closest && inp.closest('[data-ppid],[data-pid],[data-k],[data-key],[data-col]');
         if(!host) return '';
-        var pid = host.getAttribute('data-ppid') || host.getAttribute('data-k')
-               || host.getAttribute('data-key')  || host.getAttribute('data-col') || '';
+        var pid = host.getAttribute('data-ppid') || host.getAttribute('data-pid')
+               || host.getAttribute('data-k')    || host.getAttribute('data-key')
+               || host.getAttribute('data-col')  || '';
         if(!pid) return '';
         return (pid.slice(0, 2) === 'f:') ? pid.slice(2) : pid;   /* f:title → title */
       }catch(e){ return ''; }
@@ -13352,7 +13426,9 @@ async function githubUpload(token){
   }
 
   /* 건드리지 않을 칸 — 이미 다른 자동완성이 붙었거나, 검색창이거나, 짧은 이름칸이 아닌 것 */
-  var SKIP_ID = ['m-field','m-material','m-contact',
+  /* m-material 은 뺐다 — 전용 검색창(m-material-list)이 있는 화면에서는
+     아래 「-list 가 있으면 건너뛴다」 규칙이 알아서 비켜준다 */
+  var SKIP_ID = ['m-field','m-contact',
                  'tpSearchInp','vpSearch','tpCfName','q','v43Search','searchInp',
                  'newMatName','newMatVendor','wlSfBox'];
   /* 흡수 대상 — 옛 자동완성을 끄고 이 엔진으로 통일한다 (제목·위치) */
@@ -13459,7 +13535,7 @@ async function githubUpload(token){
     if(!cfg().ac) return;
     var key = keyOf(inp);
     var v = (inp.value || '').trim();
-    if(!canSuggest(v)) return;
+    if(!canSuggest(v, key)) return;
     if(countOf(key, v) > 0) return;                 /* 이미 있는 값이면 조용히 */
     var wk = key + '|' + v;
     if(warned[wk]) return;
@@ -13706,6 +13782,51 @@ async function githubUpload(token){
     chosung: chosung,
     rescan:  function(){ _cacheAt = 0; scanNow(); return '다시 훑었습니다'; },
     unhide:  function(){ unhideAll(); _cacheAt = 0; return '뺀 값을 모두 되살렸습니다'; },
+    /* ★ 왜 안 뜨는지 그대로 말해준다 — 칸을 클릭해 둔 채로 부른다 */
+    why: function(el){
+      var inp = el || document.activeElement;
+      if(!inp || ['INPUT','TEXTAREA'].indexOf(inp.tagName) < 0){
+        console.log('%c먼저 확인할 입력칸을 클릭한 뒤 다시 불러주세요.', 'color:#b45309;font-weight:700');
+        return '입력칸이 아닙니다';
+      }
+      var c = cfg();
+      var id = inp.id || '(이름표 없음)';
+      var key = keyOf(inp);
+      var host = inp.closest && inp.closest('[data-ppid],[data-pid],[data-k],[data-key],[data-col]');
+      var reasons = [];
+      if(!c.ac) reasons.push('진단 탭에서 「자동완성」이 꺼져 있습니다');
+      if(!key)  reasons.push('이 칸이 어느 항목인지 알아낼 수 없습니다 (이름표도 없고 감싼 칸에 표시도 없음)');
+      if(inp.readOnly) reasons.push('읽기 전용 칸입니다');
+      if(inp.disabled) reasons.push('잠긴 칸입니다');
+      if(SKIP_ID.indexOf(id) >= 0) reasons.push('제외 목록에 있는 칸입니다 (전용 자동완성이 따로 있음)');
+      if(inp.getAttribute('list')) reasons.push('브라우저 기본 목록(datalist)이 붙어 있습니다');
+      if(document.getElementById(id + '-list')) reasons.push('전용 검색창이 따로 붙어 있습니다');
+      if(!inp._sfDone) reasons.push('이 칸에 아직 자동완성이 붙지 않았습니다');
+      var all = key ? candFor(key) : [];
+      if(key && !all.length) reasons.push('이 칸에 쓸 후보가 0개입니다 (최소 ' + minOf(key) + '번 이상 쓴 값만 후보, 글자수 ' + maxOf(key) + '자 이하)');
+      var raw = key ? (buildCache()[key] || {}) : {};
+      var rawN = 0; for(var _v in raw) rawN++;
+
+      console.log('%c── 입력 도우미 진단 ──', 'color:#2563eb;font-weight:700');
+      console.table([{
+        '칸 이름표': id,
+        '알아낸 항목': key || '(못 알아냄)',
+        '감싼 표시': host ? (host.getAttribute('data-ppid') || host.getAttribute('data-pid') || host.getAttribute('data-k') || '') : '(없음)',
+        '붙었나': inp._sfDone ? '예' : '아니오',
+        '기록에서 모은 값': rawN,
+        '후보로 쓸 값': all.length,
+        '최소 횟수': key ? minOf(key) : '-',
+        '글자수 상한': key ? maxOf(key) : '-'
+      }]);
+      if(all.length) console.table(all.slice(0, 10));
+      if(reasons.length){
+        console.log('%c안 뜨는 이유:', 'color:#dc2626;font-weight:700');
+        reasons.forEach(function(r, i){ console.log('  ' + (i+1) + '. ' + r); });
+      }else{
+        console.log('%c막는 것이 없습니다 — 글자를 치면 떠야 합니다.', 'color:#0f7a4a;font-weight:700');
+      }
+      return reasons.length ? ('막는 것 ' + reasons.length + '가지') : '정상';
+    },
     ids:     function(){          /* 업체 아이디가 실제로 붙었는지 확인 */
       var n = 0, out = [];
       try{
