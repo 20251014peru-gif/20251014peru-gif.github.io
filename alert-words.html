@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 <title>알림 단어</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -271,9 +274,7 @@
   var words={watch:[],only:[],mute:[]};
   var raw=null;   // 파일 원본(설명 줄을 지우지 않으려고 통째로 보관)
   var sha=null;
-  var $=function(s,r){ return (r||document).querySelector(s) };
-  var $$=function(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)) };
-
+  
   function say(t, kind){
     var m=$("#msg"); m.textContent=t||""; m.className=kind||"";
   }
