@@ -13058,7 +13058,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v107-0829-1950
+   ✨ 입력칸 3종 세트 (wlSmartField)  v108-0829-2030
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13961,28 +13961,52 @@ async function githubUpload(token){
 
   /* ── 처음부터 들어 있는 규칙 ─────────────────────────── */
   function baseRules(){
+    /* ⚠ 칸 이름은 종류마다 다르다 (2026-08-29 실측)
+       업무   : workVendor(업체) workContact(담당자) workRole(직책) workPhone(전화) workMemo(업체메모)
+       지출   : vendor(업체) isIssued(계산서 발행) isJeonpyo(전표) expSubType(하위구분)
+       통화   : company(업체) name(이름) role(직책) phone(전화)
+       진행업무: owner(담당 업체) ownerPhone(연락처)
+       사고   : partyName(당사자) partyPhone(연락처) */
     return [
-      { id:'b1', on:1, base:1, name:'업체를 넣으면 딸린 칸이 나온다',
-        when:{ k:'company', op:'filled' },
-        then:{ act:'show', keys:['person','role','phone','companyMemo','memo'] } },
-      { id:'b2', on:1, base:1, name:'업체를 지우면 딸린 값도 지운다',
-        when:{ k:'company', op:'empty' },
-        then:{ act:'clear', keys:['person','role','phone','companyMemo'] } },
-      { id:'b3', on:1, base:1, name:'자재명을 지우면 규격·단가도 지운다',
-        when:{ k:'material', op:'empty' },
-        then:{ act:'clear', keys:['spec','unit','unitPrice','itemCode','maker'] } },
-      { id:'b4', on:1, base:1, name:'자재명을 넣으면 규격·단가가 나온다',
+      { id:'b1', on:1, base:1, name:'업무 — 업체를 넣으면 담당자·직책·전화·메모가 나온다',
+        when:{ k:'workVendor', op:'filled' },
+        then:{ act:'show', keys:['workContact','workRole','workPhone','workMemo'] } },
+      { id:'b2', on:1, base:1, name:'업무 — 업체를 지우면 딸린 값도 지운다',
+        when:{ k:'workVendor', op:'empty' },
+        then:{ act:'clear', keys:['workContact','workRole','workPhone'] } },
+      { id:'b3', on:1, base:1, name:'업무 — 자재명을 넣으면 규격·수량·금액이 나온다',
         when:{ k:'material', op:'filled' },
-        then:{ act:'show', keys:['spec','unit','unitPrice','qty'] } },
-      { id:'b5', on:1, base:1, name:'개인비용이면 영수증 칸이 나온다',
-        when:{ k:'expType', op:'eq', v:'개인비용' },
-        then:{ act:'show', keys:['receipt','영수증','att'] } },
-      { id:'b6', on:1, base:1, name:'후불청구면 세금계산서 칸이 나온다',
-        when:{ k:'expType', op:'eq', v:'후불청구' },
-        then:{ act:'show', keys:['taxInvoice','isIssued','세금계산서'] } },
-      { id:'b7', on:1, base:1, name:'미완료면 예정일·담당자가 나온다',
-        when:{ k:'status', op:'eq', v:'미완료' },
-        then:{ act:'show', keys:['dueDate','person','예정일'] } }
+        then:{ act:'show', keys:['spec','qty','cost'] } },
+      { id:'b4', on:1, base:1, name:'업무 — 자재명을 지우면 규격도 지운다',
+        when:{ k:'material', op:'empty' },
+        then:{ act:'clear', keys:['spec'] } },
+      { id:'b5', on:1, base:1, name:'업무 — 지출종류를 고르면 금액·견적메모가 나온다',
+        when:{ k:'expType', op:'filled' },
+        then:{ act:'show', keys:['cost','estimateMemo','workVendor'] } },
+      { id:'b6', on:1, base:1, name:'지출 — 세금계산서면 발행여부·공급가액이 나온다',
+        when:{ k:'expType', op:'contains', v:'계산서' },
+        then:{ act:'show', keys:['isIssued','supplyAmt','taxAmt'] } },
+      { id:'b7', on:1, base:1, name:'지출 — 전표면 전표 칸이 나온다',
+        when:{ k:'expType', op:'contains', v:'전표' },
+        then:{ act:'show', keys:['isJeonpyo','expSubType'] } },
+      { id:'b8', on:1, base:1, name:'지출 — 개인지출이면 용도·비고가 나온다',
+        when:{ k:'expType', op:'contains', v:'개인' },
+        then:{ act:'show', keys:['purpose','memo'] } },
+      { id:'b9', on:1, base:1, name:'통화 — 업체를 넣으면 이름·직책·전화가 나온다',
+        when:{ k:'company', op:'filled' },
+        then:{ act:'show', keys:['name','role','phone'] } },
+      { id:'b10', on:1, base:1, name:'통화 — 업체를 지우면 딸린 값도 지운다',
+        when:{ k:'company', op:'empty' },
+        then:{ act:'clear', keys:['name','role','phone'] } },
+      { id:'b11', on:1, base:1, name:'진행업무 — 담당 업체를 넣으면 연락처가 나온다',
+        when:{ k:'owner', op:'filled' },
+        then:{ act:'show', keys:['ownerPhone','estCost'] } },
+      { id:'b12', on:1, base:1, name:'사고 — 당사자를 넣으면 연락처·유형이 나온다',
+        when:{ k:'partyName', op:'filled' },
+        then:{ act:'show', keys:['partyPhone','partyType'] } },
+      { id:'b13', on:1, base:1, name:'미완료면 담당자가 나온다',
+        when:{ k:'status', op:'contains', v:'미완료' },
+        then:{ act:'show', keys:['workContact','owner','followUp'] } }
     ];
   }
 
@@ -14059,9 +14083,10 @@ async function githubUpload(token){
         }else if(act === 'hide'){
           if(row && row.style && !(el.value || '').trim()){ row.style.display = 'none'; }
         }else if(act === 'clear'){
+          /* 조건이 된 칸 자체는 절대 안 건드린다 (업체를 지우려다 업체를 지우는 사고 방지) */
+          if(keys[i] === (rule.when && rule.when.k)) continue;
           /* 사람이 직접 쓴 값은 지우지 않는다 — 연결에서 온 값만 */
-          if(el._byLink || el.readOnly || String(el.style.background || '').indexOf('251') >= 0
-             || el.dataset.fromLink === '1'){
+          if(el._byLink === 1 || el.dataset.fromLink === '1'){
             if((el.value || '').trim()){
               el.value = '';
               try{ el.dispatchEvent(new Event('input',  {bubbles:true})); }catch(e){}
