@@ -13041,7 +13041,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v97-0829-1305
+   ✨ 입력칸 3종 세트 (wlSmartField)  v98-0829-1330
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13331,6 +13331,17 @@ async function githubUpload(token){
   /* ── 입력칸 하나에 붙이기 ──────────────────────────── */
   function keyOf(inp){
     var id = inp.id || '';
+    if(!id){
+      /* 노션식 화면(데이터·페이지)의 편집칸은 id 가 없다 — 조상의 이름표로 찾는다 */
+      try{
+        var host = inp.closest && inp.closest('[data-ppid],[data-k],[data-key],[data-col]');
+        if(!host) return '';
+        var pid = host.getAttribute('data-ppid') || host.getAttribute('data-k')
+               || host.getAttribute('data-key')  || host.getAttribute('data-col') || '';
+        if(!pid) return '';
+        return (pid.slice(0, 2) === 'f:') ? pid.slice(2) : pid;   /* f:title → title */
+      }catch(e){ return ''; }
+    }
     id = id.replace(/^m-/, '')
            .replace(/^expV2/, '')      /* 지출창: expV2Vendor → Vendor */
            .replace(/^exp-?/, '')
@@ -13357,7 +13368,13 @@ async function githubUpload(token){
       if(['text','search',''].indexOf(t) < 0) return true;    /* 날짜·시간·숫자·전화 제외 */
     }
     var id = inp.id || '';
-    if(!id) return true;                                       /* id 없는 칸은 건너뜀 */
+    if(!id){
+      /* 노션식 편집칸만 예외로 받아준다 (어느 칸인지 알아낼 수 있을 때만) */
+      var isIE = inp.classList && inp.classList.contains('lf-ie');
+      if(!isIE) return true;
+      if(!keyOf(inp)) return true;
+      return false;
+    }
     if(SKIP_ID.indexOf(id) >= 0) return true;
     /* 이름 칸은 통화 모달에만 전용 자동완성이 있다 — 그때만 비켜준다 */
     if(id === 'm-name'){
@@ -13504,7 +13521,10 @@ async function githubUpload(token){
   var scanT = null;
   function scanNow(){
     try{
-      document.querySelectorAll('input, textarea').forEach(attach);
+      document.querySelectorAll('input, textarea, .lf-ie').forEach(function(el){
+        var tg = (el.tagName || '').toLowerCase();
+        if(tg === 'input' || tg === 'textarea') attach(el);
+      });
       ['mFields','mxWrap','expV2Overlay'].forEach(function(id){
         var r = document.getElementById(id);
         if(r) foldEmpty(r);
@@ -13524,6 +13544,19 @@ async function githubUpload(token){
     });
     mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
   }catch(e){ console.warn('[입력도우미] 감시 시작 실패', e); }
+
+  /* 클릭해서 칸이 막 생긴 경우 감시(150ms)보다 빠르게 붙인다 */
+  document.addEventListener('focusin', function(ev){
+    var el = ev.target;
+    if(!el) return;
+    var tag = (el.tagName || '').toLowerCase();
+    if(tag !== 'input' && tag !== 'textarea') return;
+    if(el._sfDone) return;
+    try{
+      attach(el);
+      if(el._sfDone && cfg().ac) setTimeout(function(){ render(el); }, 30);
+    }catch(e){ console.warn('[입력도우미] 즉시 붙이기 실패', e); }
+  }, true);
 
   window.addEventListener('scroll', function(){ if(boxFor) placeBox(boxFor); }, true);
   window.addEventListener('resize', closeBox);
