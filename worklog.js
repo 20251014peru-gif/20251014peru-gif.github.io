@@ -13028,3 +13028,534 @@ async function githubUpload(token){
     }
   }catch(e){ console.warn('[자가 점검] 저장 보호 붙이기 실패', e); }
 })();
+
+
+/* ============================================================
+   ✨ 입력칸 3종 세트 (wlSmartField)  v94-0829-1120
+   기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
+
+   ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
+   ② 연결 배지          : 이름·업체를 고르면 전화·직책이 따라 보인다
+   ③ 빈 칸 접기          : 값 없는 칸을 접어 화면을 아낀다 (기본 꺼짐)
+
+   ▸ 붙이는 방식은 「전부 붙이고 예외만 빼기」 — 새 칸을 만들어도 자동으로 된다
+   ▸ 기존 자동완성 5벌(제목·위치·분야·자재·통화이름)은 건드리지 않는다 (충돌 0)
+   ▸ 새 script / style 블록을 만들지 않는다
+   ▸ 되돌리기는 파일이 아니라 진단 탭 스위치로 한다
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS_ON     = 'wl_sf_on';        /* 스위치      {ac,link,fold} */
+  var LS_HIDE   = 'wl_sugg_hidden';  /* 🗑 로 뺀 값  {키:[값…]}    */
+  var MAXLEN    = 30;                /* 후보 글자수 상한          */
+  var MAXSHOW   = 8;                 /* 한 번에 보여줄 개수        */
+  var MINCOUNT  = 2;                 /* 2번 이상 쓰인 값만         */
+
+  /* ── 설정 ─────────────────────────────────────────── */
+  function cfg(){
+    var d = { ac:1, link:1, fold:0 };
+    try{
+      var o = JSON.parse(localStorage.getItem(LS_ON) || 'null');
+      if(o && typeof o === 'object'){ for(var k in d) if(k in o) d[k] = o[k] ? 1 : 0; }
+    }catch(e){ console.warn('[입력도우미] 설정 읽기 실패', e); }
+    return d;
+  }
+  function cfgSet(k, v){
+    var c = cfg(); c[k] = v ? 1 : 0;
+    try{ localStorage.setItem(LS_ON, JSON.stringify(c)); }
+    catch(e){ console.warn('[입력도우미] 설정 저장 실패', e); }
+    return c;
+  }
+
+  /* ── 초성 ─────────────────────────────────────────── */
+  var CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  function chosung(s){
+    return String(s == null ? '' : s).split('').map(function(ch){
+      var c = ch.charCodeAt(0) - 0xAC00;
+      return (c >= 0 && c <= 11171) ? CHO[Math.floor(c/588)] : ch;
+    }).join('');
+  }
+  function hitCand(cand, q){
+    var s = String(cand == null ? '' : cand);
+    var t = String(q || '').trim();
+    if(!t) return true;
+    if(/^[ㄱ-ㅎ]+$/.test(t)) return chosung(s).indexOf(t) >= 0;
+    return s.toLowerCase().indexOf(t.toLowerCase()) >= 0;
+  }
+  function canSuggest(v){
+    var s = String(v == null ? '' : v).trim();
+    return s.length > 0 && s.length <= MAXLEN && s.indexOf('\n') < 0;
+  }
+  function normKey(s){
+    return String(s == null ? '' : s)
+      .replace(/\s+/g, '')
+      .replace(/\(주\)|（주）|㈜|\(유\)|（유）|㈜|주식회사|유한회사/g, '')  /* 법인표기는 통째로 먼저 */
+      .replace(/[()（）.\-_]/g, '')                                      /* 남은 기호 */
+      .toLowerCase();
+  }
+  function ES(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* ── 🗑 숨김 목록 ─────────────────────────────────── */
+  function hiddenOf(key){
+    try{
+      var o = JSON.parse(localStorage.getItem(LS_HIDE) || '{}');
+      return Array.isArray(o[key]) ? o[key] : [];
+    }catch(e){ console.warn('[입력도우미] 숨김 목록 읽기 실패', e); return []; }
+  }
+  function hideVal(key, v){
+    try{
+      var o = JSON.parse(localStorage.getItem(LS_HIDE) || '{}');
+      if(!Array.isArray(o[key])) o[key] = [];
+      if(o[key].indexOf(v) < 0) o[key].push(v);
+      localStorage.setItem(LS_HIDE, JSON.stringify(o));
+    }catch(e){ console.warn('[입력도우미] 숨김 저장 실패', e); }
+  }
+  function unhideAll(){
+    try{ localStorage.removeItem(LS_HIDE); }
+    catch(e){ console.warn('[입력도우미] 숨김 비우기 실패', e); }
+  }
+
+  /* ── 후보 모으기 (기록에서 직접, 5초 캐시) ─────────── */
+  var _cache = {}, _cacheAt = 0;
+  function buildCache(){
+    var now = Date.now();
+    if(now - _cacheAt < 5000) return _cache;
+    var map = {};
+    try{
+      var list = (typeof entries !== 'undefined' && entries) ? entries : [];
+      for(var i = 0; i < list.length; i++){
+        var e = list[i]; if(!e) continue;
+        for(var k in e){
+          if(k === 'id' || k === 'kind' || k === 'createdAt' || k === 'updatedAt') continue;
+          var v = e[k];
+          if(typeof v !== 'string') continue;
+          if(!canSuggest(v)) continue;
+          var t = v.trim();
+          if(!map[k]) map[k] = {};
+          map[k][t] = (map[k][t] || 0) + 1;
+        }
+      }
+    }catch(err){ console.warn('[입력도우미] 후보 모으기 실패', err); }
+    _cache = map; _cacheAt = now;
+    return map;
+  }
+  function candFor(key){
+    var m = buildCache()[key] || {};
+    var hid = hiddenOf(key);
+    var arr = [];
+    for(var v in m){
+      if(hid.indexOf(v) >= 0) continue;
+      if(m[v] < MINCOUNT) continue;
+      arr.push({ v: v, n: m[v] });
+    }
+    arr.sort(function(a, b){ return b.n - a.n || a.v.localeCompare(b.v); });
+    return arr;
+  }
+  function countOf(key, val){
+    var m = buildCache()[key] || {};
+    return m[String(val).trim()] || 0;
+  }
+
+  /* ── 연락처에서 찾기 (연결 배지용) ─────────────────── */
+  var LINK_KEYS = ['company','vendor','workVendor','supplier','partner','거래처','업체'];
+  function isLinkKey(key){ return LINK_KEYS.indexOf(key) >= 0; }
+  function contacts(){
+    try{
+      if(typeof contactsCache !== 'undefined' && contactsCache && contactsCache.length) return contactsCache;
+      if(typeof loadContactsCache === 'function') loadContactsCache().catch(function(){});
+    }catch(e){ console.warn('[입력도우미] 연락처를 못 읽었어요', e); }
+    return [];
+  }
+  function findContact(name){
+    var n = normKey(name); if(!n) return null;
+    var list = contacts();
+    for(var i = 0; i < list.length; i++){
+      var c = list[i]; if(!c) continue;
+      if(normKey(c.name) === n || normKey(c.company) === n) return c;
+    }
+    return null;
+  }
+
+  /* ── 드롭다운 (한 개만 만들어 돌려 쓴다) ───────────── */
+  var box = null, boxFor = null;
+  function ensureBox(){
+    if(box && box.parentNode) return box;
+    box = document.createElement('div');
+    box.id = 'wlSfBox';
+    box.style.cssText = 'display:none;position:fixed;z-index:99999;background:#fff;'
+      + 'border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.14);'
+      + 'max-height:260px;overflow:auto;font-family:inherit;font-size:13px';
+    document.body.appendChild(box);
+    return box;
+  }
+  function closeBox(){
+    if(box) box.style.display = 'none';
+    boxFor = null;
+  }
+  function placeBox(inp){
+    var r = inp.getBoundingClientRect();
+    var b = ensureBox();
+    var below = window.innerHeight - r.bottom;
+    b.style.left  = Math.max(6, r.left) + 'px';
+    b.style.width = Math.max(160, r.width) + 'px';
+    if(below < 180 && r.top > 200){          /* 아래가 좁으면 위로 뒤집는다 */
+      b.style.top = 'auto';
+      b.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+      b.style.maxHeight = Math.min(260, r.top - 12) + 'px';
+    }else{
+      b.style.bottom = 'auto';
+      b.style.top = (r.bottom + 4) + 'px';
+      b.style.maxHeight = Math.min(260, below - 12) + 'px';
+    }
+  }
+
+  /* ── 연결 배지 ─────────────────────────────────────── */
+  function badgeOf(inp, make){
+    var id = 'sfb-' + (inp.id || '');
+    var el = document.getElementById(id);
+    if(!el && make){
+      el = document.createElement('div');
+      el.id = id;
+      el.style.cssText = 'margin-top:4px;padding:6px 9px;border-radius:8px;background:#f1f5f9;'
+        + 'border:1px solid #e2e8f0;color:#64748b;font-size:12px;line-height:1.5;'
+        + 'display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+      if(inp.parentNode) inp.parentNode.appendChild(el);
+    }
+    return el;
+  }
+  function showBadge(inp, c){
+    if(!cfg().link) return;
+    var el = badgeOf(inp, true); if(!el) return;
+    var bits = [];
+    if(c.phone)   bits.push('📞 <a href="tel:' + ES(String(c.phone).replace(/[^0-9+]/g,'')) + '" style="color:#2563eb;text-decoration:none">' + ES(c.phone) + '</a>');
+    if(c.company && normKey(c.company) !== normKey(c.name)) bits.push('🏢 ' + ES(c.company));
+    if(c.role)    bits.push('👤 ' + ES(c.role));
+    if(c.cat)     bits.push('🏷 ' + ES(c.cat));
+    if(!bits.length){ el.remove(); return; }
+    el.innerHTML = '<span style="flex:1;min-width:0">' + bits.join(' · ') + '</span>'
+      + '<button type="button" data-sfx="1" style="flex:0 0 auto;height:24px;padding:0 8px;'
+      + 'border:1px solid #e2e8f0;border-radius:7px;background:#fff;color:#94a3b8;'
+      + 'font-size:11px;font-family:inherit;cursor:pointer">연결 해제</button>';
+    el.style.display = 'flex';
+    var x = el.querySelector('[data-sfx]');
+    if(x) x.addEventListener('click', function(){ el.remove(); });
+  }
+  function syncBadge(inp){
+    var key = keyOf(inp);
+    if(!isLinkKey(key)){ return; }
+    var v = (inp.value || '').trim();
+    var old = badgeOf(inp, false);
+    if(!v){ if(old) old.remove(); return; }
+    var c = findContact(v);
+    if(c) showBadge(inp, c);
+    else if(old) old.remove();
+  }
+
+  /* ── 목록 그리기 ───────────────────────────────────── */
+  function render(inp){
+    var key = keyOf(inp);
+    var q = (inp.value || '').trim();
+    var all = candFor(key);
+    var hit = [];
+    for(var i = 0; i < all.length && hit.length < MAXSHOW; i++){
+      if(hitCand(all[i].v, q)) hit.push(all[i]);
+    }
+    if(!hit.length){ closeBox(); return; }
+    var b = ensureBox();
+    var html = '';
+    for(var j = 0; j < hit.length; j++){
+      var it = hit[j];
+      var sub = '';
+      if(isLinkKey(key)){
+        var c = findContact(it.v);
+        if(c && (c.role || c.phone)) sub = ' · ' + ES([c.role, c.phone].filter(Boolean).join(' '));
+      }
+      html += '<div data-sfv="' + ES(it.v) + '" style="display:flex;align-items:center;gap:6px;'
+        + 'padding:9px 10px;cursor:pointer;border-bottom:1px solid #f1f5f9">'
+        + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+        + ES(it.v) + '<span style="color:#94a3b8;font-size:11.5px">' + sub + '</span></span>'
+        + '<span style="flex:0 0 auto;color:#94a3b8;font-size:11px">' + it.n + '</span>'
+        + '<button type="button" data-sfdel="' + ES(it.v) + '" title="이 목록에서 빼기" '
+        + 'style="flex:0 0 auto;width:24px;height:24px;border:1px solid #fde8e8;border-radius:6px;'
+        + 'background:#fff;color:#e74c3c;font-size:11px;cursor:pointer;font-family:inherit;line-height:1">🗑</button>'
+        + '</div>';
+    }
+    b.innerHTML = html;
+    b.style.display = 'block';
+    boxFor = inp;
+    placeBox(inp);
+
+    /* 고르기 — mousedown 이어야 폰에서 키보드가 안 닫힌다 */
+    b.querySelectorAll('[data-sfv]').forEach(function(row){
+      row.addEventListener('mousedown', function(ev){
+        if(ev.target && ev.target.getAttribute('data-sfdel') != null) return;
+        ev.preventDefault();
+        inp.value = row.getAttribute('data-sfv');
+        closeBox();
+        syncBadge(inp);
+        try{ inp.dispatchEvent(new Event('input',  {bubbles:true})); }catch(e){}
+        try{ inp.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
+      });
+    });
+    b.querySelectorAll('[data-sfdel]').forEach(function(btn){
+      btn.addEventListener('mousedown', function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        var v = btn.getAttribute('data-sfdel');
+        if(!confirm('"' + v + '"\n이 값을 자동완성 목록에서 뺄까요?\n(과거 기록은 그대로 남습니다)')) return;
+        hideVal(keyOf(inp), v);
+        render(inp);
+        if(typeof toast === 'function') toast('자동완성에서 뺐습니다');
+      });
+    });
+  }
+
+  /* ── 입력칸 하나에 붙이기 ──────────────────────────── */
+  function keyOf(inp){
+    var id = inp.id || '';
+    return id.replace(/^m-/, '').replace(/^exp-?/, '').replace(/-(new|list|sel)$/, '');
+  }
+
+  /* 건드리지 않을 칸 — 이미 다른 자동완성이 붙었거나, 검색창이거나, 짧은 이름칸이 아닌 것 */
+  var SKIP_ID = ['m-title','m-loc','m-field','m-material','m-name','m-contact',
+                 'tpSearchInp','vpSearch','tpCfName','q','v43Search','searchInp',
+                 'newMatName','newMatVendor','wlSfBox'];
+  function shouldSkip(inp){
+    if(!inp || inp._sfDone) return true;
+    var t = (inp.getAttribute('type') || 'text').toLowerCase();
+    if(['text','search',''].indexOf(t) < 0) return true;      /* 날짜·시간·숫자·전화 제외 */
+    var id = inp.id || '';
+    if(!id) return true;                                       /* id 없는 칸은 건너뜀 */
+    if(SKIP_ID.indexOf(id) >= 0) return true;
+    if(/search|검색/i.test(id)) return true;
+    if(inp.getAttribute('list')) return true;                  /* datalist 붙은 칸 */
+    if(document.getElementById(id + '-list')) return true;     /* 기존 커스텀 목록 */
+    if(inp._callACwired || inp._tacWired || inp._fsWired) return true;
+    if(inp.readOnly || inp.disabled) return true;
+    if(inp.closest && inp.closest('#wlSfBox')) return true;
+    return false;
+  }
+
+  function attach(inp){
+    if(shouldSkip(inp)) return;
+    inp._sfDone = true;
+    inp.setAttribute('autocomplete', 'off');
+
+    var composing = false;
+    inp.addEventListener('compositionstart', function(){ composing = true; });
+    inp.addEventListener('compositionend',   function(){ composing = false; if(cfg().ac) render(inp); });
+    inp.addEventListener('input', function(){
+      if(!cfg().ac) return;
+      if(composing) return;                 /* 조합 중에는 건드리지 않는다 (자모 분리 방지) */
+      render(inp);
+    });
+    inp.addEventListener('focus', function(){ if(cfg().ac) render(inp); });
+    inp.addEventListener('blur',  function(){
+      setTimeout(function(){ if(boxFor === inp) closeBox(); }, 120);
+      syncBadge(inp);
+      warnSimilar(inp);
+    });
+    inp.addEventListener('keydown', function(ev){
+      if(ev.key === 'Escape') closeBox();
+    });
+    if((inp.value || '').trim()) syncBadge(inp);
+  }
+
+  /* ── 「비슷한 이름이 있어요」 — 새 값을 처음 만들 때 한 번만 ── */
+  var warned = {};
+  function warnSimilar(inp){
+    if(!cfg().ac) return;
+    var key = keyOf(inp);
+    var v = (inp.value || '').trim();
+    if(!canSuggest(v)) return;
+    if(countOf(key, v) > 0) return;                 /* 이미 있는 값이면 조용히 */
+    var wk = key + '|' + v;
+    if(warned[wk]) return;
+    var n = normKey(v); if(n.length < 2) return;
+    var all = candFor(key), same = null;
+    for(var i = 0; i < all.length; i++){
+      if(normKey(all[i].v) === n){ same = all[i]; break; }
+    }
+    if(!same) return;
+    warned[wk] = 1;
+    if(confirm('비슷한 이름이 이미 있어요.\n\n  기존 : ' + same.v + '  (' + same.n + '건)\n  입력 : ' + v
+             + '\n\n[확인] 기존 것으로 맞출까요?\n[취소] 새 이름 그대로 둡니다')){
+      inp.value = same.v;
+      syncBadge(inp);
+      try{ inp.dispatchEvent(new Event('input', {bubbles:true})); }catch(e){}
+    }
+  }
+
+  /* ── ③ 빈 칸 접기 ─────────────────────────────────── */
+  function foldEmpty(root){
+    if(!cfg().fold) return;
+    if(!root) return;
+    var wraps = root.querySelectorAll('.field');
+    var hidden = 0;
+    for(var i = 0; i < wraps.length; i++){
+      var w = wraps[i];
+      if(w._sfKeep) continue;
+      var el = w.querySelector('input, select, textarea');
+      if(!el) continue;
+      var id = el.id || '';
+      if(/date|time|title|kind|status/i.test(id)) continue;   /* 늘 보여야 하는 칸 */
+      var v = (el.value || '').trim();
+      if(v) continue;
+      w.style.display = 'none';
+      w._sfFolded = true;
+      hidden++;
+    }
+    var bar = root.querySelector('[data-sffold]');
+    if(hidden > 0){
+      if(!bar){
+        bar = document.createElement('div');
+        bar.setAttribute('data-sffold', '1');
+        bar.style.cssText = 'grid-column:1/-1;margin:6px 0;padding:8px 12px;border-radius:9px;'
+          + 'background:#f8fafc;border:1px dashed #cbd5e1;color:#64748b;font-size:12.5px;'
+          + 'cursor:pointer;text-align:center;font-family:inherit';
+        bar.addEventListener('click', function(){
+          root.querySelectorAll('.field').forEach(function(w){
+            if(w._sfFolded){ w.style.display = ''; w._sfKeep = true; w._sfFolded = false; }
+          });
+          bar.remove();
+        });
+        root.insertBefore(bar, root.firstChild);
+      }
+      bar.textContent = '＋ 비어 있는 항목 ' + hidden + '개 — 눌러서 펼치기';
+    }else if(bar){ bar.remove(); }
+  }
+
+  /* ── 화면에 나타나는 칸을 자동으로 잡는다 ──────────── */
+  var scanT = null;
+  function scanNow(){
+    try{
+      document.querySelectorAll('input').forEach(attach);
+      ['mFields','mxWrap','expV2Overlay'].forEach(function(id){
+        var r = document.getElementById(id);
+        if(r) foldEmpty(r);
+      });
+    }catch(e){ console.warn('[입력도우미] 훑기 실패', e); }
+  }
+  function scan(){
+    clearTimeout(scanT);
+    scanT = setTimeout(scanNow, 150);
+  }
+
+  try{
+    var mo = new MutationObserver(function(muts){
+      for(var i = 0; i < muts.length; i++){
+        if(muts[i].addedNodes && muts[i].addedNodes.length){ scan(); return; }
+      }
+    });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[입력도우미] 감시 시작 실패', e); }
+
+  window.addEventListener('scroll', function(){ if(boxFor) placeBox(boxFor); }, true);
+  window.addEventListener('resize', closeBox);
+  document.addEventListener('mousedown', function(ev){
+    if(box && box.style.display === 'block' && !box.contains(ev.target) && ev.target !== boxFor) closeBox();
+  });
+
+  /* ── 진단 탭 스위치 ────────────────────────────────── */
+  function panel(){
+    var anchor = document.getElementById('opNow');
+    var host = anchor && anchor.parentNode ? anchor.parentNode.parentNode : null;
+    if(!host) return;
+    if(document.getElementById('sfPanel')) { paintPanel(); return; }
+
+    var head = document.createElement('div');
+    head.className = 'sec-head';
+    head.textContent = '✨ 입력 도우미';
+
+    var wrap = document.createElement('div');
+    wrap.id = 'sfPanel';
+    wrap.innerHTML =
+      '<div style="font-size:12.5px;color:#7a92a8;margin-bottom:6px">'
+      + '입력칸에 저장된 값을 띄워 오타를 막습니다. 이상하면 여기서 끄면 원래대로 돌아갑니다.</div>'
+      + '<div class="btn-row" style="margin-top:0">'
+      + '<button class="btn btn-sm" id="sfAc"   style="min-height:44px">🔤 자동완성·초성검색</button>'
+      + '<button class="btn btn-sm" id="sfLink" style="min-height:44px">🔗 연락처 정보 표시</button>'
+      + '<button class="btn btn-sm" id="sfFold" style="min-height:44px">📁 빈 칸 접기</button>'
+      + '<button class="btn btn-ghost btn-sm" id="sfUnhide" style="min-height:44px">👁 뺀 값 되살리기</button>'
+      + '</div><div id="sfNow" style="font-size:12.5px;color:#7a92a8;margin-top:6px"></div>';
+
+    host.insertBefore(head, anchor.parentNode.nextSibling);
+    host.insertBefore(wrap, head.nextSibling);
+
+    [['sfAc','ac'],['sfLink','link'],['sfFold','fold']].forEach(function(p){
+      var el = document.getElementById(p[0]);
+      if(el && !el._bound){
+        el._bound = 1;
+        el.addEventListener('click', function(){
+          var c = cfg();
+          cfgSet(p[1], !c[p[1]]);
+          paintPanel();
+          if(p[1] === 'fold' && typeof toast === 'function') toast('입력창을 다시 열면 반영됩니다');
+        });
+      }
+    });
+    var u = document.getElementById('sfUnhide');
+    if(u && !u._bound){
+      u._bound = 1;
+      u.addEventListener('click', function(){
+        unhideAll();
+        _cacheAt = 0;
+        paintPanel();
+        if(typeof toast === 'function') toast('뺀 값을 모두 되살렸습니다');
+      });
+    }
+    paintPanel();
+  }
+  function paintPanel(){
+    var c = cfg();
+    [['sfAc','ac'],['sfLink','link'],['sfFold','fold']].forEach(function(p){
+      var el = document.getElementById(p[0]); if(!el) return;
+      el.className = 'btn btn-sm ' + (c[p[1]] ? 'btn-primary' : 'btn-ghost');
+      el.style.minHeight = '44px';
+    });
+    var n = document.getElementById('sfNow'); if(!n) return;
+    var m = buildCache(), keys = 0, vals = 0;
+    for(var k in m){ keys++; for(var v in m[k]) vals++; }
+    var hid = 0;
+    try{
+      var ho = JSON.parse(localStorage.getItem(LS_HIDE) || '{}');
+      for(var kk in ho) hid += (ho[kk] || []).length;
+    }catch(e){}
+    n.textContent = '지금: ' + (c.ac ? '자동완성 켜짐' : '자동완성 꺼짐')
+      + ' · ' + (c.link ? '연락처 표시 켜짐' : '연락처 표시 꺼짐')
+      + ' · ' + (c.fold ? '빈 칸 접기 켜짐' : '빈 칸 접기 꺼짐')
+      + '  |  후보 ' + vals + '개 / 칸 ' + keys + '종' + (hid ? ' · 뺀 값 ' + hid + '개' : '');
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
+  else panel();
+  setTimeout(panel, 1500);
+  setTimeout(scanNow, 800);
+
+  /* ── 콘솔 도구 ─────────────────────────────────────── */
+  window.wlSmartField = {
+    on:   function(){ cfgSet('ac',1); cfgSet('link',1); paintPanel(); return cfg(); },
+    off:  function(){ cfgSet('ac',0); cfgSet('link',0); cfgSet('fold',0); paintPanel(); closeBox(); return cfg(); },
+    cfg:  cfg,
+    set:  function(k,v){ var c = cfgSet(k,v); paintPanel(); return c; },
+    info: function(){
+      var m = buildCache(), out = [];
+      for(var k in m){
+        var n = 0; for(var v in m[k]) if(m[k][v] >= MINCOUNT) n++;
+        if(n) out.push({ 칸:k, 후보수:n });
+      }
+      out.sort(function(a,b){ return b.후보수 - a.후보수; });
+      console.table(out.slice(0, 25));
+      return out.length + '개 칸에 후보가 있습니다';
+    },
+    cand:    function(key){ console.table(candFor(key).slice(0,20)); },
+    chosung: chosung,
+    rescan:  function(){ _cacheAt = 0; scanNow(); return '다시 훑었습니다'; },
+    unhide:  function(){ unhideAll(); _cacheAt = 0; return '뺀 값을 모두 되살렸습니다'; }
+  };
+
+  console.log('[입력도우미] 준비됨 — 진단 탭 「✨ 입력 도우미」에서 켜고 끌 수 있어요');
+})();
