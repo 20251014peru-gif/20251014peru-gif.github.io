@@ -13058,7 +13058,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v108-0829-2030
+   ✨ 입력칸 3종 세트 (wlSmartField)  v109-0829-2130
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13989,9 +13989,12 @@ async function githubUpload(token){
       { id:'b7', on:1, base:1, name:'지출 — 전표면 전표 칸이 나온다',
         when:{ k:'expType', op:'contains', v:'전표' },
         then:{ act:'show', keys:['isJeonpyo','expSubType'] } },
-      { id:'b8', on:1, base:1, name:'지출 — 개인지출이면 용도·비고가 나온다',
+      { id:'b8', on:1, base:1, name:'지출 — 개인지출이면 용도·비고·사진이 나온다',
         when:{ k:'expType', op:'contains', v:'개인' },
-        then:{ act:'show', keys:['purpose','memo'] } },
+        then:{ act:'show', keys:['purpose','memo','sec:pics'] } },
+      { id:'b8b', on:1, base:1, name:'지출종류를 고르면 파일 링크 칸이 나온다',
+        when:{ k:'expType', op:'filled' },
+        then:{ act:'show', keys:['sec:att'] } },
       { id:'b9', on:1, base:1, name:'통화 — 업체를 넣으면 이름·직책·전화가 나온다',
         when:{ k:'company', op:'filled' },
         then:{ act:'show', keys:['name','role','phone'] } },
@@ -14074,6 +14077,14 @@ async function githubUpload(token){
     var keys = (rule.then && rule.then.keys) || [];
     var act  = (rule.then && rule.then.act) || 'show';
     for(var i = 0; i < keys.length; i++){
+      /* sec:pics 처럼 적으면 아래쪽 큰 영역을 펼친다 (v109) */
+      if(String(keys[i]).indexOf('sec:') === 0){
+        if(act === 'show'){
+          try{ if(typeof window.wlSecShow === 'function') window.wlSecShow(String(keys[i]).slice(4)); }
+          catch(e){ console.warn('[연결 규칙] 영역 펼치기 실패', e); }
+        }
+        continue;
+      }
       var els = fieldsIn(root, keys[i]);
       for(var j = 0; j < els.length; j++){
         var el = els[j], row = rowOf(el);
@@ -14260,4 +14271,194 @@ async function githubUpload(token){
     run:   function(){ runNow(); return '규칙을 다시 적용했습니다'; }
   };
   console.log('[연결 규칙] 준비됨 — 진단 탭 「🔗 연결 규칙」 에서 만들 수 있어요');
+})();
+
+
+/* ============================================================
+   🗂 아래쪽 블록 접기 (wlSecs)  v109-0829-2130
+   기본지침 제3원칙 3-3 「비어 있는 칸은 안 그린다」 를 큰 영역까지 넓힌 것
+
+   노션식 페이지 아래에는 큰 영역이 여섯 개 있다.
+     🧷 하위 항목 · ⏱ 소요 시간 · 📦 자재 사용 내역
+     📎 파일·폴더 링크 · 📝 본문 · 📷 사진·첨부
+   대부분 비어 있는데 늘 자리를 차지한다.
+
+   ▸ 비어 있으면 접고, 맨 위에 [＋ 본문] 같은 단추만 남긴다
+   ▸ 내용이 있으면 저절로 펼쳐진다
+   ▸ 단추를 누르면 그 자리에 나타난다
+   ▸ 연결 규칙에서 sec:pics 처럼 지정하면 조건에 따라 펼칠 수 있다
+   ▸ 되돌리기 : 진단 탭 「🗂 빈 영역 접기」 를 끄면 전부 보인다
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS_ON   = 'wl_secs_on';
+  var LS_OPEN = 'wl_secs_open';     /* 사람이 편 것 — 기록마다 기억 */
+
+  /* 2026-08-29 실측한 실제 제목들 */
+  var SECS = [
+    { key:'sub',  label:'하위 항목', icon:'🧷', re:/하위\s*항목/,        has:function(w){ return cnt(w,'.pg-subrow, .pg-sub li, [data-subid]'); } },
+    { key:'time', label:'소요 시간', icon:'⏱',  re:/소요\s*시간/,        has:function(){ return false; } },
+    { key:'mat',  label:'자재 내역', icon:'📦', re:/자재\s*사용/,         has:function(w){ return cnt(w,'.pg-matrow, [data-matdel]'); } },
+    { key:'att',  label:'파일 링크', icon:'📎', re:/파일\s*[·ㆍ]\s*폴더/, has:function(w){ return cnt(w,'.pg-attrow, [data-attdel]'); } },
+    { key:'body', label:'본문',      icon:'📝', re:/본문/,               has:function(){ var t=document.getElementById('pgBodyTx');
+                                                                                          return !!(t && (t.textContent||'').trim().length); } },
+    { key:'pics', label:'사진',      icon:'📷', re:/사진/,               has:function(w){ return cnt(w,'img'); } }
+  ];
+  function cnt(wrap, sel){
+    try{ return wrap.some(function(el){ return el.querySelectorAll && el.querySelectorAll(sel).length > 0; }); }
+    catch(e){ return false; }
+  }
+
+  function isOn(){ try{ return localStorage.getItem(LS_ON) !== '0'; }catch(e){ return true; } }
+  function setOn(v){ try{ localStorage.setItem(LS_ON, v ? '1' : '0'); }catch(e){ console.warn('[빈 영역] 설정 저장 실패', e); } }
+  function pageId(){
+    try{ var m = String(location.hash||'').match(/^#lp=([^&]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+    catch(e){ return ''; }
+  }
+  function openedOf(){
+    try{ var o = JSON.parse(localStorage.getItem(LS_OPEN) || '{}'); return (o && typeof o==='object') ? o : {}; }
+    catch(e){ return {}; }
+  }
+  function markOpen(key){
+    try{
+      var o = openedOf(), id = pageId() || '_';
+      if(!o[id]) o[id] = [];
+      if(o[id].indexOf(key) < 0) o[id].push(key);
+      var ks = Object.keys(o);                       /* 너무 쌓이지 않게 최근 40건만 */
+      if(ks.length > 40) delete o[ks[0]];
+      localStorage.setItem(LS_OPEN, JSON.stringify(o));
+    }catch(e){ console.warn('[빈 영역] 펼침 기억 실패', e); }
+  }
+  function isOpened(key){
+    var o = openedOf(), id = pageId() || '_';
+    return (o[id] || []).indexOf(key) >= 0;
+  }
+
+  /* 이 제목줄이 이끄는 영역 — 다음 제목줄이나 구분선 앞까지 */
+  function blockOf(head){
+    var out = [head], n = head.nextElementSibling;
+    while(n){
+      if(n.classList && (n.classList.contains('pg-sec') || n.classList.contains('pg-div'))) break;
+      out.push(n);
+      n = n.nextElementSibling;
+    }
+    return out;
+  }
+
+  function run(){
+    var body = document.querySelector('.lf-page .pg-body');
+    if(!body) return;
+    var heads = [].slice.call(body.querySelectorAll('.pg-sec'));
+    if(!heads.length) return;
+
+    /* 단추 줄 자리 */
+    var bar = body.querySelector('#pgSecBar');
+    if(!bar){
+      bar = document.createElement('div');
+      bar.id = 'pgSecBar';
+      bar.className = 'pg-secbar';
+      var anchor = body.querySelector('.pg-div') || heads[0];
+      if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor);
+    }
+
+    var chips = [];
+    heads.forEach(function(h){
+      var txt = (h.textContent || '').trim();
+      var def = null;
+      for(var i = 0; i < SECS.length; i++){ if(SECS[i].re.test(txt)){ def = SECS[i]; break; } }
+      if(!def) return;
+
+      var wrap = blockOf(h);
+      var filled = false;
+      try{ filled = !!def.has(wrap); }catch(e){ filled = true; }
+      var forced = h._secForce || isOpened(def.key);
+      var show   = !isOn() || filled || forced;
+
+      wrap.forEach(function(el){
+        if(!el.style) return;
+        if(show){ if(el._secHid){ el.style.display = ''; el._secHid = 0; } }
+        else { if(el.style.display !== 'none'){ el._secPrev = el.style.display; el.style.display = 'none'; el._secHid = 1; } }
+      });
+
+      if(!show) chips.push({ key:def.key, label:def.label, icon:def.icon, head:h });
+    });
+
+    if(!chips.length){ bar.innerHTML = ''; bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    bar.innerHTML = chips.map(function(c){
+      return '<button type="button" class="pg-secb" data-secadd="' + c.key + '">＋ ' + c.icon + ' ' + c.label + '</button>';
+    }).join('');
+    bar.querySelectorAll('[data-secadd]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var k = b.getAttribute('data-secadd');
+        var hit = chips.filter(function(c){ return c.key === k; })[0];
+        if(hit && hit.head){ hit.head._secForce = 1; markOpen(k); }
+        run();
+        setTimeout(function(){
+          try{
+            if(k === 'body'){ var t = document.getElementById('pgBodyTx'); if(t) t.focus(); }
+            if(hit && hit.head && hit.head.scrollIntoView) hit.head.scrollIntoView({block:'center'});
+          }catch(e){}
+        }, 60);
+      });
+    });
+  }
+
+  /* 연결 규칙에서 sec:pics 처럼 부를 수 있게 */
+  window.wlSecShow = function(key){
+    var body = document.querySelector('.lf-page .pg-body'); if(!body) return false;
+    var heads = [].slice.call(body.querySelectorAll('.pg-sec'));
+    for(var i = 0; i < heads.length; i++){
+      var txt = (heads[i].textContent || '').trim();
+      for(var j = 0; j < SECS.length; j++){
+        if(SECS[j].key === key && SECS[j].re.test(txt)){
+          heads[i]._secForce = 1; markOpen(key); run(); return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  var t = null;
+  function later(){ clearTimeout(t); t = setTimeout(run, 150); }
+  try{
+    var mo = new MutationObserver(function(m){
+      for(var i = 0; i < m.length; i++) if(m[i].addedNodes && m[i].addedNodes.length){ later(); return; }
+    });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[빈 영역] 감시 시작 실패', e); }
+  document.addEventListener('input', function(ev){
+    var t2 = ev.target;
+    if(t2 && (t2.id === 'pgBodyTx' || (t2.closest && t2.closest('.pg-body')))) later();
+  }, true);
+  setTimeout(run, 1200);
+
+  /* 진단 탭 스위치 */
+  function panel(){
+    var host = document.getElementById('sfPanel');
+    if(!host || document.getElementById('secBtn')) return;
+    var row = host.querySelector('.btn-row'); if(!row) return;
+    var b = document.createElement('button');
+    b.id = 'secBtn'; b.style.minHeight = '44px';
+    function paint(){
+      b.textContent = isOn() ? '🗂 빈 영역 접힘' : '🗂 빈 영역 다 보임';
+      b.className = 'btn btn-sm ' + (isOn() ? 'btn-primary' : 'btn-ghost');
+      b.style.minHeight = '44px';
+    }
+    b.addEventListener('click', function(){ setOn(!isOn()); paint(); run(); });
+    paint(); row.appendChild(b);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
+  else panel();
+  setTimeout(panel, 2000);
+
+  window.wlSecs = {
+    on:  function(){ setOn(1); run(); return '빈 영역을 접습니다'; },
+    off: function(){ setOn(0); run(); return '전부 보입니다'; },
+    show: window.wlSecShow,
+    run: function(){ run(); return '다시 살폈습니다'; },
+    forget: function(){ try{ localStorage.removeItem(LS_OPEN); }catch(e){} run(); return '펼침 기억을 지웠습니다'; }
+  };
+  console.log('[빈 영역] 준비됨 — 비어 있는 아래쪽 영역을 접고 단추로 꺼내 씁니다');
 })();
