@@ -931,3 +931,35 @@ tr.wk-checked td{background:#e8f3fd !important}
   border-radius:9px; background:#fff; color:#2563a8; font-size:12px; font-weight:700;
   cursor:pointer; font-family:inherit; line-height:1 }
 .pg-gb:hover{ background:#eef5fd }
+
+/* ══════════════════════════════════════════════════════════
+   🧩 묶어보기 — 펼친 덩어리 (v112)
+   대표 줄 위에 제목 띠를 한 줄 통째로 깔면,
+   그 다음 줄인 대표 칸이 저절로 첫째 칸에서 시작한다.
+   → 「담당자가 지출종류 옆에 홀로 떠 있는」 모양이 사라진다
+   ══════════════════════════════════════════════════════════ */
+.pg-ghead{
+  grid-column:1 / -1; display:flex; align-items:center; gap:8px;
+  margin:12px 0 4px; padding:7px 12px;
+  background:linear-gradient(90deg,#eef5fd,#f8fbff);
+  border-left:4px solid #2563a8; border-radius:0 9px 9px 0;
+}
+.pg-ghead b{ font-size:12.5px; color:#1d4f86; font-weight:800; letter-spacing:-.2px }
+.pg-ghead .pg-gi{ font-size:14px }
+.pg-ghead .pg-ghint{ font-size:11.5px; color:#8aa3bb; font-weight:600 }
+.pg-ghead .pg-gfold{
+  margin-left:auto; height:30px; padding:0 12px; border:1.5px solid #cfe0f2;
+  border-radius:8px; background:#fff; color:#2563a8; font-size:12.5px; font-weight:800;
+  cursor:pointer; font-family:inherit; white-space:nowrap;
+}
+.pg-ghead .pg-gfold:hover{ background:#eef5fd }
+
+/* 덩어리에 속한 줄 — 왼쪽에 옅은 기둥을 세워 한 묶음으로 보이게 */
+.pg-prow.pg-gm{ background:#fbfdff; box-shadow:inset 3px 0 0 #cfe0f5; border-radius:0 7px 7px 0 }
+.pg-prow.pg-gm .pg-pk{ padding-left:7px }
+.pg-gtail{ grid-column:1 / -1; height:1px; background:#e8f0fa; margin:4px 0 12px }
+
+@media (max-width:600px){
+  .pg-ghead{ margin:10px 0 3px; padding:6px 10px }
+  .pg-ghead .pg-ghint{ display:none }
+}

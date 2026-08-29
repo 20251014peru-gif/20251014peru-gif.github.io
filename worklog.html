@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v111-0829-2330";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v112-0829-2350";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3266,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=111-20260829t2330"></script>
+<script src="worklog.js?v=112-20260829t2350"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -21041,8 +21041,16 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         /* ★ 다이얼이 뜨면 입력칸이 blur 되어 「빈 값으로 저장하고 닫기」가 먼저 일어난다.
               그러면 다이얼에서 고른 값이 갈 곳을 잃는다 → 여는 동안 저장을 막는다 */
         tgt._dialOpen = 1;
+        /* ★ v112 근본 수정 — 시간칸은 readonly 라서 focus() 가 안 먹는다.
+              그래서 focus→blur 로 저장하던 예전 방식은 blur 가 아예 안 나가
+              「확인」을 눌러도 값이 사라졌다. (2026-08-29 실측: focus 0회 / blur 0회)
+              → 편집기 쪽에서 넘겨준 저장 함수(_dialDone)를 직접 부른다. */
         var finish = function(){
           tgt._dialOpen = 0;
+          if(typeof tgt._dialDone === 'function'){
+            try{ tgt._dialDone(); return; }
+            catch(e){ console.warn('[시각] 저장 함수 실패 — 예전 방식으로', e); }
+          }
           try{ tgt.focus(); tgt.blur(); }catch(e){}
         };
         openTimeDial(tgt.value, function(v, endV){
@@ -21054,7 +21062,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
           if(endV){
             try{
               var box = tgt.closest('.lf-page,.pg-body,#mFields,#overlay,tr,form') || document;
-              var et = box.querySelector('[data-ppid="f:endTime"] .lf-ie,[data-pid="f:endTime"] .lf-ie')
+              var et = box.querySelector('[data-prow="f:endTime"] .lf-ie,[data-ppid="f:endTime"] .lf-ie,[data-pid="f:endTime"] .lf-ie')
+                    || document.querySelector('[data-prow="f:endTime"] .lf-ie')
                     || document.getElementById('m-workEnd')
                     || document.getElementById('m-endTime');
               if(et && et !== tgt){
@@ -24182,6 +24191,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
           rec = ent().filter(function(x){ return x.id===id; })[0] || rec;
           box.innerHTML = cellHTML(rec, p);
         }
+        el._dialDone = function(){ fin(true); };   /* v112 시계창이 직접 저장을 부른다 */
         el.addEventListener('blur', function(){ if(el._dialOpen) return; fin(true); });
         el.addEventListener('change', function(){ if(el.tagName==='SELECT'||el.type==='checkbox') fin(true); });
         el.addEventListener('keydown', function(e2){
@@ -27834,6 +27844,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         if(save) try{ editCommit(ptNow, eid, epid, ie); }catch(e){ alert('저장 실패: '+e); }
         EDIT=null; setTimeout(render, 0);
       };
+      ie._dialDone = function(){ fin(true); };    /* v112 시계창이 직접 저장을 부른다 */
       ie.addEventListener('blur', function(){ if(ie._dialOpen) return; fin(true); });
       ie.addEventListener('change', function(){ if(ie.type==='checkbox'||ie.tagName==='SELECT') fin(true); });
       ie.addEventListener('keydown', function(ev){

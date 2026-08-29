@@ -13960,56 +13960,62 @@ async function githubUpload(token){
   var LS_ON    = 'wl_rules_on';
 
   /* ── 처음부터 들어 있는 규칙 ─────────────────────────── */
+  /* ⚠ v112 — 칸 이름을 14종 전수 실측으로 다시 썼다 (기본지침 제0원칙)
+        업체는 workVendor 가 아니라 **_sub** 다. v111 까지 한 번도 안 맞았다.
+        업무   : _sub(업체) f:workContact f:workRole f:workPhone f:workMemo
+                 f:material f:spec f:qty f:expType f:estimateMemo f:startTime f:endTime
+        지출   : _sub(업체) f:expType f:purpose f:expSubType f:supplyAmt f:taxAmt
+                 f:isIssued f:isJeonpyo
+        통화   : _sub(상대) f:callContact f:role f:phone f:callField
+        진행업무: _sub(담당 업체) f:ownerPhone f:status
+        사고   : _sub(당사자) f:partyType f:partyPhone f:accType f:followUp
+        입출고 : _sub(거래처) f:stockType f:qty f:unitPrice f:docNo f:useTarget  */
+  var RVER = 3;                      /* 규칙 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
+  var LS_RVER = 'wl_rules_ver';
   function baseRules(){
-    /* ⚠ 칸 이름은 종류마다 다르다 (2026-08-29 실측)
-       업무   : workVendor(업체) workContact(담당자) workRole(직책) workPhone(전화) workMemo(업체메모)
-       지출   : vendor(업체) isIssued(계산서 발행) isJeonpyo(전표) expSubType(하위구분)
-       통화   : company(업체) name(이름) role(직책) phone(전화)
-       진행업무: owner(담당 업체) ownerPhone(연락처)
-       사고   : partyName(당사자) partyPhone(연락처) */
     return [
-      { id:'b1', on:1, base:1, name:'업무 — 업체를 넣으면 담당자·직책·전화·메모가 나온다',
-        when:{ k:'workVendor', op:'filled' },
-        then:{ act:'show', keys:['workContact','workRole','workPhone','workMemo'] } },
-      { id:'b2', on:1, base:1, name:'업무 — 업체를 지우면 딸린 값도 지운다',
-        when:{ k:'workVendor', op:'empty' },
-        then:{ act:'clear', keys:['workContact','workRole','workPhone'] } },
+      { id:'b1', on:1, base:1, name:'업체를 넣으면 담당자·직책·전화·메모가 나온다',
+        when:{ k:'_sub', op:'filled' },
+        then:{ act:'show', keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',
+                                 'f:callContact','f:role','f:phone','f:ownerPhone',
+                                 'f:partyType','f:partyPhone'] } },
+      { id:'b2', on:1, base:1, name:'업체를 지우면 딸린 값도 지운다',
+        when:{ k:'_sub', op:'empty' },
+        then:{ act:'clear', keys:['f:workContact','f:workRole','f:workPhone',
+                                  'f:callContact','f:role','f:phone','f:ownerPhone'] } },
       { id:'b3', on:1, base:1, name:'업무 — 자재명을 넣으면 규격·수량·금액이 나온다',
-        when:{ k:'material', op:'filled' },
-        then:{ act:'show', keys:['spec','qty','cost'] } },
+        when:{ k:'f:material', op:'filled' },
+        then:{ act:'show', keys:['f:spec','f:qty','_amount'] } },
       { id:'b4', on:1, base:1, name:'업무 — 자재명을 지우면 규격도 지운다',
-        when:{ k:'material', op:'empty' },
-        then:{ act:'clear', keys:['spec'] } },
-      { id:'b5', on:1, base:1, name:'업무 — 지출종류를 고르면 금액·견적메모가 나온다',
-        when:{ k:'expType', op:'filled' },
-        then:{ act:'show', keys:['cost','estimateMemo','workVendor'] } },
-      { id:'b6', on:1, base:1, name:'지출 — 세금계산서면 발행여부·공급가액이 나온다',
-        when:{ k:'expType', op:'contains', v:'계산서' },
-        then:{ act:'show', keys:['isIssued','supplyAmt','taxAmt'] } },
-      { id:'b7', on:1, base:1, name:'지출 — 전표면 전표 칸이 나온다',
-        when:{ k:'expType', op:'contains', v:'전표' },
-        then:{ act:'show', keys:['isJeonpyo','expSubType'] } },
-      { id:'b8', on:1, base:1, name:'지출 — 개인지출이면 용도·비고·사진이 나온다',
-        when:{ k:'expType', op:'contains', v:'개인' },
-        then:{ act:'show', keys:['purpose','memo','sec:pics'] } },
-      { id:'b8b', on:1, base:1, name:'지출종류를 고르면 파일 링크 칸이 나온다',
-        when:{ k:'expType', op:'filled' },
-        then:{ act:'show', keys:['sec:att'] } },
-      { id:'b9', on:1, base:1, name:'통화 — 업체를 넣으면 이름·직책·전화가 나온다',
-        when:{ k:'company', op:'filled' },
-        then:{ act:'show', keys:['name','role','phone'] } },
-      { id:'b10', on:1, base:1, name:'통화 — 업체를 지우면 딸린 값도 지운다',
-        when:{ k:'company', op:'empty' },
-        then:{ act:'clear', keys:['name','role','phone'] } },
-      { id:'b11', on:1, base:1, name:'진행업무 — 담당 업체를 넣으면 연락처가 나온다',
-        when:{ k:'owner', op:'filled' },
-        then:{ act:'show', keys:['ownerPhone','estCost'] } },
-      { id:'b12', on:1, base:1, name:'사고 — 당사자를 넣으면 연락처·유형이 나온다',
-        when:{ k:'partyName', op:'filled' },
-        then:{ act:'show', keys:['partyPhone','partyType'] } },
-      { id:'b13', on:1, base:1, name:'미완료면 담당자가 나온다',
-        when:{ k:'status', op:'contains', v:'미완료' },
-        then:{ act:'show', keys:['workContact','owner','followUp'] } }
+        when:{ k:'f:material', op:'empty' },
+        then:{ act:'clear', keys:['f:spec'] } },
+      { id:'b5', on:1, base:1, name:'업무 — 후불청구면 업체·금액·견적메모가 나온다',
+        when:{ k:'f:expType', op:'contains', v:'후불' },
+        then:{ act:'show', keys:['_sub','_amount','f:estimateMemo','sec:att'] } },
+      { id:'b6', on:1, base:1, name:'업무 — 개인비용이면 자재·수량·금액·사진이 나온다',
+        when:{ k:'f:expType', op:'contains', v:'개인비용' },
+        then:{ act:'show', keys:['f:material','f:qty','_amount','sec:pics'] } },
+      { id:'b7', on:1, base:1, name:'업무 — 전표면 업체·금액·사진이 나온다',
+        when:{ k:'f:expType', op:'contains', v:'전표' },
+        then:{ act:'show', keys:['_sub','_amount','sec:pics'] } },
+      { id:'b8', on:1, base:1, name:'지출 — 세금계산서면 발행여부·공급가액·부가세가 나온다',
+        when:{ k:'f:expType', op:'contains', v:'계산서' },
+        then:{ act:'show', keys:['f:isIssued','f:supplyAmt','f:taxAmt','f:expSubType'] } },
+      { id:'b9', on:1, base:1, name:'지출 — 개인지출이면 용도·사진이 나온다',
+        when:{ k:'f:expType', op:'contains', v:'개인지출' },
+        then:{ act:'show', keys:['f:purpose','sec:pics'] } },
+      { id:'b10', on:1, base:1, name:'시작 시각을 넣으면 끝난 시각이 나온다',
+        when:{ k:'f:startTime', op:'filled' },
+        then:{ act:'show', keys:['f:endTime'] } },
+      { id:'b11', on:1, base:1, name:'사고 — 당사자를 넣으면 유형·연락처·후속조치가 나온다',
+        when:{ k:'_sub', op:'filled' },
+        then:{ act:'show', keys:['f:accType','f:followUp'] } },
+      { id:'b12', on:1, base:1, name:'입출고 — 거래처를 넣으면 단가·전표번호가 나온다',
+        when:{ k:'_sub', op:'filled' },
+        then:{ act:'show', keys:['f:unitPrice','f:docNo'] } },
+      { id:'b13', on:1, base:1, name:'미완료면 담당자·후속조치가 나온다',
+        when:{ k:'f:status', op:'contains', v:'미완료' },
+        then:{ act:'show', keys:['f:workContact','f:followUp'] } }
     ];
   }
 
@@ -14021,6 +14027,11 @@ async function githubUpload(token){
   }
   function load(){
     try{
+      if(String(localStorage.getItem(LS_RVER)) !== String(RVER)){
+        localStorage.removeItem(LS_RULES);            /* 옛 이름(workVendor…)을 쓰는 규칙은 버린다 */
+        localStorage.setItem(LS_RVER, String(RVER));
+        return baseRules();
+      }
       var raw = localStorage.getItem(LS_RULES);
       if(!raw) return baseRules();
       var a = JSON.parse(raw);
@@ -14028,24 +14039,53 @@ async function githubUpload(token){
     }catch(e){ console.warn('[연결 규칙] 읽기 실패', e); return baseRules(); }
   }
   function save(arr){
-    try{ localStorage.setItem(LS_RULES, JSON.stringify(arr)); }
+    try{ localStorage.setItem(LS_RULES, JSON.stringify(arr)); localStorage.setItem(LS_RVER, String(RVER)); }
     catch(e){ console.warn('[연결 규칙] 저장 실패', e); }
   }
 
   /* ── 화면에서 칸 찾기 — 모달(m-키) · 노션식(data-ppid/pid) 모두 ── */
+  /* v112 — 이름은 두 가지로 온다.
+        · 옛 규칙 : workContact  (f: 없이)
+        · 새 규칙 : f:workContact · _sub (data-prow 그대로)
+     둘 다 받아들인다. 그리고 노션식 페이지는 **고치는 중이 아니면 입력칸이 없다**
+     → 줄(.pg-prow)도 함께 돌려주고, 값은 보이는 글자에서 읽는다. */
+  function idsOf(key){
+    var k = String(key || '');
+    if(!k) return [];
+    if(k.charAt(0) === '_') return [k];                    /* 공통칸 _sub·_amount·_memo */
+    if(k.slice(0,2) === 'f:') return [k, k.slice(2)];
+    return ['f:' + k, k];
+  }
   function fieldsIn(root, key){
     var out = [];
     try{
-      var el = (root.querySelector ? root.querySelector('#m-' + key) : null) || document.getElementById('m-' + key);
+      var ids = idsOf(key);
+      var el = (root.querySelector ? root.querySelector('#m-' + key.replace(/^f:/,'')) : null)
+               || document.getElementById('m-' + key.replace(/^f:/,''));
       if(el) out.push(el);
-      var sel = '[data-ppid="f:' + key + '"],[data-pid="f:' + key + '"],'
-              + '[data-ppid="' + key + '"],[data-pid="' + key + '"]';
-      (root.querySelectorAll ? root.querySelectorAll(sel) : []).forEach(function(h){
+      var sel = ids.map(function(i){
+        return '[data-prow="'+i+'"],[data-ppid="'+i+'"],[data-pid="'+i+'"]'; }).join(',');
+      var hosts = root.querySelectorAll ? root.querySelectorAll(sel) : [];
+      [].forEach.call(hosts, function(h){
         var ie = h.querySelector('.lf-ie, input, textarea, select');
-        if(ie && out.indexOf(ie) < 0) out.push(ie);
+        if(ie){ if(out.indexOf(ie) < 0) out.push(ie); return; }
+        if(out.indexOf(h) < 0) out.push(h);                /* 입력칸이 없으면 줄 자체 */
       });
     }catch(e){ console.warn('[연결 규칙] 칸 찾기 실패 (' + key + ')', e); }
     return out;
+  }
+  /* 입력칸이면 value, 아니면 화면에 보이는 글자 */
+  function readVal(el){
+    try{
+      if(el && 'value' in el && el.tagName && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)){
+        if(el.type === 'checkbox') return el.checked ? '1' : '';
+        return String(el.value == null ? '' : el.value).trim();
+      }
+      var pv = el && el.querySelector ? el.querySelector('.pg-pv') : null;
+      var t = ((pv || el || {}).textContent || '').trim();
+      if(!t || t === '비어 있음' || t === '\u2014') return '';
+      return t;
+    }catch(e){ return ''; }
   }
   function rowOf(el){
     try{ return el.closest('.pg-prow, .field, tr') || el.parentNode; }catch(e){ return el.parentNode; }
@@ -14053,7 +14093,7 @@ async function githubUpload(token){
   function valOf(root, key){
     var els = fieldsIn(root, key);
     for(var i = 0; i < els.length; i++){
-      var v = (els[i].value == null ? '' : String(els[i].value)).trim();
+      var v = readVal(els[i]);
       if(v) return v;
     }
     return '';
@@ -14089,6 +14129,7 @@ async function githubUpload(token){
       for(var j = 0; j < els.length; j++){
         var el = els[j], row = rowOf(el);
         if(act === 'show'){
+          if(row && row._gHid) continue;                 /* 묶어보기가 접어 둔 줄은 건드리지 않는다 (v112) */
           if(row && row.style && row.style.display === 'none'){ row.style.display = ''; row._ruleShown = 1; }
           if(row) row._ruleKeep = 1;                     /* 빈 칸 접기가 다시 숨기지 않게 */
         }else if(act === 'hide'){
@@ -14135,6 +14176,15 @@ async function githubUpload(token){
     var t = ev.target; if(!t || ['INPUT','TEXTAREA','SELECT'].indexOf(t.tagName) < 0) return;
     run(t.closest('#mFields, .lf-page, #expV2Overlay, form, tr') || document);
   }, true);
+  /* v112 — 기록을 처음 열었을 때도 한 번 본다 (그전엔 값을 바꿔야만 돌았다) */
+  var seenPg = null;
+  setInterval(function(){
+    try{
+      var pg = document.querySelector('.lf-page .pg-props');
+      if(pg && pg !== seenPg){ seenPg = pg; run(document.querySelector('.lf-page')); }
+      else if(!pg) seenPg = null;
+    }catch(e){ console.warn('[연결 규칙] 파수꾼 실패', e); }
+  }, 400);
   try{
     var mo = new MutationObserver(function(m){
       for(var i = 0; i < m.length; i++) if(m[i].addedNodes && m[i].addedNodes.length){ run(); return; }
@@ -14433,6 +14483,15 @@ async function githubUpload(token){
     if(t2 && (t2.id === 'pgBodyTx' || (t2.closest && t2.closest('.pg-body')))) later();
   }, true);
   setTimeout(run, 1200);
+  /* v112 — 기록 창이 통째로 새로 붙을 때 감시가 놓치는 것을 막는 파수꾼 */
+  var seenBody = null;
+  setInterval(function(){
+    try{
+      var bd = document.querySelector('.lf-page .pg-body');
+      if(bd && bd !== seenBody){ seenBody = bd; run(); }
+      else if(!bd) seenBody = null;
+    }catch(e){ console.warn('[빈 영역] 파수꾼 실패', e); }
+  }, 400);
 
   /* 진단 탭 스위치 */
   function panel(){
@@ -14465,54 +14524,75 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   🧩 연관 속성 한 줄 묶기 (wlGroup)  v110-0829-2230
-   기본지침 제3원칙 — 「화면에 보이는 게 전부 정보」
+   🧩 연관 속성 묶어보기 (wlGroup)  v112-0829-2350
+   기본지침 제0원칙 — 「짐작하지 않는다. 14종을 열어 이름을 직접 뽑았다」
 
-   업체·담당자·직책·전화·메모가 다섯 줄을 차지한다.
-   사실 이건 「한 업체에 대한 한 덩어리」다.
-   그래서 한 줄로 접어서 보여주고, 누르면 펼쳐 고칠 수 있게 한다.
+   ⚠ v110 까지 틀렸던 것
+      업체 칸 이름을 workVendor 로 짐작했는데, 노션식 화면에서는
+      공통 칸 **_sub** 다. (2026-08-29 14종 전수 실측)
+      그래서 묶음도 연결 규칙도 한 번도 맞은 적이 없었다.
 
-     🏢 (주)은진 · 조홍석 상무 · 010-6265-4001            [펼치기]
+   하는 일
+     ① 대표 값이 있으면  →  한 줄로 접는다
+          🏢 (주)은진 · 조홍석 · 상무 · 010-6265-4001      [펼치기]
+     ② 대표 값이 비었으면 →  접지 않고 **한 덩어리로 띠를 둘러** 보여준다
+          (담당자가 지출종류 옆에 홀로 떠 있지 않게 — 새 줄에서 시작한다)
+     ③ 펼친 것은 [접기] 로 다시 접힌다
+     ④ 페이지·창(모달) 둘 다 같은 코드가 돈다 (.lf-page 는 공통 뿌리)
 
-   ▸ 묶음은 데이터로 정의한다 — 새 묶음을 만들 수 있다 (제4원칙)
-   ▸ 값이 하나도 없으면 묶지 않는다 (원래대로 보인다)
-   ▸ 되돌리기 : 진단 탭 「🧩 연관 묶어보기」 를 끈다
+   되돌리기 : 진단 탭 「🧩 연관 묶어보기」 를 끄면 원래대로
    ============================================================ */
 (function(){
   'use strict';
 
   var LS_ON  = 'wl_group_on';
   var LS_GRP = 'wl_groups';
+  var VER    = 3;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
+  var LS_VER = 'wl_groups_ver';
 
-  /* 2026-08-29 실측한 진짜 칸 이름 (제0원칙) */
+  /* ── 2026-08-29 14종 전수 실측 결과로 만든 묶음 ──
+        이름은 data-prow 값 그대로 쓴다 (_sub · f:workContact …) */
   function baseGroups(){
     return [
-      { id:'g1', on:1, base:1, name:'업무 — 업체 한 덩어리', icon:'🏢',
-        head:'workVendor', keys:['workContact','workRole','workPhone','workMemo'] },
-      { id:'g2', on:1, base:1, name:'통화 — 업체 한 덩어리', icon:'📞',
-        head:'company', keys:['name','role','phone'] },
-      { id:'g3', on:1, base:1, name:'진행업무 — 담당 업체', icon:'🏢',
-        head:'owner', keys:['ownerPhone'] },
-      { id:'g4', on:1, base:1, name:'사고 — 당사자', icon:'👤',
-        head:'partyName', keys:['partyType','partyPhone'] },
-      { id:'g5', on:1, base:1, name:'업무 — 자재 한 덩어리', icon:'📦',
-        head:'material', keys:['spec','qty'] },
-      { id:'g6', on:1, base:1, name:'업무 — 시각 한 덩어리', icon:'🕐',
-        head:'startTime', keys:['endTime'] }
+      { id:'g1', on:1, base:1, icon:'🏢', name:'업체 한 덩어리', head:'_sub',
+        keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',   /* 업무 */
+              'f:callContact','f:role','f:phone',                        /* 통화 */
+              'f:ownerPhone',                                            /* 진행업무 */
+              'f:partyType','f:partyPhone',                              /* 사고 */
+              'f:purpose','f:expSubType'] },                             /* 지출 */
+      { id:'g2', on:1, base:1, icon:'📦', name:'자재 한 덩어리', head:'f:material',
+        keys:['f:spec','f:qty'] },
+      { id:'g3', on:1, base:1, icon:'🕐', name:'시각 한 덩어리', head:'f:startTime',
+        keys:['f:endTime'] },
+      /* 🧾 세금계산서 칸들은 일부러 묶지 않는다 —
+            「세금계산서를 고르면 발행여부가 나온다」는 연결 규칙이 보여줘야 하는데,
+            묶어버리면 접혀서 안 보인다. (2026-08-29 실측으로 확인) */
+      { id:'g5', on:1, base:1, icon:'🏷', name:'품목 한 덩어리', head:'f:itemName',
+        keys:['f:unitPrice','f:docNo','f:useTarget'] }
     ];
   }
 
   function isOn(){ try{ return localStorage.getItem(LS_ON) !== '0'; }catch(e){ return true; } }
   function setOn(v){ try{ localStorage.setItem(LS_ON, v ? '1':'0'); }catch(e){ console.warn('[묶어보기] 설정 저장 실패', e); } }
+
   function load(){
     try{
+      var v = localStorage.getItem(LS_VER);
+      if(String(v) !== String(VER)){          /* 옛 정의(workVendor 등)는 버린다 */
+        localStorage.removeItem(LS_GRP);
+        localStorage.setItem(LS_VER, String(VER));
+        return baseGroups();
+      }
       var raw = localStorage.getItem(LS_GRP);
       if(!raw) return baseGroups();
       var a = JSON.parse(raw);
-      return Array.isArray(a) ? a : baseGroups();
+      return Array.isArray(a) && a.length ? a : baseGroups();
     }catch(e){ console.warn('[묶어보기] 읽기 실패', e); return baseGroups(); }
   }
-  function save(a){ try{ localStorage.setItem(LS_GRP, JSON.stringify(a)); }catch(e){ console.warn('[묶어보기] 저장 실패', e); } }
+  function save(a){
+    try{ localStorage.setItem(LS_GRP, JSON.stringify(a)); localStorage.setItem(LS_VER, String(VER)); }
+    catch(e){ console.warn('[묶어보기] 저장 실패', e); }
+  }
 
   function ES(s){
     return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
@@ -14520,16 +14600,14 @@ async function githubUpload(token){
     });
   }
 
-  /* 속성 줄 찾기 — 노션식 페이지는 data-prow 에 f:칸이름 이 들어 있다 */
-  function rowOf(body, key){
-    try{
-      return body.querySelector('[data-prow="f:' + key + '"]')
-          || body.querySelector('[data-ppid="f:' + key + '"]')
-          || null;
-    }catch(e){ return null; }
+  /* 속성 줄 하나 — 페이지·창 모두 data-prow 를 쓴다 */
+  function rowOf(props, key){
+    if(!key) return null;
+    try{ return props.querySelector('[data-prow="' + key.replace(/"/g,'') + '"]'); }
+    catch(e){ return null; }
   }
   /* 그 줄에 지금 들어 있는 값 (편집 중이면 입력칸, 아니면 보기 글자) */
-  function valOfRow(row){
+  function valOf(row){
     if(!row) return '';
     try{
       var ie = row.querySelector('.lf-ie');
@@ -14541,146 +14619,233 @@ async function githubUpload(token){
       return t;
     }catch(e){ return ''; }
   }
+  function labelOf(row){
+    try{ return ((row.querySelector('.pg-pnm')||{}).textContent||'').trim().replace(/^\S+\s/,''); }
+    catch(e){ return ''; }
+  }
 
-  function run(){
-    var body = document.querySelector('.lf-page .pg-body');
-    if(!body) return;
-    var props = body.querySelector('.pg-props');
-    if(!props) return;
+  /* ── 원래 차례를 기억해 두고, 끌 때 그대로 되돌린다 ──
+        (정리 모드에서 차례를 저장하므로 뒤섞인 채로 두면 안 된다) */
+  /* 속성 줄이 .pg-props 의 바로 밑 자식이 아닐 수도 있다 → 진짜 부모를 찾아 쓴다 */
+  function boxOf(props){
+    var r = props.querySelector('[data-prow]');
+    return (r && r.parentNode) ? r.parentNode : props;
+  }
+  function putBefore(el, ref){
+    if(!ref || !ref.parentNode) return false;
+    ref.parentNode.insertBefore(el, ref); return true;
+  }
+  function putAfter(el, ref){
+    if(!ref || !ref.parentNode) return false;
+    ref.parentNode.insertBefore(el, ref.nextSibling); return true;
+  }
+  function snapshot(box){
+    if(!box._gOrder) box._gOrder = [].slice.call(box.children);
+  }
+  function restoreOrder(box){
+    var o = box._gOrder; if(!o) return;
+    for(var i = 0; i < o.length; i++){
+      if(o[i] && o[i].parentNode === box) box.appendChild(o[i]);
+    }
+  }
 
-    /* 정리 모드에서는 원래대로 — 순서를 끌어 옮겨야 하니까 */
-    var editing = props.classList && props.classList.contains('pg-edit');
-
-    /* 이전에 만든 요약 줄은 지우고 다시 만든다 */
-    [].forEach.call(props.querySelectorAll('.pg-grow'), function(x){ x.remove(); });
+  function cleanup(props, box){
+    [].forEach.call(props.querySelectorAll('.pg-grow,.pg-ghead,.pg-gtail'), function(x){ x.remove(); });
     [].forEach.call(props.querySelectorAll('[data-prow]'), function(r){
       if(r._gHid){ r.style.display = ''; r._gHid = 0; }
+      r.classList.remove('pg-gm', 'pg-gm-first', 'pg-gm-last');
     });
+    restoreOrder(box || boxOf(props));
+  }
+
+  function run(){
+    var page = document.querySelector('.lf-page');      /* 페이지·창 공통 뿌리 */
+    if(!page) return;
+    var props = page.querySelector('.pg-props');
+    if(!props) return;
+    var box = boxOf(props);
+    snapshot(box);
+
+    /* 정리 모드에서는 손대지 않는다 — 끌어서 차례를 바꿔야 하니까 */
+    var editing = props.classList && props.classList.contains('pg-edit');
+
+    cleanup(props, box);
     if(!isOn() || editing) return;
 
-    var groups = load();
-    groups.forEach(function(g){
+    var used = {};
+    load().forEach(function(g){
       if(!g || !g.on) return;
-      var hRow = rowOf(props, g.head);
-      if(!hRow) return;
-      var hVal = valOfRow(hRow);
-      if(!hVal) return;                                  /* 대표 값이 없으면 안 묶는다 */
-      if(hRow._gOpen) return;                            /* 사람이 펼쳐둔 묶음은 그대로 */
 
-      var parts = [], rows = [];
+      var hRow = rowOf(props, g.head);
+      if(!hRow || used[g.head]) return;
+
+      var rows = [], parts = [];
       (g.keys || []).forEach(function(k){
+        if(used[k]) return;
         var r = rowOf(props, k); if(!r) return;
-        var v = valOfRow(r);
-        rows.push(r);
+        rows.push({ k:k, el:r });
+        var v = valOf(r);
         if(v) parts.push(v);
       });
-      if(!rows.length) return;
+      if(!rows.length) return;                     /* 묶을 짝이 없으면 그냥 둔다 */
 
-      var line = document.createElement('div');
-      line.className = 'pg-prow wide pg-grow';
-      line.innerHTML =
-        '<div class="pg-gk">' + (g.icon || '🔗') + '</div>'
-        + '<div class="pg-gv"><b>' + ES(hVal) + '</b>'
-        + (parts.length ? '<span class="pg-gsep"> · </span>' + ES(parts.join(' · ')) : '')
-        + '</div>'
-        + '<button type="button" class="pg-gb" title="펼쳐서 고치기">펼치기</button>';
+      var hVal = valOf(hRow);
+      used[g.head] = 1;
+      rows.forEach(function(r){ used[r.k] = 1; });
 
-      hRow.parentNode.insertBefore(line, hRow);
-      rows.forEach(function(r){ if(r.style.display !== 'none'){ r.style.display = 'none'; r._gHid = 1; } });
+      /* ── ① 대표 값이 있고, 사람이 펼쳐두지 않았으면 → 한 줄로 접는다 ── */
+      if(hVal && !hRow._gOpen){
+        var line = document.createElement('div');
+        line.className = 'pg-prow wide pg-grow';
+        line.innerHTML =
+            '<div class="pg-gk">' + (g.icon || '🔗') + '</div>'
+          + '<div class="pg-gv"><b>' + ES(hVal) + '</b>'
+          +   (parts.length ? '<span class="pg-gsep"> · </span>' + ES(parts.join(' · ')) : '')
+          + '</div>'
+          + '<button type="button" class="pg-gb" title="펼쳐서 고치기">펼치기</button>';
+        if(!putBefore(line, hRow)) return;
 
-      line.querySelector('.pg-gb').addEventListener('click', function(){
-        hRow._gOpen = 1;
-        run();
-        setTimeout(function(){ try{ hRow.scrollIntoView({block:'center'}); }catch(e){} }, 60);
+        hRow.style.display = 'none'; hRow._gHid = 1;
+        rows.forEach(function(r){ r.el.style.display = 'none'; r.el._gHid = 1; });
+
+        function openIt(){
+          hRow._gOpen = 1; run();
+          setTimeout(function(){ try{ hRow.scrollIntoView({block:'center'}); }catch(e){} }, 60);
+        }
+        line.querySelector('.pg-gb').addEventListener('click', openIt);
+        line.querySelector('.pg-gv').addEventListener('click', openIt);
+        return;
+      }
+
+      /* ── ② 펼친 상태 / 대표 값이 빈 상태 → 새 줄에서 시작하는 한 덩어리로 ── */
+      var bar = document.createElement('div');
+      bar.className = 'pg-ghead';
+      bar.innerHTML =
+          '<span class="pg-gi">' + (g.icon || '🔗') + '</span>'
+        + '<b>' + ES(g.name || '묶음') + '</b>'
+        + (hVal ? '' : '<span class="pg-ghint">' + ES(labelOf(hRow) || '대표 값') + '을 먼저 넣으면 한 줄로 접힙니다</span>')
+        + '<button type="button" class="pg-gfold">접기</button>';
+      if(!putBefore(bar, hRow)) return;
+
+      /* 흩어져 있는 짝들을 대표 줄 바로 뒤로 모은다 (차례는 끌 때 되돌린다) */
+      var prev = hRow;
+      rows.forEach(function(r){
+        if(r.el.parentNode === prev.parentNode && r.el.previousElementSibling !== prev) putAfter(r.el, prev);
+        if(r.el.parentNode === prev.parentNode) prev = r.el;
       });
-      line.querySelector('.pg-gv').addEventListener('click', function(){
-        hRow._gOpen = 1; run();
+
+      hRow.classList.add('pg-gm', 'pg-gm-first');
+      rows.forEach(function(r){ r.el.classList.add('pg-gm'); });
+      (rows.length ? rows[rows.length-1].el : hRow).classList.add('pg-gm-last');
+
+      var tail = document.createElement('div');
+      tail.className = 'pg-gtail';
+      putAfter(tail, prev);
+
+      bar.querySelector('.pg-gfold').addEventListener('click', function(){
+        if(!hVal){                                   /* 값이 없으면 접을 게 없다 → 알려준다 */
+          if(typeof toast === 'function') toast((labelOf(hRow)||'대표 값') + ' 을 넣으면 한 줄로 접혀요');
+          return;
+        }
+        hRow._gOpen = 0; run();
       });
     });
   }
 
+  /* ── 화면이 다시 그려질 때마다 따라간다 ── */
   var t = null;
   function later(){ clearTimeout(t); t = setTimeout(run, 180); }
   try{
     var mo = new MutationObserver(function(m){
       for(var i = 0; i < m.length; i++){
-        if(m[i].addedNodes && m[i].addedNodes.length){
-          for(var j = 0; j < m[i].addedNodes.length; j++){
-            var n = m[i].addedNodes[j];
-            if(n.classList && n.classList.contains('pg-grow')) return;   /* 내가 만든 것엔 반응 안 함 */
-          }
-          later(); return;
+        var add = m[i].addedNodes;
+        if(!add || !add.length) continue;
+        var mine = false;
+        for(var j = 0; j < add.length; j++){
+          var n = add[j];
+          if(n.classList && (n.classList.contains('pg-grow') || n.classList.contains('pg-ghead')
+                             || n.classList.contains('pg-gtail'))) mine = true;
         }
+        if(!mine){ later(); return; }
       }
     });
     mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
   }catch(e){ console.warn('[묶어보기] 감시 시작 실패', e); }
-  setTimeout(run, 1400);
+  document.addEventListener('change', function(ev){
+    if(ev.target && ev.target.classList && ev.target.classList.contains('lf-ie')) later();
+  }, true);
+  setTimeout(run, 1300);
 
-  /* ── 묶음 만드는 화면 ── */
+  /* ★ v112 — 감시(MutationObserver)만으로는 놓친다.
+        기록 창은 화면 밖에서 통째로 만들어진 뒤 한 번에 붙기 때문에
+        알림이 「창이 붙기 전」에 와서 그때는 아직 속성 줄이 없다.
+        그래서 속성판이 새 것으로 바뀌었는지 0.4초마다 눈으로 확인한다. (아주 가볍다) */
+  var seenProps = null;
+  setInterval(function(){
+    try{
+      var pr = document.querySelector('.lf-page .pg-props');
+      if(pr && pr !== seenProps){ seenProps = pr; run(); }
+      else if(!pr) seenProps = null;
+    }catch(e){ console.warn('[묶어보기] 파수꾼 실패', e); }
+  }, 400);
+
+  /* ── 묶음 관리 창 ── */
   function openMgr(){
-    var ov = document.createElement('div'); ov.className = 'ptw';
-    function draw(){
-      var gs = load();
-      ov.innerHTML = '<div class="ptw-box" style="width:min(96vw,560px)">'
-        + '<div class="ptw-h">🧩 연관 묶어보기</div>'
-        + '<div class="ptw-s">여러 줄에 흩어진 것을 <b>한 줄로 접어</b> 보여줍니다. '
-        + '「펼치기」를 누르면 원래대로 나와서 고칠 수 있어요.</div>'
-        + '<div class="rl-list">' + gs.map(function(g, i){
-            return '<div class="rl-row'+(g.on?'':' off')+'">'
-              + '<button type="button" class="rl-tg" data-gon="'+i+'">'+(g.on?'✔':'○')+'</button>'
-              + '<div class="rl-nm">' + (g.icon||'') + ' ' + ES(g.name||'')
-              +   '<div class="rl-sub">' + ES(g.head) + ' 아래에 ' + ES((g.keys||[]).join(', ')) + ' 를 접음</div>'
-              + '</div>'
-              + (g.base ? '<span class="rl-base">기본</span>'
-                        : '<button type="button" class="rl-del" data-gdel="'+i+'">🗑</button>')
+    var ov = document.createElement('div');
+    ov.className = 'rl-ov';
+    var gs = load();
+    ov.innerHTML =
+        '<div class="rl-mod">'
+      +   '<div class="rl-head"><b>🧩 묶어보기</b>'
+      +     '<button type="button" id="gClose" class="rl-x">✕</button></div>'
+      +   '<div class="rl-note">여러 줄을 차지하는 관련 칸을 한 줄로 접어 보여줍니다.'
+      +     ' 대표 칸에 값이 있으면 접히고, 없으면 한 덩어리로 묶어서 보여줍니다.</div>'
+      +   '<div class="rl-list">'
+      +     gs.map(function(g, i){
+            return '<div class="rl-row">'
+              + '<button type="button" class="rl-on' + (g.on ? ' on':'') + '" data-gon="' + i + '">'
+              +   (g.on ? '켜짐' : '꺼짐') + '</button>'
+              + '<div class="rl-txt"><b>' + (g.icon||'') + ' ' + ES(g.name||'') + '</b>'
+              +   '<span>대표 ' + ES(g.head) + ' · 접는 칸 ' + ES((g.keys||[]).join(', ')) + '</span></div>'
+              + (g.base ? '' : '<button type="button" class="rl-del" data-gdel="' + i + '">✕</button>')
               + '</div>';
-          }).join('') + '</div>'
-        + '<div class="rl-new"><div class="rl-nh">＋ 새 묶음</div>'
-        +   '<div class="rl-nr">'
-        +     '<input type="text" id="gH" placeholder="대표 칸 (예: workVendor)" data-vac="off">'
-        +     '<input type="text" id="gK" placeholder="접을 칸 (쉼표로 여러 개)" data-vac="off">'
-        +     '<button type="button" id="gAdd">추가</button>'
-        +   '</div></div>'
-        + '<div class="ptw-btns">'
-        +   '<button type="button" id="gReset" style="flex:1;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8">처음으로</button>'
-        +   '<button type="button" id="gClose" style="flex:2;background:#2563a8;color:#fff">닫기</button>'
-        + '</div></div>';
-      ov.querySelectorAll('[data-gon]').forEach(function(b){
-        b.addEventListener('click', function(){
-          var a = load(), i = +b.getAttribute('data-gon');
-          a[i].on = a[i].on ? 0 : 1; save(a); draw();
-        });
-      });
-      ov.querySelectorAll('[data-gdel]').forEach(function(b){
-        b.addEventListener('click', function(){
-          var a = load(), i = +b.getAttribute('data-gdel');
-          if(!confirm('「' + (a[i].name||'') + '」 묶음을 지울까요?')) return;
-          a.splice(i,1); save(a); draw();
-        });
-      });
-      ov.querySelector('#gAdd').addEventListener('click', function(){
-        var h = (ov.querySelector('#gH').value || '').trim();
-        var k = (ov.querySelector('#gK').value || '').trim();
-        if(!h || !k){ alert('대표 칸과 접을 칸을 적어주세요'); return; }
-        var a = load();
-        a.push({ id:'u_'+Date.now().toString(36), on:1, icon:'🔗', name:h + ' 묶음',
-                 head:h, keys:k.split(',').map(function(x){return x.trim();}).filter(Boolean) });
-        save(a); draw();
-        if(typeof toast === 'function') toast('묶음을 추가했어요');
-      });
-      ov.querySelector('#gReset').addEventListener('click', function(){
-        if(!confirm('내가 만든 묶음이 사라지고 처음으로 돌아갑니다. 계속할까요?')) return;
-        try{ localStorage.removeItem(LS_GRP); }catch(e){}
-        draw();
-      });
-      ov.querySelector('#gClose').addEventListener('click', function(){ ov.remove(); run(); });
-    }
-    draw();
-    ov.addEventListener('mousedown', function(e){ if(e.target === ov){ ov.remove(); run(); } });
+            }).join('')
+      +   '</div>'
+      +   '<div class="rl-add"><b>＋ 내 묶음 추가</b>'
+      +     '<input id="gH" placeholder="대표 칸 이름 (예: _sub)">'
+      +     '<input id="gK" placeholder="접을 칸들, 쉼표로 (예: f:workRole, f:workPhone)">'
+      +     '<button type="button" id="gAdd">넣기</button></div>'
+      +   '<div class="rl-foot"><button type="button" id="gReset">처음으로 되돌리기</button>'
+      +     '<span class="rl-hint">칸 이름은 콘솔에 wlGroup.names() 로 볼 수 있어요</span></div>'
+      + '</div>';
     document.body.appendChild(ov);
+    ov.addEventListener('mousedown', function(e){ if(e.target === ov){ ov.remove(); run(); } });
+    ov.querySelectorAll('[data-gon]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var i = +b.getAttribute('data-gon'); gs[i].on = gs[i].on ? 0 : 1; save(gs); ov.remove(); run(); openMgr();
+      });
+    });
+    ov.querySelectorAll('[data-gdel]').forEach(function(b){
+      b.addEventListener('click', function(){
+        gs.splice(+b.getAttribute('data-gdel'), 1); save(gs); ov.remove(); run(); openMgr();
+      });
+    });
+    ov.querySelector('#gAdd').addEventListener('click', function(){
+      var h = (ov.querySelector('#gH').value || '').trim();
+      var k = (ov.querySelector('#gK').value || '').trim();
+      if(!h || !k){ alert('대표 칸과 접을 칸을 모두 적어주세요'); return; }
+      gs.push({ id:'u'+Date.now(), on:1, icon:'🔗', name:h+' 묶음', head:h,
+                keys:k.split(',').map(function(s){ return s.trim(); }).filter(Boolean) });
+      save(gs); ov.remove(); run(); openMgr();
+    });
+    ov.querySelector('#gReset').addEventListener('click', function(){
+      try{ localStorage.removeItem(LS_GRP); }catch(e){}
+      ov.remove(); run(); openMgr();
+    });
+    ov.querySelector('#gClose').addEventListener('click', function(){ ov.remove(); run(); });
   }
 
+  /* ── 진단 탭 스위치 ── */
   function panel(){
     var host = document.getElementById('sfPanel');
     if(!host || document.getElementById('grpBtn')) return;
@@ -14688,32 +14853,47 @@ async function githubUpload(token){
     var b = document.createElement('button');
     b.id = 'grpBtn'; b.style.minHeight = '44px';
     function paint(){
-      b.textContent = isOn() ? '🧩 연관 묶어보기' : '🧩 묶기 꺼짐';
+      b.textContent = isOn() ? '🧩 묶어보기 켜짐' : '🧩 묶어보기 꺼짐';
       b.className = 'btn btn-sm ' + (isOn() ? 'btn-primary' : 'btn-ghost');
       b.style.minHeight = '44px';
     }
-    b.addEventListener('click', function(ev){
-      if(ev.shiftKey){ setOn(!isOn()); paint(); run(); return; }
-      openMgr();
-    });
-    b.title = '누르면 묶음 관리 · Shift+누르면 켜기/끄기';
+    b.addEventListener('click', function(){ setOn(!isOn()); paint(); run(); });
     paint(); row.appendChild(b);
+
+    if(!document.getElementById('grpMgr')){
+      var m = document.createElement('button');
+      m.id = 'grpMgr'; m.className = 'btn btn-ghost btn-sm'; m.style.minHeight = '44px';
+      m.textContent = '⚙ 묶음 고치기';
+      m.addEventListener('click', openMgr);
+      row.appendChild(m);
+    }
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
   else panel();
   setTimeout(panel, 2200);
 
   window.wlGroup = {
-    list: function(){ console.table(load().map(function(g){
-            return { 켜짐:g.on?'✔':'', 이름:g.name, 대표:g.head, 접는칸:(g.keys||[]).join(',') }; }));
-            return load().length + '개'; },
+    list: function(){
+      console.table(load().map(function(g){
+        return { 켜짐:g.on?'✔':'', 이름:g.name, 대표:g.head, 접는칸:(g.keys||[]).join(',') }; }));
+      return load().length + '개';
+    },
+    /* 지금 열린 화면에 실제로 있는 칸 이름 — 짐작하지 말고 이걸 보고 만든다 */
+    names: function(){
+      var p = document.querySelector('.lf-page .pg-props');
+      if(!p) return '기록을 하나 연 다음에 다시 불러주세요';
+      var out = [].map.call(p.querySelectorAll('[data-prow]'), function(r){
+        return { 이름:r.getAttribute('data-prow'), 보이는말:labelOf(r), 값:valOf(r) }; });
+      console.table(out); return out.length + '개';
+    },
     open: openMgr,
     on:   function(){ setOn(1); run(); return '묶어서 보여줍니다'; },
     off:  function(){ setOn(0); run(); return '전부 펼쳐서 보여줍니다'; },
     run:  function(){ run(); return '다시 그렸습니다'; },
-    reset:function(){ try{ localStorage.removeItem(LS_GRP); }catch(e){} run(); return '처음 묶음으로'; }
+    reset:function(){ try{ localStorage.removeItem(LS_GRP); localStorage.removeItem(LS_VER); }catch(e){}
+                      run(); return '처음 묶음으로 되돌렸습니다'; }
   };
-  console.log('[묶어보기] 준비됨 — 진단 탭 「🧩 연관 묶어보기」');
+  console.log('[묶어보기] v112 준비됨 — 진단 탭 「🧩 묶어보기」 / 칸 이름은 wlGroup.names()');
 })();
 
 
@@ -14895,4 +15075,88 @@ async function githubUpload(token){
   setTimeout(panel, 2400);
 
   console.log('[종합 점검] 준비됨 — 콘솔에 wlCheckAll() 또는 진단 탭 [🩺 종합 점검]');
+})();
+
+
+/* ============================================================
+   🗔📄 창 ↔ 전체 페이지 한 번에 바꾸기 (wlPageStyle)  v112-0829-2350
+
+   달님 말 : 「페이지로 보기가 없어, 모달만 열리지」
+   → 설정은 진단 탭 깊숙이 있었다. 보이지 않으면 없는 것과 같다.
+     그래서 기록을 연 자리(머리줄)에 단추를 놓는다.
+     지금 창이면 [📄 페이지로] · 지금 페이지면 [🗔 창으로]
+     누르면 보던 기록을 그 모양으로 곧바로 다시 연다.
+   ============================================================ */
+(function(){
+  'use strict';
+  var LS = 'wl_open_as_page';
+
+  function styleNow(){
+    try{ return (typeof window.wlOpenStyle === 'function') ? window.wlOpenStyle() : 'modal'; }
+    catch(e){ return 'modal'; }
+  }
+  function ridNow(){
+    try{
+      var m = String(location.hash || '').match(/^#lp=([^&]+)/);
+      return m ? decodeURIComponent(m[1]) : '';
+    }catch(e){ return ''; }
+  }
+
+  function add(){
+    var top = document.querySelector('.lf-page .pg-top');
+    if(!top) return;
+    var old = top.querySelector('#pgStyleBtn');
+    var cur = styleNow();
+    var toModal = (cur !== 'modal');          /* 지금 페이지면 → 창으로 */
+    var label = toModal ? '🗔 창으로' : '📄 페이지로';
+    if(old){ old.textContent = label; return; }
+
+    var b = document.createElement('button');
+    b.type = 'button'; b.id = 'pgStyleBtn';
+    b.textContent = label;
+    b.title = toModal ? '작은 창으로 봅니다' : '화면 전체로 넓게 봅니다';
+    b.addEventListener('click', function(){
+      var rid = ridNow();
+      try{ localStorage.setItem(LS, toModal ? 'modal' : 'page'); }
+      catch(e){ console.warn('[보기 모양] 저장 실패', e); }
+      if(typeof toast === 'function') toast(toModal ? '🗔 창으로 봅니다' : '📄 전체 페이지로 봅니다');
+      /* 보던 기록을 그 모양으로 곧바로 다시 연다 */
+      setTimeout(function(){
+        try{
+          if(rid && typeof window.wlGoPage === 'function') window.wlGoPage(rid, toModal);
+        }catch(e){ console.warn('[보기 모양] 다시 열기 실패', e); }
+      }, 120);
+    });
+
+    var del = top.querySelector('#pgDel');
+    if(del) top.insertBefore(b, del); else top.appendChild(b);
+  }
+
+  var t = null;
+  function later(){ clearTimeout(t); t = setTimeout(add, 160); }
+  try{
+    var mo = new MutationObserver(function(m){
+      for(var i = 0; i < m.length; i++) if(m[i].addedNodes && m[i].addedNodes.length){ later(); return; }
+    });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[보기 모양] 감시 시작 실패', e); }
+  setTimeout(add, 1200);
+  /* 감시가 놓치는 경우가 있어 머리줄이 새로 생겼는지 0.4초마다 확인한다 */
+  var seenTop = null;
+  setInterval(function(){
+    try{
+      var tp = document.querySelector('.lf-page .pg-top');
+      if(tp && tp !== seenTop){ seenTop = tp; add(); }
+      else if(!tp) seenTop = null;
+    }catch(e){ console.warn('[보기 모양] 파수꾼 실패', e); }
+  }, 400);
+
+  window.wlPageStyle = function(v){
+    if(v === 'page' || v === 'modal' || v === 'old'){
+      try{ localStorage.setItem(LS, v); }catch(e){}
+      return '이제 기록을 누르면 ' + (v==='page'?'전체 페이지':(v==='modal'?'창(모달)':'예전 입력창')) + '으로 열립니다';
+    }
+    return '지금: ' + styleNow() + "  —  바꾸려면 wlPageStyle('page') 또는 wlPageStyle('modal')";
+  };
+  console.log('[보기 모양] v112 준비됨 — 기록 머리줄의 [📄 페이지로] / [🗔 창으로]');
 })();
