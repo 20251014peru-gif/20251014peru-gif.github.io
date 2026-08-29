@@ -13058,7 +13058,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v105-0829-1810
+   ✨ 입력칸 3종 세트 (wlSmartField)  v106-0829-1900
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13339,6 +13339,8 @@ async function githubUpload(token){
       if(!t) continue;
       if((t.value || '').trim()) continue;              /* 이미 쓴 값은 안 건드린다 */
       t.value = v;
+      t._byLink = 1;                                     /* v106: 연결에서 온 값 표시 */
+      try{ t.dataset.fromLink = '1'; }catch(e){}
       t.style.background = '#fffbea';                    /* 자동 채운 칸은 노란 배경 (달님 표준) */
       try{ t.dispatchEvent(new Event('input',  {bubbles:true})); }catch(e){}
       try{ t.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
@@ -13933,4 +13935,304 @@ async function githubUpload(token){
   };
 
   console.log('[입력도우미] 준비됨 — 진단 탭 「✨ 입력 도우미」에서 켜고 끌 수 있어요');
+})();
+
+
+/* ============================================================
+   🔗 연결 규칙 (wlRules)  v106-0829-1900
+   기본지침 제4원칙 — 「만든 사람 없이도 늘릴 수 있어야 한다」
+
+   지금까지 「업체를 넣으면 전화·직책이 따라온다」 는 코드에 박혀 있었다.
+   그래서 새 연결을 만들려면 매번 손을 봐야 했다.
+   이제 그 규칙을 데이터로 꺼내서, 화면에서 만들고 지울 수 있게 한다.
+
+   규칙 = 「언제(조건)  →  무엇을(동작)」
+     조건 : 어떤 칸이 [채워지면 / 비면 / 값이 ○○이면 / ○○을 담고 있으면]
+     동작 : 다른 칸을 [보이게 / 숨기게 / 비우게]
+
+   ▸ 값 채우기(업체→전화)는 이미 있는 기능이 하고, 여기서는 그 뒷정리를 맡는다
+   ▸ 되돌리기 : wlRules.reset()  — 처음 규칙으로
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS_RULES = 'wl_rules';
+  var LS_ON    = 'wl_rules_on';
+
+  /* ── 처음부터 들어 있는 규칙 ─────────────────────────── */
+  function baseRules(){
+    return [
+      { id:'b1', on:1, base:1, name:'업체를 넣으면 딸린 칸이 나온다',
+        when:{ k:'company', op:'filled' },
+        then:{ act:'show', keys:['person','role','phone','companyMemo','memo'] } },
+      { id:'b2', on:1, base:1, name:'업체를 지우면 딸린 값도 지운다',
+        when:{ k:'company', op:'empty' },
+        then:{ act:'clear', keys:['person','role','phone','companyMemo'] } },
+      { id:'b3', on:1, base:1, name:'자재명을 지우면 규격·단가도 지운다',
+        when:{ k:'material', op:'empty' },
+        then:{ act:'clear', keys:['spec','unit','unitPrice','itemCode','maker'] } },
+      { id:'b4', on:1, base:1, name:'자재명을 넣으면 규격·단가가 나온다',
+        when:{ k:'material', op:'filled' },
+        then:{ act:'show', keys:['spec','unit','unitPrice','qty'] } },
+      { id:'b5', on:1, base:1, name:'개인비용이면 영수증 칸이 나온다',
+        when:{ k:'expType', op:'eq', v:'개인비용' },
+        then:{ act:'show', keys:['receipt','영수증','att'] } },
+      { id:'b6', on:1, base:1, name:'후불청구면 세금계산서 칸이 나온다',
+        when:{ k:'expType', op:'eq', v:'후불청구' },
+        then:{ act:'show', keys:['taxInvoice','isIssued','세금계산서'] } },
+      { id:'b7', on:1, base:1, name:'미완료면 예정일·담당자가 나온다',
+        when:{ k:'status', op:'eq', v:'미완료' },
+        then:{ act:'show', keys:['dueDate','person','예정일'] } }
+    ];
+  }
+
+  function isOn(){
+    try{ return localStorage.getItem(LS_ON) !== '0'; }catch(e){ return true; }
+  }
+  function setOn(v){
+    try{ localStorage.setItem(LS_ON, v ? '1' : '0'); }catch(e){ console.warn('[연결 규칙] 켜기 저장 실패', e); }
+  }
+  function load(){
+    try{
+      var raw = localStorage.getItem(LS_RULES);
+      if(!raw) return baseRules();
+      var a = JSON.parse(raw);
+      return Array.isArray(a) ? a : baseRules();
+    }catch(e){ console.warn('[연결 규칙] 읽기 실패', e); return baseRules(); }
+  }
+  function save(arr){
+    try{ localStorage.setItem(LS_RULES, JSON.stringify(arr)); }
+    catch(e){ console.warn('[연결 규칙] 저장 실패', e); }
+  }
+
+  /* ── 화면에서 칸 찾기 — 모달(m-키) · 노션식(data-ppid/pid) 모두 ── */
+  function fieldsIn(root, key){
+    var out = [];
+    try{
+      var el = (root.querySelector ? root.querySelector('#m-' + key) : null) || document.getElementById('m-' + key);
+      if(el) out.push(el);
+      var sel = '[data-ppid="f:' + key + '"],[data-pid="f:' + key + '"],'
+              + '[data-ppid="' + key + '"],[data-pid="' + key + '"]';
+      (root.querySelectorAll ? root.querySelectorAll(sel) : []).forEach(function(h){
+        var ie = h.querySelector('.lf-ie, input, textarea, select');
+        if(ie && out.indexOf(ie) < 0) out.push(ie);
+      });
+    }catch(e){ console.warn('[연결 규칙] 칸 찾기 실패 (' + key + ')', e); }
+    return out;
+  }
+  function rowOf(el){
+    try{ return el.closest('.pg-prow, .field, tr') || el.parentNode; }catch(e){ return el.parentNode; }
+  }
+  function valOf(root, key){
+    var els = fieldsIn(root, key);
+    for(var i = 0; i < els.length; i++){
+      var v = (els[i].value == null ? '' : String(els[i].value)).trim();
+      if(v) return v;
+    }
+    return '';
+  }
+
+  /* ── 조건이 맞나 ─────────────────────────────────────── */
+  function match(root, w){
+    if(!w || !w.k) return false;
+    var v = valOf(root, w.k);
+    switch(w.op){
+      case 'filled':   return !!v;
+      case 'empty':    return !v;
+      case 'eq':       return v === String(w.v || '');
+      case 'contains': return v.indexOf(String(w.v || '')) >= 0;
+      default:         return false;
+    }
+  }
+
+  /* ── 동작 ────────────────────────────────────────────── */
+  function apply(root, rule){
+    var keys = (rule.then && rule.then.keys) || [];
+    var act  = (rule.then && rule.then.act) || 'show';
+    for(var i = 0; i < keys.length; i++){
+      var els = fieldsIn(root, keys[i]);
+      for(var j = 0; j < els.length; j++){
+        var el = els[j], row = rowOf(el);
+        if(act === 'show'){
+          if(row && row.style && row.style.display === 'none'){ row.style.display = ''; row._ruleShown = 1; }
+          if(row) row._ruleKeep = 1;                     /* 빈 칸 접기가 다시 숨기지 않게 */
+        }else if(act === 'hide'){
+          if(row && row.style && !(el.value || '').trim()){ row.style.display = 'none'; }
+        }else if(act === 'clear'){
+          /* 사람이 직접 쓴 값은 지우지 않는다 — 연결에서 온 값만 */
+          if(el._byLink || el.readOnly || String(el.style.background || '').indexOf('251') >= 0
+             || el.dataset.fromLink === '1'){
+            if((el.value || '').trim()){
+              el.value = '';
+              try{ el.dispatchEvent(new Event('input',  {bubbles:true})); }catch(e){}
+              try{ el.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
+            }
+          }
+        }
+      }
+    }
+  }
+
+  var runT = null;
+  function runNow(root){
+    if(!isOn()) return;
+    var host = root || document;
+    var rules = load();
+    for(var i = 0; i < rules.length; i++){
+      var r = rules[i];
+      if(!r || !r.on) continue;
+      try{ if(match(host, r.when)) apply(host, r); }
+      catch(e){ console.warn('[연결 규칙] 적용 실패 — ' + (r.name || r.id), e); }
+    }
+  }
+  function run(root){
+    clearTimeout(runT);
+    runT = setTimeout(function(){ runNow(root); }, 120);
+  }
+
+  /* 값이 바뀔 때마다 규칙을 다시 본다 */
+  document.addEventListener('input',  function(ev){
+    var t = ev.target; if(!t || ['INPUT','TEXTAREA','SELECT'].indexOf(t.tagName) < 0) return;
+    run(t.closest('#mFields, .lf-page, #expV2Overlay, form, tr') || document);
+  }, true);
+  document.addEventListener('change', function(ev){
+    var t = ev.target; if(!t || ['INPUT','TEXTAREA','SELECT'].indexOf(t.tagName) < 0) return;
+    run(t.closest('#mFields, .lf-page, #expV2Overlay, form, tr') || document);
+  }, true);
+  try{
+    var mo = new MutationObserver(function(m){
+      for(var i = 0; i < m.length; i++) if(m[i].addedNodes && m[i].addedNodes.length){ run(); return; }
+    });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[연결 규칙] 감시 시작 실패', e); }
+
+  /* ── 규칙 만드는 화면 ───────────────────────────────── */
+  var OPS = [['채워지면','filled'],['비면','empty'],['값이 같으면','eq'],['값을 담고 있으면','contains']];
+  var ACTS = [['보이게','show'],['숨기게','hide'],['비우게','clear']];
+
+  function openMgr(){
+    var ov = document.createElement('div'); ov.className = 'ptw';
+    function draw(){
+      var rules = load();
+      ov.innerHTML = '<div class="ptw-box" style="width:min(96vw,560px)">'
+        + '<div class="ptw-h">🔗 연결 규칙</div>'
+        + '<div class="ptw-s">「어떤 칸이 ○○이면 → 다른 칸을 ○○하게」 를 직접 만들 수 있어요.<br>'
+        + '<b>업체를 넣으면 전화·직책이 나오는 것</b>도 아래 규칙 중 하나입니다.</div>'
+        + '<div class="rl-list">' + rules.map(function(r, i){
+            return '<div class="rl-row'+(r.on?'':' off')+'">'
+              + '<button type="button" class="rl-tg" data-rlon="'+i+'" title="켜기 / 끄기">'+(r.on?'✔':'○')+'</button>'
+              + '<div class="rl-nm">' + ES(r.name || '(이름 없음)')
+              +   '<div class="rl-sub">' + ES(r.when.k) + ' 가 '
+              +   ES((OPS.filter(function(o){return o[1]===r.when.op;})[0]||['?'])[0])
+              +   (r.when.v ? ' (' + ES(r.when.v) + ')' : '') + ' → '
+              +   ES((r.then.keys||[]).slice(0,4).join(', '))
+              +   ' 를 ' + ES((ACTS.filter(function(a){return a[1]===r.then.act;})[0]||['?'])[0]) + '</div>'
+              + '</div>'
+              + (r.base ? '<span class="rl-base">기본</span>'
+                        : '<button type="button" class="rl-del" data-rldel="'+i+'" title="지우기">🗑</button>')
+              + '</div>';
+          }).join('') + '</div>'
+        + '<div class="rl-new">'
+        +   '<div class="rl-nh">＋ 새 규칙</div>'
+        +   '<div class="rl-nr">'
+        +     '<input type="text" id="rlK" placeholder="칸 이름 (예: expType)" data-vac="off">'
+        +     '<select id="rlOp">' + OPS.map(function(o){ return '<option value="'+o[1]+'">'+o[0]+'</option>'; }).join('') + '</select>'
+        +     '<input type="text" id="rlV" placeholder="값 (같으면·담고 있으면 일 때)" data-vac="off">'
+        +   '</div>'
+        +   '<div class="rl-nr">'
+        +     '<span class="rl-ar">→</span>'
+        +     '<input type="text" id="rlT" placeholder="대상 칸 (쉼표로 여러 개)" data-vac="off">'
+        +     '<select id="rlAct">' + ACTS.map(function(a){ return '<option value="'+a[1]+'">'+a[0]+'</option>'; }).join('') + '</select>'
+        +     '<button type="button" id="rlAdd">추가</button>'
+        +   '</div>'
+        + '</div>'
+        + '<div class="ptw-btns">'
+        +   '<button type="button" id="rlReset" style="flex:1;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8">처음으로</button>'
+        +   '<button type="button" id="rlClose" style="flex:2;background:#2563a8;color:#fff">닫기</button>'
+        + '</div></div>';
+
+      ov.querySelectorAll('[data-rlon]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var a = load(); var i = +b.getAttribute('data-rlon');
+          a[i].on = a[i].on ? 0 : 1; save(a); draw();
+        });
+      });
+      ov.querySelectorAll('[data-rldel]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var a = load(); var i = +b.getAttribute('data-rldel');
+          if(!confirm('「' + (a[i].name || '') + '」 규칙을 지울까요?')) return;
+          a.splice(i, 1); save(a); draw();
+        });
+      });
+      ov.querySelector('#rlAdd').addEventListener('click', function(){
+        var k  = (ov.querySelector('#rlK').value || '').trim();
+        var op = ov.querySelector('#rlOp').value;
+        var v  = (ov.querySelector('#rlV').value || '').trim();
+        var t  = (ov.querySelector('#rlT').value || '').trim();
+        var ac = ov.querySelector('#rlAct').value;
+        if(!k || !t){ alert('칸 이름과 대상 칸을 적어주세요'); return; }
+        if((op === 'eq' || op === 'contains') && !v){ alert('비교할 값을 적어주세요'); return; }
+        var a = load();
+        a.push({ id:'u_' + Date.now().toString(36), on:1,
+          name: k + ' → ' + t,
+          when:{ k:k, op:op, v:v },
+          then:{ act:ac, keys: t.split(',').map(function(x){ return x.trim(); }).filter(Boolean) } });
+        save(a); draw();
+        if(typeof toast === 'function') toast('규칙을 추가했어요');
+      });
+      ov.querySelector('#rlReset').addEventListener('click', function(){
+        if(!confirm('내가 만든 규칙이 모두 사라지고 처음 규칙으로 돌아갑니다. 계속할까요?')) return;
+        try{ localStorage.removeItem(LS_RULES); }catch(e){}
+        draw();
+      });
+      ov.querySelector('#rlClose').addEventListener('click', function(){ ov.remove(); runNow(); });
+    }
+    draw();
+    ov.addEventListener('mousedown', function(e){ if(e.target === ov) { ov.remove(); runNow(); } });
+    document.body.appendChild(ov);
+  }
+  function ES(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* ── 진단 탭 버튼 ───────────────────────────────────── */
+  function panel(){
+    var host = document.getElementById('sfPanel');
+    if(!host || document.getElementById('rlBtn')) return;
+    var row = host.querySelector('.btn-row');
+    if(!row) return;
+    var b = document.createElement('button');
+    b.className = 'btn btn-sm'; b.id = 'rlBtn'; b.style.minHeight = '44px';
+    b.textContent = '🔗 연결 규칙';
+    b.addEventListener('click', openMgr);
+    row.appendChild(b);
+    var t = document.createElement('button');
+    t.className = 'btn btn-sm'; t.id = 'rlOnBtn'; t.style.minHeight = '44px';
+    function paintT(){
+      t.textContent = isOn() ? '🔗 규칙 켜짐' : '🔗 규칙 꺼짐';
+      t.className = 'btn btn-sm ' + (isOn() ? 'btn-primary' : 'btn-ghost');
+      t.style.minHeight = '44px';
+    }
+    t.addEventListener('click', function(){ setOn(!isOn()); paintT(); runNow(); });
+    paintT();
+    row.appendChild(t);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
+  else panel();
+  setTimeout(panel, 1800);
+  setTimeout(function(){ runNow(); }, 1000);
+
+  window.wlRules = {
+    list:  function(){ console.table(load().map(function(r){
+             return { 켜짐:r.on?'✔':'', 이름:r.name, 조건:r.when.k+' '+r.when.op+(r.when.v?' '+r.when.v:''),
+                      동작:r.then.act, 대상:(r.then.keys||[]).join(',') }; })); return load().length + '개'; },
+    open:  openMgr,
+    on:    function(){ setOn(1); runNow(); return '규칙 켜짐'; },
+    off:   function(){ setOn(0); return '규칙 꺼짐'; },
+    reset: function(){ try{ localStorage.removeItem(LS_RULES); }catch(e){} return '처음 규칙으로 돌아갔습니다'; },
+    run:   function(){ runNow(); return '규칙을 다시 적용했습니다'; }
+  };
+  console.log('[연결 규칙] 준비됨 — 진단 탭 「🔗 연결 규칙」 에서 만들 수 있어요');
 })();
