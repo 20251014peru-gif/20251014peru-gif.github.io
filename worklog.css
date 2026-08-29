@@ -1129,3 +1129,17 @@ tr.wk-checked td{background:#e8f3fd !important}
 .ss-it:hover{ background:#eef5fd }
 .ss-it.on{ background:#2563a8; border-color:#2563a8; color:#fff }
 .ss-none{ font-size:12px; color:#a8b8c8; padding:4px 2px }
+
+/* ⌨ 고르는 칸 단추판 (wlPick v129) */
+.qp-wrap{ display:block }
+.qp-grid{ display:flex; flex-wrap:wrap; gap:5px; max-height:168px; overflow:auto; margin-bottom:6px }
+.qp-it{
+  min-height:34px; padding:0 12px; border:1.5px solid #cfe0f2; border-radius:9px;
+  background:#f7faff; color:#2b4763; font-size:13px; font-weight:800;
+  cursor:pointer; font-family:inherit; white-space:nowrap;
+}
+.qp-it:hover{ background:#e8f1fb; border-color:#9fc2e4 }
+.qp-it.on{ background:#2563a8; border-color:#2563a8; color:#fff }
+.qp-clr{ background:#fff; border-color:#e3e9ef; color:#94a5b6; font-weight:700 }
+.qp-clr:hover{ background:#f4f6f8; border-color:#cfd8e0 }
+select.lf-ie.qp-hide{ display:none !important }

@@ -17244,20 +17244,36 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   🔎 고르는 칸에 초성 검색 (wlSelSearch)  v128-0830-0310
+   ⌨ 고르는 칸 — 자주 쓰는 것은 단추, 나머지는 초성 검색 (wlPick)  v129-0830-0810
 
-   달님 : 「분야 초성검색 해줘」
+   달님 : 「대상년·대상월·해당층은 단추로 한 번에.
+           분야는 자주 쓰는 5개만 단추, 나머지는 초성 검색」
 
-   분야·용도·전표 구분처럼 「고르는 칸」은 목록이 길어질수록 찾기 힘들다.
-   ▸ 칸을 누르면 검색창이 함께 뜬다
-   ▸ ㅈㄱ 만 쳐도 「전기」가 걸린다 (앱에 이미 있는 getChosung 을 그대로 쓴다)
-   ▸ 고르면 원래 select 에 값이 들어가고 저장까지 그대로 이어진다
-   ▸ ⚠ 한글 IME — 검색창을 다시 만들지 않는다. 목록만 다시 그린다 (자모 분리 방지)
+   ⚠ v128 사고 (이번에 고친 것)
+     검색창이 select 의 포커스를 빼앗아 blur 가 나고, 편집기가 그 자리에서
+     닫혀 버려 「대상년도~분야」를 아예 고를 수 없었다.
+     → 앱이 이미 갖고 있는 「지금 고르는 중」 표시(_dialOpen)를 켜 둔다.
+       고르거나 그만둘 때만 끈다. 단추는 mousedown 으로 포커스를 안 옮긴다.
+
+   어떤 칸을 어떻게 보여줄지는 아래 PLAN 한 곳만 고치면 된다.
    ============================================================ */
 (function(){
   'use strict';
 
-  var MIN_OPTS = 3;          /* 고를 것이 이만큼 넘으면 검색창을 붙인다 */
+  var MIN_OPTS = 3;          /* 계획에 없는 칸은 고를 것이 이만큼 넘을 때만 검색창 */
+  var TOP_N    = 5;          /* 「자주 쓰는 것」 몇 개를 단추로 */
+
+  /* 칸별 보여주는 방법 ─────────────────────────────────
+     chips : 'all'  전부 단추   |  'top'  자주 쓰는 것만 단추
+     search: true   검색창도 함께
+     lab   : 단추에 쓸 글자 (값은 그대로 저장된다)
+     ──────────────────────────────────────────────── */
+  var PLAN = {
+    'f:refYear' : { chips:'all', search:false, lab:function(v){ return v + '년'; } },
+    'f:refMonth': { chips:'all', search:false, lab:function(v){ return v + '월'; } },
+    'f:floor'   : { chips:'all', search:false },
+    'f:field'   : { chips:'top', search:true,  cnt:'field' }
+  };
 
   function cho(s){
     try{ if(typeof getChosung === 'function') return getChosung(String(s||'')); }catch(e){}
@@ -17273,67 +17289,176 @@ async function githubUpload(token){
   function ES(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
-  function attach(sel){
-    if(!sel || sel._ssBound) return;
-    var opts = [].map.call(sel.options, function(o){ return o.value; }).filter(function(v){ return v !== ''; });
-    if(opts.length < MIN_OPTS) return;
-    sel._ssBound = 1;
-
-    var box = document.createElement('div');
-    box.className = 'ss-wrap';
-    box.innerHTML =
-        '<input type="text" class="ss-q" placeholder="검색 (초성 가능 · 예: ㅈㄱ → 전기)" autocomplete="off">'
-      + '<div class="ss-list"></div>';
-    /* select 바로 위에 놓는다 — 줄의 칸 수를 늘리지 않도록 값 칸 안쪽 */
-    if(sel.parentNode) sel.parentNode.insertBefore(box, sel);
-
-    var q    = box.querySelector('.ss-q');
-    var list = box.querySelector('.ss-list');
-    var ime  = false;
-
-    function draw(){
-      var s = q.value;
-      var found = opts.filter(function(o){ return hit(o, s); });
-      if(!found.length){
-        list.innerHTML = '<div class="ss-none">찾는 것이 없어요 — 그냥 아래에서 고르세요</div>';
-        return;
-      }
-      list.innerHTML = found.slice(0, 40).map(function(o, i){
-        return '<button type="button" class="ss-it' + (i===0 && s ? ' on':'') + '" data-ssv="' + ES(o) + '">'
-             + ES(o) + '</button>';
-      }).join('');
-    }
-    function pick(v){
-      try{
-        sel.value = v;
-        sel.dispatchEvent(new Event('input',  {bubbles:true}));
-        sel.dispatchEvent(new Event('change', {bubbles:true}));
-      }catch(e){ console.warn('[고르기 검색] 넣기 실패', e); }
-    }
-
-    q.addEventListener('compositionstart', function(){ ime = true; });
-    q.addEventListener('compositionend',   function(){ ime = false; draw(); });
-    q.addEventListener('input', function(){ if(!ime) draw(); });      /* 검색창은 그대로 두고 목록만 다시 그린다 */
-    q.addEventListener('keydown', function(ev){
-      if(ev.key === 'Enter'){
-        ev.preventDefault();
-        var f = list.querySelector('.ss-it');
-        if(f) pick(f.getAttribute('data-ssv'));
-      }else if(ev.key === 'Escape'){ q.value = ''; draw(); }
-    });
-    /* 목록은 mousedown 으로 — click 이면 blur 가 먼저 나 창이 닫힌다 */
-    list.addEventListener('mousedown', function(ev){
-      var b = ev.target.closest && ev.target.closest('[data-ssv]');
-      if(!b) return;
-      ev.preventDefault(); ev.stopPropagation();
-      pick(b.getAttribute('data-ssv'));
-    });
-
-    draw();
-    setTimeout(function(){ try{ q.focus(); }catch(e){} }, 30);
+  /* 이 select 이 화면의 어느 칸인가 */
+  function pidOf(sel){
+    try{
+      var h = sel.closest('[data-ppid]') || sel.closest('[data-pid]');
+      if(!h) return '';
+      return h.getAttribute('data-ppid') || h.getAttribute('data-pid') || '';
+    }catch(e){ return ''; }
   }
 
-  /* 고르는 칸이 어떤 길로 열리든 붙게 — 화면에 select 가 나타나면 바로 잡는다 (v128) */
+  /* 실제로 많이 쓴 차례로 — 기록에서 세어 온다 */
+  function topUsed(key, opts, n){
+    var cnt = {};
+    try{
+      (entries||[]).forEach(function(e){
+        var v = e && e[key]; if(v==null || v==='') return;
+        v = String(v); cnt[v] = (cnt[v]||0) + 1;
+      });
+    }catch(e){ console.warn('[고르기] 자주 쓰는 것 세기 실패', e); }
+    var out = Object.keys(cnt)
+      .filter(function(v){ return opts.indexOf(v) >= 0; })
+      .sort(function(a,b){ return cnt[b] - cnt[a]; })
+      .slice(0, n);
+    /* 기록이 적어 모자라면 목록 앞에서 채운다 */
+    for(var i=0; i<opts.length && out.length<n; i++){
+      if(out.indexOf(opts[i]) < 0) out.push(opts[i]);
+    }
+    return out;
+  }
+
+  function attach(sel){
+    if(!sel || sel._ssBound) return;
+
+    var opts = [].map.call(sel.options, function(o){ return o.value; })
+                 .filter(function(v){ return v !== ''; });
+    if(!opts.length) return;
+
+    var pid  = pidOf(sel);
+    var plan = PLAN[pid] || null;
+    var useChips  = !!plan;
+    var useSearch = plan ? (plan.search !== false) : (opts.length >= MIN_OPTS);
+    if(!useChips && !useSearch) return;
+
+    sel._ssBound = 1;
+
+    /* ★ 무엇보다 먼저 — 이 칸은 「지금 고르는 중」이다.
+          이걸 켜 두지 않으면 아래에서 select 를 숨기거나 검색창에 포커스를 주는
+          순간 blur 가 나서 편집기가 통째로 닫힌다 (v128 사고의 원인). */
+    sel._dialOpen = 1;
+
+    var cur = String(sel.value == null ? '' : sel.value);
+
+    var box = document.createElement('div');
+    box.className = 'qp-wrap';
+
+    /* ── 단추판 ── */
+    var chipVals = [];
+    if(useChips){
+      chipVals = (plan.chips === 'top')
+        ? topUsed(plan.cnt || pid.slice(2), opts, TOP_N)
+        : opts.slice();
+      var lab = plan.lab || function(v){ return v; };
+      var grid = document.createElement('div');
+      grid.className = 'qp-grid';
+      grid.innerHTML = chipVals.map(function(v){
+        return '<button type="button" class="qp-it' + (v === cur ? ' on' : '') + '" '
+             + 'data-qpv="' + ES(v) + '">' + ES(lab(v)) + '</button>';
+      }).join('')
+      + '<button type="button" class="qp-it qp-clr" data-qpv="">비우기</button>';
+      box.appendChild(grid);
+    }
+
+    /* ── 검색창 + 목록 ── */
+    var q = null, list = null, ime = false;
+    if(useSearch){
+      var sw = document.createElement('div');
+      sw.className = 'ss-wrap';
+      sw.innerHTML =
+          '<input type="text" class="ss-q" autocomplete="off" '
+        + 'placeholder="' + (useChips ? '다른 것 찾기' : '검색')
+        + ' (초성 가능 · 예: ㅈㄱ → 전기)">'
+        + '<div class="ss-list"></div>';
+      box.appendChild(sw);
+      q    = sw.querySelector('.ss-q');
+      list = sw.querySelector('.ss-list');
+    }
+
+    if(sel.parentNode) sel.parentNode.insertBefore(box, sel);
+    /* 단추가 전부를 덮는 칸은 원래 목록을 감춘다 — 화면이 좁아지지 않게 */
+    if(useChips && plan.chips === 'all') sel.classList.add('qp-hide');
+    if(useChips && plan.chips === 'top' && useSearch) sel.classList.add('qp-hide');
+
+    function draw(){
+      if(!list) return;
+      var s = q.value;
+      var pool = (useChips && !s)
+        ? opts.filter(function(o){ return chipVals.indexOf(o) < 0; })   /* 단추로 이미 나온 건 빼고 */
+        : opts;
+      var found = pool.filter(function(o){ return hit(o, s); });
+      if(!found.length){
+        list.innerHTML = '<div class="ss-none">찾는 것이 없어요</div>';
+        return;
+      }
+      list.innerHTML = found.slice(0, 60).map(function(o, i){
+        return '<button type="button" class="ss-it' + (i===0 && s ? ' on' : '')
+             + '" data-qpv="' + ES(o) + '">' + ES(o) + '</button>';
+      }).join('');
+    }
+
+    var closed = false;
+    function offGuard(){
+      try{ document.removeEventListener('mousedown', outside, true); }catch(e){}
+    }
+    /* 고르기 — 값을 넣고 「고르는 중」을 끈 뒤 앱의 저장을 그대로 부른다 */
+    function pick(v){
+      if(closed) return; closed = true;
+      offGuard();
+      try{
+        sel.value = v;
+        sel._dialOpen = 0;
+        sel.dispatchEvent(new Event('input',  {bubbles:true}));
+        sel.dispatchEvent(new Event('change', {bubbles:true}));   /* → 앱이 저장하고 칸을 닫는다 */
+      }catch(e){
+        console.warn('[고르기] 넣기 실패 — 예전 방식으로', e);
+        try{ sel._dialOpen = 0; if(typeof sel._dialDone === 'function') sel._dialDone(); }catch(e2){}
+      }
+    }
+    /* 그만두기 — 아무것도 바꾸지 않고 칸만 닫는다 */
+    function giveUp(){
+      if(closed) return; closed = true;
+      offGuard();
+      sel._dialOpen = 0;
+      try{ if(typeof sel._dialDone === 'function') sel._dialDone(); else { sel.focus(); sel.blur(); } }
+      catch(e){ console.warn('[고르기] 닫기 실패', e); }
+    }
+
+    /* 단추·목록은 mousedown 으로 — click 이면 blur 가 먼저 나 창이 닫힌다 */
+    box.addEventListener('mousedown', function(ev){
+      var b = ev.target.closest && ev.target.closest('[data-qpv]');
+      if(!b) return;
+      ev.preventDefault(); ev.stopPropagation();
+      pick(b.getAttribute('data-qpv'));
+    });
+
+    if(q){
+      q.addEventListener('compositionstart', function(){ ime = true; });
+      q.addEventListener('compositionend',   function(){ ime = false; draw(); });
+      q.addEventListener('input', function(){ if(!ime) draw(); });   /* 검색창은 그대로 두고 목록만 다시 그린다 */
+      q.addEventListener('keydown', function(ev){
+        if(ev.key === 'Enter'){
+          ev.preventDefault();
+          var f = list && list.querySelector('[data-qpv]');
+          if(f) pick(f.getAttribute('data-qpv'));
+        }else if(ev.key === 'Escape'){ ev.preventDefault(); giveUp(); }
+      });
+      draw();
+    }
+
+    /* 딴 데를 누르면 조용히 닫는다 (칸이 열린 채 남지 않게) */
+    function outside(ev){
+      try{
+        if(box.contains(ev.target) || ev.target === sel) return;
+        giveUp();
+      }catch(e){}
+    }
+    setTimeout(function(){
+      try{ document.addEventListener('mousedown', outside, true); }catch(e){}
+    }, 0);
+  }
+
+  /* 고르는 칸이 어떤 길로 열리든 붙게 — 화면에 select 가 나타나면 바로 잡는다 */
   try{
     var mo = new MutationObserver(function(m){
       for(var i=0;i<m.length;i++){
@@ -17349,26 +17474,28 @@ async function githubUpload(token){
       }
     });
     mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
-  }catch(e){ console.warn('[고르기 검색] 감시 시작 실패', e); }
+  }catch(e){ console.warn('[고르기] 감시 시작 실패', e); }
 
-  /* 고르는 칸이 열릴 때마다 붙인다 */
   document.addEventListener('focusin', function(ev){
     var t = ev.target;
     if(t && t.tagName === 'SELECT' && t.classList && t.classList.contains('lf-ie')) attach(t);
   }, true);
   document.addEventListener('click', function(ev){
     try{
-      var box = ev.target.closest && ev.target.closest('[data-ppid]');
-      if(!box) return;
+      var host = ev.target.closest && ev.target.closest('[data-ppid],[data-pid]');
+      if(!host) return;
       setTimeout(function(){
-        var s = box.querySelector('select.lf-ie');
+        var s = host.querySelector('select.lf-ie');
         if(s) attach(s);
       }, 60);
     }catch(e){}
   }, true);
 
-  window.wlSelSearch = {
-    min: function(n){ if(typeof n === 'number') MIN_OPTS = n; return '고를 것이 ' + MIN_OPTS + '개 넘으면 검색창을 붙입니다'; }
+  window.wlPick = {
+    min:  function(n){ if(typeof n === 'number') MIN_OPTS = n; return '고를 것이 ' + MIN_OPTS + '개 넘으면 검색창'; },
+    top:  function(n){ if(typeof n === 'number') TOP_N = n;    return '자주 쓰는 것 ' + TOP_N + '개를 단추로'; },
+    plan: function(){ return PLAN; }
   };
-  console.log('[고르기 검색] v128 준비됨 — 분야·용도 같은 칸에 초성 검색 (ㅈㄱ → 전기)');
+  window.wlSelSearch = window.wlPick;   /* 예전 이름도 그대로 */
+  console.log('[고르기] v129 준비됨 — 대상년·월·층은 단추, 분야는 자주 쓰는 ' + TOP_N + '개 단추 + 초성 검색');
 })();
