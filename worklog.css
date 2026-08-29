@@ -1016,3 +1016,18 @@ tr.wk-checked td{background:#e8f3fd !important}
 .mm-s.on{ background:#eef5fd; border-color:#2563a8; color:#1d4f86 }
 .mm-hint{ width:100%; box-sizing:border-box; padding:8px 10px; font-size:12.5px;
   border:1.5px solid #e3ecf7; border-radius:8px; font-family:inherit; color:#5a7590 }
+
+/* ── v118 : 속성 줄에 덧붙이는 것은 모두 값 칸 안쪽에 ──
+      .pg-prow 는 flex 라 형제로 넣으면 값 상자가 눌린다.
+      («후/불/청/구» 처럼 세로로 쪼개지던 사고) */
+.pg-pv > .pg-addon{ display:inline-flex; align-items:center; margin:6px 4px 0 0; vertical-align:middle }
+.pg-pv > div.pg-addon{ display:block; margin:4px 0 0 }
+.pg-gv > .pg-addon{ margin-left:8px }
+
+/* ＋ 자재 담기 */
+.pg-matadd{
+  height:30px; padding:0 12px; border:1.5px solid #cbb2f5; border-radius:8px;
+  background:#f6f1ff; color:#6d28d9; font-size:12.5px; font-weight:800;
+  cursor:pointer; font-family:inherit; white-space:nowrap;
+}
+.pg-matadd:hover{ background:#efe6ff }
