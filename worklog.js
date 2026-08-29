@@ -2140,6 +2140,17 @@ function openVendorPickerPopup(){
 }
 
 function renderWorkModal(data, mode){
+  /* v103: 그린 직후 맨 위로 (수정 모드로 열 때 위쪽 탭이 잘리던 문제) */
+  try{
+    [0, 80, 200, 400].forEach(function(ms){
+      setTimeout(function(){
+        var md = document.getElementById('overlay');
+        md = md && md.querySelector('.modal');
+        if(md && md.scrollTop) md.scrollTop = 0;
+      }, ms);
+    });
+  }catch(e){ console.warn('[업무 모달] 맨 위로 실패', e); }
+
   _workMode = mode||"simple";
   const e2 = s=>(s||"").toString().replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
   const td = kstNow().toISOString().slice(0,10);
@@ -2157,7 +2168,7 @@ function renderWorkModal(data, mode){
 
   /* ── 탭 ── */
   const tabs = `
-  <div style="display:flex;gap:0;border-radius:6px;overflow:hidden;border:1.5px solid #e2e8f0;margin-bottom:6px">
+  <div id="mWorkTabs" style="display:flex;gap:0;border-radius:6px;overflow:hidden;border:1.5px solid #e2e8f0;margin-bottom:6px">
     <button type="button" onclick="renderWorkModal(window._wModalData,'simple')"
       style="flex:1;padding:5px 0;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border:none;
       background:${_workMode==='simple'?'#2563a8':'#f8fafc'};color:${_workMode==='simple'?'#fff':'#64748b'}">
@@ -2930,6 +2941,12 @@ function openEditor(kind,id){
     $("overlay").querySelector(".modal").scrollTop=0;
     return;
   }
+
+  /* v103: 모달을 열 때는 언제나 맨 위부터 — 스크롤이 남아 있으면 위쪽 탭이 제목에 가린다 */
+  try{
+    var _md = $("overlay") && $("overlay").querySelector(".modal");
+    if(_md){ _md.scrollTop = 0; setTimeout(function(){ try{ _md.scrollTop = 0; }catch(e){} }, 60); }
+  }catch(e){ console.warn('[모달] 맨 위로 되돌리기 실패', e); }
 
   const sc=SCHEMA[kind];
   /* v97: SCHEMA 에 없는 종류(청소일지·비밀번호)는 전용 화면을 쓴다 — 조용히 깨지지 않게 */
@@ -13041,7 +13058,7 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   ✨ 입력칸 3종 세트 (wlSmartField)  v102-0829-1530
+   ✨ 입력칸 3종 세트 (wlSmartField)  v103-0829-1600
    기본지침 제3원칙 — 어떤 프로그램이든 기본으로 넣는 부품
 
    ① 자동완성 + 초성검색 : 모든 짧은 입력칸에 자동으로 붙는다
@@ -13626,6 +13643,8 @@ async function githubUpload(token){
   function quickChips(inp){
     if(!cfg().quick) return;
     if(inp._sfChip) return;
+    /* 옛 입력창에는 이미 같은 버튼이 있다 — 중복으로 붙이지 않는다 */
+    try{ if(inp.closest && inp.closest('#overlay')) { inp._sfChip = true; return; } }catch(e){}
     var ty = (inp.getAttribute('type') || '').toLowerCase();
     var isDate = (ty === 'date');
     var isTime = (ty === 'time') || !!inp.getAttribute('data-tdial')

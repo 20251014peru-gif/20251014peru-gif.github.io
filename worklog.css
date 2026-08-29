@@ -836,3 +836,32 @@ tr.wk-checked td{background:#e8f3fd !important}
 .ptw-btns{ display:flex; gap:8px; margin-top:14px }
 .ptw-btns button{ height:44px; border-radius:11px; font-size:13.5px; font-weight:800;
   cursor:pointer; font-family:inherit; border:none }
+
+/* ── 입력창 가로 넘침 막기 (v103) — 버튼 줄이 안 접혀 가로 스크롤이 생기던 문제 ── */
+#overlay .modal{ overflow-x:hidden }
+#overlay .modal .btn-row,
+#overlay .modal [style*="display:flex"]{ flex-wrap:wrap }
+#overlay .modal input,
+#overlay .modal select,
+#overlay .modal textarea{ max-width:100% }
+
+/* ── 입력창 머리·발 줄이 삐져나가던 문제 (v103) ──
+   .modal 의 좌우 여백이 22px → 12px 로 바뀌었는데
+   #mTitle · #mBtnRow 의 음수 여백은 -22px 그대로여서 좌우로 10px 씩 넘쳤다 */
+/* HTML 안 style 블록이 이 파일보다 뒤에 오므로 !important 로 눌러야 한다 */
+#overlay .modal > #mTitle,
+#overlay .modal > #mBtnRow{
+  width:auto !important; margin-left:-12px !important; margin-right:-12px !important;
+  box-sizing:border-box !important;
+}
+/* 제목이 위에 고정(sticky)되어 있어 스크롤하면 바로 아래 줄을 덮는다 */
+#overlay .modal > *{ scroll-margin-top:64px }
+/* 내용이 늘어날 때 브라우저가 보던 자리를 지키려고 스크롤을 옮기는 것을 막는다 */
+#overlay .modal{ overflow-anchor:none !important }
+
+/* 업무 입력창의 [일반업무 / 외주·비용] 탭도 제목과 함께 위에 붙어 있게 (v103)
+   — 제목이 sticky 라 스크롤하면 탭을 덮어버리던 문제 */
+#overlay .modal #mWorkTabs{
+  position:sticky !important; top:44px !important; z-index:5 !important;
+  background:#fff !important; padding-top:2px !important;
+}
