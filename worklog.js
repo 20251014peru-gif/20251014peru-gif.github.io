@@ -14591,7 +14591,7 @@ async function githubUpload(token){
 
   var LS_ON  = 'wl_group_on';
   var LS_GRP = 'wl_groups';
-  var VER    = 6;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
+  var VER    = 7;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
   var LS_VER = 'wl_groups_ver';
 
   /* ── 2026-08-29 14종 전수 실측 결과로 만든 묶음 ──
@@ -14608,6 +14608,9 @@ async function githubUpload(token){
       { id:'gc', on:1, base:1, icon:'💰', name:'비용 — 얼마를 어떻게', head:'f:expType',
         keys:['f:expSubType','f:purpose','f:supplyAmt','f:taxAmt','_amount','f:isIssued'],
         openDefault:1 },
+      /* v124 — 달님 : 「자재도 자재 제목 넣어줘 별도로 구분되게」 */
+      { id:'gt', on:1, base:1, icon:'📦', name:'자재 — 무엇을 썼나', head:'f:material',
+        keys:['f:spec','f:qty'], openDefault:1 },
       { id:'g1', on:1, base:1, icon:'🏢', name:'업체 — 누구와', head:'_sub',
         keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',   /* 업무 */
               'f:callContact','f:role','f:phone',                        /* 통화 */
@@ -14696,14 +14699,24 @@ async function githubUpload(token){
     if(!ref || !ref.parentNode) return false;
     ref.parentNode.insertBefore(el, ref.nextSibling); return true;
   }
-  function snapshot(box){
-    if(!box._gOrder) box._gOrder = [].slice.call(box.children);
+  /* v124 — 속성 줄은 두 곳에 나뉘어 있다 : 보이는 곳(.pg-props) 과 「빈 항목」 상자(#pgHidden).
+        예전에는 보이는 곳만 기억해서, 빈 항목 상자에 있던 칸(예: 발급 완료)이
+        묶음 안으로 못 들어오고 **덩그러니 밖에** 남았다. (달님 : 「발급 완료가 이상한 데 있잖아」)
+        → 부모마다 원래 차례를 기억해 둔다. 그러면 어디에 있든 옮겼다가 되돌릴 수 있다. */
+  function snapshot(props){
+    if(props._gSnap) return;
+    var seen = [], snap = [];
+    [].forEach.call(props.querySelectorAll('[data-prow]'), function(r){
+      var pa = r.parentNode;
+      if(pa && seen.indexOf(pa) < 0){ seen.push(pa); snap.push({ pa:pa, kids:[].slice.call(pa.children) }); }
+    });
+    props._gSnap = snap;
   }
-  function restoreOrder(box){
-    var o = box._gOrder; if(!o) return;
-    for(var i = 0; i < o.length; i++){
-      if(o[i] && o[i].parentNode === box) box.appendChild(o[i]);
-    }
+  function restoreOrder(props){
+    var snap = props._gSnap; if(!snap) return;
+    snap.forEach(function(g){
+      g.kids.forEach(function(el){ try{ if(el) g.pa.appendChild(el); }catch(e){} });
+    });
   }
 
   /* v118 — 사람이 접거나 펼친 뒤에는 묶어보기만 다시 그리면 안 된다.
@@ -14712,13 +14725,14 @@ async function githubUpload(token){
     if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint();
     else run();
   }
-  function cleanup(props, box){
-    [].forEach.call(props.querySelectorAll('.pg-grow,.pg-ghead,.pg-gtail'), function(x){ x.remove(); });
+  function cleanup(props){
+    [].forEach.call(props.querySelectorAll('.pg-grow,.pg-ghead,.pg-gtail,.pg-gfoot'), function(x){ x.remove(); });
     [].forEach.call(props.querySelectorAll('[data-prow]'), function(r){
       if(r._gHid){ r.style.display = ''; r._gHid = 0; }
+      if(r._gEmpty){ r.style.display = ''; r._gEmpty = 0; }
       r.classList.remove('pg-gm', 'pg-gm-first', 'pg-gm-last');
     });
-    restoreOrder(box || boxOf(props));
+    restoreOrder(props);
   }
 
   /* v114 — 자재는 「속성 칸(자재명·사양·수량)」과 「자재 사용 내역」 두 군데에 있다.
@@ -14747,33 +14761,20 @@ async function githubUpload(token){
     var props = page.querySelector('.pg-props');
     if(!props) return;
     var box = boxOf(props);
-    snapshot(box);
+    snapshot(props);
 
     /* 정리 모드에서는 손대지 않는다 — 끌어서 차례를 바꿔야 하니까 */
     var editing = props.classList && props.classList.contains('pg-edit');
 
-    cleanup(props, box);
+    cleanup(props);
     if(!isOn() || editing) return;
 
     var used = {};
+    var lastTail = null;      /* v125 — 묶음을 「정한 차례대로」 위에서부터 쌓기 위한 표시 */
 
-    /* 자재 사용 내역이 있으면 — 내역을 한 줄로 보여주고 겹치는 속성 칸은 감춘다 */
+    /* 자재 사용 내역이 있으면 겹치는 속성 칸(자재명·규격·수량)은 쓰지 않는다 */
     var mats = matsOfRec();
     if(mats.length){
-      /* v117 — 달님 : 「자재 사용내역은 시각 한 덩어리 위쪽으로」
-            예전에는 자재명 칸 자리에 붙어서 견적 메모 밑까지 내려가 있었다. */
-      var anchor = rowOf(props, 'f:startTime') || rowOf(props, '_sub')
-                || rowOf(props, 'f:material') || rowOf(props, 'f:spec') || rowOf(props, 'f:qty');
-      if(anchor){
-        var mLine = document.createElement('div');
-        mLine.className = 'pg-prow wide pg-grow';
-        mLine.setAttribute('data-gid', 'gm');
-        mLine.innerHTML =
-            '<div class="pg-gk">📦</div>'
-          + '<div class="pg-gv">' + ES(mats.map(matLine).join('  /  ')) + '</div>'
-          + '<span class="pg-gcnt">자재 ' + mats.length + '건</span>';
-        putBefore(mLine, anchor);
-      }
       ['f:material','f:spec','f:qty'].forEach(function(k){
         var r = rowOf(props, k);
         if(r && r.style.display !== 'none'){ r.style.display = 'none'; r._gHid = 1; }
@@ -14828,10 +14829,22 @@ async function githubUpload(token){
                   + (parts.length ? '<span class="pg-gsep">' + ES(sep) + '</span>' + ES(parts.join(' · ')) : ''))
           + '</div>'
           + '<button type="button" class="pg-gb" title="펼쳐서 고치기">펼치기</button>';
-        if(!putBefore(line, hRow)) return;
+        /* v125 — 앞 묶음이 있으면 그 뒤에 이어 붙인다 → 관리 창에서 정한 차례가 화면 차례가 된다 */
+        if(lastTail) putAfter(line, lastTail);
+        else if(!putBefore(line, hRow)) return;
 
+        var pvL = line;
         hRow.style.display = 'none'; hRow._gHid = 1;
-        rows.forEach(function(r){ r.el.style.display = 'none'; r.el._gHid = 1; });
+        /* v124 — 접혀 있을 때도 짝들을 대표 줄 뒤로 모아 둔다.
+              안 그러면 펼쳤을 때 밴드가 엉뚱한 자리(다른 묶음 뒤)에 생긴다. */
+        if(hRow.previousElementSibling !== line) putAfter(hRow, line);
+        var pv0 = hRow;
+        rows.forEach(function(r){
+          if(r.el.previousElementSibling !== pv0) putAfter(r.el, pv0);
+          pv0 = r.el;
+          r.el.style.display = 'none'; r.el._gHid = 1;
+        });
+        lastTail = pv0;
 
         function openIt(){
           OPEN[gid] = 1;
@@ -14856,22 +14869,37 @@ async function githubUpload(token){
         + '<b>' + ES(g.name || '묶음') + '</b>'
         + (hVal || g.openDefault ? '' : '<span class="pg-ghint">' + ES(labelOf(hRow) || '대표 값') + '을 먼저 넣으면 한 줄로 접힙니다</span>')
         + '<button type="button" class="pg-gfold">접기</button>';
-      if(!putBefore(bar, hRow)) return;
+      if(lastTail) putAfter(bar, lastTail);
+      else if(!putBefore(bar, hRow)) return;
+      if(hRow.previousElementSibling !== bar) putAfter(hRow, bar);
 
-      /* 흩어져 있는 짝들을 대표 줄 바로 뒤로 모은다 (차례는 끌 때 되돌린다) */
+      /* 흩어져 있는 짝들을 대표 줄 바로 뒤로 모은다 (차례는 끌 때 되돌린다).
+            v124 — 「빈 항목」 상자에 들어 있던 칸도 데려온다. 다만 그건 빈 칸이므로
+            밴드 안에서 조용히 감춰 둔다 → 덩어리 밖에 덩그러니 뜨지 않는다. */
       var prev = hRow;
       rows.forEach(function(r){
-        if(r.el.parentNode === prev.parentNode && r.el.previousElementSibling !== prev) putAfter(r.el, prev);
-        if(r.el.parentNode === prev.parentNode) prev = r.el;
+        var wasHidden = false;
+        try{ wasHidden = !!(r.el.closest && r.el.closest('#pgHidden')); }catch(e){}
+        if(r.el.previousElementSibling !== prev) putAfter(r.el, prev);
+        prev = r.el;
+        if(wasHidden){ r.el.style.display = 'none'; r.el._gEmpty = 1; }
       });
 
       hRow.classList.add('pg-gm', 'pg-gm-first');
       rows.forEach(function(r){ r.el.classList.add('pg-gm'); });
       (rows.length ? rows[rows.length-1].el : hRow).classList.add('pg-gm-last');
 
+      /* v124 — 묶음 발치. 「연결된 지출 보기」 같은 단추가 여기 앉는다.
+            (속성 줄 안에 끼워 넣으면 값 칸이 눌린다 — v118 규칙) */
+      var foot = document.createElement('div');
+      foot.className = 'pg-gfoot';
+      foot.setAttribute('data-gfoot', gid);
+      putAfter(foot, prev);
+
       var tail = document.createElement('div');
       tail.className = 'pg-gtail';
-      putAfter(tail, prev);
+      putAfter(tail, foot);
+      lastTail = tail;
 
       bar.querySelector('.pg-gfold').addEventListener('click', function(){
         OPEN[gid] = 0;
@@ -14879,7 +14907,27 @@ async function githubUpload(token){
         redraw();                                    /* 값이 없어도 접힌다 (v116) */
       });
     });
+
+    /* v124 — 자재 내역 요약 줄은 「📦 자재」 밴드 바로 밑에 놓는다.
+          밴드가 없으면(자재 묶음이 꺼져 있으면) 시각 묶음 앞에 놓는다. */
+    if(mats.length){
+      var mLine = document.createElement('div');
+      mLine.className = 'pg-prow wide pg-grow';
+      mLine.setAttribute('data-gid', 'gm');
+      mLine.innerHTML =
+          '<div class="pg-gk">📦</div>'
+        + '<div class="pg-gv">' + ES(mats.map(matLine).join('  /  ')) + '</div>'
+        + '<span class="pg-gcnt">자재 ' + mats.length + '건</span>';
+      var band = props.querySelector('[data-gid="gt"].pg-ghead')
+              || props.querySelector('[data-gid="gt"].pg-grow');
+      if(band) putAfter(mLine, band);
+      else {
+        var anc = rowOf(props, 'f:startTime') || rowOf(props, '_sub') || rowOf(props, 'f:material');
+        if(anc) putBefore(mLine, anc);
+      }
+    }
   }
+
 
   /* ── 화면이 다시 그려질 때마다 따라간다 ── */
   var t = null;
@@ -14916,60 +14964,95 @@ async function githubUpload(token){
   /* v118 — 파수꾼을 각자 돌리지 않는다 (wlPaint 가 차례대로 부른다) */
   (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:20, n:'묶어보기', f:run });
 
-  /* ── 묶음 관리 창 ── */
+  /* ── 묶음 관리 창 ──────────────────────────────────
+        v125 — 달님이 직접 : 이름 바꾸기 · 차례 옮기기 · 켜고 끄기 · 새로 만들기
+        여기서 정한 차례가 화면에 나오는 차례가 된다. */
   function openMgr(){
     var ov = document.createElement('div');
     ov.className = 'rl-ov';
     var gs = load();
-    ov.innerHTML =
-        '<div class="rl-mod">'
-      +   '<div class="rl-head"><b>🧩 묶어보기</b>'
-      +     '<button type="button" id="gClose" class="rl-x">✕</button></div>'
-      +   '<div class="rl-note">여러 줄을 차지하는 관련 칸을 한 줄로 접어 보여줍니다.'
-      +     ' 대표 칸에 값이 있으면 접히고, 없으면 한 덩어리로 묶어서 보여줍니다.</div>'
-      +   '<div class="rl-list">'
-      +     gs.map(function(g, i){
-            return '<div class="rl-row">'
-              + '<button type="button" class="rl-on' + (g.on ? ' on':'') + '" data-gon="' + i + '">'
-              +   (g.on ? '켜짐' : '꺼짐') + '</button>'
-              + '<div class="rl-txt"><b>' + (g.icon||'') + ' ' + ES(g.name||'') + '</b>'
-              +   '<span>대표 ' + ES(g.head) + ' · 접는 칸 ' + ES((g.keys||[]).join(', ')) + '</span></div>'
-              + (g.base ? '' : '<button type="button" class="rl-del" data-gdel="' + i + '">✕</button>')
-              + '</div>';
-            }).join('')
-      +   '</div>'
-      +   '<div class="rl-add"><b>＋ 내 묶음 추가</b>'
-      +     '<input id="gH" placeholder="대표 칸 이름 (예: _sub)">'
-      +     '<input id="gK" placeholder="접을 칸들, 쉼표로 (예: f:workRole, f:workPhone)">'
-      +     '<button type="button" id="gAdd">넣기</button></div>'
-      +   '<div class="rl-foot"><button type="button" id="gReset">처음으로 되돌리기</button>'
-      +     '<span class="rl-hint">칸 이름은 콘솔에 wlGroup.names() 로 볼 수 있어요</span></div>'
-      + '</div>';
+
+    function draw(){
+      ov.innerHTML =
+          '<div class="rl-mod">'
+        +   '<div class="rl-head"><b>🧩 묶어보기 — 덩어리 고치기</b>'
+        +     '<button type="button" id="gClose" class="rl-x">✕</button></div>'
+        +   '<div class="rl-note">이름을 고치고 ▲▼ 로 차례를 옮기면, <b>화면에 나오는 차례</b>도 그대로 바뀝니다. '
+        +     '대표 칸에 값이 있으면 한 줄로 접히고, 없으면 한 덩어리로 묶여 보입니다.</div>'
+        +   '<div class="rl-list">'
+        +     gs.map(function(g, i){
+              return '<div class="gm-row">'
+                + '<div class="gm-ord">'
+                +   '<button type="button" class="gm-up" data-gup="' + i + '"' + (i===0?' disabled':'') + ' title="위로">▲</button>'
+                +   '<button type="button" class="gm-dn" data-gdn="' + i + '"' + (i===gs.length-1?' disabled':'') + ' title="아래로">▼</button>'
+                + '</div>'
+                + '<button type="button" class="rl-on' + (g.on ? ' on':'') + '" data-gon="' + i + '">'
+                +   (g.on ? '켜짐' : '꺼짐') + '</button>'
+                + '<div class="gm-body">'
+                +   '<div class="gm-nm">'
+                +     '<input class="gm-icon" data-gi="' + i + '" value="' + ES(g.icon||'') + '" maxlength="2" title="그림">'
+                +     '<input class="gm-name" data-gn="' + i + '" value="' + ES(g.name||'') + '" placeholder="덩어리 이름">'
+                +   '</div>'
+                +   '<div class="gm-keys">대표 <b>' + ES(g.head) + '</b> · 함께 ' + ES((g.keys||[]).join(', ') || '(없음)') + '</div>'
+                + '</div>'
+                + (g.base ? '' : '<button type="button" class="rl-del" data-gdel="' + i + '">✕</button>')
+                + '</div>';
+              }).join('')
+        +   '</div>'
+        +   '<div class="rl-add"><b>＋ 내 덩어리 추가</b>'
+        +     '<input id="gH" placeholder="대표 칸 이름 (예: _sub)">'
+        +     '<input id="gK" placeholder="함께 묶을 칸들, 쉼표로 (예: f:workRole, f:workPhone)">'
+        +     '<button type="button" id="gAdd">넣기</button></div>'
+        +   '<div class="rl-foot"><button type="button" id="gReset">처음으로 되돌리기</button>'
+        +     '<span class="rl-hint">칸 이름은 콘솔에 wlGroup.names() 로 볼 수 있어요</span></div>'
+        + '</div>';
+
+      function save2(){ save(gs); redraw(); }
+
+      ov.querySelectorAll('[data-gup]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var i = +b.getAttribute('data-gup'); if(i<=0) return;
+          var t = gs[i-1]; gs[i-1] = gs[i]; gs[i] = t; save2(); draw();
+        }); });
+      ov.querySelectorAll('[data-gdn]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var i = +b.getAttribute('data-gdn'); if(i>=gs.length-1) return;
+          var t = gs[i+1]; gs[i+1] = gs[i]; gs[i] = t; save2(); draw();
+        }); });
+      ov.querySelectorAll('[data-gon]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var i = +b.getAttribute('data-gon'); gs[i].on = gs[i].on ? 0 : 1; save2(); draw();
+        }); });
+      ov.querySelectorAll('[data-gn]').forEach(function(i2){
+        i2.addEventListener('change', function(){ gs[+i2.getAttribute('data-gn')].name = i2.value; save2(); }); });
+      ov.querySelectorAll('[data-gi]').forEach(function(i3){
+        i3.addEventListener('change', function(){ gs[+i3.getAttribute('data-gi')].icon = i3.value; save2(); }); });
+      ov.querySelectorAll('[data-gdel]').forEach(function(b){
+        b.addEventListener('click', function(){
+          gs.splice(+b.getAttribute('data-gdel'), 1); save2(); draw();
+        }); });
+
+      var addB = ov.querySelector('#gAdd');
+      if(addB) addB.addEventListener('click', function(){
+        var h = (ov.querySelector('#gH').value || '').trim();
+        var k = (ov.querySelector('#gK').value || '').trim();
+        if(!h || !k){ alert('대표 칸과 함께 묶을 칸을 모두 적어주세요'); return; }
+        gs.push({ id:'u'+Date.now(), on:1, icon:'🔗', name:h+' 덩어리', head:h,
+                  keys:k.split(',').map(function(x){ return x.trim(); }).filter(Boolean) });
+        save2(); draw();
+      });
+      var rs = ov.querySelector('#gReset');
+      if(rs) rs.addEventListener('click', function(){
+        if(!confirm('덩어리 이름과 차례를 처음으로 되돌릴까요?')) return;
+        try{ localStorage.removeItem(LS_GRP); localStorage.removeItem(LS_VER); }catch(e){}
+        gs = load(); redraw(); draw();
+      });
+      var xb = ov.querySelector('#gClose');
+      if(xb) xb.addEventListener('click', function(){ ov.remove(); redraw(); });
+    }
+    draw();
     document.body.appendChild(ov);
-    ov.addEventListener('mousedown', function(e){ if(e.target === ov){ ov.remove(); run(); } });
-    ov.querySelectorAll('[data-gon]').forEach(function(b){
-      b.addEventListener('click', function(){
-        var i = +b.getAttribute('data-gon'); gs[i].on = gs[i].on ? 0 : 1; save(gs); ov.remove(); run(); openMgr();
-      });
-    });
-    ov.querySelectorAll('[data-gdel]').forEach(function(b){
-      b.addEventListener('click', function(){
-        gs.splice(+b.getAttribute('data-gdel'), 1); save(gs); ov.remove(); run(); openMgr();
-      });
-    });
-    ov.querySelector('#gAdd').addEventListener('click', function(){
-      var h = (ov.querySelector('#gH').value || '').trim();
-      var k = (ov.querySelector('#gK').value || '').trim();
-      if(!h || !k){ alert('대표 칸과 접을 칸을 모두 적어주세요'); return; }
-      gs.push({ id:'u'+Date.now(), on:1, icon:'🔗', name:h+' 묶음', head:h,
-                keys:k.split(',').map(function(s){ return s.trim(); }).filter(Boolean) });
-      save(gs); ov.remove(); run(); openMgr();
-    });
-    ov.querySelector('#gReset').addEventListener('click', function(){
-      try{ localStorage.removeItem(LS_GRP); }catch(e){}
-      ov.remove(); run(); openMgr();
-    });
-    ov.querySelector('#gClose').addEventListener('click', function(){ ov.remove(); run(); });
+    ov.addEventListener('mousedown', function(e){ if(e.target === ov){ ov.remove(); redraw(); } });
   }
 
   /* ── 진단 탭 스위치 ── */
@@ -15153,6 +15236,19 @@ async function githubUpload(token){
       add('기록을 누르면 : ' + st + (st === 'old' ? '  ⚠ 예전 입력창이라 새 기능이 안 보입니다' : ''));
     }catch(e){}
 
+    head('화면이 반듯한가');
+    try{
+      if(typeof window.wlLayoutCheck === 'function'){
+        var _lg = console.log, _buf = [];
+        console.log = function(){ _buf.push([].slice.call(arguments).map(String).join(' ')); };
+        var _r = window.wlLayoutCheck();
+        console.log = _lg;
+        var _body = _buf.join('\n').split('📐 화면 점검')[2] || '';
+        _body.split('\n').forEach(function(l){ if(l.trim()) add(l.replace(/^\s{0,2}/,'')); });
+        if(!_body) add(String(_r));
+      }else add('화면 점검 도구가 없습니다 — 최신 worklog.js 를 올리세요');
+    }catch(e){ add('화면 점검 실패 — ' + e.message); }
+
     head('무엇을 하면 되나');
     var todo = [];
     if(on === false) todo.push('인터넷을 연결하고 새로고침 (연락처·클라우드가 이때 살아납니다)');
@@ -15161,6 +15257,21 @@ async function githubUpload(token){
     try{ if(typeof window.wlGroup === 'undefined') todo.push('파일이 옛 것입니다 — 최신 worklog.js 를 올리세요'); }catch(e){}
     try{ if(typeof window.wlOpenStyle === 'function' && window.wlOpenStyle() === 'old')
            todo.push('진단 탭 「기록을 누르면」 을 창 또는 페이지로 바꾸세요'); }catch(e){}
+    try{
+      if(typeof window.wlLayoutCheck === 'function'){
+        var _lg2 = console.log; console.log = function(){};
+        var _r2 = window.wlLayoutCheck(); console.log = _lg2;
+        if(String(_r2).indexOf('어긋난') >= 0) todo.push('📐 화면이 ' + _r2 + ' — 진단 탭 [📐 화면 점검] 을 눌러 자세히 보세요');
+      }
+    }catch(e){}
+    try{
+      if(window.wlUser){
+        var _n = window.wlUser.list ? 0 : 0;
+        var _o = JSON.parse(localStorage.getItem('wl_userchoice')||'{}');
+        var _c = 0; Object.keys(_o).forEach(function(k){ _c += Object.keys(_o[k]).length; });
+        if(_c) todo.push('✋ 내가 정한 것 ' + _c + '개 (접어 둠·숨긴 칸) — 이상하면 진단 탭 [✋ 내가 정한 것 지우기]');
+      }
+    }catch(e){}
     if(!todo.length) todo.push('막는 것이 없습니다 — 기록을 하나 열고 다시 점검해 보세요');
     todo.forEach(function(t, i){ add((i+1) + '. ' + t); });
 
@@ -15535,13 +15646,15 @@ async function githubUpload(token){
       keys:['workContact','workRole','workPhone','workMemo',
             'callContact','role','phone','ownerPhone','partyType','partyPhone',
             'person','companyMemo'] },
-    { gid:'g2', head:'f:material', icon:'📦', name:'자재',
+    { gid:'gt', head:'f:material', icon:'📦', name:'자재',
       headKeys:['material','itemName'],
       keys:['spec','qty','unit','unitPrice','maker','itemCode','cost','amount'] }
   ];
 
   function hostFor(page, g){
-    return page.querySelector('[data-gid="' + g.gid + '"] .pg-gv')
+    /* 접혀 있으면 묶음 줄 안, 펼쳐져 있으면 묶음 발치, 그것도 없으면 대표 칸 안 (v124) */
+    return page.querySelector('[data-gid="' + g.gid + '"].pg-grow .pg-gv')
+        || page.querySelector('[data-gfoot="' + g.gid + '"]')
         || page.querySelector('[data-prow="' + g.head + '"] .pg-pv')
         || null;
   }
@@ -15669,7 +15782,9 @@ async function githubUpload(token){
     }catch(e){}
 
     var ex = linkedExp(rid);
-    window.wlAddOn(['[data-prow="f:expType"] .pg-pv'], 'explink',
+    /* v124 — 달님 : 「연결된 지출 보기는 비용 하단에 넣어」
+          비용 묶음 발치 → 없으면 지출종류 값 칸 안 */
+    window.wlAddOn(['[data-gfoot="gc"]', '[data-prow="f:expType"] .pg-pv'], 'explink',
       function(){
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'pg-explink';
@@ -15925,7 +16040,8 @@ async function githubUpload(token){
       if(!m || m.pick !== 'mats'){
         window.wlAddOn(['#__none'], 'matadd', function(){ return null; });
       }else{
-        window.wlAddOn(['[data-gid="gm"] .pg-gv', '[data-prow="' + sw + '"] .pg-pv'], 'matadd',
+        window.wlAddOn(['[data-gfoot="gt"]', '[data-gid="gm"] .pg-gv',
+                        '[data-prow="' + sw + '"] .pg-pv'], 'matadd',
           function(){
             var b = document.createElement('button');
             b.type = 'button'; b.className = 'pg-matadd';
@@ -17013,7 +17129,9 @@ async function githubUpload(token){
     var outs = [];
     [].forEach.call(page.querySelectorAll('.pg-addon'), function(el){
       var host = el.parentNode;
-      if(!host || !(host.classList.contains('pg-pv') || host.classList.contains('pg-gv')))
+      /* 올바른 자리 : 값 칸(.pg-pv) · 묶음 요약(.pg-gv) · 묶음 발치(.pg-gfoot) */
+      if(!host || !(host.classList.contains('pg-pv') || host.classList.contains('pg-gv')
+                    || host.classList.contains('pg-gfoot')))
         outs.push(el.id || el.className);
     });
     add('③ 덧붙임 : ' + page.querySelectorAll('.pg-addon').length + '개 · 자리 잘못 '

@@ -1057,3 +1057,30 @@ tr.wk-checked td{background:#e8f3fd !important}
 .pg-eye:hover{ opacity:1 }
 .pg-props.pg-edit .pg-eye{ opacity:.55 }
 @media (max-width:600px){ .pg-eye{ opacity:.4; position:static; width:auto; height:auto; margin-left:6px } }
+
+/* ── v124 : 묶음 발치 — 덧붙이는 단추가 앉는 자리 ──
+      속성 줄 안에 끼우면 값 칸이 눌린다(v118 규칙). 그래서 덩어리 끝에 한 줄을 둔다. */
+.pg-gfoot{
+  grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+  padding:2px 0 2px 12px; min-height:0;
+}
+.pg-gfoot:empty{ display:none }
+.pg-gfoot > .pg-addon{ margin:0 }
+
+/* ── v125 : 묶음 관리 창 — 이름 바꾸기 · 차례 옮기기 ── */
+.gm-row{ display:flex; align-items:flex-start; gap:9px; padding:10px 11px; margin-bottom:8px;
+  border:1.5px solid #e8f0fa; border-radius:11px; background:#fbfdff }
+.gm-ord{ display:flex; flex-direction:column; gap:3px; flex:0 0 auto }
+.gm-up,.gm-dn{ width:30px; height:24px; border:1.5px solid #dbe6f4; border-radius:7px;
+  background:#fff; color:#5a7590; font-size:11px; cursor:pointer; font-family:inherit; line-height:1 }
+.gm-up:hover,.gm-dn:hover{ background:#eef5fd }
+.gm-up:disabled,.gm-dn:disabled{ opacity:.3; cursor:default }
+.gm-body{ flex:1; min-width:0 }
+.gm-nm{ display:flex; gap:6px; margin-bottom:5px }
+.gm-icon{ flex:0 0 46px; text-align:center; padding:7px 4px; font-size:14px;
+  border:1.5px solid #dbe6f4; border-radius:8px; font-family:inherit }
+.gm-name{ flex:1; min-width:0; padding:7px 10px; font-size:13.5px; font-weight:700; color:#1a2f45;
+  border:1.5px solid #dbe6f4; border-radius:8px; font-family:inherit }
+.gm-keys{ font-size:11.5px; color:#8aa3bb; font-weight:600; line-height:1.5;
+  overflow:hidden; text-overflow:ellipsis }
+.gm-keys b{ color:#5a7590 }
