@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v146-0830-1450";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v147-0830-1520";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3268,7 +3268,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=146-20260830t1450"></script>
+<script src="worklog.js?v=147-20260830t1520"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -29171,12 +29171,29 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(!curInp || !c) return;
     var map=curMap, inp=curInp;
     try{
-      if(map && map.memo && !String(c.memo||'').trim()){
-        var pm = pastMemo(c.name);
-        if(pm && pm.t){
-          c = Object.assign({}, c, { memo: pm.t });
-          if(typeof toast === 'function')
-            toast('📝 업체 메모를 ' + (pm.d || '예전') + ' 기록에서 가져왔어요 — 틀리면 지우세요');
+      if(map && map.memo){
+        var _cm = String(c.memo || '').trim();
+        if(!_cm){
+          var pm = pastMemo(c.name);
+          if(pm && pm.t){
+            _cm = pm.t;
+            if(typeof toast === 'function')
+              toast('📝 업체 메모를 ' + (pm.d || '예전') + ' 기록에서 가져왔어요 — 틀리면 지우세요');
+          }
+        }
+        /* v147 — 달님 : 「있는 내용에 덧붙여 넣으면 누적되게」
+              지금 칸에 적혀 있는 메모를 지우지 않고 뒤에 이어 붙인다.
+              같은 말이 이미 있으면 다시 넣지 않는다. */
+        if(_cm){
+          var _old = '';
+          try{
+            var _r = document.querySelector('.lf-page [data-prow="f:workMemo"] .lf-ie, .lf-page [data-prow="f:workMemo"] .pg-val');
+            _old = _r ? String(_r.value != null ? _r.value : _r.textContent || '').trim() : '';
+            if(_old === '비어 있음' || _old === '—') _old = '';
+          }catch(e){}
+          if(_old && _old.indexOf(_cm) < 0) _cm = _old + '\n' + _cm;
+          else if(_old) _cm = _old;
+          c = Object.assign({}, c, { memo: _cm });
         }
       }
     }catch(e){ console.warn('[관련처] 업체 메모 채우기 실패', e); }

@@ -18777,13 +18777,18 @@ async function githubUpload(token){
   function lines(r){
     var out = [];
 
-    /* 📌 기본 — 언제 · 어디서 · 무엇 */
+    /* 📌 기본 — 달님이 정한 차례 (v147)
+          년 → (년+월) → 분야 → 층 → 제목 → 내용 → 완료 상태
+          ▸ 「대상」 이라는 말은 빼고, 작성 날짜도 넣지 않는다 */
     var b = [];
-    if(T(r.date)) b.push(T(r.date));
-    var ym = [T(r.refYear) ? T(r.refYear)+'년' : '', T(r.refMonth) ? T(r.refMonth)+'월' : ''].filter(Boolean).join(' ');
-    if(ym) b.push('대상 ' + ym);
-    if(T(r.floor))  b.push(T(r.floor));
+    var _yy = T(r.refYear), _mm = T(r.refMonth);
+    if(_yy && _mm)      b.push(_yy + '년 ' + _mm + '월');
+    else if(_yy)        b.push(_yy + '년');
+    else if(_mm)        b.push(_mm + '월');
     if(T(r.field))  b.push(T(r.field));
+    if(T(r.floor))  b.push(T(r.floor));
+    if(T(r.title))  b.push('「' + T(r.title) + '」');
+    if(T(r.detail)) b.push(T(r.detail));
     if(T(r.status)) b.push(T(r.status));
     /* v139 — 달님 : 「기본은 제목 빼고 3개 이상 채워졌을 때에만 한 줄 요약해」
           날짜·완료 상태는 새로 만들 때 저절로 들어가는 값이다.
@@ -18848,6 +18853,7 @@ async function githubUpload(token){
     }
     var rid = ridNow(); if(!rid) return;
     var r = recOf(rid); if(!r) return;
+    if(_curId !== rid){ _curId = rid; _lastSaved = ''; }   /* 다른 기록 — 기억을 비운다 */
 
     var ls = lines(r);
     if(!ls.length){
@@ -18865,12 +18871,31 @@ async function githubUpload(token){
     save(B);
   }
 
+  /* v147 【최우선】 달님 로그 :
+        「resource-exhausted : Write stream exhausted maximum allowed queued writes」
+        = 저장 요청이 너무 많이 쌓여 파이어스토어가 받기를 거부한 것이다.
+          이 상태로 두면 적은 내용이 서버에 안 올라간다.
+        원인 : 정리 줄이 다시 그려질 때마다 본문을 저장했다.
+        고침 : 화면에는 바로 반영하고, 서버 저장은 1.5초 모아서 한 번만 한다.
+               게다가 마지막으로 저장한 내용과 같으면 아예 안 보낸다. */
+  var _saveT = null, _lastSaved = '', _curId = '';
   function save(B){
-    try{
-      B.dispatchEvent(new Event('input', {bubbles:true}));
-      if(typeof window.wlBodySave === 'function') window.wlBodySave(B.innerHTML);
-    }catch(e){ console.warn('[자동 정리] 본문 저장 실패', e); }
+    try{ B.dispatchEvent(new Event('input', {bubbles:true})); }catch(e){}
+    var html = B.innerHTML;
+    if(html === _lastSaved) return;                 /* 달라진 게 없으면 보내지 않는다 */
+    clearTimeout(_saveT);
+    _saveT = setTimeout(function(){
+      try{
+        var B2 = document.getElementById('pgBodyTx');
+        if(!B2) return;
+        var h2 = B2.innerHTML;
+        if(h2 === _lastSaved) return;
+        _lastSaved = h2;
+        if(typeof window.wlBodySave === 'function') window.wlBodySave(h2);
+      }catch(e){ console.warn('[자동 정리] 본문 저장 실패', e); }
+    }, 1500);
   }
+  window.wlSumForget = function(){ _lastSaved = ''; };   /* 다른 기록을 열면 기억을 비운다 */
 
   /* 본문 옆에 켜고 끄는 단추 */
   function btn(){
