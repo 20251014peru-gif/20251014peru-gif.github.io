@@ -252,7 +252,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.8</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.9</span></div>
   </div>
 </header>
 <main>
@@ -1017,15 +1017,22 @@ function loadData(manual){
   var btn=document.getElementById("refreshBtn"); if(btn){btn.disabled=true;btn.textContent="⏳ 불러오는 중…";}
   setStatus("🟡 불러오는 중…");
   var bust = "?t="+Date.now();  // 항상 최신 강제(캐시 우회)
-  // 최근 4일치 archive 경로 (오늘 포함) — 어제·그제 뉴스도 함께 보기
-  var days=[]; for(var i=0;i<4;i++){ var d=new Date(Date.now()+9*3600000-i*86400000); days.push(d.toISOString().slice(0,10)); }
-  var fetches=[
-    fetch("news.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-    fetch("glossary.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-    fetch("trends.json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
-  ];
+  // archive 는 '어제' 1일치만 받는다.
+  //  · 오늘 archive 는 news.json 과 내용이 완전히 같다(수집기가 같은 내용을 두 파일에 쓴다) → 받으면 순수 낭비
+  //  · 4일치까지 받으면 폰에서 5.8MB 를 매번 내려받게 돼 로딩이 '불러오는 중…' 에서 멈춘다
+  var days=[]; for(var i=1;i<2;i++){ var d=new Date(Date.now()+9*3600000-i*86400000); days.push(d.toISOString().slice(0,10)); }
+  // 한 파일이 안 내려와도 전체가 멎지 않게 시간 제한을 둔다(예전엔 무한정 기다려 '불러오는 중…' 에서 멈췄다)
+  function grab(path, ms){
+    var ctl = (typeof AbortController!=="undefined") ? new AbortController() : null;
+    var timer = setTimeout(function(){ if(ctl) ctl.abort(); }, ms||20000);
+    var opt = {cache:"no-store"}; if(ctl) opt.signal = ctl.signal;
+    return fetch(path+bust, opt)
+      .then(function(r){ clearTimeout(timer); return r.ok?r.json():null; })
+      .catch(function(){ clearTimeout(timer); return null; });
+  }
+  var fetches=[ grab("news.json",25000), grab("glossary.json",20000), grab("trends.json",10000) ];
   // archive 파일들도 병렬로(없으면 무시)
-  days.forEach(function(dk){ fetches.push( fetch("archive/"+dk+".json"+bust,{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}) ); });
+  days.forEach(function(dk){ fetches.push( grab("archive/"+dk+".json",20000) ); });
   Promise.all(fetches).then(function(res){
     var nj=res[0], gj=res[1], tj=res[2];
     var archs=res.slice(3); // archive 배열들
@@ -1035,7 +1042,10 @@ function loadData(manual){
     function addAll(arr){ if(!arr||!arr.length)return; arr.forEach(function(n){ var k=n.url||(n.title+"|"+n.date); if(k&&!seen[k]){ seen[k]=1; merged.push(n); } }); }
     addAll(nj); archs.forEach(addAll);
     if(merged.length){ NEWS=normalizeNews(merged); NEWS.forEach(function(x,ix){x._idx=ix;}); buildDates(); dateFilter="all"; }
-    else { NEWS=SAMPLE.slice(); buildDates(); dateFilter="all"; setStatus("🟠 news.json 없음 — 예시 표시"); }
+    else { NEWS=[]; buildDates(); dateFilter="all";
+      setStatus("🔴 뉴스를 못 불러왔어요 — 잠시 뒤 🔄 새로고침 을 눌러주세요");
+      try{ toast("뉴스를 못 불러왔어요 — 인터넷 상태를 확인하고 🔄 새로고침"); }catch(e){}
+    }
     if(gj){ var hid=lsGet("nr_gloss_hide",[]); collectedGloss=Object.keys(gj).filter(function(k){return hid.indexOf(k)<0;}).map(function(k){return {term:k,def:(gj[k].def||gj[k]),at:(gj[k].first_seen||"")};}); }
     if(nj&&nj.length){
       var when="";
@@ -1278,6 +1288,6 @@ document.getElementById("dInput").addEventListener("keydown",function(e){if(e.ke
 document.getElementById("rInput").addEventListener("keydown",function(e){if(e.key==="Enter")rSend();});
 loadData(false);
 </script>
-  <script src="news_patch.js?v=20260830-18"></script>
+  <script src="news_patch.js?v=20260830-19"></script>
 </body>
 </html>
