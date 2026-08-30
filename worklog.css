@@ -1227,3 +1227,25 @@ select.lf-ie.qp-hide{ display:none !important }
   .pg-2r{ padding-left:0; border-left:none }
   .pg-2r > .pg-div:first-child{ display:block }
 }
+
+/* ↔ 오른쪽으로 보낸 묶음 (wlSide v136) */
+.pg-side{ margin-top:10px !important; grid-template-columns:1fr !important }
+.pg-side .pg-prow{ min-width:0 }
+
+/* 2열일 때 세로를 아낀다 — 터치 영역(44px)은 건드리지 않고 여백만 줄인다 */
+.lf-page.is-2col .pg-props{ gap:0 16px }
+.lf-page.is-2col .pg-ghead{ margin-top:12px; margin-bottom:2px; padding-top:6px; padding-bottom:6px }
+.lf-page.is-2col .pg-gfoot:empty{ display:none }
+.lf-page.is-2col .pg-gtail{ height:0 }
+.lf-page.is-2col .pg-text{ min-height:170px }
+.lf-page.is-2col .pg-matbox{ margin-top:2px }
+.lf-page.is-2col .mb-list{ gap:3px; margin-bottom:4px }
+.lf-page.is-2col .mb-it{ padding:5px 9px }
+.lf-page.is-2col .mb-sum{ margin:0 0 5px 2px }
+.lf-page.is-2col .pg-title{ margin-bottom:2px }
+
+/* 한 화면에 담기 위한 마지막 여백 다듬기 (v136) */
+.lf-page.is-2col .pg-ghead{ margin-top:9px }
+.lf-page.is-2col .pg-body{ padding-bottom:40px }
+.lf-page.is-2col .pg-div{ margin:8px 0 }
+.lf-page.is-2col #pgSumWrap{ margin-top:6px }

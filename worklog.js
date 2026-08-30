@@ -14756,8 +14756,13 @@ async function githubUpload(token){
     else run();
   }
   function cleanup(props){
-    [].forEach.call(props.querySelectorAll('.pg-grow,.pg-ghead,.pg-gtail,.pg-gfoot'), function(x){ x.remove(); });
-    [].forEach.call(props.querySelectorAll('[data-prow]'), function(r){
+    /* v136 — 묶음 줄은 「오른쪽 곁상자」로 옮겨져 있을 수도 있다.
+          속성 상자 안만 뒤지면 옮겨 간 머리·발치가 남아 겹겹이 쌓인다.
+          그래서 페이지 전체에서 치운다. 제자리 되돌리기는 restoreOrder 가
+          부모별 스냅샷으로 하므로 곁상자에 있던 줄도 알아서 돌아온다. */
+    var scope = (props.closest && props.closest('.lf-page')) || props;
+    [].forEach.call(scope.querySelectorAll('.pg-grow,.pg-ghead,.pg-gtail,.pg-gfoot'), function(x){ x.remove(); });
+    [].forEach.call(scope.querySelectorAll('[data-prow]'), function(r){
       if(r._gHid){ r.style.display = ''; r._gHid = 0; }
       if(r._gEmpty){ r.style.display = ''; r._gEmpty = 0; }
       r.classList.remove('pg-gm', 'pg-gm-first', 'pg-gm-last');
@@ -18332,4 +18337,258 @@ async function githubUpload(token){
     off: function(){ setOn(false); return '페이지를 한 줄로 봅니다'; }
   };
   console.log('[페이지 2열] v134 준비됨 — ' + (isOn()?'켜짐':'꺼짐') + ' (진단 탭 「▥ 페이지 2열」)');
+})();
+
+
+/* ============================================================
+   ↔ 묶음을 오른쪽으로 보내기 (wlSide)  v136-0830-1110
+
+   달님 : 「2열 구조에서 시각을 본문 쪽으로 보내면 한 창에 다 나올듯.
+           내가 중요시하는게 한눈에 파악이야. 이게 가장 중요해」
+
+   실측 (1600×1000 화면) : 왼쪽 1482px · 오른쪽 523px · 화면 1000px
+   → 왼쪽이 482px 넘쳐 스크롤이 생겼다. 오른쪽에는 477px 이 남아 있었다.
+     시각 묶음 하나(≈150px)만 옮겨서는 모자라, 무엇을 보낼지 고를 수 있게 한다.
+     기본은 「🕐 시각 + 🏢 업체」 — 둘이 ≈450px 라 양쪽이 비슷해진다.
+
+   ⚠ 옮긴 줄은 wlGroup 이 다시 그릴 때 restoreOrder 가 제자리로 되돌린다.
+     그래서 매번 「그리기 → 다시 옮기기」 차례로만 움직인다 (o:25).
+   되돌리기 : wlSide.set('')   /  진단 탭 「↔ 오른쪽으로 보낼 묶음」
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS = 'wl_side_groups';
+  var DEF = 'g3,g1';                 /* 기본 : 시각 · 업체 */
+  var NAME = { g0:'📌 기본', gc:'💰 비용', gt:'📦 자재', g1:'🏢 업체', g3:'🕐 시각' };
+
+  function list(){
+    try{
+      var v = localStorage.getItem(LS);
+      if(v === null) v = DEF;
+      return String(v).split(',').map(function(x){ return x.trim(); }).filter(Boolean);
+    }catch(e){ return DEF.split(','); }
+  }
+  function set(v){
+    try{ localStorage.setItem(LS, Array.isArray(v) ? v.join(',') : String(v||'')); }catch(e){}
+    paintBtns();
+    if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint();
+    var n = list().length;
+    if(typeof toast === 'function')
+      toast(n ? ('↔ ' + list().map(function(g){ return NAME[g]||g; }).join(' · ') + ' 를 오른쪽으로 보냅니다')
+              : '↔ 모두 왼쪽에 둡니다');
+  }
+  function toggle(gid){
+    var a = list(), i = a.indexOf(gid);
+    if(i >= 0) a.splice(i, 1); else a.push(gid);
+    set(a);
+  }
+
+  /* 묶음 한 덩어리 = 머리 ~ 다음 묶음 머리 직전 (발치·여백까지) */
+  function chunk(props, gid){
+    var head = props.querySelector('.pg-ghead[data-gid="' + gid + '"]')
+            || props.querySelector('.pg-grow[data-gid="' + gid + '"]');
+    if(!head) return null;
+    var out = [head], n = head.nextElementSibling, guard = 0;
+    while(n && guard++ < 60){
+      var c = n.classList;
+      if(c && (c.contains('pg-ghead') || (c.contains('pg-grow') && n.hasAttribute('data-gid')))) break;
+      out.push(n);
+      var isTail = c && c.contains('pg-gtail');
+      n = n.nextElementSibling;
+      if(isTail) break;
+    }
+    return out;
+  }
+
+  function run(){
+    var page = document.querySelector('.lf-page');
+    if(!page) return;
+    var side = page.querySelector('.pg-side');
+    var want = list();
+
+    /* 2열이 아니거나 보낼 것이 없으면 곁상자를 치운다 (줄은 restoreOrder 가 되돌린다) */
+    var two = (typeof window.wlIsTwoCol === 'function') ? window.wlIsTwoCol() : false;
+    if(!two || !want.length){
+      if(side) side.remove();
+      return;
+    }
+
+    var props = page.querySelector('.pg-props');
+    var right = page.querySelector('.pg-2r');
+    if(!props || !right) return;
+
+    if(!side || side.parentNode !== right){
+      if(side) side.remove();
+      side = document.createElement('div');
+      side.className = 'pg-props pg-side';
+      /* 본문은 맨 위에 그대로 두고, 그 아래·하위 항목 위에 놓는다 */
+      var before = null;
+      [].forEach.call(right.children, function(el){
+        if(before) return;
+        if(el.classList && el.classList.contains('pg-sec') && /하위\s*항목/.test(el.textContent || '')) before = el;
+        if(el.classList && el.classList.contains('pg-fold2')) before = el;
+      });
+      if(before) right.insertBefore(side, before); else right.appendChild(side);
+    }
+    side.innerHTML = '';
+
+    var moved = 0;
+    want.forEach(function(gid){
+      var part = chunk(props, gid);
+      if(!part || !part.length) return;
+      part.forEach(function(el){ side.appendChild(el); });
+      moved++;
+    });
+    if(!moved) side.remove();
+  }
+
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:25, n:'묶음 오른쪽으로', f:run });
+
+  /* ── 진단 탭 스위치 ── */
+  function paintBtns(){
+    var on = list();
+    Object.keys(NAME).forEach(function(g){
+      var el = document.getElementById('sd_' + g);
+      if(!el) return;
+      el.className = 'btn btn-sm ' + (on.indexOf(g) >= 0 ? 'btn-primary' : 'btn-ghost');
+      el.style.minHeight = '44px';
+    });
+    var t = document.getElementById('sdNow');
+    if(t) t.textContent = on.length
+      ? ('오른쪽: ' + on.map(function(g){ return NAME[g]||g; }).join(' · '))
+      : '모두 왼쪽에 둡니다';
+  }
+  function panel(){
+    var anchor = document.getElementById('pg2Now');
+    if(!anchor) return;
+    var host = anchor.parentNode && anchor.parentNode.parentNode;
+    if(!host || document.getElementById('sdRow')) return;
+
+    var h = document.createElement('div');
+    h.className = 'sec-head'; h.textContent = '↔ 오른쪽으로 보낼 묶음';
+    var d = document.createElement('div');
+    d.style.cssText = 'font-size:12.5px;color:#7a92a8;margin-bottom:6px';
+    d.textContent = '2열로 볼 때, 눌러 둔 묶음을 오른쪽(본문 쪽)으로 보냅니다. '
+                  + '왼쪽이 길어 스크롤이 생기면 몇 개를 오른쪽으로 보내 한 화면에 담으세요.';
+    var row = document.createElement('div');
+    row.className = 'btn-row'; row.id = 'sdRow'; row.style.marginTop = '0';
+    row.innerHTML = ['gc','gt','g1','g3'].map(function(g){
+      return '<button class="btn btn-sm" id="sd_' + g + '">' + NAME[g] + '</button>';
+    }).join('')
+    + '<button class="btn btn-primary btn-sm" id="sdAuto" style="min-height:44px">⚖ 자동 맞춤</button>'
+    + '<span id="sdNow" style="font-size:12.5px;color:#7a92a8;align-self:center;margin-left:6px"></span>';
+
+    var after = anchor.parentNode;
+    host.insertBefore(h,   after.nextSibling);
+    host.insertBefore(d,   h.nextSibling);
+    host.insertBefore(row, d.nextSibling);
+
+    ['gc','gt','g1','g3'].forEach(function(g){
+      var el = document.getElementById('sd_' + g);
+      if(el && !el._b){ el._b = 1; el.addEventListener('click', function(){ toggle(g); }); }
+    });
+    var ab = document.getElementById('sdAuto');
+    if(ab && !ab._b){
+      ab._b = 1;
+      ab.addEventListener('click', function(){
+        var r = autoFit();
+        if(typeof toast === 'function') toast('⚖ ' + r);
+        var t2 = document.getElementById('sdNow');
+        setTimeout(function(){ if(t2) t2.textContent = r; }, 400);
+      });
+    }
+    paintBtns();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
+  else panel();
+  setTimeout(panel, 2000);
+  setTimeout(panel, 4600);
+
+  /* ⚖ 자동 맞춤 — 지금 화면을 재어 좌·우가 비슷해지도록 묶음을 나눈다.
+        한 번 계산해서 정해 두는 방식이라, 저절로 왔다 갔다 하지 않는다. */
+  function autoFit(){
+    var page = document.querySelector('.lf-page');
+    var L = page && page.querySelector('.pg-2l');
+    var R = page && page.querySelector('.pg-2r');
+    if(!L || !R) return '2열 화면에서 눌러 주세요';
+
+    var props = page.querySelector('.pg-props');
+    if(!props) return '속성을 못 찾았어요';
+
+    /* 지금 왼쪽에 있는 묶음들의 높이를 잰다 */
+    var cand = [];
+    ['gc','gt','g1','g3'].forEach(function(gid){
+      var part = chunk(props, gid);
+      if(!part || !part.length) return;
+      var h = 0;
+      part.forEach(function(el){
+        try{ var r = el.getBoundingClientRect(); h += r.height; }catch(e){}
+      });
+      if(h > 0) cand.push({ gid:gid, h:Math.round(h) });
+    });
+
+    var side = page.querySelector('.pg-side');
+    var sideH = side ? side.scrollHeight : 0;
+    var Lh = L.scrollHeight, Rh = R.scrollHeight;
+    var base = { L: Lh, R: Rh - sideH };          /* 곁상자를 뺀 순수 높이 */
+
+    /* 이미 오른쪽에 가 있는 것도 후보에 넣는다 (되돌릴 수 있게) */
+    var cur = list();
+    if(side){
+      ['gc','gt','g1','g3'].forEach(function(gid){
+        if(cur.indexOf(gid) < 0) return;
+        var p2 = chunk(side, gid);
+        if(!p2 || !p2.length) return;
+        var h2 = 0;
+        p2.forEach(function(el){ try{ h2 += el.getBoundingClientRect().height; }catch(e){} });
+        if(h2 > 0){ cand.push({ gid:gid, h:Math.round(h2) }); base.L += h2; }
+      });
+    }
+    if(!cand.length) return '나눌 묶음이 없어요';
+
+    /* 큰 것부터 넣어 보며 「높은 쪽」이 가장 낮아지는 조합을 고른다 */
+    cand.sort(function(a,b){ return b.h - a.h; });
+    var best = null;
+    var n = cand.length, total = 1 << n;
+    for(var m = 0; m < total; m++){
+      var l = base.L, r = base.R, pick = [];
+      for(var i = 0; i < n; i++){
+        if(m & (1 << i)){ l -= cand[i].h; r += cand[i].h; pick.push(cand[i].gid); }
+      }
+      var worst = Math.max(l, r);
+      if(!best || worst < best.worst){ best = { worst:worst, pick:pick, l:l, r:r }; }
+      if(m === 0) var now = { worst:worst, pick:pick.slice(), l:l, r:r };   /* 지금 그대로 두는 경우 */
+    }
+    /* v136 — 지금과 크게 다르지 않으면 바꾸지 않는다.
+          안 그러면 누를 때마다 조합이 왔다 갔다 해서 화면이 흔들린다. */
+    var nowWorst = Math.max(base.L, base.R);
+    if(best.worst > nowWorst - 40){
+      return '왼쪽 ' + Math.round(base.L) + 'px · 오른쪽 ' + Math.round(base.R) + 'px → '
+           + (nowWorst <= window.innerHeight ? '✅ 이미 알맞습니다'
+                                             : '지금이 가장 나은 배치예요 — 안 쓰는 묶음을 접어 보세요');
+    }
+    set(best.pick);
+    var fits = best.worst <= window.innerHeight;
+    return '왼쪽 ' + Math.round(best.l) + 'px · 오른쪽 ' + Math.round(best.r) + 'px → '
+         + (fits ? '✅ 한 화면에 들어옵니다'
+                 : '⚠ 아직 ' + Math.round(best.worst - window.innerHeight) + 'px 넘칩니다 — 안 쓰는 묶음을 접어 보세요');
+  }
+
+  window.wlSide = {
+    auto: autoFit,
+    set:  function(v){ set(v); return list().join(',') || '(없음)'; },
+    list: function(){ return list(); },
+    /* 지금 화면이 한 눈에 들어오는지 재어 본다 */
+    fit:  function(){
+      var L = document.querySelector('.pg-2l'), R = document.querySelector('.pg-2r');
+      if(!L || !R) return '2열 화면이 아닙니다';
+      var h = window.innerHeight;
+      return '왼쪽 ' + Math.round(L.scrollHeight) + 'px · 오른쪽 ' + Math.round(R.scrollHeight)
+           + 'px · 화면 ' + h + 'px → '
+           + ((L.scrollHeight <= h && R.scrollHeight <= h) ? '✅ 한 화면에 들어옵니다'
+                                                           : '⚠ 넘칩니다 — 묶음을 더 오른쪽으로 보내 보세요');
+    }
+  };
+  console.log('[묶음 오른쪽으로] v136 준비됨 — ' + (list().map(function(g){ return NAME[g]||g; }).join(' · ') || '없음'));
 })();
