@@ -1,4 +1,13 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v15 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v16 (2026-08-30)
+ *
+ * v16 : 폰에서 칸 순서를 바꿔 좌우 스크롤 없이 제목이 보이게
+ *   원래 : [체크] ● 시간 출처 키워드 | 제목 요약 | 메모 신호 원문 ⭐
+ *   폰   : [체크] ● | 제목 요약 | 시간 출처 키워드 메모 신호 원문 ⭐
+ *   시간·출처·키워드가 왼쪽에서 280px 을 먹어 제목이 화면 밖으로 밀리던 문제.
+ *   표가 table-layout:fixed 라 <td> 뿐 아니라 <th> 와 colgroup 의 <col> 도 같이 옮긴다.
+ *   컴(761px 이상)에서는 원래 순서 그대로. 화면을 돌리면 자동으로 다시 맞춘다.
+ *
+ * ↓ v15 원본 설명
  *
  * v15 : 5줄 요약을 '기사 종류별 틀' 로 다시 정의
  *   뉴스는 종류마다 쓰이는 방식이 다르다.
@@ -118,11 +127,11 @@
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 15) return;
-  window.__nrPatch = 15;
+  if (window.__nrPatch >= 16) return;
+  window.__nrPatch = 16;
 
   var LINES = 5;
-  var VER = "v15";
+  var VER = "v16";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
   var BODY_MAX = 1500;     /* 공유할 때 함께 보내는 본문 최대 글자수 */
 
@@ -210,7 +219,7 @@
     "table{min-width:1700px!important}",
     "col.c-title{width:470px!important} col.c-sum{width:620px!important}",
     "@media(max-width:760px){table{min-width:1240px!important}",
-    "col.c-title{width:330px!important} col.c-sum{width:430px!important}}",
+    "col.c-title{width:318px!important} col.c-sum{width:430px!important}}",
     /* 말줄임표는 어디서도 쓰지 않는다 */
     "tbody td{text-overflow:clip!important}",
     /* 읽기창 헤더 제목 : 한 줄 유지(말줄임표는 안 붙임).
@@ -986,6 +995,65 @@
       }
     }
   }
+  /* ── 폰에서 칸 순서 바꾸기 ──
+     원래 순서 : [체크] ● 시간 출처 키워드 | 제목 요약 | 메모 신호 원문 ⭐
+     폰 순서   : [체크] ● | 제목 요약 | 시간 출처 키워드 메모 신호 원문 ⭐
+     제목이 화면 왼쪽에서 바로 시작해 좌우로 밀지 않고 읽을 수 있다.
+     표는 table-layout:fixed 라 colgroup 의 <col> 도 같은 순서로 옮겨야 폭이 따라온다. */
+  var COLNAMES = ["chk", "dot", "date", "src", "kw", "title", "sum", "note", "sig", "link", "star"];
+  function isPhone() { return window.innerWidth <= 760; }
+
+  function moveAfter(ref, node) {
+    if (!ref || !node || ref === node) return false;
+    if (ref.nextSibling === node) return false;
+    ref.parentNode.insertBefore(node, ref.nextSibling);
+    return true;
+  }
+
+  function reorderHeader() {
+    var tr = document.getElementById("theadRow");
+    var table = document.querySelector(".tablewrap table");
+    if (!tr || !table) return;
+    var ths = tr.children, i;
+    if (!tr.dataset.nrtag) {                       /* 첫 실행 때 칸 이름표를 달아둔다 */
+      for (i = 0; i < ths.length && i < COLNAMES.length; i++) ths[i].dataset.nrc = COLNAMES[i];
+      var cols0 = table.querySelectorAll("colgroup col");
+      for (i = 0; i < cols0.length && i < COLNAMES.length; i++) cols0[i].dataset.nrc = COLNAMES[i];
+      tr.dataset.nrtag = "1";
+    }
+    function pick(root, name) { return root.querySelector('[data-nrc="' + name + '"]'); }
+    var cg = table.querySelector("colgroup");
+    var want = isPhone() ? "dot" : "kw";           /* 이 칸 뒤에 제목·요약을 놓는다 */
+    [tr, cg].forEach(function (root) {
+      if (!root) return;
+      var ref = pick(root, want), t = pick(root, "title"), u = pick(root, "sum");
+      if (ref && t) { moveAfter(ref, t); if (u) moveAfter(t, u); }
+    });
+  }
+
+  function reorderRows() {
+    var rows = document.querySelectorAll("tbody tr");
+    var phone = isPhone();
+    for (var i = 0; i < rows.length; i++) {
+      var tr = rows[i];
+      var dotSpan = tr.querySelector(".rdot");
+      var kwSpan = tr.querySelector(".kwtag");
+      var titleSpan = tr.querySelector(".title");
+      var sumTd = tr.querySelector("td.summary");
+      if (!titleSpan || !sumTd) continue;
+      var titleTd = titleSpan.parentNode;
+      var ref = phone ? (dotSpan ? dotSpan.parentNode : null)
+                      : (kwSpan ? kwSpan.parentNode : null);
+      if (!ref || ref === titleTd) continue;
+      moveAfter(ref, titleTd);
+      moveAfter(titleTd, sumTd);
+    }
+  }
+
+  function reorderPhone() {
+    try { reorderHeader(); reorderRows(); } catch (e) {}
+  }
+
   function autoFitCells() {
     try {
       var titles = document.querySelectorAll("tbody .title");
@@ -1480,6 +1548,7 @@
       decorateMemoCells();
       decorateDeleteButtons();
       trimTitles();
+      reorderPhone();
       autoFitCells();
       setupTabs();
       setupBriefBtn();
@@ -1501,6 +1570,7 @@
       decorateMemoCells();
       decorateDeleteButtons();
       trimTitles();
+      reorderPhone();
       autoFitCells();
     }).observe(tb, { childList: true, subtree: true });
 
@@ -1533,6 +1603,15 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
   else watch();
+
+  var _rsT = null;
+  window.addEventListener("resize", function () {
+    if (_rsT) clearTimeout(_rsT);
+    _rsT = setTimeout(function () {
+      reorderPhone();
+      autoFitCells();
+    }, 180);
+  });
 
   if (window.console) console.log("[news_patch] " + VER + " 적용됨 — 정리본 공유 · 선택 공유 · A4 브리핑");
 })();
