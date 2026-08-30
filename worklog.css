@@ -1229,7 +1229,9 @@ select.lf-ie.qp-hide{ display:none !important }
 }
 
 /* ↔ 오른쪽으로 보낸 묶음 (wlSide v136) */
-.pg-side{ margin-top:10px !important; grid-template-columns:1fr !important }
+/* 곁상자도 폭이 되면 2열로 — 1열로 못박으면 오른쪽만 길어진다 (v138) */
+.pg-side{ margin-top:10px !important;
+  grid-template-columns:repeat(auto-fill, minmax(268px, 1fr)) !important; gap:0 14px !important }
 .pg-side .pg-prow{ min-width:0 }
 
 /* 2열일 때 세로를 아낀다 — 터치 영역(44px)은 건드리지 않고 여백만 줄인다 */

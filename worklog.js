@@ -18359,8 +18359,23 @@ async function githubUpload(token){
   'use strict';
 
   var LS = 'wl_side_groups';
-  var DEF = 'g3,g1';                 /* 기본 : 시각 · 업체 */
+  /* v138 — 달님 : 「업체 누구와는 2열로 만들어서 왼쪽으로 보내. 그래야 균형이 맞아」
+        업체는 칸이 5개라 오른쪽 1열에 두면 세로로 길어져 오른쪽만 늘어났다.
+        왼쪽 속성 격자는 폭에 맞춰 2열이 되므로 업체는 왼쪽이 맞다. */
+  var DEF = 'g3';                    /* 기본 : 시각만 */
   var NAME = { g0:'📌 기본', gc:'💰 비용', gt:'📦 자재', g1:'🏢 업체', g3:'🕐 시각' };
+  var LS_AUTO = 'wl_side_autofit';
+  var _fitId = '';                   /* 이 기록에서 이미 균형을 맞췄나 */
+  function autoOn(){ try{ return localStorage.getItem(LS_AUTO) !== '0'; }catch(e){ return true; } }
+
+  /* v138 — 예전 기본값(시각+업체)을 그대로 쓰고 있던 분은 새 기본값으로 한 번 갈아끼운다.
+        손으로 정해 둔 분은 건드리지 않는다. */
+  try{
+    if(localStorage.getItem(LS) === 'g3,g1' && localStorage.getItem('wl_side_v138') !== '1'){
+      localStorage.setItem(LS, 'g3');
+      localStorage.setItem('wl_side_v138', '1');
+    }
+  }catch(e){}
 
   function list(){
     try{
@@ -18441,6 +18456,31 @@ async function githubUpload(token){
       moved++;
     });
     if(!moved) side.remove();
+
+    /* v138 — 기록마다 값이 달라 한쪽만 길어질 수 있다.
+          기록을 열 때 딱 한 번 재어 균형을 맞춘다 (같은 기록에서는 다시 안 한다).
+          끄기 : wlSide.autoOff() */
+    try{
+      var rid = (String(location.hash||'').match(/^#lp=([^&]+)/)||[])[1] || '';
+      if(autoOn() && rid && rid !== _fitId){
+        _fitId = rid;
+        /* 한 번 옮기면 여백이 달라져 계산이 조금 어긋난다.
+              옮긴 뒤 실제로 다시 재어 두 번까지만 맞춘다 (그 뒤로는 손대지 않는다). */
+        var tries = 0;
+        (function again(){
+          setTimeout(function(){
+            try{
+              var L2 = document.querySelector('.pg-2l'), R2 = document.querySelector('.pg-2r');
+              if(!L2 || !R2) return;
+              if(Math.max(L2.scrollHeight, R2.scrollHeight) <= window.innerHeight) return;  /* 알맞다 */
+              var before = list().join(',');
+              autoFit();
+              if(++tries < 2 && list().join(',') !== before) again();   /* 달라졌으면 한 번 더 */
+            }catch(e){ console.warn('[묶음 오른쪽으로] 자동 균형 실패', e); }
+          }, 450);
+        })();
+      }
+    }catch(e){}
   }
 
   (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:25, n:'묶음 오른쪽으로', f:run });
@@ -18563,7 +18603,8 @@ async function githubUpload(token){
     /* v136 — 지금과 크게 다르지 않으면 바꾸지 않는다.
           안 그러면 누를 때마다 조합이 왔다 갔다 해서 화면이 흔들린다. */
     var nowWorst = Math.max(base.L, base.R);
-    if(best.worst > nowWorst - 40){
+    var margin = (nowWorst > window.innerHeight) ? 15 : 40;   /* 넘치는 중이면 조금만 나아져도 옮긴다 */
+    if(best.worst > nowWorst - margin){
       return '왼쪽 ' + Math.round(base.L) + 'px · 오른쪽 ' + Math.round(base.R) + 'px → '
            + (nowWorst <= window.innerHeight ? '✅ 이미 알맞습니다'
                                              : '지금이 가장 나은 배치예요 — 안 쓰는 묶음을 접어 보세요');
@@ -18577,6 +18618,8 @@ async function githubUpload(token){
 
   window.wlSide = {
     auto: autoFit,
+    autoOn:  function(){ try{ localStorage.setItem(LS_AUTO,'1'); }catch(e){} _fitId=''; return '기록을 열 때 저절로 균형을 맞춥니다'; },
+    autoOff: function(){ try{ localStorage.setItem(LS_AUTO,'0'); }catch(e){} return '자동 균형을 껐습니다'; },
     set:  function(v){ set(v); return list().join(',') || '(없음)'; },
     list: function(){ return list(); },
     /* 지금 화면이 한 눈에 들어오는지 재어 본다 */
@@ -18650,7 +18693,10 @@ async function githubUpload(token){
     if(T(r.floor))  b.push(T(r.floor));
     if(T(r.field))  b.push(T(r.field));
     if(T(r.status)) b.push(T(r.status));
-    if(b.length) out.push({ k:'g0', t:'📌 ' + b.join(' · ') });
+    /* v139 — 달님 : 「기본은 제목 빼고 3개 이상 채워졌을 때에만 한 줄 요약해」
+          날짜·완료 상태는 새로 만들 때 저절로 들어가는 값이다.
+          그 둘만으로 「📌 2026-08-30 · 완료」 를 적어 봐야 아무 정보도 아니다. */
+    if(b.length >= 3) out.push({ k:'g0', t:'📌 ' + b.join(' · ') });
 
     /* 💰 비용 */
     var c = [];
