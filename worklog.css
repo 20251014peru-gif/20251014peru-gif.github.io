@@ -1269,3 +1269,12 @@ select.lf-ie.qp-hide{ display:none !important }
   font-size:12px; font-weight:800; cursor:pointer; font-family:inherit; line-height:1;
 }
 .pic-x:hover{ background:#c0392b }
+
+/* 제목을 줄여 위쪽 자리를 아낀다 (v140) */
+.lf-page.is-2col .pg-title{ font-size:23px; line-height:1.25 }
+.lf-page.is-2col .pg-badge{ margin-bottom:5px; padding:2px 9px; font-size:11.5px }
+.lf-page.is-2col .pg-body{ padding-top:16px }
+
+/* ＋ 자재 추가 — 수량 칸 옆에 작게 (v140) */
+.mb-add-s{ min-height:30px !important; padding:0 10px !important; font-size:12px !important;
+  margin-left:6px; white-space:nowrap }

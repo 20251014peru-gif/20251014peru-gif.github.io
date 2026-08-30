@@ -14950,7 +14950,11 @@ async function githubUpload(token){
 
     /* v124 — 자재 내역 요약 줄은 「📦 자재」 밴드 바로 밑에 놓는다.
           밴드가 없으면(자재 묶음이 꺼져 있으면) 시각 묶음 앞에 놓는다. */
-    if(mats.length){
+    /* v140 — 달님 : 「자재 정리된거 자재 항목 밑에 나올 필요 없잖아.
+          이제 전부 본문에만 저장하게 해」
+          자재 내역은 본문 맨 위 「자동 정리」의 📦 줄에 이미 들어간다.
+          같은 것을 두 곳에 그리면 화면만 길어진다. */
+    if(false && mats.length){
       var mLine = document.createElement('div');
       mLine.className = 'pg-prow wide pg-grow';
       mLine.setAttribute('data-gid', 'gm');
@@ -17900,7 +17904,10 @@ async function githubUpload(token){
       }
     }catch(e){ console.warn('[자재 합계] 맞추기 실패', e); }
 
-    window.wlAddOn(['[data-gfoot="gt"]', '[data-prow="f:material"] .pg-pv'], 'matbox',
+    /* v140 — 담긴 자재 목록도 화면에서 내린다 (본문 자동 정리로 충분).
+          담고 빼는 일은 [＋ 자재 추가] 창에서 한다. */
+    window.wlAddOn(['#__none'], 'matbox', function(){ return null; });
+    if(false) window.wlAddOn(['[data-gfoot="gt"]'], 'matbox_old',
       function(){ var d = document.createElement('div'); d.className = 'pg-matbox'; return d; },
       function(d){
         var h = '';
@@ -17921,7 +17928,6 @@ async function githubUpload(token){
           if(s > 0) h += '<div class="mb-sum">자재 합계 <b>' + won(s) + '원</b>'
                        + ' <span>「자재 합계」 칸에 저절로 들어갑니다 · 비용의 합계와는 따로입니다</span></div>';
         }
-        h += '<button type="button" class="mb-add">＋ 자재 추가</button>';
         if(d.innerHTML !== h) d.innerHTML = h;
 
         var ab = d.querySelector('.mb-add');
@@ -17936,6 +17942,18 @@ async function githubUpload(token){
             drop(Number(x.getAttribute('data-mbx')));
           });
         }
+      });
+
+    /* v140 — 달님 : 「자재 추가 버튼을 수량 오른쪽으로 보내. 그럼 균형이 조금 더 맞을듯」
+          단추가 발치에 있으면 한 줄을 통째로 잡아먹는다. 수량 칸 옆이면 자리를 안 쓴다. */
+    window.wlAddOn(['[data-prow="f:qty"] .pg-pv', '[data-prow="f:material"] .pg-pv'], 'matadd2',
+      function(){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'mb-add mb-add-s';
+        b.textContent = '＋ 자재 추가';
+        b.title = '저장된 자재에서 골라 담습니다';
+        b.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); addOne(); });
+        return b;
       });
 
     /* 화면 아래 큰 「자재 사용 내역」 상자는 접어 둔다 — 같은 일을 두 곳에서 하지 않게 */
@@ -18907,6 +18925,29 @@ async function githubUpload(token){
 
   (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:72, n:'사진 떼어내기', f:function(){
     try{ split(); marks(); }catch(e){ console.warn('[사진] 실패', e); } } });
+
+  /* v140 — 달님 : 「사진은 본문에 그냥 들어가는데 따로 칸 만들라 했잖아」
+        그리기 차례를 기다리면 사진이 본문에 한동안 남아 있는다.
+        본문에 <img> 가 생기는 순간 바로 옮긴다. */
+  try{
+    var mo = new MutationObserver(function(m){
+      var hit = false;
+      for(var i=0;i<m.length && !hit;i++){
+        var add = m[i].addedNodes; if(!add) continue;
+        for(var j=0;j<add.length;j++){
+          var n = add[j];
+          if(!n || n.nodeType !== 1) continue;
+          if(n.tagName === 'IMG'){ hit = true; break; }
+          if(n.querySelector && n.querySelector('img')){ hit = true; break; }
+        }
+      }
+      if(!hit) return;
+      var B = document.getElementById('pgBodyTx');
+      if(!B || !B.querySelector('img')) return;
+      setTimeout(function(){ try{ split(); }catch(e){ console.warn('[사진] 옮기기 실패', e); } }, 120);
+    });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[사진] 감시 시작 실패', e); }
 
   window.wlPics = {
     on:  function(){ setOn(true);  return '사진을 사진칸으로 모읍니다'; },
