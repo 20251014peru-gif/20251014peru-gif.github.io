@@ -14610,7 +14610,7 @@ async function githubUpload(token){
         openDefault:1 },
       /* v124 — 달님 : 「자재도 자재 제목 넣어줘 별도로 구분되게」 */
       { id:'gt', on:1, base:1, icon:'📦', name:'자재 — 무엇을 썼나', head:'f:material',
-        keys:['f:spec','f:qty'], openDefault:1 },
+        keys:['f:spec','f:qty','f:matCost'], openDefault:1 },   /* v135 — 자재 합계도 자재 묶음 안에 */
       /* ★ v126 — 달님 : 「개인비용 입력하고 접기 하니까 자재·업체·시각 입력 창이 사라졌어」
             원인 : 대표 값이 있으면 **저절로 접히는** 것이 기본이었다.
                    업체·시각처럼 값이 이미 있는 덩어리는 열자마자 접혀 있어서
@@ -16145,8 +16145,7 @@ async function githubUpload(token){
       try{
         var arr = Array.isArray(list) ? list : [];
         var sum = arr.reduce(function(a,m2){ return a + (Number(m2.price)||0) * (Number(m2.qty)||1); }, 0);
-        var patch = { materials: arr };
-        if(sum > 0) patch.cost = sum;                 /* 금액은 저절로 (버튼 없이) */
+        var patch = { materials: arr, matCost: sum };  /* v135 — 자재 값은 「자재 합계」 칸으로 */
         if(typeof updateRecord === 'function') updateRecord(rid, patch);
         if(typeof toast === 'function') toast(
           arr.length ? ('📦 자재 ' + arr.length + '종' + (sum>0 ? (' · 합계 ' + sum.toLocaleString('ko-KR') + '원') : ''))
@@ -17805,9 +17804,10 @@ async function githubUpload(token){
   function save(rid, arr){
     try{
       var patch = { materials: arr };
-      var s = sumOf(arr);
-      if(s > 0) patch.cost = s;
-      else if(!arr.length) patch.cost = 0;
+      /* v135 — 달님 : 「금액쪽 합계는 비용의 합계, 자재쪽 합계는 자재쪽 칸에」
+            예전에는 자재 값이 비용의 「합계」(cost) 를 덮어썼다.
+            외주비를 적어 둔 기록에 자재를 담으면 그 금액이 통째로 날아갔다. */
+      patch.matCost = sumOf(arr);
       if(typeof updateRecord === 'function') updateRecord(rid, patch);
       setTimeout(function(){
         try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
@@ -17877,6 +17877,24 @@ async function githubUpload(token){
     if(!page || !rec){ window.wlAddOn(['#__none'], 'matbox', function(){ return null; }); return; }
 
     var mats = matsAll(rec);
+
+    /* v135 — 담긴 자재가 있으면 「자재 합계」 칸을 실제 합계로 맞춰 둔다.
+          값이 이미 같으면 아무것도 하지 않으므로 되풀이되지 않는다. */
+    try{
+      var real = sumOf(mats);
+      if(real > 0 && Number(rec.matCost || 0) !== real && typeof updateRecord === 'function'){
+        updateRecord(rid, { matCost: real });
+      }
+      /* 저장은 됐어도 화면은 아직 옛 값이다 — 고치는 중이 아닐 때만 표시를 맞춘다 */
+      if(real > 0){
+        var cell = document.querySelector('.lf-page [data-ppid="f:matCost"]');
+        if(cell && !cell.querySelector('.lf-ie')){
+          var t = String(cell.textContent || '').replace(/\s/g, '');
+          if(!t || t === '—' || t === '비어있음') cell.textContent = won(real) + '원';
+        }
+      }
+    }catch(e){ console.warn('[자재 합계] 맞추기 실패', e); }
+
     window.wlAddOn(['[data-gfoot="gt"]', '[data-prow="f:material"] .pg-pv'], 'matbox',
       function(){ var d = document.createElement('div'); d.className = 'pg-matbox'; return d; },
       function(d){
@@ -17896,7 +17914,7 @@ async function githubUpload(token){
           }).join('') + '</div>';
           var s = sumOf(mats);
           if(s > 0) h += '<div class="mb-sum">자재 합계 <b>' + won(s) + '원</b>'
-                       + ' <span>합계 칸에 저절로 들어갑니다</span></div>';
+                       + ' <span>「자재 합계」 칸에 저절로 들어갑니다 · 비용의 합계와는 따로입니다</span></div>';
         }
         h += '<button type="button" class="mb-add">＋ 자재 추가</button>';
         if(d.innerHTML !== h) d.innerHTML = h;

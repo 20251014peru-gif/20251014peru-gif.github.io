@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v134-0830-1002";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v135-0830-1040";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3266,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=134-20260830t1002"></script>
+<script src="worklog.js?v=135-20260830t1040"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -20438,6 +20438,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       {k:'isIssued',    label:'발급 완료',     type:'checkbox'},
       {k:'workVendor',  label:'업체',         type:'text'},
       {k:'spec',        label:'규격 · 사양',   type:'text'},
+      {k:'matCost',     label:'자재 합계 (원)', type:'number'},   /* v135 — 자재 값은 여기 (비용 합계와 분리) */
       {k:'workContact', label:'담당자',       type:'text'},
       {k:'workRole',    label:'직책',         type:'text'},
       {k:'workPhone',   label:'전화',         type:'tel'},
@@ -21468,6 +21469,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
                    'f:accType','f:stockType','f:dir','f:vtype',
                    'f:expType','f:expSubType','f:purpose',
                    'f:supplyAmt','f:taxAmt','_amount','f:isIssued',
+                   'f:material','f:spec','f:qty','f:matCost',   /* v135 — 자재는 한 덩어리로 */
                    'f:startTime','f:endTime','_sub'];
       var fr = [], rest3 = [];
       out.forEach(function(p){ (FRONT.indexOf(p.id) >= 0 ? fr : rest3).push(p); });
@@ -23688,7 +23690,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     {c:'hr',          i:'—',               t:'구분선'},
     {c:'pic',         i:'📷',              t:'사진 넣기'},
     {sep:1},
-    {c:'removeFormat',i:'✕',               t:'서식 지우기'}
+    {c:'clearBody',   i:'✕',               t:'본문 내용을 전부 지웁니다'}
   ];
   function pgToolbarHTML(){
     return '<div class="pg-tb">' + PGTOOLS.map(function(t){
@@ -24011,13 +24013,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
           단가가 하나도 없으면(합계 0) 손으로 적은 금액을 지우지 않는다. */
     function matPatch(arr){
       var patch = { materials: arr };
-      try{
-        var s3 = matSum(arr);
-        if(s3 > 0 && !amountLocked(rec) && propById(pt,'_amount')){
-          var ap3 = ppatch(rec, '_amount', s3);
-          if(ap3) for(var k3 in ap3) patch[k3] = ap3[k3];
-        }
-      }catch(e){ console.warn('[합계] 자동 계산 실패', e); }
+      /* v135 — 달님 : 「자재쪽 합계는 자재쪽 칸에 저장되게」
+            예전에는 자재 값이 비용의 「합계」(cost) 를 덮어써서,
+            외주비를 적어 두면 자재를 담는 순간 사라졌다. 이제 따로 담는다. */
+      try{ patch.matCost = matSum(arr); }
+      catch(e){ console.warn('[자재 합계] 계산 실패', e); }
       return patch;
     }
     /* 금액 칸이 비어 있을 때만 자재 합계를 넣는다. force 면 덮어쓴다 */
@@ -24265,6 +24265,18 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       b.addEventListener('click', function(){
         var c=b.getAttribute('data-pgc');
         if(c==='pic'){ document.getElementById('pgPicIn').click(); return; }
+        /* v135 — 달님 : 「본문 내용에 x를 누르면 기존 내용 지워지게」
+              한 번 물어본 뒤 본문을 통째로 비운다 (실수로 날리지 않게) */
+        if(c==='clearBody'){
+          var _has = String((B.textContent||'')).trim().length > 0 || /<img/i.test(B.innerHTML||'');
+          if(!_has){ if(typeof toast==='function') toast('본문이 이미 비어 있어요'); return; }
+          if(!confirm('본문 내용을 전부 지울까요?\n\n되돌릴 수 없습니다.')) return;
+          B.innerHTML = '';
+          try{ B.focus(); }catch(e){}
+          phSync(); bodySave();
+          if(typeof toast==='function') toast('🧹 본문을 비웠어요');
+          return;
+        }
         pgExec(c, B); phSync(); bodySave();
       });
     });
@@ -24286,8 +24298,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
               if(propById(pt,'f:spec')) patch.spec = r.spec;
               if(propById(pt,'f:qty'))  patch.qty  = r.qty;
               var s1 = (Number(r.price)||0) * (Number(r.qty)||1);
-              var ap1 = amountPatch(s1, false);
-              if(ap1) for(var k1 in ap1){ patch[k1] = ap1[k1]; }
+              if(s1 > 0) patch.matCost = s1;          /* v135 — 자재 값은 자재 합계 칸으로 */
               save(patch);
               /* v113 — 저절로 따라 들어온 칸만 적어 둔다 (자재명은 사람이 고른 것) */
               try{
@@ -24299,7 +24310,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
                 }
               }catch(e){ console.warn('[자재 자동채움] 기록 실패', e); }
               if(typeof toast==='function') toast('📦 '+r.name+(r.spec?(' · '+r.spec):'')+' · '+r.qty+'개'
-                + (ap1? (' · 금액 '+numFmt(s1)+'원') : ''));
+                + (s1>0 ? (' · 자재 합계 '+numFmt(s1)+'원') : ''));
               openPage(id);
             }catch(e){ console.error('[자재 고르기]', e); alert('자재를 못 넣었어요: '+(e.message||e)); }
           }, pget(rec, pid) || '');
@@ -29241,25 +29252,55 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }catch(e){ return ''; }
   }
 
-  var _tried=0;                       /* 빈 캐시 다시 불러오기는 딱 한 번만 (되풀이 금지) */
+  /* v135 — 달님 : 「연락처가 없다도 나와」
+        예전에는 딱 한 번만 다시 불러오고, 실패해도 조용히 넘어갔다.
+        그래서 한 번 실패하면 그 뒤로는 영영 「없어요」만 떴다.
+        ▸ 5초가 지나면 다시 시도한다  ▸ 실패는 화면과 콘솔에 남긴다 */
+  var _tried=0, _triedAt=0, _failMsg='';
+  function _canRetry(){ return !_tried || (Date.now() - _triedAt > 5000); }
   function render(q){
     var b=ensure(), all=CC();
     if(!all.length){
-      b.innerHTML='<div style="padding:12px 14px;color:#aab8c8;font-size:13px">'
-        + (_tried? '연락처가 아직 없어요' : '연락처를 불러오는 중…') + '</div>';
+      var msg = _failMsg ? _failMsg
+              : (_tried ? '연락처를 다시 불러오는 중…' : '연락처를 불러오는 중…');
+      b.innerHTML='<div style="padding:12px 14px;color:#aab8c8;font-size:13px">' + esc(msg)
+        + '<button type="button" id="cvReload" style="margin-left:8px;height:26px;padding:0 10px;'
+        + 'border:1.5px solid #dbe6f4;border-radius:7px;background:#fff;color:#2563a8;'
+        + 'font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">다시 불러오기</button></div>';
       b.style.display='block'; place();
-      if(!_tried){
-        _tried=1;
+      var rb = b.querySelector('#cvReload');
+      if(rb) rb.addEventListener('mousedown', function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        _tried = 0; _failMsg = ''; render(curInp ? curInp.value : '');
+      });
+      if(_canRetry()){
+        _tried=1; _triedAt=Date.now(); _failMsg='';
         try{
-          if(typeof loadContactsCache==='function')
-            loadContactsCache().then(function(){
-              if(curInp && CC().length) render(curInp.value);
-            }).catch(function(){});
-        }catch(e){}
+          /* 통로가 둘이다 — 하나가 없으면 다른 하나로 */
+          var pr = null;
+          if(typeof loadContactsCache==='function') pr = loadContactsCache();
+          else if(typeof loadContactsCacheList==='function'){ loadContactsCacheList(); pr = Promise.resolve(); }
+          if(pr && pr.then){
+            pr.then(function(){
+              if(!CC().length) _failMsg = '연락처가 아직 비어 있어요 — 연락처 탭을 한 번 열어 보세요';
+              if(curInp) render(curInp.value);
+            }).catch(function(err){
+              console.warn('[관련처] 연락처를 못 불러왔어요', err);
+              _failMsg = '연락처를 못 불러왔어요 — 인터넷을 확인하고 다시 눌러 주세요';
+              if(curInp) render(curInp.value);
+            });
+          }else{
+            _failMsg = '연락처를 불러오는 통로를 못 찾았어요 — 새로고침해 주세요';
+            console.warn('[관련처] loadContactsCache 가 없습니다');
+          }
+        }catch(e){
+          console.warn('[관련처] 연락처 불러오기 실패', e);
+          _failMsg = '연락처를 못 불러왔어요 — ' + (e.message || e);
+        }
       }
       return;
     }
-    _tried=0;
+    _tried=0; _failMsg='';
     q=String(q||'').trim();
     var qn=q.replace(/[^0-9]/g,'');
     var hit = q ? all.filter(function(c){
