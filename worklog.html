@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v141-0830-1305";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v144-0830-1402";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -2901,21 +2901,23 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 </div>
 
 <div id="imgOverlay">
+  <!-- v143 — 달님 : 「사진창 아이콘 크기도 살리고 직관적으로」
+       아이콘만 있던 것을 「그림 + 글자」로 바꾸고, 위·아래에 또렷한 줄로 놓는다. -->
   <div id="imgViewerHeader">
     <div id="imgViewerTitle"></div>
-    <div style="display:flex;gap:12px;align-items:center">
-      <button class="iv-btn" id="ivShare" title="공유">📤</button>
-      <button class="iv-btn" id="ivDownload" title="다운로드">⬇</button>
-      <button class="iv-btn" id="ivClose" title="닫기">✕</button>
+    <div class="iv-grp">
+      <button class="iv-btn" id="ivShare"    title="공유"><b>📤</b><span>공유</span></button>
+      <button class="iv-btn" id="ivDownload" title="내 컴퓨터에 저장"><b>⬇</b><span>저장</span></button>
+      <button class="iv-btn iv-close" id="ivClose" title="닫기 (Esc)"><b>✕</b><span>닫기</span></button>
     </div>
   </div>
   <img id="imgFull" src="" alt="">
   <div id="imgViewerFooter">
-    <button class="iv-btn" id="ivRotL" title="반시계">↺</button>
-    <button class="iv-btn" id="ivZoomOut" title="축소">−</button>
-    <button class="iv-btn" id="ivFit" title="화면에 맞추기">⤢</button>
-    <button class="iv-btn" id="ivZoomIn" title="확대">+</button>
-    <button class="iv-btn" id="ivRotR" title="시계">↻</button>
+    <button class="iv-btn" id="ivRotL"    title="왼쪽으로 돌리기"><b>↺</b><span>왼쪽</span></button>
+    <button class="iv-btn" id="ivZoomOut" title="작게 보기"><b>−</b><span>작게</span></button>
+    <button class="iv-btn" id="ivFit"     title="화면에 맞추기"><b>⤢</b><span>맞춤</span></button>
+    <button class="iv-btn" id="ivZoomIn"  title="크게 보기"><b>+</b><span>크게</span></button>
+    <button class="iv-btn" id="ivRotR"    title="오른쪽으로 돌리기"><b>↻</b><span>오른쪽</span></button>
   </div>
 </div>
 
@@ -3266,7 +3268,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=141-20260830t1305"></script>
+<script src="worklog.js?v=144-20260830t1402"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */

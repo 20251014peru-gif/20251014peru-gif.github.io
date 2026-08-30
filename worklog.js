@@ -18455,14 +18455,11 @@ async function githubUpload(token){
       if(side) side.remove();
       side = document.createElement('div');
       side.className = 'pg-props pg-side';
-      /* 본문은 맨 위에 그대로 두고, 그 아래·하위 항목 위에 놓는다 */
-      var before = null;
-      [].forEach.call(right.children, function(el){
-        if(before) return;
-        if(el.classList && el.classList.contains('pg-sec') && /하위\s*항목/.test(el.textContent || '')) before = el;
-        if(el.classList && el.classList.contains('pg-fold2')) before = el;
-      });
-      if(before) right.insertBefore(side, before); else right.appendChild(side);
+      /* v144 — 달님 : 「시각은 본문 위로 보내」
+            시각은 적자마자 눈에 들어와야 하는 값이라 오른쪽 맨 위가 제자리다.
+            (예전에는 본문 아래·하위 항목 앞에 두어 스크롤을 내려야 보였다) */
+      if(right.firstChild) right.insertBefore(side, right.firstChild);
+      else right.appendChild(side);
     }
     side.innerHTML = '';
 
@@ -18892,29 +18889,49 @@ async function githubUpload(token){
     var r = recOf(rid);
     return (r && Array.isArray(r.photos)) ? r.photos.slice() : [];
   }
-  function saveOrder(rid, arr){
+  function capsOf(rid){
+    var r = recOf(rid);
+    return (r && Array.isArray(r.photoCaps)) ? r.photoCaps.slice() : [];
+  }
+  function saveOrder(rid, arr, caps){
     try{
-      if(typeof updateRecord === 'function') updateRecord(rid, { photos: arr });
+      var patch = { photos: arr };
+      if(caps) patch.photoCaps = caps;
+      if(typeof updateRecord === 'function') updateRecord(rid, patch);
       setTimeout(function(){
         try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
       }, 140);
     }catch(e){ console.error('[사진] 순서 저장 실패', e); }
   }
-  function move(rid, src, dir){
-    var arr = photosOf(rid);
-    var i = arr.indexOf(src);
-    if(i < 0) return;
-    var j = i + dir;
-    if(j < 0 || j >= arr.length) return;
-    arr.splice(j, 0, arr.splice(i, 1)[0]);
-    saveOrder(rid, arr);
-  }
-  function moveTo(rid, src, to){
-    var arr = photosOf(rid);
-    var i = arr.indexOf(src);
+  /* 사진을 옮기면 그 사진의 설명도 같은 자리로 따라간다 */
+  function shift(rid, i, to){
+    var arr = photosOf(rid), caps = capsOf(rid);
+    while(caps.length < arr.length) caps.push('');
     if(i < 0 || to < 0 || to >= arr.length || i === to) return;
     arr.splice(to, 0, arr.splice(i, 1)[0]);
-    saveOrder(rid, arr);
+    caps.splice(to, 0, caps.splice(i, 1)[0]);
+    saveOrder(rid, arr, caps);
+  }
+  function move(rid, src, dir){
+    var i = photosOf(rid).indexOf(src);
+    if(i < 0) return;
+    shift(rid, i, i + dir);
+  }
+  function moveTo(rid, src, to){
+    var i = photosOf(rid).indexOf(src);
+    if(i < 0) return;
+    shift(rid, i, to);
+  }
+  /* ✎ 사진 설명 — 보고서에 그대로 옮겨 쓸 수 있게 */
+  function cap(rid, src){
+    var arr = photosOf(rid), caps = capsOf(rid);
+    var i = arr.indexOf(src); if(i < 0) return;
+    while(caps.length < arr.length) caps.push('');
+    var now = String(caps[i] || '');
+    var v = prompt('이 사진의 설명을 적어 주세요 (비우면 지웁니다)', now);
+    if(v === null) return;
+    caps[i] = String(v).trim();
+    saveOrder(rid, arr, caps);
   }
 
   var _dragSrc = '';
@@ -18954,17 +18971,27 @@ async function githubUpload(token){
           +   ' title="앞으로 (더 중요하게)">◀</button>'
           + '<button type="button" class="pic-b" data-mv="1"' + (idx === mine.length-1 ? ' disabled' : '')
           +   ' title="뒤로">▶</button>'
+          + '<button type="button" class="pic-b" data-cap="1" title="이 사진에 설명을 답니다">✎ 설명</button>'
           + '<button type="button" class="pic-b pic-del" data-del="1" title="이 사진을 지웁니다">🗑 지우기</button>';
       }else{
         bar.innerHTML = '<span class="pic-note">스캔앱 사진</span>';
       }
       w.appendChild(bar);
 
+      var caps = capsOf(rid);
+      var ct = (idx >= 0 && caps[idx]) ? String(caps[idx]) : '';
+      if(ct){
+        var cd = document.createElement('div');
+        cd.className = 'pic-cap'; cd.textContent = ct; cd.title = ct;
+        w.insertBefore(cd, bar);
+      }
+
       bar.addEventListener('click', function(ev){
         var b = ev.target.closest && ev.target.closest('button');
         if(!b) return;
         ev.preventDefault(); ev.stopPropagation();
-        if(b.hasAttribute('data-del')) drop(rid, src);
+        if(b.hasAttribute('data-del'))      drop(rid, src);
+        else if(b.hasAttribute('data-cap'))  cap(rid, src);
         else move(rid, src, Number(b.getAttribute('data-mv')) || 0);
       });
 
@@ -18990,8 +19017,12 @@ async function githubUpload(token){
     if(!confirm('이 사진을 지울까요?\n\n되돌릴 수 없습니다.')) return;
     var r = recOf(rid); if(!r) return;
     try{
-      var p = (Array.isArray(r.photos) ? r.photos : []).filter(function(u){ return u !== src; });
-      if(typeof updateRecord === 'function') updateRecord(rid, { photos: p });
+      var all = Array.isArray(r.photos) ? r.photos.slice() : [];
+      var caps = Array.isArray(r.photoCaps) ? r.photoCaps.slice() : [];
+      var i = all.indexOf(src);
+      if(i >= 0){ all.splice(i, 1); if(i < caps.length) caps.splice(i, 1); }
+      var p = all;
+      if(typeof updateRecord === 'function') updateRecord(rid, { photos: p, photoCaps: caps });
       if(typeof toast === 'function') toast('🗑 사진을 지웠어요');
       setTimeout(function(){
         try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
@@ -19034,4 +19065,106 @@ async function githubUpload(token){
     list:function(){ var r = recOf(ridNow()); return r ? (r.photos||[]).length + '장' : '기록을 먼저 여세요'; }
   };
   console.log('[사진] v137 준비됨 — 본문 사진을 사진칸으로 · 누르면 확대 · ✕ 로 삭제');
+})();
+
+
+/* ============================================================
+   🖼 목록에 대표 사진 미리보기 (wlThumb)  v142-0830-1330
+
+   달님 응용 : 「대표 사진을 목록·카드에 작은 미리보기로 띄우면
+                어떤 기록인지 열지 않고도 알아본다」
+
+   ▸ 카드(.lf-card) · 리스트(.lf-lsi) 앞에 첫 사진을 작게 붙인다
+   ▸ 사진이 없는 기록은 아무것도 붙이지 않는다 (자리를 안 쓴다)
+   ▸ 표(테이블)는 열이 어긋나므로 건드리지 않는다
+   ▸ 「대표」로 올려 둔 사진이 곧 미리보기다 — ◀▶ 로 바꾼 순서가 그대로 반영된다
+   되돌리기 : wlThumb.off()
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS = 'wl_thumb';
+
+  function isOn(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function setOn(v){
+    try{ localStorage.setItem(LS, v?'1':'0'); }catch(e){}
+    if(!v) clear();
+    else run();
+    if(typeof toast === 'function') toast(v ? '🖼 목록에 대표 사진을 보여 줍니다' : '🖼 목록 사진을 껐어요');
+  }
+  function recOf(id){
+    try{ return (entries||[]).filter(function(x){ return x && x.id === id; })[0] || null; }
+    catch(e){ return null; }
+  }
+  /* 대표 사진 — 직접 넣은 것 먼저, 없으면 스캔앱 사진 */
+  function lead(r){
+    try{
+      if(r && Array.isArray(r.photos) && r.photos.length) return String(r.photos[0] || '');
+      if(r && Array.isArray(r.scanRefs)){
+        for(var i=0;i<r.scanRefs.length;i++){
+          var u = r.scanRefs[i] && r.scanRefs[i].data && r.scanRefs[i].data.photoUrl;
+          if(u) return String(u);
+        }
+      }
+    }catch(e){}
+    return '';
+  }
+  function clear(){
+    try{ [].forEach.call(document.querySelectorAll('.wl-th'), function(x){ x.remove(); }); }catch(e){}
+  }
+
+  var SPOTS = [
+    { sel:'.lf-card[data-lid]',  at:'data-lid'  },
+    { sel:'.lf-lsi[data-lsid]',  at:'data-lsid' }
+  ];
+
+  function run(){
+    if(!isOn()) return;
+    SPOTS.forEach(function(sp){
+      [].forEach.call(document.querySelectorAll(sp.sel), function(el){
+        var id = el.getAttribute(sp.at);
+        if(!id) return;
+        var have = el.querySelector(':scope > .wl-th');
+        var src = lead(recOf(id));
+        if(!src){ if(have) have.remove(); return; }
+        if(have){
+          if(have.getAttribute('src') !== src) have.setAttribute('src', src);
+          return;
+        }
+        var im = document.createElement('img');
+        im.className = 'wl-th';
+        im.setAttribute('src', src);
+        im.alt = '';
+        im.loading = 'lazy';
+        el.insertBefore(im, el.firstChild);
+      });
+    });
+  }
+
+  /* 목록은 자주 다시 그려진다 — 그려진 뒤에 따라 붙는다 */
+  var t = null;
+  function later(){ clearTimeout(t); t = setTimeout(function(){ try{ run(); }catch(e){ console.warn('[목록 사진]', e); } }, 160); }
+  try{
+    var mo = new MutationObserver(function(m){
+      for(var i=0;i<m.length;i++){
+        var add = m[i].addedNodes; if(!add || !add.length) continue;
+        for(var j=0;j<add.length;j++){
+          var n = add[j];
+          if(!n || n.nodeType !== 1) continue;
+          if(n.classList && n.classList.contains('wl-th')) continue;   /* 내가 붙인 것은 무시 */
+          later(); return;
+        }
+      }
+    });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[목록 사진] 감시 실패', e); }
+  setTimeout(run, 1800);
+  setTimeout(run, 4200);
+
+  window.wlThumb = {
+    on:  function(){ setOn(true);  return '목록에 대표 사진을 보여 줍니다'; },
+    off: function(){ setOn(false); return '목록 사진을 껐습니다'; },
+    now: run
+  };
+  console.log('[목록 사진] v142 준비됨 — 카드·리스트 앞에 대표 사진');
 })();
