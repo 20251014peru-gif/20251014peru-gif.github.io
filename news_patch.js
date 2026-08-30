@@ -1,61 +1,89 @@
-/* news_patch.js — 뉴스레이더 보강 패치  v2  (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v3 (2026-08-30)
  *
- *  v2에서 고친 것
- *   ① 요약을 만들면 [📝 요약] 버튼이 사라지고, 그 자리에 요약 첫 줄이 남는다.
- *      → 칸을 누르면 5줄 전체가 팝업으로 뜬다. (이전엔 버튼이 계속 남아 있었음)
- *   ② 읽은 기사(제목 클릭)는 자동으로 ★ 스크랩에 들어간다. AI 요약을 안 해도 된다.
- *      → "스크랩한 기사만 요약합니다" 제한도 없앴다.
- *   ③ 읽지도 않은 기사에 ✓ 가 뜨던 문제 해결.
- *      원인: 기사 id 가 수집할 때마다 1,2,3… 으로 다시 매겨져서(collector.py)
- *            어제 읽은 번호가 오늘 다른 기사에 붙었다. news.json + archive 를 합칠 때
- *            같은 번호가 여러 건 생기기도 했다.
- *      해결: 읽음·스크랩 판정을 번호가 아니라 기사 URL 기준으로 바꿨다.
- *            기존 읽음 기록은 처음 한 번 현재 목록 기준으로 URL 로 옮긴다.
+ * 삼단(사실은 사단) 이동식 구조
+ *   ⚡속보  →  🆕새 뉴스  →  📖읽음  →  🔖스크랩
+ *   · 프로그램을 켜면 ⚡속보 화면이 먼저 뜬다.
+ *   · 제목을 눌러 읽으면 속보/새 뉴스에서 빠지고 📖읽음 으로 간다.
+ *   · 읽음에서 [📝 요약] 을 누르면 5줄 요약이 만들어지고 🔖스크랩 으로 옮겨진다.
+ *   · 요약 칸은 '핵심 한 줄'만 보이고, 누르면 5줄 전체가 팝업으로 뜬다.
  *
- *  news.html 본문은 건드리지 않는다.
- *  문제가 생기면 news.html 의 <script src="news_patch.js"> 한 줄만 지우면 원래대로 돌아온다.
+ * 되돌리기
+ *   · 읽음 → 새 뉴스 : 왼쪽 ✓ 동그라미를 다시 누르면 안읽음으로 돌아간다.
+ *   · 스크랩 → 읽음 : 맨 오른쪽 ★ 를 다시 누르면 스크랩에서 빠진다.
+ *
+ * v2 에서 이어받은 것
+ *   · 읽음·스크랩 판정을 기사 번호가 아니라 URL 기준으로 (안 본 기사에 ✓ 뜨던 버그 해결)
+ *   · 만든 요약은 새로고침해도 남는다
+ *
+ * v3 에서 새로 한 것
+ *   ① 탭 순서 재배치 + 이름 '전체' → '🆕새 뉴스' + 탭마다 건수 배지
+ *   ② 읽기만 해도 스크랩되던 것 제거 (이제 요약해야 스크랩)
+ *   ③ 요약 프롬프트 수정 — 1번째 줄이 '가장 중요한 핵심 한 줄'이 되게
+ *   ④ 수집기가 넣어준 1줄 요약은 '요약 완료'로 치지 않고 📝 버튼을 계속 띄운다
+ *   ⑤ 스크랩에 메모 한 줄 (왜 남겼는지)
+ *   ⑥ 속보가 0건인 날엔 최근 🔴중요 뉴스로 첫 화면을 채운다
+ *
+ * news.html 본문은 건드리지 않는다.
+ * 문제가 생기면 news.html 의 <script src="news_patch.js"> 한 줄만 지우면 원래대로 돌아온다.
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 2) return;
-  window.__nrPatch = 2;
+  if (window.__nrPatch >= 3) return;
+  window.__nrPatch = 3;
 
   var LINES = 5;
-  var VER = "v2";
+  var VER = "v3";
+  var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
 
-  /* ---------- 스타일 ---------- */
+  /* ================= 스타일 ================= */
   var css = [
-    "#nrpopBg{position:fixed;inset:0;background:rgba(15,20,30,.55);z-index:99999;",
+    "#nrpopBg,#nrmemoBg{position:fixed;inset:0;background:rgba(15,20,30,.55);z-index:99999;",
     "display:flex;align-items:center;justify-content:center;padding:16px}",
-    "#nrpop{background:#fff;color:#1c1c1e;width:100%;max-width:560px;max-height:82vh;",
+    "#nrpop,#nrmemo{background:#fff;color:#1c1c1e;width:100%;max-width:560px;max-height:82vh;",
     "overflow:auto;border-radius:16px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.32);",
     "font-size:15px;line-height:1.75;font-family:inherit}",
-    "#nrpop .t{font-weight:700;font-size:15.5px;line-height:1.5;margin-bottom:12px}",
+    "#nrpop .t,#nrmemo .t{font-weight:700;font-size:15.5px;line-height:1.5;margin-bottom:12px}",
     "#nrpop .b{white-space:pre-wrap;word-break:break-word}",
-    "#nrpop .x{margin-top:16px;width:100%;min-height:46px;border:0;border-radius:12px;",
+    "#nrpop .x,#nrmemo .x{margin-top:16px;width:100%;min-height:46px;border:0;border-radius:12px;",
     "background:#3b57c9;color:#fff;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer}",
+    "#nrmemo textarea{width:100%;min-height:96px;border:1px solid #d9dde5;border-radius:12px;",
+    "padding:12px;font-size:15px;line-height:1.6;font-family:inherit;resize:vertical;box-sizing:border-box}",
+    "#nrmemo .row{display:flex;gap:8px;margin-top:12px}",
+    "#nrmemo .row button{flex:1;min-height:46px;border:0;border-radius:12px;font-size:15px;",
+    "font-weight:600;font-family:inherit;cursor:pointer}",
+    "#nrmemo .ok{background:#3b57c9;color:#fff}",
+    "#nrmemo .no{background:#eceef3;color:#41474f}",
     "tbody td.summary .sumline{display:block;overflow:hidden;text-overflow:ellipsis;",
     "white-space:nowrap;cursor:pointer}",
+    "tbody td.summary .nrre{margin-top:3px}",
     "tbody tr.read{opacity:1!important}",
     "tbody tr.read .rdot{background:transparent!important;position:relative}",
-    "tbody tr.read .rdot::after{content:'✓';position:absolute;left:50%;top:50%;",
-    "transform:translate(-50%,-50%);font-size:13px;line-height:1;font-weight:700;color:#9aa3af}"
+    "tbody tr.read .rdot::after{content:'\\2713';position:absolute;left:50%;top:50%;",
+    "transform:translate(-50%,-50%);font-size:13px;line-height:1;font-weight:700;color:#9aa3af}",
+    "#nrNote{margin:0 0 10px;padding:9px 12px;border-radius:10px;background:rgba(59,87,201,.08);",
+    "color:#3b57c9;font-size:12.5px;font-weight:700;line-height:1.5}",
+    ".nrmemochip{display:inline-block;max-width:120px;overflow:hidden;text-overflow:ellipsis;",
+    "white-space:nowrap;vertical-align:middle;cursor:pointer;font-size:11.5px;font-weight:700;",
+    "padding:2px 7px;border-radius:8px;background:rgba(59,87,201,.10);color:#3b57c9}",
+    ".nrmemochip.empty{background:transparent;color:#b3b9c4;font-weight:600}"
   ].join("");
   var st = document.createElement("style");
   st.id = "nrPatchCss";
   st.textContent = css;
   document.head.appendChild(st);
 
-  /* ---------- 작은 도우미 ---------- */
+  /* ================= 작은 도우미 ================= */
   function say(m) { if (window.toast) window.toast(m); else alert(m); }
   function get(k, d) { return window.lsGet ? window.lsGet(k, d) : d; }
   function put(k, v) { if (window.lsSet) window.lsSet(k, v); }
+  function clean(s) { return String(s == null ? "" : s).replace(/[<>]/g, " ").trim(); }
 
   /* 기사 한 건을 가리키는 고정 열쇠 — URL 우선, 없으면 번호(예시 데이터용) */
   function keyOf(n) { return n ? (n.url && n.url !== "#" ? n.url : "id:" + n.id) : ""; }
 
   function newsList() { return (window.NEWS && window.NEWS.length) ? window.NEWS : []; }
   function scrapList() { return (window.scraps && window.scraps.length) ? window.scraps : []; }
+  function curView() { return (typeof window.view === "string") ? window.view : "all"; }
 
   function byId(id) {
     var i, L = newsList();
@@ -70,9 +98,17 @@
   }
   function keyById(id) { return keyOf(byId(id)); }
 
-  /* ---------- 번호 정리 : 합쳐진 목록에서 번호가 겹치지 않게 ---------- */
-  /* news.json + archive 를 합치면 같은 id 가 여러 건 생긴다.
-     화면에서 엉뚱한 기사가 열리거나 별표가 붙는 원인이라 매 렌더 전에 다시 매긴다. */
+  /* 행(tr) 에서 기사 찾기 — onclick="openReader(숫자)" 를 읽는다 */
+  function newsOfRow(tr) {
+    if (!tr) return null;
+    var holder = tr.querySelector("[onclick*='openReader']");
+    var oc = holder ? (holder.getAttribute("onclick") || "") : "";
+    var m = oc.match(/openReader\((\d+)\)/);
+    return m ? byId(parseInt(m[1], 10)) : null;
+  }
+
+  /* ================= 번호 정리 ================= */
+  /* news.json + archive 를 합치면 같은 id 가 여러 건 생긴다. 매 렌더 전에 다시 매긴다. */
   function reindex() {
     try {
       var L = newsList(), i, seen = {};
@@ -86,9 +122,7 @@
     } catch (e) {}
   }
 
-  /* ---------- 읽음 : URL 기준 ---------- */
-  /* localStorage 열쇠는 그대로 "nr_read" 를 쓴다(기기간 동기화 코드 유지).
-     담기는 값만 번호 배열 → URL 배열로 바뀐다. */
+  /* ================= 읽음 : URL 기준 ================= */
   var readSet = {};
   function loadRead() {
     var a = get("nr_read", []);
@@ -105,11 +139,10 @@
   }
   loadRead();
 
-  /* 기존 번호 기록 → URL 로 한 번만 옮기기 (현재 화면에 로드된 목록 기준) */
+  /* 기존 번호 기록 → URL 로 한 번만 옮기기 */
   function migrateRead(arr) {
     if (get("nr_read_mig", 0)) return;
-    var old = get("nr_read", []);
-    var ids = [];
+    var old = get("nr_read", []), ids = [];
     if (Object.prototype.toString.call(old) === "[object Array]") {
       for (var i = 0; i < old.length; i++) if (typeof old[i] === "number") ids.push(old[i]);
     }
@@ -122,23 +155,27 @@
     put("nr_read_mig", 1);
   }
 
-  window.isRead = function (id) { var k = keyById(id); return k ? !!readSet[k] : false; };
+  function isReadN(n) { var k = keyOf(n); return k ? !!readSet[k] : false; }
+  window.isRead = function (id) { return isReadN(byId(id)); };
   function markRead(k) { if (k && !readSet[k]) { readSet[k] = 1; saveRead(); } }
   window.toggleRead = function (id) {
     var k = keyById(id);
     if (!k) return;
-    if (readSet[k]) delete readSet[k]; else readSet[k] = 1;
+    if (readSet[k]) { delete readSet[k]; say("안읽음으로 되돌렸어요"); }
+    else { readSet[k] = 1; }
     saveRead();
     if (window.renderRows) window.renderRows();
     if (window.syncSoon) window.syncSoon();
   };
 
-  /* ---------- 스크랩 : URL 기준 ---------- */
+  /* ================= 스크랩 : URL 기준 ================= */
   function scrapByKey(k) {
     var S = scrapList();
     for (var i = 0; i < S.length; i++) if (S[i] && S[i].n && keyOf(S[i].n) === k) return S[i];
     return null;
   }
+  function scrapOfN(n) { return scrapByKey(keyOf(n)); }
+  function isScrapN(n) { return !!scrapOfN(n); }
   window.isScrap = function (id) { return !!scrapByKey(keyById(id)); };
   window.scrapOf = function (id) { return scrapByKey(keyById(id)) || undefined; };
 
@@ -149,7 +186,7 @@
     var ex = scrapByKey(k);
     if (ex) return ex;
     if (!window.scraps) return null;
-    ex = { n: JSON.parse(JSON.stringify(n)), notes: [], at: new Date().toISOString().slice(0, 10) };
+    ex = { n: JSON.parse(JSON.stringify(n)), notes: [], memo: "", at: new Date().toISOString().slice(0, 10) };
     window.scraps.push(ex);
     put("nr_scrap", window.scraps);
     if (window.syncSoon) window.syncSoon();
@@ -162,13 +199,14 @@
       window.scraps = window.scraps.filter(function (s) { return !(s && s.n && keyOf(s.n) === k); });
       put("nr_scrap", window.scraps);
       if (window.syncSoon) window.syncSoon();
+      say("스크랩에서 뺐어요 — 📖읽음 으로 돌아갑니다");
     } else {
       addScrap(byId(id));
     }
     if (window.renderRows) window.renderRows();
   };
 
-  /* ---------- 목록 로드 때 : 번호 다시 매기고, 읽음 기록 옮기기 ---------- */
+  /* ================= 목록 로드 때 ================= */
   var _normalize = window.normalizeNews;
   window.normalizeNews = function (arr) {
     var out = _normalize ? _normalize(arr) : arr;
@@ -177,19 +215,22 @@
       var L = out || [], i;
       for (i = 0; i < L.length; i++) {
         L[i].id = i + 1;
-        /* 새로고침해도 만들어 둔 요약이 살아 있게 (manSum → 스크랩 순서로 복원) */
-        if (!L[i].summary) {
-          var k = keyOf(L[i]);
-          if (L[i].url && window.manSum && window.manSum[L[i].url]) L[i].summary = window.manSum[L[i].url];
-          else { var sc = scrapByKey(k); if (sc && sc.n && sc.n.summary) L[i].summary = sc.n.summary; }
+        /* 새로고침해도 만들어 둔 요약이 살아 있게 */
+        if (L[i].url && window.manSum && window.manSum[L[i].url]) L[i].summary = window.manSum[L[i].url];
+        else if (!L[i].summary) {
+          var sc = scrapByKey(keyOf(L[i]));
+          if (sc && sc.n && sc.n.summary) L[i].summary = sc.n.summary;
         }
       }
     } catch (e) {}
     return out;
   };
 
-  /* ---------- 팝업 ---------- */
-  function closePop() { var e = document.getElementById("nrpopBg"); if (e) e.remove(); }
+  /* ================= 팝업 ================= */
+  function closePop() {
+    var a = document.getElementById("nrpopBg"); if (a) a.remove();
+    var b = document.getElementById("nrmemoBg"); if (b) b.remove();
+  }
   function popup(title, text) {
     closePop();
     var bg = document.createElement("div"); bg.id = "nrpopBg";
@@ -204,40 +245,79 @@
   }
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closePop(); });
 
-  /* ---------- 읽기창 열기 = 읽음 + 자동 스크랩 ---------- */
+  /* ================= 스크랩 메모 한 줄 ================= */
+  function openMemo(n) {
+    var sc = scrapOfN(n);
+    if (!sc) { say("스크랩된 기사만 메모할 수 있어요"); return; }
+    closePop();
+    var bg = document.createElement("div"); bg.id = "nrmemoBg";
+    var box = document.createElement("div"); box.id = "nrmemo";
+    var t = document.createElement("div"); t.className = "t"; t.textContent = "✏️ 왜 남겼나요 — " + (n.title || "");
+    var ta = document.createElement("textarea");
+    ta.placeholder = "예) 하이닉스 HBM 가격 협상 근거 / 다음 주 실적 발표 전 확인";
+    ta.value = sc.memo || "";
+    var row = document.createElement("div"); row.className = "row";
+    var ok = document.createElement("button"); ok.className = "ok"; ok.textContent = "저장";
+    var no = document.createElement("button"); no.className = "no"; no.textContent = "닫기";
+    ok.onclick = function () {
+      sc.memo = ta.value.trim();
+      put("nr_scrap", window.scraps);
+      if (window.syncSoon) window.syncSoon();
+      closePop();
+      if (window.renderRows) window.renderRows();
+      say(sc.memo ? "메모 저장됨" : "메모 비움");
+    };
+    no.onclick = closePop;
+    row.appendChild(ok); row.appendChild(no);
+    box.appendChild(t); box.appendChild(ta); box.appendChild(row);
+    bg.appendChild(box);
+    bg.addEventListener("click", function (e) { if (e.target === bg) closePop(); });
+    document.body.appendChild(bg);
+    setTimeout(function () { ta.focus(); }, 120);
+  }
+
+  /* ================= 읽기창 열기 = 읽음 처리 (자동 스크랩 없음) ================= */
   var _openReader = window.openReader;
   window.openReader = function (id) {
     var n = byId(id);
-    if (n) {
-      markRead(keyOf(n));   /* 먼저 읽음 처리 → 원래 함수의 번호 기반 저장이 실행되지 않음 */
-      addScrap(n);          /* 읽은 기사는 자동으로 ★ 스크랩 */
-    }
+    if (n) markRead(keyOf(n));         /* 먼저 읽음 처리 → 원래 함수의 번호 저장이 무의미해짐 */
     if (_openReader) _openReader(id);
-    saveRead();             /* 혹시 원래 코드가 덮어썼으면 되돌리기 */
+    saveRead();                        /* 원래 코드가 덮어썼으면 되돌리기 */
     if (window.renderRows) window.renderRows();
   };
 
-  /* ---------- 요약 생성 : 5줄, 만들고 나면 버튼 없애기 ---------- */
+  /* ================= 요약 : 5줄, 첫 줄이 핵심 ================= */
   function applySummary(n, text) {
     var k = keyOf(n);
-    n.summary = text;
-    if (n.url && window.manSum) { window.manSum[n.url] = text; put("nr_mansum", window.manSum); }
+    var txt = clean(text);
+    n.summary = txt;
+    if (n.url && window.manSum) { window.manSum[n.url] = txt; put("nr_mansum", window.manSum); }
     var L = newsList(), i;
-    for (i = 0; i < L.length; i++) if (keyOf(L[i]) === k) L[i].summary = text;
+    for (i = 0; i < L.length; i++) if (keyOf(L[i]) === k) L[i].summary = txt;
     var sc = scrapByKey(k);
-    if (sc) { sc.n.summary = text; put("nr_scrap", window.scraps); }
+    if (sc) { sc.n.summary = txt; put("nr_scrap", window.scraps); }
     /* 읽기창이 열려 있으면 그 안의 "한 줄 요약"도 바꿔주기 */
     try {
       if (window.curArticle && keyOf(window.curArticle) === k) {
-        window.curArticle.summary = text;
+        window.curArticle.summary = txt;
         var box = document.getElementById("aSum");
         if (box) {
-          var one = String(text).split("\n")[0].replace(/^[·\-•]\s*/, "").trim();
-          box.innerHTML = '<b>한 줄 요약</b> · ' + one +
+          var one = headline(txt);
+          box.innerHTML = '<b>핵심 한 줄</b> · ' + one +
             (n.url ? ' &nbsp;<a href="' + n.url + '" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800;white-space:nowrap">🔗 기사 원문 열기 ↗</a>' : '');
         }
       }
     } catch (e) {}
+  }
+
+  function headline(text) {
+    return String(text || "").split("\n")[0].replace(/^[·\-•]\s*/, "").trim();
+  }
+
+  /* 내가 만든 5줄 요약이 있는가 (수집기가 넣어준 1줄은 여기 안 들어감) */
+  function mySummary(n) {
+    if (!n || !n.url || !window.manSum) return null;
+    return window.manSum[n.url] || null;
   }
 
   window.rowSummarize = function (id, ev) {
@@ -246,12 +326,12 @@
     var n = byId(id);
     if (!n) return;
 
-    var saved = (n.url && window.manSum) ? window.manSum[n.url] : null;
-    if (!saved && n.summary) saved = n.summary;
-    if (saved) {                       /* 이미 요약이 있으면 새로 만들지 않고 보여주기만 */
-      applySummary(n, saved);
+    var mine = mySummary(n);
+    if (mine) {                        /* 이미 내 요약이 있으면 보여주기만 */
+      applySummary(n, mine);
+      addScrap(n);
       if (window.renderRows) window.renderRows();
-      popup(n.title || "", saved);
+      popup(n.title || "", mine);
       return;
     }
 
@@ -262,69 +342,232 @@
     }
 
     var btn = ev && ev.target && ev.target.closest ? ev.target.closest(".miniai") : null;
+    var label = btn ? btn.textContent : "";
     if (btn) { btn.disabled = true; btn.textContent = "요약 중…"; }
 
     var sys =
-      "너는 한국어 뉴스 요약가다. 반드시 " + LINES + "줄로 요약한다. " +
-      "각 줄은 '· ' 로 시작하고, 한 줄에 한 가지 사실만 담는다. " +
-      "기사에 없는 내용은 절대 추측해서 쓰지 않는다. " +
-      "숫자·회사명·인명은 기사에 나온 그대로 옮긴다. 군더더기 인사말은 쓰지 않는다.";
+      "너는 한국어 뉴스 요약가다. 반드시 " + LINES + "줄로 요약한다.\n" +
+      "1번째 줄: 이 기사에서 가장 중요한 사실 딱 하나를 35자 내외 한 줄로. 이 줄만 봐도 기사를 파악할 수 있어야 한다.\n" +
+      "2~" + LINES + "번째 줄: 나머지 핵심 사실을 중요한 순서대로.\n" +
+      "각 줄은 '· ' 로 시작하고, 한 줄에 한 가지 사실만 담는다.\n" +
+      "기사에 없는 내용은 절대 추측해서 쓰지 않는다. 숫자·회사명·인명은 기사에 나온 그대로 옮긴다. 인사말·머리말은 쓰지 않는다.";
 
     var src = (n.title || "") + "\n\n" + String(n.body || n.orig_title || "").slice(0, 6000);
 
     window.callClaude([{ role: "user", content: src }], sys, function (txt, err) {
-      if (btn) { btn.disabled = false; btn.textContent = "📝 요약"; }
+      if (btn) { btn.disabled = false; btn.textContent = label || "📝 요약"; }
       if (err || !txt) { say("요약 실패: " + (err || "응답이 비었습니다")); return; }
-      var clean = String(txt).trim();
-      applySummary(n, clean);
-      addScrap(n);                       /* 요약한 기사도 스크랩에 남기기 */
+      var out = clean(txt);
+      markRead(keyOf(n));
+      applySummary(n, out);
+      addScrap(n);                     /* 요약한 기사만 스크랩으로 이동 */
       if (window.renderRows) window.renderRows();
-      popup(n.title || "", clean);
+      popup(n.title || "", out);
+      say("🔖 스크랩으로 옮겼어요");
     });
   };
 
-  /* ---------- 요약 칸은 첫 줄만 보이게 ---------- */
-  function firstLineOnly() {
-    var cells = document.querySelectorAll("tbody td.summary");
-    for (var i = 0; i < cells.length; i++) {
-      var td = cells[i];
-      if (td.querySelector(".miniai")) continue;   /* 아직 요약 전 (버튼만 있는 칸) */
-      if (td.querySelector(".sumline")) continue;  /* 이미 처리됨 */
+  /* ================= 삼단 이동 : 목록 걸러내기 ================= */
+  var _fallback = false;
+  var _currentRows = window.currentRows;
+
+  function importantFallback() {
+    var L = newsList(), out = [], i, n;
+    for (i = 0; i < L.length; i++) {
+      n = L[i];
+      if (isReadN(n) || isScrapN(n)) continue;
+      if (n.sig !== "red") continue;
+      out.push(n);
+    }
+    if (window._tval) out.sort(function (a, b) { return window._tval(b) - window._tval(a); });
+    return out.slice(0, FALLBACK_MAX);
+  }
+
+  window.currentRows = function () {
+    var list = _currentRows ? _currentRows() : [];
+    _fallback = false;
+    try {
+      if (window.liveMode) return list;
+      var v = curView();
+      if (v === "scrap" || v === "gloss") return list;
+      /* 검색 중일 때는 이미 읽은/스크랩한 것도 다 보여준다 (안 그러면 검색이 안 됨) */
+      if (window.search) return list;
+      if (v === "all") {
+        list = list.filter(function (n) { return !isReadN(n) && !isScrapN(n); });
+      } else if (v === "read") {
+        list = list.filter(function (n) { return !isScrapN(n); });
+      } else if (v === "breaking") {
+        list = list.filter(function (n) { return !isReadN(n) && !isScrapN(n); });
+        if (!list.length && !window.filterKw && !window.groupFilter) {
+          list = importantFallback(); _fallback = list.length > 0;
+        }
+      }
+    } catch (e) {
+      if (window.console) console.error("[news_patch] currentRows", e);
+    }
+    return list;
+  };
+
+  /* ================= 탭 : 순서·이름·건수 배지 ================= */
+  var ORDER = ["breaking", "all", "read", "scrap", "gloss"];
+  function tabBtn(v) { return document.querySelector('.tabbar button[data-view="' + v + '"]'); }
+
+  function setupTabs() {
+    var bar = document.querySelector(".tabbar");
+    if (!bar || bar.dataset.nr3) return;
+    var i, b;
+    /* 이름 바꾸기 : 전체 → 🆕 새 뉴스 */
+    b = tabBtn("all");
+    if (b) b.innerHTML = '<span class="ic">🆕</span>새 뉴스';
+    /* 순서 재배치 : 속보 · 새 뉴스 · 읽음 · 스크랩 · 용어집 · AI */
+    for (i = 0; i < ORDER.length; i++) {
+      b = tabBtn(ORDER[i]);
+      if (b) bar.appendChild(b);
+    }
+    var ai = document.getElementById("aiTabBtn");
+    if (ai) bar.appendChild(ai);
+    /* 배지 자리 만들어 두기 */
+    for (i = 0; i < ORDER.length; i++) {
+      b = tabBtn(ORDER[i]);
+      if (b && !b.querySelector(".tb")) {
+        var s = document.createElement("span");
+        s.className = "tb"; s.style.display = "none";
+        b.appendChild(s);
+      }
+    }
+    bar.dataset.nr3 = "1";
+  }
+
+  function setBadge(v, num) {
+    var b = tabBtn(v);
+    if (!b) return;
+    var t = b.querySelector(".tb");
+    if (!t) return;
+    if (num > 0) { t.textContent = num > 99 ? "99+" : String(num); t.style.display = "grid"; }
+    else { t.style.display = "none"; }
+  }
+
+  function updateBadges() {
+    try {
+      var L = newsList(), i, n, k;
+      var unread = 0, brk = 0, readOnly = 0;
+      for (i = 0; i < L.length; i++) {
+        n = L[i]; k = keyOf(n);
+        if (scrapByKey(k)) continue;
+        if (readSet[k]) { readOnly++; continue; }
+        unread++;
+        if (window.isBreaking && window.isBreaking(n)) brk++;
+      }
+      setBadge("breaking", brk);
+      setBadge("all", unread);
+      setBadge("read", readOnly);
+      setBadge("scrap", scrapList().length);
+    } catch (e) {}
+  }
+
+  /* ================= 안내 줄 (속보 0건일 때) ================= */
+  function noteBox() {
+    var el = document.getElementById("nrNote");
+    if (el) return el;
+    var wrap = document.getElementById("tablewrap");
+    if (!wrap || !wrap.parentNode) return null;
+    el = document.createElement("div");
+    el.id = "nrNote";
+    el.style.display = "none";
+    wrap.parentNode.insertBefore(el, wrap);
+    return el;
+  }
+  function showNote(text) {
+    var el = noteBox();
+    if (!el) return;
+    if (text) { el.textContent = text; el.style.display = "block"; }
+    else { el.style.display = "none"; }
+  }
+
+  /* ================= 요약 칸 : 핵심 한 줄만 ================= */
+  function decorateSummaryCells() {
+    var rows = document.querySelectorAll("tbody tr");
+    for (var i = 0; i < rows.length; i++) {
+      var tr = rows[i];
+      var td = tr.querySelector("td.summary");
+      if (!td) continue;
+      if (td.querySelector(".sumline")) continue;   /* 이미 처리됨 */
       var raw = (td.textContent || "").trim();
       if (!raw) continue;
-      var one = raw.split("\n")[0].replace(/^[·\-•]\s*/, "").trim();
+      if (td.querySelector(".miniai") && !raw.replace(/📝\s*요약/, "").trim()) continue; /* 버튼만 있는 칸 */
+      var one = headline(raw);
       if (!one) continue;
+
+      var n = newsOfRow(tr);
       td.textContent = "";
       var sp = document.createElement("span");
       sp.className = "sumline";
       sp.textContent = one;
       sp.title = "눌러서 전체 보기";
       td.appendChild(sp);
+
+      /* 수집기가 넣어준 1줄 요약이면 → 5줄 요약 버튼을 계속 띄운다 */
+      if (n && !mySummary(n)) {
+        var b = document.createElement("button");
+        b.className = "miniai nrre";
+        b.textContent = "📝 5줄 요약";
+        b.setAttribute("onclick", "rowSummarize(" + n.id + ",event)");
+        td.appendChild(b);
+      }
     }
   }
 
-  /* ---------- 요약 칸 클릭 → 전체 보기 ---------- */
+  /* 요약 칸 클릭 → 전체 보기 */
   document.addEventListener("click", function (e) {
     if (!e.target.closest) return;
-    if (e.target.closest(".miniai")) return;            /* 요약 버튼은 원래대로 */
+    if (e.target.closest(".miniai")) return;        /* 요약 버튼은 원래대로 */
+    if (e.target.closest(".nrmemochip")) return;    /* 메모 칩은 따로 */
     var cell = e.target.closest("tbody td.summary");
     if (!cell) return;
-    var tr = cell.closest("tr");
-    if (!tr) return;
-    var holder = tr.querySelector("[onclick*='openReader']");
-    var oc = holder ? holder.getAttribute("onclick") || "" : "";
-    var m = oc.match(/openReader\((\d+)\)/);
-    if (!m) return;
-    var n = byId(parseInt(m[1], 10));
+    var n = newsOfRow(cell.closest("tr"));
     if (!n) return;
-    var s = (n.url && window.manSum && window.manSum[n.url]) ? window.manSum[n.url] : n.summary;
-    if (!s) return;                                    /* 요약이 없으면 원래 동작 유지 */
+    var s = mySummary(n) || n.summary;
+    if (!s) return;
     e.preventDefault();
     e.stopPropagation();
     popup(n.title || "", s);
   }, true);
 
-  /* ---------- 렌더 감싸기 : 번호 정리 + 읽음 최신화 + 첫 줄 처리 ---------- */
+  /* ================= 스크랩 메모 칸 ================= */
+  function decorateMemoCells() {
+    if (curView() !== "scrap") return;
+    var rows = document.querySelectorAll("tbody tr");
+    for (var i = 0; i < rows.length; i++) {
+      var tr = rows[i];
+      var sum = tr.querySelector("td.summary");
+      if (!sum) continue;
+      var td = sum.nextElementSibling;              /* 요약 칸 다음이 메모(💬) 칸 */
+      if (!td || td.querySelector(".nrmemochip")) continue;
+      var n = newsOfRow(tr);
+      if (!n) continue;
+      var sc = scrapOfN(n);
+      if (!sc) continue;
+      var noteN = (sc.notes && sc.notes.length) ? sc.notes.length : 0;
+      td.innerHTML = "";
+      var chip = document.createElement("span");
+      chip.className = "nrmemochip" + (sc.memo ? "" : " empty");
+      chip.textContent = sc.memo ? ("✏️ " + sc.memo) : "✏️";
+      chip.title = sc.memo || "메모 남기기";
+      chip.onclick = function (nn) {
+        return function (ev) { ev.stopPropagation(); openMemo(nn); };
+      }(n);
+      td.appendChild(chip);
+      if (noteN) {
+        var p = document.createElement("span");
+        p.className = "notepill";
+        p.textContent = "💬" + noteN;
+        p.style.marginLeft = "4px";
+        td.appendChild(p);
+      }
+    }
+  }
+
+  /* ================= 렌더 감싸기 ================= */
   var _renderRows = window.renderRows;
   var _inRender = 0;
   window.renderRows = function () {
@@ -334,20 +577,39 @@
       loadRead();
       reindex();
       if (_renderRows) _renderRows();
-      firstLineOnly();
+      decorateSummaryCells();
+      decorateMemoCells();
+      setupTabs();
+      updateBadges();
+      showNote(_fallback ? "⚡ 지금 새 속보는 없어요 — 대신 아직 안 읽은 🔴 중요 뉴스를 보여드립니다." : "");
     } catch (e) {
       if (window.console) console.error("[news_patch] renderRows", e);
     }
     _inRender = 0;
   };
 
-  /* 표가 다시 그려질 때마다 첫 줄만 남기기 */
+  /* 표가 다시 그려질 때마다 다시 손보기 */
   function watch() {
     var tb = document.querySelector("tbody");
     if (!tb) { setTimeout(watch, 500); return; }
-    new MutationObserver(function () { firstLineOnly(); })
-      .observe(tb, { childList: true, subtree: true });
-    firstLineOnly();
+    new MutationObserver(function () {
+      decorateSummaryCells();
+      decorateMemoCells();
+    }).observe(tb, { childList: true, subtree: true });
+
+    setupTabs();
+    decorateSummaryCells();
+    updateBadges();
+
+    /* 켜면 ⚡속보 화면부터 */
+    if (!window.__nrLanded) {
+      window.__nrLanded = 1;
+      setTimeout(function () {
+        try { if (window.setView && !window.liveMode) window.setView("breaking"); } catch (e) {}
+      }, 400);
+    }
+
+    /* 헤더 버전 표시 */
     try {
       var sp = document.querySelectorAll(".hmeta span");
       for (var i = 0; i < sp.length; i++) {
@@ -361,5 +623,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
   else watch();
 
-  if (window.console) console.log("[news_patch] " + VER + " 적용됨 — 읽음/스크랩 URL 기준");
+  if (window.console) console.log("[news_patch] " + VER + " 적용됨 — 속보→새뉴스→읽음→스크랩 이동식");
 })();
