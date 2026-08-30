@@ -1,4 +1,4 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v4 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v6 (2026-08-30)
  *
  * 삼단(사실은 사단) 이동식 구조
  *   ⚡속보  →  🆕새 뉴스  →  📖읽음  →  🔖스크랩
@@ -29,16 +29,27 @@
  *   ⑨ 표 머리글 '한 줄 요약' → '5줄 요약'
  *   ⑩ 아직 요약 안 한 기사는 수집기 문장 대신 [📝 요약] 버튼만 보인다
  *
+ * v5 에서 새로 한 것
+ *   ⑪ 컴↔폰 동기화에 '내가 만든 5줄 요약'과 '지운 목록'을 포함시킴
+ *      (원래 userdata.json 동기화는 스크랩·읽음·키워드만 담고 요약은 빠져 있었다)
+ *   ⑫ 화면을 다시 켤 때 자동으로 최신 내용을 받아온다
+ *   ⑬ 읽음·스크랩에서 뉴스를 지울 수 있다 — 줄마다 🗑 + 여러 건 선택 삭제 + 모두 지우기
+ *   ⑭ 폰(화면 760px 이하)에서는 제목과 요약이 두 줄까지만 보인다
+ *
+ * v6 에서 새로 한 것
+ *   ⑮ 읽기창과 요약 팝업에 [📤 공유] — 제목 + 5줄 요약 + 원문 링크를 한 번에.
+ *      폰에서는 카톡·문자 등 공유창이 뜨고, 컴에서는 클립보드로 복사된다.
+ *
  * news.html 본문은 건드리지 않는다.
  * 문제가 생기면 news.html 의 <script src="news_patch.js"> 한 줄만 지우면 원래대로 돌아온다.
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 4) return;
-  window.__nrPatch = 4;
+  if (window.__nrPatch >= 6) return;
+  window.__nrPatch = 6;
 
   var LINES = 5;
-  var VER = "v4";
+  var VER = "v6";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
 
   /* ================= 스타일 ================= */
@@ -64,6 +75,17 @@
     "line-height:1.55;cursor:pointer}",
     "tbody td.summary .sumline:hover{text-decoration:underline dotted}",
     "body:has(.tabbar button.on[data-view=\"scrap\"]) col.c-note{width:132px}",
+    ".nrdel{cursor:pointer;margin-left:6px;opacity:.5;font-size:13px}",
+    "#nrpop .sh{margin-top:12px;width:100%;min-height:46px;border:1px solid #d9dde5;border-radius:12px;",
+    "background:#fff;color:#3b57c9;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer}",
+    "#nrpop .cp{width:100%;min-height:150px;margin-top:12px;border:1px solid #d9dde5;border-radius:12px;",
+    "padding:12px;font-size:14px;line-height:1.6;font-family:inherit;box-sizing:border-box}",
+    ".nrdel:hover{opacity:1}",
+    "#selbar .nrall{background:var(--line-2);color:var(--ink-2)}",
+    "@media(max-width:760px){",
+    "tbody td.summary .sumline,tbody .title{display:-webkit-box;-webkit-line-clamp:2;",
+    "-webkit-box-orient:vertical;overflow:hidden}",
+    "}",
     "tbody tr.read{opacity:1!important}",
     "tbody tr.read .rdot{background:transparent!important;position:relative}",
     "tbody tr.read .rdot::after{content:'\\2713';position:absolute;left:50%;top:50%;",
@@ -176,6 +198,25 @@
     if (window.syncSoon) window.syncSoon();
   };
 
+  /* ================= 지운 뉴스 : URL 기준 ================= */
+  /* 읽음/스크랩에서 🗑 로 지운 기사. 새 뉴스·읽음·속보 어디에도 다시 안 나온다. */
+  var gone = {};
+  function loadGone() {
+    var a = get("nr_dismiss", []);
+    gone = {};
+    if (Object.prototype.toString.call(a) === "[object Array]") {
+      for (var i = 0; i < a.length; i++) if (typeof a[i] === "string") gone[a[i]] = 1;
+    }
+  }
+  function saveGone() {
+    var out = [], k;
+    for (k in gone) if (gone.hasOwnProperty(k)) out.push(k);
+    put("nr_dismiss", out);
+    if (window.syncSoon) window.syncSoon();
+  }
+  function isGone(n) { var k = keyOf(n); return k ? !!gone[k] : false; }
+  loadGone();
+
   /* ================= 스크랩 : URL 기준 ================= */
   function scrapByKey(k) {
     var S = scrapList();
@@ -239,14 +280,21 @@
     var a = document.getElementById("nrpopBg"); if (a) a.remove();
     var b = document.getElementById("nrmemoBg"); if (b) b.remove();
   }
-  function popup(title, text) {
+  function popup(title, text, shareN) {
     closePop();
     var bg = document.createElement("div"); bg.id = "nrpopBg";
     var box = document.createElement("div"); box.id = "nrpop";
     var t = document.createElement("div"); t.className = "t"; t.textContent = title || "";
     var b = document.createElement("div"); b.className = "b"; b.textContent = text || "";
     var x = document.createElement("button"); x.className = "x"; x.textContent = "닫기"; x.onclick = closePop;
-    box.appendChild(t); box.appendChild(b); box.appendChild(x);
+    box.appendChild(t); box.appendChild(b);
+    if (shareN) {
+      var sh = document.createElement("button");
+      sh.className = "sh"; sh.textContent = "📤 공유하기";
+      sh.onclick = function () { doShare(shareN); };
+      box.appendChild(sh);
+    }
+    box.appendChild(x);
     bg.appendChild(box);
     bg.addEventListener("click", function (e) { if (e.target === bg) closePop(); });
     document.body.appendChild(bg);
@@ -291,7 +339,7 @@
     if (n) markRead(keyOf(n));         /* 먼저 읽음 처리 → 원래 함수의 번호 저장이 무의미해짐 */
     if (_openReader) _openReader(id);
     saveRead();                        /* 원래 코드가 덮어썼으면 되돌리기 */
-    try { fixReaderSum(n); } catch (e) {}
+    try { fixReaderSum(n); setupShareBtn(); } catch (e) {}
     if (window.renderRows) window.renderRows();
   };
 
@@ -300,7 +348,11 @@
     var k = keyOf(n);
     var txt = clean(text);
     n.summary = txt;
-    if (n.url && window.manSum) { window.manSum[n.url] = txt; put("nr_mansum", window.manSum); }
+    if (n.url && window.manSum) {
+      window.manSum[n.url] = txt;
+      put("nr_mansum", window.manSum);
+      if (window.syncSoon) window.syncSoon();   /* 요약도 컴↔폰 동기화 */
+    }
     var L = newsList(), i;
     for (i = 0; i < L.length; i++) if (keyOf(L[i]) === k) L[i].summary = txt;
     var sc = scrapByKey(k);
@@ -337,8 +389,79 @@
 
   function popupSummary(n, text) {
     var h = headline(text), b = fiveLines(text);
-    popup(n && n.title ? n.title : "", h ? (h + "\n\n" + b) : b);
+    popup(n && n.title ? n.title : "", h ? (h + "\n\n" + b) : b, n);
   }
+
+  /* ================= 공유 ================= */
+  /* 제목 + 5줄 요약 + 원문 링크를 한 덩어리로 만든다 */
+  function shareText(n) {
+    if (!n) return "";
+    var out = [];
+    out.push("📰 " + (n.title || ""));
+    var src = n.origin || (n.src === "naver" ? "네이버" : n.src === "google" ? "구글" : "");
+    var meta = [src, n.date || ""].filter(Boolean).join(" · ");
+    if (meta) out.push(meta);
+    var sum = mySummary(n) || "";
+    if (sum) {
+      out.push("");
+      var h = headline(sum);
+      if (h) out.push("▶ " + h);
+      var b = fiveLines(sum);
+      if (b) out.push(b);
+    }
+    if (n.url && n.url !== "#") { out.push(""); out.push(n.url); }
+    return out.join("\n");
+  }
+
+  /* 복사도 공유도 막혔을 때 : 직접 긁어갈 수 있게 보여주기 */
+  function shareFallback(n, text) {
+    closePop();
+    var bg = document.createElement("div"); bg.id = "nrpopBg";
+    var box = document.createElement("div"); box.id = "nrpop";
+    var t = document.createElement("div"); t.className = "t"; t.textContent = "📤 아래 내용을 복사해서 보내세요";
+    var ta = document.createElement("textarea"); ta.className = "cp"; ta.value = text;
+    var x = document.createElement("button"); x.className = "x"; x.textContent = "닫기"; x.onclick = closePop;
+    box.appendChild(t); box.appendChild(ta); box.appendChild(x);
+    bg.appendChild(box);
+    bg.addEventListener("click", function (e) { if (e.target === bg) closePop(); });
+    document.body.appendChild(bg);
+    setTimeout(function () { ta.focus(); ta.select(); }, 120);
+  }
+
+  function doShare(n) {
+    if (!n) return;
+    var text = shareText(n);
+    if (!text) { say("공유할 내용이 없어요"); return; }
+    /* 폰이면 카톡·문자 등 공유창, 컴이면 복사가 더 편하다 */
+    var isPhone = false;
+    try {
+      isPhone = (navigator.maxTouchPoints > 0) && (window.innerWidth <= 900);
+    } catch (e) {}
+    if (isPhone && navigator.share) {
+      var data = { title: n.title || "뉴스", text: text };
+      navigator.share(data).catch(function (err) {
+        if (err && err.name === "AbortError") return;   /* 사용자가 닫은 것 */
+        copyShare(n, text);
+      });
+      return;
+    }
+    copyShare(n, text);
+  }
+
+  function copyShare(n, text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        say("복사했어요 — 붙여넣기 하세요");
+      }).catch(function () { shareFallback(n, text); });
+      return;
+    }
+    shareFallback(n, text);
+  }
+
+  window.nrShare = function (id, ev) {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    doShare(byId(id) || window.curArticle);
+  };
 
   function escHtml(s) {
     return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -408,7 +531,7 @@
     var L = newsList(), out = [], i, n;
     for (i = 0; i < L.length; i++) {
       n = L[i];
-      if (isReadN(n) || isScrapN(n)) continue;
+      if (isReadN(n) || isScrapN(n) || isGone(n)) continue;
       if (n.sig !== "red") continue;
       out.push(n);
     }
@@ -425,6 +548,7 @@
       if (v === "scrap" || v === "gloss") return list;
       /* 검색 중일 때는 이미 읽은/스크랩한 것도 다 보여준다 (안 그러면 검색이 안 됨) */
       if (window.search) return list;
+      list = list.filter(function (n) { return !isGone(n); });
       if (v === "all") {
         list = list.filter(function (n) { return !isReadN(n) && !isScrapN(n); });
       } else if (v === "read") {
@@ -486,6 +610,7 @@
       var unread = 0, brk = 0, readOnly = 0;
       for (i = 0; i < L.length; i++) {
         n = L[i]; k = keyOf(n);
+        if (gone[k]) continue;
         if (scrapByKey(k)) continue;
         if (readSet[k]) { readOnly++; continue; }
         unread++;
@@ -564,6 +689,25 @@
     }
   }
 
+  /* 읽기창 헤더에 [📤 공유] 버튼 (원문 버튼 앞에) */
+  function setupShareBtn() {
+    var host = document.querySelector("#reader .r-actions");
+    if (!host || host.querySelector(".nrshare")) return;
+    var b = document.createElement("button");
+    b.className = "r-btn nrshare";
+    b.textContent = "📤 공유";
+    b.title = "제목 + 5줄 요약 + 원문 링크를 공유";
+    b.onclick = function (ev) {
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+      var n = window.curArticle;
+      if (!n) { say("기사를 먼저 열어주세요"); return; }
+      doShare(n);
+    };
+    var orig = document.getElementById("rOrig");
+    if (orig && orig.parentNode === host) host.insertBefore(b, orig);
+    else host.appendChild(b);
+  }
+
   /* 표 머리글 : 한 줄 요약 → 5줄 요약 */
   function fixHead() {
     try {
@@ -624,6 +768,210 @@
     }
   }
 
+  /* ================= 컴 ↔ 폰 동기화 보강 ================= */
+  /* 원래 userdata.json 에는 스크랩·읽음·키워드만 담겨서, 내가 만든 5줄 요약은
+     다른 기기에서 안 보였다. 요약(nr_mansum)과 지운 목록(nr_dismiss)을 함께 싣는다. */
+  var _payload = window.syncPayload;
+  window.syncPayload = function () {
+    var d = _payload ? _payload() : { v: 1, ts: Date.now() };
+    try {
+      d.mansum = get("nr_mansum", {});
+      d.dismiss = get("nr_dismiss", []);
+      d.pv = 5;
+    } catch (e) {}
+    return d;
+  };
+
+  var _apply = window.applyPayload;
+  window.applyPayload = function (d) {
+    if (_apply) _apply(d);
+    try {
+      if (d && d.mansum) { put("nr_mansum", d.mansum); window.manSum = d.mansum; }
+      if (d && d.dismiss) { put("nr_dismiss", d.dismiss); }
+      loadRead();
+      loadGone();
+      /* 받아온 요약을 지금 목록에 다시 입히기 */
+      var L = newsList(), i, u;
+      for (i = 0; i < L.length; i++) {
+        u = L[i].url;
+        if (u && window.manSum && window.manSum[u]) L[i].summary = window.manSum[u];
+      }
+      if (window.renderRows) window.renderRows();
+    } catch (e) {
+      if (window.console) console.error("[news_patch] applyPayload", e);
+    }
+  };
+
+  /* 저장(push)이 왜 실패했는지 알려주기 —
+     원래 코드는 실패해도 작은 뱃지만 바뀌어서 몇 달을 모르고 지나갈 수 있었다. */
+  function syncFile() { return window.SYNC_FILE || "userdata.json"; }
+  var _pushBusy = false;
+  var _pulledOnce = false;
+  var _lastPull = 0;
+
+  /* 받아오기가 끝났는지 표시 — 새 기기(폰)가 빈 내용으로 컴 자료를 덮어쓰는 사고를 막는다 */
+  var _pull = window.syncPull;
+  window.syncPull = function (cb) {
+    if (!_pull) { if (cb) cb(false); return; }
+    _pull(function (ok, d) {
+      _pulledOnce = true;
+      _lastPull = Date.now();
+      if (cb) cb(ok, d);
+    });
+  };
+
+  window.syncPush = function () {
+    if (!window.GH_TOKEN || !window.GH_REPO) { say("동기화하려면 ⚙️ 에서 GitHub 토큰을 넣어주세요"); return; }
+    if (_pushBusy) return;
+    if (!_pulledOnce) {                     /* 아직 한 번도 안 받아왔으면 받아온 뒤에 저장 */
+      _pulledOnce = true;
+      window.syncPull(function () { setTimeout(window.syncPush, 400); });
+      return;
+    }
+    _pushBusy = true;
+    var badge = document.getElementById("syncBadge");
+    if (badge) { badge.textContent = "⏳ 동기화 중"; badge.style.opacity = "1"; }
+
+    var body = JSON.stringify(window.syncPayload(), null, 2);
+    var content = btoa(unescape(encodeURIComponent(body)));
+    var url = "https://api.github.com/repos/" + window.GH_REPO + "/contents/" + syncFile();
+    var payload = { message: "sync userdata", content: content };
+    if (window._syncSha) payload.sha = window._syncSha;
+
+    fetch(url, { method: "PUT", headers: window._ghHeaders(), body: JSON.stringify(payload) })
+      .then(function (r) { return r.json().then(function (j) { return { s: r.status, j: j }; }); })
+      .then(function (o) {
+        _pushBusy = false;
+        if (o.j && o.j.content) {
+          window._syncSha = o.j.content.sha;
+          if (badge) { badge.textContent = "✅ 저장됨"; setTimeout(function () { badge.style.opacity = "0"; }, 1500); }
+          return;
+        }
+        if (badge) { badge.textContent = "🟠 실패"; badge.style.opacity = "1"; }
+        if (o.s === 401) say("동기화 실패: 토큰이 만료됐거나 잘못됐어요 (⚙️에서 다시 넣기)");
+        else if (o.s === 403) say("동기화 실패: 토큰에 Contents 쓰기 권한이 없어요");
+        else if (o.s === 404) say("동기화 실패: 저장소를 못 찾아요 — 토큰 권한(Contents) 확인");
+        else if (o.s === 409 || o.s === 422) {
+          say("다른 기기 내용과 겹쳐요 — 불러온 뒤 다시 저장할게요");
+          if (window.syncPull) window.syncPull(function () { setTimeout(window.syncPush, 600); });
+        } else say("동기화 실패 (" + o.s + ")");
+      })
+      .catch(function () {
+        _pushBusy = false;
+        if (badge) { badge.textContent = "🟠 실패"; badge.style.opacity = "1"; }
+        say("동기화 실패: 네트워크 오류");
+      });
+  };
+
+  /* 화면을 다시 켜면(폰에서 앱 전환 후 복귀 등) 최신 내용 받아오기 */
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState !== "visible") return;
+    if (Date.now() - _lastPull < 60000) return;      /* 1분에 한 번까지만 */
+    if (!window.GH_TOKEN || !window.GH_REPO) return;
+    _lastPull = Date.now();
+    try { if (window.syncPull) window.syncPull(); } catch (e) {}
+  });
+
+  /* ================= 지우기 ================= */
+  function killOne(n, silent) {
+    if (!n) return;
+    var k = keyOf(n);
+    if (!k) return;
+    /* 스크랩이면 스크랩에서도 빼고, 다시 안 나오게 지운 목록에 넣는다 */
+    if (scrapByKey(k) && window.scraps) {
+      window.scraps = scrapList().filter(function (s) { return !(s && s.n && keyOf(s.n) === k); });
+      put("nr_scrap", window.scraps);
+    }
+    gone[k] = 1;
+    saveGone();
+    if (!silent) say("지웠어요");
+  }
+
+  window.nrKill = function (id, ev) {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    killOne(byId(id));
+    if (window.renderRows) window.renderRows();
+  };
+
+  /* 여러 건 선택 삭제 (읽음·스크랩 공용) */
+  window.selDelete = function () {
+    var sel = window.selected || {};
+    var ids = Object.keys(sel).map(Number).filter(function (x) { return !isNaN(x); });
+    if (!ids.length) { say("선택된 항목이 없어요"); return; }
+    if (!window.confirm(ids.length + "건을 지울까요?\n(새 뉴스·읽음·스크랩 어디에도 다시 안 나와요)")) return;
+    for (var i = 0; i < ids.length; i++) killOne(byId(ids[i]), true);
+    window.selected = {};
+    if (window.setSelUI) window.setSelUI();
+    if (window.renderRows) window.renderRows();
+    say(ids.length + "건 지웠어요");
+  };
+
+  /* 지금 탭에 보이는 것 전부 지우기 */
+  window.nrKillAll = function () {
+    var list = [];
+    try { list = window.currentRows() || []; } catch (e) {}
+    if (!list.length) { say("지울 게 없어요"); return; }
+    var v = curView();
+    var name = (v === "scrap") ? "스크랩" : (v === "read") ? "읽음" : "이 목록";
+    if (!window.confirm(name + "에 있는 " + list.length + "건을 모두 지울까요?")) return;
+    for (var i = 0; i < list.length; i++) killOne(list[i], true);
+    window.selected = {};
+    if (window.setSelUI) window.setSelUI();
+    if (window.renderRows) window.renderRows();
+    say(list.length + "건 지웠어요");
+  };
+
+  /* 읽음 탭에서도 선택 삭제 툴바를 쓸 수 있게 + '모두 지우기' 버튼 달기 */
+  var _setView = window.setView;
+  window.setView = function (v) {
+    if (_setView) _setView(v);
+    try {
+      var sb = document.getElementById("selbar");
+      if (v === "read") {
+        window.selMode = true;
+        window.selected = {};
+        if (sb) sb.classList.add("on");
+        if (window.setSelUI) window.setSelUI();
+        if (window.toggleChkCol) window.toggleChkCol();
+        if (window.renderRows) window.renderRows();
+      }
+      if (sb) {
+        var all = sb.querySelector(".nrall");
+        if (v === "read" || v === "scrap") {
+          if (!all) {
+            all = document.createElement("button");
+            all.className = "clr nrall";
+            all.textContent = "🧹 모두 지우기";
+            all.onclick = function () { window.nrKillAll(); };
+            sb.appendChild(all);
+          }
+          all.style.display = "";
+        } else if (all) { all.style.display = "none"; }
+      }
+    } catch (e) {
+      if (window.console) console.error("[news_patch] setView", e);
+    }
+  };
+
+  /* 줄마다 🗑 (읽음·스크랩 탭에서만) */
+  function decorateDeleteButtons() {
+    var v = curView();
+    if (v !== "read" && v !== "scrap") return;
+    var rows = document.querySelectorAll("tbody tr");
+    for (var i = 0; i < rows.length; i++) {
+      var act = rows[i].querySelector(".rowact");
+      if (!act || act.querySelector(".nrdel")) continue;
+      var n = newsOfRow(rows[i]);
+      if (!n) continue;
+      var b = document.createElement("span");
+      b.className = "nrdel";
+      b.textContent = "🗑";
+      b.title = "이 뉴스 지우기";
+      b.setAttribute("onclick", "nrKill(" + n.id + ",event)");
+      act.appendChild(b);
+    }
+  }
+
   /* ================= 렌더 감싸기 ================= */
   var _renderRows = window.renderRows;
   var _inRender = 0;
@@ -632,10 +980,12 @@
     _inRender = 1;
     try {
       loadRead();
+      loadGone();
       reindex();
       if (_renderRows) _renderRows();
       decorateSummaryCells();
       decorateMemoCells();
+      decorateDeleteButtons();
       setupTabs();
       fixHead();
       updateBadges();
@@ -653,10 +1003,12 @@
     new MutationObserver(function () {
       decorateSummaryCells();
       decorateMemoCells();
+      decorateDeleteButtons();
     }).observe(tb, { childList: true, subtree: true });
 
     setupTabs();
     fixHead();
+    setupShareBtn();
     decorateSummaryCells();
     updateBadges();
 
@@ -682,5 +1034,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
   else watch();
 
-  if (window.console) console.log("[news_patch] " + VER + " 적용됨 — 5줄 요약 · 압축 한 줄 표시");
+  if (window.console) console.log("[news_patch] " + VER + " 적용됨 — 동기화 · 삭제 · 공유");
 })();
