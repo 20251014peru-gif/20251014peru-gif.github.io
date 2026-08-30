@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v160-0831-0030";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v161-0831-0210";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3268,7 +3268,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=160-20260831t0030"></script>
+<script src="worklog.js?v=161-20260831t0210"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -18165,14 +18165,20 @@ if('serviceWorker' in navigator){
     if(Number(e.finalCost)) cost.push(['최종 금액', won(e.finalCost)]);
     if(Number(e.estCost) && Number(e.finalCost)){
       var d = Number(e.finalCost) - Number(e.estCost);
-      cost.push(['증감', (d > 0 ? '+' : '') + won(Math.abs(d)).replace('원','') + '원']);
+      /* v161 — 깎인 경우에 「−」 가 안 붙어서 오른 것처럼 보였다.
+            견적 120만 → 최종 115만 이 보고서에 「증감 50,000원」 으로 나왔다. */
+      cost.push(['증감', (d > 0 ? '+' : (d < 0 ? '−' : '')) + won(Math.abs(d)).replace('원','') + '원']);
     }
     var info = [
       ['등록일', esc(pdate(e))],
       ['진행상태', '<b>' + esc(e.status || '') + '</b>'],
       ['담당 업체', esc(e.owner || '')],
-      ['담당자 · 연락처', esc(e.ownerPhone || '')]
-    ].concat(cost);
+      /* v161-0831-0210 — 담당자·직책 칸이 생겼다. 옛 기록은 이 둘이 비어 있으므로
+            값이 있을 때만 줄을 만든다 (빈 줄이 늘어나면 보고서가 지저분해진다). */
+      ['담당자', esc([e.ownerContact || '', e.ownerRole || ''].filter(Boolean).join(' · '))],
+      ['연락처', esc(e.ownerPhone || '')]
+    ].filter(function(row){ return row[1] !== ''; }).concat(cost);
+    if(e.ownerMemo) info.push(['업체 메모', esc(e.ownerMemo)]);
     if(e.floor)    info.push(['층', esc(e.floor)]);
     if(e.location) info.push(['위치', esc(e.location)]);
 
@@ -29100,7 +29106,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   var VEND = {
     work:     { workVendor:{person:'workContact', title:'workRole', phone:'workPhone', memo:'workMemo'} },
     expense:  { vendor:{} },
-    progress: { owner:{phone:'ownerPhone'} },
+    /* v161-0831-0210 — 진행업무에 담당자·직책·메모 칸이 생겼다 (worklog.js SCHEMA.progress)
+          → 연락처를 고르면 업무(work) 와 똑같이 넉 칸이 한 번에 채워진다. */
+    progress: { owner:{person:'ownerContact', title:'ownerRole', phone:'ownerPhone', memo:'ownerMemo'} },
     item:     { vendor:{}, maker:{} },
     stock:    { vendor:{} },
     call:     { company:{person:'name', title:'role', phone:'phone'} },

@@ -385,7 +385,15 @@ const SCHEMA={
     {k:"status",label:"진행상태",type:"select",opts:["검토중","견적중","품의중","발주완료","공사중","완료","보류"],req:true},
     {k:"title",label:"업무 제목",type:"text",full:true,req:true},
     {k:"owner",label:"담당 업체",type:"text",span:2,nl:true},
-    {k:"ownerPhone",label:"담당자 · 연락처",type:"text",span:2},
+    /* v161-0831-0210 — 달님 : 「담당자 직책 메모 추가해줘, 업체에」
+          업무(work)에는 workContact·workRole·workPhone·workMemo 넉 칸이 있는데
+          진행업무에는 ownerPhone 한 칸뿐이라 「누가 · 무슨 직책인지」를 적을 데가 없었다.
+          → 업무와 같은 넉 칸으로 맞춘다. 옛 기록의 ownerPhone 값은 그대로 남는다.
+          ⚠ ownerPhone 의 이름표만 「담당자 · 연락처」→「연락처」로 바꾼다 (칸 이름은 그대로). */
+    {k:"ownerContact",label:"담당자",type:"text",span:2},
+    {k:"ownerRole",label:"직책",type:"text",span:2},
+    {k:"ownerPhone",label:"연락처",type:"text",span:2},
+    {k:"ownerMemo",label:"업체 메모",type:"text",full:true},
     {k:"estCost",label:"초기 견적비 (원)",type:"number",span:2,nl:true},
     {k:"finalCost",label:"최종 금액 (원)",type:"number",span:2},
     {k:"detail",label:"상세 내용",type:"textarea",full:true},
@@ -2678,7 +2686,28 @@ function bindTempPhoneUI(){
 }
 
 
-/* ── 연락처 추가 팝업 (등록업체 / 일회성) ── */
+/* ── 연락처 추가 팝업 (등록업체 / 일회성) ──
+      v161-0831-0210 — 달님 : 「연락처 적을 때 기본 연락처 모달처럼 만들어줘」
+        연락처 앱(contacts.html)의 「업체 수정」 창에는
+          업체명* · 분야 · 담당자 · 직책 · 전화번호 · 이메일 · 주소 · 메모
+        가 있는데 이 팝업에는 **이메일 · 주소**가 없어서,
+        여기서 넣은 업체는 연락처 앱에서 다시 열어 채워 넣어야 했다.
+        → 두 칸을 더한다. 주소는 네이버 지도로 바로 열린다.
+
+      ⚠ 주소 칸 이름은 앱마다 다를 수 있다(address / addr).
+        **이미 저장된 연락처를 보고 맞춘다** — 추측해서 새 이름을 만들면
+        연락처 앱에서 안 보이는 유령 값이 된다. addrKey() 참고. */
+function tpAddrKey(){
+  /* 연락처 앱이 주소를 'addr' 로 적는지 'address' 로 적는지, 이미 있는 자료를 보고 정한다.
+     둘 다 없으면 worklog 검색이 오래 써 온 'address' 를 쓴다 (worklog.js renderTpList 참고). */
+  try{
+    var cc=(typeof contactsCache!=='undefined'?contactsCache:[])||[], a=0, b=0;
+    for(var i=0;i<cc.length;i++){ if(!cc[i]) continue;
+      if(cc[i].addr) a++; if(cc[i].address) b++; }
+    if(a>b) return 'addr';
+  }catch(e){ console.warn('[연락처] 주소 칸 이름 확인 실패 — address 로 갑니다', e); }
+  return 'address';
+}
 function openTpContactForm(phoneInpRef, defaultType){
   var old=document.getElementById('tpCfOv'); if(old) old.remove();
   var curPhone=(phoneInpRef&&phoneInpRef.value)?phoneInpRef.value.trim():'';
@@ -2694,7 +2723,8 @@ function openTpContactForm(phoneInpRef, defaultType){
         '<span style="font-size:16px;font-weight:800;color:#1a2f45">'+(isOne?'🕐 임시번호 저장':'📇 연락처 추가')+'</span>'+
         '<button id="tpCfX" type="button" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer;line-height:1">✕</button>'+
       '</div>'+
-      '<div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">'+
+      /* v161 — 칸이 8개로 늘었다. 폰에서 넘치지 않게 가운데만 스크롤된다 */
+      '<div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 260px);overflow:auto;-webkit-overflow-scrolling:touch">'+
         '<div><label style="'+LB+'">업체명 / 이름 <span style="color:#e74c3c">*</span></label>'+
           '<input type="text" id="tpCfName" placeholder="예: 서희건설, 김상동" autocomplete="off" style="'+SI+';border-color:#3b82f6;font-weight:600"></div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
@@ -2705,8 +2735,13 @@ function openTpContactForm(phoneInpRef, defaultType){
           '<input type="tel" id="tpCfPhone" value="'+curPhone+'" placeholder="010-0000-0000" style="'+SI+'"></div>'+
         '<div><label style="'+LB+'">분야</label>'+
           '<input type="text" id="tpCfCat" placeholder="예: 전기, 설비, 영선" style="'+SI+'"></div>'+
+        '<div><label style="'+LB+'">이메일</label>'+
+          '<input type="email" id="tpCfEmail" placeholder="예: abc@company.co.kr" autocomplete="off" style="'+SI+'"></div>'+
+        '<div><label style="'+LB+'">주소</label>'+
+          '<input type="text" id="tpCfAddr" placeholder="예: 서울시 강남구 …" autocomplete="off" style="'+SI+'"></div>'+
         '<div><label style="'+LB+'">메모</label>'+
           '<input type="text" id="tpCfMemo" placeholder="간단한 메모" style="'+SI+'"></div>'+
+        '<a href="contacts.html" target="_blank" style="font-size:11.5px;color:#3f7cb8;font-weight:700;text-decoration:none;text-align:center;padding:2px 0">📇 명함 스캔 · 자세히 고치기는 연락처 앱에서 →</a>'+
       '</div>'+
       '<div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:6px">'+
         '<button id="tpCfSaveReg" type="button" style="width:100%;height:48px;border:none;border-radius:12px;background:'+(isOne?'#f1f5f9':'#3f7cb8')+';color:'+(isOne?'#94a3b8':'#fff')+';font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">'+
@@ -2734,10 +2769,14 @@ function openTpContactForm(phoneInpRef, defaultType){
       title:(document.getElementById('tpCfRole').value||'').trim(),
       phone:phone,
       memo:(document.getElementById('tpCfMemo').value||'').trim(),
+      email:(document.getElementById('tpCfEmail').value||'').trim(),
       vendorType:vendorType,
       fav:false,
       createdAt:Date.now()
     };
+    /* 주소는 연락처 앱이 쓰는 이름 그대로 담는다 (addr / address) */
+    var av=(document.getElementById('tpCfAddr').value||'').trim();
+    if(av) rec[tpAddrKey()]=av;
     var btn=document.getElementById(vendorType==='일회성'?'tpCfSaveOne':'tpCfSaveReg');
     if(btn){btn.disabled=true;btn.textContent='저장 중…';}
     db.collection('contacts').add(rec).then(function(ref){
@@ -8928,7 +8967,7 @@ function renderProgressTasks(){
           <div style="font-size:17.5px;font-weight:800;color:#0f2438;line-height:1.32;letter-spacing:-.3px;margin-bottom:3px;word-break:keep-all">${esc(a.title||'(제목 없음)')}</div>
           <div style="font-size:11.5px;color:#7a92a8;margin-bottom:2px">📅 ${esc(a.date || (a.createdAt?new Date(a.createdAt).toISOString().slice(0,10):''))}</div>
           ${progStepBar(a.status)}
-          ${(a.owner||a.ownerPhone)?`<div style="font-size:12px;color:#7a92a8">👤 ${esc(a.owner||'')}${a.ownerPhone?' · '+esc(a.ownerPhone):''}</div>`:''}
+          ${(a.owner||a.ownerContact||a.ownerPhone)?`<div style="font-size:12px;color:#7a92a8">👤 ${esc([a.owner||'', [a.ownerContact||'',a.ownerRole||''].filter(Boolean).join(' '), a.ownerPhone||''].filter(Boolean).join(' · '))}</div>`:''}
           ${a.location?`<div style="font-size:11.5px;color:#9ab0c4">📍 ${esc(a.location)}</div>`:''}
           ${a.detail?`<div style="font-size:12.5px;color:#33567d;margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(a.detail)}</div>`:''}
           ${a.steps&&a.steps.length?`<div style="margin-top:8px;padding:8px 10px;background:#eef6ff;border:1px solid #90c2f0;border-radius:8px">
@@ -14122,22 +14161,25 @@ async function githubUpload(token){
         지출   : _sub(업체) f:expType f:purpose f:expSubType f:supplyAmt f:taxAmt
                  f:isIssued f:isJeonpyo
         통화   : _sub(상대) f:callContact f:role f:phone f:callField
-        진행업무: _sub(담당 업체) f:ownerPhone f:status
+        진행업무: _sub(담당 업체) f:ownerContact f:ownerRole f:ownerPhone f:ownerMemo f:status  (v161)
         사고   : _sub(당사자) f:partyType f:partyPhone f:accType f:followUp
         입출고 : _sub(거래처) f:stockType f:qty f:unitPrice f:docNo f:useTarget  */
-  var RVER = 3;                      /* 규칙 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
+  var RVER = 4;                      /* 규칙 정의가 바뀌면 올린다 → 옛 저장본 자동 교체
+                                        v161 : 진행업무 담당자·직책·메모를 b1·b2 에 넣었다 */
   var LS_RVER = 'wl_rules_ver';
   function baseRules(){
     return [
       { id:'b1', on:1, base:1, name:'업체를 넣으면 담당자·직책·전화·메모가 나온다',
         when:{ k:'_sub', op:'filled' },
         then:{ act:'show', keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',
-                                 'f:callContact','f:role','f:phone','f:ownerPhone',
+                                 'f:callContact','f:role','f:phone',
+                                 'f:ownerContact','f:ownerRole','f:ownerPhone','f:ownerMemo',
                                  'f:partyType','f:partyPhone'] } },
       { id:'b2', on:1, base:1, name:'업체를 지우면 딸린 값도 지운다',
         when:{ k:'_sub', op:'empty' },
-        then:{ act:'clear', keys:['f:workContact','f:workRole','f:workPhone',
-                                  'f:callContact','f:role','f:phone','f:ownerPhone'] } },
+        then:{ act:'clear', keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',
+                                  'f:callContact','f:role','f:phone',
+                                  'f:ownerContact','f:ownerRole','f:ownerPhone','f:ownerMemo'] } },
       { id:'b3', on:1, base:1, name:'업무 — 자재명을 넣으면 규격·수량·금액이 나온다',
         when:{ k:'f:material', op:'filled' },
         then:{ act:'show', keys:['f:spec','f:qty','_amount'] } },
@@ -14737,7 +14779,8 @@ async function githubUpload(token){
 
   var LS_ON  = 'wl_group_on';
   var LS_GRP = 'wl_groups';
-  var VER    = 8;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체 */
+  var VER    = 9;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체
+                                        v161 : 진행업무 담당자·직책·메모 3칸을 g1 에 넣었다 */
   var LS_VER = 'wl_groups_ver';
 
   /* ── 2026-08-29 14종 전수 실측 결과로 만든 묶음 ──
@@ -14766,7 +14809,7 @@ async function githubUpload(token){
       { id:'g1', on:1, base:1, icon:'🏢', name:'업체 — 누구와', head:'_sub', openDefault:1,
         keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',   /* 업무 */
               'f:callContact','f:role','f:phone',                        /* 통화 */
-              'f:ownerPhone',                                            /* 진행업무 */
+              'f:ownerContact','f:ownerRole','f:ownerPhone','f:ownerMemo', /* 진행업무 v161 */
               'f:partyType','f:partyPhone'] },                           /* 사고 */
       /* v118 — 자재 속성 칸(자재명·규격·수량)은 더 이상 묶지 않는다.
             진짜 자재는 「자재 사용 내역」이고, 그것은 위쪽 📦 줄이 보여준다.
@@ -15424,7 +15467,8 @@ async function githubUpload(token){
       }
       var keys = ['workVendor','workContact','workRole','workPhone','workMemo',
                   'material','spec','qty','expType','cost','company','name','role','phone',
-                  'owner','ownerPhone','partyName','startTime','endTime','isIssued','purpose'];
+                  'owner','ownerContact','ownerRole','ownerPhone','ownerMemo',
+                  'partyName','startTime','endTime','isIssued','purpose'];
       var found = keys.filter(fieldExists);
       add('지금 화면에 있는 칸 : ' + (found.length ? found.join(', ') : '(없음 — 기록을 열고 다시 눌러주세요)'));
     }catch(e){ add('규칙 확인 실패 — ' + e.message); }
@@ -15858,7 +15902,9 @@ async function githubUpload(token){
             _sub 는 데이터 칸 셋(workVendor·owner·vendor)을 물고 있어 전부 비운다. */
       headKeys:['workVendor','owner','vendor','company','partyName','payee'],
       keys:['workContact','workRole','workPhone','workMemo',
-            'callContact','role','phone','ownerPhone','partyType','partyPhone',
+            'callContact','role','phone',
+            'ownerContact','ownerRole','ownerPhone','ownerMemo',   /* v161 */
+            'partyType','partyPhone',
             'person','companyMemo'] },
     { gid:'gt', head:'f:material', icon:'📦', name:'자재',
       headKeys:['material','itemName'],
@@ -18890,12 +18936,12 @@ async function githubUpload(token){
     var v = [];
     var nm = T(r.workVendor) || T(r.vendor) || T(r.owner) || T(r.company) || T(r.partyName);
     if(nm) v.push(nm);
-    var who = [T(r.workContact) || T(r.callContact) || T(r.person),
-               T(r.workRole) || T(r.role)].filter(Boolean).join(' ');
+    var who = [T(r.workContact) || T(r.callContact) || T(r.person) || T(r.ownerContact),
+               T(r.workRole) || T(r.role) || T(r.ownerRole)].filter(Boolean).join(' ');
     if(who) v.push(who);
     var ph = T(r.workPhone) || T(r.phone) || T(r.ownerPhone) || T(r.partyPhone);
     if(ph) v.push(ph);
-    if(T(r.workMemo)) v.push(T(r.workMemo));
+    if(T(r.workMemo) || T(r.ownerMemo)) v.push(T(r.workMemo) || T(r.ownerMemo));
     if(v.length) out.push({ k:'g1', t:'🏢 ' + v.join(' · ') });
 
     /* 🕐 시각 */
