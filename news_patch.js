@@ -1,4 +1,15 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v17 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v18 (2026-08-30)
+ *
+ * v18 : 읽음·스크랩 이동이 되돌아가던 문제 (동기화가 덮어쓰고 있었다)
+ *   증상 : 뉴스를 읽고 요약했는데 잠시 뒤 스크랩에 없다.
+ *   원인 : 1분에 한 번 도는 syncPull 이 받아온 내용으로 scraps 를 통째로 갈아치웠다.
+ *          방금 이 기기에서 넣은 스크랩이 아직 안 올라간 상태면 그대로 사라진다.
+ *          실제 userdata.json 에 내 요약 5건 / 스크랩 4건 으로 1건이 빠져 있었다.
+ *   해결 : 읽음·스크랩을 '켠 시각(nr_on)' 과 '끈 시각(nr_off)' 으로 도장 찍어 두고,
+ *          받아온 내용과 합칠 때 항목마다 늦게 누른 쪽이 이기게 했다.
+ *          내 요약·지운 목록도 덮어쓰기가 아니라 합치기로 바꿨다.
+ *
+ * ↓ v17 원본 설명
  *
  * v17 : 실제 요약 결과 4건을 보고 요약 틀을 다듬음
  *   ① 사건 틀 4번 칸 '시장 반응' → '영향받는 곳'.
@@ -138,11 +149,11 @@
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 17) return;
-  window.__nrPatch = 17;
+  if (window.__nrPatch >= 18) return;
+  window.__nrPatch = 18;
 
   var LINES = 5;
-  var VER = "v17";
+  var VER = "v18";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
   var BODY_MAX = 1500;     /* 공유할 때 함께 보내는 본문 최대 글자수 */
 
@@ -322,6 +333,28 @@
 
   /* ================= 읽음 : URL 기준 ================= */
   var readSet = {};
+  /* ── 기기 사이 합치기용 도장 ──
+     읽음·스크랩을 '켠 시각' 과 '끈 시각' 으로 각각 기록해 둔다.
+     기기 두 대가 각자 바꾼 내용을 합칠 때, 항목마다 마지막에 누른 쪽이 이긴다.
+     예전에는 받아온 내용으로 통째로 덮어써서, 방금 스크랩한 게 1분 뒤 사라졌다. */
+  var onTs = get("nr_on", {});
+  var offTs = get("nr_off", {});
+  function tsKey(kind, k) { return kind + "|" + k; }
+  function stampOn(kind, k) {
+    if (!k) return;
+    onTs[tsKey(kind, k)] = Date.now();
+    put("nr_on", onTs);
+  }
+  function stampOff(kind, k) {
+    if (!k) return;
+    offTs[tsKey(kind, k)] = Date.now();
+    put("nr_off", offTs);
+  }
+  function isOn(kind, k) {
+    return (onTs[tsKey(kind, k)] || 0) >= (offTs[tsKey(kind, k)] || 0) &&
+           (onTs[tsKey(kind, k)] || 0) > 0;
+  }
+
   function loadRead() {
     var a = get("nr_read", []);
     readSet = {};
@@ -355,12 +388,16 @@
 
   function isReadN(n) { var k = keyOf(n); return k ? !!readSet[k] : false; }
   window.isRead = function (id) { return isReadN(byId(id)); };
-  function markRead(k) { if (k && !readSet[k]) { readSet[k] = 1; saveRead(); } }
+  function markRead(k) {
+    if (!k) return;
+    if (!readSet[k]) { readSet[k] = 1; saveRead(); }
+    stampOn("r", k);
+  }
   window.toggleRead = function (id) {
     var k = keyById(id);
     if (!k) return;
-    if (readSet[k]) { delete readSet[k]; say("안읽음으로 되돌렸어요"); }
-    else { readSet[k] = 1; }
+    if (readSet[k]) { delete readSet[k]; stampOff("r", k); say("안읽음으로 되돌렸어요"); }
+    else { readSet[k] = 1; stampOn("r", k); }
     saveRead();
     if (window.renderRows) window.renderRows();
     if (window.syncSoon) window.syncSoon();
@@ -406,6 +443,7 @@
     ex = { n: JSON.parse(JSON.stringify(n)), notes: [], memo: "", at: new Date().toISOString().slice(0, 10) };
     window.scraps.push(ex);
     put("nr_scrap", window.scraps);
+    stampOn("s", k);
     if (window.syncSoon) window.syncSoon();
     return ex;
   }
@@ -415,6 +453,7 @@
     if (scrapByKey(k)) {
       window.scraps = window.scraps.filter(function (s) { return !(s && s.n && keyOf(s.n) === k); });
       put("nr_scrap", window.scraps);
+      stampOff("s", k);
       if (window.syncSoon) window.syncSoon();
       say("스크랩에서 뺐어요 — 📖읽음 으로 돌아갑니다");
     } else {
@@ -1325,17 +1364,95 @@
     try {
       d.mansum = get("nr_mansum", {});
       d.dismiss = get("nr_dismiss", []);
-      d.pv = 5;
+      d.on = onTs;
+      d.off = offTs;
+      d.pv = 6;
     } catch (e) {}
     return d;
   };
 
   var _apply = window.applyPayload;
+  function maxMerge(local, remote) {
+    if (!remote) return;
+    for (var k in remote) {
+      if (!remote.hasOwnProperty(k)) continue;
+      if ((remote[k] || 0) > (local[k] || 0)) local[k] = remote[k];
+    }
+  }
+
   window.applyPayload = function (d) {
+    /* 받아온 내용을 그대로 덮어쓰면 방금 여기서 한 일이 지워진다.
+       그래서 원래 함수를 부르기 전에 지금 상태를 챙겨두고, 부른 뒤 합친다. */
+    var mineRead = get("nr_read", []);
+    var mineScrap = get("nr_scrap", []);
+    var mineSum = get("nr_mansum", {});
+    var mineGone = get("nr_dismiss", []);
     if (_apply) _apply(d);
     try {
-      if (d && d.mansum) { put("nr_mansum", d.mansum); window.manSum = d.mansum; }
-      if (d && d.dismiss) { put("nr_dismiss", d.dismiss); }
+      var rts = (d && d.ts) || 1;   /* 도장이 없는 옛 기기 자료는 보낸 시각으로 친다 */
+      /* 도장 합치기 : 항목마다 늦게 누른 쪽이 이긴다 */
+      maxMerge(onTs, d && d.on);
+      maxMerge(offTs, d && d.off);
+
+      /* 읽음 : 양쪽을 합친 뒤, 끈 적이 더 나중인 것만 뺀다 */
+      var rd = {}, i, u;
+      function addRead(arr) {
+        if (Object.prototype.toString.call(arr) !== "[object Array]") return;
+        for (var j = 0; j < arr.length; j++) {
+          if (typeof arr[j] !== "string") continue;
+          rd[arr[j]] = 1;
+          if (!onTs[tsKey("r", arr[j])]) onTs[tsKey("r", arr[j])] = rts;
+        }
+      }
+      addRead(mineRead);
+      addRead(d && d.read);
+      var outRead = [];
+      for (u in rd) if (rd.hasOwnProperty(u) && isOn("r", u)) outRead.push(u);
+      put("nr_read", outRead);
+
+      /* 스크랩 : url 기준으로 합치고, 메모·리서치가 있는 쪽을 남긴다 */
+      var bag = {}, arr2 = [].concat(
+        Object.prototype.toString.call(mineScrap) === "[object Array]" ? mineScrap : [],
+        (d && Object.prototype.toString.call(d.scraps) === "[object Array]") ? d.scraps : []);
+      for (i = 0; i < arr2.length; i++) {
+        var sc = arr2[i];
+        if (!sc || !sc.n) continue;
+        var k = keyOf(sc.n);
+        if (!k) continue;
+        if (!onTs[tsKey("s", k)]) onTs[tsKey("s", k)] = rts;
+        var old = bag[k];
+        if (!old) { bag[k] = sc; continue; }
+        var wNew = ((sc.notes || []).length ? 2 : 0) + (sc.memo ? 1 : 0);
+        var wOld = ((old.notes || []).length ? 2 : 0) + (old.memo ? 1 : 0);
+        if (wNew > wOld) bag[k] = sc;
+      }
+      var outScrap = [];
+      for (u in bag) if (bag.hasOwnProperty(u) && isOn("s", u)) outScrap.push(bag[u]);
+      window.scraps = outScrap;
+      put("nr_scrap", outScrap);
+
+      /* 내 요약 : 합치되 이 기기 것이 우선 */
+      var sum = {};
+      if (d && d.mansum) for (u in d.mansum) if (d.mansum.hasOwnProperty(u)) sum[u] = d.mansum[u];
+      for (u in mineSum) if (mineSum.hasOwnProperty(u)) sum[u] = mineSum[u];
+      put("nr_mansum", sum);
+      window.manSum = sum;
+
+      /* 지운 목록 : 합집합 */
+      var gm = {};
+      function addGone(arr) {
+        if (Object.prototype.toString.call(arr) !== "[object Array]") return;
+        for (var j = 0; j < arr.length; j++) if (typeof arr[j] === "string") gm[arr[j]] = 1;
+      }
+      addGone(mineGone);
+      addGone(d && d.dismiss);
+      var outGone = [];
+      for (u in gm) if (gm.hasOwnProperty(u)) outGone.push(u);
+      put("nr_dismiss", outGone);
+
+      put("nr_on", onTs);
+      put("nr_off", offTs);
+
       loadRead();
       loadGone();
       /* 받아온 요약을 지금 목록에 다시 입히기 */
