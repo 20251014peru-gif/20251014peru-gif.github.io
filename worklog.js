@@ -40,6 +40,40 @@ const firebaseConfig = {
   storageBucket: "my-system-25497.firebasestorage.app",
 };
 const COL = "worklog_entries";
+
+/* ══════════════════════════════════════════════════════════════
+   📦 덩치 큰 종류를 별도 컬렉션으로 (v149-0830-1700)
+   달님 : 「kind 26종 중 지출·자재·입출고를 별도 컬렉션으로 — 이건 해야 해」
+
+   기록이 1,232건을 넘어 한 컬렉션이 버거워졌다.
+   (2026-08-30 : Write stream exhausted / 연결 timeout 이 잦아진 배경)
+
+   ⚠ 데이터를 옮기는 일이라 세 걸음으로 나눈다. 한 번에 하지 않는다.
+     1걸음 (이번 판) : 새 컬렉션도 함께 「읽고」, 새 기록은 새 컬렉션에 「쓴다」
+                        → 옛 기록은 그대로 있으므로 아무것도 잃지 않는다
+     2걸음 (달님이 단추) : 옛 기록을 새 컬렉션으로 복사 → 숫자 대조
+     3걸음 (대조가 맞으면) : 옛 자리에서 지운다
+
+   되돌리기 : wlSplit.off()  → 전부 예전처럼 worklog_entries 한 곳만 쓴다
+   ══════════════════════════════════════════════════════════════ */
+const COL_SPLIT = { expense:"worklog_expense", item:"worklog_item", stock:"worklog_stock" };
+function splitOn(){ try{ return localStorage.getItem("wl_col_split") !== "0"; }catch(e){ return true; } }
+/* 이 종류를 어느 컬렉션에 쓸까 */
+function colOf(kind){
+  if(!splitOn()) return COL;
+  return COL_SPLIT[String(kind||"")] || COL;
+}
+/* id 만 아는 경우엔 기억해 둔 목록에서 종류를 찾는다 */
+function colOfId(id){
+  try{
+    var r = (entries||[]).filter(function(x){ return x && x.id === id; })[0];
+    return colOf(r && r.kind);
+  }catch(e){ return COL; }
+}
+function _wlDoc(rec){
+  try{ return db.collection(colOf(rec && rec.kind)).doc(rec.id); }
+  catch(e){ return db.collection(COL).doc(rec.id); }
+}
 const STATUSES = ["미완료","진행중","완료"];
 const CALLDIR  = ["수신","발신"];
 const VTYPES   = ["년차휴가","오전반차","오후반차","병가","경조","기타"];
@@ -938,7 +972,12 @@ function lsSave(){
 }
 
 function genId(){ return online ? db.collection(COL).doc().id : "L"+Date.now()+Math.floor(Math.random()*100000); }
-function syncSet(id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.collection(COL).doc(id).set(payload).catch(e=>{ logErr("저장 동기화", e); toast("클라우드 동기화 지연 — 이 기기에는 저장됨"); }); }
+function syncSet(id,rec){
+  if(!online) return;
+  const {id:_x,...payload}=rec;
+  db.collection(colOf(rec&&rec.kind)).doc(id).set(payload)
+    .catch(e=>{ logErr("저장 동기화", e); toast("클라우드 동기화 지연 — 이 기기에는 저장됨"); });
+}
 function addRecord(data){ const id=genId(); const rec={...data,id}; entries.push(rec); if(online) syncSet(id,rec); lsSave(); return rec; }
 function updateRecord(id,patch){ const i=entries.findIndex(x=>x.id===id); if(i<0) return; entries[i]={...entries[i],...patch}; if(online) syncSet(id,entries[i]); lsSave(); }
 /* ═══ v46: 지운 항목이 되살아나는 것 방지 ═══
@@ -973,7 +1012,12 @@ window.wlDeletedIds = { list: loadDelIds, forget: forgetDelId,
 function deleteRecord(id){
   rememberDelId(id);
   entries=entries.filter(x=>x.id!==id);
-  if(online) db.collection(COL).doc(id).delete().catch(e=>logErr("삭제 동기화", e));
+  if(online){
+    const _c = colOfId(id);
+    db.collection(_c).doc(id).delete().catch(e=>logErr("삭제 동기화", e));
+    /* 옛 자리에 남아 있을 수도 있다 — 거기서도 지운다 (되살아나는 것 방지) */
+    if(_c !== COL) db.collection(COL).doc(id).delete().catch(()=>{});
+  }
   lsSave();
 }
 const TEMP_BK="wl_tempbackup";
@@ -1002,7 +1046,7 @@ function restoreRecord(rec){
   forgetDelId(rec.id);                       /* v46: 되살리기로 지운 기록 취소 */
   const i=entries.findIndex(x=>x.id===rec.id);
   if(i<0) entries.push(rec); else entries[i]=rec;
-  if(online){ const {id,...p}=rec; db.collection(COL).doc(rec.id).set(p).catch(e=>logErr("복구 동기화", e)); }
+  if(online){ const {id,...p}=rec; _wlDoc(rec).set(p).catch(e=>logErr("복구 동기화", e)); }
   lsSave();
 }
 function deleteWithUndo(id, label){
@@ -1019,20 +1063,44 @@ function deleteWithUndo(id, label){
 async function loadAll(){
   if(online){
     try{
-      const s=await db.collection(COL).get();
-      const all=s.docs.map(d=>({id:d.id,...d.data()}));
+      /* v149 — 나뉜 컬렉션까지 함께 읽는다.
+            ⚠ 하나라도 실패하면 그 부분이 통째로 빠져 「기록이 사라진 것」처럼 보인다.
+              그래서 실패한 컬렉션은 건너뛰되 반드시 콘솔에 남긴다 (지침 ㉑). */
+      const _cols = splitOn()
+        ? [COL].concat(Object.keys(COL_SPLIT).map(function(k){ return COL_SPLIT[k]; }))
+        : [COL];
+      const _snaps = await Promise.all(_cols.map(function(c){
+        return db.collection(c).get().catch(function(err){
+          console.warn('[불러오기] ' + c + ' 를 못 읽었어요', err);
+          return null;
+        });
+      }));
+      if(!_snaps[0]) throw new Error('worklog_entries 를 못 읽었습니다');
+      let all = [];
+      const _seen = {};
+      _snaps.forEach(function(sn){
+        if(!sn) return;
+        sn.docs.forEach(function(d){
+          if(_seen[d.id]) return;                 /* 옮기는 중이면 두 곳에 있을 수 있다 */
+          _seen[d.id] = 1;
+          all.push({ id:d.id, ...d.data() });
+        });
+      });
       /* v46: 지운 항목이 클라우드에 되살아나 있으면 조용히 청소 */
       const zombie=all.filter(x=>isDelId(x.id));
       const fb=all.filter(x=>!isDelId(x.id));
       if(zombie.length){
         console.log("[worklog] 되살아난 항목 "+zombie.length+"건 정리");
-        zombie.forEach(x=>{ db.collection(COL).doc(x.id).delete().catch(()=>{}); });
+        zombie.forEach(x=>{
+          db.collection(colOf(x.kind)).doc(x.id).delete().catch(()=>{});
+          if(colOf(x.kind) !== COL) db.collection(COL).doc(x.id).delete().catch(()=>{});
+        });
       }
       const ids=new Set(fb.map(x=>x.id));
       /* v46: 지운 것은 다시 올리지 않는다 */
       const extra=lsLoad().filter(x=>!ids.has(x.id) && !isDelId(x.id));
       entries=[...fb,...extra];
-      extra.forEach(x=>{ const {id,...p}=x; db.collection(COL).doc(id).set(p).catch(()=>{}); });
+      extra.forEach(x=>{ const {id,...p}=x; db.collection(colOf(x.kind)).doc(id).set(p).catch(()=>{}); });
     }catch(e){ entries=lsLoad(); }
   } else entries=lsLoad();
 }
@@ -1156,7 +1224,7 @@ function migrateTissueToJumbo(){
       else e.memo = e.memo + " · 휴지에서 자동 변경됨";
       // Firestore에도 반영
       if(online && db){
-        db.collection(COL).doc(e.id).set(e).catch(err=>console.warn("migrate save fail",err));
+        _wlDoc(e).set(e).catch(err=>console.warn("migrate save fail",err));
       }
       changed++;
     }
@@ -1209,7 +1277,7 @@ function migrateBadMemoAttachments(){
         // body 필드 호환 (content → body)
         if(e.content && !e.body) e.body = e.content;
         if(online && db){
-          db.collection(COL).doc(e.id).set(e).catch(()=>{});
+          _wlDoc(e).set(e).catch(()=>{});
         }
         changed++;
       }
@@ -4426,7 +4494,7 @@ function handleRestore(e){
       if(!rec.id) rec.id=genId();
       if(byId[rec.id]) updated++; else added++;
       byId[rec.id]=rec;
-      if(online){ const {id,...p}=rec; db.collection(COL).doc(rec.id).set(p).catch(()=>{}); }
+      if(online){ const {id,...p}=rec; _wlDoc(rec).set(p).catch(()=>{}); }
     });
     entries=Object.values(byId); lsSave(); renderAll();
     toast(`복구 완료 — 신규 ${added}건, 갱신 ${updated}건`);
@@ -5282,7 +5350,7 @@ function migrateTowerCats(){
     const newCat = getTowerGroupLabel(e);
     if(e.category!==newCat){
       e.category = newCat; // entries 직접 수정
-      if(online&&db) db.collection(COL).doc(e.id).update({category:newCat}).catch(()=>{});
+      if(online&&db) _wlDoc(e).update({category:newCat}).catch(()=>{});
       changed++;
     }
   });
@@ -5966,7 +6034,7 @@ function renderFieldMgrList(){
             if((e.kind==="work"||e.kind==="item") && e.field===f){
               e.field = "기타";
               // Firestore 동기화
-              if(online && db) db.collection(COL).doc(e.id).set(e).catch(()=>{});
+              if(online && db) _wlDoc(e).set(e).catch(()=>{});
             }
           });
           lsSave();
@@ -8957,8 +9025,10 @@ function renderExpense(){
   });
 }
 
-function renderExpenseStats(){
-  const box = $("expStats"); if(!box) return;
+/* v149 — 달님 : 「지출 월별 합계 표를 데이터 탭으로 옮기자」
+      그리는 곳을 밖에서 정할 수 있게만 열어 둔다. 인자 없이 부르면 예전 그대로. */
+function renderExpenseStats(target){
+  const box = target || $("expStats"); if(!box) return;
   const all = entries.filter(e=>e.kind==="expense");
   if(!all.length){ box.innerHTML=""; return; }
   const now = new Date();
@@ -19547,4 +19617,248 @@ async function githubUpload(token){
     go:  function(k){ setCur(k); run(); return k; }
   };
   console.log('[핸드폰 탭] v148 준비됨 — 좁은 화면에서 칸 · 본문 · 첨부를 탭으로');
+})();
+
+
+/* ============================================================
+   💰 데이터 탭 지출에도 월별 합계 (wlExpStats)  v149-0830-1700
+
+   달님 : 「지출 월별 합계 표를 데이터 탭으로 옮기자」
+
+   v130에서 위 줄 지출 탭을 데이터 탭으로 보내면서, 지출 탭에만 있던
+   「이번 달 개인지출 / 세금계산서」 요약 카드가 안 보이게 됐다.
+   그래서 「탭 하나로」를 껐다 켰다 해야 했다. 그 카드를 여기에도 그린다.
+
+   ▸ 데이터 탭에서 「💰 지출」 을 보고 있을 때만 목록 위에 나온다
+   ▸ 계산은 원래 함수(renderExpenseStats)를 그대로 쓴다 — 숫자가 갈리지 않게
+   되돌리기 : wlExpStats.off()
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS = 'wl_expstats';
+  var ID = 'wlExpStatsBox';
+
+  function isOn(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function setOn(v){
+    try{ localStorage.setItem(LS, v?'1':'0'); }catch(e){}
+    run();
+    if(typeof toast === 'function') toast(v ? '💰 데이터 탭 지출에 월별 합계를 보여 줍니다' : '💰 월별 합계를 껐어요');
+  }
+
+  /* 지금 데이터 탭에서 지출을 보고 있나 */
+  function onExpense(){
+    try{
+      var host = document.getElementById('dataHost');
+      if(!host || !host.innerHTML) return false;
+      if(host.offsetParent === null) return false;              /* 화면에 없으면 아니다 */
+      var k = '';
+      try{ k = (window.wlUser && window.wlUser.kind) ? (window.wlUser.kind() || '') : ''; }catch(e){}
+      if(!k){ try{ k = String(localStorage.getItem('wl_ds_last') || '').replace(/^["'\\]+|["'\\]+$/g,'').trim(); }catch(e){} }
+      return k === 'expense';
+    }catch(e){ return false; }
+  }
+
+  function run(){
+    var old = document.getElementById(ID);
+    if(!isOn() || !onExpense()){ if(old) old.remove(); return; }
+
+    var host = document.getElementById('dataHost');
+    if(!host) return;
+
+    var box = old;
+    if(!box || box.parentNode !== host.parentNode){
+      if(box) box.remove();
+      box = document.createElement('div');
+      box.id = ID; box.className = 'wl-expstats';
+      host.parentNode.insertBefore(box, host);                  /* 목록 바로 위 */
+    }
+    try{
+      if(typeof renderExpenseStats === 'function') renderExpenseStats(box);
+      else if(typeof window.renderExpenseStats === 'function') window.renderExpenseStats(box);
+      else { box.remove(); return; }
+    }catch(e){
+      console.warn('[지출 합계] 그리기 실패', e);
+      box.remove();
+    }
+  }
+
+  /* 목록이 다시 그려질 때 따라 붙는다 */
+  var t = null;
+  function later(){ clearTimeout(t); t = setTimeout(function(){ try{ run(); }catch(e){ console.warn('[지출 합계]', e); } }, 200); }
+  try{
+    var mo = new MutationObserver(function(m){
+      for(var i=0;i<m.length;i++){
+        var add = m[i].addedNodes; if(!add || !add.length) continue;
+        for(var j=0;j<add.length;j++){
+          var n = add[j];
+          if(!n || n.nodeType !== 1) continue;
+          if(n.id === ID || (n.closest && n.closest('#' + ID))) continue;   /* 내가 만든 것은 무시 */
+          later(); return;
+        }
+      }
+    });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[지출 합계] 감시 실패', e); }
+  document.addEventListener('click', function(ev){
+    try{ if(ev.target.closest && ev.target.closest('[data-dsk],[data-v43tab]')) later(); }catch(e){}
+  }, true);
+  setTimeout(run, 2000);
+  setTimeout(run, 4500);
+
+  window.wlExpStats = {
+    on:  function(){ setOn(true);  return '데이터 탭 지출에 월별 합계를 보여 줍니다'; },
+    off: function(){ setOn(false); return '월별 합계를 껐습니다'; },
+    now: run
+  };
+  console.log('[지출 합계] v149 준비됨 — 데이터 탭 「지출」 위에 이번 달 요약');
+})();
+
+
+/* ============================================================
+   📦 덩치 큰 종류를 별도 컬렉션으로 — 옮기기 도구 (wlSplit)  v149-0830-1700
+
+   달님 : 「kind 26종 중 지출·자재·입출고를 별도 컬렉션으로. 이건 해야 해」
+
+   ⚠ 데이터를 옮기는 일이라 절대 저절로 하지 않는다. 달님이 눌러야 움직인다.
+     그리고 「복사 → 대조 → 지우기」 순서를 어기지 않는다.
+     복사만 해 두면 두 곳에 다 있어 아무것도 잃지 않는다.
+
+     1걸음 (이미 켜짐) : 새 기록은 새 컬렉션에, 읽기는 네 곳을 합쳐서
+     2걸음 wlSplit.copy()  : 옛 자리의 지출·자재·입출고를 새 컬렉션으로 복사
+     3걸음 wlSplit.check() : 양쪽 숫자 대조
+     4걸음 wlSplit.clean() : 대조가 맞을 때만 옛 자리에서 지움
+
+   되돌리기 : wlSplit.off()  → 전부 예전 한 곳만 쓴다 (복사본은 남아 있어 무해)
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var KINDS = ['expense','item','stock'];
+
+  function on(){ try{ return localStorage.getItem('wl_col_split') !== '0'; }catch(e){ return true; } }
+  function ready(){
+    if(typeof db === 'undefined' || !db){ console.warn('[나누기] 클라우드가 아직 준비되지 않았습니다'); return false; }
+    if(typeof online === 'undefined' || !online){ console.warn('[나누기] 인터넷이 연결돼야 합니다'); return false; }
+    return true;
+  }
+
+  /* 옛 자리(worklog_entries)에 남아 있는 옮길 것들 */
+  function oldOnes(){
+    try{
+      return (entries||[]).filter(function(e){ return e && KINDS.indexOf(e.kind) >= 0; });
+    }catch(e){ return []; }
+  }
+
+  /* ── 2걸음 : 복사 (지우지 않는다) ── */
+  async function copy(){
+    if(!ready()) return '준비 안 됨';
+    var src = COL;
+    var moved = 0, fail = 0, skip = 0;
+    var snap;
+    try{ snap = await db.collection(src).get(); }
+    catch(e){ console.error('[나누기] 옛 자리를 못 읽었어요', e); return '옛 자리를 못 읽었습니다'; }
+
+    var rows = snap.docs.map(function(d){ return { id:d.id, data:d.data() }; });
+    var todo = rows.filter(function(r){ return KINDS.indexOf(String(r.data.kind||'')) >= 0; });
+    if(!todo.length) return '옮길 것이 없습니다 (옛 자리에 지출·자재·입출고가 없음)';
+
+    console.log('[나누기] 옮길 것 ' + todo.length + '건 — 복사를 시작합니다 (지우지 않습니다)');
+    for(var i = 0; i < todo.length; i++){
+      var r = todo[i];
+      var to = COL_SPLIT[String(r.data.kind)];
+      if(!to){ skip++; continue; }
+      try{
+        await db.collection(to).doc(r.id).set(r.data);
+        moved++;
+      }catch(e){
+        fail++;
+        console.warn('[나누기] ' + r.id + ' 복사 실패', e);
+      }
+      if(i % 25 === 24) await new Promise(function(ok){ setTimeout(ok, 400); });  /* 몰아치지 않게 쉬어 간다 */
+    }
+    var msg = '복사 끝 — 옮김 ' + moved + '건 · 실패 ' + fail + '건 · 건너뜀 ' + skip + '건';
+    console.log('[나누기] ' + msg + ' / 옛 자리는 그대로 있습니다. wlSplit.check() 로 대조하세요');
+    if(typeof toast === 'function') toast('📦 ' + msg);
+    return msg;
+  }
+
+  /* ── 3걸음 : 대조 ── */
+  async function check(){
+    if(!ready()) return '준비 안 됨';
+    var out = [];
+    var okAll = true;
+    for(var i = 0; i < KINDS.length; i++){
+      var k = KINDS[i], to = COL_SPLIT[k];
+      var a = 0, b = 0;
+      try{
+        var s1 = await db.collection(COL).get();
+        a = s1.docs.filter(function(d){ return String((d.data()||{}).kind||'') === k; }).length;
+      }catch(e){ console.warn('[나누기] 옛 자리 세기 실패', e); okAll = false; }
+      try{
+        var s2 = await db.collection(to).get();
+        b = s2.docs.length;
+      }catch(e){ console.warn('[나누기] ' + to + ' 세기 실패', e); okAll = false; }
+      if(b < a) okAll = false;
+      out.push({ 종류:k, 옛자리:a, 새자리:b, 상태:(b >= a ? '✅ 다 옮겨짐' : '⚠ 모자람 — 복사를 다시') });
+    }
+    try{ console.table(out); }catch(e){ console.log(out); }
+    console.log(okAll ? '[나누기] 대조 통과 — wlSplit.clean() 으로 옛 자리를 정리할 수 있습니다'
+                      : '[나누기] 아직 맞지 않습니다 — wlSplit.copy() 를 다시 하세요');
+    return out;
+  }
+
+  /* ── 4걸음 : 옛 자리 정리 (대조가 맞을 때만) ── */
+  async function clean(force){
+    if(!ready()) return '준비 안 됨';
+    var res = await check();
+    var bad = (res || []).filter(function(r){ return r.새자리 < r.옛자리; });
+    if(bad.length && !force){
+      console.warn('[나누기] 아직 다 안 옮겨졌습니다 — 정리하지 않습니다', bad);
+      return '아직 다 안 옮겨졌습니다 — 먼저 wlSplit.copy()';
+    }
+    var ask = (window.wlAsk && window.wlAsk.ok)
+      ? await window.wlAsk.ok('옛 자리에서 지출·자재·입출고를 지울까요?',
+          { sub:'새 자리에 복사가 끝난 것만 지웁니다 · 되돌릴 수 없습니다', ok:'정리하기', danger:1 })
+      : confirm('옛 자리에서 지울까요? 되돌릴 수 없습니다.');
+    if(!ask) return '그만두었습니다';
+
+    var snap;
+    try{ snap = await db.collection(COL).get(); }
+    catch(e){ console.error('[나누기] 옛 자리를 못 읽었어요', e); return '못 읽었습니다'; }
+    var todo = snap.docs.filter(function(d){ return KINDS.indexOf(String((d.data()||{}).kind||'')) >= 0; });
+    var done = 0, fail = 0;
+    for(var i = 0; i < todo.length; i++){
+      var d = todo[i];
+      var to = COL_SPLIT[String((d.data()||{}).kind)];
+      try{
+        var chk = await db.collection(to).doc(d.id).get();
+        if(!chk.exists){ fail++; console.warn('[나누기] 새 자리에 없어 안 지웁니다: ' + d.id); continue; }
+        await db.collection(COL).doc(d.id).delete();
+        done++;
+      }catch(e){ fail++; console.warn('[나누기] ' + d.id + ' 정리 실패', e); }
+      if(i % 25 === 24) await new Promise(function(ok){ setTimeout(ok, 400); });
+    }
+    var msg = '옛 자리 정리 끝 — 지움 ' + done + '건 · 남김 ' + fail + '건';
+    console.log('[나누기] ' + msg);
+    if(typeof toast === 'function') toast('📦 ' + msg);
+    return msg;
+  }
+
+  window.wlSplit = {
+    on:  function(){ try{ localStorage.setItem('wl_col_split','1'); }catch(e){}
+                     return '지출·자재·입출고를 별도 컬렉션에 씁니다 (새로고침 뒤 적용)'; },
+    off: function(){ try{ localStorage.setItem('wl_col_split','0'); }catch(e){}
+                     return '예전처럼 한 곳만 씁니다 (새로고침 뒤 적용) — 복사본은 남아 있어 무해합니다'; },
+    state: function(){
+      var o = oldOnes();
+      return { 나누기:on()?'켜짐':'꺼짐', 지금기록:(entries||[]).length,
+               옛자리에남은_지출자재입출고:o.length,
+               다음: o.length ? 'wlSplit.copy() → wlSplit.check() → wlSplit.clean()' : '옮길 것 없음' };
+    },
+    copy:  copy,
+    check: check,
+    clean: clean
+  };
+  console.log('[나누기] v149 준비됨 — ' + (on()?'켜짐':'꺼짐') + ' / wlSplit.state() 로 지금 상태를 봅니다');
 })();

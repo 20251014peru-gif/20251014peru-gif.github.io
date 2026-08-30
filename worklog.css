@@ -1438,3 +1438,7 @@ select.lf-ie.qp-hide{ display:none !important }
   .pg-prow.wide .pg-pk{ flex:0 0 76px !important }
   .pg-sumbox > div{ font-size:13.5px !important }
 }
+
+/* 💰 데이터 탭 지출 월별 합계 (wlExpStats v149) */
+.wl-expstats{ margin:10px 0 4px }
+.wl-expstats:empty{ display:none }
