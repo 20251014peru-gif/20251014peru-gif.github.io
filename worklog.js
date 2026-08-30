@@ -21802,7 +21802,7 @@ async function githubUpload(token){
 })();
 
 /* ============================================================
-   📋 사고 · 진행업무를 「시간순 단계」로 보기 (wlSteps)  v159-0830-2400
+   📋 사고 · 진행업무를 「시간순 단계」로 보기 (wlSteps)  v160-0831-0030
 
    달님 : 「사고·진행업무는 단계가 나눠져 있어 본문 형식으로 보기 불편하다.
            시간 순으로 이동되는 게 좋다」
@@ -21824,6 +21824,14 @@ async function githubUpload(token){
 
    ⚠ 저장은 기존 칸 그대로 쓴다 (`steps`). 옛 입력창 · 보기창 · A4 보고서와
      같은 데이터를 보므로 어느 쪽에서 고쳐도 똑같이 보인다.
+
+   v160 — 단계마다 사진 (달님 : 「단계마다 사진」)
+     ▸ 단계를 고칠 때 [＋ 사진] 으로 넣는다 · 여러 장 한 번에
+     ▸ 넣는 순간 **Storage 에 올리고 주소만** 단계에 담는다 (v150·v152 와 같은 규칙)
+     ▸ 인터넷이 없으면 잠시 기록 안에 담았다가, 다음에 열 때 저절로 올라간다
+     ▸ 사진을 누르면 앱의 기존 확대 창(showImg)으로 크게 본다
+     ▸ A4 보고서(처리·진행 경과 표)에도 같이 인쇄된다
+     → 「8/27 손상 → 8/29 수리」 경과를 눈으로 볼 수 있다
 
    되돌리기 : wlSteps.off()
    ============================================================ */
@@ -21866,6 +21874,105 @@ async function githubUpload(token){
   function save(rid, steps){
     try{ if(typeof updateRecord === 'function') updateRecord(rid, { steps: asc(steps) }); }
     catch(e){ console.warn('[단계] 저장 실패', e); }
+  }
+
+  /* ── 사진 (v160) ── */
+  function pics(s){ return (s && Array.isArray(s.photos)) ? s.photos : []; }
+  function isB64(x){ return typeof x === 'string' && x.indexOf('data:image') === 0; }
+  function isUrl(x){ return typeof x === 'string' && /^https?:\/\//.test(x); }
+  function netOK(){ try{ return !!online; }catch(e){ return false; } }
+
+  /* 한 장을 Storage 에 올린다 — 실패하면 null (그러면 기록 안에 잠시 담는다) */
+  async function upOne(dataUrl, rid, i){
+    try{
+      if(!netOK() || !window.wlPhoto || typeof window.wlPhoto.up !== 'function') return null;
+      var base = (window.wlPhoto.base || 'worklog/photos/');
+      var path = base + rid + '/step' + (i + 1) + '_' + Date.now() + '_' +
+                 Math.random().toString(36).slice(2, 7) + '.jpg';
+      return await window.wlPhoto.up(dataUrl, path);
+    }catch(e){ console.warn('[단계] 사진 올리기 실패', e); return null; }
+  }
+
+  /* 고른 파일들을 줄여서 넣는다 */
+  async function addPics(files, rid, idx){
+    var rec = recOf(rid); if(!rec) return;
+    var list = asc(rec.steps);
+    var s = list[idx]; if(!s) return;
+    if(!Array.isArray(s.photos)) s.photos = [];
+    var up = 0, keep = 0;
+    for(var i = 0; i < files.length; i++){
+      var f = files[i];
+      if(!f || !f.type || f.type.indexOf('image/') !== 0) continue;
+      var data = null;
+      try{ data = await compressImage(f); }catch(e){ console.warn('[단계] 사진 처리 실패', e); continue; }
+      if(!data) continue;
+      var u = await upOne(data, rid, idx);
+      if(u){ s.photos.push(u); up++; }
+      else { s.photos.push(data); keep++; }
+    }
+    list[idx] = s;
+    save(rid, list);
+    draw();
+    if(typeof toast === 'function'){
+      if(up && !keep) toast('📷 사진 ' + up + '장을 넣었어요');
+      else if(keep)   toast('📷 ' + keep + '장은 잠시 기록 안에 — 인터넷이 되면 저절로 올라갑니다');
+    }
+  }
+
+  /* 기록 안에 남은 사진을 조용히 올린다 (다음에 열 때) */
+  var sweeping = {};
+  async function sweep(rid){
+    if(!rid || sweeping[rid] || !netOK()) return;
+    var rec = recOf(rid); if(!rec || !Array.isArray(rec.steps)) return;
+    var need = rec.steps.some(function(s){ return pics(s).some(isB64); });
+    if(!need) return;
+    sweeping[rid] = 1;
+    try{
+      var list = asc(rec.steps), n = 0;
+      for(var i = 0; i < list.length; i++){
+        var ph = pics(list[i]);
+        for(var j = 0; j < ph.length; j++){
+          if(!isB64(ph[j])) continue;
+          var u = await upOne(ph[j], rid, i);
+          if(!u) { j = ph.length; i = list.length; break; }
+          ph[j] = u; n++;
+        }
+      }
+      if(n){ save(rid, list); draw();
+        console.log('[단계] 사진 ' + n + '장을 Storage 로 올렸습니다');
+        if(typeof toast === 'function') toast('📷 사진 ' + n + '장을 올렸어요'); }
+    }catch(e){ console.warn('[단계] 사진 훑기 실패', e); }
+    finally{ delete sweeping[rid]; }
+  }
+
+  /* 사진 줄 그리기 */
+  function picsHTML(s, i, edit){
+    var ph = pics(s);
+    var h = '';
+    if(ph.length){
+      h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">';
+      ph.forEach(function(u, k){
+        h += '<span style="position:relative;display:inline-block">'
+          +    '<img data-st-img="' + esc2(u) + '" src="' + esc2(u) + '" alt=""'
+          +      ' style="width:62px;height:62px;object-fit:cover;border-radius:9px;'
+          +      'border:1.5px solid #dbe6f4;cursor:zoom-in;background:#eef4fa">'
+          +    (isB64(u) ? '<span title="아직 안 올라감" style="position:absolute;left:3px;bottom:3px;'
+                          + 'background:#c2740b;color:#fff;font-size:9px;font-weight:800;'
+                          + 'border-radius:5px;padding:1px 4px">대기</span>' : '')
+          +    (edit ? '<button type="button" data-st-pdel="' + i + ':' + k + '" title="이 사진 빼기"'
+                      + ' style="position:absolute;right:-6px;top:-6px;width:24px;height:24px;border-radius:12px;'
+                      + 'border:none;background:#b52929;color:#fff;font-size:13px;line-height:1;cursor:pointer">✕</button>' : '')
+          +  '</span>';
+      });
+      h += '</div>';
+    }
+    if(edit){
+      h += '<button type="button" data-st-padd="' + i + '"'
+        +   ' style="margin-top:8px;border:1.5px dashed #bcd2ea;background:#f7fbff;color:#3f7cb8;'
+        +   'border-radius:10px;padding:11px 15px;font-size:13.5px;font-family:inherit;cursor:pointer;'
+        +   'min-height:44px">＋ 사진</button>';
+    }
+    return h;
   }
 
   /* ── 그리기 ── */
@@ -21949,6 +22056,7 @@ async function githubUpload(token){
             +   row2('상세',  '<textarea data-st-f="detail" rows="3" placeholder="자세히" style="' + INP + ';min-height:70px;resize:vertical">' + esc2(s.detail||s.memo||'') + '</textarea>')
             +   row2('업체',  '<input type="text" data-st-f="' + (isAcc?'vendor':'owner') + '" value="' + esc2(isAcc ? (s.vendor||'') : (s.owner||s.vendor||'')) + '" placeholder="업체 이름" style="' + INP + '">')
             +   row2('연락처','<input type="text" data-st-f="vendorPhone" value="' + esc2(s.vendorPhone||'') + '" placeholder="010-" style="' + INP + '">')
+            +   row2('사진',  picsHTML(s, i, true))
             +   '<div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap">'
             +     '<button type="button" data-st-ok="' + i + '" style="flex:1;border:none;background:' + accent + ';color:#fff;border-radius:10px;padding:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;min-height:46px">저장</button>'
             +     '<button type="button" data-st-cancel="1" style="border:1px solid #d7dee8;background:#f7f9fc;border-radius:10px;padding:12px 16px;font-size:14px;font-family:inherit;cursor:pointer;min-height:46px">취소</button>'
@@ -21980,6 +22088,7 @@ async function githubUpload(token){
             +     (who.length
                     ? '<div style="font-size:12px;color:#8ea3b8;line-height:1.4;margin-top:3px">'
                       + esc2(who.join(' · ')) + '</div>' : '')
+            +     picsHTML(s, i, false)
             +   '</div></div>';
         }
       }
@@ -22001,13 +22110,64 @@ async function githubUpload(token){
   document.addEventListener('click', function(ev){
     var box = document.getElementById(HOST);
     if(!box || !box.contains(ev.target)) return;
-    var t = ev.target.closest('[data-st-add],[data-st-row],[data-st-ok],[data-st-cancel],[data-st-del],[data-st-set]');
+    var t = ev.target.closest('[data-st-add],[data-st-row],[data-st-ok],[data-st-cancel],[data-st-del],[data-st-set],[data-st-img],[data-st-pdel],[data-st-padd]');
     if(!t) return;
     ev.preventDefault(); ev.stopPropagation();
 
     var rid = box.getAttribute('data-rid');
     var rec = recOf(rid); if(!rec) return;
     var list = asc(rec.steps);
+
+    /* 사진 크게 보기 — 앱에 있던 확대 창을 그대로 쓴다 */
+    var img = t.getAttribute('data-st-img');
+    if(img != null){
+      try{ if(typeof showImg === 'function') showImg(img, rec.title || ''); }
+      catch(e){ console.warn('[단계] 사진 열기 실패', e); }
+      return;
+    }
+
+    /* 사진 넣기 — 숨은 파일 고르개를 연다 */
+    var padd = t.getAttribute('data-st-padd');
+    if(padd != null){
+      var inp = document.getElementById('wlStepsFile');
+      if(!inp){
+        inp = document.createElement('input');
+        inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+        inp.id = 'wlStepsFile';
+        inp.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px';
+        inp.addEventListener('change', function(){
+          var files = [].slice.call(inp.files || []);
+          var rid2 = inp.getAttribute('data-rid'), i2 = parseInt(inp.getAttribute('data-idx'), 10);
+          inp.value = '';
+          if(files.length) addPics(files, rid2, i2);
+        });
+        document.body.appendChild(inp);
+      }
+      inp.setAttribute('data-rid', rid);
+      inp.setAttribute('data-idx', padd);
+      inp.click();
+      return;
+    }
+
+    /* 사진 빼기 */
+    var pdel = t.getAttribute('data-st-pdel');
+    if(pdel != null){
+      var pp = pdel.split(':');
+      var si = parseInt(pp[0], 10), pi = parseInt(pp[1], 10);
+      var ss = list[si];
+      if(ss && Array.isArray(ss.photos)){
+        var doDel = function(go){
+          if(!go) return;
+          ss.photos.splice(pi, 1);
+          list[si] = ss; save(rid, list); draw();
+          if(typeof toast === 'function') toast('사진을 뺐어요 (Storage 원본은 남아 있습니다)');
+        };
+        if(window.wlAsk && window.wlAsk.ok){
+          window.wlAsk.ok('이 사진을 뺄까요?', { sub:'단계에서만 빠집니다', ok:'빼기', danger:1 }).then(doDel);
+        }else{ doDel(confirm('이 사진을 뺄까요?')); }
+      }
+      return;
+    }
 
     /* 상태 바꾸기 */
     var st = t.getAttribute('data-st-set');
@@ -22080,6 +22240,8 @@ async function githubUpload(token){
       var rid = ridNow();
       if(rid !== lastRid){ lastRid = rid; EDIT = null; }
       draw();
+      /* 기록 안에 남은 사진이 있으면 조용히 Storage 로 (v160) */
+      setTimeout(function(){ sweep(ridNow()); }, 900);
     }catch(e){ console.warn('[단계] 그리기 실패', e); }
   }
   (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:75, n:'처리 기록 시간순', f:run });
@@ -22088,6 +22250,10 @@ async function githubUpload(token){
     on:  function(){ try{ localStorage.setItem(LS,'1'); }catch(e){} run(); return '사고·진행업무를 시간순 단계로 봅니다'; },
     off: function(){ try{ localStorage.setItem(LS,'0'); }catch(e){} run(); return '단계 영역을 숨깁니다 (자료는 그대로)'; },
     now: run,
+    /* 지금 열린 기록의 N번째 단계에 사진 넣기 (콘솔용) — 화면 [＋ 사진] 과 같은 길 */
+    pic: function(files, idx){ return addPics([].slice.call(files||[]), ridNow(), idx||0); },
+    /* 기록 안에 남은 사진을 지금 Storage 로 올린다 */
+    upload: function(id){ return sweep(id || ridNow()); },
     list: function(id){
       var r = recOf(id || ridNow());
       if(!r) return '기록을 못 찾았습니다';
@@ -22102,8 +22268,12 @@ async function githubUpload(token){
       return { 보이기: on()?'켜짐':'꺼짐',
                지금기록: r ? (r.kind + ' · ' + (r.title||'')) : '없음',
                대상종류: '사고 · 진행업무',
-               단계수: r && Array.isArray(r.steps) ? r.steps.length : 0 };
+               단계수: r && Array.isArray(r.steps) ? r.steps.length : 0,
+               사진수: r && Array.isArray(r.steps)
+                       ? r.steps.reduce(function(n,s){ return n + pics(s).length; }, 0) : 0,
+               올릴사진: r && Array.isArray(r.steps)
+                       ? r.steps.reduce(function(n,s){ return n + pics(s).filter(isB64).length; }, 0) : 0 };
     }
   };
-  console.log('[단계] v159 — 사고·진행업무를 시간순으로 (' + (on()?'켜짐':'꺼짐') + ')');
+  console.log('[단계] v160 — 사고·진행업무를 시간순으로 (' + (on()?'켜짐':'꺼짐') + ')');
 })();
