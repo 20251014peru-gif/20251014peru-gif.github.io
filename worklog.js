@@ -19864,7 +19864,7 @@ async function githubUpload(token){
 })();
 
 /* ============================================================
-   📏 문서용 실측표 (wlDocStat)  v150-0830-1830
+   📏 문서용 실측표 (wlDocStat)  v151-0830-1725
 
    달님 : 「문서가 자꾸 밀리니, 앱이 스스로 세서 표로 뽑아줘」
 
@@ -19980,12 +19980,18 @@ async function githubUpload(token){
 
   /* ── 밖으로 열어 둔 창구 ── */
   function exports_(js){
-    var ln = lineIndex(js), out = [], re = /window\.(wl[A-Za-z0-9_]+)\s*=/g, m, seen = {};
+    /* ⚠ =(대입) 만 센다.  ===(비교) 와 =>(화살표) 를 대입으로 세면
+          「window.wlSumNow === 'function'」 같은 확인문이 창구로 잡혀
+          엉뚱한 줄 번호가 나온다 (v150 에서 실제로 그랬다). */
+    var ln = lineIndex(js), out = [], re = /window\.(wl[A-Za-z0-9_]+)\s*=(?![=>])/g, m, seen = {};
     while((m = re.exec(js))){
-      if(seen[m[1]]) continue;
+      if(seen[m[1]]){ seen[m[1]]++; continue; }
       seen[m[1]] = 1;
       out.push({ 창구: m[1], 줄: ln(m.index) });
     }
+    /* 같은 이름에 두 번 이상 대입 — 일부러 감싼 것일 수도, 앞의 것이 죽은 것일 수도 있다.
+          (openEditor · wlSelfCheck 처럼 일부러 겹친 것은 정상이다 — 눈으로 한 번 확인만) */
+    out.forEach(function(r){ if(seen[r.창구] > 1) r.겹침 = seen[r.창구] + '겹 (감싼 것인지 확인)'; });
     out.sort(function(a, b){ return a.줄 - b.줄; });
     return out;
   }
@@ -20070,7 +20076,13 @@ async function githubUpload(token){
     s.push('');
     s.push('## 창구 (window.wlXxx) ' + d.창구.length + '개');
     s.push('');
-    s.push(d.창구.map(function(r){ return r.창구 + '(' + r.줄 + ')'; }).join(' · '));
+    s.push(d.창구.map(function(r){ return r.창구 + '(' + r.줄 + ')' + (r.겹침 ? '📎' : ''); }).join(' · '));
+    var dup = d.창구.filter(function(r){ return r.겹침; });
+    if(dup.length){
+      s.push('');
+      s.push('> 📎 두 번 이상 대입된 창구 — 일부러 감싼 것이면 정상, 아니면 앞의 것이 죽습니다: ' +
+             dup.map(function(r){ return r.창구 + ' ' + r.겹침; }).join(' · '));
+    }
     s.push('');
     s.push('## 중괄호 짝');
     s.push('');
@@ -20171,7 +20183,7 @@ async function githubUpload(token){
 })();
 
 /* ============================================================
-   🖼 사진을 기록 밖으로 — 축소 · Storage 이관 (wlPhoto)  v150-0830-1830
+   🖼 사진을 기록 밖으로 — 축소 · Storage 이관 (wlPhoto)  v150-0830-1657
 
    달님 : 「사진 자동 축소 + Storage 이관」
 
