@@ -1,4 +1,4 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v9 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v10 (2026-08-30)
  *
  * 삼단(사실은 사단) 이동식 구조
  *   ⚡속보  →  🆕새 뉴스  →  📖읽음  →  🔖스크랩
@@ -57,16 +57,23 @@
  *      브리핑 버튼이 'AI로 뉴스검색' 위에 겹쳐 뭉개지던 문제 해결
  *   ㉓ 폰에서는 칸 폭을 조금 줄여 가로 스크롤이 덜 하게
  *
+ * v10 에서 고친 것
+ *   ㉔ 윗줄을 한 줄로 되돌림 — 검색·버튼이 모두 한 줄에 들어가고, 좁으면 버튼 줄만
+ *      좌우로 밀린다(스크롤막대는 숨김). 세로로 길어지지 않는다.
+ *   ㉕ 제목·요약을 딱 두 줄로, 문장 가운데에서 나뉘게 (text-wrap:balance)
+ *      + 한국어는 낱말 중간에서 안 끊기게 (word-break:keep-all)
+ *   ㉖ 공유에서 기사 원문 주소를 완전히 뺐다 — 정리된 내용만 나간다
+ *
  * news.html 본문은 건드리지 않는다.
  * 문제가 생기면 news.html 의 <script src="news_patch.js"> 한 줄만 지우면 원래대로 돌아온다.
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 9) return;
-  window.__nrPatch = 9;
+  if (window.__nrPatch >= 10) return;
+  window.__nrPatch = 10;
 
   var LINES = 5;
-  var VER = "v9";
+  var VER = "v10";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
   var BODY_MAX = 1500;     /* 공유할 때 함께 보내는 본문 최대 글자수 */
 
@@ -100,23 +107,25 @@
     "padding:12px;font-size:14px;line-height:1.6;font-family:inherit;box-sizing:border-box}",
     ".nrdel:hover{opacity:1}",
     "#selbar .nrall{background:var(--line-2);color:var(--ink-2)}",
-    /* 윗줄 정리 : 1줄=검색창+최신/중요, 2줄=버튼들 */
+    /* 윗줄 : 한 줄로. 좁으면 버튼 줄만 좌우로 밀린다 */
     ".controls{flex-wrap:wrap!important;align-items:center;gap:10px}",
-    ".controls .searchbar{order:0;flex:1 1 360px!important;max-width:560px!important;min-width:250px!important}",
-    ".controls .seg{order:1;flex:0 0 auto;margin-left:auto}",
-    ".controls .actbar{order:2;flex:1 1 100%!important;flex-wrap:wrap!important}",
+    ".controls .searchbar{flex:0 1 420px!important;min-width:260px!important;max-width:520px!important}",
+    ".controls .actbar{flex:1 1 auto!important;flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none}",
+    ".controls .actbar::-webkit-scrollbar{display:none}",
+    ".controls .actbar>*{flex:0 0 auto}",
+    ".controls .actbar .seg{margin-left:auto}",
     ".nrbrief{white-space:nowrap}",
-    /* 제목·요약 칸은 가로로 길게, 표는 좌우 스크롤 */
-    ".tablewrap table{min-width:1760px!important}",
-    "col.c-title{width:430px!important}",
-    "col.c-sum{width:560px!important}",
+    /* 제목·요약 : 딱 두 줄, 문장 가운데에서 나뉘게, 낱말은 안 끊기게 */
+    "tbody .title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;",
+    "overflow:hidden;white-space:normal;word-break:keep-all;overflow-wrap:break-word;",
+    "text-wrap:balance;max-width:340px}",
+    "tbody td.summary .sumline{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;",
+    "overflow:hidden;white-space:normal;word-break:keep-all;overflow-wrap:break-word;",
+    "text-wrap:balance;max-width:420px}",
     "@media(max-width:760px){",
-    ".tablewrap table{min-width:1300px!important}",
-    "col.c-title{width:340px!important}",
-    "col.c-sum{width:420px!important}",
+    "tbody .title{max-width:250px}",
+    "tbody td.summary .sumline{max-width:300px}",
     "}",
-    "tbody td.summary .sumline,tbody .title{display:-webkit-box;-webkit-line-clamp:2;",
-    "-webkit-box-orient:vertical;overflow:hidden;white-space:normal;word-break:break-word}",
     "tbody td{vertical-align:top}",
     "#selbar .nrsh{background:#3b57c9;color:#fff}",
     "tbody tr.read{opacity:1!important}",
@@ -457,8 +466,7 @@
       out.push("");
       out.push(body.length > BODY_MAX ? (body.slice(0, BODY_MAX).trim() + " …(이하 생략)") : body);
     }
-    if (n.url && n.url !== "#") { out.push(""); out.push("🔗 " + n.url); }
-    return out.join("\n");
+    return out.join("\n");   /* 링크는 넣지 않는다 — 정리된 내용만 보낸다 */
   }
 
   /* 여러 건 한 번에 */
@@ -471,7 +479,7 @@
       out.push((i + 1) + ") " + (n.title || ""));
       var sum = mySummary(n);
       if (sum) { var h = headline(sum); if (h) out.push("   ▶ " + h); }
-      if (n.url && n.url !== "#") out.push("   " + n.url);
+      /* 여러 건도 링크 없이 제목 + 핵심 한 줄만 */
       out.push("");
     }
     return out.join("\n").trim();
@@ -809,7 +817,11 @@
       ".s{font-size:8.6pt;line-height:1.45;color:#2b2f36;margin:0 0 1mm;white-space:pre-wrap}",
       ".m{font-size:7.6pt;color:#8b919b}",
       ".sig{font-size:8pt;margin-right:2px}",
-      "@media print{.bar{display:none}body{padding:0}}"
+      ".it{position:relative}",
+      ".x{position:absolute;top:-1mm;right:-2mm;border:0;background:none;color:#c2c7d0;font-size:11pt;",
+      "cursor:pointer;line-height:1;padding:2px 4px;font-family:inherit}",
+      ".x:hover{color:#e0294a}",
+      "@media print{.bar{display:none}.x{display:none}body{padding:0}}"
     ].join("");
 
     var items = list.map(function (n, i) {
@@ -819,6 +831,7 @@
       var meta = [srcName(n), (window.fmtDate ? window.fmtDate(n.date, n) : (n.date || ""))].filter(Boolean).join(" · ");
       var ttl = String(n.title || "").replace(/\s+-\s+[^-]{1,24}$/, "");   /* 제목 끝의 " - 출처" 떼기 */
       return '<div class="it">' +
+        '<button class="x" onclick="del(this)" title="이 뉴스 빼기">✕</button>' +
         '<div class="t"><span class="sig">' + sig + "</span>" + escHtml(ttl) + "</div>" +
         (line ? '<div class="s">' + escHtml(line) + "</div>" : "") +
         '<div class="m">' + escHtml(meta) + "</div>" +
@@ -834,27 +847,41 @@
       '<span class="sp"></span><span style="font-size:12px;color:#8b919b">인쇄 전에 열 수를 골라보세요</span>' +
       "</div>" +
       "<h1>📰 뉴스 브리핑</h1>" +
-      '<div class="sub">' + day + " · 총 " + list.length + "건</div>" +
+      '<div class="sub">' + day + ' · 총 <b id="cnt">' + list.length + "</b>건 " +
+      '<span style="color:#b3b9c4">· 빼고 싶은 건 ✕</span></div>' +
       '<div id="w" class="wrap c' + cols + '">' + items + "</div>" +
+      "<script>function del(b){b.parentNode.remove();" +
+      "document.getElementById('cnt').textContent=document.querySelectorAll('.it').length;}<\/script>" +
       "</body></html>";
   }
 
   window.nrBrief = function () {
-    var list = [];
-    try { list = (window.currentRows() || []).slice(0, 60); } catch (e) {}
+    var list = [], picked = [];
+    /* 체크해 둔 게 있으면 그것만, 없으면 지금 보고 있는 목록 전부 */
+    try {
+      var sel = window.selected || {};
+      Object.keys(sel).forEach(function (k) { var n = byId(Number(k)); if (n) picked.push(n); });
+    } catch (e) {}
+    if (picked.length) list = picked;
+    else { try { list = (window.currentRows() || []).slice(0, 60); } catch (e) {} }
     if (!list.length) { say("브리핑에 담을 뉴스가 없어요"); return; }
     var w = window.open("", "_blank");
     if (!w) { say("팝업이 막혔어요 — 주소창 옆 팝업 허용을 켜주세요"); return; }
     w.document.open();
     w.document.write(briefHTML(list, 2));
     w.document.close();
-    say(list.length + "건으로 브리핑을 만들었어요");
+    say(list.length + "건으로 브리핑을 만들었어요" + (picked.length ? " (선택한 것만)" : ""));
   };
 
-  /* 상단에 [🖨️ 브리핑] 버튼 달기 */
+  /* 상단에 [🖨️ 브리핑] 버튼 달기 + 최신/중요를 버튼줄로 옮겨 한 줄 유지 */
   function setupBriefBtn() {
     var bar = document.querySelector(".actbar");
-    if (!bar || bar.querySelector(".nrbrief")) return;
+    if (!bar) return;
+    try {
+      var seg = document.querySelector(".controls > .seg");
+      if (seg) bar.appendChild(seg);
+    } catch (e) {}
+    if (bar.querySelector(".nrbrief")) return;
     var anchor = null;
     var bs = bar.querySelectorAll("button");
     for (var i = 0; i < bs.length; i++) {
