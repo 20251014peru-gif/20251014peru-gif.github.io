@@ -1109,9 +1109,19 @@ async function init(){
        저장소가 꽉 차면 QuotaExceeded → FIRESTORE INTERNAL ASSERTION FAILED 로 번진다.
        IndexedDB 만 쓰도록 끈다 (여러 탭을 동시에 안 여니 문제 없음). */
     try{ await db.enablePersistence(); }catch(_){ }
-    await Promise.race([ db.collection(COL).limit(1).get(), new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),6000)) ]);
+    /* v146 — 6초는 너무 짧았다. 파이어스토어 자체가 10초를 기다린다.
+          그 전에 우리가 먼저 포기해 「오프라인」으로 못 박혀 버렸다. */
+    await Promise.race([ db.collection(COL).limit(1).get(), new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),12000)) ]);
     online=true; setStatus(true);
-  }catch(e){ online=false; setStatus(false); logErr("초기 연결", e); }
+  }catch(e){
+    online=false; setStatus(false); logErr("초기 연결", e);
+    /* v146 【근본】 달님 로그 : 「Could not reach Cloud Firestore backend / 초기 연결 timeout」
+          예전에는 여기서 online=false 로 못 박고 끝이었다.
+          그 뒤 연결이 살아나도 아무도 다시 확인하지 않아
+          연락처가 영영 빈 채로 남았다 (업체 목록이 안 뜨던 진짜 배경).
+          → 뒤에서 조용히 다시 확인하고, 이어지면 그때 불러온다. */
+    try{ if(db) _wlReconnect(0); }catch(_){}
+  }
   await loadAll();
   autoCleanTrash(); // v44: 30일 지난 휴지통 자동 정리
   migrateTissueToJumbo(); // v26: 휴지 → 점보롤 자동 변환
@@ -10056,11 +10066,71 @@ let STAFF_LIST = [
   {name:"박일월", phone:"010-8976-5746", role:"미화"},
 ];
 
+/* v145 — 달님 : 「업체 연락처 안 나와. 확실히 고쳐」
+      원인 : 인터넷이 끊겨 있으면(online=false) 이 함수가 그냥 나가서
+             연락처가 영영 빈 채였다. 게다가 조용히 나가서 이유도 몰랐다.
+      고침 : 성공하면 이 기기에 적어 두고, 못 불러오면 그걸로 되살린다.
+             ⚠ 명함 사진 같은 큰 값은 빼고 적는다 (2026-08-28 저장소 사고) */
+const LS_CONTACTS = 'wl_contacts_cache';
+function _ctSlim(list){
+  return (list||[]).map(function(c){
+    var o = {};
+    for(var k in c){
+      if(!Object.prototype.hasOwnProperty.call(c,k)) continue;
+      if(/photo|card|image|img|base64|thumb/i.test(k)) continue;   /* 사진은 안 적는다 */
+      var v = c[k];
+      if(typeof v === 'string' && v.length > 1500) continue;        /* 지나치게 긴 값도 뺀다 */
+      o[k] = v;
+    }
+    return o;
+  });
+}
+function _ctSave(){
+  try{ localStorage.setItem(LS_CONTACTS, JSON.stringify(_ctSlim(contactsCache))); }
+  catch(e){ console.warn('[연락처] 이 기기에 적어 두지 못했어요', e); }
+}
+function _ctLoadLocal(){
+  try{
+    var s = JSON.parse(localStorage.getItem(LS_CONTACTS) || 'null');
+    if(Array.isArray(s) && s.length){ contactsCache = s; return s.length; }
+  }catch(e){ console.warn('[연락처] 적어 둔 것을 못 읽었어요', e); }
+  return 0;
+}
+try{ window.wlContactsLocal = _ctLoadLocal; }catch(e){}
+
+/* v146 — 연결이 늦게 살아나는 경우를 지켜본다.
+      5초 · 10초 · 20초 · 40초 · 60초 · 60초 (총 약 3분) 뒤에 한 번씩만 확인한다.
+      쉬지 않고 두드리면 배터리·요금만 먹는다. */
+var _WL_RC = [5000, 10000, 20000, 40000, 60000, 60000];
+function _wlReconnect(n){
+  if(online || !db || n >= _WL_RC.length) return;
+  setTimeout(function(){
+    if(online) return;
+    db.collection(COL).limit(1).get().then(function(){
+      if(online) return;
+      online = true;
+      try{ setStatus(true); }catch(e){}
+      console.warn('[연결] 늦게 이어졌습니다 — 연락처를 다시 불러옵니다');
+      try{ loadContactsCache(); }catch(e){ console.warn('[연결] 연락처 다시 불러오기 실패', e); }
+      try{ if(typeof loadContactCats === 'function') loadContactCats().catch(function(){}); }catch(e){}
+      try{ if(typeof renderDiag === 'function') renderDiag(); }catch(e){}
+      if(typeof toast === 'function') toast('🌐 연결됐어요 — 연락처를 불러왔습니다');
+    }).catch(function(){ _wlReconnect(n + 1); });
+  }, _WL_RC[n]);
+}
+try{ window.wlReconnect = function(){ online = false; _wlReconnect(0); return '연결을 다시 확인합니다'; }; }catch(e){}
+
 async function loadContactsCache(){
-  if(!online||!db) return;
+  if(!online || !db){
+    /* 인터넷이 끊겼어도 예전에 적어 둔 연락처는 쓸 수 있게 한다 */
+    var n0 = contactsCache.length ? contactsCache.length : _ctLoadLocal();
+    console.warn('[연락처] 인터넷 연결이 없어 이 기기에 적어 둔 ' + n0 + '건을 씁니다');
+    return;
+  }
   try{
     const snap = await db.collection("contacts").get();
     contactsCache = snap.docs.map(d=>({id:d.id,...d.data()}));
+    _ctSave();
     // contacts에서 직원(재직중) 카테고리를 STAFF_LIST로 동기화
     const staffFromDB = contactsCache.filter(c=>c.cat==="직원(재직중)"&&c.name);
     if(staffFromDB.length){
@@ -10070,7 +10140,13 @@ async function loadContactsCache(){
         role: c.memo ? c.memo.split(" · ")[0] : ""
       }));
     }
-  }catch(e){ console.warn("contacts 캐시 로드 실패:", e); }
+  }catch(e){
+    console.warn("contacts 캐시 로드 실패:", e);
+    if(!contactsCache.length){
+      var n1 = _ctLoadLocal();
+      if(n1) console.warn('[연락처] 대신 이 기기에 적어 둔 ' + n1 + '건을 씁니다');
+    }
+  }
 }
 
 function searchContacts(q){
@@ -17818,6 +17894,7 @@ async function githubUpload(token){
             외주비를 적어 둔 기록에 자재를 담으면 그 금액이 통째로 날아갔다. */
       patch.matCost = sumOf(arr);
       if(typeof updateRecord === 'function') updateRecord(rid, patch);
+      try{ if(typeof window.wlSumNow === 'function') window.wlSumNow(); }catch(e){}
       setTimeout(function(){
         try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
       }, 140);
@@ -18756,6 +18833,7 @@ async function githubUpload(token){
   function boxHTML(ls){
     return '<div data-' + TAG + '="1" class="pg-sumbox">'
          + ls.map(function(l){ return '<div data-' + TAG + 'k="' + l.k + '">' + ES(l.t) + '</div>'; }).join('')
+         + '<div class="pg-sumnote" contenteditable="false">칸을 고치면 이 줄들이 저절로 바뀝니다 · 아래에 쓴 글은 그대로 둡니다</div>'
          + '</div>';
   }
 
@@ -18815,6 +18893,25 @@ async function githubUpload(token){
 
   (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:70, n:'묶음 한 줄 정리', f:function(){
     try{ btn(); run(); }catch(e){ console.warn('[자동 정리] 실패', e); } } });
+
+  /* v145 — 달님 : 「언제 본문에 한 줄로 들어갈지 정의도 있어야 할 듯」
+        규칙을 못박는다 :
+          ▸ 칸(날짜·층·분야·금액·자재·업체·시각…)을 고치면 → 그 자리에서 곧바로
+          ▸ 본문에 쓰는 글은 정리와 무관하다 (정리는 「칸」에서만 나온다)
+        예전에는 화면이 다시 그려질 때까지 기다려서 언제 바뀌는지 알 수 없었다. */
+  var _t = null;
+  function soon(){
+    clearTimeout(_t);
+    _t = setTimeout(function(){ try{ run(); }catch(e){ console.warn('[자동 정리] 실패', e); } }, 250);
+  }
+  function fromProps(t){
+    if(!t || t.nodeType !== 1 || typeof t.closest !== 'function') return false;
+    return !!(t.closest('.lf-page .pg-props') || t.closest('.lf-page .pg-side'));
+  }
+  document.addEventListener('change',   function(ev){ if(fromProps(ev.target)) soon(); }, true);
+  document.addEventListener('focusout', function(ev){ if(fromProps(ev.target)) soon(); }, true);
+  /* 자재 담기·사진처럼 코드가 값을 바꾸는 길도 있다 — 그때도 곧바로 */
+  window.wlSumNow = function(){ try{ run(); }catch(e){ console.warn('[자동 정리] 실패', e); } };
 
   window.wlAutoSum = {
     on:  function(){ setOn(true);  return '켰습니다'; },
@@ -18928,10 +19025,14 @@ async function githubUpload(token){
     var i = arr.indexOf(src); if(i < 0) return;
     while(caps.length < arr.length) caps.push('');
     var now = String(caps[i] || '');
-    var v = prompt('이 사진의 설명을 적어 주세요 (비우면 지웁니다)', now);
-    if(v === null) return;
-    caps[i] = String(v).trim();
-    saveOrder(rid, arr, caps);
+    var ask = (window.wlAsk && window.wlAsk.text)
+      ? window.wlAsk.text('사진 설명', now, { sub:'비우면 설명을 지웁니다', ph:'예) 배전반 앞면' })
+      : Promise.resolve(prompt('이 사진의 설명을 적어 주세요 (비우면 지웁니다)', now));
+    ask.then(function(v){
+      if(v === null || v === undefined) return;
+      caps[i] = String(v).trim();
+      saveOrder(rid, arr, caps);
+    });
   }
 
   var _dragSrc = '';
@@ -19014,7 +19115,12 @@ async function githubUpload(token){
 
   function drop(rid, src){
     if(!src) return;
-    if(!confirm('이 사진을 지울까요?\n\n되돌릴 수 없습니다.')) return;
+    var ask = (window.wlAsk && window.wlAsk.ok)
+      ? window.wlAsk.ok('이 사진을 지울까요?', { sub:'되돌릴 수 없습니다', ok:'지우기', danger:1 })
+      : Promise.resolve(confirm('이 사진을 지울까요?'));
+    ask.then(function(yes){ if(yes) dropNow(rid, src); });
+  }
+  function dropNow(rid, src){
     var r = recOf(rid); if(!r) return;
     try{
       var all = Array.isArray(r.photos) ? r.photos.slice() : [];
@@ -19167,4 +19273,107 @@ async function githubUpload(token){
     now: run
   };
   console.log('[목록 사진] v142 준비됨 — 카드·리스트 앞에 대표 사진');
+})();
+
+
+/* ============================================================
+   💬 앱 안에서 묻기 (wlAsk)  v145-0830-1430
+
+   달님 : 「무언가를 칠 때 인터넷창 위에 나오게 하지 말고 pop 스타일로」
+
+   브라우저가 띄우는 prompt/confirm 은 주소창 아래 붙어 나와 앱과 따로 논다.
+   같은 일을 앱 한가운데 팝업으로 한다.
+
+     await wlAsk.text('설명을 적어 주세요', '지금 값')   → 글자 또는 null(취소)
+     await wlAsk.ok('지울까요?', {ok:'지우기', danger:1}) → true / false
+
+   ⚠ 브라우저 confirm/alert 은 「멈춰서 답을 기다리는」 방식이라
+     앱 전체를 한 번에 바꿀 수 없다. 새로 만드는 곳부터 이걸 쓴다.
+   ============================================================ */
+(function(){
+  'use strict';
+
+  function ES(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function build(){
+    var ov = document.getElementById('wlAskOv');
+    if(ov) return ov;
+    ov = document.createElement('div');
+    ov.id = 'wlAskOv'; ov.className = 'wlask-ov';
+    ov.innerHTML =
+        '<div class="wlask" role="dialog" aria-modal="true">'
+      +   '<div class="wlask-t"></div>'
+      +   '<div class="wlask-s"></div>'
+      +   '<input type="text" class="wlask-in" autocomplete="off">'
+      +   '<div class="wlask-b">'
+      +     '<button type="button" class="wlask-no">취소</button>'
+      +     '<button type="button" class="wlask-yes">확인</button>'
+      +   '</div>'
+      + '</div>';
+    document.body.appendChild(ov);
+    return ov;
+  }
+
+  function open(opt){
+    return new Promise(function(done){
+      var ov = build();
+      var box  = ov.querySelector('.wlask');
+      var tEl  = ov.querySelector('.wlask-t');
+      var sEl  = ov.querySelector('.wlask-s');
+      var inEl = ov.querySelector('.wlask-in');
+      var yes  = ov.querySelector('.wlask-yes');
+      var no   = ov.querySelector('.wlask-no');
+
+      tEl.textContent = opt.title || '';
+      sEl.textContent = opt.sub || '';
+      sEl.style.display = opt.sub ? 'block' : 'none';
+
+      var isText = (opt.kind === 'text');
+      inEl.style.display = isText ? 'block' : 'none';
+      inEl.value = isText ? String(opt.value == null ? '' : opt.value) : '';
+      if(opt.ph) inEl.placeholder = opt.ph;
+
+      yes.textContent = opt.ok || '확인';
+      no.textContent  = opt.no || '취소';
+      yes.className = 'wlask-yes' + (opt.danger ? ' danger' : '');
+
+      var closed = false;
+      function fin(v){
+        if(closed) return; closed = true;
+        ov.classList.remove('on');
+        document.removeEventListener('keydown', onKey, true);
+        setTimeout(function(){ done(v); }, 10);
+      }
+      function onKey(ev){
+        if(ev.key === 'Escape'){ ev.preventDefault(); fin(isText ? null : false); }
+        else if(ev.key === 'Enter' && (isText || document.activeElement === yes)){
+          ev.preventDefault(); fin(isText ? inEl.value : true);
+        }
+      }
+      yes.onclick = function(){ fin(isText ? inEl.value : true); };
+      no.onclick  = function(){ fin(isText ? null : false); };
+      ov.onmousedown = function(ev){ if(ev.target === ov) fin(isText ? null : false); };
+      document.addEventListener('keydown', onKey, true);
+
+      ov.classList.add('on');
+      setTimeout(function(){
+        try{ if(isText){ inEl.focus(); inEl.select(); } else yes.focus(); }catch(e){}
+      }, 40);
+    });
+  }
+
+  window.wlAsk = {
+    text: function(title, value, opt){
+      opt = opt || {};
+      return open({ kind:'text', title:title, sub:opt.sub, value:value, ph:opt.ph,
+                    ok:opt.ok || '저장', no:opt.no || '취소' });
+    },
+    ok: function(title, opt){
+      opt = opt || {};
+      return open({ kind:'ok', title:title, sub:opt.sub,
+                    ok:opt.ok || '확인', no:opt.no || '취소', danger:opt.danger });
+    }
+  };
+  console.log('[묻기 창] v145 준비됨 — 브라우저 창 대신 앱 안 팝업 (wlAsk)');
 })();
