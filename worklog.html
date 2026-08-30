@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v131-0830-0846";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v132-0830-0912";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3266,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=131-20260830t0846"></script>
+<script src="worklog.js?v=132-20260830t0912"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -24186,11 +24186,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +     bodyToHTML(rec.body) + '</div>'
       +   '<input type="file" id="pgPicIn" accept="image/*" multiple style="display:none">'
       +   '<div id="pgBodyNote" class="pg-note"></div>'
-      +   '<div class="pg-sec" style="margin-top:22px">📷 사진 · 첨부</div>'
-      +   '<div class="pg-pics">' + (pics.length
-            ? pics.map(function(u){ return '<img src="'+esc(u)+'" class="zimg">'; }).join('')
-            : '<span class="pg-none">첨부된 사진이 없어요 — [✏️ 전체 서식] 에서 넣을 수 있습니다</span>')
-      +   '</div>'
+      /* v132 — 달님 : 「맨 밑에 사진 첨부 안내문은 없애줘」
+            사진이 있을 때만 보여 준다. 없으면 제목도 안 만든다. */
+      +   (pics.length
+            ? ('<div class="pg-sec" style="margin-top:22px">📷 사진 · 첨부</div>'
+               + '<div class="pg-pics">'
+               + pics.map(function(u){ return '<img src="'+esc(u)+'" class="zimg">'; }).join('')
+               + '</div>')
+            : '')
       + '</div></div>';
 
     /* ── 저장 ── */

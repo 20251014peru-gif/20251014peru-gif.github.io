@@ -1180,3 +1180,20 @@ select.lf-ie.qp-hide{ display:none !important }
 }
 .wl-go:hover{ background:#e8f1fb; border-color:#9fc2e4 }
 .wl-go:disabled{ opacity:.4; cursor:default }
+
+/* 📦 자재 — 칸에 적은 것 표시 (v132) */
+.mb-it.mb-fld{ background:#fffdf5; border-color:#f2e6c4 }
+.mb-fld .mb-n{ background:#c99a2e }
+.mb-tag{ flex:0 0 auto; padding:1px 7px; border-radius:6px; background:#f6e9c8;
+  color:#8a6a16; font-size:11px; font-weight:800 }
+
+/* ▸ 아래 영역 접었다 펴기 (wlFold v132) */
+.pg-sec.pg-foldable{ cursor:pointer; user-select:none; display:flex; align-items:center; gap:7px }
+.pg-sec.pg-foldable:hover{ color:#2563a8 }
+.pg-foldi{
+  flex:0 0 auto; min-width:26px; height:22px; line-height:22px; padding:0 7px;
+  border-radius:7px; background:#eef3f9; color:#5b7793;
+  font-size:11.5px; font-weight:800; text-align:center;
+}
+.pg-sec.pg-foldable.is-open .pg-foldi{ background:#dce9f7; color:#2563a8 }
+.wl-foldhide{ display:none !important }

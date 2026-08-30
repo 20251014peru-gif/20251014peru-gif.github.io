@@ -14776,7 +14776,15 @@ async function githubUpload(token){
     try{
       var rid = ridNow2(); if(!rid) return [];
       var rec = (entries||[]).filter(function(x){ return x && x.id === rid; })[0];
-      return (rec && Array.isArray(rec.materials)) ? rec.materials.filter(Boolean) : [];
+      if(!rec) return [];
+      /* v132 — 자재명 칸에 직접 적은 것도 「첫째 자재」로 함께 센다.
+            달님 : 「자재 첫재줄은 요약이 안나와 저상태야」 */
+      var out = [];
+      var nm = String(rec.material == null ? '' : rec.material).trim();
+      if(nm) out.push({ name:nm, spec:String(rec.spec==null?'':rec.spec),
+                        qty:Number(rec.qty)||1, price:0, _field:1 });
+      if(Array.isArray(rec.materials)) rec.materials.filter(Boolean).forEach(function(m){ out.push(m); });
+      return out;
     }catch(e){ return []; }
   }
   function matLine(m){
@@ -16585,9 +16593,14 @@ async function githubUpload(token){
   };
 
   var painting = false;
+  var qn = -1;
   function paintAll(){
     if(painting) return;                       /* 그리다가 또 그리기 방지 (되돌이 막기) */
     painting = true;
+    /* v132 — 예전엔 파일을 읽을 때 딱 한 번만 차례를 매겼다.
+          그래서 뒤에 새로 붙인 모듈이 제 차례(o) 를 무시하고 맨 끝에 붙었다.
+          늘어났을 때만 다시 매긴다 (매번 정렬하지 않는다). */
+    if(Q.length !== qn){ Q.sort(function(a,b){ return a.o - b.o; }); qn = Q.length; }
     try{
       for(var i=0;i<Q.length;i++){
         try{ Q[i].f(); }
@@ -17752,8 +17765,19 @@ async function githubUpload(token){
     catch(e){ return null; }
   }
   function matsOf(r){ return (r && Array.isArray(r.materials)) ? r.materials.filter(Boolean) : []; }
+  /* v132 — 자재명 칸에 직접 적은 것 + 담은 자재 목록 = 화면에 보여줄 전부 */
+  function matsAll(r){
+    var out = [];
+    var nm = String((r && r.material) == null ? '' : r.material).trim();
+    if(nm) out.push({ name:nm, spec:String((r && r.spec)||''), qty:Number(r && r.qty)||1, price:0, _field:1 });
+    matsOf(r).forEach(function(m){ out.push(m); });
+    return out;
+  }
   function sumOf(arr){
-    return arr.reduce(function(a,m){ return a + (Number(m.price)||0) * (Number(m.qty)||1); }, 0);
+    return arr.reduce(function(a,m){
+      if(m && m._field) return a;                   /* 칸에 적은 것은 단가가 없다 */
+      return a + (Number(m.price)||0) * (Number(m.qty)||1);
+    }, 0);
   }
   function keepOld(){ try{ return localStorage.getItem(HIDE_OLD) === '1'; }catch(e){ return false; } }
 
@@ -17806,9 +17830,22 @@ async function githubUpload(token){
   function drop(i){
     var rid = ridNow(); if(!rid) return;
     var rec = recOf(rid); if(!rec) return;
+    var all = matsAll(rec);
+    if(i < 0 || i >= all.length) return;
+    /* v132 — 첫 줄이 「자재명 칸에 적은 것」이면 배열이 아니라 칸을 비운다 */
+    if(all[i] && all[i]._field){
+      try{
+        if(typeof updateRecord === 'function') updateRecord(rid, { material:'', spec:'', qty:'' });
+        setTimeout(function(){
+          try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
+        }, 140);
+      }catch(e){ console.error('[자재 담기] 칸 비우기 실패', e); }
+      return;
+    }
     var arr = matsOf(rec).slice();
-    if(i < 0 || i >= arr.length) return;
-    arr.splice(i, 1);
+    var j = i - (all.length - arr.length);          /* 칸 줄을 뺀 실제 자리 */
+    if(j < 0 || j >= arr.length) return;
+    arr.splice(j, 1);
     save(rid, arr);
   }
 
@@ -17819,7 +17856,7 @@ async function githubUpload(token){
     var page = document.querySelector('.lf-page');
     if(!page || !rec){ window.wlAddOn(['#__none'], 'matbox', function(){ return null; }); return; }
 
-    var mats = matsOf(rec);
+    var mats = matsAll(rec);
     window.wlAddOn(['[data-gfoot="gt"]', '[data-prow="f:material"] .pg-pv'], 'matbox',
       function(){ var d = document.createElement('div'); d.className = 'pg-matbox'; return d; },
       function(d){
@@ -17828,9 +17865,10 @@ async function githubUpload(token){
           h += '<div class="mb-list">' + mats.map(function(m, i){
             var bits = [ES(m.name||''), ES(m.spec||'')].filter(Boolean).join(' <span class="mb-sp">·</span> ');
             var q = Number(m.qty)||1, pr = (Number(m.price)||0) * q;
-            return '<div class="mb-it">'
+            return '<div class="mb-it' + (m._field ? ' mb-fld' : '') + '">'
                  + '<span class="mb-n">' + (i+1) + '</span>'
                  + '<span class="mb-t">' + bits + '</span>'
+                 + (m._field ? '<span class="mb-tag">칸에 적음</span>' : '')
                  + '<span class="mb-q">' + q + '개</span>'
                  + (pr ? '<span class="mb-p">' + won(pr) + '원</span>' : '')
                  + '<button type="button" class="mb-x" data-mbx="' + i + '" title="빼기">✕</button>'
@@ -17916,4 +17954,121 @@ async function githubUpload(token){
     list: function(){ var r = recOf(ridNow()); return r ? matsOf(r) : []; }
   };
   console.log('[자재 담기] v131 준비됨 — 자재 묶음 발치에 목록과 ＋ 추가 / 지출에 🔗 관련 업무');
+})();
+
+
+/* ============================================================
+   ▸ 아래 영역 접었다 펴기 (wlFold)  v132-0830-0930
+
+   달님 : 「하위목록과 파일 폴더 목록은 클릭 했을 때 펼쳐지게 해」
+
+   「🧷 하위 항목」·「📎 파일 · 폴더 링크」는 내용이 있어도 화면만 길어질 뿐
+   늘 보고 있을 것은 아니다. 제목 줄만 남기고 접어 두었다가 누르면 편다.
+
+   ⚠ wlSecs 는 style.display 로 영역을 감춘다. 여기서 같은 style 을 만지면
+     서로 지우게 되므로, 이쪽은 **클래스**로만 접는다 (CSS 가 이긴다).
+     wlSecs 가 아예 감춘 영역(내용 없음)은 건드리지 않는다.
+   되돌리기 : wlFold.off()
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS = 'wl_fold_on';
+  /* 접을 영역 — 제목 글자로 알아본다 */
+  var DEFS = [
+    { key:'sub', re:/하위\s*항목/,        icon:'🧷', cnt:'.pg-subrow, .pg-sub li, [data-subid]' },
+    { key:'att', re:/파일\s*[·ㆍ]\s*폴더/, icon:'📎', cnt:'.pg-attrow, [data-attdel]' }
+  ];
+
+  function isOn(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function setOn(v){ try{ localStorage.setItem(LS, v?'1':'0'); }catch(e){} }
+
+  /* 사람이 편 것은 종류별로 기억한다 (wlUser 규칙) */
+  function opened(key){
+    try{ if(window.wlUser) return window.wlUser.get('fold', key); }catch(e){}
+    return undefined;
+  }
+  function markOpen(key, v){
+    try{ if(window.wlUser) window.wlUser.set('fold', key, v ? 1 : 0); }catch(e){}
+  }
+
+  /* 제목 다음부터 다음 제목 전까지가 그 영역이다 */
+  function blockOf(head){
+    var out = [], n = head.nextElementSibling, guard = 0;
+    while(n && guard++ < 12){
+      if(n.classList && n.classList.contains('pg-sec')) break;
+      out.push(n);
+      n = n.nextElementSibling;
+    }
+    return out;
+  }
+  function count(list, sel){
+    var n = 0;
+    list.forEach(function(el){
+      try{ if(el.querySelectorAll) n += el.querySelectorAll(sel).length; }catch(e){}
+    });
+    return n;
+  }
+
+  function run(){
+    var page = document.querySelector('.lf-page');
+    if(!page) return;
+
+    [].forEach.call(page.querySelectorAll('.pg-sec'), function(h){
+      var txt = (h.textContent || '').trim();
+      var def = null;
+      for(var i = 0; i < DEFS.length; i++){ if(DEFS[i].re.test(txt)){ def = DEFS[i]; break; } }
+      if(!def) return;
+
+      /* wlSecs 가 이미 통째로 감춘 영역이면 손대지 않는다 */
+      if(h.style && h.style.display === 'none'){ h.classList.remove('pg-foldable'); return; }
+
+      var body = blockOf(h);
+      if(!body.length) return;
+
+      if(!isOn()){
+        h.classList.remove('pg-foldable', 'is-open');
+        body.forEach(function(el){ el.classList.remove('wl-foldhide'); });
+        var od = h.querySelector('.pg-foldi'); if(od) od.remove();
+        return;
+      }
+
+      var open = (opened(def.key) === 1);
+      var n = count(body, def.cnt);
+
+      /* 제목을 누를 수 있게 만든다 (한 번만) */
+      h.classList.add('pg-foldable');
+      h.classList.toggle('is-open', open);
+      var ind = h.querySelector('.pg-foldi');
+      if(!ind){
+        ind = document.createElement('span');
+        ind.className = 'pg-foldi';
+        h.insertBefore(ind, h.firstChild);
+      }
+      var lab = (open ? '▾' : '▸') + (n ? (' ' + n) : '');
+      if(ind.textContent !== lab) ind.textContent = lab;
+
+      if(!h._foldB){
+        h._foldB = 1;
+        h.addEventListener('click', function(ev){
+          /* 안쪽 단추를 누른 것은 접기가 아니다 */
+          if(ev.target !== h && ev.target.closest && ev.target.closest('button,input,a,textarea,select')) return;
+          var now = (opened(def.key) === 1);
+          markOpen(def.key, !now);
+          if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); else run();
+        });
+      }
+
+      body.forEach(function(el){ el.classList.toggle('wl-foldhide', !open); });
+    });
+  }
+
+  /* 그리는 차례 맨 뒤 — wlSecs(10) 가 display 를 정한 다음에 클래스로 접는다 */
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:60, n:'아래 영역 접기', f:run });
+
+  window.wlFold = {
+    on:  function(){ setOn(1); if(window.wlAfterPaint) window.wlAfterPaint(); return '하위 항목·파일 링크를 접습니다'; },
+    off: function(){ setOn(0); if(window.wlAfterPaint) window.wlAfterPaint(); return '예전처럼 늘 펼쳐 둡니다'; }
+  };
+  console.log('[영역 접기] v132 준비됨 — 🧷 하위 항목 · 📎 파일 링크는 제목을 누르면 펼쳐집니다');
 })();
