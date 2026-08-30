@@ -1,4 +1,4 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v6 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v7 (2026-08-30)
  *
  * 삼단(사실은 사단) 이동식 구조
  *   ⚡속보  →  🆕새 뉴스  →  📖읽음  →  🔖스크랩
@@ -40,16 +40,23 @@
  *   ⑮ 읽기창과 요약 팝업에 [📤 공유] — 제목 + 5줄 요약 + 원문 링크를 한 번에.
  *      폰에서는 카톡·문자 등 공유창이 뜨고, 컴에서는 클립보드로 복사된다.
  *
+ * v7 에서 새로 한 것
+ *   ⑯ 표에서 제목·요약이 '…' 로 잘리지 않고 전부 보인다
+ *   ⑰ 공유 링크가 광고 많은 원문이 아니라 '깔끔히 정리된 읽기 화면' 으로 바뀐다
+ *      (받는 사람이 눌러도 바로 정리본이 열린다 — news.html#a=원문주소)
+ *   ⑱ 여러 건 골라서 한 번에 공유 [📤 선택 공유]
+ *   ⑲ [🖨️ 브리핑] — 지금 보는 목록을 A4 2열/3열 한 장으로 인쇄
+ *
  * news.html 본문은 건드리지 않는다.
  * 문제가 생기면 news.html 의 <script src="news_patch.js"> 한 줄만 지우면 원래대로 돌아온다.
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 6) return;
-  window.__nrPatch = 6;
+  if (window.__nrPatch >= 7) return;
+  window.__nrPatch = 7;
 
   var LINES = 5;
-  var VER = "v6";
+  var VER = "v7";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
 
   /* ================= 스타일 ================= */
@@ -82,10 +89,10 @@
     "padding:12px;font-size:14px;line-height:1.6;font-family:inherit;box-sizing:border-box}",
     ".nrdel:hover{opacity:1}",
     "#selbar .nrall{background:var(--line-2);color:var(--ink-2)}",
-    "@media(max-width:760px){",
-    "tbody td.summary .sumline,tbody .title{display:-webkit-box;-webkit-line-clamp:2;",
-    "-webkit-box-orient:vertical;overflow:hidden}",
-    "}",
+    "tbody td.summary .sumline{overflow:visible;text-overflow:clip}",
+    "tbody .title{white-space:normal;word-break:break-word;overflow:visible;text-overflow:clip}",
+    "tbody td{vertical-align:top}",
+    "#selbar .nrsh{background:#3b57c9;color:#fff}",
     "tbody tr.read{opacity:1!important}",
     "tbody tr.read .rdot{background:transparent!important;position:relative}",
     "tbody tr.read .rdot::after{content:'\\2713';position:absolute;left:50%;top:50%;",
@@ -394,12 +401,21 @@
 
   /* ================= 공유 ================= */
   /* 제목 + 5줄 요약 + 원문 링크를 한 덩어리로 만든다 */
+  /* 광고 없는 '깔끔 정리본' 주소 — 받는 사람이 눌러도 바로 정리된 화면이 열린다 */
+  function cleanLink(n) {
+    if (!n || !n.url || n.url === "#") return "";
+    return location.origin + location.pathname + "#a=" + encodeURIComponent(n.url);
+  }
+
+  function srcName(n) {
+    return n.origin || (n.src === "naver" ? "네이버" : n.src === "google" ? "구글" : "외신");
+  }
+
   function shareText(n) {
     if (!n) return "";
     var out = [];
     out.push("📰 " + (n.title || ""));
-    var src = n.origin || (n.src === "naver" ? "네이버" : n.src === "google" ? "구글" : "");
-    var meta = [src, n.date || ""].filter(Boolean).join(" · ");
+    var meta = [srcName(n), n.date || ""].filter(Boolean).join(" · ");
     if (meta) out.push(meta);
     var sum = mySummary(n) || "";
     if (sum) {
@@ -409,8 +425,26 @@
       var b = fiveLines(sum);
       if (b) out.push(b);
     }
-    if (n.url && n.url !== "#") { out.push(""); out.push(n.url); }
+    var cl = cleanLink(n);
+    if (cl) { out.push(""); out.push("🔗 정리해서 보기(광고 없음)"); out.push(cl); }
     return out.join("\n");
+  }
+
+  /* 여러 건 한 번에 */
+  function shareTextMany(list) {
+    var day = "";
+    try { day = new Date(Date.now() + 9 * 3600000).toISOString().slice(5, 10).replace("-", "/"); } catch (e) {}
+    var out = ["📰 뉴스 정리 " + list.length + "건" + (day ? " (" + day + ")" : ""), ""];
+    for (var i = 0; i < list.length; i++) {
+      var n = list[i];
+      out.push((i + 1) + ") " + (n.title || ""));
+      var sum = mySummary(n);
+      if (sum) { var h = headline(sum); if (h) out.push("   ▶ " + h); }
+      var cl = cleanLink(n);
+      if (cl) out.push("   " + cl);
+      out.push("");
+    }
+    return out.join("\n").trim();
   }
 
   /* 복사도 공유도 막혔을 때 : 직접 긁어갈 수 있게 보여주기 */
@@ -428,9 +462,9 @@
     setTimeout(function () { ta.focus(); ta.select(); }, 120);
   }
 
-  function doShare(n) {
-    if (!n) return;
-    var text = shareText(n);
+  function doShare(n, forcedText, forcedTitle) {
+    if (!n && !forcedText) return;
+    var text = forcedText || shareText(n);
     if (!text) { say("공유할 내용이 없어요"); return; }
     /* 폰이면 카톡·문자 등 공유창, 컴이면 복사가 더 편하다 */
     var isPhone = false;
@@ -438,7 +472,7 @@
       isPhone = (navigator.maxTouchPoints > 0) && (window.innerWidth <= 900);
     } catch (e) {}
     if (isPhone && navigator.share) {
-      var data = { title: n.title || "뉴스", text: text };
+      var data = { title: forcedTitle || (n && n.title) || "뉴스", text: text };
       navigator.share(data).catch(function (err) {
         if (err && err.name === "AbortError") return;   /* 사용자가 닫은 것 */
         copyShare(n, text);
@@ -457,6 +491,41 @@
     }
     shareFallback(n, text);
   }
+
+  /* 고른 것 여러 건 공유 */
+  window.nrShareSel = function () {
+    var sel = window.selected || {};
+    var ids = Object.keys(sel).map(Number).filter(function (x) { return !isNaN(x); });
+    if (!ids.length) { say("먼저 공유할 뉴스를 선택하세요"); return; }
+    var list = [];
+    for (var i = 0; i < ids.length; i++) { var n = byId(ids[i]); if (n) list.push(n); }
+    if (!list.length) { say("선택한 뉴스를 찾지 못했어요"); return; }
+    doShare(null, shareTextMany(list), "뉴스 정리 " + list.length + "건");
+  };
+
+  /* ================= 깔끔 정리본 열기 (#a=원문주소) ================= */
+  function openByUrl(u) {
+    var L = newsList(), i;
+    for (i = 0; i < L.length; i++) if (L[i].url === u) { window.openReader(L[i].id); return true; }
+    var S = scrapList();
+    for (i = 0; i < S.length; i++) if (S[i] && S[i].n && S[i].n.url === u) { window.openReader(S[i].n.id); return true; }
+    return false;
+  }
+
+  var _deepTries = 0;
+  function handleDeepLink() {
+    var h = location.hash || "";
+    if (h.indexOf("#a=") !== 0) return;
+    var u = "";
+    try { u = decodeURIComponent(h.slice(3)); } catch (e) { return; }
+    if (!u) return;
+    if (openByUrl(u)) { _deepTries = 0; return; }
+    /* 아직 뉴스가 안 불러와졌을 수 있으니 잠깐 기다렸다 다시 */
+    if (_deepTries++ < 20) { setTimeout(handleDeepLink, 800); return; }
+    popup("이 뉴스는 지금 목록에 없어요",
+      "정리본은 최근 며칠치만 보관돼요.\n아래 주소로 원문을 볼 수 있어요.\n\n" + u);
+  }
+  window.addEventListener("hashchange", function () { _deepTries = 0; handleDeepLink(); });
 
   window.nrShare = function (id, ev) {
     if (ev && ev.stopPropagation) ev.stopPropagation();
@@ -687,6 +756,87 @@
     } else {
       box.innerHTML = '<b>5줄 요약</b> · <button class="miniai" onclick="rowSummarize(' + n.id + ',event)">📝 요약 만들기</button>' + link;
     }
+  }
+
+  /* ================= 🖨️ 브리핑 : A4 한 장 인쇄 ================= */
+  function briefHTML(list, cols) {
+    var day = "";
+    try { day = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10); } catch (e) {}
+    var css = [
+      "@page{size:A4;margin:10mm}",
+      "*{box-sizing:border-box}",
+      "body{margin:0;padding:10mm;font-family:-apple-system,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;color:#16181d}",
+      ".bar{position:sticky;top:0;display:flex;gap:8px;align-items:center;padding:10px 0 14px;background:#fff}",
+      ".bar button{border:1px solid #d9dde5;background:#fff;border-radius:9px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}",
+      ".bar .go{background:#3b57c9;color:#fff;border-color:#3b57c9}",
+      ".bar .sp{flex:1}",
+      "h1{font-size:15pt;margin:0 0 2mm}",
+      ".sub{font-size:9pt;color:#6b7280;margin:0 0 5mm;padding-bottom:3mm;border-bottom:1.5px solid #16181d}",
+      ".wrap{column-gap:8mm}",
+      ".c2{column-count:2}.c3{column-count:3}",
+      ".it{break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;margin:0 0 4.5mm}",
+      ".t{font-size:9.8pt;font-weight:700;line-height:1.35;margin:0 0 1mm}",
+      ".s{font-size:8.6pt;line-height:1.45;color:#2b2f36;margin:0 0 1mm;white-space:pre-wrap}",
+      ".m{font-size:7.6pt;color:#8b919b}",
+      ".sig{font-size:8pt;margin-right:2px}",
+      "@media print{.bar{display:none}body{padding:0}}"
+    ].join("");
+
+    var items = list.map(function (n, i) {
+      var sum = mySummary(n);
+      var line = sum ? headline(sum) : "";
+      var sig = n.sig === "red" ? "🔴" : n.sig === "orange" ? "🟠" : "";
+      var meta = [srcName(n), (window.fmtDate ? window.fmtDate(n.date, n) : (n.date || ""))].filter(Boolean).join(" · ");
+      var ttl = String(n.title || "").replace(/\s+-\s+[^-]{1,24}$/, "");   /* 제목 끝의 " - 출처" 떼기 */
+      return '<div class="it">' +
+        '<div class="t"><span class="sig">' + sig + "</span>" + escHtml(ttl) + "</div>" +
+        (line ? '<div class="s">' + escHtml(line) + "</div>" : "") +
+        '<div class="m">' + escHtml(meta) + "</div>" +
+        "</div>";
+    }).join("");
+
+    return "<!doctype html><html lang='ko'><head><meta charset='utf-8'>" +
+      "<title>뉴스 브리핑 " + day + "</title><style>" + css + "</style></head><body>" +
+      '<div class="bar">' +
+      '<button class="go" onclick="window.print()">🖨️ 인쇄</button>' +
+      "<button onclick=\"document.getElementById('w').className='wrap c2'\">2열</button>" +
+      "<button onclick=\"document.getElementById('w').className='wrap c3'\">3열</button>" +
+      '<span class="sp"></span><span style="font-size:12px;color:#8b919b">인쇄 전에 열 수를 골라보세요</span>' +
+      "</div>" +
+      "<h1>📰 뉴스 브리핑</h1>" +
+      '<div class="sub">' + day + " · 총 " + list.length + "건</div>" +
+      '<div id="w" class="wrap c' + cols + '">' + items + "</div>" +
+      "</body></html>";
+  }
+
+  window.nrBrief = function () {
+    var list = [];
+    try { list = (window.currentRows() || []).slice(0, 60); } catch (e) {}
+    if (!list.length) { say("브리핑에 담을 뉴스가 없어요"); return; }
+    var w = window.open("", "_blank");
+    if (!w) { say("팝업이 막혔어요 — 주소창 옆 팝업 허용을 켜주세요"); return; }
+    w.document.open();
+    w.document.write(briefHTML(list, 2));
+    w.document.close();
+    say(list.length + "건으로 브리핑을 만들었어요");
+  };
+
+  /* 상단에 [🖨️ 브리핑] 버튼 달기 */
+  function setupBriefBtn() {
+    var bar = document.querySelector(".actbar");
+    if (!bar || bar.querySelector(".nrbrief")) return;
+    var anchor = null;
+    var bs = bar.querySelectorAll("button");
+    for (var i = 0; i < bs.length; i++) {
+      if ((bs[i].getAttribute("onclick") || "").indexOf("openSummary") >= 0) { anchor = bs[i]; break; }
+    }
+    var b = document.createElement("button");
+    b.className = "sumbtn nrbrief";
+    b.textContent = "🖨️ 브리핑";
+    b.title = "지금 보는 목록을 A4 한 장으로 인쇄";
+    b.onclick = function () { window.nrBrief(); };
+    if (anchor && anchor.nextSibling) bar.insertBefore(b, anchor.nextSibling);
+    else bar.appendChild(b);
   }
 
   /* 읽기창 헤더에 [📤 공유] 버튼 (원문 버튼 앞에) */
@@ -936,6 +1086,17 @@
         if (window.renderRows) window.renderRows();
       }
       if (sb) {
+        var shb = sb.querySelector(".nrsh");
+        if (v === "read" || v === "scrap") {
+          if (!shb) {
+            shb = document.createElement("button");
+            shb.className = "clr nrsh";
+            shb.textContent = "📤 선택 공유";
+            shb.onclick = function () { window.nrShareSel(); };
+            sb.appendChild(shb);
+          }
+          shb.style.display = "";
+        } else if (shb) { shb.style.display = "none"; }
         var all = sb.querySelector(".nrall");
         if (v === "read" || v === "scrap") {
           if (!all) {
@@ -987,6 +1148,7 @@
       decorateMemoCells();
       decorateDeleteButtons();
       setupTabs();
+      setupBriefBtn();
       fixHead();
       updateBadges();
       showNote(_fallback ? "⚡ 지금 새 속보는 없어요 — 대신 아직 안 읽은 🔴 중요 뉴스를 보여드립니다." : "");
@@ -1009,6 +1171,8 @@
     setupTabs();
     fixHead();
     setupShareBtn();
+    setupBriefBtn();
+    handleDeepLink();
     decorateSummaryCells();
     updateBadges();
 
@@ -1034,5 +1198,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
   else watch();
 
-  if (window.console) console.log("[news_patch] " + VER + " 적용됨 — 동기화 · 삭제 · 공유");
+  if (window.console) console.log("[news_patch] " + VER + " 적용됨 — 정리본 공유 · 선택 공유 · A4 브리핑");
 })();
