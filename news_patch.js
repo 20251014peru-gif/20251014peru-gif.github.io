@@ -1,4 +1,15 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v14 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v15 (2026-08-30)
+ *
+ * v15 : 5줄 요약을 '기사 종류별 틀' 로 다시 정의
+ *   뉴스는 종류마다 쓰이는 방식이 다르다.
+ *     사건 기사 = 역피라미드(중요한 것부터), 해설·칼럼 = 논증(결론과 근거),
+ *     시황 기사 = 수치 나열. 한 가지 틀로 찍으면 억지 문장이 나온다.
+ *   그래서 AI 가 먼저 유형(사건/시황/종목/해설/무관)을 가리고,
+ *   그 유형에 맞는 5칸을 채운다. ▶ 줄 앞에 [유형] 이 붙고 표에서는 색 칩으로 보인다.
+ *   투자와 관계없는 기사는 [무관] 으로 표시되고 이유가 함께 나온다.
+ *   칸 내용이 기사에 없으면 지어내지 말고 '기사에 언급 없음' 이라고 쓰게 했다.
+ *
+ * ↓ v14 원본 설명
  *
  * v14 에서 한 것
  *   ① 5줄 요약을 '한 줄 쓰고 한 줄 띄우기' 로 — 팝업·공유·브리핑 모두 적용
@@ -107,11 +118,11 @@
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 14) return;
-  window.__nrPatch = 14;
+  if (window.__nrPatch >= 15) return;
+  window.__nrPatch = 15;
 
   var LINES = 5;
-  var VER = "v14";
+  var VER = "v15";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
   var BODY_MAX = 1500;     /* 공유할 때 함께 보내는 본문 최대 글자수 */
 
@@ -224,7 +235,15 @@
     ".nrmemochip{display:inline-block;max-width:120px;overflow:hidden;text-overflow:clip;",
     "white-space:nowrap;vertical-align:middle;cursor:pointer;font-size:11.5px;font-weight:700;",
     "padding:2px 7px;border-radius:8px;background:rgba(59,87,201,.10);color:#3b57c9}",
-    ".nrmemochip.empty{background:transparent;color:#b3b9c4;font-weight:600}"
+    ".nrmemochip.empty{background:transparent;color:#b3b9c4;font-weight:600}",
+    /* 요약 앞의 기사 유형 표시 */
+    ".nrtype{display:inline-block;margin-right:5px;padding:1px 6px;border-radius:6px;",
+    "font-size:10.5px;font-weight:800;vertical-align:1px;white-space:nowrap}",
+    ".nrtype.t-사건{background:#FDE8EC;color:#c2274a}",
+    ".nrtype.t-시황{background:#E7F0FF;color:#2a4bb8}",
+    ".nrtype.t-종목{background:#E6F6EC;color:#1c7a45}",
+    ".nrtype.t-해설{background:#F3EAFD;color:#6b34b5}",
+    ".nrtype.t-무관{background:#F1F2F5;color:#8b919b}"
   ].join("");
   var st = document.createElement("style");
   st.id = "nrPatchCss";
@@ -693,15 +712,44 @@
     var label = btn ? btn.textContent : "";
     if (btn) { btn.disabled = true; btn.textContent = "요약 중…"; }
 
+    /* 기사 종류를 먼저 가리고, 그 종류에 맞는 5칸으로 요약한다.
+       뉴스는 종류마다 쓰는 방식이 달라서(사건=역피라미드, 해설=논증, 시황=수치나열)
+       한 가지 틀로 찍으면 억지 문장이 나온다. */
     var sys =
-      "너는 한국어 뉴스 요약가다. 아래 형식으로만 답한다. 다른 말은 절대 붙이지 않는다.\n\n" +
-      "▶ (5줄 요약 전체를 한 문장으로 압축한 한 줄, 45자 내외)\n" +
-      "· (핵심 사실 1)\n· (핵심 사실 2)\n· (핵심 사실 3)\n· (핵심 사실 4)\n· (핵심 사실 5)\n\n" +
-      "규칙:\n" +
-      "- 맨 윗줄은 반드시 ▶ 로 시작하고, 아래 " + LINES + "줄을 다 읽지 않아도 기사를 알 수 있게 압축한다.\n" +
-      "- ▶ 줄은 기사 제목을 그대로 옮기지 말고, 내용을 요약한 문장으로 새로 쓴다.\n" +
-      "- 그 아래는 정확히 " + LINES + "줄이며 각 줄은 '· ' 로 시작하고 한 줄에 한 가지 사실만 담는다.\n" +
-      "- 기사에 없는 내용은 절대 추측해서 쓰지 않는다. 숫자·회사명·인명은 기사에 나온 그대로 옮긴다.";
+      "너는 한국투자자를 위한 뉴스 요약가다. 아래 형식으로만 답한다. 다른 말은 절대 붙이지 않는다.\n\n" +
+      "형식:\n" +
+      "▶ [유형] 기사 전체를 한 문장으로 압축 (45자 내외)\n" +
+      "· (1번 칸)\n· (2번 칸)\n· (3번 칸)\n· (4번 칸)\n· (5번 칸)\n\n" +
+
+      "1단계 — 유형을 하나 고른다:\n" +
+      "  사건 : 무슨 일이 실제로 일어났다 (발표·결정·발언·계약·규제·사고)\n" +
+      "  시황 : 지수·환율·금리·유가의 그날 움직임과 마감\n" +
+      "  종목 : 특정 기업의 실적·수주·목표주가·투자의견\n" +
+      "  해설 : 필자나 기관의 주장과 근거가 중심인 칼럼·전망·분석\n" +
+      "  무관 : 투자 판단과 관계없는 기사 (지자체 소식, 홍보, 생활, 연예, 스포츠)\n\n" +
+
+      "2단계 — 고른 유형의 5칸을 채운다:\n" +
+      "  사건 → 1 무슨 일이 있었나(주체와 행동) / 2 핵심 수치와 변화폭 / " +
+      "3 왜 이렇게 됐나(배경·경위) / 4 시장이 어떻게 반응했나 / 5 다음에 확인할 일정이나 지표\n" +
+      "  시황 → 1 지수·가격이 얼마나 움직였나 / 2 누가 사고 팔았나(수급) / " +
+      "3 오른 업종·종목 / 4 내린 업종·종목 / 5 다음 장의 변수\n" +
+      "  종목 → 1 어느 회사에 무슨 일이 / 2 실적·수주 수치 / 3 그렇게 된 이유 / " +
+      "4 주가·목표주가·투자의견에 준 영향 / 5 다음에 확인할 일정\n" +
+      "  해설 → 1 필자의 결론(주장) / 2 근거 하나 / 3 근거 둘 / " +
+      "4 이 주장이 성립하려면 필요한 전제나 반대 논리 / 5 누가 한 말인지(필자·기관)\n" +
+      "  무관 → 1 무슨 내용인지 한 줄 / 2~5 는 '· 투자 관련성 낮음 — (이유)' 를 2번 칸에만 쓰고 " +
+      "3·4·5번 칸은 만들지 않는다 (이 경우에만 줄 수가 2줄이다)\n\n" +
+
+      "지켜야 할 것:\n" +
+      "- ▶ 줄은 반드시 ▶ 로 시작하고 그 뒤에 [사건] [시황] [종목] [해설] [무관] 중 하나를 대괄호로 붙인다.\n" +
+      "- ▶ 줄은 기사 제목을 그대로 옮기지 말고, 내용을 압축한 문장으로 새로 쓴다.\n" +
+      "- 아래 줄은 각각 '· ' 로 시작하고, 한 줄에 한 가지만 담는다.\n" +
+      "- 기사에 없는 내용은 절대 지어내지 않는다. 해당 칸의 내용이 기사에 없으면 " +
+      "그 칸에 '· (칸 이름): 기사에 언급 없음' 이라고 쓴다.\n" +
+      "- 유형이 무관이 아니어도, 투자 판단에 쓸모가 없다고 보이면 마지막 칸에 " +
+      "'투자 관련성 낮음 — (이유)' 를 덧붙인다.\n" +
+      "- 숫자·회사명·인명·날짜는 기사에 나온 그대로 옮긴다. 반올림하거나 바꾸지 않는다.\n" +
+      "- 추천·매수·매도 같은 투자 권유는 하지 않는다. 기사에 있는 기관 의견은 '누가 그렇게 말했다' 로만 옮긴다.";
 
     var src = (n.title || "") + "\n\n" + String(n.body || n.orig_title || "").slice(0, 6000);
 
@@ -869,7 +917,17 @@
       if (mine) {
         var sp = document.createElement("span");
         sp.className = "sumline";
-        sp.textContent = headline(mine);
+        var htxt = headline(mine);
+        var tm = htxt.match(/^\[(사건|시황|종목|해설|무관)\]\s*/);
+        if (tm) {
+          var chip = document.createElement("span");
+          chip.className = "nrtype t-" + tm[1];
+          chip.textContent = tm[1];
+          sp.appendChild(chip);
+          sp.appendChild(document.createTextNode(htxt.slice(tm[0].length)));
+        } else {
+          sp.textContent = htxt;
+        }
         sp.title = "눌러서 5줄 요약 보기";
         td.appendChild(sp);
       } else {
