@@ -1,4 +1,13 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v13 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v14 (2026-08-30)
+ *
+ * v14 에서 한 것
+ *   ① 5줄 요약을 '한 줄 쓰고 한 줄 띄우기' 로 — 팝업·공유·브리핑 모두 적용
+ *   ② 제목·요약이 두 줄 안에 '다' 나오게 (잘려나가던 문제)
+ *      - 제목칸 470px / 요약칸 620px 로 넓힘 (표가 화면보다 넓어지면 좌우 스크롤)
+ *      - 제목 끝의 " - 언론사" 꼬리 제거 (원제목은 마우스 올리면 나옴)
+ *      - 그래도 두 줄을 넘치면 그 칸만 글자 크기를 자동으로 줄인다 (13px → 최소 9.5px)
+ *
+ * ↓ v13 원본 설명
  *
  * v13 : v12 가 만든 사고 하나 수습
  *   · 읽기창(제목 눌러 열리는 화면) 헤더의 기사 제목이 한 글자씩 세로로 쌓이던 문제.
@@ -98,11 +107,11 @@
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 13) return;
-  window.__nrPatch = 13;
+  if (window.__nrPatch >= 14) return;
+  window.__nrPatch = 14;
 
   var LINES = 5;
-  var VER = "v13";
+  var VER = "v14";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
   var BODY_MAX = 1500;     /* 공유할 때 함께 보내는 본문 최대 글자수 */
 
@@ -180,11 +189,17 @@
     "tbody .title{display:block!important;line-height:1.4;max-height:2.8em!important;",
     "overflow:hidden;text-overflow:clip!important;",
     "white-space:normal;word-break:keep-all;overflow-wrap:break-word;",
-    "text-wrap:balance;max-width:340px}",
+    "text-wrap:balance;max-width:100%}",
     "tbody td.summary .sumline{display:block!important;line-height:1.4;max-height:2.8em!important;",
     "overflow:hidden;text-overflow:clip!important;",
     "white-space:normal;word-break:keep-all;overflow-wrap:break-word;",
-    "text-wrap:balance;max-width:420px}",
+    "text-wrap:balance;max-width:100%}",
+    /* 제목·요약 칸을 넓게 — 두 줄에 글이 다 들어가게 한다.
+       표가 화면보다 넓어지지만 .tablewrap 이 overflow-x:auto 라 좌우로 밀린다. */
+    "table{min-width:1700px!important}",
+    "col.c-title{width:470px!important} col.c-sum{width:620px!important}",
+    "@media(max-width:760px){table{min-width:1240px!important}",
+    "col.c-title{width:330px!important} col.c-sum{width:430px!important}}",
     /* 말줄임표는 어디서도 쓰지 않는다 */
     "tbody td{text-overflow:clip!important}",
     /* 읽기창 헤더 제목 : 한 줄 유지(말줄임표는 안 붙임).
@@ -193,9 +208,10 @@
     /* 폰에서는 헤더에 제목을 아예 넣지 않는다 — 바로 아래 큰 글씨로 다시 나오므로 중복이다 */
     "@media(max-width:760px){.r-head .rt{display:none!important}",
     ".r-head{gap:8px}}",
+    /* 폰에서도 칸 폭을 그대로 다 쓴다 (예전 250/300px 제한이 글을 잘라먹었다) */
     "@media(max-width:760px){",
-    "tbody .title{max-width:250px}",
-    "tbody td.summary .sumline{max-width:300px}",
+    "tbody .title{max-width:100%}",
+    "tbody td.summary .sumline{max-width:100%}",
     "}",
     "tbody td{vertical-align:top}",
     "#selbar .nrsh{background:#3b57c9;color:#fff}",
@@ -495,9 +511,10 @@
 
   /* 팝업에 보여줄 5줄 본문 (▶ 압축 줄은 뺀다) */
   function fiveLines(text) {
+    /* 한 줄 쓰고 한 줄 띄워서 읽기 쉽게 (팝업·공유·브리핑 공통) */
     return String(text || "").split("\n").filter(function (l) {
       return l.trim() && l.trim().indexOf("▶") !== 0;
-    }).join("\n");
+    }).join("\n\n");
   }
 
   function popupSummary(n, text) {
@@ -864,6 +881,81 @@
         td.appendChild(b);
       }
     }
+  }
+
+  /* ── 두 줄에 글이 다 들어가도록 글자 크기 자동 맞춤 ──
+     한글은 글자폭이 대략 글자크기와 같고, 영문·숫자·공백은 그 절반쯤이다.
+     그래서 '가중 글자수' 를 세어 두 줄에 들어갈 최대 크기를 계산한다.
+     칸 폭은 열마다 같으므로 한 번만 재고(레이아웃 계산 1회) 전부에 적용한다. */
+  var FS_BASE = 13, FS_MIN = 9.5;
+  function weighted(t) {
+    var w = 0, i, c;
+    for (i = 0; i < t.length; i++) {
+      c = t.charCodeAt(i);
+      if (c >= 0x1100 && c <= 0xd7ff) w += 1.02;        /* 한글·한자 */
+      else if (c >= 0x3000 && c <= 0x30ff) w += 1.02;   /* 일본어·전각기호 */
+      else if (c === 32) w += 0.3;                      /* 공백 */
+      else if (c >= 48 && c <= 57) w += 0.58;           /* 숫자 */
+      else if (c >= 65 && c <= 90) w += 0.68;           /* 영문 대문자 */
+      else w += 0.52;                                   /* 그 외 */
+    }
+    return w || 1;
+  }
+  function fitOne(el, boxW) {
+    if (!el || !boxW) return;
+    var t = el.textContent || "";
+    var need = weighted(t);
+    /* 두 줄 = 2 × 칸폭. 0.94 는 줄 끝에서 낱말이 넘어가며 생기는 여백 몫. */
+    var fs = (2 * boxW * 0.94) / need;
+    if (fs > FS_BASE) fs = FS_BASE;
+    if (fs < FS_MIN) fs = FS_MIN;
+    fs = Math.floor(fs * 10) / 10;
+    if (el.dataset.nrfs !== String(fs)) {
+      el.style.fontSize = fs + "px";
+      el.dataset.nrfs = String(fs);
+    }
+  }
+  function shrinkOverflow(els) {
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i], guard = 0;
+      var fs = parseFloat(el.dataset.nrfs || FS_BASE);
+      while (el.scrollHeight > el.clientHeight + 1 && fs > FS_MIN && guard < 10) {
+        fs = Math.round((fs - 0.5) * 10) / 10;
+        if (fs < FS_MIN) fs = FS_MIN;
+        el.style.fontSize = fs + "px";
+        el.dataset.nrfs = String(fs);
+        guard++;
+      }
+    }
+  }
+  function autoFitCells() {
+    try {
+      var titles = document.querySelectorAll("tbody .title");
+      var sums = document.querySelectorAll("tbody td.summary .sumline");
+      var tw = titles.length ? titles[0].clientWidth : 0;
+      var sw = sums.length ? sums[0].clientWidth : 0;
+      var i;
+      for (i = 0; i < titles.length; i++) fitOne(titles[i], tw);
+      for (i = 0; i < sums.length; i++) fitOne(sums[i], sw);
+      /* 계산은 어림값이므로, 그래도 두 줄을 넘친 칸만 실제로 재서 더 줄인다 */
+      shrinkOverflow(titles);
+      shrinkOverflow(sums);
+    } catch (e) {}
+  }
+
+  /* 제목 끝의 " - 언론사" 꼬리를 떼서 두 줄 안에 들어갈 여유를 만든다 */
+  function trimTitles() {
+    try {
+      var els = document.querySelectorAll("tbody .title");
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (el.dataset.nrtt) continue;
+        var raw = el.textContent || "";
+        var cut = raw.replace(/\s+-\s+[^-]{1,24}$/, "").trim();
+        if (cut && cut !== raw) { el.textContent = cut; el.title = raw; }
+        el.dataset.nrtt = "1";
+      }
+    } catch (e) {}
   }
 
   /* 읽기창(오른쪽 패널)의 요약 줄 */
@@ -1329,6 +1421,8 @@
       decorateSummaryCells();
       decorateMemoCells();
       decorateDeleteButtons();
+      trimTitles();
+      autoFitCells();
       setupTabs();
       setupBriefBtn();
       fixHead();
@@ -1348,6 +1442,8 @@
       decorateSummaryCells();
       decorateMemoCells();
       decorateDeleteButtons();
+      trimTitles();
+      autoFitCells();
     }).observe(tb, { childList: true, subtree: true });
 
     setupTabs();
