@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v132-0830-0912";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v133-0830-0942";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3266,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=132-20260830t0912"></script>
+<script src="worklog.js?v=133-20260830t0942"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -21463,7 +21463,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
             시작 시각 · 끝난 시각 · 업체                        (그다음) */
     try{
       var FRONT = ['_date','f:refYear','f:refMonth','f:floor','f:field',
-                   'f:status','f:accType','f:stockType','f:dir','f:vtype',
+                   'f:status',
+                   '_memo',                                   /* v133 — 「내용」은 기본 바로 밑 */
+                   'f:accType','f:stockType','f:dir','f:vtype',
                    'f:expType','f:expSubType','f:purpose',
                    'f:supplyAmt','f:taxAmt','_amount','f:isIssued',
                    'f:startTime','f:endTime','_sub'];
@@ -21474,6 +21476,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         out = fr.concat(rest3);
       }
     }catch(e){ console.warn('[앞자리 차례]', e); }
+    /* v133 — 달님 : 「견적 메모는 없애」
+          화면에서만 뺀다. 예전에 적어 둔 값은 데이터에 그대로 남는다. */
+    try{ out = out.filter(function(p){ return p.id !== 'f:estimateMemo'; }); }
+    catch(e){ console.warn('[견적 메모 빼기]', e); }
     return out;
   }
   function propById(pt, id){
@@ -24103,7 +24109,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
           예전에는 값이 있는 칸이 먼저 오고 빈 칸은 뒤로 밀려서,
           「해당층·분야를 날짜 옆으로」가 아무리 고쳐도 안 됐다. (달님 신고 4회)
           숨김 목록에 들어 있어도 되살린다 — 기본 칸이라 감춰 두면 안 된다. */
-    var ALWAYS = { '_date':1, 'f:refYear':1, 'f:refMonth':1, 'f:floor':1, 'f:field':1, 'f:status':1 };
+    var ALWAYS = { '_date':1, 'f:refYear':1, 'f:refMonth':1, 'f:floor':1, 'f:field':1, 'f:status':1,
+                   '_memo':1 };   /* v133 — 「내용」은 비어 있어도 기본 바로 밑에 (달님 요청) */
     /* v119 — 지금 고른 모드(지출종류 등)가 요구하는 칸도 늘 보인다.
           비어 있다고 「빈 항목」 뒤로 밀리면 합계와 따로 떨어져 보기 나쁘다. */
     try{
@@ -29117,9 +29124,31 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     });
   }
 
+  /* v133 — 달님 : 「업체 메모는 기존에 내가 적어 놨던게 나오게 해줘」
+        연락처에 메모가 없으면, 그 업체로 적어 둔 가장 최근 업무의 업체 메모를 가져온다.
+        ⚠ 업체를 「고르는 그 순간」에만 넣는다. 다시 그릴 때마다 넣으면
+          지운 메모가 되살아난다 (v117 업체 되살아남 사고와 같은 유형). */
+  function pastMemo(name){
+    try{
+      var nm = String(name||'').trim(); if(!nm) return '';
+      var hit = (entries||[]).filter(function(e){
+        if(!e || e.kind !== 'work') return false;
+        if(String(e.workVendor||e.vendor||'').trim() !== nm) return false;
+        return String(e.workMemo||'').trim().length > 0;
+      }).sort(function(a,b){ return String(b.date||'').localeCompare(String(a.date||'')); })[0];
+      return hit ? String(hit.workMemo).trim() : '';
+    }catch(e){ console.warn('[관련처] 예전 업체 메모 찾기 실패', e); return ''; }
+  }
+
   function pick(c){
     if(!curInp || !c) return;
     var map=curMap, inp=curInp;
+    try{
+      if(map && map.memo && !String(c.memo||'').trim()){
+        var pm = pastMemo(c.name);
+        if(pm){ c = Object.assign({}, c, { memo: pm }); }
+      }
+    }catch(e){ console.warn('[관련처] 업체 메모 채우기 실패', e); }
     inp.value = c.name;
     try{ inp.dispatchEvent(new Event('input',{bubbles:true}));
          inp.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}

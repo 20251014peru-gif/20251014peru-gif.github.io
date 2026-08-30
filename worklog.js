@@ -14965,6 +14965,26 @@ async function githubUpload(token){
       else if(mrow)  putBefore(mLine, mrow);
       else           mLine = null;
     }
+
+    /* v133 — 달님 : 「내용은 기본탭 바로 밑으로. 업무 내용 적을 꺼야」
+          묶음들은 lastTail 체인으로 위에서부터 다시 쌓인다. 어느 묶음에도
+          속하지 않는 「내용」 줄은 제자리에 남아 묶음들에게 밀려 아래로 간다.
+          그래서 묶음을 다 쌓은 뒤 「기본」 묶음 바로 뒤로 옮겨 준다. */
+    try{
+      var mrow2 = rowOf(props, '_memo');
+      if(mrow2){
+        var g0f = props.querySelector('[data-gfoot="g0"]');
+        var anchor = null;
+        if(g0f){
+          anchor = g0f;
+          var nx = g0f.nextElementSibling;                    /* 발치 다음의 여백 줄까지 건너뛴다 */
+          if(nx && nx.classList && nx.classList.contains('pg-gtail')) anchor = nx;
+        }else{
+          anchor = props.querySelector('[data-gid="g0"].pg-grow');
+        }
+        if(anchor && anchor.nextElementSibling !== mrow2) putAfter(mrow2, anchor);
+      }
+    }catch(e){ console.warn('[묶어보기] 「내용」 자리 옮기기 실패', e); }
   }
 
 
@@ -18010,9 +18030,51 @@ async function githubUpload(token){
     return n;
   }
 
+  /* v133 — 달님 : 「하위목록과 파일 폴더 링크는 2열로 나오게 해 공간 활용」
+        두 영역이 나란히 붙어 있으면 한 상자에 담아 좌·우로 나눈다.
+        ⚠ 이미 담아 둔 상자가 있으면 그대로 쓴다 (다시 그릴 때마다 겹겹이 싸지 않게).
+        좁은 화면에서는 CSS 가 알아서 1열로 돌린다. */
+  function twoCol(page){
+    try{
+      var heads = [].filter.call(page.querySelectorAll('.pg-sec'), function(h){
+        if(h.style && h.style.display === 'none') return false;
+        return /하위\s*항목|파일\s*[·ㆍ]\s*폴더/.test(h.textContent || '');
+      });
+      if(heads.length < 2){                       /* 한쪽만 있으면 나눌 것이 없다 */
+        var solo = page.querySelector('.pg-fold2');
+        if(solo && solo.children.length){
+          while(solo.firstChild) solo.parentNode.insertBefore(solo.firstChild, solo);
+          solo.remove();
+        }
+        return;
+      }
+      var a = heads[0], b2 = heads[1];
+      /* 이미 같은 상자 안에 좌·우로 들어가 있으면 손대지 않는다 */
+      var ca = a.closest('.pg-fold2c'), cb = b2.closest('.pg-fold2c');
+      if(ca && cb && ca !== cb && ca.parentNode === cb.parentNode
+         && ca.parentNode.classList.contains('pg-fold2')) return;
+
+      var wrap = document.createElement('div');
+      wrap.className = 'pg-fold2';
+      a.parentNode.insertBefore(wrap, a);
+
+      function cell(head){
+        var c = document.createElement('div');
+        c.className = 'pg-fold2c';
+        var list = [head].concat(blockOf(head));
+        wrap.appendChild(c);
+        list.forEach(function(el){ c.appendChild(el); });
+        return c;
+      }
+      cell(a); cell(b2);
+    }catch(e){ console.warn('[영역 접기] 2열로 나누기 실패', e); }
+  }
+
   function run(){
     var page = document.querySelector('.lf-page');
     if(!page) return;
+
+    if(isOn()) twoCol(page);
 
     [].forEach.call(page.querySelectorAll('.pg-sec'), function(h){
       var txt = (h.textContent || '').trim();
