@@ -21242,3 +21242,192 @@ async function githubUpload(token){
   console.log('[옛 창] 입구 ' + (oldShown() ? '보임' : '숨김') + ' — wlOldForm.on() 으로 되돌립니다');
   console.log('[고정] 표 왼쪽 ' + frzN() + '칸 — 표 도구줄 [📌 고정] 단추 / wlFreeze.set(2)');
 })();
+
+/* ============================================================
+   🆕 미리 채워서 새 기록 열기 (wlNewPageWith)  v156-0830-2140
+
+   달님 : 「12번 하자」 — 옛 전체입력 창을 완전히 없애려면 이게 먼저다.
+
+   왜 필요했나
+     달력의 ＋ 와 통화의 [업무로 생성] 은 창을 연 **뒤에** 칸을 채운다.
+       openEditor("schedule", null);
+       setTimeout(function(){ $("m-date").value = d; }, 50);
+     노션식 창에는 그 통로가 없어서 이 두 자리만 옛 창을 쓰고 있었다.
+     → 「미리 채울 값」을 받아 새 기록을 만들고 곧바로 노션식으로 여는 길을 낸다.
+
+   window.wlNewPageWith(종류, {칸:값, …}, 창여부)  →  새 기록 id (Promise)
+
+   이걸 쓰도록 바꾼 자리 (원래 코드는 그대로 두고 **먼저 가로챈다**)
+     · 달력 [＋ 빠른 추가]  (#calQuickAdd)      → 예정 · 고른 날짜
+     · 달력 [➕ 예정 추가]  (#addSchedBtn)      → 예정 · 고른 날짜
+     · 달력 빈 칸 두 번 누르기 (예정 모드)       → 예정 · 그 날짜
+     · 통화 [업무로 생성]  (#callToWorkNewBtn)  → 업무 · 날짜·제목·업체·메모 + 서로 연결
+
+   되돌리기 : wlNewPageWith.off()   → 예전처럼 옛 창이 뜬다
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS = 'wl_newwith';
+  function on(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+
+  function ids(){ try{ return (entries||[]).map(function(e){ return e && e.id; }); }catch(e){ return []; } }
+  function hashId(){
+    try{ var m = String(location.hash||'').match(/^#lp=([^&]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+    catch(e){ return ''; }
+  }
+
+  /* 새 기록이 생길 때까지 기다린다.
+        ⚠ 목록(entries)을 먼저 본다 — addRecord 가 밀어 넣는 즉시 잡히므로
+          화면이 그려지기(openPage, 약 120ms) **전에** 값을 채울 수 있다.
+          주소(#lp=)는 화면이 열린 뒤에야 바뀌어서 한 발 늦다. */
+  function waitNew(before, ms){
+    var t0 = Date.now(), seen = {};
+    before.forEach(function(x){ seen[x] = 1; });
+    return new Promise(function(res){
+      (function tick(){
+        var now = ids();
+        for(var i = now.length - 1; i >= 0; i--){ if(now[i] && !seen[now[i]]) return res(now[i]); }
+        var h = hashId();
+        if(h && !seen[h]) return res(h);
+        if(Date.now() - t0 > (ms || 4500)) return res('');
+        setTimeout(tick, 40);
+      })();
+    });
+  }
+
+  async function newWith(kind, preset, asModal){
+    if(typeof window.wlNewPage !== 'function'){
+      console.warn('[미리채움] 노션식 새 기록 통로가 없습니다');
+      return '';
+    }
+    var before = ids();
+    try{ window.wlNewPage(kind, asModal !== false); }
+    catch(e){ console.error('[미리채움] 새 기록 열기 실패', e); return ''; }
+
+    var id = await waitNew(before, 5000);
+    if(!id){
+      /* 노션식이 안 열렸다 — 예전 입력창으로 물러난다. 아무 일도 안 일어나는 것보다 낫다. */
+      console.warn('[미리채움] 새 기록을 못 찾았습니다 — 예전 입력창으로 물러납니다');
+      try{
+        if(typeof openEditor === 'function'){
+          window._wlForceOld = true;
+          openEditor(kind, null);
+          setTimeout(function(){
+            var map = { date:'m-date', title:'m-title', workVendor:'m-workVendor', workMemo:'m-workMemo' };
+            for(var k in map){
+              if(!preset || !preset[k]) continue;
+              var el = document.getElementById(map[k]);
+              if(el){ el.value = preset[k]; try{ el.dispatchEvent(new Event('input')); }catch(e2){} }
+            }
+          }, 220);
+        }
+      }catch(e){ console.error('[미리채움] 물러나기도 실패', e); }
+      return '';
+    }
+
+    /* 빈 값은 넣지 않는다 — 기본값을 덮어쓰지 않게 */
+    var p = {};
+    for(var k in preset){
+      if(!Object.prototype.hasOwnProperty.call(preset, k)) continue;
+      var v = preset[k];
+      if(v === undefined || v === null || v === '') continue;
+      p[k] = v;
+    }
+    if(Object.keys(p).length){
+      try{ if(typeof updateRecord === 'function') updateRecord(id, p); }
+      catch(e){ console.warn('[미리채움] 값 넣기 실패', e); }
+      /* 혹시 화면이 먼저 그려졌으면 한 번 더 그린다 (값이 안 보이는 것 방지) */
+      setTimeout(function(){
+        try{
+          var ov = document.getElementById('lfPageOv');
+          if(ov && hashId() === id && typeof window.wlGoPage === 'function') window.wlGoPage(id);
+        }catch(e){}
+      }, 420);
+    }
+    return id;
+  }
+
+  /* ── 달력 : 고른 날짜로 「예정」 ── */
+  function dayNow(el){
+    try{ if(el && el.dataset && el.dataset.d) return el.dataset.d; }catch(e){}
+    try{ if(typeof selDay !== 'undefined' && selDay) return selDay; }catch(e){}
+    try{ if(typeof todayStr === 'function') return todayStr(); }catch(e){}
+    return '';
+  }
+
+  document.addEventListener('click', function(ev){
+    if(!on()) return;
+    var t = ev.target;
+    if(!t || !t.closest) return;
+    var b = t.closest('#calQuickAdd, #addSchedBtn');
+    if(!b) return;
+    ev.stopImmediatePropagation();
+    ev.preventDefault();
+    var d = dayNow(null);
+    newWith('schedule', { date: d }).then(function(id){
+      if(id && typeof toast === 'function') toast('🆕 ' + (d || '오늘') + ' 예정을 만들었어요');
+    });
+  }, true);
+
+  document.addEventListener('dblclick', function(ev){
+    if(!on()) return;
+    var t = ev.target;
+    if(!t || !t.closest) return;
+    var cell = t.closest('[data-d]');
+    if(!cell) return;
+    var mode = '';
+    try{ mode = (typeof calMode !== 'undefined') ? calMode : ''; }catch(e){}
+    if(mode !== 'schedule') return;
+    ev.stopImmediatePropagation();
+    ev.preventDefault();
+    var d = dayNow(cell);
+    newWith('schedule', { date: d });
+  }, true);
+
+  /* ── 통화 → 업무로 생성 ── */
+  document.addEventListener('click', function(ev){
+    if(!on()) return;
+    var t = ev.target;
+    if(!t || !t.closest) return;
+    if(!t.closest('#callToWorkNewBtn')) return;
+
+    var callId = '';
+    try{ callId = (typeof vId !== 'undefined' && vId) ? vId : ''; }catch(e){}
+    var c = null;
+    try{ c = (entries||[]).filter(function(x){ return x && x.id === callId; })[0] || null; }catch(e){}
+    if(!c) return;                       /* 통화를 못 찾으면 원래 동작에 맡긴다 */
+
+    ev.stopImmediatePropagation();
+    ev.preventDefault();
+    try{ var ov = document.getElementById('viewOverlay'); if(ov) ov.classList.remove('show'); }catch(e){}
+
+    var who = String(c.name || '');
+    var memo = '[통화연결] ' + who + (c.phone ? (' ' + c.phone) : '');
+    newWith('work', {
+      date: c.date || '',
+      title: c.content || c.followup || '',
+      workVendor: c.company || c.name || '',
+      workMemo: memo,
+      memo: memo,
+      linkedCallId: callId
+    }).then(function(id){
+      if(!id) return;
+      try{ if(typeof updateRecord === 'function') updateRecord(callId, { linkedWorkId: id }); }catch(e){}
+      if(typeof toast === 'function') toast('🔗 통화 내용을 업무로 옮기고 서로 이었어요');
+    });
+  }, true);
+
+  window.wlNewPageWith = newWith;
+  window.wlNewPageWith.on  = function(){ try{ localStorage.setItem(LS,'1'); }catch(e){}
+                                         return '달력 ＋ · 통화→업무를 노션식으로 엽니다'; };
+  window.wlNewPageWith.off = function(){ try{ localStorage.setItem(LS,'0'); }catch(e){}
+                                         return '예전처럼 옛 입력창으로 엽니다'; };
+  window.wlNewPageWith.state = function(){
+    return { 미리채움: on() ? '켜짐' : '꺼짐',
+             바뀐자리: ['달력 ＋ 빠른추가','달력 ➕ 예정추가','달력 빈칸 두번누르기','통화 → 업무로 생성'],
+             쓰는법: "wlNewPageWith('work', {date:'2026-08-30', title:'제목'})" };
+  };
+
+  console.log('[미리채움] v156 — 달력 ＋ · 통화→업무도 노션식으로 (' + (on()?'켜짐':'꺼짐') + ')');
+})();
