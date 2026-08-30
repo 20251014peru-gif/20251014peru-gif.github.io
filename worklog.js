@@ -20747,310 +20747,295 @@ async function githubUpload(token){
 })();
 
 /* ============================================================
-   🗑 휴지통 — 지운 것을 30일 보관하고 되살린다 (wlTrash)  v153-0830-1855
+   🗑 휴지통 단추 · 배지 · 여러 건 되살리기 (wlTrashUI)  v153-0830-1930
 
-   달님 : 「휴지통 진짜로 만들기」
+   달님 : 「응용 만들어」
+     ① 머리말에 [🗑 휴지통] 단추 — 🛟 안전 탭까지 안 들어가도 된다
+     ② 몇 건 들어 있는지 **빨간 배지** — 실수로 지운 걸 바로 알아챈다
+     ③ 체크해서 **여러 건 한 번에** 되살린다
 
-   🔴 지금까지 무슨 일이 벌어지고 있었나
-     문서에는 「삭제는 즉시 지우지 않습니다. 휴지통 30일」 이라고 적혀 있었지만
-     코드는 이랬다.
+   ⚠ 휴지통 자체는 새로 만들지 않는다. **이미 있다.**
+     worklog.html 「🔐 안전 저장소 v47」 블록이 다 갖고 있다 —
+       wrapWorklogDelete() 가 deleteRecord 를 감싸 trashPut('worklog', r)
+       로컬 wl_trash_v1(200건) + 클라우드 worklog_trash(90일)
+       되살리기는 restoreRecord() → forgetDelId 까지 해 준다
+     창구도 이미 열려 있다 : wlP.trash / trashSync / trashRestore / trashClear
 
-       function autoCleanTrash(){ ...미구현... }        ← 빈 껍데기
-       function deleteRecord(id){
-         entries = entries.filter(x => x.id !== id);
-         db.collection(_c).doc(id).delete();            ← 클라우드에서 바로 지움
-       }
+     (2026-08-30 : worklog.js 의 autoCleanTrash(){ ...미구현... } 만 보고
+      「휴지통이 없다」고 판단해 똑같은 것을 새로 만들 뻔했다.
+      그건 v44 때의 죽은 껍데기였고, 진짜 휴지통은 **worklog.html 안**에 있었다.
+      → 기능을 찾을 때 worklog.js 만 grep 하면 안 된다. 기능의 85%는 html 안에 있다.)
 
-     **휴지통이 아예 없었다.** 지우면 그 자리에서 사라졌고 되살릴 방법이 없었다.
-     (2026-08-30 확인 — 「문서에 있다고 코드에도 있다고 믿지 말 것」의 실제 사례)
-
-   무엇을 하나
-     ① deleteRecord 를 감싼다 — 지우기 **전에** 사본을 worklog_trash 로 옮긴다
-        (원래 함수는 그대로 둔다. 되돌리기 쉽게)
-     ② autoCleanTrash 를 진짜로 만든다 — 30일 지난 것만 정리, 하루 1회
-     ③ 되살리기 — 기록·주소를 그대로 되돌리고 「지운 id」 기억도 지운다
-        (이걸 안 지우면 되살려도 다음 새로고침에 다시 사라진다)
-
-   ⚠ 인터넷이 끊겨 있으면 휴지통에 못 넣는다. 대신 그때는 클라우드 원본도
-     안 지워지므로 새로고침하면 기록이 돌아온다 (원래 그런 구조다).
-
-   쓰는 법
-     wlTrash.panel()          창으로 보고 되살리기
-     wlTrash.list()           콘솔에 표
-     wlTrash.back('기록id')   그 기록 되살리기
-     wlTrash.empty()          휴지통 비우기 (물어봄)
+   되돌리기 : wlTrashUI.off()   → 단추만 숨긴다 (휴지통은 그대로 돈다)
    ============================================================ */
 (function(){
   'use strict';
 
-  var COL_TRASH = 'worklog_trash';
-  var LS_IDX    = 'wl_trash_idx';     /* 목록 색인 — 요약만, 용량을 안 먹게 */
-  var LS_CLEAN  = 'wl_trash_cleaned'; /* 마지막 자동 정리 날짜 */
-  var KEEP_DAYS = 30;
-  var MAX_KEEP  = 300;
+  var LS_SHOW = 'wl_trash_btn';
+  var BTN_ID  = 'wlTrashBtn';
+  var SRC     = 'worklog';
+  var DAYS    = 90;                 /* 안전 저장소가 쓰는 보관 기간과 같게 */
 
-  function netOK(){ try{ return !!online && !!db; }catch(e){ return false; } }
-  function nowMs(){ try{ return kstNow().getTime(); }catch(e){ return Date.now(); } }
-  function esc2(s){ return String(s == null ? '' : s); }
-
-  /* ── 목록 색인 (요약만 — 사진·본문은 안 담는다) ── */
-  function idxLoad(){
-    try{ var a = JSON.parse(localStorage.getItem(LS_IDX) || '[]'); return Array.isArray(a) ? a : []; }
+  function showOn(){ try{ return localStorage.getItem(LS_SHOW) !== '0'; }catch(e){ return true; } }
+  function P(){ return window.wlP || null; }
+  function rows(){
+    try{ var a = P() && P().trash ? P().trash(SRC) : []; return Array.isArray(a) ? a : []; }
     catch(e){ return []; }
   }
-  function idxSave(a){
-    try{ localStorage.setItem(LS_IDX, JSON.stringify(a.slice(0, MAX_KEEP))); }
-    catch(e){ console.warn('[휴지통] 색인 저장 실패(용량)', e); }
-  }
-  function idxAdd(r, at){
-    var a = idxLoad();
-    a = a.filter(function(x){ return x && x.id !== r.id; });
-    a.unshift({ id:r.id, kind:esc2(r.kind), date:esc2(r.date),
-                title:esc2(r.title || r.name || r.memo || '').slice(0, 40), at:at });
-    idxSave(a);
-  }
-  function idxDel(id){ idxSave(idxLoad().filter(function(x){ return x && x.id !== id; })); }
-
-  /* ── ① 지우기 전에 사본을 옮긴다 ── */
-  var _origDel = (typeof window.deleteRecord === 'function') ? window.deleteRecord : null;
-
-  window.deleteRecord = function(id){
-    try{
-      if(id && netOK()){
-        var r = (entries || []).filter(function(x){ return x && x.id === id; })[0];
-        if(r){
-          var at = nowMs();
-          var copy = {};
-          for(var k in r){ if(Object.prototype.hasOwnProperty.call(r, k)) copy[k] = r[k]; }
-          copy._trashAt   = at;
-          copy._trashKind = esc2(r.kind);
-          db.collection(COL_TRASH).doc(id).set(copy)
-            .catch(function(e){ console.warn('[휴지통] 담기 실패 — 그래도 삭제는 진행합니다', e); });
-          idxAdd(r, at);
-        }
-      }else if(id){
-        console.warn('[휴지통] 인터넷이 끊겨 휴지통에 못 넣었습니다 (새로고침하면 기록이 돌아옵니다)');
-      }
-    }catch(e){ console.warn('[휴지통] 담기 중 오류 — 삭제는 진행합니다', e); }
-
-    if(_origDel) return _origDel.call(null, id);
-  };
-
-  /* ── ② 30일 지난 것만 정리 (하루 1회) ── */
-  window.autoCleanTrash = async function(force){
-    if(!netOK()) return;
-    var today = new Date(nowMs()).toISOString().slice(0, 10);
-    try{ if(!force && localStorage.getItem(LS_CLEAN) === today) return; }catch(e){}
-    try{ localStorage.setItem(LS_CLEAN, today); }catch(e){}
-
-    var cut = nowMs() - KEEP_DAYS * 24 * 3600 * 1000;
-    try{
-      var snap = await db.collection(COL_TRASH).get();
-      var old = snap.docs.filter(function(d){
-        var t = (d.data() || {})._trashAt || 0;
-        return t && t < cut;
-      });
-      if(!old.length) return;
-      for(var i = 0; i < old.length; i++){
-        try{ await db.collection(COL_TRASH).doc(old[i].id).delete(); idxDel(old[i].id); }catch(e){}
-        if(i % 20 === 19) await new Promise(function(ok){ setTimeout(ok, 300); });
-      }
-      console.log('[휴지통] ' + KEEP_DAYS + '일 지난 ' + old.length + '건을 정리했습니다');
-    }catch(e){ console.warn('[휴지통] 자동 정리 실패', e); }
-  };
-
-  /* ── ③ 되살리기 ── */
-  async function back(id){
-    if(!id) return '기록 id 를 넣어주세요';
-    if(!netOK()) return '인터넷이 연결돼야 합니다';
-    var doc;
-    try{ doc = await db.collection(COL_TRASH).doc(id).get(); }
-    catch(e){ console.error('[휴지통] 못 읽었어요', e); return '휴지통을 못 읽었습니다'; }
-    if(!doc.exists) return '휴지통에 없습니다 (30일이 지났을 수 있어요)';
-
-    var r = doc.data() || {};
-    delete r._trashAt; delete r._trashKind;
-    r.id = id;
-
-    try{
-      /* 🔴 이걸 안 지우면 되살려도 다음 새로고침에 다시 사라진다.
-            loadAll() 이 「지운 id」 목록을 보고 건너뛰기 때문. */
-      if(typeof forgetDelId === 'function') forgetDelId(id);
-      else if(window.wlDeletedIds && window.wlDeletedIds.forget) window.wlDeletedIds.forget(id);
-
-      var col = (typeof colOf === 'function') ? colOf(r.kind) : COL;
-      await db.collection(col).doc(id).set(r);
-
-      var i = (entries || []).findIndex(function(x){ return x && x.id === id; });
-      if(i >= 0) entries[i] = r; else entries.push(r);
-      if(typeof lsSave === 'function') lsSave();
-
-      await db.collection(COL_TRASH).doc(id).delete().catch(function(){});
-      idxDel(id);
-
-      try{ if(typeof renderAll === 'function') renderAll(); }catch(e){}
-      try{ if(typeof window.v43Refresh === 'function') window.v43Refresh(); }catch(e){}
-
-      var msg = '되살렸습니다 — ' + esc2(r.title || r.kind || id).slice(0, 24);
-      console.log('[휴지통] ' + msg);
-      if(typeof toast === 'function') toast('🗑 ' + msg);
-      return msg;
-    }catch(e){
-      console.error('[휴지통] 되살리기 실패', e);
-      return '되살리기 실패 (콘솔 참고)';
-    }
-  }
-
-  /* ── 목록 ── */
-  async function fetchList(){
-    if(!netOK()) return idxLoad();      /* 오프라인이면 색인만 */
-    try{
-      var snap = await db.collection(COL_TRASH).get();
-      var a = snap.docs.map(function(d){
-        var v = d.data() || {};
-        return { id:d.id, kind:esc2(v.kind), date:esc2(v.date),
-                 title:esc2(v.title || v.name || v.memo || '').slice(0, 40),
-                 at:v._trashAt || 0 };
-      });
-      a.sort(function(x, y){ return (y.at || 0) - (x.at || 0); });
-      idxSave(a);
-      return a;
-    }catch(e){ console.warn('[휴지통] 목록 실패 — 색인으로 보여줍니다', e); return idxLoad(); }
-  }
+  function nowMs(){ try{ return kstNow().getTime(); }catch(e){ return Date.now(); } }
+  function txt(s){ return String(s == null ? '' : s); }
 
   function when(at){
     if(!at) return '';
-    var d = new Date(at);
-    var p = function(n){ return (n < 10 ? '0' : '') + n; };
+    var d = new Date(at), p = function(n){ return (n < 10 ? '0' : '') + n; };
     return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
   }
   function left(at){
     if(!at) return '';
-    var d = Math.ceil((at + KEEP_DAYS * 24 * 3600 * 1000 - nowMs()) / (24 * 3600 * 1000));
-    return d > 0 ? (d + '일 남음') : '곧 사라짐';
+    var n = Math.ceil((at + DAYS * 24 * 3600 * 1000 - nowMs()) / (24 * 3600 * 1000));
+    return n > 0 ? (n + '일 남음') : '곧 사라짐';
+  }
+  function title(x){
+    var r = (x && x.rec) || {};
+    return txt(r.title || r.name || r.memo || r.detail || '').slice(0, 44);
+  }
+  function sub(x){
+    var r = (x && x.rec) || {};
+    var a = [txt(r.kind), txt(r.date), '지움 ' + when(x.at), left(x.at)];
+    if(r._photoN) a.push('📷 ' + r._photoN);
+    return a.filter(Boolean).join(' · ');
   }
 
-  async function list(){
-    var a = await fetchList();
-    if(!a.length){ console.log('[휴지통] 비어 있습니다'); return []; }
-    try{
-      console.table(a.slice(0, 40).map(function(r){
-        return { 지운때: when(r.at), 종류: r.kind, 날짜: r.date,
-                 제목: r.title, 보관: left(r.at), id: r.id };
-      }));
-    }catch(e){ console.log(a); }
-    console.log('[휴지통] ' + a.length + '건 — 되살리려면  wlTrash.back(\'기록id\')  또는  wlTrash.panel()');
-    return a;
-  }
-
-  /* ── 비우기 ── */
-  async function empty(){
-    if(!netOK()) return '인터넷이 연결돼야 합니다';
-    var a = await fetchList();
-    if(!a.length) return '이미 비어 있습니다';
-    var ask = (window.wlAsk && window.wlAsk.ok)
-      ? await window.wlAsk.ok('휴지통을 비울까요?',
-          { sub: a.length + '건 · 되돌릴 수 없습니다', ok:'비우기', danger:1 })
-      : confirm('휴지통 ' + a.length + '건을 비울까요? 되돌릴 수 없습니다.');
-    if(!ask) return '그만두었습니다';
-    var n = 0;
-    for(var i = 0; i < a.length; i++){
-      try{ await db.collection(COL_TRASH).doc(a[i].id).delete(); n++; }catch(e){}
-      if(i % 20 === 19) await new Promise(function(ok){ setTimeout(ok, 300); });
+  /* ── ①② 머리말 단추 + 배지 ── */
+  function paintBtn(){
+    var b = document.getElementById(BTN_ID);
+    if(!showOn()){ if(b) b.remove(); return; }
+    var anchor = document.getElementById('btnSafe');
+    if(!anchor) return;
+    if(!b){
+      b = document.createElement('button');
+      b.id = BTN_ID;
+      b.className = 'nav-btn';
+      b.title = '휴지통 — 지운 것을 ' + DAYS + '일 동안 되살릴 수 있어요';
+      b.style.cssText = 'background:#fff;border:1.5px solid #dbe6f4;color:#444;border-radius:10px;' +
+        'padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;' +
+        'display:inline-flex;align-items:center;gap:6px;min-height:32px';
+      b.addEventListener('click', function(){ panel(); });
+      anchor.insertAdjacentElement('afterend', b);
     }
-    idxSave([]);
-    var msg = '휴지통을 비웠습니다 — ' + n + '건';
-    console.log('[휴지통] ' + msg);
-    if(typeof toast === 'function') toast('🗑 ' + msg);
-    return msg;
+    var n = rows().length;
+    b.innerHTML = '🗑 휴지통' + (n
+      ? '<span style="background:#e8542f;color:#fff;border-radius:9px;min-width:18px;height:18px;' +
+        'display:inline-flex;align-items:center;justify-content:center;font-size:11px;' +
+        'font-weight:800;padding:0 5px">' + (n > 99 ? '99+' : n) + '</span>'
+      : '');
   }
 
-  /* ── 창 ── */
-  async function panel(){
+  /* 지우면 배지를 바로 고친다 (안전 저장소가 담은 뒤에) */
+  if(typeof window.deleteRecord === 'function' && !window.deleteRecord._trBadge){
+    var _od = window.deleteRecord;
+    var f = function(){
+      var r = _od.apply(this, arguments);
+      setTimeout(paintBtn, 300);
+      return r;
+    };
+    f._trBadge = 1;
+    window.deleteRecord = f;
+    try{ deleteRecord = f; }catch(e){}
+  }
+
+  /* ── ③ 창 ── */
+  function panel(){
     var old = document.getElementById('wlTrashOv'); if(old) old.remove();
-    var a = await fetchList();
+    var list = rows();
 
     var ov = document.createElement('div');
     ov.id = 'wlTrashOv';
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,24,32,.45);z-index:99999;' +
       'display:flex;align-items:center;justify-content:center;padding:16px';
     var bx = document.createElement('div');
-    bx.style.cssText = 'background:#fff;border-radius:16px;max-width:720px;width:100%;max-height:88vh;' +
+    bx.style.cssText = 'background:#fff;border-radius:16px;max-width:760px;width:100%;max-height:88vh;' +
       'display:flex;flex-direction:column;box-shadow:0 18px 50px rgba(0,0,0,.28);overflow:hidden';
 
+    /* 머리 */
     var hd = document.createElement('div');
-    hd.style.cssText = 'padding:16px 18px;border-bottom:1px solid #e8ecf2;display:flex;align-items:center;gap:10px';
-    hd.innerHTML = '<b style="font-size:17px">🗑 휴지통</b>' +
-      '<span style="color:#7b8794;font-size:13px">' + a.length + '건 · ' + KEEP_DAYS + '일 보관</span>';
+    hd.style.cssText = 'padding:16px 18px;border-bottom:1px solid #e8ecf2;display:flex;' +
+      'align-items:center;gap:10px;flex-wrap:wrap';
+    var cnt = document.createElement('span');
+    cnt.style.cssText = 'color:#7b8794;font-size:13px';
+    cnt.textContent = list.length + '건 · ' + DAYS + '일 보관';
+    hd.innerHTML = '<b style="font-size:17px">🗑 휴지통</b>';
+    hd.appendChild(cnt);
     var sp = document.createElement('div'); sp.style.cssText = 'flex:1';
-    var bEmpty = document.createElement('button');
-    bEmpty.textContent = '비우기';
-    bEmpty.style.cssText = 'border:1px solid #f0c9c9;background:#fdeeee;color:#b4534f;border-radius:10px;' +
-      'padding:10px 16px;font-size:14px;font-family:inherit;cursor:pointer;min-height:44px';
+    var bSync = document.createElement('button');
+    bSync.textContent = '↻ 새로 받기';
+    bSync.style.cssText = 'border:1px solid #d7dee8;background:#f7f9fc;border-radius:10px;' +
+      'padding:10px 14px;font-size:13px;font-family:inherit;cursor:pointer;min-height:44px';
     var bClose = document.createElement('button');
     bClose.textContent = '닫기';
-    bClose.style.cssText = 'border:1px solid #d7dee8;background:#f7f9fc;border-radius:10px;' +
-      'padding:10px 16px;font-size:14px;font-family:inherit;cursor:pointer;min-height:44px';
-    hd.appendChild(sp); hd.appendChild(bEmpty); hd.appendChild(bClose);
+    bClose.style.cssText = bSync.style.cssText;
+    hd.appendChild(sp); hd.appendChild(bSync); hd.appendChild(bClose);
+
+    /* 도구줄 */
+    var tb = document.createElement('div');
+    tb.style.cssText = 'padding:8px 18px;border-bottom:1px solid #f0f3f7;display:flex;' +
+      'align-items:center;gap:8px;flex-wrap:wrap;background:#fbfcfe';
+    var lab = document.createElement('label');
+    lab.style.cssText = 'display:flex;align-items:center;gap:7px;font-size:14px;cursor:pointer;min-height:44px';
+    lab.innerHTML = '<input type="checkbox" id="wlTrAll" style="width:20px;height:20px;cursor:pointer">전체 선택';
+    var pick = document.createElement('span');
+    pick.style.cssText = 'color:#7b8794;font-size:13px';
+    var sp2 = document.createElement('div'); sp2.style.cssText = 'flex:1';
+    var bBack = document.createElement('button');
+    bBack.textContent = '선택한 것 되살리기';
+    bBack.disabled = true; bBack.style.opacity = '.5';
+    bBack.style.cssText += 'border:none;background:#3f7cb8;color:#fff;border-radius:10px;' +
+      'padding:11px 18px;font-size:14px;font-family:inherit;cursor:pointer;min-height:44px;opacity:.5';
+    var bClear = document.createElement('button');
+    bClear.textContent = '비우기';
+    bClear.style.cssText = 'border:1px solid #f0c9c9;background:#fdeeee;color:#b4534f;border-radius:10px;' +
+      'padding:11px 16px;font-size:14px;font-family:inherit;cursor:pointer;min-height:44px';
+    tb.appendChild(lab); tb.appendChild(pick); tb.appendChild(sp2);
+    tb.appendChild(bBack); tb.appendChild(bClear);
 
     var body = document.createElement('div');
-    body.style.cssText = 'flex:1;overflow:auto;padding:10px 14px 18px';
+    body.style.cssText = 'flex:1;overflow:auto;padding:4px 14px 16px';
+    var log = document.createElement('div');
+    log.style.cssText = 'padding:0 18px 14px;font-size:13px;color:#3f7cb8;min-height:18px';
 
-    if(!a.length){
-      body.innerHTML = '<div style="padding:40px 10px;text-align:center;color:#8b95a1;font-size:15px">' +
-        '비어 있습니다<br><span style="font-size:13px">여기서부터 지운 것은 ' + KEEP_DAYS + '일 동안 되살릴 수 있어요</span></div>';
-    }else{
-      a.slice(0, 200).forEach(function(r){
+    function draw(){
+      list = rows();
+      cnt.textContent = list.length + '건 · ' + DAYS + '일 보관';
+      body.innerHTML = '';
+      if(!list.length){
+        tb.style.display = 'none';
+        body.innerHTML = '<div style="padding:44px 10px;text-align:center;color:#8b95a1;font-size:15px">' +
+          '비어 있습니다<br><span style="font-size:13px">지운 것은 ' + DAYS +
+          '일 동안 여기서 되살릴 수 있어요</span></div>';
+        return;
+      }
+      tb.style.display = 'flex';
+      list.slice(0, 300).forEach(function(x){
         var row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 10px;' +
-          'border-bottom:1px solid #f0f3f7';
+        row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #f0f3f7';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.className = 'wlTrCb';
+        cb.setAttribute('data-at', String(x.at));
+        cb.style.cssText = 'width:20px;height:20px;flex:none;cursor:pointer';
         var t = document.createElement('div');
-        t.style.cssText = 'flex:1;min-width:0';
-        t.innerHTML = '<div style="font-size:15px;font-weight:600;white-space:nowrap;' +
-          'overflow:hidden;text-overflow:ellipsis">' +
-          (r.title || '<span style="color:#a0a8b3">(제목없음)</span>') + '</div>' +
-          '<div style="font-size:12px;color:#8b95a1;margin-top:3px">' +
-          [r.kind, r.date, '지움 ' + when(r.at), left(r.at)].filter(Boolean).join(' · ') + '</div>';
-        var b = document.createElement('button');
-        b.textContent = '되살리기';
-        b.style.cssText = 'border:none;background:#eef4fb;color:#3f7cb8;border-radius:10px;' +
+        t.style.cssText = 'flex:1;min-width:0;cursor:pointer';
+        t.innerHTML = '<div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;' +
+          'text-overflow:ellipsis">' + (title(x) ||
+          '<span style="color:#a0a8b3">(제목없음)</span>') + '</div>' +
+          '<div style="font-size:12px;color:#8b95a1;margin-top:3px">' + sub(x) + '</div>';
+        t.addEventListener('click', function(){ cb.checked = !cb.checked; sync(); });
+        var one = document.createElement('button');
+        one.textContent = '되살리기';
+        one.style.cssText = 'border:none;background:#eef4fb;color:#3f7cb8;border-radius:10px;' +
           'padding:11px 16px;font-size:14px;font-family:inherit;cursor:pointer;min-height:44px;flex:none';
-        b.addEventListener('click', function(){
-          b.disabled = true; b.textContent = '되살리는 중…';
-          back(r.id).then(function(m){
-            b.textContent = (String(m).indexOf('되살렸') === 0) ? '✅ 되살림' : String(m).slice(0, 14);
-            if(String(m).indexOf('되살렸') === 0) row.style.opacity = '.45';
-          });
-        });
-        row.appendChild(t); row.appendChild(b);
+        one.addEventListener('click', function(){ run([x.at]); });
+        row.appendChild(cb); row.appendChild(t); row.appendChild(one);
         body.appendChild(row);
       });
+      sync();
     }
 
-    bClose.addEventListener('click', function(){ ov.remove(); });
-    ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
-    bEmpty.addEventListener('click', function(){
-      empty().then(function(m){ ov.remove(); if(String(m).indexOf('비웠') >= 0) panel(); });
+    function boxes(){ return [].slice.call(body.querySelectorAll('.wlTrCb')); }
+    function sync(){
+      var on = boxes().filter(function(c){ return c.checked; });
+      pick.textContent = on.length ? (on.length + '건 선택') : '';
+      bBack.disabled = !on.length;
+      bBack.style.opacity = on.length ? '1' : '.5';
+      var all = tb.querySelector('#wlTrAll');
+      if(all) all.checked = on.length > 0 && on.length === boxes().length;
+    }
+    body.addEventListener('change', function(e){
+      if(e.target && e.target.classList && e.target.classList.contains('wlTrCb')) sync();
+    });
+    tb.querySelector('#wlTrAll').addEventListener('change', function(e){
+      boxes().forEach(function(c){ c.checked = e.target.checked; }); sync();
     });
 
-    bx.appendChild(hd); bx.appendChild(body); ov.appendChild(bx);
-    document.body.appendChild(ov);
+    function run(ats){
+      if(!P() || !P().trashRestore){ log.textContent = '안전 저장소를 찾을 수 없습니다'; return; }
+      var ok = 0, ng = 0;
+      ats.forEach(function(at){
+        var r = false;
+        try{ r = P().trashRestore(SRC, at); }catch(e){ console.warn('[휴지통] 되살리기 실패', e); }
+        if(r) ok++; else ng++;
+      });
+      try{ if(typeof renderAll === 'function') renderAll(); }catch(e){}
+      try{ if(typeof window.v43Refresh === 'function') window.v43Refresh(); }catch(e){}
+      log.textContent = '되살림 ' + ok + '건' + (ng ? (' · 실패 ' + ng + '건') : '');
+      if(ok && typeof toast === 'function') toast('🗑 ' + ok + '건을 되살렸어요');
+      draw(); paintBtn();
+    }
+
+    bBack.addEventListener('click', function(){
+      var ats = boxes().filter(function(c){ return c.checked; })
+                       .map(function(c){ return Number(c.getAttribute('data-at')); });
+      if(ats.length) run(ats);
+    });
+    bClear.addEventListener('click', async function(){
+      var n = rows().length;
+      if(!n){ log.textContent = '이미 비어 있습니다'; return; }
+      var ask = (window.wlAsk && window.wlAsk.ok)
+        ? await window.wlAsk.ok('휴지통을 비울까요?',
+            { sub: n + '건 · 되돌릴 수 없습니다', ok:'비우기', danger:1 })
+        : confirm('휴지통 ' + n + '건을 비울까요? 되돌릴 수 없습니다.');
+      if(!ask) return;
+      try{ P().trashClear(SRC); }catch(e){ console.warn('[휴지통] 비우기 실패', e); }
+      log.textContent = '휴지통을 비웠습니다';
+      draw(); paintBtn();
+    });
+    bSync.addEventListener('click', function(){
+      if(!P() || !P().trashSync){ log.textContent = '새로 받을 수 없습니다'; return; }
+      bSync.disabled = true; log.textContent = '클라우드에서 받는 중…';
+      Promise.resolve(P().trashSync()).then(function(){
+        log.textContent = '다른 기기에서 지운 것까지 합쳤습니다';
+        bSync.disabled = false; draw(); paintBtn();
+      }).catch(function(){ log.textContent = '못 받았습니다'; bSync.disabled = false; });
+    });
+    bClose.addEventListener('click', function(){ ov.remove(); paintBtn(); });
+    ov.addEventListener('click', function(e){ if(e.target === ov){ ov.remove(); paintBtn(); } });
+
+    bx.appendChild(hd); bx.appendChild(tb); bx.appendChild(body); bx.appendChild(log);
+    ov.appendChild(bx); document.body.appendChild(ov);
+    draw();
+
+    /* 열자마자 클라우드도 한 번 맞춘다 (다른 기기에서 지운 것) */
+    try{ if(P() && P().trashSync) Promise.resolve(P().trashSync()).then(function(){ draw(); paintBtn(); }); }
+    catch(e){}
     return '창을 띄웠습니다';
   }
 
-  window.wlTrash = {
-    list:  list,
-    back:  back,
-    empty: empty,
-    panel: panel,
-    clean: function(){ return window.autoCleanTrash(true); },
-    state: function(){
-      var a = idxLoad();
-      return { 보관일수: KEEP_DAYS, 최대보관: MAX_KEEP, 색인에있는것: a.length,
-               인터넷: netOK() ? '연결됨' : '끊김',
-               안내: 'wlTrash.panel() 로 보고 되살립니다' };
-    }
-  };
+  /* ── 붙이기 — 화면이 늦게 그려져도 따라간다 ── */
+  function boot(){ [0, 1200, 4000, 9000].forEach(function(ms){ setTimeout(paintBtn, ms); }); }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 
-  console.log('[휴지통] v153 준비됨 — 이제 지운 것은 ' + KEEP_DAYS + '일 보관됩니다 / wlTrash.panel()');
+  window.wlTrashUI = {
+    panel:   panel,
+    count:   function(){ return rows().length; },
+    list:    function(){
+      var a = rows();
+      try{
+        console.table(a.slice(0, 40).map(function(x){
+          return { 지운때: when(x.at), 제목: title(x), 종류: (x.rec||{}).kind || '',
+                   날짜: (x.rec||{}).date || '', 보관: left(x.at), at: x.at };
+        }));
+      }catch(e){ console.log(a); }
+      return a;
+    },
+    sync:    function(){ return P() && P().trashSync ? P().trashSync() : null; },
+    refresh: paintBtn,
+    on:  function(){ try{ localStorage.setItem(LS_SHOW,'1'); }catch(e){} paintBtn(); return '단추를 보입니다'; },
+    off: function(){ try{ localStorage.setItem(LS_SHOW,'0'); }catch(e){} paintBtn(); return '단추만 숨깁니다 (휴지통은 그대로)'; }
+  };
+  /* 예전 이름으로 불러도 열리게 */
+  window.wlTrash = window.wlTrash || {};
+  window.wlTrash.panel = panel;
+  window.wlTrash.list  = window.wlTrashUI.list;
+
+  console.log('[휴지통] 단추·배지 v153 — 머리말 「🛟 안전」 옆 [🗑 휴지통] / 휴지통 본체는 안전 저장소(v47)가 이미 하고 있습니다');
 })();
