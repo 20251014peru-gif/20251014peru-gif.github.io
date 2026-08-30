@@ -21802,7 +21802,7 @@ async function githubUpload(token){
 })();
 
 /* ============================================================
-   📋 사고 · 진행업무를 「시간순 단계」로 보기 (wlSteps)  v158-0830-2330
+   📋 사고 · 진행업무를 「시간순 단계」로 보기 (wlSteps)  v159-0830-2400
 
    달님 : 「사고·진행업무는 단계가 나눠져 있어 본문 형식으로 보기 불편하다.
            시간 순으로 이동되는 게 좋다」
@@ -21880,14 +21880,20 @@ async function githubUpload(token){
     var body = ov && ov.querySelector('.pg-body');
     if(!body){ if(box) box.remove(); return; }
 
+    /* 어디에 놓을까 (v159 — 달님 : 「단계 추가는 오른쪽으로 보내, 본문 위로」)
+         2열이면 → 오른쪽 열 맨 위 (본문 바로 위)
+         1열·폰이면 → 페이지 맨 위 (폰 탭에 안 가려지도록) */
+    var right = body.querySelector('.pg-2col .pg-2r');
+    var host = right || body;
+
     if(!box){
       box = document.createElement('div');
       box.id = HOST;
-      box.style.cssText = 'margin:0 0 16px;border:1.5px solid #cfe0f2;border-radius:14px;' +
+      box.style.cssText = 'margin:0 0 14px;border:1.5px solid #cfe0f2;border-radius:14px;' +
         'background:#f7fbff;padding:14px 16px;font-family:inherit';
-      body.insertBefore(box, body.firstChild);      /* 맨 위 — 본문보다 앞 */
-    }else if(box.parentNode !== body || body.firstChild !== box){
-      body.insertBefore(box, body.firstChild);
+    }
+    if(box.parentNode !== host || host.firstChild !== box){
+      host.insertBefore(box, host.firstChild);
     }
 
     var isAcc = (rec.kind === 'accident');
@@ -22099,5 +22105,5 @@ async function githubUpload(token){
                단계수: r && Array.isArray(r.steps) ? r.steps.length : 0 };
     }
   };
-  console.log('[단계] v158 — 사고·진행업무를 시간순으로 (' + (on()?'켜짐':'꺼짐') + ')');
+  console.log('[단계] v159 — 사고·진행업무를 시간순으로 (' + (on()?'켜짐':'꺼짐') + ')');
 })();
