@@ -19402,3 +19402,149 @@ async function githubUpload(token){
   };
   console.log('[묻기 창] v145 준비됨 — 브라우저 창 대신 앱 안 팝업 (wlAsk)');
 })();
+
+
+/* ============================================================
+   📱 핸드폰에서 탭으로 나눠 보기 (wlMobTab)  v148-0830-1600
+
+   달님 : 「핸드폰에서 하나씩 세로로 나열돼 스크롤만 내려야 해」
+
+   실측(아이폰 폭 390) : 페이지 높이가 화면의 4.1배였다.
+   ▸ 칸을 한 줄로 세우고 2열로 놓아 2.8배까지 줄였다 (CSS)
+   ▸ 여기서 「칸 · 본문 · 첨부」를 탭으로 나눠 한 번에 하나만 보여 준다
+
+   ⚠ 숨기는 것은 클래스로만 한다 — 다른 모듈이 style.display 를 만지므로
+     같은 걸 건드리면 서로 지운다 (v137 wlFold 에서 겪은 것과 같은 함정)
+   되돌리기 : wlMobTab.off()
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS = 'wl_mobtab';
+  var W  = 640;                       /* 이 폭 아래에서만 나눈다 */
+
+  var TABS = [
+    { k:'p', i:'📋', n:'칸' },
+    { k:'b', i:'📝', n:'본문' },
+    { k:'a', i:'📎', n:'첨부' }
+  ];
+
+  function isOn(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function setOn(v){
+    try{ localStorage.setItem(LS, v?'1':'0'); }catch(e){}
+    clear(); if(v) run();
+    if(typeof toast === 'function') toast(v ? '📱 핸드폰에서 탭으로 나눠 봅니다' : '📱 예전처럼 쭉 이어 봅니다');
+  }
+  function narrow(){ try{ return (window.innerWidth || 0) <= W; }catch(e){ return false; } }
+  function cur(){ try{ return sessionStorage.getItem('wl_mobtab_cur') || 'p'; }catch(e){ return 'p'; } }
+  function setCur(k){ try{ sessionStorage.setItem('wl_mobtab_cur', k); }catch(e){} }
+
+  function clear(){
+    try{
+      var bar = document.getElementById('pgMobTab');
+      if(bar) bar.remove();
+      [].forEach.call(document.querySelectorAll('.mt-hide'), function(el){ el.classList.remove('mt-hide'); });
+    }catch(e){}
+  }
+
+  /* 오른쪽 칸의 자식들을 「본문 것 / 첨부 것」으로 가른다 */
+  function sortRight(list){
+    var out = { b:[], a:[] };
+    var mode = 'a';
+    list.forEach(function(el){
+      var t = (el.textContent || '');
+      if(el.classList && el.classList.contains('pg-sec')){
+        if(/본문/.test(t)) mode = 'b';
+        else mode = 'a';                       /* 사진·하위 항목·파일 링크 */
+      }
+      out[mode].push(el);
+    });
+    return out;
+  }
+
+  function run(){
+    if(!isOn() || !narrow()){ clear(); return; }
+    var page = document.querySelector('.lf-page');
+    if(!page) return;
+    var body = page.querySelector('.pg-body');
+    if(!body) return;
+
+    /* 어떤 요소가 어느 탭인가 */
+    var left = [], right = [];
+    var two = body.querySelector('.pg-2col');
+    if(two){
+      var L = two.querySelector('.pg-2l'), R = two.querySelector('.pg-2r');
+      if(L) left  = [].slice.call(L.children);
+      if(R) right = [].slice.call(R.children);
+    }else{
+      var props = body.querySelector(':scope > .pg-props');
+      if(!props) return;
+      left = [props];
+      var n = props.nextElementSibling;
+      if(n && n.id === 'pgSecBar'){ left.push(n); n = n.nextElementSibling; }
+      while(n){ right.push(n); n = n.nextElementSibling; }
+    }
+    if(!right.length){ clear(); return; }
+
+    var g = sortRight(right);
+    var side = page.querySelector('.pg-side');
+    if(side && g.b.indexOf(side) >= 0){ /* 곁상자(시각)는 칸 쪽으로 */
+      g.b = g.b.filter(function(x){ return x !== side; });
+      left.push(side);
+    }else if(side && g.a.indexOf(side) >= 0){
+      g.a = g.a.filter(function(x){ return x !== side; });
+      left.push(side);
+    }
+
+    var k = cur();
+    var map = { p:left, b:g.b, a:g.a };
+
+    /* 탭 줄 만들기 (제목 바로 아래) */
+    var bar = document.getElementById('pgMobTab');
+    if(!bar){
+      bar = document.createElement('div');
+      bar.id = 'pgMobTab'; bar.className = 'pg-mobtab';
+      var ttl = body.querySelector('.pg-title');
+      if(ttl && ttl.nextSibling) body.insertBefore(bar, ttl.nextSibling);
+      else body.insertBefore(bar, body.firstChild);
+      bar.addEventListener('click', function(ev){
+        var b2 = ev.target.closest && ev.target.closest('[data-mt]');
+        if(!b2) return;
+        setCur(b2.getAttribute('data-mt'));
+        run();
+        try{ window.scrollTo({ top:0, behavior:'smooth' }); }catch(e){}
+      });
+    }
+    var cnt = { p:left.length, b:g.b.length, a:g.a.length };
+    var html = TABS.map(function(t){
+      return '<button type="button" data-mt="' + t.k + '"'
+           + (k === t.k ? ' class="on"' : '') + (cnt[t.k] ? '' : ' disabled')
+           + '>' + t.i + ' ' + t.n + '</button>';
+    }).join('');
+    if(bar.innerHTML !== html) bar.innerHTML = html;
+
+    /* 고른 탭만 남기고 나머지는 클래스로 감춘다 */
+    ['p','b','a'].forEach(function(key){
+      (map[key] || []).forEach(function(el){
+        if(!el || !el.classList) return;
+        el.classList.toggle('mt-hide', key !== k);
+      });
+    });
+  }
+
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:80, n:'핸드폰 탭', f:function(){
+    try{ run(); }catch(e){ console.warn('[핸드폰 탭] 실패', e); } } });
+
+  var rz = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(rz);
+    rz = setTimeout(function(){ try{ run(); }catch(e){} }, 250);
+  });
+
+  window.wlMobTab = {
+    on:  function(){ setOn(true);  return '핸드폰에서 탭으로 나눠 봅니다'; },
+    off: function(){ setOn(false); return '예전처럼 쭉 이어 봅니다'; },
+    go:  function(k){ setCur(k); run(); return k; }
+  };
+  console.log('[핸드폰 탭] v148 준비됨 — 좁은 화면에서 칸 · 본문 · 첨부를 탭으로');
+})();

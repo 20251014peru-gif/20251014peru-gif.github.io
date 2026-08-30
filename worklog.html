@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v147-0830-1520";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v148-0830-1545";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3268,7 +3268,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=147-20260830t1520"></script>
+<script src="worklog.js?v=148-20260830t1545"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -19758,12 +19758,23 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
 .pg-rx{ width:28px; height:30px; border:none; border-radius:7px; background:#fdeaea;
   color:#c0392b; font-size:11px; cursor:pointer; font-family:inherit; padding:0 }
 @media (max-width:640px){
-  .pg-body{ padding:18px 14px 80px }
-  .pg-title{ font-size:26px }
-  .pg-props{ grid-template-columns:1fr }
-  .pg-prow{ flex-direction:column; gap:0 }
-  .pg-pk{ flex:none; padding:4px 2px; font-size:12px }
+  /* v148 — 달님 : 「핸드폰에서 하나씩 세로로 나열돼 스크롤만 내려야 해」
+        예전에는 이름과 값을 위아래로 쌓아(column) 한 칸이 68px 을 먹었다.
+        칸이 25개면 화면의 4배가 넘는다.
+        ▸ 이름과 값을 한 줄로 세우고  ▸ 짧은 칸은 2열로 놓는다
+        ⚠ 손가락으로 누를 수 있는 크기(44px)는 그대로 지킨다 */
+  .pg-body{ padding:14px 12px 80px }
+  .pg-title{ font-size:22px }
+  .pg-props{ grid-template-columns:1fr 1fr; gap:0 10px }
+  .pg-prow{ flex-direction:row; align-items:center; gap:6px; padding:3px 0; min-width:0 }
+  .pg-prow.wide{ grid-column:1 / -1 }
+  .pg-pk{ flex:0 0 62px !important; padding:6px 0; font-size:12px !important; align-items:center }
+  .pg-pk .pg-pnm{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  .pg-val{ min-height:38px; padding:7px 9px; font-size:13.5px }
+  .lf-ie{ height:36px; font-size:14px }
   .pg-top{ padding:9px 12px; gap:6px; flex-wrap:wrap }
+  .pg-ghead{ margin-top:10px; padding:6px 9px }
+  .pg-text{ min-height:220px }
 }
 
 /* ── 본문 서식 도구 ── */
