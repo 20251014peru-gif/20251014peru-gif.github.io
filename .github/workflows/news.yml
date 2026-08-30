@@ -1,4 +1,4 @@
-# v 20260830-1440  |  수정: cron 을 시간당 3회로 분산(깃허브가 예약 실행을 자주 건너뜀),
+# v 20260830-1830  |  수정: cron 을 시간당 3회로 분산(깃허브가 예약 실행을 자주 건너뜀),
 #                        push 재시도 3회 + 끝내 실패하면 조용히 넘어가지 않고 알림,
 #                        concurrency 로 수집끼리 겹치지 않게
 name: News Radar Collector
@@ -44,7 +44,7 @@ jobs:
           set -o pipefail
           git config user.name "news-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add news.json glossary.json trends.json stocks.json archive/ 2>/dev/null || true
+          git add news.json glossary.json trends.json stocks.json archive/ lite/ bodies/ 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "::notice::새로 들어온 뉴스가 없어 커밋할 것이 없습니다."
