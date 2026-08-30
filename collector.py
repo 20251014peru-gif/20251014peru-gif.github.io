@@ -75,7 +75,11 @@ FOREIGN_PER_KW = 5
 # 본문 최소 길이(이보다 짧으면 추출 실패로 간주 → 요약만 사용)
 MIN_BODY_LEN = 200
 
-HEADERS = {"User-Agent": "Mozilla/5.0 (NewsRadar/1.0)"}
+HEADERS = {
+    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"),
+    "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
+}
 
 
 # ──────────────────────────────────────────────────────────────
@@ -244,20 +248,55 @@ def fetch_google_rss(keyword: str, lang="ko", region="KR", foreign=False) -> lis
     return out
 
 
-def extract_body(url: str) -> str:
-    """원문 페이지에서 본문 추출. requests 타임아웃(8초)만 사용 → 무한대기 방지."""
-    if not url:
-        return ""
+_GNEWS_PAT = [
+    re.compile(r'data-n-au="(https?://[^"]+)"'),
+    re.compile(r'<link\s+rel="canonical"\s+href="(https?://(?!news\.google)[^"]+)"'),
+    re.compile(r'jsdata="[^"]*?;(https?://(?!news\.google)[^;"\s]+)'),
+    re.compile(r'<a[^>]+href="(https?://(?!news\.google|policies\.google|support\.google|accounts\.google)[^"]+)"[^>]*>\s*<'),
+]
+
+def resolve_google(url: str) -> str:
+    """구글 뉴스 RSS 링크(news.google.com/rss/articles/...)를 언론사 실제 주소로 바꾼다.
+
+    구글 링크는 본문이 없는 안내 페이지라서, 그대로 두면 본문 추출이 항상 실패한다
+    (2026-08-30 실측: 구글 155건 중 본문 300자 이상은 2건뿐).
+    실패하면 원래 주소를 그대로 돌려주므로 이 함수 때문에 수집이 망가지지는 않는다.
+    """
+    if not url or "news.google.com" not in url:
+        return url
     try:
-        r = requests.get(url, headers=HEADERS, timeout=8)
+        r = requests.get(url, headers=HEADERS, timeout=8, allow_redirects=True)
+        if "news.google.com" not in (r.url or ""):
+            return r.url                      # 리다이렉트로 이미 언론사에 도착
+        html = r.text or ""
+        for pat in _GNEWS_PAT:
+            m = pat.search(html)
+            if m:
+                return m.group(1)
+    except Exception:
+        pass
+    return url
+
+
+def extract_body(url: str):
+    """원문 페이지에서 본문 추출. (본문, 실제주소) 를 돌려준다.
+
+    구글 뉴스 링크는 먼저 언론사 주소로 바꾼 뒤 추출한다.
+    requests 타임아웃(8초)만 사용 → 무한대기 방지.
+    """
+    if not url:
+        return "", url
+    real = resolve_google(url)
+    try:
+        r = requests.get(real, headers=HEADERS, timeout=8)
         body = trafilatura.extract(
             r.text or "", include_comments=False, include_tables=False, favor_recall=True
         )
         if body and len(body) >= MIN_BODY_LEN:
-            return body.strip()
+            return body.strip(), real
     except Exception:
         pass
-    return ""
+    return "", real
 
 
 def dedupe(items: list) -> list:
@@ -272,7 +311,15 @@ def dedupe(items: list) -> list:
                 break
         if matched:
             matched["dupes"] += 1
-            # 국내 우선, 본문 있는 쪽 우선 유지
+            # 같은 기사가 네이버에도 있으면 네이버 쪽으로 갈아탄다.
+            # 구글 링크는 본문 추출이 거의 안 되므로(실측 1.3%), 먼저 들어왔다는
+            # 이유만으로 구글판을 남기면 본문 있는 네이버판을 통째로 버리게 된다.
+            if it.get("src") == "naver" and matched.get("src") != "naver":
+                keep_dupes, keep_nt = matched["dupes"], matched["_nt"]
+                matched.clear()
+                matched.update(it)
+                matched["dupes"] = keep_dupes
+                matched["_nt"] = keep_nt
             continue
         it["_nt"] = nt
         it["dupes"] = 1
@@ -422,19 +469,28 @@ def main():
     total = len(items)
     print(f"[1/2] 본문 추출(병렬) 0/{total} …", flush=True)
     bodies = [""]*total
+    reals = [""]*total
     done = 0
     with ThreadPoolExecutor(max_workers=8) as ex:
         futs = {ex.submit(extract_body, it["url"]): idx for idx, it in enumerate(items)}
         from concurrent.futures import as_completed
         for fut in as_completed(futs):
             idx = futs[fut]
-            try: bodies[idx] = fut.result()
-            except Exception: bodies[idx] = ""
+            try:
+                bodies[idx], reals[idx] = fut.result()
+            except Exception:
+                bodies[idx], reals[idx] = "", ""
             done += 1
             if done % 10 == 0 or done == total:
                 print(f"[1/2] 본문 추출 {done}/{total} ({round(done/total*100)}%)", flush=True)
-    for it, b in zip(items, bodies):
+    for it, b, real in zip(items, bodies, reals):
         it["body"] = b
+        # 구글 링크를 언론사 주소로 바꾼 경우 '원문 열기'도 그쪽을 가리키게 한다
+        if real and real != it.get("url") and "news.google.com" not in real:
+            it["url"] = real
+    _g = [x for x in items if x.get("src") == "google"]
+    _gok = [x for x in _g if len(x.get("body") or "") >= MIN_BODY_LEN]
+    print(f"  · 구글 본문 확보 {len(_gok)}/{len(_g)}건", flush=True)
 
     # 중요도 태깅: AI 없이 키워드 매칭으로 즉시 판정 (요약·번역은 앱에서 수동)
     print(f"[2/2] 중요도 태깅(키워드 매칭) · 총 {len(items)}건 — AI 미사용(무료)", flush=True)

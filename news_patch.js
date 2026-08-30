@@ -1,4 +1,12 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v12 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v13 (2026-08-30)
+ *
+ * v13 : v12 가 만든 사고 하나 수습
+ *   · 읽기창(제목 눌러 열리는 화면) 헤더의 기사 제목이 한 글자씩 세로로 쌓이던 문제.
+ *     v12 에서 말줄임표를 없애려고 white-space:normal 을 준 것이 원인 — 헤더는
+ *     [목록][기사/AI][지금 저장][공유] 가 폭을 다 차지해 제목 칸이 0 에 가깝게 눌린다.
+ *     한 줄 유지로 되돌리고, 폰에서는 헤더 제목을 감췄다(바로 아래 큰 글씨로 다시 나옴).
+ *
+ * ↓ v12 원본 설명
  *
  * v12 에서 한 것
  *   ① 말줄임표(…) 를 화면 어디에서도 쓰지 않는다.
@@ -90,11 +98,11 @@
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 12) return;
-  window.__nrPatch = 12;
+  if (window.__nrPatch >= 13) return;
+  window.__nrPatch = 13;
 
   var LINES = 5;
-  var VER = "v12";
+  var VER = "v13";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
   var BODY_MAX = 1500;     /* 공유할 때 함께 보내는 본문 최대 글자수 */
 
@@ -179,7 +187,12 @@
     "text-wrap:balance;max-width:420px}",
     /* 말줄임표는 어디서도 쓰지 않는다 */
     "tbody td{text-overflow:clip!important}",
-    ".r-head .rt h2{text-overflow:clip!important;white-space:normal!important;line-height:1.35}",
+    /* 읽기창 헤더 제목 : 한 줄 유지(말줄임표는 안 붙임).
+       white-space:normal 로 두면 버튼들이 폭을 다 먹어 제목이 한 글자씩 세로로 쌓인다(v12 사고). */
+    ".r-head .rt h2{text-overflow:clip!important;white-space:nowrap!important;overflow:hidden}",
+    /* 폰에서는 헤더에 제목을 아예 넣지 않는다 — 바로 아래 큰 글씨로 다시 나오므로 중복이다 */
+    "@media(max-width:760px){.r-head .rt{display:none!important}",
+    ".r-head{gap:8px}}",
     "@media(max-width:760px){",
     "tbody .title{max-width:250px}",
     "tbody td.summary .sumline{max-width:300px}",
