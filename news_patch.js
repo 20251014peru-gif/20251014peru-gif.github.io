@@ -1,4 +1,4 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v7 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v8 (2026-08-30)
  *
  * 삼단(사실은 사단) 이동식 구조
  *   ⚡속보  →  🆕새 뉴스  →  📖읽음  →  🔖스크랩
@@ -47,17 +47,23 @@
  *   ⑱ 여러 건 골라서 한 번에 공유 [📤 선택 공유]
  *   ⑲ [🖨️ 브리핑] — 지금 보는 목록을 A4 2열/3열 한 장으로 인쇄
  *
+ * v8 에서 고친 것
+ *   ⑳ 제목·요약 칸을 가로로 길게(표는 좌우 스크롤) + 각각 두 줄까지만
+ *   ㉑ 공유가 '뉴스레이더 링크'가 아니라 뉴스 내용 자체가 가게 바꿈 —
+ *      제목·출처·5줄 요약·본문 전문이 글로 담기고, 맨 끝에 기사 원문 주소
+ *
  * news.html 본문은 건드리지 않는다.
  * 문제가 생기면 news.html 의 <script src="news_patch.js"> 한 줄만 지우면 원래대로 돌아온다.
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 7) return;
-  window.__nrPatch = 7;
+  if (window.__nrPatch >= 8) return;
+  window.__nrPatch = 8;
 
   var LINES = 5;
-  var VER = "v7";
+  var VER = "v8";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
+  var BODY_MAX = 1500;     /* 공유할 때 함께 보내는 본문 최대 글자수 */
 
   /* ================= 스타일 ================= */
   var css = [
@@ -89,8 +95,14 @@
     "padding:12px;font-size:14px;line-height:1.6;font-family:inherit;box-sizing:border-box}",
     ".nrdel:hover{opacity:1}",
     "#selbar .nrall{background:var(--line-2);color:var(--ink-2)}",
-    "tbody td.summary .sumline{overflow:visible;text-overflow:clip}",
-    "tbody .title{white-space:normal;word-break:break-word;overflow:visible;text-overflow:clip}",
+    ".controls .searchbar{flex:1 1 430px!important;min-width:430px!important}",
+    ".controls .actbar{flex:1 1 auto}",
+    ".nrbrief{white-space:nowrap}",
+    ".tablewrap table{min-width:1760px!important}",
+    "col.c-title{width:430px!important}",
+    "col.c-sum{width:560px!important}",
+    "tbody td.summary .sumline,tbody .title{display:-webkit-box;-webkit-line-clamp:2;",
+    "-webkit-box-orient:vertical;overflow:hidden;white-space:normal;word-break:break-word}",
     "tbody td{vertical-align:top}",
     "#selbar .nrsh{background:#3b57c9;color:#fff}",
     "tbody tr.read{opacity:1!important}",
@@ -425,8 +437,13 @@
       var b = fiveLines(sum);
       if (b) out.push(b);
     }
-    var cl = cleanLink(n);
-    if (cl) { out.push(""); out.push("🔗 정리해서 보기(광고 없음)"); out.push(cl); }
+    /* 본문 전문 — 링크를 안 눌러도 뉴스 자체를 읽을 수 있게 */
+    var body = String(n.body || "").trim();
+    if (body) {
+      out.push("");
+      out.push(body.length > BODY_MAX ? (body.slice(0, BODY_MAX).trim() + " …(이하 생략)") : body);
+    }
+    if (n.url && n.url !== "#") { out.push(""); out.push("🔗 " + n.url); }
     return out.join("\n");
   }
 
@@ -440,8 +457,7 @@
       out.push((i + 1) + ") " + (n.title || ""));
       var sum = mySummary(n);
       if (sum) { var h = headline(sum); if (h) out.push("   ▶ " + h); }
-      var cl = cleanLink(n);
-      if (cl) out.push("   " + cl);
+      if (n.url && n.url !== "#") out.push("   " + n.url);
       out.push("");
     }
     return out.join("\n").trim();
