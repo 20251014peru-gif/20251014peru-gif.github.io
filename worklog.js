@@ -20773,8 +20773,9 @@ async function githubUpload(token){
 
   var LS_SHOW = 'wl_trash_btn';
   var BTN_ID  = 'wlTrashBtn';
-  var SRC     = 'worklog';
+  var SRC     = 'worklog';          /* 창에서 고른 쪽 — 'worklog' | 'personal' (v157) */
   var DAYS    = 90;                 /* 안전 저장소가 쓰는 보관 기간과 같게 */
+  var SOON    = 7;                  /* 이 날짜 안에 사라지면 노란색으로 (v157) */
 
   function showOn(){ try{ return localStorage.getItem(LS_SHOW) !== '0'; }catch(e){ return true; } }
   function P(){ return window.wlP || null; }
@@ -20790,10 +20791,23 @@ async function githubUpload(token){
     var d = new Date(at), p = function(n){ return (n < 10 ? '0' : '') + n; };
     return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
   }
+  function leftN(at){
+    if(!at) return 999;
+    return Math.ceil((at + DAYS * 24 * 3600 * 1000 - nowMs()) / (24 * 3600 * 1000));
+  }
   function left(at){
     if(!at) return '';
-    var n = Math.ceil((at + DAYS * 24 * 3600 * 1000 - nowMs()) / (24 * 3600 * 1000));
+    var n = leftN(at);
     return n > 0 ? (n + '일 남음') : '곧 사라짐';
+  }
+  /* 곧 사라지는 것은 눈에 띄게 (v157) */
+  function soonHtml(at){
+    var n = leftN(at);
+    if(n > SOON) return '';
+    var c = (n <= 2) ? '#b52929' : '#a35b00', bg = (n <= 2) ? '#fdeaea' : '#fff6e0';
+    return '<span style="background:' + bg + ';color:' + c + ';border-radius:7px;' +
+           'padding:2px 7px;font-size:11.5px;font-weight:800;margin-left:6px">⏳ ' +
+           (n > 0 ? (n + '일 남음') : '곧 사라짐') + '</span>';
   }
   function title(x){
     var r = (x && x.rec) || {};
@@ -20801,7 +20815,8 @@ async function githubUpload(token){
   }
   function sub(x){
     var r = (x && x.rec) || {};
-    var a = [txt(r.kind), txt(r.date), '지움 ' + when(x.at), left(x.at)];
+    var a = [txt(r.kind), txt(r.date), '지움 ' + when(x.at)];
+    if(leftN(x.at) > SOON) a.push(left(x.at));      /* 넉넉하면 글자만 */
     if(r._photoN) a.push('📷 ' + r._photoN);
     return a.filter(Boolean).join(' · ');
   }
@@ -20880,6 +20895,20 @@ async function githubUpload(token){
     var tb = document.createElement('div');
     tb.style.cssText = 'padding:8px 18px;border-bottom:1px solid #f0f3f7;display:flex;' +
       'align-items:center;gap:8px;flex-wrap:wrap;background:#fbfcfe';
+    /* 업무 / 개인 두 휴지통을 한 창에서 (v157) */
+    var seg = document.createElement('div');
+    seg.style.cssText = 'display:flex;gap:0;border:1.5px solid #dbe6f4;border-radius:10px;overflow:hidden;margin-right:6px';
+    [['worklog','🛠 업무'],['personal','🏠 개인']].forEach(function(o){
+      var t = document.createElement('button');
+      t.type = 'button';
+      t.textContent = o[1];
+      t.style.cssText = 'border:none;padding:10px 14px;font-size:13.5px;font-family:inherit;' +
+        'cursor:pointer;min-height:44px;' +
+        (SRC === o[0] ? 'background:#2563a8;color:#fff;font-weight:800' : 'background:#fff;color:#5b7794');
+      t.addEventListener('click', function(){ if(SRC === o[0]) return; SRC = o[0]; ov.remove(); panel(); });
+      seg.appendChild(t);
+    });
+
     var lab = document.createElement('label');
     lab.style.cssText = 'display:flex;align-items:center;gap:7px;font-size:14px;cursor:pointer;min-height:44px';
     lab.innerHTML = '<input type="checkbox" id="wlTrAll" style="width:20px;height:20px;cursor:pointer">전체 선택';
@@ -20895,7 +20924,7 @@ async function githubUpload(token){
     bClear.textContent = '비우기';
     bClear.style.cssText = 'border:1px solid #f0c9c9;background:#fdeeee;color:#b4534f;border-radius:10px;' +
       'padding:11px 16px;font-size:14px;font-family:inherit;cursor:pointer;min-height:44px';
-    tb.appendChild(lab); tb.appendChild(pick); tb.appendChild(sp2);
+    tb.appendChild(seg); tb.appendChild(lab); tb.appendChild(pick); tb.appendChild(sp2);
     tb.appendChild(bBack); tb.appendChild(bClear);
 
     var body = document.createElement('div');
@@ -20927,7 +20956,7 @@ async function githubUpload(token){
         t.innerHTML = '<div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;' +
           'text-overflow:ellipsis">' + (title(x) ||
           '<span style="color:#a0a8b3">(제목없음)</span>') + '</div>' +
-          '<div style="font-size:12px;color:#8b95a1;margin-top:3px">' + sub(x) + '</div>';
+          '<div style="font-size:12px;color:#8b95a1;margin-top:3px">' + sub(x) + soonHtml(x.at) + '</div>';
         t.addEventListener('click', function(){ cb.checked = !cb.checked; sync(); });
         var one = document.createElement('button');
         one.textContent = '되살리기';
@@ -21430,4 +21459,645 @@ async function githubUpload(token){
   };
 
   console.log('[미리채움] v156 — 달력 ＋ · 통화→업무도 노션식으로 (' + (on()?'켜짐':'꺼짐') + ')');
+})();
+
+/* ============================================================
+   📱 폰에서 빈 칸 접기 (wlPhoneFold)  v157-0830-2230
+
+   달님 : 「폰 스크롤 줄이기」
+   실측 (390×780) — 속성 줄 25개 중 **18개가 비어 있고**, 스크롤 1.72배.
+   빈 줄을 접으면 한 화면에 거의 들어온다.
+
+   ▸ 좁은 화면(≤700px)에서만 · 노션식 창에서만
+   ▸ 날짜 · 제목 · 상태는 비어 있어도 늘 보인다
+   ▸ 접힌 것은 「＋ 빈 칸 N개」 를 누르면 그 자리에 나타난다
+   ▸ 값을 넣는 중(포커스)인 줄은 절대 접지 않는다
+   되돌리기 : wlPhoneFold.off()
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS   = 'wl_phfold';
+  var BAR  = 'wlPhFoldBar';
+  var WIDE = 700;
+  /* 비어 있어도 늘 보여야 하는 칸 */
+  var KEEP = /(^|:)(_date|_title|f:status|date|title|status)$/;
+
+  function on(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function narrow(){ try{ return window.innerWidth <= WIDE; }catch(e){ return false; } }
+  var opened = false;                 /* 이번에 펼쳐 뒀나 */
+
+  function emptyRow(row){
+    var v = row.querySelector('.pg-val');
+    if(!v) return false;
+    if(v.querySelector('input, textarea, select')) return false;   /* 고치는 중 */
+    var t = String(v.textContent || '').trim();
+    return !t || t === '—' || t === '비어 있음';
+  }
+
+  function run(){
+    var ov = document.getElementById('lfPageOv');
+    if(!ov) return;
+    var rows = [].slice.call(ov.querySelectorAll('.pg-prow'));
+    if(!rows.length) return;
+
+    var bar = ov.querySelector('#' + BAR);
+
+    /* 끄거나 넓은 화면이면 전부 되돌린다 */
+    if(!on() || !narrow()){
+      rows.forEach(function(r){ if(r._phFold){ r.style.display = ''; r._phFold = 0; } });
+      if(bar) bar.remove();
+      return;
+    }
+
+    var hid = 0;
+    rows.forEach(function(r){
+      var pid = r.getAttribute('data-prow') || '';
+      if(KEEP.test(pid)){ if(r._phFold){ r.style.display=''; r._phFold=0; } return; }
+      if(r.contains(document.activeElement)){ if(r._phFold){ r.style.display=''; r._phFold=0; } return; }
+      var empty = emptyRow(r);
+      if(empty && !opened){ r.style.display = 'none'; r._phFold = 1; hid++; }
+      else if(r._phFold){ r.style.display = ''; r._phFold = 0; }
+      else if(empty && opened) hid++;
+    });
+
+    if(!hid){ if(bar) bar.remove(); return; }
+
+    if(!bar){
+      bar = document.createElement('button');
+      bar.type = 'button';
+      bar.id = BAR;
+      bar.style.cssText = 'display:block;width:100%;margin:8px 0 4px;padding:12px;' +
+        'border:1px dashed #cbd5e1;border-radius:11px;background:#f8fafc;color:#5b6672;' +
+        'font-size:13.5px;font-family:inherit;cursor:pointer;min-height:44px';
+      bar.addEventListener('click', function(){ opened = !opened; run(); });
+      var host = ov.querySelector('.pg-props') || ov.querySelector('.pg-body');
+      if(host) host.appendChild(bar); else return;
+    }else{
+      var host2 = bar.parentNode;
+      if(host2) host2.appendChild(bar);      /* 늘 맨 아래로 */
+    }
+    bar.textContent = opened ? ('▲ 빈 칸 ' + hid + '개 접기') : ('＋ 빈 칸 ' + hid + '개 보기');
+  }
+
+  /* 창이 새로 열리면 다시 접는다 */
+  var lastId = '';
+  function tick(){
+    try{
+      var m = String(location.hash || '').match(/^#lp=([^&]+)/);
+      var id = m ? m[1] : '';
+      if(id !== lastId){ lastId = id; opened = false; }
+      run();
+    }catch(e){ console.warn('[폰 접기] 실패', e); }
+  }
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:85, n:'폰 빈 칸 접기', f:tick });
+  window.addEventListener('resize', function(){ setTimeout(tick, 150); });
+  document.addEventListener('focusout', function(){ setTimeout(tick, 200); }, true);
+
+  window.wlPhoneFold = {
+    on:  function(){ try{ localStorage.setItem(LS,'1'); }catch(e){} tick(); return '폰에서 빈 칸을 접습니다'; },
+    off: function(){ try{ localStorage.setItem(LS,'0'); }catch(e){} tick(); return '빈 칸도 전부 보입니다'; },
+    now: tick,
+    state: function(){
+      var ov = document.getElementById('lfPageOv');
+      var rows = ov ? ov.querySelectorAll('.pg-prow').length : 0;
+      var hid  = ov ? [].slice.call(ov.querySelectorAll('.pg-prow')).filter(function(r){ return r._phFold; }).length : 0;
+      return { 접기: on()?'켜짐':'꺼짐', 화면폭: (window.innerWidth||0) + 'px',
+               좁은화면: narrow()?'예':'아니오', 속성줄: rows, 접힌줄: hid,
+               펼친상태: opened };
+    }
+  };
+  console.log('[폰 접기] v157 — 좁은 화면에서 빈 칸을 접습니다 (' + (on()?'켜짐':'꺼짐') + ')');
+})();
+
+
+/* ============================================================
+   🧱 중괄호 짝 자동 검사 (wlBrace)  v157-0830-2230
+
+   2026-08-26 : style 블록의 중괄호 **1개**가 빠져 뒤 규칙 52개가 통째로 죽었다.
+   레이아웃이 옛날 모습으로 돌아갔는데 **오류는 하나도 안 났다.**
+   → 앱을 켤 때 스스로 세고, 안 맞으면 화면 맨 위로 알린다.
+
+   ▸ 하루 한 번만 (캐시를 타므로 거의 공짜)
+   ▸ 안 맞을 때만 말한다. 맞으면 아무 말도 안 한다
+   되돌리기 : wlBrace.off()   지금 검사 : wlBrace.now()
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS_ON  = 'wl_brace_on';
+  var LS_DAY = 'wl_brace_day';
+
+  function on(){ try{ return localStorage.getItem(LS_ON) !== '0'; }catch(e){ return true; } }
+  function today(){
+    try{ return kstNow().toISOString().slice(0,10); }
+    catch(e){ return new Date().toISOString().slice(0,10); }
+  }
+
+  function grab(u){
+    return fetch(u, { cache:'force-cache' })
+      .then(function(r){ return r.text(); })
+      .catch(function(){ return ''; });
+  }
+  function srcOf(){
+    var css = 'worklog.css', html = location.pathname || 'worklog.html';
+    try{
+      var l = document.getElementById('main-css') || document.querySelector('link[href*="worklog.css"]');
+      if(l) css = l.getAttribute('href');
+    }catch(e){}
+    return { html: html, css: css };
+  }
+
+  function banner(msg){
+    var id = 'wlBraceBar';
+    var b = document.getElementById(id);
+    if(!b){
+      b = document.createElement('div');
+      b.id = id;
+      b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99998;background:#b52929;' +
+        'color:#fff;font-size:14px;font-weight:700;padding:12px 16px;font-family:inherit;' +
+        'display:flex;align-items:center;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.2)';
+      var x = document.createElement('button');
+      x.textContent = '닫기';
+      x.style.cssText = 'margin-left:auto;border:none;background:rgba(255,255,255,.2);color:#fff;' +
+        'border-radius:8px;padding:8px 14px;font-size:13px;font-family:inherit;cursor:pointer;min-height:40px';
+      x.addEventListener('click', function(){ b.remove(); });
+      var t = document.createElement('span');
+      t.id = id + 'Txt';
+      b.appendChild(t); b.appendChild(x);
+      document.body.appendChild(b);
+    }
+    document.getElementById(id + 'Txt').textContent = msg;
+  }
+
+  async function check(quiet){
+    var s = srcOf();
+    var r = await Promise.all([grab(s.html), grab(s.css)]);
+    var html = r[0], css = r[1];
+    if(!html && !css) return '파일을 못 읽었습니다';
+
+    var bad = [], rows = [], n = 0, m, re = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+    while((m = re.exec(html))){
+      n++;
+      var b = m[1];
+      var o = (b.match(/\{/g) || []).length, c = (b.match(/\}/g) || []).length;
+      if(!o && !c) continue;
+      rows.push({ 곳:'html style ' + n, 여는것:o, 닫는것:c, 상태:(o===c?'✅':'🔴') });
+      if(o !== c) bad.push('html style ' + n + ' (' + o + '/' + c + ')');
+    }
+    var o2 = (css.match(/\{/g) || []).length, c2 = (css.match(/\}/g) || []).length;
+    rows.push({ 곳:'worklog.css', 여는것:o2, 닫는것:c2, 상태:(o2===c2?'✅':'🔴') });
+    if(o2 !== c2) bad.push('worklog.css (' + o2 + '/' + c2 + ')');
+
+    if(!quiet){ try{ console.table(rows); }catch(e){ console.log(rows); } }
+
+    if(bad.length){
+      var msg = '🧱 스타일 중괄호가 안 맞습니다 — ' + bad.join(' · ') +
+                ' · 디자인이 깨져 보일 수 있어요 (콘솔에 표가 있습니다)';
+      console.error('[중괄호] ' + msg);
+      try{ console.table(rows); }catch(e){}
+      banner(msg);
+      return msg;
+    }
+    if(!quiet) console.log('[중괄호] ✅ 전부 맞습니다');
+    return '✅ 전부 맞습니다';
+  }
+
+  /* 앱 켠 뒤 한 번 — 하루 1회, 조용히 */
+  setTimeout(function(){
+    if(!on()) return;
+    try{ if(localStorage.getItem(LS_DAY) === today()) return; }catch(e){}
+    try{ localStorage.setItem(LS_DAY, today()); }catch(e){}
+    check(true).catch(function(e){ console.warn('[중괄호] 검사 실패', e); });
+  }, 9000);
+
+  window.wlBrace = {
+    now: function(){ return check(false); },
+    on:  function(){ try{ localStorage.setItem(LS_ON,'1'); }catch(e){} return '앱 켤 때 하루 한 번 검사합니다'; },
+    off: function(){ try{ localStorage.setItem(LS_ON,'0'); }catch(e){} return '자동 검사를 끕니다 (wlBrace.now() 는 그대로)'; }
+  };
+  console.log('[중괄호] v157 준비됨 — 하루 한 번 자동 · wlBrace.now() 로 지금 검사');
+})();
+
+
+/* ============================================================
+   ⚖ 덩치 큰 기록 찾기 (wlBig)  v157-0830-2230
+
+   파이어스토어 문서 한 건 상한이 1MB 다. 넘으면 **저장이 통째로 거부**된다.
+   어느 기록이 무거운지, 그 안에서 **어느 칸이** 먹는지 보여 준다.
+
+   wlBig()        무거운 순 20건
+   wlBig.one(id)  그 기록의 칸별 용량
+   wlBig.panel()  창으로 보기
+   ============================================================ */
+(function(){
+  'use strict';
+
+  function bytes(v){
+    try{ return new Blob([typeof v === 'string' ? v : JSON.stringify(v)]).size; }
+    catch(e){ try{ return String(v).length; }catch(e2){ return 0; } }
+  }
+  function kb(n){ return Math.round(n/1024*10)/10; }
+  function all(){ try{ return entries || []; }catch(e){ return []; } }
+
+  function sizeOf(e){
+    var t = 0, f = [];
+    for(var k in e){
+      if(!Object.prototype.hasOwnProperty.call(e, k)) continue;
+      var b = bytes(e[k]); t += b;
+      f.push({ 칸:k, KB:kb(b), bytes:b });
+    }
+    f.sort(function(a,b){ return b.bytes - a.bytes; });
+    return { total:t, fields:f };
+  }
+
+  function list(n){
+    var rows = all().map(function(e){
+      var s = sizeOf(e);
+      return { id:e.id, 종류:e.kind || '', 날짜:e.date || '',
+               제목:String(e.title || e.name || '').slice(0,20),
+               KB:kb(s.total), bytes:s.total,
+               큰칸:(s.fields[0] ? (s.fields[0].칸 + ' ' + s.fields[0].KB + 'KB') : ''),
+               위험:(s.total > 900000 ? '🔴 1MB 임박' : s.total > 400000 ? '🟠 무거움' : '') };
+    });
+    rows.sort(function(a,b){ return b.bytes - a.bytes; });
+    return rows.slice(0, n || 20);
+  }
+
+  function run(n){
+    var rows = list(n);
+    if(!rows.length){ console.log('[덩치] 기록이 없습니다'); return []; }
+    try{ console.table(rows.map(function(r){
+      return { 종류:r.종류, 날짜:r.날짜, 제목:r.제목, KB:r.KB, 큰칸:r.큰칸, 위험:r.위험, id:r.id };
+    })); }catch(e){ console.log(rows); }
+    var tot = all().reduce(function(s, e){ return s + sizeOf(e).total; }, 0);
+    console.log('[덩치] 전체 ' + all().length + '건 · 합계 ' + Math.round(tot/1024/1024*100)/100 + 'MB' +
+                ' · 한 건 상한 1MB (넘으면 저장이 거부됩니다)');
+    console.log('[덩치] 한 건을 뜯어보려면  wlBig.one(\'기록id\')');
+    return rows;
+  }
+
+  function one(id){
+    var e = all().filter(function(x){ return x && x.id === id; })[0];
+    if(!e) return '그런 기록이 없습니다';
+    var s = sizeOf(e);
+    try{ console.table(s.fields.filter(function(f){ return f.bytes > 20; })
+      .map(function(f){ return { 칸:f.칸, KB:f.KB }; })); }catch(err){ console.log(s.fields); }
+    console.log('[덩치] ' + (e.title || id) + ' — 모두 ' + kb(s.total) + 'KB');
+    return s.fields;
+  }
+
+  function panel(){
+    var old = document.getElementById('wlBigOv'); if(old) old.remove();
+    var rows = list(40);
+    var ov = document.createElement('div');
+    ov.id = 'wlBigOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,24,32,.45);z-index:99999;' +
+      'display:flex;align-items:center;justify-content:center;padding:16px';
+    var bx = document.createElement('div');
+    bx.style.cssText = 'background:#fff;border-radius:16px;max-width:720px;width:100%;max-height:88vh;' +
+      'display:flex;flex-direction:column;box-shadow:0 18px 50px rgba(0,0,0,.28);overflow:hidden';
+    var tot = all().reduce(function(s, e){ return s + sizeOf(e).total; }, 0);
+    var hd = document.createElement('div');
+    hd.style.cssText = 'padding:16px 18px;border-bottom:1px solid #e8ecf2;display:flex;align-items:center;gap:10px';
+    hd.innerHTML = '<b style="font-size:17px">⚖ 덩치 큰 기록</b>' +
+      '<span style="color:#7b8794;font-size:13px">' + all().length + '건 · 합계 ' +
+      (Math.round(tot/1024/1024*100)/100) + 'MB · 한 건 상한 1MB</span>';
+    var sp = document.createElement('div'); sp.style.cssText='flex:1';
+    var x = document.createElement('button');
+    x.textContent = '닫기';
+    x.style.cssText = 'border:1px solid #d7dee8;background:#f7f9fc;border-radius:10px;padding:10px 16px;' +
+      'font-size:14px;font-family:inherit;cursor:pointer;min-height:44px';
+    x.addEventListener('click', function(){ ov.remove(); });
+    hd.appendChild(sp); hd.appendChild(x);
+    var body = document.createElement('div');
+    body.style.cssText = 'flex:1;overflow:auto;padding:6px 14px 18px';
+    if(!rows.length) body.innerHTML = '<div style="padding:40px;text-align:center;color:#8b95a1">기록이 없습니다</div>';
+    rows.forEach(function(r){
+      var d = document.createElement('div');
+      d.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #f0f3f7';
+      d.innerHTML = '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
+        (r.제목 || '<span style="color:#a0a8b3">(제목없음)</span>') + ' ' +
+        (r.위험 ? '<span style="font-size:12px">' + r.위험 + '</span>' : '') + '</div>' +
+        '<div style="font-size:12px;color:#8b95a1;margin-top:3px">' +
+        [r.종류, r.날짜, '가장 큰 칸: ' + r.큰칸].filter(Boolean).join(' · ') + '</div></div>' +
+        '<b style="font-size:14px;color:' + (r.bytes>400000?'#b52929':'#3f7cb8') + ';white-space:nowrap">' +
+        r.KB + 'KB</b>';
+      d.addEventListener('click', function(){ one(r.id); });
+      d.style.cursor = 'pointer';
+      d.title = '누르면 칸별 용량이 콘솔에 나옵니다';
+      body.appendChild(d);
+    });
+    bx.appendChild(hd); bx.appendChild(body); ov.appendChild(bx);
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+    document.body.appendChild(ov);
+    return '창을 띄웠습니다';
+  }
+
+  var API = function(n){ return run(n); };
+  API.one = one; API.panel = panel; API.list = list;
+  window.wlBig = API;
+  console.log('[덩치] v157 준비됨 — wlBig() 또는 wlBig.panel()');
+})();
+
+/* ============================================================
+   📋 사고 · 진행업무를 「시간순 단계」로 보기 (wlSteps)  v158-0830-2330
+
+   달님 : 「사고·진행업무는 단계가 나눠져 있어 본문 형식으로 보기 불편하다.
+           시간 순으로 이동되는 게 좋다」
+
+   무엇이 문제였나
+     단계 기능 자체는 v44부터 이미 완성돼 있었다.
+       steps = [{ date, action, detail, vendor, owner, vendorPhone, field }]
+     시간순으로 보이는 곳도 셋이나 된다 — 옛 입력창 · 보기창 · A4 보고서.
+     **그런데 노션식 창에만 이 영역이 없었다.** 그래서 노션식으로 열면
+     단계가 통째로 안 보이고 속성 + 본문만 남았다.
+     (v154에서 옛 창 입구를 숨긴 뒤로는 단계를 넣을 길까지 좁아졌다)
+
+   무엇을 하나
+     ▸ 사고 · 진행업무를 열면 **맨 위에** 「📋 처리 기록」이 시간순으로 (최신이 위)
+     ▸ 줄을 누르면 그 자리에서 고친다 — 날짜 · 조치 · 상세 · 업체 · 연락처
+     ▸ [＋ 단계 추가] — 오늘 날짜로 새 줄
+     ▸ 맨 위에 **상태 진행 막대** — 지금 어디까지 왔는지, 눌러서 바꾸기
+     ▸ 다른 종류(업무 · 지출 등)에는 **아무것도 안 나온다**
+
+   ⚠ 저장은 기존 칸 그대로 쓴다 (`steps`). 옛 입력창 · 보기창 · A4 보고서와
+     같은 데이터를 보므로 어느 쪽에서 고쳐도 똑같이 보인다.
+
+   되돌리기 : wlSteps.off()
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS   = 'wl_steps_page';
+  var HOST = 'wlStepsBox';
+  var KINDS = { accident:1, progress:1 };
+  var EDIT = null;                       /* 지금 고치는 중인 단계 번호 (asc 기준) */
+
+  function on(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function esc2(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function today(){
+    try{ return todayStr(); }catch(e){}
+    try{ return kstNow().toISOString().slice(0,10); }catch(e){}
+    return new Date().toISOString().slice(0,10);
+  }
+  function ridNow(){
+    try{ var m = String(location.hash||'').match(/^#lp=([^&]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+    catch(e){ return ''; }
+  }
+  function recOf(id){
+    try{ return (entries||[]).filter(function(x){ return x && x.id === id; })[0] || null; }
+    catch(e){ return null; }
+  }
+  function asc(arr){
+    try{ if(typeof wlSortStepsAsc === 'function') return wlSortStepsAsc(arr); }catch(e){}
+    return (arr||[]).slice().sort(function(a,b){
+      return String((a&&a.date)||'').localeCompare(String((b&&b.date)||'')); });
+  }
+  function statusList(kind){
+    try{ if(kind==='accident' && typeof ACCIDENT_STATUS !== 'undefined') return ACCIDENT_STATUS; }catch(e){}
+    try{ if(kind==='progress' && typeof PROGRESS_STATUS !== 'undefined') return PROGRESS_STATUS; }catch(e){}
+    return [];
+  }
+  function save(rid, steps){
+    try{ if(typeof updateRecord === 'function') updateRecord(rid, { steps: asc(steps) }); }
+    catch(e){ console.warn('[단계] 저장 실패', e); }
+  }
+
+  /* ── 그리기 ── */
+  function draw(){
+    var box = document.getElementById(HOST);
+    var rid = ridNow();
+    var rec = rid ? recOf(rid) : null;
+
+    if(!on() || !rec || !KINDS[rec.kind]){ if(box) box.remove(); return; }
+
+    var ov = document.getElementById('lfPageOv');
+    var body = ov && ov.querySelector('.pg-body');
+    if(!body){ if(box) box.remove(); return; }
+
+    if(!box){
+      box = document.createElement('div');
+      box.id = HOST;
+      box.style.cssText = 'margin:0 0 16px;border:1.5px solid #cfe0f2;border-radius:14px;' +
+        'background:#f7fbff;padding:14px 16px;font-family:inherit';
+      body.insertBefore(box, body.firstChild);      /* 맨 위 — 본문보다 앞 */
+    }else if(box.parentNode !== body || body.firstChild !== box){
+      body.insertBefore(box, body.firstChild);
+    }
+
+    var isAcc = (rec.kind === 'accident');
+    var accent = isAcc ? '#c2740b' : '#2563a8';
+    var list = asc(rec.steps);
+    var n = list.length;
+
+    var h = '';
+
+    /* 머리 */
+    h += '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px">'
+      +    '<b style="font-size:15.5px;color:#1a2f45">📋 ' + (isAcc ? '처리 기록' : '진행 기록') + '</b>'
+      +    '<span style="font-size:12.5px;color:#8ba0b6;font-weight:700">' + n + '건</span>'
+      +    '<div style="flex:1"></div>'
+      +    '<button type="button" data-st-add="1" style="border:none;background:' + accent + ';color:#fff;'
+      +      'border-radius:10px;padding:11px 16px;font-size:13.5px;font-weight:700;font-family:inherit;'
+      +      'cursor:pointer;min-height:44px">＋ 단계 추가</button>'
+      +  '</div>';
+
+    /* 상태 진행 막대 */
+    var sts = statusList(rec.kind);
+    if(sts.length){
+      var curIdx = sts.indexOf(rec.status);
+      h += '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">';
+      sts.forEach(function(s, i){
+        var done = (curIdx >= 0 && i <= curIdx);
+        var isCur = (i === curIdx);
+        h += '<button type="button" data-st-set="' + esc2(s) + '" title="여기까지 왔다고 표시"'
+          +   ' style="border:1.5px solid ' + (isCur ? accent : (done ? '#bcd6ef' : '#e3ecf6')) + ';'
+          +   'background:' + (isCur ? accent : (done ? '#e8f2fd' : '#fff')) + ';'
+          +   'color:' + (isCur ? '#fff' : (done ? '#2563a8' : '#a7b6c6')) + ';'
+          +   'border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:' + (isCur ? '800' : '700') + ';'
+          +   'font-family:inherit;cursor:pointer;min-height:40px">' + esc2(s) + '</button>';
+      });
+      h += '</div>';
+    }
+
+    /* 목록 — 최신이 위 */
+    if(!n){
+      h += '<div style="text-align:center;padding:22px 10px;color:#a7b6c6;font-size:13.5px">'
+        +    (isAcc ? '아직 처리 단계가 없어요' : '아직 진행 내용이 없어요')
+        +    '<br><span style="font-size:12.5px">[＋ 단계 추가] 로 날짜별로 쌓아 두세요</span></div>';
+    }else{
+      for(var i = n - 1; i >= 0; i--){
+        var s = list[i] || {};
+        var no = i + 1;
+        var newest = (i === n - 1);
+
+        if(EDIT === i){
+          h += '<div style="border:1.5px solid ' + accent + ';border-radius:11px;padding:12px;margin-bottom:8px;background:#fff">'
+            +   row2('날짜', '<input type="date" data-st-f="date" value="' + esc2((s.date||'').slice(0,10)) + '" style="' + INP + '">')
+            +   row2('조치',  '<input type="text" data-st-f="action" value="' + esc2(s.action||'') + '" placeholder="무엇을 했나" style="' + INP + '">')
+            +   row2('상세',  '<textarea data-st-f="detail" rows="3" placeholder="자세히" style="' + INP + ';min-height:70px;resize:vertical">' + esc2(s.detail||s.memo||'') + '</textarea>')
+            +   row2('업체',  '<input type="text" data-st-f="' + (isAcc?'vendor':'owner') + '" value="' + esc2(isAcc ? (s.vendor||'') : (s.owner||s.vendor||'')) + '" placeholder="업체 이름" style="' + INP + '">')
+            +   row2('연락처','<input type="text" data-st-f="vendorPhone" value="' + esc2(s.vendorPhone||'') + '" placeholder="010-" style="' + INP + '">')
+            +   '<div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap">'
+            +     '<button type="button" data-st-ok="' + i + '" style="flex:1;border:none;background:' + accent + ';color:#fff;border-radius:10px;padding:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;min-height:46px">저장</button>'
+            +     '<button type="button" data-st-cancel="1" style="border:1px solid #d7dee8;background:#f7f9fc;border-radius:10px;padding:12px 16px;font-size:14px;font-family:inherit;cursor:pointer;min-height:46px">취소</button>'
+            +     '<button type="button" data-st-del="' + i + '" style="border:1px solid #f0c9c9;background:#fdeeee;color:#b4534f;border-radius:10px;padding:12px 16px;font-size:14px;font-family:inherit;cursor:pointer;min-height:46px">삭제</button>'
+            +   '</div></div>';
+        }else{
+          var who = [];
+          if(s.vendor) who.push('🏢 ' + s.vendor);
+          if(s.owner)  who.push('👤 ' + s.owner);
+          if(s.vendorPhone) who.push('📞 ' + s.vendorPhone);
+          if(s.field)  who.push('🏷 ' + s.field);
+
+          h += '<div data-st-row="' + i + '" title="누르면 고칠 수 있어요"'
+            +   ' style="display:flex;gap:9px;align-items:flex-start;padding:9px 6px;'
+            +   'border-bottom:1px solid #e8f0fa;cursor:pointer;border-radius:8px">'
+            +   '<span style="flex:0 0 auto;background:' + (newest ? accent : '#c3d4e6') + ';color:#fff;'
+            +     'font-size:11px;font-weight:800;min-width:21px;height:21px;display:inline-flex;'
+            +     'align-items:center;justify-content:center;border-radius:11px;margin-top:2px">' + no + '</span>'
+            +   '<span style="flex:0 0 auto;font-size:12.5px;font-weight:700;color:#7a92a8;'
+            +     'white-space:nowrap;margin-top:3px">' + esc2((s.date||'').slice(2,10)) + '</span>'
+            +   '<div style="flex:1;min-width:0">'
+            +     '<div style="font-size:14px;font-weight:700;color:#1a2f45;line-height:1.45">'
+            +       (esc2(s.action||'') || '<span style="color:#b8c6d4">(내용 없음)</span>')
+            +       (newest ? '<span style="font-size:11px;font-weight:800;color:' + accent + '"> · 최근</span>' : '')
+            +     '</div>'
+            +     (s.detail || s.memo
+                    ? '<div style="font-size:13px;color:#41627f;line-height:1.55;white-space:pre-wrap;margin-top:2px">'
+                      + esc2(s.detail || s.memo) + '</div>' : '')
+            +     (who.length
+                    ? '<div style="font-size:12px;color:#8ea3b8;line-height:1.4;margin-top:3px">'
+                      + esc2(who.join(' · ')) + '</div>' : '')
+            +   '</div></div>';
+        }
+      }
+    }
+
+    box.innerHTML = h;
+    box.setAttribute('data-rid', rid);
+  }
+
+  var INP = 'width:100%;box-sizing:border-box;min-height:44px;padding:10px 11px;border:1.5px solid #dbe6f4;' +
+            'border-radius:9px;font-size:14px;font-family:inherit;background:#fff;outline:none';
+  function row2(label, inner){
+    return '<div style="margin-bottom:8px">' +
+           '<div style="font-size:12px;font-weight:700;color:#8ba0b6;margin-bottom:4px">' + label + '</div>' +
+           inner + '</div>';
+  }
+
+  /* ── 누르기 ── */
+  document.addEventListener('click', function(ev){
+    var box = document.getElementById(HOST);
+    if(!box || !box.contains(ev.target)) return;
+    var t = ev.target.closest('[data-st-add],[data-st-row],[data-st-ok],[data-st-cancel],[data-st-del],[data-st-set]');
+    if(!t) return;
+    ev.preventDefault(); ev.stopPropagation();
+
+    var rid = box.getAttribute('data-rid');
+    var rec = recOf(rid); if(!rec) return;
+    var list = asc(rec.steps);
+
+    /* 상태 바꾸기 */
+    var st = t.getAttribute('data-st-set');
+    if(st != null){
+      try{ updateRecord(rid, { status: st }); }catch(e){ console.warn('[단계] 상태 저장 실패', e); }
+      if(typeof toast === 'function') toast('상태를 「' + st + '」 로 바꿨어요');
+      try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
+      setTimeout(draw, 260);
+      return;
+    }
+
+    /* 새 단계 */
+    if(t.hasAttribute('data-st-add')){
+      list.push({ date: today(), action:'', detail:'', vendor:'', owner:'', vendorPhone:'' });
+      save(rid, list);
+      EDIT = list.length - 1;
+      draw();
+      setTimeout(function(){
+        var el = box.querySelector('[data-st-f="action"]');
+        if(el) el.focus();
+      }, 60);
+      return;
+    }
+
+    /* 고치기 시작 */
+    var rowI = t.getAttribute('data-st-row');
+    if(rowI != null){ EDIT = parseInt(rowI, 10); draw(); return; }
+
+    /* 취소 */
+    if(t.hasAttribute('data-st-cancel')){ EDIT = null; draw(); return; }
+
+    /* 저장 */
+    var okI = t.getAttribute('data-st-ok');
+    if(okI != null){
+      var i = parseInt(okI, 10);
+      var s = list[i] || {};
+      [].forEach.call(box.querySelectorAll('[data-st-f]'), function(el){
+        s[el.getAttribute('data-st-f')] = el.value || '';
+      });
+      list[i] = s;
+      save(rid, list);
+      EDIT = null;
+      draw();
+      if(typeof toast === 'function') toast('📋 단계를 저장했어요');
+      return;
+    }
+
+    /* 삭제 */
+    var delI = t.getAttribute('data-st-del');
+    if(delI != null){
+      var j = parseInt(delI, 10);
+      var ask = function(go){
+        if(!go) return;
+        list.splice(j, 1);
+        save(rid, list);
+        EDIT = null; draw();
+        if(typeof toast === 'function') toast('단계를 지웠어요');
+      };
+      if(window.wlAsk && window.wlAsk.ok){
+        window.wlAsk.ok('이 단계를 지울까요?', { sub:'되돌릴 수 없습니다', ok:'지우기', danger:1 }).then(ask);
+      }else{ ask(confirm('이 단계를 지울까요?')); }
+      return;
+    }
+  }, true);
+
+  /* 창이 바뀌면 고치던 것을 놓는다 */
+  var lastRid = '';
+  function run(){
+    try{
+      var rid = ridNow();
+      if(rid !== lastRid){ lastRid = rid; EDIT = null; }
+      draw();
+    }catch(e){ console.warn('[단계] 그리기 실패', e); }
+  }
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:75, n:'처리 기록 시간순', f:run });
+
+  window.wlSteps = {
+    on:  function(){ try{ localStorage.setItem(LS,'1'); }catch(e){} run(); return '사고·진행업무를 시간순 단계로 봅니다'; },
+    off: function(){ try{ localStorage.setItem(LS,'0'); }catch(e){} run(); return '단계 영역을 숨깁니다 (자료는 그대로)'; },
+    now: run,
+    list: function(id){
+      var r = recOf(id || ridNow());
+      if(!r) return '기록을 못 찾았습니다';
+      var a = asc(r.steps);
+      try{ console.table(a.map(function(s,i){
+        return { 번호:i+1, 날짜:s.date, 조치:s.action, 상세:String(s.detail||s.memo||'').slice(0,30),
+                 업체:s.vendor||s.owner||'', 연락처:s.vendorPhone||'' }; })); }catch(e){ console.log(a); }
+      return a;
+    },
+    state: function(){
+      var r = recOf(ridNow());
+      return { 보이기: on()?'켜짐':'꺼짐',
+               지금기록: r ? (r.kind + ' · ' + (r.title||'')) : '없음',
+               대상종류: '사고 · 진행업무',
+               단계수: r && Array.isArray(r.steps) ? r.steps.length : 0 };
+    }
+  };
+  console.log('[단계] v158 — 사고·진행업무를 시간순으로 (' + (on()?'켜짐':'꺼짐') + ')');
 })();
