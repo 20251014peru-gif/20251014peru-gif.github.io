@@ -1,4 +1,15 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v10 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v11 (2026-08-30)
+ *
+ * v11 에서 고친 것 (폰 화면 깨짐)
+ *   · 폰에서 검색창·[검색]·[AI로 뉴스검색] 이 세로로 길게 늘어나던 문제.
+ *     원인: news.html 은 폰(≤760px)에서 .controls 를 flex-direction:column 으로 세우는데,
+ *           v9·v10 이 넣은 .searchbar{flex:0 1 420px} 의 420px 이 세로 방향에서는
+ *           '너비'가 아니라 '높이'로 해석돼 검색줄이 420px 이상 늘어났다.
+ *     조치: 한 줄 레이아웃 규칙을 @media(min-width:761px) 안으로 옮기고,
+ *           폰에는 세로 배치 + 입력창 높이 44px 을 따로 못박았다.
+ *   · 폰에서 헤더 '뉴스레이더' 가 두 줄로 접히던 것도 같이 잡음.
+ *
+ * ↓ v10 원본 설명
  *
  * 삼단(사실은 사단) 이동식 구조
  *   ⚡속보  →  🆕새 뉴스  →  📖읽음  →  🔖스크랩
@@ -69,11 +80,11 @@
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 10) return;
-  window.__nrPatch = 10;
+  if (window.__nrPatch >= 11) return;
+  window.__nrPatch = 11;
 
   var LINES = 5;
-  var VER = "v10";
+  var VER = "v11";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
   var BODY_MAX = 1500;     /* 공유할 때 함께 보내는 본문 최대 글자수 */
 
@@ -107,13 +118,31 @@
     "padding:12px;font-size:14px;line-height:1.6;font-family:inherit;box-sizing:border-box}",
     ".nrdel:hover{opacity:1}",
     "#selbar .nrall{background:var(--line-2);color:var(--ink-2)}",
-    /* 윗줄 : 한 줄로. 좁으면 버튼 줄만 좌우로 밀린다 */
+    /* 윗줄 : 컴에서는 한 줄로. 좁으면 버튼 줄만 좌우로 밀린다.
+       ※ 폰(≤760px)에서는 news.html 이 .controls 를 flex-direction:column 으로 세운다.
+          세로 방향에서는 flex-basis 가 '높이'가 되므로 아래 420px 지정이 검색창을
+          420px 높이로 늘려버린다(v9·v10 폰 화면 깨짐의 원인). 그래서 컴에서만 적용한다. */
+    "@media(min-width:761px){",
     ".controls{flex-wrap:wrap!important;align-items:center;gap:10px}",
     ".controls .searchbar{flex:0 1 420px!important;min-width:260px!important;max-width:520px!important}",
     ".controls .actbar{flex:1 1 auto!important;flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none}",
-    ".controls .actbar::-webkit-scrollbar{display:none}",
     ".controls .actbar>*{flex:0 0 auto}",
     ".controls .actbar .seg{margin-left:auto}",
+    "}",
+    ".controls .actbar::-webkit-scrollbar{display:none}",
+    /* 폰 : 검색창 한 줄(가로 꽉), 버튼줄은 좌우 스크롤 — 세로로 늘어나지 않게 못박는다 */
+    "@media(max-width:760px){",
+    ".controls{flex-direction:column!important;align-items:stretch!important;gap:8px!important}",
+    ".controls .searchbar{flex:none!important;width:100%!important;min-width:0!important;max-width:none!important}",
+    ".controls .searchbar input{flex:1 1 auto!important;min-width:0!important;height:44px!important}",
+    ".controls .searchbar button{flex:0 0 auto!important;height:44px!important;align-self:auto!important}",
+    ".controls .actbar{flex:none!important;width:100%!important;flex-wrap:nowrap!important;",
+    "overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}",
+    ".controls .actbar>*{flex:0 0 auto!important;align-self:center}",
+    ".controls .actbar .seg{margin-left:0!important;width:auto!important}",
+    ".brand h1{flex:0 0 auto;white-space:nowrap;font-size:18px}",
+    ".hmeta{font-size:11px;line-height:1.35}",
+    "}",
     ".nrbrief{white-space:nowrap}",
     /* 제목·요약 : 딱 두 줄, 문장 가운데에서 나뉘게, 낱말은 안 끊기게 */
     "tbody .title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;",
