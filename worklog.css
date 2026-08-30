@@ -1260,15 +1260,36 @@ select.lf-ie.qp-hide{ display:none !important }
 .pg-sumbox > div{ font-size:13.5px; line-height:1.7; color:#3d5875 }
 .pg-sumbox > div + div{ border-top:1px dashed #e4edf7; padding-top:3px; margin-top:3px }
 
-/* 📷 사진 확대 · 삭제 (wlPics v137) */
-.pic-w{ position:relative; display:inline-block; line-height:0 }
-.pic-w img{ cursor:zoom-in }
-.pic-x{
-  position:absolute; top:5px; right:5px; width:24px; height:24px;
-  border:none; border-radius:7px; background:rgba(24,40,58,.62); color:#fff;
-  font-size:12px; font-weight:800; cursor:pointer; font-family:inherit; line-height:1;
+/* 📷 사진 — 확대 · 순서 바꾸기 · 지우기 (wlPics v141) */
+.pg-pics{ gap:12px !important }
+.pg-pics img{ width:150px !important; height:150px !important }
+.pic-w{ position:relative; display:inline-block; line-height:0; border-radius:12px;
+  padding:0 0 4px; background:#fff }
+.pic-w img{ cursor:zoom-in; display:block }
+.pic-w[draggable="true"]{ cursor:grab }
+.pic-w.pic-drag{ opacity:.45 }
+.pic-w.pic-over{ outline:3px solid #2563a8; outline-offset:2px; border-radius:12px }
+
+/* 몇 번째 사진인지 — 첫 장은 「대표」 */
+.pic-lead, .pic-no{
+  position:absolute; top:7px; left:7px; height:24px; line-height:24px; padding:0 9px;
+  border-radius:8px; font-size:12px; font-weight:800; color:#fff; letter-spacing:-.2px;
 }
-.pic-x:hover{ background:#c0392b }
+.pic-lead{ background:#2563a8 }
+.pic-no{ background:rgba(24,40,58,.66); padding:0 10px }
+
+/* 사진 아래 손잡이 줄 — 사진을 가리지 않고, 손가락으로 눌러도 되는 크기 */
+.pic-bar{ display:flex; gap:5px; align-items:center; margin-top:6px; line-height:normal }
+.pic-b{
+  min-height:40px; min-width:40px; padding:0 10px;
+  border:1.5px solid #dbe6f4; border-radius:10px; background:#fff; color:#3d5875;
+  font-size:13px; font-weight:800; cursor:pointer; font-family:inherit;
+}
+.pic-b:hover:not(:disabled){ background:#eef5fd; border-color:#2563a8; color:#2563a8 }
+.pic-b:disabled{ opacity:.32; cursor:default }
+.pic-del{ flex:1; border-color:#f0d5d5; color:#b52929 }
+.pic-del:hover{ background:#fdeeee; border-color:#c0392b; color:#c0392b }
+.pic-note{ font-size:12px; color:#a8b8c8; padding:0 4px }
 
 /* 제목을 줄여 위쪽 자리를 아낀다 (v140) */
 .lf-page.is-2col .pg-title{ font-size:23px; line-height:1.25 }
@@ -1278,3 +1299,13 @@ select.lf-ie.qp-hide{ display:none !important }
 /* ＋ 자재 추가 — 수량 칸 옆에 작게 (v140) */
 .mb-add-s{ min-height:30px !important; padding:0 10px !important; font-size:12px !important;
   margin-left:6px; white-space:nowrap }
+
+/* ＋ 자재 추가 — 수량 입력칸 오른쪽에 나란히 (v141)
+   .pg-pv 는 원래 블록이라 덧붙임이 다음 줄로 밀려 있었다. 이 칸만 가로로 세운다. */
+[data-prow="f:qty"] .pg-pv{ display:flex; align-items:center; gap:7px }
+[data-prow="f:qty"] .pg-pv > .pg-val{ flex:1 1 auto; min-width:0 }
+[data-prow="f:qty"] .pg-pv > .pg-addon{ flex:0 0 auto; margin:0 !important }
+
+/* 본문 창을 더 넉넉하게 — 화면을 조금 넘어가도 적기 편한 쪽으로 (v141) */
+.lf-page.is-2col .pg-text{ min-height:320px }
+.pg-text{ min-height:300px }

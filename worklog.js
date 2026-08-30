@@ -18882,27 +18882,106 @@ async function githubUpload(token){
     }catch(e){ console.warn('[사진] 옮기기 실패', e); }
   }
 
-  /* ② 사진칸에 ✕ 붙이기 (확대는 앱의 zimg 뷰어가 이미 한다) */
+  /* ② 사진마다 「순서 바꾸기 · 지우기」 손잡이를 단다
+        달님 : 「닫기 버튼이 너무 작잖아. 잘 보이는 곳에 잘 보이는 크기로.
+                사진은 내가 중요도 순으로 재배치할 수 있게」
+        ▸ 단추는 사진 아래 줄에 크게 (터치 40px) — 사진을 가리지 않는다
+        ▸ ◀ ▶ 로 순서를 바꾼다 (첫 장은 「대표」)
+        ▸ 끌어서 옮기기도 된다 (컴퓨터) */
+  function photosOf(rid){
+    var r = recOf(rid);
+    return (r && Array.isArray(r.photos)) ? r.photos.slice() : [];
+  }
+  function saveOrder(rid, arr){
+    try{
+      if(typeof updateRecord === 'function') updateRecord(rid, { photos: arr });
+      setTimeout(function(){
+        try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
+      }, 140);
+    }catch(e){ console.error('[사진] 순서 저장 실패', e); }
+  }
+  function move(rid, src, dir){
+    var arr = photosOf(rid);
+    var i = arr.indexOf(src);
+    if(i < 0) return;
+    var j = i + dir;
+    if(j < 0 || j >= arr.length) return;
+    arr.splice(j, 0, arr.splice(i, 1)[0]);
+    saveOrder(rid, arr);
+  }
+  function moveTo(rid, src, to){
+    var arr = photosOf(rid);
+    var i = arr.indexOf(src);
+    if(i < 0 || to < 0 || to >= arr.length || i === to) return;
+    arr.splice(to, 0, arr.splice(i, 1)[0]);
+    saveOrder(rid, arr);
+  }
+
+  var _dragSrc = '';
+
   function marks(){
     var page = document.querySelector('.lf-page'); if(!page) return;
     var box = page.querySelector('.pg-pics'); if(!box) return;
     var rid = ridNow(); if(!rid) return;
+    var mine = photosOf(rid);
 
-    [].forEach.call(box.querySelectorAll('img'), function(im, i){
+    [].forEach.call(box.querySelectorAll('img'), function(im){
       if(im._pw) return;
       im._pw = 1;
-      var w = document.createElement('span');
+      var src = im.getAttribute('src') || '';
+      var idx = mine.indexOf(src);            /* -1 이면 스캔앱 사진 — 순서를 못 바꾼다 */
+
+      var w = document.createElement('div');
       w.className = 'pic-w';
       im.parentNode.insertBefore(w, im);
       w.appendChild(im);
-      var x = document.createElement('button');
-      x.type = 'button'; x.className = 'pic-x'; x.textContent = '✕';
-      x.title = '이 사진을 지웁니다';
-      x.addEventListener('click', function(ev){
+
+      if(idx === 0){
+        var lead = document.createElement('span');
+        lead.className = 'pic-lead'; lead.textContent = '대표';
+        w.appendChild(lead);
+      }else if(idx > 0){
+        var no = document.createElement('span');
+        no.className = 'pic-no'; no.textContent = String(idx + 1);
+        w.appendChild(no);
+      }
+
+      var bar = document.createElement('div');
+      bar.className = 'pic-bar';
+      if(idx >= 0){
+        bar.innerHTML =
+            '<button type="button" class="pic-b" data-mv="-1"' + (idx === 0 ? ' disabled' : '')
+          +   ' title="앞으로 (더 중요하게)">◀</button>'
+          + '<button type="button" class="pic-b" data-mv="1"' + (idx === mine.length-1 ? ' disabled' : '')
+          +   ' title="뒤로">▶</button>'
+          + '<button type="button" class="pic-b pic-del" data-del="1" title="이 사진을 지웁니다">🗑 지우기</button>';
+      }else{
+        bar.innerHTML = '<span class="pic-note">스캔앱 사진</span>';
+      }
+      w.appendChild(bar);
+
+      bar.addEventListener('click', function(ev){
+        var b = ev.target.closest && ev.target.closest('button');
+        if(!b) return;
         ev.preventDefault(); ev.stopPropagation();
-        drop(rid, im.getAttribute('src') || '');
+        if(b.hasAttribute('data-del')) drop(rid, src);
+        else move(rid, src, Number(b.getAttribute('data-mv')) || 0);
       });
-      w.appendChild(x);
+
+      /* 끌어서 옮기기 (컴퓨터) */
+      if(idx >= 0){
+        w.setAttribute('draggable', 'true');
+        w.addEventListener('dragstart', function(){ _dragSrc = src; w.classList.add('pic-drag'); });
+        w.addEventListener('dragend',   function(){ _dragSrc = ''; w.classList.remove('pic-drag'); });
+        w.addEventListener('dragover',  function(ev){ ev.preventDefault(); w.classList.add('pic-over'); });
+        w.addEventListener('dragleave', function(){ w.classList.remove('pic-over'); });
+        w.addEventListener('drop', function(ev){
+          ev.preventDefault(); w.classList.remove('pic-over');
+          if(!_dragSrc || _dragSrc === src) return;
+          var to = photosOf(rid).indexOf(src);
+          moveTo(rid, _dragSrc, to);
+        });
+      }
     });
   }
 
