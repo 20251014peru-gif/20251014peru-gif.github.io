@@ -21039,3 +21039,206 @@ async function githubUpload(token){
 
   console.log('[휴지통] 단추·배지 v153 — 머리말 「🛟 안전」 옆 [🗑 휴지통] / 휴지통 본체는 안전 저장소(v47)가 이미 하고 있습니다');
 })();
+
+/* ============================================================
+   🗒 옛 전체입력 창 숨기기 · 📌 표 왼쪽 칸 고정 (wlOldForm · wlFreeze)  v154-0830-2010
+
+   달님 : 「옛 모달 숨기기 그리고 날짜 옆쪽으로 고정 안 되는 거 수정」
+
+   ── ① 옛 전체입력 창 숨기기 ───────────────────────────────
+   노션식 창으로 다 되므로 들어가는 입구만 가린다. **코드는 그대로 둔다.**
+     · 페이지 도구줄 [✏️ 전체 서식]        (#pgForm)
+     · 진단 탭 「기록을 누르면」 [🗒 예전 입력창으로]   (#opAsModal)
+     · 진단 탭 「＋ 새로 만들 때」 [🗒 예전 입력창으로] (#nsOld)
+   지금 설정이 'old' 로 남아 있으면 창(모달)로 바꿔 준다 — 안 그러면
+   되돌릴 단추를 숨긴 채 옛 창에 갇힌다.
+
+   ⚠ **달력 ＋ 와 통화→업무는 그대로 둔다.** 이 둘은 날짜·업체를 미리 채워
+     넣어야 하는데 노션식에는 아직 그 통로(wlNewPage(kind,opts))가 없다.
+     여기까지 숨기면 기능이 깨진다.
+
+   되돌리기 : wlOldForm.on()
+
+   ── ② 표에서 왼쪽 칸 고정 ─────────────────────────────────
+   원래도 고정 기능은 있었다 — 다만 **맨 앞 한 칸만**(`.lf-tv.frz :first-child`).
+   그래서 칸 순서를 바꿔 날짜가 두 번째로 가면 날짜가 같이 밀려간다.
+     → 고정할 **칸 수를 1~3 중에 고르게** 하고, 실제 폭을 재서 왼쪽에 붙인다.
+   표 도구줄에 [📌 고정 1칸] 단추가 생긴다. 누를 때마다 1 → 2 → 3 → 끔.
+
+   되돌리기 : wlFreeze.set(1)
+   ============================================================ */
+(function(){
+  'use strict';
+
+  /* ══════ ① 옛 전체입력 창 숨기기 ══════ */
+  var LS_OLD = 'wl_oldform_show';
+  var IDS = ['pgForm', 'opAsModal', 'nsOld'];
+
+  function oldShown(){ try{ return localStorage.getItem(LS_OLD) === '1'; }catch(e){ return false; } }
+
+  function fixStuck(){
+    /* 되돌릴 단추를 숨기는데 설정이 'old' 면 갇힌다 — 창(모달)로 옮겨 준다 */
+    try{
+      var moved = [];
+      if(localStorage.getItem('wl_open_as_page') === 'old'){
+        localStorage.setItem('wl_open_as_page', 'modal'); moved.push('기록을 누르면');
+      }
+      if(localStorage.getItem('wl_new_style') === 'old'){
+        localStorage.setItem('wl_new_style', 'modal'); moved.push('＋ 새로 만들 때');
+      }
+      if(moved.length){
+        console.log('[옛 창] ' + moved.join(' · ') + ' 을(를) 창(모달)로 바꿨습니다 — 옛 창 입구를 숨기기 때문입니다');
+        if(typeof toast === 'function') toast('🗒 이제 창(모달)로 열립니다');
+      }
+    }catch(e){}
+  }
+
+  function paintOld(){
+    var show = oldShown();
+    if(!show) fixStuck();
+    IDS.forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      el.style.display = show ? '' : 'none';
+    });
+  }
+
+  window.wlOldForm = {
+    on:  function(){ try{ localStorage.setItem(LS_OLD, '1'); }catch(e){} paintOld();
+                     return '옛 전체입력 창 입구를 다시 보입니다'; },
+    off: function(){ try{ localStorage.setItem(LS_OLD, '0'); }catch(e){} paintOld();
+                     return '옛 전체입력 창 입구를 숨깁니다 (코드는 그대로)'; },
+    state: function(){
+      var o = {};
+      try{
+        o.입구 = oldShown() ? '보임' : '숨김';
+        o.기록을누르면 = localStorage.getItem('wl_open_as_page') || 'modal(기본)';
+        o.새로만들때   = localStorage.getItem('wl_new_style') || 'modal(기본)';
+      }catch(e){}
+      o.그대로둔곳 = '달력 ＋ · 통화→업무 (미리 채울 값 통로가 없어 유지)';
+      return o;
+    }
+  };
+
+  /* ══════ ② 표 왼쪽 칸 고정 ══════ */
+  var LS_N = 'wl_frz_n';
+
+  function frzN(){
+    var n = 1;
+    try{ var v = localStorage.getItem(LS_N); if(v !== null) n = parseInt(v, 10); }catch(e){}
+    if(isNaN(n) || n < 0) n = 0;
+    if(n > 3) n = 3;
+    return n;
+  }
+  function frzSetN(n){
+    n = Math.max(0, Math.min(3, parseInt(n, 10) || 0));
+    try{ localStorage.setItem(LS_N, String(n)); }catch(e){}
+    applyFrz();
+    paintFrzBtn();
+    return n ? (n + '칸을 왼쪽에 고정합니다') : '고정을 껐습니다';
+  }
+
+  /* 실제 폭을 재서 왼쪽에 차례로 붙인다 */
+  function applyFrz(){
+    var tbl = document.querySelector('.lf-tv');
+    if(!tbl) return;
+    var n = frzN();
+    var head = tbl.querySelector('thead tr');
+    if(!head) return;
+    var ths = [].slice.call(head.children);
+
+    /* 먼저 전부 푼다 (칸 순서·폭이 바뀌었을 수 있다) */
+    var rows = [].slice.call(tbl.rows);
+    rows.forEach(function(tr){
+      [].slice.call(tr.cells).forEach(function(c){
+        if(c._frz){
+          c.style.position = ''; c.style.left = ''; c.style.zIndex = '';
+          c.style.boxShadow = ''; c.style.background = '';
+          c._frz = 0;
+        }
+      });
+    });
+    /* 「끔」이면 원래 CSS 한 칸 고정(.frz)까지 확실히 푼다 */
+    if(!n){ tbl.classList.remove('frz'); return; }
+    tbl.classList.add('frz');
+
+    var off = 0, offs = [];
+    for(var i = 0; i < n && i < ths.length - 1; i++){   /* 마지막 ⚙ 칸은 뺀다 */
+      offs.push(off);
+      off += ths[i].offsetWidth || 0;
+    }
+    var last = offs.length - 1;
+
+    rows.forEach(function(tr){
+      var isHead = (tr.parentNode && tr.parentNode.tagName === 'THEAD');
+      var isGrp  = /lf-grp/.test(tr.className || '');
+      /* 묶음 줄(날짜 머리)은 한 칸이 표 전체를 덮는다(colspan) — 붙이면 겹쳐 보인다 */
+      var c0 = tr.cells[0];
+      if(c0 && c0.colSpan > 1) return;
+      for(var i = 0; i < offs.length; i++){
+        var c = tr.cells[i]; if(!c) continue;
+        c.style.setProperty('position', 'sticky', 'important');
+        c.style.setProperty('left', offs[i] + 'px', 'important');
+        c.style.setProperty('z-index', isHead ? '6' : '3', 'important');
+        c.style.setProperty('background', isHead ? '#f4f8fd' : (isGrp ? '#eef5fd' : '#fff'), 'important');
+        if(i === last) c.style.setProperty('box-shadow', '2px 0 0 #e6eef7', 'important');
+        c._frz = 1;
+      }
+    });
+  }
+
+  /* 표 도구줄에 단추 하나 */
+  function paintFrzBtn(){
+    var anchor = document.getElementById('lfColwR');       /* ↔ 폭 초기화 — 표 보기에만 있다 */
+    var b = document.getElementById('wlFrzBtn');
+    if(!anchor){ if(b) b.remove(); return; }
+    if(!b){
+      b = document.createElement('button');
+      b.type = 'button';
+      b.id = 'wlFrzBtn';
+      b.className = anchor.className;
+      b.title = '옆으로 밀어도 왼쪽 칸이 그대로 있게 — 누를 때마다 1 → 2 → 3 → 끔';
+      b.addEventListener('click', function(){
+        var n = frzN();
+        frzSetN(n >= 3 ? 0 : n + 1);
+      });
+      anchor.insertAdjacentElement('afterend', b);
+    }
+    var n = frzN();
+    b.textContent = n ? ('📌 고정 ' + n + '칸') : '📌 고정 끔';
+  }
+
+  /* 표가 다시 그려질 때마다 따라간다 */
+  var t = null;
+  function soon(){ clearTimeout(t); t = setTimeout(function(){
+    try{ paintOld(); paintFrzBtn(); applyFrz(); }catch(e){ console.warn('[고정] 실패', e); }
+  }, 120); }
+
+  try{
+    new MutationObserver(soon).observe(document.body, { childList:true, subtree:true });
+  }catch(e){ setInterval(soon, 1500); }
+  window.addEventListener('resize', soon);
+
+  [0, 800, 2500, 6000].forEach(function(ms){ setTimeout(soon, ms); });
+
+  window.wlFreeze = {
+    set: frzSetN,
+    get: frzN,
+    now: applyFrz,
+    state: function(){
+      var tbl = document.querySelector('.lf-tv');
+      var names = [];
+      if(tbl){
+        var hs = tbl.querySelectorAll('thead th');
+        for(var i = 0; i < Math.min(4, hs.length); i++){
+          names.push(hs[i].textContent.replace(/[⋮▾▲▼⚙]/g, '').trim().slice(0, 8));
+        }
+      }
+      return { 고정칸수: frzN(), 표있음: !!tbl, 앞칸들: names,
+               쓰는법: "wlFreeze.set(2)  또는 표 도구줄 [📌 고정] 단추" };
+    }
+  };
+
+  console.log('[옛 창] 입구 ' + (oldShown() ? '보임' : '숨김') + ' — wlOldForm.on() 으로 되돌립니다');
+  console.log('[고정] 표 왼쪽 ' + frzN() + '칸 — 표 도구줄 [📌 고정] 단추 / wlFreeze.set(2)');
+})();
