@@ -19862,3 +19862,664 @@ async function githubUpload(token){
   };
   console.log('[나누기] v149 준비됨 — ' + (on()?'켜짐':'꺼짐') + ' / wlSplit.state() 로 지금 상태를 봅니다');
 })();
+
+/* ============================================================
+   📏 문서용 실측표 (wlDocStat)  v150-0830-1830
+
+   달님 : 「문서가 자꾸 밀리니, 앱이 스스로 세서 표로 뽑아줘」
+
+   앱이 자기 파일 3개를 직접 읽어서
+     ▸ 행수·용량        ▸ HTML 블록 지도(줄번호)
+     ▸ worklog.js 모듈 지도(줄번호)   ▸ 창구(window.wlXxx) 목록
+   를 세고, 구조설명서에 그대로 붙여넣을 수 있는 표를 만든다.
+
+   쓰는 법
+     wlDocStat()        → 콘솔에 표로 본다
+     wlDocStat.md()     → 붙여넣기용 글을 만들고 클립보드에 복사
+     wlDocStat.panel()  → 화면에 창으로 띄우고 [복사] 단추
+
+   ⚠ 파일을 읽기만 한다. 아무것도 고치지 않는다.
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var CACHE = null;
+
+  function ver(){ try{ return String(window.APP_VERSION || ''); }catch(e){ return ''; } }
+
+  /* 파일 3개의 실제 주소 — 화면이 쓰고 있는 것 그대로 (캐시를 타서 빠르다) */
+  function urls(){
+    var js = '', css = '', html = location.pathname || 'worklog.html';
+    try{
+      var t = document.querySelector('script[src*="worklog.js"]');
+      if(t) js = t.getAttribute('src');
+    }catch(e){}
+    try{
+      var l = document.getElementById('main-css') ||
+              document.querySelector('link[href*="worklog.css"]');
+      if(l) css = l.getAttribute('href');
+    }catch(e){}
+    return { html: html, js: js || 'worklog.js', css: css || 'worklog.css' };
+  }
+
+  function grab(u){
+    return fetch(u, { cache:'force-cache' })
+      .then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); })
+      .catch(function(){ return fetch(u).then(function(r){ return r.text(); }); });
+  }
+
+  function kb(n){ return Math.round(n/1024); }
+  function mb(n){ return Math.round(n/1024/1024*100)/100; }
+  /* 파일이 실제로 차지하는 바이트 — 한글은 한 글자가 3바이트라 .length 로 세면 작게 나온다 */
+  function bytes(t){ try{ return new Blob([t]).size; }catch(e){ return t.length; } }
+
+  /* 글자 위치 → 줄 번호 */
+  function lineIndex(txt){
+    var at = [0], i = 0;
+    while(true){ i = txt.indexOf('\n', i); if(i < 0) break; i++; at.push(i); }
+    return function(pos){
+      var lo = 0, hi = at.length - 1;
+      while(lo < hi){ var mid = (lo + hi + 1) >> 1; if(at[mid] <= pos) lo = mid; else hi = mid - 1; }
+      return lo + 1;
+    };
+  }
+
+  /* 배너 주석에서 이름 한 줄 뽑기 */
+  function bannerName(body){
+    var m = body.slice(0, 4000).match(/\/\*[\s\S]{0,600}?\*\//);
+    if(m){
+      var ls = m[0].replace(/^\/\*+|\*+\/$/g, '').split('\n');
+      for(var i = 0; i < ls.length; i++){
+        var s = ls[i].replace(/^[\s*]+/, '').replace(/[\s*]+$/, '');
+        if(!s) continue;
+        if(/^[=═─\-_]+$/.test(s)) continue;
+        if(s.length < 3) continue;
+        return s.slice(0, 70);
+      }
+    }
+    var c = body.slice(0, 1500).match(/\/\/\s*(.{4,70})/);
+    return c ? c[1].trim() : '';
+  }
+
+  /* ── HTML 안 블록 지도 ── */
+  function htmlBlocks(html){
+    var ln = lineIndex(html), out = [], re = /<(script|style)([^>]*)>/gi, m;
+    while((m = re.exec(html))){
+      var tag = m[1].toLowerCase(), attrs = m[2] || '';
+      if(/\bsrc\s*=/.test(attrs)) continue;                 /* 바깥 파일은 뺀다 */
+      var end = html.indexOf('</' + tag + '>', m.index + m[0].length);
+      if(end < 0) continue;
+      var body = html.slice(m.index + m[0].length, end);
+      out.push({
+        시작: ln(m.index), 끝: ln(end), 행수: ln(end) - ln(m.index),
+        종류: (tag === 'style' ? '스타일' : '기능'),
+        이름: bannerName(body)
+      });
+    }
+    return out;
+  }
+
+  /* ── worklog.js 모듈 지도 (배너로 나뉜 구역) ── */
+  function jsBlocks(js){
+    var lines = js.split('\n'), starts = [], i;
+    for(i = 0; i < lines.length; i++){
+      if(/^\/\*\s*[=═]{6,}/.test(lines[i])) starts.push(i);
+    }
+    var out = [];
+    for(i = 0; i < starts.length; i++){
+      var a = starts[i], b = (i + 1 < starts.length ? starts[i + 1] : lines.length);
+      var t = '';
+      for(var k = a + 1; k < Math.min(a + 6, lines.length); k++){
+        var s = lines[k].replace(/^[\s*]+/, '').replace(/[\s*]+$/, '');
+        if(s && !/^[=═─\-_]+$/.test(s)){ t = s; break; }
+      }
+      out.push({ 시작: a + 1, 끝: b, 행수: b - a, 이름: t.slice(0, 70) });
+    }
+    return out;
+  }
+
+  /* ── 밖으로 열어 둔 창구 ── */
+  function exports_(js){
+    var ln = lineIndex(js), out = [], re = /window\.(wl[A-Za-z0-9_]+)\s*=/g, m, seen = {};
+    while((m = re.exec(js))){
+      if(seen[m[1]]) continue;
+      seen[m[1]] = 1;
+      out.push({ 창구: m[1], 줄: ln(m.index) });
+    }
+    out.sort(function(a, b){ return a.줄 - b.줄; });
+    return out;
+  }
+
+  /* ── 중괄호 짝 (CSS 가 죽지 않았나) ── */
+  function braces(html, css){
+    var out = [], re = /<style([^>]*)>([\s\S]*?)<\/style>/gi, m, n = 0;
+    while((m = re.exec(html))){
+      n++;
+      var b = m[2];
+      var o = (b.match(/\{/g) || []).length, c = (b.match(/\}/g) || []).length;
+      if(!o && !c) continue;                       /* 빈 블록은 뺀다 */
+      out.push({ 곳: 'html style ' + n, 여는것: o, 닫는것: c, 상태: (o === c ? '✅' : '🔴 안 맞음') });
+    }
+    var o2 = (css.match(/\{/g) || []).length, c2 = (css.match(/\}/g) || []).length;
+    out.push({ 곳: 'worklog.css', 여는것: o2, 닫는것: c2, 상태: (o2 === c2 ? '✅' : '🔴 안 맞음') });
+    return out;
+  }
+
+  /* ── 다 모으기 ── */
+  function collect(){
+    var u = urls();
+    return Promise.all([grab(u.html), grab(u.js), grab(u.css)]).then(function(r){
+      var html = r[0], js = r[1], css = r[2];
+      var hb = htmlBlocks(html);
+      var inl = hb.filter(function(x){ return x.종류 === '기능'; }).length;
+      var sty = hb.filter(function(x){ return x.종류 === '스타일' && x.행수 > 1; }).length;
+      var L = function(s){ return s.split('\n').length; };
+      var Bh = bytes(html), Bj = bytes(js), Bc = bytes(css);
+      CACHE = {
+        버전: ver(),
+        잰때: (function(){ try{ return kstNow().toISOString().slice(0,16).replace('T',' '); }
+                          catch(e){ return new Date().toISOString().slice(0,16).replace('T',' '); } })(),
+        규모: [
+          { 파일:'worklog.html', 행수:L(html), 용량KB:kb(Bh), 비고:'인라인 기능 '+inl+'개 · 스타일 '+sty+'개' },
+          { 파일:'worklog.js',   행수:L(js),   용량KB:kb(Bj), 비고:'모듈 구역 '+jsBlocks(js).length+'개' },
+          { 파일:'worklog.css',  행수:L(css),  용량KB:kb(Bc), 비고:'' },
+          { 파일:'합계',         행수:L(html)+L(js)+L(css),
+            용량KB:kb(Bh+Bj+Bc),
+            비고:'약 '+mb(Bh+Bj+Bc)+'MB' }
+        ],
+        html구역: hb,
+        js구역: jsBlocks(js),
+        창구: exports_(js),
+        중괄호: braces(html, css)
+      };
+      return CACHE;
+    });
+  }
+
+  /* ── 붙여넣기용 글 ── */
+  function toMd(d){
+    var s = [];
+    s.push('<!-- ' + d.버전 + ' · ' + d.잰때 + ' 실측 (wlDocStat) -->');
+    s.push('');
+    s.push('## 1. 한눈에 보는 규모');
+    s.push('');
+    s.push('| 파일 | 행수 | 용량 | 비고 |');
+    s.push('|---|---|---|---|');
+    d.규모.forEach(function(r){
+      s.push('| ' + r.파일 + ' | ' + r.행수.toLocaleString() + '행 | ' + r.용량KB + 'KB | ' + r.비고 + ' |');
+    });
+    s.push('');
+    s.push('## 3-A. worklog.html 구역 지도');
+    s.push('');
+    s.push('| 줄 번호 | 크기 | 구역 이름 |');
+    s.push('|---|---|---|');
+    d.html구역.forEach(function(r){
+      if(r.행수 < 30) return;
+      s.push('| ' + r.시작 + '–' + r.끝 + ' | ' + r.행수.toLocaleString() +
+             ' | ' + (r.종류 === '스타일' ? '(스타일) ' : '') + r.이름 + ' |');
+    });
+    s.push('');
+    s.push('## 3-B. worklog.js 모듈 지도');
+    s.push('');
+    s.push('| 줄 번호 | 크기 | 모듈 |');
+    s.push('|---|---|---|');
+    d.js구역.forEach(function(r){
+      if(r.행수 < 30) return;
+      s.push('| ' + r.시작 + '–' + r.끝 + ' | ' + r.행수.toLocaleString() + ' | ' + r.이름 + ' |');
+    });
+    s.push('');
+    s.push('## 창구 (window.wlXxx) ' + d.창구.length + '개');
+    s.push('');
+    s.push(d.창구.map(function(r){ return r.창구 + '(' + r.줄 + ')'; }).join(' · '));
+    s.push('');
+    s.push('## 중괄호 짝');
+    s.push('');
+    s.push(d.중괄호.map(function(r){ return r.곳 + ' ' + r.여는것 + '/' + r.닫는것 + ' ' + r.상태; }).join(' · '));
+    return s.join('\n');
+  }
+
+  function copyText(t){
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        return navigator.clipboard.writeText(t).then(function(){ return true; }).catch(function(){ return false; });
+      }
+    }catch(e){}
+    return Promise.resolve(false);
+  }
+
+  /* ── 콘솔에 보기 ── */
+  function run(){
+    return collect().then(function(d){
+      console.log('%c📏 ' + d.버전 + ' 실측 (' + d.잰때 + ')', 'font-weight:bold;font-size:13px');
+      try{
+        console.table(d.규모);
+        console.table(d.html구역.filter(function(r){ return r.행수 >= 30; }));
+        console.table(d.js구역.filter(function(r){ return r.행수 >= 30; }));
+        console.table(d.중괄호);
+      }catch(e){ console.log(d); }
+      var bad = d.중괄호.filter(function(r){ return r.상태.indexOf('🔴') === 0; });
+      if(bad.length) console.warn('[실측] 🔴 중괄호 짝이 안 맞습니다 — 디자인이 죽었을 수 있어요', bad);
+      console.log('[실측] 창구 ' + d.창구.length + '개 · 붙여넣기용은 wlDocStat.md() / 창으로 보려면 wlDocStat.panel()');
+      return d;
+    });
+  }
+
+  /* ── 화면 창 (달님용) ── */
+  function panel(){
+    return collect().then(function(d){
+      var md = toMd(d);
+      var old = document.getElementById('wlDocStatOv');
+      if(old) old.remove();
+      var ov = document.createElement('div');
+      ov.id = 'wlDocStatOv';
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,24,32,.45);z-index:99999;' +
+        'display:flex;align-items:center;justify-content:center;padding:16px';
+      var bx = document.createElement('div');
+      bx.style.cssText = 'background:#fff;border-radius:16px;max-width:900px;width:100%;max-height:88vh;' +
+        'display:flex;flex-direction:column;box-shadow:0 18px 50px rgba(0,0,0,.28);overflow:hidden';
+      var hd = document.createElement('div');
+      hd.style.cssText = 'padding:16px 18px;border-bottom:1px solid #e8ecf2;display:flex;' +
+        'align-items:center;gap:10px;flex-wrap:wrap';
+      hd.innerHTML = '<b style="font-size:16px">📏 문서용 실측표</b>' +
+        '<span style="color:#7b8794;font-size:13px">' + d.버전 + ' · ' + d.잰때 + '</span>';
+      var sp = document.createElement('div'); sp.style.cssText = 'flex:1';
+      var bCopy = document.createElement('button');
+      bCopy.textContent = '📋 복사';
+      bCopy.style.cssText = 'border:none;background:#3f7cb8;color:#fff;border-radius:10px;' +
+        'padding:11px 18px;font-size:14px;font-family:inherit;cursor:pointer;min-height:44px';
+      var bClose = document.createElement('button');
+      bClose.textContent = '닫기';
+      bClose.style.cssText = 'border:1px solid #d7dee8;background:#f7f9fc;border-radius:10px;' +
+        'padding:11px 18px;font-size:14px;font-family:inherit;cursor:pointer;min-height:44px';
+      hd.appendChild(sp); hd.appendChild(bCopy); hd.appendChild(bClose);
+      var ta = document.createElement('textarea');
+      ta.value = md;
+      ta.readOnly = true;
+      ta.style.cssText = 'flex:1;border:none;outline:none;padding:16px 18px;font-size:13px;' +
+        'line-height:1.6;font-family:ui-monospace,Menlo,Consolas,monospace;resize:none;background:#fbfcfe';
+      bClose.addEventListener('click', function(){ ov.remove(); });
+      ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+      bCopy.addEventListener('click', function(){
+        copyText(md).then(function(ok){
+          if(!ok){ ta.select(); try{ document.execCommand('copy'); ok = true; }catch(e){} }
+          bCopy.textContent = ok ? '✅ 복사됨' : '⚠ 직접 선택해 주세요';
+          setTimeout(function(){ bCopy.textContent = '📋 복사'; }, 1800);
+        });
+      });
+      bx.appendChild(hd); bx.appendChild(ta); ov.appendChild(bx);
+      document.body.appendChild(ov);
+      return '창을 띄웠습니다';
+    });
+  }
+
+  var API = function(){ return run(); };
+  API.md = function(){
+    return collect().then(function(d){
+      var t = toMd(d);
+      console.log(t);
+      return copyText(t).then(function(ok){
+        console.log(ok ? '[실측] 클립보드에 복사했습니다 — 문서에 그대로 붙여넣으세요'
+                       : '[실측] 위 글을 직접 복사하세요 (wlDocStat.panel() 이면 복사 단추가 있습니다)');
+        return t;
+      });
+    });
+  };
+  API.panel = panel;
+  API.raw   = function(){ return CACHE; };
+
+  window.wlDocStat = API;
+})();
+
+/* ============================================================
+   🖼 사진을 기록 밖으로 — 축소 · Storage 이관 (wlPhoto)  v150-0830-1830
+
+   달님 : 「사진 자동 축소 + Storage 이관」
+
+   지금 무슨 일이 벌어지고 있나
+     사진이 기록 문서 안에 base64 글자로 통째 들어간다.
+     한 장이 200~600KB 이고, 파이어스토어 문서 한 건 상한이 1MB 라
+     사진 두세 장이면 기록 하나가 꽉 찬다. 목록을 열 때 사진까지 전부 딸려 온다.
+     (2026-08-28 연락처 앱이 같은 이유로 저장소 4.07MB 를 먹었다)
+
+   두 가지를 한다
+     ① 축소 — 이미 있는 compressImage 를 「Storage 기준」으로 다시 잡는다
+              (이관을 마치면 문서 크기 제한이 사라지므로 화질을 올릴 수 있다)
+     ② 이관 — 기록 안 base64 → Storage 에 올리고 주소만 남긴다
+
+   ⚠ 데이터를 옮기는 일이라 wlSplit 과 똑같이 네 걸음으로 나눈다.
+      복사(올리기)만 해 두면 원본이 그대로 있어 아무것도 잃지 않는다.
+
+     wlPhoto.state()   지금 사진이 몇 장 · 얼마나 무거운가
+     wlPhoto.test()    Storage 에 올릴 권한이 있나 (작은 파일 하나로 시험)
+     wlPhoto.copy()    base64 → Storage 업로드, 주소를 photosUrl 에 적어 둔다 (원본 그대로)
+     wlPhoto.check()   적어 둔 주소가 진짜로 열리는지 한 장씩 확인
+     wlPhoto.backup()  옮길 기록의 원본을 JSON 파일로 내려받기
+     wlPhoto.clean()   확인된 것만 photos ← photosUrl  (백업 뒤에만)
+
+   화면 창 : wlPhoto.panel()      화질 바꾸기 : wlPhoto.q('high')
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var SDK  = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js';
+  var BASE = 'worklog/photos/';
+  var LSQ  = 'wl_photo_q';
+
+  /* ── 거들기 ── */
+  function recs(){
+    try{ return (entries || []).filter(function(e){ return e && Array.isArray(e.photos) && e.photos.length; }); }
+    catch(e){ return []; }
+  }
+  function isUrl(s){ return typeof s === 'string' && /^https?:\/\//.test(s); }
+  function isB64(s){ return typeof s === 'string' && s.indexOf('data:image') === 0; }
+  function kb(n){ return Math.round(n/1024); }
+  function mb(n){ return Math.round(n/1024/1024*100)/100; }
+  function say(m){ console.log('[사진] ' + m); try{ if(typeof toast === 'function') toast('🖼 ' + m); }catch(e){} }
+  function rest(ms){ return new Promise(function(ok){ setTimeout(ok, ms); }); }
+
+  function ready(){
+    if(typeof db === 'undefined' || !db){ console.warn('[사진] 클라우드가 아직 준비되지 않았습니다'); return false; }
+    if(typeof online === 'undefined' || !online){ console.warn('[사진] 인터넷이 연결돼야 합니다'); return false; }
+    return true;
+  }
+
+  /* Storage 는 평소에 안 쓰므로, 필요할 때만 불러온다 (HTML 은 안 건드린다) */
+  var _st = null;
+  function storage(){
+    if(_st) return Promise.resolve(_st);
+    return new Promise(function(res){
+      function done(){
+        try{
+          if(window.firebase && firebase.storage){ _st = firebase.storage(); return res(_st); }
+        }catch(e){ console.warn('[사진] Storage 준비 실패', e); }
+        res(null);
+      }
+      try{
+        if(window.firebase && firebase.storage) return done();
+        var s = document.createElement('script');
+        s.src = SDK;
+        s.onload  = done;
+        s.onerror = function(){ console.warn('[사진] Storage 라이브러리를 못 불러왔습니다 (인터넷 확인)'); res(null); };
+        document.head.appendChild(s);
+      }catch(e){ console.warn('[사진] Storage 불러오기 실패', e); res(null); }
+    });
+  }
+
+  /* ── ① 지금 상태 ── */
+  function state(){
+    var rs = recs();
+    var nB = 0, nU = 0, bytes = 0, big = [];
+    rs.forEach(function(r){
+      var sz = 0;
+      r.photos.forEach(function(p){
+        if(isB64(p)){ nB++; sz += p.length; }
+        else if(isUrl(p)){ nU++; }
+      });
+      bytes += sz;
+      if(sz > 0) big.push({ id:r.id, 종류:r.kind, 날짜:r.date || '', 제목:String(r.title || '').slice(0,24), KB:kb(sz), 장수:r.photos.length });
+    });
+    big.sort(function(a,b){ return b.KB - a.KB; });
+    var pend = 0;
+    rs.forEach(function(r){ if(Array.isArray(r.photosUrl) && r.photosUrl.length) pend++; });
+    var out = {
+      사진있는기록: rs.length,
+      기록안에든사진: nB,
+      이미주소인사진: nU,
+      기록이먹는용량: mb(bytes) + 'MB',
+      주소적어둔기록: pend,
+      화질: qName(),
+      다음: nB ? 'wlPhoto.test() → wlPhoto.copy() → wlPhoto.check() → wlPhoto.backup() → wlPhoto.clean()'
+               : '옮길 것 없음 (사진이 전부 주소입니다)'
+    };
+    console.log('[사진]', out);
+    if(big.length){ try{ console.table(big.slice(0, 12)); }catch(e){} }
+    return out;
+  }
+
+  /* ── ② 올릴 권한이 있나 ── */
+  function test(){
+    return storage().then(function(st){
+      if(!st) return '❌ Storage 라이브러리를 못 불러왔습니다';
+      var p = BASE + '_test/' + Date.now() + '.txt';
+      var ref = st.ref(p);
+      return ref.putString('ok').then(function(){
+        return ref.getDownloadURL();
+      }).then(function(u){
+        return ref.delete().catch(function(){}).then(function(){
+          console.log('[사진] ✅ 올릴 수 있습니다 — wlPhoto.copy() 로 진행하세요');
+          return '✅ 올릴 수 있습니다';
+        });
+      }).catch(function(e){
+        console.error('[사진] ❌ 올리지 못했습니다 — 구글이 준 원문:', e && (e.code || e.message), e);
+        console.log('[사진] 파이어베이스 콘솔 → Storage → Rules 에서 쓰기 권한을 확인해야 합니다.');
+        return '❌ 올리지 못했습니다 (' + (e && e.code ? e.code : '원인은 위 오류 참고') + ')';
+      });
+    });
+  }
+
+  /* ── ③ 올리기 (원본은 그대로 둔다) ── */
+  async function copy(limit){
+    if(!ready()) return '준비 안 됨';
+    var st = await storage();
+    if(!st) return 'Storage 라이브러리를 못 불러왔습니다';
+
+    var todo = recs().filter(function(r){
+      if(Array.isArray(r.photosUrl) && r.photosUrl.length === r.photos.length) return false;  /* 이미 적어 둠 */
+      return r.photos.some(isB64);
+    });
+    if(limit) todo = todo.slice(0, limit);
+    if(!todo.length) return '올릴 것이 없습니다';
+
+    console.log('[사진] 올릴 기록 ' + todo.length + '건 — 원본은 지우지 않습니다');
+    var okN = 0, failN = 0, upN = 0;
+
+    for(var i = 0; i < todo.length; i++){
+      var r = todo[i];
+      var urls = [], bad = 0;
+      for(var j = 0; j < r.photos.length; j++){
+        var p = r.photos[j];
+        if(isUrl(p)){ urls.push(p); continue; }
+        if(!isB64(p)){ urls.push(p); continue; }
+        try{
+          var ext = (p.slice(0, 30).indexOf('image/png') > 0) ? 'png' : 'jpg';
+          var ref = st.ref(BASE + r.id + '/' + j + '_' + Date.now() + '.' + ext);
+          await ref.putString(p, 'data_url');
+          urls.push(await ref.getDownloadURL());
+          upN++;
+        }catch(e){
+          bad++;
+          console.warn('[사진] ' + r.id + ' 의 ' + (j+1) + '번째 올리기 실패', e && (e.code || e.message));
+          break;                                   /* 한 장이라도 실패하면 이 기록은 건너뛴다 */
+        }
+      }
+      if(bad || urls.length !== r.photos.length){ failN++; }
+      else{
+        try{ updateRecord(r.id, { photosUrl: urls, photoMigAt: Date.now() }); okN++; }
+        catch(e){ failN++; console.warn('[사진] ' + r.id + ' 주소 적기 실패', e); }
+      }
+      if(i % 5 === 4) await rest(500);             /* 몰아치지 않게 쉬어 간다 */
+    }
+    var msg = '올리기 끝 — 기록 ' + okN + '건 (사진 ' + upN + '장) · 실패 ' + failN + '건 / 원본은 그대로';
+    say(msg);
+    console.log('[사진] 다음은 wlPhoto.check() 로 주소가 진짜 열리는지 확인하세요');
+    return msg;
+  }
+
+  /* ── ④ 주소가 진짜 열리나 ── */
+  function loadOne(u){
+    return new Promise(function(res){
+      var im = new Image(), done = false;
+      var t = setTimeout(function(){ if(!done){ done = true; res(false); } }, 12000);
+      im.onload  = function(){ if(!done){ done = true; clearTimeout(t); res(true);  } };
+      im.onerror = function(){ if(!done){ done = true; clearTimeout(t); res(false); } };
+      im.src = u;
+    });
+  }
+  async function check(){
+    var rs = recs().filter(function(r){ return Array.isArray(r.photosUrl) && r.photosUrl.length; });
+    if(!rs.length) return '확인할 것이 없습니다 — 먼저 wlPhoto.copy()';
+    var rows = [], okAll = 0, ng = 0;
+    for(var i = 0; i < rs.length; i++){
+      var r = rs[i], good = 0;
+      for(var j = 0; j < r.photosUrl.length; j++){
+        var u = r.photosUrl[j];
+        if(isUrl(u) ? await loadOne(u) : false) good++;
+      }
+      var ok = (good === r.photosUrl.length && r.photosUrl.length === r.photos.length);
+      if(ok) okAll++; else ng++;
+      rows.push({ id:r.id, 제목:String(r.title||'').slice(0,20),
+                  원본:r.photos.length, 주소:r.photosUrl.length, 열림:good,
+                  상태: ok ? '✅' : '⚠ 다시 올리기' });
+      if(i % 8 === 7) await rest(200);
+    }
+    try{ console.table(rows); }catch(e){ console.log(rows); }
+    console.log(ng ? '[사진] ⚠ ' + ng + '건이 아직 안 됩니다 — wlPhoto.copy() 를 다시 하세요'
+                   : '[사진] ✅ 전부 확인 — wlPhoto.backup() 뒤에 wlPhoto.clean() 하세요');
+    _lastCheck = { at: Date.now(), ok: okAll, ng: ng, ids: rows.filter(function(x){ return x.상태 === '✅'; }).map(function(x){ return x.id; }) };
+    return rows;
+  }
+  var _lastCheck = null;
+
+  /* ── ⑤ 원본 내려받기 (지우기 전 안전망) ── */
+  function backup(){
+    var rs = recs().filter(function(r){ return Array.isArray(r.photosUrl) && r.photosUrl.length && r.photos.some(isB64); });
+    if(!rs.length) return '백업할 것이 없습니다';
+    var data = rs.map(function(r){
+      return { id:r.id, kind:r.kind, date:r.date, title:r.title, photos:r.photos, photosUrl:r.photosUrl };
+    });
+    var txt = JSON.stringify({ 만든때: new Date().toISOString(), 버전: String(window.APP_VERSION||''), 기록: data });
+    var size = txt.length;
+    try{
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([txt], { type:'application/json' }));
+      a.download = '사진원본백업_' + new Date().toISOString().slice(0,10) + '.json';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    }catch(e){ console.error('[사진] 백업 파일 만들기 실패', e); return '백업 실패'; }
+    _backupAt = Date.now();
+    var msg = '원본 백업 내려받음 — 기록 ' + rs.length + '건 · ' + mb(size) + 'MB';
+    say(msg);
+    return msg;
+  }
+  var _backupAt = 0;
+
+  /* ── ⑥ 원본 비우기 (확인·백업이 끝난 것만) ── */
+  async function clean(force){
+    if(!ready()) return '준비 안 됨';
+    if(!_lastCheck || (Date.now() - _lastCheck.at) > 30*60*1000){
+      console.warn('[사진] 먼저 wlPhoto.check() 로 확인하세요 (30분 안에 한 것만 인정합니다)');
+      return '먼저 wlPhoto.check()';
+    }
+    if(!_backupAt && !force){
+      console.warn('[사진] 먼저 wlPhoto.backup() 으로 원본을 내려받으세요');
+      return '먼저 wlPhoto.backup()';
+    }
+    var okIds = {}; (_lastCheck.ids || []).forEach(function(id){ okIds[id] = 1; });
+    var rs = recs().filter(function(r){ return okIds[r.id] && r.photos.some(isB64); });
+    if(!rs.length) return '비울 것이 없습니다';
+
+    var ask = (window.wlAsk && window.wlAsk.ok)
+      ? await window.wlAsk.ok('기록 안의 사진 원본을 비울까요?',
+          { sub: rs.length + '건 · 사진은 Storage 에 있고 주소로 그대로 보입니다 · 되돌릴 수 없습니다',
+            ok:'비우기', danger:1 })
+      : confirm('기록 안의 사진 원본을 비울까요? 되돌릴 수 없습니다.');
+    if(!ask) return '그만두었습니다';
+
+    var done = 0, fail = 0, freed = 0;
+    for(var i = 0; i < rs.length; i++){
+      var r = rs[i];
+      var was = r.photos.reduce(function(s,p){ return s + (isB64(p) ? p.length : 0); }, 0);
+      try{
+        updateRecord(r.id, { photos: r.photosUrl.slice(), photosUrl: [], photoMigAt: Date.now() });
+        done++; freed += was;
+      }catch(e){ fail++; console.warn('[사진] ' + r.id + ' 비우기 실패', e); }
+      if(i % 10 === 9) await rest(400);
+    }
+    var msg = '원본 비움 — ' + done + '건 · 줄어든 용량 ' + mb(freed) + 'MB · 실패 ' + fail + '건';
+    say(msg);
+    return msg;
+  }
+
+  /* ── 화질 ── */
+  var QN = { low:'표준 (많이 담기)', mid:'선명 (권장)', high:'최고 (글씨까지)' };
+  function qName(){ try{ return QN[localStorage.getItem(LSQ) || 'mid'] || QN.mid; }catch(e){ return QN.mid; } }
+  function q(k){
+    if(!k) return { 지금: qName(), 고를수있는것: ['low','mid','high'],
+                    쓰는법: "wlPhoto.q('high')", 참고:'Storage 이관을 마치면 high 를 써도 됩니다' };
+    if(!QN[k]) return "low · mid · high 중에 고르세요";
+    try{ localStorage.setItem(LSQ, k); }catch(e){}
+    say('사진 화질 — ' + QN[k]);
+    return QN[k];
+  }
+
+  /* ── 화면 창 ── */
+  function panel(){
+    var old = document.getElementById('wlPhotoOv'); if(old) old.remove();
+    var s = state();
+    var ov = document.createElement('div');
+    ov.id = 'wlPhotoOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,24,32,.45);z-index:99999;' +
+      'display:flex;align-items:center;justify-content:center;padding:16px';
+    var bx = document.createElement('div');
+    bx.style.cssText = 'background:#fff;border-radius:16px;max-width:620px;width:100%;max-height:88vh;' +
+      'overflow:auto;box-shadow:0 18px 50px rgba(0,0,0,.28);padding:20px';
+    var rows = [
+      ['사진 있는 기록', s.사진있는기록 + '건'],
+      ['기록 안에 든 사진', s.기록안에든사진 + '장'],
+      ['이미 주소인 사진', s.이미주소인사진 + '장'],
+      ['기록이 먹는 용량', s.기록이먹는용량],
+      ['화질', s.화질]
+    ];
+    bx.innerHTML =
+      '<div style="font-size:17px;font-weight:700;margin-bottom:4px">🖼 사진을 기록 밖으로</div>' +
+      '<div style="color:#7b8794;font-size:13px;margin-bottom:14px">아래 순서대로 하나씩 누르세요. ' +
+      '3번까지는 아무것도 지우지 않습니다.</div>' +
+      '<div style="background:#f7f9fc;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:14px">' +
+      rows.map(function(r){
+        return '<div style="display:flex;justify-content:space-between;padding:4px 0">' +
+               '<span style="color:#5b6672">' + r[0] + '</span><b>' + r[1] + '</b></div>';
+      }).join('') + '</div>' +
+      '<div id="wlPhotoBtns"></div>' +
+      '<div id="wlPhotoLog" style="margin-top:14px;font-size:13px;color:#3f7cb8;min-height:20px"></div>';
+    var steps = [
+      ['① 올릴 수 있나 확인', test,   '#eef4fb'],
+      ['② Storage 에 올리기 (안 지움)', function(){ return copy(); }, '#eef4fb'],
+      ['③ 주소가 열리는지 확인', check, '#eef4fb'],
+      ['④ 원본 백업 내려받기', function(){ return Promise.resolve(backup()); }, '#fff7e6'],
+      ['⑤ 기록 안 원본 비우기', function(){ return clean(); }, '#fdeeee']
+    ];
+    ov.appendChild(bx); document.body.appendChild(ov);
+    var host = bx.querySelector('#wlPhotoBtns'), log = bx.querySelector('#wlPhotoLog');
+    steps.forEach(function(st){
+      var b = document.createElement('button');
+      b.textContent = st[0];
+      b.style.cssText = 'display:block;width:100%;margin-bottom:8px;border:1px solid #d7dee8;' +
+        'background:' + st[2] + ';border-radius:12px;padding:14px 16px;font-size:15px;' +
+        'font-family:inherit;cursor:pointer;text-align:left;min-height:48px';
+      b.addEventListener('click', function(){
+        b.disabled = true; log.textContent = st[0] + ' 하는 중…';
+        Promise.resolve(st[1]()).then(function(r){
+          log.textContent = (typeof r === 'string') ? r : '끝났습니다 — 콘솔에 표가 있어요';
+          b.disabled = false;
+        }).catch(function(e){
+          log.textContent = '실패: ' + (e && e.message || e); b.disabled = false;
+        });
+      });
+      host.appendChild(b);
+    });
+    var c = document.createElement('button');
+    c.textContent = '닫기';
+    c.style.cssText = 'display:block;width:100%;margin-top:8px;border:none;background:#eef1f5;' +
+      'border-radius:12px;padding:13px;font-size:14px;font-family:inherit;cursor:pointer;min-height:44px';
+    c.addEventListener('click', function(){ ov.remove(); });
+    host.appendChild(c);
+    ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+    return '창을 띄웠습니다';
+  }
+
+  window.wlPhoto = {
+    state: state, test: test, copy: copy, check: check,
+    backup: backup, clean: clean, q: q, panel: panel
+  };
+  console.log('[사진] v150 준비됨 — wlPhoto.panel() 또는 wlPhoto.state()');
+})();
