@@ -1442,3 +1442,23 @@ select.lf-ie.qp-hide{ display:none !important }
 /* 💰 데이터 탭 지출 월별 합계 (wlExpStats v149) */
 .wl-expstats{ margin:10px 0 4px }
 .wl-expstats:empty{ display:none }
+
+/* ═══════════════════════════════════════════════════════════════
+   📌 표 머릿줄 세로 고정 (v155-0830-2050)
+
+   달님 : 「사진 보면 제목줄이 고정 안 되잖아」
+   증상 — 표(☰ 목록)를 아래로 내리면 「제목·상태·층·분야」 칸 이름 줄이
+          위로 사라지고, 왼쪽 날짜 칸만 덩그러니 남는다.
+   원인 — 가로 고정(.lf-tv.frz :first-child)만 있었고
+          **세로 고정(thead sticky top)은 아예 없었다.**
+   ⚠ HTML 안 style 블록이 이 파일보다 뒤에 오므로 !important 로 눌러야 한다.
+   ═══════════════════════════════════════════════════════════════ */
+.lf-tvwrap .lf-tv thead th{
+  position:sticky !important;
+  top:0 !important;
+  z-index:4 !important;
+  background:#f4f8fd !important;
+  box-shadow:0 1px 0 #e2ebf5;
+}
+/* 왼쪽 고정 칸의 머리는 가로·세로 둘 다 붙으므로 제일 위에 와야 한다 */
+.lf-tvwrap .lf-tv.frz thead th:first-child{ z-index:7 !important }
