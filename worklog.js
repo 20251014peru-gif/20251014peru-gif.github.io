@@ -18040,6 +18040,16 @@ async function githubUpload(token){
         if(h.style && h.style.display === 'none') return false;
         return /하위\s*항목|파일\s*[·ㆍ]\s*폴더/.test(h.textContent || '');
       });
+      /* v134 — 페이지가 이미 좌·우로 나뉘어 있으면 오른쪽 칸을 또 반으로 쪼개지 않는다.
+            그러면 하위 항목·파일 링크가 너무 좁아진다. */
+      if(typeof window.wlIsTwoCol === 'function' && window.wlIsTwoCol()){
+        var w0 = page.querySelector('.pg-fold2');
+        if(w0 && w0.children.length){
+          while(w0.firstChild) w0.parentNode.insertBefore(w0.firstChild, w0);
+          w0.remove();
+        }
+        return;
+      }
       if(heads.length < 2){                       /* 한쪽만 있으면 나눌 것이 없다 */
         var solo = page.querySelector('.pg-fold2');
         if(solo && solo.children.length){
@@ -18133,4 +18143,175 @@ async function githubUpload(token){
     off: function(){ setOn(0); if(window.wlAfterPaint) window.wlAfterPaint(); return '예전처럼 늘 펼쳐 둡니다'; }
   };
   console.log('[영역 접기] v132 준비됨 — 🧷 하위 항목 · 📎 파일 링크는 제목을 누르면 펼쳐집니다');
+})();
+
+
+/* ============================================================
+   ▥ 페이지를 2열로 (wlPage2)  v134-0830-1010
+
+   달님 : 「페이지는 2열로 나오게 만들자.
+           작성하면서 본문도 같이 보면서 데이터 넣고 보고 수정하게」
+
+   왼쪽 = 속성(칸들) · 오른쪽 = 본문 · 자재 · 하위 항목 · 파일 링크 · 사진
+   ▸ 뱃지와 제목은 위에 그대로 (전체 폭)
+   ▸ 화면이 좁으면(1180px 미만) CSS 가 알아서 1열로 돌린다
+   ▸ 속성 격자는 원래 「폭에 맞춰 2~4열」이라, 절반이 되면 저절로 2열이 된다
+
+   ⚠ 화면을 다시 그릴 때마다 겹겹이 싸지 않도록, 이미 나뉘어 있으면 손대지 않는다.
+   되돌리기 : wlPage2.off()   또는 진단 탭 「▥ 페이지 2열」
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS = 'wl_page2';
+
+  function isOn(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function setOn(v){
+    try{ localStorage.setItem(LS, v?'1':'0'); }catch(e){}
+    paintBtn();
+    if(typeof window.wlGoPage === 'function'){
+      try{
+        var m = String(location.hash||'').match(/^#lp=([^&]+)/);
+        if(m) window.wlGoPage(decodeURIComponent(m[1]));       /* 통째로 다시 그린다 */
+      }catch(e){}
+    }
+    if(typeof toast === 'function') toast(v ? '▥ 페이지를 2열로 봅니다' : '▤ 페이지를 한 줄로 봅니다');
+  }
+
+  /* 이 페이지가 이미 나뉘어 있나 */
+  window.wlIsTwoCol = function(){
+    try{ return !!document.querySelector('.lf-page .pg-2col'); }catch(e){ return false; }
+  };
+
+  function split(){
+    var body = document.querySelector('.lf-page .pg-body');
+    if(!body) return;
+
+    var have = body.querySelector(':scope > .pg-2col');
+
+    if(!isOn()){                                   /* 꺼져 있으면 원래대로 돌려 놓는다 */
+      if(have){
+        var L = have.querySelector('.pg-2l'), R = have.querySelector('.pg-2r');
+        [L, R].forEach(function(c){
+          if(!c) return;
+          while(c.firstChild) body.insertBefore(c.firstChild, have);
+        });
+        have.remove();
+      }
+      try{ var pg0 = body.closest('.lf-page'); if(pg0) pg0.classList.remove('is-2col'); }catch(e){}
+      return;
+    }
+    if(have){
+      /* v134 — 「＋ 영역」 칩줄은 속성과 한 몸이다. 나중에 만들어져 오른쪽에
+            섞여 들어갔으면 왼쪽 끝으로 돌려 놓는다. */
+      try{
+        var bar = have.querySelector('.pg-2r > #pgSecBar');
+        var lc  = have.querySelector('.pg-2l');
+        if(bar && lc) lc.appendChild(bar);
+      }catch(e){ console.warn('[페이지 2열] 칩줄 자리 되돌리기 실패', e); }
+      return;                                      /* 이미 나뉘어 있으면 그대로 */
+    }
+
+    var props = body.querySelector(':scope > .pg-props');
+    if(!props) return;                             /* 속성이 없으면 나눌 것이 없다 */
+
+    /* 속성 격자와 그 바로 밑 「＋ 영역」 칩줄까지가 왼쪽 */
+    var left = [props];
+    var n = props.nextElementSibling;
+    if(n && n.id === 'pgSecBar'){ left.push(n); n = n.nextElementSibling; }
+
+    var right = [];
+    while(n){ right.push(n); n = n.nextElementSibling; }
+    if(!right.length) return;                      /* 오른쪽에 놓을 것이 없으면 굳이 나누지 않는다 */
+
+    /* v134 — 좁은 화면에서는 나누지 않는다. 나눠 봐야 양쪽 다 답답해진다. */
+    try{ if((window.innerWidth || 0) < 1200) return; }catch(e){}
+
+    var wrap = document.createElement('div');
+    wrap.className = 'pg-2col';
+    body.insertBefore(wrap, props);
+    /* 2열일 때만 페이지를 넓힌다 — 평소 읽기 폭(860px)은 그대로 둔다 */
+    try{ var pgEl = body.closest('.lf-page'); if(pgEl) pgEl.classList.add('is-2col'); }catch(e){}
+
+    var L2 = document.createElement('div'); L2.className = 'pg-2l';
+    var R2 = document.createElement('div'); R2.className = 'pg-2r';
+    wrap.appendChild(L2); wrap.appendChild(R2);
+    left.forEach(function(el){ L2.appendChild(el); });
+    right.forEach(function(el){ R2.appendChild(el); });
+
+    /* v134 — 오른쪽 맨 위는 「본문」이다.
+          달님 : 「작성하면서 본문도 같이 보면서 데이터 넣고 보고 수정하게」
+          본문 제목 뒤에 오는 것들(서식줄·글상자·한 줄 정리·사진)은 본문에 딸린
+          것이므로 통째로 앞으로 옮긴다. */
+    try{
+      var bodySec = null;
+      [].forEach.call(R2.children, function(el){
+        if(bodySec) return;
+        if(el.classList && el.classList.contains('pg-sec') && /본문/.test(el.textContent || '')) bodySec = el;
+      });
+      if(bodySec){
+        var move = [], hit = false;
+        [].slice.call(R2.children).forEach(function(el){
+          if(el === bodySec) hit = true;
+          if(hit) move.push(el);
+        });
+        move.reverse().forEach(function(el){ R2.insertBefore(el, R2.firstChild); });
+      }
+    }catch(e){ console.warn('[페이지 2열] 본문을 위로 올리지 못했어요', e); }
+  }
+
+  function run(){
+    try{ split(); }
+    catch(e){ console.warn('[페이지 2열] 나누기 실패 — 한 줄로 둡니다', e); }
+  }
+
+  /* 큰 틀을 먼저 만들고, 나머지 모듈이 그 안에서 자리를 잡게 한다 */
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:5, n:'페이지 2열', f:run });
+
+  /* ── 진단 탭 스위치 ── */
+  function paintBtn(){
+    var a = document.getElementById('pg2On'), b = document.getElementById('pg2Off');
+    var on = isOn();
+    if(a) a.className = 'btn btn-sm ' + (on ? 'btn-primary' : 'btn-ghost');
+    if(b) b.className = 'btn btn-sm ' + (!on ? 'btn-primary' : 'btn-ghost');
+    var t = document.getElementById('pg2Now');
+    if(t) t.textContent = '지금: ' + (on ? '2열로 봅니다' : '한 줄로 봅니다');
+  }
+  function panel(){
+    var anchor = document.getElementById('tabOneNow');
+    if(!anchor) return;
+    var host = anchor.parentNode && anchor.parentNode.parentNode;
+    if(!host || document.getElementById('pg2Row')) return;
+
+    var h = document.createElement('div');
+    h.className = 'sec-head'; h.textContent = '▥ 페이지 2열';
+    var d = document.createElement('div');
+    d.style.cssText = 'font-size:12.5px;color:#7a92a8;margin-bottom:6px';
+    d.textContent = '켜면 왼쪽에 칸들, 오른쪽에 본문·자재·하위 항목이 나란히 놓입니다. '
+                  + '적으면서 본문을 같이 볼 수 있습니다. 화면이 좁으면 저절로 한 줄이 됩니다.';
+    var row = document.createElement('div');
+    row.className = 'btn-row'; row.id = 'pg2Row'; row.style.marginTop = '0';
+    row.innerHTML = '<button class="btn btn-sm" id="pg2On"  style="min-height:44px">▥ 2열로</button>'
+                  + '<button class="btn btn-sm" id="pg2Off" style="min-height:44px">▤ 한 줄로</button>'
+                  + '<span id="pg2Now" style="font-size:12.5px;color:#7a92a8;align-self:center;margin-left:6px"></span>';
+
+    var after = anchor.parentNode;
+    host.insertBefore(h,   after.nextSibling);
+    host.insertBefore(d,   h.nextSibling);
+    host.insertBefore(row, d.nextSibling);
+
+    document.getElementById('pg2On').addEventListener('click',  function(){ setOn(true);  });
+    document.getElementById('pg2Off').addEventListener('click', function(){ setOn(false); });
+    paintBtn();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', panel);
+  else panel();
+  setTimeout(panel, 1800);
+  setTimeout(panel, 4200);
+
+  window.wlPage2 = {
+    on:  function(){ setOn(true);  return '페이지를 2열로 봅니다'; },
+    off: function(){ setOn(false); return '페이지를 한 줄로 봅니다'; }
+  };
+  console.log('[페이지 2열] v134 준비됨 — ' + (isOn()?'켜짐':'꺼짐') + ' (진단 탭 「▥ 페이지 2열」)');
 })();

@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v133-0830-0942";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v134-0830-1002";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3266,7 +3266,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=133-20260830t0942"></script>
+<script src="worklog.js?v=134-20260830t1002"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -29136,7 +29136,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         if(String(e.workVendor||e.vendor||'').trim() !== nm) return false;
         return String(e.workMemo||'').trim().length > 0;
       }).sort(function(a,b){ return String(b.date||'').localeCompare(String(a.date||'')); })[0];
-      return hit ? String(hit.workMemo).trim() : '';
+      if(!hit) return '';
+      /* v134 — 어디서 가져온 값인지 알 수 있게 날짜를 함께 돌려준다 */
+      return { t:String(hit.workMemo).trim(), d:String(hit.date||'') };
     }catch(e){ console.warn('[관련처] 예전 업체 메모 찾기 실패', e); return ''; }
   }
 
@@ -29146,7 +29148,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     try{
       if(map && map.memo && !String(c.memo||'').trim()){
         var pm = pastMemo(c.name);
-        if(pm){ c = Object.assign({}, c, { memo: pm }); }
+        if(pm && pm.t){
+          c = Object.assign({}, c, { memo: pm.t });
+          if(typeof toast === 'function')
+            toast('📝 업체 메모를 ' + (pm.d || '예전') + ' 기록에서 가져왔어요 — 틀리면 지우세요');
+        }
       }
     }catch(e){ console.warn('[관련처] 업체 메모 채우기 실패', e); }
     inp.value = c.name;

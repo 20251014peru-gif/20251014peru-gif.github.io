@@ -1205,3 +1205,25 @@ select.lf-ie.qp-hide{ display:none !important }
 @media (max-width:820px){
   .pg-fold2{ grid-template-columns:1fr; gap:0 }
 }
+
+/* ▥ 페이지 2열 (wlPage2 v134) */
+/* ⚠ .pg-body > * 에 걸린 읽기 폭 860px 이 2열 상자를 눌렀다 — 여기만 푼다 */
+.pg-body > .pg-2col{ max-width:none !important }
+.lf-page.is-2col .pg-body{ max-width:1560px; padding:26px 26px 90px }
+.lf-page-ov.as-modal > .lf-page.is-2col{ max-width:1560px }
+.pg-2col{ display:grid; grid-template-columns:minmax(0,1.28fr) minmax(0,1fr); gap:0 28px; align-items:start }
+/* 왼쪽이 절반이 되어도 칸이 2열로 서게 — 원래 기준(330px)은 너무 넓어 1열로 무너졌다 */
+.pg-2l .pg-props{ grid-template-columns:repeat(auto-fill, minmax(296px, 1fr)); gap:2px 16px }
+.pg-2l .pg-prow .pg-pk{ flex:0 0 118px }
+.pg-2l .pg-prow.wide .pg-pk{ flex:0 0 118px !important }
+.pg-2l, .pg-2r{ min-width:0 }
+.pg-2l > *, .pg-2r > *{ max-width:100% }
+.pg-2r{ padding-left:26px; border-left:1.5px solid #eef3f9 }
+.pg-2r > .pg-div:first-child{ display:none }        /* 칸이 나뉘면 맨 위 구분선은 군더더기 */
+.pg-2l > .pg-props{ margin-top:14px }
+.pg-2r > .pg-sec:first-child{ margin-top:16px }
+@media (max-width:1180px){
+  .pg-2col{ grid-template-columns:1fr; gap:0 }
+  .pg-2r{ padding-left:0; border-left:none }
+  .pg-2r > .pg-div:first-child{ display:block }
+}
