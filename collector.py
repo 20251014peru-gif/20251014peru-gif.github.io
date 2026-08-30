@@ -74,6 +74,7 @@ FOREIGN_PER_KW = 5
 
 # 본문 최소 길이(이보다 짧으면 추출 실패로 간주 → 요약만 사용)
 MIN_BODY_LEN = 200
+GOOGLE_FIX_MAX = 80        # 한 번 수집에서 네이버로 다시 찾아볼 구글 기사 최대 건수
 
 HEADERS = {
     "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -248,55 +249,61 @@ def fetch_google_rss(keyword: str, lang="ko", region="KR", foreign=False) -> lis
     return out
 
 
-_GNEWS_PAT = [
-    re.compile(r'data-n-au="(https?://[^"]+)"'),
-    re.compile(r'<link\s+rel="canonical"\s+href="(https?://(?!news\.google)[^"]+)"'),
-    re.compile(r'jsdata="[^"]*?;(https?://(?!news\.google)[^;"\s]+)'),
-    re.compile(r'<a[^>]+href="(https?://(?!news\.google|policies\.google|support\.google|accounts\.google)[^"]+)"[^>]*>\s*<'),
-]
+def naver_search_one(title: str):
+    """제목으로 네이버 뉴스를 찾아 (언론사 원문주소, 네이버가 준 제목) 을 돌려준다.
 
-def resolve_google(url: str) -> str:
-    """구글 뉴스 RSS 링크(news.google.com/rss/articles/...)를 언론사 실제 주소로 바꾼다.
-
-    구글 링크는 본문이 없는 안내 페이지라서, 그대로 두면 본문 추출이 항상 실패한다
-    (2026-08-30 실측: 구글 155건 중 본문 300자 이상은 2건뿐).
-    실패하면 원래 주소를 그대로 돌려주므로 이 함수 때문에 수집이 망가지지는 않는다.
+    구글 뉴스 RSS 링크(news.google.com/rss/articles/...)는 본문이 없는 안내 페이지다.
+    2026-08-30 에 구글의 주소 해석 방식(batchexecute)을 세 가지로 시험했으나 모두
+    거부당했다(응답 코드 3). 그래서 '같은 기사를 네이버에서 찾는' 방식으로 바꿨다.
+    네이버는 본문 추출 성공률이 92% 라 찾기만 하면 본문이 확보된다.
     """
-    if not url or "news.google.com" not in url:
-        return url
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=8, allow_redirects=True)
-        if "news.google.com" not in (r.url or ""):
-            return r.url                      # 리다이렉트로 이미 언론사에 도착
-        html = r.text or ""
-        for pat in _GNEWS_PAT:
-            m = pat.search(html)
-            if m:
-                return m.group(1)
-    except Exception:
-        pass
-    return url
+    if not (NAVER_ID and NAVER_SECRET) or not title:
+        return None, None
+    q = re.sub(r"\s+-\s+[^-]{1,24}$", "", title)       # 끝의 ' - 언론사' 떼기
+    q = re.sub(r"\[[^\]]*\]", " ", q).strip()          # [속보] 같은 머리표 떼기
+    if len(q) < 6:
+        return None, None
+    params = {"query": q[:100], "display": 5, "sort": "sim"}
+    attempts = [
+        ("https://naverapihub.apigw.ntruss.com/search/v1/news",
+         {"X-NCP-APIGW-API-KEY-ID": NAVER_ID, "X-NCP-APIGW-API-KEY": NAVER_SECRET}),
+        ("https://openapi.naver.com/v1/search/news.json",
+         {"X-Naver-Client-Id": NAVER_ID, "X-Naver-Client-Secret": NAVER_SECRET}),
+    ]
+    want = norm_title(q)
+    for url, h in attempts:
+        try:
+            r = requests.get(url, params=params, headers=h, timeout=8)
+            if r.status_code != 200:
+                continue
+            for it in r.json().get("items", []):
+                cand = strip_tags(it.get("title", ""))
+                # 제목이 충분히 같아야 같은 기사로 본다 (엉뚱한 기사 붙는 것 방지)
+                if difflib.SequenceMatcher(None, want, norm_title(cand)).ratio() >= 0.78:
+                    link = it.get("originallink") or it.get("link", "")
+                    if link and "news.google.com" not in link:
+                        return link, cand
+            return None, None
+        except Exception:
+            continue
+    return None, None
 
 
 def extract_body(url: str):
     """원문 페이지에서 본문 추출. (본문, 실제주소) 를 돌려준다.
-
-    구글 뉴스 링크는 먼저 언론사 주소로 바꾼 뒤 추출한다.
-    requests 타임아웃(8초)만 사용 → 무한대기 방지.
-    """
+    requests 타임아웃(8초)만 사용 → 무한대기 방지."""
     if not url:
         return "", url
-    real = resolve_google(url)
     try:
-        r = requests.get(real, headers=HEADERS, timeout=8)
+        r = requests.get(url, headers=HEADERS, timeout=8)
         body = trafilatura.extract(
             r.text or "", include_comments=False, include_tables=False, favor_recall=True
         )
         if body and len(body) >= MIN_BODY_LEN:
-            return body.strip(), real
+            return body.strip(), url
     except Exception:
         pass
-    return "", real
+    return "", url
 
 
 def dedupe(items: list) -> list:
@@ -485,12 +492,35 @@ def main():
                 print(f"[1/2] 본문 추출 {done}/{total} ({round(done/total*100)}%)", flush=True)
     for it, b, real in zip(items, bodies, reals):
         it["body"] = b
-        # 구글 링크를 언론사 주소로 바꾼 경우 '원문 열기'도 그쪽을 가리키게 한다
-        if real and real != it.get("url") and "news.google.com" not in real:
+        if real and real != it.get("url"):
             it["url"] = real
+
+    # ── 2차: 구글 링크라 본문을 못 얻은 기사는 네이버에서 같은 기사를 찾아 채운다 ──
     _g = [x for x in items if x.get("src") == "google"]
-    _gok = [x for x in _g if len(x.get("body") or "") >= MIN_BODY_LEN]
-    print(f"  · 구글 본문 확보 {len(_gok)}/{len(_g)}건", flush=True)
+    before = len([x for x in _g if len(x.get("body") or "") >= MIN_BODY_LEN])
+    need = [x for x in _g
+            if len(x.get("body") or "") < MIN_BODY_LEN
+            and "news.google.com" in (x.get("url") or "")][:GOOGLE_FIX_MAX]
+
+    def _refill(it):
+        try:
+            link, _t = naver_search_one(it.get("title", ""))
+            if not link:
+                return
+            body, _r = extract_body(link)
+            if len(body) >= MIN_BODY_LEN:
+                it["body"] = body
+                it["url"] = link          # '원문 열기' 도 구글 안내페이지 대신 진짜 기사로
+        except Exception:
+            pass
+
+    if need:
+        print(f"[1.5/2] 구글 기사 {len(need)}건을 네이버에서 다시 찾는 중…", flush=True)
+        with ThreadPoolExecutor(max_workers=4) as ex2:
+            list(ex2.map(_refill, need))
+
+    after = len([x for x in _g if len(x.get("body") or "") >= MIN_BODY_LEN])
+    print(f"  · 구글 본문 확보 {after}/{len(_g)}건 (네이버 재검색으로 +{after-before}건)", flush=True)
 
     # 중요도 태깅: AI 없이 키워드 매칭으로 즉시 판정 (요약·번역은 앱에서 수동)
     print(f"[2/2] 중요도 태깅(키워드 매칭) · 총 {len(items)}건 — AI 미사용(무료)", flush=True)
@@ -541,6 +571,30 @@ def main():
     # 메인(news.json) = 오늘 것 전체
     with open("news.json", "w", encoding="utf-8") as f:
         json.dump(existing, f, ensure_ascii=False, indent=2)
+
+    # ── 앱이 빨리 켜지도록 '가벼운 목록' 과 '본문' 을 따로 저장 ──
+    #    news.json 은 2.3MB 인데 그중 71% 가 본문이다. 목록 화면에는 본문이 필요 없다.
+    #    lite/날짜.json  : 본문 뺀 목록 (앱이 켤 때 받는다)
+    #    bodies/날짜.json: {원문주소: 본문} (기사를 열 때만 받는다)
+    #    news.json / archive 는 그대로 둔다 → 예전 버전 앱도 계속 돌아간다.
+    try:
+        os.makedirs("lite", exist_ok=True)
+        os.makedirs("bodies", exist_ok=True)
+        lite = [{k: v for k, v in x.items() if k != "body"} for x in existing]
+        with open(os.path.join("lite", today + ".json"), "w", encoding="utf-8") as f:
+            json.dump(lite, f, ensure_ascii=False, separators=(",", ":"))
+        bodies = {}
+        for x in existing:
+            u, b = x.get("url"), x.get("body")
+            if u and b:
+                bodies[u] = b
+        with open(os.path.join("bodies", today + ".json"), "w", encoding="utf-8") as f:
+            json.dump(bodies, f, ensure_ascii=False, separators=(",", ":"))
+        _full = os.path.getsize("news.json")
+        _lt = os.path.getsize(os.path.join("lite", today + ".json"))
+        print(f"  · 가벼운 목록 저장: {_lt/1048576:.2f}MB (원본 {_full/1048576:.2f}MB) · 본문 {len(bodies)}건 분리", flush=True)
+    except Exception as e:
+        print("  ! lite/bodies 저장 실패(무시하고 계속):", e, flush=True)
     # ── 네이버 데이터랩: 종목 검색어 트렌드 → trends.json ──
     try:
         # 검색 관심(데이터랩): 대중이 많이 찾는 경제·투자 키워드 (별도 파일)

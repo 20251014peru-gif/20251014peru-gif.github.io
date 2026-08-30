@@ -252,7 +252,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v4.9</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v5.0</span></div>
   </div>
 </header>
 <main>
@@ -1030,10 +1030,26 @@ function loadData(manual){
       .then(function(r){ clearTimeout(timer); return r.ok?r.json():null; })
       .catch(function(){ clearTimeout(timer); return null; });
   }
-  var fetches=[ grab("news.json",25000), grab("glossary.json",20000), grab("trends.json",10000) ];
-  // archive 파일들도 병렬로(없으면 무시)
-  days.forEach(function(dk){ fetches.push( grab("archive/"+dk+".json",20000) ); });
+  // 목록은 '본문 뺀 가벼운 파일(lite)' 을 먼저 받아본다. 없으면 예전 파일로 되돌아간다.
+  //  lite/날짜.json 0.38MB  vs  news.json 2.27MB — 본문이 전체의 71% 였다.
+  //  본문은 기사를 열 때 bodies/날짜.json 에서 그때 받아온다(news_patch.js).
+  var todayKey = new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+  function grabList(dk, fallback, ms){
+    return grab("lite/"+dk+".json", ms).then(function(a){
+      return (a && a.length) ? a : grab(fallback, ms);
+    });
+  }
+  // 용어집(0.39MB)은 켤 때 받지 않는다 — 📖용어집 탭을 열 때 받는다(news_patch.js)
+  var fetches=[ grabList(todayKey,"news.json",25000), Promise.resolve(null), grab("trends.json",10000) ];
+  days.forEach(function(dk){ fetches.push( grabList(dk, "archive/"+dk+".json", 20000) ); });
+  function done(msg){
+    if(btn){btn.disabled=false;btn.textContent="🔄 새로고침";}
+    var el=document.getElementById("loadStat");
+    if(msg) setStatus(msg);
+    else if(el && el.textContent.indexOf("불러오는 중")>=0) setStatus("⚪ 불러오기 끝 — 화면을 확인하세요");
+  }
   Promise.all(fetches).then(function(res){
+   try{
     var nj=res[0], gj=res[1], tj=res[2];
     var archs=res.slice(3); // archive 배열들
     if(tj&&tj.data){ trendsData=tj.data; trendsMeta={order:tj.order||[], updated:tj.updated||""}; }
@@ -1054,7 +1070,17 @@ function loadData(manual){
       setStatus("🟢 최신 수집 "+(when||"-")+" · "+nowk+" 불러옴");
     }
     renderDateSel(); renderAll();
-    if(btn){btn.disabled=false;btn.textContent="🔄 새로고침";}
+   }catch(e){
+    if(window.console) console.error("[loadData]", e);
+    setStatus("🟠 화면을 그리다 문제가 생겼어요 — 🔄 새로고침");
+   }finally{
+    // 예전에는 중간에 오류가 나거나 news.json 만 실패하면
+    // 버튼과 상태가 '불러오는 중…' 에 영원히 남았다. 이제는 무조건 되돌린다.
+    done();
+   }
+  }).catch(function(e){
+    if(window.console) console.error("[loadData]", e);
+    done("🔴 불러오기 실패 — 🔄 새로고침 을 눌러주세요");
   });
 }
 
@@ -1288,6 +1314,6 @@ document.getElementById("dInput").addEventListener("keydown",function(e){if(e.ke
 document.getElementById("rInput").addEventListener("keydown",function(e){if(e.key==="Enter")rSend();});
 loadData(false);
 </script>
-  <script src="news_patch.js?v=20260830-19"></script>
+  <script src="news_patch.js?v=20260830-20"></script>
 </body>
 </html>

@@ -1,4 +1,13 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v18 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v19 (2026-08-30)
+ *
+ * v19 : 앱이 빨리 켜지도록 '본문' 과 '용어집' 을 나중에 받는다
+ *   켤 때 받던 것 : news.json 2.27MB + 용어집 0.39MB + 어제치 0.89MB = 3.56MB
+ *   바뀐 뒤       : lite/날짜.json 0.38MB + 어제 lite + trends = 0.5MB 안팎
+ *   · 기사를 열거나 요약할 때 bodies/날짜.json 을 그 자리에서 받아 본문을 채운다
+ *   · 용어집은 📖용어집 탭을 열 때 받는다
+ *   · lite/bodies 파일이 없는 옛 배포에서도 news.json 으로 되돌아가 그대로 돌아간다
+ *
+ * ↓ v18 원본 설명
  *
  * v18 : 읽음·스크랩 이동이 되돌아가던 문제 (동기화가 덮어쓰고 있었다)
  *   증상 : 뉴스를 읽고 요약했는데 잠시 뒤 스크랩에 없다.
@@ -149,11 +158,11 @@
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 18) return;
-  window.__nrPatch = 18;
+  if (window.__nrPatch >= 19) return;
+  window.__nrPatch = 19;
 
   var LINES = 5;
-  var VER = "v18";
+  var VER = "v19";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
   var BODY_MAX = 1500;     /* 공유할 때 함께 보내는 본문 최대 글자수 */
 
@@ -482,6 +491,66 @@
     return out;
   };
 
+  /* ================= 본문·용어집은 필요할 때 받는다 =================
+     앱을 켤 때 받는 목록(lite)에는 본문이 빠져 있다(2.27MB → 0.38MB).
+     기사를 열거나 요약할 때 그 자리에서 bodies/날짜.json 을 받아 채운다.
+     bodies 파일이 없는 옛 배포에서도 목록에 본문이 들어 있으면 그대로 쓰므로 안전하다. */
+  function dayKeys() {
+    var out = [], i, d;
+    for (i = 0; i < 2; i++) {
+      d = new Date(Date.now() + 9 * 3600000 - i * 86400000);
+      out.push(d.toISOString().slice(0, 10));
+    }
+    return out;
+  }
+  var _bodyState = 0;      /* 0 아직, 1 받는 중, 2 끝 */
+  var _bodyWait = [];
+  function ensureBodies(cb) {
+    if (_bodyState === 2) { cb(); return; }
+    _bodyWait.push(cb);
+    if (_bodyState === 1) return;
+    _bodyState = 1;
+    var t = "?t=" + Date.now();
+    var jobs = dayKeys().map(function (dk) {
+      return fetch("bodies/" + dk + ".json" + t, { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; });
+    });
+    Promise.all(jobs).then(function (res) {
+      var map = {}, i, u;
+      res.forEach(function (m) { if (m) for (u in m) if (m.hasOwnProperty(u)) map[u] = m[u]; });
+      var L = newsList();
+      for (i = 0; i < L.length; i++) if (!L[i].body && L[i].url && map[L[i].url]) L[i].body = map[L[i].url];
+      var S = scrapList();
+      for (i = 0; i < S.length; i++) {
+        if (S[i] && S[i].n && !S[i].n.body && S[i].n.url && map[S[i].n.url]) S[i].n.body = map[S[i].n.url];
+      }
+      if (window.curArticle && !window.curArticle.body && map[window.curArticle.url]) {
+        window.curArticle.body = map[window.curArticle.url];
+      }
+      _bodyState = 2;
+      var q = _bodyWait; _bodyWait = [];
+      q.forEach(function (f) { try { f(); } catch (e) {} });
+    });
+  }
+
+  /* 용어집(0.39MB)도 용어집 탭을 열 때 받는다 */
+  var _glossState = 0;
+  function ensureGloss() {
+    if (_glossState) return;
+    _glossState = 1;
+    fetch("glossary.json?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (gj) {
+        if (!gj) return;
+        var hid = get("nr_gloss_hide", []);
+        window.collectedGloss = Object.keys(gj).filter(function (k) { return hid.indexOf(k) < 0; })
+          .map(function (k) { return { term: k, def: (gj[k].def || gj[k]), at: (gj[k].first_seen || "") }; });
+        if (window.renderGloss) window.renderGloss();
+      })
+      .catch(function () {});
+  }
+
   /* ================= 팝업 ================= */
   function closePop() {
     var a = document.getElementById("nrpopBg"); if (a) a.remove();
@@ -547,6 +616,15 @@
     if (_openReader) _openReader(id);
     saveRead();                        /* 원래 코드가 덮어썼으면 되돌리기 */
     try { fixReaderSum(n); setupShareBtn(); } catch (e) {}
+    /* 목록이 가벼운 판이라 본문이 없으면 지금 받아서 채운다 */
+    if (n && !n.body) {
+      var ab = document.getElementById("aBody");
+      if (ab && !ab.textContent) ab.textContent = "본문을 불러오는 중…";
+      ensureBodies(function () {
+        var m = byId(id) || n;
+        if (ab) ab.textContent = (m && (m.body || m.summary)) || "본문을 가져오지 못했어요 — 🔗 기사 원문 열기 를 눌러주세요";
+      });
+    }
     if (window.renderRows) window.renderRows();
   };
 
@@ -764,6 +842,13 @@
     if (!window.AI_KEY) {
       if (window.openKey) window.openKey();
       else say("AI 키를 먼저 넣어주세요");
+      return;
+    }
+
+    /* 본문이 아직 없으면 먼저 받아온 뒤 다시 시작 (가벼운 목록으로 켰을 때) */
+    if (!n.body && _bodyState !== 2) {
+      say("본문을 불러오는 중…");
+      ensureBodies(function () { window.rowSummarize(id, ev); });
       return;
     }
 
@@ -1591,6 +1676,7 @@
   window.setView = function (v) {
     if (_setView) _setView(v);
     try {
+      if (v === "gloss") ensureGloss();
       /* 이슈·테마 탭 : 표·검색·필터를 감추고 보드만 보여준다 */
       if (v === "board") {
         var bw = document.getElementById("boardWrap");
