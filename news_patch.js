@@ -1,4 +1,14 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v11 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v12 (2026-08-30)
+ *
+ * v12 에서 한 것
+ *   ① 말줄임표(…) 를 화면 어디에서도 쓰지 않는다.
+ *      제목·5줄요약은 모든 탭에서 딱 두 줄까지 보이고, 잘려도 … 을 붙이지 않는다.
+ *      (크롬의 -webkit-line-clamp 는 … 을 강제로 붙이므로 줄높이×2 방식으로 바꿈)
+ *   ② 브리핑에 '내가 만든 5줄 요약' 전체가 실린다. 요약해 둔 기사가 앞으로 정렬되고,
+ *      내 요약이 없으면 수집기가 준 한 줄이라도 싣는다. (제목만 나오던 문제)
+ *   ③ 이슈·테마 보드를 '새 뉴스' 화면에서 빼고, 스크랩과 용어집 사이 전용 탭으로 옮김.
+ *
+ * ↓ v11 원본 설명
  *
  * v11 에서 고친 것 (폰 화면 깨짐)
  *   · 폰에서 검색창·[검색]·[AI로 뉴스검색] 이 세로로 길게 늘어나던 문제.
@@ -80,11 +90,11 @@
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 11) return;
-  window.__nrPatch = 11;
+  if (window.__nrPatch >= 12) return;
+  window.__nrPatch = 12;
 
   var LINES = 5;
-  var VER = "v11";
+  var VER = "v12";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
   var BODY_MAX = 1500;     /* 공유할 때 함께 보내는 본문 최대 글자수 */
 
@@ -111,6 +121,18 @@
     "line-height:1.55;cursor:pointer}",
     "tbody td.summary .sumline:hover{text-decoration:underline dotted}",
     "body:has(.tabbar button.on[data-view=\"scrap\"]) col.c-note{width:132px}",
+    /* 이슈·테마 보드를 '새 뉴스' 화면에서 빼고, 전용 탭에서만 보이게 */
+    "html body:has(.tabbar button.on[data-view=\"all\"]) #boardWrap{display:none!important}",
+    "html body:has(.tabbar button.on[data-view=\"board\"]) #boardWrap{display:block!important}",
+    "html body:has(.tabbar button.on[data-view=\"board\"]) #tablewrap,",
+    "html body:has(.tabbar button.on[data-view=\"board\"]) #controls,",
+    "html body:has(.tabbar button.on[data-view=\"board\"]) #filters,",
+    "html body:has(.tabbar button.on[data-view=\"board\"]) #moreBox,",
+    "html body:has(.tabbar button.on[data-view=\"board\"]) #emptyBox,",
+    "html body:has(.tabbar button.on[data-view=\"board\"]) #selbar{display:none!important}",
+    /* 탭이 7개가 되므로 폰에서 글자를 살짝 줄인다 */
+    "@media(max-width:760px){.tabbar button{font-size:9.5px;letter-spacing:-.04em}",
+    ".tabbar button .ic{font-size:18px}}",
     ".nrdel{cursor:pointer;margin-left:6px;opacity:.5;font-size:13px}",
     "#nrpop .sh{margin-top:12px;width:100%;min-height:46px;border:1px solid #d9dde5;border-radius:12px;",
     "background:#fff;color:#3b57c9;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer}",
@@ -145,12 +167,19 @@
     "}",
     ".nrbrief{white-space:nowrap}",
     /* 제목·요약 : 딱 두 줄, 문장 가운데에서 나뉘게, 낱말은 안 끊기게 */
-    "tbody .title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;",
-    "overflow:hidden;white-space:normal;word-break:keep-all;overflow-wrap:break-word;",
+    /* 제목·요약 : 딱 두 줄. -webkit-line-clamp 는 크롬이 끝에 '…' 를 자동으로 붙이므로
+       쓰지 않고, 줄높이×2 만큼만 보여주고 잘라낸다(말줄임표 없음). */
+    "tbody .title{display:block!important;line-height:1.4;max-height:2.8em!important;",
+    "overflow:hidden;text-overflow:clip!important;",
+    "white-space:normal;word-break:keep-all;overflow-wrap:break-word;",
     "text-wrap:balance;max-width:340px}",
-    "tbody td.summary .sumline{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;",
-    "overflow:hidden;white-space:normal;word-break:keep-all;overflow-wrap:break-word;",
+    "tbody td.summary .sumline{display:block!important;line-height:1.4;max-height:2.8em!important;",
+    "overflow:hidden;text-overflow:clip!important;",
+    "white-space:normal;word-break:keep-all;overflow-wrap:break-word;",
     "text-wrap:balance;max-width:420px}",
+    /* 말줄임표는 어디서도 쓰지 않는다 */
+    "tbody td{text-overflow:clip!important}",
+    ".r-head .rt h2{text-overflow:clip!important;white-space:normal!important;line-height:1.35}",
     "@media(max-width:760px){",
     "tbody .title{max-width:250px}",
     "tbody td.summary .sumline{max-width:300px}",
@@ -163,7 +192,7 @@
     "transform:translate(-50%,-50%);font-size:13px;line-height:1;font-weight:700;color:#9aa3af}",
     "#nrNote{margin:0 0 10px;padding:9px 12px;border-radius:10px;background:rgba(59,87,201,.08);",
     "color:#3b57c9;font-size:12.5px;font-weight:700;line-height:1.5}",
-    ".nrmemochip{display:inline-block;max-width:120px;overflow:hidden;text-overflow:ellipsis;",
+    ".nrmemochip{display:inline-block;max-width:120px;overflow:hidden;text-overflow:clip;",
     "white-space:nowrap;vertical-align:middle;cursor:pointer;font-size:11.5px;font-weight:700;",
     "padding:2px 7px;border-radius:8px;background:rgba(59,87,201,.10);color:#3b57c9}",
     ".nrmemochip.empty{background:transparent;color:#b3b9c4;font-weight:600}"
@@ -701,8 +730,15 @@
     return list;
   };
 
+  /* board 탭에서는 표를 안 그리므로 목록 계산도 건너뛴다 */
+  var _curRowsBoard = window.currentRows;
+  window.currentRows = function () {
+    if (curView() === "board") return [];
+    return _curRowsBoard ? _curRowsBoard() : [];
+  };
+
   /* ================= 탭 : 순서·이름·건수 배지 ================= */
-  var ORDER = ["breaking", "all", "read", "scrap", "gloss"];
+  var ORDER = ["breaking", "all", "read", "scrap", "board", "gloss"];
   function tabBtn(v) { return document.querySelector('.tabbar button[data-view="' + v + '"]'); }
 
   function setupTabs() {
@@ -712,6 +748,14 @@
     /* 이름 바꾸기 : 전체 → 🆕 새 뉴스 */
     b = tabBtn("all");
     if (b) b.innerHTML = '<span class="ic">🆕</span>새 뉴스';
+    /* 이슈·테마 탭 새로 만들기 (스크랩과 용어집 사이에 놓인다) */
+    if (!tabBtn("board")) {
+      var nb = document.createElement("button");
+      nb.setAttribute("data-view", "board");
+      nb.innerHTML = '<span class="ic">📰</span>이슈·테마';
+      nb.onclick = function () { window.setView("board"); };
+      bar.appendChild(nb);
+    }
     /* 순서 재배치 : 속보 · 새 뉴스 · 읽음 · 스크랩 · 용어집 · AI */
     for (i = 0; i < ORDER.length; i++) {
       b = tabBtn(ORDER[i]);
@@ -843,7 +887,9 @@
       ".c2{column-count:2}.c3{column-count:3}",
       ".it{break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;margin:0 0 4.5mm}",
       ".t{font-size:9.8pt;font-weight:700;line-height:1.35;margin:0 0 1mm}",
+      ".hd{font-size:8.8pt;font-weight:700;line-height:1.4;color:#16181d;margin:0 0 1mm}",
       ".s{font-size:8.6pt;line-height:1.45;color:#2b2f36;margin:0 0 1mm;white-space:pre-wrap}",
+      ".s.sub{color:#6b7280}",
       ".m{font-size:7.6pt;color:#8b919b}",
       ".sig{font-size:8pt;margin-right:2px}",
       ".it{position:relative}",
@@ -855,14 +901,20 @@
 
     var items = list.map(function (n, i) {
       var sum = mySummary(n);
-      var line = sum ? headline(sum) : "";
+      var head = sum ? headline(sum) : "";
+      var body = sum ? fiveLines(sum) : "";
+      /* 내 요약이 없으면 수집기가 준 한 줄이라도 싣는다 (제목만 나오던 문제) */
+      var sub = "";
+      if (!sum && n.summary) sub = String(n.summary).trim();
       var sig = n.sig === "red" ? "🔴" : n.sig === "orange" ? "🟠" : "";
       var meta = [srcName(n), (window.fmtDate ? window.fmtDate(n.date, n) : (n.date || ""))].filter(Boolean).join(" · ");
       var ttl = String(n.title || "").replace(/\s+-\s+[^-]{1,24}$/, "");   /* 제목 끝의 " - 출처" 떼기 */
-      return '<div class="it">' +
+      return '<div class="it" data-s="' + (head || body || sub ? "1" : "0") + '">' +
         '<button class="x" onclick="del(this)" title="이 뉴스 빼기">✕</button>' +
         '<div class="t"><span class="sig">' + sig + "</span>" + escHtml(ttl) + "</div>" +
-        (line ? '<div class="s">' + escHtml(line) + "</div>" : "") +
+        (head ? '<div class="hd">' + escHtml(head) + "</div>" : "") +
+        (body ? '<div class="s">' + escHtml(body) + "</div>" : "") +
+        (sub ? '<div class="s sub">' + escHtml(sub) + "</div>" : "") +
         '<div class="m">' + escHtml(meta) + "</div>" +
         "</div>";
     }).join("");
@@ -873,14 +925,20 @@
       '<button class="go" onclick="window.print()">🖨️ 인쇄</button>' +
       "<button onclick=\"document.getElementById('w').className='wrap c2'\">2열</button>" +
       "<button onclick=\"document.getElementById('w').className='wrap c3'\">3열</button>" +
+      "<button id=\"onlys\" onclick=\"onlySum()\">📝 요약된 것만</button>" +
       '<span class="sp"></span><span style="font-size:12px;color:#8b919b">인쇄 전에 열 수를 골라보세요</span>' +
       "</div>" +
       "<h1>📰 뉴스 브리핑</h1>" +
       '<div class="sub">' + day + ' · 총 <b id="cnt">' + list.length + "</b>건 " +
       '<span style="color:#b3b9c4">· 빼고 싶은 건 ✕</span></div>' +
       '<div id="w" class="wrap c' + cols + '">' + items + "</div>" +
-      "<script>function del(b){b.parentNode.remove();" +
-      "document.getElementById('cnt').textContent=document.querySelectorAll('.it').length;}<\/script>" +
+      "<script>function cnt(){document.getElementById('cnt').textContent=" +
+      "document.querySelectorAll('.it:not([hidden])').length;}" +
+      "function del(b){b.parentNode.remove();cnt();}" +
+      "var only=false;function onlySum(){only=!only;" +
+      "document.querySelectorAll('.it').forEach(function(e){" +
+      "e.hidden = only && e.getAttribute('data-s')!=='1';});" +
+      "document.getElementById('onlys').textContent = only? '📄 전체 보기':'📝 요약된 것만';cnt();}<\/script>" +
       "</body></html>";
   }
 
@@ -892,7 +950,15 @@
       Object.keys(sel).forEach(function (k) { var n = byId(Number(k)); if (n) picked.push(n); });
     } catch (e) {}
     if (picked.length) list = picked;
-    else { try { list = (window.currentRows() || []).slice(0, 60); } catch (e) {} }
+    else {
+      try {
+        var all = (window.currentRows() || []).slice();
+        /* 내가 요약해 둔 기사를 앞으로 — 브리핑에 제목만 줄줄이 나오던 문제 */
+        var withSum = [], noSum = [];
+        all.forEach(function (n) { (mySummary(n) ? withSum : noSum).push(n); });
+        list = withSum.concat(noSum).slice(0, 60);
+      } catch (e) {}
+    }
     if (!list.length) { say("브리핑에 담을 뉴스가 없어요"); return; }
     var w = window.open("", "_blank");
     if (!w) { say("팝업이 막혔어요 — 주소창 옆 팝업 허용을 켜주세요"); return; }
@@ -1161,6 +1227,23 @@
   var _setView = window.setView;
   window.setView = function (v) {
     if (_setView) _setView(v);
+    try {
+      /* 이슈·테마 탭 : 표·검색·필터를 감추고 보드만 보여준다 */
+      if (v === "board") {
+        var bw = document.getElementById("boardWrap");
+        if (bw) bw.style.display = "block";
+        var gv = document.getElementById("glossView");
+        if (gv) gv.style.display = "none";
+        var sg = document.getElementById("surge");
+        if (sg) sg.style.display = "flex";
+        ["tablewrap", "controls", "filters", "moreBox", "emptyBox"].forEach(function (id) {
+          var e = document.getElementById(id);
+          if (e) e.style.display = "none";
+        });
+        var sb0 = document.getElementById("selbar");
+        if (sb0) sb0.classList.remove("on");
+      }
+    } catch (e) {}
     try {
       var sb = document.getElementById("selbar");
       if (v === "read") {
