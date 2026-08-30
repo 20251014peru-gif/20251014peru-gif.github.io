@@ -1,4 +1,4 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v8 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v9 (2026-08-30)
  *
  * 삼단(사실은 사단) 이동식 구조
  *   ⚡속보  →  🆕새 뉴스  →  📖읽음  →  🔖스크랩
@@ -52,16 +52,21 @@
  *   ㉑ 공유가 '뉴스레이더 링크'가 아니라 뉴스 내용 자체가 가게 바꿈 —
  *      제목·출처·5줄 요약·본문 전문이 글로 담기고, 맨 끝에 기사 원문 주소
  *
+ * v9 에서 고친 것
+ *   ㉒ 윗줄(검색·버튼) 정리 — 검색창은 적당한 길이로 한 줄, 버튼은 그 아래 한 줄.
+ *      브리핑 버튼이 'AI로 뉴스검색' 위에 겹쳐 뭉개지던 문제 해결
+ *   ㉓ 폰에서는 칸 폭을 조금 줄여 가로 스크롤이 덜 하게
+ *
  * news.html 본문은 건드리지 않는다.
  * 문제가 생기면 news.html 의 <script src="news_patch.js"> 한 줄만 지우면 원래대로 돌아온다.
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 8) return;
-  window.__nrPatch = 8;
+  if (window.__nrPatch >= 9) return;
+  window.__nrPatch = 9;
 
   var LINES = 5;
-  var VER = "v8";
+  var VER = "v9";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
   var BODY_MAX = 1500;     /* 공유할 때 함께 보내는 본문 최대 글자수 */
 
@@ -95,12 +100,21 @@
     "padding:12px;font-size:14px;line-height:1.6;font-family:inherit;box-sizing:border-box}",
     ".nrdel:hover{opacity:1}",
     "#selbar .nrall{background:var(--line-2);color:var(--ink-2)}",
-    ".controls .searchbar{flex:1 1 430px!important;min-width:430px!important}",
-    ".controls .actbar{flex:1 1 auto}",
+    /* 윗줄 정리 : 1줄=검색창+최신/중요, 2줄=버튼들 */
+    ".controls{flex-wrap:wrap!important;align-items:center;gap:10px}",
+    ".controls .searchbar{order:0;flex:1 1 360px!important;max-width:560px!important;min-width:250px!important}",
+    ".controls .seg{order:1;flex:0 0 auto;margin-left:auto}",
+    ".controls .actbar{order:2;flex:1 1 100%!important;flex-wrap:wrap!important}",
     ".nrbrief{white-space:nowrap}",
+    /* 제목·요약 칸은 가로로 길게, 표는 좌우 스크롤 */
     ".tablewrap table{min-width:1760px!important}",
     "col.c-title{width:430px!important}",
     "col.c-sum{width:560px!important}",
+    "@media(max-width:760px){",
+    ".tablewrap table{min-width:1300px!important}",
+    "col.c-title{width:340px!important}",
+    "col.c-sum{width:420px!important}",
+    "}",
     "tbody td.summary .sumline,tbody .title{display:-webkit-box;-webkit-line-clamp:2;",
     "-webkit-box-orient:vertical;overflow:hidden;white-space:normal;word-break:break-word}",
     "tbody td{vertical-align:top}",
