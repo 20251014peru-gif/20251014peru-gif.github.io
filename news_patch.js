@@ -1,4 +1,4 @@
-/* news_patch.js — 뉴스레이더 보강 패치 v3 (2026-08-30)
+/* news_patch.js — 뉴스레이더 보강 패치 v4 (2026-08-30)
  *
  * 삼단(사실은 사단) 이동식 구조
  *   ⚡속보  →  🆕새 뉴스  →  📖읽음  →  🔖스크랩
@@ -23,16 +23,22 @@
  *   ⑤ 스크랩에 메모 한 줄 (왜 남겼는지)
  *   ⑥ 속보가 0건인 날엔 최근 🔴중요 뉴스로 첫 화면을 채운다
  *
+ * v4 에서 새로 한 것
+ *   ⑦ 표 칸에 뜨는 한 줄은 '5줄 요약을 한 줄로 압축한 문장' (기사 제목이 아님)
+ *   ⑧ 그 한 줄은 잘리지 않고 줄바꿈되어 전부 보인다
+ *   ⑨ 표 머리글 '한 줄 요약' → '5줄 요약'
+ *   ⑩ 아직 요약 안 한 기사는 수집기 문장 대신 [📝 요약] 버튼만 보인다
+ *
  * news.html 본문은 건드리지 않는다.
  * 문제가 생기면 news.html 의 <script src="news_patch.js"> 한 줄만 지우면 원래대로 돌아온다.
  */
 (function () {
   "use strict";
-  if (window.__nrPatch >= 3) return;
-  window.__nrPatch = 3;
+  if (window.__nrPatch >= 4) return;
+  window.__nrPatch = 4;
 
   var LINES = 5;
-  var VER = "v3";
+  var VER = "v4";
   var FALLBACK_MAX = 20;   /* 속보 0건일 때 대신 채울 중요 뉴스 최대 건수 */
 
   /* ================= 스타일 ================= */
@@ -53,9 +59,11 @@
     "font-weight:600;font-family:inherit;cursor:pointer}",
     "#nrmemo .ok{background:#3b57c9;color:#fff}",
     "#nrmemo .no{background:#eceef3;color:#41474f}",
-    "tbody td.summary .sumline{display:block;overflow:hidden;text-overflow:ellipsis;",
-    "white-space:nowrap;cursor:pointer}",
-    "tbody td.summary .nrre{margin-top:3px}",
+    "tbody td.summary{white-space:normal!important;vertical-align:top;padding-top:9px;padding-bottom:9px}",
+    "tbody td.summary .sumline{display:block;white-space:normal;word-break:break-word;",
+    "line-height:1.55;cursor:pointer}",
+    "tbody td.summary .sumline:hover{text-decoration:underline dotted}",
+    "body:has(.tabbar button.on[data-view=\"scrap\"]) col.c-note{width:132px}",
     "tbody tr.read{opacity:1!important}",
     "tbody tr.read .rdot{background:transparent!important;position:relative}",
     "tbody tr.read .rdot::after{content:'\\2713';position:absolute;left:50%;top:50%;",
@@ -283,6 +291,7 @@
     if (n) markRead(keyOf(n));         /* 먼저 읽음 처리 → 원래 함수의 번호 저장이 무의미해짐 */
     if (_openReader) _openReader(id);
     saveRead();                        /* 원래 코드가 덮어썼으면 되돌리기 */
+    try { fixReaderSum(n); } catch (e) {}
     if (window.renderRows) window.renderRows();
   };
 
@@ -296,22 +305,43 @@
     for (i = 0; i < L.length; i++) if (keyOf(L[i]) === k) L[i].summary = txt;
     var sc = scrapByKey(k);
     if (sc) { sc.n.summary = txt; put("nr_scrap", window.scraps); }
-    /* 읽기창이 열려 있으면 그 안의 "한 줄 요약"도 바꿔주기 */
+    /* 읽기창이 열려 있으면 그 안의 요약 줄도 바꿔주기 */
     try {
       if (window.curArticle && keyOf(window.curArticle) === k) {
         window.curArticle.summary = txt;
-        var box = document.getElementById("aSum");
-        if (box) {
-          var one = headline(txt);
-          box.innerHTML = '<b>핵심 한 줄</b> · ' + one +
-            (n.url ? ' &nbsp;<a href="' + n.url + '" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800;white-space:nowrap">🔗 기사 원문 열기 ↗</a>' : '');
-        }
+        fixReaderSum(n);
       }
     } catch (e) {}
   }
 
+  /* 표에 보여줄 한 줄 = 5줄 요약을 한 줄로 압축한 문장(▶ 줄). 없으면 첫 줄. */
   function headline(text) {
-    return String(text || "").split("\n")[0].replace(/^[·\-•]\s*/, "").trim();
+    var ls = String(text || "").split("\n"), i, l;
+    for (i = 0; i < ls.length; i++) {
+      l = ls[i].trim();
+      if (l.indexOf("▶") === 0) return l.replace(/^▶\s*/, "").trim();
+    }
+    for (i = 0; i < ls.length; i++) {
+      l = ls[i].trim();
+      if (l) return l.replace(/^[·\-•]\s*/, "").trim();
+    }
+    return "";
+  }
+
+  /* 팝업에 보여줄 5줄 본문 (▶ 압축 줄은 뺀다) */
+  function fiveLines(text) {
+    return String(text || "").split("\n").filter(function (l) {
+      return l.trim() && l.trim().indexOf("▶") !== 0;
+    }).join("\n");
+  }
+
+  function popupSummary(n, text) {
+    var h = headline(text), b = fiveLines(text);
+    popup(n && n.title ? n.title : "", h ? (h + "\n\n" + b) : b);
+  }
+
+  function escHtml(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
   /* 내가 만든 5줄 요약이 있는가 (수집기가 넣어준 1줄은 여기 안 들어감) */
@@ -331,7 +361,7 @@
       applySummary(n, mine);
       addScrap(n);
       if (window.renderRows) window.renderRows();
-      popup(n.title || "", mine);
+      popupSummary(n, mine);
       return;
     }
 
@@ -346,11 +376,14 @@
     if (btn) { btn.disabled = true; btn.textContent = "요약 중…"; }
 
     var sys =
-      "너는 한국어 뉴스 요약가다. 반드시 " + LINES + "줄로 요약한다.\n" +
-      "1번째 줄: 이 기사에서 가장 중요한 사실 딱 하나를 35자 내외 한 줄로. 이 줄만 봐도 기사를 파악할 수 있어야 한다.\n" +
-      "2~" + LINES + "번째 줄: 나머지 핵심 사실을 중요한 순서대로.\n" +
-      "각 줄은 '· ' 로 시작하고, 한 줄에 한 가지 사실만 담는다.\n" +
-      "기사에 없는 내용은 절대 추측해서 쓰지 않는다. 숫자·회사명·인명은 기사에 나온 그대로 옮긴다. 인사말·머리말은 쓰지 않는다.";
+      "너는 한국어 뉴스 요약가다. 아래 형식으로만 답한다. 다른 말은 절대 붙이지 않는다.\n\n" +
+      "▶ (5줄 요약 전체를 한 문장으로 압축한 한 줄, 45자 내외)\n" +
+      "· (핵심 사실 1)\n· (핵심 사실 2)\n· (핵심 사실 3)\n· (핵심 사실 4)\n· (핵심 사실 5)\n\n" +
+      "규칙:\n" +
+      "- 맨 윗줄은 반드시 ▶ 로 시작하고, 아래 " + LINES + "줄을 다 읽지 않아도 기사를 알 수 있게 압축한다.\n" +
+      "- ▶ 줄은 기사 제목을 그대로 옮기지 말고, 내용을 요약한 문장으로 새로 쓴다.\n" +
+      "- 그 아래는 정확히 " + LINES + "줄이며 각 줄은 '· ' 로 시작하고 한 줄에 한 가지 사실만 담는다.\n" +
+      "- 기사에 없는 내용은 절대 추측해서 쓰지 않는다. 숫자·회사명·인명은 기사에 나온 그대로 옮긴다.";
 
     var src = (n.title || "") + "\n\n" + String(n.body || n.orig_title || "").slice(0, 6000);
 
@@ -362,7 +395,7 @@
       applySummary(n, out);
       addScrap(n);                     /* 요약한 기사만 스크랩으로 이동 */
       if (window.renderRows) window.renderRows();
-      popup(n.title || "", out);
+      popupSummary(n, out);
       say("🔖 스크랩으로 옮겼어요");
     });
   };
@@ -484,37 +517,61 @@
     else { el.style.display = "none"; }
   }
 
-  /* ================= 요약 칸 : 핵심 한 줄만 ================= */
+  /* ================= 요약 칸 : 5줄 요약을 압축한 한 줄 ================= */
   function decorateSummaryCells() {
     var rows = document.querySelectorAll("tbody tr");
     for (var i = 0; i < rows.length; i++) {
       var tr = rows[i];
       var td = tr.querySelector("td.summary");
       if (!td) continue;
-      if (td.querySelector(".sumline")) continue;   /* 이미 처리됨 */
-      var raw = (td.textContent || "").trim();
-      if (!raw) continue;
-      if (td.querySelector(".miniai") && !raw.replace(/📝\s*요약/, "").trim()) continue; /* 버튼만 있는 칸 */
-      var one = headline(raw);
-      if (!one) continue;
-
       var n = newsOfRow(tr);
+      if (!n) continue;
+      var mine = mySummary(n);
+      var state = keyOf(n) + "|" + (mine ? "1" : "0");
+      if (td.dataset.nrk === state) continue;   /* 이미 이 상태로 그려짐 */
+      td.dataset.nrk = state;
       td.textContent = "";
-      var sp = document.createElement("span");
-      sp.className = "sumline";
-      sp.textContent = one;
-      sp.title = "눌러서 전체 보기";
-      td.appendChild(sp);
-
-      /* 수집기가 넣어준 1줄 요약이면 → 5줄 요약 버튼을 계속 띄운다 */
-      if (n && !mySummary(n)) {
+      if (mine) {
+        var sp = document.createElement("span");
+        sp.className = "sumline";
+        sp.textContent = headline(mine);
+        sp.title = "눌러서 5줄 요약 보기";
+        td.appendChild(sp);
+      } else {
+        /* 아직 내 요약이 없으면 수집기 문장 대신 버튼만 */
         var b = document.createElement("button");
-        b.className = "miniai nrre";
-        b.textContent = "📝 5줄 요약";
+        b.className = "miniai";
+        b.textContent = "📝 요약";
         b.setAttribute("onclick", "rowSummarize(" + n.id + ",event)");
         td.appendChild(b);
       }
     }
+  }
+
+  /* 읽기창(오른쪽 패널)의 요약 줄 */
+  function fixReaderSum(n) {
+    var box = document.getElementById("aSum");
+    if (!box || !n) return;
+    var mine = mySummary(n);
+    var link = n.url ? ' &nbsp;<a href="' + n.url + '" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800;white-space:nowrap">🔗 기사 원문 열기 ↗</a>' : '';
+    if (mine) {
+      box.innerHTML = '<b>5줄 요약</b> · <span class="nrsum" style="cursor:pointer;text-decoration:underline dotted">' +
+        escHtml(headline(mine)) + '</span>' + link;
+      var sp = box.querySelector(".nrsum");
+      if (sp) sp.onclick = function () { popupSummary(n, mine); };
+    } else {
+      box.innerHTML = '<b>5줄 요약</b> · <button class="miniai" onclick="rowSummarize(' + n.id + ',event)">📝 요약 만들기</button>' + link;
+    }
+  }
+
+  /* 표 머리글 : 한 줄 요약 → 5줄 요약 */
+  function fixHead() {
+    try {
+      var ths = document.querySelectorAll("#theadRow th");
+      for (var i = 0; i < ths.length; i++) {
+        if ((ths[i].textContent || "").trim() === "한 줄 요약") { ths[i].textContent = "5줄 요약"; return; }
+      }
+    } catch (e) {}
   }
 
   /* 요약 칸 클릭 → 전체 보기 */
@@ -526,11 +583,11 @@
     if (!cell) return;
     var n = newsOfRow(cell.closest("tr"));
     if (!n) return;
-    var s = mySummary(n) || n.summary;
+    var s = mySummary(n);
     if (!s) return;
     e.preventDefault();
     e.stopPropagation();
-    popup(n.title || "", s);
+    popupSummary(n, s);
   }, true);
 
   /* ================= 스크랩 메모 칸 ================= */
@@ -580,6 +637,7 @@
       decorateSummaryCells();
       decorateMemoCells();
       setupTabs();
+      fixHead();
       updateBadges();
       showNote(_fallback ? "⚡ 지금 새 속보는 없어요 — 대신 아직 안 읽은 🔴 중요 뉴스를 보여드립니다." : "");
     } catch (e) {
@@ -598,6 +656,7 @@
     }).observe(tb, { childList: true, subtree: true });
 
     setupTabs();
+    fixHead();
     decorateSummaryCells();
     updateBadges();
 
@@ -623,5 +682,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
   else watch();
 
-  if (window.console) console.log("[news_patch] " + VER + " 적용됨 — 속보→새뉴스→읽음→스크랩 이동식");
+  if (window.console) console.log("[news_patch] " + VER + " 적용됨 — 5줄 요약 · 압축 한 줄 표시");
 })();
