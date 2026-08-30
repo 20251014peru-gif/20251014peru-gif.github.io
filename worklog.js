@@ -18592,3 +18592,280 @@ async function githubUpload(token){
   };
   console.log('[묶음 오른쪽으로] v136 준비됨 — ' + (list().map(function(g){ return NAME[g]||g; }).join(' · ') || '없음'));
 })();
+
+
+/* ============================================================
+   🧾 묶음별 한 줄 자동 정리 (wlAutoSum)  v137-0830-1150
+
+   달님 : 「기본·비용·자재·업체·시간이 채워지면 다 채워진 것만 자동으로
+           본문에 들어가게. 한 줄씩 밑으로 쌓이게.
+           칸 전부 적기는 세로 나열이라 불편해」
+
+   본문 맨 위에 「정리」 상자를 두고, 채워진 묶음마다 한 줄씩 쌓는다.
+
+       📌 2026-08-30 · 지하6층 · 전기 · 완료
+       💰 개인비용 · 합계 500,000원
+       📦 소방관창 AL/65A 1개 · 삼파장램프 2개 · 자재 4,020원
+       🏢 (주)은진 · 조홍석 상무 · 010-6265-4001
+       🕐 09:00 ~ 10:30
+
+   ▸ 값이 바뀌면 그 줄만 다시 쓴다 — 상자 아래에 직접 적은 글은 안 건드린다
+   ▸ 실제로 달라졌을 때만 저장한다 (저장이 쉴 새 없이 도는 것을 막는다)
+   되돌리기 : wlAutoSum.off()  또는 본문 옆 [🧾 자동 정리] 를 한 번 더
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS  = 'wl_autosum';
+  var TAG = 'wlsum';                 /* 정리 상자 표시 — 이 표시가 붙은 것만 앱이 고친다 */
+
+  function isOn(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function setOn(v){
+    try{ localStorage.setItem(LS, v?'1':'0'); }catch(e){}
+    run();
+    if(typeof toast === 'function') toast(v ? '🧾 채워진 묶음이 본문에 한 줄씩 쌓입니다' : '🧾 자동 정리를 껐어요');
+  }
+  function ridNow(){
+    try{ var m = String(location.hash||'').match(/^#lp=([^&]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+    catch(e){ return ''; }
+  }
+  function recOf(id){
+    try{ return (entries||[]).filter(function(x){ return x && x.id === id; })[0] || null; }
+    catch(e){ return null; }
+  }
+  function ES(s){ return String(s==null?'':s).replace(/[&<>]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+  function won(n){ n = Number(n)||0; return n ? n.toLocaleString('ko-KR') : ''; }
+  function T(v){ return String(v==null?'':v).trim(); }
+
+  /* 묶음마다 한 줄 만들기 — 값이 없으면 그 묶음은 아예 빠진다 */
+  function lines(r){
+    var out = [];
+
+    /* 📌 기본 — 언제 · 어디서 · 무엇 */
+    var b = [];
+    if(T(r.date)) b.push(T(r.date));
+    var ym = [T(r.refYear) ? T(r.refYear)+'년' : '', T(r.refMonth) ? T(r.refMonth)+'월' : ''].filter(Boolean).join(' ');
+    if(ym) b.push('대상 ' + ym);
+    if(T(r.floor))  b.push(T(r.floor));
+    if(T(r.field))  b.push(T(r.field));
+    if(T(r.status)) b.push(T(r.status));
+    if(b.length) out.push({ k:'g0', t:'📌 ' + b.join(' · ') });
+
+    /* 💰 비용 */
+    var c = [];
+    if(T(r.expType) && T(r.expType) !== '없음') c.push(T(r.expType));
+    if(T(r.expSubType)) c.push(T(r.expSubType));
+    if(T(r.purpose))    c.push(T(r.purpose));
+    if(Number(r.supplyAmt)) c.push('공급 ' + won(r.supplyAmt) + '원');
+    if(Number(r.taxAmt))    c.push('부가세 ' + won(r.taxAmt) + '원');
+    if(Number(r.cost))      c.push('합계 ' + won(r.cost) + '원');
+    if(r.isIssued) c.push('발급 완료');
+    if(c.length) out.push({ k:'gc', t:'💰 ' + c.join(' · ') });
+
+    /* 📦 자재 — 칸에 적은 것 + 담은 목록 */
+    var m = [];
+    if(T(r.material)) m.push([T(r.material), T(r.spec)].filter(Boolean).join(' ')
+                             + (Number(r.qty) ? ' ' + Number(r.qty) + '개' : ''));
+    (Array.isArray(r.materials) ? r.materials : []).filter(Boolean).forEach(function(x){
+      m.push([T(x.name), T(x.spec)].filter(Boolean).join(' ') + ' ' + (Number(x.qty)||1) + '개');
+    });
+    if(Number(r.matCost)) m.push('자재 ' + won(r.matCost) + '원');
+    if(m.length) out.push({ k:'gt', t:'📦 ' + m.join(' · ') });
+
+    /* 🏢 업체 */
+    var v = [];
+    var nm = T(r.workVendor) || T(r.vendor) || T(r.owner) || T(r.company) || T(r.partyName);
+    if(nm) v.push(nm);
+    var who = [T(r.workContact) || T(r.callContact) || T(r.person),
+               T(r.workRole) || T(r.role)].filter(Boolean).join(' ');
+    if(who) v.push(who);
+    var ph = T(r.workPhone) || T(r.phone) || T(r.ownerPhone) || T(r.partyPhone);
+    if(ph) v.push(ph);
+    if(T(r.workMemo)) v.push(T(r.workMemo));
+    if(v.length) out.push({ k:'g1', t:'🏢 ' + v.join(' · ') });
+
+    /* 🕐 시각 */
+    var st = T(r.startTime), et = T(r.endTime);
+    if(st || et) out.push({ k:'g3', t:'🕐 ' + [st, et].filter(Boolean).join(' ~ ') });
+
+    return out;
+  }
+
+  function boxHTML(ls){
+    return '<div data-' + TAG + '="1" class="pg-sumbox">'
+         + ls.map(function(l){ return '<div data-' + TAG + 'k="' + l.k + '">' + ES(l.t) + '</div>'; }).join('')
+         + '</div>';
+  }
+
+  function run(){
+    var B = document.getElementById('pgBodyTx');
+    if(!B) return;
+    var old = B.querySelector('[data-' + TAG + ']');
+
+    if(!isOn()){
+      if(old){ old.remove(); save(B); }
+      return;
+    }
+    var rid = ridNow(); if(!rid) return;
+    var r = recOf(rid); if(!r) return;
+
+    var ls = lines(r);
+    if(!ls.length){
+      if(old){ old.remove(); save(B); }
+      return;
+    }
+    var want = boxHTML(ls);
+
+    if(old){
+      if(old.outerHTML === want) return;            /* 달라진 게 없으면 저장하지 않는다 */
+      old.outerHTML = want;
+    }else{
+      B.insertAdjacentHTML('afterbegin', want);     /* 맨 위에 — 아래 글은 그대로 */
+    }
+    save(B);
+  }
+
+  function save(B){
+    try{
+      B.dispatchEvent(new Event('input', {bubbles:true}));
+      if(typeof window.wlBodySave === 'function') window.wlBodySave(B.innerHTML);
+    }catch(e){ console.warn('[자동 정리] 본문 저장 실패', e); }
+  }
+
+  /* 본문 옆에 켜고 끄는 단추 */
+  function btn(){
+    var wrap = document.getElementById('pgSumWrap');
+    if(!wrap || document.getElementById('pgAutoSum')) return;
+    var b = document.createElement('button');
+    b.type = 'button'; b.id = 'pgAutoSum'; b.className = 'pg-xb';
+    b.title = '채워진 묶음을 본문 맨 위에 한 줄씩 쌓습니다';
+    b.addEventListener('click', function(){ setOn(!isOn()); paintBtn(); });
+    wrap.insertBefore(b, wrap.firstChild);
+    paintBtn();
+  }
+  function paintBtn(){
+    var b = document.getElementById('pgAutoSum');
+    if(!b) return;
+    var on = isOn();
+    b.textContent = on ? '🧾 자동 정리 켬' : '🧾 자동 정리 끔';
+    b.className = 'pg-xb' + (on ? ' on' : '');
+  }
+
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:70, n:'묶음 한 줄 정리', f:function(){
+    try{ btn(); run(); }catch(e){ console.warn('[자동 정리] 실패', e); } } });
+
+  window.wlAutoSum = {
+    on:  function(){ setOn(true);  return '켰습니다'; },
+    off: function(){ setOn(false); return '껐습니다'; },
+    now: function(){ var r = recOf(ridNow()); return r ? lines(r).map(function(l){ return l.t; }) : '기록을 먼저 여세요'; }
+  };
+  console.log('[자동 정리] v137 준비됨 — 채워진 묶음이 본문 맨 위에 한 줄씩 쌓입니다');
+})();
+
+
+/* ============================================================
+   📷 본문에서 사진 떼어내기 · 확대 · 삭제 (wlPics)  v137-0830-1150
+
+   달님 : 「본문 내용과 사진 넣는건 분리해서 사진칸 만들어서 정리되게.
+           사진은 확대 삭제 기능이 있어야 하고」
+
+   ▸ 본문에 끌어다 놓은 사진을 「📷 사진」 칸으로 옮긴다 (본문은 글만)
+   ▸ 사진을 누르면 크게 보인다 (앱에 있던 zimg 뷰어를 그대로 쓴다)
+   ▸ 사진마다 ✕ — 한 번 물어보고 지운다
+   되돌리기 : wlPics.off()  (사진을 본문에 그대로 둔다)
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS = 'wl_pics_split';
+
+  function isOn(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function setOn(v){ try{ localStorage.setItem(LS, v?'1':'0'); }catch(e){}
+    if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint();
+    if(typeof toast === 'function') toast(v ? '📷 사진을 사진칸으로 모읍니다' : '📷 사진을 본문에 그대로 둡니다'); }
+  function ridNow(){
+    try{ var m = String(location.hash||'').match(/^#lp=([^&]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+    catch(e){ return ''; }
+  }
+  function recOf(id){
+    try{ return (entries||[]).filter(function(x){ return x && x.id === id; })[0] || null; }
+    catch(e){ return null; }
+  }
+
+  /* ① 본문 안 사진 → photos 로 옮기기 */
+  function split(){
+    if(!isOn()) return;
+    var B = document.getElementById('pgBodyTx'); if(!B) return;
+    var imgs = B.querySelectorAll('img'); if(!imgs.length) return;
+    var rid = ridNow(); if(!rid) return;
+    var r = recOf(rid); if(!r) return;
+
+    var cur = Array.isArray(r.photos) ? r.photos.slice() : [];
+    var add = 0;
+    [].forEach.call(imgs, function(im){
+      var src = im.getAttribute('src') || '';
+      if(src && cur.indexOf(src) < 0){ cur.push(src); add++; }
+      im.remove();
+    });
+    try{
+      if(typeof updateRecord === 'function') updateRecord(rid, { photos: cur });
+      if(typeof window.wlBodySave === 'function') window.wlBodySave(B.innerHTML);
+      if(add && typeof toast === 'function') toast('📷 사진 ' + add + '장을 사진칸으로 옮겼어요');
+      setTimeout(function(){
+        try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
+      }, 160);
+    }catch(e){ console.warn('[사진] 옮기기 실패', e); }
+  }
+
+  /* ② 사진칸에 ✕ 붙이기 (확대는 앱의 zimg 뷰어가 이미 한다) */
+  function marks(){
+    var page = document.querySelector('.lf-page'); if(!page) return;
+    var box = page.querySelector('.pg-pics'); if(!box) return;
+    var rid = ridNow(); if(!rid) return;
+
+    [].forEach.call(box.querySelectorAll('img'), function(im, i){
+      if(im._pw) return;
+      im._pw = 1;
+      var w = document.createElement('span');
+      w.className = 'pic-w';
+      im.parentNode.insertBefore(w, im);
+      w.appendChild(im);
+      var x = document.createElement('button');
+      x.type = 'button'; x.className = 'pic-x'; x.textContent = '✕';
+      x.title = '이 사진을 지웁니다';
+      x.addEventListener('click', function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        drop(rid, im.getAttribute('src') || '');
+      });
+      w.appendChild(x);
+    });
+  }
+
+  function drop(rid, src){
+    if(!src) return;
+    if(!confirm('이 사진을 지울까요?\n\n되돌릴 수 없습니다.')) return;
+    var r = recOf(rid); if(!r) return;
+    try{
+      var p = (Array.isArray(r.photos) ? r.photos : []).filter(function(u){ return u !== src; });
+      if(typeof updateRecord === 'function') updateRecord(rid, { photos: p });
+      if(typeof toast === 'function') toast('🗑 사진을 지웠어요');
+      setTimeout(function(){
+        try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(rid); }catch(e){}
+      }, 160);
+    }catch(e){
+      console.error('[사진] 지우기 실패', e);
+      if(typeof toast === 'function') toast('사진을 못 지웠어요: ' + (e.message || e));
+    }
+  }
+
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:72, n:'사진 떼어내기', f:function(){
+    try{ split(); marks(); }catch(e){ console.warn('[사진] 실패', e); } } });
+
+  window.wlPics = {
+    on:  function(){ setOn(true);  return '사진을 사진칸으로 모읍니다'; },
+    off: function(){ setOn(false); return '사진을 본문에 그대로 둡니다'; },
+    list:function(){ var r = recOf(ridNow()); return r ? (r.photos||[]).length + '장' : '기록을 먼저 여세요'; }
+  };
+  console.log('[사진] v137 준비됨 — 본문 사진을 사진칸으로 · 누르면 확대 · ✕ 로 삭제');
+})();
