@@ -20529,9 +20529,219 @@ async function githubUpload(token){
     return '창을 띄웠습니다';
   }
 
+  /* 사진 한 장을 Storage 에 올리고 주소를 돌려준다 (실패하면 null)
+        — v152 「새 사진 자동 올리기」가 이걸 쓴다 */
+  async function up(dataUrl, path){
+    if(!isB64(dataUrl)) return null;
+    var st = await storage();
+    if(!st) return null;
+    try{
+      var ref = st.ref(path || (BASE + '_new/' + Date.now() + '_' +
+                Math.random().toString(36).slice(2,8) + '.jpg'));
+      await ref.putString(dataUrl, 'data_url');
+      return await ref.getDownloadURL();
+    }catch(e){
+      console.warn('[사진] 올리기 실패 — 기록 안에 담습니다', e && (e.code || e.message));
+      return null;
+    }
+  }
+
   window.wlPhoto = {
     state: state, test: test, copy: copy, check: check,
-    backup: backup, clean: clean, q: q, panel: panel
+    backup: backup, clean: clean, q: q, panel: panel,
+    up: up, base: BASE
   };
   console.log('[사진] v150 준비됨 — wlPhoto.panel() 또는 wlPhoto.state()');
+})();
+
+/* ============================================================
+   ⬆ 새 사진도 자동으로 Storage 에 (wlPhotoAuto)  v152-0830-1810
+
+   달님 : 「1·2 진행해」
+          ① 사진 상한·화질 풀기   ② 새 사진도 자동으로 Storage 로
+
+   왜 필요한가
+     v150 에서 기존 사진 20장(2.42MB)을 Storage 로 옮겼지만,
+     **새로 넣는 사진은 여전히 기록 안에 base64 로 쌓인다.**
+     그대로 두면 몇 달 뒤 같은 이관을 또 해야 한다. 여기서 끊는다.
+
+   무엇을 하나
+     ① 사진을 넣는 순간 Storage 에 올리고 **주소만** 기록에 담는다
+     ② 주소로 담기면 파이어스토어 1MB 상한과 무관해지므로
+        900KB 총량 제한을 **주소로 담을 때만** 푼다
+        (올리기 실패로 기록 안에 담을 때는 옛 상한을 그대로 지킨다)
+     ③ 화질 기본값을 「최고」로 올린다 — 계량기 숫자·명판 글씨용
+        (달님이 한 번이라도 직접 고른 적이 있으면 그 선택을 존중한다)
+     ④ 본문(노션식 페이지)에 끌어다 놓은 사진처럼 다른 길로 들어온 것도
+        그물(o:90)로 훑어서 조용히 올린다
+
+   되돌리기 : wlPhoto.auto.off()   → 예전처럼 기록 안에 base64 로 담는다
+   지금 상태 : wlPhoto.auto.state()
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS_AUTO = 'wl_photo_auto';     /* 자동 올리기 켜짐/꺼짐 */
+  var LS_QSET = 'wl_photo_q_set';    /* 달님이 화질을 직접 고른 적이 있나 */
+  var LS_Q    = 'wl_photo_q';
+
+  function autoOn(){ try{ return localStorage.getItem(LS_AUTO) !== '0'; }catch(e){ return true; } }
+  function isB64(s){ return typeof s === 'string' && s.indexOf('data:image') === 0; }
+  function isUrl(s){ return typeof s === 'string' && /^https?:\/\//.test(s); }
+  function netOK(){ try{ return !!online; }catch(e){ return false; } }
+  function ready(){ return !!(window.wlPhoto && typeof window.wlPhoto.up === 'function'); }
+  function say(m){ try{ if(typeof toast === 'function') toast('🖼 ' + m); }catch(e){} }
+
+  /* ── ③ 화질 기본값을 「최고」로 (한 번만) ──
+        달님이 wlPhoto.q(...) 로 직접 고른 적이 있으면 건드리지 않는다. */
+  (function raiseQuality(){
+    try{
+      if(localStorage.getItem(LS_QSET) === '1') return;   /* 직접 고른 적 있음 */
+      if(!autoOn()) return;
+      localStorage.setItem(LS_Q, 'high');
+      console.log('[사진] 화질 기본값을 「최고 (글씨까지)」로 올렸습니다 — 주소로 저장하므로 문서 크기 제한이 없습니다');
+    }catch(e){}
+  })();
+
+  /* 달님이 직접 고르면 그때부터 존중한다 */
+  if(window.wlPhoto && typeof window.wlPhoto.q === 'function'){
+    var _origQ = window.wlPhoto.q;
+    window.wlPhoto.q = function(k){
+      if(k){ try{ localStorage.setItem(LS_QSET, '1'); }catch(e){} }
+      return _origQ.call(window.wlPhoto, k);
+    };
+  }
+
+  /* ── 사진 한 장 올리기 ── */
+  async function upOne(dataUrl, rid){
+    if(!ready() || !netOK()) return null;
+    var base = (window.wlPhoto.base || 'worklog/photos/');
+    var dir  = rid ? (base + rid + '/') : (base + '_new/');
+    var path = dir + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.jpg';
+    try{ return await window.wlPhoto.up(dataUrl, path); }
+    catch(e){ return null; }
+  }
+
+  /* ── ①② 사진 담기 — 기존 addPhotos 를 대신한다 ──
+        원래 것은 압축 → 900KB 검사 → 기록 안에 담기 순서였다.
+        여기서는 압축 → **올리기** → 주소 담기. 실패할 때만 옛 방식으로 물러난다. */
+  var _origAdd = (typeof window.addPhotos === 'function') ? window.addPhotos : null;
+
+  window.addPhotos = async function(files, arr, rerender){
+    if(!autoOn() || !ready()){
+      if(_origAdd) return _origAdd.call(null, files, arr, rerender);
+      return;
+    }
+    var list = [].slice.call(files || []);
+    var up = 0, keep = 0, bad = 0;
+
+    for(var i = 0; i < list.length; i++){
+      var f = list[i];
+      if(!f || !f.type || f.type.indexOf('image/') !== 0) continue;
+
+      var data = null;
+      try{ data = await compressImage(f); }
+      catch(e){ bad++; console.warn('[사진] 처리 실패', e); continue; }
+      if(!data) { bad++; continue; }
+
+      var url = await upOne(data, ridNow());
+      if(url){ arr.push(url); up++; continue; }
+
+      /* 올리기 실패 — 예전처럼 기록 안에 담는다. 이때만 900KB 상한을 지킨다. */
+      var cur = 0;
+      for(var j = 0; j < arr.length; j++) if(isB64(arr[j])) cur += arr[j].length;
+      if(cur + data.length > MAX_TOTAL){
+        say('인터넷이 없어 기록 안에 담는 중인데 용량이 찼어요 — 연결 뒤 다시 넣어주세요');
+        break;
+      }
+      arr.push(data); keep++;
+    }
+
+    try{ if(typeof rerender === 'function') rerender(); }catch(e){}
+
+    if(up && !keep) say('사진 ' + up + '장을 올렸어요');
+    else if(up && keep) say('사진 ' + up + '장 올림 · ' + keep + '장은 기록 안에 (인터넷 확인)');
+    else if(keep) say('사진 ' + keep + '장을 기록 안에 담았어요 (나중에 자동으로 올립니다)');
+    if(bad) console.warn('[사진] 처리 못한 파일 ' + bad + '장');
+  };
+
+  /* ── ④ 그물 — 다른 길로 들어온 사진도 훑는다 ──
+        노션식 본문에 끌어다 놓은 사진은 wlPics(o:72) 가 r.photos 로 옮긴다.
+        그 뒤(o:90)에 여기서 base64 를 발견하면 조용히 올린다. */
+  function ridNow(){
+    try{ var m = String(location.hash || '').match(/^#lp=([^&]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+    catch(e){ return ''; }
+  }
+  function recOf(id){
+    try{ return (entries || []).filter(function(x){ return x && x.id === id; })[0] || null; }
+    catch(e){ return null; }
+  }
+
+  var busy = {};          /* 지금 올리는 중인 기록 — 두 번 안 돌게 */
+  var doneT = 0;
+
+  async function sweepOne(rid){
+    if(!rid || busy[rid]) return;
+    var r = recOf(rid); if(!r || !Array.isArray(r.photos) || !r.photos.length) return;
+    if(!r.photos.some(isB64)) return;
+    if(!autoOn() || !ready() || !netOK()) return;
+
+    busy[rid] = 1;
+    try{
+      var out = r.photos.slice(), n = 0;
+      for(var i = 0; i < out.length; i++){
+        if(!isB64(out[i])) continue;
+        var u = await upOne(out[i], rid);
+        if(!u) break;                       /* 한 장이라도 실패하면 이번엔 그만 (다음에 다시) */
+        out[i] = u; n++;
+      }
+      if(n){
+        if(typeof updateRecord === 'function') updateRecord(rid, { photos: out, photoMigAt: Date.now() });
+        console.log('[사진] 새로 들어온 사진 ' + n + '장을 올렸습니다 (' + rid + ')');
+        say('사진 ' + n + '장을 올렸어요');
+      }
+    }catch(e){ console.warn('[사진] 훑기 실패', e); }
+    finally{ delete busy[rid]; }
+  }
+
+  function sweepSoon(){
+    clearTimeout(doneT);
+    doneT = setTimeout(function(){ sweepOne(ridNow()); }, 1200);
+  }
+
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:90, n:'새 사진 올리기', f:sweepSoon });
+
+  /* ── 창구 ── */
+  function state(){
+    var b = 0, u = 0;
+    try{
+      (entries || []).forEach(function(e){
+        if(!e || !Array.isArray(e.photos)) return;
+        e.photos.forEach(function(p){ if(isB64(p)) b++; else if(isUrl(p)) u++; });
+      });
+    }catch(e){}
+    var q = 'mid';
+    try{ q = localStorage.getItem(LS_Q) || 'mid'; }catch(e){}
+    return {
+      자동올리기: autoOn() ? '켜짐' : '꺼짐',
+      인터넷: netOK() ? '연결됨' : '끊김',
+      화질: q,
+      기록안에남은사진: b,
+      주소로된사진: u,
+      안내: b ? '기록을 열면 자동으로 올라갑니다 (또는 wlPhoto.copy())' : '전부 주소입니다'
+    };
+  }
+
+  window.wlPhoto = window.wlPhoto || {};
+  window.wlPhoto.auto = {
+    on:  function(){ try{ localStorage.setItem(LS_AUTO, '1'); }catch(e){}
+                     return '새 사진을 Storage 에 올립니다'; },
+    off: function(){ try{ localStorage.setItem(LS_AUTO, '0'); }catch(e){}
+                     return '예전처럼 기록 안에 담습니다 (900KB 상한이 다시 걸립니다)'; },
+    state: state,
+    now:   function(){ return sweepOne(ridNow()); }
+  };
+
+  console.log('[사진] 자동 올리기 v152 — ' + (autoOn() ? '켜짐' : '꺼짐') +
+              ' / wlPhoto.auto.state() 로 확인');
 })();
