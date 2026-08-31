@@ -9120,8 +9120,21 @@ function renderExpenseStats(target){
   const hStyle = (t) => `cursor:pointer;user-select:none;border-radius:8px;padding:2px 6px;margin:-2px -6px;`
     + (_nowF===t ? `background:#eaf3fd;box-shadow:inset 0 0 0 1.5px #2563a8;` : ``);
   const hTip = (t) => _nowF===t ? `눌러서 거르개 풀기` : `눌러서 아래 목록을 「${t}」 만 보기`;
+  /* v174 — 두 카드를 한 번에 접었다 폈다 */
+  let _fold = false;
+  try{ _fold = localStorage.getItem("wl_expstats_fold")==="1"; }catch(e){}
   box.innerHTML = `
-    <div class="exp-stat-row">
+    <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:2px 2px 8px">
+      <button type="button" data-esfold="1" title="눌러서 접었다 폈다"
+        style="height:34px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:9px;background:#f7faff;
+               color:#5b7794;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">
+        ${_fold ? "▸" : "▾"} 💰 ${ym} 지출 요약
+      </button>
+      ${_fold ? `<span style="font-size:12.5px;color:#8ba0b6;font-weight:700">
+          개인 <b style="color:#0369a1">${won(personalSum)}원</b> ·
+          세금계산서 <b style="color:#c2410c">${won(taxSum)}원</b></span>` : ``}
+    </div>
+    <div class="exp-stat-row"${_fold ? ` style="display:none"` : ``}>
       <div class="exp-stat-card exp-stat-personal">
         <div class="es-h" data-esf="개인지출" style="${hStyle('개인지출')}" title="${hTip('개인지출')}">💸 ${ym} 개인 지출 ${_nowF==='개인지출'?'<span style="font-size:11px;color:#2563a8;font-weight:800">· 목록 걸림</span>':''} <span class="es-h-sub">전체 ${won(personalSumAll)}원</span></div>
         <div class="es-v">${won(personalSum)}<span class="es-u">원</span></div>
@@ -9141,6 +9154,18 @@ function renderExpenseStats(target){
   `;
   box.querySelectorAll(".es-item").forEach(el=>{
     el.addEventListener("click",()=>openExpenseEditor(el.dataset.id));
+  });
+  /* v174 — 요약 카드 접기 */
+  box.querySelectorAll("[data-esfold]").forEach(el=>{
+    el.addEventListener("click", ev=>{
+      ev.stopPropagation();
+      try{
+        const now = localStorage.getItem("wl_expstats_fold")==="1";
+        localStorage.setItem("wl_expstats_fold", now ? "0" : "1");
+      }catch(e){}
+      try{ if(window.wlExpStats && window.wlExpStats.now) window.wlExpStats.now();
+           else renderExpenseStats(box); }catch(e){ console.warn("[지출 합계] 접기 실패", e); }
+    });
   });
   /* v169 — 머리 누르면 아래 목록 걸러내기 */
   box.querySelectorAll("[data-esf]").forEach(el=>{
@@ -22608,7 +22633,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v173-0831-1700';
+  var JS_BUILD = 'v174-0831-1730';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -22974,4 +22999,127 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
                        console.log('[정산 빌려오기]', r); return r; }
   };
   console.log('[정산 빌려오기] v173 준비됨 — ' + (isOn()?'켜짐':'꺼짐') + ' · wlExpEmbed.state()');
+})();
+
+/* ═══════════════════════════════════════════════════════════
+   🗂 v174 — 위 줄(1행) 탭 숨기기 (wlTabHide)
+
+   달님 : 「노션 보기가 이상 없으면 맨 윗줄은 지워 버릴 거야」
+
+   ⚠️ 「⚙️ 폴더탭관리」로는 1행 탭을 못 숨긴다 — FIXED1(worklog.html 3987)에
+      11개가 전부 「기본 탭」으로 묶여 삭제가 막혀 있다. 그래서 따로 만든다.
+
+   ▸ 코드는 하나도 안 지운다. 단추만 감춘다 → 언제든 되살아난다.
+   ▸ 🗃 데이터 · ⚙️ 폴더탭관리 는 **숨길 수 없다** (되돌릴 길이 막히므로)
+   ▸ 숨긴 탭이 지금 켜져 있으면 데이터 탭으로 보낸다
+   창구 : wlTabHide.panel() / .hide('expense') / .show('expense') / .list() / .reset()
+   ═══════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var LS   = 'wl_tab_hide';
+  var KEEP = ['data', 'folder'];            /* 절대 못 숨기는 것 */
+  var NAME = { main:'📋 기록', life:'🏠 개인', data:'🗃 데이터', expense:'💰 지출',
+               memo:'📝 메모', calendar:'📅 달력', accident:'🚨 사고', progress:'🚧 진행업무',
+               material:'📦 자재', password:'🔐 비번', diag:'🔧 진단', ai:'🤖 AI' };
+  var ROW1 = ['main','life','data','expense','memo','calendar','accident','progress','material','password','diag','ai'];
+
+  function list(){
+    try{ var a=JSON.parse(localStorage.getItem(LS)||'[]'); return Array.isArray(a)?a:[]; }
+    catch(e){ return []; }
+  }
+  function save(a){
+    try{ localStorage.setItem(LS, JSON.stringify(a||[])); }catch(e){}
+    paint();
+  }
+
+  function paint(){
+    try{
+      var h = list();
+      document.querySelectorAll('[data-v43tab]').forEach(function(b){
+        var t = b.getAttribute('data-v43tab') || '';
+        var hide = (KEEP.indexOf(t) < 0) && h.indexOf(t) >= 0;
+        if(hide){ b.dataset._wlth='1'; b.style.display='none'; }
+        else if(b.dataset._wlth){ b.style.display=''; delete b.dataset._wlth; }
+      });
+      /* 지금 켜진 탭을 숨겼으면 데이터 화면으로 옮겨 준다 */
+      var on = document.querySelector('[data-v43tab].on, [data-v43tab].active');
+      var ot = on ? (on.getAttribute('data-v43tab')||'') : '';
+      if(ot && h.indexOf(ot) >= 0 && KEEP.indexOf(ot) < 0){
+        if(typeof window.v43ActivateTab === 'function') window.v43ActivateTab('data');
+      }
+    }catch(e){ console.warn('[탭 숨기기]', e); }
+  }
+
+  function hide(t){ var a=list(); if(KEEP.indexOf(t)>=0) return '이 탭은 숨길 수 없어요'; if(a.indexOf(t)<0) a.push(t); save(a); return (NAME[t]||t)+' 숨김'; }
+  function show(t){ save(list().filter(function(x){ return x!==t; })); return (NAME[t]||t)+' 다시 보임'; }
+  function reset(){ save([]); if(typeof toast==='function') toast('🗂 위 줄 탭을 전부 되살렸어요'); return '전부 되살렸습니다'; }
+
+  /* ── 켜고 끄는 작은 창 ── */
+  function panel(){
+    var old=document.getElementById('wlTabHideOv'); if(old) old.remove();
+    var h=list();
+    var ov=document.createElement('div');
+    ov.id='wlTabHideOv';
+    ov.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(20,32,48,.42);'
+      + 'display:flex;align-items:center;justify-content:center;padding:16px';
+    var rows = ROW1.map(function(t){
+      var fixed = KEEP.indexOf(t)>=0;
+      var on = h.indexOf(t)>=0;
+      return '<label style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1.5px solid '
+        + (on?'#f0c9c9':'#e8f0fa')+';border-radius:10px;background:'+(on?'#fff6f6':'#fff')+';'
+        + (fixed?'opacity:.45;':'cursor:pointer;')+'">'
+        + '<input type="checkbox" data-th="'+t+'"'+(on?' checked':'')+(fixed?' disabled':'')
+        +   ' style="width:19px;height:19px;'+(fixed?'':'cursor:pointer')+'">'
+        + '<span style="flex:1;font-size:14px;color:#1a2f45;font-weight:700">'+(NAME[t]||t)+'</span>'
+        + '<span style="font-size:11.5px;color:'+(fixed?'#aab8c8':(on?'#b52929':'#8ba0b6'))+';font-weight:700">'
+        +   (fixed?'못 숨김':(on?'숨김':'보임'))+'</span>'
+        + '</label>';
+    }).join('');
+    ov.innerHTML =
+      '<div style="background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:86vh;'
+      + 'overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,.22);padding:18px">'
+      + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:6px">'
+      +   '<b style="font-size:17px;color:#1a2f45;flex:1">🗂 위 줄 탭 숨기기</b>'
+      +   '<button type="button" id="thX" style="border:none;background:none;font-size:22px;color:#94a3b8;cursor:pointer">✕</button>'
+      + '</div>'
+      + '<div style="font-size:12.5px;color:#8ba0b6;line-height:1.6;margin-bottom:12px">'
+      +   '체크하면 그 단추만 감춥니다. <b>코드는 하나도 안 지웁니다</b> — 언제든 다시 켜집니다.<br>'
+      +   '🗃 데이터 는 되돌릴 길이라 숨길 수 없습니다.</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:7px">'+rows+'</div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">'
+      +   '<button type="button" id="thReset" style="height:40px;padding:0 16px;border:1.5px solid #dbe6f4;'
+      +     'border-radius:10px;background:#f7faff;color:#5b7794;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">↺ 전부 되살리기</button>'
+      +   '<button type="button" id="thOk" style="height:40px;padding:0 22px;border:none;border-radius:10px;'
+      +     'background:#2563a8;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">닫기</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(ev){ if(ev.target===ov) ov.remove(); });
+    ov.querySelector('#thX').addEventListener('click', function(){ ov.remove(); });
+    ov.querySelector('#thOk').addEventListener('click', function(){ ov.remove(); });
+    ov.querySelector('#thReset').addEventListener('click', function(){ reset(); ov.remove(); panel(); });
+    ov.querySelectorAll('[data-th]').forEach(function(cb){
+      cb.addEventListener('change', function(){
+        var t=cb.getAttribute('data-th');
+        if(cb.checked) hide(t); else show(t);
+        ov.remove(); panel();
+      });
+    });
+  }
+
+  /* 탭 줄이 다시 그려져도 따라 붙는다 */
+  var t=null;
+  function later(){ clearTimeout(t); t=setTimeout(paint, 200); }
+  try{
+    var mo=new MutationObserver(function(){ later(); });
+    var bar=document.querySelector('[data-v43tab]');
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){}
+  setTimeout(paint, 1200);
+  setTimeout(paint, 3000);
+  setTimeout(paint, 6000);
+
+  window.wlTabHide = { panel:panel, hide:hide, show:show, reset:reset,
+                       list:function(){ var r=list(); console.log('[탭 숨기기] 숨긴 탭:', r); return r; },
+                       now:paint };
+  console.log('[탭 숨기기] v174 준비됨 — wlTabHide.panel() · 지금 숨긴 것 ' + list().length + '개');
 })();

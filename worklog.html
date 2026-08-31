@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v173-0831-1700";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v174-0831-1730";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3268,7 +3268,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=173-20260831t1700"></script>
+<script src="worklog.js?v=174-20260831t1730"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -23584,7 +23584,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
                + '<button type="button" class="lf-fx" id="lfClnNew"'
                + ' title="청소일지를 바로 새로 씁니다">🧹 청소일지 쓰기</button>'
                + '<button type="button" class="lf-fx" data-gotab="calendar"'
-               + ' title="달력 화면 — 청소일지 목록이 여기 있습니다">📅 달력(청소일지)</button>')
+               + ' title="달력 화면 — 청소일지 목록이 여기 있습니다">📅 달력(청소일지)</button>'
+               /* v174 — 위 줄 탭 숨기기 */
+               + '<button type="button" class="lf-fx" id="lfTabHide"'
+               + ' title="맨 윗줄 탭을 감춥니다 — 코드는 그대로라 언제든 되살아납니다">🗂 위 줄 탭 숨기기</button>')
       +     ((!isPersonal() && DS && DS.key==='work:expense')
              ? '<button type="button" class="lf-fx" data-expsub="meal" title="지출 화면의 중식이용내역">🍚 중식</button>'
                + '<button type="button" class="lf-fx" data-expsub="labor" title="지출 화면의 도급비 산출">👷 인건비</button>'
@@ -28068,6 +28071,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
           else toast('그 화면을 열지 못했어요');
         }catch(err){ console.error('[도구]', err); toast('오류: '+(err.message||err)); }
       });
+    });
+    var thb=document.getElementById('lfTabHide');
+    if(thb) thb.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      try{
+        if(window.wlTabHide && window.wlTabHide.panel) window.wlTabHide.panel();
+        else toast('탭 숨기기 창을 열지 못했어요');
+      }catch(err){ console.error('[탭 숨기기]', err); toast('오류: '+(err.message||err)); }
     });
     var clnb=document.getElementById('lfClnNew');
     if(clnb) clnb.addEventListener('click', function(ev){
