@@ -17843,7 +17843,10 @@ async function githubUpload(token){
   var NAME = { expense:'지출', memo:'메모', accident:'사고', progress:'진행업무', material:'자재' };
 
   function isOn(){
-    try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; }   /* 기본 켬 */
+    /* v173 — 달님 요청으로 기본 꺼짐.
+       지출 탭에는 정산표·중식·인건비가 따로 있어서, 가로채면 갈 길이 막힌다.
+       켜려면 wlOneTab.on() 또는 진단 탭 「🗂 탭 하나로」 */
+    try{ return localStorage.getItem(LS) === '1'; }catch(e){ return false; }
   }
   function setOn(v){
     try{ localStorage.setItem(LS, v ? '1' : '0'); }catch(e){}
@@ -22605,7 +22608,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v172-0831-1620';
+  var JS_BUILD = 'v173-0831-1700';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -22805,3 +22808,170 @@ async function githubUpload(token){
   console.log('[대조] v170 — wlSame() 으로 기록 탭 ↔ 노션 보기 건수를 맞춰 볼 수 있습니다');
 })();
 try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
+
+/* ═══════════════════════════════════════════════════════════
+   🧮 v173 — 노션 지출 화면에 「정산표 · 중식 · 인건비」 빌려오기 (wlExpEmbed)
+
+   달님 : 「노션 보기에도 지출 누르면 똑같이 나오게 할 수 없어?」
+
+   ▸ 어떻게 — 복사하지 않고 **빌려 쓰고 돌려놓는다**.
+     지출 탭의 연/월 선택바·서브탭줄·정산표·중식·인건비 덩어리를
+     노션 지출 화면 아래로 옮겼다가, 떠나면 원래 자리로 되돌린다.
+     복사하면 같은 id 가 둘이 되어 뒤쪽 화면이 통째로 먹통이 된다(사고이력 ⑮).
+   ▸ 어디에 붙이나 — `dataHost` 는 통째로 다시 그려지므로 그 **바깥**(형제 자리)에
+     붙인다. 안에 붙이면 다음 render 에서 날아간다.
+   ▸ 최악의 경우 — 새로고침하면 HTML 원본대로 제자리에 돌아온다.
+   창구 : wlExpEmbed.state() / .off() / .on() / .now()
+   ═══════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var LS  = 'wl_exp_embed';
+  var BOX = 'wlExpEmbedBox';
+  var SUB = '_wlExpSubBar';                 /* 서브탭 줄에 임시로 붙이는 id */
+  var IDS = ['expYmBar', 'expSettleWrap', 'expMealWrap', 'expLaborWrap'];
+  var home = {};                            /* id → {p:원래부모, n:원래 다음형제} */
+  var lent = false;
+
+  function isOn(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function setOn(v){
+    try{ localStorage.setItem(LS, v ? '1' : '0'); }catch(e){}
+    if(!v) giveBack();
+    run();
+    if(typeof toast === 'function') toast(v ? '🧮 노션 지출에 정산표를 함께 보여 줍니다'
+                                           : '🧮 정산표는 지출 탭에서만 봅니다');
+  }
+
+  function subBar(){
+    var b = document.getElementById('expSubTabList');
+    if(!b || !b.parentNode) return null;
+    if(!b.parentNode.id) b.parentNode.id = SUB;
+    return b.parentNode;
+  }
+  function parts(){
+    var out = [];
+    var sb = subBar(); if(sb) out.push(sb);
+    IDS.forEach(function(id){ var el = document.getElementById(id); if(el) out.push(el); });
+    return out;
+  }
+
+  /* 지금 노션 데이터 화면에서 「지출」을 보고 있나 */
+  function onNotionExpense(){
+    try{
+      var host = document.getElementById('dataHost');
+      if(!host || !host.innerHTML) return false;
+      if(host.offsetParent === null) return false;
+      var k = '';
+      try{ k = (window.wlUser && window.wlUser.kind) ? (window.wlUser.kind() || '') : ''; }catch(e){}
+      if(!k){ try{ k = String(localStorage.getItem('wl_ds_last') || '').replace(/^["'\\]+|["'\\]+$/g,'').trim(); }catch(e){} }
+      return k === 'expense';
+    }catch(e){ return false; }
+  }
+
+  function remember(el){
+    if(!el || !el.id) return;
+    if(home[el.id]) return;                 /* 원래 자리는 딱 한 번만 기억한다 */
+    home[el.id] = { p: el.parentNode, n: el.nextSibling };
+  }
+
+  function borrow(){
+    if(lent) return;
+    var host = document.getElementById('dataHost');
+    if(!host || !host.parentNode) return;
+    var ps = parts();
+    if(!ps.length) return;                  /* 지출 화면이 아직 안 만들어졌다 */
+
+    var box = document.getElementById(BOX);
+    if(!box){
+      box = document.createElement('div');
+      box.id = BOX;
+      box.style.cssText = 'margin-top:14px;border-top:2px solid #dbe6f4;padding-top:12px';
+      var hd = document.createElement('div');
+      hd.style.cssText = 'display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px';
+      hd.innerHTML = '<b style="font-size:14px;color:#33567d">🧮 정산 · 중식 · 인건비</b>'
+        + '<span style="font-size:11.5px;color:#aab8c8;flex:1;min-width:140px">'
+        +   '💰 지출 탭에서 빌려온 화면입니다 — 여기서 고치면 그대로 저장됩니다</span>';
+      box.appendChild(hd);
+    }
+    if(box.parentNode !== host.parentNode) host.parentNode.insertBefore(box, host.nextSibling);
+
+    ps.forEach(function(el){ remember(el); box.appendChild(el); });
+
+    /* 노션에는 이미 목록이 있으므로 「📋 목록」 단추는 감춘다 */
+    try{
+      var lb = document.getElementById('expSubTabList');
+      if(lb){ lb.dataset._wlHid = '1'; lb.style.display = 'none'; }
+    }catch(e){}
+
+    /* 아무것도 안 보이면 정산표를 열어 준다 */
+    try{
+      var sw = document.getElementById('expSettleWrap');
+      var mw = document.getElementById('expMealWrap');
+      var lw = document.getElementById('expLaborWrap');
+      var vis = function(x){ return x && x.style.display !== 'none' && x.offsetParent !== null; };
+      if(!vis(sw) && !vis(mw) && !vis(lw)){
+        var sb2 = document.getElementById('expSubTabSettle');
+        if(sb2) sb2.click();
+      }
+    }catch(e){}
+
+    lent = true;
+  }
+
+  function giveBack(){
+    if(!lent) return;
+    try{
+      var lb = document.getElementById('expSubTabList');
+      if(lb && lb.dataset._wlHid){ lb.style.display = ''; delete lb.dataset._wlHid; }
+    }catch(e){}
+    Object.keys(home).forEach(function(id){
+      try{
+        var el = document.getElementById(id), h = home[id];
+        if(!el || !h || !h.p) return;
+        if(h.n && h.n.parentNode === h.p) h.p.insertBefore(el, h.n);
+        else h.p.appendChild(el);
+      }catch(e){ console.warn('[정산 빌려오기] 되돌리기 실패:', id, e); }
+    });
+    var box = document.getElementById(BOX);
+    if(box) box.remove();
+    lent = false;
+  }
+
+  function run(){
+    try{
+      if(isOn() && onNotionExpense()) borrow();
+      else giveBack();
+    }catch(e){ console.warn('[정산 빌려오기]', e); try{ giveBack(); }catch(e2){} }
+  }
+
+  var t = null;
+  function later(){ clearTimeout(t); t = setTimeout(run, 260); }
+  try{
+    var mo = new MutationObserver(function(m){
+      for(var i=0;i<m.length;i++){
+        var add = m[i].addedNodes; if(!add || !add.length) continue;
+        for(var j=0;j<add.length;j++){
+          var n = add[j];
+          if(!n || n.nodeType !== 1) continue;
+          if(n.id === BOX || (n.closest && n.closest('#' + BOX))) continue;   /* 내가 옮긴 것은 무시 */
+          later(); return;
+        }
+      }
+    });
+    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+  }catch(e){ console.warn('[정산 빌려오기] 감시 실패', e); }
+  document.addEventListener('click', function(ev){
+    try{ if(ev.target.closest && ev.target.closest('[data-dsk],[data-v43tab]')) later(); }catch(e){}
+  }, true);
+  setTimeout(run, 2600);
+  setTimeout(run, 5200);
+
+  window.wlExpEmbed = {
+    on:    function(){ setOn(true);  return '노션 지출에 정산표를 함께 보여 줍니다'; },
+    off:   function(){ setOn(false); return '정산표는 지출 탭에서만 봅니다'; },
+    now:   run,
+    back:  giveBack,
+    state: function(){ var r={켜짐:isOn(), 지금빌려옴:lent, 노션지출화면:onNotionExpense()};
+                       console.log('[정산 빌려오기]', r); return r; }
+  };
+  console.log('[정산 빌려오기] v173 준비됨 — ' + (isOn()?'켜짐':'꺼짐') + ' · wlExpEmbed.state()');
+})();
