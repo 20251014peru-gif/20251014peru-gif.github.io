@@ -11878,6 +11878,9 @@ async function githubUpload(token){
 
   window.renderRecurWidget = renderRecurWidget;
   window.openRecurManage = openRecurManage;
+  /* v165 — 노션식 화면에서 요약을 보여주려고 밖에 낸다 */
+  window.wlRecur = { list: rcList, done: rcIsDone, month: rcCurMonth,
+                     manage: openRecurManage, render: renderRecurWidget };
   window.rcUpdateFabBadge = rcUpdateFabBadge;
 
   setTimeout(function(){ try{ renderRecurWidget(); rcUpdateFabBadge(); }catch(e){} }, 950);

@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v164-0831-1150";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v165-0831-1215";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3268,7 +3268,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=164-20260831t1150"></script>
+<script src="worklog.js?v=165-20260831t1215"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -22984,7 +22984,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   /* 날짜 빠른 고르기 → 실제 기간 */
   function colfRange(q){
     var t=today();
-    function shift(n){ var d=new Date(t+'T00:00:00'); d.setDate(d.getDate()+n);
+    /* v165 — 한국 시간대에서 하루 밀리던 것을 고침 (UTC 고정 연산 · 사고이력 ⑬) */
+    function shift(n){ var q=t.slice(0,10).split('-');
+      var d=new Date(Date.UTC(+q[0], +q[1]-1, +q[2]));
+      d.setUTCDate(d.getUTCDate()+n);
       return d.toISOString().slice(0,10); }
     if(q==='d0')  return {from:t, to:t};
     if(q==='d1')  return {from:shift(-1), to:shift(-1)};
@@ -23273,6 +23276,100 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
          (카드·리스트·보드에는 칸 이름이 없으므로 「🔽 조건 걸기」로 남긴다)
        · 「✕ 필터 풀기 N」 을 ⚙ 밖으로 꺼냈다 — 걸렸을 때만 빨갛게 나온다
        · 걸린 조건 칩은 줄에 늘어놓지 않고 그 버튼을 눌러 펼친다 */
+  /* ── 📅 날짜 빠르게 고르기 (v165) — 기록 탭과 같은 칩 + 「N일 전」 칸 ───────
+     칩은 기존 colfRange() 를 그대로 쓴다 (기록 탭과 계산이 어긋나지 않게). */
+  var DAY_Q = [['d0','오늘'],['d1','어제'],['d2','2일전'],['d3','3일전'],
+               ['d7','이번 주'],['m','이번 달'],['pm','지난 달']];
+  function dayNow(){                    /* 지금 걸린 기간이 어느 칩인지 */
+    if(!flt.from && !flt.to) return '';
+    for(var i=0;i<DAY_Q.length;i++){
+      var r=colfRange(DAY_Q[i][0]);
+      if(r && r.from===flt.from && r.to===flt.to) return DAY_Q[i][0];
+    }
+    return '';
+  }
+  function dAgo(n){                     /* 오늘에서 n 일 전 — UTC 고정 (사고이력 ⑬) */
+    var t=today(), p=t.slice(0,10).split('-');
+    var d=new Date(Date.UTC(+p[0], +p[1]-1, +p[2]));
+    d.setUTCDate(d.getUTCDate()-n);
+    return d.toISOString().slice(0,10);
+  }
+  function dayAgoN(){                   /* 「N일 전」 칸에 되비쳐 줄 숫자 */
+    if(!flt.from || flt.from!==flt.to) return '';
+    var t=today(), p=t.slice(0,10).split('-'), q=String(flt.from).split('-');
+    if(q.length<3) return '';
+    var a=Date.UTC(+p[0],+p[1]-1,+p[2]), b=Date.UTC(+q[0],+q[1]-1,+q[2]);
+    var n=Math.round((a-b)/86400000);
+    return (n>=0 && n<=3650)? String(n) : '';
+  }
+  function dayBar(){
+    var on=dayNow();
+    return '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 0 2px">'
+      + '<span style="font-size:12.5px;font-weight:800;color:#5b7794;margin-right:2px">📅 날짜</span>'
+      + DAY_Q.map(function(q){
+          var sel=(on===q[0]);
+          return '<button type="button" class="lf-fx" data-dayq="'+q[0]+'"'
+            + ' style="height:34px;padding:0 13px;font-size:12.5px;font-weight:800'
+            +   (sel? ';background:#2563a8;color:#fff;border-color:#2563a8' : '')+'">'
+            + q[1]+'</button>'; }).join('')
+      + '<span style="display:inline-flex;align-items:center;gap:5px;margin-left:5px">'
+      +   '<input type="number" min="0" max="3650" id="lfDayN" value="'+esc(dayAgoN())+'"'
+      +   ' placeholder="숫자" title="숫자를 넣고 엔터 — 1이면 어제, 2면 2일 전 하루만 봅니다"'
+      +   ' style="width:82px;height:34px;border:1.5px solid #dbe6f4;border-radius:8px;'
+      +     'padding:0 8px;font-size:13px;font-family:inherit;text-align:center;background:#fffbea">'
+      +   '<span style="font-size:12.5px;font-weight:800;color:#5b7794">일 전</span>'
+      + '</span>'
+      + ((flt.from||flt.to)
+         ? '<button type="button" class="lf-fx" id="lfDayClr" style="height:34px;padding:0 13px;'
+           + 'font-size:12.5px;font-weight:800;color:#b52929;border-color:#f0c9c9;background:#fff6f6">'
+           + '기간 해제</button>'
+           + '<span style="font-size:12px;color:#8ba0b6;font-weight:700">'
+           + esc(flt.from||'처음')+' ~ '+esc(flt.to||'끝')+'</span>'
+         : '')
+      + '</div>';
+  }
+
+  /* ── 🔁 정기점검 · 📅 반복업무 한눈에 (v165) ─────────────────────────
+     기록 탭의 위젯을 옮겨 오지 않는다(같은 id 가 둘이면 먹통 — 사고이력 ⑮).
+     요약만 새로 그리고, 누르면 원래 관리창을 그대로 부른다. */
+  function chkBar(){
+    if(isPersonal()) return '';
+    var h='';
+    try{
+      var rows = (window.wlChk && window.wlChk.rows) ? window.wlChk.rows() : [];
+      if(rows.length){
+        var r0=rows[0], dd=r0.dd;
+        var lab=(dd==null)?'날짜 미정':(dd<0?(-dd)+'일 지남':dd===0?'오늘':'D-'+dd);
+        var col=(dd==null)?'#5b7794':(dd<0?'#991b1b':(dd<=7?'#9a3412':'#5b7794'));
+        h += '<button type="button" class="lf-fx" data-ckmgr="1"'
+          + ' style="height:36px;padding:0 13px;font-size:12.5px;font-weight:800" title="눌러서 정기점검 관리">'
+          + '🔁 정기점검 <b style="color:#1a2f45">'+esc(r0.t.name)+'</b> '
+          + '<b style="color:'+col+'">'+lab+'</b>'
+          + (rows.length>1? ' <span style="color:#8ba0b6;font-weight:700">외 '+(rows.length-1)+'건</span>':'')
+          + '</button>';
+      } else {
+        h += '<button type="button" class="lf-fx" data-ckmgr="1" style="height:36px;padding:0 13px;'
+          + 'font-size:12.5px;font-weight:800;border-style:dashed">🔁 정기점검 등록</button>';
+      }
+    }catch(e){ console.warn('[노션] 정기점검 요약 실패:', e && e.message); }
+    try{
+      var R=window.wlRecur;
+      if(R && R.list){
+        var all=R.list(), done=all.filter(R.done).length;
+        var mn=String(R.month()||'').slice(5,7), mLab=(+mn)? (+mn)+'월 ' : '';
+        h += '<button type="button" class="lf-fx" data-rcmgr="1"'
+          + ' style="height:36px;padding:0 13px;font-size:12.5px;font-weight:800" title="눌러서 반복업무 관리">'
+          + '📅 '+mLab+'반복업무 '
+          + (all.length
+             ? '<b style="color:'+(done===all.length?'#0f7a4a':'#9a3412')+'">'+done+' / '+all.length+' 완료</b>'
+             : '<span style="color:#8ba0b6;font-weight:700">등록</span>')
+          + '</button>';
+      }
+    }catch(e){ console.warn('[노션] 반복업무 요약 실패:', e && e.message); }
+    if(!h) return '';
+    return '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0 0">'+h+'</div>';
+  }
+
   function fltNum(pt){
     return colfCount(pt) + ((flt.rules||[]).length) + (flt.money?1:0)
          + ((flt.from||flt.to)?1:0) + (num(flt.min)?1:0);
@@ -23347,7 +23444,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   function fltBar(n, tot){
     var pt0 = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
     var nF = fltNum(pt0);
-    return '<div class="lf-fb">'
+    return chkBar() + dayBar()
+      + '<div class="lf-fb">'
       + '<div class="lf-fbwrap"><div class="lf-fbmid">'
       +   viewChips(pt0)
       +   '<span class="lf-fbsep"></span>'
@@ -23435,7 +23533,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     /* v163 — 금액·숫자 칸과 날짜 칸은 뺀다. 그룹이 수백 개가 되어 쓸모가 없다.
        (월별로 묶기가 이미 있으므로 날짜별 묶기는 겹친다) */
     var ok=['sel','tag','multi','rel'];   /* v164 — 체크·글자·전화 칸은 뺀다 */
-    var a=propsOf(pt).filter(function(p){ return ok.indexOf(p.type)>=0 && p.id!=='_title'; });
+    var ALSO=/^(업체|거래처)$/;            /* v165 — 「업체」만 되살린다 */
+    var a=propsOf(pt).filter(function(p){
+      return (ok.indexOf(p.type)>=0 || ALSO.test(p.name||'')) && p.id!=='_title'; });
     var si=statInfo(pt);
     var siName = si ? (({status:'상태',expType:'종류',stockType:'입고/출고',dir:'통화 구분',
                          vtype:'휴가 종류',dtype:'전달 종류',scheduleType:'반복',
@@ -27749,6 +27849,52 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(cfb) cfb.addEventListener('click', function(ev){ ev.stopPropagation(); colfPick(ptCF, cfb); });
     var fpb=document.getElementById('lfFpop');   /* v163 — 걸린 조건 펼쳐보기 */
     if(fpb) fpb.addEventListener('click', function(ev){ ev.stopPropagation(); fltPop(ptCF, fpb); });
+    /* ── 📅 날짜 칩 · 「N일 전」 칸 (v165) ── */
+    host.querySelectorAll('[data-dayq]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var q=b.getAttribute('data-dayq'), r=colfRange(q);
+        if(!r) return;
+        if(dayNow()===q) fltSet({from:'', to:''});        /* 같은 칩 다시 = 해제 */
+        else fltSet({from:r.from, to:r.to});
+      });
+    });
+    var dn=document.getElementById('lfDayN');
+    if(dn && !dn._bound){
+      dn._bound = true;
+      var applyN = function(){
+        var v=String(dn.value||'').trim();
+        if(v===''){ if(flt.from||flt.to) fltSet({from:'', to:''}); return; }
+        var n=parseInt(v,10);
+        if(isNaN(n) || n<0 || n>3650) return;
+        var s2=dAgo(n);
+        fltSet({from:s2, to:s2});
+      };
+      dn.addEventListener('change', applyN);
+      dn.addEventListener('keydown', function(ev){
+        if(ev.key==='Enter'){ ev.preventDefault(); applyN(); } });
+    }
+    var dcl=document.getElementById('lfDayClr');
+    if(dcl) dcl.addEventListener('click', function(ev){
+      ev.stopPropagation(); fltSet({from:'', to:''}); });
+
+    /* ── 🔁 정기점검 · 📅 반복업무 (v165) ── */
+    host.querySelectorAll('[data-ckmgr]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        try{ if(window.wlChk && window.wlChk.mgr) window.wlChk.mgr();
+             else toast('정기점검 창을 열지 못했어요 — 기록 탭에서 열어 주세요'); }
+        catch(err){ console.error('[정기점검]', err); toast('오류: '+(err.message||err)); }
+      });
+    });
+    host.querySelectorAll('[data-rcmgr]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        try{ if(typeof window.openRecurManage==='function') window.openRecurManage();
+             else toast('반복업무 창을 열지 못했어요 — 기록 탭에서 열어 주세요'); }
+        catch(err){ console.error('[반복업무]', err); toast('오류: '+(err.message||err)); }
+      });
+    });
     /* ⚙ 그 밖의 도구 */
     var mb=document.getElementById('lfMoreBtn'), mw=document.getElementById('lfMore');
     if(mb && mw){
@@ -28434,6 +28580,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   }
 
   /* ── 위젯 ── */
+  /* v165 — 노션식 화면에서도 쓰려고 따로 뺐다 */
+  function ckRows(){
+    return ckList().map(function(t){ return { t:t, d:nextDue(t), dd:dday(nextDue(t)) }; })
+      .sort(function(a,b){ return (a.dd==null?9999:a.dd) - (b.dd==null?9999:b.dd); });
+  }
   function ckRender(){
     var host=document.getElementById('chkWidget'); if(!host) return;
     var all=ckList();
@@ -28449,8 +28600,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var b0=document.getElementById('ckMgr0'); if(b0) b0.addEventListener('click', ckMgr);
       return;
     }
-    var rows = all.map(function(t){ return { t:t, d:nextDue(t), dd:dday(nextDue(t)) }; })
-      .sort(function(a,b){ return (a.dd==null?9999:a.dd) - (b.dd==null?9999:b.dd); });
+    var rows = ckRows();
 
     host.innerHTML='<div style="background:#f7fafd;border:1.5px solid #e8f0fa;border-radius:12px;padding:11px 13px;margin-top:10px">'
       + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px">'
@@ -28652,6 +28802,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(t) setTimeout(boot, 200);
   }, true);
   window.wlChkBoot = boot;
+  /* v165 — 노션식 화면에서 요약·관리창을 부르려고 밖에 낸다 */
+  window.wlChk = { rows: ckRows, mgr: ckMgr, render: ckRender, boot: boot };
 })();
 </script>
 <script>
