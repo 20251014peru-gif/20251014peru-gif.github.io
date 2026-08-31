@@ -1026,6 +1026,11 @@ window.wlDeletedIds = { list: loadDelIds, forget: forgetDelId,
 function deleteRecord(id){
   rememberDelId(id);
   entries=entries.filter(x=>x.id!==id);
+  /* v171 — 어느 화면에서 지우든 위 지출 요약 카드가 따라오게 */
+  try{ setTimeout(function(){
+    try{ if(window.wlExpStats && window.wlExpStats.now) window.wlExpStats.now(); }
+    catch(e){ console.warn("[지출 합계] 갱신 실패", e); }
+  }, 300); }catch(e){}
   if(online){
     const _c = colOfId(id);
     db.collection(_c).doc(id).delete().catch(e=>logErr("삭제 동기화", e));
@@ -7803,6 +7808,7 @@ function renderCleaningStats(){
 // ===== 청소 일지 추가/수정 모달 =====
 let cleaningPhoto=null;
 let cleaningData=null;
+/* v172 — 노션 ⚙ 「도구」에서도 부른다 */
 function openCleaningEditor(id){
   cleaningData = id ? Object.assign({},entries.find(e=>e.id===id)||{}) : {
     date: todayStr(),
@@ -9074,8 +9080,15 @@ function renderExpense(){
       그리는 곳을 밖에서 정할 수 있게만 열어 둔다. 인자 없이 부르면 예전 그대로. */
 function renderExpenseStats(target){
   const box = target || $("expStats"); if(!box) return;
-  const all = entries.filter(e=>e.kind==="expense");
-  if(!all.length){ box.innerHTML=""; return; }
+  /* v171 — 아래 목록과 똑같은 규칙으로 센다.
+     노션 목록은 하위 항목(parentId)을 빼는데 요약은 넣고 있어서 숫자가 갈렸다.
+     ⚙ 안의 「하위 항목도」 를 켜면 양쪽 다 넣는다. */
+  let _sub = false;
+  try{ _sub = localStorage.getItem("wl_life_showsub")==="true"; }catch(e){}
+  const raw = entries.filter(e=>e.kind==="expense");
+  const all = _sub ? raw : raw.filter(e=>!e.parentId);
+  const hidN = raw.length - all.length;
+  if(!raw.length){ box.innerHTML=""; return; }
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
   // 이번달 + 전체 모두 보여줌
@@ -9122,6 +9135,9 @@ function renderExpenseStats(target){
         ${showItems(taxThis, taxAll)}
       </div>
     </div>
+    ${hidN ? `<div style="font-size:11.5px;color:#b58a2f;background:#fffbea;border:1px solid #f0e0b0;
+       border-radius:9px;padding:6px 10px;margin-top:7px">하위 항목 ${hidN}건은 아래 목록과 똑같이 빼고 셌습니다
+       — ⚙ 안의 「하위 항목도」 를 켜면 함께 보입니다</div>` : ``}
   `;
   box.querySelectorAll(".es-item").forEach(el=>{
     el.addEventListener("click",()=>openExpenseEditor(el.dataset.id));
@@ -22589,7 +22605,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v170-0831-1500';
+  var JS_BUILD = 'v172-0831-1620';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -22788,3 +22804,4 @@ async function githubUpload(token){
   window.wlSame.detail = detail;
   console.log('[대조] v170 — wlSame() 으로 기록 탭 ↔ 노션 보기 건수를 맞춰 볼 수 있습니다');
 })();
+try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}

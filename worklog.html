@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v170-0831-1500";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v172-0831-1620";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3268,7 +3268,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=170-20260831t1500"></script>
+<script src="worklog.js?v=172-20260831t1620"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -3737,7 +3737,15 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       }, 250);
     });
     gsBar.addEventListener('focus', () => {
-      // 메인 탭으로 이동
+      /* v171 — 노션 보기(데이터·개인)에 있을 때는 그대로 둔다.
+         예전에는 커서만 갖다 대도 무조건 기록 탭으로 튕겼다. */
+      try{
+        var now = '';
+        var onTab = document.querySelector('[data-v43tab].on, [data-v43tab].active');
+        if(onTab) now = onTab.getAttribute('data-v43tab') || '';
+        if(!now){ try{ now = String(localStorage.getItem('v43_tab')||'').replace(/^["']+|["']+$/g,''); }catch(e){} }
+        if(now === 'data' || now === 'life') return;      /* 노션 보기면 그 자리에서 찾는다 */
+      }catch(e){}
       v43ActivateTab('main');
     });
     /* ⚡ 빠른 기간 필터 핸들러 */
@@ -23563,6 +23571,24 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +     '<button type="button" class="lf-fx" id="lfRuleAdd" style="border-style:dashed;color:#7c3aed">＋ 조건 추가</button>'
       +     '<button type="button" class="lf-fx" id="lfColorBtn" style="border-style:dashed">🎨 색상 규칙</button>'
       +     (vw==='table'? '<button type="button" class="lf-fx" id="lfColwR" title="끌어서 바꾼 칸 폭을 처음으로">↔ 폭 초기화</button>':'')
+      /* ── v171 「도구」 — 탭 1행을 없애도 여기서 다 갈 수 있게 ── */
+      +     '<div class="sep"></div>'
+      +     '<div style="font-size:11px;font-weight:800;color:#8ba0b6;padding:1px 3px">도구</div>'
+      +     '<button type="button" class="lf-fx" data-gotab="password" title="비밀번호 화면">🔐 비번</button>'
+      +     '<button type="button" class="lf-fx" data-gotab="diag" title="진단 · 자가 점검">🔧 진단</button>'
+      +     '<button type="button" class="lf-fx" data-gotab="ai" title="AI 화면">🤖 AI</button>'
+      +     (isPersonal()? ''
+             : '<button type="button" class="lf-fx" id="lfCopyXls"'
+               + ' title="지금 걸린 기간의 업무를 엑셀에 붙여넣을 수 있게 복사합니다">📋 복사(엑셀)</button>'
+               /* v172 — 청소일지는 달력에서만 열리던 것. 여기서도 갈 수 있게 */
+               + '<button type="button" class="lf-fx" id="lfClnNew"'
+               + ' title="청소일지를 바로 새로 씁니다">🧹 청소일지 쓰기</button>'
+               + '<button type="button" class="lf-fx" data-gotab="calendar"'
+               + ' title="달력 화면 — 청소일지 목록이 여기 있습니다">📅 달력(청소일지)</button>')
+      +     ((!isPersonal() && DS && DS.key==='work:expense')
+             ? '<button type="button" class="lf-fx" data-expsub="meal" title="지출 화면의 중식이용내역">🍚 중식</button>'
+               + '<button type="button" class="lf-fx" data-expsub="labor" title="지출 화면의 도급비 산출">👷 인건비</button>'
+             : '')
       +   '</div>'
       + '</div>'
       + '<span class="lf-cnt">'+won(n)+'건'+(n!==tot? ' / '+won(tot):'')+'</span>'
@@ -28032,6 +28058,52 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var dcl=document.getElementById('lfDayClr');
     if(dcl) dcl.addEventListener('click', function(ev){
       ev.stopPropagation(); fltSet({from:'', to:''}); });
+
+    /* ── 🛠 도구 (v171) — 탭 1행 없이도 가는 길 ── */
+    host.querySelectorAll('[data-gotab]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        try{
+          if(typeof window.v43ActivateTab==='function') window.v43ActivateTab(b.getAttribute('data-gotab'));
+          else toast('그 화면을 열지 못했어요');
+        }catch(err){ console.error('[도구]', err); toast('오류: '+(err.message||err)); }
+      });
+    });
+    var clnb=document.getElementById('lfClnNew');
+    if(clnb) clnb.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      try{
+        if(typeof window.openCleaningEditor==='function') window.openCleaningEditor(null);
+        else if(typeof openCleaningEditor==='function') openCleaningEditor(null);
+        else toast('청소일지 창을 열지 못했어요 — 📅 달력에서 열어 주세요');
+      }catch(err){ console.error('[청소일지]', err); toast('오류: '+(err.message||err)); }
+    });
+    var cxb=document.getElementById('lfCopyXls');
+    if(cxb) cxb.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      try{
+        /* 기록 탭의 기간 칸에 지금 걸린 기간을 넣고 원래 복사 함수를 그대로 쓴다 */
+        var f=document.getElementById('v43From'), t=document.getElementById('v43To');
+        if(f) f.value = flt.from || '';
+        if(t) t.value = flt.to   || '';
+        if(typeof window.v43CopyWorkExcel==='function') window.v43CopyWorkExcel();
+        else if(typeof v43CopyWorkExcel==='function') v43CopyWorkExcel();
+        else toast('복사 기능을 찾지 못했어요');
+      }catch(err){ console.error('[복사]', err); toast('오류: '+(err.message||err)); }
+    });
+    host.querySelectorAll('[data-expsub]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var which=b.getAttribute('data-expsub');
+        try{
+          if(typeof window.v43ActivateTab==='function') window.v43ActivateTab('expense');
+          setTimeout(function(){
+            var el=document.getElementById(which==='meal'?'expSubTabMeal':'expSubTabLabor');
+            if(el) el.click(); else toast('그 화면을 못 찾았어요');
+          }, 320);
+        }catch(err){ console.error('[지출 하위]', err); toast('오류: '+(err.message||err)); }
+      });
+    });
 
     /* ── 🔁 정기점검 · 📅 반복업무 펼치기 (v166) ── */
     host.querySelectorAll('[data-panel]').forEach(function(b){
