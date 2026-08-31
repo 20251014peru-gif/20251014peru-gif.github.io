@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v162-0831-0330";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v163-0831-1130";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3268,7 +3268,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=162-20260831t0330"></script>
+<script src="worklog.js?v=163-20260831t1130"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -23268,19 +23268,97 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   }
 
   /* ── 도구 줄 — 한 줄로 끝낸다 ─────────────────────────────
-     자주 쓰는 것만 밖에 두고, 가끔 쓰는 것은 ⚙ 안으로.
-     넘치면 줄바꿈 대신 옆으로 밀린다 (화면을 세로로 안 잡아먹게). */
+     v163 정리 — 겹치던 버튼을 걷어냈다.
+       · 「칸 거르기」는 목록 보기의 칸 이름 ▾ 와 완전히 겹쳐서 목록에서는 안 낸다
+         (카드·리스트·보드에는 칸 이름이 없으므로 「🔽 조건 걸기」로 남긴다)
+       · 「✕ 필터 풀기 N」 을 ⚙ 밖으로 꺼냈다 — 걸렸을 때만 빨갛게 나온다
+       · 걸린 조건 칩은 줄에 늘어놓지 않고 그 버튼을 눌러 펼친다 */
+  function fltNum(pt){
+    return colfCount(pt) + ((flt.rules||[]).length) + (flt.money?1:0)
+         + ((flt.from||flt.to)?1:0) + (num(flt.min)?1:0);
+  }
+  /* 지금 걸린 조건을 펼쳐 보여주고 하나씩 푸는 쪽지 (v163) */
+  function fltPop(pt, anchor){
+    colfClose();
+    var m=colfOf(pt), rs=flt.rules||[], rows='';
+    Object.keys(m).forEach(function(pid){
+      var p=propById(pt,pid); if(!p) return;
+      rows += '<label class="it" data-fpcf="'+esc(pid)+'">'
+        + '<span style="width:16px;text-align:center">'+tinfo(p.type).i+'</span>'
+        + '<span class="nm"><b>'+esc(p.name)+'</b> '+esc(colfLabel(p, m[pid]))+'</span>'
+        + '<span class="n" style="color:#b52929;font-weight:900">✕</span></label>';
+    });
+    rs.forEach(function(r,i){
+      var p=propById(pt,r.pid);
+      rows += '<label class="it" data-fprule="'+i+'">'
+        + '<span style="width:16px;text-align:center">'+tinfo(p?p.type:'text').i+'</span>'
+        + '<span class="nm"><b>'+esc(p?p.name:r.pid)+'</b> '+esc(r.op)
+        +   (opNeedsVal(r.op)? (' '+esc(r.val)) : '')+'</span>'
+        + '<span class="n" style="color:#b52929;font-weight:900">✕</span></label>';
+    });
+    if(flt.from||flt.to) rows += '<label class="it" data-fpday="1">'
+      + '<span style="width:16px;text-align:center">📅</span>'
+      + '<span class="nm"><b>기간</b> '+esc(flt.from||'처음')+' ~ '+esc(flt.to||'끝')+'</span>'
+      + '<span class="n" style="color:#b52929;font-weight:900">✕</span></label>';
+    if(flt.money) rows += '<label class="it" data-fpmoney="1">'
+      + '<span style="width:16px;text-align:center">💰</span>'
+      + '<span class="nm"><b>금액 있는 것만</b></span>'
+      + '<span class="n" style="color:#b52929;font-weight:900">✕</span></label>';
+    if(num(flt.min)) rows += '<label class="it" data-fpmin="1">'
+      + '<span style="width:16px;text-align:center">🔢</span>'
+      + '<span class="nm"><b>최소 금액</b> '+esc(flt.min)+'</span>'
+      + '<span class="n" style="color:#b52929;font-weight:900">✕</span></label>';
+    if(!rows) rows = '<div style="padding:16px;color:#a8b8c8;font-size:12.5px">걸린 조건이 없어요</div>';
+
+    var pop=document.createElement('div');
+    pop.className='lf-cfp'; pop.id='lfCfPop';
+    pop.innerHTML = '<div class="hd">지금 걸러내고 있는 조건'
+      + '<button type="button" class="x" data-cfx="1">✕</button></div>'
+      + '<div class="bd">'+rows+'</div>'
+      + '<div style="padding:8px;border-top:1px solid #eef2f7">'
+      +   '<button type="button" class="lf-fx" data-fpall="1"'
+      +   ' style="width:100%;height:34px;color:#b52929;border-color:#f0c9c9;background:#fff6f6;font-weight:800">'
+      +   '✕ 전부 풀기</button></div>';
+    document.body.appendChild(pop);
+    var r0=anchor.getBoundingClientRect(), w=pop.offsetWidth||272, hh=pop.offsetHeight||240;
+    pop.style.left = Math.max(8, Math.min(r0.left, window.innerWidth-w-8))+'px';
+    pop.style.top  = (r0.bottom+6+hh > window.innerHeight)
+      ? Math.max(8, window.innerHeight-hh-8)+'px' : (r0.bottom+6)+'px';
+    pop.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
+    pop.querySelector('[data-cfx]').addEventListener('click', colfClose);
+    pop.querySelectorAll('[data-fpcf]').forEach(function(el){
+      el.addEventListener('click', function(){
+        colfClose(); colfSet(pt, el.getAttribute('data-fpcf'), null); }); });
+    pop.querySelectorAll('[data-fprule]').forEach(function(el){
+      el.addEventListener('click', function(){
+        colfClose();
+        flt.rules.splice(parseInt(el.getAttribute('data-fprule'),10),1);
+        lsSet(LS_FLT,flt); safeRender(); }); });
+    var dq=pop.querySelector('[data-fpday]');
+    if(dq) dq.addEventListener('click', function(){ colfClose(); fltSet({from:'',to:''}); });
+    var mq=pop.querySelector('[data-fpmoney]');
+    if(mq) mq.addEventListener('click', function(){ colfClose(); fltSet({money:false}); });
+    var nq=pop.querySelector('[data-fpmin]');
+    if(nq) nq.addEventListener('click', function(){ colfClose(); fltSet({min:''}); });
+    pop.querySelector('[data-fpall]').addEventListener('click', function(){
+      colfClose(); colfSave(pt,null); flt.rules=[];
+      fltSet({from:'',to:'',money:false,min:''}); });
+  }
   function fltBar(n, tot){
     var pt0 = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
-    var nF = colfCount(pt0) + ((flt.rules||[]).length) + (flt.money?1:0);
+    var nF = fltNum(pt0);
     return '<div class="lf-fb">'
       + '<div class="lf-fbwrap"><div class="lf-fbmid">'
       +   viewChips(pt0)
       +   '<span class="lf-fbsep"></span>'
-      +   '<button type="button" class="lf-fx on" id="lfColF">🔽 칸 거르기</button>'
+      +   (vw==='table' ? ''
+           : '<button type="button" class="lf-fx'+(colfCount(pt0)?' on':'')+'" id="lfColF"'
+             + ' title="어느 칸의 값으로 골라 볼지 고릅니다">🔽 조건 걸기</button>')
+      +   (nF ? '<button type="button" class="lf-fx" id="lfFpop"'
+             + ' style="color:#b52929;border-color:#f0c9c9;background:#fff6f6;font-weight:800"'
+             + ' title="눌러서 걸린 조건을 보고 하나씩 풀 수 있어요">✕ 필터 풀기 '
+             + '<b style="background:#b52929;color:#fff;border-radius:9px;padding:1px 6px;margin-left:3px">'+nF+'</b></button>' : '')
       +   ((vw==='table'||vw==='list'||vw==='card') ? grpOptions(pt0) : '')
-      +   colfChips(pt0)
-      +   ruleBar(pt0)
       + '</div></div>'
       + '<div class="lf-more" id="lfMore">'
       +   '<button type="button" class="lf-fx" id="lfMoreBtn" title="그 밖의 도구">⚙'
@@ -23295,7 +23373,6 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +     '<button type="button" class="lf-fx" id="lfRuleAdd" style="border-style:dashed;color:#7c3aed">＋ 조건 추가</button>'
       +     '<button type="button" class="lf-fx" id="lfColorBtn" style="border-style:dashed">🎨 색상 규칙</button>'
       +     (vw==='table'? '<button type="button" class="lf-fx" id="lfColwR" title="끌어서 바꾼 칸 폭을 처음으로">↔ 폭 초기화</button>':'')
-      +     (fltOn()? '<div class="sep"></div><button type="button" class="lf-fx" id="lfFclr" style="color:#b52929;border-color:#f0c9c9">✕ 거르개·조건 모두 풀기</button>':'')
       +   '</div>'
       + '</div>'
       + '<span class="lf-cnt">'+won(n)+'건'+(n!==tot? ' / '+won(tot):'')+'</span>'
@@ -23355,7 +23432,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     });
   }
   function grpOptions(pt){
-    var ok=['date','sel','check','tag','text','tel','num','multi','rel'];
+    /* v163 — 금액·숫자 칸과 날짜 칸은 뺀다. 그룹이 수백 개가 되어 쓸모가 없다.
+       (월별로 묶기가 이미 있으므로 날짜별 묶기는 겹친다) */
+    var ok=['sel','check','tag','text','tel','multi','rel'];
     var a=propsOf(pt).filter(function(p){ return ok.indexOf(p.type)>=0 && p.id!=='_title'; });
     var si=statInfo(pt);
     var siName = si ? (({status:'상태',expType:'종류',stockType:'입고/출고',dir:'통화 구분',
@@ -23364,6 +23443,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     return '<select id="lfGrp" class="lf-in" style="height:32px;font-size:12.5px" title="어떤 기준으로 갈라서 볼지">'
       + '<option value=""'+(grp===''?' selected':'')+'>'
         + (si? ('\u2728 '+siName+'별로 묶기 (기본)') : '\uD83D\uDCC5 월별로 묶기 (기본)') + '</option>'
+      + '<option value="_none"'+(grp==='_none'?' selected':'')+'>\uD83D\uDEAB 묶지 않기 — 최신순으로 쭉</option>'
       + '<option value="_month"'+(grp==='_month'?' selected':'')+'>\uD83D\uDCC5 월별로 묶기</option>'
       + a.map(function(p){ return '<option value="'+esc(p.id)+'"'+(grp===p.id?' selected':'')
           +'>'+tinfo(p.type).i+' '+esc(p.name)+' 로 묶기</option>'; }).join('')
@@ -25394,7 +25474,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var N = lsColN();
 
     var eg = effGrp(pt);
-    var grouped = (srt.k==='date') || !!grp;
+    var grouped = (grp!=='_none') && ((srt.k==='date') || !!grp);
     if(eg!=='_month' && grouped){
       arr = grpSort(arr, pt, eg);
     }
@@ -25474,7 +25554,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
     var sumAll=0; arr.forEach(function(e){ sumAll+=money(e); });
     var egT = effGrp(pt);
-    var grouped = (srt.k==='date') || !!grp;
+    var grouped = (grp!=='_none') && ((srt.k==='date') || !!grp);
     if(egT!=='_month' && grouped) arr = grpSort(arr, pt, egT);
     PGLIST = arr.map(function(e){ return e.id; });        /* ◀ ▶ 이동용 */
 
@@ -25635,7 +25715,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 
     var h=bar + '<div class="lf-grid">';
     buckets.forEach(function(b2){
-      h += cardHead(b2.k, pt, g, b2.list);
+      if(g!=='_none') h += cardHead(b2.k, pt, g, b2.list);
       b2.list.forEach(function(e){ h += card(e); });
     });
     return h+'</div>';
@@ -27667,6 +27747,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       b.addEventListener('click', function(){ colfClear(ptCF); }); });
     var cfb=document.getElementById('lfColF');
     if(cfb) cfb.addEventListener('click', function(ev){ ev.stopPropagation(); colfPick(ptCF, cfb); });
+    var fpb=document.getElementById('lfFpop');   /* v163 — 걸린 조건 펼쳐보기 */
+    if(fpb) fpb.addEventListener('click', function(ev){ ev.stopPropagation(); fltPop(ptCF, fpb); });
     /* ⚙ 그 밖의 도구 */
     var mb=document.getElementById('lfMoreBtn'), mw=document.getElementById('lfMore');
     if(mb && mw){
@@ -27907,6 +27989,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
           colsSave(ptF, defCols(ptF));
           srt={k:'date', d:-1}; lsSet(LS_SORT, srt);
           flt={from:'', to:'', money:false, min:'', rules:[]}; lsSet(LS_FLT, flt);
+          colfSave(ptF, null);            /* v163 — 칸 거르개도 함께 푼다 */
+          grp=''; lsSet(LS_GRP, '');      /* v163 — 묶기도 기본으로 */
           curQ='';
           safeRender(); return;
         }
