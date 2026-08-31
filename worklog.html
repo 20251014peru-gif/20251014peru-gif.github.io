@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v167-0831-1330";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v168-0831-1400";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3268,7 +3268,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=167-20260831t1330"></script>
+<script src="worklog.js?v=168-20260831t1400"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -27793,6 +27793,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
             + '<button type="button" id="lfSeedBtn" style="height:30px;padding:0 11px;border:1.5px dashed #dbe6f4;border-radius:9px;background:#fff;color:#8ba0b6;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">🧪 샘플</button>'
             + '</div>')
       + '</div>'
+      + dsChips()                       /* v168 — 여기서 바로 업무 종류로 갈 수 있게 */
       + '<div class="lf-tabs">' + TABS.map(function(t){
           return '<button type="button" class="lf-tab'+(t[0]===cur?' on':'')+'" data-lt="'+t[0]+'">'+t[1]+'</button>'; }).join('')
       + '</div>' + body + '</div>';
@@ -27804,9 +27805,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
      업무일지 종류(업무/지출/사고/…)에 그대로 붙인다. */
   var DS_ORDER = ['work','expense','accident','progress','call','memo','schedule','deliver','meeting','vacation','item','stock','plan','site'];
 
+  /* v168 — 맨 앞에 「🏠 개인」 을 넣었다.
+     윗줄(기록·개인·데이터…)을 없애도 이 줄 하나로 개인 ↔ 업무를 오갈 수 있다. */
   function dsChips(){
     var cw = (typeof WORK_KINDS==='object') ? WORK_KINDS : {};
     var h = '<div class="lf-tabs lf-dstabs" style="margin-bottom:10px">';
+    h += '<button type="button" class="lf-tab'+(isPersonal()?' on':'')+'" data-dsk="personal"'
+       + ' title="개인일지 — 업무일지와 따로 저장됩니다">🏠 개인</button>'
+       + '<span style="display:inline-block;width:1px;height:22px;background:#dbe6f4;margin:0 6px;vertical-align:middle"></span>';
     DS_ORDER.forEach(function(k){
       var m = cw[k]; if(!m) return;
       var on = (DS && DS.key==='work:'+k);
@@ -27850,10 +27856,6 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     bindRender(host);
     var g = host.querySelector('#dsGoLife');
     if(g) g.addEventListener('click', function(){ window.wlOpenData('personal'); });
-
-    host.querySelectorAll('[data-dsk]').forEach(function(b){
-      b.addEventListener('click', function(){ window.wlOpenData(b.getAttribute('data-dsk')); });
-    });
   }
 
   /* 개인 ↔ 업무 데이터셋 전환 */
@@ -27879,6 +27881,15 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   };
 
   function bindRender(host){
+
+    /* v168 — 종류 칩(🏠 개인 + 업무 14종). 개인 화면·데이터 화면 양쪽에서 먹는다 */
+    host.querySelectorAll('[data-dsk]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        try{ window.wlOpenData(b.getAttribute('data-dsk')); }
+        catch(err){ console.error('[데이터셋]', err); }
+      });
+    });
 
     /* 하위 탭 */
     host.querySelectorAll('[data-lt]').forEach(function(b){
