@@ -22544,3 +22544,122 @@ async function githubUpload(token){
 
   console.log('[명함] v162 — 연락처 추가 팝업에서 바로 스캔 (' + (on() ? '켜짐' : '꺼짐') + ')');
 })();
+
+/* ═══════════════════════════════════════════════════════════
+   🔔 v164 — GitHub 최신판과 지금 화면을 견주어 본다
+   ───────────────────────────────────────────────────────────
+   할 수 있는 것 : 지금 브라우저에 떠 있는 판이 GitHub 최신판과 다르면
+                   위에 빨간 띠를 띄운다. (캐시 때문에 옛 판이 떠 있는
+                   경우를 잡는다 — 「기능이 없다」 신고의 대부분이 이것)
+   할 수 없는 것 : 바탕화면 폴더 파일은 볼 수 없다 (브라우저 제약).
+                   폴더는 띠에 적힌 GitHub 판을 보고 눈으로 견준다.
+   창구 : wlVer.now()  wlVer.state()  wlVer.off()  wlVer.on()
+   ═══════════════════════════════════════════════════════════ */
+(function(){
+  var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
+  var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
+  var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
+  var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
+  var GAP = 30*60*1000;            /* 30분에 한 번만 물어본다 */
+  var BAND_ID = 'wlVerBand';
+
+  function off(){ try{ return localStorage.getItem(LS_OFF)==='1'; }catch(e){ return false; } }
+  function mine(){ return String(window.APP_VERSION||'').trim(); }
+  function pick(t){ var m=/APP_VERSION\s*=\s*"(v[^"]+)"/.exec(t||''); return m? m[1] : null; }
+  function nOf(v){ var m=/^v(\d+)/.exec(String(v||'')); return m? parseInt(m[1],10) : 0; }
+
+  /* GitHub 의 worklog.html 앞부분만 읽는다 — 1.6MB 를 다 받지 않고 찾자마자 끊는다 */
+  function fetchVer(){
+    if(!window.fetch) return Promise.resolve(null);
+    if(navigator && navigator.onLine === false) return Promise.resolve(null);
+    return fetch(RAW, {cache:'no-store'}).then(function(res){
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      if(!res.body || !res.body.getReader) return res.text().then(pick);
+      var rd=res.body.getReader(), dec=new TextDecoder('utf-8'), buf='';
+      function step(){
+        return rd.read().then(function(r){
+          if(r.done) return pick(buf);
+          buf += dec.decode(r.value, {stream:true});
+          var v=pick(buf);
+          if(v){ try{ rd.cancel(); }catch(e){} return v; }
+          if(buf.length > 200000){ try{ rd.cancel(); }catch(e){} return null; }
+          return step();
+        });
+      }
+      return step();
+    }).catch(function(err){
+      console.warn('[버전확인] 못 물어봤어요:', err && err.message);   /* 조용히 삼키지 않는다 */
+      return null;
+    });
+  }
+
+  function close(){ var o=document.getElementById(BAND_ID); if(o) o.remove(); }
+
+  function band(hub, me){
+    close();
+    var older = nOf(me) < nOf(hub);
+    var d=document.createElement('div');
+    d.id=BAND_ID;
+    d.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;'
+      + 'background:'+(older?'#fdecec':'#fff8e6')+';'
+      + 'border-bottom:2px solid '+(older?'#e05252':'#e0b352')+';'
+      + 'color:#2b2b2b;font-size:14px;line-height:1.5;padding:10px 14px;'
+      + 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;'
+      + 'font-family:Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;'
+      + 'box-shadow:0 2px 8px rgba(0,0,0,.10)';
+    d.innerHTML =
+        '<b style="font-size:15px">'
+      +   (older? '⚠️ 지금 보고 계신 판이 옛날 것입니다' : 'ℹ️ GitHub 판과 다릅니다')
+      + '</b>'
+      + '<span>이 화면 <b>'+me+'</b> &nbsp;·&nbsp; GitHub <b>'+hub+'</b></span>'
+      + (older? '<span style="color:#b52929;font-weight:800">Ctrl+Shift+R 로 강제 새로고침 하세요</span>' : '')
+      + '<span style="flex:1;min-width:8px"></span>'
+      + '<button type="button" id="wlVerRe" style="height:36px;padding:0 14px;border:1px solid #c8d4e0;'
+      +   'border-radius:8px;background:#fff;font-size:13px;font-weight:800;cursor:pointer">🔄 새로고침</button>'
+      + '<button type="button" id="wlVerX" style="height:36px;padding:0 14px;border:1px solid #c8d4e0;'
+      +   'border-radius:8px;background:#fff;font-size:13px;cursor:pointer">닫기</button>';
+    document.body.appendChild(d);
+    var re=document.getElementById('wlVerRe');
+    if(re) re.addEventListener('click', function(){ try{ location.reload(true); }catch(e){ location.reload(); } });
+    var x=document.getElementById('wlVerX');
+    if(x) x.addEventListener('click', function(){
+      try{ localStorage.setItem(LS_HIDE, hub); }catch(e){}
+      close();
+    });
+  }
+
+  function run(force){
+    if(off() && !force) return Promise.resolve(null);
+    var now=Date.now();
+    if(!force){
+      var last=0; try{ last=parseInt(localStorage.getItem(LS_LAST)||'0',10)||0; }catch(e){}
+      if(now-last < GAP) return Promise.resolve(null);
+    }
+    try{ localStorage.setItem(LS_LAST, String(now)); }catch(e){}
+    return fetchVer().then(function(hub){
+      if(!hub) return null;
+      var me=mine();
+      if(!me || hub===me){ close(); return {github:hub, 이_화면:me, 같음:true}; }
+      var hide=''; try{ hide=localStorage.getItem(LS_HIDE)||''; }catch(e){}
+      if(!force && hide===hub) return {github:hub, 이_화면:me, 같음:false, 닫아둠:true};
+      band(hub, me);
+      return {github:hub, 이_화면:me, 같음:false};
+    });
+  }
+
+  window.wlVer = {
+    now:   function(){ return run(true).then(function(r){ console.log('[버전확인]', r); return r; }); },
+    state: function(){ var r={이_화면:mine(), 자동확인:(off()?'꺼짐':'켜짐')}; console.log('[버전확인]', r); return r; },
+    off:   function(){ try{ localStorage.setItem(LS_OFF,'1'); }catch(e){} close(); return '자동 확인을 껐습니다'; },
+    on:    function(){ try{ localStorage.removeItem(LS_OFF); localStorage.removeItem(LS_HIDE); }catch(e){} return '자동 확인을 켰습니다'; },
+    close: close
+  };
+
+  /* 처음 뜰 때 한 번 + 다른 탭 갔다 돌아올 때 (30분 간격) */
+  setTimeout(function(){ run(false); }, 6000);
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) setTimeout(function(){ run(false); }, 1200);
+  });
+
+  console.log('[버전확인] v164 — GitHub 최신판과 견주기 (' + (off()?'꺼짐':'켜짐') + ') · wlVer.now() 로 바로 확인');
+})();
