@@ -2456,15 +2456,17 @@ function renderWorkModal(data, mode){
              ["후불청구","📃 기타정산 (세금계산서)"]]
             .map(([v,t])=>`<option value="${v}"${expType===v?" selected":""}>${t}</option>`).join("")}
         </select>
-        <div style="margin-top:4px;font-size:10.5px;color:#94a3b8;line-height:1.35">
-          💧 수도·전기 요금은 <b>선납부</b> 로 고르고 제목에 「수도요금」·「전기요금」 을 넣으면<br>정산표에서 저절로 <b>수도광열비</b> 로 갑니다
-        </div>
       </div>
       <div>
         <label id="lbl-cost" style="${S.lbl.replace('#94a3b8',isPost?'#c2410c':'#1d4ed8')}">${isPost?"계약금액 (원)":"금액 (원)"}</label>
         <input type="number" id="m-cost" value="${e2(d.cost||"")}" placeholder="0"
           style="${S.inp};background:transparent;border-color:${isPost?"#fdba74":"#bfdbfe"};font-size:14px;font-weight:700;text-align:right;color:${isPost?"#c2410c":"#1d4ed8"}">
       </div>
+      <div id="w-subRow" style="grid-column:1 / -1;display:none">
+        <label style="${S.lbl.replace('#94a3b8','#64748b')}">하위 구분</label>
+        <select id="m-expSubType" style="${S.sel};background:transparent"></select>
+      </div>
+      <div id="w-grpHint" style="grid-column:1 / -1;font-size:11px;font-weight:700;color:#7a92a8;line-height:1.4"></div>
     </div>`;
 
     /* ── 담당업체 팝업 버튼 ── */
@@ -2528,10 +2530,51 @@ function renderWorkModal(data, mode){
     const stEl=$("m-status"); if(stEl) stEl.value="완료";
   }
 
+  /* ══ v182 — 업무 창에도 하위 구분 (수도·전기를 여기서 바로 고른다) ══
+     🔴 판단은 정산표 창구(wlSettleGroup) 하나뿐이므로, 여기서는 「무엇이 저장되고
+        그게 정산표 어디로 가는지」를 보여 주기만 한다. */
+  const W_SUBS = {
+    "전표":    ["수도","전기","유선방송","전화","정수기","기타"],
+    "후불청구":["공사성"]
+  };
+  function wGrpOf(t, st){
+    if(t==="후불청구") return "기타정산";
+    if(t==="전표")     return (st==="수도"||st==="전기") ? "수도광열비" : "선납부";
+    if(t==="개인비용") return "선결재";
+    return "";
+  }
+  function wPaintSub(){
+    const tEl=$("m-expType"), sEl=$("m-expSubType"), row=$("w-subRow"), hint=$("w-grpHint");
+    if(!tEl||!sEl||!row) return;
+    const t=tEl.value, opts=W_SUBS[t];
+    if(!opts){ row.style.display="none"; sEl.innerHTML=""; }
+    else{
+      const cur = sEl.dataset.keep || sEl.value || "";
+      sEl.innerHTML = opts.map(o=>`<option${o===cur?" selected":""}>${o}</option>`).join("");
+      if(opts.indexOf(cur)<0) sEl.value=opts[0];
+      delete sEl.dataset.keep;
+      row.style.display="";
+    }
+    if(hint){
+      const gk=wGrpOf(t, sEl.value||"");
+      const C={"선결재":"#3f7cb8","선납부":"#7c3aed","수도광열비":"#0e7490","기타정산":"#c2410c"};
+      hint.innerHTML = gk
+        ? `🧮 정산표에서 <b style="color:${C[gk]||'#7a92a8'}">${gk}</b> 칸으로 들어갑니다`
+        : "";
+    }
+  }
+
   /* expType 변경 */
   const expTypeEl=$("m-expType");
+  const expSubEl=$("m-expSubType");
+  if(expSubEl){
+    /* 저장돼 있던 하위 구분을 되살린다 (스코프에 안전한 창구로) */
+    try{ var _wd = window._wModalData || {}; if(_wd.expSubType) expSubEl.dataset.keep = _wd.expSubType; }catch(e){}
+    expSubEl.addEventListener("change", wPaintSub);
+  }
   if(expTypeEl){
     expTypeEl.addEventListener("change",()=>{
+      wPaintSub();
       const isPost=expTypeEl.value==="후불청구";
       const lbl2=$("lbl-cost"); if(lbl2) lbl2.textContent=isPost?"계약금액 (원)":"금액 (원)";
       const box=expTypeEl.closest("div[style*='background']");
@@ -2992,6 +3035,8 @@ function _doSaveWorkEntry(){
     qty:Number(($("m-qty")||{}).value)||0,
     materials: readMats(),
     expType: mode==="full"?(($("m-expType")||{}).value||"개인비용"):"없음",
+    /* v182 — 업무에서 고른 하위 구분을 그대로 지출로 넘긴다 (수도·전기 → 수도광열비) */
+    expSubType: mode==="full"?((($("w-subRow")||{}).style||{}).display!=="none" ? (($("m-expSubType")||{}).value||"") : "") : "",
     cost: mode==="full"?(Number(($("m-cost")||{}).value)||0):0,
     workVendor:($("m-workVendor")||{}).value?.trim()||"",
     workContact:($("m-workContact")||{}).value?.trim()||"",
@@ -22721,7 +22766,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v181-0831-1800';
+  var JS_BUILD = 'v182-0831-1808';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
