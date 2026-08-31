@@ -11879,8 +11879,20 @@ async function githubUpload(token){
   window.renderRecurWidget = renderRecurWidget;
   window.openRecurManage = openRecurManage;
   /* v165 — 노션식 화면에서 요약을 보여주려고 밖에 낸다 */
+  /* v166 — 노션식 화면에서 체크를 켜고 끌 수 있게 */
+  function rcToggle(id, on){
+    var t = rcList().filter(function(x){ return String(x.id)===String(id); })[0];
+    if(!t) return false;
+    var mon = rcCurMonth();
+    var doneMap = Object.assign({}, t.done||{});
+    var atMap   = Object.assign({}, t.doneAt||{});
+    if(on){ doneMap[mon]=true; atMap[mon]=todayStr().slice(5); }
+    else  { delete doneMap[mon]; delete atMap[mon]; }
+    updateRecord(id, {done:doneMap, doneAt:atMap, updatedAt:Date.now()});
+    return true;
+  }
   window.wlRecur = { list: rcList, done: rcIsDone, month: rcCurMonth,
-                     manage: openRecurManage, render: renderRecurWidget };
+                     toggle: rcToggle, manage: openRecurManage, render: renderRecurWidget };
   window.rcUpdateFabBadge = rcUpdateFabBadge;
 
   setTimeout(function(){ try{ renderRecurWidget(); rcUpdateFabBadge(); }catch(e){} }, 950);
@@ -22560,6 +22572,9 @@ async function githubUpload(token){
    ═══════════════════════════════════════════════════════════ */
 (function(){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
+  /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
+     html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
+  var JS_BUILD = 'v166-0831-1300';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -22570,6 +22585,8 @@ async function githubUpload(token){
   function mine(){ return String(window.APP_VERSION||'').trim(); }
   function pick(t){ var m=/APP_VERSION\s*=\s*"(v[^"]+)"/.exec(t||''); return m? m[1] : null; }
   function nOf(v){ var m=/^v(\d+)/.exec(String(v||'')); return m? parseInt(m[1],10) : 0; }
+  /* worklog.js 가 worklog.html 과 같은 판인가 (v166) */
+  function jsStale(){ var me=mine(); return !!(me && JS_BUILD && nOf(JS_BUILD) < nOf(me)); }
 
   /* GitHub 의 worklog.html 앞부분만 읽는다 — 1.6MB 를 다 받지 않고 찾자마자 끊는다 */
   function fetchVer(){
@@ -22601,6 +22618,7 @@ async function githubUpload(token){
   function band(hub, me){
     close();
     var older = nOf(me) < nOf(hub);
+    var js = jsStale();
     var d=document.createElement('div');
     d.id=BAND_ID;
     d.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;'
@@ -22610,12 +22628,17 @@ async function githubUpload(token){
       + 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;'
       + 'font-family:Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;'
       + 'box-shadow:0 2px 8px rgba(0,0,0,.10)';
+    var jsOnly = (hub===me);        /* GitHub 판은 같은데 js 만 옛것인 경우 */
     d.innerHTML =
         '<b style="font-size:15px">'
-      +   (older? '⚠️ 지금 보고 계신 판이 옛날 것입니다' : 'ℹ️ GitHub 판과 다릅니다')
+      +   (jsOnly ? '🔴 worklog.js 가 안 올라갔습니다'
+                  : (older? '⚠️ 지금 보고 계신 판이 옛날 것입니다' : 'ℹ️ GitHub 판과 다릅니다'))
       + '</b>'
-      + '<span>이 화면 <b>'+me+'</b> &nbsp;·&nbsp; GitHub <b>'+hub+'</b></span>'
+      + (jsOnly ? '' : '<span>이 화면 <b>'+me+'</b> &nbsp;·&nbsp; GitHub <b>'+hub+'</b></span>')
       + (older? '<span style="color:#b52929;font-weight:800">Ctrl+Shift+R 로 강제 새로고침 하세요</span>' : '')
+      + (js? '<span style="width:100%;color:#991b1b;font-weight:800;background:#fee2e2;'
+           + 'border-radius:8px;padding:6px 10px">화면은 <b>'+me+'</b> 인데 worklog.js 는 <b>'+JS_BUILD+'</b> 입니다 — '
+           + '<b>worklog.js 도 함께 GitHub 에 올려 주세요</b> (안 올리면 새 기능이 안 돕니다)</span>' : '')
       + '<span style="flex:1;min-width:8px"></span>'
       + '<button type="button" id="wlVerRe" style="height:36px;padding:0 14px;border:1px solid #c8d4e0;'
       +   'border-radius:8px;background:#fff;font-size:13px;font-weight:800;cursor:pointer">🔄 새로고침</button>'
@@ -22642,7 +22665,10 @@ async function githubUpload(token){
     return fetchVer().then(function(hub){
       if(!hub) return null;
       var me=mine();
-      if(!me || hub===me){ close(); return {github:hub, 이_화면:me, 같음:true}; }
+      if(!me || hub===me){
+        if(jsStale()){ band(hub, me); return {github:hub, 이_화면:me, 같음:true, js:JS_BUILD, js가_옛것:true}; }
+        close(); return {github:hub, 이_화면:me, js:JS_BUILD, 같음:true};
+      }
       var hide=''; try{ hide=localStorage.getItem(LS_HIDE)||''; }catch(e){}
       if(!force && hide===hub) return {github:hub, 이_화면:me, 같음:false, 닫아둠:true};
       band(hub, me);
@@ -22652,7 +22678,8 @@ async function githubUpload(token){
 
   window.wlVer = {
     now:   function(){ return run(true).then(function(r){ console.log('[버전확인]', r); return r; }); },
-    state: function(){ var r={이_화면:mine(), 자동확인:(off()?'꺼짐':'켜짐')}; console.log('[버전확인]', r); return r; },
+    state: function(){ var r={이_화면:mine(), js파일:JS_BUILD, js가_옛것:jsStale(),
+                              자동확인:(off()?'꺼짐':'켜짐')}; console.log('[버전확인]', r); return r; },
     off:   function(){ try{ localStorage.setItem(LS_OFF,'1'); }catch(e){} close(); return '자동 확인을 껐습니다'; },
     on:    function(){ try{ localStorage.removeItem(LS_OFF); localStorage.removeItem(LS_HIDE); }catch(e){} return '자동 확인을 켰습니다'; },
     close: close
@@ -22664,5 +22691,8 @@ async function githubUpload(token){
     if(!document.hidden) setTimeout(function(){ run(false); }, 1200);
   });
 
-  console.log('[버전확인] v164 — GitHub 최신판과 견주기 (' + (off()?'꺼짐':'켜짐') + ') · wlVer.now() 로 바로 확인');
+  /* js 가 안 올라간 것은 인터넷 없이도 바로 알 수 있다 — 3초 뒤 띄운다 */
+  setTimeout(function(){ if(!off() && jsStale()) band(mine(), mine()); }, 3000);
+  console.log('[버전확인] v166 — GitHub 판 + worklog.js 판 견주기 ('
+    + (off()?'꺼짐':'켜짐') + ') · js=' + JS_BUILD + (jsStale()? ' 🔴 옛 파일!' : '') + ' · wlVer.now()');
 })();
