@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v166-0831-1300";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v167-0831-1330";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3268,7 +3268,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=166-20260831t1300"></script>
+<script src="worklog.js?v=167-20260831t1330"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -23241,20 +23241,6 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     safeRender();
   }
   var curView = lsGet('wl_life_curview', '') || '';
-  function viewChips(pt){
-    var vs=viewsOf(pt);
-    var h='<span class="lf-vchips">';
-    h+='<div class="lf-chip'+(curView?'':' on')+'"'+(curView?'':' style="background:#2563a8"')+' data-vgo="">📄<span class="t"> 기본</span></div>';
-    vs.forEach(function(v){
-      var on=(curView===v.id);
-      h+='<div class="lf-chip'+(on?' on':'')+'"'+(on?' style="background:#7c3aed"':'')+' data-vgo="'+esc(v.id)+'">'
-        + (v.fav?'⭐ ':'👁 ')+esc(v.name)+'</div>';
-    });
-    h+='<div class="lf-chip" data-vsave="1" style="border-style:dashed">💾<span class="t"> 지금 보기 저장</span></div>';
-    if(vs.length) h+='<div class="lf-chip" data-vmgr="1" style="border-style:dashed">⋯<span class="t"> 보기 관리</span></div>';
-    return h+'</span>';
-  }
-
   /* ── 조건(규칙) 줄 ── */
   function ruleBar(pt){
     var rs=flt.rules||[];
@@ -23302,44 +23288,50 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var n=Math.round((a-b)/86400000);
     return (n>=0 && n<=3650)? String(n) : '';
   }
+  /* ── 📅 날짜 — 「N일 전」 칸 하나로 (v167에서 칩 줄을 없앴다) ───────────
+     칩은 [기간 해제] 하나로 대신할 수 있어서 뺐다. 도구 줄 안에 한 덩이로 들어간다. */
   var LS_DRNG='wl_life_dayrange';
-  function dayRange(){ return lsGet(LS_DRNG,'0')==='1'; }        /* 「~ 오늘까지」 켜짐? */
-  function applyDayN(n){                                          /* v166 */
+  function dayRange(){ return lsGet(LS_DRNG,'0')==='1'; }
+  function dAgo(n){                     /* 오늘에서 n 일 전 — UTC 고정 (사고이력 ⑬) */
+    var t=today(), p=t.slice(0,10).split('-');
+    var d=new Date(Date.UTC(+p[0], +p[1]-1, +p[2]));
+    d.setUTCDate(d.getUTCDate()-n);
+    return d.toISOString().slice(0,10);
+  }
+  function dayAgoN(){                   /* 「N일 전」 칸에 되비쳐 줄 숫자 */
+    if(!flt.from) return '';
+    var t=today(), p=t.slice(0,10).split('-'), q=String(flt.from).split('-');
+    if(q.length<3) return '';
+    var a=Date.UTC(+p[0],+p[1]-1,+p[2]), b=Date.UTC(+q[0],+q[1]-1,+q[2]);
+    var n=Math.round((a-b)/86400000);
+    if(n<0 || n>3650) return '';
+    if(dayRange()) return (flt.to===t)? String(n) : '';
+    return (flt.to===flt.from)? String(n) : '';
+  }
+  function applyDayN(n){
     var s2=dAgo(n);
     if(dayRange()) fltSet({from:s2, to:today()});
     else fltSet({from:s2, to:s2});
   }
-  function dayBar(){
-    var on=dayNow(), rng=dayRange();
-    return '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 0 2px">'
-      + '<span style="font-size:12.5px;font-weight:800;color:#5b7794;margin-right:2px">📅 날짜</span>'
-      + DAY_Q.map(function(q){
-          var sel=(on===q[0]);
-          return '<button type="button" class="lf-fx" data-dayq="'+q[0]+'"'
-            + ' style="height:34px;padding:0 13px;font-size:12.5px;font-weight:800'
-            +   (sel? ';background:#2563a8;color:#fff;border-color:#2563a8' : '')+'">'
-            + q[1]+'</button>'; }).join('')
-      + '<span style="display:inline-flex;align-items:center;gap:5px;margin-left:5px">'
-      +   '<input type="number" min="0" max="3650" id="lfDayN" value="'+esc(dayAgoN())+'"'
-      +   ' placeholder="숫자" title="숫자를 넣고 엔터 — 1이면 어제, 2면 2일 전"'
-      +   ' style="width:82px;height:34px;border:1.5px solid #dbe6f4;border-radius:8px;'
+  function dayInline(){
+    var rng=dayRange(), on=(flt.from||flt.to);
+    return '<span style="display:inline-flex;align-items:center;gap:5px">'
+      + '<span style="font-size:12.5px;font-weight:800;color:#5b7794">📅</span>'
+      + '<input type="number" min="0" max="3650" id="lfDayN" value="'+esc(dayAgoN())+'"'
+      +   ' placeholder="숫자" title="숫자를 넣고 엔터 — 0이면 오늘, 1이면 어제"'
+      +   ' style="width:74px;height:34px;border:1.5px solid #dbe6f4;border-radius:8px;'
       +     'padding:0 8px;font-size:13px;font-family:inherit;text-align:center;background:#fffbea">'
-      +   '<span style="font-size:12.5px;font-weight:800;color:#5b7794">일 전</span>'
-      +   '<label title="켜면 그 날부터 오늘까지 모두 봅니다" style="display:inline-flex;align-items:center;gap:4px;'
-      +     'height:34px;padding:0 10px;border:1.5px solid '+(rng?'#2563a8':'#dbe6f4')+';border-radius:8px;'
-      +     'background:'+(rng?'#eaf3fd':'#fff')+';cursor:pointer;font-size:12.5px;font-weight:800;'
-      +     'color:'+(rng?'#2563a8':'#5b7794')+'">'
-      +     '<input type="checkbox" id="lfDayRng"'+(rng?' checked':'')+' style="width:16px;height:16px;cursor:pointer">'
-      +     '~ 오늘까지</label>'
-      + '</span>'
-      + ((flt.from||flt.to)
-         ? '<button type="button" class="lf-fx" id="lfDayClr" style="height:34px;padding:0 13px;'
-           + 'font-size:12.5px;font-weight:800;color:#b52929;border-color:#f0c9c9;background:#fff6f6">'
-           + '기간 해제</button>'
-           + '<span style="font-size:12px;color:#8ba0b6;font-weight:700">'
-           + esc(flt.from||'처음')+' ~ '+esc(flt.to||'끝')+'</span>'
-         : '')
-      + '</div>';
+      + '<span style="font-size:12.5px;font-weight:800;color:#5b7794">일 전</span>'
+      + '<label title="켜면 그 날부터 오늘까지 모두 봅니다" style="display:inline-flex;align-items:center;gap:4px;'
+      +   'height:34px;padding:0 9px;border:1.5px solid '+(rng?'#2563a8':'#dbe6f4')+';border-radius:8px;'
+      +   'background:'+(rng?'#eaf3fd':'#fff')+';cursor:pointer;font-size:12.5px;font-weight:800;'
+      +   'color:'+(rng?'#2563a8':'#5b7794')+'">'
+      +   '<input type="checkbox" id="lfDayRng"'+(rng?' checked':'')+' style="width:16px;height:16px;cursor:pointer">'
+      +   '~오늘</label>'
+      + (on ? '<button type="button" class="lf-fx" id="lfDayClr" title="'+esc(String(flt.from||'처음')+' ~ '+String(flt.to||'끝'))+'"'
+            + ' style="height:34px;padding:0 11px;font-size:12.5px;font-weight:800;'
+            + 'color:#b52929;border-color:#f0c9c9;background:#fff6f6">✕ 기간</button>' : '')
+      + '</span>';
   }
 
   /* ── 🔁 정기점검 · 📅 반복업무 — 단추를 누르면 아래로 펼친다 (v166) ─────
@@ -23348,6 +23340,19 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   var panelOpen = lsGet(LS_PANEL,'') || '';
   function ddLab(dd){ return (dd==null)?'날짜 미정':(dd<0?(-dd)+'일 지남':dd===0?'오늘':'D-'+dd); }
   function ddCol(dd){ return (dd==null)?'#5b7794':(dd<0?'#991b1b':(dd<=7?'#9a3412':'#5b7794')); }
+  function ckRowsSafe(){
+    try{ return (window.wlChk && window.wlChk.rows)? window.wlChk.rows() : []; }
+    catch(e){ console.warn('[노션] 정기점검 요약 실패:', e && e.message); return []; }
+  }
+  function rcInfo(){
+    try{
+      var R=window.wlRecur;
+      if(!R || !R.list) return null;
+      var all=R.list(), done=all.filter(R.done).length;
+      var mn=String(R.month()||'').slice(5,7);
+      return { all:all, done:done, mLab:(+mn)? (+mn)+'월 ' : '' };
+    }catch(e){ console.warn('[노션] 반복업무 요약 실패:', e && e.message); return null; }
+  }
 
   function ckPanel(rows){
     var names=(window.wlChk && window.wlChk.names) || {};
@@ -23372,7 +23377,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
               + '</div>'; }).join('')
         + '</div>'
       : '<div style="color:#a8b8c8;font-size:13px;padding:10px 2px">등록된 정기점검이 없어요</div>';
-    return '<div style="border:1.5px solid #dbe6f4;border-radius:12px;background:#f7fafd;padding:11px 13px;margin-top:8px">'
+    return '<div style="border:1.5px solid #dbe6f4;border-radius:12px;background:#f7fafd;padding:11px 13px;margin:8px 0 0">'
       + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'
       +   '<b style="font-size:13.5px;color:#33567d">🔁 정기점검</b>'
       +   '<span style="font-size:11.5px;color:#aab8c8;flex:1">기한이 다가오면 📅 예정에 저절로 올라갑니다</span>'
@@ -23383,7 +23388,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   function rcPanel(all){
     var R=window.wlRecur;
     var body = all.length
-      ? '<div style="display:flex;flex-direction:column;gap:5px">'
+      ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px">'
         + all.slice().sort(function(a,b){ return (Number(a.day)||99)-(Number(b.day)||99); })
             .map(function(t){
               var done=false; try{ done=!!R.done(t); }catch(e){}
@@ -23398,48 +23403,36 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
                 + '</label>'; }).join('')
         + '</div>'
       : '<div style="color:#a8b8c8;font-size:13px;padding:10px 2px">등록된 반복업무가 없어요</div>';
-    return '<div style="border:1.5px solid #dbe6f4;border-radius:12px;background:#f7fafd;padding:11px 13px;margin-top:8px">'
+    return '<div style="border:1.5px solid #dbe6f4;border-radius:12px;background:#f7fafd;padding:11px 13px;margin:8px 0 0">'
       + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'
       +   '<b style="font-size:13.5px;color:#33567d">📅 반복업무</b>'
-      +   '<span style="font-size:11.5px;color:#aab8c8;flex:1">매월 되풀이되는 일 — 체크하면 이번 달 완료로 남습니다</span>'
+      +   '<span style="font-size:11.5px;color:#aab8c8;flex:1">체크하면 이번 달 완료로 남습니다</span>'
       +   '<button type="button" class="lf-fx" data-rcmgr="1" style="height:31px;padding:0 11px;font-size:12px;font-weight:800">⚙️ 관리</button>'
       + '</div>' + body + '</div>';
   }
 
-  function chkBar(){
+  /* 도구 줄 안에 들어가는 🔁 📅 단추 두 개 */
+  function chkBtns(rows, rc){
     if(isPersonal()) return '';
-    var btns='', panel='', rows=[], all=[], done=0, mLab='';
-    try{ rows=(window.wlChk && window.wlChk.rows)? window.wlChk.rows() : []; }
-    catch(e){ console.warn('[노션] 정기점검 요약 실패:', e && e.message); }
-    try{
-      var R=window.wlRecur;
-      if(R && R.list){ all=R.list(); done=all.filter(R.done).length;
-        var mn=String(R.month()||'').slice(5,7); mLab=(+mn)? (+mn)+'월 ' : ''; }
-    }catch(e){ console.warn('[노션] 반복업무 요약 실패:', e && e.message); }
-
-    var ckOn=(panelOpen==='ck'), rcOn=(panelOpen==='rc');
-    var r0=rows[0];
-    btns += '<button type="button" class="lf-fx" data-panel="ck"'
-      + ' style="height:36px;padding:0 13px;font-size:12.5px;font-weight:800'
+    var ckOn=(panelOpen==='ck'), rcOn=(panelOpen==='rc'), r0=rows[0], h='';
+    h += '<button type="button" class="lf-fx" data-panel="ck"'
+      + ' style="height:34px;padding:0 11px;font-size:12.5px;font-weight:800'
       +   (ckOn? ';background:#eaf3fd;border-color:#2563a8;color:#2563a8':'')+'"'
       + ' title="눌러서 정기점검 목록 펼치기">'
-      + (ckOn?'▾':'▸')+' 🔁 정기점검 '
-      + (r0? ('<b style="color:#1a2f45">'+esc(r0.t.name)+'</b> <b style="color:'+ddCol(r0.dd)+'">'+ddLab(r0.dd)+'</b>'
-              + (rows.length>1? ' <span style="color:#8ba0b6;font-weight:700">외 '+(rows.length-1)+'건</span>':''))
-           : '<span style="color:#8ba0b6;font-weight:700">등록</span>')
+      + (ckOn?'▾':'▸')+' 🔁 '
+      + (r0? ('<b style="color:#1a2f45">'+esc(r0.t.name)+'</b> <b style="color:'+ddCol(r0.dd)+'">'+ddLab(r0.dd)+'</b>')
+           : '<span style="color:#8ba0b6;font-weight:700">정기점검</span>')
       + '</button>';
-    btns += '<button type="button" class="lf-fx" data-panel="rc"'
-      + ' style="height:36px;padding:0 13px;font-size:12.5px;font-weight:800'
+    h += '<button type="button" class="lf-fx" data-panel="rc"'
+      + ' style="height:34px;padding:0 11px;font-size:12.5px;font-weight:800'
       +   (rcOn? ';background:#eaf3fd;border-color:#2563a8;color:#2563a8':'')+'"'
       + ' title="눌러서 반복업무 목록 펼치기">'
-      + (rcOn?'▾':'▸')+' 📅 '+mLab+'반복업무 '
-      + (all.length? '<b style="color:'+(done===all.length?'#0f7a4a':'#9a3412')+'">'+done+' / '+all.length+' 완료</b>'
-                   : '<span style="color:#8ba0b6;font-weight:700">등록</span>')
+      + (rcOn?'▾':'▸')+' 📅 '+(rc? esc(rc.mLab):'')
+      + (rc && rc.all.length
+         ? '<b style="color:'+(rc.done===rc.all.length?'#0f7a4a':'#9a3412')+'">'+rc.done+'/'+rc.all.length+'</b>'
+         : '<span style="color:#8ba0b6;font-weight:700">반복업무</span>')
       + '</button>';
-
-    if(ckOn) panel = ckPanel(rows);
-    else if(rcOn) panel = rcPanel(all);
-    return '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0 0">'+btns+'</div>' + panel;
+    return h;
   }
 
   function fltNum(pt){
@@ -23513,27 +23506,54 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       colfClose(); colfSave(pt,null); flt.rules=[];
       fltSet({from:'',to:'',money:false,min:''}); });
   }
+  /* ── 도구 줄 — v167에서 한 줄로 합쳤다 ────────────────────────────
+     늘 보이는 것 : 🔁 정기점검 · 📅 반복업무 · 날짜 · 묶기 · 걸린 필터 · 건수
+     가끔 쓰는 것 : ⚙ 안으로 (보기 저장·보기 관리·조건 걸기·색상 규칙·틀고정…)
+     저장해 둔 보기는 **있을 때만** 칩으로 나온다. */
+  function viewChips(pt){
+    var vs=viewsOf(pt);
+    var h='<span class="lf-vchips">';
+    h+='<div class="lf-chip'+(curView?'':' on')+'"'+(curView?'':' style="background:#2563a8"')
+      + ' data-vgo="" title="정렬·필터·묶기·칸을 처음 상태로">↺<span class="t"> 처음</span></div>';
+    vs.forEach(function(v){
+      var on=(curView===v.id);
+      h+='<div class="lf-chip'+(on?' on':'')+'"'+(on?' style="background:#7c3aed"':'')+' data-vgo="'+esc(v.id)+'">'
+        + (v.fav?'⭐ ':'👁 ')+esc(v.name)+'</div>';
+    });
+    return h+'</span>';
+  }
+
   function fltBar(n, tot){
     var pt0 = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
-    var nF = fltNum(pt0);
-    return chkBar() + dayBar()
-      + '<div class="lf-fb">'
-      + '<div class="lf-fbwrap"><div class="lf-fbmid">'
-      +   viewChips(pt0)
-      +   '<span class="lf-fbsep"></span>'
-      +   (vw==='table' ? ''
-           : '<button type="button" class="lf-fx'+(colfCount(pt0)?' on':'')+'" id="lfColF"'
-             + ' title="어느 칸의 값으로 골라 볼지 고릅니다">🔽 조건 걸기</button>')
-      +   (nF ? '<button type="button" class="lf-fx" id="lfFpop"'
-             + ' style="color:#b52929;border-color:#f0c9c9;background:#fff6f6;font-weight:800"'
-             + ' title="눌러서 걸린 조건을 보고 하나씩 풀 수 있어요">✕ 필터 풀기 '
-             + '<b style="background:#b52929;color:#fff;border-radius:9px;padding:1px 6px;margin-left:3px">'+nF+'</b></button>' : '')
+    var nF  = fltNum(pt0);
+    var rows= isPersonal()? [] : ckRowsSafe();
+    var rc  = isPersonal()? null : rcInfo();
+    var sep = '<span class="lf-fbsep"></span>';
+    var vs  = viewsOf(pt0);
+    return '<div class="lf-fb">'
+      + '<div class="lf-fbwrap"><div class="lf-fbmid" style="flex-wrap:wrap;row-gap:6px">'
+      +   chkBtns(rows, rc)
+      +   (isPersonal()? '' : sep)
+      +   dayInline()
+      +   sep
       +   ((vw==='table'||vw==='list'||vw==='card') ? grpOptions(pt0) : '')
+      +   (nF ? '<button type="button" class="lf-fx" id="lfFpop"'
+             + ' style="height:34px;color:#b52929;border-color:#f0c9c9;background:#fff6f6;font-weight:800"'
+             + ' title="눌러서 걸린 조건을 보고 하나씩 풀 수 있어요">✕ 필터 '
+             + '<b style="background:#b52929;color:#fff;border-radius:9px;padding:1px 6px;margin-left:3px">'+nF+'</b></button>' : '')
+      +   sep
+      +   viewChips(pt0)
       + '</div></div>'
       + '<div class="lf-more" id="lfMore">'
       +   '<button type="button" class="lf-fx" id="lfMoreBtn" title="그 밖의 도구">⚙'
       +     (nF? '<b class="dot">'+nF+'</b>':'') + '</button>'
       +   '<div class="lf-morep" id="lfMoreP">'
+      +     '<button type="button" class="lf-fx" data-vsave="1" style="border-style:dashed">💾 지금 보기 저장</button>'
+      +     (vs.length? '<button type="button" class="lf-fx" data-vmgr="1" style="border-style:dashed">⋯ 보기 관리</button>' : '')
+      +     (vw==='table' ? '' :
+             '<button type="button" class="lf-fx'+(colfCount(pt0)?' on':'')+'" id="lfColF"'
+             + ' title="어느 칸의 값으로 골라 볼지 고릅니다">🔽 조건 걸기</button>')
+      +     '<div class="sep"></div>'
       +     (vw==='table'
              ? '<label class="lf-ck" title="옆으로 밀어도 첫 칸과 칸 이름이 붙어 있게"><input type="checkbox" id="lfFrz"'+(frzOn()?' checked':'')+'> 칸 이름 틀고정</label>'
              : '')
@@ -23546,9 +23566,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +   '</div>'
       + '</div>'
       + '<span class="lf-cnt">'+won(n)+'건'+(n!==tot? ' / '+won(tot):'')+'</span>'
-      + '</div>';
+      + '</div>'
+      + (panelOpen==='ck' ? ckPanel(rows) : (panelOpen==='rc' ? rcPanel(rc? rc.all : []) : ''));
   }
-
   function th(k, label, w, right){
     var on = srt.k===k;
     return '<th class="s'+(on?' on':'')+'"'+(w?' style="width:'+w+(right?';text-align:right':'')+'"':(right?' style="text-align:right"':''))
@@ -27932,14 +27952,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(cfb) cfb.addEventListener('click', function(ev){ ev.stopPropagation(); colfPick(ptCF, cfb); });
     var fpb=document.getElementById('lfFpop');   /* v163 — 걸린 조건 펼쳐보기 */
     if(fpb) fpb.addEventListener('click', function(ev){ ev.stopPropagation(); fltPop(ptCF, fpb); });
-    /* ── 📅 날짜 칩 · 「N일 전」 칸 · 「~ 오늘까지」 (v166) ── */
-    host.querySelectorAll('[data-dayq]').forEach(function(b){
-      b.addEventListener('click', function(ev){
-        ev.stopPropagation();
-        var r=colfRange(b.getAttribute('data-dayq'));
-        if(r) fltSet({from:r.from, to:r.to});     /* 푸는 건 [기간 해제] 로만 */
-      });
-    });
+    /* ── 📅 「N일 전」 칸 · 「~오늘」 (v167 — 칩 줄은 없앴다) ── */
     var dn=document.getElementById('lfDayN');
     if(dn && !dn._bound){
       dn._bound = true;
@@ -28267,10 +28280,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         }
         var v=viewsOf(ptF).filter(function(x){ return x.id===id; })[0];
         if(v) viewApply(v); }); });
-    var vs2=host.querySelector('[data-vsave]');
-    if(vs2) vs2.addEventListener('click', function(){ viewSaveNow(ptF); });
-    var vm=host.querySelector('[data-vmgr]');
-    if(vm) vm.addEventListener('click', function(){ viewMgr(ptF); });
+    host.querySelectorAll('[data-vsave]').forEach(function(b){
+      b.addEventListener('click', function(ev){ ev.stopPropagation(); viewSaveNow(ptF); }); });
+    host.querySelectorAll('[data-vmgr]').forEach(function(b){
+      b.addEventListener('click', function(ev){ ev.stopPropagation(); viewMgr(ptF); }); });
     /* 관계 칩 클릭 → 그 기록 열기 */
     host.querySelectorAll('[data-relgo]').forEach(function(b){
       b.addEventListener('click', function(ev){
