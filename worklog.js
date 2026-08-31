@@ -1025,11 +1025,33 @@ window.wlDeletedIds = { list: loadDelIds, forget: forgetDelId,
 
 function deleteRecord(id){
   rememberDelId(id);
+  /* v175 — 자동으로 만들어진 지출을 지우면 「이 업무는 다시 만들지 마라」고 기억한다.
+     이걸 안 하면 wlExpSync 가 다음에 그 업무를 건드릴 때 똑같은 지출을 되살린다. */
+  try{
+    var _e = (entries||[]).filter(function(x){ return x && x.id===id; })[0];
+    if(_e && _e.kind==='expense' && _e.workId){
+      var _a=[]; try{ _a=JSON.parse(localStorage.getItem('wl_exp_nosync')||'[]')||[]; }catch(e2){}
+      if(!Array.isArray(_a)) _a=[];
+      if(_a.indexOf(_e.workId)<0) _a.push(_e.workId);
+      if(_a.length>800) _a=_a.slice(-800);
+      try{ localStorage.setItem('wl_exp_nosync', JSON.stringify(_a)); }catch(e2){}
+    }
+  }catch(e){ console.warn('[지출연결] 지운 기억 실패', e); }
   entries=entries.filter(x=>x.id!==id);
   /* v171 — 어느 화면에서 지우든 위 지출 요약 카드가 따라오게 */
   try{ setTimeout(function(){
     try{ if(window.wlExpStats && window.wlExpStats.now) window.wlExpStats.now(); }
     catch(e){ console.warn("[지출 합계] 갱신 실패", e); }
+    /* v177 — 정산표·중식·인건비 화면도 같이 다시 그린다.
+       이걸 안 하면 지운 지출이 정산표에 그대로 남아 있는 것처럼 보인다. */
+    try{
+      if(window._expFinUnlocked){
+        var vis = function(id){ var el=document.getElementById(id); return !!(el && el.offsetParent !== null); };
+        if(vis("expSettleWrap") && typeof window.renderExpSettle === "function") window.renderExpSettle();
+        if(vis("expLaborWrap")  && typeof window.renderExpLabor  === "function") window.renderExpLabor();
+        if(vis("expMealWrap")   && typeof window.renderExpMeal   === "function") window.renderExpMeal();
+      }
+    }catch(e){ console.warn("[정산표] 갱신 실패", e); }
   }, 300); }catch(e){}
   if(online){
     const _c = colOfId(id);
@@ -17066,6 +17088,15 @@ async function githubUpload(token){
         (기본지침 「저장·수정·삭제 3원칙」 — 남이 넣은 값을 잃지 않는다) */
   function isMine(e){ return !!(e && e.autoFromWork === true); }
 
+  /* v175 — 「이 업무의 지출은 다시 만들지 마라」 목록 (지출을 지우면 여기 쌓인다) */
+  var LS_NS = 'wl_exp_nosync';
+  function nsList(){
+    try{ var a=JSON.parse(localStorage.getItem(LS_NS)||'[]'); return Array.isArray(a)?a:[]; }
+    catch(e){ return []; }
+  }
+  function nsSave(a){ try{ localStorage.setItem(LS_NS, JSON.stringify(a||[])); }catch(e){} }
+  function noSync(rid){ return nsList().indexOf(rid) >= 0; }
+
   function expPatch(r){
     var et = MAP[String(r.expType||'').trim()];
     if(!et) return null;
@@ -17116,6 +17147,7 @@ async function githubUpload(token){
       return '';
     }
     if(!cur){
+      if(noSync(rid)) return '';                      /* v175 — 지운 적 있는 업무는 다시 안 만든다 */
       if(!(n(r.cost) > 0) && !r.title) return '';     /* 아직 적을 게 없다 */
       try{
         var made = addRecord(want);
@@ -17204,6 +17236,46 @@ async function githubUpload(token){
   setTimeout(panel, 2800);
 
   window.wlExpSync = {
+    /* v175 — 업무에서 자동으로 만들어진 지출을 한 번에 살펴보고 정리한다.
+       .autoList()  : 자동으로 만들어진 것만 표로 본다 (안 지운다)
+       .autoClean() : 그 전부를 휴지통으로 보내고, 다시 안 만들게 기억한다 */
+    autoList: function(){
+      var out=[];
+      try{
+        (entries||[]).forEach(function(e){
+          if(!e || e.kind!=='expense' || !e.autoFromWork) return;
+          var w = recOf(e.workId);
+          out.push({ 날짜:e.date||'', 내역:(e.title||'(제목없음)').slice(0,26),
+                     종류:e.expType||'', 금액:n(e.amount),
+                     원래업무: w ? (w.title||'(제목없음)').slice(0,20) : '(업무 없음)' });
+        });
+      }catch(err){ console.error('[지출연결]', err); }
+      console.log('[지출연결] 업무에서 자동으로 만들어진 지출 ' + out.length + '건');
+      if(out.length && console.table) console.table(out);
+      return out;
+    },
+    autoClean: function(){
+      var ids=[];
+      try{
+        (entries||[]).forEach(function(e){
+          if(e && e.kind==='expense' && e.autoFromWork) ids.push(e.id);
+        });
+      }catch(err){ console.error('[지출연결]', err); return '살펴보다 실패했어요'; }
+      if(!ids.length) return '자동으로 만들어진 지출이 없습니다';
+      if(typeof confirm==='function' &&
+         !confirm('업무에서 자동으로 만들어진 지출 ' + ids.length + '건을 휴지통으로 보낼까요?\n\n'
+                + '· 90일 동안 되살릴 수 있습니다 (🛟 안전 → 휴지통)\n'
+                + '· 업무 기록은 그대로 남습니다\n'
+                + '· 앞으로 그 업무들은 지출을 다시 만들지 않습니다')) return '취소했습니다';
+      var ok=0;
+      ids.forEach(function(id){ try{ deleteRecord(id); ok++; }catch(e){ console.error('[지출연결] 삭제 실패', id, e); } });
+      if(typeof toast==='function') toast('🧾 자동 지출 ' + ok + '건을 휴지통으로 보냈어요');
+      return ok + '건 정리했습니다 — 되살리려면 🛟 안전 → 휴지통';
+    },
+    /* v175 — 지운 지출이 되살아나지 않게 하는 기억 */
+    nosync:    function(){ var a=nsList(); console.log('[지출연결] 다시 안 만들 업무 '+a.length+'건', a); return a; },
+    forget:    function(rid){ nsSave(nsList().filter(function(x){ return x!==rid; })); return '이 업무는 다시 만들 수 있어요'; },
+    forgetAll: function(){ nsSave([]); return '기억을 지웠습니다 — 업무에 지출종류가 남아 있으면 다시 만들어집니다'; },
     /* 🔎 업무에 딸린 지출이 「자동」인지 「직접」인지 전부 보여준다 (덮어쓰기 걱정 확인용) */
     check: function(){
       var out = [];
@@ -22633,7 +22705,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v174-0831-1730';
+  var JS_BUILD = 'v177-0831-1645';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -22909,7 +22981,8 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     if(!box){
       box = document.createElement('div');
       box.id = BOX;
-      box.style.cssText = 'margin-top:14px;border-top:2px solid #dbe6f4;padding-top:12px';
+      /* v176 — 목록 위에 놓이므로 경계선을 아래쪽으로 */
+      box.style.cssText = 'margin-bottom:14px;border-bottom:2px solid #dbe6f4;padding-bottom:12px';
       var hd = document.createElement('div');
       hd.style.cssText = 'display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px';
       hd.innerHTML = '<b style="font-size:14px;color:#33567d">🧮 정산 · 중식 · 인건비</b>'
@@ -22917,7 +22990,13 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
         +   '💰 지출 탭에서 빌려온 화면입니다 — 여기서 고치면 그대로 저장됩니다</span>';
       box.appendChild(hd);
     }
-    if(box.parentNode !== host.parentNode) host.parentNode.insertBefore(box, host.nextSibling);
+    /* v176 — 달님 요청: 목록 아래가 아니라 「맨 위」에 나오게.
+       지출 요약 카드(wlExpStatsBox)가 있으면 그보다도 위에 둔다. */
+    var _anchor = document.getElementById('wlExpStatsBox');
+    if(!_anchor || _anchor.parentNode !== host.parentNode) _anchor = host;
+    if(box.parentNode !== host.parentNode || box.nextSibling !== _anchor){
+      host.parentNode.insertBefore(box, _anchor);
+    }
 
     ps.forEach(function(el){ remember(el); box.appendChild(el); });
 
@@ -22933,7 +23012,8 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
       var mw = document.getElementById('expMealWrap');
       var lw = document.getElementById('expLaborWrap');
       var vis = function(x){ return x && x.style.display !== 'none' && x.offsetParent !== null; };
-      if(!vis(sw) && !vis(mw) && !vis(lw)){
+      /* v177 — 달님이 [✕ 닫기] 로 닫았으면 억지로 다시 열지 않는다 */
+      if(!vis(sw) && !vis(mw) && !vis(lw) && !window._expUserClosed){
         var sb2 = document.getElementById('expSubTabSettle');
         if(sb2) sb2.click();
       }

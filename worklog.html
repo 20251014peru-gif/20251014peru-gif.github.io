@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v174-0831-1730";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v177-0831-1645";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -1700,6 +1700,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <button type="button" id="expSubTabSettle" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🧮 정산표</button>
         <button type="button" id="expSubTabMeal" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🍚 중식</button>
         <button type="button" id="expSubTabLabor" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🧾 인건비+정기분</button>
+        <button type="button" id="expSubTabClose" style="display:none;height:38px;padding:0 14px;border-radius:10px;border:1.5px solid #f0b7b7;background:#fff5f5;color:#b52929;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer" title="정산표·중식·인건비 화면을 닫습니다">✕ 닫기</button>
         <span id="expSubTabActions" style="display:flex;gap:6px;margin-left:auto;align-items:center;flex-wrap:wrap"></span>
       </div>
       <div id="expListWrap">
@@ -3268,7 +3269,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=174-20260831t1730"></script>
+<script src="worklog.js?v=177-20260831t1645"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -12483,6 +12484,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       btn.style.borderColor=on?'#3f7cb8':'#dbe6f4';
     }
     paint(bl,which==='list'); paint(bs,which==='settle'); paint(bm,which==='meal'); paint(bb,which==='labor');
+    /* v177 — 정산표·중식·인건비가 열렸을 때만 [✕ 닫기] 를 보인다 */
+    var bc=g('expSubTabClose');
+    if(bc) bc.style.display = (which==='list') ? 'none' : '';
+    window._expUserClosed = (which==='list');
     if(typeof window.syncExpActions==='function') window.syncExpActions(which);
     if(which==='settle') window.renderExpSettle();
     if(which==='meal'&&typeof window.renderExpMeal==='function') window.renderExpMeal();
@@ -12495,6 +12500,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var bs=g('expSubTabSettle'); if(bs&&!bs._b){bs._b=true;bs.addEventListener('click',function(){setSubTab('settle');});}
     var bm=g('expSubTabMeal'); if(bm&&!bm._b){bm._b=true;bm.addEventListener('click',function(){setSubTab('meal');});}
     var bb=g('expSubTabLabor'); if(bb&&!bb._b){bb._b=true;bb.addEventListener('click',function(){setSubTab('labor');});}
+    /* v177 — ✕ 닫기 : 목록으로 돌아간다 (노션 화면에서는 서브탭 줄만 남는다) */
+    var bc=g('expSubTabClose'); if(bc&&!bc._b){bc._b=true;bc.addEventListener('click',function(){setSubTab('list');});}
     var ms=g('expSettleMonthSel'); if(ms&&!ms._b){ms._b=true;ms.addEventListener('change',function(){window.renderExpSettle();});}
     var cp=g('expSettleCopyBtn');  if(cp&&!cp._b){cp._b=true;cp.addEventListener('click',copySettleToExcel);}
   }
@@ -13101,6 +13108,16 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(typeof entries==='undefined') return null;
     return entries.find(function(e){ return e.kind==='labor_month'&&e.ym===ym; })||null;
   }
+  /* v177 — 지난달 월정산 찾기 (금액이 실제로 적힌 가장 최근 달) */
+  function prevMonthly(ym){
+    var arr=(typeof entries!=='undefined'?entries:[]).filter(function(e){
+      return e.kind==='labor_month' && (e.ym||'') < ym && Array.isArray(e.monthly)
+          && e.monthly.some(function(r){ return (Number(r.sup)||0)>0; });
+    });
+    arr.sort(function(a,b){ return (b.ym||'').localeCompare(a.ym||''); });
+    return arr[0]||null;
+  }
+
   function loadMonth(ym){
     var rec=findRec(ym);
     if(rec){
@@ -13241,6 +13258,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         +'<button type="button" id="mtCancel" style="height:34px;padding:0 12px;border-radius:9px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">취소</button>'
         +'<button type="button" id="mtSave" style="height:34px;padding:0 16px;border-radius:9px;border:none;background:#ea580c;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">💾 저장</button>'
       : '<button type="button" id="mtEdit" style="height:34px;padding:0 16px;border-radius:9px;border:none;background:#ea580c;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">✏️ 수정</button>';
+    /* v177 — 이번 달이 비었으면 「지난달 것 가져오기」 를 앞에 붙인다 */
+    var PVBTN='<button type="button" id="mtPrev" style="height:34px;padding:0 12px;border-radius:9px;border:1.5px solid #ea580c;background:#fff7ed;color:#c2410c;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer" title="금액이 적힌 가장 최근 달을 그대로 가져옵니다">⬅ 지난달 것 가져오기</button>';
+    var _empty=!list.some(function(r){ return (Number(r.sup)||0)>0; });
+    if(prevMonthly(_cur.ym) && (_mEdit || _empty)) btns = PVBTN + btns;
     var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap">'
       +'<span style="font-size:14px;font-weight:800;color:#ea580c">📅 '+esc(_cur.ym)+' 월정산 (정기 발생분) <span style="font-size:11px;color:#94a3b8;font-weight:600">— 수정 버튼으로만 변경 · 금액 입력 시 부가세 10% 자동</span></span>'
       +'<div style="display:flex;gap:6px">'+btns+'</div></div>';
@@ -13320,6 +13341,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         });
       });
       var ad=host.querySelector('#mtAdd'); if(ad) ad.addEventListener('click',function(){ _mDraft.push({name:'',sup:0,tax:0,note:''}); renderMonthly(parentBox); });
+      bindPrev();
       var cc=host.querySelector('#mtCancel'); if(cc) cc.addEventListener('click',function(){ _mEdit=false; _mDraft=null; renderMonthly(parentBox); });
       var sv=host.querySelector('#mtSave'); if(sv) sv.addEventListener('click',function(){
         _cur.monthly=_mDraft.filter(function(r){ return r.name; });
@@ -13332,6 +13354,23 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var ed=host.querySelector('#mtEdit'); if(ed) ed.addEventListener('click',function(){
         _mDraft=JSON.parse(JSON.stringify(_cur.monthly||[]));
         _mEdit=true; renderMonthly(parentBox);
+      });
+      bindPrev();
+    }
+
+    /* v177 — ⬅ 지난달 것 가져오기 (초안에만 넣는다 · [💾 저장] 을 눌러야 반영) */
+    function bindPrev(){
+      var pv=host.querySelector('#mtPrev'); if(!pv) return;
+      pv.addEventListener('click',function(){
+        var src=prevMonthly(_cur.ym);
+        if(!src){ if(typeof toast==='function') toast('가져올 지난달 월정산이 없어요'); return; }
+        var rows=JSON.parse(JSON.stringify(src.monthly||[])).filter(function(r){ return r.name; });
+        var base=_mEdit?_mDraft:(_cur.monthly||[]);
+        var has=base.some(function(r){ return (Number(r.sup)||0)>0; });
+        if(has && !confirm(src.ym+' 월정산으로 바꿀까요?\n지금 적혀 있는 금액은 지워집니다.')) return;
+        _mDraft=rows; _mEdit=true;
+        renderMonthly(parentBox);
+        if(typeof toast==='function') toast('⬅ '+src.ym+' 월정산을 가져왔어요 — 금액을 확인하고 [💾 저장] 을 누르세요');
       });
     }
   }
