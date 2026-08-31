@@ -9102,16 +9102,21 @@ function renderExpenseStats(target){
       </div>`
     ).join("") + `</div>`;
   };
+  /* v169 — 머리를 누르면 아래 목록이 그 종류만 남는다 (위아래가 늘 같은 것을 보게) */
+  let _nowF = ''; try{ _nowF = (window.wlExpFilterNow && window.wlExpFilterNow()) || ''; }catch(e){}
+  const hStyle = (t) => `cursor:pointer;user-select:none;border-radius:8px;padding:2px 6px;margin:-2px -6px;`
+    + (_nowF===t ? `background:#eaf3fd;box-shadow:inset 0 0 0 1.5px #2563a8;` : ``);
+  const hTip = (t) => _nowF===t ? `눌러서 거르개 풀기` : `눌러서 아래 목록을 「${t}」 만 보기`;
   box.innerHTML = `
     <div class="exp-stat-row">
       <div class="exp-stat-card exp-stat-personal">
-        <div class="es-h">💸 ${ym} 개인 지출 <span class="es-h-sub">전체 ${won(personalSumAll)}원</span></div>
+        <div class="es-h" data-esf="개인지출" style="${hStyle('개인지출')}" title="${hTip('개인지출')}">💸 ${ym} 개인 지출 ${_nowF==='개인지출'?'<span style="font-size:11px;color:#2563a8;font-weight:800">· 목록 걸림</span>':''} <span class="es-h-sub">전체 ${won(personalSumAll)}원</span></div>
         <div class="es-v">${won(personalSum)}<span class="es-u">원</span></div>
         <div class="es-s">이번달 ${personalThis.length}건 · 전체 ${personalAll.length}건</div>
         ${showItems(personalThis, personalAll)}
       </div>
       <div class="exp-stat-card exp-stat-tax">
-        <div class="es-h">📃 ${ym} 세금계산서 <span class="es-h-sub">전체 ${won(taxSumAll)}원</span></div>
+        <div class="es-h" data-esf="세금계산서" style="${hStyle('세금계산서')}" title="${hTip('세금계산서')}">📃 ${ym} 세금계산서 ${_nowF==='세금계산서'?'<span style="font-size:11px;color:#2563a8;font-weight:800">· 목록 걸림</span>':''} <span class="es-h-sub">전체 ${won(taxSumAll)}원</span></div>
         <div class="es-v">${won(taxSum)}<span class="es-u">원</span></div>
         <div class="es-s">이번달 ${taxThis.length}건 · 전체 ${taxAll.length}건</div>
         ${showItems(taxThis, taxAll)}
@@ -9120,6 +9125,16 @@ function renderExpenseStats(target){
   `;
   box.querySelectorAll(".es-item").forEach(el=>{
     el.addEventListener("click",()=>openExpenseEditor(el.dataset.id));
+  });
+  /* v169 — 머리 누르면 아래 목록 걸러내기 */
+  box.querySelectorAll("[data-esf]").forEach(el=>{
+    el.addEventListener("click", ev=>{
+      ev.stopPropagation();
+      try{
+        if(typeof window.wlExpFilter === "function") window.wlExpFilter(el.getAttribute("data-esf"));
+        else if(typeof toast === "function") toast("아직 목록을 걸러낼 수 없어요");
+      }catch(err){ console.error("[지출 거르기]", err); }
+    });
   });
 }
 
@@ -22574,7 +22589,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v168-0831-1400';
+  var JS_BUILD = 'v169-0831-1430';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
