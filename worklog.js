@@ -411,7 +411,13 @@ const SCHEMA={
     {k:"field",label:"분야",type:"field"},
     {k:"partyName",label:"당사자 이름",type:"text",nl:true},
     {k:"partyType",label:"당사자 유형",type:"select",opts:["임차인","방문객","직원","외부인","불명"]},
+    /* v162-0831-0330 — 업무·진행업무와 같은 넉 칸으로 맞춘다.
+          당사자가 회사·업체일 때 「누가 · 무슨 직책인지」를 적을 데가 없었다.
+          (예: 차량파손 사고에서 상대 업체의 담당 과장) */
+    {k:"partyContact",label:"담당자",type:"text"},
+    {k:"partyRole",label:"직책",type:"text"},
     {k:"partyPhone",label:"당사자 연락처",type:"text"},
+    {k:"partyMemo",label:"당사자 메모",type:"text",full:true},
     {k:"repairCost",label:"수리비 (원)",type:"number",nl:true},
     {k:"compensation",label:"배상금 (원)",type:"number"},
     {k:"insurance",label:"보험금 (원)",type:"number"},
@@ -2741,7 +2747,7 @@ function openTpContactForm(phoneInpRef, defaultType){
           '<input type="text" id="tpCfAddr" placeholder="예: 서울시 강남구 …" autocomplete="off" style="'+SI+'"></div>'+
         '<div><label style="'+LB+'">메모</label>'+
           '<input type="text" id="tpCfMemo" placeholder="간단한 메모" style="'+SI+'"></div>'+
-        '<a href="contacts.html" target="_blank" style="font-size:11.5px;color:#3f7cb8;font-weight:700;text-decoration:none;text-align:center;padding:2px 0">📇 명함 스캔 · 자세히 고치기는 연락처 앱에서 →</a>'+
+        '<a href="contacts.html" target="_blank" style="font-size:11.5px;color:#3f7cb8;font-weight:700;text-decoration:none;text-align:center;padding:2px 0">📋 자세히 고치기는 연락처 앱에서 →</a>'+
       '</div>'+
       '<div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:6px">'+
         '<button id="tpCfSaveReg" type="button" style="width:100%;height:48px;border:none;border-radius:12px;background:'+(isOne?'#f1f5f9':'#3f7cb8')+';color:'+(isOne?'#94a3b8':'#fff')+';font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">'+
@@ -14162,10 +14168,11 @@ async function githubUpload(token){
                  f:isIssued f:isJeonpyo
         통화   : _sub(상대) f:callContact f:role f:phone f:callField
         진행업무: _sub(담당 업체) f:ownerContact f:ownerRole f:ownerPhone f:ownerMemo f:status  (v161)
-        사고   : _sub(당사자) f:partyType f:partyPhone f:accType f:followUp
+        사고   : _sub(당사자) f:partyType f:partyContact f:partyRole f:partyPhone f:partyMemo f:accType f:followUp  (v162)
         입출고 : _sub(거래처) f:stockType f:qty f:unitPrice f:docNo f:useTarget  */
-  var RVER = 4;                      /* 규칙 정의가 바뀌면 올린다 → 옛 저장본 자동 교체
-                                        v161 : 진행업무 담당자·직책·메모를 b1·b2 에 넣었다 */
+  var RVER = 5;                      /* 규칙 정의가 바뀌면 올린다 → 옛 저장본 자동 교체
+                                        v161 : 진행업무 담당자·직책·메모를 b1·b2 에 넣었다
+                                        v162 : 사고 담당자·직책·메모도 */
   var LS_RVER = 'wl_rules_ver';
   function baseRules(){
     return [
@@ -14174,12 +14181,14 @@ async function githubUpload(token){
         then:{ act:'show', keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',
                                  'f:callContact','f:role','f:phone',
                                  'f:ownerContact','f:ownerRole','f:ownerPhone','f:ownerMemo',
-                                 'f:partyType','f:partyPhone'] } },
+                                 'f:partyType','f:partyContact','f:partyRole',
+                                 'f:partyPhone','f:partyMemo'] } },
       { id:'b2', on:1, base:1, name:'업체를 지우면 딸린 값도 지운다',
         when:{ k:'_sub', op:'empty' },
         then:{ act:'clear', keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',
                                   'f:callContact','f:role','f:phone',
-                                  'f:ownerContact','f:ownerRole','f:ownerPhone','f:ownerMemo'] } },
+                                  'f:ownerContact','f:ownerRole','f:ownerPhone','f:ownerMemo',
+                                  'f:partyContact','f:partyRole','f:partyPhone','f:partyMemo'] } },
       { id:'b3', on:1, base:1, name:'업무 — 자재명을 넣으면 규격·수량·금액이 나온다',
         when:{ k:'f:material', op:'filled' },
         then:{ act:'show', keys:['f:spec','f:qty','_amount'] } },
@@ -14779,8 +14788,9 @@ async function githubUpload(token){
 
   var LS_ON  = 'wl_group_on';
   var LS_GRP = 'wl_groups';
-  var VER    = 9;                    /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체
-                                        v161 : 진행업무 담당자·직책·메모 3칸을 g1 에 넣었다 */
+  var VER    = 10;                   /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체
+                                        v161 : 진행업무 담당자·직책·메모 3칸을 g1 에 넣었다
+                                        v162 : 사고 담당자·직책·메모 3칸도 g1 에 */
   var LS_VER = 'wl_groups_ver';
 
   /* ── 2026-08-29 14종 전수 실측 결과로 만든 묶음 ──
@@ -14810,7 +14820,8 @@ async function githubUpload(token){
         keys:['f:workContact','f:workRole','f:workPhone','f:workMemo',   /* 업무 */
               'f:callContact','f:role','f:phone',                        /* 통화 */
               'f:ownerContact','f:ownerRole','f:ownerPhone','f:ownerMemo', /* 진행업무 v161 */
-              'f:partyType','f:partyPhone'] },                           /* 사고 */
+              'f:partyType','f:partyContact','f:partyRole',              /* 사고 v162 */
+              'f:partyPhone','f:partyMemo'] },
       /* v118 — 자재 속성 칸(자재명·규격·수량)은 더 이상 묶지 않는다.
             진짜 자재는 「자재 사용 내역」이고, 그것은 위쪽 📦 줄이 보여준다.
             비어 있을 때 「(자재명 없음) · 0」 같은 줄이 나와서 오히려 헷갈렸다. */
@@ -15468,7 +15479,8 @@ async function githubUpload(token){
       var keys = ['workVendor','workContact','workRole','workPhone','workMemo',
                   'material','spec','qty','expType','cost','company','name','role','phone',
                   'owner','ownerContact','ownerRole','ownerPhone','ownerMemo',
-                  'partyName','startTime','endTime','isIssued','purpose'];
+                  'partyName','partyContact','partyRole','partyPhone','partyMemo',
+                  'startTime','endTime','isIssued','purpose'];
       var found = keys.filter(fieldExists);
       add('지금 화면에 있는 칸 : ' + (found.length ? found.join(', ') : '(없음 — 기록을 열고 다시 눌러주세요)'));
     }catch(e){ add('규칙 확인 실패 — ' + e.message); }
@@ -15904,7 +15916,7 @@ async function githubUpload(token){
       keys:['workContact','workRole','workPhone','workMemo',
             'callContact','role','phone',
             'ownerContact','ownerRole','ownerPhone','ownerMemo',   /* v161 */
-            'partyType','partyPhone',
+            'partyType','partyContact','partyRole','partyPhone','partyMemo',   /* v162 */
             'person','companyMemo'] },
     { gid:'gt', head:'f:material', icon:'📦', name:'자재',
       headKeys:['material','itemName'],
@@ -18936,12 +18948,13 @@ async function githubUpload(token){
     var v = [];
     var nm = T(r.workVendor) || T(r.vendor) || T(r.owner) || T(r.company) || T(r.partyName);
     if(nm) v.push(nm);
-    var who = [T(r.workContact) || T(r.callContact) || T(r.person) || T(r.ownerContact),
-               T(r.workRole) || T(r.role) || T(r.ownerRole)].filter(Boolean).join(' ');
+    var who = [T(r.workContact) || T(r.callContact) || T(r.person) || T(r.ownerContact) || T(r.partyContact),
+               T(r.workRole) || T(r.role) || T(r.ownerRole) || T(r.partyRole)].filter(Boolean).join(' ');
     if(who) v.push(who);
     var ph = T(r.workPhone) || T(r.phone) || T(r.ownerPhone) || T(r.partyPhone);
     if(ph) v.push(ph);
-    if(T(r.workMemo) || T(r.ownerMemo)) v.push(T(r.workMemo) || T(r.ownerMemo));
+    if(T(r.workMemo) || T(r.ownerMemo) || T(r.partyMemo))
+      v.push(T(r.workMemo) || T(r.ownerMemo) || T(r.partyMemo));
     if(v.length) out.push({ k:'g1', t:'🏢 ' + v.join(' · ') });
 
     /* 🕐 시각 */
@@ -22322,4 +22335,212 @@ async function githubUpload(token){
     }
   };
   console.log('[단계] v160 — 사고·진행업무를 시간순으로 (' + (on()?'켜짐':'꺼짐') + ')');
+})();
+/* ══════════════════════════════════════════════════════════════
+   📇 명함 스캔 — 연락처 추가 팝업 안에서 바로 (v162-0831-0330)
+
+   달님 : 「명함 스캔을 worklog 안에서」
+
+   지금까지는 명함을 찍으려면 연락처 앱(contacts.html)으로 건너가야 했다.
+   → 업무를 쓰다가 업체 칸에서 [📇 연락처 추가] 를 눌렀을 때,
+     그 자리에서 명함을 찍으면 8칸이 저절로 채워진다.
+
+   ⚠ 사진은 **저장하지 않는다.** AI 에게 한 번 보내고 버린다.
+      (2026-08-28 사고 — 명함 base64 가 localStorage 4.07MB 를 먹었다)
+   ⚠ 새 열쇠를 코드에 적지 않는다. 이미 쓰던 [🤖 AI] 탭의 열쇠를 그대로 쓴다.
+   ⚠ 이미 적어 둔 칸은 건드리지 않는다. **빈 칸만** 채운다.
+      채워진 칸은 노란 바탕(#fffbea)이 되어 「AI 가 넣은 값」임을 알 수 있다.
+
+   되돌리기 : wlCardScan.off()   → 단추가 사라지고 예전처럼 손으로 적는다
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+
+  var LS = 'wl_cardscan';
+  function on(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+
+  /* 어느 입력칸에 무엇을 넣을지 — 명함에서 읽은 이름 → 팝업 칸 id */
+  var MAP = [
+    ['name',   'tpCfName',   '업체명'],
+    ['person', 'tpCfPerson', '담당자'],
+    ['title',  'tpCfRole',   '직책'],
+    ['phone',  'tpCfPhone',  '전화번호'],
+    ['cat',    'tpCfCat',    '분야'],
+    ['email',  'tpCfEmail',  '이메일'],
+    ['addr',   'tpCfAddr',   '주소'],
+    ['memo',   'tpCfMemo',   '메모']
+  ];
+
+  function $(id){ return document.getElementById(id); }
+
+  /* ── 단추 두 개 + 안내줄 ── */
+  function scanHTML(){
+    var BS = 'flex:1;min-width:118px;height:40px;border:1.5px solid #cfe0f2;border-radius:10px;'
+           + 'background:#f7faff;color:#3f7cb8;font-size:13px;font-weight:800;'
+           + 'font-family:inherit;cursor:pointer';
+    return '<div style="font-size:11.5px;font-weight:700;color:#94a3b8">'
+      +   '명함이 있으면 찍어 보세요 — 아래 칸이 저절로 채워집니다</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +   '<button type="button" id="tpCfCam"  style="' + BS + '">📷 명함 촬영</button>'
+      +   '<button type="button" id="tpCfPick" style="' + BS + '">🖼 사진에서 고르기</button>'
+      + '</div>'
+      + '<div id="tpCfScanMsg" style="font-size:11.5px;color:#94a3b8;text-align:center;'
+      +   'min-height:16px;line-height:1.5;margin:-4px 0 2px"></div>'
+      /* capture 는 폰에서 카메라를 바로 연다. PC 에서는 그냥 파일 고르기가 된다 */
+      + '<input type="file" id="tpCfCamF"  accept="image/*" capture="environment" style="display:none">'
+      + '<input type="file" id="tpCfPickF" accept="image/*" style="display:none">';
+  }
+
+  function say(t, color){
+    var m = $('tpCfScanMsg');
+    if(m){ m.textContent = t || ''; m.style.color = color || '#94a3b8'; }
+  }
+
+  /* ── 빈 칸만 채운다 ── */
+  function fill(o){
+    var n = 0, names = [];
+    MAP.forEach(function(row){
+      var v = o && o[row[0]];
+      if(v === undefined || v === null) return;
+      v = String(v).trim();
+      if(!v || v === '-' || v === '없음') return;
+      var el = $(row[1]);
+      if(!el || (el.value || '').trim()) return;    /* 이미 적혀 있으면 건드리지 않는다 */
+      el.value = v;
+      el.style.background = '#fffbea';              /* 자동입력 = 노란 바탕 (UX 규칙) */
+      n++; names.push(row[2]);
+    });
+    return { n:n, names:names };
+  }
+
+  /* ── 명함 한 장 읽기 ── */
+  async function read(file){
+    var key = '';
+    try{ key = (typeof aiGetKey === 'function') ? aiGetKey() : ''; }catch(e){}
+    if(!key){
+      say('⚠ AI 열쇠가 없어요 — [🤖 AI] 탭에서 열쇠를 먼저 저장하세요', '#e11d48');
+      return;
+    }
+
+    say('📷 사진 줄이는 중…');
+    var data;
+    try{
+      /* 글씨만 읽으면 되므로 1500px · 0.82 면 충분하다 (보통 200~400KB) */
+      data = await _compressImage(file, 1500, 0.82);
+    }catch(e){
+      console.warn('[명함] 사진 처리 실패', e);
+      say('사진을 못 읽었어요 — 다른 사진으로 해보세요', '#e11d48');
+      return;
+    }
+
+    say('🤖 명함 읽는 중… (5~10초)');
+    var sys = '너는 한국 명함을 읽어 주는 도구다. 아래 JSON 하나만 답하고 다른 말은 하지 마라.\n'
+      + '{\n'
+      + '  "name":   "회사·업체 이름 (없으면 사람 이름)",\n'
+      + '  "person": "사람 이름",\n'
+      + '  "title":  "직책 (예: 부장, 대표, 소장)",\n'
+      + '  "phone":  "휴대폰을 우선. 없으면 대표번호. 010-0000-0000 꼴로",\n'
+      + '  "cat":    "업종 한 단어 (전기·소방·기계·설비·영선·청소·엘리베이터·건축·통신·조경·보안·기타 중 하나)",\n'
+      + '  "email":  "이메일",\n'
+      + '  "addr":   "주소",\n'
+      + '  "memo":   "팩스·직통번호·홈페이지 등 남는 정보를 한 줄로. 없으면 빈 문자열"\n'
+      + '}\n'
+      + '- 안 보이는 항목은 빈 문자열 "" 로 둔다. 지어내지 마라.\n'
+      + '- 전화번호에서 +82 는 0 으로 바꾼다.\n'
+      + '- 회사 이름에 (주)·㈜ 가 있으면 그대로 남긴다.';
+
+    try{
+      var res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'x-api-key':key,
+                   'anthropic-version':'2023-06-01',
+                   'anthropic-dangerous-direct-browser-access':'true' },
+        body: JSON.stringify({
+          model: (typeof AI_MODEL !== 'undefined') ? AI_MODEL : 'claude-sonnet-4-6',
+          max_tokens: 600, system: sys,
+          messages: [{ role:'user', content: [
+            { type:'image', source:{ type:'base64', media_type:'image/jpeg',
+                                     data: data.split(',')[1] } },
+            { type:'text', text:'이 명함을 읽어서 JSON 으로 알려줘.' }
+          ] }]
+        })
+      });
+      if(!res.ok){
+        var m = 'HTTP ' + res.status;
+        try{ var j = await res.json(); if(j && j.error && j.error.message) m = j.error.message; }catch(_){}
+        throw new Error(m);
+      }
+      var d = await res.json();
+      var reply = (d.content || []).filter(function(b){ return b.type === 'text'; })
+                    .map(function(b){ return b.text; }).join('\n').trim();
+      var o = extractJsonFromAIReply(reply, false);
+      var r = fill(o);
+      if(r.n) say('✅ ' + r.names.join(' · ') + ' 를 채웠어요 — 확인하고 저장하세요', '#0f9d58');
+      else    say('읽을 내용을 못 찾았어요 (또는 이미 다 적혀 있어요)', '#e11d48');
+    }catch(e){
+      /* ⚠ 열쇠 값은 절대 로그에 남기지 않는다 */
+      console.warn('[명함] 읽기 실패', e && (e.message || e));
+      say('❌ ' + String((e && e.message) || e).slice(0, 60), '#e11d48');
+    }finally{
+      data = null;   /* 사진은 여기서 버린다 — 어디에도 저장하지 않는다 */
+    }
+  }
+
+  /* ── 팝업이 뜨면 단추를 붙인다 ──
+        ⚠ **맨 위**에 붙인다. 아래(메모 밑)에 두었더니 폰에서 스크롤을 내려야
+          보였다 — 명함 스캔은 「가장 먼저」 쓰는 것이라 맨 위가 맞다.
+          (2026-08-31 폰 390×780 실측에서 확인) */
+  function attach(ov){
+    if(!ov || ov._cardScan) return;
+    ov._cardScan = 1;
+    var body = ov.querySelector('div[style*="overflow:auto"]');
+    if(!body) body = ov.querySelector('a[href="contacts.html"]');
+    if(!body) return;
+    if(body.tagName === 'A') body.insertAdjacentHTML('beforebegin', scanHTML());
+    else                     body.insertAdjacentHTML('afterbegin', scanHTML());
+
+    [['tpCfCam','tpCfCamF'], ['tpCfPick','tpCfPickF']].forEach(function(pair){
+      var b = $(pair[0]), f = $(pair[1]);
+      if(!b || !f || b._bound) return;
+      b._bound = 1;
+      b.addEventListener('click', function(){ f.click(); });
+      f.addEventListener('change', function(){
+        var file = f.files && f.files[0];
+        f.value = '';                      /* 같은 사진을 다시 고를 수 있게 */
+        if(file) read(file);
+      });
+    });
+  }
+
+  /* 팝업은 openTpContactForm 이 그때그때 만든다 → 나타나는지 지켜본다 */
+  function watch(){
+    if(!on()) return;
+    var ov = $('tpCfOv');
+    if(ov) attach(ov);
+  }
+  try{
+    new MutationObserver(watch).observe(document.body, { childList:true });
+  }catch(e){ setInterval(watch, 700); }
+  setInterval(watch, 1200);   /* 그물 — 관찰자가 놓쳐도 1.2초 안에 붙는다 */
+
+  window.wlCardScan = {
+    on:  function(){ try{ localStorage.setItem(LS,'1'); }catch(e){} watch();
+                     return '연락처 추가 팝업에 명함 스캔 단추를 보입니다'; },
+    off: function(){ try{ localStorage.setItem(LS,'0'); }catch(e){}
+                     var b=$('tpCfCam'), p=$('tpCfPick');
+                     if(b) b.remove(); if(p) p.remove();
+                     return '명함 스캔 단추를 숨깁니다 (손으로 적기)'; },
+    read: read,
+    state: function(){
+      var k = '';
+      try{ k = (typeof aiGetKey === 'function') ? aiGetKey() : ''; }catch(e){}
+      return { 명함스캔: on() ? '켜짐' : '꺼짐',
+               AI열쇠: k ? ('있음 (••••' + k.slice(-4) + ')') : '없음 — [🤖 AI] 탭에서 저장하세요',
+               채우는칸: MAP.map(function(r){ return r[2]; }).join(' · '),
+               사진저장: '안 함 — AI 에 한 번 보내고 버립니다',
+               쓰는법: '업체 칸 → [📇 연락처 추가] → [📷 명함 촬영]' };
+    }
+  };
+
+  console.log('[명함] v162 — 연락처 추가 팝업에서 바로 스캔 (' + (on() ? '켜짐' : '꺼짐') + ')');
 })();
