@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v177-0831-1645";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v178-0831-1710";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3269,7 +3269,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=177-20260831t1645"></script>
+<script src="worklog.js?v=178-20260831t1710"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -12277,7 +12277,24 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var TH='padding:9px 10px;font-size:12px;font-weight:800;color:#fff;background:#3f7cb8;border:1px solid #dbe6f4;white-space:nowrap';
     var TD='padding:8px 10px;font-size:13px;color:#1a2f45;border:1px solid #e8f0fa;background:#fff';
     var TDR=TD+';text-align:right;white-space:nowrap;font-weight:600';
-    var html='<table style="border-collapse:collapse;width:100%;min-width:680px">'
+    /* v178 — 업무에서 저절로 만들어진 지출이 섞여 있으면 알려 주고 한 번에 정리할 수 있게 */
+    var html='';
+    try{
+      var _auto=[];
+      for(var _k in d.map){
+        (d.map[_k]||[]).forEach(function(x){ if(x && x.autoFromWork && x.id) _auto.push(x); });
+      }
+      if(_auto.length){
+        html+='<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px;padding:9px 12px;'
+          +'border:1.5px solid #fed7aa;background:#fff7ed;border-radius:10px">'
+          +'<b style="font-size:12.5px;color:#c2410c">🤖 업무에서 저절로 만들어진 지출 '+_auto.length+'건이 섞여 있어요</b>'
+          +'<span style="font-size:11.5px;color:#b08968;flex:1;min-width:160px">각 줄의 🗑 로 하나씩, 또는 오른쪽 단추로 한 번에 정리합니다 (휴지통으로 갑니다)</span>'
+          +'<button type="button" id="expSettleAutoClean" style="height:32px;padding:0 12px;border-radius:9px;border:1.5px solid #c2410c;'
+          +'background:#fff;color:#c2410c;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">🧹 '+_auto.length+'건 한 번에 정리</button>'
+          +'</div>';
+      }
+    }catch(e){ console.warn('[정산표] 자동 지출 안내 실패', e); }
+    html+='<table style="border-collapse:collapse;width:100%;min-width:680px">'
       +'<thead><tr>'
       +'<th style="'+TH+'">구분</th><th style="'+TH+'">NO</th><th style="'+TH+';min-width:160px">지출내용</th>'
       +'<th style="'+TH+'">금액</th><th style="'+TH+'">부가세</th><th style="'+TH+'">합계</th><th style="'+TH+';min-width:110px">비고</th>'
@@ -12301,7 +12318,12 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
             +'<td style="'+TDR+'">'+(e?cell(v.sup):'')+'</td>'
             +'<td style="'+TDR+';color:#94a3b8">'+(e?cell(v.tax):'')+'</td>'
             +'<td style="'+TDR+';font-weight:800">'+(e?cell(v.amount):'')+'</td>'
-            +'<td style="'+TD+';font-size:12px;color:#64748b">'+(e?esc(rowNote(e)):'')+'</td>'
+            +'<td style="'+TD+';font-size:12px;color:#64748b">'
+              + (e?esc(rowNote(e)):'')
+              /* v178 — 업무에서 저절로 만들어진 지출은 🤖 로 표시하고, 여기서 바로 지울 수 있게 */
+              + (e&&e.autoFromWork?' <span title="업무에서 저절로 만들어진 지출입니다" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:5px;padding:0 5px;font-size:10px;font-weight:800">🤖 업무에서</span>':'')
+              + (e&&e.id&&!e.__virtual?' <button type="button" data-settledel="'+esc(e.id)+'" title="이 줄을 지웁니다 (휴지통으로)" style="float:right;width:26px;height:26px;border:none;border-radius:7px;background:#fde8e8;color:#b52929;cursor:pointer;font-family:inherit;font-size:12px">🗑</button>':'')
+              +'</td>'
             +'</tr>';
         }
         gSum+=s; gTax+=t; gAmt+=a;
@@ -12343,10 +12365,43 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       +'</tr>';
     html+='</tbody></table>';
     box.innerHTML=html;
-    /* 행 클릭 → 지출 조회 팝업 (자동 반영 행 제외) */
+    /* v178 — 🧹 한 번에 정리 */
+    (function(){
+      var ac=box.querySelector('#expSettleAutoClean'); if(!ac) return;
+      ac.addEventListener('click',function(){
+        if(!(window.wlExpSync && window.wlExpSync.autoClean)){
+          if(typeof toast==='function') toast('정리 기능을 못 찾았어요 — worklog.js 를 올렸는지 확인하세요');
+          return;
+        }
+        try{ window.wlExpSync.autoClean(); }
+        catch(err){ console.error('[정산표 정리]',err); if(typeof toast==='function') toast('정리 오류: '+(err.message||err)); }
+        setTimeout(function(){ try{ window.renderExpSettle(); }catch(e){} }, 600);
+      });
+    })();
+    /* 행 클릭 → 상세 */
     box.querySelectorAll('[data-settleid]').forEach(function(tr){
       tr.addEventListener('click',function(){
-        if(typeof window.openExpenseEditor==='function') window.openExpenseEditor(tr.dataset.settleid);
+        var id=tr.dataset.settleid;
+        /* v178 — 노션식 상세 창을 먼저 쓴다 (옛 「지출 조회」 창은 못 열 때만) */
+        try{
+          if(typeof window.wlOpenPage==='function'){ window.wlOpenPage(id); return; }
+        }catch(err){ console.warn('[정산표] 노션 상세 열기 실패 — 옛 창으로', err); }
+        if(typeof window.openExpenseEditor==='function') window.openExpenseEditor(id);
+      });
+    });
+    /* v178 — 정산표에서 바로 지우기 */
+    box.querySelectorAll('[data-settledel]').forEach(function(btn){
+      btn.addEventListener('click',function(ev){
+        ev.stopPropagation();
+        var id=btn.dataset.settledel;
+        var rec=(typeof entries!=='undefined'?entries:[]).filter(function(x){return x.id===id;})[0];
+        var nm=rec?(rec.title||'(내역없음)'):'이 줄';
+        if(!confirm('「'+nm+'」 을(를) 지울까요?\n휴지통으로 갑니다 — 🛟 안전 → 휴지통에서 되살릴 수 있어요.')) return;
+        try{
+          if(typeof deleteWithUndo==='function') deleteWithUndo(id,'지출');
+          else if(typeof deleteRecord==='function') deleteRecord(id);
+        }catch(err){ console.error('[정산표 삭제]',err); if(typeof toast==='function') toast('지우기 오류: '+(err.message||err)); return; }
+        setTimeout(function(){ try{ window.renderExpSettle(); }catch(e){} }, 350);
       });
     });
     /* 그룹별 복사: 내용 행만 (지출내용·금액·부가세·합계, 빈 행 포함 고정 행수) */
@@ -20059,8 +20114,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   function won(n){ n=Number(n)||0; return n.toLocaleString('ko-KR'); }
   function num(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?0:n; }
   function today(){
+    /* 🔴 v178 — kstNow() 는 「UTC 로 읽어야」 한국 시각이 나오는 객체다.
+       getFullYear/getMonth/getDate(지역 게터)로 읽으면 한국에서 +9시간이 더해져
+       오후 3시가 넘으면 날짜가 하루 앞선다. 반드시 getUTC… 로 읽는다. */
     try{ if(typeof kstNow==='function'){ var d=kstNow();
-      return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); } }catch(e){}
+      return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0'); } }catch(e){}
     var t=new Date(Date.now()+9*3600000); return t.toISOString().slice(0,10);
   }
   function dday(d){ if(!d) return null;
@@ -21064,7 +21122,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     document.getElementById('tdPM').addEventListener('click', function(){ if(H<12) H+=12; paint(); });
     document.getElementById('tdNow').addEventListener('click', function(){
       var d = (typeof kstNow==='function') ? kstNow() : new Date(Date.now()+9*3600000);
-      H=d.getHours(); MI=Math.round(d.getMinutes()/5)*5; if(MI>=60){MI=0;H=(H+1)%24;} paint(); });
+      /* v178 — kstNow() 는 UTC 게터로 읽어야 한국 시각이다 (지역 게터면 +9시간 어긋남) */
+      H=d.getUTCHours(); MI=Math.round(d.getUTCMinutes()/5)*5; if(MI>=60){MI=0;H=(H+1)%24;} paint(); });
 
     /* ── 분 단위 · ± · 소요 시간 (v105) ── */
     var STEP = 10;          /* 분 단위 — 5·10·15·30 */
@@ -24266,6 +24325,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     el.style.height=(el.scrollHeight+4)+'px';
   }
 
+  /* v178 — 정산표 등 바깥에서도 노션식 상세 창을 열 수 있게 (지침 2-2 · 창구 노출) */
+  try{ window.wlOpenPage = function(id){ return openPage(id); }; }catch(e){}
   function openPage(id){
     var rec = ent().filter(function(x){ return x.id===id; })[0];
     if(!rec){ alert('기록을 못 찾았어요'); return; }

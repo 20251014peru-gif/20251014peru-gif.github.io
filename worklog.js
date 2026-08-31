@@ -2689,7 +2689,7 @@ function bindTempPhoneUI(){
       person: '',
       phone,
       vendorType: isOne ? '일회성' : '등록업체',
-      memo: '업무 모달 전화번호에서 저장 ('+kstNow().toLocaleDateString('ko-KR')+')',
+      memo: '업무 모달 전화번호에서 저장 ('+kstNow().toISOString().slice(0,10)+')',
       fav: false,
       createdAt: Date.now()
     };
@@ -13912,8 +13912,9 @@ async function githubUpload(token){
   /* ── 날짜·시각 칸 빠른 버튼 (v102) ─────────────────────
      옛 입력창에만 있던 [어제][3일전][지금][+30분] 을 노션식에도 붙인다 */
   function ymd(d){
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0')
-         + '-' + String(d.getDate()).padStart(2,'0');
+    /* v178 — kstNow() 로 만든 값이 들어온다. UTC 게터로 읽어야 한국 날짜다. */
+    return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0')
+         + '-' + String(d.getUTCDate()).padStart(2,'0');
   }
   function dayShift(n){
     var k = (typeof kstNow === 'function') ? kstNow() : new Date();
@@ -13925,7 +13926,7 @@ async function githubUpload(token){
   }
   function hhmm(mins){
     var k = (typeof kstNow === 'function') ? kstNow() : new Date();
-    var t = k.getHours()*60 + k.getMinutes() + (mins || 0);
+    var t = k.getUTCHours()*60 + k.getUTCMinutes() + (mins || 0);   /* v178 — 지역 게터면 +9시간 어긋남 */
     t = ((t % 1440) + 1440) % 1440;
     t = Math.round(t/5)*5; if(t >= 1440) t -= 1440;      /* 5분 단위 (달님 표준) */
     return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
@@ -19876,7 +19877,13 @@ async function githubUpload(token){
       if(box) box.remove();
       box = document.createElement('div');
       box.id = ID; box.className = 'wl-expstats';
-      host.parentNode.insertBefore(box, host);                  /* 목록 바로 위 */
+      /* v178 — 달님 요청: 목록 → 요약 → 정산표 차례.
+         요약 카드는 목록 「바로 아래」에 놓는다. */
+      host.parentNode.insertBefore(box, host.nextSibling);
+    }
+    /* v178 — 이미 있어도 목록 아래가 아니면 제자리로 돌려놓는다 */
+    else if(box.previousSibling !== host){
+      try{ host.parentNode.insertBefore(box, host.nextSibling); }catch(e){}
     }
     try{
       if(typeof renderExpenseStats === 'function') renderExpenseStats(box);
@@ -22705,7 +22712,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v177-0831-1645';
+  var JS_BUILD = 'v178-0831-1710';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -22981,8 +22988,8 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     if(!box){
       box = document.createElement('div');
       box.id = BOX;
-      /* v176 — 목록 위에 놓이므로 경계선을 아래쪽으로 */
-      box.style.cssText = 'margin-bottom:14px;border-bottom:2px solid #dbe6f4;padding-bottom:12px';
+      /* v178 — 목록·요약 아래에 놓이므로 경계선을 위쪽으로 */
+      box.style.cssText = 'margin-top:14px;border-top:2px solid #dbe6f4;padding-top:12px';
       var hd = document.createElement('div');
       hd.style.cssText = 'display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px';
       hd.innerHTML = '<b style="font-size:14px;color:#33567d">🧮 정산 · 중식 · 인건비</b>'
@@ -22990,12 +22997,12 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
         +   '💰 지출 탭에서 빌려온 화면입니다 — 여기서 고치면 그대로 저장됩니다</span>';
       box.appendChild(hd);
     }
-    /* v176 — 달님 요청: 목록 아래가 아니라 「맨 위」에 나오게.
-       지출 요약 카드(wlExpStatsBox)가 있으면 그보다도 위에 둔다. */
-    var _anchor = document.getElementById('wlExpStatsBox');
-    if(!_anchor || _anchor.parentNode !== host.parentNode) _anchor = host;
-    if(box.parentNode !== host.parentNode || box.nextSibling !== _anchor){
-      host.parentNode.insertBefore(box, _anchor);
+    /* v178 — 달님 요청: 목록 → 요약 → 정산표 차례.
+       요약 카드(wlExpStatsBox)가 있으면 그 바로 뒤, 없으면 목록 바로 뒤. */
+    var _prev = document.getElementById('wlExpStatsBox');
+    if(!_prev || _prev.parentNode !== host.parentNode) _prev = host;
+    if(box.parentNode !== host.parentNode || box.previousSibling !== _prev){
+      host.parentNode.insertBefore(box, _prev.nextSibling);
     }
 
     ps.forEach(function(el){ remember(el); box.appendChild(el); });
@@ -23202,4 +23209,33 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
                        list:function(){ var r=list(); console.log('[탭 숨기기] 숨긴 탭:', r); return r; },
                        now:paint };
   console.log('[탭 숨기기] v174 준비됨 — wlTabHide.panel() · 지금 숨긴 것 ' + list().length + '개');
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   🕐 wlTime — 시계 점검 (v178)
+   「날짜가 하루 밀린다 / 시각이 안 맞는다」 신고가 오면 이것부터.
+   kstNow() 는 UTC 로 읽어야 한국 시각이 나오는 객체다.
+   지역 게터(getHours·getDate…)로 읽으면 한국에서 +9시간 어긋난다.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function kst(){
+    try{ return (typeof kstNow==='function') ? kstNow() : new Date(Date.now()+9*3600000); }
+    catch(e){ return new Date(Date.now()+9*3600000); }
+  }
+  window.wlTime = function(){
+    var b = new Date();                       /* 이 컴퓨터가 아는 시각 */
+    var k = kst();                            /* +9시간 밀어 둔 객체 */
+    var r = {
+      이_컴퓨터: b.getFullYear()+'-'+pad(b.getMonth()+1)+'-'+pad(b.getDate())+' '+pad(b.getHours())+':'+pad(b.getMinutes()),
+      시간대: (b.getTimezoneOffset()/-60)+'시간',
+      앱이_보는_한국시각: k.toISOString().slice(0,10)+' '+k.toISOString().slice(11,16),
+      앱이_보는_오늘: (typeof todayStr==='function') ? todayStr() : k.toISOString().slice(0,10)
+    };
+    r.맞나 = (r.앱이_보는_한국시각.slice(0,10) === r.앱이_보는_오늘) ? '✅ 앞뒤가 맞습니다' : '🔴 어긋납니다';
+    console.table(r);
+    if(typeof toast==='function') toast('🕐 앱이 보는 오늘 = ' + r.앱이_보는_오늘 + ' ' + r.앱이_보는_한국시각.slice(11));
+    return r;
+  };
+  console.log('[시계] wlTime() 으로 날짜·시각을 확인할 수 있습니다');
 })();
