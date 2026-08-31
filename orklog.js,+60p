@@ -22712,7 +22712,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v179-0831-1740';
+  var JS_BUILD = 'v178-0831-1710';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -22932,22 +22932,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
   var LS  = 'wl_exp_embed';
   var BOX = 'wlExpEmbedBox';
   var SUB = '_wlExpSubBar';                 /* 서브탭 줄에 임시로 붙이는 id */
-  /* v179 — 두 가지 보기.
-       card   : 지출 탭의 「지출 관리」 화면을 통째로 (요약 카드 4개 + 연/월 바 + 종류별 카드 목록 + 정산표…)
-       notion : 예전처럼 노션 목록을 쓰고 정산표·중식·인건비만 빌려온다
-     달님 기본은 card. 언제든 머리말의 단추로 오갈 수 있다. */
-  var LSV = 'wl_exp_view';
-  var IDS_CARD   = ['expV2Dashboard', 'expYmBar', 'expListWrap', 'expSettleWrap', 'expMealWrap', 'expLaborWrap'];
-  var IDS_NOTION = ['expYmBar', 'expSettleWrap', 'expMealWrap', 'expLaborWrap'];
-  function view(){ try{ return localStorage.getItem(LSV) === 'notion' ? 'notion' : 'card'; }catch(e){ return 'card'; } }
-  function setView(v){
-    try{ localStorage.setItem(LSV, v === 'notion' ? 'notion' : 'card'); }catch(e){}
-    try{ giveBack(); }catch(e){}
-    window._expUserClosed = false;
-    run();
-    if(typeof toast === 'function') toast(v === 'notion' ? '📋 노션 목록으로 봅니다' : '🎴 지출 관리 화면으로 봅니다');
-  }
-  var IDS = IDS_CARD;
+  var IDS = ['expYmBar', 'expSettleWrap', 'expMealWrap', 'expLaborWrap'];
   var home = {};                            /* id → {p:원래부모, n:원래 다음형제} */
   var lent = false;
 
@@ -22968,14 +22953,8 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
   }
   function parts(){
     var out = [];
-    var ids = (view() === 'notion') ? IDS_NOTION : IDS_CARD;
-    var sb = subBar();
-    /* card 보기에서는 요약 카드 → 연/월 바 → 서브탭 줄 → 목록 차례가 되게 */
-    ids.forEach(function(id){
-      if(id === 'expListWrap' && sb) out.push(sb);          /* 목록 바로 앞에 서브탭 줄 */
-      var el = document.getElementById(id); if(el) out.push(el);
-    });
-    if(sb && out.indexOf(sb) < 0) out.unshift(sb);
+    var sb = subBar(); if(sb) out.push(sb);
+    IDS.forEach(function(id){ var el = document.getElementById(id); if(el) out.push(el); });
     return out;
   }
 
@@ -23012,32 +22991,12 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
       /* v178 — 목록·요약 아래에 놓이므로 경계선을 위쪽으로 */
       box.style.cssText = 'margin-top:14px;border-top:2px solid #dbe6f4;padding-top:12px';
       var hd = document.createElement('div');
-      hd.id = 'wlExpEmbedHd';
       hd.style.cssText = 'display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px';
+      hd.innerHTML = '<b style="font-size:14px;color:#33567d">🧮 정산 · 중식 · 인건비</b>'
+        + '<span style="font-size:11.5px;color:#aab8c8;flex:1;min-width:140px">'
+        +   '💰 지출 탭에서 빌려온 화면입니다 — 여기서 고치면 그대로 저장됩니다</span>';
       box.appendChild(hd);
     }
-    /* v179 — 머리말 + 보기 전환 단추 (다시 그릴 때마다 지금 보기를 칠한다) */
-    try{
-      var hd2 = box.querySelector('#wlExpEmbedHd');
-      if(hd2){
-        var isC = view() !== 'notion';
-        var bs = function(on){
-          return 'height:30px;padding:0 12px;border-radius:9px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;'
-               + (on ? 'border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff'
-                     : 'border:1.5px solid #dbe6f4;background:#fff;color:#7a92a8');
-        };
-        hd2.innerHTML =
-            '<b style="font-size:14px;color:#33567d">' + (isC ? '💰 지출 관리' : '🧮 정산 · 중식 · 인건비') + '</b>'
-          + '<span style="font-size:11.5px;color:#aab8c8;flex:1;min-width:140px">'
-          +   '지출 탭에서 빌려온 화면입니다 — 여기서 고치면 그대로 저장됩니다</span>'
-          + '<button type="button" data-expview="card"   style="' + bs(isC)  + '">🎴 지출관리</button>'
-          + '<button type="button" data-expview="notion" style="' + bs(!isC) + '">📋 노션목록</button>';
-        hd2.querySelectorAll('[data-expview]').forEach(function(b){
-          if(b._b) return; b._b = true;
-          b.addEventListener('click', function(){ setView(b.dataset.expview); });
-        });
-      }
-    }catch(e){ console.warn('[지출 빌려오기] 머리말 실패', e); }
     /* v178 — 달님 요청: 목록 → 요약 → 정산표 차례.
        요약 카드(wlExpStatsBox)가 있으면 그 바로 뒤, 없으면 목록 바로 뒤. */
     var _prev = document.getElementById('wlExpStatsBox');
@@ -23048,41 +23007,21 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
 
     ps.forEach(function(el){ remember(el); box.appendChild(el); });
 
-    var card = (view() !== 'notion');
-
-    /* 「📋 목록」 단추 — 지출관리 보기에서는 쓰고, 노션목록 보기에서는 감춘다 */
+    /* 노션에는 이미 목록이 있으므로 「📋 목록」 단추는 감춘다 */
     try{
       var lb = document.getElementById('expSubTabList');
-      if(lb){
-        if(card){ if(lb.dataset._wlHid){ lb.style.display=''; delete lb.dataset._wlHid; } }
-        else    { lb.dataset._wlHid = '1'; lb.style.display = 'none'; }
-      }
+      if(lb){ lb.dataset._wlHid = '1'; lb.style.display = 'none'; }
     }catch(e){}
 
-    /* v179 — 지출관리 보기에서는 노션 목록 구역과 노션 요약 카드를 접는다 (종류 칩은 남긴다) */
-    try{
-      var lz = document.getElementById('dsListZone');
-      if(lz){
-        if(card){ lz.dataset._wlHid='1'; lz.style.display='none'; }
-        else if(lz.dataset._wlHid){ lz.style.display=''; delete lz.dataset._wlHid; }
-      }
-      var st = document.getElementById('wlExpStatsBox');
-      if(st){
-        if(card){ st.dataset._wlHid='1'; st.style.display='none'; }
-        else if(st.dataset._wlHid){ st.style.display=''; delete st.dataset._wlHid; }
-      }
-    }catch(e){ console.warn('[지출 빌려오기] 접기 실패', e); }
-
-    /* 아무것도 안 보이면 열어 준다 — 지출관리 보기는 목록, 노션목록 보기는 정산표 */
+    /* 아무것도 안 보이면 정산표를 열어 준다 */
     try{
       var sw = document.getElementById('expSettleWrap');
       var mw = document.getElementById('expMealWrap');
       var lw = document.getElementById('expLaborWrap');
-      var lw2= document.getElementById('expListWrap');
       var vis = function(x){ return x && x.style.display !== 'none' && x.offsetParent !== null; };
       /* v177 — 달님이 [✕ 닫기] 로 닫았으면 억지로 다시 열지 않는다 */
-      if(!vis(sw) && !vis(mw) && !vis(lw) && !(card && vis(lw2)) && !window._expUserClosed){
-        var sb2 = document.getElementById(card ? 'expSubTabList' : 'expSubTabSettle');
+      if(!vis(sw) && !vis(mw) && !vis(lw) && !window._expUserClosed){
+        var sb2 = document.getElementById('expSubTabSettle');
         if(sb2) sb2.click();
       }
     }catch(e){}
@@ -23095,13 +23034,6 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     try{
       var lb = document.getElementById('expSubTabList');
       if(lb && lb.dataset._wlHid){ lb.style.display = ''; delete lb.dataset._wlHid; }
-    }catch(e){}
-    /* v179 — 접어 둔 노션 목록·요약 카드를 되살린다 */
-    try{
-      ['dsListZone','wlExpStatsBox'].forEach(function(id){
-        var el = document.getElementById(id);
-        if(el && el.dataset._wlHid){ el.style.display=''; delete el.dataset._wlHid; }
-      });
     }catch(e){}
     Object.keys(home).forEach(function(id){
       try{
@@ -23150,13 +23082,10 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     off:   function(){ setOn(false); return '정산표는 지출 탭에서만 봅니다'; },
     now:   run,
     back:  giveBack,
-    card:  function(){ setView('card');   return '🎴 지출 관리 화면으로 봅니다'; },
-    notion:function(){ setView('notion'); return '📋 노션 목록으로 봅니다'; },
-    view:  view,
-    state: function(){ var r={켜짐:isOn(), 보기:view(), 지금빌려옴:lent, 노션지출화면:onNotionExpense()};
-                       console.log('[지출 빌려오기]', r); return r; }
+    state: function(){ var r={켜짐:isOn(), 지금빌려옴:lent, 노션지출화면:onNotionExpense()};
+                       console.log('[정산 빌려오기]', r); return r; }
   };
-  console.log('[지출 빌려오기] v179 준비됨 — ' + (isOn()?'켜짐':'꺼짐') + ' · 보기 ' + view() + ' · wlExpEmbed.state()');
+  console.log('[정산 빌려오기] v173 준비됨 — ' + (isOn()?'켜짐':'꺼짐') + ' · wlExpEmbed.state()');
 })();
 
 /* ═══════════════════════════════════════════════════════════

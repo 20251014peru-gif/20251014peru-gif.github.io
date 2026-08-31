@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v178-0831-1710";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v179-0831-1740";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3269,7 +3269,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=178-20260831t1710"></script>
+<script src="worklog.js?v=179-20260831t1740"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -10988,9 +10988,20 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
 
     /* 종류별 그룹핑 */
     function isJpFn(e){ return !!(e.isJeonpyo||e.expType==='전표'||/\[전표\]/.test(e.title||'')||/\[전표\]/.test(e.memo||'')); }
-    var personal = list.filter(function(e){ return e.expType!=='급여'&&!isJpFn(e)&&e.expType!=='세금계산서'; });
-    var tax      = list.filter(function(e){ return e.expType!=='급여'&&!isJpFn(e)&&e.expType==='세금계산서'; });
-    var jeonpyo  = list.filter(function(e){ return e.expType!=='급여'&&isJpFn(e); });
+    /* v179 — 🔴 정산표와 똑같은 눈으로 나눈다 (창구 wlSettleGroup).
+       그래야 「목록에 있는 것이 정산표 어디로 가는지」 가 화면에서 바로 보인다. */
+    function grpOf(e){
+      try{ if(typeof window.wlSettleGroup==='function') return window.wlSettleGroup(e); }catch(err){}
+      if(e.expType==='급여') return '기타';
+      if(isJpFn(e)) return '선납부';
+      if(e.expType==='세금계산서') return '기타정산';
+      return '선결재';
+    }
+    var personal = list.filter(function(e){ return grpOf(e)==='선결재'; });
+    var tax      = list.filter(function(e){ return grpOf(e)==='기타정산'; });
+    var jeonpyo  = list.filter(function(e){ return grpOf(e)==='선납부'; });
+    var util     = list.filter(function(e){ return grpOf(e)==='수도광열비'; });
+    var salary   = list.filter(function(e){ return grpOf(e)==='기타'; });
     var G = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px';
     var html = '';
 
@@ -11007,12 +11018,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     }
 
     if(!typeSel){
-      if(personal.length) html += makeSection(personal,'#3f7cb8','💸','개인지출');
+      /* v179 — 정산표 차례 그대로: 선결재 → 선납부 → 기타정산 → 수도광열비 → 월정산 → 기타 */
+      if(personal.length) html += makeSection(personal,'#3f7cb8','💸','선결재 <span style="font-size:11px;color:#94a3b8;font-weight:600">(개인지출)</span>');
+      if(jeonpyo.length)  html += makeSection(jeonpyo,'#7c3aed','📋','선납부 <span style="font-size:11px;color:#94a3b8;font-weight:600">(전표 — 전화·유선 등)</span>');
       if(tax.length){
         var tUnissued=tax.filter(function(e){return !e.isIssued;}).length;
-        html += makeSection(tax,'#c2410c','📃','세금계산서',tUnissued?' · <span style="color:#c2410c">미발급 '+tUnissued+'건</span>':'');
+        html += makeSection(tax,'#c2410c','📃','기타정산 <span style="font-size:11px;color:#94a3b8;font-weight:600">(세금계산서)</span>',tUnissued?' · <span style="color:#c2410c">미발급 '+tUnissued+'건</span>':'');
       }
-      if(jeonpyo.length) html += makeSection(jeonpyo,'#7c3aed','📋','전표');
+      if(util.length)     html += makeSection(util,'#0e7490','💧','수도광열비 <span style="font-size:11px;color:#94a3b8;font-weight:600">(전표 — 수도·전기)</span>');
       /* 📅 월정산 카드 (인건비 탭 연동, 읽기전용) */
       try{
         var msYm=monthSel||'';
@@ -11039,6 +11052,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
           }
         }
       }catch(err){ console.error('[목록 월정산]',err); }
+      if(salary.length) html += makeSection(salary,'#16a34a','💵','기타 <span style="font-size:11px;color:#94a3b8;font-weight:600">(급여)</span>');
     } else {
       html = '<div style="'+G+'">'+list.map(makeCard).join('')+'</div>';
     }
@@ -11092,7 +11106,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       +'<div style="font-size:13px;color:#aab8c8;margin-top:6px">'+personal.length+'건</div>'
       +'</div>'
       +'<div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:14px;padding:18px 20px">'
-      +'<div style="font-size:13px;font-weight:700;color:#7a92a8;margin-bottom:8px">📃 세금계산서</div>'
+      +'<div style="font-size:13px;font-weight:700;color:#7a92a8;margin-bottom:8px">📃 기타정산 <span style="font-size:10.5px;color:#aab8c8">(세금계산서)</span></div>'
       +'<div style="font-size:26px;font-weight:800;color:#c2410c;line-height:1.1">'+fmt(tSum)+'<span style="font-size:15px">원</span></div>'
       +'<div style="font-size:13px;margin-top:6px">'+tax.length+'건'+(taxUnissued>0?' · <span style="color:#c2410c;font-weight:700">미발급 '+taxUnissued+'건</span>':'')+'</div>'
       +'</div>'
@@ -12159,6 +12173,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(e.expType==='세금계산서') return '기타정산';   /* 월정산은 인건비 탭 표에서만 */
     return '선결재';
   }
+  /* v179 — 🔴 「이 지출이 정산표 어느 칸에 들어가는가」 판단은 여기 하나뿐이다.
+     지출 목록·요약도 이 창구를 써야 목록과 정산표가 어긋나지 않는다. (지침 「판단은 받는 쪽에 한 번만」) */
+  window.wlSettleGroup = function(e){ try{ return classify(e||{}); }catch(err){ return '선결재'; } };
+
   /* fixedRows: 엑셀 시트와 동일한 고정 행수 (부족분 빈 행 패딩) */
   var GROUPS=[
     {key:'선결재',     label:'선결재(개인지출)',   color:'#3f7cb8', bg:'#f0f6ff', fixedRows:15},
@@ -27993,7 +28011,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       +     '<button type="button" id="dsGoLife" style="height:30px;padding:0 11px;border:1.5px solid #dbe6f4;border-radius:9px;background:#fff;color:#5b7794;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">🏠 개인일지</button>'
       +   '</div>'
       + '</div>'
-      + dsChips() + viewRec() + '</div>';
+      /* v179 — 목록 부분만 따로 감쌌다. 「지출 관리 보기」 에서 이 구역만 접는다 (종류 칩은 남긴다) */
+      + dsChips() + '<div id="dsListZone">' + viewRec() + '</div>' + '</div>';
     bindRender(host);
     var g = host.querySelector('#dsGoLife');
     if(g) g.addEventListener('click', function(){ window.wlOpenData('personal'); });
