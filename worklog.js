@@ -2443,13 +2443,22 @@ function renderWorkModal(data, mode){
 
     /* ── 지출종류 + 금액 (1열씩) ── */
     const isPost = expType==="후불청구";
+    /* v181 — 수도·전기는 선납부로 고르고 제목에 「수도요금」·「전기요금」을 넣으면
+       정산표에서 저절로 수도광열비로 갑니다 (worklog.html classify) */
     const costSection = `
     <div style="padding:6px 10px;background:${isPost?"#fff7ed":"#eff6ff"};border:1.5px solid ${isPost?"#fdba74":"#bfdbfe"};border-radius:8px;${S.mb};display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center">
       <div>
         <label style="${S.lbl.replace('#94a3b8',isPost?'#c2410c':'#1d4ed8')}">지출종류</label>
         <select id="m-expType" style="${S.sel};background:transparent;border-color:${isPost?"#fdba74":"#bfdbfe"}">
-          ${["개인비용","전표","후불청구"].map(o=>`<option${expType===o?" selected":""}>${o}</option>`).join("")}
+          ${/* v181 — 달님 요청: 지출 창과 같은 이름으로. 🔴 저장되는 값은 그대로 두고 보이는 글자만 바꾼다 */
+            [["개인비용","💸 개인지출 (선결재)"],
+             ["전표",    "📋 선납부 (전표 · 월별청구)"],
+             ["후불청구","📃 기타정산 (세금계산서)"]]
+            .map(([v,t])=>`<option value="${v}"${expType===v?" selected":""}>${t}</option>`).join("")}
         </select>
+        <div style="margin-top:4px;font-size:10.5px;color:#94a3b8;line-height:1.35">
+          💧 수도·전기 요금은 <b>선납부</b> 로 고르고 제목에 「수도요금」·「전기요금」 을 넣으면<br>정산표에서 저절로 <b>수도광열비</b> 로 갑니다
+        </div>
       </div>
       <div>
         <label id="lbl-cost" style="${S.lbl.replace('#94a3b8',isPost?'#c2410c':'#1d4ed8')}">${isPost?"계약금액 (원)":"금액 (원)"}</label>
@@ -22712,7 +22721,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v179-0831-1740';
+  var JS_BUILD = 'v181-0831-1800';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
