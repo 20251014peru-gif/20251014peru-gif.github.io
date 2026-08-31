@@ -22589,7 +22589,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v169-0831-1430';
+  var JS_BUILD = 'v170-0831-1500';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -22710,4 +22710,81 @@ async function githubUpload(token){
   setTimeout(function(){ if(!off() && jsStale()) band(mine(), mine()); }, 3000);
   console.log('[버전확인] v166 — GitHub 판 + worklog.js 판 견주기 ('
     + (off()?'꺼짐':'켜짐') + ') · js=' + JS_BUILD + (jsStale()? ' 🔴 옛 파일!' : '') + ' · wlVer.now()');
+})();
+
+/* ═══════════════════════════════════════════════════════════
+   🔍 v170 — 「기록 탭」과 「노션 보기」가 같은 것을 세는지 대조
+   ───────────────────────────────────────────────────────────
+   달님 : 「기본 보는거와 노션 보는거와 차이가 있는지 점검해줘」
+
+   두 화면이 세는 방식이 원래 이렇게 다르다 :
+     · 기록 탭   countByKind()  → entries 에서 kind 만 맞으면 다 센다
+     · 노션 목록 recs()         → 거기서 **하위 항목(parentId)** 을 뺀다
+                                  (⚙ 안 「하위 항목도」 를 켜면 넣는다)
+   그래서 하위 항목이 있는 종류만 숫자가 갈린다. 그 밖에는 같아야 한다.
+
+   창구 : wlSame()  ·  wlSame.detail('work')
+   ═══════════════════════════════════════════════════════════ */
+(function(){
+  var KIND = { work:'🛠 업무', expense:'💰 지출', accident:'🚨 사고', progress:'🚧 진행업무',
+               call:'📞 통화', memo:'📝 메모', schedule:'📅 예정', deliver:'📢 전달',
+               meeting:'💼 회의', vacation:'🌴 휴가', item:'📦 자재', stock:'🔄 입출고',
+               plan:'✅ 오늘계획', site:'🌐 사이트' };
+
+  function E(){ try{ return (typeof entries!=='undefined' && entries) ? entries : []; }catch(e){ return []; } }
+  function subOn(){ try{ return localStorage.getItem('wl_life_showsub')==='true'; }catch(e){ return false; } }
+
+  function run(){
+    var all = E(), rows = [], diff = 0, sum = { 기록탭:0, 노션:0, 하위:0 };
+    Object.keys(KIND).forEach(function(k){
+      var a = all.filter(function(e){ return e && e.kind===k; });
+      var b = subOn() ? a : a.filter(function(e){ return !e.parentId; });
+      var d = a.length - b.length;
+      if(d) diff++;
+      sum.기록탭 += a.length; sum.노션 += b.length; sum.하위 += d;
+      rows.push({ 종류:KIND[k], '기록 탭':a.length, '노션 보기':b.length,
+                  '하위(숨김)': d || '', 결과: d ? '✗ 다름' : '○' });
+    });
+    rows.push({ 종류:'━ 합계', '기록 탭':sum.기록탭, '노션 보기':sum.노션,
+                '하위(숨김)':sum.하위||'', 결과: diff? '✗ '+diff+'종류' : '○ 전부 같음' });
+    console.table(rows);
+
+    /* 저장본과 메모리가 어긋나 있지 않은지도 함께 본다 */
+    var lsN = null;
+    try{ var raw = localStorage.getItem('wl_worklog_entries');
+         if(raw){ var arr = JSON.parse(raw); if(Array.isArray(arr)) lsN = arr.length; } }catch(e){}
+    var info = {
+      '메모리 entries': all.length,
+      '기기에 저장된 것': (lsN==null? '못 읽음' : lsN),
+      '하위 항목 보기': subOn() ? '켜짐 (다 보임)' : '꺼짐 (기본)',
+      '컬렉션 분리': (function(){ try{ return localStorage.getItem('wl_col_split')==='0' ? '꺼짐' : '켜짐'; }catch(e){ return '?'; } })(),
+      '화면 판': (window.APP_VERSION||'?')
+    };
+    console.table(info);
+
+    if(diff===0) console.log('%c✅ 두 화면이 세는 수가 전부 같습니다.', 'color:#0f7a4a;font-weight:800');
+    else console.log('%c⚠️ ' + diff + '개 종류에서 갈립니다 — 하위 항목 때문입니다. '
+      + '노션 보기 ⚙ 안의 「하위 항목도」 를 켜면 같아집니다.', 'color:#9a3412;font-weight:800');
+    if(lsN!=null && Math.abs(lsN-all.length) > 0)
+      console.log('%c⚠️ 기기에 저장된 수(' + lsN + ')와 지금 화면의 수(' + all.length
+        + ')가 다릅니다. 아직 다 못 불러왔거나 저장이 밀린 상태일 수 있어요.', 'color:#b52929;font-weight:800');
+
+    return { 다른종류: diff, 합계: sum };
+  }
+
+  /* 어떤 기록이 빠지는지 실제로 보여 준다 */
+  function detail(kind){
+    var k = String(kind||'work');
+    var a = E().filter(function(e){ return e && e.kind===k && e.parentId; });
+    if(!a.length){ console.log('「'+(KIND[k]||k)+'」 에는 하위 항목이 없습니다.'); return []; }
+    console.log('「'+(KIND[k]||k)+'」 의 하위 항목 '+a.length+'건 — 노션 목록에서 숨겨집니다');
+    console.table(a.map(function(e){
+      return { 날짜:e.date||'', 제목:(e.title||e.who||'').slice(0,40), 윗기록id:e.parentId };
+    }));
+    return a;
+  }
+
+  window.wlSame = run;
+  window.wlSame.detail = detail;
+  console.log('[대조] v170 — wlSame() 으로 기록 탭 ↔ 노션 보기 건수를 맞춰 볼 수 있습니다');
 })();
