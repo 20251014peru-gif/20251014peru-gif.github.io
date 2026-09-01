@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v206-0901-1333';
+window.PERSONAL_BUILD = 'v207-0901-1409';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -386,17 +386,8 @@ window.PERSONAL_BUILD = 'v206-0901-1333';
       /* v196 — 달님 : 「입고의 제목이 이상하게 나와」
             입출고는 제목 자리가 품목 **id**(Uml1oEcU…) 라 알아볼 수 없었다.
             품목명을 먼저 쓰고, 없으면 자재 목록에서 이름을 찾아온다. */
-      if(pty==='stock'){
-        var _sn = String(e.itemName||'').trim();
-        if(!_sn && e.itemId){
-          try{
-            var _si = (ent()||[]).filter(function(x){ return x && x.kind==='item' && x.id===e.itemId; })[0];
-            if(_si) _sn = String(_si.itemName||'').trim();
-          }catch(_se){ console.warn('[입출고] 품목 이름 찾기 실패', _se); }
-        }
-        if(_sn) ttl = _sn;
-        else if(ttl && /^[A-Za-z0-9_-]{16,}$/.test(ttl)) ttl = '(품목 없음)';
-      }
+      /* v207 — 품목 이름 찾기는 titleFix 한 곳에서만 한다 (v196 의 덩어리를 여기서 뺐다) */
+      try{ ttl = titleFix(e, ttl); }catch(_s){ console.warn('[카드] 제목 다듬기 실패', _s); }
       if(!ttl) ttl = d.n;
       /* v196 — 달님 : 「카드에 메모라고 써있는건 지워도 되잔아 메모인지 다 아니까」
             지금 그 종류 하나만 보고 있으면 같은 배지를 카드마다 또 붙이지 않는다.
@@ -1697,6 +1688,42 @@ window.PERSONAL_BUILD = 'v206-0901-1333';
   /* ── 값 읽기 / 쓰기 (id 기준) ── */
   function bmf(pid){ try{ return (DS && DS.bmap && DS.bmap[pid]) || null; }catch(e){ return null; } }
 
+  /* ══ v207 — 🔄 입출고 제목이 암호처럼 나오던 것 【근본 수정】 ══
+        달님 : 「입출고 제목이 이상해. 카드형으로는 정상으로 나와」
+
+        BMAP.stock 의 _title 은 `itemId` 다. 품목 기록을 가리키는 열쇠라
+        그대로 내보내면 `Nyn5Ra1zfAv3u8ElENDN` 같은 글자가 제목으로 나온다.
+        v196 에서 **카드 그리는 곳에만** 이름 찾기를 넣었더니
+        표·목록·리스트·보드·달력·타임라인·갤러리에서는 여전히 id 가 나왔다.
+        → 이제 **값이 나가는 문(pget)** 에서 한 번에 바꾼다. 그리는 곳은 손댈 필요가 없다.
+        덤 : 검색·정렬도 품목 이름으로 된다 (예전에는 id 로 찾아야 했다). */
+  var _itmMap = null, _itmAt = 0;
+  function itemNameOf(id){
+    if(!id) return '';
+    var now = Date.now();
+    if(!_itmMap || (now - _itmAt) > 3000){          /* 3초마다 한 번만 다시 만든다 */
+      _itmMap = {}; _itmAt = now;
+      try{
+        (ent() || []).forEach(function(x){
+          if(x && x.kind === 'item' && x.id) _itmMap[x.id] = String(x.itemName || '').trim();
+        });
+      }catch(e){ console.warn('[품목 이름] 표 만들기 실패', e); }
+    }
+    return _itmMap[id] || '';
+  }
+  function titleFix(e, v){
+    try{
+      if(!e || e.kind !== 'stock') return v;
+      var nm = String(e.itemName || '').trim() || itemNameOf(e.itemId);
+      if(nm) return nm;
+      /* 이름을 못 찾았는데 제목 자리에 열쇠(itemId)가 그대로 들어 있으면 암호처럼 보인다 */
+      if(v && e.itemId && String(v) === String(e.itemId)) return '(품목 없음)';
+      if(v && /^[A-Za-z0-9_-]{16,}$/.test(String(v)))     return '(품목 없음)';
+    }catch(x){ console.warn('[제목] 품목 이름 찾기 실패', x); }
+    return v;
+  }
+  try{ window.wlRecTitle = function(e){ return titleFix(e, pget(e, '_title')); }; }catch(e){}
+
   function pget(e, pid){
     if(!e) return '';
     if(!isPersonal()){
@@ -1707,9 +1734,12 @@ window.PERSONAL_BUILD = 'v206-0901-1333';
       if(bf){
         for(var bi=0; bi<bf.length; bi++){
           var bv = e[bf[bi]];
-          if(bv!=null && bv!=='') return (pid==='_amount') ? num(bv) : bv;
+          if(bv!=null && bv!==''){
+            if(pid==='_amount') return num(bv);
+            return (pid==='_title') ? titleFix(e, bv) : bv;   /* v207 */
+          }
         }
-        return (pid==='_amount') ? 0 : '';
+        return (pid==='_amount') ? 0 : (pid==='_title' ? titleFix(e, '') : '');
       }
       if(['_date','_title','_sub','_memo'].indexOf(pid)>=0) return '';
       if(pid==='_amount') return 0;

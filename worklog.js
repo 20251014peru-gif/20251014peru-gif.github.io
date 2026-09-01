@@ -23045,7 +23045,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v206-0901-1333';
+  var JS_BUILD = 'v207-0901-1409';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -24112,7 +24112,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
       });
     });
     if(mode === 'work')      bindApplyWork(box, rid);
-    else if(mode === 'clean') { /* 반영 단추가 없다 */ }
+    else if(mode === 'clean') bindClean(box, rid);
     else                      bindApply(box, rid);
   }
 
@@ -24348,24 +24348,87 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
          + ' <span style="color:#9ab">(📊 월보고가 이 숫자를 씁니다)</span>';
   }
 
+  /* ══ v207 — 🧹 청소 상자를 단순하게 ══
+        달님 : 「청소원 작업과 입출고는 빼. 나중에 넣게 되면 넣자.
+                소장 지시·특이사항을 사각 틀에서 빼서 내용을 지시사항으로 바꾸고
+                텍스트 칸을 세로로 늘려. 특이사항을 그 밑으로. 단순하게 가자」
+
+        ▶ 무엇이 바뀌나
+          표 6개  →  글칸 2개 (📌 지시사항 · ⭐ 특이사항)
+          청소원 작업 · 입고 · 출고 는 **화면에서만** 뺀다.
+          🔴 자료는 그대로 있다. 다시 보려면  wlCleanEdit.full()
+
+        ▶ 저장 모양은 안 바꾼다
+          옛 청소 창과 📊 월보고가 **글자 배열**(['엘리베이터 홀청소', …])로 읽는다.
+          그래서 화면에서는 줄바꿈 글로 보여 주고, 저장할 때 다시 줄로 쪼개 배열로 넣는다.
+          (옛 창도 `split(/\n+/).filter(트림)` 로 만든다 — 같은 식이다)  */
+  var TXTKEYS = [ {k:'directives', t:'📌 지시사항', rows:8,  ph:'할 일을 줄바꿈으로 적으세요'},
+                  {k:'specials',   t:'⭐ 특이사항', rows:4,  ph:'그날 눈에 띈 것'} ];
+  var LSC_FULL = 'wl_cleanlists_full';
+  function cFull(){ try{ return localStorage.getItem(LSC_FULL) === '1'; }catch(e){ return false; } }
+
+  function linesOf(v){ return A(v).filter(function(x){ return String(x==null?'':x).trim(); })
+                                  .map(function(x){ return String(x); }).join('\n'); }
+  function toLines(txt){ return String(txt==null?'':txt).split(/\r?\n/)
+                                .map(function(x){ return x.trim(); })
+                                .filter(function(x){ return x; }); }
+
   function htmlClean(r, edit){
     var h = '';
-    CKEYS.forEach(function(k){
-      var list = A(r[k]).filter(function(x){ return x !== null && x !== undefined; });
-      if(!list.length && !edit) return;
-      var tail = '';
-      if(k === 'staffWork' && list.length)
-        tail = '<span id="cwSum">' + staffTail(list) + '</span>';
-      h += sec(k, list, edit, tail);
+
+    /* 👔 소장 지시 — 화면에서는 뺐지만 옛 자료가 있으면 알려 준다 (묻히지 않게) */
+    var dorder = A(r.directorOrders).filter(function(x){ return String(x==null?'':x).trim(); });
+    if(dorder.length){
+      h += '<div style="font-size:12px;color:#8a7a4a;background:#fffbea;border-radius:8px;'
+         + 'padding:7px 9px;margin-bottom:8px;line-height:1.6">'
+         + '👔 옛 <b>소장 지시</b> ' + dorder.length + '줄이 남아 있어요'
+         + (edit ? ' <button type="button" id="clMerge" style="margin-left:6px;height:26px;padding:0 10px;'
+                   + 'border:1.5px solid #e0d6b0;border-radius:7px;background:#fff;color:#8a7a4a;'
+                   + 'font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">'
+                   + '📌 지시사항으로 옮기기</button>' : '')
+         + '<div style="color:#a89a76;margin-top:3px">' + ES(dorder.join(' · ')).slice(0, 200) + '</div>'
+         + '</div>';
+    }
+
+    TXTKEYS.forEach(function(c){
+      var val = linesOf(r[c.k]);
+      h += '<div style="font-size:12px;font-weight:900;color:#33567d;margin:0 0 4px">'
+         + c.t + ' <span style="font-weight:600;color:#8ba0b6">'
+         + (val ? (toLines(val).length + '줄') : '') + '</span></div>';
+      if(edit){
+        h += '<textarea data-clt="' + c.k + '" rows="' + c.rows + '" placeholder="' + ES(c.ph) + '"'
+           + ' style="width:100%;box-sizing:border-box;min-height:' + (c.rows * 22 + 16) + 'px;'
+           + 'padding:9px 11px;border:1.5px solid #e6eef7;border-radius:9px;font-size:13px;'
+           + 'font-family:inherit;line-height:1.6;background:#fff;outline:none;resize:vertical;'
+           + 'margin-bottom:12px">' + ES(val) + '</textarea>';
+      }else{
+        h += '<div style="white-space:pre-wrap;font-size:13px;line-height:1.6;color:#33567d;'
+           + 'background:#fff;border:1.5px solid #eef3f9;border-radius:9px;padding:9px 11px;'
+           + 'min-height:' + (c.rows * 22) + 'px;margin-bottom:12px">'
+           + (val ? ES(val) : '<span style="color:#b8c6d4">비어 있어요</span>') + '</div>';
+      }
     });
-    if(!h) return '';
-    h += '<div style="margin-top:6px;font-size:11.5px;color:#a8b8c8">'
-       + (edit ? '고친 값은 칸에서 빠져나올 때 저장됩니다' : '보기 전용입니다')
-       + ' · 끄기 wlCleanEdit.off()'
-       + (edit ? ' · 보기 전용으로 wlCleanEdit.readonly()' : ' · 고치려면 wlCleanEdit.edit()')
+
+    /* 🧹 청소원 작업 · 📥 입고 · 📤 출고 — 평소에는 안 보인다 (wlCleanEdit.full() 로 켠다) */
+    if(cFull()){
+      ['staffWork','inItems','outItems'].forEach(function(k){
+        var list = A(r[k]).filter(function(x){ return x !== null && x !== undefined; });
+        if(!list.length && !edit) return;
+        var tail = (k === 'staffWork' && list.length)
+                 ? '<span id="cwSum">' + staffTail(list) + '</span>' : '';
+        h += sec(k, list, edit, tail);
+      });
+    }
+
+    h += '<div style="margin-top:6px;font-size:11.5px;color:#a8b8c8;line-height:1.7">'
+       + (edit ? '한 줄에 하나씩 적으세요 · 칸에서 빠져나올 때 저장됩니다' : '보기 전용입니다')
+       + '<br>🧹 청소원 작업 · 입출고 ' + (cFull() ? '켜짐 — 끄려면 wlCleanEdit.simple()'
+                                                  : '숨김 — 보려면 wlCleanEdit.full()')
+       + ' · 상자 끄기 wlCleanEdit.off()'
        + '</div>';
     return h;
   }
+
   /* 🔴 상자 전체를 다시 그리지 않는다 — 합계 줄 하나만 갈아 끼운다.
         (옆 칸을 이어서 고치는 중일 수 있고, 한글을 치는 중이면 자모가 깨진다) */
   function reSumClean(box, rid){
@@ -24376,6 +24439,45 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
       if(el) el.innerHTML = staffTail(r2.staffWork);
     }catch(e){ console.warn('[청소 목록] 합계 갱신 실패', e); }
   }
+  /* v207 — 🧹 글칸 두 개를 잇는다.
+        🔴 글자를 치는 동안에는 아무것도 하지 않는다 (한글 자모가 깨진다).
+           칸에서 빠져나올 때(change) 만 줄로 쪼개어 저장한다. */
+  function bindClean(box, rid){
+    box.querySelectorAll('[data-clt]').forEach(function(ta){
+      if(ta._clB) return; ta._clB = 1;
+      ta.addEventListener('change', function(){
+        try{
+          var key = ta.getAttribute('data-clt');
+          var lines = toLines(ta.value);
+          if(save(rid, key, lines)){
+            var hd = ta.previousElementSibling;
+            if(hd) { var c = hd.querySelector('span'); if(c) c.textContent = lines.length ? (lines.length + '줄') : ''; }
+          }
+        }catch(e){ console.error('[청소] 저장 실패', e);
+          if(typeof toast === 'function') toast('못 저장했어요: ' + (e.message || e)); }
+      });
+    });
+    /* 👔 옛 소장 지시를 📌 지시사항 뒤에 이어 붙인다 (자료를 잃지 않게) */
+    var mb = box.querySelector('#clMerge');
+    if(mb && !mb._clB){
+      mb._clB = 1;
+      mb.addEventListener('click', function(){
+        try{
+          var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
+          var add = A(r2.directorOrders).filter(function(x){ return String(x==null?'':x).trim(); })
+                     .map(function(x){ return String(x).trim(); });
+          if(!add.length) return;
+          var cur = A(r2.directives).filter(function(x){ return String(x==null?'':x).trim(); })
+                     .map(function(x){ return String(x).trim(); });
+          add.forEach(function(x){ if(cur.indexOf(x) < 0) cur.push(x); });
+          if(typeof updateRecord === 'function') updateRecord(rid, { directives: cur, directorOrders: [] });
+          if(typeof toast === 'function') toast('📌 지시사항으로 ' + add.length + '줄 옮겼어요');
+          redrawClean(box, rid);
+        }catch(e){ console.error('[청소] 옮기기 실패', e); }
+      });
+    }
+  }
+
   function redrawClean(box, rid){
     try{
       var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
@@ -24391,7 +24493,10 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     var r = recNow();
     if(!r || r.kind !== 'cleaning'){ cOff(); return; }
     var edit = cEdit();
-    var any = CKEYS.some(function(k){ return A(r[k]).length; });
+    /* v207 — 단순 화면에서는 글칸 2개가 늘 나온다. 보기 전용일 때만 「빈 것」을 접는다 */
+    var any = TXTKEYS.some(function(c){ return A(r[c.k]).length; })
+           || A(r.directorOrders).length
+           || (cFull() && ['staffWork','inItems','outItems'].some(function(k){ return A(r[k]).length; }));
     if(!any && !edit){ cOff(); return; }
     try{
       window.wlAddOn(['.lf-page .pg-props', '.lf-page .pg-2l', '.lf-page .pg-body'], 'cleanlists',
@@ -24426,8 +24531,17 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     edit:     function(){ try{ localStorage.setItem(LSC_EDIT,'1'); }catch(e){}
                           if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
                           return '고칠 수 있습니다'; },
+    /* v207 — 🧹 청소원 작업 · 입출고까지 보기 / 다시 숨기기 */
+    full:     function(){ try{ localStorage.setItem(LSC_FULL,'1'); }catch(e){}
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '청소원 작업 · 입고 · 출고까지 보여줍니다'; },
+    simple:   function(){ try{ localStorage.setItem(LSC_FULL,'0'); }catch(e){}
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '지시사항 · 특이사항만 보여줍니다'; },
     state:    function(){ return { 보기:(cOn()?'켜짐':'꺼짐'), 고치기:(cEdit()?'가능':'보기 전용'),
-                                   다루는목록:CKEYS.map(function(k){ return TITLE[k]; }) }; },
+                                   화면:(cFull()?'전부':'단순 (지시사항·특이사항)'),
+                                   글칸:TXTKEYS.map(function(c){ return c.t; }),
+                                   숨긴목록:(cFull()?[]:['🧹 청소원 작업','📥 입고','📤 출고']) }; },
     /* 청소 기록마다 목록이 몇 줄인지 — 화면에 안 나오던 자료가 얼마나 있었나 */
     count:    function(){
       var out = [];
