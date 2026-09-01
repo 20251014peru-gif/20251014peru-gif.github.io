@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # 흐름지도(flow) 수집기
-# v 20260902-0530
+# v 20260902-0620
 #
 # 하는 일 : 경제 유튜브 채널의 최근 영상을 모아 → 쇼츠/라이브를 걸러내고 → 주제별로 묶어
 #           주제 카드를 갱신하고 → 변경 이력을 남기고 → 급증하면 폰으로 알립니다.
@@ -166,16 +166,48 @@ def parse_published(iso):
     return datetime.fromisoformat((iso or "").replace("Z", "+00:00")).astimezone(KST)
 
 
-def tag_topics(text, keywords):
-    """제목+설명에서 키워드를 찾아 주제 태그를 붙입니다. 사전 기반이라 결과를 눈으로 검산할 수 있습니다."""
-    low = text.lower()
-    hits = []
+ASCII_WORD = re.compile(r"[A-Za-z0-9&.\-]+")
+
+
+def compile_keywords(keywords):
+    """사전을 미리 컴파일합니다.
+
+    영문 약자(AI·ETF·GDP·CPI…)를 단순 포함으로 찾으면 'main·email·detail' 같은 단어에
+    'ai' 가 걸려 엉뚱한 주제가 붙습니다. 그래서 영문·숫자만인 단어는 단어 경계로 매칭합니다.
+    한글이 섞인 단어는 그런 문제가 없어 단순 포함으로 둡니다.
+    """
+    out = {}
     for topic, words in keywords.items():
+        pats = []
         for w in words:
-            if w.lower() in low:
+            if ASCII_WORD.fullmatch(w):
+                pats.append(("re", re.compile(rf"(?<![A-Za-z0-9]){re.escape(w)}(?![A-Za-z0-9])", re.I)))
+            else:
+                pats.append(("in", w))
+        out[topic] = pats
+    return out
+
+
+def _match(text, compiled):
+    hits = []
+    for topic, pats in compiled.items():
+        for kind, p in pats:
+            if (p.search(text) if kind == "re" else (p in text)):
                 hits.append(topic)
                 break
     return hits
+
+
+def tag_topics(title, desc, compiled, st):
+    """제목에서 먼저 찾고, 제목에 아무것도 없을 때만 설명 앞부분을 봅니다.
+
+    제목에 주제어가 있으면 그게 그 영상의 진짜 주제입니다. 설명란은 채널소개·광고·
+    이전 영상 목록이 섞여 있어 같이 보면 태그가 오염됩니다.
+    """
+    hits = _match(title, compiled)
+    if not hits:
+        hits = _match((desc or "")[: st["desc_scan_chars"]], compiled)
+    return hits[: st["max_topics_per_video"]]
 
 
 def build_videos(raw_items, ch, st):
@@ -194,20 +226,22 @@ def build_videos(raw_items, ch, st):
         live = sn.get("liveBroadcastContent", "none")
         views = int(stt.get("viewCount", 0) or 0)
 
-        # 채널 중앙값의 분모는 쇼츠를 뺀 롱폼만 — 설정 파일 _rule_median 참조
-        if not is_short and live == "none":
+        pub = parse_published(sn.get("publishedAt"))
+        age_h = (now - pub).total_seconds() / 3600
+
+        # 채널 중앙값의 분모: 쇼츠를 뺀 롱폼 + '이미 익은' 영상만 (설정 _rule_median 참조)
+        # 어제 올라온 영상까지 분모에 넣으면 중앙값이 낮아져 배수가 왜곡됩니다.
+        if (not is_short) and live == "none" and age_h >= st["median_min_age_hours"]:
             longform_views.append(views)
 
         if is_short:
             continue
         if st["live_exclude"] and live in ("live", "upcoming"):
             continue
-
-        pub = parse_published(sn.get("publishedAt"))
         if pub < cutoff:
             continue
 
-        hours = max((now - pub).total_seconds() / 3600, 0.5)
+        hours = max(age_h, 0.5)
         kept.append({
             "id": it["id"],
             "title": sn.get("title", ""),
@@ -235,11 +269,11 @@ def build_videos(raw_items, ch, st):
     return kept
 
 
-def group_by_topic(videos, keywords, st):
+def group_by_topic(videos, compiled, st):
     """주제 사전으로 영상을 묶습니다. min_topic_videos 개 미만이면 주제로 세우지 않습니다."""
     buckets = {}
     for v in videos:
-        v["topics"] = tag_topics(f"{v['title']} {v['desc']}", keywords)
+        v["topics"] = tag_topics(v["title"], v["desc"], compiled, st)
         for t in v["topics"]:
             buckets.setdefault(t, []).append(v)
 
@@ -258,7 +292,12 @@ def group_by_topic(videos, keywords, st):
             "video_ids": [v["id"] for v in vids],
             "channels": sorted({v["channel"] for v in vids}),
         })
-    return sorted(topics, key=lambda t: (t["channel_count"], t["video_count"]), reverse=True)
+
+    # 채널 수가 많을수록 = 더 많은 사람이 다룬 = 오늘의 주제. 상위 N개만 카드로 세웁니다.
+    topics = sorted(topics, key=lambda t: (t["channel_count"], t["video_count"]), reverse=True)
+    for i, t in enumerate(topics):
+        t["active"] = i < st["max_active_topics"]
+    return topics
 
 
 def detect_alerts(videos, topics, st):
@@ -314,7 +353,7 @@ def save_all(videos, topics, alerts, changes, prev_out):
         return False
 
     save_json(OUT_FILE, {
-        "_version": "v 20260902-0530",
+        "_version": "v 20260902-0620",
         "generated_at": stamp,
         "mode": RUN_MODE,
         "quota_used": quota_used,
@@ -368,7 +407,7 @@ def main():
         sys.exit(1)
 
     st = conf["settings"]
-    keywords = conf["keywords"]
+    compiled = compile_keywords(conf["keywords"])
     state = load_json(STATE_FILE, {})
     prev_out = load_json(OUT_FILE, {})
     prev_topics = load_json(TOPICS_FILE, {}).get("topics", [])
@@ -393,13 +432,13 @@ def main():
         time.sleep(0.05)
 
     all_videos.sort(key=lambda v: v["published"], reverse=True)
-    topics = group_by_topic(all_videos, keywords, st)
+    topics = group_by_topic(all_videos, compiled, st)
     alerts = detect_alerts(all_videos, topics, st)
     changes = diff_topics(prev_topics, topics)
 
     ok = save_all(all_videos, topics, alerts, changes, prev_out)
 
-    log(f"◀ 영상 {len(all_videos)}개 · 주제 {len(topics)}개 · 변경 {len(changes)}건 · "
+    log(f"◀ 영상 {len(all_videos)}개 · 주제 {len(topics)}개(활성 {sum(1 for t in topics if t['active'])}) · 변경 {len(changes)}건 · "
         f"긴급 {len(alerts)}건 · 할당량 {quota_used}유닛 · 저장 {'완료' if ok else '거부'}")
 
     if st.get("ntfy_enabled"):
