@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v188-0901-0951";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v189-0901-1007";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=188-20260901t0951"></script>
+<script src="worklog.js?v=189-20260901t1007"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -30100,6 +30100,26 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }catch(e){}
   }
 
+  /* v189 — 이름만 그대로 쓰고 연락처에는 넣지 않는다.
+        딸린 담당자·직책·전화는 건드리지 않는다 (등록된 업체가 아니므로 채울 값이 없다). */
+  function useOnce(name){
+    var inp = curInp;
+    if(!inp || !name){ hide(); return; }
+    inp.value = name;
+    try{ inp.dispatchEvent(new Event('input',{bubbles:true}));
+         inp.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
+    var _isPage = false;
+    try{ _isPage = !!(inp.closest && inp.closest('.lf-page')); }catch(e){}
+    if(_isPage){
+      /* 노션식 칸은 저장 함수를 직접 불러야 값이 남는다 (v183 과 같은 이유) */
+      try{ if(typeof inp._dialDone === 'function') inp._dialDone(); }
+      catch(e){ console.warn('[관련처] 이번만 쓰기 저장 실패', e); }
+    }
+    hide();
+    try{ inp.focus(); }catch(e){}
+    if(typeof toast==='function') toast('「'+name+'」 이번만 씁니다 — 연락처에는 안 넣었어요');
+  }
+
   function newContact(name){
     hide();
     try{
@@ -30214,9 +30234,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     q=String(q||'').trim();
     var qn=q.replace(/[^0-9]/g,'');
     var hit = q ? all.filter(function(c){
+      if(qn && (c.phone||'').replace(/[^0-9]/g,'').indexOf(qn)>=0) return true;
+      /* v189 — 초성도 통한다 (ㅅㅎ → 서희). 찾기는 창구 하나(wlChoHit) */
+      try{
+        if(typeof wlChoHit === 'function')
+          return wlChoHit([c.name, c.person, c.cat, c.title].join(' '), q);
+      }catch(e){ console.warn('[관련처] 초성 찾기 실패', e); }
       return (c.name||'').indexOf(q)>=0 || (c.person||'').indexOf(q)>=0
-          || (c.cat||'').indexOf(q)>=0  || (c.title||'').indexOf(q)>=0
-          || (qn && (c.phone||'').replace(/[^0-9]/g,'').indexOf(qn)>=0);
+          || (c.cat||'').indexOf(q)>=0  || (c.title||'').indexOf(q)>=0;
     }) : all.slice();
     /* 즐겨찾기 → 등록업체 → 일회성 차례 */
     hit.sort(function(a,b2){
@@ -30245,7 +30270,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(!top.length) h = '<div style="padding:11px 13px;color:#aab8c8;font-size:13px">찾는 업체가 없어요</div>';
     if(q) h += '<div class="vac-new" style="padding:11px 13px;cursor:pointer;background:#f7faff;'
              + 'color:#2563a8;font-size:13px;font-weight:800;border-top:1.5px solid #e8f0fa">'
-             + '＋ 「'+esc(q)+'」 연락처에 새로 등록</div>';
+             + '＋ 「'+esc(q)+'」 연락처에 새로 등록</div>'
+             /* v189 — 달님 : 한 번 쓰고 말 업체까지 연락처가 늘어난다 */
+             + '<div class="vac-once" style="padding:10px 13px;cursor:pointer;background:#fff;'
+             + 'color:#7a92a8;font-size:12.5px;font-weight:700;border-top:1px solid #f2f7fd">'
+             + '↳ 등록하지 않고 이번만 쓰기</div>';
     if(hit.length>40) h += '<div style="padding:7px 13px;font-size:11px;color:#aab8c8">…'
              + (hit.length-40) + '개 더 — 조금 더 적어서 좁혀 보세요</div>';
     b.innerHTML=h;
@@ -30264,6 +30293,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     if(nb){
       nb.addEventListener('click', function(){ newContact(q); });
       nb.addEventListener('touchend', function(ev){ ev.preventDefault(); newContact(q); });
+    }
+    var ob=b.querySelector('.vac-once');
+    if(ob){
+      ob.addEventListener('click', function(){ useOnce(q); });
+      ob.addEventListener('touchend', function(ev){ ev.preventDefault(); useOnce(q); });
     }
   }
 

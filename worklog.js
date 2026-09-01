@@ -501,17 +501,25 @@ function isChosungOnly(str){
 /* v184 — 자재 찾기 「창구 하나」.
    글자 포함 + 초성(ㅎㄱ → 형광등) 둘 다 통한다.
    자재 고르기 창 두 개(wlPickItem·wlPickMats)가 이 함수만 쓴다. */
-function wlMatFind(it, q){
+/* v189 — 초성 찾기 「창구 하나」. 자재·업체·앞으로 붙일 칸이 모두 이것만 쓴다.
+   글자 포함이 먼저, 자음만 쳤을 때만 초성으로 견준다
+   (「전기」로 쳤는데 ㅈㄱ 로 엉뚱한 게 뜨지 않게). */
+function wlChoHit(hay, q){
   q = String(q==null?'':q).trim();
   if(!q) return true;
   try{
-    var hay = [it.itemName, it.spec, it.maker, it.vendor, it.unit].join(' ');
-    if(hay.toLowerCase().indexOf(q.toLowerCase()) >= 0) return true;
+    var s2 = String(hay==null?'':hay);
+    if(s2.toLowerCase().indexOf(q.toLowerCase()) >= 0) return true;
     var qc = q.replace(/\s/g,'');
-    if(isChosungOnly(qc)) return getChosung(hay).replace(/\s/g,'').indexOf(qc) >= 0;
-    if(getChosung(it.itemName||'').indexOf(q) >= 0) return true;
-  }catch(e){ console.warn('[자재 찾기] 실패', e); }
+    if(isChosungOnly(qc)) return getChosung(s2).replace(/\s/g,'').indexOf(qc) >= 0;
+  }catch(e){ console.warn('[초성 찾기] 실패', e); }
   return false;
+}
+window.wlChoHit = wlChoHit;
+
+function wlMatFind(it, q){
+  try{ return wlChoHit([it.itemName, it.spec, it.maker, it.vendor, it.unit].join(' '), q); }
+  catch(e){ console.warn('[자재 찾기] 실패', e); return false; }
 }
 window.wlMatFind = wlMatFind;
 
@@ -22929,7 +22937,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v188-0901-0951';
+  var JS_BUILD = 'v189-0901-1007';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -23529,11 +23537,20 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
 })();
 
 /* ══════════════════════════════════════════════════════════════
-   v187 — 노션식 페이지에서도 「하위 구분」을 지출종류 바로 밑에서 고른다
-   달님 : 「수도 전기도 넣기로 했는데 없네」
-   ▸ 있기는 있었다 — 지출종류를 고르면 나오지만 자리가 멀어 안 보였다.
-   ▸ 이제 지출종류 바로 다음 줄로 데려오고, 업무 창과 똑같이
-     「🧮 정산표에서 ○○ 칸으로 들어갑니다」 를 함께 띄운다.
+   v187·v189 — 노션식 페이지: **고른 값이 필요로 하는 칸을 바로 밑으로**
+   달님 : 「수도 전기도 넣기로 했는데 없네」 → 있었지만 자리가 멀어 안 보였다.
+
+   ▸ 어느 칸이 「스위치」인지, 그 값이 어떤 칸을 필요로 하는지는
+     이미 있는 창구 두 개가 알고 있다 — wlModeSwitch(종류) · wlModeProps(종류, 값).
+     그래서 업무만이 아니라 **사고 · 입출고 · 지출 · 휴가** 가 한 코드로 같이 된다.
+
+       업무   지출종류   → 하위 구분 · 용도 · 공급가액 · 부가세 · 발급 완료
+       사고   사고 종류  → 당사자 유형 · 전화 · 후속 조치
+       입출고 입고/출고  → 수량 · 단가 · 전표번호 / 수량 · 사용처
+
+   ▸ 🔴 옮기는 것은 `f:` 로 시작하는 칸만. `_sub`(업체) 같은 기본 칸은
+     다른 영역(「업체 — 누구와」)에 살고 있어 끌어오면 화면이 망가진다.
+   ▸ 업무일 때만 「🧮 정산표에서 ○○ 칸으로 들어갑니다」 를 덧붙인다.
    ══════════════════════════════════════════════════════════════ */
 (function(){
   'use strict';
@@ -23545,34 +23562,55 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
       if(!m) return null;
       var rid = decodeURIComponent(m[1]);
       return (entries || []).filter(function(e){ return e && e.id === rid; })[0] || null;
-    }catch(e){ console.warn('[하위 구분] 기록 읽기 실패', e); return null; }
+    }catch(e){ console.warn('[모드 칸] 기록 읽기 실패', e); return null; }
   }
+  function off(){ window.wlAddOn(['#__none'], 'subhint', function(){ return null; }); }
 
   function paint(){
     var page = document.querySelector('.lf-page');
-    var tRow = page ? page.querySelector('[data-prow="f:expType"]') : null;
-    if(!tRow){ window.wlAddOn(['#__none'], 'subhint', function(){ return null; }); return; }
-
+    if(!page){ off(); return; }
     var rec = recNow();
-    var t   = rec ? String(rec.expType    || '').trim() : '';
-    var st  = rec ? String(rec.expSubType || '').trim() : '';
-    var subs = (typeof window.wlWorkSubs === 'function') ? window.wlWorkSubs(t) : [];
+    if(!rec){ off(); return; }
 
-    if(!subs.length){ window.wlAddOn(['#__none'], 'subhint', function(){ return null; }); return; }
+    var kind = String(rec.kind || '');
+    var sw = '', need = [];
+    try{
+      sw = (typeof window.wlModeSwitch === 'function') ? (window.wlModeSwitch(kind) || '') : '';
+      if(sw){
+        var cur = rec[sw.slice(2)];
+        need = (typeof window.wlModeProps === 'function') ? (window.wlModeProps(kind, cur) || []) : [];
+      }
+    }catch(e){ console.warn('[모드 칸] 창구 읽기 실패', e); }
 
-    /* 하위 구분 줄을 지출종류 바로 뒤로 데려온다 (숨김 상자에 있어도) */
-    var sRow = page.querySelector('[data-prow="f:expSubType"]');
-    if(sRow){
+    if(!sw || !need.length){ off(); return; }
+    var swRow = page.querySelector('[data-prow="' + sw + '"]');
+    if(!swRow){ off(); return; }
+
+    /* 필요한 칸을 스위치 바로 뒤에 차례대로 세운다 */
+    var anchor = swRow, last = swRow;
+    need.forEach(function(pid){
+      if(!pid || pid === sw) return;
+      if(String(pid).slice(0,2) !== 'f:') return;      /* 기본 칸(_sub·_amount…)은 건드리지 않는다 */
+      var r = page.querySelector('[data-prow="' + pid + '"]');
+      if(!r) return;
       try{
-        sRow.style.display = '';
-        sRow._ruleKeep = 1;
-        if(tRow.nextElementSibling !== sRow && tRow.parentNode){
-          tRow.parentNode.insertBefore(sRow, tRow.nextSibling);
+        r.style.display = '';
+        r._ruleKeep = 1;
+        if(anchor.nextElementSibling !== r && anchor.parentNode){
+          anchor.parentNode.insertBefore(r, anchor.nextSibling);
         }
-      }catch(e){ console.warn('[하위 구분] 자리 옮기기 실패', e); }
-    }
+        anchor = r; last = r;
+      }catch(e){ console.warn('[모드 칸] ' + pid + ' 자리 옮기기 실패', e); }
+    });
 
-    /* 어디로 가는지 — 업무 창(v182)과 같은 말 */
+    /* 업무 — 정산표 어디로 가는지 (업무 창 v182 와 같은 말) */
+    if(kind !== 'work'){ off(); return; }
+    var t  = String(rec.expType    || '').trim();
+    var st = String(rec.expSubType || '').trim();
+    var subs = [];
+    try{ subs = (typeof window.wlWorkSubs === 'function') ? window.wlWorkSubs(t) : []; }catch(e){}
+    if(!t || t === '없음'){ off(); return; }
+
     window.wlAddOn(
       ['[data-prow="f:expSubType"] .pg-pv', '[data-prow="f:expType"] .pg-pv'], 'subhint',
       function(){
@@ -23583,14 +23621,14 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
       function(d){
         var gk = '';
         try{ gk = window.wlWorkSettleGroup ? window.wlWorkSettleGroup(t, st) : ''; }
-        catch(e){ console.warn('[하위 구분] 그룹 판단 실패', e); }
+        catch(e){ console.warn('[모드 칸] 그룹 판단 실패', e); }
         d.innerHTML = gk
           ? '🧮 정산표에서 <b style="color:' + (COL[gk] || '#7a92a8') + '">' + gk + '</b> 칸으로 들어갑니다'
-            + (st ? '' : ' <span style="color:#b45309">— 아래에서 하위 구분을 고르세요</span>')
+            + ((subs.length && !st) ? ' <span style="color:#b45309">— 아래에서 하위 구분을 고르세요</span>' : '')
           : '';
       });
   }
 
-  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:42, n:'하위 구분 자리', f:paint });
-  console.log('[하위 구분] 지출종류 바로 밑에서 고릅니다 (v187)');
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:42, n:'고른 값이 부르는 칸', f:paint });
+  console.log('[모드 칸] 고른 값이 필요로 하는 칸을 바로 밑으로 데려옵니다 (v189)');
 })();
