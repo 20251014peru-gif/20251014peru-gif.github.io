@@ -436,12 +436,13 @@
       }
       /* 제목과 내용이 같은 글이면(제목이 없어 내용을 제목으로 쓴 경우) 한 번만 보여 준다 */
       if(note && ttl && String(note).trim() === String(ttl).trim()) note = '';
-      /* v196 — 달님 : 「주소 말고 「월간 커피 사무용품 구매」처럼 내용이 나오게, 통일성 있게」
-            주소는 배지 ↗ 로 열면 되므로 카드에는 **내용**만 보여 준다.
-            내용이 비어 있을 때만 주소를 대신 보여 준다 (빈 카드를 만들지 않는다). */
-      if(pty==='site' && !note){
-        var _u = String(e.url||'').trim();
-        if(_u) note = _u;
+      /* v198 — 달님 : 「사이트 주소는 지우고 내용만 나오게, 없으면 빈 상태」
+            주소는 배지 ↗ 로 열면 되므로 카드에는 넣지 않는다.
+            달님 : 「소분류와 관련처가 안 나오는 듯」 → 태그로 보여 준다. */
+      if(pty==='site'){
+        if(e.subcategory)
+          tags += '<span class="lf-tag" style="background:#f1f5f9;color:#475569">'
+                + esc(e.subcategory) + '</span>';
       }
     }
     var nR=esr(e.scanRefs).filter(function(r){return r.type==='receipt';}).length;
@@ -4591,6 +4592,17 @@
     var ALWAYS = { '_date':1, 'f:refYear':1, 'f:refMonth':1, 'f:floor':1, 'f:field':1, 'f:status':1,
                    '_memo':1,     /* v133 — 「내용」은 비어 있어도 기본 바로 밑에 (달님 요청) */
                    'f:dtype':1, 'f:vtype':1 };   /* v197 — 전달 종류 · 휴가 종류도 늘 보이게 */
+    /* ══ v199 — 달님 : 「기존 모달에는 있고 노션식에는 없는 걸 같은 상황으로 만들어줘」 ══
+          14종을 전부 재어 보니 **노션식에 빠진 칸은 없었다** (오히려 더 많다).
+          진짜 차이는 이것 — 옛 입력창은 빈 칸도 늘 보여 주는데,
+          페이지는 비어 있으면 「빈 항목」에 접혀 안 보였다.
+          → 옛 입력창의 기본 칸(SCHEMA[종류])은 비어 있어도 늘 보이게 맞춘다.
+             그 밖의 덧칸(WORK_EXTRA)은 예전처럼 「빈 항목」에 접어 둔다. */
+    try{
+      if(!isPersonal() && typeof SCHEMA === 'object' && SCHEMA && SCHEMA[pt]){
+        SCHEMA[pt].forEach(function(f){ if(f && f.k) ALWAYS['f:' + f.k] = 1; });
+      }
+    }catch(e){ console.warn('[늘 보이는 칸] SCHEMA 읽기 실패', e); }
     /* v119 — 지금 고른 모드(지출종류 등)가 요구하는 칸도 늘 보인다.
           비어 있다고 「빈 항목」 뒤로 밀리면 합계와 따로 떨어져 보기 나쁘다. */
     try{

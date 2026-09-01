@@ -18983,6 +18983,24 @@ async function githubUpload(token){
   var _fitId = '';                   /* 이 기록에서 이미 균형을 맞췄나 */
   function autoOn(){ try{ return localStorage.getItem(LS_AUTO) !== '0'; }catch(e){ return true; } }
 
+  /* ══ v198 — 달님 : 「업체는 아직 오른쪽에 있잖아, 금액 밑으로 안 갔어」 ══
+        v194에서 저장값만 고쳤는데 **자동 균형(autoFit)** 이 업체를 다시 오른쪽으로
+        보내고 저장까지 하고 있었다. 그래서 새로고침하면 되돌아왔다.
+        → 「자동으로는 옮기지 않는 묶음」 목록을 둔다. 손으로는 언제든 옮길 수 있다.
+        되돌리기 : wlSide.lock('')      다시 잠그기 : wlSide.lock('g1') */
+  var LS_LOCK = 'wl_side_lock';
+  function lockList(){
+    try{
+      var v = localStorage.getItem(LS_LOCK);
+      if(v === null) v = 'g1';                  /* 기본 : 🏢 업체는 자동으로 안 옮긴다 */
+      return String(v).split(',').map(function(x){ return x.trim(); }).filter(Boolean);
+    }catch(e){ return ['g1']; }
+  }
+  function fitCand(){
+    var lk = lockList();
+    return ['gc','gt','g1','g3'].filter(function(g){ return lk.indexOf(g) < 0; });
+  }
+
   /* v138 — 예전 기본값(시각+업체)을 그대로 쓰고 있던 분은 새 기본값으로 한 번 갈아끼운다.
         손으로 정해 둔 분은 건드리지 않는다. */
   try{
@@ -19007,6 +19025,18 @@ async function githubUpload(token){
       localStorage.setItem('wl_side_v194', '1');
     }
   }catch(e){ console.warn('[곁상자] 업체 왼쪽 고정 실패', e); }
+
+  /* v198 — v194 는 저장값만 고쳤고 자동 균형이 다시 덮어썼다. 한 번 더 빼 준다. */
+  try{
+    if(localStorage.getItem('wl_side_v198') !== '1'){
+      var _s8 = localStorage.getItem(LS);
+      if(_s8 && String(_s8).indexOf('g1') >= 0){
+        localStorage.setItem(LS, String(_s8).split(',').map(function(x){ return x.trim(); })
+                                   .filter(function(x){ return x && x !== 'g1'; }).join(','));
+      }
+      localStorage.setItem('wl_side_v198', '1');
+    }
+  }catch(e){ console.warn('[곁상자] 업체 왼쪽 재고정 실패', e); }
 
   function list(){
     try{
@@ -19186,7 +19216,7 @@ async function githubUpload(token){
 
     /* 지금 왼쪽에 있는 묶음들의 높이를 잰다 */
     var cand = [];
-    ['gc','gt','g1','g3'].forEach(function(gid){
+    fitCand().forEach(function(gid){                 /* v198 — 잠근 묶음은 빼고 */
       var part = chunk(props, gid);
       if(!part || !part.length) return;
       var h = 0;
@@ -19204,7 +19234,7 @@ async function githubUpload(token){
     /* 이미 오른쪽에 가 있는 것도 후보에 넣는다 (되돌릴 수 있게) */
     var cur = list();
     if(side){
-      ['gc','gt','g1','g3'].forEach(function(gid){
+      fitCand().forEach(function(gid){                /* v198 — 잠근 묶음은 빼고 */
         if(cur.indexOf(gid) < 0) return;
         var p2 = chunk(side, gid);
         if(!p2 || !p2.length) return;
@@ -19246,6 +19276,9 @@ async function githubUpload(token){
 
   window.wlSide = {
     auto: autoFit,
+    lock:    function(v){ try{ localStorage.setItem(LS_LOCK, Array.isArray(v)?v.join(','):String(v==null?'g1':v)); }catch(e){}
+                          _fitId=''; return '자동으로 안 옮길 묶음 : ' + (lockList().map(function(g){return NAME[g]||g;}).join(' · ')||'없음'); },
+    locked:  function(){ return lockList().map(function(g){ return NAME[g]||g; }); },
     autoOn:  function(){ try{ localStorage.setItem(LS_AUTO,'1'); }catch(e){} _fitId=''; return '기록을 열 때 저절로 균형을 맞춥니다'; },
     autoOff: function(){ try{ localStorage.setItem(LS_AUTO,'0'); }catch(e){} return '자동 균형을 껐습니다'; },
     set:  function(v){ set(v); return list().join(',') || '(없음)'; },
@@ -22973,7 +23006,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v197-0901-1121';
+  var JS_BUILD = 'v199-0901-1143';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
