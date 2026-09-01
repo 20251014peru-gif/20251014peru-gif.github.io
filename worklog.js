@@ -12640,6 +12640,26 @@ async function githubUpload(token){
     }
   }catch(e){ console.warn('[페이지 열기] 감싸기 실패', e); }
 
+  /* ══ v191 — 「어떻게 열까」 판단 창구.
+        지출 창(openExpV2)은 openViewer·openEditor 를 안 거치고 직행하기 때문에
+        혼자만 옛 창으로 열리고 있었다. 판단을 여기 하나로 모은다 (제0원칙-12).
+        ▸ take() 가 true 를 돌려주면 이미 노션식으로 열었다는 뜻이다.
+        ▸ 페이지 안 [✏️ 전체 서식] 이 세우는 window._wlForceOld 도 여기서 소비한다.
+        ▸ 되돌리기 : 진단 탭 「기록을 누르면」 → 예전 입력창 (wl_open_as_page='old') */
+  window.wlOpenAs = {
+    style:    openStyle,
+    usesPage: usesPage,
+    kinds:    function(){ return Object.keys(KINDS); },
+    take: function(kind, id){
+      var force = !!window._wlForceOld;
+      window._wlForceOld = false;
+      if(force || !id || !KINDS[kind] || !usesPage()) return false;
+      if(typeof window.wlGoPage !== 'function') return false;
+      try{ window.wlGoPage(id, openStyle()==='modal'); return true; }
+      catch(e){ console.warn('[페이지 열기] 실패 — 예전 창으로', e); return false; }
+    }
+  };
+
   /* ── 진단 탭 버튼 ── */
   var OPMAP = { opAsWin:'modal', opAsPage:'page', opAsModal:'old' };
   function paint(){
@@ -22937,7 +22957,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v189-0901-1007';
+  var JS_BUILD = 'v192-0901-1028';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
