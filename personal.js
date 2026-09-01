@@ -378,12 +378,37 @@
       /* 제목 — 종류마다 제목이 담기는 칸이 다르다 (오늘계획은 text, 통화는 content …) */
       ttl = e.title || e.who || '';
       if(!ttl && !isPersonal()){ try{ ttl = String(pget(e,'_title')||''); }catch(_t){} }
+      /* v196 — 달님 : 「입고의 제목이 이상하게 나와」
+            입출고는 제목 자리가 품목 **id**(Uml1oEcU…) 라 알아볼 수 없었다.
+            품목명을 먼저 쓰고, 없으면 자재 목록에서 이름을 찾아온다. */
+      if(pty==='stock'){
+        var _sn = String(e.itemName||'').trim();
+        if(!_sn && e.itemId){
+          try{
+            var _si = (ent()||[]).filter(function(x){ return x && x.kind==='item' && x.id===e.itemId; })[0];
+            if(_si) _sn = String(_si.itemName||'').trim();
+          }catch(_se){ console.warn('[입출고] 품목 이름 찾기 실패', _se); }
+        }
+        if(_sn) ttl = _sn;
+        else if(ttl && /^[A-Za-z0-9_-]{16,}$/.test(ttl)) ttl = '(품목 없음)';
+      }
       if(!ttl) ttl = d.n;
+      /* v196 — 달님 : 「카드에 메모라고 써있는건 지워도 되잔아 메모인지 다 아니까」
+            지금 그 종류 하나만 보고 있으면 같은 배지를 카드마다 또 붙이지 않는다.
+            「전체」로 볼 때는 종류를 알아야 하므로 그대로 붙인다.
+            🌐 사이트는 「눌러서 여는 단추」를 겸하므로 남긴다. */
+      var _sameKind = false;
+      try{
+        _sameKind = isPersonal() ? (curCat !== '전체' && curCat === pty)
+                                 : !!(DS && DS.kind === pty);
+      }catch(_sk){}
       /* v193 — 🌐 사이트는 배지를 누르면 바로 인터넷 창으로 (카드는 안 열린다) */
       if(pty==='site' && e.url){
         tags = '<span class="lf-tag" data-siteurl="'+esc(e.url)+'" title="눌러서 인터넷으로 열기"'
              + ' style="background:'+col+'1f;color:'+col+';cursor:pointer;font-weight:800;'
              + 'text-decoration:underline">'+d.i+' '+d.n+' ↗</span>';
+      }else if(_sameKind){
+        tags = '';                                   /* v196 — 같은 종류만 볼 때는 생략 */
       }else{
         tags = '<span class="lf-tag" style="background:'+col+'1f;color:'+col+'">'+d.i+' '+d.n+'</span>';
       }
@@ -403,11 +428,20 @@
       if(e.who && pty!=='person') tags += '<span>'+esc(e.who)+'</span>';
       if(e.where) tags += '<span>'+esc(e.where)+'</span>';
       note = e.detail || e.memo || '';
-      /* v193 — 달님 : 「자재구매관련 것들은 주소가 안 나온다」
-            주소를 memo 에 적어 둔 기록만 보이고 있었다. url 칸을 먼저 본다. */
-      if(pty==='site'){
+      /* v197 — 달님 : 「일반메모는 제목과 내용이 같이 나오게」
+            종류마다 「내용」이 담기는 칸이 다르다 (메모는 body · 전달·통화는 content …).
+            제목과 마찬가지로 지도(BMAP)를 따라간다. */
+      if(!note && !isPersonal()){
+        try{ note = String(pget(e,'_memo')||''); }catch(_m){}
+      }
+      /* 제목과 내용이 같은 글이면(제목이 없어 내용을 제목으로 쓴 경우) 한 번만 보여 준다 */
+      if(note && ttl && String(note).trim() === String(ttl).trim()) note = '';
+      /* v196 — 달님 : 「주소 말고 「월간 커피 사무용품 구매」처럼 내용이 나오게, 통일성 있게」
+            주소는 배지 ↗ 로 열면 되므로 카드에는 **내용**만 보여 준다.
+            내용이 비어 있을 때만 주소를 대신 보여 준다 (빈 카드를 만들지 않는다). */
+      if(pty==='site' && !note){
         var _u = String(e.url||'').trim();
-        if(_u) note = _u + (note ? ' · ' + note : '');
+        if(_u) note = _u;
       }
     }
     var nR=esr(e.scanRefs).filter(function(r){return r.type==='receipt';}).length;
@@ -571,11 +605,19 @@
     if(t==='time'||t==='timepick') return 'time';       /* 🕐 시계로 고르기 */
     if(t==='alertbefore') return 'num';                  /* 몇 분 전 */
     if(t==='tel'||t==='phone') return 'tel';
+    if(t==='link'||t==='url') return 'link';        /* v194 — 눌러서 열린다 */
+    if(t==='map'||t==='addr') return 'map';         /* v194 — 네이버 지도 */
     if(t==='checkbox'||t==='check') return 'check';
     /* 이름으로도 알아본다 — 새 칸이 생겨도 알맞은 입력이 저절로 뜬다 */
     var nm = String(f.k||'') + ' ' + String(f.label||'');
     if(/시각|시간|Time/i.test(nm) && !/시간대|기간/.test(nm)) return 'time';
     if(/날짜|일자|Date/i.test(nm)) return 'date';
+    /* v194 — 달님 : 「전화번호를 누르면 바로 전화, 주소를 누르면 네이버 지도」
+          SCHEMA 를 손대지 않고 이름만으로 알아본다 (저장 값은 그대로).
+          ▸ 연락처(ownerPhone) · 당사자 연락처(partyPhone) 처럼 type 이 text 인 칸도 걸린다 */
+    if(/URL|링크|Link/i.test(nm)) return 'link';
+    if(/전화|연락처|휴대폰|Phone|Tel(?!e)/i.test(nm) && !/메모|기록/.test(nm)) return 'tel';
+    if(/주소|소재지|Address/i.test(nm) && !/링크|url/i.test(nm)) return 'map';
     return 'text';
   }
   /* select 후보값 — SCHEMA 에 opts 가 없으면 실제 데이터에서 모은다 */
@@ -666,9 +708,14 @@
     call:     {_date:['date'], _title:['content'], _sub:['company','name'],          _amount:[],             _memo:['content']},
     memo:     {_date:['date'], _title:['title','body'], _sub:[],                     _amount:[],             _memo:['body']},
     schedule: {_date:['date'], _title:['title'], _sub:[],                            _amount:[],             _memo:['memo']},
-    deliver:  {_date:['date'], _title:['title','content'], _sub:['dtype'],           _amount:[],             _memo:['content']},
+    /* v197 — 달님 : 「전달에 즉시전달·주간전달 고르는 게 없네 (구버전엔 있는데)」
+          SCHEMA 에는 있었다. 그런데 _sub(관련처) 가 dtype 을 먹어 **글자 칸**으로 바뀌어
+          고르는 목록이 사라졌다. _sub 를 비워 f:dtype 이 제 모습(고르기)으로 나오게 한다. */
+    deliver:  {_date:['date'], _title:['title','content'], _sub:[],                 _amount:[],             _memo:['content']},
     meeting:  {_date:['date'], _title:['title'], _sub:['attendees'],                 _amount:[],             _memo:['body']},
-    vacation: {_date:['start'],_title:['name'], _sub:['vtype'],                      _amount:[],             _memo:['note']},
+    /* v197 — 휴가도 같은 이유로 「종류」가 글자 칸이 되어 있었다.
+          f:vtype 은 「고른 값이 부르는 칸」의 스위치이기도 하다 (SWITCH.vacation). */
+    vacation: {_date:['start'],_title:['name'], _sub:[],                            _amount:[],             _memo:['note']},
     item:     {_date:[],       _title:['itemName'], _sub:['vendor','maker'],         _amount:['unitPrice'],  _memo:['memo']},
     stock:    {_date:['date'], _title:['itemId'], _sub:['vendor'],                   _amount:['amount'],     _memo:['memo']},
     plan:     {_date:['date'], _title:['text'], _sub:[],                             _amount:[],             _memo:[]},
@@ -1818,7 +1865,16 @@
       +'" onclick="event.stopPropagation()" style="color:#2563a8;font-weight:700">'+esc(v)+'</a>' : '';
     if(t==='map')    return v ? '<a href="https://map.naver.com/p/search/'+encodeURIComponent(v)
       +'" target="_blank" onclick="event.stopPropagation()" style="color:#03c75a;font-weight:700">'+esc(v)+'</a>' : '';
-    if(t==='link')   return v ? '<a href="'+esc(v)+'" target="_blank" onclick="event.stopPropagation()" style="color:#7c3aed">↗ 링크</a>' : '';
+    if(t==='link'){
+      /* v194 — 「↗ 링크」만 뜨던 것을 실제 주소가 보이게. http 를 안 적어도 열린다 */
+      if(!v) return '';
+      var _lv = String(v).trim();
+      var _lh = /^https?:\/\//i.test(_lv) ? _lv : ('https://' + _lv);
+      var _ls = _lv.replace(/^https?:\/\//i,'');
+      if(_ls.length > 46) _ls = _ls.slice(0,46) + '…';
+      return '<a href="'+esc(_lh)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()"'
+           + ' title="'+esc(_lv)+'" style="color:#7c3aed;font-weight:700">↗ '+esc(_ls)+'</a>';
+    }
     if(t==='rows'){ var n2=esr(v).length; return n2? '<span style="color:#8ba0b6;font-size:11.5px">☰ '+n2+'줄</span>':''; }
     if(t==='sel'&&v) return '<span class="lf-tag" style="background:#eef2f7;color:#475569">'+esc(v)+'</span>';
     if(t==='area')   return v ? '<span class="sub" style="display:block">'+esc(String(v).replace(/\s+/g,' ').slice(0,70))+'</span>' : '';
@@ -4533,7 +4589,8 @@
           「해당층·분야를 날짜 옆으로」가 아무리 고쳐도 안 됐다. (달님 신고 4회)
           숨김 목록에 들어 있어도 되살린다 — 기본 칸이라 감춰 두면 안 된다. */
     var ALWAYS = { '_date':1, 'f:refYear':1, 'f:refMonth':1, 'f:floor':1, 'f:field':1, 'f:status':1,
-                   '_memo':1 };   /* v133 — 「내용」은 비어 있어도 기본 바로 밑에 (달님 요청) */
+                   '_memo':1,     /* v133 — 「내용」은 비어 있어도 기본 바로 밑에 (달님 요청) */
+                   'f:dtype':1, 'f:vtype':1 };   /* v197 — 전달 종류 · 휴가 종류도 늘 보이게 */
     /* v119 — 지금 고른 모드(지출종류 등)가 요구하는 칸도 늘 보인다.
           비어 있다고 「빈 항목」 뒤로 밀리면 합계와 따로 떨어져 보기 나쁘다. */
     try{

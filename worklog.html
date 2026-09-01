@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v193-0901-1046";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v197-0901-1121";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=193-20260901t1046"></script>
+<script src="worklog.js?v=197-20260901t1121"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -10791,6 +10791,23 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
          && window.wlOpenAs.take('expense', id)) return;
     }catch(e){ console.warn('[지출] 노션식으로 못 열었어요 — 옛 창으로 엽니다', e); }
 
+    /* ══ v195 — 달님 : 「지출 새로 만들기도 노션식」 ══
+          새로 만들 때도 노션식 페이지로 연다. 미리 채우는 길은 이미 있다(wlNewPageWith).
+          ▸ 아무것도 안 쓰고 닫으면 빈 껍데기는 저절로 지워진다 (DRAFT).
+          🔴 중식·폐기물 목록은 아직 이 옛 창에만 있다
+             → 그게 필요하면 페이지 안 [✏️ 전체 서식] 으로 이 창을 열면 된다.
+          되돌리기 : wlExpNew.off() */
+    try{
+      if(!id && !window._wlForceOld && window.wlExpNew && window.wlExpNew.pageOn()
+         && typeof window.wlNewPageWith === 'function'){
+        var _nd = '';
+        try{ _nd = (typeof todayStr==='function') ? todayStr() : ''; }catch(e2){}
+        window.wlNewPageWith('expense', { date:_nd, expType:'개인지출' });
+        return;
+      }
+    }catch(e){ console.warn('[지출] 새로 만들기를 노션식으로 못 열었어요 — 옛 창으로', e); }
+    window._wlForceOld = false;
+
     _editId=id||null; _matItems=[]; _mealItems=[]; _wasteItems=[]; _selPurpose=null;
     _expType='개인지출'; _expSubType='';
     var en=id&&typeof entries!=='undefined'?entries.find(function(x){return x.id===id;}):null;
@@ -11318,6 +11335,17 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var tplBtn=g('expV2TplMgrBtn'); if(tplBtn&&!tplBtn._b){tplBtn._b=true;tplBtn.addEventListener('click',openExpTplMgr);}
     // 날짜 변경 → 템플릿 이번달 입력완료 표시 갱신
     var dtEl=g('expV2Date'); if(dtEl&&!dtEl._tplB){dtEl._tplB=true;dtEl.addEventListener('change',function(){ renderExpTplChips(); });}
+    /* v195 — 지출을 새로 만들 때 어떤 창으로 열지 (되돌리는 스위치) */
+    window.wlExpNew = {
+      pageOn: function(){ try{ return localStorage.getItem('wl_exp_new_page') !== '0'; }
+                          catch(e){ return true; } },
+      on:  function(){ try{ localStorage.setItem('wl_exp_new_page','1'); }catch(e){}
+                       return '지출을 새로 만들 때 노션식 페이지로 엽니다'; },
+      off: function(){ try{ localStorage.setItem('wl_exp_new_page','0'); }catch(e){}
+                       return '지출을 새로 만들 때 예전 창으로 엽니다 (중식·폐기물 목록이 필요할 때)'; },
+      state: function(){ return window.wlExpNew.pageOn() ? '노션식 페이지' : '예전 창'; }
+    };
+
     // openExpenseEditor 교체
     window.openExpenseEditor=function(id){openExpV2(id);};
 
@@ -18019,6 +18047,17 @@ if('serviceWorker' in navigator){
         if(el.closest && el.closest(SKIP)) continue;
         /* 너무 큰 덩어리는 위험 — 자식이 많으면 건너뜀 */
         if(el.children && el.children.length > 6) continue;
+        /* v196 — 달님 : 「잠금메모는 제목은 나오고 내용이 가려지게」
+              🔒 는 **제목**에 붙는다. 제목을 가리면 무슨 메모인지조차 알 수 없었다.
+              → 카드·목록에서는 제목 대신 「내용」 쪽을 가린다.
+                 내용이 없으면 아무것도 안 가린다 (제목만 보이면 된다). */
+        var _card = null;
+        try{ _card = el.closest && el.closest('.lf-card, .lf-row, .lf-page'); }catch(e2){}
+        if(_card){
+          var _body = _card.querySelector('.lf-note, .pg-body-txt, .lf-b');
+          if(_body) out.push(_body);
+          continue;
+        }
         out.push(el);
       }
     }catch(e){}
@@ -20270,7 +20309,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=193-20260901t1046"></script>
+<script src="personal.js?v=197-20260901t1121"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에

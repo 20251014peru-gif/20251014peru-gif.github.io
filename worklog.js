@@ -18992,6 +18992,22 @@ async function githubUpload(token){
     }
   }catch(e){}
 
+  /* v194 — 달님 : 「업체-누구와는 기본값을 아예 왼쪽 금액 밑으로 고정해」
+        저장돼 있던 값에서 🏢 업체(g1)만 **한 번** 빼 준다.
+        그 뒤에 달님이 다시 오른쪽으로 보내면 그대로 존중한다 (다시 안 건드린다).
+        되돌리기 : wlSide.set('g3,g1') */
+  try{
+    if(localStorage.getItem('wl_side_v194') !== '1'){
+      var _sv = localStorage.getItem(LS);
+      if(_sv && String(_sv).indexOf('g1') >= 0){
+        var _sa = String(_sv).split(',').map(function(x){ return x.trim(); })
+                    .filter(function(x){ return x && x !== 'g1'; });
+        localStorage.setItem(LS, _sa.join(','));
+      }
+      localStorage.setItem('wl_side_v194', '1');
+    }
+  }catch(e){ console.warn('[곁상자] 업체 왼쪽 고정 실패', e); }
+
   function list(){
     try{
       var v = localStorage.getItem(LS);
@@ -22957,7 +22973,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v193-0901-1046';
+  var JS_BUILD = 'v197-0901-1121';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
