@@ -18609,7 +18609,9 @@ async function githubUpload(token){
                        if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
                        return keepOld() ? '아래 큰 자재 상자를 다시 보여줍니다' : '아래 큰 자재 상자를 접습니다'; },
     add:  addOne,
-    list: function(){ var r = recOf(ridNow()); return r ? matsOf(r) : []; }
+    list: function(){ var r = recOf(ridNow()); return r ? matsOf(r) : []; },
+    /* v204 — 자재 합계를 세는 곳은 여기 하나뿐. 페이지 편집기가 이걸 쓴다. */
+    sum:  function(arr){ return sumOf(Array.isArray(arr) ? arr : []); }
   };
   console.log('[자재 담기] v131 준비됨 — 자재 묶음 발치에 목록과 ＋ 추가 / 지출에 🔗 관련 업무');
 })();
@@ -23043,7 +23045,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v203-0901-1232';
+  var JS_BUILD = 'v204-0901-1252';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -23853,8 +23855,15 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
                  {k:'price',    t:'num',  p:'1인 단가', w:'92px'} ],
     wasteItems:[ {k:'desc',     t:'text', p:'항목',   w:'auto'},
                  {k:'amount',   t:'num',  p:'금액',   w:'110px'} ]
+,
+    /* v204 — 업무·사고 기록의 자재 (지출의 matItems 와 저장 이름이 다르다) */
+    materials: [ {k:'name',  t:'text', p:'자재 이름', w:'auto'},
+                 {k:'spec',  t:'text', p:'규격',    w:'120px'},
+                 {k:'qty',   t:'num',  p:'수량',    w:'62px'},
+                 {k:'price', t:'num',  p:'단가',    w:'88px'} ]
   };
-  var TITLE = { matItems:'📦 자재 내역', mealItems:'🍚 중식 내역', wasteItems:'🗑 폐기물' };
+  var TITLE = { matItems:'📦 자재 내역', mealItems:'🍚 중식 내역', wasteItems:'🗑 폐기물',
+                materials:'📦 자재 내역' };
 
   function rowsHTML(key, list, edit){
     var cols = COLS[key];
@@ -23950,9 +23959,22 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
   }
 
   /* ── 저장 ── */
+  /* 자재 합계 — wlMatBox 와 같은 식. 창구가 있으면 창구를 쓴다 (두 곳에서 세지 않게) */
+  function matSum(list){
+    try{
+      if(window.wlMatBox && typeof window.wlMatBox.sum === 'function') return window.wlMatBox.sum(list);
+    }catch(e){ console.warn('[자재 내역] 합계 창구 실패', e); }
+    return A(list).reduce(function(a,m){
+      if(m && m._field) return a;
+      return a + n(m.price) * (n(m.qty) || 1);
+    }, 0);
+  }
+
   function save(rid, key, list){
     try{
       var patch = {}; patch[key] = list;
+      /* v204 — 업무 자재는 「자재 합계」 칸(matCost)이 짝이다. 비용의 금액과는 따로다. */
+      if(key === 'materials') patch.matCost = Math.round(matSum(list));
       if(typeof updateRecord === 'function') updateRecord(rid, patch);
       else if(typeof window.updateRecord === 'function') window.updateRecord(rid, patch);
       else { console.warn('[지출 내역] updateRecord 를 못 찾았어요'); return false; }
@@ -23995,7 +24017,10 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     if(b && !b._eiB){ b._eiB = 1; b.addEventListener('click', function(){ applyAmount(box, rid, false); }); }
   }
 
-  function bind(box, rid){
+  /* v204 — mode 'exp' = 지출(금액 반영) · 'work' = 업무 자재(자재 합계 칸) */
+  function bind(box, rid, mode){
+    var RD = (mode === 'work') ? redrawWork : redraw;
+    var RS = (mode === 'work') ? reSumWork : reSum;
     /* 값 고치기 — ⌨️ 글자를 치는 동안에는 건드리지 않는다. 칸에서 빠져나올 때만 저장한다 */
     box.querySelectorAll('[data-eik]').forEach(function(inp){
       if(inp._eiB) return; inp._eiB = 1;
@@ -24010,7 +24035,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
           var col = (COLS[key] || []).filter(function(c){ return c.k === ck; })[0];
           list[i][ck] = (col && col.t === 'num') ? n(inp.value) : inp.value;
           if(col && col.t === 'num') inp.value = n(inp.value) ? won(inp.value) : '';
-          if(save(rid, key, list)) reSum(box, rid);
+          if(save(rid, key, list)) RS(box, rid);
         }catch(e){ console.error('[지출 내역] 고치기 실패', e); }
       });
     });
@@ -24021,7 +24046,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
         try{
           var patch = {}; patch[cb.getAttribute('data-eivat')] = !!cb.checked;
           if(typeof updateRecord === 'function') updateRecord(rid, patch);
-          redraw(box, rid);
+          RD(box, rid);
         }catch(e){ console.error('[지출 내역] 부가세 설정 실패', e); }
       });
     });
@@ -24035,7 +24060,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
           var list = A(r2[key]).map(function(o){ return Object.assign({}, o); });
           var blank = {}; (COLS[key] || []).forEach(function(c){ blank[c.k] = (c.t === 'num') ? 0 : ''; });
           list.push(blank);
-          if(save(rid, key, list)) redraw(box, rid);
+          if(save(rid, key, list)) RD(box, rid);
         }catch(e){ console.error('[지출 내역] 줄 추가 실패', e); }
       });
     });
@@ -24048,20 +24073,208 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
           var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
           var list = A(r2[key]).map(function(o){ return Object.assign({}, o); });
           list.splice(i, 1);
-          if(save(rid, key, list)) redraw(box, rid);
+          if(save(rid, key, list)) RD(box, rid);
         }catch(e){ console.error('[지출 내역] 줄 지우기 실패', e); }
       });
     });
-    bindApply(box, rid);
+    if(mode === 'work') bindApplyWork(box, rid); else bindApply(box, rid);
   }
 
   function redraw(box, rid){
     try{
       var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
       box.innerHTML = html(r2, sums(r2), canEdit());
-      bind(box, rid);
+      bind(box, rid, 'exp');
     }catch(e){ console.warn('[지출 내역] 다시 그리기 실패', e); }
   }
+
+  /* ══════════════════════════════════════════════════════════
+     v204 — 📦 업무·사고 기록의 자재 내역도 페이지에서 바로 고친다
+
+     달님 : 「같은 틀로 업무 기록의 자재 내역도 페이지에서 바로 고치게」
+
+     🔴 지출과 무엇이 다른가
+       · 저장 이름이 다르다 — 지출 matItems / 업무 materials
+       · 합계가 가는 곳이 다르다 — 지출은 「금액」(정산표의 행) · 업무는 「자재 합계」(matCost)
+         v135 사고 : 자재 값이 비용의 합계를 덮어써서 외주비가 통째로 날아갔다.
+         그래서 업무 자재는 금액(cost)을 절대 건드리지 않는다.
+       · 자재명 칸에 직접 적은 것(_field)은 목록이 아니라 속성 칸이다 → 여기서는 안 고친다
+     되돌리기 : wlMatEdit.off()      보기 전용 : wlMatEdit.readonly()
+     ══════════════════════════════════════════════════════════ */
+  var LSW      = 'wl_workmats';
+  var LSW_EDIT = 'wl_workmats_edit';
+  function wOn(){   try{ return localStorage.getItem(LSW)      !== '0'; }catch(e){ return true; } }
+  function wEdit(){ try{ return localStorage.getItem(LSW_EDIT) !== '0'; }catch(e){ return true; } }
+  function wOff(){ try{ window.wlAddOn(['#__none'], 'workmats', function(){ return null; }); }catch(e){} }
+
+  /* 자재명 칸에 직접 적은 것 — 목록이 아니라 속성 칸이라 여기서는 보여주기만 한다 */
+  function fieldMat(r){
+    var nm = String((r && r.material) == null ? '' : r.material).trim();
+    if(!nm) return null;
+    return { name:nm, spec:String((r && r.spec) || ''), qty:n(r && r.qty) || 1 };
+  }
+
+  function sumWorkHTML(want, now, edit){
+    var gap = Math.abs(want - now);
+    if(gap <= 1)
+      return '<div style="font-size:12.5px;font-weight:800;color:#0f7a4a">'
+           + '✅ 자재 합계 칸과 같습니다 (' + won(now) + '원)</div>';
+    return '<div style="font-size:12.5px;font-weight:800;color:#b52929;background:#fdecec;'
+         + 'border-radius:8px;padding:8px 10px;line-height:1.7">'
+         + '🔴 내역 합계 <b>' + won(want) + '원</b> ≠ 「자재 합계」 칸 <b>' + won(now) + '원</b>'
+         + ' <span style="color:#8a5a5a">(' + won(gap) + '원 차이)</span>'
+         + (edit
+            ? '<br><button type="button" id="wmApply" style="margin-top:6px;height:34px;padding:0 14px;'
+              + 'border:none;border-radius:9px;background:#b52929;color:#fff;font-size:13px;font-weight:800;'
+              + 'cursor:pointer;font-family:inherit">🧮 자재 합계 칸에 반영 (' + won(want) + '원)</button>'
+              + ' <span style="font-weight:700;color:#7a4a4a">비용의 「금액」은 건드리지 않습니다</span>'
+              + '<br><span style="font-weight:600;color:#8a6a6a;font-size:11.5px">'
+              + '보통은 기록을 열 때 저절로 맞춰집니다 — 이 띠가 보이면 한 번 눌러 주세요</span>'
+            : '')
+         + '</div>';
+  }
+
+  function htmlWork(r, edit){
+    var list = A(r.materials).filter(Boolean);
+    var fm   = fieldMat(r);
+    var h = '';
+    h += '<div style="font-size:12px;font-weight:900;color:#33567d;margin:0 0 4px">'
+       + '📦 자재 내역 <span style="font-weight:600;color:#8ba0b6">' + list.length + '줄</span></div>';
+    if(fm)
+      h += '<div style="font-size:12px;color:#8a7a4a;background:#fffbea;border-radius:7px;'
+         + 'padding:5px 8px;margin-bottom:5px">✎ 자재명 칸에 적은 것 — <b>' + ES(fm.name) + '</b>'
+         + (fm.spec ? ' · ' + ES(fm.spec) : '') + ' · ' + fm.qty + '개'
+         + ' <span style="color:#a89a76">(위 「자재명·규격·수량」 칸에서 고칩니다)</span></div>';
+    h += rowsHTML('materials', list, edit);
+    var want = Math.round(matSum(list)), now = n(r.matCost);
+    h += '<div style="font-size:12px;color:#5b7fa6;margin-top:4px">담은 자재 합계 <b>'
+       + won(want) + '원</b></div>';
+    h += '<div id="wmSum" style="margin-top:9px">' + sumWorkHTML(want, now, edit) + '</div>';
+    h += '<div style="margin-top:6px;font-size:11.5px;color:#a8b8c8">'
+       + (edit ? '고친 값은 칸에서 빠져나올 때 저장됩니다' : '보기 전용입니다')
+       + ' · 끄기 wlMatEdit.off()'
+       + (edit ? ' · 보기 전용으로 wlMatEdit.readonly()' : ' · 고치려면 wlMatEdit.edit()')
+       + '</div>';
+    return h;
+  }
+
+  function reSumWork(box, rid){
+    try{
+      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0];
+      if(!r2) return;
+      var el = box.querySelector('#wmSum');
+      if(el) el.innerHTML = sumWorkHTML(Math.round(matSum(A(r2.materials))), n(r2.matCost), wEdit());
+      bindApplyWork(box, rid);
+    }catch(e){ console.warn('[업무 자재] 합계 갱신 실패', e); }
+  }
+  function applyMatCost(box, rid){
+    try{
+      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0];
+      if(!r2) return;
+      var w = Math.round(matSum(A(r2.materials)));
+      if(typeof updateRecord === 'function') updateRecord(rid, { matCost: w });
+      if(typeof toast === 'function') toast('🧮 자재 합계를 ' + won(w) + '원으로 맞췄어요');
+      reSumWork(box, rid);
+      try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e){}
+    }catch(e){ console.error('[업무 자재] 합계 반영 실패', e);
+      if(typeof toast === 'function') toast('자재 합계를 못 바꿨어요: ' + (e.message || e)); }
+  }
+  function bindApplyWork(box, rid){
+    var b = box.querySelector('#wmApply');
+    if(b && !b._eiB){ b._eiB = 1; b.addEventListener('click', function(){ applyMatCost(box, rid); }); }
+  }
+  function redrawWork(box, rid){
+    try{
+      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
+      box.innerHTML = htmlWork(r2, wEdit());
+      bind(box, rid, 'work');
+    }catch(e){ console.warn('[업무 자재] 다시 그리기 실패', e); }
+  }
+
+  function paintWork(){
+    if(!wOn()){ wOff(); return; }
+    var page = document.querySelector('.lf-page');
+    if(!page){ wOff(); return; }
+    var r = recNow();
+    if(!r || r.kind === 'expense'){ wOff(); return; }     /* 지출은 위 상자가 맡는다 */
+    var list = A(r.materials).filter(Boolean);
+    if(!list.length){ wOff(); return; }                   /* 담은 자재가 없으면 안 낀다 */
+    var edit = wEdit();
+    try{
+      window.wlAddOn(['[data-gfoot="gt"]', '[data-prow="f:matCost"] .pg-pv',
+                      '[data-prow="f:qty"] .pg-pv', '.lf-page .pg-props'], 'workmats',
+        function(){
+          var d = document.createElement('div');
+          d.style.cssText = 'margin-top:8px;border:1.5px solid #e2dcf2;border-radius:10px;'
+                          + 'padding:10px 12px;background:#fcfbff';
+          return d;
+        },
+        function(d){
+          try{ if(d.contains(document.activeElement)) return; }catch(e){}
+          d.innerHTML = htmlWork(r, edit);
+          bind(d, r.id, 'work');
+        });
+    }catch(e){ console.warn('[업무 자재] 붙이기 실패', e); }
+  }
+
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:45, n:'업무 자재 내역', f:paintWork });
+
+  window.wlMatEdit = {
+    off:      function(){ try{ localStorage.setItem(LSW,'0'); }catch(e){} wOff();
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '업무 자재 내역 상자를 끕니다'; },
+    on:       function(){ try{ localStorage.setItem(LSW,'1'); }catch(e){}
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '업무 자재 내역 상자를 켭니다'; },
+    readonly: function(){ try{ localStorage.setItem(LSW_EDIT,'0'); }catch(e){}
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '보기 전용입니다'; },
+    edit:     function(){ try{ localStorage.setItem(LSW_EDIT,'1'); }catch(e){}
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '고칠 수 있습니다'; },
+    sum:      function(rec){ return Math.round(matSum(A(rec && rec.materials))); },
+    state:    function(){ return { 보기:(wOn()?'켜짐':'꺼짐'), 고치기:(wEdit()?'가능':'보기 전용') }; },
+    /* 지금 열어 둔 기록의 「자재 합계」 칸을 맞춘다 */
+    fix:      function(){
+      try{
+        var rid = (String(location.hash||'').match(/^#lp=([^&]+)/)||[])[1];
+        if(!rid) return '기록을 먼저 열어 주세요';
+        rid = decodeURIComponent(rid);
+        var r = (entries||[]).filter(function(x){ return x && x.id===rid; })[0];
+        if(!r) return '기록을 못 찾았어요';
+        var w = Math.round(matSum(A(r.materials)));
+        if(typeof updateRecord === 'function') updateRecord(rid, { matCost: w });
+        try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e){}
+        return '자재 합계 칸을 ' + won(w) + '원으로 맞췄어요';
+      }catch(e){ console.error('[업무 자재] fix 실패', e); return '못 맞췄어요: ' + (e.message||e); }
+    },
+    /* 🔴 어긋난 기록을 한꺼번에 맞춘다 — 먼저 check() 로 목록을 보고 나서 부르세요.
+          「자재 합계」 칸만 건드립니다. 비용의 금액(cost·amount)은 그대로입니다. */
+    fixAll:   function(){
+      try{
+        var bad = window.wlMatEdit.check().목록, k = 0;
+        bad.forEach(function(x){
+          try{ if(typeof updateRecord === 'function'){ updateRecord(x.id, { matCost: x.내역합계 }); k++; } }
+          catch(e){ console.warn('[업무 자재] ' + x.id + ' 맞추기 실패', e); }
+        });
+        try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e){}
+        return k ? (k + '건의 「자재 합계」 칸을 맞췄어요 (비용 금액은 그대로)') : '맞출 것이 없어요';
+      }catch(e){ console.error('[업무 자재] fixAll 실패', e); return '못 맞췄어요: ' + (e.message||e); }
+    },
+    /* 담은 자재가 있는 기록 전부에서 「자재 합계」 칸이 맞는지 본다 */
+    check:    function(){
+      var bad = [];
+      (entries || []).forEach(function(e){
+        if(!e || e.kind === 'expense') return;
+        var l = A(e.materials).filter(Boolean); if(!l.length) return;
+        var w = Math.round(matSum(l)), now = n(e.matCost);
+        if(Math.abs(w - now) > 1) bad.push({ id:e.id, 제목:e.title, 내역합계:w, 자재합계칸:now });
+      });
+      return { 전체:(entries||[]).filter(function(e){ return e && e.kind!=='expense'
+                     && A(e.materials).filter(Boolean).length; }).length,
+               다른것:bad.length, 목록:bad };
+    }
+  };
 
   function paint(){
     if(!on()){ off(); return; }
@@ -24084,7 +24297,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
           /* ⌨️ 글자를 치는 동안에는 다시 그리지 않는다 (한글 자모가 깨진다) */
           try{ if(d.contains(document.activeElement)) return; }catch(e){}
           d.innerHTML = html(r, s, edit);
-          bind(d, r.id);
+          bind(d, r.id, 'exp');
         });
     }catch(e){ console.warn('[지출 내역] 붙이기 실패', e); }
   }
@@ -24129,7 +24342,64 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
                                                     금액반영:(autoOn()?'저절로':'단추로') }; };
   window.wlExpSums = sums;
 
-  console.log('[지출 내역] 자재·중식·폐기물을 지출 페이지에서 봅니다'
-            + (canEdit() ? ' · 고칠 수 있습니다' : ' (보기 전용)')
-            + ' · 금액은 ' + (autoOn() ? '저절로 맞춥니다' : '단추로 맞춥니다') + ' (v202)');
+  console.log('[지출 내역] 자재·중식·폐기물 — 지출 페이지 (v202) / 업무 자재 (v204)'
+            + ' · 고치기 ' + (canEdit()?'가능':'보기 전용')
+            + ' · 금액 반영 ' + (autoOn()?'저절로':'단추로')
+            + ' · 업무 자재 ' + (wOn()?(wEdit()?'고치기 가능':'보기 전용'):'꺼짐'));
+})();
+
+
+/* ============================================================
+   🔒 「저장값을 무시하고 늘 이렇게」 규칙 모음 (wlLock)  v204-0901
+
+   달님 : 「wlSide 잠금 방식은 다른 되돌아오는 설정에도 그대로 쓸 수 있잖아」
+
+   ▶ 세 파일을 전부 뒤져서 「사람이 안 눌렀는데 설정을 저절로 저장하는 곳」을
+     찾아봤다. 나온 것은 **wlSide 의 자동 균형(autoFit) 한 곳뿐**이었다.
+     나머지 setItem 은 전부 wlXxx.on()/off() 처럼 사람이 부르는 창구다.
+     → 없는 병에 약을 짓지 않는다. 대신 두 가지를 둔다.
+
+       ① 지금 걸려 있는 잠금을 한눈에 (wlLock())
+       ② 🔴 **저장값과 실제로 쓰는 값이 어긋난 설정**을 찾아낸다
+          — v194·v198 이 두 판이나 헛돈 이유가 바로 이 어긋남이었다.
+            이 검사가 있었으면 첫 판에서 잡았다.
+
+   쓰는 법 :  wlLock()          지금 상태를 표로
+             wlLock.why()      왜 이런 게 있는지
+   새 잠금을 더할 때는 아래 REG 에 한 줄만 더한다.
+   ============================================================ */
+(function(){
+  'use strict';
+  function ls(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function norm(v){ return String(v==null?'':v).split(',').map(function(x){ return x.trim(); })
+                      .filter(Boolean).sort().join(','); }
+
+  var REG = [
+    { 설정:'↔ 오른쪽으로 보낼 묶음 (wlSide)',
+      저장값: function(){ return ls('wl_side_groups'); },
+      실제:   function(){ try{ return (window.wlSide.list() || []).join(','); }catch(e){ return '?'; } },
+      잠금:   function(){ try{ return (window.wlSide.locked() || []).join(' · '); }catch(e){ return '?'; } },
+      푸는법: "wlSide.lock('')" }
+  ];
+
+  window.wlLock = function(){
+    return REG.map(function(r){
+      var a = r.저장값(), b = r.실제();
+      return {
+        설정: r.설정,
+        저장된값: (a == null ? '(정한 적 없음)' : (a || '(비어 있음)')),
+        실제쓰는값: (b || '(없음)'),
+        잠긴묶음: (r.잠금() || '(없음)'),
+        상태: (norm(a) === norm(b)) ? '✅ 같음' : '🔒 잠금 때문에 다름 (정상)',
+        푸는법: r.푸는법
+      };
+    });
+  };
+  window.wlLock.why = function(){
+    return ['v194 : 저장값에서 업체(g1)를 한 번 뺐다 → 자동 균형이 다시 넣었다',
+            'v198 : 자동 균형이 못 만지게 잠갔다 → 저장값에 이미 있던 g1 은 그대로 남아 계속 오른쪽',
+            'v203 : 나가는 문(list)에서 거른다 → 저장값이 무엇이든 결과가 같다',
+            '교훈 : 「한 번 지운다」식 이주는 반드시 되돌아온다. 판단하는 문에서 걸러라.'];
+  };
+  console.log('[잠금 모음] v204 준비됨 — wlLock() 으로 저장값과 실제 값을 견줍니다');
 })();
