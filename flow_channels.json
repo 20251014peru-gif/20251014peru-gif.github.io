@@ -1,0 +1,118 @@
+{
+  "_version": "v 20260902-0530",
+  "_note": "흐름지도(flow) 설정 파일. 숫자·단어·채널은 전부 여기서만 고칩니다. 코드(flow_collector.py)는 건드리지 않습니다.",
+  "_track": "1 = 랭킹·주제묶기 대상(매일), 2 = 기준선(공공·연구기관, 주1회 확인·점수 안 매김)",
+  "_tier": "1 = 핵심(먼저 이걸로 시작), 2 = 확장. settings.use_tiers 로 어디까지 쓸지 정합니다",
+  "_weight": "채널 신뢰도. 지금은 전부 1.0 — 근거 없는 추측값을 넣지 않습니다. '봤음/좋았음' 기록이 3개월 쌓이면 그때 이 값을 고칩니다",
+  "_rule_median": "★채널배수의 분모(최근 N개 중앙값)는 반드시 쇼츠를 제외한 롱폼만으로 계산합니다. 쇼츠를 섞으면 분모가 수천 단위로 떨어져 배수가 폭등하고, 쇼츠 병행 채널이 랭킹을 점령합니다 (경제사냥꾼 실측: 롱폼 2.5만~6.6만 vs 쇼츠 1.4천~5천)",
+
+  "settings": {
+    "use_tiers": [1],
+    "use_tracks": [1],
+    "lookback_hours": 48,
+    "shorts_max_seconds": 60,
+    "live_exclude": true,
+    "channel_median_sample": 20,
+    "min_topic_videos": 3,
+    "alert_window_hours": 6,
+    "alert_min_videos": 5,
+    "max_active_topics": 8,
+    "topic_idle_days": 3,
+    "max_videos_per_channel": 15,
+    "ntfy_enabled": true
+  },
+
+  "_keywords_note": "주제 묶기 사전. 제목+설명에서 아래 단어가 나오면 그 주제로 태그됩니다. 묶기가 틀리면 여기에 단어를 추가하세요 — 코드는 안 건드려도 됩니다. 한 영상이 여러 주제에 붙을 수 있습니다.",
+  "keywords": {
+    "금리·연준":      ["금리", "기준금리", "연준", "FOMC", "파월", "금리인하", "금리인상", "국채금리", "장단기", "연방준비"],
+    "환율·달러":      ["환율", "달러", "원달러", "약달러", "강달러", "외환", "1400원", "1500원"],
+    "물가·인플레":    ["물가", "인플레", "디플레", "CPI", "PPI", "소비자물가", "생산자물가"],
+    "국내증시":       ["코스피", "코스닥", "국내증시", "한국증시", "외국인 수급", "기관 수급", "공매도"],
+    "미국증시":       ["나스닥", "S&P", "다우", "미국증시", "뉴욕증시", "서학개미", "미국주식"],
+    "반도체":         ["반도체", "삼성전자", "SK하이닉스", "HBM", "메모리", "파운드리", "TSMC", "D램"],
+    "AI·엔비디아":    ["엔비디아", "NVIDIA", "AI", "인공지능", "데이터센터", "GPU", "오픈AI", "빅테크"],
+    "관세·무역":      ["관세", "무역", "무역전쟁", "수출", "수입", "통상", "미중", "미·중", "미-중", "무역수지", "정상회담", "협상", "공급망"],
+    "중국경제":       ["중국", "중국경제", "위안화", "부동산위기", "헝다", "리오프닝"],
+    "일본·엔화":      ["일본", "엔화", "엔캐리", "BOJ", "일본은행", "니케이"],
+    "유가·에너지":    ["유가", "원유", "WTI", "브렌트", "OPEC", "천연가스", "에너지", "전력"],
+    "채권·크레딧":    ["채권", "회사채", "국채", "크레딧", "스프레드", "부실채권", "PF"],
+    "실적시즌":       ["실적", "어닝", "가이던스", "컨센서스", "영업이익", "매출"],
+    "고용·경기":      ["고용", "실업률", "비농업", "경기침체", "리세션", "소비", "GDP", "성장률"],
+    "코인":           ["비트코인", "이더리움", "코인", "가상자산", "암호화폐", "ETF 승인"],
+    "배당·ETF":       ["배당", "ETF", "월배당", "연금", "IRP", "ISA", "자산배분"],
+    "조선·방산":      ["조선", "방산", "수주", "HD현대", "한화오션", "무기"],
+    "2차전지":        ["2차전지", "배터리", "전기차", "테슬라", "LG에너지", "양극재", "리튬"],
+    "바이오":         ["바이오", "제약", "임상", "FDA", "신약", "비만치료제"],
+    "부동산":         ["부동산", "아파트", "전세", "분양", "재건축", "규제지역", "청약", "집값"],
+    "정책·정치":      ["정부", "정책", "규제", "세제", "예산", "대통령", "국회", "선거"]
+  },
+
+  "channels": [
+    { "name": "삼프로TV 3PROTV",            "handle": "@3protv",           "cid": null, "group": "거시·해설", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "언더스탠딩",                  "handle": "@understanding.",   "cid": null, "group": "거시·해설", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "슈카월드",                    "handle": "@syukaworld",       "cid": null, "group": "거시·해설", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "박종훈의 지식한방",            "handle": "@kpunch",           "cid": null, "group": "거시·해설", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "홍춘욱의 경제강의노트",         "handle": "@chunukhong",       "cid": null, "group": "거시·해설", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "경제 읽어주는 남자 (김광석)",   "handle": null, "cid": "UC3pfEoxaRDT6hvZZjpHu7Tg", "group": "거시·해설", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "김영익의 경제스쿨",            "handle": null, "cid": "UCQIyAcoLsO3L0RMFQk7YMYA", "group": "거시·해설", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "이효석아카데미",               "handle": "@hs_academy",       "cid": null, "group": "거시·해설", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "최준영 박사의 지구본 연구소",    "handle": "@globelab", "cid": "UCstI8HwGQsHdqLDgyH0PImw", "group": "거시·해설", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "경제사냥꾼",                   "handle": "@경제사냥꾼", "cid": "UC7usMJDHmtbs_oegmzQKKMA", "group": "거시·해설", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "815머니톡",                   "handle": "@815moneytalk",     "cid": null, "group": "거시·해설", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "전인구경제연구소",             "handle": "@moneydo",          "cid": null, "group": "거시·해설", "track": 1, "tier": 2, "weight": 1.0 },
+
+    { "name": "티타임즈TV",                  "handle": "@TTimesTV",         "cid": null, "group": "산업·기술", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "머니코믹스",                  "handle": "@moneymoneycomics", "cid": null, "group": "산업·기술", "track": 1, "tier": 2, "weight": 1.0 },
+
+    { "name": "체슬리TV (박세익)",            "handle": "@chesleytv",        "cid": null, "group": "국내주식", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "증시각도기TV",                "handle": "@koreanstockrider", "cid": null, "group": "국내주식", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "염블리와 함께 (염승환)",        "handle": "@yeomvely",         "cid": null, "group": "국내주식", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "한경 코리아마켓",              "handle": "@hk_koreamarket",   "cid": null, "group": "국내주식", "track": 1, "tier": 2, "weight": 1.0 },
+
+    { "name": "사경인TV",                    "handle": null, "cid": "UC0pY2MgLs4uYiDAVoh-M4VQ", "group": "가치투자", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "달란트투자",                  "handle": "@talentinvestment", "cid": null, "group": "가치투자", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "슈퍼개미 이세무사TV",           "handle": "@leesemusaTV",      "cid": null, "group": "가치투자", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "vip tv 가까워진 가치투자",      "handle": "@vip-tv",           "cid": null, "group": "가치투자", "track": 1, "tier": 2, "weight": 1.0 },
+    { "name": "슈퍼케이스 SuperKace",         "handle": "@SuperKace", "cid": "UCSEp-ioWYHFxSO7OkrQtFhg", "group": "가치투자", "track": 1, "tier": 2, "weight": 1.0 },
+
+    { "name": "뉴욕주민",                    "handle": "@newyork-er",       "cid": null, "group": "글로벌·자산배분", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "할 수 있다! 알고 투자 (강환국)", "handle": null, "cid": "UCSWPuzlD337Y6VBkyFPwT8g", "group": "글로벌·자산배분", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "내일은 투자왕 - 김단테",        "handle": null, "cid": "UCKTMvIu9a4VGSrpWy-8bUrQ", "group": "글로벌·자산배분", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "소수몽키",                    "handle": "@sosumonkey",       "cid": null, "group": "글로벌·자산배분", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "미주은 (미국주식으로 은퇴하기)", "handle": "@mijooeun",         "cid": null, "group": "글로벌·자산배분", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "미국주식에 미치다 TV",          "handle": null, "cid": "UCibo107UgpabxGBxEa6ixqA", "group": "글로벌·자산배분", "track": 1, "tier": 2, "weight": 1.0 },
+    { "name": "한경 글로벌마켓",              "handle": null, "cid": "UCWskYkV4c4S9D__rsfOl2JA", "group": "글로벌·자산배분", "track": 1, "tier": 2, "weight": 1.0 },
+    { "name": "오선의 미국 증시 라이브",        "handle": "@futuresnow",       "cid": null, "group": "글로벌·자산배분", "track": 1, "tier": 2, "weight": 1.0 },
+
+    { "name": "한문도TV 부동산채널",           "handle": "@tv_4355",          "cid": null, "group": "리스크·비관", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "광수네 복덕방 (이광수)",        "handle": null, "cid": "UCE2PUxbL1IS98Rd3CpX2zEA", "group": "리스크·비관", "track": 1, "tier": 1, "weight": 1.0 },
+    { "name": "쇼킹부동산",                  "handle": null, "cid": "UCcloDgiDqz8twby7zvG-USg", "group": "리스크·비관", "track": 1, "tier": 2, "weight": 1.0 },
+
+    { "name": "김작가 TV",                   "handle": "@lucky_tv",         "cid": null, "group": "인터뷰", "track": 1, "tier": 2, "weight": 1.0 },
+    { "name": "머니인사이드",                 "handle": "@moneyinside7",     "cid": null, "group": "인터뷰", "track": 1, "tier": 2, "weight": 1.0 },
+
+    { "name": "한국경제TV",                  "handle": "@hkwowtv",          "cid": null, "group": "언론사", "track": 1, "tier": 2, "weight": 1.0 },
+    { "name": "MTN 머니투데이방송",           "handle": "@mtn",              "cid": null, "group": "언론사", "track": 1, "tier": 2, "weight": 1.0 },
+    { "name": "이데일리TV",                  "handle": "@Edaily_TV",        "cid": null, "group": "언론사", "track": 1, "tier": 2, "weight": 1.0 },
+
+    { "name": "스마트튜브 (빠숑 김학렬)",      "handle": "@ppassong",         "cid": null, "group": "부동산", "track": 1, "tier": 2, "weight": 1.0 },
+    { "name": "부읽남TV",                    "handle": "@buiknam_tv",       "cid": null, "group": "부동산", "track": 1, "tier": 2, "weight": 1.0 },
+    { "name": "월부 (월급쟁이부자들TV)",       "handle": "@weolbu",           "cid": null, "group": "부동산", "track": 1, "tier": 2, "weight": 1.0 },
+    { "name": "후랭이TV",                    "handle": null, "cid": "UChnfOZtjny0KBSVkfS9nwsg", "group": "부동산", "track": 1, "tier": 2, "weight": 1.0 },
+    { "name": "푸릉 (렘군)",                 "handle": "@prng_official",    "cid": null, "group": "부동산", "track": 1, "tier": 2, "weight": 1.0 },
+
+    { "name": "한국은행",                    "handle": null, "cid": "UCyK8niZNIfBTgRNkuURdoXA", "group": "기관", "track": 2, "tier": 1, "weight": 1.0 },
+    { "name": "KDI 한국개발연구원",           "handle": null, "cid": "UCCWWpm3ZkHVckG0TMUpkGaA", "group": "기관", "track": 2, "tier": 1, "weight": 1.0 },
+    { "name": "KIEP 대외경제정책연구원",       "handle": null, "cid": "UCM_0SZaSF2KSxQZiYOIcCfg", "group": "기관", "track": 2, "tier": 1, "weight": 1.0 },
+    { "name": "산업연구원 KIET",              "handle": null, "cid": "UC7K8pIy-NLwUOukLaXV5wnA", "group": "기관", "track": 2, "tier": 1, "weight": 1.0 },
+    { "name": "KCMI 자본시장연구원",          "handle": null, "cid": "UCM7x1Wnu3nerjdRmKsmsIsA", "group": "기관", "track": 2, "tier": 2, "weight": 1.0 }
+  ],
+
+  "_excluded": [
+    { "name": "부티플",                       "reason": "영상 5,259개 대부분 숏츠·재테크·자기계발. 쇼츠 필터에 대량 걸리고 논리 충족률이 낮아 주제 묶기를 오염시킴" },
+    { "name": "증권사·자산운용사 공식 채널 12개", "reason": "홍보 채널이라 리스크·반대 시나리오를 구조적으로 내지 않음" },
+    { "name": "신사임당·김짠부·단희TV·장사의 신", "reason": "창업·절약·부업 영역, 투자 판단과 무관" },
+    { "name": "셀코TV",                        "reason": "이름과 달리 중년 건강·라이프 채널" },
+    { "name": "너와나의 투자이야기 / 오건영 개인채널", "reason": "검색으로 실재 확인 실패 — 추측 기재하지 않음" }
+  ]
+}
