@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v182-0831-1808";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v185-0901-0925";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=182-20260831t1808"></script>
+<script src="worklog.js?v=185-20260901t0925"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -20736,7 +20736,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
        opts:(function(){ try{ return JSON.parse(localStorage.getItem('wl_exp_purposes_v44')||'null')
                               || ['자재구매','소모품','식대','폐기물 처리','기타']; }
                          catch(e){ return ['자재구매','소모품','식대','폐기물 처리','기타']; } })()},
-      {k:'expSubType',  label:'세금계산서·전표 구분', type:'select',
+      {k:'expSubType',  label:'하위 구분',      type:'select',   /* v185 — 업무 창과 같은 말로 */
        opts:['공사성','전기','수도','유선방송','전화','정수기','기타']},
       {k:'supplyAmt',   label:'공급가액 (원)', type:'number'},
       {k:'taxAmt',      label:'부가세 (원)',   type:'number'},
@@ -21308,7 +21308,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }
     function drawDur(){
       var el = document.getElementById('tdDur'); if(!el) return;
-      var DL = [['안 넣음',0],['30분',30],['1시간',60],['1시간반',90],['2시간',120],['3시간',180],['4시간',240]];
+      var DL = [['안 넣음',0]];   /* v183 — 30분~4시간 단추는 없앴다 (달님 요청) */
       el.innerHTML =
         '<div class="td-dlbl">얼마나 걸렸나요? <span class="td-dhint">끝난 시각이 저절로 채워집니다</span></div>'
         + '<div class="td-drow">'
@@ -21317,11 +21317,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
             }).join('')
         + '</div>'
         + '<div class="td-srow">'
-        +   '<button type="button" class="td-pm" data-tdm="-1" title="소요 시간 줄이기">−</button>'
+        +   '<button type="button" class="td-pm" data-tdm="-1" title="방금 누른 단위만큼 줄이기">−</button>'
         +   [5,10,15,30].map(function(n){
-              return '<button type="button" class="td-unit'+(n===STEP?' on':'')+'" data-tdu="'+n+'">'+n+'분</button>';
+              return '<button type="button" class="td-unit'+(n===STEP?' on':'')+'" data-tdadd="'+n+'">＋'+n+'분</button>';
             }).join('')
-        +   '<button type="button" class="td-pm" data-tdm="1" title="소요 시간 늘리기">＋</button>'
+        +   '<button type="button" class="td-pm" data-tdm="1" title="방금 누른 단위만큼 늘리기">＋</button>'
         + '</div>'
         + '<div class="td-res">' + (DUR
             ? '<b>' + durLabel(DUR) + '</b> 걸림 · 끝난 시각 <b>' + endOf() + '</b>'
@@ -21329,8 +21329,15 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       el.querySelectorAll('[data-tdd]').forEach(function(b){
         b.addEventListener('click', function(){ DUR = +b.getAttribute('data-tdd'); drawDur(); });
       });
-      el.querySelectorAll('[data-tdu]').forEach(function(b){
-        b.addEventListener('click', function(){ STEP = +b.getAttribute('data-tdu'); drawDur(); });
+      /* v183 — 5·10·15·30분은 「단위 고르기」가 아니라 「누를수록 쌓이는」 단추다.
+         방금 누른 값이 ＋/− 단추가 움직일 폭도 함께 정한다. */
+      el.querySelectorAll('[data-tdadd]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var n = +b.getAttribute('data-tdadd');
+          STEP = n;
+          DUR = Math.max(0, Math.min(24*60-5, DUR + n));
+          drawDur();
+        });
       });
       el.querySelectorAll('[data-tdm]').forEach(function(b){
         b.addEventListener('click', function(){
@@ -21968,6 +21975,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
   /* ── 셀 그리기 ── */
   function cellHTML(e, p){
     var v = pget(e, p.id), t = p.type;
+    /* v185 — 업무 「지출종류」는 보이는 이름만 통일한다 (저장 값은 그대로) */
+    if(p.id==='f:expType' && v && typeof wlExpTypeLabel==='function')
+      return '<span>'+esc(wlExpTypeLabel(v))+'</span>';
     if(p.id==='_cat')   return tagOf(e);
     if(p.id==='_att')   return v ? '<span style="color:#8ba0b6;font-size:11.5px">📎'+v+'</span>' : '';
     if(p.id==='_title'){

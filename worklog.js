@@ -498,6 +498,39 @@ function isChosungOnly(str){
   return /^[ㄱ-ㅎ]+$/.test(str);
 }
 
+/* v184 — 자재 찾기 「창구 하나」.
+   글자 포함 + 초성(ㅎㄱ → 형광등) 둘 다 통한다.
+   자재 고르기 창 두 개(wlPickItem·wlPickMats)가 이 함수만 쓴다. */
+function wlMatFind(it, q){
+  q = String(q==null?'':q).trim();
+  if(!q) return true;
+  try{
+    var hay = [it.itemName, it.spec, it.maker, it.vendor, it.unit].join(' ');
+    if(hay.toLowerCase().indexOf(q.toLowerCase()) >= 0) return true;
+    var qc = q.replace(/\s/g,'');
+    if(isChosungOnly(qc)) return getChosung(hay).replace(/\s/g,'').indexOf(qc) >= 0;
+    if(getChosung(it.itemName||'').indexOf(q) >= 0) return true;
+  }catch(e){ console.warn('[자재 찾기] 실패', e); }
+  return false;
+}
+window.wlMatFind = wlMatFind;
+
+/* v185 — 업무 「지출종류」의 보이는 이름 창구.
+   🔴 저장 값(자재·개인비용·전표·후불청구)은 절대 바꾸지 않는다 — 옛 기록이 전부 깨진다.
+      바꾸는 것은 화면에 보이는 글자뿐이며, 업무 창(2454행)·정산표와 같은 말을 쓴다. */
+var WL_EXPTYPE_NAME = {
+  '자재'     : ['📦 자재',     '📦 자재'],
+  '개인비용' : ['💸 개인지출', '💸 개인지출 (선결재)'],
+  '전표'     : ['📋 선납부',   '📋 선납부 (전표 · 월별청구)'],
+  '후불청구' : ['📃 기타정산', '📃 기타정산 (세금계산서)']
+};
+function wlExpTypeLabel(v, long){
+  var k = String(v==null?'':v).trim();
+  var x = WL_EXPTYPE_NAME[k];
+  return x ? x[long?1:0] : k;
+}
+window.wlExpTypeLabel = wlExpTypeLabel;
+
 /* v44: 분야 검색 가능한 UI (초성검색 지원) */
 function makeFieldSearchUI(inputId, listId, onSelect){
   const inp = document.getElementById(inputId);
@@ -12624,7 +12657,7 @@ async function githubUpload(token){
       +   '<b style="font-size:16px;color:#1a2f45">📦 저장된 자재에서 고르기</b>'
       +   '<button type="button" id="ipX" style="border:none;background:none;font-size:21px;'
       +     'color:#94a3b8;cursor:pointer;min-height:44px;min-width:44px">✕</button></div>'
-      + '<input type="text" id="ipQ" placeholder="자재명 · 규격 · 제조원으로 검색" autocomplete="off"'
+      + '<input type="text" id="ipQ" placeholder="자재명 · 규격 · 제조원 검색 (초성 가능: ㅎㄱ → 형광등)" autocomplete="off"'
       +   ' style="width:100%;box-sizing:border-box;padding:11px 13px;font-size:14px;'
       +   'border:1.5px solid #dbe6f4;border-radius:10px;font-family:inherit;min-height:44px">'
       + '<div style="display:flex;align-items:center;gap:8px;margin:10px 2px 8px">'
@@ -12641,15 +12674,58 @@ async function githubUpload(token){
     var xb=ov.querySelector('#ipX'); if(xb) xb.addEventListener('click', close);
     var qEl=ov.querySelector('#ipQ'), listEl=ov.querySelector('#ipList'), qtyEl=ov.querySelector('#ipQty');
     if(prefill) qEl.value = prefill;
+
+    /* v184 — 못 찾았을 때 「직접 넣는 길」.
+       업체 칸의 「＋ 연락처에 새로 등록」과 같은 방식이다. */
+    function ipNewRows(){
+      var q = String(qEl.value||'').trim();
+      if(!q) return '';
+      return '<div data-ipnew="reg" style="border:1.5px dashed #93c5fd;border-radius:11px;'
+        + 'padding:12px;margin-bottom:7px;cursor:pointer;min-height:44px;background:#f8fbff;'
+        + 'color:#2563a8;font-size:13.5px;font-weight:800">＋ 「'+ES(q)+'」 자재로 새로 등록</div>'
+        + '<div data-ipnew="once" style="border:1.5px dashed #e2e8f0;border-radius:11px;'
+        + 'padding:12px;margin-bottom:7px;cursor:pointer;min-height:44px;background:#fff;'
+        + 'color:#7a92a8;font-size:13px;font-weight:700">↳ 등록하지 않고 이번만 쓰기</div>';
+    }
+    function ipBindNew(){
+      [].forEach.call(listEl.querySelectorAll('[data-ipnew]'), function(row){
+        row.addEventListener('click', function(){
+          var q = String(qEl.value||'').trim();
+          var qty = Number(qtyEl.value)||1;
+          if(!q) return;
+          if(row.getAttribute('data-ipnew')==='once'){
+            close();
+            try{ onPick({ id:'', name:q, spec:'', unit:'', price:0, qty:qty }); }
+            catch(e){ console.error('[자재 직접 입력]', e); }
+            return;
+          }
+          if(typeof openNewMaterialModal !== 'function'){
+            console.warn('[자재 새로 등록] openNewMaterialModal 을 못 찾았어요');
+            if(typeof toast==='function') toast('새 자재 창을 못 열었어요 — 「이번만 쓰기」로 넣어 주세요');
+            return;
+          }
+          close();
+          openNewMaterialModal(q, function(it){
+            it = it || {};
+            try{ onPick({ id:it.id||'', name:it.itemName||q, spec:it.spec||'',
+                          unit:it.unit||'', price:Number(it.unitPrice)||0, qty:qty }); }
+            catch(e){ console.error('[자재 새로 등록]', e); }
+          });
+        });
+      });
+    }
     function draw(){
-      var q=String(qEl.value||'').trim().toLowerCase();
-      var rows = q ? items.filter(function(it){
-        return [it.itemName, it.spec, it.maker, it.vendor, it.unit].join(' ').toLowerCase().indexOf(q)>=0;
-      }) : items;
+      var qRaw=String(qEl.value||'').trim();
+      var q=qRaw.toLowerCase();
+      /* v184 — 찾기는 창구 하나(wlMatFind)로. 초성(ㅎㄱ → 형광등)도 통한다 */
+      var rows = q ? items.filter(function(it){ return wlMatFind(it, qRaw); }) : items;
       var show = rows.slice(0,200);
       if(!show.length){
-        listEl.innerHTML='<div style="padding:26px 8px;text-align:center;color:#a8b8c8;font-size:13.5px">'
-          + (items.length? '찾는 자재가 없어요' : '자재 탭에 등록된 자재가 없어요') + '</div>';
+        listEl.innerHTML =
+          '<div style="padding:22px 8px;text-align:center;color:#a8b8c8;font-size:13.5px">'
+          + (items.length ? '찾는 자재가 없어요' : '자재 탭에 등록된 자재가 없어요') + '</div>'
+          + ipNewRows();
+        ipBindNew();
         return;
       }
       listEl.innerHTML = show.map(function(it){
@@ -12661,7 +12737,8 @@ async function githubUpload(token){
           +   (it.unit? ' · '+ES(it.unit) : '')
           +   (Number(it.unitPrice)? ' · '+Number(it.unitPrice).toLocaleString('ko-KR')+'원' : '')
           + '</div></div>';
-      }).join('');
+      }).join('') + ipNewRows();
+      ipBindNew();
       [].forEach.call(listEl.querySelectorAll('[data-ipid]'), function(row){
         row.addEventListener('click', function(){
           var it = items.filter(function(x){ return x.id===row.getAttribute('data-ipid'); })[0];
@@ -12708,7 +12785,7 @@ async function githubUpload(token){
       +   '<button type="button" id="mpX" style="border:none;background:none;font-size:21px;'
       +     'color:#94a3b8;cursor:pointer;min-height:44px;min-width:44px">✕</button></div>'
       + '<div id="mpBag" style="margin-bottom:10px"></div>'
-      + '<input type="text" id="mpQ" placeholder="자재명 · 규격 · 제조원으로 검색" autocomplete="off"'
+      + '<input type="text" id="mpQ" placeholder="자재명 · 규격 · 제조원 검색 (초성 가능: ㅎㄱ → 형광등)" autocomplete="off"'
       +   ' style="width:100%;box-sizing:border-box;padding:11px 13px;font-size:14px;'
       +   'border:1.5px solid #dbe6f4;border-radius:10px;font-family:inherit;min-height:44px">'
       + '<div style="display:flex;align-items:center;gap:8px;margin:10px 2px 8px">'
@@ -12733,6 +12810,54 @@ async function githubUpload(token){
 
     var qEl=ov.querySelector('#mpQ'), listEl=ov.querySelector('#mpList'),
         bagEl=ov.querySelector('#mpBag'), qtyEl=ov.querySelector('#mpQty');
+
+    /* v184 — 못 찾았을 때 「직접 넣는 길」 (업체 → 연락처 새로 등록과 같은 방식) */
+    function mpNewRows(){
+      var q=String(qEl.value||'').trim();
+      if(!q) return '';
+      return '<div data-mpnew="reg" style="border:1.5px dashed #93c5fd;border-radius:11px;'
+        + 'padding:12px;margin-bottom:7px;cursor:pointer;min-height:44px;background:#f8fbff;'
+        + 'color:#2563a8;font-size:13.5px;font-weight:800">＋ 「'+ES(q)+'」 자재로 새로 등록</div>'
+        + '<div data-mpnew="once" style="border:1.5px dashed #e2e8f0;border-radius:11px;'
+        + 'padding:12px;margin-bottom:7px;cursor:pointer;min-height:44px;background:#fff;'
+        + 'color:#7a92a8;font-size:13px;font-weight:700">↳ 등록하지 않고 이번만 담기</div>';
+    }
+    function mpAdd(o){
+      if(bag.length>=MAX){
+        if(typeof toast==='function') toast('자재는 최대 '+MAX+'종까지 담을 수 있어요');
+        return;
+      }
+      bag.push(o); qEl.value=''; drawBag(); drawList();
+      try{ qEl.focus(); }catch(e){}
+    }
+    function mpBindNew(){
+      [].forEach.call(listEl.querySelectorAll('[data-mpnew]'), function(row){
+        row.addEventListener('click', function(){
+          var q=String(qEl.value||'').trim();
+          var qty=Number(qtyEl.value)||1;
+          if(!q) return;
+          if(row.getAttribute('data-mpnew')==='once'){
+            mpAdd({ id:'', name:q, spec:'', unit:'', price:0, qty:qty });
+            return;
+          }
+          if(typeof openNewMaterialModal !== 'function'){
+            console.warn('[자재 새로 등록] openNewMaterialModal 을 못 찾았어요');
+            if(typeof toast==='function') toast('새 자재 창을 못 열었어요 — 「이번만 담기」로 넣어 주세요');
+            return;
+          }
+          openNewMaterialModal(q, function(it){
+            it = it || {};
+            mpAdd({ id:it.id||'', name:it.itemName||q, spec:it.spec||'',
+                    unit:it.unit||'', price:Number(it.unitPrice)||0, qty:qty });
+          });
+          /* 새 자재 창(z-index 10001)이 이 창(10050) 뒤로 숨지 않게 올려 준다 */
+          setTimeout(function(){
+            var nm=document.getElementById('newMatOverlay');
+            if(nm) nm.style.zIndex='10099';
+          }, 0);
+        });
+      });
+    }
 
     function drawBag(){
       if(!bag.length){
@@ -12762,14 +12887,17 @@ async function githubUpload(token){
       });
     }
     function drawList(){
-      var q=String(qEl.value||'').trim().toLowerCase();
-      var rows = q ? items.filter(function(it){
-        return [it.itemName,it.spec,it.maker,it.vendor,it.unit].join(' ').toLowerCase().indexOf(q)>=0;
-      }) : items;
+      var qRaw=String(qEl.value||'').trim();
+      var q=qRaw.toLowerCase();
+      /* v184 — 찾기는 창구 하나(wlMatFind)로. 초성(ㅎㄱ → 형광등)도 통한다 */
+      var rows = q ? items.filter(function(it){ return wlMatFind(it, qRaw); }) : items;
       var show=rows.slice(0,200), full = bag.length>=MAX;
       if(!show.length){
-        listEl.innerHTML='<div style="padding:24px 8px;text-align:center;color:#a8b8c8;font-size:13.5px">'
-          + (items.length? '찾는 자재가 없어요' : '자재 탭에 등록된 자재가 없어요')+'</div>';
+        listEl.innerHTML =
+          '<div style="padding:22px 8px;text-align:center;color:#a8b8c8;font-size:13.5px">'
+          + (items.length ? '찾는 자재가 없어요' : '자재 탭에 등록된 자재가 없어요') + '</div>'
+          + mpNewRows();
+        mpBindNew();
         return;
       }
       listEl.innerHTML = show.map(function(it){
@@ -12783,7 +12911,9 @@ async function githubUpload(token){
           + '</div></div>';
       }).join('')
       + (full ? '<div style="text-align:center;color:#b45309;font-size:12.5px;font-weight:800;padding:8px">'
-                + '자재는 최대 '+MAX+'종까지 담을 수 있어요</div>' : '');
+                + '자재는 최대 '+MAX+'종까지 담을 수 있어요</div>' : '')
+      + mpNewRows();
+      mpBindNew();
       [].forEach.call(listEl.querySelectorAll('[data-mpid]'), function(row){
         row.addEventListener('click', function(){
           if(bag.length>=MAX) return;
@@ -14021,6 +14151,18 @@ async function githubUpload(token){
           if(isDate) setVal(inp, dayShift(it[1]));
           else if(it[1] === null) setVal(inp, '');
           else setVal(inp, hhmm(it[1]));
+          /* v183 — 값만 넣으면 아무 일도 안 일어난다.
+             노션식 칸은 blur 될 때 저장하는데, mousedown 에서 preventDefault 로
+             포커스를 붙잡고 있어 blur 가 안 나가기 때문이다.
+             → 넣은 뒤 「저장하고 편집칸 닫기」까지 해 준다. */
+          setTimeout(function(){
+            try{
+              if(typeof inp._dialDone === 'function'){ inp._dialDone(); return; }
+            }catch(e2){ console.warn('[빠른버튼] 저장 함수 실패', e2); }
+            try{ inp.dispatchEvent(new KeyboardEvent('keydown',
+                 { key:'Enter', code:'Enter', keyCode:13, which:13, bubbles:true })); }catch(e2){}
+            try{ inp.blur(); }catch(e2){}
+          }, 0);
         }catch(e){ console.warn('[빠른버튼] 넣기 실패', e); }
       });
       bar.appendChild(b);
@@ -17732,7 +17874,8 @@ async function githubUpload(token){
     'f:floor'     : { chips:'all', search:false },
     'f:field'     : { chips:'top', search:true,  cnt:'field' },
     'f:status'    : { chips:'all', search:false },   /* 완료 상태 */
-    'f:expType'   : { chips:'all', search:false },   /* 지출종류 */
+    'f:expType'   : { chips:'all', search:false,      /* 지출종류 — v185 이름만 통일 */
+                      lab:function(v){ return (typeof wlExpTypeLabel==='function') ? wlExpTypeLabel(v, true) : v; } },
     'f:expSubType': { chips:'all', search:false },   /* 세금계산서·전표 구분 */
     'f:purpose'   : { chips:'all', search:false }    /* 용도 */
   };
@@ -22766,7 +22909,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v182-0831-1808';
+  var JS_BUILD = 'v185-0901-0925';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
