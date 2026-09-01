@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v207-0901-1409";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v208-0901-1437";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=207-20260901t1409"></script>
+<script src="worklog.js?v=208-20260901t1437"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -19599,7 +19599,9 @@ select.lf-in{ padding-right:8px }
 .lf-card{ position:relative; background:#fff; border:1.5px solid #e8f0fa; border-left:4px solid #cbd5e1;
   border-radius:12px; padding:11px 13px 11px 14px; cursor:pointer; transition:all .13s;
   display:flex; flex-direction:column; min-height:104px }
-.lf-card > .lf-m:last-child{ margin-top:auto }
+/* v208 — 🔴 v207 의 `.lf-m:last-child{margin-top:auto}` 를 뺐다.
+      내용이 있는 카드는 배지 줄이 위에, 없는 카드는 바닥에 붙어 **카드마다 모양이 달랐다**.
+      대신 아래 .lf-note 가 늘 자리를 차지해 모든 카드가 같은 차례로 보인다. */
 .lf-card:hover{ border-color:#bcd2ea; box-shadow:0 3px 12px rgba(63,124,184,.13); transform:translateY(-1px) }
 .lf-t{ font-size:14.5px; font-weight:800; color:#1a2f45; padding-right:26px;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
@@ -19607,7 +19609,8 @@ select.lf-in{ padding-right:8px }
 .lf-tag{ display:inline-block; padding:1.5px 7px; border-radius:7px; font-size:11px; font-weight:800; line-height:1.55 }
 .lf-money{ font-size:13.5px; font-weight:900; color:#0f7a4a; margin-top:6px }
 .lf-note{ font-size:12px; color:#7a92a8; margin-top:5px; line-height:1.45;
-  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  min-height:35px }   /* v208 — 내용이 없어도 두 줄 자리를 지킨다 (카드 모양 통일) */
 .lf-del{ position:absolute; top:7px; right:7px; width:24px; height:24px; border:none;
   border-radius:7px; background:#fdeaea; color:#c0392b; font-size:12px; cursor:pointer;
   line-height:1; padding:0; opacity:.85 }
@@ -20056,6 +20059,14 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
 .pg-props.pg-edit .pg-prow.wide .pg-pk{ flex:0 0 166px }
 #pgPEdit.on{ background:#3f7cb8; color:#fff; border-color:#3f7cb8 }
 .pg-pv{ flex:1; min-width:0 }
+/* v208 — 🧹 청소의 지시사항·특이사항을 다른 속성 줄과 같은 모양으로 (노션식) */
+#ao-cleanlists{ grid-column:1 / -1 }
+#ao-cleanlists .pg-pv textarea{ width:100%; box-sizing:border-box; padding:8px 11px;
+  border:1.5px solid #e6eef7; border-radius:9px; font-size:13px; font-family:inherit;
+  line-height:1.6; background:#fff; outline:none; resize:vertical }
+#ao-cleanlists .pg-pv textarea:focus{ border-color:#3f7cb8 }
+#ao-cleanlists .pg-pv .ro{ white-space:pre-wrap; font-size:13px; line-height:1.6; color:#33567d;
+  padding:8px 2px }
 .pg-val{ min-height:34px; padding:7px 10px; border-radius:8px; cursor:text; font-size:14px;
   color:#1a2f45; background:#fff; border:1.5px solid #e3ecf7 }
 .pg-val:hover{ background:#fff; border-color:#a9cbee }
@@ -20311,7 +20322,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=207-20260901t1409"></script>
+<script src="personal.js?v=208-20260901t1437"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에

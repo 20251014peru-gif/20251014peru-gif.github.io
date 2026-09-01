@@ -6819,6 +6819,9 @@ function calcStock(itemId){
   return s;
 }
 
+/* v208 — 재고 계산을 밖에서도 쓸 수 있게 (계산은 calcStock 한 곳에서만 한다) */
+try{ window.wlStock = { of: calcStock }; }catch(e){}
+
 // 품목 ID 자동 생성 (M0001 형식)
 function nextItemCode(){
   const used=entries.filter(e=>e.kind==="item"&&/^M\d+$/.test(e.itemCode||"")).map(e=>parseInt(e.itemCode.slice(1)));
@@ -23045,7 +23048,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v207-0901-1409';
+  var JS_BUILD = 'v208-0901-1437';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -24373,39 +24376,44 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
                                 .map(function(x){ return x.trim(); })
                                 .filter(function(x){ return x; }); }
 
+  /* ══ v208 — 지시사항·특이사항을 「노션 속성 줄」 모양으로 ══
+        달님 : 「지시사항·특이사항 별도 칸에서 분리해 나오라고, 노션 스타일로」
+        상자(테두리·배경)를 없애고 다른 속성 줄(📅 날짜 · 📝 내용 · 🔤 반장)과
+        똑같은 `.pg-prow / .pg-pk / .pg-pv` 로 만든다. 한 줄에 하나씩. */
+  function cRow(label, inner){
+    return '<div class="pg-prow" style="align-items:flex-start">'
+         + '<span class="pg-pk"><span class="pg-pnm">' + label + '</span></span>'
+         + '<span class="pg-pv">' + inner + '</span></div>';
+  }
+
   function htmlClean(r, edit){
     var h = '';
 
     /* 👔 소장 지시 — 화면에서는 뺐지만 옛 자료가 있으면 알려 준다 (묻히지 않게) */
     var dorder = A(r.directorOrders).filter(function(x){ return String(x==null?'':x).trim(); });
     if(dorder.length){
-      h += '<div style="font-size:12px;color:#8a7a4a;background:#fffbea;border-radius:8px;'
-         + 'padding:7px 9px;margin-bottom:8px;line-height:1.6">'
-         + '👔 옛 <b>소장 지시</b> ' + dorder.length + '줄이 남아 있어요'
-         + (edit ? ' <button type="button" id="clMerge" style="margin-left:6px;height:26px;padding:0 10px;'
-                   + 'border:1.5px solid #e0d6b0;border-radius:7px;background:#fff;color:#8a7a4a;'
-                   + 'font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">'
-                   + '📌 지시사항으로 옮기기</button>' : '')
-         + '<div style="color:#a89a76;margin-top:3px">' + ES(dorder.join(' · ')).slice(0, 200) + '</div>'
-         + '</div>';
+      h += cRow('👔 옛 소장 지시',
+            '<div style="font-size:12px;color:#8a7a4a;background:#fffbea;border-radius:8px;'
+          + 'padding:7px 9px;line-height:1.6">'
+          + ES(dorder.join(' · ')).slice(0, 200)
+          + (edit ? '<br><button type="button" id="clMerge" style="margin-top:5px;height:26px;padding:0 10px;'
+                    + 'border:1.5px solid #e0d6b0;border-radius:7px;background:#fff;color:#8a7a4a;'
+                    + 'font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">'
+                    + '📌 지시사항으로 옮기기</button>' : '')
+          + '</div>');
     }
 
     TXTKEYS.forEach(function(c){
       var val = linesOf(r[c.k]);
-      h += '<div style="font-size:12px;font-weight:900;color:#33567d;margin:0 0 4px">'
-         + c.t + ' <span style="font-weight:600;color:#8ba0b6">'
-         + (val ? (toLines(val).length + '줄') : '') + '</span></div>';
+      var n2  = val ? toLines(val).length : 0;
+      var lab = c.t + (n2 ? ' <span style="font-weight:600;color:#b8c6d4">' + n2 + '</span>' : '');
       if(edit){
-        h += '<textarea data-clt="' + c.k + '" rows="' + c.rows + '" placeholder="' + ES(c.ph) + '"'
-           + ' style="width:100%;box-sizing:border-box;min-height:' + (c.rows * 22 + 16) + 'px;'
-           + 'padding:9px 11px;border:1.5px solid #e6eef7;border-radius:9px;font-size:13px;'
-           + 'font-family:inherit;line-height:1.6;background:#fff;outline:none;resize:vertical;'
-           + 'margin-bottom:12px">' + ES(val) + '</textarea>';
+        h += cRow(lab, '<textarea data-clt="' + c.k + '" rows="' + c.rows + '"'
+                     + ' placeholder="' + ES(c.ph) + '"'
+                     + ' style="min-height:' + (c.rows * 22 + 16) + 'px">' + ES(val) + '</textarea>');
       }else{
-        h += '<div style="white-space:pre-wrap;font-size:13px;line-height:1.6;color:#33567d;'
-           + 'background:#fff;border:1.5px solid #eef3f9;border-radius:9px;padding:9px 11px;'
-           + 'min-height:' + (c.rows * 22) + 'px;margin-bottom:12px">'
-           + (val ? ES(val) : '<span style="color:#b8c6d4">비어 있어요</span>') + '</div>';
+        h += cRow(lab, '<div class="ro">'
+                     + (val ? ES(val) : '<span style="color:#b8c6d4">비어 있어요</span>') + '</div>');
       }
     });
 
@@ -24416,29 +24424,18 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
         if(!list.length && !edit) return;
         var tail = (k === 'staffWork' && list.length)
                  ? '<span id="cwSum">' + staffTail(list) + '</span>' : '';
-        h += sec(k, list, edit, tail);
+        h += '<div style="grid-column:1/-1">' + sec(k, list, edit, tail) + '</div>';
       });
     }
 
-    h += '<div style="margin-top:6px;font-size:11.5px;color:#a8b8c8;line-height:1.7">'
-       + (edit ? '한 줄에 하나씩 적으세요 · 칸에서 빠져나올 때 저장됩니다' : '보기 전용입니다')
-       + '<br>🧹 청소원 작업 · 입출고 ' + (cFull() ? '켜짐 — 끄려면 wlCleanEdit.simple()'
-                                                  : '숨김 — 보려면 wlCleanEdit.full()')
-       + ' · 상자 끄기 wlCleanEdit.off()'
+    h += '<div style="margin-top:4px;font-size:11.5px;color:#c2cedb;line-height:1.7">'
+       + (edit ? '한 줄에 하나씩 · 칸에서 빠져나올 때 저장됩니다' : '보기 전용')
+       + ' · 🧹 청소원 작업 · 입출고 ' + (cFull() ? '켜짐 (끄기 wlCleanEdit.simple())'
+                                                  : '숨김 (보기 wlCleanEdit.full())')
        + '</div>';
     return h;
   }
 
-  /* 🔴 상자 전체를 다시 그리지 않는다 — 합계 줄 하나만 갈아 끼운다.
-        (옆 칸을 이어서 고치는 중일 수 있고, 한글을 치는 중이면 자모가 깨진다) */
-  function reSumClean(box, rid){
-    try{
-      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0];
-      if(!r2) return;
-      var el = box.querySelector('#cwSum');
-      if(el) el.innerHTML = staffTail(r2.staffWork);
-    }catch(e){ console.warn('[청소 목록] 합계 갱신 실패', e); }
-  }
   /* v207 — 🧹 글칸 두 개를 잇는다.
         🔴 글자를 치는 동안에는 아무것도 하지 않는다 (한글 자모가 깨진다).
            칸에서 빠져나올 때(change) 만 줄로 쪼개어 저장한다. */
@@ -24478,6 +24475,19 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     }
   }
 
+  /* v205 — 🔴 상자 전체를 다시 그리지 않는다. 청소원 합계 줄 하나만 갈아 끼운다.
+        (옆 칸을 이어서 고치는 중일 수 있고, 한글을 치는 중이면 자모가 깨진다)
+        v208 — 이 함수가 편집 중에 지워져 `reSumClean is not defined` 가 났었다.
+               전수 점검(sweep)이 잡았다. 함수를 지울 때는 부르는 곳도 함께 본다. */
+  function reSumClean(box, rid){
+    try{
+      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0];
+      if(!r2) return;
+      var el = box.querySelector('#cwSum');
+      if(el) el.innerHTML = staffTail(r2.staffWork);
+    }catch(e){ console.warn('[청소 목록] 합계 갱신 실패', e); }
+  }
+
   function redrawClean(box, rid){
     try{
       var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
@@ -24501,9 +24511,9 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     try{
       window.wlAddOn(['.lf-page .pg-props', '.lf-page .pg-2l', '.lf-page .pg-body'], 'cleanlists',
         function(){
+          /* v208 — 테두리·배경 없이. 다른 속성 줄과 나란히 보이게 한다 */
           var d = document.createElement('div');
-          d.style.cssText = 'margin-top:8px;border:1.5px solid #d8ecdd;border-radius:10px;'
-                          + 'padding:10px 12px;background:#fbfffc';
+          d.style.cssText = 'margin-top:2px';
           return d;
         },
         function(d){
@@ -24683,4 +24693,239 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
             '교훈 : 「한 번 지운다」식 이주는 반드시 되돌아온다. 판단하는 문에서 걸러라.'];
   };
   console.log('[잠금 모음] v204 준비됨 — wlLock() 으로 저장값과 실제 값을 견줍니다');
+})();
+
+
+/* ============================================================
+   📦↔🔄 자재와 입출고를 서로 오가기 (wlItemTx)  v208-0901
+
+   달님 : 「입출고와 자재는 합쳐도 될 듯한데 좋은 방법 있으면 추천해줘」
+          → 합치지 않고 **서로 오가게** 잇는다 (달님이 고른 3번 안)
+
+   🔴 왜 안 합쳤나
+     📦 자재 = 「무엇을 쓰는가」 (품목 대장)
+     🔄 입출고 = 「언제 몇 개 들어오고 나갔나」 (움직임)
+     한 종류로 만들면 **재고 자동계산(calcStock)** 이 깨진다. 지금 잘 도는 부분이다.
+
+   ▶ 무엇이 생기나
+     📦 자재 페이지 → 그 품목의 **입출고 내역** + 현재 재고 + [＋ 입출고 적기]
+     🔄 입출고 페이지 → **[📦 품목 열기]** + 그 품목의 현재 재고
+
+   되돌리기 : wlItemTx.off()
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var LS = 'wl_item_tx';
+  var MAX = 12;                                    /* 한 화면에 보여줄 최근 내역 */
+  function on(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function off(){ try{
+    window.wlAddOn(['#__none'], 'itemtx',   function(){ return null; });
+    window.wlAddOn(['#__none'], 'stocklink',function(){ return null; });
+  }catch(e){} }
+
+  function n(v){ var x = Number(String(v==null?'':v).replace(/[^0-9.-]/g,'')); return isFinite(x)?x:0; }
+  function won(v){ return Math.round(n(v)).toLocaleString('ko-KR'); }
+  function ES(t){ return String(t==null?'':t).replace(/[&<>"]/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+  function recNow(){
+    try{
+      var m = String(location.hash || '').match(/^#lp=([^&]+)/);
+      if(!m) return null;
+      var rid = decodeURIComponent(m[1]);
+      return (entries || []).filter(function(e){ return e && e.id === rid; })[0] || null;
+    }catch(e){ console.warn('[자재↔입출고] 기록 읽기 실패', e); return null; }
+  }
+  function recOf(id){
+    try{ return (entries || []).filter(function(e){ return e && e.id === id; })[0] || null; }
+    catch(e){ return null; }
+  }
+  /* 재고는 앱이 원래 쓰던 계산을 그대로 쓴다 */
+  function stockOf(itemId){
+    try{ if(window.wlStock && typeof window.wlStock.of === 'function') return window.wlStock.of(itemId); }
+    catch(e){ console.warn('[자재↔입출고] 재고 창구 실패', e); }
+    return null;
+  }
+  function txOf(itemId){
+    if(!itemId) return [];
+    return (entries || []).filter(function(e){ return e && e.kind === 'stock' && e.itemId === itemId; })
+      .sort(function(a,b){ return String(b.date||'').localeCompare(String(a.date||'')); });
+  }
+
+  function stockBadge(v){
+    if(v == null) return '';
+    var c = (v > 0) ? '#0f7a4a' : (v < 0 ? '#b52929' : '#8ba0b6');
+    return '<b style="color:' + c + '">' + won(v) + '</b>';
+  }
+
+  /* ── 📦 자재 페이지 : 이 품목의 입출고 ── */
+  function paintItem(){
+    if(!on()){ off(); return; }
+    var page = document.querySelector('.lf-page'); if(!page){ off(); return; }
+    var r = recNow();
+    if(!r || r.kind !== 'item'){
+      try{ window.wlAddOn(['#__none'], 'itemtx', function(){ return null; }); }catch(e){}
+      return;
+    }
+    var list = txOf(r.id), st = stockOf(r.id);
+    try{
+      window.wlAddOn(['[data-prow="f:safetyStock"] .pg-pv', '[data-prow="f:unitPrice"] .pg-pv',
+                      '.lf-page .pg-props'], 'itemtx',
+        function(){
+          var d = document.createElement('div');
+          d.style.cssText = 'grid-column:1/-1;margin-top:10px;border:1.5px solid #e2e8f5;'
+                          + 'border-radius:10px;padding:10px 12px;background:#fbfcff';
+          return d;
+        },
+        function(d){
+          try{ if(d.contains(document.activeElement)) return; }catch(e){}
+          var h = '<div style="font-size:12px;font-weight:900;color:#33567d;margin-bottom:6px">'
+                + '🔄 이 품목의 입출고 <span style="font-weight:600;color:#8ba0b6">' + list.length + '건</span>'
+                + (st == null ? '' : ' <span style="font-weight:700;color:#5b7fa6;margin-left:6px">현재 재고 '
+                                     + stockBadge(st) + '</span>')
+                + '</div>';
+          if(!list.length){
+            h += '<div style="font-size:12.5px;color:#b8c6d4;padding:4px 0">아직 입출고 기록이 없어요</div>';
+          }else{
+            h += '<table style="width:100%;border-collapse:collapse;font-size:12.5px"><tbody>';
+            list.slice(0, MAX).forEach(function(x){
+              var isIn = (x.stockType === '입고');
+              h += '<tr>'
+                 + '<td style="padding:3px 6px 3px 0;border-bottom:1px solid #eef3f9;white-space:nowrap;color:#7a92a8">'
+                 +   ES(String(x.date||'').slice(0,10)) + '</td>'
+                 + '<td style="padding:3px 6px;border-bottom:1px solid #eef3f9;white-space:nowrap">'
+                 +   '<span style="font-weight:800;color:' + (isIn ? '#0f7a4a' : '#b52929') + '">'
+                 +   ES(x.stockType || '') + '</span></td>'
+                 + '<td style="padding:3px 6px;border-bottom:1px solid #eef3f9;text-align:right;'
+                 +   'font-variant-numeric:tabular-nums">' + won(x.qty) + '</td>'
+                 + '<td style="padding:3px 6px;border-bottom:1px solid #eef3f9;text-align:right;'
+                 +   'font-variant-numeric:tabular-nums;color:#7a92a8">'
+                 +   (n(x.amount) ? won(x.amount) + '원' : '') + '</td>'
+                 + '<td style="padding:3px 0 3px 6px;border-bottom:1px solid #eef3f9;color:#8ba0b6">'
+                 +   ES(String(x.vendor || '').slice(0, 12)) + '</td>'
+                 + '<td style="width:52px;text-align:right;border-bottom:1px solid #eef3f9">'
+                 +   '<button type="button" data-txgo="' + ES(x.id) + '"'
+                 +   ' style="border:1px solid #dbe6f4;background:#fff;color:#3f7cb8;border-radius:7px;'
+                 +   'font-size:11px;font-weight:800;padding:2px 7px;cursor:pointer;font-family:inherit">열기</button>'
+                 + '</td></tr>';
+            });
+            h += '</tbody></table>';
+            if(list.length > MAX)
+              h += '<div style="font-size:11.5px;color:#a8b8c8;margin-top:4px">최근 ' + MAX
+                 + '건만 보여줍니다 (전체 ' + list.length + '건)</div>';
+          }
+          h += '<button type="button" id="txNew" style="margin-top:7px;height:30px;padding:0 12px;'
+             + 'border:1.5px dashed #cfe0f3;border-radius:8px;background:#f8fbff;color:#3f7cb8;'
+             + 'font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">＋ 입출고 적기</button>'
+             + ' <span style="font-size:11.5px;color:#a8b8c8">끄기 wlItemTx.off()</span>';
+          if(d.innerHTML !== h) d.innerHTML = h;
+
+          if(!d._txB){
+            d._txB = 1;
+            d.addEventListener('click', function(ev){
+              var go = ev.target.closest && ev.target.closest('[data-txgo]');
+              if(go){
+                ev.preventDefault(); ev.stopPropagation();
+                var id = go.getAttribute('data-txgo');
+                try{
+                  if(typeof window.wlOpenData === 'function') window.wlOpenData('stock');
+                  setTimeout(function(){
+                    try{ location.hash = '#lp=' + encodeURIComponent(id) + '&ds=stock';
+                         if(typeof window.wlOpenPage === 'function') window.wlOpenPage(id); }
+                    catch(e){ console.error('[자재↔입출고] 열기 실패', e); }
+                  }, 260);
+                }catch(e){ console.error('[자재↔입출고] 열기 실패', e); }
+                return;
+              }
+              var nb = ev.target.closest && ev.target.closest('#txNew');
+              if(nb){
+                ev.preventDefault(); ev.stopPropagation();
+                try{
+                  if(typeof window.wlNewPageWith === 'function')
+                    window.wlNewPageWith('stock', { itemId:r.id, itemName:(r.itemName||''),
+                                                    vendor:(r.vendor||''), stockType:'입고', qty:1 }, true);
+                  else if(typeof toast === 'function') toast('새 기록 창구를 못 찾았어요');
+                }catch(e){ console.error('[자재↔입출고] 새 기록 실패', e);
+                  if(typeof toast === 'function') toast('못 만들었어요: ' + (e.message || e)); }
+              }
+            });
+          }
+        });
+    }catch(e){ console.warn('[자재↔입출고] 붙이기 실패', e); }
+  }
+
+  /* ── 🔄 입출고 페이지 : 품목으로 건너가기 ── */
+  function paintStock(){
+    if(!on()) return;
+    var page = document.querySelector('.lf-page'); if(!page) return;
+    var r = recNow();
+    if(!r || r.kind !== 'stock' || !r.itemId){
+      try{ window.wlAddOn(['#__none'], 'stocklink', function(){ return null; }); }catch(e){}
+      return;
+    }
+    var it = recOf(r.itemId), st = stockOf(r.itemId);
+    try{
+      window.wlAddOn(['[data-prow="f:itemId"] .pg-pv', '[data-prow="_title"] .pg-pv',
+                      '.lf-page .pg-props'], 'stocklink',
+        function(){
+          var d = document.createElement('div');
+          d.style.cssText = 'margin-top:6px';
+          return d;
+        },
+        function(d){
+          var nm = it ? String(it.itemName || '').trim() : '';
+          var h = '<button type="button" id="txItem"'
+                + (it ? '' : ' disabled')
+                + ' style="height:30px;padding:0 12px;border:1.5px solid #ddd6f3;border-radius:8px;'
+                + 'background:' + (it ? '#faf8ff' : '#f4f4f6') + ';color:' + (it ? '#6d5bb8' : '#b8bcc8') + ';'
+                + 'font-size:12px;font-weight:800;cursor:' + (it ? 'pointer' : 'default') + ';font-family:inherit">'
+                + '📦 품목 열기' + (nm ? ' — ' + ES(nm) : ' (품목 없음)') + '</button>'
+                + (st == null ? '' : ' <span style="font-size:12px;color:#5b7fa6;font-weight:700">현재 재고 '
+                                     + stockBadge(st) + '</span>');
+          if(d.innerHTML !== h) d.innerHTML = h;
+          var b = d.querySelector('#txItem');
+          if(b && it && !b._txB){
+            b._txB = 1;
+            b.addEventListener('click', function(ev){
+              ev.preventDefault(); ev.stopPropagation();
+              try{
+                if(typeof window.wlOpenData === 'function') window.wlOpenData('item');
+                setTimeout(function(){
+                  try{ location.hash = '#lp=' + encodeURIComponent(it.id) + '&ds=item';
+                       if(typeof window.wlOpenPage === 'function') window.wlOpenPage(it.id); }
+                  catch(e){ console.error('[자재↔입출고] 품목 열기 실패', e); }
+                }, 260);
+              }catch(e){ console.error('[자재↔입출고] 품목 열기 실패', e); }
+            });
+          }
+        });
+    }catch(e){ console.warn('[자재↔입출고] 단추 붙이기 실패', e); }
+  }
+
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:47, n:'자재↔입출고', f:paintItem });
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:48, n:'입출고→품목',  f:paintStock });
+
+  window.wlItemTx = {
+    off: function(){ try{ localStorage.setItem(LS,'0'); }catch(e){} off();
+                     if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                     return '자재↔입출고 잇기를 끕니다'; },
+    on:  function(){ try{ localStorage.setItem(LS,'1'); }catch(e){}
+                     if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                     return '자재↔입출고 잇기를 켭니다'; },
+    tx:  function(itemId){ return txOf(itemId); },
+    stock: function(itemId){ return stockOf(itemId); },
+    /* 품목을 안 가리키는(고아) 입출고 찾기 — 제목이 「(품목 없음)」 으로 나오는 것들 */
+    orphan: function(){
+      var bad = [];
+      (entries || []).forEach(function(e){
+        if(!e || e.kind !== 'stock') return;
+        if(!e.itemId){ bad.push({ id:e.id, 날짜:e.date, 왜:'품목을 안 가리킴' }); return; }
+        if(!recOf(e.itemId)) bad.push({ id:e.id, 날짜:e.date, itemId:e.itemId, 왜:'가리키는 품목이 없음' });
+      });
+      return { 입출고:(entries||[]).filter(function(e){ return e && e.kind==='stock'; }).length,
+               문제:bad.length, 목록:bad };
+    },
+    state: function(){ return { 잇기:(on()?'켜짐':'꺼짐'), 한번에보는내역:MAX }; }
+  };
+  console.log('[자재↔입출고] v208 준비됨 — 자재에 입출고 내역 · 입출고에 [📦 품목 열기]');
 })();

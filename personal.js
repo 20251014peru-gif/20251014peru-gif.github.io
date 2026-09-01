@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v207-0901-1409';
+window.PERSONAL_BUILD = 'v208-0901-1437';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -460,10 +460,22 @@ window.PERSONAL_BUILD = 'v207-0901-1409';
     return '<div class="lf-card" data-lid="'+esc(e.id)+'" style="border-left-color:'+col
       + (e.done?';opacity:.58':'') + (chC? (';background:'+colorOf(chC.color).bg+'66'):'') + '">'
       + '<button class="lf-del" data-ldel="'+esc(e.id)+'" title="삭제">🗑</button>'
+      /* ══ v208 — 카드 모양을 통일한다 ══
+            달님 : 「사이트 카드가 다 서로 틀리게 나오는 거 왜 그런지 파악하고 통일시켜」
+            ▶ 원인 두 가지
+              ① v207 에서 넣은 `.lf-m:last-child{margin-top:auto}` — 내용이 있는 카드는
+                 배지 줄이 위에, 없는 카드는 바닥에 붙어 **줄 차례가 카드마다 달랐다**.
+                 (v208 에서 그 규칙을 뺐다)
+              ② 날짜가 없는 종류(🌐 사이트·📦 자재…)도 「📅 」 만 찍혀 자리를 먹었다.
+            ▶ 이제 모든 카드가 **제목 / 배지 줄 / 내용 두 줄 자리** 로 똑같이 생긴다.
+               내용이 없어도 자리는 지킨다 (.lf-note 의 min-height). */
       + '<div class="lf-t">'+esc(ttl)+'</div>'
-      + '<div class="lf-m"><span style="font-weight:700">📅 '+esc(e.date||'')+'</span>'+tags+'</div>'
+      + '<div class="lf-m">'
+      +   (e.date ? '<span style="font-weight:700">📅 '+esc(e.date)+'</span>' : '')
+      +   tags
+      + '</div>'
       + (mo? '<div class="lf-money">💰 '+won(mo)+'원</div>':'')
-      + (note? '<div class="lf-note">'+esc(note)+'</div>':'')
+      + '<div class="lf-note">'+(note? esc(note):'')+'</div>'
       + ph
       + '</div>';
   }
