@@ -531,6 +531,27 @@ function wlExpTypeLabel(v, long){
 }
 window.wlExpTypeLabel = wlExpTypeLabel;
 
+/* v187 — 업무의 「지출종류 + 하위 구분」이 정산표 어느 칸으로 가는지 정하는 **창구 하나**.
+   업무 창(renderWorkModal)과 노션식 페이지가 모두 이것만 쓴다.
+   🔴 판단을 두 곳에서 하지 않는다 (제0원칙-12). */
+var WL_WORK_SUBS = {
+  '전표':     ['수도','전기','유선방송','전화','정수기','기타'],
+  '후불청구': ['공사성']
+};
+function wlWorkSettleGroup(expType, expSubType){
+  var t  = String(expType==null?'':expType).trim();
+  var st = String(expSubType==null?'':expSubType).trim();
+  if(t==='후불청구') return '기타정산';
+  if(t==='전표')     return (st==='수도'||st==='전기') ? '수도광열비' : '선납부';
+  if(t==='개인비용') return '선결재';
+  return '';
+}
+window.wlWorkSettleGroup = wlWorkSettleGroup;
+window.wlWorkSubs = function(t){
+  var o = WL_WORK_SUBS[String(t==null?'':t).trim()];
+  return o ? o.slice() : [];
+};
+
 /* v44: 분야 검색 가능한 UI (초성검색 지원) */
 function makeFieldSearchUI(inputId, listId, onSelect){
   const inp = document.getElementById(inputId);
@@ -2570,11 +2591,10 @@ function renderWorkModal(data, mode){
     "전표":    ["수도","전기","유선방송","전화","정수기","기타"],
     "후불청구":["공사성"]
   };
+  /* v187 — 판단은 창구 하나(wlWorkSettleGroup)에서만 한다 */
   function wGrpOf(t, st){
-    if(t==="후불청구") return "기타정산";
-    if(t==="전표")     return (st==="수도"||st==="전기") ? "수도광열비" : "선납부";
-    if(t==="개인비용") return "선결재";
-    return "";
+    try{ return wlWorkSettleGroup(t, st); }
+    catch(e){ console.warn('[정산 그룹] 창구 실패', e); return ""; }
   }
   function wPaintSub(){
     const tEl=$("m-expType"), sEl=$("m-expSubType"), row=$("w-subRow"), hint=$("w-grpHint");
@@ -22909,7 +22929,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v185-0901-0925';
+  var JS_BUILD = 'v188-0901-0951';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -23506,4 +23526,71 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     return r;
   };
   console.log('[시계] wlTime() 으로 날짜·시각을 확인할 수 있습니다');
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   v187 — 노션식 페이지에서도 「하위 구분」을 지출종류 바로 밑에서 고른다
+   달님 : 「수도 전기도 넣기로 했는데 없네」
+   ▸ 있기는 있었다 — 지출종류를 고르면 나오지만 자리가 멀어 안 보였다.
+   ▸ 이제 지출종류 바로 다음 줄로 데려오고, 업무 창과 똑같이
+     「🧮 정산표에서 ○○ 칸으로 들어갑니다」 를 함께 띄운다.
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var COL = { '선결재':'#3f7cb8', '선납부':'#7c3aed', '수도광열비':'#0e7490', '기타정산':'#c2410c' };
+
+  function recNow(){
+    try{
+      var m = String(location.hash || '').match(/^#lp=([^&]+)/);
+      if(!m) return null;
+      var rid = decodeURIComponent(m[1]);
+      return (entries || []).filter(function(e){ return e && e.id === rid; })[0] || null;
+    }catch(e){ console.warn('[하위 구분] 기록 읽기 실패', e); return null; }
+  }
+
+  function paint(){
+    var page = document.querySelector('.lf-page');
+    var tRow = page ? page.querySelector('[data-prow="f:expType"]') : null;
+    if(!tRow){ window.wlAddOn(['#__none'], 'subhint', function(){ return null; }); return; }
+
+    var rec = recNow();
+    var t   = rec ? String(rec.expType    || '').trim() : '';
+    var st  = rec ? String(rec.expSubType || '').trim() : '';
+    var subs = (typeof window.wlWorkSubs === 'function') ? window.wlWorkSubs(t) : [];
+
+    if(!subs.length){ window.wlAddOn(['#__none'], 'subhint', function(){ return null; }); return; }
+
+    /* 하위 구분 줄을 지출종류 바로 뒤로 데려온다 (숨김 상자에 있어도) */
+    var sRow = page.querySelector('[data-prow="f:expSubType"]');
+    if(sRow){
+      try{
+        sRow.style.display = '';
+        sRow._ruleKeep = 1;
+        if(tRow.nextElementSibling !== sRow && tRow.parentNode){
+          tRow.parentNode.insertBefore(sRow, tRow.nextSibling);
+        }
+      }catch(e){ console.warn('[하위 구분] 자리 옮기기 실패', e); }
+    }
+
+    /* 어디로 가는지 — 업무 창(v182)과 같은 말 */
+    window.wlAddOn(
+      ['[data-prow="f:expSubType"] .pg-pv', '[data-prow="f:expType"] .pg-pv'], 'subhint',
+      function(){
+        var d = document.createElement('div');
+        d.style.cssText = 'margin-top:6px;font-size:12px;font-weight:700;line-height:1.55';
+        return d;
+      },
+      function(d){
+        var gk = '';
+        try{ gk = window.wlWorkSettleGroup ? window.wlWorkSettleGroup(t, st) : ''; }
+        catch(e){ console.warn('[하위 구분] 그룹 판단 실패', e); }
+        d.innerHTML = gk
+          ? '🧮 정산표에서 <b style="color:' + (COL[gk] || '#7a92a8') + '">' + gk + '</b> 칸으로 들어갑니다'
+            + (st ? '' : ' <span style="color:#b45309">— 아래에서 하위 구분을 고르세요</span>')
+          : '';
+      });
+  }
+
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:42, n:'하위 구분 자리', f:paint });
+  console.log('[하위 구분] 지출종류 바로 밑에서 고릅니다 (v187)');
 })();

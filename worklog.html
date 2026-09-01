@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v185-0901-0925";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v188-0901-0951";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=185-20260901t0925"></script>
+<script src="worklog.js?v=188-20260901t0951"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -21204,6 +21204,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       + '<div class="td-dur" id="tdDur"></div>'
       + '<div class="lf-mbtn" style="margin-top:14px">'
       +   '<button type="button" id="tdNow" class="lf-radd" style="height:42px">지금</button>'
+      /* v186 — 넣어 둔 시각을 지우는 길 (달님 요청) */
+      +   '<button type="button" id="tdClr" style="height:42px;padding:0 14px;margin-left:6px;'
+      +     'border:1.5px dashed #e2b6b6;border-radius:10px;background:#fff;color:#b52929;'
+      +     'font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"'
+      +     ' title="이 칸의 시각을 비웁니다">🗑 시간 지움</button>'
       +   '<div style="flex:1"></div>'
       +   '<button type="button" id="tdC" style="height:42px;padding:0 16px;border:1.5px solid #dbe6f4;border-radius:10px;background:#fff;color:#7a92a8;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">취소</button>'
       +   '<button type="button" id="tdOk" style="height:42px;padding:0 22px;border:none;border-radius:10px;background:#2563a8;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">확인</button>'
@@ -21311,21 +21316,27 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var DL = [['안 넣음',0]];   /* v183 — 30분~4시간 단추는 없앴다 (달님 요청) */
       el.innerHTML =
         '<div class="td-dlbl">얼마나 걸렸나요? <span class="td-dhint">끝난 시각이 저절로 채워집니다</span></div>'
-        + '<div class="td-drow">'
+        /* v186 — 한 줄에 다섯 칸 균등. 줄바꿈되어 들쑥날쑥하던 것을 바로잡았다 */
+        + '<div class="td-drow" style="flex-wrap:nowrap;gap:4px;margin-bottom:7px;width:100%">'
         +   DL.map(function(d){
-              return '<button type="button" class="td-d'+(d[1]===DUR?' on':'')+'" data-tdd="'+d[1]+'">'+d[0]+'</button>';
+              return '<button type="button" class="td-d'+(d[1]===DUR?' on':'')+'" data-tdd="'+d[1]+'"'
+                   + ' style="flex:1;min-width:0;padding:0 2px;font-size:11.5px;'
+                   + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d[0]+'</button>';
             }).join('')
-        + '</div>'
-        + '<div class="td-srow">'
-        +   '<button type="button" class="td-pm" data-tdm="-1" title="방금 누른 단위만큼 줄이기">−</button>'
         +   [5,10,15,30].map(function(n){
-              return '<button type="button" class="td-unit'+(n===STEP?' on':'')+'" data-tdadd="'+n+'">＋'+n+'분</button>';
+              return '<button type="button" class="td-d'+(n===STEP&&DUR?' on':'')+'" data-tdadd="'+n+'"'
+                   + ' style="flex:1;min-width:0;padding:0 2px;font-size:11.5px;'
+                   + 'white-space:nowrap">＋'+n+'</button>';
             }).join('')
-        +   '<button type="button" class="td-pm" data-tdm="1" title="방금 누른 단위만큼 늘리기">＋</button>'
         + '</div>'
-        + '<div class="td-res">' + (DUR
-            ? '<b>' + durLabel(DUR) + '</b> 걸림 · 끝난 시각 <b>' + endOf() + '</b>'
-            : '끝난 시각은 넣지 않습니다') + '</div>';
+        /* 결과 줄 — 양옆에 −/＋ 를 두어 가운데 글씨와 균형을 맞춘다 */
+        + '<div class="td-srow" style="flex-wrap:nowrap;gap:8px;justify-content:space-between;width:100%">'
+        +   '<button type="button" class="td-pm" data-tdm="-1" title="방금 누른 단위만큼 줄이기">−</button>'
+        +   '<div class="td-res" style="flex:1;margin-top:0">' + (DUR
+              ? '<b>' + durLabel(DUR) + '</b> 걸림 · 끝 <b>' + endOf() + '</b>'
+              : '끝난 시각은 넣지 않습니다') + '</div>'
+        +   '<button type="button" class="td-pm" data-tdm="1" title="방금 누른 단위만큼 늘리기">＋</button>'
+        + '</div>';
       el.querySelectorAll('[data-tdd]').forEach(function(b){
         b.addEventListener('click', function(){ DUR = +b.getAttribute('data-tdd'); drawDur(); });
       });
@@ -21359,6 +21370,12 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var _cl0 = cl;
       cl = function(){ document.removeEventListener('keydown', onEsc, true); _cl0(); };
     })();
+    /* v186 — 지움: 시각도 끝난 시각도 넣지 않는다 */
+    document.getElementById('tdClr').addEventListener('click', function(){
+      _picked = true; cl();
+      try{ if(onPick) onPick('', ''); }
+      catch(e){ console.warn('[시간칸] 지우기 실패', e); }
+    });
     document.getElementById('tdOk').addEventListener('click', function(){
       var val = tdPad(H)+':'+tdPad(MI);
       var ev  = endOf();
@@ -23821,6 +23838,13 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
              + '<b style="background:#b52929;color:#fff;border-radius:9px;padding:1px 6px;margin-left:3px">'+nF+'</b></button>' : '')
       +   sep
       +   viewChips(pt0)
+      /* v188 — 달님 : 「노션 보기에는 복사가 없어」
+            있기는 있었다(⚙ 도구 안 lfCopyXls). 눈에 보이는 줄에도 하나 둔다.
+            누르는 일은 하나 — 아래 doCopyXls() 한 곳에서만 한다. */
+      +   (isPersonal()? '' :
+           '<button type="button" class="lf-fx" id="lfCopyXls2"'
+           + ' title="지금 걸린 기간의 업무를 엑셀에 붙여넣을 수 있게 복사합니다"'
+           + ' style="color:#0f7a4a;border-color:#b7e4c7;background:#f0f9f4;font-weight:800">📋 복사</button>')
       + '</div></div>'
       + '<div class="lf-more" id="lfMore">'
       +   '<button type="button" class="lf-fx" id="lfMoreBtn" title="그 밖의 도구">⚙'
@@ -28362,9 +28386,9 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         else toast('청소일지 창을 열지 못했어요 — 📅 달력에서 열어 주세요');
       }catch(err){ console.error('[청소일지]', err); toast('오류: '+(err.message||err)); }
     });
-    var cxb=document.getElementById('lfCopyXls');
-    if(cxb) cxb.addEventListener('click', function(ev){
-      ev.stopPropagation();
+    /* v188 — 복사는 한 곳에서만 한다. 단추는 둘(⚙ 도구 안 · 잘 보이는 줄) */
+    function doCopyXls(ev){
+      if(ev) ev.stopPropagation();
       try{
         /* 기록 탭의 기간 칸에 지금 걸린 기간을 넣고 원래 복사 함수를 그대로 쓴다 */
         var f=document.getElementById('v43From'), t=document.getElementById('v43To');
@@ -28374,6 +28398,10 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
         else if(typeof v43CopyWorkExcel==='function') v43CopyWorkExcel();
         else toast('복사 기능을 찾지 못했어요');
       }catch(err){ console.error('[복사]', err); toast('오류: '+(err.message||err)); }
+    }
+    ['lfCopyXls','lfCopyXls2'].forEach(function(cid){
+      var b=document.getElementById(cid);
+      if(b && !b._cxBound){ b._cxBound=1; b.addEventListener('click', doCopyXls); }
     });
     host.querySelectorAll('[data-expsub]').forEach(function(b){
       b.addEventListener('click', function(ev){
