@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v204-0901-1252';
+window.PERSONAL_BUILD = 'v206-0901-1333';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -530,7 +530,15 @@ window.PERSONAL_BUILD = 'v204-0901-1252';
     item:     {i:'📦', n:'자재',     c:'#8b5cf6'},
     stock:    {i:'🔄', n:'입출고',   c:'#0284c7'},
     plan:     {i:'✅', n:'오늘계획', c:'#65a30d'},
-    site:     {i:'🌐', n:'사이트',   c:'#64748b'}
+    site:     {i:'🌐', n:'사이트',   c:'#64748b'},
+    /* ══ v206 — 🧹 청소를 15번째 종류로 ══
+          달님 : 「청소를 정식 종류로 올려」
+          🔴 여기에 넣어도 「🧹 청소」 탭과 📊 월보고는 그대로다.
+             그쪽은 entries 를 직접 읽는 자기 코드(renderCleaning·renderCleaningStats)를 쓰고,
+             기록을 누르면 여전히 전용 창(openCleaningEditor)이 열린다
+             (wlOpenAs 의 KINDS 에는 일부러 안 넣었다).
+             여기에 넣는 것은 「🗃 데이터 탭에서 다른 기록처럼 다루기」 뿐이다. */
+    cleaning: {i:'🧹', n:'청소',     c:'#0d9488'}
   };
   /* SCHEMA 안의 보조 서식까지 합쳐 온전한 속성 목록을 만든다 */
   /* SCHEMA 에는 없지만 입력창(모달)이 실제로 쓰는 칸들 —
@@ -540,6 +548,19 @@ window.PERSONAL_BUILD = 'v204-0901-1252';
         여기 적은 값은 저장할 때 지출 기록(expense)으로 저절로 옮겨진다
         — 지출 탭·월보고가 지출 기록을 세기 때문에 그쪽이 비면 통계가 어긋난다. */
   var WORK_EXTRA = {
+    /* ══ v206 — 🧹 청소 ══
+          🔴 `SCHEMA` 에는 넣지 않는다. SCHEMA 는 옛 입력창·CSV·보고서가 함께 읽으므로
+             건드리면 어디가 흔들릴지 모른다. 여기(WORK_EXTRA)만 채우면
+             노션식 페이지에만 칸이 생기고 옛 코드는 전혀 영향이 없다.
+          목록 6종(소장지시·지시사항·특이사항·청소원작업·입고·출고)은
+          칸이 아니라 표라서 `wlCleanEdit`(worklog.js) 가 맡는다. */
+    cleaning: [
+      {k:'foreman',   label:'반장',        type:'text'},
+      {k:'tissueIn',  label:'점보롤 입고', type:'number'},
+      {k:'tissueOut', label:'점보롤 출고', type:'number'},
+      {k:'towelIn',   label:'핸드타월 입고', type:'number'},
+      {k:'towelOut',  label:'핸드타월 출고', type:'number'}
+    ],
     work: [
       {k:'purpose',     label:'용도',         type:'select',
        opts:(function(){ try{ return JSON.parse(localStorage.getItem('wl_exp_purposes_v44')||'null')
@@ -725,7 +746,10 @@ window.PERSONAL_BUILD = 'v204-0901-1252';
     item:     {_date:[],       _title:['itemName'], _sub:['vendor','maker'],         _amount:['unitPrice'],  _memo:['memo']},
     stock:    {_date:['date'], _title:['itemId'], _sub:['vendor'],                   _amount:['amount'],     _memo:['memo']},
     plan:     {_date:['date'], _title:['text'], _sub:[],                             _amount:[],             _memo:[]},
-    site:     {_date:[],       _title:['name'], _sub:['category'],                   _amount:[],             _memo:['memo']}
+    site:     {_date:[],       _title:['name'], _sub:['category'],                   _amount:[],             _memo:['memo']},
+    /* v206 — 청소. 반장(foreman)은 「관련처」로 먹지 않고 제 이름 그대로 칸에 둔다
+          (v197 교훈 : _sub 가 먹으면 그 칸이 사라진 것처럼 보인다) */
+    cleaning: {_date:['date'],  _title:['title'], _sub:[],                            _amount:[],             _memo:['memo']}
   };
   /* v115 — 「칸 ↔ 데이터 지도」가 읽을 수 있게 밖으로 낸다.
         화면의 칸 하나가 데이터 칸 여럿을 물고 있다는 사실이 어디에도 안 보여서
@@ -741,8 +765,31 @@ window.PERSONAL_BUILD = 'v204-0901-1252';
     stock:    { stockType:'입고', qty:1 },
     schedule: { scheduleType:'일회성' },
     call:     { dir:'수신' },
-    plan:     { status:'미완료', done:false }
+    plan:     { status:'미완료', done:false },
+    /* v206 — 옛 청소 창(openCleaningEditor)이 만드는 모양과 똑같이 맞춘다.
+          모양이 다르면 「옛 창에서 연 것」과 「데이터 탭에서 만든 것」이 달라진다. */
+    /* 🔴 함수로 둔다 — 반장·청소원 명단은 나중에 바뀔 수 있다.
+          지금 값을 통째로 굳혀 두면 명단을 고쳐도 새 기록이 옛 명단으로 만들어진다. */
+    cleaning: function(){
+      var d = { directorOrders:[], directives:[], specials:[],
+                inItems:[], outItems:[],
+                tissueIn:0, tissueOut:0, towelIn:0, towelOut:0, photo:null };
+      try{ d.foreman = CLEAN_FOREMAN; }catch(e){ d.foreman = ''; }
+      try{
+        d.staffWork = (CLEAN_STAFF||[]).map(function(x){
+          return { name:x.name, floors:x.floors, tissue:0, towel:0, special:'' }; });
+      }catch(e){ d.staffWork = []; }
+      return d;
+    }
   };
+  /* v206 — 기본값이 함수면 그때 불러서 쓴다 (아니면 그대로) */
+  function defaultOf(kind){
+    var d = WORK_DEFAULT[kind];
+    if(typeof d === 'function'){
+      try{ return d() || {}; }catch(e){ console.warn('[기본값] ' + kind + ' 만들기 실패', e); return {}; }
+    }
+    return d || {};
+  }
 
   function dsWork(kind){
     var meta = WORK_KINDS[kind] || {i:'📄', n:kind, c:'#64748b'};
@@ -763,7 +810,7 @@ window.PERSONAL_BUILD = 'v204-0901-1252';
              try{ if(typeof renderAll==='function') setTimeout(renderAll,80); }catch(e){}
              return null; },
       del:  function(id){ try{ deleteRecord(id); if(typeof renderAll==='function') setTimeout(renderAll,80); }catch(e){} },
-      newRec: function(){ return Object.assign({ kind:kind }, WORK_DEFAULT[kind]||{}); },
+      newRec: function(){ return Object.assign({ kind:kind }, defaultOf(kind)); },
       fieldsOf: function(){ return fields; }
     };
   }
@@ -7972,8 +8019,9 @@ window.PERSONAL_BUILD = 'v204-0901-1252';
      개인일지와 똑같은 엔진(표·보드·달력·페이지·속성추가·필터·수식·롤업)을
      업무일지 종류(업무/지출/사고/…)에 그대로 붙인다. */
   /* v193 — 달님 : 「오늘 계획을 업무 왼쪽에, 사이트는 업무 오른쪽으로」 */
+  /* 🗃 데이터 탭의 칩 차례. WORK_KINDS 에 있어도 여기 없으면 칩이 안 나온다 (v206에서 걸림) */
   var DS_ORDER = ['plan','work','site','expense','accident','progress','call','memo',
-                  'schedule','deliver','meeting','vacation','item','stock'];
+                  'schedule','deliver','meeting','vacation','item','stock','cleaning'];
 
   /* v168 — 맨 앞에 「🏠 개인」 을 넣었다.
      윗줄(기록·개인·데이터…)을 없애도 이 줄 하나로 개인 ↔ 업무를 오갈 수 있다. */

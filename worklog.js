@@ -23045,7 +23045,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v204-0901-1252';
+  var JS_BUILD = 'v206-0901-1333';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -23857,13 +23857,34 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
                  {k:'amount',   t:'num',  p:'금액',   w:'110px'} ]
 ,
     /* v204 — 업무·사고 기록의 자재 (지출의 matItems 와 저장 이름이 다르다) */
+    /* v205 — 🧹 청소 기록의 목록 4종
+          앞의 셋은 **글자만 든 배열**이다 (['1층 유리 닦기', ...]).
+          객체가 아니므로 STRLIST 에 적어 두고 k:'v' 한 칸만 쓴다. */
+    directorOrders: [ {k:'v', t:'text', p:'소장이 지시한 것', w:'auto'} ],
+    directives:     [ {k:'v', t:'text', p:'지시사항',        w:'auto'} ],
+    specials:       [ {k:'v', t:'text', p:'특이사항',        w:'auto'} ],
+    /* v206 — 청소 일지의 소모품 입출고 (옛 창의 「자유 입출고 항목」) */
+    inItems:        [ {k:'name', t:'text', p:'들어온 물품', w:'auto'},
+                      {k:'qty',  t:'num',  p:'수량',       w:'80px'} ],
+    outItems:       [ {k:'name', t:'text', p:'나간 물품',   w:'auto'},
+                      {k:'qty',  t:'num',  p:'수량',       w:'80px'} ],
+    staffWork:      [ {k:'name',    t:'text', p:'청소원',   w:'auto'},
+                      {k:'floors',  t:'text', p:'담당 층',  w:'110px'},
+                      {k:'tissue',  t:'num',  p:'화장지',   w:'72px'},
+                      {k:'towel',   t:'num',  p:'타월',     w:'72px'},
+                      {k:'special', t:'text', p:'특이사항', w:'auto'} ],
     materials: [ {k:'name',  t:'text', p:'자재 이름', w:'auto'},
                  {k:'spec',  t:'text', p:'규격',    w:'120px'},
                  {k:'qty',   t:'num',  p:'수량',    w:'62px'},
                  {k:'price', t:'num',  p:'단가',    w:'88px'} ]
   };
   var TITLE = { matItems:'📦 자재 내역', mealItems:'🍚 중식 내역', wasteItems:'🗑 폐기물',
-                materials:'📦 자재 내역' };
+                materials:'📦 자재 내역',
+                directorOrders:'👔 소장 지시', directives:'📌 지시사항',
+                specials:'⭐ 특이사항',       staffWork:'🧹 청소원 작업',
+                inItems:'📥 입고',            outItems:'📤 출고' };
+  /* 🔴 글자만 든 배열 — 줄 하나가 객체가 아니라 글자다 */
+  var STRLIST = { directorOrders:1, directives:1, specials:1 };
 
   function rowsHTML(key, list, edit){
     var cols = COLS[key];
@@ -23871,7 +23892,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     list.forEach(function(it, i){
       h += '<tr>';
       cols.forEach(function(c){
-        var v = it[c.k];
+        var v = STRLIST[key] ? it : it[c.k];      /* v205 — 글자 목록은 줄 자체가 값 */
         if(edit){
           h += '<td style="padding:2px 3px;border-bottom:1px solid #eef3f9">'
              + '<input type="text" data-eik="' + key + '|' + i + '|' + c.k + '"'
@@ -23970,6 +23991,11 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     }, 0);
   }
 
+  /* v205 — 목록을 그대로 베낀다. 글자 배열이면 글자 그대로, 객체 배열이면 얕은 복사 */
+  function cloneList(key, raw){
+    return A(raw).map(function(o){ return STRLIST[key] ? o : Object.assign({}, o); });
+  }
+
   function save(rid, key, list){
     try{
       var patch = {}; patch[key] = list;
@@ -24017,10 +24043,13 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     if(b && !b._eiB){ b._eiB = 1; b.addEventListener('click', function(){ applyAmount(box, rid, false); }); }
   }
 
-  /* v204 — mode 'exp' = 지출(금액 반영) · 'work' = 업무 자재(자재 합계 칸) */
+  /* v204·v205 — 어느 상자인지에 따라 「다시 그리기 · 합계 갱신」을 갈아 끼운다
+        exp   = 지출 (금액 반영 단추)
+        work  = 업무·사고 자재 (자재 합계 칸)
+        clean = 청소 목록 (합계 띠 없음) */
   function bind(box, rid, mode){
-    var RD = (mode === 'work') ? redrawWork : redraw;
-    var RS = (mode === 'work') ? reSumWork : reSum;
+    var RD = (mode === 'work') ? redrawWork : (mode === 'clean') ? redrawClean : redraw;
+    var RS = (mode === 'work') ? reSumWork  : (mode === 'clean') ? reSumClean  : reSum;
     /* 값 고치기 — ⌨️ 글자를 치는 동안에는 건드리지 않는다. 칸에서 빠져나올 때만 저장한다 */
     box.querySelectorAll('[data-eik]').forEach(function(inp){
       if(inp._eiB) return; inp._eiB = 1;
@@ -24030,11 +24059,15 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
           var key = a[0], i = +a[1], ck = a[2];
           var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0];
           if(!r2) return;
-          var list = A(r2[key]).map(function(o){ return Object.assign({}, o); });
-          if(!list[i]) return;
+          var list = cloneList(key, r2[key]);
+          if(list[i] === undefined) return;
           var col = (COLS[key] || []).filter(function(c){ return c.k === ck; })[0];
-          list[i][ck] = (col && col.t === 'num') ? n(inp.value) : inp.value;
-          if(col && col.t === 'num') inp.value = n(inp.value) ? won(inp.value) : '';
+          if(STRLIST[key]){                        /* v205 — 글자 목록 */
+            list[i] = inp.value;
+          }else{
+            list[i][ck] = (col && col.t === 'num') ? n(inp.value) : inp.value;
+            if(col && col.t === 'num') inp.value = n(inp.value) ? won(inp.value) : '';
+          }
           if(save(rid, key, list)) RS(box, rid);
         }catch(e){ console.error('[지출 내역] 고치기 실패', e); }
       });
@@ -24057,8 +24090,9 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
         try{
           var key = b.getAttribute('data-eiadd');
           var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
-          var list = A(r2[key]).map(function(o){ return Object.assign({}, o); });
-          var blank = {}; (COLS[key] || []).forEach(function(c){ blank[c.k] = (c.t === 'num') ? 0 : ''; });
+          var list = cloneList(key, r2[key]);
+          var blank = '';
+          if(!STRLIST[key]){ blank = {}; (COLS[key] || []).forEach(function(c){ blank[c.k] = (c.t === 'num') ? 0 : ''; }); }
           list.push(blank);
           if(save(rid, key, list)) RD(box, rid);
         }catch(e){ console.error('[지출 내역] 줄 추가 실패', e); }
@@ -24071,13 +24105,15 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
           var a = b.getAttribute('data-eidel').split('|');
           var key = a[0], i = +a[1];
           var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
-          var list = A(r2[key]).map(function(o){ return Object.assign({}, o); });
+          var list = cloneList(key, r2[key]);
           list.splice(i, 1);
           if(save(rid, key, list)) RD(box, rid);
         }catch(e){ console.error('[지출 내역] 줄 지우기 실패', e); }
       });
     });
-    if(mode === 'work') bindApplyWork(box, rid); else bindApply(box, rid);
+    if(mode === 'work')      bindApplyWork(box, rid);
+    else if(mode === 'clean') { /* 반영 단추가 없다 */ }
+    else                      bindApply(box, rid);
   }
 
   function redraw(box, rid){
@@ -24276,6 +24312,137 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     }
   };
 
+  /* ══════════════════════════════════════════════════════════
+     v205 — 🧹 청소 기록의 목록 4종을 페이지에서 바로 고친다
+
+     달님 : 「COLS 에 한 줄만 더하면 어떤 반복 목록이든 되잖아, 진행하자」
+
+     🔎 먼저 조사한 것 (제0원칙-25 — 없는 병에 약을 짓지 않는다)
+       · 사고·진행업무 「단계」  → **이미 전용 편집기가 있다** (v159 wlStepsBox).
+                                  COLS 로 또 만들면 같은 일을 두 곳에서 하게 된다 → 안 만든다.
+       · 사고 「후속 조치」       → 목록이 아니라 **글 칸(textarea)** 이다. 이미 페이지에 나온다.
+       · 🧹 청소 기록           → 🔴 **페이지를 열면 칸이 하나도 없다.**
+                                  소장 지시·지시사항·특이사항·청소원 작업이 통째로 안 보였다.
+                                  → 여기가 진짜 빈칸이었다.
+
+     🔴 청소를 「노션식 종류」로 등록하지는 않는다
+       목록·카드 화면과 📊 월보고 통계가 청소 자료를 쓰고 있다 (staffWork 화장지·타월 합계).
+       종류로 등록하면 그쪽이 함께 흔들린다. 그래서 v204 와 똑같이
+       **페이지에 상자만 덧붙인다.** 저장 이름도 계산도 건드리지 않는다.
+
+     되돌리기 : wlCleanEdit.off()      보기 전용 : wlCleanEdit.readonly()
+     ══════════════════════════════════════════════════════════ */
+  var LSC      = 'wl_cleanlists';
+  var LSC_EDIT = 'wl_cleanlists_edit';
+  var CKEYS    = ['directorOrders','directives','specials','staffWork','inItems','outItems'];
+  function cOn(){   try{ return localStorage.getItem(LSC)      !== '0'; }catch(e){ return true; } }
+  function cEdit(){ try{ return localStorage.getItem(LSC_EDIT) !== '0'; }catch(e){ return true; } }
+  function cOff(){ try{ window.wlAddOn(['#__none'], 'cleanlists', function(){ return null; }); }catch(e){} }
+
+  /* 🧹 청소원 작업의 합계 줄 — 여기 하나만 다시 그리면 되게 따로 뺐다 (v205)
+        상자 전체를 다시 그리면 옆 칸에 있던 커서가 날아간다 (한글 자모도 깨진다) */
+  function staffTail(list){
+    var ti = 0, to = 0;
+    A(list).forEach(function(x){ ti += n(x && x.tissue); to += n(x && x.towel); });
+    return '화장지 <b>' + won(ti) + '</b> · 타월 <b>' + won(to) + '</b>'
+         + ' <span style="color:#9ab">(📊 월보고가 이 숫자를 씁니다)</span>';
+  }
+
+  function htmlClean(r, edit){
+    var h = '';
+    CKEYS.forEach(function(k){
+      var list = A(r[k]).filter(function(x){ return x !== null && x !== undefined; });
+      if(!list.length && !edit) return;
+      var tail = '';
+      if(k === 'staffWork' && list.length)
+        tail = '<span id="cwSum">' + staffTail(list) + '</span>';
+      h += sec(k, list, edit, tail);
+    });
+    if(!h) return '';
+    h += '<div style="margin-top:6px;font-size:11.5px;color:#a8b8c8">'
+       + (edit ? '고친 값은 칸에서 빠져나올 때 저장됩니다' : '보기 전용입니다')
+       + ' · 끄기 wlCleanEdit.off()'
+       + (edit ? ' · 보기 전용으로 wlCleanEdit.readonly()' : ' · 고치려면 wlCleanEdit.edit()')
+       + '</div>';
+    return h;
+  }
+  /* 🔴 상자 전체를 다시 그리지 않는다 — 합계 줄 하나만 갈아 끼운다.
+        (옆 칸을 이어서 고치는 중일 수 있고, 한글을 치는 중이면 자모가 깨진다) */
+  function reSumClean(box, rid){
+    try{
+      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0];
+      if(!r2) return;
+      var el = box.querySelector('#cwSum');
+      if(el) el.innerHTML = staffTail(r2.staffWork);
+    }catch(e){ console.warn('[청소 목록] 합계 갱신 실패', e); }
+  }
+  function redrawClean(box, rid){
+    try{
+      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
+      box.innerHTML = htmlClean(r2, cEdit());
+      bind(box, rid, 'clean');
+    }catch(e){ console.warn('[청소 목록] 다시 그리기 실패', e); }
+  }
+
+  function paintClean(){
+    if(!cOn()){ cOff(); return; }
+    var page = document.querySelector('.lf-page');
+    if(!page){ cOff(); return; }
+    var r = recNow();
+    if(!r || r.kind !== 'cleaning'){ cOff(); return; }
+    var edit = cEdit();
+    var any = CKEYS.some(function(k){ return A(r[k]).length; });
+    if(!any && !edit){ cOff(); return; }
+    try{
+      window.wlAddOn(['.lf-page .pg-props', '.lf-page .pg-2l', '.lf-page .pg-body'], 'cleanlists',
+        function(){
+          var d = document.createElement('div');
+          d.style.cssText = 'margin-top:8px;border:1.5px solid #d8ecdd;border-radius:10px;'
+                          + 'padding:10px 12px;background:#fbfffc';
+          return d;
+        },
+        function(d){
+          try{ if(d.contains(document.activeElement)) return; }catch(e){}
+          var h = htmlClean(r, edit);
+          if(!h){ d.innerHTML = ''; return; }
+          d.innerHTML = h;
+          bind(d, r.id, 'clean');
+        });
+    }catch(e){ console.warn('[청소 목록] 붙이기 실패', e); }
+  }
+
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:46, n:'청소 목록', f:paintClean });
+
+  window.wlCleanEdit = {
+    off:      function(){ try{ localStorage.setItem(LSC,'0'); }catch(e){} cOff();
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '청소 목록 상자를 끕니다'; },
+    on:       function(){ try{ localStorage.setItem(LSC,'1'); }catch(e){}
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '청소 목록 상자를 켭니다'; },
+    readonly: function(){ try{ localStorage.setItem(LSC_EDIT,'0'); }catch(e){}
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '보기 전용입니다'; },
+    edit:     function(){ try{ localStorage.setItem(LSC_EDIT,'1'); }catch(e){}
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '고칠 수 있습니다'; },
+    state:    function(){ return { 보기:(cOn()?'켜짐':'꺼짐'), 고치기:(cEdit()?'가능':'보기 전용'),
+                                   다루는목록:CKEYS.map(function(k){ return TITLE[k]; }) }; },
+    /* 청소 기록마다 목록이 몇 줄인지 — 화면에 안 나오던 자료가 얼마나 있었나 */
+    count:    function(){
+      var out = [];
+      (entries || []).forEach(function(e){
+        if(!e || e.kind !== 'cleaning') return;
+        var o = { id:e.id, 날짜:e.date };
+        var t = 0;
+        CKEYS.forEach(function(k){ var c = A(e[k]).length; o[TITLE[k]] = c; t += c; });
+        if(t) out.push(o);
+      });
+      return { 청소기록:(entries||[]).filter(function(e){ return e && e.kind==='cleaning'; }).length,
+               목록있는것:out.length, 목록:out };
+    }
+  };
+
   function paint(){
     if(!on()){ off(); return; }
     var page = document.querySelector('.lf-page');
@@ -24342,10 +24509,10 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
                                                     금액반영:(autoOn()?'저절로':'단추로') }; };
   window.wlExpSums = sums;
 
-  console.log('[지출 내역] 자재·중식·폐기물 — 지출 페이지 (v202) / 업무 자재 (v204)'
-            + ' · 고치기 ' + (canEdit()?'가능':'보기 전용')
-            + ' · 금액 반영 ' + (autoOn()?'저절로':'단추로')
-            + ' · 업무 자재 ' + (wOn()?(wEdit()?'고치기 가능':'보기 전용'):'꺼짐'));
+  console.log('[내역 편집] 지출 (v202) · 업무 자재 (v204) · 청소 목록 (v205)'
+            + ' — 지출 ' + (canEdit()?'고치기':'보기') + '/' + (autoOn()?'저절로':'단추')
+            + ' · 업무 ' + (wOn()?(wEdit()?'고치기':'보기'):'꺼짐')
+            + ' · 청소 ' + (cOn()?(cEdit()?'고치기':'보기'):'꺼짐'));
 })();
 
 
