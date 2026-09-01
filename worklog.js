@@ -23006,7 +23006,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v199-0901-1143';
+  var JS_BUILD = 'v201-0901-1215';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -23019,6 +23019,16 @@ async function githubUpload(token){
   function nOf(v){ var m=/^v(\d+)/.exec(String(v||'')); return m? parseInt(m[1],10) : 0; }
   /* worklog.js 가 worklog.html 과 같은 판인가 (v166) */
   function jsStale(){ var me=mine(); return !!(me && JS_BUILD && nOf(JS_BUILD) < nOf(me)); }
+
+  /* v200 — personal.js(🏠개인·속성엔진·노션식 화면) 도 함께 본다.
+        표식이 아예 없으면 v199 이하의 옛 파일이다. */
+  function pBuild(){ try{ return String(window.PERSONAL_BUILD||'').trim(); }catch(e){ return ''; } }
+  function pStale(){
+    var me = mine(); if(!me) return false;
+    var pb = pBuild();
+    if(!pb) return true;                       /* 표식 없음 = 옛 파일 */
+    return nOf(pb) < nOf(me);
+  }
 
   /* GitHub 의 worklog.html 앞부분만 읽는다 — 1.6MB 를 다 받지 않고 찾자마자 끊는다 */
   function fetchVer(){
@@ -23051,6 +23061,7 @@ async function githubUpload(token){
     close();
     var older = nOf(me) < nOf(hub);
     var js = jsStale();
+    var ps = pStale();                          /* v200 */
     var d=document.createElement('div');
     d.id=BAND_ID;
     d.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;'
@@ -23061,9 +23072,11 @@ async function githubUpload(token){
       + 'font-family:Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;'
       + 'box-shadow:0 2px 8px rgba(0,0,0,.10)';
     var jsOnly = (hub===me);        /* GitHub 판은 같은데 js 만 옛것인 경우 */
+    var lackName = js && ps ? 'worklog.js 와 personal.js 가'
+                 : (ps ? 'personal.js 가' : 'worklog.js 가');   /* v200 */
     d.innerHTML =
         '<b style="font-size:15px">'
-      +   (jsOnly ? '🔴 worklog.js 가 안 올라갔습니다'
+      +   (jsOnly ? '🔴 ' + lackName + ' 안 올라갔습니다'
                   : (older? '⚠️ 지금 보고 계신 판이 옛날 것입니다' : 'ℹ️ GitHub 판과 다릅니다'))
       + '</b>'
       + (jsOnly ? '' : '<span>이 화면 <b>'+me+'</b> &nbsp;·&nbsp; GitHub <b>'+hub+'</b></span>')
@@ -23071,6 +23084,12 @@ async function githubUpload(token){
       + (js? '<span style="width:100%;color:#991b1b;font-weight:800;background:#fee2e2;'
            + 'border-radius:8px;padding:6px 10px">화면은 <b>'+me+'</b> 인데 worklog.js 는 <b>'+JS_BUILD+'</b> 입니다 — '
            + '<b>worklog.js 도 함께 GitHub 에 올려 주세요</b> (안 올리면 새 기능이 안 돕니다)</span>' : '')
+      /* v200 — personal.js 는 안 올려도 아무 경고가 없어 조용히 옛 화면이 떴다 */
+      + (ps? '<span style="width:100%;color:#991b1b;font-weight:800;background:#fee2e2;'
+           + 'border-radius:8px;padding:6px 10px">화면은 <b>'+me+'</b> 인데 personal.js 는 <b>'
+           + (pBuild()||'(표식 없음 — v199 이하 옛 파일)')+'</b> 입니다 — '
+           + '<b>personal.js 도 함께 GitHub 에 올려 주세요</b> '
+           + '(🏠개인 · 기록 상세 화면이 옛것으로 돕니다)</span>' : '')
       + '<span style="flex:1;min-width:8px"></span>'
       + '<button type="button" id="wlVerRe" style="height:36px;padding:0 14px;border:1px solid #c8d4e0;'
       +   'border-radius:8px;background:#fff;font-size:13px;font-weight:800;cursor:pointer">🔄 새로고침</button>'
@@ -23098,8 +23117,12 @@ async function githubUpload(token){
       if(!hub) return null;
       var me=mine();
       if(!me || hub===me){
-        if(jsStale()){ band(hub, me); return {github:hub, 이_화면:me, 같음:true, js:JS_BUILD, js가_옛것:true}; }
-        close(); return {github:hub, 이_화면:me, js:JS_BUILD, 같음:true};
+        if(jsStale() || pStale()){                                   /* v200 */
+          band(hub, me);
+          return {github:hub, 이_화면:me, 같음:true, js:JS_BUILD, personal:pBuild(),
+                  js가_옛것:jsStale(), personal이_옛것:pStale()};
+        }
+        close(); return {github:hub, 이_화면:me, js:JS_BUILD, personal:pBuild(), 같음:true};
       }
       var hide=''; try{ hide=localStorage.getItem(LS_HIDE)||''; }catch(e){}
       if(!force && hide===hub) return {github:hub, 이_화면:me, 같음:false, 닫아둠:true};
@@ -23111,6 +23134,7 @@ async function githubUpload(token){
   window.wlVer = {
     now:   function(){ return run(true).then(function(r){ console.log('[버전확인]', r); return r; }); },
     state: function(){ var r={이_화면:mine(), js파일:JS_BUILD, js가_옛것:jsStale(),
+                              personal파일:(pBuild()||'(표식 없음 — 옛 파일)'), personal이_옛것:pStale(),
                               자동확인:(off()?'꺼짐':'켜짐')}; console.log('[버전확인]', r); return r; },
     off:   function(){ try{ localStorage.setItem(LS_OFF,'1'); }catch(e){} close(); return '자동 확인을 껐습니다'; },
     on:    function(){ try{ localStorage.removeItem(LS_OFF); localStorage.removeItem(LS_HIDE); }catch(e){} return '자동 확인을 켰습니다'; },
@@ -23700,4 +23724,187 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
 
   (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:42, n:'고른 값이 부르는 칸', f:paint });
   console.log('[모드 칸] 고른 값이 필요로 하는 칸을 바로 밑으로 데려옵니다 (v189)');
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   v201 — 💰 지출 페이지에 「자재 · 중식 · 폐기물 내역」 보여 주기  (1단계 : 보기 전용)
+
+   달님 : 「중식·폐기물도 노션식으로 (끝나면 옛 지출 창 제거)」
+
+   🔴 왜 한 번에 안 옮기나
+     이 세 목록은 **합계가 지출의 「금액」을 자동으로 채운다.**
+     그리고 지출 금액 = 정산표의 행이다. 잘못 옮기면 월 정산이 **조용히** 틀어진다.
+     → 1단계는 **보여 주기만** 한다. 고치는 것은 아직 [✏️ 전체 서식] 쪽이다.
+
+   여기서 세는 방법은 옛 지출 창과 **글자 그대로 같다** (worklog.html):
+     자재  goods=Σ(수량×단가) · ship=Σ(배송비) · 합계=goods+ship
+           부가세포함이면 공급가=round(값/1.1), 부가세=값-공급가
+     중식  Σ(인원 × 1인 단가)
+     폐기물 Σ(금액)
+
+   점검 : wlExpItems()        — 합계와 「금액」이 다른 지출을 찾아 준다
+          wlExpItems('기록id') — 그 지출 하나만
+   되돌리기 : wlExpItems.off()
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var LS = 'wl_exp_items';
+  function on(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function A(v){ return Array.isArray(v) ? v : []; }
+  function n(v){ var x = Number(String(v==null?'':v).replace(/[^0-9.-]/g,'')); return isFinite(x) ? x : 0; }
+  function won(v){ return Math.round(n(v)).toLocaleString('ko-KR'); }
+  function ES(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+
+  /* 🔴 옛 지출 창과 똑같이 센다 (calcMatTotal · calcMealTotal · calcWasteTotal) */
+  function sums(r){
+    r = r || {};
+    var mats = A(r.matItems), meals = A(r.mealItems), wastes = A(r.wasteItems);
+    var goods = 0, ship = 0;
+    mats.forEach(function(it){ goods += n(it.qty) * n(it.price); ship += n(it.delivery); });
+    var gSup = r.matUnitVat ? Math.round(goods / 1.1) : goods;
+    var sSup = r.matShipVat ? Math.round(ship  / 1.1) : ship;
+    var meal  = meals.reduce(function(s,it){ return s + n(it.people) * n(it.price); }, 0);
+    var waste = wastes.reduce(function(s,it){ return s + n(it.amount); }, 0);
+    return {
+      mats:mats, meals:meals, wastes:wastes,
+      matGoods:goods, matShip:ship, matTotal:goods + ship,
+      matSupply:gSup + sSup, matTax:(goods - gSup) + (ship - sSup),
+      meal:meal, waste:waste,
+      any:(mats.length + meals.length + wastes.length) > 0
+    };
+  }
+
+  /* 이 지출이 「어떤 합계」를 금액으로 삼아야 하나 — 옛 창이 채우던 그대로 */
+  function wantAmount(r, s){
+    if(s.mats.length)   return s.matSupply + s.matTax;      /* 자재 : 공급가+부가세 */
+    if(s.meals.length)  return s.meal;
+    if(s.wastes.length) return s.waste;
+    return null;
+  }
+
+  function recNow(){
+    try{
+      var m = String(location.hash || '').match(/^#lp=([^&]+)/);
+      if(!m) return null;
+      var rid = decodeURIComponent(m[1]);
+      return (entries || []).filter(function(e){ return e && e.id === rid; })[0] || null;
+    }catch(e){ console.warn('[지출 내역] 기록 읽기 실패', e); return null; }
+  }
+  function off(){ try{ window.wlAddOn(['#__none'], 'expitems', function(){ return null; }); }catch(e){} }
+
+  function tbl(head, rows){
+    return '<div style="font-size:12px;font-weight:900;color:#33567d;margin:8px 0 4px">' + head + '</div>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:12.5px">' + rows + '</table>';
+  }
+  function td(v, right){
+    return '<td style="padding:3px 6px;border-bottom:1px solid #eef3f9'
+      + (right ? ';text-align:right;font-variant-numeric:tabular-nums' : '') + '">' + v + '</td>';
+  }
+
+  function html(r, s){
+    var h = '';
+    if(s.mats.length){
+      h += tbl('📦 자재 내역 <span style="font-weight:600;color:#8ba0b6">' + s.mats.length + '줄</span>',
+        s.mats.map(function(it){
+          return '<tr>' + td(ES(it.name || '(이름 없음)'))
+               + td(n(it.qty) ? won(it.qty) + '개' : '', 1)
+               + td(n(it.price) ? won(it.price) + '원' : '', 1)
+               + td(n(it.qty) * n(it.price) ? '<b>' + won(n(it.qty) * n(it.price)) + '원</b>' : '', 1)
+               + '</tr>';
+        }).join(''))
+        + '<div style="font-size:12px;color:#5b7fa6;margin-top:4px">물품 <b>' + won(s.matGoods) + '원</b>'
+        + (s.matShip ? ' · 배송 <b>' + won(s.matShip) + '원</b>' : '')
+        + ' → 공급가 <b>' + won(s.matSupply) + '원</b> · 부가세 <b>' + won(s.matTax) + '원</b>'
+        + ' <span style="color:#8ba0b6">(' + (r.matUnitVat ? '단가 부가세포함' : '단가 별도')
+        + ' · ' + (r.matShipVat ? '배송 부가세포함' : '배송 별도') + ')</span></div>';
+    }
+    if(s.meals.length){
+      h += tbl('🍚 중식 내역 <span style="font-weight:600;color:#8ba0b6">' + s.meals.length + '줄</span>',
+        s.meals.map(function(it){
+          return '<tr>' + td(ES(it.menu || '(메뉴 없음)'))
+               + td(n(it.people) ? won(it.people) + '명' : '', 1)
+               + td(n(it.price) ? won(it.price) + '원' : '', 1)
+               + td('<b>' + won(n(it.people) * n(it.price)) + '원</b>', 1) + '</tr>';
+        }).join(''))
+        + '<div style="font-size:12px;color:#5b7fa6;margin-top:4px">합계 <b>' + won(s.meal) + '원</b></div>';
+    }
+    if(s.wastes.length){
+      h += tbl('🗑 폐기물 <span style="font-weight:600;color:#8ba0b6">' + s.wastes.length + '줄</span>',
+        s.wastes.map(function(it){
+          return '<tr>' + td(ES(it.desc || '(항목 없음)'))
+               + td('<b>' + won(it.amount) + '원</b>', 1) + '</tr>';
+        }).join(''))
+        + '<div style="font-size:12px;color:#5b7fa6;margin-top:4px">합계 <b>' + won(s.waste) + '원</b></div>';
+    }
+
+    /* 🔴 지금 저장된 금액과 견준다 — 다르면 눈에 띄게 알린다 */
+    var want = wantAmount(r, s), now = n(r.amount);
+    if(want != null){
+      var gap = Math.abs(want - now);
+      h += (gap <= 1)
+        ? '<div style="margin-top:8px;font-size:12.5px;font-weight:800;color:#0f7a4a">'
+          + '✅ 내역 합계와 「금액」이 같습니다 (' + won(now) + '원)</div>'
+        : '<div style="margin-top:8px;font-size:12.5px;font-weight:800;color:#b52929;'
+          + 'background:#fdecec;border-radius:8px;padding:7px 10px;line-height:1.6">'
+          + '🔴 내역 합계 <b>' + won(want) + '원</b> ≠ 저장된 금액 <b>' + won(now) + '원</b>'
+          + ' <span style="color:#8a5a5a">(' + won(gap) + '원 차이)</span><br>'
+          + '<span style="font-weight:700;color:#7a4a4a">고치려면 위 [✏️ 전체 서식] 에서 열어 주세요 — '
+          + '이 화면은 아직 보기 전용입니다</span></div>';
+    }
+    h += '<div style="margin-top:6px;font-size:11.5px;color:#a8b8c8">'
+       + '보기 전용입니다 · 고치기는 [✏️ 전체 서식] · 끄기 wlExpItems.off()</div>';
+    return h;
+  }
+
+  function paint(){
+    if(!on()){ off(); return; }
+    var page = document.querySelector('.lf-page');
+    if(!page){ off(); return; }
+    var r = recNow();
+    if(!r || r.kind !== 'expense'){ off(); return; }
+    var s = sums(r);
+    if(!s.any){ off(); return; }
+    try{
+      window.wlAddOn(['[data-prow="_amount"] .pg-pv', '.lf-page .pg-props'], 'expitems',
+        function(){
+          var d = document.createElement('div');
+          d.style.cssText = 'margin-top:8px;border:1.5px solid #dbe6f4;border-radius:10px;'
+                          + 'padding:10px 12px;background:#fbfdff';
+          return d;
+        },
+        function(d){ d.innerHTML = html(r, s); });
+    }catch(e){ console.warn('[지출 내역] 붙이기 실패', e); }
+  }
+
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:44, n:'지출 내역 보기', f:paint });
+
+  /* ── 점검 창구 : 합계와 금액이 다른 지출을 찾아 준다 ── */
+  window.wlExpItems = function(id){
+    var list = [];
+    try{ list = (entries || []).filter(function(e){ return e && e.kind === 'expense'; }); }
+    catch(e){ console.warn('[지출 내역] 목록 실패', e); return []; }
+    if(id) list = list.filter(function(e){ return e.id === id; });
+    var out = [];
+    list.forEach(function(r){
+      var s = sums(r); if(!s.any) return;
+      var want = wantAmount(r, s); if(want == null) return;
+      var now = n(r.amount), gap = Math.abs(want - now);
+      out.push({ id:r.id, 날짜:r.date || '', 내역:String(r.title || '').slice(0, 24),
+                 자재:s.mats.length, 중식:s.meals.length, 폐기물:s.wastes.length,
+                 내역합계:Math.round(want), 저장된금액:Math.round(now),
+                 차이:Math.round(want - now), 맞나:(gap <= 1 ? '✅' : '🔴') });
+    });
+    var bad = out.filter(function(x){ return x.맞나 === '🔴'; });
+    console.log('[지출 내역] 내역이 있는 지출 ' + out.length + '건 / 금액이 다른 것 ' + bad.length + '건');
+    if(out.length) console.table(out);
+    return { 전체:out.length, 다른것:bad.length, 목록:out };
+  };
+  window.wlExpItems.off = function(){ try{ localStorage.setItem(LS,'0'); }catch(e){}
+    off(); return '지출 내역 보기를 껐습니다'; };
+  window.wlExpItems.on  = function(){ try{ localStorage.setItem(LS,'1'); }catch(e){}
+    return '지출 내역을 보여 줍니다'; };
+  window.wlExpSums = sums;                    /* 계산이 맞는지 따로 재볼 때 */
+
+  console.log('[지출 내역] 자재·중식·폐기물을 지출 페이지에 보여 줍니다 (보기 전용, v201)');
 })();
