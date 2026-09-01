@@ -379,7 +379,14 @@
       ttl = e.title || e.who || '';
       if(!ttl && !isPersonal()){ try{ ttl = String(pget(e,'_title')||''); }catch(_t){} }
       if(!ttl) ttl = d.n;
-      tags = '<span class="lf-tag" style="background:'+col+'1f;color:'+col+'">'+d.i+' '+d.n+'</span>';
+      /* v193 — 🌐 사이트는 배지를 누르면 바로 인터넷 창으로 (카드는 안 열린다) */
+      if(pty==='site' && e.url){
+        tags = '<span class="lf-tag" data-siteurl="'+esc(e.url)+'" title="눌러서 인터넷으로 열기"'
+             + ' style="background:'+col+'1f;color:'+col+';cursor:pointer;font-weight:800;'
+             + 'text-decoration:underline">'+d.i+' '+d.n+' ↗</span>';
+      }else{
+        tags = '<span class="lf-tag" style="background:'+col+'1f;color:'+col+'">'+d.i+' '+d.n+'</span>';
+      }
       tags += statTag(e, pty);                         /* 상태·구분을 한눈에 */
       if(pty==='plan' && Number(e.carryN)>0 && statVal(e,'plan')!=='완료')
         tags += '<span class="lf-tag" style="background:#fef3c7;color:#92400e">⏭ '+Number(e.carryN)+'일째</span>';
@@ -396,6 +403,12 @@
       if(e.who && pty!=='person') tags += '<span>'+esc(e.who)+'</span>';
       if(e.where) tags += '<span>'+esc(e.where)+'</span>';
       note = e.detail || e.memo || '';
+      /* v193 — 달님 : 「자재구매관련 것들은 주소가 안 나온다」
+            주소를 memo 에 적어 둔 기록만 보이고 있었다. url 칸을 먼저 본다. */
+      if(pty==='site'){
+        var _u = String(e.url||'').trim();
+        if(_u) note = _u + (note ? ' · ' + note : '');
+      }
     }
     var nR=esr(e.scanRefs).filter(function(r){return r.type==='receipt';}).length;
     var nC=esr(e.scanRefs).filter(function(r){return r.type==='card';}).length;
@@ -423,6 +436,18 @@
       + ph
       + '</div>';
   }
+
+  /* v193 — 🌐 사이트 배지 누르면 인터넷 창으로. 카드 열기보다 먼저 잡는다(capture) */
+  document.addEventListener('click', function(ev){
+    var el = ev.target && ev.target.closest && ev.target.closest('[data-siteurl]');
+    if(!el) return;
+    ev.preventDefault(); ev.stopPropagation();
+    var u = String(el.getAttribute('data-siteurl') || '').trim();
+    if(!u){ if(typeof toast==='function') toast('이 사이트에는 주소가 없어요'); return; }
+    if(!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    try{ window.open(u, '_blank', 'noopener'); }
+    catch(e){ console.warn('[사이트] 열기 실패', e); if(typeof toast==='function') toast('창을 못 열었어요'); }
+  }, true);
 
   function sBox(k,v,n){ return '<div class="lf-s"><div class="k">'+k+'</div><div class="v">'+v+'</div>'
     + (n?'<div class="n">'+n+'</div>':'') + '</div>'; }
@@ -7872,7 +7897,9 @@
   /* ══════ 📊 업무일지 데이터 화면 ══════
      개인일지와 똑같은 엔진(표·보드·달력·페이지·속성추가·필터·수식·롤업)을
      업무일지 종류(업무/지출/사고/…)에 그대로 붙인다. */
-  var DS_ORDER = ['work','expense','accident','progress','call','memo','schedule','deliver','meeting','vacation','item','stock','plan','site'];
+  /* v193 — 달님 : 「오늘 계획을 업무 왼쪽에, 사이트는 업무 오른쪽으로」 */
+  var DS_ORDER = ['plan','work','site','expense','accident','progress','call','memo',
+                  'schedule','deliver','meeting','vacation','item','stock'];
 
   /* v168 — 맨 앞에 「🏠 개인」 을 넣었다.
      윗줄(기록·개인·데이터…)을 없애도 이 줄 하나로 개인 ↔ 업무를 오갈 수 있다. */

@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v192-0901-1028";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v193-0901-1046";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=192-20260901t1028"></script>
+<script src="worklog.js?v=193-20260901t1046"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -20270,7 +20270,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=192-20260901t1028"></script>
+<script src="personal.js?v=193-20260901t1046"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에
@@ -21674,6 +21674,30 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       hide();
     }, 160);
   }, true);
+
+  /* ══ v193 — 🔴 목록이 안 닫히던 것 근본 수정 ══
+        ▸ 바깥을 눌러도 안 닫혔다 — 목록은 mousedown 을 막고 있는데 문서 쪽 처리가 없었다.
+        ▸ 입력칸이 화면에서 사라져도(페이지를 다시 그리면) focusout 이 안 나서 그대로 남았다.
+          그래서 목록이 왼쪽 위에 붙은 채 안 없어졌다. */
+  document.addEventListener('mousedown', function(e){
+    if(!box || box.style.display==='none') return;
+    if(box.contains(e.target)) return;            /* 목록 안은 그대로 */
+    if(curInp && e.target===curInp) return;       /* 그 입력칸도 그대로 */
+    hide();
+  }, true);
+
+  function vacSelfCheck(){
+    if(!box || box.style.display==='none') return;
+    var ok=false;
+    try{
+      ok = !!(curInp && document.contains(curInp));
+      if(ok){ var r=curInp.getBoundingClientRect(); ok = (r.width>0 || r.height>0); }
+    }catch(e){ ok=false; }
+    if(!ok) hide();
+  }
+  setInterval(vacSelfCheck, 700);
+  try{ if(typeof window.wlPaintReg==='function') window.wlPaintReg(95, '관련처 목록 정리', vacSelfCheck); }
+  catch(e){ console.warn('[관련처] 정리 등록 실패', e); }
 
   window.addEventListener('scroll', function(){ if(curInp) place(); }, true);
   window.addEventListener('resize', function(){ if(curInp) place(); });
