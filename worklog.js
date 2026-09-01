@@ -23048,7 +23048,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v208-0901-1437';
+  var JS_BUILD = 'v209-0901-1515';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -24711,14 +24711,33 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
      📦 자재 페이지 → 그 품목의 **입출고 내역** + 현재 재고 + [＋ 입출고 적기]
      🔄 입출고 페이지 → **[📦 품목 열기]** + 그 품목의 현재 재고
 
-   되돌리기 : wlItemTx.off()
+   ▶ v209 — 자재 페이지의 입출고 표를 **바로 고칠 수 있게**
+
+   🔴🔴 v202~v205 의 COLS 틀과 결정적으로 다르다 — 그래서 그 틀을 안 썼다
+
+     | | COLS 틀 (지출·업무자재·청소) | 여기 (v209) |
+     |---|---|---|
+     | 무엇을 고치나 | 한 기록 **안의 배열 한 줄** | **별개의 기록** 한 건 |
+     | 저장 | updateRecord(그 기록, {키:배열}) | updateRecord(**각 줄의 기록 id**, {칸:값}) |
+     | ✕ 줄 지우기 | 배열에서 빼기 | 🔴 **기록을 지우는 것** → deleteWithUndo (휴지통 + 되돌리기) |
+     | ＋ 줄 추가 | 배열에 넣기 | 🔴 **새 기록 만들기** → addRecord |
+     | 무엇이 걸리나 | 금액 | 🔴 **재고**(calcStock) · 재고가액 |
+
+   🔴 금액(amount) 은 저절로 계산되는 값이 아니라 **저장된 값**이다.
+      앱 다른 곳은 `amount || qty×단가` 로 읽는다 (worklog.js 7006).
+      → 수량·단가를 고치면 금액도 함께 맞춘다. 어긋난 줄은 🔴 로 알린다.
+
+   되돌리기 : wlItemTx.off()      보기 전용 : wlItemTx.readonly()
+   점검     : wlItemTx.check()    금액이 어긋난 입출고 찾기
    ============================================================ */
 (function(){
   'use strict';
 
-  var LS = 'wl_item_tx';
+  var LS      = 'wl_item_tx';
+  var LS_EDIT = 'wl_item_tx_edit';
   var MAX = 12;                                    /* 한 화면에 보여줄 최근 내역 */
-  function on(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  function on(){   try{ return localStorage.getItem(LS)      !== '0'; }catch(e){ return true; } }
+  function edOn(){ try{ return localStorage.getItem(LS_EDIT) !== '0'; }catch(e){ return true; } }
   function off(){ try{
     window.wlAddOn(['#__none'], 'itemtx',   function(){ return null; });
     window.wlAddOn(['#__none'], 'stocklink',function(){ return null; });
@@ -24758,7 +24777,89 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     return '<b style="color:' + c + '">' + won(v) + '</b>';
   }
 
-  /* ── 📦 자재 페이지 : 이 품목의 입출고 ── */
+  /* ── 📦 자재 페이지 : 이 품목의 입출고 (v208 보기 → v209 고치기) ── */
+
+  var TXCOLS = [
+    { k:'date',      t:'date', p:'날짜',   w:'116px' },
+    { k:'stockType', t:'sel',  p:'구분',   w:'74px', o:['입고','출고'] },
+    { k:'qty',       t:'num',  p:'수량',   w:'70px' },
+    { k:'unitPrice', t:'num',  p:'단가',   w:'86px' },
+    { k:'amount',    t:'num',  p:'금액',   w:'96px' },
+    { k:'vendor',    t:'text', p:'거래처', w:'auto' }
+  ];
+  var INPS = 'width:100%;box-sizing:border-box;height:28px;padding:0 7px;border:1.5px solid #e6eef7;'
+           + 'border-radius:7px;font-size:12.5px;font-family:inherit;background:#fff;outline:none';
+
+  /* 금액이 「수량 × 단가」와 맞는가 — 맞추기 단추를 보일지 정한다 */
+  function amtGap(x){
+    var want = n(x.qty) * n(x.unitPrice);
+    if(!want) return 0;                            /* 단가가 없으면 견줄 것이 없다 */
+    return Math.abs(want - n(x.amount)) > 1 ? want : 0;
+  }
+
+  function cellIn(x, c){
+    var v = x[c.k];
+    if(c.t === 'sel'){
+      return '<select data-txf="' + ES(x.id) + '|' + c.k + '" style="' + INPS + '">'
+           + c.o.map(function(o){
+               return '<option value="' + ES(o) + '"' + (String(v||'') === o ? ' selected' : '') + '>'
+                    + ES(o) + '</option>'; }).join('')
+           + '</select>';
+    }
+    if(c.t === 'date'){
+      return '<input type="date" data-txf="' + ES(x.id) + '|' + c.k + '"'
+           + ' value="' + ES(String(v||'').slice(0,10)) + '" style="' + INPS + '">';
+    }
+    return '<input type="text" data-txf="' + ES(x.id) + '|' + c.k + '"'
+         + ' value="' + ES(c.t === 'num' ? (n(v) ? won(v) : '') : (v == null ? '' : v)) + '"'
+         + ' placeholder="' + ES(c.p) + '" style="' + INPS
+         + (c.t === 'num' ? ';text-align:right;font-variant-numeric:tabular-nums' : '') + '">';
+  }
+
+  function txTable(list, edit){
+    var h = '<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr>';
+    TXCOLS.forEach(function(c){
+      h += '<th style="text-align:' + (c.t === 'num' ? 'right' : 'left') + ';padding:0 6px 4px 0;'
+         + 'font-size:11px;font-weight:800;color:#8ba0b6;white-space:nowrap'
+         + (c.w === 'auto' ? '' : ';width:' + c.w) + '">' + ES(c.p) + '</th>';
+    });
+    h += '<th style="width:62px"></th></tr></thead><tbody>';
+
+    list.forEach(function(x){
+      var gap = amtGap(x);
+      h += '<tr' + (gap ? ' style="background:#fdf3f3"' : '') + '>';
+      TXCOLS.forEach(function(c){
+        var isIn = (x.stockType === '입고');
+        h += '<td style="padding:2px 3px 2px 0;border-bottom:1px solid #eef3f9'
+           + (c.t === 'num' ? ';text-align:right' : '') + '">';
+        if(edit){
+          h += cellIn(x, c);
+        }else if(c.k === 'stockType'){
+          h += '<span style="font-weight:800;color:' + (isIn ? '#0f7a4a' : '#b52929') + '">'
+             + ES(x.stockType || '') + '</span>';
+        }else{
+          h += '<span style="font-variant-numeric:tabular-nums">'
+             + ES(c.t === 'num' ? (n(x[c.k]) ? won(x[c.k]) : '') : String(x[c.k] || '')) + '</span>';
+        }
+        h += '</td>';
+      });
+      h += '<td style="text-align:right;border-bottom:1px solid #eef3f9;white-space:nowrap">'
+         + (gap ? '<button type="button" data-txfix="' + ES(x.id) + '" title="금액을 수량×단가로 맞추기"'
+                  + ' style="border:none;background:#fdeaea;color:#b52929;border-radius:6px;font-size:11px;'
+                  + 'font-weight:800;padding:3px 6px;cursor:pointer;font-family:inherit">🧮 ' + won(gap) + '</button> '
+                : '')
+         + '<button type="button" data-txgo="' + ES(x.id) + '" title="이 기록을 페이지로 열기"'
+         +   ' style="border:1px solid #dbe6f4;background:#fff;color:#3f7cb8;border-radius:6px;'
+         +   'font-size:11px;font-weight:800;padding:2px 6px;cursor:pointer;font-family:inherit">열기</button>'
+         + (edit ? ' <button type="button" data-txdel="' + ES(x.id) + '" title="이 입출고 기록을 지웁니다"'
+                   + ' style="border:none;background:none;color:#c08a8a;font-size:13px;cursor:pointer;'
+                   + 'padding:2px 3px;font-family:inherit">✕</button>' : '')
+         + '</td></tr>';
+    });
+    h += '</tbody></table>';
+    return h;
+  }
+
   function paintItem(){
     if(!on()){ off(); return; }
     var page = document.querySelector('.lf-page'); if(!page){ off(); return; }
@@ -24767,7 +24868,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
       try{ window.wlAddOn(['#__none'], 'itemtx', function(){ return null; }); }catch(e){}
       return;
     }
-    var list = txOf(r.id), st = stockOf(r.id);
+    var edit = edOn();
     try{
       window.wlAddOn(['[data-prow="f:safetyStock"] .pg-pv', '[data-prow="f:unitPrice"] .pg-pv',
                       '.lf-page .pg-props'], 'itemtx',
@@ -24778,80 +24879,179 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
           return d;
         },
         function(d){
+          /* ⌨️ 글자를 치는 동안에는 다시 그리지 않는다 (한글 자모가 깨진다) */
           try{ if(d.contains(document.activeElement)) return; }catch(e){}
-          var h = '<div style="font-size:12px;font-weight:900;color:#33567d;margin-bottom:6px">'
-                + '🔄 이 품목의 입출고 <span style="font-weight:600;color:#8ba0b6">' + list.length + '건</span>'
-                + (st == null ? '' : ' <span style="font-weight:700;color:#5b7fa6;margin-left:6px">현재 재고 '
-                                     + stockBadge(st) + '</span>')
-                + '</div>';
-          if(!list.length){
-            h += '<div style="font-size:12.5px;color:#b8c6d4;padding:4px 0">아직 입출고 기록이 없어요</div>';
-          }else{
-            h += '<table style="width:100%;border-collapse:collapse;font-size:12.5px"><tbody>';
-            list.slice(0, MAX).forEach(function(x){
-              var isIn = (x.stockType === '입고');
-              h += '<tr>'
-                 + '<td style="padding:3px 6px 3px 0;border-bottom:1px solid #eef3f9;white-space:nowrap;color:#7a92a8">'
-                 +   ES(String(x.date||'').slice(0,10)) + '</td>'
-                 + '<td style="padding:3px 6px;border-bottom:1px solid #eef3f9;white-space:nowrap">'
-                 +   '<span style="font-weight:800;color:' + (isIn ? '#0f7a4a' : '#b52929') + '">'
-                 +   ES(x.stockType || '') + '</span></td>'
-                 + '<td style="padding:3px 6px;border-bottom:1px solid #eef3f9;text-align:right;'
-                 +   'font-variant-numeric:tabular-nums">' + won(x.qty) + '</td>'
-                 + '<td style="padding:3px 6px;border-bottom:1px solid #eef3f9;text-align:right;'
-                 +   'font-variant-numeric:tabular-nums;color:#7a92a8">'
-                 +   (n(x.amount) ? won(x.amount) + '원' : '') + '</td>'
-                 + '<td style="padding:3px 0 3px 6px;border-bottom:1px solid #eef3f9;color:#8ba0b6">'
-                 +   ES(String(x.vendor || '').slice(0, 12)) + '</td>'
-                 + '<td style="width:52px;text-align:right;border-bottom:1px solid #eef3f9">'
-                 +   '<button type="button" data-txgo="' + ES(x.id) + '"'
-                 +   ' style="border:1px solid #dbe6f4;background:#fff;color:#3f7cb8;border-radius:7px;'
-                 +   'font-size:11px;font-weight:800;padding:2px 7px;cursor:pointer;font-family:inherit">열기</button>'
-                 + '</td></tr>';
-            });
-            h += '</tbody></table>';
-            if(list.length > MAX)
-              h += '<div style="font-size:11.5px;color:#a8b8c8;margin-top:4px">최근 ' + MAX
-                 + '건만 보여줍니다 (전체 ' + list.length + '건)</div>';
-          }
-          h += '<button type="button" id="txNew" style="margin-top:7px;height:30px;padding:0 12px;'
-             + 'border:1.5px dashed #cfe0f3;border-radius:8px;background:#f8fbff;color:#3f7cb8;'
-             + 'font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">＋ 입출고 적기</button>'
-             + ' <span style="font-size:11.5px;color:#a8b8c8">끄기 wlItemTx.off()</span>';
-          if(d.innerHTML !== h) d.innerHTML = h;
-
-          if(!d._txB){
-            d._txB = 1;
-            d.addEventListener('click', function(ev){
-              var go = ev.target.closest && ev.target.closest('[data-txgo]');
-              if(go){
-                ev.preventDefault(); ev.stopPropagation();
-                var id = go.getAttribute('data-txgo');
-                try{
-                  if(typeof window.wlOpenData === 'function') window.wlOpenData('stock');
-                  setTimeout(function(){
-                    try{ location.hash = '#lp=' + encodeURIComponent(id) + '&ds=stock';
-                         if(typeof window.wlOpenPage === 'function') window.wlOpenPage(id); }
-                    catch(e){ console.error('[자재↔입출고] 열기 실패', e); }
-                  }, 260);
-                }catch(e){ console.error('[자재↔입출고] 열기 실패', e); }
-                return;
-              }
-              var nb = ev.target.closest && ev.target.closest('#txNew');
-              if(nb){
-                ev.preventDefault(); ev.stopPropagation();
-                try{
-                  if(typeof window.wlNewPageWith === 'function')
-                    window.wlNewPageWith('stock', { itemId:r.id, itemName:(r.itemName||''),
-                                                    vendor:(r.vendor||''), stockType:'입고', qty:1 }, true);
-                  else if(typeof toast === 'function') toast('새 기록 창구를 못 찾았어요');
-                }catch(e){ console.error('[자재↔입출고] 새 기록 실패', e);
-                  if(typeof toast === 'function') toast('못 만들었어요: ' + (e.message || e)); }
-              }
-            });
-          }
+          d.innerHTML = itemHTML(r, edit);
+          bindTx(d, r);
         });
     }catch(e){ console.warn('[자재↔입출고] 붙이기 실패', e); }
+  }
+
+  function headHTML(r){
+    var st = stockOf(r.id), safe = n(r.safetyStock);
+    var h = '<span id="txStock">';
+    if(st != null){
+      h += '<span style="font-weight:700;color:#5b7fa6">현재 재고 ' + stockBadge(st) + '</span>';
+      if(safe && st < safe)
+        h += ' <span style="background:#fdeaea;color:#b52929;border-radius:7px;padding:2px 7px;'
+           + 'font-size:11.5px;font-weight:800">⚠ 안전재고 ' + won(safe) + ' 아래</span>';
+    }
+    h += '</span>';
+    return h;
+  }
+
+  function itemHTML(r, edit){
+    var list = txOf(r.id);
+    var h = '<div style="font-size:12px;font-weight:900;color:#33567d;margin-bottom:6px">'
+          + '🔄 이 품목의 입출고 <span style="font-weight:600;color:#8ba0b6">' + list.length + '건</span> '
+          + headHTML(r) + '</div>';
+    if(!list.length && !edit){
+      h += '<div style="font-size:12.5px;color:#b8c6d4;padding:4px 0">아직 입출고 기록이 없어요</div>';
+    }else if(list.length){
+      h += txTable(list.slice(0, MAX), edit);
+      if(list.length > MAX)
+        h += '<div style="font-size:11.5px;color:#a8b8c8;margin-top:4px">최근 ' + MAX
+           + '건만 보여줍니다 (전체 ' + list.length + '건)</div>';
+    }
+    if(edit)
+      h += '<button type="button" id="txAdd" style="margin-top:7px;height:30px;padding:0 12px;'
+         + 'border:1.5px dashed #cfe0f3;border-radius:8px;background:#f8fbff;color:#3f7cb8;'
+         + 'font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">＋ 줄 추가</button>';
+    h += ' <button type="button" id="txNew" style="margin-top:7px;height:30px;padding:0 12px;'
+       + 'border:1.5px solid #dbe6f4;border-radius:8px;background:#fff;color:#3f7cb8;'
+       + 'font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">📄 페이지로 적기</button>';
+    h += '<div style="margin-top:6px;font-size:11.5px;color:#a8b8c8;line-height:1.7">'
+       + (edit ? '🔴 여기서 고치면 <b>재고가 바로 바뀝니다</b> · ✕ 는 기록을 지웁니다 (되돌리기 나옵니다)'
+               : '보기 전용입니다')
+       + '<br>' + (edit ? '보기 전용으로 wlItemTx.readonly()' : '고치려면 wlItemTx.edit()')
+       + ' · 끄기 wlItemTx.off() · 금액 점검 wlItemTx.check()'
+       + '</div>';
+    return h;
+  }
+
+  /* 재고 줄만 갈아 끼운다 — 상자를 통째로 다시 그리면 커서가 날아간다 */
+  function reStock(box, r){
+    try{
+      var el = box.querySelector('#txStock');
+      if(!el) return;
+      var tmp = document.createElement('div');
+      tmp.innerHTML = headHTML(r);
+      var nu = tmp.querySelector('#txStock');
+      if(nu) el.innerHTML = nu.innerHTML;
+    }catch(e){ console.warn('[자재↔입출고] 재고 갱신 실패', e); }
+  }
+  function redrawTx(box, r){
+    try{ box.innerHTML = itemHTML(r, edOn()); bindTx(box, r); }
+    catch(e){ console.warn('[자재↔입출고] 다시 그리기 실패', e); }
+  }
+
+  function bindTx(box, r){
+    /* 값 고치기 — 칸에서 빠져나올 때만 저장한다 (한글 자모 보호) */
+    box.querySelectorAll('[data-txf]').forEach(function(inp){
+      if(inp._txB) return; inp._txB = 1;
+      inp.addEventListener('change', function(){
+        try{
+          var a = inp.getAttribute('data-txf').split('|');
+          var sid = a[0], key = a[1];
+          var x = recOf(sid); if(!x) return;
+          var col = TXCOLS.filter(function(c){ return c.k === key; })[0];
+          var patch = {};
+          patch[key] = (col && col.t === 'num') ? n(inp.value) : inp.value;
+
+          /* 🔴 수량·단가를 고치면 금액도 함께 맞춘다 (금액은 저절로 계산되는 값이 아니다) */
+          if(key === 'qty' || key === 'unitPrice'){
+            var q  = (key === 'qty')       ? n(inp.value) : n(x.qty);
+            var up = (key === 'unitPrice') ? n(inp.value) : n(x.unitPrice);
+            if(up) patch.amount = Math.round(q * up);
+          }
+          if(typeof updateRecord === 'function') updateRecord(sid, patch);
+          if(col && col.t === 'num') inp.value = n(inp.value) ? won(inp.value) : '';
+          if(key === 'qty' || key === 'stockType') reStock(box, r);
+          if(key === 'qty' || key === 'unitPrice') redrawTx(box, r);   /* 금액 칸을 다시 보여준다 */
+          try{ if(typeof window.wlSumNow === 'function') window.wlSumNow(); }catch(e2){}
+        }catch(e){ console.error('[자재↔입출고] 고치기 실패', e);
+          if(typeof toast === 'function') toast('못 고쳤어요: ' + (e.message || e)); }
+      });
+    });
+
+    if(box._txB2) return; box._txB2 = 1;
+    box.addEventListener('click', function(ev){
+      var t = ev.target;
+
+      var fx = t.closest && t.closest('[data-txfix]');
+      if(fx){
+        ev.preventDefault(); ev.stopPropagation();
+        try{
+          var fid = fx.getAttribute('data-txfix'), fr = recOf(fid); if(!fr) return;
+          var wantA = Math.round(n(fr.qty) * n(fr.unitPrice));
+          if(typeof updateRecord === 'function') updateRecord(fid, { amount: wantA });
+          if(typeof toast === 'function') toast('🧮 금액을 ' + won(wantA) + '원으로 맞췄어요');
+          redrawTx(box, r);
+        }catch(e){ console.error('[자재↔입출고] 금액 맞추기 실패', e); }
+        return;
+      }
+
+      var del = t.closest && t.closest('[data-txdel]');
+      if(del){
+        ev.preventDefault(); ev.stopPropagation();
+        try{
+          var did = del.getAttribute('data-txdel'), dr = recOf(did); if(!dr) return;
+          var lab = '입출고 ' + String(dr.date || '').slice(0,10) + ' ' + (dr.stockType || '')
+                  + ' ' + won(dr.qty);
+          /* 🔴 기록을 지우는 것이라 되돌릴 수 있는 길로만 지운다 (휴지통 + 되돌리기 토스트) */
+          if(typeof deleteWithUndo === 'function') deleteWithUndo(did, lab);
+          else if(typeof deleteRecord === 'function') deleteRecord(did);
+          setTimeout(function(){ redrawTx(box, r); }, 220);
+        }catch(e){ console.error('[자재↔입출고] 지우기 실패', e);
+          if(typeof toast === 'function') toast('못 지웠어요: ' + (e.message || e)); }
+        return;
+      }
+
+      var add = t.closest && t.closest('#txAdd');
+      if(add){
+        ev.preventDefault(); ev.stopPropagation();
+        try{
+          var up2 = n(r.unitPrice);
+          var rec = { kind:'stock', itemId:r.id, itemName:(r.itemName || ''),
+                      date:(typeof todayStr === 'function' ? todayStr() : ''),
+                      stockType:'입고', qty:1, unitPrice:up2, amount:Math.round(up2),
+                      vendor:(r.vendor || '') };
+          if(typeof addRecord === 'function') addRecord(rec);
+          if(typeof toast === 'function') toast('＋ 입고 한 줄을 넣었어요 — 수량·날짜를 고쳐 주세요');
+          redrawTx(box, r);
+          try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e2){}
+        }catch(e){ console.error('[자재↔입출고] 줄 추가 실패', e);
+          if(typeof toast === 'function') toast('못 넣었어요: ' + (e.message || e)); }
+        return;
+      }
+
+      var go = t.closest && t.closest('[data-txgo]');
+      if(go){
+        ev.preventDefault(); ev.stopPropagation();
+        var gid = go.getAttribute('data-txgo');
+        try{
+          if(typeof window.wlOpenData === 'function') window.wlOpenData('stock');
+          setTimeout(function(){
+            try{ location.hash = '#lp=' + encodeURIComponent(gid) + '&ds=stock';
+                 if(typeof window.wlOpenPage === 'function') window.wlOpenPage(gid); }
+            catch(e){ console.error('[자재↔입출고] 열기 실패', e); }
+          }, 260);
+        }catch(e){ console.error('[자재↔입출고] 열기 실패', e); }
+        return;
+      }
+
+      var nb = t.closest && t.closest('#txNew');
+      if(nb){
+        ev.preventDefault(); ev.stopPropagation();
+        try{
+          if(typeof window.wlNewPageWith === 'function')
+            window.wlNewPageWith('stock', { itemId:r.id, itemName:(r.itemName||''),
+                                            vendor:(r.vendor||''), stockType:'입고', qty:1,
+                                            unitPrice:n(r.unitPrice) }, true);
+          else if(typeof toast === 'function') toast('새 기록 창구를 못 찾았어요');
+        }catch(e){ console.error('[자재↔입출고] 새 기록 실패', e); }
+      }
+    });
   }
 
   /* ── 🔄 입출고 페이지 : 품목으로 건너가기 ── */
@@ -24925,7 +25125,43 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
       return { 입출고:(entries||[]).filter(function(e){ return e && e.kind==='stock'; }).length,
                문제:bad.length, 목록:bad };
     },
-    state: function(){ return { 잇기:(on()?'켜짐':'꺼짐'), 한번에보는내역:MAX }; }
+    /* v209 — 고치기 켜고 끄기 */
+    edit:     function(){ try{ localStorage.setItem(LS_EDIT,'1'); }catch(e){}
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '자재 페이지에서 입출고를 고칠 수 있습니다'; },
+    readonly: function(){ try{ localStorage.setItem(LS_EDIT,'0'); }catch(e){}
+                          if(typeof window.wlAfterPaint==='function') window.wlAfterPaint();
+                          return '보기 전용입니다 (고치려면 [열기])'; },
+    /* 🔴 금액이 「수량 × 단가」와 어긋난 입출고 찾기 — 재고가액이 틀어지는 원인 */
+    check:    function(){
+      var bad = [];
+      (entries || []).forEach(function(e){
+        if(!e || e.kind !== 'stock') return;
+        var want = n(e.qty) * n(e.unitPrice);
+        if(!want) return;                              /* 단가가 없으면 견줄 것이 없다 */
+        if(Math.abs(want - n(e.amount)) > 1)
+          bad.push({ id:e.id, 날짜:e.date, 구분:e.stockType,
+                     수량:n(e.qty), 단가:n(e.unitPrice),
+                     저장된금액:n(e.amount), 수량곱단가:Math.round(want) });
+      });
+      return { 입출고:(entries||[]).filter(function(e){ return e && e.kind==='stock'; }).length,
+               어긋난것:bad.length, 목록:bad };
+    },
+    /* 어긋난 금액을 한꺼번에 「수량 × 단가」로 맞춘다 — 먼저 check() 로 보고 나서 부르세요 */
+    fixAll:   function(){
+      try{
+        var bad = window.wlItemTx.check().목록, k = 0;
+        bad.forEach(function(x){
+          try{ if(typeof updateRecord === 'function'){ updateRecord(x.id, { amount:x.수량곱단가 }); k++; } }
+          catch(e){ console.warn('[자재↔입출고] ' + x.id + ' 맞추기 실패', e); }
+        });
+        try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e){}
+        return k ? (k + '건의 금액을 「수량 × 단가」로 맞췄어요') : '맞출 것이 없어요';
+      }catch(e){ console.error('[자재↔입출고] fixAll 실패', e); return '못 맞췄어요: ' + (e.message||e); }
+    },
+    state: function(){ return { 잇기:(on()?'켜짐':'꺼짐'), 고치기:(edOn()?'가능':'보기 전용'),
+                                한번에보는내역:MAX }; }
   };
-  console.log('[자재↔입출고] v208 준비됨 — 자재에 입출고 내역 · 입출고에 [📦 품목 열기]');
+  console.log('[자재↔입출고] v209 준비됨 — 자재에 입출고 내역 ('
+            + (edOn() ? '고치기 가능' : '보기 전용') + ') · 입출고에 [📦 품목 열기]');
 })();
