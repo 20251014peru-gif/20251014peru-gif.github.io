@@ -23255,7 +23255,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v229-0902-1355';
+  var JS_BUILD = 'v230-0902-1349';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -23757,10 +23757,11 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
   }
   function save(a){
     try{ localStorage.setItem(LS, JSON.stringify(a||[])); }catch(e){}
-    paint();
+    paint(true);                 /* 방금 사람이 숨김 목록을 바꿨을 때만 자리를 옮긴다 */
   }
 
-  function paint(){
+  /* justChanged 가 true 일 때만 「켜진 탭이 숨겨졌으니 데이터로 옮기기」 를 한다 */
+  function paint(justChanged){
     try{
       var h = list();
       document.querySelectorAll('[data-v43tab]').forEach(function(b){
@@ -23770,11 +23771,21 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
         else if(b.dataset._wlth){ b.style.display=''; delete b.dataset._wlth; }
       });
       backDoor(h.indexOf('data') >= 0);
-      /* 지금 켜진 탭을 숨겼으면 데이터 화면으로 옮겨 준다 */
-      var on = document.querySelector('[data-v43tab].on, [data-v43tab].active');
-      var ot = on ? (on.getAttribute('data-v43tab')||'') : '';
-      if(ot && h.indexOf(ot) >= 0 && KEEP.indexOf(ot) < 0){
-        if(typeof window.v43ActivateTab === 'function') window.v43ActivateTab('data');
+      /* ══ v230 🔴 달님 : 「개인 기록·차계부·연락처를 누르면 업무로 바뀐다」 ══
+         이 아래 줄이 진짜 범인이었다.
+         paint() 는 화면이 조금이라도 바뀌면 0.2초 뒤에 다시 도는 감시자에 물려 있다.
+         🏠 개인(life) 이 「숨긴 탭」 목록에 들어 있으므로, 개인 화면에 들어가
+         무언가를 누르는 순간 「켜진 탭이 숨겨진 탭이네」 하고 데이터로 끌어냈다.
+         오류는 하나도 안 났다.
+         → 단추를 감추는 것과, 그 화면에 못 들어가게 하는 것은 다른 일이다.
+           자리를 옮기는 건 「사람이 방금 숨김 목록을 바꾼」 그 순간에만 한다.
+         (🏠 개인 칩 · 🏠 개인일지 단추는 탭 단추를 감춰도 살아 있는 정상 통로다) */
+      if(justChanged){
+        var on = document.querySelector('[data-v43tab].on, [data-v43tab].active');
+        var ot = on ? (on.getAttribute('data-v43tab')||'') : '';
+        if(ot && h.indexOf(ot) >= 0 && KEEP.indexOf(ot) < 0){
+          if(typeof window.v43ActivateTab === 'function') window.v43ActivateTab('data');
+        }
       }
     }catch(e){ console.warn('[탭 숨기기]', e); }
   }
@@ -23863,19 +23874,19 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
 
   /* 탭 줄이 다시 그려져도 따라 붙는다 */
   var t=null;
-  function later(){ clearTimeout(t); t=setTimeout(paint, 200); }
+  function later(){ clearTimeout(t); t=setTimeout(function(){ paint(false); }, 200); }
   try{
     var mo=new MutationObserver(function(){ later(); });
     var bar=document.querySelector('[data-v43tab]');
     mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
   }catch(e){}
-  setTimeout(paint, 1200);
-  setTimeout(paint, 3000);
-  setTimeout(paint, 6000);
+  setTimeout(function(){ paint(false); }, 1200);
+  setTimeout(function(){ paint(false); }, 3000);
+  setTimeout(function(){ paint(false); }, 6000);
 
   window.wlTabHide = { panel:panel, hide:hide, show:show, reset:reset,
                        list:function(){ var r=list(); console.log('[탭 숨기기] 숨긴 탭:', r); return r; },
-                       now:paint };
+                       now:function(){ return paint(false); } };
   console.log('[탭 숨기기] v174 준비됨 — wlTabHide.panel() · 지금 숨긴 것 ' + list().length + '개');
 })();
 
