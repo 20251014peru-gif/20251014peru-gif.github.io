@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v234-0902-1440";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v235-0902-1455";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=234-20260902t1440"></script>
+<script src="worklog.js?v=235-20260902t1455"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -19719,6 +19719,16 @@ if('serviceWorker' in navigator){
   overflow-x:auto; overflow-y:hidden; scrollbar-width:none; padding:1px 0;
   border-left:1px solid #dbe6f4; margin-left:3px; padding-left:7px }
 .lf-pcats::-webkit-scrollbar{ height:0 }
+/* v235 — 🗃 업무 머리줄: 제목 + 종류 칩을 한 줄로 (개인과 같은 모양) */
+.lf-pn{ font-size:11.5px; font-weight:800; color:#8ba0b6; background:#eef5fd;
+  border-radius:8px; padding:1px 7px; margin-left:2px }
+.lf-psub{ font-size:11px; font-weight:700; color:#b58a2f; background:#fffbea;
+  border:1px solid #f0e0b0; border-radius:8px; padding:1px 6px; white-space:nowrap; flex:0 0 auto }
+.lf-phcats{ margin-bottom:0 !important; flex:1 1 auto; min-width:0; flex-wrap:nowrap;
+  overflow-x:auto; overflow-y:hidden; scrollbar-width:none; padding:1px 0 1px 7px;
+  border-left:1px solid #dbe6f4; margin-left:3px }
+.lf-phcats::-webkit-scrollbar{ height:0 }
+.lf-phcats .lf-tab{ height:26px; padding:0 8px; font-size:11.5px; border-radius:13px; flex:0 0 auto }
 .lf-pcats .lf-chip{ height:26px; padding:0 7px; font-size:11.5px; border-radius:13px; gap:3px; flex:0 0 auto }
 .lf-pcats .lf-chip b{ font-size:10.5px; margin-left:-1px }
 .lf-pq{ height:30px !important; width:140px; max-width:22vw; flex:0 0 auto; margin-left:5px;
@@ -20490,7 +20500,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=234-20260902t1440"></script>
+<script src="personal.js?v=235-20260902t1455"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에

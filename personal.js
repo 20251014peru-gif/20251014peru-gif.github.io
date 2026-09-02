@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v234-0902-1440';
+window.PERSONAL_BUILD = 'v235-0902-1455';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -8445,7 +8445,7 @@ window.PERSONAL_BUILD = 'v234-0902-1440';
       try{ if(DS && DS.kind) keep[DS.kind] = 1; }catch(e){}
     }
     var hidden = 0;
-    var h = '<div class="lf-tabs lf-dstabs" style="margin-bottom:10px">';
+    var h = '<div class="lf-tabs lf-dstabs lf-phcats">';
     h += '<button type="button" class="lf-tab'+(isPersonal()?' on':'')+'" data-dsk="personal"'
        + ' title="개인일지 — 업무일지와 따로 저장됩니다">🏠 개인</button>'
        + '<span style="display:inline-block;width:1px;height:22px;background:#dbe6f4;margin:0 6px;vertical-align:middle"></span>';
@@ -8492,22 +8492,22 @@ window.PERSONAL_BUILD = 'v234-0902-1440';
       sub = mineAll.length - cnt;
       if(showSub()){ cnt = mineAll.length; sub = 0; }
     }catch(e){}
+    /* ══ v235 — 달님 : 「업무도 개인처럼」 ══
+       예전엔 머리말 / 종류 칩 / 도구줄 = 세 줄이었다. 개인과 똑같이 두 줄로 맞춘다.
+       ① 이 한 줄  : 🛠 업무 527 · | · 종류 칩 (넘치면 그 줄만 옆으로 밀림)
+       ② 아래 도구줄
+       - 「🏠 개인일지」 단추는 뺐다 — 칩 줄 맨 앞의 「🏠 개인」 이 같은 일을 한다
+       - 「기록 탭과 같은 데이터…」 안내글은 제목 도움말(title)로 옮겼다 */
     host.innerHTML =
       '<div class="lf-wrap">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
-      +   '<div style="font-size:19px;font-weight:900;color:#1a2f45">'+DS.icon+' '+DS.name
-      +     ' <span style="font-size:12.5px;font-weight:700;color:#8ba0b6">업무일지 · '+cnt+'건</span>'
-      +     (sub? ' <span style="font-size:11.5px;font-weight:700;color:#b58a2f;background:#fffbea;'
-              + 'border:1px solid #f0e0b0;border-radius:8px;padding:2px 7px" '
-              + 'title="⚙ 안의 「하위 항목도」 를 켜면 함께 보입니다">하위 '+sub+'건 숨김</span>' : '')
-      +   '</div>'
-      +   '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
-      +     '<span style="font-size:11.5px;color:#a8b8c8">기록 탭과 같은 데이터 · 보는 방식만 다름</span>'
-      +     '<button type="button" id="dsGoLife" style="height:30px;padding:0 11px;border:1.5px solid #dbe6f4;border-radius:9px;background:#fff;color:#5b7794;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">🏠 개인일지</button>'
-      +   '</div>'
-      + '</div>'
+      + '<div class="lf-phead">'
+      +   '<div class="lf-ptitle" title="기록 탭과 같은 데이터 · 보는 방식만 다릅니다">'
+      +     DS.icon+' '+DS.name+' <span class="lf-pn">'+cnt+'</span></div>'
+      +   (sub? '<span class="lf-psub" title="⚙ 안의 「하위 항목도」 를 켜면 함께 보입니다">하위 '+sub+'</span>' : '')
       /* v179 — 목록 부분만 따로 감쌌다. 「지출 관리 보기」 에서 이 구역만 접는다 (종류 칩은 남긴다) */
-      + dsChips() + '<div id="dsListZone">' + viewRec() + '</div>' + '</div>';
+      +   dsChips()
+      + '</div>'
+      + '<div id="dsListZone">' + viewRec() + '</div>' + '</div>';
     bindRender(host);
     var g = host.querySelector('#dsGoLife');
     if(g) g.addEventListener('click', function(){ window.wlOpenData('personal'); });
