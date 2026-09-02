@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v233-0902-1425';
+window.PERSONAL_BUILD = 'v234-0902-1440';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -3817,7 +3817,28 @@ window.PERSONAL_BUILD = 'v233-0902-1425';
     return h+'</span>';
   }
 
-  /* v233 — 개인 「📋 기록」 의 분류 칩 11개를 고르개 하나로 (도구줄 맨 앞) */
+  /* v234 — 달님 : 「세로로 떨어지는 목록 말고 옆으로 펼쳐지게」
+     머리줄 「안전」 오른쪽에 분류 칩을 그대로 편다. 작게 만들어 한 줄에 들어가게 하고,
+     화면이 좁아 넘치면 그 줄만 옆으로 밀린다 (줄이 늘어나지 않는다). */
+  function catChipsP(){
+    try{
+      var all = recs().filter(function(e){ return e.ptype!=='car'; });
+      var cnt = {}; all.forEach(function(e){ cnt[e.ptype] = (cnt[e.ptype]||0) + 1; });
+      var h = '<div class="lf-pcats">';
+      h += '<div class="lf-chip'+(curCat==='전체'?' on':'')+'" data-lc="전체"'
+         + (curCat==='전체'?' style="background:#2563a8"':'') + '>전체 <b>'+all.length+'</b></div>';
+      var cc = cats();
+      Object.keys(cc).forEach(function(k){
+        var d = cc[k] || {}, m = cnt[k] || 0, on = (curCat===k);
+        h += '<div class="lf-chip'+(on?' on':'')+(m?'':' dim')+'" data-lc="'+esc(k)+'"'
+           + (on?' style="background:'+(d.c||'#2563a8')+'"':'') + ' title="'+esc(d.n||k)+'">'
+           + (d.i||'') + ' ' + esc(d.n||k) + (m? ' <b>'+m+'</b>' : '') + '</div>';
+      });
+      return h + '</div>';
+    }catch(e){ console.warn('[분류 칩]', e); return ''; }
+  }
+
+  /* v233 — 쓰지 않음(v234에서 칩으로 되돌림). 좁은 화면용으로 남겨 둔다 */
   function catSelP(){
     try{
       var all = recs().filter(function(e){ return e.ptype!=='car'; });
@@ -3845,7 +3866,6 @@ window.PERSONAL_BUILD = 'v233-0902-1425';
       + '<div class="lf-fbwrap"><div class="lf-fbmid" style="flex-wrap:wrap;row-gap:6px">'
       /* v212 — 달님 : 「갤러리까지가 보기 부분이니 정기점검 왼쪽이 맞다」
          검색줄(lf-bar)에 있던 보기 단추를 도구줄 맨 앞으로 옮긴다. */
-      +   ((isPersonal() && cur==='rec') ? (catSelP() + sep) : '')
       +   vwBtns()
       +   sep
       +   chkBtns(rows, rc)
@@ -8361,11 +8381,13 @@ window.PERSONAL_BUILD = 'v233-0902-1425';
       +   '<div class="lf-tabs lf-ptabs">' + TABS.map(function(t){
             return '<button type="button" class="lf-tab'+(t[0]===cur?' on':'')+'" data-lt="'+t[0]+'">'+t[1]+'</button>'; }).join('')
       +   '</div>'
+      +   (cur==='rec' ? catChipsP() : '')
       +   (cur==='rec'
              ? '<input type="text" id="lfQ" class="lf-in lf-pq" placeholder="🔍 검색" value="'+esc(curQ)+'">'
              : '<span style="flex:1 1 auto"></span>')
       +   (cur==='safe' ? '<span class="lf-pnote">업무일지 · 개인일지 모두</span>' : '')
-      +   '<button type="button" id="lfGoData" class="lf-pbtn" title="업무일지 화면으로">🗃 업무일지</button>'
+      /* v234 — 분류 칩이 한 줄에 들어가도록 그림만 (마우스를 올리면 이름) */
+      +   '<button type="button" id="lfGoData" class="lf-pbtn" title="🗃 업무일지 화면으로">🗃</button>'
       +   '<button type="button" id="lfSeedBtn" class="lf-pbtn dash" title="맛보기 샘플 넣기 · 지우기">🧪</button>'
       + '</div>'
       + body + '</div>';
