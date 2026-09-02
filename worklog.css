@@ -1492,3 +1492,14 @@ tr.settle-add:hover .settle-addhint{ color:#3f7cb8; font-weight:800 }
   .lf-fb > #lfAdd{ flex:1 1 auto !important; min-height:40px }
   .lf-fb > .lf-cnt{ margin-left:auto }
 }
+
+/* v247 — 휴대폰(640px 이하) 🏠 개인 머리줄(.lf-phead) 3줄 배치
+   원인: 한 줄 고정(nowrap)에 제목·하위탭·분류칩·검색·단추 6가지가 들어가
+         322px 에서 하위탭이 21px, 분류칩이 80px 로 짓눌렸다.
+   해결: 1줄 = 제목 · 검색(남은 폭 전부) · 단추 / 2줄 = 하위탭(줄바꿈) / 3줄 = 분류칩(옆으로 밀기) */
+@media (max-width:640px){
+  .lf-phead{ flex-wrap:wrap !important; row-gap:7px }
+  .lf-phead > .lf-pq{ flex:1 1 60px !important; width:auto !important; max-width:none !important; min-width:0; margin-left:2px }
+  .lf-phead > .lf-ptabs{ order:10; flex:1 1 100% !important; flex-wrap:wrap; overflow:visible; row-gap:5px }
+  .lf-phead > .lf-pcats{ order:11; flex:1 1 100% !important; border-left:none; margin-left:0; padding-left:0 }
+}
