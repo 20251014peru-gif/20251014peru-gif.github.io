@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v241-0902-1640';
+window.PERSONAL_BUILD = 'v242-0902-1704';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -705,7 +705,9 @@ window.PERSONAL_BUILD = 'v241-0902-1640';
     expense: [
       {k:'vendor',      label:'업체',          type:'text'},
       {k:'purpose',     label:'용도',          type:'select'},
-      {k:'expSubType',  label:'하위 구분',      type:'select'},
+      /* v242 — 고를 목록은 창구(wlExpSubs)가 준다. 달님이 관리 창에서 고칠 수 있다 */
+      {k:'expSubType',  label:'하위 구분',      type:'select',
+       get opts(){ try{ return (window.wlExpSubs ? window.wlExpSubs.all() : []); }catch(e){ return []; } } },
       {k:'supplyAmt',   label:'공급가액 (원)',  type:'number'},
       {k:'taxAmt',      label:'부가세 (원)',    type:'number'},
       {k:'isIssued',    label:'계산서 발행',    type:'checkbox'},
@@ -4073,6 +4075,9 @@ window.PERSONAL_BUILD = 'v241-0902-1640';
              ? '<button type="button" class="lf-fx" id="lfOldGo"'
                + ' title="쓰시던 개인일지 앱의 기록·연락처를 한 번에 가져옵니다 · 예전 앱 기록은 그대로 남습니다">'
                + '📥 예전 개인일지 가져오기</button>' : '')
+      +     ((!isPersonal() && DS && DS.key==='work:expense')
+             ? '<button type="button" class="lf-fx" id="lfSubMgr" title="선납부 · 기타정산 · 수도광열비 의 하위 구분 목록을 고칩니다">🏷 하위 구분 관리</button>'
+             : '')
       +     '<button type="button" class="lf-fx" data-gotab="password" title="비밀번호 화면">🔐 비번</button>'
       +     '<button type="button" class="lf-fx" data-gotab="diag" title="진단 · 자가 점검">🔧 진단</button>'
       +     '<button type="button" class="lf-fx" data-gotab="ai" title="AI 화면">🤖 AI</button>'
@@ -8822,6 +8827,12 @@ window.PERSONAL_BUILD = 'v241-0902-1640';
     var tb=document.getElementById('lfTpl');  if(tb) tb.addEventListener('click', function(){
       tplPick((cur==='car')?'car':(curCat!=='전체'?curCat:'')); });
     var vb=document.getElementById('lfVend'); if(vb) vb.addEventListener('click', function(){ vendorPick(); });
+    var sm=document.getElementById('lfSubMgr');
+    if(sm) sm.addEventListener('click', function(){
+      try{ if(window.wlExpSubs && window.wlExpSubs.manage) window.wlExpSubs.manage('선납부');
+           else noteMsg('하위 구분 관리를 못 불러왔어요 — worklog.js 를 올렸는지 확인해 주세요'); }
+      catch(e){ console.error('[하위 구분 관리]', e); noteMsg('오류: '+(e.message||e)); }
+    });
     var a2=document.getElementById('lfAddCar'); if(a2) a2.addEventListener('click', function(){ openRec('car'); });
     var a3=document.getElementById('lfAddCt');  if(a3) a3.addEventListener('click', function(){ openCt(); });
 

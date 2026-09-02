@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v241-0902-1640";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v242-0902-1704";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=241-20260902t1640"></script>
+<script src="worklog.js?v=242-20260902t1704"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -10518,7 +10518,11 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var m = GRP_MAP[gk]; if(!m) return;
     _expGrp = gk;
     _expType = m.type;
-    if(m.subs){ if(m.subs.indexOf(_expSubType)<0) _expSubType = m.subs[0]; }
+    if(m.subs){
+      var _ms = m.subs;
+      try{ if(window.wlExpSubs){ var _s2 = window.wlExpSubs.get(k); if(_s2 && _s2.length) _ms = _s2; } }catch(e){}
+      if(_ms.indexOf(_expSubType)<0) _expSubType = _ms[0];
+    }
     else _expSubType = '';
   }
 
@@ -10696,7 +10700,11 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(!row||!wrap) return;
     /* v180 — 그룹이 정해 주는 목록을 먼저 쓴다 (선납부 / 수도광열비를 갈라 준다) */
     var gm = GRP_MAP[_expGrp];
-    var opts = (gm && gm.subs) ? gm.subs : EXP_SUBTYPES[_expType];
+    /* v242 — 달님이 고칠 수 있는 목록을 먼저 쓴다 (창구 wlExpSubs) */
+    var opts = null;
+    try{ if(window.wlExpSubs && gm && gm.subs){ var _s = window.wlExpSubs.get(_expGrp); if(_s && _s.length) opts = _s; } }
+    catch(e){ console.warn('[하위 구분] 저장된 목록을 못 읽었어요', e); }
+    if(!opts) opts = (gm && gm.subs) ? gm.subs : EXP_SUBTYPES[_expType];
     if(!opts){ row.style.display='none'; _expSubType=''; return; }
     /* 현재 하위구분이 이 종류에 없으면 첫 항목으로 기본 선택 */
     if(opts.indexOf(_expSubType)<0) _expSubType=opts[0];
@@ -11123,7 +11131,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         :'';
       return '<div style="background:#fff;border:1.5px solid #e8f0fa;border-left:4px solid '+color+';border-radius:12px;padding:12px 14px;cursor:pointer" data-expid="'+esc(e.id)+'">'
         +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">'
-        +'<div style="font-size:14px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+esc(e.title||'(내역없음)')+'</div>'
+        /* v242 — 달님 : 「제목은 보이게. 길면 두 줄로라도」
+           예전에는 white-space:nowrap 이라 한 줄에서 「…」 로 잘렸다.
+           두 줄까지 접어서 보여 준다 (세 줄부터는 「…」). */
+        +'<div style="font-size:14px;font-weight:700;color:#1a2f45;flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;word-break:break-word">'+esc(e.title||'(내역없음)')+'</div>'
         +'<div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0">'
         +'<div style="font-size:18px;font-weight:800;color:'+color+'">'+fmt(e.amount)+'원</div>'
         +supplyLine
@@ -11131,7 +11142,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         +'</div>'
         +'<div style="font-size:12px;color:#94a3b8;margin-top:4px">'+esc(e.date||'')+(e.vendor?' · <b style="color:#64748b">'+esc(e.vendor)+'</b>':'')+'</div>'
         +(issuedBadge||purposeBadge||subBadge?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px">'+subBadge+issuedBadge+purposeBadge+'</div>':'')
-        +(cleanMemo?'<div style="font-size:11px;color:#b0bec5;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(cleanMemo.slice(0,40))+'</div>':'')
+        /* v242 — 메모도 한 줄 40자에서 잘렸다. 두 줄까지 보여 준다 */
+        +(cleanMemo?'<div style="font-size:11px;color:#b0bec5;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;word-break:break-word">'+esc(cleanMemo.slice(0,120))+'</div>':'')
         +'</div>';
     }
 
@@ -11204,7 +11216,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
               +mrows.map(function(r){
                 return '<div data-gomonthly="1" style="background:#fff;border:1.5px solid #fed7aa;border-left:4px solid #ea580c;border-radius:12px;padding:12px 14px;cursor:pointer">'
                   +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
-                  +'<div style="font-size:13px;font-weight:700;color:#1a2f45;overflow:hidden;text-overflow:ellipsis">'+esc(r.title)+'</div>'
+                  +'<div style="font-size:13px;font-weight:700;color:#1a2f45;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;word-break:break-word">'+esc(r.title)+'</div>'
                   +'<div style="font-size:15px;font-weight:800;color:#ea580c;white-space:nowrap">'+fmt(r.amount)+'원</div>'
                   +'</div>'
                   +'<div style="font-size:11px;color:#94a3b8;margin-top:4px">공급 '+fmt(r.supplyAmt)+' / 세 '+fmt(r.taxAmt)+(r.memo?' · '+esc(r.memo):'')+'</div>'
@@ -20597,7 +20609,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=241-20260902t1640"></script>
+<script src="personal.js?v=242-20260902t1704"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에

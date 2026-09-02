@@ -23265,7 +23265,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v241-0902-1640';
+  var JS_BUILD = 'v242-0902-1704';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -25946,4 +25946,166 @@ window.wlAskText = function(title, value, opt){
                                마지막_뗀곳:  ut && (ut.id||ut.className||ut.tagName), 움직임px: Math.round(moved) }; }
   };
   console.log('[드래그 지킴이] v236 준비됨 — wlDragGuard.state()');
+})();
+
+
+/* ═══════════════════════════════════════════════════════════════
+   🏷 하위 구분 목록 창구 하나 (wlExpSubs)   v242
+   달님 : 「하위구분 목록은 내가 추가·삭제·수정할 수 있게」
+
+   예전에는 목록이 코드에 붙박이였다 (선납부 4개 · 기타정산 1개 · 수도광열비 2개).
+   이제 기기에 저장하고, 관리 창에서 고친다.
+   🔴 판단하는 곳은 여기 하나뿐이다 — 옛 지출 입력창도, 노션식 페이지도 여기서 받아 쓴다.
+
+   창구 : wlExpSubs.get('선납부') / .all() / .manage() / .reset()
+   저장 : localStorage  wl_exp_subs
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var LS = 'wl_exp_subs';
+  var DEF = {
+    '선납부':     ['유선방송','전화','정수기','기타'],
+    '기타정산':   ['공사성'],
+    '수도광열비': ['수도','전기']
+  };
+  var ORDER = ['선납부','기타정산','수도광열비'];
+
+  function load(){
+    var o = {};
+    try{ var s = localStorage.getItem(LS); if(s) o = JSON.parse(s) || {}; }
+    catch(e){ console.warn('[하위 구분] 못 읽었어요 — 기본값을 씁니다', e); o = {}; }
+    ORDER.forEach(function(k){
+      if(!Array.isArray(o[k]) || !o[k].length) o[k] = DEF[k].slice();
+      o[k] = o[k].map(function(x){ return String(x||'').trim(); }).filter(Boolean);
+    });
+    return o;
+  }
+  function save(o){
+    try{ localStorage.setItem(LS, JSON.stringify(o)); }
+    catch(e){ console.warn('[하위 구분] 저장 실패', e); }
+    try{ if(typeof window.renderSubTypeChips === 'function') window.renderSubTypeChips(); }catch(e){}
+  }
+  function get(grp){ var o = load(); return (o[grp] || []).slice(); }
+  function all(){
+    var o = load(), out = [], seen = {};
+    ORDER.forEach(function(k){ (o[k]||[]).forEach(function(v){ if(!seen[v]){ seen[v]=1; out.push(v); } }); });
+    return out;
+  }
+
+  function note(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+
+  function manage(grp){
+    var o = load();
+    var cur = ORDER.indexOf(grp) >= 0 ? grp : '선납부';
+    var ov = document.getElementById('wlSubMgrOv');
+    if(!ov){
+      ov = document.createElement('div');
+      ov.id = 'wlSubMgrOv';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:100150;background:rgba(12,26,42,.45);'
+                       + 'display:flex;align-items:center;justify-content:center;padding:20px';
+      document.body.appendChild(ov);
+      ov.addEventListener('mousedown', function(e){ if(e.target===ov) ov.remove(); });
+    }
+    function draw(){
+      o = load();
+      var list = o[cur] || [];
+      ov.innerHTML =
+          '<div style="background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(16,32,52,.28);'
+        +   'width:100%;max-width:460px;max-height:86vh;overflow:auto;padding:18px 20px;font-family:inherit">'
+        +   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+        +     '<b style="font-size:16px;color:#1a2f45">🏷 하위 구분 관리</b>'
+        +     '<span style="flex:1"></span>'
+        +     '<button type="button" data-x="1" style="width:32px;height:32px;border:none;border-radius:9px;'
+        +       'background:#f2f6fb;color:#5b7794;font-size:15px;cursor:pointer;font-family:inherit">✕</button>'
+        +   '</div>'
+        +   '<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'
+        +     ORDER.map(function(k){
+                return '<button type="button" data-g="'+k+'" style="height:32px;padding:0 12px;border-radius:9px;'
+                     + 'border:1.5px solid '+(k===cur?'#3f7cb8':'#dbe6f4')+';background:'+(k===cur?'#3f7cb8':'#fff')
+                     + ';color:'+(k===cur?'#fff':'#5b7794')+';font-size:12.5px;font-weight:800;cursor:pointer;'
+                     + 'font-family:inherit">'+k+'</button>'; }).join('')
+        +   '</div>'
+        +   (list.length
+              ? list.map(function(v,i){
+                  return '<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid #f0f5fa">'
+                       + '<button type="button" data-up="'+i+'" title="위로"'+(i===0?' disabled':'')
+                       +   ' style="width:26px;height:28px;border:none;border-radius:7px;background:'+(i===0?'#f5f8fb':'#eef5fd')
+                       +   ';color:'+(i===0?'#cdd8e4':'#3f7cb8')+';cursor:'+(i===0?'default':'pointer')+';font-family:inherit">▲</button>'
+                       + '<button type="button" data-dn="'+i+'" title="아래로"'+(i===list.length-1?' disabled':'')
+                       +   ' style="width:26px;height:28px;border:none;border-radius:7px;background:'+(i===list.length-1?'#f5f8fb':'#eef5fd')
+                       +   ';color:'+(i===list.length-1?'#cdd8e4':'#3f7cb8')+';cursor:'+(i===list.length-1?'default':'pointer')+';font-family:inherit">▼</button>'
+                       + '<b style="flex:1;font-size:13.5px;color:#1a2f45;min-width:0;word-break:break-all">'+String(v)+'</b>'
+                       + '<button type="button" data-ren="'+i+'" style="height:28px;padding:0 10px;border:1.5px solid #dbe6f4;'
+                       +   'border-radius:8px;background:#fff;color:#5b7794;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✏️ 이름</button>'
+                       + '<button type="button" data-del="'+i+'" style="width:30px;height:28px;border:none;border-radius:8px;'
+                       +   'background:#fde8e8;color:#b52929;cursor:pointer;font-family:inherit">🗑</button>'
+                       + '</div>'; }).join('')
+              : '<div style="padding:22px 4px;text-align:center;color:#aab8c8;font-size:13px;font-weight:600">아직 없어요 — 아래에서 더하세요</div>')
+        +   '<div style="display:flex;gap:6px;margin-top:14px">'
+        +     '<button type="button" data-add="1" style="flex:1;height:40px;border:1.5px dashed #cfe0f3;border-radius:10px;'
+        +       'background:#f8fbff;color:#3f7cb8;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">＋ 더하기</button>'
+        +     '<button type="button" data-reset="1" style="height:40px;padding:0 14px;border:1.5px solid #f0dede;border-radius:10px;'
+        +       'background:#fff;color:#b08a8a;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">처음으로</button>'
+        +   '</div>'
+        +   '<div style="margin-top:10px;font-size:11.5px;color:#a8b8c8;line-height:1.6">'
+        +     '고친 값은 곧바로 저장됩니다 · 이미 그 값으로 저장된 기록은 그대로 남습니다'
+        +   '</div>'
+        + '</div>';
+
+      ov.querySelector('[data-x]').addEventListener('click', function(){ ov.remove(); });
+      ov.querySelectorAll('[data-g]').forEach(function(b){
+        b.addEventListener('click', function(){ cur = b.getAttribute('data-g'); draw(); }); });
+      ov.querySelectorAll('[data-up],[data-dn]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var up = b.hasAttribute('data-up');
+          var i = Number(b.getAttribute(up?'data-up':'data-dn'));
+          var to = up ? i-1 : i+1;
+          var a = (o[cur]||[]).slice();
+          if(to<0 || to>=a.length) return;
+          var it = a.splice(i,1)[0]; a.splice(to,0,it);
+          o[cur] = a; save(o); draw();
+        }); });
+      ov.querySelectorAll('[data-ren]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var i = Number(b.getAttribute('data-ren'));
+          var a = (o[cur]||[]).slice(), old = a[i];
+          window.wlAskText('이름 바꾸기', old, { ph:'하위 구분 이름', ok:'저장' }).then(function(v){
+            if(v===null) return; v = String(v).trim(); if(!v) return;
+            if(a.indexOf(v)>=0 && v!==old){ note('이미 있는 이름이에요'); return; }
+            a[i] = v; o[cur] = a; save(o); draw();
+            note('✏️ "'+old+'" → "'+v+'"');
+          });
+        }); });
+      ov.querySelectorAll('[data-del]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var i = Number(b.getAttribute('data-del'));
+          var a = (o[cur]||[]).slice(), nm = a[i];
+          window.wlAskDel('"'+nm+'" 을(를) 목록에서 뺄까요?', '이미 이 값으로 저장된 기록은 그대로 남아요')
+            .then(function(ok){ if(!ok) return; a.splice(i,1); o[cur]=a; save(o); draw(); note('🗑 뺐어요'); });
+        }); });
+      ov.querySelector('[data-add]').addEventListener('click', function(){
+        window.wlAskText('새 하위 구분', '', { sub:cur+' 에 더합니다', ph:'예) 소방 · 승강기', ok:'더하기' }).then(function(v){
+          if(v===null) return; v = String(v).trim(); if(!v) return;
+          var a = (o[cur]||[]).slice();
+          if(a.indexOf(v)>=0){ note('이미 있어요'); return; }
+          a.push(v); o[cur]=a; save(o); draw(); note('＋ "'+v+'" 더했어요');
+        });
+      });
+      ov.querySelector('[data-reset]').addEventListener('click', function(){
+        window.wlAskDel('"'+cur+'" 목록을 처음 값으로 되돌릴까요?', '더한 것은 사라집니다')
+          .then(function(ok){ if(!ok) return; o[cur] = DEF[cur].slice(); save(o); draw(); note('↩ 되돌렸어요'); });
+      });
+    }
+    draw();
+  }
+
+  window.wlExpSubs = {
+    get: get, all: all, manage: manage,
+    def: function(){ return JSON.parse(JSON.stringify(DEF)); },
+    reset: function(){ try{ localStorage.removeItem(LS); }catch(e){}
+                       try{ if(typeof window.renderSubTypeChips==='function') window.renderSubTypeChips(); }catch(e){}
+                       return '하위 구분 목록을 처음 값으로 되돌렸어요'; },
+    state: function(){ return load(); }
+  };
+  console.log('[하위 구분 목록] v242 준비됨 — wlExpSubs.manage()');
 })();
