@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v235-0902-1455';
+window.PERSONAL_BUILD = 'v237-0902-1539';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -5320,7 +5320,10 @@ window.PERSONAL_BUILD = 'v235-0902-1455';
     document.getElementById('pgX').addEventListener('click', close);
     document.getElementById('pgBack').addEventListener('click', close);
     if(PGASMOD){
-      ov.addEventListener('mousedown', function(e){ if(e.target===ov) close(); });
+      /* v236 — mousedown 이면 배경을 「누르는 순간」 닫혀서, 배경에서 시작해
+         안쪽으로 끌어오려던 것까지 닫혔다. click 으로 바꾸고, 반대 방향(안→배경)
+         드래그는 위 「드래그 지킴이」가 막는다. 양쪽 다 안 닫힌다. */
+      ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
       var bk=document.getElementById('pgBack'); if(bk) bk.textContent='✕ 닫기';
     }
     var pts=document.getElementById('pgTplSave');

@@ -23255,7 +23255,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v235-0902-1455';
+  var JS_BUILD = 'v237-0902-1539';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -25847,4 +25847,66 @@ window.wlAskDel = function(msg, sub){
     }
   };
   console.log('[머리말 정리] v223 준비됨 — 되돌리려면 wlHeadTidy.off()');
+})();
+
+
+/* ═══════════════════════════════════════════════════════════
+   🖱 드래그 지킴이   (v236)
+   달님 : 「글 쓰다가 마우스를 왼쪽으로 끌면 창이 꺼져요」
+
+   왜 그랬나 —
+   브라우저는 「누른 자리」와 「뗀 자리」가 다르면 그 둘의 공통 부모에
+   click 을 보낸다. 모달 안 글자를 잡아 끌다가 손을 덮개(배경) 위에서 떼면
+   click 의 target 이 「덮개」가 되고, 앱 곳곳(20군데)의
+       if(e.target === 덮개) 닫기
+   가 그걸 「배경을 눌렀다」로 알아듣고 창을 닫아 버렸다.
+   오류는 하나도 안 났다.
+
+   고치는 방법 —
+   이런 click 은 「누른 자리가 뗀 자리의 자손이고 + 마우스가 실제로 움직였을 때」
+   에만 생긴다. 그때만 capture 단계에서 조용히 삼킨다.
+   · 단추 안 글자를 눌렀다 떼는 보통 클릭은 움직임이 0~2px 이라 그대로 통과한다.
+   · 20군데를 하나씩 고치지 않고 한 곳에서 막는다 (같은 병이 또 안 생기게)
+
+   창구 : wlDragGuard.off() / .on() / .state()
+   ═══════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var OFF_KEY = 'wl_dragguard_off';
+  var MOVE_MIN = 10;                  /* 이만큼 움직였으면 「드래그」로 본다 */
+  var dx = 0, dy = 0, dt = null, ut = null, moved = 0, blocked = 0;
+
+  function off(){ try{ return localStorage.getItem(OFF_KEY) === '1'; }catch(e){ return false; } }
+
+  document.addEventListener('mousedown', function(e){
+    dx = e.clientX; dy = e.clientY; dt = e.target; ut = null; moved = 0;
+  }, true);
+
+  document.addEventListener('mouseup', function(e){
+    ut = e.target;
+    moved = Math.abs(e.clientX - dx) + Math.abs(e.clientY - dy);
+  }, true);
+
+  document.addEventListener('click', function(e){
+    try{
+      if(off() || !dt || !ut) return;
+      if(dt === ut) return;             /* 누른 곳과 뗀 곳이 같다 — 보통 클릭 */
+      if(moved < MOVE_MIN) return;      /* 거의 안 움직였다 — 보통 클릭 (단추 안에서 살짝 미끄러진 것) */
+      /* 여기까지 왔으면 : 누른 곳과 뗀 곳이 다르고 손도 움직였다 = 드래그.
+         브라우저는 이때 두 곳의 공통 부모(대개 덮개)에 click 을 보내고,
+         앱은 그걸 「배경을 눌렀다」로 알아들어 창을 닫아 버린다. 그 하나만 삼킨다. */
+      e.stopPropagation();
+      blocked++;
+      console.log('[드래그 지킴이] 드래그로 생긴 클릭 하나를 막았어요 (' + Math.round(moved) + 'px)');
+    }catch(err){ console.warn('[드래그 지킴이]', err); }
+  }, true);
+
+  window.wlDragGuard = {
+    off:  function(){ try{ localStorage.setItem(OFF_KEY,'1'); }catch(e){} console.log('[드래그 지킴이] 껐어요'); },
+    on:   function(){ try{ localStorage.removeItem(OFF_KEY); }catch(e){} console.log('[드래그 지킴이] 켰어요'); },
+    state:function(){ return { 켜짐: !off(), 막은횟수: blocked, 기준px: MOVE_MIN }; },
+    test: function(){ return { 마지막_누른곳: dt && (dt.id||dt.className||dt.tagName),
+                               마지막_뗀곳:  ut && (ut.id||ut.className||ut.tagName), 움직임px: Math.round(moved) }; }
+  };
+  console.log('[드래그 지킴이] v236 준비됨 — wlDragGuard.state()');
 })();

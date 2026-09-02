@@ -603,7 +603,11 @@ tr.wk-checked td{background:#e8f3fd !important}
 .overlay.show{display:flex}
 .modal{background:var(--card);border-radius:20px;max-width:560px;width:100%;max-height:90vh;overflow:auto;padding:22px;box-shadow:0 20px 60px rgba(63,74,87,.3)}
 .modal h3{font-family:'Gowun Batang',serif;font-size:20px;margin-bottom:16px;color:#33567d}
-#imgOverlay{position:fixed;inset:0;background:rgba(30,38,48,.88);display:none;align-items:center;justify-content:center;padding:20px;z-index:90;cursor:zoom-out}
+/* v236 🔴 달님 : 「사진 확대가 안 돼」
+   확대창은 잘 열리고 있었다. 다만 z-index 가 90 이라서
+   노션식 페이지(.lf-page-ov = 9500) · 모달(.lf-ov = 9600) 뒤에 깔려 안 보였다.
+   화면에서 가장 위에 있어야 하는 것이므로 맨 위 값으로 올린다. */
+#imgOverlay{position:fixed;inset:0;background:rgba(30,38,48,.88);display:none;align-items:center;justify-content:center;padding:20px;z-index:100200;cursor:zoom-out}
 #imgOverlay.show{display:flex}
 #imgOverlay img{max-width:100%;max-height:100%;border-radius:12px}
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:#33567d;color:#fff;padding:12px 22px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:all .3s;z-index:100;pointer-events:none;max-width:90%;text-align:center}
@@ -1462,3 +1466,7 @@ select.lf-ie.qp-hide{ display:none !important }
 }
 /* 왼쪽 고정 칸의 머리는 가로·세로 둘 다 붙으므로 제일 위에 와야 한다 */
 .lf-tvwrap .lf-tv.frz thead th:first-child{ z-index:7 !important }
+
+/* v237 — 정산표 빈 줄: 눌러서 바로 적을 수 있다는 표시 */
+tr.settle-add:hover td{ background:#eff6ff !important }
+tr.settle-add:hover .settle-addhint{ color:#3f7cb8; font-weight:800 }

@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v235-0902-1455";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v237-0902-1539";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=235-20260902t1455"></script>
+<script src="worklog.js?v=237-20260902t1539"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -12362,6 +12362,20 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
      지출 목록·요약도 이 창구를 써야 목록과 정산표가 어긋나지 않는다. (지침 「판단은 받는 쪽에 한 번만」) */
   window.wlSettleGroup = function(e){ try{ return classify(e||{}); }catch(err){ return '선결재'; } };
 
+  /* v237 — 정산표 빈 줄을 눌렀을 때 「어떤 지출로 새로 만들지」.
+     🔴 위 classify() 의 반대 방향이다. 한쪽을 고치면 여기도 같이 본다.
+        월정산·기타는 없다 — 인건비·중식 화면이 저절로 채우는 칸이라 손으로 넣지 않는다. */
+  var SETTLE_ADD = {
+    '선결재':     { expType:'개인지출' },
+    '선납부':     { expType:'전표',       expSubType:'기타' },
+    '기타정산':   { expType:'세금계산서' },
+    '수도광열비': { expType:'전표',       expSubType:'수도' }
+  };
+  var SETTLE_NOADD = {
+    '월정산': '월정산은 👷 인건비 화면의 월정산 표에서 넣습니다',
+    '기타':   '기타(관리인건비·중식대)는 인건비·중식 화면에서 저절로 채워집니다'
+  };
+
   /* fixedRows: 엑셀 시트와 동일한 고정 행수 (부족분 빈 행 패딩) */
   var GROUPS=[
     {key:'선결재',     label:'선결재(개인지출)',   color:'#3f7cb8', bg:'#f0f6ff', fixedRows:15},
@@ -12514,10 +12528,18 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
           var e=arr[i]||null;
           var v=e?rowVals(e,grp.key):{sup:0,tax:0,amount:0};
           if(e){ s+=v.sup; t+=v.tax; a+=v.amount; }
-          html+='<tr'+(e&&e.id?' data-settleid="'+esc(e.id)+'" style="cursor:pointer"':'')+'>'
+          /* v237 — 달님 : 「기타정산에 비용을 여기서도 넣게」
+             빈 줄을 누르면 그 칸에 맞는 지출을 바로 새로 만든다.
+             🔴 월정산·기타는 인건비·중식 화면이 저절로 채우는 칸이라 손으로 못 넣는다 (누르면 알려 준다) */
+          var canAdd = !e && !!SETTLE_ADD[grp.key];
+          html+='<tr'
+            +(e&&e.id?' data-settleid="'+esc(e.id)+'" style="cursor:pointer"':'')
+            +(!e?' data-settleadd="'+esc(grp.key)+'" class="settle-add" style="cursor:'+(canAdd?'pointer':'default')+'"':'')
+            +'>'
             +(i===0?'<td rowspan="'+(need+1)+'" style="'+TD+';background:'+grp.bg+';color:'+grp.color+';font-weight:800;text-align:center;vertical-align:middle;white-space:nowrap">'+esc(grp.key)+'</td>':'')
             +'<td style="'+TD+';text-align:center;color:#94a3b8">'+(i+1)+'</td>'
-            +'<td style="'+TD+'">'+(e?esc(rowTitle(e)):'')+'</td>'
+            +'<td style="'+TD+'">'+(e?esc(rowTitle(e))
+                : (canAdd?'<span class="settle-addhint" style="color:#b8c6d6;font-size:12px">＋ 여기에 적기</span>':''))+'</td>'
             +'<td style="'+TDR+'">'+(e?cell(v.sup):'')+'</td>'
             +'<td style="'+TDR+';color:#94a3b8">'+(e?cell(v.tax):'')+'</td>'
             +'<td style="'+TDR+';font-weight:800">'+(e?cell(v.amount):'')+'</td>'
@@ -12581,6 +12603,42 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         setTimeout(function(){ try{ window.renderExpSettle(); }catch(e){} }, 600);
       });
     })();
+    /* v237 — 빈 줄 클릭 → 그 칸에 맞는 지출을 바로 새로 만든다 */
+    box.querySelectorAll('[data-settleadd]').forEach(function(tr){
+      tr.addEventListener('click', function(){
+        var k = tr.getAttribute('data-settleadd') || '';
+        if(SETTLE_NOADD[k]){ if(typeof toast==='function') toast('🔒 ' + SETTLE_NOADD[k]); return; }
+        var pre = SETTLE_ADD[k]; if(!pre) return;
+        /* 날짜 — 보고 있는 달이 이번 달이면 오늘, 아니면 그 달 1일 */
+        var ymv = (g('expSettleMonthSel')||{}).value || '';
+        var t0  = kstNow().toISOString().slice(0,10);
+        var dv  = (ymv && t0.slice(0,7)===ymv) ? t0 : (ymv ? (ymv+'-01') : t0);
+        var obj = { date: dv };
+        for(var kk in pre) obj[kk] = pre[kk];
+        try{
+          if(typeof window.wlNewPageWith === 'function'){
+            window.wlNewPageWith('expense', obj, true);
+          } else if(typeof window._openExpV2 === 'function'){
+            window._openExpV2(null);
+          } else {
+            if(typeof toast==='function') toast('입력창을 못 찾았어요 — worklog.js 를 올렸는지 확인하세요');
+            return;
+          }
+        }catch(err){ console.error('[정산표 추가]', err);
+          if(typeof toast==='function') toast('오류: ' + (err.message||err)); return; }
+        if(typeof toast==='function') toast('📝 ' + k + ' 로 새 지출을 엽니다');
+        /* 창을 닫으면 정산표를 다시 그린다 (넣은 것이 바로 보이게) */
+        var n=0, iv=setInterval(function(){
+          if(++n > 60){ clearInterval(iv); return; }
+          if(!document.getElementById('lfPageOv')){
+            clearInterval(iv);
+            try{ if(typeof window.renderExpSettle==='function') window.renderExpSettle(); }
+            catch(e2){ console.warn('[정산표] 다시 그리기 실패', e2); }
+          }
+        }, 500);
+      });
+    });
+
     /* 행 클릭 → 상세 */
     box.querySelectorAll('[data-settleid]').forEach(function(tr){
       tr.addEventListener('click',function(){
@@ -20500,7 +20558,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=235-20260902t1455"></script>
+<script src="personal.js?v=237-20260902t1539"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에
