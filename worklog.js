@@ -506,6 +506,17 @@ var HANGUL_PAIR = {'ㄳ':'ㄱㅅ','ㄵ':'ㄴㅈ','ㄶ':'ㄴㅎ',
                    'ㄺ':'ㄹㄱ','ㄻ':'ㄹㅁ','ㄼ':'ㄹㅂ',
                    'ㄽ':'ㄹㅅ','ㄾ':'ㄹㅌ','ㄿ':'ㄹㅍ',
                    'ㅀ':'ㄹㅎ','ㅄ':'ㅂㅅ'};
+/* v218 — 달님 : 「ㄱ 로 ㄲ 도 찾게」
+   초성을 셀 때 쌍자음을 홑자음으로 본다 (ㄲ→ㄱ, ㅆ→ㅅ …).
+   먼저 있는 그대로 찾아 보고, 못 찾았을 때만 이걸로 한 번 더 본다. */
+var HANGUL_TWIN = {'ㄲ':'ㄱ','ㄸ':'ㄷ','ㅃ':'ㅂ','ㅆ':'ㅅ','ㅉ':'ㅈ'};
+function wlChoBase(s){
+  try{
+    return String(s==null?'':s).replace(/[ㄲㄸㅃㅆㅉ]/g, function(c){ return HANGUL_TWIN[c] || c; });
+  }catch(e){ console.warn('[쌍자음 풀기] 실패', e); return String(s==null?'':s); }
+}
+window.wlChoBase = wlChoBase;
+
 function wlChoSpread(s){
   try{
     return String(s==null?'':s).replace(/[ㄳㄵㄶㄺㄻㄼㄽㄾㄿㅀㅄ]/g,
@@ -527,7 +538,12 @@ function wlChoHit(hay, q){
     var s2 = String(hay==null?'':hay);
     if(s2.toLowerCase().indexOf(q.toLowerCase()) >= 0) return true;
     var qc = wlChoSpread(q.replace(/\s/g,''));   /* v210 — ㄼ → ㄹㅂ */
-    if(isChosungOnly(qc)) return getChosung(s2).replace(/\s/g,'').indexOf(qc) >= 0;
+    if(isChosungOnly(qc)){
+      var hc = getChosung(s2).replace(/\s/g,'');
+      if(hc.indexOf(qc) >= 0) return true;
+      /* v218 — 못 찾았으면 쌍자음을 홑자음으로 보고 한 번 더 (ㄱㅈ → 꽃집) */
+      return wlChoBase(hc).indexOf(wlChoBase(qc)) >= 0;
+    }
   }catch(e){ console.warn('[초성 찾기] 실패', e); }
   return false;
 }
@@ -8757,10 +8773,17 @@ function runGlobalSearch(q){
   }
   // 모든 entries에서 검색
   const matches = [];
+  /* v218 — 달님 : 맨 위 검색에도 초성이 통해야 한다 (ㄱㄼ · ㅅㅎ).
+     찾기는 창구 하나(wlChoHit)만 쓴다 — 분야·업체·자재와 같은 규칙이다. */
+  const _hit = (txt) => {
+    try{ if(typeof wlChoHit === 'function') return wlChoHit(txt, q); }
+    catch(e){ console.warn('[전체 검색] 초성 찾기 실패', e); }
+    return txt.includes(q);
+  };
   entries.forEach(e=>{
     const kind = e.kind;
     const text = collectSearchText(e).toLowerCase();
-    if(text.includes(q)){
+    if(_hit(text)){
       matches.push({
         e, kind,
         preview: makeSearchPreview(e),
@@ -23158,7 +23181,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v216-0902-1018';
+  var JS_BUILD = 'v218-0902-1031';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */

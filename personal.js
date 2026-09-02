@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v216-0902-1018';
+window.PERSONAL_BUILD = 'v218-0902-1031';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -436,6 +436,12 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
          완료는 굳이 안 적는다. 아직 안 끝난 것만 눈에 띄게 (미완료·진행중…). */
       try{ if(String(statVal(e, pty)||'') !== '완료') tags += statTag(e, pty); }
       catch(_st){ tags += statTag(e, pty); }                         /* 상태·구분을 한눈에 */
+      /* v217 — 📅 예정은 카드에서 바로 완료로 (누르면 sStatus='완료') */
+      if(pty==='schedule' && String(e.sStatus||'') !== '완료'){
+        tags += '<span class="lf-tag" data-schdone="'+esc(e.id)+'" title="눌러서 완료로 바꾸기"'
+              + ' style="background:#eefaf4;color:#0f7a4a;border:1px solid #a7e3c8;'
+              + 'cursor:pointer;font-weight:800">✅ 완료로</span>';
+      }
       if(pty==='plan' && Number(e.carryN)>0 && statVal(e,'plan')!=='완료')
         tags += '<span class="lf-tag" style="background:#fef3c7;color:#92400e">⏭ '+Number(e.carryN)+'일째</span>';
       var vd = (typeof vendorOf==='function') ? vendorOf(e) : '';
@@ -506,6 +512,24 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
       + ph
       + '</div>';
   }
+
+  /* v217 — ✅ 예정 완료. 카드 열기보다 먼저 잡는다(capture) */
+  document.addEventListener('click', function(ev){
+    var el = ev.target && ev.target.closest && ev.target.closest('[data-schdone]');
+    if(!el) return;
+    ev.preventDefault(); ev.stopPropagation();
+    var id = el.getAttribute('data-schdone');
+    if(!id) return;
+    try{
+      try{ updateRecord(id, { sStatus:'완료' }); }
+      catch(_u){ pUpd(id, { sStatus:'완료' }); }
+      if(typeof toast==='function') toast('✅ 완료로 바꿨어요');
+      setTimeout(function(){ try{ safeRender(); }catch(e){} }, 220);
+    }catch(err){
+      console.error('[예정 완료]', err);
+      if(typeof toast==='function') toast('오류: ' + (err.message || err));
+    }
+  }, true);
 
   /* v193 — 🌐 사이트 배지 누르면 인터넷 창으로. 카드 열기보다 먼저 잡는다(capture) */
   document.addEventListener('click', function(ev){
@@ -578,6 +602,14 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
         여기 적은 값은 저장할 때 지출 기록(expense)으로 저절로 옮겨진다
         — 지출 탭·월보고가 지출 기록을 세기 때문에 그쪽이 비면 통계가 어긋난다. */
   var WORK_EXTRA = {
+    /* ══ v217 — 📅 예정에 「상태」 칸 ══
+          달님 : 「예정업무에는 완료 버튼이 없어」
+          조사해 보니 정말로 없었다 — 색을 칠하는 코드(scheduleStatusColor)는
+          sStatus 를 보는데 그 값을 넣을 칸이 어디에도 없었다.
+          🔴 SCHEMA 는 건드리지 않는다 (옛 창·CSV·보고서가 함께 읽는다 · 제0원칙-27). */
+    schedule: [
+      {k:'sStatus', label:'상태', type:'select', opts:['예정','진행중','완료','연기']}
+    ],
     /* ══ v206 — 🧹 청소 ══
           🔴 `SCHEMA` 에는 넣지 않는다. SCHEMA 는 옛 입력창·CSV·보고서가 함께 읽으므로
              건드리면 어디가 흔들릴지 모른다. 여기(WORK_EXTRA)만 채우면
@@ -762,7 +794,10 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
     expense:  {_date:['date'], _title:['title'], _sub:['vendor','payee'],            _amount:['amount'],     _memo:['memo']},
     accident: {_date:['date'], _title:['title'], _sub:['partyName','location'],      _amount:['repairCost','compensation'], _memo:['detail']},
     progress: {_date:['date'], _title:['title'], _sub:['owner'],                     _amount:['finalCost','estCost'],       _memo:['detail','memo']},
-    call:     {_date:['date'], _title:['content'], _sub:['company','name'],          _amount:[],             _memo:['content']},
+    /* v217 — 달님 : 「통화도 제목 내용 분리해서 나오게」
+       제목도 내용, 메모도 내용이라 카드에 같은 글이 한 번만 나왔다.
+       이제 제목은 「누구와」(이름 → 업체), 내용은 통화 내용이다. */
+    call:     {_date:['date'], _title:['name','company','content'], _sub:['company'], _amount:[],             _memo:['content']},
     memo:     {_date:['date'], _title:['title','body'], _sub:[],                     _amount:[],             _memo:['body']},
     schedule: {_date:['date'], _title:['title'], _sub:[],                            _amount:[],             _memo:['memo']},
     /* v197 — 달님 : 「전달에 즉시전달·주간전달 고르는 게 없네 (구버전엔 있는데)」
@@ -897,7 +932,10 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
       color:{'수신':'#0891b2','발신':'#2563a8','부재중':'#dc2626'} },
     vacation: { k:'vtype', order:[], color:{} },
     deliver:  { k:'dtype', order:[], color:{} },
-    schedule: { k:'scheduleType', order:['일회성','매일','매주','매월','매년'], color:{} },
+    /* v217 — 반복유형이 아니라 「상태」로 묶고 색을 칠한다 */
+    schedule: { k:'sStatus',
+      order:['예정','진행중','완료','연기'],
+      color:{'예정':'#0891b2','진행중':'#b45309','완료':'#0f7a4a','연기':'#94a3b8'} },
     item:     { k:'field',  order:[], color:{} },
     site:     { k:'category', order:[], color:{} },
     plan:     { k:'status', order:['미완료','보류','완료'],
@@ -3798,6 +3836,14 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
            '<button type="button" class="lf-fx" id="lfCopyXls2"'
            + ' title="지금 걸린 기간의 업무를 엑셀에 붙여넣을 수 있게 복사합니다"'
            + ' style="color:#0f7a4a;border-color:#b7e4c7;background:#f0f9f4;font-weight:800">📋 복사</button>')
+      /* v218 — 달님 : 「세 단추만 남은 줄이 아깝다」
+         업무일지에서는 검색줄을 통째로 없애고 이 셋을 여기로 옮겼다.
+         🔴 개인일지는 검색칸(lfQ)이 있어 그대로 둔다 — 같은 id 가 둘이면 안 된다 (지침 ⑮). */
+      +   (isPersonal()? '' :
+           sep
+           + '<button type="button" id="lfVend" class="lf-fx" title="업체 하나에 얽힌 모든 것 보기">📇 업체</button>'
+           + '<button type="button" id="lfTpl" class="lf-fx" title="자주 쓰는 기록을 미리 만들어 두기">📑 템플릿</button>'
+           + '<button type="button" id="lfAdd" class="lf-add" style="height:34px">➕ 기록 추가</button>')
       + '</div></div>'
       + '<div class="lf-more" id="lfMore">'
       +   '<button type="button" class="lf-fx" id="lfMoreBtn" title="그 밖의 도구">⚙'
@@ -3860,9 +3906,35 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
   function grpSet(v){ grp=v; lsSet(LS_GRP,v); safeRender(); }
   /* 지금 실제로 쓰이는 구분 기준 — 고른 게 없으면 종류에 맞게 알아서 */
   function effGrp(pt){ return grp || (statInfo(pt) ? '_stat' : '_month'); }
+  /* v218 — 주별로 묶기. 그 주의 「월요일 날짜」를 열쇠로 쓴다.
+     🔴 날짜 연산은 Date.UTC 로만 (KST 에서 하루 밀린다 · 지침 ⑬) */
+  function weekKey(d){
+    try{
+      var p2=String(d||'').slice(0,10).split('-');
+      if(p2.length!==3 || !p2[0]) return '';
+      var dt=new Date(Date.UTC(+p2[0], +p2[1]-1, +p2[2]));
+      var w=dt.getUTCDay();
+      dt.setUTCDate(dt.getUTCDate() + (w===0 ? -6 : 1-w));
+      return dt.toISOString().slice(0,10);
+    }catch(e){ console.warn('[주별 묶기] 계산 실패', e); return ''; }
+  }
+  function weekLab(k){
+    try{
+      if(!k) return '날짜 없음';
+      var p2=k.split('-');
+      var s=new Date(Date.UTC(+p2[0], +p2[1]-1, +p2[2]));
+      var e2=new Date(s.getTime()); e2.setUTCDate(e2.getUTCDate()+6);
+      var nth=Math.floor((s.getUTCDate()-1)/7)+1;
+      return k + ' ~ ' + String(e2.getUTCMonth()+1).padStart(2,'0') + '-'
+           + String(e2.getUTCDate()).padStart(2,'0')
+           + '  (' + (s.getUTCMonth()+1) + '월 ' + nth + '주)';
+    }catch(e){ console.warn('[주별 묶기] 이름표 실패', e); return String(k||''); }
+  }
+
   function grpKey(e, pt){
     var g=effGrp(pt);
     if(g==='_day')   return String(e.date||'').slice(0,10);   /* v211 */
+    if(g==='_week')  return weekKey(e.date);                  /* v218 */
     if(g==='_month') return String(e.date||'').slice(0,7);
     if(g==='_stat')  return statVal(e, pt);
     var p=propById(pt, g); if(!p) return '';
@@ -3892,7 +3964,8 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
   }
   function grpLabel(k, pt){
     var g=effGrp(pt);
-    if(g==='_day') return dayLab(k);   /* v211 */
+    if(g==='_day')  return dayLab(k);    /* v211 */
+    if(g==='_week') return weekLab(k);   /* v218 */
     if(g==='_month') return k? k.replace('-','년 ')+'월' : '날짜 없음';
     if(g==='_stat')  return k===''? '구분 없음' : k;
     return k===''? '(비어있음)' : k;
@@ -3900,7 +3973,7 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
   /* 구분 차례대로 줄 세우기 — 상태는 일 순서, 월은 최근 것부터 */
   function grpRank(k, pt, g){
     if(g==='_stat') return statRank(k, pt);
-    if(g==='_month' || g==='_day') return 0;   /* v211 */
+    if(g==='_month' || g==='_day' || g==='_week') return 0;   /* v211·v218 */
     var p=propById(pt, g), ord=(p && (p.opts||p.o)) || null;
     if(ord){ var i=ord.indexOf(k); return i<0?900:i; }
     return 0;
@@ -3923,7 +3996,7 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
       var a=grpKey(x,pt), b=grpKey(y,pt);
       if(a===b) return 0;
       if(a==='') return 1; if(b==='') return -1;          /* 빈 값은 항상 맨 아래 */
-      if(g==='_month' || g==='_day' || dl) return String(b).localeCompare(String(a));   /* v211 */
+      if(g==='_month' || g==='_day' || g==='_week' || dl) return String(b).localeCompare(String(a));   /* v211·v218 */
       var ra=grpRank(a,pt,g), rb=grpRank(b,pt,g);
       if(ra!==rb) return ra-rb;
       return String(a).localeCompare(String(b),'ko');
@@ -3945,6 +4018,7 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
         + (si? ('\u2728 '+siName+'별로 묶기 (기본)') : '\uD83D\uDCC5 월별로 묶기 (기본)') + '</option>'
       + '<option value="_none"'+(grp==='_none'?' selected':'')+'>\uD83D\uDEAB 묶지 않기 — 최신순으로 쭉</option>'
       + '<option value="_day"'+(grp==='_day'?' selected':'')+'>\uD83D\uDCC5 일별로 묶기</option>'
+      + '<option value="_week"'+(grp==='_week'?' selected':'')+'>\uD83D\uDCC5 주별로 묶기</option>'
       + '<option value="_month"'+(grp==='_month'?' selected':'')+'>\uD83D\uDCC5 월별로 묶기</option>'
       + a.map(function(p){ return '<option value="'+esc(p.id)+'"'+(grp===p.id?' selected':'')
           +'>'+tinfo(p.type).i+' '+esc(p.name)+' 로 묶기</option>'; }).join('')
@@ -6352,15 +6426,15 @@ window.PERSONAL_BUILD = 'v216-0902-1018';
     var showP = isPersonal();
     return blankBar() + (showP ? sum : '')
       + (showP ? ('<div class="lf-chips">'+chips+'</div>') : '')
-      + '<div class="lf-bar">'
       /* v212 — 검색은 맨 위 공용 검색 하나로 모은다.
-         🔴 개인일지는 공용 검색이 안 훑으므로 그대로 남긴다. */
-      +   (showP ? '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="width:220px;max-width:100%">' : '')
+         🔴 개인일지는 공용 검색이 안 훑으므로 그대로 남긴다.
+         v218 — 업무일지는 이 줄을 통째로 없앴다 (세 단추는 도구줄로 갔다). */
+      + (showP ? ('<div class="lf-bar">'
+      +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="width:220px;max-width:100%">'
       +   '<div class="lf-sp"></div>'
-      +   (showP ? '' : '<button type="button" id="lfVend" class="lf-fx" title="업체 하나에 얽힌 모든 것 보기">📇 업체</button>')
       +   '<button type="button" id="lfTpl" class="lf-fx" title="자주 쓰는 기록을 미리 만들어 두기">📑 템플릿</button>'
       +   '<button type="button" id="lfAdd" class="lf-add">➕ 기록 추가</button>'
-      + '</div>'
+      + '</div>') : '')
       + (showP ? oldBanner() : '')
       + gridHTML(list, (cats()[curCat]||{i:'🏠'}).i, (curQ?'검색 결과가 없어요':'아직 기록이 없어요<div style="font-size:12px;margin-top:6px">➕ 를 눌러 시작하세요</div>'));
   }

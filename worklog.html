@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v216-0902-1018";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v218-0902-1031";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=216-20260902t1018"></script>
+<script src="worklog.js?v=218-20260902t1031"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -14945,9 +14945,37 @@ if('serviceWorker' in navigator){
   /* v45-0824b: '미전송 N' 숫자 배지는 표시하지 않는다.
      gcalEventId 를 기억 못 하는 옛 기록까지 세어서 414건 같은 잘못된 숫자가 떴다.
      대기함은 뒤에서 조용히 재시도만 하고, 화면에는 '구글 로그인이 끊겼을 때'만 알린다. */
+  /* v217 — 달님 : 「구글 다시 로그인 해야 하면 빨간 가로바로 경고 넣어줘」
+     작은 단추는 눈에 안 띈다. 로그인이 끊긴 동안만 화면 맨 위에 띠를 띄운다.
+     로그인이 되면 스스로 사라진다. */
+  function authBar(show){
+    try{
+      var id='wlGAuthBar', el=document.getElementById(id);
+      if(!show){ if(el && el.parentNode) el.parentNode.removeChild(el); return; }
+      if(el) return;
+      if(!document.body) return;
+      el=document.createElement('div');
+      el.id=id;
+      el.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9997;'
+        +'display:flex;align-items:center;gap:10px;flex-wrap:wrap;'
+        +'background:#c0392b;color:#fff;padding:9px 14px;font-size:13.5px;font-weight:800;'
+        +'font-family:inherit;box-shadow:0 2px 10px rgba(0,0,0,.2);cursor:pointer';
+      el.innerHTML='<span>\uD83D\uDD34 구글 로그인이 끊겼어요 \u2014 지금 적는 일정이 구글 캘린더로 안 올라갑니다</span>'
+        +'<span style="margin-left:auto;background:#fff;color:#c0392b;border-radius:9px;padding:5px 13px">\uD83D\uDD11 지금 다시 로그인</span>';
+      el.addEventListener('click', function(){
+        try{
+          if(typeof window.gcalSignIn==='function'){ window.gcalSignIn(); return; }
+          if(typeof toast==='function') toast('로그인 창을 못 열었어요 — 맨 윗줄 [구글 다시 로그인] 을 눌러 주세요');
+        }catch(e){ console.warn('[구글 경고바] 로그인 열기 실패', e); }
+      });
+      document.body.insertBefore(el, document.body.firstChild);
+    }catch(e){ console.warn('[구글 경고바] 실패', e); }
+  }
+
   function paint(){
     var b = badge(); if(!b) return;
     var needAuth = !!window.__gcalAuthNeeded || !(window.gcalHasToken && window.gcalHasToken());
+    authBar(needAuth);                       /* v217 */
     if(!needAuth){ b.style.display='none'; return; }
     b.style.display = 'inline-block';
     b.textContent = '🔑 구글 다시 로그인';
@@ -20334,7 +20362,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=216-20260902t1018"></script>
+<script src="personal.js?v=218-20260902t1031"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에
