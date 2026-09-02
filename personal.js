@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v237-0902-1539';
+window.PERSONAL_BUILD = 'v238-0902-1552';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -38,6 +38,21 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
   function esr(a){ try{ return Array.isArray(a)?a:(a?JSON.parse(a):[]); }catch(e){ return []; } }
   function lsGet(k,d){ try{ var s=localStorage.getItem(k); if(s) return JSON.parse(s); }catch(e){} return d; }
   function lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+
+  /* ══ v238 — 달님 : 「지울까요? 를 브라우저 창 말고 앱 팝업으로」 ══
+     브라우저 confirm 은 주소창 아래에 붙어 앱과 따로 놀고, 글꼴·단추도 제각각이다.
+     앱 안 팝업(wlAsk / wlAskDel)은 이미 있으니 그걸 쓴다.
+     🔴 팝업은 「기다렸다 답을 주는」 방식이라 반드시 .then( ) 안에서 일한다.
+        wlAsk 를 못 쓰는 상황(옛 worklog.js)이면 예전 창으로 조용히 내려간다. */
+  function askDel(msg, sub){
+    try{
+      if(typeof window.wlAskDel === 'function') return window.wlAskDel(msg, sub);
+      if(window.wlAsk && typeof window.wlAsk.ok === 'function')
+        return window.wlAsk.ok(msg, { sub: sub || '휴지통에서 되살릴 수 있어요', ok:'삭제', danger:1 });
+    }catch(e){ console.warn('[삭제 확인] 앱 팝업을 못 써서 기본 창으로', e); }
+    try{ return Promise.resolve(window.confirm(msg)); }
+    catch(e2){ return Promise.resolve(false); }
+  }
 
   /* ── 차량 ── */
   function cars(){ var a=lsGet(LS_CARS,null);
@@ -2624,11 +2639,13 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
         a.forEach(function(x){ if(x.id===id) x.name=nm; }); viewsSave(pt,a); cl(); viewMgr(pt); }); });
     ov.querySelectorAll('[data-vdel]').forEach(function(b){
       b.addEventListener('click', function(){
-        if(!confirm('이 보기를 지울까요?\n기록은 안 지워집니다.')) return;
-        var id=b.getAttribute('data-vdel');
-        viewsSave(pt, viewsOf(pt).filter(function(x){ return x.id!==id; }));
-        if(curView===id){ curView=''; lsSet('wl_life_curview',''); }
-        cl(); viewMgr(pt); }); });
+        askDel('이 보기를 지울까요?', '기록은 안 지워집니다').then(function(ok){
+          if(!ok) return;
+          var id=b.getAttribute('data-vdel');
+          viewsSave(pt, viewsOf(pt).filter(function(x){ return x.id!==id; }));
+          if(curView===id){ curView=''; lsSet('wl_life_curview',''); }
+          cl(); viewMgr(pt);
+        }); }); });
     /* ⭐ 첫 화면 — 이 화면을 열 때 자동으로 걸리는 보기 (한 화면에 하나) */
     ov.querySelectorAll('[data-vfav]').forEach(function(b){
       b.addEventListener('click', function(){
@@ -5349,8 +5366,11 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
       openRec(pt, id);
     });
     document.getElementById('pgDel').addEventListener('click', function(){
-      if(!confirm('이 기록을 지울까요?\n휴지통에서 되살릴 수 있어요.')) return;
-      pDel(id); close(); toast2('🗑 삭제했어요');
+      askDel('이 기록을 지울까요?', '휴지통에서 되살릴 수 있어요').then(function(ok){
+        if(!ok) return;
+        try{ pDel(id); close(); toast2('🗑 삭제했어요'); }
+        catch(e){ console.error('[삭제]', e); if(typeof toast==='function') toast('삭제 실패: '+(e.message||e)); }
+      });
     });
     var pv=document.getElementById('pgPrev'), nx=document.getElementById('pgNext');
     if(pv) pv.addEventListener('click', function(){ if(idx>0) openPage(PGLIST[idx-1]); });
@@ -5744,8 +5764,10 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
     })();
     ov.querySelectorAll('[data-subdel]').forEach(function(b){
       b.addEventListener('click', function(){
-        if(!confirm('이 하위 항목을 지울까요?')) return;
-        pDel(b.getAttribute('data-subdel')); openPage(id); }); });
+        askDel('이 하위 항목을 지울까요?').then(function(ok){
+          if(!ok) return;
+          pDel(b.getAttribute('data-subdel')); openPage(id);
+        }); }); });
 
     /* 하위 항목이면 부모로 올라가는 길 */
     if(rec.parentId){
@@ -6098,10 +6120,12 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
         cl(); if(t) newRowTpl(pt, t); }); });
     ov.querySelectorAll('[data-tpdel]').forEach(function(b){
       b.addEventListener('click', function(){
-        if(!confirm('이 템플릿을 지울까요?\n이미 만든 기록은 그대로 남습니다.')) return;
-        var id=b.getAttribute('data-tpdel');
-        tplSave(pt, tplOf(pt).filter(function(x){ return x.id!==id; }));
-        cl(); tplPick(pt); }); });
+        askDel('이 템플릿을 지울까요?', '이미 만든 기록은 그대로 남습니다').then(function(ok){
+          if(!ok) return;
+          var id=b.getAttribute('data-tpdel');
+          tplSave(pt, tplOf(pt).filter(function(x){ return x.id!==id; }));
+          cl(); tplPick(pt);
+        }); }); });
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -7563,9 +7587,11 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
 
     var db=document.getElementById('lfDel');
     if(db) db.addEventListener('click', function(){
-      if(!confirm('이 기록을 지울까요?')) return;
-      try{ pDel(id); }catch(e2){ alert('삭제 실패: '+e2); return; }
-      close(); if(typeof toast==='function') toast('🗑 삭제됐어요'); setTimeout(render, 250);
+      askDel('이 기록을 지울까요?').then(function(ok){
+        if(!ok) return;
+        try{ pDel(id); }catch(e2){ console.error('[삭제]', e2); if(typeof toast==='function') toast('삭제 실패: '+e2); return; }
+        close(); if(typeof toast==='function') toast('🗑 삭제됐어요'); setTimeout(render, 250);
+      });
     });
 
     document.getElementById('lfSave').addEventListener('click', function(){
@@ -7629,9 +7655,11 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
     ov.addEventListener('mousedown', function(e){ if(e.target===ov) close(); });
     var db=document.getElementById('lfDel');
     if(db) db.addEventListener('click', function(){
-      if(!confirm('이 연락처를 지울까요?')) return;
-      try{ pDel(id); }catch(e2){ alert('삭제 실패: '+e2); return; }
-      close(); if(typeof toast==='function') toast('🗑 삭제됐어요'); setTimeout(render,250);
+      askDel('이 연락처를 지울까요?').then(function(ok){
+        if(!ok) return;
+        try{ pDel(id); }catch(e2){ console.error('[삭제]', e2); if(typeof toast==='function') toast('삭제 실패: '+e2); return; }
+        close(); if(typeof toast==='function') toast('🗑 삭제됐어요'); setTimeout(render,250);
+      });
     });
     document.getElementById('lfSave').addEventListener('click', function(){
       var o={};
@@ -8148,10 +8176,12 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
 
     ov.querySelectorAll('[data-dvd]').forEach(function(b){
       b.addEventListener('click', function(){
-        if(!confirm('이 백업 파일을 지울까요?')) return;
-        note('지우는 중…');
-        D.del(b.getAttribute('data-dvd')).then(function(){ cl(); D.list().then(drvPop); })
-          .catch(function(e){ note('⚠️ '+e.message,'#c0392b'); });
+        askDel('이 백업 파일을 지울까요?', '구글 드라이브에서 지웁니다').then(function(ok){
+          if(!ok) return;
+          note('지우는 중…');
+          D.del(b.getAttribute('data-dvd')).then(function(){ cl(); D.list().then(drvPop); })
+            .catch(function(e){ note('⚠️ '+e.message,'#c0392b'); });
+        });
       });
     });
     ov.querySelectorAll('[data-dvr]').forEach(function(b){
@@ -8183,8 +8213,10 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
       b.addEventListener('click', function(){ safeSrc=b.getAttribute('data-tsrc'); render(); }); });
     var tc=host.querySelector('[data-tclr]');
     if(tc) tc.addEventListener('click', function(){
-      if(!confirm('휴지통을 비울까요?\n비우면 정말로 되살릴 수 없어요.')) return;
-      P_().trashClear(safeSrc); if(typeof toast==='function') toast('휴지통을 비웠어요'); render(); });
+      askDel('휴지통을 비울까요?', '비우면 정말로 되살릴 수 없어요').then(function(ok){
+        if(!ok) return;
+        P_().trashClear(safeSrc); if(typeof toast==='function') toast('휴지통을 비웠어요'); render();
+      }); });
     host.querySelectorAll('[data-trs]').forEach(function(b){
       b.addEventListener('click', function(){
         var ok=P_().trashRestore(safeSrc, parseInt(b.getAttribute('data-trs'),10));
@@ -8243,8 +8275,10 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
       b.addEventListener('click', function(){ snapView(b.getAttribute('data-snv')); }); });
     host.querySelectorAll('[data-snd]').forEach(function(b){
       b.addEventListener('click', function(){
-        if(!confirm('이 스냅샷을 지울까요?')) return;
-        P_().snapDel(b.getAttribute('data-snd')).then(function(){ loadSnaps(true); }); }); });
+        askDel('이 스냅샷을 지울까요?').then(function(ok){
+          if(!ok) return;
+          P_().snapDel(b.getAttribute('data-snd')).then(function(){ loadSnaps(true); });
+        }); }); });
   }
 
   function loadSnaps(force){
@@ -8874,12 +8908,14 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
     if(bg) bg.addEventListener('click', function(){
       var a=blankList();
       if(!a.length){ var el0=document.getElementById('lfBlankBar'); if(el0) el0.remove(); return; }
-      if(!confirm('아무것도 안 적힌 기록 '+a.length+'건을 지울까요?\n휴지통에서 되살릴 수 있어요.')) return;
+      askDel('아무것도 안 적힌 기록 '+a.length+'건을 지울까요?', '휴지통에서 되살릴 수 있어요').then(function(ok){
+      if(!ok) return;
       a.forEach(function(id){ try{ pDel(id); }catch(e){} });
       if(typeof toast==='function') toast('🧹 '+a.length+'건을 정리했어요');
       /* 지우는 데 잠깐 걸릴 수 있어 두 번 그린다 */
       setTimeout(render, 300);
       setTimeout(render, 1100);
+      });
     });
     var bn = host.querySelector('#lfBlankNo');
     if(bn) bn.addEventListener('click', function(){
@@ -9255,9 +9291,12 @@ window.PERSONAL_BUILD = 'v237-0902-1539';
     host.querySelectorAll('[data-lctdel]').forEach(function(b){
       b.addEventListener('click', function(ev){
         ev.stopPropagation();
-        if(!confirm('이 연락처를 지울까요?')) return;
-        try{ pDel(b.getAttribute('data-lctdel')); }catch(e){ alert('삭제 실패: '+e); return; }
-        if(typeof toast==='function') toast('🗑 삭제됐어요'); setTimeout(render,220);
+        askDel('이 연락처를 지울까요?').then(function(ok){
+          if(!ok) return;
+          try{ pDel(b.getAttribute('data-lctdel')); }
+          catch(e){ console.error('[삭제]', e); if(typeof toast==='function') toast('삭제 실패: '+e); return; }
+          if(typeof toast==='function') toast('🗑 삭제됐어요'); setTimeout(render,220);
+        });
       });
     });
     host.querySelectorAll('[data-lctcall]').forEach(function(b){
