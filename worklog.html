@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v243-0902-1722";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v244-0902-1742";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=243-20260902t1722"></script>
+<script src="worklog.js?v=244-20260902t1742"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -12392,9 +12392,30 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     '기타':   '기타(관리인건비·중식대)는 인건비·중식 화면에서 저절로 채워집니다'
   };
 
-  /* fixedRows: 엑셀 시트와 동일한 고정 행수 (부족분 빈 행 패딩) */
+  /* v244 — 달님 : 「선결재 10개로 해주고 나중에 칸 추가할 수 있게」
+     묶음마다 늘린 줄 수를 기기에 기억한다. 소계 줄의 ＋ / − 로 늘리고 줄인다.
+     🔴 줄을 줄여도 적힌 기록은 안 지운다 — 기록 수보다 아래로는 안 내려간다. */
+  var LS_SROWS = 'wl_settle_rows';
+  function sRowsAll(){
+    try{ var o=JSON.parse(localStorage.getItem(LS_SROWS)||'{}'); return (o&&typeof o==='object')?o:{}; }
+    catch(e){ console.warn('[정산표 줄수] 못 읽었어요', e); return {}; }
+  }
+  function sExtra(k){ return Math.max(0, Math.min(90, Number(sRowsAll()[k])||0)); }
+  function sExtraSet(k, v){
+    var o=sRowsAll(); o[k]=Math.max(0, Math.min(90, Number(v)||0));
+    try{ localStorage.setItem(LS_SROWS, JSON.stringify(o)); }
+    catch(e){ console.warn('[정산표 줄수] 저장 실패', e); }
+  }
+  window.wlSettleRows = {
+    state: sRowsAll,
+    reset: function(){ try{ localStorage.removeItem(LS_SROWS); }catch(e){}
+                       try{ if(typeof window.renderExpSettle==='function') window.renderExpSettle(); }catch(e){}
+                       return '정산표 줄 수를 처음으로 되돌렸어요'; }
+  };
+
+  /* fixedRows: 기본 줄 수 (부족분 빈 행 패딩) — 소계 줄의 ＋ / − 로 늘리고 줄인다 */
   var GROUPS=[
-    {key:'선결재',     label:'선결재(개인지출)',   color:'#3f7cb8', bg:'#f0f6ff', fixedRows:15},
+    {key:'선결재',     label:'선결재(개인지출)',   color:'#3f7cb8', bg:'#f0f6ff', fixedRows:10},
     {key:'선납부',     label:'선납부(전표)',       color:'#7c3aed', bg:'#f5f3ff', fixedRows:6},
     {key:'기타정산',   label:'기타정산(비정기)',   color:'#c2410c', bg:'#fff7ed', fixedRows:10, midTotalAfter:true},
     {key:'월정산',     label:'월정산(정기)',       color:'#ea580c', bg:'#fffbea', fixedRows:10},
@@ -12518,15 +12539,52 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var ym=(g('expSettleMonthSel')||{}).value||kstNow().toISOString().slice(0,7);
     var d=buildMap(ym);
     var cnt=g('expSettleCount'); if(cnt) cnt.textContent=ym+' · '+d.total+'건';
+    /* ══ v244 — 달님 : 「이 달에 뭐가 들어왔는지 열자마자 보이게」 ══
+       빠뜨린 것이 있으면 어디서 넣는지까지 알려 준다. */
+    var html0 = '';
+    try{
+      var _mN = (d.map['월정산']||[]).length;
+      var _et = (d.map['기타']||[]);
+      var _hasLab = _et.some(function(x){ return x && /관리인건비/.test(x.title||''); });
+      var _hasMeal= _et.some(function(x){ return x && /중식/.test(x.title||''); });
+      var _expN = (typeof entries!=='undefined'?entries:[])
+        .filter(function(e){ return e && e.kind==='expense' && String(e.date||'').indexOf(ym)===0; }).length;
+      var _chip = function(ok, txt, tip){
+        return '<span title="'+esc(tip||'')+'" style="display:inline-flex;align-items:center;gap:4px;'
+             + 'background:'+(ok?'#eefaf3':'#fdf2f2')+';border:1px solid '+(ok?'#bfe6d2':'#f3d3d3')+';'
+             + 'color:'+(ok?'#0f7a4a':'#b52929')+';border-radius:8px;padding:3px 9px;font-size:12px;font-weight:800">'
+             + (ok?'\u2705':'\u274C') + ' ' + esc(txt) + '</span>';
+      };
+      var _miss = [];
+      if(!_mN)      _miss.push('월정산');
+      if(!_hasLab)  _miss.push('관리인건비');
+      if(!_hasMeal) _miss.push('중식대');
+      html0 = '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;'
+        + 'padding:9px 12px;border:1.5px solid #e3ecf6;background:#f8fbff;border-radius:10px">'
+        + '<b style="font-size:12.5px;color:#33567d">\uD83D\uDCCB '+esc(ym)+' 에 들어온 것</b>'
+        + _chip(_expN>0, '지출 기록 '+_expN+'건', '지출 목록에서 넣습니다')
+        + _chip(_mN>0,   '월정산 '+_mN+'줄',      '인건비+정기분 화면의 월정산 표에서 넣습니다')
+        + _chip(_hasLab, '관리인건비',            '인건비+정기분 화면의 도급비 산출 내역에서 넣습니다')
+        + _chip(_hasMeal,'중식대',                '중식 화면에서 넣습니다')
+        + (_miss.length
+            ? '<span style="flex:1;min-width:150px;font-size:11.5px;color:#b08968">'
+              + '아직 없는 것 — ' + esc(_miss.join(' \u00B7 ')) + ' (금액이 0인 줄은 안 넘어옵니다)</span>'
+            : '<span style="flex:1;min-width:120px;font-size:11.5px;color:#6b9a80">다 들어와 있어요</span>')
+        + '</div>';
+    }catch(e){ console.warn('[정산표 요약]', e); html0=''; }
     if(!d.total){
-      box.innerHTML='<div style="text-align:center;padding:60px 20px;color:#aab8c8"><div style="font-size:40px;margin-bottom:10px">🧮</div><div style="font-size:14px;font-weight:700">'+esc(ym)+' 지출 내역이 없어요</div></div>';
+      /* v244 — 아무것도 없을 때도 「어디서 넣는지」를 알려 준다 */
+      box.innerHTML='<div style="text-align:center;padding:44px 20px;color:#aab8c8"><div style="font-size:40px;margin-bottom:10px">🧮</div>'
+        +'<div style="font-size:14px;font-weight:700">'+esc(ym)+' 에 아직 아무것도 없어요</div>'
+        +'<div style="font-size:12px;margin-top:8px;line-height:1.8;color:#8ba0b6">'
+        +'지출은 📋 목록에서 · 월정산과 관리인건비는 👷 인건비+정기분에서 · 중식대는 🍚 중식에서 넣습니다</div></div>';
       return;
     }
     var TH='padding:9px 10px;font-size:12px;font-weight:800;color:#fff;background:#3f7cb8;border:1px solid #dbe6f4;white-space:nowrap';
     var TD='padding:8px 10px;font-size:13px;color:#1a2f45;border:1px solid #e8f0fa;background:#fff';
     var TDR=TD+';text-align:right;white-space:nowrap;font-weight:600';
     /* v178 — 업무에서 저절로 만들어진 지출이 섞여 있으면 알려 주고 한 번에 정리할 수 있게 */
-    var html='';
+    var html=html0;                     /* v244 — 맨 위 요약 줄 */
     try{
       var _auto=[];
       for(var _k in d.map){
@@ -12552,7 +12610,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var uSum=0;                         /* 수도광열 금액 (제외 계산용) */
     GROUPS.forEach(function(grp){
       var arr=d.map[grp.key]||[];
-      var need=Math.max(arr.length, grp.fixedRows||0);
+      var need=Math.max(arr.length, (grp.fixedRows||0) + sExtra(grp.key));   /* v244 — 늘린 줄 반영 */
       if(need>0){
         var s=0,t=0,a=0;
         for(var i=0;i<need;i++){
@@ -12590,7 +12648,12 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
           +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(s)+'</td>'
           +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+'">'+cell(t)+'</td>'
           +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(a)+'</td>'
-          +'<td style="'+TD+';background:'+grp.bg+';text-align:center"><button type="button" data-gcopy="'+esc(grp.key)+'" title="'+esc(grp.key)+' 내용 행만 복사 ('+need+'행)" style="border:1.5px solid '+grp.color+';background:#fff;color:'+grp.color+';border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">📋 복사</button></td>'
+          +'<td style="'+TD+';background:'+grp.bg+';text-align:center;white-space:nowrap">'
+            +'<button type="button" data-gcopy="'+esc(grp.key)+'" title="'+esc(grp.key)+' 내용 행만 복사 ('+need+'행)" style="border:1.5px solid '+grp.color+';background:#fff;color:'+grp.color+';border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">📋 복사</button>'
+            /* v244 — 줄 늘리기 · 줄이기 */
+            +'<button type="button" data-grow="'+esc(grp.key)+'" title="빈 줄을 한 줄 늘립니다" style="margin-left:4px;width:26px;height:24px;border:1.5px solid '+grp.color+';background:#fff;color:'+grp.color+';border-radius:8px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer">＋</button>'
+            +'<button type="button" data-shrink="'+esc(grp.key)+'" title="빈 줄을 한 줄 줄입니다 (적힌 줄은 안 지웁니다)"'+(need<=arr.length?' disabled':'')+' style="margin-left:2px;width:26px;height:24px;border:1.5px solid '+(need<=arr.length?'#dde6ef':grp.color)+';background:#fff;color:'+(need<=arr.length?'#c8d4e0':grp.color)+';border-radius:8px;font-size:12px;font-weight:800;font-family:inherit;cursor:'+(need<=arr.length?'default':'pointer')+'">−</button>'
+          +'</td>'
           +'</tr>';
       }
       /* 🟠 중간 합계: 개인+전표+기타정산 */
@@ -12634,6 +12697,26 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         setTimeout(function(){ try{ window.renderExpSettle(); }catch(e){} }, 600);
       });
     })();
+    /* v244 — 줄 늘리기 · 줄이기 */
+    box.querySelectorAll('[data-grow]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var k=b.getAttribute('data-grow');
+        sExtraSet(k, sExtra(k)+1);
+        window.renderExpSettle();
+        if(typeof toast==='function') toast('＋ '+k+' 빈 줄을 늘렸어요');
+      });
+    });
+    box.querySelectorAll('[data-shrink]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        if(b.disabled) return;
+        var k=b.getAttribute('data-shrink');
+        sExtraSet(k, sExtra(k)-1);
+        window.renderExpSettle();
+      });
+    });
+
     /* v237 — 빈 줄 클릭 → 그 칸에 맞는 지출을 바로 새로 만든다 */
     box.querySelectorAll('[data-settleadd]').forEach(function(tr){
       tr.addEventListener('click', function(){
@@ -12740,7 +12823,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var grp=null; GROUPS.forEach(function(x){ if(x.key===key) grp=x; });
       if(!grp) return;
       var arr=d.map[key]||[];
-      var need=Math.max(arr.length, grp.fixedRows||0);
+      var need=Math.max(arr.length, (grp.fixedRows||0) + sExtra(grp.key));   /* v244 — 늘린 줄 반영 */
       var out=[];
       for(var i=0;i<need;i++){
         var e=arr[i]||null;
@@ -12774,7 +12857,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var gSum=0,gTax=0,gAmt=0,mSum=0,mTax=0,mAmt=0,uSum=0;
       GROUPS.forEach(function(grp){
         var arr=d.map[grp.key]||[];
-        var need=Math.max(arr.length, grp.fixedRows||0);
+        var need=Math.max(arr.length, (grp.fixedRows||0) + sExtra(grp.key));   /* v244 — 늘린 줄 반영 */
         if(need>0){
           var s=0,t=0,a=0;
           for(var i=0;i<need;i++){
@@ -20645,7 +20728,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=243-20260902t1722"></script>
+<script src="personal.js?v=244-20260902t1742"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에
