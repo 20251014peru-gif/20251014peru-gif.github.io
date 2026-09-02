@@ -1470,3 +1470,12 @@ select.lf-ie.qp-hide{ display:none !important }
 /* v237 — 정산표 빈 줄: 눌러서 바로 적을 수 있다는 표시 */
 tr.settle-add:hover td{ background:#eff6ff !important }
 tr.settle-add:hover .settle-addhint{ color:#3f7cb8; font-weight:800 }
+
+/* v241 — 지출 내역(자재·중식·폐기물) 을 가로로 늘어놓는다 */
+/* 속성 목록이 2열 격자라, 이 상자만 두 열을 다 쓰게 한다 (안 되는 브라우저면 예전대로) */
+.pg-props > .pg-addon:has(.ei-cols){ grid-column:1 / -1 }
+.ei-cols{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:10px 14px; align-items:start; margin-top:6px }
+.ei-cols .ei-sec{ min-width:0; background:#fbfdff; border:1px solid #eef4fb;
+  border-radius:9px; padding:8px 9px }
+.ei-cols .ei-sec table{ width:100% }

@@ -20182,6 +20182,8 @@ async function githubUpload(token){
 
       yes.textContent = opt.ok || '확인';
       no.textContent  = opt.no || '취소';
+      /* v240 — only:true 면 「확인」 하나만. 알림용(wlAsk.info) */
+      no.style.display = opt.only ? 'none' : '';
       yes.className = 'wlask-yes' + (opt.danger ? ' danger' : '');
 
       var closed = false;
@@ -20219,6 +20221,12 @@ async function githubUpload(token){
       opt = opt || {};
       return open({ kind:'ok', title:title, sub:opt.sub,
                     ok:opt.ok || '확인', no:opt.no || '취소', danger:opt.danger });
+    },
+    /* v240 — 「확인」 하나뿐인 알림 팝업. 꼭 읽어야 하는 것에만 쓴다.
+       그냥 알려만 주는 것은 아래쪽 토스트가 덜 성가시다. */
+    info: function(title, opt){
+      opt = opt || {};
+      return open({ kind:'ok', title:title, sub:opt.sub, ok:opt.ok || '확인', only:true });
     }
   };
   console.log('[묻기 창] v145 준비됨 — 브라우저 창 대신 앱 안 팝업 (wlAsk)');
@@ -23257,7 +23265,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v239-0902-1603';
+  var JS_BUILD = 'v241-0902-1640';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -24176,16 +24184,21 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     return h;
   }
 
+  /* v241 — 달님 : 「자재·중식·폐기물이 세로로 쌓여 칸이 길어진다」
+     세 덩이를 각각 한 상자로 감싸고, 아래 html() 에서 가로로 늘어놓는다.
+     자리가 좁으면 저절로 아래로 접힌다 (auto-fit). */
   function sec(key, list, edit, tail){
     if(!list.length && !edit) return '';
-    return '<div style="font-size:12px;font-weight:900;color:#33567d;margin:10px 0 4px">'
+    return '<div class="ei-sec">'
+         + '<div style="font-size:12px;font-weight:900;color:#33567d;margin:0 0 4px">'
          + TITLE[key] + ' <span style="font-weight:600;color:#8ba0b6">' + list.length + '줄</span></div>'
          + rowsHTML(key, list, edit)
-         + (tail ? '<div style="font-size:12px;color:#5b7fa6;margin-top:4px">' + tail + '</div>' : '');
+         + (tail ? '<div style="font-size:12px;color:#5b7fa6;margin-top:4px">' + tail + '</div>' : '')
+         + '</div>';
   }
 
   function html(r, s, edit){
-    var h = '';
+    var h = '<div class="ei-cols">';
     if(s.mats.length || edit)
       h += sec('matItems', s.mats, edit,
         s.mats.length ? ('물품 <b>' + won(s.matGoods) + '원</b>'
@@ -24202,6 +24215,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
       h += sec('wasteItems', s.wastes, edit,
         s.wastes.length ? ('합계 <b>' + won(s.waste) + '원</b>') : '');
 
+    h += '</div>';                       /* v241 — 가로 상자 닫기 */
     /* 🔴 지금 저장된 금액과 견준다 */
     var want = wantAmount(r, s), now = n(r.amount);
     h += '<div id="eiSum" style="margin-top:9px">' + sumHTML(want, now, edit) + '</div>';
@@ -24827,7 +24841,11 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     var edit = canEdit();
     if(!s.any && !edit){ off(); return; }
     try{
-      window.wlAddOn(['[data-prow="_amount"] .pg-pv', '.lf-page .pg-props'], 'expitems',
+      /* v241 — 달님 : 「자재·중식·폐기물이 세로로 쌓여 칸이 길어진다」
+         예전에는 「합계」 값 칸(좁은 오른쪽 칸) 안에 붙어 폭이 253px 뿐이었다.
+         속성 목록 전체 폭에 붙여 세 덩이가 가로로 늘어서게 한다.
+         (합계 칸 안으로 되돌리려면 두 주소의 앞뒤를 바꾸면 된다) */
+      window.wlAddOn(['.lf-page .pg-props', '[data-prow="_amount"] .pg-pv'], 'expitems',
         function(){
           var d = document.createElement('div');
           d.style.cssText = 'margin-top:8px;border:1.5px solid #dbe6f4;border-radius:10px;'

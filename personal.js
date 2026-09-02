@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v239-0902-1603';
+window.PERSONAL_BUILD = 'v241-0902-1640';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -66,6 +66,34 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
     }catch(e){ console.warn('[물어보기] 앱 팝업을 못 써서 기본 창으로', e); }
     try{ return Promise.resolve(window.prompt(title, value==null?'':String(value))); }
     catch(e2){ return Promise.resolve(null); }
+  }
+
+  /* ══ v240 — 브라우저 alert 을 두 갈래로 나눈다 ══
+     달님 : 「알림은 토스트가 덜 성가시고, 막아야 하는 건 팝업이 맞다」
+
+     noteMsg(글)      → 아래쪽 토스트. 그냥 알려만 주는 것 (실패·못 찾음)
+     askInfo(글, 덧말) → 화면 한가운데 팝업, 「확인」 하나.
+                        멈춰 세워야 하거나 설명이 붙는 것 (「꼭 넣어주세요」 등)
+
+     🔴 둘 다 기다리지 않는다 — 예전 alert 자리에 그대로 끼워 넣어도
+        뒤따르는 return 이 원래대로 돈다 (코드 흐름을 안 건드린다). */
+  function noteMsg(msg){
+    var m = String(msg==null?'':msg).replace(/\n+/g, ' · ');
+    try{ if(typeof toast==='function'){ toast(m); return; } }catch(e){}
+    try{ window.alert(m); }catch(e2){}
+  }
+  function askInfo(msg, sub){
+    var m = String(msg==null?'':msg);
+    var i = m.indexOf('\n');
+    var head = (i>=0) ? m.slice(0,i) : m;
+    var rest = (i>=0) ? m.slice(i+1).replace(/\n+/g, ' · ').trim() : '';
+    try{
+      if(window.wlAsk && typeof window.wlAsk.info === 'function'){
+        window.wlAsk.info(head, { sub: sub || rest });
+        return;
+      }
+    }catch(e){ console.warn('[알림] 앱 팝업을 못 써서 기본 창으로', e); }
+    try{ window.alert(m); }catch(e2){}
   }
 
   /* ── 차량 ── */
@@ -681,7 +709,11 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
       {k:'supplyAmt',   label:'공급가액 (원)',  type:'number'},
       {k:'taxAmt',      label:'부가세 (원)',    type:'number'},
       {k:'isIssued',    label:'계산서 발행',    type:'checkbox'},
-      {k:'isJeonpyo',   label:'전표',          type:'checkbox'}
+      {k:'isJeonpyo',   label:'전표',          type:'checkbox'},
+      /* v241 — 업체를 넣으면 연락처에서 저절로 채워질 자리 (비어 있으면 「빈 항목」 안에 숨는다) */
+      {k:'workContact', label:'담당자',        type:'text'},
+      {k:'workRole',    label:'직책',          type:'text'},
+      {k:'workPhone',   label:'전화',          type:'tel'}
     ],
     item: [
       {k:'lastBuyDate', label:'마지막 구매일 (자동)', type:'date'}
@@ -2193,7 +2225,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
       l.addEventListener('click', function(e){
         e.preventDefault();
         var pid=l.getAttribute('data-cpid'), a=colsOf(pt), i=a.indexOf(pid);
-        if(i>=0){ if(a.length<=1){ alert('칸이 하나는 있어야 해요'); return; } a.splice(i,1); }
+        if(i>=0){ if(a.length<=1){ askInfo('칸이 하나는 있어야 해요'); return; } a.splice(i,1); }
         else {
           /* 공통 칸이면 원래 자리 근처에 끼워넣는다 */
           var bo={}; BASE.forEach(function(x,k){ bo[x.id]=k; });
@@ -2371,7 +2403,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
         var cus=customOf(null).slice();
         var have={}; cus.forEach(function(x){ have[x.name]=1; });
         var add=made.filter(function(x){ return !have[x.name]; });
-        if(!add.length){ alert('이미 만들어져 있어요'); return; }
+        if(!add.length){ noteMsg('이미 만들어져 있어요'); return; }
         customSave(null, cus.concat(add));
         /* 새로 만든 칸은 목록에도 바로 보이게 */
         var cs=colsOf(pt).slice();
@@ -2489,7 +2521,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
       var p=curP(); if(!p) return;
       var vEl=document.getElementById('lfCaV');
       var val = vEl ? (vEl.getAttribute('data-num')==='1'? numRaw(vEl.value) : vEl.value) : '';
-      if(opNeedsVal(OS.value) && String(val).trim()===''){ alert('값을 넣어주세요'); return; }
+      if(opNeedsVal(OS.value) && String(val).trim()===''){ askInfo('값을 넣어주세요'); return; }
       var scope = pt || '_all';
       var a=colorRules(scope); a.push({pid:p.id, op:OS.value, val:val, color:pick});
       colorRulesSave(scope, a);
@@ -2596,7 +2628,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
       var p=curProp(); if(!p) return;
       var vEl=document.getElementById('lfRV');
       var val = vEl ? (vEl.getAttribute('data-num')==='1' ? numRaw(vEl.value) : vEl.value) : '';
-      if(opNeedsVal(OS.value) && String(val).trim()===''){ alert('값을 넣어주세요'); return; }
+      if(opNeedsVal(OS.value) && String(val).trim()===''){ askInfo('값을 넣어주세요'); return; }
       (flt.rules=flt.rules||[]).push({ pid:p.id, op:OS.value, val:val });
       lsSet(LS_FLT, flt);
       cl(); safeRender();
@@ -2887,14 +2919,14 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
 
     document.getElementById('lfAOk').addEventListener('click', function(){
       var nm=(document.getElementById('lfPName').value||'').trim();
-      if(!nm){ alert('이름을 넣어주세요'); return; }
+      if(!nm){ askInfo('이름을 넣어주세요'); return; }
       var ty=ts.value, sc=document.getElementById('lfPScope').value;
       var p={ id:'c'+Date.now()+Math.floor(Math.random()*1000), name:nm, type:ty,
               order:Date.now(), archived:false };
       if(ty==='multi'){
         p.o=(document.getElementById('lfPOpts').value||'').split(',')
           .map(function(x){ return x.trim(); }).filter(Boolean);
-        if(!p.o.length){ alert('고를 값을 쉼표로 넣어주세요\n예) 현장용, 소모품, 급함'); return; }
+        if(!p.o.length){ askInfo('고를 값을 쉼표로 넣어주세요\n예) 현장용, 소모품, 급함'); return; }
         p.colors={}; var CK=['blue','green','orange','purple','pink','yellow','red','gray'];
         p.o.forEach(function(x,i){ p.colors[x]=CK[i%CK.length]; });
       }
@@ -2902,11 +2934,11 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
         p.dir = document.getElementById('lfPRuDir').value;
         if(p.dir==='rev'){
           var rv=revParse(document.getElementById('lfPRuRev2').value);
-          if(!rv){ alert('거꾸로 볼 연결을 골라 주세요'); return; }
+          if(!rv){ askInfo('거꾸로 볼 연결을 골라 주세요'); return; }
           p.revSrc = rv.src; p.relPid = rv.pid;
         } else {
           var rr=document.getElementById('lfPRuRel');
-          if(!rr || !rr.value){ alert('먼저 🔗 관계 속성을 하나 만들어 주세요'); return; }
+          if(!rr || !rr.value){ askInfo('먼저 🔗 관계 속성을 하나 만들어 주세요'); return; }
           p.relPid = rr.value;
         }
         p.tgtPid = document.getElementById('lfPRuTgt').value;
@@ -2924,7 +2956,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
       if(ty==='rel') p.target = document.getElementById('lfPRel').value;
       if(ty==='formula'){
         p.expr = (document.getElementById('lfPFx').value||'').trim();
-        if(!p.expr){ alert('계산식을 넣어주세요\n예) {단가} * {개수}'); return; }
+        if(!p.expr){ askInfo('계산식을 넣어주세요\n예) {단가} * {개수}'); return; }
       }
       var uv=(document.getElementById('lfPUnit')||{}).value;
       if(uv && uv.trim()) p.unit = uv.trim();
@@ -3176,11 +3208,79 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
     if(!rec) return;
     var patch = ppatch(rec, pid, v);
     if(pid==='_amount' && amountLocked(rec)){
-      alert('이 금액은 항목 표에서 자동으로 계산돼요.\n항목을 고치려면 줄을 눌러 창을 열어주세요.');
+      askInfo('이 금액은 항목 표에서 자동으로 계산돼요.\n항목을 고치려면 줄을 눌러 창을 열어주세요.');
       return;
     }
     pUpd(id, patch);
     if(typeof toast==='function') toast('고쳤어요');
+
+    var K = p.k || String(pid).replace(/^f:/,'');
+
+    /* ══ v241 ⑤ 공급가액 · 부가세를 고치면 합계를 저절로 맞춘다 ══
+       달님 : 「공급가액 부가세 넣어도 합계가 안 나와」
+       🔴 항목 표(자재·중식·폐기물)가 금액을 정하고 있으면 건드리지 않는다. */
+    try{
+      if(K==='supplyAmt' || K==='taxAmt'){
+        var r2 = ent().filter(function(x){ return x.id===id; })[0];
+        if(r2 && !amountLocked(r2)){
+          var sup = num(r2.supplyAmt)||0, tax = num(r2.taxAmt)||0;
+          if(sup || tax){
+            var sum2 = sup + tax;
+            if(num(r2.amount) !== sum2){
+              pUpd(id, { amount: sum2 });
+              if(typeof toast==='function') toast('🧮 합계 ' + numFmt(sum2) + '원');
+              pgCellRefresh(pt, id, '_amount');
+            }
+          }
+        }
+      }
+    }catch(e){ console.warn('[합계 자동]', e); }
+
+    /* ══ v241 ① 업체를 넣으면 연락처에서 담당자 · 직책 · 전화를 가져온다 ══
+       달님 : 「업체 넣어도 이름 전화 등등 정보가 안 나와」
+       🔴 빈 칸만 채운다 — 이미 적어 둔 값은 절대 덮어쓰지 않는다. */
+    try{
+      /* 🔴 업체 칸은 BASE 의 「_sub」 하나가 workVendor·owner·vendor 를 함께 물고 있다
+         (BMAP 참고). 그래서 pid 로도 잡아 준다 — 이걸 몰라 처음에 안 먹었다. */
+      if((K==='vendor' || K==='workVendor' || pid==='_sub') && String(v||'').trim()){
+        var nm2 = String(v).trim();
+        var cs2 = [];
+        try{ cs2 = (typeof contactsCache!=='undefined' && contactsCache) ? contactsCache : []; }catch(e0){}
+        var hit2 = cs2.filter(function(c){ return c && String(c.name||'').trim()===nm2; })[0];
+        if(hit2){
+          var r3 = ent().filter(function(x){ return x.id===id; })[0];
+          var map2 = { workContact: hit2.person, workRole: (hit2.role||hit2.position||hit2.title),
+                       workPhone: hit2.phone };
+          var pc2 = {}, cnt2 = 0;
+          Object.keys(map2).forEach(function(k2){
+            if(!map2[k2]) return;
+            if(!propById(pt, 'f:'+k2)) return;                 /* 그 칸이 없는 종류면 건너뛴다 */
+            var cur2 = r3 ? r3[k2] : '';
+            if(cur2!=null && String(cur2).trim()!=='') return;  /* 이미 적혀 있으면 그대로 */
+            pc2[k2] = map2[k2]; cnt2++;
+          });
+          if(cnt2){
+            pUpd(id, pc2);
+            try{ if(typeof window.wlAutoMark==='function') window.wlAutoMark(id, pc2); }catch(e1){}
+            if(typeof toast==='function') toast('📇 ' + nm2 + ' — ' + cnt2 + '개 칸을 채웠어요');
+            Object.keys(pc2).forEach(function(k3){ pgCellRefresh(pt, id, 'f:'+k3); });
+          }
+        } else if(cs2.length===0){
+          try{ if(typeof loadContactsCache==='function') loadContactsCache(); }catch(e2){}
+        }
+      }
+    }catch(e){ console.warn('[업체 자동채움]', e); }
+  }
+
+  /* v241 — 열려 있는 페이지의 칸 하나만 다시 그린다 (창 전체를 다시 열지 않는다) */
+  function pgCellRefresh(pt, id, pid){
+    try{
+      var ov2 = document.getElementById('lfPageOv'); if(!ov2) return;
+      var box2 = ov2.querySelector('[data-ppid="'+pid+'"]'); if(!box2) return;
+      var p2 = propById(pt, pid); if(!p2) return;
+      var r4 = ent().filter(function(x){ return x.id===id; })[0]; if(!r4) return;
+      box2.innerHTML = cellHTML(r4, p2);
+    }catch(e){ console.warn('[칸 다시 그리기]', e); }
   }
 
   /* ── 목록 정렬·필터 상태 ── */
@@ -4661,7 +4761,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
     var imgs = [].filter.call(files, function(f){ return /^image\//.test(f.type); });
     var others = [].filter.call(files, function(f){ return !/^image\//.test(f.type); });
     if(others.length && !imgs.length){
-      alert('본문에는 사진만 넣을 수 있어요.\n\n영수증·서류는 [✏️ 전체 서식] 의 🧾 영수증·명함 첨부를 쓰세요.');
+      askInfo('본문에는 사진만 넣을 수 있어요.\n\n영수증·서류는 [✏️ 전체 서식] 의 🧾 영수증·명함 첨부를 쓰세요.');
       return;
     }
     if(!imgs.length) return;
@@ -4802,7 +4902,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
   try{ window.wlOpenPage = function(id){ return openPage(id); }; }catch(e){}
   function openPage(id){
     var rec = ent().filter(function(x){ return x.id===id; })[0];
-    if(!rec){ alert('기록을 못 찾았어요'); return; }
+    if(!rec){ noteMsg('기록을 못 찾았어요'); return; }
     var pt = DS.ptypeOf(rec) || 'etc';
     var d  = (isPersonal() && pt==='car') ? {i:'🚗', n:'차계부', c:carColor(rec.car)} : (cats()[pt]||catEtc());
 
@@ -5261,8 +5361,19 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
               if(typeof toast==='function') toast('📦 '+r.name+(r.spec?(' · '+r.spec):'')+' · '+r.qty+'개'
                 + (s1>0 ? (' · 자재 합계 '+numFmt(s1)+'원') : ''));
               openPage(id);
-            }catch(e){ console.error('[자재 고르기]', e); alert('자재를 못 넣었어요: '+(e.message||e)); }
+            }catch(e){ console.error('[자재 고르기]', e); noteMsg('자재를 못 넣었어요: '+(e.message||e)); }
           }, pget(rec, pid) || '');
+          return;
+        }
+        /* v241 — 달님 : 「계산서 발행 체크가 한 번에 안 돼」
+           예전에는 첫 번째 누름이 「고치기 칸 열기」, 두 번째가 「체크」였다.
+           예/아니오 뿐인 칸은 고치기 칸을 열 까닭이 없다 — 바로 뒤집는다. */
+        if(p.type==='check'){
+          ev.preventDefault(); ev.stopPropagation();
+          var nv = !pget(rec, pid);
+          save(ppatch(rec, pid, nv));
+          box.innerHTML = cellHTML(rec, p);
+          if(typeof toast==='function') toast(nv ? '☑ 켰어요' : '☐ 껐어요');
           return;
         }
         box.innerHTML = editorHTML(p, pget(rec,pid));
@@ -5406,7 +5517,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
       var ib = document.getElementById('pgImpW'); if(!ib) return;
       ib.addEventListener('click', function(){
         if(typeof window.wlPickWork !== 'function'){
-          alert('가져오기 기능을 못 불러왔어요 — worklog.js 를 올렸는지 확인해 주세요'); return;
+          askInfo('가져오기 기능을 못 불러왔어요 — worklog.js 를 올렸는지 확인해 주세요'); return;
         }
         window.wlPickWork(function(w){
           try{
@@ -5431,7 +5542,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
                  + (skipped.length? (' / 이미 쓴 '+skipped.length+'개는 그대로') : ''))
               : '채울 빈 칸이 없었어요 — 연결만 해뒀습니다');
             openPage(id);
-          }catch(e){ console.error('[업무 가져오기]', e); alert('가져오지 못했어요: '+(e.message||e)); }
+          }catch(e){ console.error('[업무 가져오기]', e); noteMsg('가져오지 못했어요: '+(e.message||e)); }
         });
       });
     })();
@@ -5467,10 +5578,10 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
             window._wlScanTargetId = id;            /* 어느 기록에 붙일지 알려둔다 */
             if(typeof openScanPickerOfType === 'function'){ openScanPickerOfType('doc'); }
             else if(typeof window._openScanPickerOfType === 'function'){ window._openScanPickerOfType('doc'); }
-            else { alert('스캔앱 창구를 찾지 못했어요'); }
+            else { noteMsg('스캔앱 창구를 찾지 못했어요'); }
           }catch(e){
             console.error('[스캔앱]', e);
-            alert('스캔앱을 열지 못했어요: ' + (e.message || e));
+            noteMsg('스캔앱을 열지 못했어요: ' + (e.message || e));
           }
         });
       }
@@ -5511,7 +5622,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
         return { total: seen, bad: bad.filter(function(x){ return x !== null; }), badN: bad.length };
       }
       function openTypeWin(pid){
-        var p = propById(pt, pid); if(!p){ alert('속성을 찾지 못했어요'); return; }
+        var p = propById(pt, pid); if(!p){ noteMsg('속성을 찾지 못했어요'); return; }
         var cur = p.type || 'text';
         var pick = cur;
         var ov2 = document.createElement('div'); ov2.className = 'ptw';
@@ -5557,7 +5668,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
             if(chk2.badN > 0 && !confirm(chk2.badN + '건이 비워집니다. 정말 바꿀까요?\n\n되돌리려면 백업에서 복구해야 합니다.')) return;
             try{
               if(pid.slice(0,2) === 'f:'){          /* 기본 칸 — 재정의로 저장 */
-                if(ftypeLocked(pid)){ alert('이 칸은 계산·달력에 쓰여서 종류를 바꿀 수 없어요'); return; }
+                if(ftypeLocked(pid)){ askInfo('이 칸은 계산·달력에 쓰여서 종류를 바꿀 수 없어요'); return; }
                 ftypeSet(pt, pid, pick);
               }else{                                 /* 내가 만든 속성 */
                 var arr = customOf(pt).slice();
@@ -5565,7 +5676,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
                 for(var i = 0; i < arr.length; i++){
                   if(arr[i] && arr[i].id === pid){ arr[i] = Object.assign({}, arr[i], {type: pick}); hit = true; break; }
                 }
-                if(!hit){ alert('속성을 찾지 못했어요'); return; }
+                if(!hit){ noteMsg('속성을 찾지 못했어요'); return; }
                 customSave(pt, arr);
               }
               ov2.remove();
@@ -5573,7 +5684,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
               openPage(id);
             }catch(err){
               console.error('[종류 바꾸기]', err);
-              alert('바꾸지 못했어요: ' + (err.message || err));
+              noteMsg('바꾸지 못했어요: ' + (err.message || err));
             }
           });
         }
@@ -5709,7 +5820,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
       var mPick=document.getElementById('pgMatPick');
       if(mPick) mPick.addEventListener('click', function(){
         if(typeof window.wlPickMats!=='function'){
-          alert('자재 고르기를 못 불러왔어요 — worklog.js 를 올렸는지 확인해 주세요'); return;
+          askInfo('자재 고르기를 못 불러왔어요 — worklog.js 를 올렸는지 확인해 주세요'); return;
         }
         window.wlPickMats(function(list){
           try{
@@ -5724,7 +5835,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
                              + (s>0? (' · 합계 '+numFmt(s)+'원'+(ap?' → 금액 칸에 넣었어요':'')) : ''))
                           : '자재를 모두 비웠어요');
             openPage(id);
-          }catch(e){ console.error('[자재 담기]', e); alert('자재를 못 넣었어요: '+(e.message||e)); }
+          }catch(e){ console.error('[자재 담기]', e); noteMsg('자재를 못 넣었어요: '+(e.message||e)); }
         }, esr(rec.materials));
       });
       /* 자재 합계를 금액 칸에 넣기 (이미 적힌 금액도 덮어쓴다 — 사용자가 직접 누른 경우) */
@@ -5815,7 +5926,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
     try{
       PGASMOD_PEND = (asModal===undefined || asModal===null) ? null : !!asModal;
       var r = anyRec(id);
-      if(!r){ alert('기록을 못 찾았어요'); return; }
+      if(!r){ noteMsg('기록을 못 찾았어요'); return; }
       var want = (r.kind==='personal'||r.kind==='pcontact') ? 'personal' : r.kind;
       var cur2 = DS ? (DS.key==='personal' ? 'personal' : DS.kind) : '';
       if(want!==cur2){
@@ -5925,7 +6036,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
   }
   function vendorHub(name){
     var n=String(name||'').trim();
-    if(!n){ alert('업체 이름이 없어요'); return; }
+    if(!n){ noteMsg('업체 이름이 없어요'); return; }
     var rows=vendorRows(n);
     var ct=vendorContact(n);
 
@@ -6075,7 +6186,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
     });
     if(tpl.body) o.body = tpl.body;
     var rec = pAdd(o);
-    if(!rec){ alert('추가하지 못했어요'); return; }
+    if(!rec){ noteMsg('추가하지 못했어요'); return; }
     if(!(srt.k==='date' && srt.d<0)){ srt={k:'date', d:-1}; lsSet(LS_SORT, srt); }
     if(typeof toast==='function') toast('📑 "'+tpl.name+'" 으로 새 기록을 만들었어요');
     setTimeout(function(){ render(); setTimeout(function(){ openPage(rec.id); }, 120); }, 0);
@@ -6228,7 +6339,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
       }
     }
     var rec = pAdd(o);
-    if(!rec){ alert('추가하지 못했어요'); return; }
+    if(!rec){ noteMsg('추가하지 못했어요'); return; }
     /* 방금 만든 것이 눈에 보이게 — 최근 날짜가 맨 위로 오도록 정렬을 돌려놓는다 */
     if(!(srt.k==='date' && srt.d<0)){
       srt={k:'date', d:-1}; lsSet(LS_SORT, srt);
@@ -7366,7 +7477,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
   /* picker 열기 */
   function pickScan(type, pt, recId){
     if(typeof window._openScanPicker!=='function'){
-      alert('scan-app 연결을 못 찾았어요.\n페이지를 새로고침(Ctrl+Shift+R) 한 뒤 다시 해보세요.'); return;
+      askInfo('scan-app 연결을 못 찾았어요.\n페이지를 새로고침(Ctrl+Shift+R) 한 뒤 다시 해보세요.'); return;
     }
     var linkedTo='worklog:personal_'+(recId||'new');
     window._openScanPicker(type, linkedTo, function(selType, selId, d){
@@ -7560,12 +7671,12 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
       if(t.hasAttribute('data-lmap')){
         var a=document.getElementById(t.getAttribute('data-lmap'));
         if(a && a.value.trim()) window.open('https://map.naver.com/p/search/'+encodeURIComponent(a.value.trim()),'_blank');
-        else alert('주소를 먼저 입력하세요'); return;
+        else askInfo('주소를 먼저 입력하세요'); return;
       }
       if(t.hasAttribute('data-ltel')){
         var p=document.getElementById(t.getAttribute('data-ltel'));
         if(p && p.value.trim()) location.href='tel:'+p.value.replace(/[^0-9+]/g,'');
-        else alert('전화번호를 먼저 입력하세요'); return;
+        else askInfo('전화번호를 먼저 입력하세요'); return;
       }
       if(t.hasAttribute('data-lai')){ runLinkAI(t.getAttribute('data-lai')); return; }
       if(t.hasAttribute('data-lfx')){ fetchFx(); return; }
@@ -7618,7 +7729,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
     document.getElementById('lfSave').addEventListener('click', function(){
       var o = collect();
       var miss = FIELDS.filter(function(f){ return f.req && !String(o[f.k]||'').trim(); });
-      if(miss.length){ alert(miss[0].l+' 은(는) 꼭 넣어주세요'); 
+      if(miss.length){ askInfo(miss[0].l+' 은(는) 꼭 넣어주세요'); 
         var me=document.getElementById('lf-'+miss[0].k); if(me) me.focus(); return; }
       Object.keys(o).forEach(function(k){ if(k.slice(0,3)==='P__') delete o[k]; });
       o.kind='personal'; o.ptype=pt; o.photos=PHOTOS.slice();
@@ -7632,7 +7743,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
       try{
         if(rec){ pUpd(id, o); }
         else { o.createdAt=Date.now(); pAdd(o); }
-      }catch(e3){ alert('저장 실패: '+e3); return; }
+      }catch(e3){ noteMsg('저장 실패: '+e3); return; }
       close(); if(typeof toast==='function') toast('저장됐어요');
       try{ if(typeof window._linkScanItemBack==='function'){
         var lt='worklog:personal_'+(id||'new');
@@ -7685,12 +7796,12 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
     document.getElementById('lfSave').addEventListener('click', function(){
       var o={};
       CTF.forEach(function(f){ var el=document.getElementById('lf-'+f.k); if(el) o[f.k]=el.value; });
-      if(!String(o.name||'').trim()){ alert('이름을 꼭 넣어주세요'); return; }
+      if(!String(o.name||'').trim()){ askInfo('이름을 꼭 넣어주세요'); return; }
       o.kind='pcontact'; o.date = v.date || today(); o.title = o.name;
       try{
         if(rec){ pUpd(id,o); }
         else { o.createdAt=Date.now(); pAdd(o); }
-      }catch(e3){ alert('저장 실패: '+e3); return; }
+      }catch(e3){ noteMsg('저장 실패: '+e3); return; }
       close(); if(typeof toast==='function') toast('저장됐어요'); setTimeout(render,250);
     });
     setTimeout(function(){ var n=document.getElementById('lf-name'); if(n&&window.innerWidth>820) try{n.focus();}catch(e){} },120);
@@ -8284,9 +8395,9 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
             var j=JSON.parse(fr.result);
             var mode=confirm('같은 기록이 이미 있으면 어떻게 할까요?\n\n[확인] 파일 내용으로 덮어쓰기\n[취소] 그대로 두고 새 것만 추가');
             var r=P_().importPersonal(j, mode?'overwrite':'skip');
-            alert('가져오기 완료\n\n새로 추가 '+r.add+'건\n덮어씀 '+r.upd+'건\n(파일 안 '+r.total+'건)');
+            askInfo('가져오기 완료\n\n새로 추가 '+r.add+'건\n덮어씀 '+r.upd+'건\n(파일 안 '+r.total+'건)');
             render();
-          }catch(e){ alert('가져오기 실패: '+e.message); }
+          }catch(e){ noteMsg('가져오기 실패: '+e.message); }
           inp.value='';
         };
         fr.readAsText(f);
@@ -8316,7 +8427,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
   /* 스냅샷 열어보기 + 되살리기 */
   function snapView(k){
     P_().snapGet(k).then(function(arr){
-      if(!arr){ alert('스냅샷을 못 읽었어요'); return; }
+      if(!arr){ noteMsg('스냅샷을 못 읽었어요'); return; }
       var isP = k.indexOf('personal')===0;
       var head = arr.slice(0,40).map(function(e){
         return '<tr><td style="white-space:nowrap;color:#8ba0b6">'+esc(e.date||'')+'</td>'
@@ -8347,13 +8458,13 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
           var u=URL.createObjectURL(b), a=document.createElement('a');
           a.href=u; a.download=k.replace(/\|/g,'_')+'.json'; document.body.appendChild(a); a.click();
           setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); },1500);
-        }catch(e){ alert('내려받기 실패: '+e); }
+        }catch(e){ noteMsg('내려받기 실패: '+e); }
       });
       var rs=document.getElementById('lfSRes');
       if(rs) rs.addEventListener('click', function(){
         var have={}; ent().forEach(function(e){ have[e.id]=1; });
         var miss=arr.filter(function(e){ return e && e.id && !have[e.id]; });
-        if(!miss.length){ alert('없어진 기록이 없어요 — 지금 목록이 스냅샷보다 온전합니다'); return; }
+        if(!miss.length){ noteMsg('없어진 기록이 없어요 — 지금 목록이 스냅샷보다 온전합니다'); return; }
         if(!confirm(miss.length+'건을 되살릴까요?\n\n지금 있는 기록은 그대로 두고, 없어진 것만 다시 넣습니다.')) return;
         miss.forEach(function(e){ try{ P_().restore(e); }catch(x){} });
         cl(); if(typeof toast==='function') toast('↩ '+miss.length+'건을 되살렸어요');
@@ -9313,7 +9424,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
       try{ if(ie.type!=='hidden'){ ie.focus(); if(ie.select) ie.select(); } }catch(e){}
       var fin=function(save){
         if(done) return; done=true;
-        if(save) try{ editCommit(ptNow, eid, epid, ie); }catch(e){ alert('저장 실패: '+e); }
+        if(save) try{ editCommit(ptNow, eid, epid, ie); }catch(e){ noteMsg('저장 실패: '+e); }
         EDIT=null; setTimeout(render, 0);
       };
       ie._dialDone = function(){ fin(true); };    /* v112 시계창이 직접 저장을 부른다 */
@@ -9410,7 +9521,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
     ];
     if(ent().some(function(e){ return e.sample && (e.kind==='personal'||e.kind==='pcontact'); })){
       try{ localStorage.setItem(LS_SEED,'1'); }catch(e){}
-      if(force) alert('샘플이 이미 들어가 있어요.\n다시 넣으려면 먼저 [샘플 지우기] 를 하세요.');
+      if(force) askInfo('샘플이 이미 들어가 있어요.\n다시 넣으려면 먼저 [샘플 지우기] 를 하세요.');
       return;
     }
     var n=0;
@@ -9422,7 +9533,7 @@ window.PERSONAL_BUILD = 'v239-0902-1603';
   window.wlLifeSeed = function(){ seed(true); };
   window.wlLifeSeedClear = function(){
     var s=ent().filter(function(e){ return e.sample && (e.kind==='personal'||e.kind==='pcontact'); });
-    if(!s.length){ alert('샘플 데이터가 없어요'); return; }
+    if(!s.length){ noteMsg('샘플 데이터가 없어요'); return; }
     if(!confirm('샘플 '+s.length+'건을 모두 지울까요?\n(직접 넣은 기록은 안 지워집니다)')) return;
     s.forEach(function(e){ try{ pDel(e.id); }catch(x){} });
     if(typeof toast==='function') toast('🗑 샘플 '+s.length+'건 삭제');

@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v239-0902-1603";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v241-0902-1640";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=239-20260902t1603"></script>
+<script src="worklog.js?v=241-20260902t1640"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -3564,8 +3564,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   function v43ActivateTab(name){
     _wlPanelSeq++;
     var _mySeq = _wlPanelSeq;
-    /* 지출 탭을 벗어나면 정산표·인건비 재잠금 */
-    if(name!=='expense' && window._expFinUnlocked){
+    /* 지출 탭을 벗어나면 정산표·인건비 재잠금
+       🔴 v241 — 여기에 'data' 가 빠져 있었다.
+          정산표는 이제 노션식 화면(데이터 탭)에도 얹혀 있는데, 그 탭으로 가는 순간
+          자물쇠가 다시 걸렸다. v237 에서 만든 「빈 줄 눌러 넣기」 가 새 기록을 만들며
+          데이터 탭을 켜는 바람에, 창을 닫으면 비밀번호 화면이 나왔다. */
+    if(name!=='expense' && name!=='data' && window._expFinUnlocked){
       window._expFinUnlocked=false;
       try{ if(typeof window.renderExpSettle==='function') window.renderExpSettle(); }catch(e){}
       try{ if(typeof window.renderExpLabor==='function') window.renderExpLabor(); }catch(e){}
@@ -13666,7 +13670,19 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
           +'<td style="'+TD+'"><input type="number" data-mf="tax|'+i+'" value="'+(tax||'')+'" style="'+INP+'"'+(r.rev?' placeholder="자동"':'')+'></td>'
           +'<td style="'+TD+'"><input type="number" data-mf="tot|'+i+'" value="'+((sup+tax)||'')+'" title="합계 입력 시 금액·부가세 자동 역산" style="'+INP+';'+(r.rev?'border-color:#f59e0b;background:#fffbeb;':'')+'font-weight:800;color:#ea580c"'+(r.rev?' placeholder="고지서 금액"':'')+'></td>'
           +'<td style="'+TD+'"><input type="text" data-mf="note|'+i+'" value="'+esc(r.note||'')+'" style="'+INPL+';min-width:80px"></td>'
-          +'<td style="'+TD+'"><button type="button" data-mdel="'+i+'" style="width:30px;height:30px;border:none;border-radius:8px;background:#fde8e8;color:#b52929;cursor:pointer;font-family:inherit">🗑</button></td>'
+          /* v241 — 달님 : 「행 추가됐을 때 중간에 이동시킬 수 있게」
+             ▲▼ 로 한 칸씩 옮긴다. 맨 위·맨 아래 줄은 갈 곳이 없어 흐리게 둔다. */
+          +'<td style="'+TD+';white-space:nowrap">'
+          +  '<button type="button" data-mup="'+i+'" title="한 줄 위로"'
+          +    (i===0?' disabled':'')
+          +    ' style="width:26px;height:30px;border:none;border-radius:7px;background:'+(i===0?'#f3f6fa':'#eef5fd')
+          +    ';color:'+(i===0?'#c8d4e0':'#3f7cb8')+';cursor:'+(i===0?'default':'pointer')+';font-family:inherit;font-size:12px">▲</button>'
+          +  '<button type="button" data-mdn="'+i+'" title="한 줄 아래로"'
+          +    (i===list.length-1?' disabled':'')
+          +    ' style="width:26px;height:30px;margin-left:2px;border:none;border-radius:7px;background:'+(i===list.length-1?'#f3f6fa':'#eef5fd')
+          +    ';color:'+(i===list.length-1?'#c8d4e0':'#3f7cb8')+';cursor:'+(i===list.length-1?'default':'pointer')+';font-family:inherit;font-size:12px">▼</button>'
+          +  '<button type="button" data-mdel="'+i+'" style="width:30px;height:30px;margin-left:5px;border:none;border-radius:8px;background:#fde8e8;color:#b52929;cursor:pointer;font-family:inherit">🗑</button>'
+          +'</td>'
           +'</tr>';
       } else {
         var revB=r.rev?'<span style="background:#fef3c7;color:#92400e;border:1px solid #fbbf24;border-radius:5px;padding:0 6px;font-size:10px;font-weight:800;margin-left:5px">역산</span>':'';
@@ -13719,9 +13735,32 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       host.querySelectorAll('[data-mdel]').forEach(function(btn){
         btn.addEventListener('click',function(){
           var i=Number(btn.dataset.mdel);
-          if(!confirm('"'+(_mDraft[i].name||'(항목없음)')+'" 행을 삭제할까요?')) return;
-          _mDraft.splice(i,1); renderMonthly(parentBox);
+          var nm=(_mDraft[i].name||'(항목없음)');
+          var ask=(typeof window.wlAskDel==='function')
+            ? window.wlAskDel('"'+nm+'" 행을 지울까요?', '저장하기 전이면 [취소] 로 되돌릴 수 있어요')
+            : Promise.resolve(window.confirm('"'+nm+'" 행을 삭제할까요?'));
+          ask.then(function(ok){
+            if(!ok) return;
+            _mDraft.splice(i,1); renderMonthly(parentBox);
+          });
         });
+      });
+      /* v241 — ▲▼ 한 줄씩 옮기기 */
+      function mMove(from, to){
+        try{
+          if(to<0 || to>=_mDraft.length) return;
+          var it=_mDraft.splice(from,1)[0];
+          _mDraft.splice(to,0,it);
+          renderMonthly(parentBox);
+          if(typeof toast==='function') toast('↕ '+(it.name||'빈 줄')+' → '+(to+1)+'번');
+        }catch(e){ console.error('[월정산 옮기기]', e);
+          if(typeof toast==='function') toast('못 옮겼어요: '+(e.message||e)); }
+      }
+      host.querySelectorAll('[data-mup]').forEach(function(btn){
+        btn.addEventListener('click',function(){ var i=Number(btn.dataset.mup); mMove(i, i-1); });
+      });
+      host.querySelectorAll('[data-mdn]').forEach(function(btn){
+        btn.addEventListener('click',function(){ var i=Number(btn.dataset.mdn); mMove(i, i+1); });
       });
       var ad=host.querySelector('#mtAdd'); if(ad) ad.addEventListener('click',function(){ _mDraft.push({name:'',sup:0,tax:0,note:''}); renderMonthly(parentBox); });
       bindPrev();
@@ -20558,7 +20597,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=239-20260902t1603"></script>
+<script src="personal.js?v=241-20260902t1640"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에
