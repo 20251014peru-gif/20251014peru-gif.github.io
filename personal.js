@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v231-0902-1410';
+window.PERSONAL_BUILD = 'v233-0902-1425';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -3817,6 +3817,23 @@ window.PERSONAL_BUILD = 'v231-0902-1410';
     return h+'</span>';
   }
 
+  /* v233 — 개인 「📋 기록」 의 분류 칩 11개를 고르개 하나로 (도구줄 맨 앞) */
+  function catSelP(){
+    try{
+      var all = recs().filter(function(e){ return e.ptype!=='car'; });
+      var cnt = {}; all.forEach(function(e){ cnt[e.ptype] = (cnt[e.ptype]||0) + 1; });
+      var h = '<select id="lfCatSel" class="lf-in" title="분류로 골라 보기" style="max-width:170px">';
+      h += '<option value="전체"'+(curCat==='전체'?' selected':'')+'>🏠 전체 '+all.length+'</option>';
+      var cc = cats();
+      Object.keys(cc).forEach(function(k){
+        var d = cc[k] || {}, m = cnt[k] || 0;
+        h += '<option value="'+esc(k)+'"'+(curCat===k?' selected':'')+'>'
+           + esc((d.i||'')+' '+(d.n||k)) + (m? ' '+m : '') + '</option>';
+      });
+      return h + '</select>';
+    }catch(e){ console.warn('[분류 고르개]', e); return ''; }
+  }
+
   function fltBar(n, tot){
     var pt0 = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
     var nF  = fltNum(pt0);
@@ -3828,6 +3845,7 @@ window.PERSONAL_BUILD = 'v231-0902-1410';
       + '<div class="lf-fbwrap"><div class="lf-fbmid" style="flex-wrap:wrap;row-gap:6px">'
       /* v212 — 달님 : 「갤러리까지가 보기 부분이니 정기점검 왼쪽이 맞다」
          검색줄(lf-bar)에 있던 보기 단추를 도구줄 맨 앞으로 옮긴다. */
+      +   ((isPersonal() && cur==='rec') ? (catSelP() + sep) : '')
       +   vwBtns()
       +   sep
       +   chkBtns(rows, rc)
@@ -3893,6 +3911,11 @@ window.PERSONAL_BUILD = 'v231-0902-1410';
       /* ── v171 「도구」 — 탭 1행을 없애도 여기서 다 갈 수 있게 ── */
       +     '<div class="sep"></div>'
       +     '<div style="font-size:11px;font-weight:800;color:#8ba0b6;padding:1px 3px">도구</div>'
+      /* v233 — 개인일지: 띠 대신 여기 넣었다 */
+      +     (isPersonal()
+             ? '<button type="button" class="lf-fx" id="lfOldGo"'
+               + ' title="쓰시던 개인일지 앱의 기록·연락처를 한 번에 가져옵니다 · 예전 앱 기록은 그대로 남습니다">'
+               + '📥 예전 개인일지 가져오기</button>' : '')
       +     '<button type="button" class="lf-fx" data-gotab="password" title="비밀번호 화면">🔐 비번</button>'
       +     '<button type="button" class="lf-fx" data-gotab="diag" title="진단 · 자가 점검">🔧 진단</button>'
       +     '<button type="button" class="lf-fx" data-gotab="ai" title="AI 화면">🤖 AI</button>'
@@ -6498,11 +6521,9 @@ window.PERSONAL_BUILD = 'v231-0902-1410';
        ③ 📑 템플릿 · ➕ 기록 추가는 아래 도구줄로 내려보냄 — fltBar 안에 있다
        🔴 요약을 다시 보고 싶으면 📊 결산 탭에 그대로 다 있다.
           sum 은 지우지 않고 남겨 둔다 (되살릴 때 한 줄이면 된다). */
+    /* v233 — 분류 칩 줄은 도구줄의 「분류 고르개」 로 옮겼다 (catSelP)
+       chips 변수는 지우지 않고 남겨 둔다 — 되살릴 때 한 줄이면 된다 */
     return blankBar()
-      + (showP ? ('<div class="lf-pbar">'
-      +   '<div class="lf-chips" style="margin:0;flex:1 1 auto">'+chips+'</div>'
-      +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="height:34px;width:200px;max-width:100%;flex:0 0 auto">'
-      + '</div>') : '')
       + (showP ? oldBanner() : '')
       + gridHTML(list, (cats()[curCat]||{i:'🏠'}).i, (curQ?'검색 결과가 없어요':'아직 기록이 없어요<div style="font-size:12px;margin-top:6px">➕ 를 눌러 시작하세요</div>'));
   }
@@ -6510,6 +6531,11 @@ window.PERSONAL_BUILD = 'v231-0902-1410';
   /* 예전 개인일지에서 아직 안 가져왔으면 안내 */
   var LS_OLDBN='wl_life_oldbanner';
   function oldBanner(){
+    /* v233 — 달님 : 「두 줄로」
+       띠를 아예 안 띄운다. 하는 일은 ⚙ 도구 안 「📥 예전 개인일지 가져오기」 로 옮겼다.
+       다시 띠로 보고 싶으면 아래 return ''; 한 줄만 지우면 된다. */
+    return '';
+    /* eslint-disable no-unreachable */
     try{ if(localStorage.getItem(LS_OLDBN)==='off') return ''; }catch(e){}
     if(ent().some(function(e){ return e.fromOld; })) return '';
     /* v231 — 두 줄짜리 큰 띠였다. 하는 일은 그대로 두고 한 줄로 줄인다 */
@@ -8318,25 +8344,31 @@ window.PERSONAL_BUILD = 'v231-0902-1410';
              : cur==='safe' ? viewSafe()
              : viewRec();
 
+    /* ══ v233 — 달님 : 「최대한 줄을 줄여 두 줄로. 크기도 줄이고」 ══
+       예전엔 머리말 / 하위탭 / 분류칩+검색 / 도구줄 = 네 줄이었다.
+       ① 이 한 줄  : 🏠 개인 · 하위탭 5개 · 검색 · 🗃 업무일지 · 🧪
+       ② 아래 도구줄 : 분류 고르개 · 보기 · 날짜 · 묶기 · ➕ 기록 추가 · ⚙ · 건수
+       🔴 검색칸(lfQ)은 「📋 기록」일 때만 여기 둔다.
+          차계부·연락처는 자기 화면에 lfQ 가 따로 있어, 여기도 두면 같은 id 가 둘이 된다 (지침 ⑮). */
     host.innerHTML =
       '<div class="lf-wrap">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
-      +   '<div style="font-size:19px;font-weight:900;color:#1a2f45">'
-      +     (cur==='safe' ? '🛟 안전 관리 <span style="font-size:12.5px;font-weight:700;color:#8ba0b6">업무일지 · 개인일지 모두</span>' : '🏠 개인') + '</div>'
-      +   (cur==='safe'
-          ? '<button type="button" id="lfBackRec" style="height:32px;padding:0 13px;border:1.5px solid #dbe6f4;border-radius:9px;background:#fff;color:#5b7794;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">← 개인 기록으로</button>'
-          : '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
-            + '<span style="font-size:11.5px;color:#a8b8c8">업무일지와 따로 · 구글 캘린더로 안 나감</span>'
-            /* v231 — 달님 : 「개인일 때 종류 칩 줄은 안 보여도 된다」
-               16개짜리 칩 줄을 통째로 뺐다. 업무로 돌아가는 길은 이 단추 하나로 충분하다.
-               (업무 화면의 「🏠 개인일지」 단추와 짝이다) */
-            + '<button type="button" id="lfGoData" style="height:30px;padding:0 11px;border:1.5px solid #dbe6f4;border-radius:9px;background:#fff;color:#5b7794;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">🗃 업무일지</button>'
-            + '<button type="button" id="lfSeedBtn" style="height:30px;padding:0 11px;border:1.5px dashed #dbe6f4;border-radius:9px;background:#fff;color:#8ba0b6;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">🧪 샘플</button>'
-            + '</div>')
+      + '<div class="lf-phead">'
+      +   '<div class="lf-ptitle">'
+      +     (cur==='safe' ? '🛟 안전' : '🏠 개인') + '</div>'
+      /* 🔴 하위탭은 어느 화면에서나 늘 그린다.
+         v233 처음 판에서 🛟 안전일 때만 빼 봤더니 그 화면에서 다른 탭으로 못 갔다.
+         「← 개인 기록으로」 단추는 📋 기록 탭이 대신하므로 없앤다. */
+      +   '<div class="lf-tabs lf-ptabs">' + TABS.map(function(t){
+            return '<button type="button" class="lf-tab'+(t[0]===cur?' on':'')+'" data-lt="'+t[0]+'">'+t[1]+'</button>'; }).join('')
+      +   '</div>'
+      +   (cur==='rec'
+             ? '<input type="text" id="lfQ" class="lf-in lf-pq" placeholder="🔍 검색" value="'+esc(curQ)+'">'
+             : '<span style="flex:1 1 auto"></span>')
+      +   (cur==='safe' ? '<span class="lf-pnote">업무일지 · 개인일지 모두</span>' : '')
+      +   '<button type="button" id="lfGoData" class="lf-pbtn" title="업무일지 화면으로">🗃 업무일지</button>'
+      +   '<button type="button" id="lfSeedBtn" class="lf-pbtn dash" title="맛보기 샘플 넣기 · 지우기">🧪</button>'
       + '</div>'
-      + '<div class="lf-tabs">' + TABS.map(function(t){
-          return '<button type="button" class="lf-tab'+(t[0]===cur?' on':'')+'" data-lt="'+t[0]+'">'+t[1]+'</button>'; }).join('')
-      + '</div>' + body + '</div>';
+      + body + '</div>';
     bindRender(host);
   }
 
@@ -8355,6 +8387,19 @@ window.PERSONAL_BUILD = 'v231-0902-1410';
      🔴 차례(DS_ORDER)는 그대로 둔다 — 자리가 바뀌면 손이 헷갈린다. */
   var LS_DSMORE = 'wl_ds_more';
   var DS_TOP_N  = 7;
+  /* ══ v232 — 달님 : 「업무 화면 종류 칩도 접힘이 기본」 ══
+     코드 기본값은 원래부터 접힘(false) 이었다. 그런데 「⋯ 8개 더」 를 한 번 누르면
+     그 값이 기기에 남아, 그 뒤로는 늘 펼쳐진 채로 열렸다.
+     → 이 판으로 올라올 때 딱 한 번만 접어 준다.
+       그 뒤에 다시 펼치시면 그 선택은 그대로 지킨다 (다시 강제로 접지 않는다).
+     되돌리기: localStorage.removeItem('wl_ds_more_r232')  ← 다음에 열 때 한 번 더 접힘 */
+  try{
+    if(localStorage.getItem('wl_ds_more_r232') !== '1'){
+      localStorage.setItem('wl_ds_more_r232','1');
+      lsSet(LS_DSMORE, false);
+      console.log('[종류 칩] 접힘을 기본으로 되돌렸어요 — 「⋯ 더」 를 누르면 다시 다 보입니다');
+    }
+  }catch(e){ console.warn('[종류 칩] 기본값 되돌리기 실패', e); }
   /* v226 - 달님 : 「접었을 때 이 일곱은 늘 보이게」
      기록 수로 뽑으면 그날그날 자리가 바뀌어 손이 헷갈렸다 - 붙박이로 고정한다.
      차례는 DS_ORDER 를 따른다. */
@@ -9046,6 +9091,9 @@ window.PERSONAL_BUILD = 'v231-0902-1410';
       else if(v==='3m')fltSet({from:ym(y,m-2)+'-01', to:ym(y,m)+'-'+last(y,m)});
       else if(v==='12m')fltSet({from:ym(y,m-11)+'-01', to:ym(y,m)+'-'+last(y,m)});
     });
+    var cs=document.getElementById('lfCatSel');
+    if(cs) cs.addEventListener('change', function(){
+      curCat = cs.value; lsSet(LS_CAT, curCat); EDIT=null; safeRender(); });
     var mo=document.getElementById('lfMonth'); if(mo) mo.addEventListener('change', function(){ curMonth=mo.value; safeRender(); });
     var ct=document.getElementById('lfCtype'); if(ct) ct.addEventListener('change', function(){ curCtype=ct.value; safeRender(); });
     var yr=document.getElementById('lfYear');  if(yr) yr.addEventListener('change', function(){ curMonth=yr.value+'-01'; safeRender(); });
