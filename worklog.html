@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v244-0902-1742";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v245-0902-1758";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=244-20260902t1742"></script>
+<script src="worklog.js?v=245-20260902t1758"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -12549,11 +12549,15 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var _hasMeal= _et.some(function(x){ return x && /중식/.test(x.title||''); });
       var _expN = (typeof entries!=='undefined'?entries:[])
         .filter(function(e){ return e && e.kind==='expense' && String(e.date||'').indexOf(ym)===0; }).length;
-      var _chip = function(ok, txt, tip){
-        return '<span title="'+esc(tip||'')+'" style="display:inline-flex;align-items:center;gap:4px;'
+      /* v245 — 달님 : 「눌러서 바로 그 화면으로」 */
+      var _chip = function(ok, txt, tip, go){
+        return '<button type="button"'+(go?(' data-sumgo="'+go+'"'):'')
+             + ' title="'+esc(tip||'')+(go?' — 눌러서 바로 가기':'')+'"'
+             + ' style="display:inline-flex;align-items:center;gap:4px;font-family:inherit;'
              + 'background:'+(ok?'#eefaf3':'#fdf2f2')+';border:1px solid '+(ok?'#bfe6d2':'#f3d3d3')+';'
-             + 'color:'+(ok?'#0f7a4a':'#b52929')+';border-radius:8px;padding:3px 9px;font-size:12px;font-weight:800">'
-             + (ok?'\u2705':'\u274C') + ' ' + esc(txt) + '</span>';
+             + 'color:'+(ok?'#0f7a4a':'#b52929')+';border-radius:8px;padding:3px 9px;font-size:12px;font-weight:800;'
+             + 'cursor:'+(go?'pointer':'default')+'">'
+             + (ok?'\u2705':'\u274C') + ' ' + esc(txt) + (go?' <span style="opacity:.55;font-weight:700">\u203A</span>':'') + '</button>';
       };
       var _miss = [];
       if(!_mN)      _miss.push('월정산');
@@ -12562,10 +12566,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       html0 = '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;'
         + 'padding:9px 12px;border:1.5px solid #e3ecf6;background:#f8fbff;border-radius:10px">'
         + '<b style="font-size:12.5px;color:#33567d">\uD83D\uDCCB '+esc(ym)+' 에 들어온 것</b>'
-        + _chip(_expN>0, '지출 기록 '+_expN+'건', '지출 목록에서 넣습니다')
-        + _chip(_mN>0,   '월정산 '+_mN+'줄',      '인건비+정기분 화면의 월정산 표에서 넣습니다')
-        + _chip(_hasLab, '관리인건비',            '인건비+정기분 화면의 도급비 산출 내역에서 넣습니다')
-        + _chip(_hasMeal,'중식대',                '중식 화면에서 넣습니다')
+        + _chip(_expN>0, '지출 기록 '+_expN+'건', '지출 목록에서 넣습니다', 'list')
+        + _chip(_mN>0,   '월정산 '+_mN+'줄',      '인건비+정기분 화면의 월정산 표에서 넣습니다', 'labor')
+        + _chip(_hasLab, '관리인건비',            '인건비+정기분 화면의 도급비 산출 내역에서 넣습니다', 'labor')
+        + _chip(_hasMeal,'중식대',                '중식 화면에서 넣습니다', 'meal')
         + (_miss.length
             ? '<span style="flex:1;min-width:150px;font-size:11.5px;color:#b08968">'
               + '아직 없는 것 — ' + esc(_miss.join(' \u00B7 ')) + ' (금액이 0인 줄은 안 넘어옵니다)</span>'
@@ -12697,6 +12701,29 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         setTimeout(function(){ try{ window.renderExpSettle(); }catch(e){} }, 600);
       });
     })();
+    /* v245 — 요약 칩 → 그 달 그대로 넣는 화면으로 */
+    box.querySelectorAll('[data-sumgo]').forEach(function(b){
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var go=b.getAttribute('data-sumgo');
+        try{
+          /* 가는 화면의 달도 지금 보고 있는 달로 맞춘다 */
+          var sid = (go==='labor') ? 'expLaborMonthSel' : (go==='meal' ? 'expMealMonthSel' : 'expV2MonthSel');
+          var ts=g(sid);
+          if(ts){
+            if(!Array.prototype.some.call(ts.options,function(o){ return o.value===ym; })){
+              var op=document.createElement('option'); op.value=ym; op.textContent=ym; ts.appendChild(op);
+            }
+            ts.value=ym;
+          }
+          if(typeof window.setExpSubTab==='function') window.setExpSubTab(go);
+          var NM={list:'📋 지출 목록', labor:'👷 인건비+정기분', meal:'🍚 중식'};
+          if(typeof toast==='function') toast(ym+' — '+(NM[go]||go)+' 로 갑니다');
+        }catch(e){ console.error('[요약 칩]', e);
+          if(typeof toast==='function') toast('못 열었어요: '+(e.message||e)); }
+      });
+    });
+
     /* v244 — 줄 늘리기 · 줄이기 */
     box.querySelectorAll('[data-grow]').forEach(function(b){
       b.addEventListener('click', function(ev){
@@ -20728,7 +20755,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=244-20260902t1742"></script>
+<script src="personal.js?v=245-20260902t1758"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에
